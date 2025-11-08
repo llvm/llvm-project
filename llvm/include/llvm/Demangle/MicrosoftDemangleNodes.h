@@ -13,6 +13,7 @@
 #ifndef LLVM_DEMANGLE_MICROSOFTDEMANGLENODES_H
 #define LLVM_DEMANGLE_MICROSOFTDEMANGLENODES_H
 
+#include "DemangleConfig.h"
 #include <array>
 #include <cstdint>
 #include <string>
@@ -281,7 +282,7 @@ struct Node {
 
   virtual void output(OutputBuffer &OB, OutputFlags Flags) const = 0;
 
-  std::string toString(OutputFlags Flags = OF_Default) const;
+  DEMANGLE_ABI std::string toString(OutputFlags Flags = OF_Default) const;
 
 private:
   NodeKind Kind;
@@ -332,7 +333,7 @@ struct TypeNode : public Node {
   Qualifiers Quals = Q_None;
 };
 
-struct PrimitiveTypeNode : public TypeNode {
+struct DEMANGLE_ABI PrimitiveTypeNode : public TypeNode {
   explicit PrimitiveTypeNode(PrimitiveKind K)
       : TypeNode(NodeKind::PrimitiveType), PrimKind(K) {}
 
@@ -346,7 +347,7 @@ struct PrimitiveTypeNode : public TypeNode {
   PrimitiveKind PrimKind;
 };
 
-struct FunctionSignatureNode : public TypeNode {
+struct DEMANGLE_ABI FunctionSignatureNode : public TypeNode {
   explicit FunctionSignatureNode(NodeKind K) : TypeNode(K) {}
   FunctionSignatureNode() : TypeNode(NodeKind::FunctionSignature) {}
 
@@ -394,10 +395,11 @@ struct IdentifierNode : public Node {
   NodeArrayNode *TemplateParams = nullptr;
 
 protected:
-  void outputTemplateParameters(OutputBuffer &OB, OutputFlags Flags) const;
+  DEMANGLE_ABI void outputTemplateParameters(OutputBuffer &OB,
+                                             OutputFlags Flags) const;
 };
 
-struct VcallThunkIdentifierNode : public IdentifierNode {
+struct DEMANGLE_ABI VcallThunkIdentifierNode : public IdentifierNode {
   VcallThunkIdentifierNode() : IdentifierNode(NodeKind::VcallThunkIdentifier) {}
 
   void output(OutputBuffer &OB, OutputFlags Flags) const override;
@@ -409,7 +411,7 @@ struct VcallThunkIdentifierNode : public IdentifierNode {
   uint64_t OffsetInVTable = 0;
 };
 
-struct DynamicStructorIdentifierNode : public IdentifierNode {
+struct DEMANGLE_ABI DynamicStructorIdentifierNode : public IdentifierNode {
   DynamicStructorIdentifierNode()
       : IdentifierNode(NodeKind::DynamicStructorIdentifier) {}
 
@@ -424,7 +426,7 @@ struct DynamicStructorIdentifierNode : public IdentifierNode {
   bool IsDestructor = false;
 };
 
-struct NamedIdentifierNode : public IdentifierNode {
+struct DEMANGLE_ABI NamedIdentifierNode : public IdentifierNode {
   NamedIdentifierNode() : IdentifierNode(NodeKind::NamedIdentifier) {}
 
   void output(OutputBuffer &OB, OutputFlags Flags) const override;
@@ -436,7 +438,7 @@ struct NamedIdentifierNode : public IdentifierNode {
   std::string_view Name;
 };
 
-struct IntrinsicFunctionIdentifierNode : public IdentifierNode {
+struct DEMANGLE_ABI IntrinsicFunctionIdentifierNode : public IdentifierNode {
   explicit IntrinsicFunctionIdentifierNode(IntrinsicFunctionKind Operator)
       : IdentifierNode(NodeKind::IntrinsicFunctionIdentifier),
         Operator(Operator) {}
@@ -450,7 +452,7 @@ struct IntrinsicFunctionIdentifierNode : public IdentifierNode {
   IntrinsicFunctionKind Operator;
 };
 
-struct LiteralOperatorIdentifierNode : public IdentifierNode {
+struct DEMANGLE_ABI LiteralOperatorIdentifierNode : public IdentifierNode {
   LiteralOperatorIdentifierNode()
       : IdentifierNode(NodeKind::LiteralOperatorIdentifier) {}
 
@@ -463,7 +465,7 @@ struct LiteralOperatorIdentifierNode : public IdentifierNode {
   std::string_view Name;
 };
 
-struct LocalStaticGuardIdentifierNode : public IdentifierNode {
+struct DEMANGLE_ABI LocalStaticGuardIdentifierNode : public IdentifierNode {
   LocalStaticGuardIdentifierNode()
       : IdentifierNode(NodeKind::LocalStaticGuardIdentifier) {}
 
@@ -477,7 +479,7 @@ struct LocalStaticGuardIdentifierNode : public IdentifierNode {
   uint32_t ScopeIndex = 0;
 };
 
-struct ConversionOperatorIdentifierNode : public IdentifierNode {
+struct DEMANGLE_ABI ConversionOperatorIdentifierNode : public IdentifierNode {
   ConversionOperatorIdentifierNode()
       : IdentifierNode(NodeKind::ConversionOperatorIdentifier) {}
 
@@ -491,7 +493,7 @@ struct ConversionOperatorIdentifierNode : public IdentifierNode {
   TypeNode *TargetType = nullptr;
 };
 
-struct StructorIdentifierNode : public IdentifierNode {
+struct DEMANGLE_ABI StructorIdentifierNode : public IdentifierNode {
   StructorIdentifierNode() : IdentifierNode(NodeKind::StructorIdentifier) {}
   explicit StructorIdentifierNode(bool IsDestructor)
       : IdentifierNode(NodeKind::StructorIdentifier),
@@ -508,7 +510,7 @@ struct StructorIdentifierNode : public IdentifierNode {
   bool IsDestructor = false;
 };
 
-struct ThunkSignatureNode : public FunctionSignatureNode {
+struct DEMANGLE_ABI ThunkSignatureNode : public FunctionSignatureNode {
   ThunkSignatureNode() : FunctionSignatureNode(NodeKind::ThunkSignature) {}
 
   void outputPre(OutputBuffer &OB, OutputFlags Flags) const override;
@@ -528,7 +530,7 @@ struct ThunkSignatureNode : public FunctionSignatureNode {
   ThisAdjustor ThisAdjust;
 };
 
-struct PointerTypeNode : public TypeNode {
+struct DEMANGLE_ABI PointerTypeNode : public TypeNode {
   PointerTypeNode() : TypeNode(NodeKind::PointerType) {}
   void outputPre(OutputBuffer &OB, OutputFlags Flags) const override;
   void outputPost(OutputBuffer &OB, OutputFlags Flags) const override;
@@ -550,7 +552,7 @@ struct PointerTypeNode : public TypeNode {
   TypeNode *Pointee = nullptr;
 };
 
-struct TagTypeNode : public TypeNode {
+struct DEMANGLE_ABI TagTypeNode : public TypeNode {
   explicit TagTypeNode(TagKind Tag) : TypeNode(NodeKind::TagType), Tag(Tag) {}
 
   void outputPre(OutputBuffer &OB, OutputFlags Flags) const override;
@@ -562,7 +564,7 @@ struct TagTypeNode : public TypeNode {
   TagKind Tag;
 };
 
-struct ArrayTypeNode : public TypeNode {
+struct DEMANGLE_ABI ArrayTypeNode : public TypeNode {
   ArrayTypeNode() : TypeNode(NodeKind::ArrayType) {}
 
   void outputPre(OutputBuffer &OB, OutputFlags Flags) const override;
@@ -591,7 +593,7 @@ struct IntrinsicNode : public TypeNode {
   }
 };
 
-struct CustomTypeNode : public TypeNode {
+struct DEMANGLE_ABI CustomTypeNode : public TypeNode {
   CustomTypeNode() : TypeNode(NodeKind::Custom) {}
 
   void outputPre(OutputBuffer &OB, OutputFlags Flags) const override;
@@ -602,7 +604,7 @@ struct CustomTypeNode : public TypeNode {
   IdentifierNode *Identifier = nullptr;
 };
 
-struct NodeArrayNode : public Node {
+struct DEMANGLE_ABI NodeArrayNode : public Node {
   NodeArrayNode() : Node(NodeKind::NodeArray) {}
 
   void output(OutputBuffer &OB, OutputFlags Flags) const override;
@@ -618,7 +620,7 @@ struct NodeArrayNode : public Node {
   size_t Count = 0;
 };
 
-struct QualifiedNameNode : public Node {
+struct DEMANGLE_ABI QualifiedNameNode : public Node {
   QualifiedNameNode() : Node(NodeKind::QualifiedName) {}
 
   void output(OutputBuffer &OB, OutputFlags Flags) const override;
@@ -635,7 +637,7 @@ struct QualifiedNameNode : public Node {
   }
 };
 
-struct TemplateParameterReferenceNode : public Node {
+struct DEMANGLE_ABI TemplateParameterReferenceNode : public Node {
   TemplateParameterReferenceNode()
       : Node(NodeKind::TemplateParameterReference) {}
 
@@ -653,7 +655,7 @@ struct TemplateParameterReferenceNode : public Node {
   bool IsMemberPointer = false;
 };
 
-struct IntegerLiteralNode : public Node {
+struct DEMANGLE_ABI IntegerLiteralNode : public Node {
   IntegerLiteralNode() : Node(NodeKind::IntegerLiteral) {}
   IntegerLiteralNode(uint64_t Value, bool IsNegative)
       : Node(NodeKind::IntegerLiteral), Value(Value), IsNegative(IsNegative) {}
@@ -668,7 +670,7 @@ struct IntegerLiteralNode : public Node {
   bool IsNegative = false;
 };
 
-struct RttiBaseClassDescriptorNode : public IdentifierNode {
+struct DEMANGLE_ABI RttiBaseClassDescriptorNode : public IdentifierNode {
   RttiBaseClassDescriptorNode()
       : IdentifierNode(NodeKind::RttiBaseClassDescriptor) {}
 
@@ -684,7 +686,7 @@ struct RttiBaseClassDescriptorNode : public IdentifierNode {
   uint32_t Flags = 0;
 };
 
-struct SymbolNode : public Node {
+struct DEMANGLE_ABI SymbolNode : public Node {
   explicit SymbolNode(NodeKind K) : Node(K) {}
   void output(OutputBuffer &OB, OutputFlags Flags) const override;
 
@@ -696,7 +698,7 @@ struct SymbolNode : public Node {
   QualifiedNameNode *Name = nullptr;
 };
 
-struct SpecialTableSymbolNode : public SymbolNode {
+struct DEMANGLE_ABI SpecialTableSymbolNode : public SymbolNode {
   explicit SpecialTableSymbolNode()
       : SymbolNode(NodeKind::SpecialTableSymbol) {}
 
@@ -706,11 +708,11 @@ struct SpecialTableSymbolNode : public SymbolNode {
     return N->kind() == NodeKind::SpecialTableSymbol;
   }
 
-  QualifiedNameNode *TargetName = nullptr;
+  NodeArrayNode *TargetNames = nullptr;
   Qualifiers Quals = Qualifiers::Q_None;
 };
 
-struct LocalStaticGuardVariableNode : public SymbolNode {
+struct DEMANGLE_ABI LocalStaticGuardVariableNode : public SymbolNode {
   LocalStaticGuardVariableNode()
       : SymbolNode(NodeKind::LocalStaticGuardVariable) {}
 
@@ -723,7 +725,7 @@ struct LocalStaticGuardVariableNode : public SymbolNode {
   bool IsVisible = false;
 };
 
-struct EncodedStringLiteralNode : public SymbolNode {
+struct DEMANGLE_ABI EncodedStringLiteralNode : public SymbolNode {
   EncodedStringLiteralNode() : SymbolNode(NodeKind::EncodedStringLiteral) {}
 
   void output(OutputBuffer &OB, OutputFlags Flags) const override;
@@ -737,7 +739,7 @@ struct EncodedStringLiteralNode : public SymbolNode {
   CharKind Char = CharKind::Char;
 };
 
-struct VariableSymbolNode : public SymbolNode {
+struct DEMANGLE_ABI VariableSymbolNode : public SymbolNode {
   VariableSymbolNode() : SymbolNode(NodeKind::VariableSymbol) {}
 
   void output(OutputBuffer &OB, OutputFlags Flags) const override;
@@ -750,7 +752,7 @@ struct VariableSymbolNode : public SymbolNode {
   TypeNode *Type = nullptr;
 };
 
-struct FunctionSymbolNode : public SymbolNode {
+struct DEMANGLE_ABI FunctionSymbolNode : public SymbolNode {
   FunctionSymbolNode() : SymbolNode(NodeKind::FunctionSymbol) {}
 
   void output(OutputBuffer &OB, OutputFlags Flags) const override;
@@ -762,7 +764,7 @@ struct FunctionSymbolNode : public SymbolNode {
   FunctionSignatureNode *Signature = nullptr;
 };
 
-struct PointerAuthQualifierNode : public Node {
+struct DEMANGLE_ABI PointerAuthQualifierNode : public Node {
   PointerAuthQualifierNode() : Node(NodeKind::PointerAuthQualifier) {}
 
   // __ptrauth takes three arguments:

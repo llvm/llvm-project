@@ -43,7 +43,7 @@ FailureOr<ConstantOrScalableBound>
 ScalableValueBoundsConstraintSet::computeScalableBound(
     Value value, std::optional<int64_t> dim, unsigned vscaleMin,
     unsigned vscaleMax, presburger::BoundType boundType, bool closedUB,
-    StopConditionFn stopCondition) {
+    const StopConditionFn &stopCondition) {
   using namespace presburger;
   assert(vscaleMin <= vscaleMax);
 
@@ -108,7 +108,8 @@ ScalableValueBoundsConstraintSet::computeScalableBound(
     if (boundType == BoundType::EQ && !invalidBound(lowerBound) &&
         lowerBound[0] == upperBound[0]) {
       return lowerBound[0];
-    } else if (boundType == BoundType::LB && !invalidBound(lowerBound)) {
+    }
+    if (boundType == BoundType::LB && !invalidBound(lowerBound)) {
       return lowerBound[0];
     } else if (boundType == BoundType::UB && !invalidBound(upperBound)) {
       return upperBound[0];

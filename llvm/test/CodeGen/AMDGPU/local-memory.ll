@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn -mcpu=verde -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,FUNC %s
-; RUN: llc -mtriple=amdgcn -mcpu=bonaire -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,FUNC %s
+; RUN: llc -mtriple=amdgcn -mcpu=verde < %s | FileCheck --check-prefixes=GCN,FUNC %s
+; RUN: llc -mtriple=amdgcn -mcpu=bonaire < %s | FileCheck --check-prefixes=GCN,FUNC %s
 ; RUN: llc -mtriple=r600 -mcpu=redwood < %s | FileCheck -check-prefix=FUNC %s
 
 @local_memory.local_mem = internal unnamed_addr addrspace(3) global [128 x i32] poison, align 4

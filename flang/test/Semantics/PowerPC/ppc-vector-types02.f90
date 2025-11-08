@@ -2,7 +2,7 @@
 ! REQUIRES: target=powerpc{{.*}}
 
 ! C: MainProgram scope: ppc_vec_types
-! CHECK-LABEL: MainProgram scope: ppc_vec_types size={{[0-9]*}} alignment={{[0-9]*}}
+! CHECK-LABEL: MainProgram scope: PPC_VEC_TYPES size={{[0-9]*}} alignment={{[0-9]*}}
 program ppc_vec_types
   implicit none
   vector(integer(4)) :: vi

@@ -182,11 +182,9 @@ static FailureOr<LinalgOp> specializeLinalgContractions(RewriterBase &rewriter,
 
   if (!mlir::linalg::detail::isContractionBody(
           *genericOp.getBlock(), [](Operation *first, Operation *second) {
-            if ((isa<arith::MulFOp>(first) && isa<arith::AddFOp>(second)) ||
-                (isa<arith::MulIOp>(first) && isa<arith::AddIOp>(second)) ||
-                (isa<complex::MulOp>(first) && isa<complex::AddOp>(second)))
-              return true;
-            return false;
+            return (isa<arith::MulFOp>(first) && isa<arith::AddFOp>(second)) ||
+                   (isa<arith::MulIOp>(first) && isa<arith::AddIOp>(second)) ||
+                   (isa<complex::MulOp>(first) && isa<complex::AddOp>(second));
           }))
     return failure();
 
@@ -234,19 +232,8 @@ static FailureOr<LinalgOp> specializeLinalgContractions(RewriterBase &rewriter,
 
   /// Codegen the different matmul variants.
   if (numOfBatchDims) {
-    if (a == IndexMatchResult::Transposed)
-      return replaceWithMatmulVariant<BatchMatmulTransposeAOp>(rewriter,
-                                                               genericOp);
-    if (b == IndexMatchResult::Transposed)
-      return replaceWithMatmulVariant<BatchMatmulTransposeBOp>(rewriter,
-                                                               genericOp);
     return replaceWithMatmulVariant<BatchMatmulOp>(rewriter, genericOp);
   }
-
-  if (a == IndexMatchResult::Transposed)
-    return replaceWithMatmulVariant<MatmulTransposeAOp>(rewriter, genericOp);
-  if (b == IndexMatchResult::Transposed)
-    return replaceWithMatmulVariant<MatmulTransposeBOp>(rewriter, genericOp);
   return replaceWithMatmulVariant<MatmulOp>(rewriter, genericOp);
 }
 

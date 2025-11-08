@@ -22,6 +22,7 @@
 #include "flang/Tools/TargetSetup.h"
 #include "flang/Version.inc"
 #include "clang/Basic/DiagnosticDriver.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Driver.h"
@@ -156,6 +157,15 @@ static bool parseDebugArgs(Fortran::frontend::CodeGenOptions &opts,
           clang::DiagnosticsEngine::Warning, "Unsupported debug option: %0");
       diags.Report(debugWarning) << arg->getValue();
     }
+    opts.DwarfVersion =
+        getLastArgIntValue(args, clang::driver::options::OPT_dwarf_version_EQ,
+                           /*Default=*/0, diags);
+    if (const llvm::opt::Arg *a =
+            args.getLastArg(clang::driver::options::OPT_split_dwarf_file))
+      opts.SplitDwarfFile = a->getValue();
+    if (const llvm::opt::Arg *a =
+            args.getLastArg(clang::driver::options::OPT_split_dwarf_output))
+      opts.SplitDwarfOutput = a->getValue();
   }
   return true;
 }
@@ -275,6 +285,9 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
   if (args.getLastArg(clang::driver::options::OPT_floop_interchange))
     opts.InterchangeLoops = 1;
 
+  if (args.getLastArg(clang::driver::options::OPT_fexperimental_loop_fusion))
+    opts.FuseLoops = 1;
+
   if (args.getLastArg(clang::driver::options::OPT_vectorize_loops))
     opts.VectorizeLoop = 1;
 
@@ -324,17 +337,6 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
 
   if (args.hasArg(clang::driver::options::OPT_finstrument_functions))
     opts.InstrumentFunctions = 1;
-
-  // -flto=full/thin option.
-  if (const llvm::opt::Arg *a =
-          args.getLastArg(clang::driver::options::OPT_flto_EQ)) {
-    llvm::StringRef s = a->getValue();
-    assert((s == "full" || s == "thin") && "Unknown LTO mode.");
-    if (s == "full")
-      opts.PrepareForFullLTO = true;
-    else
-      opts.PrepareForThinLTO = true;
-  }
 
   if (const llvm::opt::Arg *a = args.getLastArg(
           clang::driver::options::OPT_mcode_object_version_EQ)) {
@@ -512,6 +514,16 @@ static void parseTargetArgs(TargetOptions &opts, llvm::opt::ArgList &args) {
           args.getLastArg(clang::driver::options::OPT_triple))
     opts.triple = a->getValue();
 
+  opts.atomicIgnoreDenormalMode = args.hasFlag(
+      clang::driver::options::OPT_fatomic_ignore_denormal_mode,
+      clang::driver::options::OPT_fno_atomic_ignore_denormal_mode, false);
+  opts.atomicFineGrainedMemory = args.hasFlag(
+      clang::driver::options::OPT_fatomic_fine_grained_memory,
+      clang::driver::options::OPT_fno_atomic_fine_grained_memory, false);
+  opts.atomicRemoteMemory =
+      args.hasFlag(clang::driver::options::OPT_fatomic_remote_memory,
+                   clang::driver::options::OPT_fno_atomic_remote_memory, false);
+
   if (const llvm::opt::Arg *a =
           args.getLastArg(clang::driver::options::OPT_target_cpu))
     opts.cpu = a->getValue();
@@ -583,9 +595,15 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
   // -cc1` does accept multiple action options, but will only consider the
   // rightmost one.
   if (args.hasMultipleArgs(clang::driver::options::OPT_Action_Group)) {
-    const unsigned diagID = diags.getCustomDiagID(
-        clang::DiagnosticsEngine::Error, "Only one action option is allowed");
-    diags.Report(diagID);
+    llvm::SmallString<32> buf;
+    llvm::raw_svector_ostream os(buf);
+    for (const llvm::opt::Arg *arg :
+         args.filtered(clang::driver::options::OPT_Action_Group)) {
+      if (buf.size())
+        os << ", ";
+      os << "'" << arg->getSpelling() << "'";
+    }
+    diags.Report(clang::diag::err_drv_too_many_actions) << buf;
     return false;
   }
 
@@ -1142,6 +1160,17 @@ static bool parseDialectArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
       diags.Report(diagID);
     }
   }
+  // -fcoarray
+  if (args.hasArg(clang::driver::options::OPT_fcoarray)) {
+    res.getFrontendOpts().features.Enable(
+        Fortran::common::LanguageFeature::Coarray);
+    const unsigned diagID =
+        diags.getCustomDiagID(clang::DiagnosticsEngine::Warning,
+                              "Support for multi image Fortran features is "
+                              "still experimental and in development.");
+    diags.Report(diagID);
+  }
+
   return diags.getNumErrors() == numErrorsBefore;
 }
 
@@ -1152,13 +1181,21 @@ static bool parseOpenMPArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
                             clang::DiagnosticsEngine &diags) {
   llvm::opt::Arg *arg = args.getLastArg(clang::driver::options::OPT_fopenmp,
                                         clang::driver::options::OPT_fno_openmp);
-  if (!arg || arg->getOption().matches(clang::driver::options::OPT_fno_openmp))
-    return true;
+  if (!arg ||
+      arg->getOption().matches(clang::driver::options::OPT_fno_openmp)) {
+    bool isSimdSpecified = args.hasFlag(
+        clang::driver::options::OPT_fopenmp_simd,
+        clang::driver::options::OPT_fno_openmp_simd, /*Default=*/false);
+    if (!isSimdSpecified)
+      return true;
+    res.getLangOpts().OpenMPSimd = 1;
+  }
 
   unsigned numErrorsBefore = diags.getNumErrors();
   llvm::Triple t(res.getTargetOpts().triple);
 
   constexpr unsigned newestFullySupported = 31;
+  constexpr unsigned latestFinalized = 60;
   // By default OpenMP is set to the most recent fully supported version
   res.getLangOpts().OpenMPVersion = newestFullySupported;
   res.getFrontendOpts().features.Enable(
@@ -1181,12 +1218,26 @@ static bool parseOpenMPArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
       diags.Report(diagID) << value << arg->getAsString(args) << versions.str();
     };
 
+    auto reportFutureVersion = [&](llvm::StringRef value) {
+      const unsigned diagID = diags.getCustomDiagID(
+          clang::DiagnosticsEngine::Warning,
+          "The specification for OpenMP version %0 is still under development; "
+          "the syntax and semantics of new features may be subject to change");
+      std::string buffer;
+      llvm::raw_string_ostream versions(buffer);
+      llvm::interleaveComma(ompVersions, versions);
+
+      diags.Report(diagID) << value;
+    };
+
     llvm::StringRef value = arg->getValue();
     if (!value.getAsInteger(/*radix=*/10, version)) {
       if (llvm::is_contained(ompVersions, version)) {
         res.getLangOpts().OpenMPVersion = version;
 
-        if (version > newestFullySupported)
+        if (version > latestFinalized)
+          reportFutureVersion(value);
+        else if (version > newestFullySupported)
           diags.Report(clang::diag::warn_openmp_incomplete) << version;
       } else if (llvm::is_contained(oldVersions, version)) {
         const unsigned diagID =
@@ -1215,7 +1266,7 @@ static bool parseOpenMPArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
             clang::driver::options::OPT_fopenmp_host_ir_file_path)) {
       res.getLangOpts().OMPHostIRFile = arg->getValue();
       if (!llvm::sys::fs::exists(res.getLangOpts().OMPHostIRFile))
-        diags.Report(clang::diag::err_drv_omp_host_ir_file_not_found)
+        diags.Report(clang::diag::err_omp_host_ir_file_not_found)
             << res.getLangOpts().OMPHostIRFile;
     }
 
@@ -1380,6 +1431,9 @@ static bool parseFloatingPointArgs(CompilerInvocation &invoc,
     opts.setFPContractMode(Fortran::common::LangOptions::FPM_Fast);
   }
 
+  if (args.hasArg(clang::driver::options::OPT_fno_fast_real_mod))
+    opts.NoFastRealMod = true;
+
   return true;
 }
 
@@ -1439,6 +1493,7 @@ static bool parseLinkerOptionsArgs(CompilerInvocation &invoc,
                                    llvm::opt::ArgList &args,
                                    clang::DiagnosticsEngine &diags) {
   llvm::Triple triple = llvm::Triple(invoc.getTargetOpts().triple);
+  CodeGenOptions &opts = invoc.getCodeGenOpts();
 
   // TODO: support --dependent-lib on other platforms when MLIR supports
   //       !llvm.dependent.lib
@@ -1451,8 +1506,35 @@ static bool parseLinkerOptionsArgs(CompilerInvocation &invoc,
     return false;
   }
 
-  invoc.getCodeGenOpts().DependentLibs =
+  opts.DependentLibs =
       args.getAllArgValues(clang::driver::options::OPT_dependent_lib);
+
+  // -flto=full/thin option.
+  if (const llvm::opt::Arg *a =
+          args.getLastArg(clang::driver::options::OPT_flto_EQ)) {
+    llvm::StringRef s = a->getValue();
+    assert((s == "full" || s == "thin") && "Unknown LTO mode.");
+    if (s == "full")
+      opts.PrepareForFullLTO = true;
+    else
+      opts.PrepareForThinLTO = true;
+  }
+
+  // -ffat-lto-objects
+  if (const llvm::opt::Arg *arg =
+          args.getLastArg(clang::driver::options::OPT_ffat_lto_objects,
+                          clang::driver::options::OPT_fno_fat_lto_objects)) {
+    opts.PrepareForFatLTO =
+        arg->getOption().matches(clang::driver::options::OPT_ffat_lto_objects);
+    if (opts.PrepareForFatLTO) {
+      assert((opts.PrepareForFullLTO || opts.PrepareForThinLTO) &&
+             "Unknown LTO mode");
+
+      if (!triple.isOSBinFormatELF())
+        diags.Report(clang::diag::err_drv_unsupported_opt_for_target)
+            << arg->getAsString(args) << triple.getTriple();
+    }
+  }
   return true;
 }
 
@@ -1686,6 +1768,20 @@ void CompilerInvocation::setDefaultPredefinitions() {
   fortranOptions.predefinitions.emplace_back("__flang_patchlevel__",
                                              FLANG_VERSION_PATCHLEVEL_STRING);
 
+  // Add predefinitions based on the relocation model
+  if (unsigned PICLevel = getCodeGenOpts().PICLevel) {
+    fortranOptions.predefinitions.emplace_back("__PIC__",
+                                               std::to_string(PICLevel));
+    fortranOptions.predefinitions.emplace_back("__pic__",
+                                               std::to_string(PICLevel));
+    if (getCodeGenOpts().IsPIE) {
+      fortranOptions.predefinitions.emplace_back("__PIE__",
+                                                 std::to_string(PICLevel));
+      fortranOptions.predefinitions.emplace_back("__pie__",
+                                                 std::to_string(PICLevel));
+    }
+  }
+
   // Add predefinitions based on extensions enabled
   if (frontendOptions.features.IsEnabled(
           Fortran::common::LanguageFeature::OpenACC)) {
@@ -1695,6 +1791,11 @@ void CompilerInvocation::setDefaultPredefinitions() {
           Fortran::common::LanguageFeature::OpenMP)) {
     Fortran::common::setOpenMPMacro(getLangOpts().OpenMPVersion,
                                     fortranOptions.predefinitions);
+  }
+
+  if (frontendOptions.features.IsEnabled(
+          Fortran::common::LanguageFeature::CUDA)) {
+    fortranOptions.predefinitions.emplace_back("_CUDA", "1");
   }
 
   llvm::Triple targetTriple{llvm::Triple(this->targetOpts.triple)};

@@ -1,6 +1,6 @@
 ! RUN: %flang_fc1 -fdebug-dump-symbols -fopenmp -fopenmp-version=50 %s | FileCheck %s
 program main
-!CHECK-LABEL:  MainProgram scope: main
+!CHECK-LABEL:  MainProgram scope: MAIN
   integer, parameter :: n = 256
   real(8) :: a(256)
   !$omp target map(mapper(xx), from:a)

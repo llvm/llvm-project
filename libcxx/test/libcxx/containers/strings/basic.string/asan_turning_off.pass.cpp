@@ -16,7 +16,7 @@
 // This test confirms that those allocators work after turning off annotations.
 //
 // A context to this test is a situations when memory is repurposed and destructors are not called.
-//   Related issue: https://github.com/llvm/llvm-project/issues/60384
+//   Related issue: https://llvm.org/PR60384
 //
 // That issue appeared in the past and was addressed here: https://reviews.llvm.org/D145628
 //

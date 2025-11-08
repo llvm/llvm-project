@@ -1,7 +1,7 @@
 ; RUN: opt < %s -passes=instcombine -S | FileCheck %s
 
-declare void @llvm.lifetime.start.p0(i64, ptr nocapture)
-declare void @llvm.lifetime.end.p0(i64, ptr nocapture)
+declare void @llvm.lifetime.start.p0(ptr nocapture)
+declare void @llvm.lifetime.end.p0(ptr nocapture)
 declare void @foo(ptr nocapture)
 
 define void @asan() sanitize_address {
@@ -9,8 +9,8 @@ entry:
   ; CHECK-LABEL: @asan(
   %text = alloca i8, align 1
 
-  call void @llvm.lifetime.start.p0(i64 1, ptr %text)
-  call void @llvm.lifetime.end.p0(i64 1, ptr %text)
+  call void @llvm.lifetime.start.p0(ptr %text)
+  call void @llvm.lifetime.end.p0(ptr %text)
   ; CHECK: call void @llvm.lifetime.start
   ; CHECK-NEXT: call void @llvm.lifetime.end
 
@@ -24,8 +24,8 @@ entry:
   ; CHECK-LABEL: @hwasan(
   %text = alloca i8, align 1
 
-  call void @llvm.lifetime.start.p0(i64 1, ptr %text)
-  call void @llvm.lifetime.end.p0(i64 1, ptr %text)
+  call void @llvm.lifetime.start.p0(ptr %text)
+  call void @llvm.lifetime.end.p0(ptr %text)
   ; CHECK: call void @llvm.lifetime.start
   ; CHECK-NEXT: call void @llvm.lifetime.end
 
@@ -39,8 +39,8 @@ entry:
   ; CHECK-LABEL: @msan(
   %text = alloca i8, align 1
 
-  call void @llvm.lifetime.start.p0(i64 1, ptr %text)
-  call void @llvm.lifetime.end.p0(i64 1, ptr %text)
+  call void @llvm.lifetime.start.p0(ptr %text)
+  call void @llvm.lifetime.end.p0(ptr %text)
   ; CHECK: call void @llvm.lifetime.start
   ; CHECK-NEXT: call void @llvm.lifetime.end
 
@@ -54,8 +54,8 @@ entry:
   ; CHECK-LABEL: @no_asan(
   %text = alloca i8, align 1
 
-  call void @llvm.lifetime.start.p0(i64 1, ptr %text)
-  call void @llvm.lifetime.end.p0(i64 1, ptr %text)
+  call void @llvm.lifetime.start.p0(ptr %text)
+  call void @llvm.lifetime.end.p0(ptr %text)
   ; CHECK-NO: call void @llvm.lifetime
 
   call void @foo(ptr %text) ; Keep alloca alive

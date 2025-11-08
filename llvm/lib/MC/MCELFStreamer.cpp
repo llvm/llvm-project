@@ -29,7 +29,6 @@
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCSymbolELF.h"
 #include "llvm/MC/TargetRegistry.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/LEB128.h"
 #include <cassert>
@@ -55,11 +54,11 @@ void MCELFStreamer::initSections(bool NoExecStack, const MCSubtargetInfo &STI) {
                     &STI);
 
   if (NoExecStack)
-    switchSection(Ctx.getAsmInfo()->getNonexecutableStackSection(Ctx));
+    switchSection(Ctx.getAsmInfo()->getStackSection(Ctx, /*Exec=*/false));
 }
 
 void MCELFStreamer::emitLabel(MCSymbol *S, SMLoc Loc) {
-  auto *Symbol = cast<MCSymbolELF>(S);
+  auto *Symbol = static_cast<MCSymbolELF *>(S);
   MCObjectStreamer::emitLabel(Symbol, Loc);
 
   const MCSectionELF &Section =
@@ -70,7 +69,7 @@ void MCELFStreamer::emitLabel(MCSymbol *S, SMLoc Loc) {
 
 void MCELFStreamer::emitLabelAtPos(MCSymbol *S, SMLoc Loc, MCFragment &F,
                                    uint64_t Offset) {
-  auto *Symbol = cast<MCSymbolELF>(S);
+  auto *Symbol = static_cast<MCSymbolELF *>(S);
   MCObjectStreamer::emitLabelAtPos(Symbol, Loc, F, Offset);
 
   const MCSectionELF &Section =
@@ -88,12 +87,14 @@ void MCELFStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
   if (SectionELF->getFlags() & ELF::SHF_GNU_RETAIN)
     getWriter().markGnuAbi();
 
-  changeSectionImpl(Section, Subsection);
-  Asm.registerSymbol(*Section->getBeginSymbol());
+  MCObjectStreamer::changeSection(Section, Subsection);
+  auto *Sym = static_cast<MCSymbolELF *>(Section->getBeginSymbol());
+  Sym->setBinding(ELF::STB_LOCAL);
+  Sym->setType(ELF::STT_SECTION);
 }
 
 void MCELFStreamer::emitWeakReference(MCSymbol *Alias, const MCSymbol *Target) {
-  auto *A = cast<MCSymbolELF>(Alias);
+  auto *A = static_cast<MCSymbolELF *>(Alias);
   if (A->isDefined()) {
     getContext().reportError(getStartTokLoc(), "symbol '" + A->getName() +
                                                    "' is already defined");
@@ -124,7 +125,7 @@ static unsigned CombineSymbolTypes(unsigned T1, unsigned T2) {
 }
 
 bool MCELFStreamer::emitSymbolAttribute(MCSymbol *S, MCSymbolAttr Attribute) {
-  auto *Symbol = cast<MCSymbolELF>(S);
+  auto *Symbol = static_cast<MCSymbolELF *>(S);
 
   // Adding a symbol attribute always introduces the symbol, note that an
   // important side effect of calling registerSymbol here is to register
@@ -245,7 +246,7 @@ bool MCELFStreamer::emitSymbolAttribute(MCSymbol *S, MCSymbolAttr Attribute) {
 
 void MCELFStreamer::emitCommonSymbol(MCSymbol *S, uint64_t Size,
                                      Align ByteAlignment) {
-  auto *Symbol = cast<MCSymbolELF>(S);
+  auto *Symbol = static_cast<MCSymbolELF *>(S);
   getAssembler().registerSymbol(*Symbol);
 
   if (!Symbol->isBindingSet())
@@ -270,12 +271,12 @@ void MCELFStreamer::emitCommonSymbol(MCSymbol *S, uint64_t Size,
                          " redeclared as different type");
   }
 
-  cast<MCSymbolELF>(Symbol)
-      ->setSize(MCConstantExpr::create(Size, getContext()));
+  static_cast<MCSymbolELF *>(Symbol)->setSize(
+      MCConstantExpr::create(Size, getContext()));
 }
 
 void MCELFStreamer::emitELFSize(MCSymbol *Symbol, const MCExpr *Value) {
-  cast<MCSymbolELF>(Symbol)->setSize(Value);
+  static_cast<MCSymbolELF *>(Symbol)->setSize(Value);
 }
 
 void MCELFStreamer::emitELFSymverDirective(const MCSymbol *OriginalSym,
@@ -287,7 +288,7 @@ void MCELFStreamer::emitELFSymverDirective(const MCSymbol *OriginalSym,
 
 void MCELFStreamer::emitLocalCommonSymbol(MCSymbol *S, uint64_t Size,
                                           Align ByteAlignment) {
-  auto *Symbol = cast<MCSymbolELF>(S);
+  auto *Symbol = static_cast<MCSymbolELF *>(S);
   // FIXME: Should this be caught and done earlier?
   getAssembler().registerSymbol(*Symbol);
   Symbol->setBinding(ELF::STB_LOCAL);
@@ -314,8 +315,9 @@ void MCELFStreamer::emitIdent(StringRef IdentString) {
   popSection();
 }
 
-void MCELFStreamer::finalizeCGProfileEntry(const MCSymbolRefExpr *&SRE,
-                                           uint64_t Offset) {
+void MCELFStreamer::finalizeCGProfileEntry(const MCSymbolRefExpr *Sym,
+                                           uint64_t Offset,
+                                           const MCSymbolRefExpr *&SRE) {
   const MCSymbol *S = &SRE->getSymbol();
   if (S->isTemporary()) {
     if (!S->isInSection()) {
@@ -328,13 +330,9 @@ void MCELFStreamer::finalizeCGProfileEntry(const MCSymbolRefExpr *&SRE,
     S->setUsedInReloc();
     SRE = MCSymbolRefExpr::create(S, getContext(), SRE->getLoc());
   }
-  const MCConstantExpr *MCOffset = MCConstantExpr::create(Offset, getContext());
-  if (std::optional<std::pair<bool, std::string>> Err =
-          MCObjectStreamer::emitRelocDirective(
-              *MCOffset, "BFD_RELOC_NONE", SRE, SRE->getLoc(),
-              *getContext().getSubtargetInfo()))
-    report_fatal_error("Relocation for CG Profile could not be created: " +
-                       Twine(Err->second));
+  auto *O = MCBinaryExpr::createAdd(
+      Sym, MCConstantExpr::create(Offset, getContext()), getContext());
+  MCObjectStreamer::emitRelocDirective(*O, "BFD_RELOC_NONE", SRE);
 }
 
 void MCELFStreamer::finalizeCGProfile() {
@@ -347,9 +345,11 @@ void MCELFStreamer::finalizeCGProfile() {
   pushSection();
   switchSection(CGProfile);
   uint64_t Offset = 0;
+  auto *Sym =
+      MCSymbolRefExpr::create(CGProfile->getBeginSymbol(), getContext());
   for (auto &E : W.getCGProfile()) {
-    finalizeCGProfileEntry(E.From, Offset);
-    finalizeCGProfileEntry(E.To, Offset);
+    finalizeCGProfileEntry(Sym, Offset, E.From);
+    finalizeCGProfileEntry(Sym, Offset, E.To);
     emitIntValue(E.Count, sizeof(uint64_t));
     Offset += sizeof(uint64_t);
   }

@@ -92,7 +92,7 @@ static bool isTiled(AffineMap map, ArrayRef<OpFoldResult> tileSizes) {
 std::optional<RegionMatcher::BinaryOpKind>
 RegionMatcher::matchAsScalarBinaryOp(GenericOp op) {
   auto &region = op.getRegion();
-  if (!llvm::hasSingleElement(region))
+  if (!region.hasOneBlock())
     return std::nullopt;
 
   Block &block = region.front();
@@ -171,29 +171,24 @@ computePackUnPackPerm(int64_t rank, ArrayRef<int64_t> &innerDimsPos,
 namespace mlir {
 namespace linalg {
 
-SmallVector<int64_t> getPackInverseDestPerm(PackOp packOp) {
+SmallVector<int64_t> getPackInverseDestPerm(PackOp packOp,
+                                            PackingMetadata &metadata) {
 
-  PackingMetadata pMetadata;
   int64_t packedRank = packOp.getDestType().getRank();
   ArrayRef<int64_t> innerDimPos = packOp.getInnerDimsPos();
   ArrayRef<int64_t> outerPerm = packOp.getOuterDimsPerm();
   SmallVector<int64_t> packInvDestPerm =
-      computePackUnPackPerm(packedRank, innerDimPos, outerPerm, pMetadata);
+      computePackUnPackPerm(packedRank, innerDimPos, outerPerm, metadata);
   return packInvDestPerm;
-}
-
-SmallVector<int64_t> getUnPackInverseSrcPerm(UnPackOp unpackOp) {
-  PackingMetadata metadata;
-  return getUnPackInverseSrcPerm(unpackOp, metadata);
 }
 
 SmallVector<int64_t> getUnPackInverseSrcPerm(UnPackOp unpackOp,
                                              PackingMetadata &metadata) {
-  int64_t unpackRank = unpackOp.getSourceType().getRank();
+  int64_t packedRank = unpackOp.getSourceType().getRank();
   ArrayRef<int64_t> innerDimPos = unpackOp.getInnerDimsPos();
   ArrayRef<int64_t> outerPerm = unpackOp.getOuterDimsPerm();
   SmallVector<int64_t> unpackInvSrcPerm =
-      computePackUnPackPerm(unpackRank, innerDimPos, outerPerm, metadata);
+      computePackUnPackPerm(packedRank, innerDimPos, outerPerm, metadata);
   return unpackInvSrcPerm;
 }
 
@@ -204,7 +199,7 @@ bool allIndexingsAreProjectedPermutation(LinalgOp op) {
 }
 
 bool hasOnlyScalarElementwiseOp(Region &r) {
-  if (!llvm::hasSingleElement(r))
+  if (!r.hasOneBlock())
     return false;
   for (Operation &op : r.front()) {
     if (!(isa<arith::ConstantOp, func::ConstantOp, tensor::ExtractOp,
@@ -320,14 +315,14 @@ GenericOp makeMemRefCopyOp(OpBuilder &b, Location loc, Value from, Value to) {
       AffineMap::getMultiDimIdentityMap(memrefTypeTo.getRank(), b.getContext());
   SmallVector<utils::IteratorType> iteratorTypes(memrefTypeTo.getRank(),
                                                  utils::IteratorType::parallel);
-  return b.create<linalg::GenericOp>(
-      loc,
+  return linalg::GenericOp::create(
+      b, loc,
       /*inputs=*/from,
       /*outputs=*/to,
       /*indexingMaps=*/llvm::ArrayRef({id, id}),
       /*iteratorTypes=*/iteratorTypes,
       [](OpBuilder &b, Location loc, ValueRange args) {
-        b.create<linalg::YieldOp>(loc, args.front());
+        linalg::YieldOp::create(b, loc, args.front());
       });
 }
 
@@ -483,8 +478,8 @@ static void generateParallelLoopNest(
   case DistributionMethod::None: {
     // Generate a single parallel loop-nest operation for all outermost
     // parallel loops and recurse.
-    b.create<scf::ParallelOp>(
-        loc, lbs.take_front(numProcessed), ubs.take_front(numProcessed),
+    scf::ParallelOp::create(
+        b, loc, lbs.take_front(numProcessed), ubs.take_front(numProcessed),
         steps.take_front(numProcessed),
         [&](OpBuilder &nestedBuilder, Location nestedLoc, ValueRange localIvs) {
           ivStorage.append(localIvs.begin(), localIvs.end());
@@ -499,8 +494,8 @@ static void generateParallelLoopNest(
   case DistributionMethod::Cyclic: {
     // Generate a single parallel loop-nest operation for all outermost
     // parallel loops and recurse.
-    b.create<scf::ParallelOp>(
-        loc, lbs.take_front(numProcessed), ubs.take_front(numProcessed),
+    scf::ParallelOp::create(
+        b, loc, lbs.take_front(numProcessed), ubs.take_front(numProcessed),
         steps.take_front(numProcessed),
         [&](OpBuilder &nestedBuilder, Location nestedLoc, ValueRange localIvs) {
           ivStorage.append(localIvs.begin(), localIvs.end());
@@ -519,13 +514,13 @@ static void generateParallelLoopNest(
     for (unsigned i = 1; i < numProcessed; ++i)
       cond = ab._and(cond, ab.slt(lbs[i], ubs[i]));
     ivStorage.append(lbs.begin(), std::next(lbs.begin(), numProcessed));
-    b.create<scf::IfOp>(loc, cond, [&](OpBuilder &b, Location loc) {
+    scf::IfOp::create(b, loc, cond, [&](OpBuilder &b, Location loc) {
       generateParallelLoopNest(b, loc, lbs.drop_front(numProcessed),
                                ubs.drop_front(numProcessed),
                                steps.drop_front(numProcessed),
                                iteratorTypes.drop_front(numProcessed),
                                remainderProcInfo, bodyBuilderFn, ivStorage);
-      b.create<scf::YieldOp>(loc, ValueRange{});
+      scf::YieldOp::create(b, loc, ValueRange{});
     });
     return;
   }
@@ -595,18 +590,16 @@ static Operation *materializeTiledShape(OpBuilder &builder, Location loc,
   auto shapedType = dyn_cast<ShapedType>(valueToTile.getType());
   auto *sliceOp = TypeSwitch<ShapedType, Operation *>(shapedType)
                       .Case([&](MemRefType) {
-                        return builder.create<memref::SubViewOp>(
-                            loc, valueToTile, sliceParams.offsets,
+                        return memref::SubViewOp::create(
+                            builder, loc, valueToTile, sliceParams.offsets,
                             sliceParams.sizes, sliceParams.strides);
                       })
                       .Case([&](RankedTensorType) {
-                        return builder.create<tensor::ExtractSliceOp>(
-                            loc, valueToTile, sliceParams.offsets,
+                        return tensor::ExtractSliceOp::create(
+                            builder, loc, valueToTile, sliceParams.offsets,
                             sliceParams.sizes, sliceParams.strides);
                       })
-                      .Default([](ShapedType) -> Operation * {
-                        llvm_unreachable("Unexpected shaped type");
-                      });
+                      .DefaultUnreachable("Unexpected shaped type");
   return sliceOp;
 }
 
@@ -793,8 +786,8 @@ SmallVector<Value> insertSlicesBack(OpBuilder &builder, Location loc,
     // `tiledOperands`.
     Value outputTensor = operands[opOperand.getOperandNumber()];
     if (auto sliceOp = outputTensor.getDefiningOp<tensor::ExtractSliceOp>()) {
-      Value inserted = builder.create<tensor::InsertSliceOp>(
-          loc, sliceOp.getSource().getType(), results[resultIdx],
+      Value inserted = tensor::InsertSliceOp::create(
+          builder, loc, sliceOp.getSource().getType(), results[resultIdx],
           sliceOp.getSource(), sliceOp.getOffsets(), sliceOp.getSizes(),
           sliceOp.getStrides(), sliceOp.getStaticOffsets(),
           sliceOp.getStaticSizes(), sliceOp.getStaticStrides());

@@ -15,6 +15,7 @@ set(
     "fixed_point"
     "cfloat16"
     "cfloat128"
+    "ext_vector_type"
 )
 
 # Making sure ALL_COMPILER_FEATURES is sorted.
@@ -126,6 +127,8 @@ foreach(feature IN LISTS ALL_COMPILER_FEATURES)
       set(LIBC_COMPILER_HAS_BUILTIN_ROUND TRUE)
     elseif(${feature} STREQUAL "builtin_roundeven")
       set(LIBC_COMPILER_HAS_BUILTIN_ROUNDEVEN TRUE)
+    elseif(${feature} STREQUAL "ext_vector_type")
+      set(LIBC_COMPILER_HAS_EXT_VECTOR_TYPE TRUE)
     endif()
   endif()
 endforeach()

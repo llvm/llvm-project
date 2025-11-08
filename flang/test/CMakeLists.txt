@@ -65,21 +65,25 @@ set(FLANG_TEST_DEPENDS
   bbc
   FortranDecimal
 )
+
 if (NOT FLANG_STANDALONE_BUILD)
   list(APPEND FLANG_TEST_DEPENDS
     llvm-config
     FileCheck
     count
     not
+    llvm-bcanalyzer
     llvm-dis
+    llvm-objcopy
     llvm-objdump
     llvm-profdata
+    llvm-readelf
     llvm-readobj
     split-file
   )
 endif ()
 
-if (LLVM_BUILD_EXAMPLES AND LLVM_ENABLE_PLUGINS AND NOT WIN32 AND NOT FLANG_STANDALONE_BUILD)
+if (LLVM_BUILD_EXAMPLES AND LLVM_ENABLE_PLUGINS AND NOT (WIN32 OR CYGWIN) AND NOT FLANG_STANDALONE_BUILD)
   list(APPEND FLANG_TEST_DEPENDS Bye)
 endif()
 

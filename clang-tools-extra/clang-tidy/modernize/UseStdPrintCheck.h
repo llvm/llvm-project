@@ -1,4 +1,4 @@
-//===--- UseStdPrintCheck.h - clang-tidy-------------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_USESTDPRINTCHECK_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_USESTDPRINTCHECK_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_USESTDPRINTCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_USESTDPRINTCHECK_H
 
 #include "../ClangTidyCheck.h"
 #include "../utils/IncludeInserter.h"
@@ -16,7 +16,7 @@ namespace clang::tidy::modernize {
 /// Convert calls to printf-like functions to std::print and std::println
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/modernize/use-std-print.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/modernize/use-std-print.html
 class UseStdPrintCheck : public ClangTidyCheck {
 public:
   UseStdPrintCheck(StringRef Name, ClangTidyContext *Context);
@@ -48,4 +48,4 @@ private:
 
 } // namespace clang::tidy::modernize
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_USESTDPRINTCHECK_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_USESTDPRINTCHECK_H

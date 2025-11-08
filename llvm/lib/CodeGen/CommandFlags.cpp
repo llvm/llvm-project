@@ -64,11 +64,9 @@ CGOPT_EXP(uint64_t, LargeDataThreshold)
 CGOPT(ExceptionHandling, ExceptionModel)
 CGOPT_EXP(CodeGenFileType, FileType)
 CGOPT(FramePointerKind, FramePointerUsage)
-CGOPT(bool, EnableUnsafeFPMath)
 CGOPT(bool, EnableNoInfsFPMath)
 CGOPT(bool, EnableNoNaNsFPMath)
 CGOPT(bool, EnableNoSignedZerosFPMath)
-CGOPT(bool, EnableApproxFuncFPMath)
 CGOPT(bool, EnableNoTrappingFPMath)
 CGOPT(bool, EnableAIXExtendedAltivecABI)
 CGOPT(DenormalMode::DenormalModeKind, DenormalFPMath)
@@ -101,6 +99,7 @@ CGOPT(EABI, EABIVersion)
 CGOPT(DebuggerKind, DebuggerTuningOpt)
 CGOPT(bool, EnableStackSizeSection)
 CGOPT(bool, EnableAddrsig)
+CGOPT(bool, EnableCallGraphSection)
 CGOPT(bool, EmitCallSiteInfo)
 CGOPT(bool, EnableMachineFunctionSplitter)
 CGOPT(bool, EnableStaticDataPartitioning)
@@ -219,12 +218,6 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
                      "Enable frame pointer elimination")));
   CGBINDOPT(FramePointerUsage);
 
-  static cl::opt<bool> EnableUnsafeFPMath(
-      "enable-unsafe-fp-math",
-      cl::desc("Enable optimizations that may decrease FP precision"),
-      cl::init(false));
-  CGBINDOPT(EnableUnsafeFPMath);
-
   static cl::opt<bool> EnableNoInfsFPMath(
       "enable-no-infs-fp-math",
       cl::desc("Enable FP math optimizations that assume no +-Infs"),
@@ -243,12 +236,6 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
                "the sign of 0 is insignificant"),
       cl::init(false));
   CGBINDOPT(EnableNoSignedZerosFPMath);
-
-  static cl::opt<bool> EnableApproxFuncFPMath(
-      "enable-approx-func-fp-math",
-      cl::desc("Enable FP math optimizations that assume approx func"),
-      cl::init(false));
-  CGBINDOPT(EnableApproxFuncFPMath);
 
   static cl::opt<bool> EnableNoTrappingFPMath(
       "enable-no-trapping-fp-math",
@@ -461,6 +448,11 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
       cl::init(false));
   CGBINDOPT(EnableAddrsig);
 
+  static cl::opt<bool> EnableCallGraphSection(
+      "call-graph-section", cl::desc("Emit a call graph section"),
+      cl::init(false));
+  CGBINDOPT(EnableCallGraphSection);
+
   static cl::opt<bool> EmitCallSiteInfo(
       "emit-call-site-info",
       cl::desc(
@@ -553,11 +545,9 @@ TargetOptions
 codegen::InitTargetOptionsFromCodeGenFlags(const Triple &TheTriple) {
   TargetOptions Options;
   Options.AllowFPOpFusion = getFuseFPOps();
-  Options.UnsafeFPMath = getEnableUnsafeFPMath();
   Options.NoInfsFPMath = getEnableNoInfsFPMath();
   Options.NoNaNsFPMath = getEnableNoNaNsFPMath();
   Options.NoSignedZerosFPMath = getEnableNoSignedZerosFPMath();
-  Options.ApproxFuncFPMath = getEnableApproxFuncFPMath();
   Options.NoTrappingFPMath = getEnableNoTrappingFPMath();
 
   DenormalMode::DenormalModeKind DenormKind = getDenormalFPMath();
@@ -595,6 +585,7 @@ codegen::InitTargetOptionsFromCodeGenFlags(const Triple &TheTriple) {
   Options.EnableMachineFunctionSplitter = getEnableMachineFunctionSplitter();
   Options.EnableStaticDataPartitioning = getEnableStaticDataPartitioning();
   Options.EmitAddrsig = getEnableAddrsig();
+  Options.EmitCallGraphSection = getEnableCallGraphSection();
   Options.EmitCallSiteInfo = getEmitCallSiteInfo();
   Options.EnableDebugEntryValues = getEnableDebugEntryValues();
   Options.ForceDwarfFrameSection = getForceDwarfFrameSection();
@@ -707,11 +698,9 @@ void codegen::setFunctionAttributes(StringRef CPU, StringRef Features,
   if (getStackRealign())
     NewAttrs.addAttribute("stackrealign");
 
-  HANDLE_BOOL_ATTR(EnableUnsafeFPMathView, "unsafe-fp-math");
   HANDLE_BOOL_ATTR(EnableNoInfsFPMathView, "no-infs-fp-math");
   HANDLE_BOOL_ATTR(EnableNoNaNsFPMathView, "no-nans-fp-math");
   HANDLE_BOOL_ATTR(EnableNoSignedZerosFPMathView, "no-signed-zeros-fp-math");
-  HANDLE_BOOL_ATTR(EnableApproxFuncFPMathView, "approx-func-fp-math");
 
   if (DenormalFPMathView->getNumOccurrences() > 0 &&
       !F.hasFnAttribute("denormal-fp-math")) {

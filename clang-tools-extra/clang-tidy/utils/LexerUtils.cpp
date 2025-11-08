@@ -1,4 +1,4 @@
-//===--- LexerUtils.cpp - clang-tidy---------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -42,7 +42,7 @@ SourceLocation findPreviousTokenStart(SourceLocation Start,
   if (Start.isInvalid() || Start.isMacroID())
     return {};
 
-  SourceLocation BeforeStart = Start.getLocWithOffset(-1);
+  const SourceLocation BeforeStart = Start.getLocWithOffset(-1);
   if (BeforeStart.isInvalid() || BeforeStart.isMacroID())
     return {};
 
@@ -57,7 +57,7 @@ SourceLocation findPreviousTokenKind(SourceLocation Start,
     return {};
 
   while (true) {
-    SourceLocation L = findPreviousTokenStart(Start, SM, LangOpts);
+    const SourceLocation L = findPreviousTokenStart(Start, SM, LangOpts);
     if (L.isInvalid() || L.isMacroID())
       return {};
 
@@ -123,8 +123,9 @@ std::optional<Token> getQualifyingToken(tok::TokenKind TK,
   assert((TK == tok::kw_const || TK == tok::kw_volatile ||
           TK == tok::kw_restrict) &&
          "TK is not a qualifier keyword");
-  std::pair<FileID, unsigned> LocInfo = SM.getDecomposedLoc(Range.getBegin());
-  StringRef File = SM.getBufferData(LocInfo.first);
+  const std::pair<FileID, unsigned> LocInfo =
+      SM.getDecomposedLoc(Range.getBegin());
+  const StringRef File = SM.getBufferData(LocInfo.first);
   Lexer RawLexer(SM.getLocForStartOfFile(LocInfo.first), Context.getLangOpts(),
                  File.begin(), File.data() + LocInfo.second, File.end());
   std::optional<Token> LastMatchBeforeTemplate;

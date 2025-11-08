@@ -83,7 +83,15 @@ namespace llvm {
 
     /// Mark this value as unused.
     void markUnused() { def = SlotIndex(); }
+
+    LLVM_ABI void print(raw_ostream &OS) const;
+    LLVM_ABI void dump() const;
   };
+
+  inline raw_ostream &operator<<(raw_ostream &OS, const VNInfo &VNI) {
+    VNI.print(OS);
+    return OS;
+  }
 
   /// Result of a LiveRange query. This class hides the implementation details
   /// of live ranges, and it should be used as the primary interface for

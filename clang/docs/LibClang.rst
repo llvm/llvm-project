@@ -38,6 +38,7 @@ Code example
 
 .. code-block:: cpp
 
+  // main.cpp
   #include <clang-c/Index.h>
   #include <iostream>
 
@@ -56,6 +57,22 @@ Code example
     }
     CXCursor cursor = clang_getTranslationUnitCursor(unit); //Obtain a cursor at the root of the translation unit
   }
+
+.. code-block:: cmake
+
+  # CMakeLists.txt
+  cmake_minimum_required(VERSION 3.20)
+  project(my_clang_tool VERSION 0.1.0)
+
+  # This will find the default system installation of Clang; if you want to
+  # use a different build of clang, pass -DClang_DIR=/foobar/lib/cmake/clang
+  # to the CMake configure command, where /foobar is the build directory where
+  # you built Clang.
+  find_package(Clang CONFIG REQUIRED)
+
+  add_executable(my_clang_tool main.cpp)
+  target_include_directories(my_clang_tool PRIVATE ${CLANG_INCLUDE_DIRS})
+  target_link_libraries(my_clang_tool PRIVATE libclang)
 
 Visiting elements of an AST
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -283,6 +300,7 @@ Complete example code
 
 .. code-block:: cpp
 
+  // main.cpp
   #include <clang-c/Index.h>
   #include <iostream>
 
@@ -356,6 +374,21 @@ Complete example code
     );
   }
 
+.. code-block:: cmake
+
+  # CMakeLists.txt
+  cmake_minimum_required(VERSION 3.20)
+  project(my_clang_tool VERSION 0.1.0)
+
+  # This will find the default system installation of Clang; if you want to
+  # use a different build of clang, pass -DClang_DIR=/foobar/lib/cmake/clang
+  # to the CMake configure command, where /foobar is the build directory where
+  # you built Clang.
+  find_package(Clang CONFIG REQUIRED)
+
+  add_executable(my_clang_tool main.cpp)
+  target_include_directories(my_clang_tool PRIVATE ${CLANG_INCLUDE_DIRS})
+  target_link_libraries(my_clang_tool PRIVATE libclang)
 
 .. _Index.h: https://github.com/llvm/llvm-project/blob/main/clang/include/clang-c/Index.h
 
@@ -404,3 +437,9 @@ following situations are explicitly unsupported:
   compatible across library versions.
 * For the same reason as above, serializing objects from one version of the
   library and deserializing with a different version is also not supported.
+
+Note: because libclang is a wrapper around the compiler frontend, it is not a
+`security-sensitive component`_ of the LLVM Project. Consider using a sandbox
+or some other mitigation approach if processing untrusted input.
+
+.. _security-sensitive component: https://llvm.org/docs/Security.html#what-is-considered-a-security-issue

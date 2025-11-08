@@ -48,6 +48,8 @@ using namespace llvm;
 STATISTIC(NumRemovedSExtW, "Number of removed sign-extensions");
 STATISTIC(NumTransformedToWInstrs,
           "Number of instructions transformed to W-ops");
+STATISTIC(NumTransformedToNonWInstrs,
+          "Number of instructions transformed to non-W-ops");
 
 static cl::opt<bool> DisableSExtWRemoval("riscv-disable-sextw-removal",
                                          cl::desc("Disable removal of sext.w"),
@@ -67,10 +69,9 @@ public:
   bool runOnMachineFunction(MachineFunction &MF) override;
   bool removeSExtWInstrs(MachineFunction &MF, const RISCVInstrInfo &TII,
                          const RISCVSubtarget &ST, MachineRegisterInfo &MRI);
-  bool stripWSuffixes(MachineFunction &MF, const RISCVInstrInfo &TII,
-                      const RISCVSubtarget &ST, MachineRegisterInfo &MRI);
-  bool appendWSuffixes(MachineFunction &MF, const RISCVInstrInfo &TII,
-                       const RISCVSubtarget &ST, MachineRegisterInfo &MRI);
+  bool canonicalizeWSuffixes(MachineFunction &MF, const RISCVInstrInfo &TII,
+                             const RISCVSubtarget &ST,
+                             MachineRegisterInfo &MRI);
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
@@ -171,6 +172,7 @@ static bool hasAllNBitUsers(const MachineInstr &OrigMI,
       case RISCV::CTZW:
       case RISCV::CPOPW:
       case RISCV::SLLI_UW:
+      case RISCV::ABSW:
       case RISCV::FMV_W_X:
       case RISCV::FCVT_H_W:
       case RISCV::FCVT_H_W_INX:
@@ -355,6 +357,14 @@ static bool hasAllNBitUsers(const MachineInstr &OrigMI,
           return false;
         Worklist.emplace_back(UserMI, Bits);
         break;
+      case RISCV::TH_EXT:
+      case RISCV::TH_EXTU:
+        unsigned Msb = UserMI->getOperand(2).getImm();
+        unsigned Lsb = UserMI->getOperand(3).getImm();
+        // Behavior of Msb < Lsb is not well documented.
+        if (Msb >= Lsb && Bits > Msb)
+          break;
+        return false;
       }
     }
   }
@@ -407,6 +417,16 @@ static bool isSignExtendingOpW(const MachineInstr &MI, unsigned OpNo) {
     int64_t Log2SEW = MI.getOperand(2).getImm();
     assert(Log2SEW >= 3 && Log2SEW <= 6 && "Unexpected Log2SEW");
     return Log2SEW <= 5;
+  }
+  case RISCV::TH_EXT: {
+    unsigned Msb = MI.getOperand(2).getImm();
+    unsigned Lsb = MI.getOperand(3).getImm();
+    return Msb >= Lsb && (Msb - Lsb + 1) <= 32;
+  }
+  case RISCV::TH_EXTU: {
+    unsigned Msb = MI.getOperand(2).getImm();
+    unsigned Lsb = MI.getOperand(3).getImm();
+    return Msb >= Lsb && (Msb - Lsb + 1) < 32;
   }
   }
 
@@ -518,9 +538,11 @@ static bool isSignExtendedW(Register SrcReg, const RISCVSubtarget &ST,
     case RISCV::ANDI:
     case RISCV::ORI:
     case RISCV::XORI:
+    case RISCV::SRAI:
       // |Remainder| is always <= |Dividend|. If D is 32-bit, then so is R.
       // DIV doesn't work because of the edge case 0xf..f 8000 0000 / (long)-1
       // Logical operations use a sign extended 12-bit immediate.
+      // Arithmetic shift right can only increase the number of sign bits.
       if (!AddRegToWorkList(MI->getOperand(1).getReg()))
         return false;
 
@@ -555,6 +577,9 @@ static bool isSignExtendedW(Register SrcReg, const RISCVSubtarget &ST,
     case RISCV::PseudoCCAND:
     case RISCV::PseudoCCOR:
     case RISCV::PseudoCCXOR:
+    case RISCV::PseudoCCANDN:
+    case RISCV::PseudoCCORN:
+    case RISCV::PseudoCCXNOR:
     case RISCV::PHI: {
       // If all incoming values are sign-extended, the output of AND, OR, XOR,
       // MIN, MAX, or PHI is also sign-extended.
@@ -577,6 +602,9 @@ static bool isSignExtendedW(Register SrcReg, const RISCVSubtarget &ST,
       case RISCV::PseudoCCAND:
       case RISCV::PseudoCCOR:
       case RISCV::PseudoCCXOR:
+      case RISCV::PseudoCCANDN:
+      case RISCV::PseudoCCORN:
+      case RISCV::PseudoCCXNOR:
         B = 4;
         E = 7;
         break;
@@ -721,45 +749,39 @@ bool RISCVOptWInstrs::removeSExtWInstrs(MachineFunction &MF,
   return MadeChange;
 }
 
-bool RISCVOptWInstrs::stripWSuffixes(MachineFunction &MF,
-                                     const RISCVInstrInfo &TII,
-                                     const RISCVSubtarget &ST,
-                                     MachineRegisterInfo &MRI) {
+// Strips or adds W suffixes to eligible instructions depending on the
+// subtarget preferences.
+bool RISCVOptWInstrs::canonicalizeWSuffixes(MachineFunction &MF,
+                                            const RISCVInstrInfo &TII,
+                                            const RISCVSubtarget &ST,
+                                            MachineRegisterInfo &MRI) {
+  bool ShouldStripW = !(DisableStripWSuffix || ST.preferWInst());
+  bool ShouldPreferW = ST.preferWInst();
   bool MadeChange = false;
+
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : MBB) {
-      unsigned Opc;
-      switch (MI.getOpcode()) {
+      std::optional<unsigned> WOpc;
+      std::optional<unsigned> NonWOpc;
+      unsigned OrigOpc = MI.getOpcode();
+      switch (OrigOpc) {
       default:
         continue;
-      case RISCV::ADDW:  Opc = RISCV::ADD;  break;
-      case RISCV::ADDIW: Opc = RISCV::ADDI; break;
-      case RISCV::MULW:  Opc = RISCV::MUL;  break;
-      case RISCV::SLLIW: Opc = RISCV::SLLI; break;
-      }
-
-      if (hasAllWUsers(MI, ST, MRI)) {
-        MI.setDesc(TII.get(Opc));
-        MadeChange = true;
-      }
-    }
-  }
-
-  return MadeChange;
-}
-
-bool RISCVOptWInstrs::appendWSuffixes(MachineFunction &MF,
-                                      const RISCVInstrInfo &TII,
-                                      const RISCVSubtarget &ST,
-                                      MachineRegisterInfo &MRI) {
-  bool MadeChange = false;
-  for (MachineBasicBlock &MBB : MF) {
-    for (MachineInstr &MI : MBB) {
-      unsigned WOpc;
-      // TODO: Add more?
-      switch (MI.getOpcode()) {
-      default:
-        continue;
+      case RISCV::ADDW:
+        NonWOpc = RISCV::ADD;
+        break;
+      case RISCV::ADDIW:
+        NonWOpc = RISCV::ADDI;
+        break;
+      case RISCV::MULW:
+        NonWOpc = RISCV::MUL;
+        break;
+      case RISCV::SLLIW:
+        NonWOpc = RISCV::SLLI;
+        break;
+      case RISCV::SUBW:
+        NonWOpc = RISCV::SUB;
+        break;
       case RISCV::ADD:
         WOpc = RISCV::ADDW;
         break;
@@ -773,7 +795,7 @@ bool RISCVOptWInstrs::appendWSuffixes(MachineFunction &MF,
         WOpc = RISCV::MULW;
         break;
       case RISCV::SLLI:
-        // SLLIW reads the lowest 5 bits, while SLLI reads lowest 6 bits
+        // SLLIW reads the lowest 5 bits, while SLLI reads lowest 6 bits.
         if (MI.getOperand(2).getImm() >= 32)
           continue;
         WOpc = RISCV::SLLIW;
@@ -784,19 +806,30 @@ bool RISCVOptWInstrs::appendWSuffixes(MachineFunction &MF,
         break;
       }
 
-      if (hasAllWUsers(MI, ST, MRI)) {
+      if (ShouldStripW && NonWOpc.has_value() && hasAllWUsers(MI, ST, MRI)) {
         LLVM_DEBUG(dbgs() << "Replacing " << MI);
-        MI.setDesc(TII.get(WOpc));
+        MI.setDesc(TII.get(NonWOpc.value()));
+        LLVM_DEBUG(dbgs() << "     with " << MI);
+        ++NumTransformedToNonWInstrs;
+        MadeChange = true;
+        continue;
+      }
+      // LWU is always converted to LW when possible as 1) LW is compressible
+      // and 2) it helps minimise differences vs RV32.
+      if ((ShouldPreferW || OrigOpc == RISCV::LWU) && WOpc.has_value() &&
+          hasAllWUsers(MI, ST, MRI)) {
+        LLVM_DEBUG(dbgs() << "Replacing " << MI);
+        MI.setDesc(TII.get(WOpc.value()));
         MI.clearFlag(MachineInstr::MIFlag::NoSWrap);
         MI.clearFlag(MachineInstr::MIFlag::NoUWrap);
         MI.clearFlag(MachineInstr::MIFlag::IsExact);
         LLVM_DEBUG(dbgs() << "     with " << MI);
         ++NumTransformedToWInstrs;
         MadeChange = true;
+        continue;
       }
     }
   }
-
   return MadeChange;
 }
 
@@ -813,12 +846,6 @@ bool RISCVOptWInstrs::runOnMachineFunction(MachineFunction &MF) {
 
   bool MadeChange = false;
   MadeChange |= removeSExtWInstrs(MF, TII, ST, MRI);
-
-  if (!(DisableStripWSuffix || ST.preferWInst()))
-    MadeChange |= stripWSuffixes(MF, TII, ST, MRI);
-
-  if (ST.preferWInst())
-    MadeChange |= appendWSuffixes(MF, TII, ST, MRI);
-
+  MadeChange |= canonicalizeWSuffixes(MF, TII, ST, MRI);
   return MadeChange;
 }

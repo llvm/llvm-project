@@ -85,11 +85,18 @@ void tools::MinGW::Linker::AddLibGCC(const ArgList &Args,
 
   CmdArgs.push_back("-lmoldname");
   CmdArgs.push_back("-lmingwex");
-  for (auto Lib : Args.getAllArgValues(options::OPT_l))
+  for (auto Lib : Args.getAllArgValues(options::OPT_l)) {
     if (StringRef(Lib).starts_with("msvcr") ||
         StringRef(Lib).starts_with("ucrt") ||
-        StringRef(Lib).starts_with("crtdll"))
+        StringRef(Lib).starts_with("crtdll")) {
+      std::string CRTLib = (llvm::Twine("-l") + Lib).str();
+      // Respect the user's chosen crt variant, but still provide it
+      // again as the last linker argument, because some of the libraries
+      // we added above may depend on it.
+      CmdArgs.push_back(Args.MakeArgStringRef(CRTLib));
       return;
+    }
+  }
   CmdArgs.push_back("-lmsvcrt");
 }
 
@@ -548,7 +555,7 @@ toolchains::MinGW::MinGW(const Driver &D, const llvm::Triple &Triple,
     getFilePaths().push_back(Base + "lib");
 
   NativeLLVMSupport =
-      Args.getLastArgValue(options::OPT_fuse_ld_EQ, CLANG_DEFAULT_LINKER)
+      Args.getLastArgValue(options::OPT_fuse_ld_EQ, D.getPreferredLinker())
           .equals_insensitive("lld");
 }
 

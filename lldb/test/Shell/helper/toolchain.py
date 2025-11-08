@@ -156,6 +156,16 @@ def use_lldb_substitutions(config):
             extra_args=["platform"],
             unresolved="ignore",
         ),
+        ToolSubst(
+            "%lldb-rpc-gen",
+            command=FindTool("lldb-rpc-gen"),
+            # We need the LLDB build directory root to pass into the tool, not the test build root.
+            extra_args=[
+                "-p " + config.lldb_build_directory + "/..",
+                '--extra-arg="-resource-dir=' + config.clang_resource_dir + '"',
+            ],
+            unresolved="ignore",
+        ),
         "lldb-test",
         "lldb-dap",
         ToolSubst(

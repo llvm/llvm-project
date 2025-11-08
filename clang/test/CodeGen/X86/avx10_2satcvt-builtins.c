@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 %s -flax-vector-conversions=none -ffreestanding -triple=x86_64 -target-feature +avx10.2-256 \
+// RUN: %clang_cc1 %s -flax-vector-conversions=none -ffreestanding -triple=x86_64 -target-feature +avx10.2 \
 // RUN: -Wno-invalid-feature-combination -emit-llvm -o - -Wall -Werror | FileCheck %s
-// RUN: %clang_cc1 %s -flax-vector-conversions=none -ffreestanding -triple=i386 -target-feature +avx10.2-256 \
+// RUN: %clang_cc1 %s -flax-vector-conversions=none -ffreestanding -triple=i386 -target-feature +avx10.2 \
 // RUN: -Wno-invalid-feature-combination -emit-llvm -o - -Wall -Werror | FileCheck %s
 
 #include <immintrin.h>

@@ -92,11 +92,13 @@ struct SPIRVInlinerInterface : public DialectInlinerInterface {
   /// as necessary.
   void handleTerminator(Operation *op, Block *newDest) const final {
     if (auto returnOp = dyn_cast<spirv::ReturnOp>(op)) {
-      OpBuilder(op).create<spirv::BranchOp>(op->getLoc(), newDest);
+      auto builder = OpBuilder(op);
+      spirv::BranchOp::create(builder, op->getLoc(), newDest);
       op->erase();
     } else if (auto retValOp = dyn_cast<spirv::ReturnValueOp>(op)) {
-      OpBuilder(op).create<spirv::BranchOp>(retValOp->getLoc(), newDest,
-                                            retValOp->getOperands());
+      auto builder = OpBuilder(op);
+      spirv::BranchOp::create(builder, retValOp->getLoc(), newDest,
+                              retValOp->getOperands());
       op->erase();
     }
   }
@@ -249,10 +251,18 @@ static Type parseAndVerifySampledImageType(SPIRVDialect const &dialect,
   if (parser.parseType(type))
     return Type();
 
-  if (!llvm::isa<ImageType>(type)) {
+  auto imageType = dyn_cast<ImageType>(type);
+  if (!imageType) {
     parser.emitError(typeLoc,
                      "sampled image must be composed using image type, got ")
         << type;
+    return Type();
+  }
+
+  if (llvm::is_contained({Dim::SubpassData, Dim::Buffer}, imageType.getDim())) {
+    parser.emitError(
+        typeLoc, "sampled image Dim must not be SubpassData or Buffer, got ")
+        << stringifyDim(imageType.getDim());
     return Type();
   }
 
@@ -665,19 +675,17 @@ static ParseResult parseStructMemberDecorations(
 
     // Parse member decoration value if it exists.
     if (succeeded(parser.parseOptionalEqual())) {
-      auto memberDecorationValue =
-          parseAndVerifyInteger<uint32_t>(dialect, parser);
-
-      if (!memberDecorationValue)
+      Attribute memberDecorationValue;
+      if (failed(parser.parseAttribute(memberDecorationValue)))
         return failure();
 
       memberDecorationInfo.emplace_back(
-          static_cast<uint32_t>(memberTypes.size() - 1), 1,
-          memberDecoration.value(), memberDecorationValue.value());
+          static_cast<uint32_t>(memberTypes.size() - 1),
+          memberDecoration.value(), memberDecorationValue);
     } else {
       memberDecorationInfo.emplace_back(
-          static_cast<uint32_t>(memberTypes.size() - 1), 0,
-          memberDecoration.value(), 0);
+          static_cast<uint32_t>(memberTypes.size() - 1),
+          memberDecoration.value(), UnitAttr::get(dialect.getContext()));
     }
     return success();
   };
@@ -693,7 +701,9 @@ static ParseResult parseStructMemberDecorations(
 //             `!spirv.struct<` (id `,`)?
 //                          `(`
 //                            (spirv-type (`[` struct-member-decoration `]`)?)*
-//                          `)>`
+//                          `)`
+//                            (`,` struct-decoration)?
+//                          `>`
 static Type parseStructType(SPIRVDialect const &dialect,
                             DialectAsmParser &parser) {
   // TODO: This function is quite lengthy. Break it down into smaller chunks.
@@ -767,17 +777,48 @@ static Type parseStructType(SPIRVDialect const &dialect,
     return Type();
   }
 
-  if (failed(parser.parseRParen()) || failed(parser.parseGreater()))
+  if (failed(parser.parseRParen()))
+    return Type();
+
+  SmallVector<StructType::StructDecorationInfo, 1> structDecorationInfo;
+
+  auto parseStructDecoration = [&]() {
+    std::optional<spirv::Decoration> decoration =
+        parseAndVerify<spirv::Decoration>(dialect, parser);
+    if (!decoration)
+      return failure();
+
+    // Parse decoration value if it exists.
+    if (succeeded(parser.parseOptionalEqual())) {
+      Attribute decorationValue;
+      if (failed(parser.parseAttribute(decorationValue)))
+        return failure();
+
+      structDecorationInfo.emplace_back(decoration.value(), decorationValue);
+    } else {
+      structDecorationInfo.emplace_back(decoration.value(),
+                                        UnitAttr::get(dialect.getContext()));
+    }
+    return success();
+  };
+
+  while (succeeded(parser.parseOptionalComma()))
+    if (failed(parseStructDecoration()))
+      return Type();
+
+  if (failed(parser.parseGreater()))
     return Type();
 
   if (!identifier.empty()) {
     if (failed(idStructTy.trySetBody(memberTypes, offsetInfo,
-                                     memberDecorationInfo)))
+                                     memberDecorationInfo,
+                                     structDecorationInfo)))
       return Type();
     return idStructTy;
   }
 
-  return StructType::get(memberTypes, offsetInfo, memberDecorationInfo);
+  return StructType::get(memberTypes, offsetInfo, memberDecorationInfo,
+                         structDecorationInfo);
 }
 
 // spirv-type ::= array-type
@@ -882,8 +923,9 @@ static void print(StructType type, DialectAsmPrinter &os) {
       }
       auto eachFn = [&os](spirv::StructType::MemberDecorationInfo decoration) {
         os << stringifyDecoration(decoration.decoration);
-        if (decoration.hasValue) {
-          os << "=" << decoration.decorationValue;
+        if (decoration.hasValue()) {
+          os << "=";
+          os.printAttributeWithoutType(decoration.decorationValue);
         }
       };
       llvm::interleaveComma(decorations, os, eachFn);
@@ -892,7 +934,23 @@ static void print(StructType type, DialectAsmPrinter &os) {
   };
   llvm::interleaveComma(llvm::seq<unsigned>(0, type.getNumElements()), os,
                         printMember);
-  os << ")>";
+  os << ")";
+
+  SmallVector<spirv::StructType::StructDecorationInfo, 1> decorations;
+  type.getStructDecorations(decorations);
+  if (!decorations.empty()) {
+    os << ", ";
+    auto eachFn = [&os](spirv::StructType::StructDecorationInfo decoration) {
+      os << stringifyDecoration(decoration.decoration);
+      if (decoration.hasValue()) {
+        os << "=";
+        os.printAttributeWithoutType(decoration.decorationValue);
+      }
+    };
+    llvm::interleaveComma(decorations, os, eachFn);
+  }
+
+  os << ">";
 }
 
 static void print(CooperativeMatrixType type, DialectAsmPrinter &os) {
@@ -929,7 +987,7 @@ void SPIRVDialect::printType(Type type, DialectAsmPrinter &os) const {
       .Case<ArrayType, CooperativeMatrixType, PointerType, RuntimeArrayType,
             ImageType, SampledImageType, StructType, MatrixType, TensorArmType>(
           [&](auto type) { print(type, os); })
-      .Default([](Type) { llvm_unreachable("unhandled SPIR-V type"); });
+      .DefaultUnreachable("Unhandled SPIR-V type");
 }
 
 //===----------------------------------------------------------------------===//
@@ -940,12 +998,12 @@ Operation *SPIRVDialect::materializeConstant(OpBuilder &builder,
                                              Attribute value, Type type,
                                              Location loc) {
   if (auto poison = dyn_cast<ub::PoisonAttr>(value))
-    return builder.create<ub::PoisonOp>(loc, type, poison);
+    return ub::PoisonOp::create(builder, loc, type, poison);
 
   if (!spirv::ConstantOp::isBuildableWith(type))
     return nullptr;
 
-  return builder.create<spirv::ConstantOp>(loc, type, value);
+  return spirv::ConstantOp::create(builder, loc, type, value);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1016,7 +1074,12 @@ LogicalResult SPIRVDialect::verifyRegionArgAttribute(Operation *op,
 }
 
 LogicalResult SPIRVDialect::verifyRegionResultAttribute(
-    Operation *op, unsigned /*regionIndex*/, unsigned /*resultIndex*/,
+    Operation *op, unsigned /*regionIndex*/, unsigned resultIndex,
     NamedAttribute attribute) {
-  return op->emitError("cannot attach SPIR-V attributes to region result");
+  if (auto graphOp = dyn_cast<spirv::GraphARMOp>(op))
+    return verifyRegionAttribute(
+        op->getLoc(), graphOp.getResultTypes()[resultIndex], attribute);
+  return op->emitError(
+      "cannot attach SPIR-V attributes to region result which is "
+      "not part of a spirv::GraphARMOp type");
 }

@@ -261,8 +261,7 @@ public:
   static ObjectFileCreateMemoryInstance
   GetObjectFileCreateMemoryCallbackForPluginName(llvm::StringRef name);
 
-  static Status SaveCore(const lldb::ProcessSP &process_sp,
-                         lldb_private::SaveCoreOptions &core_options);
+  static Status SaveCore(lldb_private::SaveCoreOptions &core_options);
 
   static std::vector<llvm::StringRef> GetSaveCorePluginNames();
 
@@ -356,6 +355,24 @@ public:
   static lldb::ScriptInterpreterSP
   GetScriptInterpreterForLanguage(lldb::ScriptLanguage script_lang,
                                   Debugger &debugger);
+
+  // SyntheticFrameProvider
+  static bool
+  RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
+                 SyntheticFrameProviderCreateInstance create_native_callback,
+                 ScriptedFrameProviderCreateInstance create_scripted_callback);
+
+  static bool
+  UnregisterPlugin(SyntheticFrameProviderCreateInstance create_callback);
+
+  static bool
+  UnregisterPlugin(ScriptedFrameProviderCreateInstance create_callback);
+
+  static SyntheticFrameProviderCreateInstance
+  GetSyntheticFrameProviderCreateCallbackForPluginName(llvm::StringRef name);
+
+  static ScriptedFrameProviderCreateInstance
+  GetScriptedFrameProviderCreateCallbackAtIndex(uint32_t idx);
 
   // StructuredDataPlugin
 

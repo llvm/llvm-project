@@ -1,0 +1,12 @@
+# REQUIRES: aarch64-registered-target
+# RUN: rm -rf %t.json
+# RUN: llvm-mc -triple=aarch64 -disassemble -o /dev/null %s -runs=1000 -time-trace -time-trace-file=%t.json
+# RUN: FileCheck --input-file %t.json %s
+
+# Note: Test input taken from llvm/test/MC/Disassembler/AArch64/udf.txt
+
+# CHECK: "name":"Total getInstruction"
+# CHECK: "args":{"count":3,"avg ms":{{.*}}}
+[0x00,0x00,0x00,0x00]
+[0x01,0x02,0x00,0x00]
+[0xff,0xff,0x00,0x00]

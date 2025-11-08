@@ -28,8 +28,7 @@ class RISCVELFStreamer : public MCELFStreamer {
 public:
   RISCVELFStreamer(MCContext &C, std::unique_ptr<MCAsmBackend> MAB,
                    std::unique_ptr<MCObjectWriter> MOW,
-                   std::unique_ptr<MCCodeEmitter> MCE)
-      : MCELFStreamer(C, std::move(MAB), std::move(MOW), std::move(MCE)) {}
+                   std::unique_ptr<MCCodeEmitter> MCE);
 
   void changeSection(MCSection *Section, uint32_t Subsection) override;
   void emitInstruction(const MCInst &Inst, const MCSubtargetInfo &STI) override;

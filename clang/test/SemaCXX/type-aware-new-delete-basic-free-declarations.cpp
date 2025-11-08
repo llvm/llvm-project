@@ -75,7 +75,7 @@ template <typename T, typename U> void *operator new(std::type_identity<T>, U);
 template <typename T, typename U> void operator delete(std::type_identity<T>, U, size_t, std::align_val_t);
 // expected-error@-1 {{type aware 'operator delete' cannot take a dependent type as its 2nd parameter; use 'void *' instead}}
 template <typename T, typename U> void operator delete(std::type_identity<T>, void *, U, std::align_val_t);
-// expected-error@-1 {{type aware 'operator delete' cannot take a dependent type as its 3rd parameter; use 'unsigned long' instead}}
+// expected-error@-1 {{type aware 'operator delete' cannot take a dependent type as its 3rd parameter; use '__size_t' (aka 'unsigned long') instead}}
 template <typename T, typename U> void operator delete(std::type_identity<T>, void *, size_t, U);
 // expected-error@-1 {{type aware 'operator delete' cannot take a dependent type as its 4th parameter; use 'std::align_val_t' instead}}
 template <typename U> void *operator new(std::type_identity<int>, typename S<U>::size_ty, std::align_val_t);

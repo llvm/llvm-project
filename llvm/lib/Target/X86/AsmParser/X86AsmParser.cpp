@@ -15,10 +15,12 @@
 #include "MCTargetDesc/X86TargetStreamer.h"
 #include "TargetInfo/X86TargetInfo.h"
 #include "X86Operand.h"
+#include "X86RegisterInfo.h"
 #include "llvm-c/Visibility.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/MC/MCContext.h"
@@ -29,6 +31,7 @@
 #include "llvm/MC/MCParser/MCAsmParser.h"
 #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
+#include "llvm/MC/MCRegister.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCStreamer.h"
@@ -40,6 +43,7 @@
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
+#include <cstdint>
 #include <memory>
 
 using namespace llvm;
@@ -1042,8 +1046,8 @@ private:
       }
       PrevState = CurrState;
     }
-    void onRParen() {
-      PrevState = State;
+    bool onRParen(StringRef &ErrMsg) {
+      IntelExprState CurrState = State;
       switch (State) {
       default:
         State = IES_ERROR;
@@ -1054,9 +1058,27 @@ private:
       case IES_RBRAC:
       case IES_RPAREN:
         State = IES_RPAREN;
+        // In the case of a multiply, onRegister has already set IndexReg
+        // directly, with appropriate scale.
+        // Otherwise if we just saw a register it has only been stored in
+        // TmpReg, so we need to store it into the state machine.
+        if (CurrState == IES_REGISTER && PrevState != IES_MULTIPLY) {
+          // If we already have a BaseReg, then assume this is the IndexReg with
+          // no explicit scale.
+          if (!BaseReg) {
+            BaseReg = TmpReg;
+          } else {
+            if (IndexReg)
+              return regsUseUpError(ErrMsg);
+            IndexReg = TmpReg;
+            Scale = 0;
+          }
+        }
         IC.pushOperator(IC_RPAREN);
         break;
       }
+      PrevState = CurrState;
+      return false;
     }
     bool onOffset(const MCExpr *Val, SMLoc OffsetLoc, StringRef ID,
                   const InlineAsmIdentifierInfo &IDInfo,
@@ -1099,7 +1121,7 @@ private:
     void setTypeInfo(AsmTypeInfo Type) { CurType = Type; }
   };
 
-  bool Error(SMLoc L, const Twine &Msg, SMRange Range = std::nullopt,
+  bool Error(SMLoc L, const Twine &Msg, SMRange Range = {},
              bool MatchingInlineAsm = false) {
     MCAsmParser &Parser = getParser();
     if (MatchingInlineAsm) {
@@ -1154,7 +1176,7 @@ private:
 
   X86::CondCode ParseConditionCode(StringRef CCode);
 
-  bool ParseIntelMemoryOperandSize(unsigned &Size);
+  bool ParseIntelMemoryOperandSize(unsigned &Size, StringRef *SizeStr);
   bool CreateMemForMSInlineAsm(MCRegister SegReg, const MCExpr *Disp,
                                MCRegister BaseReg, MCRegister IndexReg,
                                unsigned Scale, bool NonAbsMem, SMLoc Start,
@@ -1225,7 +1247,7 @@ private:
   /// return false if no parsing errors occurred, true otherwise.
   bool HandleAVX512Operand(OperandVector &Operands);
 
-  bool ParseZ(std::unique_ptr<X86Operand> &Z, const SMLoc &StartLoc);
+  bool ParseZ(std::unique_ptr<X86Operand> &Z, SMLoc StartLoc);
 
   bool is64BitMode() const {
     // FIXME: Can tablegen auto-generate this?
@@ -2172,7 +2194,11 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
       }
       break;
     case AsmToken::LParen:  SM.onLParen(); break;
-    case AsmToken::RParen:  SM.onRParen(); break;
+    case AsmToken::RParen:
+      if (SM.onRParen(ErrMsg)) {
+        return Error(Tok.getLoc(), ErrMsg);
+      }
+      break;
     }
     if (SM.hadError())
       return Error(Tok.getLoc(), "unknown token in expression");
@@ -2444,10 +2470,10 @@ bool X86AsmParser::ParseIntelOffsetOperator(const MCExpr *&Val, StringRef &ID,
 // Report back its kind, or IOK_INVALID if does not evaluated as a known one
 unsigned X86AsmParser::IdentifyIntelInlineAsmOperator(StringRef Name) {
   return StringSwitch<unsigned>(Name)
-    .Cases("TYPE","type",IOK_TYPE)
-    .Cases("SIZE","size",IOK_SIZE)
-    .Cases("LENGTH","length",IOK_LENGTH)
-    .Default(IOK_INVALID);
+      .Cases({"TYPE", "type"}, IOK_TYPE)
+      .Cases({"SIZE", "size"}, IOK_SIZE)
+      .Cases({"LENGTH", "length"}, IOK_LENGTH)
+      .Default(IOK_INVALID);
 }
 
 /// Parse the 'LENGTH', 'TYPE' and 'SIZE' operators.  The LENGTH operator
@@ -2490,8 +2516,8 @@ unsigned X86AsmParser::ParseIntelInlineAsmOperator(unsigned OpKind) {
 unsigned X86AsmParser::IdentifyMasmOperator(StringRef Name) {
   return StringSwitch<unsigned>(Name.lower())
       .Case("type", MOK_TYPE)
-      .Cases("size", "sizeof", MOK_SIZEOF)
-      .Cases("length", "lengthof", MOK_LENGTHOF)
+      .Cases({"size", "sizeof"}, MOK_SIZEOF)
+      .Cases({"length", "lengthof"}, MOK_LENGTHOF)
       .Default(MOK_INVALID);
 }
 
@@ -2552,30 +2578,46 @@ bool X86AsmParser::ParseMasmOperator(unsigned OpKind, int64_t &Val) {
   return false;
 }
 
-bool X86AsmParser::ParseIntelMemoryOperandSize(unsigned &Size) {
+bool X86AsmParser::ParseIntelMemoryOperandSize(unsigned &Size,
+                                               StringRef *SizeStr) {
   Size = StringSwitch<unsigned>(getTok().getString())
-    .Cases("BYTE", "byte", 8)
-    .Cases("WORD", "word", 16)
-    .Cases("DWORD", "dword", 32)
-    .Cases("FLOAT", "float", 32)
-    .Cases("LONG", "long", 32)
-    .Cases("FWORD", "fword", 48)
-    .Cases("DOUBLE", "double", 64)
-    .Cases("QWORD", "qword", 64)
-    .Cases("MMWORD","mmword", 64)
-    .Cases("XWORD", "xword", 80)
-    .Cases("TBYTE", "tbyte", 80)
-    .Cases("XMMWORD", "xmmword", 128)
-    .Cases("YMMWORD", "ymmword", 256)
-    .Cases("ZMMWORD", "zmmword", 512)
-    .Default(0);
+             .Cases({"BYTE", "byte"}, 8)
+             .Cases({"WORD", "word"}, 16)
+             .Cases({"DWORD", "dword"}, 32)
+             .Cases({"FLOAT", "float"}, 32)
+             .Cases({"LONG", "long"}, 32)
+             .Cases({"FWORD", "fword"}, 48)
+             .Cases({"DOUBLE", "double"}, 64)
+             .Cases({"QWORD", "qword"}, 64)
+             .Cases({"MMWORD", "mmword"}, 64)
+             .Cases({"XWORD", "xword"}, 80)
+             .Cases({"TBYTE", "tbyte"}, 80)
+             .Cases({"XMMWORD", "xmmword"}, 128)
+             .Cases({"YMMWORD", "ymmword"}, 256)
+             .Cases({"ZMMWORD", "zmmword"}, 512)
+             .Default(0);
   if (Size) {
+    if (SizeStr)
+      *SizeStr = getTok().getString();
     const AsmToken &Tok = Lex(); // Eat operand size (e.g., byte, word).
     if (!(Tok.getString() == "PTR" || Tok.getString() == "ptr"))
       return Error(Tok.getLoc(), "Expected 'PTR' or 'ptr' token!");
     Lex(); // Eat ptr.
   }
   return false;
+}
+
+uint16_t RegSizeInBits(const MCRegisterInfo &MRI, MCRegister RegNo) {
+  if (X86MCRegisterClasses[X86::GR8RegClassID].contains(RegNo))
+    return 8;
+  if (X86MCRegisterClasses[X86::GR16RegClassID].contains(RegNo))
+    return 16;
+  if (X86MCRegisterClasses[X86::GR32RegClassID].contains(RegNo))
+    return 32;
+  if (X86MCRegisterClasses[X86::GR64RegClassID].contains(RegNo))
+    return 64;
+  // Unknown register size
+  return 0;
 }
 
 bool X86AsmParser::parseIntelOperand(OperandVector &Operands, StringRef Name) {
@@ -2585,7 +2627,8 @@ bool X86AsmParser::parseIntelOperand(OperandVector &Operands, StringRef Name) {
 
   // Parse optional Size directive.
   unsigned Size;
-  if (ParseIntelMemoryOperandSize(Size))
+  StringRef SizeStr;
+  if (ParseIntelMemoryOperandSize(Size, &SizeStr))
     return true;
   bool PtrInOperand = bool(Size);
 
@@ -2602,9 +2645,29 @@ bool X86AsmParser::parseIntelOperand(OperandVector &Operands, StringRef Name) {
       return Error(Start, "rip can only be used as a base register");
     // A Register followed by ':' is considered a segment override
     if (Tok.isNot(AsmToken::Colon)) {
-      if (PtrInOperand)
-        return Error(Start, "expected memory operand after 'ptr', "
-                            "found register operand instead");
+      if (PtrInOperand) {
+        if (!Parser.isParsingMasm())
+          return Error(Start, "expected memory operand after 'ptr', "
+                              "found register operand instead");
+
+        // If we are parsing MASM, we are allowed to cast registers to their own
+        // sizes, but not to other types.
+        uint16_t RegSize =
+            RegSizeInBits(*getContext().getRegisterInfo(), RegNo);
+        if (RegSize == 0)
+          return Error(
+              Start,
+              "cannot cast register '" +
+                  StringRef(getContext().getRegisterInfo()->getName(RegNo)) +
+                  "'; its size is not easily defined.");
+        if (RegSize != Size)
+          return Error(
+              Start,
+              std::to_string(RegSize) + "-bit register '" +
+                  StringRef(getContext().getRegisterInfo()->getName(RegNo)) +
+                  "' cannot be used as a " + std::to_string(Size) + "-bit " +
+                  SizeStr.upper());
+      }
       Operands.push_back(X86Operand::CreateReg(RegNo, Start, End));
       return false;
     }
@@ -2823,29 +2886,28 @@ bool X86AsmParser::parseATTOperand(OperandVector &Operands) {
 // otherwise the EFLAGS Condition Code enumerator.
 X86::CondCode X86AsmParser::ParseConditionCode(StringRef CC) {
   return StringSwitch<X86::CondCode>(CC)
-      .Case("o", X86::COND_O)          // Overflow
-      .Case("no", X86::COND_NO)        // No Overflow
-      .Cases("b", "nae", X86::COND_B)  // Below/Neither Above nor Equal
-      .Cases("ae", "nb", X86::COND_AE) // Above or Equal/Not Below
-      .Cases("e", "z", X86::COND_E)    // Equal/Zero
-      .Cases("ne", "nz", X86::COND_NE) // Not Equal/Not Zero
-      .Cases("be", "na", X86::COND_BE) // Below or Equal/Not Above
-      .Cases("a", "nbe", X86::COND_A)  // Above/Neither Below nor Equal
-      .Case("s", X86::COND_S)          // Sign
-      .Case("ns", X86::COND_NS)        // No Sign
-      .Cases("p", "pe", X86::COND_P)   // Parity/Parity Even
-      .Cases("np", "po", X86::COND_NP) // No Parity/Parity Odd
-      .Cases("l", "nge", X86::COND_L)  // Less/Neither Greater nor Equal
-      .Cases("ge", "nl", X86::COND_GE) // Greater or Equal/Not Less
-      .Cases("le", "ng", X86::COND_LE) // Less or Equal/Not Greater
-      .Cases("g", "nle", X86::COND_G)  // Greater/Neither Less nor Equal
+      .Case("o", X86::COND_O)            // Overflow
+      .Case("no", X86::COND_NO)          // No Overflow
+      .Cases({"b", "nae"}, X86::COND_B)  // Below/Neither Above nor Equal
+      .Cases({"ae", "nb"}, X86::COND_AE) // Above or Equal/Not Below
+      .Cases({"e", "z"}, X86::COND_E)    // Equal/Zero
+      .Cases({"ne", "nz"}, X86::COND_NE) // Not Equal/Not Zero
+      .Cases({"be", "na"}, X86::COND_BE) // Below or Equal/Not Above
+      .Cases({"a", "nbe"}, X86::COND_A)  // Above/Neither Below nor Equal
+      .Case("s", X86::COND_S)            // Sign
+      .Case("ns", X86::COND_NS)          // No Sign
+      .Cases({"p", "pe"}, X86::COND_P)   // Parity/Parity Even
+      .Cases({"np", "po"}, X86::COND_NP) // No Parity/Parity Odd
+      .Cases({"l", "nge"}, X86::COND_L)  // Less/Neither Greater nor Equal
+      .Cases({"ge", "nl"}, X86::COND_GE) // Greater or Equal/Not Less
+      .Cases({"le", "ng"}, X86::COND_LE) // Less or Equal/Not Greater
+      .Cases({"g", "nle"}, X86::COND_G)  // Greater/Neither Less nor Equal
       .Default(X86::COND_INVALID);
 }
 
 // true on failure, false otherwise
 // If no {z} mark was found - Parser doesn't advance
-bool X86AsmParser::ParseZ(std::unique_ptr<X86Operand> &Z,
-                          const SMLoc &StartLoc) {
+bool X86AsmParser::ParseZ(std::unique_ptr<X86Operand> &Z, SMLoc StartLoc) {
   MCAsmParser &Parser = getParser();
   // Assuming we are just pass the '{' mark, quering the next token
   // Searched for {z}, but none was found. Return false, as no parsing error was
@@ -3452,15 +3514,16 @@ bool X86AsmParser::parseInstruction(ParseInstructionInfo &Info, StringRef Name,
   // xacquire <insn>      ; xacquire must be accompanied by 'lock'
   bool IsPrefix =
       StringSwitch<bool>(Name)
-          .Cases("cs", "ds", "es", "fs", "gs", "ss", true)
-          .Cases("rex64", "data32", "data16", "addr32", "addr16", true)
-          .Cases("xacquire", "xrelease", true)
-          .Cases("acquire", "release", isParsingIntelSyntax())
+          .Cases({"cs", "ds", "es", "fs", "gs", "ss"}, true)
+          .Cases({"rex64", "data32", "data16", "addr32", "addr16"}, true)
+          .Cases({"xacquire", "xrelease"}, true)
+          .Cases({"acquire", "release"}, isParsingIntelSyntax())
           .Default(false);
 
   auto isLockRepeatNtPrefix = [](StringRef N) {
     return StringSwitch<bool>(N)
-        .Cases("lock", "rep", "repe", "repz", "repne", "repnz", "notrack", true)
+        .Cases({"lock", "rep", "repe", "repz", "repne", "repnz", "notrack"},
+               true)
         .Default(false);
   };
 
@@ -3470,10 +3533,10 @@ bool X86AsmParser::parseInstruction(ParseInstructionInfo &Info, StringRef Name,
   while (isLockRepeatNtPrefix(Name.lower())) {
     unsigned Prefix =
         StringSwitch<unsigned>(Name)
-            .Cases("lock", "lock", X86::IP_HAS_LOCK)
-            .Cases("rep", "repe", "repz", X86::IP_HAS_REPEAT)
-            .Cases("repne", "repnz", X86::IP_HAS_REPEAT_NE)
-            .Cases("notrack", "notrack", X86::IP_HAS_NOTRACK)
+            .Case("lock", X86::IP_HAS_LOCK)
+            .Cases({"rep", "repe", "repz"}, X86::IP_HAS_REPEAT)
+            .Cases({"repne", "repnz"}, X86::IP_HAS_REPEAT_NE)
+            .Case("notrack", X86::IP_HAS_NOTRACK)
             .Default(X86::IP_NO_PREFIX); // Invalid prefix (impossible)
     Flags |= Prefix;
     if (getLexer().is(AsmToken::EndOfStatement)) {
@@ -3955,9 +4018,14 @@ bool X86AsmParser::validateInstruction(MCInst &Inst, const OperandVector &Ops) {
       return Error(Ops[0]->getStartLoc(), "all tmm registers must be distinct");
   }
 
-  // Check that we aren't mixing AH/BH/CH/DH with REX prefix. We only need to
-  // check this with the legacy encoding, VEX/EVEX/XOP don't use REX.
-  if ((TSFlags & X86II::EncodingMask) == 0) {
+  // High 8-bit regs (AH/BH/CH/DH) are incompatible with encodings that imply
+  // extended prefixes:
+  //  * Legacy path that would emit a REX (e.g. uses r8..r15 or sil/dil/bpl/spl)
+  //  * EVEX
+  //  * REX2
+  // VEX/XOP don't use REX; they are excluded from the legacy check.
+  const unsigned Enc = TSFlags & X86II::EncodingMask;
+  if (Enc != X86II::VEX && Enc != X86II::XOP) {
     MCRegister HReg;
     bool UsesRex = TSFlags & X86II::REX_W;
     unsigned NumOps = Inst.getNumOperands();
@@ -3973,11 +4041,13 @@ bool X86AsmParser::validateInstruction(MCInst &Inst, const OperandVector &Ops) {
         UsesRex = true;
     }
 
-    if (UsesRex && HReg) {
+    if (HReg &&
+        (Enc == X86II::EVEX || ForcedOpcodePrefix == OpcodePrefix_REX2 ||
+         ForcedOpcodePrefix == OpcodePrefix_REX || UsesRex)) {
       StringRef RegName = X86IntelInstPrinter::getRegisterName(HReg);
       return Error(Ops[0]->getStartLoc(),
-                   "can't encode '" + RegName + "' in an instruction requiring "
-                   "REX prefix");
+                   "can't encode '" + RegName.str() +
+                       "' in an instruction requiring EVEX/REX2/REX prefix");
     }
   }
 
@@ -4252,7 +4322,7 @@ bool X86AsmParser::matchAndEmitATTInstruction(
     SMLoc IDLoc, unsigned &Opcode, MCInst &Inst, OperandVector &Operands,
     MCStreamer &Out, uint64_t &ErrorInfo, bool MatchingInlineAsm) {
   X86Operand &Op = static_cast<X86Operand &>(*Operands[0]);
-  SMRange EmptyRange = std::nullopt;
+  SMRange EmptyRange;
   // In 16-bit mode, if data32 is specified, temporarily switch to 32-bit mode
   // when matching the instruction.
   if (ForcedDataPrefix == X86::Is32Bit)
@@ -4478,7 +4548,7 @@ bool X86AsmParser::matchAndEmitIntelInstruction(
     SMLoc IDLoc, unsigned &Opcode, MCInst &Inst, OperandVector &Operands,
     MCStreamer &Out, uint64_t &ErrorInfo, bool MatchingInlineAsm) {
   X86Operand &Op = static_cast<X86Operand &>(*Operands[0]);
-  SMRange EmptyRange = std::nullopt;
+  SMRange EmptyRange;
   // Find one unsized memory operand, if present.
   X86Operand *UnsizedMemOp = nullptr;
   for (const auto &Op : Operands) {
@@ -4781,7 +4851,7 @@ bool X86AsmParser::parseDirectiveEven(SMLoc L) {
     getStreamer().initSections(false, getSTI());
     Section = getStreamer().getCurrentSectionOnly();
   }
-  if (Section->useCodeAlign())
+  if (getContext().getAsmInfo()->useCodeAlign(*Section))
     getStreamer().emitCodeAlignment(Align(2), &getSTI(), 0);
   else
     getStreamer().emitValueToAlignment(Align(2), 0, 1, 0);

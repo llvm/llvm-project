@@ -287,6 +287,13 @@ math_mpfr_test(
 )
 
 math_mpfr_test(
+    name = "hypotf16",
+    hdrs = [
+        "HypotTest.h",
+    ],
+)
+
+math_mpfr_test(
     name = "llrint",
     hdrs = ["RoundToIntegerTest.h"],
 )

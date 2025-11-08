@@ -155,12 +155,9 @@ void StackInfoBuilder::visit(OptimizationRemarkEmitter &ORE,
     return;
   }
   if (auto *II = dyn_cast<LifetimeIntrinsic>(&Inst)) {
-    AllocaInst *AI = findAllocaForValue(II->getArgOperand(1));
-    if (!AI) {
-      Info.UnrecognizedLifetimes.push_back(&Inst);
-      return;
-    }
-    if (getAllocaInterestingness(*AI) != AllocaInterestingness::kInteresting)
+    AllocaInst *AI = dyn_cast<AllocaInst>(II->getArgOperand(0));
+    if (!AI ||
+        getAllocaInterestingness(*AI) != AllocaInterestingness::kInteresting)
       return;
     if (II->getIntrinsicID() == Intrinsic::lifetime_start)
       Info.AllocasToInstrument[AI].LifetimeStart.push_back(II);
@@ -232,13 +229,7 @@ void alignAndPadAlloca(memtag::AllocaInfo &Info, llvm::Align Alignment) {
   NewAI->setSwiftError(Info.AI->isSwiftError());
   NewAI->copyMetadata(*Info.AI);
 
-  Value *NewPtr = NewAI;
-
-  // TODO: Remove when typed pointers dropped
-  if (Info.AI->getType() != NewAI->getType())
-    NewPtr = new BitCastInst(NewAI, Info.AI->getType(), "", Info.AI->getIterator());
-
-  Info.AI->replaceAllUsesWith(NewPtr);
+  Info.AI->replaceAllUsesWith(NewAI);
   Info.AI->eraseFromParent();
   Info.AI = NewAI;
 }

@@ -9,12 +9,13 @@
 #include "mlir/Analysis/DataFlowFramework.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/Operation.h"
+#include "mlir/IR/SymbolTable.h"
 #include "mlir/IR/Value.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/Config/abi-breaking.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/Debug.h"
+#include "llvm/Support/DebugLog.h"
 #include "llvm/Support/raw_ostream.h"
 
 #define DEBUG_TYPE "dataflow"
@@ -44,9 +45,8 @@ void AnalysisState::addDependency(ProgramPoint *dependent,
   (void)inserted;
   DATAFLOW_DEBUG({
     if (inserted) {
-      llvm::dbgs() << "Creating dependency between " << debugName << " of "
-                   << anchor << "\nand " << debugName << " on " << dependent
-                   << "\n";
+      LDBG() << "Creating dependency between " << debugName << " of " << anchor
+             << "\nand " << debugName << " on " << *dependent;
     }
   });
 }
@@ -63,11 +63,12 @@ void ProgramPoint::print(raw_ostream &os) const {
     return;
   }
   if (!isBlockStart()) {
-    os << "<after operation>:";
-    return getPrevOp()->print(os, OpPrintingFlags().skipRegions());
+    os << "<after operation>:"
+       << OpWithFlags(getPrevOp(), OpPrintingFlags().skipRegions());
+    return;
   }
-  os << "<before operation>:";
-  return getNextOp()->print(os, OpPrintingFlags().skipRegions());
+  os << "<before operation>:"
+     << OpWithFlags(getNextOp(), OpPrintingFlags().skipRegions());
 }
 
 //===----------------------------------------------------------------------===//
@@ -79,8 +80,8 @@ void LatticeAnchor::print(raw_ostream &os) const {
     os << "<NULL POINT>";
     return;
   }
-  if (auto *LatticeAnchor = llvm::dyn_cast<GenericLatticeAnchor *>(*this))
-    return LatticeAnchor->print(os);
+  if (auto *latticeAnchor = llvm::dyn_cast<GenericLatticeAnchor *>(*this))
+    return latticeAnchor->print(os);
   if (auto value = llvm::dyn_cast<Value>(*this)) {
     return value.print(os, OpPrintingFlags().skipRegions());
   }
@@ -89,8 +90,8 @@ void LatticeAnchor::print(raw_ostream &os) const {
 }
 
 Location LatticeAnchor::getLoc() const {
-  if (auto *LatticeAnchor = llvm::dyn_cast<GenericLatticeAnchor *>(*this))
-    return LatticeAnchor->getLoc();
+  if (auto *latticeAnchor = llvm::dyn_cast<GenericLatticeAnchor *>(*this))
+    return latticeAnchor->getLoc();
   if (auto value = llvm::dyn_cast<Value>(*this))
     return value.getLoc();
 
@@ -109,6 +110,12 @@ LogicalResult DataFlowSolver::initializeAndRun(Operation *top) {
   isRunning = true;
   auto guard = llvm::make_scope_exit([&]() { isRunning = false; });
 
+  bool isInterprocedural = config.isInterprocedural();
+  auto restoreInterprocedural = llvm::make_scope_exit(
+      [&]() { config.setInterprocedural(isInterprocedural); });
+  if (isInterprocedural && !top->hasTrait<OpTrait::SymbolTable>())
+    config.setInterprocedural(false);
+
   // Initialize equivalent lattice anchors.
   for (DataFlowAnalysis &analysis : llvm::make_pointee_range(childAnalyses)) {
     analysis.initializeEquivalentLatticeAnchor(top);
@@ -116,8 +123,7 @@ LogicalResult DataFlowSolver::initializeAndRun(Operation *top) {
 
   // Initialize the analyses.
   for (DataFlowAnalysis &analysis : llvm::make_pointee_range(childAnalyses)) {
-    DATAFLOW_DEBUG(llvm::dbgs()
-                   << "Priming analysis: " << analysis.debugName << "\n");
+    DATAFLOW_DEBUG(LDBG() << "Priming analysis: " << analysis.debugName);
     if (failed(analysis.initialize(top)))
       return failure();
   }
@@ -129,8 +135,8 @@ LogicalResult DataFlowSolver::initializeAndRun(Operation *top) {
     auto [point, analysis] = worklist.front();
     worklist.pop();
 
-    DATAFLOW_DEBUG(llvm::dbgs() << "Invoking '" << analysis->debugName
-                                << "' on: " << point << "\n");
+    DATAFLOW_DEBUG(LDBG() << "Invoking '" << analysis->debugName
+                          << "' on: " << *point);
     if (failed(analysis->visit(point)))
       return failure();
   }
@@ -143,9 +149,9 @@ void DataFlowSolver::propagateIfChanged(AnalysisState *state,
   assert(isRunning &&
          "DataFlowSolver is not running, should not use propagateIfChanged");
   if (changed == ChangeResult::Change) {
-    DATAFLOW_DEBUG(llvm::dbgs() << "Propagating update to " << state->debugName
-                                << " of " << state->anchor << "\n"
-                                << "Value: " << *state << "\n");
+    DATAFLOW_DEBUG(LDBG() << "Propagating update to " << state->debugName
+                          << " of " << state->anchor << "\n"
+                          << "Value: " << *state);
     state->onUpdate(this);
   }
 }

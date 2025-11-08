@@ -74,9 +74,6 @@ T* addressof(T& arg);
 template<typename T>
 T&& forward(T& arg);
 
-template<typename T>
-T&& move( T&& t );
-
 template<typename ToType, typename FromType>
 ToType bit_cast(FromType from);
 

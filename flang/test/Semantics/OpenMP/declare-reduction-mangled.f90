@@ -17,7 +17,7 @@ contains
 end module mymod
 
 program omp_examples
-!CHECK-LABEL: MainProgram scope: omp_examples
+!CHECK-LABEL: MainProgram scope: OMP_EXAMPLES
   use mymod
   implicit none
   integer, parameter :: n = 100

@@ -19,11 +19,11 @@ void f0(S0 *p) {
   use0(*p);
 }
 // CHECK-C:   declare void @use0(<vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>)
-// CHECK-CXX: declare void @use0(ptr noundef)
+// CHECK-CXX: declare void @use0(ptr dead_on_return noundef)
 
 #ifdef __cplusplus
 
-// PST containing an empty union with `[[no_unique_address]]`` - pass in registers.
+// PST containing an empty union with `[[no_unique_address]]` - pass in registers.
 typedef struct {
    fvec32 x[4];
    [[no_unique_address]]

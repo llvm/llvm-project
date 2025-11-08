@@ -51,7 +51,6 @@
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCSymbol.h"
-#include "llvm/MC/MCSymbolELF.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
@@ -166,7 +165,7 @@ static void emitDirectiveRelocJalr(const MachineInstr &MI,
         OutStreamer.emitRelocDirective(
             *OffsetExpr,
             Subtarget.inMicroMipsMode() ? "R_MICROMIPS_JALR" : "R_MIPS_JALR",
-            CaleeExpr, SMLoc(), *TM.getMCSubtargetInfo());
+            CaleeExpr);
         OutStreamer.emitLabel(OffsetLabel);
         return;
       }
@@ -737,14 +736,18 @@ void MipsAsmPrinter::emitStartOfAsmFile(Module &M) {
     if (FS.empty() && M.size() && F->hasFnAttribute("target-features"))
       FS = F->getFnAttribute("target-features").getValueAsString();
 
+    std::string strFS = FS.str();
+    if (M.size() && F->getFnAttribute("use-soft-float").getValueAsBool())
+      strFS += strFS.empty() ? "+soft-float" : ",+soft-float";
+
     // Compute MIPS architecture attributes based on the default subtarget
     // that we'd have constructed.
     // FIXME: For ifunc related functions we could iterate over and look
     // for a feature string that doesn't match the default one.
     StringRef CPU = MIPS_MC::selectMipsCPU(TT, TM.getTargetCPU());
     const MipsTargetMachine &MTM = static_cast<const MipsTargetMachine &>(TM);
-    const MipsSubtarget STI(TT, CPU, FS, MTM.isLittleEndian(), MTM,
-                            std::nullopt);
+    const MipsSubtarget STI(TT, CPU, StringRef(strFS), MTM.isLittleEndian(),
+                            MTM, std::nullopt);
 
     bool IsABICalls = STI.isABICalls();
     const MipsABIInfo &ABI = MTM.getABI();
@@ -964,8 +967,7 @@ void MipsAsmPrinter::EmitFPCallStub(
   // freed) and since we're at the global level we can use the default
   // constructed subtarget.
   std::unique_ptr<MCSubtargetInfo> STI(TM.getTarget().createMCSubtargetInfo(
-      TM.getTargetTriple().str(), TM.getTargetCPU(),
-      TM.getTargetFeatureString()));
+      TM.getTargetTriple(), TM.getTargetCPU(), TM.getTargetFeatureString()));
 
   //
   // .global xxxx
@@ -1048,8 +1050,7 @@ void MipsAsmPrinter::EmitFPCallStub(
   //  __call_stub_fp_xxxx:
   //
   std::string x = "__call_stub_fp_" + std::string(Symbol);
-  MCSymbolELF *Stub =
-      cast<MCSymbolELF>(OutContext.getOrCreateSymbol(StringRef(x)));
+  MCSymbol *Stub = OutContext.getOrCreateSymbol(StringRef(x));
   TS.emitDirectiveEnt(*Stub);
   MCSymbol *MType =
       OutContext.getOrCreateSymbol("__call_stub_fp_" + Twine(Symbol));

@@ -20,6 +20,7 @@
 #include "WinException.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -40,6 +41,7 @@
 #include "llvm/CodeGen/GCMetadataPrinter.h"
 #include "llvm/CodeGen/LazyMachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineBlockHashInfo.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineDominators.h"
@@ -78,6 +80,8 @@
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/IR/LLVMRemarkStreamer.h"
 #include "llvm/IR/Mangler.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
@@ -116,6 +120,7 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/VCSRevision.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetMachine.h"
@@ -180,6 +185,8 @@ static cl::opt<bool> PrintLatency(
     cl::desc("Print instruction latencies as verbose asm comments"), cl::Hidden,
     cl::init(false));
 
+extern cl::opt<bool> EmitBBHash;
+
 STATISTIC(EmittedInsts, "Number of machine instrs printed");
 
 char AsmPrinter::ID = 0;
@@ -202,6 +209,17 @@ public:
   void allUsesReplacedWith(Value *V2) override;
 };
 } // namespace
+
+namespace callgraph {
+LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
+enum Flags : uint8_t {
+  None = 0,
+  IsIndirectTarget = 1u << 0,
+  HasDirectCallees = 1u << 1,
+  HasIndirectCallees = 1u << 2,
+  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue*/ HasIndirectCallees)
+};
+} // namespace callgraph
 
 class llvm::AddrLabelMap {
   MCContext &Context;
@@ -459,9 +477,12 @@ void AsmPrinter::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<GCModuleInfo>();
   AU.addRequired<LazyMachineBlockFrequencyInfoPass>();
   AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
+  if (EmitBBHash)
+    AU.addRequired<MachineBlockHashInfo>();
 }
 
 bool AsmPrinter::doInitialization(Module &M) {
+  VFS = vfs::getRealFileSystem();
   auto *MMIWP = getAnalysisIfAvailable<MachineModuleInfoWrapperPass>();
   MMI = MMIWP ? &MMIWP->getMMI() : nullptr;
   HasSplitStack = false;
@@ -471,11 +492,9 @@ bool AsmPrinter::doInitialization(Module &M) {
   AddrLabelSymbols = nullptr;
 
   // Initialize TargetLoweringObjectFile.
-  const_cast<TargetLoweringObjectFile&>(getObjFileLowering())
-    .Initialize(OutContext, TM);
+  TM.getObjFileLowering()->Initialize(OutContext, TM);
 
-  const_cast<TargetLoweringObjectFile &>(getObjFileLowering())
-      .getModuleMetadata(M);
+  TM.getObjFileLowering()->getModuleMetadata(M);
 
   // On AIX, we delay emitting any section information until
   // after emitting the .file pseudo-op. This allows additional
@@ -809,7 +828,7 @@ void AsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
 
   // If we have a bss global going to a section that supports the
   // zerofill directive, do so here.
-  if (GVKind.isBSS() && MAI->isMachO() && TheSection->isVirtualSection()) {
+  if (GVKind.isBSS() && MAI->isMachO() && TheSection->isBssSection()) {
     if (Size == 0)
       Size = 1; // zerofill of 0 bytes is undefined.
     emitLinkage(GV, GVSym);
@@ -1420,19 +1439,18 @@ getBBAddrMapFeature(const MachineFunction &MF, int NumMBBSectionRanges,
         "BB entries info is required for BBFreq and BrProb "
         "features");
   }
-  return {FuncEntryCountEnabled,
-          BBFreqEnabled,
-          BrProbEnabled,
+  return {FuncEntryCountEnabled, BBFreqEnabled, BrProbEnabled,
           MF.hasBBSections() && NumMBBSectionRanges > 1,
-          static_cast<bool>(BBAddrMapSkipEmitBBEntries),
-          HasCalls};
+          // Use static_cast to avoid breakage of tests on windows.
+          static_cast<bool>(BBAddrMapSkipEmitBBEntries), HasCalls,
+          static_cast<bool>(EmitBBHash), false};
 }
 
 void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
   MCSection *BBAddrMapSection =
       getObjFileLowering().getBBAddrMapSection(*MF.getSection());
   assert(BBAddrMapSection && ".llvm_bb_addr_map section is not initialized.");
-  bool HasCalls = !CurrentFnCallsiteSymbols.empty();
+  bool HasCalls = !CurrentFnCallsiteEndSymbols.empty();
 
   const MCSymbol *FunctionSymbol = getFunctionBegin();
 
@@ -1484,6 +1502,9 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
       PrevMBBEndSymbol = MBBSymbol;
     }
 
+    auto MBHI =
+        Features.BBHash ? &getAnalysis<MachineBlockHashInfo>() : nullptr;
+
     if (!Features.OmitBBEntries) {
       OutStreamer->AddComment("BB id");
       // Emit the BB ID for this basic block.
@@ -1497,13 +1518,13 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
       emitLabelDifferenceAsULEB128(MBBSymbol, PrevMBBEndSymbol);
       const MCSymbol *CurrentLabel = MBBSymbol;
       if (HasCalls) {
-        auto CallsiteSymbols = CurrentFnCallsiteSymbols.lookup(&MBB);
+        auto CallsiteEndSymbols = CurrentFnCallsiteEndSymbols.lookup(&MBB);
         OutStreamer->AddComment("number of callsites");
-        OutStreamer->emitULEB128IntValue(CallsiteSymbols.size());
-        for (const MCSymbol *CallsiteSymbol : CallsiteSymbols) {
+        OutStreamer->emitULEB128IntValue(CallsiteEndSymbols.size());
+        for (const MCSymbol *CallsiteEndSymbol : CallsiteEndSymbols) {
           // Emit the callsite offset.
-          emitLabelDifferenceAsULEB128(CallsiteSymbol, CurrentLabel);
-          CurrentLabel = CallsiteSymbol;
+          emitLabelDifferenceAsULEB128(CallsiteEndSymbol, CurrentLabel);
+          CurrentLabel = CallsiteEndSymbol;
         }
       }
       // Emit the offset to the end of the block, which can be used to compute
@@ -1511,6 +1532,10 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
       emitLabelDifferenceAsULEB128(MBB.getEndSymbol(), CurrentLabel);
       // Emit the Metadata.
       OutStreamer->emitULEB128IntValue(getBBAddrMapMetadata(MBB));
+      // Emit the Hash.
+      if (MBHI) {
+        OutStreamer->emitInt64(MBHI->getMBBHash(MBB));
+      }
     }
     PrevMBBEndSymbol = MBB.getEndSymbol();
   }
@@ -1654,6 +1679,96 @@ void AsmPrinter::emitStackUsage(const MachineFunction &MF) {
     *StackUsageStream << "static\n";
 }
 
+/// Extracts a generalized numeric type identifier of a Function's type from
+/// type metadata. Returns null if metadata cannot be found.
+static ConstantInt *extractNumericCGTypeId(const Function &F) {
+  SmallVector<MDNode *, 2> Types;
+  F.getMetadata(LLVMContext::MD_type, Types);
+  for (const auto &Type : Types) {
+    if (Type->hasGeneralizedMDString()) {
+      MDString *MDGeneralizedTypeId = cast<MDString>(Type->getOperand(1));
+      uint64_t TypeIdVal = llvm::MD5Hash(MDGeneralizedTypeId->getString());
+      IntegerType *Int64Ty = Type::getInt64Ty(F.getContext());
+      return ConstantInt::get(Int64Ty, TypeIdVal);
+    }
+  }
+  return nullptr;
+}
+
+/// Emits .llvm.callgraph section.
+void AsmPrinter::emitCallGraphSection(const MachineFunction &MF,
+                                      FunctionCallGraphInfo &FuncCGInfo) {
+  if (!MF.getTarget().Options.EmitCallGraphSection)
+    return;
+
+  // Switch to the call graph section for the function
+  MCSection *FuncCGSection =
+      getObjFileLowering().getCallGraphSection(*getCurrentSection());
+  assert(FuncCGSection && "null callgraph section");
+  OutStreamer->pushSection();
+  OutStreamer->switchSection(FuncCGSection);
+
+  const Function &F = MF.getFunction();
+  // If this function has external linkage or has its address taken and
+  // it is not a callback, then anything could call it.
+  bool IsIndirectTarget =
+      !F.hasLocalLinkage() || F.hasAddressTaken(nullptr,
+                                                /*IgnoreCallbackUses=*/true,
+                                                /*IgnoreAssumeLikeCalls=*/true,
+                                                /*IgnoreLLVMUsed=*/false);
+
+  const auto &DirectCallees = FuncCGInfo.DirectCallees;
+  const auto &IndirectCalleeTypeIDs = FuncCGInfo.IndirectCalleeTypeIDs;
+
+  using namespace callgraph;
+  Flags CGFlags = Flags::None;
+  if (IsIndirectTarget)
+    CGFlags |= Flags::IsIndirectTarget;
+  if (DirectCallees.size() > 0)
+    CGFlags |= Flags::HasDirectCallees;
+  if (IndirectCalleeTypeIDs.size() > 0)
+    CGFlags |= Flags::HasIndirectCallees;
+
+  // Emit function's call graph information.
+  // 1) CallGraphSectionFormatVersion
+  // 2) Flags
+  //    a. LSB bit 0 is set to 1 if the function is a potential indirect
+  //       target.
+  //    b. LSB bit 1 is set to 1 if there are direct callees.
+  //    c. LSB bit 2 is set to 1 if there are indirect callees.
+  //    d. Rest of the 5 bits in Flags are reserved for any future use.
+  // 3) Function entry PC.
+  // 4) FunctionTypeID if the function is indirect target and its type id
+  //    is known, otherwise it is set to 0.
+  // 5) Number of unique direct callees, if at least one exists.
+  // 6) For each unique direct callee, the callee's PC.
+  // 7) Number of unique indirect target type IDs, if at least one exists.
+  // 8) Each unique indirect target type id.
+  OutStreamer->emitInt8(CallGraphSectionFormatVersion::V_0);
+  OutStreamer->emitInt8(static_cast<uint8_t>(CGFlags));
+  OutStreamer->emitSymbolValue(getSymbol(&F), TM.getProgramPointerSize());
+  const auto *TypeId = extractNumericCGTypeId(F);
+  if (IsIndirectTarget && TypeId)
+    OutStreamer->emitInt64(TypeId->getZExtValue());
+  else
+    OutStreamer->emitInt64(0);
+
+  if (DirectCallees.size() > 0) {
+    OutStreamer->emitULEB128IntValue(DirectCallees.size());
+    for (const auto &CalleeSymbol : DirectCallees)
+      OutStreamer->emitSymbolValue(CalleeSymbol, TM.getProgramPointerSize());
+    FuncCGInfo.DirectCallees.clear();
+  }
+  if (IndirectCalleeTypeIDs.size() > 0) {
+    OutStreamer->emitULEB128IntValue(IndirectCalleeTypeIDs.size());
+    for (const auto &CalleeTypeId : IndirectCalleeTypeIDs)
+      OutStreamer->emitInt64(CalleeTypeId);
+    FuncCGInfo.IndirectCalleeTypeIDs.clear();
+  }
+  // End of emitting call graph section contents.
+  OutStreamer->popSection();
+}
+
 void AsmPrinter::emitPCSectionsLabel(const MachineFunction &MF,
                                      const MDNode &MD) {
   MCSymbol *S = MF.getContext().createTempSymbol("pcsection");
@@ -1784,6 +1899,40 @@ static StringRef getMIMnemonic(const MachineInstr &MI, MCStreamer &Streamer) {
   return Name;
 }
 
+void AsmPrinter::handleCallsiteForCallgraph(
+    FunctionCallGraphInfo &FuncCGInfo,
+    const MachineFunction::CallSiteInfoMap &CallSitesInfoMap,
+    const MachineInstr &MI) {
+  assert(MI.isCall() && "This method is meant for call instructions only.");
+  const MachineOperand &CalleeOperand = MI.getOperand(0);
+  if (CalleeOperand.isGlobal() || CalleeOperand.isSymbol()) {
+    // Handle direct calls.
+    MCSymbol *CalleeSymbol = nullptr;
+    switch (CalleeOperand.getType()) {
+    case llvm::MachineOperand::MO_GlobalAddress:
+      CalleeSymbol = getSymbol(CalleeOperand.getGlobal());
+      break;
+    case llvm::MachineOperand::MO_ExternalSymbol:
+      CalleeSymbol = GetExternalSymbolSymbol(CalleeOperand.getSymbolName());
+      break;
+    default:
+      llvm_unreachable(
+          "Expected to only handle direct call instructions here.");
+    }
+    FuncCGInfo.DirectCallees.insert(CalleeSymbol);
+    return; // Early exit after handling the direct call instruction.
+  }
+  const auto &CallSiteInfo = CallSitesInfoMap.find(&MI);
+  if (CallSiteInfo == CallSitesInfoMap.end())
+    return;
+  // Handle indirect callsite info.
+  // Only indirect calls have type identifiers set.
+  for (ConstantInt *CalleeTypeId : CallSiteInfo->second.CalleeTypeIds) {
+    uint64_t CalleeTypeIdVal = CalleeTypeId->getZExtValue();
+    FuncCGInfo.IndirectCalleeTypeIDs.insert(CalleeTypeIdVal);
+  }
+}
+
 /// EmitFunctionBody - This method emits the body and trailer for a
 /// function.
 void AsmPrinter::emitFunctionBody() {
@@ -1830,6 +1979,8 @@ void AsmPrinter::emitFunctionBody() {
     MBBSectionRanges[MF->front().getSectionID()] =
         MBBSectionRange{CurrentFnBegin, nullptr};
 
+  FunctionCallGraphInfo FuncCGInfo;
+  const auto &CallSitesInfoMap = MF->getCallSitesInfo();
   for (auto &MBB : *MF) {
     // Print a label for the basic block.
     emitBasicBlockStart(MBB);
@@ -1840,8 +1991,6 @@ void AsmPrinter::emitFunctionBody() {
           !MI.isDebugInstr()) {
         HasAnyRealCode = true;
       }
-      if (MI.isCall() && MF->getTarget().Options.BBAddrMap)
-        OutStreamer->emitLabel(createCallsiteSymbol(MBB));
 
       // If there is a pre-instruction symbol, emit a label for it here.
       if (MCSymbol *S = MI.getPreInstrSymbol())
@@ -1868,6 +2017,7 @@ void AsmPrinter::emitFunctionBody() {
         OutStreamer->emitLabel(MI.getOperand(0).getMCSymbol());
         break;
       case TargetOpcode::EH_LABEL:
+        OutStreamer->AddComment("EH_LABEL");
         OutStreamer->emitLabel(MI.getOperand(0).getMCSymbol());
         // For AsynchEH, insert a Nop if followed by a trap inst
         //   Or the exception won't be caught.
@@ -1937,6 +2087,17 @@ void AsmPrinter::emitFunctionBody() {
         // This is only used to influence register allocation behavior, no
         // actual initialization is needed.
         break;
+      case TargetOpcode::RELOC_NONE: {
+        // Generate a temporary label for the current PC.
+        MCSymbol *Sym = OutContext.createTempSymbol("reloc_none");
+        OutStreamer->emitLabel(Sym);
+        const MCExpr *Dot = MCSymbolRefExpr::create(Sym, OutContext);
+        const MCExpr *Value = MCSymbolRefExpr::create(
+            OutContext.getOrCreateSymbol(MI.getOperand(0).getSymbolName()),
+            OutContext);
+        OutStreamer->emitRelocDirective(*Dot, "BFD_RELOC_NONE", Value, SMLoc());
+        break;
+      }
       default:
         emitInstruction(&MI);
 
@@ -1961,6 +2122,12 @@ void AsmPrinter::emitFunctionBody() {
         }
         break;
       }
+
+      if (MI.isCall() && MF->getTarget().Options.BBAddrMap)
+        OutStreamer->emitLabel(createCallsiteEndSymbol(MBB));
+
+      if (TM.Options.EmitCallGraphSection && MI.isCall())
+        handleCallsiteForCallgraph(FuncCGInfo, CallSitesInfoMap, MI);
 
       // If there is a post-instruction symbol, emit a label for it here.
       if (MCSymbol *S = MI.getPostInstrSymbol())
@@ -2140,6 +2307,9 @@ void AsmPrinter::emitFunctionBody() {
 
   // Emit section containing stack size metadata.
   emitStackSizeSection(*MF);
+
+  // Emit section containing call graph metadata.
+  emitCallGraphSection(*MF, FuncCGInfo);
 
   // Emit .su file containing function stack size information.
   emitStackUsage(*MF);
@@ -2399,6 +2569,8 @@ void AsmPrinter::emitGlobalIFunc(Module &M, const GlobalIFunc &GI) {
 void AsmPrinter::emitRemarksSection(remarks::RemarkStreamer &RS) {
   if (!RS.needsSection())
     return;
+  if (!RS.getFilename())
+    return;
 
   MCSection *RemarksSection =
       OutContext.getObjectFileInfo()->getRemarksSection();
@@ -2409,20 +2581,16 @@ void AsmPrinter::emitRemarksSection(remarks::RemarkStreamer &RS) {
     return;
   }
 
-  remarks::RemarkSerializer &RemarkSerializer = RS.getSerializer();
-
-  std::optional<SmallString<128>> Filename;
-  if (std::optional<StringRef> FilenameRef = RS.getFilename()) {
-    Filename = *FilenameRef;
-    sys::fs::make_absolute(*Filename);
-    assert(!Filename->empty() && "The filename can't be empty.");
-  }
+  SmallString<128> Filename = *RS.getFilename();
+  sys::fs::make_absolute(Filename);
+  assert(!Filename.empty() && "The filename can't be empty.");
 
   std::string Buf;
   raw_string_ostream OS(Buf);
+
+  remarks::RemarkSerializer &RemarkSerializer = RS.getSerializer();
   std::unique_ptr<remarks::MetaSerializer> MetaSerializer =
-      Filename ? RemarkSerializer.metaSerializer(OS, Filename->str())
-               : RemarkSerializer.metaSerializer(OS);
+      RemarkSerializer.metaSerializer(OS, Filename);
   MetaSerializer->emit();
 
   // Switch to the remarks section.
@@ -2732,9 +2900,11 @@ bool AsmPrinter::doFinalization(Module &M) {
   // If we don't have any trampolines, then we don't require stack memory
   // to be executable. Some targets have a directive to declare this.
   Function *InitTrampolineIntrinsic = M.getFunction("llvm.init.trampoline");
-  if (!InitTrampolineIntrinsic || InitTrampolineIntrinsic->use_empty())
-    if (MCSection *S = MAI->getNonexecutableStackSection(OutContext))
-      OutStreamer->switchSection(S);
+  bool HasTrampolineUses =
+      InitTrampolineIntrinsic && !InitTrampolineIntrinsic->use_empty();
+  MCSection *S = MAI->getStackSection(OutContext, /*Exec=*/HasTrampolineUses);
+  if (S)
+    OutStreamer->switchSection(S);
 
   if (TM.Options.EmitAddrsig) {
     // Emit address-significance attributes for all globals.
@@ -2789,11 +2959,11 @@ MCSymbol *AsmPrinter::getMBBExceptionSym(const MachineBasicBlock &MBB) {
   return Res.first->second;
 }
 
-MCSymbol *AsmPrinter::createCallsiteSymbol(const MachineBasicBlock &MBB) {
+MCSymbol *AsmPrinter::createCallsiteEndSymbol(const MachineBasicBlock &MBB) {
   MCContext &Ctx = MF->getContext();
   MCSymbol *Sym = Ctx.createTempSymbol("BB" + Twine(MF->getFunctionNumber()) +
                                        "_" + Twine(MBB.getNumber()) + "_CS");
-  CurrentFnCallsiteSymbols[&MBB].push_back(Sym);
+  CurrentFnCallsiteEndSymbols[&MBB].push_back(Sym);
   return Sym;
 }
 
@@ -2831,7 +3001,7 @@ void AsmPrinter::SetupMachineFunction(MachineFunction &MF) {
   CurrentFnBegin = nullptr;
   CurrentFnBeginLocal = nullptr;
   CurrentSectionBeginSym = nullptr;
-  CurrentFnCallsiteSymbols.clear();
+  CurrentFnCallsiteEndSymbols.clear();
   MBBSectionRanges.clear();
   MBBSectionExceptionSyms.clear();
   bool NeedsLocalForSize = MAI->needsLocalForSize();
@@ -2840,6 +3010,7 @@ void AsmPrinter::SetupMachineFunction(MachineFunction &MF) {
       F.hasFnAttribute("xray-instruction-threshold") ||
       needFuncLabels(MF, *this) || NeedsLocalForSize ||
       MF.getTarget().Options.EmitStackSizeSection ||
+      MF.getTarget().Options.EmitCallGraphSection ||
       MF.getTarget().Options.BBAddrMap) {
     CurrentFnBegin = createTempSymbol("func_begin");
     if (NeedsLocalForSize)
@@ -3085,7 +3256,7 @@ void AsmPrinter::emitJumpTableSizesSection(const MachineJumpTableInfo &MJTI,
     return;
 
   if (isElf) {
-    MCSymbolELF *LinkedToSym = dyn_cast<MCSymbolELF>(CurrentFnSym);
+    auto *LinkedToSym = static_cast<MCSymbolELF *>(CurrentFnSym);
     int Flags = F.hasComdat() ? static_cast<int>(ELF::SHF_GROUP) : 0;
 
     JumpTableSizesSection = OutContext.getELFSection(
@@ -3548,6 +3719,7 @@ const MCExpr *AsmPrinter::lowerConstant(const Constant *CV,
     break; // Error
   }
 
+  case Instruction::PtrToAddr:
   case Instruction::PtrToInt: {
     const DataLayout &DL = getDataLayout();
 
@@ -4220,10 +4392,11 @@ MCSymbol *AsmPrinter::GetCPISymbol(unsigned CPID) const {
       SectionKind Kind = CPE.getSectionKind(&DL);
       const Constant *C = CPE.Val.ConstVal;
       Align Alignment = CPE.Alignment;
-      if (const MCSectionCOFF *S = dyn_cast<MCSectionCOFF>(
-              getObjFileLowering().getSectionForConstant(DL, Kind, C,
-                                                         Alignment))) {
-        if (MCSymbol *Sym = S->getCOMDATSymbol()) {
+      auto *S =
+          getObjFileLowering().getSectionForConstant(DL, Kind, C, Alignment);
+      if (S && TM.getTargetTriple().isOSBinFormatCOFF()) {
+        if (MCSymbol *Sym =
+                static_cast<const MCSectionCOFF *>(S)->getCOMDATSymbol()) {
           if (Sym->isUndefined())
             OutStreamer->emitSymbolAttribute(Sym, MCSA_Global);
           return Sym;
@@ -4592,7 +4765,7 @@ void AsmPrinter::emitXRayTable() {
   const Triple &TT = TM.getTargetTriple();
   // Use PC-relative addresses on all targets.
   if (TT.isOSBinFormatELF()) {
-    auto LinkedToSym = cast<MCSymbolELF>(CurrentFnSym);
+    auto LinkedToSym = static_cast<const MCSymbolELF *>(CurrentFnSym);
     auto Flags = ELF::SHF_ALLOC | ELF::SHF_LINK_ORDER;
     StringRef GroupName;
     if (F.hasComdat()) {
@@ -4715,7 +4888,7 @@ void AsmPrinter::emitPatchableFunctionEntries() {
         Flags |= ELF::SHF_GROUP;
         GroupName = F.getComdat()->getName();
       }
-      LinkedToSym = cast<MCSymbolELF>(CurrentFnSym);
+      LinkedToSym = static_cast<const MCSymbolELF *>(CurrentFnSym);
     }
     OutStreamer->switchSection(OutContext.getELFSection(
         SectionName, ELF::SHT_PROGBITS, Flags, 0, GroupName, F.hasComdat(),

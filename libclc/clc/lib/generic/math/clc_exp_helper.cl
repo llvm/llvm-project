@@ -14,7 +14,7 @@
 #include <clc/math/tables.h>
 #include <clc/relational/clc_isnan.h>
 
-#define __DOUBLE_ONLY
+#define __CLC_DOUBLE_ONLY
 #define __CLC_BODY <clc_exp_helper.inc>
 
 #include <clc/math/gentype.inc>

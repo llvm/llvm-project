@@ -151,9 +151,9 @@ void Generator::emitParse(StringRef kind, const Record &x) {
   os << "\n\n";
 }
 
-void printParseConditional(mlir::raw_indented_ostream &ios,
-                           ArrayRef<const Init *> args,
-                           ArrayRef<std::string> argNames) {
+static void printParseConditional(mlir::raw_indented_ostream &ios,
+                                  ArrayRef<const Init *> args,
+                                  ArrayRef<std::string> argNames) {
   ios << "if ";
   auto parenScope = ios.scope("(", ") {");
   ios.indent();

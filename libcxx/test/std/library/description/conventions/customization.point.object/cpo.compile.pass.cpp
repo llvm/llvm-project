@@ -15,8 +15,11 @@
 #include <concepts>
 #include <iterator>
 #include <ranges>
+#include <sstream>
 #include <type_traits>
 #include <utility>
+
+#include "test_macros.h"
 
 // Test for basic properties of C++20 16.3.3.3.6 [customization.point.object].
 template <class CPO, class... Args>
@@ -26,7 +29,7 @@ constexpr bool test(CPO& o, Args&&...) {
   static_assert(std::is_trivially_copyable_v<CPO>);
   static_assert(std::is_trivially_default_constructible_v<CPO>);
 
-  auto p = o;
+  auto p  = o;
   using T = decltype(p);
 
   // The type of a customization point object, ignoring cv-qualifiers, shall model semiregular.
@@ -43,7 +46,10 @@ constexpr bool test(CPO& o, Args&&...) {
 
 int a[10];
 int arrays[10][10];
-//std::pair<int, int> pairs[10];
+std::pair<int, int> pairs[10];
+#ifndef TEST_HAS_NO_LOCALIZATION
+std::istringstream stream;
+#endif
 
 // [concept.swappable]
 static_assert(test(std::ranges::swap, a, a));
@@ -75,25 +81,61 @@ static_assert(test(std::ranges::rend, a));
 static_assert(test(std::ranges::size, a));
 static_assert(test(std::ranges::ssize, a));
 
+#if TEST_STD_VER >= 26
+// static_assert(test(std::views::reserve_hint, a));
+#endif
+
 // [range.factories]
 // views::empty<T> is not a CPO
 static_assert(test(std::views::iota, 1));
 static_assert(test(std::views::iota, 1, 10));
-//static_assert(test(std::views::istream<int>, 1);
+#if TEST_STD_VER >= 26
+static_assert(test(std::views::indices, 10));
+#endif
+#ifndef TEST_HAS_NO_LOCALIZATION
+static_assert(test(std::views::istream<int>, stream));
+#endif
 static_assert(test(std::views::single, 4));
+
+#if TEST_STD_VER >= 23
+static_assert(test(std::views::repeat, 1));
+#endif
 
 // [range.adaptors]
 static_assert(test(std::views::all, a));
 static_assert(test(std::views::common, a));
 static_assert(test(std::views::counted, a, 10));
 static_assert(test(std::views::drop, a, 10));
-//static_assert(test(std::views::drop_while, a, [](int x){ return x < 10; }));
-//static_assert(test(std::views::elements<0>, pairs));
-static_assert(test(std::views::filter, a, [](int x){ return x < 10; }));
+static_assert(test(std::views::drop_while, a, [](int x) { return x < 10; }));
+static_assert(test(std::views::elements<0>, pairs));
+static_assert(test(std::views::filter, a, [](int x) { return x < 10; }));
 static_assert(test(std::views::join, arrays));
-//static_assert(test(std::views::split, a, 4));
+static_assert(test(std::views::keys, pairs));
 static_assert(test(std::views::lazy_split, a, 4));
 static_assert(test(std::views::reverse, a));
+static_assert(test(std::views::split, a, 4));
 static_assert(test(std::views::take, a, 10));
-//static_assert(test(std::views::take_while, a, [](int x){ return x < 10; }));
-static_assert(test(std::views::transform, a, [](int x){ return x + 1; }));
+static_assert(test(std::views::take_while, a, [](int x) { return x < 10; }));
+static_assert(test(std::views::transform, a, [](int x) { return x + 1; }));
+static_assert(test(std::views::values, pairs));
+
+#if TEST_STD_VER >= 23
+// static_assert(test(std::views::adjacent_transform<2>, [](int x, int y) { return x + y; }, a));
+// static_assert(test(std::views::adjacent<2>, a));
+// static_assert(test(std::views::as_const, a));
+static_assert(test(std::views::as_rvalue, a));
+// static_assert(test(std::views::cartesian_product, a, a, a));
+static_assert(test(std::views::chunk_by, a, [](int x, int y) { return x < y; }));
+// static_assert(test(std::views::chunk, a, 1));
+// static_assert(test(std::views::enumerate, a));
+static_assert(test(std::views::join_with, 1));
+// static_assert(test(std::views::stride, a, 1));
+static_assert(test(std::views::zip_transform, [](int x, int y) { return x + y; }, a, a));
+static_assert(test(std::views::zip, a, a));
+#endif
+
+#if TEST_STD_VER >= 26
+// static_assert(test(std::views::cache_latest, a));
+// static_assert(test(std::views::concat, a, a));
+// static_assert(test(std::views::to_input, a));
+#endif

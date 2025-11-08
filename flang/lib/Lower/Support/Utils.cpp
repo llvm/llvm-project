@@ -82,7 +82,7 @@ public:
          x.cosubscript())
       cosubs -= getHashValue(v);
     return getHashValue(x.base()) * 97u - cosubs + getHashValue(x.stat()) +
-           257u + getHashValue(x.team());
+           257u + getHashValue(x.team()) + getHashValue(x.notify());
   }
   static unsigned getHashValue(const Fortran::evaluate::NamedEntity &x) {
     if (x.IsSymbol())
@@ -341,7 +341,8 @@ public:
                       const Fortran::evaluate::CoarrayRef &y) {
     return isEqual(x.base(), y.base()) &&
            isEqual(x.cosubscript(), y.cosubscript()) &&
-           isEqual(x.stat(), y.stat()) && isEqual(x.team(), y.team());
+           isEqual(x.stat(), y.stat()) && isEqual(x.team(), y.team()) &&
+           isEqual(x.notify(), y.notify());
   }
   static bool isEqual(const Fortran::evaluate::NamedEntity &x,
                       const Fortran::evaluate::NamedEntity &y) {
@@ -654,8 +655,9 @@ void privatizeSymbol(
     lower::AbstractConverter &converter, fir::FirOpBuilder &firOpBuilder,
     lower::SymMap &symTable,
     llvm::SetVector<const semantics::Symbol *> &allPrivatizedSymbols,
-    llvm::SmallSet<const semantics::Symbol *, 16> &mightHaveReadHostSym,
-    const semantics::Symbol *symToPrivatize, OperandsStructType *clauseOps) {
+    llvm::SmallPtrSet<const semantics::Symbol *, 16> &mightHaveReadHostSym,
+    const semantics::Symbol *symToPrivatize, OperandsStructType *clauseOps,
+    std::optional<llvm::omp::Directive> dir) {
   constexpr bool isDoConcurrent =
       std::is_same_v<OpType, fir::LocalitySpecifierOp>;
   mlir::OpBuilder::InsertPoint dcIP;
@@ -676,6 +678,13 @@ void privatizeSymbol(
   bool emitCopyRegion =
       symToPrivatize->test(semantics::Symbol::Flag::OmpFirstPrivate) ||
       symToPrivatize->test(semantics::Symbol::Flag::LocalityLocalInit);
+  // A symbol attached to the simd directive can have the firstprivate flag set
+  // on it when it is also used in a non-firstprivate privatization clause.
+  // For instance: $omp do simd lastprivate(a) firstprivate(a)
+  // We cannot apply the firstprivate privatizer to simd, so make sure we do
+  // not emit the copy region when dealing with the SIMD directive.
+  if (dir && dir == llvm::omp::Directive::OMPD_simd)
+    emitCopyRegion = false;
 
   mlir::Value privVal = hsb.getAddr();
   mlir::Type allocType = privVal.getType();
@@ -702,9 +711,10 @@ void privatizeSymbol(
     // Boxes should be passed by reference into nested regions:
     auto oldIP = firOpBuilder.saveInsertionPoint();
     firOpBuilder.setInsertionPointToStart(firOpBuilder.getAllocaBlock());
-    auto alloca = firOpBuilder.create<fir::AllocaOp>(symLoc, privVal.getType());
+    auto alloca =
+        fir::AllocaOp::create(firOpBuilder, symLoc, privVal.getType());
     firOpBuilder.restoreInsertionPoint(oldIP);
-    firOpBuilder.create<fir::StoreOp>(symLoc, privVal, alloca);
+    fir::StoreOp::create(firOpBuilder, symLoc, privVal, alloca);
     privVal = alloca;
   }
 
@@ -726,15 +736,15 @@ void privatizeSymbol(
     OpType result;
 
     if constexpr (std::is_same_v<OpType, mlir::omp::PrivateClauseOp>) {
-      result = firOpBuilder.create<OpType>(
-          symLoc, uniquePrivatizerName, allocType,
+      result = OpType::create(
+          firOpBuilder, symLoc, uniquePrivatizerName, allocType,
           emitCopyRegion ? mlir::omp::DataSharingClauseType::FirstPrivate
                          : mlir::omp::DataSharingClauseType::Private);
     } else {
-      result = firOpBuilder.create<OpType>(
-          symLoc, uniquePrivatizerName, allocType,
-          emitCopyRegion ? fir::LocalitySpecifierType::LocalInit
-                         : fir::LocalitySpecifierType::Local);
+      result =
+          OpType::create(firOpBuilder, symLoc, uniquePrivatizerName, allocType,
+                         emitCopyRegion ? fir::LocalitySpecifierType::LocalInit
+                                        : fir::LocalitySpecifierType::Local);
     }
 
     fir::ExtendedValue symExV = converter.getSymbolExtendedValue(*sym);
@@ -815,12 +825,12 @@ void privatizeSymbol(
       copyFirstPrivateSymbol(converter, symToPrivatize, &ip);
 
       if constexpr (std::is_same_v<OpType, mlir::omp::PrivateClauseOp>) {
-        firOpBuilder.create<mlir::omp::YieldOp>(
-            hsb.getAddr().getLoc(),
+        mlir::omp::YieldOp::create(
+            firOpBuilder, hsb.getAddr().getLoc(),
             symTable.shallowLookupSymbol(*symToPrivatize).getAddr());
       } else {
-        firOpBuilder.create<fir::YieldOp>(
-            hsb.getAddr().getLoc(),
+        fir::YieldOp::create(
+            firOpBuilder, hsb.getAddr().getLoc(),
             symTable.shallowLookupSymbol(*symToPrivatize).getAddr());
       }
     }
@@ -845,17 +855,19 @@ privatizeSymbol<mlir::omp::PrivateClauseOp, mlir::omp::PrivateClauseOps>(
     lower::AbstractConverter &converter, fir::FirOpBuilder &firOpBuilder,
     lower::SymMap &symTable,
     llvm::SetVector<const semantics::Symbol *> &allPrivatizedSymbols,
-    llvm::SmallSet<const semantics::Symbol *, 16> &mightHaveReadHostSym,
+    llvm::SmallPtrSet<const semantics::Symbol *, 16> &mightHaveReadHostSym,
     const semantics::Symbol *symToPrivatize,
-    mlir::omp::PrivateClauseOps *clauseOps);
+    mlir::omp::PrivateClauseOps *clauseOps,
+    std::optional<llvm::omp::Directive> dir);
 
 template void
 privatizeSymbol<fir::LocalitySpecifierOp, fir::LocalitySpecifierOperands>(
     lower::AbstractConverter &converter, fir::FirOpBuilder &firOpBuilder,
     lower::SymMap &symTable,
     llvm::SetVector<const semantics::Symbol *> &allPrivatizedSymbols,
-    llvm::SmallSet<const semantics::Symbol *, 16> &mightHaveReadHostSym,
+    llvm::SmallPtrSet<const semantics::Symbol *, 16> &mightHaveReadHostSym,
     const semantics::Symbol *symToPrivatize,
-    fir::LocalitySpecifierOperands *clauseOps);
+    fir::LocalitySpecifierOperands *clauseOps,
+    std::optional<llvm::omp::Directive> dir);
 
 } // end namespace Fortran::lower

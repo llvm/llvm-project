@@ -14,7 +14,7 @@ target datalayout = "p:8:8-n8"
 
 declare void @otherfn(ptr)
 declare i32 @__gxx_personality_v0(...)
-declare void @llvm.lifetime.end.p0(i64, ptr nocapture)
+declare void @llvm.lifetime.end.p0(ptr nocapture)
 @c = external global ptr, align 1
 
 ; This function is one where if we didn't free basicaa after memcpyopt then the
@@ -65,7 +65,7 @@ for.body:                                         ; preds = %for.cond
   br label %for.cond
 
 for.cond.cleanup:                                 ; preds = %for.cond
-  call void @llvm.lifetime.end.p0(i64 1, ptr %a)
+  call void @llvm.lifetime.end.p0(ptr %a)
   %1 = load ptr, ptr %d.0, align 1
   store ptr %1, ptr @c, align 1
   ret void

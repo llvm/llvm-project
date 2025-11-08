@@ -10,11 +10,12 @@
 //       There is currently a discussion of this going on at:
 //         https://reviews.llvm.org/D69825
 
-// RUN: %clang_cl -fno-integrated-cc1 --target=i686-pc-win32 /c /Fo%T/ /showFilenames -- %s 2>&1 | FileCheck -check-prefix=show %s
-// RUN: %clang_cl -fno-integrated-cc1 --target=i686-pc-win32 /c /Fo%T/ /showFilenames -- %s %S/Inputs/wildcard*.c 2>&1 | FileCheck -check-prefix=multiple %s
+// RUN: mkdir -p %t.dir
+// RUN: %clang_cl -fno-integrated-cc1 --target=i686-pc-win32 /c /Fo%t.dir/ /showFilenames -- %s 2>&1 | FileCheck -check-prefix=show %s
+// RUN: %clang_cl -fno-integrated-cc1 --target=i686-pc-win32 /c /Fo%t.dir/ /showFilenames -- %s %S/Inputs/wildcard*.c 2>&1 | FileCheck -check-prefix=multiple %s
 
-// RUN: %clang_cl -fno-integrated-cc1 --target=i686-pc-win32 /c /Fo%T/ -- %s 2>&1 | FileCheck -check-prefix=noshow %s
-// RUN: %clang_cl -fno-integrated-cc1 --target=i686-pc-win32 /c /Fo%T/ /showFilenames /showFilenames- -- %s 2>&1 | FileCheck -check-prefix=noshow %s
+// RUN: %clang_cl -fno-integrated-cc1 --target=i686-pc-win32 /c /Fo%t.dir/ -- %s 2>&1 | FileCheck -check-prefix=noshow %s
+// RUN: %clang_cl -fno-integrated-cc1 --target=i686-pc-win32 /c /Fo%t.dir/ /showFilenames /showFilenames- -- %s 2>&1 | FileCheck -check-prefix=noshow %s
 
 
 #pragma message "Hello"

@@ -30,6 +30,7 @@ add_libc_test(
   SRCS
     group_test.cpp
   DEPENDS
+    libc.hdr.stdint_proxy
     libc.src.__support.HashTable.bitmask
     libc.src.stdlib.rand
     libc.src.search.hsearch

@@ -4,7 +4,7 @@ import lit.Test
 
 config.name = "flang-OldUnit"
 
-config.suffixes = [".test"]
+config.suffixes = [".test", ".test.exe"]
 
 config.test_source_root = os.path.join(config.flang_obj_root, "unittests")
 config.test_exec_root = config.test_source_root

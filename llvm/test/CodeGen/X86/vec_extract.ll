@@ -104,6 +104,72 @@ entry:
 }
 declare <2 x double> @foo()
 
+define i64 @pr150117(<31 x i8> %a0) nounwind {
+; X86-LABEL: pr150117:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %ebx
+; X86-NEXT:    pushl %edi
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %edi
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ebx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    shll $8, %edx
+; X86-NEXT:    orl %ebx, %edx
+; X86-NEXT:    shll $8, %edi
+; X86-NEXT:    orl %esi, %edi
+; X86-NEXT:    shll $16, %ecx
+; X86-NEXT:    orl %edi, %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    shll $24, %esi
+; X86-NEXT:    orl %ecx, %esi
+; X86-NEXT:    movd %esi, %xmm0
+; X86-NEXT:    pinsrw $2, %edx, %xmm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    shll $8, %ecx
+; X86-NEXT:    orl %eax, %ecx
+; X86-NEXT:    pinsrw $3, %ecx, %xmm0
+; X86-NEXT:    movd %xmm0, %eax
+; X86-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; X86-NEXT:    movd %xmm0, %edx
+; X86-NEXT:    popl %esi
+; X86-NEXT:    popl %edi
+; X86-NEXT:    popl %ebx
+; X86-NEXT:    retl
+;
+; X64-LABEL: pr150117:
+; X64:       # %bb.0:
+; X64-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
+; X64-NEXT:    movzbl {{[0-9]+}}(%rsp), %ecx
+; X64-NEXT:    movzbl {{[0-9]+}}(%rsp), %edx
+; X64-NEXT:    movzbl {{[0-9]+}}(%rsp), %esi
+; X64-NEXT:    movzbl {{[0-9]+}}(%rsp), %edi
+; X64-NEXT:    movl {{[0-9]+}}(%rsp), %r8d
+; X64-NEXT:    shll $8, %r8d
+; X64-NEXT:    orl %edi, %r8d
+; X64-NEXT:    shll $8, %esi
+; X64-NEXT:    orl %edx, %esi
+; X64-NEXT:    shll $16, %ecx
+; X64-NEXT:    orl %esi, %ecx
+; X64-NEXT:    movl {{[0-9]+}}(%rsp), %edx
+; X64-NEXT:    shll $24, %edx
+; X64-NEXT:    orl %ecx, %edx
+; X64-NEXT:    movd %edx, %xmm0
+; X64-NEXT:    pinsrw $2, %r8d, %xmm0
+; X64-NEXT:    movl {{[0-9]+}}(%rsp), %ecx
+; X64-NEXT:    shll $8, %ecx
+; X64-NEXT:    orl %eax, %ecx
+; X64-NEXT:    pinsrw $3, %ecx, %xmm0
+; X64-NEXT:    movq %xmm0, %rax
+; X64-NEXT:    retq
+  %shuffle = shufflevector <31 x i8> %a0, <31 x i8> zeroinitializer, <32 x i32> <i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+  %bitcast = bitcast <32 x i8> %shuffle to <4 x i64>
+  %elt = extractelement <4 x i64> %bitcast, i64 0
+  ret i64 %elt
+}
+
 ; OSS-Fuzz #15662
 ; https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=15662
 define <4 x i32> @ossfuzz15662(ptr %in) {

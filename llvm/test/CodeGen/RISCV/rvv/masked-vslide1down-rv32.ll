@@ -90,7 +90,7 @@ define <vscale x 1 x i64> @intrinsic_vslide1down_mask_tama_vx_nxv1i64_nxv1i64_i6
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x i64> @llvm.riscv.vslide1down.mask.nxv1i64.i64(
-    <vscale x 1 x i64> undef,
+    <vscale x 1 x i64> poison,
     <vscale x 1 x i64> %0,
     i64 %1,
     <vscale x 1 x i1> %2,
@@ -110,10 +110,10 @@ define <vscale x 1 x i64> @intrinsic_vslide1down_mask_tama_undef_mask_vx_nxv1i64
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x i64> @llvm.riscv.vslide1down.mask.nxv1i64.i64(
-    <vscale x 1 x i64> undef,
+    <vscale x 1 x i64> poison,
     <vscale x 1 x i64> %0,
     i64 %1,
-    <vscale x 1 x i1> undef,
+    <vscale x 1 x i1> poison,
     i32 %2, i32 3)
 
   ret <vscale x 1 x i64> %a

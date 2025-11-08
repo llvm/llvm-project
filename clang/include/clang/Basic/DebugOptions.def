@@ -46,6 +46,8 @@ ENUM_DEBUGOPT(EmitDwarfUnwind, EmitDwarfUnwindType, 2,
 DEBUGOPT(NoDwarfDirectoryAsm , 1, 0, Benign) ///< Set when -fno-dwarf-directory-asm
                                              ///< is enabled.
 
+DEBUGOPT(Dwarf2CFIAsm, 1, 0, NotCompatible) ///< Set when -fdwarf2-cfi-asm is enabled.
+
 DEBUGOPT(NoInlineLineTables, 1, 0, Benign) ///< Whether debug info should contain
                                            ///< inline line tables.
 
@@ -124,6 +126,12 @@ DEBUGOPT(DebugNameTable, 2, 0, Compatible)
 
 /// Whether to use DWARF base address specifiers in .debug_ranges.
 DEBUGOPT(DebugRangesBaseAddress, 1, 0, Compatible)
+
+/// Whether to add linkage names to constructor/destructor declarations.
+/// This is an escape hatch for cases where attaching the additional linkage
+/// names would increase debug-info size (particularly the .debug_str section)
+/// too much.
+DEBUGOPT(DebugStructorDeclLinkageNames, 1, 0, Benign)
 
 /// Whether to embed source in DWARF debug line section.
 DEBUGOPT(EmbedSource, 1, 0, Compatible)

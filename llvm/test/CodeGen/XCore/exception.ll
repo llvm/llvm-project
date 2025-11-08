@@ -60,7 +60,7 @@ entry:
 ; CHECK: [[PRE_G:.L[a-zA-Z0-9_]+]]
 ; CHECK: bl g
 ; CHECK: [[POST_G:.L[a-zA-Z0-9_]+]]
-; CHECK: [[RETURN:.L[a-zA-Z0-9_]+]]
+; CHECK: [[RETURN:^.L[a-zA-Z0-9_]+]]
 ; CHECK: ldw r6, sp[1]
 ; CHECK: ldw r5, sp[2]
 ; CHECK: ldw r4, sp[3]

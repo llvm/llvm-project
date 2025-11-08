@@ -1,16 +1,16 @@
-// RUN: mkdir -p %T/no-move-macro-helper
-// RUN: cat %S/Inputs/macro_helper_test.h > %T/no-move-macro-helper/macro_helper_test.h
-// RUN: cat %S/Inputs/macro_helper_test.cpp > %T/no-move-macro-helper/macro_helper_test.cpp
-// RUN: cd %T/no-move-macro-helper
+// RUN: mkdir -p %t.dir/no-move-macro-helper
+// RUN: cat %S/Inputs/macro_helper_test.h > %t.dir/no-move-macro-helper/macro_helper_test.h
+// RUN: cat %S/Inputs/macro_helper_test.cpp > %t.dir/no-move-macro-helper/macro_helper_test.cpp
+// RUN: cd %t.dir/no-move-macro-helper
 //
 // -----------------------------------------------------------------------------
 // Test no moving helpers in macro.
 // -----------------------------------------------------------------------------
-// RUN: clang-move -names="A" -new_cc=%T/no-move-macro-helper/new_test.cpp -new_header=%T/no-move-macro-helper/new_test.h -old_cc=%T/no-move-macro-helper/macro_helper_test.cpp -old_header=%T/no-move-macro-helper/macro_helper_test.h %T/no-move-macro-helper/macro_helper_test.cpp -- -std=c++11
-// RUN: FileCheck -input-file=%T/no-move-macro-helper/new_test.h -check-prefix=CHECK-NEW-TEST-CASE1-H %s
-// RUN: FileCheck -input-file=%T/no-move-macro-helper/new_test.cpp -check-prefix=CHECK-NEW-TEST-CASE1-CPP %s
-// RUN: FileCheck -input-file=%T/no-move-macro-helper/macro_helper_test.h -check-prefix=CHECK-OLD-TEST-CASE1-H %s
-// RUN: FileCheck -input-file=%T/no-move-macro-helper/macro_helper_test.cpp -check-prefix=CHECK-OLD-TEST-CASE1-CPP %s
+// RUN: clang-move -names="A" -new_cc=%t.dir/no-move-macro-helper/new_test.cpp -new_header=%t.dir/no-move-macro-helper/new_test.h -old_cc=%t.dir/no-move-macro-helper/macro_helper_test.cpp -old_header=%t.dir/no-move-macro-helper/macro_helper_test.h %t.dir/no-move-macro-helper/macro_helper_test.cpp -- -std=c++11
+// RUN: FileCheck -input-file=%t.dir/no-move-macro-helper/new_test.h -check-prefix=CHECK-NEW-TEST-CASE1-H %s
+// RUN: FileCheck -input-file=%t.dir/no-move-macro-helper/new_test.cpp -check-prefix=CHECK-NEW-TEST-CASE1-CPP %s
+// RUN: FileCheck -input-file=%t.dir/no-move-macro-helper/macro_helper_test.h -check-prefix=CHECK-OLD-TEST-CASE1-H %s
+// RUN: FileCheck -input-file=%t.dir/no-move-macro-helper/macro_helper_test.cpp -check-prefix=CHECK-OLD-TEST-CASE1-CPP %s
 
 // CHECK-NEW-TEST-CASE1-H: class A {};
 
@@ -24,14 +24,14 @@
 // -----------------------------------------------------------------------------
 // Test moving all.
 // -----------------------------------------------------------------------------
-// RUN: cat %S/Inputs/macro_helper_test.h > %T/no-move-macro-helper/macro_helper_test.h
-// RUN: cat %S/Inputs/macro_helper_test.cpp > %T/no-move-macro-helper/macro_helper_test.cpp
-// RUN: clang-move -names="A, f1" -new_cc=%T/no-move-macro-helper/new_test.cpp -new_header=%T/no-move-macro-helper/new_test.h -old_cc=%T/no-move-macro-helper/macro_helper_test.cpp -old_header=%T/no-move-macro-helper/macro_helper_test.h %T/no-move-macro-helper/macro_helper_test.cpp -- -std=c++11
+// RUN: cat %S/Inputs/macro_helper_test.h > %t.dir/no-move-macro-helper/macro_helper_test.h
+// RUN: cat %S/Inputs/macro_helper_test.cpp > %t.dir/no-move-macro-helper/macro_helper_test.cpp
+// RUN: clang-move -names="A, f1" -new_cc=%t.dir/no-move-macro-helper/new_test.cpp -new_header=%t.dir/no-move-macro-helper/new_test.h -old_cc=%t.dir/no-move-macro-helper/macro_helper_test.cpp -old_header=%t.dir/no-move-macro-helper/macro_helper_test.h %t.dir/no-move-macro-helper/macro_helper_test.cpp -- -std=c++11
 //
-// RUN: FileCheck -input-file=%T/no-move-macro-helper/new_test.h -check-prefix=CHECK-NEW-TEST-CASE2-H %s
-// RUN: FileCheck -input-file=%T/no-move-macro-helper/new_test.cpp -check-prefix=CHECK-NEW-TEST-CASE2-CPP %s
-// RUN: FileCheck -input-file=%T/no-move-macro-helper/macro_helper_test.h -allow-empty -check-prefix=CHECK-EMPTY %s
-// RUN: FileCheck -input-file=%T/no-move-macro-helper/macro_helper_test.cpp -allow-empty -check-prefix=CHECK-EMPTY %s
+// RUN: FileCheck -input-file=%t.dir/no-move-macro-helper/new_test.h -check-prefix=CHECK-NEW-TEST-CASE2-H %s
+// RUN: FileCheck -input-file=%t.dir/no-move-macro-helper/new_test.cpp -check-prefix=CHECK-NEW-TEST-CASE2-CPP %s
+// RUN: FileCheck -input-file=%t.dir/no-move-macro-helper/macro_helper_test.h -allow-empty -check-prefix=CHECK-EMPTY %s
+// RUN: FileCheck -input-file=%t.dir/no-move-macro-helper/macro_helper_test.cpp -allow-empty -check-prefix=CHECK-EMPTY %s
 
 // CHECK-NEW-TEST-CASE2-H: class A {};
 // CHECK-NEW-TEST-CASE2-H-NEXT:void f1();

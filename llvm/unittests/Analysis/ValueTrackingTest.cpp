@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/FloatingPointPredicateUtils.h"
 #include "llvm/AsmParser/Parser.h"
@@ -915,11 +916,11 @@ TEST(ValueTracking, propagatesPoison) {
       {true, "call float @llvm.sin.f32(float %fx)", 0},
       {true, "call float @llvm.cos.f32(float %fx)", 0},
       {true, "call float @llvm.pow.f32(float %fx, float %fy)", 0},
-      {false, "call float @llvm.exp.f32(float %fx)", 0},
-      {false, "call float @llvm.exp2.f32(float %fx)", 0},
-      {false, "call float @llvm.log.f32(float %fx)", 0},
-      {false, "call float @llvm.log10.f32(float %fx)", 0},
-      {false, "call float @llvm.log2.f32(float %fx)", 0},
+      {true, "call float @llvm.exp.f32(float %fx)", 0},
+      {true, "call float @llvm.exp2.f32(float %fx)", 0},
+      {true, "call float @llvm.log.f32(float %fx)", 0},
+      {true, "call float @llvm.log10.f32(float %fx)", 0},
+      {true, "call float @llvm.log2.f32(float %fx)", 0},
       {false, "call float @llvm.fma.f32(float %fx, float %fx, float %fy)", 0},
       {false, "call float @llvm.fabs.f32(float %fx)", 0},
       {false, "call float @llvm.minnum.f32(float %fx, float %fy)", 0},
@@ -927,17 +928,17 @@ TEST(ValueTracking, propagatesPoison) {
       {false, "call float @llvm.minimum.f32(float %fx, float %fy)", 0},
       {false, "call float @llvm.maximum.f32(float %fx, float %fy)", 0},
       {false, "call float @llvm.copysign.f32(float %fx, float %fy)", 0},
-      {false, "call float @llvm.floor.f32(float %fx)", 0},
-      {false, "call float @llvm.ceil.f32(float %fx)", 0},
-      {false, "call float @llvm.trunc.f32(float %fx)", 0},
-      {false, "call float @llvm.rint.f32(float %fx)", 0},
-      {false, "call float @llvm.nearbyint.f32(float %fx)", 0},
-      {false, "call float @llvm.round.f32(float %fx)", 0},
-      {false, "call float @llvm.roundeven.f32(float %fx)", 0},
+      {true, "call float @llvm.floor.f32(float %fx)", 0},
+      {true, "call float @llvm.ceil.f32(float %fx)", 0},
+      {true, "call float @llvm.trunc.f32(float %fx)", 0},
+      {true, "call float @llvm.rint.f32(float %fx)", 0},
+      {true, "call float @llvm.nearbyint.f32(float %fx)", 0},
+      {true, "call float @llvm.round.f32(float %fx)", 0},
+      {true, "call float @llvm.roundeven.f32(float %fx)", 0},
       {false, "call i32 @llvm.lround.f32(float %fx)", 0},
       {false, "call i64 @llvm.llround.f32(float %fx)", 0},
-      {false, "call i32 @llvm.lrint.f32(float %fx)", 0},
-      {false, "call i64 @llvm.llrint.f32(float %fx)", 0},
+      {true, "call i32 @llvm.lrint.f32(float %fx)", 0},
+      {true, "call i64 @llvm.llrint.f32(float %fx)", 0},
       {false, "call float @llvm.fmuladd.f32(float %fx, float %fx, float %fy)",
        0}};
 
@@ -1088,6 +1089,16 @@ TEST_F(ValueTrackingTest, isGuaranteedNotToBeUndefOrPoison) {
     EXPECT_FALSE(isGuaranteedNotToBeUndefOrPoison(V3));
     EXPECT_FALSE(isGuaranteedNotToBePoison(V3));
   }
+}
+
+TEST_F(ValueTrackingTest, isGuaranteedNotToBeUndefOrPoison_splat) {
+  parseAssembly(
+      "define <4 x i32> @test(i32 noundef %x) {\n"
+      "  %ins = insertelement <4 x i32> poison, i32 %x, i32 0\n"
+      "  %A = shufflevector <4 x i32> %ins, <4 x i32> poison, <4 x i32> zeroinitializer\n"
+      "  ret <4 x i32> %A\n"
+      "}");
+  EXPECT_TRUE(isGuaranteedNotToBeUndefOrPoison(A));
 }
 
 TEST_F(ValueTrackingTest, isGuaranteedNotToBeUndefOrPoison_assume) {
@@ -2206,6 +2217,41 @@ TEST_F(ComputeKnownFPClassTest, Constants) {
     EXPECT_EQ(fcNegZero, PartiallyPoison.KnownFPClasses);
     EXPECT_TRUE(PartiallyPoison.SignBit);
   }
+}
+
+TEST_F(ComputeKnownFPClassTest, fcmpImpliesClass_fabs_zero) {
+  parseAssembly("define float @test(float %x) {\n"
+                "  %A = call float @llvm.fabs.f32(float %x)\n"
+                "  ret float %A\n"
+                "}\n");
+  EXPECT_EQ(std::get<1>(fcmpImpliesClass(FCmpInst::FCMP_OEQ, *F, A, fcZero)),
+            fcZero);
+  EXPECT_EQ(std::get<1>(fcmpImpliesClass(FCmpInst::FCMP_UEQ, *F, A, fcZero)),
+            fcZero | fcNan);
+  EXPECT_EQ(std::get<1>(fcmpImpliesClass(FCmpInst::FCMP_UNE, *F, A, fcZero)),
+            ~fcZero);
+  EXPECT_EQ(std::get<1>(fcmpImpliesClass(FCmpInst::FCMP_ONE, *F, A, fcZero)),
+            ~fcNan & ~fcZero);
+  EXPECT_EQ(std::get<1>(fcmpImpliesClass(FCmpInst::FCMP_ORD, *F, A, fcZero)),
+            ~fcNan);
+  EXPECT_EQ(std::get<1>(fcmpImpliesClass(FCmpInst::FCMP_UNO, *F, A, fcZero)),
+            fcNan);
+  EXPECT_EQ(std::get<1>(fcmpImpliesClass(FCmpInst::FCMP_OGT, *F, A, fcZero)),
+            fcSubnormal | fcNormal | fcInf);
+  EXPECT_EQ(std::get<1>(fcmpImpliesClass(FCmpInst::FCMP_UGT, *F, A, fcZero)),
+            fcSubnormal | fcNormal | fcInf | fcNan);
+  EXPECT_EQ(std::get<1>(fcmpImpliesClass(FCmpInst::FCMP_OGE, *F, A, fcZero)),
+            ~fcNan);
+  EXPECT_EQ(std::get<1>(fcmpImpliesClass(FCmpInst::FCMP_UGE, *F, A, fcZero)),
+            fcAllFlags);
+  EXPECT_EQ(std::get<1>(fcmpImpliesClass(FCmpInst::FCMP_OLT, *F, A, fcZero)),
+            fcNone);
+  EXPECT_EQ(std::get<1>(fcmpImpliesClass(FCmpInst::FCMP_ULT, *F, A, fcZero)),
+            fcNan);
+  EXPECT_EQ(std::get<1>(fcmpImpliesClass(FCmpInst::FCMP_OLE, *F, A, fcZero)),
+            fcZero);
+  EXPECT_EQ(std::get<1>(fcmpImpliesClass(FCmpInst::FCMP_ULE, *F, A, fcZero)),
+            fcZero | fcNan);
 }
 
 TEST_F(ValueTrackingTest, isNonZeroRecurrence) {

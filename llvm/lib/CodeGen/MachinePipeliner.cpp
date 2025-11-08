@@ -110,6 +110,7 @@ STATISTIC(NumFailZeroMII, "Pipeliner abort due to zero MII");
 STATISTIC(NumFailNoSchedule, "Pipeliner abort due to no schedule found");
 STATISTIC(NumFailZeroStage, "Pipeliner abort due to zero stage");
 STATISTIC(NumFailLargeMaxStage, "Pipeliner abort due to too many stages");
+STATISTIC(NumFailTooManyStores, "Pipeliner abort due to too many stores");
 
 /// A command line option to turn software pipelining on or off.
 static cl::opt<bool> EnableSWP("enable-pipeliner", cl::Hidden, cl::init(true),
@@ -193,16 +194,22 @@ static cl::opt<bool>
     MVECodeGen("pipeliner-mve-cg", cl::Hidden, cl::init(false),
                cl::desc("Use the MVE code generator for software pipelining"));
 
-namespace llvm {
+/// A command line argument to limit the number of store instructions in the
+/// target basic block.
+static cl::opt<unsigned> SwpMaxNumStores(
+    "pipeliner-max-num-stores",
+    cl::desc("Maximum number of stores allwed in the target loop."), cl::Hidden,
+    cl::init(200));
 
 // A command line option to enable the CopyToPhi DAG mutation.
-cl::opt<bool> SwpEnableCopyToPhi("pipeliner-enable-copytophi", cl::ReallyHidden,
-                                 cl::init(true),
-                                 cl::desc("Enable CopyToPhi DAG Mutation"));
+cl::opt<bool>
+    llvm::SwpEnableCopyToPhi("pipeliner-enable-copytophi", cl::ReallyHidden,
+                             cl::init(true),
+                             cl::desc("Enable CopyToPhi DAG Mutation"));
 
 /// A command line argument to force pipeliner to use specified issue
 /// width.
-cl::opt<int> SwpForceIssueWidth(
+cl::opt<int> llvm::SwpForceIssueWidth(
     "pipeliner-force-issue-width",
     cl::desc("Force pipeliner to use specified issue width."), cl::Hidden,
     cl::init(-1));
@@ -217,8 +224,6 @@ static cl::opt<WindowSchedulingFlag> WindowSchedulingOption(
                           "Use window algorithm after SMS algorithm fails."),
                clEnumValN(WindowSchedulingFlag::WS_Force, "force",
                           "Use window algorithm instead of SMS algorithm.")));
-
-} // end namespace llvm
 
 unsigned SwingSchedulerDAG::Circuits::MaxPaths = 5;
 char MachinePipeliner::ID = 0;
@@ -540,6 +545,23 @@ bool MachinePipeliner::canPipelineLoop(MachineLoop &L) {
       return MachineOptimizationRemarkAnalysis(DEBUG_TYPE, "canPipelineLoop",
                                                L.getStartLoc(), L.getHeader())
              << "No loop preheader found";
+    });
+    return false;
+  }
+
+  unsigned NumStores = 0;
+  for (MachineInstr &MI : *L.getHeader())
+    if (MI.mayStore())
+      ++NumStores;
+  if (NumStores > SwpMaxNumStores) {
+    LLVM_DEBUG(dbgs() << "Too many stores\n");
+    NumFailTooManyStores++;
+    ORE->emit([&]() {
+      return MachineOptimizationRemarkAnalysis(DEBUG_TYPE, "canPipelineLoop",
+                                               L.getStartLoc(), L.getHeader())
+             << "Too many store instructions in the loop: "
+             << ore::NV("NumStores", NumStores) << " > "
+             << ore::NV("SwpMaxNumStores", SwpMaxNumStores) << ".";
     });
     return false;
   }
@@ -3466,9 +3488,9 @@ bool SMSchedule::onlyHasLoopCarriedOutputOrOrderPreds(
 }
 
 /// Determine transitive dependences of unpipelineable instructions
-SmallSet<SUnit *, 8> SMSchedule::computeUnpipelineableNodes(
+SmallPtrSet<SUnit *, 8> SMSchedule::computeUnpipelineableNodes(
     SwingSchedulerDAG *SSD, TargetInstrInfo::PipelinerLoopInfo *PLI) {
-  SmallSet<SUnit *, 8> DoNotPipeline;
+  SmallPtrSet<SUnit *, 8> DoNotPipeline;
   SmallVector<SUnit *, 8> Worklist;
 
   for (auto &SU : SSD->SUnits)
@@ -3498,7 +3520,7 @@ SmallSet<SUnit *, 8> SMSchedule::computeUnpipelineableNodes(
 // and ensure that they are in stage 0.  If unable to do so, return false.
 bool SMSchedule::normalizeNonPipelinedInstructions(
     SwingSchedulerDAG *SSD, TargetInstrInfo::PipelinerLoopInfo *PLI) {
-  SmallSet<SUnit *, 8> DNP = computeUnpipelineableNodes(SSD, PLI);
+  SmallPtrSet<SUnit *, 8> DNP = computeUnpipelineableNodes(SSD, PLI);
 
   int NewLastCycle = INT_MIN;
   for (SUnit &SU : SSD->SUnits) {
@@ -4279,8 +4301,8 @@ void LoopCarriedEdges::modifySUnits(std::vector<SUnit> &SUnits,
             !TII->isGlobalMemoryObject(FromMI) &&
             !TII->isGlobalMemoryObject(ToMI) && !isSuccOrder(From, To)) {
           SDep Pred = Dep;
-          Pred.setSUnit(Src);
-          Dst->addPred(Pred);
+          Pred.setSUnit(From);
+          To->addPred(Pred);
         }
       }
     }

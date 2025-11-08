@@ -40,7 +40,7 @@
 // OLD-DAG: [[P9:[0-9]+]]: offload, "device-[[T]] (amdgcn-amd-amdhsa:[[ARCH]])" {[[P8]]}, image
 // NEW-DAG: [[P9:[0-9]+]]: offload, "device-[[T]] (amdgcn-amd-amdhsa:[[ARCH]])" {[[P6]]}, ir
 // OLDN-DAG: [[P10:[0-9]+]]: linker, {[[P9]]}, hip-fatbin, (device-[[T]])
-// NEW-DAG: [[P10:[0-9]+]]: clang-offload-packager, {[[P9]]}, image, (device-[[T]])
+// NEW-DAG: [[P10:[0-9]+]]: llvm-offload-binary, {[[P9]]}, image, (device-[[T]])
 // OLDR-DAG: [[P10:[0-9]+]]: linker, {[[P9]]}, object, (device-[[T]])
 
 // OLDN-DAG: [[P11:[0-9]+]]: offload, "host-[[T]] (x86_64-unknown-linux-gnu)" {[[P2]]}, "device-[[T]] (amdgcn-amd-amdhsa)" {[[P10]]}, ir
@@ -275,8 +275,14 @@
 // RUN: %clang -x hip --target=x86_64-unknown-linux-gnu -ccc-print-phases --no-offload-new-driver \
 // RUN: --cuda-gpu-arch=gfx803 %s --cuda-device-only -fhip-emit-relocatable 2>&1 \
 // RUN: | FileCheck -check-prefixes=RELOC %s
+// RUN: %clang -x hip --target=x86_64-unknown-linux-gnu -ccc-print-phases --offload-new-driver \
+// RUN: --cuda-gpu-arch=gfx803 %s --cuda-device-only -fhip-emit-relocatable 2>&1 \
+// RUN: | FileCheck -check-prefixes=RELOC %s
 //
 // RUN: %clang -x hip --target=x86_64-unknown-linux-gnu -ccc-print-phases --no-offload-new-driver \
+// RUN: --cuda-gpu-arch=gfx803 %s --cuda-device-only -fhip-emit-relocatable -Wl,--disable-new-dtags \
+// RUN: 2>&1 | FileCheck -check-prefixes=RELOC %s
+// RUN: %clang -x hip --target=x86_64-unknown-linux-gnu -ccc-print-phases --offload-new-driver \
 // RUN: --cuda-gpu-arch=gfx803 %s --cuda-device-only -fhip-emit-relocatable -Wl,--disable-new-dtags \
 // RUN: 2>&1 | FileCheck -check-prefixes=RELOC %s
 //
@@ -286,7 +292,7 @@
 // RELOC-DAG: [[P3:[0-9]+]]: backend, {[[P2]]}, assembler, (device-[[T]], [[ARCH]])
 // RELOC-DAG: [[P4:[0-9]+]]: assembler, {[[P3]]}, object, (device-[[T]], [[ARCH]])
 // RELOC-NOT: linker
-// RELOC-DAG: [[P5:[0-9]+]]: offload, "device-[[T]] (amdgcn-amd-amdhsa:[[ARCH]])" {[[P4]]}, object
+// RELOC-DAG: [[P5:[0-9]+]]: offload, "device-[[T]] (amdgcn-amd-amdhsa:[[ARCH]])" {[[P4]]}
 // RELOC-NOT: host
 
 //
@@ -659,7 +665,7 @@
 // LTO-NEXT: 10: compiler, {9}, ir, (device-hip, gfx90a)
 // LTO-NEXT: 11: backend, {10}, lto-bc, (device-hip, gfx90a)
 // LTO-NEXT: 12: offload, "device-hip (amdgcn-amd-amdhsa:gfx90a)" {11}, lto-bc
-// LTO-NEXT: 13: clang-offload-packager, {7, 12}, image, (device-hip)
+// LTO-NEXT: 13: llvm-offload-binary, {7, 12}, image, (device-hip)
 // LTO-NEXT: 14: offload, "host-hip (x86_64-unknown-linux-gnu)" {2}, "device-hip (x86_64-unknown-linux-gnu)" {13}, ir
 // LTO-NEXT: 15: backend, {14}, assembler, (host-hip)
 // LTO-NEXT: 16: assembler, {15}, object, (host-hip)
@@ -675,3 +681,25 @@
 // DEVICE-ONLY-NEXT: 2: compiler, {1}, ir, (device-hip, gfx90a)
 // DEVICE-ONLY-NEXT: 3: backend, {2}, ir, (device-hip, gfx90a)
 // DEVICE-ONLY-NEXT: 4: offload, "device-hip (amdgcn-amd-amdhsa:gfx90a)" {3}, none
+
+//
+// Test the new driver bundling SPIR-V targets.
+//
+// RUN: %clang -### --target=x86_64-linux-gnu --offload-new-driver -ccc-print-phases \
+// RUN:        --offload-device-only --offload-arch=amdgcnspirv,gfx1030 %s 2>&1 \
+// RUN: | FileCheck -check-prefix=SPIRV-ONLY %s
+//      SPIRV-ONLY: 0: input, "[[INPUT:.+]]", hip, (device-hip, gfx1030)
+// SPIRV-ONLY-NEXT: 1: preprocessor, {0}, hip-cpp-output, (device-hip, gfx1030)
+// SPIRV-ONLY-NEXT: 2: compiler, {1}, ir, (device-hip, gfx1030)
+// SPIRV-ONLY-NEXT: 3: backend, {2}, assembler, (device-hip, gfx1030)
+// SPIRV-ONLY-NEXT: 4: assembler, {3}, object, (device-hip, gfx1030)
+// SPIRV-ONLY-NEXT: 5: linker, {4}, image, (device-hip, gfx1030)
+// SPIRV-ONLY-NEXT: 6: offload, "device-hip (amdgcn-amd-amdhsa:gfx1030)" {5}, image
+// SPIRV-ONLY-NEXT: 7: input, "[[INPUT]]", hip, (device-hip, amdgcnspirv)
+// SPIRV-ONLY-NEXT: 8: preprocessor, {7}, hip-cpp-output, (device-hip, amdgcnspirv)
+// SPIRV-ONLY-NEXT: 9: compiler, {8}, ir, (device-hip, amdgcnspirv)
+// SPIRV-ONLY-NEXT: 10: backend, {9}, ir, (device-hip, amdgcnspirv)
+// SPIRV-ONLY-NEXT: 11: linker, {10}, image, (device-hip, amdgcnspirv)
+// SPIRV-ONLY-NEXT: 12: offload, "device-hip (spirv64-amd-amdhsa:amdgcnspirv)" {11}, image
+// SPIRV-ONLY-NEXT: 13: linker, {6, 12}, hip-fatbin, (device-hip)
+// SPIRV-ONLY-NEXT: 14: offload, "device-hip (amdgcn-amd-amdhsa)" {13}, none

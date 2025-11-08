@@ -28,6 +28,7 @@ def bob : Super;
 def test {
   dag orig = (foo 1, 2:$a, $b);
   dag another = (qux "hello", $world);
+  dag named = (foo:$root 1, 2:$a, $b);
 
   // CHECK: dag replaceWithBar = (bar 1, 2:$a, ?:$b);
   dag replaceWithBar = !setop(orig, bar);
@@ -40,6 +41,19 @@ def test {
 
   // CHECK: dag getopToSetop = (foo "hello", ?:$world);
   dag getopToSetop = !setdagop(another, !getdagop(orig));
+
+  // CHECK: dag setOpName = (foo:$baz 1, 2:$a, ?:$b);
+  dag setOpName = !setdagopname(orig, "baz");
+
+  // CHECK: dag getopNameToSetOpName = (foo:$root 1, 2:$a, ?:$b);
+  dag getopNameToSetOpName = !setdagopname(orig, !getdagopname(named));
+
+  // CHECK: dag setOpNameExpl = (foo:$baz 1, 2:$a, ?:$b);
+  dag setOpNameExpl = !setdagopname((foo 1, 2:$a, $b), "baz");
+
+  // CHECK: dag getopNameToSetOpNameExpl = (foo:$root 1, 2:$a, ?:$b);
+  dag getopNameToSetOpNameExpl =
+    !setdagopname(orig, !getdagopname((foo:$root 1, 2:$a, $b)));
 
   // CHECK: dag getopToBangDag = (foo 1:$a, 2:$b, 3:$c);
   dag getopToBangDag = !dag(!getdagop(orig), [1, 2, 3], ["a", "b", "c"]);

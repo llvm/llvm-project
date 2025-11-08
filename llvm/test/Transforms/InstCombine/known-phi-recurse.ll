@@ -261,14 +261,11 @@ define i8 @knownbits_umax_select_test() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[INDVAR:%.*]] = phi i8 [ 0, [[ENTRY:%.*]] ], [ [[CONTAIN:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[COND0:%.*]] = call i1 @cond()
-; CHECK-NEXT:    [[CONTAIN]] = call i8 @llvm.umax.i8(i8 [[INDVAR]], i8 1)
 ; CHECK-NEXT:    [[COND1:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[COND1]], label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[BOOL:%.*]] = and i8 [[CONTAIN]], 1
-; CHECK-NEXT:    ret i8 [[BOOL]]
+; CHECK-NEXT:    ret i8 1
 ;
 entry:
   br label %loop

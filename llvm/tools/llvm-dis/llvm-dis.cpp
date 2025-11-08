@@ -80,11 +80,6 @@ static cl::opt<bool>
                     cl::desc("Add informational comments to the .ll file"),
                     cl::cat(DisCategory));
 
-static cl::opt<bool> PreserveAssemblyUseListOrder(
-    "preserve-ll-uselistorder",
-    cl::desc("Preserve use-list order when writing LLVM assembly."),
-    cl::init(false), cl::Hidden, cl::cat(DisCategory));
-
 static cl::opt<bool>
     MaterializeMetadata("materialize-metadata",
                         cl::desc("Load module without materializing metadata, "
@@ -130,20 +125,6 @@ public:
         OS << " [debug line = ";
         printDebugLoc(DL,OS);
         OS << "]";
-      }
-      if (const DbgDeclareInst *DDI = dyn_cast<DbgDeclareInst>(I)) {
-        if (!Padded) {
-          OS.PadToColumn(50);
-          OS << ";";
-        }
-        OS << " [debug variable = " << DDI->getVariable()->getName() << "]";
-      }
-      else if (const DbgValueInst *DVI = dyn_cast<DbgValueInst>(I)) {
-        if (!Padded) {
-          OS.PadToColumn(50);
-          OS << ";";
-        }
-        OS << " [debug variable = " << DVI->getVariable()->getName() << "]";
       }
     }
   }
@@ -269,7 +250,8 @@ int main(int argc, char **argv) {
       if (!DontPrint) {
         if (M) {
           M->removeDebugIntrinsicDeclarations();
-          M->print(Out->os(), Annotator.get(), PreserveAssemblyUseListOrder);
+          M->print(Out->os(), Annotator.get(),
+                   /* ShouldPreserveUseListOrder */ false);
         }
         if (Index)
           Index->print(Out->os());

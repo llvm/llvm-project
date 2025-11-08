@@ -7,65 +7,27 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/RuntimeLibcalls.h"
+#include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/ADT/StringTable.h"
+#include "llvm/IR/Module.h"
+#include "llvm/Support/Debug.h"
+#include "llvm/Support/xxhash.h"
+#include "llvm/TargetParser/ARMTargetParser.h"
+
+#define DEBUG_TYPE "runtime-libcalls-info"
 
 using namespace llvm;
 using namespace RTLIB;
 
+#define GET_RUNTIME_LIBCALLS_INFO
 #define GET_INIT_RUNTIME_LIBCALL_NAMES
 #define GET_SET_TARGET_RUNTIME_LIBCALL_SETS
+#define DEFINE_GET_LOOKUP_LIBCALL_IMPL_NAME
 #include "llvm/IR/RuntimeLibcalls.inc"
-#undef GET_INIT_RUNTIME_LIBCALL_NAMES
-#undef GET_SET_TARGET_RUNTIME_LIBCALL_SETS
 
-static void setARMLibcallNames(RuntimeLibcallsInfo &Info, const Triple &TT,
-                               FloatABI::ABIType FloatABIType,
-                               EABI EABIVersion) {
-  static const RTLIB::LibcallImpl AAPCS_Libcalls[] = {
-      RTLIB::__aeabi_dadd,        RTLIB::__aeabi_ddiv,
-      RTLIB::__aeabi_dmul,        RTLIB::__aeabi_dsub,
-      RTLIB::__aeabi_dcmpeq__oeq, RTLIB::__aeabi_dcmpeq__une,
-      RTLIB::__aeabi_dcmplt,      RTLIB::__aeabi_dcmple,
-      RTLIB::__aeabi_dcmpge,      RTLIB::__aeabi_dcmpgt,
-      RTLIB::__aeabi_dcmpun,      RTLIB::__aeabi_fadd,
-      RTLIB::__aeabi_fdiv,        RTLIB::__aeabi_fmul,
-      RTLIB::__aeabi_fsub,        RTLIB::__aeabi_fcmpeq__oeq,
-      RTLIB::__aeabi_fcmpeq__une, RTLIB::__aeabi_fcmplt,
-      RTLIB::__aeabi_fcmple,      RTLIB::__aeabi_fcmpge,
-      RTLIB::__aeabi_fcmpgt,      RTLIB::__aeabi_fcmpun,
-      RTLIB::__aeabi_d2iz,        RTLIB::__aeabi_d2uiz,
-      RTLIB::__aeabi_d2lz,        RTLIB::__aeabi_d2ulz,
-      RTLIB::__aeabi_f2iz,        RTLIB::__aeabi_f2uiz,
-      RTLIB::__aeabi_f2lz,        RTLIB::__aeabi_f2ulz,
-      RTLIB::__aeabi_d2f,         RTLIB::__aeabi_d2h,
-      RTLIB::__aeabi_f2d,         RTLIB::__aeabi_i2d,
-      RTLIB::__aeabi_ui2d,        RTLIB::__aeabi_l2d,
-      RTLIB::__aeabi_ul2d,        RTLIB::__aeabi_i2f,
-      RTLIB::__aeabi_ui2f,        RTLIB::__aeabi_l2f,
-      RTLIB::__aeabi_ul2f,        RTLIB::__aeabi_lmul,
-      RTLIB::__aeabi_llsl,        RTLIB::__aeabi_llsr,
-      RTLIB::__aeabi_lasr,        RTLIB::__aeabi_idiv__i8,
-      RTLIB::__aeabi_idiv__i16,   RTLIB::__aeabi_idiv__i32,
-      RTLIB::__aeabi_idivmod,     RTLIB::__aeabi_uidivmod,
-      RTLIB::__aeabi_ldivmod,     RTLIB::__aeabi_uidiv__i8,
-      RTLIB::__aeabi_uidiv__i16,  RTLIB::__aeabi_uidiv__i32,
-      RTLIB::__aeabi_uldivmod,    RTLIB::__aeabi_f2h,
-      RTLIB::__aeabi_d2h,         RTLIB::__aeabi_h2f,
-      RTLIB::__aeabi_memcpy,      RTLIB::__aeabi_memmove,
-      RTLIB::__aeabi_memset,      RTLIB::__aeabi_memcpy4,
-      RTLIB::__aeabi_memcpy8,     RTLIB::__aeabi_memmove4,
-      RTLIB::__aeabi_memmove8,    RTLIB::__aeabi_memset4,
-      RTLIB::__aeabi_memset8,     RTLIB::__aeabi_memclr,
-      RTLIB::__aeabi_memclr4,     RTLIB::__aeabi_memclr8};
-
-  for (RTLIB::LibcallImpl Impl : AAPCS_Libcalls)
-    Info.setLibcallImplCallingConv(Impl, CallingConv::ARM_AAPCS);
-}
-
-void RTLIB::RuntimeLibcallsInfo::initDefaultLibCallImpls() {
-  std::memcpy(LibcallImpls, DefaultLibcallImpls, sizeof(LibcallImpls));
-  static_assert(sizeof(LibcallImpls) == sizeof(DefaultLibcallImpls),
-                "libcall array size should match");
+RuntimeLibcallsInfo::RuntimeLibcallsInfo(const Module &M)
+    : RuntimeLibcallsInfo(M.getTargetTriple()) {
+  // TODO: Consider module flags
 }
 
 /// Set default libcall names. If a target wants to opt-out of a libcall it
@@ -74,65 +36,32 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT,
                                        ExceptionHandling ExceptionModel,
                                        FloatABI::ABIType FloatABI,
                                        EABI EABIVersion, StringRef ABIName) {
-  setTargetRuntimeLibcallSets(TT, FloatABI);
+  setTargetRuntimeLibcallSets(TT, ExceptionModel, FloatABI, EABIVersion,
+                              ABIName);
+}
 
-  // Early exit for targets that have fully ported to tablegen.
-  if (TT.isAMDGPU() || TT.isNVPTX() || TT.isWasm())
-    return;
-
-  if (TT.isX86() || TT.isVE() || TT.isARM() || TT.isThumb()) {
-    if (ExceptionModel == ExceptionHandling::SjLj)
-      setLibcallImpl(RTLIB::UNWIND_RESUME, RTLIB::_Unwind_SjLj_Resume);
+LLVM_ATTRIBUTE_ALWAYS_INLINE
+iota_range<RTLIB::LibcallImpl>
+RuntimeLibcallsInfo::libcallImplNameHit(uint16_t NameOffsetEntry,
+                                        uint16_t StrOffset) {
+  int NumAliases = 1;
+  for (uint16_t Entry : ArrayRef(RuntimeLibcallNameOffsetTable)
+                            .drop_front(NameOffsetEntry + 1)) {
+    if (Entry != StrOffset)
+      break;
+    ++NumAliases;
   }
 
-  // A few names are different on particular architectures or environments.
-  if (TT.isOSDarwin()) {
-    // For f16/f32 conversions, Darwin uses the standard naming scheme,
-    // instead of the gnueabi-style __gnu_*_ieee.
-    // FIXME: What about other targets?
-    setLibcallImpl(RTLIB::FPEXT_F16_F32, RTLIB::__extendhfsf2);
-    setLibcallImpl(RTLIB::FPROUND_F32_F16, RTLIB::__truncsfhf2);
+  RTLIB::LibcallImpl ImplStart = static_cast<RTLIB::LibcallImpl>(
+      &RuntimeLibcallNameOffsetTable[NameOffsetEntry] -
+      &RuntimeLibcallNameOffsetTable[0]);
+  return enum_seq(ImplStart,
+                  static_cast<RTLIB::LibcallImpl>(ImplStart + NumAliases));
+}
 
-    if (!darwinHasExp10(TT)) {
-      setLibcallImpl(RTLIB::EXP10_F32, RTLIB::Unsupported);
-      setLibcallImpl(RTLIB::EXP10_F64, RTLIB::Unsupported);
-    }
-  }
-
-  if (TT.isOSOpenBSD()) {
-    setLibcallImpl(RTLIB::STACKPROTECTOR_CHECK_FAIL, RTLIB::Unsupported);
-    setLibcallImpl(RTLIB::STACK_SMASH_HANDLER, RTLIB::__stack_smash_handler);
-  }
-
-  // Skip default manual processing for targets that have been fully ported to
-  // tablegen for now. Eventually the rest of this should be deleted.
-  if (TT.isX86() || TT.isAArch64() || TT.isWasm())
-    return;
-
-  if (TT.isARM() || TT.isThumb()) {
-    setARMLibcallNames(*this, TT, FloatABI, EABIVersion);
-    return;
-  }
-
-  if (hasSinCos(TT)) {
-    setLibcallImpl(RTLIB::SINCOS_F32, RTLIB::sincosf);
-    setLibcallImpl(RTLIB::SINCOS_F64, RTLIB::sincos);
-    setLibcallImpl(RTLIB::SINCOS_F128, RTLIB::sincos_f128);
-  }
-
-  // These libcalls are only available in compiler-rt, not libgcc.
-  if (TT.isArch64Bit()) {
-    setLibcallImpl(RTLIB::SHL_I128, RTLIB::__ashlti3);
-    setLibcallImpl(RTLIB::SRL_I128, RTLIB::__lshrti3);
-    setLibcallImpl(RTLIB::SRA_I128, RTLIB::__ashrti3);
-    setLibcallImpl(RTLIB::MUL_I128, RTLIB::__multi3);
-    setLibcallImpl(RTLIB::MULO_I64, RTLIB::__mulodi4);
-  }
-
-  if (TT.getArch() == Triple::ArchType::msp430) {
-    setLibcallImplCallingConv(RTLIB::__mspabi_mpyll,
-                              CallingConv::MSP430_BUILTIN);
-  }
+bool RuntimeLibcallsInfo::isAAPCS_ABI(const Triple &TT, StringRef ABIName) {
+  const ARM::ARMABI TargetABI = ARM::computeTargetABI(TT, ABIName);
+  return TargetABI == ARM::ARM_ABI_AAPCS || TargetABI == ARM::ARM_ABI_AAPCS16;
 }
 
 bool RuntimeLibcallsInfo::darwinHasExp10(const Triple &TT) {
@@ -150,4 +79,81 @@ bool RuntimeLibcallsInfo::darwinHasExp10(const Triple &TT) {
   default:
     return false;
   }
+}
+
+std::pair<FunctionType *, AttributeList>
+RuntimeLibcallsInfo::getFunctionTy(LLVMContext &Ctx, const Triple &TT,
+                                   const DataLayout &DL,
+                                   RTLIB::LibcallImpl LibcallImpl) const {
+  static constexpr Attribute::AttrKind CommonFnAttrs[] = {
+      Attribute::NoCallback, Attribute::NoFree, Attribute::NoSync,
+      Attribute::NoUnwind, Attribute::WillReturn};
+
+  switch (LibcallImpl) {
+  case RTLIB::impl___sincos_stret:
+  case RTLIB::impl___sincosf_stret: {
+    if (!darwinHasSinCosStret(TT)) // Non-darwin currently unexpected
+      return {};
+
+    Type *ScalarTy = LibcallImpl == RTLIB::impl___sincosf_stret
+                         ? Type::getFloatTy(Ctx)
+                         : Type::getDoubleTy(Ctx);
+
+    AttrBuilder FuncAttrBuilder(Ctx);
+    for (Attribute::AttrKind Attr : CommonFnAttrs)
+      FuncAttrBuilder.addAttribute(Attr);
+
+    const bool UseSret =
+        TT.isX86_32() || ((TT.isARM() || TT.isThumb()) &&
+                          ARM::computeTargetABI(TT) == ARM::ARM_ABI_APCS);
+
+    FuncAttrBuilder.addMemoryAttr(MemoryEffects::argumentOrErrnoMemOnly(
+        UseSret ? ModRefInfo::Mod : ModRefInfo::NoModRef, ModRefInfo::Mod));
+
+    AttributeList Attrs;
+    Attrs = Attrs.addFnAttributes(Ctx, FuncAttrBuilder);
+
+    if (UseSret) {
+      AttrBuilder AttrBuilder(Ctx);
+      StructType *StructTy = StructType::get(ScalarTy, ScalarTy);
+      AttrBuilder.addStructRetAttr(StructTy);
+      AttrBuilder.addAlignmentAttr(DL.getABITypeAlign(StructTy));
+      FunctionType *FuncTy = FunctionType::get(
+          Type::getVoidTy(Ctx), {DL.getAllocaPtrType(Ctx), ScalarTy}, false);
+
+      return {FuncTy, Attrs.addParamAttributes(Ctx, 0, AttrBuilder)};
+    }
+
+    Type *RetTy =
+        LibcallImpl == RTLIB::impl___sincosf_stret && TT.isX86_64()
+            ? static_cast<Type *>(FixedVectorType::get(ScalarTy, 2))
+            : static_cast<Type *>(StructType::get(ScalarTy, ScalarTy));
+
+    return {FunctionType::get(RetTy, {ScalarTy}, false), Attrs};
+  }
+  case RTLIB::impl_sqrtf:
+  case RTLIB::impl_sqrt: {
+    AttrBuilder FuncAttrBuilder(Ctx);
+
+    for (Attribute::AttrKind Attr : CommonFnAttrs)
+      FuncAttrBuilder.addAttribute(Attr);
+    FuncAttrBuilder.addMemoryAttr(MemoryEffects::errnoMemOnly(ModRefInfo::Mod));
+
+    AttributeList Attrs;
+    Attrs = Attrs.addFnAttributes(Ctx, FuncAttrBuilder);
+
+    Type *ScalarTy = LibcallImpl == RTLIB::impl_sqrtf ? Type::getFloatTy(Ctx)
+                                                      : Type::getDoubleTy(Ctx);
+    FunctionType *FuncTy = FunctionType::get(ScalarTy, {ScalarTy}, false);
+
+    Attrs = Attrs.addRetAttribute(
+        Ctx, Attribute::getWithNoFPClass(Ctx, fcNegInf | fcNegSubnormal |
+                                                  fcNegNormal));
+    return {FuncTy, Attrs};
+  }
+  default:
+    return {};
+  }
+
+  return {};
 }
