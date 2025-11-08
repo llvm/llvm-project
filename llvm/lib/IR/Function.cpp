@@ -507,7 +507,9 @@ Function::Function(FunctionType *Ty, LinkageTypes Linkage, unsigned AddrSpace,
     // Don't set the attributes if the intrinsic signature is invalid. This
     // case will either be auto-upgraded or fail verification.
     SmallVector<Type *> OverloadTys;
-    if (!Intrinsic::getIntrinsicSignature(IntID, Ty, OverloadTys))
+    assert(ParentModule);
+    if (!Intrinsic::getIntrinsicSignature(ParentModule->getDataLayout(), IntID,
+                                          Ty, OverloadTys))
       return;
 
     setAttributes(Intrinsic::getAttributes(getContext(), IntID, Ty));
