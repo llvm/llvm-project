@@ -58,9 +58,10 @@ static bool assignsToBoolean(const BinaryOperator *BinOp, ASTContext *AC) {
 static const NamedDecl *
 getLHSNamedDeclIfCompoundAssign(const BinaryOperator *BO) {
   if (BO->isCompoundAssignmentOp()) {
-    const auto *DeclRefLHS =
-        dyn_cast<DeclRefExpr>(BO->getLHS()->IgnoreImpCasts());
-    return DeclRefLHS ? DeclRefLHS->getDecl() : nullptr;
+    if (const auto *DeclRefLHS = dyn_cast<DeclRefExpr>(BO->getLHS()->IgnoreImpCasts()))
+      return DeclRefLHS->getDecl();
+    else if (const auto *MemberLHS = dyn_cast<MemberExpr>(BO->getLHS()->IgnoreImpCasts()))
+      return MemberLHS->getMemberDecl();
   }
   return nullptr;
 }
@@ -132,6 +133,17 @@ static bool isBooleanBitwise(const BinaryOperator *BinOp, ASTContext *AC,
   return false;
 }
 
+static const Expr* getValidCompoundsLHS(const BinaryOperator* BinOp) {
+  assert(BinOp->isCompoundAssignmentOp());
+  
+  if (const auto *DeclRefLHS = dyn_cast<DeclRefExpr>(BinOp->getLHS()->IgnoreImpCasts()))
+    return DeclRefLHS;
+  else if (const auto *MemberLHS = dyn_cast<MemberExpr>(BinOp->getLHS()->IgnoreImpCasts()))
+    return MemberLHS;
+
+  return nullptr;
+}
+
 BoolBitwiseOperationCheck::BoolBitwiseOperationCheck(StringRef Name,
                                                      ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
@@ -159,9 +171,8 @@ void BoolBitwiseOperationCheck::emitWarningAndChangeOperatorsIfPossible(
   auto DiagEmitter = [BinOp, this] {
     const NamedDecl *ND = getLHSNamedDeclIfCompoundAssign(BinOp);
     return diag(BinOp->getOperatorLoc(),
-                "use logical operator '%0' for boolean %select{variable "
-                "%2|semantics}1 instead of bitwise operator '%3'")
-           << translate(BinOp->getOpcodeStr()) << (ND == nullptr) << ND
+                "use logical operator '%0' for boolean %select{%select{member|variable}2 %3|semantics}1 instead of bitwise operator '%4'")
+           << translate(BinOp->getOpcodeStr()) << (ND == nullptr) << (!isa<MemberExpr>(BinOp->getLHS()->IgnoreImpCasts())) << ND
            << BinOp->getOpcodeStr();
   };
 
@@ -201,19 +212,22 @@ void BoolBitwiseOperationCheck::emitWarningAndChangeOperatorsIfPossible(
 
   FixItHint InsertEqual;
   if (BinOp->isCompoundAssignmentOp()) {
-    const auto *DeclRefLHS =
-        dyn_cast<DeclRefExpr>(BinOp->getLHS()->IgnoreImpCasts());
-    if (!DeclRefLHS)
+    const auto *LHS = getValidCompoundsLHS(BinOp);
+    if (!LHS)
       return static_cast<void>(DiagEmitter());
-    const SourceLocation LocLHS = DeclRefLHS->getEndLoc();
+    const SourceLocation LocLHS = LHS->getEndLoc();
     if (LocLHS.isInvalid() || LocLHS.isMacroID())
       return static_cast<void>(IgnoreMacros || DiagEmitter());
     const SourceLocation InsertLoc =
         clang::Lexer::getLocForEndOfToken(LocLHS, 0, SM, Ctx.getLangOpts());
     if (InsertLoc.isInvalid() || InsertLoc.isMacroID())
       return static_cast<void>(IgnoreMacros || DiagEmitter());
-    InsertEqual = FixItHint::CreateInsertion(
-        InsertLoc, " = " + DeclRefLHS->getDecl()->getNameAsString());
+    auto SourceText = static_cast<std::string>(Lexer::getSourceText(
+                CharSourceRange::getTokenRange(LHS->getSourceRange()),
+                SM, Ctx.getLangOpts()
+            ));
+    llvm::erase_if(SourceText, [](unsigned char ch) { return std::isspace(ch); });
+    InsertEqual = FixItHint::CreateInsertion(InsertLoc, " = " + SourceText);
   }
 
   auto ReplaceOperator = FixItHint::CreateReplacement(TokenRange, FixSpelling);
