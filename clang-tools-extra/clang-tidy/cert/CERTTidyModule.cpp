@@ -31,7 +31,7 @@
 #include "../concurrency/ThreadCanceltypeAsynchronousCheck.h"
 #include "../google/UnnamedNamespaceInHeaderCheck.h"
 #include "../misc/NewDeleteOverloadsCheck.h"
-#include "../misc/NonCopyableObjects.h"
+#include "../misc/NonCopyableObjectsCheck.h"
 #include "../misc/StaticAssertCheck.h"
 #include "../misc/ThrowByValueCatchByReferenceCheck.h"
 #include "../modernize/AvoidSetjmpLongjmpCheck.h"
