@@ -917,11 +917,10 @@ unsigned DWARFVerifier::verifyDebugInfoAttribute(const DWARFDie &Die,
     }
 
     // Check if the offset matches any of the sequence offset.
-    auto It =
-        std::find_if(LineTable->Sequences.begin(), LineTable->Sequences.end(),
-                     [SectionOffset](const auto &Sequence) {
-                       return Sequence.StmtSeqOffset == *SectionOffset;
-                     });
+    auto It = llvm::find_if(LineTable->Sequences,
+                            [SectionOffset](const auto &Sequence) {
+                              return Sequence.StmtSeqOffset == *SectionOffset;
+                            });
 
     if (It == LineTable->Sequences.end())
       ReportError(
