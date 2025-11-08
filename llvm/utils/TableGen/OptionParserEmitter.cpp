@@ -378,9 +378,9 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
       assert((CurIndex == 0 || !SubCommand.empty()) &&
              "Only first subcommand set should be empty!");
       for (const auto &SubCommandKey : SubCommand) {
-        auto It = std::find_if(
-            SubCommands.begin(), SubCommands.end(),
-            [&](const Record *R) { return R->getName() == SubCommandKey; });
+        auto It = llvm::find_if(SubCommands, [&](const Record *R) {
+          return R->getName() == SubCommandKey;
+        });
         assert(It != SubCommands.end() && "SubCommand not found");
         OS << ", " << std::distance(SubCommands.begin(), It) << " /* '"
            << SubCommandKey << "' */";
