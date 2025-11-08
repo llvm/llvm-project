@@ -113,12 +113,12 @@ findDifferingParamsInDeclaration(const FunctionDecl *ParameterSourceDeclaration,
     // FIXME: Provide a way to extract commented out parameter name from comment
     // next to it.
     if (!nameMatch(SourceParamName, OtherParamName, Strict)) {
-      SourceRange OtherParamNameRange =
+      const SourceRange OtherParamNameRange =
           DeclarationNameInfo((*OtherParamIt)->getDeclName(),
                               (*OtherParamIt)->getLocation())
               .getSourceRange();
 
-      bool GenerateFixItHint = checkIfFixItHintIsApplicable(
+      const bool GenerateFixItHint = checkIfFixItHintIsApplicable(
           ParameterSourceDeclaration, *SourceParamIt, OriginalDeclaration);
 
       DifferingParams.emplace_back(SourceParamName, OtherParamName,
@@ -137,11 +137,11 @@ findInconsistentDeclarations(const FunctionDecl *OriginalDeclaration,
                              const FunctionDecl *ParameterSourceDeclaration,
                              SourceManager &SM, bool Strict) {
   InconsistentDeclarationsContainer InconsistentDeclarations;
-  SourceLocation ParameterSourceLocation =
+  const SourceLocation ParameterSourceLocation =
       ParameterSourceDeclaration->getLocation();
 
   for (const FunctionDecl *OtherDeclaration : OriginalDeclaration->redecls()) {
-    SourceLocation OtherLocation = OtherDeclaration->getLocation();
+    const SourceLocation OtherLocation = OtherDeclaration->getLocation();
     if (OtherLocation != ParameterSourceLocation) { // Skip self.
       DifferingParamsContainer DifferingParams =
           findDifferingParamsInDeclaration(ParameterSourceDeclaration,
@@ -305,7 +305,7 @@ void InconsistentDeclarationParameterNameCheck::check(
   const FunctionDecl *ParameterSourceDeclaration =
       getParameterSourceDeclaration(OriginalDeclaration);
 
-  InconsistentDeclarationsContainer InconsistentDeclarations =
+  const InconsistentDeclarationsContainer InconsistentDeclarations =
       findInconsistentDeclarations(OriginalDeclaration,
                                    ParameterSourceDeclaration,
                                    *Result.SourceManager, Strict);
@@ -315,7 +315,7 @@ void InconsistentDeclarationParameterNameCheck::check(
     return;
   }
 
-  SourceLocation StartLoc = OriginalDeclaration->getBeginLoc();
+  const SourceLocation StartLoc = OriginalDeclaration->getBeginLoc();
   if (StartLoc.isMacroID() && IgnoreMacros) {
     markRedeclarationsAsVisited(OriginalDeclaration);
     return;

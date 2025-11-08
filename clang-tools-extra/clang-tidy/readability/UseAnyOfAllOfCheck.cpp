@@ -20,7 +20,7 @@ namespace {
 /// followed by a Stmt matching the inner matcher.
 AST_MATCHER_P(Stmt, nextStmt, ast_matchers::internal::Matcher<Stmt>,
               InnerMatcher) {
-  DynTypedNodeList Parents = Finder->getASTContext().getParents(Node);
+  const DynTypedNodeList Parents = Finder->getASTContext().getParents(Node);
   if (Parents.size() != 1)
     return false;
 

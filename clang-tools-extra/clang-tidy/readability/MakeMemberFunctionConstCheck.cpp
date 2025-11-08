@@ -59,7 +59,7 @@ public:
   UsageKind Usage = Unused;
 
   template <class T> const T *getParent(const Expr *E) {
-    DynTypedNodeList Parents = Ctxt.getParents(*E);
+    const DynTypedNodeList Parents = Ctxt.getParents(*E);
     if (Parents.size() != 1)
       return nullptr;
 
@@ -241,7 +241,7 @@ void MakeMemberFunctionConstCheck::registerMatchers(MatchFinder *Finder) {
 }
 
 static SourceLocation getConstInsertionPoint(const CXXMethodDecl *M) {
-  TypeSourceInfo *TSI = M->getTypeSourceInfo();
+  const TypeSourceInfo *TSI = M->getTypeSourceInfo();
   if (!TSI)
     return {};
 

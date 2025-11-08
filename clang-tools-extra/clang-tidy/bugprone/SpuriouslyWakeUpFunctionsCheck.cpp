@@ -77,7 +77,7 @@ void SpuriouslyWakeUpFunctionsCheck::registerMatchers(MatchFinder *Finder) {
 void SpuriouslyWakeUpFunctionsCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto *MatchedWait = Result.Nodes.getNodeAs<CallExpr>("wait");
-  StringRef WaitName = MatchedWait->getDirectCallee()->getName();
+  const StringRef WaitName = MatchedWait->getDirectCallee()->getName();
   diag(MatchedWait->getExprLoc(),
        "'%0' should be placed inside a while statement %select{|or used with a "
        "conditional parameter}1")

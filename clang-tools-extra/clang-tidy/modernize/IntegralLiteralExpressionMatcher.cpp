@@ -95,7 +95,7 @@ bool IntegralLiteralExpressionMatcher::unaryOperator() {
 }
 
 static LiteralSize literalTokenSize(const Token &Tok) {
-  unsigned int Length = Tok.getLength();
+  const unsigned int Length = Tok.getLength();
   if (Length <= 1)
     return LiteralSize::Int;
 

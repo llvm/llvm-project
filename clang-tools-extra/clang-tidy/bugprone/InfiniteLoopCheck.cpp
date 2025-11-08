@@ -34,7 +34,7 @@ AST_MATCHER(FunctionType, typeHasNoReturnAttr) {
 } // namespace
 
 static Matcher<Stmt> loopEndingStmt(Matcher<Stmt> Internal) {
-  Matcher<QualType> IsNoReturnFunType =
+  const Matcher<QualType> IsNoReturnFunType =
       ignoringParens(functionType(typeHasNoReturnAttr()));
   Matcher<Decl> IsNoReturnDecl =
       anyOf(declHasNoReturnAttr(), functionDecl(hasType(IsNoReturnFunType)),
@@ -145,7 +145,7 @@ static std::string getCondVarNames(const Stmt *Cond) {
     if (!Child)
       continue;
 
-    std::string NewNames = getCondVarNames(Child);
+    const std::string NewNames = getCondVarNames(Child);
     if (!Result.empty() && !NewNames.empty())
       Result += ", ";
     Result += NewNames;
@@ -332,7 +332,7 @@ void InfiniteLoopCheck::check(const MatchFinder::MatchResult &Result) {
                                               Result.Context))
     return;
 
-  std::string CondVarNames = getCondVarNames(Cond);
+  const std::string CondVarNames = getCondVarNames(Cond);
   if (ShouldHaveConditionVariables && CondVarNames.empty())
     return;
 
