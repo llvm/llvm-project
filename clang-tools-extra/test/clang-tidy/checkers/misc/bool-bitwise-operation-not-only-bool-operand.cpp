@@ -1,6 +1,6 @@
 // RUN: %check_clang_tidy %s misc-bool-bitwise-operation %t
 
-// got from clang/lib/APINotes/APINotesWriter.cpp
+// The case is taken from the real code in clang/lib/APINotes/APINotesWriter.cpp
 
 void general(unsigned flags, bool value) {
     (flags << 1) | value;
@@ -9,8 +9,8 @@ void general(unsigned flags, bool value) {
     flags = (flags << 1) | (flags << 2) | (flags << 4) | value;
 }
 
-// TODO: compound operators
 // TODO: make sure parens dont spoil prior for compound operators
+// TODO: r = value |= flags << 1; (when r boolean, value unsigned)
 
 void take(bool value) {}
 

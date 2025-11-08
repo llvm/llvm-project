@@ -13,6 +13,8 @@
 #include <optional>
 #include <utility>
 
+// TODO: change warning message
+
 using namespace clang::ast_matchers;
 
 namespace clang::tidy::misc {
@@ -96,6 +98,10 @@ static bool isBooleanBitwise(const BinaryOperator *BinOp, ASTContext *AC, std::o
         return true;
       }
       if (assignsToBoolean(BinOp, AC) || rootAssignsToBoolean.value_or(false)) {
+        rootAssignsToBoolean = rootAssignsToBoolean.value_or(true);
+        return true;
+      }
+      if (BinOp->isCompoundAssignmentOp() && BinOp->getLHS()->IgnoreImpCasts()->getType().getTypePtr()->isBooleanType()) {
         rootAssignsToBoolean = rootAssignsToBoolean.value_or(true);
         return true;
       }
@@ -232,6 +238,7 @@ void BoolBitwiseOperationCheck::visitBinaryTreesNode(
     const BinaryOperator *BinOp, const BinaryOperator *ParentBinOp,
     const clang::SourceManager &SM, clang::ASTContext &Ctx,
     std::optional<bool>& rootAssignsToBoolean) {
+  //llvm::outs() << "ENTER " << rootAssignsToBoolean << "\n";
   if (!BinOp)
     return;
 
@@ -244,6 +251,8 @@ void BoolBitwiseOperationCheck::visitBinaryTreesNode(
   visitBinaryTreesNode(
       dyn_cast<BinaryOperator>(BinOp->getRHS()->IgnoreParenImpCasts()), BinOp,
       SM, Ctx, rootAssignsToBoolean);
+
+  //llvm::outs() << "LEAVE\n";
 }
 
 void BoolBitwiseOperationCheck::check(const MatchFinder::MatchResult &Result) {
