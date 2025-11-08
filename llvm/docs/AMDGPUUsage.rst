@@ -2771,7 +2771,7 @@ are deprecated and should not be used.
   ``vendor_name_size`` and ``architecture_name_size`` are the length of the
   vendor and architecture names respectively, including the NUL character.
 
-  ``vendor_and_architecture_name`` contains the NUL terminates string for the
+  ``vendor_and_architecture_name`` contains the NUL terminated string for the
   vendor, immediately followed by the NUL terminated string for the
   architecture.
 
@@ -3467,7 +3467,7 @@ location.
 
 If the lane is inactive, but was active on entry to the subprogram, then this is
 the program location in the subprogram at which execution of the lane is
-conceptual positioned.
+conceptually positioned.
 
 If the lane was not active on entry to the subprogram, then this will be the
 undefined location. A client debugger can check if the lane is part of a valid
@@ -4794,7 +4794,7 @@ same *vendor-name*.
                                                      "image", or "pipe". This may be
                                                      more restrictive than indicated
                                                      by ".access" to reflect what the
-                                                     kernel actual does. If not
+                                                     kernel actually does. If not
                                                      present then the runtime must
                                                      assume what is implied by
                                                      ".access" and ".is_const"      . Values
@@ -5173,7 +5173,7 @@ supported except by flat and scratch instructions in GFX9-GFX11.
 
 The generic address space uses the hardware flat address support available in
 GFX7-GFX11. This uses two fixed ranges of virtual addresses (the private and
-local apertures), that are outside the range of addressible global memory, to
+local apertures), that are outside the range of addressable global memory, to
 map from a flat address to a private or local address.
 
 FLAT instructions can take a flat address and access global, private (scratch)
@@ -6626,7 +6626,7 @@ Acquire memory ordering is not meaningful on store atomic instructions and is
 treated as non-atomic.
 
 Release memory ordering is not meaningful on load atomic instructions and is
-treated a non-atomic.
+treated as non-atomic.
 
 Acquire-release memory ordering is not meaningful on load or store atomic
 instructions and is treated as acquire and release respectively.
