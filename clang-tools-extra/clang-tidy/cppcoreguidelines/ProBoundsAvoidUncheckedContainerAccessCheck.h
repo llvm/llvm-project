@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CPPCOREGUIDELINES_PROBOUNDSAVOIDUNCHECKEDCONTAINERACCESS_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CPPCOREGUIDELINES_PROBOUNDSAVOIDUNCHECKEDCONTAINERACCESS_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CPPCOREGUIDELINES_PROBOUNDSAVOIDUNCHECKEDCONTAINERACCESSCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CPPCOREGUIDELINES_PROBOUNDSAVOIDUNCHECKEDCONTAINERACCESSCHECK_H
 
 #include "../ClangTidyCheck.h"
 
@@ -20,10 +20,10 @@ namespace clang::tidy::cppcoreguidelines {
 /// https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#slcon3-avoid-bounds-errors
 /// For the user-facing documentation see:
 /// https://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines/pro-bounds-avoid-unchecked-container-access.html
-class ProBoundsAvoidUncheckedContainerAccess : public ClangTidyCheck {
+class ProBoundsAvoidUncheckedContainerAccessCheck : public ClangTidyCheck {
 public:
-  ProBoundsAvoidUncheckedContainerAccess(StringRef Name,
-                                         ClangTidyContext *Context);
+  ProBoundsAvoidUncheckedContainerAccessCheck(StringRef Name,
+                                              ClangTidyContext *Context);
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
     return LangOpts.CPlusPlus;
   }
@@ -46,11 +46,11 @@ private:
 namespace clang::tidy {
 template <>
 struct OptionEnumMapping<
-    cppcoreguidelines::ProBoundsAvoidUncheckedContainerAccess::FixModes> {
+    cppcoreguidelines::ProBoundsAvoidUncheckedContainerAccessCheck::FixModes> {
   static ArrayRef<std::pair<
-      cppcoreguidelines::ProBoundsAvoidUncheckedContainerAccess::FixModes,
+      cppcoreguidelines::ProBoundsAvoidUncheckedContainerAccessCheck::FixModes,
       StringRef>>
   getEnumMapping();
 };
 } // namespace clang::tidy
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CPPCOREGUIDELINES_PROBOUNDSAVOIDUNCHECKEDCONTAINERACCESS_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CPPCOREGUIDELINES_PROBOUNDSAVOIDUNCHECKEDCONTAINERACCESSCHECK_H

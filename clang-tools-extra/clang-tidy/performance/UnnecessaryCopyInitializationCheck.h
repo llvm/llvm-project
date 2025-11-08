@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PERFORMANCE_UNNECESSARYCOPYINITIALIZATION_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PERFORMANCE_UNNECESSARYCOPYINITIALIZATION_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PERFORMANCE_UNNECESSARYCOPYINITIALIZATIONCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PERFORMANCE_UNNECESSARYCOPYINITIALIZATIONCHECK_H
 
 #include "../ClangTidyCheck.h"
 #include "clang/AST/Decl.h"
@@ -22,9 +22,12 @@ namespace clang::tidy::performance {
 // The check currently only understands a subset of variables that are
 // guaranteed to outlive the const reference returned, namely: const variables,
 // const references, and const pointers to const.
-class UnnecessaryCopyInitialization : public ClangTidyCheck {
+//
+// For the user-facing documentation see:
+// https://clang.llvm.org/extra/clang-tidy/checks/performance/unnecessary-copy-initialization.html
+class UnnecessaryCopyInitializationCheck : public ClangTidyCheck {
 public:
-  UnnecessaryCopyInitialization(StringRef Name, ClangTidyContext *Context);
+  UnnecessaryCopyInitializationCheck(StringRef Name, ClangTidyContext *Context);
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
     return LangOpts.CPlusPlus;
   }
@@ -64,4 +67,4 @@ private:
 
 } // namespace clang::tidy::performance
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PERFORMANCE_UNNECESSARYCOPYINITIALIZATION_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PERFORMANCE_UNNECESSARYCOPYINITIALIZATIONCHECK_H

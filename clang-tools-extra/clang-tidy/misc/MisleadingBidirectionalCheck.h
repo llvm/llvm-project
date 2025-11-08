@@ -6,13 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_MISLEADINGBIDIRECTIONAL_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_MISLEADINGBIDIRECTIONAL_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_MISLEADINGBIDIRECTIONALCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_MISLEADINGBIDIRECTIONALCHECK_H
 
 #include "../ClangTidyCheck.h"
 
 namespace clang::tidy::misc {
 
+/// Warns about unterminated bidirectional unicode sequence.
+///
+/// For the user-facing documentation see:
+/// https://clang.llvm.org/extra/clang-tidy/checks/misc/misleading-bidirectional.html
 class MisleadingBidirectionalCheck : public ClangTidyCheck {
 public:
   MisleadingBidirectionalCheck(StringRef Name, ClangTidyContext *Context);
@@ -31,4 +35,4 @@ private:
 
 } // namespace clang::tidy::misc
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_MISLEADINGBIDIRECTIONAL_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_MISLEADINGBIDIRECTIONALCHECK_H

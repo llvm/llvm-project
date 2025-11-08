@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "AvoidConstParamsInDecls.h"
+#include "AvoidConstParamsInDeclsCheck.h"
 #include "../utils/LexerUtils.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
@@ -38,11 +38,12 @@ findConstToRemove(const ParmVarDecl &Param,
       tok::kw_const, FileRange, *Result.Context, *Result.SourceManager);
 }
 
-void AvoidConstParamsInDecls::storeOptions(ClangTidyOptions::OptionMap &Opts) {
+void AvoidConstParamsInDeclsCheck::storeOptions(
+    ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "IgnoreMacros", IgnoreMacros);
 }
 
-void AvoidConstParamsInDecls::registerMatchers(MatchFinder *Finder) {
+void AvoidConstParamsInDeclsCheck::registerMatchers(MatchFinder *Finder) {
   const auto ConstParamDecl =
       parmVarDecl(hasType(qualType(isConstQualified()))).bind("param");
   Finder->addMatcher(functionDecl(unless(isDefinition()),
@@ -51,7 +52,8 @@ void AvoidConstParamsInDecls::registerMatchers(MatchFinder *Finder) {
                      this);
 }
 
-void AvoidConstParamsInDecls::check(const MatchFinder::MatchResult &Result) {
+void AvoidConstParamsInDeclsCheck::check(
+    const MatchFinder::MatchResult &Result) {
   const auto *Func = Result.Nodes.getNodeAs<FunctionDecl>("func");
   const auto *Param = Result.Nodes.getNodeAs<ParmVarDecl>("param");
 
