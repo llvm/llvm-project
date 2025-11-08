@@ -23,8 +23,8 @@ const char DefaultStringNames[] =
 static std::vector<StringRef> removeNamespaces(ArrayRef<StringRef> Names) {
   std::vector<StringRef> Result;
   Result.reserve(Names.size());
-  for (StringRef Name : Names) {
-    StringRef::size_type ColonPos = Name.rfind(':');
+  for (const StringRef Name : Names) {
+    const StringRef::size_type ColonPos = Name.rfind(':');
     Result.push_back(
         Name.drop_front(ColonPos == StringRef::npos ? 0 : ColonPos + 1));
   }
@@ -125,14 +125,14 @@ void RedundantStringInitCheck::check(const MatchFinder::MatchResult &Result) {
   if (const auto *VDecl = Result.Nodes.getNodeAs<VarDecl>("vardecl")) {
     // VarDecl's getSourceRange() spans 'string foo = ""' or 'string bar("")'.
     // So start at getLocation() to span just 'foo = ""' or 'bar("")'.
-    SourceRange ReplaceRange(VDecl->getLocation(), VDecl->getEndLoc());
+    const SourceRange ReplaceRange(VDecl->getLocation(), VDecl->getEndLoc());
     diag(VDecl->getLocation(), "redundant string initialization")
         << FixItHint::CreateReplacement(ReplaceRange, VDecl->getName());
   }
   if (const auto *FDecl = Result.Nodes.getNodeAs<FieldDecl>("fieldDecl")) {
     // FieldDecl's getSourceRange() spans 'string foo = ""'.
     // So start at getLocation() to span just 'foo = ""'.
-    SourceRange ReplaceRange(FDecl->getLocation(), FDecl->getEndLoc());
+    const SourceRange ReplaceRange(FDecl->getLocation(), FDecl->getEndLoc());
     diag(FDecl->getLocation(), "redundant string initialization")
         << FixItHint::CreateReplacement(ReplaceRange, FDecl->getName());
   }

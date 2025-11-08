@@ -149,8 +149,9 @@ void RedundantSmartptrGetCheck::check(const MatchFinder::MatchResult &Result) {
   if (!allReturnTypesMatch(Result))
     return;
 
-  bool IsPtrToPtr = Result.Nodes.getNodeAs<Decl>("ptr_to_ptr") != nullptr;
-  bool IsMemberExpr = Result.Nodes.getNodeAs<Expr>("memberExpr") != nullptr;
+  const bool IsPtrToPtr = Result.Nodes.getNodeAs<Decl>("ptr_to_ptr") != nullptr;
+  const bool IsMemberExpr =
+      Result.Nodes.getNodeAs<Expr>("memberExpr") != nullptr;
   const auto *GetCall = Result.Nodes.getNodeAs<Expr>("redundant_get");
   if (GetCall->getBeginLoc().isMacroID() && IgnoreMacros)
     return;
@@ -178,7 +179,8 @@ void RedundantSmartptrGetCheck::check(const MatchFinder::MatchResult &Result) {
     SmartptrText = SmartptrText.drop_back(2);
   }
   // Replace foo->get() with *foo, and foo.get() with foo.
-  std::string Replacement = Twine(IsPtrToPtr ? "*" : "", SmartptrText).str();
+  const std::string Replacement =
+      Twine(IsPtrToPtr ? "*" : "", SmartptrText).str();
   diag(GetCall->getBeginLoc(), "redundant get() call on smart pointer")
       << FixItHint::CreateReplacement(SR, Replacement);
 }
