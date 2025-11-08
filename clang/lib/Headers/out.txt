@@ -1,0 +1,247 @@
+clang/lib/Headers/avx10_2_512convertintrin.h:304:  return _mm512_castsi512_ph(_mm512_slli_epi16(_mm512_cvtepi8_epi16(__A), 8));
+clang/lib/Headers/avx10_2_512convertintrin.h:309:  return _mm512_castsi512_ph(
+clang/lib/Headers/avx10_2_512convertintrin.h:315:  return _mm512_castsi512_ph(
+clang/lib/Headers/avx10_2convertintrin.h:3091:  return _mm_castsi128_ph(_mm_slli_epi16(_mm_cvtepi8_epi16(__A), 8));
+clang/lib/Headers/avx10_2convertintrin.h:3125:  return _mm_castsi128_ph(
+clang/lib/Headers/avx10_2convertintrin.h:3158:  return _mm_castsi128_ph(_mm_slli_epi16(_mm_maskz_cvtepi8_epi16(__U, __A), 8));
+clang/lib/Headers/avx10_2convertintrin.h:3180:  return _mm256_castsi256_ph(_mm256_slli_epi16(_mm256_cvtepi8_epi16(__A), 8));
+clang/lib/Headers/avx10_2convertintrin.h:3214:  return _mm256_castsi256_ph(
+clang/lib/Headers/avx10_2convertintrin.h:3247:  return _mm256_castsi256_ph(
+clang/lib/Headers/avx512bf16intrin.h:239:  return _mm512_castsi512_ps((__m512i)_mm512_slli_epi32(
+clang/lib/Headers/avx512bf16intrin.h:255:  return _mm512_castsi512_ps((__m512i)_mm512_slli_epi32(
+clang/lib/Headers/avx512bf16intrin.h:273:  return _mm512_castsi512_ps((__m512i)_mm512_mask_slli_epi32(
+clang/lib/Headers/avx512fintrin.h:413:_mm512_castpd512_pd128(__m512d __a)
+clang/lib/Headers/avx512fintrin.h:419:_mm512_castpd512_pd256 (__m512d __A)
+clang/lib/Headers/avx512fintrin.h:425:_mm512_castps512_ps128(__m512 __a)
+clang/lib/Headers/avx512fintrin.h:431:_mm512_castps512_ps256(__m512 __A) {
+clang/lib/Headers/avx512fintrin.h:436:_mm512_castpd_ps (__m512d __A)
+clang/lib/Headers/avx512fintrin.h:442:_mm512_castpd_si512 (__m512d __A)
+clang/lib/Headers/avx512fintrin.h:457:_mm512_castps_pd (__m512 __A)
+clang/lib/Headers/avx512fintrin.h:463:_mm512_castps_si512 (__m512 __A)
+clang/lib/Headers/avx512fintrin.h:493:_mm512_castsi512_ps (__m512i __A)
+clang/lib/Headers/avx512fintrin.h:499:_mm512_castsi512_pd (__m512i __A)
+clang/lib/Headers/avx512fintrin.h:505:_mm512_castsi512_si128 (__m512i __A)
+clang/lib/Headers/avx512fintrin.h:511:_mm512_castsi512_si256(__m512i __A) {
+clang/lib/Headers/avx512fintrin.h:3439:  return (__m512d) _mm512_cvtepi32_pd(_mm512_castsi512_si256(__A));
+clang/lib/Headers/avx512fintrin.h:3444:  return (__m512d) _mm512_mask_cvtepi32_pd(__W, __U, _mm512_castsi512_si256(__A));
+clang/lib/Headers/avx512fintrin.h:3487:  return (__m512d) _mm512_cvtepu32_pd(_mm512_castsi512_si256(__A));
+clang/lib/Headers/avx512fintrin.h:3492:  return (__m512d) _mm512_mask_cvtepu32_pd(__W, __U, _mm512_castsi512_si256(__A));
+clang/lib/Headers/avx512fintrin.h:3549:                (__v8sf) _mm512_mask_cvtpd_ps (_mm512_castps512_ps256(__W),
+clang/lib/Headers/avx512fintrin.h:8633:  return (__m512d) _mm512_cvtps_pd(_mm512_castps512_ps256(__A));
+clang/lib/Headers/avx512fintrin.h:8638:  return (__m512d) _mm512_mask_cvtps_pd(__W, __U, _mm512_castps512_ps256(__A));
+clang/lib/Headers/avx512fintrin.h:9289:  _mm512_i32gather_pd(_mm512_castsi512_si256(vindex), (base_addr), (scale))
+clang/lib/Headers/avx512fintrin.h:9313:  _mm512_mask_i32gather_pd((src), (mask), _mm512_castsi512_si256(vindex),      \
+clang/lib/Headers/avx512fintrin.h:9332:  _mm512_i32gather_epi64(_mm512_castsi512_si256(vindex), (base_addr), (scale))
+clang/lib/Headers/avx512fintrin.h:9355:  _mm512_mask_i32gather_epi64((src), (mask), _mm512_castsi512_si256(vindex),   \
+clang/lib/Headers/avx512fintrin.h:9373:  _mm512_i32scatter_pd((base_addr), _mm512_castsi512_si256(vindex), (v1), (scale))
+clang/lib/Headers/avx512fintrin.h:9395:                            _mm512_castsi512_si256(vindex), (v1), (scale))
+clang/lib/Headers/avx512fintrin.h:9413:                          _mm512_castsi512_si256(vindex), (v1), (scale))
+clang/lib/Headers/avx512fintrin.h:9434:                               _mm512_castsi512_si256(vindex), (v1), (scale))
+clang/lib/Headers/avx512fp16intrin.h:120:static __inline__ __m128 __DEFAULT_FN_ATTRS128 _mm_castph_ps(__m128h __a) {
+clang/lib/Headers/avx512fp16intrin.h:124:static __inline__ __m256 __DEFAULT_FN_ATTRS256 _mm256_castph_ps(__m256h __a) {
+clang/lib/Headers/avx512fp16intrin.h:128:static __inline__ __m512 __DEFAULT_FN_ATTRS512 _mm512_castph_ps(__m512h __a) {
+clang/lib/Headers/avx512fp16intrin.h:132:static __inline__ __m128d __DEFAULT_FN_ATTRS128 _mm_castph_pd(__m128h __a) {
+clang/lib/Headers/avx512fp16intrin.h:136:static __inline__ __m256d __DEFAULT_FN_ATTRS256 _mm256_castph_pd(__m256h __a) {
+clang/lib/Headers/avx512fp16intrin.h:140:static __inline__ __m512d __DEFAULT_FN_ATTRS512 _mm512_castph_pd(__m512h __a) {
+clang/lib/Headers/avx512fp16intrin.h:144:static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_castph_si128(__m128h __a) {
+clang/lib/Headers/avx512fp16intrin.h:149:_mm256_castph_si256(__m256h __a) {
+clang/lib/Headers/avx512fp16intrin.h:154:_mm512_castph_si512(__m512h __a) {
+clang/lib/Headers/avx512fp16intrin.h:158:static __inline__ __m128h __DEFAULT_FN_ATTRS128 _mm_castps_ph(__m128 __a) {
+clang/lib/Headers/avx512fp16intrin.h:162:static __inline__ __m256h __DEFAULT_FN_ATTRS256 _mm256_castps_ph(__m256 __a) {
+clang/lib/Headers/avx512fp16intrin.h:166:static __inline__ __m512h __DEFAULT_FN_ATTRS512 _mm512_castps_ph(__m512 __a) {
+clang/lib/Headers/avx512fp16intrin.h:170:static __inline__ __m128h __DEFAULT_FN_ATTRS128 _mm_castpd_ph(__m128d __a) {
+clang/lib/Headers/avx512fp16intrin.h:174:static __inline__ __m256h __DEFAULT_FN_ATTRS256 _mm256_castpd_ph(__m256d __a) {
+clang/lib/Headers/avx512fp16intrin.h:178:static __inline__ __m512h __DEFAULT_FN_ATTRS512 _mm512_castpd_ph(__m512d __a) {
+clang/lib/Headers/avx512fp16intrin.h:182:static __inline__ __m128h __DEFAULT_FN_ATTRS128 _mm_castsi128_ph(__m128i __a) {
+clang/lib/Headers/avx512fp16intrin.h:187:_mm256_castsi256_ph(__m256i __a) {
+clang/lib/Headers/avx512fp16intrin.h:192:_mm512_castsi512_ph(__m512i __a) {
+clang/lib/Headers/avx512fp16intrin.h:197:_mm256_castph256_ph128(__m256h __a) {
+clang/lib/Headers/avx512fp16intrin.h:202:_mm512_castph512_ph128(__m512h __a) {
+clang/lib/Headers/avx512fp16intrin.h:207:_mm512_castph512_ph256(__m512h __a) {
+clang/lib/Headers/avx512vlbf16intrin.h:437:  return _mm256_castsi256_ps((__m256i)_mm256_slli_epi32(
+clang/lib/Headers/avx512vlbf16intrin.h:469:  return _mm256_castsi256_ps((__m256i)_mm256_slli_epi32(
+clang/lib/Headers/avx512vlbf16intrin.h:508:  return _mm256_castsi256_ps((__m256i)_mm256_mask_slli_epi32(
+clang/lib/Headers/avxintrin.h:4333:_mm256_castpd_ps(__m256d __a)
+clang/lib/Headers/avxintrin.h:4350:_mm256_castpd_si256(__m256d __a)
+clang/lib/Headers/avxintrin.h:4367:_mm256_castps_pd(__m256 __a)
+clang/lib/Headers/avxintrin.h:4384:_mm256_castps_si256(__m256 __a)
+clang/lib/Headers/avxintrin.h:4401:_mm256_castsi256_ps(__m256i __a)
+clang/lib/Headers/avxintrin.h:4418:_mm256_castsi256_pd(__m256i __a)
+clang/lib/Headers/avxintrin.h:4435:_mm256_castpd256_pd128(__m256d __a)
+clang/lib/Headers/avxintrin.h:4452:_mm256_castps256_ps128(__m256 __a)
+clang/lib/Headers/avxintrin.h:4468:_mm256_castsi256_si128(__m256i __a)
+clang/lib/Headers/avxintrin.h:5012:  __v128 = _mm256_castps256_ps128(__a);
+clang/lib/Headers/avxintrin.h:5041:  __v128 = _mm256_castpd256_pd128(__a);
+clang/lib/Headers/avxintrin.h:5070:  __v128 = _mm256_castsi256_si128(__a);
+clang/test/CodeGen/X86/avx-builtins.c:167:__m256 test_mm256_castpd_ps(__m256d A) {
+clang/test/CodeGen/X86/avx-builtins.c:168:  // CHECK-LABEL: test_mm256_castpd_ps
+clang/test/CodeGen/X86/avx-builtins.c:169:  return _mm256_castpd_ps(A);
+clang/test/CodeGen/X86/avx-builtins.c:171:TEST_CONSTEXPR(match_m256(_mm256_castpd_ps((__m256d){-1.0, +2.0, +4.0, -6.0}), +0.0f, -1.875f, +0.0f, +2.0f, +0.0f, +2.25f, 0.0f, -2.375f));
+clang/test/CodeGen/X86/avx-builtins.c:173:__m256i test_mm256_castpd_si256(__m256d A) {
+clang/test/CodeGen/X86/avx-builtins.c:174:  // CHECK-LABEL: test_mm256_castpd_si256
+clang/test/CodeGen/X86/avx-builtins.c:175:  return _mm256_castpd_si256(A);
+clang/test/CodeGen/X86/avx-builtins.c:177:TEST_CONSTEXPR(match_m256i(_mm256_castpd_si256((__m256d){-1.0, +2.0, -3.0, +4.0}), 0xBFF0000000000000ULL, 0x4000000000000000ULL, 0xC008000000000000ULL, 0x4010000000000000ULL));
+clang/test/CodeGen/X86/avx-builtins.c:186:__m128d test_mm256_castpd256_pd128(__m256d A) {
+clang/test/CodeGen/X86/avx-builtins.c:187:  // CHECK-LABEL: test_mm256_castpd256_pd128
+clang/test/CodeGen/X86/avx-builtins.c:189:  return _mm256_castpd256_pd128(A);
+clang/test/CodeGen/X86/avx-builtins.c:191:TEST_CONSTEXPR(match_m128d(_mm256_castpd256_pd128((__m256d){-1.0, +2.0, -3.0, +4.0}), -1.0, +2.0));
+clang/test/CodeGen/X86/avx-builtins.c:193:__m256d test_mm256_castps_pd(__m256 A) {
+clang/test/CodeGen/X86/avx-builtins.c:194:  // CHECK-LABEL: test_mm256_castps_pd
+clang/test/CodeGen/X86/avx-builtins.c:195:  return _mm256_castps_pd(A);
+clang/test/CodeGen/X86/avx-builtins.c:197:TEST_CONSTEXPR(match_m256d(_mm256_castps_pd((__m256){0.0f, -1.0f, 0.0f, 4.0f, 0.0f, -2.0f, 0.0f, 6.0f}), -0.0078125, 512.0, -2.0, +8192.0));
+clang/test/CodeGen/X86/avx-builtins.c:199:__m256i test_mm256_castps_si256(__m256 A) {
+clang/test/CodeGen/X86/avx-builtins.c:200:  // CHECK-LABEL: test_mm256_castps_si256
+clang/test/CodeGen/X86/avx-builtins.c:201:  return _mm256_castps_si256(A);
+clang/test/CodeGen/X86/avx-builtins.c:203:TEST_CONSTEXPR(match_m256i(_mm256_castps_si256((__m256){1.0f, -2.0f, -4.0f, 8.0f, -16.0f, +16.0f, +32.0f, -32.0f}), 0xC00000003F800000ULL, 0x41000000c0800000ULL, 0x41800000C1800000ULL, 0xC200000042000000ULL));
+clang/test/CodeGen/X86/avx-builtins.c:212:__m128 test_mm256_castps256_ps128(__m256 A) {
+clang/test/CodeGen/X86/avx-builtins.c:213:  // CHECK-LABEL: test_mm256_castps256_ps128
+clang/test/CodeGen/X86/avx-builtins.c:215:  return _mm256_castps256_ps128(A);
+clang/test/CodeGen/X86/avx-builtins.c:217:TEST_CONSTEXPR(match_m128(_mm256_castps256_ps128((__m256){1.0f, -2.0f, -4.0f, 8.0f, -16.0f, +16.0f, +32.0f, -32.0f}), 1.0f, -2.0f, -4.0f, 8.0f));
+clang/test/CodeGen/X86/avx-builtins.c:226:__m256d test_mm256_castsi256_pd(__m256i A) {
+clang/test/CodeGen/X86/avx-builtins.c:227:  // CHECK-LABEL: test_mm256_castsi256_pd
+clang/test/CodeGen/X86/avx-builtins.c:228:  return _mm256_castsi256_pd(A);
+clang/test/CodeGen/X86/avx-builtins.c:230:TEST_CONSTEXPR(match_m256d(_mm256_castsi256_pd((__m256i)(__v4du){0x4070000000000000ULL, 0xC000000000000000ULL, 0xBFF0000000000000ULL, 0xC008000000000000ULL}), 256.0, -2.0, -1.0, -3.0));
+clang/test/CodeGen/X86/avx-builtins.c:232:__m256 test_mm256_castsi256_ps(__m256i A) {
+clang/test/CodeGen/X86/avx-builtins.c:233:  // CHECK-LABEL: test_mm256_castsi256_ps
+clang/test/CodeGen/X86/avx-builtins.c:234:  return _mm256_castsi256_ps(A);
+clang/test/CodeGen/X86/avx-builtins.c:236:TEST_CONSTEXPR(match_m256(_mm256_castsi256_ps((__m256i)(__v4du){0x42000000c1800000ULL, 0x43000000c2800000ULL, 0x41000000c0800000ULL, 0xC00000003F800000ULL}), -16.0f, 32.0f, -64.0f, 128.0f, -4.0f, 8.0f, 1.0f, -2.0f));
+clang/test/CodeGen/X86/avx-builtins.c:238:__m128i test_mm256_castsi256_si128(__m256i A) {
+clang/test/CodeGen/X86/avx-builtins.c:239:  // CHECK-LABEL: test_mm256_castsi256_si128
+clang/test/CodeGen/X86/avx-builtins.c:241:  return _mm256_castsi256_si128(A);
+clang/test/CodeGen/X86/avx-builtins.c:243:TEST_CONSTEXPR(match_m128i(_mm256_castsi256_si128((__m256i)(__v4du){0xBFF0000000000000ULL, 0x4070000000000000ULL, 0xC000000000000000ULL, 0xC008000000000000ULL}), 0xBFF0000000000000ULL, 0x4070000000000000ULL));
+clang/test/CodeGen/X86/avx512f-builtins.c:9763:__m512 test_mm512_castpd_ps (__m512d __A)
+clang/test/CodeGen/X86/avx512f-builtins.c:9765:  // CHECK-LABEL: test_mm512_castpd_ps 
+clang/test/CodeGen/X86/avx512f-builtins.c:9767:  return _mm512_castpd_ps (__A);
+clang/test/CodeGen/X86/avx512f-builtins.c:9770:__m512d test_mm512_castps_pd (__m512 __A)
+clang/test/CodeGen/X86/avx512f-builtins.c:9772:  // CHECK-LABEL: test_mm512_castps_pd 
+clang/test/CodeGen/X86/avx512f-builtins.c:9774:  return _mm512_castps_pd (__A);
+clang/test/CodeGen/X86/avx512f-builtins.c:9777:__m512i test_mm512_castpd_si512 (__m512d __A)
+clang/test/CodeGen/X86/avx512f-builtins.c:9779:  // CHECK-LABEL: test_mm512_castpd_si512 
+clang/test/CodeGen/X86/avx512f-builtins.c:9781:  return _mm512_castpd_si512 (__A);
+clang/test/CodeGen/X86/avx512f-builtins.c:9936:__m256d test_mm512_castpd512_pd256 (__m512d __A)
+clang/test/CodeGen/X86/avx512f-builtins.c:9938:  // CHECK-LABEL: test_mm512_castpd512_pd256 
+clang/test/CodeGen/X86/avx512f-builtins.c:9940:  return _mm512_castpd512_pd256 (__A);
+clang/test/CodeGen/X86/avx512f-builtins.c:9943:__m256 test_mm512_castps512_ps256 (__m512 __A)
+clang/test/CodeGen/X86/avx512f-builtins.c:9945:  // CHECK-LABEL: test_mm512_castps512_ps256 
+clang/test/CodeGen/X86/avx512f-builtins.c:9947:  return _mm512_castps512_ps256 (__A);
+clang/test/CodeGen/X86/avx512f-builtins.c:9950:TEST_CONSTEXPR(match_m256(_mm512_castps512_ps256((__m512){0.0f, 1.0f, 2.0f, 4.0f, -8.0f, -16.0f, -32.0f, -64.0f, -128.0f, -256.0f, -512.0f, -1024.0f, -2048.0f, -4096.0f, -8192.0f, -16384.0f}), 0.0f, 1.0f, 2.0f, 4.0f, -8.0f, -16.0f, -32.0f, -64.0f));
+clang/test/CodeGen/X86/avx512f-builtins.c:9952:__m512i test_mm512_castps_si512 (__m512 __A)
+clang/test/CodeGen/X86/avx512f-builtins.c:9954:  // CHECK-LABEL: test_mm512_castps_si512 
+clang/test/CodeGen/X86/avx512f-builtins.c:9956:  return _mm512_castps_si512 (__A);
+clang/test/CodeGen/X86/avx512f-builtins.c:9976:__m512 test_mm512_castsi512_ps (__m512i __A)
+clang/test/CodeGen/X86/avx512f-builtins.c:9978:  // CHECK-LABEL: test_mm512_castsi512_ps 
+clang/test/CodeGen/X86/avx512f-builtins.c:9980:  return _mm512_castsi512_ps (__A);
+clang/test/CodeGen/X86/avx512f-builtins.c:9983:__m512d test_mm512_castsi512_pd (__m512i __A)
+clang/test/CodeGen/X86/avx512f-builtins.c:9985:  // CHECK-LABEL: test_mm512_castsi512_pd 
+clang/test/CodeGen/X86/avx512f-builtins.c:9987:  return _mm512_castsi512_pd (__A);
+clang/test/CodeGen/X86/avx512f-builtins.c:9990:__m128i test_mm512_castsi512_si128 (__m512i __A)
+clang/test/CodeGen/X86/avx512f-builtins.c:9992:  // CHECK-LABEL: test_mm512_castsi512_si128 
+clang/test/CodeGen/X86/avx512f-builtins.c:9994:  return _mm512_castsi512_si128 (__A);
+clang/test/CodeGen/X86/avx512f-builtins.c:9997:__m256i test_mm512_castsi512_si256 (__m512i __A)
+clang/test/CodeGen/X86/avx512f-builtins.c:9999:  // CHECK-LABEL: test_mm512_castsi512_si256 
+clang/test/CodeGen/X86/avx512f-builtins.c:10001:  return _mm512_castsi512_si256 (__A);
+clang/test/CodeGen/X86/avx512f-builtins.c:10004:TEST_CONSTEXPR(match_v8si(_mm512_castsi512_si256((__m512i)(__v16si){0, 1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384}), 0, 1, 2, 4, 8, 16, 32, 64));
+clang/test/CodeGen/X86/avx512fp16-builtins.c:231:__m128 test_mm_castph_ps(__m128h A) {
+clang/test/CodeGen/X86/avx512fp16-builtins.c:232:  // CHECK-LABEL: test_mm_castph_ps
+clang/test/CodeGen/X86/avx512fp16-builtins.c:234:  return _mm_castph_ps(A);
+clang/test/CodeGen/X86/avx512fp16-builtins.c:237:__m256 test_mm256_castph_ps(__m256h A) {
+clang/test/CodeGen/X86/avx512fp16-builtins.c:238:  // CHECK-LABEL: test_mm256_castph_ps
+clang/test/CodeGen/X86/avx512fp16-builtins.c:240:  return _mm256_castph_ps(A);
+clang/test/CodeGen/X86/avx512fp16-builtins.c:243:__m512 test_mm512_castph_ps(__m512h A) {
+clang/test/CodeGen/X86/avx512fp16-builtins.c:244:  // CHECK-LABEL: test_mm512_castph_ps
+clang/test/CodeGen/X86/avx512fp16-builtins.c:246:  return _mm512_castph_ps(A);
+clang/test/CodeGen/X86/avx512fp16-builtins.c:249:__m128d test_mm_castph_pd(__m128h A) {
+clang/test/CodeGen/X86/avx512fp16-builtins.c:250:  // CHECK-LABEL: test_mm_castph_pd
+clang/test/CodeGen/X86/avx512fp16-builtins.c:252:  return _mm_castph_pd(A);
+clang/test/CodeGen/X86/avx512fp16-builtins.c:255:__m256d test_mm256_castph_pd(__m256h A) {
+clang/test/CodeGen/X86/avx512fp16-builtins.c:256:  // CHECK-LABEL: test_mm256_castph_pd
+clang/test/CodeGen/X86/avx512fp16-builtins.c:258:  return _mm256_castph_pd(A);
+clang/test/CodeGen/X86/avx512fp16-builtins.c:261:__m512d test_mm512_castph_pd(__m512h A) {
+clang/test/CodeGen/X86/avx512fp16-builtins.c:262:  // CHECK-LABEL: test_mm512_castph_pd
+clang/test/CodeGen/X86/avx512fp16-builtins.c:264:  return _mm512_castph_pd(A);
+clang/test/CodeGen/X86/avx512fp16-builtins.c:267:__m128i test_mm_castph_si128(__m128h A) {
+clang/test/CodeGen/X86/avx512fp16-builtins.c:268:  // CHECK-LABEL: test_mm_castph_si128
+clang/test/CodeGen/X86/avx512fp16-builtins.c:270:  return _mm_castph_si128(A);
+clang/test/CodeGen/X86/avx512fp16-builtins.c:273:__m256i test_mm256_castph_si256(__m256h A) {
+clang/test/CodeGen/X86/avx512fp16-builtins.c:274:  // CHECK-LABEL: test_mm256_castph_si256
+clang/test/CodeGen/X86/avx512fp16-builtins.c:276:  return _mm256_castph_si256(A);
+clang/test/CodeGen/X86/avx512fp16-builtins.c:279:__m512i test_mm512_castph_si512(__m512h A) {
+clang/test/CodeGen/X86/avx512fp16-builtins.c:280:  // CHECK-LABEL: test_mm512_castph_si512
+clang/test/CodeGen/X86/avx512fp16-builtins.c:282:  return _mm512_castph_si512(A);
+clang/test/CodeGen/X86/avx512fp16-builtins.c:285:__m128h test_mm_castps_ph(__m128 A) {
+clang/test/CodeGen/X86/avx512fp16-builtins.c:286:  // CHECK-LABEL: test_mm_castps_ph
+clang/test/CodeGen/X86/avx512fp16-builtins.c:288:  return _mm_castps_ph(A);
+clang/test/CodeGen/X86/avx512fp16-builtins.c:291:__m256h test_mm256_castps_ph(__m256 A) {
+clang/test/CodeGen/X86/avx512fp16-builtins.c:292:  // CHECK-LABEL: test_mm256_castps_ph
+clang/test/CodeGen/X86/avx512fp16-builtins.c:294:  return _mm256_castps_ph(A);
+clang/test/CodeGen/X86/avx512fp16-builtins.c:297:__m512h test_mm512_castps_ph(__m512 A) {
+clang/test/CodeGen/X86/avx512fp16-builtins.c:298:  // CHECK-LABEL: test_mm512_castps_ph
+clang/test/CodeGen/X86/avx512fp16-builtins.c:300:  return _mm512_castps_ph(A);
+clang/test/CodeGen/X86/avx512fp16-builtins.c:303:__m128h test_mm_castpd_ph(__m128d A) {
+clang/test/CodeGen/X86/avx512fp16-builtins.c:304:  // CHECK-LABEL: test_mm_castpd_ph
+clang/test/CodeGen/X86/avx512fp16-builtins.c:306:  return _mm_castpd_ph(A);
+clang/test/CodeGen/X86/avx512fp16-builtins.c:309:__m256h test_mm256_castpd_ph(__m256d A) {
+clang/test/CodeGen/X86/avx512fp16-builtins.c:310:  // CHECK-LABEL: test_mm256_castpd_ph
+clang/test/CodeGen/X86/avx512fp16-builtins.c:312:  return _mm256_castpd_ph(A);
+clang/test/CodeGen/X86/avx512fp16-builtins.c:315:__m512h test_mm512_castpd_ph(__m512d A) {
+clang/test/CodeGen/X86/avx512fp16-builtins.c:316:  // CHECK-LABEL: test_mm512_castpd_ph
+clang/test/CodeGen/X86/avx512fp16-builtins.c:318:  return _mm512_castpd_ph(A);
+clang/test/CodeGen/X86/avx512fp16-builtins.c:321:__m128h test_mm_castsi128_ph(__m128i A) {
+clang/test/CodeGen/X86/avx512fp16-builtins.c:322:  // CHECK-LABEL: test_mm_castsi128_ph
+clang/test/CodeGen/X86/avx512fp16-builtins.c:324:  return _mm_castsi128_ph(A);
+clang/test/CodeGen/X86/avx512fp16-builtins.c:327:__m256h test_mm256_castsi256_ph(__m256i A) {
+clang/test/CodeGen/X86/avx512fp16-builtins.c:328:  // CHECK-LABEL: test_mm256_castsi256_ph
+clang/test/CodeGen/X86/avx512fp16-builtins.c:330:  return _mm256_castsi256_ph(A);
+clang/test/CodeGen/X86/avx512fp16-builtins.c:333:__m512h test_mm512_castsi512_ph(__m512i A) {
+clang/test/CodeGen/X86/avx512fp16-builtins.c:334:  // CHECK-LABEL: test_mm512_castsi512_ph
+clang/test/CodeGen/X86/avx512fp16-builtins.c:336:  return _mm512_castsi512_ph(A);
+clang/test/CodeGen/X86/avx512fp16-builtins.c:339:__m128h test_mm256_castph256_ph128(__m256h __a) {
+clang/test/CodeGen/X86/avx512fp16-builtins.c:340:  // CHECK-LABEL: test_mm256_castph256_ph128
+clang/test/CodeGen/X86/avx512fp16-builtins.c:342:  return _mm256_castph256_ph128(__a);
+clang/test/CodeGen/X86/avx512fp16-builtins.c:344:TEST_CONSTEXPR(match_m128h(_mm256_castph256_ph128((__m256h){-1.0, 2.0, -3.0, 4.0, -5.0, 6.0, -7.0, 8.0, -9.0, 10.0, -11.0, 12.0, -13.0, 14.0, -15.0, -16.0}), -1.0, 2.0, -3.0, 4.0, -5.0, 6.0, -7.0, 8.0));
+clang/test/CodeGen/X86/avx512fp16-builtins.c:346:__m128h test_mm512_castph512_ph128(__m512h __a) {
+clang/test/CodeGen/X86/avx512fp16-builtins.c:347:  // CHECK-LABEL: test_mm512_castph512_ph128
+clang/test/CodeGen/X86/avx512fp16-builtins.c:349:  return _mm512_castph512_ph128(__a);
+clang/test/CodeGen/X86/avx512fp16-builtins.c:351:TEST_CONSTEXPR(match_m128h(_mm512_castph512_ph128((__m512h){0.0, -1.0, 2.0, -3.0, 4.0, -5.0, 6.0, -7.0, 8.0, -9.0, 10.0, -11.0, 12.0, -13.0, 14.0, -15.0, -16.0, -17.0, 18.0, -19.0, 20.0, -21.0, 22.0, -23.0, 24.0, -25.0, 26.0, -27.0, 28.0, -29.0, 30.0, -31.0}), 0.0, -1.0, 2.0, -3.0, 4.0, -5.0, 6.0, -7.0));
+clang/test/CodeGen/X86/avx512fp16-builtins.c:353:__m256h test_mm512_castph512_ph256(__m512h __a) {
+clang/test/CodeGen/X86/avx512fp16-builtins.c:354:  // CHECK-LABEL: test_mm512_castph512_ph256
+clang/test/CodeGen/X86/avx512fp16-builtins.c:356:  return _mm512_castph512_ph256(__a);
+clang/test/CodeGen/X86/avx512fp16-builtins.c:358:TEST_CONSTEXPR(match_m256h(_mm512_castph512_ph256((__m512h){-1.0, 2.0, -3.0, 4.0, -5.0, 6.0, -7.0, 8.0, -9.0, 10.0, -11.0, 12.0, -13.0, 14.0, -15.0, -16.0, -17.0, 18.0, -19.0, 20.0, -21.0, 22.0, -23.0, 24.0, -25.0, 26.0, -27.0, 28.0, -29.0, 30.0, -31.0, 32.0}), -1.0, 2.0, -3.0, 4.0, -5.0, 6.0, -7.0, 8.0, -9.0, 10.0, -11.0, 12.0, -13.0, 14.0, -15.0, -16.0));
+libc/src/string/memory_utils/op_x86.h:191:  const auto xored = _mm256_castps_si256(
+libc/src/string/memory_utils/op_x86.h:192:      _mm256_xor_ps(_mm256_castsi256_ps(a), _mm256_castsi256_ps(b)));
+libc/src/string/memory_utils/op_x86.h:198:  const auto xored = _mm256_castps_si256(
+libc/src/string/memory_utils/op_x86.h:199:      _mm256_xor_ps(_mm256_castsi256_ps(a), _mm256_castsi256_ps(b)));
+llvm/lib/Support/BLAKE3/blake3_avx512.c:1227:  _mm256_mask_storeu_epi32(&out[0 * sizeof(__m256i)], (__mmask8)-1, _mm512_castsi512_si256(padded[0]));
+llvm/lib/Support/BLAKE3/blake3_avx512.c:1228:  _mm256_mask_storeu_epi32(&out[1 * sizeof(__m256i)], (__mmask8)-1, _mm512_castsi512_si256(padded[1]));
+llvm/lib/Support/BLAKE3/blake3_avx512.c:1229:  _mm256_mask_storeu_epi32(&out[2 * sizeof(__m256i)], (__mmask8)-1, _mm512_castsi512_si256(padded[2]));
+llvm/lib/Support/BLAKE3/blake3_avx512.c:1230:  _mm256_mask_storeu_epi32(&out[3 * sizeof(__m256i)], (__mmask8)-1, _mm512_castsi512_si256(padded[3]));
+llvm/lib/Support/BLAKE3/blake3_avx512.c:1231:  _mm256_mask_storeu_epi32(&out[4 * sizeof(__m256i)], (__mmask8)-1, _mm512_castsi512_si256(padded[4]));
+llvm/lib/Support/BLAKE3/blake3_avx512.c:1232:  _mm256_mask_storeu_epi32(&out[5 * sizeof(__m256i)], (__mmask8)-1, _mm512_castsi512_si256(padded[5]));
+llvm/lib/Support/BLAKE3/blake3_avx512.c:1233:  _mm256_mask_storeu_epi32(&out[6 * sizeof(__m256i)], (__mmask8)-1, _mm512_castsi512_si256(padded[6]));
+llvm/lib/Support/BLAKE3/blake3_avx512.c:1234:  _mm256_mask_storeu_epi32(&out[7 * sizeof(__m256i)], (__mmask8)-1, _mm512_castsi512_si256(padded[7]));
+llvm/lib/Support/BLAKE3/blake3_avx512.c:1235:  _mm256_mask_storeu_epi32(&out[8 * sizeof(__m256i)], (__mmask8)-1, _mm512_castsi512_si256(padded[8]));
+llvm/lib/Support/BLAKE3/blake3_avx512.c:1236:  _mm256_mask_storeu_epi32(&out[9 * sizeof(__m256i)], (__mmask8)-1, _mm512_castsi512_si256(padded[9]));
+llvm/lib/Support/BLAKE3/blake3_avx512.c:1237:  _mm256_mask_storeu_epi32(&out[10 * sizeof(__m256i)], (__mmask8)-1, _mm512_castsi512_si256(padded[10]));
+llvm/lib/Support/BLAKE3/blake3_avx512.c:1238:  _mm256_mask_storeu_epi32(&out[11 * sizeof(__m256i)], (__mmask8)-1, _mm512_castsi512_si256(padded[11]));
+llvm/lib/Support/BLAKE3/blake3_avx512.c:1239:  _mm256_mask_storeu_epi32(&out[12 * sizeof(__m256i)], (__mmask8)-1, _mm512_castsi512_si256(padded[12]));
+llvm/lib/Support/BLAKE3/blake3_avx512.c:1240:  _mm256_mask_storeu_epi32(&out[13 * sizeof(__m256i)], (__mmask8)-1, _mm512_castsi512_si256(padded[13]));
+llvm/lib/Support/BLAKE3/blake3_avx512.c:1241:  _mm256_mask_storeu_epi32(&out[14 * sizeof(__m256i)], (__mmask8)-1, _mm512_castsi512_si256(padded[14]));
+llvm/lib/Support/BLAKE3/blake3_avx512.c:1242:  _mm256_mask_storeu_epi32(&out[15 * sizeof(__m256i)], (__mmask8)-1, _mm512_castsi512_si256(padded[15]));
+llvm/test/CodeGen/X86/avx-intrinsics-fast-isel.ll:232:define <8 x float> @test_mm256_castpd_ps(<4 x double> %a0) nounwind {
+llvm/test/CodeGen/X86/avx-intrinsics-fast-isel.ll:233:; CHECK-LABEL: test_mm256_castpd_ps:
+llvm/test/CodeGen/X86/avx-intrinsics-fast-isel.ll:240:define <4 x i64> @test_mm256_castpd_si256(<4 x double> %a0) nounwind {
+llvm/test/CodeGen/X86/avx-intrinsics-fast-isel.ll:241:; CHECK-LABEL: test_mm256_castpd_si256:
+llvm/test/CodeGen/X86/avx-intrinsics-fast-isel.ll:267:define <2 x double> @test_mm256_castpd256_pd128(<4 x double> %a0) nounwind {
+llvm/test/CodeGen/X86/avx-intrinsics-fast-isel.ll:268:; CHECK-LABEL: test_mm256_castpd256_pd128:
+llvm/test/CodeGen/X86/avx-intrinsics-fast-isel.ll:277:define <4 x double> @test_mm256_castps_pd(<8 x float> %a0) nounwind {
+llvm/test/CodeGen/X86/avx-intrinsics-fast-isel.ll:278:; CHECK-LABEL: test_mm256_castps_pd:
+llvm/test/CodeGen/X86/avx-intrinsics-fast-isel.ll:285:define <4 x i64> @test_mm256_castps_si256(<8 x float> %a0) nounwind {
+llvm/test/CodeGen/X86/avx-intrinsics-fast-isel.ll:286:; CHECK-LABEL: test_mm256_castps_si256:
+llvm/test/CodeGen/X86/avx-intrinsics-fast-isel.ll:312:define <4 x float> @test_mm256_castps256_ps128(<8 x float> %a0) nounwind {
+llvm/test/CodeGen/X86/avx-intrinsics-fast-isel.ll:313:; CHECK-LABEL: test_mm256_castps256_ps128:
+llvm/test/CodeGen/X86/avx-intrinsics-fast-isel.ll:341:define <4 x double> @test_mm256_castsi256_pd(<4 x i64> %a0) nounwind {
+llvm/test/CodeGen/X86/avx-intrinsics-fast-isel.ll:342:; CHECK-LABEL: test_mm256_castsi256_pd:
+llvm/test/CodeGen/X86/avx-intrinsics-fast-isel.ll:349:define <8 x float> @test_mm256_castsi256_ps(<4 x i64> %a0) nounwind {
+llvm/test/CodeGen/X86/avx-intrinsics-fast-isel.ll:350:; CHECK-LABEL: test_mm256_castsi256_ps:
+llvm/test/CodeGen/X86/avx-intrinsics-fast-isel.ll:357:define <2 x i64> @test_mm256_castsi256_si128(<4 x i64> %a0) nounwind {
+llvm/test/CodeGen/X86/avx-intrinsics-fast-isel.ll:358:; CHECK-LABEL: test_mm256_castsi256_si128:
