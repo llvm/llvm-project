@@ -44,7 +44,7 @@ inline void printChar(raw_ostream &OS, char C) {
 /// @tparam Less A stable comparator for SeqT elements.
 template <typename SeqT, typename Less = std::less<typename SeqT::value_type>>
 class SequenceToOffsetTable {
-  typedef typename SeqT::value_type ElemT;
+  using ElemT = typename SeqT::value_type;
 
   // Define a comparator for SeqT that sorts a suffix immediately before a
   // sequence with that suffix.
@@ -58,7 +58,7 @@ class SequenceToOffsetTable {
 
   // Keep sequences ordered according to SeqLess so suffixes are easy to find.
   // Map each sequence to its offset in the table.
-  typedef std::map<SeqT, unsigned, SeqLess> SeqMap;
+  using SeqMap = std::map<SeqT, unsigned, SeqLess>;
 
   // Sequences added so far, with suffixes removed.
   SeqMap Seqs;

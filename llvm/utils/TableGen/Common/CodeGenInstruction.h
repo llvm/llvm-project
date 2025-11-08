@@ -158,8 +158,8 @@ public:
   OperandInfo &back() { return OperandList.back(); }
   const OperandInfo &back() const { return OperandList.back(); }
 
-  typedef std::vector<OperandInfo>::iterator iterator;
-  typedef std::vector<OperandInfo>::const_iterator const_iterator;
+  using iterator = std::vector<OperandInfo>::iterator;
+  using const_iterator = std::vector<OperandInfo>::const_iterator;
   iterator begin() { return OperandList.begin(); }
   const_iterator begin() const { return OperandList.begin(); }
   iterator end() { return OperandList.end(); }

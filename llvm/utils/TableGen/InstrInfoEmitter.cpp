@@ -68,9 +68,9 @@ private:
   void emitEnums(raw_ostream &OS,
                  ArrayRef<const CodeGenInstruction *> NumberedInstructions);
 
-  typedef std::vector<std::string> OperandInfoTy;
-  typedef std::vector<OperandInfoTy> OperandInfoListTy;
-  typedef std::map<OperandInfoTy, unsigned> OperandInfoMapTy;
+  using OperandInfoTy = std::vector<std::string>;
+  using OperandInfoListTy = std::vector<OperandInfoTy>;
+  using OperandInfoMapTy = std::map<OperandInfoTy, unsigned>;
 
   /// Generate member functions in the target-specific GenInstrInfo class.
   ///
