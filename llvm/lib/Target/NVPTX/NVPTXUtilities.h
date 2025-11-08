@@ -25,7 +25,6 @@
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <cstdarg>
-#include <set>
 #include <string>
 #include <vector>
 

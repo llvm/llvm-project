@@ -47,7 +47,6 @@
 #include <list>
 #include <memory>
 #include <optional>
-#include <set>
 #include <utility>
 
 namespace llvm {
