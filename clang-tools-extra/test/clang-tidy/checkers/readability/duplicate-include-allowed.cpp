@@ -1,6 +1,6 @@
 // RUN: %check_clang_tidy %s readability-duplicate-include %t -- \
 // RUN:   -header-filter='' \
-// RUN:   -config='{CheckOptions: [{key: readability-duplicate-include.AllowedDuplicateIncludes, value: "pack_begin.h,pack_end.h"}]}' \
+// RUN:   -config='{CheckOptions: [{key: readability-duplicate-include.IgnoreHeaders, value: "pack_begin.h;pack_end.h"}]}' \
 // RUN:   -- -I %S/Inputs/duplicate-include-allowed
 //
 // This test lives in test/clang-tidy/checkers/

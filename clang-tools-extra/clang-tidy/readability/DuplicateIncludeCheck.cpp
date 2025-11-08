@@ -66,8 +66,7 @@ private:
   const SourceManager &SM;
   std::vector<llvm::Regex> AllowedDuplicateRegex;
 
-  bool IsAllowedDuplicateInclude(StringRef TokenName, OptionalFileEntryRef File,
-                                 StringRef RelativePath);
+  bool IsAllowedDuplicateInclude(StringRef TokenName);
 };
 
 } // namespace
@@ -105,7 +104,7 @@ void DuplicateIncludeCallbacks::InclusionDirective(
     return;
 
   // if duplicate allowed, record and return
-  if (IsAllowedDuplicateInclude(FileName, File, RelativePath)) {
+  if (IsAllowedDuplicateInclude(FileName)) {
     Files.back().push_back(FileName);
     return;
   }
@@ -134,37 +133,24 @@ void DuplicateIncludeCallbacks::MacroUndefined(const Token &MacroNameTok,
   Files.back().clear();
 }
 
-bool DuplicateIncludeCallbacks::IsAllowedDuplicateInclude(
-    StringRef TokenName, OptionalFileEntryRef File, StringRef RelativePath) {
-  SmallVector<StringRef, 3> matchArguments;
-  matchArguments.push_back(TokenName);
-
-  if (!RelativePath.empty())
-    matchArguments.push_back(llvm::sys::path::filename(RelativePath));
-
-  if (File) {
-    StringRef RealPath = File->getFileEntry().tryGetRealPathName();
-    if (!RealPath.empty())
-      matchArguments.push_back(llvm::sys::path::filename(RealPath));
-  }
-
+bool DuplicateIncludeCallbacks::IsAllowedDuplicateInclude(StringRef FileName) {
   // try to match with each regex
   for (const llvm::Regex &reg : AllowedDuplicateRegex) {
-    for (StringRef arg : matchArguments) {
-      if (reg.match(arg))
-        return true;
-    }
+    if (reg.match(FileName))
+      return true;
   }
   return false;
 }
+} // namespace clang::tidy::readability
 
+namespace clang::tidy::readability {
 DuplicateIncludeCheck::DuplicateIncludeCheck(StringRef Name,
                                              ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context) {
-  std::string Raw = Options.get("AllowedDuplicateIncludes", "").str();
+  std::string Raw = Options.get("IgnoreHeaders", "").str();
   if (!Raw.empty()) {
     SmallVector<StringRef, 4> StringParts;
-    StringRef(Raw).split(StringParts, ',', -1, false);
+    StringRef(Raw).split(StringParts, ';', -1, false);
 
     for (StringRef Part : StringParts) {
       Part = Part.trim();
@@ -181,7 +167,7 @@ void DuplicateIncludeCheck::registerPPCallbacks(
 }
 
 void DuplicateIncludeCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
-  Options.store(Opts, "AllowedDuplicateIncludes",
-                llvm::join(AllowedDuplicateIncludes, ","));
+  Options.store(Opts, "IgnoreHeaders",
+                llvm::join(AllowedDuplicateIncludes, ";"));
 }
 } // namespace clang::tidy::readability

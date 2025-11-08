@@ -34,20 +34,12 @@ Because of the intervening macro definitions, this code remains unchanged:
   #include "assertion.h"
   // ...code with assertions disabled
 
-Option: ``AllowedDuplicateIncludes``
-------------------------------------
+Options
+-------
 
-Headers listed in this option are exempt from warnings. For example:
-
-.. code-block:: c++
-
-  -config='{CheckOptions: [{key: readability-duplicate-include.AllowedDuplicateIncludes, value: "pack_begin.h,pack_end.h"}]}'
-
-This allows regex matches with ``pack_begin.h`` and ``pack_end.h`` to be included multiple times
-without triggering diagnostics.
-
-Notes
------
-
-- Only direct includes in the current translation unit are checked.
-- Useful for removing redundant includes and improving compile times in large codebases.
+.. option:: IgnoreHeaders
+   
+   A semicolon-separated list of regexes to allow duplicate inclusion of header
+   files that match this regex.  E.g., `foo/.*` disables
+   insertion/removal for all headers under the directory `foo`. Default is an
+   empty string, no headers will be ignored.

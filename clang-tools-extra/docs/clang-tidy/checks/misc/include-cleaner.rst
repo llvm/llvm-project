@@ -28,7 +28,7 @@ Options
 -------
 
 .. option:: IgnoreHeaders
-
+   
    A semicolon-separated list of regexes to disable insertion/removal of header
    files that match this regex as a suffix.  E.g., `foo/.*` disables
    insertion/removal for all headers under the directory `foo`. Default is an
