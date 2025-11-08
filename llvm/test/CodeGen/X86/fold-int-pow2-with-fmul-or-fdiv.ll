@@ -114,21 +114,11 @@ define <4 x float> @fmul_pow2_ldexp_4xfloat(<4 x i32> %i) {
 ;
 ; CHECK-ONLY-AVX512F-LABEL: fmul_pow2_ldexp_4xfloat:
 ; CHECK-ONLY-AVX512F:       # %bb.0:
-; CHECK-ONLY-AVX512F-NEXT:    vcvtdq2ps %xmm0, %xmm1
-; CHECK-ONLY-AVX512F-NEXT:    vmovss {{.*#+}} xmm2 = [9.0E+0,0.0E+0,0.0E+0,0.0E+0]
-; CHECK-ONLY-AVX512F-NEXT:    vscalefss %xmm1, %xmm2, %xmm1
-; CHECK-ONLY-AVX512F-NEXT:    vshufps {{.*#+}} xmm3 = xmm0[1,1,1,1]
-; CHECK-ONLY-AVX512F-NEXT:    vcvtdq2ps %xmm3, %xmm3
-; CHECK-ONLY-AVX512F-NEXT:    vscalefss %xmm3, %xmm2, %xmm3
-; CHECK-ONLY-AVX512F-NEXT:    vunpcklps {{.*#+}} xmm1 = xmm1[0],xmm3[0],xmm1[1],xmm3[1]
-; CHECK-ONLY-AVX512F-NEXT:    vshufps {{.*#+}} xmm3 = xmm0[2,3,2,3]
-; CHECK-ONLY-AVX512F-NEXT:    vcvtdq2ps %xmm3, %xmm3
-; CHECK-ONLY-AVX512F-NEXT:    vscalefss %xmm3, %xmm2, %xmm3
-; CHECK-ONLY-AVX512F-NEXT:    vmovlhps {{.*#+}} xmm1 = xmm1[0],xmm3[0]
-; CHECK-ONLY-AVX512F-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
+; CHECK-ONLY-AVX512F-NEXT:    vbroadcastss {{.*#+}} xmm1 = [9.0E+0,9.0E+0,9.0E+0,9.0E+0]
 ; CHECK-ONLY-AVX512F-NEXT:    vcvtdq2ps %xmm0, %xmm0
-; CHECK-ONLY-AVX512F-NEXT:    vscalefss %xmm0, %xmm2, %xmm0
-; CHECK-ONLY-AVX512F-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
+; CHECK-ONLY-AVX512F-NEXT:    vscalefps %zmm0, %zmm1, %zmm0
+; CHECK-ONLY-AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
+; CHECK-ONLY-AVX512F-NEXT:    vzeroupper
 ; CHECK-ONLY-AVX512F-NEXT:    retq
 ;
 ; CHECK-SKX-LABEL: fmul_pow2_ldexp_4xfloat:

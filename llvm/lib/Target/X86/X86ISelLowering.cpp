@@ -1829,6 +1829,16 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::FCOPYSIGN, VT, Custom);
       setOperationAction(ISD::FCANONICALIZE, VT, Custom);
     }
+
+    for (MVT VT : {MVT::f32, MVT::f64, MVT::v4f32, MVT::v2f64, MVT::v8f32,
+                   MVT::v4f64, MVT::v16f32, MVT::v8f64})
+      setOperationAction(ISD::FLDEXP, VT, Custom);
+
+    if (Subtarget.hasFP16()) {
+      for (MVT VT : {MVT::f16, MVT::v8f16, MVT::v16f16, MVT::v32f16})
+        setOperationAction(ISD::FLDEXP, VT, Custom);
+    }
+
     setOperationAction(ISD::LRINT, MVT::v16f32,
                        Subtarget.hasDQI() ? Legal : Custom);
     setOperationAction(ISD::LRINT, MVT::v8f64,
@@ -2589,26 +2599,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::STRICT_FP_TO_UINT, MVT::i128, Custom);
     setOperationAction(ISD::STRICT_SINT_TO_FP, MVT::i128, Custom);
     setOperationAction(ISD::STRICT_UINT_TO_FP, MVT::i128, Custom);
-  }
-
-  if (Subtarget.hasAVX512()) {
-    for (MVT VT : { MVT::f32, MVT::f64, MVT::v16f32, MVT::v8f64})
-      setOperationAction(ISD::FLDEXP, VT, Custom);
-    
-    if (Subtarget.hasVLX()) {
-      for (MVT VT : { MVT::v4f32, MVT::v2f64, MVT::v8f32, MVT::v4f64 }) 
-        setOperationAction(ISD::FLDEXP, VT, Custom);
-
-      if (Subtarget.hasFP16()) {
-        for (MVT VT : { MVT::v8f16, MVT::v16f16, MVT::v32f16 })
-          setOperationAction(ISD::FLDEXP, VT, Custom);
-      }
-    }
-    
-    if (Subtarget.hasFP16()) {
-      for (MVT VT : { MVT::f16, MVT::v32f16 })
-        setOperationAction(ISD::FLDEXP, VT, Custom);
-    }
   }
 
   // On 32 bit MSVC, `fmodf(f32)` is not defined - only `fmod(f64)`
@@ -19177,48 +19167,67 @@ static SDValue LowerFLDEXP(SDValue Op, const X86Subtarget &Subtarget,
   SDValue Exp = Op.getOperand(1);
   MVT XVT, ExpVT; 
 
-  switch (XTy.SimpleTy) { 
-    default:
-      return SDValue();
-    case MVT::f16:
-      if (Subtarget.hasFP16()) {
-        XVT = Subtarget.hasVLX() ? MVT::v8f16 : MVT::v32f16;
-        ExpVT = XVT;
-        break;
-      } 
-      X = DAG.getNode(ISD::FP_EXTEND, DL, MVT::f32, X);
-      [[fallthrough]];
-    case MVT::f32:
-      XVT = MVT::v4f32;
-      ExpVT = MVT::v4f32;
+  switch (XTy.SimpleTy) {
+  default:
+    return SDValue();
+  case MVT::f16:
+    if (Subtarget.hasFP16()) {
+      XVT = MVT::v8f16;
+      ExpVT = XVT;
       break;
-    case MVT::f64:
-      XVT = MVT::v2f64;
-      ExpVT = MVT::v2f64;
+    }
+    X = DAG.getNode(ISD::FP_EXTEND, DL, MVT::f32, X);
+    [[fallthrough]];
+  case MVT::f32:
+    XVT = MVT::v4f32;
+    ExpVT = MVT::v4f32;
+    break;
+  case MVT::f64:
+    XVT = MVT::v2f64;
+    ExpVT = MVT::v2f64;
+    break;
+  case MVT::v4f32:
+  case MVT::v2f64:
+    if (!Subtarget.hasVLX()) {
+      XVT = XTy == MVT::v4f32 ? MVT::v16f32 : MVT::v8f64;
+      ExpVT = XVT;
       break;
-    case MVT::v4f32:
-    case MVT::v2f64:
-    case MVT::v8f32:
-    case MVT::v4f64:
-    case MVT::v16f32:
-    case MVT::v8f64:
-      Exp = DAG.getNode(ISD::SINT_TO_FP, DL, XTy, Exp); 
-      return DAG.getNode(X86ISD::SCALEF, DL, XTy, X, Exp, X);
+    }
+    [[fallthrough]];
+  case MVT::v8f32:
+  case MVT::v4f64:
+    if (!Subtarget.hasVLX()) {
+      XVT = XTy == MVT::v8f32 ? MVT::v16f32 : MVT::v8f64;
+      ExpVT = XVT;
+      break;
+    }
+    [[fallthrough]];
+  case MVT::v16f32:
+  case MVT::v8f64:
+    Exp = DAG.getNode(ISD::SINT_TO_FP, DL, XTy, Exp);
+    return DAG.getNode(X86ISD::SCALEF, DL, XTy, X, Exp, X);
   }
 
-  SDValue Zero = DAG.getConstant(0, DL, MVT::i64);
   Exp = DAG.getNode(ISD::SINT_TO_FP, DL, X.getValueType(), Exp);
-  SDValue VX =
-      DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, XVT, DAG.getUNDEF(XVT), X, Zero);
-  SDValue VExp = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, ExpVT,
-                             DAG.getUNDEF(ExpVT), Exp, Zero);
-  SDValue Scalef = DAG.getNode(X86ISD::SCALEFS, DL, XVT, VX, VExp, VX);
-  SDValue Final =
-      DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, X.getValueType(), Scalef, Zero);
-  if (X.getValueType() != XTy)
-    Final = DAG.getNode(ISD::FP_ROUND, DL, XTy, Final,
-                        DAG.getIntPtrConstant(1, SDLoc(Op)));
-  return Final;
+  if (XTy.isVector()) {
+    SDValue WideX =
+        DAG.getInsertSubvector(DL, DAG.getUNDEF(XVT), X, 0);
+    SDValue WideExp =
+        DAG.getInsertSubvector(DL, DAG.getUNDEF(ExpVT), Exp, 0);
+    SDValue Scalef =
+        DAG.getNode(X86ISD::SCALEF, DL, XVT, WideX, WideExp, WideX);
+    SDValue Final = DAG.getExtractSubvector(DL, XTy, Scalef, 0);
+    return Final;
+  } else {
+    SDValue VX = DAG.getInsertVectorElt(DL, DAG.getUNDEF(XVT), X, 0);
+    SDValue VExp = DAG.getInsertVectorElt(DL, DAG.getUNDEF(ExpVT), Exp, 0);
+    SDValue Scalefs = DAG.getNode(X86ISD::SCALEFS, DL, XVT, VX, VExp, VX);
+    SDValue Final = DAG.getExtractVectorElt(DL, X.getValueType(), Scalefs, 0);
+    if (X.getValueType() != XTy)
+      Final = DAG.getNode(ISD::FP_ROUND, DL, XTy, Final,
+                          DAG.getIntPtrConstant(1, SDLoc(Op)));
+    return Final;
+  }
 }
 
 static SDValue LowerSCALAR_TO_VECTOR(SDValue Op, const X86Subtarget &Subtarget,
