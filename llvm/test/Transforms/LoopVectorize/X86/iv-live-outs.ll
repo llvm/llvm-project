@@ -29,10 +29,10 @@ define i64 @test_pr98660(ptr %dst, i64 %N) {
 ; CHECK-NEXT:    [[TMP18:%.*]] = icmp eq <8 x i32> [[WIDE_LOAD1]], zeroinitializer
 ; CHECK-NEXT:    [[TMP19:%.*]] = icmp eq <8 x i32> [[WIDE_LOAD2]], zeroinitializer
 ; CHECK-NEXT:    [[TMP20:%.*]] = icmp eq <8 x i32> [[WIDE_LOAD3]], zeroinitializer
-; CHECK-NEXT:    call void @llvm.masked.store.v8i32.p0(<8 x i32> zeroinitializer, ptr [[TMP9]], i32 4, <8 x i1> [[TMP17]])
-; CHECK-NEXT:    call void @llvm.masked.store.v8i32.p0(<8 x i32> zeroinitializer, ptr [[TMP14]], i32 4, <8 x i1> [[TMP18]])
-; CHECK-NEXT:    call void @llvm.masked.store.v8i32.p0(<8 x i32> zeroinitializer, ptr [[TMP15]], i32 4, <8 x i1> [[TMP19]])
-; CHECK-NEXT:    call void @llvm.masked.store.v8i32.p0(<8 x i32> zeroinitializer, ptr [[TMP16]], i32 4, <8 x i1> [[TMP20]])
+; CHECK-NEXT:    call void @llvm.masked.store.v8i32.p0(<8 x i32> zeroinitializer, ptr align 4 [[TMP9]], <8 x i1> [[TMP17]])
+; CHECK-NEXT:    call void @llvm.masked.store.v8i32.p0(<8 x i32> zeroinitializer, ptr align 4 [[TMP14]], <8 x i1> [[TMP18]])
+; CHECK-NEXT:    call void @llvm.masked.store.v8i32.p0(<8 x i32> zeroinitializer, ptr align 4 [[TMP15]], <8 x i1> [[TMP19]])
+; CHECK-NEXT:    call void @llvm.masked.store.v8i32.p0(<8 x i32> zeroinitializer, ptr align 4 [[TMP16]], <8 x i1> [[TMP20]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 32
 ; CHECK-NEXT:    [[TMP21:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP21]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]

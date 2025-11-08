@@ -8,10 +8,11 @@ define <4 x i32> @test(ptr %arg1, ptr %arg2) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.s, vl8
 ; CHECK-NEXT:    mov x8, #8 // =0x8
-; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0, x8, lsl #2]
+; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x0, x8, lsl #2]
 ; CHECK-NEXT:    ld1w { z2.s }, p0/z, [x0]
-; CHECK-NEXT:    add z1.s, z0.s, z0.s
-; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #16
+; CHECK-NEXT:    movprfx z0, z1
+; CHECK-NEXT:    ext z0.b, z0.b, z1.b, #16
+; CHECK-NEXT:    add z1.s, z1.s, z1.s
 ; CHECK-NEXT:    add z2.s, z2.s, z2.s
 ; CHECK-NEXT:    dup v0.4s, v0.s[2]
 ; CHECK-NEXT:    st1w { z1.s }, p0, [x0, x8, lsl #2]
@@ -31,10 +32,11 @@ define <2 x i32> @test2(ptr %arg1, ptr %arg2) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.s, vl8
 ; CHECK-NEXT:    mov x8, #8 // =0x8
-; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0, x8, lsl #2]
+; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x0, x8, lsl #2]
 ; CHECK-NEXT:    ld1w { z2.s }, p0/z, [x0]
-; CHECK-NEXT:    add z1.s, z0.s, z0.s
-; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #24
+; CHECK-NEXT:    movprfx z0, z1
+; CHECK-NEXT:    ext z0.b, z0.b, z1.b, #24
+; CHECK-NEXT:    add z1.s, z1.s, z1.s
 ; CHECK-NEXT:    add z2.s, z2.s, z2.s
 ; CHECK-NEXT:    dup v0.2s, v0.s[0]
 ; CHECK-NEXT:    st1w { z1.s }, p0, [x0, x8, lsl #2]

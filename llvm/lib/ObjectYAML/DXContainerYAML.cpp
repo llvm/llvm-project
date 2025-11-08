@@ -60,7 +60,10 @@ readDescriptorRanges(DXContainerYAML::RootParameterHeaderYaml &Header,
     NewR.NumDescriptors = R.NumDescriptors;
     NewR.BaseShaderRegister = R.BaseShaderRegister;
     NewR.RegisterSpace = R.RegisterSpace;
-    NewR.RangeType = R.RangeType;
+    if (!dxbc::isValidRangeType(R.RangeType))
+      return createStringError(std::errc::invalid_argument,
+                               "Invalid value for descriptor range type");
+    NewR.RangeType = dxil::ResourceClass(R.RangeType);
     if constexpr (std::is_same_v<T, dxbc::RTS0::v2::DescriptorRange>) {
       // Set all flag fields for v2
 #define DESCRIPTOR_RANGE_FLAG(Num, Enum, Flag)                                 \
@@ -94,15 +97,14 @@ DXContainerYAML::RootSignatureYamlDesc::create(
       return createStringError(std::errc::invalid_argument,
                                "Invalid value for parameter type");
 
-    RootParameterHeaderYaml Header(PH.ParameterType);
+    RootParameterHeaderYaml Header(dxbc::RootParameterType(PH.ParameterType));
     Header.Offset = PH.ParameterOffset;
-    Header.Type = PH.ParameterType;
 
     if (!dxbc::isValidShaderVisibility(PH.ShaderVisibility))
       return createStringError(std::errc::invalid_argument,
                                "Invalid value for shader visibility");
 
-    Header.Visibility = PH.ShaderVisibility;
+    Header.Visibility = dxbc::ShaderVisibility(PH.ShaderVisibility);
 
     llvm::Expected<object::DirectX::RootParameterView> ParamViewOrErr =
         Data.getParameter(PH);
@@ -152,7 +154,7 @@ DXContainerYAML::RootSignatureYamlDesc::create(
         if (Error E = readDescriptorRanges<dxbc::RTS0::v1::DescriptorRange>(
                 Header, RootSigDesc, DTV))
           return std::move(E);
-      } else if (Version == 2) {
+      } else if (Version == 2 || Version == 3) {
         if (Error E = readDescriptorRanges<dxbc::RTS0::v2::DescriptorRange>(
                 Header, RootSigDesc, DTV))
           return std::move(E);
@@ -162,21 +164,56 @@ DXContainerYAML::RootSignatureYamlDesc::create(
   }
 
   for (const auto &S : Data.samplers()) {
+    if (!dxbc::isValidSamplerFilter(S.Filter))
+      return createStringError(std::errc::invalid_argument,
+                               "Invalid value for static sampler filter");
+
+    if (!dxbc::isValidAddress(S.AddressU))
+      return createStringError(std::errc::invalid_argument,
+                               "Invalid value for static sampler AddressU");
+
+    if (!dxbc::isValidAddress(S.AddressV))
+      return createStringError(std::errc::invalid_argument,
+                               "Invalid value for static sampler AddressV");
+
+    if (!dxbc::isValidAddress(S.AddressW))
+      return createStringError(std::errc::invalid_argument,
+                               "Invalid value for static sampler AddressW");
+
+    if (!dxbc::isValidComparisonFunc(S.ComparisonFunc))
+      return createStringError(
+          std::errc::invalid_argument,
+          "Invalid value for static sampler ComparisonFunc");
+
+    if (!dxbc::isValidBorderColor(S.BorderColor))
+      return createStringError(std::errc::invalid_argument,
+                               "Invalid value for static sampler BorderColor");
+
+    if (!dxbc::isValidShaderVisibility(S.ShaderVisibility))
+      return createStringError(
+          std::errc::invalid_argument,
+          "Invalid value for static sampler ShaderVisibility");
+
     StaticSamplerYamlDesc NewS;
-    NewS.Filter = S.Filter;
-    NewS.AddressU = S.AddressU;
-    NewS.AddressV = S.AddressV;
-    NewS.AddressW = S.AddressW;
+    NewS.Filter = dxbc::SamplerFilter(S.Filter);
+    NewS.AddressU = dxbc::TextureAddressMode(S.AddressU);
+    NewS.AddressV = dxbc::TextureAddressMode(S.AddressV);
+    NewS.AddressW = dxbc::TextureAddressMode(S.AddressW);
     NewS.MipLODBias = S.MipLODBias;
     NewS.MaxAnisotropy = S.MaxAnisotropy;
-    NewS.ComparisonFunc = S.ComparisonFunc;
-    NewS.BorderColor = S.BorderColor;
+    NewS.ComparisonFunc = dxbc::ComparisonFunc(S.ComparisonFunc);
+    NewS.BorderColor = dxbc::StaticBorderColor(S.BorderColor);
     NewS.MinLOD = S.MinLOD;
     NewS.MaxLOD = S.MaxLOD;
     NewS.ShaderRegister = S.ShaderRegister;
     NewS.RegisterSpace = S.RegisterSpace;
-    NewS.ShaderVisibility = S.ShaderVisibility;
+    NewS.ShaderVisibility = dxbc::ShaderVisibility(S.ShaderVisibility);
 
+    if (Version > 2) {
+#define STATIC_SAMPLER_FLAG(Num, Enum, Flag)                                   \
+  NewS.Enum = (S.Flags & llvm::to_underlying(dxbc::StaticSamplerFlags::Enum));
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+    }
     RootSigDesc.StaticSamplers.push_back(NewS);
   }
 
@@ -209,6 +246,15 @@ uint32_t DXContainerYAML::DescriptorRangeYaml::getEncodedFlags() const {
 #define DESCRIPTOR_RANGE_FLAG(Num, Enum, Flag)                                 \
   if (Enum)                                                                    \
     Flags |= (uint32_t)dxbc::DescriptorRangeFlags::Enum;
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+  return Flags;
+}
+
+uint32_t DXContainerYAML::StaticSamplerYamlDesc::getEncodedFlags() const {
+  uint64_t Flags = 0;
+#define STATIC_SAMPLER_FLAG(Num, Enum, Flag)                                   \
+  if (Enum)                                                                    \
+    Flags |= (uint32_t)dxbc::StaticSamplerFlags::Enum;
 #include "llvm/BinaryFormat/DXContainerConstants.def"
   return Flags;
 }
@@ -376,9 +422,9 @@ void MappingTraits<DXContainerYAML::RootSignatureYamlDesc>::mapping(
     IO &IO, DXContainerYAML::RootSignatureYamlDesc &S) {
   IO.mapRequired("Version", S.Version);
   IO.mapRequired("NumRootParameters", S.NumRootParameters);
-  IO.mapRequired("RootParametersOffset", S.RootParametersOffset);
+  IO.mapOptional("RootParametersOffset", S.RootParametersOffset, std::nullopt);
   IO.mapRequired("NumStaticSamplers", S.NumStaticSamplers);
-  IO.mapRequired("StaticSamplersOffset", S.StaticSamplersOffset);
+  IO.mapOptional("StaticSamplersOffset", S.StaticSamplersOffset, std::nullopt);
   IO.mapRequired("Parameters", S.Parameters.Locations, S);
   IO.mapOptional("Samplers", S.StaticSamplers);
 #define ROOT_SIGNATURE_FLAG(Num, Val) IO.mapOptional(#Val, S.Val, false);
@@ -425,21 +471,21 @@ void MappingContextTraits<DXContainerYAML::RootParameterLocationYaml,
   IO.mapRequired("ShaderVisibility", L.Header.Visibility);
 
   switch (L.Header.Type) {
-  case llvm::to_underlying(dxbc::RootParameterType::Constants32Bit): {
+  case dxbc::RootParameterType::Constants32Bit: {
     DXContainerYAML::RootConstantsYaml &Constants =
         S.Parameters.getOrInsertConstants(L);
     IO.mapRequired("Constants", Constants);
     break;
   }
-  case llvm::to_underlying(dxbc::RootParameterType::CBV):
-  case llvm::to_underlying(dxbc::RootParameterType::SRV):
-  case llvm::to_underlying(dxbc::RootParameterType::UAV): {
+  case dxbc::RootParameterType::CBV:
+  case dxbc::RootParameterType::SRV:
+  case dxbc::RootParameterType::UAV: {
     DXContainerYAML::RootDescriptorYaml &Descriptor =
         S.Parameters.getOrInsertDescriptor(L);
     IO.mapRequired("Descriptor", Descriptor);
     break;
   }
-  case llvm::to_underlying(dxbc::RootParameterType::DescriptorTable): {
+  case dxbc::RootParameterType::DescriptorTable: {
     DXContainerYAML::DescriptorTableYaml &Table =
         S.Parameters.getOrInsertTable(L);
     IO.mapRequired("Table", Table);
@@ -480,6 +526,9 @@ void MappingTraits<llvm::DXContainerYAML::StaticSamplerYamlDesc>::mapping(
   IO.mapRequired("ShaderRegister", S.ShaderRegister);
   IO.mapRequired("RegisterSpace", S.RegisterSpace);
   IO.mapRequired("ShaderVisibility", S.ShaderVisibility);
+#define STATIC_SAMPLER_FLAG(Num, Enum, Flag)                                   \
+  IO.mapOptional(#Flag, S.Enum, false);
+#include "llvm/BinaryFormat/DXContainerConstants.def"
 }
 
 void MappingTraits<DXContainerYAML::Part>::mapping(IO &IO,
@@ -540,49 +589,98 @@ void MappingTraits<DXContainerYAML::SignatureElement>::mapping(
 void ScalarEnumerationTraits<dxbc::PSV::SemanticKind>::enumeration(
     IO &IO, dxbc::PSV::SemanticKind &Value) {
   for (const auto &E : dxbc::PSV::getSemanticKinds())
-    IO.enumCase(Value, E.Name.str().c_str(), E.Value);
+    IO.enumCase(Value, E.Name, E.Value);
 }
 
 void ScalarEnumerationTraits<dxbc::PSV::ComponentType>::enumeration(
     IO &IO, dxbc::PSV::ComponentType &Value) {
   for (const auto &E : dxbc::PSV::getComponentTypes())
-    IO.enumCase(Value, E.Name.str().c_str(), E.Value);
+    IO.enumCase(Value, E.Name, E.Value);
 }
 
 void ScalarEnumerationTraits<dxbc::PSV::InterpolationMode>::enumeration(
     IO &IO, dxbc::PSV::InterpolationMode &Value) {
   for (const auto &E : dxbc::PSV::getInterpolationModes())
-    IO.enumCase(Value, E.Name.str().c_str(), E.Value);
+    IO.enumCase(Value, E.Name, E.Value);
 }
 
 void ScalarEnumerationTraits<dxbc::PSV::ResourceType>::enumeration(
     IO &IO, dxbc::PSV::ResourceType &Value) {
   for (const auto &E : dxbc::PSV::getResourceTypes())
-    IO.enumCase(Value, E.Name.str().c_str(), E.Value);
+    IO.enumCase(Value, E.Name, E.Value);
 }
 
 void ScalarEnumerationTraits<dxbc::PSV::ResourceKind>::enumeration(
     IO &IO, dxbc::PSV::ResourceKind &Value) {
   for (const auto &E : dxbc::PSV::getResourceKinds())
-    IO.enumCase(Value, E.Name.str().c_str(), E.Value);
+    IO.enumCase(Value, E.Name, E.Value);
 }
 
 void ScalarEnumerationTraits<dxbc::D3DSystemValue>::enumeration(
     IO &IO, dxbc::D3DSystemValue &Value) {
   for (const auto &E : dxbc::getD3DSystemValues())
-    IO.enumCase(Value, E.Name.str().c_str(), E.Value);
+    IO.enumCase(Value, E.Name, E.Value);
 }
 
 void ScalarEnumerationTraits<dxbc::SigMinPrecision>::enumeration(
     IO &IO, dxbc::SigMinPrecision &Value) {
   for (const auto &E : dxbc::getSigMinPrecisions())
-    IO.enumCase(Value, E.Name.str().c_str(), E.Value);
+    IO.enumCase(Value, E.Name, E.Value);
 }
 
 void ScalarEnumerationTraits<dxbc::SigComponentType>::enumeration(
     IO &IO, dxbc::SigComponentType &Value) {
   for (const auto &E : dxbc::getSigComponentTypes())
-    IO.enumCase(Value, E.Name.str().c_str(), E.Value);
+    IO.enumCase(Value, E.Name, E.Value);
+}
+
+void ScalarEnumerationTraits<dxbc::RootParameterType>::enumeration(
+    IO &IO, dxbc::RootParameterType &Value) {
+  for (const auto &E : dxbc::getRootParameterTypes())
+    IO.enumCase(Value, E.Name, E.Value);
+}
+
+void ScalarEnumerationTraits<dxil::ResourceClass>::enumeration(
+    IO &IO, dxil::ResourceClass &Value) {
+  const EnumEntry<dxil::ResourceClass> ResourceClasses[] = {
+      {"CBuffer", dxil::ResourceClass::CBuffer},
+      {"SRV", dxil::ResourceClass::SRV},
+      {"UAV", dxil::ResourceClass::UAV},
+      {"Sampler", dxil::ResourceClass::Sampler},
+  };
+
+  for (const auto &E : ResourceClasses)
+    IO.enumCase(Value, E.Name, E.Value);
+}
+
+void ScalarEnumerationTraits<dxbc::SamplerFilter>::enumeration(
+    IO &IO, dxbc::SamplerFilter &Value) {
+  for (const auto &E : dxbc::getSamplerFilters())
+    IO.enumCase(Value, E.Name, E.Value);
+}
+
+void ScalarEnumerationTraits<dxbc::StaticBorderColor>::enumeration(
+    IO &IO, dxbc::StaticBorderColor &Value) {
+  for (const auto &E : dxbc::getStaticBorderColors())
+    IO.enumCase(Value, E.Name, E.Value);
+}
+
+void ScalarEnumerationTraits<dxbc::TextureAddressMode>::enumeration(
+    IO &IO, dxbc::TextureAddressMode &Value) {
+  for (const auto &E : dxbc::getTextureAddressModes())
+    IO.enumCase(Value, E.Name, E.Value);
+}
+
+void ScalarEnumerationTraits<dxbc::ShaderVisibility>::enumeration(
+    IO &IO, dxbc::ShaderVisibility &Value) {
+  for (const auto &E : dxbc::getShaderVisibility())
+    IO.enumCase(Value, E.Name, E.Value);
+}
+
+void ScalarEnumerationTraits<dxbc::ComparisonFunc>::enumeration(
+    IO &IO, dxbc::ComparisonFunc &Value) {
+  for (const auto &E : dxbc::getComparisonFuncs())
+    IO.enumCase(Value, E.Name, E.Value);
 }
 
 } // namespace yaml

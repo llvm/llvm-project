@@ -46,7 +46,10 @@ define <4 x float> @test_fms(<4 x float> %a, <4 x float> %b, <4 x float> %c) {
   ret <4 x float> %res
 }
 
-declare <16 x i8> @llvm.wasm.laneselect.v16i8(<16 x i8>, <16 x i8>, <16 x i8>)
+; This declaration is intentionally omitted to check that intrinsic upgrade
+; also works without a declaration.
+; declare <16 x i8> @llvm.wasm.laneselect.v16i8(<16 x i8>, <16 x i8>, <16 x i8>)
+
 declare <8 x i16> @llvm.wasm.dot.i8x16.i7x16.signed(<16 x i8>, <16 x i8>)
 declare <4 x i32> @llvm.wasm.dot.i8x16.i7x16.add.signed(<16 x i8>, <16 x i8>, <4 x i32>)
 declare <4 x float> @llvm.wasm.fma.v4f32(<4 x float>, <4 x float>, <4 x float>)

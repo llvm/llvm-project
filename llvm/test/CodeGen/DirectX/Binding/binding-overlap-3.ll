@@ -30,16 +30,16 @@ target triple = "dxil-pc-shadermodel6.3-library"
 
 define void @test_overlapping() "hlsl.export" {
 entry:
-  %h1 = call target("dx.RawBuffer", float, 0, 0) @llvm.dx.resource.handlefrombinding(i32 0, i32 5, i32 1, i32 0, i1 false, ptr @A.str)
+  %h1 = call target("dx.RawBuffer", float, 0, 0) @llvm.dx.resource.handlefrombinding(i32 0, i32 5, i32 1, i32 0, ptr @A.str)
   store target("dx.RawBuffer", float, 0, 0) %h1, ptr @One, align 4
   
-  %h2 = call target("dx.RawBuffer", float, 0, 0) @llvm.dx.resource.handlefrombinding(i32 0, i32 9, i32 1, i32 0, i1 false, ptr @B.str)
+  %h2 = call target("dx.RawBuffer", float, 0, 0) @llvm.dx.resource.handlefrombinding(i32 0, i32 9, i32 1, i32 0, ptr @B.str)
   store target("dx.RawBuffer", float, 0, 0) %h2, ptr @Two, align 4
  
-  %h3 = call target("dx.RawBuffer", float, 0, 0) @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 10, i32 4, i1 false, ptr @C.str)
+  %h3 = call target("dx.RawBuffer", float, 0, 0) @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 10, i32 4, ptr @C.str)
   store target("dx.RawBuffer", float, 0, 0) %h3, ptr @Three, align 4
  
-  %h4 = call target("dx.TypedBuffer", float, 1, 0, 0) @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, i1 false, ptr @S.str)
+  %h4 = call target("dx.TypedBuffer", float, 1, 0, 0) @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, ptr @S.str)
   store target("dx.TypedBuffer", float, 1, 0, 0) %h4, ptr @Four, align 4
   
   ret void

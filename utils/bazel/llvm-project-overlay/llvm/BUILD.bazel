@@ -6,6 +6,7 @@ load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
 load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
 load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
 load("@rules_python//python:defs.bzl", "py_binary")
+load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 load("//mlir:tblgen.bzl", "gentbl_cc_library", "gentbl_filegroup", "td_library")
 load(":binary_alias.bzl", "binary_alias")
 load(":config.bzl", "llvm_config_defines")
@@ -228,6 +229,7 @@ cc_library(
         "lib/Support/*.cpp",
         "lib/Support/*.h",
         "lib/Support/*.inc",
+        "lib/Support/LSP/*.cpp",
         # To avoid a dependency cycle.
         "include/llvm/Option/*.h",
     ]) + select({
@@ -575,6 +577,7 @@ cc_library(
     deps = [
         ":BinaryFormat",
         ":DebugInfoCodeView",
+        ":DebugInfoDWARFLowLevel",
         ":Support",
         ":TargetParser",
         ":config",
@@ -690,6 +693,8 @@ cc_binary(
         "utils/TableGen/Basic/DirectiveEmitter.cpp",
         "utils/TableGen/Basic/IntrinsicEmitter.cpp",
         "utils/TableGen/Basic/RISCVTargetDefEmitter.cpp",
+        "utils/TableGen/Basic/RuntimeLibcalls.cpp",
+        "utils/TableGen/Basic/RuntimeLibcalls.h",
         "utils/TableGen/Basic/RuntimeLibcallsEmitter.cpp",
         "utils/TableGen/Basic/SDNodeProperties.cpp",
         "utils/TableGen/Basic/SDNodeProperties.h",
@@ -768,6 +773,7 @@ cc_binary(
     stamp = 0,
     deps = [
         ":CodeGenTypes",
+        ":Option",
         ":Support",
         ":TableGen",
         ":TableGenGlobalISel",
@@ -2244,7 +2250,10 @@ llvm_target_lib_list = [lib for lib in [
             "lib/Target/ARM/ARMGenGlobalISel.inc": ["-gen-global-isel"],
             "lib/Target/ARM/ARMGenCallingConv.inc": ["-gen-callingconv"],
             "lib/Target/ARM/ARMGenSubtargetInfo.inc": ["-gen-subtarget"],
-            "lib/Target/ARM/ARMGenDisassemblerTables.inc": ["-gen-disassembler"],
+            "lib/Target/ARM/ARMGenDisassemblerTables.inc": [
+                "-gen-disassembler",
+                "-ignore-non-decodable-operands",
+            ],
         },
     },
     {
@@ -2261,7 +2270,12 @@ llvm_target_lib_list = [lib for lib in [
             "lib/Target/AMDGPU/AMDGPUGenDAGISel.inc": ["-gen-dag-isel"],
             "lib/Target/AMDGPU/AMDGPUGenCallingConv.inc": ["-gen-callingconv"],
             "lib/Target/AMDGPU/AMDGPUGenSubtargetInfo.inc": ["-gen-subtarget"],
-            "lib/Target/AMDGPU/AMDGPUGenDisassemblerTables.inc": ["-gen-disassembler"],
+            "lib/Target/AMDGPU/AMDGPUGenDisassemblerTables.inc": [
+                "-gen-disassembler",
+                "--specialize-decoders-per-bitwidth",
+                "-ignore-non-decodable-operands",
+                "-ignore-fully-defined-operands",
+            ],
             "lib/Target/AMDGPU/AMDGPUGenSearchableTables.inc": ["-gen-searchable-tables"],
         },
         "tbl_deps": [
@@ -2278,7 +2292,9 @@ llvm_target_lib_list = [lib for lib in [
             "lib/Target/AVR/AVRGenAsmWriter.inc": ["-gen-asm-writer"],
             "lib/Target/AVR/AVRGenCallingConv.inc": ["-gen-callingconv"],
             "lib/Target/AVR/AVRGenDAGISel.inc": ["-gen-dag-isel"],
-            "lib/Target/AVR/AVRGenDisassemblerTables.inc": ["-gen-disassembler"],
+            "lib/Target/AVR/AVRGenDisassemblerTables.inc": [
+                "-gen-disassembler",
+            ],
             "lib/Target/AVR/AVRGenMCCodeEmitter.inc": ["-gen-emitter"],
             "lib/Target/AVR/AVRGenInstrInfo.inc": ["-gen-instr-info"],
             "lib/Target/AVR/AVRGenRegisterInfo.inc": ["-gen-register-info"],
@@ -2301,6 +2317,7 @@ llvm_target_lib_list = [lib for lib in [
             "lib/Target/BPF/BPFGenInstrInfo.inc": ["-gen-instr-info"],
             "lib/Target/BPF/BPFGenRegisterInfo.inc": ["-gen-register-info"],
             "lib/Target/BPF/BPFGenSubtargetInfo.inc": ["-gen-subtarget"],
+            "lib/Target/BPF/BPFGenSDNodeInfo.inc": ["-gen-sd-node-info"],
         },
     },
     {
@@ -2312,7 +2329,9 @@ llvm_target_lib_list = [lib for lib in [
             "lib/Target/Hexagon/HexagonGenCallingConv.inc": ["-gen-callingconv"],
             "lib/Target/Hexagon/HexagonGenDAGISel.inc": ["-gen-dag-isel"],
             "lib/Target/Hexagon/HexagonGenDFAPacketizer.inc": ["-gen-dfa-packetizer"],
-            "lib/Target/Hexagon/HexagonGenDisassemblerTables.inc": ["-gen-disassembler"],
+            "lib/Target/Hexagon/HexagonGenDisassemblerTables.inc": [
+                "-gen-disassembler",
+            ],
             "lib/Target/Hexagon/HexagonGenInstrInfo.inc": ["-gen-instr-info"],
             "lib/Target/Hexagon/HexagonGenMCCodeEmitter.inc": ["-gen-emitter"],
             "lib/Target/Hexagon/HexagonGenRegisterInfo.inc": ["-gen-register-info"],
@@ -2358,7 +2377,10 @@ llvm_target_lib_list = [lib for lib in [
             "lib/Target/Mips/MipsGenAsmWriter.inc": ["-gen-asm-writer"],
             "lib/Target/Mips/MipsGenCallingConv.inc": ["-gen-callingconv"],
             "lib/Target/Mips/MipsGenDAGISel.inc": ["-gen-dag-isel"],
-            "lib/Target/Mips/MipsGenDisassemblerTables.inc": ["-gen-disassembler"],
+            "lib/Target/Mips/MipsGenDisassemblerTables.inc": [
+                "-gen-disassembler",
+                "-ignore-non-decodable-operands",
+            ],
             "lib/Target/Mips/MipsGenMCCodeEmitter.inc": ["-gen-emitter"],
             "lib/Target/Mips/MipsGenExegesis.inc": ["-gen-exegesis"],
             "lib/Target/Mips/MipsGenFastISel.inc": ["-gen-fast-isel"],
@@ -2428,7 +2450,10 @@ llvm_target_lib_list = [lib for lib in [
             "lib/Target/RISCV/RISCVGenAsmWriter.inc": ["-gen-asm-writer"],
             "lib/Target/RISCV/RISCVGenCompressInstEmitter.inc": ["-gen-compress-inst-emitter"],
             "lib/Target/RISCV/RISCVGenDAGISel.inc": ["-gen-dag-isel"],
-            "lib/Target/RISCV/RISCVGenDisassemblerTables.inc": ["-gen-disassembler"],
+            "lib/Target/RISCV/RISCVGenDisassemblerTables.inc": [
+                "-gen-disassembler",
+                "--specialize-decoders-per-bitwidth",
+            ],
             "lib/Target/RISCV/RISCVGenInstrInfo.inc": ["-gen-instr-info"],
             "lib/Target/RISCV/RISCVGenMacroFusion.inc": ["-gen-macro-fusion-pred"],
             "lib/Target/RISCV/RISCVGenMCCodeEmitter.inc": ["-gen-emitter"],
@@ -2529,6 +2554,7 @@ llvm_target_lib_list = [lib for lib in [
             "lib/Target/WebAssembly/WebAssemblyGenRegisterInfo.inc": ["-gen-register-info"],
             "lib/Target/WebAssembly/WebAssemblyGenSubtargetInfo.inc": ["-gen-subtarget"],
             "lib/Target/WebAssembly/WebAssemblyGenAsmMatcher.inc": ["-gen-asm-matcher"],
+            "lib/Target/WebAssembly/WebAssemblyGenSDNodeInfo.inc": ["-gen-sd-node-info"],
         },
     },
     {
@@ -4732,6 +4758,36 @@ cc_binary(
 )
 
 cc_binary(
+    name = "llvm-offload-wrapper",
+    srcs = glob([
+        "tools/llvm-offload-wrapper/*.cpp",
+    ]),
+    copts = llvm_copts,
+    stamp = 0,
+    deps = [
+        ":BitWriter",
+        ":Core",
+        ":FrontendOffloading",
+        ":Object",
+        ":Option",
+        ":Support",
+        ":TargetParser",
+        ":intrinsic_enums_gen",
+    ],
+)
+
+cc_binary(
+    name = "llvm-offload-binary",
+    srcs = glob(["tools/llvm-offload-binary/*.cpp"]),
+    stamp = 0,
+    deps = [
+        "//llvm:BinaryFormat",
+        "//llvm:Object",
+        "//llvm:Support",
+    ],
+)
+
+cc_binary(
     name = "llvm-pdbutil",
     srcs = glob([
         "tools/llvm-pdbutil/*.cpp",
@@ -4765,7 +4821,7 @@ cc_library(
     ],
 )
 
-llvm_driver_cc_binary(
+cc_binary(
     name = "llvm-profdata",
     stamp = 0,
     deps = [":llvm-profdata-lib"],
@@ -4927,6 +4983,22 @@ cc_binary(
         ":TransformUtils",
         ":config",
         ":llvm-reduce-defs-lib",
+    ],
+)
+
+cc_binary(
+    name = "llvm-remarkutil",
+    srcs = glob([
+        "tools/llvm-remarkutil/**/*.cpp",
+        "tools/llvm-remarkutil/**/*.h",
+    ]),
+    copts = llvm_copts,
+    includes = ["tools/llvm-remarkutil"],
+    stamp = 0,
+    deps = [
+        ":Demangle",
+        ":Remarks",
+        ":Support",
     ],
 )
 
@@ -5600,6 +5672,64 @@ cc_binary(
         ":TLICheckerOptsTableGen",
         ":TargetParser",
         ":TextAPI",
+        ":config",
+    ],
+)
+
+cc_binary(
+    name = "llvm-sim",
+    testonly = True,
+    srcs = glob([
+        "tools/llvm-sim/*.cpp",
+    ]),
+    copts = llvm_copts,
+    stamp = 0,
+    deps = [
+        ":Analysis",
+        ":Core",
+        ":IRReader",
+        ":Support",
+        ":config",
+    ],
+)
+
+cc_binary(
+    name = "llvm-ir2vec",
+    testonly = True,
+    srcs = glob([
+        "tools/llvm-ir2vec/*.cpp",
+    ]),
+    copts = llvm_copts,
+    stamp = 0,
+    deps = [
+        ":AllTargetsAsmParsers",
+        ":AllTargetsCodeGens",
+        ":AllTargetsMCAs",
+        ":Analysis",
+        ":CodeGen",
+        ":Core",
+        ":IRReader",
+        ":MC",
+        ":Support",
+        ":Target",
+        ":TargetParser",
+        ":config",
+    ],
+)
+
+cc_binary(
+    name = "llvm-ctxprof-util",
+    testonly = True,
+    srcs = glob([
+        "tools/llvm-ctxprof-util/*.cpp",
+    ]),
+    copts = llvm_copts,
+    stamp = 0,
+    deps = [
+        ":Core",
+        ":Object",
+        ":ProfileData",
+        ":Support",
         ":config",
     ],
 )

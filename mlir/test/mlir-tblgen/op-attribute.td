@@ -69,19 +69,19 @@ def AOp : NS_Op<"a_op", []> {
 
 // DEF:      ::llvm::LogicalResult AOpAdaptor::verify
 // DEF-NEXT: auto tblgen_aAttr = getProperties().aAttr; (void)tblgen_aAttr;
-// DEF-NEXT: if (!tblgen_aAttr) return emitError(loc, "'test.a_op' op ""requires attribute 'aAttr'");
+// DEF-NEXT: if (!tblgen_aAttr) return emitError(loc, "'test.a_op' op requires attribute 'aAttr'");
 // DEF-NEXT: auto tblgen_bAttr = getProperties().bAttr; (void)tblgen_bAttr;
 // DEF-NEXT: auto tblgen_cAttr = getProperties().cAttr; (void)tblgen_cAttr;
 // DEF-NEXT: auto tblgen_dAttr = getProperties().dAttr; (void)tblgen_dAttr;
 
 // DEF:      if (tblgen_aAttr && !((some-condition)))
-// DEF-NEXT:   return emitError(loc, "'test.a_op' op ""attribute 'aAttr' failed to satisfy constraint: some attribute kind");
+// DEF-NEXT:   return emitError(loc, "'test.a_op' op attribute 'aAttr' failed to satisfy constraint: some attribute kind");
 // DEF:      if (tblgen_bAttr && !((some-condition)))
-// DEF-NEXT:   return emitError(loc, "'test.a_op' op ""attribute 'bAttr' failed to satisfy constraint: some attribute kind");
+// DEF-NEXT:   return emitError(loc, "'test.a_op' op attribute 'bAttr' failed to satisfy constraint: some attribute kind");
 // DEF:      if (tblgen_cAttr && !((some-condition)))
-// DEF-NEXT:   return emitError(loc, "'test.a_op' op ""attribute 'cAttr' failed to satisfy constraint: some attribute kind");
+// DEF-NEXT:   return emitError(loc, "'test.a_op' op attribute 'cAttr' failed to satisfy constraint: some attribute kind");
 // DEF:      if (tblgen_dAttr && !((some-condition)))
-// DEF-NEXT:   return emitError(loc, "'test.a_op' op ""attribute 'dAttr' failed to satisfy constraint: some attribute kind");
+// DEF-NEXT:   return emitError(loc, "'test.a_op' op attribute 'dAttr' failed to satisfy constraint: some attribute kind");
 
 // Test getter methods
 // ---
@@ -219,13 +219,13 @@ def AgetOp : Op<Test2_Dialect, "a_get_op", []> {
 
 // DEF:      ::llvm::LogicalResult AgetOpAdaptor::verify
 // DEF: auto tblgen_aAttr = getProperties().aAttr; (void)tblgen_aAttr;
-// DEF: if (!tblgen_aAttr) return emitError(loc, "'test2.a_get_op' op ""requires attribute 'aAttr'");
+// DEF: if (!tblgen_aAttr) return emitError(loc, "'test2.a_get_op' op requires attribute 'aAttr'");
 // DEF: auto tblgen_bAttr = getProperties().bAttr; (void)tblgen_bAttr;
 // DEF: auto tblgen_cAttr = getProperties().cAttr; (void)tblgen_cAttr;
 // DEF:      if (tblgen_bAttr && !((some-condition)))
-// DEF-NEXT:   return emitError(loc, "'test2.a_get_op' op ""attribute 'bAttr' failed to satisfy constraint: some attribute kind");
+// DEF-NEXT:   return emitError(loc, "'test2.a_get_op' op attribute 'bAttr' failed to satisfy constraint: some attribute kind");
 // DEF:      if (tblgen_cAttr && !((some-condition)))
-// DEF-NEXT:   return emitError(loc, "'test2.a_get_op' op ""attribute 'cAttr' failed to satisfy constraint: some attribute kind");
+// DEF-NEXT:   return emitError(loc, "'test2.a_get_op' op attribute 'cAttr' failed to satisfy constraint: some attribute kind");
 
 // Test getter methods
 // ---

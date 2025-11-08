@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -Wno-unused-value -verify=expected,cxx14ext,cxx17ext,cxx20ext,cxx23ext -std=c++03 -Wno-c99-designator %s -Wno-c++11-extensions
+// RUN: %clang_cc1 -fsyntax-only -Wno-unused-value -verify=expected,cxx14ext,cxx17ext,cxx20ext,cxx23ext -std=c++03 -Wno-c99-designator %s -Wno-c++11-extensions -Wno-local-type-template-args
 // RUN: %clang_cc1 -fsyntax-only -Wno-unused-value -verify=expected,cxx14ext,cxx17ext,cxx20ext,cxx23ext -std=c++11 -Wno-c99-designator %s
 // RUN: %clang_cc1 -fsyntax-only -Wno-unused-value -verify=expected,cxx17ext,cxx20ext,cxx23ext          -std=c++14 -Wno-c99-designator %s
 // RUN: %clang_cc1 -fsyntax-only -Wno-unused-value -verify=expected,cxx20ext,cxx23ext                   -std=c++17 -Wno-c99-designator %s

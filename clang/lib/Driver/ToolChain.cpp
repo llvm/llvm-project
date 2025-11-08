@@ -519,7 +519,9 @@ ToolChain::getTargetAndModeFromProgramName(StringRef PN) {
   StringRef Prefix(ProgName);
   Prefix = Prefix.slice(0, LastComponent);
   std::string IgnoredError;
-  bool IsRegistered = llvm::TargetRegistry::lookupTarget(Prefix, IgnoredError);
+
+  llvm::Triple Triple(Prefix);
+  bool IsRegistered = llvm::TargetRegistry::lookupTarget(Triple, IgnoredError);
   return ParsedClangName{std::string(Prefix), ModeSuffix, DS->ModeFlag,
                          IsRegistered};
 }
@@ -652,6 +654,7 @@ Tool *ToolChain::getTool(Action::ActionClass AC) const {
   case Action::VerifyDebugInfoJobClass:
   case Action::BinaryAnalyzeJobClass:
   case Action::BinaryTranslatorJobClass:
+  case Action::ObjcopyJobClass:
     llvm_unreachable("Invalid tool kind.");
 
   case Action::CompileJobClass:
@@ -1250,7 +1253,6 @@ std::string ToolChain::ComputeLLVMTriple(const ArgList &Args,
   }
   case llvm::Triple::aarch64: {
     llvm::Triple Triple = getTriple();
-    tools::aarch64::setPAuthABIInTriple(getDriver(), Args, Triple);
     if (!Triple.isOSBinFormatMachO())
       return Triple.getTriple();
 
@@ -1409,13 +1411,6 @@ void ToolChain::addSystemFrameworkInclude(const llvm::opt::ArgList &DriverArgs,
   CC1Args.push_back(DriverArgs.MakeArgString(Path));
 }
 
-/// Utility function to add a system include directory to CC1 arguments.
-void ToolChain::addSystemInclude(const ArgList &DriverArgs,
-                                 ArgStringList &CC1Args, const Twine &Path) {
-  CC1Args.push_back("-internal-isystem");
-  CC1Args.push_back(DriverArgs.MakeArgString(Path));
-}
-
 /// Utility function to add a system include directory with extern "C"
 /// semantics to CC1 arguments.
 ///
@@ -1436,6 +1431,14 @@ void ToolChain::addExternCSystemIncludeIfExists(const ArgList &DriverArgs,
                                                 const Twine &Path) {
   if (llvm::sys::fs::exists(Path))
     addExternCSystemInclude(DriverArgs, CC1Args, Path);
+}
+
+/// Utility function to add a system include directory to CC1 arguments.
+/*static*/ void ToolChain::addSystemInclude(const ArgList &DriverArgs,
+                                            ArgStringList &CC1Args,
+                                            const Twine &Path) {
+  CC1Args.push_back("-internal-isystem");
+  CC1Args.push_back(DriverArgs.MakeArgString(Path));
 }
 
 /// Utility function to add a list of system framework directories to CC1.
@@ -1619,7 +1622,8 @@ SanitizerMask ToolChain::getSupportedSanitizers() const {
       SanitizerKind::CFICastStrict | SanitizerKind::FloatDivideByZero |
       SanitizerKind::KCFI | SanitizerKind::UnsignedIntegerOverflow |
       SanitizerKind::UnsignedShiftBase | SanitizerKind::ImplicitConversion |
-      SanitizerKind::Nullability | SanitizerKind::LocalBounds;
+      SanitizerKind::Nullability | SanitizerKind::LocalBounds |
+      SanitizerKind::AllocToken;
   if (getTriple().getArch() == llvm::Triple::x86 ||
       getTriple().getArch() == llvm::Triple::x86_64 ||
       getTriple().getArch() == llvm::Triple::arm ||

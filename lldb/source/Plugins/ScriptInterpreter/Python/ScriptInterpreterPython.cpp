@@ -98,17 +98,7 @@ public:
 #ifdef LLDB_USE_LIBEDIT_READLINE_COMPAT_MODULE
       // Python's readline is incompatible with libedit being linked into lldb.
       // Provide a patched version local to the embedded interpreter.
-      bool ReadlinePatched = false;
-      for (auto *p = PyImport_Inittab; p->name != nullptr; p++) {
-        if (strcmp(p->name, "readline") == 0) {
-          p->initfunc = initlldb_readline;
-          break;
-        }
-      }
-      if (!ReadlinePatched) {
-        PyImport_AppendInittab("readline", initlldb_readline);
-        ReadlinePatched = true;
-      }
+      PyImport_AppendInittab("readline", initlldb_readline);
 #endif
 
       // Register _lldb as a built-in module.
@@ -909,11 +899,11 @@ bool ScriptInterpreterPythonImpl::Interrupt() {
   Log *log = GetLog(LLDBLog::Script);
 
   if (IsExecutingPython()) {
-    PyThreadState *state = PyThreadState_GET();
+    PyThreadState *state = PyThreadState_Get();
     if (!state)
       state = GetThreadState();
     if (state) {
-      long tid = state->thread_id;
+      long tid = PyThread_get_thread_ident();
       PyThreadState_Swap(state);
       int num_threads = PyThreadState_SetAsyncExc(tid, PyExc_KeyboardInterrupt);
       LLDB_LOGF(log,
@@ -1531,6 +1521,16 @@ ScriptInterpreterPythonImpl::CreateScriptedThreadInterface() {
   return std::make_shared<ScriptedThreadPythonInterface>(*this);
 }
 
+ScriptedFrameInterfaceSP
+ScriptInterpreterPythonImpl::CreateScriptedFrameInterface() {
+  return std::make_shared<ScriptedFramePythonInterface>(*this);
+}
+
+ScriptedFrameProviderInterfaceSP
+ScriptInterpreterPythonImpl::CreateScriptedFrameProviderInterface() {
+  return std::make_shared<ScriptedFrameProviderPythonInterface>(*this);
+}
+
 ScriptedThreadPlanInterfaceSP
 ScriptInterpreterPythonImpl::CreateScriptedThreadPlanInterface() {
   return std::make_shared<ScriptedThreadPlanPythonInterface>(*this);
@@ -1944,7 +1944,7 @@ lldb::ValueObjectSP ScriptInterpreterPythonImpl::GetChildAtIndex(
   return ret_val;
 }
 
-llvm::Expected<int> ScriptInterpreterPythonImpl::GetIndexOfChildWithName(
+llvm::Expected<uint32_t> ScriptInterpreterPythonImpl::GetIndexOfChildWithName(
     const StructuredData::ObjectSP &implementor_sp, const char *child_name) {
   if (!implementor_sp)
     return llvm::createStringError("Type has no child named '%s'", child_name);
@@ -1956,7 +1956,7 @@ llvm::Expected<int> ScriptInterpreterPythonImpl::GetIndexOfChildWithName(
   if (!implementor)
     return llvm::createStringError("Type has no child named '%s'", child_name);
 
-  int ret_val = INT32_MAX;
+  uint32_t ret_val = UINT32_MAX;
 
   {
     Locker py_lock(this,
@@ -1965,7 +1965,7 @@ llvm::Expected<int> ScriptInterpreterPythonImpl::GetIndexOfChildWithName(
                                                                  child_name);
   }
 
-  if (ret_val == INT32_MAX)
+  if (ret_val == UINT32_MAX)
     return llvm::createStringError("Type has no child named '%s'", child_name);
   return ret_val;
 }

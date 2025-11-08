@@ -752,9 +752,8 @@ const CGFunctionInfo &CodeGenTypes::arrangeBuiltinFunctionDeclaration(
                                  RequiredArgs::All);
 }
 
-const CGFunctionInfo &
-CodeGenTypes::arrangeSYCLKernelCallerDeclaration(QualType resultType,
-                                                 const FunctionArgList &args) {
+const CGFunctionInfo &CodeGenTypes::arrangeDeviceKernelCallerDeclaration(
+    QualType resultType, const FunctionArgList &args) {
   CanQualTypeList argTypes = getArgTypesForDeclaration(Context, args);
 
   return arrangeLLVMFunctionInfo(GetReturnType(resultType), FnInfoOpts::None,
@@ -1005,10 +1004,9 @@ getTypeExpansion(QualType Ty, const ASTContext &Context) {
     return std::make_unique<ConstantArrayExpansion>(AT->getElementType(),
                                                     AT->getZExtSize());
   }
-  if (const RecordType *RT = Ty->getAs<RecordType>()) {
+  if (const auto *RD = Ty->getAsRecordDecl()) {
     SmallVector<const CXXBaseSpecifier *, 1> Bases;
     SmallVector<const FieldDecl *, 1> Fields;
-    const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
     assert(!RD->hasFlexibleArrayMember() &&
            "Cannot expand structure with flexible array.");
     if (RD->isUnion()) {
@@ -1602,6 +1600,7 @@ void ClangToLLVMArgMapping::construct(const ASTContext &Context,
       IRArgs.PaddingArgIndex = IRArgNo++;
 
     switch (AI.getKind()) {
+    case ABIArgInfo::TargetSpecific:
     case ABIArgInfo::Extend:
     case ABIArgInfo::Direct: {
       // FIXME: handle sseregparm someday...
@@ -1712,6 +1711,7 @@ llvm::FunctionType *CodeGenTypes::GetFunctionType(const CGFunctionInfo &FI) {
   case ABIArgInfo::IndirectAliased:
     llvm_unreachable("Invalid ABI kind for return argument");
 
+  case ABIArgInfo::TargetSpecific:
   case ABIArgInfo::Extend:
   case ABIArgInfo::Direct:
     resultType = retAI.getCoerceToType();
@@ -1784,6 +1784,7 @@ llvm::FunctionType *CodeGenTypes::GetFunctionType(const CGFunctionInfo &FI) {
       ArgTypes[FirstIRArg] = llvm::PointerType::get(
           getLLVMContext(), ArgInfo.getIndirectAddrSpace());
       break;
+    case ABIArgInfo::TargetSpecific:
     case ABIArgInfo::Extend:
     case ABIArgInfo::Direct: {
       // Fast-isel and the optimizer generally like scalar values better than
@@ -1894,8 +1895,8 @@ bool CodeGenModule::MayDropFunctionReturn(const ASTContext &Context,
   // We can't just discard the return value for a record type with a
   // complex destructor or a non-trivially copyable type.
   if (const RecordType *RT =
-          ReturnType.getCanonicalType()->getAs<RecordType>()) {
-    if (const auto *ClassDecl = dyn_cast<CXXRecordDecl>(RT->getOriginalDecl()))
+          ReturnType.getCanonicalType()->getAsCanonical<RecordType>()) {
+    if (const auto *ClassDecl = dyn_cast<CXXRecordDecl>(RT->getDecl()))
       return ClassDecl->hasTrivialDestructor();
   }
   return ReturnType.isTriviallyCopyableType(Context);
@@ -2011,15 +2012,6 @@ static void getTrivialDefaultFunctionAttributes(
       FuncAttrs.addAttribute("no-infs-fp-math", "true");
     if (LangOpts.NoHonorNaNs)
       FuncAttrs.addAttribute("no-nans-fp-math", "true");
-    if (LangOpts.ApproxFunc)
-      FuncAttrs.addAttribute("approx-func-fp-math", "true");
-    if (LangOpts.AllowFPReassoc && LangOpts.AllowRecip &&
-        LangOpts.NoSignedZero && LangOpts.ApproxFunc &&
-        (LangOpts.getDefaultFPContractMode() ==
-             LangOptions::FPModeKind::FPM_Fast ||
-         LangOpts.getDefaultFPContractMode() ==
-             LangOptions::FPModeKind::FPM_FastHonorPragmas))
-      FuncAttrs.addAttribute("unsafe-fp-math", "true");
     if (CodeGenOpts.SoftFloat)
       FuncAttrs.addAttribute("use-soft-float", "true");
     FuncAttrs.addAttribute("stack-protector-buffer-size",
@@ -2439,7 +2431,10 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
 
   // Some ABIs may result in additional accesses to arguments that may
   // otherwise not be present.
+  std::optional<llvm::Attribute::AttrKind> MemAttrForPtrArgs;
+  bool AddedPotentialArgAccess = false;
   auto AddPotentialArgAccess = [&]() {
+    AddedPotentialArgAccess = true;
     llvm::Attribute A = FuncAttrs.getAttribute(llvm::Attribute::Memory);
     if (A.isValid())
       FuncAttrs.addMemoryAttr(A.getMemoryEffects() |
@@ -2500,11 +2495,13 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
       // gcc specifies that 'const' functions have greater restrictions than
       // 'pure' functions, so they also cannot have infinite loops.
       FuncAttrs.addAttribute(llvm::Attribute::WillReturn);
+      MemAttrForPtrArgs = llvm::Attribute::ReadNone;
     } else if (TargetDecl->hasAttr<PureAttr>()) {
       FuncAttrs.addMemoryAttr(llvm::MemoryEffects::readOnly());
       FuncAttrs.addAttribute(llvm::Attribute::NoUnwind);
       // gcc specifies that 'pure' functions cannot have infinite loops.
       FuncAttrs.addAttribute(llvm::Attribute::WillReturn);
+      MemAttrForPtrArgs = llvm::Attribute::ReadOnly;
     } else if (TargetDecl->hasAttr<NoAliasAttr>()) {
       FuncAttrs.addMemoryAttr(llvm::MemoryEffects::inaccessibleOrArgMemOnly());
       FuncAttrs.addAttribute(llvm::Attribute::NoUnwind);
@@ -2697,6 +2694,7 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
     else
       RetAttrs.addAttribute(llvm::Attribute::NoExt);
     [[fallthrough]];
+  case ABIArgInfo::TargetSpecific:
   case ABIArgInfo::Direct:
     if (RetAI.getInReg())
       RetAttrs.addAttribute(llvm::Attribute::InReg);
@@ -2838,6 +2836,7 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
       else
         Attrs.addAttribute(llvm::Attribute::NoExt);
       [[fallthrough]];
+    case ABIArgInfo::TargetSpecific:
     case ABIArgInfo::Direct:
       if (ArgNo == 0 && FI.isChainCall())
         Attrs.addAttribute(llvm::Attribute::Nest);
@@ -2869,10 +2868,7 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
           // whose destruction / clean-up is carried out within the callee
           // (e.g., Obj-C ARC-managed structs, MSVC callee-destroyed objects).
           if (!ParamType.isDestructedType() || !ParamType->isRecordType() ||
-              ParamType->castAs<RecordType>()
-                  ->getOriginalDecl()
-                  ->getDefinitionOrSelf()
-                  ->isParamDestroyedInCallee())
+              ParamType->castAsRecordDecl()->isParamDestroyedInCallee())
             Attrs.addAttribute(llvm::Attribute::DeadOnReturn);
         }
       }
@@ -3012,6 +3008,26 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
     }
   }
   assert(ArgNo == FI.arg_size());
+
+  ArgNo = 0;
+  if (AddedPotentialArgAccess && MemAttrForPtrArgs) {
+    llvm::FunctionType *FunctionType = getTypes().GetFunctionType(FI);
+    for (CGFunctionInfo::const_arg_iterator I = FI.arg_begin(),
+                                            E = FI.arg_end();
+         I != E; ++I, ++ArgNo) {
+      if (I->info.isDirect() || I->info.isExpand() ||
+          I->info.isCoerceAndExpand()) {
+        unsigned FirstIRArg, NumIRArgs;
+        std::tie(FirstIRArg, NumIRArgs) = IRFunctionArgs.getIRArgs(ArgNo);
+        for (unsigned i = FirstIRArg; i < FirstIRArg + NumIRArgs; ++i) {
+          if (FunctionType->getParamType(i)->isPointerTy()) {
+            ArgAttrs[i] =
+                ArgAttrs[i].addAttribute(getLLVMContext(), *MemAttrForPtrArgs);
+          }
+        }
+      }
+    }
+  }
 
   AttrList = llvm::AttributeList::get(
       getLLVMContext(), llvm::AttributeSet::get(getLLVMContext(), FuncAttrs),
@@ -3357,17 +3373,6 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
         }
       }
 
-      // Struct of fixed-length vectors and struct of array of fixed-length
-      // vector in VLS calling convention are coerced to vector tuple
-      // type(represented as TargetExtType) and scalable vector type
-      // respectively, they're no longer handled as struct.
-      if (ArgI.isDirect() && isa<llvm::StructType>(ConvertType(Ty)) &&
-          (isa<llvm::TargetExtType>(ArgI.getCoerceToType()) ||
-           isa<llvm::ScalableVectorType>(ArgI.getCoerceToType()))) {
-        ArgVals.push_back(ParamValue::forDirect(AI));
-        break;
-      }
-
       llvm::StructType *STy =
           dyn_cast<llvm::StructType>(ArgI.getCoerceToType());
       Address Alloca =
@@ -3508,6 +3513,25 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
       break;
     }
 
+    case ABIArgInfo::TargetSpecific: {
+      auto *AI = Fn->getArg(FirstIRArg);
+      AI->setName(Arg->getName() + ".target_coerce");
+      Address Alloca =
+          CreateMemTemp(Ty, getContext().getDeclAlign(Arg), Arg->getName());
+      Address Ptr = emitAddressAtOffset(*this, Alloca, ArgI);
+      CGM.getABIInfo().createCoercedStore(AI, Ptr, ArgI, false, *this);
+      if (CodeGenFunction::hasScalarEvaluationKind(Ty)) {
+        llvm::Value *V =
+            EmitLoadOfScalar(Alloca, false, Ty, Arg->getBeginLoc());
+        if (isPromoted) {
+          V = emitArgumentDemotion(*this, Arg, V);
+        }
+        ArgVals.push_back(ParamValue::forDirect(V));
+      } else {
+        ArgVals.push_back(ParamValue::forIndirect(Alloca));
+      }
+      break;
+    }
     case ABIArgInfo::Ignore:
       assert(NumIRArgs == 0);
       // Initialize the local variable appropriately.
@@ -3829,7 +3853,7 @@ static void setUsedBits(CodeGenModule &CGM, const RecordType *RTy, int Offset,
                         SmallVectorImpl<uint64_t> &Bits) {
   ASTContext &Context = CGM.getContext();
   int CharWidth = Context.getCharWidth();
-  const RecordDecl *RD = RTy->getOriginalDecl()->getDefinition();
+  const RecordDecl *RD = RTy->getDecl()->getDefinition();
   const ASTRecordLayout &ASTLayout = Context.getASTRecordLayout(RD);
   const CGRecordLayout &Layout = CGM.getTypes().getCGRecordLayout(RD);
 
@@ -3877,7 +3901,7 @@ static void setUsedBits(CodeGenModule &CGM, const ConstantArrayType *ATy,
 // the type `QTy`.
 static void setUsedBits(CodeGenModule &CGM, QualType QTy, int Offset,
                         SmallVectorImpl<uint64_t> &Bits) {
-  if (const auto *RTy = QTy->getAs<RecordType>())
+  if (const auto *RTy = QTy->getAsCanonical<RecordType>())
     return setUsedBits(CGM, RTy, Offset, Bits);
 
   ASTContext &Context = CGM.getContext();
@@ -3921,7 +3945,7 @@ llvm::Value *CodeGenFunction::EmitCMSEClearRecord(llvm::Value *Src,
   const llvm::DataLayout &DataLayout = CGM.getDataLayout();
   int Size = DataLayout.getTypeStoreSize(ITy);
   SmallVector<uint64_t, 4> Bits(Size);
-  setUsedBits(CGM, QTy->castAs<RecordType>(), 0, Bits);
+  setUsedBits(CGM, QTy->castAsCanonical<RecordType>(), 0, Bits);
 
   int CharWidth = CGM.getContext().getCharWidth();
   uint64_t Mask =
@@ -3938,7 +3962,7 @@ llvm::Value *CodeGenFunction::EmitCMSEClearRecord(llvm::Value *Src,
   const llvm::DataLayout &DataLayout = CGM.getDataLayout();
   int Size = DataLayout.getTypeStoreSize(ATy);
   SmallVector<uint64_t, 16> Bits(Size);
-  setUsedBits(CGM, QTy->castAs<RecordType>(), 0, Bits);
+  setUsedBits(CGM, QTy->castAsCanonical<RecordType>(), 0, Bits);
 
   // Clear each element of the LLVM array.
   int CharWidth = CGM.getContext().getCharWidth();
@@ -4136,6 +4160,11 @@ void CodeGenFunction::EmitFunctionEpilog(
     }
     break;
   }
+  case ABIArgInfo::TargetSpecific: {
+    Address V = emitAddressAtOffset(*this, ReturnValue, RetAI);
+    RV = CGM.getABIInfo().createCoercedLoad(V, RetAI, *this);
+    break;
+  }
   case ABIArgInfo::Expand:
   case ABIArgInfo::IndirectAliased:
     llvm_unreachable("Invalid ABI kind for return argument");
@@ -4290,10 +4319,7 @@ void CodeGenFunction::EmitDelegateCallArg(CallArgList &args,
 
   // Deactivate the cleanup for the callee-destructed param that was pushed.
   if (type->isRecordType() && !CurFuncIsThunk &&
-      type->castAs<RecordType>()
-          ->getOriginalDecl()
-          ->getDefinitionOrSelf()
-          ->isParamDestroyedInCallee() &&
+      type->castAsRecordDecl()->isParamDestroyedInCallee() &&
       param->needsDestruction(getContext())) {
     EHScopeStack::stable_iterator cleanup =
         CalleeDestructedParamCleanups.lookup(cast<ParmVarDecl>(param));
@@ -4809,19 +4835,6 @@ struct DestroyUnpassedArg final : EHScopeStack::Cleanup {
   }
 };
 
-struct DisableDebugLocationUpdates {
-  CodeGenFunction &CGF;
-  bool disabledDebugInfo;
-  DisableDebugLocationUpdates(CodeGenFunction &CGF, const Expr *E) : CGF(CGF) {
-    if ((disabledDebugInfo = isa<CXXDefaultArgExpr>(E) && CGF.getDebugInfo()))
-      CGF.disableDebugInfo();
-  }
-  ~DisableDebugLocationUpdates() {
-    if (disabledDebugInfo)
-      CGF.enableDebugInfo();
-  }
-};
-
 } // end anonymous namespace
 
 RValue CallArg::getRValue(CodeGenFunction &CGF) const {
@@ -4858,7 +4871,9 @@ void CodeGenFunction::EmitWritebacks(const CallArgList &args) {
 
 void CodeGenFunction::EmitCallArg(CallArgList &args, const Expr *E,
                                   QualType type) {
-  DisableDebugLocationUpdates Dis(*this, E);
+  std::optional<DisableDebugLocationUpdates> Dis;
+  if (isa<CXXDefaultArgExpr>(E))
+    Dis.emplace(*this);
   if (const ObjCIndirectCopyRestoreExpr *CRE =
           dyn_cast<ObjCIndirectCopyRestoreExpr>(E)) {
     assert(getLangOpts().ObjCAutoRefCount);
@@ -4886,10 +4901,8 @@ void CodeGenFunction::EmitCallArg(CallArgList &args, const Expr *E,
   // In the Microsoft C++ ABI, aggregate arguments are destructed by the callee.
   // However, we still have to push an EH-only cleanup in case we unwind before
   // we make it to the call.
-  if (type->isRecordType() && type->castAs<RecordType>()
-                                  ->getOriginalDecl()
-                                  ->getDefinitionOrSelf()
-                                  ->isParamDestroyedInCallee()) {
+  if (type->isRecordType() &&
+      type->castAsRecordDecl()->isParamDestroyedInCallee()) {
     // If we're using inalloca, use the argument memory.  Otherwise, use a
     // temporary.
     AggValueSlot Slot = args.isUsingInAlloca()
@@ -5243,9 +5256,12 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
     // since otherwise we could be making a conditional call after a check for
     // the proper cpu features (and it won't cause code generation issues due to
     // function based code generation).
-    if (TargetDecl->hasAttr<AlwaysInlineAttr>() &&
-        (TargetDecl->hasAttr<TargetAttr>() ||
-         (CurFuncDecl && CurFuncDecl->hasAttr<TargetAttr>())))
+    if ((TargetDecl->hasAttr<AlwaysInlineAttr>() &&
+         (TargetDecl->hasAttr<TargetAttr>() ||
+          (CurFuncDecl && CurFuncDecl->hasAttr<TargetAttr>()))) ||
+        (CurFuncDecl && CurFuncDecl->hasAttr<FlattenAttr>() &&
+         (CurFuncDecl->hasAttr<TargetAttr>() ||
+          TargetDecl->hasAttr<TargetAttr>())))
       checkTargetFeatures(Loc, FD);
   }
 
@@ -5704,6 +5720,24 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
       assert(IRArgPos == FirstIRArg + NumIRArgs);
       break;
     }
+
+    case ABIArgInfo::TargetSpecific: {
+      Address Src = Address::invalid();
+      if (!I->isAggregate()) {
+        Src = CreateMemTemp(I->Ty, "target_coerce");
+        I->copyInto(*this, Src);
+      } else {
+        Src = I->hasLValue() ? I->getKnownLValue().getAddress()
+                             : I->getKnownRValue().getAggregateAddress();
+      }
+
+      // If the value is offset in memory, apply the offset now.
+      Src = emitAddressAtOffset(*this, Src, ArgInfo);
+      llvm::Value *Load =
+          CGM.getABIInfo().createCoercedLoad(Src, ArgInfo, *this);
+      IRCallArgs[FirstIRArg] = Load;
+      break;
+    }
     }
   }
 
@@ -5903,8 +5937,24 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
       CI->getCalledFunction()->getName().starts_with("_Z4sqrt")) {
     SetSqrtFPAccuracy(CI);
   }
-  if (callOrInvoke)
+  if (callOrInvoke) {
     *callOrInvoke = CI;
+    if (CGM.getCodeGenOpts().CallGraphSection) {
+      QualType CST;
+      if (TargetDecl && TargetDecl->getFunctionType())
+        CST = QualType(TargetDecl->getFunctionType(), 0);
+      else if (const auto *FPT =
+                   Callee.getAbstractInfo().getCalleeFunctionProtoType())
+        CST = QualType(FPT, 0);
+      else
+        llvm_unreachable(
+            "Cannot find the callee type to generate callee_type metadata.");
+
+      // Set type identifier metadata of indirect calls for call graph section.
+      if (!CST.isNull())
+        CGM.createCalleeTypeMetadataForIcall(CST, *callOrInvoke);
+    }
+  }
 
   // If this is within a function that has the guard(nocf) attribute and is an
   // indirect call, add the "guard_nocf" attribute to this call to indicate that
@@ -6189,6 +6239,19 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
         return convertTempToRValue(DestPtr, RetTy, SourceLocation());
       }
 
+      case ABIArgInfo::TargetSpecific: {
+        Address DestPtr = ReturnValue.getValue();
+        Address StorePtr = emitAddressAtOffset(*this, DestPtr, RetAI);
+        bool DestIsVolatile = ReturnValue.isVolatile();
+        if (!DestPtr.isValid()) {
+          DestPtr = CreateMemTemp(RetTy, "target_coerce");
+          DestIsVolatile = false;
+        }
+        CGM.getABIInfo().createCoercedStore(CI, StorePtr, RetAI, DestIsVolatile,
+                                            *this);
+        return convertTempToRValue(DestPtr, RetTy, SourceLocation());
+      }
+
       case ABIArgInfo::Expand:
       case ABIArgInfo::IndirectAliased:
         llvm_unreachable("Invalid ABI kind for return argument");
@@ -6240,4 +6303,13 @@ RValue CodeGenFunction::EmitVAArg(VAArgExpr *VE, Address &VAListAddr,
   if (VE->isMicrosoftABI())
     return CGM.getABIInfo().EmitMSVAArg(*this, VAListAddr, Ty, Slot);
   return CGM.getABIInfo().EmitVAArg(*this, VAListAddr, Ty, Slot);
+}
+
+DisableDebugLocationUpdates::DisableDebugLocationUpdates(CodeGenFunction &CGF)
+    : CGF(CGF) {
+  CGF.disableDebugInfo();
+}
+
+DisableDebugLocationUpdates::~DisableDebugLocationUpdates() {
+  CGF.enableDebugInfo();
 }

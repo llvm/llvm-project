@@ -644,11 +644,10 @@ define double @fmul_pow_mul_max_pow2(i16 %cnt) nounwind {
 ; GFX11-TRUE16-LABEL: fmul_pow_mul_max_pow2:
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.h, 0
 ; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v0.l, v0.l, 2
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX11-TRUE16-NEXT:    v_cvt_f64_u32_e32 v[0:1], v0
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_mul_f64 v[0:1], 0x40080000, v[0:1]
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1194,13 +1193,12 @@ define double @fmul_pow_shl_cnt_safe(i16 %cnt) nounwind {
 ; GFX11-TRUE16-LABEL: fmul_pow_shl_cnt_safe:
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.h, 0
 ; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v0.l, v0.l, 1
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s0, 0xff5f3992
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s1, 0x7befffff
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX11-TRUE16-NEXT:    v_cvt_f64_u32_e32 v[0:1], v0
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_mul_f64 v[0:1], v[0:1], s[0:1]
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1573,25 +1571,24 @@ define half @fdiv_pow_shl_cnt_fail_out_of_bounds(i32 %cnt) nounwind {
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s0, 0x46000000
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_cvt_f32_u32_e32 v0, v0
-; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v0.l, v0
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
-; GFX11-TRUE16-NEXT:    v_cvt_f32_f16_e32 v1, v0.l
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v3.l, v0.l
-; GFX11-TRUE16-NEXT:    v_rcp_f32_e32 v1, v1
+; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v1.l, v0
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-TRUE16-NEXT:    v_cvt_f32_f16_e32 v0, v1.l
+; GFX11-TRUE16-NEXT:    v_rcp_f32_e32 v0, v0
 ; GFX11-TRUE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-TRUE16-NEXT:    v_mul_f32_e32 v2, 0x46000000, v1
+; GFX11-TRUE16-NEXT:    v_mul_f32_e32 v2, 0x46000000, v0
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_fma_mix_f32 v4, -v3, v2, s0 op_sel_hi:[1,0,0]
-; GFX11-TRUE16-NEXT:    v_fmac_f32_e32 v2, v4, v1
+; GFX11-TRUE16-NEXT:    v_fma_mix_f32 v3, -v1, v2, s0 op_sel_hi:[1,0,0]
+; GFX11-TRUE16-NEXT:    v_fmac_f32_e32 v2, v3, v0
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_fma_mix_f32 v3, -v3, v2, s0 op_sel_hi:[1,0,0]
-; GFX11-TRUE16-NEXT:    v_mul_f32_e32 v1, v3, v1
+; GFX11-TRUE16-NEXT:    v_fma_mix_f32 v3, -v1, v2, s0 op_sel_hi:[1,0,0]
+; GFX11-TRUE16-NEXT:    v_mul_f32_e32 v0, v3, v0
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_and_b32_e32 v1, 0xff800000, v1
-; GFX11-TRUE16-NEXT:    v_add_f32_e32 v1, v1, v2
+; GFX11-TRUE16-NEXT:    v_and_b32_e32 v0, 0xff800000, v0
+; GFX11-TRUE16-NEXT:    v_add_f32_e32 v0, v0, v2
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v0.h, v1
-; GFX11-TRUE16-NEXT:    v_div_fixup_f16 v0.l, v0.h, v0.l, 0x7000
+; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v0.l, v0
+; GFX11-TRUE16-NEXT:    v_div_fixup_f16 v0.l, v0.l, v1.l, 0x7000
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-FAKE16-LABEL: fdiv_pow_shl_cnt_fail_out_of_bounds:
@@ -1741,25 +1738,24 @@ define half @fdiv_pow_shl_cnt_fail_out_of_bound2(i16 %cnt) nounwind {
 ; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v0.l, v0.l, 1
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s0, 2.0
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_cvt_f16_u16_e32 v0.l, v0.l
-; GFX11-TRUE16-NEXT:    v_cvt_f32_f16_e32 v1, v0.l
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v3.l, v0.l
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_rcp_f32_e32 v1, v1
+; GFX11-TRUE16-NEXT:    v_cvt_f16_u16_e32 v1.l, v0.l
+; GFX11-TRUE16-NEXT:    v_cvt_f32_f16_e32 v0, v1.l
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
+; GFX11-TRUE16-NEXT:    v_rcp_f32_e32 v0, v0
 ; GFX11-TRUE16-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-TRUE16-NEXT:    v_add_f32_e32 v2, v1, v1
-; GFX11-TRUE16-NEXT:    v_fma_mix_f32 v4, -v3, v2, s0 op_sel_hi:[1,0,0]
+; GFX11-TRUE16-NEXT:    v_add_f32_e32 v2, v0, v0
+; GFX11-TRUE16-NEXT:    v_fma_mix_f32 v3, -v1, v2, s0 op_sel_hi:[1,0,0]
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_fmac_f32_e32 v2, v4, v1
-; GFX11-TRUE16-NEXT:    v_fma_mix_f32 v3, -v3, v2, s0 op_sel_hi:[1,0,0]
+; GFX11-TRUE16-NEXT:    v_fmac_f32_e32 v2, v3, v0
+; GFX11-TRUE16-NEXT:    v_fma_mix_f32 v3, -v1, v2, s0 op_sel_hi:[1,0,0]
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_mul_f32_e32 v1, v3, v1
-; GFX11-TRUE16-NEXT:    v_and_b32_e32 v1, 0xff800000, v1
+; GFX11-TRUE16-NEXT:    v_mul_f32_e32 v0, v3, v0
+; GFX11-TRUE16-NEXT:    v_and_b32_e32 v0, 0xff800000, v0
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_add_f32_e32 v1, v1, v2
-; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v0.h, v1
+; GFX11-TRUE16-NEXT:    v_add_f32_e32 v0, v0, v2
+; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v0.l, v0
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_div_fixup_f16 v0.l, v0.h, v0.l, 2.0
+; GFX11-TRUE16-NEXT:    v_div_fixup_f16 v0.l, v0.l, v1.l, 2.0
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-FAKE16-LABEL: fdiv_pow_shl_cnt_fail_out_of_bound2:

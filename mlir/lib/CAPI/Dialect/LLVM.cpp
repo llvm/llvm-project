@@ -197,12 +197,12 @@ MlirAttribute mlirLLVMDICompositeTypeAttrGet(
       cast<StringAttr>(unwrap(name)), cast<DIFileAttr>(unwrap(file)), line,
       cast<DIScopeAttr>(unwrap(scope)), cast<DITypeAttr>(unwrap(baseType)),
       DIFlags(flags), sizeInBits, alignInBits,
-      llvm::map_to_vector(unwrapList(nElements, elements, elementsStorage),
-                          [](Attribute a) { return cast<DINodeAttr>(a); }),
       cast<DIExpressionAttr>(unwrap(dataLocation)),
       cast<DIExpressionAttr>(unwrap(rank)),
       cast<DIExpressionAttr>(unwrap(allocated)),
-      cast<DIExpressionAttr>(unwrap(associated))));
+      cast<DIExpressionAttr>(unwrap(associated)),
+      llvm::map_to_vector(unwrapList(nElements, elements, elementsStorage),
+                          [](Attribute a) { return cast<DINodeAttr>(a); })));
 }
 
 MlirAttribute mlirLLVMDIDerivedTypeAttrGet(
@@ -253,17 +253,16 @@ MlirAttribute mlirLLVMDIFileAttrGet(MlirContext ctx, MlirAttribute name,
                               cast<StringAttr>(unwrap(directory))));
 }
 
-MlirAttribute
-mlirLLVMDICompileUnitAttrGet(MlirContext ctx, MlirAttribute id,
-                             unsigned int sourceLanguage, MlirAttribute file,
-                             MlirAttribute producer, bool isOptimized,
-                             MlirLLVMDIEmissionKind emissionKind,
-                             MlirLLVMDINameTableKind nameTableKind) {
+MlirAttribute mlirLLVMDICompileUnitAttrGet(
+    MlirContext ctx, MlirAttribute id, unsigned int sourceLanguage,
+    MlirAttribute file, MlirAttribute producer, bool isOptimized,
+    MlirLLVMDIEmissionKind emissionKind, MlirLLVMDINameTableKind nameTableKind,
+    MlirAttribute splitDebugFilename) {
   return wrap(DICompileUnitAttr::get(
       unwrap(ctx), cast<DistinctAttr>(unwrap(id)), sourceLanguage,
       cast<DIFileAttr>(unwrap(file)), cast<StringAttr>(unwrap(producer)),
-      isOptimized, DIEmissionKind(emissionKind),
-      DINameTableKind(nameTableKind)));
+      isOptimized, DIEmissionKind(emissionKind), DINameTableKind(nameTableKind),
+      cast<StringAttr>(unwrap(splitDebugFilename))));
 }
 
 MlirAttribute mlirLLVMDIFlagsAttrGet(MlirContext ctx, uint64_t value) {

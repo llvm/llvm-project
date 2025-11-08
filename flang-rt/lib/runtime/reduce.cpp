@@ -79,16 +79,16 @@ public:
       activeTemp_ = 1 - activeTemp_;
     } else {
       activeTemp_ = 0;
-      std::memcpy(&*temp_[activeTemp_], operand, elementBytes_);
+      runtime::memcpy(&*temp_[activeTemp_], operand, elementBytes_);
     }
     return true;
   }
   template <typename A>
   RT_API_ATTRS void GetResult(A *to, int /*zeroBasedDim*/ = -1) {
     if (activeTemp_ >= 0) {
-      std::memcpy(to, &*temp_[activeTemp_], elementBytes_);
+      runtime::memcpy(to, &*temp_[activeTemp_], elementBytes_);
     } else if (identity_) {
-      std::memcpy(to, identity_, elementBytes_);
+      runtime::memcpy(to, identity_, elementBytes_);
     } else {
       terminator_.Crash("REDUCE() without IDENTITY= has no result");
     }

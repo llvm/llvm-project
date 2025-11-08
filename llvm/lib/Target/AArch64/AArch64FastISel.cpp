@@ -81,10 +81,7 @@ namespace {
 class AArch64FastISel final : public FastISel {
   class Address {
   public:
-    using BaseKind = enum {
-      RegBase,
-      FrameIndexBase
-    };
+    enum BaseKind { RegBase, FrameIndexBase };
 
   private:
     BaseKind Kind = RegBase;
@@ -3578,12 +3575,8 @@ bool AArch64FastISel::fastLowerIntrinsicCall(const IntrinsicInst *II) {
     Args.reserve(II->arg_size());
 
     // Populate the argument list.
-    for (auto &Arg : II->args()) {
-      ArgListEntry Entry;
-      Entry.Val = Arg;
-      Entry.Ty = Arg->getType();
-      Args.push_back(Entry);
-    }
+    for (auto &Arg : II->args())
+      Args.emplace_back(Arg);
 
     CallLoweringInfo CLI;
     MCContext &Ctx = MF->getContext();
@@ -4874,12 +4867,8 @@ bool AArch64FastISel::selectFRem(const Instruction *I) {
   Args.reserve(I->getNumOperands());
 
   // Populate the argument list.
-  for (auto &Arg : I->operands()) {
-    ArgListEntry Entry;
-    Entry.Val = Arg;
-    Entry.Ty = Arg->getType();
-    Args.push_back(Entry);
-  }
+  for (auto &Arg : I->operands())
+    Args.emplace_back(Arg);
 
   CallLoweringInfo CLI;
   MCContext &Ctx = MF->getContext();

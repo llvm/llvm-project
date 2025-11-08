@@ -46,13 +46,11 @@ using namespace llvm;
 //    Context
 //===----------------------------------------------------------------------===//
 
-namespace llvm {
-namespace detail {
 /// This class represents the internal implementation of the RecordKeeper.
 /// It contains all of the contextual static state of the Record classes. It is
 /// kept out-of-line to simplify dependencies, and also make it easier for
 /// internal classes to access the uniquer state of the keeper.
-struct RecordKeeperImpl {
+struct detail::RecordKeeperImpl {
   RecordKeeperImpl(RecordKeeper &RK)
       : SharedBitRecTy(RK), SharedIntRecTy(RK), SharedStringRecTy(RK),
         SharedDagRecTy(RK), AnyRecord(RK, {}), TheUnsetInit(RK),
@@ -100,8 +98,6 @@ struct RecordKeeperImpl {
 
   void dumpAllocationStats(raw_ostream &OS) const;
 };
-} // namespace detail
-} // namespace llvm
 
 void detail::RecordKeeperImpl::dumpAllocationStats(raw_ostream &OS) const {
   // Dump memory allocation related stats.
@@ -522,6 +518,14 @@ std::optional<int64_t> BitsInit::convertInitializerToInt() const {
       Result |= static_cast<int64_t>(Bit->getValue()) << Idx;
     else
       return std::nullopt;
+  return Result;
+}
+
+uint64_t BitsInit::convertKnownBitsToInt() const {
+  uint64_t Result = 0;
+  for (auto [Idx, InitV] : enumerate(getBits()))
+    if (auto *Bit = dyn_cast<BitInit>(InitV))
+      Result |= static_cast<int64_t>(Bit->getValue()) << Idx;
   return Result;
 }
 
@@ -1357,9 +1361,12 @@ const Init *BinOpInit::Fold(const Record *CurRec) const {
   }
   case LISTSPLAT: {
     const auto *Value = dyn_cast<TypedInit>(LHS);
-    const auto *Size = dyn_cast<IntInit>(RHS);
-    if (Value && Size) {
-      SmallVector<const Init *, 8> Args(Size->getValue(), Value);
+    const auto *Count = dyn_cast<IntInit>(RHS);
+    if (Value && Count) {
+      if (Count->getValue() < 0)
+        PrintFatalError(Twine("!listsplat count ") + Count->getAsString() +
+                        " is negative");
+      SmallVector<const Init *, 8> Args(Count->getValue(), Value);
       return ListInit::get(Args, Value->getType());
     }
     break;
@@ -1564,9 +1571,24 @@ const Init *BinOpInit::Fold(const Record *CurRec) const {
       case AND: Result = LHSv & RHSv; break;
       case OR:  Result = LHSv | RHSv; break;
       case XOR: Result = LHSv ^ RHSv; break;
-      case SHL: Result = (uint64_t)LHSv << (uint64_t)RHSv; break;
-      case SRA: Result = LHSv >> RHSv; break;
-      case SRL: Result = (uint64_t)LHSv >> (uint64_t)RHSv; break;
+      case SHL:
+        if (RHSv < 0 || RHSv >= 64)
+          PrintFatalError(CurRec->getLoc(),
+                          "Illegal operation: out of bounds shift");
+        Result = (uint64_t)LHSv << (uint64_t)RHSv;
+        break;
+      case SRA:
+        if (RHSv < 0 || RHSv >= 64)
+          PrintFatalError(CurRec->getLoc(),
+                          "Illegal operation: out of bounds shift");
+        Result = LHSv >> (uint64_t)RHSv;
+        break;
+      case SRL:
+        if (RHSv < 0 || RHSv >= 64)
+          PrintFatalError(CurRec->getLoc(),
+                          "Illegal operation: out of bounds shift");
+        Result = (uint64_t)LHSv >> (uint64_t)RHSv;
+        break;
       }
       return IntInit::get(getRecordKeeper(), Result);
     }

@@ -107,7 +107,6 @@ static bool verifyTypeParamCount(mlir::Type inType, unsigned numParams) {
 }
 
 /// Parser shared by Alloca and Allocmem
-///
 /// operation ::= %res = (`fir.alloca` | `fir.allocmem`) $in_type
 ///                      ( `(` $typeparams `)` )? ( `,` $shape )?
 ///                      attr-dict-without-keyword
@@ -1522,8 +1521,8 @@ bool fir::ConvertOp::canBeConverted(mlir::Type inType, mlir::Type outType) {
          (isInteger(inType) && isFloatCompatible(outType)) ||
          (isFloatCompatible(inType) && isInteger(outType)) ||
          (isFloatCompatible(inType) && isFloatCompatible(outType)) ||
-         (isIntegerCompatible(inType) && isPointerCompatible(outType)) ||
-         (isPointerCompatible(inType) && isIntegerCompatible(outType)) ||
+         (isInteger(inType) && isPointerCompatible(outType)) ||
+         (isPointerCompatible(inType) && isInteger(outType)) ||
          (mlir::isa<fir::BoxType>(inType) &&
           mlir::isa<fir::BoxType>(outType)) ||
          (mlir::isa<fir::BoxProcType>(inType) &&
@@ -1775,12 +1774,13 @@ llvm::LogicalResult fir::CoordinateOp::verify() {
             return emitOpError("too many operands for len_param_index case");
         }
         if (eleTy != index.getOnType())
-          emitOpError(
+          return emitOpError(
               "len_param_index type not compatible with reference type");
         return mlir::success();
       } else if (auto index = mlir::dyn_cast<fir::FieldIndexOp>(defOp)) {
         if (eleTy != index.getOnType())
-          emitOpError("field_index type not compatible with reference type");
+          return emitOpError(
+              "field_index type not compatible with reference type");
         if (auto recTy = mlir::dyn_cast<fir::RecordType>(eleTy)) {
           eleTy = recTy.getType(index.getFieldName());
           continue;
@@ -3407,26 +3407,30 @@ llvm::LogicalResult fir::SaveResultOp::verify() {
   auto eleTy = resultType;
   if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(resultType)) {
     if (seqTy.getDimension() != shapeTyRank)
-      emitOpError("shape operand must be provided and have the value rank "
-                  "when the value is a fir.array");
+      return emitOpError(
+          "shape operand must be provided and have the value rank "
+          "when the value is a fir.array");
     eleTy = seqTy.getEleTy();
   } else {
     if (shapeTyRank != 0)
-      emitOpError(
+      return emitOpError(
           "shape operand should only be provided if the value is a fir.array");
   }
 
   if (auto recTy = mlir::dyn_cast<fir::RecordType>(eleTy)) {
     if (recTy.getNumLenParams() != getTypeparams().size())
-      emitOpError("length parameters number must match with the value type "
-                  "length parameters");
+      return emitOpError(
+          "length parameters number must match with the value type "
+          "length parameters");
   } else if (auto charTy = mlir::dyn_cast<fir::CharacterType>(eleTy)) {
     if (getTypeparams().size() > 1)
-      emitOpError("no more than one length parameter must be provided for "
-                  "character value");
+      return emitOpError(
+          "no more than one length parameter must be provided for "
+          "character value");
   } else {
     if (!getTypeparams().empty())
-      emitOpError("length parameters must not be provided for this value type");
+      return emitOpError(
+          "length parameters must not be provided for this value type");
   }
 
   return mlir::success();
@@ -4480,7 +4484,7 @@ void fir::IfOp::getSuccessorRegions(
     llvm::SmallVectorImpl<mlir::RegionSuccessor> &regions) {
   // The `then` and the `else` region branch back to the parent operation.
   if (!point.isParent()) {
-    regions.push_back(mlir::RegionSuccessor(getResults()));
+    regions.push_back(mlir::RegionSuccessor(getOperation(), getResults()));
     return;
   }
 
@@ -4490,7 +4494,8 @@ void fir::IfOp::getSuccessorRegions(
   // Don't consider the else region if it is empty.
   mlir::Region *elseRegion = &this->getElseRegion();
   if (elseRegion->empty())
-    regions.push_back(mlir::RegionSuccessor());
+    regions.push_back(
+        mlir::RegionSuccessor(getOperation(), getOperation()->getResults()));
   else
     regions.push_back(mlir::RegionSuccessor(elseRegion));
 }
@@ -4509,7 +4514,7 @@ void fir::IfOp::getEntrySuccessorRegions(
     if (!getElseRegion().empty())
       regions.emplace_back(&getElseRegion());
     else
-      regions.emplace_back(getResults());
+      regions.emplace_back(getOperation(), getOperation()->getResults());
   }
 }
 
@@ -5136,6 +5141,34 @@ mlir::LogicalResult SimplifyBoxTotalElementsOp::matchAndRewrite(
 void fir::BoxTotalElementsOp::getCanonicalizationPatterns(
     mlir::RewritePatternSet &patterns, mlir::MLIRContext *context) {
   patterns.add<SimplifyBoxTotalElementsOp>(context);
+}
+
+//===----------------------------------------------------------------------===//
+// IsAssumedSizeExtentOp and AssumedSizeExtentOp
+//===----------------------------------------------------------------------===//
+
+namespace {
+struct FoldIsAssumedSizeExtentOnCtor
+    : public mlir::OpRewritePattern<fir::IsAssumedSizeExtentOp> {
+  using mlir::OpRewritePattern<fir::IsAssumedSizeExtentOp>::OpRewritePattern;
+  mlir::LogicalResult
+  matchAndRewrite(fir::IsAssumedSizeExtentOp op,
+                  mlir::PatternRewriter &rewriter) const override {
+    if (llvm::isa_and_nonnull<fir::AssumedSizeExtentOp>(
+            op.getVal().getDefiningOp())) {
+      mlir::Type i1 = rewriter.getI1Type();
+      rewriter.replaceOpWithNewOp<mlir::arith::ConstantOp>(
+          op, i1, rewriter.getIntegerAttr(i1, 1));
+      return mlir::success();
+    }
+    return mlir::failure();
+  }
+};
+} // namespace
+
+void fir::IsAssumedSizeExtentOp::getCanonicalizationPatterns(
+    mlir::RewritePatternSet &patterns, mlir::MLIRContext *context) {
+  patterns.add<FoldIsAssumedSizeExtentOnCtor>(context);
 }
 
 //===----------------------------------------------------------------------===//

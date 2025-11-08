@@ -77,6 +77,9 @@ enum tgt_map_type {
   // the structured region
   // This is an OpenMP extension for the sake of OpenACC support.
   OMP_TGT_MAPTYPE_OMPX_HOLD = 0x2000,
+  // Attach pointer and pointee, after processing all other maps.
+  // Applicable to map-entering directives. Does not change ref-count.
+  OMP_TGT_MAPTYPE_ATTACH = 0x4000,
   // descriptor for non-contiguous target-update
   OMP_TGT_MAPTYPE_NON_CONTIG = 0x100000000000,
   // member of struct, member given by [16 MSBs] - 1
@@ -98,8 +101,6 @@ enum TargetAllocTy : int32_t {
   TARGET_ALLOC_HOST,
   TARGET_ALLOC_SHARED,
   TARGET_ALLOC_DEFAULT,
-  /// The allocation will not block on other streams.
-  TARGET_ALLOC_DEVICE_NON_BLOCKING,
 };
 
 inline KernelArgsTy CTorDTorKernelArgs = {
@@ -277,6 +278,7 @@ int omp_get_initial_device(void);
 void *omp_target_alloc(size_t Size, int DeviceNum);
 void omp_target_free(void *DevicePtr, int DeviceNum);
 int omp_target_is_present(const void *Ptr, int DeviceNum);
+int omp_target_is_accessible(const void *Ptr, size_t Size, int DeviceNum);
 int omp_target_memcpy(void *Dst, const void *Src, size_t Length,
                       size_t DstOffset, size_t SrcOffset, int DstDevice,
                       int SrcDevice);

@@ -45,7 +45,7 @@ class HexagonInstrInfo : public HexagonGenInstrInfo {
   virtual void anchor();
 
 public:
-  explicit HexagonInstrInfo(HexagonSubtarget &ST);
+  explicit HexagonInstrInfo(const HexagonSubtarget &ST);
 
   /// TargetInstrInfo overrides.
 
@@ -532,6 +532,7 @@ public:
   }
 
   MCInst getNop() const override;
+  bool isQFPMul(const MachineInstr *MF) const;
 };
 
 /// \brief Create RegSubRegPair from a register MachineOperand

@@ -358,44 +358,6 @@ def SingleOp : OpenMP_Op<"single", traits = [
 }
 
 //===---------------------------------------------------------------------===//
-// OpenMP Canonical Loop Info Type
-//===---------------------------------------------------------------------===//
-
-def CanonicalLoopInfoType : OpenMP_Type<"CanonicalLoopInfo", "cli"> {
-  let summary = "Type for representing a reference to a canonical loop";
-  let description = [{
-    A variable of type CanonicalLoopInfo refers to an OpenMP-compatible
-    canonical loop in the same function. Values of this type are not
-    available at runtime and therefore cannot be used by the program itself,
-    i.e. an opaque type. It is similar to the transform dialect's
-    `!transform.interface` type, but instead of implementing an interface
-    for each transformation, the OpenMP dialect itself defines possible
-    operations on this type.
-
-    A value of type CanonicalLoopInfoType (in the following: CLI) value can be
-
-    1. created by omp.new_cli.
-    2. passed to omp.canonical_loop to associate the loop to that CLI. A CLI
-       can only be associated once.
-    3. passed to an omp loop transformation operation that modifies the loop
-       associated with the CLI. The CLI is the "applyee" and the operation is
-       the consumer. A CLI can only be consumed once.
-    4. passed to an omp loop transformation operation to associate the cli with
-       a result of that transformation. The CLI is the "generatee" and the
-       operation is the generator.
-
-    A CLI cannot
-
-    1. be returned from a function.
-    2. be passed to operations that are not specifically designed to take a
-       CanonicalLoopInfoType, including AnyType.
-
-    A CLI directly corresponds to an object of
-    OpenMPIRBuilder's CanonicalLoopInfo struct when lowering to LLVM-IR.
-  }];
-}
-
-//===---------------------------------------------------------------------===//
 // OpenMP Canonical Loop Info Creation
 //===---------------------------------------------------------------------===//
 
@@ -564,6 +526,31 @@ def UnrollHeuristicOp : OpenMPTransform_Op<"unroll_heuristic", []> {
 }
 
 //===----------------------------------------------------------------------===//
+// OpenMP tile operation
+//===----------------------------------------------------------------------===//
+
+def TileOp : OpenMPTransformBase_Op<"tile",
+                                clauses = [OpenMP_SizesClause]> {
+  let summary = "OpenMP tile operation";
+  let description = [{
+    Represents the OpenMP tile directive introduced in OpenMP 5.1.
+
+    The construct partitions the logical iteration space of the affected loops
+    into equally-sized tiles, then creates two sets of nested loops. The outer
+    loops, called the grid loops, iterate over all tiles. The inner loops,
+    called the intratile loops, iterate over the logical iterations of a tile.
+    The sizes clause determines the size of a tile.
+
+    Currently, the affected loops must be rectangular (the tripcount of the
+    inner loop must not depend on any iv of an surrounding affected loop) and
+    perfectly nested (except for the innermost affected loop, no operations
+    other than the nested loop and the terminator in the loop body).
+  }] # clausesDescription;
+
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // 2.8.3 Workshare Construct
 //===----------------------------------------------------------------------===//
 
@@ -614,13 +601,18 @@ def WorkshareLoopWrapperOp : OpenMP_Op<"workshare.loop_wrapper", traits = [
 def LoopNestOp : OpenMP_Op<"loop_nest", traits = [
     RecursiveMemoryEffects, SameVariadicOperandSize
   ], clauses = [
-    OpenMP_LoopRelatedClause
+    OpenMP_CollapseClause,
+    OpenMP_LoopRelatedClause,
+    OpenMP_TileSizesClause
   ], singleRegion = true> {
   let summary = "rectangular loop nest";
   let description = [{
-    This operation represents a collapsed rectangular loop nest. For each
-    rectangular loop of the nest represented by an instance of this operation,
-    lower and upper bounds, as well as a step variable, must be defined.
+    This operation represents a rectangular loop nest which may be collapsed
+    and/or tiled. For each rectangular loop of the nest represented by an
+    instance of this operation, lower and upper bounds, as well as a step
+    variable, must be defined. The collapse clause specifies how many loops
+    that should be collapsed (1 if no collapse is done) after any tiling is
+    performed. The tiling sizes is represented by the tile sizes clause.
 
     The lower and upper bounds specify a half-open range: the range includes the
     lower bound but does not include the upper bound. If the `loop_inclusive`
@@ -633,7 +625,7 @@ def LoopNestOp : OpenMP_Op<"loop_nest", traits = [
     `loop_steps` arguments.
 
     ```mlir
-    omp.loop_nest (%i1, %i2) : i32 = (%c0, %c0) to (%c10, %c10) step (%c1, %c1) {
+    omp.loop_nest (%i1, %i2) : i32 = (%c0, %c0) to (%c10, %c10) step (%c1, %c1) collapse(2) tiles(5,5) {
       %a = load %arrA[%i1, %i2] : memref<?x?xf32>
       %b = load %arrB[%i1, %i2] : memref<?x?xf32>
       %sum = arith.addf %a, %b : f32
@@ -1206,7 +1198,7 @@ def MapBoundsOp : OpenMP_Op<"map.bounds",
 def MapInfoOp : OpenMP_Op<"map.info", [AttrSizedOperandSegments]> {
   let arguments = (ins OpenMP_PointerLikeType:$var_ptr,
                        TypeAttr:$var_type,
-                       UI64Attr:$map_type,
+                       ClauseMapFlagsAttr:$map_type,
                        VariableCaptureKindAttr:$map_capture_type,
                        Optional<OpenMP_PointerLikeType>:$var_ptr_ptr,
                        Variadic<OpenMP_PointerLikeType>:$members,
@@ -2095,7 +2087,7 @@ def MaskedOp : OpenMP_Op<"masked", clauses = [
 //===----------------------------------------------------------------------===//
 // [Spec 5.2] 6.5 allocate Directive
 //===----------------------------------------------------------------------===//
-def AllocateDirOp : OpenMP_Op<"allocate_dir", clauses = [
+def AllocateDirOp : OpenMP_Op<"allocate_dir", [AttrSizedOperandSegments], clauses = [
     OpenMP_AlignClause, OpenMP_AllocatorClause
   ]> {
   let summary = "allocate directive";
@@ -2113,6 +2105,123 @@ def AllocateDirOp : OpenMP_Op<"allocate_dir", clauses = [
                        ") attr-dict ";
 
   let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// TargetAllocMemOp
+//===----------------------------------------------------------------------===//
+
+def TargetAllocMemOp : OpenMP_Op<"target_allocmem",
+    [MemoryEffects<[MemAlloc<DefaultResource>]>, AttrSizedOperandSegments]> {
+  let summary = "allocate storage on an openmp device for an object of a given type";
+
+  let description = [{
+    Allocates memory on the specified OpenMP device for an object of the given type.
+    Returns an integer value representing the device pointer to the allocated memory.
+    The memory is uninitialized after allocation. Operations must be paired with 
+    `omp.target_freemem` to avoid memory leaks.
+
+    * `$device`: The integer ID of the OpenMP device where the memory will be allocated.
+    * `$in_type`: The type of the object for which memory is being allocated. 
+      For arrays, this can be a static or dynamic array type.
+    * `$uniq_name`: An optional unique name for the allocated memory.
+    * `$bindc_name`: An optional name used for C interoperability.
+    * `$typeparams`: Runtime type parameters for polymorphic or parameterized types. 
+      These are typically integer values that define aspects of a type not fixed at compile time.
+    * `$shape`: Runtime shape operands for dynamic arrays. 
+      Each operand is an integer value representing the extent of a specific dimension. 
+
+  ```mlir
+    // Allocate a static 3x3 integer vector on device 0
+    %device_0 = arith.constant 0 : i32
+    %ptr_static = omp.target_allocmem %device_0 : i32, vector<3x3xi32>
+    // ... use %ptr_static ...
+    omp.target_freemem %device_0, %ptr_static : i32, i64
+
+    // Allocate a dynamic 2D Fortran array (fir.array) on device 1
+    %device_1 = arith.constant 1 : i32
+    %rows = arith.constant 10 : index
+    %cols = arith.constant 20 : index
+    %ptr_dynamic = omp.target_allocmem %device_1 : i32, !fir.array<?x?xf32>, %rows, %cols : index, index
+    // ... use %ptr_dynamic ...
+    omp.target_freemem %device_1, %ptr_dynamic : i32, i64
+  ```
+  }];
+
+  let arguments = (ins
+    Arg<AnyInteger>:$device,
+    TypeAttr:$in_type,
+    OptionalAttr<StrAttr>:$uniq_name,
+    OptionalAttr<StrAttr>:$bindc_name,
+    Variadic<IntLikeType>:$typeparams,
+    Variadic<IntLikeType>:$shape
+  );
+  let results = (outs I64);
+
+  let hasCustomAssemblyFormat = 1;
+  let hasVerifier = 1;
+
+  let extraClassDeclaration = [{
+    mlir::Type getAllocatedType();
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// TargetFreeMemOp
+//===----------------------------------------------------------------------===//
+
+def TargetFreeMemOp : OpenMP_Op<"target_freemem",
+  [MemoryEffects<[MemFree]>]> {
+  let summary = "free memory on an openmp device";
+
+  let description = [{
+    Deallocates memory on the specified OpenMP device that was previously
+    allocated by an `omp.target_allocmem` operation. After this operation, the
+    deallocated memory is in an undefined state and should not be accessed.
+    It is crucial to ensure that all accesses to the memory region are completed
+    before `omp.target_freemem` is called to avoid undefined behavior.
+
+    * `$device`: The integer ID of the OpenMP device from which the memory will be freed.
+    * `$heapref`: The integer value representing the device pointer to the memory
+      to be deallocated, which was previously returned by `omp.target_allocmem`.
+
+    ```mlir
+      // Example of allocating and freeing memory on an OpenMP device
+      %device_id = arith.constant 0 : i32
+      %allocated_ptr = omp.target_allocmem %device_id : i32, vector<3x3xi32>
+      // ... operations using %allocated_ptr on the device ...
+      omp.target_freemem %device_id, %allocated_ptr : i32, i64
+    ```
+  }];
+
+  let arguments = (ins
+  Arg<AnyInteger, "", [MemFree]>:$device,
+  Arg<I64, "", [MemFree]>:$heapref
+  );
+  let assemblyFormat = "$device `,` $heapref attr-dict `:` type($device) `,` qualified(type($heapref))";
+}
+
+//===----------------------------------------------------------------------===//
+// workdistribute Construct
+//===----------------------------------------------------------------------===//
+
+def WorkdistributeOp : OpenMP_Op<"workdistribute"> {
+  let summary = "workdistribute directive";
+  let description = [{
+    workdistribute divides execution of the enclosed structured block into
+    separate units of work, each executed only once by each
+    initial thread in the league.
+    ```
+    !$omp target teams
+        !$omp workdistribute
+        y = a * x + y 
+        !$omp end workdistribute
+    !$omp end target teams
+    ```
+  }];
+  let regions = (region AnyRegion:$region);
+  let hasVerifier = 1;
+  let assemblyFormat = "$region attr-dict";
 }
 
 #endif // OPENMP_OPS

@@ -90,7 +90,7 @@ TEST_CONSTEXPR_CXX20 void basic_tests() {
     test<std::vector<int, safe_allocator<int> > >(a, an, alloc);
   }
 
-  // Regression test for https://github.com/llvm/llvm-project/issues/46841
+  // Regression test for https://llvm.org/PR47497
   {
     min_allocator<int> alloc;
     std::vector<int, min_allocator<int> > v1({}, forward_iterator<const int*>{}, alloc);

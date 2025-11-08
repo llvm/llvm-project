@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# ===- run-clang-tidy.py - Parallel clang-tidy runner --------*- python -*--===#
+# ===-----------------------------------------------------------------------===#
 #
 # Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 # See https://llvm.org/LICENSE.txt for license information.
@@ -31,7 +31,7 @@ Example invocations.
                       -header-filter=extra/clang-tidy
 
 Compilation database setup:
-http://clang.llvm.org/docs/HowToSetupToolingForLLVM.html
+https://clang.llvm.org/docs/HowToSetupToolingForLLVM.html
 """
 
 import argparse
@@ -483,7 +483,7 @@ async def main() -> None:
     parser.add_argument(
         "-line-filter",
         default=None,
-        help="List of files with line ranges to filter the warnings.",
+        help="List of files and line ranges to output diagnostics from.",
     )
     if yaml:
         parser.add_argument(
@@ -575,6 +575,11 @@ async def main() -> None:
         "-enable-check-profile",
         action="store_true",
         help="Enable per-check timing profiles, and print a report",
+    )
+    parser.add_argument(
+        "-hide-progress",
+        action="store_true",
+        help="Hide progress",
     )
     args = parser.parse_args()
 
@@ -681,13 +686,11 @@ async def main() -> None:
     file_name_re = re.compile("|".join(args.files))
     files = {f for f in files if file_name_re.search(f)}
 
-    print(
-        f"Running clang-tidy in {max_task} threads for",
-        len(files),
-        "files out of",
-        number_files_in_database,
-        "in compilation database ...",
-    )
+    if not args.hide_progress:
+        print(
+            f"Running clang-tidy in {max_task} threads for {len(files)} files "
+            f"out of {number_files_in_database} in compilation database ..."
+        )
 
     returncode = 0
     semaphore = asyncio.Semaphore(max_task)
@@ -716,13 +719,15 @@ async def main() -> None:
                     result.stderr += f"{result.filename}: terminated by signal {-result.returncode}\n"
             progress = f"[{i + 1: >{len(f'{len(files)}')}}/{len(files)}]"
             runtime = f"[{result.elapsed:.1f}s]"
-            print(f"{progress}{runtime} {' '.join(result.invocation)}")
+            if not args.hide_progress:
+                print(f"{progress}{runtime} {' '.join(result.invocation)}")
             if result.stdout:
                 print(result.stdout, end=("" if result.stderr else "\n"))
             if result.stderr:
                 print(result.stderr)
     except asyncio.CancelledError:
-        print("\nCtrl-C detected, goodbye.")
+        if not args.hide_progress:
+            print("\nCtrl-C detected, goodbye.")
         for task in tasks:
             task.cancel()
         if delete_fixes_dir:
@@ -742,7 +747,8 @@ async def main() -> None:
             print("No profiling data found.")
 
     if combine_fixes:
-        print(f"Writing fixes to {args.export_fixes} ...")
+        if not args.hide_progress:
+            print(f"Writing fixes to {args.export_fixes} ...")
         try:
             assert export_fixes_dir
             merge_replacement_files(export_fixes_dir, args.export_fixes)
@@ -752,7 +758,8 @@ async def main() -> None:
             returncode = 1
 
     if args.fix:
-        print("Applying fixes ...")
+        if not args.hide_progress:
+            print("Applying fixes ...")
         try:
             assert export_fixes_dir
             apply_fixes(args, clang_apply_replacements_binary, export_fixes_dir)

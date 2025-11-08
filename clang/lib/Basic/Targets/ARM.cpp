@@ -231,6 +231,8 @@ StringRef ARMTargetInfo::getCPUAttr() const {
     return "9_5A";
   case llvm::ARM::ArchKind::ARMV9_6A:
     return "9_6A";
+  case llvm::ARM::ArchKind::ARMV9_7A:
+    return "9_7A";
   case llvm::ARM::ArchKind::ARMV8MBaseline:
     return "8M_BASE";
   case llvm::ARM::ArchKind::ARMV8MMainline:
@@ -260,6 +262,7 @@ ARMTargetInfo::ARMTargetInfo(const llvm::Triple &Triple,
     : TargetInfo(Triple), FPMath(FP_Default), IsAAPCS(true), LDREX(0),
       HW_FP(0) {
   bool IsFreeBSD = Triple.isOSFreeBSD();
+  bool IsFuchsia = Triple.isOSFuchsia();
   bool IsOpenBSD = Triple.isOSOpenBSD();
   bool IsNetBSD = Triple.isOSNetBSD();
   bool IsHaiku = Triple.isOSHaiku();
@@ -332,7 +335,7 @@ ARMTargetInfo::ARMTargetInfo(const llvm::Triple &Triple,
     default:
       if (IsNetBSD)
         setABI("apcs-gnu");
-      else if (IsFreeBSD || IsOpenBSD || IsHaiku || IsOHOS)
+      else if (IsFreeBSD || IsFuchsia || IsOpenBSD || IsHaiku || IsOHOS)
         setABI("aapcs-linux");
       else
         setABI("aapcs");
@@ -585,13 +588,13 @@ bool ARMTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
     } else if (Feature == "+fp16") {
       HW_FP |= HW_FP_HP;
     } else if (Feature == "+fullfp16") {
-      HasLegalHalfType = true;
+      HasFastHalfType = true;
     } else if (Feature == "+dotprod") {
       DotProd = true;
     } else if (Feature == "+mve") {
       MVE |= MVE_INT;
     } else if (Feature == "+mve.fp") {
-      HasLegalHalfType = true;
+      HasFastHalfType = true;
       FPU |= FPARMV8;
       MVE |= MVE_INT | MVE_FP;
       HW_FP |= HW_FP_SP | HW_FP_HP;
@@ -903,6 +906,7 @@ void ARMTargetInfo::getTargetDefines(const LangOptions &Opts,
   case llvm::ARM::ArchKind::ARMV9_4A:
   case llvm::ARM::ArchKind::ARMV9_5A:
   case llvm::ARM::ArchKind::ARMV9_6A:
+  case llvm::ARM::ArchKind::ARMV9_7A:
     // Filter __arm_cdp, __arm_ldcl, __arm_stcl in arm_acle.h
     FeatureCoprocBF = FEATURE_COPROC_B1 | FEATURE_COPROC_B3;
     break;
@@ -1014,11 +1018,11 @@ void ARMTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__ARM_FP_FAST", "1");
 
   // Armv8.2-A FP16 vector intrinsic
-  if ((FPU & NeonFPU) && HasLegalHalfType)
+  if ((FPU & NeonFPU) && HasFastHalfType)
     Builder.defineMacro("__ARM_FEATURE_FP16_VECTOR_ARITHMETIC", "1");
 
   // Armv8.2-A FP16 scalar intrinsics
-  if (HasLegalHalfType)
+  if (HasFastHalfType)
     Builder.defineMacro("__ARM_FEATURE_FP16_SCALAR_ARITHMETIC", "1");
 
   // Armv8.2-A dot product intrinsics
@@ -1073,6 +1077,7 @@ void ARMTargetInfo::getTargetDefines(const LangOptions &Opts,
   case llvm::ARM::ArchKind::ARMV9_4A:
   case llvm::ARM::ArchKind::ARMV9_5A:
   case llvm::ARM::ArchKind::ARMV9_6A:
+  case llvm::ARM::ArchKind::ARMV9_7A:
     getTargetDefinesARMV83A(Opts, Builder);
     break;
   }

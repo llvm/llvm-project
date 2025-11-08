@@ -1,4 +1,4 @@
-//===--- AvoidCStyleCastsCheck.cpp - clang-tidy -----------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -140,7 +140,7 @@ void AvoidCStyleCastsCheck::check(const MatchFinder::MatchResult &Result) {
 
   CharSourceRange ReplaceRange = getReplaceRange(CastExpr);
 
-  bool FnToFnCast =
+  const bool FnToFnCast =
       IsFunction(SourceTypeAsWritten) && IsFunction(DestTypeAsWritten);
 
   const bool ConstructorCast = !CastExpr->getTypeAsWritten().hasQualifiers() &&
@@ -239,8 +239,8 @@ void AvoidCStyleCastsCheck::check(const MatchFinder::MatchResult &Result) {
       return;
     }
     if (DestType->isReferenceType()) {
-      QualType Dest = DestType.getNonReferenceType();
-      QualType Source = SourceType.getNonReferenceType();
+      const QualType Dest = DestType.getNonReferenceType();
+      const QualType Source = SourceType.getNonReferenceType();
       if (Source == Dest.withConst() ||
           SourceType.getNonReferenceType() == DestType.getNonReferenceType()) {
         ReplaceWithNamedCast("const_cast");

@@ -197,7 +197,7 @@ DeclaratorChunk DeclaratorChunk::getFunction(bool hasProto,
         [&](DeclSpec::TQ TypeQual, StringRef PrintName, SourceLocation SL) {
           I.Fun.MethodQualifiers->SetTypeQual(TypeQual, SL);
         });
-    I.Fun.MethodQualifiers->getAttributes().takeAllFrom(attrs);
+    I.Fun.MethodQualifiers->getAttributes().takeAllPrependingFrom(attrs);
     I.Fun.MethodQualifiers->getAttributePool().takeAllFrom(attrs.getPool());
   }
 
@@ -1369,7 +1369,8 @@ void DeclSpec::Finish(Sema &S, const PrintingPolicy &Policy) {
 
   if (S.getLangOpts().C23 &&
       getConstexprSpecifier() == ConstexprSpecKind::Constexpr &&
-      StorageClassSpec == SCS_extern) {
+      getTypeSpecType() != TST_unspecified &&
+      (StorageClassSpec == SCS_extern || StorageClassSpec == SCS_auto)) {
     S.Diag(ConstexprLoc, diag::err_invalid_decl_spec_combination)
         << DeclSpec::getSpecifierName(getStorageClassSpec())
         << SourceRange(getStorageClassSpecLoc());

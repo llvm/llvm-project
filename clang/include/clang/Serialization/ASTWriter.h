@@ -949,6 +949,8 @@ private:
   void ResolvedOperatorDelete(const CXXDestructorDecl *DD,
                               const FunctionDecl *Delete,
                               Expr *ThisArg) override;
+  void ResolvedOperatorGlobDelete(const CXXDestructorDecl *DD,
+                                  const FunctionDecl *Delete) override;
   void CompletedImplicitDefinition(const FunctionDecl *D) override;
   void InstantiationRequested(const ValueDecl *D) override;
   void VariableDefinitionInstantiated(const VarDecl *D) override;

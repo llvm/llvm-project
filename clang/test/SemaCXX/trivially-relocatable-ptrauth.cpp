@@ -57,7 +57,7 @@ struct Foo : Polymorphic {
 };
 
 
-static_assert(__builtin_is_cpp_trivially_relocatable(Polymorphic));
+static_assert(!__builtin_is_cpp_trivially_relocatable(Polymorphic));
 
 struct [[clang::ptrauth_vtable_pointer(process_independent,no_address_discrimination,no_extra_discrimination)]] NonAddressDiscriminatedPolymorphic trivially_relocatable_if_eligible {
   virtual ~NonAddressDiscriminatedPolymorphic();
@@ -70,7 +70,7 @@ struct PolymorphicMembers {
     Polymorphic field;
 };
 
-static_assert(__builtin_is_cpp_trivially_relocatable(PolymorphicMembers));
+static_assert(!__builtin_is_cpp_trivially_relocatable(PolymorphicMembers));
 
 struct UnionOfPolymorphic {
   union trivially_relocatable_if_eligible {

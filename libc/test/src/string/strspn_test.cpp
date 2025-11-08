@@ -85,6 +85,10 @@ TEST(LlvmLibcStrSpnTest, DuplicatedCharactersToBeSearchedForShouldStillMatch) {
   EXPECT_EQ(LIBC_NAMESPACE::strspn("aaaa", "aa"), size_t{4});
 }
 
+TEST(LlvmLibcStrSpnTest, TopBitSet) {
+  EXPECT_EQ(LIBC_NAMESPACE::strspn("hello\x80world", "helo\x80rld"), size_t{6});
+}
+
 #if defined(LIBC_ADD_NULL_CHECKS)
 
 TEST(LlvmLibcStrSpnTest, CrashOnNullPtr) {

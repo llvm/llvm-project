@@ -39,8 +39,8 @@ public:
     return Mapper->initialize(AI, std::move(OnInitialized));
   }
 
-  char *prepare(ExecutorAddr Addr, size_t ContentSize) override {
-    return Mapper->prepare(Addr, ContentSize);
+  char *prepare(LinkGraph &G, ExecutorAddr Addr, size_t ContentSize) override {
+    return Mapper->prepare(G, Addr, ContentSize);
   }
 
   void deinitialize(ArrayRef<ExecutorAddr> Allocations,

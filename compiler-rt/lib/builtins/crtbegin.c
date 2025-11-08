@@ -19,7 +19,7 @@
 __attribute__((visibility("hidden"))) void *__dso_handle = &__dso_handle;
 
 #ifdef EH_USE_FRAME_REGISTRY
-__extension__ static void *__EH_FRAME_LIST__[]
+__extension__ static void *const __EH_FRAME_LIST__[]
     __attribute__((section(".eh_frame"), aligned(sizeof(void *)))) = {};
 
 extern void __register_frame_info(const void *, void *) __attribute__((weak));

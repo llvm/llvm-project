@@ -12,8 +12,6 @@
 // closest representable value for the specified integer type, or
 // numeric_limits<IntT>::max()/min() if the value isn't representable.
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
-
 #include <__random/clamp_to_integral.h>
 #include <cassert>
 #include <cmath>

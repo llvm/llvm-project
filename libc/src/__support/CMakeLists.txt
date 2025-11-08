@@ -97,6 +97,7 @@ add_header_library(
     common.h
     endian_internal.h
     macros/properties/architectures.h
+    macros/properties/compiler.h
     macros/attributes.h
     macros/config.h
   DEPENDS
@@ -160,6 +161,7 @@ add_header_library(
   HDRS
     wctype_utils.h
   DEPENDS
+    libc.hdr.types.wchar_t
     libc.hdr.types.wint_t
 )
 
@@ -178,19 +180,7 @@ add_header_library(
   DEPENDS
     .ctype_utils
     .str_to_num_result
-    libc.hdr.errno_macros
-    libc.src.__support.CPP.limits
-    libc.src.__support.CPP.type_traits
-    libc.src.__support.common
-)
-
-add_header_library(
-  wcs_to_integer
-  HDRS
-    wcs_to_integer.h
-  DEPENDS
     .wctype_utils
-    .str_to_num_result
     libc.hdr.errno_macros
     libc.src.__support.CPP.limits
     libc.src.__support.CPP.type_traits
@@ -301,6 +291,7 @@ add_header_library(
   DEPENDS
     libc.hdr.stdint_proxy
     libc.src.__support.common
+    libc.src.string.memory_utils.inline_memcpy
 )
 
 add_header_library(

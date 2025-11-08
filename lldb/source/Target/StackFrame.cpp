@@ -57,14 +57,14 @@ using namespace lldb_private;
 StackFrame::StackFrame(const ThreadSP &thread_sp, user_id_t frame_idx,
                        user_id_t unwind_frame_index, addr_t cfa,
                        bool cfa_is_valid, addr_t pc, StackFrame::Kind kind,
-                       bool behaves_like_zeroth_frame,
+                       bool artificial, bool behaves_like_zeroth_frame,
                        const SymbolContext *sc_ptr)
     : m_thread_wp(thread_sp), m_frame_index(frame_idx),
       m_concrete_frame_index(unwind_frame_index), m_reg_context_sp(),
       m_id(pc, cfa, nullptr, thread_sp->GetProcess().get()),
       m_frame_code_addr(pc), m_sc(), m_flags(), m_frame_base(),
       m_frame_base_error(), m_cfa_is_valid(cfa_is_valid),
-      m_stack_frame_kind(kind),
+      m_stack_frame_kind(kind), m_artificial(artificial),
       m_behaves_like_zeroth_frame(behaves_like_zeroth_frame),
       m_variable_list_sp(), m_variable_list_value_objects(),
       m_recognized_frame_sp(), m_disassembly(), m_mutex() {
@@ -92,7 +92,7 @@ StackFrame::StackFrame(const ThreadSP &thread_sp, user_id_t frame_idx,
       m_id(pc, cfa, nullptr, thread_sp->GetProcess().get()),
       m_frame_code_addr(pc), m_sc(), m_flags(), m_frame_base(),
       m_frame_base_error(), m_cfa_is_valid(true),
-      m_stack_frame_kind(StackFrame::Kind::Regular),
+      m_stack_frame_kind(StackFrame::Kind::Regular), m_artificial(false),
       m_behaves_like_zeroth_frame(behaves_like_zeroth_frame),
       m_variable_list_sp(), m_variable_list_value_objects(),
       m_recognized_frame_sp(), m_disassembly(), m_mutex() {
@@ -120,7 +120,7 @@ StackFrame::StackFrame(const ThreadSP &thread_sp, user_id_t frame_idx,
            nullptr, thread_sp->GetProcess().get()),
       m_frame_code_addr(pc_addr), m_sc(), m_flags(), m_frame_base(),
       m_frame_base_error(), m_cfa_is_valid(true),
-      m_stack_frame_kind(StackFrame::Kind::Regular),
+      m_stack_frame_kind(StackFrame::Kind::Regular), m_artificial(false),
       m_behaves_like_zeroth_frame(behaves_like_zeroth_frame),
       m_variable_list_sp(), m_variable_list_value_objects(),
       m_recognized_frame_sp(), m_disassembly(), m_mutex() {
@@ -266,6 +266,7 @@ bool StackFrame::ChangePC(addr_t pc) {
 
 const char *StackFrame::Disassemble() {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
+
   if (!m_disassembly.Empty())
     return m_disassembly.GetData();
 
@@ -440,10 +441,10 @@ VariableList *StackFrame::GetVariableList(bool get_file_globals,
       const bool get_child_variables = true;
       const bool can_create = true;
       const bool stop_if_child_block_is_inlined_function = true;
-      frame_block->AppendBlockVariables(can_create, get_child_variables,
-                                        stop_if_child_block_is_inlined_function,
-                                        [](Variable *v) { return true; },
-                                        m_variable_list_sp.get());
+      frame_block->AppendBlockVariables(
+          can_create, get_child_variables,
+          stop_if_child_block_is_inlined_function,
+          [](Variable *v) { return true; }, m_variable_list_sp.get());
     }
   }
 
@@ -1227,10 +1228,12 @@ StackFrame::GetValueObjectForFrameVariable(const VariableSP &variable_sp,
     VariableList *var_list = GetVariableList(true, nullptr);
     if (var_list) {
       // Make sure the variable is a frame variable
-      const uint32_t var_idx = var_list->FindIndexForVariable(variable_sp.get());
+      const uint32_t var_idx =
+          var_list->FindIndexForVariable(variable_sp.get());
       const uint32_t num_variables = var_list->GetSize();
       if (var_idx < num_variables) {
-        valobj_sp = m_variable_list_value_objects.GetValueObjectAtIndex(var_idx);
+        valobj_sp =
+            m_variable_list_value_objects.GetValueObjectAtIndex(var_idx);
         if (!valobj_sp) {
           if (m_variable_list_value_objects.GetSize() < num_variables)
             m_variable_list_value_objects.Resize(num_variables);
@@ -1261,9 +1264,11 @@ bool StackFrame::IsHistorical() const {
   return m_stack_frame_kind == StackFrame::Kind::History;
 }
 
-bool StackFrame::IsArtificial() const {
-  return m_stack_frame_kind == StackFrame::Kind::Artificial;
+bool StackFrame::IsSynthetic() const {
+  return m_stack_frame_kind == StackFrame::Kind::Synthetic;
 }
+
+bool StackFrame::IsArtificial() const { return m_artificial; }
 
 bool StackFrame::IsHidden() {
   if (auto recognized_frame_sp = GetRecognizedFrame())
@@ -1339,18 +1344,18 @@ const char *StackFrame::GetDisplayFunctionName() {
 SourceLanguage StackFrame::GetLanguage() {
   CompileUnit *cu = GetSymbolContext(eSymbolContextCompUnit).comp_unit;
   if (cu)
-    return cu->GetLanguage();
+    return SourceLanguage{cu->GetLanguage()};
   return {};
 }
 
 SourceLanguage StackFrame::GuessLanguage() {
   SourceLanguage lang_type = GetLanguage();
 
-  if (lang_type == eLanguageTypeUnknown) {
+  if (!lang_type) {
     SymbolContext sc =
         GetSymbolContext(eSymbolContextFunction | eSymbolContextSymbol);
     if (sc.function)
-      lang_type = LanguageType(sc.function->GetMangled().GuessLanguage());
+      lang_type = SourceLanguage(sc.function->GetMangled().GuessLanguage());
     else if (sc.symbol)
       lang_type = SourceLanguage(sc.symbol->GetMangled().GuessLanguage());
   }
@@ -1764,11 +1769,9 @@ lldb::ValueObjectSP DoGuessValueAt(StackFrame &frame, ConstString reg,
 
     if (clobbered_reg_matcher(operands[0])) {
       origin_operand = &operands[1];
-    }
-    else if (clobbered_reg_matcher(operands[1])) {
+    } else if (clobbered_reg_matcher(operands[1])) {
       origin_operand = &operands[0];
-    }
-    else {
+    } else {
       continue;
     }
 
@@ -1794,8 +1797,7 @@ lldb::ValueObjectSP DoGuessValueAt(StackFrame &frame, ConstString reg,
       if (!source_path) {
         continue;
       }
-      source_path =
-          GetValueForDereferincingOffset(frame, source_path, offset);
+      source_path = GetValueForDereferincingOffset(frame, source_path, offset);
     }
 
     if (source_path) {
@@ -1805,7 +1807,7 @@ lldb::ValueObjectSP DoGuessValueAt(StackFrame &frame, ConstString reg,
 
   return ValueObjectSP();
 }
-}
+} // namespace
 
 lldb::ValueObjectSP StackFrame::GuessValueForRegisterAndOffset(ConstString reg,
                                                                int64_t offset) {

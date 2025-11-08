@@ -28,7 +28,7 @@ namespace interp {
 class Program;
 class ByteCodeEmitter;
 class Pointer;
-enum PrimType : uint32_t;
+enum PrimType : uint8_t;
 
 /// Describes a scope block.
 ///
@@ -236,9 +236,10 @@ private:
            bool HasRVO, bool IsLambdaStaticInvoker);
 
   /// Sets the code of a function.
-  void setCode(unsigned NewFrameSize, llvm::SmallVector<std::byte> &&NewCode,
-               SourceMap &&NewSrcMap, llvm::SmallVector<Scope, 2> &&NewScopes,
-               bool NewHasBody) {
+  void setCode(FunctionDeclTy Source, unsigned NewFrameSize,
+               llvm::SmallVector<std::byte> &&NewCode, SourceMap &&NewSrcMap,
+               llvm::SmallVector<Scope, 2> &&NewScopes, bool NewHasBody) {
+    this->Source = Source;
     FrameSize = NewFrameSize;
     Code = std::move(NewCode);
     SrcMap = std::move(NewSrcMap);

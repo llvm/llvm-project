@@ -76,6 +76,8 @@ struct ThreadEventCallbacks {
 
 void InstallPthreadIntrospectionHook(const ThreadEventCallbacks &callbacks);
 
+bool IsAddressInMappedRegion(uptr addr);
+
 }  // namespace __sanitizer
 
 #endif  // SANITIZER_APPLE

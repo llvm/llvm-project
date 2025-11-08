@@ -72,12 +72,12 @@ define void @ldist(i1 %cond, ptr %A, ptr %B, ptr %C) {
 ; CHECK-NEXT:  LDist: Partition 0:
 ; CHECK-NEXT:  for.body.ldist1: ; preds = %if.end.ldist1, %for.body.ph.ldist1
 ; CHECK-NEXT:    %iv.ldist1 = phi i16 [ 0, %for.body.ph.ldist1 ], [ %iv.next.ldist1, %if.end.ldist1 ]
-; CHECK-NEXT:    %lv.ldist1 = load i16, ptr %A, align 1, !alias.scope !0, !noalias !3
-; CHECK-NEXT:    store i16 %lv.ldist1, ptr %A, align 1, !alias.scope !0, !noalias !3
+; CHECK-NEXT:    %lv.ldist1 = load i16, ptr %A, align 1, !alias.scope !2, !noalias !5
+; CHECK-NEXT:    store i16 %lv.ldist1, ptr %A, align 1, !alias.scope !2, !noalias !5
 ; CHECK-NEXT:    br i1 %cond, label %if.then.ldist1, label %if.end.ldist1
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  if.then.ldist1: ; preds = %for.body.ldist1
-; CHECK-NEXT:    %lv2.ldist1 = load i16, ptr %A, align 1, !alias.scope !0, !noalias !3
+; CHECK-NEXT:    %lv2.ldist1 = load i16, ptr %A, align 1, !alias.scope !2, !noalias !5
 ; CHECK-NEXT:    br label %if.end.ldist1
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  if.end.ldist1: ; preds = %if.then.ldist1, %for.body.ldist1
