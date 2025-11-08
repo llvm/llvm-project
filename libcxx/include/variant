@@ -235,7 +235,6 @@ namespace std {
 #  include <__type_traits/conditional.h>
 #  include <__type_traits/conjunction.h>
 #  include <__type_traits/decay.h>
-#  include <__type_traits/dependent_type.h>
 #  include <__type_traits/enable_if.h>
 #  include <__type_traits/invoke.h>
 #  include <__type_traits/is_array.h>
@@ -1174,8 +1173,7 @@ public:
       conditional_t<_And<__libcpp_is_trivially_relocatable<_Types>...>::value, variant, void>;
   using __replaceable _LIBCPP_NODEBUG = conditional_t<_And<__is_replaceable<_Types>...>::value, variant, void>;
 
-  template <bool _Dummy                                                                               = true,
-            enable_if_t<__dependent_type<is_default_constructible<__first_type>, _Dummy>::value, int> = 0>
+  template <bool _Dummy = true, enable_if_t<_Dummy && is_default_constructible<__first_type>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI constexpr variant() noexcept(is_nothrow_default_constructible_v<__first_type>)
       : __impl_(in_place_index<0>) {}
 
@@ -1290,10 +1288,9 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI constexpr size_t index() const noexcept { return __impl_.index(); }
 
-  template < bool _Dummy       = true,
-             enable_if_t< __all<(__dependent_type<is_move_constructible<_Types>, _Dummy>::value &&
-                                 __dependent_type<is_swappable<_Types>, _Dummy>::value)...>::value,
-                          int> = 0>
+  template <
+      bool _Dummy                                                                                              = true,
+      enable_if_t<_Dummy && __all<(is_move_constructible_v<_Types> && is_swappable_v<_Types>)...>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void swap(variant& __that) noexcept(
       __all<(is_nothrow_move_constructible_v<_Types> && is_nothrow_swappable_v<_Types>)...>::value) {
     __impl_.__swap(__that.__impl_);

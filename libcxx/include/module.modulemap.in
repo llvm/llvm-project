@@ -84,7 +84,6 @@ module std_core [system] {
     module copy_cvref                                 { header "__type_traits/copy_cvref.h" }
     module datasizeof                                 { header "__type_traits/datasizeof.h" }
     module decay                                      { header "__type_traits/decay.h" }
-    module dependent_type                             { header "__type_traits/dependent_type.h" }
     module desugars_to                                { header "__type_traits/desugars_to.h" }
     module detected_or                                { header "__type_traits/detected_or.h" }
     module disjunction                                { header "__type_traits/disjunction.h" }

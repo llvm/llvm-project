@@ -801,7 +801,6 @@ set(files
   __type_traits/copy_cvref.h
   __type_traits/datasizeof.h
   __type_traits/decay.h
-  __type_traits/dependent_type.h
   __type_traits/desugars_to.h
   __type_traits/detected_or.h
   __type_traits/disjunction.h
