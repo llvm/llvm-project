@@ -264,32 +264,39 @@ void Fortran::lower::genSyncTeamStatement(
 void Fortran::lower::genPauseStatement(
     Fortran::lower::AbstractConverter &converter,
     const Fortran::parser::PauseStmt &stmt) {
+  
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   mlir::Location loc = converter.getCurrentLocation();
   Fortran::lower::StatementContext stmtCtx;
+
   llvm::SmallVector<mlir::Value> operands;
   mlir::func::FuncOp callee;
   mlir::FunctionType calleeType;
 
   if (stmt.v.has_value()) {
-    const Fortran::parser::StopCode &code = stmt.v.value();
+    const auto &code = stmt.v.value();
     auto expr = converter.genExprValue(*Fortran::semantics::GetExpr(code), stmtCtx);
     LLVM_DEBUG(llvm::dbgs() << "pause expression: "; expr.dump(); llvm::dbgs() << '\n');
     expr.match(
+        // Character-valued expression -> call PauseStatementText (CHAR, LEN)
         [&](const fir::CharBoxValue &x) {
           callee = fir::runtime::getRuntimeFunc<mkRTKey(PauseStatementText)>(loc, builder);
           calleeType = callee.getFunctionType();
+
           operands.push_back(
               builder.createConvert(loc, calleeType.getInput(0), x.getAddr()));
           operands.push_back(
               builder.createConvert(loc, calleeType.getInput(1), x.getLen()));
         },
+        // Numeric/unboxed value -> call PauseStatement which accepts an integer code.
         [&](fir::UnboxedValue x) {
-          callee = fir::runtime::getRuntimeFunc<mkRTKey(PauseStatement)>(loc, builder);
-          calleeType = callee.getFunctionType();
-          mlir::Value cast =
-              builder.createConvert(loc, calleeType.getInput(0), x);
-          operands.push_back(cast);
+           callee = fir::runtime::getRuntimeFunc<mkRTKey(PauseStatement)>(loc, builder);
+           calleeType = callee.getFunctionType();
+            if (calleeType.getNumInputs() >= 1) {
+              mlir::Value cast =
+                builder.createConvert(loc, calleeType.getInput(0), x);
+            operands.push_back(cast);
+            }
         },
         [&](auto) {
           mlir::emitError(loc, "unhandled expression in PAUSE");
@@ -299,16 +306,13 @@ void Fortran::lower::genPauseStatement(
     callee = fir::runtime::getRuntimeFunc<mkRTKey(PauseStatement)>(loc, builder);
     calleeType = callee.getFunctionType();
   }
-
+  
   fir::CallOp::create(builder, loc, callee, operands);
 
-  auto blockIsUnterminated = [&builder]() {
-    mlir::Block *currentBlock = builder.getBlock();
-    return currentBlock->empty() ||
-           !currentBlock->back().hasTrait<mlir::OpTrait::IsTerminator>();
-  };
-  if (blockIsUnterminated())
-    genUnreachable(builder, loc);
+  // NOTE: PAUSE should not unconditionally terminate the current block.
+  // Unlike STOP, PAUSE does not necessarily abandon control flow, so do not
+  // subsequent control flow (e.g. GOTO/branches) to be generated.
+  // insert genUnreachable() here. Leaving the block un-terminated allows
 }
 
 void Fortran::lower::genPointerAssociate(fir::FirOpBuilder &builder,
