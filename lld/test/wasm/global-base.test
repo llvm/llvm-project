@@ -19,19 +19,19 @@ CHECK-1024-NEXT:        Type:            I32
 CHECK-1024-NEXT:        Mutable:         true
 CHECK-1024-NEXT:        InitExpr:
 CHECK-1024-NEXT:          Opcode:          I32_CONST
-CHECK-1024-NEXT:          Value:           66560
+CHECK-1024-NEXT:          Value:           65536
 CHECK-1024-NEXT:      - Index:           1
 CHECK-1024-NEXT:        Type:            I32
 CHECK-1024-NEXT:        Mutable:         false
 CHECK-1024-NEXT:        InitExpr:
 CHECK-1024-NEXT:          Opcode:          I32_CONST
-CHECK-1024-NEXT:          Value:           1024
+CHECK-1024-NEXT:          Value:           65536
 CHECK-1024-NEXT:      - Index:           2
 CHECK-1024-NEXT:        Type:            I32
 CHECK-1024-NEXT:        Mutable:         false
 CHECK-1024-NEXT:        InitExpr:
 CHECK-1024-NEXT:          Opcode:          I32_CONST
-CHECK-1024-NEXT:          Value:           1024
+CHECK-1024-NEXT:          Value:           65536
 
 CHECK-1024:       - Type:            EXPORT
 CHECK-1024:           - Name:            __data_end
@@ -50,7 +50,7 @@ CHECK-16777216-NEXT:        Type:            I32
 CHECK-16777216-NEXT:        Mutable:         true
 CHECK-16777216-NEXT:        InitExpr:
 CHECK-16777216-NEXT:          Opcode:          I32_CONST
-CHECK-16777216-NEXT:          Value:           16842752
+CHECK-16777216-NEXT:          Value:           65536
 CHECK-16777216-NEXT:      - Index:           1
 CHECK-16777216-NEXT:        Type:            I32
 CHECK-16777216-NEXT:        Mutable:         false

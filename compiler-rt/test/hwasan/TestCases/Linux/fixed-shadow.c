@@ -13,7 +13,7 @@
 
 // RUN: %clang_hwasan %s -mllvm -hwasan-mapping-offset=4398046511104 -o %t
 // RUN: env HWASAN_OPTIONS=fixed_shadow_base=4398046511104 %run %t
-// RUN: env HWASAN_OPTIONS=fixed_shadow_base=17592186044416 not %run %t
+// RUN: env HWASAN_OPTIONS=fixed_shadow_base=263878495698944 not %run %t
 //
 // Note: if fixed_shadow_base is not set, compiler-rt will dynamically choose a
 // shadow base, which has a tiny but non-zero probability of matching the

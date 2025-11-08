@@ -46,7 +46,7 @@ static std::optional<SourceLocation> firstLocAfterNewLine(SourceLocation Loc,
   if (Invalid) {
     return std::nullopt;
   }
-  size_t Offset = std::strcspn(TextAfter, "\n");
+  const size_t Offset = std::strcspn(TextAfter, "\n");
   return Loc.getLocWithOffset(TextAfter[Offset] == '\0' ? Offset : Offset + 1);
 }
 
@@ -148,7 +148,7 @@ AST_MATCHER_FUNCTION_P(StatementMatcher, initializerReturnsReferenceToConst,
 static bool isInitializingVariableImmutable(
     const VarDecl &InitializingVar, const Stmt &BlockStmt, ASTContext &Context,
     const std::vector<StringRef> &ExcludedContainerTypes) {
-  QualType T = InitializingVar.getType().getCanonicalType();
+  const QualType T = InitializingVar.getType().getCanonicalType();
   if (!isOnlyUsedAsConst(InitializingVar, BlockStmt, Context,
                          T->isPointerType() ? 1 : 0))
     return false;
@@ -297,7 +297,7 @@ void UnnecessaryCopyInitialization::check(
   const auto *ObjectArg = Result.Nodes.getNodeAs<VarDecl>(ObjectArgId);
   const auto *CtorCall = Result.Nodes.getNodeAs<CXXConstructExpr>("ctorCall");
 
-  TraversalKindScope RAII(*Result.Context, TK_AsIs);
+  const TraversalKindScope RAII(*Result.Context, TK_AsIs);
 
   // A constructor that looks like T(const T& t, bool arg = false) counts as a
   // copy only when it is called with default arguments for the arguments after
@@ -327,7 +327,7 @@ void UnnecessaryCopyInitialization::check(
 
 void UnnecessaryCopyInitialization::handleCopyFromMethodReturn(
     const CheckContext &Ctx, const VarDecl *ObjectArg) {
-  bool IsConstQualified = Ctx.Var.getType().isConstQualified();
+  const bool IsConstQualified = Ctx.Var.getType().isConstQualified();
   if (!IsConstQualified && !Ctx.IsVarOnlyUsedAsConst)
     return;
   if (ObjectArg != nullptr &&

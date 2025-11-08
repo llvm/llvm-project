@@ -22,11 +22,11 @@ using namespace clang::ast_matchers;
 namespace clang::tidy::google::objc {
 
 static bool isMessageExpressionInsideMacro(const ObjCMessageExpr *Expr) {
-  SourceLocation ReceiverLocation = Expr->getReceiverRange().getBegin();
+  const SourceLocation ReceiverLocation = Expr->getReceiverRange().getBegin();
   if (ReceiverLocation.isMacroID())
     return true;
 
-  SourceLocation SelectorLocation = Expr->getSelectorStartLoc();
+  const SourceLocation SelectorLocation = Expr->getSelectorStartLoc();
   if (SelectorLocation.isMacroID())
     return true;
 
@@ -58,7 +58,7 @@ static bool isInitMethodAvailable(const ObjCInterfaceDecl *ClassDecl) {
 static StringRef getReceiverString(SourceRange ReceiverRange,
                                    const SourceManager &SM,
                                    const LangOptions &LangOpts) {
-  CharSourceRange CharRange = Lexer::makeFileCharRange(
+  const CharSourceRange CharRange = Lexer::makeFileCharRange(
       CharSourceRange::getTokenRange(ReceiverRange), SM, LangOpts);
   return Lexer::getSourceText(CharRange, SM, LangOpts);
 }
@@ -77,13 +77,13 @@ static FixItHint getCallFixItHint(const ObjCMessageExpr *Expr,
   if (FoundClassFactory != ClassToFactoryMethodMap.end()) {
     StringRef ClassName = FoundClassFactory->first;
     StringRef FactorySelector = FoundClassFactory->second;
-    std::string NewCall =
+    const std::string NewCall =
         std::string(llvm::formatv("[{0} {1}]", ClassName, FactorySelector));
     return FixItHint::CreateReplacement(Expr->getSourceRange(), NewCall);
   }
 
   if (isInitMethodAvailable(Expr->getReceiverInterface())) {
-    std::string NewCall =
+    const std::string NewCall =
         std::string(llvm::formatv("[[{0} alloc] init]", Receiver));
     return FixItHint::CreateReplacement(Expr->getSourceRange(), NewCall);
   }

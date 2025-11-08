@@ -32,9 +32,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - container-name: code-format
+          - container-name: format
             test-command: 'cd $HOME && clang-format --version | grep version && git-clang-format -h | grep usage && black --version | grep black'
-          - container-name: code-lint
+          - container-name: lint
             test-command: 'cd $HOME && clang-tidy --version | grep version && clang-tidy-diff.py -h | grep usage'
     steps:
       - name: Checkout LLVM
@@ -52,7 +52,7 @@ jobs:
         with:
           container-name: ci-ubuntu-24.04-${{ matrix.container-name }}
           dockerfile: .github/workflows/containers/github-action-ci-tooling/Dockerfile
-          target: ci-container-${{ matrix.container-name }}
+          target: ci-container-code-${{ matrix.container-name }}
           test-command: ${{ matrix.test-command }}
 
   push-ci-container:

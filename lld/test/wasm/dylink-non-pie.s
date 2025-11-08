@@ -32,7 +32,7 @@ f_p:
 
 # DIS:    <__wasm_apply_data_relocs>:
 # DIS-EMPTY:
-# DIS-NEXT:    i32.const       1024
+# DIS-NEXT:    i32.const       65536
 # DIS-NEXT:    global.get      0
 # DIS-NEXT:    i32.store       0
 # DIS-NEXT:    end

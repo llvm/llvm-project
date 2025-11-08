@@ -29,7 +29,7 @@ _start:
 # CHECK-DEFAULT-NEXT:        Mutable:         true
 # CHECK-DEFAULT-NEXT:        InitExpr:
 # CHECK-DEFAULT-NEXT:          Opcode:          I32_CONST
-# CHECK-DEFAULT-NEXT:          Value:           66560
+# CHECK-DEFAULT-NEXT:          Value:           65536
 # CHECK-DEFAULT-NEXT:      - Index:           1
 # CHECK-DEFAULT-NEXT:        Type:            I32
 # CHECK-DEFAULT-NEXT:        Mutable:         false
@@ -58,7 +58,7 @@ _start:
 # CHECK-100-NEXT:        Mutable:         true
 # CHECK-100-NEXT:        InitExpr:
 # CHECK-100-NEXT:          Opcode:          I32_CONST
-# CHECK-100-NEXT:          Value:           66560
+# CHECK-100-NEXT:          Value:           65536
 # CHECK-100-NEXT:      - Index:           1
 # CHECK-100-NEXT:        Type:            I32
 # CHECK-100-NEXT:        Mutable:         false

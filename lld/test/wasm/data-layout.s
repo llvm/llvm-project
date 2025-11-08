@@ -63,33 +63,33 @@ local_struct_internal_ptr:
 # CHECK-NEXT:         Mutable:         true
 # CHECK-NEXT:         InitExpr:
 # CHECK-NEXT:           Opcode:          [[PTR]]_CONST
-# CHECK-NEXT:           Value:           66624
+# CHECK-NEXT:           Value:           65536
 # CHECK-NEXT:       - Index:           1
 # CHECK-NEXT:         Type:            [[PTR]]
 # CHECK-NEXT:         Mutable:         false
 # CHECK-NEXT:         InitExpr:
 # CHECK-NEXT:           Opcode:          [[PTR]]_CONST
-# CHECK-NEXT:           Value:           1080
+# CHECK-NEXT:           Value:           65592
 # CHECK-NEXT:       - Index:           2
 # CHECK-NEXT:         Type:            [[PTR]]
 # CHECK-NEXT:         Mutable:         false
 # CHECK-NEXT:         InitExpr:
 # CHECK-NEXT:           Opcode:          [[PTR]]_CONST
-# CHECK-NEXT:           Value:           66624
+# CHECK-NEXT:           Value:           65600
 
 # CHECK:        - Type:            DATA
 # CHECK-NEXT:     Segments:
-# CHECK-NEXT:       - SectionOffset:   7
+# CHECK-NEXT:       - SectionOffset:   8
 # CHECK-NEXT:         InitFlags:       0
 # CHECK-NEXT:         Offset:
 # CHECK-NEXT:           Opcode:          [[PTR]]_CONST
-# CHECK-NEXT:           Value:           1024
+# CHECK-NEXT:           Value:           65536
 # CHECK-NEXT:         Content:         68656C6C6F0A00
-# CHECK-NEXT:       - SectionOffset:   20
+# CHECK-NEXT:       - SectionOffset:   22
 # CHECK-NEXT:         InitFlags:       0
 # CHECK-NEXT:         Offset:
 # CHECK-NEXT:           Opcode:          [[PTR]]_CONST
-# CHECK-NEXT:           Value:           1040
+# CHECK-NEXT:           Value:           65552
 
 
 # RUN: wasm-ld -no-gc-sections --allow-undefined --no-entry \

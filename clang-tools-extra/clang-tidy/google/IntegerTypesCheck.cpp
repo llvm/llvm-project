@@ -103,7 +103,7 @@ void IntegerTypesCheck::registerMatchers(MatchFinder *Finder) {
 
 void IntegerTypesCheck::check(const MatchFinder::MatchResult &Result) {
   auto TL = *Result.Nodes.getNodeAs<TypeLoc>("tl");
-  SourceLocation Loc = TL.getBeginLoc();
+  const SourceLocation Loc = TL.getBeginLoc();
 
   // Look through qualification.
   if (auto QualLoc = TL.getAs<QualifiedTypeLoc>())
@@ -113,7 +113,7 @@ void IntegerTypesCheck::check(const MatchFinder::MatchResult &Result) {
   if (!BuiltinLoc)
     return;
 
-  Token Tok = getTokenAtLoc(Loc, Result, *IdentTable);
+  const Token Tok = getTokenAtLoc(Loc, Result, *IdentTable);
   // Ensure the location actually points to one of the builting integral type
   // names we're interested in. Otherwise, we might be getting this match from
   // implicit code (e.g. an implicit assignment operator of a class containing
@@ -164,7 +164,7 @@ void IntegerTypesCheck::check(const MatchFinder::MatchResult &Result) {
       !isAsciiIdentifierContinue(Data[Port.size()]))
     return;
 
-  std::string Replacement =
+  const std::string Replacement =
       ((IsSigned ? SignedTypePrefix : UnsignedTypePrefix) + Twine(Width) +
        TypeSuffix)
           .str();

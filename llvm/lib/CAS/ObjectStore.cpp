@@ -213,10 +213,13 @@ Expected<ObjectRef> ObjectStore::importObject(ObjectStore &Upstream,
 
       // Remove the current node and its IDs from the stack.
       PrimaryRefStack.truncate(PrimaryRefStack.size() - Cur.RefsCount);
-      CursorStack.pop_back();
 
+      // Push new node into created objects.
       PrimaryRefStack.push_back(*NewNode);
       CreatedObjects.try_emplace(Cur.Ref, *NewNode);
+
+      // Pop the cursor in the end after all uses.
+      CursorStack.pop_back();
       continue;
     }
 
