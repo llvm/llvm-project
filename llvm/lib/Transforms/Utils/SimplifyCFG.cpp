@@ -5014,7 +5014,7 @@ bool SimplifyCFGOpt::simplifyIndirectBrOnSelect(IndirectBrInst *IBI,
 bool SimplifyCFGOpt::tryToSimplifyUncondBranchWithICmpInIt(
     ICmpInst *ICI, IRBuilder<> &Builder) {
   // Select == nullptr means we assume that there is a hidden no-op select
-  // instruction of `_ = select %icmp, true, false` just after `%icmp = icmp ...`
+  // instruction of `_ = select %icmp, true, false` after `%icmp = icmp ...`
   return tryToSimplifyUncondBranchWithICmpSelectInIt(ICI, nullptr, Builder);
 }
 
