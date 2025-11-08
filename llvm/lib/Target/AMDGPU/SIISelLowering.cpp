@@ -16892,7 +16892,11 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
     return SDValue();
 
   switch (N->getOpcode()) {
- case ISD::ADD:
+  case ISD::ABS:
+    if (N->getValueType(0) == MVT::i16 || N->getValueType(0) == MVT::i8)
+      return lowerABSi16(SDValue(N,0), DCI.DAG);
+    break;
+  case ISD::ADD:
     return performAddCombine(N, DCI);
   case ISD::PTRADD:
     return performPtrAddCombine(N, DCI);
