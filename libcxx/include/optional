@@ -210,6 +210,7 @@ namespace std {
 #  include <__iterator/wrap_iter.h>
 #  include <__memory/addressof.h>
 #  include <__memory/construct_at.h>
+#  include <__ranges/enable_borrowed_range.h>
 #  include <__ranges/enable_view.h>
 #  include <__tuple/sfinae_helpers.h>
 #  include <__type_traits/add_pointer.h>
@@ -594,6 +595,10 @@ constexpr bool ranges::enable_view<optional<_Tp>> = true;
 
 template <class _Tp>
 constexpr range_format format_kind<optional<_Tp>> = range_format::disabled;
+
+template <class _Tp>
+constexpr bool ranges::enable_borrowed_range<optional<_Tp&>> = true;
+
 #    endif
 
 #    if _LIBCPP_STD_VER >= 20
