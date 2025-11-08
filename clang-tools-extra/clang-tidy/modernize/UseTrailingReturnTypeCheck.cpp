@@ -55,7 +55,7 @@ public:
 
   bool visitUnqualName(StringRef UnqualName) {
     // Check for collisions with function arguments.
-    for (ParmVarDecl *Param : F.parameters())
+    for (const ParmVarDecl *Param : F.parameters())
       if (const IdentifierInfo *Ident = Param->getIdentifier())
         if (Ident->getName() == UnqualName) {
           Collision = true;
@@ -126,7 +126,7 @@ public:
   }
 
   bool VisitDeclRefExpr(DeclRefExpr *S) {
-    DeclarationName Name = S->getNameInfo().getName();
+    const DeclarationName Name = S->getNameInfo().getName();
     return S->getQualifierLoc() || Name.isEmpty() || !Name.isIdentifier() ||
            !visitUnqualName(Name.getAsIdentifierInfo()->getName());
   }
@@ -159,14 +159,14 @@ static SourceLocation findTrailingReturnTypeSourceLocation(
     const FunctionDecl &F, const FunctionTypeLoc &FTL, const ASTContext &Ctx,
     const SourceManager &SM, const LangOptions &LangOpts) {
   // We start with the location of the closing parenthesis.
-  SourceRange ExceptionSpecRange = F.getExceptionSpecSourceRange();
+  const SourceRange ExceptionSpecRange = F.getExceptionSpecSourceRange();
   if (ExceptionSpecRange.isValid())
     return Lexer::getLocForEndOfToken(ExceptionSpecRange.getEnd(), 0, SM,
                                       LangOpts);
 
   // If the function argument list ends inside of a macro, it is dangerous to
   // start lexing from here - bail out.
-  SourceLocation ClosingParen = FTL.getRParenLoc();
+  const SourceLocation ClosingParen = FTL.getRParenLoc();
   if (ClosingParen.isMacroID())
     return {};
 
@@ -174,8 +174,8 @@ static SourceLocation findTrailingReturnTypeSourceLocation(
       Lexer::getLocForEndOfToken(ClosingParen, 0, SM, LangOpts);
 
   // Skip subsequent CV and ref qualifiers.
-  std::pair<FileID, unsigned> Loc = SM.getDecomposedLoc(Result);
-  StringRef File = SM.getBufferData(Loc.first);
+  const std::pair<FileID, unsigned> Loc = SM.getDecomposedLoc(Result);
+  const StringRef File = SM.getBufferData(Loc.first);
   const char *TokenBegin = File.data() + Loc.second;
   Lexer Lexer(SM.getLocForStartOfFile(Loc.first), LangOpts, File.begin(),
               TokenBegin, File.end());
@@ -220,7 +220,7 @@ classifyToken(const FunctionDecl &F, Preprocessor &PP, Token Tok) {
   Token End;
   End.startToken();
   End.setKind(tok::eof);
-  SmallVector<Token, 2> Stream{Tok, End};
+  const SmallVector<Token, 2> Stream{Tok, End};
 
   // FIXME: do not report these token to Preprocessor.TokenWatcher.
   PP.EnterTokenStream(Stream, false, /*IsReinject=*/false);
@@ -230,8 +230,8 @@ classifyToken(const FunctionDecl &F, Preprocessor &PP, Token Tok) {
     if (T.is(tok::eof))
       break;
 
-    bool Qual = isCvr(T);
-    bool Spec = isSpecifier(T);
+    const bool Qual = isCvr(T);
+    const bool Spec = isSpecifier(T);
     CT.IsQualifier &= Qual;
     CT.IsSpecifier &= Spec;
     ContainsQualifiers |= Qual;
@@ -252,12 +252,12 @@ classifyTokensBeforeFunctionName(const FunctionDecl &F, const ASTContext &Ctx,
                                  const SourceManager &SM,
                                  const LangOptions &LangOpts,
                                  Preprocessor *PP) {
-  SourceLocation BeginF = expandIfMacroId(F.getBeginLoc(), SM);
-  SourceLocation BeginNameF = expandIfMacroId(F.getLocation(), SM);
+  const SourceLocation BeginF = expandIfMacroId(F.getBeginLoc(), SM);
+  const SourceLocation BeginNameF = expandIfMacroId(F.getLocation(), SM);
 
   // Create tokens for everything before the name of the function.
-  std::pair<FileID, unsigned> Loc = SM.getDecomposedLoc(BeginF);
-  StringRef File = SM.getBufferData(Loc.first);
+  const std::pair<FileID, unsigned> Loc = SM.getDecomposedLoc(BeginF);
+  const StringRef File = SM.getBufferData(Loc.first);
   const char *TokenBegin = File.data() + Loc.second;
   Lexer Lexer(SM.getLocForStartOfFile(Loc.first), LangOpts, File.begin(),
               TokenBegin, File.end());
@@ -369,9 +369,9 @@ static SourceLocation findLambdaTrailingReturnInsertLoc(
     else
       ParamEndLoc = Method->getParametersSourceRange().getEnd();
 
-    std::pair<FileID, unsigned> ParamEndLocInfo =
+    const std::pair<FileID, unsigned> ParamEndLocInfo =
         SM.getDecomposedLoc(ParamEndLoc);
-    StringRef Buffer = SM.getBufferData(ParamEndLocInfo.first);
+    const StringRef Buffer = SM.getBufferData(ParamEndLocInfo.first);
 
     Lexer Lexer(SM.getLocForStartOfFile(ParamEndLocInfo.first), LangOpts,
                 Buffer.begin(), Buffer.data() + ParamEndLocInfo.second,
@@ -421,11 +421,11 @@ static void keepSpecifiers(std::string &ReturnType, std::string &Auto,
     return;
 
   // Find specifiers, remove them from the return type, add them to 'auto'.
-  unsigned int ReturnTypeBeginOffset =
+  const unsigned int ReturnTypeBeginOffset =
       SM.getDecomposedLoc(ReturnTypeCVRange.getBegin()).second;
-  size_t InitialAutoLength = Auto.size();
+  const size_t InitialAutoLength = Auto.size();
   unsigned int DeletedChars = 0;
-  for (ClassifiedToken CT : *MaybeTokens) {
+  for (const ClassifiedToken CT : *MaybeTokens) {
     if (SM.isBeforeInTranslationUnit(CT.T.getLocation(),
                                      ReturnTypeCVRange.getBegin()) ||
         SM.isBeforeInTranslationUnit(ReturnTypeCVRange.getEnd(),
@@ -436,10 +436,11 @@ static void keepSpecifiers(std::string &ReturnType, std::string &Auto,
 
     // Add the token to 'auto' and remove it from the return type, including
     // any whitespace following the token.
-    unsigned int TOffset = SM.getDecomposedLoc(CT.T.getLocation()).second;
+    const unsigned int TOffset = SM.getDecomposedLoc(CT.T.getLocation()).second;
     assert(TOffset >= ReturnTypeBeginOffset &&
            "Token location must be after the beginning of the return type");
-    unsigned int TOffsetInRT = TOffset - ReturnTypeBeginOffset - DeletedChars;
+    const unsigned int TOffsetInRT =
+        TOffset - ReturnTypeBeginOffset - DeletedChars;
     unsigned int TLengthWithWS = CT.T.getLength();
     while (TOffsetInRT + TLengthWithWS < ReturnType.size() &&
            llvm::isSpace(ReturnType[TOffsetInRT + TLengthWithWS]))
@@ -548,7 +549,7 @@ void UseTrailingReturnTypeCheck::check(const MatchFinder::MatchResult &Result) {
     return;
   }
 
-  SourceLocation InsertionLoc =
+  const SourceLocation InsertionLoc =
       findTrailingReturnTypeSourceLocation(*F, FTL, Ctx, SM, LangOpts);
   if (InsertionLoc.isInvalid()) {
     diag(F->getLocation(), ErrorMessageOnFunction);
@@ -558,7 +559,7 @@ void UseTrailingReturnTypeCheck::check(const MatchFinder::MatchResult &Result) {
   // Using the declared return type via F->getDeclaredReturnType().getAsString()
   // discards user formatting and order of const, volatile, type, whitespace,
   // space before & ... .
-  SourceRange ReturnTypeCVRange = findReturnTypeAndCVSourceRange(
+  const SourceRange ReturnTypeCVRange = findReturnTypeAndCVSourceRange(
       *F, FTL.getReturnLoc(), Ctx, SM, LangOpts, PP);
   if (ReturnTypeCVRange.isInvalid()) {
     diag(F->getLocation(), ErrorMessageOnFunction);
@@ -580,13 +581,13 @@ void UseTrailingReturnTypeCheck::check(const MatchFinder::MatchResult &Result) {
     return;
   }
 
-  SourceLocation ReturnTypeEnd =
+  const SourceLocation ReturnTypeEnd =
       Lexer::getLocForEndOfToken(ReturnTypeCVRange.getEnd(), 0, SM, LangOpts);
-  StringRef CharAfterReturnType = Lexer::getSourceText(
+  const StringRef CharAfterReturnType = Lexer::getSourceText(
       CharSourceRange::getCharRange(ReturnTypeEnd,
                                     ReturnTypeEnd.getLocWithOffset(1)),
       SM, LangOpts);
-  bool NeedSpaceAfterAuto =
+  const bool NeedSpaceAfterAuto =
       CharAfterReturnType.empty() || !llvm::isSpace(CharAfterReturnType[0]);
 
   std::string Auto = NeedSpaceAfterAuto ? "auto " : "auto";

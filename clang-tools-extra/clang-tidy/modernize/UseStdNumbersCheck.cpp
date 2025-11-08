@@ -307,7 +307,7 @@ UseStdNumbersCheck::UseStdNumbersCheck(const StringRef Name,
 
 void UseStdNumbersCheck::registerMatchers(MatchFinder *const Finder) {
   const auto Matches = MatchBuilder{DiffThreshold};
-  std::vector<Matcher<clang::Stmt>> ConstantMatchers = {
+  const std::vector<Matcher<clang::Stmt>> ConstantMatchers = {
       Matches.matchLog2Euler(),     Matches.matchLog10Euler(),
       Matches.matchEulerTopLevel(), Matches.matchEgamma(),
       Matches.matchInvSqrtPi(),     Matches.matchInvPi(),
