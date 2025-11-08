@@ -69,7 +69,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y skopeo
           #skopeo login -u ${{ github.actor }} -p $env:GITHUB_TOKEN ghcr.io
-          skopeo copy ${{ needs.build-ci-container-windows.outputs.container-filename }} \
+          skopeo copy docker-archive:${{ needs.build-ci-container-windows.outputs.container-filename }} \
             --additional-tag=latest \
             --dest-compress-format zstd \
             oci:/tmp/blah.tar
