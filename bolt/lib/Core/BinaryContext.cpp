@@ -2346,9 +2346,38 @@ DEBUG_WITH_TYPE("bolt-flags", {
   Section.Name = NewName.str();
   Section.setOutputName(Section.Name);
 
-  NameToSection.insert(std::make_pair(Section.Name, &Section));
 
+  // --- org-sanitize block (insert here) ---
+  static constexpr char kOrgPrefix[] = ".bolt.org";
+  llvm::StringRef NewNameRef(Section.Name);
+
+  if (NewNameRef.starts_with(kOrgPrefix)) {  
+    unsigned F = Section.getELFFlags();
+    F &= ~(llvm::ELF::SHF_ALLOC | llvm::ELF::SHF_EXECINSTR);
+    F |=  llvm::ELF::SHF_EXCLUDE;
+
+    // Mutate the SAME object; don't re-enter the factory.
+    Section.update(/*Data=*/Section.getData(),
+                   /*Size=*/Section.getSize(),
+                   /*Alignment=*/Section.getAlignment(),
+                   /*ELFType=*/llvm::ELF::SHT_PROGBITS,
+                   /*ELFFlags=*/F);
+
+    Section.setLinkOnly();
+    Section.setAnonymous(true);
+
+    DEBUG_WITH_TYPE("bolt-flags", {
+      const unsigned NF = Section.getELFFlags();
+      dbgs() << "[renameSection] org-sanitize " << NewNameRef
+             << " flags=0x" << llvm::format_hex(NF, 8)
+             << " (ALLOC=" << ((NF & llvm::ELF::SHF_ALLOC) ? "yes":"no")
+             << ", EXEC="  << ((NF & llvm::ELF::SHF_EXECINSTR) ? "yes":"no")
+             << ", EXCL="  << ((NF & llvm::ELF::SHF_EXCLUDE) ? "yes":"no")
+             << ")\n";
+    });
+  }
   // Reinsert with the new name.
+  NameToSection.insert(std::make_pair(Section.Name, &Section));
   Sections.insert(&Section);
 
 DEBUG_WITH_TYPE("bolt-flags", {
