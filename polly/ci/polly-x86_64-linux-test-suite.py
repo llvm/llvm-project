@@ -7,7 +7,7 @@ import pathlib
 # Adapt to location in source tree
 llvmsrcroot = os.path.normpath(f"{__file__}/../../..")
 
-sys.path.insert(0, os.path.join(llvmsrcroot, '.buildbot/common'))
+sys.path.insert(0, os.path.join(llvmsrcroot, '.ci/buildbot'))
 import worker
 
 
