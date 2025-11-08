@@ -209,7 +209,7 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 _EndNodePtr __tree_ne
     return std::__static_fancy_pointer_cast<_EndNodePtr>(std::__tree_min(__x->__right_));
   while (!std::__tree_is_left_child(__x))
     __x = __x->__parent_unsafe();
-  return static_cast<_EndNodePtr>(__x->__parent_);
+  return std::__static_fancy_pointer_cast<_EndNodePtr>(__x->__parent_);
 }
 
 // Returns:  pointer to the previous in-order node before __x.
@@ -620,13 +620,10 @@ public:
 
 // This line fails with:
 // libcxx/test-suite-install/include/c++/v1/__memory/construct_at.h:38:49: note: non-literal type
-// 'std::__tree_node<std::__value_type<Key, int>, void *>' cannot be used in a constant expression
-//
+// `'std::__tree_node<std::__value_type<Key, int>, void *>' cannot be used in a constant expression`
 // during constant evaluation as part of P3372
 // on:
-// 1. Arm CI which is on clang 19.x (will be fixed in: https://github.com/llvm/llvm-project/issues/161159 )
-// 2. AppleClang is not yet using clang >= 20.x, which has "fixed" this issue
-// 3. A few others like FreeBSD/amd64, AArch64, AIX
+// 1. AppleClang, which is not yet using clang >= 20.x, which has "fixed" this issue
 // FIXME: when AppleClang is based off of clang >= 20.x
 // FIXME: when Clang-based CI is using clang >= 20.x
 #if (defined(_LIBCPP_CLANG_VER) && _LIBCPP_CLANG_VER < 2000) ||                                                        \
@@ -1069,10 +1066,10 @@ public:
 #if _LIBCPP_STD_VER >= 26
     if (std::is_constant_evaluated() && std::is_copy_constructible_v<decltype(__value.first)>) {
       // We create a sfinae wrapper method here, because if the __emplace_hint_unique method gets template instantiated
-      // within __insert_unique_from_orphaned_node, the code will fail to compile where the value is not
-      // copy_constructible for runtime execution as well; unless we use `if constexpr`. Given the copy-constructible
+      // within __insert_unique_from_orphaned_node, the code will fail to compile when the value is not
+      // copy_constructible (even for runtime execution); unless we use `if constexpr`. Given the copy-constructible
       // code path will be a performance regression, we want to restrict it to only execute during constant evaluation
-      //, we need to delay the template instantiation
+      // , hence, we need to delay the template instantiation.
       __emplace_hint_unique__sfinae(
           integral_constant< bool, std::is_copy_constructible_v<decltype(__value.first)> >(),
           __p,
@@ -1426,7 +1423,7 @@ private:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void
   __assign_value__sfinae(false_type, __get_node_value_type_t<value_type>&, _From&&) {
     // This method body should never be run. It only exists to allow for compilation. See note in __assign_value for
-    // more information
+    // more information.
   }
 
   template <class _From, class _ValueT = _Tp, __enable_if_t<__is_tree_value_type_v<_ValueT>, int> = 0>
@@ -1437,22 +1434,23 @@ private:
 #if _LIBCPP_STD_VER >= 26
 
     if (std::is_constant_evaluated() && std::is_copy_constructible_v<decltype(__rhs.first)>) {
-      // we use copy, and not "move" as the constraint
-      // because we can NOT move from `const key_type`, which is how `value_type` is defined
-      // atleast for map
-      // typedef pair<const key_type, mapped_type> value_type;
-      // so we must copy it
+      // We use copy, and not "move" as the constraint here because we can NOT move
+      // from `const key_type`, which is how `value_type` is defined for `std::map`
+      // `typedef pair<const key_type, mapped_type> value_type;`
+      // so we must copy it to not perform undefined behavior which
+      // is disallowed during constant evaluation.
 
-      // const_cast is not allowed at constexpr time.
-      // we get around this by deleting __lhs and creating a new node in-place
-      // to avoid const_cast __lhs.first
+      // Furthermore, `const_cast` is not allowed during constant evaluation.
+      // We get around this by deleting `__lhs` and creating a new node in-place
+      // to avoid the `const_cast` when attempting to assign to `__lhs.first`.
 
-      // We create a sfinae wrapper method here, because if the body of the true_type overload for
-      // __assign_value__sfinae() gets template instantiated within __assign_value, the code will fail to compile where
-      // the value is not copy_constructible for runtime execution as well; unless we use `if constexpr`. Given the
-      // copy-constructible code path will be a performance regression, we want to restrict it to only execute during
-      // constant evaluation
-      //, we need to delay the template instantiation
+      // We create a sfinae wrapper method here, because if the body of the `true_type` overload for
+      // `__assign_value__sfinae()` gets template instantiated within `__assign_value`,
+      // the code will fail to compile when
+      // the value is not copy_constructible (even for runtime execution); unless we use `if constexpr`.
+      // Given that the copy-constructible code path will be a performance regression,
+      // we want to restrict it to only execute during constant evaluation
+      //, we need to delay the template instantiation.
 
       __assign_value__sfinae(std::integral_constant<bool, std::is_copy_constructible_v<decltype(__rhs.first)>>(),
                              std::forward<decltype(__lhs)>(__lhs),
@@ -1493,7 +1491,7 @@ private:
       __t_->destroy(__cache_elem_);
       if (__cache_root_) {
         while (__cache_root_->__parent_ != nullptr)
-          __cache_root_ = static_cast<__node_pointer>(__cache_root_->__parent_);
+          __cache_root_ = std::__static_fancy_pointer_cast<__node_pointer>(__cache_root_->__parent_);
         __t_->destroy(__cache_root_);
       }
     }
@@ -1639,14 +1637,14 @@ __tree<_Tp, _Compare, _Allocator>::_DetachedTreeCache::__detach_next(__node_poin
     __cache                     = std::__static_fancy_pointer_cast<__node_pointer>(__cache->__parent_);
     if (__cache->__right_ == nullptr)
       return __cache;
-    return static_cast<__node_pointer>(std::__tree_leaf(__cache->__right_));
+    return std::__static_fancy_pointer_cast<__node_pointer>(std::__tree_leaf(__cache->__right_));
   }
   // __cache is right child
   __cache->__parent_unsafe()->__right_ = nullptr;
   __cache                              = std::__static_fancy_pointer_cast<__node_pointer>(__cache->__parent_);
   if (__cache->__left_ == nullptr)
     return __cache;
-  return static_cast<__node_pointer>(std::__tree_leaf(__cache->__left_));
+  return std::__static_fancy_pointer_cast<__node_pointer>(std::__tree_leaf(__cache->__left_));
 }
 
 template <class _Tp, class _Compare, class _Allocator>
@@ -1741,7 +1739,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX26 __tree<_Tp, _Compare, _Allocator>::__tree(__tree&&
   if (__size_ == 0)
     __begin_node_ = __end_node();
   else {
-    __end_node()->__left_->__parent_ = static_cast<__end_node_pointer>(__end_node());
+    __end_node()->__left_->__parent_ = std::__static_fancy_pointer_cast<__end_node_pointer>(__end_node());
     __t.__begin_node_                = __t.__end_node();
     __t.__end_node()->__left_        = nullptr;
     __t.__size_                      = 0;
@@ -1757,7 +1755,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX26 __tree<_Tp, _Compare, _Allocator>::__tree(__tree&&
     else {
       __begin_node_                    = __t.__begin_node_;
       __end_node()->__left_            = __t.__end_node()->__left_;
-      __end_node()->__left_->__parent_ = static_cast<__end_node_pointer>(__end_node());
+      __end_node()->__left_->__parent_ = std::__static_fancy_pointer_cast<__end_node_pointer>(__end_node());
       __size_                          = __t.__size_;
       __t.__begin_node_                = __t.__end_node();
       __t.__end_node()->__left_        = nullptr;
@@ -1771,7 +1769,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX26 __tree<_Tp, _Compare, _Allocator>::__tree(__tree&&
 template <class _Tp, class _Compare, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX26 void __tree<_Tp, _Compare, _Allocator>::__move_assign(__tree& __t, true_type)
     _NOEXCEPT_(is_nothrow_move_assignable<value_compare>::value&& is_nothrow_move_assignable<__node_allocator>::value) {
-  destroy(static_cast<__node_pointer>(__end_node()->__left_));
+  destroy(std::__static_fancy_pointer_cast<__node_pointer>(__end_node()->__left_));
   __begin_node_ = __t.__begin_node_;
   __end_node_   = __t.__end_node_;
   __move_assign_alloc(__t);
@@ -1780,7 +1778,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX26 void __tree<_Tp, _Compare, _Allocator>::__move_ass
   if (__size_ == 0)
     __begin_node_ = __end_node();
   else {
-    __end_node()->__left_->__parent_ = static_cast<__end_node_pointer>(__end_node());
+    __end_node()->__left_->__parent_ = std::__static_fancy_pointer_cast<__end_node_pointer>(__end_node());
     __t.__begin_node_                = __t.__end_node();
     __t.__end_node()->__left_        = nullptr;
     __t.__size_                      = 0;
@@ -1852,16 +1850,16 @@ __tree<_Tp, _Compare, _Allocator>::__find_leaf_low(__end_node_pointer& __parent,
     while (true) {
       if (value_comp()(__nd->__get_value(), __v)) {
         if (__nd->__right_ != nullptr)
-          __nd = static_cast<__node_pointer>(__nd->__right_);
+          __nd = std::__static_fancy_pointer_cast<__node_pointer>(__nd->__right_);
         else {
-          __parent = static_cast<__end_node_pointer>(__nd);
+          __parent = std::__static_fancy_pointer_cast<__end_node_pointer>(__nd);
           return __nd->__right_;
         }
       } else {
         if (__nd->__left_ != nullptr)
-          __nd = static_cast<__node_pointer>(__nd->__left_);
+          __nd = std::__static_fancy_pointer_cast<__node_pointer>(__nd->__left_);
         else {
-          __parent = static_cast<__end_node_pointer>(__nd);
+          __parent = std::__static_fancy_pointer_cast<__end_node_pointer>(__nd);
           return __parent->__left_;
         }
       }
@@ -1918,10 +1916,10 @@ __tree<_Tp, _Compare, _Allocator>::__find_leaf(
     if (__prior == begin() || !value_comp()(__v, *--__prior)) {
       // *prev(__hint) <= __v <= *__hint
       if (__hint.__ptr_->__left_ == nullptr) {
-        __parent = static_cast<__end_node_pointer>(__hint.__ptr_);
+        __parent = std::__static_fancy_pointer_cast<__end_node_pointer>(__hint.__ptr_);
         return __parent->__left_;
       } else {
-        __parent = static_cast<__end_node_pointer>(__prior.__ptr_);
+        __parent = std::__static_fancy_pointer_cast<__end_node_pointer>(__prior.__ptr_);
         return std::__static_fancy_pointer_cast<__node_base_pointer>(__prior.__ptr_)->__right_;
       }
     }
@@ -2008,7 +2006,7 @@ __tree<_Tp, _Compare, _Allocator>::__find_equal(const_iterator __hint, __node_ba
     if (__next == end() || value_comp()(__v, *__next)) {
       // *__hint < __v < *std::next(__hint)
       if (__hint.__get_np()->__right_ == nullptr)
-        return _Pair(__hint.__ptr_, static_cast<__node_pointer>(__hint.__ptr_)->__right_);
+        return _Pair(__hint.__ptr_, std::__static_fancy_pointer_cast<__node_pointer>(__hint.__ptr_)->__right_);
       return _Pair(__next.__ptr_, __next.__ptr_->__left_);
     }
     // *next(__hint) <= __v
@@ -2016,7 +2014,7 @@ __tree<_Tp, _Compare, _Allocator>::__find_equal(const_iterator __hint, __node_ba
   }
 
   // else __v == *__hint
-  __dummy = static_cast<__node_base_pointer>(__hint.__ptr_);
+  __dummy = std::__static_fancy_pointer_cast<__node_base_pointer>(__hint.__ptr_);
   return _Pair(__hint.__ptr_, __dummy);
 }
 
@@ -2064,14 +2062,14 @@ __tree<_Tp, _Compare, _Allocator>::__emplace_hint_multi(const_iterator __p, _Arg
   __end_node_pointer __parent;
   __node_base_pointer& __child = __find_leaf(__p, __parent, __h->__get_value());
   __insert_node_at(__parent, __child, std::__static_fancy_pointer_cast<__node_base_pointer>(__h.get()));
-  return iterator(static_cast<__node_pointer>(__h.release()));
+  return iterator(std::__static_fancy_pointer_cast<__node_pointer>(__h.release()));
 }
 
 template <class _Tp, class _Compare, class _Allocator>
 pair<typename __tree<_Tp, _Compare, _Allocator>::iterator, bool> _LIBCPP_CONSTEXPR_SINCE_CXX26
 __tree<_Tp, _Compare, _Allocator>::__node_assign_unique(const value_type& __v, __node_pointer __nd) {
   auto [__parent, __child] = __find_equal(__v);
-  __node_pointer __r       = static_cast<__node_pointer>(__child);
+  __node_pointer __r       = std::__static_fancy_pointer_cast<__node_pointer>(__child);
   bool __inserted          = false;
   if (__child == nullptr) {
     __assign_value(__nd->__get_value(), __v);
@@ -2096,7 +2094,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX26 typename __tree<_Tp, _Compare, _Allocator>::iterat
 __tree<_Tp, _Compare, _Allocator>::__node_insert_multi(const_iterator __p, __node_pointer __nd) {
   __end_node_pointer __parent;
   __node_base_pointer& __child = __find_leaf(__p, __parent, __nd->__get_value());
-  __insert_node_at(__parent, __child, static_cast<__node_base_pointer>(__nd));
+  __insert_node_at(__parent, __child, std::__static_fancy_pointer_cast<__node_base_pointer>(__nd));
   return iterator(__nd);
 }
 
@@ -2123,9 +2121,10 @@ __tree<_Tp, _Compare, _Allocator>::__node_handle_insert_unique(_NodeHandle&& __n
   __node_pointer __ptr = __nh.__ptr_;
   auto [__parent, __child] = __find_equal(__ptr->__get_value());
   if (__child != nullptr)
-    return _InsertReturnType{iterator(static_cast<__node_pointer>(__child)), false, std::move(__nh)};
+    return _InsertReturnType{
+        iterator(std::__static_fancy_pointer_cast<__node_pointer>(__child)), false, std::move(__nh)};
 
-  __insert_node_at(__parent, __child, static_cast<__node_base_pointer>(__ptr));
+  __insert_node_at(__parent, __child, std::__static_fancy_pointer_cast<__node_base_pointer>(__ptr));
   __nh.__release_ptr();
   return _InsertReturnType{iterator(__ptr), true, _NodeHandle()};
 }
@@ -2140,9 +2139,9 @@ __tree<_Tp, _Compare, _Allocator>::__node_handle_insert_unique(const_iterator __
   __node_pointer __ptr = __nh.__ptr_;
   __node_base_pointer __dummy;
   auto [__parent, __child] = __find_equal(__hint, __dummy, __ptr->__get_value());
-  __node_pointer __r       = static_cast<__node_pointer>(__child);
+  __node_pointer __r       = std::__static_fancy_pointer_cast<__node_pointer>(__child);
   if (__child == nullptr) {
-    __insert_node_at(__parent, __child, static_cast<__node_base_pointer>(__ptr));
+    __insert_node_at(__parent, __child, std::__static_fancy_pointer_cast<__node_base_pointer>(__ptr));
     __r = __ptr;
     __nh.__release_ptr();
   }
@@ -2179,7 +2178,7 @@ __tree<_Tp, _Compare, _Allocator>::__node_handle_merge_unique(__tree<_Tp, _Comp2
     if (__child != nullptr)
       continue;
     __source.__remove_node_pointer(__src_ptr);
-    __insert_node_at(__parent, __child, static_cast<__node_base_pointer>(__src_ptr));
+    __insert_node_at(__parent, __child, std::__static_fancy_pointer_cast<__node_base_pointer>(__src_ptr));
   }
 }
 
@@ -2222,7 +2221,7 @@ __tree<_Tp, _Compare, _Allocator>::__node_handle_merge_multi(__tree<_Tp, _Comp2,
     __node_base_pointer& __child = __find_leaf_high(__parent, __src_ptr->__get_value());
     ++__i;
     __source.__remove_node_pointer(__src_ptr);
-    __insert_node_at(__parent, __child, static_cast<__node_base_pointer>(__src_ptr));
+    __insert_node_at(__parent, __child, std::__static_fancy_pointer_cast<__node_base_pointer>(__src_ptr));
   }
 }
 
@@ -2478,12 +2477,12 @@ __tree<_Tp, _Compare, _Allocator>::remove(const_iterator __p) _NOEXCEPT {
   __node_pointer __np = __p.__get_np();
   if (__begin_node_ == __p.__ptr_) {
     if (__np->__right_ != nullptr)
-      __begin_node_ = static_cast<__end_node_pointer>(__np->__right_);
+      __begin_node_ = std::__static_fancy_pointer_cast<__end_node_pointer>(__np->__right_);
     else
-      __begin_node_ = static_cast<__end_node_pointer>(__np->__parent_);
+      __begin_node_ = std::__static_fancy_pointer_cast<__end_node_pointer>(__np->__parent_);
   }
   --__size_;
-  std::__tree_remove(__end_node()->__left_, static_cast<__node_base_pointer>(__np));
+  std::__tree_remove(__end_node()->__left_, std::__static_fancy_pointer_cast<__node_base_pointer>(__np));
   return __node_holder(__np, _Dp(__node_alloc(), true));
 }
 

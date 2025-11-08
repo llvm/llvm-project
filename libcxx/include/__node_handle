@@ -30,28 +30,28 @@ private:
 
 public:
   // [container.node.cons], constructors, copy, and assignment
-  constexpr node-handle() noexcept : ptr_(), alloc_() {} // constexpr since C++26
-  node-handle(node-handle&&) noexcept; // constexpr since C++26
-  node-handle& operator=(node-handle&&); // constexpr since C++26
+  constexpr node-handle() noexcept : ptr_(), alloc_() {}
+  constexpr node-handle(node-handle&&) noexcept;         // constexpr since C++26
+  constexpr node-handle& operator=(node-handle&&);       // constexpr since C++26
 
   // [container.node.dtor], destructor
-  ~node-handle(); // constexpr since C++26
+  constexpr ~node-handle(); // constexpr since C++26
 
   // [container.node.observers], observers
-  value_type& value() const;            // not present for map containers
-  key_type& key() const;                // not present for set containers
-  mapped_type& mapped() const;          // not present for set containers // constexpr since C++26
+  value_type& value() const;             // not present for map containers
+  key_type& key() const;                 // not present for set containers
+  constexpr mapped_type& mapped() const; // not present for set containers, constexpr since C++26
 
-  allocator_type get_allocator() const; // constexpr since C++26
-  explicit operator bool() const noexcept; // constexpr since C++26
-  [[nodiscard]] bool empty() const noexcept; // nodiscard since C++20 // constexpr since C++26
+  constexpr allocator_type get_allocator() const;      // constexpr since C++26
+  constexpr explicit operator bool() const noexcept;   // constexpr since C++26
+  [[nodiscard]] constexpr bool empty() const noexcept; // nodiscard since C++20, constexpr since C++26
 
   // [container.node.modifiers], modifiers
-  void swap(node-handle&)
+  constexpr void swap(node-handle&)
     noexcept(ator_traits::propagate_on_container_swap::value ||
              ator_traits::is_always_equal::value); // constexpr since C++26
 
-  friend void swap(node-handle& x, node-handle& y) noexcept(noexcept(x.swap(y))) {
+  constexpr friend void swap(node-handle& x, node-handle& y) noexcept(noexcept(x.swap(y))) {
     x.swap(y);
   } // constexpr since C++26
 };
