@@ -347,7 +347,7 @@ using __tuple_common_comparison_category _LIBCPP_NODEBUG =
 
 // __tuple_leaf
 
-template <size_t _Ip, class _Hp, bool = is_empty<_Hp>::value && !__libcpp_is_final<_Hp>::value >
+template <size_t _Ip, class _Hp, bool = is_empty<_Hp>::value && !__is_final_v<_Hp> >
 class __tuple_leaf;
 
 template <size_t _Ip, class _Hp, bool _Ep>

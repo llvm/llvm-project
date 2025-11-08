@@ -19,7 +19,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp>
-struct __libcpp_is_final : integral_constant<bool, __is_final(_Tp)> {};
+inline const bool __is_final_v = __is_final(_Tp);
 
 #if _LIBCPP_STD_VER >= 14
 template <class _Tp>
