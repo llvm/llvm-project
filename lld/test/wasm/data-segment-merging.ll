@@ -15,11 +15,11 @@
 
 ; MERGE-LABEL: - Type:            DATA
 ; MERGE-NEXT:    Segments:
-; MERGE-NEXT:      - SectionOffset:   7
+; MERGE-NEXT:      - SectionOffset:   8
 ; MERGE-NEXT:        InitFlags:       0
 ; MERGE-NEXT:        Offset:
 ; MERGE:             Content:         636F6E7374616E74000000002B
-; MERGE-NEXT:      - SectionOffset:   26
+; MERGE-NEXT:      - SectionOffset:   28
 ; MERGE-NEXT:        InitFlags:       0
 ; MERGE-NEXT:        Offset:
 ; MERGE:             Content:         68656C6C6F00676F6F6462796500776861746576657200002A000000
@@ -41,27 +41,27 @@
 ; SEPARATE-NOT:                  DATACOUNT
 ; SEPARATE-LABEL: - Type:            DATA
 ; SEPARATE-NEXT:    Segments:
-; SEPARATE-NEXT:      - SectionOffset:   7
+; SEPARATE-NEXT:      - SectionOffset:   8
 ; SEPARATE-NEXT:        InitFlags:       0
 ; SEPARATE-NEXT:        Offset:
 ; SEPARATE:             Content:         636F6E7374616E7400
-; SEPARATE-NEXT:      - SectionOffset:   22
+; SEPARATE-NEXT: - SectionOffset: 24
 ; SEPARATE-NEXT:        InitFlags:       0
 ; SEPARATE-NEXT:        Offset:
 ; SEPARATE:             Content:         2B
-; SEPARATE-NEXT:      - SectionOffset:   29
+; SEPARATE-NEXT:      - SectionOffset:   32
 ; SEPARATE-NEXT:        InitFlags:       0
 ; SEPARATE-NEXT:        Offset:
 ; SEPARATE:             Content:         68656C6C6F00
-; SEPARATE-NEXT:      - SectionOffset:   41
+; SEPARATE-NEXT:      - SectionOffset:   45
 ; SEPARATE-NEXT:        InitFlags:       0
 ; SEPARATE-NEXT:        Offset:
 ; SEPARATE:             Content:         676F6F6462796500
-; SEPARATE-NEXT:      - SectionOffset:   55
+; SEPARATE-NEXT:      - SectionOffset:   60
 ; SEPARATE-NEXT:        InitFlags:       0
 ; SEPARATE-NEXT:        Offset:
 ; SEPARATE:             Content:         '776861746576657200'
-; SEPARATE-NEXT:      - SectionOffset:   70
+; SEPARATE-NEXT:      - SectionOffset:   76
 ; SEPARATE-NEXT:        InitFlags:       0
 ; SEPARATE-NEXT:        Offset:
 ; SEPARATE:             Content:         2A000000

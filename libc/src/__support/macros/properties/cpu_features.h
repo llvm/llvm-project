@@ -18,6 +18,18 @@
 #define LIBC_TARGET_CPU_HAS_FULLFP16
 #endif
 
+#if defined(__ARM_FEATURE_SVE)
+#define LIBC_TARGET_CPU_HAS_SVE
+#endif
+
+#if defined(__ARM_FEATURE_SVE2)
+#define LIBC_TARGET_CPU_HAS_SVE2
+#endif
+
+#if defined(__ARM_FEATURE_MOPS)
+#define LIBC_TARGET_CPU_HAS_MOPS
+#endif
+
 #if defined(__SSE2__)
 #define LIBC_TARGET_CPU_HAS_SSE2
 #define LIBC_TARGET_CPU_HAS_FPU_FLOAT

@@ -7,9 +7,9 @@
 int y;
 
 // ALLOW-LABEL: define {{[^@]+}}@foo
-// ALLOW-SAME: () local_unnamed_addr #[[ATTR0:[0-9]+]] !pcsections !2 {
+// ALLOW-SAME: () local_unnamed_addr #[[ATTR0:[0-9]+]] !pcsections !6 {
 // ALLOW-NEXT:  entry:
-// ALLOW-NEXT:    [[TMP0:%.*]] = atomicrmw add ptr @y, i32 1 monotonic, align 4, !pcsections !4
+// ALLOW-NEXT:    [[TMP0:%.*]] = atomicrmw add ptr @y, i32 1 monotonic, align 4, !pcsections !8
 // ALLOW-NEXT:    ret void
 //
 // FUN-LABEL: define {{[^@]+}}@foo
@@ -29,15 +29,15 @@ void foo() {
 }
 
 // ALLOW-LABEL: define {{[^@]+}}@bar
-// ALLOW-SAME: () local_unnamed_addr #[[ATTR0]] !pcsections !2 {
+// ALLOW-SAME: () local_unnamed_addr #[[ATTR0]] !pcsections !6 {
 // ALLOW-NEXT:  entry:
-// ALLOW-NEXT:    [[TMP0:%.*]] = atomicrmw add ptr @y, i32 2 monotonic, align 4, !pcsections !4
+// ALLOW-NEXT:    [[TMP0:%.*]] = atomicrmw add ptr @y, i32 2 monotonic, align 4, !pcsections !8
 // ALLOW-NEXT:    ret void
 //
 // FUN-LABEL: define {{[^@]+}}@bar
-// FUN-SAME: () local_unnamed_addr #[[ATTR0]] !pcsections !2 {
+// FUN-SAME: () local_unnamed_addr #[[ATTR0]] !pcsections !6 {
 // FUN-NEXT:  entry:
-// FUN-NEXT:    [[TMP0:%.*]] = atomicrmw add ptr @y, i32 2 monotonic, align 4, !pcsections !4
+// FUN-NEXT:    [[TMP0:%.*]] = atomicrmw add ptr @y, i32 2 monotonic, align 4, !pcsections !8
 // FUN-NEXT:    ret void
 //
 // SRC-LABEL: define {{[^@]+}}@bar

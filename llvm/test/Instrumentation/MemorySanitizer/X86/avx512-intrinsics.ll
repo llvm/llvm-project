@@ -2031,7 +2031,7 @@ define void @test_mask_store_ss(ptr %ptr, <4 x float> %data, i8 %mask) #0 {
 ; CHECK-NEXT:    [[TMP12:%.*]] = ptrtoint ptr [[PTR:%.*]] to i64
 ; CHECK-NEXT:    [[TMP13:%.*]] = xor i64 [[TMP12]], 87960930222080
 ; CHECK-NEXT:    [[TMP14:%.*]] = inttoptr i64 [[TMP13]] to ptr
-; CHECK-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> [[TMP2]], ptr [[TMP14]], i32 1, <4 x i1> [[EXTRACT]])
+; CHECK-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> [[TMP2]], ptr align 1 [[TMP14]], <4 x i1> [[EXTRACT]])
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP3]], 0
 ; CHECK-NEXT:    [[TMP15:%.*]] = bitcast <4 x i1> [[_MSPROP]] to i4
 ; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i4 [[TMP15]], 0
@@ -2041,7 +2041,7 @@ define void @test_mask_store_ss(ptr %ptr, <4 x float> %data, i8 %mask) #0 {
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR10]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       17:
-; CHECK-NEXT:    call void @llvm.masked.store.v4f32.p0(<4 x float> [[DATA:%.*]], ptr [[PTR]], i32 1, <4 x i1> [[EXTRACT]])
+; CHECK-NEXT:    call void @llvm.masked.store.v4f32.p0(<4 x float> [[DATA:%.*]], ptr align 1 [[PTR]], <4 x i1> [[EXTRACT]])
 ; CHECK-NEXT:    ret void
 ;
   %1 = and i8 %mask, 1

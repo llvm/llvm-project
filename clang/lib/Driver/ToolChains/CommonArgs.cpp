@@ -663,11 +663,11 @@ static std::string getAMDGPUTargetGPU(const llvm::Triple &T,
   if (Arg *A = Args.getLastArg(options::OPT_mcpu_EQ)) {
     auto GPUName = getProcessorFromTargetID(T, A->getValue());
     return llvm::StringSwitch<std::string>(GPUName)
-        .Cases("rv630", "rv635", "r600")
-        .Cases("rv610", "rv620", "rs780", "rs880")
+        .Cases({"rv630", "rv635"}, "r600")
+        .Cases({"rv610", "rv620", "rs780"}, "rs880")
         .Case("rv740", "rv770")
         .Case("palm", "cedar")
-        .Cases("sumo", "sumo2", "sumo")
+        .Cases({"sumo", "sumo2"}, "sumo")
         .Case("hemlock", "cypress")
         .Case("aruba", "cayman")
         .Default(GPUName.str());
@@ -947,6 +947,24 @@ bool tools::isTLSDESCEnabled(const ToolChain &TC,
         << A->getSpelling() << V << Triple.getTriple();
   }
   return EnableTLSDESC;
+}
+
+void tools::addDTLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
+                            llvm::opt::ArgStringList &CmdArgs) {
+  if (Arg *A = Args.getLastArg(options::OPT_fthinlto_distributor_EQ)) {
+    CmdArgs.push_back(
+        Args.MakeArgString("--thinlto-distributor=" + Twine(A->getValue())));
+    const Driver &D = ToolChain.getDriver();
+    CmdArgs.push_back(Args.MakeArgString("--thinlto-remote-compiler=" +
+                                         Twine(D.getClangProgramPath())));
+    if (auto *PA = D.getPrependArg())
+      CmdArgs.push_back(Args.MakeArgString(
+          "--thinlto-remote-compiler-prepend-arg=" + Twine(PA)));
+
+    for (const auto &A :
+         Args.getAllArgValues(options::OPT_Xthinlto_distributor_EQ))
+      CmdArgs.push_back(Args.MakeArgString("--thinlto-distributor-arg=" + A));
+  }
 }
 
 void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
@@ -1272,6 +1290,11 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
     CmdArgs.push_back(
         Args.MakeArgString(Twine(PluginOptPrefix) + "-stack-size-section"));
 
+  if (Args.hasFlag(options::OPT_fexperimental_call_graph_section,
+                   options::OPT_fno_experimental_call_graph_section, false))
+    CmdArgs.push_back(
+        Args.MakeArgString(Twine(PluginOptPrefix) + "-call-graph-section"));
+
   // Setup statistics file output.
   SmallString<128> StatsFile = getStatsFileName(Args, Output, *Input, D);
   if (!StatsFile.empty())
@@ -1345,16 +1368,7 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
     CmdArgs.push_back(
         Args.MakeArgString(Twine(PluginOptPrefix) + "-time-passes"));
 
-  if (Arg *A = Args.getLastArg(options::OPT_fthinlto_distributor_EQ)) {
-    CmdArgs.push_back(
-        Args.MakeArgString("--thinlto-distributor=" + Twine(A->getValue())));
-    CmdArgs.push_back(
-        Args.MakeArgString("--thinlto-remote-compiler=" +
-                           Twine(ToolChain.getDriver().getClangProgramPath())));
-
-    for (auto A : Args.getAllArgValues(options::OPT_Xthinlto_distributor_EQ))
-      CmdArgs.push_back(Args.MakeArgString("--thinlto-distributor-arg=" + A));
-  }
+  addDTLTOOptions(ToolChain, Args, CmdArgs);
 }
 
 void tools::addOpenMPRuntimeLibraryPath(const ToolChain &TC,

@@ -138,6 +138,11 @@ static cl::opt<unsigned> PPCMinimumJumpTableEntries(
     "ppc-min-jump-table-entries", cl::init(64), cl::Hidden,
     cl::desc("Set minimum number of entries to use a jump table on PPC"));
 
+static cl::opt<unsigned> PPCMinimumBitTestCmps(
+    "ppc-min-bit-test-cmps", cl::init(3), cl::Hidden,
+    cl::desc("Set minimum of largest number of comparisons to use bit test for "
+             "switch on PPC."));
+
 static cl::opt<unsigned> PPCGatherAllAliasesMaxDepth(
     "ppc-gather-alias-max-depth", cl::init(18), cl::Hidden,
     cl::desc("max depth when checking alias info in GatherAllAliases()"));
@@ -442,14 +447,11 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     setLoadExtAction(ISD::EXTLOAD, MVT::f64, MVT::f32, Expand);
 
   // If we're enabling GP optimizations, use hardware square root
-  if (!Subtarget.hasFSQRT() &&
-      !(TM.Options.UnsafeFPMath && Subtarget.hasFRSQRTE() &&
-        Subtarget.hasFRE()))
+  if (!Subtarget.hasFSQRT() && !(Subtarget.hasFRSQRTE() && Subtarget.hasFRE()))
     setOperationAction(ISD::FSQRT, MVT::f64, Expand);
 
   if (!Subtarget.hasFSQRT() &&
-      !(TM.Options.UnsafeFPMath && Subtarget.hasFRSQRTES() &&
-        Subtarget.hasFRES()))
+      !(Subtarget.hasFRSQRTES() && Subtarget.hasFRES()))
     setOperationAction(ISD::FSQRT, MVT::f32, Expand);
 
   if (Subtarget.hasFCPSGN()) {
@@ -565,16 +567,15 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     setOperationAction(ISD::BITCAST, MVT::i32, Legal);
     setOperationAction(ISD::BITCAST, MVT::i64, Legal);
     setOperationAction(ISD::BITCAST, MVT::f64, Legal);
-    if (TM.Options.UnsafeFPMath) {
-      setOperationAction(ISD::LRINT, MVT::f64, Legal);
-      setOperationAction(ISD::LRINT, MVT::f32, Legal);
-      setOperationAction(ISD::LLRINT, MVT::f64, Legal);
-      setOperationAction(ISD::LLRINT, MVT::f32, Legal);
-      setOperationAction(ISD::LROUND, MVT::f64, Legal);
-      setOperationAction(ISD::LROUND, MVT::f32, Legal);
-      setOperationAction(ISD::LLROUND, MVT::f64, Legal);
-      setOperationAction(ISD::LLROUND, MVT::f32, Legal);
-    }
+
+    setOperationAction(ISD::STRICT_LRINT, MVT::f64, Custom);
+    setOperationAction(ISD::STRICT_LRINT, MVT::f32, Custom);
+    setOperationAction(ISD::STRICT_LLRINT, MVT::f64, Custom);
+    setOperationAction(ISD::STRICT_LLRINT, MVT::f32, Custom);
+    setOperationAction(ISD::STRICT_LROUND, MVT::f64, Custom);
+    setOperationAction(ISD::STRICT_LROUND, MVT::f32, Custom);
+    setOperationAction(ISD::STRICT_LLROUND, MVT::f64, Custom);
+    setOperationAction(ISD::STRICT_LLROUND, MVT::f32, Custom);
   } else {
     setOperationAction(ISD::BITCAST, MVT::f32, Expand);
     setOperationAction(ISD::BITCAST, MVT::i32, Expand);
@@ -655,6 +656,17 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
   setOperationAction(ISD::GET_DYNAMIC_AREA_OFFSET, MVT::i64, Custom);
   setOperationAction(ISD::EH_DWARF_CFA, MVT::i32, Custom);
   setOperationAction(ISD::EH_DWARF_CFA, MVT::i64, Custom);
+
+  if (Subtarget.isISA3_0() && isPPC64) {
+    setOperationAction(ISD::VP_STORE, MVT::v16i1, Custom);
+    setOperationAction(ISD::VP_STORE, MVT::v8i1, Custom);
+    setOperationAction(ISD::VP_STORE, MVT::v4i1, Custom);
+    setOperationAction(ISD::VP_STORE, MVT::v2i1, Custom);
+    setOperationAction(ISD::VP_LOAD, MVT::v16i1, Custom);
+    setOperationAction(ISD::VP_LOAD, MVT::v8i1, Custom);
+    setOperationAction(ISD::VP_LOAD, MVT::v4i1, Custom);
+    setOperationAction(ISD::VP_LOAD, MVT::v2i1, Custom);
+  }
 
   // We want to custom lower some of our intrinsics.
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::Other, Custom);
@@ -1034,11 +1046,9 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
       setOperationAction(ISD::EXTRACT_VECTOR_ELT, MVT::v2f64, Legal);
 
       // The nearbyint variants are not allowed to raise the inexact exception
-      // so we can only code-gen them with unsafe math.
-      if (TM.Options.UnsafeFPMath) {
-        setOperationAction(ISD::FNEARBYINT, MVT::f64, Legal);
-        setOperationAction(ISD::FNEARBYINT, MVT::f32, Legal);
-      }
+      // so we can only code-gen them with fpexcept.ignore.
+      setOperationAction(ISD::STRICT_FNEARBYINT, MVT::f64, Custom);
+      setOperationAction(ISD::STRICT_FNEARBYINT, MVT::f32, Custom);
 
       setOperationAction(ISD::FFLOOR, MVT::v2f64, Legal);
       setOperationAction(ISD::FCEIL, MVT::v2f64, Legal);
@@ -1441,6 +1451,9 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
   // branch instruction mtctr to the jump table may lead to bad branch predict.
   // Re-evaluate this value on future HWs that can do better with mtctr.
   setMinimumJumpTableEntries(PPCMinimumJumpTableEntries);
+
+  // The default minimum of largest number in a BitTest cluster is 3.
+  setMinimumBitTestCmps(PPCMinimumBitTestCmps);
 
   setMinFunctionAlignment(Align(4));
   setMinCmpXchgSizeInBits(Subtarget.hasPartwordAtomics() ? 8 : 32);
@@ -8911,11 +8924,13 @@ SDValue PPCTargetLowering::LowerINT_TO_FP(SDValue Op,
     // be lost at this stage, but is below the single-precision rounding
     // position.
     //
-    // However, if -enable-unsafe-fp-math is in effect, accept double
+    // However, if afn is in effect, accept double
     // rounding to avoid the extra overhead.
-    if (Op.getValueType() == MVT::f32 &&
-        !Subtarget.hasFPCVT() &&
-        !DAG.getTarget().Options.UnsafeFPMath) {
+    // FIXME: Currently INT_TO_FP can't support fast math flags because
+    // of nneg flag, thus Op->getFlags().hasApproximateFuncs() is always
+    // false.
+    if (Op.getValueType() == MVT::f32 && !Subtarget.hasFPCVT() &&
+        !Op->getFlags().hasApproximateFuncs()) {
 
       // Twiddle input to make sure the low 11 bits are zero.  (If this
       // is the case, we are guaranteed the value will fit into the 53 bit
@@ -9702,6 +9717,10 @@ SDValue PPCTargetLowering::LowerBUILD_VECTOR(SDValue Op,
       }
       return SDV;
     }
+    // Recognize build vector patterns to emit VSX vector instructions
+    // instead of loading value from memory.
+    if (SDValue VecPat = combineBVLoadsSpecialValue(Op, DAG))
+      return VecPat;
   }
   // Check if this is a splat of a constant value.
   APInt APSplatBits, APSplatUndef;
@@ -11909,6 +11928,62 @@ SDValue PPCTargetLowering::LowerIS_FPCLASS(SDValue Op,
   return getDataClassTest(LHS, Category, Dl, DAG, Subtarget);
 }
 
+// Adjust the length value for a load/store with length to account for the
+// instructions requiring a left justified length, and for non-byte element
+// types requiring scaling by element size.
+static SDValue AdjustLength(SDValue Val, unsigned Bits, bool Left,
+                            SelectionDAG &DAG) {
+  SDLoc dl(Val);
+  EVT VT = Val->getValueType(0);
+  unsigned LeftAdj = Left ? VT.getSizeInBits() - 8 : 0;
+  unsigned TypeAdj = llvm::countr_zero<uint32_t>(Bits / 8);
+  SDValue SHLAmt = DAG.getConstant(LeftAdj + TypeAdj, dl, VT);
+  return DAG.getNode(ISD::SHL, dl, VT, Val, SHLAmt);
+}
+
+SDValue PPCTargetLowering::LowerVP_LOAD(SDValue Op, SelectionDAG &DAG) const {
+  auto VPLD = cast<VPLoadSDNode>(Op);
+  bool Future = Subtarget.isISAFuture();
+  SDLoc dl(Op);
+  assert(ISD::isConstantSplatVectorAllOnes(Op->getOperand(3).getNode(), true) &&
+         "Mask predication not supported");
+  EVT PtrVT = getPointerTy(DAG.getDataLayout());
+  SDValue Len = DAG.getNode(ISD::ANY_EXTEND, dl, PtrVT, VPLD->getOperand(4));
+  unsigned IID = Future ? Intrinsic::ppc_vsx_lxvrl : Intrinsic::ppc_vsx_lxvl;
+  unsigned EltBits = Op->getValueType(0).getScalarType().getSizeInBits();
+  Len = AdjustLength(Len, EltBits, !Future, DAG);
+  SDValue Ops[] = {VPLD->getChain(), DAG.getConstant(IID, dl, MVT::i32),
+                   VPLD->getOperand(1), Len};
+  SDVTList Tys = DAG.getVTList(Op->getValueType(0), MVT::Other);
+  SDValue VPL =
+      DAG.getMemIntrinsicNode(ISD::INTRINSIC_W_CHAIN, dl, Tys, Ops,
+                              VPLD->getMemoryVT(), VPLD->getMemOperand());
+  return VPL;
+}
+
+SDValue PPCTargetLowering::LowerVP_STORE(SDValue Op, SelectionDAG &DAG) const {
+  auto VPST = cast<VPStoreSDNode>(Op);
+  assert(ISD::isConstantSplatVectorAllOnes(Op->getOperand(4).getNode(), true) &&
+         "Mask predication not supported");
+  EVT PtrVT = getPointerTy(DAG.getDataLayout());
+  SDLoc dl(Op);
+  SDValue Len = DAG.getNode(ISD::ANY_EXTEND, dl, PtrVT, VPST->getOperand(5));
+  unsigned EltBits =
+      Op->getOperand(1).getValueType().getScalarType().getSizeInBits();
+  bool Future = Subtarget.isISAFuture();
+  unsigned IID = Future ? Intrinsic::ppc_vsx_stxvrl : Intrinsic::ppc_vsx_stxvl;
+  Len = AdjustLength(Len, EltBits, !Future, DAG);
+  SDValue Ops[] = {
+      VPST->getChain(), DAG.getConstant(IID, dl, MVT::i32),
+      DAG.getNode(ISD::BITCAST, dl, MVT::v4i32, VPST->getOperand(1)),
+      VPST->getOperand(2), Len};
+  SDVTList Tys = DAG.getVTList(MVT::Other);
+  SDValue VPS =
+      DAG.getMemIntrinsicNode(ISD::INTRINSIC_VOID, dl, Tys, Ops,
+                              VPST->getMemoryVT(), VPST->getMemOperand());
+  return VPS;
+}
+
 SDValue PPCTargetLowering::LowerSCALAR_TO_VECTOR(SDValue Op,
                                                  SelectionDAG &DAG) const {
   SDLoc dl(Op);
@@ -12755,6 +12830,18 @@ SDValue PPCTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerADDSUBO_CARRY(Op, DAG);
   case ISD::UCMP:
     return LowerUCMP(Op, DAG);
+  case ISD::STRICT_LRINT:
+  case ISD::STRICT_LLRINT:
+  case ISD::STRICT_LROUND:
+  case ISD::STRICT_LLROUND:
+  case ISD::STRICT_FNEARBYINT:
+    if (Op->getFlags().hasNoFPExcept())
+      return Op;
+    return SDValue();
+  case ISD::VP_LOAD:
+    return LowerVP_LOAD(Op, DAG);
+  case ISD::VP_STORE:
+    return LowerVP_STORE(Op, DAG);
   }
 }
 
@@ -13084,7 +13171,9 @@ PPCTargetLowering::EmitAtomicBinary(MachineInstr &MI, MachineBasicBlock *BB,
   BuildMI(BB, dl, TII->get(StoreMnemonic))
     .addReg(TmpReg).addReg(ptrA).addReg(ptrB);
   BuildMI(BB, dl, TII->get(PPC::BCC))
-    .addImm(PPC::PRED_NE).addReg(PPC::CR0).addMBB(loopMBB);
+      .addImm(PPC::PRED_NE_MINUS)
+      .addReg(PPC::CR0)
+      .addMBB(loopMBB);
   BB->addSuccessor(loopMBB);
   BB->addSuccessor(exitMBB);
 
@@ -13342,7 +13431,7 @@ MachineBasicBlock *PPCTargetLowering::EmitPartwordAtomicBinary(
       .addReg(ZeroReg)
       .addReg(PtrReg);
   BuildMI(BB, dl, TII->get(PPC::BCC))
-      .addImm(PPC::PRED_NE)
+      .addImm(PPC::PRED_NE_MINUS)
       .addReg(PPC::CR0)
       .addMBB(loopMBB);
   BB->addSuccessor(loopMBB);
@@ -14173,7 +14262,7 @@ PPCTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
         .addReg(dest)
         .addReg(oldval);
     BuildMI(BB, dl, TII->get(PPC::BCC))
-        .addImm(PPC::PRED_NE)
+        .addImm(PPC::PRED_NE_MINUS)
         .addReg(CrReg)
         .addMBB(exitMBB);
     BB->addSuccessor(loop2MBB);
@@ -14185,7 +14274,7 @@ PPCTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
         .addReg(ptrA)
         .addReg(ptrB);
     BuildMI(BB, dl, TII->get(PPC::BCC))
-        .addImm(PPC::PRED_NE)
+        .addImm(PPC::PRED_NE_MINUS)
         .addReg(PPC::CR0)
         .addMBB(loop1MBB);
     BuildMI(BB, dl, TII->get(PPC::B)).addMBB(exitMBB);
@@ -14726,8 +14815,8 @@ SDValue PPCTargetLowering::getRecipEstimate(SDValue Operand, SelectionDAG &DAG,
 }
 
 unsigned PPCTargetLowering::combineRepeatedFPDivisors() const {
-  // Note: This functionality is used only when unsafe-fp-math is enabled, and
-  // on cores with reciprocal estimates (which are used when unsafe-fp-math is
+  // Note: This functionality is used only when arcp is enabled, and
+  // on cores with reciprocal estimates (which are used when arcp is
   // enabled for division), this functionality is redundant with the default
   // combiner logic (once the division -> reciprocal/multiply transformation
   // has taken place). As a result, this matters more for older cores than for
@@ -15693,6 +15782,142 @@ combineElementTruncationToVectorTruncation(SDNode *N,
     SDValue BV = DAG.getBuildVector(NewVT, dl, Ops);
     return DAG.getNode(Opcode, dl, TargetVT, BV);
   }
+  return SDValue();
+}
+
+// LXVKQ instruction load VSX vector with a special quadword value
+// based on an immediate value. This helper method returns the details of the
+// match as a tuple of {LXVKQ unsigned IMM Value, right_shift_amount}
+// to help generate the LXVKQ instruction and the subsequent shift instruction
+// required to match the original build vector pattern.
+
+// LXVKQPattern: {LXVKQ unsigned IMM Value, right_shift_amount}
+using LXVKQPattern = std::tuple<uint32_t, uint8_t>;
+
+static std::optional<LXVKQPattern> getPatternInfo(const APInt &FullVal) {
+
+  // LXVKQ instruction loads the Quadword value:
+  // 0x8000_0000_0000_0000_0000_0000_0000_0000 when imm = 0b10000
+  static const APInt BasePattern = APInt(128, 0x8000000000000000ULL) << 64;
+  static const uint32_t Uim = 16;
+
+  // Check for direct LXVKQ match (no shift needed)
+  if (FullVal == BasePattern)
+    return std::make_tuple(Uim, uint8_t{0});
+
+  // Check if FullValue is 1 (the result of the base pattern >> 127)
+  if (FullVal == APInt(128, 1))
+    return std::make_tuple(Uim, uint8_t{127});
+
+  return std::nullopt;
+}
+
+/// Combine vector loads to a single load (using lxvkq) or splat with shift of a
+/// constant (xxspltib + vsrq) by recognising patterns in the Build Vector.
+/// LXVKQ instruction load VSX vector with a special quadword value based on an
+/// immediate value. if UIM=0b10000 then LXVKQ loads VSR[32×TX+T] with value
+/// 0x8000_0000_0000_0000_0000_0000_0000_0000.
+/// This can be used to inline the build vector constants that have the
+/// following patterns:
+///
+/// 0x8000_0000_0000_0000_0000_0000_0000_0000 (MSB set pattern)
+/// 0x0000_0000_0000_0000_0000_0000_0000_0001 (LSB set pattern)
+/// MSB pattern can directly loaded using LXVKQ while LSB is loaded using a
+/// combination of splatting and right shift instructions.
+
+SDValue PPCTargetLowering::combineBVLoadsSpecialValue(SDValue Op,
+                                                      SelectionDAG &DAG) const {
+
+  assert((Op.getNode() && Op.getOpcode() == ISD::BUILD_VECTOR) &&
+         "Expected a BuildVectorSDNode in combineBVLoadsSpecialValue");
+
+  // This transformation is only supported if we are loading either a byte,
+  // halfword, word, or doubleword.
+  EVT VT = Op.getValueType();
+  if (!(VT == MVT::v8i16 || VT == MVT::v16i8 || VT == MVT::v4i32 ||
+        VT == MVT::v2i64))
+    return SDValue();
+
+  LLVM_DEBUG(llvm::dbgs() << "\ncombineBVLoadsSpecialValue: Build vector ("
+                          << VT.getEVTString() << "): ";
+             Op->dump());
+
+  unsigned NumElems = VT.getVectorNumElements();
+  unsigned ElemBits = VT.getScalarSizeInBits();
+
+  bool IsLittleEndian = DAG.getDataLayout().isLittleEndian();
+
+  // Check for Non-constant operand in the build vector.
+  for (const SDValue &Operand : Op.getNode()->op_values()) {
+    if (!isa<ConstantSDNode>(Operand))
+      return SDValue();
+  }
+
+  // Assemble build vector operands as a 128-bit register value
+  // We need to reconstruct what the 128-bit register pattern would be
+  // that produces this vector when interpreted with the current endianness
+  APInt FullVal = APInt::getZero(128);
+
+  for (unsigned Index = 0; Index < NumElems; ++Index) {
+    auto *C = cast<ConstantSDNode>(Op.getOperand(Index));
+
+    // Get element value as raw bits (zero-extended)
+    uint64_t ElemValue = C->getZExtValue();
+
+    // Mask to element size to ensure we only get the relevant bits
+    if (ElemBits < 64)
+      ElemValue &= ((1ULL << ElemBits) - 1);
+
+    // Calculate bit position for this element in the 128-bit register
+    unsigned BitPos =
+        (IsLittleEndian) ? (Index * ElemBits) : (128 - (Index + 1) * ElemBits);
+
+    // Create APInt for the element value and shift it to correct position
+    APInt ElemAPInt(128, ElemValue);
+    ElemAPInt <<= BitPos;
+
+    // Place the element value at the correct bit position
+    FullVal |= ElemAPInt;
+  }
+
+  if (FullVal.isZero() || FullVal.isAllOnes())
+    return SDValue();
+
+  if (auto UIMOpt = getPatternInfo(FullVal)) {
+    const auto &[Uim, ShiftAmount] = *UIMOpt;
+    SDLoc Dl(Op);
+
+    // Generate LXVKQ instruction if the shift amount is zero.
+    if (ShiftAmount == 0) {
+      SDValue UimVal = DAG.getTargetConstant(Uim, Dl, MVT::i32);
+      SDValue LxvkqInstr =
+          SDValue(DAG.getMachineNode(PPC::LXVKQ, Dl, VT, UimVal), 0);
+      LLVM_DEBUG(llvm::dbgs()
+                     << "combineBVLoadsSpecialValue: Instruction Emitted ";
+                 LxvkqInstr.dump());
+      return LxvkqInstr;
+    }
+
+    assert(ShiftAmount == 127 && "Unexpected lxvkq shift amount value");
+
+    // The right shifted pattern can be constructed using a combination of
+    // XXSPLTIB and VSRQ instruction. VSRQ uses the shift amount from the lower
+    // 7 bits of byte 15. This can be specified using XXSPLTIB with immediate
+    // value 255.
+    SDValue ShiftAmountVec =
+        SDValue(DAG.getMachineNode(PPC::XXSPLTIB, Dl, MVT::v4i32,
+                                   DAG.getTargetConstant(255, Dl, MVT::i32)),
+                0);
+    // Generate appropriate right shift instruction
+    SDValue ShiftVec = SDValue(
+        DAG.getMachineNode(PPC::VSRQ, Dl, VT, ShiftAmountVec, ShiftAmountVec),
+        0);
+    LLVM_DEBUG(llvm::dbgs()
+                   << "\n combineBVLoadsSpecialValue: Instruction Emitted ";
+               ShiftVec.dump());
+    return ShiftVec;
+  }
+  // No patterns matched for build vectors.
   return SDValue();
 }
 
@@ -18567,11 +18792,12 @@ bool PPCTargetLowering::isProfitableToHoist(Instruction *I) const {
     const Function *F = I->getFunction();
     const DataLayout &DL = F->getDataLayout();
     Type *Ty = User->getOperand(0)->getType();
+    bool AllowContract = I->getFastMathFlags().allowContract() &&
+                         User->getFastMathFlags().allowContract();
 
-    return !(
-        isFMAFasterThanFMulAndFAdd(*F, Ty) &&
-        isOperationLegalOrCustom(ISD::FMA, getValueType(DL, Ty)) &&
-        (Options.AllowFPOpFusion == FPOpFusion::Fast || Options.UnsafeFPMath));
+    return !(isFMAFasterThanFMulAndFAdd(*F, Ty) &&
+             isOperationLegalOrCustom(ISD::FMA, getValueType(DL, Ty)) &&
+             (AllowContract || Options.AllowFPOpFusion == FPOpFusion::Fast));
   }
   case Instruction::Load: {
     // Don't break "store (load float*)" pattern, this pattern will be combined

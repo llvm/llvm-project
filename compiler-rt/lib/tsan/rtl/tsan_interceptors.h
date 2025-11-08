@@ -1,7 +1,7 @@
 #ifndef TSAN_INTERCEPTORS_H
 #define TSAN_INTERCEPTORS_H
 
-#if SANITIZER_APPLE
+#if SANITIZER_APPLE && !SANITIZER_GO
 #  include "sanitizer_common/sanitizer_mac.h"
 #endif
 #include "sanitizer_common/sanitizer_stacktrace.h"
@@ -47,7 +47,7 @@ inline bool in_symbolizer() {
 
 inline bool MustIgnoreInterceptor(ThreadState *thr) {
   return !thr->is_inited || thr->ignore_interceptors || thr->in_ignored_lib
-#if SANITIZER_APPLE
+#if SANITIZER_APPLE && !SANITIZER_GO
          || (flags()->lock_during_write != kLockDuringAllWrites &&
              thr->in_internal_write_call)
 #endif

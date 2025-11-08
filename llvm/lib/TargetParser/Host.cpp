@@ -70,8 +70,8 @@
 
 using namespace llvm;
 
-static std::unique_ptr<llvm::MemoryBuffer>
-    LLVM_ATTRIBUTE_UNUSED getProcCpuinfoContent() {
+[[maybe_unused]] static std::unique_ptr<llvm::MemoryBuffer>
+getProcCpuinfoContent() {
   const char *CPUInfoFile = "/proc/cpuinfo";
   if (const char *CpuinfoIntercept = std::getenv("LLVM_CPUINFO"))
     CPUInfoFile = CpuinfoIntercept;
@@ -369,6 +369,7 @@ getHostCPUNameForARMFromComponents(StringRef Implementer, StringRef Hardware,
   if (Implementer == "0x63") { // Arm China.
     return StringSwitch<const char *>(Part)
         .Case("0x132", "star-mc1")
+        .Case("0xd25", "star-mc3")
         .Default("generic");
   }
 
@@ -964,6 +965,13 @@ static StringRef getIntelProcessorTypeAndSubtype(unsigned Family,
       *Subtype = X86::INTEL_COREI7_PANTHERLAKE;
       break;
 
+    // Wildcatlake:
+    case 0xd5:
+      CPU = "wildcatlake";
+      *Type = X86::INTEL_COREI7;
+      *Subtype = X86::INTEL_COREI7_PANTHERLAKE;
+      break;
+
     // Graniterapids:
     case 0xad:
       CPU = "graniterapids";
@@ -1145,6 +1153,20 @@ static StringRef getIntelProcessorTypeAndSubtype(unsigned Family,
       break;
     }
     break;
+  case 0x12:
+    switch (Model) {
+    // Novalake:
+    case 0x1:
+    case 0x3:
+      CPU = "novalake";
+      *Type = X86::INTEL_COREI7;
+      *Subtype = X86::INTEL_COREI7_NOVALAKE;
+      break;
+    default: // Unknown family 0x12 CPU.
+      break;
+    }
+    break;
+
   default:
     break; // Unknown.
   }
@@ -1157,7 +1179,7 @@ static const char *getAMDProcessorTypeAndSubtype(unsigned Family,
                                                  const unsigned *Features,
                                                  unsigned *Type,
                                                  unsigned *Subtype) {
-  const char *CPU = 0;
+  const char *CPU = nullptr;
 
   switch (Family) {
   case 4:
@@ -2170,7 +2192,6 @@ StringMap<bool> sys::getHostCPUFeatures() {
   bool HasLeaf1E = MaxLevel >= 0x1e &&
                    !getX86CpuIDAndInfoEx(0x1e, 0x1, &EAX, &EBX, &ECX, &EDX);
   Features["amx-fp8"] = HasLeaf1E && ((EAX >> 4) & 1) && HasAMXSave;
-  Features["amx-transpose"] = HasLeaf1E && ((EAX >> 5) & 1) && HasAMXSave;
   Features["amx-tf32"] = HasLeaf1E && ((EAX >> 6) & 1) && HasAMXSave;
   Features["amx-avx512"] = HasLeaf1E && ((EAX >> 7) & 1) && HasAMXSave;
   Features["amx-movrs"] = HasLeaf1E && ((EAX >> 8) & 1) && HasAMXSave;

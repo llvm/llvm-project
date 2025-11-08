@@ -277,7 +277,7 @@ define void @bug18724(i1 %cond, ptr %ptr, i1 %cond.2, i64 %v.1, i32 %v.2) {
 ; UNROLL-NOSIMPLIFY-NEXT:    [[INEWCHUNKS_2_LCSSA:%.*]] = phi i32 [ [[INEWCHUNKS_2]], [[FOR_INC23]] ], [ [[BIN_RDX]], [[MIDDLE_BLOCK]] ]
 ; UNROLL-NOSIMPLIFY-NEXT:    br label [[FOR_INC26]]
 ; UNROLL-NOSIMPLIFY:       for.inc26:
-; UNROLL-NOSIMPLIFY-NEXT:    [[INEWCHUNKS_1_LCSSA:%.*]] = phi i32 [ undef, [[FOR_BODY9]] ], [ [[INEWCHUNKS_2_LCSSA]], [[FOR_INC26_LOOPEXIT]] ]
+; UNROLL-NOSIMPLIFY-NEXT:    [[INEWCHUNKS_1_LCSSA:%.*]] = phi i32 [ 0, [[FOR_BODY9]] ], [ [[INEWCHUNKS_2_LCSSA]], [[FOR_INC26_LOOPEXIT]] ]
 ; UNROLL-NOSIMPLIFY-NEXT:    unreachable
 ;
 ; VEC-LABEL: @bug18724(
@@ -296,8 +296,6 @@ define void @bug18724(i1 %cond, ptr %ptr, i1 %cond.2, i64 %v.1, i32 %v.2) {
 ; VEC-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP4]], [[N_MOD_VF]]
 ; VEC-NEXT:    [[IND_END:%.*]] = add i64 [[V_1]], [[N_VEC]]
 ; VEC-NEXT:    [[TMP5:%.*]] = insertelement <2 x i32> zeroinitializer, i32 [[V_2:%.*]], i32 0
-; VEC-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i1> poison, i1 [[COND_2:%.*]], i64 0
-; VEC-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i1> [[BROADCAST_SPLATINSERT]], <2 x i1> poison, <2 x i32> zeroinitializer
 ; VEC-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VEC:       vector.body:
 ; VEC-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE2:%.*]] ]
@@ -305,7 +303,7 @@ define void @bug18724(i1 %cond, ptr %ptr, i1 %cond.2, i64 %v.1, i32 %v.2) {
 ; VEC-NEXT:    [[OFFSET_IDX:%.*]] = add i64 [[V_1]], [[INDEX]]
 ; VEC-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [768 x i32], ptr [[PTR:%.*]], i64 0, i64 [[OFFSET_IDX]]
 ; VEC-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP7]], align 4
-; VEC-NEXT:    br i1 [[COND_2]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE2]]
+; VEC-NEXT:    br i1 [[COND_2:%.*]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE2]]
 ; VEC:       pred.store.if:
 ; VEC-NEXT:    [[INDVARS_IV3:%.*]] = add i64 [[OFFSET_IDX]], 0
 ; VEC-NEXT:    [[ARRAYIDX16:%.*]] = getelementptr inbounds [768 x i32], ptr [[PTR]], i64 0, i64 [[INDVARS_IV3]]
@@ -318,7 +316,7 @@ define void @bug18724(i1 %cond, ptr %ptr, i1 %cond.2, i64 %v.1, i32 %v.2) {
 ; VEC-NEXT:    br label [[PRED_STORE_CONTINUE2]]
 ; VEC:       pred.store.continue2:
 ; VEC-NEXT:    [[TMP15:%.*]] = add <2 x i32> [[VEC_PHI]], splat (i32 1)
-; VEC-NEXT:    [[PREDPHI]] = select <2 x i1> [[BROADCAST_SPLAT]], <2 x i32> [[TMP15]], <2 x i32> [[VEC_PHI]]
+; VEC-NEXT:    [[PREDPHI]] = select i1 [[COND_2]], <2 x i32> [[TMP15]], <2 x i32> [[VEC_PHI]]
 ; VEC-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; VEC-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; VEC-NEXT:    br i1 [[TMP16]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
@@ -376,7 +374,7 @@ for.inc23:
   br i1 %cmp13, label %for.body14, label %for.inc26
 
 for.inc26:
-  %iNewChunks.1.lcssa = phi i32 [ undef, %for.body9 ], [ %iNewChunks.2, %for.inc23 ]
+  %iNewChunks.1.lcssa = phi i32 [ 0, %for.body9 ], [ %iNewChunks.2, %for.inc23 ]
   unreachable
 }
 
@@ -384,15 +382,15 @@ for.inc26:
 ; conditional store to remain scalar. Since we can only type-shrink vector
 ; types, we shouldn't try to represent the expression in a smaller type.
 ;
-define void @minimal_bit_widths(i1 %c) {
+define void @minimal_bit_widths(ptr %p, i1 %c) {
 ; UNROLL-LABEL: @minimal_bit_widths(
 ; UNROLL-NEXT:  entry:
 ; UNROLL-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; UNROLL:       vector.body:
 ; UNROLL-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE2:%.*]] ]
 ; UNROLL-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 1
-; UNROLL-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr undef, i64 [[INDEX]]
-; UNROLL-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr undef, i64 [[TMP1]]
+; UNROLL-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 [[INDEX]]
+; UNROLL-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[P]], i64 [[TMP1]]
 ; UNROLL-NEXT:    [[TMP4:%.*]] = load i8, ptr [[TMP2]], align 1
 ; UNROLL-NEXT:    [[TMP5:%.*]] = load i8, ptr [[TMP3]], align 1
 ; UNROLL-NEXT:    br i1 [[C:%.*]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE2]]
@@ -415,8 +413,8 @@ define void @minimal_bit_widths(i1 %c) {
 ; UNROLL-NOSIMPLIFY:       vector.body:
 ; UNROLL-NOSIMPLIFY-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE2:%.*]] ]
 ; UNROLL-NOSIMPLIFY-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 1
-; UNROLL-NOSIMPLIFY-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr undef, i64 [[INDEX]]
-; UNROLL-NOSIMPLIFY-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr undef, i64 [[TMP1]]
+; UNROLL-NOSIMPLIFY-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 [[INDEX]]
+; UNROLL-NOSIMPLIFY-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[P]], i64 [[TMP1]]
 ; UNROLL-NOSIMPLIFY-NEXT:    [[TMP4:%.*]] = load i8, ptr [[TMP2]], align 1
 ; UNROLL-NOSIMPLIFY-NEXT:    [[TMP5:%.*]] = load i8, ptr [[TMP3]], align 1
 ; UNROLL-NOSIMPLIFY-NEXT:    br i1 [[C:%.*]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
@@ -442,16 +440,16 @@ define void @minimal_bit_widths(i1 %c) {
 ; VEC-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VEC:       vector.body:
 ; VEC-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE2:%.*]] ]
-; VEC-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr undef, i64 [[INDEX]]
+; VEC-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 [[INDEX]]
 ; VEC-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i8>, ptr [[TMP1]], align 1
 ; VEC-NEXT:    br i1 [[C:%.*]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE2]]
 ; VEC:       pred.store.if:
 ; VEC-NEXT:    [[TMP8:%.*]] = add i64 [[INDEX]], 0
-; VEC-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr undef, i64 [[TMP8]]
+; VEC-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[P]], i64 [[TMP8]]
 ; VEC-NEXT:    [[TMP4:%.*]] = extractelement <2 x i8> [[WIDE_LOAD]], i32 0
 ; VEC-NEXT:    store i8 [[TMP4]], ptr [[TMP3]], align 1
 ; VEC-NEXT:    [[TMP5:%.*]] = add i64 [[INDEX]], 1
-; VEC-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr undef, i64 [[TMP5]]
+; VEC-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[P]], i64 [[TMP5]]
 ; VEC-NEXT:    [[TMP7:%.*]] = extractelement <2 x i8> [[WIDE_LOAD]], i32 1
 ; VEC-NEXT:    store i8 [[TMP7]], ptr [[TMP6]], align 1
 ; VEC-NEXT:    br label [[PRED_STORE_CONTINUE2]]
@@ -468,7 +466,7 @@ entry:
 for.body:
   %tmp0 = phi i64 [ %tmp6, %for.inc ], [ 0, %entry ]
   %tmp1 = phi i64 [ %tmp7, %for.inc ], [ 1000, %entry ]
-  %tmp2 = getelementptr i8, ptr undef, i64 %tmp0
+  %tmp2 = getelementptr i8, ptr %p, i64 %tmp0
   %tmp3 = load i8, ptr %tmp2, align 1
   br i1 %c, label %if.then, label %for.inc
 

@@ -1,0 +1,21 @@
+; Test loading metadata which was not aware of versioned language names.
+;
+; RUN: llvm-dis -o - %p/Inputs/compile-unit-no-versioned-language.bc \
+; RUN:     | FileCheck %s --implicit-check-not "sourceLanguageName" --implicit-check-not "sourceLanguageVersion"
+
+; Input bitcode file was compiled from following source on
+; LLVM commit `fc22b58c25963ece6b041cadbdc931c2338955e4`:
+;
+; source_filename = "cu.cpp"
+; target triple = "arm64-apple-macosx"
+; 
+; !llvm.dbg.cu = !{!0}
+; !llvm.module.flags = !{!3, !4}
+; 
+; !0 = distinct !DICompileUnit(language: DW_LANG_ObjC, file: !1, producer: "handwritten", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, globals: !2, splitDebugInlining: false, nameTableKind: Apple, sysroot: "/")
+; !1 = !DIFile(filename: "cu.cpp", directory: "/tmp")
+; !2 = !{}
+; !3 = !{i32 7, !"Dwarf Version", i32 5}
+; !4 = !{i32 2, !"Debug Info Version", i32 3}
+
+; CHECK: distinct !DICompileUnit(language: DW_LANG_ObjC,

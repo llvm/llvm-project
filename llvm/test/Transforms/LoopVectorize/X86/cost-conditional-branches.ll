@@ -24,39 +24,39 @@ define void @test_replicate_call_chain(float %x, ptr noalias %A, ptr noalias %B,
 ; CHECK-NEXT:    [[TMP7:%.*]] = xor <16 x i1> [[TMP6]], splat (i1 true)
 ; CHECK-NEXT:    [[TMP8:%.*]] = shl i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[D:%.*]], i64 [[TMP8]]
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <16 x float> @llvm.masked.load.v16f32.p0(ptr [[TMP9]], i32 4, <16 x i1> [[TMP7]], <16 x float> poison)
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <16 x float> @llvm.masked.load.v16f32.p0(ptr align 4 [[TMP9]], <16 x i1> [[TMP7]], <16 x float> poison)
 ; CHECK-NEXT:    [[TMP10:%.*]] = fmul <16 x float> [[WIDE_MASKED_LOAD]], splat (float 2.000000e+00)
 ; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <16 x float> [[TMP10]], i32 0
-; CHECK-NEXT:    [[TMP12:%.*]] = tail call float @llvm.pow.f32(float [[TMP11]], float [[X:%.*]])
 ; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <16 x float> [[TMP10]], i32 1
-; CHECK-NEXT:    [[TMP14:%.*]] = tail call float @llvm.pow.f32(float [[TMP13]], float [[X]])
 ; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <16 x float> [[TMP10]], i32 2
-; CHECK-NEXT:    [[TMP16:%.*]] = tail call float @llvm.pow.f32(float [[TMP15]], float [[X]])
 ; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <16 x float> [[TMP10]], i32 3
-; CHECK-NEXT:    [[TMP18:%.*]] = tail call float @llvm.pow.f32(float [[TMP17]], float [[X]])
 ; CHECK-NEXT:    [[TMP19:%.*]] = extractelement <16 x float> [[TMP10]], i32 4
-; CHECK-NEXT:    [[TMP20:%.*]] = tail call float @llvm.pow.f32(float [[TMP19]], float [[X]])
 ; CHECK-NEXT:    [[TMP21:%.*]] = extractelement <16 x float> [[TMP10]], i32 5
-; CHECK-NEXT:    [[TMP22:%.*]] = tail call float @llvm.pow.f32(float [[TMP21]], float [[X]])
 ; CHECK-NEXT:    [[TMP23:%.*]] = extractelement <16 x float> [[TMP10]], i32 6
-; CHECK-NEXT:    [[TMP24:%.*]] = tail call float @llvm.pow.f32(float [[TMP23]], float [[X]])
 ; CHECK-NEXT:    [[TMP25:%.*]] = extractelement <16 x float> [[TMP10]], i32 7
-; CHECK-NEXT:    [[TMP26:%.*]] = tail call float @llvm.pow.f32(float [[TMP25]], float [[X]])
 ; CHECK-NEXT:    [[TMP27:%.*]] = extractelement <16 x float> [[TMP10]], i32 8
-; CHECK-NEXT:    [[TMP28:%.*]] = tail call float @llvm.pow.f32(float [[TMP27]], float [[X]])
 ; CHECK-NEXT:    [[TMP29:%.*]] = extractelement <16 x float> [[TMP10]], i32 9
-; CHECK-NEXT:    [[TMP30:%.*]] = tail call float @llvm.pow.f32(float [[TMP29]], float [[X]])
 ; CHECK-NEXT:    [[TMP31:%.*]] = extractelement <16 x float> [[TMP10]], i32 10
-; CHECK-NEXT:    [[TMP32:%.*]] = tail call float @llvm.pow.f32(float [[TMP31]], float [[X]])
 ; CHECK-NEXT:    [[TMP33:%.*]] = extractelement <16 x float> [[TMP10]], i32 11
-; CHECK-NEXT:    [[TMP34:%.*]] = tail call float @llvm.pow.f32(float [[TMP33]], float [[X]])
 ; CHECK-NEXT:    [[TMP35:%.*]] = extractelement <16 x float> [[TMP10]], i32 12
-; CHECK-NEXT:    [[TMP36:%.*]] = tail call float @llvm.pow.f32(float [[TMP35]], float [[X]])
 ; CHECK-NEXT:    [[TMP37:%.*]] = extractelement <16 x float> [[TMP10]], i32 13
-; CHECK-NEXT:    [[TMP38:%.*]] = tail call float @llvm.pow.f32(float [[TMP37]], float [[X]])
 ; CHECK-NEXT:    [[TMP39:%.*]] = extractelement <16 x float> [[TMP10]], i32 14
-; CHECK-NEXT:    [[TMP40:%.*]] = tail call float @llvm.pow.f32(float [[TMP39]], float [[X]])
 ; CHECK-NEXT:    [[TMP41:%.*]] = extractelement <16 x float> [[TMP10]], i32 15
+; CHECK-NEXT:    [[TMP12:%.*]] = tail call float @llvm.pow.f32(float [[TMP11]], float [[X:%.*]])
+; CHECK-NEXT:    [[TMP14:%.*]] = tail call float @llvm.pow.f32(float [[TMP13]], float [[X]])
+; CHECK-NEXT:    [[TMP16:%.*]] = tail call float @llvm.pow.f32(float [[TMP15]], float [[X]])
+; CHECK-NEXT:    [[TMP18:%.*]] = tail call float @llvm.pow.f32(float [[TMP17]], float [[X]])
+; CHECK-NEXT:    [[TMP20:%.*]] = tail call float @llvm.pow.f32(float [[TMP19]], float [[X]])
+; CHECK-NEXT:    [[TMP22:%.*]] = tail call float @llvm.pow.f32(float [[TMP21]], float [[X]])
+; CHECK-NEXT:    [[TMP24:%.*]] = tail call float @llvm.pow.f32(float [[TMP23]], float [[X]])
+; CHECK-NEXT:    [[TMP26:%.*]] = tail call float @llvm.pow.f32(float [[TMP25]], float [[X]])
+; CHECK-NEXT:    [[TMP28:%.*]] = tail call float @llvm.pow.f32(float [[TMP27]], float [[X]])
+; CHECK-NEXT:    [[TMP30:%.*]] = tail call float @llvm.pow.f32(float [[TMP29]], float [[X]])
+; CHECK-NEXT:    [[TMP32:%.*]] = tail call float @llvm.pow.f32(float [[TMP31]], float [[X]])
+; CHECK-NEXT:    [[TMP34:%.*]] = tail call float @llvm.pow.f32(float [[TMP33]], float [[X]])
+; CHECK-NEXT:    [[TMP36:%.*]] = tail call float @llvm.pow.f32(float [[TMP35]], float [[X]])
+; CHECK-NEXT:    [[TMP38:%.*]] = tail call float @llvm.pow.f32(float [[TMP37]], float [[X]])
+; CHECK-NEXT:    [[TMP40:%.*]] = tail call float @llvm.pow.f32(float [[TMP39]], float [[X]])
 ; CHECK-NEXT:    [[TMP42:%.*]] = tail call float @llvm.pow.f32(float [[TMP41]], float [[X]])
 ; CHECK-NEXT:    [[TMP43:%.*]] = tail call float @llvm.pow.f32(float [[TMP12]], float [[X]])
 ; CHECK-NEXT:    [[TMP44:%.*]] = tail call float @llvm.pow.f32(float [[TMP14]], float [[X]])
@@ -90,8 +90,8 @@ define void @test_replicate_call_chain(float %x, ptr noalias %A, ptr noalias %B,
 ; CHECK-NEXT:    [[TMP72:%.*]] = insertelement <16 x float> [[TMP71]], float [[TMP56]], i32 13
 ; CHECK-NEXT:    [[TMP73:%.*]] = insertelement <16 x float> [[TMP72]], float [[TMP57]], i32 14
 ; CHECK-NEXT:    [[TMP74:%.*]] = insertelement <16 x float> [[TMP73]], float [[TMP58]], i32 15
-; CHECK-NEXT:    call void @llvm.masked.store.v16f32.p0(<16 x float> [[TMP74]], ptr [[TMP5]], i32 4, <16 x i1> [[TMP7]])
-; CHECK-NEXT:    call void @llvm.masked.store.v16f32.p0(<16 x float> zeroinitializer, ptr [[TMP5]], i32 4, <16 x i1> [[TMP6]])
+; CHECK-NEXT:    call void @llvm.masked.store.v16f32.p0(<16 x float> [[TMP74]], ptr align 4 [[TMP5]], <16 x i1> [[TMP7]])
+; CHECK-NEXT:    call void @llvm.masked.store.v16f32.p0(<16 x float> zeroinitializer, ptr align 4 [[TMP5]], <16 x i1> [[TMP6]])
 ; CHECK-NEXT:    store float 0.000000e+00, ptr [[E:%.*]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; CHECK-NEXT:    [[TMP75:%.*]] = icmp eq i64 [[INDEX_NEXT]], 96
@@ -324,7 +324,7 @@ define i64 @avx512_cond_load_cost(ptr %src, i32 %a, i64 %b, i32 %c, i32 %d) #1 {
 ; CHECK-NEXT:    [[TMP67:%.*]] = or <8 x i32> [[TMP66]], [[TMP34]]
 ; CHECK-NEXT:    [[TMP68:%.*]] = sext <8 x i32> [[TMP67]] to <8 x i64>
 ; CHECK-NEXT:    [[TMP69:%.*]] = getelementptr { i64, i64, i64 }, ptr [[SRC:%.*]], <8 x i64> [[TMP68]], i32 2
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <8 x i64> @llvm.masked.gather.v8i64.v8p0(<8 x ptr> [[TMP69]], i32 8, <8 x i1> [[TMP1]], <8 x i64> poison)
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <8 x i64> @llvm.masked.gather.v8i64.v8p0(<8 x ptr> align 8 [[TMP69]], <8 x i1> [[TMP1]], <8 x i64> poison)
 ; CHECK-NEXT:    [[TMP70:%.*]] = or <8 x i64> [[WIDE_MASKED_GATHER]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <8 x i1> [[TMP1]], <8 x i64> [[TMP70]], <8 x i64> zeroinitializer
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw i32 [[IV]], 8
@@ -1193,7 +1193,7 @@ define i64 @test_predicated_udiv(i32 %d, i1 %c) #2 {
 ; CHECK:       pred.udiv.continue62:
 ; CHECK-NEXT:    [[TMP161:%.*]] = phi <32 x i32> [ [[TMP156]], [[PRED_UDIV_CONTINUE60]] ], [ [[TMP160]], [[PRED_UDIV_IF61]] ]
 ; CHECK-NEXT:    [[TMP162:%.*]] = zext <32 x i32> [[TMP161]] to <32 x i64>
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select <32 x i1> [[BROADCAST_SPLAT]], <32 x i64> zeroinitializer, <32 x i64> [[TMP162]]
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select i1 [[C]], <32 x i64> zeroinitializer, <32 x i64> [[TMP162]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 32
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <32 x i32> [[VEC_IND]], splat (i32 32)
 ; CHECK-NEXT:    [[TMP163:%.*]] = icmp eq i32 [[INDEX_NEXT]], 992
@@ -1289,7 +1289,7 @@ define i64 @test_predicated_udiv(i32 %d, i1 %c) #2 {
 ; CHECK:       pred.udiv.continue84:
 ; CHECK-NEXT:    [[TMP206:%.*]] = phi <8 x i32> [ [[TMP201]], [[PRED_UDIV_CONTINUE82]] ], [ [[TMP205]], [[PRED_UDIV_IF83]] ]
 ; CHECK-NEXT:    [[TMP207:%.*]] = zext <8 x i32> [[TMP206]] to <8 x i64>
-; CHECK-NEXT:    [[PREDPHI85:%.*]] = select <8 x i1> [[BROADCAST_SPLAT64]], <8 x i64> zeroinitializer, <8 x i64> [[TMP207]]
+; CHECK-NEXT:    [[PREDPHI85:%.*]] = select i1 [[C]], <8 x i64> zeroinitializer, <8 x i64> [[TMP207]]
 ; CHECK-NEXT:    [[INDEX_NEXT86]] = add nuw i32 [[INDEX67]], 8
 ; CHECK-NEXT:    [[VEC_IND_NEXT87]] = add <8 x i32> [[VEC_IND68]], splat (i32 8)
 ; CHECK-NEXT:    [[TMP208:%.*]] = icmp eq i32 [[INDEX_NEXT86]], 1000

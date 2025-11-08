@@ -17,6 +17,7 @@
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpImplementation.h"
+#include "mlir/IR/SymbolTable.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/SmallSet.h"
@@ -39,11 +40,21 @@ static bool isScalarLikeType(Type type) {
   return type.isIntOrIndexOrFloat() || isa<ComplexType>(type);
 }
 
+/// Helper function to attach the `VarName` attribute to an operation
+/// if a variable name is provided.
+static void attachVarNameAttr(Operation *op, OpBuilder &builder,
+                              StringRef varName) {
+  if (!varName.empty()) {
+    auto varNameAttr = acc::VarNameAttr::get(builder.getContext(), varName);
+    op->setAttr(acc::getVarNameAttrName(), varNameAttr);
+  }
+}
+
+template <typename T>
 struct MemRefPointerLikeModel
-    : public PointerLikeType::ExternalModel<MemRefPointerLikeModel,
-                                            MemRefType> {
+    : public PointerLikeType::ExternalModel<MemRefPointerLikeModel<T>, T> {
   Type getElementType(Type pointer) const {
-    return cast<MemRefType>(pointer).getElementType();
+    return cast<T>(pointer).getElementType();
   }
 
   mlir::acc::VariableTypeCategory
@@ -52,7 +63,7 @@ struct MemRefPointerLikeModel
     if (auto mappableTy = dyn_cast<MappableType>(varType)) {
       return mappableTy.getTypeCategory(varPtr);
     }
-    auto memrefTy = cast<MemRefType>(pointer);
+    auto memrefTy = cast<T>(pointer);
     if (!memrefTy.hasRank()) {
       // This memref is unranked - aka it could have any rank, including a
       // rank of 0 which could mean scalar. For now, return uncategorized.
@@ -74,14 +85,18 @@ struct MemRefPointerLikeModel
   }
 
   mlir::Value genAllocate(Type pointer, OpBuilder &builder, Location loc,
-                          StringRef varName, Type varType,
-                          Value originalVar) const {
+                          StringRef varName, Type varType, Value originalVar,
+                          bool &needsFree) const {
     auto memrefTy = cast<MemRefType>(pointer);
 
     // Check if this is a static memref (all dimensions are known) - if yes
     // then we can generate an alloca operation.
-    if (memrefTy.hasStaticShape())
-      return memref::AllocaOp::create(builder, loc, memrefTy).getResult();
+    if (memrefTy.hasStaticShape()) {
+      needsFree = false; // alloca doesn't need deallocation
+      auto allocaOp = memref::AllocaOp::create(builder, loc, memrefTy);
+      attachVarNameAttr(allocaOp, builder, varName);
+      return allocaOp.getResult();
+    }
 
     // For dynamic memrefs, extract sizes from the original variable if
     // provided. Otherwise they cannot be handled.
@@ -99,8 +114,11 @@ struct MemRefPointerLikeModel
         // Note: We only add dynamic sizes to the dynamicSizes array
         // Static dimensions are handled automatically by AllocOp
       }
-      return memref::AllocOp::create(builder, loc, memrefTy, dynamicSizes)
-          .getResult();
+      needsFree = true; // alloc needs deallocation
+      auto allocOp =
+          memref::AllocOp::create(builder, loc, memrefTy, dynamicSizes);
+      attachVarNameAttr(allocOp, builder, varName);
+      return allocOp.getResult();
     }
 
     // TODO: Unranked not yet supported.
@@ -108,10 +126,14 @@ struct MemRefPointerLikeModel
   }
 
   bool genFree(Type pointer, OpBuilder &builder, Location loc,
-               TypedValue<PointerLikeType> varPtr, Type varType) const {
-    if (auto memrefValue = dyn_cast<TypedValue<MemRefType>>(varPtr)) {
+               TypedValue<PointerLikeType> varToFree, Value allocRes,
+               Type varType) const {
+    if (auto memrefValue = dyn_cast<TypedValue<MemRefType>>(varToFree)) {
+      // Use allocRes if provided to determine the allocation type
+      Value valueToInspect = allocRes ? allocRes : memrefValue;
+
       // Walk through casts to find the original allocation
-      Value currentValue = memrefValue;
+      Value currentValue = valueToInspect;
       Operation *originalAlloc = nullptr;
 
       // Follow the chain of operations to find the original allocation
@@ -150,7 +172,7 @@ struct MemRefPointerLikeModel
           return true;
         }
         if (isa<memref::AllocOp>(originalAlloc)) {
-          // This is an alloc - generate dealloc
+          // This is an alloc - generate dealloc on varToFree
           memref::DeallocOp::create(builder, loc, memrefValue);
           return true;
         }
@@ -274,7 +296,10 @@ void OpenACCDialect::initialize() {
   // By attaching interfaces here, we make the OpenACC dialect dependent on
   // the other dialects. This is probably better than having dialects like LLVM
   // and memref be dependent on OpenACC.
-  MemRefType::attachInterface<MemRefPointerLikeModel>(*getContext());
+  MemRefType::attachInterface<MemRefPointerLikeModel<MemRefType>>(
+      *getContext());
+  UnrankedMemRefType::attachInterface<
+      MemRefPointerLikeModel<UnrankedMemRefType>>(*getContext());
   LLVM::LLVMPointerType::attachInterface<LLVMPointerPointerLikeModel>(
       *getContext());
 }
@@ -577,6 +602,20 @@ LogicalResult acc::PrivateOp::verify() {
 // FirstprivateOp
 //===----------------------------------------------------------------------===//
 LogicalResult acc::FirstprivateOp::verify() {
+  if (getDataClause() != acc::DataClause::acc_firstprivate)
+    return emitError("data clause associated with firstprivate operation must "
+                     "match its intent");
+  if (failed(checkVarAndVarType(*this)))
+    return failure();
+  if (failed(checkNoModifier(*this)))
+    return failure();
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// FirstprivateMapInitialOp
+//===----------------------------------------------------------------------===//
+LogicalResult acc::FirstprivateMapInitialOp::verify() {
   if (getDataClause() != acc::DataClause::acc_firstprivate)
     return emitError("data clause associated with firstprivate operation must "
                      "match its intent");
@@ -1003,6 +1042,197 @@ struct RemoveConstantIfConditionWithRegion : public OpRewritePattern<OpTy> {
   }
 };
 
+/// Remove empty acc.kernel_environment operations. If the operation has wait
+/// operands, create a acc.wait operation to preserve synchronization.
+struct RemoveEmptyKernelEnvironment
+    : public OpRewritePattern<acc::KernelEnvironmentOp> {
+  using OpRewritePattern<acc::KernelEnvironmentOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(acc::KernelEnvironmentOp op,
+                                PatternRewriter &rewriter) const override {
+    assert(op->getNumRegions() == 1 && "expected op to have one region");
+
+    Block &block = op.getRegion().front();
+    if (!block.empty())
+      return failure();
+
+    // Conservatively disable canonicalization of empty acc.kernel_environment
+    // operations if the wait operands in the kernel_environment cannot be fully
+    // represented by acc.wait operation.
+
+    // Disable canonicalization if device type is not the default
+    if (auto deviceTypeAttr = op.getWaitOperandsDeviceTypeAttr()) {
+      for (auto attr : deviceTypeAttr) {
+        if (auto dtAttr = mlir::dyn_cast<acc::DeviceTypeAttr>(attr)) {
+          if (dtAttr.getValue() != mlir::acc::DeviceType::None)
+            return failure();
+        }
+      }
+    }
+
+    // Disable canonicalization if any wait segment has a devnum
+    if (auto hasDevnumAttr = op.getHasWaitDevnumAttr()) {
+      for (auto attr : hasDevnumAttr) {
+        if (auto boolAttr = mlir::dyn_cast<mlir::BoolAttr>(attr)) {
+          if (boolAttr.getValue())
+            return failure();
+        }
+      }
+    }
+
+    // Disable canonicalization if there are multiple wait segments
+    if (auto segmentsAttr = op.getWaitOperandsSegmentsAttr()) {
+      if (segmentsAttr.size() > 1)
+        return failure();
+    }
+
+    // Remove empty kernel environment.
+    // Preserve synchronization by creating acc.wait operation if needed.
+    if (!op.getWaitOperands().empty() || op.getWaitOnlyAttr())
+      rewriter.replaceOpWithNewOp<acc::WaitOp>(op, op.getWaitOperands(),
+                                               /*asyncOperand=*/Value(),
+                                               /*waitDevnum=*/Value(),
+                                               /*async=*/nullptr,
+                                               /*ifCond=*/Value());
+    else
+      rewriter.eraseOp(op);
+
+    return success();
+  }
+};
+
+//===----------------------------------------------------------------------===//
+// Recipe Region Helpers
+//===----------------------------------------------------------------------===//
+
+/// Create and populate an init region for privatization recipes.
+/// Returns success if the region is populated, failure otherwise.
+/// Sets needsFree to indicate if the allocated memory requires deallocation.
+static LogicalResult createInitRegion(OpBuilder &builder, Location loc,
+                                      Region &initRegion, Type varType,
+                                      StringRef varName, ValueRange bounds,
+                                      bool &needsFree) {
+  // Create init block with arguments: original value + bounds
+  SmallVector<Type> argTypes{varType};
+  SmallVector<Location> argLocs{loc};
+  for (Value bound : bounds) {
+    argTypes.push_back(bound.getType());
+    argLocs.push_back(loc);
+  }
+
+  Block *initBlock = builder.createBlock(&initRegion);
+  initBlock->addArguments(argTypes, argLocs);
+  builder.setInsertionPointToStart(initBlock);
+
+  Value privatizedValue;
+
+  // Get the block argument that represents the original variable
+  Value blockArgVar = initBlock->getArgument(0);
+
+  // Generate init region body based on variable type
+  if (isa<MappableType>(varType)) {
+    auto mappableTy = cast<MappableType>(varType);
+    auto typedVar = cast<TypedValue<MappableType>>(blockArgVar);
+    privatizedValue = mappableTy.generatePrivateInit(
+        builder, loc, typedVar, varName, bounds, {}, needsFree);
+    if (!privatizedValue)
+      return failure();
+  } else {
+    assert(isa<PointerLikeType>(varType) && "Expected PointerLikeType");
+    auto pointerLikeTy = cast<PointerLikeType>(varType);
+    // Use PointerLikeType's allocation API with the block argument
+    privatizedValue = pointerLikeTy.genAllocate(builder, loc, varName, varType,
+                                                blockArgVar, needsFree);
+    if (!privatizedValue)
+      return failure();
+  }
+
+  // Add yield operation to init block
+  acc::YieldOp::create(builder, loc, privatizedValue);
+
+  return success();
+}
+
+/// Create and populate a copy region for firstprivate recipes.
+/// Returns success if the region is populated, failure otherwise.
+/// TODO: Handle MappableType - it does not yet have a copy API.
+static LogicalResult createCopyRegion(OpBuilder &builder, Location loc,
+                                      Region &copyRegion, Type varType,
+                                      ValueRange bounds) {
+  // Create copy block with arguments: original value + privatized value +
+  // bounds
+  SmallVector<Type> copyArgTypes{varType, varType};
+  SmallVector<Location> copyArgLocs{loc, loc};
+  for (Value bound : bounds) {
+    copyArgTypes.push_back(bound.getType());
+    copyArgLocs.push_back(loc);
+  }
+
+  Block *copyBlock = builder.createBlock(&copyRegion);
+  copyBlock->addArguments(copyArgTypes, copyArgLocs);
+  builder.setInsertionPointToStart(copyBlock);
+
+  bool isMappable = isa<MappableType>(varType);
+  bool isPointerLike = isa<PointerLikeType>(varType);
+  // TODO: Handle MappableType - it does not yet have a copy API.
+  // Otherwise, for now just fallback to pointer-like behavior.
+  if (isMappable && !isPointerLike)
+    return failure();
+
+  // Generate copy region body based on variable type
+  if (isPointerLike) {
+    auto pointerLikeTy = cast<PointerLikeType>(varType);
+    Value originalArg = copyBlock->getArgument(0);
+    Value privatizedArg = copyBlock->getArgument(1);
+
+    // Generate copy operation using PointerLikeType interface
+    if (!pointerLikeTy.genCopy(
+            builder, loc, cast<TypedValue<PointerLikeType>>(privatizedArg),
+            cast<TypedValue<PointerLikeType>>(originalArg), varType))
+      return failure();
+  }
+
+  // Add terminator to copy block
+  acc::TerminatorOp::create(builder, loc);
+
+  return success();
+}
+
+/// Create and populate a destroy region for privatization recipes.
+/// Returns success if the region is populated, failure otherwise.
+static LogicalResult createDestroyRegion(OpBuilder &builder, Location loc,
+                                         Region &destroyRegion, Type varType,
+                                         Value allocRes, ValueRange bounds) {
+  // Create destroy block with arguments: original value + privatized value +
+  // bounds
+  SmallVector<Type> destroyArgTypes{varType, varType};
+  SmallVector<Location> destroyArgLocs{loc, loc};
+  for (Value bound : bounds) {
+    destroyArgTypes.push_back(bound.getType());
+    destroyArgLocs.push_back(loc);
+  }
+
+  Block *destroyBlock = builder.createBlock(&destroyRegion);
+  destroyBlock->addArguments(destroyArgTypes, destroyArgLocs);
+  builder.setInsertionPointToStart(destroyBlock);
+
+  auto varToFree =
+      cast<TypedValue<PointerLikeType>>(destroyBlock->getArgument(1));
+  if (isa<MappableType>(varType)) {
+    auto mappableTy = cast<MappableType>(varType);
+    if (!mappableTy.generatePrivateDestroy(builder, loc, varToFree))
+      return failure();
+  } else {
+    assert(isa<PointerLikeType>(varType) && "Expected PointerLikeType");
+    auto pointerLikeTy = cast<PointerLikeType>(varType);
+    if (!pointerLikeTy.genFree(builder, loc, varToFree, allocRes, varType))
+      return failure();
+  }
+
+  acc::TerminatorOp::create(builder, loc);
+  return success();
+}
+
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -1050,6 +1280,48 @@ LogicalResult acc::PrivateRecipeOp::verifyRegions() {
   return success();
 }
 
+std::optional<PrivateRecipeOp>
+PrivateRecipeOp::createAndPopulate(OpBuilder &builder, Location loc,
+                                   StringRef recipeName, Type varType,
+                                   StringRef varName, ValueRange bounds) {
+  // First, validate that we can handle this variable type
+  bool isMappable = isa<MappableType>(varType);
+  bool isPointerLike = isa<PointerLikeType>(varType);
+
+  // Unsupported type
+  if (!isMappable && !isPointerLike)
+    return std::nullopt;
+
+  OpBuilder::InsertionGuard guard(builder);
+
+  // Create the recipe operation first so regions have proper parent context
+  auto recipe = PrivateRecipeOp::create(builder, loc, recipeName, varType);
+
+  // Populate the init region
+  bool needsFree = false;
+  if (failed(createInitRegion(builder, loc, recipe.getInitRegion(), varType,
+                              varName, bounds, needsFree))) {
+    recipe.erase();
+    return std::nullopt;
+  }
+
+  // Only create destroy region if the allocation needs deallocation
+  if (needsFree) {
+    // Extract the allocated value from the init block's yield operation
+    auto yieldOp =
+        cast<acc::YieldOp>(recipe.getInitRegion().front().getTerminator());
+    Value allocRes = yieldOp.getOperand(0);
+
+    if (failed(createDestroyRegion(builder, loc, recipe.getDestroyRegion(),
+                                   varType, allocRes, bounds))) {
+      recipe.erase();
+      return std::nullopt;
+    }
+  }
+
+  return recipe;
+}
+
 //===----------------------------------------------------------------------===//
 // FirstprivateRecipeOp
 //===----------------------------------------------------------------------===//
@@ -1078,6 +1350,55 @@ LogicalResult acc::FirstprivateRecipeOp::verifyRegions() {
     return failure();
 
   return success();
+}
+
+std::optional<FirstprivateRecipeOp>
+FirstprivateRecipeOp::createAndPopulate(OpBuilder &builder, Location loc,
+                                        StringRef recipeName, Type varType,
+                                        StringRef varName, ValueRange bounds) {
+  // First, validate that we can handle this variable type
+  bool isMappable = isa<MappableType>(varType);
+  bool isPointerLike = isa<PointerLikeType>(varType);
+
+  // Unsupported type
+  if (!isMappable && !isPointerLike)
+    return std::nullopt;
+
+  OpBuilder::InsertionGuard guard(builder);
+
+  // Create the recipe operation first so regions have proper parent context
+  auto recipe = FirstprivateRecipeOp::create(builder, loc, recipeName, varType);
+
+  // Populate the init region
+  bool needsFree = false;
+  if (failed(createInitRegion(builder, loc, recipe.getInitRegion(), varType,
+                              varName, bounds, needsFree))) {
+    recipe.erase();
+    return std::nullopt;
+  }
+
+  // Populate the copy region
+  if (failed(createCopyRegion(builder, loc, recipe.getCopyRegion(), varType,
+                              bounds))) {
+    recipe.erase();
+    return std::nullopt;
+  }
+
+  // Only create destroy region if the allocation needs deallocation
+  if (needsFree) {
+    // Extract the allocated value from the init block's yield operation
+    auto yieldOp =
+        cast<acc::YieldOp>(recipe.getInitRegion().front().getTerminator());
+    Value allocRes = yieldOp.getOperand(0);
+
+    if (failed(createDestroyRegion(builder, loc, recipe.getDestroyRegion(),
+                                   varType, allocRes, bounds))) {
+      recipe.erase();
+      return std::nullopt;
+    }
+  }
+
+  return recipe;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2429,6 +2750,15 @@ void acc::HostDataOp::getCanonicalizationPatterns(RewritePatternSet &results,
 }
 
 //===----------------------------------------------------------------------===//
+// KernelEnvironmentOp
+//===----------------------------------------------------------------------===//
+
+void acc::KernelEnvironmentOp::getCanonicalizationPatterns(
+    RewritePatternSet &results, MLIRContext *context) {
+  results.add<RemoveEmptyKernelEnvironment>(context);
+}
+
+//===----------------------------------------------------------------------===//
 // LoopOp
 //===----------------------------------------------------------------------===//
 
@@ -2806,8 +3136,12 @@ LogicalResult acc::LoopOp::verify() {
   if (getRegion().empty())
     return emitError("expected non-empty body.");
 
-  // When it is container-like - it is expected to hold a loop-like operation.
-  if (isContainerLike()) {
+  if (getUnstructured()) {
+    if (!isContainerLike())
+      return emitError(
+          "unstructured acc.loop must not have induction variables");
+  } else if (isContainerLike()) {
+    // When it is container-like - it is expected to hold a loop-like operation.
     // Obtain the maximum collapse count - we use this to check that there
     // are enough loops contained.
     uint64_t collapseCount = getCollapseValue().value_or(1);
@@ -3597,7 +3931,8 @@ LogicalResult AtomicUpdateOp::canonicalize(AtomicUpdateOp op,
   }
 
   if (Value writeVal = op.getWriteOpVal()) {
-    rewriter.replaceOpWithNewOp<AtomicWriteOp>(op, op.getX(), writeVal);
+    rewriter.replaceOpWithNewOp<AtomicWriteOp>(op, op.getX(), writeVal,
+                                               op.getIfCond());
     return success();
   }
 
@@ -4403,15 +4738,4 @@ mlir::acc::getMutableDataOperands(mlir::Operation *accOp) {
               [&](auto entry) { return entry.getDataClauseOperandsMutable(); })
           .Default([&](mlir::Operation *) { return nullptr; })};
   return dataOperands;
-}
-
-mlir::Operation *mlir::acc::getEnclosingComputeOp(mlir::Region &region) {
-  mlir::Operation *parentOp = region.getParentOp();
-  while (parentOp) {
-    if (mlir::isa<ACC_COMPUTE_CONSTRUCT_OPS>(parentOp)) {
-      return parentOp;
-    }
-    parentOp = parentOp->getParentOp();
-  }
-  return nullptr;
 }

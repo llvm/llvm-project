@@ -294,7 +294,7 @@ struct RegisterAggr {
   ref_iterator ref_begin() const { return ref_iterator(*this, false); }
   ref_iterator ref_end() const { return ref_iterator(*this, true); }
 
-  using unit_iterator = typename BitVector::const_set_bits_iterator;
+  using unit_iterator = BitVector::const_set_bits_iterator;
   unit_iterator unit_begin() const { return Units.set_bits_begin(); }
   unit_iterator unit_end() const { return Units.set_bits_end(); }
 
@@ -358,13 +358,6 @@ template <> struct hash<llvm::rdf::RegisterRef> {
 template <> struct hash<llvm::rdf::RegisterAggr> {
   size_t operator()(const llvm::rdf::RegisterAggr &A) const { //
     return A.hash();
-  }
-};
-
-template <> struct equal_to<llvm::rdf::RegisterAggr> {
-  bool operator()(const llvm::rdf::RegisterAggr &A,
-                  const llvm::rdf::RegisterAggr &B) const {
-    return A == B;
   }
 };
 

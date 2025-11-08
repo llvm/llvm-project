@@ -1277,11 +1277,11 @@ static void checkEnumTypesInSwitchStmt(Sema &S, const Expr *Cond,
     return;
 
   // Ignore anonymous enums.
-  if (!CondEnumType->getOriginalDecl()->getIdentifier() &&
-      !CondEnumType->getOriginalDecl()->getTypedefNameForAnonDecl())
+  if (!CondEnumType->getDecl()->getIdentifier() &&
+      !CondEnumType->getDecl()->getTypedefNameForAnonDecl())
     return;
-  if (!CaseEnumType->getOriginalDecl()->getIdentifier() &&
-      !CaseEnumType->getOriginalDecl()->getTypedefNameForAnonDecl())
+  if (!CaseEnumType->getDecl()->getIdentifier() &&
+      !CaseEnumType->getDecl()->getTypedefNameForAnonDecl())
     return;
 
   if (S.Context.hasSameUnqualifiedType(CondType, CaseType))
@@ -3281,6 +3281,9 @@ static Scope *FindLabeledBreakContinueScope(Sema &S, Scope *CurScope,
                                             SourceLocation LabelLoc,
                                             bool IsContinue) {
   assert(Target && "not a named break/continue?");
+
+  Target->markUsed(S.Context);
+
   Scope *Found = nullptr;
   for (Scope *Scope = CurScope; Scope; Scope = Scope->getParent()) {
     if (Scope->isFunctionScope())
@@ -3760,7 +3763,7 @@ private:
   Sema &S;
 };
 bool LocalTypedefNameReferencer::VisitRecordType(RecordType *RT) {
-  auto *R = dyn_cast<CXXRecordDecl>(RT->getOriginalDecl());
+  auto *R = dyn_cast<CXXRecordDecl>(RT->getDecl());
   if (!R || !R->isLocalClass() || !R->isLocalClass()->isExternallyVisible() ||
       R->isDependentType())
     return true;
@@ -3979,7 +3982,7 @@ StmtResult Sema::BuildReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp,
             << RetValExp->getSourceRange();
     if (FD->hasAttr<CmseNSEntryAttr>() && RetValExp) {
       if (const auto *RT = dyn_cast<RecordType>(FnRetType.getCanonicalType())) {
-        if (RT->getOriginalDecl()->isOrContainsUnion())
+        if (RT->getDecl()->isOrContainsUnion())
           Diag(RetValExp->getBeginLoc(), diag::warn_cmse_nonsecure_union) << 1;
       }
     }

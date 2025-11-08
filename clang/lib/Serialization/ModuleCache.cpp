@@ -115,8 +115,10 @@ public:
   }
 
   std::time_t getModuleTimestamp(StringRef ModuleFilename) override {
+    std::string TimestampFilename =
+        serialization::ModuleFile::getTimestampFilename(ModuleFilename);
     llvm::sys::fs::file_status Status;
-    if (llvm::sys::fs::status(ModuleFilename, Status) != std::error_code{})
+    if (llvm::sys::fs::status(TimestampFilename, Status) != std::error_code{})
       return 0;
     return llvm::sys::toTimeT(Status.getLastModificationTime());
   }

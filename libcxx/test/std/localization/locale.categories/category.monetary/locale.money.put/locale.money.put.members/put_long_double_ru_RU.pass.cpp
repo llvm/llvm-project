@@ -6,9 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// TODO(mordante) Investigate
-// UNSUPPORTED: apple-clang
-
 // NetBSD does not support LC_MONETARY at the moment
 // XFAIL: netbsd
 

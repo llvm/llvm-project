@@ -1,7 +1,10 @@
-;; Tests that we store the type identifiers in .callgraph section of the object file.
+;; Tests that we store the type identifiers in .llvm.callgraph section of the object file.
+
+; REQUIRES: x86-registered-target
+; REQUIRES: arm-registered-target
 
 ; RUN: llc -mtriple=x86_64-unknown-linux --call-graph-section -filetype=obj -o - < %s | \
-; RUN: llvm-readelf -x .callgraph - | FileCheck %s
+; RUN: llvm-readelf -x .llvm.callgraph - | FileCheck %s
 
 declare !type !0 void @foo()
 
@@ -31,7 +34,7 @@ entry:
 
 ;; Make sure following type IDs are in call graph section
 ;; 0x5eecb3e2444f731f, 0x814b8e305486bc59, 0xf897fd777ade6814
-; CHECK:      Hex dump of section '.callgraph':
+; CHECK:      Hex dump of section '.llvm.callgraph':
 ; CHECK-NEXT: 0x00000000 00050000 00000000 00000000 00000000
 ; CHECK-NEXT: 0x00000010 00000324 44f731f5 eecb3e54 86bc5981
 ; CHECK-NEXT: 0x00000020 4b8e307a de6814f8 97fd77

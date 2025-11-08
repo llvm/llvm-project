@@ -53,6 +53,7 @@ def ArgBool : ArgType { let Name = "bool"; }
 def ArgFixedPoint : ArgType { let Name = "FixedPoint"; let AsRef = true; }
 
 def ArgFunction : ArgType { let Name = "const Function *"; }
+def ArgFunctionDecl : ArgType { let Name = "const FunctionDecl *"; }
 def ArgRecordDecl : ArgType { let Name = "const RecordDecl *"; }
 def ArgRecordField : ArgType { let Name = "const Record::Field *"; }
 def ArgFltSemantics : ArgType { let Name = "const llvm::fltSemantics *"; }
@@ -422,6 +423,8 @@ def CheckLiteralType : Opcode {
 
 def CheckArraySize : Opcode { let Args = [ArgUint64]; }
 
+def CheckFunctionDecl : Opcode { let Args = [ArgFunctionDecl]; }
+
 // [] -> [Value]
 def GetGlobal : AccessOpcode;
 def GetGlobalUnchecked : AccessOpcode;
@@ -612,12 +615,25 @@ class OverflowOpcode : Opcode {
   let HasGroup = 1;
 }
 
+class OverflowBitfieldOpcode : Opcode {
+  let Types = [AluTypeClass];
+  let Args = [ArgBool, ArgUint32];
+  let HasGroup = 1;
+}
+
 def Inc : OverflowOpcode;
+def IncBitfield : OverflowBitfieldOpcode;
 def IncPop : OverflowOpcode;
+def IncPopBitfield : OverflowBitfieldOpcode;
 def PreInc : OverflowOpcode;
+def PreIncBitfield : OverflowBitfieldOpcode;
+
 def Dec : OverflowOpcode;
+def DecBitfield : OverflowBitfieldOpcode;
 def DecPop : OverflowOpcode;
+def DecPopBitfield : OverflowBitfieldOpcode;
 def PreDec : OverflowOpcode;
+def PreDecBitfield : OverflowBitfieldOpcode;
 
 // Float increment and decrement.
 def Incf: FloatOpcode;
@@ -853,19 +869,13 @@ def Free : Opcode {
   let Args = [ArgBool, ArgBool];
 }
 
-def CheckNewTypeMismatch : Opcode {
-  let Args = [ArgExpr];
-}
-
-def InvalidNewDeleteExpr : Opcode {
-  let Args = [ArgExpr];
-}
-
+def CheckNewTypeMismatch : Opcode { let Args = [ArgExpr]; }
 def CheckNewTypeMismatchArray : Opcode {
   let Types = [IntegerTypeClass];
   let Args = [ArgExpr];
   let HasGroup = 1;
 }
+def InvalidNewDeleteExpr : Opcode { let Args = [ArgExpr]; }
 
 def IsConstantContext: Opcode;
 def CheckAllocations : Opcode;

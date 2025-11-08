@@ -179,6 +179,9 @@ Value createPadConstTensor(OpBuilder &builder, Location loc, Value src,
 // returns type of variable op
 RankedTensorType getVariableType(VariableOp variableOp);
 
+// Returns the bitwidth of a TOSA tensor element type
+unsigned getBitWidth(Type type);
+
 } // namespace tosa
 } // namespace mlir
 
