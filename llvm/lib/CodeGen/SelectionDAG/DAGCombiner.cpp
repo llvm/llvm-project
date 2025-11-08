@@ -900,6 +900,41 @@ namespace {
                          ISD::NodeType ExtType);
   };
 
+/// Generic remainder optimization : Folds a remainder operation (A % B) by reusing the computed quotient (A / B).
+static SDValue PerformREMCombineGeneric(SDNode *N, DAGCombiner &DC,
+                                        CodeGenOptLevel OptLevel) {
+  assert(N->getOpcode() == ISD::SREM || N->getOpcode() == ISD::UREM);
+
+  // Don't do anything at less than -O2.
+  if (OptLevel < CodeGenOptLevel::Default)
+    return SDValue();
+
+  SelectionDAG &DAG = DC.getDAG();
+  SDLoc DL(N);
+  EVT VT = N->getValueType(0);
+  bool IsSigned = N->getOpcode() == ISD::SREM;
+  unsigned DivOpc = IsSigned ? ISD::SDIV : ISD::UDIV;
+
+  const SDValue &Num = N->getOperand(0);
+  const SDValue &Den = N->getOperand(1);
+  
+  AttributeList Attr = DC.getDAG().getMachineFunction().getFunction().getAttributes();
+  if (DC.getDAG().getTargetLoweringInfo().isIntDivCheap(N->getValueType(0), Attr))
+    return SDValue();
+
+  for (const SDNode *U : Num->users()) {
+    if (U->getOpcode() == DivOpc && U->getOperand(0) == Num &&
+        U->getOperand(1) == Den) {
+      // Num % Den -> Num - (Num / Den) * Den
+      return DAG.getNode(ISD::SUB, DL, VT, Num,
+                         DAG.getNode(ISD::MUL, DL, VT,
+                                     DAG.getNode(DivOpc, DL, VT, Num, Den),
+                                     Den));
+    }
+  }
+  return SDValue();
+}
+
 /// This class is a DAGUpdateListener that removes any deleted
 /// nodes from the worklist.
 class WorklistRemover : public SelectionDAG::DAGUpdateListener {
@@ -5400,6 +5435,9 @@ SDValue DAGCombiner::visitREM(SDNode *N) {
   if (SDValue NewSel = foldBinOpIntoSelect(N))
     return NewSel;
 
+  if (SDValue V = PerformREMCombineGeneric(N, *this, OptLevel))
+    return V;
+  
   if (isSigned) {
     // If we know the sign bits of both operands are zero, strength reduce to a
     // urem instead.  Handles (X & 0x0FFFFFFF) %s 16 -> X&15
