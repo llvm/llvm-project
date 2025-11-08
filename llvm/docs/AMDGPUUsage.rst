@@ -1180,6 +1180,51 @@ is conservatively correct for OpenCL.
                              other operations within the same address space.
      ======================= ===================================================
 
+Target Types
+------------
+
+The AMDGPU backend implements some target extension types.
+
+.. _amdgpu-types-named-barriers:
+
+Named Barriers
+~~~~~~~~~~~~~~
+
+Named barriers are fixed function hardware barrier objects that are available
+in gfx12.5+ in addition to the traditional default barriers.
+
+In LLVM IR, named barriers are represented by global variables of type
+``target("amdgcn.named.barrier", 0)`` in the LDS address space. Named barrier
+global variables do not occupy actual LDS memory, but their lifetime and
+allocation scope matches that of global variables in LDS. Programs in LLVM IR
+refer to named barriers using pointers.
+
+The following named barrier types are supported in global variables, defined
+recursively:
+
+* a single, standalone ``target("amdgcn.named.barrier", 0)``
+* an array of supported types
+* a struct containing a single element of supported type
+
+.. code-block:: llvm
+
+      @bar = addrspace(3) global target("amdgcn.named.barrier", 0) undef
+      @foo = addrspace(3) global [2 x target("amdgcn.named.barrier", 0)] undef
+      @baz = addrspace(3) global { target("amdgcn.named.barrier", 0) } undef
+
+      ...
+
+      %foo.i = getelementptr [2 x target("amdgcn.named.barrier", 0)], ptr addrspace(3) @foo, i32 0, i32 %i
+      call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(3) %foo.i, i32 0)
+
+Named barrier types may not be used in ``alloca``.
+
+Named barriers do not have an underlying byte representation.
+It is undefined behavior to use a pointer to any part of a named barrier object
+as the pointer operand of a regular memory access instruction or intrinsic.
+Pointers to named barrier objects are intended to be used with dedicated
+intrinsics. Reading from or writing to such pointers is undefined behavior.
+
 LLVM IR Intrinsics
 ------------------
 

@@ -16117,6 +16117,46 @@ static SDValue reverseZExtICmpCombine(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(ISD::ZERO_EXTEND, DL, VT, Res);
 }
 
+// (and (i1) f, (setcc c, 0, ne)) -> (czero.nez f, c)
+// (and (i1) f, (setcc c, 0, eq)) -> (czero.eqz f, c)
+// (and (setcc c, 0, ne), (i1) g) -> (czero.nez g, c)
+// (and (setcc c, 0, eq), (i1) g) -> (czero.eqz g, c)
+static SDValue combineANDOfSETCCToCZERO(SDNode *N, SelectionDAG &DAG,
+                                        const RISCVSubtarget &Subtarget) {
+  if (!Subtarget.hasCZEROLike())
+    return SDValue();
+
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+
+  auto IsEqualCompZero = [](SDValue &V) -> bool {
+    if (V.getOpcode() == ISD::SETCC && isNullConstant(V.getOperand(1))) {
+      ISD::CondCode CC = cast<CondCodeSDNode>(V.getOperand(2))->get();
+      if (ISD::isIntEqualitySetCC(CC))
+        return true;
+    }
+    return false;
+  };
+
+  if (!IsEqualCompZero(N0) || !N0.hasOneUse())
+    std::swap(N0, N1);
+  if (!IsEqualCompZero(N0) || !N0.hasOneUse())
+    return SDValue();
+
+  KnownBits Known = DAG.computeKnownBits(N1);
+  if (Known.getMaxValue().ugt(1))
+    return SDValue();
+
+  unsigned CzeroOpcode =
+      (cast<CondCodeSDNode>(N0.getOperand(2))->get() == ISD::SETNE)
+          ? RISCVISD::CZERO_EQZ
+          : RISCVISD::CZERO_NEZ;
+
+  EVT VT = N->getValueType(0);
+  SDLoc DL(N);
+  return DAG.getNode(CzeroOpcode, DL, VT, N1, N0.getOperand(0));
+}
+
 static SDValue reduceANDOfAtomicLoad(SDNode *N,
                                      TargetLowering::DAGCombinerInfo &DCI) {
   SelectionDAG &DAG = DCI.DAG;
@@ -16180,7 +16220,9 @@ static SDValue performANDCombine(SDNode *N,
 
   if (SDValue V = reverseZExtICmpCombine(N, DAG, Subtarget))
     return V;
-
+  if (DCI.isAfterLegalizeDAG())
+    if (SDValue V = combineANDOfSETCCToCZERO(N, DAG, Subtarget))
+      return V;
   if (SDValue V = combineBinOpToReduce(N, DAG, Subtarget))
     return V;
   if (SDValue V = combineBinOpOfExtractToReduceTree(N, DAG, Subtarget))
