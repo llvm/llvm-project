@@ -15,6 +15,7 @@
 #include <__memory/addressof.h>
 #include <__mutex/tag_types.h>
 #include <__system_error/throw_system_error.h>
+#include <__utility/move.h>
 #include <__utility/swap.h>
 #include <cerrno>
 
@@ -22,6 +23,8 @@
 #  pragma GCC system_header
 #endif
 
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Mutex>
@@ -163,5 +166,6 @@ inline _LIBCPP_HIDE_FROM_ABI void swap(unique_lock<_Mutex>& __x, unique_lock<_Mu
 }
 
 _LIBCPP_END_NAMESPACE_STD
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___MUTEX_UNIQUE_LOCK_H
