@@ -497,7 +497,7 @@ public:
   ///
   /// As we fold identical functions, multiple symbols can point
   /// to the same BinaryFunction.
-  std::unordered_map<const MCSymbol *, BinaryFunction *> SymbolToFunctionMap;
+  DenseMap<const MCSymbol *, BinaryFunction *> SymbolToFunctionMap;
 
   /// A mutex that is used to control parallel accesses to SymbolToFunctionMap
   mutable llvm::sys::RWMutex SymbolToFunctionMapMutex;
