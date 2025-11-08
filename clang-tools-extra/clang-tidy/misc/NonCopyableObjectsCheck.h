@@ -6,15 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_NONCOPYABLEOBJECTS_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_NONCOPYABLEOBJECTS_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_NONCOPYABLEOBJECTSCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_NONCOPYABLEOBJECTSCHECK_H
 
 #include "../ClangTidyCheck.h"
 
 namespace clang::tidy::misc {
 
-/// The check flags dereferences and non-pointer declarations of objects that
+/// Flags dereferences and non-pointer declarations of objects that
 /// are not meant to be passed by value, such as C FILE objects.
+///
+/// For the user-facing documentation see:
+/// https://clang.llvm.org/extra/clang-tidy/checks/misc/non-copyable-objects.html
 class NonCopyableObjectsCheck : public ClangTidyCheck {
 public:
   NonCopyableObjectsCheck(StringRef Name, ClangTidyContext *Context)
@@ -25,4 +28,4 @@ public:
 
 } // namespace clang::tidy::misc
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_NONCOPYABLEOBJECTS_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_NONCOPYABLEOBJECTSCHECK_H

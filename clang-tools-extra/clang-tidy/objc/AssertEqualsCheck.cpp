@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "AssertEquals.h"
+#include "AssertEqualsCheck.h"
 #include "llvm/ADT/StringMap.h"
 
 #include <string>
@@ -21,7 +21,7 @@ static const llvm::StringMap<StringRef> NameMap{
     {"XCTAssertNotEqual", "XCTAssertNotEqualObjects"},
 };
 
-void AssertEquals::registerMatchers(MatchFinder *Finder) {
+void AssertEqualsCheck::registerMatchers(MatchFinder *Finder) {
   for (const auto &[CurrName, _] : NameMap) {
     Finder->addMatcher(
         binaryOperator(anyOf(hasOperatorName("!="), hasOperatorName("==")),
@@ -35,7 +35,8 @@ void AssertEquals::registerMatchers(MatchFinder *Finder) {
   }
 }
 
-void AssertEquals::check(const ast_matchers::MatchFinder::MatchResult &Result) {
+void AssertEqualsCheck::check(
+    const ast_matchers::MatchFinder::MatchResult &Result) {
   for (const auto &[CurrName, TargetName] : NameMap) {
     if (const auto *Root = Result.Nodes.getNodeAs<BinaryOperator>(CurrName)) {
       const SourceManager *Sm = Result.SourceManager;
