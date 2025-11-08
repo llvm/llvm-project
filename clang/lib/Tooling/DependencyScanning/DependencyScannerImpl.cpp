@@ -730,15 +730,13 @@ bool CompilerInstanceWithContext::initialize(DiagnosticConsumer *DC) {
          "Must have a job list of non-zero size");
   const driver::Command &Command = *(Compilation->getJobs().begin());
   const auto &CommandArgs = Command.getArguments();
-  size_t ArgSize = CommandArgs.size();
-  assert(ArgSize >= 1 && "Cannot have a command with 0 args");
-  const char *FirstArg = CommandArgs[0];
-  assert(StringRef(FirstArg) == "-cc1" && "Requires a cc1 job.");
+  assert(!CommandArgs.empty() && "Cannot have a command with 0 args");
+  assert(StringRef(CommandArgs[0]) == "-cc1" && "Requires a cc1 job.");
   OriginalInvocation = std::make_unique<CompilerInvocation>();
 
-  if (!CompilerInvocation::CreateFromArgs(
-          *OriginalInvocation, Command.getArguments(),
-          *DiagEngineWithCmdAndOpts->DiagEngine, Command.getExecutable())) {
+  if (!CompilerInvocation::CreateFromArgs(*OriginalInvocation, CommandArgs,
+                                          *DiagEngineWithCmdAndOpts->DiagEngine,
+                                          Command.getExecutable())) {
     DiagEngineWithCmdAndOpts->DiagEngine->Report(
         diag::err_fe_expected_compiler_job)
         << llvm::join(CommandLine, " ");
