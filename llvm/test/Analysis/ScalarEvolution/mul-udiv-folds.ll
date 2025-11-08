@@ -188,3 +188,43 @@ loop:
 exit:
   ret void
 }
+
+define noundef i64 @udiv_mul_common_vscale_factor(i64 %a, i64 %b) {
+; CHECK-LABEL: 'udiv_mul_common_vscale_factor'
+; CHECK-NEXT:  Classifying expressions for: @udiv_mul_common_vscale_factor
+; CHECK-NEXT:    %vs = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    --> vscale U: [1,0) S: [1,0)
+; CHECK-NEXT:    %a.vs = mul i64 %a, %vs
+; CHECK-NEXT:    --> (vscale * %a) U: full-set S: full-set
+; CHECK-NEXT:    %b.vs = mul i64 %b, %vs
+; CHECK-NEXT:    --> (vscale * %b) U: full-set S: full-set
+; CHECK-NEXT:    %div = udiv i64 %a.vs, %b.vs
+; CHECK-NEXT:    --> ((vscale * %a) /u (vscale * %b)) U: full-set S: full-set
+; CHECK-NEXT:  Determining loop execution counts for: @udiv_mul_common_vscale_factor
+;
+  %vs = call i64 @llvm.vscale()
+  %a.vs = mul i64 %a, %vs
+  %b.vs = mul i64 %b, %vs
+  %div = udiv i64 %a.vs, %b.vs
+  ret i64 %div
+}
+
+define noundef i64 @udiv_mul_nuw_common_vscale_factor(i64 %a, i64 %b) {
+; CHECK-LABEL: 'udiv_mul_nuw_common_vscale_factor'
+; CHECK-NEXT:  Classifying expressions for: @udiv_mul_nuw_common_vscale_factor
+; CHECK-NEXT:    %vs = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    --> vscale U: [1,0) S: [1,0)
+; CHECK-NEXT:    %a.vs = mul nuw i64 %a, %vs
+; CHECK-NEXT:    --> (vscale * %a)<nuw> U: full-set S: full-set
+; CHECK-NEXT:    %b.vs = mul nuw i64 %b, %vs
+; CHECK-NEXT:    --> (vscale * %b)<nuw> U: full-set S: full-set
+; CHECK-NEXT:    %div = udiv i64 %a.vs, %b.vs
+; CHECK-NEXT:    --> (%a /u %b) U: full-set S: full-set
+; CHECK-NEXT:  Determining loop execution counts for: @udiv_mul_nuw_common_vscale_factor
+;
+  %vs = call i64 @llvm.vscale()
+  %a.vs = mul nuw i64 %a, %vs
+  %b.vs = mul nuw i64 %b, %vs
+  %div = udiv i64 %a.vs, %b.vs
+  ret i64 %div
+}

@@ -60,7 +60,7 @@ class SFBALU_rr
 class SFBALU_ri
     : Pseudo<(outs GPR:$dst),
              (ins GPR:$lhs, GPR:$rhs, cond_code:$cc, GPR:$falsev, GPR:$rs1,
-                  simm12:$imm), []>,
+                  simm12_lo:$imm), []>,
       Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp, ReadSFBALU, ReadSFBALU]> {
   let hasSideEffects = 0;
   let mayLoad = 0;
@@ -106,6 +106,11 @@ def PseudoCCSRA : SFBALU_rr;
 def PseudoCCAND : SFBALU_rr;
 def PseudoCCOR  : SFBALU_rr;
 def PseudoCCXOR : SFBALU_rr;
+def PseudoCCMAX : SFBALU_rr;
+def PseudoCCMIN : SFBALU_rr;
+def PseudoCCMAXU : SFBALU_rr;
+def PseudoCCMINU : SFBALU_rr;
+def PseudoCCMUL : SFBALU_rr;
 
 def PseudoCCADDI : SFBALU_ri;
 def PseudoCCANDI : SFBALU_ri;

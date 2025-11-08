@@ -145,7 +145,13 @@ LLVM_ABI bool extractProfTotalWeight(const Instruction &I,
 /// \param Weights an array of weights to set on instruction I.
 /// \param IsExpected were these weights added from an llvm.expect* intrinsic.
 LLVM_ABI void setBranchWeights(Instruction &I, ArrayRef<uint32_t> Weights,
-                               bool IsExpected);
+                               bool IsExpected, bool ElideAllZero = false);
+
+/// Variant of `setBranchWeights` where the `Weights` will be fit first to
+/// uint32_t by shifting right.
+LLVM_ABI void setFittedBranchWeights(Instruction &I, ArrayRef<uint64_t> Weights,
+                                     bool IsExpected,
+                                     bool ElideAllZero = false);
 
 /// downscale the given weights preserving the ratio. If the maximum value is
 /// not already known and not provided via \param KnownMaxCount , it will be
@@ -184,6 +190,15 @@ inline uint32_t scaleBranchCount(uint64_t Count, uint64_t Scale) {
 /// debuggability.
 LLVM_ABI void setExplicitlyUnknownBranchWeights(Instruction &I,
                                                 StringRef PassName);
+
+/// Like setExplicitlyUnknownBranchWeights(...), but only sets unknown branch
+/// weights in the new instruction if the parent function of the original
+/// instruction has an entry count. This is to not confuse users by injecting
+/// profile data into non-profiled functions. If \p F is nullptr, we will fetch
+/// the function from \p I.
+LLVM_ABI void
+setExplicitlyUnknownBranchWeightsIfProfiled(Instruction &I, StringRef PassName,
+                                            const Function *F = nullptr);
 
 /// Analogous to setExplicitlyUnknownBranchWeights, but for functions and their
 /// entry counts.

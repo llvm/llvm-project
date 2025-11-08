@@ -286,7 +286,7 @@ LogicalResult MemorySlotPromotionAnalyzer::computeBlockingUses(
   mlir::getForwardSlice(slot.ptr, &forwardSlice);
   for (Operation *user : forwardSlice) {
     // If the next operation has no blocking uses, everything is fine.
-    auto it = userToBlockingUses.find(user);
+    auto *it = userToBlockingUses.find(user);
     if (it == userToBlockingUses.end())
       continue;
 

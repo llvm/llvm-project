@@ -30,6 +30,9 @@ namespace doc {
 // SHA1'd hash of a USR.
 using SymbolID = std::array<uint8_t, 20>;
 
+constexpr SymbolID GlobalNamespaceID = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+
 struct BaseRecordInfo;
 struct EnumInfo;
 struct FunctionInfo;
@@ -434,10 +437,6 @@ struct FunctionInfo : public SymbolInfo {
   // (AS_public = 0, AS_protected = 1, AS_private = 2, AS_none = 3)
   AccessSpecifier Access = AccessSpecifier::AS_public;
 
-  // Full qualified name of this function, including namespaces and template
-  // specializations.
-  SmallString<16> FullName;
-
   // Function Prototype
   SmallString<256> Prototype;
 
@@ -456,10 +455,6 @@ struct RecordInfo : public SymbolInfo {
 
   // Type of this record (struct, class, union, interface).
   TagTypeKind TagType = TagTypeKind::Struct;
-
-  // Full qualified name of this record, including namespaces and template
-  // specializations.
-  SmallString<16> FullName;
 
   // When present, this record is a template or specialization.
   std::optional<TemplateInfo> Template;

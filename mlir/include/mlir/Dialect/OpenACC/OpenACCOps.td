@@ -152,6 +152,26 @@ def OpenACC_LoopParMode : I32EnumAttr<
   let genSpecializedAttr = 0;
 }
 
+def OpenACC_PrivateRecipe : I32EnumAttrCase<"private_recipe", 0>;
+def OpenACC_FirstprivateRecipe : I32EnumAttrCase<"firstprivate_recipe", 1>;
+def OpenACC_ReductionRecipe : I32EnumAttrCase<"reduction_recipe", 2>;
+
+def OpenACC_RecipeKind : I32EnumAttr<
+    "RecipeKind",
+    "Encodes the options for kinds of recipes availabie in acc dialect",
+    [
+      OpenACC_PrivateRecipe, OpenACC_FirstprivateRecipe,
+      OpenACC_ReductionRecipe]> {
+  let cppNamespace = "::mlir::acc";
+  let genSpecializedAttr = 0;
+}
+
+def OpenACC_RecipeKindAttr : EnumAttr<OpenACC_Dialect,
+                                             OpenACC_RecipeKind,
+                                             "recipe_kind"> {
+  let assemblyFormat = [{ ```<` $value `>` }];
+}
+
 // Type used in operation below.
 def IntOrIndex : AnyTypeOf<[AnyInteger, Index]>;
 
@@ -414,6 +434,13 @@ def OpenACC_ConstructResource : Resource<"::mlir::acc::ConstructResource">;
 
 // Define a resource for the OpenACC current device setting.
 def OpenACC_CurrentDeviceIdResource : Resource<"::mlir::acc::CurrentDeviceIdResource">;
+
+// Attribute for saving variable names - this can be attached to non-acc-dialect
+// operations in order to ensure the name is preserved.
+def OpenACC_VarNameAttr : OpenACC_Attr<"VarName", "var_name"> {
+  let parameters = (ins StringRefParameter<"">:$name);
+  let assemblyFormat = "`<` $name `>`";
+}
 
 // Used for data specification in data clauses (2.7.1).
 // Either (or both) extent and upperbound must be specified.
@@ -775,6 +802,21 @@ def OpenACC_FirstprivateOp : OpenACC_DataEntryOp<"firstprivate",
     (ins Arg<OpenACC_AnyPointerOrMappableType,"Host variable",[MemRead]>:$var)> {
   let summary = "Represents firstprivate semantic for the acc firstprivate "
                 "clause.";
+  let results = (outs Arg<OpenACC_AnyPointerOrMappableType,
+                          "Accelerator mapped variable",[MemWrite]>:$accVar);
+  let extraClassDeclaration = extraClassDeclarationBase;
+}
+
+// The mapping of firstprivate cannot be represented through an `acc.copyin`
+// since that operation includes present counter updates (and private variables
+// do not impact counters). Instead, the below operation is used to represent
+// the mapping of that initial value which can be used to initialize the private
+// copies.
+def OpenACC_FirstprivateMapInitialOp : OpenACC_DataEntryOp<"firstprivate_map",
+    "mlir::acc::DataClause::acc_firstprivate", "", [],
+    (ins Arg<OpenACC_AnyPointerOrMappableType,"Host variable",[MemRead]>:$var)> {
+  let summary = "Used to decompose firstprivate semantics and represents the "
+                "mapping of the initial value.";
   let results = (outs Arg<OpenACC_AnyPointerOrMappableType,
                           "Accelerator mapped variable",[MemWrite]>:$accVar);
   let extraClassDeclaration = extraClassDeclarationBase;
@@ -1316,6 +1358,24 @@ def OpenACC_PrivateRecipeOp
   }];
 
   let hasRegionVerifier = 1;
+
+  let extraClassDeclaration = [{
+    /// Creates a PrivateRecipeOp and populates its regions based on the
+    /// variable type as long as the type implements MappableType or
+    /// PointerLikeType interface. If a type implements both, the MappableType
+    /// API will be preferred. Returns std::nullopt if the recipe cannot be
+    /// created or populated. The builder's current insertion point will be used
+    /// and it must be a valid place for this operation to be inserted. The
+    /// `recipeName` must be a unique name to prevent "redefinition of symbol"
+    /// IR errors.
+    static std::optional<PrivateRecipeOp> createAndPopulate(
+        ::mlir::OpBuilder &builder,
+        ::mlir::Location loc,
+        ::llvm::StringRef recipeName,
+        ::mlir::Type varType,
+        ::llvm::StringRef varName = "",
+        ::mlir::ValueRange bounds = {});
+  }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -1410,6 +1470,24 @@ def OpenACC_FirstprivateRecipeOp
   }];
 
   let hasRegionVerifier = 1;
+
+  let extraClassDeclaration = [{
+    /// Creates a FirstprivateRecipeOp and populates its regions based on the
+    /// variable type as long as the type implements MappableType or
+    /// PointerLikeType interface. If a type implements both, the MappableType
+    /// API will be preferred. Returns std::nullopt if the recipe cannot be
+    /// created or populated. The builder's current insertion point will be used
+    /// and it must be a valid place for this operation to be inserted. The
+    /// `recipeName` must be a unique name to prevent "redefinition of symbol"
+    /// IR errors.
+    static std::optional<FirstprivateRecipeOp> createAndPopulate(
+        ::mlir::OpBuilder &builder,
+        ::mlir::Location loc,
+        ::llvm::StringRef recipeName,
+        ::mlir::Type varType,
+        ::llvm::StringRef varName = "",
+        ::mlir::ValueRange bounds = {});
+  }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -2059,6 +2137,58 @@ def OpenACC_KernelsOp : OpenACC_Op<"kernels",
 }
 
 //===----------------------------------------------------------------------===//
+// acc.kernel_environment
+//===----------------------------------------------------------------------===//
+
+def OpenACC_KernelEnvironmentOp : OpenACC_Op<"kernel_environment",
+    [AttrSizedOperandSegments, RecursiveMemoryEffects, SingleBlock,
+     NoTerminator,
+     MemoryEffects<[MemWrite<OpenACC_ConstructResource>,
+                    MemRead<OpenACC_CurrentDeviceIdResource>]>]> {
+  let summary = "Decomposition of compute constructs to capture data mapping "
+                "and asynchronous behavior information";
+  let description = [{
+    The `acc.kernel_environment` operation represents a decomposition of
+    any OpenACC compute construct (acc.kernels, acc.parallel, or
+    acc.serial) that captures data mapping and asynchronous behavior:
+    - data clause operands
+    - async clause operands
+    - wait clause operands
+
+    This allows kernel execution parallelism and privatization to be
+    handled separately, facilitating eventual lowering to GPU dialect where
+    kernel launching and compute offloading are handled separately.
+  }];
+
+  let arguments = (ins
+    Variadic<AnyType>:$dataClauseOperands,
+    Variadic<IntOrIndex>:$asyncOperands,
+    OptionalAttr<DeviceTypeArrayAttr>:$asyncOperandsDeviceType,
+    OptionalAttr<DeviceTypeArrayAttr>:$asyncOnly,
+    Variadic<IntOrIndex>:$waitOperands,
+    OptionalAttr<DenseI32ArrayAttr>:$waitOperandsSegments,
+    OptionalAttr<DeviceTypeArrayAttr>:$waitOperandsDeviceType,
+    OptionalAttr<BoolArrayAttr>:$hasWaitDevnum,
+    OptionalAttr<DeviceTypeArrayAttr>:$waitOnly);
+
+  let regions = (region SizedRegion<1>:$region);
+
+  let assemblyFormat = [{
+    oilist(
+        `dataOperands` `(` $dataClauseOperands `:` type($dataClauseOperands) `)`
+      | `async` `` custom<DeviceTypeOperandsWithKeywordOnly>($asyncOperands,
+            type($asyncOperands), $asyncOperandsDeviceType, $asyncOnly)
+      | `wait` `` custom<WaitClause>($waitOperands, type($waitOperands),
+          $waitOperandsDeviceType, $waitOperandsSegments, $hasWaitDevnum,
+          $waitOnly)
+    )
+    $region attr-dict
+  }];
+
+  let hasCanonicalizer = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // 2.6.5 data Construct
 //===----------------------------------------------------------------------===//
 
@@ -2383,15 +2513,38 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
   let summary = "loop construct";
 
   let description = [{
-    The "acc.loop" operation represents the OpenACC loop construct. The lower
-    and upper bounds specify a half-open range: the range includes the lower
-    bound but does not include the upper bound. If the `inclusive` attribute is
-    set then the upper bound is included.
+    The `acc.loop` operation represents the OpenACC loop construct and when
+    bounds are included, the associated source language loop iterators. The
+    lower and upper bounds specify a half-open range: the range includes the
+    lower bound but does not include the upper bound. If the `inclusive`
+    attribute is set then the upper bound is included.
+
+    In cases where the OpenACC loop directive needs to capture multiple
+    source language loops, such as in the case of `collapse` or `tile`,
+    the multiple induction arguments are used to capture each case. Having
+    such a representation makes sure no intermediate transformation such
+    as Loop Invariant Code Motion breaks the property requested by the
+    clause on the loop constructs.
+
+    Each `acc.loop` holds private and reduction operands which are the
+    ssa values from the corresponding `acc.private` or `acc.reduction`
+    operations. Additionally, firstprivate operands are supported to
+    represent cases where privatization is needed with initialization
+    from an original value. While the OpenACC specification does not
+    explicitly support firstprivate on loop constructs, this extension
+    enables representing privatization scenarios that arise from an
+    optimization and codegen pipeline operating on acc dialect.
+
+    The operation supports capturing information that it comes combined
+    constructs (e.g., `parallel loop`, `kernels loop`, `serial loop`)
+    through the `combined` attribute despite requiring the `acc.loop`
+    to be decomposed from the compute operation representing compute
+    construct.
 
     Example:
 
     ```mlir
-    acc.loop gang() vector() (%arg3 : index, %arg4 : index, %arg5 : index) = 
+    acc.loop gang() vector() (%arg3 : index, %arg4 : index, %arg5 : index) =
         (%c0, %c0, %c0 : index, index, index) to 
         (%c10, %c10, %c10 : index, index, index) step 
         (%c1, %c1, %c1 : index, index, index) {
@@ -2400,10 +2553,18 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
     } attributes { collapse = [3] }
     ```
 
-    `collapse`, `gang`, `worker`, `vector`, `seq`, `independent`, `auto` and
-    `tile` operands are supported with `device_type` information. They should
-    only be accessed by the extra provided getters. If modified, the
-    corresponding `device_type` attributes must be modified as well.
+    `collapse`, `gang`, `worker`, `vector`, `seq`, `independent`, `auto`,
+    `cache`, and `tile` operands are supported with `device_type`
+    information. These clauses should only be accessed through the provided
+    device-type-aware getter methods. When modifying these operands, the
+    corresponding `device_type` attributes must be updated to maintain
+    consistency between operands and their target device types.
+
+    The `unstructured` attribute indicates that the loops inside the OpenACC
+    construct contain early exits and cannot be lowered to structured MLIR
+    operations. When this flag is set, the acc.loop should have no induction
+    variables and the loop must be implemented via explicit control flow
+    inside its body.
   }];
 
   let arguments = (ins
@@ -2433,9 +2594,12 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
       Variadic<OpenACC_AnyPointerOrMappableType>:$cacheOperands,
       Variadic<OpenACC_AnyPointerOrMappableType>:$privateOperands,
       OptionalAttr<SymbolRefArrayAttr>:$privatizationRecipes,
+      Variadic<OpenACC_AnyPointerOrMappableType>:$firstprivateOperands,
+      OptionalAttr<SymbolRefArrayAttr>:$firstprivatizationRecipes,
       Variadic<AnyType>:$reductionOperands,
       OptionalAttr<SymbolRefArrayAttr>:$reductionRecipes,
-      OptionalAttr<OpenACC_CombinedConstructsAttr>:$combined
+      OptionalAttr<OpenACC_CombinedConstructsAttr>:$combined,
+      UnitAttr:$unstructured
   );
 
   let results = (outs Variadic<AnyType>:$results);
@@ -2589,6 +2753,10 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
     /// Adds a private clause variable to this operation, including its recipe.
     void addPrivatization(MLIRContext *, mlir::acc::PrivateOp op,
                           mlir::acc::PrivateRecipeOp recipe);
+    /// Adds a firstprivate clause variable to this operation, including its
+    /// recipe.
+    void addFirstPrivatization(MLIRContext *, mlir::acc::FirstprivateOp op,
+                               mlir::acc::FirstprivateRecipeOp recipe);
     /// Adds a reduction clause variable to this operation, including its
     /// recipe.
     void addReduction(MLIRContext *, mlir::acc::ReductionOp op,
@@ -2609,6 +2777,8 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
             type($vectorOperands), $vectorOperandsDeviceType, $vector)
       | `private` `(` custom<SymOperandList>(
             $privateOperands, type($privateOperands), $privatizationRecipes) `)`
+      | `firstprivate` `(` custom<SymOperandList>($firstprivateOperands,
+            type($firstprivateOperands), $firstprivatizationRecipes) `)`
       | `tile` `(` custom<DeviceTypeOperandsWithSegment>($tileOperands,
             type($tileOperands), $tileOperandsDeviceType, $tileOperandsSegments)
         `)`
@@ -2665,6 +2835,8 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
           /*cacheOperands=*/{},
           /*privateOperands=*/{},
           /*privatizationRecipes=*/nullptr,
+          /*firstprivateOperands=*/{},
+          /*firstprivatizationRecipes=*/nullptr,
           /*reductionOperands=*/{},
           /*reductionRecipes=*/nullptr,
           /*combined=*/nullptr);
@@ -2709,10 +2881,14 @@ def AtomicReadOp : OpenACC_Op<"atomic.read", [AtomicReadOpInterface]> {
 
   let arguments = (ins OpenACC_PointerLikeType:$x,
                        OpenACC_PointerLikeType:$v,
-                       TypeAttr:$element_type);
+                       TypeAttr:$element_type, Optional<I1>:$ifCond);
   let assemblyFormat = [{
+    oilist(
+        `if` `(` $ifCond `)`
+    )
     $v `=` $x
-    `:` type($v) `,` type($x) `,` $element_type attr-dict
+    `:` type($v) `,` type($x) `,` $element_type
+    attr-dict
   }];
   let hasVerifier = 1;
 }
@@ -2731,8 +2907,12 @@ def AtomicWriteOp : OpenACC_Op<"atomic.write",[AtomicWriteOpInterface]> {
   }];
 
   let arguments = (ins OpenACC_PointerLikeType:$x,
-                       AnyType:$expr);
+                       AnyType:$expr,
+                       Optional<I1>:$ifCond);
   let assemblyFormat = [{
+    oilist(
+        `if` `(` $ifCond `)`
+    )
     $x `=` $expr
     `:` type($x) `,` type($expr)
     attr-dict
@@ -2772,10 +2952,15 @@ def AtomicUpdateOp : OpenACC_Op<"atomic.update",
 
   let arguments = (ins Arg<OpenACC_PointerLikeType,
                            "Address of variable to be updated",
-                           [MemRead, MemWrite]>:$x);
+                           [MemRead, MemWrite]>:$x,
+                       Optional<I1>:$ifCond);
   let regions = (region SizedRegion<1>:$region);
   let assemblyFormat = [{
-    $x `:` type($x) $region attr-dict
+    oilist(
+        `if` `(` $ifCond `)`
+    )
+    $x `:` type($x)
+      $region attr-dict
   }];
   let hasVerifier = 1;
   let hasRegionVerifier = 1;
@@ -2818,8 +3003,13 @@ def AtomicCaptureOp : OpenACC_Op<"atomic.capture",
 
   }];
 
+  let arguments = (ins Optional<I1>:$ifCond);
+
   let regions = (region SizedRegion<1>:$region);
   let assemblyFormat = [{
+    oilist(
+        `if` `(` $ifCond `)`
+    )
     $region attr-dict
   }];
   let hasRegionVerifier = 1;

@@ -380,9 +380,9 @@ void foo9() {
 // CIR-BEFORE: %[[A_ADDR:.*]] = cir.alloca !cir.complex<!cir.f16>, !cir.ptr<!cir.complex<!cir.f16>>, ["a"]
 // CIR-BEFORE: %[[B_ADDR:.*]] = cir.alloca !cir.complex<!cir.f16>, !cir.ptr<!cir.complex<!cir.f16>>, ["b", init]
 // CIR-BEFORE: %[[TMP_A:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.complex<!cir.f16>>, !cir.complex<!cir.f16>
-// CIR-BEFORE: %[[A_COMPLEX_F32:.*]] = cir.cast(float_complex, %[[TMP_A]] : !cir.complex<!cir.f16>), !cir.complex<!cir.float>
+// CIR-BEFORE: %[[A_COMPLEX_F32:.*]] = cir.cast float_complex %[[TMP_A]] : !cir.complex<!cir.f16> -> !cir.complex<!cir.float>
 // CIR-BEFORE: %[[RESULT:.*]] = cir.unary(plus, %[[A_COMPLEX_F32]]) : !cir.complex<!cir.float>, !cir.complex<!cir.float>
-// CIR-BEFORE: %[[A_COMPLEX_F16:.*]] = cir.cast(float_complex, %[[RESULT]] : !cir.complex<!cir.float>), !cir.complex<!cir.f16>
+// CIR-BEFORE: %[[A_COMPLEX_F16:.*]] = cir.cast float_complex %[[RESULT]] : !cir.complex<!cir.float> -> !cir.complex<!cir.f16>
 // CIR-BEFORE: cir.store{{.*}} %[[A_COMPLEX_F16]], %[[B_ADDR]] : !cir.complex<!cir.f16>, !cir.ptr<!cir.complex<!cir.f16>>
 
 // CIR-AFTER: %[[A_ADDR:.*]] = cir.alloca !cir.complex<!cir.f16>, !cir.ptr<!cir.complex<!cir.f16>>, ["a"]
@@ -390,8 +390,8 @@ void foo9() {
 // CIR-AFTER: %[[TMP_A:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.complex<!cir.f16>>, !cir.complex<!cir.f16>
 // CIR-AFTER: %[[A_REAL:.*]] = cir.complex.real %[[TMP_A]] : !cir.complex<!cir.f16> -> !cir.f16
 // CIR-AFTER: %[[A_IMAG:.*]] = cir.complex.imag %[[TMP_A]] : !cir.complex<!cir.f16> -> !cir.f16
-// CIR-AFTER: %[[A_REAL_F32:.*]] = cir.cast(floating, %[[A_REAL]] : !cir.f16), !cir.float
-// CIR-AFTER: %[[A_IMAG_F32:.*]] = cir.cast(floating, %[[A_IMAG]] : !cir.f16), !cir.float
+// CIR-AFTER: %[[A_REAL_F32:.*]] = cir.cast floating %[[A_REAL]] : !cir.f16 -> !cir.float
+// CIR-AFTER: %[[A_IMAG_F32:.*]] = cir.cast floating %[[A_IMAG]] : !cir.f16 -> !cir.float
 // CIR-AFTER: %[[A_COMPLEX_F32:.*]] = cir.complex.create %[[A_REAL_F32]], %[[A_IMAG_F32]] : !cir.float -> !cir.complex<!cir.float>
 // CIR-AFTER: %[[A_REAL_F32:.*]] = cir.complex.real %[[A_COMPLEX_F32]] : !cir.complex<!cir.float> -> !cir.float
 // CIR-AFTER: %[[A_IMAG_F32:.*]] = cir.complex.imag %[[A_COMPLEX_F32]] : !cir.complex<!cir.float> -> !cir.float
@@ -400,8 +400,8 @@ void foo9() {
 // CIR-AFTER: %[[RESULT_COMPLEX_F32:.*]] = cir.complex.create %[[RESULT_REAL_F32]], %[[RESULT_IMAG_F32]] : !cir.float -> !cir.complex<!cir.float>
 // CIR-AFTER: %[[RESULT_REAL_F32:.*]] = cir.complex.real %[[RESULT_COMPLEX_F32]] : !cir.complex<!cir.float> -> !cir.float
 // CIR-AFTER: %[[RESULT_IMAG_F32:.*]] = cir.complex.imag %[[RESULT_COMPLEX_F32]] : !cir.complex<!cir.float> -> !cir.float
-// CIR-AFTER: %[[RESULT_REAL_F16:.*]] = cir.cast(floating, %[[RESULT_REAL_F32]] : !cir.float), !cir.f16
-// CIR-AFTER: %[[RESULT_IMAG_F16:.*]] = cir.cast(floating, %[[RESULT_IMAG_F32]] : !cir.float), !cir.f16
+// CIR-AFTER: %[[RESULT_REAL_F16:.*]] = cir.cast floating %[[RESULT_REAL_F32]] : !cir.float -> !cir.f16
+// CIR-AFTER: %[[RESULT_IMAG_F16:.*]] = cir.cast floating %[[RESULT_IMAG_F32]] : !cir.float -> !cir.f16
 // CIR-AFTER: %[[RESULT_COMPLEX_F16:.*]] = cir.complex.create %[[RESULT_REAL_F16]], %[[RESULT_IMAG_F16]] : !cir.f16 -> !cir.complex<!cir.f16>
 // CIR-AFTER: cir.store{{.*}} %[[RESULT_COMPLEX_F16]], %[[B_ADDR]] : !cir.complex<!cir.f16>, !cir.ptr<!cir.complex<!cir.f16>>
 
@@ -445,9 +445,9 @@ void foo10() {
 // CIR-BEFORE: %[[A_ADDR:.*]] = cir.alloca !cir.complex<!cir.f16>, !cir.ptr<!cir.complex<!cir.f16>>, ["a"]
 // CIR-BEFORE: %[[B_ADDR:.*]] = cir.alloca !cir.complex<!cir.f16>, !cir.ptr<!cir.complex<!cir.f16>>, ["b", init]
 // CIR-BEFORE: %[[TMP_A:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.complex<!cir.f16>>, !cir.complex<!cir.f16>
-// CIR-BEFORE: %[[A_COMPLEX_F32:.*]] = cir.cast(float_complex, %[[TMP_A]] : !cir.complex<!cir.f16>), !cir.complex<!cir.float>
+// CIR-BEFORE: %[[A_COMPLEX_F32:.*]] = cir.cast float_complex %[[TMP_A]] : !cir.complex<!cir.f16> -> !cir.complex<!cir.float>
 // CIR-BEFORE: %[[RESULT:.*]] = cir.unary(minus, %[[A_COMPLEX_F32]]) : !cir.complex<!cir.float>, !cir.complex<!cir.float>
-// CIR-BEFORE: %[[A_COMPLEX_F16:.*]] = cir.cast(float_complex, %[[RESULT]] : !cir.complex<!cir.float>), !cir.complex<!cir.f16>
+// CIR-BEFORE: %[[A_COMPLEX_F16:.*]] = cir.cast float_complex %[[RESULT]] : !cir.complex<!cir.float> -> !cir.complex<!cir.f16>
 // CIR-BEFORE: cir.store{{.*}} %[[A_COMPLEX_F16]], %[[B_ADDR]] : !cir.complex<!cir.f16>, !cir.ptr<!cir.complex<!cir.f16>>
 
 // CIR-AFTER: %[[A_ADDR:.*]] = cir.alloca !cir.complex<!cir.f16>, !cir.ptr<!cir.complex<!cir.f16>>, ["a"]
@@ -455,8 +455,8 @@ void foo10() {
 // CIR-AFTER: %[[TMP_A:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.complex<!cir.f16>>, !cir.complex<!cir.f16>
 // CIR-AFTER: %[[A_REAL:.*]] = cir.complex.real %[[TMP_A]] : !cir.complex<!cir.f16> -> !cir.f16
 // CIR-AFTER: %[[A_IMAG:.*]] = cir.complex.imag %[[TMP_A]] : !cir.complex<!cir.f16> -> !cir.f16
-// CIR-AFTER: %[[A_REAL_F32:.*]] = cir.cast(floating, %[[A_REAL]] : !cir.f16), !cir.float
-// CIR-AFTER: %[[A_IMAG_F32:.*]] = cir.cast(floating, %[[A_IMAG]] : !cir.f16), !cir.float
+// CIR-AFTER: %[[A_REAL_F32:.*]] = cir.cast floating %[[A_REAL]] : !cir.f16 -> !cir.float
+// CIR-AFTER: %[[A_IMAG_F32:.*]] = cir.cast floating %[[A_IMAG]] : !cir.f16 -> !cir.float
 // CIR-AFTER: %[[A_COMPLEX_F32:.*]] = cir.complex.create %[[A_REAL_F32]], %[[A_IMAG_F32]] : !cir.float -> !cir.complex<!cir.float>
 // CIR-AFTER: %[[A_REAL_F32:.*]] = cir.complex.real %[[A_COMPLEX_F32]] : !cir.complex<!cir.float> -> !cir.float
 // CIR-AFTER: %[[A_IMAG_F32:.*]] = cir.complex.imag %[[A_COMPLEX_F32]] : !cir.complex<!cir.float> -> !cir.float
@@ -465,8 +465,8 @@ void foo10() {
 // CIR-AFTER: %[[RESULT_COMPLEX_F32:.*]] = cir.complex.create %[[RESULT_REAL_F32]], %[[RESULT_IMAG_F32]] : !cir.float -> !cir.complex<!cir.float>
 // CIR-AFTER: %[[RESULT_REAL_F32:.*]] = cir.complex.real %[[RESULT_COMPLEX_F32]] : !cir.complex<!cir.float> -> !cir.float
 // CIR-AFTER: %[[RESULT_IMAG_F32:.*]] = cir.complex.imag %[[RESULT_COMPLEX_F32]] : !cir.complex<!cir.float> -> !cir.float
-// CIR-AFTER: %[[RESULT_REAL_F16:.*]] = cir.cast(floating, %[[RESULT_REAL_F32]] : !cir.float), !cir.f16
-// CIR-AFTER: %[[RESULT_IMAG_F16:.*]] = cir.cast(floating, %[[RESULT_IMAG_F32]] : !cir.float), !cir.f16
+// CIR-AFTER: %[[RESULT_REAL_F16:.*]] = cir.cast floating %[[RESULT_REAL_F32]] : !cir.float -> !cir.f16
+// CIR-AFTER: %[[RESULT_IMAG_F16:.*]] = cir.cast floating %[[RESULT_IMAG_F32]] : !cir.float -> !cir.f16
 // CIR-AFTER: %[[RESULT_COMPLEX_F16:.*]] = cir.complex.create %[[RESULT_REAL_F16]], %[[RESULT_IMAG_F16]] : !cir.f16 -> !cir.complex<!cir.f16>
 // CIR-AFTER: cir.store{{.*}} %[[RESULT_COMPLEX_F16]], %[[B_ADDR]] : !cir.complex<!cir.f16>, !cir.ptr<!cir.complex<!cir.f16>>
 
@@ -505,3 +505,80 @@ void foo10() {
 // OGCG: %[[B_IMAG_PTR:.*]] = getelementptr inbounds nuw { half, half }, ptr %[[B_ADDR]], i32 0, i32 1
 // OGCG: store half %[[RESULT_REAL]], ptr %[[B_REAL_PTR]], align 2
 // OGCG: store half %[[RESULT_IMAG]], ptr %[[B_IMAG_PTR]], align 2
+
+void complex_unary_inc_lvalue() {
+  float _Complex a;
+  ++a;
+}
+
+
+// CIR-BEFORE: %[[A_ADDR]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["a"]
+// CIR-BEFORE: %[[TMP_A:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
+// CIR-BEFORE: %[[RESULT:.*]] = cir.unary(inc, %[[TMP_A]]) : !cir.complex<!cir.float>, !cir.complex<!cir.float>
+// CIR-BEFORE: cir.store{{.*}} %[[RESULT]], %[[A_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
+
+// CIR-AFTER: %[[A_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["a"]
+// CIR-AFTER: %[[TMP_A:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
+// CIR-AFTER: %[[A_REAL:.*]] = cir.complex.real %[[TMP_A]] : !cir.complex<!cir.float> -> !cir.float
+// CIR-AFTER: %[[A_IMAG:.*]] = cir.complex.imag %[[TMP_A]] : !cir.complex<!cir.float> -> !cir.float
+// CIR-AFTER: %[[RESULT_REAL:.*]] = cir.unary(inc, %2) : !cir.float, !cir.float
+// CIR-AFTER: %[[RESULT:.*]] = cir.complex.create %[[RESULT_REAL]], %[[A_IMAG]] : !cir.float -> !cir.complex<!cir.float>
+// CIR-AFTER: cir.store{{.*}} %[[RESULT]], %[[A_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
+
+// LLVM: %[[A_ADDR:.*]] = alloca { float, float }, i64 1, align 4
+// LLVM: %[[TMP_A:.*]] = load { float, float }, ptr %[[A_ADDR]], align 4
+// LLVM: %[[A_REAL:.*]] = extractvalue { float, float } %[[TMP_A]], 0
+// LLVM: %[[A_IMAG:.*]] = extractvalue { float, float } %[[TMP_A]], 1
+// LLVM: %[[RESULT_REAL:.*]] = fadd float 1.000000e+00, %[[A_REAL]]
+// LLVM: %[[TMP_RESULT:.*]] = insertvalue { float, float } {{.*}}, float %[[RESULT_REAL]], 0
+// LLVM: %[[RESULT:.*]] = insertvalue { float, float } %[[TMP_RESULT]], float %[[A_IMAG]], 1
+// LLVM: store { float, float } %[[RESULT]], ptr %[[A_ADDR]], align 4
+
+// OGCG: %[[A_ADDR:.*]] = alloca { float, float }, align 4
+// OGCG: %[[A_REAL_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[A_ADDR]], i32 0, i32 0
+// OGCG: %[[A_REAL:.*]] = load float, ptr %[[A_REAL_PTR]], align 4
+// OGCG: %[[A_IMAG_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[A_ADDR]], i32 0, i32 1
+// OGCG: %[[A_IMAG:.*]] = load float, ptr %[[A_IMAG_PTR]], align 4
+// OGCG: %[[RESULT_REAL:.*]] = fadd float %[[A_REAL]], 1.000000e+00
+// OGCG: %[[A_REAL_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[A_ADDR]], i32 0, i32 0
+// OGCG: %[[A_IMAG_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[A_ADDR]], i32 0, i32 1
+// OGCG: store float %[[RESULT_REAL]], ptr %[[A_REAL_PTR]], align 4
+// OGCG: store float %[[A_IMAG]], ptr %[[A_IMAG_PTR]], align 4
+
+void complex_unary_dec_lvalue() {
+  float _Complex a;
+  --a;
+}
+
+// CIR-BEFORE: %[[A_ADDR]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["a"]
+// CIR-BEFORE: %[[TMP_A:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
+// CIR-BEFORE: %[[RESULT:.*]] = cir.unary(dec, %[[TMP_A]]) : !cir.complex<!cir.float>, !cir.complex<!cir.float>
+// CIR-BEFORE: cir.store{{.*}} %[[RESULT]], %[[A_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
+
+// CIR-AFTER: %[[A_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["a"]
+// CIR-AFTER: %[[TMP_A:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
+// CIR-AFTER: %[[A_REAL:.*]] = cir.complex.real %[[TMP_A]] : !cir.complex<!cir.float> -> !cir.float
+// CIR-AFTER: %[[A_IMAG:.*]] = cir.complex.imag %[[TMP_A]] : !cir.complex<!cir.float> -> !cir.float
+// CIR-AFTER: %[[RESULT_REAL:.*]] = cir.unary(dec, %2) : !cir.float, !cir.float
+// CIR-AFTER: %[[RESULT:.*]] = cir.complex.create %[[RESULT_REAL]], %[[A_IMAG]] : !cir.float -> !cir.complex<!cir.float>
+// CIR-AFTER: cir.store{{.*}} %[[RESULT]], %[[A_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
+
+// LLVM: %[[A_ADDR:.*]] = alloca { float, float }, i64 1, align 4
+// LLVM: %[[TMP_A:.*]] = load { float, float }, ptr %[[A_ADDR]], align 4
+// LLVM: %[[A_REAL:.*]] = extractvalue { float, float } %[[TMP_A]], 0
+// LLVM: %[[A_IMAG:.*]] = extractvalue { float, float } %[[TMP_A]], 1
+// LLVM: %[[RESULT_REAL:.*]] = fadd float -1.000000e+00, %[[A_REAL]]
+// LLVM: %[[TMP_RESULT:.*]] = insertvalue { float, float } {{.*}}, float %[[RESULT_REAL]], 0
+// LLVM: %[[RESULT:.*]] = insertvalue { float, float } %[[TMP_RESULT]], float %[[A_IMAG]], 1
+// LLVM: store { float, float } %[[RESULT]], ptr %[[A_ADDR]], align 4
+
+// OGCG: %[[A_ADDR:.*]] = alloca { float, float }, align 4
+// OGCG: %[[A_REAL_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[A_ADDR]], i32 0, i32 0
+// OGCG: %[[A_REAL:.*]] = load float, ptr %[[A_REAL_PTR]], align 4
+// OGCG: %[[A_IMAG_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[A_ADDR]], i32 0, i32 1
+// OGCG: %[[A_IMAG:.*]] = load float, ptr %[[A_IMAG_PTR]], align 4
+// OGCG: %[[RESULT_REAL:.*]] = fadd float %[[A_REAL]], -1.000000e+00
+// OGCG: %[[A_REAL_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[A_ADDR]], i32 0, i32 0
+// OGCG: %[[A_IMAG_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[A_ADDR]], i32 0, i32 1
+// OGCG: store float %[[RESULT_REAL]], ptr %[[A_REAL_PTR]], align 4
+// OGCG: store float %[[A_IMAG]], ptr %[[A_IMAG_PTR]], align 4

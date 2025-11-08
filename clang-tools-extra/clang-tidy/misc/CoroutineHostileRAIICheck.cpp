@@ -56,16 +56,16 @@ AST_MATCHER_P(Stmt, forEachPrevStmt, ast_matchers::internal::Matcher<Stmt>,
 // Matches the expression awaited by the `co_await`.
 AST_MATCHER_P(CoawaitExpr, awaitable, ast_matchers::internal::Matcher<Expr>,
               InnerMatcher) {
-  if (Expr *E = Node.getOperand())
+  if (const Expr *E = Node.getOperand())
     return InnerMatcher.matches(*E, Finder, Builder);
   return false;
 }
+} // namespace
 
-auto typeWithNameIn(const std::vector<StringRef> &Names) {
+static auto typeWithNameIn(const std::vector<StringRef> &Names) {
   return hasType(
       hasCanonicalType(hasDeclaration(namedDecl(hasAnyName(Names)))));
 }
-} // namespace
 
 CoroutineHostileRAIICheck::CoroutineHostileRAIICheck(StringRef Name,
                                                      ClangTidyContext *Context)

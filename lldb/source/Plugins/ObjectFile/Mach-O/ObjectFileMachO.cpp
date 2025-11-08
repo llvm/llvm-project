@@ -1674,6 +1674,10 @@ void ObjectFileMachO::ProcessSegmentCommand(
   uint32_t segment_sect_idx;
   const lldb::user_id_t first_segment_sectID = context.NextSectionIdx + 1;
 
+  // 64 bit mach-o files have sections with 32 bit file offsets. If any section
+  // data end will exceed UINT32_MAX, then we need to do some bookkeeping to
+  // ensure we can access this data correctly.
+  uint64_t section_offset_adjust = 0;
   const uint32_t num_u32s = load_cmd.cmd == LC_SEGMENT ? 7 : 8;
   for (segment_sect_idx = 0; segment_sect_idx < load_cmd.nsects;
        ++segment_sect_idx) {
@@ -1696,6 +1700,16 @@ void ObjectFileMachO::ProcessSegmentCommand(
     // Keep a list of mach sections around in case we need to get at data that
     // isn't stored in the abstracted Sections.
     m_mach_sections.push_back(sect64);
+
+    // Make sure we can load sections in mach-o files where some sections cross
+    // a 4GB boundary. llvm::MachO::section_64 have only 32 bit file offsets
+    // for the file offset of the section contents, so we need to track and
+    // sections that overflow and adjust the offsets accordingly.
+    const uint64_t section_file_offset =
+        (uint64_t)sect64.offset + section_offset_adjust;
+    const uint64_t end_section_offset = (uint64_t)sect64.offset + sect64.size;
+    if (end_section_offset >= UINT32_MAX)
+      section_offset_adjust += end_section_offset & 0xFFFFFFFF00000000ull;
 
     if (add_section) {
       ConstString section_name(
@@ -1736,13 +1750,13 @@ void ObjectFileMachO::ProcessSegmentCommand(
           }
 
           // Grow the section size as needed.
-          if (sect64.offset) {
+          if (section_file_offset) {
             const lldb::addr_t segment_min_file_offset =
                 segment->GetFileOffset();
             const lldb::addr_t segment_max_file_offset =
                 segment_min_file_offset + segment->GetFileSize();
 
-            const lldb::addr_t section_min_file_offset = sect64.offset;
+            const lldb::addr_t section_min_file_offset = section_file_offset;
             const lldb::addr_t section_max_file_offset =
                 section_min_file_offset + sect64.size;
             const lldb::addr_t new_file_offset =
@@ -1769,10 +1783,10 @@ void ObjectFileMachO::ProcessSegmentCommand(
               // other sections.
               sect64.addr, // File VM address == addresses as they are
               // found in the object file
-              sect64.size,   // VM size in bytes of this section
-              sect64.offset, // Offset to the data for this section in
+              sect64.size,         // VM size in bytes of this section
+              section_file_offset, // Offset to the data for this section in
               // the file
-              sect64.offset ? sect64.size : 0, // Size in bytes of
+              section_file_offset ? sect64.size : 0, // Size in bytes of
               // this section as
               // found in the file
               sect64.align,
@@ -1792,14 +1806,14 @@ void ObjectFileMachO::ProcessSegmentCommand(
       SectionSP section_sp(new Section(
           segment_sp, module_sp, this, ++context.NextSectionIdx, section_name,
           sect_type, sect64.addr - segment_sp->GetFileAddress(), sect64.size,
-          sect64.offset, sect64.offset == 0 ? 0 : sect64.size, sect64.align,
-          sect64.flags));
+          section_file_offset, section_file_offset == 0 ? 0 : sect64.size,
+          sect64.align, sect64.flags));
       // Set the section to be encrypted to match the segment
 
       bool section_is_encrypted = false;
       if (!segment_is_encrypted && load_cmd.filesize != 0)
         section_is_encrypted = context.EncryptedRanges.FindEntryThatContains(
-                                   sect64.offset) != nullptr;
+                                   section_file_offset) != nullptr;
 
       section_sp->SetIsEncrypted(segment_is_encrypted || section_is_encrypted);
       section_sp->SetPermissions(segment_permissions);
@@ -2067,6 +2081,43 @@ static bool ParseTrieEntries(DataExtractor &data, lldb::offset_t offset,
   return true;
 }
 
+static bool
+TryParseV2ObjCMetadataSymbol(const char *&symbol_name,
+                             const char *&symbol_name_non_abi_mangled,
+                             SymbolType &type) {
+  static constexpr llvm::StringLiteral g_objc_v2_prefix_class("_OBJC_CLASS_$_");
+  static constexpr llvm::StringLiteral g_objc_v2_prefix_metaclass(
+      "_OBJC_METACLASS_$_");
+  static constexpr llvm::StringLiteral g_objc_v2_prefix_ivar("_OBJC_IVAR_$_");
+
+  llvm::StringRef symbol_name_ref(symbol_name);
+  if (symbol_name_ref.empty())
+    return false;
+
+  if (symbol_name_ref.starts_with(g_objc_v2_prefix_class)) {
+    symbol_name_non_abi_mangled = symbol_name + 1;
+    symbol_name = symbol_name + g_objc_v2_prefix_class.size();
+    type = eSymbolTypeObjCClass;
+    return true;
+  }
+
+  if (symbol_name_ref.starts_with(g_objc_v2_prefix_metaclass)) {
+    symbol_name_non_abi_mangled = symbol_name + 1;
+    symbol_name = symbol_name + g_objc_v2_prefix_metaclass.size();
+    type = eSymbolTypeObjCMetaClass;
+    return true;
+  }
+
+  if (symbol_name_ref.starts_with(g_objc_v2_prefix_ivar)) {
+    symbol_name_non_abi_mangled = symbol_name + 1;
+    symbol_name = symbol_name + g_objc_v2_prefix_ivar.size();
+    type = eSymbolTypeObjCIVar;
+    return true;
+  }
+
+  return false;
+}
+
 static SymbolType GetSymbolType(const char *&symbol_name,
                                 bool &demangled_is_synthesized,
                                 const SectionSP &text_section_sp,
@@ -2183,9 +2234,6 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
   lldb::offset_t offset = MachHeaderSizeFromMagic(m_header.magic);
   uint32_t i;
   FileSpecList dylib_files;
-  llvm::StringRef g_objc_v2_prefix_class("_OBJC_CLASS_$_");
-  llvm::StringRef g_objc_v2_prefix_metaclass("_OBJC_METACLASS_$_");
-  llvm::StringRef g_objc_v2_prefix_ivar("_OBJC_IVAR_$_");
   UUID image_uuid;
 
   for (i = 0; i < m_header.ncmds; ++i) {
@@ -2805,36 +2853,15 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
                         is_gsym = true;
                         sym[sym_idx].SetExternal(true);
 
-                        if (symbol_name && symbol_name[0] == '_' &&
-                            symbol_name[1] == 'O') {
-                          llvm::StringRef symbol_name_ref(symbol_name);
-                          if (symbol_name_ref.starts_with(
-                                  g_objc_v2_prefix_class)) {
-                            symbol_name_non_abi_mangled = symbol_name + 1;
-                            symbol_name =
-                                symbol_name + g_objc_v2_prefix_class.size();
-                            type = eSymbolTypeObjCClass;
-                            demangled_is_synthesized = true;
-
-                          } else if (symbol_name_ref.starts_with(
-                                         g_objc_v2_prefix_metaclass)) {
-                            symbol_name_non_abi_mangled = symbol_name + 1;
-                            symbol_name =
-                                symbol_name + g_objc_v2_prefix_metaclass.size();
-                            type = eSymbolTypeObjCMetaClass;
-                            demangled_is_synthesized = true;
-                          } else if (symbol_name_ref.starts_with(
-                                         g_objc_v2_prefix_ivar)) {
-                            symbol_name_non_abi_mangled = symbol_name + 1;
-                            symbol_name =
-                                symbol_name + g_objc_v2_prefix_ivar.size();
-                            type = eSymbolTypeObjCIVar;
-                            demangled_is_synthesized = true;
-                          }
+                        if (TryParseV2ObjCMetadataSymbol(
+                                symbol_name, symbol_name_non_abi_mangled,
+                                type)) {
+                          demangled_is_synthesized = true;
                         } else {
                           if (nlist.n_value != 0)
                             symbol_section = section_info.GetSection(
                                 nlist.n_sect, nlist.n_value);
+
                           type = eSymbolTypeData;
                         }
                         break;
@@ -3320,48 +3347,10 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
                                       symbol_sect_name) {
                                 type = eSymbolTypeRuntime;
 
-                                if (symbol_name) {
-                                  llvm::StringRef symbol_name_ref(symbol_name);
-                                  if (symbol_name_ref.starts_with("_OBJC_")) {
-                                    llvm::StringRef
-                                        g_objc_v2_prefix_class(
-                                            "_OBJC_CLASS_$_");
-                                    llvm::StringRef
-                                        g_objc_v2_prefix_metaclass(
-                                            "_OBJC_METACLASS_$_");
-                                    llvm::StringRef
-                                        g_objc_v2_prefix_ivar("_OBJC_IVAR_$_");
-                                    if (symbol_name_ref.starts_with(
-                                            g_objc_v2_prefix_class)) {
-                                      symbol_name_non_abi_mangled =
-                                          symbol_name + 1;
-                                      symbol_name =
-                                          symbol_name +
-                                          g_objc_v2_prefix_class.size();
-                                      type = eSymbolTypeObjCClass;
-                                      demangled_is_synthesized = true;
-                                    } else if (
-                                        symbol_name_ref.starts_with(
-                                            g_objc_v2_prefix_metaclass)) {
-                                      symbol_name_non_abi_mangled =
-                                          symbol_name + 1;
-                                      symbol_name =
-                                          symbol_name +
-                                          g_objc_v2_prefix_metaclass.size();
-                                      type = eSymbolTypeObjCMetaClass;
-                                      demangled_is_synthesized = true;
-                                    } else if (symbol_name_ref.starts_with(
-                                                   g_objc_v2_prefix_ivar)) {
-                                      symbol_name_non_abi_mangled =
-                                          symbol_name + 1;
-                                      symbol_name =
-                                          symbol_name +
-                                          g_objc_v2_prefix_ivar.size();
-                                      type = eSymbolTypeObjCIVar;
-                                      demangled_is_synthesized = true;
-                                    }
-                                  }
-                                }
+                                if (TryParseV2ObjCMetadataSymbol(
+                                        symbol_name,
+                                        symbol_name_non_abi_mangled, type))
+                                  demangled_is_synthesized = true;
                               } else if (symbol_sect_name &&
                                          ::strstr(symbol_sect_name,
                                                   "__gcc_except_tab") ==
@@ -3652,7 +3641,7 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
 
       if (is_debug) {
         switch (nlist.n_type) {
-        case N_GSYM:
+        case N_GSYM: {
           // global symbol: name,,NO_SECT,type,0
           // Sometimes the N_GSYM value contains the address.
 
@@ -3668,33 +3657,17 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
           is_gsym = true;
           sym[sym_idx].SetExternal(true);
 
-          if (symbol_name && symbol_name[0] == '_' && symbol_name[1] == 'O') {
-            llvm::StringRef symbol_name_ref(symbol_name);
-            if (symbol_name_ref.starts_with(g_objc_v2_prefix_class)) {
-              symbol_name_non_abi_mangled = symbol_name + 1;
-              symbol_name = symbol_name + g_objc_v2_prefix_class.size();
-              type = eSymbolTypeObjCClass;
-              demangled_is_synthesized = true;
-
-            } else if (symbol_name_ref.starts_with(
-                           g_objc_v2_prefix_metaclass)) {
-              symbol_name_non_abi_mangled = symbol_name + 1;
-              symbol_name = symbol_name + g_objc_v2_prefix_metaclass.size();
-              type = eSymbolTypeObjCMetaClass;
-              demangled_is_synthesized = true;
-            } else if (symbol_name_ref.starts_with(g_objc_v2_prefix_ivar)) {
-              symbol_name_non_abi_mangled = symbol_name + 1;
-              symbol_name = symbol_name + g_objc_v2_prefix_ivar.size();
-              type = eSymbolTypeObjCIVar;
-              demangled_is_synthesized = true;
-            }
+          if (TryParseV2ObjCMetadataSymbol(symbol_name,
+                                           symbol_name_non_abi_mangled, type)) {
+            demangled_is_synthesized = true;
           } else {
             if (nlist.n_value != 0)
               symbol_section =
                   section_info.GetSection(nlist.n_sect, nlist.n_value);
+
             type = eSymbolTypeData;
           }
-          break;
+        } break;
 
         case N_FNAME:
           // procedure name (f77 kludge): name,,NO_SECT,0,0
@@ -4130,38 +4103,9 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
                     ::strstr(symbol_sect_name, "__objc") == symbol_sect_name) {
                   type = eSymbolTypeRuntime;
 
-                  if (symbol_name) {
-                    llvm::StringRef symbol_name_ref(symbol_name);
-                    if (symbol_name_ref.starts_with("_OBJC_")) {
-                      llvm::StringRef g_objc_v2_prefix_class(
-                          "_OBJC_CLASS_$_");
-                      llvm::StringRef g_objc_v2_prefix_metaclass(
-                          "_OBJC_METACLASS_$_");
-                      llvm::StringRef g_objc_v2_prefix_ivar(
-                          "_OBJC_IVAR_$_");
-                      if (symbol_name_ref.starts_with(g_objc_v2_prefix_class)) {
-                        symbol_name_non_abi_mangled = symbol_name + 1;
-                        symbol_name =
-                            symbol_name + g_objc_v2_prefix_class.size();
-                        type = eSymbolTypeObjCClass;
-                        demangled_is_synthesized = true;
-                      } else if (symbol_name_ref.starts_with(
-                                     g_objc_v2_prefix_metaclass)) {
-                        symbol_name_non_abi_mangled = symbol_name + 1;
-                        symbol_name =
-                            symbol_name + g_objc_v2_prefix_metaclass.size();
-                        type = eSymbolTypeObjCMetaClass;
-                        demangled_is_synthesized = true;
-                      } else if (symbol_name_ref.starts_with(
-                                     g_objc_v2_prefix_ivar)) {
-                        symbol_name_non_abi_mangled = symbol_name + 1;
-                        symbol_name =
-                            symbol_name + g_objc_v2_prefix_ivar.size();
-                        type = eSymbolTypeObjCIVar;
-                        demangled_is_synthesized = true;
-                      }
-                    }
-                  }
+                  if (TryParseV2ObjCMetadataSymbol(
+                          symbol_name, symbol_name_non_abi_mangled, type))
+                    demangled_is_synthesized = true;
                 } else if (symbol_sect_name &&
                            ::strstr(symbol_sect_name, "__gcc_except_tab") ==
                                symbol_sect_name) {
@@ -5990,6 +5934,20 @@ Section *ObjectFileMachO::GetMachHeaderSection() {
   }
 
   return nullptr;
+}
+
+bool ObjectFileMachO::IsGOTSection(const lldb_private::Section &section) const {
+  assert(section.GetObjectFile() == this && "Wrong object file!");
+  SectionSP segment = section.GetParent();
+  if (!segment)
+    return false;
+
+  const bool is_data_const_got =
+      segment->GetName() == "__DATA_CONST" && section.GetName() == "__got";
+  const bool is_auth_const_ptr =
+      segment->GetName() == "__AUTH_CONST" &&
+      (section.GetName() == "__auth_got" || section.GetName() == "__auth_ptr");
+  return is_data_const_got || is_auth_const_ptr;
 }
 
 bool ObjectFileMachO::SectionIsLoadable(const Section *section) {

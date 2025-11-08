@@ -21,24 +21,6 @@ class RegisterCommandsTestCase(TestBase):
         self.dbg.GetSelectedTarget().GetProcess().Destroy()
         TestBase.tearDown(self)
 
-    # on macOS, detect if the current machine is arm64 and supports SME
-    def get_sme_available(self):
-        if self.getArchitecture() != "arm64":
-            return None
-        try:
-            sysctl_output = subprocess.check_output(
-                ["sysctl", "hw.optional.arm.FEAT_SME"]
-            ).decode("utf-8")
-        except subprocess.CalledProcessError:
-            return None
-        m = re.match(r"hw\.optional\.arm\.FEAT_SME: (\w+)", sysctl_output)
-        if m:
-            if int(m.group(1)) == 1:
-                return True
-            else:
-                return False
-        return None
-
     @skipIfiOSSimulator
     @skipIf(archs=no_match(["amd64", "arm$", "i386", "x86_64"]))
     @expectedFailureAll(oslist=["freebsd", "netbsd"], bugnumber="llvm.org/pr48371")
@@ -51,7 +33,7 @@ class RegisterCommandsTestCase(TestBase):
         self.log_enable("registers")
 
         error_str_matched = False
-        if self.get_sme_available() and self.platformIsDarwin():
+        if self.isAArch64SME() and self.platformIsDarwin():
             # On Darwin AArch64 SME machines, we will have unavailable
             # registers when not in Streaming SVE Mode/SME, so
             # `register read -a` will report that some registers

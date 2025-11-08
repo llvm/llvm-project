@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_OBJC_FORBIDDEN_SUBCLASSING_CHECK_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_OBJC_FORBIDDEN_SUBCLASSING_CHECK_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_OBJC_FORBIDDENSUBCLASSINGCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_OBJC_FORBIDDENSUBCLASSINGCHECK_H
 
 #include "../ClangTidyCheck.h"
 #include "llvm/ADT/StringRef.h"
@@ -19,7 +19,7 @@ namespace clang::tidy::objc {
 /// documented to not support subclassing.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/objc/forbidden-subclassing.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/objc/forbidden-subclassing.html
 class ForbiddenSubclassingCheck : public ClangTidyCheck {
 public:
   ForbiddenSubclassingCheck(StringRef Name, ClangTidyContext *Context);
@@ -36,4 +36,4 @@ private:
 
 } // namespace clang::tidy::objc
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_OBJC_FORBIDDEN_SUBCLASSING_CHECK_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_OBJC_FORBIDDENSUBCLASSINGCHECK_H

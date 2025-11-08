@@ -45,9 +45,7 @@ static StringRef getTypeKeyword(Type type) {
       .Case<LLVMStructType>([&](Type) { return "struct"; })
       .Case<LLVMTargetExtType>([&](Type) { return "target"; })
       .Case<LLVMX86AMXType>([&](Type) { return "x86_amx"; })
-      .Default([](Type) -> StringRef {
-        llvm_unreachable("unexpected 'llvm' type kind");
-      });
+      .DefaultUnreachable("unexpected 'llvm' type kind");
 }
 
 /// Prints a structure type. Keeps track of known struct names to handle self-

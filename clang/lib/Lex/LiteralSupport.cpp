@@ -1283,10 +1283,10 @@ bool NumericLiteralParser::isValidUDSuffix(const LangOptions &LangOpts,
   // Per tweaked N3660, "il", "i", and "if" are also used in the library.
   // In C++2a "d" and "y" are used in the library.
   return llvm::StringSwitch<bool>(Suffix)
-      .Cases("h", "min", "s", true)
-      .Cases("ms", "us", "ns", true)
-      .Cases("il", "i", "if", true)
-      .Cases("d", "y", LangOpts.CPlusPlus20)
+      .Cases({"h", "min", "s"}, true)
+      .Cases({"ms", "us", "ns"}, true)
+      .Cases({"il", "i", "if"}, true)
+      .Cases({"d", "y"}, LangOpts.CPlusPlus20)
       .Default(false);
 }
 

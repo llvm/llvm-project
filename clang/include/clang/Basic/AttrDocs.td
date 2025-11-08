@@ -13,16 +13,16 @@
 // version control.
 //
 // To run clang-tblgen to generate the .rst file:
-// clang-tblgen -gen-attr-docs -I <root>/llvm/tools/clang/include
-//   <root>/llvm/tools/clang/include/clang/Basic/Attr.td -o
-//   <root>/llvm/tools/clang/docs/AttributeReference.rst
+// clang-tblgen -gen-attr-docs -I <root>/clang/include
+//   <root>/clang/include/clang/Basic/Attr.td -o
+//   <root>/clang/docs/AttributeReference.rst
 //
 // To run sphinx to generate the .html files (note that sphinx-build must be
 // available on the PATH):
 // Windows (from within the clang\docs directory):
 //   make.bat html
-// Non-Windows (from within the clang\docs directory):
-//   sphinx-build -b html _build/html
+// Non-Windows (from within the clang/docs directory):
+//   sphinx-build -b html . _build/html
 
 def GlobalDocumentation {
   code Intro =[{..
@@ -396,13 +396,10 @@ any option of a multiversioned function is undefined.
   }];
 }
 
-def DeviceKernelDocs : Documentation {
+def SYCLKernelDocs : Documentation {
   let Category = DocCatFunction;
-  let Heading = "device_kernel, sycl_kernel, nvptx_kernel, amdgpu_kernel, "
-                "kernel, __kernel";
+  let Heading = "sycl_kernel";
   let Content = [{
-These attributes specify that the function represents a kernel for device offloading.
-The specific semantics depend on the offloading language, target, and attribute spelling.
 The ``sycl_kernel`` attribute specifies that a function template will be used
 to outline device code and to generate an OpenCL kernel.
 Here is a code example of the SYCL program, which demonstrates the compiler's
@@ -473,6 +470,21 @@ function marked with the ``sycl_kernel`` attribute:
   generate the OpenCL kernel body, and the OpenCL kernel must return ``void``.
 
 The SYCL kernel in the previous code sample meets these expectations.
+  }];
+}
+
+def DeviceKernelDocs : Documentation {
+  let Category = DocCatFunction;
+  let Heading = "device_kernel, nvptx_kernel, amdgpu_kernel, "
+                "kernel, __kernel";
+  let Content = [{
+These attributes specify that the function represents a kernel for device offloading.
+The specific semantics depend on the offloading language, target, and attribute spelling.
+Here is a code example using the attribute to mark a function as a kernel:
+
+.. code-block:: c++
+
+  [[clang::device_kernel]] int foo(int x) { return ++x; }
   }];
 }
 
@@ -3438,9 +3450,9 @@ Mac, and BSD. This attribute has no effect on other targets.
 def MSABIDocs : Documentation {
   let Category = DocCatCallingConvs;
   let Content = [{
-On non-Windows x86_64 targets, this attribute changes the calling convention of
-a function to match the default convention used on Windows x86_64. This
-attribute has no effect on Windows targets or non-x86_64 targets.
+On non-Windows x86_64 and aarch64 targets, this attribute changes the calling convention of
+a function to match the default convention used on Windows. This
+attribute has no effect on Windows targets or non-x86_64, non-aarch64 targets.
   }];
 }
 
@@ -3629,6 +3641,7 @@ instrumentations should not be applied.
 
 The attribute takes a list of string literals with the following accepted
 values:
+
 * all values accepted by ``-fno-sanitize=``;
 * ``coverage``, to disable SanitizerCoverage instrumentation.
 
@@ -7529,6 +7542,45 @@ A managed variable is emitted as an undefined global symbol in the device binary
 registered by ``__hipRegisterManagedVariable`` in init functions. The HIP runtime allocates
 managed memory and uses it to define the symbol when loading the device binary.
 A managed variable can be accessed in both device and host code.
+  }];
+}
+
+def CUDAClusterDimsAttrDoc : Documentation {
+  let Category = DocCatDecl;
+  let Content = [{
+In CUDA/HIP programming, the ``cluster_dims`` attribute, conventionally exposed as the
+``__cluster_dims__`` macro, can be applied to a kernel function to set the dimensions of a
+thread block cluster, which is an optional level of hierarchy and made up of thread blocks.
+``__cluster_dims__`` defines the cluster size as ``(X, Y, Z)``, where each value is the number
+of thread blocks in that dimension. The ``cluster_dims`` and `no_cluster`` attributes are
+mutually exclusive.
+
+.. code::
+
+  __global__ __cluster_dims__(2, 1, 1) void kernel(...) {
+    ...
+  }
+
+  }];
+}
+
+def CUDANoClusterAttrDoc : Documentation {
+  let Category = DocCatDecl;
+  let Content = [{
+In CUDA/HIP programming, a kernel function can still be launched with the cluster feature enabled
+at runtime, even without being annotated with ``__cluster_dims__``. The LLVM/Clang-exclusive
+``no_cluster`` attribute, conventionally exposed as the ``__no_cluster__`` macro, can be applied to
+a kernel function to explicitly indicate that the cluster feature will not be enabled either at
+compile time or at kernel launch time. This allows the compiler to apply certain optimizations
+without assuming that clustering could be enabled at runtime. It is undefined behavior to launch a
+kernel annotated with ``__no_cluster__`` if the cluster feature is enabled at runtime.
+The ``cluster_dims`` and ``no_cluster`` attributes are mutually exclusive.
+
+.. code::
+
+  __global__ __no_cluster__ void kernel(...) {
+    ...
+  }
   }];
 }
 

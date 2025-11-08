@@ -80,6 +80,7 @@ cc_library(
     hdrs = glob(["LanguageRuntime/CPlusPlus/*.h"]),
     includes = [".."],
     deps = [
+        "//clang:codegen",
         "//lldb:CoreHeaders",
         "//lldb:Headers",
         "//lldb:SymbolHeaders",

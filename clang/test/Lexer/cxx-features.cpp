@@ -148,7 +148,7 @@
 
 // init_captures checked below
 
-#if check(modules, 0, 0, 0, 0, 0, 0, 0)
+#if check(modules, 0, 0, 0, 0, 1, 1, 1)
 // FIXME: 201907 in C++20
 #error "wrong value for __cpp_modules"
 #endif

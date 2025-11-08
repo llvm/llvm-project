@@ -716,7 +716,7 @@ lowerReductionWithStartValue(ConversionPatternRewriter &rewriter, Location loc,
   accumulator = getOrCreateAccumulator<ReductionNeutral>(rewriter, loc,
                                                          llvmType, accumulator);
   return LLVMRedIntrinOp::create(rewriter, loc, llvmType,
-                                 /*startValue=*/accumulator, vectorOperand,
+                                 /*start_value=*/accumulator, vectorOperand,
                                  fmf);
 }
 
@@ -743,7 +743,7 @@ static Value lowerPredicatedReductionWithStartValue(
   Value vectorLength =
       createVectorLengthValue(rewriter, loc, vectorOperand.getType());
   return LLVMVPRedIntrinOp::create(rewriter, loc, llvmType,
-                                   /*startValue=*/accumulator, vectorOperand,
+                                   /*satrt_value=*/accumulator, vectorOperand,
                                    mask, vectorLength);
 }
 
@@ -1342,7 +1342,7 @@ struct VectorScalableExtractOpLowering
 /// ```
 class VectorFMAOpNDRewritePattern : public OpRewritePattern<FMAOp> {
 public:
-  using OpRewritePattern<FMAOp>::OpRewritePattern;
+  using Base::Base;
 
   void initialize() {
     // This pattern recursively unpacks one dimension at a time. The recursion
@@ -1723,17 +1723,18 @@ struct VectorBroadcastScalarToLowRankLowering
       return success();
     }
 
-    // For 1-d vector, we additionally do a `vectorshuffle`.
     auto v =
         LLVM::InsertElementOp::create(rewriter, broadcast.getLoc(), vectorType,
                                       poison, adaptor.getSource(), zero);
 
+    // For 1-d vector, we additionally do a `shufflevector`.
     int64_t width = cast<VectorType>(broadcast.getType()).getDimSize(0);
     SmallVector<int32_t> zeroValues(width, 0);
 
     // Shuffle the value across the desired number of elements.
-    rewriter.replaceOpWithNewOp<LLVM::ShuffleVectorOp>(broadcast, v, poison,
-                                                       zeroValues);
+    auto shuffle = rewriter.createOrFold<LLVM::ShuffleVectorOp>(
+        broadcast.getLoc(), v, poison, zeroValues);
+    rewriter.replaceOp(broadcast, shuffle);
     return success();
   }
 };
@@ -1987,17 +1988,13 @@ struct VectorScalableStepOpLowering
 ///    %e = add %c, %d
 /// ```
 /// `vector.matrix_multiply` later lowers to `llvm.matrix.multiply`.
-//
-/// This only kicks in when vectorContractLowering is set to Matmul and
-/// the vector.contract op is a row-major matrix multiply.
 class ContractionOpToMatmulOpLowering
     : public vector::MaskableOpRewritePattern<vector::ContractionOp> {
 public:
   using MaskableOpRewritePattern::MaskableOpRewritePattern;
 
-  ContractionOpToMatmulOpLowering(
-      vector::VectorContractLowering vectorContractLowering,
-      MLIRContext *context, PatternBenefit benefit = 100)
+  ContractionOpToMatmulOpLowering(MLIRContext *context,
+                                  PatternBenefit benefit = 100)
       : MaskableOpRewritePattern<vector::ContractionOp>(context, benefit) {}
 
   FailureOr<Value>
@@ -2005,23 +2002,22 @@ public:
                             PatternRewriter &rewriter) const override;
 };
 
-/// Progressively lower a `vector.contract %a, %b, %c` with row-major matmul
-/// semantics to:
+/// Lower a qualifying `vector.contract %a, %b, %c` (with row-major matmul
+/// semantics directly into `llvm.intr.matrix.multiply`:
+/// BEFORE:
+/// ```mlir
+///  %res = vector.contract #matmat_trait %lhs, %rhs, %acc
+///    : vector<2x4xf32>, vector<4x3xf32> into vector<2x3xf32>
 /// ```
-///    %mta = maybe_transpose
-///    %mtb = maybe_transpose
-///    %flattened_a = vector.shape_cast %mta
-///    %flattened_b = vector.shape_cast %mtb
-///    %flattened_d = llvm.intr.matrix.multiply %flattened_a, %flattened_b
-///    %mtd = vector.shape_cast %flattened_d
-///    %d = maybe_untranspose %mtd
-///    %e = add %c, %d
+///
+/// AFTER:
+/// ```mlir
+///   %lhs = vector.shape_cast %arg0 : vector<2x4xf32> to vector<8xf32>
+///   %rhs = vector.shape_cast %arg1 : vector<4x3xf32> to vector<12xf32>
+///   %matmul = llvm.intr.matrix.multiply %lhs, %rhs
+///   %res = arith.addf %acc, %matmul : vector<2x3xf32>
 /// ```
 //
-/// This only kicks in when vectorContractLowering is set to `Matmul`.
-/// vector.transpose operations are inserted if the vector.contract op is not a
-/// row-major matrix multiply.
-///
 /// Scalable vectors are not supported.
 FailureOr<Value> ContractionOpToMatmulOpLowering::matchAndRewriteMaskableOp(
     vector::ContractionOp op, MaskingOpInterface maskOp,
@@ -2116,11 +2112,23 @@ FailureOr<Value> ContractionOpToMatmulOpLowering::matchAndRewriteMaskableOp(
   return res;
 }
 
-/// Lowers vector.transpose to llvm.intr.matrix.transpose
+/// Lowers vector.transpose directly to llvm.intr.matrix.transpose
+///
+/// BEFORE:
+/// ```mlir
+///  %tr = vector.transpose %vec, [1, 0] : vector<2x4xf32> to vector<4x2xf32>
+/// ```
+/// AFTER:
+/// ```mlir
+///  %vec_cs = vector.shape_cast %vec : vector<2x4xf32> to vector<8xf32>
+///  %tr = llvm.intr.matrix.transpose %vec_sc
+///    {columns = 2 : i32, rows = 4 : i32} : vector<8xf32> into vector<8xf32>
+///  %res = vector.shape_cast %tr : vector<8xf32> to vector<4x2xf32>
+/// ```
 class TransposeOpToMatrixTransposeOpLowering
     : public OpRewritePattern<vector::TransposeOp> {
 public:
-  using OpRewritePattern<TransposeOp>::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::TransposeOp op,
                                 PatternRewriter &rewriter) const override {
@@ -2150,19 +2158,6 @@ public:
     Value trans = LLVM::MatrixTransposeOp::create(rewriter, loc, flattenedType,
                                                   matrix, rows, columns);
     rewriter.replaceOpWithNewOp<vector::ShapeCastOp>(op, resType, trans);
-    return success();
-  }
-};
-
-/// Convert `vector.splat` to `vector.broadcast`. There is a path to LLVM from
-/// `vector.broadcast` through other patterns.
-struct VectorSplatToBroadcast : public ConvertOpToLLVMPattern<vector::SplatOp> {
-  using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
-  LogicalResult
-  matchAndRewrite(vector::SplatOp splat, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    rewriter.replaceOpWithNewOp<vector::BroadcastOp>(splat, splat.getType(),
-                                                     adaptor.getInput());
     return success();
   }
 };
@@ -2205,7 +2200,7 @@ void mlir::populateVectorToLLVMConversionPatterns(
                VectorInsertOpConversion, VectorPrintOpConversion,
                VectorTypeCastOpConversion, VectorScaleOpConversion,
                VectorExpandLoadOpConversion, VectorCompressStoreOpConversion,
-               VectorSplatToBroadcast, VectorBroadcastScalarToLowRankLowering,
+               VectorBroadcastScalarToLowRankLowering,
                VectorBroadcastScalarToNdLowering,
                VectorScalableInsertOpLowering, VectorScalableExtractOpLowering,
                MaskedReductionOpConversion, VectorInterleaveOpLowering,

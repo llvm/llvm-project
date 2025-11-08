@@ -24,7 +24,6 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 int __countl_zero(_Tp __t) _NOEXCEPT {
-  static_assert(__is_unsigned_integer_v<_Tp>, "__countl_zero requires an unsigned integer type");
   return __builtin_clzg(__t, numeric_limits<_Tp>::digits);
 }
 
@@ -37,7 +36,7 @@ template <__unsigned_integer _Tp>
 
 template <__unsigned_integer _Tp>
 [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr int countl_one(_Tp __t) noexcept {
-  return __t != numeric_limits<_Tp>::max() ? std::countl_zero(static_cast<_Tp>(~__t)) : numeric_limits<_Tp>::digits;
+  return std::countl_zero(static_cast<_Tp>(~__t));
 }
 
 #endif // _LIBCPP_STD_VER >= 20

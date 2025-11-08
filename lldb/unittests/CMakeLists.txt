@@ -12,13 +12,17 @@ endif()
 
 function(add_lldb_unittest test_name)
   cmake_parse_arguments(ARG
-    ""
+    "SBAPITEST"
     ""
     "LINK_LIBS;LINK_COMPONENTS"
     ${ARGN})
 
   if (NOT ${test_name} MATCHES "Tests$")
     message(FATAL_ERROR "Unit test name must end with 'Tests' for lit to find it.")
+  endif()
+
+  if ("liblldb" IN_LIST ARG_LINK_LIBS AND NOT ARG_SBAPITEST)
+    message(FATAL_ERROR "The ${test_name} are not allowed to link liblldb.")
   endif()
 
   list(APPEND LLVM_LINK_COMPONENTS ${ARG_LINK_COMPONENTS})

@@ -18,7 +18,7 @@ using namespace llvm;
 iterator_range<SmallVectorImpl<int>::const_iterator>
 ExecutionDomainFix::regIndices(MCRegister Reg) const {
   assert(Reg < AliasMap.size() && "Invalid register");
-  const auto &Entry = AliasMap[Reg];
+  const auto &Entry = AliasMap[Reg.id()];
   return make_range(Entry.begin(), Entry.end());
 }
 

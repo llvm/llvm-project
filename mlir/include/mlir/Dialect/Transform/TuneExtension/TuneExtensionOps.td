@@ -11,9 +11,14 @@
 
 include "mlir/Dialect/Transform/IR/TransformDialect.td"
 include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.td"
+include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/BuiltinAttributes.td"
 include "mlir/IR/CommonAttrConstraints.td"
+
+//===----------------------------------------------------------------------===//
+// KnobOp
+//===----------------------------------------------------------------------===//
 
 def KnobOp : Op<Transform_Dialect, "tune.knob", [
   DeclareOpInterfaceMethods<TransformOpInterface>,
@@ -50,6 +55,55 @@ def KnobOp : Op<Transform_Dialect, "tune.knob", [
 
   let assemblyFormat =
       "`<` $name `>` (`=` $selected^ `from`)? `options` `=` $options attr-dict `->` type(results)";
+}
+
+//===----------------------------------------------------------------------===//
+// AlternativesOp
+//===----------------------------------------------------------------------===//
+
+def AlternativesOp : Op<Transform_Dialect, "tune.alternatives", [
+  DeclareOpInterfaceMethods<RegionBranchOpInterface,
+        ["getEntrySuccessorOperands",
+         "getRegionInvocationBounds"]>,
+  DeclareOpInterfaceMethods<TransformOpInterface>,
+  DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+  SingleBlockImplicitTerminator<"::mlir::transform::YieldOp">,
+  NoRegionArguments
+]> {
+  let summary = "Represents a choice among its regions, i.e. sub-schedules";
+
+  let description = [{
+    This op represents a choice over which of its regions is to be used.
+
+    When `selected_region` is provided, the semantics are that this op is to be
+    substituted for by the selected region, meaning the region's results become
+    the results of this op. Without a provided `selected_region`, the semantics
+    are that this non-deterministic choice is yet to be resolved -- which in
+    terms of the op's interpreted semantics is a failure.
+
+    The `selected_region` argument is either an `IntegerAttr` or a param holding
+    an `IntegerAttr`, which should provide a valid zero-based index with respect
+    to the number of alternatives, i.e. regions.
+  }];
+  let cppNamespace = [{ mlir::transform::tune }];
+
+  let arguments = (ins Builtin_StringAttr:$name,
+                       OptionalAttr<APIntAttr>:$selected_region_attr,
+                       Optional<TransformParamTypeInterface>:$selected_region_param);
+  let results = (outs Variadic<Transform_AnyHandleOrParamType>:$results);
+  let regions = (region VariadicRegion<SizedRegion<1>>:$alternatives);
+
+  let assemblyFormat = [{
+    `<` $name `>`
+    (`selected_region` `=` custom<AlternativesOpSelectedRegion>(
+        $selected_region_attr, $selected_region_param)^)?
+    attr-dict-with-keyword
+    (`:` type($selected_region_param)^)?
+    (`->` type($results)^)?
+    regions
+  }];
+
+  let hasVerifier = 1;
 }
 
 #endif // MLIR_DIALECT_TRANSFORM_TUNEEXTENSION_TUNEEXTENSIONOPS

@@ -65,8 +65,10 @@ struct CallOpSignatureConversion : public OpConversionPattern<CallOp> {
 } // namespace
 
 void mlir::populateCallOpTypeConversionPattern(RewritePatternSet &patterns,
-                                               const TypeConverter &converter) {
-  patterns.add<CallOpSignatureConversion>(converter, patterns.getContext());
+                                               const TypeConverter &converter,
+                                               PatternBenefit benefit) {
+  patterns.add<CallOpSignatureConversion>(converter, patterns.getContext(),
+                                          benefit);
 }
 
 namespace {
@@ -81,8 +83,9 @@ public:
 
   BranchOpInterfaceTypeConversion(
       const TypeConverter &typeConverter, MLIRContext *ctx,
-      function_ref<bool(BranchOpInterface, int)> shouldConvertBranchOperand)
-      : OpInterfaceConversionPattern(typeConverter, ctx, /*benefit=*/1),
+      function_ref<bool(BranchOpInterface, int)> shouldConvertBranchOperand,
+      PatternBenefit benefit)
+      : OpInterfaceConversionPattern(typeConverter, ctx, benefit),
         shouldConvertBranchOperand(shouldConvertBranchOperand) {}
 
   LogicalResult
@@ -135,9 +138,11 @@ public:
 
 void mlir::populateBranchOpInterfaceTypeConversionPattern(
     RewritePatternSet &patterns, const TypeConverter &typeConverter,
-    function_ref<bool(BranchOpInterface, int)> shouldConvertBranchOperand) {
+    function_ref<bool(BranchOpInterface, int)> shouldConvertBranchOperand,
+    PatternBenefit benefit) {
   patterns.add<BranchOpInterfaceTypeConversion>(
-      typeConverter, patterns.getContext(), shouldConvertBranchOperand);
+      typeConverter, patterns.getContext(), shouldConvertBranchOperand,
+      benefit);
 }
 
 bool mlir::isLegalForBranchOpInterfaceTypeConversionPattern(
@@ -157,8 +162,10 @@ bool mlir::isLegalForBranchOpInterfaceTypeConversionPattern(
 }
 
 void mlir::populateReturnOpTypeConversionPattern(
-    RewritePatternSet &patterns, const TypeConverter &typeConverter) {
-  patterns.add<ReturnOpTypeConversion>(typeConverter, patterns.getContext());
+    RewritePatternSet &patterns, const TypeConverter &typeConverter,
+    PatternBenefit benefit) {
+  patterns.add<ReturnOpTypeConversion>(typeConverter, patterns.getContext(),
+                                       benefit);
 }
 
 bool mlir::isLegalForReturnOpTypeConversionPattern(

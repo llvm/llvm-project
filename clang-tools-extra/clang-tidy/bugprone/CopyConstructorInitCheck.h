@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_COPY_CONSTRUCTOR_INIT_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_COPY_CONSTRUCTOR_INIT_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_COPYCONSTRUCTORINITCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_COPYCONSTRUCTORINITCHECK_H
 
 #include "../ClangTidyCheck.h"
 
@@ -17,7 +17,7 @@ namespace clang::tidy::bugprone {
 /// the base class.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/copy-constructor-init.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/copy-constructor-init.html
 class CopyConstructorInitCheck : public ClangTidyCheck {
 public:
   CopyConstructorInitCheck(StringRef Name, ClangTidyContext *Context)
@@ -31,4 +31,4 @@ public:
 
 } // namespace clang::tidy::bugprone
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_COPY_CONSTRUCTOR_INIT_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_COPYCONSTRUCTORINITCHECK_H

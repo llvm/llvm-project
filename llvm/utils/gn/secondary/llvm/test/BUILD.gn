@@ -303,6 +303,7 @@ group("test") {
     "//llvm/tools/llvm-nm",
     "//llvm/tools/llvm-objcopy:symlinks",
     "//llvm/tools/llvm-objdump:symlinks",
+    "//llvm/tools/llvm-offload-binary",
     "//llvm/tools/llvm-offload-wrapper",
     "//llvm/tools/llvm-opt-fuzzer",
     "//llvm/tools/llvm-opt-report",

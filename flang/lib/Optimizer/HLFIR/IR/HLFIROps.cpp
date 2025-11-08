@@ -281,7 +281,7 @@ void hlfir::DeclareOp::build(mlir::OpBuilder &builder,
       getDeclareOutputTypes(inputType, hasExplicitLbs);
   build(builder, result, {hlfirVariableType, firVarType}, memref, shape,
         typeparams, dummy_scope, storage, storage_offset, nameAttr,
-        fortran_attrs, data_attr);
+        fortran_attrs, data_attr, /*skip_rebox=*/mlir::UnitAttr{});
 }
 
 llvm::LogicalResult hlfir::DeclareOp::verify() {
@@ -294,6 +294,9 @@ llvm::LogicalResult hlfir::DeclareOp::verify() {
     return emitOpError("first result type is inconsistent with variable "
                        "properties: expected ")
            << hlfirVariableType;
+  if (getSkipRebox() && !llvm::isa<fir::BaseBoxType>(getMemref().getType()))
+    return emitOpError(
+        "skip_rebox attribute must only be set when the input is a box");
   // The rest of the argument verification is done by the
   // FortranVariableInterface verifier.
   auto fortranVar =

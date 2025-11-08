@@ -39,7 +39,7 @@ jobs:
           [{"body" : "$COMMENT"}]
           EOF
 
-      - uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 #v4.3.0
+      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         if: always()
         with:
           name: workflow-args

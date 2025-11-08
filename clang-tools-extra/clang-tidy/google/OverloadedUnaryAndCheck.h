@@ -20,7 +20,7 @@ namespace clang::tidy::google::runtime {
 /// Corresponding cpplint.py check name: 'runtime/operator'.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/google/runtime-operator.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/google/runtime-operator.html
 class OverloadedUnaryAndCheck : public ClangTidyCheck {
 public:
   OverloadedUnaryAndCheck(StringRef Name, ClangTidyContext *Context)

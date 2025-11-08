@@ -186,99 +186,99 @@ public:
 #        endif
 #      endif
 
-struct __type_info_implementations {
-  struct __string_impl_base {
-    typedef const char* __type_name_t;
-    _LIBCPP_HIDE_FROM_ABI _LIBCPP_ALWAYS_INLINE _LIBCPP_CONSTEXPR static const char*
-    __type_name_to_string(__type_name_t __v) _NOEXCEPT {
-      return __v;
-    }
-    _LIBCPP_HIDE_FROM_ABI _LIBCPP_ALWAYS_INLINE _LIBCPP_CONSTEXPR static __type_name_t
-    __string_to_type_name(const char* __v) _NOEXCEPT {
-      return __v;
-    }
-  };
+namespace __type_info_implementations {
+struct __string_impl_base {
+  typedef const char* __type_name_t;
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_ALWAYS_INLINE _LIBCPP_CONSTEXPR static const char*
+  __type_name_to_string(__type_name_t __v) _NOEXCEPT {
+    return __v;
+  }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_ALWAYS_INLINE _LIBCPP_CONSTEXPR static __type_name_t
+  __string_to_type_name(const char* __v) _NOEXCEPT {
+    return __v;
+  }
+};
 
-  struct __unique_impl : __string_impl_base {
-    _LIBCPP_HIDE_FROM_ABI _LIBCPP_ALWAYS_INLINE static size_t __hash(__type_name_t __v) _NOEXCEPT {
-      return reinterpret_cast<size_t>(__v);
-    }
-    _LIBCPP_HIDE_FROM_ABI _LIBCPP_ALWAYS_INLINE static bool __eq(__type_name_t __lhs, __type_name_t __rhs) _NOEXCEPT {
-      return __lhs == __rhs;
-    }
-    _LIBCPP_HIDE_FROM_ABI _LIBCPP_ALWAYS_INLINE static bool __lt(__type_name_t __lhs, __type_name_t __rhs) _NOEXCEPT {
+struct __unique_impl : __string_impl_base {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_ALWAYS_INLINE static size_t __hash(__type_name_t __v) _NOEXCEPT {
+    return reinterpret_cast<size_t>(__v);
+  }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_ALWAYS_INLINE static bool __eq(__type_name_t __lhs, __type_name_t __rhs) _NOEXCEPT {
+    return __lhs == __rhs;
+  }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_ALWAYS_INLINE static bool __lt(__type_name_t __lhs, __type_name_t __rhs) _NOEXCEPT {
+    return __lhs < __rhs;
+  }
+};
+
+struct __non_unique_impl : __string_impl_base {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_ALWAYS_INLINE static size_t __hash(__type_name_t __ptr) _NOEXCEPT {
+    size_t __hash = 5381;
+    while (unsigned char __c = static_cast<unsigned char>(*__ptr++))
+      __hash = (__hash * 33) ^ __c;
+    return __hash;
+  }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_ALWAYS_INLINE static bool __eq(__type_name_t __lhs, __type_name_t __rhs) _NOEXCEPT {
+    return __lhs == __rhs || __builtin_strcmp(__lhs, __rhs) == 0;
+  }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_ALWAYS_INLINE static bool __lt(__type_name_t __lhs, __type_name_t __rhs) _NOEXCEPT {
+    return __builtin_strcmp(__lhs, __rhs) < 0;
+  }
+};
+
+struct __non_unique_arm_rtti_bit_impl {
+  typedef uintptr_t __type_name_t;
+
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_ALWAYS_INLINE static const char* __type_name_to_string(__type_name_t __v) _NOEXCEPT {
+    return reinterpret_cast<const char*>(__v & ~__non_unique_rtti_bit::value);
+  }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_ALWAYS_INLINE static __type_name_t __string_to_type_name(const char* __v) _NOEXCEPT {
+    return reinterpret_cast<__type_name_t>(__v);
+  }
+
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_ALWAYS_INLINE static size_t __hash(__type_name_t __v) _NOEXCEPT {
+    if (__is_type_name_unique(__v))
+      return __v;
+    return __non_unique_impl::__hash(__type_name_to_string(__v));
+  }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_ALWAYS_INLINE static bool __eq(__type_name_t __lhs, __type_name_t __rhs) _NOEXCEPT {
+    if (__lhs == __rhs)
+      return true;
+    if (__is_type_name_unique(__lhs) || __is_type_name_unique(__rhs))
+      // Either both are unique and have a different address, or one of them
+      // is unique and the other one isn't. In both cases they are unequal.
+      return false;
+    return __builtin_strcmp(__type_name_to_string(__lhs), __type_name_to_string(__rhs)) == 0;
+  }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_ALWAYS_INLINE static bool __lt(__type_name_t __lhs, __type_name_t __rhs) _NOEXCEPT {
+    if (__is_type_name_unique(__lhs) || __is_type_name_unique(__rhs))
       return __lhs < __rhs;
-    }
-  };
+    return __builtin_strcmp(__type_name_to_string(__lhs), __type_name_to_string(__rhs)) < 0;
+  }
 
-  struct __non_unique_impl : __string_impl_base {
-    _LIBCPP_HIDE_FROM_ABI _LIBCPP_ALWAYS_INLINE static size_t __hash(__type_name_t __ptr) _NOEXCEPT {
-      size_t __hash = 5381;
-      while (unsigned char __c = static_cast<unsigned char>(*__ptr++))
-        __hash = (__hash * 33) ^ __c;
-      return __hash;
-    }
-    _LIBCPP_HIDE_FROM_ABI _LIBCPP_ALWAYS_INLINE static bool __eq(__type_name_t __lhs, __type_name_t __rhs) _NOEXCEPT {
-      return __lhs == __rhs || __builtin_strcmp(__lhs, __rhs) == 0;
-    }
-    _LIBCPP_HIDE_FROM_ABI _LIBCPP_ALWAYS_INLINE static bool __lt(__type_name_t __lhs, __type_name_t __rhs) _NOEXCEPT {
-      return __builtin_strcmp(__lhs, __rhs) < 0;
-    }
-  };
+private:
+  // The unique bit is the top bit. It is expected that __type_name_t is 64 bits when
+  // this implementation is actually used.
+  typedef integral_constant<__type_name_t, (1ULL << ((__CHAR_BIT__ * sizeof(__type_name_t)) - 1))>
+      __non_unique_rtti_bit;
 
-  struct __non_unique_arm_rtti_bit_impl {
-    typedef uintptr_t __type_name_t;
+  _LIBCPP_HIDE_FROM_ABI static bool __is_type_name_unique(__type_name_t __lhs) _NOEXCEPT {
+    return !(__lhs & __non_unique_rtti_bit::value);
+  }
+};
 
-    _LIBCPP_HIDE_FROM_ABI _LIBCPP_ALWAYS_INLINE static const char* __type_name_to_string(__type_name_t __v) _NOEXCEPT {
-      return reinterpret_cast<const char*>(__v & ~__non_unique_rtti_bit::value);
-    }
-    _LIBCPP_HIDE_FROM_ABI _LIBCPP_ALWAYS_INLINE static __type_name_t __string_to_type_name(const char* __v) _NOEXCEPT {
-      return reinterpret_cast<__type_name_t>(__v);
-    }
-
-    _LIBCPP_HIDE_FROM_ABI _LIBCPP_ALWAYS_INLINE static size_t __hash(__type_name_t __v) _NOEXCEPT {
-      if (__is_type_name_unique(__v))
-        return __v;
-      return __non_unique_impl::__hash(__type_name_to_string(__v));
-    }
-    _LIBCPP_HIDE_FROM_ABI _LIBCPP_ALWAYS_INLINE static bool __eq(__type_name_t __lhs, __type_name_t __rhs) _NOEXCEPT {
-      if (__lhs == __rhs)
-        return true;
-      if (__is_type_name_unique(__lhs) || __is_type_name_unique(__rhs))
-        // Either both are unique and have a different address, or one of them
-        // is unique and the other one isn't. In both cases they are unequal.
-        return false;
-      return __builtin_strcmp(__type_name_to_string(__lhs), __type_name_to_string(__rhs)) == 0;
-    }
-    _LIBCPP_HIDE_FROM_ABI _LIBCPP_ALWAYS_INLINE static bool __lt(__type_name_t __lhs, __type_name_t __rhs) _NOEXCEPT {
-      if (__is_type_name_unique(__lhs) || __is_type_name_unique(__rhs))
-        return __lhs < __rhs;
-      return __builtin_strcmp(__type_name_to_string(__lhs), __type_name_to_string(__rhs)) < 0;
-    }
-
-  private:
-    // The unique bit is the top bit. It is expected that __type_name_t is 64 bits when
-    // this implementation is actually used.
-    typedef integral_constant<__type_name_t, (1ULL << ((__CHAR_BIT__ * sizeof(__type_name_t)) - 1))>
-        __non_unique_rtti_bit;
-
-    _LIBCPP_HIDE_FROM_ABI static bool __is_type_name_unique(__type_name_t __lhs) _NOEXCEPT {
-      return !(__lhs & __non_unique_rtti_bit::value);
-    }
-  };
-
-  typedef
+typedef
 #      if _LIBCPP_TYPEINFO_COMPARISON_IMPLEMENTATION == 1
-      __unique_impl
+    __unique_impl
 #      elif _LIBCPP_TYPEINFO_COMPARISON_IMPLEMENTATION == 2
-      __non_unique_impl
+    __non_unique_impl
 #      elif _LIBCPP_TYPEINFO_COMPARISON_IMPLEMENTATION == 3
-      __non_unique_arm_rtti_bit_impl
+    __non_unique_arm_rtti_bit_impl
 #      else
 #        error invalid configuration for _LIBCPP_TYPEINFO_COMPARISON_IMPLEMENTATION
 #      endif
-          __impl;
-};
+        __impl;
+} // namespace __type_info_implementations
 
 #      if __has_cpp_attribute(_Clang::__ptrauth_vtable_pointer__)
 #        if __has_feature(ptrauth_type_info_vtable_pointer_discrimination)

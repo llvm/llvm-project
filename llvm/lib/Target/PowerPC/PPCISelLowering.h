@@ -1318,6 +1318,7 @@ namespace llvm {
     SDValue LowerIS_FPCLASS(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerADDSUBO_CARRY(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerADDSUBO(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerUCMP(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerToLibCall(const char *LibCallName, SDValue Op,
                            SelectionDAG &DAG) const;
     SDValue lowerLibCallBasedOnType(const char *LibCallFloatName,
@@ -1343,6 +1344,9 @@ namespace llvm {
     SDValue LowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerROTL(SDValue Op, SelectionDAG &DAG) const;
+
+    SDValue LowerVP_LOAD(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerVP_STORE(SDValue Op, SelectionDAG &DAG) const;
 
     SDValue LowerVectorLoad(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerVectorStore(SDValue Op, SelectionDAG &DAG) const;
@@ -1470,6 +1474,9 @@ namespace llvm {
     SDValue
     combineElementTruncationToVectorTruncation(SDNode *N,
                                                DAGCombinerInfo &DCI) const;
+
+    SDValue combineBVLoadsSpecialValue(SDValue Operand,
+                                       SelectionDAG &DAG) const;
 
     /// lowerToVINSERTH - Return the SDValue if this VECTOR_SHUFFLE can be
     /// handled by the VINSERTH instruction introduced in ISA 3.0. This is
