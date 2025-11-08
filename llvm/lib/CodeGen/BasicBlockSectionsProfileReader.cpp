@@ -353,7 +353,40 @@ Error BasicBlockSectionsProfileReader::ReadV1Profile() {
       }
       continue;
     }
-    case 't': { // Callsite target specifier.
+    case 'i': { // Prefetch hint specifier.
+      // Skip the profile when we the profile iterator (FI) refers to the
+      // past-the-end element.
+      if (FI == ProgramPathAndClusterInfo.end())
+        continue;
+      assert(Values.size() == 2);
+      SmallVector<StringRef, 2> PrefetchSiteStr;
+      Values[0].split(PrefetchSiteStr, ',');
+      assert(PrefetchSiteStr.size() == 2);
+      auto SiteBBID = parseUniqueBBID(PrefetchSiteStr[0]);
+      if (!SiteBBID)
+        return SiteBBID.takeError();
+      unsigned long long SiteBBOffset;
+      if (getAsUnsignedInteger(PrefetchSiteStr[1], 10, SiteBBOffset))
+        return createProfileParseError(Twine("unsigned integer expected: '") +
+                                       PrefetchSiteStr[1]);
+
+      SmallVector<StringRef, 3> PrefetchTargetStr;
+      Values[1].split(PrefetchTargetStr, ',');
+      assert(PrefetchTargetStr.size() == 3);
+      auto TargetBBID = parseUniqueBBID(PrefetchTargetStr[1]);
+      if (!TargetBBID)
+        return TargetBBID.takeError();
+      unsigned long long TargetBBOffset;
+      if (getAsUnsignedInteger(PrefetchTargetStr[2], 10, TargetBBOffset))
+        return createProfileParseError(Twine("unsigned integer expected: '") +
+                                       PrefetchTargetStr[2]);
+      FI->second.PrefetchHints.push_back(
+          PrefetchHint{{*SiteBBID, static_cast<unsigned>(SiteBBOffset)},
+                       PrefetchTargetStr[0],
+                       {*TargetBBID, static_cast<unsigned>(TargetBBOffset)}});
+      continue;
+    }
+    case 't': { // Prefetch target specifier.
       // Skip the profile when we the profile iterator (FI) refers to the
       // past-the-end element.
       if (FI == ProgramPathAndClusterInfo.end())
