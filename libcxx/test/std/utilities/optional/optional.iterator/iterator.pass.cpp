@@ -14,16 +14,23 @@
 // template <class T> class optional::const_iterator;
 
 #include <cassert>
-#include <iterator>
 #include <optional>
 #include <ranges>
 #include <type_traits>
 #include <utility>
 
+template <typename T>
+constexpr bool test_range_concept() {
+  return std::ranges::range<std::optional<T>>;
+}
+
 template <typename T, std::remove_reference_t<T> __val>
 constexpr bool test() {
   std::remove_reference_t<T> v{__val};
   std::optional<T> opt{v};
+  {
+    assert(test_range_concept<T>());
+  }
 
   { // Dereferencing an iterator of an engaged optional will return the same value that the optional holds.
     auto it  = opt.begin();
@@ -93,6 +100,10 @@ constexpr bool tests() {
   assert((test<bool&, true>()));
   assert((test<const int&, 2>()));
   assert((test<const char&, 'b'>()));
+
+  assert(!test_range_concept<int (&)()>());
+  assert(!test_range_concept<int (&)[]>());
+  assert(!test_range_concept<int (&)[42]>());
 
   return true;
 }
