@@ -40,7 +40,7 @@ AST_MATCHER(QualType, isEnableIf) {
   if (CheckTemplate(BaseType->getAs<TemplateSpecializationType>()))
     return true; // Case: enable_if_t< >.
   if (const auto *TT = BaseType->getAs<TypedefType>())
-    if (NestedNameSpecifier Q = TT->getQualifier();
+    if (const NestedNameSpecifier Q = TT->getQualifier();
         Q.getKind() == NestedNameSpecifier::Kind::Type)
       if (CheckTemplate(Q.getAsType()->getAs<TemplateSpecializationType>()))
         return true; // Case: enable_if< >::type.
@@ -67,7 +67,7 @@ void ForwardingReferenceOverloadCheck::registerMatchers(MatchFinder *Finder) {
                            unless(references(isConstQualified())))))
           .bind("parm-var");
 
-  DeclarationMatcher FindOverload =
+  const DeclarationMatcher FindOverload =
       cxxConstructorDecl(
           hasParameter(0, ForwardingRefParm), unless(isDeleted()),
           unless(hasAnyParameter(
@@ -128,8 +128,9 @@ void ForwardingReferenceOverloadCheck::check(
         (OtherCtor->isCopyConstructor() ? EnabledCopy : EnabledMove) = true;
     }
   }
-  bool Copy = (!EnabledMove && !DisabledMove && !DisabledCopy) || EnabledCopy;
-  bool Move = !DisabledMove || EnabledMove;
+  const bool Copy =
+      (!EnabledMove && !DisabledMove && !DisabledCopy) || EnabledCopy;
+  const bool Move = !DisabledMove || EnabledMove;
   if (!Copy && !Move)
     return;
   diag(Ctor->getLocation(),

@@ -151,7 +151,7 @@ void InvalidEnumDefaultInitializationCheck::check(
   SourceLocation Loc = InitExpr->getExprLoc();
   if (Loc.isInvalid()) {
     if (isa<ImplicitValueInitExpr, InitListExpr>(InitExpr)) {
-      DynTypedNodeList Parents = ACtx.getParents(*InitExpr);
+      const DynTypedNodeList Parents = ACtx.getParents(*InitExpr);
       if (Parents.empty())
         return;
 
@@ -170,7 +170,7 @@ void InvalidEnumDefaultInitializationCheck::check(
         // The expression may be implicitly generated for an initialization.
         // Search for a parent initialization list with valid source location.
         while (InitList->getExprLoc().isInvalid()) {
-          DynTypedNodeList Parents = ACtx.getParents(*InitList);
+          const DynTypedNodeList Parents = ACtx.getParents(*InitList);
           if (Parents.empty())
             return;
           InitList = Parents[0].get<InitListExpr>();

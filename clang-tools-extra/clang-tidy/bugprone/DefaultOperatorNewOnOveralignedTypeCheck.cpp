@@ -26,7 +26,7 @@ void DefaultOperatorNewOnOveralignedTypeCheck::check(
   // Get the found 'new' expression.
   const auto *NewExpr = Result.Nodes.getNodeAs<CXXNewExpr>("new");
 
-  QualType T = NewExpr->getAllocatedType();
+  const QualType T = NewExpr->getAllocatedType();
   // Dependent types do not have fixed alignment.
   if (T->isDependentType())
     return;
@@ -35,25 +35,25 @@ void DefaultOperatorNewOnOveralignedTypeCheck::check(
   if (!D || !D->isCompleteDefinition())
     return;
 
-  ASTContext &Context = D->getASTContext();
+  const ASTContext &Context = D->getASTContext();
 
   // Check if no alignment was specified for the type.
   if (!Context.isAlignmentRequired(T))
     return;
 
   // The user-specified alignment (in bits).
-  unsigned SpecifiedAlignment = D->getMaxAlignment();
+  const unsigned SpecifiedAlignment = D->getMaxAlignment();
   // Double-check if no alignment was specified.
   if (!SpecifiedAlignment)
     return;
   // The alignment used by default 'operator new' (in bits).
-  unsigned DefaultNewAlignment = Context.getTargetInfo().getNewAlign();
+  const unsigned DefaultNewAlignment = Context.getTargetInfo().getNewAlign();
 
-  bool OverAligned = SpecifiedAlignment > DefaultNewAlignment;
-  bool HasDefaultOperatorNew =
+  const bool OverAligned = SpecifiedAlignment > DefaultNewAlignment;
+  const bool HasDefaultOperatorNew =
       !NewExpr->getOperatorNew() || NewExpr->getOperatorNew()->isImplicit();
 
-  unsigned CharWidth = Context.getTargetInfo().getCharWidth();
+  const unsigned CharWidth = Context.getTargetInfo().getCharWidth();
   if (HasDefaultOperatorNew && OverAligned)
     diag(NewExpr->getBeginLoc(),
          "allocation function returns a pointer with alignment %0 but the "

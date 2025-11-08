@@ -29,7 +29,7 @@ AST_MATCHER_P2(Expr, hasSideEffect, bool, CheckFunctionCalls,
   const Expr *E = &Node;
 
   if (const auto *Op = dyn_cast<UnaryOperator>(E)) {
-    UnaryOperator::Opcode OC = Op->getOpcode();
+    const UnaryOperator::Opcode OC = Op->getOpcode();
     return OC == UO_PostInc || OC == UO_PostDec || OC == UO_PreInc ||
            OC == UO_PreDec;
   }
@@ -44,7 +44,7 @@ AST_MATCHER_P2(Expr, hasSideEffect, bool, CheckFunctionCalls,
       if (MethodDecl->isConst())
         return false;
 
-    OverloadedOperatorKind OpKind = OpCallExpr->getOperator();
+    const OverloadedOperatorKind OpKind = OpCallExpr->getOperator();
     return OpKind == OO_Equal || OpKind == OO_PlusEqual ||
            OpKind == OO_MinusEqual || OpKind == OO_StarEqual ||
            OpKind == OO_SlashEqual || OpKind == OO_AmpEqual ||
@@ -130,7 +130,7 @@ void AssertSideEffectCheck::check(const MatchFinder::MatchResult &Result) {
 
   StringRef AssertMacroName;
   while (Loc.isValid() && Loc.isMacroID()) {
-    StringRef MacroName = Lexer::getImmediateMacroName(Loc, SM, LangOpts);
+    const StringRef MacroName = Lexer::getImmediateMacroName(Loc, SM, LangOpts);
     Loc = SM.getImmediateMacroCallerLoc(Loc);
 
     // Check if this macro is an assert.
