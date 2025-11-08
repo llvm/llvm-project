@@ -65,8 +65,9 @@ private:
   /// registered as signal handler.
   /// @param SkipPathEnd If true the last item of the call chain (farthest away
   /// from the \c signal call) is omitted from note generation.
-  void reportHandlerChain(const llvm::df_iterator<clang::CallGraphNode *> &Itr,
-                          const DeclRefExpr *HandlerRef, bool SkipPathEnd);
+  void
+  reportHandlerChain(const llvm::df_iterator<const clang::CallGraphNode *> &Itr,
+                     const DeclRefExpr *HandlerRef, bool SkipPathEnd);
 
   clang::CallGraph CG;
 

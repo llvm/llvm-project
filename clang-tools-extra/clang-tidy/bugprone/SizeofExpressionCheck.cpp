@@ -407,9 +407,9 @@ void SizeofExpressionCheck::check(const MatchFinder::MatchResult &Result) {
     const auto *ElementTy = Result.Nodes.getNodeAs<Type>("elem-type");
     const auto *PointedTy = Result.Nodes.getNodeAs<Type>("elem-ptr-type");
 
-    CharUnits NumeratorSize = getSizeOfType(Ctx, NumTy);
-    CharUnits DenominatorSize = getSizeOfType(Ctx, DenomTy);
-    CharUnits ElementSize = getSizeOfType(Ctx, ElementTy);
+    const CharUnits NumeratorSize = getSizeOfType(Ctx, NumTy);
+    const CharUnits DenominatorSize = getSizeOfType(Ctx, DenomTy);
+    const CharUnits ElementSize = getSizeOfType(Ctx, ElementTy);
 
     if (DenominatorSize > CharUnits::Zero() &&
         !NumeratorSize.isMultipleOf(DenominatorSize)) {
