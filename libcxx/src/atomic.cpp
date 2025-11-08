@@ -200,7 +200,7 @@ static void __libcpp_platform_wake_by_address(__cxx_atomic_contention_t const vo
 template <std::size_t _Size>
 static void __platform_wait_on_address(void const volatile* __ptr, void const* __val) {
   __libcpp_thread_poll_with_backoff(
-      [=]() -> bool { return !std::memcmp(const_cast<const void*>(__ptr), __val, _Size); },
+      [=]() -> bool { return std::memcmp(const_cast<const void*>(__ptr), __val, _Size) != 0; },
       __libcpp_timed_backoff_policy());
 }
 
