@@ -156,7 +156,6 @@ Error MustacheHTMLGenerator::generateDocs(
   SmallString<128> JSONPath;
   sys::path::native(RootDir.str() + "/json", JSONPath);
 
-  StringMap<json::Value> JSONFileMap;
   {
     llvm::TimeTraceScope TS("Iterate JSON files");
     std::error_code EC;
