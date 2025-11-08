@@ -3417,6 +3417,17 @@ static QualType GetDeclSpecTypeForDeclarator(TypeProcessingState &state,
     }
   }
 
+  if (auto *CRD = dyn_cast_or_null<CXXRecordDecl>(OwnedTagDecl)) {
+    if (auto *CTD = CRD->getDescribedClassTemplate()) {
+      for (const NamedDecl *ND : CTD->getTemplateParameters()->asArray()) {
+        if (ND->isInvalidDecl()) {
+          D.setInvalidType(true);
+          return T;
+        }
+      }
+    }
+  }
+
   if (SemaRef.getLangOpts().CPlusPlus &&
       OwnedTagDecl && OwnedTagDecl->isCompleteDefinition()) {
     // Check the contexts where C++ forbids the declaration of a new class

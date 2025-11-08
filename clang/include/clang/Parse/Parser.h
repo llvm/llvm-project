@@ -3787,6 +3787,8 @@ private:
   /// true except when we are parsing an expression within a C++
   /// template argument list, where the '>' closes the template
   /// argument list.
+  SmallVector<TemplateParameterList *, 4> *TemplateParamsFromAlias = nullptr;
+
   bool GreaterThanIsOperator;
 
   // C++ type trait keywords that can be reverted to identifiers and still be

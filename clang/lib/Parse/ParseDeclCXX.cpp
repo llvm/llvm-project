@@ -889,6 +889,13 @@ Decl *Parser::ParseAliasDeclarationAfterDeclarator(
         << FixItHint::CreateRemoval(SourceRange(D.EllipsisLoc));
 
   Decl *DeclFromDeclSpec = nullptr;
+
+  TemplateParameterLists *SavedTemplateParamsFromAlias =
+      TemplateParamsFromAlias;
+  TemplateParamsFromAlias = TemplateInfo.TemplateParams;
+  TemplateParameterLists *TemplateParams = TemplateInfo.TemplateParams;
+  TemplateParamsFromAlias = SavedTemplateParamsFromAlias;
+
   TypeResult TypeAlias =
       ParseTypeName(nullptr,
                     TemplateInfo.Kind != ParsedTemplateKind::NonTemplate ? DeclaratorContext::AliasTemplate
@@ -904,7 +911,7 @@ Decl *Parser::ParseAliasDeclarationAfterDeclarator(
                                       : "alias declaration"))
     SkipUntil(tok::semi);
 
-  TemplateParameterLists *TemplateParams = TemplateInfo.TemplateParams;
+  TemplateParams = TemplateInfo.TemplateParams;
   MultiTemplateParamsArg TemplateParamsArg(
       TemplateParams ? TemplateParams->data() : nullptr,
       TemplateParams ? TemplateParams->size() : 0);
@@ -1543,6 +1550,18 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
                                  DeclSpecContext DSC,
                                  ParsedAttributes &Attributes) {
   DeclSpec::TST TagType;
+
+  if (TemplateParamsFromAlias) {
+    for (TemplateParameterList *TPL : *TemplateParamsFromAlias) {
+      for (NamedDecl *ND : *TPL) {
+        ND->setInvalidDecl(true);
+        if (auto *TTPD = dyn_cast<TemplateTypeParmDecl>(ND)) {
+          TTPD->setTypeForDecl(Actions.Context.IntTy.getTypePtr());
+        }
+      }
+    }
+  }
+
   if (TagTokKind == tok::kw_struct)
     TagType = DeclSpec::TST_struct;
   else if (TagTokKind == tok::kw___interface)
