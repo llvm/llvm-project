@@ -1213,7 +1213,7 @@ llvm::Value *CodeGenFunction::emitCountedByPointerSize(
     if (ElementSize.isZero()) {
       // This might be a __sized_by (or __counted_by) on a
       // 'void *', which counts bytes, not elements.
-      auto *CAT = ElementTy->getAs<CountAttributedType>();
+      [[maybe_unused]] auto *CAT = ElementTy->getAs<CountAttributedType>();
       assert(CAT && "must have an CountAttributedType");
 
       ElementSize = CharUnits::One();

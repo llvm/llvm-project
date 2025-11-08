@@ -9015,6 +9015,10 @@ int test_mm512_kortestc(__m512i __A, __m512i __B, __m512i __C, __m512i __D) {
                          _mm512_cmpneq_epu32_mask(__C, __D));
 }
 
+TEST_CONSTEXPR(_mm512_kortestc(0x0000, 0x0000) == 0);
+TEST_CONSTEXPR(_mm512_kortestc(0x0000, 0x8000) == 0);
+TEST_CONSTEXPR(_mm512_kortestc(0x0123, 0xFEDC) == 1);
+
 int test_mm512_kortestz(__m512i __A, __m512i __B, __m512i __C, __m512i __D) {
   // CHECK-LABEL: test_mm512_kortestz
   // CHECK: [[LHS:%.*]] = bitcast i16 %{{.*}} to <16 x i1>
@@ -9026,6 +9030,10 @@ int test_mm512_kortestz(__m512i __A, __m512i __B, __m512i __C, __m512i __D) {
   return _mm512_kortestz(_mm512_cmpneq_epu32_mask(__A, __B),
                          _mm512_cmpneq_epu32_mask(__C, __D));
 }
+
+TEST_CONSTEXPR(_mm512_kortestz(0x0000, 0x0000) == 1);
+TEST_CONSTEXPR(_mm512_kortestz(0x0000, 0x8000) == 0);
+TEST_CONSTEXPR(_mm512_kortestz(0x0123, 0xFEDC) == 0);
 
 unsigned char test_kortestz_mask16_u8(__m512i __A, __m512i __B, __m512i __C, __m512i __D) {
   // CHECK-LABEL: test_kortestz_mask16_u8
@@ -9040,6 +9048,10 @@ unsigned char test_kortestz_mask16_u8(__m512i __A, __m512i __B, __m512i __C, __m
                              _mm512_cmpneq_epu32_mask(__C, __D));
 }
 
+TEST_CONSTEXPR(_kortestz_mask16_u8(0x0000, 0x0000) == 1);
+TEST_CONSTEXPR(_kortestz_mask16_u8(0x0000, 0x8000) == 0);
+TEST_CONSTEXPR(_kortestz_mask16_u8(0x0123, 0xFEDC) == 0);
+
 unsigned char test_kortestc_mask16_u8(__m512i __A, __m512i __B, __m512i __C, __m512i __D) {
   // CHECK-LABEL: test_kortestc_mask16_u8
   // CHECK: [[LHS:%.*]] = bitcast i16 %{{.*}} to <16 x i1>
@@ -9052,6 +9064,10 @@ unsigned char test_kortestc_mask16_u8(__m512i __A, __m512i __B, __m512i __C, __m
   return _kortestc_mask16_u8(_mm512_cmpneq_epu32_mask(__A, __B),
                              _mm512_cmpneq_epu32_mask(__C, __D));
 }
+
+TEST_CONSTEXPR(_kortestc_mask16_u8(0x0000, 0x0000) == 0);
+TEST_CONSTEXPR(_kortestc_mask16_u8(0x0000, 0x8000) == 0);
+TEST_CONSTEXPR(_kortestc_mask16_u8(0x0123, 0xFEDC) == 1);
 
 unsigned char test_kortest_mask16_u8(__m512i __A, __m512i __B, __m512i __C, __m512i __D, unsigned char *CF) {
   // CHECK-LABEL: test_kortest_mask16_u8
@@ -9072,6 +9088,30 @@ unsigned char test_kortest_mask16_u8(__m512i __A, __m512i __B, __m512i __C, __m5
   return _kortest_mask16_u8(_mm512_cmpneq_epu32_mask(__A, __B),
                             _mm512_cmpneq_epu32_mask(__C, __D), CF);
 }
+
+// Test constexpr handling.
+#if defined(__cplusplus) && (__cplusplus >= 201103L)
+constexpr unsigned char
+test_kortest_mask16_u8(unsigned short A, unsigned short B) {
+  unsigned char all_ones{};
+  return (_kortest_mask16_u8(A, B, &all_ones) << 4) | all_ones;
+}
+
+void _kortest_mask16_u8() {
+  constexpr unsigned short A1 = 0x0000;
+  constexpr unsigned short B1 = 0x0000;
+  constexpr unsigned char expected_result_1 = 0x10;
+  static_assert(test_kortest_mask16_u8(A1, B1) == expected_result_1);
+  constexpr unsigned short A2 = 0x0000;
+  constexpr unsigned short B2 = 0x8000;
+  constexpr unsigned char expected_result_2 = 0x00;
+  static_assert(test_kortest_mask16_u8(A2, B2) == expected_result_2);
+  constexpr unsigned short A3 = 0x0123;
+  constexpr unsigned short B3 = 0xFEDC;
+  constexpr unsigned char expected_result_3 = 0x01;
+  static_assert(test_kortest_mask16_u8(A3, B3) == expected_result_3);
+}
+#endif
 
 __mmask16 test_mm512_kunpackb(__m512i __A, __m512i __B, __m512i __C, __m512i __D, __m512i __E, __m512i __F) {
   // CHECK-LABEL: test_mm512_kunpackb
