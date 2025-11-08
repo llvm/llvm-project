@@ -380,6 +380,15 @@ public:
 
   clang::Qualifiers getQualifiers() const { return quals; }
 
+  bool isVolatile() const { return quals.hasVolatile(); }
+
+  void setVolatile(bool flag) {
+    if (flag)
+      quals.addVolatile();
+    else
+      quals.removeVolatile();
+  }
+
   Address getAddress() const { return addr; }
 
   bool isIgnored() const { return !addr.isValid(); }
@@ -389,6 +398,8 @@ public:
   Overlap_t mayOverlap() const { return Overlap_t(overlapFlag); }
 
   IsZeroed_t isZeroed() const { return IsZeroed_t(zeroedFlag); }
+
+  IsAliased_t isPotentiallyAliased() const { return IsAliased_t(aliasedFlag); }
 
   RValue asRValue() const {
     if (isIgnored())

@@ -69,7 +69,7 @@ FunctionPass *createAMDGPUPreloadKernArgPrologLegacyPass();
 ModulePass *createAMDGPUPreloadKernelArgumentsLegacyPass(const TargetMachine *);
 
 struct AMDGPUSimplifyLibCallsPass : PassInfoMixin<AMDGPUSimplifyLibCallsPass> {
-  AMDGPUSimplifyLibCallsPass() {}
+  AMDGPUSimplifyLibCallsPass() = default;
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
@@ -371,13 +371,13 @@ public:
 class AMDGPUAnnotateUniformValuesPass
     : public PassInfoMixin<AMDGPUAnnotateUniformValuesPass> {
 public:
-  AMDGPUAnnotateUniformValuesPass() {}
+  AMDGPUAnnotateUniformValuesPass() = default;
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
 class SIModeRegisterPass : public PassInfoMixin<SIModeRegisterPass> {
 public:
-  SIModeRegisterPass() {}
+  SIModeRegisterPass() = default;
   PreservedAnalyses run(MachineFunction &F, MachineFunctionAnalysisManager &AM);
 };
 
@@ -562,9 +562,13 @@ public:
 void initializeAMDGPURewriteAGPRCopyMFMALegacyPass(PassRegistry &);
 extern char &AMDGPURewriteAGPRCopyMFMALegacyID;
 
+void initializeAMDGPUUniformIntrinsicCombineLegacyPass(PassRegistry &);
+extern char &AMDGPUUniformIntrinsicCombineLegacyPassID;
+FunctionPass *createAMDGPUUniformIntrinsicCombineLegacyPass();
+
 struct AMDGPUUniformIntrinsicCombinePass
     : public PassInfoMixin<AMDGPUUniformIntrinsicCombinePass> {
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
 namespace AMDGPU {

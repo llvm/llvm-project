@@ -861,18 +861,6 @@ public:
   using __node_allocator _LIBCPP_NODEBUG = __rebind_alloc<__alloc_traits, __node>;
   using __node_traits _LIBCPP_NODEBUG    = allocator_traits<__node_allocator>;
 
-// TODO(LLVM 22): Remove this check
-#ifndef _LIBCPP_ABI_TREE_REMOVE_NODE_POINTER_UB
-  static_assert(sizeof(__node_base_pointer) == sizeof(__end_node_pointer) && _LIBCPP_ALIGNOF(__node_base_pointer) ==
-                    _LIBCPP_ALIGNOF(__end_node_pointer),
-                "It looks like you are using std::__tree (an implementation detail for (multi)map/set) with a fancy "
-                "pointer type that thas a different representation depending on whether it points to a __tree base "
-                "pointer or a __tree node pointer (both of which are implementation details of the standard library). "
-                "This means that your ABI is being broken between LLVM 19 and LLVM 20. If you don't care about your "
-                "ABI being broken, define the _LIBCPP_ABI_TREE_REMOVE_NODE_POINTER_UB macro to silence this "
-                "diagnostic.");
-#endif
-
 private:
   // check for sane allocator pointer rebinding semantics. Rebinding the
   // allocator for a new pointer type should be exactly the same as rebinding

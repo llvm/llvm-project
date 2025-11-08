@@ -10,8 +10,8 @@ define <8 x i16> @test0(ptr %p, ptr %q, <8 x i16> %y, <8 x i1> %m, <8 x i16> %pt
 ; CHECK-LABEL: define <8 x i16> @test0(
 ; CHECK-SAME: ptr [[P:%.*]], ptr [[Q:%.*]], <8 x i16> [[Y:%.*]], <8 x i1> [[M:%.*]], <8 x i16> [[PT:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[A:%.*]] = call <8 x i16> @llvm.masked.load.v8i16.p0(ptr [[P]], i32 16, <8 x i1> [[M]], <8 x i16> [[PT]]) #[[ATTR2:[0-9]+]], !tbaa [[B_TBAA0:![0-9]+]]
-; CHECK-NEXT:    call void @llvm.masked.store.v8i16.p0(<8 x i16> [[Y]], ptr [[Q]], i32 16, <8 x i1> [[M]]), !tbaa [[A_TBAA3:![0-9]+]]
+; CHECK-NEXT:    [[A:%.*]] = call <8 x i16> @llvm.masked.load.v8i16.p0(ptr align 16 [[P]], <8 x i1> [[M]], <8 x i16> [[PT]]), !tbaa [[B_TBAA0:![0-9]+]]
+; CHECK-NEXT:    call void @llvm.masked.store.v8i16.p0(<8 x i16> [[Y]], ptr align 16 [[Q]], <8 x i1> [[M]]), !tbaa [[A_TBAA3:![0-9]+]]
 ; CHECK-NEXT:    [[C:%.*]] = add <8 x i16> [[A]], [[A]]
 ; CHECK-NEXT:    ret <8 x i16> [[C]]
 ;

@@ -16,8 +16,6 @@
 #include "flang/Semantics/openmp-modifiers.h"
 #include "flang/Semantics/symbol.h"
 
-#include "llvm/Frontend/OpenMP/OMPConstants.h"
-
 #include <list>
 #include <optional>
 #include <tuple>
@@ -251,8 +249,10 @@ MAKE_EMPTY_CLASS(Groupprivate, Groupprivate);
 
 MAKE_INCOMPLETE_CLASS(AdjustArgs, AdjustArgs);
 MAKE_INCOMPLETE_CLASS(AppendArgs, AppendArgs);
+MAKE_INCOMPLETE_CLASS(Collector, Collector);
 MAKE_INCOMPLETE_CLASS(GraphId, GraphId);
 MAKE_INCOMPLETE_CLASS(GraphReset, GraphReset);
+MAKE_INCOMPLETE_CLASS(Inductor, Inductor);
 MAKE_INCOMPLETE_CLASS(Replayable, Replayable);
 MAKE_INCOMPLETE_CLASS(Transparent, Transparent);
 
@@ -738,6 +738,18 @@ Device make(const parser::OmpClause::Device &inp,
   auto &t1 = std::get<parser::ScalarIntExpr>(inp.v.t);
   return Device{{/*DeviceModifier=*/maybeApplyToV(convert, m0),
                  /*DeviceDescription=*/makeExpr(t1, semaCtx)}};
+}
+
+DeviceSafesync make(const parser::OmpClause::DeviceSafesync &inp,
+                    semantics::SemanticsContext &semaCtx) {
+  // inp.v -> std::optional<parser::OmpDeviceSafesyncClause>
+  auto &&maybeRequired = maybeApply(
+      [&](const parser::OmpDeviceSafesyncClause &c) {
+        return makeExpr(c.v, semaCtx);
+      },
+      inp.v);
+
+  return DeviceSafesync{/*Required=*/std::move(maybeRequired)};
 }
 
 DeviceType make(const parser::OmpClause::DeviceType &inp,
@@ -1470,6 +1482,21 @@ ThreadLimit make(const parser::OmpClause::ThreadLimit &inp,
                  semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::ScalarIntExpr
   return ThreadLimit{/*Threadlim=*/makeExpr(inp.v, semaCtx)};
+}
+
+Threadset make(const parser::OmpClause::Threadset &inp,
+               semantics::SemanticsContext &semaCtx) {
+  // inp.v -> parser::OmpThreadsetClause
+  using wrapped = parser::OmpThreadsetClause;
+
+  CLAUSET_ENUM_CONVERT( //
+      convert, wrapped::ThreadsetPolicy, Threadset::ThreadsetPolicy,
+      // clang-format off
+      MS(Omp_Pool, Omp_Pool)
+      MS(Omp_Team, Omp_Team)
+      // clang-format on
+  );
+  return Threadset{/*ThreadsetPolicy=*/convert(inp.v.v)};
 }
 
 // Threadprivate: empty

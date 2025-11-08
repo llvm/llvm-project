@@ -708,7 +708,7 @@ DisassemblerTables::DisassemblerTables() {
   HasConflicts = false;
 }
 
-DisassemblerTables::~DisassemblerTables() {}
+DisassemblerTables::~DisassemblerTables() = default;
 
 void DisassemblerTables::emitModRMDecision(raw_ostream &o1, raw_ostream &o2,
                                            unsigned &i1, unsigned &i2,

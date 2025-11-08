@@ -8,6 +8,7 @@
 load("@bazel_skylib//rules:common_settings.bzl", "bool_flag")
 load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
 load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
+load("@rules_python//python:defs.bzl", "py_binary")
 load("//llvm:targets.bzl", "llvm_targets")
 load(
     ":build_defs.bzl",
@@ -354,6 +355,34 @@ cc_library(
     deps = [
         ":IR",
         ":RelayoutOpInterfaceIncGen",
+    ],
+)
+
+td_library(
+    name = "AlignmentAttrInterfaceTdFiles",
+    srcs = ["include/mlir/Interfaces/AlignmentAttrInterface.td"],
+    includes = ["include"],
+    deps = [":OpBaseTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "AlignmentAttrInterfaceIncGen",
+    tbl_outs = {
+        "include/mlir/Interfaces/AlignmentAttrInterface.h.inc": ["-gen-op-interface-decls"],
+        "include/mlir/Interfaces/AlignmentAttrInterface.cpp.inc": ["-gen-op-interface-defs"],
+    },
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Interfaces/AlignmentAttrInterface.td",
+    deps = [":OpBaseTdFiles"],
+)
+
+cc_library(
+    name = "AlignmentAttrInterface",
+    hdrs = ["include/mlir/Interfaces/AlignmentAttrInterface.h"],
+    deps = [
+        ":AlignmentAttrInterfaceIncGen",
+        ":IR",
+        "//llvm:Support",
     ],
 )
 
@@ -1280,6 +1309,7 @@ cc_binary(
     deps = [
         ":CAPIIR",
         ":CAPILLVM",
+        ":CAPITarget",
         ":MLIRBindingsPythonNanobindHeadersAndDeps",
         "@nanobind",
     ],
@@ -3780,6 +3810,7 @@ cc_library(
         ":XeGPUDialect",
         ":XeGPUPassIncGen",
         ":XeGPUUtils",
+        ":XeGPUuArch",
         "//llvm:Support",
     ],
 )
@@ -3811,6 +3842,52 @@ cc_library(
     deps = [
         ":IR",
         "//llvm:Support",
+    ],
+)
+
+td_library(
+    name = "XeGPUTransformOpsTdFiles",
+    srcs = [
+        "include/mlir/Dialect/XeGPU/TransformOps/XeGPUTransformOps.td",
+    ],
+    includes = ["include"],
+    deps = [
+        ":TransformDialectTdFiles",
+    ],
+)
+
+gentbl_cc_library(
+    name = "XeGPUTransformOpsIncGen",
+    tbl_outs = {
+        "include/mlir/Dialect/XeGPU/TransformOps/XeGPUTransformOps.h.inc": ["-gen-op-decls"],
+        "include/mlir/Dialect/XeGPU/TransformOps/XeGPUTransformOps.cpp.inc": ["-gen-op-defs"],
+    },
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/XeGPU/TransformOps/XeGPUTransformOps.td",
+    deps = [
+        ":TransformDialectTdFiles",
+        ":XeGPUTransformOpsTdFiles",
+    ],
+)
+
+cc_library(
+    name = "XeGPUTransformOps",
+    srcs = [
+        "lib/Dialect/XeGPU/TransformOps/XeGPUTransformOps.cpp",
+    ],
+    hdrs = [
+        "include/mlir/Dialect/XeGPU/TransformOps/XeGPUTransformOps.h",
+    ],
+    includes = ["include"],
+    deps = [
+        ":DialectUtils",
+        ":IR",
+        ":SCFDialect",
+        ":TransformDialect",
+        ":TransformDialectInterfaces",
+        ":XeGPUDialect",
+        ":XeGPUTransformOpsIncGen",
+        ":XeGPUUtils",
     ],
 )
 
@@ -4680,6 +4757,8 @@ cc_library(
         ":ControlFlowDialect",
         ":IR",
         ":MemRefDialect",
+        ":Pass",
+        ":TransformUtils",
     ],
 )
 
@@ -4839,6 +4918,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":AffineDialect",
+        ":AlignmentAttrInterface",
         ":Analysis",
         ":ArithDialect",
         ":ArithUtils",
@@ -6798,6 +6878,7 @@ td_library(
     srcs = glob(["include/mlir/Dialect/SPIRV/IR/*.td"]),
     includes = ["include"],
     deps = [
+        ":AlignmentAttrInterfaceTdFiles",
         ":BuiltinDialectTdFiles",
         ":CallInterfacesTdFiles",
         ":ControlFlowInterfacesTdFiles",
@@ -6912,6 +6993,7 @@ cc_library(
     ]),
     includes = ["include"],
     deps = [
+        ":AlignmentAttrInterface",
         ":BytecodeOpInterface",
         ":CallOpInterfaces",
         ":CommonFolders",
@@ -7897,6 +7979,7 @@ cc_library(
     deps = [
         ":AffineDialect",
         ":AffineToStandard",
+        ":Analysis",
         ":ArithDialect",
         ":ComplexDialect",
         ":ConversionPassIncGen",
@@ -9396,6 +9479,7 @@ cc_library(
         ":MemRefTransforms",
         ":NVGPUTransforms",
         ":OpenACCTransforms",
+        ":OpenMPTransforms",
         ":QuantTransforms",
         ":SCFTransforms",
         ":SPIRVTransforms",
@@ -9464,6 +9548,7 @@ cc_library(
         ":UBToLLVM",
         ":VectorToLLVM",
         ":VectorTransformOps",
+        ":XeGPUTransformOps",
         ":XeVMToLLVM",
         ":XeVMToLLVMIRTranslation",
     ],
@@ -10161,6 +10246,42 @@ gentbl_cc_library(
 )
 
 cc_library(
+    name = "OpenACCAnalysis",
+    srcs = glob(
+        [
+            "lib/Dialect/OpenACC/Analysis/*.cpp",
+        ],
+    ),
+    hdrs = glob(["include/mlir/Dialect/OpenACC/Analysis/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":IR",
+        ":OpenACCDialect",
+        ":OpenACCUtils",
+        ":Pass",
+    ],
+)
+
+cc_library(
+    name = "OpenACCUtils",
+    srcs = glob(
+        [
+            "lib/Dialect/OpenACC/Utils/*.cpp",
+        ],
+    ),
+    includes = ["include"],
+    deps = [
+        ":OpenACCDialect",
+        ":OpenACCOpsIncGen",
+        ":OpenACCPassIncGen",
+        ":OpenACCTypeInterfacesIncGen",
+        ":Support",
+        ":ViewLikeInterface",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
     name = "OpenACCTransforms",
     srcs = glob(
         [
@@ -10170,12 +10291,18 @@ cc_library(
     hdrs = glob(["include/mlir/Dialect/OpenACC/Transforms/*.h"]),
     includes = ["include"],
     deps = [
+        ":Analysis",
+        ":ArithDialect",
         ":FuncDialect",
+        ":FunctionInterfaces",
         ":IR",
+        ":MemRefDialect",
+        ":OpenACCAnalysis",
         ":OpenACCDialect",
         ":OpenACCPassIncGen",
         ":Pass",
         ":TransformUtils",
+        ":ViewLikeInterface",
         "//llvm:Support",
     ],
 )
@@ -10309,6 +10436,40 @@ cc_library(
         ":SideEffectInterfaces",
         ":Support",
         "//llvm:FrontendOpenMP",
+        "//llvm:Support",
+    ],
+)
+
+gentbl_cc_library(
+    name = "OpenMPPassIncGen",
+    tbl_outs = {"include/mlir/Dialect/OpenMP/Transforms/Passes.h.inc": [
+        "-gen-pass-decls",
+        "-name=OpenMP",
+    ]},
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/OpenMP/Transforms/Passes.td",
+    deps = [":PassBaseTdFiles"],
+)
+
+cc_library(
+    name = "OpenMPTransforms",
+    srcs = glob(
+        [
+            "lib/Dialect/OpenMP/Transforms/*.cpp",
+        ],
+    ),
+    hdrs = glob(["include/mlir/Dialect/OpenMP/Transforms/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":Analysis",
+        ":FuncDialect",
+        ":IR",
+        ":LLVMDialect",
+        ":OpenMPDialect",
+        ":OpenMPPassIncGen",
+        ":Pass",
+        ":Support",
+        ":Transforms",
         "//llvm:Support",
     ],
 )
@@ -11210,6 +11371,7 @@ td_library(
     ],
     includes = ["include"],
     deps = [
+        ":AlignmentAttrInterfaceTdFiles",
         ":ControlFlowInterfacesTdFiles",
         ":DestinationStyleOpInterfaceTdFiles",
         ":IndexingMapOpInterfaceTdFiles",
@@ -12014,6 +12176,7 @@ cc_library(
     srcs = glob(["lib/Dialect/Transform/TuneExtension/*.cpp"]),
     hdrs = glob(["include/mlir/Dialect/Transform/TuneExtension/*.h"]),
     deps = [
+        ":ControlFlowInterfaces",
         ":IR",
         ":TransformDialect",
         ":TransformDialectInterfaces",
@@ -12789,6 +12952,7 @@ td_library(
     ],
     includes = ["include"],
     deps = [
+        ":AlignmentAttrInterfaceTdFiles",
         ":ArithOpsTdFiles",
         ":CastInterfacesTdFiles",
         ":ControlFlowInterfacesTdFiles",
@@ -12870,6 +13034,7 @@ cc_library(
     ],
     includes = ["include"],
     deps = [
+        ":AlignmentAttrInterface",
         ":AllocationOpInterface",
         ":ArithDialect",
         ":ArithUtils",
@@ -14263,4 +14428,9 @@ cc_library(
         ":XeVMDialect",
         "//llvm:Support",
     ],
+)
+
+py_binary(
+    name = "generate-test-checks",
+    srcs = ["utils/generate-test-checks.py"],
 )

@@ -1,4 +1,5 @@
 ; RUN: llc -O0 -mtriple=spirv1.6-unknown-vulkan1.3-compute %s -o - | FileCheck %s --match-full-lines
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv1.6-unknown-vulkan1.3-compute %s -o - -filetype=obj | spirv-val %}
 
 %"__cblayout_$Globals" = type <{ i32 }>
 
@@ -19,3 +20,7 @@ entry:
   store i32 98, ptr addrspace(11) %2, align 4
   ret void
 }
+
+!hlsl.cbs = !{!0}
+
+!0 = !{ptr @"$Globals.cb", ptr addrspace(12) @i}

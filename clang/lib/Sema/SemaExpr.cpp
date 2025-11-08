@@ -12653,10 +12653,10 @@ QualType Sema::CheckCompareOperands(ExprResult &LHS, ExprResult &RHS,
       // This is a gcc extension compatibility comparison.
       // In a SFINAE context, we treat this as a hard error to maintain
       // conformance with the C++ standard.
-      diagnoseFunctionPointerToVoidComparison(
-          *this, Loc, LHS, RHS, /*isError*/ (bool)isSFINAEContext());
+      bool IsError = isSFINAEContext();
+      diagnoseFunctionPointerToVoidComparison(*this, Loc, LHS, RHS, IsError);
 
-      if (isSFINAEContext())
+      if (IsError)
         return QualType();
 
       RHS = ImpCastExprToType(RHS.get(), LHSType, CK_BitCast);
@@ -12811,7 +12811,7 @@ QualType Sema::CheckCompareOperands(ExprResult &LHS, ExprResult &RHS,
       if (auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(DC)) {
         if (CTSD->isInStdNamespace() &&
             llvm::StringSwitch<bool>(CTSD->getName())
-                .Cases("less", "less_equal", "greater", "greater_equal", true)
+                .Cases({"less", "less_equal", "greater", "greater_equal"}, true)
                 .Default(false)) {
           if (RHSType->isNullPtrType())
             RHS = ImpCastExprToType(RHS.get(), LHSType, CK_NullToPointer);
@@ -14598,11 +14598,11 @@ QualType Sema::CheckAddressOfOperand(ExprResult &OrigOp, SourceLocation OpLoc) {
   unsigned AddressOfError = AO_No_Error;
 
   if (lval == Expr::LV_ClassTemporary || lval == Expr::LV_ArrayTemporary) {
-    bool sfinae = (bool)isSFINAEContext();
-    Diag(OpLoc, isSFINAEContext() ? diag::err_typecheck_addrof_temporary
-                                  : diag::ext_typecheck_addrof_temporary)
-      << op->getType() << op->getSourceRange();
-    if (sfinae)
+    bool IsError = isSFINAEContext();
+    Diag(OpLoc, IsError ? diag::err_typecheck_addrof_temporary
+                        : diag::ext_typecheck_addrof_temporary)
+        << op->getType() << op->getSourceRange();
+    if (IsError)
       return QualType();
     // Materialize the temporary as an lvalue so that we can take its address.
     OrigOp = op =
@@ -16185,9 +16185,7 @@ ExprResult Sema::BuildStmtExpr(SourceLocation LPLoc, Stmt *SubStmt,
   QualType Ty = Context.VoidTy;
   bool StmtExprMayBindToTemp = false;
   if (!Compound->body_empty()) {
-    // For GCC compatibility we get the last Stmt excluding trailing NullStmts.
-    if (const auto *LastStmt =
-            dyn_cast<ValueStmt>(Compound->getStmtExprResult())) {
+    if (const auto *LastStmt = dyn_cast<ValueStmt>(Compound->body_back())) {
       if (const Expr *Value = LastStmt->getExprStmt()) {
         StmtExprMayBindToTemp = true;
         Ty = Value->getType();

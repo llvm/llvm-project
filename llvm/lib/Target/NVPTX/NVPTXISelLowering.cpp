@@ -305,7 +305,8 @@ static void ComputePTXValueVTs(const TargetLowering &TLI, const DataLayout &DL,
                                uint64_t StartingOffset = 0) {
   SmallVector<EVT, 16> TempVTs;
   SmallVector<uint64_t, 16> TempOffsets;
-  ComputeValueVTs(TLI, DL, Ty, TempVTs, &TempOffsets, StartingOffset);
+  ComputeValueVTs(TLI, DL, Ty, TempVTs, /*MemVTs=*/nullptr, &TempOffsets,
+                  StartingOffset);
 
   for (const auto [VT, Off] : zip(TempVTs, TempOffsets)) {
     MVT RegisterVT = TLI.getRegisterTypeForCallingConv(Ctx, CallConv, VT);

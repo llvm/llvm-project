@@ -62,6 +62,14 @@ Changes to the LLVM IR
 * The `ptrtoaddr` instruction was introduced. This instruction returns the
   address component of a pointer type variable but unlike `ptrtoint` does not
   capture provenance ([#125687](https://github.com/llvm/llvm-project/pull/125687)).
+* The alignment argument of the `@llvm.masked.load`, `@llvm.masked.store`,
+  `@llvm.masked.gather` and `@llvm.masked.scatter` intrinsics has been removed.
+  Instead, the `align` attribute should be placed on the pointer (or vector of
+  pointers) argument.
+* A `load atomic` may now be used with vector types on x86.
+* Added `@llvm.reloc.none` intrinsic to emit null relocations to symbols. This
+  emits an undefined symbol reference without adding any dedicated code or data to
+  to bear the relocation.
 
 Changes to LLVM infrastructure
 ------------------------------
@@ -88,6 +96,9 @@ Changes to Vectorizers
 
 Changes to the AArch64 Backend
 ------------------------------
+
+* Assembler/disassembler support has been added for Armv9.7-A (2025)
+  architecture extensions.
 
 Changes to the AMDGPU Backend
 -----------------------------
@@ -172,6 +183,10 @@ Changes to the LLVM tools
 * Some code paths for supporting Python 2.7 in `llvm-lit` have been removed.
 * Support for `%T` in lit has been removed.
 
+* `llvm-config` gained a new flag `--quote-paths` which quotes and escapes paths
+  emitted on stdout, to account for spaces or other special characters in path.
+  (`#97305 <https://github.com/llvm/llvm-project/pull/97305>`_).
+
 Changes to LLDB
 ---------------------------------
 
@@ -183,6 +198,10 @@ Changes to LLDB
 * The `show-progress` setting, which became a NOOP with the introduction of the
   statusline, now defaults to off and controls using OSC escape codes to show a
   native progress bar in supporting terminals like Ghostty and ConEmu.
+* The default PDB reader on Windows was changed from DIA to native, which uses 
+  LLVM's PDB and CodeView support. You can switch back to the DIA reader with
+  `settings set plugin.symbol-file.pdb.reader dia`. Note that support for the
+  DIA reader will be removed in a future version of LLDB.
 
 Changes to BOLT
 ---------------------------------

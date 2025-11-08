@@ -225,7 +225,7 @@ inline constexpr int64_t minIntN(int64_t N) {
 
   if (N == 0)
     return 0;
-  return UINT64_C(1) + ~(UINT64_C(1) << (N - 1));
+  return UINT64_MAX << (N - 1);
 }
 
 /// Gets the maximum value for a N-bit signed integer.
@@ -241,7 +241,7 @@ inline constexpr int64_t maxIntN(int64_t N) {
 
 /// Checks if an unsigned integer fits into the given (dynamic) bit width.
 inline constexpr bool isUIntN(unsigned N, uint64_t x) {
-  return N >= 64 || x <= maxUIntN(N);
+  return N >= 64 || (x >> N) == 0;
 }
 
 /// Checks if an signed integer fits into the given (dynamic) bit width.
@@ -316,10 +316,8 @@ inline bool isShiftedMask_64(uint64_t Value, unsigned &MaskIdx,
 /// Valid only for positive powers of two.
 template <size_t kValue> constexpr size_t ConstantLog2() {
   static_assert(llvm::isPowerOf2_64(kValue), "Value is not a valid power of 2");
-  return 1 + ConstantLog2<kValue / 2>();
+  return llvm::countr_zero_constexpr(kValue);
 }
-
-template <> constexpr size_t ConstantLog2<1>() { return 0; }
 
 template <size_t kValue>
 LLVM_DEPRECATED("Use ConstantLog2 instead", "ConstantLog2")

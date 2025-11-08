@@ -186,7 +186,8 @@ std::string buildTraceGraph(StringRef Json) {
 
 } // namespace
 
-TEST(TimeProfilerTest, ConstantEvaluationCxx20) {
+// FIXME: Flaky test. See https://github.com/llvm/llvm-project/pull/138613
+TEST(TimeProfilerTest, DISABLED_ConstantEvaluationCxx20) {
   std::string Code = R"(
 void print(double value);
 
