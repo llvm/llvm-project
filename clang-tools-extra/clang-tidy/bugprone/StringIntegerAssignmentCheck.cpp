@@ -129,7 +129,7 @@ void StringIntegerAssignmentCheck::check(
   const auto *Argument = Result.Nodes.getNodeAs<Expr>("expr");
   const auto CharType =
       Result.Nodes.getNodeAs<QualType>("type")->getCanonicalType();
-  SourceLocation Loc = Argument->getBeginLoc();
+  const SourceLocation Loc = Argument->getBeginLoc();
 
   // Try to detect a few common expressions to reduce false positives.
   if (CharExpressionDetector(CharType, *Result.Context)
@@ -145,7 +145,7 @@ void StringIntegerAssignmentCheck::check(
   if (Loc.isMacroID())
     return;
 
-  bool IsWideCharType = CharType->isWideCharType();
+  const bool IsWideCharType = CharType->isWideCharType();
   if (!CharType->isCharType() && !IsWideCharType)
     return;
   bool IsOneDigit = false;
@@ -155,7 +155,7 @@ void StringIntegerAssignmentCheck::check(
     IsLiteral = true;
   }
 
-  SourceLocation EndLoc = Lexer::getLocForEndOfToken(
+  const SourceLocation EndLoc = Lexer::getLocForEndOfToken(
       Argument->getEndLoc(), 0, *Result.SourceManager, getLangOpts());
   if (IsOneDigit) {
     Diag << FixItHint::CreateInsertion(Loc, IsWideCharType ? "L'" : "'")

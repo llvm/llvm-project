@@ -5368,7 +5368,6 @@ private:
           Lane = P.first->ReorderIndices[Lane];
         assert(Lane < static_cast<int>(P.first->Scalars.size()) &&
                "Couldn't find extract lane");
-        SmallVector<unsigned> OpIndices;
         for (unsigned OpIdx :
              seq<unsigned>(::getNumberOfPotentiallyCommutativeOps(
                  P.first->getMainOp()))) {
@@ -8815,7 +8814,6 @@ void BoUpSLP::buildExternalUses(
     const ExtraValueToDebugLocsMap &ExternallyUsedValues) {
   const size_t NumVectScalars = ScalarToTreeEntries.size() + 1;
   DenseMap<Value *, unsigned> ScalarToExtUses;
-  SmallPtrSet<Value *, 4> ExternalUsers;
   // Collect the values that we need to extract from the tree.
   for (auto &TEPtr : VectorizableTree) {
     TreeEntry *Entry = TEPtr.get();

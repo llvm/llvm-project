@@ -60,7 +60,7 @@ void SuspiciousMemsetUsageCheck::check(const MatchFinder::MatchResult &Result) {
     // Case 1: fill_char of memset() is a character '0'. Probably an
     // integer zero was intended.
 
-    SourceRange CharRange = CharZeroFill->getSourceRange();
+    const SourceRange CharRange = CharZeroFill->getSourceRange();
     auto Diag =
         diag(CharZeroFill->getBeginLoc(), "memset fill value is char '0', "
                                           "potentially mistaken for int 0");
@@ -82,7 +82,7 @@ void SuspiciousMemsetUsageCheck::check(const MatchFinder::MatchResult &Result) {
     if (!NumFill->EvaluateAsInt(EVResult, *Result.Context))
       return;
 
-    llvm::APSInt NumValue = EVResult.Val.getInt();
+    const llvm::APSInt NumValue = EVResult.Val.getInt();
     if (NumValue >= 0 && NumValue <= UCharMax)
       return;
 
@@ -110,7 +110,7 @@ void SuspiciousMemsetUsageCheck::check(const MatchFinder::MatchResult &Result) {
     Expr::EvalResult EVResult;
     if (!FillChar->isValueDependent() &&
         FillChar->EvaluateAsInt(EVResult, *Result.Context)) {
-      llvm::APSInt Value1 = EVResult.Val.getInt();
+      const llvm::APSInt Value1 = EVResult.Val.getInt();
       if (Value1 == 0 || Value1.isNegative())
         return;
     }
@@ -120,8 +120,10 @@ void SuspiciousMemsetUsageCheck::check(const MatchFinder::MatchResult &Result) {
     // and fix-its to swap the arguments.
     auto D = diag(Call->getBeginLoc(),
                   "memset of size zero, potentially swapped arguments");
-    StringRef RHSString = tooling::fixit::getText(*ByteCount, *Result.Context);
-    StringRef LHSString = tooling::fixit::getText(*FillChar, *Result.Context);
+    const StringRef RHSString =
+        tooling::fixit::getText(*ByteCount, *Result.Context);
+    const StringRef LHSString =
+        tooling::fixit::getText(*FillChar, *Result.Context);
     if (LHSString.empty() || RHSString.empty())
       return;
 

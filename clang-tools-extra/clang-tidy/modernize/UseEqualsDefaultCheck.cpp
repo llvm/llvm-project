@@ -200,7 +200,7 @@ static bool isCopyAssignmentAndCanBeDefaulted(ASTContext *Context,
 /// Returns false if the body has any non-whitespace character.
 static bool bodyEmpty(const ASTContext *Context, const CompoundStmt *Body) {
   bool Invalid = false;
-  StringRef Text = Lexer::getSourceText(
+  const StringRef Text = Lexer::getSourceText(
       CharSourceRange::getCharRange(Body->getLBracLoc().getLocWithOffset(1),
                                     Body->getRBracLoc()),
       Context->getSourceManager(), Context->getLangOpts(), &Invalid);
@@ -306,8 +306,8 @@ void UseEqualsDefaultCheck::check(const MatchFinder::MatchResult &Result) {
     return;
 
   // If there are comments inside the body, don't do the change.
-  bool ApplyFix = SpecialFunctionDecl->isCopyAssignmentOperator() ||
-                  bodyEmpty(Result.Context, Body);
+  const bool ApplyFix = SpecialFunctionDecl->isCopyAssignmentOperator() ||
+                        bodyEmpty(Result.Context, Body);
 
   std::vector<FixItHint> RemoveInitializers;
   unsigned MemberType = 0;
@@ -345,14 +345,14 @@ void UseEqualsDefaultCheck::check(const MatchFinder::MatchResult &Result) {
   Diag << MemberType;
 
   if (ApplyFix) {
-    SourceLocation UnifiedEnd = utils::lexer::getUnifiedEndLoc(
+    const SourceLocation UnifiedEnd = utils::lexer::getUnifiedEndLoc(
         *Body, Result.Context->getSourceManager(),
         Result.Context->getLangOpts());
     // Skipping comments, check for a semicolon after Body->getSourceRange()
     std::optional<Token> Token = utils::lexer::findNextTokenSkippingComments(
         UnifiedEnd, Result.Context->getSourceManager(),
         Result.Context->getLangOpts());
-    StringRef Replacement =
+    const StringRef Replacement =
         Token && Token->is(tok::semi) ? "= default" : "= default;";
     Diag << FixItHint::CreateReplacement(Body->getSourceRange(), Replacement)
          << RemoveInitializers;
