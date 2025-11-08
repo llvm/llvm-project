@@ -2521,7 +2521,8 @@ def CIR_FuncOp : CIR_Op<"func", [
                        OptionalAttr<DictArrayAttr>:$res_attrs,
                        OptionalAttr<FlatSymbolRefAttr>:$aliasee,
                        CIR_OptionalPriorityAttr:$global_ctor_priority,
-                       CIR_OptionalPriorityAttr:$global_dtor_priority);
+                       CIR_OptionalPriorityAttr:$global_dtor_priority,
+                       OptionalAttr<CIR_InlineAttr>:$inlining);
 
   let regions = (region AnyRegion:$body);
 

@@ -1928,6 +1928,23 @@ void CIRGenModule::setFunctionAttributes(GlobalDecl globalDecl,
                       "available body!");
     assert(!cir::MissingFeatures::attributeNoBuiltin());
   }
+
+  // Handle inline-related attributes (noinline, always_inline, inline hint)
+  // Check for explicit noinline attribute - this takes highest precedence
+  if (fd->hasAttr<NoInlineAttr>()) {
+    func.setInliningAttr(cir::InlineAttr::get(
+        builder.getContext(), cir::InlineKind::NoInline));
+  }
+  // Check for explicit always_inline attribute
+  else if (fd->hasAttr<AlwaysInlineAttr>()) {
+    func.setInliningAttr(cir::InlineAttr::get(
+        builder.getContext(), cir::InlineKind::AlwaysInline));
+  }
+  // Check for inline keyword (provides inline hint)
+  else if (fd->isInlined()) {
+    func.setInliningAttr(cir::InlineAttr::get(
+        builder.getContext(), cir::InlineKind::InlineHint));
+  }
 }
 
 void CIRGenModule::setCIRFunctionAttributesForDefinition(

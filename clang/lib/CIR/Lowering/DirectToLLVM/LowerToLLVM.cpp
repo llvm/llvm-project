@@ -1800,7 +1800,7 @@ void CIRToLLVMFuncOpLowering::lowerFuncAttributes(
         attr.getName() == getLinkageAttrNameString() ||
         attr.getName() == func.getGlobalVisibilityAttrName() ||
         attr.getName() == func.getDsoLocalAttrName() ||
-        attr.getName() == func.getInlineKindAttrName() ||
+        attr.getName() == func.getInliningAttrName() ||
         (filterArgAndResAttrs &&
          (attr.getName() == func.getArgAttrsAttrName() ||
           attr.getName() == func.getResAttrsAttrName())))
@@ -1885,10 +1885,10 @@ mlir::LogicalResult CIRToLLVMFuncOpLowering::matchAndRewrite(
 
   assert(!cir::MissingFeatures::opFuncMultipleReturnVals());
 
-  if (auto inlineKind = op.getInlineKind()) {
-    fn.setNoInline(inlineKind == cir::InlineKind::NoInline);
-    fn.setInlineHint(inlineKind == cir::InlineKind::InlineHint);
-    fn.setAlwaysInline(inlineKind == cir::InlineKind::AlwaysInline);
+  if (auto inlining = op.getInlining()) {
+    fn.setNoInline(*inlining == cir::InlineKind::NoInline);
+    fn.setInlineHint(*inlining == cir::InlineKind::InlineHint);
+    fn.setAlwaysInline(*inlining == cir::InlineKind::AlwaysInline);
   }
 
   fn.setVisibility_Attr(mlir::LLVM::VisibilityAttr::get(
