@@ -40,13 +40,6 @@ static std::optional<VectorType> getAffineVectorType(Operation *op) {
   return std::nullopt;
 }
 
-/// Returns the memref underlying an affine read/write op.
-static Value getAccessMemRef(Operation *op) {
-  if (auto loadOp = dyn_cast<AffineReadOpInterface>(op))
-    return loadOp.getMemRef();
-  return cast<AffineWriteOpInterface>(op).getMemRef();
-}
-
 // Gathers all load and store memref accesses in 'opA' into 'values', where
 // 'values[memref] == true' for each store operation.
 static void getLoadAndStoreMemRefAccesses(Operation *opA,
