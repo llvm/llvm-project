@@ -65,7 +65,7 @@ cl::opt<IR2VecKind> IR2VecEmbeddingKind(
 // static members of Flowaware Embeddings
 SmallVector<Function *, 15> FlowAwareEmbedder::FuncStack;
 SmallMapVector<const Function *, SmallVector<const Function *, 10>, 16>
-      FlowAwareEmbedder::FuncCallMap;
+  FlowAwareEmbedder::FuncCallMap;
 } // namespace ir2vec
 } // namespace llvm
 
