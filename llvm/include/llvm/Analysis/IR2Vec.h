@@ -601,7 +601,7 @@ private:
   static SmallVector<Function *, 15> FuncStack;
   Embedding computeEmbeddings(const Instruction &I) const override;
   static SmallMapVector<const Function *, SmallVector<const Function *, 10>, 16>
-      FuncCallMap;
+    FuncCallMap;
 
 public:
   FlowAwareEmbedder(const Function &F, const Vocabulary &Vocab)
