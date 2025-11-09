@@ -1,4 +1,5 @@
-//===- LitTestGen.cpp - LIT test generator ----------------------------------===//
+//===- LitTestGen.cpp - LIT test generator
+//----------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// LitTestGen extracts `LitTest` records from `Testable` TableGen records and 
-// generates corresponding LIT test files.
+// Extracts embedded LIT tests from operation descriptions in tablegen.
 //
 //===----------------------------------------------------------------------===//
 
@@ -19,139 +19,177 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/Regex.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
-
-#include <set>
 
 using namespace mlir;
 using namespace mlir::tblgen;
 using llvm::formatv;
 using llvm::RecordKeeper;
 
-static llvm::cl::OptionCategory litTestGenCategory("Options for -gen-lit-tests");
-static llvm::cl::opt<std::string>
-    outputDir("output-dir", 
-              llvm::cl::desc("Output directory for generated test files"),
-              llvm::cl::cat(litTestGenCategory), 
-              llvm::cl::value_desc("directory"));
+static llvm::cl::OptionCategory
+    litTestGenCategory("Options for -gen-lit-tests");
+static llvm::cl::opt<std::string> outputDir(
+    "output-dir", llvm::cl::desc("Output directory for generated test files"),
+    llvm::cl::cat(litTestGenCategory), llvm::cl::value_desc("directory"));
 
-
-/// Cpp type corresponding to the `LitTest` record type in TableGen
 struct LitTest {
   std::string sourceDefName;
   std::string testFileName;
-  std::string irSnippet;  
-  llvm::SmallVector<std::string> runLines;
+  std::string irSnippet;
+  llvm::SmallVector<std::string, 1> runLines;
   llvm::SmallVector<std::string> checkLines;
 };
 
-static llvm::SmallVector<LitTest> extractTestsFromRecord(const llvm::Record *record,
-                                                         llvm::StringRef dialectName = "") {
+/// Extracts code snippets with mlir_example tag from a description field.
+///
+/// Returns a vector of LitTest objects found within ```mlir_example ... ```
+/// blocks.
+static llvm::SmallVector<LitTest>
+extractOpTests(llvm::StringRef description, llvm::StringRef sourceDefName) {
   llvm::SmallVector<LitTest> tests;
-  
-  // Check if the record has a tests field
-  const llvm::RecordVal *testsVal = record->getValue("tests");
-  if (!testsVal)
-    return tests;
-    
-  const llvm::ListInit *testsList = 
-    llvm::dyn_cast_or_null<llvm::ListInit>(testsVal->getValue());
-  if (!testsList)
-    return tests;
-    
-  for (const llvm::Init *init : testsList->getElements()) {
-    const llvm::DefInit *defInit = llvm::dyn_cast<llvm::DefInit>(init);
-    if (!defInit)
-      continue;
-      
-    const llvm::Record *testRec = defInit->getDef();
-    
-    // Extract fields from LitTest record
-    std::string name = testRec->getValueAsString("testFileName").str();
-    std::string irSnippet = testRec->getValueAsString("irSnippet").str();
-    
-    llvm::SmallVector<std::string> runLines;
-    llvm::for_each(*testRec->getValueAsListInit("runLines"), [&](const llvm::Init *init) {
-      runLines.emplace_back(llvm::cast<llvm::StringInit>(init)->getValue());
-    });
 
-    llvm::SmallVector<std::string> checkLines;
-    llvm::for_each(*testRec->getValueAsListInit("checkLines"), [&](const llvm::Init *init) {
-      checkLines.emplace_back(llvm::cast<llvm::StringInit>(init)->getValue());
-    });
+  // Pattern to match ```mlir_example ... ``` code blocks
+  // - ``` - Three literal backticks
+  // - `mlir_example` - Literal text
+  // - `(\(.+\))?` - Capture group matching the optional RUN tool name. Default
+  // is `mlir-opt`.
+  // - `([^`|`^`|``^`]+)` - Capture group matching the actual mlir IR example
+  // content (everything except for three consecutive backticks).
+  // - ``` - Three literal closing backticks
+  llvm::Regex codeBlockRegex(
+      "```mlir_example(\\([[:alnum:]_-]+\\))?[[:space:]]([^`|`^`|``^`]+)```");
 
-    tests.push_back(LitTest {
-      record->getName().str(),
-      name, 
-      irSnippet, 
-      runLines, 
-      checkLines, 
-    });
-  }
-  
-  return tests;
-}
+  auto remaining = description;
+  llvm::SmallVector<llvm::StringRef> matches;
 
-/// Extract tests from passes
-static llvm::SmallVector<LitTest> extractPassTests(const RecordKeeper &records) {
-  llvm::SmallVector<LitTest> tests;
-  
-  // Check if PassBase class exists before trying to get derived definitions
-  if (records.getClass("PassBase")) {
-    for (const llvm::Record *def : records.getAllDerivedDefinitions("PassBase")) {
-      if (def->isAnonymous())
-        continue;
-        
-      auto passTests = extractTestsFromRecord(def, "passes");
-      tests.insert(tests.end(), passTests.begin(), passTests.end());
+  while (codeBlockRegex.match(remaining, &matches)) {
+    if (matches.size() == 3) {
+      std::string tool = "mlir-opt";
+      // matches[1] contains the RUN tool name
+      if (!matches[1].empty()) {
+        tool = matches[1].ltrim('(').rtrim(')').str();
+      }
+
+      // matches[2] contains the code content
+      auto codeRef = matches[2];
+      // Remove leading/trailing whitespace and comment markers (# prefix)
+      llvm::SmallVector<llvm::StringRef> lines;
+      codeRef.split(lines, '\n', -1, false);
+
+      std::string processedCode;
+      for (llvm::StringRef line : lines) {
+        auto isBody = true;
+        line = line.ltrim();
+        // Remove leading # comment markers if present
+        if (line.starts_with("#")) {
+          isBody = false;
+          line = line.drop_front(1).ltrim();
+        }
+        if (!line.empty() || !processedCode.empty()) {
+          auto tab = isBody ? "  " : "";
+          processedCode += tab + line.str() + "\n";
+        }
+      }
+
+      if (!processedCode.empty()) {
+        // Generate test file name based on index
+        auto testFileName = formatv("example_{0}.mlir", tests.size());
+        // Generate default RUN line with --verify-roundtrip
+        auto runLine =
+            llvm::formatv("// RUN: {0} %s --verify-roundtrip", tool).str();
+
+        tests.push_back(LitTest{
+            sourceDefName.str(),
+            testFileName,
+            processedCode,
+            {runLine},
+            {} // No CHECK lines by default
+        });
+      }
     }
+
+    // Move past this match to find the next one
+    size_t matchEnd =
+        remaining.find("```", remaining.find("```mlir_example") + 15);
+    if (matchEnd == llvm::StringRef::npos)
+      break;
+    remaining = remaining.substr(matchEnd + 3);
   }
-  
+
   return tests;
 }
 
-/// Generate a LIT test file for an IR test
+static llvm::SmallVector<LitTest>
+extractTestsFromRecord(const llvm::Record *record) {
+  llvm::SmallVector<LitTest> tests;
+
+  // Try to extract mlir_example code blocks from the description field
+  const llvm::RecordVal *descVal = record->getValue("description");
+  if (!descVal)
+    return tests;
+
+  auto description = record->getValueAsString("description");
+  if (description.empty())
+    return tests;
+
+  if (record->isSubClassOf("Op")) {
+    tests = extractOpTests(description, record->getName());
+  }
+
+  return tests;
+}
+
+/// Generates a LIT test file for an IR test
 static void generateTestFile(const LitTest &test, llvm::raw_ostream &os) {
   // Add RUN lines
-  for (const auto& runLine : test.runLines) {
+  for (const auto &runLine : test.runLines) {
     os << "\n" << runLine << "\n";
   }
 
-  os << "// Generated from TableGen definition: " << test.sourceDefName << "\n\n";
-  
+  os << "// Generated from TableGen definition: " << test.sourceDefName
+     << "\n\n";
+
   // Add the test body
   os << test.irSnippet << "\n";
-  
+
   // Add CHECK lines
-  for (const auto& checkLine : test.checkLines) {
+  for (const auto &checkLine : test.checkLines) {
     os << "\n" << checkLine << "\n";
   }
 }
 
 /// Main function to generate all IR test test files
 static void generateLitTests(const RecordKeeper &records, raw_ostream &os) {
+  assert(records.getClass("Op") && "Undefined TableGen class type: Op");
+
   llvm::SmallVector<LitTest> allTests;
-  
-  // Extract tests from different definition types (only passes for now)
-  auto passTests = extractPassTests(records);
-  
-  allTests.insert(allTests.end(), passTests.begin(), passTests.end());
-  
+
+  llvm::SmallVector<StringRef, 2> testTypes{"Op"};
+  for (const llvm::Record *def : records.getAllDerivedDefinitions(testTypes)) {
+    if (def->isAnonymous())
+      continue;
+
+    auto opTests = extractTestsFromRecord(def);
+    allTests.insert(allTests.end(), opTests.begin(), opTests.end());
+  }
+
   if (allTests.empty()) {
-    os << "// No LitTest record found in any TableGen definition\n";
+    os << "// No mlir_example code blocks found in any TableGen definition\n";
     return;
   }
-  
+
   // Generate summary
   os << "// Generated " << allTests.size() << " LIT test files\n";
   os << "// Use the following files for LIT testing:\n\n";
-  
+
   // Generate file list and content for each test
-  for (const auto& test : allTests) {
-    std::string testFileName = formatv("generated_{0}_{1}", test.sourceDefName, test.testFileName);
+  for (const auto &test : allTests) {
+    std::string testFileName =
+        formatv("generated_{0}_{1}", test.sourceDefName, test.testFileName);
     os << "// File: " << testFileName << "\n";
-    
+
     os << "// --- BEGIN " << testFileName << " ---\n";
     generateTestFile(test, os);
     os << "// --- END " << testFileName << " ---\n\n";
@@ -163,8 +201,9 @@ static void generateLitTests(const RecordKeeper &records, raw_ostream &os) {
 //===----------------------------------------------------------------------===//
 
 static mlir::GenRegistration
-    genLitTests("gen-lit-tests", "Generate LIT test files for `Testable` TableGen records",
-                  [](const RecordKeeper &records, raw_ostream &os) {
-                    generateLitTests(records, os);
-                    return false;
-                  });
+    genLitTests("gen-lit-tests",
+                "Generate LIT test files for `Testable` TableGen records",
+                [](const RecordKeeper &records, raw_ostream &os) {
+                  generateLitTests(records, os);
+                  return false;
+                });

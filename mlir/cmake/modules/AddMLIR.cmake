@@ -763,19 +763,19 @@ function(mlir_target_link_libraries target type)
   endif()
 endfunction()
 
-# Extracts LIT tests embedded in `Testable` records in `tblgen_file`
+# Extracts LIT tests embedded in op descriptions in `tblgen_file`
 # and generates a file per test in `output_dir`
 #
 # Example usage:
 #   # Extract tests from MyPasses.td and generate them in test/Passes/
 #   add_embedded_lit_tests(MyPassesEmbeddedTests 
-#                          ${CMAKE_CURRENT_SOURCE_DIR}/include/MyPasses.td
-#                          ${CMAKE_CURRENT_SOURCE_DIR}/test/Passes/)
+#                          ${CMAKE_CURRENT_SOURCE_DIR}/include/MyDialectOps.td
+#                          ${CMAKE_CURRENT_SOURCE_DIR}/test/Dialect/MyDialect)
 #
 #   # This will:
-#   # 1. Process MyPasses.td with mlir-tblgen --gen-lit-tests
-#   # 2. Extract individual test files to test/Passes/
-#   # 3. Generate files like: test/Passes/generated_MyPass_test1.mlir
+#   # 1. Process MyDialectOps.td with mlir-tblgen --gen-lit-tests
+#   # 2. Extract individual test files to test/Dialect/MyDialect
+#   # 3. Generate files like: test/Dialect/MyDialect/generated_MyOp_1.mlir
 #
 function(add_embedded_lit_tests target tblgen_file output_dir)
   set(LLVM_TARGET_DEFINITIONS ${tblgen_file})

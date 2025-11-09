@@ -1,65 +1,74 @@
-// RUN: mlir-tblgen -gen-lit-tests -I %S/../../include -dialect=test %s | FileCheck %s
+// RUN: mlir-tblgen -gen-lit-tests -I %S/../../include %s | FileCheck %s
 
-include "mlir/Pass/PassBase.td"
-include "mlir/IR/Testable.td"
+include "mlir/IR/OpBase.td"
 
-def TestPassWithEmbeddedLitTests : Pass<"test-pass-with-embedded-lit-tests"> {
-  let summary = "pass summary";
-  let description = [{
-    Pass description
-  }];
-  
-  let tests = [
-    LitTest<
-      "lit_test_file_1.mlir", 
-      [{
-          func.func @test1() {
-            return 42;
-          }
-      }],
-      [
-        "// RUN: mlir-opt %s --verify-roundtrip | FileCheck %s",
-      ],
-      [
-        "// RANDOM-CHECK-LABEL: func.func @test1",
-      ]
-    >,
-    LitTest<
-      "lit_test_file_2.mlir", 
-      [{
-          func.func @test2() {
-            return 42;
-          }
-      }],
-      [
-        "// RUN: mlir-opt %s --verify-roundtrip | FileCheck %s",
-      ],
-      [
-        "// RANDOM-CHECK-LABEL: func.func @test2",
-      ]
-    >,
-  ];
+def Test_Dialect : Dialect {
+  let name = "test";
+  let cppNamespace = "test";
 }
 
-// CHECK-LABEL:       // Generated 2 LIT test files
-// CHECK:             // Use the following files for LIT testing:
+def TestOp : Op<Test_Dialect, "test_op"> {
+  let summary = "test op with mlir_example code blocks";
+  let description = [{
+    This operation demonstrates the mlir_example feature for ops.
 
-// CHECK:             // File: generated_TestPassWithEmbeddedLitTests_lit_test_file_1.mlir
-// CHECK:             // --- BEGIN generated_TestPassWithEmbeddedLitTests_lit_test_file_1.mlir ---
-// CHECK:             // RUN: mlir-opt %s --verify-roundtrip | FileCheck %s
-// CHECK:             // Generated from TableGen definition: TestPassWithEmbeddedLitTests
-// CHECK:             func.func @test1() {
-// CHECK:                return 42;
-// CHECK:             }
-// CHECK:             // RANDOM-CHECK-LABEL: func.func @test1
-// CHECK:             --- END generated_TestPassWithEmbeddedLitTests_lit_test_file_1.mlir ---
+    Basic usage:
+    ```mlir_example(mlir-opt)
+    # func.func @foo(%arg0: i32) -> i32 {
+      %0 = test.test_op %arg0 : i32
+      return %0 : i32
+    # }
+    ```
 
-// CHECK:             // File: generated_TestPassWithEmbeddedLitTests_lit_test_file_2.mlir
-// CHECK:             // --- BEGIN generated_TestPassWithEmbeddedLitTests_lit_test_file_2.mlir ---
-// CHECK:             // RUN: mlir-opt %s --verify-roundtrip | FileCheck %s
-// CHECK:             // Generated from TableGen definition: TestPassWithEmbeddedLitTests
-// CHECK:             func.func @test2() {
-// CHECK:               return 42;
-// CHECK:             }
-// CHECK:             // RANDOM-CHECK-LABEL: func.func @test2
-// CHECK:             // --- END generated_TestPassWithEmbeddedLitTests_lit_test_file_2.mlir ---
+    And some more back to back examples -
+
+    ```mlir_example(some-other-tool)
+    # func.func @foo1(%arg1: i32) -> i32 {
+      %0 = test.test_op %arg1 : i32
+      return %0 : i32
+    # }
+    ```
+    ```mlir_example(yet-another-tool)
+    # func.func @foo2(%arg2: i32) -> i32 {
+      %0 = test.test_op %arg2 : i32
+      return %0 : i32
+    # }
+    ```
+  }];
+
+  let arguments = (ins I32:$input);
+  let results = (outs I32:$output);
+}
+
+// CHECK-LABEL:     // Generated 3 LIT test files
+// CHECK:           // Use the following files for LIT testing:
+
+// CHECK:           // File: generated_TestOp_example_0.mlir
+// CHECK:           // --- BEGIN generated_TestOp_example_0.mlir ---
+// CHECK:           mlir-opt %s --verify-roundtrip
+// CHECK:           // Generated from TableGen definition: TestOp
+// CHECK:           func.func @foo(%arg0: i32) -> i32 {
+// CHECK:           %0 = test.test_op %arg0 : i32
+// CHECK:           return %0 : i32
+// CHECK:           }
+// CHECK:           // --- END generated_TestOp_example_0.mlir ---
+
+// CHECK:           // File: generated_TestOp_example_1.mlir
+// CHECK:           // --- BEGIN generated_TestOp_example_1.mlir ---
+// CHECK:           some-other-tool %s --verify-roundtrip
+// CHECK:           // Generated from TableGen definition: TestOp
+// CHECK:           func.func @foo1(%arg1: i32) -> i32 {
+// CHECK:           %0 = test.test_op %arg1 : i32
+// CHECK:           return %0 : i32
+// CHECK:           }
+// CHECK:           // --- END generated_TestOp_example_1.mlir ---
+
+// CHECK:           // File: generated_TestOp_example_2.mlir
+// CHECK:           // --- BEGIN generated_TestOp_example_2.mlir ---
+// CHECK:           yet-another-tool %s --verify-roundtrip
+// CHECK:           // Generated from TableGen definition: TestOp
+// CHECK:           func.func @foo2(%arg2: i32) -> i32 {
+// CHECK:           %0 = test.test_op %arg2 : i32
+// CHECK:           return %0 : i32
+// CHECK:           }
+// CHECK:           // --- END generated_TestOp_example_2.mlir ---
