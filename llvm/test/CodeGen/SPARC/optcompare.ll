@@ -207,11 +207,11 @@ entry:
 define i32 @icc_live_out(i32 %a) #0 {
 ; CHECK-LABEL: icc_live_out:
 ; CHECK:       ! %bb.0: ! %entry
-; CHECK-NEXT:    and %o0, 1, %o1
-; CHECK-NEXT:    cmp %o1, 0
+; CHECK-NEXT:    andcc %o0, 1, %o1
 ; CHECK-NEXT:    bne .LBB6_4
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:  ! %bb.1: ! %case1
+; CHECK-NEXT:    cmp %o1, 0
 ; CHECK-NEXT:    be .LBB6_3
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:  ! %bb.2: ! %case1
@@ -226,11 +226,11 @@ define i32 @icc_live_out(i32 %a) #0 {
 ; CHECK64-LABEL: icc_live_out:
 ; CHECK64:       ! %bb.0: ! %entry
 ; CHECK64-NEXT:    mov %o0, %o1
-; CHECK64-NEXT:    and %o0, 1, %o0
-; CHECK64-NEXT:    cmp %o0, 0
+; CHECK64-NEXT:    andcc %o0, 1, %o0
 ; CHECK64-NEXT:    bne %icc, .LBB6_2
 ; CHECK64-NEXT:    nop
 ; CHECK64-NEXT:  ! %bb.1: ! %case1
+; CHECK64-NEXT:    cmp %o0, 0
 ; CHECK64-NEXT:    retl
 ; CHECK64-NEXT:    move %icc, %o1, %o0
 ; CHECK64-NEXT:  .LBB6_2: ! %case2

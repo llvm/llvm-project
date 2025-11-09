@@ -643,21 +643,24 @@ unsigned SparcInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
 bool SparcInstrInfo::analyzeCompare(const MachineInstr &MI, Register &SrcReg,
                                     Register &SrcReg2, int64_t &CmpMask,
                                     int64_t &CmpValue) const {
+  Register DstReg;
   switch (MI.getOpcode()) {
   default:
     break;
-  case SP::CMPri:
-    SrcReg = MI.getOperand(0).getReg();
+  case SP::SUBCCri:
+    DstReg = MI.getOperand(0).getReg();
+    SrcReg = MI.getOperand(1).getReg();
     SrcReg2 = 0;
     CmpMask = ~0;
-    CmpValue = MI.getOperand(1).getImm();
-    return (CmpValue == 0);
-  case SP::CMPrr:
-    SrcReg = MI.getOperand(0).getReg();
-    SrcReg2 = MI.getOperand(1).getReg();
+    CmpValue = MI.getOperand(2).getImm();
+    return (DstReg == SP::G0) && (CmpValue == 0);
+  case SP::SUBCCrr:
+    DstReg = MI.getOperand(0).getReg();
+    SrcReg = MI.getOperand(1).getReg();
+    SrcReg2 = MI.getOperand(2).getReg();
     CmpMask = ~0;
     CmpValue = 0;
-    return SrcReg2 == SP::G0;
+    return (DstReg == SP::G0) && (SrcReg2 == SP::G0);
   }
 
   return false;
@@ -773,7 +776,7 @@ bool SparcInstrInfo::optimizeCompareInstr(
   }
 
   // If the result is not needed use the %g0 register.
-  if (!isRegUsed && CmpInstr.getOperand(0).isKill())
+  if (!isRegUsed && CmpInstr.getOperand(1).isKill())
     MI->getOperand(0).setReg(SP::G0);
 
   MI->setDesc(get(newOpcode));

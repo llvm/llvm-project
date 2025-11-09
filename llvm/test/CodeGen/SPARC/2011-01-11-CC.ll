@@ -25,13 +25,15 @@ define i32 @test_addx(i64 %a, i64 %b, i64 %c) nounwind {
 ; V8-NEXT:    retl
 ; V8-NEXT:    nop
 ; V8-NEXT:  .LBB0_4: ! %entry
+; V8-NEXT:    mov %g0, %o2
 ; V8-NEXT:    cmp %o3, %o5
 ; V8-NEXT:    bgu .LBB0_2
-; V8-NEXT:    mov %g0, %o2
+; V8-NEXT:    nop
 ; V8-NEXT:  .LBB0_5: ! %entry
+; V8-NEXT:    mov %g0, %o0
 ; V8-NEXT:    cmp %o1, %o4
 ; V8-NEXT:    be .LBB0_3
-; V8-NEXT:    mov %g0, %o0
+; V8-NEXT:    nop
 ; V8-NEXT:  .LBB0_6: ! %entry
 ; V8-NEXT:    retl
 ; V8-NEXT:    mov %o2, %o0
