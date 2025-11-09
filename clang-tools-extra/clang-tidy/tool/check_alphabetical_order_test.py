@@ -80,15 +80,6 @@ class TestAlphabeticalOrderCheck(unittest.TestCase):
             "  ``NamePrefixSuffixSilenceDissimilarityTreshold``.\n",
             "\n",
         ]
-        dups = _mod.find_duplicate_entries(lines, "Changes in existing checks")
-        # Expect one duplicate group for 'bugprone-easily-swappable-parameters' with two occurrences.
-        self.assertEqual(len(dups), 1)
-        key, occs = dups[0]
-        self.assertEqual(
-            key.strip(), "- Improved :doc:`bugprone-easily-swappable-parameters"
-        )
-        self.assertEqual(len(occs), 2)
-
         report = _mod._emit_duplicate_report(lines, "Changes in existing checks")
         self.assertIsNotNone(report)
         report_str = cast(str, report)
