@@ -612,6 +612,10 @@ void CIRGenFunction::populateEHCatchRegions(EHScopeStack::stable_iterator scope,
   ehScope.setMayThrow(mayThrow);
 }
 
+// in classic codegen this function is mapping to `isInvokeDest` previously and
+// currently it's mapping to the conditions that performs early returns in
+// `getInvokeDestImpl`, in CIR we need the condition to know if the EH scope may
+// throw exception or now.
 bool CIRGenFunction::isCatchOrCleanupRequired() {
   if (!ehStack.requiresCatchOrCleanup())
     return false;
@@ -633,11 +637,14 @@ bool CIRGenFunction::isCatchOrCleanupRequired() {
   return true;
 }
 
+// In classic codegen this function is equivalent to `getInvokeDestImpl`, in
+// ClangIR we don't need to return to return any landing pad, we just need to
+// populate the catch handlers if they are required
 void CIRGenFunction::populateCatchHandlersIfRequired(cir::TryOp tryOp) {
   assert(ehStack.requiresCatchOrCleanup());
   assert(!ehStack.empty());
 
-  // TODO(cir): add personality function
+  assert(!cir::MissingFeatures::setFunctionPersonality());
 
   // CIR does not cache landing pads.
   const EHPersonality &personality = EHPersonality::get(*this);

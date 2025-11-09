@@ -636,8 +636,6 @@ RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &funcInfo,
   assert(!cir::MissingFeatures::opCallAttrs());
   cgm.constructAttributeList(callee.getAbstractInfo(), attrs);
 
-  assert(!cir::MissingFeatures::invokeOp());
-
   cir::FuncType indirectFuncTy;
   mlir::Value indirectFuncVal;
   cir::FuncOp directFuncOp;

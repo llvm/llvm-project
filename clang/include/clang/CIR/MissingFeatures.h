@@ -94,6 +94,7 @@ struct MissingFeatures {
   static bool opFuncNoReturn() { return false; }
   static bool setFunctionAttributes() { return false; }
   static bool setLLVMFunctionFEnvAttributes() { return false; }
+  static bool setFunctionPersonality() { return false; }
 
   // CallOp handling
   static bool opCallAggregateArgs() { return false; }
@@ -349,7 +350,6 @@ struct MissingFeatures {
   static bool awaitOp() { return false; }
   static bool callOp() { return false; }
   static bool ifOp() { return false; }
-  static bool invokeOp() { return false; }
   static bool labelOp() { return false; }
   static bool ptrDiffOp() { return false; }
   static bool llvmLoweringPtrDiffConsidersPointee() { return false; }
