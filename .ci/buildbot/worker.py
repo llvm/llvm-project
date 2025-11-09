@@ -1,68 +1,53 @@
 import argparse
 import filecmp
 import os
+import pathlib
+import re
+import shlex
+import shutil
 import subprocess
 import sys
 import traceback
-import pathlib
-import re
-import shutil
-import shlex
 from contextlib import contextmanager
 
-
-
-
-
-
 _SHQUOTE_WINDOWS_ESCAPEDCHARS = re.compile(r'(["\\])')
-_SHQUOTE_WINDOWS_QUOTEDCHARS = re.compile('[ \t\n]')
+_SHQUOTE_WINDOWS_QUOTEDCHARS = re.compile("[ \t\n]")
+
+
 def _shquote_windows(txt):
     """shlex.quote for Windows cmd.exe"""
-    txt = txt.replace('%', '%%')
-    quoted = re.sub(_SHQUOTE_WINDOWS_ESCAPEDCHARS, r'\\\1', txt)
+    txt = txt.replace("%", "%%")
+    quoted = re.sub(_SHQUOTE_WINDOWS_ESCAPEDCHARS, r"\\\1", txt)
     if len(quoted) == len(txt) and not _SHQUOTE_WINDOWS_QUOTEDCHARS.search(txt):
         return txt
     else:
         return '"' + quoted + '"'
 
 
-
 def shjoin(args):
     """Convert a list of shell arguments to an appropriately quoted string."""
-    if os.name in set(('nt', 'os2', 'ce')):
-        return ' '.join(map(_shquote_windows, args))
+    if os.name in set(("nt", "os2", "ce")):
+        return " ".join(map(_shquote_windows, args))
     else:
-        return     shlex.join(args)
-
-
-
-
-
-
+        return shlex.join(args)
 
 
 def report(msg):
     """Emit a message to the build log. Appears in red font. Lines surrounded by @@@ may be interpreted as meta-instructions."""
-    print(msg,file=sys.stderr, flush=True)
+    print(msg, file=sys.stderr, flush=True)
 
 
-
-def run_command(cmd, shell=False,  **kwargs):
+def run_command(cmd, shell=False, **kwargs):
     """Report which command is being run, then execute it using subprocess.check_call."""
-    report(f'Running: {cmd if shell else shjoin(cmd)}')
+    report(f"Running: {cmd if shell else shjoin(cmd)}")
     sys.stderr.flush()
-    subprocess.check_call(cmd, shell=shell,  **kwargs)
-
-
-
-
+    subprocess.check_call(cmd, shell=shell, **kwargs)
 
 
 def _remove_readonly(func, path, _):
-   """Clear the readonly bit and reattempt the removal."""
-   os.chmod(path, os.stat.S_IWRITE)
-   func(path)
+    """Clear the readonly bit and reattempt the removal."""
+    os.chmod(path, os.stat.S_IWRITE)
+    func(path)
 
 
 def rmtree(path):
@@ -75,15 +60,6 @@ def rmtree(path):
     shutil.rmtree(path, onexc=_remove_readonly)
 
 
-
-
-
-
-
-
-
-
-
 def checkout(giturl, sourcepath):
     """
     Use git to checkout the remote repository giturl at local directory sourcepath.
@@ -91,22 +67,15 @@ def checkout(giturl, sourcepath):
     If the repository already exists, clear all local changes and check out the latest main branch.
     """
     if not os.path.exists(sourcepath):
-        run_command(['git', 'clone', giturl, sourcepath])
+        run_command(["git", "clone", giturl, sourcepath])
 
     # Reset repository state no matter what there was before
-    run_command(['git', '-C', sourcepath, 'stash', '--all'])
-    run_command(['git', '-C', sourcepath, 'stash', 'clear'])
+    run_command(["git", "-C", sourcepath, "stash", "--all"])
+    run_command(["git", "-C", sourcepath, "stash", "clear"])
 
     # Fetch and checkout the newest
-    run_command(['git', '-C', sourcepath, 'fetch', 'origin'])
-    run_command(['git', '-C', sourcepath, 'checkout', 'origin/main', '--detach'])
-
-
-
-
-
-
-
+    run_command(["git", "-C", sourcepath, "fetch", "origin"])
+    run_command(["git", "-C", sourcepath, "checkout", "origin/main", "--detach"])
 
 
 @contextmanager
@@ -121,37 +90,34 @@ def step(step_name, halt_on_fail=False):
     sys.stderr.flush()
     sys.stdout.flush()
 
-    report(f'@@@BUILD_STEP {step_name}@@@')
+    report(f"@@@BUILD_STEP {step_name}@@@")
     if halt_on_fail:
-        report('@@@HALT_ON_FAILURE@@@')
+        report("@@@HALT_ON_FAILURE@@@")
     try:
         yield
     except Exception as e:
         if isinstance(e, subprocess.CalledProcessError):
-            report(f'{shjoin(e.cmd)} exited with return code {e.returncode}.' )
-            report('@@@STEP_FAILURE@@@')
+            report(f"{shjoin(e.cmd)} exited with return code {e.returncode}.")
+            report("@@@STEP_FAILURE@@@")
         else:
             traceback.print_exc()
-            report('@@@STEP_EXCEPTION@@@')
+            report("@@@STEP_EXCEPTION@@@")
         if halt_on_fail:
             # Do not continue with the next steps, but allow except/finally blocks to execute
             raise e
 
 
-
-
-
 class Worker:
     """Helper class to keep context in a worker.run() environment"""
 
-    def __init__(self,args,clean,clobber,workdir,jobs,cachefile,llvmsrcroot):
-        self.args=args
-        self.clean =clean
-        self.clobber=clobber
-        self.workdir=workdir
-        self.jobs=jobs
-        self.cachefile =cachefile
-        self.llvmsrcroot=llvmsrcroot
+    def __init__(self, args, clean, clobber, workdir, jobs, cachefile, llvmsrcroot):
+        self.args = args
+        self.clean = clean
+        self.clobber = clobber
+        self.workdir = workdir
+        self.jobs = jobs
+        self.cachefile = cachefile
+        self.llvmsrcroot = llvmsrcroot
 
     def in_llvmsrc(self, path):
         """Convert a path in the llvm-project source checkout to an absolute path"""
@@ -161,8 +127,9 @@ class Worker:
         """Convert a path in the workdir to an absolute path"""
         return os.path.join(self.workdir, path)
 
-
-    def run_ninja( self, targets :list=[], *, builddir, ccache_stats:bool=False, **kwargs):
+    def run_ninja(
+        self, targets: list = [], *, builddir, ccache_stats: bool = False, **kwargs
+    ):
         """Run ninja in builddir. If self.jobs is set, automatically adds an -j option to set the number of parallel jobs.
 
         Parameters
@@ -174,43 +141,39 @@ class Worker:
         ccache_stats : bool
             If true, also emit ccache statistics when finishing the build
         """
-        cmd = ['ninja']
+        cmd = ["ninja"]
         if builddir is not None:
-            cmd += ['-C', builddir]
+            cmd += ["-C", builddir]
         cmd += targets
         if self.jobs:
-            cmd .append(f'-j{self.jobs}')
+            cmd.append(f"-j{self.jobs}")
         if ccache_stats:
-            run_command(['ccache', '-z'])
+            run_command(["ccache", "-z"])
             try:
                 run_command(cmd, **kwargs)
             finally:
-                        # TODO: Pipe to stderr to separate from build log itself
-                        run_command(['ccache', '-sv'])
+                # TODO: Pipe to stderr to separate from build log itself
+                run_command(["ccache", "-sv"])
         else:
-                    run_command(cmd, **kwargs)
+            run_command(cmd, **kwargs)
 
     @contextmanager
     def step(self, step_name, halt_on_fail=False):
         """Convenience wrapper for step()"""
-        with step(step_name,halt_on_fail=halt_on_fail) as s:
+        with step(step_name, halt_on_fail=halt_on_fail) as s:
             yield s
 
     def run_command(self, *args, **kwargs):
-            """Convenience wrapper for run_command()"""
-            return run_command(*args, **kwargs)
+        """Convenience wrapper for run_command()"""
+        return run_command(*args, **kwargs)
 
+    def rmtree(self, *args, **kwargs):
+        """Convenience wrapper for rmtree()"""
+        return rmtree(*args, *kwargs)
 
-    def rmtree (self, *args, **kwargs):
-            """Convenience wrapper for rmtree()"""
-            return rmtree(*args,*kwargs)
-
-    def checkout (self,giturl, sourcepath):
-                        """Convenience wrapper for checkout()"""
-                        return checkout(giturl, sourcepath)
-
-
-
+    def checkout(self, giturl, sourcepath):
+        """Convenience wrapper for checkout()"""
+        return checkout(giturl, sourcepath)
 
 
 def convert_bool(v):
@@ -229,22 +192,28 @@ def convert_bool(v):
             return bool(v)
 
 
-
 def relative_if_possible(path, relative_to):
-        """Like os.path.relpath, but does not fail if path is not a parent of relative_to; keeps the original path in that case"""
-        path = os.path.normpath(path)
-        if not os.path.isabs(path):
-                # Path is already relative (assumed to relative_to)
-                return path
-        try:
-            result = os.path.relpath(path, start=relative_to)
-            return result if result else path
-        except ValueError:
-            return path
+    """Like os.path.relpath, but does not fail if path is not a parent of relative_to; keeps the original path in that case"""
+    path = os.path.normpath(path)
+    if not os.path.isabs(path):
+        # Path is already relative (assumed to relative_to)
+        return path
+    try:
+        result = os.path.relpath(path, start=relative_to)
+        return result if result else path
+    except ValueError:
+        return path
 
 
 @contextmanager
-def run(scriptpath, llvmsrcroot, parser=None ,clobberpaths=[], workerjobs=None, always_clobber=False):
+def run(
+    scriptpath,
+    llvmsrcroot,
+    parser=None,
+    clobberpaths=[],
+    workerjobs=None,
+    always_clobber=False,
+):
     """Runs the boilerplate for a ScriptedBuilder buildbot. It is not necessary to use this function (one can also all run_command() etc. directly), but allows for some more flexibility and safety checks. Arguments passed to this function represent the worker configuration.
 
     We use the term 'clean' for resetting the worker to an empty state. This involves deleting ${prefix}/llvm.src as well as ${prefix}/build.
@@ -272,74 +241,103 @@ def run(scriptpath, llvmsrcroot, parser=None ,clobberpaths=[], workerjobs=None, 
         Default number of build and test jobs; If set, expected to be the number of jobs of the actual buildbot worker that executes this script. Can be overridden using the --jobs parameter so in case someone needs to reproduce this build, they can adjust the number of jobs for the reproducer platform. Alternatively, the worker can set the BUILDBOT_JOBS environment variable or keep ninja/llvm-lit defaults.
     always_clobber
         Always clobber the build artifacts, i.e. disable incremental builds.
-"""
+    """
 
     assert os.path.isabs(scriptpath)
     assert os.path.isabs(llvmsrcroot)
 
-
-    jobs_default=None
-    if jobs_env := os.environ.get('BUILDBOT_JOBS'):
+    jobs_default = None
+    if jobs_env := os.environ.get("BUILDBOT_JOBS"):
         jobs_default = int(jobs_env)
     if not jobs_default:
         jobs_default = workerjobs
     if not jobs_default:
-        jobs_default=None
-
+        jobs_default = None
 
     stem = pathlib.Path(scriptpath).stem
-    workdir_default = f'{stem}.workdir'
+    workdir_default = f"{stem}.workdir"
 
-    parser =  parser or argparse.ArgumentParser(allow_abbrev=True, description=f"When executed without arguments, builds the worker's LLVM build configuration in {os.path.abspath(workdir_default)}. Some build configuration parameters can be altered using the following switches:")
-    parser.add_argument('--workdir', default=workdir_default, help="Use this dir as workdir to write the build artifact into. --workdir=. uses the current directory.\nWarning: This directory might be deleted")
-    parser.add_argument('--cachefile', default=relative_if_possible(pathlib.Path(scriptpath).with_suffix('.cmake'), llvmsrcroot), help='File containing the initial values for the CMakeCache.txt for the llvm build.')
-    parser.add_argument('--clean', type=bool, default=convert_bool(os.environ.get('BUILDBOT_CLEAN')), help='Delete the entire workdir before starting the build, including source directories')
-    parser.add_argument('--clobber', type=bool, default=always_clobber or convert_bool(os.environ.get('BUILDBOT_CLOBBER')) or convert_bool(os.environ.get('BUILDBOT_CLEAN_OBJ')), help='Delete build artifacts before starting the build')
-    parser.add_argument('--jobs', '-j', default=jobs_default, help='Number of build- and test-jobs')
+    parser = parser or argparse.ArgumentParser(
+        allow_abbrev=True,
+        description=f"When executed without arguments, builds the worker's LLVM build configuration in {os.path.abspath(workdir_default)}. Some build configuration parameters can be altered using the following switches:",
+    )
+    parser.add_argument(
+        "--workdir",
+        default=workdir_default,
+        help="Use this dir as workdir to write the build artifact into. --workdir=. uses the current directory.\nWarning: This directory might be deleted",
+    )
+    parser.add_argument(
+        "--cachefile",
+        default=relative_if_possible(
+            pathlib.Path(scriptpath).with_suffix(".cmake"), llvmsrcroot
+        ),
+        help="File containing the initial values for the CMakeCache.txt for the llvm build.",
+    )
+    parser.add_argument(
+        "--clean",
+        type=bool,
+        default=convert_bool(os.environ.get("BUILDBOT_CLEAN")),
+        help="Delete the entire workdir before starting the build, including source directories",
+    )
+    parser.add_argument(
+        "--clobber",
+        type=bool,
+        default=always_clobber
+        or convert_bool(os.environ.get("BUILDBOT_CLOBBER"))
+        or convert_bool(os.environ.get("BUILDBOT_CLEAN_OBJ")),
+        help="Delete build artifacts before starting the build",
+    )
+    parser.add_argument(
+        "--jobs", "-j", default=jobs_default, help="Number of build- and test-jobs"
+    )
     args = parser.parse_args()
 
-
-
-    workdir =  args.workdir
-    clean =args.clean
+    workdir = args.workdir
+    clean = args.clean
     clobber = args.clobber
     cachefile = os.path.join(llvmsrcroot, args.cachefile)
     oldcwd = os.getcwd()
 
-
-    prevcachepath = os.path.join(workdir, 'prevcache.cmake')
+    prevcachepath = os.path.join(workdir, "prevcache.cmake")
     if cachefile and os.path.exists(prevcachepath):
         # Force clobber if cache file has changed; a new cachefile does not override entries already present in CMakeCache.txt
-        if   not filecmp.cmp( os.path.join(llvmsrcroot, args.cachefile), prevcachepath, shallow=False):
+        if not filecmp.cmp(
+            os.path.join(llvmsrcroot, args.cachefile), prevcachepath, shallow=False
+        ):
             clobber = True
 
-
-    w = Worker(args, clean=clean , clobber=clobber, workdir=workdir, jobs=args.jobs, cachefile=cachefile, llvmsrcroot=llvmsrcroot)
-
-
+    w = Worker(
+        args,
+        clean=clean,
+        clobber=clobber,
+        workdir=workdir,
+        jobs=args.jobs,
+        cachefile=cachefile,
+        llvmsrcroot=llvmsrcroot,
+    )
 
     # Safety check
     parentdir = os.path.dirname(scriptpath)
     while True:
-        if os.path.samefile(  parentdir,  workdir)  :
-            raise Exception(f"Cannot use {workdir} as workdir; a '--clean' build would rmtree the llvm-project source as well")
+        if os.path.samefile(parentdir, workdir):
+            raise Exception(
+                f"Cannot use {workdir} as workdir; a '--clean' build would rmtree the llvm-project source as well"
+            )
         newparentdir = os.path.dirname(parentdir)
-        if newparentdir ==parentdir:
-             break
+        if newparentdir == parentdir:
+            break
         parentdir = newparentdir
 
-
-
     if clean:
-            # Ensure that the cwd is not the directory we are going to delete. This would not work under Windows. We will chdir to workdir later anyway.
-            os.chdir('/')
+        # Ensure that the cwd is not the directory we are going to delete. This would not work under Windows. We will chdir to workdir later anyway.
+        os.chdir("/")
 
-            with w.step(f'clean'):
-                rmtree(workdir)
+        with w.step(f"clean"):
+            rmtree(workdir)
     elif clobber:
-       with w.step(f'clobber'):
+        with w.step(f"clobber"):
             for d in clobberpaths:
-                    rmtree(os.path.join(workdir, d))
+                rmtree(os.path.join(workdir, d))
             os.path.unlink(prevcachepath)
 
     os.makedirs(workdir, exist_ok=True)
@@ -347,9 +345,10 @@ def run(scriptpath, llvmsrcroot, parser=None ,clobberpaths=[], workerjobs=None, 
 
     # Remember used cachefile in case it changes
     if cachefile:
-        shutil.copy(os.path.join(oldcwd,llvmsrcroot, args.cachefile), os.path.join(oldcwd, prevcachepath ))
+        shutil.copy(
+            os.path.join(oldcwd, llvmsrcroot, args.cachefile),
+            os.path.join(oldcwd, prevcachepath),
+        )
 
-    os.environ['NINJA_STATUS'] = "[%p/%es :: %u->%r->%f (of %t)] "
+    os.environ["NINJA_STATUS"] = "[%p/%es :: %u->%r->%f (of %t)] "
     yield w
-
-
