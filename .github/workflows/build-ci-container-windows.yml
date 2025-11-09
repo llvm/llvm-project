@@ -5,8 +5,8 @@ permissions:
 
 on:
   push:
-    branches:
-      - main
+    #branches:
+    #  - main
     paths:
       - .github/workflows/build-ci-container-windows.yml
       - '.github/workflows/containers/github-action-ci-windows/**'
@@ -17,7 +17,7 @@ on:
 
 jobs:
   build-ci-container-windows:
-    if: github.repository_owner == 'llvm'
+    #if: github.repository_owner == 'llvm'
     runs-on: windows-2022
     outputs:
       container-name: ${{ steps.vars.outputs.container-name }}
@@ -51,11 +51,11 @@ jobs:
           retention-days: 14
   
   push-ci-container:
-    #if: github.event_name == 'push'
+    if: github.event_name == 'push'
     needs:
       - build-ci-container-windows
-    #permissions:
-    #  packages: write
+    permissions:
+      packages: write
     runs-on: ubuntu-24.04
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -68,8 +68,10 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y skopeo
-          #skopeo login -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }} ghcr.io
+          skopeo login -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }} ghcr.io
           skopeo copy docker-archive:${{ needs.build-ci-container-windows.outputs.container-filename }} \
             --dest-compress-format zstd \
-            oci:/tmp/blah.tar
-            #docker://${{ needs.build-ci-container-windows.outputs.container-name-tag }}
+            docker://${{ needs.build-ci-container-windows.outputs.container-name-tag }}
+          skopeo copy docker-archive:${{ needs.build-ci-container-windows.outputs.container-filename }} \
+            --dest-compress-format zstd \
+            docker://${{ needs.build-ci-container-windows.outputs.container-name }}:latest
