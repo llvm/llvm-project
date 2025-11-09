@@ -549,10 +549,10 @@ struct MemRefRegion {
   /// dimensions where each of these maps is purely symbolic in the constraints
   /// set's symbols. If `minShape` is provided, each computed bound is at least
   /// `minShape[d]` for dimension `d`.
-  std::optional<int64_t> getConstantBoundingSizeAndShape(
-      SmallVectorImpl<int64_t> *shape = nullptr,
-      SmallVectorImpl<AffineMap> *lbs = nullptr,
-      ArrayRef<int64_t> minShape = {}) const;
+  std::optional<int64_t>
+  getConstantBoundingSizeAndShape(SmallVectorImpl<int64_t> *shape = nullptr,
+                                  SmallVectorImpl<AffineMap> *lbs = nullptr,
+                                  ArrayRef<int64_t> minShape = {}) const;
 
   /// Gets the lower and upper bound map for the dimensional variable at
   /// `pos`.
