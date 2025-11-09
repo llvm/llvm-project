@@ -1284,7 +1284,11 @@ void BinaryEmitter::emitDataSections(StringRef OrgSecPrefix) {
       continue;
 
     StringRef Prefix = Section.hasSectionRef() ? OrgSecPrefix : "";
-    Section.emitAsData(Streamer, Prefix + Section.getName());
+    std::string OutName = (Prefix + Section.getName()).str();
+    // PPC64: drop relocations before emitting .bolt.org.* sections
+    if (BC.isPPC64() && StringRef(OutName).starts_with(OrgSecPrefix))
+      Section.clearRelocations();
+    Section.emitAsData(Streamer, OutName);
     Section.clearRelocations();
   }
 }
