@@ -855,7 +855,7 @@ define i1 @shl_nsw_eq(i8 %a, i1 %cond) {
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %shl = shl nsw i8 %a, 3
-  %sel = select i1 %cond, i8 8, i8 136
+  %sel = select i1 %cond, i8 8, i8 -120
   %cmp = icmp eq i8 %shl, %sel
   ret i1 %cmp
 }
@@ -867,7 +867,7 @@ define i1 @shl_nuw_eq(i8 %a, i1 %cond) {
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %shl = shl nuw i8 %a, 3
-  %sel = select i1 %cond, i8 8, i8 136
+  %sel = select i1 %cond, i8 8, i8 -120
   %cmp = icmp eq i8 %shl, %sel
   ret i1 %cmp
 }
@@ -930,10 +930,12 @@ define i1 @shl_const_phi_failed_to_simplify(i64 %indvars, i32 %conv) {
 ; CHECK-NEXT:    [[CMP_SLT:%.*]] = icmp slt i64 [[INDVARS:%.*]], 1
 ; CHECK-NEXT:    br i1 [[CMP_SLT]], label [[END:%.*]], label [[THEN:%.*]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i32 [[CONV:%.*]], 0
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[CMP:%.*]] = phi i1 [ [[TMP0]], [[THEN]] ], [ true, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[CONST_PHI:%.*]] = phi i32 [ 0, [[THEN]] ], [ 65535, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[SHL_NUW:%.*]] = shl nuw i32 [[CONV:%.*]], 31
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP_SLT]], i32 [[CONST_PHI]], i32 [[SHL_NUW]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[SEL]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
 entry:

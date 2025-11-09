@@ -5958,16 +5958,18 @@ static Instruction *foldICmpEqualityWithOffset(ICmpInst &I,
     // V = shl nsw X, RHS => X = ashr V, RHS
     case Instruction::AShr: {
       const APInt *CV, *CRHS;
-      if (match(V, m_APInt(CV)) && match(RHS, m_APInt(CRHS)) &&
-          CV->ashr(*CRHS).shl(*CRHS) != *CV)
+      if (!(match(V, m_APInt(CV)) && match(RHS, m_APInt(CRHS)) &&
+            CV->ashr(*CRHS).shl(*CRHS) == *CV) &&
+          !match(V, m_NSWShl(m_Value(), m_Specific(RHS))))
         return nullptr;
       break;
     }
     // V = shl nuw X, RHS => X = lshr V, RHS
     case Instruction::LShr: {
       const APInt *CV, *CRHS;
-      if (match(V, m_APInt(CV)) && match(RHS, m_APInt(CRHS)) &&
-          CV->lshr(*CRHS).shl(*CRHS) != *CV)
+      if (!(match(V, m_APInt(CV)) && match(RHS, m_APInt(CRHS)) &&
+            CV->lshr(*CRHS).shl(*CRHS) == *CV) &&
+          !match(V, m_NUWShl(m_Value(), m_Specific(RHS))))
         return nullptr;
       break;
     }
