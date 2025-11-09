@@ -1467,7 +1467,7 @@ private:
   }
 
   template <class _To, class _From, class _ValueT = _Tp, __enable_if_t<!__is_tree_value_type_v<_ValueT>, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI static void __assign_value(_To& __lhs, _From&& __rhs) {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 static void __assign_value(_To& __lhs, _From&& __rhs) {
     __lhs = std::forward<_From>(__rhs);
   }
 
