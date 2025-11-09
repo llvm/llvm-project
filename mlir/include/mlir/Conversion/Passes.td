@@ -190,10 +190,13 @@ def ArithToLLVMConversionPass : Pass<"convert-arith-to-llvm"> {
 // ArithToAPFloat
 //===----------------------------------------------------------------------===//
 
-def ArithToAPFloatConversionPass : Pass<"convert-arith-to-apfloat"> {
-  let summary = "Convert Arith dialect ops on FP8 types to APFloat lib calls";
+def ArithToAPFloatConversionPass
+    : Pass<"convert-arith-to-apfloat", "ModuleOp"> {
+  let summary = "Convert Arith ops to APFloat runtime library calls";
   let description = [{
-    This pass converts supported Arith ops which manipulate FP8 typed values to APFloat lib calls.
+    This pass converts supported Arith ops to APFloat-based runtime library
+    calls (APFloatWrappers.cpp). APFloat is a software implementation of
+    floating-point arithmetic operations.
   }];
   let dependentDialects = ["func::FuncDialect"];
   let options = [];

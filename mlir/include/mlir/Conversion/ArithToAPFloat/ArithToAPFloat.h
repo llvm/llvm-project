@@ -12,17 +12,10 @@
 #include <memory>
 
 namespace mlir {
-
-class DialectRegistry;
-class RewritePatternSet;
 class Pass;
 
 #define GEN_PASS_DECL_ARITHTOAPFLOATCONVERSIONPASS
 #include "mlir/Conversion/Passes.h.inc"
-
-namespace arith {
-void populateArithToAPFloatConversionPatterns(RewritePatternSet &patterns);
-} // namespace arith
 } // namespace mlir
 
-#endif // MLIR_CONVERSION_ARITHTOAPFloat_ARITHTOAPFloat_H
+#endif // MLIR_CONVERSION_ARITHTOAPFLOAT_ARITHTOAPFLOAT_H
