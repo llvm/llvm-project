@@ -157,5 +157,5 @@
 "`P3552R3 <https://wg21.link/P3552R3>`__","Add a Coroutine Task Type","2025-06 (Sofia)","","","`#148182 <https://github.com/llvm/llvm-project/issues/148182>`__",""
 "`P1317R2 <https://wg21.link/P1317R2>`__","Remove return type deduction in ``std::apply``","2025-06 (Sofia)","","","`#148183 <https://github.com/llvm/llvm-project/issues/148183>`__",""
 "","","","","","",""
-"`P1789R3 <https://wg21.link/P1789R3>`__","Library Support for Expansion Statements`","2025-11 (Kona)","|Complete|","22","",""
+"`P1789R3 <https://wg21.link/P1789R3>`__","Library Support for Expansion Statements","2025-11 (Kona)","|Complete|","22","",""
 "","","","","","",""
