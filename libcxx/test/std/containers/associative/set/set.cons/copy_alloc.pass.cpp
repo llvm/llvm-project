@@ -21,7 +21,7 @@
 #include "test_allocator.h"
 
 template <class Alloc>
-void test_alloc(const Alloc& new_alloc) {
+TEST_CONSTEXPR_CXX26 void test_alloc(const Alloc& new_alloc) {
   { // Simple check
     using Set = std::set<int, std::less<int>, Alloc>;
 
@@ -81,7 +81,7 @@ void test_alloc(const Alloc& new_alloc) {
   }
 }
 
-void test() {
+TEST_CONSTEXPR_CXX26 bool test() {
   test_alloc(std::allocator<int>());
   test_alloc(test_allocator<int>(25)); // Make sure that the new allocator is actually used
   test_alloc(min_allocator<int>());    // Make sure that fancy pointers work
@@ -97,10 +97,6 @@ void test() {
     assert(orig.size() == 3);
     assert(orig.key_comp() == test_less<int>(3));
   }
-}
-
-TEST_CONSTEXPR_CXX26 bool test() {
-  test();
 
   return true;
 }

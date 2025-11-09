@@ -21,7 +21,7 @@
 #include "min_allocator.h"
 #include "test_allocator.h"
 
-void basic_test() {
+TEST_CONSTEXPR_CXX26 void basic_test() {
   {
     typedef std::set<int> C;
     typedef C::value_type V;
@@ -54,7 +54,7 @@ void basic_test() {
   }
 }
 
-void duplicate_keys_test() {
+TEST_CONSTEXPR_CXX26 void duplicate_keys_test() {
   test_allocator_statistics alloc_stats;
   typedef std::set<int, std::less<int>, test_allocator<int> > Set;
   {

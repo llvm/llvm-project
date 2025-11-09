@@ -73,7 +73,7 @@ TEST_CONSTEXPR_CXX26 bool test() {
     assert(m3.key_comp() == C(5));
     LIBCPP_ASSERT(m1.empty());
   }
-  {
+  if (!TEST_IS_CONSTANT_EVALUATED) {
     typedef Counter<int> V;
     typedef std::less<V> C;
     typedef test_allocator<V> A;

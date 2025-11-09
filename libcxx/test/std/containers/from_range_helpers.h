@@ -54,8 +54,8 @@ struct KeyValue {
   int key;    // Only the key is considered for equality comparison.
   char value; // Allows distinguishing equivalent instances.
 
-  bool operator<(const KeyValue& other) const { return key < other.key; }
-  bool operator==(const KeyValue& other) const { return key == other.key; }
+  TEST_CONSTEXPR_CXX26 bool operator<(const KeyValue& other) const { return key < other.key; }
+  TEST_CONSTEXPR_CXX26 bool operator==(const KeyValue& other) const { return key == other.key; }
 };
 
 template <>
