@@ -12,8 +12,6 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+d,+zvfhmin,+experimental-zvfbfa,+v -target-abi=lp64d \
 ; RUN:   -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,ZVFBFA
 
-declare <2 x bfloat> @llvm.vp.fabs.v2bf16(<2 x bfloat>, <2 x i1>, i32)
-
 define <2 x bfloat> @vfabs_vv_v2bf16(<2 x bfloat> %va, <2 x i1> %m, i32 zeroext %evl) {
 ; ZVFH-LABEL: vfabs_vv_v2bf16:
 ; ZVFH:       # %bb.0:
@@ -65,8 +63,6 @@ define <2 x bfloat> @vfabs_vv_v2bf16_unmasked(<2 x bfloat> %va, i32 zeroext %evl
   %v = call <2 x bfloat> @llvm.vp.fabs.v2bf16(<2 x bfloat> %va, <2 x i1> splat (i1 true), i32 %evl)
   ret <2 x bfloat> %v
 }
-
-declare <4 x bfloat> @llvm.vp.fabs.v4bf16(<4 x bfloat>, <4 x i1>, i32)
 
 define <4 x bfloat> @vfabs_vv_v4bf16(<4 x bfloat> %va, <4 x i1> %m, i32 zeroext %evl) {
 ; ZVFH-LABEL: vfabs_vv_v4bf16:
@@ -120,8 +116,6 @@ define <4 x bfloat> @vfabs_vv_v4bf16_unmasked(<4 x bfloat> %va, i32 zeroext %evl
   ret <4 x bfloat> %v
 }
 
-declare <8 x bfloat> @llvm.vp.fabs.v8bf16(<8 x bfloat>, <8 x i1>, i32)
-
 define <8 x bfloat> @vfabs_vv_v8bf16(<8 x bfloat> %va, <8 x i1> %m, i32 zeroext %evl) {
 ; ZVFH-LABEL: vfabs_vv_v8bf16:
 ; ZVFH:       # %bb.0:
@@ -173,8 +167,6 @@ define <8 x bfloat> @vfabs_vv_v8bf16_unmasked(<8 x bfloat> %va, i32 zeroext %evl
   %v = call <8 x bfloat> @llvm.vp.fabs.v8bf16(<8 x bfloat> %va, <8 x i1> splat (i1 true), i32 %evl)
   ret <8 x bfloat> %v
 }
-
-declare <16 x bfloat> @llvm.vp.fabs.v16bf16(<16 x bfloat>, <16 x i1>, i32)
 
 define <16 x bfloat> @vfabs_vv_v16bf16(<16 x bfloat> %va, <16 x i1> %m, i32 zeroext %evl) {
 ; ZVFH-LABEL: vfabs_vv_v16bf16:

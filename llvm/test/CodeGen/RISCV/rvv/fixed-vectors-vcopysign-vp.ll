@@ -8,8 +8,6 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+m,+d,+zvfh,+experimental-zvfbfa,+v -target-abi=lp64d \
 ; RUN:   -verify-machineinstrs < %s | FileCheck --check-prefixes=CHECK,ZVFBFA %s
 
-declare <2 x bfloat> @llvm.vp.copysign.v2bf16(<2 x bfloat>, <2 x bfloat>, <2 x i1>, i32)
-
 define <2 x bfloat> @vfsgnj_vv_v2bf16(<2 x bfloat> %va, <2 x bfloat> %vb, <2 x i1> %m, i32 zeroext %evl) {
 ; ZVFH-LABEL: vfsgnj_vv_v2bf16:
 ; ZVFH:       # %bb.0:
@@ -49,8 +47,6 @@ define <2 x bfloat> @vfsgnj_vv_v2bf16_unmasked(<2 x bfloat> %va, <2 x bfloat> %v
   %v = call <2 x bfloat> @llvm.vp.copysign.v2bf16(<2 x bfloat> %va, <2 x bfloat> %vb, <2 x i1> splat (i1 true), i32 %evl)
   ret <2 x bfloat> %v
 }
-
-declare <4 x bfloat> @llvm.vp.copysign.v4bf16(<4 x bfloat>, <4 x bfloat>, <4 x i1>, i32)
 
 define <4 x bfloat> @vfsgnj_vv_v4bf16(<4 x bfloat> %va, <4 x bfloat> %vb, <4 x i1> %m, i32 zeroext %evl) {
 ; ZVFH-LABEL: vfsgnj_vv_v4bf16:
@@ -92,8 +88,6 @@ define <4 x bfloat> @vfsgnj_vv_v4bf16_unmasked(<4 x bfloat> %va, <4 x bfloat> %v
   ret <4 x bfloat> %v
 }
 
-declare <8 x bfloat> @llvm.vp.copysign.v8bf16(<8 x bfloat>, <8 x bfloat>, <8 x i1>, i32)
-
 define <8 x bfloat> @vfsgnj_vv_v8bf16(<8 x bfloat> %va, <8 x bfloat> %vb, <8 x i1> %m, i32 zeroext %evl) {
 ; ZVFH-LABEL: vfsgnj_vv_v8bf16:
 ; ZVFH:       # %bb.0:
@@ -133,8 +127,6 @@ define <8 x bfloat> @vfsgnj_vv_v8bf16_unmasked(<8 x bfloat> %va, <8 x bfloat> %v
   %v = call <8 x bfloat> @llvm.vp.copysign.v8bf16(<8 x bfloat> %va, <8 x bfloat> %vb, <8 x i1> splat (i1 true), i32 %evl)
   ret <8 x bfloat> %v
 }
-
-declare <16 x bfloat> @llvm.vp.copysign.v16bf16(<16 x bfloat>, <16 x bfloat>, <16 x i1>, i32)
 
 define <16 x bfloat> @vfsgnj_vv_v16bf16(<16 x bfloat> %va, <16 x bfloat> %vb, <16 x i1> %m, i32 zeroext %evl) {
 ; ZVFH-LABEL: vfsgnj_vv_v16bf16:

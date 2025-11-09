@@ -12,8 +12,6 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+d,+zfhmin,+zvfhmin,+v,+experimental-zvfbfa -target-abi=lp64d \
 ; RUN:     -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,ZVFBFA
 
-declare <vscale x 1 x bfloat> @llvm.vp.fabs.nxv1bf16(<vscale x 1 x bfloat>, <vscale x 1 x i1>, i32)
-
 define <vscale x 1 x bfloat> @vfabs_vv_nxv1bf16(<vscale x 1 x bfloat> %va, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; ZVFH-LABEL: vfabs_vv_nxv1bf16:
 ; ZVFH:       # %bb.0:
@@ -65,8 +63,6 @@ define <vscale x 1 x bfloat> @vfabs_vv_nxv1bf16_unmasked(<vscale x 1 x bfloat> %
   %v = call <vscale x 1 x bfloat> @llvm.vp.fabs.nxv1bf16(<vscale x 1 x bfloat> %va, <vscale x 1 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 1 x bfloat> %v
 }
-
-declare <vscale x 2 x bfloat> @llvm.vp.fabs.nxv2bf16(<vscale x 2 x bfloat>, <vscale x 2 x i1>, i32)
 
 define <vscale x 2 x bfloat> @vfabs_vv_nxv2bf16(<vscale x 2 x bfloat> %va, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; ZVFH-LABEL: vfabs_vv_nxv2bf16:
@@ -120,8 +116,6 @@ define <vscale x 2 x bfloat> @vfabs_vv_nxv2bf16_unmasked(<vscale x 2 x bfloat> %
   ret <vscale x 2 x bfloat> %v
 }
 
-declare <vscale x 4 x bfloat> @llvm.vp.fabs.nxv4bf16(<vscale x 4 x bfloat>, <vscale x 4 x i1>, i32)
-
 define <vscale x 4 x bfloat> @vfabs_vv_nxv4bf16(<vscale x 4 x bfloat> %va, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; ZVFH-LABEL: vfabs_vv_nxv4bf16:
 ; ZVFH:       # %bb.0:
@@ -173,8 +167,6 @@ define <vscale x 4 x bfloat> @vfabs_vv_nxv4bf16_unmasked(<vscale x 4 x bfloat> %
   %v = call <vscale x 4 x bfloat> @llvm.vp.fabs.nxv4bf16(<vscale x 4 x bfloat> %va, <vscale x 4 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 4 x bfloat> %v
 }
-
-declare <vscale x 8 x bfloat> @llvm.vp.fabs.nxv8bf16(<vscale x 8 x bfloat>, <vscale x 8 x i1>, i32)
 
 define <vscale x 8 x bfloat> @vfabs_vv_nxv8bf16(<vscale x 8 x bfloat> %va, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; ZVFH-LABEL: vfabs_vv_nxv8bf16:
@@ -228,8 +220,6 @@ define <vscale x 8 x bfloat> @vfabs_vv_nxv8bf16_unmasked(<vscale x 8 x bfloat> %
   ret <vscale x 8 x bfloat> %v
 }
 
-declare <vscale x 16 x bfloat> @llvm.vp.fabs.nxv16bf16(<vscale x 16 x bfloat>, <vscale x 16 x i1>, i32)
-
 define <vscale x 16 x bfloat> @vfabs_vv_nxv16bf16(<vscale x 16 x bfloat> %va, <vscale x 16 x i1> %m, i32 zeroext %evl) {
 ; ZVFH-LABEL: vfabs_vv_nxv16bf16:
 ; ZVFH:       # %bb.0:
@@ -281,8 +271,6 @@ define <vscale x 16 x bfloat> @vfabs_vv_nxv16bf16_unmasked(<vscale x 16 x bfloat
   %v = call <vscale x 16 x bfloat> @llvm.vp.fabs.nxv16bf16(<vscale x 16 x bfloat> %va, <vscale x 16 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 16 x bfloat> %v
 }
-
-declare <vscale x 32 x bfloat> @llvm.vp.fabs.nxv32bf16(<vscale x 32 x bfloat>, <vscale x 32 x i1>, i32)
 
 define <vscale x 32 x bfloat> @vfabs_vv_nxv32bf16(<vscale x 32 x bfloat> %va, <vscale x 32 x i1> %m, i32 zeroext %evl) {
 ; ZVFH-LABEL: vfabs_vv_nxv32bf16:

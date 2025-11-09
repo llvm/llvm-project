@@ -7318,10 +7318,8 @@ static bool isPromotedOpNeedingSplit(SDValue Op,
          (Op.getValueType() == MVT::nxv32bf16 &&
           Subtarget.hasVInstructionsBF16Minimal() &&
           (!Subtarget.hasVInstructionsBF16() ||
-           (std::find(std::begin(ZvfbfaOps), std::end(ZvfbfaOps),
-                      Op.getOpcode()) == std::end(ZvfbfaOps) &&
-            std::find(std::begin(ZvfbfaVPOps), std::end(ZvfbfaVPOps),
-                      Op.getOpcode()) == std::end(ZvfbfaVPOps))));
+           (!llvm::is_contained(ZvfbfaOps, Op.getOpcode()) &&
+            !llvm::is_contained(ZvfbfaVPOps, Op.getOpcode()))));
 }
 
 static SDValue SplitVectorOp(SDValue Op, SelectionDAG &DAG) {
