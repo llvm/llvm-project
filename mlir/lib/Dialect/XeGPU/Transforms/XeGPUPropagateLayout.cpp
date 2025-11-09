@@ -101,8 +101,7 @@ public:
 
   bool isAssigned() const { return storage != nullptr; }
 
-  LayoutInfo transpose(ArrayRef<int64_t> permutation,
-                       LayoutKind layoutKind) const;
+  LayoutInfo transpose(ArrayRef<int64_t> permutation) const;
 
   SmallVector<int> getLaneLayout() const;
 
@@ -169,9 +168,9 @@ LayoutInfo LayoutInfo::join(const LayoutInfo &lhs, const LayoutInfo &rhs) {
   llvm_unreachable("Join should not be triggered by layout propagation.");
 }
 
-/// Construct a new layout with the transposed lane layout and lane data.
-LayoutInfo LayoutInfo::transpose(ArrayRef<int64_t> permutation,
-                                 LayoutKind layoutKind) const {
+/// Construct a new layout with the transposed inst_data or lane_layout,
+/// lane_data.
+LayoutInfo LayoutInfo::transpose(ArrayRef<int64_t> permutation) const {
   if (!isAssigned())
     return {};
   // Check if the permutation is valid.
@@ -190,19 +189,19 @@ LayoutInfo LayoutInfo::transpose(ArrayRef<int64_t> permutation,
   SmallVector<int32_t> laneData;
   SmallVector<int32_t> instData;
   for (int64_t idx : permutation) {
-    if (layoutKind == LayoutKind::Lane) {
+    if (getLaneLayout().size()) {
       laneLayout.push_back(static_cast<int32_t>(getLaneLayout()[idx]));
       laneData.push_back(static_cast<int32_t>(getLaneData()[idx]));
-    } else if (layoutKind == LayoutKind::InstData)
+    }
+    if (getInstData().size())
       instData.push_back(static_cast<int32_t>(getInstData()[idx]));
   }
   xegpu::LayoutAttr layoutAttr;
-  if (layoutKind == LayoutKind::Lane) {
+  if (getLaneLayout().size())
     layoutAttr =
         xegpu::LayoutAttr::get(storage.getContext(), laneLayout, laneData);
-  } else if (layoutKind == LayoutKind::InstData) {
+  if (getInstData().size())
     layoutAttr = xegpu::LayoutAttr::get(storage.getContext(), instData);
-  }
   return LayoutInfo(layoutAttr);
 }
 
@@ -748,7 +747,7 @@ void LayoutInfoPropagation::visitLoadNdOp(
   if (auto transpose = load.getTranspose()) {
     load.emitWarning("Transpose effect is not expected for LoadNdOp at "
                      "LayoutInfoPropagation stage.");
-    tensorDescLayout = valueLayout.transpose(transpose.value(), layoutKind);
+    tensorDescLayout = valueLayout.transpose(transpose.value());
   }
   // Propagate the new layout to the tensor descriptor operand.
   propagateIfChanged(operands[0], operands[0]->meet(tensorDescLayout));
@@ -763,8 +762,7 @@ void LayoutInfoPropagation::visitTransposeOp(
   LayoutInfo resultLayout = results[0]->getValue();
   if (!resultLayout.isAssigned())
     return;
-  LayoutInfo newLayout =
-      resultLayout.transpose(transpose.getPermutation(), layoutKind);
+  LayoutInfo newLayout = resultLayout.transpose(transpose.getPermutation());
   // Propagate the new layout to the vector operand.
   propagateIfChanged(operands[0], operands[0]->meet(newLayout));
 }
@@ -1207,18 +1205,17 @@ struct XeGPUPropagateLayoutPass final
 
 void XeGPUPropagateLayoutPass::runOnOperation() {
   LayoutKind layoutKind;
-  if (this->layoutKind == "lane")
+  if (this->layoutKind == "lane") {
     layoutKind = LayoutKind::Lane;
-  else if (this->layoutKind == "inst")
+  } else if (this->layoutKind == "inst") {
     layoutKind = LayoutKind::InstData;
-  else {
-    signalPassFailure();
+  } else {
     getOperation()->emitError("Unsupported layout kind option: " +
                               this->layoutKind);
+    signalPassFailure();
     return;
   }
   RunLayoutInfoPropagation analysis(getOperation(), layoutKind);
-  // auto &analysis = getAnalysis<RunLayoutInfoPropagation>();
   // Print the analysis result and exit. (for debugging purposes)
   if (printOnly) {
     auto &os = llvm::outs();
