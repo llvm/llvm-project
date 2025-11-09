@@ -247,6 +247,51 @@ define float @negative_test_seq_reduce(<4 x float> %vec) {
   ret float %sum
 }
 
+; Negative test: sequential all-zero without nsz should not return Start
+; directly because fadd(-0.0, +0.0) = +0.0, not -0.0.
+define float @negative_test_seq_reduce_all_zero_no_nsz(float %start, <4 x float> %vec) {
+; CHECK-LABEL: negative_test_seq_reduce_all_zero_no_nsz:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    movi d1, #0000000000000000
+; CHECK-NEXT:    fadd s0, s0, s1
+; CHECK-NEXT:    ret
+entry:
+  %zero1 = insertelement <4 x float> %vec, float 0.0, i64 0
+  %zero2 = insertelement <4 x float> %zero1, float 0.0, i64 1
+  %zero3 = insertelement <4 x float> %zero2, float 0.0, i64 2
+  %zero4 = insertelement <4 x float> %zero3, float 0.0, i64 3
+  %sum = call float @llvm.vector.reduce.fadd.v4f32(float %start, <4 x float> %zero4)
+  ret float %sum
+}
+
+; Test with -0.0 elements (negative zero). With nsz, these should be
+; treated as zero elements.
+define float @test_v4f32_neg_zero_element(<4 x float> %vec) {
+; CHECK-LABEL: test_v4f32_neg_zero_element:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov s1, v0.s[2]
+; CHECK-NEXT:    faddp s0, v0.2s
+; CHECK-NEXT:    fadd s0, s0, s1
+; CHECK-NEXT:    ret
+entry:
+  %with_neg_zero = insertelement <4 x float> %vec, float -0.0, i64 3
+  %sum = call nsz float @llvm.aarch64.neon.faddv.f32.v4f32(<4 x float> %with_neg_zero)
+  ret float %sum
+}
+
+define float @test_reduce_v4f32_neg_zero_element(<4 x float> %vec) {
+; CHECK-LABEL: test_reduce_v4f32_neg_zero_element:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov s1, v0.s[2]
+; CHECK-NEXT:    faddp s0, v0.2s
+; CHECK-NEXT:    fadd s0, s0, s1
+; CHECK-NEXT:    ret
+entry:
+  %with_neg_zero = insertelement <4 x float> %vec, float -0.0, i64 3
+  %sum = call reassoc nsz float @llvm.vector.reduce.fadd.v4f32(float -0.0, <4 x float> %with_neg_zero)
+  ret float %sum
+}
+
 declare float @llvm.aarch64.neon.faddv.f32.v2f32(<2 x float>)
 declare float @llvm.aarch64.neon.faddv.f32.v4f32(<4 x float>)
 declare double @llvm.aarch64.neon.faddv.f64.v2f64(<2 x double>)
