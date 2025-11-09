@@ -3357,6 +3357,12 @@ def fmodules_driver : Flag<["-"], "fmodules-driver">,
 def fno_modules_driver : Flag<["-"], "fno-modules-driver">,
   Group<f_Group>, Visibility<[ClangOption]>,
   HelpText<"Disable support for driver managed module builds (experimental)">;
+def fimplicit_import_std : Flag<["-"], "fimplicit-import-std">,
+  Group<f_Group>, Visibility<[ClangOption]>,
+  HelpText<"Implicitly add the std module when discovered in driver managed module builds">;
+def fno_implicit_import_std : Flag<["-"], "fno-implicit-import-std">,
+  Group<f_Group>, Visibility<[ClangOption]>,
+  HelpText<"Don't implicitly add the std module when discovered in driver managed module builds">;
 
 def experimental_modules_reduced_bmi : Flag<["-"], "fexperimental-modules-reduced-bmi">,
   Group<f_Group>, Visibility<[ClangOption, CC1Option]>, Alias<fmodules_reduced_bmi>;

@@ -60,6 +60,7 @@
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/InputInfo.h"
 #include "clang/Driver/Job.h"
+#include "clang/Driver/ModulesDriver.h"
 #include "clang/Driver/Options.h"
 #include "clang/Driver/Phases.h"
 #include "clang/Driver/SanitizerArgs.h"
@@ -1832,6 +1833,18 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
       for (Arg *A : *CfgOptionsTail)
         TranslatedLinkerIns.append(A);
       BuildInputs(C->getDefaultToolChain(), TranslatedLinkerIns, Inputs);
+    }
+  }
+
+  if (C->getArgs().hasFlag(options::OPT_fmodules_driver,
+                           options::OPT_fno_modules_driver, false)) {
+    // The detection logic for this is kept here only for diagnostics until
+    // is enabled by default.
+    modules::shouldEnableModulesDriver(Inputs, getVFS(), Diags);
+    Diags.Report(diag::remark_performing_driver_managed_module_build);
+    if (C->getArgs().hasFlag(options::OPT_fimplicit_import_std,
+                             options::OPT_fno_implicit_import_std, true)) {
+      modules::ensureNamedModuleStdLibraryInputs(*C, Inputs);
     }
   }
 
@@ -4208,10 +4221,20 @@ void Driver::handleArguments(Compilation &C, DerivedArgList &Args,
     YcArg = nullptr;
   }
 
-  if (Args.hasArgNoClaim(options::OPT_fmodules_driver))
-    // TODO: Check against all incompatible -fmodules-driver arguments
-    if (!ModulesModeCXX20 && !Args.hasArgNoClaim(options::OPT_fmodules))
-      Args.eraseArg(options::OPT_fmodules_driver);
+  if (Args.hasArgNoClaim(options::OPT_fmodules_driver)) {
+    // HACK: This should be only added for the Standard library jobs, explicitly
+    // created by the modules driver.
+    MakeInputArg(Args, getOpts(),
+                 Args.MakeArgString("-Wno-reserved-module-identifier"));
+    if (Args.hasArg(options::OPT_fmodules)) {
+      Args.eraseArg(options::OPT_fmodules);
+      Arg *Arg = Args.MakeSeparateArg(
+          nullptr, getOpts().getOption(options::OPT_fimplicit_modules),
+          Args.MakeArgString(("-fimplicit-modules")));
+      Arg->claim();
+      Args.append(Arg);
+    }
+  }
 
   Arg *FinalPhaseArg;
   phases::ID FinalPhase = getFinalPhase(Args, &FinalPhaseArg);
@@ -4339,33 +4362,6 @@ void Driver::handleArguments(Compilation &C, DerivedArgList &Args,
   }
 }
 
-static bool hasCXXModuleInputType(const Driver::InputList &Inputs) {
-  const auto IsTypeCXXModule = [](const auto &Input) -> bool {
-    const auto TypeID = Input.first;
-    return (TypeID == types::TY_CXXModule);
-  };
-  return llvm::any_of(Inputs, IsTypeCXXModule);
-}
-
-llvm::ErrorOr<bool>
-Driver::ScanInputsForCXX20ModulesUsage(const InputList &Inputs) const {
-  const auto CXXInputs = llvm::make_filter_range(
-      Inputs, [](const auto &Input) { return types::isCXX(Input.first); });
-  for (const auto &Input : CXXInputs) {
-    StringRef Filename = Input.second->getSpelling();
-    auto ErrOrBuffer = VFS->getBufferForFile(Filename);
-    if (!ErrOrBuffer)
-      return ErrOrBuffer.getError();
-    const auto Buffer = std::move(*ErrOrBuffer);
-
-    if (scanInputForCXX20ModulesUsage(Buffer->getBuffer())) {
-      Diags.Report(diag::remark_found_cxx20_module_usage) << Filename;
-      return true;
-    }
-  }
-  return false;
-}
-
 void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
                           const InputList &Inputs, ActionList &Actions) const {
   llvm::PrettyStackTraceString CrashInfo("Building compilation actions");
@@ -4376,33 +4372,6 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
   }
 
   handleArguments(C, Args, Inputs, Actions);
-
-  if (Args.hasFlag(options::OPT_fmodules_driver,
-                   options::OPT_fno_modules_driver, false)) {
-    // TODO: Move the logic for implicitly enabling explicit-module-builds out
-    // of -fmodules-driver once it is no longer experimental.
-    // Currently, this serves diagnostic purposes only.
-    bool UsesCXXModules = hasCXXModuleInputType(Inputs);
-    if (!UsesCXXModules) {
-      const auto ErrOrScanResult = ScanInputsForCXX20ModulesUsage(Inputs);
-      if (!ErrOrScanResult) {
-        Diags.Report(diag::err_cannot_open_file)
-            << ErrOrScanResult.getError().message();
-        return;
-      }
-      UsesCXXModules = *ErrOrScanResult;
-    }
-    if (UsesCXXModules || Args.hasArg(options::OPT_fmodules))
-      BuildDriverManagedModuleBuildActions(C, Args, Inputs, Actions);
-    return;
-  }
-
-  BuildDefaultActions(C, Args, Inputs, Actions);
-}
-
-void Driver::BuildDefaultActions(Compilation &C, DerivedArgList &Args,
-                                 const InputList &Inputs,
-                                 ActionList &Actions) const {
 
   bool UseNewOffloadingDriver =
       C.isOffloadingHostKind(Action::OFK_OpenMP) ||
@@ -4697,12 +4666,6 @@ void Driver::BuildDefaultActions(Compilation &C, DerivedArgList &Args,
 
   // Claim ignored clang-cl options.
   Args.ClaimAllArgs(options::OPT_cl_ignored_Group);
-}
-
-void Driver::BuildDriverManagedModuleBuildActions(
-    Compilation &C, llvm::opt::DerivedArgList &Args, const InputList &Inputs,
-    ActionList &Actions) const {
-  Diags.Report(diag::remark_performing_driver_managed_module_build);
 }
 
 /// Returns the canonical name for the offloading architecture when using a HIP
@@ -5458,6 +5421,12 @@ void Driver::BuildJobs(Compilation &C) const {
         }
       }
     }
+  }
+  if (C.getArgs().hasFlag(options::OPT_fmodules_driver,
+                          options::OPT_fno_modules_driver, false)) {
+    auto Success = modules::performDriverModuleBuild(C, C.getDriver().Diags);
+    if (!Success)
+      return;
   }
 }
 

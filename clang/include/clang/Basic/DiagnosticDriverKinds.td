@@ -595,6 +595,22 @@ def remark_found_cxx20_module_usage : Remark<
 def remark_performing_driver_managed_module_build : Remark<
   "performing driver managed module build">,
   InGroup<ModulesDriver>;
+def remark_std_module_manifest_path : Remark<
+  "using std modules manifest: '%0'">, InGroup<ModulesDriver>;
+def err_failed_parse_modules_manifest_json: Error<
+  "failed to parse the std modules manifest">;
+def err_failed_depdendency_scan : Error<
+  "failed to perform dependency scan">;
+def remark_failed_dependency_scan_for_input : Remark<
+  "dependency scan failed for source input '%0'">,
+  InGroup<ModulesDriver>;
+def err_mod_graph_named_module_redefinition : Error<
+  "duplicate definitions of C++20 named module '%0' in '%1' and '%2'">;
+def  err_building_depdendency_graph : Error<
+  "failed to construct the module dependency graph">;
+def remark_printing_module_graph : Remark<
+  "printing module dependency graph">,
+  InGroup<ModulesDriver>;
 
 def warn_drv_delayed_template_parsing_after_cxx20 : Warning<
   "-fdelayed-template-parsing is deprecated after C++20">,
