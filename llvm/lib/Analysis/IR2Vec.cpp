@@ -17,6 +17,7 @@
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/CallGraph.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
@@ -26,7 +27,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Analysis/CallGraph.h"
 
 using namespace llvm;
 using namespace ir2vec;
@@ -62,7 +62,10 @@ cl::opt<IR2VecKind> IR2VecEmbeddingKind(
                           "Generate flow-aware embeddings")),
     cl::init(IR2VecKind::Symbolic), cl::desc("IR2Vec embedding kind"),
     cl::cat(IR2VecCategory));
-
+// static members of Flowaware Embeddings
+SmallVector<Function *, 15> FlowAwareEmbedder::FuncStack;
+SmallMapVector<const Function *, SmallVector<const Function *, 10>, 16>
+      FlowAwareEmbedder::FuncCallMap;
 } // namespace ir2vec
 } // namespace llvm
 
@@ -209,19 +212,18 @@ Embedding FlowAwareEmbedder::computeEmbeddings(const Instruction &I) const {
   // For now, we treat them like other instructions
   Embedding ArgEmb(Dimension, 0);
 
-    if(isa<CallInst>(I)){
-    const auto* Ci = dyn_cast<CallInst>(&I);
-    Function* Func = Ci->getCalledFunction();
-    if(Func){
-      if(!Func->isDeclaration() &&
-        std::find(FuncStack.begin(),FuncStack.end(),Func)== 
-        FuncStack.end()){
+  if (isa<CallInst>(I)) {
+    const auto *Ci = dyn_cast<CallInst>(&I);
+    Function *Func = Ci->getCalledFunction();
+    if (Func) {
+      if (!Func->isDeclaration() &&
+          std::find(FuncStack.begin(), FuncStack.end(), Func) ==
+              FuncStack.end()) {
         FuncStack.push_back(Func);
         auto Emb = Embedder::create(IR2VecEmbeddingKind, *Func, Vocab);
         auto FuncVec = Emb->getFunctionVector();
-        std::transform(ArgEmb.begin(),ArgEmb.end(),
-                       FuncVec.begin(),FuncVec.end(),
-                       std::plus<double>());
+        std::transform(ArgEmb.begin(), ArgEmb.end(), FuncVec.begin(),
+                       FuncVec.end(), std::plus<double>());
         FuncStack.pop_back();
       }
     }
@@ -264,16 +266,16 @@ Embedding FlowAwareEmbedder::computeEmbeddings(const Instruction &I) const {
   return InstVector;
 }
 
-void FlowAwareEmbedder::computeFuncCallMap(Module &M){
+void FlowAwareEmbedder::computeFuncCallMap(Module &M) {
   CallGraph Cg = CallGraph(M);
-  for(auto CallItr=Cg.begin();CallItr != Cg.end();CallItr++){
-    if(CallItr->first && !CallItr->first->isDeclaration()){
-      const auto* ParentFunc = CallItr->first;
+  for (auto CallItr = Cg.begin(); CallItr != Cg.end(); CallItr++) {
+    if (CallItr->first && !CallItr->first->isDeclaration()) {
+      const auto *ParentFunc = CallItr->first;
       CallGraphNode *Cgn = CallItr->second.get();
-      if(Cgn){
-        for(auto It = Cgn->begin(); It!= Cgn->end(); It++){
-          const auto* Func = It->second->getFunction();
-          if(Func && !Func->isDeclaration()){
+      if (Cgn) {
+        for (auto It = Cgn->begin(); It != Cgn->end(); It++) {
+          const auto *Func = It->second->getFunction();
+          if (Func && !Func->isDeclaration()) {
             FuncCallMap[ParentFunc].push_back(Func);
           }
         }
