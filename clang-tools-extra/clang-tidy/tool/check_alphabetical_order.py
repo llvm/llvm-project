@@ -99,11 +99,13 @@ def _normalize_list_rst_lines(lines: Sequence[str]) -> List[str]:
 
 
 @overload
-def normalize_list_rst(data: str) -> str: ...
+def normalize_list_rst(data: str) -> str:
+    ...
 
 
 @overload
-def normalize_list_rst(data: List[str]) -> List[str]: ...
+def normalize_list_rst(data: List[str]) -> List[str]:
+    ...
 
 
 def normalize_list_rst(data: Union[str, List[str]]) -> Union[str, List[str]]:
