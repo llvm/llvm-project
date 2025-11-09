@@ -134,7 +134,6 @@ class Display(object):
         )
 
         # Show the test failure output, if requested.
-        # print("test_output: ", self.opts.test_output)
         if (
             test.isFailure() and self.opts.test_output == "failed"
         ) or self.opts.test_output == "all":
