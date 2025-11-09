@@ -53,7 +53,10 @@ class LLVMConfig(object):
             self.use_lit_shell = True
 
             global lit_path_displayed
-            if self.lit_config.diagnostic_level_enabled("note") and lit_path_displayed is False:
+            if (
+                self.lit_config.diagnostic_level_enabled("note")
+                and lit_path_displayed is False
+            ):
                 self.lit_config.note("using lit tools: {}".format(path))
                 lit_path_displayed = True
 

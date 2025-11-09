@@ -239,7 +239,9 @@ class LitConfig(object):
     def diagnostic_level_enabled(self, kind):
         if kind == "debug":
             return self.debug
-        return DiagnosticLevel.create(self.diagnostic_level) >= DiagnosticLevel.create(kind)
+        return DiagnosticLevel.create(self.diagnostic_level) >= DiagnosticLevel.create(
+            kind
+        )
 
     def dbg(self, message):
         self._write_message("debug", message)
@@ -259,6 +261,7 @@ class LitConfig(object):
         self._write_message("fatal", message)
         sys.exit(2)
 
+
 @enum.unique
 class DiagnosticLevel(enum.IntEnum):
     FATAL = 0
@@ -276,4 +279,6 @@ class DiagnosticLevel(enum.IntEnum):
             return cls.WARNING
         if value == "note":
             return cls.NOTE
-        raise ValueError(f"invalid diagnostic level {repr(value)} of type {type(value)}")
+        raise ValueError(
+            f"invalid diagnostic level {repr(value)} of type {type(value)}"
+        )

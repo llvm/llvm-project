@@ -42,12 +42,13 @@ class TestOutputAction(argparse.Action):
     @classmethod
     def setOutputLevel(cls, namespace, dest, value):
         setattr(namespace, dest, value)
-        #print(dest, value)
-        if dest == "test_output" and TestOutputLevel.create(namespace.print_result_after) < TestOutputLevel.create(value):
-            #print("print_result_after", value)
+        if dest == "test_output" and TestOutputLevel.create(
+            namespace.print_result_after
+        ) < TestOutputLevel.create(value):
             setattr(namespace, "print_result_after", value)
-        elif dest == "print_result_after" and TestOutputLevel.create(namespace.test_output) > TestOutputLevel.create(value):
-            #print("test_output", value)
+        elif dest == "print_result_after" and TestOutputLevel.create(
+            namespace.test_output
+        ) > TestOutputLevel.create(value):
             setattr(namespace, "test_output", value)
 
 
@@ -141,13 +142,20 @@ def parse_args():
     )
     parser.set_defaults(terse_summary=False)
     format_group.add_argument(
-        "-q", "--quiet", help="Alias for '--diagnostic-level=error --test-output=off --terse-summary'", action=AliasAction,
+        "-q",
+        "--quiet",
+        help="Alias for '--diagnostic-level=error --test-output=off --terse-summary'",
+        action=AliasAction,
         alias=[
-            lambda namespace: TestOutputAction.setOutputLevel(namespace, "print_result_after", "failed"),
-            lambda namespace: TestOutputAction.setOutputLevel(namespace, "test_output", "off"),
+            lambda namespace: TestOutputAction.setOutputLevel(
+                namespace, "print_result_after", "failed"
+            ),
+            lambda namespace: TestOutputAction.setOutputLevel(
+                namespace, "test_output", "off"
+            ),
             ("diagnostic_level", "error"),
             ("terse_summary", True),
-            ],
+        ],
     )
     format_group.add_argument(
         "-s",
@@ -156,7 +164,9 @@ def parse_args():
         action=AliasAction,
         alias=[
             ("useProgressBar", True),
-            lambda namespace: TestOutputAction.setOutputLevel(namespace, "print_result_after", "failed"),
+            lambda namespace: TestOutputAction.setOutputLevel(
+                namespace, "print_result_after", "failed"
+            ),
         ],
     )
     format_group.add_argument(
@@ -167,7 +177,9 @@ def parse_args():
         " that failed. Alias for '--test-output=failed'",
         action=AliasAction,
         alias=[
-            lambda namespace: TestOutputAction.setOutputLevel(namespace, "test_output", "failed"),
+            lambda namespace: TestOutputAction.setOutputLevel(
+                namespace, "test_output", "failed"
+            ),
         ],
     )
     format_group.add_argument(
@@ -176,7 +188,9 @@ def parse_args():
         help="Deprecated alias for -v.",
         action=AliasAction,
         alias=[
-            lambda namespace: TestOutputAction.setOutputLevel(namespace, "test_output", "all"),
+            lambda namespace: TestOutputAction.setOutputLevel(
+                namespace, "test_output", "all"
+            ),
         ],
     )
     format_group.add_argument(
@@ -185,7 +199,9 @@ def parse_args():
         help="Enable -v, but for all tests not just failed tests. Alias for '--test-output=all'",
         action=AliasAction,
         alias=[
-            lambda namespace: TestOutputAction.setOutputLevel(namespace, "test_output", "all"),
+            lambda namespace: TestOutputAction.setOutputLevel(
+                namespace, "test_output", "all"
+            ),
         ],
     )
     format_group.add_argument(
@@ -498,8 +514,6 @@ def parse_args():
 
     for report in opts.reports:
         report.use_unique_output_file_name = opts.use_unique_output_file_name
-    #print("test_output", opts.test_output)
-    #print("print_result_after", opts.print_result_after)
 
     return opts
 

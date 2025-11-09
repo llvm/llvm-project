@@ -95,7 +95,8 @@ class Display(object):
         self.completed += 1
 
         show_result = (
-            test.isFailure() and self.opts.print_result_after == "failed"
+            test.isFailure()
+            and self.opts.print_result_after == "failed"
             or self.opts.print_result_after == "all"
         )
         if show_result:
@@ -133,8 +134,10 @@ class Display(object):
         )
 
         # Show the test failure output, if requested.
-        #print("test_output: ", self.opts.test_output)
-        if (test.isFailure() and self.opts.test_output == "failed") or self.opts.test_output == "all":
+        # print("test_output: ", self.opts.test_output)
+        if (
+            test.isFailure() and self.opts.test_output == "failed"
+        ) or self.opts.test_output == "all":
             if test.isFailure():
                 print("%s TEST '%s' FAILED %s" % ("*" * 20, test_name, "*" * 20))
             out = test.result.output
