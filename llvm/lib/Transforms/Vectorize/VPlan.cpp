@@ -52,10 +52,6 @@
 using namespace llvm;
 using namespace llvm::VPlanPatternMatch;
 
-namespace llvm {
-extern cl::opt<bool> EnableVPlanNativePath;
-}
-
 /// @{
 /// Metadata attribute names
 const char LLVMLoopVectorizeFollowupAll[] = "llvm.loop.vectorize.followup_all";

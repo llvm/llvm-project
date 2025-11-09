@@ -68,8 +68,7 @@ llvm::StringMap<ProgramPoint> FactManager::getTestPoints() const {
     for (const Fact *F : BlockFacts) {
       if (const auto *TPF = F->getAs<TestPointFact>()) {
         StringRef PointName = TPF->getAnnotation();
-        assert(AnnotationToPointMap.find(PointName) ==
-                   AnnotationToPointMap.end() &&
+        assert(!AnnotationToPointMap.contains(PointName) &&
                "more than one test points with the same name");
         AnnotationToPointMap[PointName] = F;
       }
