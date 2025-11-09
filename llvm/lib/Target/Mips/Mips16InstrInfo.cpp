@@ -405,9 +405,9 @@ unsigned Mips16InstrInfo::loadImmediate(unsigned FrameReg, int64_t Imm,
       }
       if (SecondRegSaved)
         copyPhysReg(MBB, II, DL, SecondRegSavedTo, SecondRegSaved, true);
+    } else {
+      Available.reset(SpReg);
     }
-   else
-     Available.reset(SpReg);
     copyPhysReg(MBB, II, DL, SpReg, Mips::SP, false);
     BuildMI(MBB, II, DL, get(Mips::AdduRxRyRz16), Reg)
         .addReg(SpReg, RegState::Kill)
