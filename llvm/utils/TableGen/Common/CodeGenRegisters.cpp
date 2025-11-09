@@ -57,9 +57,8 @@ CodeGenSubRegIndex::CodeGenSubRegIndex(const Record *R, unsigned Enum,
   if (R->getValue("Namespace"))
     Namespace = R->getValueAsString("Namespace").str();
 
-  if (const RecordVal *RV = R->getValue("SubRegRanges"))
-    if (auto *DI = dyn_cast_or_null<DefInit>(RV->getValue()))
-      Range = SubRegRangeByHwMode(DI->getDef(), CGH);
+  if (const Record *RV = R->getValueAsOptionalDef("SubRegRanges"))
+    Range = SubRegRangeByHwMode(RV, CGH);
   if (!Range.hasDefault())
     Range.insertSubRegRangeForMode(DefaultMode, SubRegRange(R));
 }
@@ -732,9 +731,8 @@ CodeGenRegisterClass::CodeGenRegisterClass(CodeGenRegBank &RegBank,
 
   Namespace = R->getValueAsString("Namespace");
 
-  if (const RecordVal *RV = R->getValue("RegInfos"))
-    if (const DefInit *DI = dyn_cast_or_null<DefInit>(RV->getValue()))
-      RSI = RegSizeInfoByHwMode(DI->getDef(), RegBank.getHwModes());
+  if (const Record *RV = R->getValueAsOptionalDef("RegInfos"))
+    RSI = RegSizeInfoByHwMode(RV, RegBank.getHwModes());
   unsigned Size = R->getValueAsInt("Size");
   assert((RSI.hasDefault() || Size != 0 || VTs[0].isSimple()) &&
          "Impossible to determine register size");
@@ -746,7 +744,7 @@ CodeGenRegisterClass::CodeGenRegisterClass(CodeGenRegBank &RegBank,
     RSI.insertRegSizeForMode(DefaultMode, RI);
   }
 
-  CopyCost = R->getValueAsInt("CopyCost");
+  int CopyCostParsed = R->getValueAsInt("CopyCost");
   Allocatable = R->getValueAsBit("isAllocatable");
   AltOrderSelect = R->getValueAsString("AltOrderSelect");
   int AllocationPriority = R->getValueAsInt("AllocationPriority");
@@ -759,6 +757,14 @@ CodeGenRegisterClass::CodeGenRegisterClass(CodeGenRegBank &RegBank,
   const BitsInit *TSF = R->getValueAsBitsInit("TSFlags");
   for (auto [Idx, Bit] : enumerate(TSF->getBits()))
     TSFlags |= uint8_t(cast<BitInit>(Bit)->getValue()) << Idx;
+
+  // Saturate negative costs to the maximum
+  if (CopyCostParsed < 0)
+    CopyCost = std::numeric_limits<uint8_t>::max();
+  else if (!isUInt<8>(CopyCostParsed))
+    PrintFatalError(R->getLoc(), "'CopyCost' must be an 8-bit value");
+
+  CopyCost = CopyCostParsed;
 }
 
 // Create an inferred register class that was missing from the .td files.
@@ -850,17 +856,6 @@ unsigned CodeGenRegisterClass::getWeight(const CodeGenRegBank &RegBank) const {
 
   return (*Members.begin())->getWeight(RegBank);
 }
-
-namespace llvm {
-
-raw_ostream &operator<<(raw_ostream &OS, const CodeGenRegisterClass::Key &K) {
-  OS << "{ " << K.RSI;
-  for (const auto R : *K.Members)
-    OS << ", " << R->getName();
-  return OS << " }";
-}
-
-} // end namespace llvm
 
 // This is a simple lexicographical order that can be used to search for sets.
 // It is not the same as the topological order provided by TopoOrderRC.
@@ -1656,8 +1651,7 @@ template <> struct llvm::GraphTraits<SubRegIndexCompositionGraph> {
   struct ChildIteratorType
       : public iterator_adaptor_base<
             ChildIteratorType, CompMapIt,
-            typename std::iterator_traits<CompMapIt>::iterator_category,
-            NodeRef> {
+            std::iterator_traits<CompMapIt>::iterator_category, NodeRef> {
     ChildIteratorType(CompMapIt I)
         : ChildIteratorType::iterator_adaptor_base(I) {}
 
@@ -2169,7 +2163,7 @@ void CodeGenRegBank::computeRegUnitLaneMasks() {
     CodeGenRegister::RegUnitLaneMaskList RegUnitLaneMasks(
         RegUnits.count(), LaneBitmask::getAll());
     // Iterate through SubRegisters.
-    typedef CodeGenRegister::SubRegMap SubRegMap;
+    using SubRegMap = CodeGenRegister::SubRegMap;
     const SubRegMap &SubRegs = Register.getSubRegs();
     for (auto [SubRegIndex, SubReg] : SubRegs) {
       // Ignore non-leaf subregisters, their lane masks are fully covered by
@@ -2288,9 +2282,8 @@ void CodeGenRegBank::inferCommonSubClass(CodeGenRegisterClass *RC) {
 //
 void CodeGenRegBank::inferSubClassWithSubReg(CodeGenRegisterClass *RC) {
   // Map SubRegIndex to set of registers in RC supporting that SubRegIndex.
-  typedef std::map<const CodeGenSubRegIndex *, CodeGenRegister::Vec,
-                   deref<std::less<>>>
-      SubReg2SetMap;
+  using SubReg2SetMap = std::map<const CodeGenSubRegIndex *,
+                                 CodeGenRegister::Vec, deref<std::less<>>>;
 
   // Compute the set of registers supporting each SubRegIndex.
   SubReg2SetMap SRSets;

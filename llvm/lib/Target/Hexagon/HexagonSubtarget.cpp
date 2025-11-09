@@ -15,7 +15,6 @@
 #include "HexagonRegisterInfo.h"
 #include "MCTargetDesc/HexagonMCTargetDesc.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/MachineInstr.h"
@@ -29,7 +28,6 @@
 #include "llvm/Target/TargetMachine.h"
 #include <algorithm>
 #include <cassert>
-#include <map>
 #include <optional>
 
 using namespace llvm;
@@ -445,8 +443,8 @@ void HexagonSubtarget::adjustSchedDependency(
   const HexagonInstrInfo *QII = getInstrInfo();
 
   // Instructions with .new operands have zero latency.
-  SmallSet<SUnit *, 4> ExclSrc;
-  SmallSet<SUnit *, 4> ExclDst;
+  SmallPtrSet<SUnit *, 4> ExclSrc;
+  SmallPtrSet<SUnit *, 4> ExclDst;
   if (QII->canExecuteInBundle(*SrcInst, *DstInst) &&
       isBestZeroLatency(Src, Dst, QII, ExclSrc, ExclDst)) {
     Dep.setLatency(0);
@@ -545,7 +543,7 @@ int HexagonSubtarget::updateLatency(MachineInstr &SrcInst,
   if (!hasV60Ops())
     return Latency;
 
-  auto &QII = static_cast<const HexagonInstrInfo &>(*getInstrInfo());
+  const HexagonInstrInfo &QII = *getInstrInfo();
   // BSB scheduling.
   if (QII.isHVXVec(SrcInst) || useBSBScheduling())
     Latency = (Latency + 1) >> 1;
@@ -630,9 +628,9 @@ static SUnit *getZeroLatency(SUnit *N, SmallVector<SDep, 4> &Deps) {
 // together with a zero latency. Only one dependence should have a zero
 // latency. If there are multiple choices, choose the best, and change
 // the others, if needed.
-bool HexagonSubtarget::isBestZeroLatency(SUnit *Src, SUnit *Dst,
-      const HexagonInstrInfo *TII, SmallSet<SUnit*, 4> &ExclSrc,
-      SmallSet<SUnit*, 4> &ExclDst) const {
+bool HexagonSubtarget::isBestZeroLatency(
+    SUnit *Src, SUnit *Dst, const HexagonInstrInfo *TII,
+    SmallPtrSet<SUnit *, 4> &ExclSrc, SmallPtrSet<SUnit *, 4> &ExclDst) const {
   MachineInstr &SrcInst = *Src->getInstr();
   MachineInstr &DstInst = *Dst->getInstr();
 

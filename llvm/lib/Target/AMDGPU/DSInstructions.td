@@ -8,7 +8,7 @@
 
 class DS_Pseudo <string opName, dag outs, dag ins, string asmOps, list<dag> pattern=[]> :
   InstSI <outs, ins, "", pattern>,
-  SIMCInstr <opName, SIEncodingFamily.NONE> {
+  SIMCInstr <NAME, SIEncodingFamily.NONE> {
 
   let LGKM_CNT = 1;
   let DS = 1;
@@ -19,6 +19,7 @@ class DS_Pseudo <string opName, dag outs, dag ins, string asmOps, list<dag> patt
   // Most instruction load and store data, so set this as the default.
   let mayLoad = 1;
   let mayStore = 1;
+  let FixedSize = true;
 
   let hasSideEffects = 0;
   let SchedRW = [WriteLDS];
@@ -76,7 +77,6 @@ class DS_Real <DS_Pseudo ps, string opName = ps.Mnemonic> :
   let isConvergent       = ps.isConvergent;
 
   let Constraints = ps.Constraints;
-  let DisableEncoding = ps.DisableEncoding;
 
   // encoding fields
   bits<10> vdst;
@@ -91,16 +91,33 @@ class DS_Real <DS_Pseudo ps, string opName = ps.Mnemonic> :
   let offset0 = !if(ps.has_offset, offset{7-0}, ?);
   let offset1 = !if(ps.has_offset, offset{15-8}, ?);
 
-  bits<1> acc = !if(ps.has_vdst, vdst{9},
-                    !if(!or(ps.has_data0, ps.has_gws_data0), data0{9}, 0));
+  // Figure out if we should set the acc bit. Simple load and store
+  // instructions with a single data operand can use AV_* classes, in
+  // which case the encoding comes from the assigned register field.
+
+  // For more compliated cases with multiple data operands, since the
+  // register fields are only 8-bit, so data operands must all be AGPR
+  // or VGPR.
+  defvar DstOpIsAV = !if(ps.has_vdst,
+                         VDstOperandIsAV<ps.OutOperandList>.ret, 0);
+  defvar DstOpIsAGPR = !if(ps.has_vdst,
+                           VDstOperandIsAGPR<ps.OutOperandList>.ret, 0);
+  defvar DataOpIsAV = !if(!or(ps.has_data0, ps.has_gws_data0),
+                          Data0OperandIsAV<ps.InOperandList>.ret, 0);
+  defvar DataOpIsAGPR = !if(!or(ps.has_data0, ps.has_gws_data0),
+                            Data0OperandIsAGPR<ps.InOperandList>.ret, 0);
+
+  bits<1> acc = !if(ps.has_vdst,
+                    !if(DstOpIsAV, vdst{9}, DstOpIsAGPR),
+                    !if(DataOpIsAV, data0{9}, DataOpIsAGPR));
 }
 
 // DS Pseudo instructions
 
-class DS_0A1D_NORET<string opName, RegisterClass rc = VGPR_32>
+class DS_0A1D_NORET<string opName, RegisterOperand rc = AVLdSt_32>
 : DS_Pseudo<opName,
   (outs),
-  (ins getLdStRegisterOperand<rc>.ret:$data0, Offset:$offset, gds:$gds),
+  (ins rc:$data0, Offset:$offset, gds:$gds),
   " $data0$offset$gds"> {
 
   let has_addr = 0;
@@ -108,10 +125,10 @@ class DS_0A1D_NORET<string opName, RegisterClass rc = VGPR_32>
   let has_vdst = 0;
 }
 
-class DS_1A1D_NORET<string opName, RegisterClass rc = VGPR_32>
+class DS_1A1D_NORET<string opName, RegisterOperand rc = AVLdSt_32>
 : DS_Pseudo<opName,
   (outs),
-  (ins VGPR_32:$addr, getLdStRegisterOperand<rc>.ret:$data0, Offset:$offset, gds:$gds),
+  (ins VGPR_32:$addr, rc:$data0, Offset:$offset, gds:$gds),
   " $addr, $data0$offset$gds"> {
 
   let has_data1 = 0;
@@ -119,7 +136,7 @@ class DS_1A1D_NORET<string opName, RegisterClass rc = VGPR_32>
   let IsAtomicNoRet = 1;
 }
 
-multiclass DS_1A1D_NORET_mc<string opName, RegisterClass rc = VGPR_32> {
+multiclass DS_1A1D_NORET_mc<string opName, RegisterOperand rc = AVLdSt_32> {
   def "" : DS_1A1D_NORET<opName, rc>;
 
   let has_m0_read = 0 in {
@@ -127,23 +144,23 @@ multiclass DS_1A1D_NORET_mc<string opName, RegisterClass rc = VGPR_32> {
   }
 }
 
-multiclass DS_1A1D_NORET_t16<string opName, RegisterClass rc = VGPR_32> 
+multiclass DS_1A1D_NORET_t16<string opName, RegisterOperand rc = AVLdSt_32>
 : DS_1A1D_NORET_mc<opName, rc> {
   let has_m0_read = 0 in {
     let True16Predicate = UseRealTrue16Insts in {
-      def "_t16" : DS_1A1D_NORET<opName#"_t16", VGPR_16>, True16D16Table<NAME#"_D16_HI", NAME>;
+      def "_t16" : DS_1A1D_NORET<opName#"_t16", VGPROp_16>,
+        True16D16Table<NAME#"_D16_HI", NAME#"_gfx9">;
     }
   }
 }
 
-multiclass DS_1A1D_NORET_mc_gfx9<string opName, RegisterClass rc = VGPR_32> {
+multiclass DS_1A1D_NORET_mc_gfx9<string opName, RegisterOperand rc = AVLdSt_32> {
   let has_m0_read = 0 in {
     def "" : DS_1A1D_NORET<opName, rc>;
   }
 }
 
-class DS_1A2D_NORET<string opName, RegisterClass rc = VGPR_32,
-                    RegisterOperand data_op = getLdStRegisterOperand<rc>.ret>
+class DS_1A2D_NORET<string opName, RegisterOperand data_op = VGPROp_32>
 : DS_Pseudo<opName,
   (outs),
   (ins VGPR_32:$addr, data_op:$data0, data_op:$data1, Offset:$offset, gds:$gds),
@@ -153,16 +170,24 @@ class DS_1A2D_NORET<string opName, RegisterClass rc = VGPR_32,
   let IsAtomicNoRet = 1;
 }
 
-multiclass DS_1A2D_NORET_mc<string opName, RegisterClass rc = VGPR_32> {
+// DS_xx2D cases should only be instantiated with VGPR operand classes.
+multiclass DS_1A2D_NORET_mc<string opName, RegisterOperand rc = VGPROp_32> {
+  assert OperandIsVGPR<rc>.ret,
+         "DS with 2 data operands should be declared with VGPRs";
+
   def "" : DS_1A2D_NORET<opName, rc>;
 
   let has_m0_read = 0 in {
     def _gfx9 : DS_1A2D_NORET<opName, rc>;
+
+    // All data operands are replaced with AGPRs in this form.
+    let SubtargetPredicate = isGFX90APlus in {
+      def _agpr : DS_1A2D_NORET<opName, getEquivalentAGPROperand<rc>.ret>;
+    }
   }
 }
 
-class DS_1A2D_Off8_NORET <string opName, RegisterClass rc = VGPR_32,
-                          RegisterOperand data_op = getLdStRegisterOperand<rc>.ret>
+class DS_1A2D_Off8_NORET <string opName, RegisterOperand data_op = VGPROp_32>
 : DS_Pseudo<opName,
   (outs),
   (ins VGPR_32:$addr, data_op:$data0, data_op:$data1,
@@ -173,17 +198,23 @@ class DS_1A2D_Off8_NORET <string opName, RegisterClass rc = VGPR_32,
   let has_offset = 0;
 }
 
-multiclass DS_1A2D_Off8_NORET_mc <string opName, RegisterClass rc = VGPR_32> {
+multiclass DS_1A2D_Off8_NORET_mc <string opName, RegisterOperand rc = VGPROp_32> {
+  assert OperandIsVGPR<rc>.ret,
+         "DS with 2 data operands should be declared with VGPRs";
+
   def "" : DS_1A2D_Off8_NORET<opName, rc>;
 
   let has_m0_read = 0 in {
     def _gfx9 : DS_1A2D_Off8_NORET<opName, rc>;
+
+    let SubtargetPredicate = isGFX90APlus in {
+      def _agpr : DS_1A2D_Off8_NORET<opName, getEquivalentAGPROperand<rc>.ret>;
+    }
   }
 }
 
-class DS_0A1D_RET_GDS<string opName, RegisterClass rc = VGPR_32, RegisterClass src = rc,
-                  RegisterOperand dst_op = getLdStRegisterOperand<rc>.ret,
-                  RegisterOperand src_op = getLdStRegisterOperand<src>.ret>
+class DS_0A1D_RET_GDS<string opName, RegisterOperand dst_op = AVLdSt_32,
+                                     RegisterOperand src_op = dst_op>
 : DS_Pseudo<opName,
   (outs dst_op:$vdst),
   (ins src_op:$data0, Offset:$offset),
@@ -196,8 +227,7 @@ class DS_0A1D_RET_GDS<string opName, RegisterClass rc = VGPR_32, RegisterClass s
   let hasSideEffects = 1;
 }
 
-class DS_1A1D_RET <string opName, RegisterClass rc = VGPR_32,
-                  RegisterOperand data_op = getLdStRegisterOperand<rc>.ret>
+class DS_1A1D_RET <string opName, RegisterOperand data_op = AVLdSt_32>
 : DS_Pseudo<opName,
   (outs data_op:$vdst),
   (ins VGPR_32:$addr, data_op:$data0, Offset:$offset, gds:$gds),
@@ -207,76 +237,84 @@ class DS_1A1D_RET <string opName, RegisterClass rc = VGPR_32,
   let IsAtomicRet = 1;
 }
 
-multiclass DS_1A1D_RET_mc <string opName, RegisterClass rc = VGPR_32> {
+multiclass DS_1A1D_RET_mc <string opName, RegisterOperand rc = VGPROp_32> {
+  assert OperandIsVGPR<rc>.ret,
+         "DS with 2 data operands should be declared with VGPRs";
+
   def "" : DS_1A1D_RET<opName, rc>;
 
   let has_m0_read = 0 in {
     def _gfx9 : DS_1A1D_RET<opName, rc>;
+    def _agpr : DS_1A1D_RET<opName, getEquivalentAGPROperand<rc>.ret>;
   }
 }
 
-multiclass DS_1A1D_RET_mc_gfx9 <string opName, RegisterClass rc = VGPR_32> {
+multiclass DS_1A1D_RET_mc_gfx9 <string opName, RegisterOperand rc = VGPROp_32> {
   let has_m0_read = 0 in {
     def "" : DS_1A1D_RET<opName, rc>;
+    def _agpr : DS_1A1D_RET<opName, getEquivalentAGPROperand<rc>.ret>;
   }
 }
 
 class DS_1A2D_RET<string opName,
-                  RegisterClass rc = VGPR_32,
-                  RegisterClass src = rc,
-                  RegisterOperand dst_op = getLdStRegisterOperand<rc>.ret,
-                  RegisterOperand src_op = getLdStRegisterOperand<src>.ret>
-: DS_Pseudo<opName,
-  (outs dst_op:$vdst),
-  (ins VGPR_32:$addr, src_op:$data0, src_op:$data1, Offset:$offset, gds:$gds),
+                  RegisterOperand dst_rc = VGPROp_32,
+                  RegisterOperand src_rc = dst_rc>: DS_Pseudo<opName,
+  (outs dst_rc:$vdst),
+  (ins VGPR_32:$addr, src_rc:$data0, src_rc:$data1, Offset:$offset, gds:$gds),
   " $vdst, $addr, $data0, $data1$offset$gds"> {
 
   let IsAtomicRet = 1;
 }
 
 multiclass DS_1A2D_RET_mc<string opName,
-                          RegisterClass rc = VGPR_32,
-                          RegisterClass src = rc> {
-  def "" : DS_1A2D_RET<opName, rc, src>;
+                          RegisterOperand dst_rc = VGPROp_32,
+                          RegisterOperand src_rc = dst_rc> {
+  assert !and(OperandIsVGPR<dst_rc>.ret, OperandIsVGPR<src_rc>.ret),
+         "DS with 2 data operands should be declared with VGPRs";
+
+  def "" : DS_1A2D_RET<opName, dst_rc, src_rc>;
 
   let has_m0_read = 0 in {
-    def _gfx9 : DS_1A2D_RET<opName, rc, src>;
+    def _gfx9 : DS_1A2D_RET<opName, dst_rc, src_rc>;
+    def _agpr : DS_1A2D_RET<opName, getEquivalentAGPROperand<dst_rc>.ret,
+                                    getEquivalentAGPROperand<src_rc>.ret>;
   }
 }
 
 class DS_1A2D_Off8_RET<string opName,
-                       RegisterClass rc = VGPR_32,
-                       RegisterClass src = rc,
-                       RegisterOperand dst_op = getLdStRegisterOperand<rc>.ret,
-                       RegisterOperand src_op = getLdStRegisterOperand<src>.ret>
+                       RegisterOperand dst_rc = VGPROp_32,
+                       RegisterOperand src_rc = dst_rc>
 : DS_Pseudo<opName,
-  (outs dst_op:$vdst),
-  (ins VGPR_32:$addr, src_op:$data0, src_op:$data1, Offset0:$offset0, Offset1:$offset1, gds:$gds),
+  (outs dst_rc:$vdst),
+  (ins VGPR_32:$addr, src_rc:$data0, src_rc:$data1, Offset0:$offset0, Offset1:$offset1, gds:$gds),
   " $vdst, $addr, $data0, $data1$offset0$offset1$gds"> {
 
   let has_offset = 0;
 }
 
 multiclass DS_1A2D_Off8_RET_mc<string opName,
-                               RegisterClass rc = VGPR_32,
-                               RegisterClass src = rc> {
-  def "" : DS_1A2D_Off8_RET<opName, rc, src>;
+                               RegisterOperand dst_rc = VGPROp_32,
+                               RegisterOperand src_rc = dst_rc> {
+  assert !and(OperandIsVGPR<dst_rc>.ret, OperandIsVGPR<src_rc>.ret)  ,
+         "DS with 2 data operands should be declared with VGPRs";
+
+  def "" : DS_1A2D_Off8_RET<opName, dst_rc, src_rc>;
 
   let has_m0_read = 0 in {
-    def _gfx9 : DS_1A2D_Off8_RET<opName, rc, src>;
+    def _gfx9 : DS_1A2D_Off8_RET<opName, dst_rc, src_rc>;
+    def _agpr : DS_1A2D_Off8_RET<opName, getEquivalentAGPROperand<dst_rc>.ret,
+                                         getEquivalentAGPROperand<src_rc>.ret>;
   }
 }
 
 class DS_BVH_STACK<string opName,
-                   RegisterClass vdst_rc,
-                   RegisterClass data1_rc>
+                   RegisterOperand vdst_rc,
+                   RegisterOperand data1_rc>
 : DS_Pseudo<opName,
-  (outs getLdStRegisterOperand<vdst_rc>.ret:$vdst, VGPR_32:$addr),
-  (ins VGPR_32:$addr_in, getLdStRegisterOperand<VGPR_32>.ret:$data0,
-   data1_rc:$data1, Offset:$offset),
+  (outs vdst_rc:$vdst, VGPR_32:$addr),
+  (ins VGPR_32:$addr_in, VGPR_32:$data0, data1_rc:$data1, Offset:$offset),
   " $vdst, $addr, $data0, $data1$offset"> {
   let Constraints = "$addr = $addr_in";
-  let DisableEncoding = "$addr_in";
   let has_gds = 0;
   let gdsValue = 0;
   // TODO: Use MMOs in the LDS address space instead of hasSideEffects = 1.
@@ -284,8 +322,8 @@ class DS_BVH_STACK<string opName,
   let SchedRW = [WriteLDS, WriteLDS];
 }
 
-class DS_1A_RET<string opName, RegisterClass rc = VGPR_32, bit HasTiedOutput = 0, Operand ofs = Offset,
-                RegisterOperand data_op = getLdStRegisterOperand<rc>.ret>
+class DS_1A_RET<string opName, RegisterOperand data_op = AVLdSt_32,
+                bit HasTiedOutput = 0, Operand ofs = Offset>
 : DS_Pseudo<opName,
   (outs data_op:$vdst),
   !if(HasTiedOutput,
@@ -293,12 +331,12 @@ class DS_1A_RET<string opName, RegisterClass rc = VGPR_32, bit HasTiedOutput = 0
     (ins VGPR_32:$addr, ofs:$offset, gds:$gds)),
   " $vdst, $addr$offset$gds"> {
   let Constraints = !if(HasTiedOutput, "$vdst = $vdst_in", "");
-  let DisableEncoding = !if(HasTiedOutput, "$vdst_in", "");
   let has_data0 = 0;
   let has_data1 = 0;
 }
 
-multiclass DS_1A_RET_mc<string opName, RegisterClass rc = VGPR_32, bit HasTiedOutput = 0, Operand ofs = Offset> {
+multiclass DS_1A_RET_mc<string opName, RegisterOperand rc = AVLdSt_32,
+                        bit HasTiedOutput = 0, Operand ofs = Offset> {
   def "" : DS_1A_RET<opName, rc, HasTiedOutput, ofs>;
 
   let has_m0_read = 0 in {
@@ -306,27 +344,28 @@ multiclass DS_1A_RET_mc<string opName, RegisterClass rc = VGPR_32, bit HasTiedOu
   }
 }
 
-multiclass DS_1A_RET_t16<string opName, RegisterClass rc = VGPR_32, bit HasTiedOutput = 0, Operand ofs = Offset> 
+multiclass DS_1A_RET_t16<string opName, RegisterOperand rc = AVLdSt_32,
+                         bit HasTiedOutput = 0, Operand ofs = Offset>
 : DS_1A_RET_mc<opName, rc, HasTiedOutput, ofs> {
   let has_m0_read = 0 in {
     let True16Predicate = UseRealTrue16Insts in {
-      def "_t16" : DS_1A_RET<opName#"_t16", VGPR_16, HasTiedOutput, ofs>, True16D16Table<NAME#"_D16_HI", NAME#"_D16">;
+      def "_t16" : DS_1A_RET<opName#"_t16", VGPROp_16, HasTiedOutput, ofs>, True16D16Table<NAME#"_D16_HI", NAME#"_D16">;
     }
   }
 }
 
-multiclass DS_1A_RET_NoM0<string opName, RegisterClass rc = VGPR_32> {
+multiclass DS_1A_RET_NoM0<string opName, RegisterOperand rc = VGPROp_32> {
   let has_m0_read = 0 in {
     def "" : DS_1A_RET<opName, rc>;
   }
 }
 
-class DS_1A_RET_Tied<string opName, RegisterClass rc = VGPR_32> :
+class DS_1A_RET_Tied<string opName, RegisterOperand rc = AVLdSt_32> :
   DS_1A_RET<opName, rc, 1>;
 
-class DS_1A_Off8_RET <string opName, RegisterClass rc = VGPR_32>
+class DS_1A_Off8_RET <string opName, RegisterOperand rc = AVLdSt_32>
 : DS_Pseudo<opName,
-  (outs getLdStRegisterOperand<rc>.ret:$vdst),
+  (outs rc:$vdst),
   (ins VGPR_32:$addr, Offset0:$offset0, Offset1:$offset1, gds:$gds),
   " $vdst, $addr$offset0$offset1$gds"> {
 
@@ -335,7 +374,7 @@ class DS_1A_Off8_RET <string opName, RegisterClass rc = VGPR_32>
   let has_data1 = 0;
 }
 
-multiclass DS_1A_Off8_RET_mc <string opName, RegisterClass rc = VGPR_32> {
+multiclass DS_1A_Off8_RET_mc <string opName, RegisterOperand rc = VGPROp_32> {
   def "" : DS_1A_Off8_RET<opName, rc>;
 
   let has_m0_read = 0 in {
@@ -344,7 +383,7 @@ multiclass DS_1A_Off8_RET_mc <string opName, RegisterClass rc = VGPR_32> {
 }
 
 class DS_1A_RET_GDS <string opName> : DS_Pseudo<opName,
-  (outs getLdStRegisterOperand<VGPR_32>.ret:$vdst),
+  (outs AVLdSt_32:$vdst),
   (ins VGPR_32:$addr, Offset:$offset),
   " $vdst, $addr$offset gds"> {
 
@@ -369,7 +408,7 @@ class DS_1A_Off16_NORET <string opName>
 }
 
 class DS_0A_RET <string opName> : DS_Pseudo<opName,
-  (outs getLdStRegisterOperand<VGPR_32>.ret:$vdst),
+  (outs AVLdSt_32:$vdst),
   (ins Offset:$offset, gds:$gds),
   " $vdst$offset$gds"> {
 
@@ -424,7 +463,7 @@ class DS_GWS_0D <string opName>
 
 class DS_GWS_1D <string opName>
 : DS_GWS<opName,
-  (ins getLdStRegisterOperand<VGPR_32>.ret:$data0, Offset:$offset),
+  (ins AVLdSt_32:$data0, Offset:$offset),
   " $data0$offset gds"> {
 
   let has_gws_data0 = 1;
@@ -449,7 +488,7 @@ class DS_VOID <string opName> : DS_Pseudo<opName,
 }
 
 class DS_1A1D_PERMUTE <string opName, SDPatternOperator node = null_frag,
-                       RegisterOperand data_op = getLdStRegisterOperand<VGPR_32>.ret>
+                       RegisterOperand data_op = AVLdSt_32>
 : DS_Pseudo<opName,
   (outs data_op:$vdst),
   (ins VGPR_32:$addr, data_op:$data0, Offset:$offset),
@@ -465,10 +504,73 @@ class DS_1A1D_PERMUTE <string opName, SDPatternOperator node = null_frag,
   let has_gds = 0;
 }
 
+multiclass DS_1A1D_PERMUTE_mc <string opName, SDPatternOperator node = null_frag,
+                                RegisterOperand data_op = VGPROp_32> {
+  assert OperandIsVGPR<data_op>.ret,
+         "DS with 2 data operands should be declared with VGPRs";
+  def "" : DS_1A1D_PERMUTE<opName, node, data_op>;
+
+  let SubtargetPredicate = isGFX90APlus in {
+    def _agpr : DS_1A1D_PERMUTE<opName, null_frag,
+                                getEquivalentAGPROperand<data_op>.ret>;
+  }
+}
+
+
 class DSAtomicRetPat<DS_Pseudo inst, ValueType vt, PatFrag frag, int complexity = 0,
   bit gds=0> : GCNPat <(frag (DS1Addr1Offset i32:$ptr, i32:$offset), vt:$value),
   (inst $ptr, getVregSrcForVT<vt>.ret:$value, Offset:$offset, (i1 gds))> {
   let AddedComplexity = complexity;
+}
+
+multiclass DSAtomicRetPat_mc<DS_Pseudo inst, ValueType vt, string frag> {
+  let OtherPredicates = [LDSRequiresM0Init] in {
+    def : DSAtomicRetPat<inst, vt, !cast<PatFrag>(frag#"_local_m0_"#vt)>;
+  }
+
+  let OtherPredicates = [NotLDSRequiresM0Init] in {
+    def : DSAtomicRetPat<!cast<DS_Pseudo>(!cast<string>(inst)#"_gfx9"), vt,
+                         !cast<PatFrag>(frag#"_local_"#vt)>;
+  }
+
+  let OtherPredicates = [HasGDS] in {
+    def : DSAtomicRetPat<inst, vt, !cast<PatFrag>(frag#"_region_m0_"#vt),
+                         /* complexity */ 0, /* gds */ 1>;
+  }
+}
+
+multiclass DSAtomicRetNoRetPat_NoM0_mc<DS_Pseudo inst, DS_Pseudo noRetInst,
+                                       ValueType vt, string frag> {
+  def : DSAtomicRetPat<inst, vt,
+                       !cast<PatFrag>(frag#"_local_"#vt)>;
+  def : DSAtomicRetPat<noRetInst, vt,
+                       !cast<PatFrag>(frag#"_local_noret_"#vt), /* complexity */ 1>;
+}
+
+multiclass DSAtomicRetNoRetPat_mc<DS_Pseudo inst, DS_Pseudo noRetInst,
+                                  ValueType vt, string frag> {
+  let OtherPredicates = [LDSRequiresM0Init] in {
+    def : DSAtomicRetPat<inst, vt,
+                         !cast<PatFrag>(frag#"_local_m0_"#vt)>;
+    def : DSAtomicRetPat<noRetInst, vt,
+                         !cast<PatFrag>(frag#"_local_m0_noret_"#vt), /* complexity */ 1>;
+  }
+
+  let OtherPredicates = [NotLDSRequiresM0Init] in {
+    defm : DSAtomicRetNoRetPat_NoM0_mc<
+      !cast<DS_Pseudo>(!cast<string>(inst)#"_gfx9"),
+      !cast<DS_Pseudo>(!cast<string>(noRetInst)#"_gfx9"),
+      vt, frag>;
+  }
+
+  let OtherPredicates = [HasGDS] in {
+    def : DSAtomicRetPat<inst, vt,
+                         !cast<PatFrag>(frag#"_region_m0_"#vt),
+                         /* complexity */ 0, /* gds */ 1>;
+    def : DSAtomicRetPat<noRetInst, vt,
+                         !cast<PatFrag>(frag#"_region_m0_noret_"#vt),
+                         /* complexity */ 1, /* gds */ 1>;
+  }
 }
 
 defm DS_ADD_U32       : DS_1A1D_NORET_mc<"ds_add_u32">;
@@ -516,100 +618,100 @@ def DS_WRITE_ADDTID_B32 : DS_0A1D_NORET<"ds_write_addtid_b32">;
 } // End mayLoad = 0
 
 let SubtargetPredicate = HasLdsAtomicAddF64 in {
-  defm DS_ADD_F64     : DS_1A1D_NORET_mc_gfx9<"ds_add_f64", VReg_64>;
-  defm DS_ADD_RTN_F64 : DS_1A1D_RET_mc_gfx9<"ds_add_rtn_f64", VReg_64>;
+  defm DS_ADD_F64     : DS_1A1D_NORET_mc_gfx9<"ds_add_f64", AVLdSt_64>;
+  defm DS_ADD_RTN_F64 : DS_1A1D_RET_mc_gfx9<"ds_add_rtn_f64", VGPROp_64>;
 } // End SubtargetPredicate = HasLdsAtomicAddF64
 
 let SubtargetPredicate = HasAtomicDsPkAdd16Insts in {
-  defm DS_PK_ADD_F16      : DS_1A1D_NORET_mc<"ds_pk_add_f16">;
-  defm DS_PK_ADD_RTN_F16  : DS_1A1D_RET_mc<"ds_pk_add_rtn_f16", VGPR_32>;
-  defm DS_PK_ADD_BF16     : DS_1A1D_NORET_mc<"ds_pk_add_bf16">;
-  defm DS_PK_ADD_RTN_BF16 : DS_1A1D_RET_mc<"ds_pk_add_rtn_bf16", VGPR_32>;
+  defm DS_PK_ADD_F16      : DS_1A1D_NORET_mc_gfx9<"ds_pk_add_f16">;
+  defm DS_PK_ADD_RTN_F16  : DS_1A1D_RET_mc_gfx9<"ds_pk_add_rtn_f16">;
+  defm DS_PK_ADD_BF16     : DS_1A1D_NORET_mc_gfx9<"ds_pk_add_bf16">;
+  defm DS_PK_ADD_RTN_BF16 : DS_1A1D_RET_mc_gfx9<"ds_pk_add_rtn_bf16">;
 } // End SubtargetPredicate = HasAtomicDsPkAdd16Insts
 
 defm DS_CMPSTORE_B32     : DS_1A2D_NORET_mc<"ds_cmpstore_b32">;
 defm DS_CMPSTORE_F32     : DS_1A2D_NORET_mc<"ds_cmpstore_f32">;
-defm DS_CMPSTORE_B64     : DS_1A2D_NORET_mc<"ds_cmpstore_b64", VReg_64>;
-defm DS_CMPSTORE_F64     : DS_1A2D_NORET_mc<"ds_cmpstore_f64", VReg_64>;
-defm DS_CMPSTORE_RTN_B32 : DS_1A2D_RET_mc<"ds_cmpstore_rtn_b32", VGPR_32>;
-defm DS_CMPSTORE_RTN_F32 : DS_1A2D_RET_mc<"ds_cmpstore_rtn_f32", VGPR_32>;
-defm DS_CMPSTORE_RTN_B64  : DS_1A2D_RET_mc<"ds_cmpstore_rtn_b64", VReg_64>;
-defm DS_CMPSTORE_RTN_F64  : DS_1A2D_RET_mc<"ds_cmpstore_rtn_f64", VReg_64>;
+defm DS_CMPSTORE_B64     : DS_1A2D_NORET_mc<"ds_cmpstore_b64", VGPROp_64>;
+defm DS_CMPSTORE_F64     : DS_1A2D_NORET_mc<"ds_cmpstore_f64", VGPROp_64>;
+defm DS_CMPSTORE_RTN_B32 : DS_1A2D_RET_mc<"ds_cmpstore_rtn_b32">;
+defm DS_CMPSTORE_RTN_F32 : DS_1A2D_RET_mc<"ds_cmpstore_rtn_f32">;
+defm DS_CMPSTORE_RTN_B64  : DS_1A2D_RET_mc<"ds_cmpstore_rtn_b64", VGPROp_64>;
+defm DS_CMPSTORE_RTN_F64  : DS_1A2D_RET_mc<"ds_cmpstore_rtn_f64", VGPROp_64>;
 
 defm DS_MSKOR_B32     : DS_1A2D_NORET_mc<"ds_mskor_b32">;
 defm DS_CMPST_B32     : DS_1A2D_NORET_mc<"ds_cmpst_b32">;
 defm DS_CMPST_F32     : DS_1A2D_NORET_mc<"ds_cmpst_f32">;
 
-defm DS_ADD_U64       : DS_1A1D_NORET_mc<"ds_add_u64", VReg_64>;
-defm DS_SUB_U64       : DS_1A1D_NORET_mc<"ds_sub_u64", VReg_64>;
-defm DS_RSUB_U64      : DS_1A1D_NORET_mc<"ds_rsub_u64", VReg_64>;
-defm DS_INC_U64       : DS_1A1D_NORET_mc<"ds_inc_u64", VReg_64>;
-defm DS_DEC_U64       : DS_1A1D_NORET_mc<"ds_dec_u64", VReg_64>;
-defm DS_MIN_I64       : DS_1A1D_NORET_mc<"ds_min_i64", VReg_64>;
-defm DS_MAX_I64       : DS_1A1D_NORET_mc<"ds_max_i64", VReg_64>;
-defm DS_MIN_U64       : DS_1A1D_NORET_mc<"ds_min_u64", VReg_64>;
-defm DS_MAX_U64       : DS_1A1D_NORET_mc<"ds_max_u64", VReg_64>;
-defm DS_AND_B64       : DS_1A1D_NORET_mc<"ds_and_b64", VReg_64>;
-defm DS_OR_B64        : DS_1A1D_NORET_mc<"ds_or_b64", VReg_64>;
-defm DS_XOR_B64       : DS_1A1D_NORET_mc<"ds_xor_b64", VReg_64>;
-defm DS_MSKOR_B64     : DS_1A2D_NORET_mc<"ds_mskor_b64", VReg_64>;
+defm DS_ADD_U64       : DS_1A1D_NORET_mc<"ds_add_u64", AVLdSt_64>;
+defm DS_SUB_U64       : DS_1A1D_NORET_mc<"ds_sub_u64", AVLdSt_64>;
+defm DS_RSUB_U64      : DS_1A1D_NORET_mc<"ds_rsub_u64", AVLdSt_64>;
+defm DS_INC_U64       : DS_1A1D_NORET_mc<"ds_inc_u64", AVLdSt_64>;
+defm DS_DEC_U64       : DS_1A1D_NORET_mc<"ds_dec_u64", AVLdSt_64>;
+defm DS_MIN_I64       : DS_1A1D_NORET_mc<"ds_min_i64", AVLdSt_64>;
+defm DS_MAX_I64       : DS_1A1D_NORET_mc<"ds_max_i64", AVLdSt_64>;
+defm DS_MIN_U64       : DS_1A1D_NORET_mc<"ds_min_u64", AVLdSt_64>;
+defm DS_MAX_U64       : DS_1A1D_NORET_mc<"ds_max_u64", AVLdSt_64>;
+defm DS_AND_B64       : DS_1A1D_NORET_mc<"ds_and_b64", AVLdSt_64>;
+defm DS_OR_B64        : DS_1A1D_NORET_mc<"ds_or_b64", AVLdSt_64>;
+defm DS_XOR_B64       : DS_1A1D_NORET_mc<"ds_xor_b64", AVLdSt_64>;
+defm DS_MSKOR_B64     : DS_1A2D_NORET_mc<"ds_mskor_b64", VGPROp_64>;
 let mayLoad = 0 in {
-defm DS_WRITE_B64     : DS_1A1D_NORET_mc<"ds_write_b64", VReg_64>;
-defm DS_WRITE2_B64    : DS_1A2D_Off8_NORET_mc<"ds_write2_b64", VReg_64>;
-defm DS_WRITE2ST64_B64: DS_1A2D_Off8_NORET_mc<"ds_write2st64_b64", VReg_64>;
+defm DS_WRITE_B64     : DS_1A1D_NORET_mc<"ds_write_b64", AVLdSt_64>;
+defm DS_WRITE2_B64    : DS_1A2D_Off8_NORET_mc<"ds_write2_b64", VGPROp_64>;
+defm DS_WRITE2ST64_B64: DS_1A2D_Off8_NORET_mc<"ds_write2st64_b64", VGPROp_64>;
 }
-defm DS_CMPST_B64     : DS_1A2D_NORET_mc<"ds_cmpst_b64", VReg_64>;
-defm DS_CMPST_F64     : DS_1A2D_NORET_mc<"ds_cmpst_f64", VReg_64>;
-defm DS_MIN_F64       : DS_1A1D_NORET_mc<"ds_min_f64", VReg_64>;
-defm DS_MAX_F64       : DS_1A1D_NORET_mc<"ds_max_f64", VReg_64>;
+defm DS_CMPST_B64     : DS_1A2D_NORET_mc<"ds_cmpst_b64", VGPROp_64>;
+defm DS_CMPST_F64     : DS_1A2D_NORET_mc<"ds_cmpst_f64", VGPROp_64>;
+defm DS_MIN_F64       : DS_1A1D_NORET_mc<"ds_min_f64", AVLdSt_64>;
+defm DS_MAX_F64       : DS_1A1D_NORET_mc<"ds_max_f64", AVLdSt_64>;
 
-defm DS_ADD_RTN_U32   : DS_1A1D_RET_mc<"ds_add_rtn_u32", VGPR_32>;
+defm DS_ADD_RTN_U32   : DS_1A1D_RET_mc<"ds_add_rtn_u32">;
 
 let SubtargetPredicate = HasLDSFPAtomicAddF32 in {
-defm DS_ADD_RTN_F32   : DS_1A1D_RET_mc<"ds_add_rtn_f32", VGPR_32>;
+defm DS_ADD_RTN_F32   : DS_1A1D_RET_mc<"ds_add_rtn_f32">;
 }
-defm DS_SUB_RTN_U32   : DS_1A1D_RET_mc<"ds_sub_rtn_u32", VGPR_32>;
-defm DS_RSUB_RTN_U32  : DS_1A1D_RET_mc<"ds_rsub_rtn_u32", VGPR_32>;
-defm DS_INC_RTN_U32   : DS_1A1D_RET_mc<"ds_inc_rtn_u32", VGPR_32>;
-defm DS_DEC_RTN_U32   : DS_1A1D_RET_mc<"ds_dec_rtn_u32", VGPR_32>;
-defm DS_MIN_RTN_I32   : DS_1A1D_RET_mc<"ds_min_rtn_i32", VGPR_32>;
-defm DS_MAX_RTN_I32   : DS_1A1D_RET_mc<"ds_max_rtn_i32", VGPR_32>;
-defm DS_MIN_RTN_U32   : DS_1A1D_RET_mc<"ds_min_rtn_u32", VGPR_32>;
-defm DS_MAX_RTN_U32   : DS_1A1D_RET_mc<"ds_max_rtn_u32", VGPR_32>;
-defm DS_AND_RTN_B32   : DS_1A1D_RET_mc<"ds_and_rtn_b32", VGPR_32>;
-defm DS_OR_RTN_B32    : DS_1A1D_RET_mc<"ds_or_rtn_b32", VGPR_32>;
-defm DS_XOR_RTN_B32   : DS_1A1D_RET_mc<"ds_xor_rtn_b32", VGPR_32>;
-defm DS_MSKOR_RTN_B32 : DS_1A2D_RET_mc<"ds_mskor_rtn_b32", VGPR_32>;
-defm DS_CMPST_RTN_B32 : DS_1A2D_RET_mc<"ds_cmpst_rtn_b32", VGPR_32>;
-defm DS_CMPST_RTN_F32 : DS_1A2D_RET_mc<"ds_cmpst_rtn_f32", VGPR_32>;
-defm DS_MIN_RTN_F32   : DS_1A1D_RET_mc<"ds_min_rtn_f32", VGPR_32>;
-defm DS_MAX_RTN_F32   : DS_1A1D_RET_mc<"ds_max_rtn_f32", VGPR_32>;
+defm DS_SUB_RTN_U32   : DS_1A1D_RET_mc<"ds_sub_rtn_u32">;
+defm DS_RSUB_RTN_U32  : DS_1A1D_RET_mc<"ds_rsub_rtn_u32">;
+defm DS_INC_RTN_U32   : DS_1A1D_RET_mc<"ds_inc_rtn_u32">;
+defm DS_DEC_RTN_U32   : DS_1A1D_RET_mc<"ds_dec_rtn_u32">;
+defm DS_MIN_RTN_I32   : DS_1A1D_RET_mc<"ds_min_rtn_i32">;
+defm DS_MAX_RTN_I32   : DS_1A1D_RET_mc<"ds_max_rtn_i32">;
+defm DS_MIN_RTN_U32   : DS_1A1D_RET_mc<"ds_min_rtn_u32">;
+defm DS_MAX_RTN_U32   : DS_1A1D_RET_mc<"ds_max_rtn_u32">;
+defm DS_AND_RTN_B32   : DS_1A1D_RET_mc<"ds_and_rtn_b32">;
+defm DS_OR_RTN_B32    : DS_1A1D_RET_mc<"ds_or_rtn_b32">;
+defm DS_XOR_RTN_B32   : DS_1A1D_RET_mc<"ds_xor_rtn_b32">;
+defm DS_MSKOR_RTN_B32 : DS_1A2D_RET_mc<"ds_mskor_rtn_b32", VGPROp_32>;
+defm DS_CMPST_RTN_B32 : DS_1A2D_RET_mc<"ds_cmpst_rtn_b32", VGPROp_32>;
+defm DS_CMPST_RTN_F32 : DS_1A2D_RET_mc<"ds_cmpst_rtn_f32", VGPROp_32>;
+defm DS_MIN_RTN_F32   : DS_1A1D_RET_mc<"ds_min_rtn_f32">;
+defm DS_MAX_RTN_F32   : DS_1A1D_RET_mc<"ds_max_rtn_f32">;
 
 defm DS_WRXCHG_RTN_B32 : DS_1A1D_RET_mc<"ds_wrxchg_rtn_b32">;
-defm DS_WRXCHG2_RTN_B32 : DS_1A2D_Off8_RET_mc<"ds_wrxchg2_rtn_b32", VReg_64, VGPR_32>;
-defm DS_WRXCHG2ST64_RTN_B32 : DS_1A2D_Off8_RET_mc<"ds_wrxchg2st64_rtn_b32", VReg_64, VGPR_32>;
+defm DS_WRXCHG2_RTN_B32 : DS_1A2D_Off8_RET_mc<"ds_wrxchg2_rtn_b32", VGPROp_64, VGPROp_32>;
+defm DS_WRXCHG2ST64_RTN_B32 : DS_1A2D_Off8_RET_mc<"ds_wrxchg2st64_rtn_b32", VGPROp_64, VGPROp_32>;
 
-defm DS_ADD_RTN_U64  : DS_1A1D_RET_mc<"ds_add_rtn_u64", VReg_64>;
-defm DS_SUB_RTN_U64  : DS_1A1D_RET_mc<"ds_sub_rtn_u64", VReg_64>;
-defm DS_RSUB_RTN_U64  : DS_1A1D_RET_mc<"ds_rsub_rtn_u64", VReg_64>;
-defm DS_INC_RTN_U64   : DS_1A1D_RET_mc<"ds_inc_rtn_u64", VReg_64>;
-defm DS_DEC_RTN_U64   : DS_1A1D_RET_mc<"ds_dec_rtn_u64", VReg_64>;
-defm DS_MIN_RTN_I64    : DS_1A1D_RET_mc<"ds_min_rtn_i64", VReg_64>;
-defm DS_MAX_RTN_I64    : DS_1A1D_RET_mc<"ds_max_rtn_i64", VReg_64>;
-defm DS_MIN_RTN_U64   : DS_1A1D_RET_mc<"ds_min_rtn_u64", VReg_64>;
-defm DS_MAX_RTN_U64   : DS_1A1D_RET_mc<"ds_max_rtn_u64", VReg_64>;
-defm DS_AND_RTN_B64    : DS_1A1D_RET_mc<"ds_and_rtn_b64", VReg_64>;
-defm DS_OR_RTN_B64     : DS_1A1D_RET_mc<"ds_or_rtn_b64", VReg_64>;
-defm DS_XOR_RTN_B64    : DS_1A1D_RET_mc<"ds_xor_rtn_b64", VReg_64>;
-defm DS_MSKOR_RTN_B64  : DS_1A2D_RET_mc<"ds_mskor_rtn_b64", VReg_64>;
-defm DS_CMPST_RTN_B64  : DS_1A2D_RET_mc<"ds_cmpst_rtn_b64", VReg_64>;
-defm DS_CMPST_RTN_F64  : DS_1A2D_RET_mc<"ds_cmpst_rtn_f64", VReg_64>;
-defm DS_MIN_RTN_F64    : DS_1A1D_RET_mc<"ds_min_rtn_f64", VReg_64>;
-defm DS_MAX_RTN_F64    : DS_1A1D_RET_mc<"ds_max_rtn_f64", VReg_64>;
+defm DS_ADD_RTN_U64  : DS_1A1D_RET_mc<"ds_add_rtn_u64", VGPROp_64>;
+defm DS_SUB_RTN_U64  : DS_1A1D_RET_mc<"ds_sub_rtn_u64", VGPROp_64>;
+defm DS_RSUB_RTN_U64  : DS_1A1D_RET_mc<"ds_rsub_rtn_u64", VGPROp_64>;
+defm DS_INC_RTN_U64   : DS_1A1D_RET_mc<"ds_inc_rtn_u64", VGPROp_64>;
+defm DS_DEC_RTN_U64   : DS_1A1D_RET_mc<"ds_dec_rtn_u64", VGPROp_64>;
+defm DS_MIN_RTN_I64    : DS_1A1D_RET_mc<"ds_min_rtn_i64", VGPROp_64>;
+defm DS_MAX_RTN_I64    : DS_1A1D_RET_mc<"ds_max_rtn_i64", VGPROp_64>;
+defm DS_MIN_RTN_U64   : DS_1A1D_RET_mc<"ds_min_rtn_u64", VGPROp_64>;
+defm DS_MAX_RTN_U64   : DS_1A1D_RET_mc<"ds_max_rtn_u64", VGPROp_64>;
+defm DS_AND_RTN_B64    : DS_1A1D_RET_mc<"ds_and_rtn_b64", VGPROp_64>;
+defm DS_OR_RTN_B64     : DS_1A1D_RET_mc<"ds_or_rtn_b64", VGPROp_64>;
+defm DS_XOR_RTN_B64    : DS_1A1D_RET_mc<"ds_xor_rtn_b64", VGPROp_64>;
+defm DS_MSKOR_RTN_B64  : DS_1A2D_RET_mc<"ds_mskor_rtn_b64", VGPROp_64>;
+defm DS_CMPST_RTN_B64  : DS_1A2D_RET_mc<"ds_cmpst_rtn_b64", VGPROp_64>;
+defm DS_CMPST_RTN_F64  : DS_1A2D_RET_mc<"ds_cmpst_rtn_f64", VGPROp_64>;
+defm DS_MIN_RTN_F64    : DS_1A1D_RET_mc<"ds_min_rtn_f64", VGPROp_64>;
+defm DS_MAX_RTN_F64    : DS_1A1D_RET_mc<"ds_max_rtn_f64", VGPROp_64>;
 
-defm DS_WRXCHG_RTN_B64 : DS_1A1D_RET_mc<"ds_wrxchg_rtn_b64", VReg_64>;
-defm DS_WRXCHG2_RTN_B64 : DS_1A2D_Off8_RET_mc<"ds_wrxchg2_rtn_b64", VReg_128, VReg_64>;
-defm DS_WRXCHG2ST64_RTN_B64 : DS_1A2D_Off8_RET_mc<"ds_wrxchg2st64_rtn_b64", VReg_128, VReg_64>;
+defm DS_WRXCHG_RTN_B64 : DS_1A1D_RET_mc<"ds_wrxchg_rtn_b64", VGPROp_64>;
+defm DS_WRXCHG2_RTN_B64 : DS_1A2D_Off8_RET_mc<"ds_wrxchg2_rtn_b64", VGPROp_128, VGPROp_64>;
+defm DS_WRXCHG2ST64_RTN_B64 : DS_1A2D_Off8_RET_mc<"ds_wrxchg2st64_rtn_b64", VGPROp_128, VGPROp_64>;
 
 let isConvergent = 1, usesCustomInserter = 1 in {
 def DS_GWS_INIT       : DS_GWS_1D<"ds_gws_init"> {
@@ -657,19 +759,19 @@ def DS_WRITE_SRC2_B64 : DS_1A<"ds_write_src2_b64">;
 } // End SubtargetPredicate = HasDsSrc2Insts
 
 let Uses = [EXEC], mayLoad = 0, mayStore = 0, isConvergent = 1 in {
-def DS_SWIZZLE_B32 : DS_1A_RET <"ds_swizzle_b32", VGPR_32, 0, Swizzle>;
+def DS_SWIZZLE_B32 : DS_1A_RET <"ds_swizzle_b32", AVLdSt_32, 0, Swizzle>;
 }
 
 let mayStore = 0 in {
 defm DS_READ_I16     : DS_1A_RET_mc<"ds_read_i16">;
 defm DS_READ_B32     : DS_1A_RET_mc<"ds_read_b32">;
-defm DS_READ_B64     : DS_1A_RET_mc<"ds_read_b64", VReg_64>;
+defm DS_READ_B64     : DS_1A_RET_mc<"ds_read_b64", AVLdSt_64>;
 
-defm DS_READ2_B32    : DS_1A_Off8_RET_mc<"ds_read2_b32", VReg_64>;
-defm DS_READ2ST64_B32: DS_1A_Off8_RET_mc<"ds_read2st64_b32", VReg_64>;
+defm DS_READ2_B32    : DS_1A_Off8_RET_mc<"ds_read2_b32", AVLdSt_64>;
+defm DS_READ2ST64_B32: DS_1A_Off8_RET_mc<"ds_read2st64_b32", AVLdSt_64>;
 
-defm DS_READ2_B64    : DS_1A_Off8_RET_mc<"ds_read2_b64", VReg_128>;
-defm DS_READ2ST64_B64: DS_1A_Off8_RET_mc<"ds_read2st64_b64", VReg_128>;
+defm DS_READ2_B64    : DS_1A_Off8_RET_mc<"ds_read2_b64", AVLdSt_128>;
+defm DS_READ2ST64_B64: DS_1A_Off8_RET_mc<"ds_read2st64_b64", AVLdSt_128>;
 
 let has_m0_read = 0 in {
 let SubtargetPredicate = HasD16LoadStore, TiedSourceNotRead = 1 in {
@@ -704,21 +806,21 @@ def DS_ORDERED_COUNT : DS_1A_RET_GDS<"ds_ordered_count">;
 
 let SubtargetPredicate = isGFX7Plus in {
 
-defm DS_WRAP_RTN_B32 : DS_1A2D_RET_mc<"ds_wrap_rtn_b32", VGPR_32>;
-defm DS_CONDXCHG32_RTN_B64 : DS_1A1D_RET_mc<"ds_condxchg32_rtn_b64", VReg_64>;
+defm DS_WRAP_RTN_B32 : DS_1A2D_RET_mc<"ds_wrap_rtn_b32", VGPROp_32>;
+defm DS_CONDXCHG32_RTN_B64 : DS_1A1D_RET_mc<"ds_condxchg32_rtn_b64", VGPROp_64>;
 
 let isConvergent = 1, usesCustomInserter = 1 in {
 def DS_GWS_SEMA_RELEASE_ALL : DS_GWS_0D<"ds_gws_sema_release_all">;
 }
 
 let mayStore = 0 in {
-defm DS_READ_B96 : DS_1A_RET_mc<"ds_read_b96", VReg_96>;
-defm DS_READ_B128: DS_1A_RET_mc<"ds_read_b128", VReg_128>;
+defm DS_READ_B96 : DS_1A_RET_mc<"ds_read_b96", AVLdSt_96>;
+defm DS_READ_B128: DS_1A_RET_mc<"ds_read_b128", AVLdSt_128>;
 } // End mayStore = 0
 
 let mayLoad = 0 in {
-defm DS_WRITE_B96 : DS_1A1D_NORET_mc<"ds_write_b96", VReg_96>;
-defm DS_WRITE_B128 : DS_1A1D_NORET_mc<"ds_write_b128", VReg_128>;
+defm DS_WRITE_B96 : DS_1A1D_NORET_mc<"ds_write_b96", AVLdSt_96>;
+defm DS_WRITE_B128 : DS_1A1D_NORET_mc<"ds_write_b128", AVLdSt_128>;
 } // End mayLoad = 0
 
 def DS_NOP : DS_VOID<"ds_nop">;
@@ -732,10 +834,10 @@ def DS_NOP : DS_VOID<"ds_nop">;
 let SubtargetPredicate = isGFX8Plus in {
 
 let Uses = [EXEC] in {
-def DS_PERMUTE_B32  : DS_1A1D_PERMUTE <"ds_permute_b32",
-                                       int_amdgcn_ds_permute>;
-def DS_BPERMUTE_B32 : DS_1A1D_PERMUTE <"ds_bpermute_b32",
-                                       int_amdgcn_ds_bpermute>;
+defm DS_PERMUTE_B32  : DS_1A1D_PERMUTE_mc<"ds_permute_b32",
+                                         int_amdgcn_ds_permute>;
+defm DS_BPERMUTE_B32 : DS_1A1D_PERMUTE_mc<"ds_bpermute_b32",
+                                         int_amdgcn_ds_bpermute>;
 }
 
 } // let SubtargetPredicate = isGFX8Plus
@@ -751,8 +853,8 @@ def DS_ADD_SRC2_F32 : DS_1A<"ds_add_src2_f32">;
 
 let SubtargetPredicate = isGFX11Only in {
 
-def DS_ADD_GS_REG_RTN : DS_0A1D_RET_GDS<"ds_add_gs_reg_rtn", VReg_64, VGPR_32>;
-def DS_SUB_GS_REG_RTN : DS_0A1D_RET_GDS<"ds_sub_gs_reg_rtn", VReg_64, VGPR_32>;
+def DS_ADD_GS_REG_RTN : DS_0A1D_RET_GDS<"ds_add_gs_reg_rtn", VGPROp_64, VGPROp_32>;
+def DS_SUB_GS_REG_RTN : DS_0A1D_RET_GDS<"ds_sub_gs_reg_rtn", VGPROp_64, VGPROp_32>;
 
 } // let SubtargetPredicate = isGFX11Only
 
@@ -760,7 +862,7 @@ let SubtargetPredicate = isGFX11Plus in {
 
 let OtherPredicates = [HasImageInsts] in
 def DS_BVH_STACK_RTN_B32 : DS_BVH_STACK<"ds_bvh_stack_rtn_b32",
-                                        VGPR_32, VReg_128> ;
+                                        VGPROp_32, VGPROp_128> ;
 
 } // let SubtargetPredicate = isGFX11Plus
 
@@ -772,15 +874,15 @@ let SubtargetPredicate = isGFX12Plus in {
 
 let OtherPredicates = [HasImageInsts] in {
 def DS_BVH_STACK_PUSH8_POP1_RTN_B32 : DS_BVH_STACK<
-  "ds_bvh_stack_push8_pop1_rtn_b32", VGPR_32, VReg_256>;
+  "ds_bvh_stack_push8_pop1_rtn_b32", VGPROp_32, VGPROp_256>;
 def DS_BVH_STACK_PUSH8_POP2_RTN_B64 : DS_BVH_STACK<
-  "ds_bvh_stack_push8_pop2_rtn_b64", VReg_64, VReg_256>;
+  "ds_bvh_stack_push8_pop2_rtn_b64", VGPROp_64, VGPROp_256>;
 } // End OtherPredicates = [HasImageInsts].
 
-defm DS_COND_SUB_U32      : DS_1A1D_NORET_mc<"ds_cond_sub_u32">;
-defm DS_COND_SUB_RTN_U32  : DS_1A1D_RET_mc<"ds_cond_sub_rtn_u32", VGPR_32>;
-defm DS_SUB_CLAMP_U32     : DS_1A1D_NORET_mc<"ds_sub_clamp_u32">;
-defm DS_SUB_CLAMP_RTN_U32 : DS_1A1D_RET_mc<"ds_sub_clamp_rtn_u32", VGPR_32>;
+defm DS_COND_SUB_U32      : DS_1A1D_NORET_mc_gfx9<"ds_cond_sub_u32">;
+defm DS_COND_SUB_RTN_U32  : DS_1A1D_RET_mc_gfx9<"ds_cond_sub_rtn_u32", VGPROp_32>;
+defm DS_SUB_CLAMP_U32     : DS_1A1D_NORET_mc_gfx9<"ds_sub_clamp_u32">;
+defm DS_SUB_CLAMP_RTN_U32 : DS_1A1D_RET_mc_gfx9<"ds_sub_clamp_rtn_u32", VGPROp_32>;
 def DS_BPERMUTE_FI_B32    : DS_1A1D_PERMUTE <"ds_bpermute_fi_b32",
                                              int_amdgcn_ds_bpermute_fi_b32>;
 
@@ -801,11 +903,11 @@ let SubtargetPredicate = isGFX1250Plus in {
 
 let WaveSizePredicate = isWave32, mayStore = 0 in {
 let OtherPredicates = [HasTransposeLoadF4F6Insts] in {
-defm DS_LOAD_TR4_B64   : DS_1A_RET_NoM0<"ds_load_tr4_b64",   VReg_64>;
-defm DS_LOAD_TR6_B96   : DS_1A_RET_NoM0<"ds_load_tr6_b96",   VReg_96>;
+defm DS_LOAD_TR4_B64   : DS_1A_RET_NoM0<"ds_load_tr4_b64",   VGPROp_64>;
+defm DS_LOAD_TR6_B96   : DS_1A_RET_NoM0<"ds_load_tr6_b96",   VGPROp_96_Align1>;
 } // End OtherPredicates = [HasTransposeLoadF4F6Insts]
-defm DS_LOAD_TR8_B64   : DS_1A_RET_NoM0<"ds_load_tr8_b64",   VReg_64>;
-defm DS_LOAD_TR16_B128 : DS_1A_RET_NoM0<"ds_load_tr16_b128", VReg_128>;
+defm DS_LOAD_TR8_B64   : DS_1A_RET_NoM0<"ds_load_tr8_b64",   VGPROp_64>;
+defm DS_LOAD_TR16_B128 : DS_1A_RET_NoM0<"ds_load_tr16_b128", VGPROp_128>;
 } // End WaveSizePredicate = isWave32, mayStore = 0
 
 let OtherPredicates = [HasLdsBarrierArriveAtomic] in {
@@ -818,7 +920,7 @@ def : GCNPat <
   (DS_ATOMIC_ASYNC_BARRIER_ARRIVE_B64 VGPR_32:$ptr, Offset:$offset, (i1 0))
 >;
 
-defm DS_ATOMIC_BARRIER_ARRIVE_RTN_B64 : DS_1A1D_RET_mc_gfx9<"ds_atomic_barrier_arrive_rtn_b64", VReg_64>;
+defm DS_ATOMIC_BARRIER_ARRIVE_RTN_B64 : DS_1A1D_RET_mc_gfx9<"ds_atomic_barrier_arrive_rtn_b64", VGPROp_64>;
 
 def : GCNPat<
   (i64 (int_amdgcn_ds_atomic_barrier_arrive_rtn_b64 (DS1Addr1Offset i32:$ptr, i32:$offset), i64:$data)),
@@ -829,10 +931,10 @@ def : GCNPat<
 } // End SubtargetPredicate = isGFX1250Plus
 
 let WaveSizePredicate = isWave64, SubtargetPredicate = HasGFX950Insts, mayStore = 0 in {
-  defm DS_READ_B64_TR_B4  : DS_1A_RET_NoM0<"ds_read_b64_tr_b4", VReg_64>;
-  defm DS_READ_B64_TR_B8  : DS_1A_RET_NoM0<"ds_read_b64_tr_b8", VReg_64>;
-  defm DS_READ_B64_TR_B16 : DS_1A_RET_NoM0<"ds_read_b64_tr_b16", VReg_64>;
-  defm DS_READ_B96_TR_B6  : DS_1A_RET_NoM0<"ds_read_b96_tr_b6", VReg_96>;
+  defm DS_READ_B64_TR_B4  : DS_1A_RET_NoM0<"ds_read_b64_tr_b4", AVLdSt_64>;
+  defm DS_READ_B64_TR_B8  : DS_1A_RET_NoM0<"ds_read_b64_tr_b8", AVLdSt_64>;
+  defm DS_READ_B64_TR_B16 : DS_1A_RET_NoM0<"ds_read_b64_tr_b16", AVLdSt_64>;
+  defm DS_READ_B96_TR_B6  : DS_1A_RET_NoM0<"ds_read_b96_tr_b6", AVLdSt_96_Align1>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -847,6 +949,11 @@ def : GCNPat <
 class DSReadPat <DS_Pseudo inst, ValueType vt, PatFrag frag, int gds=0> : GCNPat <
   (vt (frag (DS1Addr1Offset i32:$ptr, i32:$offset))),
   (inst $ptr, Offset:$offset, (i1 gds))
+>;
+
+class DSReadPat_t16 <DS_Pseudo inst, ValueType vt, PatFrag frag, int gds=0> : GCNPat <
+  (vt (frag (DS1Addr1Offset i32:$ptr, i32:$offset))),
+  (EXTRACT_SUBREG (inst $ptr, Offset:$offset, (i1 gds)), lo16)
 >;
 
 multiclass DSReadPat_mc<DS_Pseudo inst, ValueType vt, string frag> {
@@ -866,14 +973,14 @@ multiclass DSReadPat_t16<DS_Pseudo inst, ValueType vt, string frag> {
     def : DSReadPat<inst, vt, !cast<PatFrag>(frag#"_m0")>;
   }
 
-  let OtherPredicates = [NotLDSRequiresM0Init] in {
-    foreach p = [NotHasTrue16BitInsts, UseFakeTrue16Insts] in
-      let True16Predicate = p in {
-        def : DSReadPat<!cast<DS_Pseudo>(!cast<string>(inst)#"_gfx9"), vt, !cast<PatFrag>(frag)>;
-      }
-    let True16Predicate = UseRealTrue16Insts in {
-      def : DSReadPat<!cast<DS_Pseudo>(!cast<string>(inst)#"_t16"), vt, !cast<PatFrag>(frag)>;
-    }
+  let OtherPredicates = [NotLDSRequiresM0Init], True16Predicate = NotUseRealTrue16Insts in {
+    def : DSReadPat<!cast<DS_Pseudo>(!cast<string>(inst)#"_gfx9"), vt, !cast<PatFrag>(frag)>;
+  }
+  let OtherPredicates = [NotLDSRequiresM0Init, D16PreservesUnusedBits], True16Predicate = UseRealTrue16Insts in {
+    def : DSReadPat<!cast<DS_Pseudo>(!cast<string>(inst)#"_t16"), vt, !cast<PatFrag>(frag)>;
+  }
+  let OtherPredicates = [NotLDSRequiresM0Init], True16Predicate = UseTrue16WithSramECC in {
+    def : DSReadPat_t16<!cast<DS_Pseudo>(!cast<string>(inst)#"_gfx9"), vt, !cast<PatFrag>(frag)>;
   }
 }
 
@@ -948,10 +1055,9 @@ multiclass DSWritePat_t16 <DS_Pseudo inst, ValueType vt, string frag> {
   }
 
   let OtherPredicates = [NotLDSRequiresM0Init] in {
-    foreach p = [NotHasTrue16BitInsts, UseFakeTrue16Insts] in
-      let True16Predicate = p in {
-        def : DSWritePat<!cast<DS_Pseudo>(!cast<string>(inst)#"_gfx9"), vt, !cast<PatFrag>(frag)>;
-      }
+    let True16Predicate = NotUseRealTrue16Insts in {
+      def : DSWritePat<!cast<DS_Pseudo>(!cast<string>(inst)#"_gfx9"), vt, !cast<PatFrag>(frag)>;
+    }
     let True16Predicate = UseRealTrue16Insts in {
       def : DSWritePat<!cast<DS_Pseudo>(!cast<string>(inst)#"_t16"), vt, !cast<PatFrag>(frag)>;
     }
@@ -984,6 +1090,7 @@ class DS64Bit4ByteAlignedReadPat<DS_Pseudo inst, ValueType vt, PatFrag frag> : G
   (inst $ptr, $offset0, $offset1, (i1 0))
 >;
 
+// TODO: Should this use AVLdSt_64 for the class?
 class DS64Bit4ByteAlignedWritePat<DS_Pseudo inst, ValueType vt, PatFrag frag> : GCNPat<
   (frag vt:$value, (DS64Bit4ByteAligned i32:$ptr, i32:$offset0, i32:$offset1)),
   (inst $ptr, (i32 (EXTRACT_SUBREG VReg_64:$value, sub0)),
@@ -1091,50 +1198,6 @@ defm : DSWritePat_mc <DS_WRITE_B128, vt, "store_align_less_than_4_local">;
 
 } // End AddedComplexity = 100
 
-multiclass DSAtomicRetPat_mc<DS_Pseudo inst, ValueType vt, string frag> {
-  let OtherPredicates = [LDSRequiresM0Init] in {
-    def : DSAtomicRetPat<inst, vt, !cast<PatFrag>(frag#"_local_m0_"#vt)>;
-  }
-
-  let OtherPredicates = [NotLDSRequiresM0Init] in {
-    def : DSAtomicRetPat<!cast<DS_Pseudo>(!cast<string>(inst)#"_gfx9"), vt,
-                         !cast<PatFrag>(frag#"_local_"#vt)>;
-  }
-
-  let OtherPredicates = [HasGDS] in {
-    def : DSAtomicRetPat<inst, vt, !cast<PatFrag>(frag#"_region_m0_"#vt),
-                         /* complexity */ 0, /* gds */ 1>;
-  }
-}
-
-multiclass DSAtomicRetNoRetPat_mc<DS_Pseudo inst, DS_Pseudo noRetInst,
-                                  ValueType vt, string frag> {
-  let OtherPredicates = [LDSRequiresM0Init] in {
-    def : DSAtomicRetPat<inst, vt,
-                         !cast<PatFrag>(frag#"_local_m0_"#vt)>;
-    def : DSAtomicRetPat<noRetInst, vt,
-                         !cast<PatFrag>(frag#"_local_m0_noret_"#vt), /* complexity */ 1>;
-  }
-
-  let OtherPredicates = [NotLDSRequiresM0Init] in {
-    def : DSAtomicRetPat<!cast<DS_Pseudo>(!cast<string>(inst)#"_gfx9"), vt,
-                         !cast<PatFrag>(frag#"_local_"#vt)>;
-    def : DSAtomicRetPat<!cast<DS_Pseudo>(!cast<string>(noRetInst)#"_gfx9"), vt,
-                         !cast<PatFrag>(frag#"_local_noret_"#vt), /* complexity */ 1>;
-  }
-
-  let OtherPredicates = [HasGDS] in {
-    def : DSAtomicRetPat<inst, vt,
-                         !cast<PatFrag>(frag#"_region_m0_"#vt),
-                         /* complexity */ 0, /* gds */ 1>;
-    def : DSAtomicRetPat<noRetInst, vt,
-                         !cast<PatFrag>(frag#"_region_m0_noret_"#vt),
-                         /* complexity */ 1, /* gds */ 1>;
-  }
-}
-
-
-
 let SubtargetPredicate = isGFX6GFX7GFX8GFX9GFX10 in {
 // Caution, the order of src and cmp is the *opposite* of the BUFFER_ATOMIC_CMPSWAP opcode.
 class DSAtomicCmpXChgSwapped<DS_Pseudo inst, ValueType vt, PatFrag frag,
@@ -1212,8 +1275,8 @@ defm : DSAtomicRetNoRetPat_mc<DS_MAX_RTN_F32, DS_MAX_F32, f32, "atomic_load_fmax
 
 
 let SubtargetPredicate = HasAtomicDsPkAdd16Insts in {
-defm : DSAtomicRetNoRetPat_mc<DS_PK_ADD_RTN_F16, DS_PK_ADD_F16, v2f16, "atomic_load_fadd">;
-defm : DSAtomicRetNoRetPat_mc<DS_PK_ADD_RTN_BF16, DS_PK_ADD_BF16, v2bf16, "atomic_load_fadd">;
+defm : DSAtomicRetNoRetPat_NoM0_mc<DS_PK_ADD_RTN_F16, DS_PK_ADD_F16, v2f16, "atomic_load_fadd">;
+defm : DSAtomicRetNoRetPat_NoM0_mc<DS_PK_ADD_RTN_BF16, DS_PK_ADD_BF16, v2bf16, "atomic_load_fadd">;
 }
 
 let SubtargetPredicate = isGFX6GFX7GFX8GFX9GFX10 in {
@@ -1265,7 +1328,7 @@ class DSAtomicRetPatIntrinsic<DS_Pseudo inst, ValueType vt, PatFrag frag,
 } // End SubtargetPredicate = HasLdsAtomicAddF64
 
 let SubtargetPredicate = HasAtomicDsPkAdd16Insts in {
-defm : DSAtomicRetNoRetPat_mc<DS_PK_ADD_RTN_F16, DS_PK_ADD_F16, v2f16, "atomic_load_fadd">;
+defm : DSAtomicRetNoRetPat_NoM0_mc<DS_PK_ADD_RTN_F16, DS_PK_ADD_F16, v2f16, "atomic_load_fadd">;
 } // End SubtargetPredicate = HasAtomicDsPkAdd16Insts
 
 let OtherPredicates = [HasGDS] in
@@ -1357,8 +1420,10 @@ class Base_DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<bits<8> op, DS_Pseudo ps, int ef,
 // GFX12.
 //===----------------------------------------------------------------------===//
 
-multiclass DS_Real_gfx12<bits<8> op, string name = !tolower(NAME)> {
-  defvar ps = !cast<DS_Pseudo>(NAME);
+multiclass DS_Real_gfx12<bits<8> op,
+                         DS_Pseudo ps = !cast<DS_Pseudo>(NAME),
+                         string name = !tolower(NAME)> {
+
   let AssemblerPredicate = isGFX12Plus in {
     let DecoderNamespace = "GFX12" in
       def _gfx12 :
@@ -1369,14 +1434,20 @@ multiclass DS_Real_gfx12<bits<8> op, string name = !tolower(NAME)> {
   } // End AssemblerPredicate
 }
 
-defm DS_MIN_F32           : DS_Real_gfx12<0x012, "ds_min_num_f32">;
-defm DS_MAX_F32           : DS_Real_gfx12<0x013, "ds_max_num_f32">;
-defm DS_MIN_RTN_F32       : DS_Real_gfx12<0x032, "ds_min_num_rtn_f32">;
-defm DS_MAX_RTN_F32       : DS_Real_gfx12<0x033, "ds_max_num_rtn_f32">;
-defm DS_MIN_F64           : DS_Real_gfx12<0x052, "ds_min_num_f64">;
-defm DS_MAX_F64           : DS_Real_gfx12<0x053, "ds_max_num_f64">;
-defm DS_MIN_RTN_F64       : DS_Real_gfx12<0x072, "ds_min_num_rtn_f64">;
-defm DS_MAX_RTN_F64       : DS_Real_gfx12<0x073, "ds_max_num_rtn_f64">;
+// Helper to avoid repeating the pseudo-name if we only need to set
+// the gfx12 name.
+multiclass DS_Real_gfx12_with_name<bits<8> op, string name> {
+  defm "" : DS_Real_gfx12<op, !cast<DS_Pseudo>(NAME#"_gfx9"), name>;
+}
+
+defm DS_MIN_F32           : DS_Real_gfx12_with_name<0x012, "ds_min_num_f32">;
+defm DS_MAX_F32           : DS_Real_gfx12_with_name<0x013, "ds_max_num_f32">;
+defm DS_MIN_RTN_F32       : DS_Real_gfx12_with_name<0x032, "ds_min_num_rtn_f32">;
+defm DS_MAX_RTN_F32       : DS_Real_gfx12_with_name<0x033, "ds_max_num_rtn_f32">;
+defm DS_MIN_F64           : DS_Real_gfx12_with_name<0x052, "ds_min_num_f64">;
+defm DS_MAX_F64           : DS_Real_gfx12_with_name<0x053, "ds_max_num_f64">;
+defm DS_MIN_RTN_F64       : DS_Real_gfx12_with_name<0x072, "ds_min_num_rtn_f64">;
+defm DS_MAX_RTN_F64       : DS_Real_gfx12_with_name<0x073, "ds_max_num_rtn_f64">;
 defm DS_COND_SUB_U32      : DS_Real_gfx12<0x098>;
 defm DS_SUB_CLAMP_U32     : DS_Real_gfx12<0x099>;
 defm DS_COND_SUB_RTN_U32  : DS_Real_gfx12<0x0a8>;
@@ -1392,8 +1463,8 @@ defm DS_LOAD_TR6_B96      : DS_Real_gfx12<0x0fb>;
 defm DS_LOAD_TR16_B128    : DS_Real_gfx12<0x0fc>;
 defm DS_LOAD_TR8_B64      : DS_Real_gfx12<0x0fd>;
 
-defm DS_BVH_STACK_RTN_B32             : DS_Real_gfx12<0x0e0,
-  "ds_bvh_stack_push4_pop1_rtn_b32">;
+defm DS_BVH_STACK_RTN_B32 : DS_Real_gfx12<0x0e0, DS_BVH_STACK_RTN_B32,
+                                          "ds_bvh_stack_push4_pop1_rtn_b32">;
 defm DS_BVH_STACK_PUSH8_POP1_RTN_B32  : DS_Real_gfx12<0x0e1>;
 defm DS_BVH_STACK_PUSH8_POP2_RTN_B64  : DS_Real_gfx12<0x0e2>;
 
@@ -1417,12 +1488,18 @@ let AssemblerPredicate = isGFX12Plus in {
 def : MnemonicAlias<"ds_load_tr_b64", "ds_load_tr8_b64">, Requires<[isGFX1250Plus]>;
 def : MnemonicAlias<"ds_load_tr_b128", "ds_load_tr16_b128">, Requires<[isGFX1250Plus]>;
 
+// Additional aliases for ds load transpose instructions.
+def : MnemonicAlias<"ds_load_b64_tr_b8", "ds_load_tr8_b64">, Requires<[isGFX125xOnly]>;
+def : MnemonicAlias<"ds_load_b128_tr_b16", "ds_load_tr16_b128">, Requires<[isGFX125xOnly]>;
+def : MnemonicAlias<"ds_load_b64_tr_b4", "ds_load_tr4_b64">, Requires<[isGFX125xOnly]>;
+def : MnemonicAlias<"ds_load_b96_tr_b6", "ds_load_tr6_b96">, Requires<[isGFX125xOnly]>;
+
 //===----------------------------------------------------------------------===//
 // GFX11.
 //===----------------------------------------------------------------------===//
 
-multiclass DS_Real_gfx11<bits<8> op, string name = !tolower(NAME)> {
-  defvar ps = !cast<DS_Pseudo>(NAME);
+multiclass DS_Real_gfx11<bits<8> op, DS_Pseudo ps = !cast<DS_Pseudo>(NAME#"_gfx9"),
+                                     string name = !tolower(NAME)> {
   let AssemblerPredicate = isGFX11Only in {
     let DecoderNamespace = "GFX11" in
       def _gfx11 :
@@ -1433,8 +1510,11 @@ multiclass DS_Real_gfx11<bits<8> op, string name = !tolower(NAME)> {
   } // End AssemblerPredicate
 }
 
-multiclass DS_Real_gfx11_gfx12<bits<8> op, string name = !tolower(NAME)>
-  : DS_Real_gfx11<op, name>, DS_Real_gfx12<op, name>;
+multiclass DS_Real_gfx11_gfx12<bits<8> op,
+                               string name = !tolower(NAME),
+                               DS_Pseudo ps = !cast<DS_Pseudo>(NAME#"_gfx9")>
+  : DS_Real_gfx11<op, ps, name>,
+    DS_Real_gfx12<op, ps, name>;
 
 defm DS_WRITE_B32           : DS_Real_gfx11_gfx12<0x00d, "ds_store_b32">;
 defm DS_WRITE2_B32          : DS_Real_gfx11_gfx12<0x00e, "ds_store_2addr_b32">;
@@ -1460,16 +1540,16 @@ defm DS_WRXCHG2ST64_RTN_B64 : DS_Real_gfx11_gfx12<0x06f, "ds_storexchg_2addr_str
 defm DS_READ_B64            : DS_Real_gfx11_gfx12<0x076, "ds_load_b64">;
 defm DS_READ2_B64           : DS_Real_gfx11_gfx12<0x077, "ds_load_2addr_b64">;
 defm DS_READ2ST64_B64       : DS_Real_gfx11_gfx12<0x078, "ds_load_2addr_stride64_b64">;
-defm DS_WRITE_B8_D16_HI     : DS_Real_gfx11_gfx12<0x0a0, "ds_store_b8_d16_hi">;
-defm DS_WRITE_B16_D16_HI    : DS_Real_gfx11_gfx12<0x0a1, "ds_store_b16_d16_hi">;
-defm DS_READ_U8_D16         : DS_Real_gfx11_gfx12<0x0a2, "ds_load_u8_d16">;
-defm DS_READ_U8_D16_HI      : DS_Real_gfx11_gfx12<0x0a3, "ds_load_u8_d16_hi">;
-defm DS_READ_I8_D16         : DS_Real_gfx11_gfx12<0x0a4, "ds_load_i8_d16">;
-defm DS_READ_I8_D16_HI      : DS_Real_gfx11_gfx12<0x0a5, "ds_load_i8_d16_hi">;
-defm DS_READ_U16_D16        : DS_Real_gfx11_gfx12<0x0a6, "ds_load_u16_d16">;
-defm DS_READ_U16_D16_HI     : DS_Real_gfx11_gfx12<0x0a7, "ds_load_u16_d16_hi">;
-defm DS_WRITE_ADDTID_B32    : DS_Real_gfx11_gfx12<0x0b0, "ds_store_addtid_b32">;
-defm DS_READ_ADDTID_B32     : DS_Real_gfx11_gfx12<0x0b1, "ds_load_addtid_b32">;
+defm DS_WRITE_B8_D16_HI     : DS_Real_gfx11_gfx12<0x0a0, "ds_store_b8_d16_hi", DS_WRITE_B8_D16_HI>;
+defm DS_WRITE_B16_D16_HI    : DS_Real_gfx11_gfx12<0x0a1, "ds_store_b16_d16_hi", DS_WRITE_B16_D16_HI>;
+defm DS_READ_U8_D16         : DS_Real_gfx11_gfx12<0x0a2, "ds_load_u8_d16", DS_READ_U8_D16>;
+defm DS_READ_U8_D16_HI      : DS_Real_gfx11_gfx12<0x0a3, "ds_load_u8_d16_hi", DS_READ_U8_D16_HI>;
+defm DS_READ_I8_D16         : DS_Real_gfx11_gfx12<0x0a4, "ds_load_i8_d16", DS_READ_I8_D16>;
+defm DS_READ_I8_D16_HI      : DS_Real_gfx11_gfx12<0x0a5, "ds_load_i8_d16_hi", DS_READ_I8_D16_HI>;
+defm DS_READ_U16_D16        : DS_Real_gfx11_gfx12<0x0a6, "ds_load_u16_d16", DS_READ_U16_D16>;
+defm DS_READ_U16_D16_HI     : DS_Real_gfx11_gfx12<0x0a7, "ds_load_u16_d16_hi", DS_READ_U16_D16_HI>;
+defm DS_WRITE_ADDTID_B32    : DS_Real_gfx11_gfx12<0x0b0, "ds_store_addtid_b32", DS_WRITE_ADDTID_B32>;
+defm DS_READ_ADDTID_B32     : DS_Real_gfx11_gfx12<0x0b1, "ds_load_addtid_b32", DS_READ_ADDTID_B32>;
 defm DS_WRITE_B96           : DS_Real_gfx11_gfx12<0x0de, "ds_store_b96">;
 defm DS_WRITE_B128          : DS_Real_gfx11_gfx12<0x0df, "ds_store_b128">;
 defm DS_READ_B96            : DS_Real_gfx11_gfx12<0x0fe, "ds_load_b96">;
@@ -1489,22 +1569,22 @@ defm DS_CMPSTORE_RTN_B64                 : DS_Real_gfx11_gfx12<0x070>;
 defm DS_CMPSTORE_RTN_F64                 : DS_Real_gfx11<0x071>;
 
 defm DS_ADD_RTN_F32                      : DS_Real_gfx11_gfx12<0x079>;
-defm DS_ADD_GS_REG_RTN                   : DS_Real_gfx11<0x07a>;
-defm DS_SUB_GS_REG_RTN                   : DS_Real_gfx11<0x07b>;
-defm DS_BVH_STACK_RTN_B32                : DS_Real_gfx11<0x0ad>;
+defm DS_ADD_GS_REG_RTN                   : DS_Real_gfx11<0x07a, DS_ADD_GS_REG_RTN>;
+defm DS_SUB_GS_REG_RTN                   : DS_Real_gfx11<0x07b, DS_SUB_GS_REG_RTN>;
+defm DS_BVH_STACK_RTN_B32                : DS_Real_gfx11<0x0ad, DS_BVH_STACK_RTN_B32>;
 
 //===----------------------------------------------------------------------===//
 // GFX10.
 //===----------------------------------------------------------------------===//
 
 let AssemblerPredicate = isGFX10Only, DecoderNamespace = "GFX10" in {
-  multiclass DS_Real_gfx10<bits<8> op>  {
+  multiclass DS_Real_gfx10<bits<8> op, DS_Pseudo ps = !cast<DS_Pseudo>(NAME)>  {
     def _gfx10 : Base_DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<op,
-      !cast<DS_Pseudo>(NAME), SIEncodingFamily.GFX10>;
+      ps, SIEncodingFamily.GFX10>;
   }
 } // End AssemblerPredicate = isGFX10Only, DecoderNamespace = "GFX10"
 
-defm DS_ADD_RTN_F32      : DS_Real_gfx10<0x055>;
+defm DS_ADD_RTN_F32      : DS_Real_gfx10<0x055, DS_ADD_RTN_F32_gfx9>;
 defm DS_WRITE_B8_D16_HI  : DS_Real_gfx10<0x0a0>;
 defm DS_WRITE_B16_D16_HI : DS_Real_gfx10<0x0a1>;
 defm DS_READ_U8_D16      : DS_Real_gfx10<0x0a2>;
@@ -1520,39 +1600,48 @@ defm DS_READ_ADDTID_B32  : DS_Real_gfx10<0x0b1>;
 // GFX10, GFX11, GFX12.
 //===----------------------------------------------------------------------===//
 
-multiclass DS_Real_gfx10_gfx11_gfx12<bits<8> op> :
-  DS_Real_gfx10<op>, DS_Real_gfx11<op>, DS_Real_gfx12<op>;
+multiclass DS_Real_gfx10_gfx11_gfx12<bits<8> op, DS_Pseudo ps = !cast<DS_Pseudo>(NAME#"_gfx9")> :
+  DS_Real_gfx10<op, ps>,
+  DS_Real_gfx11<op, ps>,
+  DS_Real_gfx12<op, ps>;
 
-multiclass DS_Real_gfx10_gfx11<bits<8> op> :
-  DS_Real_gfx10<op>, DS_Real_gfx11<op>;
+multiclass DS_Real_gfx10_gfx11<bits<8> op, DS_Pseudo ps = !cast<DS_Pseudo>(NAME#"_gfx9")> :
+  DS_Real_gfx10<op, ps>, DS_Real_gfx11<op, ps>;
 
 defm DS_ADD_F32          : DS_Real_gfx10_gfx11_gfx12<0x015>;
 defm DS_ADD_SRC2_F32     : DS_Real_gfx10<0x095>;
-defm DS_PERMUTE_B32      : DS_Real_gfx10_gfx11_gfx12<0x0b2>;
-defm DS_BPERMUTE_B32     : DS_Real_gfx10_gfx11_gfx12<0x0b3>;
+defm DS_PERMUTE_B32      : DS_Real_gfx10_gfx11_gfx12<0x0b2, DS_PERMUTE_B32>;
+defm DS_BPERMUTE_B32     : DS_Real_gfx10_gfx11_gfx12<0x0b3, DS_BPERMUTE_B32>;
 
 //===----------------------------------------------------------------------===//
 // GFX7, GFX10, GFX11, GFX12.
 //===----------------------------------------------------------------------===//
 
 let AssemblerPredicate = isGFX7Only, DecoderNamespace = "GFX7" in {
-  multiclass DS_Real_gfx7<bits<8> op> {
+  multiclass DS_Real_gfx7<bits<8> op, DS_Pseudo ps> {
     def _gfx7 : Base_DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<op,
-      !cast<DS_Pseudo>(NAME), SIEncodingFamily.SI>;
+      ps, SIEncodingFamily.SI>;
   }
 } // End AssemblerPredicate = isGFX7Only, DecoderNamespace = "GFX7"
 
-multiclass DS_Real_gfx7_gfx10_gfx11_gfx12<bits<8> op> :
-  DS_Real_gfx7<op>, DS_Real_gfx10_gfx11_gfx12<op>;
+multiclass DS_Real_gfx7_gfx10_gfx11_gfx12<bits<8> op,
+           DS_Pseudo ps_gfx6 = !cast<DS_Pseudo>(NAME),
+           DS_Pseudo ps_gfx9 = !cast<DS_Pseudo>(NAME#"_gfx9")> :
+  DS_Real_gfx7<op, ps_gfx6>,
+  DS_Real_gfx10_gfx11_gfx12<op, ps_gfx9>;
 
-multiclass DS_Real_gfx7_gfx10_gfx11<bits<8> op> :
-  DS_Real_gfx7<op>, DS_Real_gfx10_gfx11<op>;
+multiclass DS_Real_gfx7_gfx10_gfx11<bits<8> op,
+           DS_Pseudo ps_gfx6 = !cast<DS_Pseudo>(NAME),
+           DS_Pseudo ps_gfx9 = !cast<DS_Pseudo>(NAME#"_gfx9")> :
+  DS_Real_gfx7<op, ps_gfx6>, DS_Real_gfx10_gfx11<op, ps_gfx9>;
 
-multiclass DS_Real_gfx7_gfx10<bits<8> op> :
-  DS_Real_gfx7<op>, DS_Real_gfx10<op>;
+multiclass DS_Real_gfx7_gfx10<bits<8> op,
+           DS_Pseudo ps_gfx6 = !cast<DS_Pseudo>(NAME),
+           DS_Pseudo ps_gfx9 = !cast<DS_Pseudo>(NAME#"_gfx9")> :
+  DS_Real_gfx7<op, ps_gfx6>, DS_Real_gfx10<op, ps_gfx9>;
 
 // FIXME-GFX7: Add tests when upstreaming this part.
-defm DS_GWS_SEMA_RELEASE_ALL : DS_Real_gfx7_gfx10_gfx11<0x018>;
+defm DS_GWS_SEMA_RELEASE_ALL : DS_Real_gfx7_gfx10_gfx11<0x018, DS_GWS_SEMA_RELEASE_ALL, DS_GWS_SEMA_RELEASE_ALL>;
 defm DS_WRAP_RTN_B32         : DS_Real_gfx7_gfx10_gfx11<0x034>;
 defm DS_CONDXCHG32_RTN_B64   : DS_Real_gfx7_gfx10_gfx11_gfx12<0x07e>;
 defm DS_WRITE_B96            : DS_Real_gfx7_gfx10<0x0de>;
@@ -1565,20 +1654,27 @@ defm DS_READ_B128            : DS_Real_gfx7_gfx10<0x0ff>;
 //===----------------------------------------------------------------------===//
 
 let AssemblerPredicate = isGFX6GFX7, DecoderNamespace = "GFX6GFX7" in {
-  multiclass DS_Real_gfx6_gfx7<bits<8> op> {
+  multiclass DS_Real_gfx6_gfx7<bits<8> op, DS_Pseudo ps> {
     def _gfx6_gfx7 : Base_DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<op,
-      !cast<DS_Pseudo>(NAME), SIEncodingFamily.SI>;
+      ps, SIEncodingFamily.SI>;
   }
 } // End AssemblerPredicate = isGFX6GFX7, DecoderNamespace = "GFX6GFX7"
 
-multiclass DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<bits<8> op> :
-  DS_Real_gfx6_gfx7<op>, DS_Real_gfx10_gfx11_gfx12<op>;
+multiclass DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<bits<8> op,
+           DS_Pseudo ps_gfx6 = !cast<DS_Pseudo>(NAME),
+           DS_Pseudo ps_gfx9 = !cast<DS_Pseudo>(NAME#"_gfx9")> :
+  DS_Real_gfx6_gfx7<op, ps_gfx6>,
+  DS_Real_gfx10_gfx11_gfx12<op, ps_gfx9>;
 
-multiclass DS_Real_gfx6_gfx7_gfx10_gfx11<bits<8> op> :
-  DS_Real_gfx6_gfx7<op>, DS_Real_gfx10_gfx11<op>;
+multiclass DS_Real_gfx6_gfx7_gfx10_gfx11<bits<8> op,
+           DS_Pseudo ps_gfx6 = !cast<DS_Pseudo>(NAME),
+           DS_Pseudo ps_gfx9 = !cast<DS_Pseudo>(NAME#"_gfx9")> :
+  DS_Real_gfx6_gfx7<op, ps_gfx6>, DS_Real_gfx10_gfx11<op, ps_gfx9>;
 
-multiclass DS_Real_gfx6_gfx7_gfx10<bits<8> op> :
-  DS_Real_gfx6_gfx7<op>, DS_Real_gfx10<op>;
+multiclass DS_Real_gfx6_gfx7_gfx10<bits<8> op,
+                                   DS_Pseudo ps_gfx6 = !cast<DS_Pseudo>(NAME),
+                                   DS_Pseudo ps_gfx9 = !cast<DS_Pseudo>(NAME#"_gfx9")> :
+  DS_Real_gfx6_gfx7<op, ps_gfx6>, DS_Real_gfx10<op, ps_gfx9>;
 
 defm DS_ADD_U32             : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x000>;
 defm DS_SUB_U32             : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x001>;
@@ -1602,12 +1698,12 @@ defm DS_CMPST_F32           : DS_Real_gfx6_gfx7_gfx10<0x011>;
 
 defm DS_MIN_F32             : DS_Real_gfx6_gfx7_gfx10_gfx11<0x012>;
 defm DS_MAX_F32             : DS_Real_gfx6_gfx7_gfx10_gfx11<0x013>;
-defm DS_NOP                 : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x014>;
-defm DS_GWS_INIT            : DS_Real_gfx6_gfx7_gfx10_gfx11<0x019>;
-defm DS_GWS_SEMA_V          : DS_Real_gfx6_gfx7_gfx10_gfx11<0x01a>;
-defm DS_GWS_SEMA_BR         : DS_Real_gfx6_gfx7_gfx10_gfx11<0x01b>;
-defm DS_GWS_SEMA_P          : DS_Real_gfx6_gfx7_gfx10_gfx11<0x01c>;
-defm DS_GWS_BARRIER         : DS_Real_gfx6_gfx7_gfx10_gfx11<0x01d>;
+defm DS_NOP                 : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x014, DS_NOP, DS_NOP>;
+defm DS_GWS_INIT            : DS_Real_gfx6_gfx7_gfx10_gfx11<0x019, DS_GWS_INIT, DS_GWS_INIT>;
+defm DS_GWS_SEMA_V          : DS_Real_gfx6_gfx7_gfx10_gfx11<0x01a, DS_GWS_SEMA_V, DS_GWS_SEMA_V>;
+defm DS_GWS_SEMA_BR         : DS_Real_gfx6_gfx7_gfx10_gfx11<0x01b, DS_GWS_SEMA_BR, DS_GWS_SEMA_BR>;
+defm DS_GWS_SEMA_P          : DS_Real_gfx6_gfx7_gfx10_gfx11<0x01c, DS_GWS_SEMA_P, DS_GWS_SEMA_P>;
+defm DS_GWS_BARRIER         : DS_Real_gfx6_gfx7_gfx10_gfx11<0x01d, DS_GWS_BARRIER, DS_GWS_BARRIER>;
 
 defm DS_WRITE_B8            : DS_Real_gfx6_gfx7_gfx10<0x01e>;
 defm DS_WRITE_B16           : DS_Real_gfx6_gfx7_gfx10<0x01f>;
@@ -1634,7 +1730,7 @@ defm DS_CMPST_RTN_F32       : DS_Real_gfx6_gfx7_gfx10<0x031>;
 
 defm DS_MIN_RTN_F32         : DS_Real_gfx6_gfx7_gfx10_gfx11<0x032>;
 defm DS_MAX_RTN_F32         : DS_Real_gfx6_gfx7_gfx10_gfx11<0x033>;
-defm DS_SWIZZLE_B32         : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x035>;
+defm DS_SWIZZLE_B32         : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x035, DS_SWIZZLE_B32, DS_SWIZZLE_B32>;
 
 defm DS_READ_B32            : DS_Real_gfx6_gfx7_gfx10<0x036>;
 defm DS_READ2_B32           : DS_Real_gfx6_gfx7_gfx10<0x037>;
@@ -1644,9 +1740,9 @@ defm DS_READ_U8             : DS_Real_gfx6_gfx7_gfx10<0x03a>;
 defm DS_READ_I16            : DS_Real_gfx6_gfx7_gfx10<0x03b>;
 defm DS_READ_U16            : DS_Real_gfx6_gfx7_gfx10<0x03c>;
 
-defm DS_CONSUME             : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x03d>;
-defm DS_APPEND              : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x03e>;
-defm DS_ORDERED_COUNT       : DS_Real_gfx6_gfx7_gfx10_gfx11<0x03f>;
+defm DS_CONSUME             : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x03d, DS_CONSUME, DS_CONSUME>;
+defm DS_APPEND              : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x03e, DS_APPEND, DS_APPEND>;
+defm DS_ORDERED_COUNT       : DS_Real_gfx6_gfx7_gfx10_gfx11<0x03f, DS_ORDERED_COUNT, DS_ORDERED_COUNT>;
 defm DS_ADD_U64             : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x040>;
 defm DS_SUB_U64             : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x041>;
 defm DS_RSUB_U64            : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x042>;
@@ -1695,42 +1791,42 @@ defm DS_MAX_RTN_F64         : DS_Real_gfx6_gfx7_gfx10_gfx11<0x073>;
 defm DS_READ_B64            : DS_Real_gfx6_gfx7_gfx10<0x076>;
 defm DS_READ2_B64           : DS_Real_gfx6_gfx7_gfx10<0x077>;
 defm DS_READ2ST64_B64       : DS_Real_gfx6_gfx7_gfx10<0x078>;
-defm DS_ADD_SRC2_U32        : DS_Real_gfx6_gfx7_gfx10<0x080>;
-defm DS_SUB_SRC2_U32        : DS_Real_gfx6_gfx7_gfx10<0x081>;
-defm DS_RSUB_SRC2_U32       : DS_Real_gfx6_gfx7_gfx10<0x082>;
-defm DS_INC_SRC2_U32        : DS_Real_gfx6_gfx7_gfx10<0x083>;
-defm DS_DEC_SRC2_U32        : DS_Real_gfx6_gfx7_gfx10<0x084>;
-defm DS_MIN_SRC2_I32        : DS_Real_gfx6_gfx7_gfx10<0x085>;
-defm DS_MAX_SRC2_I32        : DS_Real_gfx6_gfx7_gfx10<0x086>;
-defm DS_MIN_SRC2_U32        : DS_Real_gfx6_gfx7_gfx10<0x087>;
-defm DS_MAX_SRC2_U32        : DS_Real_gfx6_gfx7_gfx10<0x088>;
-defm DS_AND_SRC2_B32        : DS_Real_gfx6_gfx7_gfx10<0x089>;
-defm DS_OR_SRC2_B32         : DS_Real_gfx6_gfx7_gfx10<0x08a>;
-defm DS_XOR_SRC2_B32        : DS_Real_gfx6_gfx7_gfx10<0x08b>;
-defm DS_WRITE_SRC2_B32      : DS_Real_gfx6_gfx7_gfx10<0x08d>;
-defm DS_MIN_SRC2_F32        : DS_Real_gfx6_gfx7_gfx10<0x092>;
-defm DS_MAX_SRC2_F32        : DS_Real_gfx6_gfx7_gfx10<0x093>;
-defm DS_ADD_SRC2_U64        : DS_Real_gfx6_gfx7_gfx10<0x0c0>;
-defm DS_SUB_SRC2_U64        : DS_Real_gfx6_gfx7_gfx10<0x0c1>;
-defm DS_RSUB_SRC2_U64       : DS_Real_gfx6_gfx7_gfx10<0x0c2>;
-defm DS_INC_SRC2_U64        : DS_Real_gfx6_gfx7_gfx10<0x0c3>;
-defm DS_DEC_SRC2_U64        : DS_Real_gfx6_gfx7_gfx10<0x0c4>;
-defm DS_MIN_SRC2_I64        : DS_Real_gfx6_gfx7_gfx10<0x0c5>;
-defm DS_MAX_SRC2_I64        : DS_Real_gfx6_gfx7_gfx10<0x0c6>;
-defm DS_MIN_SRC2_U64        : DS_Real_gfx6_gfx7_gfx10<0x0c7>;
-defm DS_MAX_SRC2_U64        : DS_Real_gfx6_gfx7_gfx10<0x0c8>;
-defm DS_AND_SRC2_B64        : DS_Real_gfx6_gfx7_gfx10<0x0c9>;
-defm DS_OR_SRC2_B64         : DS_Real_gfx6_gfx7_gfx10<0x0ca>;
-defm DS_XOR_SRC2_B64        : DS_Real_gfx6_gfx7_gfx10<0x0cb>;
-defm DS_WRITE_SRC2_B64      : DS_Real_gfx6_gfx7_gfx10<0x0cd>;
-defm DS_MIN_SRC2_F64        : DS_Real_gfx6_gfx7_gfx10<0x0d2>;
-defm DS_MAX_SRC2_F64        : DS_Real_gfx6_gfx7_gfx10<0x0d3>;
+defm DS_ADD_SRC2_U32        : DS_Real_gfx6_gfx7_gfx10<0x080, DS_ADD_SRC2_U32, DS_ADD_SRC2_U32>;
+defm DS_SUB_SRC2_U32        : DS_Real_gfx6_gfx7_gfx10<0x081, DS_SUB_SRC2_U32, DS_SUB_SRC2_U32>;
+defm DS_RSUB_SRC2_U32       : DS_Real_gfx6_gfx7_gfx10<0x082, DS_RSUB_SRC2_U32, DS_RSUB_SRC2_U32>;
+defm DS_INC_SRC2_U32        : DS_Real_gfx6_gfx7_gfx10<0x083, DS_INC_SRC2_U32, DS_INC_SRC2_U32>;
+defm DS_DEC_SRC2_U32        : DS_Real_gfx6_gfx7_gfx10<0x084, DS_DEC_SRC2_U32, DS_DEC_SRC2_U32>;
+defm DS_MIN_SRC2_I32        : DS_Real_gfx6_gfx7_gfx10<0x085, DS_MIN_SRC2_I32, DS_MIN_SRC2_I32>;
+defm DS_MAX_SRC2_I32        : DS_Real_gfx6_gfx7_gfx10<0x086, DS_MAX_SRC2_I32, DS_MAX_SRC2_I32>;
+defm DS_MIN_SRC2_U32        : DS_Real_gfx6_gfx7_gfx10<0x087, DS_MIN_SRC2_U32, DS_MIN_SRC2_U32>;
+defm DS_MAX_SRC2_U32        : DS_Real_gfx6_gfx7_gfx10<0x088, DS_MAX_SRC2_U32, DS_MAX_SRC2_U32>;
+defm DS_AND_SRC2_B32        : DS_Real_gfx6_gfx7_gfx10<0x089, DS_AND_SRC2_B32, DS_AND_SRC2_B32>;
+defm DS_OR_SRC2_B32         : DS_Real_gfx6_gfx7_gfx10<0x08a, DS_OR_SRC2_B32, DS_OR_SRC2_B32>;
+defm DS_XOR_SRC2_B32        : DS_Real_gfx6_gfx7_gfx10<0x08b, DS_XOR_SRC2_B32, DS_XOR_SRC2_B32>;
+defm DS_WRITE_SRC2_B32      : DS_Real_gfx6_gfx7_gfx10<0x08d, DS_WRITE_SRC2_B32, DS_WRITE_SRC2_B32>;
+defm DS_MIN_SRC2_F32        : DS_Real_gfx6_gfx7_gfx10<0x092, DS_MIN_SRC2_F32, DS_MIN_SRC2_F32>;
+defm DS_MAX_SRC2_F32        : DS_Real_gfx6_gfx7_gfx10<0x093, DS_MAX_SRC2_F32, DS_MAX_SRC2_F32>;
+defm DS_ADD_SRC2_U64        : DS_Real_gfx6_gfx7_gfx10<0x0c0, DS_ADD_SRC2_U64, DS_ADD_SRC2_U64>;
+defm DS_SUB_SRC2_U64        : DS_Real_gfx6_gfx7_gfx10<0x0c1, DS_SUB_SRC2_U64, DS_SUB_SRC2_U64>;
+defm DS_RSUB_SRC2_U64       : DS_Real_gfx6_gfx7_gfx10<0x0c2, DS_RSUB_SRC2_U64, DS_RSUB_SRC2_U64>;
+defm DS_INC_SRC2_U64        : DS_Real_gfx6_gfx7_gfx10<0x0c3, DS_INC_SRC2_U64, DS_INC_SRC2_U64>;
+defm DS_DEC_SRC2_U64        : DS_Real_gfx6_gfx7_gfx10<0x0c4, DS_DEC_SRC2_U64, DS_DEC_SRC2_U64>;
+defm DS_MIN_SRC2_I64        : DS_Real_gfx6_gfx7_gfx10<0x0c5, DS_MIN_SRC2_I64, DS_MIN_SRC2_I64>;
+defm DS_MAX_SRC2_I64        : DS_Real_gfx6_gfx7_gfx10<0x0c6, DS_MAX_SRC2_I64, DS_MAX_SRC2_I64>;
+defm DS_MIN_SRC2_U64        : DS_Real_gfx6_gfx7_gfx10<0x0c7, DS_MIN_SRC2_U64, DS_MIN_SRC2_U64>;
+defm DS_MAX_SRC2_U64        : DS_Real_gfx6_gfx7_gfx10<0x0c8, DS_MAX_SRC2_U64, DS_MAX_SRC2_U64>;
+defm DS_AND_SRC2_B64        : DS_Real_gfx6_gfx7_gfx10<0x0c9, DS_AND_SRC2_B64, DS_AND_SRC2_B64>;
+defm DS_OR_SRC2_B64         : DS_Real_gfx6_gfx7_gfx10<0x0ca, DS_OR_SRC2_B64, DS_OR_SRC2_B64>;
+defm DS_XOR_SRC2_B64        : DS_Real_gfx6_gfx7_gfx10<0x0cb, DS_XOR_SRC2_B64, DS_XOR_SRC2_B64>;
+defm DS_WRITE_SRC2_B64      : DS_Real_gfx6_gfx7_gfx10<0x0cd, DS_WRITE_SRC2_B64, DS_WRITE_SRC2_B64>;
+defm DS_MIN_SRC2_F64        : DS_Real_gfx6_gfx7_gfx10<0x0d2, DS_MIN_SRC2_F64, DS_MIN_SRC2_F64>;
+defm DS_MAX_SRC2_F64        : DS_Real_gfx6_gfx7_gfx10<0x0d3, DS_MAX_SRC2_F64, DS_MAX_SRC2_F64>;
 
 //===----------------------------------------------------------------------===//
 // GFX8, GFX9 (VI).
 //===----------------------------------------------------------------------===//
 
-class DS_Real_vi <bits<8> op, DS_Pseudo ps> :
+class DS_Real_Base_vi <bits<8> op, DS_Pseudo ps> :
   DS_Real <ps>,
   SIMCInstr <ps.PseudoInstr, SIEncodingFamily.VI> {
   let AssemblerPredicate = isGFX8GFX9;
@@ -1749,181 +1845,210 @@ class DS_Real_vi <bits<8> op, DS_Pseudo ps> :
   let Inst{63-56} = !if(ps.has_vdst, vdst{7-0}, 0);
 }
 
-def DS_ADD_U32_vi         : DS_Real_vi<0x0,  DS_ADD_U32>;
-def DS_SUB_U32_vi         : DS_Real_vi<0x1,  DS_SUB_U32>;
-def DS_RSUB_U32_vi        : DS_Real_vi<0x2,  DS_RSUB_U32>;
-def DS_INC_U32_vi         : DS_Real_vi<0x3,  DS_INC_U32>;
-def DS_DEC_U32_vi         : DS_Real_vi<0x4,  DS_DEC_U32>;
-def DS_MIN_I32_vi         : DS_Real_vi<0x5,  DS_MIN_I32>;
-def DS_MAX_I32_vi         : DS_Real_vi<0x6,  DS_MAX_I32>;
-def DS_MIN_U32_vi         : DS_Real_vi<0x7,  DS_MIN_U32>;
-def DS_MAX_U32_vi         : DS_Real_vi<0x8,  DS_MAX_U32>;
-def DS_AND_B32_vi         : DS_Real_vi<0x9,  DS_AND_B32>;
-def DS_OR_B32_vi          : DS_Real_vi<0xa,  DS_OR_B32>;
-def DS_XOR_B32_vi         : DS_Real_vi<0xb,  DS_XOR_B32>;
-def DS_MSKOR_B32_vi       : DS_Real_vi<0xc,  DS_MSKOR_B32>;
-def DS_WRITE_B32_vi       : DS_Real_vi<0xd,  DS_WRITE_B32>;
-def DS_WRITE2_B32_vi      : DS_Real_vi<0xe,  DS_WRITE2_B32>;
-def DS_WRITE2ST64_B32_vi  : DS_Real_vi<0xf,  DS_WRITE2ST64_B32>;
-def DS_CMPST_B32_vi       : DS_Real_vi<0x10, DS_CMPST_B32>;
-def DS_CMPST_F32_vi       : DS_Real_vi<0x11, DS_CMPST_F32>;
-def DS_MIN_F32_vi         : DS_Real_vi<0x12, DS_MIN_F32>;
-def DS_MAX_F32_vi         : DS_Real_vi<0x13, DS_MAX_F32>;
-def DS_NOP_vi             : DS_Real_vi<0x14, DS_NOP>;
-def DS_ADD_F32_vi         : DS_Real_vi<0x15, DS_ADD_F32>;
-def DS_GWS_INIT_vi        : DS_Real_vi<0x99, DS_GWS_INIT>;
-def DS_GWS_SEMA_V_vi      : DS_Real_vi<0x9a, DS_GWS_SEMA_V>;
-def DS_GWS_SEMA_BR_vi     : DS_Real_vi<0x9b, DS_GWS_SEMA_BR>;
-def DS_GWS_SEMA_P_vi      : DS_Real_vi<0x9c, DS_GWS_SEMA_P>;
-def DS_GWS_BARRIER_vi     : DS_Real_vi<0x9d, DS_GWS_BARRIER>;
-def DS_WRITE_ADDTID_B32_vi : DS_Real_vi<0x1d, DS_WRITE_ADDTID_B32>;
-def DS_WRITE_B8_vi        : DS_Real_vi<0x1e, DS_WRITE_B8>;
-def DS_WRITE_B16_vi       : DS_Real_vi<0x1f, DS_WRITE_B16>;
-def DS_ADD_RTN_U32_vi     : DS_Real_vi<0x20, DS_ADD_RTN_U32>;
-def DS_SUB_RTN_U32_vi     : DS_Real_vi<0x21, DS_SUB_RTN_U32>;
-def DS_RSUB_RTN_U32_vi    : DS_Real_vi<0x22, DS_RSUB_RTN_U32>;
-def DS_INC_RTN_U32_vi     : DS_Real_vi<0x23, DS_INC_RTN_U32>;
-def DS_DEC_RTN_U32_vi     : DS_Real_vi<0x24, DS_DEC_RTN_U32>;
-def DS_MIN_RTN_I32_vi     : DS_Real_vi<0x25, DS_MIN_RTN_I32>;
-def DS_MAX_RTN_I32_vi     : DS_Real_vi<0x26, DS_MAX_RTN_I32>;
-def DS_MIN_RTN_U32_vi     : DS_Real_vi<0x27, DS_MIN_RTN_U32>;
-def DS_MAX_RTN_U32_vi     : DS_Real_vi<0x28, DS_MAX_RTN_U32>;
-def DS_AND_RTN_B32_vi     : DS_Real_vi<0x29, DS_AND_RTN_B32>;
-def DS_OR_RTN_B32_vi      : DS_Real_vi<0x2a, DS_OR_RTN_B32>;
-def DS_XOR_RTN_B32_vi     : DS_Real_vi<0x2b, DS_XOR_RTN_B32>;
-def DS_MSKOR_RTN_B32_vi   : DS_Real_vi<0x2c, DS_MSKOR_RTN_B32>;
-def DS_WRXCHG_RTN_B32_vi  : DS_Real_vi<0x2d, DS_WRXCHG_RTN_B32>;
-def DS_WRXCHG2_RTN_B32_vi : DS_Real_vi<0x2e, DS_WRXCHG2_RTN_B32>;
-def DS_WRXCHG2ST64_RTN_B32_vi : DS_Real_vi<0x2f, DS_WRXCHG2ST64_RTN_B32>;
-def DS_CMPST_RTN_B32_vi   : DS_Real_vi<0x30, DS_CMPST_RTN_B32>;
-def DS_CMPST_RTN_F32_vi   : DS_Real_vi<0x31, DS_CMPST_RTN_F32>;
-def DS_MIN_RTN_F32_vi     : DS_Real_vi<0x32, DS_MIN_RTN_F32>;
-def DS_MAX_RTN_F32_vi     : DS_Real_vi<0x33, DS_MAX_RTN_F32>;
-def DS_WRAP_RTN_B32_vi    : DS_Real_vi<0x34, DS_WRAP_RTN_B32>;
-def DS_ADD_RTN_F32_vi     : DS_Real_vi<0x35, DS_ADD_RTN_F32>;
-def DS_READ_B32_vi        : DS_Real_vi<0x36, DS_READ_B32>;
-def DS_READ2_B32_vi       : DS_Real_vi<0x37, DS_READ2_B32>;
-def DS_READ2ST64_B32_vi   : DS_Real_vi<0x38, DS_READ2ST64_B32>;
-def DS_READ_I8_vi         : DS_Real_vi<0x39, DS_READ_I8>;
-def DS_READ_U8_vi         : DS_Real_vi<0x3a, DS_READ_U8>;
-def DS_READ_I16_vi        : DS_Real_vi<0x3b, DS_READ_I16>;
-def DS_READ_U16_vi        : DS_Real_vi<0x3c, DS_READ_U16>;
-def DS_READ_ADDTID_B32_vi : DS_Real_vi<0xb6, DS_READ_ADDTID_B32>;
-def DS_CONSUME_vi         : DS_Real_vi<0xbd, DS_CONSUME>;
-def DS_APPEND_vi          : DS_Real_vi<0xbe, DS_APPEND>;
-def DS_ORDERED_COUNT_vi   : DS_Real_vi<0xbf, DS_ORDERED_COUNT>;
-def DS_SWIZZLE_B32_vi     : DS_Real_vi<0x3d, DS_SWIZZLE_B32>;
-def DS_PERMUTE_B32_vi     : DS_Real_vi<0x3e, DS_PERMUTE_B32>;
-def DS_BPERMUTE_B32_vi    : DS_Real_vi<0x3f, DS_BPERMUTE_B32>;
 
-def DS_ADD_U64_vi         : DS_Real_vi<0x40, DS_ADD_U64>;
-def DS_SUB_U64_vi         : DS_Real_vi<0x41, DS_SUB_U64>;
-def DS_RSUB_U64_vi        : DS_Real_vi<0x42, DS_RSUB_U64>;
-def DS_INC_U64_vi         : DS_Real_vi<0x43, DS_INC_U64>;
-def DS_DEC_U64_vi         : DS_Real_vi<0x44, DS_DEC_U64>;
-def DS_MIN_I64_vi         : DS_Real_vi<0x45, DS_MIN_I64>;
-def DS_MAX_I64_vi         : DS_Real_vi<0x46, DS_MAX_I64>;
-def DS_MIN_U64_vi         : DS_Real_vi<0x47, DS_MIN_U64>;
-def DS_MAX_U64_vi         : DS_Real_vi<0x48, DS_MAX_U64>;
-def DS_AND_B64_vi         : DS_Real_vi<0x49, DS_AND_B64>;
-def DS_OR_B64_vi          : DS_Real_vi<0x4a, DS_OR_B64>;
-def DS_XOR_B64_vi         : DS_Real_vi<0x4b, DS_XOR_B64>;
-def DS_MSKOR_B64_vi       : DS_Real_vi<0x4c, DS_MSKOR_B64>;
-def DS_WRITE_B64_vi       : DS_Real_vi<0x4d, DS_WRITE_B64>;
-def DS_WRITE2_B64_vi      : DS_Real_vi<0x4E, DS_WRITE2_B64>;
-def DS_WRITE2ST64_B64_vi  : DS_Real_vi<0x4f, DS_WRITE2ST64_B64>;
-def DS_CMPST_B64_vi       : DS_Real_vi<0x50, DS_CMPST_B64>;
-def DS_CMPST_F64_vi       : DS_Real_vi<0x51, DS_CMPST_F64>;
-def DS_MIN_F64_vi         : DS_Real_vi<0x52, DS_MIN_F64>;
-def DS_MAX_F64_vi         : DS_Real_vi<0x53, DS_MAX_F64>;
+multiclass DS_Real_vi <bits<8> op, DS_Pseudo base_pseudo, bit need_gfx9_suffix = true> {
+  def "" : DS_Real_Base_vi<op, base_pseudo>;
 
-def DS_WRITE_B8_D16_HI_vi  : DS_Real_vi<0x54, DS_WRITE_B8_D16_HI>;
-def DS_WRITE_B16_D16_HI_vi : DS_Real_vi<0x55, DS_WRITE_B16_D16_HI>;
+  if need_gfx9_suffix then {
+    def _gfx9 : DS_Real_Base_vi<op, !cast<DS_Pseudo>(!cast<string>(base_pseudo)#"_gfx9")> {
+      let DecoderNamespace = "GFX9";
+    }
+  }
 
-def DS_READ_U8_D16_vi     : DS_Real_vi<0x56, DS_READ_U8_D16>;
-def DS_READ_U8_D16_HI_vi  : DS_Real_vi<0x57, DS_READ_U8_D16_HI>;
-def DS_READ_I8_D16_vi     : DS_Real_vi<0x58, DS_READ_I8_D16>;
-def DS_READ_I8_D16_HI_vi  : DS_Real_vi<0x59, DS_READ_I8_D16_HI>;
-def DS_READ_U16_D16_vi    : DS_Real_vi<0x5a, DS_READ_U16_D16>;
-def DS_READ_U16_D16_HI_vi : DS_Real_vi<0x5b, DS_READ_U16_D16_HI>;
+  // Handle cases that are available in all-AGPR or all-VGPR data
+  // operand forms. This should be used for all DS instructions with 2
+  // data operands.
+  defvar agpr_suffixed_name = !cast<string>(base_pseudo)#"_agpr";
 
-def DS_ADD_RTN_U64_vi     : DS_Real_vi<0x60, DS_ADD_RTN_U64>;
-def DS_SUB_RTN_U64_vi     : DS_Real_vi<0x61, DS_SUB_RTN_U64>;
-def DS_RSUB_RTN_U64_vi    : DS_Real_vi<0x62, DS_RSUB_RTN_U64>;
-def DS_INC_RTN_U64_vi     : DS_Real_vi<0x63, DS_INC_RTN_U64>;
-def DS_DEC_RTN_U64_vi     : DS_Real_vi<0x64, DS_DEC_RTN_U64>;
-def DS_MIN_RTN_I64_vi     : DS_Real_vi<0x65, DS_MIN_RTN_I64>;
-def DS_MAX_RTN_I64_vi     : DS_Real_vi<0x66, DS_MAX_RTN_I64>;
-def DS_MIN_RTN_U64_vi     : DS_Real_vi<0x67, DS_MIN_RTN_U64>;
-def DS_MAX_RTN_U64_vi     : DS_Real_vi<0x68, DS_MAX_RTN_U64>;
-def DS_AND_RTN_B64_vi     : DS_Real_vi<0x69, DS_AND_RTN_B64>;
-def DS_OR_RTN_B64_vi      : DS_Real_vi<0x6a, DS_OR_RTN_B64>;
-def DS_XOR_RTN_B64_vi     : DS_Real_vi<0x6b, DS_XOR_RTN_B64>;
-def DS_MSKOR_RTN_B64_vi   : DS_Real_vi<0x6c, DS_MSKOR_RTN_B64>;
-def DS_WRXCHG_RTN_B64_vi  : DS_Real_vi<0x6d, DS_WRXCHG_RTN_B64>;
-def DS_WRXCHG2_RTN_B64_vi : DS_Real_vi<0x6e, DS_WRXCHG2_RTN_B64>;
-def DS_WRXCHG2ST64_RTN_B64_vi : DS_Real_vi<0x6f, DS_WRXCHG2ST64_RTN_B64>;
-def DS_CONDXCHG32_RTN_B64_vi   : DS_Real_vi<0x7e, DS_CONDXCHG32_RTN_B64>;
-def DS_GWS_SEMA_RELEASE_ALL_vi : DS_Real_vi<0x98, DS_GWS_SEMA_RELEASE_ALL>;
-def DS_CMPST_RTN_B64_vi   : DS_Real_vi<0x70, DS_CMPST_RTN_B64>;
-def DS_CMPST_RTN_F64_vi   : DS_Real_vi<0x71, DS_CMPST_RTN_F64>;
-def DS_MIN_RTN_F64_vi     : DS_Real_vi<0x72, DS_MIN_RTN_F64>;
-def DS_MAX_RTN_F64_vi     : DS_Real_vi<0x73, DS_MAX_RTN_F64>;
+  if !exists<DS_Pseudo>(agpr_suffixed_name) then {
+    def _agpr : DS_Real_Base_vi<op, !cast<DS_Pseudo>(agpr_suffixed_name)> {
+      let DecoderNamespace = "GFX9";
+      let AssemblerPredicate = isGFX90APlus;
+    }
+  }
+}
 
-def DS_READ_B64_vi        : DS_Real_vi<0x76, DS_READ_B64>;
-def DS_READ2_B64_vi       : DS_Real_vi<0x77, DS_READ2_B64>;
-def DS_READ2ST64_B64_vi   : DS_Real_vi<0x78, DS_READ2ST64_B64>;
+// Instructions which use m0 or not for both gfx8 and gfx9 (or did not
+// exist on gfx8)
+multiclass DS_Real_m0_vi<bits<8> op, DS_Pseudo ps> : DS_Real_vi<op, ps, false>;
 
-def DS_ADD_SRC2_U32_vi    : DS_Real_vi<0x80, DS_ADD_SRC2_U32>;
-def DS_SUB_SRC2_U32_vi    : DS_Real_vi<0x81, DS_SUB_SRC2_U32>;
-def DS_RSUB_SRC2_U32_vi   : DS_Real_vi<0x82, DS_RSUB_SRC2_U32>;
-def DS_INC_SRC2_U32_vi    : DS_Real_vi<0x83, DS_INC_SRC2_U32>;
-def DS_DEC_SRC2_U32_vi    : DS_Real_vi<0x84, DS_DEC_SRC2_U32>;
-def DS_MIN_SRC2_I32_vi    : DS_Real_vi<0x85, DS_MIN_SRC2_I32>;
-def DS_MAX_SRC2_I32_vi    : DS_Real_vi<0x86, DS_MAX_SRC2_I32>;
-def DS_MIN_SRC2_U32_vi    : DS_Real_vi<0x87, DS_MIN_SRC2_U32>;
-def DS_MAX_SRC2_U32_vi    : DS_Real_vi<0x88, DS_MAX_SRC2_U32>;
-def DS_AND_SRC2_B32_vi    : DS_Real_vi<0x89, DS_AND_SRC2_B32>;
-def DS_OR_SRC2_B32_vi     : DS_Real_vi<0x8a, DS_OR_SRC2_B32>;
-def DS_XOR_SRC2_B32_vi    : DS_Real_vi<0x8b, DS_XOR_SRC2_B32>;
-def DS_WRITE_SRC2_B32_vi  : DS_Real_vi<0x8d, DS_WRITE_SRC2_B32>;
-def DS_MIN_SRC2_F32_vi    : DS_Real_vi<0x92, DS_MIN_SRC2_F32>;
-def DS_MAX_SRC2_F32_vi    : DS_Real_vi<0x93, DS_MAX_SRC2_F32>;
-def DS_ADD_SRC2_F32_vi    : DS_Real_vi<0x95, DS_ADD_SRC2_F32>;
-def DS_ADD_SRC2_U64_vi    : DS_Real_vi<0xc0, DS_ADD_SRC2_U64>;
-def DS_SUB_SRC2_U64_vi    : DS_Real_vi<0xc1, DS_SUB_SRC2_U64>;
-def DS_RSUB_SRC2_U64_vi   : DS_Real_vi<0xc2, DS_RSUB_SRC2_U64>;
-def DS_INC_SRC2_U64_vi    : DS_Real_vi<0xc3, DS_INC_SRC2_U64>;
-def DS_DEC_SRC2_U64_vi    : DS_Real_vi<0xc4, DS_DEC_SRC2_U64>;
-def DS_MIN_SRC2_I64_vi    : DS_Real_vi<0xc5, DS_MIN_SRC2_I64>;
-def DS_MAX_SRC2_I64_vi    : DS_Real_vi<0xc6, DS_MAX_SRC2_I64>;
-def DS_MIN_SRC2_U64_vi    : DS_Real_vi<0xc7, DS_MIN_SRC2_U64>;
-def DS_MAX_SRC2_U64_vi    : DS_Real_vi<0xc8, DS_MAX_SRC2_U64>;
-def DS_AND_SRC2_B64_vi    : DS_Real_vi<0xc9, DS_AND_SRC2_B64>;
-def DS_OR_SRC2_B64_vi     : DS_Real_vi<0xca, DS_OR_SRC2_B64>;
-def DS_XOR_SRC2_B64_vi    : DS_Real_vi<0xcb, DS_XOR_SRC2_B64>;
-def DS_WRITE_SRC2_B64_vi  : DS_Real_vi<0xcd, DS_WRITE_SRC2_B64>;
-def DS_MIN_SRC2_F64_vi    : DS_Real_vi<0xd2, DS_MIN_SRC2_F64>;
-def DS_MAX_SRC2_F64_vi    : DS_Real_vi<0xd3, DS_MAX_SRC2_F64>;
-def DS_WRITE_B96_vi       : DS_Real_vi<0xde, DS_WRITE_B96>;
-def DS_WRITE_B128_vi      : DS_Real_vi<0xdf, DS_WRITE_B128>;
-def DS_READ_B96_vi        : DS_Real_vi<0xfe, DS_READ_B96>;
-def DS_READ_B128_vi       : DS_Real_vi<0xff, DS_READ_B128>;
+defm DS_ADD_U32_vi        : DS_Real_vi<0x0,  DS_ADD_U32>;
+defm DS_SUB_U32_vi        : DS_Real_vi<0x1,  DS_SUB_U32>;
+defm DS_RSUB_U32_vi       : DS_Real_vi<0x2,  DS_RSUB_U32>;
+defm DS_INC_U32_vi        : DS_Real_vi<0x3,  DS_INC_U32>;
+defm DS_DEC_U32_vi        : DS_Real_vi<0x4,  DS_DEC_U32>;
+defm DS_MIN_I32_vi        : DS_Real_vi<0x5,  DS_MIN_I32>;
+defm DS_MAX_I32_vi        : DS_Real_vi<0x6,  DS_MAX_I32>;
+defm DS_MIN_U32_vi        : DS_Real_vi<0x7,  DS_MIN_U32>;
+defm DS_MAX_U32_vi        : DS_Real_vi<0x8,  DS_MAX_U32>;
+defm DS_AND_B32_vi        : DS_Real_vi<0x9,  DS_AND_B32>;
+defm DS_OR_B32_vi         : DS_Real_vi<0xa,  DS_OR_B32>;
+defm DS_XOR_B32_vi        : DS_Real_vi<0xb,  DS_XOR_B32>;
+defm DS_MSKOR_B32_vi      : DS_Real_vi<0xc,  DS_MSKOR_B32>;
+defm DS_WRITE_B32_vi      : DS_Real_vi<0xd,  DS_WRITE_B32>;
+defm DS_WRITE2_B32_vi     : DS_Real_vi<0xe,  DS_WRITE2_B32>;
+defm DS_WRITE2ST64_B32_vi : DS_Real_vi<0xf,  DS_WRITE2ST64_B32>;
+
+defm DS_CMPST_B32_vi      : DS_Real_vi<0x10, DS_CMPST_B32>;
+defm DS_CMPST_F32_vi      : DS_Real_vi<0x11, DS_CMPST_F32>;
+defm DS_MIN_F32_vi        : DS_Real_vi<0x12, DS_MIN_F32>;
+defm DS_MAX_F32_vi        : DS_Real_vi<0x13, DS_MAX_F32>;
+defm DS_NOP_vi            : DS_Real_m0_vi<0x14, DS_NOP>;
+defm DS_ADD_F32_vi        : DS_Real_vi<0x15, DS_ADD_F32>;
+defm DS_GWS_INIT_vi       : DS_Real_m0_vi<0x99, DS_GWS_INIT>;
+defm DS_GWS_SEMA_V_vi     : DS_Real_m0_vi<0x9a, DS_GWS_SEMA_V>;
+defm DS_GWS_SEMA_BR_vi    : DS_Real_m0_vi<0x9b, DS_GWS_SEMA_BR>;
+defm DS_GWS_SEMA_P_vi     : DS_Real_m0_vi<0x9c, DS_GWS_SEMA_P>;
+defm DS_GWS_BARRIER_vi    : DS_Real_m0_vi<0x9d, DS_GWS_BARRIER>;
+defm DS_WRITE_ADDTID_B32_vi: DS_Real_m0_vi<0x1d, DS_WRITE_ADDTID_B32>;
+defm DS_WRITE_B8_vi       : DS_Real_vi<0x1e, DS_WRITE_B8>;
+defm DS_WRITE_B16_vi      : DS_Real_vi<0x1f, DS_WRITE_B16>;
+defm DS_ADD_RTN_U32_vi    : DS_Real_vi<0x20, DS_ADD_RTN_U32>;
+defm DS_SUB_RTN_U32_vi    : DS_Real_vi<0x21, DS_SUB_RTN_U32>;
+defm DS_RSUB_RTN_U32_vi   : DS_Real_vi<0x22, DS_RSUB_RTN_U32>;
+defm DS_INC_RTN_U32_vi    : DS_Real_vi<0x23, DS_INC_RTN_U32>;
+defm DS_DEC_RTN_U32_vi    : DS_Real_vi<0x24, DS_DEC_RTN_U32>;
+defm DS_MIN_RTN_I32_vi    : DS_Real_vi<0x25, DS_MIN_RTN_I32>;
+defm DS_MAX_RTN_I32_vi    : DS_Real_vi<0x26, DS_MAX_RTN_I32>;
+defm DS_MIN_RTN_U32_vi    : DS_Real_vi<0x27, DS_MIN_RTN_U32>;
+defm DS_MAX_RTN_U32_vi    : DS_Real_vi<0x28, DS_MAX_RTN_U32>;
+defm DS_AND_RTN_B32_vi    : DS_Real_vi<0x29, DS_AND_RTN_B32>;
+defm DS_OR_RTN_B32_vi     : DS_Real_vi<0x2a, DS_OR_RTN_B32>;
+defm DS_XOR_RTN_B32_vi    : DS_Real_vi<0x2b, DS_XOR_RTN_B32>;
+defm DS_MSKOR_RTN_B32_vi  : DS_Real_vi<0x2c, DS_MSKOR_RTN_B32>;
+defm DS_WRXCHG_RTN_B32_vi : DS_Real_vi<0x2d, DS_WRXCHG_RTN_B32>;
+defm DS_WRXCHG2_RTN_B32_vi : DS_Real_vi<0x2e, DS_WRXCHG2_RTN_B32>;
+defm DS_WRXCHG2ST64_RTN_B32_vi : DS_Real_vi<0x2f, DS_WRXCHG2ST64_RTN_B32>;
+defm DS_CMPST_RTN_B32_vi  : DS_Real_vi<0x30, DS_CMPST_RTN_B32>;
+defm DS_CMPST_RTN_F32_vi  : DS_Real_vi<0x31, DS_CMPST_RTN_F32>;
+defm DS_MIN_RTN_F32_vi    : DS_Real_vi<0x32, DS_MIN_RTN_F32>;
+defm DS_MAX_RTN_F32_vi    : DS_Real_vi<0x33, DS_MAX_RTN_F32>;
+defm DS_WRAP_RTN_B32_vi   : DS_Real_vi<0x34, DS_WRAP_RTN_B32>;
+defm DS_ADD_RTN_F32_vi    : DS_Real_vi<0x35, DS_ADD_RTN_F32>;
+defm DS_READ_B32_vi       : DS_Real_vi<0x36, DS_READ_B32>;
+defm DS_READ2_B32_vi      : DS_Real_vi<0x37, DS_READ2_B32>;
+defm DS_READ2ST64_B32_vi  : DS_Real_vi<0x38, DS_READ2ST64_B32>;
+defm DS_READ_I8_vi        : DS_Real_vi<0x39, DS_READ_I8>;
+defm DS_READ_U8_vi        : DS_Real_vi<0x3a, DS_READ_U8>;
+defm DS_READ_I16_vi       : DS_Real_vi<0x3b, DS_READ_I16>;
+defm DS_READ_U16_vi       : DS_Real_vi<0x3c, DS_READ_U16>;
+defm DS_READ_ADDTID_B32_vi : DS_Real_m0_vi<0xb6, DS_READ_ADDTID_B32>;
+defm DS_CONSUME_vi         : DS_Real_m0_vi<0xbd, DS_CONSUME>;
+defm DS_APPEND_vi          : DS_Real_m0_vi<0xbe, DS_APPEND>;
+defm DS_ORDERED_COUNT_vi   : DS_Real_m0_vi<0xbf, DS_ORDERED_COUNT>;
+defm DS_SWIZZLE_B32_vi     : DS_Real_m0_vi<0x3d, DS_SWIZZLE_B32>;
+defm DS_PERMUTE_B32_vi    : DS_Real_m0_vi<0x3e, DS_PERMUTE_B32>;
+defm DS_BPERMUTE_B32_vi   : DS_Real_m0_vi<0x3f, DS_BPERMUTE_B32>;
+
+defm DS_ADD_U64_vi        : DS_Real_vi<0x40, DS_ADD_U64>;
+defm DS_SUB_U64_vi        : DS_Real_vi<0x41, DS_SUB_U64>;
+defm DS_RSUB_U64_vi       : DS_Real_vi<0x42, DS_RSUB_U64>;
+defm DS_INC_U64_vi        : DS_Real_vi<0x43, DS_INC_U64>;
+defm DS_DEC_U64_vi        : DS_Real_vi<0x44, DS_DEC_U64>;
+defm DS_MIN_I64_vi        : DS_Real_vi<0x45, DS_MIN_I64>;
+defm DS_MAX_I64_vi        : DS_Real_vi<0x46, DS_MAX_I64>;
+defm DS_MIN_U64_vi        : DS_Real_vi<0x47, DS_MIN_U64>;
+defm DS_MAX_U64_vi        : DS_Real_vi<0x48, DS_MAX_U64>;
+defm DS_AND_B64_vi        : DS_Real_vi<0x49, DS_AND_B64>;
+defm DS_OR_B64_vi         : DS_Real_vi<0x4a, DS_OR_B64>;
+defm DS_XOR_B64_vi        : DS_Real_vi<0x4b, DS_XOR_B64>;
+defm DS_MSKOR_B64_vi      : DS_Real_vi<0x4c, DS_MSKOR_B64>;
+defm DS_WRITE_B64_vi      : DS_Real_vi<0x4d, DS_WRITE_B64>;
+defm DS_WRITE2_B64_vi     : DS_Real_vi<0x4E, DS_WRITE2_B64>;
+defm DS_WRITE2ST64_B64_vi : DS_Real_vi<0x4f, DS_WRITE2ST64_B64>;
+
+defm DS_CMPST_B64_vi      : DS_Real_vi<0x50, DS_CMPST_B64>;
+defm DS_CMPST_F64_vi      : DS_Real_vi<0x51, DS_CMPST_F64>;
+defm DS_MIN_F64_vi        : DS_Real_vi<0x52, DS_MIN_F64>;
+defm DS_MAX_F64_vi        : DS_Real_vi<0x53, DS_MAX_F64>;
+
+defm DS_WRITE_B8_D16_HI_vi : DS_Real_m0_vi<0x54, DS_WRITE_B8_D16_HI>;
+defm DS_WRITE_B16_D16_HI_vi: DS_Real_m0_vi<0x55, DS_WRITE_B16_D16_HI>;
+
+defm DS_READ_U8_D16_vi    : DS_Real_m0_vi<0x56, DS_READ_U8_D16>;
+defm DS_READ_U8_D16_HI_vi : DS_Real_m0_vi<0x57, DS_READ_U8_D16_HI>;
+defm DS_READ_I8_D16_vi    : DS_Real_m0_vi<0x58, DS_READ_I8_D16>;
+defm DS_READ_I8_D16_HI_vi : DS_Real_m0_vi<0x59, DS_READ_I8_D16_HI>;
+defm DS_READ_U16_D16_vi   : DS_Real_m0_vi<0x5a, DS_READ_U16_D16>;
+defm DS_READ_U16_D16_HI_vi: DS_Real_m0_vi<0x5b, DS_READ_U16_D16_HI>;
+
+defm DS_ADD_RTN_U64_vi    : DS_Real_vi<0x60, DS_ADD_RTN_U64>;
+defm DS_SUB_RTN_U64_vi    : DS_Real_vi<0x61, DS_SUB_RTN_U64>;
+defm DS_RSUB_RTN_U64_vi   : DS_Real_vi<0x62, DS_RSUB_RTN_U64>;
+defm DS_INC_RTN_U64_vi    : DS_Real_vi<0x63, DS_INC_RTN_U64>;
+defm DS_DEC_RTN_U64_vi    : DS_Real_vi<0x64, DS_DEC_RTN_U64>;
+defm DS_MIN_RTN_I64_vi    : DS_Real_vi<0x65, DS_MIN_RTN_I64>;
+defm DS_MAX_RTN_I64_vi    : DS_Real_vi<0x66, DS_MAX_RTN_I64>;
+defm DS_MIN_RTN_U64_vi    : DS_Real_vi<0x67, DS_MIN_RTN_U64>;
+defm DS_MAX_RTN_U64_vi    : DS_Real_vi<0x68, DS_MAX_RTN_U64>;
+defm DS_AND_RTN_B64_vi    : DS_Real_vi<0x69, DS_AND_RTN_B64>;
+defm DS_OR_RTN_B64_vi     : DS_Real_vi<0x6a, DS_OR_RTN_B64>;
+defm DS_XOR_RTN_B64_vi    : DS_Real_vi<0x6b, DS_XOR_RTN_B64>;
+defm DS_MSKOR_RTN_B64_vi  : DS_Real_vi<0x6c, DS_MSKOR_RTN_B64>;
+defm DS_WRXCHG_RTN_B64_vi : DS_Real_vi<0x6d, DS_WRXCHG_RTN_B64>;
+defm DS_WRXCHG2_RTN_B64_vi : DS_Real_vi<0x6e, DS_WRXCHG2_RTN_B64>;
+defm DS_WRXCHG2ST64_RTN_B64_vi : DS_Real_vi<0x6f, DS_WRXCHG2ST64_RTN_B64>;
+defm DS_CONDXCHG32_RTN_B64_vi  : DS_Real_vi<0x7e, DS_CONDXCHG32_RTN_B64>;
+defm DS_GWS_SEMA_RELEASE_ALL_vi: DS_Real_m0_vi<0x98, DS_GWS_SEMA_RELEASE_ALL>;
+defm DS_CMPST_RTN_B64_vi  : DS_Real_vi<0x70, DS_CMPST_RTN_B64>;
+defm DS_CMPST_RTN_F64_vi  : DS_Real_vi<0x71, DS_CMPST_RTN_F64>;
+defm DS_MIN_RTN_F64_vi    : DS_Real_vi<0x72, DS_MIN_RTN_F64>;
+defm DS_MAX_RTN_F64_vi    : DS_Real_vi<0x73, DS_MAX_RTN_F64>;
+
+defm DS_READ_B64_vi       : DS_Real_vi<0x76, DS_READ_B64>;
+defm DS_READ2_B64_vi      : DS_Real_vi<0x77, DS_READ2_B64>;
+defm DS_READ2ST64_B64_vi  : DS_Real_vi<0x78, DS_READ2ST64_B64>;
+
+defm DS_ADD_SRC2_U32_vi   : DS_Real_m0_vi<0x80, DS_ADD_SRC2_U32>;
+defm DS_SUB_SRC2_U32_vi   : DS_Real_m0_vi<0x81, DS_SUB_SRC2_U32>;
+defm DS_RSUB_SRC2_U32_vi  : DS_Real_m0_vi<0x82, DS_RSUB_SRC2_U32>;
+defm DS_INC_SRC2_U32_vi   : DS_Real_m0_vi<0x83, DS_INC_SRC2_U32>;
+defm DS_DEC_SRC2_U32_vi   : DS_Real_m0_vi<0x84, DS_DEC_SRC2_U32>;
+defm DS_MIN_SRC2_I32_vi   : DS_Real_m0_vi<0x85, DS_MIN_SRC2_I32>;
+defm DS_MAX_SRC2_I32_vi   : DS_Real_m0_vi<0x86, DS_MAX_SRC2_I32>;
+defm DS_MIN_SRC2_U32_vi   : DS_Real_m0_vi<0x87, DS_MIN_SRC2_U32>;
+defm DS_MAX_SRC2_U32_vi   : DS_Real_m0_vi<0x88, DS_MAX_SRC2_U32>;
+defm DS_AND_SRC2_B32_vi   : DS_Real_m0_vi<0x89, DS_AND_SRC2_B32>;
+defm DS_OR_SRC2_B32_vi    : DS_Real_m0_vi<0x8a, DS_OR_SRC2_B32>;
+defm DS_XOR_SRC2_B32_vi   : DS_Real_m0_vi<0x8b, DS_XOR_SRC2_B32>;
+defm DS_WRITE_SRC2_B32_vi : DS_Real_m0_vi<0x8d, DS_WRITE_SRC2_B32>;
+defm DS_MIN_SRC2_F32_vi   : DS_Real_m0_vi<0x92, DS_MIN_SRC2_F32>;
+defm DS_MAX_SRC2_F32_vi   : DS_Real_m0_vi<0x93, DS_MAX_SRC2_F32>;
+defm DS_ADD_SRC2_F32_vi   : DS_Real_m0_vi<0x95, DS_ADD_SRC2_F32>;
+defm DS_ADD_SRC2_U64_vi   : DS_Real_m0_vi<0xc0, DS_ADD_SRC2_U64>;
+defm DS_SUB_SRC2_U64_vi   : DS_Real_m0_vi<0xc1, DS_SUB_SRC2_U64>;
+defm DS_RSUB_SRC2_U64_vi  : DS_Real_m0_vi<0xc2, DS_RSUB_SRC2_U64>;
+defm DS_INC_SRC2_U64_vi   : DS_Real_m0_vi<0xc3, DS_INC_SRC2_U64>;
+defm DS_DEC_SRC2_U64_vi   : DS_Real_m0_vi<0xc4, DS_DEC_SRC2_U64>;
+defm DS_MIN_SRC2_I64_vi   : DS_Real_m0_vi<0xc5, DS_MIN_SRC2_I64>;
+defm DS_MAX_SRC2_I64_vi   : DS_Real_m0_vi<0xc6, DS_MAX_SRC2_I64>;
+defm DS_MIN_SRC2_U64_vi   : DS_Real_m0_vi<0xc7, DS_MIN_SRC2_U64>;
+defm DS_MAX_SRC2_U64_vi   : DS_Real_m0_vi<0xc8, DS_MAX_SRC2_U64>;
+defm DS_AND_SRC2_B64_vi   : DS_Real_m0_vi<0xc9, DS_AND_SRC2_B64>;
+defm DS_OR_SRC2_B64_vi    : DS_Real_m0_vi<0xca, DS_OR_SRC2_B64>;
+defm DS_XOR_SRC2_B64_vi   : DS_Real_m0_vi<0xcb, DS_XOR_SRC2_B64>;
+defm DS_WRITE_SRC2_B64_vi : DS_Real_m0_vi<0xcd, DS_WRITE_SRC2_B64>;
+defm DS_MIN_SRC2_F64_vi   : DS_Real_m0_vi<0xd2, DS_MIN_SRC2_F64>;
+defm DS_MAX_SRC2_F64_vi   : DS_Real_m0_vi<0xd3, DS_MAX_SRC2_F64>;
+defm DS_WRITE_B96_vi      : DS_Real_vi<0xde, DS_WRITE_B96>;
+defm DS_WRITE_B128_vi     : DS_Real_vi<0xdf, DS_WRITE_B128>;
+defm DS_READ_B96_vi       : DS_Real_vi<0xfe, DS_READ_B96>;
+defm DS_READ_B128_vi      : DS_Real_vi<0xff, DS_READ_B128>;
 
 // GFX90A+.
-def DS_ADD_F64_vi     : DS_Real_vi<0x5c, DS_ADD_F64>;
-def DS_ADD_RTN_F64_vi : DS_Real_vi<0x7c, DS_ADD_RTN_F64>;
+defm DS_ADD_F64_vi    : DS_Real_m0_vi<0x5c, DS_ADD_F64>;
+defm DS_ADD_RTN_F64_vi: DS_Real_m0_vi<0x7c, DS_ADD_RTN_F64>;
 
 // GFX942+.
-def DS_PK_ADD_F16_vi     : DS_Real_vi<0x17, DS_PK_ADD_F16>;
-def DS_PK_ADD_RTN_F16_vi : DS_Real_vi<0xb7, DS_PK_ADD_RTN_F16>;
-def DS_PK_ADD_BF16_vi     : DS_Real_vi<0x18, DS_PK_ADD_BF16>;
-def DS_PK_ADD_RTN_BF16_vi : DS_Real_vi<0xb8, DS_PK_ADD_RTN_BF16>;
+defm DS_PK_ADD_F16_vi     : DS_Real_m0_vi<0x17, DS_PK_ADD_F16>;
+defm DS_PK_ADD_RTN_F16_vi : DS_Real_m0_vi<0xb7, DS_PK_ADD_RTN_F16>;
+defm DS_PK_ADD_BF16_vi    : DS_Real_m0_vi<0x18, DS_PK_ADD_BF16>;
+defm DS_PK_ADD_RTN_BF16_vi: DS_Real_m0_vi<0xb8, DS_PK_ADD_RTN_BF16>;
 
 //===----------------------------------------------------------------------===//
 // GFX950.
 //===----------------------------------------------------------------------===//
-def DS_READ_B64_TR_B4_vi  : DS_Real_vi<0x0e0, DS_READ_B64_TR_B4>;
-def DS_READ_B96_TR_B6_vi  : DS_Real_vi<0x0e1, DS_READ_B96_TR_B6>;
-def DS_READ_B64_TR_B8_vi  : DS_Real_vi<0x0e2, DS_READ_B64_TR_B8>;
-def DS_READ_B64_TR_B16_vi : DS_Real_vi<0x0e3, DS_READ_B64_TR_B16>;
+defm DS_READ_B64_TR_B4_vi : DS_Real_m0_vi<0x0e0, DS_READ_B64_TR_B4>;
+defm DS_READ_B96_TR_B6_vi : DS_Real_m0_vi<0x0e1, DS_READ_B96_TR_B6>;
+defm DS_READ_B64_TR_B8_vi : DS_Real_m0_vi<0x0e2, DS_READ_B64_TR_B8>;
+defm DS_READ_B64_TR_B16_vi: DS_Real_m0_vi<0x0e3, DS_READ_B64_TR_B16>;

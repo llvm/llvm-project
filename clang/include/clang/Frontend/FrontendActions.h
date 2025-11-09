@@ -320,13 +320,16 @@ protected:
   bool hasPCHSupport() const override { return true; }
 };
 
-class GetDependenciesByModuleNameAction : public PreprocessOnlyAction {
-  StringRef ModuleName;
+//===----------------------------------------------------------------------===//
+// HLSL Specific Actions
+//===----------------------------------------------------------------------===//
+
+class HLSLFrontendAction : public WrapperFrontendAction {
+protected:
   void ExecuteAction() override;
 
 public:
-  GetDependenciesByModuleNameAction(StringRef ModuleName)
-      : ModuleName(ModuleName) {}
+  HLSLFrontendAction(std::unique_ptr<FrontendAction> WrappedAction);
 };
 
 }  // end namespace clang

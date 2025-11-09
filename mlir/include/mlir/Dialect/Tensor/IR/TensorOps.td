@@ -1470,24 +1470,25 @@ def Tensor_PadOp : Tensor_Op<"pad", [
 // ParallelInsertSliceOp
 //===----------------------------------------------------------------------===//
 
-// TODO: Implement InParallelOpInterface.
 def Tensor_ParallelInsertSliceOp : Tensor_Op<"parallel_insert_slice", [
        AttrSizedOperandSegments,
        OffsetSizeAndStrideOpInterface,
+       DeclareOpInterfaceMethods<ParallelCombiningOpInterface,
+          ["getUpdatedDestinations", "getIteratingParent"]>,
        // TODO: Cannot use an interface here atm, verify this manually for now.
-       // HasParent<"ParallelCombiningOpInterface">
+       // HasParent<"InParallelOpInterface">
   ]> {
   let summary = [{
     Specify the tensor slice update of a single thread of a parent
-    ParallelCombiningOpInterface op.
+    InParallelOpInterface op.
   }];
   let description = [{
     The `parallel_insert_slice` yields a subset tensor value to its parent
-    ParallelCombiningOpInterface. These subset tensor values are aggregated to
+    InParallelOpInterface. These subset tensor values are aggregated to
     in some unspecified order into a full tensor value returned by the parent
     parallel iterating op.
     The `parallel_insert_slice` is one such op allowed in the
-    ParallelCombiningOpInterface op.
+    InParallelOpInterface op.
 
     Conflicting writes result in undefined semantics, in that the indices written
     to by multiple parallel updates might contain data from any of the updates,
@@ -1569,8 +1570,8 @@ def Tensor_ParallelInsertSliceOp : Tensor_Op<"parallel_insert_slice", [
       return ::llvm::cast<RankedTensorType>(getDest().getType());
     }
 
-    ParallelCombiningOpInterface getParallelCombiningParent() {
-      return dyn_cast<ParallelCombiningOpInterface>(
+    InParallelOpInterface getParallelCombiningParent() {
+      return dyn_cast<InParallelOpInterface>(
         getOperation()->getParentOp());
     }
 

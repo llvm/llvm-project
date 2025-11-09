@@ -25,7 +25,7 @@ define amdgpu_kernel void @flat_atomic_cond_sub_no_rtn_u32(ptr %addr, i32 %in) {
 ; GFX12-GISEL-NEXT:    flat_atomic_cond_sub_u32 v0, v[0:1], v2 offset:-16 th:TH_ATOMIC_RETURN
 ; GFX12-GISEL-NEXT:    s_endpgm
 entry:
-  %gep = getelementptr i32, ptr %addr, i32 -4
+  %gep = getelementptr inbounds i32, ptr %addr, i32 -4
   %unused = call i32 @llvm.amdgcn.atomic.cond.sub.u32.p0(ptr %gep, i32 %in)
   ret void
 }
@@ -49,7 +49,7 @@ define amdgpu_kernel void @flat_atomic_cond_sub_no_rtn_u32_forced(ptr %addr, i32
 ; GFX12-GISEL-NEXT:    flat_atomic_cond_sub_u32 v[0:1], v2 offset:-16
 ; GFX12-GISEL-NEXT:    s_endpgm
 entry:
-  %gep = getelementptr i32, ptr %addr, i32 -4
+  %gep = getelementptr inbounds i32, ptr %addr, i32 -4
   %unused = call i32 @llvm.amdgcn.atomic.cond.sub.u32.p0(ptr %gep, i32 %in)
   ret void
 }
@@ -83,7 +83,7 @@ define amdgpu_kernel void @flat_atomic_cond_sub_rtn_u32(ptr %addr, i32 %in, ptr 
 ; GFX12-GISEL-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX12-GISEL-NEXT:    s_endpgm
 entry:
-  %gep = getelementptr i32, ptr %addr, i32 4
+  %gep = getelementptr inbounds i32, ptr %addr, i32 4
   %val = call i32 @llvm.amdgcn.atomic.cond.sub.u32.p0(ptr %gep, i32 %in)
   store i32 %val, ptr %use
   ret void

@@ -21,6 +21,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -149,7 +150,10 @@ public:
       if (!CVisited.insert(CII).second)
         continue;
 
-      if (CII->getParent() == II->getParent() && !IsLookThru(II))
+      // Same-BB filter must look at the *user*; and allow non-lookthrough
+      // users when the def is a PHI (loop-header pattern).
+      if (CII->getParent() == II->getParent() && !IsLookThru(CII) &&
+          !isa<PHINode>(II))
         continue;
 
       if (isOpLegal(CII))
@@ -545,7 +549,8 @@ public:
     AU.addRequired<TargetPassConfig>();
     AU.addRequired<AssumptionCacheTracker>();
     AU.addRequired<UniformityInfoWrapperPass>();
-    AU.setPreservesAll();
+    // Invalidates UniformityInfo
+    AU.setPreservesCFG();
   }
 
   bool runOnFunction(Function &F) override;

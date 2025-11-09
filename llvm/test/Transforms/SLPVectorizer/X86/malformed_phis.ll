@@ -12,22 +12,10 @@ define void @test() #0 {
 ; CHECK:       bb1:
 ; CHECK-NEXT:    [[TMP:%.*]] = phi i32 [ 1, [[BB1]] ], [ 2, [[BB:%.*]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = phi i32 [ [[TMP18:%.*]], [[BB1]] ], [ 3, [[BB]] ]
-; CHECK-NEXT:    [[TMP3:%.*]] = mul i32 4, [[TMP]]
-; CHECK-NEXT:    [[TMP4:%.*]] = mul i32 [[TMP3]], [[TMP]]
-; CHECK-NEXT:    [[TMP5:%.*]] = mul i32 [[TMP4]], [[TMP]]
-; CHECK-NEXT:    [[TMP6:%.*]] = mul i32 [[TMP5]], [[TMP]]
-; CHECK-NEXT:    [[TMP7:%.*]] = mul i32 [[TMP6]], [[TMP]]
-; CHECK-NEXT:    [[TMP8:%.*]] = mul i32 [[TMP7]], [[TMP]]
-; CHECK-NEXT:    [[TMP9:%.*]] = mul i32 [[TMP8]], [[TMP]]
-; CHECK-NEXT:    [[TMP10:%.*]] = mul i32 [[TMP9]], [[TMP]]
-; CHECK-NEXT:    [[TMP11:%.*]] = mul i32 [[TMP10]], [[TMP]]
-; CHECK-NEXT:    [[TMP12:%.*]] = mul i32 [[TMP11]], [[TMP]]
-; CHECK-NEXT:    [[TMP13:%.*]] = mul i32 [[TMP12]], [[TMP]]
-; CHECK-NEXT:    [[TMP14:%.*]] = mul i32 [[TMP13]], [[TMP]]
-; CHECK-NEXT:    [[TMP15:%.*]] = mul i32 [[TMP14]], [[TMP]]
-; CHECK-NEXT:    [[TMP16:%.*]] = mul i32 [[TMP15]], [[TMP]]
-; CHECK-NEXT:    [[TMP17:%.*]] = mul i32 [[TMP16]], [[TMP]]
-; CHECK-NEXT:    [[TMP18]] = mul i32 [[TMP17]], [[TMP]]
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <16 x i32> poison, i32 [[TMP]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i32> [[TMP0]], <16 x i32> poison, <16 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.mul.v16i32(<16 x i32> [[TMP1]])
+; CHECK-NEXT:    [[TMP18]] = mul i32 [[TMP2]], 4
 ; CHECK-NEXT:    br label [[BB1]]
 ;
 bb:

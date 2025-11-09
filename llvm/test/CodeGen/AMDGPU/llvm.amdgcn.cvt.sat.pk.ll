@@ -58,13 +58,7 @@ define amdgpu_kernel void @sat_pk4_i4_i8_f32_v(i32 %src, ptr %out) #1 {
 
 define amdgpu_kernel void @sat_pk4_i4_i8_f32_s(i32 inreg %src, ptr %out) #1 {
 ; SDAG-REAL16-LABEL: sat_pk4_i4_i8_f32_s:
-; SDAG-REAL16:       ; %bb.1:
-; SDAG-REAL16-NEXT:    s_load_b32 s8, s[4:5], 0x0
-; SDAG-REAL16-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-REAL16-NEXT:    s_branch .LBB1_0
-; SDAG-REAL16-NEXT:    .p2align 8
-; SDAG-REAL16-NEXT:  ; %bb.2:
-; SDAG-REAL16-NEXT:  .LBB1_0:
+; SDAG-REAL16:       ; %bb.0:
 ; SDAG-REAL16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
 ; SDAG-REAL16-NEXT:    v_sat_pk4_i4_i8_e32 v0.l, s8
 ; SDAG-REAL16-NEXT:    v_mov_b32_e32 v1, 0
@@ -73,13 +67,7 @@ define amdgpu_kernel void @sat_pk4_i4_i8_f32_s(i32 inreg %src, ptr %out) #1 {
 ; SDAG-REAL16-NEXT:    s_endpgm
 ;
 ; SDAG-FAKE16-LABEL: sat_pk4_i4_i8_f32_s:
-; SDAG-FAKE16:       ; %bb.1:
-; SDAG-FAKE16-NEXT:    s_load_b32 s8, s[4:5], 0x0
-; SDAG-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-FAKE16-NEXT:    s_branch .LBB1_0
-; SDAG-FAKE16-NEXT:    .p2align 8
-; SDAG-FAKE16-NEXT:  ; %bb.2:
-; SDAG-FAKE16-NEXT:  .LBB1_0:
+; SDAG-FAKE16:       ; %bb.0:
 ; SDAG-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
 ; SDAG-FAKE16-NEXT:    v_mov_b32_e32 v0, 0
 ; SDAG-FAKE16-NEXT:    v_sat_pk4_i4_i8_e32 v1, s8
@@ -205,13 +193,7 @@ define amdgpu_kernel void @sat_pk4_u4_u8_f32_v(i32 %src, ptr %out) #1 {
 
 define amdgpu_kernel void @sat_pk4_u4_u8_f32_s(i32 inreg %src, ptr %out) #1 {
 ; SDAG-REAL16-LABEL: sat_pk4_u4_u8_f32_s:
-; SDAG-REAL16:       ; %bb.1:
-; SDAG-REAL16-NEXT:    s_load_b32 s8, s[4:5], 0x0
-; SDAG-REAL16-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-REAL16-NEXT:    s_branch .LBB4_0
-; SDAG-REAL16-NEXT:    .p2align 8
-; SDAG-REAL16-NEXT:  ; %bb.2:
-; SDAG-REAL16-NEXT:  .LBB4_0:
+; SDAG-REAL16:       ; %bb.0:
 ; SDAG-REAL16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
 ; SDAG-REAL16-NEXT:    v_sat_pk4_u4_u8_e32 v0.l, s8
 ; SDAG-REAL16-NEXT:    v_mov_b32_e32 v1, 0
@@ -220,13 +202,7 @@ define amdgpu_kernel void @sat_pk4_u4_u8_f32_s(i32 inreg %src, ptr %out) #1 {
 ; SDAG-REAL16-NEXT:    s_endpgm
 ;
 ; SDAG-FAKE16-LABEL: sat_pk4_u4_u8_f32_s:
-; SDAG-FAKE16:       ; %bb.1:
-; SDAG-FAKE16-NEXT:    s_load_b32 s8, s[4:5], 0x0
-; SDAG-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-FAKE16-NEXT:    s_branch .LBB4_0
-; SDAG-FAKE16-NEXT:    .p2align 8
-; SDAG-FAKE16-NEXT:  ; %bb.2:
-; SDAG-FAKE16-NEXT:  .LBB4_0:
+; SDAG-FAKE16:       ; %bb.0:
 ; SDAG-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
 ; SDAG-FAKE16-NEXT:    v_mov_b32_e32 v0, 0
 ; SDAG-FAKE16-NEXT:    v_sat_pk4_u4_u8_e32 v1, s8

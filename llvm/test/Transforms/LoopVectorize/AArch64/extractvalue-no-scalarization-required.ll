@@ -27,7 +27,7 @@ define void @test1(ptr %dst, {i64, i64} %sv) {
 ; FORCED-LABEL: define void @test1(
 ; FORCED-SAME: ptr [[DST:%.*]], { i64, i64 } [[SV:%.*]]) {
 ; FORCED-NEXT:  [[ENTRY:.*:]]
-; FORCED-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; FORCED-NEXT:    br label %[[VECTOR_PH:.*]]
 ; FORCED:       [[VECTOR_PH]]:
 ; FORCED-NEXT:    [[TMP0:%.*]] = extractvalue { i64, i64 } [[SV]], 0
 ; FORCED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i64> poison, i64 [[TMP0]], i64 0
@@ -46,7 +46,7 @@ define void @test1(ptr %dst, {i64, i64} %sv) {
 ; FORCED-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; FORCED:       [[MIDDLE_BLOCK]]:
 ; FORCED-NEXT:    br [[EXIT:label %.*]]
-; FORCED:       [[SCALAR_PH]]:
+; FORCED:       [[SCALAR_PH:.*:]]
 ;
 entry:
   br label %loop.body
@@ -83,7 +83,7 @@ define void @test_getVectorCallCost(ptr %dst, {float, float} %sv) {
 ; FORCED-LABEL: define void @test_getVectorCallCost(
 ; FORCED-SAME: ptr [[DST:%.*]], { float, float } [[SV:%.*]]) {
 ; FORCED-NEXT:  [[ENTRY:.*:]]
-; FORCED-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; FORCED-NEXT:    br label %[[VECTOR_PH:.*]]
 ; FORCED:       [[VECTOR_PH]]:
 ; FORCED-NEXT:    [[TMP0:%.*]] = extractvalue { float, float } [[SV]], 0
 ; FORCED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x float> poison, float [[TMP0]], i64 0
@@ -102,7 +102,7 @@ define void @test_getVectorCallCost(ptr %dst, {float, float} %sv) {
 ; FORCED-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; FORCED:       [[MIDDLE_BLOCK]]:
 ; FORCED-NEXT:    br [[EXIT:label %.*]]
-; FORCED:       [[SCALAR_PH]]:
+; FORCED:       [[SCALAR_PH:.*:]]
 ;
 entry:
   br label %loop.body

@@ -17,7 +17,9 @@
 
 namespace lld::elf {
 struct Ctx;
+struct ELFSyncStream;
 class Defined;
+class Undefined;
 class Symbol;
 class InputSection;
 class InputSectionBase;
@@ -153,17 +155,24 @@ struct JumpInstrMod {
   unsigned size;
 };
 
+void printLocation(ELFSyncStream &s, InputSectionBase &sec, const Symbol &sym,
+                   uint64_t off);
+
 // This function writes undefined symbol diagnostics to an internal buffer.
 // Call reportUndefinedSymbols() after calling scanRelocations() to emit
 // the diagnostics.
 template <class ELFT> void scanRelocations(Ctx &ctx);
 template <class ELFT> void checkNoCrossRefs(Ctx &ctx);
 void reportUndefinedSymbols(Ctx &);
+bool maybeReportUndefined(Ctx &, Undefined &sym, InputSectionBase &sec,
+                          uint64_t offset);
 void postScanRelocations(Ctx &ctx);
 void addGotEntry(Ctx &ctx, Symbol &sym);
 
 void hexagonTLSSymbolUpdate(Ctx &ctx);
 bool hexagonNeedsTLSSymbol(ArrayRef<OutputSection *> outputSections);
+
+bool isAbsolute(const Symbol &sym);
 
 class ThunkSection;
 class Thunk;

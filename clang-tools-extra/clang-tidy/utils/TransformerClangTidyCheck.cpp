@@ -1,4 +1,4 @@
-//===---------- TransformerClangTidyCheck.cpp - clang-tidy ----------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -105,7 +105,7 @@ void TransformerClangTidyCheck::check(
   if (Result.Context->getDiagnostics().hasErrorOccurred())
     return;
 
-  size_t I = transformer::detail::findSelectedCase(Result, Rule);
+  const size_t I = transformer::detail::findSelectedCase(Result, Rule);
   Expected<SmallVector<transformer::Edit, 1>> Edits =
       Rule.Cases[I].Edits(Result);
   if (!Edits) {
@@ -127,7 +127,7 @@ void TransformerClangTidyCheck::check(
 
   // Associate the diagnostic with the location of the first change.
   {
-    DiagnosticBuilder Diag =
+    const DiagnosticBuilder Diag =
         diag((*Edits)[0].Range.getBegin(), escapeForDiagnostic(*Explanation));
     for (const auto &T : *Edits) {
       switch (T.Kind) {

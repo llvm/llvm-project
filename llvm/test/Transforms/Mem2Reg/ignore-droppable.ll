@@ -2,8 +2,8 @@
 ; RUN: opt -passes=mem2reg -S -o - < %s | FileCheck %s
 
 declare void @llvm.assume(i1)
-declare void @llvm.lifetime.start.p0(i64 %size, ptr nocapture %ptr)
-declare void @llvm.lifetime.end.p0(i64 %size, ptr nocapture %ptr)
+declare void @llvm.lifetime.start.p0(ptr nocapture %ptr)
+declare void @llvm.lifetime.end.p0(ptr nocapture %ptr)
 
 define void @positive_assume_uses(ptr %arg) {
 ; CHECK-LABEL: @positive_assume_uses(
@@ -54,10 +54,10 @@ define void @positive_gep_assume_uses() {
 ;
   %A = alloca {i8, i16}
   %B = getelementptr {i8, i16}, ptr %A, i32 0, i32 0
-  call void @llvm.lifetime.start.p0(i64 2, ptr %A)
+  call void @llvm.lifetime.start.p0(ptr %A)
   call void @llvm.assume(i1 true) ["align"(ptr %B, i64 8), "align"(ptr %B, i64 16)]
   store {i8, i16} zeroinitializer, ptr %A
-  call void @llvm.lifetime.end.p0(i64 2, ptr %A)
+  call void @llvm.lifetime.end.p0(ptr %A)
   call void @llvm.assume(i1 true) ["nonnull"(ptr %B), "align"(ptr %B, i64 2)]
   ret void
 }
@@ -70,10 +70,10 @@ define void @positive_mixed_assume_uses() {
 ; CHECK-NEXT:    ret void
 ;
   %A = alloca i8
-  call void @llvm.lifetime.start.p0(i64 2, ptr %A)
+  call void @llvm.lifetime.start.p0(ptr %A)
   call void @llvm.assume(i1 true) ["nonnull"(ptr %A), "align"(ptr %A, i64 8), "align"(ptr %A, i64 16)]
   store i8 1, ptr %A
-  call void @llvm.lifetime.end.p0(i64 2, ptr %A)
+  call void @llvm.lifetime.end.p0(ptr %A)
   call void @llvm.assume(i1 true) ["nonnull"(ptr %A), "align"(ptr %A, i64 2), "nonnull"(ptr %A)]
   call void @llvm.assume(i1 true) ["nonnull"(ptr %A), "align"(ptr %A, i64 2), "nonnull"(ptr %A)]
   ret void

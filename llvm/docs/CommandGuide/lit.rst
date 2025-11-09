@@ -399,6 +399,11 @@ ADDITIONAL OPTIONS
  Show all features used in the test suite (in ``XFAIL``, ``UNSUPPORTED`` and
  ``REQUIRES``) and exit.
 
+.. option:: --update-tests
+
+ Pass failing tests to functions in the ``lit_config.test_updaters`` list to
+ check whether any of them know how to update the test to make it pass.
+
 EXIT STATUS
 -----------
 
@@ -623,32 +628,27 @@ TestRunner.py:
  %{fs-src-root}          root component of file system paths pointing to the LLVM checkout
  %{fs-tmp-root}          root component of file system paths pointing to the test's temporary directory
  %{fs-sep}               file system path separator
- %t                      temporary file name unique to the test
+ %t                      a path unique to the test (which may be used to make files or directories)
  %basename_t             The last path component of %t but without the ``.tmp`` extension (deprecated, use ``%{t:stem}`` instead)
- %T                      parent directory of %t (not unique, deprecated, do not use)
  %%                      %
  %/s                     %s but ``\`` is replaced by ``/``
  %/S                     %S but ``\`` is replaced by ``/``
  %/p                     %p but ``\`` is replaced by ``/``
  %/t                     %t but ``\`` is replaced by ``/``
- %/T                     %T but ``\`` is replaced by ``/``
  %{s:basename}           The last path component of %s
  %{t:stem}               The last path component of %t but without the ``.tmp`` extension (alias for %basename_t)
  %{s:real}               %s after expanding all symbolic links and substitute drives
  %{S:real}               %S after expanding all symbolic links and substitute drives
  %{p:real}               %p after expanding all symbolic links and substitute drives
  %{t:real}               %t after expanding all symbolic links and substitute drives
- %{T:real}               %T after expanding all symbolic links and substitute drives
  %{/s:real}              %/s after expanding all symbolic links and substitute drives
  %{/S:real}              %/S after expanding all symbolic links and substitute drives
  %{/p:real}              %/p after expanding all symbolic links and substitute drives
  %{/t:real}              %/t after expanding all symbolic links and substitute drives
- %{/T:real}              %/T after expanding all symbolic links and substitute drives
  %{/s:regex_replacement} %/s but escaped for use in the replacement of a ``s@@@`` command in sed
  %{/S:regex_replacement} %/S but escaped for use in the replacement of a ``s@@@`` command in sed
  %{/p:regex_replacement} %/p but escaped for use in the replacement of a ``s@@@`` command in sed
  %{/t:regex_replacement} %/t but escaped for use in the replacement of a ``s@@@`` command in sed
- %{/T:regex_replacement} %/T but escaped for use in the replacement of a ``s@@@`` command in sed
  %:s                     On Windows, %/s but a ``:`` is removed if its the second character.
                          Otherwise, %s but with a single leading ``/`` removed.
  %:S                     On Windows, %/S but a ``:`` is removed if its the second character.
@@ -657,8 +657,7 @@ TestRunner.py:
                          Otherwise, %p but with a single leading ``/`` removed.
  %:t                     On Windows, %/t but a ``:`` is removed if its the second character.
                          Otherwise, %t but with a single leading ``/`` removed.
- %:T                     On Windows, %/T but a ``:`` is removed if its the second character.
-                         Otherwise, %T but with a single leading ``/`` removed.
+ %{readfile:<filename>}  Reads the file specified.
  ======================= ==============
 
 Other substitutions are provided that are variations on this base set and

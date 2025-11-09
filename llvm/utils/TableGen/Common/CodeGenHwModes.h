@@ -30,14 +30,13 @@ struct CodeGenHwModes;
 struct HwMode {
   HwMode(const Record *R);
   StringRef Name;
-  std::string Features;
-  std::string Predicates;
+  std::vector<const Record *> Predicates;
   void dump() const;
 };
 
 struct HwModeSelect {
   HwModeSelect(const Record *R, CodeGenHwModes &CGH);
-  typedef std::pair<unsigned, const Record *> PairType;
+  using PairType = std::pair<unsigned, const Record *>;
   std::vector<PairType> Items;
   void dump() const;
 };

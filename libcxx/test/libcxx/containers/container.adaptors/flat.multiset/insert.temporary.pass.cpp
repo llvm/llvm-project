@@ -10,7 +10,7 @@
 
 // <flat_set>
 
-// https://github.com/llvm/llvm-project/issues/119016
+// https://https://llvm.org/PR119016
 
 #include <flat_set>
 
@@ -21,7 +21,7 @@
 #include "../flat_helpers.h"
 #include "test_macros.h"
 
-bool test() {
+constexpr bool test() {
   using M = std::flat_multiset<TrackCopyMove>;
   {
     M m;
@@ -43,6 +43,9 @@ bool test() {
 
 int main(int, char**) {
   test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 
   return 0;
 }

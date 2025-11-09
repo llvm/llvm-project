@@ -388,8 +388,8 @@ define void @memmove_p0_p3(ptr addrspace(0) align 1 %dst, ptr addrspace(3) align
 ; CHECK-NEXT:    s_and_saveexec_b32 s7, s4
 ; CHECK-NEXT:    s_cbranch_execz .LBB2_13
 ; CHECK-NEXT:  ; %bb.11: ; %memmove_bwd_residual_loop.preheader
-; CHECK-NEXT:    v_add_co_u32 v9, s4, v3, v0
-; CHECK-NEXT:    v_add_co_ci_u32_e64 v10, null, v4, v1, s4
+; CHECK-NEXT:    v_add_co_u32 v9, s4, v0, v3
+; CHECK-NEXT:    v_add_co_ci_u32_e64 v10, null, v1, v4, s4
 ; CHECK-NEXT:    v_add3_u32 v4, v3, v2, -1
 ; CHECK-NEXT:    v_add_co_u32 v9, s4, v9, -1
 ; CHECK-NEXT:    v_add_co_ci_u32_e64 v10, null, -1, v10, s4
@@ -684,8 +684,8 @@ define void @memmove_p0_p5(ptr addrspace(0) align 1 %dst, ptr addrspace(5) align
 ; CHECK-NEXT:    s_and_saveexec_b32 s7, s4
 ; CHECK-NEXT:    s_cbranch_execz .LBB4_13
 ; CHECK-NEXT:  ; %bb.11: ; %memmove_bwd_residual_loop.preheader
-; CHECK-NEXT:    v_add_co_u32 v9, s4, v3, v0
-; CHECK-NEXT:    v_add_co_ci_u32_e64 v10, null, v4, v1, s4
+; CHECK-NEXT:    v_add_co_u32 v9, s4, v0, v3
+; CHECK-NEXT:    v_add_co_ci_u32_e64 v10, null, v1, v4, s4
 ; CHECK-NEXT:    v_add3_u32 v4, v3, v2, -1
 ; CHECK-NEXT:    v_add_co_u32 v9, s4, v9, -1
 ; CHECK-NEXT:    v_add_co_ci_u32_e64 v10, null, -1, v10, s4
@@ -1411,8 +1411,8 @@ define void @memmove_p3_p0(ptr addrspace(3) align 1 %dst, ptr addrspace(0) align
 ; CHECK-NEXT:    s_and_saveexec_b32 s7, s4
 ; CHECK-NEXT:    s_cbranch_execz .LBB10_13
 ; CHECK-NEXT:  ; %bb.11: ; %memmove_bwd_residual_loop.preheader
-; CHECK-NEXT:    v_add_co_u32 v9, s4, v3, v1
-; CHECK-NEXT:    v_add_co_ci_u32_e64 v10, null, v4, v2, s4
+; CHECK-NEXT:    v_add_co_u32 v9, s4, v1, v3
+; CHECK-NEXT:    v_add_co_ci_u32_e64 v10, null, v2, v4, s4
 ; CHECK-NEXT:    v_add3_u32 v4, v3, v0, -1
 ; CHECK-NEXT:    v_add_co_u32 v9, s4, v9, -1
 ; CHECK-NEXT:    v_add_co_ci_u32_e64 v10, null, -1, v10, s4
@@ -1889,8 +1889,8 @@ define void @memmove_p5_p0(ptr addrspace(5) align 1 %dst, ptr addrspace(0) align
 ; CHECK-NEXT:    s_and_saveexec_b32 s7, s4
 ; CHECK-NEXT:    s_cbranch_execz .LBB15_13
 ; CHECK-NEXT:  ; %bb.11: ; %memmove_bwd_residual_loop.preheader
-; CHECK-NEXT:    v_add_co_u32 v9, s4, v3, v1
-; CHECK-NEXT:    v_add_co_ci_u32_e64 v10, null, v4, v2, s4
+; CHECK-NEXT:    v_add_co_u32 v9, s4, v1, v3
+; CHECK-NEXT:    v_add_co_ci_u32_e64 v10, null, v2, v4, s4
 ; CHECK-NEXT:    v_add3_u32 v4, v3, v0, -1
 ; CHECK-NEXT:    v_add_co_u32 v9, s4, v9, -1
 ; CHECK-NEXT:    v_add_co_ci_u32_e64 v10, null, -1, v10, s4

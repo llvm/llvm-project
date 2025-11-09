@@ -15,7 +15,7 @@ define <4 x i64> @vector_ptrtoint({<2 x ptr>, <2 x ptr>} %x) {
 ; CHECK-NEXT:    [[A_SROA_0_16_VECBLEND:%.*]] = select <4 x i1> <i1 false, i1 false, i1 true, i1 true>, <4 x i64> [[A_SROA_0_16_VEC_EXPAND]], <4 x i64> [[A_SROA_0_0_VECBLEND]]
 ; CHECK-NEXT:    ret <4 x i64> [[A_SROA_0_16_VECBLEND]]
 ;
-  %a = alloca {<2 x ptr>, <2 x ptr>}
+  %a = alloca {<2 x ptr>, <2 x ptr>}, align 32
 
   store {<2 x ptr>, <2 x ptr>} %x, ptr %a
 
@@ -36,7 +36,7 @@ define <4 x ptr> @vector_inttoptr({<2 x i64>, <2 x i64>} %x) {
 ; CHECK-NEXT:    [[A_SROA_0_16_VECBLEND:%.*]] = select <4 x i1> <i1 false, i1 false, i1 true, i1 true>, <4 x ptr> [[A_SROA_0_16_VEC_EXPAND]], <4 x ptr> [[A_SROA_0_0_VECBLEND]]
 ; CHECK-NEXT:    ret <4 x ptr> [[A_SROA_0_16_VECBLEND]]
 ;
-  %a = alloca {<2 x i64>, <2 x i64>}
+  %a = alloca {<2 x i64>, <2 x i64>}, align 32
 
   store {<2 x i64>, <2 x i64>} %x, ptr %a
 
@@ -57,7 +57,7 @@ define <2 x i64> @vector_ptrtointbitcast({<1 x ptr>, <1 x ptr>} %x) {
 ; CHECK-NEXT:    [[A_SROA_0_8_VEC_INSERT:%.*]] = insertelement <2 x i64> [[A_SROA_0_0_VEC_INSERT]], i64 [[TMP4]], i32 1
 ; CHECK-NEXT:    ret <2 x i64> [[A_SROA_0_8_VEC_INSERT]]
 ;
-  %a = alloca {<1 x ptr>, <1 x ptr>}
+  %a = alloca {<1 x ptr>, <1 x ptr>}, align 16
 
   store {<1 x ptr>, <1 x ptr>} %x, ptr %a
 
@@ -74,7 +74,7 @@ define <2 x ptr> @vector_inttoptrbitcast_vector({<16 x i8>, <16 x i8>} %x) {
 ; CHECK-NEXT:    [[X_FCA_1_EXTRACT:%.*]] = extractvalue { <16 x i8>, <16 x i8> } [[X]], 1
 ; CHECK-NEXT:    ret <2 x ptr> [[TMP2]]
 ;
-  %a = alloca {<16 x i8>, <16 x i8>}
+  %a = alloca {<16 x i8>, <16 x i8>}, align 16
 
   store {<16 x i8>, <16 x i8>} %x, ptr %a
 
@@ -91,7 +91,7 @@ define <16 x i8> @vector_ptrtointbitcast_vector({<2 x ptr>, <2 x ptr>} %x) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i64> [[TMP1]] to <16 x i8>
 ; CHECK-NEXT:    ret <16 x i8> [[TMP2]]
 ;
-  %a = alloca {<2 x ptr>, <2 x ptr>}
+  %a = alloca {<2 x ptr>, <2 x ptr>}, align 16
 
   store {<2 x ptr>, <2 x ptr>} %x, ptr %a
 

@@ -264,6 +264,10 @@ private:
       if (auto ShowAKA = boolValue(N, "ShowAKA"))
         F.ShowAKA = *ShowAKA;
     });
+    Dict.handle("MacroContentsLimit", [&](Node &N) {
+      if (auto MacroContentsLimit = uint32Value(N, "MacroContentsLimit"))
+        F.MacroContentsLimit = *MacroContentsLimit;
+    });
     Dict.parse(N);
   }
 

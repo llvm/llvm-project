@@ -623,8 +623,8 @@ static void printSubRegIndex(raw_ostream &OS, const CodeGenSubRegIndex *Idx) {
 // The initial value depends on the specific list. The list is terminated by a
 // 0 differential which means we can't encode repeated elements.
 
-typedef SmallVector<int16_t, 4> DiffVec;
-typedef SmallVector<LaneBitmask, 4> MaskVec;
+using DiffVec = SmallVector<int16_t, 4>;
+using MaskVec = SmallVector<LaneBitmask, 4>;
 
 // Fills V with differentials between every two consecutive elements of List.
 static DiffVec &diffEncode(DiffVec &V, SparseBitVector<> List) {
@@ -912,7 +912,7 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS) {
   auto &SubRegIndices = RegBank.getSubRegIndices();
   // The lists of sub-registers and super-registers go in the same array.  That
   // allows us to share suffixes.
-  typedef std::vector<const CodeGenRegister *> RegVec;
+  using RegVec = std::vector<const CodeGenRegister *>;
 
   // Differentially encoded lists.
   SequenceToOffsetTable<DiffVec> DiffSeqs;
@@ -926,7 +926,7 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS) {
 
   // Keep track of sub-register names as well. These are not differentially
   // encoded.
-  typedef SmallVector<const CodeGenSubRegIndex *, 4> SubRegIdxVec;
+  using SubRegIdxVec = SmallVector<const CodeGenSubRegIndex *, 4>;
   SequenceToOffsetTable<SubRegIdxVec, deref<std::less<>>> SubRegIdxSeqs(
       /*Terminator=*/std::nullopt);
   SmallVector<SubRegIdxVec, 4> SubRegIdxLists(Regs.size());
@@ -1083,14 +1083,13 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS) {
     std::string RCName = Order.empty() ? "nullptr" : RC.getName();
     std::string RCBitsName = Order.empty() ? "nullptr" : RC.getName() + "Bits";
     std::string RCBitsSize = Order.empty() ? "0" : "sizeof(" + RCBitsName + ")";
-    assert(isInt<8>(RC.CopyCost) && "Copy cost too large.");
     uint32_t RegSize = 0;
     if (RC.RSI.isSimple())
       RegSize = RC.RSI.getSimple().RegSize;
     OS << "  { " << RCName << ", " << RCBitsName << ", "
        << RegClassStrings.get(RC.getName()) << ", " << RC.getOrder().size()
        << ", " << RCBitsSize << ", " << RC.getQualifiedIdName() << ", "
-       << RegSize << ", " << RC.CopyCost << ", "
+       << RegSize << ", " << static_cast<unsigned>(RC.CopyCost) << ", "
        << (RC.Allocatable ? "true" : "false") << ", "
        << (RC.getBaseClassOrder() ? "true" : "false") << " },\n";
   }
@@ -1107,11 +1106,7 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS) {
   for (const auto &RE : Regs) {
     const Record *Reg = RE.TheDef;
     const BitsInit *BI = Reg->getValueAsBitsInit("HWEncoding");
-    uint64_t Value = 0;
-    for (unsigned b = 0, be = BI->getNumBits(); b != be; ++b) {
-      if (const BitInit *B = dyn_cast<BitInit>(BI->getBit(b)))
-        Value |= (uint64_t)B->getValue() << b;
-    }
+    uint64_t Value = BI->convertKnownBitsToInt();
     OS << "  " << Value << ",\n";
   }
   OS << "};\n"; // End of HW encoding table
@@ -1353,7 +1348,7 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS) {
     // Every bit mask present in the list has at least one bit set.
 
     // Compress the sub-reg index lists.
-    typedef std::vector<const CodeGenSubRegIndex *> IdxList;
+    using IdxList = std::vector<const CodeGenSubRegIndex *>;
     SmallVector<IdxList, 8> SuperRegIdxLists(RegisterClasses.size());
     SequenceToOffsetTable<IdxList, deref<std::less<>>> SuperRegIdxSeqs;
     BitVector MaskBV(RegisterClasses.size());

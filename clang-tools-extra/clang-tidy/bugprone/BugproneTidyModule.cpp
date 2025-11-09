@@ -1,4 +1,4 @@
-//===--- BugproneTidyModule.cpp - clang-tidy ------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -19,14 +19,19 @@
 #include "CapturingThisInMemberVariableCheck.h"
 #include "CastingThroughVoidCheck.h"
 #include "ChainedComparisonCheck.h"
+#include "CommandProcessorCheck.h"
 #include "ComparePointerToMemberVirtualFunctionCheck.h"
 #include "CopyConstructorInitCheck.h"
+#include "CopyConstructorMutatesArgumentCheck.h"
 #include "CrtpConstructorAccessibilityCheck.h"
 #include "DanglingHandleCheck.h"
+#include "DefaultOperatorNewOnOveralignedTypeCheck.h"
+#include "DerivedMethodShadowingBaseMethodCheck.h"
 #include "DynamicStaticInitializersCheck.h"
 #include "EasilySwappableParametersCheck.h"
 #include "EmptyCatchCheck.h"
 #include "ExceptionEscapeCheck.h"
+#include "FloatLoopCounterCheck.h"
 #include "FoldInitTypeCheck.h"
 #include "ForwardDeclarationNamespaceCheck.h"
 #include "ForwardingReferenceOverloadCheck.h"
@@ -59,6 +64,7 @@
 #include "ParentVirtualCallCheck.h"
 #include "PointerArithmeticOnPolymorphicObjectCheck.h"
 #include "PosixReturnCheck.h"
+#include "RawMemoryCallOnNonTrivialTypeCheck.h"
 #include "RedundantBranchConditionCheck.h"
 #include "ReservedIdentifierCheck.h"
 #include "ReturnConstRefFromParameterCheck.h"
@@ -69,6 +75,7 @@
 #include "SizeofExpressionCheck.h"
 #include "SpuriouslyWakeUpFunctionsCheck.h"
 #include "StandaloneEmptyCheck.h"
+#include "StdNamespaceModificationCheck.h"
 #include "StringConstructorCheck.h"
 #include "StringIntegerAssignmentCheck.h"
 #include "StringLiteralWithEmbeddedNulCheck.h"
@@ -87,8 +94,10 @@
 #include "TaggedUnionMemberCountCheck.h"
 #include "TerminatingContinueCheck.h"
 #include "ThrowKeywordMissingCheck.h"
+#include "ThrowingStaticInitializationCheck.h"
 #include "TooSmallLoopVariableCheck.h"
 #include "UncheckedOptionalAccessCheck.h"
+#include "UncheckedStringToNumberConversionCheck.h"
 #include "UndefinedMemoryManipulationCheck.h"
 #include "UndelegatedConstructorCheck.h"
 #include "UnhandledExceptionAtNewCheck.h"
@@ -127,12 +136,20 @@ public:
         "bugprone-casting-through-void");
     CheckFactories.registerCheck<ChainedComparisonCheck>(
         "bugprone-chained-comparison");
+    CheckFactories.registerCheck<CommandProcessorCheck>(
+        "bugprone-command-processor");
     CheckFactories.registerCheck<ComparePointerToMemberVirtualFunctionCheck>(
         "bugprone-compare-pointer-to-member-virtual-function");
     CheckFactories.registerCheck<CopyConstructorInitCheck>(
         "bugprone-copy-constructor-init");
+    CheckFactories.registerCheck<CopyConstructorMutatesArgumentCheck>(
+        "bugprone-copy-constructor-mutates-argument");
     CheckFactories.registerCheck<DanglingHandleCheck>(
         "bugprone-dangling-handle");
+    CheckFactories.registerCheck<DefaultOperatorNewOnOveralignedTypeCheck>(
+        "bugprone-default-operator-new-on-overaligned-type");
+    CheckFactories.registerCheck<DerivedMethodShadowingBaseMethodCheck>(
+        "bugprone-derived-method-shadowing-base-method");
     CheckFactories.registerCheck<DynamicStaticInitializersCheck>(
         "bugprone-dynamic-static-initializers");
     CheckFactories.registerCheck<EasilySwappableParametersCheck>(
@@ -140,6 +157,8 @@ public:
     CheckFactories.registerCheck<EmptyCatchCheck>("bugprone-empty-catch");
     CheckFactories.registerCheck<ExceptionEscapeCheck>(
         "bugprone-exception-escape");
+    CheckFactories.registerCheck<FloatLoopCounterCheck>(
+        "bugprone-float-loop-counter");
     CheckFactories.registerCheck<FoldInitTypeCheck>("bugprone-fold-init-type");
     CheckFactories.registerCheck<ForwardDeclarationNamespaceCheck>(
         "bugprone-forward-declaration-namespace");
@@ -208,6 +227,8 @@ public:
     CheckFactories.registerCheck<ParentVirtualCallCheck>(
         "bugprone-parent-virtual-call");
     CheckFactories.registerCheck<PosixReturnCheck>("bugprone-posix-return");
+    CheckFactories.registerCheck<RawMemoryCallOnNonTrivialTypeCheck>(
+        "bugprone-raw-memory-call-on-non-trivial-type");
     CheckFactories.registerCheck<ReservedIdentifierCheck>(
         "bugprone-reserved-identifier");
     CheckFactories.registerCheck<SharedPtrArrayMismatchCheck>(
@@ -223,6 +244,8 @@ public:
         "bugprone-spuriously-wake-up-functions");
     CheckFactories.registerCheck<StandaloneEmptyCheck>(
         "bugprone-standalone-empty");
+    CheckFactories.registerCheck<StdNamespaceModificationCheck>(
+        "bugprone-std-namespace-modification");
     CheckFactories.registerCheck<StringConstructorCheck>(
         "bugprone-string-constructor");
     CheckFactories.registerCheck<StringIntegerAssignmentCheck>(
@@ -257,10 +280,14 @@ public:
         "bugprone-terminating-continue");
     CheckFactories.registerCheck<ThrowKeywordMissingCheck>(
         "bugprone-throw-keyword-missing");
+    CheckFactories.registerCheck<ThrowingStaticInitializationCheck>(
+        "bugprone-throwing-static-initialization");
     CheckFactories.registerCheck<TooSmallLoopVariableCheck>(
         "bugprone-too-small-loop-variable");
     CheckFactories.registerCheck<UncheckedOptionalAccessCheck>(
         "bugprone-unchecked-optional-access");
+    CheckFactories.registerCheck<UncheckedStringToNumberConversionCheck>(
+        "bugprone-unchecked-string-to-number-conversion");
     CheckFactories.registerCheck<UndefinedMemoryManipulationCheck>(
         "bugprone-undefined-memory-manipulation");
     CheckFactories.registerCheck<UndelegatedConstructorCheck>(

@@ -32,7 +32,7 @@ Feature Checking Macros
 =======================
 
 Language extensions can be very useful, but only if you know you can depend on
-them.  In order to allow fine-grain features checks, we support three builtin
+them.  In order to allow fine-grained feature checks, we support three builtin
 function-like macros.  This allows you to directly test for a feature in your
 code without having to resort to something like autoconf or fragile "compiler
 version checks".
@@ -137,7 +137,7 @@ feature) or 0 if not.  They can be used like this:
 .. _langext-has-feature-back-compat:
 
 For backward compatibility, ``__has_feature`` can also be used to test
-for support for non-standardized features, i.e. features not prefixed ``c_``,
+for support for non-standardized features, i.e., features not prefixed ``c_``,
 ``cxx_`` or ``objc_``.
 
 Another use of ``__has_feature`` is to check for compiler features not related
@@ -159,7 +159,7 @@ of ``cxx_rvalue_references``.
 
 This function-like macro is available in C++20 by default, and is provided as an
 extension in earlier language standards. It takes a single argument that is the
-name of a double-square-bracket-style attribute. The argument can either be a
+name of a double-square-bracket-style attribute. The argument can be either a
 single identifier or a scoped identifier. If the attribute is supported, a
 nonzero value is returned. If the attribute is a standards-based attribute, this
 macro returns a nonzero value based on the year and month in which the attribute
@@ -320,7 +320,7 @@ To test for this feature, use ``#if defined(__has_include)``:
 
 .. code-block:: c++
 
-  // To avoid problem with non-clang compilers not having this macro.
+  // To avoid problems with non-clang compilers not having this macro.
   #if defined(__has_include)
   #if __has_include("myinclude.h")
   # include "myinclude.h"
@@ -345,7 +345,7 @@ or 0 otherwise:
   # include_next "myinclude.h"
   #endif
 
-  // To avoid problem with non-clang compilers not having this macro.
+  // To avoid problems with non-clang compilers not having this macro.
   #if defined(__has_include_next)
   #if __has_include_next("myinclude.h")
   # include_next "myinclude.h"
@@ -361,7 +361,7 @@ absolute path is used in the file argument.
 -----------------
 
 This function-like macro takes a string literal that represents a command line
-option for a warning and returns true if that is a valid warning option.
+option for a warning and returns ``true`` if that is a valid warning option.
 
 .. code-block:: c++
 
@@ -385,7 +385,9 @@ Builtin Macros
 
 ``__COUNTER__``
   Defined to an integer value that starts at zero and is incremented each time
-  the ``__COUNTER__`` macro is expanded.
+  the ``__COUNTER__`` macro is expanded. This is a standard feature in C2y but
+  is an extension in earlier language modes and in C++. This macro can only be
+  expanded 2147483647 times at most.
 
 ``__INCLUDE_LEVEL__``
   Defined to an integral value that is the include depth of the file currently
@@ -396,7 +398,7 @@ Builtin Macros
   file.
 
 ``__clang__``
-  Defined when compiling with Clang
+  Defined when compiling with Clang.
 
 ``__clang_major__``
   Defined to the major marketing version number of Clang (e.g., the 2 in
@@ -599,7 +601,7 @@ NEON vector types are created using ``neon_vector_type`` and
 
 GCC vector types are created using the ``vector_size(N)`` attribute.  The
 argument ``N`` specifies the number of bytes that will be allocated for an
-object of this type.  The size has to be multiple of the size of the vector
+object of this type.  The size has to be a multiple of the size of the vector
 element type. For example:
 
 .. code-block:: c++
@@ -620,7 +622,7 @@ element type. For example:
 Boolean Vectors
 ---------------
 
-Clang also supports the ext_vector_type attribute with boolean element types in
+Clang also supports the ``ext_vector_type`` attribute with boolean element types in
 C and C++.  For example:
 
 .. code-block:: c++
@@ -635,11 +637,12 @@ C and C++.  For example:
     return v;
   }
 
+
 Boolean vectors are a Clang extension of the ext vector type.  Boolean vectors
 are intended, though not guaranteed, to map to vector mask registers.  The size
 parameter of a boolean vector type is the number of bits in the vector.  The
 boolean vector is dense and each bit in the boolean vector is one vector
-element.
+element. Query for this feature with ``__has_feature(ext_vector_type_boolean)``.
 
 The semantics of boolean vectors borrows from C bit-fields with the following
 differences:
@@ -657,13 +660,23 @@ The size and alignment are both the number of bits rounded up to the next power
 of two, but the alignment is at most the maximum vector alignment of the
 target.
 
+A boolean vector can be used in a ternary `?:` operator to select vector
+elements of a different type.
+
+.. code-block:: c++
+
+  typedef int int4 __attribute__((ext_vector_type(4)));
+  typedef bool bool4 __attribute__((ext_vector_type(4)));
+
+  int4 blend(bool4 cond, int4 a, int4 b) { return cond ? a : b; }
+
 
 Vector Literals
 ---------------
 
 Vector literals can be used to create vectors from a set of scalars, or
 vectors.  Either parentheses or braces form can be used.  In the parentheses
-form the number of literal values specified must be one, i.e. referring to a
+form the number of literal values specified must be one, i.e., referring to a
 scalar value, or must match the size of the vector type being created.  If a
 single scalar literal value is specified, the scalar literal value will be
 replicated to all the components of the vector type.  In the brackets form any
@@ -714,12 +727,12 @@ address &v[i]                    no      no        no [#]_     no     no
 
 See also :ref:`langext-__builtin_shufflevector`, :ref:`langext-__builtin_convertvector`.
 
-.. [#] ternary operator(?:) has different behaviors depending on condition
-  operand's vector type. If the condition is a GNU vector (i.e. __vector_size__),
+.. [#] ternary operator(?:) has different behaviors depending on the condition
+  operand's vector type. If the condition is a GNU vector (i.e., ``__vector_size__``),
   a NEON vector or an SVE vector, it's only available in C++ and uses normal bool
   conversions (that is, != 0).
   If it's an extension (OpenCL) vector, it's only available in C and OpenCL C.
-  And it selects based on signedness of the condition operands (OpenCL v1.1 s6.3.9).
+  And it selects based on the signedness of the condition operands (OpenCL v1.1 s6.3.9).
 .. [#] sizeof can only be used on vector length specific SVE types.
 .. [#] Clang does not allow the address of an element to be taken while GCC
    allows this. This is intentional for vectors with a boolean element type and
@@ -736,7 +749,7 @@ to perform additional operations on certain scalar and vector types.
 Let ``T`` be one of the following types:
 
 * an integer type (as in C23 6.2.5p22), but excluding enumerated types and ``bool``
-* the standard floating types float or double
+* the standard floating types ``float`` or ``double``
 * a half-precision floating point type, if one is supported on the target
 * a vector type.
 
@@ -757,9 +770,12 @@ elementwise to the input.
 
 Unless specified otherwise operation(±0) = ±0 and operation(±infinity) = ±infinity
 
-The integer elementwise intrinsics, including ``__builtin_elementwise_popcount``,
+The elementwise intrinsics ``__builtin_elementwise_popcount``,
 ``__builtin_elementwise_bitreverse``, ``__builtin_elementwise_add_sat``,
-``__builtin_elementwise_sub_sat`` can be called in a ``constexpr`` context.
+``__builtin_elementwise_sub_sat``, ``__builtin_elementwise_max``,
+``__builtin_elementwise_min``, ``__builtin_elementwise_abs``,
+``__builtin_elementwise_clzg``, ``__builtin_elementwise_ctzg``, and
+``__builtin_elementwise_fma`` can be called in a ``constexpr`` context.
 
 No implicit promotion of integer types takes place. The mixing of integer types
 of different sizes and signs is forbidden in binary and ternary builtins.
@@ -791,6 +807,8 @@ of different sizes and signs is forbidden in binary and ternary builtins.
  T __builtin_elementwise_exp(T x)               returns the base-e exponential, e^x, of the specified value            floating point types
  T __builtin_elementwise_exp2(T x)              returns the base-2 exponential, 2^x, of the specified value            floating point types
  T __builtin_elementwise_exp10(T x)             returns the base-10 exponential, 10^x, of the specified value          floating point types
+ T __builtin_elementwise_ldexp(T x, IntT y)     returns the product of x and 2 raised to the power y.                  T: floating point types,
+                                                y must be an integer type matching the shape of x.                     IntT: integer types
 
  T __builtin_elementwise_sqrt(T x)              return the square root of a floating-point number                      floating point types
  T __builtin_elementwise_roundeven(T x)         round x to the nearest integer value in floating point format,         floating point types
@@ -819,7 +837,7 @@ of different sizes and signs is forbidden in binary and ternary builtins.
  T __builtin_elementwise_canonicalize(T x)      return the platform specific canonical encoding                        floating point types
                                                 of a floating-point number
  T __builtin_elementwise_copysign(T x, T y)     return the magnitude of x with the sign of y.                          floating point types
- T __builtin_elementwise_fmod(T x, T y)         return The floating-point remainder of (x/y) whose sign                floating point types
+ T __builtin_elementwise_fmod(T x, T y)         return the floating-point remainder of (x/y) whose sign                floating point types
                                                 matches the sign of x.
  T __builtin_elementwise_max(T x, T y)          return x or y, whichever is larger                                     integer and floating point types
                                                 For floating point types, follows semantics of maxNum
@@ -859,6 +877,25 @@ of different sizes and signs is forbidden in binary and ternary builtins.
                                                 semantics, see `LangRef
                                                 <http://llvm.org/docs/LangRef.html#llvm-min-intrinsics-comparation>`_
                                                 for the comparison.
+T __builtin_elementwise_fshl(T x, T y, T z)     perform a funnel shift left. Concatenate x and y (x is the most        integer types
+                                                significant bits of the wide value), the combined value is shifted
+                                                left by z (modulo the bit width of the original arguments),
+                                                and the most significant bits are extracted to produce
+                                                a result that is the same size as the original arguments.
+
+T __builtin_elementwise_fshr(T x, T y, T z)     perform a funnel shift right. Concatenate x and y (x is the most       integer types
+                                                significant bits of the wide value), the combined value is shifted
+                                                right by z (modulo the bit width of the original arguments),
+                                                and the least significant bits are extracted to produce
+                                                a result that is the same size as the original arguments.
+ T __builtin_elementwise_clzg(T x[, T y])       return the number of leading 0 bits in the first argument. If          integer types
+                                                the first argument is 0 and an optional second argument is provided,
+                                                the second argument is returned. It is undefined behaviour if the
+                                                first argument is 0 and no second argument is provided.
+ T __builtin_elementwise_ctzg(T x[, T y])       return the number of trailing 0 bits in the first argument. If         integer types
+                                                the first argument is 0 and an optional second argument is provided,
+                                                the second argument is returned. It is undefined behaviour if the
+                                                first argument is 0 and no second argument is provided.
 ============================================== ====================================================================== =========================================
 
 
@@ -910,6 +947,55 @@ Let ``VT`` be a vector type and ``ET`` the element type of ``VT``.
                                          <http://llvm.org/docs/LangRef.html#llvm-min-intrinsics-comparation>`_
                                          for the comparison.
 ======================================= ====================================================================== ==================================
+
+*Masked Builtins*
+
+Each builtin accesses memory according to a provided boolean mask. These are
+provided as ``__builtin_masked_load`` and ``__builtin_masked_store``. The first
+argument is always a boolean mask vector. The ``__builtin_masked_load`` builtin
+takes an optional third vector argument that will be used for the result of the
+masked-off lanes. These builtins assume the memory is unaligned, use
+``__builtin_assume_aligned`` if alignment is desired.
+
+The ``__builtin_masked_expand_load`` and ``__builtin_masked_compress_store``
+builtins have the same interface but store the result in consecutive indices.
+Effectively this performs the ``if (mask[i]) val[i] = ptr[j++]`` and ``if
+(mask[i]) ptr[j++] = val[i]`` pattern respectively.
+
+The ``__builtin_masked_gather`` and ``__builtin_masked_scatter`` builtins handle
+non-sequential memory access for vector types. These use a base pointer and a
+vector of integer indices to gather memory into a vector type or scatter it to
+separate indices.
+
+Example:
+
+.. code-block:: c++
+
+    using v8b = bool [[clang::ext_vector_type(8)]];
+    using v8i = int [[clang::ext_vector_type(8)]];
+
+    v8i load(v8b mask, int *ptr) { return __builtin_masked_load(mask, ptr); }
+    
+    v8i load_expand(v8b mask, int *ptr) {
+      return __builtin_masked_expand_load(mask, ptr);
+    }
+    
+    void store(v8b mask, v8i val, int *ptr) {
+      __builtin_masked_store(mask, val, ptr);
+    }
+    
+    void store_compress(v8b mask, v8i val, int *ptr) {
+      __builtin_masked_compress_store(mask, val, ptr);
+    }
+
+    v8i gather(v8b mask, v8i idx, int *ptr) {
+      return __builtin_masked_gather(mask, idx, ptr);
+    }
+
+    void scatter(v8b mask, v8i val, v8i idx, int *ptr) {
+      __builtin_masked_scatter(mask, idx, val, ptr);
+    }
+
 
 Matrix Types
 ============
@@ -1027,7 +1113,7 @@ to ``float``; see below for more information on this emulation.
 
 ``__fp16`` and ``_Float16`` both use the binary16 format from IEEE
 754-2008, which provides a 5-bit exponent and an 11-bit significand
-(counting the implicit leading 1). ``__bf16`` uses the `bfloat16
+(including the implicit leading 1). ``__bf16`` uses the `bfloat16
 <https://en.wikipedia.org/wiki/Bfloat16_floating-point_format>`_ format,
 which provides an 8-bit exponent and an 8-bit significand; this is the same
 exponent range as `float`, just with greatly reduced precision.
@@ -1061,7 +1147,7 @@ types with the ``-ffloat16-excess-precision=`` and
 
 * ``none``: meaning to perform strict operation-by-operation emulation
 * ``standard``: meaning that excess precision is permitted under the rules
-  described in the standard, i.e. never across explicit casts or statements
+  described in the standard, i.e., never across explicit casts or statements
 * ``fast``: meaning that excess precision is permitted whenever the
   optimizer sees an opportunity to avoid truncations; currently this has no
   effect beyond ``standard``
@@ -1704,11 +1790,42 @@ Variadic Friends                              __cpp_variadic_friend            C
 Trivial Relocatability                        __cpp_trivial_relocatability     C++26         C++03
 --------------------------------------------- -------------------------------- ------------- -------------
 Designated initializers (N494)                                                 C99           C89
+``_Complex`` (N693)                                                            C99           C89, C++
+``_Bool`` (N815)                                                               C99           C89
+Variable-length arrays (N683)                                                  C99           C89, C++
+Flexible array members                                                         C99           C89, C++
+static and type quals in arrays                                                C99           C89
+``long long`` (N601)                                                           C99           C89
+Hexadecimal floating constants (N308)                                          C99           C89
+Compound literals (N716)                                                       C99           C89, C++
+``//`` comments (N644)                                                         C99           C89
+Mixed declarations and code (N740)                                             C99           C89
+init-statement in for (N740)                                                   C99           C89
+Variadic macros (N707)                                                         C99           C89
+Empty macro arguments (N570)                                                   C99           C89
+Trailing comma in enum declaration                                             C99           C89
+Implicit ``return 0`` in ``main``                                              C99           C89
+``__func__`` (N611)                                                            C99           C89
+``_Generic`` (N1441)                                                           C11           C89, C++
+``_Static_assert`` (N1330)                                                     C11           C89, C++
+``_Atomic`` (N1485)                                                            C11           C89, C++
+``_Thread_local`` (N1364)                                                      C11           C89, C++
 Array & element qualification (N2607)                                          C23           C89
 Attributes (N2335)                                                             C23           C89
 ``#embed`` (N3017)                                                             C23           C89, C++
+Enum with fixed underlying type (N3030)                                        C23           C89
+``#warning`` (N2686)                                                           C23           C89
+``_BitInt`` (N3035)                                                            C23           C89, C++
+Binary literals (N2549)                                                        C23           C89
+Unnamed parameters in a function definition                                    C23           C89
+Free positioning of labels (N2508)                                             C23           C89
+``#elifdef`` (N2645)                                                           C23           C89
+``__has_include`` (N2799)                                                      C23           C89
 Octal literals prefixed with ``0o`` or ``0O``                                  C2y           C89, C++
 ``_Countof`` (N3369, N3469)                                                    C2y           C89
+``_Generic`` with a type operand (N3260)                                       C2y           C89, C++
+``++``/``--`` on ``_Complex`` value (N3259)                                    C2y           C89, C++
+``__COUNTER__`` (N3457)                                                        C2y           C89, C++
 ============================================= ================================ ============= =============
 
 Builtin type aliases
@@ -1751,12 +1868,43 @@ __make_integer_seq
 
 This alias returns ``IntSeq`` instantiated with ``IntSeqT = T``and ``Ints`` being the pack ``0, ..., N - 1``.
 
+__builtin_dedup_pack
+--------------------
+
+.. code-block:: c++
+
+  template <class... Ts>
+  using __builtin_dedup_pack = ...;
+
+This alias takes a template parameter pack ``Ts`` and produces a new unexpanded pack containing the unique types
+from ``Ts``, with the order of the first occurrence of each type preserved.
+It is useful in template metaprogramming to normalize type lists.
+
+The resulting pack can be expanded in contexts like template argument lists or base specifiers.
+
+**Example of Use**:
+
+.. code-block:: c++
+
+  template <typename...> struct TypeList;
+
+  // The resulting type is TypeList<int, double, char>
+  template <typename ...ExtraTypes>
+  using MyTypeList = TypeList<__builtin_dedup_pack<int, double, int, char, double, ExtraTypes...>...>;
+
+**Limitations**:
+
+* This builtin can only be used inside a template.
+* The resulting pack is currently only supported for expansion in template argument lists and base specifiers.
+* This builtin cannot be assigned to a template template parameter.
+
+
 Type Trait Primitives
 =====================
 
 Type trait primitives are special builtin constant expressions that can be used
 by the standard C++ library to facilitate or simplify the implementation of
-user-facing type traits in the <type_traits> header.
+user-facing type traits in the ``<type_traits>`` header.
 
 They are not intended to be used directly by user code because they are
 implementation-defined and subject to change -- as such they're tied closely to
@@ -1911,7 +2059,7 @@ The following type trait primitives are supported by Clang. Those traits marked
 * ``__is_volatile`` (C++, Embarcadero)
 * ``__reference_binds_to_temporary(T, U)`` (Clang):  Determines whether a
   reference of type ``T`` bound to an expression of type ``U`` would bind to a
-  materialized temporary object. If ``T`` is not a reference type the result
+  materialized temporary object. If ``T`` is not a reference type, the result
   is false. Note this trait will also return false when the initialization of
   ``T`` from ``U`` is ill-formed.
   Deprecated, use ``__reference_constructs_from_temporary``.
@@ -1922,6 +2070,9 @@ The following type trait primitives are supported by Clang. Those traits marked
     Returns true if a reference ``T`` can be copy-initialized from a temporary of type
     a non-cv-qualified ``U``.
 * ``__underlying_type`` (C++, GNU, Microsoft)
+* ``__builtin_lt_synthesizes_from_spaceship``, ``__builtin_gt_synthesizes_from_spaceship``,
+  ``__builtin_le_synthesizes_from_spaceship``, ``__builtin_ge_synthesizes_from_spaceship`` (Clang):
+  These builtins can be used to determine whether the corresponding operator is synthesized from a spaceship operator.
 
 In addition, the following expression traits are supported:
 
@@ -2036,7 +2187,7 @@ Prior to clang-16, the output may only be used safely when the indirect
 branches are not taken.  Query for this difference with
 ``__has_extension(gnu_asm_goto_with_outputs_full)``.
 
-When using tied-outputs (i.e. outputs that are inputs and outputs, not just
+When using tied-outputs (i.e., outputs that are inputs and outputs, not just
 outputs) with the `+r` constraint, there is a hidden input that's created
 before the label, so numeric references to operands must account for that.
 
@@ -2215,7 +2366,7 @@ Loading from a ``__weak`` variable always implicitly retains the
 loaded value.  In non-ARC modes, this retain is normally balanced
 by an implicit autorelease.  This autorelease can be suppressed
 by performing the load in the receiver position of a ``-retain``
-message send (e.g. ``[weakReference retain]``); note that this performs
+message send (e.g., ``[weakReference retain]``); note that this performs
 only a single retain (the retain done when primitively loading from
 the weak reference).
 
@@ -2259,6 +2410,16 @@ those modes.
 
 Use ``__has_feature(c_fixed_enum)`` to determine whether support for fixed
 underlying types is available in C23 and later.
+
+Enumerations with no enumerators
+--------------------------------
+
+Clang provides support for Microsoft extensions to support enumerations with no enumerators.
+
+.. code-block:: c++
+
+  typedef enum empty { } A;
+
 
 Interoperability with C++11 lambdas
 -----------------------------------
@@ -2416,7 +2577,7 @@ When a method that's introduced in the OS newer than the target OS is called, a
 .. code-block:: objc
 
   void my_fun(NSSomeClass* var) {
-    // If fancyNewMethod was added in e.g. macOS 10.12, but the code is
+    // If fancyNewMethod was added in e.g., macOS 10.12, but the code is
     // built with -mmacos-version-min=10.11, then this unconditional call
     // will emit a -Wunguarded-availability warning:
     [var fancyNewMethod];
@@ -2579,7 +2740,7 @@ correctly in any circumstances. It can be used if:
   metaprogramming algorithms to be able to specify/detect types generically.
 
 - the generated kernel binary does not contain indirect calls because they
-  are eliminated using compiler optimizations e.g. devirtualization.
+  are eliminated using compiler optimizations e.g., devirtualization.
 
 - the selected target supports the function pointer like functionality e.g.
   most CPU targets.
@@ -2609,12 +2770,12 @@ Extension Specification, section 1.2
 <https://www.khronos.org/registry/OpenCL/specs/3.0-unified/html/OpenCL_Ext.html#extensions-overview>`_.
 
 This is not conformant behavior and it can only be used portably when the
-functions with variadic prototypes do not get generated in binary e.g. the
+functions with variadic prototypes do not get generated in binary e.g., the
 variadic prototype is used to specify a function type with any number of
 arguments in metaprogramming algorithms in C++ for OpenCL.
 
 This extension can also be used when the kernel code is intended for targets
-supporting the variadic arguments e.g. majority of CPU targets.
+supporting the variadic arguments e.g., majority of CPU targets.
 
 **Example of Use**:
 
@@ -4072,7 +4233,7 @@ builtin, the mangler emits their usual pattern without any special treatment.
 -----------------------
 
 ``__builtin_popcountg`` returns the number of 1 bits in the argument. The
-argument can be of any unsigned integer type.
+argument can be of any unsigned integer type or fixed boolean vector.
 
 **Syntax**:
 
@@ -4104,7 +4265,13 @@ such as ``unsigned __int128`` and C23 ``unsigned _BitInt(N)``.
 
 ``__builtin_clzg`` (respectively ``__builtin_ctzg``) returns the number of
 leading (respectively trailing) 0 bits in the first argument. The first argument
-can be of any unsigned integer type.
+can be of any unsigned integer type or fixed boolean vector.
+
+For boolean vectors, these builtins interpret the vector like a bit-field where
+the ith element of the vector is bit i of the bit-field, counting from the
+least significant end. ``__builtin_clzg`` returns the number of zero elements at
+the end of the vector, while ``__builtin_ctzg`` returns the number of zero
+elements at the start of the vector.
 
 If the first argument is 0 and an optional second argument of ``int`` type is
 provided, then the second argument is returned. If the first argument is 0, but
@@ -4330,7 +4497,7 @@ fall into one of the specified floating-point classes.
 
   if (__builtin_isfpclass(x, 448)) {
      // `x` is positive finite value
-	 ...
+         ...
   }
 
 **Description**:
@@ -4694,6 +4861,7 @@ currently supported:
 * ``__MEMORY_SCOPE_SYSTEM``
 * ``__MEMORY_SCOPE_DEVICE``
 * ``__MEMORY_SCOPE_WRKGRP``
+* ``__MEMORY_SCOPE_CLUSTR``
 * ``__MEMORY_SCOPE_WVFRNT``
 * ``__MEMORY_SCOPE_SINGLE``
 
@@ -5017,8 +5185,8 @@ __builtin_amdgcn_fence
 
 ``__builtin_amdgcn_fence`` emits a fence.
 
-* ``unsigned`` atomic ordering, e.g. ``__ATOMIC_ACQUIRE``
-* ``const char *`` synchronization scope, e.g. ``workgroup``
+* ``unsigned`` atomic ordering, e.g., ``__ATOMIC_ACQUIRE``
+* ``const char *`` synchronization scope, e.g., ``workgroup``
 * Zero or more ``const char *`` address spaces names.
 
 The address spaces arguments must be one of the following string literals:
@@ -5044,6 +5212,23 @@ If no address spaces names are provided, all address spaces are fenced.
   __builtin_amdgcn_fence(__ATOMIC_SEQ_CST, "workgroup", "local")
   __builtin_amdgcn_fence(__ATOMIC_SEQ_CST, "workgroup", "local", "global")
 
+__builtin_amdgcn_ballot_w{32,64}
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+``__builtin_amdgcn_ballot_w{32,64}`` returns a bitmask that contains its
+boolean argument as a bit for every lane of the current wave that is currently
+active (i.e., that is converged with the executing thread), and a 0 bit for
+every lane that is not active.
+
+The result is uniform, i.e., it is the same in every active thread of the wave.
+
+__builtin_amdgcn_inverse_ballot_w{32,64}
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Given a wave-uniform bitmask, ``__builtin_amdgcn_inverse_ballot_w{32,64}(mask)``
+returns the bit at the position of the current lane. It is almost equivalent to
+``(mask & (1 << lane_id)) != 0``, except that its behavior is only defined if
+the given mask has the same value for all active lanes of the current wave.
 
 ARM/AArch64 Language Extensions
 -------------------------------
@@ -5204,7 +5389,7 @@ followed by ``off`` or ``on``.
 
 All function definitions in the region between an ``off`` and the following
 ``on`` will be decorated with the ``optnone`` attribute unless doing so would
-conflict with explicit attributes already present on the function (e.g. the
+conflict with explicit attributes already present on the function (e.g., the
 ones that control inlining).
 
 .. code-block:: c++
@@ -5302,12 +5487,12 @@ provides options for vectorization, interleaving, predication, unrolling and
 distribution. Loop hints can be specified before any loop and will be ignored if
 the optimization is not safe to apply.
 
-There are loop hints that control transformations (e.g. vectorization, loop
+There are loop hints that control transformations (e.g., vectorization, loop
 unrolling) and there are loop hints that set transformation options (e.g.
 ``vectorize_width``, ``unroll_count``).  Pragmas setting transformation options
-imply the transformation is enabled, as if it was enabled via the corresponding
-transformation pragma (e.g. ``vectorize(enable)``). If the transformation is
-disabled  (e.g. ``vectorize(disable)``), that takes precedence over
+imply the transformation is enabled, as if it were enabled via the corresponding
+transformation pragma (e.g., ``vectorize(enable)``). If the transformation is
+disabled  (e.g., ``vectorize(disable)``), that takes precedence over
 transformations option pragmas implying that transformation.
 
 Vectorization, Interleaving, and Predication
@@ -5534,7 +5719,7 @@ operation when supported by the target.
 The pragma can take three values: ``on``, ``fast`` and ``off``.  The ``on``
 option is identical to using ``#pragma STDC FP_CONTRACT(ON)`` and it allows
 fusion as specified the language standard.  The ``fast`` option allows fusion
-in cases when the language standard does not make this possible (e.g. across
+in cases when the language standard does not make this possible (e.g., across
 statements in C).
 
 .. code-block:: c++
@@ -5689,14 +5874,14 @@ and ``ignore_denormal_mode``, each optionally prefixed with ``no_``. The meaning
 are as follows:
 
 - ``remote_memory`` means atomic operations may be performed on remote
-  memory, i.e. memory accessed through off-chip interconnects (e.g., PCIe).
+  memory, i.e., memory accessed through off-chip interconnects (e.g., PCIe).
   On ROCm platforms using HIP, remote memory refers to memory accessed via
   PCIe and is subject to specific atomic operation support. See
   `ROCm PCIe Atomics <https://rocm.docs.amd.com/en/latest/conceptual/
   pcie-atomics.html>`_ for further details. Prefixing with ``no_remote_memory`` indicates that
   atomic operations should not be performed on remote memory.
 - ``fine_grained_memory`` means atomic operations may be performed on fine-grained
-  memory, i.e. memory regions that support fine-grained coherence, where updates to
+  memory, i.e., memory regions that support fine-grained coherence, where updates to
   memory are visible to other parts of the system even while modifications are ongoing.
   For example, in HIP, fine-grained coherence ensures that host and device share
   up-to-date data without explicit synchronization (see
@@ -5918,7 +6103,7 @@ match rules are specified after the attribute. The compiler expects an
 identifier that corresponds to the subject set specifier. The ``apply_to``
 specifier is currently the only supported subject set specifier. It allows you
 to specify match rules that form a subset of the attribute's allowed subject
-set, i.e. the compiler doesn't require all of the attribute's subjects. For
+set, i.e., the compiler doesn't require all of the attribute's subjects. For
 example, an attribute like ``[[nodiscard]]`` whose subject set includes
 ``enum``, ``record`` and ``hasType(functionType)``, requires the presence of at
 least one of these rules after ``apply_to``:

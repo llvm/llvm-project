@@ -71,8 +71,8 @@ struct AssemblerInvocation {
   /// @name Target Options
   /// @{
 
-  /// The name of the target triple to assemble for.
-  std::string Triple;
+  /// The target triple to assemble for.
+  llvm::Triple Triple;
 
   /// If given, the name of the target CPU to determine which instructions
   /// are legal.
@@ -192,9 +192,12 @@ struct AssemblerInvocation {
   std::string AsSecureLogFile;
   /// @}
 
+  void setTriple(llvm::StringRef Str) {
+    Triple = llvm::Triple(llvm::Triple::normalize(Str));
+  }
+
 public:
   AssemblerInvocation() {
-    Triple = "";
     NoInitialTextSection = 0;
     InputFile = "-";
     OutputPath = "-";
@@ -261,7 +264,7 @@ bool AssemblerInvocation::CreateFromArgs(AssemblerInvocation &Opts,
   // Construct the invocation.
 
   // Target Options
-  Opts.Triple = llvm::Triple::normalize(Args.getLastArgValue(OPT_triple));
+  Opts.setTriple(Args.getLastArgValue(OPT_triple));
   if (Arg *A = Args.getLastArg(options::OPT_darwin_target_variant_triple))
     Opts.DarwinTargetVariantTriple = llvm::Triple(A->getValue());
   if (Arg *A = Args.getLastArg(OPT_darwin_target_variant_sdk_version_EQ)) {
@@ -278,7 +281,7 @@ bool AssemblerInvocation::CreateFromArgs(AssemblerInvocation &Opts,
 
   // Use the default target triple if unspecified.
   if (Opts.Triple.empty())
-    Opts.Triple = llvm::sys::getDefaultTargetTriple();
+    Opts.setTriple(llvm::sys::getDefaultTargetTriple());
 
   // Language Options
   Opts.IncludePaths = Args.getAllArgValues(OPT_I);
@@ -414,12 +417,13 @@ getOutputStream(StringRef Path, DiagnosticsEngine &Diags, bool Binary) {
 }
 
 static bool ExecuteAssemblerImpl(AssemblerInvocation &Opts,
-                                 DiagnosticsEngine &Diags) {
+                                 DiagnosticsEngine &Diags,
+                                 IntrusiveRefCntPtr<vfs::FileSystem> VFS) {
   // Get the target specific parser.
   std::string Error;
   const Target *TheTarget = TargetRegistry::lookupTarget(Opts.Triple, Error);
   if (!TheTarget)
-    return Diags.Report(diag::err_target_unknown_triple) << Opts.Triple;
+    return Diags.Report(diag::err_target_unknown_triple) << Opts.Triple.str();
 
   ErrorOr<std::unique_ptr<MemoryBuffer>> Buffer =
       MemoryBuffer::getFileOrSTDIN(Opts.InputFile, /*IsText=*/true);
@@ -437,6 +441,7 @@ static bool ExecuteAssemblerImpl(AssemblerInvocation &Opts,
   // Record the location of the include directories so that the lexer can find
   // it later.
   SrcMgr.setIncludeDirs(Opts.IncludePaths);
+  SrcMgr.setVirtualFileSystem(VFS);
 
   std::unique_ptr<MCRegisterInfo> MRI(TheTarget->createMCRegInfo(Opts.Triple));
   assert(MRI && "Unable to create target register info!");
@@ -477,7 +482,10 @@ static bool ExecuteAssemblerImpl(AssemblerInvocation &Opts,
 
   std::unique_ptr<MCSubtargetInfo> STI(
       TheTarget->createMCSubtargetInfo(Opts.Triple, Opts.CPU, FS));
-  assert(STI && "Unable to create subtarget info!");
+  if (!STI) {
+    return Diags.Report(diag::err_fe_unable_to_create_subtarget)
+           << Opts.CPU << FS.empty() << FS;
+  }
 
   MCContext Ctx(Triple(Opts.Triple), MAI.get(), MRI.get(), STI.get(), &SrcMgr,
                 &MCOptions);
@@ -604,7 +612,7 @@ static bool ExecuteAssemblerImpl(AssemblerInvocation &Opts,
   std::unique_ptr<MCTargetAsmParser> TAP(
       TheTarget->createMCAsmParser(*STI, *Parser, *MCII, MCOptions));
   if (!TAP)
-    Failed = Diags.Report(diag::err_target_unknown_triple) << Opts.Triple;
+    Failed = Diags.Report(diag::err_target_unknown_triple) << Opts.Triple.str();
 
   // Set values for symbols, if any.
   for (auto &S : Opts.SymbolDefs) {
@@ -626,8 +634,9 @@ static bool ExecuteAssemblerImpl(AssemblerInvocation &Opts,
 }
 
 static bool ExecuteAssembler(AssemblerInvocation &Opts,
-                             DiagnosticsEngine &Diags) {
-  bool Failed = ExecuteAssemblerImpl(Opts, Diags);
+                             DiagnosticsEngine &Diags,
+                             IntrusiveRefCntPtr<vfs::FileSystem> VFS) {
+  bool Failed = ExecuteAssemblerImpl(Opts, Diags, VFS);
 
   // Delete output file if there were errors.
   if (Failed) {
@@ -662,6 +671,8 @@ int cc1as_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
       new TextDiagnosticPrinter(errs(), DiagOpts);
   DiagClient->setPrefix("clang -cc1as");
   DiagnosticsEngine Diags(DiagnosticIDs::create(), DiagOpts, DiagClient);
+
+  auto VFS = vfs::getRealFileSystem();
 
   // Set an error handler, so that any LLVM backend diagnostics go through our
   // error handler.
@@ -701,11 +712,12 @@ int cc1as_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
     for (unsigned i = 0; i != NumArgs; ++i)
       Args[i + 1] = Asm.LLVMArgs[i].c_str();
     Args[NumArgs + 1] = nullptr;
-    llvm::cl::ParseCommandLineOptions(NumArgs + 1, Args.get());
+    llvm::cl::ParseCommandLineOptions(NumArgs + 1, Args.get(), /*Overview=*/"",
+                                      /*Errs=*/nullptr, /*VFS=*/VFS.get());
   }
 
   // Execute the invocation, unless there were parsing errors.
-  bool Failed = Diags.hasErrorOccurred() || ExecuteAssembler(Asm, Diags);
+  bool Failed = Diags.hasErrorOccurred() || ExecuteAssembler(Asm, Diags, VFS);
 
   // If any timers were active but haven't been destroyed yet, print their
   // results now.

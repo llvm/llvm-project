@@ -16,7 +16,8 @@ namespace LIBC_NAMESPACE_DECL {
 
 // TODO: https://github.com/llvm/llvm-project/issues/149911
 LLVM_LIBC_FUNCTION(int, dlinfo,
-                   (void *restrict handle, int request, void *restrict info)) {
+                   (void *__restrict handle, int request,
+                    void *__restrict info)) {
   return -1;
 }
 

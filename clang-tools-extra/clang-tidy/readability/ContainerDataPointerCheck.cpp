@@ -1,4 +1,4 @@
-//===--- ContainerDataPointerCheck.cpp - clang-tidy -----------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -101,7 +101,7 @@ void ContainerDataPointerCheck::check(const MatchFinder::MatchResult &Result) {
   else if (ACE)
     CE = ACE;
 
-  SourceRange SrcRange = CE->getSourceRange();
+  const SourceRange SrcRange = CE->getSourceRange();
 
   std::string ReplacementText{
       Lexer::getSourceText(CharSourceRange::getTokenRange(SrcRange),
@@ -116,7 +116,7 @@ void ContainerDataPointerCheck::check(const MatchFinder::MatchResult &Result) {
   else
     ReplacementText += ".data()";
 
-  FixItHint Hint =
+  const FixItHint Hint =
       FixItHint::CreateReplacement(UO->getSourceRange(), ReplacementText);
   diag(UO->getBeginLoc(),
        "'data' should be used for accessing the data pointer instead of taking "

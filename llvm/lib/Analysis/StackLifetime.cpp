@@ -70,7 +70,7 @@ void StackLifetime::collectMarkers() {
       const IntrinsicInst *II = dyn_cast<IntrinsicInst>(&I);
       if (!II || !II->isLifetimeStartOrEnd())
         continue;
-      const AllocaInst *AI = dyn_cast<AllocaInst>(II->getArgOperand(1));
+      const AllocaInst *AI = dyn_cast<AllocaInst>(II->getArgOperand(0));
       if (!AI)
         continue;
       auto It = AllocaNumbering.find(AI);

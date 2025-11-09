@@ -533,9 +533,9 @@ static T extractMaskValue(T KeyPath) {
 #define PARSE_OPTION_WITH_MARSHALLING(                                         \
     ARGS, DIAGS, PREFIX_TYPE, SPELLING_OFFSET, ID, KIND, GROUP, ALIAS,         \
     ALIASARGS, FLAGS, VISIBILITY, PARAM, HELPTEXT, HELPTEXTSFORVARIANTS,       \
-    METAVAR, VALUES, SHOULD_PARSE, ALWAYS_EMIT, KEYPATH, DEFAULT_VALUE,        \
-    IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, DENORMALIZER, MERGER, EXTRACTOR, \
-    TABLE_INDEX)                                                               \
+    METAVAR, VALUES, SUBCOMMANDIDS_OFFSET, SHOULD_PARSE, ALWAYS_EMIT, KEYPATH, \
+    DEFAULT_VALUE, IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, DENORMALIZER,     \
+    MERGER, EXTRACTOR, TABLE_INDEX)                                            \
   if ((VISIBILITY) & options::CC1Option) {                                     \
     KEYPATH = MERGER(KEYPATH, DEFAULT_VALUE);                                  \
     if (IMPLIED_CHECK)                                                         \
@@ -551,8 +551,9 @@ static T extractMaskValue(T KeyPath) {
 #define GENERATE_OPTION_WITH_MARSHALLING(                                      \
     CONSUMER, PREFIX_TYPE, SPELLING_OFFSET, ID, KIND, GROUP, ALIAS, ALIASARGS, \
     FLAGS, VISIBILITY, PARAM, HELPTEXT, HELPTEXTSFORVARIANTS, METAVAR, VALUES, \
-    SHOULD_PARSE, ALWAYS_EMIT, KEYPATH, DEFAULT_VALUE, IMPLIED_CHECK,          \
-    IMPLIED_VALUE, NORMALIZER, DENORMALIZER, MERGER, EXTRACTOR, TABLE_INDEX)   \
+    SUBCOMMANDIDS_OFFSET, SHOULD_PARSE, ALWAYS_EMIT, KEYPATH, DEFAULT_VALUE,   \
+    IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, DENORMALIZER, MERGER, EXTRACTOR, \
+    TABLE_INDEX)                                                               \
   if ((VISIBILITY) & options::CC1Option) {                                     \
     [&](const auto &Extracted) {                                               \
       if (ALWAYS_EMIT ||                                                       \
@@ -623,6 +624,9 @@ static bool FixupInvocation(CompilerInvocation &Invocation,
     LangOpts.RawStringLiterals = true;
   }
 
+  LangOpts.NamedLoops =
+      Args.hasFlag(OPT_fnamed_loops, OPT_fno_named_loops, LangOpts.C2y);
+
   // Prevent the user from specifying both -fsycl-is-device and -fsycl-is-host.
   if (LangOpts.SYCLIsDevice && LangOpts.SYCLIsHost)
     Diags.Report(diag::err_drv_argument_not_allowed_with) << "-fsycl-is-device"
@@ -639,6 +643,10 @@ static bool FixupInvocation(CompilerInvocation &Invocation,
   if (Args.hasArg(OPT_fdx_rootsignature_version) && !LangOpts.HLSL)
     Diags.Report(diag::err_drv_argument_not_allowed_with)
         << "-fdx-rootsignature-version" << GetInputKindName(IK);
+
+  if (Args.hasArg(OPT_fdx_rootsignature_define) && !LangOpts.HLSL)
+    Diags.Report(diag::err_drv_argument_not_allowed_with)
+        << "-fdx-rootsignature-define" << GetInputKindName(IK);
 
   if (Args.hasArg(OPT_fgpu_allow_device_init) && !LangOpts.HIP)
     Diags.Report(diag::warn_ignored_hip_only_option)
@@ -1315,15 +1323,6 @@ static void parseAnalyzerConfigs(AnalyzerOptions &AnOpts,
   if (AnOpts.ShouldTrackConditionsDebug && !AnOpts.ShouldTrackConditions)
     Diags->Report(diag::err_analyzer_config_invalid_input)
         << "track-conditions-debug" << "'track-conditions' to also be enabled";
-
-  if (!AnOpts.CTUDir.empty() && !llvm::sys::fs::is_directory(AnOpts.CTUDir))
-    Diags->Report(diag::err_analyzer_config_invalid_input) << "ctu-dir"
-                                                           << "a filename";
-
-  if (!AnOpts.ModelPath.empty() &&
-      !llvm::sys::fs::is_directory(AnOpts.ModelPath))
-    Diags->Report(diag::err_analyzer_config_invalid_input) << "model-path"
-                                                           << "a filename";
 }
 
 /// Generate a remark argument. This is an inverse of `ParseOptimizationRemark`.
@@ -1475,34 +1474,6 @@ static std::string serializeXRayInstrumentationBundle(const XRayInstrSet &S) {
   return Buffer;
 }
 
-// Set the profile kind using fprofile-instrument-use-path.
-static void setPGOUseInstrumentor(CodeGenOptions &Opts,
-                                  const Twine &ProfileName,
-                                  llvm::vfs::FileSystem &FS,
-                                  DiagnosticsEngine &Diags) {
-  auto ReaderOrErr = llvm::IndexedInstrProfReader::create(ProfileName, FS);
-  if (auto E = ReaderOrErr.takeError()) {
-    unsigned DiagID = Diags.getCustomDiagID(DiagnosticsEngine::Error,
-                                            "Error in reading profile %0: %1");
-    llvm::handleAllErrors(std::move(E), [&](const llvm::ErrorInfoBase &EI) {
-      Diags.Report(DiagID) << ProfileName.str() << EI.message();
-    });
-    return;
-  }
-  std::unique_ptr<llvm::IndexedInstrProfReader> PGOReader =
-    std::move(ReaderOrErr.get());
-  // Currently memprof profiles are only added at the IR level. Mark the profile
-  // type as IR in that case as well and the subsequent matching needs to detect
-  // which is available (might be one or both).
-  if (PGOReader->isIRLevelProfile() || PGOReader->hasMemoryProfile()) {
-    if (PGOReader->hasCSIRLevelProfile())
-      Opts.setProfileUse(llvm::driver::ProfileInstrKind::ProfileCSIRInstr);
-    else
-      Opts.setProfileUse(llvm::driver::ProfileInstrKind::ProfileIRInstr);
-  } else
-    Opts.setProfileUse(llvm::driver::ProfileInstrKind::ProfileClangInstr);
-}
-
 void CompilerInvocation::setDefaultPointerAuthOptions(
     PointerAuthOptions &Opts, const LangOptions &LangOpts,
     const llvm::Triple &Triple) {
@@ -1541,6 +1512,17 @@ void CompilerInvocation::setDefaultPointerAuthOptions(
           Key::ASIA, LangOpts.PointerAuthInitFiniAddressDiscrimination,
           Discrimination::Constant, InitFiniPointerConstantDiscriminator);
     }
+
+    Opts.BlockInvocationFunctionPointers =
+        PointerAuthSchema(Key::ASIA, true, Discrimination::None);
+    Opts.BlockHelperFunctionPointers =
+        PointerAuthSchema(Key::ASIA, true, Discrimination::None);
+    Opts.BlockByrefHelperFunctionPointers =
+        PointerAuthSchema(Key::ASIA, true, Discrimination::None);
+    if (LangOpts.PointerAuthBlockDescriptorPointers)
+      Opts.BlockDescriptorPointers =
+          PointerAuthSchema(Key::ASDA, true, Discrimination::Constant,
+                            BlockDescriptorConstantDiscriminator);
 
     Opts.ObjCMethodListFunctionPointers =
         PointerAuthSchema(Key::ASIA, true, Discrimination::None);
@@ -1670,6 +1652,9 @@ void CompilerInvocationBase::GenerateCodeGenArgs(const CodeGenOptions &Opts,
     GenerateArg(Consumer, OPT_floop_interchange);
   else
     GenerateArg(Consumer, OPT_fno_loop_interchange);
+
+  if (Opts.FuseLoops)
+    GenerateArg(Consumer, OPT_fexperimental_loop_fusion);
 
   if (!Opts.BinutilsVersion.empty())
     GenerateArg(Consumer, OPT_fbinutils_version_EQ, Opts.BinutilsVersion);
@@ -1966,9 +1951,10 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
   }
 
   const llvm::Triple::ArchType DebugEntryValueArchs[] = {
-      llvm::Triple::x86, llvm::Triple::x86_64, llvm::Triple::aarch64,
-      llvm::Triple::arm, llvm::Triple::armeb, llvm::Triple::mips,
-      llvm::Triple::mipsel, llvm::Triple::mips64, llvm::Triple::mips64el};
+      llvm::Triple::x86,     llvm::Triple::x86_64, llvm::Triple::aarch64,
+      llvm::Triple::arm,     llvm::Triple::armeb,  llvm::Triple::mips,
+      llvm::Triple::mipsel,  llvm::Triple::mips64, llvm::Triple::mips64el,
+      llvm::Triple::riscv32, llvm::Triple::riscv64};
 
   if (Opts.OptimizationLevel > 0 && Opts.hasReducedDebugInfo() &&
       llvm::is_contained(DebugEntryValueArchs, T.getArch()))
@@ -1991,6 +1977,8 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
                    (Opts.OptimizationLevel > 1));
   Opts.InterchangeLoops =
       Args.hasFlag(OPT_floop_interchange, OPT_fno_loop_interchange, false);
+  Opts.FuseLoops = Args.hasFlag(OPT_fexperimental_loop_fusion,
+                                OPT_fno_experimental_loop_fusion, false);
   Opts.BinutilsVersion =
       std::string(Args.getLastArgValue(OPT_fbinutils_version_EQ));
 
@@ -3226,7 +3214,7 @@ static bool ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
       DashX = llvm::StringSwitch<InputKind>(XValue)
                   .Case("cpp-output", InputKind(Language::C).getPreprocessed())
                   .Case("assembler-with-cpp", Language::Asm)
-                  .Cases("ast", "pcm", "precompiled-header",
+                  .Cases({"ast", "pcm", "precompiled-header"},
                          InputKind(Language::Unknown, InputKind::Precompiled))
                   .Case("ir", Language::LLVM_IR)
                   .Case("cir", Language::CIR)
@@ -3305,9 +3293,6 @@ static void GenerateHeaderSearchArgs(const HeaderSearchOptions &Opts,
 
   if (Opts.UseLibcxx)
     GenerateArg(Consumer, OPT_stdlib_EQ, "libc++");
-
-  if (!Opts.ModuleCachePath.empty())
-    GenerateArg(Consumer, OPT_fmodules_cache_path, Opts.ModuleCachePath);
 
   for (const auto &File : Opts.PrebuiltModuleFiles)
     GenerateArg(Consumer, OPT_fmodule_file, File.first + "=" + File.second);
@@ -3411,8 +3396,7 @@ static void GenerateHeaderSearchArgs(const HeaderSearchOptions &Opts,
 }
 
 static bool ParseHeaderSearchArgs(HeaderSearchOptions &Opts, ArgList &Args,
-                                  DiagnosticsEngine &Diags,
-                                  const std::string &WorkingDir) {
+                                  DiagnosticsEngine &Diags) {
   unsigned NumErrorsBefore = Diags.getNumErrors();
 
   HeaderSearchOptions *HeaderSearchOpts = &Opts;
@@ -3424,17 +3408,6 @@ static bool ParseHeaderSearchArgs(HeaderSearchOptions &Opts, ArgList &Args,
 
   if (const Arg *A = Args.getLastArg(OPT_stdlib_EQ))
     Opts.UseLibcxx = (strcmp(A->getValue(), "libc++") == 0);
-
-  // Canonicalize -fmodules-cache-path before storing it.
-  SmallString<128> P(Args.getLastArgValue(OPT_fmodules_cache_path));
-  if (!(P.empty() || llvm::sys::path::is_absolute(P))) {
-    if (WorkingDir.empty())
-      llvm::sys::fs::make_absolute(P);
-    else
-      llvm::sys::fs::make_absolute(WorkingDir, P);
-  }
-  llvm::sys::path::remove_dots(P);
-  Opts.ModuleCachePath = std::string(P);
 
   // Only the -fmodule-file=<name>=<file> form.
   for (const auto *A : Args.filtered(OPT_fmodule_file)) {
@@ -3598,6 +3571,8 @@ static void GeneratePointerAuthArgs(const LangOptions &Opts,
     GenerateArg(Consumer, OPT_fptrauth_objc_interface_sel);
   if (Opts.PointerAuthObjcClassROPointers)
     GenerateArg(Consumer, OPT_fptrauth_objc_class_ro);
+  if (Opts.PointerAuthBlockDescriptorPointers)
+    GenerateArg(Consumer, OPT_fptrauth_block_descriptor_pointers);
 }
 
 static void ParsePointerAuthArgs(LangOptions &Opts, ArgList &Args,
@@ -3621,7 +3596,8 @@ static void ParsePointerAuthArgs(LangOptions &Opts, ArgList &Args,
   Opts.PointerAuthELFGOT = Args.hasArg(OPT_fptrauth_elf_got);
   Opts.AArch64JumpTableHardening =
       Args.hasArg(OPT_faarch64_jump_table_hardening);
-
+  Opts.PointerAuthBlockDescriptorPointers =
+      Args.hasArg(OPT_fptrauth_block_descriptor_pointers);
   Opts.PointerAuthObjcIsa = Args.hasArg(OPT_fptrauth_objc_isa);
   Opts.PointerAuthObjcClassROPointers = Args.hasArg(OPT_fptrauth_objc_class_ro);
   Opts.PointerAuthObjcInterfaceSel =
@@ -3907,9 +3883,6 @@ void CompilerInvocationBase::GenerateLangArgs(const LangOptions &Opts,
     GenerateArg(Consumer, OPT_offload_targets_EQ, Targets);
   }
 
-  if (!Opts.OMPHostIRFile.empty())
-    GenerateArg(Consumer, OPT_fopenmp_host_ir_file_path, Opts.OMPHostIRFile);
-
   if (Opts.OpenMPCUDAMode)
     GenerateArg(Consumer, OPT_fopenmp_cuda_mode);
 
@@ -3980,6 +3953,29 @@ void CompilerInvocationBase::GenerateLangArgs(const LangOptions &Opts,
 
   if (!Opts.RandstructSeed.empty())
     GenerateArg(Consumer, OPT_frandomize_layout_seed_EQ, Opts.RandstructSeed);
+
+  if (Opts.AllocTokenMax)
+    GenerateArg(Consumer, OPT_falloc_token_max_EQ,
+                std::to_string(*Opts.AllocTokenMax));
+
+  if (Opts.AllocTokenMode) {
+    StringRef S;
+    switch (*Opts.AllocTokenMode) {
+    case llvm::AllocTokenMode::Increment:
+      S = "increment";
+      break;
+    case llvm::AllocTokenMode::Random:
+      S = "random";
+      break;
+    case llvm::AllocTokenMode::TypeHash:
+      S = "typehash";
+      break;
+    case llvm::AllocTokenMode::TypeHashPointerSplit:
+      S = "typehashpointersplit";
+      break;
+    }
+    GenerateArg(Consumer, OPT_falloc_token_mode_EQ, S);
+  }
 }
 
 bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
@@ -4026,13 +4022,13 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
           auto Diag = Diags.Report(diag::note_drv_use_standard);
           Diag << Std.getName() << Std.getDescription();
           unsigned NumAliases = 0;
-#define LANGSTANDARD(id, name, lang, desc, features)
+#define LANGSTANDARD(id, name, lang, desc, features, version)
 #define LANGSTANDARD_ALIAS(id, alias) \
           if (KindValue == LangStandard::lang_##id) ++NumAliases;
 #define LANGSTANDARD_ALIAS_DEPR(id, alias)
 #include "clang/Basic/LangStandards.def"
           Diag << NumAliases;
-#define LANGSTANDARD(id, name, lang, desc, features)
+#define LANGSTANDARD(id, name, lang, desc, features, version)
 #define LANGSTANDARD_ALIAS(id, alias) \
           if (KindValue == LangStandard::lang_##id) Diag << alias;
 #define LANGSTANDARD_ALIAS_DEPR(id, alias)
@@ -4053,18 +4049,18 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
   // -cl-std only applies for OpenCL language standards.
   // Override the -std option in this case.
   if (const Arg *A = Args.getLastArg(OPT_cl_std_EQ)) {
-    LangStandard::Kind OpenCLLangStd
-      = llvm::StringSwitch<LangStandard::Kind>(A->getValue())
-        .Cases("cl", "CL", LangStandard::lang_opencl10)
-        .Cases("cl1.0", "CL1.0", LangStandard::lang_opencl10)
-        .Cases("cl1.1", "CL1.1", LangStandard::lang_opencl11)
-        .Cases("cl1.2", "CL1.2", LangStandard::lang_opencl12)
-        .Cases("cl2.0", "CL2.0", LangStandard::lang_opencl20)
-        .Cases("cl3.0", "CL3.0", LangStandard::lang_opencl30)
-        .Cases("clc++", "CLC++", LangStandard::lang_openclcpp10)
-        .Cases("clc++1.0", "CLC++1.0", LangStandard::lang_openclcpp10)
-        .Cases("clc++2021", "CLC++2021", LangStandard::lang_openclcpp2021)
-        .Default(LangStandard::lang_unspecified);
+    LangStandard::Kind OpenCLLangStd =
+        llvm::StringSwitch<LangStandard::Kind>(A->getValue())
+            .Cases({"cl", "CL"}, LangStandard::lang_opencl10)
+            .Cases({"cl1.0", "CL1.0"}, LangStandard::lang_opencl10)
+            .Cases({"cl1.1", "CL1.1"}, LangStandard::lang_opencl11)
+            .Cases({"cl1.2", "CL1.2"}, LangStandard::lang_opencl12)
+            .Cases({"cl2.0", "CL2.0"}, LangStandard::lang_opencl20)
+            .Cases({"cl3.0", "CL3.0"}, LangStandard::lang_opencl30)
+            .Cases({"clc++", "CLC++"}, LangStandard::lang_openclcpp10)
+            .Cases({"clc++1.0", "CLC++1.0"}, LangStandard::lang_openclcpp10)
+            .Cases({"clc++2021", "CLC++2021"}, LangStandard::lang_openclcpp2021)
+            .Default(LangStandard::lang_unspecified);
 
     if (OpenCLLangStd == LangStandard::lang_unspecified) {
       Diags.Report(diag::err_drv_invalid_value)
@@ -4376,15 +4372,6 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
     }
   }
 
-  // Get OpenMP host file path if any and report if a non existent file is
-  // found
-  if (Arg *A = Args.getLastArg(options::OPT_fopenmp_host_ir_file_path)) {
-    Opts.OMPHostIRFile = A->getValue();
-    if (!llvm::sys::fs::exists(Opts.OMPHostIRFile))
-      Diags.Report(diag::err_drv_omp_host_ir_file_not_found)
-          << Opts.OMPHostIRFile;
-  }
-
   // Set CUDA mode for OpenMP target NVPTX/AMDGCN if specified in options
   Opts.OpenMPCUDAMode = Opts.OpenMPIsTargetDevice &&
                         (T.isNVPTX() || T.isAMDGCN()) &&
@@ -4441,7 +4428,7 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
 
     StringRef Ver = A->getValue();
     std::pair<StringRef, StringRef> VerParts = Ver.split('.');
-    unsigned Major, Minor = 0;
+    int Major, Minor = 0;
 
     // Check the version number is valid: either 3.x (0 <= x <= 9) or
     // y or y.0 (4 <= y <= current version).
@@ -4454,7 +4441,7 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
              : VerParts.first.size() == Ver.size() || VerParts.second == "0")) {
       // Got a valid version number.
 #define ABI_VER_MAJOR_MINOR(Major_, Minor_)                                    \
-  if (std::tie(Major, Minor) <= std::tuple(Major_, Minor_))                    \
+  if (std::tuple(Major, Minor) <= std::tuple(Major_, Minor_))                  \
     Opts.setClangABICompat(LangOptions::ClangABI::Ver##Major_##_##Minor_);     \
   else
 #define ABI_VER_MAJOR(Major_)                                                  \
@@ -4567,6 +4554,23 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
   if (const Arg *A = Args.getLastArg(OPT_frandomize_layout_seed_EQ))
     Opts.RandstructSeed = A->getValue(0);
 
+  if (const auto *Arg = Args.getLastArg(options::OPT_falloc_token_max_EQ)) {
+    StringRef S = Arg->getValue();
+    uint64_t Value = 0;
+    if (S.getAsInteger(0, Value))
+      Diags.Report(diag::err_drv_invalid_value) << Arg->getAsString(Args) << S;
+    else
+      Opts.AllocTokenMax = Value;
+  }
+
+  if (const auto *Arg = Args.getLastArg(options::OPT_falloc_token_mode_EQ)) {
+    StringRef S = Arg->getValue();
+    if (auto Mode = getAllocTokenModeFromString(S))
+      Opts.AllocTokenMode = Mode;
+    else
+      Diags.Report(diag::err_drv_invalid_value) << Arg->getAsString(Args) << S;
+  }
+
   // Validate options for HLSL
   if (Opts.HLSL) {
     // TODO: Revisit restricting SPIR-V to logical once we've figured out how to
@@ -4596,7 +4600,8 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
         // Validate that if fnative-half-type is given, that
         // the language standard is at least hlsl2018, and that
         // the target shader model is at least 6.2.
-        if (Args.getLastArg(OPT_fnative_half_type)) {
+        if (Args.getLastArg(OPT_fnative_half_type) ||
+            Args.getLastArg(OPT_fnative_int16_type)) {
           const LangStandard &Std =
               LangStandard::getLangStandardForKind(Opts.LangStd);
           if (!(Opts.LangStd >= LangStandard::lang_hlsl2018 &&
@@ -4610,12 +4615,16 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
           Diags.Report(diag::err_drv_hlsl_bad_shader_unsupported)
               << VulkanEnv << T.getOSName() << T.str();
         }
-        if (Args.getLastArg(OPT_fnative_half_type)) {
+        if (Args.getLastArg(OPT_fnative_half_type) ||
+            Args.getLastArg(OPT_fnative_int16_type)) {
+          const char *Str = Args.getLastArg(OPT_fnative_half_type)
+                                ? "-fnative-half-type"
+                                : "-fnative-int16-type";
           const LangStandard &Std =
               LangStandard::getLangStandardForKind(Opts.LangStd);
           if (!(Opts.LangStd >= LangStandard::lang_hlsl2018))
             Diags.Report(diag::err_drv_hlsl_16bit_types_unsupported)
-                << "-fnative-half-type" << false << Std.getName();
+                << Str << false << Std.getName();
         }
       } else {
         llvm_unreachable("expected DXIL or SPIR-V target");
@@ -5021,8 +5030,7 @@ bool CompilerInvocation::CreateFromArgsImpl(
   InputKind DashX = Res.getFrontendOpts().DashX;
   ParseTargetArgs(Res.getTargetOpts(), Args, Diags);
   llvm::Triple T(Res.getTargetOpts().Triple);
-  ParseHeaderSearchArgs(Res.getHeaderSearchOpts(), Args, Diags,
-                        Res.getFileSystemOpts().WorkingDir);
+  ParseHeaderSearchArgs(Res.getHeaderSearchOpts(), Args, Diags);
   if (Res.getFrontendOpts().GenReducedBMI ||
       Res.getFrontendOpts().ProgramAction ==
           frontend::GenerateReducedModuleInterface ||
@@ -5100,16 +5108,10 @@ bool CompilerInvocation::CreateFromArgsImpl(
     append_range(Res.getCodeGenOpts().CommandLineArgs, CommandLineArgs);
   }
 
-  // Set PGOOptions. Need to create a temporary VFS to read the profile
-  // to determine the PGO type.
-  if (!Res.getCodeGenOpts().ProfileInstrumentUsePath.empty()) {
-    auto FS =
-        createVFSFromOverlayFiles(Res.getHeaderSearchOpts().VFSOverlayFiles,
-                                  Diags, llvm::vfs::getRealFileSystem());
-    setPGOUseInstrumentor(Res.getCodeGenOpts(),
-                          Res.getCodeGenOpts().ProfileInstrumentUsePath, *FS,
-                          Diags);
-  }
+  if (!Res.getCodeGenOpts().ProfileInstrumentUsePath.empty() &&
+      Res.getCodeGenOpts().getProfileUse() ==
+          llvm::driver::ProfileInstrKind::ProfileNone)
+    Diags.Report(diag::err_drv_profile_instrument_use_path_with_no_kind);
 
   FixupInvocation(Res, Diags, Args, DashX);
 

@@ -8,6 +8,7 @@
 
 #include "lldb/Interpreter/OptionValueFileSpecList.h"
 
+#include "lldb/Interpreter/OptionValue.h"
 #include "lldb/Utility/Args.h"
 #include "lldb/Utility/Stream.h"
 
@@ -22,9 +23,15 @@ void OptionValueFileSpecList::DumpValue(const ExecutionContext *exe_ctx,
   if (dump_mask & eDumpOptionValue) {
     const bool one_line = dump_mask & eDumpOptionCommand;
     const uint32_t size = m_current_value.GetSize();
-    if (dump_mask & eDumpOptionType)
-      strm.Printf(" =%s",
-                  (m_current_value.GetSize() > 0 && !one_line) ? "\n" : "");
+    if (dump_mask & (eDumpOptionType | eDumpOptionDefaultValue)) {
+      strm.Printf(" =");
+      if (dump_mask & eDumpOptionDefaultValue && !m_current_value.IsEmpty()) {
+        DefaultValueFormat label(strm);
+        strm.PutCString("empty");
+      }
+      if (!m_current_value.IsEmpty() && !one_line)
+        strm.PutCString("\n");
+    }
     if (!one_line)
       strm.IndentMore();
     for (uint32_t i = 0; i < size; ++i) {

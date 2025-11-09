@@ -1,4 +1,4 @@
-//===--- tools/extra/clang-tidy/GlobList.cpp ------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -23,16 +23,17 @@ static bool consumeNegativeIndicator(StringRef &GlobList) {
 // removes it and the trailing comma from the GlobList and
 // returns the extracted glob.
 static llvm::StringRef extractNextGlob(StringRef &GlobList) {
-  StringRef UntrimmedGlob = GlobList.substr(0, GlobList.find_first_of(",\n"));
-  StringRef Glob = UntrimmedGlob.trim();
+  const StringRef UntrimmedGlob =
+      GlobList.substr(0, GlobList.find_first_of(",\n"));
+  const StringRef Glob = UntrimmedGlob.trim();
   GlobList = GlobList.substr(UntrimmedGlob.size() + 1);
   return Glob;
 }
 
 static llvm::Regex createRegexFromGlob(StringRef &Glob) {
   SmallString<128> RegexText("^");
-  StringRef MetaChars("()^$|*+?.[]\\{}");
-  for (char C : Glob) {
+  const StringRef MetaChars("()^$|*+?.[]\\{}");
+  for (const char C : Glob) {
     if (C == '*')
       RegexText.push_back('.');
     else if (MetaChars.contains(C))

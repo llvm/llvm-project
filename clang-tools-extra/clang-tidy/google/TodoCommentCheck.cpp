@@ -1,4 +1,4 @@
-//===--- TodoCommentCheck.cpp - clang-tidy --------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -20,7 +20,7 @@ public:
         TodoMatch("^// *TODO *(\\(.*\\))?:?( )?(.*)$") {}
 
   bool HandleComment(Preprocessor &PP, SourceRange Range) override {
-    StringRef Text =
+    const StringRef Text =
         Lexer::getSourceText(CharSourceRange::getCharRange(Range),
                              PP.getSourceManager(), PP.getLangOpts());
 
@@ -28,13 +28,14 @@ public:
     if (!TodoMatch.match(Text, &Matches))
       return false;
 
-    StringRef Username = Matches[1];
-    StringRef Comment = Matches[3];
+    const StringRef Username = Matches[1];
+    const StringRef Comment = Matches[3];
 
     if (!Username.empty())
       return false;
 
-    std::string NewText = ("// TODO(" + Twine(User) + "): " + Comment).str();
+    const std::string NewText =
+        ("// TODO(" + Twine(User) + "): " + Comment).str();
 
     Check.diag(Range.getBegin(), "missing username/bug in TODO")
         << FixItHint::CreateReplacement(CharSourceRange::getCharRange(Range),

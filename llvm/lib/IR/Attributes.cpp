@@ -954,6 +954,19 @@ AttributeSet AttributeSet::addAttributes(LLVMContext &C,
   return get(C, B);
 }
 
+AttributeSet AttributeSet::addAttributes(LLVMContext &C,
+                                         const AttrBuilder &B) const {
+  if (!hasAttributes())
+    return get(C, B);
+
+  if (!B.hasAttributes())
+    return *this;
+
+  AttrBuilder Merged(C, *this);
+  Merged.merge(B);
+  return get(C, Merged);
+}
+
 AttributeSet AttributeSet::removeAttribute(LLVMContext &C,
                                              Attribute::AttrKind Kind) const {
   if (!hasAttribute(Kind)) return *this;

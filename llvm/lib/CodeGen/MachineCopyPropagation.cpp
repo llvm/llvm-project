@@ -490,7 +490,7 @@ private:
   SmallSetVector<MachineInstr *, 8> MaybeDeadCopies;
 
   /// Multimap tracking debug users in current BB
-  DenseMap<MachineInstr *, SmallSet<MachineInstr *, 2>> CopyDbgUsers;
+  DenseMap<MachineInstr *, SmallPtrSet<MachineInstr *, 2>> CopyDbgUsers;
 
   CopyTracker Tracker;
 
@@ -1257,7 +1257,7 @@ void MachineCopyPropagation::BackwardCopyPropagateBlock(
   Tracker.clear();
 }
 
-static void LLVM_ATTRIBUTE_UNUSED printSpillReloadChain(
+[[maybe_unused]] static void printSpillReloadChain(
     DenseMap<MachineInstr *, SmallVector<MachineInstr *>> &SpillChain,
     DenseMap<MachineInstr *, SmallVector<MachineInstr *>> &ReloadChain,
     MachineInstr *Leader) {

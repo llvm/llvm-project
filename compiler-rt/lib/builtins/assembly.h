@@ -14,7 +14,7 @@
 #ifndef COMPILERRT_ASSEMBLY_H
 #define COMPILERRT_ASSEMBLY_H
 
-#if defined(__linux__) && defined(__CET__)
+#ifdef __CET__
 #if __has_include(<cet.h>)
 #include <cet.h>
 #endif
@@ -71,9 +71,24 @@
 
 #endif
 
+#if defined(__aarch64__) && defined(__ELF__) &&                                \
+    defined(COMPILER_RT_EXECUTE_ONLY_CODE)
+// The assembler always creates an implicit '.text' section with default flags
+// (SHF_ALLOC | SHF_EXECINSTR), which is incompatible with the execute-only
+// '.text' section we want to create here because of the missing
+// SHF_AARCH64_PURECODE section flag. To solve this, we use 'unique,0' to
+// differentiate the two sections. The output will therefore have two separate
+// sections named '.text', where code will be placed into the execute-only
+// '.text' section, and the implicitly-created one will be empty.
+#define TEXT_SECTION                                                           \
+  .section .text,"axy",@progbits,unique,0
+#else
+#define TEXT_SECTION                                                           \
+  .text
+#endif
+
 #if defined(__arm__) || defined(__aarch64__) || defined(__arm64ec__)
 #define FUNC_ALIGN                                                             \
-  .text SEPARATOR                                                              \
   .balign 16 SEPARATOR
 #else
 #define FUNC_ALIGN
@@ -255,6 +270,7 @@
 #endif
 
 #define DEFINE_COMPILERRT_FUNCTION(name)                                       \
+  TEXT_SECTION SEPARATOR                                                       \
   DEFINE_CODE_STATE                                                            \
   FILE_LEVEL_DIRECTIVE SEPARATOR                                               \
   .globl FUNC_SYMBOL(SYMBOL_NAME(name)) SEPARATOR                              \
@@ -264,6 +280,7 @@
   FUNC_SYMBOL(SYMBOL_NAME(name)):
 
 #define DEFINE_COMPILERRT_THUMB_FUNCTION(name)                                 \
+  TEXT_SECTION SEPARATOR                                                       \
   DEFINE_CODE_STATE                                                            \
   FILE_LEVEL_DIRECTIVE SEPARATOR                                               \
   .globl FUNC_SYMBOL(SYMBOL_NAME(name)) SEPARATOR                              \
@@ -273,6 +290,7 @@
   FUNC_SYMBOL(SYMBOL_NAME(name)):
 
 #define DEFINE_COMPILERRT_PRIVATE_FUNCTION(name)                               \
+  TEXT_SECTION SEPARATOR                                                       \
   DEFINE_CODE_STATE                                                            \
   FILE_LEVEL_DIRECTIVE SEPARATOR                                               \
   .globl FUNC_SYMBOL(SYMBOL_NAME(name)) SEPARATOR                              \
@@ -282,6 +300,7 @@
   FUNC_SYMBOL(SYMBOL_NAME(name)):
 
 #define DEFINE_COMPILERRT_PRIVATE_FUNCTION_UNMANGLED(name)                     \
+  TEXT_SECTION SEPARATOR                                                       \
   DEFINE_CODE_STATE                                                            \
   .globl FUNC_SYMBOL(name) SEPARATOR                                           \
   SYMBOL_IS_FUNC(name) SEPARATOR                                               \
@@ -290,6 +309,7 @@
   FUNC_SYMBOL(name):
 
 #define DEFINE_COMPILERRT_OUTLINE_FUNCTION_UNMANGLED(name)                     \
+  TEXT_SECTION SEPARATOR                                                       \
   DEFINE_CODE_STATE                                                            \
   FUNC_ALIGN                                                                   \
   .globl FUNC_SYMBOL(name) SEPARATOR                                           \
@@ -304,7 +324,7 @@
   .globl FUNC_SYMBOL(SYMBOL_NAME(name)) SEPARATOR                              \
   SYMBOL_IS_FUNC(SYMBOL_NAME(name)) SEPARATOR                                  \
   DECLARE_SYMBOL_VISIBILITY(name) SEPARATOR                                    \
-  .set FUNC_SYMBOL(SYMBOL_NAME(name)), FUNC_SYMBOL(target) SEPARATOR
+  .set FUNC_SYMBOL(SYMBOL_NAME(name)), FUNC_SYMBOL(SYMBOL_NAME(target)) SEPARATOR
 
 #if defined(__ARM_EABI__)
 #define DEFINE_AEABI_FUNCTION_ALIAS(aeabi_name, name)                          \
@@ -335,6 +355,11 @@
 #define VMOV_TO_DOUBLE(dst, src0, src1) vmov dst, src0, src1 SEPARATOR
 #define VMOV_FROM_DOUBLE(dst0, dst1, src) vmov dst0, dst1, src SEPARATOR
 #endif
+#endif
+
+#if defined(__ASSEMBLER__) && (defined(__i386__) || defined(__amd64__)) &&     \
+    !defined(__arm64ec__)
+.att_syntax
 #endif
 
 #endif // COMPILERRT_ASSEMBLY_H

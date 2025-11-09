@@ -29,7 +29,7 @@
 using namespace llvm;
 
 enum {
-  IndexWidth = 6,
+  IndexWidth = 7,
   FullIndexWidth = IndexWidth + 4,
   HistOpcWidth = 40,
 };

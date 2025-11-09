@@ -2216,6 +2216,18 @@ func.func @test_mulf1(%arg0 : f32, %arg1 : f32) -> (f32) {
   return %2 : f32
 }
 
+// CHECK-LABEL: @test_mulf2(
+func.func @test_mulf2(%arg0 : f32) -> (f32, f32) {
+  // CHECK-DAG:  %[[C0:.+]] = arith.constant 0.000000e+00 : f32
+  // CHECK-DAG:  %[[C0n:.+]] = arith.constant -0.000000e+00 : f32
+  // CHECK-NEXT:  return %[[C0]], %[[C0n]]
+  %c0 = arith.constant 0.0 : f32
+  %c0n = arith.constant -0.0 : f32
+  %0 = arith.mulf %c0, %arg0 fastmath<nnan,nsz> : f32
+  %1 = arith.mulf %c0n, %arg0 fastmath<nnan,nsz> : f32
+  return %0, %1 : f32, f32
+}
+
 // -----
 
 // CHECK-LABEL: @test_divf(
@@ -3363,3 +3375,18 @@ func.func @bf16_fma(%arg0: vector<32x32x32xbf16>, %arg1: vector<32x32x32xbf16>, 
     }
   }
 #-}
+
+// CHECK-LABEL: func @unreachable()
+// CHECK-NEXT: return
+// CHECK-NOT: arith
+func.func @unreachable() {
+  return
+^unreachable:
+  %c1_i64 = arith.constant 1 : i64
+  // This self referencing operation is legal in an unreachable block.
+  // Many patterns are unsafe with respect to this kind of situation,
+  // check that we don't infinite loop here.
+  %add = arith.addi %add, %c1_i64 : i64
+  cf.br ^unreachable
+}
+

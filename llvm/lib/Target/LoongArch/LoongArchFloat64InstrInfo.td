@@ -11,6 +11,21 @@
 //===----------------------------------------------------------------------===//
 
 //===----------------------------------------------------------------------===//
+// LoongArch specific DAG Nodes.
+//===----------------------------------------------------------------------===//
+
+def SDT_LoongArchMOVGR2FR_D
+    : SDTypeProfile<1, 1, [SDTCisVT<0, f64>, SDTCisVT<1, i64>]>;
+def SDT_LoongArchMOVGR2FR_D_LO_HI
+    : SDTypeProfile<1, 2, [SDTCisVT<0, f64>, SDTCisVT<1, i32>,
+                           SDTCisSameAs<1, 2>]>;
+
+def loongarch_movgr2fr_d
+    : SDNode<"LoongArchISD::MOVGR2FR_D", SDT_LoongArchMOVGR2FR_D>;
+def loongarch_movgr2fr_d_lo_hi
+    : SDNode<"LoongArchISD::MOVGR2FR_D_LO_HI", SDT_LoongArchMOVGR2FR_D_LO_HI>;
+
+//===----------------------------------------------------------------------===//
 // Instructions
 //===----------------------------------------------------------------------===//
 
@@ -147,6 +162,11 @@ def : PatFpr<fneg, FNEG_D, FPR64>;
 def : PatFpr<fabs, FABS_D, FPR64>;
 def : PatFpr<fsqrt, FSQRT_D, FPR64>;
 def : Pat<(fdiv fpimm1, (fsqrt FPR64:$fj)), (FRSQRT_D FPR64:$fj)>;
+let Predicates = [IsLA32] in {
+def : Pat<(fdiv (loongarch_movgr2fr_d_lo_hi (i32 0), (i32 1072693248)),
+                (fsqrt FPR64:$fj)),
+          (FRSQRT_D FPR64:$fj)>;
+} // Predicates = [IsLA32]
 def : Pat<(fcopysign FPR64:$fj, FPR32:$fk),
           (FCOPYSIGN_D FPR64:$fj, (FCVT_D_S FPR32:$fk))>;
 def : Pat<(fcopysign FPR32:$fj, FPR64:$fk),
@@ -184,8 +204,10 @@ def : PatFPSetcc<SETUO,  FCMP_CUN_D,  FPR64>;
 def : PatFPSetcc<SETLT,  FCMP_CLT_D,  FPR64>;
 
 defm : PatFPBrcond<SETOEQ, FCMP_CEQ_D, FPR64>;
+defm : PatFPBrcond<SETEQ,  FCMP_CEQ_D, FPR64>;
 defm : PatFPBrcond<SETOLT, FCMP_CLT_D, FPR64>;
 defm : PatFPBrcond<SETOLE, FCMP_CLE_D, FPR64>;
+defm : PatFPBrcond<SETLE,  FCMP_CLE_D, FPR64>;
 defm : PatFPBrcond<SETONE, FCMP_CNE_D, FPR64>;
 defm : PatFPBrcond<SETO,   FCMP_COR_D, FPR64>;
 defm : PatFPBrcond<SETUEQ, FCMP_CUEQ_D, FPR64>;
@@ -250,6 +272,10 @@ def : Pat<(f64 (fpextend FPR32:$src)), (FCVT_D_S FPR32:$src)>;
 
 // FP reciprocal operation
 def : Pat<(fdiv fpimm1, FPR64:$src), (FRECIP_D $src)>;
+let Predicates = [IsLA32] in {
+def : Pat<(fdiv (loongarch_movgr2fr_d_lo_hi (i32 0), (i32 1072693248)), FPR64:$src),
+          (FRECIP_D FPR64:$src)>;
+} // Predicates = [IsLA32]
 
 let Predicates = [HasFrecipe] in {
 // FP approximate reciprocal operation
@@ -305,9 +331,13 @@ def : Pat<(f64 (sint_to_fp (i64 (sexti32 (i64 GPR:$src))))),
 def : Pat<(f64 (sint_to_fp GPR:$src)), (FFINT_D_L (MOVGR2FR_D GPR:$src))>;
 
 def : Pat<(bitconvert GPR:$src), (MOVGR2FR_D GPR:$src)>;
+def : Pat<(loongarch_movgr2fr_d GPR:$src), (MOVGR2FR_D GPR:$src)>;
 } // Predicates = [HasBasicD, IsLA64]
 let Predicates = [HasBasicD, IsLA32] in {
 def : Pat<(f64 (sint_to_fp (i32 GPR:$src))), (FFINT_D_W (MOVGR2FR_W GPR:$src))>;
+
+def : Pat<(f64 (loongarch_movgr2fr_d_lo_hi (i32 GPR:$lo), (i32 GPR:$hi))),
+          (MOVGR2FRH_W (MOVGR2FR_W_64 GPR:$lo), GPR:$hi)>;
 } // Predicates = [HasBasicD, IsLA32]
 
 // Convert FP to int
@@ -318,6 +348,7 @@ def : Pat<(bitconvert FPR64:$src), (MOVFR2GR_D FPR64:$src)>;
 // FP Rounding
 let Predicates = [HasBasicD, IsLA64] in {
 def : PatFpr<frint, FRINT_D, FPR64>;
+def : PatFpr<flog2, FLOGB_D, FPR64>;
 } // Predicates = [HasBasicD, IsLA64]
 
 /// Pseudo-instructions needed for the soft-float ABI with LA32D

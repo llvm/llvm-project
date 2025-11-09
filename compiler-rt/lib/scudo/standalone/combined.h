@@ -25,6 +25,7 @@
 #include "size_class_allocator.h"
 #include "stack_depot.h"
 #include "string_utils.h"
+#include "tracing.h"
 #include "tsd.h"
 
 #include "scudo/interface.h"
@@ -100,7 +101,7 @@ public:
       Chunk::UnpackedHeader Header = {};
       Header.ClassId = QuarantineClassId & Chunk::ClassIdMask;
       Header.SizeOrUnusedBytes = sizeof(QuarantineBatch);
-      Header.State = Chunk::State::Allocated;
+      Header.State = Chunk::State::Quarantined;
       Chunk::storeHeader(Allocator.Cookie, Ptr, &Header);
 
       // Reset tag to 0 as this chunk may have been previously used for a tagged
@@ -119,7 +120,7 @@ public:
       Chunk::UnpackedHeader Header;
       Chunk::loadHeader(Allocator.Cookie, Ptr, &Header);
 
-      if (UNLIKELY(Header.State != Chunk::State::Allocated))
+      if (UNLIKELY(Header.State != Chunk::State::Quarantined))
         reportInvalidChunkState(AllocatorAction::Deallocating, Ptr);
       DCHECK_EQ(Header.ClassId, QuarantineClassId);
       DCHECK_EQ(Header.Offset, 0);
@@ -671,10 +672,11 @@ public:
 
   void releaseToOS(ReleaseToOS ReleaseType) {
     initThreadMaybe();
+    SCUDO_SCOPED_TRACE(GetReleaseToOSTraceName(ReleaseType));
     if (ReleaseType == ReleaseToOS::ForceAll)
       drainCaches();
     Primary.releaseToOS(ReleaseType);
-    Secondary.releaseToOS();
+    Secondary.releaseToOS(ReleaseType);
   }
 
   // Iterate over all chunks and call a callback for all busy chunks located
@@ -704,19 +706,26 @@ public:
         if (!getChunkFromBlock(Block, &Chunk, &Header) &&
             !getChunkFromBlock(addHeaderTag(Block), &Chunk, &Header))
           return;
+      } else if (!getChunkFromBlock(addHeaderTag(Block), &Chunk, &Header)) {
+        return;
+      }
+
+      if (Header.State != Chunk::State::Allocated)
+        return;
+
+      uptr TaggedChunk = Chunk;
+      if (allocatorSupportsMemoryTagging<AllocatorConfig>())
+        TaggedChunk = untagPointer(TaggedChunk);
+      uptr Size;
+      if (UNLIKELY(useMemoryTagging<AllocatorConfig>(Primary.Options.load()))) {
+        TaggedChunk = loadTag(Chunk);
+        Size = getSize(reinterpret_cast<void *>(Chunk), &Header);
+      } else if (AllocatorConfig::getExactUsableSize()) {
+        Size = getSize(reinterpret_cast<void *>(Chunk), &Header);
       } else {
-        if (!getChunkFromBlock(addHeaderTag(Block), &Chunk, &Header))
-          return;
+        Size = getUsableSize(reinterpret_cast<void *>(Chunk), &Header);
       }
-      if (Header.State == Chunk::State::Allocated) {
-        uptr TaggedChunk = Chunk;
-        if (allocatorSupportsMemoryTagging<AllocatorConfig>())
-          TaggedChunk = untagPointer(TaggedChunk);
-        if (useMemoryTagging<AllocatorConfig>(Primary.Options.load()))
-          TaggedChunk = loadTag(Chunk);
-        Callback(TaggedChunk, getSize(reinterpret_cast<void *>(Chunk), &Header),
-                 Arg);
-      }
+      Callback(TaggedChunk, Size, Arg);
     };
     Primary.iterateOverBlocks(Lambda);
     Secondary.iterateOverBlocks(Lambda);
@@ -757,16 +766,50 @@ public:
     return false;
   }
 
-  // Return the usable size for a given chunk. Technically we lie, as we just
-  // report the actual size of a chunk. This is done to counteract code actively
-  // writing past the end of a chunk (like sqlite3) when the usable size allows
-  // for it, which then forces realloc to copy the usable size of a chunk as
-  // opposed to its actual size.
+  ALWAYS_INLINE uptr getUsableSize(const void *Ptr,
+                                   Chunk::UnpackedHeader *Header) {
+    void *BlockBegin = getBlockBegin(Ptr, Header);
+    if (LIKELY(Header->ClassId)) {
+      return SizeClassMap::getSizeByClassId(Header->ClassId) -
+             (reinterpret_cast<uptr>(Ptr) - reinterpret_cast<uptr>(BlockBegin));
+    }
+
+    uptr UntaggedPtr = reinterpret_cast<uptr>(Ptr);
+    if (allocatorSupportsMemoryTagging<AllocatorConfig>()) {
+      UntaggedPtr = untagPointer(UntaggedPtr);
+      BlockBegin = untagPointer(BlockBegin);
+    }
+    return SecondaryT::getBlockEnd(BlockBegin) - UntaggedPtr;
+  }
+
+  // Return the usable size for a given chunk. If MTE is enabled or if the
+  // ExactUsableSize config parameter is true, we report the exact size of
+  // the original allocation size. Otherwise, we will return the total
+  // actual usable size.
   uptr getUsableSize(const void *Ptr) {
     if (UNLIKELY(!Ptr))
       return 0;
 
-    return getAllocSize(Ptr);
+    if (AllocatorConfig::getExactUsableSize() ||
+        UNLIKELY(useMemoryTagging<AllocatorConfig>(Primary.Options.load())))
+      return getAllocSize(Ptr);
+
+    initThreadMaybe();
+
+#ifdef GWP_ASAN_HOOKS
+    if (UNLIKELY(GuardedAlloc.pointerIsMine(Ptr)))
+      return GuardedAlloc.getSize(Ptr);
+#endif // GWP_ASAN_HOOKS
+
+    Ptr = getHeaderTaggedPointer(const_cast<void *>(Ptr));
+    Chunk::UnpackedHeader Header;
+    Chunk::loadHeader(Cookie, Ptr, &Header);
+
+    // Getting the alloc size of a chunk only makes sense if it's allocated.
+    if (UNLIKELY(Header.State != Chunk::State::Allocated))
+      reportInvalidChunkState(AllocatorAction::Sizing, Ptr);
+
+    return getUsableSize(Ptr, &Header);
   }
 
   uptr getAllocSize(const void *Ptr) {
@@ -947,6 +990,19 @@ public:
       getInlineErrorInfo(ErrorInfo, NextErrorReport, FaultAddr, Depot,
                          RegionInfoPtr, Memory, MemoryTags, MemoryAddr,
                          MemorySize, 2, 16);
+  }
+
+  uptr getBlockBeginTestOnly(const void *Ptr) {
+    Chunk::UnpackedHeader Header;
+    Chunk::loadHeader(Cookie, Ptr, &Header);
+    DCHECK(Header.State == Chunk::State::Allocated);
+
+    if (allocatorSupportsMemoryTagging<AllocatorConfig>())
+      Ptr = untagPointer(const_cast<void *>(Ptr));
+    void *Begin = getBlockBegin(Ptr, &Header);
+    if (allocatorSupportsMemoryTagging<AllocatorConfig>())
+      Begin = untagPointer(Begin);
+    return reinterpret_cast<uptr>(Begin);
   }
 
 private:

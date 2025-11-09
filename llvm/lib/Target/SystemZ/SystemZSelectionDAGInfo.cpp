@@ -263,7 +263,7 @@ static std::pair<SDValue, SDValue> getBoundedStrlen(SelectionDAG &DAG,
 
 std::pair<SDValue, SDValue> SystemZSelectionDAGInfo::EmitTargetCodeForStrlen(
     SelectionDAG &DAG, const SDLoc &DL, SDValue Chain, SDValue Src,
-    MachinePointerInfo SrcPtrInfo) const {
+    const CallInst *CI) const {
   EVT PtrVT = Src.getValueType();
   return getBoundedStrlen(DAG, DL, Chain, Src, DAG.getConstant(0, DL, PtrVT));
 }

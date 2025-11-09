@@ -1314,7 +1314,7 @@ class S1 {
 #else
 template<class T>
 using U1 = S1<T>;
-// expected-error@first.h:* {{'DependentType::S1::x' from module 'FirstModule' is not present in definition of 'S1<T>' in module 'SecondModule'}}
+// expected-error@first.h:* {{'DependentType::S1::x' from module 'FirstModule' is not present in definition of 'DependentType::S1<T>' in module 'SecondModule'}}
 // expected-note@second.h:* {{declaration of 'x' does not match}}
 #endif
 
@@ -2343,7 +2343,7 @@ struct S1 {
 };
 #else
 using TemplateTypeParmType::S1;
-// expected-error@first.h:* {{'TemplateTypeParmType::S1::x' from module 'FirstModule' is not present in definition of 'S1<T1, T2>' in module 'SecondModule'}}
+// expected-error@first.h:* {{'TemplateTypeParmType::S1::x' from module 'FirstModule' is not present in definition of 'TemplateTypeParmType::S1<T1, T2>' in module 'SecondModule'}}
 // expected-note@second.h:* {{declaration of 'x' does not match}}
 #endif
 
@@ -2365,9 +2365,9 @@ class S2 {
 };
 #else
 using TemplateTypeParmType::S2;
-// expected-error@first.h:* {{'TemplateTypeParmType::S2::x' from module 'FirstModule' is not present in definition of 'S2<T, U>' in module 'SecondModule'}}
+// expected-error@first.h:* {{'TemplateTypeParmType::S2::x' from module 'FirstModule' is not present in definition of 'TemplateTypeParmType::S2<T, U>' in module 'SecondModule'}}
 // expected-note@second.h:* {{declaration of 'x' does not match}}
-// expected-error@first.h:* {{'TemplateTypeParmType::S2::type' from module 'FirstModule' is not present in definition of 'S2<T, U>' in module 'SecondModule'}}
+// expected-error@first.h:* {{'TemplateTypeParmType::S2::type' from module 'FirstModule' is not present in definition of 'TemplateTypeParmType::S2<T, U>' in module 'SecondModule'}}
 // expected-note@second.h:* {{declaration of 'type' does not match}}
 #endif
 
@@ -4020,7 +4020,7 @@ struct Valid {
 };
 #else
 Invalid::L2<1>::L3<1> invalid;
-// expected-error@second.h:* {{'Types::InjectedClassName::Invalid::L2::L3::x' from module 'SecondModule' is not present in definition of 'L3<value-parameter-1-0>' in module 'FirstModule'}}
+// expected-error@second.h:* {{'Types::InjectedClassName::Invalid::L2::L3::x' from module 'SecondModule' is not present in definition of 'Types::InjectedClassName::Invalid::L2::L3<value-parameter-1-0>' in module 'FirstModule'}}
 // expected-note@first.h:* {{declaration of 'x' does not match}}
 Valid::L2<1>::L3<1> valid;
 #endif
@@ -4291,7 +4291,7 @@ struct Valid {
 };
 #else
 template <class T> using I = Invalid<T>;
-// expected-error@first.h:* {{'Types::UnresolvedUsing::Invalid::x' from module 'FirstModule' is not present in definition of 'Invalid<T>' in module 'SecondModule'}}
+// expected-error@first.h:* {{'Types::UnresolvedUsing::Invalid::x' from module 'FirstModule' is not present in definition of 'Types::UnresolvedUsing::Invalid<T>' in module 'SecondModule'}}
 // expected-note@second.h:* {{declaration of 'x' does not match}}
 
 template <class T> using V = Valid<T>;

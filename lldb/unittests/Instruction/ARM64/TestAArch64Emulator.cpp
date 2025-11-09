@@ -62,7 +62,7 @@ struct Arch64EmulatorTester : public EmulateInstructionARM64 {
       reg_value.SetUInt64(tester->gpr.pc);
       return true;
     case gpr_cpsr_arm64:
-      reg_value.SetUInt64(tester->gpr.cpsr);
+      reg_value.SetUInt32(tester->gpr.cpsr);
       return true;
     default:
       return false;
@@ -97,7 +97,7 @@ struct Arch64EmulatorTester : public EmulateInstructionARM64 {
       tester->gpr.pc = reg_value.GetAsUInt64();
       return true;
     case gpr_cpsr_arm64:
-      tester->gpr.cpsr = reg_value.GetAsUInt64();
+      tester->gpr.cpsr = reg_value.GetAsUInt32();
       return true;
     default:
       return false;
@@ -112,7 +112,7 @@ struct Arch64EmulatorTester : public EmulateInstructionARM64 {
     assert(addr - tester->memory_offset + length <= sizeof(tester->memory));
     if (addr >= tester->memory_offset &&
         addr - tester->memory_offset + length <= sizeof(tester->memory)) {
-      memcpy(dst, tester->memory + addr - tester->memory_offset, length);
+      memcpy(dst, tester->memory + (addr - tester->memory_offset), length);
       return length;
     }
     return 0;

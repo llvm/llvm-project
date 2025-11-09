@@ -13,6 +13,7 @@
 #include "TargetInfo/HexagonTargetInfo.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCDecoder.h"
 #include "llvm/MC/MCDecoderOps.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/MC/MCExpr.h"
@@ -33,6 +34,7 @@
 #define DEBUG_TYPE "hexagon-disassembler"
 
 using namespace llvm;
+using namespace llvm::MCD;
 using namespace Hexagon;
 
 using DecodeStatus = MCDisassembler::DecodeStatus;
@@ -63,6 +65,10 @@ public:
                                     raw_ostream &CStream) const override;
 
   void remapInstruction(MCInst &Instr) const;
+
+  Expected<bool> onSymbolStart(SymbolInfoTy &Symbol, uint64_t &Size,
+                               ArrayRef<uint8_t> Bytes,
+                               uint64_t Address) const override;
 
 private:
   bool makeBundle(ArrayRef<uint8_t> Bytes, uint64_t Address,
@@ -172,6 +178,19 @@ static DecodeStatus s32_0ImmDecoder(MCInst &MI, unsigned tmp,
                                     const MCDisassembler *Decoder);
 static DecodeStatus brtargetDecoder(MCInst &MI, unsigned tmp, uint64_t Address,
                                     const MCDisassembler *Decoder);
+
+static DecodeStatus n1ConstDecoder(MCInst &MI, const MCDisassembler *Decoder) {
+  MCContext &Ctx = Decoder->getContext();
+  MI.addOperand(MCOperand::createExpr(MCConstantExpr::create(-1, Ctx)));
+  return DecodeStatus::Success;
+}
+
+static DecodeStatus sgp10ConstDecoder(MCInst &MI,
+                                      const MCDisassembler *Decoder) {
+  MI.addOperand(MCOperand::createReg(Hexagon::SGP1_0));
+  return DecodeStatus::Success;
+}
+
 #include "HexagonDepDecoders.inc"
 #include "HexagonGenDisassemblerTables.inc"
 
@@ -348,21 +367,6 @@ void HexagonDisassembler::remapInstruction(MCInst &Instr) const {
   }
 }
 
-static void adjustDuplex(MCInst &MI, MCContext &Context) {
-  switch (MI.getOpcode()) {
-  case Hexagon::SA1_setin1:
-    MI.insert(MI.begin() + 1,
-              MCOperand::createExpr(MCConstantExpr::create(-1, Context)));
-    break;
-  case Hexagon::SA1_dec:
-    MI.insert(MI.begin() + 2,
-              MCOperand::createExpr(MCConstantExpr::create(-1, Context)));
-    break;
-  default:
-    break;
-  }
-}
-
 DecodeStatus HexagonDisassembler::getSingleInstruction(MCInst &MI, MCInst &MCB,
                                                        ArrayRef<uint8_t> Bytes,
                                                        uint64_t Address,
@@ -467,12 +471,10 @@ DecodeStatus HexagonDisassembler::getSingleInstruction(MCInst &MI, MCInst &MCB,
     CurrentExtender = TmpExtender;
     if (Result != DecodeStatus::Success)
       return DecodeStatus::Fail;
-    adjustDuplex(*MILow, getContext());
     Result = decodeInstruction(
         DecodeHigh, *MIHigh, (Instruction >> 16) & 0x1fff, Address, this, STI);
     if (Result != DecodeStatus::Success)
       return DecodeStatus::Fail;
-    adjustDuplex(*MIHigh, getContext());
     MCOperand OPLow = MCOperand::createInst(MILow);
     MCOperand OPHigh = MCOperand::createInst(MIHigh);
     MI.addOperand(OPLow);
@@ -496,38 +498,6 @@ DecodeStatus HexagonDisassembler::getSingleInstruction(MCInst &MI, MCInst &MCB,
       Result = decodeInstruction(DecoderTableEXT_mmvec32, MI, Instruction,
                                  Address, this, STI);
 
-  }
-
-  switch (MI.getOpcode()) {
-  case Hexagon::J4_cmpeqn1_f_jumpnv_nt:
-  case Hexagon::J4_cmpeqn1_f_jumpnv_t:
-  case Hexagon::J4_cmpeqn1_fp0_jump_nt:
-  case Hexagon::J4_cmpeqn1_fp0_jump_t:
-  case Hexagon::J4_cmpeqn1_fp1_jump_nt:
-  case Hexagon::J4_cmpeqn1_fp1_jump_t:
-  case Hexagon::J4_cmpeqn1_t_jumpnv_nt:
-  case Hexagon::J4_cmpeqn1_t_jumpnv_t:
-  case Hexagon::J4_cmpeqn1_tp0_jump_nt:
-  case Hexagon::J4_cmpeqn1_tp0_jump_t:
-  case Hexagon::J4_cmpeqn1_tp1_jump_nt:
-  case Hexagon::J4_cmpeqn1_tp1_jump_t:
-  case Hexagon::J4_cmpgtn1_f_jumpnv_nt:
-  case Hexagon::J4_cmpgtn1_f_jumpnv_t:
-  case Hexagon::J4_cmpgtn1_fp0_jump_nt:
-  case Hexagon::J4_cmpgtn1_fp0_jump_t:
-  case Hexagon::J4_cmpgtn1_fp1_jump_nt:
-  case Hexagon::J4_cmpgtn1_fp1_jump_t:
-  case Hexagon::J4_cmpgtn1_t_jumpnv_nt:
-  case Hexagon::J4_cmpgtn1_t_jumpnv_t:
-  case Hexagon::J4_cmpgtn1_tp0_jump_nt:
-  case Hexagon::J4_cmpgtn1_tp0_jump_t:
-  case Hexagon::J4_cmpgtn1_tp1_jump_nt:
-  case Hexagon::J4_cmpgtn1_tp1_jump_t:
-    MI.insert(MI.begin() + 1,
-              MCOperand::createExpr(MCConstantExpr::create(-1, getContext())));
-    break;
-  default:
-    break;
   }
 
   if (HexagonMCInstrInfo::isNewValue(*MCII, MI)) {
@@ -599,6 +569,18 @@ DecodeStatus HexagonDisassembler::getSingleInstruction(MCInst &MI, MCInst &MCB,
       return MCDisassembler::Fail;
   }
   return Result;
+}
+
+Expected<bool> HexagonDisassembler::onSymbolStart(SymbolInfoTy &Symbol,
+                                                  uint64_t &Size,
+                                                  ArrayRef<uint8_t> Bytes,
+                                                  uint64_t Address) const {
+  // At the start of a symbol, force a fresh packet by resetting any
+  // in-progress bundle state. This prevents packets from straddling label
+  // boundaries when data (e.g. jump tables) appears in between.
+  Size = 0;
+  resetBundle();
+  return true;
 }
 
 static DecodeStatus DecodeRegisterClass(MCInst &Inst, unsigned RegNo,
@@ -701,11 +683,10 @@ static DecodeStatus DecodeHvxWRRegisterClass(MCInst &Inst, unsigned RegNo,
   return DecodeRegisterClass(Inst, RegNo, HvxWRDecoderTable);
 }
 
-LLVM_ATTRIBUTE_UNUSED // Suppress warning temporarily.
-    static DecodeStatus
-    DecodeHvxVQRRegisterClass(MCInst &Inst, unsigned RegNo,
-                              uint64_t /*Address*/,
-                              const MCDisassembler *Decoder) {
+[[maybe_unused]] // Suppress warning temporarily.
+static DecodeStatus DecodeHvxVQRRegisterClass(MCInst &Inst, unsigned RegNo,
+                                              uint64_t /*Address*/,
+                                              const MCDisassembler *Decoder) {
   static const MCPhysReg HvxVQRDecoderTable[] = {
       Hexagon::VQ0,  Hexagon::VQ1,  Hexagon::VQ2,  Hexagon::VQ3,
       Hexagon::VQ4,  Hexagon::VQ5,  Hexagon::VQ6,  Hexagon::VQ7};

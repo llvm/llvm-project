@@ -32,3 +32,8 @@ void foo() {
   provide()->doWork();
   // expected-warning@-1{{Call argument for 'this' parameter is unchecked and unsafe}}
 }
+
+void doWorkWithObject(const CheckedObject&);
+void bar() {
+  doWorkWithObject(CheckedObject());
+}
