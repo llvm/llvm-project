@@ -208,14 +208,13 @@ Status RegisterValue::SetValueFromData(const RegisterInfo &reg_info,
       }
       SetUIntN(llvm::APInt(128, int128.x));
     } else {
-      size_t bit_count = src_len * 8;
-      std::vector<uint8_t> bytes(src_len, 0);
+      std::vector<uint8_t> native_endian_src(src_len, 0);
       src.ExtractBytes(src_offset, src_len,
                        llvm::sys::IsLittleEndianHost ? eByteOrderLittle
                                                      : eByteOrderBig,
-                       bytes.data());
-      llvm::APInt uint = llvm::APInt::getZero(bit_count);
-      llvm::LoadIntFromMemory(uint, bytes.data(), bytes.size());
+                       native_endian_src.data());
+      llvm::APInt uint = llvm::APInt::getZero(src_len * 8);
+      llvm::LoadIntFromMemory(uint, native_endian_src.data(), src_len);
       SetUIntN(uint);
     }
     break;
