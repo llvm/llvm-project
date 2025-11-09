@@ -8157,9 +8157,10 @@ VPRecipeBase *VPRecipeBuilder::tryToCreateWidenRecipe(VPSingleDefRecipe *R,
     return new VPWidenSelectRecipe(*cast<SelectInst>(Instr), R->operands());
 
   if (Instruction::isCast(VPI->getOpcode())) {
+    auto *CastR = cast<VPInstructionWithType>(R);
     auto *CI = cast<CastInst>(Instr);
     return new VPWidenCastRecipe(CI->getOpcode(), VPI->getOperand(0),
-                                 CI->getType(), *CI);
+                                 CastR->getResultType(), *CI);
   }
 
   return tryToWiden(VPI);
