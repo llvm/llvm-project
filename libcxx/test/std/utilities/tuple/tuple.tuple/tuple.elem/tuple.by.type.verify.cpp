@@ -30,7 +30,7 @@ void test_bad_index() {
 void test_bad_return_type() {
     typedef std::unique_ptr<int> upint;
     std::tuple<upint> t;
-    upint p = std::get<upint>(t); // expected-error{{deleted copy constructor}}
+    upint p = std::get<upint>(t); // expected-error{{deleted constructor}}
 }
 
 void f() {

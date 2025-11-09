@@ -45,6 +45,7 @@
 #include <__type_traits/is_trivially_relocatable.h>
 #include <__type_traits/is_unbounded_array.h>
 #include <__type_traits/is_void.h>
+#include <__type_traits/nat.h>
 #include <__type_traits/remove_extent.h>
 #include <__type_traits/type_identity.h>
 #include <__utility/declval.h>
@@ -208,9 +209,15 @@ public:
   template <bool _Dummy = true, class = _EnableIfDeleterConstructible<_BadRValRefType<_Dummy> > >
   _LIBCPP_HIDE_FROM_ABI unique_ptr(pointer __p, _BadRValRefType<_Dummy> __d) = delete;
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unique_ptr(unique_ptr&& __u) _NOEXCEPT
-      : __ptr_(__u.release()),
-        __deleter_(std::forward<deleter_type>(__u.get_deleter())) {}
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23
+#if _LIBCPP_STD_VER >= 20
+  unique_ptr(unique_ptr&& __u) noexcept
+    requires is_move_constructible_v<_Dp>
+#else
+  unique_ptr(_If<is_move_constructible<_Dp>::value, unique_ptr&&, __nat> __u) _NOEXCEPT
+#endif
+      : __ptr_(__u.release()), __deleter_(std::forward<deleter_type>(__u.get_deleter())) {
+  }
 
   template <class _Up,
             class _Ep,
@@ -226,7 +233,14 @@ public:
   _LIBCPP_HIDE_FROM_ABI unique_ptr(auto_ptr<_Up>&& __p) _NOEXCEPT : __ptr_(__p.release()), __deleter_() {}
 #endif
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unique_ptr& operator=(unique_ptr&& __u) _NOEXCEPT {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unique_ptr&
+#if _LIBCPP_STD_VER >= 20
+  operator=(unique_ptr&& __u) noexcept
+    requires is_move_assignable_v<_Dp>
+#else
+  operator=(_If<is_move_assignable<_Dp>::value, unique_ptr&&, __nat> __u) _NOEXCEPT
+#endif
+  {
     reset(__u.release());
     __deleter_ = std::forward<deleter_type>(__u.get_deleter());
     return *this;
@@ -251,10 +265,8 @@ public:
   }
 #endif
 
-#ifdef _LIBCPP_CXX03_LANG
   unique_ptr(unique_ptr const&)            = delete;
   unique_ptr& operator=(unique_ptr const&) = delete;
-#endif
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 ~unique_ptr() { reset(); }
 
@@ -532,12 +544,26 @@ public:
             class       = _EnableIfPointerConvertible<_Pp> >
   _LIBCPP_HIDE_FROM_ABI unique_ptr(_Pp __ptr, _BadRValRefType<_Dummy> __deleter) = delete;
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unique_ptr(unique_ptr&& __u) _NOEXCEPT
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23
+#if _LIBCPP_STD_VER >= 20
+  unique_ptr(unique_ptr&& __u) noexcept
+    requires is_move_constructible_v<_Dp>
+#else
+  unique_ptr(_If<is_move_constructible<_Dp>::value, unique_ptr&&, __nat> __u) _NOEXCEPT
+#endif
       : __ptr_(__u.release()),
         __deleter_(std::forward<deleter_type>(__u.get_deleter())),
-        __checker_(std::move(__u.__checker_)) {}
+        __checker_(std::move(__u.__checker_)) {
+  }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unique_ptr& operator=(unique_ptr&& __u) _NOEXCEPT {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unique_ptr&
+#if _LIBCPP_STD_VER >= 20
+  operator=(unique_ptr&& __u) noexcept
+    requires is_move_assignable_v<_Dp>
+#else
+  operator=(_If<is_move_assignable<_Dp>::value, unique_ptr&&, __nat> __u) _NOEXCEPT
+#endif
+  {
     reset(__u.release());
     __deleter_ = std::forward<deleter_type>(__u.get_deleter());
     __checker_ = std::move(__u.__checker_);
@@ -564,10 +590,8 @@ public:
     return *this;
   }
 
-#ifdef _LIBCPP_CXX03_LANG
   unique_ptr(unique_ptr const&)            = delete;
   unique_ptr& operator=(unique_ptr const&) = delete;
-#endif
 
 public:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 ~unique_ptr() { reset(); }
