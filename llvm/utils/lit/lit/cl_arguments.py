@@ -189,7 +189,7 @@ def parse_args():
         action=AliasAction,
         alias=[
             lambda namespace: TestOutputAction.setOutputLevel(
-                namespace, "test_output", "all"
+                namespace, "test_output", "failed"
             ),
         ],
     )
