@@ -1856,6 +1856,7 @@ module std [system] {
 
   module ranges {
     module access                         { header "__ranges/access.h" }
+    module adjacent_view                  { header "__ranges/adjacent_view.h" }
     module all                            {
       header "__ranges/all.h"
       export std.ranges.ref_view
@@ -1952,6 +1953,9 @@ module std [system] {
     module zip_view {
       header "__ranges/zip_view.h"
       export std.utility.pair
+    }
+    module zip_utils {
+      header "__ranges/zip_utils.h"
     }
     module zip_transform_view {
       header "__ranges/zip_transform_view.h"
