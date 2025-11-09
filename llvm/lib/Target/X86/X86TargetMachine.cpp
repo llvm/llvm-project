@@ -624,6 +624,9 @@ void X86PassConfig::addPreEmitPass2() {
   // after all real instructions have been added to the epilog.
   if (TT.isOSWindows() && TT.isX86_64())
     addPass(createX86WinEHUnwindV2Pass());
+
+  if (TM->getBBSectionsType() == llvm::BasicBlockSection::List)
+    addPass(createPrefetchInsertionPass());
 }
 
 bool X86PassConfig::addPostFastRegAllocRewrite() {

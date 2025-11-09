@@ -1299,7 +1299,7 @@ public:
 
   MCSymbol *getCallInstSymbol(unsigned CallInstNumber) const;
 
-  const SmallVector<MCSymbol *, 4>& getCallInstSymbols() const {
+  const SmallVector<MCSymbol *, 4> &getCallInstSymbols() const {
     return CallInstSymbols;
   }
 
