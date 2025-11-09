@@ -49,8 +49,6 @@ private:
   // Runtime values, populated from Options in the constructor (or storeOptions)
   std::string PreferredSide;          // "Left" or "Right"
   std::vector<std::string> Operators; // list of operator names, e.g. "=="
-
-  // Implementation helpers live in the .cpp file.
 };
 
 } // namespace clang::tidy::readability
