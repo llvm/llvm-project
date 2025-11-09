@@ -3346,6 +3346,8 @@ void RewriteInstance::initializeMetadataManager() {
 
   MetadataManager.registerRewriter(createPseudoProbeRewriter(*BC));
 
+  MetadataManager.registerRewriter(createRSeqRewriter(*BC));
+
   MetadataManager.registerRewriter(createSDTRewriter(*BC));
 
   MetadataManager.registerRewriter(createGNUPropertyRewriter(*BC));
