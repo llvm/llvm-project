@@ -50,8 +50,8 @@ void populateAllReduceEndomorphismSimplificationPatterns(
   auto getAlgebraicOpOperands = [](Operation *op,
                                    SmallVector<OpOperand *> &operands) {
     auto algebraicOp = llvm::cast<AlgebraicOp>(op);
-    llvm::transform(algebraicOp->getOpOperands(), std::back_inserter(operands),
-                    [](OpOperand &operand) { return &operand; });
+    llvm::append_range(operands,
+                       llvm::make_pointer_range(algebraicOp->getOpOperands()));
   };
   auto getAlgebraicOpResult = [](Operation *op) {
     auto algebraicOp = llvm::cast<AlgebraicOp>(op);
