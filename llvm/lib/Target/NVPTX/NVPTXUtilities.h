@@ -27,7 +27,6 @@
 #include <cstdarg>
 #include <set>
 #include <string>
-#include <vector>
 
 namespace llvm {
 
