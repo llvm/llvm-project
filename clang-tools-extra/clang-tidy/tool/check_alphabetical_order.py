@@ -29,7 +29,7 @@ import io
 import os
 import re
 import sys
-from typing import Dict, List, Optional, Sequence, Tuple
+from typing import Dict, List, Optional, Sequence, Tuple, Union, overload
 
 # Matches a :doc:`label <path>` or :doc:`label` reference anywhere in text and
 # captures the label. Used to sort bullet items alphabetically in ReleaseNotes
@@ -41,8 +41,12 @@ DOC_LABEL_RN_RE = re.compile(r":doc:`(?P<label>[^`<]+)\s*(?:<[^>]+>)?`")
 DOC_LINE_RE = re.compile(r"^\s*:doc:`(?P<label>[^`<]+?)\s*<[^>]+>`.*$")
 
 
-def script_dir() -> str:
-    return os.path.dirname(os.path.abspath(__file__))
+EXTRA_DIR = os.path.join(os.path.dirname(__file__), "../..")
+DOCS_DIR = os.path.join(EXTRA_DIR, "docs")
+CLANG_TIDY_DOCS_DIR = os.path.join(DOCS_DIR, "clang-tidy")
+CHECKS_DOCS_DIR = os.path.join(CLANG_TIDY_DOCS_DIR, "checks")
+LIST_DOC = os.path.join(CHECKS_DOCS_DIR, "list.rst")
+RELEASE_NOTES_DOC = os.path.join(DOCS_DIR, "ReleaseNotes.rst")
 
 
 def read_text(path: str) -> List[str]:
@@ -55,13 +59,8 @@ def write_text(path: str, content: str) -> None:
         f.write(content)
 
 
-def normalize_list_rst(lines: Sequence[str]) -> str:
-    """Return normalized content of checks list.rst from given lines.
-
-    Input: full file content split into lines.
-    Output: single string with all csv-table rows sorted by :doc: label while
-            preserving non-table content and table options/headers.
-    """
+def _normalize_list_rst_lines(lines: Sequence[str]) -> List[str]:
+    """Return normalized content of checks list.rst as a list of lines."""
     out: List[str] = []
     i = 0
     n = len(lines)
@@ -96,7 +95,28 @@ def normalize_list_rst(lines: Sequence[str]) -> str:
         out.append(line)
         i += 1
 
-    return "".join(out)
+    return out
+
+
+@overload
+def normalize_list_rst(data: str) -> str: ...
+
+
+@overload
+def normalize_list_rst(data: List[str]) -> List[str]: ...
+
+
+def normalize_list_rst(data: Union[str, List[str]]) -> Union[str, List[str]]:
+    """Normalize list.rst; returns same type as input (str or list).
+
+    - If given a string, returns a single normalized string.
+    - If given a sequence of lines, returns a list of lines.
+    """
+    if isinstance(data, str):
+        lines = data.splitlines(True)
+        return "".join(_normalize_list_rst_lines(lines))
+    else:
+        return _normalize_list_rst_lines(data)
 
 
 def find_heading(lines: Sequence[str], title: str) -> Optional[int]:
@@ -293,13 +313,6 @@ def normalize_release_notes(lines: Sequence[str]) -> str:
     return "".join(out)
 
 
-def _default_paths() -> Tuple[str, str]:
-    base = os.path.normpath(os.path.join(script_dir(), "..", ".."))
-    list_doc = os.path.join(base, "docs", "clang-tidy", "checks", "list.rst")
-    rn_doc = os.path.join(base, "docs", "ReleaseNotes.rst")
-    return list_doc, rn_doc
-
-
 def _emit_duplicate_report(lines: Sequence[str], title: str) -> Optional[str]:
     dups_detail = find_duplicate_entries(lines, title)
     if not dups_detail:
@@ -338,7 +351,7 @@ def process_release_notes(out_path: str, rn_doc: str) -> int:
 
 def process_checks_list(out_path: str, list_doc: str) -> int:
     lines = read_text(list_doc)
-    normalized = normalize_list_rst(lines)
+    normalized = normalize_list_rst("".join(lines))
     write_text(out_path, normalized)
     return 0
 
@@ -348,7 +361,7 @@ def main(argv: Sequence[str]) -> int:
     ap.add_argument("-o", "--output", dest="out", default=None)
     args = ap.parse_args(argv)
 
-    list_doc, rn_doc = _default_paths()
+    list_doc, rn_doc = (os.path.normpath(LIST_DOC), os.path.normpath(RELEASE_NOTES_DOC))
 
     if args.out:
         out_path = args.out
@@ -360,7 +373,7 @@ def main(argv: Sequence[str]) -> int:
 
     list_lines = read_text(list_doc)
     rn_lines = read_text(rn_doc)
-    list_norm = normalize_list_rst(list_lines)
+    list_norm = normalize_list_rst("".join(list_lines))
     rn_norm = normalize_release_notes(rn_lines)
     if "".join(list_lines) != list_norm:
         write_text(list_doc, list_norm)

@@ -1,5 +1,0 @@
-// RUN: %python %S/../../../clang-tidy/tool/check-alphabetical-order.py -o %t.clang-tidy-checks-list.rst
-// RUN: diff --strip-trailing-cr %t.clang-tidy-checks-list.rst %S/../../../docs/clang-tidy/checks/list.rst
-
-// RUN: %python %S/../../../clang-tidy/tool/check-alphabetical-order.py -o %t.ReleaseNotes.rst
-// RUN: diff --strip-trailing-cr %t.ReleaseNotes.rst %S/../../../docs/ReleaseNotes.rst

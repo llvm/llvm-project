@@ -3,40 +3,22 @@
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 # To run these tests:
-# python3 check-alphabetical-order_test.py -v
+# python3 check_alphabetical_order_test.py -v
 
 import io
 import os
 import tempfile
 import unittest
 from contextlib import redirect_stderr
-import importlib.util
-import importlib.machinery
-from typing import Any, cast
+from typing import cast
 
 
-def _load_script_module():
-    here = os.path.dirname(cast(str, __file__))
-    script_path = os.path.normpath(os.path.join(here, "check-alphabetical-order.py"))
-    loader = importlib.machinery.SourceFileLoader(
-        "check_alphabetical_order", cast(str, script_path)
-    )
-    spec = importlib.util.spec_from_loader(loader.name, loader)
-    if spec is None or spec.loader is None:
-        raise ImportError(f"Failed to load spec for {script_path}")
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod
-
-
-_mod = cast(Any, _load_script_module())
+import check_alphabetical_order as _mod
 
 
 class TestAlphabeticalOrderCheck(unittest.TestCase):
     def test_normalize_list_rst_sorts_rows(self):
-        lines = [
-            "Header\n",
-            "------" "\n",
+        input_lines = [
             ".. csv-table:: Clang-Tidy checks\n",
             '   :header: "Name", "Offers fixes"\n',
             "\n",
@@ -44,19 +26,23 @@ class TestAlphabeticalOrderCheck(unittest.TestCase):
             "   :doc:`cert-flp30-c <cert/flp30-c>`,\n",
             '   :doc:`abseil-cleanup-ctad <abseil/cleanup-ctad>`, "Yes"\n',
             "   A non-doc row that should stay after docs\n",
-            "\n",
-            "Footer\n",
         ]
 
-        out = _mod.normalize_list_rst(lines)
-        pos_abseil = out.find("abseil-cleanup-ctad")
-        pos_bugprone = out.find("bugprone-virtual-near-miss")
-        pos_cert = out.find("cert-flp30-c")
-        self.assertTrue(all(p != -1 for p in [pos_abseil, pos_bugprone, pos_cert]))
-        self.assertLess(pos_abseil, pos_bugprone)
-        self.assertLess(pos_bugprone, pos_cert)
-        # Non-doc row should remain after doc rows within the table region.
-        self.assertGreater(out.find("A non-doc row"), out.find("cert-flp30-c"))
+        expected_lines = [
+            ".. csv-table:: Clang-Tidy checks\n",
+            '   :header: "Name", "Offers fixes"\n',
+            "\n",
+            '   :doc:`abseil-cleanup-ctad <abseil/cleanup-ctad>`, "Yes"\n',
+            '   :doc:`bugprone-virtual-near-miss <bugprone/virtual-near-miss>`, "Yes"\n',
+            "   :doc:`cert-flp30-c <cert/flp30-c>`,\n",
+            "   A non-doc row that should stay after docs\n",
+        ]
+
+        out_str = _mod.normalize_list_rst("".join(input_lines))
+        self.assertEqual(out_str, "".join(expected_lines))
+
+        out_lines = _mod.normalize_list_rst(input_lines)
+        self.assertEqual(out_lines, expected_lines)
 
     def test_find_heading(self):
         lines = [
@@ -104,15 +90,29 @@ class TestAlphabeticalOrderCheck(unittest.TestCase):
         self.assertEqual(len(occs), 2)
 
         report = _mod._emit_duplicate_report(lines, "Changes in existing checks")
-        self.assertIsInstance(report, str)
-        self.assertIn("Duplicate entries in 'Changes in existing checks':", report)
-        self.assertIn(
-            "-- Duplicate: - Improved :doc:`bugprone-easily-swappable-parameters",
-            report,
+        self.assertIsNotNone(report)
+        report_str = cast(str, report)
+
+        expected_report = "".join(
+            [
+                "Error: Duplicate entries in 'Changes in existing checks':\n",
+                "\n",
+                "-- Duplicate: - Improved :doc:`bugprone-easily-swappable-parameters\n",
+                "\n",
+                "- At line 4:\n",
+                "- Improved :doc:`bugprone-easily-swappable-parameters\n",
+                "  <clang-tidy/checks/bugprone/easily-swappable-parameters>` check by\n",
+                "  correcting a spelling mistake on its option\n",
+                "  ``NamePrefixSuffixSilenceDissimilarityTreshold``.\n",
+                "\n",
+                "- At line 14:\n",
+                "- Improved :doc:`bugprone-easily-swappable-parameters\n",
+                "  <clang-tidy/checks/bugprone/easily-swappable-parameters>` check by\n",
+                "  correcting a spelling mistake on its option\n",
+                "  ``NamePrefixSuffixSilenceDissimilarityTreshold``.\n",
+            ]
         )
-        self.assertEqual(report.count("- At line "), 2)
-        self.assertIn("- At line 4:", report)
-        self.assertIn("- At line 14:", report)
+        self.assertEqual(report_str, expected_report)
 
     def test_process_release_notes_with_unsorted_content(self):
         # When content is not normalized, the function writes normalized text and returns 0.
@@ -145,33 +145,26 @@ class TestAlphabeticalOrderCheck(unittest.TestCase):
             with open(out_path, "r", encoding="utf-8") as f:
                 out = f.read()
 
-            bugprone_item = [
-                "- New :doc:`bugprone-derived-method-shadowing-base-method",
-                "  <clang-tidy/checks/bugprone/derived-method-shadowing-base-method>` check.",
-                "  Finds derived class methods that shadow a (non-virtual) base class method.",
-            ]
-            readability_item = [
-                "- New :doc:`readability-redundant-parentheses",
-                "  <clang-tidy/checks/readability/redundant-parentheses>` check.",
-                "  Detect redundant parentheses.",
-            ]
-
-            p_bugprone = [out.find(s) for s in bugprone_item]
-            p_readability = [out.find(s) for s in readability_item]
-
-            self.assertTrue(all(p != -1 for p in p_bugprone))
-            self.assertTrue(all(p != -1 for p in p_readability))
-
-            self.assertLess(p_bugprone[0], p_bugprone[1])
-            self.assertLess(p_bugprone[1], p_bugprone[2])
-
-            self.assertLess(p_readability[0], p_readability[1])
-            self.assertLess(p_readability[1], p_readability[2])
-
-            self.assertLess(
-                out.find("bugprone-derived-method-shadowing-base-method"),
-                out.find("readability-redundant-parentheses"),
+            expected_out = "".join(
+                [
+                    "New checks\n",
+                    "^^^^^^^^^^\n",
+                    "\n",
+                    "- New :doc:`bugprone-derived-method-shadowing-base-method\n",
+                    "  <clang-tidy/checks/bugprone/derived-method-shadowing-base-method>` check.\n",
+                    "\n",
+                    "  Finds derived class methods that shadow a (non-virtual) base class method.\n",
+                    "\n",
+                    "- New :doc:`readability-redundant-parentheses\n",
+                    "  <clang-tidy/checks/readability/redundant-parentheses>` check.\n",
+                    "\n",
+                    "  Detect redundant parentheses.\n",
+                    "\n",
+                    "\n",
+                ]
             )
+
+            self.assertEqual(out, expected_out)
             self.assertIn("not normalized", buf.getvalue())
 
     def test_process_release_notes_prioritizes_sorting_over_duplicates(self):
@@ -211,6 +204,33 @@ class TestAlphabeticalOrderCheck(unittest.TestCase):
                 buf.getvalue(),
             )
 
+            with open(out_path, "r", encoding="utf-8") as f:
+                out = f.read()
+            expected_out = "".join(
+                [
+                    "Changes in existing checks\n",
+                    "^^^^^^^^^^^^^^^^^^^^^^^^^^\n",
+                    "\n",
+                    "- Improved :doc:`bugprone-easily-swappable-parameters\n",
+                    "  <clang-tidy/checks/bugprone/easily-swappable-parameters>` check by\n",
+                    "  correcting a spelling mistake on its option\n",
+                    "  ``NamePrefixSuffixSilenceDissimilarityTreshold``.\n",
+                    "\n",
+                    "- Improved :doc:`bugprone-easily-swappable-parameters\n",
+                    "  <clang-tidy/checks/bugprone/easily-swappable-parameters>` check by\n",
+                    "  correcting a spelling mistake on its option\n",
+                    "  ``NamePrefixSuffixSilenceDissimilarityTreshold``.\n",
+                    "\n",
+                    "- Improved :doc:`bugprone-exception-escape\n",
+                    "  <clang-tidy/checks/bugprone/exception-escape>` check's handling of lambdas:\n",
+                    "  exceptions from captures are now diagnosed, exceptions in the bodies of\n",
+                    "  lambdas that aren't actually invoked are not.\n",
+                    "\n",
+                    "\n",
+                ]
+            )
+            self.assertEqual(out, expected_out)
+
     def test_process_release_notes_with_duplicates_fails(self):
         # Sorting is already correct but duplicates exist, should return 3 and report.
         rn_lines = [
@@ -244,10 +264,31 @@ class TestAlphabeticalOrderCheck(unittest.TestCase):
                 rc = _mod.process_release_notes(out_path, rn_doc)
 
             self.assertEqual(rc, 3)
-            self.assertIn(
-                "-- Duplicate: - Improved :doc:`bugprone-easily-swappable-parameters",
-                buf.getvalue(),
+            expected_report = "".join(
+                [
+                    "Error: Duplicate entries in 'Changes in existing checks':\n",
+                    "\n",
+                    "-- Duplicate: - Improved :doc:`bugprone-easily-swappable-parameters\n",
+                    "\n",
+                    "- At line 4:\n",
+                    "- Improved :doc:`bugprone-easily-swappable-parameters\n",
+                    "  <clang-tidy/checks/bugprone/easily-swappable-parameters>` check by\n",
+                    "  correcting a spelling mistake on its option\n",
+                    "  ``NamePrefixSuffixSilenceDissimilarityTreshold``.\n",
+                    "\n",
+                    "- At line 9:\n",
+                    "- Improved :doc:`bugprone-easily-swappable-parameters\n",
+                    "  <clang-tidy/checks/bugprone/easily-swappable-parameters>` check by\n",
+                    "  correcting a spelling mistake on its option\n",
+                    "  ``NamePrefixSuffixSilenceDissimilarityTreshold``.\n",
+                    "\n",
+                ]
             )
+            self.assertEqual(buf.getvalue(), expected_report)
+
+            with open(out_path, "r", encoding="utf-8") as f:
+                out = f.read()
+            self.assertEqual(out, "".join(rn_lines))
 
     def test_process_checks_list_normalizes_output(self):
         list_lines = [
@@ -268,15 +309,19 @@ class TestAlphabeticalOrderCheck(unittest.TestCase):
             self.assertEqual(rc, 0)
             with open(out_doc, "r", encoding="utf-8") as f:
                 out = f.read()
-            dcl16_pos = out.find("cert-dcl16-c <cert/dcl16-c>")
-            con36_pos = out.find("cert-con36-c <cert/con36-c>")
-            dcl37_pos = out.find("cert-dcl37-c <cert/dcl37-c>")
-            arr39_pos = out.find("cert-arr39-c <cert/arr39-c>")
-            for pos in (dcl16_pos, con36_pos, dcl37_pos, arr39_pos):
-                self.assertGreaterEqual(pos, 0)
-            self.assertLess(arr39_pos, con36_pos)
-            self.assertLess(con36_pos, dcl16_pos)
-            self.assertLess(dcl16_pos, dcl37_pos)
+
+            expected_out = "".join(
+                [
+                    ".. csv-table:: List\n",
+                    '   :header: "Name", "Redirect", "Offers fixes"\n',
+                    "\n",
+                    "   :doc:`cert-arr39-c <cert/arr39-c>`, :doc:`bugprone-sizeof-expression <bugprone/sizeof-expression>`,\n",
+                    "   :doc:`cert-con36-c <cert/con36-c>`, :doc:`bugprone-spuriously-wake-up-functions <bugprone/spuriously-wake-up-functions>`,\n",
+                    '   :doc:`cert-dcl16-c <cert/dcl16-c>`, :doc:`readability-uppercase-literal-suffix <readability/uppercase-literal-suffix>`, "Yes"\n',
+                    '   :doc:`cert-dcl37-c <cert/dcl37-c>`, :doc:`bugprone-reserved-identifier <bugprone/reserved-identifier>`, "Yes"\n',
+                ]
+            )
+            self.assertEqual(out, expected_out)
 
 
 if __name__ == "__main__":
