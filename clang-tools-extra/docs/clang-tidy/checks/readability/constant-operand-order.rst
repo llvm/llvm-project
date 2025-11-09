@@ -25,7 +25,7 @@ Options
 
 .. option:: PreferredConstantSide (string)
 
-   Either ``Left`` or ``Right``. Default: ``Right``.
+   Either `Left` or `Right`. Default: `Right`.
 
 .. option:: BinaryOperators (string)
 
