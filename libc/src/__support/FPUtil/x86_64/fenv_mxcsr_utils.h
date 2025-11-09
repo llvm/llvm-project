@@ -114,7 +114,7 @@ LIBC_INLINE static void raise_except(uint16_t excepts) {
       [[maybe_unused]] volatile float z = EXCEPTION_INPUTS[idx][0];
       z /= EXCEPTION_INPUTS[idx][1];
     } else {
-      // For the remaining exceptions, we floating point multiplications.
+      // For the remaining exceptions, we use floating point multiplications.
       [[maybe_unused]] volatile float z = EXCEPTION_INPUTS[idx][0];
       z *= EXCEPTION_INPUTS[idx][1];
     }

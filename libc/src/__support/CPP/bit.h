@@ -68,13 +68,9 @@ LIBC_INLINE constexpr cpp::enable_if_t<
     void>
 bit_copy(const From &from, To &to) {
   MSAN_UNPOISON(&from, sizeof(From));
-  if constexpr (sizeof(To) == sizeof(From)) {
-    to = bit_cast<To>(from);
-  } else {
-    char *dst = reinterpret_cast<char *>(&to);
-    const char *src = reinterpret_cast<const char *>(&from);
-    inline_copy<sizeof(From)>(src, dst);
-  }
+  char *dst = reinterpret_cast<char *>(&to);
+  const char *src = reinterpret_cast<const char *>(&from);
+  inline_copy<sizeof(From)>(src, dst);
 }
 
 template <typename T>

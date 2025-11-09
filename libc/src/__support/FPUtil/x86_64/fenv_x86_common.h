@@ -78,8 +78,6 @@ struct RoundingControl {
   static constexpr uint16_t ERROR = 0xFFFF;
 };
 
-static constexpr uint16_t MXCSR_ROUNDING_CONTROL_BIT_POSITION = 13;
-
 // Exception flags are individual bits in the corresponding registers.
 // So, we just OR the bit values to get the full set of exceptions.
 LIBC_INLINE static uint16_t get_status_value_from_except(int excepts) {
