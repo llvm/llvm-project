@@ -14,6 +14,8 @@
 #include <set>
 #include <cassert>
 
+#include "test_macros.h"
+
 TEST_CONSTEXPR_CXX26 bool test() {
   typedef std::set<int> set_type;
 
