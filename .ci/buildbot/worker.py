@@ -243,8 +243,12 @@ def run(
         Always clobber the build artifacts, i.e. disable incremental builds.
     """
 
-    assert os.path.isabs(scriptpath)
-    assert os.path.isabs(llvmsrcroot)
+
+    scriptpath = os.path.abspath(scriptpath)
+    llvmsrcroot = os.path.abspath(llvmsrcroot)
+    stem = pathlib.Path(scriptpath).stem
+    workdir_default = f"{stem}.workdir"
+
 
     jobs_default = None
     if jobs_env := os.environ.get("BUILDBOT_JOBS"):
@@ -253,9 +257,6 @@ def run(
         jobs_default = workerjobs
     if not jobs_default:
         jobs_default = None
-
-    stem = pathlib.Path(scriptpath).stem
-    workdir_default = f"{stem}.workdir"
 
     parser = parser or argparse.ArgumentParser(
         allow_abbrev=True,
@@ -292,7 +293,7 @@ def run(
     )
     args = parser.parse_args()
 
-    workdir = args.workdir
+    workdir = os.path.abspath( args.workdir)
     clean = args.clean
     clobber = args.clobber
     cachefile = os.path.join(llvmsrcroot, args.cachefile)
@@ -306,6 +307,20 @@ def run(
         ):
             clobber = True
 
+
+    # Safety check
+    parentdir = os.path.dirname(scriptpath)
+    while True:
+        if os.path.samefile(parentdir, workdir):
+            raise Exception(
+                f"Cannot use {args.workdir} as workdir; a '--clean' build would rmtree the llvm-project source in {parentdir} as well"
+            )
+        newparentdir = os.path.dirname(parentdir)
+        if newparentdir == parentdir:
+            break
+        parentdir = newparentdir
+
+
     w = Worker(
         args,
         clean=clean,
@@ -316,17 +331,7 @@ def run(
         llvmsrcroot=llvmsrcroot,
     )
 
-    # Safety check
-    parentdir = os.path.dirname(scriptpath)
-    while True:
-        if os.path.samefile(parentdir, workdir):
-            raise Exception(
-                f"Cannot use {workdir} as workdir; a '--clean' build would rmtree the llvm-project source as well"
-            )
-        newparentdir = os.path.dirname(parentdir)
-        if newparentdir == parentdir:
-            break
-        parentdir = newparentdir
+
 
     if clean:
         # Ensure that the cwd is not the directory we are going to delete. This would not work under Windows. We will chdir to workdir later anyway.

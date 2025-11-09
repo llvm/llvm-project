@@ -22,8 +22,8 @@ with worker.run(
     with w.step("configure-llvm", halt_on_fail=True):
         cmakecmd = [
             "cmake",
-            f'-S{w.in_llvmsrc("llvm")}',
-            "-B{llvmbuilddir}",
+            f"-S{w.in_llvmsrc('llvm')}",
+            f"-B{llvmbuilddir}",
             "-GNinja",
             f"-C{w.in_llvmsrc(w.cachefile)}",
             f"-DCMAKE_INSTALL_PREFIX={llvminstalldir}",
@@ -36,7 +36,7 @@ with worker.run(
         w.run_ninja(builddir=llvmbuilddir, ccache_stats=True)
 
     with w.step("check-polly"):
-        w.run_ninja(["check-polly"], builddir=llvmbuilddir, targets=[])
+        w.run_ninja(["check-polly"], builddir=llvmbuilddir)
 
     with w.step("install-llvm", halt_on_fail=True):
         w.run_ninja(["install"], builddir=llvmbuilddir)
@@ -59,7 +59,7 @@ with worker.run(
                 f"-DTEST_SUITE_LLVM_SIZE={os.path.abspath(llvmbuilddir)}/bin/llvm-size",
                 "-DTEST_SUITE_EXTRA_C_FLAGS=-Wno-unused-command-line-argument -mllvm -polly",
                 "-DTEST_SUITE_EXTRA_CXX_FLAGS=-Wno-unused-command-line-argument -mllvm -polly",
-                "-DLLVM_LIT_ARGS=-sv{jobsarg};-o;report.json",
+                f"-DLLVM_LIT_ARGS=-sv{jobsarg};-o;report.json",
             ]
         )
 
