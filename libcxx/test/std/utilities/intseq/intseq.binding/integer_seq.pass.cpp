@@ -22,7 +22,7 @@ int main(int, char**) {
   using empty = std::integer_sequence<int>;
   static_assert(std::tuple_size_v<empty> == 0);
   static_assert(std::tuple_size_v<const empty> == 0);
-  
+
   using size4 = std::integer_sequence<int, 9, 8, 7, 2>;
   static_assert(std::tuple_size_v<size4> == 4);
   static_assert(std::tuple_size_v<const size4> == 4);
