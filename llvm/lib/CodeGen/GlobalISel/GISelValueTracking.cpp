@@ -37,6 +37,8 @@
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/KnownFPClass.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/CodeGen/GlobalISel/Utils.h"
+#include "llvm/IR/Constants.h"
 
 #define DEBUG_TYPE "gisel-known-bits"
 
@@ -2082,6 +2084,41 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
     // Add can have at most one carry bit.  Thus we know that the output
     // is, at worst, one more bit than the inputs.
     FirstAnswer = std::min(Src1NumSignBits, Src2NumSignBits) - 1;
+    break;
+  }
+  case TargetOpcode::G_MUL: {
+    Register Src1 = MI.getOperand(1).getReg();
+    Register Src2 = MI.getOperand(2).getReg();
+
+    KnownBits Known1 = getKnownBits(Src1, DemandedElts, Depth + 1);
+    KnownBits Known2 = getKnownBits(Src2, DemandedElts, Depth + 1);
+
+    if (Known1.isZero() || Known2.isZero())
+      return TyBits;
+    
+    auto C1 = getIConstantVRegValWithLookThrough(Src1, MRI);
+    auto C2 = getIConstantVRegValWithLookThrough(Src2, MRI);
+
+    if (C1 && C2) {
+      APInt Val1 = C1->Value;
+      APInt Val2 = C2->Value;
+      APInt Product = Val1 * Val2;
+      return Product.getNumSignBits();
+    }
+    unsigned Src1NumSignBits =
+        computeNumSignBits(Src1, DemandedElts, Depth + 1);
+    if(Src1NumSignBits==1){
+      return 1;
+    }
+    unsigned Src2NumSignBits =
+        computeNumSignBits(Src2, DemandedElts, Depth + 1);
+    if(Src2NumSignBits==1){
+      return 1;
+    }
+
+    unsigned OutValidBits =
+      (TyBits - Src1NumSignBits + 1) + (TyBits - Src2NumSignBits + 1);
+    FirstAnswer = OutValidBits > TyBits ? 1 : TyBits - OutValidBits + 1;
     break;
   }
   case TargetOpcode::G_FCMP:
