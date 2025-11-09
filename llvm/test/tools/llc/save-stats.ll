@@ -1,4 +1,5 @@
 ; REQUIRES: asserts
+; REQUIRES: aarch64-registered-target
 
 ; RUN: llc -mtriple=arm64-apple-macosx --save-stats=obj -o %t.s %s && cat %t.stats | FileCheck %s
 ; RUN: llc -mtriple=arm64-apple-macosx --save-stats=cwd -o %t.s %s && cat %{t:stem}.tmp.stats | FileCheck %s
