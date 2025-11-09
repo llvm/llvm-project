@@ -208,19 +208,13 @@ Status RegisterValue::SetValueFromData(const RegisterInfo &reg_info,
       }
       SetUIntN(llvm::APInt(128, int128.x));
     } else {
+      size_t bit_count = src_len * 8;
       std::vector<uint8_t> bytes(src_len, 0);
-      src.ExtractBytes(src_offset, src_len, eByteOrderLittle, bytes.data());
-
-      if (llvm::sys::IsBigEndianHost) {
-        // If LLDB runs on a big-endian architecture,
-        // make sure that the input data can be read in
-        // 64-bit chunks because that is what
-        // the "llvm::LoadIntFromMemory" function will do.
-        size_t size64 = (reg_info.byte_size - 1) / 8 + 1;
-        bytes.resize(size64 * sizeof(uint64_t), 0);
-      }
-
-      llvm::APInt uint = llvm::APInt::getZero(src_len * 8);
+      src.ExtractBytes(
+        src_offset, src_len,
+        llvm::sys::IsLittleEndianHost ? eByteOrderLittle : eByteOrderBig,
+        bytes.data());
+      llvm::APInt uint = llvm::APInt::getZero(bit_count);
       llvm::LoadIntFromMemory(uint, bytes.data(), bytes.size());
       SetUIntN(uint);
     }
