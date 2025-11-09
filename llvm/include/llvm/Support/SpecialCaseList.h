@@ -218,11 +218,6 @@ protected:
     LLVM_ABI unsigned getLastMatch(StringRef Prefix, StringRef Query,
                                    StringRef Category) const;
 
-    // Helper method to search by Prefix, Query, and Category. Returns
-    // matching rule, or empty string if there is no match.
-    LLVM_ABI StringRef getLongestMatch(StringRef Prefix, StringRef Query,
-                                       StringRef Category) const;
-
   private:
     friend class SpecialCaseList;
     LLVM_ABI void preprocess(bool OrderBySize);
