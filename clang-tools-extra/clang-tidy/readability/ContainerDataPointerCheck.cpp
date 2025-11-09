@@ -84,7 +84,7 @@ void ContainerDataPointerCheck::registerMatchers(MatchFinder *Finder) {
               arraySubscriptExpr(hasLHS(ContainerExpr), hasRHS(Zero)))))))
           .bind(AddressOfName);
 
-  Finder->addMatcher(traverse(TK_AsIs, AddressOfMatcher), this);
+  Finder->addMatcher(AddressOfMatcher, this);
 }
 
 void ContainerDataPointerCheck::check(const MatchFinder::MatchResult &Result) {
