@@ -259,8 +259,8 @@ bool matchZip(MachineInstr &MI, MachineRegisterInfo &MRI,
   if (!isZIPMask(ShuffleMask, NumElts, WhichResult, OperandOrder))
     return false;
   unsigned Opc = (WhichResult == 0) ? AArch64::G_ZIP1 : AArch64::G_ZIP2;
-  Register V1 = MI.getOperand(1).getReg();
-  Register V2 = MI.getOperand(2).getReg();
+  Register V1 = MI.getOperand(OperandOrder == 0 ? 1 : 2).getReg();
+  Register V2 = MI.getOperand(OperandOrder == 0 ? 2 : 1).getReg();
   MatchInfo = ShuffleVectorPseudo(Opc, Dst, {V1, V2});
   return true;
 }
