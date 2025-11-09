@@ -582,7 +582,7 @@ void Preprocessor::EnterMainSourceFile() {
     if (getLangOpts().CPlusPlusModules) {
       std::optional<StringRef> Input =
           getSourceManager().getBufferDataOrNone(MainFileID);
-      if (Input)
+      if (!isPreprocessedModuleFile() && Input)
         MainFileIsPreprocessedModuleFile =
             clang::isPreprocessedModuleFile(*Input);
       auto Tracer = std::make_unique<NoTrivialPPDirectiveTracer>(*this);
@@ -1121,6 +1121,40 @@ bool Preprocessor::LexHeaderName(Token &FilenameTok, bool AllowMacroExpansion) {
   return false;
 }
 
+std::optional<Token> Preprocessor::peekNextPPToken() const {
+  // Do some quick tests for rejection cases.
+  std::optional<Token> Val;
+  if (CurLexer)
+    Val = CurLexer->peekNextPPToken();
+  else
+    Val = CurTokenLexer->peekNextPPToken();
+
+  if (!Val) {
+    // We have run off the end.  If it's a source file we don't
+    // examine enclosing ones (C99 5.1.1.2p4).  Otherwise walk up the
+    // macro stack.
+    if (CurPPLexer)
+      return std::nullopt;
+    for (const IncludeStackInfo &Entry : llvm::reverse(IncludeMacroStack)) {
+      if (Entry.TheLexer)
+        Val = Entry.TheLexer->peekNextPPToken();
+      else
+        Val = Entry.TheTokenLexer->peekNextPPToken();
+
+      if (Val)
+        break;
+
+      // Ran off the end of a source file?
+      if (Entry.ThePPLexer)
+        return std::nullopt;
+    }
+  }
+
+  // Okay, we found the token and return.  Otherwise we found the end of the
+  // translation unit.
+  return Val;
+}
+
 // We represent the primary and partition names as 'Paths' which are sections
 // of the hierarchical access path for a clang module.  However for C++20
 // the periods in a name are just another character, and we will need to
@@ -1284,9 +1318,6 @@ bool Preprocessor::CollectPPImportSuffixAndEnterStream(
 /// Collect the tokens of a C++20 pp-import-suffix.
 void Preprocessor::CollectPPImportSuffix(SmallVectorImpl<Token> &Toks,
                                          bool StopUntilEOD) {
-  // FIXME: For error recovery, consider recognizing attribute syntax here
-  // and terminating / diagnosing a missing semicolon if we find anything
-  // else? (Can we leave that to the parser?)
   while (true) {
     Toks.emplace_back();
     Lex(Toks.back());

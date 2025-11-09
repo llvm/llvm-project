@@ -482,7 +482,7 @@ Preprocessor::CheckEndOfDirective(StringRef DirType, bool EnableMacros,
   // C++20 import or module directive has no '#' prefix.
   if (getLangOpts().CPlusPlusModules &&
       (DirType == "import" || DirType == "module"))
-    DiagID = diag::ext_pp_extra_tokens_at_module_directive_eol;
+    DiagID = diag::warn_pp_extra_tokens_at_module_directive_eol;
 
   Diag(Tmp, DiagID) << DirType << Hint;
   return DiscardUntilEndOfDirective(ExtraToks).getEnd();
@@ -4116,6 +4116,7 @@ void Preprocessor::HandleCXXImportDirective(Token ImportTok) {
   case tok::header_name:
     ImportingHeader = true;
     DirToks.push_back(Tok);
+    Lex(DirToks.emplace_back());
     break;
   case tok::colon:
     IsPartition = true;
@@ -4356,6 +4357,19 @@ void Preprocessor::HandleCXXModuleDirective(Token ModuleTok) {
   // Consume the pp-import-suffix and expand any macros in it now, if we're not
   // at the semicolon already.
   SourceLocation End = DirToks.back().getLocation();
+  std::optional<Token> NextPPTok = DirToks.back();
+  if (DirToks.back().is(tok::eod)) {
+    NextPPTok = peekNextPPToken();
+    if (NextPPTok && NextPPTok->is(tok::raw_identifier))
+      LookUpIdentifierInfo(*NextPPTok);
+  }
+
+  // Only ';' and '[' are allowed after module name.
+  // We also check 'private' because the previous is not a module name.
+  if (!NextPPTok->isOneOf(tok::semi, tok::eod, tok::l_square, tok::kw_private))
+    Diag(*NextPPTok, diag::err_pp_unexpected_tok_after_module_name)
+        << getSpelling(*NextPPTok);
+
   if (!DirToks.back().isOneOf(tok::semi, tok::eod)) {
     // Consume the pp-import-suffix and expand any macros in it now. We'll add
     // it back into the token stream later.
@@ -4368,11 +4382,5 @@ void Preprocessor::HandleCXXModuleDirective(Token ModuleTok) {
                               /*EnableMacros=*/false, &DirToks);
   else
     End = DirToks.pop_back_val().getLocation();
-
-  // export module m
-  // ;
-  //
-  // FIXME: Do we need to strictly check whether ';' and module directive are in
-  // the same line?
   EnterModuleSuffixTokenStream(DirToks);
 }

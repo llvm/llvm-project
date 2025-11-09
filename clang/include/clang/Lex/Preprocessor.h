@@ -1840,6 +1840,13 @@ public:
     return MainFileIsPreprocessedModuleFile;
   }
 
+  /// Mark the main file as a preprocessed module file, then the 'module' and
+  /// 'import' directive recognition will be suppressed. Only
+  /// '__preprocessed_moduke' and '__preprocessed_import' are allowed.
+  void markMainFileAsPreprocessedModuleFile() {
+    MainFileIsPreprocessedModuleFile = true;
+  }
+
   bool LexModuleNameContinue(Token &Tok, SourceLocation UseLoc,
                              SmallVectorImpl<Token> &Suffix,
                              SmallVectorImpl<IdentifierLoc> &Path,
@@ -2391,45 +2398,22 @@ public:
     }
   }
 
-  /// Check whether the next pp-token is one of the specificed token kind. this
-  /// method should have no observable side-effect on the lexed tokens.
-  template <typename... Ts> bool isNextPPTokenOneOf(Ts... Ks) {
+  /// isNextPPTokenOneOf - Check whether the next pp-token is one of the
+  /// specificed token kind. this method should have no observable side-effect
+  /// on the lexed tokens.
+  template <typename... Ts> bool isNextPPTokenOneOf(Ts... Ks) const {
     static_assert(sizeof...(Ts) > 0,
                   "requires at least one tok::TokenKind specified");
-    // Do some quick tests for rejection cases.
-    std::optional<Token> Val;
-    if (CurLexer)
-      Val = CurLexer->peekNextPPToken();
-    else
-      Val = CurTokenLexer->peekNextPPToken();
-
-    if (!Val) {
-      // We have run off the end.  If it's a source file we don't
-      // examine enclosing ones (C99 5.1.1.2p4).  Otherwise walk up the
-      // macro stack.
-      if (CurPPLexer)
-        return false;
-      for (const IncludeStackInfo &Entry : llvm::reverse(IncludeMacroStack)) {
-        if (Entry.TheLexer)
-          Val = Entry.TheLexer->peekNextPPToken();
-        else
-          Val = Entry.TheTokenLexer->peekNextPPToken();
-
-        if (Val)
-          break;
-
-        // Ran off the end of a source file?
-        if (Entry.ThePPLexer)
-          return false;
-      }
-    }
-
-    // Okay, we found the token and return.  Otherwise we found the end of the
-    // translation unit.
-    return Val->isOneOf(Ks...);
+    auto NextTokOpt = peekNextPPToken();
+    return NextTokOpt.has_value() ? NextTokOpt->is(Ks...) : false;
   }
 
 private:
+  /// peekNextPPToken - Return std::nullopt if there are no more tokens in the
+  /// buffer controlled by this lexer, otherwise return the next unexpanded
+  /// token.
+  std::optional<Token> peekNextPPToken() const;
+
   /// Identifiers used for SEH handling in Borland. These are only
   /// allowed in particular circumstances
   // __except block

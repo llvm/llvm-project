@@ -2378,6 +2378,10 @@ Parser::ParseModuleDecl(Sema::ModuleImportState &ImportState) {
       return nullptr;
   }
 
+  // This should already diagnosed in phase 4, just skip unil semicolon.
+  if (!Tok.isOneOf(tok::semi, tok::l_square))
+    SkipUntil(tok::semi, SkipUntilFlags::StopBeforeMatch);
+
   // We don't support any module attributes yet; just parse them and diagnose.
   ParsedAttributes Attrs(AttrFactory);
   MaybeParseCXX11Attributes(Attrs);

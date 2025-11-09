@@ -466,9 +466,6 @@ def err_pp_embed_device_file : Error<
 
 def ext_pp_extra_tokens_at_eol : ExtWarn<
   "extra tokens at end of #%0 directive">, InGroup<ExtraTokens>;
-def ext_pp_extra_tokens_at_module_directive_eol
-    : Warning<"extra tokens at end of '%0' directive">,
-      InGroup<ExtraTokens>;
 
 def ext_pp_comma_expr : Extension<"comma operator in operand of #if">;
 def ext_pp_bad_vaargs_use : Extension<
@@ -993,6 +990,12 @@ def err_pp_module_name_is_macro : Error<
   "%select{module|partition}0 name component %1 cannot be a object-like macro">;
 def err_pp_module_expected_ident : Error<
   "expected %select{identifier after '.' in |}0module name">;
+def err_pp_unexpected_tok_after_module_name : Error<
+  "unexpected preprocessing token '%0' after module name, "
+  "only ';' and '[' (start of attribute specifier sequence) are allowed">;
+def warn_pp_extra_tokens_at_module_directive_eol
+    : Warning<"extra tokens after semicolon in '%0' directive">,
+      InGroup<ExtraTokens>;
 def err_pp_module_decl_in_header
     : Error<"module declaration must not come from an #include directive">;
 def err_pp_cond_span_module_decl
