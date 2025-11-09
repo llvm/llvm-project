@@ -923,3 +923,30 @@ define i1 @shl_nuw_ne(i8 %a, i8 %b, i8 %c, i1 %cond) {
   %cmp = icmp ne i8 %sel, %shl_a
   ret i1 %cmp
 }
+
+define i1 @shl_const_phi_failed_to_simplify(i64 %indvars, i32 %conv) {
+; CHECK-LABEL: @shl_const_phi_failed_to_simplify(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP_SLT:%.*]] = icmp slt i64 [[INDVARS:%.*]], 1
+; CHECK-NEXT:    br i1 [[CMP_SLT]], label [[END:%.*]], label [[THEN:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i32 [[CONV:%.*]], 0
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    [[CMP:%.*]] = phi i1 [ [[TMP0]], [[THEN]] ], [ true, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %cmp_slt = icmp slt i64 %indvars, 1
+  br i1 %cmp_slt, label %end, label %then
+
+then:
+  br label %end
+
+end:
+  %const_phi = phi i32 [ 0, %then ], [ 65535, %entry ]
+  %shl_nuw = shl nuw i32 %conv, 31
+  %sel = select i1 %cmp_slt, i32 %const_phi, i32 %shl_nuw
+  %cmp = icmp eq i32 %sel, 0
+  ret i1 %cmp
+}
