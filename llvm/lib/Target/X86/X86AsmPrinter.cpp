@@ -932,7 +932,13 @@ void X86AsmPrinter::emitStartOfAsmFile(Module &M) {
     if (M.getModuleFlag("import-call-optimization"))
       EnableImportCallOptimization = true;
   }
-  OutStreamer->emitSyntaxDirective();
+
+  // FIXME: Currently emit unprefix'ed registers.
+  // The intel_syntax directive has one optional argument
+  // with may have a value of prefix or noprefix.
+  const bool IntelSyntax = MAI->getAssemblerDialect() == InlineAsm::AD_Intel;
+  OutStreamer->emitSyntaxDirective(IntelSyntax ? "intel" : "att",
+                                   IntelSyntax ? "noprefix" : "");
 
   // If this is not inline asm and we're in 16-bit
   // mode prefix assembly with .code16.

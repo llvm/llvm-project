@@ -152,6 +152,8 @@ Changes to the X86 Backend
 
 * `-mcpu=wildcatlake` is now supported.
 * `-mcpu=novalake` is now supported.
+* `.att_syntax` is now emitted at the beginning of the file when emitting AT&T
+  syntax assembly.
 
 Changes to the OCaml bindings
 -----------------------------
