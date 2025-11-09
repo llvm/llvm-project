@@ -4,7 +4,7 @@ readability-constant-operand-order
 ==================================
 
 Warns when a constant appears on the non-preferred side of a supported binary
-operator and offers a fix-it to swap operands (and invert the operator for
+operator and offers a fix-it note to swap operands (and invert the operator for
 ``<``, ``>``, ``<=``, ``>=``).
 
 Examples
