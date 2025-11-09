@@ -29,4 +29,4 @@ Options
 
 .. option:: BinaryOperators (string)
 
-   Comma-separated list of operators to check. Default: ``==,!=,<,<=,>,>=``.
+   Comma-separated list of operators to check. Default: `==,!=,<,<=,>,>=`.
