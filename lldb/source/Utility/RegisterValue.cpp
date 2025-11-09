@@ -210,10 +210,10 @@ Status RegisterValue::SetValueFromData(const RegisterInfo &reg_info,
     } else {
       size_t bit_count = src_len * 8;
       std::vector<uint8_t> bytes(src_len, 0);
-      src.ExtractBytes(
-        src_offset, src_len,
-        llvm::sys::IsLittleEndianHost ? eByteOrderLittle : eByteOrderBig,
-        bytes.data());
+      src.ExtractBytes(src_offset, src_len,
+                       llvm::sys::IsLittleEndianHost ? eByteOrderLittle
+                                                     : eByteOrderBig,
+                       bytes.data());
       llvm::APInt uint = llvm::APInt::getZero(bit_count);
       llvm::LoadIntFromMemory(uint, bytes.data(), bytes.size());
       SetUIntN(uint);
