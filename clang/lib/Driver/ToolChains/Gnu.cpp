@@ -1750,11 +1750,11 @@ static void findRISCVBareMetalMultilibs(const Driver &D,
   std::string MArch = tools::riscv::getRISCVArch(Args, TargetTriple);
   for (auto Element : RISCVMultilibSet) {
     addMultilibFlag(MArch == Element.march,
-                    Twine("-march=", Element.march).str().c_str(), Flags);
+                    Twine("-march=", Element.march).str(), Flags);
     if (!Added_ABIs.count(Element.mabi)) {
       Added_ABIs.insert(Element.mabi);
       addMultilibFlag(ABIName == Element.mabi,
-                      Twine("-mabi=", Element.mabi).str().c_str(), Flags);
+                      Twine("-mabi=", Element.mabi).str(), Flags);
     }
   }
 
@@ -2529,6 +2529,14 @@ void Generic_GCC::GCCInstallationDetector::AddDefaultGCCPrefixes(
 
   if (TargetTriple.isOSHurd()) {
     switch (TargetTriple.getArch()) {
+    case llvm::Triple::aarch64:
+      LibDirs.append(begin(AArch64LibDirs), end(AArch64LibDirs));
+      TripleAliases.push_back("aarch64-gnu");
+      break;
+    case llvm::Triple::riscv64:
+      LibDirs.append(begin(RISCV64LibDirs), end(RISCV64LibDirs));
+      TripleAliases.push_back("riscv64-gnu");
+      break;
     case llvm::Triple::x86_64:
       LibDirs.append(begin(X86_64LibDirs), end(X86_64LibDirs));
       TripleAliases.push_back("x86_64-gnu");

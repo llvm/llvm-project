@@ -700,6 +700,55 @@ bool is_relative(const Twine &path, Style style) {
   return !is_absolute(path, style);
 }
 
+void make_absolute(const Twine &current_directory,
+                   SmallVectorImpl<char> &path) {
+  StringRef p(path.data(), path.size());
+
+  bool rootDirectory = has_root_directory(p);
+  bool rootName = has_root_name(p);
+
+  // Already absolute.
+  if ((rootName || is_style_posix(Style::native)) && rootDirectory)
+    return;
+
+  // All the following conditions will need the current directory.
+  SmallString<128> current_dir;
+  current_directory.toVector(current_dir);
+
+  // Relative path. Prepend the current directory.
+  if (!rootName && !rootDirectory) {
+    // Append path to the current directory.
+    append(current_dir, p);
+    // Set path to the result.
+    path.swap(current_dir);
+    return;
+  }
+
+  if (!rootName && rootDirectory) {
+    StringRef cdrn = root_name(current_dir);
+    SmallString<128> curDirRootName(cdrn.begin(), cdrn.end());
+    append(curDirRootName, p);
+    // Set path to the result.
+    path.swap(curDirRootName);
+    return;
+  }
+
+  if (rootName && !rootDirectory) {
+    StringRef pRootName = root_name(p);
+    StringRef bRootDirectory = root_directory(current_dir);
+    StringRef bRelativePath = relative_path(current_dir);
+    StringRef pRelativePath = relative_path(p);
+
+    SmallString<128> res;
+    append(res, pRootName, bRootDirectory, bRelativePath, pRelativePath);
+    path.swap(res);
+    return;
+  }
+
+  llvm_unreachable("All rootName and rootDirectory combinations should have "
+                   "occurred above!");
+}
+
 StringRef remove_leading_dotslash(StringRef Path, Style style) {
   // Remove leading "./" (or ".//" or "././" etc.)
   while (Path.size() > 2 && Path[0] == '.' && is_separator(Path[1], style)) {
@@ -903,55 +952,6 @@ getPotentiallyUniqueTempFileName(const Twine &Prefix, StringRef Suffix,
   return createTemporaryFile(Prefix, Suffix, Dummy, ResultPath, FS_Name);
 }
 
-void make_absolute(const Twine &current_directory,
-                   SmallVectorImpl<char> &path) {
-  StringRef p(path.data(), path.size());
-
-  bool rootDirectory = path::has_root_directory(p);
-  bool rootName = path::has_root_name(p);
-
-  // Already absolute.
-  if ((rootName || is_style_posix(Style::native)) && rootDirectory)
-    return;
-
-  // All of the following conditions will need the current directory.
-  SmallString<128> current_dir;
-  current_directory.toVector(current_dir);
-
-  // Relative path. Prepend the current directory.
-  if (!rootName && !rootDirectory) {
-    // Append path to the current directory.
-    path::append(current_dir, p);
-    // Set path to the result.
-    path.swap(current_dir);
-    return;
-  }
-
-  if (!rootName && rootDirectory) {
-    StringRef cdrn = path::root_name(current_dir);
-    SmallString<128> curDirRootName(cdrn.begin(), cdrn.end());
-    path::append(curDirRootName, p);
-    // Set path to the result.
-    path.swap(curDirRootName);
-    return;
-  }
-
-  if (rootName && !rootDirectory) {
-    StringRef pRootName      = path::root_name(p);
-    StringRef bRootDirectory = path::root_directory(current_dir);
-    StringRef bRelativePath  = path::relative_path(current_dir);
-    StringRef pRelativePath  = path::relative_path(p);
-
-    SmallString<128> res;
-    path::append(res, pRootName, bRootDirectory, bRelativePath, pRelativePath);
-    path.swap(res);
-    return;
-  }
-
-  llvm_unreachable("All rootName and rootDirectory combinations should have "
-                   "occurred above!");
-}
-
 std::error_code make_absolute(SmallVectorImpl<char> &path) {
   if (path::is_absolute(path))
     return {};
@@ -960,7 +960,7 @@ std::error_code make_absolute(SmallVectorImpl<char> &path) {
   if (std::error_code ec = current_path(current_dir))
     return ec;
 
-  make_absolute(current_dir, path);
+  path::make_absolute(current_dir, path);
   return {};
 }
 

@@ -1278,49 +1278,49 @@ vmv.v.v v4, v12
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN1024X300SiFive7PipeA,VLEN1024X300SiFive7PipeAB VSETVLI            vsetvli	zero, zero, e64, m8, tu, mu
 # CHECK-NEXT:  1      8     8.00                         8     VLEN1024X300SiFive7VA1OrVA2[1,17],VLEN1024X300SiFive7VCQ VMULHU_VX    vmulhu.vx	v4, v8, a0
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN1024X300SiFive7PipeA,VLEN1024X300SiFive7PipeAB VSETVLI            vsetvli	zero, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      60    60.00                        60    VLEN1024X300SiFive7VA1[1,61],VLEN1024X300SiFive7VA1OrVA2[1,61],VLEN1024X300SiFive7VCQ VDIVU_VV vdivu.vv	v4, v8, v12
+# CHECK-NEXT:  1      32    32.00                        32    VLEN1024X300SiFive7VA1[1,33],VLEN1024X300SiFive7VA1OrVA2[1,33],VLEN1024X300SiFive7VCQ VDIVU_VV vdivu.vv	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN1024X300SiFive7PipeA,VLEN1024X300SiFive7PipeAB VSETVLI            vsetvli	zero, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      120   120.00                       120   VLEN1024X300SiFive7VA1[1,121],VLEN1024X300SiFive7VA1OrVA2[1,121],VLEN1024X300SiFive7VCQ VDIVU_VX vdivu.vx	v4, v8, a0
+# CHECK-NEXT:  1      64    64.00                        64    VLEN1024X300SiFive7VA1[1,65],VLEN1024X300SiFive7VA1OrVA2[1,65],VLEN1024X300SiFive7VCQ VDIVU_VX vdivu.vx	v4, v8, a0
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN1024X300SiFive7PipeA,VLEN1024X300SiFive7PipeAB VSETVLI            vsetvli	zero, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      240   240.00                       240   VLEN1024X300SiFive7VA1[1,241],VLEN1024X300SiFive7VA1OrVA2[1,241],VLEN1024X300SiFive7VCQ VDIV_VV vdiv.vv	v4, v8, v12
+# CHECK-NEXT:  1      128   128.00                       128   VLEN1024X300SiFive7VA1[1,129],VLEN1024X300SiFive7VA1OrVA2[1,129],VLEN1024X300SiFive7VCQ VDIV_VV vdiv.vv	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN1024X300SiFive7PipeA,VLEN1024X300SiFive7PipeAB VSETVLI            vsetvli	zero, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      480   480.00                       480   VLEN1024X300SiFive7VA1[1,481],VLEN1024X300SiFive7VA1OrVA2[1,481],VLEN1024X300SiFive7VCQ VDIV_VX vdiv.vx	v4, v8, a0
+# CHECK-NEXT:  1      256   256.00                       256   VLEN1024X300SiFive7VA1[1,257],VLEN1024X300SiFive7VA1OrVA2[1,257],VLEN1024X300SiFive7VCQ VDIV_VX vdiv.vx	v4, v8, a0
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN1024X300SiFive7PipeA,VLEN1024X300SiFive7PipeAB VSETVLI            vsetvli	zero, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      960   960.00                       960   VLEN1024X300SiFive7VA1[1,961],VLEN1024X300SiFive7VA1OrVA2[1,961],VLEN1024X300SiFive7VCQ VREMU_VV vremu.vv	v4, v8, v12
+# CHECK-NEXT:  1      512   512.00                       512   VLEN1024X300SiFive7VA1[1,513],VLEN1024X300SiFive7VA1OrVA2[1,513],VLEN1024X300SiFive7VCQ VREMU_VV vremu.vv	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN1024X300SiFive7PipeA,VLEN1024X300SiFive7PipeAB VSETVLI            vsetvli	zero, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1920  1920.00                      1920  VLEN1024X300SiFive7VA1[1,1921],VLEN1024X300SiFive7VA1OrVA2[1,1921],VLEN1024X300SiFive7VCQ VREMU_VX vremu.vx	v4, v8, a0
+# CHECK-NEXT:  1      1024  1024.00                      1024  VLEN1024X300SiFive7VA1[1,1025],VLEN1024X300SiFive7VA1OrVA2[1,1025],VLEN1024X300SiFive7VCQ VREMU_VX vremu.vx	v4, v8, a0
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN1024X300SiFive7PipeA,VLEN1024X300SiFive7PipeAB VSETVLI            vsetvli	zero, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      3840  3840.00                      3840  VLEN1024X300SiFive7VA1[1,3841],VLEN1024X300SiFive7VA1OrVA2[1,3841],VLEN1024X300SiFive7VCQ VREM_VV vrem.vv	v4, v8, v12
+# CHECK-NEXT:  1      2048  2048.00                      2048  VLEN1024X300SiFive7VA1[1,2049],VLEN1024X300SiFive7VA1OrVA2[1,2049],VLEN1024X300SiFive7VCQ VREM_VV vrem.vv	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN1024X300SiFive7PipeA,VLEN1024X300SiFive7PipeAB VSETVLI            vsetvli	zero, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      60    60.00                        60    VLEN1024X300SiFive7VA1[1,61],VLEN1024X300SiFive7VA1OrVA2[1,61],VLEN1024X300SiFive7VCQ VREM_VX vrem.vx	v4, v8, a0
+# CHECK-NEXT:  1      64    64.00                        64    VLEN1024X300SiFive7VA1[1,65],VLEN1024X300SiFive7VA1OrVA2[1,65],VLEN1024X300SiFive7VCQ VREM_VX vrem.vx	v4, v8, a0
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN1024X300SiFive7PipeA,VLEN1024X300SiFive7PipeAB VSETVLI            vsetvli	zero, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      120   120.00                       120   VLEN1024X300SiFive7VA1[1,121],VLEN1024X300SiFive7VA1OrVA2[1,121],VLEN1024X300SiFive7VCQ VDIVU_VV vdivu.vv	v4, v8, v12
+# CHECK-NEXT:  1      128   128.00                       128   VLEN1024X300SiFive7VA1[1,129],VLEN1024X300SiFive7VA1OrVA2[1,129],VLEN1024X300SiFive7VCQ VDIVU_VV vdivu.vv	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN1024X300SiFive7PipeA,VLEN1024X300SiFive7PipeAB VSETVLI            vsetvli	zero, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      240   240.00                       240   VLEN1024X300SiFive7VA1[1,241],VLEN1024X300SiFive7VA1OrVA2[1,241],VLEN1024X300SiFive7VCQ VDIVU_VX vdivu.vx	v4, v8, a0
+# CHECK-NEXT:  1      256   256.00                       256   VLEN1024X300SiFive7VA1[1,257],VLEN1024X300SiFive7VA1OrVA2[1,257],VLEN1024X300SiFive7VCQ VDIVU_VX vdivu.vx	v4, v8, a0
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN1024X300SiFive7PipeA,VLEN1024X300SiFive7PipeAB VSETVLI            vsetvli	zero, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      480   480.00                       480   VLEN1024X300SiFive7VA1[1,481],VLEN1024X300SiFive7VA1OrVA2[1,481],VLEN1024X300SiFive7VCQ VDIV_VV vdiv.vv	v4, v8, v12
+# CHECK-NEXT:  1      512   512.00                       512   VLEN1024X300SiFive7VA1[1,513],VLEN1024X300SiFive7VA1OrVA2[1,513],VLEN1024X300SiFive7VCQ VDIV_VV vdiv.vv	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN1024X300SiFive7PipeA,VLEN1024X300SiFive7PipeAB VSETVLI            vsetvli	zero, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      960   960.00                       960   VLEN1024X300SiFive7VA1[1,961],VLEN1024X300SiFive7VA1OrVA2[1,961],VLEN1024X300SiFive7VCQ VDIV_VX vdiv.vx	v4, v8, a0
+# CHECK-NEXT:  1      1024  1024.00                      1024  VLEN1024X300SiFive7VA1[1,1025],VLEN1024X300SiFive7VA1OrVA2[1,1025],VLEN1024X300SiFive7VCQ VDIV_VX vdiv.vx	v4, v8, a0
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN1024X300SiFive7PipeA,VLEN1024X300SiFive7PipeAB VSETVLI            vsetvli	zero, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1920  1920.00                      1920  VLEN1024X300SiFive7VA1[1,1921],VLEN1024X300SiFive7VA1OrVA2[1,1921],VLEN1024X300SiFive7VCQ VREMU_VV vremu.vv	v4, v8, v12
+# CHECK-NEXT:  1      2048  2048.00                      2048  VLEN1024X300SiFive7VA1[1,2049],VLEN1024X300SiFive7VA1OrVA2[1,2049],VLEN1024X300SiFive7VCQ VREMU_VV vremu.vv	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN1024X300SiFive7PipeA,VLEN1024X300SiFive7PipeAB VSETVLI            vsetvli	zero, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      112   112.00                       112   VLEN1024X300SiFive7VA1[1,113],VLEN1024X300SiFive7VA1OrVA2[1,113],VLEN1024X300SiFive7VCQ VREMU_VX vremu.vx	v4, v8, a0
+# CHECK-NEXT:  1      128   128.00                       128   VLEN1024X300SiFive7VA1[1,129],VLEN1024X300SiFive7VA1OrVA2[1,129],VLEN1024X300SiFive7VCQ VREMU_VX vremu.vx	v4, v8, a0
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN1024X300SiFive7PipeA,VLEN1024X300SiFive7PipeAB VSETVLI            vsetvli	zero, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      224   224.00                       224   VLEN1024X300SiFive7VA1[1,225],VLEN1024X300SiFive7VA1OrVA2[1,225],VLEN1024X300SiFive7VCQ VREM_VV vrem.vv	v4, v8, v12
+# CHECK-NEXT:  1      256   256.00                       256   VLEN1024X300SiFive7VA1[1,257],VLEN1024X300SiFive7VA1OrVA2[1,257],VLEN1024X300SiFive7VCQ VREM_VV vrem.vv	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN1024X300SiFive7PipeA,VLEN1024X300SiFive7PipeAB VSETVLI            vsetvli	zero, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      448   448.00                       448   VLEN1024X300SiFive7VA1[1,449],VLEN1024X300SiFive7VA1OrVA2[1,449],VLEN1024X300SiFive7VCQ VREM_VX vrem.vx	v4, v8, a0
+# CHECK-NEXT:  1      512   512.00                       512   VLEN1024X300SiFive7VA1[1,513],VLEN1024X300SiFive7VA1OrVA2[1,513],VLEN1024X300SiFive7VCQ VREM_VX vrem.vx	v4, v8, a0
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN1024X300SiFive7PipeA,VLEN1024X300SiFive7PipeAB VSETVLI            vsetvli	zero, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      896   896.00                       896   VLEN1024X300SiFive7VA1[1,897],VLEN1024X300SiFive7VA1OrVA2[1,897],VLEN1024X300SiFive7VCQ VDIVU_VV vdivu.vv	v4, v8, v12
+# CHECK-NEXT:  1      1024  1024.00                      1024  VLEN1024X300SiFive7VA1[1,1025],VLEN1024X300SiFive7VA1OrVA2[1,1025],VLEN1024X300SiFive7VCQ VDIVU_VV vdivu.vv	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN1024X300SiFive7PipeA,VLEN1024X300SiFive7PipeAB VSETVLI            vsetvli	zero, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1792  1792.00                      1792  VLEN1024X300SiFive7VA1[1,1793],VLEN1024X300SiFive7VA1OrVA2[1,1793],VLEN1024X300SiFive7VCQ VDIVU_VX vdivu.vx	v4, v8, a0
+# CHECK-NEXT:  1      2048  2048.00                      2048  VLEN1024X300SiFive7VA1[1,2049],VLEN1024X300SiFive7VA1OrVA2[1,2049],VLEN1024X300SiFive7VCQ VDIVU_VX vdivu.vx	v4, v8, a0
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN1024X300SiFive7PipeA,VLEN1024X300SiFive7PipeAB VSETVLI            vsetvli	zero, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      228   228.00                       228   VLEN1024X300SiFive7VA1[1,229],VLEN1024X300SiFive7VA1OrVA2[1,229],VLEN1024X300SiFive7VCQ VDIV_VV vdiv.vv	v4, v8, v12
+# CHECK-NEXT:  1      256   256.00                       256   VLEN1024X300SiFive7VA1[1,257],VLEN1024X300SiFive7VA1OrVA2[1,257],VLEN1024X300SiFive7VCQ VDIV_VV vdiv.vv	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN1024X300SiFive7PipeA,VLEN1024X300SiFive7PipeAB VSETVLI            vsetvli	zero, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      456   456.00                       456   VLEN1024X300SiFive7VA1[1,457],VLEN1024X300SiFive7VA1OrVA2[1,457],VLEN1024X300SiFive7VCQ VDIV_VX vdiv.vx	v4, v8, a0
+# CHECK-NEXT:  1      512   512.00                       512   VLEN1024X300SiFive7VA1[1,513],VLEN1024X300SiFive7VA1OrVA2[1,513],VLEN1024X300SiFive7VCQ VDIV_VX vdiv.vx	v4, v8, a0
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN1024X300SiFive7PipeA,VLEN1024X300SiFive7PipeAB VSETVLI            vsetvli	zero, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      912   912.00                       912   VLEN1024X300SiFive7VA1[1,913],VLEN1024X300SiFive7VA1OrVA2[1,913],VLEN1024X300SiFive7VCQ VREMU_VV vremu.vv	v4, v8, v12
+# CHECK-NEXT:  1      1024  1024.00                      1024  VLEN1024X300SiFive7VA1[1,1025],VLEN1024X300SiFive7VA1OrVA2[1,1025],VLEN1024X300SiFive7VCQ VREMU_VV vremu.vv	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN1024X300SiFive7PipeA,VLEN1024X300SiFive7PipeAB VSETVLI            vsetvli	zero, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      1824  1824.00                      1824  VLEN1024X300SiFive7VA1[1,1825],VLEN1024X300SiFive7VA1OrVA2[1,1825],VLEN1024X300SiFive7VCQ VREMU_VX vremu.vx	v4, v8, a0
+# CHECK-NEXT:  1      2048  2048.00                      2048  VLEN1024X300SiFive7VA1[1,2049],VLEN1024X300SiFive7VA1OrVA2[1,2049],VLEN1024X300SiFive7VCQ VREMU_VX vremu.vx	v4, v8, a0
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN1024X300SiFive7PipeA,VLEN1024X300SiFive7PipeAB VSETVLI            vsetvli	zero, zero, e8, mf8, tu, mu
 # CHECK-NEXT:  1      8     1.00                         8     VLEN1024X300SiFive7VA1OrVA2[1,2],VLEN1024X300SiFive7VCQ VWMUL_VV      vwmul.vv	v4, v8, v12
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN1024X300SiFive7PipeA,VLEN1024X300SiFive7PipeAB VSETVLI            vsetvli	zero, zero, e8, mf4, tu, mu
@@ -1539,7 +1539,7 @@ vmv.v.v v4, v12
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]
-# CHECK-NEXT:  -      -     342.00  -     20046.50 682.50 385.00  -    -
+# CHECK-NEXT:  -      -     342.00  -     17658.50 682.50 385.00  -    -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    Instructions:
@@ -2023,49 +2023,49 @@ vmv.v.v v4, v12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -     vsetvli	zero, zero, e64, m8, tu, mu
 # CHECK-NEXT:  -      -      -      -     8.50   8.50   1.00    -      -     vmulhu.vx	v4, v8, a0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -     vsetvli	zero, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  -      -      -      -     61.00   -     1.00    -      -     vdivu.vv	v4, v8, v12
+# CHECK-NEXT:  -      -      -      -     33.00   -     1.00    -      -     vdivu.vv	v4, v8, v12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -     vsetvli	zero, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  -      -      -      -     121.00  -     1.00    -      -     vdivu.vx	v4, v8, a0
+# CHECK-NEXT:  -      -      -      -     65.00   -     1.00    -      -     vdivu.vx	v4, v8, a0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -     vsetvli	zero, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -     241.00  -     1.00    -      -     vdiv.vv	v4, v8, v12
+# CHECK-NEXT:  -      -      -      -     129.00  -     1.00    -      -     vdiv.vv	v4, v8, v12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -     vsetvli	zero, zero, e8, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -     481.00  -     1.00    -      -     vdiv.vx	v4, v8, a0
+# CHECK-NEXT:  -      -      -      -     257.00  -     1.00    -      -     vdiv.vx	v4, v8, a0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -     vsetvli	zero, zero, e8, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -     961.00  -     1.00    -      -     vremu.vv	v4, v8, v12
+# CHECK-NEXT:  -      -      -      -     513.00  -     1.00    -      -     vremu.vv	v4, v8, v12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -     vsetvli	zero, zero, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -     1921.00  -    1.00    -      -     vremu.vx	v4, v8, a0
+# CHECK-NEXT:  -      -      -      -     1025.00  -    1.00    -      -     vremu.vx	v4, v8, a0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -     vsetvli	zero, zero, e8, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -     3841.00  -    1.00    -      -     vrem.vv	v4, v8, v12
+# CHECK-NEXT:  -      -      -      -     2049.00  -    1.00    -      -     vrem.vv	v4, v8, v12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -     vsetvli	zero, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  -      -      -      -     61.00   -     1.00    -      -     vrem.vx	v4, v8, a0
+# CHECK-NEXT:  -      -      -      -     65.00   -     1.00    -      -     vrem.vx	v4, v8, a0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -     vsetvli	zero, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -     121.00  -     1.00    -      -     vdivu.vv	v4, v8, v12
+# CHECK-NEXT:  -      -      -      -     129.00  -     1.00    -      -     vdivu.vv	v4, v8, v12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -     vsetvli	zero, zero, e16, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -     241.00  -     1.00    -      -     vdivu.vx	v4, v8, a0
+# CHECK-NEXT:  -      -      -      -     257.00  -     1.00    -      -     vdivu.vx	v4, v8, a0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -     vsetvli	zero, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -     481.00  -     1.00    -      -     vdiv.vv	v4, v8, v12
+# CHECK-NEXT:  -      -      -      -     513.00  -     1.00    -      -     vdiv.vv	v4, v8, v12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -     vsetvli	zero, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -     961.00  -     1.00    -      -     vdiv.vx	v4, v8, a0
+# CHECK-NEXT:  -      -      -      -     1025.00  -    1.00    -      -     vdiv.vx	v4, v8, a0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -     vsetvli	zero, zero, e16, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -     1921.00  -    1.00    -      -     vremu.vv	v4, v8, v12
+# CHECK-NEXT:  -      -      -      -     2049.00  -    1.00    -      -     vremu.vv	v4, v8, v12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -     vsetvli	zero, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -     113.00  -     1.00    -      -     vremu.vx	v4, v8, a0
+# CHECK-NEXT:  -      -      -      -     129.00  -     1.00    -      -     vremu.vx	v4, v8, a0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -     vsetvli	zero, zero, e32, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -     225.00  -     1.00    -      -     vrem.vv	v4, v8, v12
+# CHECK-NEXT:  -      -      -      -     257.00  -     1.00    -      -     vrem.vv	v4, v8, v12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -     vsetvli	zero, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -     449.00  -     1.00    -      -     vrem.vx	v4, v8, a0
+# CHECK-NEXT:  -      -      -      -     513.00  -     1.00    -      -     vrem.vx	v4, v8, a0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -     vsetvli	zero, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -     897.00  -     1.00    -      -     vdivu.vv	v4, v8, v12
+# CHECK-NEXT:  -      -      -      -     1025.00  -    1.00    -      -     vdivu.vv	v4, v8, v12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -     vsetvli	zero, zero, e32, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -     1793.00  -    1.00    -      -     vdivu.vx	v4, v8, a0
+# CHECK-NEXT:  -      -      -      -     2049.00  -    1.00    -      -     vdivu.vx	v4, v8, a0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -     vsetvli	zero, zero, e64, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -     229.00  -     1.00    -      -     vdiv.vv	v4, v8, v12
+# CHECK-NEXT:  -      -      -      -     257.00  -     1.00    -      -     vdiv.vv	v4, v8, v12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -     vsetvli	zero, zero, e64, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -     457.00  -     1.00    -      -     vdiv.vx	v4, v8, a0
+# CHECK-NEXT:  -      -      -      -     513.00  -     1.00    -      -     vdiv.vx	v4, v8, a0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -     vsetvli	zero, zero, e64, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -     913.00  -     1.00    -      -     vremu.vv	v4, v8, v12
+# CHECK-NEXT:  -      -      -      -     1025.00  -    1.00    -      -     vremu.vv	v4, v8, v12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -     vsetvli	zero, zero, e64, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -     1825.00  -    1.00    -      -     vremu.vx	v4, v8, a0
+# CHECK-NEXT:  -      -      -      -     2049.00  -    1.00    -      -     vremu.vx	v4, v8, a0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -     vsetvli	zero, zero, e8, mf8, tu, mu
 # CHECK-NEXT:  -      -      -      -     1.00   1.00   1.00    -      -     vwmul.vv	v4, v8, v12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -     vsetvli	zero, zero, e8, mf4, tu, mu

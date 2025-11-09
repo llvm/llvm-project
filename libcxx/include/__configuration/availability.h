@@ -108,14 +108,6 @@
 #  define _LIBCPP_INTRODUCED_IN_LLVM_12 1
 #  define _LIBCPP_INTRODUCED_IN_LLVM_12_ATTRIBUTE /* nothing */
 
-#  define _LIBCPP_INTRODUCED_IN_LLVM_11 1
-#  define _LIBCPP_INTRODUCED_IN_LLVM_11_ATTRIBUTE /* nothing */
-
-#  define _LIBCPP_INTRODUCED_IN_LLVM_9 1
-#  define _LIBCPP_INTRODUCED_IN_LLVM_9_ATTRIBUTE      /* nothing */
-#  define _LIBCPP_INTRODUCED_IN_LLVM_9_ATTRIBUTE_PUSH /* nothing */
-#  define _LIBCPP_INTRODUCED_IN_LLVM_9_ATTRIBUTE_POP  /* nothing */
-
 #elif defined(__APPLE__)
 
 // clang-format off
@@ -126,14 +118,40 @@
 #  define _LIBCPP_INTRODUCED_IN_LLVM_21_ATTRIBUTE __attribute__((unavailable))
 
 // LLVM 20
-// TODO: Fill this in
-#  define _LIBCPP_INTRODUCED_IN_LLVM_20 0
-#  define _LIBCPP_INTRODUCED_IN_LLVM_20_ATTRIBUTE __attribute__((unavailable))
+//
+// Note that versions for most Apple OSes were bumped forward and aligned in that release.
+#  if (defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ < 260000) ||       \
+      (defined(__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__ < 260000) ||     \
+      (defined(__ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__ < 260000) ||             \
+      (defined(__ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__ < 260000) ||       \
+      (defined(__ENVIRONMENT_BRIDGE_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_BRIDGE_OS_VERSION_MIN_REQUIRED__ < 100000)
+#    define _LIBCPP_INTRODUCED_IN_LLVM_20 0
+#  else
+#    define _LIBCPP_INTRODUCED_IN_LLVM_20 1
+#  endif
+#  define _LIBCPP_INTRODUCED_IN_LLVM_20_ATTRIBUTE                                                                 \
+    __attribute__((availability(macos, strict, introduced = 26.0)))                                               \
+    __attribute__((availability(ios, strict, introduced = 26.0)))                                                 \
+    __attribute__((availability(tvos, strict, introduced = 26.0)))                                                \
+    __attribute__((availability(watchos, strict, introduced = 26.0)))                                             \
+    __attribute__((availability(bridgeos, strict, introduced = 10.0)))
 
 // LLVM 19
-// TODO: Fill this in
-#  define _LIBCPP_INTRODUCED_IN_LLVM_19 0
-#  define _LIBCPP_INTRODUCED_IN_LLVM_19_ATTRIBUTE __attribute__((unavailable))
+#  if (defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ < 150400) ||       \
+      (defined(__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__ < 180400) ||     \
+      (defined(__ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__ < 180400) ||             \
+      (defined(__ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__ < 110400) ||       \
+      (defined(__ENVIRONMENT_BRIDGE_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_BRIDGE_OS_VERSION_MIN_REQUIRED__ < 90400)
+#    define _LIBCPP_INTRODUCED_IN_LLVM_19 0
+#  else
+#    define _LIBCPP_INTRODUCED_IN_LLVM_19 1
+#  endif
+#  define _LIBCPP_INTRODUCED_IN_LLVM_19_ATTRIBUTE                                                                 \
+    __attribute__((availability(macos, strict, introduced = 15.4)))                                               \
+    __attribute__((availability(ios, strict, introduced = 18.4)))                                                 \
+    __attribute__((availability(tvos, strict, introduced = 18.4)))                                                \
+    __attribute__((availability(watchos, strict, introduced = 11.4)))                                             \
+    __attribute__((availability(bridgeos, strict, introduced = 9.4)))
 
 // LLVM 18
 #  if (defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ < 150000) ||       \
@@ -215,48 +233,6 @@
     __attribute__((availability(bridgeos, strict, introduced = 6.0)))                                             \
     __attribute__((availability(driverkit, strict, introduced = 21.3)))
 
-// LLVM 11
-#  if (defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ < 110000) ||   \
-      (defined(__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__ < 140000) || \
-      (defined(__ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__ < 140000) ||         \
-      (defined(__ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__ < 70000)
-#    define _LIBCPP_INTRODUCED_IN_LLVM_11 0
-#  else
-#    define _LIBCPP_INTRODUCED_IN_LLVM_11 1
-#  endif
-#  define _LIBCPP_INTRODUCED_IN_LLVM_11_ATTRIBUTE                                                                 \
-    __attribute__((availability(macos, strict, introduced = 11.0)))                                               \
-    __attribute__((availability(ios, strict, introduced = 14.0)))                                                 \
-    __attribute__((availability(tvos, strict, introduced = 14.0)))                                                \
-    __attribute__((availability(watchos, strict, introduced = 7.0)))
-
-// LLVM 9
-#  if (defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ < 101500) ||   \
-      (defined(__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__ < 130000) || \
-      (defined(__ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__ < 130000) ||         \
-      (defined(__ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__ < 60000)
-#    define _LIBCPP_INTRODUCED_IN_LLVM_9 0
-#  else
-#    define _LIBCPP_INTRODUCED_IN_LLVM_9 1
-#  endif
-#  define _LIBCPP_INTRODUCED_IN_LLVM_9_ATTRIBUTE                                                                  \
-    __attribute__((availability(macos, strict, introduced = 10.15)))                                              \
-    __attribute__((availability(ios, strict, introduced = 13.0)))                                                 \
-    __attribute__((availability(tvos, strict, introduced = 13.0)))                                                \
-    __attribute__((availability(watchos, strict, introduced = 6.0)))
-#  define _LIBCPP_INTRODUCED_IN_LLVM_9_ATTRIBUTE_PUSH                                                                            \
-    _Pragma("clang attribute push(__attribute__((availability(macos,strict,introduced=10.15))), apply_to=any(function,record))") \
-    _Pragma("clang attribute push(__attribute__((availability(ios,strict,introduced=13.0))), apply_to=any(function,record))")    \
-    _Pragma("clang attribute push(__attribute__((availability(tvos,strict,introduced=13.0))), apply_to=any(function,record))")   \
-    _Pragma("clang attribute push(__attribute__((availability(watchos,strict,introduced=6.0))), apply_to=any(function,record))")
-#  define _LIBCPP_INTRODUCED_IN_LLVM_9_ATTRIBUTE_POP                                                                    \
-    _Pragma("clang attribute pop") \
-    _Pragma("clang attribute pop") \
-    _Pragma("clang attribute pop") \
-    _Pragma("clang attribute pop")
-
-// clang-format on
-
 #else
 
 // ...New vendors can add availability markup here...
@@ -265,20 +241,6 @@
       "It looks like you're trying to enable vendor availability markup, but you haven't defined the corresponding macros yet!"
 
 #endif
-
-// These macros control the availability of all parts of <filesystem> that
-// depend on something in the dylib.
-#define _LIBCPP_AVAILABILITY_HAS_FILESYSTEM_LIBRARY _LIBCPP_INTRODUCED_IN_LLVM_9
-#define _LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY _LIBCPP_INTRODUCED_IN_LLVM_9_ATTRIBUTE
-#define _LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY_PUSH _LIBCPP_INTRODUCED_IN_LLVM_9_ATTRIBUTE_PUSH
-#define _LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY_POP _LIBCPP_INTRODUCED_IN_LLVM_9_ATTRIBUTE_POP
-
-// This controls the availability of the C++20 synchronization library,
-// which requires shared library support for various operations
-// (see libcxx/src/atomic.cpp). This includes <barier>, <latch>,
-// <semaphore>, and notification functions on std::atomic.
-#define _LIBCPP_AVAILABILITY_HAS_SYNC _LIBCPP_INTRODUCED_IN_LLVM_11
-#define _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INTRODUCED_IN_LLVM_11_ATTRIBUTE
 
 // Enable additional explicit instantiations of iostreams components. This
 // reduces the number of weak definitions generated in programs that use

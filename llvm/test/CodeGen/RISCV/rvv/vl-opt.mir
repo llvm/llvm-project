@@ -770,3 +770,11 @@ body: |
   bb.2:
     PseudoVSE8_V_M1 %inc, $noreg, %avl2, 3 /* e8 */
 ...
+---
+name: dbg_value
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: dbg_value
+    ; CHECK: DBG_VALUE %0:vr
+    DBG_VALUE %0:vr
+...

@@ -17,7 +17,7 @@ namespace clang::tidy::bugprone {
 /// a base class
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/derived-method-shadowing-base-method.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/derived-method-shadowing-base-method.html
 class DerivedMethodShadowingBaseMethodCheck : public ClangTidyCheck {
 public:
   DerivedMethodShadowingBaseMethodCheck(StringRef Name,

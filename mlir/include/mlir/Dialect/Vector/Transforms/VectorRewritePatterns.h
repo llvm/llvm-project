@@ -322,6 +322,16 @@ void populateVectorUnrollPatterns(RewritePatternSet &patterns,
                                   const UnrollVectorOptions &options,
                                   PatternBenefit benefit = 1);
 
+/// Unrolls 2 or more dimensional `vector.to_elements` ops by unrolling the
+/// outermost dimension of the operand.
+void populateVectorToElementsUnrollPatterns(RewritePatternSet &patterns,
+                                            PatternBenefit benefit = 1);
+
+/// Unrolls 2 or more dimensional `vector.from_elements` ops by unrolling the
+/// outermost dimension.
+void populateVectorFromElementsUnrollPatterns(RewritePatternSet &patterns,
+                                              PatternBenefit benefit = 1);
+
 /// Collect a set of leading one dimension removal patterns.
 ///
 /// These patterns insert vector.shape_cast to remove leading one dimensions

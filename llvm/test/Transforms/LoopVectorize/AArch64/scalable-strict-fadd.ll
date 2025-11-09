@@ -118,7 +118,7 @@ define float @fadd_strict(ptr noalias nocapture readonly %a, i64 %n) #0 {
 ; CHECK-ORDERED-TF-LABEL: define float @fadd_strict
 ; CHECK-ORDERED-TF-SAME: (ptr noalias readonly captures(none) [[A:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-ORDERED-TF-NEXT:  entry:
-; CHECK-ORDERED-TF-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-ORDERED-TF-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK-ORDERED-TF:       vector.ph:
 ; CHECK-ORDERED-TF-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-ORDERED-TF-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 8
@@ -134,7 +134,7 @@ define float @fadd_strict(ptr noalias nocapture readonly %a, i64 %n) #0 {
 ; CHECK-ORDERED-TF-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 8 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], [[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-ORDERED-TF-NEXT:    [[VEC_PHI:%.*]] = phi float [ 0.000000e+00, [[VECTOR_PH]] ], [ [[TMP9:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-ORDERED-TF-NEXT:    [[TMP7:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDEX]]
-; CHECK-ORDERED-TF-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 8 x float> @llvm.masked.load.nxv8f32.p0(ptr [[TMP7]], i32 4, <vscale x 8 x i1> [[ACTIVE_LANE_MASK]], <vscale x 8 x float> poison)
+; CHECK-ORDERED-TF-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 8 x float> @llvm.masked.load.nxv8f32.p0(ptr align 4 [[TMP7]], <vscale x 8 x i1> [[ACTIVE_LANE_MASK]], <vscale x 8 x float> poison)
 ; CHECK-ORDERED-TF-NEXT:    [[TMP8:%.*]] = select <vscale x 8 x i1> [[ACTIVE_LANE_MASK]], <vscale x 8 x float> [[WIDE_MASKED_LOAD]], <vscale x 8 x float> splat (float -0.000000e+00)
 ; CHECK-ORDERED-TF-NEXT:    [[TMP9]] = call float @llvm.vector.reduce.fadd.nxv8f32(float [[VEC_PHI]], <vscale x 8 x float> [[TMP8]])
 ; CHECK-ORDERED-TF-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP1]]
@@ -144,20 +144,8 @@ define float @fadd_strict(ptr noalias nocapture readonly %a, i64 %n) #0 {
 ; CHECK-ORDERED-TF-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK-ORDERED-TF:       middle.block:
 ; CHECK-ORDERED-TF-NEXT:    br label [[FOR_END:%.*]]
-; CHECK-ORDERED-TF:       scalar.ph:
-; CHECK-ORDERED-TF-NEXT:    br label [[FOR_BODY:%.*]]
-; CHECK-ORDERED-TF:       for.body:
-; CHECK-ORDERED-TF-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
-; CHECK-ORDERED-TF-NEXT:    [[SUM_07:%.*]] = phi float [ 0.000000e+00, [[SCALAR_PH]] ], [ [[ADD:%.*]], [[FOR_BODY]] ]
-; CHECK-ORDERED-TF-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[IV]]
-; CHECK-ORDERED-TF-NEXT:    [[TMP12:%.*]] = load float, ptr [[ARRAYIDX]], align 4
-; CHECK-ORDERED-TF-NEXT:    [[ADD]] = fadd float [[TMP12]], [[SUM_07]]
-; CHECK-ORDERED-TF-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; CHECK-ORDERED-TF-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; CHECK-ORDERED-TF-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK-ORDERED-TF:       for.end:
-; CHECK-ORDERED-TF-NEXT:    [[ADD_LCSSA:%.*]] = phi float [ [[ADD]], [[FOR_BODY]] ], [ [[TMP9]], [[MIDDLE_BLOCK]] ]
-; CHECK-ORDERED-TF-NEXT:    ret float [[ADD_LCSSA]]
+; CHECK-ORDERED-TF-NEXT:    ret float [[TMP9]]
 ;
 
 
@@ -322,7 +310,7 @@ define float @fadd_strict_unroll(ptr noalias nocapture readonly %a, i64 %n) #0 {
 ; CHECK-ORDERED-TF-LABEL: define float @fadd_strict_unroll
 ; CHECK-ORDERED-TF-SAME: (ptr noalias readonly captures(none) [[A:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
 ; CHECK-ORDERED-TF-NEXT:  entry:
-; CHECK-ORDERED-TF-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-ORDERED-TF-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK-ORDERED-TF:       vector.ph:
 ; CHECK-ORDERED-TF-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-ORDERED-TF-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 32
@@ -362,10 +350,10 @@ define float @fadd_strict_unroll(ptr noalias nocapture readonly %a, i64 %n) #0 {
 ; CHECK-ORDERED-TF-NEXT:    [[TMP20:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-ORDERED-TF-NEXT:    [[TMP21:%.*]] = mul nuw i64 [[TMP20]], 24
 ; CHECK-ORDERED-TF-NEXT:    [[TMP22:%.*]] = getelementptr inbounds float, ptr [[TMP13]], i64 [[TMP21]]
-; CHECK-ORDERED-TF-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 8 x float> @llvm.masked.load.nxv8f32.p0(ptr [[TMP13]], i32 4, <vscale x 8 x i1> [[ACTIVE_LANE_MASK]], <vscale x 8 x float> poison)
-; CHECK-ORDERED-TF-NEXT:    [[WIDE_MASKED_LOAD9:%.*]] = call <vscale x 8 x float> @llvm.masked.load.nxv8f32.p0(ptr [[TMP16]], i32 4, <vscale x 8 x i1> [[ACTIVE_LANE_MASK6]], <vscale x 8 x float> poison)
-; CHECK-ORDERED-TF-NEXT:    [[WIDE_MASKED_LOAD10:%.*]] = call <vscale x 8 x float> @llvm.masked.load.nxv8f32.p0(ptr [[TMP19]], i32 4, <vscale x 8 x i1> [[ACTIVE_LANE_MASK7]], <vscale x 8 x float> poison)
-; CHECK-ORDERED-TF-NEXT:    [[WIDE_MASKED_LOAD11:%.*]] = call <vscale x 8 x float> @llvm.masked.load.nxv8f32.p0(ptr [[TMP22]], i32 4, <vscale x 8 x i1> [[ACTIVE_LANE_MASK8]], <vscale x 8 x float> poison)
+; CHECK-ORDERED-TF-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 8 x float> @llvm.masked.load.nxv8f32.p0(ptr align 4 [[TMP13]], <vscale x 8 x i1> [[ACTIVE_LANE_MASK]], <vscale x 8 x float> poison)
+; CHECK-ORDERED-TF-NEXT:    [[WIDE_MASKED_LOAD9:%.*]] = call <vscale x 8 x float> @llvm.masked.load.nxv8f32.p0(ptr align 4 [[TMP16]], <vscale x 8 x i1> [[ACTIVE_LANE_MASK6]], <vscale x 8 x float> poison)
+; CHECK-ORDERED-TF-NEXT:    [[WIDE_MASKED_LOAD10:%.*]] = call <vscale x 8 x float> @llvm.masked.load.nxv8f32.p0(ptr align 4 [[TMP19]], <vscale x 8 x i1> [[ACTIVE_LANE_MASK7]], <vscale x 8 x float> poison)
+; CHECK-ORDERED-TF-NEXT:    [[WIDE_MASKED_LOAD11:%.*]] = call <vscale x 8 x float> @llvm.masked.load.nxv8f32.p0(ptr align 4 [[TMP22]], <vscale x 8 x i1> [[ACTIVE_LANE_MASK8]], <vscale x 8 x float> poison)
 ; CHECK-ORDERED-TF-NEXT:    [[TMP23:%.*]] = select <vscale x 8 x i1> [[ACTIVE_LANE_MASK]], <vscale x 8 x float> [[WIDE_MASKED_LOAD]], <vscale x 8 x float> splat (float -0.000000e+00)
 ; CHECK-ORDERED-TF-NEXT:    [[TMP24:%.*]] = call float @llvm.vector.reduce.fadd.nxv8f32(float [[VEC_PHI]], <vscale x 8 x float> [[TMP23]])
 ; CHECK-ORDERED-TF-NEXT:    [[TMP25:%.*]] = select <vscale x 8 x i1> [[ACTIVE_LANE_MASK6]], <vscale x 8 x float> [[WIDE_MASKED_LOAD9]], <vscale x 8 x float> splat (float -0.000000e+00)
@@ -390,23 +378,11 @@ define float @fadd_strict_unroll(ptr noalias nocapture readonly %a, i64 %n) #0 {
 ; CHECK-ORDERED-TF-NEXT:    [[ACTIVE_LANE_MASK_NEXT14]] = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 [[TMP39]], i64 [[TMP6]])
 ; CHECK-ORDERED-TF-NEXT:    [[TMP40:%.*]] = extractelement <vscale x 8 x i1> [[ACTIVE_LANE_MASK_NEXT]], i32 0
 ; CHECK-ORDERED-TF-NEXT:    [[TMP41:%.*]] = xor i1 [[TMP40]], true
-; CHECK-ORDERED-TF-NEXT:    br i1 [[TMP41]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK-ORDERED-TF-NEXT:    br i1 [[TMP41]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK-ORDERED-TF:       middle.block:
 ; CHECK-ORDERED-TF-NEXT:    br label [[FOR_END:%.*]]
-; CHECK-ORDERED-TF:       scalar.ph:
-; CHECK-ORDERED-TF-NEXT:    br label [[FOR_BODY:%.*]]
-; CHECK-ORDERED-TF:       for.body:
-; CHECK-ORDERED-TF-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
-; CHECK-ORDERED-TF-NEXT:    [[SUM_07:%.*]] = phi float [ 0.000000e+00, [[SCALAR_PH]] ], [ [[ADD:%.*]], [[FOR_BODY]] ]
-; CHECK-ORDERED-TF-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[IV]]
-; CHECK-ORDERED-TF-NEXT:    [[TMP42:%.*]] = load float, ptr [[ARRAYIDX]], align 4
-; CHECK-ORDERED-TF-NEXT:    [[ADD]] = fadd float [[TMP42]], [[SUM_07]]
-; CHECK-ORDERED-TF-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; CHECK-ORDERED-TF-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; CHECK-ORDERED-TF-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK-ORDERED-TF:       for.end:
-; CHECK-ORDERED-TF-NEXT:    [[ADD_LCSSA:%.*]] = phi float [ [[ADD]], [[FOR_BODY]] ], [ [[TMP30]], [[MIDDLE_BLOCK]] ]
-; CHECK-ORDERED-TF-NEXT:    ret float [[ADD_LCSSA]]
+; CHECK-ORDERED-TF-NEXT:    ret float [[TMP30]]
 ;
 
 
@@ -599,7 +575,7 @@ define void @fadd_strict_interleave(ptr noalias nocapture readonly %a, ptr noali
 ; CHECK-ORDERED-TF-NEXT:    [[TMP0:%.*]] = add i64 [[N]], -2
 ; CHECK-ORDERED-TF-NEXT:    [[TMP1:%.*]] = lshr i64 [[TMP0]], 1
 ; CHECK-ORDERED-TF-NEXT:    [[TMP2:%.*]] = add nuw i64 [[TMP1]], 1
-; CHECK-ORDERED-TF-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-ORDERED-TF-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK-ORDERED-TF:       vector.ph:
 ; CHECK-ORDERED-TF-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-ORDERED-TF-NEXT:    [[TMP4:%.*]] = mul nuw i64 [[TMP3]], 4
@@ -618,7 +594,7 @@ define void @fadd_strict_interleave(ptr noalias nocapture readonly %a, ptr noali
 ; CHECK-ORDERED-TF-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 2
 ; CHECK-ORDERED-TF-NEXT:    [[TMP10:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[OFFSET_IDX]]
 ; CHECK-ORDERED-TF-NEXT:    [[INTERLEAVED_MASK:%.*]] = call <vscale x 8 x i1> @llvm.vector.interleave2.nxv8i1(<vscale x 4 x i1> [[ACTIVE_LANE_MASK]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK]])
-; CHECK-ORDERED-TF-NEXT:    [[WIDE_MASKED_VEC:%.*]] = call <vscale x 8 x float> @llvm.masked.load.nxv8f32.p0(ptr [[TMP10]], i32 4, <vscale x 8 x i1> [[INTERLEAVED_MASK]], <vscale x 8 x float> poison)
+; CHECK-ORDERED-TF-NEXT:    [[WIDE_MASKED_VEC:%.*]] = call <vscale x 8 x float> @llvm.masked.load.nxv8f32.p0(ptr align 4 [[TMP10]], <vscale x 8 x i1> [[INTERLEAVED_MASK]], <vscale x 8 x float> poison)
 ; CHECK-ORDERED-TF-NEXT:    [[STRIDED_VEC:%.*]] = call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.vector.deinterleave2.nxv8f32(<vscale x 8 x float> [[WIDE_MASKED_VEC]])
 ; CHECK-ORDERED-TF-NEXT:    [[TMP11:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[STRIDED_VEC]], 0
 ; CHECK-ORDERED-TF-NEXT:    [[TMP12:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[STRIDED_VEC]], 1
@@ -630,30 +606,12 @@ define void @fadd_strict_interleave(ptr noalias nocapture readonly %a, ptr noali
 ; CHECK-ORDERED-TF-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 [[INDEX]], i64 [[TMP9]])
 ; CHECK-ORDERED-TF-NEXT:    [[TMP17:%.*]] = extractelement <vscale x 4 x i1> [[ACTIVE_LANE_MASK_NEXT]], i32 0
 ; CHECK-ORDERED-TF-NEXT:    [[TMP18:%.*]] = xor i1 [[TMP17]], true
-; CHECK-ORDERED-TF-NEXT:    br i1 [[TMP18]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; CHECK-ORDERED-TF-NEXT:    br i1 [[TMP18]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK-ORDERED-TF:       middle.block:
 ; CHECK-ORDERED-TF-NEXT:    br label [[FOR_END:%.*]]
-; CHECK-ORDERED-TF:       scalar.ph:
-; CHECK-ORDERED-TF-NEXT:    br label [[FOR_BODY:%.*]]
-; CHECK-ORDERED-TF:       for.body:
-; CHECK-ORDERED-TF-NEXT:    [[ADD_PHI1:%.*]] = phi float [ [[A2]], [[SCALAR_PH]] ], [ [[ADD2:%.*]], [[FOR_BODY]] ]
-; CHECK-ORDERED-TF-NEXT:    [[ADD_PHI2:%.*]] = phi float [ [[A1]], [[SCALAR_PH]] ], [ [[ADD1:%.*]], [[FOR_BODY]] ]
-; CHECK-ORDERED-TF-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
-; CHECK-ORDERED-TF-NEXT:    [[ARRAYIDXB1:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[IV]]
-; CHECK-ORDERED-TF-NEXT:    [[TMP19:%.*]] = load float, ptr [[ARRAYIDXB1]], align 4
-; CHECK-ORDERED-TF-NEXT:    [[ADD1]] = fadd float [[TMP19]], [[ADD_PHI2]]
-; CHECK-ORDERED-TF-NEXT:    [[OR:%.*]] = or disjoint i64 [[IV]], 1
-; CHECK-ORDERED-TF-NEXT:    [[ARRAYIDXB2:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[OR]]
-; CHECK-ORDERED-TF-NEXT:    [[TMP20:%.*]] = load float, ptr [[ARRAYIDXB2]], align 4
-; CHECK-ORDERED-TF-NEXT:    [[ADD2]] = fadd float [[TMP20]], [[ADD_PHI1]]
-; CHECK-ORDERED-TF-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 2
-; CHECK-ORDERED-TF-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; CHECK-ORDERED-TF-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK-ORDERED-TF:       for.end:
-; CHECK-ORDERED-TF-NEXT:    [[ADD1_LCSSA:%.*]] = phi float [ [[ADD1]], [[FOR_BODY]] ], [ [[TMP16]], [[MIDDLE_BLOCK]] ]
-; CHECK-ORDERED-TF-NEXT:    [[ADD2_LCSSA:%.*]] = phi float [ [[ADD2]], [[FOR_BODY]] ], [ [[TMP14]], [[MIDDLE_BLOCK]] ]
-; CHECK-ORDERED-TF-NEXT:    store float [[ADD1_LCSSA]], ptr [[A]], align 4
-; CHECK-ORDERED-TF-NEXT:    store float [[ADD2_LCSSA]], ptr [[ARRAYIDXA]], align 4
+; CHECK-ORDERED-TF-NEXT:    store float [[TMP16]], ptr [[A]], align 4
+; CHECK-ORDERED-TF-NEXT:    store float [[TMP14]], ptr [[ARRAYIDXA]], align 4
 ; CHECK-ORDERED-TF-NEXT:    ret void
 ;
 
@@ -837,7 +795,7 @@ define float @fadd_of_sum(ptr noalias nocapture readonly %a, ptr noalias nocaptu
 ; CHECK-ORDERED-TF-NEXT:    [[CMP1:%.*]] = fcmp ogt float [[TMP0]], 5.000000e-01
 ; CHECK-ORDERED-TF-NEXT:    br i1 [[CMP1]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_END:%.*]]
 ; CHECK-ORDERED-TF:       for.body.preheader:
-; CHECK-ORDERED-TF-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-ORDERED-TF-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK-ORDERED-TF:       vector.ph:
 ; CHECK-ORDERED-TF-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-ORDERED-TF-NEXT:    [[TMP2:%.*]] = mul nuw i64 [[TMP1]], 4
@@ -853,9 +811,9 @@ define float @fadd_of_sum(ptr noalias nocapture readonly %a, ptr noalias nocaptu
 ; CHECK-ORDERED-TF-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 4 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], [[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-ORDERED-TF-NEXT:    [[VEC_PHI:%.*]] = phi float [ 0.000000e+00, [[VECTOR_PH]] ], [ [[TMP12:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-ORDERED-TF-NEXT:    [[TMP8:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDEX]]
-; CHECK-ORDERED-TF-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0(ptr [[TMP8]], i32 4, <vscale x 4 x i1> [[ACTIVE_LANE_MASK]], <vscale x 4 x float> poison)
+; CHECK-ORDERED-TF-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0(ptr align 4 [[TMP8]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK]], <vscale x 4 x float> poison)
 ; CHECK-ORDERED-TF-NEXT:    [[TMP9:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[INDEX]]
-; CHECK-ORDERED-TF-NEXT:    [[WIDE_MASKED_LOAD1:%.*]] = call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0(ptr [[TMP9]], i32 4, <vscale x 4 x i1> [[ACTIVE_LANE_MASK]], <vscale x 4 x float> poison)
+; CHECK-ORDERED-TF-NEXT:    [[WIDE_MASKED_LOAD1:%.*]] = call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0(ptr align 4 [[TMP9]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK]], <vscale x 4 x float> poison)
 ; CHECK-ORDERED-TF-NEXT:    [[TMP10:%.*]] = fadd <vscale x 4 x float> [[WIDE_MASKED_LOAD]], [[WIDE_MASKED_LOAD1]]
 ; CHECK-ORDERED-TF-NEXT:    [[TMP11:%.*]] = select <vscale x 4 x i1> [[ACTIVE_LANE_MASK]], <vscale x 4 x float> [[TMP10]], <vscale x 4 x float> splat (float -0.000000e+00)
 ; CHECK-ORDERED-TF-NEXT:    [[TMP12]] = call float @llvm.vector.reduce.fadd.nxv4f32(float [[VEC_PHI]], <vscale x 4 x float> [[TMP11]])
@@ -863,28 +821,13 @@ define float @fadd_of_sum(ptr noalias nocapture readonly %a, ptr noalias nocaptu
 ; CHECK-ORDERED-TF-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 [[INDEX]], i64 [[TMP7]])
 ; CHECK-ORDERED-TF-NEXT:    [[TMP13:%.*]] = extractelement <vscale x 4 x i1> [[ACTIVE_LANE_MASK_NEXT]], i32 0
 ; CHECK-ORDERED-TF-NEXT:    [[TMP14:%.*]] = xor i1 [[TMP13]], true
-; CHECK-ORDERED-TF-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; CHECK-ORDERED-TF-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK-ORDERED-TF:       middle.block:
 ; CHECK-ORDERED-TF-NEXT:    br label [[FOR_END_LOOPEXIT:%.*]]
-; CHECK-ORDERED-TF:       scalar.ph:
-; CHECK-ORDERED-TF-NEXT:    br label [[FOR_BODY:%.*]]
-; CHECK-ORDERED-TF:       for.body:
-; CHECK-ORDERED-TF-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], [[FOR_BODY]] ], [ 0, [[SCALAR_PH]] ]
-; CHECK-ORDERED-TF-NEXT:    [[RES_014:%.*]] = phi float [ [[RDX:%.*]], [[FOR_BODY]] ], [ 0.000000e+00, [[SCALAR_PH]] ]
-; CHECK-ORDERED-TF-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[IV]]
-; CHECK-ORDERED-TF-NEXT:    [[TMP15:%.*]] = load float, ptr [[ARRAYIDX2]], align 4
-; CHECK-ORDERED-TF-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[IV]]
-; CHECK-ORDERED-TF-NEXT:    [[TMP16:%.*]] = load float, ptr [[ARRAYIDX4]], align 4
-; CHECK-ORDERED-TF-NEXT:    [[ADD:%.*]] = fadd float [[TMP15]], [[TMP16]]
-; CHECK-ORDERED-TF-NEXT:    [[RDX]] = fadd float [[RES_014]], [[ADD]]
-; CHECK-ORDERED-TF-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; CHECK-ORDERED-TF-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; CHECK-ORDERED-TF-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END_LOOPEXIT]], label [[FOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
 ; CHECK-ORDERED-TF:       for.end.loopexit:
-; CHECK-ORDERED-TF-NEXT:    [[RDX_LCSSA:%.*]] = phi float [ [[RDX]], [[FOR_BODY]] ], [ [[TMP12]], [[MIDDLE_BLOCK]] ]
 ; CHECK-ORDERED-TF-NEXT:    br label [[FOR_END]]
 ; CHECK-ORDERED-TF:       for.end:
-; CHECK-ORDERED-TF-NEXT:    [[RES:%.*]] = phi float [ 0.000000e+00, [[ENTRY:%.*]] ], [ [[RDX_LCSSA]], [[FOR_END_LOOPEXIT]] ]
+; CHECK-ORDERED-TF-NEXT:    [[RES:%.*]] = phi float [ 0.000000e+00, [[ENTRY:%.*]] ], [ [[TMP12]], [[FOR_END_LOOPEXIT]] ]
 ; CHECK-ORDERED-TF-NEXT:    ret float [[RES]]
 ;
 
@@ -961,7 +904,7 @@ define float @fadd_conditional(ptr noalias nocapture readonly %a, ptr noalias no
 ; CHECK-UNORDERED-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x float>, ptr [[TMP4]], align 4
 ; CHECK-UNORDERED-NEXT:    [[TMP5:%.*]] = fcmp une <vscale x 4 x float> [[WIDE_LOAD]], zeroinitializer
 ; CHECK-UNORDERED-NEXT:    [[TMP6:%.*]] = getelementptr float, ptr [[A]], i64 [[INDEX]]
-; CHECK-UNORDERED-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0(ptr [[TMP6]], i32 4, <vscale x 4 x i1> [[TMP5]], <vscale x 4 x float> poison)
+; CHECK-UNORDERED-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0(ptr align 4 [[TMP6]], <vscale x 4 x i1> [[TMP5]], <vscale x 4 x float> poison)
 ; CHECK-UNORDERED-NEXT:    [[PREDPHI:%.*]] = select <vscale x 4 x i1> [[TMP5]], <vscale x 4 x float> [[WIDE_MASKED_LOAD]], <vscale x 4 x float> splat (float 3.000000e+00)
 ; CHECK-UNORDERED-NEXT:    [[TMP7]] = fadd <vscale x 4 x float> [[VEC_PHI]], [[PREDPHI]]
 ; CHECK-UNORDERED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
@@ -1016,7 +959,7 @@ define float @fadd_conditional(ptr noalias nocapture readonly %a, ptr noalias no
 ; CHECK-ORDERED-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x float>, ptr [[TMP4]], align 4
 ; CHECK-ORDERED-NEXT:    [[TMP5:%.*]] = fcmp une <vscale x 4 x float> [[WIDE_LOAD]], zeroinitializer
 ; CHECK-ORDERED-NEXT:    [[TMP6:%.*]] = getelementptr float, ptr [[A]], i64 [[INDEX]]
-; CHECK-ORDERED-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0(ptr [[TMP6]], i32 4, <vscale x 4 x i1> [[TMP5]], <vscale x 4 x float> poison)
+; CHECK-ORDERED-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0(ptr align 4 [[TMP6]], <vscale x 4 x i1> [[TMP5]], <vscale x 4 x float> poison)
 ; CHECK-ORDERED-NEXT:    [[PREDPHI:%.*]] = select <vscale x 4 x i1> [[TMP5]], <vscale x 4 x float> [[WIDE_MASKED_LOAD]], <vscale x 4 x float> splat (float 3.000000e+00)
 ; CHECK-ORDERED-NEXT:    [[TMP7]] = call float @llvm.vector.reduce.fadd.nxv4f32(float [[VEC_PHI]], <vscale x 4 x float> [[PREDPHI]])
 ; CHECK-ORDERED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
@@ -1053,7 +996,7 @@ define float @fadd_conditional(ptr noalias nocapture readonly %a, ptr noalias no
 ; CHECK-ORDERED-TF-LABEL: define float @fadd_conditional
 ; CHECK-ORDERED-TF-SAME: (ptr noalias readonly captures(none) [[A:%.*]], ptr noalias readonly captures(none) [[B:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
 ; CHECK-ORDERED-TF-NEXT:  entry:
-; CHECK-ORDERED-TF-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-ORDERED-TF-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK-ORDERED-TF:       vector.ph:
 ; CHECK-ORDERED-TF-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-ORDERED-TF-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 4
@@ -1069,11 +1012,11 @@ define float @fadd_conditional(ptr noalias nocapture readonly %a, ptr noalias no
 ; CHECK-ORDERED-TF-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 4 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], [[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-ORDERED-TF-NEXT:    [[VEC_PHI:%.*]] = phi float [ 1.000000e+00, [[VECTOR_PH]] ], [ [[TMP12:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-ORDERED-TF-NEXT:    [[TMP7:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[INDEX]]
-; CHECK-ORDERED-TF-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0(ptr [[TMP7]], i32 4, <vscale x 4 x i1> [[ACTIVE_LANE_MASK]], <vscale x 4 x float> poison)
+; CHECK-ORDERED-TF-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0(ptr align 4 [[TMP7]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK]], <vscale x 4 x float> poison)
 ; CHECK-ORDERED-TF-NEXT:    [[TMP8:%.*]] = fcmp une <vscale x 4 x float> [[WIDE_MASKED_LOAD]], zeroinitializer
 ; CHECK-ORDERED-TF-NEXT:    [[TMP9:%.*]] = select <vscale x 4 x i1> [[ACTIVE_LANE_MASK]], <vscale x 4 x i1> [[TMP8]], <vscale x 4 x i1> zeroinitializer
 ; CHECK-ORDERED-TF-NEXT:    [[TMP10:%.*]] = getelementptr float, ptr [[A]], i64 [[INDEX]]
-; CHECK-ORDERED-TF-NEXT:    [[WIDE_MASKED_LOAD1:%.*]] = call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0(ptr [[TMP10]], i32 4, <vscale x 4 x i1> [[TMP9]], <vscale x 4 x float> poison)
+; CHECK-ORDERED-TF-NEXT:    [[WIDE_MASKED_LOAD1:%.*]] = call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0(ptr align 4 [[TMP10]], <vscale x 4 x i1> [[TMP9]], <vscale x 4 x float> poison)
 ; CHECK-ORDERED-TF-NEXT:    [[PREDPHI:%.*]] = select <vscale x 4 x i1> [[TMP8]], <vscale x 4 x float> [[WIDE_MASKED_LOAD1]], <vscale x 4 x float> splat (float 3.000000e+00)
 ; CHECK-ORDERED-TF-NEXT:    [[TMP11:%.*]] = select <vscale x 4 x i1> [[ACTIVE_LANE_MASK]], <vscale x 4 x float> [[PREDPHI]], <vscale x 4 x float> splat (float -0.000000e+00)
 ; CHECK-ORDERED-TF-NEXT:    [[TMP12]] = call float @llvm.vector.reduce.fadd.nxv4f32(float [[VEC_PHI]], <vscale x 4 x float> [[TMP11]])
@@ -1081,31 +1024,11 @@ define float @fadd_conditional(ptr noalias nocapture readonly %a, ptr noalias no
 ; CHECK-ORDERED-TF-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 [[INDEX]], i64 [[TMP6]])
 ; CHECK-ORDERED-TF-NEXT:    [[TMP13:%.*]] = extractelement <vscale x 4 x i1> [[ACTIVE_LANE_MASK_NEXT]], i32 0
 ; CHECK-ORDERED-TF-NEXT:    [[TMP14:%.*]] = xor i1 [[TMP13]], true
-; CHECK-ORDERED-TF-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
+; CHECK-ORDERED-TF-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK-ORDERED-TF:       middle.block:
 ; CHECK-ORDERED-TF-NEXT:    br label [[FOR_END:%.*]]
-; CHECK-ORDERED-TF:       scalar.ph:
-; CHECK-ORDERED-TF-NEXT:    br label [[FOR_BODY:%.*]]
-; CHECK-ORDERED-TF:       for.body:
-; CHECK-ORDERED-TF-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_INC:%.*]] ]
-; CHECK-ORDERED-TF-NEXT:    [[RES:%.*]] = phi float [ 1.000000e+00, [[SCALAR_PH]] ], [ [[FADD:%.*]], [[FOR_INC]] ]
-; CHECK-ORDERED-TF-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[IV]]
-; CHECK-ORDERED-TF-NEXT:    [[TMP15:%.*]] = load float, ptr [[ARRAYIDX]], align 4
-; CHECK-ORDERED-TF-NEXT:    [[TOBOOL:%.*]] = fcmp une float [[TMP15]], 0.000000e+00
-; CHECK-ORDERED-TF-NEXT:    br i1 [[TOBOOL]], label [[IF_THEN:%.*]], label [[FOR_INC]]
-; CHECK-ORDERED-TF:       if.then:
-; CHECK-ORDERED-TF-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[IV]]
-; CHECK-ORDERED-TF-NEXT:    [[TMP16:%.*]] = load float, ptr [[ARRAYIDX2]], align 4
-; CHECK-ORDERED-TF-NEXT:    br label [[FOR_INC]]
-; CHECK-ORDERED-TF:       for.inc:
-; CHECK-ORDERED-TF-NEXT:    [[PHI:%.*]] = phi float [ [[TMP16]], [[IF_THEN]] ], [ 3.000000e+00, [[FOR_BODY]] ]
-; CHECK-ORDERED-TF-NEXT:    [[FADD]] = fadd float [[RES]], [[PHI]]
-; CHECK-ORDERED-TF-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; CHECK-ORDERED-TF-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; CHECK-ORDERED-TF-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
 ; CHECK-ORDERED-TF:       for.end:
-; CHECK-ORDERED-TF-NEXT:    [[RDX:%.*]] = phi float [ [[FADD]], [[FOR_INC]] ], [ [[TMP12]], [[MIDDLE_BLOCK]] ]
-; CHECK-ORDERED-TF-NEXT:    ret float [[RDX]]
+; CHECK-ORDERED-TF-NEXT:    ret float [[TMP12]]
 ;
 
 
@@ -1245,7 +1168,7 @@ define float @fadd_multiple(ptr noalias nocapture %a, ptr noalias nocapture %b, 
 ; CHECK-ORDERED-TF-NEXT:    [[ADD3]] = fadd float [[ADD]], [[TMP1]]
 ; CHECK-ORDERED-TF-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-ORDERED-TF-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; CHECK-ORDERED-TF-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END:%.*]], label [[FOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
+; CHECK-ORDERED-TF-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END:%.*]], label [[FOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK-ORDERED-TF:       for.end:
 ; CHECK-ORDERED-TF-NEXT:    [[RDX:%.*]] = phi float [ [[ADD3]], [[FOR_BODY]] ]
 ; CHECK-ORDERED-TF-NEXT:    ret float [[RDX]]
@@ -1456,7 +1379,7 @@ define float @fmuladd_strict(ptr %a, ptr %b, i64 %n) #0 {
 ; CHECK-ORDERED-TF-LABEL: define float @fmuladd_strict
 ; CHECK-ORDERED-TF-SAME: (ptr [[A:%.*]], ptr [[B:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
 ; CHECK-ORDERED-TF-NEXT:  entry:
-; CHECK-ORDERED-TF-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-ORDERED-TF-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK-ORDERED-TF:       vector.ph:
 ; CHECK-ORDERED-TF-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-ORDERED-TF-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 32
@@ -1496,10 +1419,10 @@ define float @fmuladd_strict(ptr %a, ptr %b, i64 %n) #0 {
 ; CHECK-ORDERED-TF-NEXT:    [[TMP20:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-ORDERED-TF-NEXT:    [[TMP21:%.*]] = mul nuw i64 [[TMP20]], 24
 ; CHECK-ORDERED-TF-NEXT:    [[TMP22:%.*]] = getelementptr inbounds float, ptr [[TMP13]], i64 [[TMP21]]
-; CHECK-ORDERED-TF-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 8 x float> @llvm.masked.load.nxv8f32.p0(ptr [[TMP13]], i32 4, <vscale x 8 x i1> [[ACTIVE_LANE_MASK]], <vscale x 8 x float> poison)
-; CHECK-ORDERED-TF-NEXT:    [[WIDE_MASKED_LOAD9:%.*]] = call <vscale x 8 x float> @llvm.masked.load.nxv8f32.p0(ptr [[TMP16]], i32 4, <vscale x 8 x i1> [[ACTIVE_LANE_MASK6]], <vscale x 8 x float> poison)
-; CHECK-ORDERED-TF-NEXT:    [[WIDE_MASKED_LOAD10:%.*]] = call <vscale x 8 x float> @llvm.masked.load.nxv8f32.p0(ptr [[TMP19]], i32 4, <vscale x 8 x i1> [[ACTIVE_LANE_MASK7]], <vscale x 8 x float> poison)
-; CHECK-ORDERED-TF-NEXT:    [[WIDE_MASKED_LOAD11:%.*]] = call <vscale x 8 x float> @llvm.masked.load.nxv8f32.p0(ptr [[TMP22]], i32 4, <vscale x 8 x i1> [[ACTIVE_LANE_MASK8]], <vscale x 8 x float> poison)
+; CHECK-ORDERED-TF-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 8 x float> @llvm.masked.load.nxv8f32.p0(ptr align 4 [[TMP13]], <vscale x 8 x i1> [[ACTIVE_LANE_MASK]], <vscale x 8 x float> poison)
+; CHECK-ORDERED-TF-NEXT:    [[WIDE_MASKED_LOAD9:%.*]] = call <vscale x 8 x float> @llvm.masked.load.nxv8f32.p0(ptr align 4 [[TMP16]], <vscale x 8 x i1> [[ACTIVE_LANE_MASK6]], <vscale x 8 x float> poison)
+; CHECK-ORDERED-TF-NEXT:    [[WIDE_MASKED_LOAD10:%.*]] = call <vscale x 8 x float> @llvm.masked.load.nxv8f32.p0(ptr align 4 [[TMP19]], <vscale x 8 x i1> [[ACTIVE_LANE_MASK7]], <vscale x 8 x float> poison)
+; CHECK-ORDERED-TF-NEXT:    [[WIDE_MASKED_LOAD11:%.*]] = call <vscale x 8 x float> @llvm.masked.load.nxv8f32.p0(ptr align 4 [[TMP22]], <vscale x 8 x i1> [[ACTIVE_LANE_MASK8]], <vscale x 8 x float> poison)
 ; CHECK-ORDERED-TF-NEXT:    [[TMP23:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[INDEX]]
 ; CHECK-ORDERED-TF-NEXT:    [[TMP24:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-ORDERED-TF-NEXT:    [[TMP25:%.*]] = shl nuw i64 [[TMP24]], 3
@@ -1510,10 +1433,10 @@ define float @fmuladd_strict(ptr %a, ptr %b, i64 %n) #0 {
 ; CHECK-ORDERED-TF-NEXT:    [[TMP30:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-ORDERED-TF-NEXT:    [[TMP31:%.*]] = mul nuw i64 [[TMP30]], 24
 ; CHECK-ORDERED-TF-NEXT:    [[TMP32:%.*]] = getelementptr inbounds float, ptr [[TMP23]], i64 [[TMP31]]
-; CHECK-ORDERED-TF-NEXT:    [[WIDE_MASKED_LOAD12:%.*]] = call <vscale x 8 x float> @llvm.masked.load.nxv8f32.p0(ptr [[TMP23]], i32 4, <vscale x 8 x i1> [[ACTIVE_LANE_MASK]], <vscale x 8 x float> poison)
-; CHECK-ORDERED-TF-NEXT:    [[WIDE_MASKED_LOAD13:%.*]] = call <vscale x 8 x float> @llvm.masked.load.nxv8f32.p0(ptr [[TMP26]], i32 4, <vscale x 8 x i1> [[ACTIVE_LANE_MASK6]], <vscale x 8 x float> poison)
-; CHECK-ORDERED-TF-NEXT:    [[WIDE_MASKED_LOAD14:%.*]] = call <vscale x 8 x float> @llvm.masked.load.nxv8f32.p0(ptr [[TMP29]], i32 4, <vscale x 8 x i1> [[ACTIVE_LANE_MASK7]], <vscale x 8 x float> poison)
-; CHECK-ORDERED-TF-NEXT:    [[WIDE_MASKED_LOAD15:%.*]] = call <vscale x 8 x float> @llvm.masked.load.nxv8f32.p0(ptr [[TMP32]], i32 4, <vscale x 8 x i1> [[ACTIVE_LANE_MASK8]], <vscale x 8 x float> poison)
+; CHECK-ORDERED-TF-NEXT:    [[WIDE_MASKED_LOAD12:%.*]] = call <vscale x 8 x float> @llvm.masked.load.nxv8f32.p0(ptr align 4 [[TMP23]], <vscale x 8 x i1> [[ACTIVE_LANE_MASK]], <vscale x 8 x float> poison)
+; CHECK-ORDERED-TF-NEXT:    [[WIDE_MASKED_LOAD13:%.*]] = call <vscale x 8 x float> @llvm.masked.load.nxv8f32.p0(ptr align 4 [[TMP26]], <vscale x 8 x i1> [[ACTIVE_LANE_MASK6]], <vscale x 8 x float> poison)
+; CHECK-ORDERED-TF-NEXT:    [[WIDE_MASKED_LOAD14:%.*]] = call <vscale x 8 x float> @llvm.masked.load.nxv8f32.p0(ptr align 4 [[TMP29]], <vscale x 8 x i1> [[ACTIVE_LANE_MASK7]], <vscale x 8 x float> poison)
+; CHECK-ORDERED-TF-NEXT:    [[WIDE_MASKED_LOAD15:%.*]] = call <vscale x 8 x float> @llvm.masked.load.nxv8f32.p0(ptr align 4 [[TMP32]], <vscale x 8 x i1> [[ACTIVE_LANE_MASK8]], <vscale x 8 x float> poison)
 ; CHECK-ORDERED-TF-NEXT:    [[TMP33:%.*]] = fmul <vscale x 8 x float> [[WIDE_MASKED_LOAD]], [[WIDE_MASKED_LOAD12]]
 ; CHECK-ORDERED-TF-NEXT:    [[TMP34:%.*]] = fmul <vscale x 8 x float> [[WIDE_MASKED_LOAD9]], [[WIDE_MASKED_LOAD13]]
 ; CHECK-ORDERED-TF-NEXT:    [[TMP35:%.*]] = fmul <vscale x 8 x float> [[WIDE_MASKED_LOAD10]], [[WIDE_MASKED_LOAD14]]
@@ -1542,25 +1465,11 @@ define float @fmuladd_strict(ptr %a, ptr %b, i64 %n) #0 {
 ; CHECK-ORDERED-TF-NEXT:    [[ACTIVE_LANE_MASK_NEXT18]] = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 [[TMP53]], i64 [[TMP6]])
 ; CHECK-ORDERED-TF-NEXT:    [[TMP54:%.*]] = extractelement <vscale x 8 x i1> [[ACTIVE_LANE_MASK_NEXT]], i32 0
 ; CHECK-ORDERED-TF-NEXT:    [[TMP55:%.*]] = xor i1 [[TMP54]], true
-; CHECK-ORDERED-TF-NEXT:    br i1 [[TMP55]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
+; CHECK-ORDERED-TF-NEXT:    br i1 [[TMP55]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
 ; CHECK-ORDERED-TF:       middle.block:
 ; CHECK-ORDERED-TF-NEXT:    br label [[FOR_END:%.*]]
-; CHECK-ORDERED-TF:       scalar.ph:
-; CHECK-ORDERED-TF-NEXT:    br label [[FOR_BODY:%.*]]
-; CHECK-ORDERED-TF:       for.body:
-; CHECK-ORDERED-TF-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
-; CHECK-ORDERED-TF-NEXT:    [[SUM_07:%.*]] = phi float [ 0.000000e+00, [[SCALAR_PH]] ], [ [[MULADD:%.*]], [[FOR_BODY]] ]
-; CHECK-ORDERED-TF-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[IV]]
-; CHECK-ORDERED-TF-NEXT:    [[TMP56:%.*]] = load float, ptr [[ARRAYIDX]], align 4
-; CHECK-ORDERED-TF-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[IV]]
-; CHECK-ORDERED-TF-NEXT:    [[TMP57:%.*]] = load float, ptr [[ARRAYIDX2]], align 4
-; CHECK-ORDERED-TF-NEXT:    [[MULADD]] = tail call float @llvm.fmuladd.f32(float [[TMP56]], float [[TMP57]], float [[SUM_07]])
-; CHECK-ORDERED-TF-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; CHECK-ORDERED-TF-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; CHECK-ORDERED-TF-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP17:![0-9]+]]
 ; CHECK-ORDERED-TF:       for.end:
-; CHECK-ORDERED-TF-NEXT:    [[MULADD_LCSSA:%.*]] = phi float [ [[MULADD]], [[FOR_BODY]] ], [ [[TMP44]], [[MIDDLE_BLOCK]] ]
-; CHECK-ORDERED-TF-NEXT:    ret float [[MULADD_LCSSA]]
+; CHECK-ORDERED-TF-NEXT:    ret float [[TMP44]]
 ;
 
 
@@ -1766,7 +1675,7 @@ define float @fmuladd_strict_fmf(ptr %a, ptr %b, i64 %n) #0 {
 ; CHECK-ORDERED-TF-LABEL: define float @fmuladd_strict_fmf
 ; CHECK-ORDERED-TF-SAME: (ptr [[A:%.*]], ptr [[B:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
 ; CHECK-ORDERED-TF-NEXT:  entry:
-; CHECK-ORDERED-TF-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-ORDERED-TF-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK-ORDERED-TF:       vector.ph:
 ; CHECK-ORDERED-TF-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-ORDERED-TF-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 32
@@ -1806,10 +1715,10 @@ define float @fmuladd_strict_fmf(ptr %a, ptr %b, i64 %n) #0 {
 ; CHECK-ORDERED-TF-NEXT:    [[TMP20:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-ORDERED-TF-NEXT:    [[TMP21:%.*]] = mul nuw i64 [[TMP20]], 24
 ; CHECK-ORDERED-TF-NEXT:    [[TMP22:%.*]] = getelementptr inbounds float, ptr [[TMP13]], i64 [[TMP21]]
-; CHECK-ORDERED-TF-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 8 x float> @llvm.masked.load.nxv8f32.p0(ptr [[TMP13]], i32 4, <vscale x 8 x i1> [[ACTIVE_LANE_MASK]], <vscale x 8 x float> poison)
-; CHECK-ORDERED-TF-NEXT:    [[WIDE_MASKED_LOAD9:%.*]] = call <vscale x 8 x float> @llvm.masked.load.nxv8f32.p0(ptr [[TMP16]], i32 4, <vscale x 8 x i1> [[ACTIVE_LANE_MASK6]], <vscale x 8 x float> poison)
-; CHECK-ORDERED-TF-NEXT:    [[WIDE_MASKED_LOAD10:%.*]] = call <vscale x 8 x float> @llvm.masked.load.nxv8f32.p0(ptr [[TMP19]], i32 4, <vscale x 8 x i1> [[ACTIVE_LANE_MASK7]], <vscale x 8 x float> poison)
-; CHECK-ORDERED-TF-NEXT:    [[WIDE_MASKED_LOAD11:%.*]] = call <vscale x 8 x float> @llvm.masked.load.nxv8f32.p0(ptr [[TMP22]], i32 4, <vscale x 8 x i1> [[ACTIVE_LANE_MASK8]], <vscale x 8 x float> poison)
+; CHECK-ORDERED-TF-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 8 x float> @llvm.masked.load.nxv8f32.p0(ptr align 4 [[TMP13]], <vscale x 8 x i1> [[ACTIVE_LANE_MASK]], <vscale x 8 x float> poison)
+; CHECK-ORDERED-TF-NEXT:    [[WIDE_MASKED_LOAD9:%.*]] = call <vscale x 8 x float> @llvm.masked.load.nxv8f32.p0(ptr align 4 [[TMP16]], <vscale x 8 x i1> [[ACTIVE_LANE_MASK6]], <vscale x 8 x float> poison)
+; CHECK-ORDERED-TF-NEXT:    [[WIDE_MASKED_LOAD10:%.*]] = call <vscale x 8 x float> @llvm.masked.load.nxv8f32.p0(ptr align 4 [[TMP19]], <vscale x 8 x i1> [[ACTIVE_LANE_MASK7]], <vscale x 8 x float> poison)
+; CHECK-ORDERED-TF-NEXT:    [[WIDE_MASKED_LOAD11:%.*]] = call <vscale x 8 x float> @llvm.masked.load.nxv8f32.p0(ptr align 4 [[TMP22]], <vscale x 8 x i1> [[ACTIVE_LANE_MASK8]], <vscale x 8 x float> poison)
 ; CHECK-ORDERED-TF-NEXT:    [[TMP23:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[INDEX]]
 ; CHECK-ORDERED-TF-NEXT:    [[TMP24:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-ORDERED-TF-NEXT:    [[TMP25:%.*]] = shl nuw i64 [[TMP24]], 3
@@ -1820,10 +1729,10 @@ define float @fmuladd_strict_fmf(ptr %a, ptr %b, i64 %n) #0 {
 ; CHECK-ORDERED-TF-NEXT:    [[TMP30:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-ORDERED-TF-NEXT:    [[TMP31:%.*]] = mul nuw i64 [[TMP30]], 24
 ; CHECK-ORDERED-TF-NEXT:    [[TMP32:%.*]] = getelementptr inbounds float, ptr [[TMP23]], i64 [[TMP31]]
-; CHECK-ORDERED-TF-NEXT:    [[WIDE_MASKED_LOAD12:%.*]] = call <vscale x 8 x float> @llvm.masked.load.nxv8f32.p0(ptr [[TMP23]], i32 4, <vscale x 8 x i1> [[ACTIVE_LANE_MASK]], <vscale x 8 x float> poison)
-; CHECK-ORDERED-TF-NEXT:    [[WIDE_MASKED_LOAD13:%.*]] = call <vscale x 8 x float> @llvm.masked.load.nxv8f32.p0(ptr [[TMP26]], i32 4, <vscale x 8 x i1> [[ACTIVE_LANE_MASK6]], <vscale x 8 x float> poison)
-; CHECK-ORDERED-TF-NEXT:    [[WIDE_MASKED_LOAD14:%.*]] = call <vscale x 8 x float> @llvm.masked.load.nxv8f32.p0(ptr [[TMP29]], i32 4, <vscale x 8 x i1> [[ACTIVE_LANE_MASK7]], <vscale x 8 x float> poison)
-; CHECK-ORDERED-TF-NEXT:    [[WIDE_MASKED_LOAD15:%.*]] = call <vscale x 8 x float> @llvm.masked.load.nxv8f32.p0(ptr [[TMP32]], i32 4, <vscale x 8 x i1> [[ACTIVE_LANE_MASK8]], <vscale x 8 x float> poison)
+; CHECK-ORDERED-TF-NEXT:    [[WIDE_MASKED_LOAD12:%.*]] = call <vscale x 8 x float> @llvm.masked.load.nxv8f32.p0(ptr align 4 [[TMP23]], <vscale x 8 x i1> [[ACTIVE_LANE_MASK]], <vscale x 8 x float> poison)
+; CHECK-ORDERED-TF-NEXT:    [[WIDE_MASKED_LOAD13:%.*]] = call <vscale x 8 x float> @llvm.masked.load.nxv8f32.p0(ptr align 4 [[TMP26]], <vscale x 8 x i1> [[ACTIVE_LANE_MASK6]], <vscale x 8 x float> poison)
+; CHECK-ORDERED-TF-NEXT:    [[WIDE_MASKED_LOAD14:%.*]] = call <vscale x 8 x float> @llvm.masked.load.nxv8f32.p0(ptr align 4 [[TMP29]], <vscale x 8 x i1> [[ACTIVE_LANE_MASK7]], <vscale x 8 x float> poison)
+; CHECK-ORDERED-TF-NEXT:    [[WIDE_MASKED_LOAD15:%.*]] = call <vscale x 8 x float> @llvm.masked.load.nxv8f32.p0(ptr align 4 [[TMP32]], <vscale x 8 x i1> [[ACTIVE_LANE_MASK8]], <vscale x 8 x float> poison)
 ; CHECK-ORDERED-TF-NEXT:    [[TMP33:%.*]] = fmul nnan <vscale x 8 x float> [[WIDE_MASKED_LOAD]], [[WIDE_MASKED_LOAD12]]
 ; CHECK-ORDERED-TF-NEXT:    [[TMP34:%.*]] = fmul nnan <vscale x 8 x float> [[WIDE_MASKED_LOAD9]], [[WIDE_MASKED_LOAD13]]
 ; CHECK-ORDERED-TF-NEXT:    [[TMP35:%.*]] = fmul nnan <vscale x 8 x float> [[WIDE_MASKED_LOAD10]], [[WIDE_MASKED_LOAD14]]
@@ -1852,25 +1761,11 @@ define float @fmuladd_strict_fmf(ptr %a, ptr %b, i64 %n) #0 {
 ; CHECK-ORDERED-TF-NEXT:    [[ACTIVE_LANE_MASK_NEXT18]] = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 [[TMP53]], i64 [[TMP6]])
 ; CHECK-ORDERED-TF-NEXT:    [[TMP54:%.*]] = extractelement <vscale x 8 x i1> [[ACTIVE_LANE_MASK_NEXT]], i32 0
 ; CHECK-ORDERED-TF-NEXT:    [[TMP55:%.*]] = xor i1 [[TMP54]], true
-; CHECK-ORDERED-TF-NEXT:    br i1 [[TMP55]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP18:![0-9]+]]
+; CHECK-ORDERED-TF-NEXT:    br i1 [[TMP55]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; CHECK-ORDERED-TF:       middle.block:
 ; CHECK-ORDERED-TF-NEXT:    br label [[FOR_END:%.*]]
-; CHECK-ORDERED-TF:       scalar.ph:
-; CHECK-ORDERED-TF-NEXT:    br label [[FOR_BODY:%.*]]
-; CHECK-ORDERED-TF:       for.body:
-; CHECK-ORDERED-TF-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
-; CHECK-ORDERED-TF-NEXT:    [[SUM_07:%.*]] = phi float [ 0.000000e+00, [[SCALAR_PH]] ], [ [[MULADD:%.*]], [[FOR_BODY]] ]
-; CHECK-ORDERED-TF-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[IV]]
-; CHECK-ORDERED-TF-NEXT:    [[TMP56:%.*]] = load float, ptr [[ARRAYIDX]], align 4
-; CHECK-ORDERED-TF-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[IV]]
-; CHECK-ORDERED-TF-NEXT:    [[TMP57:%.*]] = load float, ptr [[ARRAYIDX2]], align 4
-; CHECK-ORDERED-TF-NEXT:    [[MULADD]] = tail call nnan float @llvm.fmuladd.f32(float [[TMP56]], float [[TMP57]], float [[SUM_07]])
-; CHECK-ORDERED-TF-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; CHECK-ORDERED-TF-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; CHECK-ORDERED-TF-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP19:![0-9]+]]
 ; CHECK-ORDERED-TF:       for.end:
-; CHECK-ORDERED-TF-NEXT:    [[MULADD_LCSSA:%.*]] = phi float [ [[MULADD]], [[FOR_BODY]] ], [ [[TMP44]], [[MIDDLE_BLOCK]] ]
-; CHECK-ORDERED-TF-NEXT:    ret float [[MULADD_LCSSA]]
+; CHECK-ORDERED-TF-NEXT:    ret float [[TMP44]]
 ;
 
 

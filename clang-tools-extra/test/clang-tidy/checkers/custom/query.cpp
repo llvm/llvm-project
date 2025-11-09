@@ -1,3 +1,4 @@
+// REQUIRES: custom-check
 // RUN: %check_clang_tidy %s custom-* %t --config-file=%S/Inputs/clang-tidy.yml
 
 extern long E;

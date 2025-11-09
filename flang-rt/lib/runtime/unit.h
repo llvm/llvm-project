@@ -59,6 +59,7 @@ class PseudoOpenFile {
 public:
   using FileOffset = std::int64_t;
 
+  RT_API_ATTRS int fd() const { return 1 /*stdout*/; }
   RT_API_ATTRS const char *path() const { return nullptr; }
   RT_API_ATTRS std::size_t pathLength() const { return 0; }
   RT_API_ATTRS void set_path(OwningPtr<char> &&, std::size_t bytes) {}

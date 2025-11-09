@@ -329,6 +329,7 @@ bool llvm::IsConstantOffsetFromGlobal(Constant *C, GlobalValue *&GV,
 
   // Look through ptr->int and ptr->ptr casts.
   if (CE->getOpcode() == Instruction::PtrToInt ||
+      CE->getOpcode() == Instruction::PtrToAddr ||
       CE->getOpcode() == Instruction::BitCast)
     return IsConstantOffsetFromGlobal(CE->getOperand(0), GV, Offset, DL,
                                       DSOEquiv);
@@ -951,21 +952,21 @@ Constant *SymbolicallyEvaluateGEP(const GEPOperator *GEP,
 
   // If the base value for this address is a literal integer value, fold the
   // getelementptr to the resulting integer value casted to the pointer type.
-  APInt BasePtr(DL.getPointerTypeSizeInBits(Ptr->getType()), 0);
+  APInt BaseIntVal(DL.getPointerTypeSizeInBits(Ptr->getType()), 0);
   if (auto *CE = dyn_cast<ConstantExpr>(Ptr)) {
     if (CE->getOpcode() == Instruction::IntToPtr) {
       if (auto *Base = dyn_cast<ConstantInt>(CE->getOperand(0)))
-        BasePtr = Base->getValue().zextOrTrunc(BasePtr.getBitWidth());
+        BaseIntVal = Base->getValue().zextOrTrunc(BaseIntVal.getBitWidth());
     }
   }
 
-  auto *PTy = cast<PointerType>(Ptr->getType());
-  if ((Ptr->isNullValue() || BasePtr != 0) &&
-      !DL.isNonIntegralPointerType(PTy)) {
+  if ((Ptr->isNullValue() || BaseIntVal != 0) &&
+      !DL.mustNotIntroduceIntToPtr(Ptr->getType())) {
+
     // If the index size is smaller than the pointer size, add to the low
     // bits only.
-    BasePtr.insertBits(BasePtr.trunc(BitWidth) + Offset, 0);
-    Constant *C = ConstantInt::get(Ptr->getContext(), BasePtr);
+    BaseIntVal.insertBits(BaseIntVal.trunc(BitWidth) + Offset, 0);
+    Constant *C = ConstantInt::get(Ptr->getContext(), BaseIntVal);
     return ConstantExpr::getIntToPtr(C, ResTy);
   }
 
@@ -1482,26 +1483,35 @@ Constant *llvm::ConstantFoldFPInstOperands(unsigned Opcode, Constant *LHS,
 Constant *llvm::ConstantFoldCastOperand(unsigned Opcode, Constant *C,
                                         Type *DestTy, const DataLayout &DL) {
   assert(Instruction::isCast(Opcode));
+
+  if (auto *CE = dyn_cast<ConstantExpr>(C))
+    if (CE->isCast())
+      if (unsigned NewOp = CastInst::isEliminableCastPair(
+              Instruction::CastOps(CE->getOpcode()),
+              Instruction::CastOps(Opcode), CE->getOperand(0)->getType(),
+              C->getType(), DestTy, &DL))
+        return ConstantFoldCastOperand(NewOp, CE->getOperand(0), DestTy, DL);
+
   switch (Opcode) {
   default:
     llvm_unreachable("Missing case");
   case Instruction::PtrToAddr:
-    // TODO: Add some of the ptrtoint folds here as well.
-    break;
   case Instruction::PtrToInt:
     if (auto *CE = dyn_cast<ConstantExpr>(C)) {
       Constant *FoldedValue = nullptr;
-      // If the input is a inttoptr, eliminate the pair.  This requires knowing
+      // If the input is an inttoptr, eliminate the pair.  This requires knowing
       // the width of a pointer, so it can't be done in ConstantExpr::getCast.
       if (CE->getOpcode() == Instruction::IntToPtr) {
-        // zext/trunc the inttoptr to pointer size.
-        FoldedValue = ConstantFoldIntegerCast(CE->getOperand(0),
-                                              DL.getIntPtrType(CE->getType()),
+        // zext/trunc the inttoptr to pointer/address size.
+        Type *MidTy = Opcode == Instruction::PtrToInt
+                          ? DL.getAddressType(CE->getType())
+                          : DL.getIntPtrType(CE->getType());
+        FoldedValue = ConstantFoldIntegerCast(CE->getOperand(0), MidTy,
                                               /*IsSigned=*/false, DL);
       } else if (auto *GEP = dyn_cast<GEPOperator>(CE)) {
         // If we have GEP, we can perform the following folds:
-        // (ptrtoint (gep null, x)) -> x
-        // (ptrtoint (gep (gep null, x), y) -> x + y, etc.
+        // (ptrtoint/ptrtoaddr (gep null, x)) -> x
+        // (ptrtoint/ptrtoaddr (gep (gep null, x), y) -> x + y, etc.
         unsigned BitWidth = DL.getIndexTypeSizeInBits(GEP->getType());
         APInt BaseOffset(BitWidth, 0);
         auto *Base = cast<Constant>(GEP->stripAndAccumulateConstantOffsets(
@@ -1509,7 +1519,8 @@ Constant *llvm::ConstantFoldCastOperand(unsigned Opcode, Constant *C,
         if (Base->isNullValue()) {
           FoldedValue = ConstantInt::get(CE->getContext(), BaseOffset);
         } else {
-          // ptrtoint (gep i8, Ptr, (sub 0, V)) -> sub (ptrtoint Ptr), V
+          // ptrtoint/ptrtoaddr (gep i8, Ptr, (sub 0, V))
+          //   -> sub (ptrtoint/ptrtoaddr Ptr), V
           if (GEP->getNumIndices() == 1 &&
               GEP->getSourceElementType()->isIntegerTy(8)) {
             auto *Ptr = cast<Constant>(GEP->getPointerOperand());
@@ -1519,12 +1530,13 @@ Constant *llvm::ConstantFoldCastOperand(unsigned Opcode, Constant *C,
                 Sub->getOpcode() == Instruction::Sub &&
                 Sub->getOperand(0)->isNullValue())
               FoldedValue = ConstantExpr::getSub(
-                  ConstantExpr::getPtrToInt(Ptr, IntIdxTy), Sub->getOperand(1));
+                  ConstantExpr::getCast(Opcode, Ptr, IntIdxTy),
+                  Sub->getOperand(1));
           }
         }
       }
       if (FoldedValue) {
-        // Do a zext or trunc to get to the ptrtoint dest size.
+        // Do a zext or trunc to get to the ptrtoint/ptrtoaddr dest size.
         return ConstantFoldIntegerCast(FoldedValue, DestTy, /*IsSigned=*/false,
                                        DL);
       }
@@ -2151,30 +2163,51 @@ Constant *ConstantFoldBinaryFP(double (*NativeFP)(double, double),
 }
 
 Constant *constantFoldVectorReduce(Intrinsic::ID IID, Constant *Op) {
-  FixedVectorType *VT = dyn_cast<FixedVectorType>(Op->getType());
+  auto *OpVT = cast<VectorType>(Op->getType());
+
+  // This is the same as the underlying binops - poison propagates.
+  if (Op->containsPoisonElement())
+    return PoisonValue::get(OpVT->getElementType());
+
+  // Shortcut non-accumulating reductions.
+  if (Constant *SplatVal = Op->getSplatValue()) {
+    switch (IID) {
+    case Intrinsic::vector_reduce_and:
+    case Intrinsic::vector_reduce_or:
+    case Intrinsic::vector_reduce_smin:
+    case Intrinsic::vector_reduce_smax:
+    case Intrinsic::vector_reduce_umin:
+    case Intrinsic::vector_reduce_umax:
+      return SplatVal;
+    case Intrinsic::vector_reduce_add:
+      if (SplatVal->isNullValue())
+        return SplatVal;
+      break;
+    case Intrinsic::vector_reduce_mul:
+      if (SplatVal->isNullValue() || SplatVal->isOneValue())
+        return SplatVal;
+      break;
+    case Intrinsic::vector_reduce_xor:
+      if (SplatVal->isNullValue())
+        return SplatVal;
+      if (OpVT->getElementCount().isKnownMultipleOf(2))
+        return Constant::getNullValue(OpVT->getElementType());
+      break;
+    }
+  }
+
+  FixedVectorType *VT = dyn_cast<FixedVectorType>(OpVT);
   if (!VT)
     return nullptr;
 
-  // This isn't strictly necessary, but handle the special/common case of zero:
-  // all integer reductions of a zero input produce zero.
-  if (isa<ConstantAggregateZero>(Op))
-    return ConstantInt::get(VT->getElementType(), 0);
-
-  // This is the same as the underlying binops - poison propagates.
-  if (isa<PoisonValue>(Op) || Op->containsPoisonElement())
-    return PoisonValue::get(VT->getElementType());
-
   // TODO: Handle undef.
-  if (!isa<ConstantVector>(Op) && !isa<ConstantDataVector>(Op))
-    return nullptr;
-
-  auto *EltC = dyn_cast<ConstantInt>(Op->getAggregateElement(0U));
+  auto *EltC = dyn_cast_or_null<ConstantInt>(Op->getAggregateElement(0U));
   if (!EltC)
     return nullptr;
 
   APInt Acc = EltC->getValue();
   for (unsigned I = 1, E = VT->getNumElements(); I != E; I++) {
-    if (!(EltC = dyn_cast<ConstantInt>(Op->getAggregateElement(I))))
+    if (!(EltC = dyn_cast_or_null<ConstantInt>(Op->getAggregateElement(I))))
       return nullptr;
     const APInt &X = EltC->getValue();
     switch (IID) {
@@ -2625,8 +2658,17 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
     case Intrinsic::nvvm_d2ull_rp:
     case Intrinsic::nvvm_d2ull_rz: {
       // In float-to-integer conversion, NaN inputs are converted to 0.
-      if (U.isNaN())
-        return ConstantInt::get(Ty, 0);
+      if (U.isNaN()) {
+        // In float-to-integer conversion, NaN inputs are converted to 0
+        // when the source and destination bitwidths are both less than 64.
+        if (nvvm::FPToIntegerIntrinsicNaNZero(IntrinsicID))
+          return ConstantInt::get(Ty, 0);
+
+        // Otherwise, the most significant bit is set.
+        unsigned BitWidth = Ty->getIntegerBitWidth();
+        uint64_t Val = 1ULL << (BitWidth - 1);
+        return ConstantInt::get(Ty, APInt(BitWidth, Val, /*IsSigned=*/false));
+      }
 
       APFloat::roundingMode RMode =
           nvvm::GetFPToIntegerRoundingMode(IntrinsicID);
@@ -2636,13 +2678,11 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
       APSInt ResInt(Ty->getIntegerBitWidth(), !IsSigned);
       auto FloatToRound = IsFTZ ? FTZPreserveSign(U) : U;
 
+      // Return max/min value for integers if the result is +/-inf or
+      // is too large to fit in the result's integer bitwidth.
       bool IsExact = false;
-      APFloat::opStatus Status =
-          FloatToRound.convertToInteger(ResInt, RMode, &IsExact);
-
-      if (Status != APFloat::opInvalidOp)
-        return ConstantInt::get(Ty, ResInt);
-      return nullptr;
+      FloatToRound.convertToInteger(ResInt, RMode, &IsExact);
+      return ConstantInt::get(Ty, ResInt);
     }
     }
 
@@ -3040,35 +3080,25 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
       Val = Val | Val << 1;
       return ConstantInt::get(Ty, Val);
     }
-
-    default:
-      return nullptr;
     }
   }
 
-  switch (IntrinsicID) {
-  default: break;
-  case Intrinsic::vector_reduce_add:
-  case Intrinsic::vector_reduce_mul:
-  case Intrinsic::vector_reduce_and:
-  case Intrinsic::vector_reduce_or:
-  case Intrinsic::vector_reduce_xor:
-  case Intrinsic::vector_reduce_smin:
-  case Intrinsic::vector_reduce_smax:
-  case Intrinsic::vector_reduce_umin:
-  case Intrinsic::vector_reduce_umax:
-    if (Constant *C = constantFoldVectorReduce(IntrinsicID, Operands[0]))
-      return C;
-    break;
-  }
-
-  // Support ConstantVector in case we have an Undef in the top.
-  if (isa<ConstantVector>(Operands[0]) ||
-      isa<ConstantDataVector>(Operands[0]) ||
-      isa<ConstantAggregateZero>(Operands[0])) {
+  if (Operands[0]->getType()->isVectorTy()) {
     auto *Op = cast<Constant>(Operands[0]);
     switch (IntrinsicID) {
     default: break;
+    case Intrinsic::vector_reduce_add:
+    case Intrinsic::vector_reduce_mul:
+    case Intrinsic::vector_reduce_and:
+    case Intrinsic::vector_reduce_or:
+    case Intrinsic::vector_reduce_xor:
+    case Intrinsic::vector_reduce_smin:
+    case Intrinsic::vector_reduce_smax:
+    case Intrinsic::vector_reduce_umin:
+    case Intrinsic::vector_reduce_umax:
+      if (Constant *C = constantFoldVectorReduce(IntrinsicID, Operands[0]))
+        return C;
+      break;
     case Intrinsic::x86_sse_cvtss2si:
     case Intrinsic::x86_sse_cvtss2si64:
     case Intrinsic::x86_sse2_cvtsd2si:
@@ -3097,10 +3127,15 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
     case Intrinsic::wasm_alltrue:
       // Check each element individually
       unsigned E = cast<FixedVectorType>(Op->getType())->getNumElements();
-      for (unsigned I = 0; I != E; ++I)
-        if (Constant *Elt = Op->getAggregateElement(I))
-          if (Elt->isZeroValue())
-            return ConstantInt::get(Ty, 0);
+      for (unsigned I = 0; I != E; ++I) {
+        Constant *Elt = Op->getAggregateElement(I);
+        // Return false as soon as we find a non-true element.
+        if (Elt && Elt->isZeroValue())
+          return ConstantInt::get(Ty, 0);
+        // Bail as soon as we find an element we cannot prove to be true.
+        if (!Elt || !isa<ConstantInt>(Elt))
+          return nullptr;
+      }
 
       return ConstantInt::get(Ty, 1);
     }
@@ -4045,8 +4080,8 @@ static Constant *ConstantFoldFixedVectorCall(
   switch (IntrinsicID) {
   case Intrinsic::masked_load: {
     auto *SrcPtr = Operands[0];
-    auto *Mask = Operands[2];
-    auto *Passthru = Operands[3];
+    auto *Mask = Operands[1];
+    auto *Passthru = Operands[2];
 
     Constant *VecData = ConstantFoldLoadFromConstPtr(SrcPtr, FVTy, DL);
 

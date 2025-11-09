@@ -58,15 +58,14 @@ class LLVM_ABI GISelValueTracking : public GISelChangeObserver {
 
 public:
   GISelValueTracking(MachineFunction &MF, unsigned MaxDepth = 6);
-  virtual ~GISelValueTracking() = default;
+  ~GISelValueTracking() override = default;
 
   const MachineFunction &getMachineFunction() const { return MF; }
 
   const DataLayout &getDataLayout() const { return DL; }
 
-  virtual void computeKnownBitsImpl(Register R, KnownBits &Known,
-                                    const APInt &DemandedElts,
-                                    unsigned Depth = 0);
+  void computeKnownBitsImpl(Register R, KnownBits &Known,
+                            const APInt &DemandedElts, unsigned Depth = 0);
 
   unsigned computeNumSignBits(Register R, const APInt &DemandedElts,
                               unsigned Depth = 0);

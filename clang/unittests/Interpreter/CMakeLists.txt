@@ -37,7 +37,7 @@ set(CLANG_REPL_TEST_SOURCES
   CodeCompletionTest.cpp
 )
 
-if(TARGET compiler-rt)
+if(TARGET compiler-rt AND LLVM_ON_UNIX)
   list(APPEND CLANG_REPL_TEST_SOURCES
     OutOfProcessInterpreterTests.cpp
   )
@@ -61,7 +61,7 @@ add_distinct_clang_unittest(ClangReplInterpreterTests
   ${LLVM_COMPONENTS_TO_LINK}
   )
 
-if(TARGET compiler-rt)
+if(TARGET compiler-rt AND LLVM_ON_UNIX)
   add_dependencies(ClangReplInterpreterTests 
     llvm-jitlink-executor 
     compiler-rt

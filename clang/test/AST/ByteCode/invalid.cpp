@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -fcxx-exceptions -std=c++20 -fexperimental-new-constant-interpreter -verify=expected,both %s
-// RUN: %clang_cc1 -fcxx-exceptions -std=c++20 -verify=ref,both %s
+// RUN: %clang_cc1 -fcxx-exceptions -std=c++20                                         -verify=ref,both %s
 
 namespace Throw {
 
@@ -66,3 +66,26 @@ struct S {
 S s;
 S *sp[2] = {&s, &s};
 S *&spp = sp[1];
+
+namespace InvalidBitCast {
+  void foo() {
+    const long long int i = 1; // both-note {{declared const here}}
+    if (*(double *)&i == 2) {
+      i = 0; // both-error {{cannot assign to variable}}
+    }
+  }
+
+  struct S2 {
+    void *p;
+  };
+  struct T {
+    S2 s;
+  };
+  constexpr T t = {{nullptr}};
+  constexpr void *foo2() { return ((void **)&t)[0]; } // both-error {{never produces a constant expression}} \
+                                                      // both-note 2{{cast that performs the conversions of a reinterpret_cast}}
+  constexpr auto x = foo2(); // both-error {{must be initialized by a constant expression}} \
+                             // both-note {{in call to}}
+
+
+}

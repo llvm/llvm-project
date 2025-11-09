@@ -51,7 +51,7 @@ int test3(int x) {
 // CHECK: cir.func dso_local @test3
   return noProto3(x);
   // CHECK:  [[GGO:%.*]] = cir.get_global @noProto3 : !cir.ptr<!cir.func<(...) -> !s32i>>
-  // CHECK:  [[CAST:%.*]] = cir.cast(bitcast, [[GGO]] : !cir.ptr<!cir.func<(...) -> !s32i>>), !cir.ptr<!cir.func<(!s32i) -> !s32i>>
+  // CHECK:  [[CAST:%.*]] = cir.cast bitcast [[GGO]] : !cir.ptr<!cir.func<(...) -> !s32i>> -> !cir.ptr<!cir.func<(!s32i) -> !s32i>>
   // CHECK:  {{%.*}} = cir.call [[CAST]](%{{[0-9]+}}) : (!cir.ptr<!cir.func<(!s32i) -> !s32i>>, !s32i) -> !s32i
 }
 
@@ -68,7 +68,7 @@ int noProto4() { return 0; }
 int test4(int x) {
   return noProto4(x); // Even if we know the definition, this should compile.
   // CHECK:  [[GGO:%.*]] = cir.get_global @noProto4 : !cir.ptr<!cir.func<() -> !s32i>>
-  // CHECK:  [[CAST:%.*]] = cir.cast(bitcast, [[GGO]] : !cir.ptr<!cir.func<() -> !s32i>>), !cir.ptr<!cir.func<(!s32i) -> !s32i>>
+  // CHECK:  [[CAST:%.*]] = cir.cast bitcast [[GGO]] : !cir.ptr<!cir.func<() -> !s32i>> -> !cir.ptr<!cir.func<(!s32i) -> !s32i>>
   // CHECK:  {{%.*}} = cir.call [[CAST]]({{%.*}}) : (!cir.ptr<!cir.func<(!s32i) -> !s32i>>, !s32i) -> !s32i
 }
 
@@ -77,7 +77,7 @@ int noProto5();
 int test5(int x) {
   return noProto5();
   // CHECK:  [[GGO:%.*]] = cir.get_global @noProto5 : !cir.ptr<!cir.func<(!s32i) -> !s32i>>
-  // CHECK:  [[CAST:%.*]] = cir.cast(bitcast, [[GGO]] : !cir.ptr<!cir.func<(!s32i) -> !s32i>>), !cir.ptr<!cir.func<() -> !s32i>>
+  // CHECK:  [[CAST:%.*]] = cir.cast bitcast [[GGO]] : !cir.ptr<!cir.func<(!s32i) -> !s32i>> -> !cir.ptr<!cir.func<() -> !s32i>>
   // CHECK:  {{%.*}} = cir.call [[CAST]]() : (!cir.ptr<!cir.func<() -> !s32i>>) -> !s32i
 }
 int noProto5(int x) { return x; }

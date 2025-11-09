@@ -327,6 +327,7 @@ protected:
 
   /// Creates a local primitive value.
   unsigned allocateLocalPrimitive(DeclTy &&Decl, PrimType Ty, bool IsConst,
+                                  bool IsVolatile = false,
                                   const ValueDecl *ExtendingDecl = nullptr,
                                   ScopeKind SC = ScopeKind::Block,
                                   bool IsConstexprUnknown = false);
@@ -423,6 +424,8 @@ private:
   bool maybeEmitDeferredVarInit(const VarDecl *VD);
 
   bool refersToUnion(const Expr *E);
+
+  bool isValidBitCast(const CastExpr *E);
 
 protected:
   /// Variable to storage mapping.

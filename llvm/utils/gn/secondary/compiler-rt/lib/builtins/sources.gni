@@ -526,6 +526,13 @@ if (current_cpu == "ve") {
   ]
 }
 
+if (current_cpu == "wasm") {
+  builtins_sources += [
+    "wasm/__c_longjmp.S",
+    "wasm/__cpp_exception.S",
+  ]
+}
+
 if (!compiler_rt_exclude_atomic_builtin) {
   builtins_sources += [ "atomic.c" ]
 }

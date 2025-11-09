@@ -137,6 +137,7 @@ add_llvm_component_library(LLVMAnalysis
   RegionPass.cpp
   RegionPrinter.cpp
   ReplayInlineAdvisor.cpp
+  RuntimeLibcallInfo.cpp
   ScalarEvolution.cpp
   ScalarEvolutionAliasAnalysis.cpp
   ScalarEvolutionDivision.cpp

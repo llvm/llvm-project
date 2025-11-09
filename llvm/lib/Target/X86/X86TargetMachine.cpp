@@ -90,14 +90,14 @@ extern "C" LLVM_C_ABI void LLVMInitializeX86Target() {
   initializeX86ExecutionDomainFixPass(PR);
   initializeX86DomainReassignmentPass(PR);
   initializeX86AvoidSFBPassPass(PR);
-  initializeX86AvoidTrailingCallPassPass(PR);
+  initializeX86AvoidTrailingCallLegacyPassPass(PR);
   initializeX86SpeculativeLoadHardeningPassPass(PR);
   initializeX86SpeculativeExecutionSideEffectSuppressionPass(PR);
   initializeX86FlagsCopyLoweringPassPass(PR);
   initializeX86LoadValueInjectionLoadHardeningPassPass(PR);
   initializeX86LoadValueInjectionRetHardeningPassPass(PR);
   initializeX86OptimizeLEAPassPass(PR);
-  initializeX86PartialReductionPass(PR);
+  initializeX86PartialReductionLegacyPass(PR);
   initializePseudoProbeInserterPass(PR);
   initializeX86ReturnThunksPass(PR);
   initializeX86DAGToDAGISelLegacyPass(PR);
@@ -112,7 +112,7 @@ extern "C" LLVM_C_ABI void LLVMInitializeX86Target() {
 
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
   if (TT.isOSBinFormatMachO()) {
-    if (TT.getArch() == Triple::x86_64)
+    if (TT.isX86_64())
       return std::make_unique<X86_64MachoTargetObjectFile>();
     return std::make_unique<TargetLoweringObjectFileMachO>();
   }
@@ -120,14 +120,14 @@ static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
   if (TT.isOSBinFormatCOFF())
     return std::make_unique<TargetLoweringObjectFileCOFF>();
 
-  if (TT.getArch() == Triple::x86_64)
+  if (TT.isX86_64())
     return std::make_unique<X86_64ELFTargetObjectFile>();
   return std::make_unique<X86ELFTargetObjectFile>();
 }
 
 static Reloc::Model getEffectiveRelocModel(const Triple &TT, bool JIT,
                                            std::optional<Reloc::Model> RM) {
-  bool is64Bit = TT.getArch() == Triple::x86_64;
+  bool is64Bit = TT.isX86_64();
   if (!RM) {
     // JIT codegen should use static relocations by default, since it's
     // typically executed in process and not relocatable.
@@ -169,7 +169,7 @@ static Reloc::Model getEffectiveRelocModel(const Triple &TT, bool JIT,
 static CodeModel::Model
 getEffectiveX86CodeModel(const Triple &TT, std::optional<CodeModel::Model> CM,
                          bool JIT) {
-  bool Is64Bit = TT.getArch() == Triple::x86_64;
+  bool Is64Bit = TT.isX86_64();
   if (CM) {
     if (*CM == CodeModel::Tiny)
       reportFatalUsageError("target does not support the tiny CodeModel");
@@ -402,7 +402,7 @@ char X86ExecutionDomainFix::ID;
 
 INITIALIZE_PASS_BEGIN(X86ExecutionDomainFix, "x86-execution-domain-fix",
   "X86 Execution Domain Fix", false, false)
-INITIALIZE_PASS_DEPENDENCY(ReachingDefAnalysis)
+INITIALIZE_PASS_DEPENDENCY(ReachingDefInfoWrapperPass)
 INITIALIZE_PASS_END(X86ExecutionDomainFix, "x86-execution-domain-fix",
   "X86 Execution Domain Fix", false, false)
 
@@ -422,14 +422,14 @@ void X86PassConfig::addIRPasses() {
 
   // We add both pass anyway and when these two passes run, we skip the pass
   // based on the option level and option attribute.
-  addPass(createX86LowerAMXIntrinsicsPass());
-  addPass(createX86LowerAMXTypePass());
+  addPass(createX86LowerAMXIntrinsicsLegacyPass());
+  addPass(createX86LowerAMXTypeLegacyPass());
 
   TargetPassConfig::addIRPasses();
 
   if (TM->getOptLevel() != CodeGenOptLevel::None) {
     addPass(createInterleavedAccessPass());
-    addPass(createX86PartialReductionPass());
+    addPass(createX86PartialReductionLegacyPass());
   }
 
   // Add passes that handle indirect branch removal and insertion of a retpoline
@@ -440,7 +440,7 @@ void X86PassConfig::addIRPasses() {
   // Add Control Flow Guard checks.
   const Triple &TT = TM->getTargetTriple();
   if (TT.isOSWindows()) {
-    if (TT.getArch() == Triple::x86_64) {
+    if (TT.isX86_64()) {
       addPass(createCFGuardDispatchPass());
     } else {
       addPass(createCFGuardCheckPass());
@@ -499,7 +499,7 @@ bool X86PassConfig::addILPOpts() {
 bool X86PassConfig::addPreISel() {
   // Only add this pass for 32-bit x86 Windows.
   const Triple &TT = TM->getTargetTriple();
-  if (TT.isOSWindows() && TT.getArch() == Triple::x86)
+  if (TT.isOSWindows() && TT.isX86_32())
     addPass(createX86WinEHStatePass());
   return true;
 }
@@ -588,8 +588,8 @@ void X86PassConfig::addPreEmitPass2() {
 
   // Insert extra int3 instructions after trailing call instructions to avoid
   // issues in the unwinder.
-  if (TT.isOSWindows() && TT.getArch() == Triple::x86_64)
-    addPass(createX86AvoidTrailingCallPass());
+  if (TT.isOSWindows() && TT.isX86_64())
+    addPass(createX86AvoidTrailingCallLegacyPass());
 
   // Verify basic block incoming and outgoing cfa offset and register values and
   // correct CFA calculation rule where needed by inserting appropriate CFI
@@ -625,7 +625,7 @@ void X86PassConfig::addPreEmitPass2() {
 
   // Analyzes and emits pseudos to support Win x64 Unwind V2. This pass must run
   // after all real instructions have been added to the epilog.
-  if (TT.isOSWindows() && (TT.getArch() == Triple::x86_64))
+  if (TT.isOSWindows() && TT.isX86_64())
     addPass(createX86WinEHUnwindV2Pass());
 }
 
