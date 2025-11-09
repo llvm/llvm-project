@@ -141,7 +141,9 @@ public:
   /// lattice elements don't have a `meet` method, this is a no-op.
   template <typename VT>
   ChangeResult meet(const VT &rhs) {
-    if constexpr (lattice_has_meet<VT>::value) {
+    if constexpr (!lattice_has_meet<VT>::value) {
+      return ChangeResult::NoChange;
+    } else {
       ValueT newValue = ValueT::meet(value, rhs);
       assert(ValueT::meet(newValue, value) == newValue &&
              "expected `meet` to be monotonic");
@@ -155,8 +157,6 @@ public:
       value = newValue;
       return ChangeResult::Change;
     }
-
-    return ChangeResult::NoChange;
   }
 
   /// Print the lattice element.
