@@ -72,7 +72,9 @@ static void analyzeICmp(ScalarEvolution &SE, ICmpInst *ICmp,
     // value from backedge.
     if (Cond.AddRecSCEV && isa<PHINode>(Cond.AddRecValue)) {
       PHINode *PN = cast<PHINode>(Cond.AddRecValue);
-      Cond.NonPHIAddRecValue = PN->getIncomingValueForBlock(L.getLoopLatch());
+      int Idx = PN->getBasicBlockIndex(L.getLoopLatch());
+      if (Idx >= 0)
+        Cond.NonPHIAddRecValue = PN->getIncomingValue(Idx);
     }
   }
 }
