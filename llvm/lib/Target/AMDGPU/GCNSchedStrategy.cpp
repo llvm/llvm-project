@@ -1916,7 +1916,9 @@ void PreRARematStage::rematerialize() {
       MF.getInfo<SIMachineFunctionInfo>()->getDynamicVGPRBlockSize();
   AchievedOcc = MFI.getMaxWavesPerEU();
   for (auto &[I, OriginalRP] : ImpactedRegions) {
-    bool IsEmptyRegion = DAG.Regions[I].first == DAG.Regions[I].second;
+    auto NonDbgMBBI = skipDebugInstructionsForward(DAG.Regions[I].first,
+                                                   DAG.Regions[I].second);
+    bool IsEmptyRegion = NonDbgMBBI == DAG.Regions[I].second;
     RescheduleRegions[I] = !IsEmptyRegion;
     if (!RecomputeRP.contains(I))
       continue;
@@ -1926,16 +1928,9 @@ void PreRARematStage::rematerialize() {
       RP = getRegPressure(DAG.MRI, DAG.LiveIns[I]);
     } else {
       GCNDownwardRPTracker RPT(*DAG.LIS);
-      auto *NonDbgMI = &*skipDebugInstructionsForward(DAG.Regions[I].first,
-                                                      DAG.Regions[I].second);
-      if (NonDbgMI == DAG.Regions[I].second) {
-        // Region is non-empty but contains only debug instructions.
-        RP = getRegPressure(DAG.MRI, DAG.LiveIns[I]);
-      } else {
-        RPT.reset(*NonDbgMI, &DAG.LiveIns[I]);
-        RPT.advance(DAG.Regions[I].second);
-        RP = RPT.moveMaxPressure();
-      }
+      RPT.reset(*NonDbgMBBI, &DAG.LiveIns[I]);
+      RPT.advance(DAG.Regions[I].second);
+      RP = RPT.moveMaxPressure();
     }
     DAG.Pressure[I] = RP;
     AchievedOcc =
