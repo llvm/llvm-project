@@ -5,8 +5,8 @@ permissions:
 
 on:
   push:
-    #branches:
-    #  - main
+    branches:
+      - main
     paths:
       - .github/workflows/build-ci-container-windows.yml
       - '.github/workflows/containers/github-action-ci-windows/**'
@@ -17,7 +17,7 @@ on:
 
 jobs:
   build-ci-container-windows:
-    #if: github.repository_owner == 'llvm'
+    if: github.repository_owner == 'llvm'
     runs-on: windows-2022
     outputs:
       container-name: ${{ steps.vars.outputs.container-name }}
