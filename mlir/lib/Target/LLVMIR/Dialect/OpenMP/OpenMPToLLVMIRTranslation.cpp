@@ -4151,6 +4151,26 @@ convertOmpCancellationPoint(omp::CancellationPointOp op,
   return success();
 }
 
+static LLVM::GlobalOp
+getGlobalFromSymbol(Operation *symOp,
+                    LLVM::ModuleTranslation &moduleTranslation,
+                    Operation *opInst) {
+
+  // Handle potential address space cast
+  if (auto asCast = dyn_cast<LLVM::AddrSpaceCastOp>(symOp))
+    symOp = asCast.getOperand().getDefiningOp();
+
+  // Check if we have an AddressOfOp
+  if (!isa<LLVM::AddressOfOp>(symOp)) {
+    if (opInst)
+      opInst->emitError("Addressing symbol not found");
+    return nullptr;
+  }
+
+  LLVM::AddressOfOp addressOfOp = cast<LLVM::AddressOfOp>(symOp);
+  return addressOfOp.getGlobal(moduleTranslation.symbolTable());
+}
+
 /// Converts an OpenMP Threadprivate operation into LLVM IR using
 /// OpenMPIRBuilder.
 static LogicalResult
@@ -4166,15 +4186,10 @@ convertOmpThreadprivate(Operation &opInst, llvm::IRBuilderBase &builder,
   Value symAddr = threadprivateOp.getSymAddr();
   auto *symOp = symAddr.getDefiningOp();
 
-  if (auto asCast = dyn_cast<LLVM::AddrSpaceCastOp>(symOp))
-    symOp = asCast.getOperand().getDefiningOp();
-
-  if (!isa<LLVM::AddressOfOp>(symOp))
-    return opInst.emitError("Addressing symbol not found");
-  LLVM::AddressOfOp addressOfOp = dyn_cast<LLVM::AddressOfOp>(symOp);
-
   LLVM::GlobalOp global =
-      addressOfOp.getGlobal(moduleTranslation.symbolTable());
+      getGlobalFromSymbol(symOp, moduleTranslation, &opInst);
+  if (!global)
+    return failure();
   llvm::GlobalValue *globalValue = moduleTranslation.lookupGlobal(global);
   llvm::Type *type = globalValue->getValueType();
   llvm::TypeSize typeSize =
@@ -7117,17 +7132,13 @@ convertOmpGroupprivate(Operation &opInst, llvm::IRBuilderBase &builder,
   }
 
   Value symAddr = groupprivateOp.getSymAddr();
-  auto *symOp = symAddr.getDefiningOp();
-
-  if (auto asCast = dyn_cast<LLVM::AddrSpaceCastOp>(symOp))
-    symOp = asCast.getOperand().getDefiningOp();
-
-  if (!isa<LLVM::AddressOfOp>(symOp))
-    return opInst.emitError("Addressing symbol not found");
-  LLVM::AddressOfOp addressOfOp = dyn_cast<LLVM::AddressOfOp>(symOp);
+  Operation *symOp = symAddr.getDefiningOp();
 
   LLVM::GlobalOp global =
-      addressOfOp.getGlobal(moduleTranslation.symbolTable());
+      getGlobalFromSymbol(symOp, moduleTranslation, &opInst);
+  if (!global)
+    return failure();
+
   llvm::GlobalValue *globalValue = moduleTranslation.lookupGlobal(global);
   llvm::Value *resultPtr;
 
@@ -7148,6 +7159,11 @@ convertOmpGroupprivate(Operation &opInst, llvm::IRBuilderBase &builder,
     if (!resultPtr)
       resultPtr = globalValue;
   }
+
+  llvm::Type *ptrTy = builder.getPtrTy();
+  if (resultPtr->getType() != ptrTy)
+    resultPtr = builder.CreateBitCast(resultPtr, ptrTy);
+
   moduleTranslation.mapValue(opInst.getResult(0), resultPtr);
   return success();
 }

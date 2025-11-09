@@ -33,7 +33,7 @@ module attributes {omp.is_target_device = true, llvm.target_triple = "amdgcn-amd
 
 // CHECK: define {{.*}} amdgpu_kernel void @__omp_offloading_{{.*}}_{{.*}}__QQmain_{{.*}}(ptr %{{.*}}, ptr %{{.*}}) #{{[0-9]+}} {
 // CHECK-LABEL:  omp.target:
-// CHECK-NEXT :    %[[LOAD:.*]] = load i32, ptr %3, align 4
+// CHECK-NEXT :    %[[LOAD:.*]] = load i32, ptr %{{.*}}, align 4
 // CHECK-NEXT :    %[[ALLOC_any:.*]] = call ptr @__kmpc_alloc_shared(i64 4)
 // CHECK-NEXT :    store i32 %[[LOAD]], ptr %[[ALLOC_any]], align 4
 // CHECK-NEXT :    store i32 %[[LOAD]], ptr @global_host, align 4
