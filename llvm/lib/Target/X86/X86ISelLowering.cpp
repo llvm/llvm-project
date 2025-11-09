@@ -8432,7 +8432,6 @@ static bool isFMAddSubOrFMSubAdd(const X86Subtarget &Subtarget,
   // DAGCombiner::visitFADDForFMACombine. It would be good to have one
   // function that would answer if it is Ok to fuse MUL + ADD to FMADD
   // or MUL + ADDSUB to FMADDSUB.
-  const TargetOptions &Options = DAG.getTarget().Options;
   bool AllowFusion =
       (AllowSubAddOrAddSubContract && Opnd0->getFlags().hasAllowContract());
   if (!AllowFusion)
