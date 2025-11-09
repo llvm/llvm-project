@@ -1217,6 +1217,14 @@ macro(add_llvm_executable name)
     add_llvm_symbol_exports( ${name} ${LLVM_EXPORTED_SYMBOL_FILE} )
   endif(LLVM_EXPORTED_SYMBOL_FILE)
 
+  # The default import library suffix that cmake uses for cygwin/mingw is
+  # ".dll.a", but for clang.exe that causes a collision with libclang.dll,
+  # where the import libraries of both get named libclang.dll.a. Use a suffix
+  # of ".exe.a" to avoid this.
+  if(CYGWIN OR MINGW)
+    set_target_properties(${name} PROPERTIES IMPORT_SUFFIX ".exe.a")
+  endif()
+
   if (DEFINED LLVM_ENABLE_EXPORTED_SYMBOLS_IN_EXECUTABLES AND
       NOT LLVM_ENABLE_EXPORTED_SYMBOLS_IN_EXECUTABLES AND
       NOT ARG_EXPORT_SYMBOLS)
@@ -1517,13 +1525,6 @@ function(export_executable_symbols target)
     # transitive link against only the libraries whose symbols
     # we aren't exporting.
     set_target_properties(${target} PROPERTIES INTERFACE_LINK_LIBRARIES "${other_libs}")
-    # The default import library suffix that cmake uses for cygwin/mingw is
-    # ".dll.a", but for clang.exe that causes a collision with libclang.dll,
-    # where the import libraries of both get named libclang.dll.a. Use a suffix
-    # of ".exe.a" to avoid this.
-    if(CYGWIN OR MINGW)
-      set_target_properties(${target} PROPERTIES IMPORT_SUFFIX ".exe.a")
-    endif()
   elseif(NOT (WIN32 OR CYGWIN))
     # On Windows auto-exporting everything doesn't work because of the limit on
     # the size of the exported symbol table, but on other platforms we can do
