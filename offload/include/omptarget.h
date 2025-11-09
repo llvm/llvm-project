@@ -103,10 +103,6 @@ enum TargetAllocTy : int32_t {
   TARGET_ALLOC_DEFAULT,
 };
 
-inline KernelArgsTy CTorDTorKernelArgs = {
-    1,       0, nullptr,   nullptr,   nullptr,   nullptr, nullptr,
-    nullptr, 0, {0, 0, 0}, {1, 0, 0}, {1, 0, 0}, 0};
-
 struct DeviceTy;
 
 /// The libomptarget wrapper around a __tgt_async_info object directly
