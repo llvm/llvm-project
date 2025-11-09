@@ -346,6 +346,39 @@ define <vscale x 4 x i32> @vector_compress_nxv4i32_passthru(<vscale x 4 x i32> %
   ret <vscale x 4 x i32> %ret
 }
 
+define <vscale x 4 x i32> @test_compress_nvx8f64_knownbits(<vscale x 4 x i16> %vec, <vscale x 4 x i1> %mask, <vscale x 4 x i32> %passthru) nounwind {
+; CHECK-LABEL: test_compress_nvx8f64_knownbits:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
+; CHECK-NEXT:    vzext.vf2 v12, v8
+; CHECK-NEXT:    vand.vi v8, v10, 3
+; CHECK-NEXT:    vsetvli zero, zero, e32, m2, tu, ma
+; CHECK-NEXT:    vcompress.vm v8, v12, v0
+; CHECK-NEXT:    ret
+  %xvec = zext <vscale x 4 x i16> %vec to <vscale x 4 x i32>
+  %xpassthru = and <vscale x 4 x i32> %passthru, splat (i32 3)
+  %out = call <vscale x 4 x i32> @llvm.experimental.vector.compress(<vscale x 4 x i32> %xvec, <vscale x 4 x i1> %mask, <vscale x 4 x i32> %xpassthru)
+  %res = and <vscale x 4 x i32> %out, splat (i32 65535)
+  ret <vscale x 4 x i32> %res
+}
+
+define <vscale x 4 x i32> @test_compress_nv8xf64_numsignbits(<vscale x 4 x i16> %vec, <vscale x 4 x i1> %mask, <vscale x 4 x i32> %passthru) nounwind {
+; CHECK-LABEL: test_compress_nv8xf64_numsignbits:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
+; CHECK-NEXT:    vsext.vf2 v12, v8
+; CHECK-NEXT:    vand.vi v8, v10, 3
+; CHECK-NEXT:    vsetvli zero, zero, e32, m2, tu, ma
+; CHECK-NEXT:    vcompress.vm v8, v12, v0
+; CHECK-NEXT:    ret
+  %xvec = sext <vscale x 4 x i16> %vec to <vscale x 4 x i32>
+  %xpassthru = and <vscale x 4 x i32> %passthru, splat (i32 3)
+  %out = call <vscale x 4 x i32> @llvm.experimental.vector.compress(<vscale x 4 x i32> %xvec, <vscale x 4 x i1> %mask, <vscale x 4 x i32> %xpassthru)
+  %shl = shl <vscale x 4 x i32> %out, splat (i32 16)
+  %res = ashr <vscale x 4 x i32> %shl, splat (i32 16)
+  ret <vscale x 4 x i32> %res
+}
+
 define <vscale x 8 x i32> @vector_compress_nxv8i32(<vscale x 8 x i32> %data, <vscale x 8 x i1> %mask) {
 ; CHECK-LABEL: vector_compress_nxv8i32:
 ; CHECK:       # %bb.0:

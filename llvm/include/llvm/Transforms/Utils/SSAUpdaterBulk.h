@@ -13,7 +13,6 @@
 #ifndef LLVM_TRANSFORMS_UTILS_SSAUPDATERBULK_H
 #define LLVM_TRANSFORMS_UTILS_SSAUPDATERBULK_H
 
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/PredIteratorCache.h"
 #include "llvm/Support/Compiler.h"
@@ -79,6 +78,10 @@ public:
   LLVM_ABI void
   RewriteAllUses(DominatorTree *DT,
                  SmallVectorImpl<PHINode *> *InsertedPHIs = nullptr);
+
+  /// Rewrite all uses and simplify the inserted PHI nodes.
+  /// Use this method to preserve behavior when replacing SSAUpdater.
+  void RewriteAndOptimizeAllUses(DominatorTree &DT);
 };
 
 } // end namespace llvm

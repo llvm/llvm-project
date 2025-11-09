@@ -137,7 +137,7 @@ ol_result_t printDeviceValue(std::ostream &S, ol_device_handle_t Dev,
     size_t Size;
     OFFLOAD_ERR(olGetDeviceInfoSize(Dev, Info, &Size));
     Val.resize(Size);
-    OFFLOAD_ERR(olGetDeviceInfo(Dev, Info, sizeof(Val), Val.data()));
+    OFFLOAD_ERR(olGetDeviceInfo(Dev, Info, Size, Val.data()));
     doWrite<T, PK>(S, reinterpret_cast<T>(Val.data()));
   } else {
     T Val;
@@ -176,6 +176,7 @@ ol_result_t printDevice(std::ostream &S, ol_device_handle_t D) {
       printDeviceValue<const char *>(S, D, OL_DEVICE_INFO_NAME, "Name"));
   OFFLOAD_ERR(printDeviceValue<const char *>(S, D, OL_DEVICE_INFO_PRODUCT_NAME,
                                              "Product Name"));
+  OFFLOAD_ERR(printDeviceValue<const char *>(S, D, OL_DEVICE_INFO_UID, "UID"));
   OFFLOAD_ERR(
       printDeviceValue<ol_device_type_t>(S, D, OL_DEVICE_INFO_TYPE, "Type"));
   OFFLOAD_ERR(printDeviceValue<const char *>(

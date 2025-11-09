@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PORTABILITY_RESTRICTINCLUDESSCHECK_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PORTABILITY_RESTRICTINCLUDESSCHECK_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PORTABILITY_RESTRICTSYSTEMINCLUDESCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PORTABILITY_RESTRICTSYSTEMINCLUDESCHECK_H
 
 #include "../ClangTidyCheck.h"
 #include "../GlobList.h"
@@ -19,7 +19,7 @@ namespace clang::tidy::portability {
 /// includes are specified, the check will exit without issuing any warnings.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/portability/restrict-system-includes.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/portability/restrict-system-includes.html
 class RestrictSystemIncludesCheck : public ClangTidyCheck {
 public:
   RestrictSystemIncludesCheck(StringRef Name, ClangTidyContext *Context,
@@ -79,4 +79,4 @@ private:
 
 } // namespace clang::tidy::portability
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PORTABILITY_RESTRICTINCLUDESSCHECK_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PORTABILITY_RESTRICTSYSTEMINCLUDESCHECK_H

@@ -63,6 +63,7 @@ These objects and functions are (or return) the fundamental parsers:
   the value that the parser never returns.
 * `nextCh` consumes the next character and returns its location,
   and fails at EOF.
+* `consumedAllInput` is equivalent, but preferable, to `!nextCh`.
 * `"xyz"_ch` succeeds if the next character consumed matches any of those
   in the string and returns its location.  Be advised that the source
   will have been normalized to lower case (miniscule) letters outside

@@ -17,7 +17,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr, dense<
 // CHECK: %{{.*}} = cuf.shared_memory[%c0{{.*}} : i32] !fir.array<?xf32>, %c-1 : index {bindc_name = "r", uniq_name = "_QFdynsharedEr"} -> !fir.ref<!fir.array<?xf32>>       
 // CHECK: gpu.return
 // CHECK: }
-// CHECK: fir.global internal @_QPdynshared__shared_mem {alignment = 4 : i64, data_attr = #cuf.cuda<shared>} : !fir.array<0xi8>
+// CHECK: fir.global external @_QPdynshared__shared_mem {alignment = 4 : i64, data_attr = #cuf.cuda<shared>} : !fir.array<0xi8>
 
 // -----
 
@@ -158,3 +158,5 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr, dense<
 // CHECK-LABEL: gpu.func @_QMmtestsPtestany
 // CHECK: %{{.*}} = cuf.shared_memory[%c0{{.*}} : i32] !fir.array<?xf64>, %c-1{{.*}} : index {bindc_name = "dmasks", uniq_name = "_QMmtestsFtestanyEdmasks"} -> !fir.ref<!fir.array<?xf64>>
 // CHECK: %{{.*}} = cuf.shared_memory[%c0{{.*}} : i32] !fir.array<?xf32>, %c-1{{.*}} : index {bindc_name = "smasks", uniq_name = "_QMmtestsFtestanyEsmasks"} -> !fir.ref<!fir.array<?xf32>>
+
+// CHECK: fir.global external @_QMmtestsPtestany__shared_mem {alignment = 8 : i64, data_attr = #cuf.cuda<shared>} : !fir.array<0xi8>

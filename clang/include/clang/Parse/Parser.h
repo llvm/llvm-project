@@ -2174,7 +2174,7 @@ private:
     if (Tok.is(tok::kw___attribute)) {
       ParsedAttributes Attrs(AttrFactory);
       ParseGNUAttributes(Attrs, LateAttrs, &D);
-      D.takeAttributes(Attrs);
+      D.takeAttributesAppending(Attrs);
     }
   }
 
@@ -2273,7 +2273,7 @@ private:
     if (isAllowedCXX11AttributeSpecifier()) {
       ParsedAttributes Attrs(AttrFactory);
       ParseCXX11Attributes(Attrs);
-      D.takeAttributes(Attrs);
+      D.takeAttributesAppending(Attrs);
     }
   }
 
@@ -2293,7 +2293,7 @@ private:
       ParsedAttributes AttrsWithRange(AttrFactory);
       ParseMicrosoftAttributes(AttrsWithRange);
       AttrsParsed = !AttrsWithRange.empty();
-      Attrs.takeAllFrom(AttrsWithRange);
+      Attrs.takeAllAppendingFrom(AttrsWithRange);
     }
     return AttrsParsed;
   }
@@ -5176,7 +5176,7 @@ private:
     if (Tok.is(tok::colon)) {
       ParsedAttributes Attrs(AttrFactory);
       ParseHLSLAnnotations(Attrs, EndLoc, CouldBeBitField);
-      D.takeAttributes(Attrs);
+      D.takeAttributesAppending(Attrs);
       return true;
     }
     return false;
@@ -6768,6 +6768,9 @@ private:
                                                 OpenMPClauseKind Kind,
                                                 bool ParseOnly);
 
+  /// Parses the 'looprange' clause of a '#pragma omp fuse' directive.
+  OMPClause *ParseOpenMPLoopRangeClause();
+
   /// Parses the 'sizes' clause of a '#pragma omp tile' directive.
   OMPClause *ParseOpenMPSizesClause();
 
@@ -7675,7 +7678,7 @@ private:
   /// [GNU] asm-clobbers:
   ///         asm-string-literal
   ///         asm-clobbers ',' asm-string-literal
-  /// \endverbatim 
+  /// \endverbatim
   ///
   StmtResult ParseAsmStatement(bool &msAsm);
 

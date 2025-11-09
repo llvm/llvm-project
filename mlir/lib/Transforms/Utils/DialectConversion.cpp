@@ -92,6 +92,22 @@ static OpBuilder::InsertPoint computeInsertPoint(ArrayRef<Value> vals) {
   return pt;
 }
 
+namespace {
+enum OpConversionMode {
+  /// In this mode, the conversion will ignore failed conversions to allow
+  /// illegal operations to co-exist in the IR.
+  Partial,
+
+  /// In this mode, all operations must be legal for the given target for the
+  /// conversion to succeed.
+  Full,
+
+  /// In this mode, operations are analyzed for legality. No actual rewrites are
+  /// applied to the operations on success.
+  Analysis,
+};
+} // namespace
+
 //===----------------------------------------------------------------------===//
 // ConversionValueMapping
 //===----------------------------------------------------------------------===//
@@ -866,8 +882,9 @@ namespace mlir {
 namespace detail {
 struct ConversionPatternRewriterImpl : public RewriterBase::Listener {
   explicit ConversionPatternRewriterImpl(ConversionPatternRewriter &rewriter,
-                                         const ConversionConfig &config)
-      : rewriter(rewriter), config(config),
+                                         const ConversionConfig &config,
+                                         OperationConverter &opConverter)
+      : rewriter(rewriter), config(config), opConverter(opConverter),
         notifyingRewriter(rewriter.getContext(), config.listener) {}
 
   //===--------------------------------------------------------------------===//
@@ -1105,10 +1122,6 @@ struct ConversionPatternRewriterImpl : public RewriterBase::Listener {
   /// A set of operations that were modified by the current pattern.
   SetVector<Operation *> patternModifiedOps;
 
-  /// A set of blocks that were inserted (newly-created blocks or moved blocks)
-  /// by the current pattern.
-  SetVector<Block *> patternInsertedBlocks;
-
   /// A list of unresolved materializations that were created by the current
   /// pattern.
   DenseSet<UnrealizedConversionCastOp> patternMaterializations;
@@ -1127,6 +1140,9 @@ struct ConversionPatternRewriterImpl : public RewriterBase::Listener {
 
   /// Dialect conversion configuration.
   const ConversionConfig &config;
+
+  /// The operation converter to use for recursive legalization.
+  OperationConverter &opConverter;
 
   /// A set of erased operations. This set is utilized only if
   /// `allowPatternRollback` is set to "false". Conceptually, this set is
@@ -1618,6 +1634,8 @@ Block *ConversionPatternRewriterImpl::applySignatureConversion(
     if (!inputMap) {
       // This block argument was dropped and no replacement value was provided.
       // Materialize a replacement value "out of thin air".
+      // Note: Materialization must be built here because we cannot find a
+      // valid insertion point in the new block. (Will point to the old block.)
       Value mat =
           buildUnresolvedMaterialization(
               MaterializationKind::Source,
@@ -1725,29 +1743,29 @@ Value ConversionPatternRewriterImpl::findOrBuildReplacementValue(
   // (regardless of the type) and build a source materialization to the
   // original type.
   repl = lookupOrNull(value);
-  if (repl.empty()) {
-    // No replacement value is registered in the mapping. This means that the
-    // value is dropped and no longer needed. (If the value were still needed,
-    // a source materialization producing a replacement value "out of thin air"
-    // would have already been created during `replaceOp` or
-    // `applySignatureConversion`.)
-    return Value();
-  }
 
-  // Note: `computeInsertPoint` computes the "earliest" insertion point at
-  // which all values in `repl` are defined. It is important to emit the
-  // materialization at that location because the same materialization may be
-  // reused in a different context. (That's because materializations are cached
-  // in the conversion value mapping.) The insertion point of the
-  // materialization must be valid for all future users that may be created
-  // later in the conversion process.
-  Value castValue =
-      buildUnresolvedMaterialization(MaterializationKind::Source,
-                                     computeInsertPoint(repl), value.getLoc(),
-                                     /*valuesToMap=*/repl, /*inputs=*/repl,
-                                     /*outputTypes=*/value.getType(),
-                                     /*originalType=*/Type(), converter)
-          .front();
+  // Compute the insertion point of the materialization.
+  OpBuilder::InsertPoint ip;
+  if (repl.empty()) {
+    // The source materialization has no inputs. Insert it right before the
+    // value that it is replacing.
+    ip = computeInsertPoint(value);
+  } else {
+    // Compute the "earliest" insertion point at which all values in `repl` are
+    // defined. It is important to emit the materialization at that location
+    // because the same materialization may be reused in a different context.
+    // (That's because materializations are cached in the conversion value
+    // mapping.) The insertion point of the materialization must be valid for
+    // all future users that may be created later in the conversion process.
+    ip = computeInsertPoint(repl);
+  }
+  Value castValue = buildUnresolvedMaterialization(
+                        MaterializationKind::Source, ip, value.getLoc(),
+                        /*valuesToMap=*/repl, /*inputs=*/repl,
+                        /*outputTypes=*/value.getType(),
+                        /*originalType=*/Type(), converter,
+                        /*isPureTypeConversion=*/!repl.empty())
+                        .front();
   return castValue;
 }
 
@@ -1854,6 +1872,44 @@ void ConversionPatternRewriterImpl::replaceOp(
     Operation *op, SmallVector<SmallVector<Value>> &&newValues) {
   assert(newValues.size() == op->getNumResults() &&
          "incorrect number of replacement values");
+  LLVM_DEBUG({
+    logger.startLine() << "** Replace : '" << op->getName() << "'(" << op
+                       << ")\n";
+    if (currentTypeConverter) {
+      // If the user-provided replacement types are different from the
+      // legalized types, as per the current type converter, print a note.
+      // In most cases, the replacement types are expected to match the types
+      // produced by the type converter, so this could indicate a bug in the
+      // user code.
+      for (auto [result, repls] :
+           llvm::zip_equal(op->getResults(), newValues)) {
+        Type resultType = result.getType();
+        auto logProlog = [&, repls = repls]() {
+          logger.startLine() << "   Note: Replacing op result of type "
+                             << resultType << " with value(s) of type (";
+          llvm::interleaveComma(repls, logger.getOStream(), [&](Value v) {
+            logger.getOStream() << v.getType();
+          });
+          logger.getOStream() << ")";
+        };
+        SmallVector<Type> convertedTypes;
+        if (failed(currentTypeConverter->convertTypes(resultType,
+                                                      convertedTypes))) {
+          logProlog();
+          logger.getOStream() << ", but the type converter failed to legalize "
+                                 "the original type.\n";
+          continue;
+        }
+        if (TypeRange(convertedTypes) != TypeRange(ValueRange(repls))) {
+          logProlog();
+          logger.getOStream() << ", but the legalized type(s) is/are (";
+          llvm::interleaveComma(convertedTypes, logger.getOStream(),
+                                [&](Type t) { logger.getOStream() << t; });
+          logger.getOStream() << ")\n";
+        }
+      }
+    }
+  });
 
   if (!config.allowPatternRollback) {
     // Pattern rollback is not allowed: materialize all IR changes immediately.
@@ -1897,21 +1953,8 @@ void ConversionPatternRewriterImpl::replaceOp(
   }
 
   // Create mappings for each of the new result values.
-  for (auto [repl, result] : llvm::zip_equal(newValues, op->getResults())) {
-    if (repl.empty()) {
-      // This result was dropped and no replacement value was provided.
-      // Materialize a replacement value "out of thin air".
-      buildUnresolvedMaterialization(
-          MaterializationKind::Source, computeInsertPoint(result),
-          result.getLoc(), /*valuesToMap=*/{result}, /*inputs=*/ValueRange(),
-          /*outputTypes=*/result.getType(), /*originalType=*/Type(),
-          currentTypeConverter, /*isPureTypeConversion=*/false);
-      continue;
-    }
-
-    // Remap result to replacement value.
+  for (auto [repl, result] : llvm::zip_equal(newValues, op->getResults()))
     mapping.map(static_cast<Value>(result), std::move(repl));
-  }
 
   appendRewrite<ReplaceOperationRewrite>(op, currentTypeConverter);
   // Mark this operation and all nested ops as replaced.
@@ -2019,8 +2062,6 @@ void ConversionPatternRewriterImpl::notifyBlockInserted(
   if (!config.allowPatternRollback && config.listener)
     config.listener->notifyBlockInserted(block, previous, previousIt);
 
-  patternInsertedBlocks.insert(block);
-
   if (wasDetached) {
     // If the block was detached, it is most likely a newly created block.
     if (config.allowPatternRollback) {
@@ -2063,9 +2104,10 @@ void ConversionPatternRewriterImpl::notifyMatchFailure(
 //===----------------------------------------------------------------------===//
 
 ConversionPatternRewriter::ConversionPatternRewriter(
-    MLIRContext *ctx, const ConversionConfig &config)
-    : PatternRewriter(ctx),
-      impl(new detail::ConversionPatternRewriterImpl(*this, config)) {
+    MLIRContext *ctx, const ConversionConfig &config,
+    OperationConverter &opConverter)
+    : PatternRewriter(ctx), impl(new detail::ConversionPatternRewriterImpl(
+                                *this, config, opConverter)) {
   setListener(impl.get());
 }
 
@@ -2083,10 +2125,6 @@ void ConversionPatternRewriter::replaceOp(Operation *op, Operation *newOp) {
 void ConversionPatternRewriter::replaceOp(Operation *op, ValueRange newValues) {
   assert(op->getNumResults() == newValues.size() &&
          "incorrect # of replacement values");
-  LLVM_DEBUG({
-    impl->logger.startLine()
-        << "** Replace : '" << op->getName() << "'(" << op << ")\n";
-  });
 
   // If the current insertion point is before the erased operation, we adjust
   // the insertion point to be after the operation.
@@ -2104,10 +2142,6 @@ void ConversionPatternRewriter::replaceOpWithMultiple(
     Operation *op, SmallVector<SmallVector<Value>> &&newValues) {
   assert(op->getNumResults() == newValues.size() &&
          "incorrect # of replacement values");
-  LLVM_DEBUG({
-    impl->logger.startLine()
-        << "** Replace : '" << op->getName() << "'(" << op << ")\n";
-  });
 
   // If the current insertion point is before the erased operation, we adjust
   // the insertion point to be after the operation.
@@ -2191,6 +2225,37 @@ ConversionPatternRewriter::getRemappedValues(ValueRange keys,
     assert(values.size() == 1 && "1:N conversion not supported");
     results.push_back(values.front());
   }
+  return success();
+}
+
+LogicalResult ConversionPatternRewriter::legalize(Region *r) {
+  // Fast path: If the region is empty, there is nothing to legalize.
+  if (r->empty())
+    return success();
+
+  // Gather a list of all operations to legalize. This is done before
+  // converting the entry block signature because unrealized_conversion_cast
+  // ops should not be included.
+  SmallVector<Operation *> ops;
+  for (Block &b : *r)
+    for (Operation &op : b)
+      ops.push_back(&op);
+
+  // If the current pattern runs with a type converter, convert the entry block
+  // signature.
+  if (const TypeConverter *converter = impl->currentTypeConverter) {
+    std::optional<TypeConverter::SignatureConversion> conversion =
+        converter->convertBlockSignature(&r->front());
+    if (!conversion)
+      return failure();
+    applySignatureConversion(&r->front(), *conversion, converter);
+  }
+
+  // Legalize all operations in the region.
+  for (Operation *op : ops)
+    if (failed(legalize(op)))
+      return failure();
+
   return success();
 }
 
@@ -2380,17 +2445,12 @@ private:
   bool canApplyPattern(Operation *op, const Pattern &pattern);
 
   /// Legalize the resultant IR after successfully applying the given pattern.
-  LogicalResult legalizePatternResult(Operation *op, const Pattern &pattern,
-                                      const RewriterState &curState,
-                                      const SetVector<Operation *> &newOps,
-                                      const SetVector<Operation *> &modifiedOps,
-                                      const SetVector<Block *> &insertedBlocks);
-
-  /// Legalizes the actions registered during the execution of a pattern.
   LogicalResult
-  legalizePatternBlockRewrites(Operation *op,
-                               const SetVector<Block *> &insertedBlocks,
-                               const SetVector<Operation *> &newOps);
+  legalizePatternResult(Operation *op, const Pattern &pattern,
+                        const RewriterState &curState,
+                        const SetVector<Operation *> &newOps,
+                        const SetVector<Operation *> &modifiedOps);
+
   LogicalResult
   legalizePatternCreatedOperations(const SetVector<Operation *> &newOps);
   LogicalResult
@@ -2589,7 +2649,6 @@ LogicalResult OperationLegalizer::legalizeWithFold(Operation *op) {
   auto cleanup = llvm::make_scope_exit([&]() {
     rewriterImpl.patternNewOps.clear();
     rewriterImpl.patternModifiedOps.clear();
-    rewriterImpl.patternInsertedBlocks.clear();
   });
 
   // Upon failure, undo all changes made by the folder.
@@ -2643,24 +2702,16 @@ LogicalResult OperationLegalizer::legalizeWithFold(Operation *op) {
 static void
 reportNewIrLegalizationFatalError(const Pattern &pattern,
                                   const SetVector<Operation *> &newOps,
-                                  const SetVector<Operation *> &modifiedOps,
-                                  const SetVector<Block *> &insertedBlocks) {
+                                  const SetVector<Operation *> &modifiedOps) {
   auto newOpNames = llvm::map_range(
       newOps, [](Operation *op) { return op->getName().getStringRef(); });
   auto modifiedOpNames = llvm::map_range(
       modifiedOps, [](Operation *op) { return op->getName().getStringRef(); });
-  StringRef detachedBlockStr = "(detached block)";
-  auto insertedBlockNames = llvm::map_range(insertedBlocks, [&](Block *block) {
-    if (block->getParentOp())
-      return block->getParentOp()->getName().getStringRef();
-    return detachedBlockStr;
-  });
-  llvm::report_fatal_error(
-      "pattern '" + pattern.getDebugName() +
-      "' produced IR that could not be legalized. " + "new ops: {" +
-      llvm::join(newOpNames, ", ") + "}, " + "modified ops: {" +
-      llvm::join(modifiedOpNames, ", ") + "}, " + "inserted block into ops: {" +
-      llvm::join(insertedBlockNames, ", ") + "}");
+  llvm::report_fatal_error("pattern '" + pattern.getDebugName() +
+                           "' produced IR that could not be legalized. " +
+                           "new ops: {" + llvm::join(newOpNames, ", ") + "}, " +
+                           "modified ops: {" +
+                           llvm::join(modifiedOpNames, ", ") + "}");
 }
 
 LogicalResult OperationLegalizer::legalizeWithPattern(Operation *op) {
@@ -2724,7 +2775,6 @@ LogicalResult OperationLegalizer::legalizeWithPattern(Operation *op) {
     }
     rewriterImpl.patternNewOps.clear();
     rewriterImpl.patternModifiedOps.clear();
-    rewriterImpl.patternInsertedBlocks.clear();
     LLVM_DEBUG({
       logFailure(rewriterImpl.logger, "pattern failed to match");
       if (rewriterImpl.config.notifyCallback) {
@@ -2758,15 +2808,12 @@ LogicalResult OperationLegalizer::legalizeWithPattern(Operation *op) {
     SetVector<Operation *> newOps = moveAndReset(rewriterImpl.patternNewOps);
     SetVector<Operation *> modifiedOps =
         moveAndReset(rewriterImpl.patternModifiedOps);
-    SetVector<Block *> insertedBlocks =
-        moveAndReset(rewriterImpl.patternInsertedBlocks);
-    auto result = legalizePatternResult(op, pattern, curState, newOps,
-                                        modifiedOps, insertedBlocks);
+    auto result =
+        legalizePatternResult(op, pattern, curState, newOps, modifiedOps);
     appliedPatterns.erase(&pattern);
     if (failed(result)) {
       if (!rewriterImpl.config.allowPatternRollback)
-        reportNewIrLegalizationFatalError(pattern, newOps, modifiedOps,
-                                          insertedBlocks);
+        reportNewIrLegalizationFatalError(pattern, newOps, modifiedOps);
       rewriterImpl.resetState(curState, pattern.getDebugName());
     }
     if (config.listener)
@@ -2804,8 +2851,7 @@ bool OperationLegalizer::canApplyPattern(Operation *op,
 LogicalResult OperationLegalizer::legalizePatternResult(
     Operation *op, const Pattern &pattern, const RewriterState &curState,
     const SetVector<Operation *> &newOps,
-    const SetVector<Operation *> &modifiedOps,
-    const SetVector<Block *> &insertedBlocks) {
+    const SetVector<Operation *> &modifiedOps) {
   [[maybe_unused]] auto &impl = rewriter.getImpl();
   assert(impl.pendingRootUpdates.empty() && "dangling root updates");
 
@@ -2824,60 +2870,12 @@ LogicalResult OperationLegalizer::legalizePatternResult(
 #endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
 
   // Legalize each of the actions registered during application.
-  if (failed(legalizePatternBlockRewrites(op, insertedBlocks, newOps)) ||
-      failed(legalizePatternRootUpdates(modifiedOps)) ||
+  if (failed(legalizePatternRootUpdates(modifiedOps)) ||
       failed(legalizePatternCreatedOperations(newOps))) {
     return failure();
   }
 
   LLVM_DEBUG(logSuccess(impl.logger, "pattern applied successfully"));
-  return success();
-}
-
-LogicalResult OperationLegalizer::legalizePatternBlockRewrites(
-    Operation *op, const SetVector<Block *> &insertedBlocks,
-    const SetVector<Operation *> &newOps) {
-  ConversionPatternRewriterImpl &impl = rewriter.getImpl();
-  SmallPtrSet<Operation *, 16> alreadyLegalized;
-
-  // If the pattern moved or created any blocks, make sure the types of block
-  // arguments get legalized.
-  for (Block *block : insertedBlocks) {
-    if (impl.erasedBlocks.contains(block))
-      continue;
-
-    // Only check blocks outside of the current operation.
-    Operation *parentOp = block->getParentOp();
-    if (!parentOp || parentOp == op || block->getNumArguments() == 0)
-      continue;
-
-    // If the region of the block has a type converter, try to convert the block
-    // directly.
-    if (auto *converter = impl.regionToConverter.lookup(block->getParent())) {
-      std::optional<TypeConverter::SignatureConversion> conversion =
-          converter->convertBlockSignature(block);
-      if (!conversion) {
-        LLVM_DEBUG(logFailure(impl.logger, "failed to convert types of moved "
-                                           "block"));
-        return failure();
-      }
-      impl.applySignatureConversion(block, converter, *conversion);
-      continue;
-    }
-
-    // Otherwise, try to legalize the parent operation if it was not generated
-    // by this pattern. This is because we will attempt to legalize the parent
-    // operation, and blocks in regions created by this pattern will already be
-    // legalized later on.
-    if (!newOps.count(parentOp) && alreadyLegalized.insert(parentOp).second) {
-      if (failed(legalize(parentOp))) {
-        LLVM_DEBUG(logFailure(
-            impl.logger, "operation '{0}'({1}) became illegal after rewrite",
-            parentOp->getName(), parentOp));
-        return failure();
-      }
-    }
-  }
   return success();
 }
 
@@ -3246,22 +3244,6 @@ static void reconcileUnrealizedCasts(
 // OperationConverter
 //===----------------------------------------------------------------------===//
 
-namespace {
-enum OpConversionMode {
-  /// In this mode, the conversion will ignore failed conversions to allow
-  /// illegal operations to co-exist in the IR.
-  Partial,
-
-  /// In this mode, all operations must be legal for the given target for the
-  /// conversion to succeed.
-  Full,
-
-  /// In this mode, operations are analyzed for legality. No actual rewrites are
-  /// applied to the operations on success.
-  Analysis,
-};
-} // namespace
-
 namespace mlir {
 // This class converts operations to a given conversion target via a set of
 // rewrite patterns. The conversion behaves differently depending on the
@@ -3271,16 +3253,20 @@ struct OperationConverter {
                               const FrozenRewritePatternSet &patterns,
                               const ConversionConfig &config,
                               OpConversionMode mode)
-      : rewriter(ctx, config), opLegalizer(rewriter, target, patterns),
+      : rewriter(ctx, config, *this), opLegalizer(rewriter, target, patterns),
         mode(mode) {}
 
   /// Converts the given operations to the conversion target.
   LogicalResult convertOperations(ArrayRef<Operation *> ops);
 
-private:
-  /// Converts an operation with the given rewriter.
-  LogicalResult convert(Operation *op);
+  /// Converts a single operation. If `isRecursiveLegalization` is "true", the
+  /// conversion is a recursive legalization request, triggered from within a
+  /// pattern. In that case, do not emit errors because there will be another
+  /// attempt at legalizing the operation later (via the regular pre-order
+  /// legalization mechanism).
+  LogicalResult convert(Operation *op, bool isRecursiveLegalization = false);
 
+private:
   /// The rewriter to use when converting operations.
   ConversionPatternRewriter rewriter;
 
@@ -3292,32 +3278,42 @@ private:
 };
 } // namespace mlir
 
-LogicalResult OperationConverter::convert(Operation *op) {
+LogicalResult ConversionPatternRewriter::legalize(Operation *op) {
+  return impl->opConverter.convert(op, /*isRecursiveLegalization=*/true);
+}
+
+LogicalResult OperationConverter::convert(Operation *op,
+                                          bool isRecursiveLegalization) {
   const ConversionConfig &config = rewriter.getConfig();
 
   // Legalize the given operation.
   if (failed(opLegalizer.legalize(op))) {
     // Handle the case of a failed conversion for each of the different modes.
     // Full conversions expect all operations to be converted.
-    if (mode == OpConversionMode::Full)
-      return op->emitError()
-             << "failed to legalize operation '" << op->getName() << "'";
+    if (mode == OpConversionMode::Full) {
+      if (!isRecursiveLegalization)
+        op->emitError() << "failed to legalize operation '" << op->getName()
+                        << "'";
+      return failure();
+    }
     // Partial conversions allow conversions to fail iff the operation was not
     // explicitly marked as illegal. If the user provided a `unlegalizedOps`
     // set, non-legalizable ops are added to that set.
     if (mode == OpConversionMode::Partial) {
-      if (opLegalizer.isIllegal(op))
-        return op->emitError()
-               << "failed to legalize operation '" << op->getName()
-               << "' that was explicitly marked illegal";
-      if (config.unlegalizedOps)
+      if (opLegalizer.isIllegal(op)) {
+        if (!isRecursiveLegalization)
+          op->emitError() << "failed to legalize operation '" << op->getName()
+                          << "' that was explicitly marked illegal";
+        return failure();
+      }
+      if (config.unlegalizedOps && !isRecursiveLegalization)
         config.unlegalizedOps->insert(op);
     }
   } else if (mode == OpConversionMode::Analysis) {
     // Analysis conversions don't fail if any operations fail to legalize,
     // they are only interested in the operations that were successfully
     // legalized.
-    if (config.legalizableOps)
+    if (config.legalizableOps && !isRecursiveLegalization)
       config.legalizableOps->insert(op);
   }
   return success();
@@ -3781,10 +3777,11 @@ static LogicalResult convertFuncOpTypes(FunctionOpInterface funcOp,
   TypeConverter::SignatureConversion result(type.getNumInputs());
   SmallVector<Type, 1> newResults;
   if (failed(typeConverter.convertSignatureArgs(type.getInputs(), result)) ||
-      failed(typeConverter.convertTypes(type.getResults(), newResults)) ||
-      failed(rewriter.convertRegionTypes(&funcOp.getFunctionBody(),
-                                         typeConverter, &result)))
+      failed(typeConverter.convertTypes(type.getResults(), newResults)))
     return failure();
+  if (!funcOp.getFunctionBody().empty())
+    rewriter.applySignatureConversion(&funcOp.getFunctionBody().front(), result,
+                                      &typeConverter);
 
   // Update the function signature in-place.
   auto newType = FunctionType::get(rewriter.getContext(),

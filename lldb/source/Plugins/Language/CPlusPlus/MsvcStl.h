@@ -89,6 +89,7 @@ MsvcStlVariantSyntheticFrontEndCreator(CXXSyntheticChildren *,
                                        lldb::ValueObjectSP valobj_sp);
 
 // MSVC STL std::atomic<>
+bool IsMsvcStlAtomic(ValueObject &valobj);
 bool MsvcStlAtomicSummaryProvider(ValueObject &valobj, Stream &stream,
                                   const TypeSummaryOptions &options);
 SyntheticChildrenFrontEnd *

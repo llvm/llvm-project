@@ -139,13 +139,11 @@ struct DenseMapInfo<std::pair<T, U>> {
   using SecondInfo = DenseMapInfo<U>;
 
   static constexpr Pair getEmptyKey() {
-    return std::make_pair(FirstInfo::getEmptyKey(),
-                          SecondInfo::getEmptyKey());
+    return {FirstInfo::getEmptyKey(), SecondInfo::getEmptyKey()};
   }
 
   static constexpr Pair getTombstoneKey() {
-    return std::make_pair(FirstInfo::getTombstoneKey(),
-                          SecondInfo::getTombstoneKey());
+    return {FirstInfo::getTombstoneKey(), SecondInfo::getTombstoneKey()};
   }
 
   static unsigned getHashValue(const Pair& PairVal) {

@@ -280,6 +280,8 @@ public:
     basic_string substr(size_type pos = 0, size_type n = npos) const;                           // constexpr in C++20, removed in C++23
     basic_string substr(size_type pos = 0, size_type n = npos) const&;                          // since C++23
     constexpr basic_string substr(size_type pos = 0, size_type n = npos) &&;                    // since C++23
+    constexpr basic_string_view<charT, traits> subview(size_type pos = 0,
+                                                       size_type n = npos) const;               // since C++26
     void swap(basic_string& str)
         noexcept(allocator_traits<allocator_type>::propagate_on_container_swap::value ||
                  allocator_traits<allocator_type>::is_always_equal::value);                     // C++17, constexpr since C++20
@@ -598,9 +600,9 @@ basic_string<char32_t> operator""s( const char32_t *str, size_t len );          
 #  include <__debug_utils/sanitizers.h>
 #  include <__format/enable_insertable.h>
 #  include <__functional/hash.h>
+#  include <__functional/is_transparent.h>
 #  include <__functional/unary_function.h>
 #  include <__fwd/string.h>
-#  include <__ios/fpos.h>
 #  include <__iterator/bounded_iter.h>
 #  include <__iterator/distance.h>
 #  include <__iterator/iterator_traits.h>
@@ -620,7 +622,6 @@ basic_string<char32_t> operator""s( const char32_t *str, size_t len );          
 #  include <__ranges/concepts.h>
 #  include <__ranges/container_compatible_range.h>
 #  include <__ranges/from_range.h>
-#  include <__ranges/size.h>
 #  include <__string/char_traits.h>
 #  include <__string/extern_template_lists.h>
 #  include <__type_traits/conditional.h>
@@ -628,6 +629,7 @@ basic_string<char32_t> operator""s( const char32_t *str, size_t len );          
 #  include <__type_traits/is_allocator.h>
 #  include <__type_traits/is_array.h>
 #  include <__type_traits/is_convertible.h>
+#  include <__type_traits/is_generic_transparent_comparator.h>
 #  include <__type_traits/is_nothrow_assignable.h>
 #  include <__type_traits/is_nothrow_constructible.h>
 #  include <__type_traits/is_replaceable.h>
@@ -637,12 +639,12 @@ basic_string<char32_t> operator""s( const char32_t *str, size_t len );          
 #  include <__type_traits/is_trivially_copyable.h>
 #  include <__type_traits/is_trivially_relocatable.h>
 #  include <__type_traits/remove_cvref.h>
-#  include <__type_traits/void_t.h>
-#  include <__utility/auto_cast.h>
 #  include <__utility/default_three_way_comparator.h>
+#  include <__utility/exception_guard.h>
 #  include <__utility/forward.h>
 #  include <__utility/is_pointer_in_range.h>
 #  include <__utility/move.h>
+#  include <__utility/no_destroy.h>
 #  include <__utility/scope_guard.h>
 #  include <__utility/swap.h>
 #  include <climits>
@@ -913,6 +915,11 @@ private:
   union __rep {
     __short __s;
     __long __l;
+
+    __rep() = default;
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __rep(__short __r) : __s(__r) {}
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __rep(__long __r) : __l(__r) {}
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __rep(__uninitialized_tag) {}
   };
 
   _LIBCPP_COMPRESSED_PAIR(__rep, __rep_, allocator_type, __alloc_);
@@ -1059,13 +1066,13 @@ public:
   }
 #  endif // _LIBCPP_CXX03_LANG
 
-  template <__enable_if_t<__is_allocator<_Allocator>::value, int> = 0>
+  template <__enable_if_t<__is_allocator_v<_Allocator>, int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string(const _CharT* _LIBCPP_DIAGNOSE_NULLPTR __s) {
     _LIBCPP_ASSERT_NON_NULL(__s != nullptr, "basic_string(const char*) detected nullptr");
     __init(__s, traits_type::length(__s));
   }
 
-  template <__enable_if_t<__is_allocator<_Allocator>::value, int> = 0>
+  template <__enable_if_t<__is_allocator_v<_Allocator>, int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
   basic_string(const _CharT* _LIBCPP_DIAGNOSE_NULLPTR __s, const _Allocator& __a)
       : __alloc_(__a) {
@@ -1114,7 +1121,7 @@ public:
   }
 #  endif
 
-  template <__enable_if_t<__is_allocator<_Allocator>::value, int> = 0>
+  template <__enable_if_t<__is_allocator_v<_Allocator>, int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string(size_type __n, _CharT __c, const _Allocator& __a)
       : __alloc_(__a) {
     __init(__n, __c);
@@ -1205,7 +1212,10 @@ public:
   }
 #  endif // _LIBCPP_CXX03_LANG
 
-  inline _LIBCPP_CONSTEXPR_SINCE_CXX20 ~basic_string() { __reset_internal_buffer(); }
+  // TODO(boomanaiden154): Once we mark this in destructors as dead on return,
+  // we can use a normal call to __reset_internal_buffer and remove the extra
+  // __rep constructor.
+  inline _LIBCPP_CONSTEXPR_SINCE_CXX20 ~basic_string() { __reset_internal_buffer(__rep(__uninitialized_tag())); }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 operator __self_view() const _NOEXCEPT {
     return __self_view(typename __self_view::__assume_valid(), data(), size());
@@ -1311,6 +1321,8 @@ public:
 #  if _LIBCPP_STD_VER >= 23
   template <class _Op>
   _LIBCPP_HIDE_FROM_ABI constexpr void resize_and_overwrite(size_type __n, _Op __op) {
+    using __result_type = decltype(std::move(__op)(data(), auto(__n)));
+    static_assert(__integer_like<__result_type>, "Operation return type must be integer-like");
     size_type __sz  = size();
     size_type __cap = capacity();
     if (__n > __cap)
@@ -1760,6 +1772,11 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI constexpr basic_string substr(size_type __pos = 0, size_type __n = npos) && {
     return basic_string(std::move(*this), __pos, __n);
+  }
+#  endif
+#  if _LIBCPP_STD_VER >= 26
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr __self_view subview(size_type __pos = 0, size_type __n = npos) const {
+    return __self_view(*this).subview(__pos, __n);
   }
 #  endif
 
@@ -2251,18 +2268,12 @@ private:
     return __long(__buffer, __capacity);
   }
 
-  // Deallocate the long buffer if it exists and clear the short buffer so we are an empty string
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __reset_internal_buffer() {
+  // Replace the current buffer with __new_rep. Deallocate the old long buffer if it exists.
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __reset_internal_buffer(__rep __new_rep = __short()) {
     __annotate_delete();
     if (__is_long())
       __alloc_traits::deallocate(__alloc_, __get_long_pointer(), __get_long_cap());
-    __rep_.__s = __short();
-  }
-
-  // Replace the current buffer with __alloc; the first __size elements constitute a string
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __replace_internal_buffer(__long __alloc) {
-    __reset_internal_buffer();
-    __rep_.__l = __alloc;
+    __rep_ = __new_rep;
   }
 
   // Initialize the internal buffer to hold __size elements
@@ -2436,7 +2447,7 @@ private:
         __annotate_delete();
         auto __guard = std::__make_scope_guard(__annotate_new_size(*this));
         auto __alloc = __str.__alloc_;
-        __replace_internal_buffer(__allocate_long_buffer(__alloc, __str.size()));
+        __reset_internal_buffer(__allocate_long_buffer(__alloc, __str.size()));
         __alloc_ = std::move(__alloc);
       }
     }
@@ -2549,7 +2560,7 @@ _LIBCPP_STRING_V1_EXTERN_TEMPLATE_LIST(_LIBCPP_DECLARE, wchar_t)
 #  endif
 #  undef _LIBCPP_DECLARE
 
-#  if _LIBCPP_STD_VER <= 17 || !__has_builtin(__builtin_lt_synthesises_from_spaceship)
+#  if _LIBCPP_STD_VER <= 17 || !__has_builtin(__builtin_lt_synthesizes_from_spaceship)
 template <class _CharT, class _Traits, class _Alloc>
 struct __default_three_way_comparator<basic_string<_CharT, _Traits, _Alloc>, basic_string<_CharT, _Traits, _Alloc> > {
   using __string_t _LIBCPP_NODEBUG = basic_string<_CharT, _Traits, _Alloc>;
@@ -2564,26 +2575,40 @@ struct __default_three_way_comparator<basic_string<_CharT, _Traits, _Alloc>, bas
 };
 #  endif
 
+template <class _Comparator, class _CharT, class _Traits, class _Alloc>
+inline const bool __is_transparently_comparable_v<_Comparator,
+                                                  basic_string<_CharT, _Traits, _Alloc>,
+                                                  const _CharT*,
+                                                  __enable_if_t<__is_generic_transparent_comparator_v<_Comparator> > > =
+    true;
+
+template <class _Comparator, class _CharT, class _Traits, class _Alloc, size_t _Np>
+inline const bool __is_transparently_comparable_v<_Comparator,
+                                                  basic_string<_CharT, _Traits, _Alloc>,
+                                                  _CharT[_Np],
+                                                  __enable_if_t<__is_generic_transparent_comparator_v<_Comparator> > > =
+    true;
+
 #  if _LIBCPP_STD_VER >= 17
 template <class _InputIterator,
-          class _CharT     = __iter_value_type<_InputIterator>,
+          class _CharT     = __iterator_value_type<_InputIterator>,
           class _Allocator = allocator<_CharT>,
           class            = enable_if_t<__has_input_iterator_category<_InputIterator>::value>,
-          class            = enable_if_t<__is_allocator<_Allocator>::value> >
+          class            = enable_if_t<__is_allocator_v<_Allocator>>>
 basic_string(_InputIterator, _InputIterator, _Allocator = _Allocator())
     -> basic_string<_CharT, char_traits<_CharT>, _Allocator>;
 
 template <class _CharT,
           class _Traits,
           class _Allocator = allocator<_CharT>,
-          class            = enable_if_t<__is_allocator<_Allocator>::value> >
+          class            = enable_if_t<__is_allocator_v<_Allocator>>>
 explicit basic_string(basic_string_view<_CharT, _Traits>, const _Allocator& = _Allocator())
     -> basic_string<_CharT, _Traits, _Allocator>;
 
 template <class _CharT,
           class _Traits,
           class _Allocator = allocator<_CharT>,
-          class            = enable_if_t<__is_allocator<_Allocator>::value>,
+          class            = enable_if_t<__is_allocator_v<_Allocator>>,
           class _Sz        = typename allocator_traits<_Allocator>::size_type >
 basic_string(basic_string_view<_CharT, _Traits>, _Sz, _Sz, const _Allocator& = _Allocator())
     -> basic_string<_CharT, _Traits, _Allocator>;
@@ -2592,7 +2617,7 @@ basic_string(basic_string_view<_CharT, _Traits>, _Sz, _Sz, const _Allocator& = _
 #  if _LIBCPP_STD_VER >= 23
 template <ranges::input_range _Range,
           class _Allocator = allocator<ranges::range_value_t<_Range>>,
-          class            = enable_if_t<__is_allocator<_Allocator>::value> >
+          class            = enable_if_t<__is_allocator_v<_Allocator>>>
 basic_string(from_range_t, _Range&&, _Allocator = _Allocator())
     -> basic_string<ranges::range_value_t<_Range>, char_traits<ranges::range_value_t<_Range>>, _Allocator>;
 #  endif
@@ -2633,17 +2658,10 @@ basic_string<_CharT, _Traits, _Allocator>::__init_with_sentinel(_InputIterator _
   __rep_ = __rep();
   __annotate_new(0);
 
-#  if _LIBCPP_HAS_EXCEPTIONS
-  try {
-#  endif // _LIBCPP_HAS_EXCEPTIONS
-    for (; __first != __last; ++__first)
-      push_back(*__first);
-#  if _LIBCPP_HAS_EXCEPTIONS
-  } catch (...) {
-    __reset_internal_buffer();
-    throw;
-  }
-#  endif // _LIBCPP_HAS_EXCEPTIONS
+  auto __guard = std::__make_exception_guard([this] { __reset_internal_buffer(); });
+  for (; __first != __last; ++__first)
+    push_back(*__first);
+  __guard.__complete();
 }
 
 template <class _CharT, class _Traits, class _Allocator>
@@ -2660,17 +2678,10 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void
 basic_string<_CharT, _Traits, _Allocator>::__init_with_size(_InputIterator __first, _Sentinel __last, size_type __sz) {
   pointer __p = __init_internal_buffer(__sz);
 
-#  if _LIBCPP_HAS_EXCEPTIONS
-  try {
-#  endif // _LIBCPP_HAS_EXCEPTIONS
-    auto __end = __copy_non_overlapping_range(std::move(__first), std::move(__last), std::__to_address(__p));
-    traits_type::assign(*__end, value_type());
-#  if _LIBCPP_HAS_EXCEPTIONS
-  } catch (...) {
-    __reset_internal_buffer();
-    throw;
-  }
-#  endif                       // _LIBCPP_HAS_EXCEPTIONS
+  auto __guard = std::__make_exception_guard([this] { __reset_internal_buffer(); });
+  auto __end   = __copy_non_overlapping_range(std::move(__first), std::move(__last), std::__to_address(__p));
+  traits_type::assign(*__end, value_type());
+  __guard.__complete();
 }
 
 template <class _CharT, class _Traits, class _Allocator>
@@ -2702,7 +2713,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void basic_string<_CharT, _Traits, _Allocator>::__
                       __sec_cp_sz);
   __buffer.__size_ = __n_copy + __n_add + __sec_cp_sz;
   traits_type::assign(__buffer.__data_[__buffer.__size_], value_type());
-  __replace_internal_buffer(__buffer);
+  __reset_internal_buffer(__buffer);
 }
 
 // __grow_by is deprecated because it does not set the size. It may not update the size when the size is changed, and it
@@ -2738,7 +2749,7 @@ _LIBCPP_DEPRECATED_("use __grow_by_without_replace") basic_string<_CharT, _Trait
   // This is -1 to make sure the caller sets the size properly, since old versions of this function didn't set the size
   // at all.
   __buffer.__size_ = -1;
-  __replace_internal_buffer(__buffer);
+  __reset_internal_buffer(__buffer);
 }
 
 template <class _CharT, class _Traits, class _Allocator>
@@ -3386,7 +3397,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void basic_string<_CharT, _Traits, _Allocator>::re
   __long __buffer  = __allocate_long_buffer(__alloc_, __requested_capacity);
   __buffer.__size_ = size();
   traits_type::copy(std::__to_address(__buffer.__data_), data(), __buffer.__size_ + 1);
-  __replace_internal_buffer(__buffer);
+  __reset_internal_buffer(__buffer);
 }
 
 template <class _CharT, class _Traits, class _Allocator>
@@ -3425,7 +3436,7 @@ inline _LIBCPP_CONSTEXPR_SINCE_CXX20 void basic_string<_CharT, _Traits, _Allocat
     }
 
     traits_type::copy(std::__to_address(__buffer.__data_), std::__to_address(__get_long_pointer()), __size + 1);
-    __replace_internal_buffer(__buffer);
+    __reset_internal_buffer(__buffer);
 #  if _LIBCPP_HAS_EXCEPTIONS
   } catch (...) {
     return;

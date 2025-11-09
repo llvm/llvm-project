@@ -30,6 +30,41 @@ struct simple {
     int a, b;
 };
 
+// Byte-aligned bitfields
+struct byte_aligned_bitfields {
+    unsigned int a : 8;
+    unsigned int b : 8;
+    unsigned int c : 16;
+};
+
+struct signed_byte_aligned_bitfields {
+    int x : 8;
+    int y : 8;
+};
+
+struct single_byte_bitfield {
+    unsigned char a : 8;
+};
+
+// Partial bitfields (sub-byte)
+struct partial_bitfields {
+    unsigned int a : 3;
+    unsigned int b : 5;
+    unsigned int c : 8;
+};
+
+struct signed_partial_bitfields {
+    int x : 4;
+    int y : 4;
+};
+
+struct mixed_partial_bitfields {
+    unsigned char a : 1;
+    unsigned char b : 1;
+    unsigned char c : 1;
+    unsigned char d : 5;
+};
+
 void function() {
     constexpr static empty e;
 
@@ -54,7 +89,21 @@ void function() {
     constexpr static simple simple_array[] {
         s, {1111, 2222}, s
     };
+
+    // Byte-aligned bitfield tests
+    constexpr static byte_aligned_bitfields ba_bf1 = {0xFF, 0xAA, 0x1234};
+    constexpr static signed_byte_aligned_bitfields ba_bf2 = {-1, 127};
+    constexpr static single_byte_bitfield ba_bf3 = {42};
+
+    // Partial bitfield tests
+    constexpr static partial_bitfields p_bf1 = {1, 2, 3};
+    constexpr static signed_partial_bitfields p_bf2 = {-1, 7};
+    constexpr static mixed_partial_bitfields p_bf3 = {1, 0, 1, 15};
 }
+
+// Anonymous struct type definitions for bitfields
+// CIR-DAG: !rec_anon_struct = !cir.record<struct  {!u8i, !u8i, !u8i, !u8i}>
+// CIR-DAG: !rec_anon_struct1 = !cir.record<struct  {!u8i, !u8i, !cir.array<!u8i x 2>}>
 
 // CIR-DAG: cir.global "private" internal dso_local @_ZZ8functionvE1e = #cir.zero : !rec_empty
 // CIR-DAG: cir.global "private" internal dso_local @_ZZ8functionvE1s = #cir.const_record<{#cir.int<0> : !s32i, #cir.int<-1> : !s32i}> : !rec_simple
@@ -83,6 +132,33 @@ void function() {
 // CIR-DAG-SAME:   #cir.zero : !rec_packed_and_aligned
 // CIR-DAG-SAME: ]> : !cir.array<!rec_packed_and_aligned x 2>
 
+// CIR-DAG: cir.global "private" internal dso_local @_ZZ8functionvE6ba_bf1 = #cir.const_record<{
+// CIR-DAG-SAME:   #cir.int<255> : !u8i,
+// CIR-DAG-SAME:   #cir.int<170> : !u8i,
+// CIR-DAG-SAME:   #cir.int<52> : !u8i,
+// CIR-DAG-SAME:   #cir.int<18> : !u8i
+// CIR-DAG-SAME: }> : !rec_anon_struct
+// CIR-DAG: cir.global "private" internal dso_local @_ZZ8functionvE6ba_bf2 = #cir.const_record<{
+// CIR-DAG-SAME:   #cir.int<255> : !u8i,
+// CIR-DAG-SAME:   #cir.int<127> : !u8i,
+// CIR-DAG-SAME:   #cir.const_array<[#cir.zero : !u8i, #cir.zero : !u8i]> : !cir.array<!u8i x 2>
+// CIR-DAG-SAME: }> : !rec_anon_struct1
+// CIR-DAG: cir.global "private" internal dso_local @_ZZ8functionvE6ba_bf3 = #cir.const_record<{
+// CIR-DAG-SAME:   #cir.int<42> : !u8i
+// CIR-DAG-SAME: }> : !rec_single_byte_bitfield
+// CIR-DAG: cir.global "private" internal dso_local @_ZZ8functionvE5p_bf1 = #cir.const_record<{
+// CIR-DAG-SAME:   #cir.int<17> : !u8i,
+// CIR-DAG-SAME:   #cir.int<3> : !u8i,
+// CIR-DAG-SAME:   #cir.const_array<[#cir.zero : !u8i, #cir.zero : !u8i]> : !cir.array<!u8i x 2>
+// CIR-DAG-SAME: }> : !rec_anon_struct1
+// CIR-DAG: cir.global "private" internal dso_local @_ZZ8functionvE5p_bf2 = #cir.const_record<{
+// CIR-DAG-SAME:   #cir.int<127> : !u8i,
+// CIR-DAG-SAME:   #cir.const_array<[#cir.zero : !u8i, #cir.zero : !u8i, #cir.zero : !u8i]> : !cir.array<!u8i x 3>
+// CIR-DAG-SAME: }> : !rec_signed_partial_bitfields
+// CIR-DAG: cir.global "private" internal dso_local @_ZZ8functionvE5p_bf3 = #cir.const_record<{
+// CIR-DAG-SAME:   #cir.int<125> : !u8i
+// CIR-DAG-SAME: }> : !rec_mixed_partial_bitfields
+
 // CIR-LABEL: cir.func dso_local @_Z8functionv()
 // CIR:   cir.return
 
@@ -96,6 +172,12 @@ void function() {
 // LLVM-DAG: @_ZZ8functionvE3paa = internal global %struct.packed_and_aligned <{ i16 1, i8 2, float 3.000000e+00, i8 0 }>
 // LLVM-DAG: @_ZZ8functionvE5array = internal global [2 x %struct.Point] [%struct.Point { i32 123, i32 456, [3 x i8] c"\0B\16!", i32 789 }, %struct.Point { i32 10, i32 20, [3 x i8] zeroinitializer, i32 40 }]
 // LLVM-DAG: @_ZZ8functionvE9paa_array = internal global [2 x %struct.packed_and_aligned] [%struct.packed_and_aligned <{ i16 1, i8 2, float 3.000000e+00, i8 0 }>, %struct.packed_and_aligned zeroinitializer]
+// LLVM-DAG: @_ZZ8functionvE6ba_bf1 = internal global { i8, i8, i8, i8 } { i8 -1, i8 -86, i8 52, i8 18 }
+// LLVM-DAG: @_ZZ8functionvE6ba_bf2 = internal global { i8, i8, [2 x i8] } { i8 -1, i8 127, [2 x i8] zeroinitializer }
+// LLVM-DAG: @_ZZ8functionvE6ba_bf3 = internal global %struct.single_byte_bitfield { i8 42 }
+// LLVM-DAG: @_ZZ8functionvE5p_bf1 = internal global { i8, i8, [2 x i8] } { i8 17, i8 3, [2 x i8] zeroinitializer }
+// LLVM-DAG: @_ZZ8functionvE5p_bf2 = internal global %struct.signed_partial_bitfields { i8 127, [3 x i8] zeroinitializer }
+// LLVM-DAG: @_ZZ8functionvE5p_bf3 = internal global %struct.mixed_partial_bitfields { i8 125 }
 
 // LLVM-LABEL: define{{.*}} void @_Z8functionv
 // LLVM:   ret void
@@ -110,6 +192,12 @@ void function() {
 // OGCG-DAG: @_ZZ8functionvE3paa = internal constant %struct.packed_and_aligned <{ i16 1, i8 2, float 3.000000e+00, i8 undef }>
 // OGCG-DAG: @_ZZ8functionvE5array = internal constant [2 x %struct.Point] [%struct.Point { i32 123, i32 456, [3 x i8] c"\0B\16!", i32 789 }, %struct.Point { i32 10, i32 20, [3 x i8] zeroinitializer, i32 40 }]
 // OGCG-DAG: @_ZZ8functionvE9paa_array = internal constant [2 x %struct.packed_and_aligned] [%struct.packed_and_aligned <{ i16 1, i8 2, float 3.000000e+00, i8 undef }>, %struct.packed_and_aligned <{ i16 0, i8 0, float 0.000000e+00, i8 undef }>]
+// OGCG-DAG: @_ZZ8functionvE6ba_bf1 = internal constant { i8, i8, i8, i8 } { i8 -1, i8 -86, i8 52, i8 18 }
+// OGCG-DAG: @_ZZ8functionvE6ba_bf2 = internal constant { i8, i8, [2 x i8] } { i8 -1, i8 127, [2 x i8] undef }
+// OGCG-DAG: @_ZZ8functionvE6ba_bf3 = internal constant %struct.single_byte_bitfield { i8 42 }
+// OGCG-DAG: @_ZZ8functionvE5p_bf1 = internal constant { i8, i8, [2 x i8] } { i8 17, i8 3, [2 x i8] undef }
+// OGCG-DAG: @_ZZ8functionvE5p_bf2 = internal constant %struct.signed_partial_bitfields { i8 127, [3 x i8] undef }
+// OGCG-DAG: @_ZZ8functionvE5p_bf3 = internal constant %struct.mixed_partial_bitfields { i8 125 }
 
 // OGCG-LABEL: define{{.*}} void @_Z8functionv
 // OGCG:   ret void

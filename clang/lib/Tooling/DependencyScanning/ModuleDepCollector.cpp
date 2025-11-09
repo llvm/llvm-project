@@ -263,6 +263,10 @@ makeCommonInvocationForModuleBuild(CompilerInvocation CI) {
   // units.
   CI.getFrontendOpts().Inputs.clear();
   CI.getFrontendOpts().OutputFile.clear();
+  CI.getFrontendOpts().GenReducedBMI = false;
+  CI.getFrontendOpts().ModuleOutputPath.clear();
+  CI.getHeaderSearchOpts().ModulesSkipHeaderSearchPaths = false;
+  CI.getHeaderSearchOpts().ModulesSkipDiagnosticOptions = false;
   // LLVM options are not going to affect the AST
   CI.getFrontendOpts().LLVMArgs.clear();
 
@@ -962,7 +966,9 @@ ModuleDepCollector::ModuleDepCollector(
           makeCommonInvocationForModuleBuild(std::move(OriginalCI))) {}
 
 void ModuleDepCollector::attachToPreprocessor(Preprocessor &PP) {
-  PP.addPPCallbacks(std::make_unique<ModuleDepCollectorPP>(*this));
+  auto CollectorPP = std::make_unique<ModuleDepCollectorPP>(*this);
+  CollectorPPPtr = CollectorPP.get();
+  PP.addPPCallbacks(std::move(CollectorPP));
 }
 
 void ModuleDepCollector::attachToASTReader(ASTReader &R) {}

@@ -158,7 +158,7 @@ static void generateInstSeqImpl(int64_t Val, const MCSubtargetInfo &STI,
         // Reduce the shift amount and add zeros to the LSBs so it will match
         // LUI, then shift left with SLLI.UW to clear the upper 32 set bits.
         ShiftAmount -= 12;
-        Val = ((uint64_t)Val << 12) | (0xffffffffull << 32);
+        Val = SignExtend64<32>((uint64_t)Val << 12);
         Unsigned = true;
       }
     }
@@ -168,7 +168,7 @@ static void generateInstSeqImpl(int64_t Val, const MCSubtargetInfo &STI,
         STI.hasFeature(RISCV::FeatureStdExtZba)) {
       // Use LUI+ADDI or LUI to compose, then clear the upper 32 bits with
       // SLLI_UW.
-      Val = ((uint64_t)Val) | (0xffffffffull << 32);
+      Val = SignExtend64<32>((uint64_t)Val);
       Unsigned = true;
     }
   }
@@ -239,8 +239,8 @@ static void generateInstSeqLeadingZeros(int64_t Val, const MCSubtargetInfo &STI,
   // If we have exactly 32 leading zeros and Zba, we can try using zext.w at
   // the end of the sequence.
   if (LeadingZeros == 32 && STI.hasFeature(RISCV::FeatureStdExtZba)) {
-    // Try replacing upper bits with 1.
-    uint64_t LeadingOnesVal = Val | maskLeadingOnes<uint64_t>(LeadingZeros);
+    // Bit 31 is set, so sign extend to fill the upper bits with 1s.
+    uint64_t LeadingOnesVal = SignExtend64<32>(Val);
     TmpSeq.clear();
     generateInstSeqImpl(LeadingOnesVal, STI, TmpSeq);
 

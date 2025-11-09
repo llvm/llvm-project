@@ -17,7 +17,7 @@ namespace clang::tidy::cppcoreguidelines {
 /// instead.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines/use-enum-class.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines/use-enum-class.html
 class UseEnumClassCheck : public ClangTidyCheck {
 public:
   UseEnumClassCheck(StringRef Name, ClangTidyContext *Context);
