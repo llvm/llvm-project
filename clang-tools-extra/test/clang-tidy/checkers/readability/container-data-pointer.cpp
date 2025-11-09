@@ -156,3 +156,14 @@ void s(std::unique_ptr<std::vector<unsigned char>> p) {
   // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: 'data' should be used for accessing the data pointer instead of taking the address of the 0-th element [readability-container-data-pointer]
   // CHECK-FIXES: f((*p).data());
 }
+
+void t(std::unique_ptr<container_without_data<unsigned char>> p) {
+  // p has no "data" member function, so no warning
+  f(&(*p)[0]);
+}
+
+template <typename T>
+void u(std::unique_ptr<T> p) {
+  // we don't know if 'T' will always have "data" member function, so no warning
+  f(&(*p)[0]);
+}
