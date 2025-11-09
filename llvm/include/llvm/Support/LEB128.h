@@ -252,6 +252,34 @@ LLVM_ABI extern unsigned getULEB128Size(uint64_t Value);
 /// Utility function to get the size of the SLEB128-encoded value.
 LLVM_ABI extern unsigned getSLEB128Size(int64_t Value);
 
+// Unsigned Counted LEB128: A variant of LEB128 where the length information is
+// determined by counting trailing zero bits in the first byte. Specifically, if
+// the first byte has n-1 trailing zeros, then the encoded integer occupies n
+// bytes total. The special case of a zero first byte signals a 9-byte encoding.
+//
+// The remaining bits in the first byte, plus all subsequent bytes, contain the
+// actual value in little-endian order.
+
+// clang-format off
+// xxxxxxx1: 7 value bits, 1 byte
+// xxxxxx10 xxxxxxxx: 14 value bits, 2 bytes
+// xxxxx100 xxxxxxxx xxxxxxxx: 21 value bits, 3 bytes
+// xxxx1000 xxxxxxxx xxxxxxxx xxxxxxxx: 28 value bits, 4 bytes
+// xxx10000 xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx: 35 value bits, 5 bytes
+// xx100000 xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx: 42 value bits, 6 bytes
+// x1000000 xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx: 49 value bits, 7 bytes
+// 10000000 xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx: 56 value bits, 8 bytes
+//
+// 00000000 xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx: 64 value bits, 9 bytes
+// The last byte should not be 0.
+// clang-format on
+LLVM_ABI void encodeUCLeb128(uint64_t x, raw_ostream &os);
+LLVM_ABI uint64_t getUCLeb128(const uint8_t *&p, const uint8_t *end);
+LLVM_ABI uint64_t getUCLeb128Unsafe(const uint8_t *&p);
+
+// Note: If we introduce signed version of CLEB128, we should use sign extension
+// instead of zig-zag encoding. Sign extension actually generates faster code.
+
 } // namespace llvm
 
 #endif // LLVM_SUPPORT_LEB128_H
