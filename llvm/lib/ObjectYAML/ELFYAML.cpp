@@ -670,7 +670,7 @@ void ScalarBitSetTraits<ELFYAML::ELF_EF>::bitset(IO &IO,
       for (unsigned K = ELF::EF_AMDGPU_GENERIC_VERSION_MIN;
            K <= ELF::EF_AMDGPU_GENERIC_VERSION_MAX; ++K) {
         std::string Key = "EF_AMDGPU_GENERIC_VERSION_V" + std::to_string(K);
-        IO.maskedBitSetCase(Value, Key.c_str(),
+        IO.maskedBitSetCase(Value, Key,
                             K << ELF::EF_AMDGPU_GENERIC_VERSION_OFFSET,
                             ELF::EF_AMDGPU_GENERIC_VERSION);
       }
