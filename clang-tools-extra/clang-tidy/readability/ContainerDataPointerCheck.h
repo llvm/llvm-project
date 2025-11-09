@@ -34,7 +34,7 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 
   std::optional<TraversalKind> getCheckTraversalKind() const override {
-    return TK_AsIs;
+    return TK_IgnoreUnlessSpelledInSource;
   }
 
 private:
