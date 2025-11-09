@@ -36,12 +36,12 @@ std::string m68k::getM68kTargetCPU(const ArgList &Args) {
       return "generic";
 
     return llvm::StringSwitch<std::string>(CPUName)
-        .Cases("m68000", "68000", "M68000")
-        .Cases("m68010", "68010", "M68010")
-        .Cases("m68020", "68020", "M68020")
-        .Cases("m68030", "68030", "M68030")
-        .Cases("m68040", "68040", "M68040")
-        .Cases("m68060", "68060", "M68060")
+        .Cases({"m68000", "68000"}, "M68000")
+        .Cases({"m68010", "68010"}, "M68010")
+        .Cases({"m68020", "68020"}, "M68020")
+        .Cases({"m68030", "68030"}, "M68030")
+        .Cases({"m68040", "68040"}, "M68040")
+        .Cases({"m68060", "68060"}, "M68060")
         .Default(CPUName.str());
   }
   // FIXME: Throw error when multiple sub-architecture flag exist

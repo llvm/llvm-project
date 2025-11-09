@@ -540,8 +540,6 @@ bool LoopVersioningLICM::run(DominatorTree *DT) {
   return Changed;
 }
 
-namespace llvm {
-
 PreservedAnalyses LoopVersioningLICMPass::run(Loop &L, LoopAnalysisManager &AM,
                                               LoopStandardAnalysisResults &LAR,
                                               LPMUpdater &U) {
@@ -556,4 +554,3 @@ PreservedAnalyses LoopVersioningLICMPass::run(Loop &L, LoopAnalysisManager &AM,
     return PreservedAnalyses::all();
   return getLoopPassPreservedAnalyses();
 }
-} // namespace llvm

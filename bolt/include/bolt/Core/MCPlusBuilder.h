@@ -432,7 +432,7 @@ public:
     return Analysis->isConditionalBranch(Inst);
   }
 
-  /// Returns true if Inst is a condtional move instruction
+  /// Returns true if Inst is a conditional move instruction
   virtual bool isConditionalMove(const MCInst &Inst) const {
     llvm_unreachable("not implemented");
     return false;
@@ -836,6 +836,16 @@ public:
   }
 
   virtual bool isAddXri(const MCInst &Inst) const {
+    llvm_unreachable("not implemented");
+    return false;
+  }
+
+  virtual bool isLDRWl(const MCInst &Inst) const {
+    llvm_unreachable("not implemented");
+    return false;
+  }
+
+  virtual bool isLDRXl(const MCInst &Inst) const {
     llvm_unreachable("not implemented");
     return false;
   }
@@ -1564,7 +1574,7 @@ public:
   }
 
   /// Get the default def_in and live_out registers for the function
-  /// Currently only used for the Stoke optimzation
+  /// Currently only used for the Stoke optimization
   virtual void getDefaultDefIn(BitVector &Regs) const {
     llvm_unreachable("not implemented");
   }
@@ -1786,6 +1796,19 @@ public:
   /// ADRP+ADD instruction sequence.
   virtual InstructionListType undoAdrpAddRelaxation(const MCInst &ADRInst,
                                                     MCContext *Ctx) const {
+    llvm_unreachable("not implemented");
+  }
+
+  /// Take \p LDRInst and return ADRP+LDR instruction sequence - for
+  ///
+  ///     ldr  x0, [label]
+  ///
+  /// the following sequence will be generated:
+  ///
+  ///     adrp x0, PageBase(label)
+  ///     ldr  x0, [x0, PageOffset(label)]
+  virtual InstructionListType createAdrpLdr(const MCInst &LDRInst,
+                                            MCContext *Ctx) const {
     llvm_unreachable("not implemented");
   }
 

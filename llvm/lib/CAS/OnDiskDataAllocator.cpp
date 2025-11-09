@@ -185,7 +185,7 @@ Expected<ArrayRef<char>> OnDiskDataAllocator::get(FileOffset Offset,
   return ArrayRef<char>{Impl->File.getRegion().data() + Offset.get(), Size};
 }
 
-MutableArrayRef<uint8_t> OnDiskDataAllocator::getUserHeader() {
+MutableArrayRef<uint8_t> OnDiskDataAllocator::getUserHeader() const {
   return Impl->Store.getUserHeader();
 }
 
@@ -221,7 +221,9 @@ Expected<ArrayRef<char>> OnDiskDataAllocator::get(FileOffset Offset,
                            "OnDiskDataAllocator is not supported");
 }
 
-MutableArrayRef<uint8_t> OnDiskDataAllocator::getUserHeader() { return {}; }
+MutableArrayRef<uint8_t> OnDiskDataAllocator::getUserHeader() const {
+  return {};
+}
 
 size_t OnDiskDataAllocator::size() const { return 0; }
 size_t OnDiskDataAllocator::capacity() const { return 0; }

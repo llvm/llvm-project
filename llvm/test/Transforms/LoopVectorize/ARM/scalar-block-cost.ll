@@ -36,7 +36,7 @@ for.body:                                         ; preds = %entry, %for.body
   br i1 %exitcond.not, label %exit, label %for.body
 }
 
-define i32 @if_convert(ptr %a, ptr %b, i32 %start, i32 %end) #0 {
+define void @if_convert(ptr %a, ptr %b, i32 %start, i32 %end) #0 {
 
 ; CHECK-COST-2: LV: Found an estimated cost of 0 for VF 1 For instruction:   %i.032 = phi i32 [ %inc, %if.end ], [ %start, %for.body.preheader ]
 ; CHECK-COST-2-NEXT: LV: Found an estimated cost of 0 for VF 1 For instruction:   %arrayidx = getelementptr inbounds i32, ptr %a, i32 %i.032
@@ -70,7 +70,7 @@ for.cond.cleanup.loopexit:                        ; preds = %if.end
   br label %for.cond.cleanup
 
 for.cond.cleanup:                                 ; preds = %for.cond.cleanup.loopexit, %entry
-  ret i32 undef
+  ret void
 
 for.body:                                         ; preds = %for.body.preheader, %if.end
   %i.032 = phi i32 [ %inc, %if.end ], [ %start, %for.body.preheader ]

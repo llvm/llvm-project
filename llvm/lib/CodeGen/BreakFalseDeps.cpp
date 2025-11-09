@@ -31,7 +31,7 @@
 
 using namespace llvm;
 
-namespace llvm {
+namespace {
 
 class BreakFalseDeps : public MachineFunctionPass {
 private:
@@ -95,7 +95,7 @@ private:
   void processUndefReads(MachineBasicBlock *);
 };
 
-} // namespace llvm
+} // namespace
 
 #define DEBUG_TYPE "break-false-deps"
 

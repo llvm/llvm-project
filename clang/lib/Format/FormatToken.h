@@ -30,9 +30,10 @@ namespace format {
   TYPE(ArraySubscriptLSquare)                                                  \
   TYPE(AttributeColon)                                                         \
   TYPE(AttributeLParen)                                                        \
+  TYPE(AttributeLSquare)                                                       \
   TYPE(AttributeMacro)                                                         \
   TYPE(AttributeRParen)                                                        \
-  TYPE(AttributeSquare)                                                        \
+  TYPE(AttributeRSquare)                                                       \
   TYPE(BinaryOperator)                                                         \
   TYPE(BitFieldColon)                                                          \
   TYPE(BlockComment)                                                           \
@@ -663,6 +664,12 @@ public:
   bool isIf(bool AllowConstexprMacro = true) const {
     return is(tok::kw_if) || endsSequence(tok::kw_constexpr, tok::kw_if) ||
            (endsSequence(tok::identifier, tok::kw_if) && AllowConstexprMacro);
+  }
+
+  bool isLoop(const FormatStyle &Style) const {
+    return isOneOf(tok::kw_for, tok::kw_while) ||
+           (Style.isJavaScript() && isNot(tok::l_paren) && Previous &&
+            Previous->is(tok::kw_for));
   }
 
   bool closesScopeAfterBlock() const {

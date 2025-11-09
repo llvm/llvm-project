@@ -1034,6 +1034,10 @@ static TargetTypeInfo getTargetTypeInfo(const TargetExtType *Ty) {
   }
 
   // DirectX resources
+  if (Name == "dx.Padding")
+    return TargetTypeInfo(
+        ArrayType::get(Type::getInt8Ty(C), Ty->getIntParameter(0)),
+        TargetExtType::CanBeGlobal);
   if (Name.starts_with("dx."))
     return TargetTypeInfo(PointerType::get(C, 0), TargetExtType::CanBeGlobal,
                           TargetExtType::CanBeLocal,

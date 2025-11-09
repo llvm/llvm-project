@@ -1,0 +1,32 @@
+# RUN: llc -march=amdgcn -mcpu=gfx908 -run-pass machine-scheduler --misched-prera-direction=topdown -verify-machineinstrs %s -o - -debug-only=machine-scheduler 2>&1 | FileCheck %s
+# REQUIRES: asserts
+
+# Check that cycle counts are consistent with hazards.
+
+# CHECK: Cycle: 3 TopQ.A
+# CHECK: hazard:  SU(6) HWXDL[0]=9c, is later than CurrCycle = 3c
+# CHECK-NOT: Cycle: 9 TopQ.A
+# CHECK: Cycle: 83 TopQ.A
+# CHECK: Checking pending node SU(6)
+# CHECK: Move SU(6) into Available Q
+
+---
+name:            pending_queue_ready_cycle
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $sgpr4_sgpr5
+
+    %2:sgpr_128 = IMPLICIT_DEF
+    %14:vgpr_32 = IMPLICIT_DEF
+    %15:vgpr_32 = IMPLICIT_DEF
+    %18:areg_512 = IMPLICIT_DEF
+    %18:areg_512 = V_MFMA_F32_16X16X1F32_mac_e64 %15, %14, %18, 0, 0, 0, implicit $mode, implicit $exec
+    %5:vreg_128 = BUFFER_LOAD_DWORDX4_OFFSET %2, 0, 0, 0, 0, implicit $exec
+    %18:areg_512 = V_MFMA_F32_16X16X1F32_mac_e64 %15, %14, %18, 0, 0, 0, implicit $mode, implicit $exec
+    undef %84.sub0:vreg_128_align2 = V_ADD_U32_e32 %5.sub0, %14, implicit $exec
+    %7:vreg_512 = COPY %18
+    SCHED_BARRIER 0
+    S_NOP 0, implicit %18, implicit %7, implicit %84
+    S_ENDPGM 0
+...

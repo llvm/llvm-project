@@ -667,8 +667,11 @@ Constant::PossibleRelocationsTy Constant::getRelocationInfo() const {
     if (CE->getOpcode() == Instruction::Sub) {
       ConstantExpr *LHS = dyn_cast<ConstantExpr>(CE->getOperand(0));
       ConstantExpr *RHS = dyn_cast<ConstantExpr>(CE->getOperand(1));
-      if (LHS && RHS && LHS->getOpcode() == Instruction::PtrToInt &&
-          RHS->getOpcode() == Instruction::PtrToInt) {
+      if (LHS && RHS &&
+          (LHS->getOpcode() == Instruction::PtrToInt ||
+           LHS->getOpcode() == Instruction::PtrToAddr) &&
+          (RHS->getOpcode() == Instruction::PtrToInt ||
+           RHS->getOpcode() == Instruction::PtrToAddr)) {
         Constant *LHSOp0 = LHS->getOperand(0);
         Constant *RHSOp0 = RHS->getOperand(0);
 

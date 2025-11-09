@@ -1244,8 +1244,9 @@ bool FlatLinearValueConstraints::areVarsAlignedWithOther(
 
 /// Checks if the SSA values associated with `cst`'s variables in range
 /// [start, end) are unique.
-static bool LLVM_ATTRIBUTE_UNUSED areVarsUnique(
-    const FlatLinearValueConstraints &cst, unsigned start, unsigned end) {
+[[maybe_unused]] static bool
+areVarsUnique(const FlatLinearValueConstraints &cst, unsigned start,
+              unsigned end) {
 
   assert(start <= cst.getNumDimAndSymbolVars() &&
          "Start position out of bounds");
@@ -1267,14 +1268,14 @@ static bool LLVM_ATTRIBUTE_UNUSED areVarsUnique(
 }
 
 /// Checks if the SSA values associated with `cst`'s variables are unique.
-static bool LLVM_ATTRIBUTE_UNUSED
+[[maybe_unused]] static bool
 areVarsUnique(const FlatLinearValueConstraints &cst) {
   return areVarsUnique(cst, 0, cst.getNumDimAndSymbolVars());
 }
 
 /// Checks if the SSA values associated with `cst`'s variables of kind `kind`
 /// are unique.
-static bool LLVM_ATTRIBUTE_UNUSED
+[[maybe_unused]] static bool
 areVarsUnique(const FlatLinearValueConstraints &cst, VarKind kind) {
 
   if (kind == VarKind::SetDim)

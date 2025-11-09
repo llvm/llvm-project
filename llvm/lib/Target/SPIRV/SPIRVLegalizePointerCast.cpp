@@ -46,7 +46,6 @@
 #include "SPIRVSubtarget.h"
 #include "SPIRVTargetMachine.h"
 #include "SPIRVUtils.h"
-#include "llvm/CodeGen/IntrinsicLowering.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
@@ -74,16 +73,23 @@ class SPIRVLegalizePointerCast : public FunctionPass {
   // Returns the loaded value.
   Value *loadVectorFromVector(IRBuilder<> &B, FixedVectorType *SourceType,
                               FixedVectorType *TargetType, Value *Source) {
-    assert(TargetType->getNumElements() <= SourceType->getNumElements());
     LoadInst *NewLoad = B.CreateLoad(SourceType, Source);
     buildAssignType(B, SourceType, NewLoad);
     Value *AssignValue = NewLoad;
     if (TargetType->getElementType() != SourceType->getElementType()) {
+      const DataLayout &DL = B.GetInsertBlock()->getModule()->getDataLayout();
+      [[maybe_unused]] TypeSize TargetTypeSize =
+          DL.getTypeSizeInBits(TargetType);
+      [[maybe_unused]] TypeSize SourceTypeSize =
+          DL.getTypeSizeInBits(SourceType);
+      assert(TargetTypeSize == SourceTypeSize);
       AssignValue = B.CreateIntrinsic(Intrinsic::spv_bitcast,
                                       {TargetType, SourceType}, {NewLoad});
       buildAssignType(B, TargetType, AssignValue);
+      return AssignValue;
     }
 
+    assert(TargetType->getNumElements() < SourceType->getNumElements());
     SmallVector<int> Mask(/* Size= */ TargetType->getNumElements());
     for (unsigned I = 0; I < TargetType->getNumElements(); ++I)
       Mask[I] = I;
@@ -348,7 +354,7 @@ class SPIRVLegalizePointerCast : public FunctionPass {
 public:
   SPIRVLegalizePointerCast(SPIRVTargetMachine *TM) : FunctionPass(ID), TM(TM) {}
 
-  virtual bool runOnFunction(Function &F) override {
+  bool runOnFunction(Function &F) override {
     const SPIRVSubtarget &ST = TM->getSubtarget<SPIRVSubtarget>(F);
     GR = ST.getSPIRVGlobalRegistry();
     DeadInstructions.clear();

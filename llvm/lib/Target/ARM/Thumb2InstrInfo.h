@@ -90,6 +90,9 @@ inline ARMVCC::VPTCodes getVPTInstrPredicate(const MachineInstr &MI) {
   Register PredReg;
   return getVPTInstrPredicate(MI, PredReg);
 }
+// Identify the input operand in an MVE predicated instruction which
+// contributes the values of any inactive vector lanes.
+int findVPTInactiveOperandIdx(const MachineInstr &MI);
 
 // Recomputes the Block Mask of Instr, a VPT or VPST instruction.
 // This rebuilds the block mask of the instruction depending on the predicates
