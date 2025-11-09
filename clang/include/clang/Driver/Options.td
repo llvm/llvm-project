@@ -3240,7 +3240,7 @@ def fms_compatibility : Flag<["-"], "fms-compatibility">, Group<f_Group>,
   MarshallingInfoFlag<LangOpts<"MSVCCompat">>;
 def fms_preprocessor_compat : Flag<["-"], "fms-preprocessor-compat">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
-  HelpText<"Enable full emulation of the traditional MSVC preprocesor">,
+  HelpText<"Enable full emulation of the traditional MSVC preprocessor">,
   MarshallingInfoFlag<LangOpts<"MSVCPreprocessor">>;
 def fms_define_stdc : Flag<["-"], "fms-define-stdc">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option, CLOption]>,
