@@ -374,25 +374,23 @@ static std::unique_ptr<ToolOutputFile> GetOutputStream(const char *TargetName,
 }
 
 static int MaybeEnableStats() {
-  if (SaveStats == SaveStatsMode::None) {
+  if (SaveStats == SaveStatsMode::None)
     return 0;
-  }
 
   llvm::EnableStatistics(false);
   return 0;
 }
 
 static int MaybeSaveStats(std::string &&OutputFilename) {
-  if (SaveStats == SaveStatsMode::None) {
+  if (SaveStats == SaveStatsMode::None)
     return 0;
-  }
 
   SmallString<128> StatsFilename;
   if (SaveStats == SaveStatsMode::Obj) {
     StatsFilename = OutputFilename;
     llvm::sys::path::remove_filename(StatsFilename);
   } else {
-    assert((SaveStats == SaveStatsMode::Cwd) &&
+    assert(SaveStats == SaveStatsMode::Cwd &&
            "Should have been a valid --save-stats value");
   }
 

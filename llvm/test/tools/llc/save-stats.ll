@@ -1,4 +1,3 @@
-
 ; RUN: rm -f %t.stats && llc -mtriple=arm64-apple-macosx --save-stats=obj -o %t.s %s && test -f %t.stats
 ; RUN: rm -f %{t:stem}.tmp.stats && llc -mtriple=arm64-apple-macosx --save-stats=cwd -o %t.s %s && test -f %{t:stem}.tmp.stats
 ; RUN: rm -f %{t:stem}.tmp.stats && llc -mtriple=arm64-apple-macosx --save-stats -o %t.s %s && test -f %{t:stem}.tmp.stats
