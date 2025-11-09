@@ -679,59 +679,59 @@ bool SparcInstrInfo::optimizeCompareInstr(
   if (MI->getParent() != CmpInstr.getParent())
     return false;
 
-  unsigned newOpcode;
+  unsigned NewOpcode;
   switch (MI->getOpcode()) {
   case SP::ANDNrr:
-    newOpcode = SP::ANDNCCrr;
+    NewOpcode = SP::ANDNCCrr;
     break;
   case SP::ANDNri:
-    newOpcode = SP::ANDNCCri;
+    NewOpcode = SP::ANDNCCri;
     break;
   case SP::ANDrr:
-    newOpcode = SP::ANDCCrr;
+    NewOpcode = SP::ANDCCrr;
     break;
   case SP::ANDri:
-    newOpcode = SP::ANDCCri;
+    NewOpcode = SP::ANDCCri;
     break;
   case SP::ORrr:
-    newOpcode = SP::ORCCrr;
+    NewOpcode = SP::ORCCrr;
     break;
   case SP::ORri:
-    newOpcode = SP::ORCCri;
+    NewOpcode = SP::ORCCri;
     break;
   case SP::ORNCCrr:
-    newOpcode = SP::ORNCCrr;
+    NewOpcode = SP::ORNCCrr;
     break;
   case SP::ORNri:
-    newOpcode = SP::ORNCCri;
+    NewOpcode = SP::ORNCCri;
     break;
   case SP::XORrr:
-    newOpcode = SP::XORCCrr;
+    NewOpcode = SP::XORCCrr;
     break;
   case SP::XNORri:
-    newOpcode = SP::XNORCCri;
+    NewOpcode = SP::XNORCCri;
     break;
   case SP::XNORrr:
-    newOpcode = SP::XNORCCrr;
+    NewOpcode = SP::XNORCCrr;
     break;
   case SP::ADDrr:
-    newOpcode = SP::ADDCCrr;
+    NewOpcode = SP::ADDCCrr;
     break;
   case SP::ADDri:
-    newOpcode = SP::ADDCCri;
+    NewOpcode = SP::ADDCCri;
     break;
   case SP::SUBrr:
-    newOpcode = SP::SUBCCrr;
+    NewOpcode = SP::SUBCCrr;
     break;
   case SP::SUBri:
-    newOpcode = SP::SUBCCri;
+    NewOpcode = SP::SUBCCri;
     break;
   default:
     return false;
   }
 
-  bool isSafe = false;
-  bool isRegUsed = false;
+  bool IsSafe = false;
+  bool IsRegUsed = false;
   MachineBasicBlock::iterator I = MI;
   MachineBasicBlock::iterator C = CmpInstr;
   MachineBasicBlock::iterator E = CmpInstr.getParent()->end();
@@ -742,7 +742,7 @@ bool SparcInstrInfo::optimizeCompareInstr(
     if (I->modifiesRegister(SP::ICC, TRI) || I->readsRegister(SP::ICC, TRI))
       return false;
     if (I->readsRegister(SrcReg, TRI))
-      isRegUsed = true;
+      IsRegUsed = true;
   }
 
   while (++I != E) {
@@ -761,12 +761,12 @@ bool SparcInstrInfo::optimizeCompareInstr(
            I->getOperand(IsICCBranch ? 1 : 3).getImm() != SPCC::ICC_NE))
         return false;
     } else if (I->modifiesRegister(SP::ICC, TRI)) {
-      isSafe = true;
+      IsSafe = true;
       break;
     }
   }
 
-  if (!isSafe) {
+  if (!IsSafe) {
     MachineBasicBlock *MBB = CmpInstr.getParent();
     for (MachineBasicBlock::succ_iterator SI = MBB->succ_begin(),
                                           SE = MBB->succ_end();
@@ -775,11 +775,13 @@ bool SparcInstrInfo::optimizeCompareInstr(
         return false;
   }
 
-  // If the result is not needed use the %g0 register.
-  if (!isRegUsed && CmpInstr.getOperand(1).isKill())
+  // If the SrcReg use by CmpInstr is a kill that means that it won't be used in
+  // any of the successor blocks. In that case it is safe to set the destination
+  // of MI to %g0.
+  if (!IsRegUsed && CmpInstr.getOperand(1).isKill())
     MI->getOperand(0).setReg(SP::G0);
 
-  MI->setDesc(get(newOpcode));
+  MI->setDesc(get(NewOpcode));
   MI->addRegisterDefined(SP::ICC);
   CmpInstr.eraseFromParent();
 
