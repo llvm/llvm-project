@@ -21,6 +21,7 @@
 #include <__memory/allocation_guard.h>
 #include <__memory/allocator_arg_t.h>
 #include <__memory/allocator_traits.h>
+#include <__memory/pointer_traits.h>
 #include <__memory/swap_allocator.h>
 #include <__type_traits/is_array.h>
 #include <__type_traits/is_assignable.h>
