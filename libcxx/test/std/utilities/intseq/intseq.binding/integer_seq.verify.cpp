@@ -7,17 +7,25 @@
 //===----------------------------------------------------------------------===//
 
 // REQUIRES: std-at-least-c++26
+
 // <utility>
+
+// template<size_t I, class T, T... Values>
+//   struct tuple_element<I, integer_sequence<T, Values...>>;
+// template<size_t I, class T, T... Values>
+//   struct tuple_element<I, const integer_sequence<T, Values...>>;
+// template<size_t I, class T, T... Values>
+//   constexpr T get(integer_sequence<T, Values...>) noexcept;
 
 // Expect failures for tuple_element and get with empty integer_sequence
 
 #include <utility>
 
 void f() {
-  using test1 = typename std::tuple_element<0, std::integer_sequence<int>>::
-      type; // expected-error-re@*:* {{static assertion failed{{.*}}Index out of bounds in std::tuple_element<> (std::integer_sequence)}}
-  using test2 = typename std::tuple_element<0, const std::integer_sequence<int>>::
-      type; // expected-error-re@*:* {{static assertion failed{{.*}}Index out of bounds in std::tuple_element<> (const std::integer_sequence)}}
+  // expected-error-re@*:* {{static assertion failed{{.*}}Index out of bounds in std::tuple_element<> (std::integer_sequence)}}
+  using test1 = std::tuple_element_t<0, std::integer_sequence<int>>;
+  // expected-error-re@*:* {{static assertion failed{{.*}}Index out of bounds in std::tuple_element<> (const std::integer_sequence)}}
+  using test2 = std::tuple_element_t<0, const std::integer_sequence<int>>;
 
   auto empty = std::integer_sequence<int>();
   // expected-error-re@*:* {{static assertion failed{{.*}}Index out of bounds in std::get<> (std::integer_sequence)}}
