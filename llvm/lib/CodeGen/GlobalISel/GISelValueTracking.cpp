@@ -31,14 +31,13 @@
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/IR/ConstantRange.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/FMF.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/KnownFPClass.h"
 #include "llvm/Target/TargetMachine.h"
-#include "llvm/CodeGen/GlobalISel/Utils.h"
-#include "llvm/IR/Constants.h"
 
 #define DEBUG_TYPE "gisel-known-bits"
 
@@ -2095,7 +2094,7 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
 
     if (Known1.isZero() || Known2.isZero())
       return TyBits;
-    
+
     auto C1 = getIConstantVRegValWithLookThrough(Src1, MRI);
     auto C2 = getIConstantVRegValWithLookThrough(Src2, MRI);
 
@@ -2107,17 +2106,17 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
     }
     unsigned Src1NumSignBits =
         computeNumSignBits(Src1, DemandedElts, Depth + 1);
-    if(Src1NumSignBits==1){
+    if (Src1NumSignBits == 1) {
       return 1;
     }
     unsigned Src2NumSignBits =
         computeNumSignBits(Src2, DemandedElts, Depth + 1);
-    if(Src2NumSignBits==1){
+    if (Src2NumSignBits == 1) {
       return 1;
     }
 
     unsigned OutValidBits =
-      (TyBits - Src1NumSignBits + 1) + (TyBits - Src2NumSignBits + 1);
+        (TyBits - Src1NumSignBits + 1) + (TyBits - Src2NumSignBits + 1);
     FirstAnswer = OutValidBits > TyBits ? 1 : TyBits - OutValidBits + 1;
     break;
   }
