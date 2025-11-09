@@ -7,18 +7,24 @@
 //===----------------------------------------------------------------------===//
 
 // REQUIRES: std-at-least-c++26
+
 // <utility>
 
-// structured binding support for integer_sequence
+// template<class T, T... Values>
+//   struct tuple_size<integer_sequence<T, Values...>>;
+// template<size_t I, class T, T... Values>
+//   struct tuple_element<I, integer_sequence<T, Values...>>;
+// template<size_t I, class T, T... Values>
+//   struct tuple_element<I, const integer_sequence<T, Values...>>;
+// template<size_t I, class T, T... Values>
+//   constexpr T get(integer_sequence<T, Values...>) noexcept;
 
 #include <tuple>
 #include <utility>
 #include <type_traits>
 #include <cassert>
 
-#include "test_macros.h"
-
-int main(int, char**) {
+constexpr void test() {
   using empty = std::integer_sequence<int>;
   static_assert(std::tuple_size_v<empty> == 0);
   static_assert(std::tuple_size_v<const empty> == 0);
@@ -42,6 +48,4 @@ int main(int, char**) {
   static_assert(get<1>(seq4) == 8);
   static_assert(get<2>(seq4) == 7);
   static_assert(get<3>(seq4) == 2);
-
-  return 0;
 }
