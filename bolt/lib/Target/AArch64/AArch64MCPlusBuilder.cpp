@@ -199,7 +199,7 @@ public:
         continue;
       if (IsPop || IsSPAdj || isPAuthOnLR(Instr))
         continue;
-      if (isReturn(Instr) || isPAuthAndRet(Instr))
+      if (isReturn(Instr))
         return true;
       if (isBranch(Instr))
         break;
