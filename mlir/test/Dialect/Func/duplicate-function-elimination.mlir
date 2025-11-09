@@ -1,5 +1,5 @@
 // RUN: mlir-opt %s --split-input-file --duplicate-function-elimination | \
-// RUN: FileCheck %s
+// RUN: FileCheck %s --check-prefixes=CHECK,CHECK-2,CHECK-3
 
 func.func @identity(%arg0: tensor<f32>) -> tensor<f32> {
   return %arg0 : tensor<f32>
