@@ -8421,7 +8421,7 @@ bool Sema::TemplateParameterListsAreEqual(
   return true;
 }
 
-bool
+bool 
 Sema::CheckTemplateDeclScope(Scope *S, TemplateParameterList *TemplateParams) {
   if (!S)
     return false;
@@ -8445,33 +8445,49 @@ Sema::CheckTemplateDeclScope(Scope *S, TemplateParameterList *TemplateParams) {
   }
   Ctx = Ctx ? Ctx->getRedeclContext() : nullptr;
 
-  // C++ [temp]p2:
-  //   A template-declaration can appear only as a namespace scope or
-  //   class scope declaration.
-  // C++ [temp.expl.spec]p3:
-  //   An explicit specialization may be declared in any scope in which the
-  //   corresponding primary template may be defined.
-  // C++ [temp.class.spec]p6: [P2096]
-  //   A partial specialization may be declared in any scope in which the
-  //   corresponding primary template may be defined.
+  // Compute a SourceLocation to use for diagnostics. Prefer the explicit
+  // template location, but fall back to nearby Decl locations when needed.
+  SourceLocation Loc = TemplateParams->getTemplateLoc();
+  if (Loc.isInvalid())
+    Loc = TemplateParams->getSourceRange().getBegin();
+
+  if (Loc.isInvalid() && Ctx) {
+    if (const Decl *D = dyn_cast<Decl>(Ctx))
+      Loc = D->getBeginLoc();
+  }
+
+  // Try to extract class context if present.
+  CXXRecordDecl *RD = Ctx ? dyn_cast<CXXRecordDecl>(Ctx) : nullptr;
+  if (Loc.isInvalid() && RD)
+    Loc = RD->getLocation();
+
   if (Ctx) {
     if (Ctx->isFileContext())
       return false;
-    if (CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(Ctx)) {
+
+    if (RD) {
       // C++ [temp.mem]p2:
       //   A local class shall not have member templates.
-      if (RD->isLocalClass())
-        return Diag(TemplateParams->getTemplateLoc(),
-                    diag::err_template_inside_local_class)
-          << TemplateParams->getSourceRange();
-      else
+      if (RD->isLocalClass()) {
+        // when the template location is not valid we are trying to use fallback SourceLocation such that diagnostic prints a usable file:line:col location
+        if (Loc.isInvalid())
+          Loc = TemplateParams->getSourceRange().getBegin();
+
+        return Diag(Loc, diag::err_template_inside_local_class)
+                 << TemplateParams->getSourceRange();
+      } 
+      else {
         return false;
+      }
     }
   }
 
-  return Diag(TemplateParams->getTemplateLoc(),
-              diag::err_template_outside_namespace_or_class_scope)
-    << TemplateParams->getSourceRange();
+  // when teplate declared outside the namspace or class scope it Fallbacks and it give valid SourceLocation with file:line info.
+  if (Loc.isInvalid())
+    Loc = TemplateParams->getSourceRange().getBegin();
+
+  return Diag(Loc, diag::err_template_outside_namespace_or_class_scope)
+           << TemplateParams->getSourceRange();
 }
 
 /// Determine what kind of template specialization the given declaration
