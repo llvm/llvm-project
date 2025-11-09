@@ -78,7 +78,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr void __for_each_index_sequence(index_sequence<_I
 #    if _LIBCPP_STD_VER >= 26
 // structured binding support for integer_sequence
 template <typename _Tp, _Tp... _Indices>
-struct tuple_size<integer_sequence<_Tp, _Indices...>> : public integral_constant<size_t, sizeof...(_Indices)> {};
+struct tuple_size<integer_sequence<_Tp, _Indices...>> : integral_constant<size_t, sizeof...(_Indices)> {};
 
 template <size_t _Ip, typename _Tp, _Tp... _Indices>
 struct tuple_element<_Ip, integer_sequence<_Tp, _Indices...>> {
@@ -97,7 +97,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr _Tp get(integer_sequence<_Tp, _Indices...>) _NOE
   static_assert(_Ip < sizeof...(_Indices), "Index out of bounds in std::get<> (std::integer_sequence)");
   return _Indices...[_Ip];
 }
-#    endif // _LIBCPP_STD_VER >= 20
+#    endif // _LIBCPP_STD_VER >= 26
 
 #  endif // _LIBCPP_STD_VER >= 14
 
