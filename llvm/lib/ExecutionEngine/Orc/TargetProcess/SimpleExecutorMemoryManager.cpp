@@ -36,8 +36,6 @@ Expected<ExecutorAddr> SimpleExecutorMemoryManager::reserve(uint64_t Size) {
 
 Expected<ExecutorAddr>
 SimpleExecutorMemoryManager::initialize(tpctypes::FinalizeRequest &FR) {
-  std::vector<shared::WrapperFunctionCall> DeallocationActions;
-
   if (FR.Segments.empty()) {
     if (FR.Actions.empty())
       return make_error<StringError>("Finalization request is empty",
