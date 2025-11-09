@@ -282,13 +282,13 @@ private:
   template <class... _Us>
   _LIBCPP_HIDE_FROM_ABI static constexpr pointer __allocate_owned_object(_Allocator& __a, _Us&&... __us) {
     __allocation_guard<_Allocator> __guard(__a, 1);
-    allocator_traits<_Allocator>::construct(__a, __guard.__get(), std::forward<_Us>(__us)...);
+    allocator_traits<_Allocator>::construct(__a, std::to_address(__guard.__get()), std::forward<_Us>(__us)...);
     return __guard.__release_ptr();
   }
 
   _LIBCPP_HIDE_FROM_ABI constexpr void __destroy_owned_object() noexcept {
     if (!valueless_after_move()) {
-      allocator_traits<_Allocator>::destroy(__alloc_, __ptr_);
+      allocator_traits<_Allocator>::destroy(__alloc_, std::to_address(__ptr_));
       allocator_traits<_Allocator>::deallocate(__alloc_, __ptr_, 1);
     }
   }

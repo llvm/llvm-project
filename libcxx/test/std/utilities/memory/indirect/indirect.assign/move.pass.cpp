@@ -17,13 +17,11 @@
 //            allocator_traits<Allocator>::is_always_equal::value);
 
 #include <cassert>
-#include <type_traits>
 #include <memory>
+#include <type_traits>
 
-#include "test_convertible.h"
 #include "test_allocator.h"
 #include "min_allocator.h"
-#include "archetypes.h"
 
 constexpr void test_assignment() {
   { // Move-assigning from an indirect leaves it valueless.
@@ -126,7 +124,7 @@ constexpr void test_lwg4251() {
     i = std::move(i);
   }
   { // T doesn't have to be move constructible, as long as the allocator is always equal.
-    using A = explicit_allocator<Immovable>;
+    using A = min_allocator<Immovable>;
     static_assert(!std::allocator_traits<A>::propagate_on_container_move_assignment::value);
     static_assert(std::allocator_traits<A>::is_always_equal::value);
     std::indirect<Immovable, A> i;
