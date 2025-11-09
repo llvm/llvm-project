@@ -10,7 +10,7 @@
 
 // class set
 
-// iterator erase(const_iterator position);
+// constexpr iterator erase(const_iterator position); // constexpr since C++26
 
 #include <set>
 #include <cassert>
@@ -25,7 +25,7 @@ struct TemplateConstructor {
 
 bool operator<(const TemplateConstructor&, const TemplateConstructor&) { return false; }
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   {
     typedef std::set<int> M;
     typedef int V;
@@ -179,5 +179,12 @@ int main(int, char**) {
   }
 #endif
 
+  return true;
+}
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
   return 0;
 }

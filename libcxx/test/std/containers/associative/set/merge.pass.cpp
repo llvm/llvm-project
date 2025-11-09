@@ -13,13 +13,13 @@
 // class set
 
 // template <class C2>
-//   void merge(set<key_type, C2, allocator_type>& source);
+//   constexpr void merge(set<key_type, C2, allocator_type>& source); // constexpr since C++26
 // template <class C2>
-//   void merge(set<key_type, C2, allocator_type>&& source);
+//   constexpr void merge(set<key_type, C2, allocator_type>&& source); // constexpr since C++26
 // template <class C2>
-//   void merge(multiset<key_type, C2, allocator_type>& source);
+//   constexpr void merge(multiset<key_type, C2, allocator_type>& source); // constexpr since C++26
 // template <class C2>
-//   void merge(multiset<key_type, C2, allocator_type>&& source);
+//   constexpr void merge(multiset<key_type, C2, allocator_type>&& source); // constexpr since C++26
 
 #include <set>
 #include <cassert>
@@ -46,7 +46,7 @@ struct throw_comparator {
 };
 #endif
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   {
     std::set<int> src{1, 3, 5};
     std::set<int> dst{2, 4, 5};
@@ -134,5 +134,12 @@ int main(int, char**) {
       first.merge(std::move(second));
     }
   }
+  return true;
+}
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
   return 0;
 }

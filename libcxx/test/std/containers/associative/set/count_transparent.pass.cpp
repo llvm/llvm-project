@@ -13,7 +13,7 @@
 // class set
 
 //    template<typename K>
-//        size_type count(const K& x) const;        // C++14
+//        constexpr size_type count(const K& x) const;        // C++14 // constexpr since C++26
 
 #include <cassert>
 #include <set>
@@ -29,11 +29,18 @@ struct Comp {
   bool operator()(int lhs, const std::pair<int, int>& rhs) const { return lhs < rhs.first; }
 };
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   std::set<std::pair<int, int>, Comp> s{{2, 1}, {1, 2}, {1, 3}, {1, 4}, {2, 2}};
 
   auto cnt = s.count(1);
   assert(cnt == 3);
 
+  return true;
+}
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
   return 0;
 }

@@ -10,7 +10,7 @@
 
 // class set
 
-// pair<iterator, bool> insert(const value_type& v);
+// constexpr pair<iterator, bool> insert(const value_type& v); // constexpr since C++26
 
 #include <set>
 #include <cassert>
@@ -53,7 +53,7 @@ void do_insert_cv_test() {
   assert(*r.first == 3);
 }
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   do_insert_cv_test<std::set<int> >();
 #if TEST_STD_VER >= 11
   {
@@ -62,5 +62,12 @@ int main(int, char**) {
   }
 #endif
 
+  return true;
+}
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
   return 0;
 }

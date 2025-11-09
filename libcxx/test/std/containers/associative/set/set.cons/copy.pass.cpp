@@ -10,7 +10,7 @@
 
 // class set
 
-// set(const set& m);
+// constexpr set(const set& m); // constexpr since C++26
 
 #include <cassert>
 #include <set>
@@ -127,8 +127,15 @@ void test() {
   }
 }
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   test();
 
+  return true;
+}
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
   return 0;
 }

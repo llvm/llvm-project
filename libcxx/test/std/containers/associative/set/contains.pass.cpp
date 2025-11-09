@@ -13,7 +13,7 @@
 
 // <set>
 
-// bool contains(const key_type& x) const;
+// constexpr bool contains(const key_type& x) const; // constexpr since C++26
 
 template <typename T, typename V, typename B, typename... Vals>
 void test(B bad, Vals... args) {
@@ -34,7 +34,7 @@ struct E {
   char c   = 1;
 };
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   {
     test<std::set<int>, int>(14, 10, 11, 12, 13);
     test<std::set<char>, char>('e', 'a', 'b', 'c', 'd');
@@ -44,5 +44,12 @@ int main(int, char**) {
     test<std::multiset<char>, char>('e', 'a', 'b', 'c', 'd');
   }
 
+  return true;
+}
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
   return 0;
 }

@@ -12,7 +12,7 @@
 
 // class set
 
-// iterator insert(const_iterator hint, node_type&&);
+// constexpr iterator insert(const_iterator hint, node_type&&); // constexpr since C++26
 
 #include <set>
 #include "test_macros.h"
@@ -47,11 +47,18 @@ void test(Container& c) {
   }
 }
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   std::set<int> m;
   test(m);
   std::set<int, std::less<int>, min_allocator<int>> m2;
   test(m2);
 
+  return true;
+}
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
   return 0;
 }

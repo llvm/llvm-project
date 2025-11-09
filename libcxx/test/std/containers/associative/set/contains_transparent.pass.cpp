@@ -12,7 +12,7 @@
 
 // class set
 
-// template<typename K> bool contains(const K& x) const; // C++20
+// template<typename K> constexpr bool contains(const K& x) const; // C++20 // constexpr since C++26
 
 #include <cassert>
 #include <set>
@@ -36,9 +36,16 @@ void test() {
   assert(!s.contains(-1));
 }
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   test<std::set<std::pair<int, int>, Comp> >();
   test<std::multiset<std::pair<int, int>, Comp> >();
 
+  return true;
+}
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
   return 0;
 }

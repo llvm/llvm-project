@@ -11,7 +11,7 @@
 // class set
 
 // template <class InputIterator>
-//   void insert(InputIterator first, InputIterator last);
+//   constexpr void insert(InputIterator first, InputIterator last); // constexpr since C++26
 
 #include <array>
 #include <cassert>
@@ -183,8 +183,15 @@ void test() {
   test_alloc<cpp17_input_iterator<int*>, min_allocator<int> >();
 }
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   test();
 
+  return true;
+}
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
   return 0;
 }

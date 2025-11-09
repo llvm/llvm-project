@@ -11,7 +11,7 @@
 
 // template <class T, class Compare, class Allocator, class Predicate>
 //   typename set<T, Compare, Allocator>::size_type
-//   erase_if(set<T, Compare, Allocator>& c, Predicate pred);
+//   constexpr erase_if(set<T, Compare, Allocator>& c, Predicate pred); // constexpr since C++26
 
 #include <set>
 
@@ -53,7 +53,7 @@ void test() {
   test0(S({1, 2, 3}), False, S({1, 2, 3}), 0);
 }
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   test<std::set<int>>();
   test<std::set<int, std::less<int>, min_allocator<int>>>();
   test<std::set<int, std::less<int>, test_allocator<int>>>();
@@ -61,5 +61,12 @@ int main(int, char**) {
   test<std::set<long>>();
   test<std::set<double>>();
 
+  return true;
+}
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
   return 0;
 }

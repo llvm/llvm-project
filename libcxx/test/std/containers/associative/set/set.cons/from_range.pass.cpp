@@ -14,6 +14,7 @@
 // template<container-compatible-range<value_type> R>
 //   set(from_range_t, R&& rg, const Allocator& a))
 //     : set(from_range, std::forward<R>(rg), Compare(), a) { } // C++23
+// constexpr since C++26
 
 #include <array>
 #include <set>
@@ -30,7 +31,7 @@ void test_duplicates() {
   assert(std::ranges::is_permutation(expected, c));
 }
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   for_all_iterators_and_allocators<int>([]<class Iter, class Sent, class Alloc>() {
     test_associative_set<std::set, int, Iter, Sent, test_less<int>, Alloc>();
   });
@@ -42,5 +43,12 @@ int main(int, char**) {
   test_set_exception_safety_throwing_copy<std::set>();
   test_set_exception_safety_throwing_allocator<std::set, int>();
 
+  return true;
+}
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
   return 0;
 }
