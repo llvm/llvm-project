@@ -1887,9 +1887,14 @@ public:
   template <typename LLVMCaseItT, typename BlockT, typename ConstT>
   class CaseItImpl;
 
+  // The template helps avoid code duplication for const and non-const
+  // CaseHandle variants.
   template <typename LLVMCaseItT, typename BlockT, typename ConstT>
   class CaseHandleImpl {
     Context &Ctx;
+    // NOTE: We are not wrapping an LLVM CaseHande here because it is not
+    // default-constructible. Instead we are wrapping the LLVM CaseIt
+    // iterator, as we can always get an LLVM CaseHandle by de-referencing it.
     LLVMCaseItT LLVMCaseIt;
     template <typename T1, typename T2, typename T3> friend class CaseItImpl;
 
@@ -1908,6 +1913,8 @@ public:
     }
   };
 
+  // The template helps avoid code duplication for const and non-const CaseIt
+  // variants.
   template <typename LLVMCaseItT, typename BlockT, typename ConstT>
   class CaseItImpl : public iterator_facade_base<
                          CaseItImpl<LLVMCaseItT, BlockT, ConstT>,
@@ -1921,11 +1928,11 @@ public:
         : CH(SI->getContext(), llvm::SwitchInst::CaseIt(
                                    cast<llvm::SwitchInst>(SI->Val), CaseNum)) {}
     CaseItImpl &operator+=(ptrdiff_t N) {
-      CH.LLVMCaseIt.operator+=(N);
+      CH.LLVMCaseIt += N;
       return *this;
     }
     CaseItImpl &operator-=(ptrdiff_t N) {
-      CH.LLVMCaseIt.operator-=(N);
+      CH.LLVMCaseIt -= N;
       return *this;
     }
     ptrdiff_t operator-(const CaseItImpl &Other) const {
