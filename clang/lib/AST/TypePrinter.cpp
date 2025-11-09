@@ -18,6 +18,7 @@
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/ExprCXX.h"
 #include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/PrettyPrinter.h"
 #include "clang/AST/TemplateBase.h"
@@ -1321,6 +1322,18 @@ void TypePrinter::printTypeOfBefore(const TypeOfType *T, raw_ostream &OS) {
 void TypePrinter::printTypeOfAfter(const TypeOfType *T, raw_ostream &OS) {}
 
 void TypePrinter::printDecltypeBefore(const DecltypeType *T, raw_ostream &OS) {
+  // Check for the 'decltype(T{})' pattern and simplify it to 'T'.
+  if (const Expr *E = T->getUnderlyingExpr()) {
+    E = E->IgnoreParenImpCasts();
+    if (const CXXConstructExpr *CE = dyn_cast<CXXConstructExpr>(E)) {
+      // Check if it's a default constructor (T{}) and not a list init (T{...})
+      if (CE->getNumArgs() == 0 && !CE->isListInitialization()) {
+        CE->getType().print(OS, Policy);
+        spaceBeforePlaceHolder(OS);
+        return; // Skip the default 'decltype(...)' printing
+      }
+    }
+  }
   OS << "decltype(";
   if (const Expr *E = T->getUnderlyingExpr()) {
     PrintingPolicy ExprPolicy = Policy;
