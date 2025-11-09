@@ -1154,6 +1154,21 @@ auto buildDiagnoseMatchSwitch(
   // lot of duplicated work (e.g. string comparisons), consider providing APIs
   // that avoid it through memoization.
   auto IgnorableOptional = ignorableOptional(Options);
+  if (Options.IgnoreValueCalls) {
+    // Only diagnose operator-based unwraps. Value calls are ignored.
+    return CFGMatchSwitchBuilder<
+               const Environment,
+               llvm::SmallVector<UncheckedOptionalAccessDiagnostic>>()
+        // optional::operator*, optional::operator->
+        .CaseOfCFGStmt<CallExpr>(valueOperatorCall(IgnorableOptional),
+                                 [](const CallExpr *E,
+                                    const MatchFinder::MatchResult &,
+                                    const Environment &Env) {
+                                   return diagnoseUnwrapCall(E->getArg(0), Env);
+                                 })
+        .Build();
+  }
+
   return CFGMatchSwitchBuilder<
              const Environment,
              llvm::SmallVector<UncheckedOptionalAccessDiagnostic>>()

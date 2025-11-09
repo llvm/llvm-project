@@ -46,6 +46,13 @@ struct UncheckedOptionalAccessModelOptions {
   /// are confident in this const accessor caching, we shouldn't need the
   /// IgnoreSmartPointerDereference option anymore.
   bool IgnoreSmartPointerDereference = false;
+
+  /// In generating diagnostics, ignore calls to `optional::value()`.
+  ///
+  /// Projects that intentionally use `value()` as a guarded access pattern may
+  /// set this to true to suppress diagnostics for `value()` while continuing to
+  /// diagnose UB-prone operator accesses (`operator*`, `operator->`).
+  bool IgnoreValueCalls = false;
 };
 
 using UncheckedOptionalAccessLattice = CachedConstAccessorsLattice<NoopLattice>;
