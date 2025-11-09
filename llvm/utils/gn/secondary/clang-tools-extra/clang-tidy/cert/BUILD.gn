@@ -16,9 +16,7 @@ static_library("cert") {
   ]
   sources = [
     "CERTTidyModule.cpp",
-    "FloatLoopCounter.cpp",
     "LimitedRandomnessCheck.cpp",
-    "MutatingCopyCheck.cpp",
     "ProperlySeededRandomGeneratorCheck.cpp",
     "ThrownExceptionTypeCheck.cpp",
   ]

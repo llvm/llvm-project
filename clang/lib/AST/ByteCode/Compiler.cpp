@@ -2508,7 +2508,7 @@ bool Compiler<Emitter>::VisitAbstractConditionalOperator(
   };
 
   if (std::optional<bool> BoolValue = getBoolValue(Condition)) {
-    if (BoolValue)
+    if (*BoolValue)
       return visitChildExpr(TrueExpr);
     return visitChildExpr(FalseExpr);
   }
@@ -3235,7 +3235,8 @@ bool Compiler<Emitter>::VisitCXXConstructExpr(const CXXConstructExpr *E) {
       return this->visitInitializer(E->getArg(0));
 
     // Zero initialization.
-    if (E->requiresZeroInitialization()) {
+    bool ZeroInit = E->requiresZeroInitialization();
+    if (ZeroInit) {
       const Record *R = getRecord(E->getType());
 
       if (!this->visitZeroRecordInitializer(R, E))
@@ -3244,6 +3245,19 @@ bool Compiler<Emitter>::VisitCXXConstructExpr(const CXXConstructExpr *E) {
       // If the constructor is trivial anyway, we're done.
       if (Ctor->isTrivial())
         return true;
+    }
+
+    // Avoid materializing a temporary for an elidable copy/move constructor.
+    if (!ZeroInit && E->isElidable()) {
+      const Expr *SrcObj = E->getArg(0);
+      assert(SrcObj->isTemporaryObject(Ctx.getASTContext(), Ctor->getParent()));
+      assert(Ctx.getASTContext().hasSameUnqualifiedType(E->getType(),
+                                                        SrcObj->getType()));
+      if (const auto *ME = dyn_cast<MaterializeTemporaryExpr>(SrcObj)) {
+        if (!this->emitCheckFunctionDecl(Ctor, E))
+          return false;
+        return this->visitInitializer(ME->getSubExpr());
+      }
     }
 
     const Function *Func = getFunction(Ctor);
@@ -4175,7 +4189,7 @@ bool Compiler<Emitter>::VisitStmtExpr(const StmtExpr *E) {
   StmtExprScope<Emitter> SS(this);
 
   const CompoundStmt *CS = E->getSubStmt();
-  const Stmt *Result = CS->getStmtExprResult();
+  const Stmt *Result = CS->body_back();
   for (const Stmt *S : CS->body()) {
     if (S != Result) {
       if (!this->visitStmt(S))
@@ -6007,6 +6021,8 @@ bool Compiler<Emitter>::visitSwitchStmt(const SwitchStmt *S) {
       CaseLabels[SC] = this->getLabel();
 
       const Expr *Value = CS->getLHS();
+      if (Value->isValueDependent())
+        return false;
       PrimType ValueT = this->classifyPrim(Value->getType());
 
       // Compare the case statement's value to the switch condition.

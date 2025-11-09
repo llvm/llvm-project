@@ -640,7 +640,8 @@ public:
     Insts[1].addOperand(MCOperand::createImm(0));
     Insts[1].addOperand(MCOperand::createImm(0));
     setOperandToSymbolRef(Insts[1], /* OpNum */ 2, Target, 0, Ctx,
-                          ELF::R_AARCH64_ADD_ABS_LO12_NC);
+                          isLDRXl(LDRInst) ? ELF::R_AARCH64_LDST64_ABS_LO12_NC
+                                           : ELF::R_AARCH64_LDST32_ABS_LO12_NC);
     return Insts;
   }
 

@@ -1885,6 +1885,13 @@ void addInstrRequirements(const MachineInstr &MI,
     Reqs.addCapability(
         SPIRV::Capability::CooperativeMatrixCheckedInstructionsINTEL);
     break;
+  case SPIRV::OpReadPipeBlockingALTERA:
+  case SPIRV::OpWritePipeBlockingALTERA:
+    if (ST.canUseExtension(SPIRV::Extension::SPV_ALTERA_blocking_pipes)) {
+      Reqs.addExtension(SPIRV::Extension::SPV_ALTERA_blocking_pipes);
+      Reqs.addCapability(SPIRV::Capability::BlockingPipesALTERA);
+    }
+    break;
   case SPIRV::OpCooperativeMatrixGetElementCoordINTEL:
     if (!ST.canUseExtension(SPIRV::Extension::SPV_INTEL_joint_matrix))
       report_fatal_error("OpCooperativeMatrixGetElementCoordINTEL requires the "

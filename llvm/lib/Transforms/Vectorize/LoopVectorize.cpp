@@ -7488,11 +7488,12 @@ void EpilogueVectorizerEpilogueLoop::printDebugTracesAtEnd() {
   });
 }
 
-VPWidenMemoryRecipe *
-VPRecipeBuilder::tryToWidenMemory(Instruction *I, ArrayRef<VPValue *> Operands,
-                                  VFRange &Range) {
-  assert((isa<LoadInst>(I) || isa<StoreInst>(I)) &&
+VPWidenMemoryRecipe *VPRecipeBuilder::tryToWidenMemory(VPInstruction *VPI,
+                                                       VFRange &Range) {
+  assert((VPI->getOpcode() == Instruction::Load ||
+          VPI->getOpcode() == Instruction::Store) &&
          "Must be called with either a load or store");
+  Instruction *I = VPI->getUnderlyingInstr();
 
   auto WillWiden = [&](ElementCount VF) -> bool {
     LoopVectorizationCostModel::InstWidening Decision =
@@ -7522,7 +7523,8 @@ VPRecipeBuilder::tryToWidenMemory(Instruction *I, ArrayRef<VPValue *> Operands,
   bool Consecutive =
       Reverse || Decision == LoopVectorizationCostModel::CM_Widen;
 
-  VPValue *Ptr = isa<LoadInst>(I) ? Operands[0] : Operands[1];
+  VPValue *Ptr = VPI->getOpcode() == Instruction::Load ? VPI->getOperand(0)
+                                                       : VPI->getOperand(1);
   if (Consecutive) {
     auto *GEP = dyn_cast<GetElementPtrInst>(
         Ptr->getUnderlyingValue()->stripPointerCasts());
@@ -7536,78 +7538,78 @@ VPRecipeBuilder::tryToWidenMemory(Instruction *I, ArrayRef<VPValue *> Operands,
           CM.foldTailByMasking() || !GEP
               ? GEPNoWrapFlags::none()
               : GEP->getNoWrapFlags().withoutNoUnsignedWrap();
-      VectorPtr =
-          new VPVectorEndPointerRecipe(Ptr, &Plan.getVF(), getLoadStoreType(I),
-                                       /*Stride*/ -1, Flags, I->getDebugLoc());
+      VectorPtr = new VPVectorEndPointerRecipe(
+          Ptr, &Plan.getVF(), getLoadStoreType(I),
+          /*Stride*/ -1, Flags, VPI->getDebugLoc());
     } else {
       VectorPtr = new VPVectorPointerRecipe(Ptr, getLoadStoreType(I),
                                             GEP ? GEP->getNoWrapFlags()
                                                 : GEPNoWrapFlags::none(),
-                                            I->getDebugLoc());
+                                            VPI->getDebugLoc());
     }
     Builder.insert(VectorPtr);
     Ptr = VectorPtr;
   }
-  if (LoadInst *Load = dyn_cast<LoadInst>(I))
+  if (VPI->getOpcode() == Instruction::Load) {
+    auto *Load = cast<LoadInst>(I);
     return new VPWidenLoadRecipe(*Load, Ptr, Mask, Consecutive, Reverse,
-                                 Load->getAlign(), VPIRMetadata(*Load, LVer),
-                                 I->getDebugLoc());
+                                 VPIRMetadata(*Load, LVer), I->getDebugLoc());
+  }
 
   StoreInst *Store = cast<StoreInst>(I);
-  return new VPWidenStoreRecipe(*Store, Ptr, Operands[0], Mask, Consecutive,
-                                Reverse, Store->getAlign(),
-                                VPIRMetadata(*Store, LVer), I->getDebugLoc());
+  return new VPWidenStoreRecipe(*Store, Ptr, VPI->getOperand(0), Mask,
+                                Consecutive, Reverse,
+                                VPIRMetadata(*Store, LVer), VPI->getDebugLoc());
 }
 
-/// Creates a VPWidenIntOrFpInductionRecpipe for \p Phi. If needed, it will also
-/// insert a recipe to expand the step for the induction recipe.
+/// Creates a VPWidenIntOrFpInductionRecipe for \p PhiR. If needed, it will
+/// also insert a recipe to expand the step for the induction recipe.
 static VPWidenIntOrFpInductionRecipe *
-createWidenInductionRecipes(PHINode *Phi, Instruction *PhiOrTrunc,
-                            VPValue *Start, const InductionDescriptor &IndDesc,
-                            VPlan &Plan, ScalarEvolution &SE, Loop &OrigLoop) {
-  assert(IndDesc.getStartValue() ==
-         Phi->getIncomingValueForBlock(OrigLoop.getLoopPreheader()));
+createWidenInductionRecipes(VPInstruction *PhiR,
+                            const InductionDescriptor &IndDesc, VPlan &Plan,
+                            ScalarEvolution &SE, Loop &OrigLoop) {
   assert(SE.isLoopInvariant(IndDesc.getStep(), &OrigLoop) &&
          "step must be loop invariant");
 
+  VPValue *Start = PhiR->getOperand(0);
+  assert(Plan.getLiveIn(IndDesc.getStartValue()) == Start &&
+         "Start VPValue must match IndDesc's start value");
+
   VPValue *Step =
       vputils::getOrCreateVPValueForSCEVExpr(Plan, IndDesc.getStep());
-  if (auto *TruncI = dyn_cast<TruncInst>(PhiOrTrunc)) {
-    return new VPWidenIntOrFpInductionRecipe(Phi, Start, Step, &Plan.getVF(),
-                                             IndDesc, TruncI,
-                                             TruncI->getDebugLoc());
-  }
-  assert(isa<PHINode>(PhiOrTrunc) && "must be a phi node here");
+  PHINode *Phi = cast<PHINode>(PhiR->getUnderlyingInstr());
   return new VPWidenIntOrFpInductionRecipe(Phi, Start, Step, &Plan.getVF(),
-                                           IndDesc, Phi->getDebugLoc());
+                                           IndDesc, PhiR->getDebugLoc());
 }
 
-VPHeaderPHIRecipe *VPRecipeBuilder::tryToOptimizeInductionPHI(
-    PHINode *Phi, ArrayRef<VPValue *> Operands, VFRange &Range) {
+VPHeaderPHIRecipe *
+VPRecipeBuilder::tryToOptimizeInductionPHI(VPInstruction *VPI, VFRange &Range) {
+  auto *Phi = cast<PHINode>(VPI->getUnderlyingInstr());
 
   // Check if this is an integer or fp induction. If so, build the recipe that
   // produces its scalar and vector values.
   if (auto *II = Legal->getIntOrFpInductionDescriptor(Phi))
-    return createWidenInductionRecipes(Phi, Phi, Operands[0], *II, Plan,
-                                       *PSE.getSE(), *OrigLoop);
+    return createWidenInductionRecipes(VPI, *II, Plan, *PSE.getSE(), *OrigLoop);
 
   // Check if this is pointer induction. If so, build the recipe for it.
   if (auto *II = Legal->getPointerInductionDescriptor(Phi)) {
     VPValue *Step = vputils::getOrCreateVPValueForSCEVExpr(Plan, II->getStep());
     return new VPWidenPointerInductionRecipe(
-        Phi, Operands[0], Step, &Plan.getVFxUF(), *II,
+        Phi, VPI->getOperand(0), Step, &Plan.getVFxUF(), *II,
         LoopVectorizationPlanner::getDecisionAndClampRange(
             [&](ElementCount VF) {
               return CM.isScalarAfterVectorization(Phi, VF);
             },
             Range),
-        Phi->getDebugLoc());
+        VPI->getDebugLoc());
   }
   return nullptr;
 }
 
-VPWidenIntOrFpInductionRecipe *VPRecipeBuilder::tryToOptimizeInductionTruncate(
-    TruncInst *I, ArrayRef<VPValue *> Operands, VFRange &Range) {
+VPWidenIntOrFpInductionRecipe *
+VPRecipeBuilder::tryToOptimizeInductionTruncate(VPInstruction *VPI,
+                                                VFRange &Range) {
+  auto *I = cast<TruncInst>(VPI->getUnderlyingInstr());
   // Optimize the special case where the source is a constant integer
   // induction variable. Notice that we can only optimize the 'trunc' case
   // because (a) FP conversions lose precision, (b) sext/zext may wrap, and
@@ -7622,21 +7624,24 @@ VPWidenIntOrFpInductionRecipe *VPRecipeBuilder::tryToOptimizeInductionTruncate(
     };
   };
 
-  if (LoopVectorizationPlanner::getDecisionAndClampRange(
-          IsOptimizableIVTruncate(I), Range)) {
+  if (!LoopVectorizationPlanner::getDecisionAndClampRange(
+          IsOptimizableIVTruncate(I), Range))
+    return nullptr;
 
-    auto *Phi = cast<PHINode>(I->getOperand(0));
-    const InductionDescriptor &II = *Legal->getIntOrFpInductionDescriptor(Phi);
-    VPValue *Start = Plan.getOrAddLiveIn(II.getStartValue());
-    return createWidenInductionRecipes(Phi, I, Start, II, Plan, *PSE.getSE(),
-                                       *OrigLoop);
-  }
-  return nullptr;
+  auto *WidenIV = cast<VPWidenIntOrFpInductionRecipe>(
+      VPI->getOperand(0)->getDefiningRecipe());
+  PHINode *Phi = WidenIV->getPHINode();
+  VPValue *Start = WidenIV->getStartValue();
+  const InductionDescriptor &IndDesc = WidenIV->getInductionDescriptor();
+  VPValue *Step =
+      vputils::getOrCreateVPValueForSCEVExpr(Plan, IndDesc.getStep());
+  return new VPWidenIntOrFpInductionRecipe(Phi, Start, Step, &Plan.getVF(),
+                                           IndDesc, I, VPI->getDebugLoc());
 }
 
-VPSingleDefRecipe *VPRecipeBuilder::tryToWidenCall(CallInst *CI,
-                                                   ArrayRef<VPValue *> Operands,
+VPSingleDefRecipe *VPRecipeBuilder::tryToWidenCall(VPInstruction *VPI,
                                                    VFRange &Range) {
+  CallInst *CI = cast<CallInst>(VPI->getUnderlyingInstr());
   bool IsPredicated = LoopVectorizationPlanner::getDecisionAndClampRange(
       [this, CI](ElementCount VF) {
         return CM.isScalarWithPredication(CI, VF);
@@ -7653,7 +7658,8 @@ VPSingleDefRecipe *VPRecipeBuilder::tryToWidenCall(CallInst *CI,
              ID == Intrinsic::experimental_noalias_scope_decl))
     return nullptr;
 
-  SmallVector<VPValue *, 4> Ops(Operands.take_front(CI->arg_size()));
+  SmallVector<VPValue *, 4> Ops(VPI->op_begin(),
+                                VPI->op_begin() + CI->arg_size());
 
   // Is it beneficial to perform intrinsic call compared to lib call?
   bool ShouldUseVectorIntrinsic =
@@ -7665,7 +7671,7 @@ VPSingleDefRecipe *VPRecipeBuilder::tryToWidenCall(CallInst *CI,
                 Range);
   if (ShouldUseVectorIntrinsic)
     return new VPWidenIntrinsicRecipe(*CI, ID, Ops, CI->getType(),
-                                      CI->getDebugLoc());
+                                      VPI->getDebugLoc());
 
   Function *Variant = nullptr;
   std::optional<unsigned> MaskPos;
@@ -7712,13 +7718,13 @@ VPSingleDefRecipe *VPRecipeBuilder::tryToWidenCall(CallInst *CI,
         Mask = getBlockInMask(Builder.getInsertBlock());
       else
         Mask = Plan.getOrAddLiveIn(
-            ConstantInt::getTrue(IntegerType::getInt1Ty(CI->getContext())));
+            ConstantInt::getTrue(IntegerType::getInt1Ty(Plan.getContext())));
 
       Ops.insert(Ops.begin() + *MaskPos, Mask);
     }
 
-    Ops.push_back(Operands.back());
-    return new VPWidenCallRecipe(CI, Variant, Ops, CI->getDebugLoc());
+    Ops.push_back(VPI->getOperand(VPI->getNumOperands() - 1));
+    return new VPWidenCallRecipe(CI, Variant, Ops, VPI->getDebugLoc());
   }
 
   return nullptr;
@@ -7738,9 +7744,9 @@ bool VPRecipeBuilder::shouldWiden(Instruction *I, VFRange &Range) const {
                                                              Range);
 }
 
-VPWidenRecipe *VPRecipeBuilder::tryToWiden(Instruction *I,
-                                           ArrayRef<VPValue *> Operands) {
-  switch (I->getOpcode()) {
+VPWidenRecipe *VPRecipeBuilder::tryToWiden(VPInstruction *VPI) {
+  auto *I = VPI->getUnderlyingInstr();
+  switch (VPI->getOpcode()) {
   default:
     return nullptr;
   case Instruction::SDiv:
@@ -7750,10 +7756,11 @@ VPWidenRecipe *VPRecipeBuilder::tryToWiden(Instruction *I,
     // If not provably safe, use a select to form a safe divisor before widening the
     // div/rem operation itself.  Otherwise fall through to general handling below.
     if (CM.isPredicatedInst(I)) {
-      SmallVector<VPValue *> Ops(Operands);
+      SmallVector<VPValue *> Ops(VPI->operands());
       VPValue *Mask = getBlockInMask(Builder.getInsertBlock());
       VPValue *One = Plan.getConstantInt(I->getType(), 1u);
-      auto *SafeRHS = Builder.createSelect(Mask, Ops[1], One, I->getDebugLoc());
+      auto *SafeRHS =
+          Builder.createSelect(Mask, Ops[1], One, VPI->getDebugLoc());
       Ops[1] = SafeRHS;
       return new VPWidenRecipe(*I, Ops);
     }
@@ -7778,8 +7785,8 @@ VPWidenRecipe *VPRecipeBuilder::tryToWiden(Instruction *I,
   case Instruction::Sub:
   case Instruction::Xor:
   case Instruction::Freeze: {
-    SmallVector<VPValue *> NewOps(Operands);
-    if (Instruction::isBinaryOp(I->getOpcode())) {
+    SmallVector<VPValue *> NewOps(VPI->operands());
+    if (Instruction::isBinaryOp(VPI->getOpcode())) {
       // The legacy cost model uses SCEV to check if some of the operands are
       // constants. To match the legacy cost model's behavior, use SCEV to try
       // to replace operands with constants.
@@ -7796,7 +7803,7 @@ VPWidenRecipe *VPRecipeBuilder::tryToWiden(Instruction *I,
         return Plan.getOrAddLiveIn(C->getValue());
       };
       // For Mul, the legacy cost model checks both operands.
-      if (I->getOpcode() == Instruction::Mul)
+      if (VPI->getOpcode() == Instruction::Mul)
         NewOps[0] = GetConstantViaSCEV(NewOps[0]);
       // For other binops, the legacy cost model only checks the second operand.
       NewOps[1] = GetConstantViaSCEV(NewOps[1]);
@@ -7804,7 +7811,7 @@ VPWidenRecipe *VPRecipeBuilder::tryToWiden(Instruction *I,
     return new VPWidenRecipe(*I, NewOps);
   }
   case Instruction::ExtractValue: {
-    SmallVector<VPValue *> NewOps(Operands);
+    SmallVector<VPValue *> NewOps(VPI->operands());
     auto *EVI = cast<ExtractValueInst>(I);
     assert(EVI->getNumIndices() == 1 && "Expected one extractvalue index");
     unsigned Idx = EVI->getIndices()[0];
@@ -7814,9 +7821,8 @@ VPWidenRecipe *VPRecipeBuilder::tryToWiden(Instruction *I,
   };
 }
 
-VPHistogramRecipe *
-VPRecipeBuilder::tryToWidenHistogram(const HistogramInfo *HI,
-                                     ArrayRef<VPValue *> Operands) {
+VPHistogramRecipe *VPRecipeBuilder::tryToWidenHistogram(const HistogramInfo *HI,
+                                                        VPInstruction *VPI) {
   // FIXME: Support other operations.
   unsigned Opcode = HI->Update->getOpcode();
   assert((Opcode == Instruction::Add || Opcode == Instruction::Sub) &&
@@ -7824,7 +7830,7 @@ VPRecipeBuilder::tryToWidenHistogram(const HistogramInfo *HI,
 
   SmallVector<VPValue *, 3> HGramOps;
   // Bucket address.
-  HGramOps.push_back(Operands[1]);
+  HGramOps.push_back(VPI->getOperand(1));
   // Increment value.
   HGramOps.push_back(getVPValueOrAddLiveIn(HI->Update->getOperand(1)));
 
@@ -7833,12 +7839,12 @@ VPRecipeBuilder::tryToWidenHistogram(const HistogramInfo *HI,
   if (Legal->isMaskRequired(HI->Store))
     HGramOps.push_back(getBlockInMask(Builder.getInsertBlock()));
 
-  return new VPHistogramRecipe(Opcode, HGramOps, HI->Store->getDebugLoc());
+  return new VPHistogramRecipe(Opcode, HGramOps, VPI->getDebugLoc());
 }
 
-VPReplicateRecipe *
-VPRecipeBuilder::handleReplication(Instruction *I, ArrayRef<VPValue *> Operands,
-                                   VFRange &Range) {
+VPReplicateRecipe *VPRecipeBuilder::handleReplication(VPInstruction *VPI,
+                                                      VFRange &Range) {
+  auto *I = VPI->getUnderlyingInstr();
   bool IsUniform = LoopVectorizationPlanner::getDecisionAndClampRange(
       [&](ElementCount VF) { return CM.isUniformAfterVectorization(I, VF); },
       Range);
@@ -7894,8 +7900,8 @@ VPRecipeBuilder::handleReplication(Instruction *I, ArrayRef<VPValue *> Operands,
   assert((Range.Start.isScalar() || !IsUniform || !IsPredicated ||
           (Range.Start.isScalable() && isa<IntrinsicInst>(I))) &&
          "Should not predicate a uniform recipe");
-  auto *Recipe = new VPReplicateRecipe(I, Operands, IsUniform, BlockInMask,
-                                       VPIRMetadata(*I, LVer));
+  auto *Recipe = new VPReplicateRecipe(I, VPI->operands(), IsUniform,
+                                       BlockInMask, VPIRMetadata(*I, LVer));
   return Recipe;
 }
 
@@ -7933,6 +7939,26 @@ void VPRecipeBuilder::collectScaledReductions(VFRange &Range) {
     if (ExtendIsOnlyUsedByPartialReductions(Chain.ExtendA) &&
         (!Chain.ExtendB || ExtendIsOnlyUsedByPartialReductions(Chain.ExtendB)))
       ScaledReductionMap.try_emplace(Chain.Reduction, Pair.second);
+  }
+
+  // Check that all partial reductions in a chain are only used by other
+  // partial reductions with the same scale factor. Otherwise we end up creating
+  // users of scaled reductions where the types of the other operands don't
+  // match.
+  for (const auto &[Chain, Scale] : PartialReductionChains) {
+    auto AllUsersPartialRdx = [ScaleVal = Scale, this](const User *U) {
+      auto *UI = cast<Instruction>(U);
+      if (isa<PHINode>(UI) && UI->getParent() == OrigLoop->getHeader()) {
+        return all_of(UI->users(), [ScaleVal, this](const User *U) {
+          auto *UI = cast<Instruction>(U);
+          return ScaledReductionMap.lookup_or(UI, 0) == ScaleVal;
+        });
+      }
+      return ScaledReductionMap.lookup_or(UI, 0) == ScaleVal ||
+             !OrigLoop->contains(UI->getParent());
+    };
+    if (!all_of(Chain.Reduction->users(), AllUsersPartialRdx))
+      ScaledReductionMap.erase(Chain.Reduction);
   }
 }
 
@@ -8056,8 +8082,6 @@ VPRecipeBase *VPRecipeBuilder::tryToCreateWidenRecipe(VPSingleDefRecipe *R,
   // First, check for specific widening recipes that deal with inductions, Phi
   // nodes, calls and memory operations.
   VPRecipeBase *Recipe;
-  Instruction *Instr = R->getUnderlyingInstr();
-  SmallVector<VPValue *, 4> Operands(R->operands());
   if (auto *PhiR = dyn_cast<VPPhi>(R)) {
     VPBasicBlock *Parent = PhiR->getParent();
     [[maybe_unused]] VPRegionBlock *LoopRegionOf =
@@ -8065,15 +8089,15 @@ VPRecipeBase *VPRecipeBuilder::tryToCreateWidenRecipe(VPSingleDefRecipe *R,
     assert(LoopRegionOf && LoopRegionOf->getEntry() == Parent &&
            "Non-header phis should have been handled during predication");
     auto *Phi = cast<PHINode>(R->getUnderlyingInstr());
-    assert(Operands.size() == 2 && "Must have 2 operands for header phis");
-    if ((Recipe = tryToOptimizeInductionPHI(Phi, Operands, Range)))
+    assert(R->getNumOperands() == 2 && "Must have 2 operands for header phis");
+    if ((Recipe = tryToOptimizeInductionPHI(PhiR, Range)))
       return Recipe;
 
     VPHeaderPHIRecipe *PhiRecipe = nullptr;
     assert((Legal->isReductionVariable(Phi) ||
             Legal->isFixedOrderRecurrence(Phi)) &&
            "can only widen reductions and fixed-order recurrences here");
-    VPValue *StartV = Operands[0];
+    VPValue *StartV = R->getOperand(0);
     if (Legal->isReductionVariable(Phi)) {
       const RecurrenceDescriptor &RdxDesc = Legal->getRecurrenceDescriptor(Phi);
       assert(RdxDesc.getRecurrenceStartValue() ==
@@ -8093,13 +8117,15 @@ VPRecipeBase *VPRecipeBuilder::tryToCreateWidenRecipe(VPSingleDefRecipe *R,
       PhiRecipe = new VPFirstOrderRecurrencePHIRecipe(Phi, *StartV);
     }
     // Add backedge value.
-    PhiRecipe->addOperand(Operands[1]);
+    PhiRecipe->addOperand(R->getOperand(1));
     return PhiRecipe;
   }
   assert(!R->isPhi() && "only VPPhi nodes expected at this point");
 
-  if (isa<TruncInst>(Instr) && (Recipe = tryToOptimizeInductionTruncate(
-                                    cast<TruncInst>(Instr), Operands, Range)))
+  auto *VPI = cast<VPInstruction>(R);
+  Instruction *Instr = R->getUnderlyingInstr();
+  if (VPI->getOpcode() == Instruction::Trunc &&
+      (Recipe = tryToOptimizeInductionTruncate(VPI, Range)))
     return Recipe;
 
   // All widen recipes below deal only with VF > 1.
@@ -8107,81 +8133,79 @@ VPRecipeBase *VPRecipeBuilder::tryToCreateWidenRecipe(VPSingleDefRecipe *R,
           [&](ElementCount VF) { return VF.isScalar(); }, Range))
     return nullptr;
 
-  if (auto *CI = dyn_cast<CallInst>(Instr))
-    return tryToWidenCall(CI, Operands, Range);
+  if (VPI->getOpcode() == Instruction::Call)
+    return tryToWidenCall(VPI, Range);
 
-  if (StoreInst *SI = dyn_cast<StoreInst>(Instr))
-    if (auto HistInfo = Legal->getHistogramInfo(SI))
-      return tryToWidenHistogram(*HistInfo, Operands);
+  if (VPI->getOpcode() == Instruction::Store)
+    if (auto HistInfo = Legal->getHistogramInfo(cast<StoreInst>(Instr)))
+      return tryToWidenHistogram(*HistInfo, VPI);
 
-  if (isa<LoadInst>(Instr) || isa<StoreInst>(Instr))
-    return tryToWidenMemory(Instr, Operands, Range);
+  if (VPI->getOpcode() == Instruction::Load ||
+      VPI->getOpcode() == Instruction::Store)
+    return tryToWidenMemory(VPI, Range);
 
-  if (std::optional<unsigned> ScaleFactor = getScalingForReduction(Instr)) {
-    if (auto PartialRed =
-            tryToCreatePartialReduction(Instr, Operands, ScaleFactor.value()))
-      return PartialRed;
-  }
+  if (std::optional<unsigned> ScaleFactor = getScalingForReduction(Instr))
+    return tryToCreatePartialReduction(VPI, ScaleFactor.value());
 
   if (!shouldWiden(Instr, Range))
     return nullptr;
 
-  if (auto *GEP = dyn_cast<GetElementPtrInst>(Instr))
-    return new VPWidenGEPRecipe(GEP, Operands);
+  if (VPI->getOpcode() == Instruction::GetElementPtr)
+    return new VPWidenGEPRecipe(cast<GetElementPtrInst>(Instr), R->operands());
 
-  if (auto *SI = dyn_cast<SelectInst>(Instr)) {
-    return new VPWidenSelectRecipe(*SI, Operands);
+  if (VPI->getOpcode() == Instruction::Select)
+    return new VPWidenSelectRecipe(*cast<SelectInst>(Instr), R->operands());
+
+  if (Instruction::isCast(VPI->getOpcode())) {
+    auto *CI = cast<CastInst>(Instr);
+    return new VPWidenCastRecipe(CI->getOpcode(), VPI->getOperand(0),
+                                 CI->getType(), *CI);
   }
 
-  if (auto *CI = dyn_cast<CastInst>(Instr)) {
-    return new VPWidenCastRecipe(CI->getOpcode(), Operands[0], CI->getType(),
-                                 *CI);
-  }
-
-  return tryToWiden(Instr, Operands);
+  return tryToWiden(VPI);
 }
 
 VPRecipeBase *
-VPRecipeBuilder::tryToCreatePartialReduction(Instruction *Reduction,
-                                             ArrayRef<VPValue *> Operands,
+VPRecipeBuilder::tryToCreatePartialReduction(VPInstruction *Reduction,
                                              unsigned ScaleFactor) {
-  assert(Operands.size() == 2 &&
+  assert(Reduction->getNumOperands() == 2 &&
          "Unexpected number of operands for partial reduction");
 
-  VPValue *BinOp = Operands[0];
-  VPValue *Accumulator = Operands[1];
+  VPValue *BinOp = Reduction->getOperand(0);
+  VPValue *Accumulator = Reduction->getOperand(1);
   VPRecipeBase *BinOpRecipe = BinOp->getDefiningRecipe();
   if (isa<VPReductionPHIRecipe>(BinOpRecipe) ||
       isa<VPPartialReductionRecipe>(BinOpRecipe))
     std::swap(BinOp, Accumulator);
 
-  if (ScaleFactor !=
-      vputils::getVFScaleFactor(Accumulator->getDefiningRecipe()))
-    return nullptr;
+  assert(ScaleFactor ==
+             vputils::getVFScaleFactor(Accumulator->getDefiningRecipe()) &&
+         "all accumulators in chain must have same scale factor");
 
   unsigned ReductionOpcode = Reduction->getOpcode();
+  auto *ReductionI = Reduction->getUnderlyingInstr();
   if (ReductionOpcode == Instruction::Sub) {
-    auto *const Zero = ConstantInt::get(Reduction->getType(), 0);
+    auto *const Zero = ConstantInt::get(ReductionI->getType(), 0);
     SmallVector<VPValue *, 2> Ops;
     Ops.push_back(Plan.getOrAddLiveIn(Zero));
     Ops.push_back(BinOp);
-    BinOp = new VPWidenRecipe(*Reduction, Ops);
+    BinOp = new VPWidenRecipe(*ReductionI, Ops);
     Builder.insert(BinOp->getDefiningRecipe());
     ReductionOpcode = Instruction::Add;
   }
 
   VPValue *Cond = nullptr;
-  if (CM.blockNeedsPredicationForAnyReason(Reduction->getParent())) {
+  if (CM.blockNeedsPredicationForAnyReason(ReductionI->getParent())) {
     assert((ReductionOpcode == Instruction::Add ||
             ReductionOpcode == Instruction::Sub) &&
            "Expected an ADD or SUB operation for predicated partial "
            "reductions (because the neutral element in the mask is zero)!");
     Cond = getBlockInMask(Builder.getInsertBlock());
-    VPValue *Zero = Plan.getConstantInt(Reduction->getType(), 0);
+    VPValue *Zero = Plan.getConstantInt(ReductionI->getType(), 0);
     BinOp = Builder.createSelect(Cond, BinOp, Zero, Reduction->getDebugLoc());
   }
   return new VPPartialReductionRecipe(ReductionOpcode, Accumulator, BinOp, Cond,
-                                      ScaleFactor, Reduction);
+                                      ScaleFactor, ReductionI);
 }
 
 void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
@@ -8366,7 +8390,8 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
       VPRecipeBase *Recipe =
           RecipeBuilder.tryToCreateWidenRecipe(SingleDef, Range);
       if (!Recipe)
-        Recipe = RecipeBuilder.handleReplication(Instr, R.operands(), Range);
+        Recipe = RecipeBuilder.handleReplication(cast<VPInstruction>(SingleDef),
+                                                 Range);
 
       RecipeBuilder.setRecipe(Instr, Recipe);
       if (isa<VPWidenIntOrFpInductionRecipe>(Recipe) && isa<TruncInst>(Instr)) {
