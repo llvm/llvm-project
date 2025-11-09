@@ -37,7 +37,7 @@ Options
 References
 ----------
 
-This is a CERT security rule, see
+This check corresponds to the CERT C++ Coding Standard rules
 `MSC51-CPP. Ensure your random number generator is properly seeded
 <https://wiki.sei.cmu.edu/confluence/display/cplusplus/MSC51-CPP.+Ensure+your+random+number+generator+is+properly+seeded>`_ and
 `MSC32-C. Properly seed pseudorandom number generators
