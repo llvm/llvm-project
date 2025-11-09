@@ -6623,34 +6623,49 @@ inline unsigned getPerfectShuffleCost(llvm::ArrayRef<int> M) {
 
 /// Return true for zip1 or zip2 masks of the form:
 ///  <0,  8, 1,  9, 2, 10, 3, 11> or
-///  <4, 12, 5, 13, 6, 14, 7, 15>
+///  <4, 12, 5, 13, 6, 14, 7, 15> or
+///  <8,  0, 9,  1, 10, 2, 11, 3> or
+///  <12, 4, 13, 5, 14, 6, 15, 7>
 inline bool isZIPMask(ArrayRef<int> M, unsigned NumElts,
-                      unsigned &WhichResultOut) {
+                      unsigned &WhichResultOut, unsigned &OperandOrderOut) {
   if (NumElts % 2 != 0)
     return false;
-  // Check the first non-undef element for which half to use.
-  unsigned WhichResult = 2;
-  for (unsigned i = 0; i != NumElts / 2; i++) {
-    if (M[i * 2] >= 0) {
-      WhichResult = ((unsigned)M[i * 2] == i ? 0 : 1);
-      break;
-    } else if (M[i * 2 + 1] >= 0) {
-      WhichResult = ((unsigned)M[i * 2 + 1] == NumElts + i ? 0 : 1);
-      break;
+
+  // "Variant" refers to the distinction bwetween zip1 and zip2, while
+  // "Order" refers to sequence of input registers (matching vs flipped).
+  bool Variant0Order0 = true;
+  bool Variant1Order0 = true;
+  bool Variant0Order1 = true;
+  bool Variant1Order1 = true;
+  // Check all elements match.
+  for (unsigned i = 0; i != NumElts; i += 2) {
+    if (M[i] >= 0) {
+      if ((unsigned)M[i] != i / 2)
+        Variant0Order0 = false;
+      if ((unsigned)M[i] != NumElts / 2 + i / 2)
+        Variant1Order0 = false;
+      if ((unsigned)M[i] != NumElts + i / 2)
+        Variant0Order1 = false;
+      if ((unsigned)M[i] != NumElts + NumElts / 2 + i / 2)
+        Variant1Order1 = false;
+    }
+    if (M[i + 1] >= 0) {
+      if ((unsigned)M[i + 1] != NumElts + i / 2)
+        Variant0Order0 = false;
+      if ((unsigned)M[i + 1] != NumElts + NumElts / 2 + i / 2)
+        Variant1Order0 = false;
+      if ((unsigned)M[i + 1] != i / 2)
+        Variant0Order1 = false;
+      if ((unsigned)M[i + 1] != NumElts / 2 + i / 2)
+        Variant1Order1 = false;
     }
   }
-  if (WhichResult == 2)
+
+  if (Variant0Order0 + Variant1Order0 + Variant0Order1 + Variant1Order1 != 1)
     return false;
 
-  // Check all elements match.
-  unsigned Idx = WhichResult * NumElts / 2;
-  for (unsigned i = 0; i != NumElts; i += 2) {
-    if ((M[i] >= 0 && (unsigned)M[i] != Idx) ||
-        (M[i + 1] >= 0 && (unsigned)M[i + 1] != Idx + NumElts))
-      return false;
-    Idx += 1;
-  }
-  WhichResultOut = WhichResult;
+  WhichResultOut = (Variant0Order0 || Variant0Order1) ? 0 : 1;
+  OperandOrderOut = (Variant0Order0 || Variant1Order0) ? 0 : 1;
   return true;
 }
 

@@ -14722,9 +14722,12 @@ SDValue AArch64TargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
   }
 
   unsigned WhichResult;
-  if (isZIPMask(ShuffleMask, NumElts, WhichResult)) {
+  unsigned OperandOrder;
+  if (isZIPMask(ShuffleMask, NumElts, WhichResult, OperandOrder)) {
     unsigned Opc = (WhichResult == 0) ? AArch64ISD::ZIP1 : AArch64ISD::ZIP2;
-    return DAG.getNode(Opc, DL, V1.getValueType(), V1, V2);
+    return DAG.getNode(Opc, DL, V1.getValueType(),
+                       (OperandOrder == 0) ? V1 : V2,
+                       (OperandOrder == 0) ? V2 : V1);
   }
   if (isUZPMask(ShuffleMask, NumElts, WhichResult)) {
     unsigned Opc = (WhichResult == 0) ? AArch64ISD::UZP1 : AArch64ISD::UZP2;
@@ -16446,7 +16449,7 @@ bool AArch64TargetLowering::isShuffleMaskLegal(ArrayRef<int> M, EVT VT) const {
           isSingletonEXTMask(M, VT, DummyUnsigned) ||
           isTRNMask(M, NumElts, DummyUnsigned) ||
           isUZPMask(M, NumElts, DummyUnsigned) ||
-          isZIPMask(M, NumElts, DummyUnsigned) ||
+          isZIPMask(M, NumElts, DummyUnsigned, DummyUnsigned) ||
           isTRN_v_undef_Mask(M, VT, DummyUnsigned) ||
           isUZP_v_undef_Mask(M, VT, DummyUnsigned) ||
           isZIP_v_undef_Mask(M, VT, DummyUnsigned) ||
@@ -31440,10 +31443,15 @@ SDValue AArch64TargetLowering::LowerFixedLengthVECTOR_SHUFFLEToSVE(
   }
 
   unsigned WhichResult;
-  if (isZIPMask(ShuffleMask, VT.getVectorNumElements(), WhichResult) &&
+  unsigned OperandOrder;
+  if (isZIPMask(ShuffleMask, VT.getVectorNumElements(), WhichResult,
+                OperandOrder) &&
       WhichResult == 0)
     return convertFromScalableVector(
-        DAG, VT, DAG.getNode(AArch64ISD::ZIP1, DL, ContainerVT, Op1, Op2));
+        DAG, VT,
+        DAG.getNode(AArch64ISD::ZIP1, DL, ContainerVT,
+                    OperandOrder == 0 ? Op1 : Op2,
+                    OperandOrder == 0 ? Op2 : Op1));
 
   if (isTRNMask(ShuffleMask, VT.getVectorNumElements(), WhichResult)) {
     unsigned Opc = (WhichResult == 0) ? AArch64ISD::TRN1 : AArch64ISD::TRN2;
@@ -31488,10 +31496,14 @@ SDValue AArch64TargetLowering::LowerFixedLengthVECTOR_SHUFFLEToSVE(
       return convertFromScalableVector(DAG, VT, Op);
     }
 
-    if (isZIPMask(ShuffleMask, VT.getVectorNumElements(), WhichResult) &&
+    if (isZIPMask(ShuffleMask, VT.getVectorNumElements(), WhichResult,
+                  OperandOrder) &&
         WhichResult != 0)
       return convertFromScalableVector(
-          DAG, VT, DAG.getNode(AArch64ISD::ZIP2, DL, ContainerVT, Op1, Op2));
+          DAG, VT,
+          DAG.getNode(AArch64ISD::ZIP2, DL, ContainerVT,
+                      OperandOrder == 0 ? Op1 : Op2,
+                      OperandOrder == 0 ? Op2 : Op1));
 
     if (isUZPMask(ShuffleMask, VT.getVectorNumElements(), WhichResult)) {
       unsigned Opc = (WhichResult == 0) ? AArch64ISD::UZP1 : AArch64ISD::UZP2;

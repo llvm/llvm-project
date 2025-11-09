@@ -6062,7 +6062,7 @@ AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
   if (LT.second.isFixedLengthVector() &&
       LT.second.getVectorNumElements() == Mask.size() &&
       (Kind == TTI::SK_PermuteTwoSrc || Kind == TTI::SK_PermuteSingleSrc) &&
-      (isZIPMask(Mask, LT.second.getVectorNumElements(), Unused) ||
+      (isZIPMask(Mask, LT.second.getVectorNumElements(), Unused, Unused) ||
        isUZPMask(Mask, LT.second.getVectorNumElements(), Unused) ||
        isREVMask(Mask, LT.second.getScalarSizeInBits(),
                  LT.second.getVectorNumElements(), 16) ||
