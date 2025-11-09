@@ -29,7 +29,7 @@
 !1 = !DIFile(filename: "test.cpp", directory: ".")
 !2 = !{i32 2, !"Debug Info Version", i32 3}
 !3 = !{i32 1, !"wchar_size", i32 4}
-!4 = !{i32 2, !"Dwarf Version", i32 5}
+!4 = !{i32 2, !"Dwarf Version", i32 4}
 !8 = !{!9, !16, !24, !35}
 
 ; extraData node definitions

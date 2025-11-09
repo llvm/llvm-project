@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ConvertMemberFunctionsToStatic.h"
+#include "ConvertMemberFunctionsToStaticCheck.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/RecursiveASTVisitor.h"
@@ -78,7 +78,8 @@ AST_MATCHER(CXXMethodDecl, usesThis) {
 
 } // namespace
 
-void ConvertMemberFunctionsToStatic::registerMatchers(MatchFinder *Finder) {
+void ConvertMemberFunctionsToStaticCheck::registerMatchers(
+    MatchFinder *Finder) {
   Finder->addMatcher(
       cxxMethodDecl(
           isDefinition(), isUserProvided(),
@@ -118,26 +119,26 @@ static SourceRange getLocationOfConst(const TypeSourceInfo *TSI,
   const auto FTL = TSI->getTypeLoc().IgnoreParens().getAs<FunctionTypeLoc>();
   assert(FTL);
 
-  SourceRange Range{FTL.getRParenLoc().getLocWithOffset(1),
-                    FTL.getLocalRangeEnd()};
+  const SourceRange Range{FTL.getRParenLoc().getLocWithOffset(1),
+                          FTL.getLocalRangeEnd()};
   // Inside Range, there might be other keywords and trailing return types.
   // Find the exact position of "const".
-  StringRef Text = getStringFromRange(SourceMgr, LangOpts, Range);
-  size_t Offset = Text.find("const");
+  const StringRef Text = getStringFromRange(SourceMgr, LangOpts, Range);
+  const size_t Offset = Text.find("const");
   if (Offset == StringRef::npos)
     return {};
 
-  SourceLocation Start = Range.getBegin().getLocWithOffset(Offset);
+  const SourceLocation Start = Range.getBegin().getLocWithOffset(Offset);
   return {Start, Start.getLocWithOffset(strlen("const") - 1)};
 }
 
-void ConvertMemberFunctionsToStatic::check(
+void ConvertMemberFunctionsToStaticCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto *Definition = Result.Nodes.getNodeAs<CXXMethodDecl>("x");
 
   // TODO: For out-of-line declarations, don't modify the source if the header
   // is excluded by the -header-filter option.
-  DiagnosticBuilder Diag =
+  const DiagnosticBuilder Diag =
       diag(Definition->getLocation(), "method %0 can be made static")
       << Definition;
 
@@ -152,15 +153,15 @@ void ConvertMemberFunctionsToStatic::check(
   if (Definition->isConst()) {
     // Make sure that we either remove 'const' on both declaration and
     // definition or emit no fix-it at all.
-    SourceRange DefConst = getLocationOfConst(Definition->getTypeSourceInfo(),
-                                              *Result.SourceManager,
-                                              Result.Context->getLangOpts());
+    const SourceRange DefConst = getLocationOfConst(
+        Definition->getTypeSourceInfo(), *Result.SourceManager,
+        Result.Context->getLangOpts());
 
     if (DefConst.isInvalid())
       return;
 
     if (Declaration != Definition) {
-      SourceRange DeclConst = getLocationOfConst(
+      const SourceRange DeclConst = getLocationOfConst(
           Declaration->getTypeSourceInfo(), *Result.SourceManager,
           Result.Context->getLangOpts());
 

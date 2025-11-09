@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_AVOIDCONSTPARAMSINDECLS_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_AVOIDCONSTPARAMSINDECLS_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_AVOIDCONSTPARAMSINDECLSCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_AVOIDCONSTPARAMSINDECLSCHECK_H
 
 #include "../ClangTidyCheck.h"
 
@@ -15,9 +15,12 @@ namespace clang::tidy::readability {
 
 // Detect function declarations that have const value parameters and discourage
 // them.
-class AvoidConstParamsInDecls : public ClangTidyCheck {
+//
+// For the user-facing documentation see:
+// https://clang.llvm.org/extra/clang-tidy/checks/readability/avoid-const-params-in-decls.html
+class AvoidConstParamsInDeclsCheck : public ClangTidyCheck {
 public:
-  AvoidConstParamsInDecls(StringRef Name, ClangTidyContext *Context)
+  AvoidConstParamsInDeclsCheck(StringRef Name, ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context),
         IgnoreMacros(Options.get("IgnoreMacros", true)) {}
 
@@ -34,4 +37,4 @@ private:
 
 } // namespace clang::tidy::readability
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_AVOIDCONSTPARAMSINDECLS_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_AVOIDCONSTPARAMSINDECLSCHECK_H

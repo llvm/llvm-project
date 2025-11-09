@@ -1,4 +1,4 @@
-#RUN: dsymutil --linker=parallel -f -oso-prepend-path=%p/Inputs/ -y %s -o %t.dwarf
+#RUN: dsymutil --linker=parallel -f -oso-prepend-path=%p/../Inputs/ -y %s -o %t.dwarf
 #RUN: llvm-dwarfdump %t.dwarf | FileCheck %s
 
 # There should be two typedef DIE named "BarInt" in the resultant .dwarf file.
