@@ -1,4 +1,5 @@
-// RUN: %check_clang_tidy %s bugprone-random-generator-seed %t -- -config="{CheckOptions: {bugprone-random-generator-seed.DisallowedSeedTypes: 'some_type,time_t'}}"
+// RUN: %check_clang_tidy %s bugprone-random-generator-seed %t -- \
+// RUN: -config="{CheckOptions: {bugprone-random-generator-seed.DisallowedSeedTypes: 'some_type,time_t'}}"
 
 void srand(int seed);
 typedef int time_t;
