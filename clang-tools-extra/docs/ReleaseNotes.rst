@@ -462,6 +462,10 @@ Changes in existing checks
   comparisons to ``npos``. Internal changes may cause new rare false positives
   in non-standard containers.
 
+- Improved :doc:`readability-container-data-pointer
+  <clang-tidy/checks/readability/container-data-pointer>` check by correctly
+  adding parentheses when the container expression is a dereference.
+
 - Improved :doc:`readability-container-size-empty
   <clang-tidy/checks/readability/container-size-empty>` check by correctly
   generating fix-it hints when size method is called from implicit ``this``,
