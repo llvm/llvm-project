@@ -256,9 +256,10 @@ func::deduplicateArgsOfFuncOp(RewriterBase &rewriter, func::FuncOp funcOp,
 }
 
 FailureOr<func::FuncOp>
-func::lookupOrCreateFn(OpBuilder &b, Operation *moduleOp, StringRef name,
-                       ArrayRef<Type> paramTypes, ArrayRef<Type> resultTypes,
-                       bool setPrivate, SymbolTableCollection *symbolTables) {
+func::lookupOrCreateFnDecl(OpBuilder &b, Operation *moduleOp, StringRef name,
+                           ArrayRef<Type> paramTypes,
+                           ArrayRef<Type> resultTypes, bool setPrivate,
+                           SymbolTableCollection *symbolTables) {
   assert(moduleOp->hasTrait<OpTrait::SymbolTable>() &&
          "expected SymbolTable operation");
 

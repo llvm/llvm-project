@@ -63,10 +63,10 @@ deduplicateArgsOfFuncOp(mlir::RewriterBase &rewriter, mlir::func::FuncOp funcOp,
 /// Create a FuncOp with signature `resultTypes`(`paramTypes`)` and name `name`.
 /// Return a failure if the FuncOp found has unexpected signature.
 FailureOr<FuncOp>
-lookupOrCreateFn(OpBuilder &b, Operation *moduleOp, StringRef name,
-                 ArrayRef<Type> paramTypes = {},
-                 ArrayRef<Type> resultTypes = {}, bool setPrivate = false,
-                 SymbolTableCollection *symbolTables = nullptr);
+lookupOrCreateFnDecl(OpBuilder &b, Operation *moduleOp, StringRef name,
+                     ArrayRef<Type> paramTypes = {},
+                     ArrayRef<Type> resultTypes = {}, bool setPrivate = false,
+                     SymbolTableCollection *symbolTables = nullptr);
 
 } // namespace func
 } // namespace mlir

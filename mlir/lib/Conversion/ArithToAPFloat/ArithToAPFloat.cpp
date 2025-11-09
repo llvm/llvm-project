@@ -37,13 +37,12 @@ using namespace mlir::func;
 static FailureOr<Operation *>
 lookupOrCreateBinaryFn(OpBuilder &b, Operation *moduleOp, StringRef name,
                        SymbolTableCollection *symbolTables = nullptr) {
-  return lookupOrCreateFn(b, moduleOp,
-                          (llvm::Twine("_mlir_apfloat_") + name).str(),
-                          {IntegerType::get(moduleOp->getContext(), 32),
-                           IntegerType::get(moduleOp->getContext(), 64),
-                           IntegerType::get(moduleOp->getContext(), 64)},
-                          {IntegerType::get(moduleOp->getContext(), 64)},
-                          /*setPrivate=*/true, symbolTables);
+  auto i32Type = IntegerType::get(moduleOp->getContext(), 32);
+  auto i64Type = IntegerType::get(moduleOp->getContext(), 64);
+  return lookupOrCreateFnDecl(b, moduleOp,
+                              (llvm::Twine("_mlir_apfloat_") + name).str(),
+                              {i32Type, i64Type, i64Type}, {i64Type},
+                              /*setPrivate=*/true, symbolTables);
 }
 
 /// Rewrite a binary arithmetic operation to an APFloat function call.
@@ -89,31 +88,30 @@ static LogicalResult rewriteBinaryOp(RewriterBase &rewriter, ModuleOp module,
 namespace {
 struct ArithToAPFloatConversionPass final
     : impl::ArithToAPFloatConversionPassBase<ArithToAPFloatConversionPass> {
-  using impl::ArithToAPFloatConversionPassBase<
-      ArithToAPFloatConversionPass>::ArithToAPFloatConversionPassBase;
+  using Base::Base;
 
   void runOnOperation() override {
-    ModuleOp module = getOperation();
+    ModuleOp moduleOp = getOperation();
     IRRewriter rewriter(getOperation()->getContext());
     SmallVector<arith::AddFOp> addOps;
-    WalkResult status = module->walk([&](Operation *op) {
+    WalkResult status = moduleOp->walk([&](Operation *op) {
       rewriter.setInsertionPoint(op);
       LogicalResult result =
           llvm::TypeSwitch<Operation *, LogicalResult>(op)
               .Case<arith::AddFOp>([&](arith::AddFOp op) {
-                return rewriteBinaryOp(rewriter, module, op, "add");
+                return rewriteBinaryOp(rewriter, moduleOp, op, "add");
               })
               .Case<arith::SubFOp>([&](arith::SubFOp op) {
-                return rewriteBinaryOp(rewriter, module, op, "subtract");
+                return rewriteBinaryOp(rewriter, moduleOp, op, "subtract");
               })
               .Case<arith::MulFOp>([&](arith::MulFOp op) {
-                return rewriteBinaryOp(rewriter, module, op, "multiply");
+                return rewriteBinaryOp(rewriter, moduleOp, op, "multiply");
               })
               .Case<arith::DivFOp>([&](arith::DivFOp op) {
-                return rewriteBinaryOp(rewriter, module, op, "divide");
+                return rewriteBinaryOp(rewriter, moduleOp, op, "divide");
               })
               .Case<arith::RemFOp>([&](arith::RemFOp op) {
-                return rewriteBinaryOp(rewriter, module, op, "remainder");
+                return rewriteBinaryOp(rewriter, moduleOp, op, "remainder");
               })
               .Default([](Operation *op) { return success(); });
       if (failed(result))
