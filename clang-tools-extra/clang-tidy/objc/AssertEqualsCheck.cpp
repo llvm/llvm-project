@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "AssertEquals.h"
+#include "AssertEqualsCheck.h"
+#include "llvm/ADT/StringMap.h"
 
-#include <map>
 #include <string>
 
 using namespace clang::ast_matchers;
@@ -16,44 +16,40 @@ using namespace clang::ast_matchers;
 namespace clang::tidy::objc {
 
 // Mapping from `XCTAssert*Equal` to `XCTAssert*EqualObjects` name.
-static const std::map<std::string, std::string> &nameMap() {
-  static std::map<std::string, std::string> Map{
-      {"XCTAssertEqual", "XCTAssertEqualObjects"},
-      {"XCTAssertNotEqual", "XCTAssertNotEqualObjects"},
+static const llvm::StringMap<StringRef> NameMap{
+    {"XCTAssertEqual", "XCTAssertEqualObjects"},
+    {"XCTAssertNotEqual", "XCTAssertNotEqualObjects"},
+};
 
-  };
-  return Map;
-}
-
-void AssertEquals::registerMatchers(MatchFinder *Finder) {
-  for (const auto &Pair : nameMap()) {
+void AssertEqualsCheck::registerMatchers(MatchFinder *Finder) {
+  for (const auto &[CurrName, _] : NameMap) {
     Finder->addMatcher(
         binaryOperator(anyOf(hasOperatorName("!="), hasOperatorName("==")),
-                       isExpandedFromMacro(Pair.first),
+                       isExpandedFromMacro(std::string(CurrName)),
                        anyOf(hasLHS(hasType(qualType(
                                  hasCanonicalType(asString("NSString *"))))),
                              hasRHS(hasType(qualType(
-                                 hasCanonicalType(asString("NSString *"))))))
-
-                           )
-            .bind(Pair.first),
+                                 hasCanonicalType(asString("NSString *")))))))
+            .bind(CurrName),
         this);
   }
 }
 
-void AssertEquals::check(const ast_matchers::MatchFinder::MatchResult &Result) {
-  for (const auto &Pair : nameMap()) {
-    if (const auto *Root = Result.Nodes.getNodeAs<BinaryOperator>(Pair.first)) {
-      SourceManager *Sm = Result.SourceManager;
+void AssertEqualsCheck::check(
+    const ast_matchers::MatchFinder::MatchResult &Result) {
+  for (const auto &[CurrName, TargetName] : NameMap) {
+    if (const auto *Root = Result.Nodes.getNodeAs<BinaryOperator>(CurrName)) {
+      const SourceManager *Sm = Result.SourceManager;
       // The macros are nested two levels, so going up twice.
       auto MacroCallsite = Sm->getImmediateMacroCallerLoc(
           Sm->getImmediateMacroCallerLoc(Root->getBeginLoc()));
-      diag(MacroCallsite, "use " + Pair.second + " for comparing objects")
+      diag(MacroCallsite,
+           (Twine("use ") + TargetName + " for comparing objects").str())
           << FixItHint::CreateReplacement(
                  clang::CharSourceRange::getCharRange(
                      MacroCallsite,
-                     MacroCallsite.getLocWithOffset(Pair.first.length())),
-                 Pair.second);
+                     MacroCallsite.getLocWithOffset(CurrName.size())),
+                 TargetName);
     }
   }
 }

@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MisleadingBidirectional.h"
+#include "MisleadingBidirectionalCheck.h"
 
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/Preprocessor.h"
@@ -40,18 +40,18 @@ static bool containsMisleadingBidi(StringRef Buffer,
   //
   // Warn if we end up with an unclosed context.
   while (CurPtr < Buffer.end()) {
-    unsigned char C = *CurPtr;
+    const unsigned char C = *CurPtr;
     if (isASCII(C)) {
       ++CurPtr;
-      bool IsParagrapSep =
+      const bool IsParagrapSep =
           (C == 0xA || C == 0xD || (0x1C <= C && C <= 0x1E) || C == 0x85);
-      bool IsSegmentSep = (C == 0x9 || C == 0xB || C == 0x1F);
+      const bool IsSegmentSep = (C == 0x9 || C == 0xB || C == 0x1F);
       if (IsParagrapSep || IsSegmentSep)
         BidiContexts.clear();
       continue;
     }
     llvm::UTF32 CodePoint = 0;
-    llvm::ConversionResult Result = llvm::convertUTF8Sequence(
+    const llvm::ConversionResult Result = llvm::convertUTF8Sequence(
         (const llvm::UTF8 **)&CurPtr, (const llvm::UTF8 *)Buffer.end(),
         &CodePoint, llvm::strictConversion);
 
@@ -94,7 +94,7 @@ public:
 
   bool HandleComment(Preprocessor &PP, SourceRange Range) override {
     // FIXME: check that we are in a /* */ comment
-    StringRef Text =
+    const StringRef Text =
         Lexer::getSourceText(CharSourceRange::getCharRange(Range),
                              PP.getSourceManager(), PP.getLangOpts());
 
@@ -124,7 +124,7 @@ void MisleadingBidirectionalCheck::registerPPCallbacks(
 void MisleadingBidirectionalCheck::check(
     const ast_matchers::MatchFinder::MatchResult &Result) {
   if (const auto *SL = Result.Nodes.getNodeAs<StringLiteral>("strlit")) {
-    StringRef Literal = SL->getBytes();
+    const StringRef Literal = SL->getBytes();
     if (containsMisleadingBidi(Literal, false))
       diag(SL->getBeginLoc(), "string literal contains misleading "
                               "bidirectional Unicode characters");

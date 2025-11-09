@@ -6,22 +6,22 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_OBJC_ASSERTEQUALS_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_OBJC_ASSERTEQUALS_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_OBJC_ASSERTEQUALSCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_OBJC_ASSERTEQUALSCHECK_H
 
 #include "../ClangTidyCheck.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
 namespace clang::tidy::objc {
 
-/// Warn if XCTAssertEqual() or XCTAssertNotEqual() is used with at least one
+/// Warns if XCTAssertEqual() or XCTAssertNotEqual() is used with at least one
 /// operands of type NSString*.
 ///
 /// For the user-facing documentation see:
 /// https://clang.llvm.org/extra/clang-tidy/checks/objc/assert-equals.html
-class AssertEquals final : public ClangTidyCheck {
+class AssertEqualsCheck final : public ClangTidyCheck {
 public:
-  AssertEquals(StringRef Name, ClangTidyContext *Context)
+  AssertEqualsCheck(StringRef Name, ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context) {}
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
     return LangOpts.ObjC;
@@ -32,4 +32,4 @@ public:
 
 } // namespace clang::tidy::objc
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_OBJC_ASSERTEQUALS_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_OBJC_ASSERTEQUALSCHECK_H

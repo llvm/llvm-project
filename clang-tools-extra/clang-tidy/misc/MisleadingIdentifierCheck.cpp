@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MisleadingIdentifier.h"
+#include "MisleadingIdentifierCheck.h"
 
 #include "llvm/Support/ConvertUTF.h"
 
@@ -124,7 +124,7 @@ static bool hasRTLCharacters(StringRef Buffer) {
   const char *EndPtr = Buffer.end();
   while (CurPtr < EndPtr) {
     llvm::UTF32 CodePoint = 0;
-    llvm::ConversionResult Result = llvm::convertUTF8Sequence(
+    const llvm::ConversionResult Result = llvm::convertUTF8Sequence(
         (const llvm::UTF8 **)&CurPtr, (const llvm::UTF8 *)EndPtr, &CodePoint,
         llvm::strictConversion);
     if (Result != llvm::conversionOK)
@@ -144,9 +144,9 @@ MisleadingIdentifierCheck::~MisleadingIdentifierCheck() = default;
 void MisleadingIdentifierCheck::check(
     const ast_matchers::MatchFinder::MatchResult &Result) {
   if (const auto *ND = Result.Nodes.getNodeAs<NamedDecl>("nameddecl")) {
-    IdentifierInfo *II = ND->getIdentifier();
+    const IdentifierInfo *II = ND->getIdentifier();
     if (II) {
-      StringRef NDName = II->getName();
+      const StringRef NDName = II->getName();
       if (hasRTLCharacters(NDName))
         diag(ND->getBeginLoc(), "identifier has right-to-left codepoints");
     }
