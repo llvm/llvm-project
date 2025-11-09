@@ -11,8 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/ModuleUtils.h"
-#include "llvm/Analysis/VectorUtils.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
@@ -21,7 +21,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Support/xxhash.h"
+#include "llvm/Transforms/Instrumentation/KCFI.h"
 
 using namespace llvm;
 
@@ -208,10 +208,10 @@ void llvm::setKCFIType(Module &M, Function &F, StringRef MangledType) {
   std::string Type = MangledType.str();
   if (M.getModuleFlag("cfi-normalize-integers"))
     Type += ".normalized";
-  F.setMetadata(LLVMContext::MD_kcfi_type,
-                MDNode::get(Ctx, MDB.createConstant(ConstantInt::get(
-                                     Type::getInt32Ty(Ctx),
-                                     static_cast<uint32_t>(xxHash64(Type))))));
+  F.setMetadata(
+      LLVMContext::MD_kcfi_type,
+      MDNode::get(Ctx, MDB.createConstant(ConstantInt::get(
+                           Type::getInt32Ty(Ctx), getKCFITypeID(Type)))));
   // If the module was compiled with -fpatchable-function-entry, ensure
   // we use the same patchable-function-prefix.
   if (auto *MD = mdconst::extract_or_null<ConstantInt>(
