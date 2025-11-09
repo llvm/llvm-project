@@ -46,6 +46,7 @@
 // RUN: %clang_cc1 -std=c++20 %t/xcpp-output.cpp -fsyntax-only -verify -xc++-cpp-output
 // RUN: %clang_cc1 -std=c++20 %t/func_like_macro.cpp -D'm(x)=x' -fsyntax-only -verify
 // RUN: %clang_cc1 -std=c++20 %t/lparen.cpp -D'm(x)=x' -D'LPAREN=(' -fsyntax-only -verify
+// RUN: %clang_cc1 -std=c++20 %t/control_line.cpp -fsyntax-only -verify
 
 
 //--- hash.cpp
@@ -249,3 +250,12 @@ export module m
 // #define LPAREN (
 export module m
     LPAREN foo); // expected-error {{unexpected preprocessing token 'LPAREN' after module name, only ';' and '[' (start of attribute specifier sequence) are allowed}}
+
+//--- control_line.cpp
+#if 0 // #1
+export module m; // expected-error {{preprocessor conditionals shall not span a module declaration}}
+#else
+export module m; // expected-error {{preprocessor conditionals shall not span a module declaration}} \
+                 // expected-error {{module declaration must occur at the start of the translation unit}} \
+                 // expected-note@#1 {{add 'module;'}}
+#endif

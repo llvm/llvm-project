@@ -48,6 +48,7 @@
 #include "llvm/Support/SaveAndRestore.h"
 #include <algorithm>
 #include <cassert>
+#include <cstddef>
 #include <cstring>
 #include <optional>
 #include <string>
@@ -626,6 +627,57 @@ void Preprocessor::SkipExcludedConditionalBlock(SourceLocation HashTokenLoc,
           if (CodeComplete)
             CodeComplete->CodeCompleteInConditionalExclusion();
           continue;
+        }
+
+        // There is actually no "skipped block" in the above because the module
+        // directive is not a text-line (https://wg21.link/cpp.pre#2) nor
+        // anything else that is allowed in a group
+        // (https://eel.is/c++draft/cpp.pre#nt:group-part).
+        //
+        // A preprocessor diagnostic (effective with -E) that triggers whenever
+        // a module directive is encountered where a control-line or a text-line
+        // is required.
+        if (getLangOpts().CPlusPlusModules && Tok.isAtStartOfLine() &&
+            Tok.is(tok::raw_identifier) &&
+            (Tok.getRawIdentifier() == "export" ||
+             Tok.getRawIdentifier() == "module")) {
+          llvm::SaveAndRestore ModuleDirectiveSkipping(
+              LastTokenWasExportKeyword);
+          LastTokenWasExportKeyword.reset();
+          LookUpIdentifierInfo(Tok);
+          IdentifierInfo *II = Tok.getIdentifierInfo();
+
+          if (II->getName()[0] == 'e') {
+            HandleModuleContextualKeyword(Tok, Tok.isAtStartOfLine());
+            CurLexer->Lex(Tok);
+            if (Tok.is(tok::raw_identifier)) {
+              LookUpIdentifierInfo(Tok);
+              II = Tok.getIdentifierInfo();
+            }
+          }
+
+          if (II->getName()[0] == 'm') {
+            // HandleModuleContextualKeyword will look ahead next token, so
+            // exiting RawLexingMode.
+            llvm::SaveAndRestore RestoreLexingRawMode(CurPPLexer->LexingRawMode,
+                                                      false);
+            if (HandleModuleContextualKeyword(Tok, Tok.isAtStartOfLine())) {
+              // We just parsed a # character at the start of a line, so we're
+              // in directive mode.  Tell the lexer this so any newlines we see
+              // will be converted into an EOD token (this terminates the
+              // macro).
+              CurPPLexer->ParsingPreprocessorDirective = true;
+              SourceLocation StartLoc = Tok.getLocation();
+              SourceLocation End = DiscardUntilEndOfDirective().getEnd();
+              Diag(StartLoc, diag::err_pp_cond_span_module_decl)
+                  << SourceRange(StartLoc, End);
+              CurPPLexer->ParsingPreprocessorDirective = false;
+              // Restore comment saving mode.
+              if (CurLexer)
+                CurLexer->resetExtendedTokenMode();
+              continue;
+            }
+          }
         }
 
         // If this is the end of the buffer, we have an error.
@@ -4261,19 +4313,6 @@ void Preprocessor::HandleCXXModuleDirective(Token ModuleTok) {
   }
 
   SourceLocation StartLoc = Introducer.getLocation();
-  if (!IncludeMacroStack.empty()) {
-    SourceLocation End = DiscardUntilEndOfDirective().getEnd();
-    Diag(StartLoc, diag::err_pp_module_decl_in_header)
-        << SourceRange(StartLoc, End);
-    return;
-  }
-
-  if (CurPPLexer->getConditionalStackDepth() != 0) {
-    SourceLocation End = DiscardUntilEndOfDirective().getEnd();
-    Diag(StartLoc, diag::err_pp_cond_span_module_decl)
-        << SourceRange(StartLoc, End);
-    return;
-  }
 
   Token Tok;
   SourceLocation UseLoc = ModuleTok.getLocation();
@@ -4402,5 +4441,15 @@ void Preprocessor::HandleCXXModuleDirective(Token ModuleTok) {
                               /*EnableMacros=*/false, &DirToks);
   else
     End = DirToks.pop_back_val().getLocation();
+
+  if (!IncludeMacroStack.empty()) {
+    Diag(StartLoc, diag::err_pp_module_decl_in_header)
+        << SourceRange(StartLoc, End);
+  }
+
+  if (CurPPLexer->getConditionalStackDepth() != 0) {
+    Diag(StartLoc, diag::err_pp_cond_span_module_decl)
+        << SourceRange(StartLoc, End);
+  }
   EnterModuleSuffixTokenStream(DirToks);
 }
