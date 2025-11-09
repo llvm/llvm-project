@@ -23,5 +23,7 @@ void test(std::indirect<int>& i) {
   *std::move(std::as_const(i)); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   i.valueless_after_move(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   i.get_allocator(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  i.operator->(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::as_const(i).operator->(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   // clang-format on
 }

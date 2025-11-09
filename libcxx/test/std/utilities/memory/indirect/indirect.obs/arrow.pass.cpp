@@ -16,22 +16,27 @@
 // constexpr pointer operator->() noexcept;
 
 #include <cassert>
+#include <concepts>
 #include <memory>
 #include <utility>
 
 constexpr bool test() {
-  struct S {
-    constexpr bool is_const() & noexcept { return false; }
-    constexpr bool is_const() const& noexcept { return true; }
-  };
+  {
+    std::indirect<int> i;
 
-  std::indirect<S> i;
+    std::same_as<std::indirect<int>::pointer> decltype(auto) _       = i.operator->();
+    std::same_as<std::indirect<int>::const_pointer> decltype(auto) _ = std::as_const(i).operator->();
 
-  assert(!i->is_const());
-  assert(std::as_const(i)->is_const());
-
-  static_assert(noexcept(i->is_const()));
-  static_assert(noexcept(std::as_const(i)->is_const()));
+    static_assert(noexcept(i.operator->()));
+    static_assert(noexcept(std::as_const(i).operator->()));
+  }
+  {
+    struct Incomplete;
+    (void)([](std::indirect<Incomplete>& i) {
+      (void)(i.operator->());
+      (void)(std::as_const(i).operator->());
+    });
+  }
 
   return true;
 }
