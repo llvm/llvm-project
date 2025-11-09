@@ -71,18 +71,21 @@ void ExceptionEscapeCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 void ExceptionEscapeCheck::registerMatchers(MatchFinder *Finder) {
-  ast_matchers::internal::Matcher<FunctionDecl> Nothing = unless(anything());
+  auto MatchIf = [](bool Enabled, const auto &Matcher) {
+    ast_matchers::internal::Matcher<FunctionDecl> Nothing = unless(anything());
+    return Enabled ? Matcher : Nothing;
+  };
   Finder->addMatcher(
       functionDecl(
           isDefinition(),
           anyOf(
-              CheckNothrowFunctions ? isNoThrow() : Nothing,
-              allOf(anyOf(CheckDestructors ? cxxDestructorDecl() : Nothing,
-                          CheckMoveMemberFunctions
-                              ? anyOf(cxxConstructorDecl(isMoveConstructor()),
-                                      cxxMethodDecl(isMoveAssignmentOperator()))
-                              : Nothing,
-                          CheckMain ? isMain() : Nothing,
+              MatchIf(CheckNothrowFunctions, isNoThrow()),
+              allOf(anyOf(MatchIf(CheckDestructors, cxxDestructorDecl()),
+                          MatchIf(
+                              CheckMoveMemberFunctions,
+                              anyOf(cxxConstructorDecl(isMoveConstructor()),
+                                    cxxMethodDecl(isMoveAssignmentOperator()))),
+                          MatchIf(CheckMain, isMain()),
                           allOf(isEnabled(CheckedSwapFunctions),
                                 hasAtLeastOneParameter())),
                     unless(isExplicitThrow())),
