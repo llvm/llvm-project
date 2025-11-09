@@ -4129,7 +4129,7 @@ def NoThreadSafetyAnalysis : InheritableAttr {
 }
 
 def GuardedBy : InheritableAttr {
-  let Spellings = [Clang<"guarded_by", 0>];
+  let Spellings = [GNU<"guarded_by">];
   let Args = [ExprArgument<"Arg">];
   let LateParsed = LateAttrParseExperimentalExt;
   let TemplateDependent = 1;
@@ -5014,6 +5014,10 @@ def HLSLUnparsedSemantic : HLSLAnnotationAttr {
               DefaultBoolArgument<"ExplicitIndex", 0>];
   let Subjects = SubjectList<[ParmVar, Field, Function]>;
   let LangOpts = [HLSL];
+  let Documentation = [InternalOnly];
+}
+
+def HLSLUserSemantic : HLSLSemanticAttr</* Indexable= */ 1> {
   let Documentation = [InternalOnly];
 }
 
