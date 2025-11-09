@@ -294,6 +294,28 @@ cl::bits<GadgetScannerKind> GadgetScannersToRun(
         clEnumValN(GS_ALL, "all", "All implemented scanners")),
     cl::ZeroOrMore, cl::CommaSeparated, cl::cat(BinaryAnalysisCategory));
 
+// Primary targets for hooking runtime library initialization hooking
+// with fallback to next item in case if current item is not available
+// in the input binary.
+enum RuntimeLibInitHookTarget : char {
+  RLIH_ENTRY_POINT = 0, /// Use ELF Header Entry Point
+  RLIH_INIT = 1,        /// Use ELF DT_INIT entry
+  RLIH_INIT_ARRAY = 2,  /// Use ELF .init_array entry
+};
+
+cl::opt<RuntimeLibInitHookTarget> RuntimeLibInitHook(
+    "runtime-lib-init-hook",
+    cl::desc("Primary target for hooking runtime library initialization, used "
+             "in fallback order of availabiliy in input binary (entry_point -> "
+             "init -> init_array) (default: entry_point)"),
+    cl::Hidden, cl::init(RLIH_ENTRY_POINT),
+    cl::values(clEnumValN(RLIH_ENTRY_POINT, "entry_point",
+                          "use ELF Header Entry Point"),
+               clEnumValN(RLIH_INIT, "init", "use ELF DT_INIT entry"),
+               clEnumValN(RLIH_INIT_ARRAY, "init_array",
+                          "use ELF .init_array entry")),
+    cl::ZeroOrMore, cl::cat(BoltOptCategory));
+
 } // namespace opts
 
 // FIXME: implement a better way to mark sections for replacement.
@@ -741,9 +763,12 @@ Error RewriteInstance::run() {
   adjustCommandLineOptions();
   discoverFileObjects();
 
-  if (opts::Instrument && !BC->IsStaticExecutable)
+  if (opts::Instrument && !BC->IsStaticExecutable) {
+    if (Error E = discoverRtInitAddress())
+      return E;
     if (Error E = discoverRtFiniAddress())
       return E;
+  }
 
   preprocessProfileData();
 
@@ -785,8 +810,11 @@ Error RewriteInstance::run() {
 
   updateMetadata();
 
-  if (opts::Instrument && !BC->IsStaticExecutable)
+  if (opts::Instrument && !BC->IsStaticExecutable) {
+    if (Error E = updateRtInitReloc())
+      return E;
     updateRtFiniReloc();
+  }
 
   if (opts::OutputFilename == "/dev/null") {
     BC->outs() << "BOLT-INFO: skipping writing final binary to disk\n";
@@ -1411,6 +1439,60 @@ void RewriteInstance::discoverBOLTReserved() {
   NextAvailableAddress = BC->BOLTReserved.start();
 }
 
+Error RewriteInstance::discoverRtInitAddress() {
+  if (BC->HasInterpHeader && opts::RuntimeLibInitHook == opts::RLIH_ENTRY_POINT)
+    return Error::success();
+
+  // Use DT_INIT if it's available.
+  if (BC->InitAddress && opts::RuntimeLibInitHook <= opts::RLIH_INIT) {
+    BC->StartFunctionAddress = BC->InitAddress;
+    return Error::success();
+  }
+
+  if (!BC->InitArrayAddress || !BC->InitArraySize) {
+    return createStringError(std::errc::not_supported,
+                             "Instrumentation of shared library needs either "
+                             "DT_INIT or DT_INIT_ARRAY");
+  }
+
+  if (*BC->InitArraySize < BC->AsmInfo->getCodePointerSize()) {
+    return createStringError(std::errc::not_supported,
+                             "Need at least 1 DT_INIT_ARRAY slot");
+  }
+
+  ErrorOr<BinarySection &> InitArraySection =
+      BC->getSectionForAddress(*BC->InitArrayAddress);
+  if (auto EC = InitArraySection.getError())
+    return errorCodeToError(EC);
+
+  if (const Relocation *Reloc = InitArraySection->getDynamicRelocationAt(0)) {
+    if (Reloc->isRelative()) {
+      BC->StartFunctionAddress = Reloc->Addend;
+    } else {
+      MCSymbol *Sym = Reloc->Symbol;
+      if (!Sym)
+        return createStringError(
+            std::errc::not_supported,
+            "Failed to locate symbol for 0 entry of .init_array");
+      const BinaryFunction *BF = BC->getFunctionForSymbol(Sym);
+      if (!BF)
+        return createStringError(
+            std::errc::not_supported,
+            "Failed to locate binary function for 0 entry of .init_array");
+      BC->StartFunctionAddress = BF->getAddress() + Reloc->Addend;
+    }
+    return Error::success();
+  }
+
+  if (const Relocation *Reloc = InitArraySection->getRelocationAt(0)) {
+    BC->StartFunctionAddress = Reloc->Value;
+    return Error::success();
+  }
+
+  return createStringError(std::errc::not_supported,
+                           "No relocation for first DT_INIT_ARRAY slot");
+}
+
 Error RewriteInstance::discoverRtFiniAddress() {
   // Use DT_FINI if it's available.
   if (BC->FiniAddress) {
@@ -1446,6 +1528,68 @@ Error RewriteInstance::discoverRtFiniAddress() {
 
   return createStringError(std::errc::not_supported,
                            "No relocation for first DT_FINI_ARRAY slot");
+}
+
+Error RewriteInstance::updateRtInitReloc() {
+  if (BC->HasInterpHeader && opts::RuntimeLibInitHook == opts::RLIH_ENTRY_POINT)
+    return Error::success();
+
+  // Updating DT_INIT is handled by patchELFDynamic.
+  if (BC->InitAddress && opts::RuntimeLibInitHook <= opts::RLIH_INIT)
+    return Error::success();
+
+  const RuntimeLibrary *RT = BC->getRuntimeLibrary();
+  if (!RT || !RT->getRuntimeStartAddress())
+    return Error::success();
+
+  if (!BC->InitArrayAddress)
+    return Error::success();
+
+  if (!BC->InitArrayAddress || !BC->InitArraySize)
+    return createStringError(std::errc::not_supported,
+                             "inconsistent .init_array state");
+
+  ErrorOr<BinarySection &> InitArraySection =
+      BC->getSectionForAddress(*BC->InitArrayAddress);
+  if (!InitArraySection)
+    return createStringError(std::errc::not_supported, ".init_array removed");
+
+  if (std::optional<Relocation> Reloc =
+          InitArraySection->takeDynamicRelocationAt(0)) {
+    if (Reloc->isRelative()) {
+      if (Reloc->Addend != BC->StartFunctionAddress)
+        return createStringError(std::errc::not_supported,
+                                 "inconsistent .init_array dynamic relocation");
+      Reloc->Addend = RT->getRuntimeStartAddress();
+      InitArraySection->addDynamicRelocation(*Reloc);
+    } else {
+      MCSymbol *Sym = Reloc->Symbol;
+      if (!Sym)
+        return createStringError(
+            std::errc::not_supported,
+            "Failed to locate symbol for 0 entry of .init_array");
+      const BinaryFunction *BF = BC->getFunctionForSymbol(Sym);
+      if (!BF)
+        return createStringError(
+            std::errc::not_supported,
+            "Failed to locate binary function for 0 entry of .init_array");
+      if (BF->getAddress() + Reloc->Addend != BC->StartFunctionAddress)
+        return createStringError(std::errc::not_supported,
+                                 "inconsistent .init_array dynamic relocation");
+      InitArraySection->addDynamicRelocation(Relocation{
+          /*Offset*/ 0, /*Symbol*/ nullptr, /*Type*/ Relocation::getAbs64(),
+          /*Addend*/ RT->getRuntimeStartAddress(), /*Value*/ 0});
+    }
+  }
+  // Update the static relocation by adding a pending relocation which will get
+  // patched when flushPendingRelocations is called in rewriteFile. Note that
+  // flushPendingRelocations will calculate the value to patch as
+  // "Symbol + Addend". Since we don't have a symbol, just set the addend to the
+  // desired value.
+  InitArraySection->addPendingRelocation(Relocation{
+      /*Offset*/ 0, /*Symbol*/ nullptr, /*Type*/ Relocation::getAbs64(),
+      /*Addend*/ RT->getRuntimeStartAddress(), /*Value*/ 0});
+  return Error::success();
 }
 
 void RewriteInstance::updateRtFiniReloc() {
@@ -4849,7 +4993,8 @@ void RewriteInstance::patchELFSectionHeaderTable(ELFObjectFile<ELFT> *File) {
   ELFEhdrTy NewEhdr = Obj.getHeader();
 
   if (BC->HasRelocations) {
-    if (RuntimeLibrary *RtLibrary = BC->getRuntimeLibrary())
+    RuntimeLibrary *RtLibrary = BC->getRuntimeLibrary();
+    if (RtLibrary && opts::RuntimeLibInitHook == opts::RLIH_ENTRY_POINT)
       NewEhdr.e_entry = RtLibrary->getRuntimeStartAddress();
     else
       NewEhdr.e_entry = getNewFunctionAddress(NewEhdr.e_entry);
@@ -5695,7 +5840,9 @@ void RewriteInstance::patchELFDynamic(ELFObjectFile<ELFT> *File) {
         if (uint64_t Addr = RtLibrary->getRuntimeFiniAddress())
           NewDE.d_un.d_ptr = Addr;
       }
-      if (RtLibrary && Dyn.getTag() == ELF::DT_INIT && !BC->HasInterpHeader) {
+      if (RtLibrary && Dyn.getTag() == ELF::DT_INIT &&
+          (!BC->HasInterpHeader ||
+           opts::RuntimeLibInitHook == opts::RLIH_INIT)) {
         if (auto Addr = RtLibrary->getRuntimeStartAddress()) {
           LLVM_DEBUG(dbgs() << "BOLT-DEBUG: Set DT_INIT to 0x"
                             << Twine::utohexstr(Addr) << '\n');
@@ -5767,10 +5914,13 @@ Error RewriteInstance::readELFDynamic(ELFObjectFile<ELFT> *File) {
   for (const Elf_Dyn &Dyn : DynamicEntries) {
     switch (Dyn.d_tag) {
     case ELF::DT_INIT:
-      if (!BC->HasInterpHeader) {
-        LLVM_DEBUG(dbgs() << "BOLT-DEBUG: Set start function address\n");
-        BC->StartFunctionAddress = Dyn.getPtr();
-      }
+      BC->InitAddress = Dyn.getPtr();
+      break;
+    case ELF::DT_INIT_ARRAY:
+      BC->InitArrayAddress = Dyn.getPtr();
+      break;
+    case ELF::DT_INIT_ARRAYSZ:
+      BC->InitArraySize = Dyn.getPtr();
       break;
     case ELF::DT_FINI:
       BC->FiniAddress = Dyn.getPtr();
