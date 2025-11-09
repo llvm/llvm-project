@@ -101,13 +101,6 @@ asbirlea@google.com (email), [alinas](https://github.com/alinas) (GitHub)
 Madhur Amilkanthwar \
 madhura@nvidia.com (email), [madhur13490](https://github.com/madhur13490) (GitHub)
 
-#### SandboxVectorizer
-
-Vasileios Porpodas \
-vporpodas@google.com (email), [vporpo](https://github.com/vporpo) (GitHub) \
-Jorge Gorbe Moya \
-jgorbe@google.com (email), [slackito](https://github.com/slackito) (GitHub)
-
 #### ScalarEvolution, IndVarSimplify
 
 Philip Reames \
@@ -396,13 +389,6 @@ geek4civic@gmail.com (email), [chapuni](https://github.com/chapuni) (GitHub)
 
 Lang Hames \
 lhames@gmail.com (email), [lhames](https://github.com/lhames) (GitHub)
-
-#### SandboxIR
-
-Vasileios Porpodas \
-vporpodas@google.com (email), [vporpo](https://github.com/vporpo) (GitHub) \
-Jorge Gorbe Moya \
-jgorbe@google.com (email), [slackito](https://github.com/slackito) (GitHub)
 
 #### TableGen
 
