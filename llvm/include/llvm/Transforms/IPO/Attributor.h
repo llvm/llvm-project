@@ -5957,7 +5957,12 @@ public:
     /// actual use of the list. So we just blindly append here.
 
     bool merge(const OffsetInfo &R) {
-      bool Changed =  set_union(Ranges, R.Ranges);
+
+      SmallSet<AA::RangeTy, 2> Set1(Ranges.begin(), Ranges.end());
+      SmallSet<AA::RangeTy, 2> Set2(R.Ranges.begin(), R.Ranges.end());
+
+      bool Changed = set_union(Set1, Set2);
+      Ranges.append(R.Ranges);
       // ensure elements are unique.
       sort(Ranges.begin(), Ranges.end());
       Ranges.erase(std::unique(Ranges.begin(), Ranges.end()), Ranges.end());
@@ -5974,7 +5979,11 @@ public:
     // and adds it to the corresponding offset in the
     // origins map.
     bool mergeWithOffset(const OffsetInfo &R, Value &CurPtr) {
-      bool Changed = set_union(Ranges, R.Ranges);
+      SmallSet<AA::RangeTy, 2> Set1(Ranges.begin(), Ranges.end());
+      SmallSet<AA::RangeTy, 2> Set2(R.Ranges.begin(), R.Ranges.end());
+
+      bool Changed = set_union(Set1, Set2);
+      Ranges.append(R.Ranges);
       // ensure elements are unique.
       sort(Ranges.begin(), Ranges.end());
       Ranges.erase(std::unique(Ranges.begin(), Ranges.end()), Ranges.end());
@@ -6386,7 +6395,7 @@ public:
   virtual const_bin_iterator end() const = 0;
   virtual int64_t numOffsetBins() const = 0;
   virtual bool reachesReturn() const = 0;
-  virtual void addReturnedOffsetsTo(OffsetInfo &) const = 0;
+  virtual void addReturnedOffsetsTo(OffsetInfo &, Value &V) const = 0;
   virtual void dumpState(raw_ostream &O) const = 0;
   virtual const Access &getBinAccess(unsigned Index) const = 0;
   virtual const DenseMap<Value *, OffsetInfo> &getOffsetInfoMap() const = 0;

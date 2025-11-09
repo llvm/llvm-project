@@ -34,8 +34,8 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 define dso_local i32 @main() {
 ; TUNIT-LABEL: define {{[^@]+}}@main() {
 ; TUNIT-NEXT:  entry:
-; TUNIT-NEXT:    [[ALLOC11:%.*]] = alloca [0 x i8], align 1
-; TUNIT-NEXT:    [[ALLOC22:%.*]] = alloca [0 x i8], align 1
+; TUNIT-NEXT:    [[ALLOC1:%.*]] = alloca i8, align 8
+; TUNIT-NEXT:    [[ALLOC2:%.*]] = alloca i8, align 8
 ; TUNIT-NEXT:    [[THREAD:%.*]] = alloca i64, align 8
 ; TUNIT-NEXT:    [[CALL:%.*]] = call i32 @pthread_create(ptr noundef nonnull align 8 dereferenceable(8) [[THREAD]], ptr noundef null, ptr noundef nonnull @foo, ptr nofree readnone undef)
 ; TUNIT-NEXT:    [[CALL1:%.*]] = call i32 @pthread_create(ptr noundef nonnull align 8 dereferenceable(8) [[THREAD]], ptr noundef null, ptr noundef nonnull @bar, ptr noalias nofree nonnull readnone align 8 captures(none) dereferenceable(8) undef)

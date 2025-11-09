@@ -2474,7 +2474,7 @@ define internal void @dead_with_blockaddress_users(ptr nocapture %pc) nounwind r
 ; CGSCC-NEXT:    [[TMP1_PN:%.*]] = load i32, ptr [[PC_ADDR_0]], align 4
 ; CGSCC-NEXT:    [[INDIRECT_GOTO_DEST_IN:%.*]] = getelementptr inbounds [2 x ptr], ptr @dead_with_blockaddress_users.l, i32 0, i32 [[TMP1_PN]]
 ; CGSCC-NEXT:    [[INDIRECT_GOTO_DEST:%.*]] = load ptr, ptr [[INDIRECT_GOTO_DEST_IN]], align 8
-; CGSCC-NEXT:    indirectbr ptr [[INDIRECT_GOTO_DEST]], [label [[LAB0]], label %end]
+; CGSCC-NEXT:    indirectbr ptr [[INDIRECT_GOTO_DEST]], [label [[LAB0]], label [[END:%.*]]]
 ;
 entry:
   br label %indirectgoto
@@ -2589,7 +2589,7 @@ define void @bad_gep() {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    [[N1:%.*]] = alloca [0 x i8], align 1
 ; TUNIT-NEXT:    [[M2:%.*]] = alloca [0 x i8], align 1
-; TUNIT-NEXT:    call void @llvm.lifetime.start.p0(i64 noundef 1, ptr noalias nocapture nofree noundef nonnull dereferenceable(1) [[N1]]) #[[ATTR18:[0-9]+]]
+; TUNIT-NEXT:    call void @llvm.lifetime.start.p0(ptr noalias nofree noundef nonnull captures(none) dereferenceable(1) [[N1]]) #[[ATTR18:[0-9]+]]
 ; TUNIT-NEXT:    br label [[EXIT:%.*]]
 ; TUNIT:       while.body:
 ; TUNIT-NEXT:    unreachable
@@ -2607,7 +2607,7 @@ define void @bad_gep() {
 ; CGSCC-NEXT:  entry:
 ; CGSCC-NEXT:    [[N1:%.*]] = alloca [0 x i8], align 1
 ; CGSCC-NEXT:    [[M2:%.*]] = alloca [0 x i8], align 1
-; CGSCC-NEXT:    call void @llvm.lifetime.start.p0(i64 noundef 1, ptr noalias nocapture nofree noundef nonnull dereferenceable(1) [[N1]]) #[[ATTR21:[0-9]+]]
+; CGSCC-NEXT:    call void @llvm.lifetime.start.p0(ptr noalias nofree noundef nonnull captures(none) dereferenceable(1) [[N1]]) #[[ATTR21:[0-9]+]]
 ; CGSCC-NEXT:    br label [[EXIT:%.*]]
 ; CGSCC:       while.body:
 ; CGSCC-NEXT:    unreachable

@@ -3248,10 +3248,7 @@ define i32 @may_access_after_return_choice(i32 noundef %N, i32 noundef %M, i1 %c
 ; TUNIT-NEXT:    [[CALL:%.*]] = call nonnull align 4 dereferenceable(4) ptr @passthrough_choice(i1 [[C]], ptr noalias nofree noundef nonnull readnone align 4 dereferenceable(4) "no-capture-maybe-returned" [[A]], ptr noalias nofree noundef nonnull readnone align 4 dereferenceable(4) "no-capture-maybe-returned" [[B]]) #[[ATTR23:[0-9]+]]
 ; TUNIT-NEXT:    [[CALL1:%.*]] = call nonnull align 4 dereferenceable(4) ptr @passthrough_choice(i1 [[C]], ptr noalias nofree noundef nonnull readnone align 4 dereferenceable(4) "no-capture-maybe-returned" [[B]], ptr noalias nofree noundef nonnull readnone align 4 dereferenceable(4) "no-capture-maybe-returned" [[A]]) #[[ATTR23]]
 ; TUNIT-NEXT:    call void @write_both(ptr nofree noundef nonnull writeonly align 4 captures(none) dereferenceable(4) [[CALL]], ptr nofree noundef nonnull writeonly align 4 captures(none) dereferenceable(4) [[CALL1]]) #[[ATTR18]]
-; TUNIT-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A]], align 4
-; TUNIT-NEXT:    [[TMP1:%.*]] = load i32, ptr [[B]], align 4
-; TUNIT-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP0]], [[TMP1]]
-; TUNIT-NEXT:    ret i32 [[ADD]]
+; TUNIT-NEXT:    ret i32 10
 ;
 ; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn
 ; CGSCC-LABEL: define {{[^@]+}}@may_access_after_return_choice
@@ -3456,7 +3453,7 @@ define void @returnedPtrAccesses() {
 ; TUNIT-NEXT:    store i8 2, ptr [[A2]], align 1
 ; TUNIT-NEXT:    store i8 4, ptr [[A4]], align 1
 ; TUNIT-NEXT:    store i8 6, ptr [[A6]], align 1
-; TUNIT-NEXT:    call void @use3i8(i8 2, i8 4, i8 6)
+; TUNIT-NEXT:    call void @use3i8(i8 noundef 2, i8 noundef 4, i8 noundef 6)
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC-LABEL: define {{[^@]+}}@returnedPtrAccesses() {

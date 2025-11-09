@@ -54,10 +54,10 @@ define dso_local void @positive_malloc_1(ptr noundef %val) #0 {
 ; CHECK-NEXT:    store ptr [[VAL]], ptr [[VAL_ADDR]], align 8
 ; CHECK-NEXT:    [[CALL:%.*]] = call noalias ptr @malloc(i64 noundef 12)
 ; CHECK-NEXT:    store ptr [[CALL]], ptr [[F]], align 8
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[VAL]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[VAL]], align 4, !invariant.load [[META0:![0-9]+]]
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP0]], 10
 ; CHECK-NEXT:    store i32 [[ADD]], ptr [[CALL]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[CALL]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[CALL]], align 4, !invariant.load [[META0]]
 ; CHECK-NEXT:    [[CALL2:%.*]] = call i32 (ptr, ...) @printf(ptr noundef nonnull dereferenceable(17) @.str, i32 noundef [[TMP1]])
 ; CHECK-NEXT:    ret void
 ;
@@ -91,9 +91,9 @@ define dso_local void @positive_malloc_2(ptr noundef %val) #0 {
 ; CHECK-NEXT:    store ptr [[VAL]], ptr [[VAL_ADDR]], align 8
 ; CHECK-NEXT:    [[CALL:%.*]] = call noalias ptr @malloc(i64 noundef 60)
 ; CHECK-NEXT:    store ptr [[CALL]], ptr [[F]], align 8
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[VAL]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[VAL]], align 4, !invariant.load [[META0]]
 ; CHECK-NEXT:    store i32 [[TMP0]], ptr [[CALL]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[CALL]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[CALL]], align 4, !invariant.load [[META0]]
 ; CHECK-NEXT:    [[CALL2:%.*]] = call i32 (ptr, ...) @printf(ptr noundef nonnull dereferenceable(17) @.str, i32 noundef [[TMP1]])
 ; CHECK-NEXT:    ret void
 ;
@@ -134,7 +134,7 @@ define dso_local ptr @negative_test_escaping_pointer(i32 noundef %val) #0 {
 ; CHECK-NEXT:    store i32 2, ptr [[TMP0]], align 8
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 10, [[VAL]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[F]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[TMP1]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[TMP1]], align 8, !invariant.load [[META0]]
 ; CHECK-NEXT:    [[ADD2:%.*]] = add nsw i32 [[TMP2]], [[ADD]]
 ; CHECK-NEXT:    store i32 [[ADD2]], ptr [[TMP1]], align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[F]], align 8
@@ -165,24 +165,43 @@ entry:
 ;However, the offsets (load/store etc.) Need to be changed.
 ; Function Attrs: noinline nounwind uwtable
 define dso_local void @positive_test_not_a_single_start_offset(i32 noundef %val) #0 {
-; CHECK-LABEL: define dso_local void @positive_test_not_a_single_start_offset
-; CHECK-SAME: (i32 noundef [[VAL:%.*]]) {
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[VAL_ADDR:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    [[F1:%.*]] = alloca [5 x i8], align 1
-; CHECK-NEXT:    store i32 [[VAL]], ptr [[VAL_ADDR]], align 4
-; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 2, [[VAL]]
-; CHECK-NEXT:    store i32 [[MUL]], ptr [[F1]], align 4
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[F1]], align 4
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 (ptr, ...) @printf(ptr noundef nonnull dereferenceable(17) @.str, i32 noundef [[TMP0]])
-; CHECK-NEXT:    [[NEWGEP:%.*]] = getelementptr [5 x i8], ptr [[F1]], i64 4
-; CHECK-NEXT:    [[CONV1:%.*]] = trunc i32 [[TMP0]] to i8
-; CHECK-NEXT:    store i8 [[CONV1]], ptr [[NEWGEP]], align 4
-; CHECK-NEXT:    [[NEWGEP2:%.*]] = getelementptr [5 x i8], ptr [[F1]], i64 4
-; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[NEWGEP2]], align 4
-; CHECK-NEXT:    [[CONV:%.*]] = sext i8 [[TMP1]] to i32
-; CHECK-NEXT:    [[CALL3:%.*]] = call i32 (ptr, ...) @printf(ptr noundef nonnull dereferenceable(17) @.str, i32 noundef [[CONV]])
-; CHECK-NEXT:    ret void
+; TUNIT-LABEL: define dso_local void @positive_test_not_a_single_start_offset
+; TUNIT-SAME: (i32 noundef [[VAL:%.*]]) {
+; TUNIT-NEXT:  entry:
+; TUNIT-NEXT:    [[VAL_ADDR:%.*]] = alloca i32, align 4
+; TUNIT-NEXT:    [[F1:%.*]] = alloca [5 x i8], align 1
+; TUNIT-NEXT:    store i32 [[VAL]], ptr [[VAL_ADDR]], align 4
+; TUNIT-NEXT:    [[MUL:%.*]] = mul nsw i32 2, [[VAL]]
+; TUNIT-NEXT:    store i32 [[MUL]], ptr [[F1]], align 4
+; TUNIT-NEXT:    [[TMP0:%.*]] = load i32, ptr [[F1]], align 4
+; TUNIT-NEXT:    [[CALL:%.*]] = call i32 (ptr, ...) @printf(ptr noundef nonnull dereferenceable(17) @.str, i32 noundef [[TMP0]])
+; TUNIT-NEXT:    [[NEWGEP:%.*]] = getelementptr [5 x i8], ptr [[F1]], i64 4
+; TUNIT-NEXT:    [[CONV1:%.*]] = trunc i32 [[TMP0]] to i8
+; TUNIT-NEXT:    store i8 [[CONV1]], ptr [[NEWGEP]], align 4
+; TUNIT-NEXT:    [[NEWGEP2:%.*]] = getelementptr [5 x i8], ptr [[F1]], i64 4
+; TUNIT-NEXT:    [[TMP1:%.*]] = load i8, ptr [[NEWGEP2]], align 4
+; TUNIT-NEXT:    [[CONV:%.*]] = sext i8 [[TMP1]] to i32
+; TUNIT-NEXT:    [[CALL3:%.*]] = call i32 (ptr, ...) @printf(ptr noundef nonnull dereferenceable(17) @.str, i32 noundef [[CONV]])
+; TUNIT-NEXT:    ret void
+;
+; CGSCC-LABEL: define dso_local void @positive_test_not_a_single_start_offset
+; CGSCC-SAME: (i32 noundef [[VAL:%.*]]) {
+; CGSCC-NEXT:  entry:
+; CGSCC-NEXT:    [[VAL_ADDR:%.*]] = alloca i32, align 4
+; CGSCC-NEXT:    [[F1:%.*]] = alloca [5 x i8], align 1
+; CGSCC-NEXT:    store i32 [[VAL]], ptr [[VAL_ADDR]], align 4
+; CGSCC-NEXT:    [[MUL:%.*]] = mul nsw i32 2, [[VAL]]
+; CGSCC-NEXT:    store i32 [[MUL]], ptr [[F1]], align 4
+; CGSCC-NEXT:    [[TMP0:%.*]] = load i32, ptr [[F1]], align 4
+; CGSCC-NEXT:    [[CALL:%.*]] = call i32 (ptr, ...) @printf(ptr noundef nonnull dereferenceable(17) @.str, i32 noundef [[TMP0]])
+; CGSCC-NEXT:    [[NEWGEP2:%.*]] = getelementptr [5 x i8], ptr [[F1]], i64 4
+; CGSCC-NEXT:    [[CONV1:%.*]] = trunc i32 [[TMP0]] to i8
+; CGSCC-NEXT:    store i8 [[CONV1]], ptr [[NEWGEP2]], align 4
+; CGSCC-NEXT:    [[NEWGEP:%.*]] = getelementptr [5 x i8], ptr [[F1]], i64 4
+; CGSCC-NEXT:    [[TMP1:%.*]] = load i8, ptr [[NEWGEP]], align 4
+; CGSCC-NEXT:    [[CONV:%.*]] = sext i8 [[TMP1]] to i32
+; CGSCC-NEXT:    [[CALL3:%.*]] = call i32 (ptr, ...) @printf(ptr noundef nonnull dereferenceable(17) @.str, i32 noundef [[CONV]])
+; CGSCC-NEXT:    ret void
 ;
 entry:
   %val.addr = alloca i32, align 4
@@ -255,9 +274,9 @@ define dso_local void @baz(ptr noundef %val, i32 noundef %arrayLength) #0 {
 ; CHECK-NEXT:    [[MUL:%.*]] = mul i64 4, [[CONV]]
 ; CHECK-NEXT:    [[CALL:%.*]] = call noalias ptr @malloc(i64 noundef [[MUL]])
 ; CHECK-NEXT:    store ptr [[CALL]], ptr [[F]], align 8
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[VAL]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[VAL]], align 4, !invariant.load [[META0]]
 ; CHECK-NEXT:    store i32 [[TMP0]], ptr [[CALL]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[CALL]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[CALL]], align 4, !invariant.load [[META0]]
 ; CHECK-NEXT:    [[CALL2:%.*]] = call i32 (ptr, ...) @printf(ptr noundef nonnull dereferenceable(17) @.str, i32 noundef [[TMP1]])
 ; CHECK-NEXT:    ret void
 ;
@@ -323,7 +342,7 @@ define dso_local void @positive_test_reduce_array_allocation_2() #0 {
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[I2]], align 4
 ; CHECK-NEXT:    [[IDXPROM4:%.*]] = sext i32 [[TMP5]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds i32, ptr [[CALL]], i64 [[IDXPROM4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr [[ARRAYIDX5]], align 4
+; CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr [[ARRAYIDX5]], align 4, !invariant.load [[META0]]
 ; CHECK-NEXT:    [[ADD6:%.*]] = add nsw i32 [[TMP6]], 1
 ; CHECK-NEXT:    store i32 [[ADD6]], ptr [[ARRAYIDX5]], align 4
 ; CHECK-NEXT:    br label [[FOR_INC7:%.*]]
@@ -343,7 +362,7 @@ define dso_local void @positive_test_reduce_array_allocation_2() #0 {
 ; CHECK-NEXT:    [[TMP9:%.*]] = load i32, ptr [[I2]], align 4
 ; CHECK-NEXT:    [[IDXPROM13:%.*]] = sext i32 [[TMP9]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX14:%.*]] = getelementptr inbounds i32, ptr [[CALL]], i64 [[IDXPROM13]]
-; CHECK-NEXT:    [[TMP10:%.*]] = load i32, ptr [[ARRAYIDX14]], align 4
+; CHECK-NEXT:    [[TMP10:%.*]] = load i32, ptr [[ARRAYIDX14]], align 4, !invariant.load [[META0]]
 ; CHECK-NEXT:    [[CALL15:%.*]] = call i32 (ptr, ...) @printf(ptr noundef nonnull dereferenceable(17) @.str, i32 noundef [[TMP10]])
 ; CHECK-NEXT:    br label [[FOR_INC16:%.*]]
 ; CHECK:       for.inc16:
@@ -440,9 +459,9 @@ define dso_local void @pthread_test(){
 ; TUNIT-LABEL: define dso_local void @pthread_test() {
 ; TUNIT-NEXT:    [[ARG1:%.*]] = alloca i8, align 8
 ; TUNIT-NEXT:    [[THREAD:%.*]] = alloca i64, align 8
-; TUNIT-NEXT:    [[CALL1:%.*]] = call i32 @pthread_create(ptr noundef nonnull align 8 dereferenceable(8) [[THREAD]], ptr noundef align 4294967296 null, ptr noundef nonnull @pthread_allocation_should_remain_same, ptr noundef nonnull align 8 dereferenceable(1) [[ARG1]])
+; TUNIT-NEXT:    [[CALL1:%.*]] = call i32 @pthread_create(ptr noundef nonnull align 8 dereferenceable(8) [[THREAD]], ptr noundef null, ptr noundef nonnull @pthread_allocation_should_remain_same, ptr noundef nonnull align 8 dereferenceable(1) [[ARG1]])
 ; TUNIT-NEXT:    [[F1:%.*]] = alloca [4 x i8], align 1
-; TUNIT-NEXT:    [[CALL2:%.*]] = call i32 @pthread_create(ptr noundef nonnull align 8 dereferenceable(8) [[THREAD]], ptr noundef align 4294967296 null, ptr noundef nonnull @pthread_allocation_should_be_reduced, ptr noalias nocapture nofree nonnull readnone align 4 dereferenceable(12) undef)
+; TUNIT-NEXT:    [[CALL2:%.*]] = call i32 @pthread_create(ptr noundef nonnull align 8 dereferenceable(8) [[THREAD]], ptr noundef null, ptr noundef nonnull @pthread_allocation_should_be_reduced, ptr noalias nofree nonnull readnone align 4 captures(none) dereferenceable(12) undef)
 ; TUNIT-NEXT:    [[F2:%.*]] = alloca [[STRUCT_FOO:%.*]], align 4
 ; TUNIT-NEXT:    [[CALL3:%.*]] = call i32 @pthread_create(ptr noundef nonnull align 8 dereferenceable(8) [[THREAD]], ptr noundef null, ptr noundef nonnull @pthread_check_captured_pointer, ptr noundef nonnull align 4 dereferenceable(12) [[F2]])
 ; TUNIT-NEXT:    ret void
@@ -469,14 +488,13 @@ define dso_local void @pthread_test(){
 
 
 define dso_local void @select_case(i1 %cond){
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(write)
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define dso_local void @select_case
 ; CHECK-SAME: (i1 [[COND:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[A:%.*]] = alloca [100 x i8], align 1
 ; CHECK-NEXT:    [[B:%.*]] = getelementptr inbounds [100 x i8], ptr [[A]], i64 0, i64 3
 ; CHECK-NEXT:    [[C:%.*]] = getelementptr inbounds [100 x i8], ptr [[A]], i64 0, i64 1
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND]], ptr [[B]], ptr [[C]]
-; CHECK-NEXT:    store i8 100, ptr [[SEL]], align 1
 ; CHECK-NEXT:    ret void
 ;
   %a = alloca [100 x i8], align 1
@@ -488,14 +506,9 @@ define dso_local void @select_case(i1 %cond){
 }
 
 define dso_local void @select_case_2(i1 %cond){
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(write)
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define dso_local void @select_case_2
 ; CHECK-SAME: (i1 [[COND:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[A:%.*]] = alloca [100 x i32], align 1
-; CHECK-NEXT:    [[B:%.*]] = getelementptr inbounds [100 x i32], ptr [[A]], i64 0, i64 3
-; CHECK-NEXT:    [[C:%.*]] = getelementptr inbounds [100 x i32], ptr [[A]], i64 0, i64 1
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND]], ptr [[B]], ptr [[C]]
-; CHECK-NEXT:    store i8 100, ptr [[SEL]], align 1
 ; CHECK-NEXT:    ret void
 ;
   %a = alloca [100 x i32], align 1
@@ -530,7 +543,7 @@ define internal void @pthread_allocation_should_be_reduced(ptr %arg) {
 ; CGSCC-LABEL: define internal void @pthread_allocation_should_be_reduced
 ; CGSCC-SAME: (ptr noalias nofree noundef nonnull readonly align 4 captures(none) dereferenceable(12) [[ARG:%.*]]) {
 ; CGSCC-NEXT:  entry:
-; CGSCC-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARG]], align 4
+; CGSCC-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARG]], align 4, !invariant.load [[META0]]
 ; CGSCC-NEXT:    [[CALL:%.*]] = call i32 (ptr, ...) @printf(ptr noundef nonnull dereferenceable(17) @.str, i32 noundef [[TMP0]])
 ; CGSCC-NEXT:    ret void
 ;
@@ -618,15 +631,17 @@ declare i32 @printf(ptr noundef, ...) #1
 ; Function Attrs: nounwind allocsize(0)
 declare noalias ptr @malloc(i64 noundef) #1
 ;.
-; TUNIT: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(write) }
+; TUNIT: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
 ; TUNIT: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind memory(none) }
 ;.
-; CGSCC: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(write) }
+; CGSCC: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
 ; CGSCC: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind memory(none) }
 ;.
-; TUNIT: [[META0:![0-9]+]] = !{[[META1:![0-9]+]]}
-; TUNIT: [[META1]] = !{i64 2, i64 3, i1 false}
+; TUNIT: [[META0]] = !{}
+; TUNIT: [[META1:![0-9]+]] = !{[[META2:![0-9]+]]}
+; TUNIT: [[META2]] = !{i64 2, i64 3, i1 false}
 ;.
-; CGSCC: [[META0:![0-9]+]] = !{[[META1:![0-9]+]]}
-; CGSCC: [[META1]] = !{i64 2, i64 3, i1 false}
+; CGSCC: [[META0]] = !{}
+; CGSCC: [[META1:![0-9]+]] = !{[[META2:![0-9]+]]}
+; CGSCC: [[META2]] = !{i64 2, i64 3, i1 false}
 ;.
