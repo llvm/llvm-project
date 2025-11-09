@@ -921,52 +921,21 @@ def NVVM_Barrier0Op : NVVM_Op<"barrier0"> {
   }];
 }
 
-// Attrs describing the predicate of barrier0 operation.
-def Barrier0PredPopc : I32EnumAttrCase<"POPC", 0, "popc">;
-def Barrier0PredAnd : I32EnumAttrCase<"AND", 1, "and">;
-def Barrier0PredOr : I32EnumAttrCase<"OR", 2, "or">;
+// Attrs describing the reduction operations for the barrier operation.
+def BarrierReductionPopc : I32EnumAttrCase<"POPC", 0, "popc">;
+def BarrierReductionAnd : I32EnumAttrCase<"AND", 1, "and">;
+def BarrierReductionOr : I32EnumAttrCase<"OR", 2, "or">;
 
-def Barrier0Pred
-    : I32EnumAttr<"Barrier0Pred", "NVVM barrier0 predicate",
-                  [Barrier0PredPopc, Barrier0PredAnd, Barrier0PredOr]> {
+def BarrierReduction
+    : I32EnumAttr<"BarrierReduction", "NVVM barrier reduction operation",
+                  [BarrierReductionPopc, BarrierReductionAnd,
+                   BarrierReductionOr]> {
   let genSpecializedAttr = 0;
   let cppNamespace = "::mlir::NVVM";
 }
-def Barrier0PredAttr : EnumAttr<NVVM_Dialect, Barrier0Pred, "barrier0_pred"> {
+def BarrierReductionAttr
+    : EnumAttr<NVVM_Dialect, BarrierReduction, "reduction"> {
   let assemblyFormat = "`<` $value `>`";
-}
-
-def NVVM_Barrier0PredOp : NVVM_Op<"barrier0.pred">,
-                          Arguments<(ins Barrier0PredAttr:$pred, I32:$value)>,
-                          Results<(outs I32:$res)> {
-  let summary = "CTA Barrier Synchronization with predicate (Barrier ID 0)";
-  let description = [{
-    The `nvvm.barrier0` operation is a convenience operation that performs
-    barrier synchronization and communication within a CTA
-    (Cooperative Thread Array) using barrier ID 0. It is functionally
-    equivalent to `nvvm.barrier` or `nvvm.barrier id=0`.
-
-    `popc` is identical to `nvvm.barrier0` with the additional feature that it
-    evaluates predicate for all threads of the block and returns the number of
-    threads for which predicate evaluates to non-zero.
-
-    `and` is identical to `nvvm.barrier0` with the additional feature that it
-    evaluates predicate for all threads of the block and returns non-zero if
-    and only if predicate evaluates to non-zero for all of them.
-
-    `or` is identical to `nvvm.barrier0` with the additional feature that it
-    evaluates predicate for all threads of the block and returns non-zero if and
-    only if predicate evaluates to non-zero for any of them.
-
-    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-bar)
-  }];
-
-  let assemblyFormat =
-      "$value `:` type($value) $pred attr-dict `->` type($res)";
-  string llvmBuilder = [{
-      createIntrinsicCall(
-          builder, getBarrier0IntrinsicID($pred), {$value});
-  }];
 }
 
 def NVVM_BarrierOp : NVVM_Op<"barrier", [AttrSizedOperandSegments]> {
@@ -983,6 +952,7 @@ def NVVM_BarrierOp : NVVM_Op<"barrier", [AttrSizedOperandSegments]> {
     - `numberOfThreads`: Specifies the number of threads participating in the barrier. 
       When specified, the value must be a multiple of the warp size. If not specified, 
       all threads in the CTA participate in the barrier.
+    - `reductionOp`
 
     The barrier operation guarantees that when the barrier completes, prior memory 
     accesses requested by participating threads are performed relative to all threads 
@@ -999,31 +969,36 @@ def NVVM_BarrierOp : NVVM_Op<"barrier", [AttrSizedOperandSegments]> {
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-bar)
   }];
 
-  let arguments = (ins     
-    Optional<I32>:$barrierId,
-    Optional<I32>:$numberOfThreads);
+  let arguments = (ins Optional<I32>:$barrierId, Optional<I32>:$numberOfThreads,
+      OptionalAttr<BarrierReductionAttr>:$reductionOp,
+      Optional<I32>:$reductionPredicate);
   string llvmBuilder = [{
     llvm::Value *id = $barrierId ? $barrierId : builder.getInt32(0);
     if ($numberOfThreads)
       createIntrinsicCall(
           builder, llvm::Intrinsic::nvvm_barrier_cta_sync_aligned_count,
           {id, $numberOfThreads});
+    else if ($reductionOp)
+      createIntrinsicCall(
+          builder, getBarrierIntrinsicID($reductionOp), {$reductionPredicate});
     else
       createIntrinsicCall(
           builder, llvm::Intrinsic::nvvm_barrier_cta_sync_aligned_all, {id});
   }];
+  let results = (outs Optional<I32>:$res);
+
   let hasVerifier = 1;
 
-  let assemblyFormat = "(`id` `=` $barrierId^)? (`number_of_threads` `=` $numberOfThreads^)? attr-dict";
+  let assemblyFormat =
+      "(`id` `=` $barrierId^)? (`number_of_threads` `=` $numberOfThreads^)? "
+      "($reductionOp^ $reductionPredicate)? (`->` type($res)^)? attr-dict";
 
-  let builders = [
-    OpBuilder<(ins), [{
-      return build($_builder, $_state, Value{}, Value{});
+  let builders = [OpBuilder<(ins), [{
+      return build($_builder, $_state, TypeRange{}, Value{}, Value{}, {}, Value{});
     }]>,
-    OpBuilder<(ins "Value":$barrierId), [{
-      return build($_builder, $_state, barrierId, Value{});
-    }]>
-  ];
+                  OpBuilder<(ins "Value":$barrierId), [{
+      return build($_builder, $_state, TypeRange{}, barrierId, Value{}, {}, Value{});
+    }]>];
 }
 
 def NVVM_BarrierArriveOp : NVVM_PTXBuilder_Op<"barrier.arrive"> 

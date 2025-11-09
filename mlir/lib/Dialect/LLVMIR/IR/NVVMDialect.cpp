@@ -1517,6 +1517,15 @@ LogicalResult NVVM::BarrierOp::verify() {
   if (getNumberOfThreads() && !getBarrierId())
     return emitOpError(
         "barrier id is missing, it should be set between 0 to 15");
+
+  if (getBarrierId() && (getReductionOp() || getReductionPredicate()))
+    return emitOpError("reduction are only available for barrier id 0");
+
+  if ((getReductionOp() && !getReductionPredicate()) ||
+      (!getReductionOp() && getReductionPredicate()))
+    return emitOpError("reduction predicate and reduction operation must be "
+                       "specified together");
+
   return success();
 }
 
