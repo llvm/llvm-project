@@ -17,9 +17,7 @@ struct destructor {
 };
 
 struct move {
-    move(const move&) { throw 42; }
     move(move&&) { throw 42; }
-    move& operator=(const move&) { throw 42; }
     move& operator=(move&&) { throw 42; }
 };
 

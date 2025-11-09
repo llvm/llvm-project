@@ -47,7 +47,7 @@ Options
 
 .. option:: CheckMain
 
-   When `true`, ``main()`` function is analyzed to not throw exceptions.
+   When `true`, the ``main()`` function is analyzed to not throw exceptions.
    Default value is `true`.
 
 .. option:: CheckNothrowFunctions
