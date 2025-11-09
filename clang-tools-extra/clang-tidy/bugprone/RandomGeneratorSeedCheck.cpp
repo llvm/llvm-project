@@ -15,16 +15,15 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::bugprone {
 
-RandomGeneratorSeedCheck::RandomGeneratorSeedCheck(
-    StringRef Name, ClangTidyContext *Context)
+RandomGeneratorSeedCheck::RandomGeneratorSeedCheck(StringRef Name,
+                                                   ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       RawDisallowedSeedTypes(
           Options.get("DisallowedSeedTypes", "time_t,std::time_t")) {
   RawDisallowedSeedTypes.split(DisallowedSeedTypes, ',');
 }
 
-void RandomGeneratorSeedCheck::storeOptions(
-    ClangTidyOptions::OptionMap &Opts) {
+void RandomGeneratorSeedCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "DisallowedSeedTypes", RawDisallowedSeedTypes);
 }
 
@@ -75,8 +74,7 @@ void RandomGeneratorSeedCheck::registerMatchers(MatchFinder *Finder) {
       this);
 }
 
-void RandomGeneratorSeedCheck::check(
-    const MatchFinder::MatchResult &Result) {
+void RandomGeneratorSeedCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *Ctor = Result.Nodes.getNodeAs<CXXConstructExpr>("ctor");
   if (Ctor)
     checkSeed(Result, Ctor);
@@ -91,8 +89,8 @@ void RandomGeneratorSeedCheck::check(
 }
 
 template <class T>
-void RandomGeneratorSeedCheck::checkSeed(
-    const MatchFinder::MatchResult &Result, const T *Func) {
+void RandomGeneratorSeedCheck::checkSeed(const MatchFinder::MatchResult &Result,
+                                         const T *Func) {
   if (Func->getNumArgs() == 0 || Func->getArg(0)->isDefaultArgument()) {
     diag(Func->getExprLoc(),
          "random number generator seeded with a default argument will generate "
