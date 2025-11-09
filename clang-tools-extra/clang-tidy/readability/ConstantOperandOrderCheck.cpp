@@ -169,8 +169,8 @@ void ConstantOperandOrderCheck::check(const MatchFinder::MatchResult &Result) {
     return;
 
   // Compute operator replacement (invert for asymmetric operators).
-  llvm::StringRef OpName = Bin->getOpcodeStr();
-  std::string NewOp = invertOperatorText(OpName);
+  const StringRef OpName = Bin->getOpcodeStr();
+  const std::string NewOp = invertOperatorText(OpName);
 
   // Apply operand swaps as two independent replacements (safer than replacing
   // the whole Bin range).
