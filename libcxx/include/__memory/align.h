@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___MEMORY_ALIGN_H
-#define _LIBCPP___MEMORY_ALIGN_H
+#ifndef _LIBCPP_MEMORY_ALIGN_H
+#define _LIBCPP_MEMORY_ALIGN_H
 
 #include <__config>
 #include <__cstddef/size_t.h>
@@ -22,4 +22,4 @@ _LIBCPP_EXPORTED_FROM_ABI void* align(size_t __align, size_t __sz, void*& __ptr,
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___MEMORY_ALIGN_H
+#endif // _LIBCPP_MEMORY_ALIGN_H

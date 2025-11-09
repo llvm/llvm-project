@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___NEW_GLOBAL_NEW_DELETE_H
-#define _LIBCPP___NEW_GLOBAL_NEW_DELETE_H
+#ifndef _LIBCPP_NEW_GLOBAL_NEW_DELETE_H
+#define _LIBCPP_NEW_GLOBAL_NEW_DELETE_H
 
 #include <__config>
 #include <__cstddef/size_t.h>
@@ -74,4 +74,4 @@ _LIBCPP_OVERRIDABLE_FUNC_VIS void operator delete[](void* __p, std::size_t __sz,
 #  endif
 #endif
 
-#endif // _LIBCPP___NEW_GLOBAL_NEW_DELETE_H
+#endif // _LIBCPP_NEW_GLOBAL_NEW_DELETE_H

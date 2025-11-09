@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FUNCTIONAL_BIND_BACK_H
-#define _LIBCPP___FUNCTIONAL_BIND_BACK_H
+#ifndef _LIBCPP_FUNCTIONAL_BIND_BACK_H
+#define _LIBCPP_FUNCTIONAL_BIND_BACK_H
 
 #include <__config>
 #include <__functional/invoke.h>
@@ -80,4 +80,4 @@ _LIBCPP_HIDE_FROM_ABI constexpr auto bind_back(_Fn&& __f, _Args&&... __args) {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FUNCTIONAL_BIND_BACK_H
+#endif // _LIBCPP_FUNCTIONAL_BIND_BACK_H

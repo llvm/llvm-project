@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CHARCONV_FROM_CHARS_FLOATING_POINT_H
-#define _LIBCPP___CHARCONV_FROM_CHARS_FLOATING_POINT_H
+#ifndef _LIBCPP_CHARCONV_FROM_CHARS_FLOATING_POINT_H
+#define _LIBCPP_CHARCONV_FROM_CHARS_FLOATING_POINT_H
 
 #include <__assert>
 #include <__charconv/chars_format.h>
@@ -70,4 +70,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___CHARCONV_FROM_CHARS_FLOATING_POINT_H
+#endif // _LIBCPP_CHARCONV_FROM_CHARS_FLOATING_POINT_H

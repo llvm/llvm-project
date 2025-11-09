@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_ALIGNMENT_OF_H
-#define _LIBCPP___TYPE_TRAITS_ALIGNMENT_OF_H
+#ifndef _LIBCPP_TYPE_TRAITS_ALIGNMENT_OF_H
+#define _LIBCPP_TYPE_TRAITS_ALIGNMENT_OF_H
 
 #include <__config>
 #include <__cstddef/size_t.h>
@@ -29,4 +29,4 @@ _LIBCPP_NO_SPECIALIZATIONS inline constexpr size_t alignment_of_v = _LIBCPP_ALIG
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_ALIGNMENT_OF_H
+#endif // _LIBCPP_TYPE_TRAITS_ALIGNMENT_OF_H

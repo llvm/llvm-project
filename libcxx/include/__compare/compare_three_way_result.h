@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___COMPARE_COMPARE_THREE_WAY_RESULT_H
-#define _LIBCPP___COMPARE_COMPARE_THREE_WAY_RESULT_H
+#ifndef _LIBCPP_COMPARE_COMPARE_THREE_WAY_RESULT_H
+#define _LIBCPP_COMPARE_COMPARE_THREE_WAY_RESULT_H
 
 #include <__config>
 #include <__type_traits/make_const_lvalue_ref.h>
@@ -43,4 +43,4 @@ using compare_three_way_result_t = typename compare_three_way_result<_Tp, _Up>::
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___COMPARE_COMPARE_THREE_WAY_RESULT_H
+#endif // _LIBCPP_COMPARE_COMPARE_THREE_WAY_RESULT_H

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_IS_UNQUALIFIED_H
-#define _LIBCPP___TYPE_TRAITS_IS_UNQUALIFIED_H
+#ifndef _LIBCPP_TYPE_TRAITS_IS_UNQUALIFIED_H
+#define _LIBCPP_TYPE_TRAITS_IS_UNQUALIFIED_H
 
 #include <__config>
 
@@ -22,4 +22,4 @@ inline const bool __is_unqualified_v = __is_same(_Tp, __remove_cvref(_Tp));
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_IS_UNQUALIFIED_H
+#endif // _LIBCPP_TYPE_TRAITS_IS_UNQUALIFIED_H

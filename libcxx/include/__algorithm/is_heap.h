@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_IS_HEAP_H
-#define _LIBCPP___ALGORITHM_IS_HEAP_H
+#ifndef _LIBCPP_ALGORITHM_IS_HEAP_H
+#define _LIBCPP_ALGORITHM_IS_HEAP_H
 
 #include <__algorithm/comp.h>
 #include <__algorithm/comp_ref_type.h>
@@ -34,4 +34,4 @@ is_heap(_RandomAccessIterator __first, _RandomAccessIterator __last) {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ALGORITHM_IS_HEAP_H
+#endif // _LIBCPP_ALGORITHM_IS_HEAP_H

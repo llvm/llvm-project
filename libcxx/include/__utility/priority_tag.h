@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___UTILITY_PRIORITY_TAG_H
-#define _LIBCPP___UTILITY_PRIORITY_TAG_H
+#ifndef _LIBCPP_UTILITY_PRIORITY_TAG_H
+#define _LIBCPP_UTILITY_PRIORITY_TAG_H
 
 #include <__config>
 #include <__cstddef/size_t.h>
@@ -25,4 +25,4 @@ struct __priority_tag<0> {};
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___UTILITY_PRIORITY_TAG_H
+#endif // _LIBCPP_UTILITY_PRIORITY_TAG_H

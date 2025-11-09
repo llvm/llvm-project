@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___EXCEPTION_TERMINATE_H
-#define _LIBCPP___EXCEPTION_TERMINATE_H
+#ifndef _LIBCPP_EXCEPTION_TERMINATE_H
+#define _LIBCPP_EXCEPTION_TERMINATE_H
 
 #include <__config>
 
@@ -19,4 +19,4 @@ _LIBCPP_BEGIN_UNVERSIONED_NAMESPACE_STD
 [[__noreturn__]] _LIBCPP_EXPORTED_FROM_ABI void terminate() _NOEXCEPT;
 _LIBCPP_END_UNVERSIONED_NAMESPACE_STD
 
-#endif // _LIBCPP___EXCEPTION_TERMINATE_H
+#endif // _LIBCPP_EXCEPTION_TERMINATE_H

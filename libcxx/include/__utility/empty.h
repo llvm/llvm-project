@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___UTILITY_EMPTY_H
-#define _LIBCPP___UTILITY_EMPTY_H
+#ifndef _LIBCPP_UTILITY_EMPTY_H
+#define _LIBCPP_UTILITY_EMPTY_H
 
 #include <__config>
 
@@ -21,4 +21,4 @@ struct __empty {};
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___UTILITY_EMPTY_H
+#endif // _LIBCPP_UTILITY_EMPTY_H

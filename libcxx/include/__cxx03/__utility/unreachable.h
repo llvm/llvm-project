@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___UTILITY_UNREACHABLE_H
-#define _LIBCPP___CXX03___UTILITY_UNREACHABLE_H
+#ifndef _LIBCPP_CXX03_UTILITY_UNREACHABLE_H
+#define _LIBCPP_CXX03_UTILITY_UNREACHABLE_H
 
 #include <__cxx03/__assert>
 #include <__cxx03/__config>
@@ -25,4 +25,4 @@ _LIBCPP_NORETURN _LIBCPP_HIDE_FROM_ABI inline void __libcpp_unreachable() {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CXX03___UTILITY_UNREACHABLE_H
+#endif // _LIBCPP_CXX03_UTILITY_UNREACHABLE_H

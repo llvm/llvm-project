@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___LOCALE_DIR_SUPPORT_WINDOWS_H
-#define _LIBCPP___LOCALE_DIR_SUPPORT_WINDOWS_H
+#ifndef _LIBCPP_LOCALE_DIR_SUPPORT_WINDOWS_H
+#define _LIBCPP_LOCALE_DIR_SUPPORT_WINDOWS_H
 
 #include <__config>
 #include <__cstddef/nullptr_t.h>
@@ -334,4 +334,4 @@ struct __locale_guard {
 } // namespace __locale
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___LOCALE_DIR_SUPPORT_WINDOWS_H
+#endif // _LIBCPP_LOCALE_DIR_SUPPORT_WINDOWS_H

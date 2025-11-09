@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CONCEPTS_CONSTRUCTIBLE_H
-#define _LIBCPP___CONCEPTS_CONSTRUCTIBLE_H
+#ifndef _LIBCPP_CONCEPTS_CONSTRUCTIBLE_H
+#define _LIBCPP_CONCEPTS_CONSTRUCTIBLE_H
 
 #include <__concepts/convertible_to.h>
 #include <__concepts/destructible.h>
@@ -52,4 +52,4 @@ concept copy_constructible =
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CONCEPTS_CONSTRUCTIBLE_H
+#endif // _LIBCPP_CONCEPTS_CONSTRUCTIBLE_H

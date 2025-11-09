@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___EXCEPTION_EXCEPTION_PTR_H
-#define _LIBCPP___EXCEPTION_EXCEPTION_PTR_H
+#ifndef _LIBCPP_EXCEPTION_EXCEPTION_PTR_H
+#define _LIBCPP_EXCEPTION_EXCEPTION_PTR_H
 
 #include <__config>
 #include <__cstddef/nullptr_t.h>
@@ -225,4 +225,4 @@ _LIBCPP_END_UNVERSIONED_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___EXCEPTION_EXCEPTION_PTR_H
+#endif // _LIBCPP_EXCEPTION_EXCEPTION_PTR_H

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_IS_NULL_POINTER_H
-#define _LIBCPP___TYPE_TRAITS_IS_NULL_POINTER_H
+#ifndef _LIBCPP_TYPE_TRAITS_IS_NULL_POINTER_H
+#define _LIBCPP_TYPE_TRAITS_IS_NULL_POINTER_H
 
 #include <__config>
 #include <__cstddef/nullptr_t.h>
@@ -34,4 +34,4 @@ _LIBCPP_NO_SPECIALIZATIONS inline constexpr bool is_null_pointer_v = __is_null_p
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_IS_NULL_POINTER_H
+#endif // _LIBCPP_TYPE_TRAITS_IS_NULL_POINTER_H

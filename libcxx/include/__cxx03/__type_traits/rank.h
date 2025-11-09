@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___TYPE_TRAITS_RANK_H
-#define _LIBCPP___CXX03___TYPE_TRAITS_RANK_H
+#ifndef _LIBCPP_CXX03_TYPE_TRAITS_RANK_H
+#define _LIBCPP_CXX03_TYPE_TRAITS_RANK_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__type_traits/integral_constant.h>
@@ -38,4 +38,4 @@ struct _LIBCPP_TEMPLATE_VIS rank<_Tp[_Np]> : public integral_constant<size_t, ra
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CXX03___TYPE_TRAITS_RANK_H
+#endif // _LIBCPP_CXX03_TYPE_TRAITS_RANK_H

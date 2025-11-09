@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___TYPE_TRAITS_REMOVE_POINTER_H
-#define _LIBCPP___CXX03___TYPE_TRAITS_REMOVE_POINTER_H
+#ifndef _LIBCPP_CXX03_TYPE_TRAITS_REMOVE_POINTER_H
+#define _LIBCPP_CXX03_TYPE_TRAITS_REMOVE_POINTER_H
 
 #include <__cxx03/__config>
 
@@ -45,4 +45,4 @@ using __remove_pointer_t = typename remove_pointer<_Tp>::type;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CXX03___TYPE_TRAITS_REMOVE_POINTER_H
+#endif // _LIBCPP_CXX03_TYPE_TRAITS_REMOVE_POINTER_H

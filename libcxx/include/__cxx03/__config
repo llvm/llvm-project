@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___CONFIG
-#define _LIBCPP___CXX03___CONFIG
+#ifndef _LIBCPP_CXX03_CONFIG
+#define _LIBCPP_CXX03_CONFIG
 
 #include <__cxx03/__configuration/abi.h>
 #include <__cxx03/__configuration/availability.h>
@@ -1078,4 +1078,4 @@ typedef __char32_t char32_t;
 
 #endif // __cplusplus
 
-#endif // _LIBCPP___CXX03___CONFIG
+#endif // _LIBCPP_CXX03_CONFIG

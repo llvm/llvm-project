@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_CLAMP_H
-#define _LIBCPP___ALGORITHM_CLAMP_H
+#ifndef _LIBCPP_ALGORITHM_CLAMP_H
+#define _LIBCPP_ALGORITHM_CLAMP_H
 
 #include <__algorithm/comp.h>
 #include <__assert>
@@ -41,4 +41,4 @@ clamp(_LIBCPP_LIFETIMEBOUND const _Tp& __v,
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ALGORITHM_CLAMP_H
+#endif // _LIBCPP_ALGORITHM_CLAMP_H

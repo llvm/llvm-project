@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___SYSTEM_ERROR_ERROR_CONDITION_H
-#define _LIBCPP___SYSTEM_ERROR_ERROR_CONDITION_H
+#ifndef _LIBCPP_SYSTEM_ERROR_ERROR_CONDITION_H
+#define _LIBCPP_SYSTEM_ERROR_ERROR_CONDITION_H
 
 #include <__compare/ordering.h>
 #include <__config>
@@ -126,4 +126,4 @@ struct hash<error_condition> : public __unary_function<error_condition, size_t> 
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___SYSTEM_ERROR_ERROR_CONDITION_H
+#endif // _LIBCPP_SYSTEM_ERROR_ERROR_CONDITION_H

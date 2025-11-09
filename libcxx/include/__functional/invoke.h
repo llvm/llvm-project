@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FUNCTIONAL_INVOKE_H
-#define _LIBCPP___FUNCTIONAL_INVOKE_H
+#ifndef _LIBCPP_FUNCTIONAL_INVOKE_H
+#define _LIBCPP_FUNCTIONAL_INVOKE_H
 
 #include <__config>
 #include <__type_traits/invoke.h>
@@ -52,4 +52,4 @@ invoke_r(_Fn&& __f, _Args&&... __args) noexcept(is_nothrow_invocable_r_v<_Result
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FUNCTIONAL_INVOKE_H
+#endif // _LIBCPP_FUNCTIONAL_INVOKE_H

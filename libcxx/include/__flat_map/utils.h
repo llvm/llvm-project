@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FLAT_MAP_UTILS_H
-#define _LIBCPP___FLAT_MAP_UTILS_H
+#ifndef _LIBCPP_FLAT_MAP_UTILS_H
+#define _LIBCPP_FLAT_MAP_UTILS_H
 
 #include <__config>
 #include <__iterator/product_iterator.h>
@@ -118,4 +118,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // #define _LIBCPP___FLAT_MAP_UTILS_H
+#endif // #define _LIBCPP_FLAT_MAP_UTILS_H

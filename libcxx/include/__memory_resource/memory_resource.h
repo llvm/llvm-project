@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___MEMORY_RESOURCE_MEMORY_RESOURCE_H
-#define _LIBCPP___MEMORY_RESOURCE_MEMORY_RESOURCE_H
+#ifndef _LIBCPP_MEMORY_RESOURCE_MEMORY_RESOURCE_H
+#define _LIBCPP_MEMORY_RESOURCE_MEMORY_RESOURCE_H
 
 #include <__config>
 #include <__cstddef/max_align_t.h>
@@ -86,4 +86,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 17
 
-#endif // _LIBCPP___MEMORY_RESOURCE_MEMORY_RESOURCE_H
+#endif // _LIBCPP_MEMORY_RESOURCE_MEMORY_RESOURCE_H

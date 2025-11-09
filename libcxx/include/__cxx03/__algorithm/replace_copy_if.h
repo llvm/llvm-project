@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___ALGORITHM_REPLACE_COPY_IF_H
-#define _LIBCPP___CXX03___ALGORITHM_REPLACE_COPY_IF_H
+#ifndef _LIBCPP_CXX03_ALGORITHM_REPLACE_COPY_IF_H
+#define _LIBCPP_CXX03_ALGORITHM_REPLACE_COPY_IF_H
 
 #include <__cxx03/__config>
 
@@ -34,4 +34,4 @@ inline _LIBCPP_HIDE_FROM_ABI _OutputIterator replace_copy_if(
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CXX03___ALGORITHM_REPLACE_COPY_IF_H
+#endif // _LIBCPP_CXX03_ALGORITHM_REPLACE_COPY_IF_H

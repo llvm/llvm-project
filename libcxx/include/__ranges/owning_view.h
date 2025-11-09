@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___RANGES_OWNING_VIEW_H
-#define _LIBCPP___RANGES_OWNING_VIEW_H
+#ifndef _LIBCPP_RANGES_OWNING_VIEW_H
+#define _LIBCPP_RANGES_OWNING_VIEW_H
 
 #include <__concepts/constructible.h>
 #include <__concepts/movable.h>
@@ -113,4 +113,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___RANGES_OWNING_VIEW_H
+#endif // _LIBCPP_RANGES_OWNING_VIEW_H

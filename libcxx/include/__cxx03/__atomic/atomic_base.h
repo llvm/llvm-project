@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___ATOMIC_ATOMIC_BASE_H
-#define _LIBCPP___CXX03___ATOMIC_ATOMIC_BASE_H
+#ifndef _LIBCPP_CXX03_ATOMIC_ATOMIC_BASE_H
+#define _LIBCPP_CXX03_ATOMIC_ATOMIC_BASE_H
 
 #include <__cxx03/__atomic/atomic_sync.h>
 #include <__cxx03/__atomic/check_memory_order.h>
@@ -214,4 +214,4 @@ struct __atomic_waitable_traits<__atomic_base<_Tp, _IsIntegral> > {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CXX03___ATOMIC_ATOMIC_BASE_H
+#endif // _LIBCPP_CXX03_ATOMIC_ATOMIC_BASE_H

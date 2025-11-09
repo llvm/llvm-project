@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_ALIGNED_STORAGE_H
-#define _LIBCPP___TYPE_TRAITS_ALIGNED_STORAGE_H
+#ifndef _LIBCPP_TYPE_TRAITS_ALIGNED_STORAGE_H
+#define _LIBCPP_TYPE_TRAITS_ALIGNED_STORAGE_H
 
 #include <__config>
 #include <__cstddef/size_t.h>
@@ -85,4 +85,4 @@ _LIBCPP_SUPPRESS_DEPRECATED_POP
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_ALIGNED_STORAGE_H
+#endif // _LIBCPP_TYPE_TRAITS_ALIGNED_STORAGE_H

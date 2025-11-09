@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CONDITION_VARIABLE_CONDITION_VARIABLE_H
-#define _LIBCPP___CONDITION_VARIABLE_CONDITION_VARIABLE_H
+#ifndef _LIBCPP_CONDITION_VARIABLE_CONDITION_VARIABLE_H
+#define _LIBCPP_CONDITION_VARIABLE_CONDITION_VARIABLE_H
 
 #include <__chrono/duration.h>
 #include <__chrono/steady_clock.h>
@@ -229,4 +229,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___CONDITION_VARIABLE_CONDITION_VARIABLE_H
+#endif // _LIBCPP_CONDITION_VARIABLE_CONDITION_VARIABLE_H

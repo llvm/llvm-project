@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ITERATOR_PRODUCT_ITERATOR_H
-#define _LIBCPP___ITERATOR_PRODUCT_ITERATOR_H
+#ifndef _LIBCPP_ITERATOR_PRODUCT_ITERATOR_H
+#define _LIBCPP_ITERATOR_PRODUCT_ITERATOR_H
 
 // Product iterators are iterators that contain two or more underlying iterators.
 //
@@ -73,4 +73,4 @@ using __product_iterator_element_t _LIBCPP_NODEBUG =
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ITERATOR_PRODUCT_ITERATOR_H
+#endif // _LIBCPP_ITERATOR_PRODUCT_ITERATOR_H

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___MUTEX_MUTEX_H
-#define _LIBCPP___MUTEX_MUTEX_H
+#ifndef _LIBCPP_MUTEX_MUTEX_H
+#define _LIBCPP_MUTEX_MUTEX_H
 
 #include <__config>
 #include <__thread/support.h>
@@ -50,4 +50,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_HAS_THREADS
 
-#endif // _LIBCPP___MUTEX_MUTEX_H
+#endif // _LIBCPP_MUTEX_MUTEX_H

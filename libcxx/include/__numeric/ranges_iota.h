@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___NUMERIC_RANGES_IOTA_H
-#define _LIBCPP___NUMERIC_RANGES_IOTA_H
+#ifndef _LIBCPP_NUMERIC_RANGES_IOTA_H
+#define _LIBCPP_NUMERIC_RANGES_IOTA_H
 
 #include <__algorithm/out_value_result.h>
 #include <__config>
@@ -62,4 +62,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___NUMERIC_RANGES_IOTA_H
+#endif // _LIBCPP_NUMERIC_RANGES_IOTA_H

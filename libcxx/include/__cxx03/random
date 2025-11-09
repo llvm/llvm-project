@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03_RANDOM
-#define _LIBCPP___CXX03_RANDOM
+#ifndef _LIBCPP_CXX03_RANDOM
+#define _LIBCPP_CXX03_RANDOM
 
 /*
     random synopsis
@@ -1732,4 +1732,4 @@ class piecewise_linear_distribution
 #  include <__cxx03/vector>
 #endif
 
-#endif // _LIBCPP___CXX03_RANDOM
+#endif // _LIBCPP_CXX03_RANDOM

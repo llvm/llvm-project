@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___UTILITY_AS_CONST_H
-#define _LIBCPP___UTILITY_AS_CONST_H
+#ifndef _LIBCPP_UTILITY_AS_CONST_H
+#define _LIBCPP_UTILITY_AS_CONST_H
 
 #include <__config>
 
@@ -29,4 +29,4 @@ void as_const(const _Tp&&) = delete;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___UTILITY_AS_CONST_H
+#endif // _LIBCPP_UTILITY_AS_CONST_H

@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___UTILITY_SCOPE_GUARD_H
-#define _LIBCPP___UTILITY_SCOPE_GUARD_H
+#ifndef _LIBCPP_UTILITY_SCOPE_GUARD_H
+#define _LIBCPP_UTILITY_SCOPE_GUARD_H
 
 #include <__config>
 #include <__utility/move.h>
@@ -54,4 +54,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___UTILITY_SCOPE_GUARD_H
+#endif // _LIBCPP_UTILITY_SCOPE_GUARD_H

@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03_CERRNO
-#define _LIBCPP___CXX03_CERRNO
+#ifndef _LIBCPP_CXX03_CERRNO
+#define _LIBCPP_CXX03_CERRNO
 
 /*
     cerrno synopsis
@@ -45,4 +45,4 @@ Macros:
 // Based on the post commit feedback the macro are no longer deprecated.
 // Instead libc++ leaves the deprecation to the provider of errno.h.
 
-#endif // _LIBCPP___CXX03_CERRNO
+#endif // _LIBCPP_CXX03_CERRNO

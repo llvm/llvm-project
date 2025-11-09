@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___MUTEX_UNIQUE_LOCK_H
-#define _LIBCPP___MUTEX_UNIQUE_LOCK_H
+#ifndef _LIBCPP_MUTEX_UNIQUE_LOCK_H
+#define _LIBCPP_MUTEX_UNIQUE_LOCK_H
 
 #include <__chrono/duration.h>
 #include <__chrono/time_point.h>
@@ -170,4 +170,4 @@ inline _LIBCPP_HIDE_FROM_ABI void swap(unique_lock<_Mutex>& __x, unique_lock<_Mu
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___MUTEX_UNIQUE_LOCK_H
+#endif // _LIBCPP_MUTEX_UNIQUE_LOCK_H

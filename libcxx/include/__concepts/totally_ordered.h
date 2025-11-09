@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CONCEPTS_TOTALLY_ORDERED_H
-#define _LIBCPP___CONCEPTS_TOTALLY_ORDERED_H
+#ifndef _LIBCPP_CONCEPTS_TOTALLY_ORDERED_H
+#define _LIBCPP_CONCEPTS_TOTALLY_ORDERED_H
 
 #include <__concepts/boolean_testable.h>
 #include <__concepts/equality_comparable.h>
@@ -56,4 +56,4 @@ concept totally_ordered_with =
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CONCEPTS_TOTALLY_ORDERED_H
+#endif // _LIBCPP_CONCEPTS_TOTALLY_ORDERED_H

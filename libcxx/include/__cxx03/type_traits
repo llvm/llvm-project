@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03_TYPE_TRAITS
-#define _LIBCPP___CXX03_TYPE_TRAITS
+#ifndef _LIBCPP_CXX03_TYPE_TRAITS
+#define _LIBCPP_CXX03_TYPE_TRAITS
 
 /*
     type_traits synopsis
@@ -494,4 +494,4 @@ namespace std
 #  pragma GCC system_header
 #endif
 
-#endif // _LIBCPP___CXX03_TYPE_TRAITS
+#endif // _LIBCPP_CXX03_TYPE_TRAITS

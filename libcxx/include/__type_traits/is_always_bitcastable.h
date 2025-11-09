@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_IS_ALWAYS_BITCASTABLE_H
-#define _LIBCPP___TYPE_TRAITS_IS_ALWAYS_BITCASTABLE_H
+#ifndef _LIBCPP_TYPE_TRAITS_IS_ALWAYS_BITCASTABLE_H
+#define _LIBCPP_TYPE_TRAITS_IS_ALWAYS_BITCASTABLE_H
 
 #include <__config>
 #include <__type_traits/is_integral.h>
@@ -80,4 +80,4 @@ struct __is_always_bitcastable {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_IS_ALWAYS_BITCASTABLE_H
+#endif // _LIBCPP_TYPE_TRAITS_IS_ALWAYS_BITCASTABLE_H

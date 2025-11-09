@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ITERATOR_CONCEPTS_H
-#define _LIBCPP___ITERATOR_CONCEPTS_H
+#ifndef _LIBCPP_ITERATOR_CONCEPTS_H
+#define _LIBCPP_ITERATOR_CONCEPTS_H
 
 #include <__concepts/arithmetic.h>
 #include <__concepts/assignable.h>
@@ -321,4 +321,4 @@ using __has_random_access_iterator_category_or_concept _LIBCPP_NODEBUG
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ITERATOR_CONCEPTS_H
+#endif // _LIBCPP_ITERATOR_CONCEPTS_H

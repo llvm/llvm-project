@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FORMAT_FORMAT_TO_N_RESULT_H
-#define _LIBCPP___FORMAT_FORMAT_TO_N_RESULT_H
+#ifndef _LIBCPP_FORMAT_FORMAT_TO_N_RESULT_H
+#define _LIBCPP_FORMAT_FORMAT_TO_N_RESULT_H
 
 #include <__config>
 #include <__iterator/incrementable_traits.h>
@@ -32,4 +32,4 @@ _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(format_to_n_result);
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FORMAT_FORMAT_TO_N_RESULT_H
+#endif // _LIBCPP_FORMAT_FORMAT_TO_N_RESULT_H

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___NEW_ALLOCATE_H
-#define _LIBCPP___NEW_ALLOCATE_H
+#ifndef _LIBCPP_NEW_ALLOCATE_H
+#define _LIBCPP_NEW_ALLOCATE_H
 
 #include <__config>
 #include <__cstddef/max_align_t.h>
@@ -76,4 +76,4 @@ inline _LIBCPP_HIDE_FROM_ABI void __libcpp_deallocate_unsized(
 }
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___NEW_ALLOCATE_H
+#endif // _LIBCPP_NEW_ALLOCATE_H

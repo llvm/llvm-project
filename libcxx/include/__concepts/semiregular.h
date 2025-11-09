@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CONCEPTS_SEMIREGULAR_H
-#define _LIBCPP___CONCEPTS_SEMIREGULAR_H
+#ifndef _LIBCPP_CONCEPTS_SEMIREGULAR_H
+#define _LIBCPP_CONCEPTS_SEMIREGULAR_H
 
 #include <__concepts/constructible.h>
 #include <__concepts/copyable.h>
@@ -30,4 +30,4 @@ concept semiregular = copyable<_Tp> && default_initializable<_Tp>;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CONCEPTS_SEMIREGULAR_H
+#endif // _LIBCPP_CONCEPTS_SEMIREGULAR_H

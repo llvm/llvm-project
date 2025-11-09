@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___COMPARE_COMPARE_WEAK_ORDER_FALLBACK
-#define _LIBCPP___COMPARE_COMPARE_WEAK_ORDER_FALLBACK
+#ifndef _LIBCPP_COMPARE_COMPARE_WEAK_ORDER_FALLBACK
+#define _LIBCPP_COMPARE_COMPARE_WEAK_ORDER_FALLBACK
 
 #include <__compare/ordering.h>
 #include <__compare/weak_order.h>
@@ -70,4 +70,4 @@ inline constexpr auto compare_weak_order_fallback = __compare_weak_order_fallbac
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___COMPARE_COMPARE_WEAK_ORDER_FALLBACK
+#endif // _LIBCPP_COMPARE_COMPARE_WEAK_ORDER_FALLBACK

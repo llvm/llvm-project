@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_IS_TRIVIALLY_COPYABLE_H
-#define _LIBCPP___TYPE_TRAITS_IS_TRIVIALLY_COPYABLE_H
+#ifndef _LIBCPP_TYPE_TRAITS_IS_TRIVIALLY_COPYABLE_H
+#define _LIBCPP_TYPE_TRAITS_IS_TRIVIALLY_COPYABLE_H
 
 #include <__config>
 #include <__type_traits/integral_constant.h>
@@ -32,4 +32,4 @@ inline const bool __is_cheap_to_copy = __is_trivially_copyable(_Tp) && sizeof(_T
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_IS_TRIVIALLY_COPYABLE_H
+#endif // _LIBCPP_TYPE_TRAITS_IS_TRIVIALLY_COPYABLE_H

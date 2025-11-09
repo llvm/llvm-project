@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___UTILITY_IS_VALID_RANGE_H
-#define _LIBCPP___CXX03___UTILITY_IS_VALID_RANGE_H
+#ifndef _LIBCPP_CXX03_UTILITY_IS_VALID_RANGE_H
+#define _LIBCPP_CXX03_UTILITY_IS_VALID_RANGE_H
 
 #include <__cxx03/__algorithm/comp.h>
 #include <__cxx03/__config>
@@ -33,4 +33,4 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_SANITIZE("address") bool __is_valid_range(const
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CXX03___UTILITY_IS_VALID_RANGE_H
+#endif // _LIBCPP_CXX03_UTILITY_IS_VALID_RANGE_H

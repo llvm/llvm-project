@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___PSTL_DISPATCH_H
-#define _LIBCPP___PSTL_DISPATCH_H
+#ifndef _LIBCPP_PSTL_DISPATCH_H
+#define _LIBCPP_PSTL_DISPATCH_H
 
 #include <__config>
 #include <__pstl/backend_fwd.h>
@@ -68,4 +68,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___PSTL_DISPATCH_H
+#endif // _LIBCPP_PSTL_DISPATCH_H

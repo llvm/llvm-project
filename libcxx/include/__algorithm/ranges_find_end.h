@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_RANGES_FIND_END_H
-#define _LIBCPP___ALGORITHM_RANGES_FIND_END_H
+#ifndef _LIBCPP_ALGORITHM_RANGES_FIND_END_H
+#define _LIBCPP_ALGORITHM_RANGES_FIND_END_H
 
 #include <__algorithm/find_end.h>
 #include <__algorithm/iterator_operations.h>
@@ -98,4 +98,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___ALGORITHM_RANGES_FIND_END_H
+#endif // _LIBCPP_ALGORITHM_RANGES_FIND_END_H

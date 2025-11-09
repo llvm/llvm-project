@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___CONFIGURATION_CONFIG_SITE_SHIM_H
-#define _LIBCPP___CXX03___CONFIGURATION_CONFIG_SITE_SHIM_H
+#ifndef _LIBCPP_CXX03_CONFIGURATION_CONFIG_SITE_SHIM_H
+#define _LIBCPP_CXX03_CONFIGURATION_CONFIG_SITE_SHIM_H
 
 #include <__config_site>
 
@@ -77,4 +77,4 @@
 #  undef _LIBCPP_INSTRUMENTED_WITH_ASAN
 #endif
 
-#endif // _LIBCPP___CXX03___CONFIGURATION_CONFIG_SITE_SHIM_H
+#endif // _LIBCPP_CXX03_CONFIGURATION_CONFIG_SITE_SHIM_H

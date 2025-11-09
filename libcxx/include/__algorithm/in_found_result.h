@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_IN_FOUND_RESULT_H
-#define _LIBCPP___ALGORITHM_IN_FOUND_RESULT_H
+#ifndef _LIBCPP_ALGORITHM_IN_FOUND_RESULT_H
+#define _LIBCPP_ALGORITHM_IN_FOUND_RESULT_H
 
 #include <__concepts/convertible_to.h>
 #include <__config>
@@ -51,4 +51,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___ALGORITHM_IN_FOUND_RESULT_H
+#endif // _LIBCPP_ALGORITHM_IN_FOUND_RESULT_H

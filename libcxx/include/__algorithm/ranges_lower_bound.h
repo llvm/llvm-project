@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_RANGES_LOWER_BOUND_H
-#define _LIBCPP___ALGORITHM_RANGES_LOWER_BOUND_H
+#ifndef _LIBCPP_ALGORITHM_RANGES_LOWER_BOUND_H
+#define _LIBCPP_ALGORITHM_RANGES_LOWER_BOUND_H
 
 #include <__algorithm/iterator_operations.h>
 #include <__algorithm/lower_bound.h>
@@ -68,4 +68,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___ALGORITHM_RANGES_LOWER_BOUND_H
+#endif // _LIBCPP_ALGORITHM_RANGES_LOWER_BOUND_H

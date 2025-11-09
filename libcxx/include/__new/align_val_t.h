@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___NEW_ALIGN_VAL_T_H
-#define _LIBCPP___NEW_ALIGN_VAL_T_H
+#ifndef _LIBCPP_NEW_ALIGN_VAL_T_H
+#define _LIBCPP_NEW_ALIGN_VAL_T_H
 
 #include <__config>
 #include <__cstddef/size_t.h>
@@ -32,4 +32,4 @@ enum align_val_t { __zero = 0, __max = (size_t)-1 };
 #endif
 _LIBCPP_END_UNVERSIONED_NAMESPACE_STD
 
-#endif // _LIBCPP___NEW_ALIGN_VAL_T_H
+#endif // _LIBCPP_NEW_ALIGN_VAL_T_H

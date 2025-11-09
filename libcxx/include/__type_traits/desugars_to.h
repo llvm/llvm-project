@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_DESUGARS_TO_H
-#define _LIBCPP___TYPE_TRAITS_DESUGARS_TO_H
+#ifndef _LIBCPP_TYPE_TRAITS_DESUGARS_TO_H
+#define _LIBCPP_TYPE_TRAITS_DESUGARS_TO_H
 
 #include <__config>
 #include <__type_traits/integral_constant.h>
@@ -70,4 +70,4 @@ struct __desugars_to : integral_constant<bool, __desugars_to_v<_CanonicalTag, _O
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_DESUGARS_TO_H
+#endif // _LIBCPP_TYPE_TRAITS_DESUGARS_TO_H

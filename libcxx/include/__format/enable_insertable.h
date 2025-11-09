@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FORMAT_ENABLE_INSERTABLE_H
-#define _LIBCPP___FORMAT_ENABLE_INSERTABLE_H
+#ifndef _LIBCPP_FORMAT_ENABLE_INSERTABLE_H
+#define _LIBCPP_FORMAT_ENABLE_INSERTABLE_H
 
 #include <__config>
 
@@ -32,4 +32,4 @@ inline constexpr bool __enable_insertable = false;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FORMAT_ENABLE_INSERTABLE_H
+#endif // _LIBCPP_FORMAT_ENABLE_INSERTABLE_H

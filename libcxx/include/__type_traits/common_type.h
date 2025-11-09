@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_COMMON_TYPE_H
-#define _LIBCPP___TYPE_TRAITS_COMMON_TYPE_H
+#ifndef _LIBCPP_TYPE_TRAITS_COMMON_TYPE_H
+#define _LIBCPP_TYPE_TRAITS_COMMON_TYPE_H
 
 #include <__config>
 #include <__type_traits/conditional.h>
@@ -114,4 +114,4 @@ using common_type_t = typename common_type<_Tp...>::type;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_COMMON_TYPE_H
+#endif // _LIBCPP_TYPE_TRAITS_COMMON_TYPE_H

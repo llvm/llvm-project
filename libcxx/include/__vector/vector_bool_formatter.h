@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___VECTOR_VECTOR_BOOL_FORMATTER_H
-#define _LIBCPP___VECTOR_VECTOR_BOOL_FORMATTER_H
+#ifndef _LIBCPP_VECTOR_VECTOR_BOOL_FORMATTER_H
+#define _LIBCPP_VECTOR_VECTOR_BOOL_FORMATTER_H
 
 #include <__concepts/same_as.h>
 #include <__config>
@@ -46,4 +46,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 23
 
-#endif // _LIBCPP___VECTOR_VECTOR_BOOL_FORMATTER_H
+#endif // _LIBCPP_VECTOR_VECTOR_BOOL_FORMATTER_H

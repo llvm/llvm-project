@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___ITERATOR_NEXT_H
-#define _LIBCPP___CXX03___ITERATOR_NEXT_H
+#ifndef _LIBCPP_CXX03_ITERATOR_NEXT_H
+#define _LIBCPP_CXX03_ITERATOR_NEXT_H
 
 #include <__cxx03/__assert>
 #include <__cxx03/__config>
@@ -36,4 +36,4 @@ next(_InputIter __x, typename iterator_traits<_InputIter>::difference_type __n =
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CXX03___ITERATOR_NEXT_H
+#endif // _LIBCPP_CXX03_ITERATOR_NEXT_H

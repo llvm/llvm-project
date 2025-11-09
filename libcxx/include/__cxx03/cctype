@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03_CCTYPE
-#define _LIBCPP___CXX03_CCTYPE
+#ifndef _LIBCPP_CXX03_CCTYPE
+#define _LIBCPP_CXX03_CCTYPE
 
 /*
     cctype synopsis
@@ -124,4 +124,4 @@ using ::toupper _LIBCPP_USING_IF_EXISTS;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CXX03_CCTYPE
+#endif // _LIBCPP_CXX03_CCTYPE

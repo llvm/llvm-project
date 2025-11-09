@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___UTILITY_IN_PLACE_H
-#define _LIBCPP___UTILITY_IN_PLACE_H
+#ifndef _LIBCPP_UTILITY_IN_PLACE_H
+#define _LIBCPP_UTILITY_IN_PLACE_H
 
 #include <__config>
 #include <__cstddef/size_t.h>
@@ -61,4 +61,4 @@ using __is_inplace_index _LIBCPP_NODEBUG = __is_inplace_index_imp<__remove_cvref
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___UTILITY_IN_PLACE_H
+#endif // _LIBCPP_UTILITY_IN_PLACE_H

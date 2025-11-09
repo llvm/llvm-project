@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ERRC
-#define _LIBCPP___ERRC
+#ifndef _LIBCPP_ERRC
+#define _LIBCPP_ERRC
 
 /*
     system_error synopsis
@@ -263,4 +263,4 @@ _LIBCPP_DECLARE_STRONG_ENUM_EPILOG(errc)
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ERRC
+#endif // _LIBCPP_ERRC

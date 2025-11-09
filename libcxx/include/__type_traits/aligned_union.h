@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_ALIGNED_UNION_H
-#define _LIBCPP___TYPE_TRAITS_ALIGNED_UNION_H
+#ifndef _LIBCPP_TYPE_TRAITS_ALIGNED_UNION_H
+#define _LIBCPP_TYPE_TRAITS_ALIGNED_UNION_H
 
 #include <__config>
 #include <__cstddef/size_t.h>
@@ -47,4 +47,4 @@ using aligned_union_t _LIBCPP_DEPRECATED_IN_CXX23 = typename aligned_union<_Len,
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_ALIGNED_UNION_H
+#endif // _LIBCPP_TYPE_TRAITS_ALIGNED_UNION_H

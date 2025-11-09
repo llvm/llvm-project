@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___MEMORY_ASSUME_ALIGNED_H
-#define _LIBCPP___MEMORY_ASSUME_ALIGNED_H
+#ifndef _LIBCPP_MEMORY_ASSUME_ALIGNED_H
+#define _LIBCPP_MEMORY_ASSUME_ALIGNED_H
 
 #include <__assert>
 #include <__config>
@@ -47,4 +47,4 @@ template <size_t _Np, class _Tp>
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___MEMORY_ASSUME_ALIGNED_H
+#endif // _LIBCPP_MEMORY_ASSUME_ALIGNED_H

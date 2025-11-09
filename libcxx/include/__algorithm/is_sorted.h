@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_IS_SORTED_H
-#define _LIBCPP___ALGORITHM_IS_SORTED_H
+#ifndef _LIBCPP_ALGORITHM_IS_SORTED_H
+#define _LIBCPP_ALGORITHM_IS_SORTED_H
 
 #include <__algorithm/comp.h>
 #include <__algorithm/comp_ref_type.h>
@@ -34,4 +34,4 @@ is_sorted(_ForwardIterator __first, _ForwardIterator __last) {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ALGORITHM_IS_SORTED_H
+#endif // _LIBCPP_ALGORITHM_IS_SORTED_H

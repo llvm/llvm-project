@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_IS_ARITHMETIC_H
-#define _LIBCPP___TYPE_TRAITS_IS_ARITHMETIC_H
+#ifndef _LIBCPP_TYPE_TRAITS_IS_ARITHMETIC_H
+#define _LIBCPP_TYPE_TRAITS_IS_ARITHMETIC_H
 
 #include <__config>
 #include <__type_traits/integral_constant.h>
@@ -31,4 +31,4 @@ _LIBCPP_NO_SPECIALIZATIONS inline constexpr bool is_arithmetic_v = is_arithmetic
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_IS_ARITHMETIC_H
+#endif // _LIBCPP_TYPE_TRAITS_IS_ARITHMETIC_H

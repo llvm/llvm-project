@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___MUTEX_MUTEX_H
-#define _LIBCPP___CXX03___MUTEX_MUTEX_H
+#ifndef _LIBCPP_CXX03_MUTEX_MUTEX_H
+#define _LIBCPP_CXX03_MUTEX_MUTEX_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__thread/support.h>
@@ -50,4 +50,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_HAS_NO_THREADS
 
-#endif // _LIBCPP___CXX03___MUTEX_MUTEX_H
+#endif // _LIBCPP_CXX03_MUTEX_MUTEX_H

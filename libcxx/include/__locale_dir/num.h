@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___LOCALE_DIR_NUM_H
-#define _LIBCPP___LOCALE_DIR_NUM_H
+#ifndef _LIBCPP_LOCALE_DIR_NUM_H
+#define _LIBCPP_LOCALE_DIR_NUM_H
 
 #include <__algorithm/find.h>
 #include <__algorithm/reverse.h>
@@ -1069,4 +1069,4 @@ _LIBCPP_POP_MACROS
 
 #endif // _LIBCPP_HAS_LOCALIZATION
 
-#endif // _LIBCPP___LOCALE_DIR_NUM_H
+#endif // _LIBCPP_LOCALE_DIR_NUM_H

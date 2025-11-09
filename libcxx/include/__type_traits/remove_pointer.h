@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_REMOVE_POINTER_H
-#define _LIBCPP___TYPE_TRAITS_REMOVE_POINTER_H
+#ifndef _LIBCPP_TYPE_TRAITS_REMOVE_POINTER_H
+#define _LIBCPP_TYPE_TRAITS_REMOVE_POINTER_H
 
 #include <__config>
 
@@ -50,4 +50,4 @@ using remove_pointer_t = __remove_pointer_t<_Tp>;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_REMOVE_POINTER_H
+#endif // _LIBCPP_TYPE_TRAITS_REMOVE_POINTER_H

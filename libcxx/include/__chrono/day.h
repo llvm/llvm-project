@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CHRONO_DAY_H
-#define _LIBCPP___CHRONO_DAY_H
+#ifndef _LIBCPP_CHRONO_DAY_H
+#define _LIBCPP_CHRONO_DAY_H
 
 #include <__chrono/duration.h>
 #include <__compare/ordering.h>
@@ -96,4 +96,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 20
 
-#endif // _LIBCPP___CHRONO_DAY_H
+#endif // _LIBCPP_CHRONO_DAY_H

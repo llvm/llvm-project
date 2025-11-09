@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FUNCTIONAL_DEFAULT_SEARCHER_H
-#define _LIBCPP___FUNCTIONAL_DEFAULT_SEARCHER_H
+#ifndef _LIBCPP_FUNCTIONAL_DEFAULT_SEARCHER_H
+#define _LIBCPP_FUNCTIONAL_DEFAULT_SEARCHER_H
 
 #include <__algorithm/search.h>
 #include <__config>
@@ -51,4 +51,4 @@ _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(default_searcher);
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FUNCTIONAL_DEFAULT_SEARCHER_H
+#endif // _LIBCPP_FUNCTIONAL_DEFAULT_SEARCHER_H

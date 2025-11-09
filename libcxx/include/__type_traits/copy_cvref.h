@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_COPY_CVREF_H
-#define _LIBCPP___TYPE_TRAITS_COPY_CVREF_H
+#ifndef _LIBCPP_TYPE_TRAITS_COPY_CVREF_H
+#define _LIBCPP_TYPE_TRAITS_COPY_CVREF_H
 
 #include <__config>
 #include <__type_traits/add_reference.h>
@@ -42,4 +42,4 @@ using __copy_cvref_t _LIBCPP_NODEBUG = typename __copy_cvref<_From>::template __
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_COPY_CVREF_H
+#endif // _LIBCPP_TYPE_TRAITS_COPY_CVREF_H

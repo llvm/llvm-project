@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___MATH_REMAINDER_H
-#define _LIBCPP___MATH_REMAINDER_H
+#ifndef _LIBCPP_MATH_REMAINDER_H
+#define _LIBCPP_MATH_REMAINDER_H
 
 #include <__config>
 #include <__type_traits/enable_if.h>
@@ -69,4 +69,4 @@ inline _LIBCPP_HIDE_FROM_ABI __promote_t<_A1, _A2> remquo(_A1 __x, _A2 __y, int*
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___MATH_REMAINDER_H
+#endif // _LIBCPP_MATH_REMAINDER_H

@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ITERATOR_WRAP_ITER_H
-#define _LIBCPP___ITERATOR_WRAP_ITER_H
+#ifndef _LIBCPP_ITERATOR_WRAP_ITER_H
+#define _LIBCPP_ITERATOR_WRAP_ITER_H
 
 #include <__compare/ordering.h>
 #include <__compare/three_way_comparable.h>
@@ -250,4 +250,4 @@ struct pointer_traits<__wrap_iter<_It> > {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ITERATOR_WRAP_ITER_H
+#endif // _LIBCPP_ITERATOR_WRAP_ITER_H

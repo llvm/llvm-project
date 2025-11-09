@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___STOP_TOKEN_STOP_STATE_H
-#define _LIBCPP___STOP_TOKEN_STOP_STATE_H
+#ifndef _LIBCPP_STOP_TOKEN_STOP_STATE_H
+#define _LIBCPP_STOP_TOKEN_STOP_STATE_H
 
 #include <__assert>
 #include <__config>
@@ -233,4 +233,4 @@ struct __intrusive_shared_ptr_traits<__stop_state> {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___STOP_TOKEN_STOP_STATE_H
+#endif // _LIBCPP_STOP_TOKEN_STOP_STATE_H

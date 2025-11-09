@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___MEMORY_SHARED_COUNT_H
-#define _LIBCPP___MEMORY_SHARED_COUNT_H
+#ifndef _LIBCPP_MEMORY_SHARED_COUNT_H
+#define _LIBCPP_MEMORY_SHARED_COUNT_H
 
 #include <__config>
 #include <__memory/addressof.h>
@@ -113,4 +113,4 @@ private:
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___MEMORY_SHARED_COUNT_H
+#endif // _LIBCPP_MEMORY_SHARED_COUNT_H

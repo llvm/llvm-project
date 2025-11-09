@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___MEMORY_TEMPORARY_BUFFER_H
-#define _LIBCPP___MEMORY_TEMPORARY_BUFFER_H
+#ifndef _LIBCPP_MEMORY_TEMPORARY_BUFFER_H
+#define _LIBCPP_MEMORY_TEMPORARY_BUFFER_H
 
 #include <__config>
 #include <__cstddef/ptrdiff_t.h>
@@ -42,4 +42,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_TEMPORARY_BUFFER)
 
-#endif // _LIBCPP___MEMORY_TEMPORARY_BUFFER_H
+#endif // _LIBCPP_MEMORY_TEMPORARY_BUFFER_H

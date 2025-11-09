@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03_CSTDDEF
-#define _LIBCPP___CXX03_CSTDDEF
+#ifndef _LIBCPP_CXX03_CSTDDEF
+#define _LIBCPP_CXX03_CSTDDEF
 
 /*
     cstddef synopsis
@@ -61,4 +61,4 @@ using ::size_t _LIBCPP_USING_IF_EXISTS;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CXX03_CSTDDEF
+#endif // _LIBCPP_CXX03_CSTDDEF

@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ITERATOR_PROJECTED_H
-#define _LIBCPP___ITERATOR_PROJECTED_H
+#ifndef _LIBCPP_ITERATOR_PROJECTED_H
+#define _LIBCPP_ITERATOR_PROJECTED_H
 
 #include <__config>
 #include <__iterator/concepts.h>
@@ -58,4 +58,4 @@ using projected = typename __projected_impl<_It, _Proj>::__type;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ITERATOR_PROJECTED_H
+#endif // _LIBCPP_ITERATOR_PROJECTED_H

@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___LOCALE
-#define _LIBCPP___CXX03___LOCALE
+#ifndef _LIBCPP_CXX03_LOCALE
+#define _LIBCPP_CXX03_LOCALE
 
 #include <__cxx03/__config>
 #include <__cxx03/__locale_dir/locale_base_api.h>
@@ -1492,4 +1492,4 @@ private:
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CXX03___LOCALE
+#endif // _LIBCPP_CXX03_LOCALE

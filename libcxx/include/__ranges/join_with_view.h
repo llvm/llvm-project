@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___RANGES_JOIN_WITH_VIEW_H
-#define _LIBCPP___RANGES_JOIN_WITH_VIEW_H
+#ifndef _LIBCPP_RANGES_JOIN_WITH_VIEW_H
+#define _LIBCPP_RANGES_JOIN_WITH_VIEW_H
 
 #include <__concepts/common_reference_with.h>
 #include <__concepts/common_with.h>
@@ -457,4 +457,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___RANGES_JOIN_WITH_VIEW_H
+#endif // _LIBCPP_RANGES_JOIN_WITH_VIEW_H

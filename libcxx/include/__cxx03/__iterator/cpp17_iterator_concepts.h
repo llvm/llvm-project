@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___ITERATOR_CPP17_ITERATOR_CONCEPTS_H
-#define _LIBCPP___CXX03___ITERATOR_CPP17_ITERATOR_CONCEPTS_H
+#ifndef _LIBCPP_CXX03_ITERATOR_CPP17_ITERATOR_CONCEPTS_H
+#define _LIBCPP_CXX03_ITERATOR_CPP17_ITERATOR_CONCEPTS_H
 
 #include <__cxx03/__concepts/boolean_testable.h>
 #include <__cxx03/__concepts/convertible_to.h>
@@ -38,4 +38,4 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___CXX03___ITERATOR_CPP17_ITERATOR_CONCEPTS_H
+#endif // _LIBCPP_CXX03_ITERATOR_CPP17_ITERATOR_CONCEPTS_H

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ATOMIC_SUPPORT_C11_H
-#define _LIBCPP___ATOMIC_SUPPORT_C11_H
+#ifndef _LIBCPP_ATOMIC_SUPPORT_C11_H
+#define _LIBCPP_ATOMIC_SUPPORT_C11_H
 
 #include <__atomic/memory_order.h>
 #include <__config>
@@ -261,4 +261,4 @@ __cxx_atomic_fetch_xor(__cxx_atomic_base_impl<_Tp>* __a, _Tp __pattern, memory_o
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ATOMIC_SUPPORT_C11_H
+#endif // _LIBCPP_ATOMIC_SUPPORT_C11_H

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_REFERENCE_CONSTRUCTS_FROM_TEMPORARY_H
-#define _LIBCPP___TYPE_TRAITS_REFERENCE_CONSTRUCTS_FROM_TEMPORARY_H
+#ifndef _LIBCPP_TYPE_TRAITS_REFERENCE_CONSTRUCTS_FROM_TEMPORARY_H
+#define _LIBCPP_TYPE_TRAITS_REFERENCE_CONSTRUCTS_FROM_TEMPORARY_H
 
 #include <__config>
 #include <__type_traits/integral_constant.h>
@@ -35,4 +35,4 @@ inline const bool __reference_constructs_from_temporary_v = __reference_construc
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_REFERENCE_CONSTRUCTS_FROM_TEMPORARY_H
+#endif // _LIBCPP_TYPE_TRAITS_REFERENCE_CONSTRUCTS_FROM_TEMPORARY_H

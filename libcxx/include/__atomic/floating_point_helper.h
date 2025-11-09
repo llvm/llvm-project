@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ATOMIC_FLOATING_POINT_HELPER_H
-#define _LIBCPP___ATOMIC_FLOATING_POINT_HELPER_H
+#ifndef _LIBCPP_ATOMIC_FLOATING_POINT_HELPER_H
+#define _LIBCPP_ATOMIC_FLOATING_POINT_HELPER_H
 
 #include <__config>
 #include <__type_traits/is_floating_point.h>
@@ -52,4 +52,4 @@ _LIBCPP_HIDE_FROM_ABI constexpr bool __has_rmw_builtin() {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ATOMIC_FLOATING_POINT_HELPER_H
+#endif // _LIBCPP_ATOMIC_FLOATING_POINT_HELPER_H

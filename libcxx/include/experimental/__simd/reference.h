@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_EXPERIMENTAL___SIMD_REFERENCE_H
-#define _LIBCPP_EXPERIMENTAL___SIMD_REFERENCE_H
+#ifndef _LIBCPP_EXPERIMENTAL_SIMD_REFERENCE_H
+#define _LIBCPP_EXPERIMENTAL_SIMD_REFERENCE_H
 
 #include <__config>
 #include <__cstddef/size_t.h>
@@ -189,4 +189,4 @@ _LIBCPP_END_NAMESPACE_EXPERIMENTAL
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP_EXPERIMENTAL___SIMD_REFERENCE_H
+#endif // _LIBCPP_EXPERIMENTAL_SIMD_REFERENCE_H

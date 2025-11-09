@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___UTILITY_TO_UNDERLYING_H
-#define _LIBCPP___UTILITY_TO_UNDERLYING_H
+#ifndef _LIBCPP_UTILITY_TO_UNDERLYING_H
+#define _LIBCPP_UTILITY_TO_UNDERLYING_H
 
 #include <__config>
 #include <__type_traits/underlying_type.h>
@@ -35,4 +35,4 @@ template <class _Tp>
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___UTILITY_TO_UNDERLYING_H
+#endif // _LIBCPP_UTILITY_TO_UNDERLYING_H

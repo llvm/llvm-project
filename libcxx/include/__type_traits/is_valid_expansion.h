@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_IS_VALID_EXPANSION_H
-#define _LIBCPP___TYPE_TRAITS_IS_VALID_EXPANSION_H
+#ifndef _LIBCPP_TYPE_TRAITS_IS_VALID_EXPANSION_H
+#define _LIBCPP_TYPE_TRAITS_IS_VALID_EXPANSION_H
 
 #include <__config>
 #include <__type_traits/integral_constant.h>
@@ -28,4 +28,4 @@ using _IsValidExpansion _LIBCPP_NODEBUG = decltype(std::__sfinae_test_impl<_Temp
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_IS_VALID_EXPANSION_H
+#endif // _LIBCPP_TYPE_TRAITS_IS_VALID_EXPANSION_H

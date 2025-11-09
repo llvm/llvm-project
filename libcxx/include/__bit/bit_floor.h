@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___BIT_BIT_FLOOR_H
-#define _LIBCPP___BIT_BIT_FLOOR_H
+#ifndef _LIBCPP_BIT_BIT_FLOOR_H
+#define _LIBCPP_BIT_BIT_FLOOR_H
 
 #include <__bit/bit_log2.h>
 #include <__config>
@@ -30,4 +30,4 @@ template <__unsigned_integer _Tp>
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___BIT_BIT_FLOOR_H
+#endif // _LIBCPP_BIT_BIT_FLOOR_H

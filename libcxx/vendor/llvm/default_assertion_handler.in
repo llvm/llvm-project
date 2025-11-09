@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ASSERTION_HANDLER
-#define _LIBCPP___ASSERTION_HANDLER
+#ifndef _LIBCPP_ASSERTION_HANDLER
+#define _LIBCPP_ASSERTION_HANDLER
 
 #if __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 #  include <__cxx03/__config>
@@ -61,4 +61,4 @@ _LIBCPP_ASSERTION_SEMANTIC_ENFORCE
 
 #endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
-#endif // _LIBCPP___ASSERTION_HANDLER
+#endif // _LIBCPP_ASSERTION_HANDLER

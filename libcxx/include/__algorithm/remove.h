@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_REMOVE_H
-#define _LIBCPP___ALGORITHM_REMOVE_H
+#ifndef _LIBCPP_ALGORITHM_REMOVE_H
+#define _LIBCPP_ALGORITHM_REMOVE_H
 
 #include <__algorithm/find.h>
 #include <__algorithm/find_if.h>
@@ -43,4 +43,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___ALGORITHM_REMOVE_H
+#endif // _LIBCPP_ALGORITHM_REMOVE_H

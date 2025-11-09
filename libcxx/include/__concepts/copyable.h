@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CONCEPTS_COPYABLE_H
-#define _LIBCPP___CONCEPTS_COPYABLE_H
+#ifndef _LIBCPP_CONCEPTS_COPYABLE_H
+#define _LIBCPP_CONCEPTS_COPYABLE_H
 
 #include <__concepts/assignable.h>
 #include <__concepts/constructible.h>
@@ -38,4 +38,4 @@ concept copyable =
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CONCEPTS_COPYABLE_H
+#endif // _LIBCPP_CONCEPTS_COPYABLE_H

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___BIT_BIT_LOG2_H
-#define _LIBCPP___BIT_BIT_LOG2_H
+#ifndef _LIBCPP_BIT_BIT_LOG2_H
+#define _LIBCPP_BIT_BIT_LOG2_H
 
 #include <__assert>
 #include <__bit/countl.h>
@@ -30,4 +30,4 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp __bit_log2(_Tp __t) _NOE
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___BIT_BIT_LOG2_H
+#endif // _LIBCPP_BIT_BIT_LOG2_H

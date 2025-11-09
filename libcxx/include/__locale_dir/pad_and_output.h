@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___LOCALE_DIR_PAD_AND_OUTPUT_H
-#define _LIBCPP___LOCALE_DIR_PAD_AND_OUTPUT_H
+#ifndef _LIBCPP_LOCALE_DIR_PAD_AND_OUTPUT_H
+#define _LIBCPP_LOCALE_DIR_PAD_AND_OUTPUT_H
 
 #include <__config>
 
@@ -85,4 +85,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_HAS_LOCALIZATION
 
-#endif // _LIBCPP___LOCALE_DIR_PAD_AND_OUTPUT_H
+#endif // _LIBCPP_LOCALE_DIR_PAD_AND_OUTPUT_H

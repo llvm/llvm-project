@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___NUMERIC_INCLUSIVE_SCAN_H
-#define _LIBCPP___NUMERIC_INCLUSIVE_SCAN_H
+#ifndef _LIBCPP_NUMERIC_INCLUSIVE_SCAN_H
+#define _LIBCPP_NUMERIC_INCLUSIVE_SCAN_H
 
 #include <__config>
 #include <__functional/operations.h>
@@ -56,4 +56,4 @@ inclusive_scan(_InputIterator __first, _InputIterator __last, _OutputIterator __
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___NUMERIC_INCLUSIVE_SCAN_H
+#endif // _LIBCPP_NUMERIC_INCLUSIVE_SCAN_H

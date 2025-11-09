@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___MEMORY_SWAP_ALLOCATOR_H
-#define _LIBCPP___CXX03___MEMORY_SWAP_ALLOCATOR_H
+#ifndef _LIBCPP_CXX03_MEMORY_SWAP_ALLOCATOR_H
+#define _LIBCPP_CXX03_MEMORY_SWAP_ALLOCATOR_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__memory/allocator_traits.h>
@@ -38,4 +38,4 @@ inline _LIBCPP_HIDE_FROM_ABI void __swap_allocator(_Alloc& __a1, _Alloc& __a2) {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CXX03___MEMORY_SWAP_ALLOCATOR_H
+#endif // _LIBCPP_CXX03_MEMORY_SWAP_ALLOCATOR_H

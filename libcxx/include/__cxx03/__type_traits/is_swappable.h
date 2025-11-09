@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___TYPE_TRAITS_IS_SWAPPABLE_H
-#define _LIBCPP___CXX03___TYPE_TRAITS_IS_SWAPPABLE_H
+#ifndef _LIBCPP_CXX03_TYPE_TRAITS_IS_SWAPPABLE_H
+#define _LIBCPP_CXX03_TYPE_TRAITS_IS_SWAPPABLE_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__type_traits/add_lvalue_reference.h>
@@ -57,4 +57,4 @@ inline const bool __is_swappable_with_v<_Tp,
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CXX03___TYPE_TRAITS_IS_SWAPPABLE_H
+#endif // _LIBCPP_CXX03_TYPE_TRAITS_IS_SWAPPABLE_H

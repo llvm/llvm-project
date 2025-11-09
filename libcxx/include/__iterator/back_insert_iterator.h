@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ITERATOR_BACK_INSERT_ITERATOR_H
-#define _LIBCPP___ITERATOR_BACK_INSERT_ITERATOR_H
+#ifndef _LIBCPP_ITERATOR_BACK_INSERT_ITERATOR_H
+#define _LIBCPP_ITERATOR_BACK_INSERT_ITERATOR_H
 
 #include <__config>
 #include <__cstddef/ptrdiff_t.h>
@@ -76,4 +76,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___ITERATOR_BACK_INSERT_ITERATOR_H
+#endif // _LIBCPP_ITERATOR_BACK_INSERT_ITERATOR_H

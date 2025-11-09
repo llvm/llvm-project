@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___RANDOM_CHI_SQUARED_DISTRIBUTION_H
-#define _LIBCPP___RANDOM_CHI_SQUARED_DISTRIBUTION_H
+#ifndef _LIBCPP_RANDOM_CHI_SQUARED_DISTRIBUTION_H
+#define _LIBCPP_RANDOM_CHI_SQUARED_DISTRIBUTION_H
 
 #include <__config>
 #include <__random/gamma_distribution.h>
@@ -122,4 +122,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___RANDOM_CHI_SQUARED_DISTRIBUTION_H
+#endif // _LIBCPP_RANDOM_CHI_SQUARED_DISTRIBUTION_H

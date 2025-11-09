@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FUNCTIONAL_NOT_FN_H
-#define _LIBCPP___FUNCTIONAL_NOT_FN_H
+#ifndef _LIBCPP_FUNCTIONAL_NOT_FN_H
+#define _LIBCPP_FUNCTIONAL_NOT_FN_H
 
 #include <__config>
 #include <__functional/invoke.h>
@@ -73,4 +73,4 @@ template <auto _Fn>
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FUNCTIONAL_NOT_FN_H
+#endif // _LIBCPP_FUNCTIONAL_NOT_FN_H

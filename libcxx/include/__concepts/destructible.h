@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CONCEPTS_DESTRUCTIBLE_H
-#define _LIBCPP___CONCEPTS_DESTRUCTIBLE_H
+#ifndef _LIBCPP_CONCEPTS_DESTRUCTIBLE_H
+#define _LIBCPP_CONCEPTS_DESTRUCTIBLE_H
 
 #include <__config>
 #include <__type_traits/is_nothrow_destructible.h>
@@ -29,4 +29,4 @@ concept destructible = is_nothrow_destructible_v<_Tp>;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CONCEPTS_DESTRUCTIBLE_H
+#endif // _LIBCPP_CONCEPTS_DESTRUCTIBLE_H

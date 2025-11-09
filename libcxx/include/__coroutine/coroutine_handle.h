@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___COROUTINE_COROUTINE_HANDLE_H
-#define _LIBCPP___COROUTINE_COROUTINE_HANDLE_H
+#ifndef _LIBCPP_COROUTINE_COROUTINE_HANDLE_H
+#define _LIBCPP_COROUTINE_COROUTINE_HANDLE_H
 
 #include <__assert>
 #include <__config>
@@ -174,4 +174,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 20
 
-#endif // _LIBCPP___COROUTINE_COROUTINE_HANDLE_H
+#endif // _LIBCPP_COROUTINE_COROUTINE_HANDLE_H

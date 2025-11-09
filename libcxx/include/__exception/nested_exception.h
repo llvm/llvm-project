@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___EXCEPTION_NESTED_EXCEPTION_H
-#define _LIBCPP___EXCEPTION_NESTED_EXCEPTION_H
+#ifndef _LIBCPP_EXCEPTION_NESTED_EXCEPTION_H
+#define _LIBCPP_EXCEPTION_NESTED_EXCEPTION_H
 
 #include <__config>
 #include <__exception/exception_ptr.h>
@@ -97,4 +97,4 @@ inline _LIBCPP_HIDE_FROM_ABI void rethrow_if_nested(const _Ep&) {}
 
 _LIBCPP_END_UNVERSIONED_NAMESPACE_STD
 
-#endif // _LIBCPP___EXCEPTION_NESTED_EXCEPTION_H
+#endif // _LIBCPP_EXCEPTION_NESTED_EXCEPTION_H

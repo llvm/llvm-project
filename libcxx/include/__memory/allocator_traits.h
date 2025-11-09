@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___MEMORY_ALLOCATOR_TRAITS_H
-#define _LIBCPP___MEMORY_ALLOCATOR_TRAITS_H
+#ifndef _LIBCPP_MEMORY_ALLOCATOR_TRAITS_H
+#define _LIBCPP_MEMORY_ALLOCATOR_TRAITS_H
 
 #include <__config>
 #include <__cstddef/size_t.h>
@@ -378,4 +378,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___MEMORY_ALLOCATOR_TRAITS_H
+#endif // _LIBCPP_MEMORY_ALLOCATOR_TRAITS_H

@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___CHRONO_DURATION_H
-#define _LIBCPP___CXX03___CHRONO_DURATION_H
+#ifndef _LIBCPP_CXX03_CHRONO_DURATION_H
+#define _LIBCPP_CXX03_CHRONO_DURATION_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__type_traits/common_type.h>
@@ -415,4 +415,4 @@ _LIBCPP_POP_MACROS
 #  include <__cxx03/type_traits>
 #endif
 
-#endif // _LIBCPP___CXX03___CHRONO_DURATION_H
+#endif // _LIBCPP_CXX03_CHRONO_DURATION_H

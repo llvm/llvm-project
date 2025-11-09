@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FORMAT_FORMATTER_INTEGER_H
-#define _LIBCPP___FORMAT_FORMATTER_INTEGER_H
+#ifndef _LIBCPP_FORMAT_FORMATTER_INTEGER_H
+#define _LIBCPP_FORMAT_FORMATTER_INTEGER_H
 
 #include <__concepts/arithmetic.h>
 #include <__config>
@@ -123,4 +123,4 @@ inline constexpr bool enable_nonlocking_formatter_optimization<__uint128_t> = tr
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FORMAT_FORMATTER_INTEGER_H
+#endif // _LIBCPP_FORMAT_FORMATTER_INTEGER_H

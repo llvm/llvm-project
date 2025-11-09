@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___LOG_HARDENING_FAILURE
-#define _LIBCPP___LOG_HARDENING_FAILURE
+#ifndef _LIBCPP_LOG_HARDENING_FAILURE
+#define _LIBCPP_LOG_HARDENING_FAILURE
 
 #include <__config>
 
@@ -39,4 +39,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_HAS_EXPERIMENTAL_HARDENING_OBSERVE_SEMANTIC && !defined(_LIBCPP_CXX03_LANG)
 
-#endif // _LIBCPP___LOG_HARDENING_FAILURE
+#endif // _LIBCPP_LOG_HARDENING_FAILURE

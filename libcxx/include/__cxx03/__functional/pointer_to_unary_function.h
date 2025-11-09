@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___FUNCTIONAL_POINTER_TO_UNARY_FUNCTION_H
-#define _LIBCPP___CXX03___FUNCTIONAL_POINTER_TO_UNARY_FUNCTION_H
+#ifndef _LIBCPP_CXX03_FUNCTIONAL_POINTER_TO_UNARY_FUNCTION_H
+#define _LIBCPP_CXX03_FUNCTIONAL_POINTER_TO_UNARY_FUNCTION_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__functional/unary_function.h>
@@ -35,4 +35,4 @@ inline _LIBCPP_HIDE_FROM_ABI pointer_to_unary_function<_Arg, _Result> ptr_fun(_R
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CXX03___FUNCTIONAL_POINTER_TO_UNARY_FUNCTION_H
+#endif // _LIBCPP_CXX03_FUNCTIONAL_POINTER_TO_UNARY_FUNCTION_H

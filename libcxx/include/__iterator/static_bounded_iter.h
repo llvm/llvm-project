@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ITERATOR_STATIC_BOUNDED_ITER_H
-#define _LIBCPP___ITERATOR_STATIC_BOUNDED_ITER_H
+#ifndef _LIBCPP_ITERATOR_STATIC_BOUNDED_ITER_H
+#define _LIBCPP_ITERATOR_STATIC_BOUNDED_ITER_H
 
 #include <__assert>
 #include <__compare/ordering.h>
@@ -315,4 +315,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___ITERATOR_STATIC_BOUNDED_ITER_H
+#endif // _LIBCPP_ITERATOR_STATIC_BOUNDED_ITER_H

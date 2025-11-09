@@ -6,8 +6,8 @@
 //
 //===---------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FWD_SUBRANGE_H
-#define _LIBCPP___FWD_SUBRANGE_H
+#ifndef _LIBCPP_FWD_SUBRANGE_H
+#define _LIBCPP_FWD_SUBRANGE_H
 
 #include <__concepts/copyable.h>
 #include <__config>
@@ -46,4 +46,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 20
 
-#endif // _LIBCPP___FWD_SUBRANGE_H
+#endif // _LIBCPP_FWD_SUBRANGE_H

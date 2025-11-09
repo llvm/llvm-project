@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___MEMORY_ALLOCATOR_H
-#define _LIBCPP___MEMORY_ALLOCATOR_H
+#ifndef _LIBCPP_MEMORY_ALLOCATOR_H
+#define _LIBCPP_MEMORY_ALLOCATOR_H
 
 #include <__config>
 #include <__cstddef/ptrdiff_t.h>
@@ -174,4 +174,4 @@ inline _LIBCPP_HIDE_FROM_ABI bool operator!=(const allocator<_Tp>&, const alloca
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___MEMORY_ALLOCATOR_H
+#endif // _LIBCPP_MEMORY_ALLOCATOR_H

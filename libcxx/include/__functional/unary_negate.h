@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FUNCTIONAL_UNARY_NEGATE_H
-#define _LIBCPP___FUNCTIONAL_UNARY_NEGATE_H
+#ifndef _LIBCPP_FUNCTIONAL_UNARY_NEGATE_H
+#define _LIBCPP_FUNCTIONAL_UNARY_NEGATE_H
 
 #include <__config>
 #include <__functional/unary_function.h>
@@ -44,4 +44,4 @@ not1(const _Predicate& __pred) {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FUNCTIONAL_UNARY_NEGATE_H
+#endif // _LIBCPP_FUNCTIONAL_UNARY_NEGATE_H

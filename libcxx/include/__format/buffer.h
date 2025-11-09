@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FORMAT_BUFFER_H
-#define _LIBCPP___FORMAT_BUFFER_H
+#ifndef _LIBCPP_FORMAT_BUFFER_H
+#define _LIBCPP_FORMAT_BUFFER_H
 
 #include <__algorithm/copy_n.h>
 #include <__algorithm/fill_n.h>
@@ -705,4 +705,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___FORMAT_BUFFER_H
+#endif // _LIBCPP_FORMAT_BUFFER_H

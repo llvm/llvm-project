@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___TYPE_TRAITS_TYPE_IDENTITY_H
-#define _LIBCPP___CXX03___TYPE_TRAITS_TYPE_IDENTITY_H
+#ifndef _LIBCPP_CXX03_TYPE_TRAITS_TYPE_IDENTITY_H
+#define _LIBCPP_CXX03_TYPE_TRAITS_TYPE_IDENTITY_H
 
 #include <__cxx03/__config>
 
@@ -27,4 +27,4 @@ using __type_identity_t _LIBCPP_NODEBUG = typename __type_identity<_Tp>::type;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CXX03___TYPE_TRAITS_TYPE_IDENTITY_H
+#endif // _LIBCPP_CXX03_TYPE_TRAITS_TYPE_IDENTITY_H

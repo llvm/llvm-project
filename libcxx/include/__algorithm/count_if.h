@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_COUNT_IF_H
-#define _LIBCPP___ALGORITHM_COUNT_IF_H
+#ifndef _LIBCPP_ALGORITHM_COUNT_IF_H
+#define _LIBCPP_ALGORITHM_COUNT_IF_H
 
 #include <__algorithm/iterator_operations.h>
 #include <__config>
@@ -43,4 +43,4 @@ count_if(_InputIterator __first, _InputIterator __last, _Predicate __pred) {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ALGORITHM_COUNT_IF_H
+#endif // _LIBCPP_ALGORITHM_COUNT_IF_H

@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___VERBOSE_TRAP
-#define _LIBCPP___CXX03___VERBOSE_TRAP
+#ifndef _LIBCPP_CXX03_VERBOSE_TRAP
+#define _LIBCPP_CXX03_VERBOSE_TRAP
 
 #include <__cxx03/__config>
 
@@ -33,4 +33,4 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CXX03___VERBOSE_TRAP
+#endif // _LIBCPP_CXX03_VERBOSE_TRAP

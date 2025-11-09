@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FUNCTIONAL_COMPOSE_H
-#define _LIBCPP___FUNCTIONAL_COMPOSE_H
+#ifndef _LIBCPP_FUNCTIONAL_COMPOSE_H
+#define _LIBCPP_FUNCTIONAL_COMPOSE_H
 
 #include <__config>
 #include <__functional/invoke.h>
@@ -50,4 +50,4 @@ _LIBCPP_HIDE_FROM_ABI constexpr auto __compose(_Fn1&& __f1, _Fn2&& __f2) noexcep
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FUNCTIONAL_COMPOSE_H
+#endif // _LIBCPP_FUNCTIONAL_COMPOSE_H

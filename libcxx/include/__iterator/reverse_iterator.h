@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ITERATOR_REVERSE_ITERATOR_H
-#define _LIBCPP___ITERATOR_REVERSE_ITERATOR_H
+#ifndef _LIBCPP_ITERATOR_REVERSE_ITERATOR_H
+#define _LIBCPP_ITERATOR_REVERSE_ITERATOR_H
 
 #include <__algorithm/unwrap_iter.h>
 #include <__compare/compare_three_way_result.h>
@@ -340,4 +340,4 @@ struct __unwrap_iter_impl<reverse_iterator<reverse_iterator<_Iter> >, __b> {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ITERATOR_REVERSE_ITERATOR_H
+#endif // _LIBCPP_ITERATOR_REVERSE_ITERATOR_H

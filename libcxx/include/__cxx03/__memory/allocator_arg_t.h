@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___FUNCTIONAL_ALLOCATOR_ARG_T_H
-#define _LIBCPP___CXX03___FUNCTIONAL_ALLOCATOR_ARG_T_H
+#ifndef _LIBCPP_CXX03_FUNCTIONAL_ALLOCATOR_ARG_T_H
+#define _LIBCPP_CXX03_FUNCTIONAL_ALLOCATOR_ARG_T_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__memory/uses_allocator.h>
@@ -29,4 +29,4 @@ struct _LIBCPP_TEMPLATE_VIS allocator_arg_t {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CXX03___FUNCTIONAL_ALLOCATOR_ARG_T_H
+#endif // _LIBCPP_CXX03_FUNCTIONAL_ALLOCATOR_ARG_T_H

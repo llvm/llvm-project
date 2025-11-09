@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FUNCTIONAL_IS_TRANSPARENT
-#define _LIBCPP___FUNCTIONAL_IS_TRANSPARENT
+#ifndef _LIBCPP_FUNCTIONAL_IS_TRANSPARENT
+#define _LIBCPP_FUNCTIONAL_IS_TRANSPARENT
 
 #include <__config>
 #include <__type_traits/void_t.h>
@@ -39,4 +39,4 @@ inline const bool __is_transparently_comparable_v = false;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FUNCTIONAL_IS_TRANSPARENT
+#endif // _LIBCPP_FUNCTIONAL_IS_TRANSPARENT

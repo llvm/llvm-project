@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___FUNCTIONAL_UNARY_NEGATE_H
-#define _LIBCPP___CXX03___FUNCTIONAL_UNARY_NEGATE_H
+#ifndef _LIBCPP_CXX03_FUNCTIONAL_UNARY_NEGATE_H
+#define _LIBCPP_CXX03_FUNCTIONAL_UNARY_NEGATE_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__functional/unary_function.h>
@@ -35,4 +35,4 @@ inline _LIBCPP_HIDE_FROM_ABI unary_negate<_Predicate> not1(const _Predicate& __p
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CXX03___FUNCTIONAL_UNARY_NEGATE_H
+#endif // _LIBCPP_CXX03_FUNCTIONAL_UNARY_NEGATE_H

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_IS_SWAPPABLE_H
-#define _LIBCPP___TYPE_TRAITS_IS_SWAPPABLE_H
+#ifndef _LIBCPP_TYPE_TRAITS_IS_SWAPPABLE_H
+#define _LIBCPP_TYPE_TRAITS_IS_SWAPPABLE_H
 
 #include <__config>
 #include <__cstddef/size_t.h>
@@ -103,4 +103,4 @@ struct _LIBCPP_NO_SPECIALIZATIONS is_nothrow_swappable : bool_constant<is_nothro
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_IS_SWAPPABLE_H
+#endif // _LIBCPP_TYPE_TRAITS_IS_SWAPPABLE_H

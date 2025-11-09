@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___EXCEPTION_EXCEPTION_H
-#define _LIBCPP___EXCEPTION_EXCEPTION_H
+#ifndef _LIBCPP_EXCEPTION_EXCEPTION_H
+#define _LIBCPP_EXCEPTION_EXCEPTION_H
 
 #include <__config>
 
@@ -91,4 +91,4 @@ public:
 
 _LIBCPP_END_UNVERSIONED_NAMESPACE_STD
 
-#endif // _LIBCPP___EXCEPTION_EXCEPTION_H
+#endif // _LIBCPP_EXCEPTION_EXCEPTION_H

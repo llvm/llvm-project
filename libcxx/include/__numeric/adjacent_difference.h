@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___NUMERIC_ADJACENT_DIFFERENCE_H
-#define _LIBCPP___NUMERIC_ADJACENT_DIFFERENCE_H
+#ifndef _LIBCPP_NUMERIC_ADJACENT_DIFFERENCE_H
+#define _LIBCPP_NUMERIC_ADJACENT_DIFFERENCE_H
 
 #include <__config>
 #include <__iterator/iterator_traits.h>
@@ -65,4 +65,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___NUMERIC_ADJACENT_DIFFERENCE_H
+#endif // _LIBCPP_NUMERIC_ADJACENT_DIFFERENCE_H

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___TUPLE_TUPLE_LIKE_EXT_H
-#define _LIBCPP___CXX03___TUPLE_TUPLE_LIKE_EXT_H
+#ifndef _LIBCPP_CXX03_TUPLE_TUPLE_LIKE_EXT_H
+#define _LIBCPP_CXX03_TUPLE_TUPLE_LIKE_EXT_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__fwd/array.h>
@@ -44,4 +44,4 @@ struct __tuple_like_ext<__tuple_types<_Tp...> > : true_type {};
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CXX03___TUPLE_TUPLE_LIKE_EXT_H
+#endif // _LIBCPP_CXX03_TUPLE_TUPLE_LIKE_EXT_H

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_IS_TRIVIALLY_DESTRUCTIBLE_H
-#define _LIBCPP___TYPE_TRAITS_IS_TRIVIALLY_DESTRUCTIBLE_H
+#ifndef _LIBCPP_TYPE_TRAITS_IS_TRIVIALLY_DESTRUCTIBLE_H
+#define _LIBCPP_TYPE_TRAITS_IS_TRIVIALLY_DESTRUCTIBLE_H
 
 #include <__config>
 #include <__type_traits/integral_constant.h>
@@ -44,4 +44,4 @@ _LIBCPP_NO_SPECIALIZATIONS inline constexpr bool is_trivially_destructible_v = i
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_IS_TRIVIALLY_DESTRUCTIBLE_H
+#endif // _LIBCPP_TYPE_TRAITS_IS_TRIVIALLY_DESTRUCTIBLE_H

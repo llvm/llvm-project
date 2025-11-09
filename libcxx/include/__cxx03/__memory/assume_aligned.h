@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___MEMORY_ASSUME_ALIGNED_H
-#define _LIBCPP___CXX03___MEMORY_ASSUME_ALIGNED_H
+#ifndef _LIBCPP_CXX03_MEMORY_ASSUME_ALIGNED_H
+#define _LIBCPP_CXX03_MEMORY_ASSUME_ALIGNED_H
 
 #include <__cxx03/__assert>
 #include <__cxx03/__config>
@@ -38,4 +38,4 @@ _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI _Tp* __assume_aligned(_Tp* __ptr) {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CXX03___MEMORY_ASSUME_ALIGNED_H
+#endif // _LIBCPP_CXX03_MEMORY_ASSUME_ALIGNED_H

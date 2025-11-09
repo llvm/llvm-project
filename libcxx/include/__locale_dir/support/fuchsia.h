@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___LOCALE_DIR_SUPPORT_FUCHSIA_H
-#define _LIBCPP___LOCALE_DIR_SUPPORT_FUCHSIA_H
+#ifndef _LIBCPP_LOCALE_DIR_SUPPORT_FUCHSIA_H
+#define _LIBCPP_LOCALE_DIR_SUPPORT_FUCHSIA_H
 
 #include <__config>
 #include <__utility/forward.h>
@@ -157,4 +157,4 @@ _LIBCPP_END_NAMESPACE_STD
 #include <__locale_dir/support/no_locale/characters.h>
 #include <__locale_dir/support/no_locale/strtonum.h>
 
-#endif // _LIBCPP___LOCALE_DIR_SUPPORT_FUCHSIA_H
+#endif // _LIBCPP_LOCALE_DIR_SUPPORT_FUCHSIA_H

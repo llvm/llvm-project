@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___FUNCTIONAL_BIND_H
-#define _LIBCPP___CXX03___FUNCTIONAL_BIND_H
+#ifndef _LIBCPP_CXX03_FUNCTIONAL_BIND_H
+#define _LIBCPP_CXX03_FUNCTIONAL_BIND_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__functional/weak_result_type.h>
@@ -67,4 +67,4 @@ struct is_placeholder<placeholders::__ph<_Np> > : public integral_constant<int, 
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CXX03___FUNCTIONAL_BIND_H
+#endif // _LIBCPP_CXX03_FUNCTIONAL_BIND_H

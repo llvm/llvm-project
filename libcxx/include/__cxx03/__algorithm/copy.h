@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___ALGORITHM_COPY_H
-#define _LIBCPP___CXX03___ALGORITHM_COPY_H
+#ifndef _LIBCPP_CXX03_ALGORITHM_COPY_H
+#define _LIBCPP_CXX03_ALGORITHM_COPY_H
 
 #include <__cxx03/__algorithm/copy_move_common.h>
 #include <__cxx03/__algorithm/for_each_segment.h>
@@ -114,4 +114,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___CXX03___ALGORITHM_COPY_H
+#endif // _LIBCPP_CXX03_ALGORITHM_COPY_H

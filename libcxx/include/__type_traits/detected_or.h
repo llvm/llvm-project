@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_DETECTED_OR_H
-#define _LIBCPP___TYPE_TRAITS_DETECTED_OR_H
+#ifndef _LIBCPP_TYPE_TRAITS_DETECTED_OR_H
+#define _LIBCPP_TYPE_TRAITS_DETECTED_OR_H
 
 #include <__config>
 #include <__type_traits/void_t.h>
@@ -33,4 +33,4 @@ using __detected_or_t _LIBCPP_NODEBUG = typename __detector<_Default, void, _Op,
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_DETECTED_OR_H
+#endif // _LIBCPP_TYPE_TRAITS_DETECTED_OR_H

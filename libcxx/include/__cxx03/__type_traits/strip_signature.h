@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___TYPE_TRAITS_STRIP_SIGNATURE_H
-#define _LIBCPP___CXX03___TYPE_TRAITS_STRIP_SIGNATURE_H
+#ifndef _LIBCPP_CXX03_TYPE_TRAITS_STRIP_SIGNATURE_H
+#define _LIBCPP_CXX03_TYPE_TRAITS_STRIP_SIGNATURE_H
 
 #include <__cxx03/__config>
 
@@ -15,4 +15,4 @@
 #  pragma GCC system_header
 #endif
 
-#endif // _LIBCPP___CXX03___TYPE_TRAITS_STRIP_SIGNATURE_H
+#endif // _LIBCPP_CXX03_TYPE_TRAITS_STRIP_SIGNATURE_H

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___MUTEX_LOCK_GUARD_H
-#define _LIBCPP___MUTEX_LOCK_GUARD_H
+#ifndef _LIBCPP_MUTEX_LOCK_GUARD_H
+#define _LIBCPP_MUTEX_LOCK_GUARD_H
 
 #include <__config>
 #include <__mutex/tag_types.h>
@@ -43,4 +43,4 @@ _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(lock_guard);
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___MUTEX_LOCK_GUARD_H
+#endif // _LIBCPP_MUTEX_LOCK_GUARD_H

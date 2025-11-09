@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FUNCTIONAL_BINDER2ND_H
-#define _LIBCPP___FUNCTIONAL_BINDER2ND_H
+#ifndef _LIBCPP_FUNCTIONAL_BINDER2ND_H
+#define _LIBCPP_FUNCTIONAL_BINDER2ND_H
 
 #include <__config>
 #include <__functional/unary_function.h>
@@ -51,4 +51,4 @@ bind2nd(const _Operation& __op, const _Tp& __x) {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FUNCTIONAL_BINDER2ND_H
+#endif // _LIBCPP_FUNCTIONAL_BINDER2ND_H

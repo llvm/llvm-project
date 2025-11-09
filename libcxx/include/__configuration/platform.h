@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CONFIGURATION_PLATFORM_H
-#define _LIBCPP___CONFIGURATION_PLATFORM_H
+#ifndef _LIBCPP_CONFIGURATION_PLATFORM_H
+#define _LIBCPP_CONFIGURATION_PLATFORM_H
 
 #include <__config_site>
 
@@ -60,4 +60,4 @@
 #  define _LIBCPP_BIG_ENDIAN
 #endif // __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
 
-#endif // _LIBCPP___CONFIGURATION_PLATFORM_H
+#endif // _LIBCPP_CONFIGURATION_PLATFORM_H

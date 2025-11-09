@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_IS_REFERENCEABLE_H
-#define _LIBCPP___TYPE_TRAITS_IS_REFERENCEABLE_H
+#ifndef _LIBCPP_TYPE_TRAITS_IS_REFERENCEABLE_H
+#define _LIBCPP_TYPE_TRAITS_IS_REFERENCEABLE_H
 
 #include <__config>
 #include <__type_traits/void_t.h>
@@ -31,4 +31,4 @@ concept __referenceable = __is_referenceable_v<_Tp>;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_IS_REFERENCEABLE_H
+#endif // _LIBCPP_TYPE_TRAITS_IS_REFERENCEABLE_H

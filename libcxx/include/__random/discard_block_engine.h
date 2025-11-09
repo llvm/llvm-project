@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___RANDOM_DISCARD_BLOCK_ENGINE_H
-#define _LIBCPP___RANDOM_DISCARD_BLOCK_ENGINE_H
+#ifndef _LIBCPP_RANDOM_DISCARD_BLOCK_ENGINE_H
+#define _LIBCPP_RANDOM_DISCARD_BLOCK_ENGINE_H
 
 #include <__config>
 #include <__cstddef/size_t.h>
@@ -163,4 +163,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___RANDOM_DISCARD_BLOCK_ENGINE_H
+#endif // _LIBCPP_RANDOM_DISCARD_BLOCK_ENGINE_H

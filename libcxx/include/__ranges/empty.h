@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___RANGES_EMPTY_H
-#define _LIBCPP___RANGES_EMPTY_H
+#ifndef _LIBCPP_RANGES_EMPTY_H
+#define _LIBCPP_RANGES_EMPTY_H
 
 #include <__concepts/class_or_enum.h>
 #include <__config>
@@ -68,4 +68,4 @@ inline constexpr auto empty = __empty::__fn{};
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___RANGES_EMPTY_H
+#endif // _LIBCPP_RANGES_EMPTY_H

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_IS_ABSTRACT_H
-#define _LIBCPP___TYPE_TRAITS_IS_ABSTRACT_H
+#ifndef _LIBCPP_TYPE_TRAITS_IS_ABSTRACT_H
+#define _LIBCPP_TYPE_TRAITS_IS_ABSTRACT_H
 
 #include <__config>
 #include <__type_traits/integral_constant.h>
@@ -28,4 +28,4 @@ _LIBCPP_NO_SPECIALIZATIONS inline constexpr bool is_abstract_v = __is_abstract(_
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_IS_ABSTRACT_H
+#endif // _LIBCPP_TYPE_TRAITS_IS_ABSTRACT_H

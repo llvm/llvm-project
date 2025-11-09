@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ITERATOR_ISTREAMBUF_ITERATOR_H
-#define _LIBCPP___ITERATOR_ISTREAMBUF_ITERATOR_H
+#ifndef _LIBCPP_ITERATOR_ISTREAMBUF_ITERATOR_H
+#define _LIBCPP_ITERATOR_ISTREAMBUF_ITERATOR_H
 
 #include <__config>
 #include <__fwd/istream.h>
@@ -107,4 +107,4 @@ operator!=(const istreambuf_iterator<_CharT, _Traits>& __a, const istreambuf_ite
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ITERATOR_ISTREAMBUF_ITERATOR_H
+#endif // _LIBCPP_ITERATOR_ISTREAMBUF_ITERATOR_H

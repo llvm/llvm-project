@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FUNCTIONAL_BINARY_FUNCTION_H
-#define _LIBCPP___FUNCTIONAL_BINARY_FUNCTION_H
+#ifndef _LIBCPP_FUNCTIONAL_BINARY_FUNCTION_H
+#define _LIBCPP_FUNCTIONAL_BINARY_FUNCTION_H
 
 #include <__config>
 
@@ -50,4 +50,4 @@ using __binary_function _LIBCPP_NODEBUG = __binary_function_keep_layout_base<_Ar
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FUNCTIONAL_BINARY_FUNCTION_H
+#endif // _LIBCPP_FUNCTIONAL_BINARY_FUNCTION_H

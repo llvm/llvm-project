@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___RANGES_CONCEPTS_H
-#define _LIBCPP___RANGES_CONCEPTS_H
+#ifndef _LIBCPP_RANGES_CONCEPTS_H
+#define _LIBCPP_RANGES_CONCEPTS_H
 
 #include <__concepts/common_reference_with.h>
 #include <__concepts/constructible.h>
@@ -179,4 +179,4 @@ concept __concatable = requires {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___RANGES_CONCEPTS_H
+#endif // _LIBCPP_RANGES_CONCEPTS_H

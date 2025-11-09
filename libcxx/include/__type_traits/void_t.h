@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_VOID_T_H
-#define _LIBCPP___TYPE_TRAITS_VOID_T_H
+#ifndef _LIBCPP_TYPE_TRAITS_VOID_T_H
+#define _LIBCPP_TYPE_TRAITS_VOID_T_H
 
 #include <__config>
 
@@ -27,4 +27,4 @@ using __void_t _LIBCPP_NODEBUG = void;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_VOID_T_H
+#endif // _LIBCPP_TYPE_TRAITS_VOID_T_H

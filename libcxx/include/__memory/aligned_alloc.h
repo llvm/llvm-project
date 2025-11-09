@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___MEMORY_ALIGNED_ALLOC_H
-#define _LIBCPP___MEMORY_ALIGNED_ALLOC_H
+#ifndef _LIBCPP_MEMORY_ALIGNED_ALLOC_H
+#define _LIBCPP_MEMORY_ALIGNED_ALLOC_H
 
 #include <__config>
 #include <cstdlib>
@@ -60,4 +60,4 @@ inline _LIBCPP_HIDE_FROM_ABI void __libcpp_aligned_free(void* __ptr) {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___MEMORY_ALIGNED_ALLOC_H
+#endif // _LIBCPP_MEMORY_ALIGNED_ALLOC_H

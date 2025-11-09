@@ -6,8 +6,8 @@
 //
 //===---------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___OSTREAM_PUT_CHARACTER_SEQUENCE_H
-#define _LIBCPP___OSTREAM_PUT_CHARACTER_SEQUENCE_H
+#ifndef _LIBCPP_OSTREAM_PUT_CHARACTER_SEQUENCE_H
+#define _LIBCPP_OSTREAM_PUT_CHARACTER_SEQUENCE_H
 
 #include <__config>
 
@@ -56,4 +56,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_HAS_LOCALIZATION
 
-#endif // _LIBCPP___OSTREAM_PUT_CHARACTER_SEQUENCE_H
+#endif // _LIBCPP_OSTREAM_PUT_CHARACTER_SEQUENCE_H

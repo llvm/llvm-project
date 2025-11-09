@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03_OSTREAM
-#define _LIBCPP___CXX03_OSTREAM
+#ifndef _LIBCPP_CXX03_OSTREAM
+#define _LIBCPP_CXX03_OSTREAM
 
 /*
     ostream synopsis
@@ -192,4 +192,4 @@ void vprint_nonunicode(ostream& os, string_view fmt, format_args args);         
 #  include <__cxx03/type_traits>
 #endif
 
-#endif // _LIBCPP___CXX03_OSTREAM
+#endif // _LIBCPP_CXX03_OSTREAM

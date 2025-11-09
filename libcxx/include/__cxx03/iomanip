@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03_IOMANIP
-#define _LIBCPP___CXX03_IOMANIP
+#ifndef _LIBCPP_CXX03_IOMANIP
+#define _LIBCPP_CXX03_IOMANIP
 
 /*
     iomanip synopsis
@@ -507,4 +507,4 @@ __quoted(basic_string<_CharT, _Traits, _Allocator>& __s, _CharT __delim = _CharT
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CXX03_IOMANIP
+#endif // _LIBCPP_CXX03_IOMANIP

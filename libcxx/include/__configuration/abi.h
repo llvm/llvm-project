@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CONFIGURATION_ABI_H
-#define _LIBCPP___CONFIGURATION_ABI_H
+#ifndef _LIBCPP_CONFIGURATION_ABI_H
+#define _LIBCPP_CONFIGURATION_ABI_H
 
 #include <__config_site>
 #include <__configuration/compiler.h>
@@ -151,4 +151,4 @@
 #  endif
 #endif
 
-#endif // _LIBCPP___CONFIGURATION_ABI_H
+#endif // _LIBCPP_CONFIGURATION_ABI_H

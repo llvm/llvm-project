@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FORMAT_FORMAT_ERROR_H
-#define _LIBCPP___FORMAT_FORMAT_ERROR_H
+#ifndef _LIBCPP_FORMAT_FORMAT_ERROR_H
+#define _LIBCPP_FORMAT_FORMAT_ERROR_H
 
 #include <__config>
 #include <__verbose_abort>
@@ -47,4 +47,4 @@ _LIBCPP_DIAGNOSTIC_POP
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FORMAT_FORMAT_ERROR_H
+#endif // _LIBCPP_FORMAT_FORMAT_ERROR_H

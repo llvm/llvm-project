@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FUNCTIONAL_BINARY_NEGATE_H
-#define _LIBCPP___FUNCTIONAL_BINARY_NEGATE_H
+#ifndef _LIBCPP_FUNCTIONAL_BINARY_NEGATE_H
+#define _LIBCPP_FUNCTIONAL_BINARY_NEGATE_H
 
 #include <__config>
 #include <__functional/binary_function.h>
@@ -48,4 +48,4 @@ not2(const _Predicate& __pred) {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FUNCTIONAL_BINARY_NEGATE_H
+#endif // _LIBCPP_FUNCTIONAL_BINARY_NEGATE_H

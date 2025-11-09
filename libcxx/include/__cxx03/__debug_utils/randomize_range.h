@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___LIBCXX_DEBUG_RANDOMIZE_RANGE_H
-#define _LIBCPP___CXX03___LIBCXX_DEBUG_RANDOMIZE_RANGE_H
+#ifndef _LIBCPP_CXX03_LIBCXX_DEBUG_RANDOMIZE_RANGE_H
+#define _LIBCPP_CXX03_LIBCXX_DEBUG_RANDOMIZE_RANGE_H
 
 #include <__cxx03/__config>
 
@@ -37,4 +37,4 @@ _LIBCPP_HIDE_FROM_ABI void __debug_randomize_range(_Iterator __first, _Sentinel 
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CXX03___LIBCXX_DEBUG_RANDOMIZE_RANGE_H
+#endif // _LIBCPP_CXX03_LIBCXX_DEBUG_RANDOMIZE_RANGE_H

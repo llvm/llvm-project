@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___TUPLE_TUPLE_SIZE_H
-#define _LIBCPP___CXX03___TUPLE_TUPLE_SIZE_H
+#ifndef _LIBCPP_CXX03_TUPLE_TUPLE_SIZE_H
+#define _LIBCPP_CXX03_TUPLE_TUPLE_SIZE_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__fwd/tuple.h>
@@ -34,4 +34,4 @@ struct _LIBCPP_TEMPLATE_VIS tuple_size<const volatile _Tp> : public tuple_size<_
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CXX03___TUPLE_TUPLE_SIZE_H
+#endif // _LIBCPP_CXX03_TUPLE_TUPLE_SIZE_H

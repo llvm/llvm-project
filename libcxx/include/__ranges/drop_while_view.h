@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___RANGES_DROP_WHILE_VIEW_H
-#define _LIBCPP___RANGES_DROP_WHILE_VIEW_H
+#ifndef _LIBCPP_RANGES_DROP_WHILE_VIEW_H
+#define _LIBCPP_RANGES_DROP_WHILE_VIEW_H
 
 #include <__algorithm/ranges_find_if_not.h>
 #include <__assert>
@@ -133,4 +133,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___RANGES_DROP_WHILE_VIEW_H
+#endif // _LIBCPP_RANGES_DROP_WHILE_VIEW_H

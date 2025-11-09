@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FLAT_SET_RA_ITERATOR_H
-#define _LIBCPP___FLAT_SET_RA_ITERATOR_H
+#ifndef _LIBCPP_FLAT_SET_RA_ITERATOR_H
+#define _LIBCPP_FLAT_SET_RA_ITERATOR_H
 
 #include "__type_traits/is_same.h"
 #include <__compare/three_way_comparable.h>
@@ -154,4 +154,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___FLAT_SET_RA_ITERATOR_H
+#endif // _LIBCPP_FLAT_SET_RA_ITERATOR_H

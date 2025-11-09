@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___MEMORY_ADDRESSOF_H
-#define _LIBCPP___CXX03___MEMORY_ADDRESSOF_H
+#ifndef _LIBCPP_CXX03_MEMORY_ADDRESSOF_H
+#define _LIBCPP_CXX03_MEMORY_ADDRESSOF_H
 
 #include <__cxx03/__config>
 
@@ -53,4 +53,4 @@ inline _LIBCPP_HIDE_FROM_ABI __unsafe_unretained _Tp* addressof(__unsafe_unretai
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CXX03___MEMORY_ADDRESSOF_H
+#endif // _LIBCPP_CXX03_MEMORY_ADDRESSOF_H

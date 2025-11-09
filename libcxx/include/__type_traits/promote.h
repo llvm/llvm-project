@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_PROMOTE_H
-#define _LIBCPP___TYPE_TRAITS_PROMOTE_H
+#ifndef _LIBCPP_TYPE_TRAITS_PROMOTE_H
+#define _LIBCPP_TYPE_TRAITS_PROMOTE_H
 
 #include <__config>
 #include <__type_traits/enable_if.h>
@@ -40,4 +40,4 @@ using __promote_t _LIBCPP_NODEBUG =
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_PROMOTE_H
+#endif // _LIBCPP_TYPE_TRAITS_PROMOTE_H

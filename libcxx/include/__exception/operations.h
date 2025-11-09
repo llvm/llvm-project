@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___EXCEPTION_OPERATIONS_H
-#define _LIBCPP___EXCEPTION_OPERATIONS_H
+#ifndef _LIBCPP_EXCEPTION_OPERATIONS_H
+#define _LIBCPP_EXCEPTION_OPERATIONS_H
 
 #include <__config>
 
@@ -39,4 +39,4 @@ _LIBCPP_EXPORTED_FROM_ABI exception_ptr current_exception() _NOEXCEPT;
 [[__noreturn__]] _LIBCPP_EXPORTED_FROM_ABI void rethrow_exception(exception_ptr);
 _LIBCPP_END_UNVERSIONED_NAMESPACE_STD
 
-#endif // _LIBCPP___EXCEPTION_OPERATIONS_H
+#endif // _LIBCPP_EXCEPTION_OPERATIONS_H

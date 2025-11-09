@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___MEMORY_UNIQUE_PTR_H
-#define _LIBCPP___CXX03___MEMORY_UNIQUE_PTR_H
+#ifndef _LIBCPP_CXX03_MEMORY_UNIQUE_PTR_H
+#define _LIBCPP_CXX03_MEMORY_UNIQUE_PTR_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__functional/hash.h>
@@ -550,4 +550,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___CXX03___MEMORY_UNIQUE_PTR_H
+#endif // _LIBCPP_CXX03_MEMORY_UNIQUE_PTR_H

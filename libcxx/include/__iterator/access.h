@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ITERATOR_ACCESS_H
-#define _LIBCPP___ITERATOR_ACCESS_H
+#ifndef _LIBCPP_ITERATOR_ACCESS_H
+#define _LIBCPP_ITERATOR_ACCESS_H
 
 #include <__config>
 #include <__cstddef/size_t.h>
@@ -92,4 +92,4 @@ _LIBCPP_HIDE_FROM_ABI typename _Cp::const_iterator end(const _Cp& __c) {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ITERATOR_ACCESS_H
+#endif // _LIBCPP_ITERATOR_ACCESS_H

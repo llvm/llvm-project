@@ -6,8 +6,8 @@
 //
 //===---------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___FWD_PAIR_H
-#define _LIBCPP___CXX03___FWD_PAIR_H
+#ifndef _LIBCPP_CXX03_FWD_PAIR_H
+#define _LIBCPP_CXX03_FWD_PAIR_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__fwd/tuple.h>
@@ -30,4 +30,4 @@ _LIBCPP_HIDE_FROM_ABI const typename tuple_element<_Ip, pair<_T1, _T2> >::type& 
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CXX03___FWD_PAIR_H
+#endif // _LIBCPP_CXX03_FWD_PAIR_H

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CONCEPTS_MOVABLE_H
-#define _LIBCPP___CONCEPTS_MOVABLE_H
+#ifndef _LIBCPP_CONCEPTS_MOVABLE_H
+#define _LIBCPP_CONCEPTS_MOVABLE_H
 
 #include <__concepts/assignable.h>
 #include <__concepts/constructible.h>
@@ -32,4 +32,4 @@ concept movable = is_object_v<_Tp> && move_constructible<_Tp> && assignable_from
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CONCEPTS_MOVABLE_H
+#endif // _LIBCPP_CONCEPTS_MOVABLE_H

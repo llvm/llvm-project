@@ -6,8 +6,8 @@
 //
 //===---------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___FWD_VECTOR_H
-#define _LIBCPP___CXX03___FWD_VECTOR_H
+#ifndef _LIBCPP_CXX03_FWD_VECTOR_H
+#define _LIBCPP_CXX03_FWD_VECTOR_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__fwd/memory.h>
@@ -23,4 +23,4 @@ class _LIBCPP_TEMPLATE_VIS vector;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CXX03___FWD_VECTOR_H
+#endif // _LIBCPP_CXX03_FWD_VECTOR_H

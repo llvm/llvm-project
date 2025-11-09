@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___TYPE_TRAITS_IS_MEMBER_POINTER_H
-#define _LIBCPP___CXX03___TYPE_TRAITS_IS_MEMBER_POINTER_H
+#ifndef _LIBCPP_CXX03_TYPE_TRAITS_IS_MEMBER_POINTER_H
+#define _LIBCPP_CXX03_TYPE_TRAITS_IS_MEMBER_POINTER_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__type_traits/integral_constant.h>
@@ -29,4 +29,4 @@ struct _LIBCPP_TEMPLATE_VIS is_member_function_pointer : _BoolConstant<__is_memb
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CXX03___TYPE_TRAITS_IS_MEMBER_POINTER_H
+#endif // _LIBCPP_CXX03_TYPE_TRAITS_IS_MEMBER_POINTER_H

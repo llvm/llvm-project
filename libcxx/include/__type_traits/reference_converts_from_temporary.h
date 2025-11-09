@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_REFERENCE_CONVERTS_FROM_TEMPORARY_H
-#define _LIBCPP___TYPE_TRAITS_REFERENCE_CONVERTS_FROM_TEMPORARY_H
+#ifndef _LIBCPP_TYPE_TRAITS_REFERENCE_CONVERTS_FROM_TEMPORARY_H
+#define _LIBCPP_TYPE_TRAITS_REFERENCE_CONVERTS_FROM_TEMPORARY_H
 
 #include <__config>
 #include <__type_traits/integral_constant.h>
@@ -32,4 +32,4 @@ _LIBCPP_NO_SPECIALIZATIONS inline constexpr bool reference_converts_from_tempora
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_REFERENCE_CONVERTS_FROM_TEMPORARY_H
+#endif // _LIBCPP_TYPE_TRAITS_REFERENCE_CONVERTS_FROM_TEMPORARY_H

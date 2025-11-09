@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ITERATOR_DISTANCE_H
-#define _LIBCPP___ITERATOR_DISTANCE_H
+#ifndef _LIBCPP_ITERATOR_DISTANCE_H
+#define _LIBCPP_ITERATOR_DISTANCE_H
 
 #include <__algorithm/for_each_segment.h>
 #include <__concepts/same_as.h>
@@ -114,4 +114,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___ITERATOR_DISTANCE_H
+#endif // _LIBCPP_ITERATOR_DISTANCE_H

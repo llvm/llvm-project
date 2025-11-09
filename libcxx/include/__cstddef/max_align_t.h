@@ -6,8 +6,8 @@
 //
 //===---------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CSTDDEF_MAX_ALIGN_T_H
-#define _LIBCPP___CSTDDEF_MAX_ALIGN_T_H
+#ifndef _LIBCPP_CSTDDEF_MAX_ALIGN_T_H
+#define _LIBCPP_CSTDDEF_MAX_ALIGN_T_H
 
 #include <__config>
 #include <stddef.h>
@@ -24,4 +24,4 @@ using ::max_align_t _LIBCPP_USING_IF_EXISTS;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CSTDDEF_MAX_ALIGN_T_H
+#endif // _LIBCPP_CSTDDEF_MAX_ALIGN_T_H

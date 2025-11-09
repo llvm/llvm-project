@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FUNCTIONAL_POINTER_TO_BINARY_FUNCTION_H
-#define _LIBCPP___FUNCTIONAL_POINTER_TO_BINARY_FUNCTION_H
+#ifndef _LIBCPP_FUNCTIONAL_POINTER_TO_BINARY_FUNCTION_H
+#define _LIBCPP_FUNCTIONAL_POINTER_TO_BINARY_FUNCTION_H
 
 #include <__config>
 #include <__functional/binary_function.h>
@@ -40,4 +40,4 @@ ptr_fun(_Result (*__f)(_Arg1, _Arg2)) {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FUNCTIONAL_POINTER_TO_BINARY_FUNCTION_H
+#endif // _LIBCPP_FUNCTIONAL_POINTER_TO_BINARY_FUNCTION_H

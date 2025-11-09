@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_PARTITION_POINT_H
-#define _LIBCPP___ALGORITHM_PARTITION_POINT_H
+#ifndef _LIBCPP_ALGORITHM_PARTITION_POINT_H
+#define _LIBCPP_ALGORITHM_PARTITION_POINT_H
 
 #include <__algorithm/half_positive.h>
 #include <__config>
@@ -41,4 +41,4 @@ partition_point(_ForwardIterator __first, _ForwardIterator __last, _Predicate __
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ALGORITHM_PARTITION_POINT_H
+#endif // _LIBCPP_ALGORITHM_PARTITION_POINT_H

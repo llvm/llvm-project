@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___ATOMIC_ATOMIC_INIT_H
-#define _LIBCPP___CXX03___ATOMIC_ATOMIC_INIT_H
+#ifndef _LIBCPP_CXX03_ATOMIC_ATOMIC_INIT_H
+#define _LIBCPP_CXX03_ATOMIC_ATOMIC_INIT_H
 
 #include <__cxx03/__config>
 
@@ -18,4 +18,4 @@
 #define ATOMIC_FLAG_INIT {false}
 #define ATOMIC_VAR_INIT(__v) {__v}
 
-#endif // _LIBCPP___CXX03___ATOMIC_ATOMIC_INIT_H
+#endif // _LIBCPP_CXX03_ATOMIC_ATOMIC_INIT_H

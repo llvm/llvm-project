@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___UTILITY_REL_OPS_H
-#define _LIBCPP___CXX03___UTILITY_REL_OPS_H
+#ifndef _LIBCPP_CXX03_UTILITY_REL_OPS_H
+#define _LIBCPP_CXX03_UTILITY_REL_OPS_H
 
 #include <__cxx03/__config>
 
@@ -43,4 +43,4 @@ inline _LIBCPP_HIDE_FROM_ABI bool operator>=(const _Tp& __x, const _Tp& __y) {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CXX03___UTILITY_REL_OPS_H
+#endif // _LIBCPP_CXX03_UTILITY_REL_OPS_H

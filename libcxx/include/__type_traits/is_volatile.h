@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_IS_VOLATILE_H
-#define _LIBCPP___TYPE_TRAITS_IS_VOLATILE_H
+#ifndef _LIBCPP_TYPE_TRAITS_IS_VOLATILE_H
+#define _LIBCPP_TYPE_TRAITS_IS_VOLATILE_H
 
 #include <__config>
 #include <__type_traits/integral_constant.h>
@@ -28,4 +28,4 @@ _LIBCPP_NO_SPECIALIZATIONS inline constexpr bool is_volatile_v = __is_volatile(_
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_IS_VOLATILE_H
+#endif // _LIBCPP_TYPE_TRAITS_IS_VOLATILE_H

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___LOCALE_DIR_WBUFFER_CONVERT_H
-#define _LIBCPP___LOCALE_DIR_WBUFFER_CONVERT_H
+#ifndef _LIBCPP_LOCALE_DIR_WBUFFER_CONVERT_H
+#define _LIBCPP_LOCALE_DIR_WBUFFER_CONVERT_H
 
 #include <__algorithm/reverse.h>
 #include <__config>
@@ -427,4 +427,4 @@ _LIBCPP_POP_MACROS
 
 #endif // _LIBCPP_HAS_LOCALIZATION
 
-#endif // _LIBCPP___LOCALE_DIR_WBUFFER_CONVERT_H
+#endif // _LIBCPP_LOCALE_DIR_WBUFFER_CONVERT_H

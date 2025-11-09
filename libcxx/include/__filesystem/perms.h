@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FILESYSTEM_PERMS_H
-#define _LIBCPP___FILESYSTEM_PERMS_H
+#ifndef _LIBCPP_FILESYSTEM_PERMS_H
+#define _LIBCPP_FILESYSTEM_PERMS_H
 
 #include <__config>
 
@@ -77,4 +77,4 @@ _LIBCPP_END_NAMESPACE_FILESYSTEM
 
 #endif // _LIBCPP_STD_VER >= 17
 
-#endif // _LIBCPP___FILESYSTEM_PERMS_H
+#endif // _LIBCPP_FILESYSTEM_PERMS_H

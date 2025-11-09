@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FUNCTIONAL_OPERATIONS_H
-#define _LIBCPP___FUNCTIONAL_OPERATIONS_H
+#ifndef _LIBCPP_FUNCTIONAL_OPERATIONS_H
+#define _LIBCPP_FUNCTIONAL_OPERATIONS_H
 
 #include <__config>
 #include <__functional/binary_function.h>
@@ -566,4 +566,4 @@ struct logical_or<void> {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FUNCTIONAL_OPERATIONS_H
+#endif // _LIBCPP_FUNCTIONAL_OPERATIONS_H

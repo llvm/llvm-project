@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___CONFIGURATION_COMPILER_H
-#define _LIBCPP___CXX03___CONFIGURATION_COMPILER_H
+#ifndef _LIBCPP_CXX03_CONFIGURATION_COMPILER_H
+#define _LIBCPP_CXX03_CONFIGURATION_COMPILER_H
 
 #include <__cxx03/__configuration/config_site_shim.h>
 
@@ -48,4 +48,4 @@
 
 #endif
 
-#endif // _LIBCPP___CXX03___CONFIGURATION_COMPILER_H
+#endif // _LIBCPP_CXX03_CONFIGURATION_COMPILER_H

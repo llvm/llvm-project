@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FORMAT_FORMAT_FUNCTIONS
-#define _LIBCPP___FORMAT_FORMAT_FUNCTIONS
+#ifndef _LIBCPP_FORMAT_FORMAT_FUNCTIONS
+#define _LIBCPP_FORMAT_FORMAT_FUNCTIONS
 
 #include <__algorithm/clamp.h>
 #include <__algorithm/ranges_find_first_of.h>
@@ -719,4 +719,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___FORMAT_FORMAT_FUNCTIONS
+#endif // _LIBCPP_FORMAT_FORMAT_FUNCTIONS

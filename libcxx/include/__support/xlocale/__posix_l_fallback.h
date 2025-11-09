@@ -12,8 +12,8 @@
 // Android's bionic and Newlib).
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___SUPPORT_XLOCALE_POSIX_L_FALLBACK_H
-#define _LIBCPP___SUPPORT_XLOCALE_POSIX_L_FALLBACK_H
+#ifndef _LIBCPP_SUPPORT_XLOCALE_POSIX_L_FALLBACK_H
+#define _LIBCPP_SUPPORT_XLOCALE_POSIX_L_FALLBACK_H
 
 #include <__config>
 #include <ctype.h>
@@ -88,4 +88,4 @@ inline _LIBCPP_HIDE_FROM_ABI size_t wcsxfrm_l(wchar_t* __dest, const wchar_t* __
 }
 #endif // _LIBCPP_HAS_WIDE_CHARACTERS
 
-#endif // _LIBCPP___SUPPORT_XLOCALE_POSIX_L_FALLBACK_H
+#endif // _LIBCPP_SUPPORT_XLOCALE_POSIX_L_FALLBACK_H

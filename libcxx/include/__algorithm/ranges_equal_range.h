@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_RANGES_EQUAL_RANGE_H
-#define _LIBCPP___ALGORITHM_RANGES_EQUAL_RANGE_H
+#ifndef _LIBCPP_ALGORITHM_RANGES_EQUAL_RANGE_H
+#define _LIBCPP_ALGORITHM_RANGES_EQUAL_RANGE_H
 
 #include <__algorithm/equal_range.h>
 #include <__algorithm/iterator_operations.h>
@@ -73,4 +73,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___ALGORITHM_RANGES_EQUAL_RANGE_H
+#endif // _LIBCPP_ALGORITHM_RANGES_EQUAL_RANGE_H

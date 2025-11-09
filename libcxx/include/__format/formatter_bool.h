@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FORMAT_FORMATTER_BOOL_H
-#define _LIBCPP___FORMAT_FORMATTER_BOOL_H
+#ifndef _LIBCPP_FORMAT_FORMATTER_BOOL_H
+#define _LIBCPP_FORMAT_FORMATTER_BOOL_H
 
 #include <__algorithm/copy.h>
 #include <__assert>
@@ -77,4 +77,4 @@ inline constexpr bool enable_nonlocking_formatter_optimization<bool> = true;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FORMAT_FORMATTER_BOOL_H
+#endif // _LIBCPP_FORMAT_FORMATTER_BOOL_H

@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CONFIGURATION_AVAILABILITY_H
-#define _LIBCPP___CONFIGURATION_AVAILABILITY_H
+#ifndef _LIBCPP_CONFIGURATION_AVAILABILITY_H
+#define _LIBCPP_CONFIGURATION_AVAILABILITY_H
 
 #include <__configuration/compiler.h>
 #include <__configuration/language.h>
@@ -326,4 +326,4 @@
 #  define _LIBCPP_AVAILABILITY_INIT_PRIMARY_EXCEPTION
 #endif
 
-#endif // _LIBCPP___CONFIGURATION_AVAILABILITY_H
+#endif // _LIBCPP_CONFIGURATION_AVAILABILITY_H

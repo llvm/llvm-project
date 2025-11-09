@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ITERATOR_EMPTY_H
-#define _LIBCPP___ITERATOR_EMPTY_H
+#ifndef _LIBCPP_ITERATOR_EMPTY_H
+#define _LIBCPP_ITERATOR_EMPTY_H
 
 #include <__config>
 #include <initializer_list>
@@ -41,4 +41,4 @@ template <class _Ep>
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ITERATOR_EMPTY_H
+#endif // _LIBCPP_ITERATOR_EMPTY_H

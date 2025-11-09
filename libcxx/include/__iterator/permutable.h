@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ITERATOR_PERMUTABLE_H
-#define _LIBCPP___ITERATOR_PERMUTABLE_H
+#ifndef _LIBCPP_ITERATOR_PERMUTABLE_H
+#define _LIBCPP_ITERATOR_PERMUTABLE_H
 
 #include <__config>
 #include <__iterator/concepts.h>
@@ -31,4 +31,4 @@ concept permutable =
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ITERATOR_PERMUTABLE_H
+#endif // _LIBCPP_ITERATOR_PERMUTABLE_H

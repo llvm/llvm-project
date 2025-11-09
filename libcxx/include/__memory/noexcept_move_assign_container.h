@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___MEMORY_NOEXCEPT_MOVE_ASSIGN_CONTAINER_H
-#define _LIBCPP___MEMORY_NOEXCEPT_MOVE_ASSIGN_CONTAINER_H
+#ifndef _LIBCPP_MEMORY_NOEXCEPT_MOVE_ASSIGN_CONTAINER_H
+#define _LIBCPP_MEMORY_NOEXCEPT_MOVE_ASSIGN_CONTAINER_H
 
 #include <__config>
 #include <__memory/allocator_traits.h>
@@ -34,4 +34,4 @@ struct __noexcept_move_assign_container
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___MEMORY_NOEXCEPT_MOVE_ASSIGN_CONTAINER_H
+#endif // _LIBCPP_MEMORY_NOEXCEPT_MOVE_ASSIGN_CONTAINER_H

@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___RANGES_NON_PROPAGATING_CACHE_H
-#define _LIBCPP___RANGES_NON_PROPAGATING_CACHE_H
+#ifndef _LIBCPP_RANGES_NON_PROPAGATING_CACHE_H
+#define _LIBCPP_RANGES_NON_PROPAGATING_CACHE_H
 
 #include <__config>
 #include <__iterator/concepts.h>        // indirectly_readable
@@ -100,4 +100,4 @@ struct __empty_cache {};
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___RANGES_NON_PROPAGATING_CACHE_H
+#endif // _LIBCPP_RANGES_NON_PROPAGATING_CACHE_H

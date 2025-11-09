@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___PSTL_CPU_ALGOS_STABLE_SORT_H
-#define _LIBCPP___PSTL_CPU_ALGOS_STABLE_SORT_H
+#ifndef _LIBCPP_PSTL_CPU_ALGOS_STABLE_SORT_H
+#define _LIBCPP_PSTL_CPU_ALGOS_STABLE_SORT_H
 
 #include <__algorithm/stable_sort.h>
 #include <__config>
@@ -48,4 +48,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 17
 
-#endif // _LIBCPP___PSTL_CPU_ALGOS_STABLE_SORT_H
+#endif // _LIBCPP_PSTL_CPU_ALGOS_STABLE_SORT_H

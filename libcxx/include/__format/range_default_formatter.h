@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FORMAT_RANGE_DEFAULT_FORMATTER_H
-#define _LIBCPP___FORMAT_RANGE_DEFAULT_FORMATTER_H
+#ifndef _LIBCPP_FORMAT_RANGE_DEFAULT_FORMATTER_H
+#define _LIBCPP_FORMAT_RANGE_DEFAULT_FORMATTER_H
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -172,4 +172,4 @@ struct formatter<_Rp, _CharT> : __range_default_formatter<format_kind<_Rp>, _Rp,
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FORMAT_RANGE_DEFAULT_FORMATTER_H
+#endif // _LIBCPP_FORMAT_RANGE_DEFAULT_FORMATTER_H

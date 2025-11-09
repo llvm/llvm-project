@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_DECAY_H
-#define _LIBCPP___TYPE_TRAITS_DECAY_H
+#ifndef _LIBCPP_TYPE_TRAITS_DECAY_H
+#define _LIBCPP_TYPE_TRAITS_DECAY_H
 
 #include <__config>
 
@@ -37,4 +37,4 @@ using decay_t = __decay_t<_Tp>;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_DECAY_H
+#endif // _LIBCPP_TYPE_TRAITS_DECAY_H

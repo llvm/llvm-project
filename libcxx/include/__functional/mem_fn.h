@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FUNCTIONAL_MEM_FN_H
-#define _LIBCPP___FUNCTIONAL_MEM_FN_H
+#ifndef _LIBCPP_FUNCTIONAL_MEM_FN_H
+#define _LIBCPP_FUNCTIONAL_MEM_FN_H
 
 #include <__config>
 #include <__functional/binary_function.h>
@@ -49,4 +49,4 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __mem_fn<_Rp _Tp::*> 
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FUNCTIONAL_MEM_FN_H
+#endif // _LIBCPP_FUNCTIONAL_MEM_FN_H

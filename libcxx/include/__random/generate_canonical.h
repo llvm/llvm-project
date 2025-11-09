@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___RANDOM_GENERATE_CANONICAL_H
-#define _LIBCPP___RANDOM_GENERATE_CANONICAL_H
+#ifndef _LIBCPP_RANDOM_GENERATE_CANONICAL_H
+#define _LIBCPP_RANDOM_GENERATE_CANONICAL_H
 
 #include <__config>
 #include <__random/log2.h>
@@ -48,4 +48,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___RANDOM_GENERATE_CANONICAL_H
+#endif // _LIBCPP_RANDOM_GENERATE_CANONICAL_H

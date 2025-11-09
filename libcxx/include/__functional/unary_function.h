@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FUNCTIONAL_UNARY_FUNCTION_H
-#define _LIBCPP___FUNCTIONAL_UNARY_FUNCTION_H
+#ifndef _LIBCPP_FUNCTIONAL_UNARY_FUNCTION_H
+#define _LIBCPP_FUNCTIONAL_UNARY_FUNCTION_H
 
 #include <__config>
 
@@ -47,4 +47,4 @@ using __unary_function _LIBCPP_NODEBUG = __unary_function_keep_layout_base<_Arg,
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FUNCTIONAL_UNARY_FUNCTION_H
+#endif // _LIBCPP_FUNCTIONAL_UNARY_FUNCTION_H

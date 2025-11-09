@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___PSTL_CPU_ALGOS_MERGE_H
-#define _LIBCPP___PSTL_CPU_ALGOS_MERGE_H
+#ifndef _LIBCPP_PSTL_CPU_ALGOS_MERGE_H
+#define _LIBCPP_PSTL_CPU_ALGOS_MERGE_H
 
 #include <__algorithm/merge.h>
 #include <__assert>
@@ -86,4 +86,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___PSTL_CPU_ALGOS_MERGE_H
+#endif // _LIBCPP_PSTL_CPU_ALGOS_MERGE_H

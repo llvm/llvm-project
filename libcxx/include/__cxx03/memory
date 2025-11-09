@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03_MEMORY
-#define _LIBCPP___CXX03_MEMORY
+#ifndef _LIBCPP_CXX03_MEMORY
+#define _LIBCPP_CXX03_MEMORY
 
 // clang-format off
 
@@ -970,4 +970,4 @@ template<class Pointer = void, class Smart, class... Args>
 #  include <__cxx03/utility>
 #endif
 
-#endif // _LIBCPP___CXX03_MEMORY
+#endif // _LIBCPP_CXX03_MEMORY

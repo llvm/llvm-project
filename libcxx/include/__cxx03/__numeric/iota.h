@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___NUMERIC_IOTA_H
-#define _LIBCPP___CXX03___NUMERIC_IOTA_H
+#ifndef _LIBCPP_CXX03_NUMERIC_IOTA_H
+#define _LIBCPP_CXX03_NUMERIC_IOTA_H
 
 #include <__cxx03/__config>
 
@@ -26,4 +26,4 @@ _LIBCPP_HIDE_FROM_ABI void iota(_ForwardIterator __first, _ForwardIterator __las
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CXX03___NUMERIC_IOTA_H
+#endif // _LIBCPP_CXX03_NUMERIC_IOTA_H

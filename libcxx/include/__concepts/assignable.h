@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CONCEPTS_ASSIGNABLE_H
-#define _LIBCPP___CONCEPTS_ASSIGNABLE_H
+#ifndef _LIBCPP_CONCEPTS_ASSIGNABLE_H
+#define _LIBCPP_CONCEPTS_ASSIGNABLE_H
 
 #include <__concepts/common_reference_with.h>
 #include <__concepts/same_as.h>
@@ -38,4 +38,4 @@ concept assignable_from =
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CONCEPTS_ASSIGNABLE_H
+#endif // _LIBCPP_CONCEPTS_ASSIGNABLE_H

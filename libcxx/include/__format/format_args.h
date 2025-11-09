@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FORMAT_FORMAT_ARGS_H
-#define _LIBCPP___FORMAT_FORMAT_ARGS_H
+#ifndef _LIBCPP_FORMAT_FORMAT_ARGS_H
+#define _LIBCPP_FORMAT_FORMAT_ARGS_H
 
 #include <__config>
 #include <__cstddef/size_t.h>
@@ -75,4 +75,4 @@ basic_format_args(__format_arg_store<_Context, _Args...>) -> basic_format_args<_
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FORMAT_FORMAT_ARGS_H
+#endif // _LIBCPP_FORMAT_FORMAT_ARGS_H

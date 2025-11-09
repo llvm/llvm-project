@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___MATH_TRAITS_H
-#define _LIBCPP___MATH_TRAITS_H
+#ifndef _LIBCPP_MATH_TRAITS_H
+#define _LIBCPP_MATH_TRAITS_H
 
 #include <__config>
 #include <__type_traits/enable_if.h>
@@ -262,4 +262,4 @@ template <class _A1, class _A2>
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___MATH_TRAITS_H
+#endif // _LIBCPP_MATH_TRAITS_H

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ATOMIC_FENCE_H
-#define _LIBCPP___ATOMIC_FENCE_H
+#ifndef _LIBCPP_ATOMIC_FENCE_H
+#define _LIBCPP_ATOMIC_FENCE_H
 
 #include <__atomic/memory_order.h>
 #include <__atomic/support.h>
@@ -25,4 +25,4 @@ inline _LIBCPP_HIDE_FROM_ABI void atomic_signal_fence(memory_order __m) _NOEXCEP
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ATOMIC_FENCE_H
+#endif // _LIBCPP_ATOMIC_FENCE_H

@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FLAT_MAP_FLAT_MAP_H
-#define _LIBCPP___FLAT_MAP_FLAT_MAP_H
+#ifndef _LIBCPP_FLAT_MAP_FLAT_MAP_H
+#define _LIBCPP_FLAT_MAP_FLAT_MAP_H
 
 #include <__algorithm/lexicographical_compare_three_way.h>
 #include <__algorithm/lower_bound.h>
@@ -1264,4 +1264,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___FLAT_MAP_FLAT_MAP_H
+#endif // _LIBCPP_FLAT_MAP_FLAT_MAP_H

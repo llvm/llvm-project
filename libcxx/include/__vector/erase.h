@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___VECTOR_ERASE_H
-#define _LIBCPP___VECTOR_ERASE_H
+#ifndef _LIBCPP_VECTOR_ERASE_H
+#define _LIBCPP_VECTOR_ERASE_H
 
 #include <__algorithm/remove.h>
 #include <__algorithm/remove_if.h>
@@ -47,4 +47,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___VECTOR_ERASE_H
+#endif // _LIBCPP_VECTOR_ERASE_H

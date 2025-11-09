@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_RANGES_MAKE_HEAP_H
-#define _LIBCPP___ALGORITHM_RANGES_MAKE_HEAP_H
+#ifndef _LIBCPP_ALGORITHM_RANGES_MAKE_HEAP_H
+#define _LIBCPP_ALGORITHM_RANGES_MAKE_HEAP_H
 
 #include <__algorithm/iterator_operations.h>
 #include <__algorithm/make_heap.h>
@@ -78,4 +78,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___ALGORITHM_RANGES_MAKE_HEAP_H
+#endif // _LIBCPP_ALGORITHM_RANGES_MAKE_HEAP_H

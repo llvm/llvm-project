@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_STABLE_SORT_H
-#define _LIBCPP___ALGORITHM_STABLE_SORT_H
+#ifndef _LIBCPP_ALGORITHM_STABLE_SORT_H
+#define _LIBCPP_ALGORITHM_STABLE_SORT_H
 
 #include <__algorithm/comp.h>
 #include <__algorithm/comp_ref_type.h>
@@ -320,4 +320,4 @@ stable_sort(_RandomAccessIterator __first, _RandomAccessIterator __last) {
 _LIBCPP_END_NAMESPACE_STD
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___ALGORITHM_STABLE_SORT_H
+#endif // _LIBCPP_ALGORITHM_STABLE_SORT_H

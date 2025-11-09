@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_IS_OBJECT_H
-#define _LIBCPP___TYPE_TRAITS_IS_OBJECT_H
+#ifndef _LIBCPP_TYPE_TRAITS_IS_OBJECT_H
+#define _LIBCPP_TYPE_TRAITS_IS_OBJECT_H
 
 #include <__config>
 #include <__type_traits/integral_constant.h>
@@ -28,4 +28,4 @@ _LIBCPP_NO_SPECIALIZATIONS inline constexpr bool is_object_v = __is_object(_Tp);
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_IS_OBJECT_H
+#endif // _LIBCPP_TYPE_TRAITS_IS_OBJECT_H

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___TUPLE_MAKE_TUPLE_TYPES_H
-#define _LIBCPP___CXX03___TUPLE_MAKE_TUPLE_TYPES_H
+#ifndef _LIBCPP_CXX03_TUPLE_MAKE_TUPLE_TYPES_H
+#define _LIBCPP_CXX03_TUPLE_MAKE_TUPLE_TYPES_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__fwd/array.h>
@@ -25,4 +25,4 @@
 #  pragma GCC system_header
 #endif
 
-#endif // _LIBCPP___CXX03___TUPLE_MAKE_TUPLE_TYPES_H
+#endif // _LIBCPP_CXX03_TUPLE_MAKE_TUPLE_TYPES_H

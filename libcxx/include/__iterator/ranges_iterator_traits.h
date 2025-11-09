@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ITERATOR_RANGES_ITERATOR_TRAITS_H
-#define _LIBCPP___ITERATOR_RANGES_ITERATOR_TRAITS_H
+#ifndef _LIBCPP_ITERATOR_RANGES_ITERATOR_TRAITS_H
+#define _LIBCPP_ITERATOR_RANGES_ITERATOR_TRAITS_H
 
 #include <__config>
 #include <__fwd/pair.h>
@@ -37,4 +37,4 @@ using __range_to_alloc_type _LIBCPP_NODEBUG =
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ITERATOR_RANGES_ITERATOR_TRAITS_H
+#endif // _LIBCPP_ITERATOR_RANGES_ITERATOR_TRAITS_H

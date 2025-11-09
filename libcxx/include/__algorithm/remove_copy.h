@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_REMOVE_COPY_H
-#define _LIBCPP___ALGORITHM_REMOVE_COPY_H
+#ifndef _LIBCPP_ALGORITHM_REMOVE_COPY_H
+#define _LIBCPP_ALGORITHM_REMOVE_COPY_H
 
 #include <__config>
 
@@ -31,4 +31,4 @@ remove_copy(_InputIterator __first, _InputIterator __last, _OutputIterator __res
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ALGORITHM_REMOVE_COPY_H
+#endif // _LIBCPP_ALGORITHM_REMOVE_COPY_H

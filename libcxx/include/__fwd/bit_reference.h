@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FWD_BIT_REFERENCE_H
-#define _LIBCPP___FWD_BIT_REFERENCE_H
+#ifndef _LIBCPP_FWD_BIT_REFERENCE_H
+#define _LIBCPP_FWD_BIT_REFERENCE_H
 
 #include <__config>
 
@@ -41,4 +41,4 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _StorageType __middle_mask(u
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FWD_BIT_REFERENCE_H
+#endif // _LIBCPP_FWD_BIT_REFERENCE_H

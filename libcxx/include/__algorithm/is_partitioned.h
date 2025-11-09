@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_IS_PARTITIONED_H
-#define _LIBCPP___ALGORITHM_IS_PARTITIONED_H
+#ifndef _LIBCPP_ALGORITHM_IS_PARTITIONED_H
+#define _LIBCPP_ALGORITHM_IS_PARTITIONED_H
 
 #include <__config>
 
@@ -34,4 +34,4 @@ is_partitioned(_InputIterator __first, _InputIterator __last, _Predicate __pred)
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ALGORITHM_IS_PARTITIONED_H
+#endif // _LIBCPP_ALGORITHM_IS_PARTITIONED_H

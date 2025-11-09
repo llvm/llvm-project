@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___RANDOM_SEED_SEQ_H
-#define _LIBCPP___RANDOM_SEED_SEQ_H
+#ifndef _LIBCPP_RANDOM_SEED_SEQ_H
+#define _LIBCPP_RANDOM_SEED_SEQ_H
 
 #include <__algorithm/copy.h>
 #include <__algorithm/fill.h>
@@ -165,4 +165,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___RANDOM_SEED_SEQ_H
+#endif // _LIBCPP_RANDOM_SEED_SEQ_H

@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FILESYSTEM_OPERATIONS_H
-#define _LIBCPP___FILESYSTEM_OPERATIONS_H
+#ifndef _LIBCPP_FILESYSTEM_OPERATIONS_H
+#define _LIBCPP_FILESYSTEM_OPERATIONS_H
 
 #include <__chrono/time_point.h>
 #include <__config>
@@ -303,4 +303,4 @@ _LIBCPP_END_NAMESPACE_FILESYSTEM
 
 #endif // _LIBCPP_STD_VER >= 17 && _LIBCPP_HAS_FILESYSTEM
 
-#endif // _LIBCPP___FILESYSTEM_OPERATIONS_H
+#endif // _LIBCPP_FILESYSTEM_OPERATIONS_H

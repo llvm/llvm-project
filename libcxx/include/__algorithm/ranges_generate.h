@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_RANGES_GENERATE_H
-#define _LIBCPP___ALGORITHM_RANGES_GENERATE_H
+#ifndef _LIBCPP_ALGORITHM_RANGES_GENERATE_H
+#define _LIBCPP_ALGORITHM_RANGES_GENERATE_H
 
 #include <__concepts/constructible.h>
 #include <__concepts/invocable.h>
@@ -66,4 +66,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___ALGORITHM_RANGES_GENERATE_H
+#endif // _LIBCPP_ALGORITHM_RANGES_GENERATE_H

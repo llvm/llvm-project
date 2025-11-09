@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_IS_STANDARD_LAYOUT_H
-#define _LIBCPP___TYPE_TRAITS_IS_STANDARD_LAYOUT_H
+#ifndef _LIBCPP_TYPE_TRAITS_IS_STANDARD_LAYOUT_H
+#define _LIBCPP_TYPE_TRAITS_IS_STANDARD_LAYOUT_H
 
 #include <__config>
 #include <__type_traits/integral_constant.h>
@@ -28,4 +28,4 @@ _LIBCPP_NO_SPECIALIZATIONS inline constexpr bool is_standard_layout_v = __is_sta
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_IS_STANDARD_LAYOUT_H
+#endif // _LIBCPP_TYPE_TRAITS_IS_STANDARD_LAYOUT_H

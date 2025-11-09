@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ITERATOR_CPP17_ITERATOR_CONCEPTS_H
-#define _LIBCPP___ITERATOR_CPP17_ITERATOR_CONCEPTS_H
+#ifndef _LIBCPP_ITERATOR_CPP17_ITERATOR_CONCEPTS_H
+#define _LIBCPP_ITERATOR_CPP17_ITERATOR_CONCEPTS_H
 
 #include <__concepts/boolean_testable.h>
 #include <__concepts/convertible_to.h>
@@ -188,4 +188,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___ITERATOR_CPP17_ITERATOR_CONCEPTS_H
+#endif // _LIBCPP_ITERATOR_CPP17_ITERATOR_CONCEPTS_H

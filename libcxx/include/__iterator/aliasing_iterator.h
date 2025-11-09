@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ITERATOR_ALIASING_ITERATOR_H
-#define _LIBCPP___ITERATOR_ALIASING_ITERATOR_H
+#ifndef _LIBCPP_ITERATOR_ALIASING_ITERATOR_H
+#define _LIBCPP_ITERATOR_ALIASING_ITERATOR_H
 
 #include <__config>
 #include <__cstddef/ptrdiff_t.h>
@@ -127,4 +127,4 @@ using __aliasing_iterator _LIBCPP_NODEBUG = typename __aliasing_iterator_wrapper
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ITERATOR_ALIASING_ITERATOR_H
+#endif // _LIBCPP_ITERATOR_ALIASING_ITERATOR_H

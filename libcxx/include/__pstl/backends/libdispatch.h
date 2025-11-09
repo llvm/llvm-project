@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___PSTL_BACKENDS_LIBDISPATCH_H
-#define _LIBCPP___PSTL_BACKENDS_LIBDISPATCH_H
+#ifndef _LIBCPP_PSTL_BACKENDS_LIBDISPATCH_H
+#define _LIBCPP_PSTL_BACKENDS_LIBDISPATCH_H
 
 #include <__algorithm/inplace_merge.h>
 #include <__algorithm/lower_bound.h>
@@ -399,4 +399,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___PSTL_BACKENDS_LIBDISPATCH_H
+#endif // _LIBCPP_PSTL_BACKENDS_LIBDISPATCH_H

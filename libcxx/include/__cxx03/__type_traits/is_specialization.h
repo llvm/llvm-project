@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___TYPE_TRAITS_IS_SPECIALIZATION
-#define _LIBCPP___CXX03___TYPE_TRAITS_IS_SPECIALIZATION
+#ifndef _LIBCPP_CXX03_TYPE_TRAITS_IS_SPECIALIZATION
+#define _LIBCPP_CXX03_TYPE_TRAITS_IS_SPECIALIZATION
 
 // This contains parts of P2098R1 but is based on MSVC STL's implementation.
 //
@@ -32,4 +32,4 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CXX03___TYPE_TRAITS_IS_SPECIALIZATION
+#endif // _LIBCPP_CXX03_TYPE_TRAITS_IS_SPECIALIZATION

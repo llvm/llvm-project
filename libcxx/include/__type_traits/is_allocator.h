@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_IS_ALLOCATOR_H
-#define _LIBCPP___TYPE_IS_ALLOCATOR_H
+#ifndef _LIBCPP_TYPE_IS_ALLOCATOR_H
+#define _LIBCPP_TYPE_IS_ALLOCATOR_H
 
 #include <__config>
 #include <__cstddef/size_t.h>
@@ -30,4 +30,4 @@ inline const bool __is_allocator_v<_Alloc,
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_IS_ALLOCATOR_H
+#endif // _LIBCPP_TYPE_IS_ALLOCATOR_H

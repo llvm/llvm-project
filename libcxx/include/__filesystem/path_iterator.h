@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FILESYSTEM_PATH_ITERATOR_H
-#define _LIBCPP___FILESYSTEM_PATH_ITERATOR_H
+#ifndef _LIBCPP_FILESYSTEM_PATH_ITERATOR_H
+#define _LIBCPP_FILESYSTEM_PATH_ITERATOR_H
 
 #include <__assert>
 #include <__config>
@@ -107,4 +107,4 @@ _LIBCPP_END_NAMESPACE_FILESYSTEM
 
 #endif // _LIBCPP_STD_VER >= 17
 
-#endif // _LIBCPP___FILESYSTEM_PATH_ITERATOR_H
+#endif // _LIBCPP_FILESYSTEM_PATH_ITERATOR_H

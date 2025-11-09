@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FWD_MEMORY_RESOURCE_H
-#define _LIBCPP___FWD_MEMORY_RESOURCE_H
+#ifndef _LIBCPP_FWD_MEMORY_RESOURCE_H
+#define _LIBCPP_FWD_MEMORY_RESOURCE_H
 
 #include <__config>
 
@@ -28,4 +28,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 17
 
-#endif // _LIBCPP___FWD_MEMORY_RESOURCE_H
+#endif // _LIBCPP_FWD_MEMORY_RESOURCE_H

@@ -6,8 +6,8 @@
 //
 //===---------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CSTDDEF_SIZE_T_H
-#define _LIBCPP___CSTDDEF_SIZE_T_H
+#ifndef _LIBCPP_CSTDDEF_SIZE_T_H
+#define _LIBCPP_CSTDDEF_SIZE_T_H
 
 #include <__config>
 
@@ -21,4 +21,4 @@ using size_t = decltype(sizeof(int));
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CSTDDEF_SIZE_T_H
+#endif // _LIBCPP_CSTDDEF_SIZE_T_H

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___ALGORITHM_FOR_EACH_SEGMENT_H
-#define _LIBCPP___CXX03___ALGORITHM_FOR_EACH_SEGMENT_H
+#ifndef _LIBCPP_CXX03_ALGORITHM_FOR_EACH_SEGMENT_H
+#define _LIBCPP_CXX03_ALGORITHM_FOR_EACH_SEGMENT_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__iterator/segmented_iterator.h>
@@ -49,4 +49,4 @@ _LIBCPP_HIDE_FROM_ABI void __for_each_segment(_SegmentedIterator __first, _Segme
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CXX03___ALGORITHM_FOR_EACH_SEGMENT_H
+#endif // _LIBCPP_CXX03_ALGORITHM_FOR_EACH_SEGMENT_H

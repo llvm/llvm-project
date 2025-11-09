@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___TUPLE_TUPLE_LIKE_NO_SUBRANGE_H
-#define _LIBCPP___CXX03___TUPLE_TUPLE_LIKE_NO_SUBRANGE_H
+#ifndef _LIBCPP_CXX03_TUPLE_TUPLE_LIKE_NO_SUBRANGE_H
+#define _LIBCPP_CXX03_TUPLE_TUPLE_LIKE_NO_SUBRANGE_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__fwd/array.h>
@@ -26,4 +26,4 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CXX03___TUPLE_TUPLE_LIKE_NO_SUBRANGE_H
+#endif // _LIBCPP_CXX03_TUPLE_TUPLE_LIKE_NO_SUBRANGE_H

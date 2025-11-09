@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___LOCALE_DIR_MESSAGES_H
-#define _LIBCPP___LOCALE_DIR_MESSAGES_H
+#ifndef _LIBCPP_LOCALE_DIR_MESSAGES_H
+#define _LIBCPP_LOCALE_DIR_MESSAGES_H
 
 #include <__config>
 #include <__iterator/back_insert_iterator.h>
@@ -140,4 +140,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_HAS_LOCALIZATION
 
-#endif // _LIBCPP___LOCALE_DIR_MESSAGES_H
+#endif // _LIBCPP_LOCALE_DIR_MESSAGES_H

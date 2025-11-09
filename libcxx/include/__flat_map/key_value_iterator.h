@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FLAT_MAP_KEY_VALUE_ITERATOR_H
-#define _LIBCPP___FLAT_MAP_KEY_VALUE_ITERATOR_H
+#ifndef _LIBCPP_FLAT_MAP_KEY_VALUE_ITERATOR_H
+#define _LIBCPP_FLAT_MAP_KEY_VALUE_ITERATOR_H
 
 #include <__compare/three_way_comparable.h>
 #include <__concepts/convertible_to.h>
@@ -214,4 +214,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___FLAT_MAP_KEY_VALUE_ITERATOR_H
+#endif // _LIBCPP_FLAT_MAP_KEY_VALUE_ITERATOR_H

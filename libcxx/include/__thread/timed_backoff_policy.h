@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___THREAD_TIMED_BACKOFF_POLICY_H
-#define _LIBCPP___THREAD_TIMED_BACKOFF_POLICY_H
+#ifndef _LIBCPP_THREAD_TIMED_BACKOFF_POLICY_H
+#define _LIBCPP_THREAD_TIMED_BACKOFF_POLICY_H
 
 #include <__config>
 
@@ -41,4 +41,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_HAS_THREADS
 
-#endif // _LIBCPP___THREAD_TIMED_BACKOFF_POLICY_H
+#endif // _LIBCPP_THREAD_TIMED_BACKOFF_POLICY_H

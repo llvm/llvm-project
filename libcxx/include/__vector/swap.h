@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___VECTOR_SWAP_H
-#define _LIBCPP___VECTOR_SWAP_H
+#ifndef _LIBCPP_VECTOR_SWAP_H
+#define _LIBCPP_VECTOR_SWAP_H
 
 #include <__config>
 #include <__fwd/vector.h>
@@ -26,4 +26,4 @@ swap(vector<_Tp, _Allocator>& __x, vector<_Tp, _Allocator>& __y) _NOEXCEPT_(_NOE
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___VECTOR_SWAP_H
+#endif // _LIBCPP_VECTOR_SWAP_H

@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CHRONO_FILE_CLOCK_H
-#define _LIBCPP___CHRONO_FILE_CLOCK_H
+#ifndef _LIBCPP_CHRONO_FILE_CLOCK_H
+#define _LIBCPP_CHRONO_FILE_CLOCK_H
 
 #include <__chrono/duration.h>
 #include <__chrono/system_clock.h>
@@ -77,4 +77,4 @@ struct _FilesystemClock {
 _LIBCPP_END_NAMESPACE_FILESYSTEM
 #endif // !_LIBCPP_CXX03_LANG
 
-#endif // _LIBCPP___CHRONO_FILE_CLOCK_H
+#endif // _LIBCPP_CHRONO_FILE_CLOCK_H

@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___LOCALE
-#define _LIBCPP___LOCALE
+#ifndef _LIBCPP_LOCALE
+#define _LIBCPP_LOCALE
 
 #include <__config>
 
@@ -1505,4 +1505,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_HAS_LOCALIZATION
 
-#endif // _LIBCPP___LOCALE
+#endif // _LIBCPP_LOCALE

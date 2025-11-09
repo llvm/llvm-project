@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_REMOVE_CONST_H
-#define _LIBCPP___TYPE_TRAITS_REMOVE_CONST_H
+#ifndef _LIBCPP_TYPE_TRAITS_REMOVE_CONST_H
+#define _LIBCPP_TYPE_TRAITS_REMOVE_CONST_H
 
 #include <__config>
 
@@ -46,4 +46,4 @@ using remove_const_t = __remove_const_t<_Tp>;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_REMOVE_CONST_H
+#endif // _LIBCPP_TYPE_TRAITS_REMOVE_CONST_H

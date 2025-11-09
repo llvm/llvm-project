@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___MEMORY_USES_ALLOCATOR_H
-#define _LIBCPP___CXX03___MEMORY_USES_ALLOCATOR_H
+#ifndef _LIBCPP_CXX03_MEMORY_USES_ALLOCATOR_H
+#define _LIBCPP_CXX03_MEMORY_USES_ALLOCATOR_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__type_traits/is_convertible.h>
@@ -44,4 +44,4 @@ struct _LIBCPP_TEMPLATE_VIS uses_allocator : public __uses_allocator<_Tp, _Alloc
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CXX03___MEMORY_USES_ALLOCATOR_H
+#endif // _LIBCPP_CXX03_MEMORY_USES_ALLOCATOR_H

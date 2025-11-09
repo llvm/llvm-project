@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___TYPE_TRAITS_IS_CONSTANT_EVALUATED_H
-#define _LIBCPP___CXX03___TYPE_TRAITS_IS_CONSTANT_EVALUATED_H
+#ifndef _LIBCPP_CXX03_TYPE_TRAITS_IS_CONSTANT_EVALUATED_H
+#define _LIBCPP_CXX03_TYPE_TRAITS_IS_CONSTANT_EVALUATED_H
 
 #include <__cxx03/__config>
 
@@ -23,4 +23,4 @@ _LIBCPP_HIDE_FROM_ABI inline bool __libcpp_is_constant_evaluated() _NOEXCEPT {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CXX03___TYPE_TRAITS_IS_CONSTANT_EVALUATED_H
+#endif // _LIBCPP_CXX03_TYPE_TRAITS_IS_CONSTANT_EVALUATED_H

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___UTILITY_DEFAULT_THREE_WAY_COMPARATOR_H
-#define _LIBCPP___UTILITY_DEFAULT_THREE_WAY_COMPARATOR_H
+#ifndef _LIBCPP_UTILITY_DEFAULT_THREE_WAY_COMPARATOR_H
+#define _LIBCPP_UTILITY_DEFAULT_THREE_WAY_COMPARATOR_H
 
 #include <__config>
 #include <__type_traits/enable_if.h>
@@ -67,4 +67,4 @@ struct __has_default_three_way_comparator<_LHS, _RHS, sizeof(__default_three_way
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___UTILITY_DEFAULT_THREE_WAY_COMPARATOR_H
+#endif // _LIBCPP_UTILITY_DEFAULT_THREE_WAY_COMPARATOR_H

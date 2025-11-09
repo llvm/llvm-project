@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_COPY_MOVE_COMMON_H
-#define _LIBCPP___ALGORITHM_COPY_MOVE_COMMON_H
+#ifndef _LIBCPP_ALGORITHM_COPY_MOVE_COMMON_H
+#define _LIBCPP_ALGORITHM_COPY_MOVE_COMMON_H
 
 #include <__algorithm/unwrap_iter.h>
 #include <__algorithm/unwrap_range.h>
@@ -110,4 +110,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___ALGORITHM_COPY_MOVE_COMMON_H
+#endif // _LIBCPP_ALGORITHM_COPY_MOVE_COMMON_H

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___TYPE_TRAITS_ENABLE_IF_H
-#define _LIBCPP___CXX03___TYPE_TRAITS_ENABLE_IF_H
+#ifndef _LIBCPP_CXX03_TYPE_TRAITS_ENABLE_IF_H
+#define _LIBCPP_CXX03_TYPE_TRAITS_ENABLE_IF_H
 
 #include <__cxx03/__config>
 
@@ -29,4 +29,4 @@ using __enable_if_t _LIBCPP_NODEBUG = typename enable_if<_Bp, _Tp>::type;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CXX03___TYPE_TRAITS_ENABLE_IF_H
+#endif // _LIBCPP_CXX03_TYPE_TRAITS_ENABLE_IF_H

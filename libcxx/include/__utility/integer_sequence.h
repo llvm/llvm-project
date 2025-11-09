@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___UTILITY_INTEGER_SEQUENCE_H
-#define _LIBCPP___UTILITY_INTEGER_SEQUENCE_H
+#ifndef _LIBCPP_UTILITY_INTEGER_SEQUENCE_H
+#define _LIBCPP_UTILITY_INTEGER_SEQUENCE_H
 
 #include <__config>
 #include <__cstddef/size_t.h>
@@ -73,4 +73,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_CXX03_LANG
 
-#endif // _LIBCPP___UTILITY_INTEGER_SEQUENCE_H
+#endif // _LIBCPP_UTILITY_INTEGER_SEQUENCE_H

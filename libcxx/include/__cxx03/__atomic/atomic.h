@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___ATOMIC_ATOMIC_H
-#define _LIBCPP___CXX03___ATOMIC_ATOMIC_H
+#ifndef _LIBCPP_CXX03_ATOMIC_ATOMIC_H
+#define _LIBCPP_CXX03_ATOMIC_ATOMIC_H
 
 #include <__cxx03/__atomic/atomic_base.h>
 #include <__cxx03/__atomic/check_memory_order.h>
@@ -481,4 +481,4 @@ atomic_fetch_xor_explicit(atomic<_Tp>* __o, typename atomic<_Tp>::value_type __o
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CXX03___ATOMIC_ATOMIC_H
+#endif // _LIBCPP_CXX03_ATOMIC_ATOMIC_H

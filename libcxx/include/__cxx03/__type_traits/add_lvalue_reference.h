@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___TYPE_TRAITS_ADD_LVALUE_REFERENCE_H
-#define _LIBCPP___CXX03___TYPE_TRAITS_ADD_LVALUE_REFERENCE_H
+#ifndef _LIBCPP_CXX03_TYPE_TRAITS_ADD_LVALUE_REFERENCE_H
+#define _LIBCPP_CXX03_TYPE_TRAITS_ADD_LVALUE_REFERENCE_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__type_traits/is_referenceable.h>
@@ -46,4 +46,4 @@ struct add_lvalue_reference {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CXX03___TYPE_TRAITS_ADD_LVALUE_REFERENCE_H
+#endif // _LIBCPP_CXX03_TYPE_TRAITS_ADD_LVALUE_REFERENCE_H

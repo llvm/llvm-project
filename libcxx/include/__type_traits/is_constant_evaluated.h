@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_IS_CONSTANT_EVALUATED_H
-#define _LIBCPP___TYPE_TRAITS_IS_CONSTANT_EVALUATED_H
+#ifndef _LIBCPP_TYPE_TRAITS_IS_CONSTANT_EVALUATED_H
+#define _LIBCPP_TYPE_TRAITS_IS_CONSTANT_EVALUATED_H
 
 #include <__config>
 
@@ -29,4 +29,4 @@ _LIBCPP_HIDE_FROM_ABI inline _LIBCPP_CONSTEXPR bool __libcpp_is_constant_evaluat
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_IS_CONSTANT_EVALUATED_H
+#endif // _LIBCPP_TYPE_TRAITS_IS_CONSTANT_EVALUATED_H

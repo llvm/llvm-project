@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_FOR_EACH_N_SEGMENT_H
-#define _LIBCPP___ALGORITHM_FOR_EACH_N_SEGMENT_H
+#ifndef _LIBCPP_ALGORITHM_FOR_EACH_N_SEGMENT_H
+#define _LIBCPP_ALGORITHM_FOR_EACH_N_SEGMENT_H
 
 #include <__config>
 #include <__iterator/iterator_traits.h>
@@ -60,4 +60,4 @@ __for_each_n_segment(_SegmentedIterator __first, _Size __orig_n, _Functor __func
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ALGORITHM_FOR_EACH_N_SEGMENT_H
+#endif // _LIBCPP_ALGORITHM_FOR_EACH_N_SEGMENT_H

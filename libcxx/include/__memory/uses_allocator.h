@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___MEMORY_USES_ALLOCATOR_H
-#define _LIBCPP___MEMORY_USES_ALLOCATOR_H
+#ifndef _LIBCPP_MEMORY_USES_ALLOCATOR_H
+#define _LIBCPP_MEMORY_USES_ALLOCATOR_H
 
 #include <__config>
 #include <__type_traits/integral_constant.h>
@@ -49,4 +49,4 @@ inline constexpr bool uses_allocator_v = uses_allocator<_Tp, _Alloc>::value;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___MEMORY_USES_ALLOCATOR_H
+#endif // _LIBCPP_MEMORY_USES_ALLOCATOR_H

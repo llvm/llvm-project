@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___LOCALE_DIR_SCAN_KEYWORD_H
-#define _LIBCPP___LOCALE_DIR_SCAN_KEYWORD_H
+#ifndef _LIBCPP_LOCALE_DIR_SCAN_KEYWORD_H
+#define _LIBCPP_LOCALE_DIR_SCAN_KEYWORD_H
 
 #include <__config>
 #include <__memory/unique_ptr.h>
@@ -140,4 +140,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_HAS_LOCALIZATION
 
-#endif // _LIBCPP___LOCALE_DIR_SCAN_KEYWORD_H
+#endif // _LIBCPP_LOCALE_DIR_SCAN_KEYWORD_H

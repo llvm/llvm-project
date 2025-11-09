@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___ALGORITHM_FOR_EACH_H
-#define _LIBCPP___CXX03___ALGORITHM_FOR_EACH_H
+#ifndef _LIBCPP_CXX03_ALGORITHM_FOR_EACH_H
+#define _LIBCPP_CXX03_ALGORITHM_FOR_EACH_H
 
 #include <__cxx03/__algorithm/for_each_segment.h>
 #include <__cxx03/__config>
@@ -30,4 +30,4 @@ _LIBCPP_HIDE_FROM_ABI _Function for_each(_InputIterator __first, _InputIterator 
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CXX03___ALGORITHM_FOR_EACH_H
+#endif // _LIBCPP_CXX03_ALGORITHM_FOR_EACH_H

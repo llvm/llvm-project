@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FORMAT_FORMATTER_POINTER_H
-#define _LIBCPP___FORMAT_FORMATTER_POINTER_H
+#ifndef _LIBCPP_FORMAT_FORMATTER_POINTER_H
+#define _LIBCPP_FORMAT_FORMATTER_POINTER_H
 
 #include <__config>
 #include <__cstddef/nullptr_t.h>
@@ -77,4 +77,4 @@ inline constexpr bool enable_nonlocking_formatter_optimization<const void*> = tr
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FORMAT_FORMATTER_POINTER_H
+#endif // _LIBCPP_FORMAT_FORMATTER_POINTER_H

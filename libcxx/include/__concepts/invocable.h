@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CONCEPTS_INVOCABLE_H
-#define _LIBCPP___CONCEPTS_INVOCABLE_H
+#ifndef _LIBCPP_CONCEPTS_INVOCABLE_H
+#define _LIBCPP_CONCEPTS_INVOCABLE_H
 
 #include <__config>
 #include <__functional/invoke.h>
@@ -37,4 +37,4 @@ concept regular_invocable = invocable<_Fn, _Args...>;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CONCEPTS_INVOCABLE_H
+#endif // _LIBCPP_CONCEPTS_INVOCABLE_H

@@ -6,8 +6,8 @@
 //
 //===---------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FWD_VARIANT_H
-#define _LIBCPP___FWD_VARIANT_H
+#ifndef _LIBCPP_FWD_VARIANT_H
+#define _LIBCPP_FWD_VARIANT_H
 
 #include <__config>
 #include <__cstddef/size_t.h>
@@ -65,4 +65,4 @@ _LIBCPP_HIDE_FROM_ABI constexpr const _Tp&& get(const variant<_Types...>&&);
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FWD_VARIANT_H
+#endif // _LIBCPP_FWD_VARIANT_H

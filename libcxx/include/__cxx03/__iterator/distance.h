@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___ITERATOR_DISTANCE_H
-#define _LIBCPP___CXX03___ITERATOR_DISTANCE_H
+#ifndef _LIBCPP_CXX03_ITERATOR_DISTANCE_H
+#define _LIBCPP_CXX03_ITERATOR_DISTANCE_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__iterator/iterator_traits.h>
@@ -44,4 +44,4 @@ distance(_InputIter __first, _InputIter __last) {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CXX03___ITERATOR_DISTANCE_H
+#endif // _LIBCPP_CXX03_ITERATOR_DISTANCE_H

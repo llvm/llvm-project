@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03_VECTOR
-#define _LIBCPP___CXX03_VECTOR
+#ifndef _LIBCPP_CXX03_VECTOR
+#define _LIBCPP_CXX03_VECTOR
 
 // clang-format off
 
@@ -2451,4 +2451,4 @@ _LIBCPP_POP_MACROS
 #  include <__cxx03/utility>
 #endif
 
-#endif // _LIBCPP___CXX03_VECTOR
+#endif // _LIBCPP_CXX03_VECTOR

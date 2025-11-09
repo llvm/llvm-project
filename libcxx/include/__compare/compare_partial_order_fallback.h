@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___COMPARE_COMPARE_PARTIAL_ORDER_FALLBACK
-#define _LIBCPP___COMPARE_COMPARE_PARTIAL_ORDER_FALLBACK
+#ifndef _LIBCPP_COMPARE_COMPARE_PARTIAL_ORDER_FALLBACK
+#define _LIBCPP_COMPARE_COMPARE_PARTIAL_ORDER_FALLBACK
 
 #include <__compare/ordering.h>
 #include <__compare/partial_order.h>
@@ -72,4 +72,4 @@ inline constexpr auto compare_partial_order_fallback = __compare_partial_order_f
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___COMPARE_COMPARE_PARTIAL_ORDER_FALLBACK
+#endif // _LIBCPP_COMPARE_COMPARE_PARTIAL_ORDER_FALLBACK

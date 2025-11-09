@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___COROUTINE_NOOP_COROUTINE_HANDLE_H
-#define _LIBCPP___COROUTINE_NOOP_COROUTINE_HANDLE_H
+#ifndef _LIBCPP_COROUTINE_NOOP_COROUTINE_HANDLE_H
+#define _LIBCPP_COROUTINE_NOOP_COROUTINE_HANDLE_H
 
 #include <__config>
 #include <__coroutine/coroutine_handle.h>
@@ -92,4 +92,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 20
 
-#endif // _LIBCPP___COROUTINE_NOOP_COROUTINE_HANDLE_H
+#endif // _LIBCPP_COROUTINE_NOOP_COROUTINE_HANDLE_H

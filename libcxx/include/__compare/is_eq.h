@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___COMPARE_IS_EQ_H
-#define _LIBCPP___COMPARE_IS_EQ_H
+#ifndef _LIBCPP_COMPARE_IS_EQ_H
+#define _LIBCPP_COMPARE_IS_EQ_H
 
 #include <__compare/ordering.h>
 #include <__config>
@@ -31,4 +31,4 @@ _LIBCPP_HIDE_FROM_ABI inline constexpr bool is_gteq(partial_ordering __c) noexce
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___COMPARE_IS_EQ_H
+#endif // _LIBCPP_COMPARE_IS_EQ_H

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___UTILITY_NO_DESTROY_H
-#define _LIBCPP___UTILITY_NO_DESTROY_H
+#ifndef _LIBCPP_UTILITY_NO_DESTROY_H
+#define _LIBCPP_UTILITY_NO_DESTROY_H
 
 #include <__config>
 #include <__new/placement_new_delete.h>
@@ -50,4 +50,4 @@ private:
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___UTILITY_NO_DESTROY_H
+#endif // _LIBCPP_UTILITY_NO_DESTROY_H

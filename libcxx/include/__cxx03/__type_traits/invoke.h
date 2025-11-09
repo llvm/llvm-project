@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___TYPE_TRAITS_INVOKE_H
-#define _LIBCPP___CXX03___TYPE_TRAITS_INVOKE_H
+#ifndef _LIBCPP_CXX03_TYPE_TRAITS_INVOKE_H
+#define _LIBCPP_CXX03_TYPE_TRAITS_INVOKE_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__type_traits/conditional.h>
@@ -211,4 +211,4 @@ struct __invoke_void_return_wrapper<_Ret, true> {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CXX03___TYPE_TRAITS_INVOKE_H
+#endif // _LIBCPP_CXX03_TYPE_TRAITS_INVOKE_H

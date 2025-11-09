@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_ADD_CV_H
-#define _LIBCPP___TYPE_TRAITS_ADD_CV_H
+#ifndef _LIBCPP_TYPE_TRAITS_ADD_CV_H
+#define _LIBCPP_TYPE_TRAITS_ADD_CV_H
 
 #include <__config>
 
@@ -49,4 +49,4 @@ using add_volatile_t = typename add_volatile<_Tp>::type;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_ADD_CV_H
+#endif // _LIBCPP_TYPE_TRAITS_ADD_CV_H

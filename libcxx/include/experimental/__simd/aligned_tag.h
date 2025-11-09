@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_EXPERIMENTAL___SIMD_ALIGNED_TAG_H
-#define _LIBCPP_EXPERIMENTAL___SIMD_ALIGNED_TAG_H
+#ifndef _LIBCPP_EXPERIMENTAL_SIMD_ALIGNED_TAG_H
+#define _LIBCPP_EXPERIMENTAL_SIMD_ALIGNED_TAG_H
 
 #include <__config>
 #include <__cstddef/size_t.h>
@@ -72,4 +72,4 @@ inline constexpr overaligned_tag<_Np> overaligned{};
 _LIBCPP_END_NAMESPACE_EXPERIMENTAL
 
 #endif // _LIBCPP_STD_VER >= 17 && defined(_LIBCPP_ENABLE_EXPERIMENTAL)
-#endif // _LIBCPP_EXPERIMENTAL___SIMD_ALIGNED_TAG_H
+#endif // _LIBCPP_EXPERIMENTAL_SIMD_ALIGNED_TAG_H

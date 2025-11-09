@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___STOP_TOKEN_STOP_SOURCE_H
-#define _LIBCPP___STOP_TOKEN_STOP_SOURCE_H
+#ifndef _LIBCPP_STOP_TOKEN_STOP_SOURCE_H
+#define _LIBCPP_STOP_TOKEN_STOP_SOURCE_H
 
 #include <__config>
 #include <__stop_token/intrusive_shared_ptr.h>
@@ -88,4 +88,4 @@ private:
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___STOP_TOKEN_STOP_SOURCE_H
+#endif // _LIBCPP_STOP_TOKEN_STOP_SOURCE_H

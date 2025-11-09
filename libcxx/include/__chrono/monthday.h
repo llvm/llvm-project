@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CHRONO_MONTHDAY_H
-#define _LIBCPP___CHRONO_MONTHDAY_H
+#ifndef _LIBCPP_CHRONO_MONTHDAY_H
+#define _LIBCPP_CHRONO_MONTHDAY_H
 
 #include <__chrono/calendar.h>
 #include <__chrono/day.h>
@@ -130,4 +130,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 20
 
-#endif // _LIBCPP___CHRONO_MONTHDAY_H
+#endif // _LIBCPP_CHRONO_MONTHDAY_H

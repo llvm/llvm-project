@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___ALGORITHM_SEARCH_H
-#define _LIBCPP___CXX03___ALGORITHM_SEARCH_H
+#ifndef _LIBCPP_CXX03_ALGORITHM_SEARCH_H
+#define _LIBCPP_CXX03_ALGORITHM_SEARCH_H
 
 #include <__cxx03/__algorithm/comp.h>
 #include <__cxx03/__algorithm/iterator_operations.h>
@@ -179,4 +179,4 @@ search(_ForwardIterator1 __first1, _ForwardIterator1 __last1, _ForwardIterator2 
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CXX03___ALGORITHM_SEARCH_H
+#endif // _LIBCPP_CXX03_ALGORITHM_SEARCH_H

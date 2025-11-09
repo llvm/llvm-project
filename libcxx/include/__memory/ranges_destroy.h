@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___MEMORY_RANGES_DESTROY_H
-#define _LIBCPP___MEMORY_RANGES_DESTROY_H
+#ifndef _LIBCPP_MEMORY_RANGES_DESTROY_H
+#define _LIBCPP_MEMORY_RANGES_DESTROY_H
 
 #include <__concepts/destructible.h>
 #include <__config>
@@ -76,4 +76,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___MEMORY_RANGES_DESTROY_H
+#endif // _LIBCPP_MEMORY_RANGES_DESTROY_H

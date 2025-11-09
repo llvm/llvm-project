@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TUPLE_TUPLE_TYPES_H
-#define _LIBCPP___TUPLE_TUPLE_TYPES_H
+#ifndef _LIBCPP_TUPLE_TUPLE_TYPES_H
+#define _LIBCPP_TUPLE_TUPLE_TYPES_H
 
 #include <__config>
 
@@ -22,4 +22,4 @@ struct __tuple_types {};
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TUPLE_TUPLE_TYPES_H
+#endif // _LIBCPP_TUPLE_TUPLE_TYPES_H

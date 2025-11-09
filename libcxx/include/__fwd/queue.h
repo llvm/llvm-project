@@ -6,8 +6,8 @@
 //
 //===---------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FWD_QUEUE_H
-#define _LIBCPP___FWD_QUEUE_H
+#ifndef _LIBCPP_FWD_QUEUE_H
+#define _LIBCPP_FWD_QUEUE_H
 
 #include <__config>
 #include <__functional/operations.h>
@@ -28,4 +28,4 @@ class priority_queue;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FWD_QUEUE_H
+#endif // _LIBCPP_FWD_QUEUE_H

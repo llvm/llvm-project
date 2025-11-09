@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___THREAD_THREAD_H
-#define _LIBCPP___CXX03___THREAD_THREAD_H
+#ifndef _LIBCPP_CXX03_THREAD_THREAD_H
+#define _LIBCPP_CXX03_THREAD_THREAD_H
 
 #include <__cxx03/__condition_variable/condition_variable.h>
 #include <__cxx03/__config>
@@ -215,4 +215,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___CXX03___THREAD_THREAD_H
+#endif // _LIBCPP_CXX03_THREAD_THREAD_H

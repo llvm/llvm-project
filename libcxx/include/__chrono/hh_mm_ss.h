@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CHRONO_HH_MM_SS_H
-#define _LIBCPP___CHRONO_HH_MM_SS_H
+#ifndef _LIBCPP_CHRONO_HH_MM_SS_H
+#define _LIBCPP_CHRONO_HH_MM_SS_H
 
 #include <__chrono/duration.h>
 #include <__chrono/time_point.h>
@@ -109,4 +109,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 20
 
-#endif // _LIBCPP___CHRONO_HH_MM_SS_H
+#endif // _LIBCPP_CHRONO_HH_MM_SS_H

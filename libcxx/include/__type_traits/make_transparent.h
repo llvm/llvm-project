@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_MAKE_TRANSPARENT_H
-#define _LIBCPP___TYPE_TRAITS_MAKE_TRANSPARENT_H
+#ifndef _LIBCPP_TYPE_TRAITS_MAKE_TRANSPARENT_H
+#define _LIBCPP_TYPE_TRAITS_MAKE_TRANSPARENT_H
 
 #include <__config>
 #include <__type_traits/enable_if.h>
@@ -45,4 +45,4 @@ _LIBCPP_HIDE_FROM_ABI __make_transparent_t<_Comparator> __as_transparent(_Compar
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_MAKE_TRANSPARENT_H
+#endif // _LIBCPP_TYPE_TRAITS_MAKE_TRANSPARENT_H

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_REMOVE_ALL_EXTENTS_H
-#define _LIBCPP___TYPE_TRAITS_REMOVE_ALL_EXTENTS_H
+#ifndef _LIBCPP_TYPE_TRAITS_REMOVE_ALL_EXTENTS_H
+#define _LIBCPP_TYPE_TRAITS_REMOVE_ALL_EXTENTS_H
 
 #include <__config>
 
@@ -37,4 +37,4 @@ using remove_all_extents_t = __remove_all_extents_t<_Tp>;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_REMOVE_ALL_EXTENTS_H
+#endif // _LIBCPP_TYPE_TRAITS_REMOVE_ALL_EXTENTS_H

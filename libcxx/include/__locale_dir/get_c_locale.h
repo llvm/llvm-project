@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___LOCALE_DIR_GET_C_LOCALE_H
-#define _LIBCPP___LOCALE_DIR_GET_C_LOCALE_H
+#ifndef _LIBCPP_LOCALE_DIR_GET_C_LOCALE_H
+#define _LIBCPP_LOCALE_DIR_GET_C_LOCALE_H
 
 #include <__config>
 #include <__locale_dir/locale_base_api.h>
@@ -37,4 +37,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_HAS_LOCALIZATION
 
-#endif // _LIBCPP___LOCALE_DIR_GET_C_LOCALE_H
+#endif // _LIBCPP_LOCALE_DIR_GET_C_LOCALE_H

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___BIT_POPCOUNT_H
-#define _LIBCPP___CXX03___BIT_POPCOUNT_H
+#ifndef _LIBCPP_CXX03_BIT_POPCOUNT_H
+#define _LIBCPP_CXX03_BIT_POPCOUNT_H
 
 #include <__cxx03/__bit/rotate.h>
 #include <__cxx03/__config>
@@ -31,4 +31,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___CXX03___BIT_POPCOUNT_H
+#endif // _LIBCPP_CXX03_BIT_POPCOUNT_H

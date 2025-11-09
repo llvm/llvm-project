@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FWD_STREAMBUF_H
-#define _LIBCPP___FWD_STREAMBUF_H
+#ifndef _LIBCPP_FWD_STREAMBUF_H
+#define _LIBCPP_FWD_STREAMBUF_H
 
 #include <__config>
 #include <__fwd/string.h>
@@ -32,4 +32,4 @@ class _LIBCPP_PREFERRED_NAME(streambuf) _LIBCPP_IF_WIDE_CHARACTERS(_LIBCPP_PREFE
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FWD_STREAMBUF_H
+#endif // _LIBCPP_FWD_STREAMBUF_H

@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FUNCTIONAL_PERFECT_FORWARD_H
-#define _LIBCPP___FUNCTIONAL_PERFECT_FORWARD_H
+#ifndef _LIBCPP_FUNCTIONAL_PERFECT_FORWARD_H
+#define _LIBCPP_FUNCTIONAL_PERFECT_FORWARD_H
 
 #include <__config>
 #include <__cstddef/size_t.h>
@@ -102,4 +102,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___FUNCTIONAL_PERFECT_FORWARD_H
+#endif // _LIBCPP_FUNCTIONAL_PERFECT_FORWARD_H

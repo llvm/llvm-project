@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___MEMORY_UNIQUE_TEMPORARY_BUFFER_H
-#define _LIBCPP___MEMORY_UNIQUE_TEMPORARY_BUFFER_H
+#ifndef _LIBCPP_MEMORY_UNIQUE_TEMPORARY_BUFFER_H
+#define _LIBCPP_MEMORY_UNIQUE_TEMPORARY_BUFFER_H
 
 #include <__assert>
 #include <__config>
@@ -90,4 +90,4 @@ __allocate_unique_temporary_buffer(ptrdiff_t __count) {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___MEMORY_UNIQUE_TEMPORARY_BUFFER_H
+#endif // _LIBCPP_MEMORY_UNIQUE_TEMPORARY_BUFFER_H

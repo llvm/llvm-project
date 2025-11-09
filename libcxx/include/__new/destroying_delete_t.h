@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___NEW_DESTROYING_DELETE_T_H
-#define _LIBCPP___NEW_DESTROYING_DELETE_T_H
+#ifndef _LIBCPP_NEW_DESTROYING_DELETE_T_H
+#define _LIBCPP_NEW_DESTROYING_DELETE_T_H
 
 #include <__config>
 
@@ -26,4 +26,4 @@ inline constexpr destroying_delete_t destroying_delete{};
 _LIBCPP_END_UNVERSIONED_NAMESPACE_STD
 #endif
 
-#endif // _LIBCPP___NEW_DESTROYING_DELETE_T_H
+#endif // _LIBCPP_NEW_DESTROYING_DELETE_T_H

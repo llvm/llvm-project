@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CONCEPTS_ARITHMETIC_H
-#define _LIBCPP___CONCEPTS_ARITHMETIC_H
+#ifndef _LIBCPP_CONCEPTS_ARITHMETIC_H
+#define _LIBCPP_CONCEPTS_ARITHMETIC_H
 
 #include <__config>
 #include <__type_traits/is_floating_point.h>
@@ -40,4 +40,4 @@ concept floating_point = is_floating_point_v<_Tp>;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CONCEPTS_ARITHMETIC_H
+#endif // _LIBCPP_CONCEPTS_ARITHMETIC_H

@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_CONTAINER_TRAITS_H
-#define _LIBCPP___TYPE_TRAITS_CONTAINER_TRAITS_H
+#ifndef _LIBCPP_TYPE_TRAITS_CONTAINER_TRAITS_H
+#define _LIBCPP_TYPE_TRAITS_CONTAINER_TRAITS_H
 
 #include <__config>
 
@@ -43,4 +43,4 @@ struct __container_traits {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_CONTAINER_TRAITS_H
+#endif // _LIBCPP_TYPE_TRAITS_CONTAINER_TRAITS_H

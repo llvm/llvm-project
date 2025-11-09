@@ -6,8 +6,8 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#ifndef _LIBCPP___EXPECTED_EXPECTED_H
-#define _LIBCPP___EXPECTED_EXPECTED_H
+#ifndef _LIBCPP_EXPECTED_EXPECTED_H
+#define _LIBCPP_EXPECTED_EXPECTED_H
 
 #include <__assert>
 #include <__config>
@@ -1907,4 +1907,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___EXPECTED_EXPECTED_H
+#endif // _LIBCPP_EXPECTED_EXPECTED_H

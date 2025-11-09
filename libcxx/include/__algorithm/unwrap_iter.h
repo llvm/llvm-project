@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_UNWRAP_ITER_H
-#define _LIBCPP___ALGORITHM_UNWRAP_ITER_H
+#ifndef _LIBCPP_ALGORITHM_UNWRAP_ITER_H
+#define _LIBCPP_ALGORITHM_UNWRAP_ITER_H
 
 #include <__config>
 #include <__iterator/iterator_traits.h>
@@ -82,4 +82,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___ALGORITHM_UNWRAP_ITER_H
+#endif // _LIBCPP_ALGORITHM_UNWRAP_ITER_H

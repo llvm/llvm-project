@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FORMAT_FORMATTER_INTEGRAL_H
-#define _LIBCPP___FORMAT_FORMATTER_INTEGRAL_H
+#ifndef _LIBCPP_FORMAT_FORMATTER_INTEGRAL_H
+#define _LIBCPP_FORMAT_FORMATTER_INTEGRAL_H
 
 #include <__charconv/to_chars_integral.h>
 #include <__charconv/to_chars_result.h>
@@ -443,4 +443,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___FORMAT_FORMATTER_INTEGRAL_H
+#endif // _LIBCPP_FORMAT_FORMATTER_INTEGRAL_H

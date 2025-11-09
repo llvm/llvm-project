@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___ALGORITHM_MINMAX_H
-#define _LIBCPP___CXX03___ALGORITHM_MINMAX_H
+#ifndef _LIBCPP_CXX03_ALGORITHM_MINMAX_H
+#define _LIBCPP_CXX03_ALGORITHM_MINMAX_H
 
 #include <__cxx03/__algorithm/comp.h>
 #include <__cxx03/__algorithm/minmax_element.h>
@@ -36,4 +36,4 @@ minmax(_LIBCPP_LIFETIMEBOUND const _Tp& __a, _LIBCPP_LIFETIMEBOUND const _Tp& __
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CXX03___ALGORITHM_MINMAX_H
+#endif // _LIBCPP_CXX03_ALGORITHM_MINMAX_H

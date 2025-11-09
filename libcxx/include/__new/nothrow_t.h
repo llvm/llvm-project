@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___NEW_NOTHROW_T_H
-#define _LIBCPP___NEW_NOTHROW_T_H
+#ifndef _LIBCPP_NEW_NOTHROW_T_H
+#define _LIBCPP_NEW_NOTHROW_T_H
 
 #include <__config>
 
@@ -26,4 +26,4 @@ extern _LIBCPP_EXPORTED_FROM_ABI const nothrow_t nothrow;
 _LIBCPP_END_UNVERSIONED_NAMESPACE_STD
 #endif // _LIBCPP_ABI_VCRUNTIME
 
-#endif // _LIBCPP___NEW_NOTHROW_T_H
+#endif // _LIBCPP_NEW_NOTHROW_T_H

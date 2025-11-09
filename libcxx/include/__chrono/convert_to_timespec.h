@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CHRONO_CONVERT_TO_TIMESPEC_H
-#define _LIBCPP___CHRONO_CONVERT_TO_TIMESPEC_H
+#ifndef _LIBCPP_CHRONO_CONVERT_TO_TIMESPEC_H
+#define _LIBCPP_CHRONO_CONVERT_TO_TIMESPEC_H
 
 #include <__chrono/duration.h>
 #include <__config>
@@ -48,4 +48,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___CHRONO_CONVERT_TO_TIMESPEC_H
+#endif // _LIBCPP_CHRONO_CONVERT_TO_TIMESPEC_H

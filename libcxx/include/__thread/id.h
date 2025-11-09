@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___THREAD_ID_H
-#define _LIBCPP___THREAD_ID_H
+#ifndef _LIBCPP_THREAD_ID_H
+#define _LIBCPP_THREAD_ID_H
 
 #include <__compare/ordering.h>
 #include <__config>
@@ -118,4 +118,4 @@ inline _LIBCPP_HIDE_FROM_ABI __thread_id get_id() _NOEXCEPT { return __libcpp_th
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___THREAD_ID_H
+#endif // _LIBCPP_THREAD_ID_H

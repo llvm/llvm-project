@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_FILL_N_H
-#define _LIBCPP___ALGORITHM_FILL_N_H
+#ifndef _LIBCPP_ALGORITHM_FILL_N_H
+#define _LIBCPP_ALGORITHM_FILL_N_H
 
 #include <__algorithm/for_each_n_segment.h>
 #include <__algorithm/min.h>
@@ -95,4 +95,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___ALGORITHM_FILL_N_H
+#endif // _LIBCPP_ALGORITHM_FILL_N_H

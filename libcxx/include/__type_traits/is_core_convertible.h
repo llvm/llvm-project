@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_IS_CORE_CONVERTIBLE_H
-#define _LIBCPP___TYPE_TRAITS_IS_CORE_CONVERTIBLE_H
+#ifndef _LIBCPP_TYPE_TRAITS_IS_CORE_CONVERTIBLE_H
+#define _LIBCPP_TYPE_TRAITS_IS_CORE_CONVERTIBLE_H
 
 #include <__config>
 #include <__type_traits/integral_constant.h>
@@ -51,4 +51,4 @@ inline const bool __is_nothrow_core_convertible_v<_Tp, _Up, true> =
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_IS_CORE_CONVERTIBLE_H
+#endif // _LIBCPP_TYPE_TRAITS_IS_CORE_CONVERTIBLE_H

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___ALGORITHM_MAKE_PROJECTED_H
-#define _LIBCPP___CXX03___ALGORITHM_MAKE_PROJECTED_H
+#ifndef _LIBCPP_CXX03_ALGORITHM_MAKE_PROJECTED_H
+#define _LIBCPP_CXX03_ALGORITHM_MAKE_PROJECTED_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__functional/identity.h>
@@ -71,4 +71,4 @@ _LIBCPP_HIDE_FROM_ABI _Pred& __make_projected(_Pred& __pred, _Proj&) {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CXX03___ALGORITHM_MAKE_PROJECTED_H
+#endif // _LIBCPP_CXX03_ALGORITHM_MAKE_PROJECTED_H

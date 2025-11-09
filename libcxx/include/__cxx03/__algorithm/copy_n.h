@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___ALGORITHM_COPY_N_H
-#define _LIBCPP___CXX03___ALGORITHM_COPY_N_H
+#ifndef _LIBCPP_CXX03_ALGORITHM_COPY_N_H
+#define _LIBCPP_CXX03_ALGORITHM_COPY_N_H
 
 #include <__cxx03/__algorithm/copy.h>
 #include <__cxx03/__config>
@@ -55,4 +55,4 @@ inline _LIBCPP_HIDE_FROM_ABI _OutputIterator copy_n(_InputIterator __first, _Siz
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CXX03___ALGORITHM_COPY_N_H
+#endif // _LIBCPP_CXX03_ALGORITHM_COPY_N_H

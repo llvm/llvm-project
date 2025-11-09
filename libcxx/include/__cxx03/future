@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03_FUTURE
-#define _LIBCPP___CXX03_FUTURE
+#ifndef _LIBCPP_CXX03_FUTURE
+#define _LIBCPP_CXX03_FUTURE
 
 /*
     future synopsis
@@ -1943,4 +1943,4 @@ _LIBCPP_POP_MACROS
 #  include <__cxx03/system_error>
 #endif
 
-#endif // _LIBCPP___CXX03_FUTURE
+#endif // _LIBCPP_CXX03_FUTURE

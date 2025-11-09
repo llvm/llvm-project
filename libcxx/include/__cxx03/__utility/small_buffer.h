@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___UTILITY_SMALL_BUFFER_H
-#define _LIBCPP___CXX03___UTILITY_SMALL_BUFFER_H
+#ifndef _LIBCPP_CXX03_UTILITY_SMALL_BUFFER_H
+#define _LIBCPP_CXX03_UTILITY_SMALL_BUFFER_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__memory/construct_at.h>
@@ -23,4 +23,4 @@
 #  pragma GCC system_header
 #endif
 
-#endif // _LIBCPP___CXX03___UTILITY_SMALL_BUFFER_H
+#endif // _LIBCPP_CXX03_UTILITY_SMALL_BUFFER_H

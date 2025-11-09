@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___PSTL_BACKEND_H
-#define _LIBCPP___PSTL_BACKEND_H
+#ifndef _LIBCPP_PSTL_BACKEND_H
+#define _LIBCPP_PSTL_BACKEND_H
 
 #include <__config>
 #include <__pstl/backend_fwd.h>
@@ -36,4 +36,4 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___PSTL_BACKEND_H
+#endif // _LIBCPP_PSTL_BACKEND_H

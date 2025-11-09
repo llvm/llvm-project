@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FORMAT_FORMATTER_FLOATING_POINT_H
-#define _LIBCPP___FORMAT_FORMATTER_FLOATING_POINT_H
+#ifndef _LIBCPP_FORMAT_FORMATTER_FLOATING_POINT_H
+#define _LIBCPP_FORMAT_FORMATTER_FLOATING_POINT_H
 
 #include <__algorithm/copy_n.h>
 #include <__algorithm/find.h>
@@ -789,4 +789,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___FORMAT_FORMATTER_FLOATING_POINT_H
+#endif // _LIBCPP_FORMAT_FORMATTER_FLOATING_POINT_H

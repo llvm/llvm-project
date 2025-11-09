@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___MEMORY_ALLOCATE_AT_LEAST_H
-#define _LIBCPP___MEMORY_ALLOCATE_AT_LEAST_H
+#ifndef _LIBCPP_MEMORY_ALLOCATE_AT_LEAST_H
+#define _LIBCPP_MEMORY_ALLOCATE_AT_LEAST_H
 
 #include <__config>
 #include <__cstddef/size_t.h>
@@ -50,4 +50,4 @@ __allocate_at_least(_Alloc& __alloc, size_t __n) {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___MEMORY_ALLOCATE_AT_LEAST_H
+#endif // _LIBCPP_MEMORY_ALLOCATE_AT_LEAST_H

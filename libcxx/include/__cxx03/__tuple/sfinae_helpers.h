@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___TUPLE_SFINAE_HELPERS_H
-#define _LIBCPP___CXX03___TUPLE_SFINAE_HELPERS_H
+#ifndef _LIBCPP_CXX03_TUPLE_SFINAE_HELPERS_H
+#define _LIBCPP_CXX03_TUPLE_SFINAE_HELPERS_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__fwd/tuple.h>
@@ -33,4 +33,4 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CXX03___TUPLE_SFINAE_HELPERS_H
+#endif // _LIBCPP_CXX03_TUPLE_SFINAE_HELPERS_H

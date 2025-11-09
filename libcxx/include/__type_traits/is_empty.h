@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_IS_EMPTY_H
-#define _LIBCPP___TYPE_TRAITS_IS_EMPTY_H
+#ifndef _LIBCPP_TYPE_TRAITS_IS_EMPTY_H
+#define _LIBCPP_TYPE_TRAITS_IS_EMPTY_H
 
 #include <__config>
 #include <__type_traits/integral_constant.h>
@@ -28,4 +28,4 @@ _LIBCPP_NO_SPECIALIZATIONS inline constexpr bool is_empty_v = __is_empty(_Tp);
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_IS_EMPTY_H
+#endif // _LIBCPP_TYPE_TRAITS_IS_EMPTY_H

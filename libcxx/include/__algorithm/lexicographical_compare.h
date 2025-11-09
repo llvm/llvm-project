@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_LEXICOGRAPHICAL_COMPARE_H
-#define _LIBCPP___ALGORITHM_LEXICOGRAPHICAL_COMPARE_H
+#ifndef _LIBCPP_ALGORITHM_LEXICOGRAPHICAL_COMPARE_H
+#define _LIBCPP_ALGORITHM_LEXICOGRAPHICAL_COMPARE_H
 
 #include <__algorithm/comp.h>
 #include <__algorithm/min.h>
@@ -126,4 +126,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___ALGORITHM_LEXICOGRAPHICAL_COMPARE_H
+#endif // _LIBCPP_ALGORITHM_LEXICOGRAPHICAL_COMPARE_H

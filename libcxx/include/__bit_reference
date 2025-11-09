@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___BIT_REFERENCE
-#define _LIBCPP___BIT_REFERENCE
+#ifndef _LIBCPP_BIT_REFERENCE
+#define _LIBCPP_BIT_REFERENCE
 
 #include <__algorithm/comp.h>
 #include <__algorithm/copy.h>
@@ -543,4 +543,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___BIT_REFERENCE
+#endif // _LIBCPP_BIT_REFERENCE

@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___MEMORY_ARRAY_COOKIE_H
-#define _LIBCPP___MEMORY_ARRAY_COOKIE_H
+#ifndef _LIBCPP_MEMORY_ARRAY_COOKIE_H
+#define _LIBCPP_MEMORY_ARRAY_COOKIE_H
 
 #include <__config>
 #include <__configuration/abi.h>
@@ -120,4 +120,4 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_SANITIZE("address") size_t __get_array_cookie([
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___MEMORY_ARRAY_COOKIE_H
+#endif // _LIBCPP_MEMORY_ARRAY_COOKIE_H

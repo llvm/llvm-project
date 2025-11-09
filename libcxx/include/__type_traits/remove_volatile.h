@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_REMOVE_VOLATILE_H
-#define _LIBCPP___TYPE_TRAITS_REMOVE_VOLATILE_H
+#ifndef _LIBCPP_TYPE_TRAITS_REMOVE_VOLATILE_H
+#define _LIBCPP_TYPE_TRAITS_REMOVE_VOLATILE_H
 
 #include <__config>
 
@@ -46,4 +46,4 @@ using remove_volatile_t = __remove_volatile_t<_Tp>;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_REMOVE_VOLATILE_H
+#endif // _LIBCPP_TYPE_TRAITS_REMOVE_VOLATILE_H

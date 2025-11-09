@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___NEW_PLACEMENT_NEW_DELETE_H
-#define _LIBCPP___NEW_PLACEMENT_NEW_DELETE_H
+#ifndef _LIBCPP_NEW_PLACEMENT_NEW_DELETE_H
+#define _LIBCPP_NEW_PLACEMENT_NEW_DELETE_H
 
 #include <__config>
 #include <__cstddef/size_t.h>
@@ -31,4 +31,4 @@ inline _LIBCPP_HIDE_FROM_ABI void operator delete(void*, void*) _NOEXCEPT {}
 inline _LIBCPP_HIDE_FROM_ABI void operator delete[](void*, void*) _NOEXCEPT {}
 #endif
 
-#endif // _LIBCPP___NEW_PLACEMENT_NEW_DELETE_H
+#endif // _LIBCPP_NEW_PLACEMENT_NEW_DELETE_H

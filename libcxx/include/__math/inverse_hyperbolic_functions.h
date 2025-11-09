@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___MATH_INVERSE_HYPERBOLIC_FUNCTIONS_H
-#define _LIBCPP___MATH_INVERSE_HYPERBOLIC_FUNCTIONS_H
+#ifndef _LIBCPP_MATH_INVERSE_HYPERBOLIC_FUNCTIONS_H
+#define _LIBCPP_MATH_INVERSE_HYPERBOLIC_FUNCTIONS_H
 
 #include <__config>
 #include <__type_traits/enable_if.h>
@@ -73,4 +73,4 @@ inline _LIBCPP_HIDE_FROM_ABI double atanh(_A1 __x) _NOEXCEPT {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___MATH_INVERSE_HYPERBOLIC_FUNCTIONS_H
+#endif // _LIBCPP_MATH_INVERSE_HYPERBOLIC_FUNCTIONS_H

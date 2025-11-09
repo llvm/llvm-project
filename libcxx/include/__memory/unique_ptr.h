@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___MEMORY_UNIQUE_PTR_H
-#define _LIBCPP___MEMORY_UNIQUE_PTR_H
+#ifndef _LIBCPP_MEMORY_UNIQUE_PTR_H
+#define _LIBCPP_MEMORY_UNIQUE_PTR_H
 
 #include <__assert>
 #include <__compare/compare_three_way.h>
@@ -812,4 +812,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___MEMORY_UNIQUE_PTR_H
+#endif // _LIBCPP_MEMORY_UNIQUE_PTR_H

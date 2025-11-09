@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___MEMORY_SHARED_PTR_H
-#define _LIBCPP___MEMORY_SHARED_PTR_H
+#ifndef _LIBCPP_MEMORY_SHARED_PTR_H
+#define _LIBCPP_MEMORY_SHARED_PTR_H
 
 #include <__compare/compare_three_way.h>
 #include <__compare/ordering.h>
@@ -1558,4 +1558,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___MEMORY_SHARED_PTR_H
+#endif // _LIBCPP_MEMORY_SHARED_PTR_H

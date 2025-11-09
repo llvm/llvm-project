@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___NODE_HANDLE
-#define _LIBCPP___NODE_HANDLE
+#ifndef _LIBCPP_NODE_HANDLE
+#define _LIBCPP_NODE_HANDLE
 
 /*
 
@@ -207,4 +207,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___NODE_HANDLE
+#endif // _LIBCPP_NODE_HANDLE

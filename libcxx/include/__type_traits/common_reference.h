@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_COMMON_REFERENCE_H
-#define _LIBCPP___TYPE_TRAITS_COMMON_REFERENCE_H
+#ifndef _LIBCPP_TYPE_TRAITS_COMMON_REFERENCE_H
+#define _LIBCPP_TYPE_TRAITS_COMMON_REFERENCE_H
 
 #include <__config>
 #include <__type_traits/add_pointer.h>
@@ -199,4 +199,4 @@ struct _LIBCPP_NO_SPECIALIZATIONS common_reference {};
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_COMMON_REFERENCE_H
+#endif // _LIBCPP_TYPE_TRAITS_COMMON_REFERENCE_H

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_RANK_H
-#define _LIBCPP___TYPE_TRAITS_RANK_H
+#ifndef _LIBCPP_TYPE_TRAITS_RANK_H
+#define _LIBCPP_TYPE_TRAITS_RANK_H
 
 #include <__config>
 #include <__cstddef/size_t.h>
@@ -49,4 +49,4 @@ _LIBCPP_NO_SPECIALIZATIONS inline constexpr size_t rank_v = rank<_Tp>::value;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_RANK_H
+#endif // _LIBCPP_TYPE_TRAITS_RANK_H

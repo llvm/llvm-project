@@ -6,8 +6,8 @@
 //
 //===---------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FWD_TUPLE_H
-#define _LIBCPP___FWD_TUPLE_H
+#ifndef _LIBCPP_FWD_TUPLE_H
+#define _LIBCPP_FWD_TUPLE_H
 
 #include <__config>
 #include <__cstddef/size_t.h>
@@ -63,4 +63,4 @@ get(const tuple<_Tp...>&&) _NOEXCEPT;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FWD_TUPLE_H
+#endif // _LIBCPP_FWD_TUPLE_H

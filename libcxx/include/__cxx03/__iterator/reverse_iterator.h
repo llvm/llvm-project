@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___ITERATOR_REVERSE_ITERATOR_H
-#define _LIBCPP___CXX03___ITERATOR_REVERSE_ITERATOR_H
+#ifndef _LIBCPP_CXX03_ITERATOR_REVERSE_ITERATOR_H
+#define _LIBCPP_CXX03_ITERATOR_REVERSE_ITERATOR_H
 
 #include <__cxx03/__algorithm/unwrap_iter.h>
 #include <__cxx03/__config>
@@ -200,4 +200,4 @@ struct __unwrap_iter_impl<reverse_iterator<reverse_iterator<_Iter> >, __b> {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CXX03___ITERATOR_REVERSE_ITERATOR_H
+#endif // _LIBCPP_CXX03_ITERATOR_REVERSE_ITERATOR_H

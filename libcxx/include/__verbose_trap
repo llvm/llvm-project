@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___VERBOSE_TRAP
-#define _LIBCPP___VERBOSE_TRAP
+#ifndef _LIBCPP_VERBOSE_TRAP
+#define _LIBCPP_VERBOSE_TRAP
 
 #include <__config>
 
@@ -33,4 +33,4 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___VERBOSE_TRAP
+#endif // _LIBCPP_VERBOSE_TRAP

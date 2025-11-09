@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___COMPARE_THREE_WAY_COMPARABLE_H
-#define _LIBCPP___COMPARE_THREE_WAY_COMPARABLE_H
+#ifndef _LIBCPP_COMPARE_THREE_WAY_COMPARABLE_H
+#define _LIBCPP_COMPARE_THREE_WAY_COMPARABLE_H
 
 #include <__compare/common_comparison_category.h>
 #include <__compare/ordering.h>
@@ -52,4 +52,4 @@ concept three_way_comparable_with =
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___COMPARE_THREE_WAY_COMPARABLE_H
+#endif // _LIBCPP_COMPARE_THREE_WAY_COMPARABLE_H

@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___SYSTEM_ERROR_ERROR_CATEGORY_H
-#define _LIBCPP___CXX03___SYSTEM_ERROR_ERROR_CATEGORY_H
+#ifndef _LIBCPP_CXX03_SYSTEM_ERROR_ERROR_CATEGORY_H
+#define _LIBCPP_CXX03_SYSTEM_ERROR_ERROR_CATEGORY_H
 
 #include <__cxx03/__config>
 #include <__cxx03/string>
@@ -61,4 +61,4 @@ __attribute__((__const__)) _LIBCPP_EXPORTED_FROM_ABI const error_category& syste
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CXX03___SYSTEM_ERROR_ERROR_CATEGORY_H
+#endif // _LIBCPP_CXX03_SYSTEM_ERROR_ERROR_CATEGORY_H

@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___THREAD_FORMATTER_H
-#define _LIBCPP___THREAD_FORMATTER_H
+#ifndef _LIBCPP_THREAD_FORMATTER_H
+#define _LIBCPP_THREAD_FORMATTER_H
 
 #include <__concepts/arithmetic.h>
 #include <__config>
@@ -77,4 +77,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 23
 
-#endif // _LIBCPP___THREAD_FORMATTER_H
+#endif // _LIBCPP_THREAD_FORMATTER_H

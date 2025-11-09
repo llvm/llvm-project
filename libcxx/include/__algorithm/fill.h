@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_FILL_H
-#define _LIBCPP___ALGORITHM_FILL_H
+#ifndef _LIBCPP_ALGORITHM_FILL_H
+#define _LIBCPP_ALGORITHM_FILL_H
 
 #include <__algorithm/fill_n.h>
 #include <__algorithm/for_each_segment.h>
@@ -60,4 +60,4 @@ fill(_ForwardIterator __first, _ForwardIterator __last, const _Tp& __value) {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ALGORITHM_FILL_H
+#endif // _LIBCPP_ALGORITHM_FILL_H

@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CHARCONV_TO_CHARS_FLOATING_POINT_H
-#define _LIBCPP___CHARCONV_TO_CHARS_FLOATING_POINT_H
+#ifndef _LIBCPP_CHARCONV_TO_CHARS_FLOATING_POINT_H
+#define _LIBCPP_CHARCONV_TO_CHARS_FLOATING_POINT_H
 
 #include <__charconv/chars_format.h>
 #include <__charconv/to_chars_result.h>
@@ -52,4 +52,4 @@ to_chars(char* __first, char* __last, long double __value, chars_format __fmt, i
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CHARCONV_TO_CHARS_FLOATING_POINT_H
+#endif // _LIBCPP_CHARCONV_TO_CHARS_FLOATING_POINT_H

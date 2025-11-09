@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_RANGES_REVERSE_H
-#define _LIBCPP___ALGORITHM_RANGES_REVERSE_H
+#ifndef _LIBCPP_ALGORITHM_RANGES_REVERSE_H
+#define _LIBCPP_ALGORITHM_RANGES_REVERSE_H
 
 #include <__config>
 #include <__iterator/concepts.h>
@@ -74,4 +74,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 20
 
-#endif // _LIBCPP___ALGORITHM_RANGES_REVERSE_H
+#endif // _LIBCPP_ALGORITHM_RANGES_REVERSE_H

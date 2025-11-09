@@ -6,8 +6,8 @@
 //
 //===---------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FWD_BYTE_H
-#define _LIBCPP___FWD_BYTE_H
+#ifndef _LIBCPP_FWD_BYTE_H
+#define _LIBCPP_FWD_BYTE_H
 
 #include <__config>
 
@@ -23,4 +23,4 @@ enum class byte : unsigned char;
 _LIBCPP_END_UNVERSIONED_NAMESPACE_STD
 #endif // _LIBCPP_STD_VER >= 17
 
-#endif // _LIBCPP___FWD_BYTE_H
+#endif // _LIBCPP_FWD_BYTE_H

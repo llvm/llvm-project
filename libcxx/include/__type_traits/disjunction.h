@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_DISJUNCTION_H
-#define _LIBCPP___TYPE_TRAITS_DISJUNCTION_H
+#ifndef _LIBCPP_TYPE_TRAITS_DISJUNCTION_H
+#define _LIBCPP_TYPE_TRAITS_DISJUNCTION_H
 
 #include <__config>
 #include <__type_traits/integral_constant.h>
@@ -55,4 +55,4 @@ _LIBCPP_NO_SPECIALIZATIONS inline constexpr bool disjunction_v = _Or<_Args...>::
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_DISJUNCTION_H
+#endif // _LIBCPP_TYPE_TRAITS_DISJUNCTION_H

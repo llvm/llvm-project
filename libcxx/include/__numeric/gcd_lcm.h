@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___NUMERIC_GCD_LCM_H
-#define _LIBCPP___NUMERIC_GCD_LCM_H
+#ifndef _LIBCPP_NUMERIC_GCD_LCM_H
+#define _LIBCPP_NUMERIC_GCD_LCM_H
 
 #include <__assert>
 #include <__bit/countr.h>
@@ -127,4 +127,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___NUMERIC_GCD_LCM_H
+#endif // _LIBCPP_NUMERIC_GCD_LCM_H

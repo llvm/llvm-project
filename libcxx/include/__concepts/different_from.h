@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CONCEPTS_DIFFERENT_FROM_H
-#define _LIBCPP___CONCEPTS_DIFFERENT_FROM_H
+#ifndef _LIBCPP_CONCEPTS_DIFFERENT_FROM_H
+#define _LIBCPP_CONCEPTS_DIFFERENT_FROM_H
 
 #include <__concepts/same_as.h>
 #include <__config>
@@ -28,4 +28,4 @@ concept __different_from = !same_as<remove_cvref_t<_Tp>, remove_cvref_t<_Up>>;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CONCEPTS_DIFFERENT_FROM_H
+#endif // _LIBCPP_CONCEPTS_DIFFERENT_FROM_H

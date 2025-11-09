@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ITERATOR_OSTREAM_ITERATOR_H
-#define _LIBCPP___ITERATOR_OSTREAM_ITERATOR_H
+#ifndef _LIBCPP_ITERATOR_OSTREAM_ITERATOR_H
+#define _LIBCPP_ITERATOR_OSTREAM_ITERATOR_H
 
 #include <__config>
 #include <__cstddef/ptrdiff_t.h>
@@ -66,4 +66,4 @@ public:
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ITERATOR_OSTREAM_ITERATOR_H
+#endif // _LIBCPP_ITERATOR_OSTREAM_ITERATOR_H

@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___PSTL_BACKENDS_SERIAL_H
-#define _LIBCPP___PSTL_BACKENDS_SERIAL_H
+#ifndef _LIBCPP_PSTL_BACKENDS_SERIAL_H
+#define _LIBCPP_PSTL_BACKENDS_SERIAL_H
 
 #include <__algorithm/find_if.h>
 #include <__algorithm/for_each.h>
@@ -182,4 +182,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___PSTL_BACKENDS_SERIAL_H
+#endif // _LIBCPP_PSTL_BACKENDS_SERIAL_H

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___BIT_BLSR_H
-#define _LIBCPP___CXX03___BIT_BLSR_H
+#ifndef _LIBCPP_CXX03_BIT_BLSR_H
+#define _LIBCPP_CXX03_BIT_BLSR_H
 
 #include <__cxx03/__config>
 
@@ -27,4 +27,4 @@ inline _LIBCPP_HIDE_FROM_ABI unsigned long long __libcpp_blsr(unsigned long long
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CXX03___BIT_BLSR_H
+#endif // _LIBCPP_CXX03_BIT_BLSR_H

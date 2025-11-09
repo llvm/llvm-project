@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___MEMORY_ADDRESSOF_H
-#define _LIBCPP___MEMORY_ADDRESSOF_H
+#ifndef _LIBCPP_MEMORY_ADDRESSOF_H
+#define _LIBCPP_MEMORY_ADDRESSOF_H
 
 #include <__config>
 
@@ -56,4 +56,4 @@ _Tp* addressof(const _Tp&&) noexcept = delete;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___MEMORY_ADDRESSOF_H
+#endif // _LIBCPP_MEMORY_ADDRESSOF_H

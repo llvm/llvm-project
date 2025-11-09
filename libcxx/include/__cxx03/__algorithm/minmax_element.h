@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___ALGORITHM_MINMAX_ELEMENT_H
-#define _LIBCPP___CXX03___ALGORITHM_MINMAX_ELEMENT_H
+#ifndef _LIBCPP_CXX03_ALGORITHM_MINMAX_ELEMENT_H
+#define _LIBCPP_CXX03_ALGORITHM_MINMAX_ELEMENT_H
 
 #include <__cxx03/__algorithm/comp.h>
 #include <__cxx03/__config>
@@ -96,4 +96,4 @@ minmax_element(_ForwardIterator __first, _ForwardIterator __last) {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CXX03___ALGORITHM_MINMAX_ELEMENT_H
+#endif // _LIBCPP_CXX03_ALGORITHM_MINMAX_ELEMENT_H

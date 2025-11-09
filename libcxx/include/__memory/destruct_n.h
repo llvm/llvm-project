@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___MEMORY_DESTRUCT_N_H
-#define _LIBCPP___MEMORY_DESTRUCT_N_H
+#ifndef _LIBCPP_MEMORY_DESTRUCT_N_H
+#define _LIBCPP_MEMORY_DESTRUCT_N_H
 
 #include <__config>
 #include <__cstddef/size_t.h>
@@ -60,4 +60,4 @@ public:
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___MEMORY_DESTRUCT_N_H
+#endif // _LIBCPP_MEMORY_DESTRUCT_N_H

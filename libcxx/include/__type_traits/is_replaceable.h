@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_IS_REPLACEABLE_H
-#define _LIBCPP___TYPE_TRAITS_IS_REPLACEABLE_H
+#ifndef _LIBCPP_TYPE_TRAITS_IS_REPLACEABLE_H
+#define _LIBCPP_TYPE_TRAITS_IS_REPLACEABLE_H
 
 #include <__config>
 #include <__type_traits/enable_if.h>
@@ -58,4 +58,4 @@ struct __container_allocator_is_replaceable
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_IS_REPLACEABLE_H
+#endif // _LIBCPP_TYPE_TRAITS_IS_REPLACEABLE_H

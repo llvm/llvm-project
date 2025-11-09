@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CHARCONV_FROM_CHARS_RESULT_H
-#define _LIBCPP___CHARCONV_FROM_CHARS_RESULT_H
+#ifndef _LIBCPP_CHARCONV_FROM_CHARS_RESULT_H
+#define _LIBCPP_CHARCONV_FROM_CHARS_RESULT_H
 
 #include <__config>
 #include <__system_error/errc.h>
@@ -36,4 +36,4 @@ struct from_chars_result {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CHARCONV_FROM_CHARS_RESULT_H
+#endif // _LIBCPP_CHARCONV_FROM_CHARS_RESULT_H

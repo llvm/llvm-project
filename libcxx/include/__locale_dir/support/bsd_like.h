@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___LOCALE_DIR_SUPPORT_BSD_LIKE_H
-#define _LIBCPP___LOCALE_DIR_SUPPORT_BSD_LIKE_H
+#ifndef _LIBCPP_LOCALE_DIR_SUPPORT_BSD_LIKE_H
+#define _LIBCPP_LOCALE_DIR_SUPPORT_BSD_LIKE_H
 
 #include <__config>
 #include <__cstddef/size_t.h>
@@ -227,4 +227,4 @@ _LIBCPP_DIAGNOSTIC_POP
 } // namespace __locale
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___LOCALE_DIR_SUPPORT_BSD_LIKE_H
+#endif // _LIBCPP_LOCALE_DIR_SUPPORT_BSD_LIKE_H

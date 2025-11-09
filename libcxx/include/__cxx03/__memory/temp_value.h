@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___MEMORY_TEMP_VALUE_H
-#define _LIBCPP___CXX03___MEMORY_TEMP_VALUE_H
+#ifndef _LIBCPP_CXX03_MEMORY_TEMP_VALUE_H
+#define _LIBCPP_CXX03_MEMORY_TEMP_VALUE_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__memory/addressof.h>
@@ -42,4 +42,4 @@ struct __temp_value {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CXX03___MEMORY_TEMP_VALUE_H
+#endif // _LIBCPP_CXX03_MEMORY_TEMP_VALUE_H

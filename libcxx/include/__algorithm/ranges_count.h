@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_RANGES_COUNT_H
-#define _LIBCPP___ALGORITHM_RANGES_COUNT_H
+#ifndef _LIBCPP_ALGORITHM_RANGES_COUNT_H
+#define _LIBCPP_ALGORITHM_RANGES_COUNT_H
 
 #include <__algorithm/count.h>
 #include <__algorithm/iterator_operations.h>
@@ -61,4 +61,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___ALGORITHM_RANGES_COUNT_H
+#endif // _LIBCPP_ALGORITHM_RANGES_COUNT_H

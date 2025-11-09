@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_IS_SPECIALIZATION
-#define _LIBCPP___TYPE_TRAITS_IS_SPECIALIZATION
+#ifndef _LIBCPP_TYPE_TRAITS_IS_SPECIALIZATION
+#define _LIBCPP_TYPE_TRAITS_IS_SPECIALIZATION
 
 // This contains parts of P2098R1 but is based on MSVC STL's implementation.
 //
@@ -38,4 +38,4 @@ inline const bool __is_specialization_v<_Template<_Args...>, _Template> = true;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_IS_SPECIALIZATION
+#endif // _LIBCPP_TYPE_TRAITS_IS_SPECIALIZATION

@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FORMAT_FORMATTER_H
-#define _LIBCPP___FORMAT_FORMATTER_H
+#ifndef _LIBCPP_FORMAT_FORMATTER_H
+#define _LIBCPP_FORMAT_FORMATTER_H
 
 #include <__config>
 #include <__fwd/format.h>
@@ -55,4 +55,4 @@ _LIBCPP_HIDE_FROM_ABI constexpr void __set_debug_format(_Tp& __formatter) {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FORMAT_FORMATTER_H
+#endif // _LIBCPP_FORMAT_FORMATTER_H

@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03_ARRAY
-#define _LIBCPP___CXX03_ARRAY
+#ifndef _LIBCPP_CXX03_ARRAY
+#define _LIBCPP_CXX03_ARRAY
 
 /*
     array synopsis
@@ -416,4 +416,4 @@ _LIBCPP_POP_MACROS
 #  include <__cxx03/utility>
 #endif
 
-#endif // _LIBCPP___CXX03_ARRAY
+#endif // _LIBCPP_CXX03_ARRAY

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___BIT_POPCOUNT_H
-#define _LIBCPP___BIT_POPCOUNT_H
+#ifndef _LIBCPP_BIT_POPCOUNT_H
+#define _LIBCPP_BIT_POPCOUNT_H
 
 #include <__config>
 #include <__type_traits/integer_traits.h>
@@ -39,4 +39,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___BIT_POPCOUNT_H
+#endif // _LIBCPP_BIT_POPCOUNT_H

@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___NUMERIC_EXCLUSIVE_SCAN_H
-#define _LIBCPP___NUMERIC_EXCLUSIVE_SCAN_H
+#ifndef _LIBCPP_NUMERIC_EXCLUSIVE_SCAN_H
+#define _LIBCPP_NUMERIC_EXCLUSIVE_SCAN_H
 
 #include <__config>
 #include <__functional/operations.h>
@@ -55,4 +55,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___NUMERIC_EXCLUSIVE_SCAN_H
+#endif // _LIBCPP_NUMERIC_EXCLUSIVE_SCAN_H

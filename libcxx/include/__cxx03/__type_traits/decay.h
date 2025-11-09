@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___TYPE_TRAITS_DECAY_H
-#define _LIBCPP___CXX03___TYPE_TRAITS_DECAY_H
+#ifndef _LIBCPP_CXX03_TYPE_TRAITS_DECAY_H
+#define _LIBCPP_CXX03_TYPE_TRAITS_DECAY_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__type_traits/add_pointer.h>
@@ -65,4 +65,4 @@ using __decay_t = typename decay<_Tp>::type;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CXX03___TYPE_TRAITS_DECAY_H
+#endif // _LIBCPP_CXX03_TYPE_TRAITS_DECAY_H

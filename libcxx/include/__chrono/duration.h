@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CHRONO_DURATION_H
-#define _LIBCPP___CHRONO_DURATION_H
+#ifndef _LIBCPP_CHRONO_DURATION_H
+#define _LIBCPP_CHRONO_DURATION_H
 
 #include <__compare/ordering.h>
 #include <__compare/three_way_comparable.h>
@@ -542,4 +542,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___CHRONO_DURATION_H
+#endif // _LIBCPP_CHRONO_DURATION_H

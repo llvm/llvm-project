@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FUNCTIONAL_WEAK_RESULT_TYPE_H
-#define _LIBCPP___FUNCTIONAL_WEAK_RESULT_TYPE_H
+#ifndef _LIBCPP_FUNCTIONAL_WEAK_RESULT_TYPE_H
+#define _LIBCPP_FUNCTIONAL_WEAK_RESULT_TYPE_H
 
 #include <__config>
 #include <__functional/binary_function.h>
@@ -225,4 +225,4 @@ struct __weak_result_type<_Rp (_Cp::*)(_A1, _A2, _A3...) const volatile> {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FUNCTIONAL_WEAK_RESULT_TYPE_H
+#endif // _LIBCPP_FUNCTIONAL_WEAK_RESULT_TYPE_H

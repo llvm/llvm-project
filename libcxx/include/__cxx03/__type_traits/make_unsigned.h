@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___TYPE_TRAITS_MAKE_UNSIGNED_H
-#define _LIBCPP___CXX03___TYPE_TRAITS_MAKE_UNSIGNED_H
+#ifndef _LIBCPP_CXX03_TYPE_TRAITS_MAKE_UNSIGNED_H
+#define _LIBCPP_CXX03_TYPE_TRAITS_MAKE_UNSIGNED_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__type_traits/conditional.h>
@@ -86,4 +86,4 @@ using __copy_unsigned_t = __conditional_t<is_unsigned<_Tp>::value, __make_unsign
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CXX03___TYPE_TRAITS_MAKE_UNSIGNED_H
+#endif // _LIBCPP_CXX03_TYPE_TRAITS_MAKE_UNSIGNED_H

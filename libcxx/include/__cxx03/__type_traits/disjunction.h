@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___TYPE_TRAITS_DISJUNCTION_H
-#define _LIBCPP___CXX03___TYPE_TRAITS_DISJUNCTION_H
+#ifndef _LIBCPP_CXX03_TYPE_TRAITS_DISJUNCTION_H
+#define _LIBCPP_CXX03_TYPE_TRAITS_DISJUNCTION_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__type_traits/integral_constant.h>
@@ -45,4 +45,4 @@ using _Or _LIBCPP_NODEBUG = typename _OrImpl<sizeof...(_Args) != 0>::template _R
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CXX03___TYPE_TRAITS_DISJUNCTION_H
+#endif // _LIBCPP_CXX03_TYPE_TRAITS_DISJUNCTION_H

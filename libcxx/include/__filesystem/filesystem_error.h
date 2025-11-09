@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FILESYSTEM_FILESYSTEM_ERROR_H
-#define _LIBCPP___FILESYSTEM_FILESYSTEM_ERROR_H
+#ifndef _LIBCPP_FILESYSTEM_FILESYSTEM_ERROR_H
+#define _LIBCPP_FILESYSTEM_FILESYSTEM_ERROR_H
 
 #include <__config>
 #include <__filesystem/path.h>
@@ -83,4 +83,4 @@ _LIBCPP_END_NAMESPACE_FILESYSTEM
 
 #endif // _LIBCPP_STD_VER >= 17
 
-#endif // _LIBCPP___FILESYSTEM_FILESYSTEM_ERROR_H
+#endif // _LIBCPP_FILESYSTEM_FILESYSTEM_ERROR_H

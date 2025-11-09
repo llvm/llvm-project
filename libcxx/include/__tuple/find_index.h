@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TUPLE_FIND_INDEX_H
-#define _LIBCPP___TUPLE_FIND_INDEX_H
+#ifndef _LIBCPP_TUPLE_FIND_INDEX_H
+#define _LIBCPP_TUPLE_FIND_INDEX_H
 
 #include <__config>
 #include <__cstddef/size_t.h>
@@ -59,4 +59,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 14
 
-#endif // _LIBCPP___TUPLE_FIND_INDEX_H
+#endif // _LIBCPP_TUPLE_FIND_INDEX_H

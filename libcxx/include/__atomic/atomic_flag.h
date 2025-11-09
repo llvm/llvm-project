@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ATOMIC_ATOMIC_FLAG_H
-#define _LIBCPP___ATOMIC_ATOMIC_FLAG_H
+#ifndef _LIBCPP_ATOMIC_ATOMIC_FLAG_H
+#define _LIBCPP_ATOMIC_ATOMIC_FLAG_H
 
 #include <__atomic/atomic_sync.h>
 #include <__atomic/contention_t.h>
@@ -161,4 +161,4 @@ inline _LIBCPP_HIDE_FROM_ABI void atomic_flag_notify_all(atomic_flag* __o) _NOEX
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ATOMIC_ATOMIC_FLAG_H
+#endif // _LIBCPP_ATOMIC_ATOMIC_FLAG_H

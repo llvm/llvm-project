@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TUPLE_TUPLE_ELEMENT_H
-#define _LIBCPP___TUPLE_TUPLE_ELEMENT_H
+#ifndef _LIBCPP_TUPLE_TUPLE_ELEMENT_H
+#define _LIBCPP_TUPLE_TUPLE_ELEMENT_H
 
 #include <__config>
 #include <__cstddef/size_t.h>
@@ -43,4 +43,4 @@ using tuple_element_t _LIBCPP_NODEBUG = typename tuple_element<_Ip, _Tp...>::typ
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TUPLE_TUPLE_ELEMENT_H
+#endif // _LIBCPP_TUPLE_TUPLE_ELEMENT_H

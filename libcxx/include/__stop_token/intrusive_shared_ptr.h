@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___STOP_TOKEN_INTRUSIVE_SHARED_PTR_H
-#define _LIBCPP___STOP_TOKEN_INTRUSIVE_SHARED_PTR_H
+#ifndef _LIBCPP_STOP_TOKEN_INTRUSIVE_SHARED_PTR_H
+#define _LIBCPP_STOP_TOKEN_INTRUSIVE_SHARED_PTR_H
 
 #include <__atomic/atomic.h>
 #include <__atomic/memory_order.h>
@@ -132,4 +132,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___STOP_TOKEN_INTRUSIVE_SHARED_PTR_H
+#endif // _LIBCPP_STOP_TOKEN_INTRUSIVE_SHARED_PTR_H

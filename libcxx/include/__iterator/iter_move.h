@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ITERATOR_ITER_MOVE_H
-#define _LIBCPP___ITERATOR_ITER_MOVE_H
+#ifndef _LIBCPP_ITERATOR_ITER_MOVE_H
+#define _LIBCPP_ITERATOR_ITER_MOVE_H
 
 #include <__concepts/class_or_enum.h>
 #include <__config>
@@ -101,4 +101,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___ITERATOR_ITER_MOVE_H
+#endif // _LIBCPP_ITERATOR_ITER_MOVE_H

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_RANGES_PARTIAL_SORT_COPY_H
-#define _LIBCPP___ALGORITHM_RANGES_PARTIAL_SORT_COPY_H
+#ifndef _LIBCPP_ALGORITHM_RANGES_PARTIAL_SORT_COPY_H
+#define _LIBCPP_ALGORITHM_RANGES_PARTIAL_SORT_COPY_H
 
 #include <__algorithm/in_out_result.h>
 #include <__algorithm/iterator_operations.h>
@@ -107,4 +107,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___ALGORITHM_RANGES_PARTIAL_SORT_COPY_H
+#endif // _LIBCPP_ALGORITHM_RANGES_PARTIAL_SORT_COPY_H

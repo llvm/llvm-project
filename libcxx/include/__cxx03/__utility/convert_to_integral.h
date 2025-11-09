@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___UTILITY_CONVERT_TO_INTEGRAL_H
-#define _LIBCPP___CXX03___UTILITY_CONVERT_TO_INTEGRAL_H
+#ifndef _LIBCPP_CXX03_UTILITY_CONVERT_TO_INTEGRAL_H
+#define _LIBCPP_CXX03_UTILITY_CONVERT_TO_INTEGRAL_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__type_traits/enable_if.h>
@@ -60,4 +60,4 @@ inline _LIBCPP_HIDE_FROM_ABI typename __sfinae_underlying_type<_Tp>::__promoted_
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CXX03___UTILITY_CONVERT_TO_INTEGRAL_H
+#endif // _LIBCPP_CXX03_UTILITY_CONVERT_TO_INTEGRAL_H

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___MATH_ROUNDING_FUNCTIONS_H
-#define _LIBCPP___MATH_ROUNDING_FUNCTIONS_H
+#ifndef _LIBCPP_MATH_ROUNDING_FUNCTIONS_H
+#define _LIBCPP_MATH_ROUNDING_FUNCTIONS_H
 
 #include <__config>
 #include <__type_traits/enable_if.h>
@@ -242,4 +242,4 @@ template <class _A1, __enable_if_t<is_integral<_A1>::value, int> = 0>
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___MATH_ROUNDING_FUNCTIONS_H
+#endif // _LIBCPP_MATH_ROUNDING_FUNCTIONS_H

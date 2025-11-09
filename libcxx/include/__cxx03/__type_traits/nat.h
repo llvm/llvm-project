@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___TYPE_TRAITS_NAT_H
-#define _LIBCPP___CXX03___TYPE_TRAITS_NAT_H
+#ifndef _LIBCPP_CXX03_TYPE_TRAITS_NAT_H
+#define _LIBCPP_CXX03_TYPE_TRAITS_NAT_H
 
 #include <__cxx03/__config>
 
@@ -21,4 +21,4 @@ struct __nat {};
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CXX03___TYPE_TRAITS_NAT_H
+#endif // _LIBCPP_CXX03_TYPE_TRAITS_NAT_H

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___RANDOM_IS_VALID_H
-#define _LIBCPP___CXX03___RANDOM_IS_VALID_H
+#ifndef _LIBCPP_CXX03_RANDOM_IS_VALID_H
+#define _LIBCPP_CXX03_RANDOM_IS_VALID_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__type_traits/enable_if.h>
@@ -91,4 +91,4 @@ struct __libcpp_random_is_valid_urng<
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CXX03___RANDOM_IS_VALID_H
+#endif // _LIBCPP_CXX03_RANDOM_IS_VALID_H

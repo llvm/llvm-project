@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CHARCONV_TRAITS
-#define _LIBCPP___CHARCONV_TRAITS
+#ifndef _LIBCPP_CHARCONV_TRAITS
+#define _LIBCPP_CHARCONV_TRAITS
 
 #include <__assert>
 #include <__bit/countl.h>
@@ -185,4 +185,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___CHARCONV_TRAITS
+#endif // _LIBCPP_CHARCONV_TRAITS

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___PSTL_CPU_ALGOS_TRANSFORM_REDUCE_H
-#define _LIBCPP___PSTL_CPU_ALGOS_TRANSFORM_REDUCE_H
+#ifndef _LIBCPP_PSTL_CPU_ALGOS_TRANSFORM_REDUCE_H
+#define _LIBCPP_PSTL_CPU_ALGOS_TRANSFORM_REDUCE_H
 
 #include <__assert>
 #include <__config>
@@ -216,4 +216,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___PSTL_CPU_ALGOS_TRANSFORM_REDUCE_H
+#endif // _LIBCPP_PSTL_CPU_ALGOS_TRANSFORM_REDUCE_H

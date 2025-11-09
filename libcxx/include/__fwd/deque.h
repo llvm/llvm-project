@@ -6,8 +6,8 @@
 //
 //===---------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FWD_DEQUE_H
-#define _LIBCPP___FWD_DEQUE_H
+#ifndef _LIBCPP_FWD_DEQUE_H
+#define _LIBCPP_FWD_DEQUE_H
 
 #include <__config>
 #include <__fwd/memory.h>
@@ -23,4 +23,4 @@ class deque;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FWD_DEQUE_H
+#endif // _LIBCPP_FWD_DEQUE_H

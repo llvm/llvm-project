@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_IS_WITHIN_LIFETIME_H
-#define _LIBCPP___TYPE_TRAITS_IS_WITHIN_LIFETIME_H
+#ifndef _LIBCPP_TYPE_TRAITS_IS_WITHIN_LIFETIME_H
+#define _LIBCPP_TYPE_TRAITS_IS_WITHIN_LIFETIME_H
 
 #include <__config>
 
@@ -26,4 +26,4 @@ _LIBCPP_HIDE_FROM_ABI consteval bool is_within_lifetime(const _Tp* __p) noexcept
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_IS_WITHIN_LIFETIME_H
+#endif // _LIBCPP_TYPE_TRAITS_IS_WITHIN_LIFETIME_H

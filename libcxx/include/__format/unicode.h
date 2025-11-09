@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FORMAT_UNICODE_H
-#define _LIBCPP___FORMAT_UNICODE_H
+#ifndef _LIBCPP_FORMAT_UNICODE_H
+#define _LIBCPP_FORMAT_UNICODE_H
 
 #include <__assert>
 #include <__bit/countl.h>
@@ -599,4 +599,4 @@ private:
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FORMAT_UNICODE_H
+#endif // _LIBCPP_FORMAT_UNICODE_H

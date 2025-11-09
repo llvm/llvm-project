@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___BIT_ROTATE_H
-#define _LIBCPP___BIT_ROTATE_H
+#ifndef _LIBCPP_BIT_ROTATE_H
+#define _LIBCPP_BIT_ROTATE_H
 
 #include <__config>
 #include <__type_traits/integer_traits.h>
@@ -57,4 +57,4 @@ template <__unsigned_integer _Tp>
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___BIT_ROTATE_H
+#endif // _LIBCPP_BIT_ROTATE_H

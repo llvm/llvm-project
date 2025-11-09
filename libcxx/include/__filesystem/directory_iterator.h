@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FILESYSTEM_DIRECTORY_ITERATOR_H
-#define _LIBCPP___FILESYSTEM_DIRECTORY_ITERATOR_H
+#ifndef _LIBCPP_FILESYSTEM_DIRECTORY_ITERATOR_H
+#define _LIBCPP_FILESYSTEM_DIRECTORY_ITERATOR_H
 
 #include <__assert>
 #include <__config>
@@ -141,4 +141,4 @@ inline constexpr bool std::ranges::enable_view<std::filesystem::directory_iterat
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___FILESYSTEM_DIRECTORY_ITERATOR_H
+#endif // _LIBCPP_FILESYSTEM_DIRECTORY_ITERATOR_H

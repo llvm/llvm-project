@@ -7,8 +7,8 @@
 //
 //===---------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FWD_STRING_VIEW_H
-#define _LIBCPP___FWD_STRING_VIEW_H
+#ifndef _LIBCPP_FWD_STRING_VIEW_H
+#define _LIBCPP_FWD_STRING_VIEW_H
 
 #include <__config>
 #include <__fwd/string.h>
@@ -47,4 +47,4 @@ class _LIBCPP_PREFERRED_NAME(string_view)
 // clang-format on
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FWD_STRING_VIEW_H
+#endif // _LIBCPP_FWD_STRING_VIEW_H

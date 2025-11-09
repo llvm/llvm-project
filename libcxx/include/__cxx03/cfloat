@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03_CFLOAT
-#define _LIBCPP___CXX03_CFLOAT
+#ifndef _LIBCPP_CXX03_CFLOAT
+#define _LIBCPP_CXX03_CFLOAT
 
 /*
     cfloat synopsis
@@ -85,4 +85,4 @@ Macros:
 #  pragma GCC system_header
 #endif
 
-#endif // _LIBCPP___CXX03_CFLOAT
+#endif // _LIBCPP_CXX03_CFLOAT

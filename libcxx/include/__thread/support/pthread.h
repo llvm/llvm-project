@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___THREAD_SUPPORT_PTHREAD_H
-#define _LIBCPP___THREAD_SUPPORT_PTHREAD_H
+#ifndef _LIBCPP_THREAD_SUPPORT_PTHREAD_H
+#define _LIBCPP_THREAD_SUPPORT_PTHREAD_H
 
 #include <__chrono/convert_to_timespec.h>
 #include <__chrono/duration.h>
@@ -218,4 +218,4 @@ inline _LIBCPP_HIDE_FROM_ABI int __libcpp_tls_set(__libcpp_tls_key __key, void* 
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___THREAD_SUPPORT_PTHREAD_H
+#endif // _LIBCPP_THREAD_SUPPORT_PTHREAD_H

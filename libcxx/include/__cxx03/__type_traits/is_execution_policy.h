@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___TYPE_TRAITS_IS_EXECUTION_POLICY_H
-#define _LIBCPP___CXX03___TYPE_TRAITS_IS_EXECUTION_POLICY_H
+#ifndef _LIBCPP_CXX03_TYPE_TRAITS_IS_EXECUTION_POLICY_H
+#define _LIBCPP_CXX03_TYPE_TRAITS_IS_EXECUTION_POLICY_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__type_traits/remove_cvref.h>
@@ -16,4 +16,4 @@
 #  pragma GCC system_header
 #endif
 
-#endif // _LIBCPP___CXX03___TYPE_TRAITS_IS_EXECUTION_POLICY_H
+#endif // _LIBCPP_CXX03_TYPE_TRAITS_IS_EXECUTION_POLICY_H

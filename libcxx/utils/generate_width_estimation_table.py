@@ -241,8 +241,8 @@ TABLES_HPP_TEMPLATE = """
 // use or other dealings in these Data Files or Software without prior
 // written authorization of the copyright holder.
 
-#ifndef _LIBCPP___FORMAT_WIDTH_ESTIMATION_TABLE_H
-#define _LIBCPP___FORMAT_WIDTH_ESTIMATION_TABLE_H
+#ifndef _LIBCPP_FORMAT_WIDTH_ESTIMATION_TABLE_H
+#define _LIBCPP_FORMAT_WIDTH_ESTIMATION_TABLE_H
 
 #include <__algorithm/ranges_upper_bound.h>
 #include <__config>
@@ -265,7 +265,7 @@ namespace __width_estimation_table {{
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FORMAT_WIDTH_ESTIMATION_TABLE_H"""
+#endif // _LIBCPP_FORMAT_WIDTH_ESTIMATION_TABLE_H"""
 
 
 def property_ranges_to_table(ranges: list[PropertyRange]) -> list[Entry]:

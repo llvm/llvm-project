@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___RANGES_FROM_RANGE_H
-#define _LIBCPP___RANGES_FROM_RANGE_H
+#ifndef _LIBCPP_RANGES_FROM_RANGE_H
+#define _LIBCPP_RANGES_FROM_RANGE_H
 
 #include <__config>
 
@@ -30,4 +30,4 @@ inline constexpr from_range_t from_range{};
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___RANGES_FROM_RANGE_H
+#endif // _LIBCPP_RANGES_FROM_RANGE_H

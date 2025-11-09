@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FORMAT_FORMATTER_STRING_H
-#define _LIBCPP___FORMAT_FORMATTER_STRING_H
+#ifndef _LIBCPP_FORMAT_FORMATTER_STRING_H
+#define _LIBCPP_FORMAT_FORMATTER_STRING_H
 
 #include <__assert>
 #include <__config>
@@ -170,4 +170,4 @@ inline constexpr bool enable_nonlocking_formatter_optimization<basic_string_view
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FORMAT_FORMATTER_STRING_H
+#endif // _LIBCPP_FORMAT_FORMATTER_STRING_H

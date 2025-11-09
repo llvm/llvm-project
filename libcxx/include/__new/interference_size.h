@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___NEW_INTERFERENCE_SIZE_H
-#define _LIBCPP___NEW_INTERFERENCE_SIZE_H
+#ifndef _LIBCPP_NEW_INTERFERENCE_SIZE_H
+#define _LIBCPP_NEW_INTERFERENCE_SIZE_H
 
 #include <__config>
 #include <__cstddef/size_t.h>
@@ -31,4 +31,4 @@ inline constexpr size_t hardware_constructive_interference_size = __GCC_CONSTRUC
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___NEW_INTERFERENCE_SIZE_H
+#endif // _LIBCPP_NEW_INTERFERENCE_SIZE_H

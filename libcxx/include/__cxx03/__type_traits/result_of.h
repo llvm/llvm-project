@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___TYPE_TRAITS_RESULT_OF_H
-#define _LIBCPP___CXX03___TYPE_TRAITS_RESULT_OF_H
+#ifndef _LIBCPP_CXX03_TYPE_TRAITS_RESULT_OF_H
+#define _LIBCPP_CXX03_TYPE_TRAITS_RESULT_OF_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__type_traits/invoke.h>
@@ -28,4 +28,4 @@ class _LIBCPP_TEMPLATE_VIS result_of<_Fp(_Args...)> : public __invoke_of<_Fp, _A
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CXX03___TYPE_TRAITS_RESULT_OF_H
+#endif // _LIBCPP_CXX03_TYPE_TRAITS_RESULT_OF_H

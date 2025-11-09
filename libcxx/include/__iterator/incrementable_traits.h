@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ITERATOR_INCREMENTABLE_TRAITS_H
-#define _LIBCPP___ITERATOR_INCREMENTABLE_TRAITS_H
+#ifndef _LIBCPP_ITERATOR_INCREMENTABLE_TRAITS_H
+#define _LIBCPP_ITERATOR_INCREMENTABLE_TRAITS_H
 
 #include <__concepts/arithmetic.h>
 #include <__config>
@@ -76,4 +76,4 @@ using iter_difference_t =
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ITERATOR_INCREMENTABLE_TRAITS_H
+#endif // _LIBCPP_ITERATOR_INCREMENTABLE_TRAITS_H

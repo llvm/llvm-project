@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___TYPE_TRAITS_COMMON_TYPE_H
-#define _LIBCPP___CXX03___TYPE_TRAITS_COMMON_TYPE_H
+#ifndef _LIBCPP_CXX03_TYPE_TRAITS_COMMON_TYPE_H
+#define _LIBCPP_CXX03_TYPE_TRAITS_COMMON_TYPE_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__type_traits/conditional.h>
@@ -76,4 +76,4 @@ struct _LIBCPP_TEMPLATE_VIS common_type<_Tp, _Up, _Vp, _Rest...>
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CXX03___TYPE_TRAITS_COMMON_TYPE_H
+#endif // _LIBCPP_CXX03_TYPE_TRAITS_COMMON_TYPE_H

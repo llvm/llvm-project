@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___SYSTEM_ERROR_SYSTEM_ERROR_H
-#define _LIBCPP___SYSTEM_ERROR_SYSTEM_ERROR_H
+#ifndef _LIBCPP_SYSTEM_ERROR_SYSTEM_ERROR_H
+#define _LIBCPP_SYSTEM_ERROR_SYSTEM_ERROR_H
 
 #include <__config>
 #include <__system_error/error_category.h>
@@ -54,4 +54,4 @@ public:
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___SYSTEM_ERROR_SYSTEM_ERROR_H
+#endif // _LIBCPP_SYSTEM_ERROR_SYSTEM_ERROR_H

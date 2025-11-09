@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03_CSTDIO
-#define _LIBCPP___CXX03_CSTDIO
+#ifndef _LIBCPP_CXX03_CSTDIO
+#define _LIBCPP_CXX03_CSTDIO
 
 /*
     cstdio synopsis
@@ -169,4 +169,4 @@ using ::vprintf _LIBCPP_USING_IF_EXISTS;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CXX03_CSTDIO
+#endif // _LIBCPP_CXX03_CSTDIO

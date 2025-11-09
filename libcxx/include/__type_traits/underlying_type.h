@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_UNDERLYING_TYPE_H
-#define _LIBCPP___TYPE_TRAITS_UNDERLYING_TYPE_H
+#ifndef _LIBCPP_TYPE_TRAITS_UNDERLYING_TYPE_H
+#define _LIBCPP_TYPE_TRAITS_UNDERLYING_TYPE_H
 
 #include <__config>
 #include <__type_traits/is_enum.h>
@@ -48,4 +48,4 @@ using underlying_type_t = __underlying_type_t<_Tp>;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_UNDERLYING_TYPE_H
+#endif // _LIBCPP_TYPE_TRAITS_UNDERLYING_TYPE_H

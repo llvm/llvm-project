@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___UTILITY_UNREACHABLE_H
-#define _LIBCPP___UTILITY_UNREACHABLE_H
+#ifndef _LIBCPP_UTILITY_UNREACHABLE_H
+#define _LIBCPP_UTILITY_UNREACHABLE_H
 
 #include <__assert>
 #include <__config>
@@ -31,4 +31,4 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___UTILITY_UNREACHABLE_H
+#endif // _LIBCPP_UTILITY_UNREACHABLE_H

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_IS_ASSIGNABLE_H
-#define _LIBCPP___TYPE_TRAITS_IS_ASSIGNABLE_H
+#ifndef _LIBCPP_TYPE_TRAITS_IS_ASSIGNABLE_H
+#define _LIBCPP_TYPE_TRAITS_IS_ASSIGNABLE_H
 
 #include <__config>
 #include <__type_traits/add_reference.h>
@@ -47,4 +47,4 @@ _LIBCPP_NO_SPECIALIZATIONS inline constexpr bool is_move_assignable_v = is_move_
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_IS_ASSIGNABLE_H
+#endif // _LIBCPP_TYPE_TRAITS_IS_ASSIGNABLE_H

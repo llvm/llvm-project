@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___RANDOM_LINEAR_CONGRUENTIAL_ENGINE_H
-#define _LIBCPP___RANDOM_LINEAR_CONGRUENTIAL_ENGINE_H
+#ifndef _LIBCPP_RANDOM_LINEAR_CONGRUENTIAL_ENGINE_H
+#define _LIBCPP_RANDOM_LINEAR_CONGRUENTIAL_ENGINE_H
 
 #include <__config>
 #include <__random/is_seed_sequence.h>
@@ -368,4 +368,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___RANDOM_LINEAR_CONGRUENTIAL_ENGINE_H
+#endif // _LIBCPP_RANDOM_LINEAR_CONGRUENTIAL_ENGINE_H

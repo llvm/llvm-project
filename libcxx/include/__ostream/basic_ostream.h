@@ -6,8 +6,8 @@
 //
 //===---------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___OSTREAM_BASIC_OSTREAM_H
-#define _LIBCPP___OSTREAM_BASIC_OSTREAM_H
+#ifndef _LIBCPP_OSTREAM_BASIC_OSTREAM_H
+#define _LIBCPP_OSTREAM_BASIC_OSTREAM_H
 
 #include <__config>
 
@@ -678,4 +678,4 @@ _LIBCPP_POP_MACROS
 
 #endif // _LIBCPP_HAS_LOCALIZATION
 
-#endif // _LIBCPP___OSTREAM_BASIC_OSTREAM_H
+#endif // _LIBCPP_OSTREAM_BASIC_OSTREAM_H

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_RANGES_ENDS_WITH_H
-#define _LIBCPP___ALGORITHM_RANGES_ENDS_WITH_H
+#ifndef _LIBCPP_ALGORITHM_RANGES_ENDS_WITH_H
+#define _LIBCPP_ALGORITHM_RANGES_ENDS_WITH_H
 
 #include <__algorithm/ranges_equal.h>
 #include <__algorithm/ranges_starts_with.h>
@@ -197,4 +197,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___ALGORITHM_RANGES_ENDS_WITH_H
+#endif // _LIBCPP_ALGORITHM_RANGES_ENDS_WITH_H

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___NEW_NEW_HANDLER_H
-#define _LIBCPP___NEW_NEW_HANDLER_H
+#ifndef _LIBCPP_NEW_NEW_HANDLER_H
+#define _LIBCPP_NEW_NEW_HANDLER_H
 
 #include <__config>
 
@@ -25,4 +25,4 @@ _LIBCPP_EXPORTED_FROM_ABI new_handler get_new_handler() _NOEXCEPT;
 _LIBCPP_END_UNVERSIONED_NAMESPACE_STD
 #endif // _LIBCPP_ABI_VCRUNTIME
 
-#endif // _LIBCPP___NEW_NEW_HANDLER_H
+#endif // _LIBCPP_NEW_NEW_HANDLER_H

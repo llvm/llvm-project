@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___UTILITY_ELEMENT_COUNT_H
-#define _LIBCPP___UTILITY_ELEMENT_COUNT_H
+#ifndef _LIBCPP_UTILITY_ELEMENT_COUNT_H
+#define _LIBCPP_UTILITY_ELEMENT_COUNT_H
 
 #include <__config>
 #include <__cstddef/size_t.h>
@@ -24,4 +24,4 @@ enum class __element_count : size_t {};
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___UTILITY_ELEMENT_COUNT_H
+#endif // _LIBCPP_UTILITY_ELEMENT_COUNT_H

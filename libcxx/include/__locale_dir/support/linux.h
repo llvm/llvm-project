@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___LOCALE_DIR_SUPPORT_LINUX_H
-#define _LIBCPP___LOCALE_DIR_SUPPORT_LINUX_H
+#ifndef _LIBCPP_LOCALE_DIR_SUPPORT_LINUX_H
+#define _LIBCPP_LOCALE_DIR_SUPPORT_LINUX_H
 
 #include <__config>
 #include <__cstddef/size_t.h>
@@ -278,4 +278,4 @@ inline _LIBCPP_ATTRIBUTE_FORMAT(__scanf__, 3, 4) int __sscanf(
 } // namespace __locale
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___LOCALE_DIR_SUPPORT_LINUX_H
+#endif // _LIBCPP_LOCALE_DIR_SUPPORT_LINUX_H

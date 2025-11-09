@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___FUNCTIONAL_MEM_FUN_REF_H
-#define _LIBCPP___CXX03___FUNCTIONAL_MEM_FUN_REF_H
+#ifndef _LIBCPP_CXX03_FUNCTIONAL_MEM_FUN_REF_H
+#define _LIBCPP_CXX03_FUNCTIONAL_MEM_FUN_REF_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__functional/binary_function.h>
@@ -134,4 +134,4 @@ inline _LIBCPP_HIDE_FROM_ABI const_mem_fun1_ref_t<_Sp, _Tp, _Ap> mem_fun_ref(_Sp
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CXX03___FUNCTIONAL_MEM_FUN_REF_H
+#endif // _LIBCPP_CXX03_FUNCTIONAL_MEM_FUN_REF_H

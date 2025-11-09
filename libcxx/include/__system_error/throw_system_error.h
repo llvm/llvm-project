@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___SYSTEM_ERROR_THROW_SYSTEM_ERROR_H
-#define _LIBCPP___SYSTEM_ERROR_THROW_SYSTEM_ERROR_H
+#ifndef _LIBCPP_SYSTEM_ERROR_THROW_SYSTEM_ERROR_H
+#define _LIBCPP_SYSTEM_ERROR_THROW_SYSTEM_ERROR_H
 
 #include <__config>
 
@@ -22,4 +22,4 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___SYSTEM_ERROR_THROW_SYSTEM_ERROR_H
+#endif // _LIBCPP_SYSTEM_ERROR_THROW_SYSTEM_ERROR_H

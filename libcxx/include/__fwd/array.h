@@ -6,8 +6,8 @@
 //
 //===---------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FWD_ARRAY_H
-#define _LIBCPP___FWD_ARRAY_H
+#ifndef _LIBCPP_FWD_ARRAY_H
+#define _LIBCPP_FWD_ARRAY_H
 
 #include <__config>
 #include <__cstddef/size_t.h>
@@ -44,4 +44,4 @@ inline const bool __is_std_array_v<array<_Tp, _Size> > = true;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FWD_ARRAY_H
+#endif // _LIBCPP_FWD_ARRAY_H

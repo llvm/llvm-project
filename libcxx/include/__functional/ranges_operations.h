@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FUNCTIONAL_RANGES_OPERATIONS_H
-#define _LIBCPP___FUNCTIONAL_RANGES_OPERATIONS_H
+#ifndef _LIBCPP_FUNCTIONAL_RANGES_OPERATIONS_H
+#define _LIBCPP_FUNCTIONAL_RANGES_OPERATIONS_H
 
 #include <__concepts/equality_comparable.h>
 #include <__concepts/totally_ordered.h>
@@ -119,4 +119,4 @@ inline const bool __is_generic_transparent_comparator_v<ranges::greater> = true;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FUNCTIONAL_RANGES_OPERATIONS_H
+#endif // _LIBCPP_FUNCTIONAL_RANGES_OPERATIONS_H

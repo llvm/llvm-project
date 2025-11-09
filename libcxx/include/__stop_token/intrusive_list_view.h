@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___STOP_TOKEN_INTRUSIVE_LIST_VIEW_H
-#define _LIBCPP___STOP_TOKEN_INTRUSIVE_LIST_VIEW_H
+#ifndef _LIBCPP_STOP_TOKEN_INTRUSIVE_LIST_VIEW_H
+#define _LIBCPP_STOP_TOKEN_INTRUSIVE_LIST_VIEW_H
 
 #include <__assert>
 #include <__config>
@@ -82,4 +82,4 @@ private:
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___STOP_TOKEN_INTRUSIVE_LIST_VIEW_H
+#endif // _LIBCPP_STOP_TOKEN_INTRUSIVE_LIST_VIEW_H

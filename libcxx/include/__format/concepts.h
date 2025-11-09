@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FORMAT_CONCEPTS_H
-#define _LIBCPP___FORMAT_CONCEPTS_H
+#ifndef _LIBCPP_FORMAT_CONCEPTS_H
+#define _LIBCPP_FORMAT_CONCEPTS_H
 
 #include <__concepts/same_as.h>
 #include <__concepts/semiregular.h>
@@ -66,4 +66,4 @@ concept formattable = __formattable<_Tp, _CharT>;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FORMAT_CONCEPTS_H
+#endif // _LIBCPP_FORMAT_CONCEPTS_H

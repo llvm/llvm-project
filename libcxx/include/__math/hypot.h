@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___MATH_HYPOT_H
-#define _LIBCPP___MATH_HYPOT_H
+#ifndef _LIBCPP_MATH_HYPOT_H
+#define _LIBCPP_MATH_HYPOT_H
 
 #include <__config>
 #include <__math/abs.h>
@@ -105,4 +105,4 @@ _LIBCPP_HIDE_FROM_ABI __promote_t<_A1, _A2, _A3> hypot(_A1 __x, _A2 __y, _A3 __z
 _LIBCPP_END_NAMESPACE_STD
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___MATH_HYPOT_H
+#endif // _LIBCPP_MATH_HYPOT_H

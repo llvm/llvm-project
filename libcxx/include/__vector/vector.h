@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___VECTOR_VECTOR_H
-#define _LIBCPP___VECTOR_VECTOR_H
+#ifndef _LIBCPP_VECTOR_VECTOR_H
+#define _LIBCPP_VECTOR_VECTOR_H
 
 #include <__algorithm/copy.h>
 #include <__algorithm/copy_n.h>
@@ -1466,4 +1466,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___VECTOR_VECTOR_H
+#endif // _LIBCPP_VECTOR_VECTOR_H

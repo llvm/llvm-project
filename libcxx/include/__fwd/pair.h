@@ -6,8 +6,8 @@
 //
 //===---------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FWD_PAIR_H
-#define _LIBCPP___FWD_PAIR_H
+#ifndef _LIBCPP_FWD_PAIR_H
+#define _LIBCPP_FWD_PAIR_H
 
 #include <__config>
 #include <__cstddef/size_t.h>
@@ -48,4 +48,4 @@ get(const pair<_T1, _T2>&&) _NOEXCEPT;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FWD_PAIR_H
+#endif // _LIBCPP_FWD_PAIR_H

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___RANDOM_DEFAULT_RANDOM_ENGINE_H
-#define _LIBCPP___RANDOM_DEFAULT_RANDOM_ENGINE_H
+#ifndef _LIBCPP_RANDOM_DEFAULT_RANDOM_ENGINE_H
+#define _LIBCPP_RANDOM_DEFAULT_RANDOM_ENGINE_H
 
 #include <__config>
 #include <__random/linear_congruential_engine.h>
@@ -22,4 +22,4 @@ typedef minstd_rand default_random_engine;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___RANDOM_DEFAULT_RANDOM_ENGINE_H
+#endif // _LIBCPP_RANDOM_DEFAULT_RANDOM_ENGINE_H

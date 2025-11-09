@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TREE
-#define _LIBCPP___TREE
+#ifndef _LIBCPP_TREE
+#define _LIBCPP_TREE
 
 #include <__algorithm/min.h>
 #include <__assert>
@@ -2323,4 +2323,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___TREE
+#endif // _LIBCPP_TREE

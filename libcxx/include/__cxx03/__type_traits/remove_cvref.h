@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___TYPE_TRAITS_REMOVE_CVREF_H
-#define _LIBCPP___CXX03___TYPE_TRAITS_REMOVE_CVREF_H
+#ifndef _LIBCPP_CXX03_TYPE_TRAITS_REMOVE_CVREF_H
+#define _LIBCPP_CXX03_TYPE_TRAITS_REMOVE_CVREF_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__type_traits/is_same.h>
@@ -33,4 +33,4 @@ struct __is_same_uncvref : _IsSame<__remove_cvref_t<_Tp>, __remove_cvref_t<_Up> 
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CXX03___TYPE_TRAITS_REMOVE_CVREF_H
+#endif // _LIBCPP_CXX03_TYPE_TRAITS_REMOVE_CVREF_H

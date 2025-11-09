@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FORMAT_FMT_PAIR_LIKE_H
-#define _LIBCPP___FORMAT_FMT_PAIR_LIKE_H
+#ifndef _LIBCPP_FORMAT_FMT_PAIR_LIKE_H
+#define _LIBCPP_FORMAT_FMT_PAIR_LIKE_H
 
 #include <__config>
 #include <__fwd/pair.h>
@@ -39,4 +39,4 @@ concept __fmt_pair_like =
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FORMAT_FMT_PAIR_LIKE_H
+#endif // _LIBCPP_FORMAT_FMT_PAIR_LIKE_H

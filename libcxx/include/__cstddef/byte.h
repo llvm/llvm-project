@@ -6,8 +6,8 @@
 //
 //===---------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CSTDDEF_BYTE_H
-#define _LIBCPP___CSTDDEF_BYTE_H
+#ifndef _LIBCPP_CSTDDEF_BYTE_H
+#define _LIBCPP_CSTDDEF_BYTE_H
 
 #include <__config>
 #include <__fwd/byte.h>
@@ -82,4 +82,4 @@ template <class _Integer, __enable_if_t<is_integral<_Integer>::value, int> = 0>
 _LIBCPP_END_UNVERSIONED_NAMESPACE_STD
 #endif // _LIBCPP_STD_VER >= 17
 
-#endif // _LIBCPP___CSTDDEF_BYTE_H
+#endif // _LIBCPP_CSTDDEF_BYTE_H

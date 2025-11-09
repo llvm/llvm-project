@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_COPY_N_H
-#define _LIBCPP___ALGORITHM_COPY_N_H
+#ifndef _LIBCPP_ALGORITHM_COPY_N_H
+#define _LIBCPP_ALGORITHM_COPY_N_H
 
 #include <__algorithm/copy.h>
 #include <__config>
@@ -57,4 +57,4 @@ copy_n(_InputIterator __first, _Size __orig_n, _OutputIterator __result) {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ALGORITHM_COPY_N_H
+#endif // _LIBCPP_ALGORITHM_COPY_N_H

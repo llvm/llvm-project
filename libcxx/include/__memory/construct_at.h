@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___MEMORY_CONSTRUCT_AT_H
-#define _LIBCPP___MEMORY_CONSTRUCT_AT_H
+#ifndef _LIBCPP_MEMORY_CONSTRUCT_AT_H
+#define _LIBCPP_MEMORY_CONSTRUCT_AT_H
 
 #include <__assert>
 #include <__config>
@@ -79,4 +79,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___MEMORY_CONSTRUCT_AT_H
+#endif // _LIBCPP_MEMORY_CONSTRUCT_AT_H

@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___RANGES_DATA_H
-#define _LIBCPP___RANGES_DATA_H
+#ifndef _LIBCPP_RANGES_DATA_H
+#define _LIBCPP_RANGES_DATA_H
 
 #include <__concepts/class_or_enum.h>
 #include <__config>
@@ -99,4 +99,4 @@ inline constexpr auto cdata = __cdata::__fn{};
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___RANGES_DATA_H
+#endif // _LIBCPP_RANGES_DATA_H

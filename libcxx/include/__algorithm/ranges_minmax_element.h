@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_RANGES_MINMAX_ELEMENT_H
-#define _LIBCPP___ALGORITHM_RANGES_MINMAX_ELEMENT_H
+#ifndef _LIBCPP_ALGORITHM_RANGES_MINMAX_ELEMENT_H
+#define _LIBCPP_ALGORITHM_RANGES_MINMAX_ELEMENT_H
 
 #include <__algorithm/min_max_result.h>
 #include <__algorithm/minmax_element.h>
@@ -73,4 +73,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___ALGORITHM_RANGES_MINMAX_H
+#endif // _LIBCPP_ALGORITHM_RANGES_MINMAX_H

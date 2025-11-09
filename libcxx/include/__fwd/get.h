@@ -6,8 +6,8 @@
 //
 //===---------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FWD_GET_H
-#define _LIBCPP___FWD_GET_H
+#ifndef _LIBCPP_FWD_GET_H
+#define _LIBCPP_FWD_GET_H
 
 #include <__config>
 #include <__fwd/array.h>
@@ -21,4 +21,4 @@
 #  pragma GCC system_header
 #endif
 
-#endif // _LIBCPP___FWD_GET_H
+#endif // _LIBCPP_FWD_GET_H

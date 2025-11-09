@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_IS_UNSIGNED_H
-#define _LIBCPP___TYPE_TRAITS_IS_UNSIGNED_H
+#ifndef _LIBCPP_TYPE_TRAITS_IS_UNSIGNED_H
+#define _LIBCPP_TYPE_TRAITS_IS_UNSIGNED_H
 
 #include <__config>
 #include <__type_traits/integral_constant.h>
@@ -49,4 +49,4 @@ inline constexpr bool is_unsigned_v = __is_unsigned_v<_Tp>;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_IS_UNSIGNED_H
+#endif // _LIBCPP_TYPE_TRAITS_IS_UNSIGNED_H

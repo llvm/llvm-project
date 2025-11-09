@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___UTILITY_PIECEWISE_CONSTRUCT_H
-#define _LIBCPP___CXX03___UTILITY_PIECEWISE_CONSTRUCT_H
+#ifndef _LIBCPP_CXX03_UTILITY_PIECEWISE_CONSTRUCT_H
+#define _LIBCPP_CXX03_UTILITY_PIECEWISE_CONSTRUCT_H
 
 #include <__cxx03/__config>
 
@@ -23,4 +23,4 @@ struct _LIBCPP_TEMPLATE_VIS piecewise_construct_t {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CXX03___UTILITY_PIECEWISE_CONSTRUCT_H
+#endif // _LIBCPP_CXX03_UTILITY_PIECEWISE_CONSTRUCT_H

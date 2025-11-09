@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___COMPARE_SYNTH_THREE_WAY_H
-#define _LIBCPP___COMPARE_SYNTH_THREE_WAY_H
+#ifndef _LIBCPP_COMPARE_SYNTH_THREE_WAY_H
+#define _LIBCPP_COMPARE_SYNTH_THREE_WAY_H
 
 #include <__compare/ordering.h>
 #include <__compare/three_way_comparable.h>
@@ -50,4 +50,4 @@ using __synth_three_way_result _LIBCPP_NODEBUG =
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___COMPARE_SYNTH_THREE_WAY_H
+#endif // _LIBCPP_COMPARE_SYNTH_THREE_WAY_H

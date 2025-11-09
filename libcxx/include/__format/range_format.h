@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FORMAT_RANGE_FORMAT_H
-#define _LIBCPP___FORMAT_RANGE_FORMAT_H
+#ifndef _LIBCPP_FORMAT_RANGE_FORMAT_H
+#define _LIBCPP_FORMAT_RANGE_FORMAT_H
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

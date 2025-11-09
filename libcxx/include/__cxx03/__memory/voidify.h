@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___MEMORY_VOIDIFY_H
-#define _LIBCPP___CXX03___MEMORY_VOIDIFY_H
+#ifndef _LIBCPP_CXX03_MEMORY_VOIDIFY_H
+#define _LIBCPP_CXX03_MEMORY_VOIDIFY_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__memory/addressof.h>
@@ -27,4 +27,4 @@ _LIBCPP_ALWAYS_INLINE _LIBCPP_HIDE_FROM_ABI void* __voidify(_Tp& __from) {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CXX03___MEMORY_VOIDIFY_H
+#endif // _LIBCPP_CXX03_MEMORY_VOIDIFY_H

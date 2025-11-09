@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___STRING_CONSTEXPR_C_FUNCTIONS_H
-#define _LIBCPP___CXX03___STRING_CONSTEXPR_C_FUNCTIONS_H
+#ifndef _LIBCPP_CXX03_STRING_CONSTEXPR_C_FUNCTIONS_H
+#define _LIBCPP_CXX03_STRING_CONSTEXPR_C_FUNCTIONS_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__memory/addressof.h>
@@ -220,4 +220,4 @@ _LIBCPP_HIDE_FROM_ABI _Tp* __constexpr_memmove(_Tp* __dest, _Up* __src, __elemen
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CXX03___STRING_CONSTEXPR_C_FUNCTIONS_H
+#endif // _LIBCPP_CXX03_STRING_CONSTEXPR_C_FUNCTIONS_H

@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___RANGES_TRANSFORM_VIEW_H
-#define _LIBCPP___RANGES_TRANSFORM_VIEW_H
+#ifndef _LIBCPP_RANGES_TRANSFORM_VIEW_H
+#define _LIBCPP_RANGES_TRANSFORM_VIEW_H
 
 #include <__compare/three_way_comparable.h>
 #include <__concepts/constructible.h>
@@ -416,4 +416,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___RANGES_TRANSFORM_VIEW_H
+#endif // _LIBCPP_RANGES_TRANSFORM_VIEW_H

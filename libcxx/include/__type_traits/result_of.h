@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_RESULT_OF_H
-#define _LIBCPP___TYPE_TRAITS_RESULT_OF_H
+#ifndef _LIBCPP_TYPE_TRAITS_RESULT_OF_H
+#define _LIBCPP_TYPE_TRAITS_RESULT_OF_H
 
 #include <__config>
 #include <__type_traits/invoke.h>
@@ -40,4 +40,4 @@ using result_of_t _LIBCPP_DEPRECATED_IN_CXX17 = typename result_of<_Tp>::type;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_RESULT_OF_H
+#endif // _LIBCPP_TYPE_TRAITS_RESULT_OF_H

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___COMPARE_ORDERING_H
-#define _LIBCPP___COMPARE_ORDERING_H
+#ifndef _LIBCPP_COMPARE_ORDERING_H
+#define _LIBCPP_COMPARE_ORDERING_H
 
 #include <__config>
 #include <__type_traits/enable_if.h>
@@ -279,4 +279,4 @@ concept __comparison_category =
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___COMPARE_ORDERING_H
+#endif // _LIBCPP_COMPARE_ORDERING_H

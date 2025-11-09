@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___FUNCTIONAL_BINDER2ND_H
-#define _LIBCPP___CXX03___FUNCTIONAL_BINDER2ND_H
+#ifndef _LIBCPP_CXX03_FUNCTIONAL_BINDER2ND_H
+#define _LIBCPP_CXX03_FUNCTIONAL_BINDER2ND_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__functional/unary_function.h>
@@ -46,4 +46,4 @@ inline _LIBCPP_HIDE_FROM_ABI binder2nd<_Operation> bind2nd(const _Operation& __o
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CXX03___FUNCTIONAL_BINDER2ND_H
+#endif // _LIBCPP_CXX03_FUNCTIONAL_BINDER2ND_H

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___RANDOM_EXPONENTIAL_DISTRIBUTION_H
-#define _LIBCPP___RANDOM_EXPONENTIAL_DISTRIBUTION_H
+#ifndef _LIBCPP_RANDOM_EXPONENTIAL_DISTRIBUTION_H
+#define _LIBCPP_RANDOM_EXPONENTIAL_DISTRIBUTION_H
 
 #include <__config>
 #include <__random/generate_canonical.h>
@@ -129,4 +129,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___RANDOM_EXPONENTIAL_DISTRIBUTION_H
+#endif // _LIBCPP_RANDOM_EXPONENTIAL_DISTRIBUTION_H

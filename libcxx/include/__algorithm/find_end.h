@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_FIND_END_OF_H
-#define _LIBCPP___ALGORITHM_FIND_END_OF_H
+#ifndef _LIBCPP_ALGORITHM_FIND_END_OF_H
+#define _LIBCPP_ALGORITHM_FIND_END_OF_H
 
 #include <__algorithm/comp.h>
 #include <__algorithm/iterator_operations.h>
@@ -115,4 +115,4 @@ find_end(_ForwardIterator1 __first1, _ForwardIterator1 __last1, _ForwardIterator
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ALGORITHM_FIND_END_OF_H
+#endif // _LIBCPP_ALGORITHM_FIND_END_OF_H

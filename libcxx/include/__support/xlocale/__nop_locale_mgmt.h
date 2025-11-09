@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___SUPPORT_XLOCALE_NOP_LOCALE_MGMT_H
-#define _LIBCPP___SUPPORT_XLOCALE_NOP_LOCALE_MGMT_H
+#ifndef _LIBCPP_SUPPORT_XLOCALE_NOP_LOCALE_MGMT_H
+#define _LIBCPP_SUPPORT_XLOCALE_NOP_LOCALE_MGMT_H
 
 #include <__config>
 
@@ -30,4 +30,4 @@ inline _LIBCPP_HIDE_FROM_ABI locale_t newlocale(int, const char*, locale_t) { re
 #define LC_ALL_MASK                                                                                                    \
   (LC_COLLATE_MASK | LC_CTYPE_MASK | LC_MONETARY_MASK | LC_NUMERIC_MASK | LC_TIME_MASK | LC_MESSAGES_MASK)
 
-#endif // _LIBCPP___SUPPORT_XLOCALE_NOP_LOCALE_MGMT_H
+#endif // _LIBCPP_SUPPORT_XLOCALE_NOP_LOCALE_MGMT_H

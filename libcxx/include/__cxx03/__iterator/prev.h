@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___ITERATOR_PREV_H
-#define _LIBCPP___CXX03___ITERATOR_PREV_H
+#ifndef _LIBCPP_CXX03_ITERATOR_PREV_H
+#define _LIBCPP_CXX03_ITERATOR_PREV_H
 
 #include <__cxx03/__assert>
 #include <__cxx03/__config>
@@ -51,4 +51,4 @@ _LIBCPP_POP_MACROS
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CXX03___ITERATOR_PREV_H
+#endif // _LIBCPP_CXX03_ITERATOR_PREV_H

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_REVERSE_H
-#define _LIBCPP___ALGORITHM_REVERSE_H
+#ifndef _LIBCPP_ALGORITHM_REVERSE_H
+#define _LIBCPP_ALGORITHM_REVERSE_H
 
 #include <__algorithm/iter_swap.h>
 #include <__algorithm/iterator_operations.h>
@@ -59,4 +59,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___ALGORITHM_REVERSE_H
+#endif // _LIBCPP_ALGORITHM_REVERSE_H

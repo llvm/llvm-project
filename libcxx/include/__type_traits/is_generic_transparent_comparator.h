@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_IS_GENERIC_TRANSPARENT_COMPARATOR_H
-#define _LIBCPP___TYPE_TRAITS_IS_GENERIC_TRANSPARENT_COMPARATOR_H
+#ifndef _LIBCPP_TYPE_TRAITS_IS_GENERIC_TRANSPARENT_COMPARATOR_H
+#define _LIBCPP_TYPE_TRAITS_IS_GENERIC_TRANSPARENT_COMPARATOR_H
 
 #include <__config>
 
@@ -27,4 +27,4 @@ inline const bool __is_generic_transparent_comparator_v = false;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_IS_GENERIC_TRANSPARENT_COMPARATOR_H
+#endif // _LIBCPP_TYPE_TRAITS_IS_GENERIC_TRANSPARENT_COMPARATOR_H

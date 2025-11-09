@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___COROUTINE_COROUTINE_TRAITS_H
-#define _LIBCPP___COROUTINE_COROUTINE_TRAITS_H
+#ifndef _LIBCPP_COROUTINE_COROUTINE_TRAITS_H
+#define _LIBCPP_COROUTINE_COROUTINE_TRAITS_H
 
 #include <__config>
 #include <__type_traits/void_t.h>
@@ -45,4 +45,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 20
 
-#endif // _LIBCPP___COROUTINE_COROUTINE_TRAITS_H
+#endif // _LIBCPP_COROUTINE_COROUTINE_TRAITS_H

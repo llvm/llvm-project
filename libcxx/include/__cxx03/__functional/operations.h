@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___FUNCTIONAL_OPERATIONS_H
-#define _LIBCPP___CXX03___FUNCTIONAL_OPERATIONS_H
+#ifndef _LIBCPP_CXX03_FUNCTIONAL_OPERATIONS_H
+#define _LIBCPP_CXX03_FUNCTIONAL_OPERATIONS_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__functional/binary_function.h>
@@ -178,4 +178,4 @@ _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(logical_or);
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CXX03___FUNCTIONAL_OPERATIONS_H
+#endif // _LIBCPP_CXX03_FUNCTIONAL_OPERATIONS_H

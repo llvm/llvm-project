@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___BIT_INVERT_IF_H
-#define _LIBCPP___CXX03___BIT_INVERT_IF_H
+#ifndef _LIBCPP_CXX03_BIT_INVERT_IF_H
+#define _LIBCPP_CXX03_BIT_INVERT_IF_H
 
 #include <__cxx03/__config>
 
@@ -26,4 +26,4 @@ _LIBCPP_HIDE_FROM_ABI _Tp __invert_if(_Tp __v) {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CXX03___BIT_INVERT_IF_H
+#endif // _LIBCPP_CXX03_BIT_INVERT_IF_H

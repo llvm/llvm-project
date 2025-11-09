@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_RANGES_LEXICOGRAPHICAL_COMPARE_H
-#define _LIBCPP___ALGORITHM_RANGES_LEXICOGRAPHICAL_COMPARE_H
+#ifndef _LIBCPP_ALGORITHM_RANGES_LEXICOGRAPHICAL_COMPARE_H
+#define _LIBCPP_ALGORITHM_RANGES_LEXICOGRAPHICAL_COMPARE_H
 
 #include <__algorithm/lexicographical_compare.h>
 #include <__algorithm/unwrap_range.h>
@@ -104,4 +104,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___ALGORITHM_RANGES_LEXICOGRAPHICAL_COMPARE_H
+#endif // _LIBCPP_ALGORITHM_RANGES_LEXICOGRAPHICAL_COMPARE_H

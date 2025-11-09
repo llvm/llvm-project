@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_IS_POINTER_H
-#define _LIBCPP___TYPE_TRAITS_IS_POINTER_H
+#ifndef _LIBCPP_TYPE_TRAITS_IS_POINTER_H
+#define _LIBCPP_TYPE_TRAITS_IS_POINTER_H
 
 #include <__config>
 #include <__type_traits/integral_constant.h>
@@ -28,4 +28,4 @@ _LIBCPP_NO_SPECIALIZATIONS inline constexpr bool is_pointer_v = __is_pointer(_Tp
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_IS_POINTER_H
+#endif // _LIBCPP_TYPE_TRAITS_IS_POINTER_H

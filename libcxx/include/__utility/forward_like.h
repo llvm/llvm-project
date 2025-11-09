@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___UTILITY_FORWARD_LIKE_H
-#define _LIBCPP___UTILITY_FORWARD_LIKE_H
+#ifndef _LIBCPP_UTILITY_FORWARD_LIKE_H
+#define _LIBCPP_UTILITY_FORWARD_LIKE_H
 
 #include <__config>
 #include <__type_traits/conditional.h>
@@ -60,4 +60,4 @@ __forward_as(_LIBCPP_LIFETIMEBOUND _Up&& __val) noexcept {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___UTILITY_FORWARD_LIKE_H
+#endif // _LIBCPP_UTILITY_FORWARD_LIKE_H

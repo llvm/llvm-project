@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___FUNCTIONAL_WEAK_RESULT_TYPE_H
-#define _LIBCPP___CXX03___FUNCTIONAL_WEAK_RESULT_TYPE_H
+#ifndef _LIBCPP_CXX03_FUNCTIONAL_WEAK_RESULT_TYPE_H
+#define _LIBCPP_CXX03_FUNCTIONAL_WEAK_RESULT_TYPE_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__functional/binary_function.h>
@@ -206,4 +206,4 @@ struct __invoke_return {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CXX03___FUNCTIONAL_WEAK_RESULT_TYPE_H
+#endif // _LIBCPP_CXX03_FUNCTIONAL_WEAK_RESULT_TYPE_H

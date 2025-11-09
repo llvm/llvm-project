@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ATOMIC_ATOMIC_LOCK_FREE_H
-#define _LIBCPP___ATOMIC_ATOMIC_LOCK_FREE_H
+#ifndef _LIBCPP_ATOMIC_ATOMIC_LOCK_FREE_H
+#define _LIBCPP_ATOMIC_ATOMIC_LOCK_FREE_H
 
 #include <__config>
 
@@ -45,4 +45,4 @@
 #  define ATOMIC_POINTER_LOCK_FREE __GCC_ATOMIC_POINTER_LOCK_FREE
 #endif
 
-#endif // _LIBCPP___ATOMIC_ATOMIC_LOCK_FREE_H
+#endif // _LIBCPP_ATOMIC_ATOMIC_LOCK_FREE_H

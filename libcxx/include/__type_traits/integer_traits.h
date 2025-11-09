@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_INTEGER_TRAITS_H
-#define _LIBCPP___TYPE_TRAITS_INTEGER_TRAITS_H
+#ifndef _LIBCPP_TYPE_TRAITS_INTEGER_TRAITS_H
+#define _LIBCPP_TYPE_TRAITS_INTEGER_TRAITS_H
 
 #include <__config>
 
@@ -70,4 +70,4 @@ concept __signed_or_unsigned_integer = __signed_integer<_Tp> || __unsigned_integ
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_INTEGER_TRAITS_H
+#endif // _LIBCPP_TYPE_TRAITS_INTEGER_TRAITS_H

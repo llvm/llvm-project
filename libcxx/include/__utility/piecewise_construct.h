@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___UTILITY_PIECEWISE_CONSTRUCT_H
-#define _LIBCPP___UTILITY_PIECEWISE_CONSTRUCT_H
+#ifndef _LIBCPP_UTILITY_PIECEWISE_CONSTRUCT_H
+#define _LIBCPP_UTILITY_PIECEWISE_CONSTRUCT_H
 
 #include <__config>
 
@@ -29,4 +29,4 @@ constexpr piecewise_construct_t piecewise_construct = piecewise_construct_t();
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___UTILITY_PIECEWISE_CONSTRUCT_H
+#endif // _LIBCPP_UTILITY_PIECEWISE_CONSTRUCT_H

@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FLAT_SET_UTILS_H
-#define _LIBCPP___FLAT_SET_UTILS_H
+#ifndef _LIBCPP_FLAT_SET_UTILS_H
+#define _LIBCPP_FLAT_SET_UTILS_H
 
 #include <__config>
 #include <__iterator/iterator_traits.h>
@@ -79,4 +79,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // #define _LIBCPP___FLAT_SET_UTILS_H
+#endif // #define _LIBCPP_FLAT_SET_UTILS_H

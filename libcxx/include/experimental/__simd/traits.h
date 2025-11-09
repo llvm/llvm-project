@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_EXPERIMENTAL___SIMD_TRAITS_H
-#define _LIBCPP_EXPERIMENTAL___SIMD_TRAITS_H
+#ifndef _LIBCPP_EXPERIMENTAL_SIMD_TRAITS_H
+#define _LIBCPP_EXPERIMENTAL_SIMD_TRAITS_H
 
 #include <__bit/bit_ceil.h>
 #include <__config>
@@ -72,4 +72,4 @@ inline constexpr size_t memory_alignment_v = memory_alignment<_Tp, _Up>::value;
 _LIBCPP_END_NAMESPACE_EXPERIMENTAL
 
 #endif // _LIBCPP_STD_VER >= 17 && defined(_LIBCPP_ENABLE_EXPERIMENTAL)
-#endif // _LIBCPP_EXPERIMENTAL___SIMD_TRAITS_H
+#endif // _LIBCPP_EXPERIMENTAL_SIMD_TRAITS_H

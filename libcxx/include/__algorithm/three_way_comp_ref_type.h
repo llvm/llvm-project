@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_THREE_WAY_COMP_REF_TYPE_H
-#define _LIBCPP___ALGORITHM_THREE_WAY_COMP_REF_TYPE_H
+#ifndef _LIBCPP_ALGORITHM_THREE_WAY_COMP_REF_TYPE_H
+#define _LIBCPP_ALGORITHM_THREE_WAY_COMP_REF_TYPE_H
 
 #include <__assert>
 #include <__compare/ordering.h>
@@ -71,4 +71,4 @@ using __three_way_comp_ref_type _LIBCPP_NODEBUG = _Comp&;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ALGORITHM_THREE_WAY_COMP_REF_TYPE_H
+#endif // _LIBCPP_ALGORITHM_THREE_WAY_COMP_REF_TYPE_H

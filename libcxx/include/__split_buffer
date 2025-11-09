@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___SPLIT_BUFFER
-#define _LIBCPP___SPLIT_BUFFER
+#ifndef _LIBCPP_SPLIT_BUFFER
+#define _LIBCPP_SPLIT_BUFFER
 
 #include <__algorithm/max.h>
 #include <__algorithm/move.h>
@@ -866,4 +866,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___SPLIT_BUFFER
+#endif // _LIBCPP_SPLIT_BUFFER

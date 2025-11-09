@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___LOCALE_DIR_SUPPORT_FREEBSD_H
-#define _LIBCPP___LOCALE_DIR_SUPPORT_FREEBSD_H
+#ifndef _LIBCPP_LOCALE_DIR_SUPPORT_FREEBSD_H
+#define _LIBCPP_LOCALE_DIR_SUPPORT_FREEBSD_H
 
 #include <__config>
 
@@ -17,4 +17,4 @@
 
 #include <__locale_dir/support/bsd_like.h>
 
-#endif // _LIBCPP___LOCALE_DIR_SUPPORT_FREEBSD_H
+#endif // _LIBCPP_LOCALE_DIR_SUPPORT_FREEBSD_H

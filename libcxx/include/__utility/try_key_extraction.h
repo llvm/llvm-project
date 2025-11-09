@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___UTILITY_TRY_EXTRACT_KEY_H
-#define _LIBCPP___UTILITY_TRY_EXTRACT_KEY_H
+#ifndef _LIBCPP_UTILITY_TRY_EXTRACT_KEY_H
+#define _LIBCPP_UTILITY_TRY_EXTRACT_KEY_H
 
 #include <__config>
 #include <__fwd/pair.h>
@@ -111,4 +111,4 @@ __try_key_extraction(_WithKey __with_key, _WithoutKey __without_key, _Args&&... 
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___UTILITY_TRY_EXTRACT_KEY_H
+#endif // _LIBCPP_UTILITY_TRY_EXTRACT_KEY_H

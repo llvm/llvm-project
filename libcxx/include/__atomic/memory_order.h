@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ATOMIC_MEMORY_ORDER_H
-#define _LIBCPP___ATOMIC_MEMORY_ORDER_H
+#ifndef _LIBCPP_ATOMIC_MEMORY_ORDER_H
+#define _LIBCPP_ATOMIC_MEMORY_ORDER_H
 
 #include <__config>
 #include <__type_traits/is_same.h>
@@ -62,4 +62,4 @@ enum memory_order {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ATOMIC_MEMORY_ORDER_H
+#endif // _LIBCPP_ATOMIC_MEMORY_ORDER_H

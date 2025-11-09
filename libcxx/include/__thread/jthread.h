@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___THREAD_JTHREAD_H
-#define _LIBCPP___THREAD_JTHREAD_H
+#ifndef _LIBCPP_THREAD_JTHREAD_H
+#define _LIBCPP_THREAD_JTHREAD_H
 
 #include <__config>
 #include <__stop_token/stop_source.h>
@@ -133,4 +133,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___THREAD_JTHREAD_H
+#endif // _LIBCPP_THREAD_JTHREAD_H

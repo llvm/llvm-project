@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___RANGES_ISTREAM_VIEW_H
-#define _LIBCPP___RANGES_ISTREAM_VIEW_H
+#ifndef _LIBCPP_RANGES_ISTREAM_VIEW_H
+#define _LIBCPP_RANGES_ISTREAM_VIEW_H
 
 #include <__concepts/constructible.h>
 #include <__concepts/derived_from.h>
@@ -138,4 +138,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 20
 
-#endif // _LIBCPP___RANGES_ISTREAM_VIEW_H
+#endif // _LIBCPP_RANGES_ISTREAM_VIEW_H

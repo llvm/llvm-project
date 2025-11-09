@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_SIMD_UTILS_H
-#define _LIBCPP___ALGORITHM_SIMD_UTILS_H
+#ifndef _LIBCPP_ALGORITHM_SIMD_UTILS_H
+#define _LIBCPP_ALGORITHM_SIMD_UTILS_H
 
 #include <__algorithm/min.h>
 #include <__bit/bit_cast.h>
@@ -164,4 +164,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___ALGORITHM_SIMD_UTILS_H
+#endif // _LIBCPP_ALGORITHM_SIMD_UTILS_H

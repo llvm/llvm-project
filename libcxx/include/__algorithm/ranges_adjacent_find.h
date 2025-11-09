@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_RANGES_ADJACENT_FIND_H
-#define _LIBCPP___ALGORITHM_RANGES_ADJACENT_FIND_H
+#ifndef _LIBCPP_ALGORITHM_RANGES_ADJACENT_FIND_H
+#define _LIBCPP_ALGORITHM_RANGES_ADJACENT_FIND_H
 
 #include <__algorithm/adjacent_find.h>
 #include <__config>
@@ -63,4 +63,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___ALGORITHM_RANGES_ADJACENT_FIND_H
+#endif // _LIBCPP_ALGORITHM_RANGES_ADJACENT_FIND_H

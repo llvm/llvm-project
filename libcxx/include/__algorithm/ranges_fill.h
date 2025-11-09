@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_RANGES_FILL_H
-#define _LIBCPP___ALGORITHM_RANGES_FILL_H
+#ifndef _LIBCPP_ALGORITHM_RANGES_FILL_H
+#define _LIBCPP_ALGORITHM_RANGES_FILL_H
 
 #include <__algorithm/fill.h>
 #include <__algorithm/fill_n.h>
@@ -58,4 +58,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___ALGORITHM_RANGES_FILL_H
+#endif // _LIBCPP_ALGORITHM_RANGES_FILL_H

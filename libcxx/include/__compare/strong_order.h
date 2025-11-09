@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___COMPARE_STRONG_ORDER
-#define _LIBCPP___COMPARE_STRONG_ORDER
+#ifndef _LIBCPP_COMPARE_STRONG_ORDER
+#define _LIBCPP_COMPARE_STRONG_ORDER
 
 #include <__bit/bit_cast.h>
 #include <__compare/compare_three_way.h>
@@ -122,4 +122,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___COMPARE_STRONG_ORDER
+#endif // _LIBCPP_COMPARE_STRONG_ORDER

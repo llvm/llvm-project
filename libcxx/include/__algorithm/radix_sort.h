@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_RADIX_SORT_H
-#define _LIBCPP___ALGORITHM_RADIX_SORT_H
+#ifndef _LIBCPP_ALGORITHM_RADIX_SORT_H
+#define _LIBCPP_ALGORITHM_RADIX_SORT_H
 
 // This is an implementation of classic LSD radix sort algorithm, running in linear time and using `O(max(N, M))`
 // additional memory, where `N` is size of an input range, `M` - maximum value of
@@ -428,4 +428,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___ALGORITHM_RADIX_SORT_H
+#endif // _LIBCPP_ALGORITHM_RADIX_SORT_H

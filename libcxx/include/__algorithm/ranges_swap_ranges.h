@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_RANGES_SWAP_RANGES_H
-#define _LIBCPP___ALGORITHM_RANGES_SWAP_RANGES_H
+#ifndef _LIBCPP_ALGORITHM_RANGES_SWAP_RANGES_H
+#define _LIBCPP_ALGORITHM_RANGES_SWAP_RANGES_H
 
 #include <__algorithm/in_in_result.h>
 #include <__algorithm/iterator_operations.h>
@@ -65,4 +65,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___ALGORITHM_RANGES_SWAP_RANGES_H
+#endif // _LIBCPP_ALGORITHM_RANGES_SWAP_RANGES_H

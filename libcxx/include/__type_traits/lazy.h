@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_LAZY_H
-#define _LIBCPP___TYPE_TRAITS_LAZY_H
+#ifndef _LIBCPP_TYPE_TRAITS_LAZY_H
+#define _LIBCPP_TYPE_TRAITS_LAZY_H
 
 #include <__config>
 
@@ -22,4 +22,4 @@ struct _Lazy : _Func<_Args...> {};
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_LAZY_H
+#endif // _LIBCPP_TYPE_TRAITS_LAZY_H

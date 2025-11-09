@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___MEMORY_IS_SUFFICIENTLY_ALIGNED_H
-#define _LIBCPP___MEMORY_IS_SUFFICIENTLY_ALIGNED_H
+#ifndef _LIBCPP_MEMORY_IS_SUFFICIENTLY_ALIGNED_H
+#define _LIBCPP_MEMORY_IS_SUFFICIENTLY_ALIGNED_H
 
 #include <__config>
 #include <__cstddef/size_t.h>
@@ -31,4 +31,4 @@ _LIBCPP_HIDE_FROM_ABI bool is_sufficiently_aligned(_Tp* __ptr) {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___MEMORY_IS_SUFFICIENTLY_ALIGNED_H
+#endif // _LIBCPP_MEMORY_IS_SUFFICIENTLY_ALIGNED_H

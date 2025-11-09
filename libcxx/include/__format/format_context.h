@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FORMAT_FORMAT_CONTEXT_H
-#define _LIBCPP___FORMAT_FORMAT_CONTEXT_H
+#ifndef _LIBCPP_FORMAT_FORMAT_CONTEXT_H
+#define _LIBCPP_FORMAT_FORMAT_CONTEXT_H
 
 #include <__concepts/same_as.h>
 #include <__config>
@@ -212,4 +212,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___FORMAT_FORMAT_CONTEXT_H
+#endif // _LIBCPP_FORMAT_FORMAT_CONTEXT_H

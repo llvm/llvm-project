@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___UTILITY_FORWARD_H
-#define _LIBCPP___CXX03___UTILITY_FORWARD_H
+#ifndef _LIBCPP_CXX03_UTILITY_FORWARD_H
+#define _LIBCPP_CXX03_UTILITY_FORWARD_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__type_traits/is_reference.h>
@@ -35,4 +35,4 @@ forward(_LIBCPP_LIFETIMEBOUND __libcpp_remove_reference_t<_Tp>&& __t) _NOEXCEPT 
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CXX03___UTILITY_FORWARD_H
+#endif // _LIBCPP_CXX03_UTILITY_FORWARD_H

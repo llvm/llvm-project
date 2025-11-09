@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___MATH_INVERSE_TRIGONOMETRIC_FUNCTIONS_H
-#define _LIBCPP___MATH_INVERSE_TRIGONOMETRIC_FUNCTIONS_H
+#ifndef _LIBCPP_MATH_INVERSE_TRIGONOMETRIC_FUNCTIONS_H
+#define _LIBCPP_MATH_INVERSE_TRIGONOMETRIC_FUNCTIONS_H
 
 #include <__config>
 #include <__type_traits/enable_if.h>
@@ -96,4 +96,4 @@ inline _LIBCPP_HIDE_FROM_ABI __promote_t<_A1, _A2> atan2(_A1 __y, _A2 __x) _NOEX
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___MATH_INVERSE_TRIGONOMETRIC_FUNCTIONS_H
+#endif // _LIBCPP_MATH_INVERSE_TRIGONOMETRIC_FUNCTIONS_H

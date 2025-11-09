@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___FUNCTIONAL_HASH_H
-#define _LIBCPP___CXX03___FUNCTIONAL_HASH_H
+#ifndef _LIBCPP_CXX03_FUNCTIONAL_HASH_H
+#define _LIBCPP_CXX03_FUNCTIONAL_HASH_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__functional/unary_function.h>
@@ -506,4 +506,4 @@ struct _LIBCPP_TEMPLATE_VIS hash : public __enum_hash<_Tp> {};
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CXX03___FUNCTIONAL_HASH_H
+#endif // _LIBCPP_CXX03_FUNCTIONAL_HASH_H

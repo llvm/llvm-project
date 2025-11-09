@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_EXPERIMENTAL___SIMD_SCALAR_H
-#define _LIBCPP_EXPERIMENTAL___SIMD_SCALAR_H
+#ifndef _LIBCPP_EXPERIMENTAL_SIMD_SCALAR_H
+#define _LIBCPP_EXPERIMENTAL_SIMD_SCALAR_H
 
 #include <__assert>
 #include <__config>
@@ -99,4 +99,4 @@ struct __mask_operations<_Tp, simd_abi::__scalar> {
 _LIBCPP_END_NAMESPACE_EXPERIMENTAL
 
 #endif // _LIBCPP_STD_VER >= 17 && defined(_LIBCPP_ENABLE_EXPERIMENTAL)
-#endif // _LIBCPP_EXPERIMENTAL___SIMD_SCALAR_H
+#endif // _LIBCPP_EXPERIMENTAL_SIMD_SCALAR_H

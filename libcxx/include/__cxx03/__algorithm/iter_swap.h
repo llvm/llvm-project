@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___ALGORITHM_ITER_SWAP_H
-#define _LIBCPP___CXX03___ALGORITHM_ITER_SWAP_H
+#ifndef _LIBCPP_CXX03_ALGORITHM_ITER_SWAP_H
+#define _LIBCPP_CXX03_ALGORITHM_ITER_SWAP_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__utility/declval.h>
@@ -26,4 +26,4 @@ inline _LIBCPP_HIDE_FROM_ABI void iter_swap(_ForwardIterator1 __a, _ForwardItera
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CXX03___ALGORITHM_ITER_SWAP_H
+#endif // _LIBCPP_CXX03_ALGORITHM_ITER_SWAP_H

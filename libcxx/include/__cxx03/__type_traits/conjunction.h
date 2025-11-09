@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___TYPE_TRAITS_CONJUNCTION_H
-#define _LIBCPP___CXX03___TYPE_TRAITS_CONJUNCTION_H
+#ifndef _LIBCPP_CXX03_TYPE_TRAITS_CONJUNCTION_H
+#define _LIBCPP_CXX03_TYPE_TRAITS_CONJUNCTION_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__type_traits/conditional.h>
@@ -46,4 +46,4 @@ struct __all : _IsSame<__all_dummy<_Pred...>, __all_dummy<((void)_Pred, true)...
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CXX03___TYPE_TRAITS_CONJUNCTION_H
+#endif // _LIBCPP_CXX03_TYPE_TRAITS_CONJUNCTION_H

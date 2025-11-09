@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___SYSTEM_ERROR_ERROR_CATEGORY_H
-#define _LIBCPP___SYSTEM_ERROR_ERROR_CATEGORY_H
+#ifndef _LIBCPP_SYSTEM_ERROR_ERROR_CATEGORY_H
+#define _LIBCPP_SYSTEM_ERROR_ERROR_CATEGORY_H
 
 #include <__compare/ordering.h>
 #include <__config>
@@ -72,4 +72,4 @@ public:
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___SYSTEM_ERROR_ERROR_CATEGORY_H
+#endif // _LIBCPP_SYSTEM_ERROR_ERROR_CATEGORY_H

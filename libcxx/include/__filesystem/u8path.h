@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FILESYSTEM_U8PATH_H
-#define _LIBCPP___FILESYSTEM_U8PATH_H
+#ifndef _LIBCPP_FILESYSTEM_U8PATH_H
+#define _LIBCPP_FILESYSTEM_U8PATH_H
 
 #include <__algorithm/unwrap_iter.h>
 #include <__config>
@@ -88,4 +88,4 @@ _LIBCPP_END_NAMESPACE_FILESYSTEM
 
 #endif // _LIBCPP_STD_VER >= 17
 
-#endif // _LIBCPP___FILESYSTEM_U8PATH_H
+#endif // _LIBCPP_FILESYSTEM_U8PATH_H

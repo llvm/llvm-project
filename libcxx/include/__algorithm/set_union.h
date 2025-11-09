@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_SET_UNION_H
-#define _LIBCPP___ALGORITHM_SET_UNION_H
+#ifndef _LIBCPP_ALGORITHM_SET_UNION_H
+#define _LIBCPP_ALGORITHM_SET_UNION_H
 
 #include <__algorithm/comp.h>
 #include <__algorithm/comp_ref_type.h>
@@ -101,4 +101,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___ALGORITHM_SET_UNION_H
+#endif // _LIBCPP_ALGORITHM_SET_UNION_H

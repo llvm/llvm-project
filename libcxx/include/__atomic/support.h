@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ATOMIC_SUPPORT_H
-#define _LIBCPP___ATOMIC_SUPPORT_H
+#ifndef _LIBCPP_ATOMIC_SUPPORT_H
+#define _LIBCPP_ATOMIC_SUPPORT_H
 
 #include <__config>
 
@@ -118,4 +118,4 @@ struct __cxx_atomic_impl : public _Base {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ATOMIC_SUPPORT_H
+#endif // _LIBCPP_ATOMIC_SUPPORT_H

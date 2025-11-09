@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_IS_BASE_OF_H
-#define _LIBCPP___TYPE_TRAITS_IS_BASE_OF_H
+#ifndef _LIBCPP_TYPE_TRAITS_IS_BASE_OF_H
+#define _LIBCPP_TYPE_TRAITS_IS_BASE_OF_H
 
 #include <__config>
 #include <__type_traits/integral_constant.h>
@@ -40,4 +40,4 @@ _LIBCPP_NO_SPECIALIZATIONS inline constexpr bool is_virtual_base_of_v = __builti
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_IS_BASE_OF_H
+#endif // _LIBCPP_TYPE_TRAITS_IS_BASE_OF_H

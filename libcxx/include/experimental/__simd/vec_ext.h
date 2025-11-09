@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_EXPERIMENTAL___SIMD_VEC_EXT_H
-#define _LIBCPP_EXPERIMENTAL___SIMD_VEC_EXT_H
+#ifndef _LIBCPP_EXPERIMENTAL_SIMD_VEC_EXT_H
+#define _LIBCPP_EXPERIMENTAL_SIMD_VEC_EXT_H
 
 #include <__assert>
 #include <__bit/bit_ceil.h>
@@ -127,4 +127,4 @@ struct __mask_operations<_Tp, simd_abi::__vec_ext<_Np>> {
 _LIBCPP_END_NAMESPACE_EXPERIMENTAL
 
 #endif // _LIBCPP_STD_VER >= 17 && defined(_LIBCPP_ENABLE_EXPERIMENTAL)
-#endif // _LIBCPP_EXPERIMENTAL___SIMD_VEC_EXT_H
+#endif // _LIBCPP_EXPERIMENTAL_SIMD_VEC_EXT_H

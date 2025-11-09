@@ -14,8 +14,8 @@
 //
 //===---------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___MDSPAN_ALIGNED_ACCESSOR_H
-#define _LIBCPP___MDSPAN_ALIGNED_ACCESSOR_H
+#ifndef _LIBCPP_MDSPAN_ALIGNED_ACCESSOR_H
+#define _LIBCPP_MDSPAN_ALIGNED_ACCESSOR_H
 
 #include <__config>
 #include <__cstddef/size_t.h>
@@ -84,4 +84,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___MDSPAN_ALIGNED_ACCESSOR_H
+#endif // _LIBCPP_MDSPAN_ALIGNED_ACCESSOR_H

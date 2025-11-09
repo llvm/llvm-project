@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___SYSTEM_ERROR_ERROR_CONDITION_H
-#define _LIBCPP___CXX03___SYSTEM_ERROR_ERROR_CONDITION_H
+#ifndef _LIBCPP_CXX03_SYSTEM_ERROR_ERROR_CONDITION_H
+#define _LIBCPP_CXX03_SYSTEM_ERROR_ERROR_CONDITION_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__functional/hash.h>
@@ -106,4 +106,4 @@ struct _LIBCPP_TEMPLATE_VIS hash<error_condition> : public __unary_function<erro
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CXX03___SYSTEM_ERROR_ERROR_CONDITION_H
+#endif // _LIBCPP_CXX03_SYSTEM_ERROR_ERROR_CONDITION_H

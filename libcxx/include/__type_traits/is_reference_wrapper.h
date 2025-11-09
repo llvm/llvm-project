@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_IS_REFERENCE_WRAPPER_H
-#define _LIBCPP___TYPE_TRAITS_IS_REFERENCE_WRAPPER_H
+#ifndef _LIBCPP_TYPE_TRAITS_IS_REFERENCE_WRAPPER_H
+#define _LIBCPP_TYPE_TRAITS_IS_REFERENCE_WRAPPER_H
 
 #include <__config>
 #include <__fwd/functional.h>
@@ -29,4 +29,4 @@ struct __is_reference_wrapper : __is_reference_wrapper_impl<__remove_cv_t<_Tp> >
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_ENABLE_IF_H
+#endif // _LIBCPP_TYPE_TRAITS_ENABLE_IF_H

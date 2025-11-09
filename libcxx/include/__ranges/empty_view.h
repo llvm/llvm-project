@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___RANGES_EMPTY_VIEW_H
-#define _LIBCPP___RANGES_EMPTY_VIEW_H
+#ifndef _LIBCPP_RANGES_EMPTY_VIEW_H
+#define _LIBCPP_RANGES_EMPTY_VIEW_H
 
 #include <__config>
 #include <__cstddef/size_t.h>
@@ -51,4 +51,4 @@ inline constexpr empty_view<_Tp> empty{};
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___RANGES_EMPTY_VIEW_H
+#endif // _LIBCPP_RANGES_EMPTY_VIEW_H

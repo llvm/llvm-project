@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___VECTOR_CONTAINER_TRAITS_H
-#define _LIBCPP___VECTOR_CONTAINER_TRAITS_H
+#ifndef _LIBCPP_VECTOR_CONTAINER_TRAITS_H
+#define _LIBCPP_VECTOR_CONTAINER_TRAITS_H
 
 #include <__config>
 #include <__fwd/vector.h>
@@ -38,4 +38,4 @@ struct __container_traits<vector<_Tp, _Allocator> > {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___VECTOR_CONTAINER_TRAITS_H
+#endif // _LIBCPP_VECTOR_CONTAINER_TRAITS_H

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_EXTENT_H
-#define _LIBCPP___TYPE_TRAITS_EXTENT_H
+#ifndef _LIBCPP_TYPE_TRAITS_EXTENT_H
+#define _LIBCPP_TYPE_TRAITS_EXTENT_H
 
 #include <__config>
 #include <__cstddef/size_t.h>
@@ -51,4 +51,4 @@ inline constexpr size_t extent_v = extent<_Tp, _Ip>::value;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_EXTENT_H
+#endif // _LIBCPP_TYPE_TRAITS_EXTENT_H

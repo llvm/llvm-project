@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_TYPE_LIST_H
-#define _LIBCPP___TYPE_TRAITS_TYPE_LIST_H
+#ifndef _LIBCPP_TYPE_TRAITS_TYPE_LIST_H
+#define _LIBCPP_TYPE_TRAITS_TYPE_LIST_H
 
 #include <__config>
 #include <__cstddef/size_t.h>
@@ -44,4 +44,4 @@ struct __find_first<__type_list<_Head, _Tail...>, _Size, false> {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_TYPE_LIST_H
+#endif // _LIBCPP_TYPE_TRAITS_TYPE_LIST_H

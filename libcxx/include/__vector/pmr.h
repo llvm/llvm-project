@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___VECTOR_PMR_H
-#define _LIBCPP___VECTOR_PMR_H
+#ifndef _LIBCPP_VECTOR_PMR_H
+#define _LIBCPP_VECTOR_PMR_H
 
 #include <__config>
 #include <__fwd/vector.h>
@@ -30,4 +30,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 #endif
 
-#endif // _LIBCPP___VECTOR_PMR_H
+#endif // _LIBCPP_VECTOR_PMR_H

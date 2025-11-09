@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ITERATOR_SORTABLE_H
-#define _LIBCPP___ITERATOR_SORTABLE_H
+#ifndef _LIBCPP_ITERATOR_SORTABLE_H
+#define _LIBCPP_ITERATOR_SORTABLE_H
 
 #include <__config>
 #include <__functional/identity.h>
@@ -32,4 +32,4 @@ concept sortable = permutable<_Iter> && indirect_strict_weak_order<_Comp, projec
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ITERATOR_SORTABLE_H
+#endif // _LIBCPP_ITERATOR_SORTABLE_H

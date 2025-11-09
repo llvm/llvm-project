@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_IS_PRIMARY_TEMPLATE_H
-#define _LIBCPP___TYPE_TRAITS_IS_PRIMARY_TEMPLATE_H
+#ifndef _LIBCPP_TYPE_TRAITS_IS_PRIMARY_TEMPLATE_H
+#define _LIBCPP_TYPE_TRAITS_IS_PRIMARY_TEMPLATE_H
 
 #include <__config>
 #include <__type_traits/enable_if.h>
@@ -29,4 +29,4 @@ using __is_primary_template _LIBCPP_NODEBUG = _IsValidExpansion<__test_for_prima
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_IS_PRIMARY_TEMPLATE_H
+#endif // _LIBCPP_TYPE_TRAITS_IS_PRIMARY_TEMPLATE_H

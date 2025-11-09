@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___ALGORITHM_NONE_OF_H
-#define _LIBCPP___CXX03___ALGORITHM_NONE_OF_H
+#ifndef _LIBCPP_CXX03_ALGORITHM_NONE_OF_H
+#define _LIBCPP_CXX03_ALGORITHM_NONE_OF_H
 
 #include <__cxx03/__config>
 
@@ -29,4 +29,4 @@ none_of(_InputIterator __first, _InputIterator __last, _Predicate __pred) {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CXX03___ALGORITHM_NONE_OF_H
+#endif // _LIBCPP_CXX03_ALGORITHM_NONE_OF_H

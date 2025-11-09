@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ITERATOR_COMMON_ITERATOR_H
-#define _LIBCPP___ITERATOR_COMMON_ITERATOR_H
+#ifndef _LIBCPP_ITERATOR_COMMON_ITERATOR_H
+#define _LIBCPP_ITERATOR_COMMON_ITERATOR_H
 
 #include <__assert>
 #include <__concepts/assignable.h>
@@ -298,4 +298,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___ITERATOR_COMMON_ITERATOR_H
+#endif // _LIBCPP_ITERATOR_COMMON_ITERATOR_H

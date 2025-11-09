@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___TYPE_TRAITS_DESUGARS_TO_H
-#define _LIBCPP___CXX03___TYPE_TRAITS_DESUGARS_TO_H
+#ifndef _LIBCPP_CXX03_TYPE_TRAITS_DESUGARS_TO_H
+#define _LIBCPP_CXX03_TYPE_TRAITS_DESUGARS_TO_H
 
 #include <__cxx03/__config>
 
@@ -37,4 +37,4 @@ inline const bool __desugars_to_v = false;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CXX03___TYPE_TRAITS_DESUGARS_TO_H
+#endif // _LIBCPP_CXX03_TYPE_TRAITS_DESUGARS_TO_H

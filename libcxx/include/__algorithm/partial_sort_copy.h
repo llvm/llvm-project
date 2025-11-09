@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_PARTIAL_SORT_COPY_H
-#define _LIBCPP___ALGORITHM_PARTIAL_SORT_COPY_H
+#ifndef _LIBCPP_ALGORITHM_PARTIAL_SORT_COPY_H
+#define _LIBCPP_ALGORITHM_PARTIAL_SORT_COPY_H
 
 #include <__algorithm/comp.h>
 #include <__algorithm/comp_ref_type.h>
@@ -103,4 +103,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___ALGORITHM_PARTIAL_SORT_COPY_H
+#endif // _LIBCPP_ALGORITHM_PARTIAL_SORT_COPY_H

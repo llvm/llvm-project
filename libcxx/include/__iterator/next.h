@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ITERATOR_NEXT_H
-#define _LIBCPP___ITERATOR_NEXT_H
+#ifndef _LIBCPP_ITERATOR_NEXT_H
+#define _LIBCPP_ITERATOR_NEXT_H
 
 #include <__config>
 #include <__iterator/advance.h>
@@ -71,4 +71,4 @@ inline constexpr auto next = __next{};
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ITERATOR_NEXT_H
+#endif // _LIBCPP_ITERATOR_NEXT_H

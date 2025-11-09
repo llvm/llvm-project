@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_ROTATE_COPY_H
-#define _LIBCPP___ALGORITHM_ROTATE_COPY_H
+#ifndef _LIBCPP_ALGORITHM_ROTATE_COPY_H
+#define _LIBCPP_ALGORITHM_ROTATE_COPY_H
 
 #include <__algorithm/copy.h>
 #include <__config>
@@ -26,4 +26,4 @@ rotate_copy(_ForwardIterator __first, _ForwardIterator __middle, _ForwardIterato
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ALGORITHM_ROTATE_COPY_H
+#endif // _LIBCPP_ALGORITHM_ROTATE_COPY_H

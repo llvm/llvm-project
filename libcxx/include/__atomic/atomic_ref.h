@@ -14,8 +14,8 @@
 //
 //===---------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ATOMIC_ATOMIC_REF_H
-#define _LIBCPP___ATOMIC_ATOMIC_REF_H
+#ifndef _LIBCPP_ATOMIC_ATOMIC_REF_H
+#define _LIBCPP_ATOMIC_ATOMIC_REF_H
 
 #include <__assert>
 #include <__atomic/atomic_sync.h>

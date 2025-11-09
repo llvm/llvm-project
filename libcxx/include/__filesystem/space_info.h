@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FILESYSTEM_SPACE_INFO_H
-#define _LIBCPP___FILESYSTEM_SPACE_INFO_H
+#ifndef _LIBCPP_FILESYSTEM_SPACE_INFO_H
+#define _LIBCPP_FILESYSTEM_SPACE_INFO_H
 
 #include <__config>
 #include <cstdint>
@@ -35,4 +35,4 @@ _LIBCPP_END_NAMESPACE_FILESYSTEM
 
 #endif // _LIBCPP_STD_VER >= 17
 
-#endif // _LIBCPP___FILESYSTEM_SPACE_INFO_H
+#endif // _LIBCPP_FILESYSTEM_SPACE_INFO_H

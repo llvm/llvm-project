@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___MBSTATE_T_H
-#define _LIBCPP___MBSTATE_T_H
+#ifndef _LIBCPP_MBSTATE_T_H
+#define _LIBCPP_MBSTATE_T_H
 
 #include <__config>
 
@@ -51,4 +51,4 @@
 #  error "We don't know how to get the definition of mbstate_t on your platform."
 #endif
 
-#endif // _LIBCPP___MBSTATE_T_H
+#endif // _LIBCPP_MBSTATE_T_H

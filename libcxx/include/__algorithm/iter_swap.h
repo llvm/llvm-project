@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_ITER_SWAP_H
-#define _LIBCPP___ALGORITHM_ITER_SWAP_H
+#ifndef _LIBCPP_ALGORITHM_ITER_SWAP_H
+#define _LIBCPP_ALGORITHM_ITER_SWAP_H
 
 #include <__config>
 #include <__utility/declval.h>
@@ -28,4 +28,4 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void iter_swap(_Forwa
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ALGORITHM_ITER_SWAP_H
+#endif // _LIBCPP_ALGORITHM_ITER_SWAP_H

@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FORMAT_FORMATTER_OUTPUT_H
-#define _LIBCPP___FORMAT_FORMATTER_OUTPUT_H
+#ifndef _LIBCPP_FORMAT_FORMATTER_OUTPUT_H
+#define _LIBCPP_FORMAT_FORMATTER_OUTPUT_H
 
 #include <__algorithm/ranges_copy.h>
 #include <__algorithm/ranges_fill_n.h>
@@ -310,4 +310,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___FORMAT_FORMATTER_OUTPUT_H
+#endif // _LIBCPP_FORMAT_FORMATTER_OUTPUT_H

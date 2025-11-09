@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CONCEPTS_DERIVED_FROM_H
-#define _LIBCPP___CONCEPTS_DERIVED_FROM_H
+#ifndef _LIBCPP_CONCEPTS_DERIVED_FROM_H
+#define _LIBCPP_CONCEPTS_DERIVED_FROM_H
 
 #include <__config>
 #include <__type_traits/is_base_of.h>
@@ -30,4 +30,4 @@ concept derived_from = is_base_of_v<_Bp, _Dp> && is_convertible_v<const volatile
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CONCEPTS_DERIVED_FROM_H
+#endif // _LIBCPP_CONCEPTS_DERIVED_FROM_H

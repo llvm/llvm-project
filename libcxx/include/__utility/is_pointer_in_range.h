@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___UTILITY_IS_POINTER_IN_RANGE_H
-#define _LIBCPP___UTILITY_IS_POINTER_IN_RANGE_H
+#ifndef _LIBCPP_UTILITY_IS_POINTER_IN_RANGE_H
+#define _LIBCPP_UTILITY_IS_POINTER_IN_RANGE_H
 
 #include <__algorithm/comp.h>
 #include <__assert>
@@ -67,4 +67,4 @@ __is_overlapping_range(const _Tp* __begin, const _Tp* __end, const _Up* __begin2
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___UTILITY_IS_POINTER_IN_RANGE_H
+#endif // _LIBCPP_UTILITY_IS_POINTER_IN_RANGE_H

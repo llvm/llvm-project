@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___STRING_EXTERN_TEMPLATE_LISTS_H
-#define _LIBCPP___STRING_EXTERN_TEMPLATE_LISTS_H
+#ifndef _LIBCPP_STRING_EXTERN_TEMPLATE_LISTS_H
+#define _LIBCPP_STRING_EXTERN_TEMPLATE_LISTS_H
 
 #include <__config>
 
@@ -91,4 +91,4 @@
 
 // clang-format on
 
-#endif // _LIBCPP___STRING_EXTERN_TEMPLATE_LISTS_H
+#endif // _LIBCPP_STRING_EXTERN_TEMPLATE_LISTS_H

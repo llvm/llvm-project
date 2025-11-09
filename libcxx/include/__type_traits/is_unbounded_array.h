@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_IS_UNBOUNDED_ARRAY_H
-#define _LIBCPP___TYPE_TRAITS_IS_UNBOUNDED_ARRAY_H
+#ifndef _LIBCPP_TYPE_TRAITS_IS_UNBOUNDED_ARRAY_H
+#define _LIBCPP_TYPE_TRAITS_IS_UNBOUNDED_ARRAY_H
 
 #include <__config>
 #include <__type_traits/integral_constant.h>
@@ -35,4 +35,4 @@ _LIBCPP_NO_SPECIALIZATIONS inline constexpr bool is_unbounded_array_v = __is_unb
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_IS_UNBOUNDED_ARRAY_H
+#endif // _LIBCPP_TYPE_TRAITS_IS_UNBOUNDED_ARRAY_H

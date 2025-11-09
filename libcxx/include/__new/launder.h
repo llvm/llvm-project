@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___NEW_LAUNDER_H
-#define _LIBCPP___NEW_LAUNDER_H
+#ifndef _LIBCPP_NEW_LAUNDER_H
+#define _LIBCPP_NEW_LAUNDER_H
 
 #include <__config>
 
@@ -31,4 +31,4 @@ template <class _Tp>
 #endif
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___NEW_LAUNDER_H
+#endif // _LIBCPP_NEW_LAUNDER_H

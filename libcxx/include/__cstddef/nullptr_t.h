@@ -6,8 +6,8 @@
 //
 //===---------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CSTDDEF_NULLPTR_T_H
-#define _LIBCPP___CSTDDEF_NULLPTR_T_H
+#ifndef _LIBCPP_CSTDDEF_NULLPTR_T_H
+#define _LIBCPP_CSTDDEF_NULLPTR_T_H
 
 #include <__config>
 
@@ -21,4 +21,4 @@ using nullptr_t = decltype(nullptr);
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CSTDDEF_NULLPTR_T_H
+#endif // _LIBCPP_CSTDDEF_NULLPTR_T_H

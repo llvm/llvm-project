@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FORMAT_FORMAT_ARG_H
-#define _LIBCPP___FORMAT_FORMAT_ARG_H
+#ifndef _LIBCPP_FORMAT_FORMAT_ARG_H
+#define _LIBCPP_FORMAT_FORMAT_ARG_H
 
 #include <__assert>
 #include <__concepts/arithmetic.h>
@@ -396,4 +396,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___FORMAT_FORMAT_ARG_H
+#endif // _LIBCPP_FORMAT_FORMAT_ARG_H

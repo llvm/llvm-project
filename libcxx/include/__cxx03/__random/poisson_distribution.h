@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___RANDOM_POISSON_DISTRIBUTION_H
-#define _LIBCPP___CXX03___RANDOM_POISSON_DISTRIBUTION_H
+#ifndef _LIBCPP_CXX03_RANDOM_POISSON_DISTRIBUTION_H
+#define _LIBCPP_CXX03_RANDOM_POISSON_DISTRIBUTION_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__random/clamp_to_integral.h>
@@ -233,4 +233,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___CXX03___RANDOM_POISSON_DISTRIBUTION_H
+#endif // _LIBCPP_CXX03_RANDOM_POISSON_DISTRIBUTION_H

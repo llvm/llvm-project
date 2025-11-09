@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___PSTL_CPU_ALGOS_FIND_IF_H
-#define _LIBCPP___PSTL_CPU_ALGOS_FIND_IF_H
+#ifndef _LIBCPP_PSTL_CPU_ALGOS_FIND_IF_H
+#define _LIBCPP_PSTL_CPU_ALGOS_FIND_IF_H
 
 #include <__algorithm/find_if.h>
 #include <__assert>
@@ -137,4 +137,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___PSTL_CPU_ALGOS_FIND_IF_H
+#endif // _LIBCPP_PSTL_CPU_ALGOS_FIND_IF_H

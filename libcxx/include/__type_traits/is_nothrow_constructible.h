@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_IS_NOTHROW_CONSTRUCTIBLE_H
-#define _LIBCPP___TYPE_TRAITS_IS_NOTHROW_CONSTRUCTIBLE_H
+#ifndef _LIBCPP_TYPE_TRAITS_IS_NOTHROW_CONSTRUCTIBLE_H
+#define _LIBCPP_TYPE_TRAITS_IS_NOTHROW_CONSTRUCTIBLE_H
 
 #include <__config>
 #include <__type_traits/add_reference.h>
@@ -60,4 +60,4 @@ _LIBCPP_NO_SPECIALIZATIONS inline constexpr bool is_nothrow_default_constructibl
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_IS_NOTHROW_CONSTRUCTIBLE_H
+#endif // _LIBCPP_TYPE_TRAITS_IS_NOTHROW_CONSTRUCTIBLE_H

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ATOMIC_CONTENTION_T_H
-#define _LIBCPP___ATOMIC_CONTENTION_T_H
+#ifndef _LIBCPP_ATOMIC_CONTENTION_T_H
+#define _LIBCPP_ATOMIC_CONTENTION_T_H
 
 #include <__atomic/support.h>
 #include <__config>
@@ -29,4 +29,4 @@ using __cxx_atomic_contention_t _LIBCPP_NODEBUG = __cxx_atomic_impl<__cxx_conten
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ATOMIC_CONTENTION_T_H
+#endif // _LIBCPP_ATOMIC_CONTENTION_T_H

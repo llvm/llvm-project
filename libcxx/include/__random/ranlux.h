@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___RANDOM_RANLUX_H
-#define _LIBCPP___RANDOM_RANLUX_H
+#ifndef _LIBCPP_RANDOM_RANLUX_H
+#define _LIBCPP_RANDOM_RANLUX_H
 
 #include <__config>
 #include <__random/discard_block_engine.h>
@@ -28,4 +28,4 @@ typedef discard_block_engine<ranlux48_base, 389, 11> ranlux48;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___RANDOM_RANLUX_H
+#endif // _LIBCPP_RANDOM_RANLUX_H

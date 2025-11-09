@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_FIND_SEGMENT_IF_H
-#define _LIBCPP___ALGORITHM_FIND_SEGMENT_IF_H
+#ifndef _LIBCPP_ALGORITHM_FIND_SEGMENT_IF_H
+#define _LIBCPP_ALGORITHM_FIND_SEGMENT_IF_H
 
 #include <__config>
 #include <__iterator/segmented_iterator.h>
@@ -59,4 +59,4 @@ __find_segment_if(_SegmentedIterator __first, _SegmentedIterator __last, _Pred _
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ALGORITHM_FIND_SEGMENT_IF_H
+#endif // _LIBCPP_ALGORITHM_FIND_SEGMENT_IF_H

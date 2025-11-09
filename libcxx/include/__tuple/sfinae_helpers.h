@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TUPLE_SFINAE_HELPERS_H
-#define _LIBCPP___TUPLE_SFINAE_HELPERS_H
+#ifndef _LIBCPP_TUPLE_SFINAE_HELPERS_H
+#define _LIBCPP_TUPLE_SFINAE_HELPERS_H
 
 #include <__config>
 
@@ -96,4 +96,4 @@ struct __sfinae_assign_base<false, true> {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TUPLE_SFINAE_HELPERS_H
+#endif // _LIBCPP_TUPLE_SFINAE_HELPERS_H

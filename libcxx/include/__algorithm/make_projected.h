@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_MAKE_PROJECTED_H
-#define _LIBCPP___ALGORITHM_MAKE_PROJECTED_H
+#ifndef _LIBCPP_ALGORITHM_MAKE_PROJECTED_H
+#define _LIBCPP_ALGORITHM_MAKE_PROJECTED_H
 
 #include <__config>
 #include <__functional/identity.h>
@@ -101,4 +101,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 20
 
-#endif // _LIBCPP___ALGORITHM_MAKE_PROJECTED_H
+#endif // _LIBCPP_ALGORITHM_MAKE_PROJECTED_H

@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03_CINTTYPES
-#define _LIBCPP___CXX03_CINTTYPES
+#ifndef _LIBCPP_CXX03_CINTTYPES
+#define _LIBCPP_CXX03_CINTTYPES
 
 /*
     cinttypes synopsis
@@ -267,4 +267,4 @@ using ::wcstoumax _LIBCPP_USING_IF_EXISTS;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CXX03_CINTTYPES
+#endif // _LIBCPP_CXX03_CINTTYPES

@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___MEMORY_COMPRESSED_PAIR_H
-#define _LIBCPP___MEMORY_COMPRESSED_PAIR_H
+#ifndef _LIBCPP_MEMORY_COMPRESSED_PAIR_H
+#define _LIBCPP_MEMORY_COMPRESSED_PAIR_H
 
 #include <__config>
 #include <__cstddef/size_t.h>
@@ -139,4 +139,4 @@ class __compressed_pair_padding<_ToPad, true> {};
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___MEMORY_COMPRESSED_PAIR_H
+#endif // _LIBCPP_MEMORY_COMPRESSED_PAIR_H

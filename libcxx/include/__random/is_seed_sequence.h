@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___RANDOM_IS_SEED_SEQUENCE_H
-#define _LIBCPP___RANDOM_IS_SEED_SEQUENCE_H
+#ifndef _LIBCPP_RANDOM_IS_SEED_SEQUENCE_H
+#define _LIBCPP_RANDOM_IS_SEED_SEQUENCE_H
 
 #include <__config>
 #include <__type_traits/is_convertible.h>
@@ -28,4 +28,4 @@ struct __is_seed_sequence {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___RANDOM_IS_SEED_SEQUENCE_H
+#endif // _LIBCPP_RANDOM_IS_SEED_SEQUENCE_H

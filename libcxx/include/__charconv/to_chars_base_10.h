@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CHARCONV_TO_CHARS_BASE_10_H
-#define _LIBCPP___CHARCONV_TO_CHARS_BASE_10_H
+#ifndef _LIBCPP_CHARCONV_TO_CHARS_BASE_10_H
+#define _LIBCPP_CHARCONV_TO_CHARS_BASE_10_H
 
 #include <__algorithm/copy_n.h>
 #include <__assert>
@@ -181,4 +181,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___CHARCONV_TO_CHARS_BASE_10_H
+#endif // _LIBCPP_CHARCONV_TO_CHARS_BASE_10_H

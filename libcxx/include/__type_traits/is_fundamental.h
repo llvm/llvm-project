@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_IS_FUNDAMENTAL_H
-#define _LIBCPP___TYPE_TRAITS_IS_FUNDAMENTAL_H
+#ifndef _LIBCPP_TYPE_TRAITS_IS_FUNDAMENTAL_H
+#define _LIBCPP_TYPE_TRAITS_IS_FUNDAMENTAL_H
 
 #include <__config>
 #include <__type_traits/integral_constant.h>
@@ -45,4 +45,4 @@ inline constexpr bool is_fundamental_v = is_fundamental<_Tp>::value;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_IS_FUNDAMENTAL_H
+#endif // _LIBCPP_TYPE_TRAITS_IS_FUNDAMENTAL_H

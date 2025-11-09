@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___LIBCXX_DEBUG_UTILS_SANITIZERS_H
-#define _LIBCPP___CXX03___LIBCXX_DEBUG_UTILS_SANITIZERS_H
+#ifndef _LIBCPP_CXX03_LIBCXX_DEBUG_UTILS_SANITIZERS_H
+#define _LIBCPP_CXX03_LIBCXX_DEBUG_UTILS_SANITIZERS_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__type_traits/integral_constant.h>
@@ -101,4 +101,4 @@ _LIBCPP_HIDE_FROM_ABI void __annotate_contiguous_container(
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CXX03___LIBCXX_DEBUG_UTILS_SANITIZERS_H
+#endif // _LIBCPP_CXX03_LIBCXX_DEBUG_UTILS_SANITIZERS_H

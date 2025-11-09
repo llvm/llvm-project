@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CHRONO_OSTREAM_H
-#define _LIBCPP___CHRONO_OSTREAM_H
+#ifndef _LIBCPP_CHRONO_OSTREAM_H
+#define _LIBCPP_CHRONO_OSTREAM_H
 
 #include <__config>
 
@@ -351,4 +351,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_HAS_LOCALIZATION
 
-#endif // _LIBCPP___CHRONO_OSTREAM_H
+#endif // _LIBCPP_CHRONO_OSTREAM_H

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___ALGORITHM_GENERATE_N_H
-#define _LIBCPP___CXX03___ALGORITHM_GENERATE_N_H
+#ifndef _LIBCPP_CXX03_ALGORITHM_GENERATE_N_H
+#define _LIBCPP_CXX03_ALGORITHM_GENERATE_N_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__utility/convert_to_integral.h>
@@ -29,4 +29,4 @@ inline _LIBCPP_HIDE_FROM_ABI _OutputIterator generate_n(_OutputIterator __first,
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CXX03___ALGORITHM_GENERATE_N_H
+#endif // _LIBCPP_CXX03_ALGORITHM_GENERATE_N_H

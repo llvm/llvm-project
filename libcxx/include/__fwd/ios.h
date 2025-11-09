@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FWD_IOS_H
-#define _LIBCPP___FWD_IOS_H
+#ifndef _LIBCPP_FWD_IOS_H
+#define _LIBCPP_FWD_IOS_H
 
 #include <__config>
 #include <__fwd/string.h>
@@ -40,4 +40,4 @@ using streamoff = long long; // for char_traits in <string>
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FWD_IOS_H
+#endif // _LIBCPP_FWD_IOS_H

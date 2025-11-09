@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_COMP_H
-#define _LIBCPP___ALGORITHM_COMP_H
+#ifndef _LIBCPP_ALGORITHM_COMP_H
+#define _LIBCPP_ALGORITHM_COMP_H
 
 #include <__config>
 #include <__type_traits/desugars_to.h>
@@ -54,4 +54,4 @@ inline const bool __is_generic_transparent_comparator_v<__less<> > = true;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ALGORITHM_COMP_H
+#endif // _LIBCPP_ALGORITHM_COMP_H

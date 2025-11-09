@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___CHRONO_SYSTEM_CLOCK_H
-#define _LIBCPP___CXX03___CHRONO_SYSTEM_CLOCK_H
+#ifndef _LIBCPP_CXX03_CHRONO_SYSTEM_CLOCK_H
+#define _LIBCPP_CXX03_CHRONO_SYSTEM_CLOCK_H
 
 #include <__cxx03/__chrono/duration.h>
 #include <__cxx03/__chrono/time_point.h>
@@ -40,4 +40,4 @@ public:
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CXX03___CHRONO_SYSTEM_CLOCK_H
+#endif // _LIBCPP_CXX03_CHRONO_SYSTEM_CLOCK_H

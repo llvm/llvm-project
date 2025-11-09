@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_IS_EXECUTION_POLICY_H
-#define _LIBCPP___TYPE_TRAITS_IS_EXECUTION_POLICY_H
+#ifndef _LIBCPP_TYPE_TRAITS_IS_EXECUTION_POLICY_H
+#define _LIBCPP_TYPE_TRAITS_IS_EXECUTION_POLICY_H
 
 #include <__config>
 #include <__type_traits/remove_cvref.h>
@@ -56,4 +56,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 17
 
-#endif // _LIBCPP___TYPE_TRAITS_IS_EXECUTION_POLICY_H
+#endif // _LIBCPP_TYPE_TRAITS_IS_EXECUTION_POLICY_H

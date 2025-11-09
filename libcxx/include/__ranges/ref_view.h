@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___RANGES_REF_VIEW_H
-#define _LIBCPP___RANGES_REF_VIEW_H
+#ifndef _LIBCPP_RANGES_REF_VIEW_H
+#define _LIBCPP_RANGES_REF_VIEW_H
 
 #include <__concepts/convertible_to.h>
 #include <__concepts/different_from.h>
@@ -86,4 +86,4 @@ inline constexpr bool enable_borrowed_range<ref_view<_Tp>> = true;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___RANGES_REF_VIEW_H
+#endif // _LIBCPP_RANGES_REF_VIEW_H

@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CHARCONV_TABLES
-#define _LIBCPP___CHARCONV_TABLES
+#ifndef _LIBCPP_CHARCONV_TABLES
+#define _LIBCPP_CHARCONV_TABLES
 
 #include <__config>
 #include <cstdint>
@@ -156,4 +156,4 @@ inline _LIBCPP_CONSTEXPR const char __digits_base_10[200] = {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CHARCONV_TABLES
+#endif // _LIBCPP_CHARCONV_TABLES

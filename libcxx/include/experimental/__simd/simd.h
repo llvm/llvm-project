@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_EXPERIMENTAL___SIMD_SIMD_H
-#define _LIBCPP_EXPERIMENTAL___SIMD_SIMD_H
+#ifndef _LIBCPP_EXPERIMENTAL_SIMD_SIMD_H
+#define _LIBCPP_EXPERIMENTAL_SIMD_SIMD_H
 
 #include <__config>
 #include <__cstddef/size_t.h>
@@ -152,4 +152,4 @@ using fixed_size_simd = simd<_Tp, simd_abi::fixed_size<_Np>>;
 _LIBCPP_END_NAMESPACE_EXPERIMENTAL
 
 #endif // _LIBCPP_STD_VER >= 17 && defined(_LIBCPP_ENABLE_EXPERIMENTAL)
-#endif // _LIBCPP_EXPERIMENTAL___SIMD_SIMD_H
+#endif // _LIBCPP_EXPERIMENTAL_SIMD_SIMD_H

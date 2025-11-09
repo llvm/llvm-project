@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___TYPE_IS_CONSTRUCTIBLE_H
-#define _LIBCPP___CXX03___TYPE_IS_CONSTRUCTIBLE_H
+#ifndef _LIBCPP_CXX03_TYPE_IS_CONSTRUCTIBLE_H
+#define _LIBCPP_CXX03_TYPE_IS_CONSTRUCTIBLE_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__type_traits/add_lvalue_reference.h>
@@ -36,4 +36,4 @@ struct _LIBCPP_TEMPLATE_VIS is_default_constructible : public integral_constant<
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CXX03___TYPE_IS_CONSTRUCTIBLE_H
+#endif // _LIBCPP_CXX03_TYPE_IS_CONSTRUCTIBLE_H

@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ITERATOR_DEFAULT_SENTINEL_H
-#define _LIBCPP___ITERATOR_DEFAULT_SENTINEL_H
+#ifndef _LIBCPP_ITERATOR_DEFAULT_SENTINEL_H
+#define _LIBCPP_ITERATOR_DEFAULT_SENTINEL_H
 
 #include <__config>
 
@@ -27,4 +27,4 @@ inline constexpr default_sentinel_t default_sentinel{};
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ITERATOR_DEFAULT_SENTINEL_H
+#endif // _LIBCPP_ITERATOR_DEFAULT_SENTINEL_H

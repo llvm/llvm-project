@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FWD_ISTREAM_H
-#define _LIBCPP___FWD_ISTREAM_H
+#ifndef _LIBCPP_FWD_ISTREAM_H
+#define _LIBCPP_FWD_ISTREAM_H
 
 #include <__config>
 #include <__fwd/string.h>
@@ -40,4 +40,4 @@ class _LIBCPP_PREFERRED_NAME(iostream) _LIBCPP_IF_WIDE_CHARACTERS(_LIBCPP_PREFER
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FWD_ISTREAM_H
+#endif // _LIBCPP_FWD_ISTREAM_H

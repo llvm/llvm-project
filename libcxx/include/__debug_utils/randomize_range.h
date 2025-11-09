@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___LIBCXX_DEBUG_RANDOMIZE_RANGE_H
-#define _LIBCPP___LIBCXX_DEBUG_RANDOMIZE_RANGE_H
+#ifndef _LIBCPP_LIBCXX_DEBUG_RANDOMIZE_RANGE_H
+#define _LIBCPP_LIBCXX_DEBUG_RANDOMIZE_RANGE_H
 
 #include <__config>
 
@@ -39,4 +39,4 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void __debug_randomize_range
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___LIBCXX_DEBUG_RANDOMIZE_RANGE_H
+#endif // _LIBCPP_LIBCXX_DEBUG_RANDOMIZE_RANGE_H

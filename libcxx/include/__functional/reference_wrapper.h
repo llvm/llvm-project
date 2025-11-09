@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FUNCTIONAL_REFERENCE_WRAPPER_H
-#define _LIBCPP___FUNCTIONAL_REFERENCE_WRAPPER_H
+#ifndef _LIBCPP_FUNCTIONAL_REFERENCE_WRAPPER_H
+#define _LIBCPP_FUNCTIONAL_REFERENCE_WRAPPER_H
 
 #include <__compare/synth_three_way.h>
 #include <__concepts/convertible_to.h>
@@ -187,4 +187,4 @@ struct basic_common_reference<_Tp, _Rp, _TpQual, _RpQual> {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FUNCTIONAL_REFERENCE_WRAPPER_H
+#endif // _LIBCPP_FUNCTIONAL_REFERENCE_WRAPPER_H

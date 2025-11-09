@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___PSTL_BACKENDS_STD_THREAD_H
-#define _LIBCPP___PSTL_BACKENDS_STD_THREAD_H
+#ifndef _LIBCPP_PSTL_BACKENDS_STD_THREAD_H
+#define _LIBCPP_PSTL_BACKENDS_STD_THREAD_H
 
 #include <__config>
 #include <__pstl/backend_fwd.h>
@@ -136,4 +136,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___PSTL_BACKENDS_STD_THREAD_H
+#endif // _LIBCPP_PSTL_BACKENDS_STD_THREAD_H

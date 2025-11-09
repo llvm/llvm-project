@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___MUTEX_ONCE_FLAG_H
-#define _LIBCPP___MUTEX_ONCE_FLAG_H
+#ifndef _LIBCPP_MUTEX_ONCE_FLAG_H
+#define _LIBCPP_MUTEX_ONCE_FLAG_H
 
 #include <__config>
 #include <__memory/addressof.h>
@@ -162,4 +162,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___MUTEX_ONCE_FLAG_H
+#endif // _LIBCPP_MUTEX_ONCE_FLAG_H

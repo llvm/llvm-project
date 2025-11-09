@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FUNCTIONAL_BIND_H
-#define _LIBCPP___FUNCTIONAL_BIND_H
+#ifndef _LIBCPP_FUNCTIONAL_BIND_H
+#define _LIBCPP_FUNCTIONAL_BIND_H
 
 #include <__config>
 #include <__functional/weak_result_type.h>
@@ -295,4 +295,4 @@ bind(_Fp&& __f, _BoundArgs&&... __bound_args) {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FUNCTIONAL_BIND_H
+#endif // _LIBCPP_FUNCTIONAL_BIND_H

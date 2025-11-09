@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CONCEPTS_PREDICATE_H
-#define _LIBCPP___CONCEPTS_PREDICATE_H
+#ifndef _LIBCPP_CONCEPTS_PREDICATE_H
+#define _LIBCPP_CONCEPTS_PREDICATE_H
 
 #include <__concepts/boolean_testable.h>
 #include <__concepts/invocable.h>
@@ -31,4 +31,4 @@ concept predicate = regular_invocable<_Fn, _Args...> && __boolean_testable<invok
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CONCEPTS_PREDICATE_H
+#endif // _LIBCPP_CONCEPTS_PREDICATE_H

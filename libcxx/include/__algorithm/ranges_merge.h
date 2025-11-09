@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_RANGES_MERGE_H
-#define _LIBCPP___ALGORITHM_RANGES_MERGE_H
+#ifndef _LIBCPP_ALGORITHM_RANGES_MERGE_H
+#define _LIBCPP_ALGORITHM_RANGES_MERGE_H
 
 #include <__algorithm/in_in_out_result.h>
 #include <__algorithm/ranges_copy.h>
@@ -131,4 +131,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___ALGORITHM_RANGES_MERGE_H
+#endif // _LIBCPP_ALGORITHM_RANGES_MERGE_H

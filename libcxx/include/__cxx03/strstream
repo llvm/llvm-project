@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03_STRSTREAM
-#define _LIBCPP___CXX03_STRSTREAM
+#ifndef _LIBCPP_CXX03_STRSTREAM
+#define _LIBCPP_CXX03_STRSTREAM
 
 /*
     strstream synopsis
@@ -264,4 +264,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___CXX03_STRSTREAM
+#endif // _LIBCPP_CXX03_STRSTREAM

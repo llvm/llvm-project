@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_IS_TRIVIALLY_CONSTRUCTIBLE_H
-#define _LIBCPP___TYPE_TRAITS_IS_TRIVIALLY_CONSTRUCTIBLE_H
+#ifndef _LIBCPP_TYPE_TRAITS_IS_TRIVIALLY_CONSTRUCTIBLE_H
+#define _LIBCPP_TYPE_TRAITS_IS_TRIVIALLY_CONSTRUCTIBLE_H
 
 #include <__config>
 #include <__type_traits/add_reference.h>
@@ -61,4 +61,4 @@ _LIBCPP_NO_SPECIALIZATIONS inline constexpr bool is_trivially_default_constructi
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_IS_TRIVIALLY_CONSTRUCTIBLE_H
+#endif // _LIBCPP_TYPE_TRAITS_IS_TRIVIALLY_CONSTRUCTIBLE_H

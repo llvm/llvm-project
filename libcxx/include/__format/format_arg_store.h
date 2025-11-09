@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FORMAT_FORMAT_ARG_STORE_H
-#define _LIBCPP___FORMAT_FORMAT_ARG_STORE_H
+#ifndef _LIBCPP_FORMAT_FORMAT_ARG_STORE_H
+#define _LIBCPP_FORMAT_FORMAT_ARG_STORE_H
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -279,4 +279,4 @@ struct __format_arg_store {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FORMAT_FORMAT_ARG_STORE_H
+#endif // _LIBCPP_FORMAT_FORMAT_ARG_STORE_H

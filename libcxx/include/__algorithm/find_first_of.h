@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_FIND_FIRST_OF_H
-#define _LIBCPP___ALGORITHM_FIND_FIRST_OF_H
+#ifndef _LIBCPP_ALGORITHM_FIND_FIRST_OF_H
+#define _LIBCPP_ALGORITHM_FIND_FIRST_OF_H
 
 #include <__algorithm/comp.h>
 #include <__config>
@@ -51,4 +51,4 @@ template <class _ForwardIterator1, class _ForwardIterator2>
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ALGORITHM_FIND_FIRST_OF_H
+#endif // _LIBCPP_ALGORITHM_FIND_FIRST_OF_H

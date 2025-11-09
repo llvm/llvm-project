@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___STOP_TOKEN_ATOMIC_UNIQUE_LOCK_H
-#define _LIBCPP___STOP_TOKEN_ATOMIC_UNIQUE_LOCK_H
+#ifndef _LIBCPP_STOP_TOKEN_ATOMIC_UNIQUE_LOCK_H
+#define _LIBCPP_STOP_TOKEN_ATOMIC_UNIQUE_LOCK_H
 
 #include <__bit/popcount.h>
 #include <__config>
@@ -137,4 +137,4 @@ private:
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___STOP_TOKEN_ATOMIC_UNIQUE_LOCK_H
+#endif // _LIBCPP_STOP_TOKEN_ATOMIC_UNIQUE_LOCK_H

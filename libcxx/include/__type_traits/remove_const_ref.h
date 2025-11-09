@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_REMOVE_CONST_REF_H
-#define _LIBCPP___TYPE_TRAITS_REMOVE_CONST_REF_H
+#ifndef _LIBCPP_TYPE_TRAITS_REMOVE_CONST_REF_H
+#define _LIBCPP_TYPE_TRAITS_REMOVE_CONST_REF_H
 
 #include <__config>
 #include <__type_traits/remove_const.h>
@@ -24,4 +24,4 @@ using __remove_const_ref_t _LIBCPP_NODEBUG = __remove_const_t<__libcpp_remove_re
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_REMOVE_CONST_REF_H
+#endif // _LIBCPP_TYPE_TRAITS_REMOVE_CONST_REF_H

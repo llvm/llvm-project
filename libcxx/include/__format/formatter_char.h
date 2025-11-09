@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FORMAT_FORMATTER_CHAR_H
-#define _LIBCPP___FORMAT_FORMATTER_CHAR_H
+#ifndef _LIBCPP_FORMAT_FORMATTER_CHAR_H
+#define _LIBCPP_FORMAT_FORMATTER_CHAR_H
 
 #include <__concepts/same_as.h>
 #include <__config>
@@ -98,4 +98,4 @@ inline constexpr bool enable_nonlocking_formatter_optimization<wchar_t> = true;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FORMAT_FORMATTER_CHAR_H
+#endif // _LIBCPP_FORMAT_FORMATTER_CHAR_H

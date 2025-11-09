@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___MATH_HYPOT_H
-#define _LIBCPP___CXX03___MATH_HYPOT_H
+#ifndef _LIBCPP_CXX03_MATH_HYPOT_H
+#define _LIBCPP_CXX03_MATH_HYPOT_H
 
 #include <__cxx03/__algorithm/max.h>
 #include <__cxx03/__config>
@@ -55,4 +55,4 @@ inline _LIBCPP_HIDE_FROM_ABI typename __promote<_A1, _A2>::type hypot(_A1 __x, _
 _LIBCPP_END_NAMESPACE_STD
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___CXX03___MATH_HYPOT_H
+#endif // _LIBCPP_CXX03_MATH_HYPOT_H

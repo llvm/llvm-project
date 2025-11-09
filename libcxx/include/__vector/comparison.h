@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___VECTOR_COMPARISON_H
-#define _LIBCPP___VECTOR_COMPARISON_H
+#ifndef _LIBCPP_VECTOR_COMPARISON_H
+#define _LIBCPP_VECTOR_COMPARISON_H
 
 #include <__algorithm/equal.h>
 #include <__algorithm/lexicographical_compare.h>
@@ -68,4 +68,4 @@ operator<=>(const vector<_Tp, _Allocator>& __x, const vector<_Tp, _Allocator>& _
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___VECTOR_COMPARISON_H
+#endif // _LIBCPP_VECTOR_COMPARISON_H

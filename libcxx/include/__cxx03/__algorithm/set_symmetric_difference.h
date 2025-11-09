@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03___ALGORITHM_SET_SYMMETRIC_DIFFERENCE_H
-#define _LIBCPP___CXX03___ALGORITHM_SET_SYMMETRIC_DIFFERENCE_H
+#ifndef _LIBCPP_CXX03_ALGORITHM_SET_SYMMETRIC_DIFFERENCE_H
+#define _LIBCPP_CXX03_ALGORITHM_SET_SYMMETRIC_DIFFERENCE_H
 
 #include <__cxx03/__algorithm/comp.h>
 #include <__cxx03/__algorithm/comp_ref_type.h>
@@ -105,4 +105,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___CXX03___ALGORITHM_SET_SYMMETRIC_DIFFERENCE_H
+#endif // _LIBCPP_CXX03_ALGORITHM_SET_SYMMETRIC_DIFFERENCE_H

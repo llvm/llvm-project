@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_HAS_UNIQUE_OBJECT_REPRESENTATION_H
-#define _LIBCPP___TYPE_TRAITS_HAS_UNIQUE_OBJECT_REPRESENTATION_H
+#ifndef _LIBCPP_TYPE_TRAITS_HAS_UNIQUE_OBJECT_REPRESENTATION_H
+#define _LIBCPP_TYPE_TRAITS_HAS_UNIQUE_OBJECT_REPRESENTATION_H
 
 #include <__config>
 #include <__type_traits/integral_constant.h>
@@ -32,4 +32,4 @@ _LIBCPP_NO_SPECIALIZATIONS inline constexpr bool has_unique_object_representatio
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_HAS_UNIQUE_OBJECT_REPRESENTATION_H
+#endif // _LIBCPP_TYPE_TRAITS_HAS_UNIQUE_OBJECT_REPRESENTATION_H

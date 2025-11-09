@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___PSTL_HANDLE_EXCEPTION_H
-#define _LIBCPP___PSTL_HANDLE_EXCEPTION_H
+#ifndef _LIBCPP_PSTL_HANDLE_EXCEPTION_H
+#define _LIBCPP_PSTL_HANDLE_EXCEPTION_H
 
 #include <__config>
 #include <__new/exceptions.h>
@@ -58,4 +58,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___PSTL_HANDLE_EXCEPTION_H
+#endif // _LIBCPP_PSTL_HANDLE_EXCEPTION_H

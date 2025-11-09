@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CONCEPTS_EQUALITY_COMPARABLE_H
-#define _LIBCPP___CONCEPTS_EQUALITY_COMPARABLE_H
+#ifndef _LIBCPP_CONCEPTS_EQUALITY_COMPARABLE_H
+#define _LIBCPP_CONCEPTS_EQUALITY_COMPARABLE_H
 
 #include <__concepts/boolean_testable.h>
 #include <__concepts/common_reference_with.h>
@@ -53,4 +53,4 @@ concept equality_comparable_with =
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CONCEPTS_EQUALITY_COMPARABLE_H
+#endif // _LIBCPP_CONCEPTS_EQUALITY_COMPARABLE_H

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CONCEPTS_COMMON_WITH_H
-#define _LIBCPP___CONCEPTS_COMMON_WITH_H
+#ifndef _LIBCPP_CONCEPTS_COMMON_WITH_H
+#define _LIBCPP_CONCEPTS_COMMON_WITH_H
 
 #include <__concepts/common_reference_with.h>
 #include <__concepts/same_as.h>
@@ -49,4 +49,4 @@ concept common_with =
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CONCEPTS_COMMON_WITH_H
+#endif // _LIBCPP_CONCEPTS_COMMON_WITH_H

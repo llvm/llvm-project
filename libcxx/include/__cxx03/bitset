@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CXX03_BITSET
-#define _LIBCPP___CXX03_BITSET
+#ifndef _LIBCPP_CXX03_BITSET
+#define _LIBCPP_CXX03_BITSET
 
 // clang-format off
 
@@ -883,4 +883,4 @@ _LIBCPP_POP_MACROS
 #  include <__cxx03/type_traits>
 #endif
 
-#endif // _LIBCPP___CXX03_BITSET
+#endif // _LIBCPP_CXX03_BITSET
