@@ -2378,6 +2378,8 @@ public:
   /// Get the factor that the VF of this recipe's output should be scaled by.
   unsigned getVFScaleFactor() const { return VFScaleFactor; }
 
+  void setVFScaleFactor(unsigned F) { VFScaleFactor = F; }
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
   void print(raw_ostream &O, const Twine &Indent,

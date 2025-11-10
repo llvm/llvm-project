@@ -40,6 +40,8 @@
 using namespace llvm;
 using namespace VPlanPatternMatch;
 
+#define DEBUG_TYPE "loop-vectorize"
+
 static cl::opt<bool> EnableWideActiveLaneMask(
     "enable-wide-lane-mask", cl::init(false), cl::Hidden,
     cl::desc("Enable use of wide get active lane mask instructions"));
@@ -3761,7 +3763,7 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
 
 /// This function tries to create abstract recipes from the reduction recipe for
 /// following optimizations and cost estimation.
-static void tryToCreateAbstractReductionRecipe(VPReductionRecipe *Red,
+static bool tryToCreateAbstractReductionRecipe(VPReductionRecipe *Red,
                                                VPCostContext &Ctx,
                                                VFRange &Range) {
   VPExpressionRecipe *AbstractR = nullptr;
@@ -3773,10 +3775,52 @@ static void tryToCreateAbstractReductionRecipe(VPReductionRecipe *Red,
     AbstractR = ExtRed;
   // Cannot create abstract inloop reduction recipes.
   if (!AbstractR)
-    return;
+    return false;
 
   AbstractR->insertBefore(*VPBB, IP);
   Red->replaceAllUsesWith(AbstractR);
+  return true;
+}
+
+/// Lower a partial reduction back to a regular reduction, by
+/// changing the in-loop partial reduction to a binop and removing
+/// the scale factor from the PHI node.
+static void lowerPartialReduction(VPlan &Plan, VPPartialReductionRecipe *Red,
+                                  VPCostContext &Ctx) {
+  VPRecipeBase *Acc = Red->getChainOp()->getDefiningRecipe();
+  if (auto *PhiR = dyn_cast<VPReductionPHIRecipe>(Acc)) {
+    PhiR->setVFScaleFactor(1);
+
+    // We also need to update the scale factor of the reduction-start-vector
+    // operand.
+    VPValue *StartV, *IdentityV;
+    if (!match(PhiR->getOperand(0),
+               m_VPInstruction<VPInstruction::ReductionStartVector>(
+                   m_VPValue(StartV), m_VPValue(IdentityV), m_VPValue())))
+      llvm_unreachable("Unexpected operand for a partial reduction");
+    Type *I32Ty = IntegerType::getInt32Ty(Plan.getContext());
+    auto *ScaleFactorVPV = Plan.getOrAddLiveIn(ConstantInt::get(I32Ty, 1));
+    cast<VPInstruction>(PhiR->getOperand(0))->setOperand(2, ScaleFactorVPV);
+  }
+
+  if (auto *R = dyn_cast<VPPartialReductionRecipe>(Acc))
+    if (R->getVFScaleFactor() != 1)
+      lowerPartialReduction(Plan, R, Ctx);
+
+  LLVM_DEBUG(
+      dbgs() << "LV: Lowering " << *Red
+             << " back to regular reduction, because it is not profitable\n");
+
+  // Lower the partial reduction to a regular binop.
+  VPBuilder Builder(Red);
+  VPInstruction *Add = Builder.createNaryOp(
+      RecurrenceDescriptor::getOpcode(Red->getRecurrenceKind()),
+      {Red->getChainOp(), Red->getVecOp()});
+  if (Red->isConditional())
+    Add = Builder.createSelect(Red->getCondOp(), Add, Red->getChainOp());
+
+  Red->replaceAllUsesWith(Add);
+  Red->eraseFromParent();
 }
 
 void VPlanTransforms::convertToAbstractRecipes(VPlan &Plan, VPCostContext &Ctx,
@@ -3784,8 +3828,23 @@ void VPlanTransforms::convertToAbstractRecipes(VPlan &Plan, VPCostContext &Ctx,
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_deep(Plan.getVectorLoopRegion()))) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
-      if (auto *Red = dyn_cast<VPReductionRecipe>(&R))
-        tryToCreateAbstractReductionRecipe(Red, Ctx, Range);
+      auto *Red = dyn_cast<VPReductionRecipe>(&R);
+      if (!Red)
+        continue;
+
+      if (!tryToCreateAbstractReductionRecipe(Red, Ctx, Range) &&
+          isa<VPPartialReductionRecipe>(Red)) {
+        // If there isn't a profitable VPExpression for a partial reduction,
+        // then that suggests using a partial reduction is not profitable
+        // for this VPlan. It seems better to resort to a regular (middle-block)
+        // reduction, so that the this plan is still profitable to consider.
+        // Otherwise, the plan might be discarded in favour of a smaller VF.
+        //
+        // FIXME: There's a lot to unpick when it comes to partial
+        // reductions, but this should provide a temporary stop-gap until we
+        // reimplement the logic for creating partial reductions.
+        lowerPartialReduction(Plan, cast<VPPartialReductionRecipe>(Red), Ctx);
+      }
     }
   }
 }
