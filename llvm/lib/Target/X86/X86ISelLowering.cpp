@@ -54158,7 +54158,6 @@ static SDValue combineFMulcFCMulc(SDNode *N, SelectionDAG &DAG,
 //  FADD(A, FMA(B, C, 0)) and FADD(A, FMUL(B, C)) to FMA(B, C, A)
 static SDValue combineFaddCFmul(SDNode *N, SelectionDAG &DAG,
                                 const X86Subtarget &Subtarget) {
-  bool AllowContract = N->getFlags().hasAllowContract();
   auto HasNoSignedZero = [&DAG](const SDNodeFlags &Flags) {
     return DAG.getTarget().Options.NoSignedZerosFPMath ||
            Flags.hasNoSignedZeros();
@@ -54170,7 +54169,7 @@ static SDValue combineFaddCFmul(SDNode *N, SelectionDAG &DAG,
            Bits.getConstant() == AI;
   };
 
-  if (N->getOpcode() != ISD::FADD || !Subtarget.hasFP16() || !AllowContract)
+  if (N->getOpcode() != ISD::FADD || !Subtarget.hasFP16() || !N->getFlags().hasAllowContract())
     return SDValue();
 
   EVT VT = N->getValueType(0);
@@ -54181,14 +54180,14 @@ static SDValue combineFaddCFmul(SDNode *N, SelectionDAG &DAG,
   SDValue RHS = N->getOperand(1);
   bool IsConj;
   SDValue FAddOp1, MulOp0, MulOp1;
-  auto GetCFmulFrom = [&MulOp0, &MulOp1, &IsConj, AllowContract,
+  auto GetCFmulFrom = [&MulOp0, &MulOp1, &IsConj,
                        &IsVectorAllNegativeZero,
                        &HasNoSignedZero](SDValue N) -> bool {
     if (!N.hasOneUse() || N.getOpcode() != ISD::BITCAST)
       return false;
     SDValue Op0 = N.getOperand(0);
     unsigned Opcode = Op0.getOpcode();
-    if (Op0.hasOneUse() && AllowContract) {
+    if (Op0.hasOneUse() && Op0->getFlags().hasAllowContract()) {
       if ((Opcode == X86ISD::VFMULC || Opcode == X86ISD::VFCMULC)) {
         MulOp0 = Op0.getOperand(0);
         MulOp1 = Op0.getOperand(1);
