@@ -30,6 +30,7 @@
 #include "DynamicStaticInitializersCheck.h"
 #include "EasilySwappableParametersCheck.h"
 #include "EmptyCatchCheck.h"
+#include "ExceptionCopyConstructorThrowsCheck.h"
 #include "ExceptionEscapeCheck.h"
 #include "FloatLoopCounterCheck.h"
 #include "FoldInitTypeCheck.h"
@@ -156,6 +157,8 @@ public:
     CheckFactories.registerCheck<EasilySwappableParametersCheck>(
         "bugprone-easily-swappable-parameters");
     CheckFactories.registerCheck<EmptyCatchCheck>("bugprone-empty-catch");
+    CheckFactories.registerCheck<ExceptionCopyConstructorThrowsCheck>(
+        "bugprone-exception-copy-constructor-throws");
     CheckFactories.registerCheck<ExceptionEscapeCheck>(
         "bugprone-exception-escape");
     CheckFactories.registerCheck<FloatLoopCounterCheck>(

@@ -44,10 +44,8 @@
 #include <cassert>
 #include <functional>
 #include <iterator>
-#include <list>
 #include <memory>
 #include <optional>
-#include <set>
 #include <utility>
 
 namespace llvm {

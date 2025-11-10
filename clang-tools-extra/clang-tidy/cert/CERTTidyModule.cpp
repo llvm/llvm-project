@@ -13,6 +13,7 @@
 #include "../bugprone/CommandProcessorCheck.h"
 #include "../bugprone/CopyConstructorMutatesArgumentCheck.h"
 #include "../bugprone/DefaultOperatorNewOnOveralignedTypeCheck.h"
+#include "../bugprone/ExceptionCopyConstructorThrowsCheck.h"
 #include "../bugprone/FloatLoopCounterCheck.h"
 #include "../bugprone/PointerArithmeticOnPolymorphicObjectCheck.h"
 #include "../bugprone/RandomGeneratorSeedCheck.h"
@@ -262,7 +263,8 @@ public:
         "cert-err52-cpp");
     CheckFactories.registerCheck<bugprone::ThrowingStaticInitializationCheck>(
         "cert-err58-cpp");
-    CheckFactories.registerCheck<ThrownExceptionTypeCheck>("cert-err60-cpp");
+    CheckFactories.registerCheck<bugprone::ExceptionCopyConstructorThrowsCheck>(
+        "cert-err60-cpp");
     CheckFactories.registerCheck<misc::ThrowByValueCatchByReferenceCheck>(
         "cert-err61-cpp");
     // MEM
