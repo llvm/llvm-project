@@ -704,6 +704,7 @@ public:
   NODE(parser, OmpTraitSetSelectorName)
   NODE_ENUM(OmpTraitSetSelectorName, Value)
   NODE(parser, OmpTransparentClause)
+  NODE_ENUM(OmpTransparentClause, TransparentPolicy)
   NODE(parser, OmpTypeName)
   NODE(parser, OmpTypeNameList)
   NODE(parser, OmpUnifiedAddressClause)
