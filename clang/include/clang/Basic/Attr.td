@@ -5017,6 +5017,10 @@ def HLSLUnparsedSemantic : HLSLAnnotationAttr {
   let Documentation = [InternalOnly];
 }
 
+def HLSLUserSemantic : HLSLSemanticAttr</* Indexable= */ 1> {
+  let Documentation = [InternalOnly];
+}
+
 def HLSLSV_Position : HLSLSemanticAttr</* Indexable= */ 1> {
   let Documentation = [HLSLSV_PositionDocs];
 }

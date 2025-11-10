@@ -16975,6 +16975,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPSingleExprClause(OpenMPClauseKind Kind,
   case OMPC_holds:
     Res = ActOnOpenMPHoldsClause(Expr, StartLoc, LParenLoc, EndLoc);
     break;
+  case OMPC_dyn_groupprivate:
   case OMPC_grainsize:
   case OMPC_num_tasks:
   case OMPC_num_threads:
@@ -17101,6 +17102,8 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
   case OMPC_num_teams:
   case OMPC_thread_limit:
   case OMPC_ompx_dyn_cgroup_mem:
+  case OMPC_dyn_groupprivate:
+    // TODO: This may need to consider teams too.
     if (Leafs[0] == OMPD_target)
       return OMPD_target;
     break;
@@ -18148,7 +18151,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPSingleExprWithArgClause(
     SourceLocation EndLoc) {
   OMPClause *Res = nullptr;
   switch (Kind) {
-  case OMPC_schedule:
+  case OMPC_schedule: {
     enum { Modifier1, Modifier2, ScheduleKind, NumberOfElements };
     assert(Argument.size() == NumberOfElements &&
            ArgumentLoc.size() == NumberOfElements);
@@ -18159,6 +18162,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPSingleExprWithArgClause(
         StartLoc, LParenLoc, ArgumentLoc[Modifier1], ArgumentLoc[Modifier2],
         ArgumentLoc[ScheduleKind], DelimLoc, EndLoc);
     break;
+  }
   case OMPC_if:
     assert(Argument.size() == 1 && ArgumentLoc.size() == 1);
     Res = ActOnOpenMPIfClause(static_cast<OpenMPDirectiveKind>(Argument.back()),
@@ -18214,6 +18218,20 @@ OMPClause *SemaOpenMP::ActOnOpenMPSingleExprWithArgClause(
         static_cast<OpenMPNumTasksClauseModifier>(Argument.back()), Expr,
         StartLoc, LParenLoc, ArgumentLoc.back(), EndLoc);
     break;
+  case OMPC_dyn_groupprivate: {
+    enum { Modifier1, Modifier2, NumberOfElements };
+    assert(Argument.size() == NumberOfElements &&
+           ArgumentLoc.size() == NumberOfElements &&
+           "Modifiers for dyn_groupprivate clause and their locations are "
+           "expected.");
+    Res = ActOnOpenMPDynGroupprivateClause(
+        static_cast<OpenMPDynGroupprivateClauseModifier>(Argument[Modifier1]),
+        static_cast<OpenMPDynGroupprivateClauseFallbackModifier>(
+            Argument[Modifier2]),
+        Expr, StartLoc, LParenLoc, ArgumentLoc[Modifier1],
+        ArgumentLoc[Modifier2], EndLoc);
+    break;
+  }
   case OMPC_num_threads:
     assert(Argument.size() == 1 && ArgumentLoc.size() == 1 &&
            "Modifier for num_threads clause and its location are expected.");
@@ -18570,6 +18588,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPClause(OpenMPClauseKind Kind,
   case OMPC_affinity:
   case OMPC_when:
   case OMPC_ompx_dyn_cgroup_mem:
+  case OMPC_dyn_groupprivate:
   default:
     llvm_unreachable("Clause is not allowed.");
   }
@@ -25699,6 +25718,49 @@ OMPClause *SemaOpenMP::ActOnOpenMPXDynCGroupMemClause(Expr *Size,
 
   return new (getASTContext()) OMPXDynCGroupMemClause(
       ValExpr, HelperValStmt, CaptureRegion, StartLoc, LParenLoc, EndLoc);
+}
+
+OMPClause *SemaOpenMP::ActOnOpenMPDynGroupprivateClause(
+    OpenMPDynGroupprivateClauseModifier M1,
+    OpenMPDynGroupprivateClauseFallbackModifier M2, Expr *Size,
+    SourceLocation StartLoc, SourceLocation LParenLoc, SourceLocation M1Loc,
+    SourceLocation M2Loc, SourceLocation EndLoc) {
+
+  if ((M1Loc.isValid() && M1 == OMPC_DYN_GROUPPRIVATE_unknown) ||
+      (M2Loc.isValid() && M2 == OMPC_DYN_GROUPPRIVATE_FALLBACK_unknown)) {
+    std::string Values = getListOfPossibleValues(
+        OMPC_dyn_groupprivate, /*First=*/0, OMPC_DYN_GROUPPRIVATE_unknown);
+    Diag((M1Loc.isValid() && M1 == OMPC_DYN_GROUPPRIVATE_unknown) ? M1Loc
+                                                                  : M2Loc,
+         diag::err_omp_unexpected_clause_value)
+        << Values << getOpenMPClauseName(OMPC_dyn_groupprivate);
+    return nullptr;
+  }
+
+  Expr *ValExpr = Size;
+  Stmt *HelperValStmt = nullptr;
+
+  // OpenMP [2.5, Restrictions]
+  //  The dyn_groupprivate expression must evaluate to a positive integer
+  //  value.
+  if (!isNonNegativeIntegerValue(ValExpr, SemaRef, OMPC_dyn_groupprivate,
+                                 /*StrictlyPositive=*/false))
+    return nullptr;
+
+  OpenMPDirectiveKind DKind = DSAStack->getCurrentDirective();
+  OpenMPDirectiveKind CaptureRegion = getOpenMPCaptureRegionForClause(
+      DKind, OMPC_dyn_groupprivate, getLangOpts().OpenMP);
+  if (CaptureRegion != OMPD_unknown &&
+      !SemaRef.CurContext->isDependentContext()) {
+    ValExpr = SemaRef.MakeFullExpr(ValExpr).get();
+    llvm::MapVector<const Expr *, DeclRefExpr *> Captures;
+    ValExpr = tryBuildCapture(SemaRef, ValExpr, Captures).get();
+    HelperValStmt = buildPreInits(getASTContext(), Captures);
+  }
+
+  return new (getASTContext()) OMPDynGroupprivateClause(
+      StartLoc, LParenLoc, EndLoc, ValExpr, HelperValStmt, CaptureRegion, M1,
+      M1Loc, M2, M2Loc);
 }
 
 OMPClause *SemaOpenMP::ActOnOpenMPDoacrossClause(

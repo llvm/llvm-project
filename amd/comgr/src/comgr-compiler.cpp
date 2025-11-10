@@ -2126,6 +2126,7 @@ amd_comgr_status_t AMDGPUCompiler::compileSpirvToRelocatable() {
   amd_comgr_data_set_t TranslatedSpirvT;
   if (auto Status = amd_comgr_create_data_set(&TranslatedSpirvT))
     return Status;
+  ScopedDataSetReleaser SDSR(TranslatedSpirvT);
   DataSet *TranslatedSpirv = DataSet::convert(TranslatedSpirvT);
 
   if (auto Status = translateSpirvToBitcodeImpl(InSet, TranslatedSpirv))
@@ -2154,6 +2155,42 @@ amd_comgr_status_t AMDGPUCompiler::compileSpirvToRelocatable() {
   Args.push_back("-amdgpu-internalize-symbols");
 
   return processFiles(AMD_COMGR_DATA_KIND_RELOCATABLE, ".o", TranslatedSpirv);
+}
+
+amd_comgr_status_t AMDGPUCompiler::compileSourceToSpirv() {
+  if (auto Status = createTmpDirs()) {
+    return Status;
+  }
+
+  if (ActionInfo->Language != AMD_COMGR_LANGUAGE_HIP) {
+    return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+  }
+
+  if (auto Status = addIncludeFlags()) {
+    return Status;
+  }
+
+  if (auto Status = addCompilationFlags()) {
+    return Status;
+  }
+
+  // Add SPIRV-specific compilation flags
+  Args.push_back("--offload-arch=amdgcnspirv");
+  Args.push_back("--no-gpu-bundle-output");
+  Args.push_back("-c");
+
+
+#if _WIN32
+  Args.push_back("-fshort-wchar");
+#endif
+
+  if (ActionInfo->ShouldLinkDeviceLibs) {
+    if (auto Status = addDeviceLibraries()) {
+      return Status;
+    }
+  }
+
+  return processFiles(AMD_COMGR_DATA_KIND_SPIRV, ".spv");
 }
 
 AMDGPUCompiler::AMDGPUCompiler(DataAction *ActionInfo, DataSet *InSet,

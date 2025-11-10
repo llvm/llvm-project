@@ -3322,13 +3322,13 @@ _mm512_mask_blend_ph(__mmask32 __U, __m512h __A, __m512h __W) {
                                               (__v32hf)__A);
 }
 
-static __inline__ __m512h __DEFAULT_FN_ATTRS512
+static __inline__ __m512h __DEFAULT_FN_ATTRS512_CONSTEXPR
 _mm512_permutex2var_ph(__m512h __A, __m512i __I, __m512h __B) {
   return (__m512h)__builtin_ia32_vpermi2varhi512((__v32hi)__A, (__v32hi)__I,
                                                  (__v32hi)__B);
 }
 
-static __inline__ __m512h __DEFAULT_FN_ATTRS512
+static __inline__ __m512h __DEFAULT_FN_ATTRS512_CONSTEXPR
 _mm512_permutexvar_ph(__m512i __A, __m512h __B) {
   return (__m512h)__builtin_ia32_permvarhi512((__v32hi)__B, (__v32hi)__A);
 }

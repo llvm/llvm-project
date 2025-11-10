@@ -1211,14 +1211,10 @@ llvm::Value *CodeGenFunction::emitCountedByPointerSize(
         getContext().getTypeSizeInChars(ElementTy->getPointeeType());
 
     if (ElementSize.isZero()) {
-      // This might be a __sized_by on a 'void *', which counts bytes, not
-      // elements.
-      auto *CAT = ElementTy->getAs<CountAttributedType>();
-      if (!CAT || (CAT->getKind() != CountAttributedType::SizedBy &&
-                   CAT->getKind() != CountAttributedType::SizedByOrNull))
-        // Okay, not sure what it is now.
-        // FIXME: Should this be an assert?
-        return std::optional<CharUnits>();
+      // This might be a __sized_by (or __counted_by) on a
+      // 'void *', which counts bytes, not elements.
+      [[maybe_unused]] auto *CAT = ElementTy->getAs<CountAttributedType>();
+      assert(CAT && "must have an CountAttributedType");
 
       ElementSize = CharUnits::One();
     }
@@ -3992,6 +3988,12 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_elementwise_exp10:
     return RValue::get(emitBuiltinWithOneOverloadedType<1>(
         *this, E, Intrinsic::exp10, "elt.exp10"));
+  case Builtin::BI__builtin_elementwise_ldexp: {
+    Value *Src = EmitScalarExpr(E->getArg(0));
+    Value *Exp = EmitScalarExpr(E->getArg(1));
+    Value *Result = Builder.CreateLdexp(Src, Exp, {}, "elt.ldexp");
+    return RValue::get(Result);
+  }
   case Builtin::BI__builtin_elementwise_log:
     return RValue::get(emitBuiltinWithOneOverloadedType<1>(
         *this, E, Intrinsic::log, "elt.log"));
