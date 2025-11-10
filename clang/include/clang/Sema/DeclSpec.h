@@ -2331,9 +2331,10 @@ public:
   /// EndLoc, which should be the last token of the chunk.
   /// This function takes attrs by R-Value reference because it takes ownership
   /// of those attributes from the parameter.
-  void AddTypeInfo(const DeclaratorChunk &TI, ParsedAttributes &&attrs,
-                   SourceLocation EndLoc,
-                   ArrayRef<DeclaratorChunk::LateAttrOpaquePtr> LateAttrs = {}) {
+  void
+  AddTypeInfo(const DeclaratorChunk &TI, ParsedAttributes &&attrs,
+              SourceLocation EndLoc,
+              ArrayRef<DeclaratorChunk::LateAttrOpaquePtr> LateAttrs = {}) {
     DeclTypeInfo.push_back(TI);
     DeclTypeInfo.back().getAttrs().prepend(attrs.begin(), attrs.end());
     getAttributePool().takeAllFrom(attrs.getPool());
