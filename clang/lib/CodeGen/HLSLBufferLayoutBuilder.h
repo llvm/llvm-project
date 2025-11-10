@@ -34,9 +34,8 @@ public:
   // Returns LLVM target extension type with the name LayoutTypeName
   // for given structure type and layout data. The first number in
   // the Layout is the size followed by offsets for each struct element.
-  llvm::TargetExtType *
-  createLayoutType(const RecordType *StructType,
-                   const CGHLSLOffsetInfo &OffsetInfo);
+  llvm::TargetExtType *createLayoutType(const RecordType *StructType,
+                                        const CGHLSLOffsetInfo &OffsetInfo);
 
 private:
   bool layoutField(const clang::FieldDecl *FD, unsigned &EndOffset,
