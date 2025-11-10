@@ -1022,7 +1022,8 @@ bool WebAssemblyFastISel::selectTrunc(const Instruction *I) {
   if (Reg == 0)
     return false;
 
-  updateValueMap(Trunc, Reg);  return true;
+  updateValueMap(Trunc, Reg);
+  return true;
 }
 
 bool WebAssemblyFastISel::selectZExt(const Instruction *I) {
