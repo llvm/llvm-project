@@ -3037,7 +3037,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
           {
             llvm::raw_svector_ostream os(buffer);
             os << preferred_triple.getArchName() << '-';
-            os << preferred_triple.getVendorName() << '-';
+            os << llvm::Triple::getVendorTypeName(preferred_triple.getVendor()) << '-';
             os << llvm::Triple::getOSTypeName(preferred_triple.getOS());
             os << platform_version.getAsString();
           }
