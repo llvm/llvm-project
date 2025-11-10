@@ -975,10 +975,6 @@ def frexpf : RuntimeLibcallImpl<FREXP_F32>;
 def frexp : RuntimeLibcallImpl<FREXP_F64>;
 defm frexpl : LibmLongDoubleLibCall;
 
-def sincospif : RuntimeLibcallImpl<SINCOSPI_F32>;
-def sincospi : RuntimeLibcallImpl<SINCOSPI_F64>;
-defm sincospil : LibmLongDoubleLibCall;
-
 def modff : RuntimeLibcallImpl<MODF_F32>;
 def modf : RuntimeLibcallImpl<MODF_F64>;
 defm modfl : LibmLongDoubleLibCall;
@@ -1054,6 +1050,15 @@ def __sincos_stret : RuntimeLibcallImpl<SINCOS_STRET_F64>;
 def sincosf : RuntimeLibcallImpl<SINCOS_F32>;
 def sincos : RuntimeLibcallImpl<SINCOS_F64>;
 defm sincosl : LibmLongDoubleLibCall;
+
+// Exists in sun math library
+def sincospif : RuntimeLibcallImpl<SINCOSPI_F32>;
+def sincospi : RuntimeLibcallImpl<SINCOSPI_F64>;
+defm sincospil : LibmLongDoubleLibCall;
+
+// Exists on macOS
+def __sincospif : RuntimeLibcallImpl<SINCOSPI_F32>;
+def __sincospi : RuntimeLibcallImpl<SINCOSPI_F64>;
 
 def bzero : RuntimeLibcallImpl<BZERO>;
 def __bzero : RuntimeLibcallImpl<BZERO>;
@@ -1232,7 +1237,9 @@ defvar DefaultLibcallImpls32 = (add DefaultRuntimeLibcallImpls);
 defvar DefaultLibcallImpls64 = (add DefaultRuntimeLibcallImpls,
                                     Int128RTLibcalls);
 
-defvar DarwinSinCosStret = LibcallImpls<(add __sincosf_stret, __sincos_stret),
+// TODO: Guessing sincospi added at same time as sincos_stret
+defvar DarwinSinCosStret = LibcallImpls<(add __sincosf_stret, __sincos_stret,
+                                             __sincospif, __sincospi),
                                         darwinHasSinCosStret>;
 defvar DarwinExp10 = LibcallImpls<(add __exp10f, __exp10), darwinHasExp10>;
 
