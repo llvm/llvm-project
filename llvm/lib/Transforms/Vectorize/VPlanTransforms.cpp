@@ -4274,16 +4274,17 @@ static bool canNarrowOps(ArrayRef<VPValue *> Ops) {
   if (!WideMember0)
     return false;
 
+  for (const auto &[_, V] : enumerate(Ops)) {
+    auto *R = dyn_cast<VPWidenRecipe>(V);
+    if (!R || R->getOpcode() != WideMember0->getOpcode() ||
+        R->getNumOperands() > 2)
+      return false;
+  }
+
   for (unsigned Idx = 0; Idx != WideMember0->getNumOperands(); ++Idx) {
     SmallVector<VPValue *> Ops0;
-    for (const auto &[I, V] : enumerate(Ops)) {
-      auto *R = dyn_cast_or_null<VPWidenRecipe>(V);
-      if (!R || R->getOpcode() != WideMember0->getOpcode() ||
-          R->getNumOperands() > 2)
-        return false;
-
-      Ops0.push_back(R->getOperand(Idx));
-    }
+    for (VPValue *Op : Ops)
+      Ops0.push_back(Op->getDefiningRecipe()->getOperand(Idx));
     if (any_of(enumerate(Ops0), [WideMember0, Idx](const auto &P) {
           const auto &[OpIdx, OpV] = P;
           return !canNarrowLoad(WideMember0, Idx, OpV, OpIdx);
