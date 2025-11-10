@@ -274,11 +274,12 @@ bool SpecialCaseList::parse(unsigned FileIdx, const MemoryBuffer *MB,
 
   bool RemoveDotSlash = Version > 2;
 
-  Section *CurrentSection;
-  if (auto Err = addSection("*", FileIdx, 1, true).moveInto(CurrentSection)) {
+  auto ErrOrSection = addSection("*", FileIdx, 1, true);
+  if (auto Err = ErrOrSection.takeError()) {
     Error = toString(std::move(Err));
     return false;
   }
+  Section *CurrentSection = ErrOrSection.get();
 
   // This is the current list of prefixes for all existing users matching file
   // path. We may need parametrization in constructor in future.
@@ -300,12 +301,13 @@ bool SpecialCaseList::parse(unsigned FileIdx, const MemoryBuffer *MB,
         return false;
       }
 
-      if (auto Err = addSection(Line.drop_front().drop_back(), FileIdx, LineNo,
-                                UseGlobs)
-                         .moveInto(CurrentSection)) {
+      auto ErrOrSection =
+          addSection(Line.drop_front().drop_back(), FileIdx, LineNo, UseGlobs);
+      if (auto Err = ErrOrSection.takeError()) {
         Error = toString(std::move(Err));
         return false;
       }
+      CurrentSection = ErrOrSection.get();
       continue;
     }
 
