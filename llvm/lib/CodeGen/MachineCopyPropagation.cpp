@@ -1257,7 +1257,7 @@ void MachineCopyPropagation::BackwardCopyPropagateBlock(
   Tracker.clear();
 }
 
-static void LLVM_ATTRIBUTE_UNUSED printSpillReloadChain(
+[[maybe_unused]] static void printSpillReloadChain(
     DenseMap<MachineInstr *, SmallVector<MachineInstr *>> &SpillChain,
     DenseMap<MachineInstr *, SmallVector<MachineInstr *>> &ReloadChain,
     MachineInstr *Leader) {

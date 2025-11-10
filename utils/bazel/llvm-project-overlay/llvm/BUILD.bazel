@@ -577,6 +577,7 @@ cc_library(
     deps = [
         ":BinaryFormat",
         ":DebugInfoCodeView",
+        ":DebugInfoDWARFLowLevel",
         ":Support",
         ":TargetParser",
         ":config",
@@ -692,6 +693,8 @@ cc_binary(
         "utils/TableGen/Basic/DirectiveEmitter.cpp",
         "utils/TableGen/Basic/IntrinsicEmitter.cpp",
         "utils/TableGen/Basic/RISCVTargetDefEmitter.cpp",
+        "utils/TableGen/Basic/RuntimeLibcalls.cpp",
+        "utils/TableGen/Basic/RuntimeLibcalls.h",
         "utils/TableGen/Basic/RuntimeLibcallsEmitter.cpp",
         "utils/TableGen/Basic/SDNodeProperties.cpp",
         "utils/TableGen/Basic/SDNodeProperties.h",
@@ -770,6 +773,7 @@ cc_binary(
     stamp = 0,
     deps = [
         ":CodeGenTypes",
+        ":Option",
         ":Support",
         ":TableGen",
         ":TableGenGlobalISel",
@@ -1725,6 +1729,7 @@ cc_library(
     copts = llvm_copts,
     deps = [
         ":Analysis",
+        ":Core",
         ":ProfileData",
         ":Support",
         ":TargetParser",
@@ -2313,6 +2318,7 @@ llvm_target_lib_list = [lib for lib in [
             "lib/Target/BPF/BPFGenInstrInfo.inc": ["-gen-instr-info"],
             "lib/Target/BPF/BPFGenRegisterInfo.inc": ["-gen-register-info"],
             "lib/Target/BPF/BPFGenSubtargetInfo.inc": ["-gen-subtarget"],
+            "lib/Target/BPF/BPFGenSDNodeInfo.inc": ["-gen-sd-node-info"],
         },
     },
     {
@@ -2549,6 +2555,7 @@ llvm_target_lib_list = [lib for lib in [
             "lib/Target/WebAssembly/WebAssemblyGenRegisterInfo.inc": ["-gen-register-info"],
             "lib/Target/WebAssembly/WebAssemblyGenSubtargetInfo.inc": ["-gen-subtarget"],
             "lib/Target/WebAssembly/WebAssemblyGenAsmMatcher.inc": ["-gen-asm-matcher"],
+            "lib/Target/WebAssembly/WebAssemblyGenSDNodeInfo.inc": ["-gen-sd-node-info"],
         },
     },
     {
@@ -4771,6 +4778,17 @@ cc_binary(
 )
 
 cc_binary(
+    name = "llvm-offload-binary",
+    srcs = glob(["tools/llvm-offload-binary/*.cpp"]),
+    stamp = 0,
+    deps = [
+        "//llvm:BinaryFormat",
+        "//llvm:Object",
+        "//llvm:Support",
+    ],
+)
+
+cc_binary(
     name = "llvm-pdbutil",
     srcs = glob([
         "tools/llvm-pdbutil/*.cpp",
@@ -4804,7 +4822,7 @@ cc_library(
     ],
 )
 
-llvm_driver_cc_binary(
+cc_binary(
     name = "llvm-profdata",
     stamp = 0,
     deps = [":llvm-profdata-lib"],
@@ -5655,6 +5673,64 @@ cc_binary(
         ":TLICheckerOptsTableGen",
         ":TargetParser",
         ":TextAPI",
+        ":config",
+    ],
+)
+
+cc_binary(
+    name = "llvm-sim",
+    testonly = True,
+    srcs = glob([
+        "tools/llvm-sim/*.cpp",
+    ]),
+    copts = llvm_copts,
+    stamp = 0,
+    deps = [
+        ":Analysis",
+        ":Core",
+        ":IRReader",
+        ":Support",
+        ":config",
+    ],
+)
+
+cc_binary(
+    name = "llvm-ir2vec",
+    testonly = True,
+    srcs = glob([
+        "tools/llvm-ir2vec/*.cpp",
+    ]),
+    copts = llvm_copts,
+    stamp = 0,
+    deps = [
+        ":AllTargetsAsmParsers",
+        ":AllTargetsCodeGens",
+        ":AllTargetsMCAs",
+        ":Analysis",
+        ":CodeGen",
+        ":Core",
+        ":IRReader",
+        ":MC",
+        ":Support",
+        ":Target",
+        ":TargetParser",
+        ":config",
+    ],
+)
+
+cc_binary(
+    name = "llvm-ctxprof-util",
+    testonly = True,
+    srcs = glob([
+        "tools/llvm-ctxprof-util/*.cpp",
+    ]),
+    copts = llvm_copts,
+    stamp = 0,
+    deps = [
+        ":Core",
+        ":Object",
+        ":ProfileData",
+        ":Support",
         ":config",
     ],
 )

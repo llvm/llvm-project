@@ -14,6 +14,7 @@
 #include "RemarkUtilHelpers.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/Support/Regex.h"
+#include <map>
 
 namespace llvm {
 namespace remarks {
@@ -44,18 +45,6 @@ inline std::string groupByToStr(GroupBy GroupBy) {
     return "Source";
   }
 }
-
-/// Filter out remarks based on remark properties based on name, pass name,
-/// argument and type.
-struct Filters {
-  std::optional<FilterMatcher> RemarkNameFilter;
-  std::optional<FilterMatcher> PassNameFilter;
-  std::optional<FilterMatcher> ArgFilter;
-  std::optional<Type> RemarkTypeFilter;
-
-  /// Returns true if \p Remark satisfies all the provided filters.
-  bool filterRemark(const Remark &Remark);
-};
 
 /// Abstract counter class used to define the general required methods for
 /// counting a remark.

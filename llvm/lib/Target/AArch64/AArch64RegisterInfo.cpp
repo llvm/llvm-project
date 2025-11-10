@@ -71,6 +71,7 @@ bool AArch64RegisterInfo::regNeedsCFI(MCRegister Reg,
 const MCPhysReg *
 AArch64RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   assert(MF && "Invalid MachineFunction pointer.");
+  auto &AFI = *MF->getInfo<AArch64FunctionInfo>();
 
   if (MF->getFunction().getCallingConv() == CallingConv::GHC)
     // GHC set of callee saved regs is empty as all those regs are
@@ -89,6 +90,16 @@ AArch64RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   if (MF->getSubtarget<AArch64Subtarget>().isTargetDarwin())
     return getDarwinCalleeSavedRegs(MF);
 
+  if (MF->getFunction().getCallingConv() == CallingConv::PreserveMost)
+    return MF->getSubtarget<AArch64Subtarget>().isTargetWindows()
+               ? CSR_Win_AArch64_RT_MostRegs_SaveList
+               : CSR_AArch64_RT_MostRegs_SaveList;
+
+  if (MF->getFunction().getCallingConv() == CallingConv::PreserveAll)
+    return MF->getSubtarget<AArch64Subtarget>().isTargetWindows()
+               ? CSR_Win_AArch64_RT_AllRegs_SaveList
+               : CSR_AArch64_RT_AllRegs_SaveList;
+
   if (MF->getFunction().getCallingConv() == CallingConv::CFGuard_Check)
     return CSR_Win_AArch64_CFGuard_Check_SaveList;
   if (MF->getSubtarget<AArch64Subtarget>().isTargetWindows()) {
@@ -101,10 +112,7 @@ AArch64RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
       return CSR_Win_AArch64_AAPCS_SwiftTail_SaveList;
     if (MF->getFunction().getCallingConv() == CallingConv::AArch64_VectorCall)
       return CSR_Win_AArch64_AAVPCS_SaveList;
-    if (MF->getFunction().getCallingConv() ==
-        CallingConv::AArch64_SVE_VectorCall)
-      return CSR_Win_AArch64_SVE_AAPCS_SaveList;
-    if (MF->getInfo<AArch64FunctionInfo>()->isSVECC())
+    if (AFI.hasSVE_AAPCS(*MF))
       return CSR_Win_AArch64_SVE_AAPCS_SaveList;
     return CSR_Win_AArch64_AAPCS_SaveList;
   }
@@ -140,15 +148,11 @@ AArch64RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
     return CSR_AArch64_AAPCS_SwiftError_SaveList;
   if (MF->getFunction().getCallingConv() == CallingConv::SwiftTail)
     return CSR_AArch64_AAPCS_SwiftTail_SaveList;
-  if (MF->getFunction().getCallingConv() == CallingConv::PreserveMost)
-    return CSR_AArch64_RT_MostRegs_SaveList;
-  if (MF->getFunction().getCallingConv() == CallingConv::PreserveAll)
-    return CSR_AArch64_RT_AllRegs_SaveList;
   if (MF->getFunction().getCallingConv() == CallingConv::Win64)
     // This is for OSes other than Windows; Windows is a separate case further
     // above.
     return CSR_AArch64_AAPCS_X18_SaveList;
-  if (MF->getInfo<AArch64FunctionInfo>()->isSVECC())
+  if (AFI.hasSVE_AAPCS(*MF))
     return CSR_AArch64_SVE_AAPCS_SaveList;
   return CSR_AArch64_AAPCS_SaveList;
 }
@@ -158,6 +162,7 @@ AArch64RegisterInfo::getDarwinCalleeSavedRegs(const MachineFunction *MF) const {
   assert(MF && "Invalid MachineFunction pointer.");
   assert(MF->getSubtarget<AArch64Subtarget>().isTargetDarwin() &&
          "Invalid subtarget for getDarwinCalleeSavedRegs");
+  auto &AFI = *MF->getInfo<AArch64FunctionInfo>();
 
   if (MF->getFunction().getCallingConv() == CallingConv::CFGuard_Check)
     report_fatal_error(
@@ -205,7 +210,7 @@ AArch64RegisterInfo::getDarwinCalleeSavedRegs(const MachineFunction *MF) const {
     return CSR_Darwin_AArch64_RT_AllRegs_SaveList;
   if (MF->getFunction().getCallingConv() == CallingConv::Win64)
     return CSR_Darwin_AArch64_AAPCS_Win64_SaveList;
-  if (MF->getInfo<AArch64FunctionInfo>()->isSVECC())
+  if (AFI.hasSVE_AAPCS(*MF))
     return CSR_Darwin_AArch64_SVE_AAPCS_SaveList;
   return CSR_Darwin_AArch64_AAPCS_SaveList;
 }
@@ -621,7 +626,7 @@ AArch64RegisterInfo::getCrossCopyRegClass(const TargetRegisterClass *RC) const {
   return RC;
 }
 
-unsigned AArch64RegisterInfo::getBaseRegister() const { return AArch64::X19; }
+MCRegister AArch64RegisterInfo::getBaseRegister() const { return AArch64::X19; }
 
 bool AArch64RegisterInfo::hasBasePointer(const MachineFunction &MF) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
@@ -643,7 +648,7 @@ bool AArch64RegisterInfo::hasBasePointer(const MachineFunction &MF) const {
     if (ST.hasSVE() || ST.isStreaming()) {
       // Frames that have variable sized objects and scalable SVE objects,
       // should always use a basepointer.
-      if (!AFI->hasCalculatedStackSizeSVE() || AFI->getStackSizeSVE())
+      if (!AFI->hasCalculatedStackSizeSVE() || AFI->hasSVEStackSize())
         return true;
     }
 
@@ -783,7 +788,7 @@ AArch64RegisterInfo::useFPForScavengingIndex(const MachineFunction &MF) const {
   assert((!MF.getSubtarget<AArch64Subtarget>().hasSVE() ||
           AFI->hasCalculatedStackSizeSVE()) &&
          "Expected SVE area to be calculated by this point");
-  return TFI.hasFP(MF) && !hasStackRealignment(MF) && !AFI->getStackSizeSVE() &&
+  return TFI.hasFP(MF) && !hasStackRealignment(MF) && !AFI->hasSVEStackSize() &&
          !AFI->hasStackHazardSlotIndex();
 }
 
@@ -1118,24 +1123,85 @@ unsigned AArch64RegisterInfo::getRegPressureLimit(const TargetRegisterClass *RC,
   }
 }
 
-// FORM_TRANSPOSED_REG_TUPLE nodes are created to improve register allocation
-// where a consecutive multi-vector tuple is constructed from the same indices
-// of multiple strided loads. This may still result in unnecessary copies
-// between the loads and the tuple. Here we try to return a hint to assign the
-// contiguous ZPRMulReg starting at the same register as the first operand of
-// the pseudo, which should be a subregister of the first strided load.
+// We add regalloc hints for different cases:
+// * Choosing a better destination operand for predicated SVE instructions
+//   where the inactive lanes are undef, by choosing a register that is not
+//   unique to the other operands of the instruction.
 //
-// For example, if the first strided load has been assigned $z16_z20_z24_z28
-// and the operands of the pseudo are each accessing subregister zsub2, we
-// should look through through Order to find a contiguous register which
-// begins with $z24 (i.e. $z24_z25_z26_z27).
+// * Improve register allocation for SME multi-vector instructions where we can
+//   benefit from the strided- and contiguous register multi-vector tuples.
 //
+//   Here FORM_TRANSPOSED_REG_TUPLE nodes are created to improve register
+//   allocation where a consecutive multi-vector tuple is constructed from the
+//   same indices of multiple strided loads. This may still result in
+//   unnecessary copies between the loads and the tuple. Here we try to return a
+//   hint to assign the contiguous ZPRMulReg starting at the same register as
+//   the first operand of the pseudo, which should be a subregister of the first
+//   strided load.
+//
+//   For example, if the first strided load has been assigned $z16_z20_z24_z28
+//   and the operands of the pseudo are each accessing subregister zsub2, we
+//   should look through through Order to find a contiguous register which
+//   begins with $z24 (i.e. $z24_z25_z26_z27).
 bool AArch64RegisterInfo::getRegAllocationHints(
     Register VirtReg, ArrayRef<MCPhysReg> Order,
     SmallVectorImpl<MCPhysReg> &Hints, const MachineFunction &MF,
     const VirtRegMap *VRM, const LiveRegMatrix *Matrix) const {
-
   auto &ST = MF.getSubtarget<AArch64Subtarget>();
+  const AArch64InstrInfo *TII =
+      MF.getSubtarget<AArch64Subtarget>().getInstrInfo();
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
+
+  // For predicated SVE instructions where the inactive lanes are undef,
+  // pick a destination register that is not unique to avoid introducing
+  // a movprfx.
+  const TargetRegisterClass *RegRC = MRI.getRegClass(VirtReg);
+  if (AArch64::ZPRRegClass.hasSubClassEq(RegRC)) {
+    for (const MachineOperand &DefOp : MRI.def_operands(VirtReg)) {
+      const MachineInstr &Def = *DefOp.getParent();
+      if (DefOp.isImplicit() ||
+          (TII->get(Def.getOpcode()).TSFlags & AArch64::FalseLanesMask) !=
+              AArch64::FalseLanesUndef)
+        continue;
+
+      unsigned InstFlags =
+          TII->get(AArch64::getSVEPseudoMap(Def.getOpcode())).TSFlags;
+
+      for (MCPhysReg R : Order) {
+        auto AddHintIfSuitable = [&](MCPhysReg R, const MachineOperand &MO) {
+          // R is a suitable register hint if there exists an operand for the
+          // instruction that is not yet allocated a register or if R matches
+          // one of the other source operands.
+          if (!VRM->hasPhys(MO.getReg()) || VRM->getPhys(MO.getReg()) == R)
+            Hints.push_back(R);
+        };
+
+        switch (InstFlags & AArch64::DestructiveInstTypeMask) {
+        default:
+          break;
+        case AArch64::DestructiveTernaryCommWithRev:
+          AddHintIfSuitable(R, Def.getOperand(2));
+          AddHintIfSuitable(R, Def.getOperand(3));
+          AddHintIfSuitable(R, Def.getOperand(4));
+          break;
+        case AArch64::DestructiveBinaryComm:
+        case AArch64::DestructiveBinaryCommWithRev:
+          AddHintIfSuitable(R, Def.getOperand(2));
+          AddHintIfSuitable(R, Def.getOperand(3));
+          break;
+        case AArch64::DestructiveBinary:
+        case AArch64::DestructiveBinaryImm:
+          AddHintIfSuitable(R, Def.getOperand(2));
+          break;
+        }
+      }
+    }
+
+    if (Hints.size())
+      return TargetRegisterInfo::getRegAllocationHints(VirtReg, Order, Hints,
+                                                       MF, VRM);
+  }
+
   if (!ST.hasSME() || !ST.isStreaming())
     return TargetRegisterInfo::getRegAllocationHints(VirtReg, Order, Hints, MF,
                                                      VRM);
@@ -1148,8 +1214,7 @@ bool AArch64RegisterInfo::getRegAllocationHints(
   // FORM_TRANSPOSED_REG_TUPLE pseudo, we want to favour reducing copy
   // instructions over reducing the number of clobbered callee-save registers,
   // so we add the strided registers as a hint.
-  const MachineRegisterInfo &MRI = MF.getRegInfo();
-  unsigned RegID = MRI.getRegClass(VirtReg)->getID();
+  unsigned RegID = RegRC->getID();
   if (RegID == AArch64::ZPR2StridedOrContiguousRegClassID ||
       RegID == AArch64::ZPR4StridedOrContiguousRegClassID) {
 

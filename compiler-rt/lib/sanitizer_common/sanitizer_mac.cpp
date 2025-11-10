@@ -105,6 +105,12 @@ extern "C" {
     mach_msg_type_number_t *infoCnt);
 }
 
+#  if !SANITIZER_GO
+// Weak symbol no-op when TSan is not linked
+SANITIZER_WEAK_ATTRIBUTE extern void __tsan_set_in_internal_write_call(
+    bool value) {}
+#  endif
+
 namespace __sanitizer {
 
 #include "sanitizer_syscall_generic.inc"
@@ -175,7 +181,15 @@ uptr internal_read(fd_t fd, void *buf, uptr count) {
 }
 
 uptr internal_write(fd_t fd, const void *buf, uptr count) {
+#  if SANITIZER_GO
   return write(fd, buf, count);
+#  else
+  // We need to disable interceptors when writing in TSan
+  __tsan_set_in_internal_write_call(true);
+  uptr res = write(fd, buf, count);
+  __tsan_set_in_internal_write_call(false);
+  return res;
+#  endif
 }
 
 uptr internal_stat(const char *path, void *buf) {
@@ -946,7 +960,17 @@ static void DisableMmapExcGuardExceptions() {
       RTLD_DEFAULT, "task_set_exc_guard_behavior");
   if (set_behavior == nullptr) return;
   const task_exc_guard_behavior_t task_exc_guard_none = 0;
-  set_behavior(mach_task_self(), task_exc_guard_none);
+  kern_return_t res = set_behavior(mach_task_self(), task_exc_guard_none);
+  if (res != KERN_SUCCESS) {
+    Report(
+        "WARN: task_set_exc_guard_behavior returned %d (%s), "
+        "mmap may fail unexpectedly.\n",
+        res, mach_error_string(res));
+    if (res == KERN_DENIED)
+      Report(
+          "HINT: Check that task_set_exc_guard_behavior is allowed by "
+          "sandbox.\n");
+  }
 }
 
 static void VerifyInterceptorsWorking();
@@ -1147,8 +1171,8 @@ static void PrintVmmap() {
         lastsz += vmsize;
       } else {
         if (lastsz)
-          Printf("|| `[%p, %p]` || size=0x%016" PRIx64 " ||\n", last,
-                 last + lastsz, lastsz);
+          Printf("|| `[%p, %p]` || size=0x%016" PRIx64 " ||\n", (void*)last,
+                 (void*)(last + lastsz), lastsz);
 
         last = address;
         lastsz = vmsize;
@@ -1158,8 +1182,8 @@ static void PrintVmmap() {
       // We've reached the end of the memory map. Print the last remaining
       // region, if there is one.
       if (lastsz)
-        Printf("|| `[%p, %p]` || size=0x%016" PRIx64 " ||\n", last,
-               last + lastsz, lastsz);
+        Printf("|| `[%p, %p]` || size=0x%016" PRIx64 " ||\n", (void*)last,
+               (void*)(last + lastsz), lastsz);
 
       break;
     }
@@ -1170,7 +1194,7 @@ static void ReportShadowAllocFail(uptr shadow_size_bytes, uptr alignment) {
   Report(
       "FATAL: Failed to allocate shadow memory. Tried to allocate %p bytes "
       "(alignment=%p).\n",
-      shadow_size_bytes, alignment);
+      (void*)shadow_size_bytes, (void*)alignment);
   PrintVmmap();
 }
 

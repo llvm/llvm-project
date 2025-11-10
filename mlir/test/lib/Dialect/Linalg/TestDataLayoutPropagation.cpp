@@ -33,7 +33,8 @@ struct TestDataLayoutPropagationPass
     MLIRContext *context = &getContext();
     RewritePatternSet patterns(context);
     linalg::populateDataLayoutPropagationPatterns(
-        patterns, [](OpOperand *opOperand) { return true; });
+        patterns, [](OpOperand *opOperand) { return true; },
+        /*poisonPaddingOk=*/true);
     linalg::ControlPropagationFn controlExtract =
         [](OpOperand *opOperand) -> bool {
       Operation *producer = opOperand->get().getDefiningOp();

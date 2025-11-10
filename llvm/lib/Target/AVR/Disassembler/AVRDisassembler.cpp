@@ -40,7 +40,7 @@ class AVRDisassembler : public MCDisassembler {
 public:
   AVRDisassembler(const MCSubtargetInfo &STI, MCContext &Ctx)
       : MCDisassembler(STI, Ctx) {}
-  virtual ~AVRDisassembler() = default;
+  ~AVRDisassembler() override = default;
 
   DecodeStatus getInstruction(MCInst &Instr, uint64_t &Size,
                               ArrayRef<uint8_t> Bytes, uint64_t Address,

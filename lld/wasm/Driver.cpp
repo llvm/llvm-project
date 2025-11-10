@@ -157,7 +157,7 @@ bool link(ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
 static constexpr opt::OptTable::Info optInfo[] = {
 #define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS,         \
                VISIBILITY, PARAM, HELPTEXT, HELPTEXTSFORVARIANTS, METAVAR,     \
-               VALUES)                                                         \
+               VALUES, SUBCOMMANDIDS_OFFSET)                                   \
   {PREFIX,                                                                     \
    NAME,                                                                       \
    HELPTEXT,                                                                   \
@@ -171,7 +171,8 @@ static constexpr opt::OptTable::Info optInfo[] = {
    OPT_##GROUP,                                                                \
    OPT_##ALIAS,                                                                \
    ALIASARGS,                                                                  \
-   VALUES},
+   VALUES,                                                                     \
+   SUBCOMMANDIDS_OFFSET},
 #include "Options.inc"
 #undef OPTION
 };
@@ -594,7 +595,7 @@ static void readConfigs(opt::InputArgList &args) {
   ctx.arg.shlibSigCheck = !args.hasArg(OPT_no_shlib_sigcheck);
   ctx.arg.stripAll = args.hasArg(OPT_strip_all);
   ctx.arg.stripDebug = args.hasArg(OPT_strip_debug);
-  ctx.arg.stackFirst = args.hasArg(OPT_stack_first);
+  ctx.arg.stackFirst = args.hasFlag(OPT_stack_first, OPT_no_stack_first, true);
   ctx.arg.trace = args.hasArg(OPT_trace);
   ctx.arg.thinLTOCacheDir = args.getLastArgValue(OPT_thinlto_cache_dir);
   ctx.arg.thinLTOCachePolicy = CHECK(
@@ -914,9 +915,10 @@ static InputGlobal *createGlobal(StringRef name, bool isMutable) {
   return make<InputGlobal>(wasmGlobal, nullptr);
 }
 
-static GlobalSymbol *createGlobalVariable(StringRef name, bool isMutable) {
+static GlobalSymbol *createGlobalVariable(StringRef name, bool isMutable,
+                                          uint32_t flags = 0) {
   InputGlobal *g = createGlobal(name, isMutable);
-  return symtab->addSyntheticGlobal(name, WASM_SYMBOL_VISIBILITY_HIDDEN, g);
+  return symtab->addSyntheticGlobal(name, flags, g);
 }
 
 static GlobalSymbol *createOptionalGlobal(StringRef name, bool isMutable) {
@@ -966,9 +968,13 @@ static void createSyntheticSymbols() {
   }
 
   if (ctx.arg.sharedMemory) {
-    ctx.sym.tlsBase = createGlobalVariable("__tls_base", true);
-    ctx.sym.tlsSize = createGlobalVariable("__tls_size", false);
-    ctx.sym.tlsAlign = createGlobalVariable("__tls_align", false);
+    // TLS symbols are all hidden/dso-local
+    ctx.sym.tlsBase =
+        createGlobalVariable("__tls_base", true, WASM_SYMBOL_VISIBILITY_HIDDEN);
+    ctx.sym.tlsSize = createGlobalVariable("__tls_size", false,
+                                           WASM_SYMBOL_VISIBILITY_HIDDEN);
+    ctx.sym.tlsAlign = createGlobalVariable("__tls_align", false,
+                                            WASM_SYMBOL_VISIBILITY_HIDDEN);
     ctx.sym.initTLS = symtab->addSyntheticFunction(
         "__wasm_init_tls", WASM_SYMBOL_VISIBILITY_HIDDEN,
         make<SyntheticFunction>(is64 ? i64ArgSignature : i32ArgSignature,

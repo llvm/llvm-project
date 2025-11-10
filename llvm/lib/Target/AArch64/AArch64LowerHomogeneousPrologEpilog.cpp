@@ -649,7 +649,7 @@ bool AArch64LowerHomogeneousPE::runOnMBB(MachineBasicBlock &MBB) {
 }
 
 bool AArch64LowerHomogeneousPE::runOnMachineFunction(MachineFunction &MF) {
-  TII = static_cast<const AArch64InstrInfo *>(MF.getSubtarget().getInstrInfo());
+  TII = MF.getSubtarget<AArch64Subtarget>().getInstrInfo();
 
   bool Modified = false;
   for (auto &MBB : MF)

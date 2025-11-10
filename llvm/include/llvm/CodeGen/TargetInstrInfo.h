@@ -168,10 +168,22 @@ public:
   /// registers so that the instructions result is independent of the place
   /// in the function.
   bool isTriviallyReMaterializable(const MachineInstr &MI) const {
+    if (!isReMaterializable(MI))
+      return false;
+    for (const MachineOperand &MO : MI.all_uses()) {
+      if (MO.getReg().isVirtual())
+        return false;
+    }
+    return true;
+  }
+
+  /// Return true if the instruction would be materializable at a point
+  /// in the containing function where all virtual register uses were
+  /// known to be live and available in registers.
+  bool isReMaterializable(const MachineInstr &MI) const {
     return (MI.getOpcode() == TargetOpcode::IMPLICIT_DEF &&
             MI.getNumOperands() == 1) ||
-           (MI.getDesc().isRematerializable() &&
-            isReMaterializableImpl(MI));
+           (MI.getDesc().isRematerializable() && isReMaterializableImpl(MI));
   }
 
   /// Given \p MO is a PhysReg use return if it can be ignored for the purpose
@@ -194,10 +206,9 @@ public:
 protected:
   /// For instructions with opcodes for which the M_REMATERIALIZABLE flag is
   /// set, this hook lets the target specify whether the instruction is actually
-  /// trivially rematerializable, taking into consideration its operands. This
+  /// rematerializable, taking into consideration its operands. This
   /// predicate must return false if the instruction has any side effects other
-  /// than producing a value, or if it requres any address registers that are
-  /// not always available.
+  /// than producing a value.
   virtual bool isReMaterializableImpl(const MachineInstr &MI) const;
 
   /// This method commutes the operands of the given machine instruction MI.
@@ -425,7 +436,10 @@ public:
   /// MachineSink determines on its own whether the instruction is safe to sink;
   /// this gives the target a hook to override the default behavior with regards
   /// to which instructions should be sunk.
+  ///
+  /// shouldPostRASink() is used by PostRAMachineSink.
   virtual bool shouldSink(const MachineInstr &MI) const { return true; }
+  virtual bool shouldPostRASink(const MachineInstr &MI) const { return true; }
 
   /// Return false if the instruction should not be hoisted by MachineLICM.
   ///
@@ -1747,6 +1761,17 @@ public:
   /// Return true if it's safe to move a machine
   /// instruction that defines the specified register class.
   virtual bool isSafeToMoveRegClassDefs(const TargetRegisterClass *RC) const {
+    return true;
+  }
+
+  /// Return true if it's safe to move a machine instruction.
+  /// This allows the backend to prevent certain special instruction
+  /// sequences from being broken by instruction motion in optimization
+  /// passes.
+  /// By default, this returns true for every instruction.
+  virtual bool isSafeToMove(const MachineInstr &MI,
+                            const MachineBasicBlock *MBB,
+                            const MachineFunction &MF) const {
     return true;
   }
 

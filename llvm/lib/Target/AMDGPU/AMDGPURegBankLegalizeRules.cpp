@@ -202,7 +202,7 @@ bool PredicateMapping::match(const MachineInstr &MI,
   return true;
 }
 
-SetOfRulesForOpcode::SetOfRulesForOpcode() {}
+SetOfRulesForOpcode::SetOfRulesForOpcode() = default;
 
 SetOfRulesForOpcode::SetOfRulesForOpcode(FastRulesTypes FastTypes)
     : FastTypes(FastTypes) {}
@@ -470,7 +470,19 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Uni(S16, {{Sgpr32Trunc}, {Sgpr32AExt, Sgpr32AExt}})
       .Div(S16, {{Vgpr16}, {Vgpr16, Vgpr16}})
       .Uni(S32, {{Sgpr32}, {Sgpr32, Sgpr32}})
-      .Div(S32, {{Vgpr32}, {Vgpr32, Vgpr32}});
+      .Div(S32, {{Vgpr32}, {Vgpr32, Vgpr32}})
+      .Uni(V2S16, {{SgprV2S16}, {SgprV2S16, SgprV2S16}, UnpackAExt})
+      .Div(V2S16, {{VgprV2S16}, {VgprV2S16, VgprV2S16}})
+      .Uni(S64, {{Sgpr64}, {Sgpr64, Sgpr64}})
+      .Div(S64, {{Vgpr64}, {Vgpr64, Vgpr64}});
+
+  addRulesForGOpcs({G_UADDO, G_USUBO}, Standard)
+      .Uni(S32, {{Sgpr32, Sgpr32Trunc}, {Sgpr32, Sgpr32}})
+      .Div(S32, {{Vgpr32, Vcc}, {Vgpr32, Vgpr32}});
+
+  addRulesForGOpcs({G_UADDE, G_USUBE}, Standard)
+      .Uni(S32, {{Sgpr32, Sgpr32Trunc}, {Sgpr32, Sgpr32, Sgpr32AExtBoolInReg}})
+      .Div(S32, {{Vgpr32, Vcc}, {Vgpr32, Vgpr32, Vcc}});
 
   addRulesForGOpcs({G_MUL}, Standard).Div(S32, {{Vgpr32}, {Vgpr32, Vgpr32}});
 
@@ -521,6 +533,22 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Div(S32, {{Vgpr32}, {Vgpr32, Vgpr32, Vgpr32}})
       .Uni(S64, {{Sgpr64}, {Sgpr64, Sgpr32, Sgpr32}, S_BFE})
       .Div(S64, {{Vgpr64}, {Vgpr64, Vgpr32, Vgpr32}, V_BFE});
+
+  addRulesForGOpcs({G_SMIN, G_SMAX}, Standard)
+      .Uni(S16, {{Sgpr32Trunc}, {Sgpr32SExt, Sgpr32SExt}})
+      .Div(S16, {{Vgpr16}, {Vgpr16, Vgpr16}})
+      .Uni(S32, {{Sgpr32}, {Sgpr32, Sgpr32}})
+      .Div(S32, {{Vgpr32}, {Vgpr32, Vgpr32}})
+      .Uni(V2S16, {{SgprV2S16}, {SgprV2S16, SgprV2S16}, UnpackMinMax})
+      .Div(V2S16, {{VgprV2S16}, {VgprV2S16, VgprV2S16}});
+
+  addRulesForGOpcs({G_UMIN, G_UMAX}, Standard)
+      .Uni(S16, {{Sgpr32Trunc}, {Sgpr32ZExt, Sgpr32ZExt}})
+      .Div(S16, {{Vgpr16}, {Vgpr16, Vgpr16}})
+      .Uni(S32, {{Sgpr32}, {Sgpr32, Sgpr32}})
+      .Div(S32, {{Vgpr32}, {Vgpr32, Vgpr32}})
+      .Uni(V2S16, {{SgprV2S16}, {SgprV2S16, SgprV2S16}, UnpackMinMax})
+      .Div(V2S16, {{VgprV2S16}, {VgprV2S16, VgprV2S16}});
 
   // Note: we only write S1 rules for G_IMPLICIT_DEF, G_CONSTANT, G_FCONSTANT
   // and G_FREEZE here, rest is trivially regbankselected earlier
@@ -616,6 +644,12 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{DivS32, S32}, {{Vgpr32}, {Vgpr32}}})
       .Any({{UniS64, S64}, {{Sgpr64}, {Sgpr64}}})
       .Any({{DivS64, S64}, {{Vgpr64}, {Vgpr64}, SplitTo32SExtInReg}});
+
+  addRulesForGOpcs({G_ASSERT_ZEXT, G_ASSERT_SEXT}, Standard)
+      .Uni(S32, {{Sgpr32}, {Sgpr32, Imm}})
+      .Div(S32, {{Vgpr32}, {Vgpr32, Imm}})
+      .Uni(S64, {{Sgpr64}, {Sgpr64, Imm}})
+      .Div(S64, {{Vgpr64}, {Vgpr64, Imm}});
 
   bool hasSMRDx3 = ST->hasScalarDwordx3Loads();
   bool hasSMRDSmall = ST->hasScalarSubwordLoads();
@@ -840,7 +874,9 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{B128, Ptr32}, {{}, {VgprB128, VgprPtr32}}});
   // clang-format on
 
-  addRulesForGOpcs({G_AMDGPU_BUFFER_LOAD}, StandardB)
+  addRulesForGOpcs({G_AMDGPU_BUFFER_LOAD, G_AMDGPU_BUFFER_LOAD_FORMAT,
+                    G_AMDGPU_TBUFFER_LOAD_FORMAT},
+                   StandardB)
       .Div(B32, {{VgprB32}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}})
       .Uni(B32, {{UniInVgprB32}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}})
       .Div(B64, {{VgprB64}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}})
@@ -877,12 +913,28 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
 
   addRulesForGOpcs({G_ABS}, Standard).Uni(S16, {{Sgpr32Trunc}, {Sgpr32SExt}});
 
+  addRulesForGOpcs({G_FENCE}).Any({{{}}, {{}, {}}});
+
+  addRulesForGOpcs({G_READSTEADYCOUNTER, G_READCYCLECOUNTER}, Standard)
+      .Uni(S64, {{Sgpr64}, {}});
+
   bool hasSALUFloat = ST->hasSALUFloatInsts();
 
   addRulesForGOpcs({G_FADD}, Standard)
+      .Uni(S16, {{UniInVgprS16}, {Vgpr16, Vgpr16}}, !hasSALUFloat)
+      .Uni(S16, {{Sgpr16}, {Sgpr16, Sgpr16}}, hasSALUFloat)
+      .Div(S16, {{Vgpr16}, {Vgpr16, Vgpr16}})
       .Uni(S32, {{Sgpr32}, {Sgpr32, Sgpr32}}, hasSALUFloat)
       .Uni(S32, {{UniInVgprS32}, {Vgpr32, Vgpr32}}, !hasSALUFloat)
-      .Div(S32, {{Vgpr32}, {Vgpr32, Vgpr32}});
+      .Div(S32, {{Vgpr32}, {Vgpr32, Vgpr32}})
+      .Uni(S64, {{UniInVgprS64}, {Vgpr64, Vgpr64}})
+      .Div(S64, {{Vgpr64}, {Vgpr64, Vgpr64}})
+      .Uni(V2S16, {{UniInVgprV2S16}, {VgprV2S16, VgprV2S16}}, !hasSALUFloat)
+      .Uni(V2S16, {{SgprV2S16}, {SgprV2S16, SgprV2S16}, ScalarizeToS16},
+           hasSALUFloat)
+      .Div(V2S16, {{VgprV2S16}, {VgprV2S16, VgprV2S16}})
+      .Any({{UniV2S32}, {{UniInVgprV2S32}, {VgprV2S32, VgprV2S32}}})
+      .Any({{DivV2S32}, {{VgprV2S32}, {VgprV2S32, VgprV2S32}}});
 
   addRulesForGOpcs({G_FPTOUI})
       .Any({{UniS32, S32}, {{Sgpr32}, {Sgpr32}}}, hasSALUFloat)

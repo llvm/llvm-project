@@ -26,7 +26,7 @@ def SDT_LoongArchV1RUimm: SDTypeProfile<1, 2, [SDTCisVec<0>,
 def SDT_LoongArchV2RUimm
     : SDTypeProfile<1, 3,
                     [SDTCisVec<0>, SDTCisSameAs<0, 1>, SDTCisSameAs<1, 2>,
-                     SDTCisVT<3, i64>]>;
+                     SDTCisVT<3, GRLenVT>]>;
 def SDT_LoongArchVreplgr2vr : SDTypeProfile<1, 1, [SDTCisInt<0>, SDTCisVec<0>, SDTCisInt<1>]>;
 def SDT_LoongArchVFRECIPE : SDTypeProfile<1, 1, [SDTCisFP<0>, SDTCisVec<0>, SDTCisSameAs<0, 1>]>;
 def SDT_LoongArchVFRSQRTE : SDTypeProfile<1, 1, [SDTCisFP<0>, SDTCisVec<0>, SDTCisSameAs<0, 1>]>;
@@ -158,6 +158,7 @@ def vsplatf32_fpimm_eq_1
   N = N->getOperand(0).getNode();
 
   return selectVSplat(N, Imm, EltTy.getSizeInBits()) &&
+         Imm.getBitWidth() == 32 &&
          Imm.getBitWidth() == EltTy.getSizeInBits() &&
          Imm == APFloat(+1.0f).bitcastToAPInt();
 }]>;
@@ -1482,7 +1483,7 @@ multiclass VldreplPat<ValueType vt, LAInst Inst, Operand ImmOpnd> {
 }
 
 multiclass VstelmPat<PatFrag StoreOp, ValueType vt, LAInst Inst,
-                     Operand ImmOpnd, Operand IdxOpnd, ValueType elt = i64> {
+                     Operand ImmOpnd, Operand IdxOpnd, ValueType elt = GRLenVT> {
   def : Pat<(StoreOp(elt(vector_extract vt:$vd, IdxOpnd:$idx)), BaseAddr:$rj),
             (Inst vt:$vd, BaseAddr:$rj, 0, IdxOpnd:$idx)>;
 
@@ -1515,6 +1516,18 @@ multiclass InsertExtractPatV2<ValueType vecty, ValueType elemty> {
                 (VEXTRINS_D $vd, $vj, Imm)>;
     }
   }
+}
+
+multiclass VAvgPat<SDPatternOperator OpNode, string Inst, ValueType vt> {
+  def : Pat<(OpNode (vt (add vt:$vj, vt:$vk)), (vt (vsplat_imm_eq_1))),
+            (!cast<LAInst>(Inst) vt:$vj, vt:$vk)>;
+}
+
+multiclass VAvgrPat<SDPatternOperator OpNode, string Inst, ValueType vt> {
+  def : Pat<(OpNode (vt (add (vt (add vt:$vj, vt:$vk)),
+                             (vt (vsplat_imm_eq_1)))),
+                    (vt (vsplat_imm_eq_1))),
+            (!cast<LAInst>(Inst) vt:$vj, vt:$vk)>;
 }
 
 let Predicates = [HasExtLSX] in {
@@ -1747,6 +1760,10 @@ defm : PatVrVrF<fmul, "VFMUL">;
 // VFDIV_{S/D}
 defm : PatVrVrF<fdiv, "VFDIV">;
 
+// VFMAX_{S/D}, VFMIN_{S/D}
+defm : PatVrVrF<fmaxnum, "VFMAX">;
+defm : PatVrVrF<fminnum, "VFMIN">;
+
 // VFMADD_{S/D}
 def : Pat<(fma v4f32:$vj, v4f32:$vk, v4f32:$va),
           (VFMADD_S v4f32:$vj, v4f32:$vk, v4f32:$va)>;
@@ -1781,6 +1798,9 @@ def : Pat<(fma_nsz (fneg v2f64:$vj), v2f64:$vk, v2f64:$va),
 
 // VFSQRT_{S/D}
 defm : PatVrF<fsqrt, "VFSQRT">;
+
+// VFLOGB_{S/D}
+defm : PatVrF<flog2, "VFLOGB">;
 
 // VFRECIP_{S/D}
 def : Pat<(fdiv vsplatf32_fpimm_eq_1, v4f32:$vj),
@@ -2110,8 +2130,8 @@ def : Pat<(GRLenVT (vector_extract v4i32:$vj, GRLenVT:$rk)),
           (COPY_TO_REGCLASS (f32 (EXTRACT_SUBREG (VREPLVE_W v4i32:$vj, GRLenVT:$rk),
                                                  sub_32)),
                             GPR)>;
-def : Pat<(i64 (vector_extract v2i64:$vj, i64:$rk)),
-          (COPY_TO_REGCLASS (f64 (EXTRACT_SUBREG (VREPLVE_D v2i64:$vj, i64:$rk),
+def : Pat<(GRLenVT (vector_extract v2i64:$vj, GRLenVT:$rk)),
+          (COPY_TO_REGCLASS (f64 (EXTRACT_SUBREG (VREPLVE_D v2i64:$vj, GRLenVT:$rk),
                                                  sub_64)),
                             GPR)>;
 def : Pat<(f32 (vector_extract v4f32:$vj, GRLenVT:$rk)),
@@ -2153,9 +2173,43 @@ def : Pat<(f32 f32imm_vldi:$in),
 def : Pat<(f64 f64imm_vldi:$in),
           (f64 (EXTRACT_SUBREG (VLDI (to_f64imm_vldi f64imm_vldi:$in)), sub_64))>;
 
+// VAVG_{B/H/W/D/BU/HU/WU/DU}, VAVGR_{B/H/W/D/BU/HU/WU/DU}
+defm : VAvgPat<sra, "VAVG_B", v16i8>;
+defm : VAvgPat<sra, "VAVG_H", v8i16>;
+defm : VAvgPat<sra, "VAVG_W", v4i32>;
+defm : VAvgPat<sra, "VAVG_D", v2i64>;
+defm : VAvgPat<srl, "VAVG_BU", v16i8>;
+defm : VAvgPat<srl, "VAVG_HU", v8i16>;
+defm : VAvgPat<srl, "VAVG_WU", v4i32>;
+defm : VAvgPat<srl, "VAVG_DU", v2i64>;
+defm : VAvgrPat<sra, "VAVGR_B", v16i8>;
+defm : VAvgrPat<sra, "VAVGR_H", v8i16>;
+defm : VAvgrPat<sra, "VAVGR_W", v4i32>;
+defm : VAvgrPat<sra, "VAVGR_D", v2i64>;
+defm : VAvgrPat<srl, "VAVGR_BU", v16i8>;
+defm : VAvgrPat<srl, "VAVGR_HU", v8i16>;
+defm : VAvgrPat<srl, "VAVGR_WU", v4i32>;
+defm : VAvgrPat<srl, "VAVGR_DU", v2i64>;
+
+// abs
+def : Pat<(abs v16i8:$vj), (VSIGNCOV_B v16i8:$vj, v16i8:$vj)>;
+def : Pat<(abs v8i16:$vj), (VSIGNCOV_H v8i16:$vj, v8i16:$vj)>;
+def : Pat<(abs v4i32:$vj), (VSIGNCOV_W v4i32:$vj, v4i32:$vj)>;
+def : Pat<(abs v2i64:$vj), (VSIGNCOV_D v2i64:$vj, v2i64:$vj)>;
+
 // VABSD_{B/H/W/D}[U]
 defm : PatVrVr<abds, "VABSD">;
 defm : PatVrVrU<abdu, "VABSD">;
+
+// VADDA_{B/H/W/D}
+def : Pat<(add (v16i8 (abs v16i8:$vj)), (v16i8 (abs v16i8:$vk))),
+          (VADDA_B v16i8:$vj, v16i8:$vk)>;
+def : Pat<(add (v8i16 (abs v8i16:$vj)), (v8i16 (abs v8i16:$vk))),
+          (VADDA_H v8i16:$vj, v8i16:$vk)>;
+def : Pat<(add (v4i32 (abs v4i32:$vj)), (v4i32 (abs v4i32:$vk))),
+          (VADDA_W v4i32:$vj, v4i32:$vk)>;
+def : Pat<(add (v2i64 (abs v2i64:$vj)), (v2i64 (abs v2i64:$vk))),
+          (VADDA_D v2i64:$vj, v2i64:$vk)>;
 
 // VSADD_{B/H/W/D}[U], VSSUB_{B/H/W/D}[U]
 defm : PatVrVr<saddsat, "VSADD">;
@@ -2501,6 +2555,11 @@ def : Pat<(f32 (froundeven FPR32:$fj)),
 def : Pat<(f64 (froundeven FPR64:$fj)),
           (f64 (EXTRACT_SUBREG (VFRINTRNE_D (VREPLVEI_D
                (SUBREG_TO_REG (i64 0), FPR64:$fj, sub_64), 0)), sub_64))>;
+
+defm : PatVrF<fceil, "VFRINTRP">;
+defm : PatVrF<ffloor, "VFRINTRM">;
+defm : PatVrF<ftrunc, "VFRINTRZ">;
+defm : PatVrF<froundeven, "VFRINTRNE">;
 
 // load
 def : Pat<(int_loongarch_lsx_vld GPR:$rj, timm:$imm),

@@ -149,10 +149,13 @@ def TileZeroOp : AMX_Op<"tile_zero", [
   let summary = "tile zero operation";
   let description = [{
     Zeroes the destination tile, with the shape defined by the 2-dim
-    vector type of the result. This is eventually lowered into the
-    "tilezero" instruction with the corresponding tile configuration.
-    With memory-effects, each "tilezero" operation serves as a compilation 
-    hint to use a separate tile register.
+    vector type of the result.
+    
+    The operation is eventually lowered into the "tilezero" instruction
+    with the corresponding tile configuration.
+    
+    With the write memory effect, each `amx.tile_zero` operation serves as
+    a compilation hint to use a separate tile register.
 
     Example:
 
@@ -184,25 +187,53 @@ def TileZeroOp : AMX_Op<"tile_zero", [
 
 def TileLoadOp : AMX_Op<"tile_load", [
     AMXIntrinsicOpInterface,
-    MemoryEffects<[MemWrite]>
+    MemoryEffects<[MemWrite]>,
+    AttrSizedOperandSegments
   ]> {
   let summary = "tile load operation";
   let description = [{
-    Loads a tile from memory defined by a base and indices, with the
-    shape defined by the 2-dim vector type of the result. This is
-    eventually lowered into the "tileloadd" instruction with the
-    corresponding tile configuration. With memory-effects, each "tileload" 
-    operation serves as a compilation hint to use a separate tile register.
+    Loads a tile from memory defined by a `base` and `indices`, with the
+    shape defined by the 2-dim vector type of the result.
+    The tile's rows are populated by reading contiguous elements starting
+    at the `base`. For each tile row, the `base` is incremented by `stride`
+    number of elements.
+
+    The tile is loaded using the following indexing scheme:
+
+    ```
+    for row in enumerate(tile_rows):
+      mem_row = base[i0, i1, ..., iN + row * stride]
+      for col in enumerate(tile_cols):
+        tile[row, col] = mem_row[col]
+    ```
+
+    If the `stride` is not provided, then the `base` buffer must be at least
+    2-dimensional, and the `stride` is automatically inferred and corresponds
+    to the stride of the buffer's second innermost dimension.
+
+    The operation is eventually lowered into the "tileloadd" instruction
+    with the corresponding tile configuration.
+
+    With the write memory effect, each `amx.tile_load` operation serves as
+    a compilation hint to use a separate tile register.
 
     Example:
 
     ```mlir
+      // Tile load from a 2-D memref with implicit stride.
       %0 = amx.tile_load %arg0[%c0, %c0] : memref<?x?xi8> into !amx.tile<16x64xi8>
+
+      // Tile load from a 1-D memref with explicit stride.
+      %0 = amx.tile_load %arg0[%c0], %stride : memref<?xi8> into !amx.tile<16x64xi8>
     ```
   }];
   let arguments = (ins Arg<AnyMemRef, "load base", [MemRead]>:$base,
-                   Variadic<Index>:$indices);
+                   Variadic<Index>:$indices,
+                   Optional<Index>:$stride);
   let results = (outs AnyAMXTile:$res);
+  let builders = [
+    OpBuilder<(ins "Type":$res, "Value":$base, "ValueRange":$indices)>
+  ];
   let extraClassDeclaration = [{
     MemRefType getMemRefType() {
       return ::llvm::cast<MemRefType>(getBase().getType());
@@ -219,30 +250,56 @@ def TileLoadOp : AMX_Op<"tile_load", [
         const ::mlir::LLVMTypeConverter &typeConverter,
         ::mlir::RewriterBase &rewriter);
   }];
-  let assemblyFormat = "$base `[` $indices `]` attr-dict `:` "
-                       "type($base) `into` qualified(type($res))";
+  let assemblyFormat = "$base `[` $indices `]` (`,` $stride^ )? attr-dict"
+                       "`:` type($base) `into` qualified(type($res))";
   let hasVerifier = 1;
 }
 
 def TileStoreOp : AMX_Op<"tile_store", [
-    AMXIntrinsicOpInterface
+    AMXIntrinsicOpInterface,
+    AttrSizedOperandSegments
   ]> {
   let summary = "tile store operation";
   let description = [{
-    Stores a tile to memory defined by a base and indices, with the
-    shape defined by the 2-dim vector type of the value. This is
-    eventually lowered into the "tilestored" instruction with the
-    corresponding tile configuration.
+    Stores a tile to memory defined by a `base` and `indices`, with the
+    shape defined by the 2-dim vector type of the value.
+    The tile's rows are written contiguously to the buffer starting at
+    the `base`. For each tile row, the `base` is incremented by `stride`
+    number of elements.
+
+    The tile is stored using the following indexing scheme:
+
+    ```
+    for row in enumerate(tile_rows):
+      mem_row = base[i0, i1, ..., iN + row * stride]
+      for col in enumerate(tile_cols):
+        mem_row[col] = tile[row, col]
+    ```
+
+    If the `stride` is not provided, then the `base` buffer must be at least
+    2-dimensional, and the `stride` is automatically inferred and corresponds
+    to the stride of the buffer's second innermost dimension.
+
+    The operation is eventually lowered into the "tilestored" instruction
+    with the corresponding tile configuration.
 
     Example:
 
     ```mlir
+      // Tile store to a 2-D memref with implicit stride.
       amx.tile_store %arg1[%c0, %c0], %0 : memref<?x?xi8>, !amx.tile<16x64xi8>
+
+      // Tile store to a 1-D memref with explicit stride.
+      amx.tile_store %arg1[%c0], %0, %stride : memref<?xi8>, !amx.tile<16x64xi8>
     ```
   }];
   let arguments = (ins Arg<AnyMemRef, "store base", [MemWrite]>:$base,
                    Variadic<Index>:$indices,
-                   AnyAMXTile:$val);
+                   AnyAMXTile:$val,
+                   Optional<Index>:$stride);
+  let builders = [
+    OpBuilder<(ins "Value":$base, "ValueRange":$indices, "Value":$val)>
+  ];
   let extraClassDeclaration = [{
     MemRefType getMemRefType() {
       return ::llvm::cast<MemRefType>(getBase().getType());
@@ -259,8 +316,8 @@ def TileStoreOp : AMX_Op<"tile_store", [
         const ::mlir::LLVMTypeConverter &typeConverter,
         ::mlir::RewriterBase &rewriter);
   }];
-  let assemblyFormat = "$base `[` $indices `]` `,` $val attr-dict `:` "
-                       "type($base) `,` qualified(type($val))";
+  let assemblyFormat = "$base `[` $indices `]` `,` $val (`,` $stride^ )?"
+                       "attr-dict `:` type($base) `,` qualified(type($val))";
   let hasVerifier = 1;
 }
 
@@ -276,8 +333,10 @@ def TileMulFOp : AMX_Op<"tile_mulf", [Pure,
   let description = [{
     Multiplies a "m x k" tile with a "k x n" tile and accumulates the results
     into a "m x n" destination tile. Supports "f32 <- bf16 x bf16" (with
-    pairs of "bf16"). The operation is eventually lowered into the
-    "tdpbf16ps" instruction with the corresponding tile configuration.
+    pairs of "bf16").
+    
+    The operation is eventually lowered into the "tdpbf16ps" instruction with
+    the corresponding tile configuration.
 
     Example:
 
@@ -330,9 +389,11 @@ def TileMulIOp : AMX_Op<"tile_muli", [Pure,
     into a "m x n" destination tile. Supports all "si32 <- s/ui8 x s/ui8"
     combinations (4 bytes packed into dwords in the columns of both the
     source operand tiles; the zero or sign extension is specified with
-    the attributes and default to sign extended). The operation is eventually
-    lowered into one of the "tdpbssd", "tdpbsud", "tdpbusd", or "tdpbuud"
-    instructions with the corresponding tile configuration.
+    the attributes and default to sign extended).
+    
+    The operation is eventually lowered into one of the "tdpbssd",
+    "tdpbsud", "tdpbusd", or "tdpbuud" instructions with the corresponding
+    tile configuration.
 
     Example:
 

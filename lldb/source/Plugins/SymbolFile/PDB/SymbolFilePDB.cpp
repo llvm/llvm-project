@@ -83,8 +83,8 @@ constexpr OptionEnumValueElement g_pdb_reader_enums[] = {
     {
         ePDBReaderDefault,
         "default",
-        "Use DIA PDB reader unless LLDB_USE_NATIVE_PDB_READER environment "
-        "variable is set",
+        "Use native PDB reader unless LLDB_USE_NATIVE_PDB_READER environment "
+        "is set to 0",
     },
     {
         ePDBReaderDIA,
@@ -109,16 +109,10 @@ enum {
 static const bool g_should_use_native_reader_by_default = [] {
   llvm::StringRef env_value = ::getenv("LLDB_USE_NATIVE_PDB_READER");
 
-#if !LLVM_ENABLE_DIA_SDK || !defined(_WIN32)
-  // if the environment value is unset, the native reader is requested
-  if (env_value.empty())
-    return true;
-#endif
-
-  return env_value.equals_insensitive("on") ||
-         env_value.equals_insensitive("yes") ||
-         env_value.equals_insensitive("1") ||
-         env_value.equals_insensitive("true");
+  return !env_value.equals_insensitive("off") &&
+         !env_value.equals_insensitive("no") &&
+         !env_value.equals_insensitive("0") &&
+         !env_value.equals_insensitive("false");
 }();
 
 class PluginProperties : public Properties {
@@ -139,8 +133,8 @@ public:
     if (!IsNativeReaderRequested()) {
       static std::once_flag g_warning_shown;
       Debugger::ReportWarning(
-          "The DIA PDB reader was explicitly requested, but LLDB was built "
-          "without the DIA SDK. The native reader will be used instead.",
+          "the DIA PDB reader was explicitly requested, but LLDB was built "
+          "without the DIA SDK. The native reader will be used instead",
           {}, &g_warning_shown);
     }
     return true;

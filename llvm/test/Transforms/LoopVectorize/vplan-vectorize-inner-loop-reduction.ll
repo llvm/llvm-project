@@ -22,9 +22,9 @@ define void @inner_loop_reduction(ptr noalias nocapture readonly %a.in, ptr noal
 ; CHECK-NEXT: %[[FOR1_INDEX:.*]] = phi i64 [ 0, %[[LABEL_PR:.*]] ], [ %{{.*}}, %[[LABEL_FOR1_LATCH:.*]] ]
 ; CHECK: %[[VEC_INDEX:.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[LABEL_PR]] ], [ %{{.*}}, %[[LABEL_FOR1_LATCH]] ]
 ; CHECK-NEXT: %[[A_PTR:.*]] = getelementptr inbounds double, ptr %a.in, <4 x i64> %[[VEC_INDEX]]
-; CHECK-NEXT: %[[MASKED_GATHER1:.*]] = call <4 x double> @llvm.masked.gather.v4f64.v4p0(<4 x ptr> %[[A_PTR]], i32 8, <4 x i1> splat (i1 true), <4 x double> poison)
+; CHECK-NEXT: %[[MASKED_GATHER1:.*]] = call <4 x double> @llvm.masked.gather.v4f64.v4p0(<4 x ptr> align 8 %[[A_PTR]], <4 x i1> splat (i1 true), <4 x double> poison)
 ; CHECK-NEXT: %[[B_PTR:.*]] = getelementptr inbounds double, ptr %b.in, <4 x i64> %[[VEC_INDEX]]
-; CHECK-NEXT: %[[MASKED_GATHER2:.*]] = call <4 x double> @llvm.masked.gather.v4f64.v4p0(<4 x ptr> %[[B_PTR]], i32 8, <4 x i1> splat (i1 true), <4 x double> poison)
+; CHECK-NEXT: %[[MASKED_GATHER2:.*]] = call <4 x double> @llvm.masked.gather.v4f64.v4p0(<4 x ptr> align 8 %[[B_PTR]], <4 x i1> splat (i1 true), <4 x double> poison)
 ; CHECK-NEXT: br label %[[FOR2_HEADER:.*]]
 
 ; CHECK: [[FOR2_HEADER]]:
@@ -39,7 +39,7 @@ define void @inner_loop_reduction(ptr noalias nocapture readonly %a.in, ptr noal
 ; CHECK: [[FOR1_LATCH]]:
 ; CHECK-NEXT: %[[REDUCTION:.*]] = phi <4 x double> [ %[[REDUCTION_NEXT]], %[[FOR2_HEADER]] ]
 ; CHECK-NEXT: %[[C_PTR:.*]] = getelementptr inbounds double, ptr %c.out, <4 x i64> %[[VEC_INDEX]]
-; CHECK-NEXT: call void @llvm.masked.scatter.v4f64.v4p0(<4 x double> %[[REDUCTION]], <4 x ptr> %[[C_PTR]], i32 8, <4 x i1> splat (i1 true))
+; CHECK-NEXT: call void @llvm.masked.scatter.v4f64.v4p0(<4 x double> %[[REDUCTION]], <4 x ptr> align 8 %[[C_PTR]], <4 x i1> splat (i1 true))
 ; CHECK-NEXT: %[[FOR1_INDEX_NEXT:.*]] = add nuw i64 %[[FOR1_INDEX]], 4
 ; CHECK-NEXT: %{{.*}} = add <4 x i64> %[[VEC_INDEX]], splat (i64 4)
 ; CHECK-NEXT: %[[EXIT_COND:.*]] = icmp eq i64 %[[FOR1_INDEX_NEXT]], 1000
