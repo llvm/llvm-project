@@ -55,8 +55,8 @@ bool tryExtendDynamicLDSGlobal(GlobalVariable &GV) {
   if (!AT || AT->getNumElements() != 0)
     return false;
 
-  constexpr auto Magic = std::numeric_limits<uint32_t>::max();
-  ArrayType *NewAT = ArrayType::get(AT->getElementType(), Magic);
+  constexpr auto UInt32Max = std::numeric_limits<uint32_t>::max();
+  ArrayType *NewAT = ArrayType::get(AT->getElementType(), UInt32Max);
   GlobalVariable *NewGV = new GlobalVariable(
       *GV.getParent(), NewAT, GV.isConstant(), GV.getLinkage(), nullptr, "",
       &GV, GV.getThreadLocalMode(), WorkgroupAS, GV.isExternallyInitialized());
