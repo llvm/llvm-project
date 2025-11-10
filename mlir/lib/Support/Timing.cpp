@@ -109,11 +109,11 @@ TimingIdentifier TimingIdentifier::get(StringRef str, TimingManager &tm) {
 
 namespace {
 
-class OutputTextStrategy : public OutputStrategy {
+class OutputTextStrategy : public mlir::timing::OutputStrategy {
 public:
-  OutputTextStrategy(raw_ostream &os) : OutputStrategy(os) {}
+  OutputTextStrategy(raw_ostream &os) : mlir::timing::OutputStrategy(os) {}
 
-  void printHeader(const TimeRecord &total) override {
+  void printHeader(const mlir::timing::TimeRecord &total) override {
     // Figure out how many spaces to description name.
     unsigned padding = (80 - kTimingDescription.size()) / 2;
     os << "===" << std::string(73, '-') << "===\n";
@@ -129,7 +129,8 @@ public:
 
   void printFooter() override { os.flush(); }
 
-  void printTime(const TimeRecord &time, const TimeRecord &total) override {
+  void printTime(const mlir::timing::TimeRecord &time,
+                 const mlir::timing::TimeRecord &total) override {
     if (total.user != total.wall) {
       os << llvm::format("  %8.4f (%5.1f%%)", time.user,
                          100.0 * time.user / total.user);
@@ -138,14 +139,16 @@ public:
                        100.0 * time.wall / total.wall);
   }
 
-  void printListEntry(StringRef name, const TimeRecord &time,
-                      const TimeRecord &total, bool lastEntry) override {
+  void printListEntry(StringRef name, const mlir::timing::TimeRecord &time,
+                      const mlir::timing::TimeRecord &total,
+                      bool lastEntry) override {
     printTime(time, total);
     os << name << "\n";
   }
 
-  void printTreeEntry(unsigned indent, StringRef name, const TimeRecord &time,
-                      const TimeRecord &total) override {
+  void printTreeEntry(unsigned indent, StringRef name,
+                      const mlir::timing::TimeRecord &time,
+                      const mlir::timing::TimeRecord &total) override {
     printTime(time, total);
     os.indent(indent) << name << "\n";
   }
@@ -153,18 +156,21 @@ public:
   void printTreeEntryEnd(unsigned indent, bool lastEntry) override {}
 };
 
-class OutputJsonStrategy : public OutputStrategy {
+class OutputJsonStrategy : public mlir::timing::OutputStrategy {
 public:
-  OutputJsonStrategy(raw_ostream &os) : OutputStrategy(os) {}
+  OutputJsonStrategy(raw_ostream &os) : mlir::timing::OutputStrategy(os) {}
 
-  void printHeader(const TimeRecord &total) override { os << "[" << "\n"; }
+  void printHeader(const mlir::timing::TimeRecord &total) override {
+    os << "[" << "\n";
+  }
 
   void printFooter() override {
     os << "]" << "\n";
     os.flush();
   }
 
-  void printTime(const TimeRecord &time, const TimeRecord &total) override {
+  void printTime(const mlir::timing::TimeRecord &time,
+                 const mlir::timing::TimeRecord &total) override {
     if (total.user != total.wall) {
       os << "\"user\": {";
       os << "\"duration\": " << llvm::format("%8.4f", time.user) << ", ";
@@ -179,8 +185,9 @@ public:
     os << "}";
   }
 
-  void printListEntry(StringRef name, const TimeRecord &time,
-                      const TimeRecord &total, bool lastEntry) override {
+  void printListEntry(StringRef name, const mlir::timing::TimeRecord &time,
+                      const mlir::timing::TimeRecord &total,
+                      bool lastEntry) override {
     os << "{";
     printTime(time, total);
     os << ", \"name\": " << "\"" << name << "\"";
@@ -190,8 +197,9 @@ public:
     os << "\n";
   }
 
-  void printTreeEntry(unsigned indent, StringRef name, const TimeRecord &time,
-                      const TimeRecord &total) override {
+  void printTreeEntry(unsigned indent, StringRef name,
+                      const mlir::timing::TimeRecord &time,
+                      const mlir::timing::TimeRecord &total) override {
     os.indent(indent) << "{";
     printTime(time, total);
     os << ", \"name\": " << "\"" << name << "\"";
@@ -225,7 +233,8 @@ public:
   using ChildrenMap = llvm::MapVector<const void *, std::unique_ptr<TimerImpl>>;
   using AsyncChildrenMap = llvm::DenseMap<uint64_t, ChildrenMap>;
 
-  TimerImpl(std::string &&name, std::unique_ptr<OutputStrategy> &output)
+  TimerImpl(std::string &&name,
+            std::unique_ptr<mlir::timing::OutputStrategy> &output)
       : threadId(llvm::get_threadid()), name(name), output(output) {}
 
   /// Start the timer.
@@ -360,8 +369,8 @@ public:
   }
 
   /// Returns the time for this timer in seconds.
-  TimeRecord getTimeRecord() {
-    return TimeRecord(
+  mlir::timing::TimeRecord getTimeRecord() {
+    return mlir::timing::TimeRecord(
         std::chrono::duration_cast<std::chrono::duration<double>>(wallTime)
             .count(),
         std::chrono::duration_cast<std::chrono::duration<double>>(userTime)
@@ -369,9 +378,9 @@ public:
   }
 
   /// Print the timing result in list mode.
-  void printAsList(TimeRecord total) {
+  void printAsList(mlir::timing::TimeRecord total) {
     // Flatten the leaf timers in the tree and merge them by name.
-    llvm::StringMap<TimeRecord> mergedTimers;
+    llvm::StringMap<mlir::timing::TimeRecord> mergedTimers;
     std::function<void(TimerImpl *)> addTimer = [&](TimerImpl *timer) {
       mergedTimers[timer->name] += timer->getTimeRecord();
       for (auto &children : timer->children)
@@ -380,15 +389,17 @@ public:
     addTimer(this);
 
     // Sort the timing information by wall time.
-    std::vector<std::pair<StringRef, TimeRecord>> timerNameAndTime;
+    std::vector<std::pair<StringRef, mlir::timing::TimeRecord>>
+        timerNameAndTime;
     for (auto &it : mergedTimers)
       timerNameAndTime.emplace_back(it.first(), it.second);
-    llvm::array_pod_sort(timerNameAndTime.begin(), timerNameAndTime.end(),
-                         [](const std::pair<StringRef, TimeRecord> *lhs,
-                            const std::pair<StringRef, TimeRecord> *rhs) {
-                           return llvm::array_pod_sort_comparator<double>(
-                               &rhs->second.wall, &lhs->second.wall);
-                         });
+    llvm::array_pod_sort(
+        timerNameAndTime.begin(), timerNameAndTime.end(),
+        [](const std::pair<StringRef, mlir::timing::TimeRecord> *lhs,
+           const std::pair<StringRef, mlir::timing::TimeRecord> *rhs) {
+          return llvm::array_pod_sort_comparator<double>(&rhs->second.wall,
+                                                         &lhs->second.wall);
+        });
 
     // Print the timing information sequentially.
     for (auto &timeData : timerNameAndTime)
@@ -396,7 +407,7 @@ public:
   }
 
   /// Print the timing result in tree mode.
-  void printAsTree(TimeRecord total, unsigned indent = 0) {
+  void printAsTree(mlir::timing::TimeRecord total, unsigned indent = 0) {
     unsigned childIndent = indent;
     if (!hidden) {
       output->printTreeEntry(indent, name, getTimeRecord(), total);
@@ -468,7 +479,7 @@ public:
   /// Mutex for the async children.
   std::mutex asyncMutex;
 
-  std::unique_ptr<OutputStrategy> &output;
+  std::unique_ptr<mlir::timing::OutputStrategy> &output;
 };
 
 } // namespace
@@ -521,7 +532,8 @@ DefaultTimingManager::DisplayMode DefaultTimingManager::getDisplayMode() const {
 }
 
 /// Change the stream where the output will be printed to.
-void DefaultTimingManager::setOutput(std::unique_ptr<OutputStrategy> output) {
+void DefaultTimingManager::setOutput(
+    std::unique_ptr<mlir::timing::OutputStrategy> output) {
   out = std::move(output);
 }
 
@@ -619,12 +631,13 @@ void mlir::applyDefaultTimingManagerCLOptions(DefaultTimingManager &tm) {
     return;
   tm.setEnabled(options->timing);
   tm.setDisplayMode(options->displayMode);
-  tm.setOutput(createOutputStrategy(options->outputFormat, llvm::errs()));
+  tm.setOutput(
+      mlir::timing::createOutputStrategy(options->outputFormat, llvm::errs()));
 }
 
-std::unique_ptr<OutputStrategy>
-mlir::createOutputStrategy(DefaultTimingManager::OutputFormat fmt,
-                           raw_ostream &os) {
+std::unique_ptr<mlir::timing::OutputStrategy>
+mlir::timing::createOutputStrategy(DefaultTimingManager::OutputFormat fmt,
+                                   raw_ostream &os) {
   switch (fmt) {
   case OutputFormat::Text:
     return std::make_unique<OutputTextStrategy>(os);
