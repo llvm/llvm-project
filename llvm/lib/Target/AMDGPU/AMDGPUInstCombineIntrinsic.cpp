@@ -18,6 +18,7 @@
 #include "AMDGPUTargetTransformInfo.h"
 #include "GCNSubtarget.h"
 #include "llvm/ADT/FloatingPointMode.h"
+#include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
@@ -1342,6 +1343,58 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       Call->takeName(&II);
       return IC.replaceInstUsesWith(II, Call);
     }
+
+    // Fold ballot intrinsic based on llvm.assume hint about the result.
+    //
+    // assume(ballot(x) == ballot(i1 true)) -> x = true
+    // assume(ballot(x) == -1)              -> x = true
+    // assume(ballot(x) == 0)               -> x = false
+    if (Arg->getType()->isIntegerTy(1)) {
+      for (auto &AssumeVH : IC.getAssumptionCache().assumptionsFor(&II)) {
+        if (!AssumeVH)
+          continue;
+
+        auto *Assume = cast<AssumeInst>(AssumeVH);
+        Value *Cond = Assume->getArgOperand(0);
+
+        // Check if assume condition is an equality comparison.
+        auto *ICI = dyn_cast<ICmpInst>(Cond);
+        if (!ICI || ICI->getPredicate() != ICmpInst::ICMP_EQ)
+          continue;
+
+        // Extract the ballot and the value being compared against it.
+        Value *LHS = ICI->getOperand(0), *RHS = ICI->getOperand(1);
+        Value *CompareValue = (LHS == &II) ? RHS : (RHS == &II) ? LHS : nullptr;
+        if (!CompareValue)
+          continue;
+
+        // Determine the constant value of the ballot's condition argument.
+        std::optional<bool> PropagatedBool;
+        if (match(CompareValue, m_AllOnes()) ||
+            match(CompareValue,
+                  m_Intrinsic<Intrinsic::amdgcn_ballot>(m_One()))) {
+          // ballot(x) == -1 or ballot(x) == ballot(true) means x is true.
+          PropagatedBool = true;
+        } else if (match(CompareValue, m_Zero())) {
+          // ballot(x) == 0 means x is false.
+          PropagatedBool = false;
+        }
+
+        if (!PropagatedBool)
+          continue;
+
+        Constant *PropagatedValue =
+            ConstantInt::getBool(Arg->getContext(), *PropagatedBool);
+
+        // Replace dominated uses of the ballot's condition argument with the
+        // propagated value.
+        Arg->replaceUsesWithIf(PropagatedValue, [&](Use &U) {
+          Instruction *UserInst = dyn_cast<Instruction>(U.getUser());
+          return UserInst && IC.getDominatorTree().dominates(Assume, U);
+        });
+      }
+    }
+
     break;
   }
   case Intrinsic::amdgcn_wavefrontsize: {
