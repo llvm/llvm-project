@@ -102,10 +102,6 @@ static cl::opt<bool>
     VersionLoops("loop-flatten-version-loops", cl::Hidden, cl::init(true),
                  cl::desc("Version loops if flattened loop could overflow"));
 
-static cl::opt<bool> VersionLoopsOverWiden(
-    "loop-flatten-version-over-widen", cl::Hidden, cl::init(false),
-    cl::desc("Version loops and generate runtime checks over widening the IV"));
-
 namespace {
 // We require all uses of both induction variables to match this pattern:
 //
@@ -877,9 +873,6 @@ static bool CanWidenIV(FlattenInfo &FI, DominatorTree *DT, LoopInfo *LI,
     return false;
   }
 
-  if (VersionLoopsOverWiden && VersionLoop(FI, DT, LI, SE, LAI))
-    return true;
-
   LLVM_DEBUG(dbgs() << "Try widening the IVs\n");
   Module *M = FI.InnerLoop->getHeader()->getParent()->getParent();
   auto &DL = M->getDataLayout();
@@ -998,7 +991,8 @@ static bool FlattenLoopPair(FlattenInfo &FI, DominatorTree *DT, LoopInfo *LI,
       return false;
     }
     LLVM_DEBUG(dbgs() << "Multiply might overflow, versioning loop\n");
-    assert(VersionLoop(FI, DT, LI, SE, LAI) && "Failed to version loop");
+    bool LoopIsVersioned = VersionLoop(FI, DT, LI, SE, LAI);
+    assert(LoopIsVersioned && "Failed to version loop");
   } else {
     LLVM_DEBUG(dbgs() << "Multiply cannot overflow, modifying loop in-place\n");
   }
