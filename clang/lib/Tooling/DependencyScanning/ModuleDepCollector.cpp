@@ -471,9 +471,13 @@ static bool isSafeToIgnoreCWD(const CowCompilerInvocation &CI) {
   // Check if the command line input uses relative paths.
   // It is not safe to ignore the current working directory if any of the
   // command line inputs use relative paths.
-  return !CI.anyPath([](StringRef Path) {
-    return !Path.empty() && !llvm::sys::path::is_absolute(Path);
+  bool AnyRelative = false;
+  CI.visitPaths([&](StringRef Path) {
+    assert(!AnyRelative && "Continuing path visitation despite returning true");
+    AnyRelative |= !Path.empty() && !llvm::sys::path::is_absolute(Path);
+    return AnyRelative;
   });
+  return !AnyRelative;
 }
 
 static std::string getModuleContextHash(const ModuleDeps &MD,

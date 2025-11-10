@@ -5280,78 +5280,84 @@ std::string CompilerInvocation::getModuleHash() const {
   return toString(llvm::APInt(64, Hash), 36, /*Signed=*/false);
 }
 
-bool CompilerInvocationBase::anyPath(
-    llvm::function_ref<bool(StringRef)> Predicate) const {
-#define PROPAGATE_TRUE_IF(PATH)                                                \
+void CompilerInvocationBase::visitPathsImpl(
+    llvm::function_ref<bool(std::string &)> Predicate) {
+#define RETURN_IF(PATH)                                                        \
   do {                                                                         \
     if (Predicate(PATH))                                                       \
-      return true;                                                             \
+      return;                                                                  \
   } while (0)
 
-#define PROPAGATE_TRUE_IF_MANY(PATHS)                                          \
+#define RETURN_IF_MANY(PATHS)                                                  \
   do {                                                                         \
     if (llvm::any_of(PATHS, Predicate))                                        \
-      return true;                                                             \
+      return;                                                                  \
   } while (0)
 
+  auto &HeaderSearchOpts = *this->HSOpts;
   // Header search paths.
-  const auto &HeaderSearchOpts = getHeaderSearchOpts();
-  PROPAGATE_TRUE_IF(HeaderSearchOpts.Sysroot);
+  RETURN_IF(HeaderSearchOpts.Sysroot);
   for (auto &Entry : HeaderSearchOpts.UserEntries)
     if (Entry.IgnoreSysRoot)
-      PROPAGATE_TRUE_IF(Entry.Path);
-  PROPAGATE_TRUE_IF(HeaderSearchOpts.ResourceDir);
-  PROPAGATE_TRUE_IF(HeaderSearchOpts.ModuleCachePath);
-  PROPAGATE_TRUE_IF(HeaderSearchOpts.ModuleUserBuildPath);
-  for (const auto &[Name, File] : HeaderSearchOpts.PrebuiltModuleFiles)
-    PROPAGATE_TRUE_IF(File);
-  PROPAGATE_TRUE_IF_MANY(HeaderSearchOpts.PrebuiltModulePaths);
-  PROPAGATE_TRUE_IF_MANY(HeaderSearchOpts.VFSOverlayFiles);
+      RETURN_IF(Entry.Path);
+  RETURN_IF(HeaderSearchOpts.ResourceDir);
+  RETURN_IF(HeaderSearchOpts.ModuleCachePath);
+  RETURN_IF(HeaderSearchOpts.ModuleUserBuildPath);
+  for (auto &[Name, File] : HeaderSearchOpts.PrebuiltModuleFiles)
+    RETURN_IF(File);
+  RETURN_IF_MANY(HeaderSearchOpts.PrebuiltModulePaths);
+  RETURN_IF_MANY(HeaderSearchOpts.VFSOverlayFiles);
 
   // Preprocessor options.
-  const auto &PPOpts = getPreprocessorOpts();
-  PROPAGATE_TRUE_IF_MANY(PPOpts.MacroIncludes);
-  PROPAGATE_TRUE_IF_MANY(PPOpts.Includes);
-  PROPAGATE_TRUE_IF(PPOpts.ImplicitPCHInclude);
+  auto &PPOpts = *this->PPOpts;
+  RETURN_IF_MANY(PPOpts.MacroIncludes);
+  RETURN_IF_MANY(PPOpts.Includes);
+  RETURN_IF(PPOpts.ImplicitPCHInclude);
 
   // Frontend options.
-  const auto &FrontendOpts = getFrontendOpts();
-  for (const FrontendInputFile &Input : FrontendOpts.Inputs) {
+  auto &FrontendOpts = *this->FrontendOpts;
+  for (auto &Input : FrontendOpts.Inputs) {
     if (Input.isBuffer())
-      continue; // FIXME: Can this happen when parsing command-line?
+      continue;
 
-    PROPAGATE_TRUE_IF(Input.getFile());
+    RETURN_IF(Input.File);
   }
-  PROPAGATE_TRUE_IF(FrontendOpts.CodeCompletionAt.FileName);
-  PROPAGATE_TRUE_IF_MANY(FrontendOpts.ModuleMapFiles);
-  PROPAGATE_TRUE_IF_MANY(FrontendOpts.ModuleFiles);
-  PROPAGATE_TRUE_IF_MANY(FrontendOpts.ModulesEmbedFiles);
-  PROPAGATE_TRUE_IF_MANY(FrontendOpts.ASTMergeFiles);
-  PROPAGATE_TRUE_IF(FrontendOpts.OverrideRecordLayoutsFile);
-  PROPAGATE_TRUE_IF(FrontendOpts.StatsFile);
+  RETURN_IF(FrontendOpts.CodeCompletionAt.FileName);
+  RETURN_IF_MANY(FrontendOpts.ModuleMapFiles);
+  RETURN_IF_MANY(FrontendOpts.ModuleFiles);
+  RETURN_IF_MANY(FrontendOpts.ModulesEmbedFiles);
+  RETURN_IF_MANY(FrontendOpts.ASTMergeFiles);
+  RETURN_IF(FrontendOpts.OverrideRecordLayoutsFile);
+  RETURN_IF(FrontendOpts.StatsFile);
 
   // Filesystem options.
-  const auto &FileSystemOpts = getFileSystemOpts();
-  PROPAGATE_TRUE_IF(FileSystemOpts.WorkingDir);
+  auto &FileSystemOpts = *this->FSOpts;
+  RETURN_IF(FileSystemOpts.WorkingDir);
 
   // Codegen options.
-  const auto &CodeGenOpts = getCodeGenOpts();
-  PROPAGATE_TRUE_IF(CodeGenOpts.DebugCompilationDir);
-  PROPAGATE_TRUE_IF(CodeGenOpts.CoverageCompilationDir);
+  auto &CodeGenOpts = *this->CodeGenOpts;
+  RETURN_IF(CodeGenOpts.DebugCompilationDir);
+  RETURN_IF(CodeGenOpts.CoverageCompilationDir);
 
   // Sanitizer options.
-  PROPAGATE_TRUE_IF_MANY(getLangOpts().NoSanitizeFiles);
+  RETURN_IF_MANY(LangOpts->NoSanitizeFiles);
 
   // Coverage mappings.
-  PROPAGATE_TRUE_IF(CodeGenOpts.ProfileInstrumentUsePath);
-  PROPAGATE_TRUE_IF(CodeGenOpts.SampleProfileFile);
-  PROPAGATE_TRUE_IF(CodeGenOpts.ProfileRemappingFile);
+  RETURN_IF(CodeGenOpts.ProfileInstrumentUsePath);
+  RETURN_IF(CodeGenOpts.SampleProfileFile);
+  RETURN_IF(CodeGenOpts.ProfileRemappingFile);
 
   // Dependency output options.
-  for (auto &ExtraDep : getDependencyOutputOpts().ExtraDeps)
-    PROPAGATE_TRUE_IF(ExtraDep.first);
+  for (auto &ExtraDep : DependencyOutputOpts->ExtraDeps)
+    RETURN_IF(ExtraDep.first);
+}
 
-  return false;
+void CompilerInvocationBase::visitPaths(
+    llvm::function_ref<bool(StringRef)> Callback) const {
+  // The const_cast here is OK, because visitPathsImpl() itself doesn't modify
+  // the invocation, and our callback takes immutable StringRefs.
+  return const_cast<CompilerInvocationBase *>(this)->visitPathsImpl(
+      [&Callback](std::string &Path) { return Callback(StringRef(Path)); });
 }
 
 void CompilerInvocationBase::generateCC1CommandLine(
