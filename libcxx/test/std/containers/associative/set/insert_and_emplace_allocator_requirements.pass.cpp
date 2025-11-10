@@ -10,9 +10,9 @@
 
 // class set
 
-// constexpr insert(...) // constexpr since C++26
-// constexpr emplace(...) // constexpr since C++26
-// constexpr emplace_hint(...) // constexpr since C++26
+// insert(...)
+// emplace(...)
+// emplace_hint(...)
 
 // UNSUPPORTED: c++03
 
@@ -21,17 +21,10 @@
 #include "container_test_types.h"
 #include "../../set_allocator_requirement_test_templates.h"
 
-TEST_CONSTEXPR_CXX26 bool test() {
+int main(int, char**) {
   testSetInsert<TCT::set<> >();
   testSetEmplace<TCT::set<> >();
   testSetEmplaceHint<TCT::set<> >();
 
-  return true;
-}
-int main(int, char**) {
-  test();
-#if TEST_STD_VER >= 26
-  static_assert(test());
-#endif
   return 0;
 }

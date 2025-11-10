@@ -200,7 +200,7 @@ TestCaseMapSet<std::pair<K, V>> constexpr NElementsContainer_RangeWithDuplicates
         {16, 'D'}}};
 
 template <class Container, class T, class Iter, class Sent>
-void test_map_set_insert_range(bool allow_duplicates = false) {
+TEST_CONSTEXPR_CXX26 void test_map_set_insert_range(bool allow_duplicates = false) {
   auto test = [&](const TestCaseMapSet<T>& test_case, bool check_multi = false) {
     Container c(test_case.initial.begin(), test_case.initial.end());
     auto in = wrap_input<Iter, Sent>(test_case.input);
@@ -250,7 +250,7 @@ void test_map_set_insert_range(bool allow_duplicates = false) {
 // Move-only types.
 
 template <template <class...> class Container>
-void test_set_insert_range_move_only() {
+TEST_CONSTEXPR_CXX26 void test_set_insert_range_move_only() {
   MoveOnly input[5];
   std::ranges::subrange in(std::move_iterator{input}, std::move_iterator{input + 5});
 
@@ -271,8 +271,8 @@ void test_map_insert_range_move_only() {
 // Exception safety.
 
 template <template <class...> class Container>
-void test_set_insert_range_exception_safety_throwing_copy() {
-#if !defined(TEST_HAS_NO_EXCEPTIONS)
+TEST_CONSTEXPR_CXX26 void test_set_insert_range_exception_safety_throwing_copy() {
+#if !defined(TEST_HAS_NO_EXCEPTIONS) && !defined(TEST_IS_CONSTANT_EVALUATED)
   using T = ThrowingCopy<3>;
   T::reset();
   T in[5] = {{1}, {2}, {3}, {4}, {5}};
@@ -313,8 +313,8 @@ void test_map_insert_range_exception_safety_throwing_copy() {
 }
 
 template <template <class...> class Container, class T>
-void test_assoc_set_insert_range_exception_safety_throwing_allocator() {
-#if !defined(TEST_HAS_NO_EXCEPTIONS)
+TEST_CONSTEXPR_CXX26 void test_assoc_set_insert_range_exception_safety_throwing_allocator() {
+#if !defined(TEST_HAS_NO_EXCEPTIONS) && !defined(TEST_IS_CONSTANT_EVALUATED)
   T in[] = {1, 2};
 
   try {

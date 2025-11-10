@@ -20,7 +20,7 @@
 #include "Counter.h"
 
 template <class Container>
-void test(Container& c) {
+TEST_CONSTEXPR_CXX26 void test(Container& c) {
   std::size_t sz = c.size();
 
   for (auto first = c.cbegin(); first != c.cend();) {
@@ -42,7 +42,7 @@ TEST_CONSTEXPR_CXX26 bool test() {
     test(m);
   }
 
-  {
+  if (!TEST_IS_CONSTANT_EVALUATED) {
     std::set<Counter<int>> m = {1, 2, 3, 4, 5, 6};
     assert(Counter_base::gConstructed == 6);
     test(m);

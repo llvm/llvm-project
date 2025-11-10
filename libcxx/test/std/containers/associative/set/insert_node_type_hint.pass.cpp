@@ -19,19 +19,20 @@
 #include "min_allocator.h"
 
 template <class Container>
-typename Container::node_type node_factory(typename Container::key_type const& key) {
-  static Container c;
+TEST_CONSTEXPR_CXX26 typename Container::node_type node_factory(Container& c, typename Container::key_type const& key) {
   auto p = c.insert(key);
   assert(p.second);
   return c.extract(p.first);
 }
 
 template <class Container>
-void test(Container& c) {
+TEST_CONSTEXPR_CXX26 void test(Container& c) {
   auto* nf = &node_factory<Container>;
 
+  Container c2;
+
   for (int i = 0; i != 10; ++i) {
-    typename Container::node_type node = nf(i);
+    typename Container::node_type node = nf(c2, i);
     assert(!node.empty());
     std::size_t prev = c.size();
     auto it          = c.insert(c.end(), std::move(node));

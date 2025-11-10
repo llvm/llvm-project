@@ -172,7 +172,9 @@ template <class _NodeType, class _Derived>
 struct __set_node_handle_specifics {
   typedef typename _NodeType::__node_value_type value_type;
 
-  _LIBCPP_HIDE_FROM_ABI value_type& value() const { return static_cast<_Derived const*>(this)->__ptr_->__get_value(); }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 value_type& value() const {
+    return static_cast<_Derived const*>(this)->__ptr_->__get_value();
+  }
 };
 
 template <class _NodeType, class _Derived>
