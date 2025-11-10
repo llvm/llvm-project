@@ -6,33 +6,32 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Driver/Options.h"
+#include "clang/Options/Options.h"
 #include "llvm/Option/OptTable.h"
 #include <cassert>
 
-using namespace clang::driver;
-using namespace clang::driver::options;
+using namespace clang::options;
 using namespace llvm::opt;
 
 #define OPTTABLE_STR_TABLE_CODE
-#include "clang/Driver/Options.inc"
+#include "clang/Options/Options.inc"
 #undef OPTTABLE_STR_TABLE_CODE
 
 #define OPTTABLE_VALUES_CODE
-#include "clang/Driver/Options.inc"
+#include "clang/Options/Options.inc"
 #undef OPTTABLE_VALUES_CODE
 
 #define OPTTABLE_PREFIXES_TABLE_CODE
-#include "clang/Driver/Options.inc"
+#include "clang/Options/Options.inc"
 #undef OPTTABLE_PREFIXES_TABLE_CODE
 
 #define OPTTABLE_PREFIXES_UNION_CODE
-#include "clang/Driver/Options.inc"
+#include "clang/Options/Options.inc"
 #undef OPTTABLE_PREFIXES_UNION_CODE
 
 static constexpr OptTable::Info InfoTable[] = {
 #define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
-#include "clang/Driver/Options.inc"
+#include "clang/Options/Options.inc"
 #undef OPTION
 };
 
@@ -44,9 +43,9 @@ public:
       : PrecomputedOptTable(OptionStrTable, OptionPrefixesTable, InfoTable,
                             OptionPrefixesUnion) {}
 };
-}
+} // anonymous namespace
 
-const llvm::opt::OptTable &clang::driver::getDriverOptTable() {
+const llvm::opt::OptTable &clang::getDriverOptTable() {
   static DriverOptTable Table;
   return Table;
 }
