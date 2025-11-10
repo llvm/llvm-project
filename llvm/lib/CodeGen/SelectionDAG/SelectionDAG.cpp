@@ -76,7 +76,6 @@
 #include <cstdlib>
 #include <limits>
 #include <optional>
-#include <set>
 #include <string>
 #include <utility>
 #include <vector>
@@ -8404,7 +8403,8 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
   }
   case ISD::PARTIAL_REDUCE_UMLA:
   case ISD::PARTIAL_REDUCE_SMLA:
-  case ISD::PARTIAL_REDUCE_SUMLA: {
+  case ISD::PARTIAL_REDUCE_SUMLA:
+  case ISD::PARTIAL_REDUCE_FMLA: {
     [[maybe_unused]] EVT AccVT = N1.getValueType();
     [[maybe_unused]] EVT Input1VT = N2.getValueType();
     [[maybe_unused]] EVT Input2VT = N3.getValueType();
@@ -12746,6 +12746,10 @@ void SelectionDAG::getTopologicallyOrderedNodes(
   for (unsigned i = 0U; i < SortedNodes.size(); ++i) {
     const SDNode *N = SortedNodes[i];
     for (const SDNode *U : N->users()) {
+      // HandleSDNode is never part of a DAG and therefore has no entry in
+      // RemainingOperands.
+      if (U->getOpcode() == ISD::HANDLENODE)
+        continue;
       unsigned &NumRemOperands = RemainingOperands[U];
       assert(NumRemOperands && "Invalid number of remaining operands");
       --NumRemOperands;
@@ -12759,8 +12763,6 @@ void SelectionDAG::getTopologicallyOrderedNodes(
          "First node in topological sort is not the entry token");
   assert(SortedNodes.front()->getNumOperands() == 0 &&
          "First node in topological sort has operands");
-  assert(SortedNodes.back()->use_empty() &&
-         "Last node in topologic sort has users");
 }
 
 /// AddDbgValue - Add a dbg_value SDNode. If SD is non-null that means the
@@ -13060,6 +13062,11 @@ bool llvm::isOneOrOneSplat(SDValue N, bool AllowUndefs) {
   ConstantSDNode *C =
       isConstOrConstSplat(N, AllowUndefs, /*AllowTruncation*/ true);
   return C && C->isOne();
+}
+
+bool llvm::isOneOrOneSplatFP(SDValue N, bool AllowUndefs) {
+  ConstantFPSDNode *C = isConstOrConstSplatFP(N, AllowUndefs);
+  return C && C->isExactlyValue(1.0);
 }
 
 bool llvm::isAllOnesOrAllOnesSplat(SDValue N, bool AllowUndefs) {
