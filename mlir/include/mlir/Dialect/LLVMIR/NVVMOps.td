@@ -971,21 +971,22 @@ def NVVM_BarrierOp : NVVM_Op<"barrier", [AttrSizedOperandSegments]> {
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-bar)
   }];
 
+  let extraClassDeclaration = [{
+    static mlir::NVVM::IDArgPair
+      getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
+                            llvm::IRBuilderBase& builder);
+  }];
+
   let arguments = (ins Optional<I32>:$barrierId, Optional<I32>:$numberOfThreads,
       OptionalAttr<BarrierReductionAttr>:$reductionOp,
       Optional<I32>:$reductionOperand);
   string llvmBuilder = [{
-    llvm::Value *id = $barrierId ? $barrierId : builder.getInt32(0);
-    if ($numberOfThreads)
-      createIntrinsicCall(
-          builder, llvm::Intrinsic::nvvm_barrier_cta_sync_aligned_count,
-          {id, $numberOfThreads});
-    else if ($reductionOp)
-      createIntrinsicCall(
-          builder, getBarrierIntrinsicID($reductionOp), {$reductionOperand});
-    else
-      createIntrinsicCall(
-          builder, llvm::Intrinsic::nvvm_barrier_cta_sync_aligned_all, {id});
+    auto [id, args] = NVVM::BarrierOp::getIntrinsicIDAndArgs(
+                        *op, moduleTranslation, builder);
+    if ($reductionOp)
+      $res = createIntrinsicCall(builder, id, args);
+    else 
+      createIntrinsicCall(builder, id, args);
   }];
   let results = (outs Optional<I32>:$res);
 

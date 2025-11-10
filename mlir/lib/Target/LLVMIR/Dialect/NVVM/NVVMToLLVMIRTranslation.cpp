@@ -291,22 +291,6 @@ static unsigned getUnidirectionalFenceProxyID(NVVM::ProxyKind fromProxy,
   llvm_unreachable("Unsupported proxy kinds");
 }
 
-static unsigned
-getBarrierIntrinsicID(std::optional<NVVM::BarrierReduction> reduction) {
-  if (reduction) {
-    switch (*reduction) {
-    case NVVM::BarrierReduction::AND:
-      return llvm::Intrinsic::nvvm_barrier0_and;
-    case NVVM::BarrierReduction::OR:
-      return llvm::Intrinsic::nvvm_barrier0_or;
-    case NVVM::BarrierReduction::POPC:
-      return llvm::Intrinsic::nvvm_barrier0_popc;
-    }
-  }
-
-  llvm_unreachable("Unknown reduction operation for barrier");
-}
-
 static unsigned getMembarIntrinsicID(NVVM::MemScopeKind scope) {
   switch (scope) {
   case NVVM::MemScopeKind::CTA:
