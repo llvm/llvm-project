@@ -135,24 +135,76 @@ define <16 x float> @gather_lower(ptr %base, <16 x i32> %ind, i16 %mask) {
   ret <16 x float> %res
 }
 
-; Test case 5: v32i1 mask via bitconvert, lower 16 bits set (tests bitconvert pattern)
-define <32 x i16> @mask_v32i1_lower16(<32 x i16> %a, <32 x i16> %b) {
-; AVX512-LABEL: mask_v32i1_lower16:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm1[4,5,6,7]
-; AVX512-NEXT:    retq
-  %mask = bitcast i32 65535 to <32 x i1>
+; Test case 5: v32i1 mask via bitconvert combined with dynamic condition.
+; Ensures lower 16 lanes force the KSET1W path without folding into a shuffle.
+define <32 x i16> @mask_v32i1_lower16(<32 x i16> %a, <32 x i16> %b,
+                                      <32 x i16> %c, <32 x i16> %d) {
+; AVX512F-LABEL: mask_v32i1_lower16:
+; AVX512F:         vextracti64x4
+; AVX512F:         vpcmpgtw
+; AVX512F:         vpternlogd
+; AVX512F:         vinserti64x4
+; AVX512F:         vpternlogq
+;
+; AVX512DQ-LABEL: mask_v32i1_lower16:
+; AVX512DQ:         vextracti64x4
+; AVX512DQ:         vpcmpgtw
+; AVX512DQ:         vpternlogd
+; AVX512DQ:         vinserti64x4
+; AVX512DQ:         vpternlogq
+;
+; AVX512BW-LABEL: mask_v32i1_lower16:
+; AVX512BW:         movl $65535, %eax
+; AVX512BW:         kmovd %eax, %k0
+; AVX512BW:         vpcmpgtw %zmm3, %zmm2, %k1
+; AVX512BW:         kord %k0, %k1, %k1
+; AVX512BW:         vpblendmw %zmm0, %zmm1, %zmm0 {%k1}
+;
+; AVX512DQBW-LABEL: mask_v32i1_lower16:
+; AVX512DQBW:         kxnorw %k0, %k0, %k0
+; AVX512DQBW:         vpcmpgtw %zmm3, %zmm2, %k1
+; AVX512DQBW:         kord %k0, %k1, %k1
+; AVX512DQBW:         vpblendmw %zmm0, %zmm1, %zmm0 {%k1}
+  %mask0 = bitcast i32 65535 to <32 x i1>
+  %mask1 = icmp sgt <32 x i16> %c, %d
+  %mask = or <32 x i1> %mask0, %mask1
   %res = select <32 x i1> %mask, <32 x i16> %a, <32 x i16> %b
   ret <32 x i16> %res
 }
 
-; Test case 6: v64i1 mask via bitconvert, lower 32 bits set (tests bitconvert pattern)
-define <64 x i8> @mask_v64i1_lower32(<64 x i8> %a, <64 x i8> %b) {
-; AVX512-LABEL: mask_v64i1_lower32:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm1[4,5,6,7]
-; AVX512-NEXT:    retq
-  %mask = bitcast i64 4294967295 to <64 x i1>
+; Test case 6: v64i1 mask via bitconvert combined with dynamic condition.
+; Verifies the KSET1D submask pattern survives past SelectionDAG combines.
+define <64 x i8> @mask_v64i1_lower32(<64 x i8> %a, <64 x i8> %b,
+                                     <64 x i8> %c, <64 x i8> %d) {
+; AVX512F-LABEL: mask_v64i1_lower32:
+; AVX512F:         vextracti64x4
+; AVX512F:         vpcmpgtb
+; AVX512F:         vpternlogd
+; AVX512F:         vinserti64x4
+; AVX512F:         vpternlogq
+;
+; AVX512DQ-LABEL: mask_v64i1_lower32:
+; AVX512DQ:         vextracti64x4
+; AVX512DQ:         vpcmpgtb
+; AVX512DQ:         vpternlogd
+; AVX512DQ:         vinserti64x4
+; AVX512DQ:         vpternlogq
+;
+; AVX512BW-LABEL: mask_v64i1_lower32:
+; AVX512BW:         movl $4294967295, %eax
+; AVX512BW:         kmovq %rax, %k0
+; AVX512BW:         vpcmpgtb %zmm3, %zmm2, %k1
+; AVX512BW:         korq %k0, %k1, %k1
+; AVX512BW:         vpblendmb %zmm0, %zmm1, %zmm0 {%k1}
+;
+; AVX512DQBW-LABEL: mask_v64i1_lower32:
+; AVX512DQBW:         kxnord %k0, %k0, %k0
+; AVX512DQBW:         vpcmpgtb %zmm3, %zmm2, %k1
+; AVX512DQBW:         korq %k0, %k1, %k1
+; AVX512DQBW:         vpblendmb %zmm0, %zmm1, %zmm0 {%k1}
+  %mask0 = bitcast i64 4294967295 to <64 x i1>
+  %mask1 = icmp sgt <64 x i8> %c, %d
+  %mask = or <64 x i1> %mask0, %mask1
   %res = select <64 x i1> %mask, <64 x i8> %a, <64 x i8> %b
   ret <64 x i8> %res
 }
