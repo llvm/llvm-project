@@ -23,6 +23,8 @@
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Sema.h"
 
+#include "llvm/ADT/StringSwitch.h"
+
 namespace clang {
 
 static CountAttributedType::DynamicCountPointerKind
@@ -334,15 +336,13 @@ static void EmitIncompleteCountedByPointeeNotes(Sema &S,
   SourceRange AttrSrcRange = CATL.getAttrNameRange(S);
 
   StringRef Spelling = CATL.getAttrNameAsWritten(S);
-  StringRef FixedSpelling;
-  if (Spelling == "__counted_by")
-    FixedSpelling = "__sized_by";
-  else if (Spelling == "counted_by")
-    FixedSpelling = "sized_by";
-  else if (Spelling == "__counted_by_or_null")
-    FixedSpelling = "__sized_by_or_null";
-  else if (Spelling == "counted_by_or_null")
-    FixedSpelling = "sized_by_or_null";
+  StringRef FixedSpelling =
+      llvm::StringSwitch<StringRef>(Spelling)
+          .Case("__counted_by", "__sized_by")
+          .Case("counted_by", "sized_by")
+          .Case("__counted_by_or_null", "__sized_by_or_null")
+          .Case("counted_by_or_null", "sized_by_or_null")
+          .Default("");
   FixItHint Fix;
   if (!FixedSpelling.empty())
     Fix = FixItHint::CreateReplacement(AttrSrcRange, FixedSpelling);
