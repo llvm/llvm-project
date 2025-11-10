@@ -23,7 +23,7 @@
 #elif __has_include(<unistd.h>)
 #  include <unistd.h>
 #  if defined(_NEWLIB_VERSION)
-#    if defined(__POSIX_VISIBLE) && __POSIX_VISIBLE && __has_include(<stdio.h>)
+#    if defined(_POSIX_C_SOURCE) && __has_include(<stdio.h>)
 #      include <stdio.h>
 #      define HAS_FILENO_AND_ISATTY
 #    endif
