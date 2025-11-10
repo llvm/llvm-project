@@ -1217,12 +1217,6 @@ struct HasStructureComponentHelper
   HasStructureComponentHelper() : Base(*this) {}
   using Base::operator();
 
-  bool operator()(const DataRef &dataRef) const {
-    return std::holds_alternative<Component>(dataRef.u);
-  }
-  bool operator()(const NamedEntity &NamedEntity) const {
-    return NamedEntity.UnwrapComponent() != nullptr;
-  }
   bool operator()(const Component &) const { return true; }
 };
 

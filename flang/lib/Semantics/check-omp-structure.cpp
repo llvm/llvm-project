@@ -4676,7 +4676,7 @@ void OmpStructureChecker::CheckStructureComponent(
     if (const parser::DataRef *dataRef{
             std::get_if<parser::DataRef>(&designator.u)}) {
       if (!IsDataRefTypeParamInquiry(dataRef)) {
-        const auto expr = AnalyzeExpr(context_, designator);
+        const auto expr {AnalyzeExpr(context_, designator)};
         if (expr.has_value() && evaluate::HasStructureComponent(expr.value())) {
           context_.Say(designator.source,
               "A variable that is part of another variable cannot appear on the %s clause"_err_en_US,
