@@ -12,9 +12,9 @@
 #include "mlir/Dialect/Arith/Transforms/Passes.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Func/Utils/Utils.h"
+#include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/Verifier.h"
-
-#include "llvm/ADT/TypeSwitch.h"
+#include "mlir/Transforms/WalkPatternRewriteDriver.h"
 
 namespace mlir {
 #define GEN_PASS_DEF_ARITHTOAPFLOATCONVERSIONPASS
@@ -24,7 +24,7 @@ namespace mlir {
 using namespace mlir;
 using namespace mlir::func;
 
-/// Helper function to lookup or create the symbol for a runtime library
+/// Helper function to look up or create the symbol for a runtime library
 /// function for a binary arithmetic operation.
 ///
 /// Parameter 1: APFloat semantics
@@ -46,44 +46,55 @@ lookupOrCreateBinaryFn(OpBuilder &b, Operation *moduleOp, StringRef name,
 }
 
 /// Rewrite a binary arithmetic operation to an APFloat function call.
-template <typename OpTy>
-static LogicalResult rewriteBinaryOp(RewriterBase &rewriter, ModuleOp module,
-                                     OpTy op, StringRef apfloatName) {
-  // Get APFloat function from runtime library.
-  FailureOr<Operation *> fn =
-      lookupOrCreateBinaryFn(rewriter, module, apfloatName);
-  if (failed(fn))
-    return op->emitError("failed to lookup or create APFloat function");
+template <typename OpTy, const char *APFloatName>
+struct ArithOpToAPFloatConversion final : OpRewritePattern<OpTy> {
+  using OpRewritePattern<OpTy>::OpRewritePattern;
 
-  // Cast operands to 64-bit integers.
-  Location loc = op.getLoc();
-  auto floatTy = cast<FloatType>(op.getType());
-  auto intWType = rewriter.getIntegerType(floatTy.getWidth());
-  auto int64Type = rewriter.getI64Type();
-  Value lhsBits = arith::ExtUIOp::create(
-      rewriter, loc, int64Type,
-      arith::BitcastOp::create(rewriter, loc, intWType, op.getLhs()));
-  Value rhsBits = arith::ExtUIOp::create(
-      rewriter, loc, int64Type,
-      arith::BitcastOp::create(rewriter, loc, intWType, op.getRhs()));
+  LogicalResult matchAndRewrite(OpTy op,
+                                PatternRewriter &rewriter) const override {
+    auto moduleOp = op->template getParentOfType<ModuleOp>();
+    if (!moduleOp) {
+      op.emitError("arith op must be contained within a builtin.module");
+      return failure();
+    }
+    // Get APFloat function from runtime library.
+    FailureOr<Operation *> fn =
+        lookupOrCreateBinaryFn(rewriter, moduleOp, APFloatName);
+    if (failed(fn))
+      return op->emitError("failed to lookup or create APFloat function");
 
-  // Call APFloat function.
-  int32_t sem = llvm::APFloatBase::SemanticsToEnum(floatTy.getFloatSemantics());
-  Value semValue = arith::ConstantOp::create(
-      rewriter, loc, rewriter.getI32Type(),
-      rewriter.getIntegerAttr(rewriter.getI32Type(), sem));
-  SmallVector<Value> params = {semValue, lhsBits, rhsBits};
-  auto resultOp =
-      func::CallOp::create(rewriter, loc, TypeRange(rewriter.getI64Type()),
-                           SymbolRefAttr::get(*fn), params);
+    rewriter.setInsertionPoint(op);
+    // Cast operands to 64-bit integers.
+    Location loc = op.getLoc();
+    auto floatTy = cast<FloatType>(op.getType());
+    auto intWType = rewriter.getIntegerType(floatTy.getWidth());
+    auto int64Type = rewriter.getI64Type();
+    Value lhsBits = arith::ExtUIOp::create(
+        rewriter, loc, int64Type,
+        arith::BitcastOp::create(rewriter, loc, intWType, op.getLhs()));
+    Value rhsBits = arith::ExtUIOp::create(
+        rewriter, loc, int64Type,
+        arith::BitcastOp::create(rewriter, loc, intWType, op.getRhs()));
 
-  // Truncate result to the original width.
-  Value truncatedBits =
-      arith::TruncIOp::create(rewriter, loc, intWType, resultOp->getResult(0));
-  rewriter.replaceOp(
-      op, arith::BitcastOp::create(rewriter, loc, floatTy, truncatedBits));
-  return success();
-}
+    // Call APFloat function.
+    int32_t sem =
+        llvm::APFloatBase::SemanticsToEnum(floatTy.getFloatSemantics());
+    Value semValue = arith::ConstantOp::create(
+        rewriter, loc, rewriter.getI32Type(),
+        rewriter.getIntegerAttr(rewriter.getI32Type(), sem));
+    SmallVector<Value> params = {semValue, lhsBits, rhsBits};
+    auto resultOp =
+        func::CallOp::create(rewriter, loc, TypeRange(rewriter.getI64Type()),
+                             SymbolRefAttr::get(*fn), params);
+
+    // Truncate result to the original width.
+    Value truncatedBits = arith::TruncIOp::create(rewriter, loc, intWType,
+                                                  resultOp->getResult(0));
+    rewriter.replaceOp(
+        op, arith::BitcastOp::create(rewriter, loc, floatTy, truncatedBits));
+    return success();
+  }
+};
 
 namespace {
 struct ArithToAPFloatConversionPass final
@@ -91,35 +102,19 @@ struct ArithToAPFloatConversionPass final
   using Base::Base;
 
   void runOnOperation() override {
-    ModuleOp moduleOp = getOperation();
-    IRRewriter rewriter(getOperation()->getContext());
-    SmallVector<arith::AddFOp> addOps;
-    WalkResult status = moduleOp->walk([&](Operation *op) {
-      rewriter.setInsertionPoint(op);
-      LogicalResult result =
-          llvm::TypeSwitch<Operation *, LogicalResult>(op)
-              .Case<arith::AddFOp>([&](arith::AddFOp op) {
-                return rewriteBinaryOp(rewriter, moduleOp, op, "add");
-              })
-              .Case<arith::SubFOp>([&](arith::SubFOp op) {
-                return rewriteBinaryOp(rewriter, moduleOp, op, "subtract");
-              })
-              .Case<arith::MulFOp>([&](arith::MulFOp op) {
-                return rewriteBinaryOp(rewriter, moduleOp, op, "multiply");
-              })
-              .Case<arith::DivFOp>([&](arith::DivFOp op) {
-                return rewriteBinaryOp(rewriter, moduleOp, op, "divide");
-              })
-              .Case<arith::RemFOp>([&](arith::RemFOp op) {
-                return rewriteBinaryOp(rewriter, moduleOp, op, "remainder");
-              })
-              .Default([](Operation *op) { return success(); });
-      if (failed(result))
-        return WalkResult::interrupt();
-      return WalkResult::advance();
-    });
-    if (status.wasInterrupted())
-      return signalPassFailure();
+    MLIRContext *context = &getContext();
+    RewritePatternSet patterns(context);
+    static const char add[] = "add";
+    static const char subtract[] = "subtract";
+    static const char multiply[] = "multiply";
+    static const char divide[] = "divide";
+    static const char remainder[] = "remainder";
+    patterns.add<ArithOpToAPFloatConversion<arith::AddFOp, add>,
+                 ArithOpToAPFloatConversion<arith::SubFOp, subtract>,
+                 ArithOpToAPFloatConversion<arith::MulFOp, multiply>,
+                 ArithOpToAPFloatConversion<arith::DivFOp, divide>,
+                 ArithOpToAPFloatConversion<arith::RemFOp, remainder>>(context);
+    walkAndApplyPatterns(getOperation(), std::move(patterns));
   }
 };
 } // namespace
