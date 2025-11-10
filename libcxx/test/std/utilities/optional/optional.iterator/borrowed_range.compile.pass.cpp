@@ -20,34 +20,15 @@
 #include <ranges>
 
 template <typename T>
-constexpr void enable_borrowed_range() {
-  static_assert(std::ranges::enable_borrowed_range<std::optional<T&>>);
-}
-
-template <typename T>
 constexpr void borrowed_range() {
+  static_assert(std::ranges::enable_borrowed_range<std::optional<T&>>);
   static_assert(std::ranges::range<std::optional<T&>> == std::ranges::borrowed_range<std::optional<T&>>);
 }
 
-constexpr void test_enable_borrowed_range() {
-  enable_borrowed_range<int>();
-  enable_borrowed_range<const int>();
-  enable_borrowed_range<int[]>();
-  enable_borrowed_range<int[10]>();
-  enable_borrowed_range<int()>();
-}
-
-constexpr void test_borrowed_range() {
+void test_borrowed_range() {
   borrowed_range<int>();
   borrowed_range<const int>();
   borrowed_range<int[]>();
   borrowed_range<int[10]>();
   borrowed_range<int()>();
-}
-
-int main(int, char**) {
-  test_enable_borrowed_range();
-  test_borrowed_range();
-
-  return 0;
 }
