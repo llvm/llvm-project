@@ -251,11 +251,12 @@ bb2:
   ret void
 }
 
-define amdgpu_kernel void @scalar_alloca_vector_gep_i8(ptr %buffer, float %data, i32 %index) {
-; CHECK-LABEL: define amdgpu_kernel void @scalar_alloca_vector_gep_i8(
-; CHECK-SAME: ptr [[BUFFER:%.*]], float [[DATA:%.*]], i32 [[INDEX:%.*]]) {
+define amdgpu_kernel void @scalar_alloca_vector_gep_i8_0_or_4(ptr %buffer, float %data, i1 %idx_sel) {
+; CHECK-LABEL: define amdgpu_kernel void @scalar_alloca_vector_gep_i8_0_or_4(
+; CHECK-SAME: ptr [[BUFFER:%.*]], float [[DATA:%.*]], i1 [[IDX_SEL:%.*]]) {
 ; CHECK-NEXT:    [[ALLOCA:%.*]] = freeze <3 x float> poison
 ; CHECK-NEXT:    [[VEC:%.*]] = load <3 x float>, ptr [[BUFFER]], align 16
+; CHECK-NEXT:    [[INDEX:%.*]] = select i1 [[IDX_SEL]], i32 0, i32 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <3 x float> [[VEC]], float [[DATA]], i32 [[TMP1]]
 ; CHECK-NEXT:    store <3 x float> [[TMP2]], ptr [[BUFFER]], align 16
@@ -264,6 +265,67 @@ define amdgpu_kernel void @scalar_alloca_vector_gep_i8(ptr %buffer, float %data,
   %alloca = alloca <3 x float>, align 16, addrspace(5)
   %vec = load <3 x float>, ptr %buffer
   store <3 x float> %vec, ptr addrspace(5) %alloca
+  %index = select i1 %idx_sel, i32 0, i32 4
+  %elt = getelementptr inbounds nuw i8, ptr addrspace(5) %alloca, i32 %index
+  store float %data, ptr addrspace(5) %elt, align 4
+  %updated = load <3 x float>, ptr addrspace(5) %alloca, align 16
+  store <3 x float> %updated, ptr %buffer, align 16
+  ret void
+}
+
+define amdgpu_kernel void @scalar_alloca_vector_gep_i8_4_or_8(ptr %buffer, float %data, i1 %idx_sel) {
+; CHECK-LABEL: define amdgpu_kernel void @scalar_alloca_vector_gep_i8_4_or_8(
+; CHECK-SAME: ptr [[BUFFER:%.*]], float [[DATA:%.*]], i1 [[IDX_SEL:%.*]]) {
+; CHECK-NEXT:    [[ALLOCA:%.*]] = freeze <3 x float> poison
+; CHECK-NEXT:    [[VEC:%.*]] = load <3 x float>, ptr [[BUFFER]], align 16
+; CHECK-NEXT:    [[INDEX:%.*]] = select i1 [[IDX_SEL]], i32 4, i32 8
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <3 x float> [[VEC]], float [[DATA]], i32 [[TMP1]]
+; CHECK-NEXT:    store <3 x float> [[TMP2]], ptr [[BUFFER]], align 16
+; CHECK-NEXT:    ret void
+;
+  %alloca = alloca <3 x float>, align 16, addrspace(5)
+  %vec = load <3 x float>, ptr %buffer
+  store <3 x float> %vec, ptr addrspace(5) %alloca
+  %index = select i1 %idx_sel, i32 4, i32 8
+  %elt = getelementptr inbounds nuw i8, ptr addrspace(5) %alloca, i32 %index
+  store float %data, ptr addrspace(5) %elt, align 4
+  %updated = load <3 x float>, ptr addrspace(5) %alloca, align 16
+  store <3 x float> %updated, ptr %buffer, align 16
+  ret void
+}
+
+define amdgpu_kernel void @scalar_alloca_vector_gep_i8_4_or_5_no_promote(ptr %buffer, float %data, i1 %idx_sel) {
+; CHECK-LABEL: define amdgpu_kernel void @scalar_alloca_vector_gep_i8_4_or_5_no_promote(
+; CHECK-SAME: ptr [[BUFFER:%.*]], float [[DATA:%.*]], i1 [[IDX_SEL:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call noalias nonnull dereferenceable(64) ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr addrspace(4) [[TMP1]], i64 1
+; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(4) [[TMP2]], align 4, !invariant.load [[META0]]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr addrspace(4) [[TMP1]], i64 2
+; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr addrspace(4) [[TMP4]], align 4, !range [[RNG1]], !invariant.load [[META0]]
+; CHECK-NEXT:    [[TMP6:%.*]] = lshr i32 [[TMP3]], 16
+; CHECK-NEXT:    [[TMP7:%.*]] = call range(i32 0, 1024) i32 @llvm.amdgcn.workitem.id.x()
+; CHECK-NEXT:    [[TMP8:%.*]] = call range(i32 0, 1024) i32 @llvm.amdgcn.workitem.id.y()
+; CHECK-NEXT:    [[TMP9:%.*]] = call range(i32 0, 1024) i32 @llvm.amdgcn.workitem.id.z()
+; CHECK-NEXT:    [[TMP10:%.*]] = mul nuw nsw i32 [[TMP6]], [[TMP5]]
+; CHECK-NEXT:    [[TMP11:%.*]] = mul i32 [[TMP10]], [[TMP7]]
+; CHECK-NEXT:    [[TMP12:%.*]] = mul nuw nsw i32 [[TMP8]], [[TMP5]]
+; CHECK-NEXT:    [[TMP13:%.*]] = add i32 [[TMP11]], [[TMP12]]
+; CHECK-NEXT:    [[TMP14:%.*]] = add i32 [[TMP13]], [[TMP9]]
+; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [1024 x <3 x float>], ptr addrspace(3) @scalar_alloca_vector_gep_i8_4_or_5_no_promote.alloca, i32 0, i32 [[TMP14]]
+; CHECK-NEXT:    [[VEC:%.*]] = load <3 x float>, ptr [[BUFFER]], align 16
+; CHECK-NEXT:    store <3 x float> [[VEC]], ptr addrspace(3) [[TMP15]], align 16
+; CHECK-NEXT:    [[INDEX:%.*]] = select i1 [[IDX_SEL]], i32 4, i32 5
+; CHECK-NEXT:    [[ELT:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(3) [[TMP15]], i32 [[INDEX]]
+; CHECK-NEXT:    store float [[DATA]], ptr addrspace(3) [[ELT]], align 4
+; CHECK-NEXT:    [[UPDATED:%.*]] = load <3 x float>, ptr addrspace(3) [[TMP15]], align 16
+; CHECK-NEXT:    store <3 x float> [[UPDATED]], ptr [[BUFFER]], align 16
+; CHECK-NEXT:    ret void
+;
+  %alloca = alloca <3 x float>, align 16, addrspace(5)
+  %vec = load <3 x float>, ptr %buffer
+  store <3 x float> %vec, ptr addrspace(5) %alloca
+  %index = select i1 %idx_sel, i32 4, i32 5
   %elt = getelementptr inbounds nuw i8, ptr addrspace(5) %alloca, i32 %index
   store float %data, ptr addrspace(5) %elt, align 4
   %updated = load <3 x float>, ptr addrspace(5) %alloca, align 16
