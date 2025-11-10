@@ -30,7 +30,7 @@ class Mips16InstrInfo : public MipsInstrInfo {
 public:
   explicit Mips16InstrInfo(const MipsSubtarget &STI);
 
-  const MipsRegisterInfo &getRegisterInfo() const override;
+  const Mips16RegisterInfo &getRegisterInfo() const { return RI; }
 
   /// isLoadFromStackSlot - If the specified machine instruction is a direct
   /// load from a stack slot, return the virtual or physical register number of

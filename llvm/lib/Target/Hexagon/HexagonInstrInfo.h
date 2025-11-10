@@ -23,6 +23,8 @@
 #include <cstdint>
 #include <vector>
 
+#include "HexagonRegisterInfo.h"
+
 #define GET_INSTRINFO_HEADER
 #include "HexagonGenInstrInfo.inc"
 
@@ -36,6 +38,7 @@ class MachineOperand;
 class TargetRegisterInfo;
 
 class HexagonInstrInfo : public HexagonGenInstrInfo {
+  const HexagonRegisterInfo RegInfo;
   const HexagonSubtarget &Subtarget;
 
   enum BundleAttribute {
@@ -46,6 +49,8 @@ class HexagonInstrInfo : public HexagonGenInstrInfo {
 
 public:
   explicit HexagonInstrInfo(const HexagonSubtarget &ST);
+
+  const HexagonRegisterInfo &getRegisterInfo() const { return RegInfo; }
 
   /// TargetInstrInfo overrides.
 
