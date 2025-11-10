@@ -396,7 +396,7 @@ def pp_out_of_date_dependency : Warning<
   "current file is older than dependency %0">;
 def ext_pp_undef_builtin_macro : ExtWarn<"undefining builtin macro">,
   InGroup<BuiltinMacroRedefined>;
-def ext_pp_redef_builtin_macro : ExtWarn<"redefining builtin macro">,
+def ext_pp_redef_builtin_macro : ExtWarn<"redefining builtin macro '%0'">,
   InGroup<BuiltinMacroRedefined>;
 def pp_disabled_macro_expansion : Warning<
   "disabled expansion of recursive macro">, DefaultIgnore,
