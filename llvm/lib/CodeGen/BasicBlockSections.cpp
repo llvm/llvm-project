@@ -310,7 +310,8 @@ bool BasicBlockSections::handleBBSections(MachineFunction &MF) {
   if (BBSectionsType == BasicBlockSection::List) {
     auto ClusterInfo = getAnalysis<BasicBlockSectionsProfileReaderWrapperPass>()
                            .getClusterInfoForFunction(MF.getName());
-    if (ClusterInfo.empty()) return false;
+    if (ClusterInfo.empty())
+      return false;
     for (auto &BBClusterInfo : ClusterInfo) {
       FuncClusterInfo.try_emplace(BBClusterInfo.BBID, BBClusterInfo);
     }
