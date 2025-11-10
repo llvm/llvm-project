@@ -1,8 +1,10 @@
-[clang-tidy/checks/**/*.rst]
+[{**/*.rst,*.rst}]
 charset = utf-8
 trim_trailing_whitespace = true
 insert_final_newline = true
 end_of_line = lf
 indent_style = space
-indent_size = 2
 max_line_length = 80
+
+[list.rst]
+max_line_length = unset
