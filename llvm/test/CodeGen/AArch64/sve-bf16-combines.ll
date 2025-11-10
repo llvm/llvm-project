@@ -7,21 +7,17 @@ target triple = "aarch64-unknown-linux-gnu"
 define <vscale x 8 x bfloat> @fmla_nxv8bf16(<vscale x 8 x bfloat> %acc, <vscale x 8 x bfloat> %m1, <vscale x 8 x bfloat> %m2) {
 ; SVE-LABEL: fmla_nxv8bf16:
 ; SVE:       // %bb.0:
-; SVE-NEXT:    uunpkhi z3.s, z2.h
-; SVE-NEXT:    uunpkhi z4.s, z1.h
-; SVE-NEXT:    uunpkhi z5.s, z0.h
+; SVE-NEXT:    uunpkhi z3.s, z0.h
+; SVE-NEXT:    uunpklo z0.s, z0.h
+; SVE-NEXT:    uunpkhi z4.s, z2.h
+; SVE-NEXT:    uunpkhi z5.s, z1.h
 ; SVE-NEXT:    uunpklo z2.s, z2.h
 ; SVE-NEXT:    uunpklo z1.s, z1.h
-; SVE-NEXT:    uunpklo z0.s, z0.h
 ; SVE-NEXT:    ptrue p0.s
 ; SVE-NEXT:    lsl z3.s, z3.s, #16
-; SVE-NEXT:    lsl z4.s, z4.s, #16
-; SVE-NEXT:    lsl z5.s, z5.s, #16
-; SVE-NEXT:    lsl z2.s, z2.s, #16
-; SVE-NEXT:    lsl z1.s, z1.s, #16
 ; SVE-NEXT:    lsl z0.s, z0.s, #16
-; SVE-NEXT:    fmad z3.s, p0/m, z4.s, z5.s
-; SVE-NEXT:    fmla z0.s, p0/m, z1.s, z2.s
+; SVE-NEXT:    bfmlalb z3.s, z5.h, z4.h
+; SVE-NEXT:    bfmlalb z0.s, z1.h, z2.h
 ; SVE-NEXT:    bfcvt z1.h, p0/m, z3.s
 ; SVE-NEXT:    bfcvt z0.h, p0/m, z0.s
 ; SVE-NEXT:    uzp1 z0.h, z0.h, z1.h
@@ -40,11 +36,9 @@ define <vscale x 8 x bfloat> @fmla_nxv8bf16(<vscale x 8 x bfloat> %acc, <vscale 
 define <vscale x 4 x bfloat> @fmla_nxv4bf16(<vscale x 4 x bfloat> %acc, <vscale x 4 x bfloat> %m1, <vscale x 4 x bfloat> %m2) {
 ; SVE-LABEL: fmla_nxv4bf16:
 ; SVE:       // %bb.0:
-; SVE-NEXT:    lsl z2.s, z2.s, #16
-; SVE-NEXT:    lsl z1.s, z1.s, #16
 ; SVE-NEXT:    lsl z0.s, z0.s, #16
 ; SVE-NEXT:    ptrue p0.s
-; SVE-NEXT:    fmla z0.s, p0/m, z1.s, z2.s
+; SVE-NEXT:    bfmlalb z0.s, z1.h, z2.h
 ; SVE-NEXT:    bfcvt z0.h, p0/m, z0.s
 ; SVE-NEXT:    ret
 ;
@@ -83,22 +77,18 @@ define <vscale x 8 x bfloat> @fmls_nxv8bf16(<vscale x 8 x bfloat> %acc, <vscale 
 ; SVE-LABEL: fmls_nxv8bf16:
 ; SVE:       // %bb.0:
 ; SVE-NEXT:    ptrue p0.h
-; SVE-NEXT:    uunpkhi z3.s, z2.h
-; SVE-NEXT:    uunpkhi z4.s, z0.h
-; SVE-NEXT:    uunpklo z2.s, z2.h
+; SVE-NEXT:    uunpkhi z3.s, z0.h
 ; SVE-NEXT:    uunpklo z0.s, z0.h
+; SVE-NEXT:    uunpkhi z5.s, z2.h
+; SVE-NEXT:    uunpklo z2.s, z2.h
 ; SVE-NEXT:    fneg z1.h, p0/m, z1.h
 ; SVE-NEXT:    ptrue p0.s
 ; SVE-NEXT:    lsl z3.s, z3.s, #16
-; SVE-NEXT:    lsl z4.s, z4.s, #16
-; SVE-NEXT:    lsl z2.s, z2.s, #16
 ; SVE-NEXT:    lsl z0.s, z0.s, #16
-; SVE-NEXT:    uunpkhi z5.s, z1.h
+; SVE-NEXT:    uunpkhi z4.s, z1.h
 ; SVE-NEXT:    uunpklo z1.s, z1.h
-; SVE-NEXT:    lsl z5.s, z5.s, #16
-; SVE-NEXT:    lsl z1.s, z1.s, #16
-; SVE-NEXT:    fmad z3.s, p0/m, z5.s, z4.s
-; SVE-NEXT:    fmla z0.s, p0/m, z1.s, z2.s
+; SVE-NEXT:    bfmlalb z3.s, z4.h, z5.h
+; SVE-NEXT:    bfmlalb z0.s, z1.h, z2.h
 ; SVE-NEXT:    bfcvt z1.h, p0/m, z3.s
 ; SVE-NEXT:    bfcvt z0.h, p0/m, z0.s
 ; SVE-NEXT:    uzp1 z0.h, z0.h, z1.h
@@ -118,11 +108,9 @@ define <vscale x 4 x bfloat> @fmls_nxv4bf16(<vscale x 4 x bfloat> %acc, <vscale 
 ; SVE-LABEL: fmls_nxv4bf16:
 ; SVE:       // %bb.0:
 ; SVE-NEXT:    ptrue p0.s
-; SVE-NEXT:    lsl z2.s, z2.s, #16
 ; SVE-NEXT:    lsl z0.s, z0.s, #16
 ; SVE-NEXT:    fneg z1.h, p0/m, z1.h
-; SVE-NEXT:    lsl z1.s, z1.s, #16
-; SVE-NEXT:    fmla z0.s, p0/m, z1.s, z2.s
+; SVE-NEXT:    bfmlalb z0.s, z1.h, z2.h
 ; SVE-NEXT:    bfcvt z0.h, p0/m, z0.s
 ; SVE-NEXT:    ret
 ;
@@ -161,24 +149,20 @@ define <vscale x 2 x bfloat> @fmls_nxv2bf16(<vscale x 2 x bfloat> %acc, <vscale 
 define <vscale x 8 x bfloat> @fmla_sel_nxv8bf16(<vscale x 8 x i1> %pred, <vscale x 8 x bfloat> %acc, <vscale x 8 x bfloat> %m1, <vscale x 8 x bfloat> %m2) {
 ; SVE-LABEL: fmla_sel_nxv8bf16:
 ; SVE:       // %bb.0:
-; SVE-NEXT:    uunpkhi z3.s, z2.h
-; SVE-NEXT:    uunpkhi z4.s, z1.h
-; SVE-NEXT:    uunpkhi z5.s, z0.h
+; SVE-NEXT:    uunpkhi z3.s, z0.h
+; SVE-NEXT:    uunpklo z4.s, z0.h
+; SVE-NEXT:    uunpkhi z5.s, z2.h
+; SVE-NEXT:    uunpkhi z6.s, z1.h
 ; SVE-NEXT:    uunpklo z2.s, z2.h
 ; SVE-NEXT:    uunpklo z1.s, z1.h
-; SVE-NEXT:    uunpklo z6.s, z0.h
 ; SVE-NEXT:    ptrue p1.s
 ; SVE-NEXT:    lsl z3.s, z3.s, #16
 ; SVE-NEXT:    lsl z4.s, z4.s, #16
-; SVE-NEXT:    lsl z5.s, z5.s, #16
-; SVE-NEXT:    lsl z2.s, z2.s, #16
-; SVE-NEXT:    lsl z1.s, z1.s, #16
-; SVE-NEXT:    lsl z6.s, z6.s, #16
-; SVE-NEXT:    fmad z3.s, p1/m, z4.s, z5.s
-; SVE-NEXT:    fmad z1.s, p1/m, z2.s, z6.s
-; SVE-NEXT:    bfcvt z2.h, p1/m, z3.s
-; SVE-NEXT:    bfcvt z1.h, p1/m, z1.s
-; SVE-NEXT:    uzp1 z1.h, z1.h, z2.h
+; SVE-NEXT:    bfmlalb z3.s, z6.h, z5.h
+; SVE-NEXT:    bfmlalb z4.s, z1.h, z2.h
+; SVE-NEXT:    bfcvt z1.h, p1/m, z3.s
+; SVE-NEXT:    bfcvt z2.h, p1/m, z4.s
+; SVE-NEXT:    uzp1 z1.h, z2.h, z1.h
 ; SVE-NEXT:    mov z0.h, p0/m, z1.h
 ; SVE-NEXT:    ret
 ;
@@ -195,12 +179,9 @@ define <vscale x 8 x bfloat> @fmla_sel_nxv8bf16(<vscale x 8 x i1> %pred, <vscale
 define <vscale x 4 x bfloat> @fmla_sel_nxv4bf16(<vscale x 4 x i1> %pred, <vscale x 4 x bfloat> %acc, <vscale x 4 x bfloat> %m1, <vscale x 4 x bfloat> %m2) {
 ; SVE-LABEL: fmla_sel_nxv4bf16:
 ; SVE:       // %bb.0:
-; SVE-NEXT:    lsl z2.s, z2.s, #16
-; SVE-NEXT:    lsl z1.s, z1.s, #16
 ; SVE-NEXT:    lsl z3.s, z0.s, #16
-; SVE-NEXT:    ptrue p1.s
-; SVE-NEXT:    fmad z1.s, p1/m, z2.s, z3.s
-; SVE-NEXT:    bfcvt z0.h, p0/m, z1.s
+; SVE-NEXT:    bfmlalb z3.s, z1.h, z2.h
+; SVE-NEXT:    bfcvt z0.h, p0/m, z3.s
 ; SVE-NEXT:    ret
 ;
 ; SVE-B16B16-LABEL: fmla_sel_nxv4bf16:
@@ -238,25 +219,21 @@ define <vscale x 8 x bfloat> @fmls_sel_nxv8bf16(<vscale x 8 x i1> %pred, <vscale
 ; SVE-LABEL: fmls_sel_nxv8bf16:
 ; SVE:       // %bb.0:
 ; SVE-NEXT:    ptrue p1.h
-; SVE-NEXT:    uunpkhi z3.s, z2.h
-; SVE-NEXT:    uunpkhi z4.s, z0.h
+; SVE-NEXT:    uunpkhi z3.s, z0.h
+; SVE-NEXT:    uunpklo z4.s, z0.h
+; SVE-NEXT:    uunpkhi z6.s, z2.h
 ; SVE-NEXT:    uunpklo z2.s, z2.h
-; SVE-NEXT:    uunpklo z6.s, z0.h
 ; SVE-NEXT:    fneg z1.h, p1/m, z1.h
 ; SVE-NEXT:    ptrue p1.s
 ; SVE-NEXT:    lsl z3.s, z3.s, #16
 ; SVE-NEXT:    lsl z4.s, z4.s, #16
-; SVE-NEXT:    lsl z2.s, z2.s, #16
-; SVE-NEXT:    lsl z6.s, z6.s, #16
 ; SVE-NEXT:    uunpkhi z5.s, z1.h
 ; SVE-NEXT:    uunpklo z1.s, z1.h
-; SVE-NEXT:    lsl z5.s, z5.s, #16
-; SVE-NEXT:    lsl z1.s, z1.s, #16
-; SVE-NEXT:    fmad z3.s, p1/m, z5.s, z4.s
-; SVE-NEXT:    fmad z1.s, p1/m, z2.s, z6.s
-; SVE-NEXT:    bfcvt z2.h, p1/m, z3.s
-; SVE-NEXT:    bfcvt z1.h, p1/m, z1.s
-; SVE-NEXT:    uzp1 z1.h, z1.h, z2.h
+; SVE-NEXT:    bfmlalb z3.s, z5.h, z6.h
+; SVE-NEXT:    bfmlalb z4.s, z1.h, z2.h
+; SVE-NEXT:    bfcvt z1.h, p1/m, z3.s
+; SVE-NEXT:    bfcvt z2.h, p1/m, z4.s
+; SVE-NEXT:    uzp1 z1.h, z2.h, z1.h
 ; SVE-NEXT:    mov z0.h, p0/m, z1.h
 ; SVE-NEXT:    ret
 ;
@@ -274,12 +251,10 @@ define <vscale x 4 x bfloat> @fmls_sel_nxv4bf16(<vscale x 4 x i1> %pred, <vscale
 ; SVE-LABEL: fmls_sel_nxv4bf16:
 ; SVE:       // %bb.0:
 ; SVE-NEXT:    ptrue p1.s
-; SVE-NEXT:    lsl z2.s, z2.s, #16
 ; SVE-NEXT:    lsl z3.s, z0.s, #16
 ; SVE-NEXT:    fneg z1.h, p1/m, z1.h
-; SVE-NEXT:    lsl z1.s, z1.s, #16
-; SVE-NEXT:    fmad z1.s, p1/m, z2.s, z3.s
-; SVE-NEXT:    bfcvt z0.h, p0/m, z1.s
+; SVE-NEXT:    bfmlalb z3.s, z1.h, z2.h
+; SVE-NEXT:    bfcvt z0.h, p0/m, z3.s
 ; SVE-NEXT:    ret
 ;
 ; SVE-B16B16-LABEL: fmls_sel_nxv4bf16:

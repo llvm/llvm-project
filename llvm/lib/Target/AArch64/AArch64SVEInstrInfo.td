@@ -2578,6 +2578,10 @@ let Predicates = [HasBF16, HasSVE_or_SME] in {
   defm BFMLALB_ZZZI : sve2_fp_mla_long_by_indexed_elem<0b100, "bfmlalb", nxv4f32, nxv8bf16, int_aarch64_sve_bfmlalb_lane_v2>;
   defm BFMLALT_ZZZI : sve2_fp_mla_long_by_indexed_elem<0b101, "bfmlalt", nxv4f32, nxv8bf16, int_aarch64_sve_bfmlalt_lane_v2>;
 
+  def : Pat<(nxv4f32 (AArch64fmla_p (SVEAllActive), nxv4f32:$acc, (nxv4f32 (AArch64fcvte_mt (SVEAllActive), nxv4bf16:$Zn, (undef))),
+                                                                  (nxv4f32 (AArch64fcvte_mt (SVEAllActive), nxv4bf16:$Zm, (undef))))),
+            (BFMLALB_ZZZ nxv4f32:$acc, ZPR:$Zn, ZPR:$Zm)>;
+
   defm BFCVT_ZPmZ   : sve_bfloat_convert<"bfcvt", int_aarch64_sve_fcvt_bf16f32_v2, AArch64fcvtr_mt>;
   defm BFCVTNT_ZPmZ : sve_bfloat_convert_top<"bfcvtnt", int_aarch64_sve_fcvtnt_bf16f32_v2>;
 } // End HasBF16, HasSVE_or_SME
