@@ -411,7 +411,6 @@ int *nothingIsCertain(int x, int y) {
   // Keep constraints alive. (Without this, it is possible that the overeager
   // garbage collection of constraints _also_ prevents the intended behavior in
   // this testcase.)
-  (void)x;
 
   return mem;
 }
