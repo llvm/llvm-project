@@ -3,13 +3,21 @@
 ; RUN: llc -mtriple=riscv64 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,RV64
 
 define i1 @or_icmp_2(i32 signext %type) {
-; CHECK-LABEL: or_icmp_2:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi a1, a0, -6
-; CHECK-NEXT:    seqz a1, a1
-; CHECK-NEXT:    seqz a0, a0
-; CHECK-NEXT:    or a0, a1, a0
-; CHECK-NEXT:    ret
+; RV32-LABEL: or_icmp_2:
+; RV32:       # %bb.0: # %entry
+; RV32-NEXT:    li a1, 65
+; RV32-NEXT:    srl a1, a1, a0
+; RV32-NEXT:    sltiu a0, a0, 32
+; RV32-NEXT:    and a0, a0, a1
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: or_icmp_2:
+; RV64:       # %bb.0: # %entry
+; RV64-NEXT:    li a1, 65
+; RV64-NEXT:    srl a1, a1, a0
+; RV64-NEXT:    sltiu a0, a0, 64
+; RV64-NEXT:    and a0, a0, a1
+; RV64-NEXT:    ret
 entry:
   %cmp = icmp eq i32 %type, 6
   %cmp1 = icmp eq i32 %type, 0
@@ -18,16 +26,23 @@ entry:
 }
 
 define i1 @or_icmp_3(i32 signext %type) {
-; CHECK-LABEL: or_icmp_3:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi a1, a0, -6
-; CHECK-NEXT:    seqz a2, a0
-; CHECK-NEXT:    addi a0, a0, -15
-; CHECK-NEXT:    seqz a1, a1
-; CHECK-NEXT:    or a1, a1, a2
-; CHECK-NEXT:    seqz a0, a0
-; CHECK-NEXT:    or a0, a0, a1
-; CHECK-NEXT:    ret
+; RV32-LABEL: or_icmp_3:
+; RV32:       # %bb.0: # %entry
+; RV32-NEXT:    lui a1, 8
+; RV32-NEXT:    addi a1, a1, 65
+; RV32-NEXT:    srl a1, a1, a0
+; RV32-NEXT:    sltiu a0, a0, 32
+; RV32-NEXT:    and a0, a0, a1
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: or_icmp_3:
+; RV64:       # %bb.0: # %entry
+; RV64-NEXT:    lui a1, 8
+; RV64-NEXT:    addi a1, a1, 65
+; RV64-NEXT:    srl a1, a1, a0
+; RV64-NEXT:    sltiu a0, a0, 64
+; RV64-NEXT:    and a0, a0, a1
+; RV64-NEXT:    ret
 entry:
   %cmp = icmp eq i32 %type, 6
   %cmp1 = icmp eq i32 %type, 0
@@ -38,19 +53,23 @@ entry:
 }
 
 define i1 @or_icmp_4_tree(i32 signext %type) {
-; CHECK-LABEL: or_icmp_4_tree:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi a1, a0, -6
-; CHECK-NEXT:    seqz a2, a0
-; CHECK-NEXT:    seqz a1, a1
-; CHECK-NEXT:    or a1, a1, a2
-; CHECK-NEXT:    addi a2, a0, -15
-; CHECK-NEXT:    addi a0, a0, -22
-; CHECK-NEXT:    seqz a2, a2
-; CHECK-NEXT:    seqz a0, a0
-; CHECK-NEXT:    or a0, a2, a0
-; CHECK-NEXT:    or a0, a0, a1
-; CHECK-NEXT:    ret
+; RV32-LABEL: or_icmp_4_tree:
+; RV32:       # %bb.0: # %entry
+; RV32-NEXT:    lui a1, 1032
+; RV32-NEXT:    addi a1, a1, 65
+; RV32-NEXT:    srl a1, a1, a0
+; RV32-NEXT:    sltiu a0, a0, 32
+; RV32-NEXT:    and a0, a0, a1
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: or_icmp_4_tree:
+; RV64:       # %bb.0: # %entry
+; RV64-NEXT:    lui a1, 1032
+; RV64-NEXT:    addi a1, a1, 65
+; RV64-NEXT:    srl a1, a1, a0
+; RV64-NEXT:    sltiu a0, a0, 64
+; RV64-NEXT:    and a0, a0, a1
+; RV64-NEXT:    ret
 entry:
   %cmp = icmp eq i32 %type, 6
   %cmp1 = icmp eq i32 %type, 0
@@ -63,28 +82,24 @@ entry:
 }
 
 define i1 @or_icmp_7(i32 signext %type) {
-; CHECK-LABEL: or_icmp_7:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi a1, a0, -6
-; CHECK-NEXT:    seqz a2, a0
-; CHECK-NEXT:    addi a3, a0, -17
-; CHECK-NEXT:    addi a4, a0, -3
-; CHECK-NEXT:    seqz a1, a1
-; CHECK-NEXT:    or a1, a1, a2
-; CHECK-NEXT:    addi a2, a0, -31
-; CHECK-NEXT:    seqz a3, a3
-; CHECK-NEXT:    seqz a4, a4
-; CHECK-NEXT:    or a3, a4, a3
-; CHECK-NEXT:    addi a4, a0, -14
-; CHECK-NEXT:    seqz a2, a2
-; CHECK-NEXT:    seqz a4, a4
-; CHECK-NEXT:    or a2, a4, a2
-; CHECK-NEXT:    addi a0, a0, -28
-; CHECK-NEXT:    seqz a0, a0
-; CHECK-NEXT:    or a1, a3, a1
-; CHECK-NEXT:    or a0, a0, a2
-; CHECK-NEXT:    or a0, a0, a1
-; CHECK-NEXT:    ret
+; RV32-LABEL: or_icmp_7:
+; RV32:       # %bb.0: # %entry
+; RV32-NEXT:    lui a1, 589860
+; RV32-NEXT:    addi a1, a1, 73
+; RV32-NEXT:    srl a1, a1, a0
+; RV32-NEXT:    sltiu a0, a0, 32
+; RV32-NEXT:    and a0, a0, a1
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: or_icmp_7:
+; RV64:       # %bb.0: # %entry
+; RV64-NEXT:    lui a1, 147465
+; RV64-NEXT:    slli a1, a1, 2
+; RV64-NEXT:    addi a1, a1, 73
+; RV64-NEXT:    srl a1, a1, a0
+; RV64-NEXT:    sltiu a0, a0, 64
+; RV64-NEXT:    and a0, a0, a1
+; RV64-NEXT:    ret
 entry:
   %cmp = icmp eq i32 %type, 6
   %cmp1 = icmp eq i32 %type, 0
@@ -152,14 +167,24 @@ entry:
 }
 
 define i1 @or_icmp_xlen(i32 signext %type) {
-; CHECK-LABEL: or_icmp_xlen:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi a1, a0, -6
-; CHECK-NEXT:    addi a0, a0, -32
-; CHECK-NEXT:    seqz a1, a1
-; CHECK-NEXT:    seqz a0, a0
-; CHECK-NEXT:    or a0, a1, a0
-; CHECK-NEXT:    ret
+; RV32-LABEL: or_icmp_xlen:
+; RV32:       # %bb.0: # %entry
+; RV32-NEXT:    addi a1, a0, -6
+; RV32-NEXT:    addi a0, a0, -32
+; RV32-NEXT:    seqz a1, a1
+; RV32-NEXT:    seqz a0, a0
+; RV32-NEXT:    or a0, a1, a0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: or_icmp_xlen:
+; RV64:       # %bb.0: # %entry
+; RV64-NEXT:    li a1, 1
+; RV64-NEXT:    slli a1, a1, 32
+; RV64-NEXT:    addi a1, a1, 64
+; RV64-NEXT:    srl a1, a1, a0
+; RV64-NEXT:    sltiu a0, a0, 64
+; RV64-NEXT:    and a0, a0, a1
+; RV64-NEXT:    ret
 entry:
   %cmp = icmp eq i32 %type, 6
   %cmp1 = icmp eq i32 %type, 32
@@ -184,13 +209,11 @@ define i1 @or_icmp_i64(i64 signext %type) {
 ;
 ; RV64-LABEL: or_icmp_i64:
 ; RV64:       # %bb.0: # %entry
-; RV64-NEXT:    addi a1, a0, -6
-; RV64-NEXT:    seqz a2, a0
-; RV64-NEXT:    addi a0, a0, -15
-; RV64-NEXT:    seqz a1, a1
-; RV64-NEXT:    or a1, a1, a2
-; RV64-NEXT:    seqz a0, a0
-; RV64-NEXT:    or a0, a0, a1
+; RV64-NEXT:    lui a1, 8
+; RV64-NEXT:    addi a1, a1, 65
+; RV64-NEXT:    srl a1, a1, a0
+; RV64-NEXT:    sltiu a0, a0, 64
+; RV64-NEXT:    and a0, a0, a1
 ; RV64-NEXT:    ret
 entry:
   %cmp = icmp eq i64 %type, 6

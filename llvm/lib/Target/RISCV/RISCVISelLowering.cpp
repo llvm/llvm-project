@@ -16736,6 +16736,52 @@ static SDValue combineOrAndToBitfieldInsert(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(RISCVISD::QC_INSB, DL, MVT::i32, Ops);
 }
 
+// or (icmp eq x, imm0), (icmp eq x, imm1) -> czero.eqz (sltui x, 64), (bext x,
+// 1 << imm0 | 1 << imm1) If [imm0, imm1] < 64
+static SDValue combineOrOfImmCmpToBitExtract(SDNode *N, SelectionDAG &DAG,
+                                             const RISCVSubtarget &Subtarget) {
+  using namespace SDPatternMatch;
+
+  auto CollectSetEqImmTree = [](auto &&Self, SmallVector<APInt, 4> &FlagVals,
+                                SDNode *N, SDValue &X) -> bool {
+    APInt Imm;
+    if (X ? sd_match(N, m_OneUse(m_SetCC(m_Specific(X), m_ConstInt(Imm),
+                                         m_SpecificCondCode(ISD::SETEQ))))
+          : sd_match(N, m_OneUse(m_SetCC(m_Value(X), m_ConstInt(Imm),
+                                         m_SpecificCondCode(ISD::SETEQ))))) {
+      FlagVals.push_back(Imm);
+      return true;
+    }
+    SDValue LHS, RHS;
+    if (sd_match(N, m_OneUse(m_Or(m_Value(LHS), m_Value(RHS))))) {
+      return Self(Self, FlagVals, LHS.getNode(), X) &&
+             Self(Self, FlagVals, RHS.getNode(), X);
+    }
+    return false;
+  };
+
+  SmallVector<APInt, 4> FlagVals;
+  SDValue X;
+  if (!CollectSetEqImmTree(CollectSetEqImmTree, FlagVals, N, X))
+    return SDValue();
+
+  unsigned XLen = Subtarget.getXLen();
+  uint64_t BitMask = 0;
+  for (auto &Imm : FlagVals) {
+    if (Imm.uge(XLen))
+      return SDValue();
+    BitMask |= ((uint64_t)1 << Imm.getZExtValue());
+  }
+
+  SDLoc DL(N);
+  EVT VT = N->getValueType(0);
+  SDValue BitExtract =
+      DAG.getNode(ISD::SRL, DL, VT, DAG.getConstant(BitMask, DL, VT), X);
+  SDValue Lt64Check =
+      DAG.getSetCC(DL, VT, X, DAG.getConstant(XLen, DL, VT), ISD::SETULT);
+  return DAG.getNode(ISD::AND, DL, VT, Lt64Check, BitExtract);
+}
+
 static SDValue performORCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
                                 const RISCVSubtarget &Subtarget) {
   SelectionDAG &DAG = DCI.DAG;
@@ -16748,6 +16794,9 @@ static SDValue performORCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
     return V;
   if (SDValue V = combineBinOpOfExtractToReduceTree(N, DAG, Subtarget))
     return V;
+  if (DCI.isAfterLegalizeDAG())
+    if (SDValue V = combineOrOfImmCmpToBitExtract(N, DAG, Subtarget))
+      return V;
 
   if (DCI.isAfterLegalizeDAG())
     if (SDValue V = combineDeMorganOfBoolean(N, DAG))
