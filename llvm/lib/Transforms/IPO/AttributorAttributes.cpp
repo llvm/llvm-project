@@ -5315,7 +5315,7 @@ struct AAAlignImpl : AAAlign {
           IsMakeBufferRsrc = true;
     for (const Use &U : AssociatedValue.uses()) {
       if (auto *SI = dyn_cast<StoreInst>(U.getUser())) {
-        if (SI->getPointerOperand() == &AssociatedValue)
+        if (SI->getPointerOperand() == &AssociatedValue) {
           if (IsMakeBufferRsrc) {
             SI->setAlignment(std::min(SI->getAlign(), getAssumedAlign()));
           } else if (SI->getAlign() < getAssumedAlign()) {
@@ -5324,8 +5324,9 @@ struct AAAlignImpl : AAAlign {
             SI->setAlignment(getAssumedAlign());
             InstrChanged = ChangeStatus::CHANGED;
           }
+        }
       } else if (auto *LI = dyn_cast<LoadInst>(U.getUser())) {
-        if (LI->getPointerOperand() == &AssociatedValue)
+        if (LI->getPointerOperand() == &AssociatedValue) {
           if (IsMakeBufferRsrc) {
             LI->setAlignment(std::min(LI->getAlign(), getAssumedAlign()));
           } else if (LI->getAlign() < getAssumedAlign()) {
@@ -5334,6 +5335,7 @@ struct AAAlignImpl : AAAlign {
                             "Number of times alignment added to a load");
             InstrChanged = ChangeStatus::CHANGED;
           }
+        }
       } else if (auto *RMW = dyn_cast<AtomicRMWInst>(U.getUser())) {
         if (IsMakeBufferRsrc) {
           RMW->setAlignment(std::min(RMW->getAlign(), getAssumedAlign()));
