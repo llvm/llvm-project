@@ -8567,8 +8567,9 @@ OpenMPIRBuilder::createPlatformSpecificName(ArrayRef<StringRef> Parts) const {
                                                 Config.separator());
 }
 
-GlobalVariable *OpenMPIRBuilder::getOrCreateInternalVariable(
-    Type *Ty, const StringRef &Name, std::optional<unsigned> AddressSpace) {
+GlobalVariable *
+OpenMPIRBuilder::getOrCreateInternalVariable(Type *Ty, const StringRef &Name,
+                                             unsigned AddressSpace) {
   auto &Elem = *InternalVars.try_emplace(Name, nullptr).first;
   if (Elem.second) {
     assert(Elem.second->getValueType() == Ty &&
@@ -8578,18 +8579,16 @@ GlobalVariable *OpenMPIRBuilder::getOrCreateInternalVariable(
     // variable for possibly changing that to internal or private, or maybe
     // create different versions of the function for different OMP internal
     // variables.
-    const DataLayout &DL = M.getDataLayout();
-    unsigned AddressSpaceVal =
-        AddressSpace ? *AddressSpace : DL.getDefaultGlobalsAddressSpace();
     auto Linkage = this->M.getTargetTriple().getArch() == Triple::wasm32
                        ? GlobalValue::InternalLinkage
                        : GlobalValue::CommonLinkage;
     auto *GV = new GlobalVariable(M, Ty, /*IsConstant=*/false, Linkage,
                                   Constant::getNullValue(Ty), Elem.first(),
                                   /*InsertBefore=*/nullptr,
-                                  GlobalValue::NotThreadLocal, AddressSpaceVal);
+                                  GlobalValue::NotThreadLocal, AddressSpace);
+    const DataLayout &DL = M.getDataLayout();
     const llvm::Align TypeAlign = DL.getABITypeAlign(Ty);
-    const llvm::Align PtrAlign = DL.getPointerABIAlignment(AddressSpaceVal);
+    const llvm::Align PtrAlign = DL.getPointerABIAlignment(AddressSpace);
     GV->setAlignment(std::max(TypeAlign, PtrAlign));
     Elem.second = GV;
   }
