@@ -466,10 +466,9 @@ createOptionsProvider(llvm::IntrusiveRefCntPtr<vfs::FileSystem> FS) {
 }
 
 static llvm::IntrusiveRefCntPtr<vfs::FileSystem>
-getVfsFromFile(const std::string &OverlayFile,
-               llvm::IntrusiveRefCntPtr<vfs::FileSystem> BaseFS) {
+getVfsFromFile(const std::string &OverlayFile, vfs::FileSystem &BaseFS) {
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> Buffer =
-      BaseFS->getBufferForFile(OverlayFile);
+      BaseFS.getBufferForFile(OverlayFile);
   if (!Buffer) {
     llvm::errs() << "Can't load virtual filesystem overlay file '"
                  << OverlayFile << "': " << Buffer.getError().message()
@@ -585,7 +584,7 @@ static llvm::IntrusiveRefCntPtr<vfs::OverlayFileSystem> createBaseFS() {
 
   if (!VfsOverlay.empty()) {
     IntrusiveRefCntPtr<vfs::FileSystem> VfsFromFile =
-        getVfsFromFile(VfsOverlay, BaseFS);
+        getVfsFromFile(VfsOverlay, *BaseFS);
     if (!VfsFromFile)
       return nullptr;
     BaseFS->pushOverlay(std::move(VfsFromFile));

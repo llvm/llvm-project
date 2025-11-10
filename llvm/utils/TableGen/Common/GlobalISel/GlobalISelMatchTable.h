@@ -528,10 +528,10 @@ protected:
 
   ArrayRef<SMLoc> SrcLoc;
 
-  typedef std::tuple<const Record *, unsigned, unsigned>
-      DefinedComplexPatternSubOperand;
-  typedef StringMap<DefinedComplexPatternSubOperand>
-      DefinedComplexPatternSubOperandMap;
+  using DefinedComplexPatternSubOperand =
+      std::tuple<const Record *, unsigned, unsigned>;
+  using DefinedComplexPatternSubOperandMap =
+      StringMap<DefinedComplexPatternSubOperand>;
   /// A map of Symbolic Names to ComplexPattern sub-operands.
   DefinedComplexPatternSubOperandMap ComplexSubOperands;
   /// A map used to for multiple referenced error check of ComplexSubOperand.
@@ -1775,7 +1775,7 @@ public:
 /// * Has an nsw/nuw flag or doesn't.
 class InstructionMatcher final : public PredicateListMatcher<PredicateMatcher> {
 protected:
-  typedef std::vector<std::unique_ptr<OperandMatcher>> OperandVec;
+  using OperandVec = std::vector<std::unique_ptr<OperandMatcher>>;
 
   RuleMatcher &Rule;
 

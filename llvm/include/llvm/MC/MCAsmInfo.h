@@ -401,7 +401,7 @@ protected:
   // Generated object files can use all ELF features supported by GNU ld of
   // this binutils version and later. INT_MAX means all features can be used,
   // regardless of GNU ld support. The default value is referenced by
-  // clang/Driver/Options.td.
+  // clang/Options/Options.td.
   std::pair<int, int> BinutilsVersion = {2, 26};
 
   /// Should we use the integrated assembler?

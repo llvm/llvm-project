@@ -15,7 +15,6 @@
 #include "llvm/Testing/Support/Error.h"
 
 #include <deque>
-#include <set>
 #include <thread>
 
 using namespace llvm;

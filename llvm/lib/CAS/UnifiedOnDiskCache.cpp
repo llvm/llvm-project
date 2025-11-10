@@ -331,8 +331,6 @@ Expected<ValidationResult> UnifiedOnDiskCache::validateIfNeeded(
     if (Error E = getBootTime().moveInto(BootTime))
       return std::move(E);
 
-  std::string LogValidationError;
-
   if (ValidationBootTime == BootTime && !ForceValidation)
     return ValidationResult::Skipped;
 

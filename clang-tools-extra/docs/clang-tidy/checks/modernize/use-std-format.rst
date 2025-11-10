@@ -62,7 +62,7 @@ Options
 
 .. option:: StrFormatLikeFunctions
 
-   A semicolon-separated list of regular expressions matching the 
+   A semicolon-separated list of regular expressions matching the
    (fully qualified) names of functions to replace, with the requirement that
    the first parameter contains the printf-style format string and the
    arguments to be formatted follow immediately afterwards. Qualified member

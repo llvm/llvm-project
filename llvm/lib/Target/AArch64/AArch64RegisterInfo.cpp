@@ -1123,24 +1123,85 @@ unsigned AArch64RegisterInfo::getRegPressureLimit(const TargetRegisterClass *RC,
   }
 }
 
-// FORM_TRANSPOSED_REG_TUPLE nodes are created to improve register allocation
-// where a consecutive multi-vector tuple is constructed from the same indices
-// of multiple strided loads. This may still result in unnecessary copies
-// between the loads and the tuple. Here we try to return a hint to assign the
-// contiguous ZPRMulReg starting at the same register as the first operand of
-// the pseudo, which should be a subregister of the first strided load.
+// We add regalloc hints for different cases:
+// * Choosing a better destination operand for predicated SVE instructions
+//   where the inactive lanes are undef, by choosing a register that is not
+//   unique to the other operands of the instruction.
 //
-// For example, if the first strided load has been assigned $z16_z20_z24_z28
-// and the operands of the pseudo are each accessing subregister zsub2, we
-// should look through through Order to find a contiguous register which
-// begins with $z24 (i.e. $z24_z25_z26_z27).
+// * Improve register allocation for SME multi-vector instructions where we can
+//   benefit from the strided- and contiguous register multi-vector tuples.
 //
+//   Here FORM_TRANSPOSED_REG_TUPLE nodes are created to improve register
+//   allocation where a consecutive multi-vector tuple is constructed from the
+//   same indices of multiple strided loads. This may still result in
+//   unnecessary copies between the loads and the tuple. Here we try to return a
+//   hint to assign the contiguous ZPRMulReg starting at the same register as
+//   the first operand of the pseudo, which should be a subregister of the first
+//   strided load.
+//
+//   For example, if the first strided load has been assigned $z16_z20_z24_z28
+//   and the operands of the pseudo are each accessing subregister zsub2, we
+//   should look through through Order to find a contiguous register which
+//   begins with $z24 (i.e. $z24_z25_z26_z27).
 bool AArch64RegisterInfo::getRegAllocationHints(
     Register VirtReg, ArrayRef<MCPhysReg> Order,
     SmallVectorImpl<MCPhysReg> &Hints, const MachineFunction &MF,
     const VirtRegMap *VRM, const LiveRegMatrix *Matrix) const {
-
   auto &ST = MF.getSubtarget<AArch64Subtarget>();
+  const AArch64InstrInfo *TII =
+      MF.getSubtarget<AArch64Subtarget>().getInstrInfo();
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
+
+  // For predicated SVE instructions where the inactive lanes are undef,
+  // pick a destination register that is not unique to avoid introducing
+  // a movprfx.
+  const TargetRegisterClass *RegRC = MRI.getRegClass(VirtReg);
+  if (AArch64::ZPRRegClass.hasSubClassEq(RegRC)) {
+    for (const MachineOperand &DefOp : MRI.def_operands(VirtReg)) {
+      const MachineInstr &Def = *DefOp.getParent();
+      if (DefOp.isImplicit() ||
+          (TII->get(Def.getOpcode()).TSFlags & AArch64::FalseLanesMask) !=
+              AArch64::FalseLanesUndef)
+        continue;
+
+      unsigned InstFlags =
+          TII->get(AArch64::getSVEPseudoMap(Def.getOpcode())).TSFlags;
+
+      for (MCPhysReg R : Order) {
+        auto AddHintIfSuitable = [&](MCPhysReg R, const MachineOperand &MO) {
+          // R is a suitable register hint if there exists an operand for the
+          // instruction that is not yet allocated a register or if R matches
+          // one of the other source operands.
+          if (!VRM->hasPhys(MO.getReg()) || VRM->getPhys(MO.getReg()) == R)
+            Hints.push_back(R);
+        };
+
+        switch (InstFlags & AArch64::DestructiveInstTypeMask) {
+        default:
+          break;
+        case AArch64::DestructiveTernaryCommWithRev:
+          AddHintIfSuitable(R, Def.getOperand(2));
+          AddHintIfSuitable(R, Def.getOperand(3));
+          AddHintIfSuitable(R, Def.getOperand(4));
+          break;
+        case AArch64::DestructiveBinaryComm:
+        case AArch64::DestructiveBinaryCommWithRev:
+          AddHintIfSuitable(R, Def.getOperand(2));
+          AddHintIfSuitable(R, Def.getOperand(3));
+          break;
+        case AArch64::DestructiveBinary:
+        case AArch64::DestructiveBinaryImm:
+          AddHintIfSuitable(R, Def.getOperand(2));
+          break;
+        }
+      }
+    }
+
+    if (Hints.size())
+      return TargetRegisterInfo::getRegAllocationHints(VirtReg, Order, Hints,
+                                                       MF, VRM);
+  }
+
   if (!ST.hasSME() || !ST.isStreaming())
     return TargetRegisterInfo::getRegAllocationHints(VirtReg, Order, Hints, MF,
                                                      VRM);
@@ -1153,8 +1214,7 @@ bool AArch64RegisterInfo::getRegAllocationHints(
   // FORM_TRANSPOSED_REG_TUPLE pseudo, we want to favour reducing copy
   // instructions over reducing the number of clobbered callee-save registers,
   // so we add the strided registers as a hint.
-  const MachineRegisterInfo &MRI = MF.getRegInfo();
-  unsigned RegID = MRI.getRegClass(VirtReg)->getID();
+  unsigned RegID = RegRC->getID();
   if (RegID == AArch64::ZPR2StridedOrContiguousRegClassID ||
       RegID == AArch64::ZPR4StridedOrContiguousRegClassID) {
 

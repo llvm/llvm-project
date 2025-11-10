@@ -64,6 +64,9 @@ jobs:
       - name: Build and Test
         timeout-minutes: 120
         continue-on-error: ${{ runner.arch == 'ARM64' }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           git config --global --add safe.directory '*'
 
@@ -153,6 +156,9 @@ jobs:
         timeout-minutes: 180
         if: ${{ steps.vars.outputs.windows-projects != '' }}
         shell: cmd
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           call C:\\BuildTools\\Common7\\Tools\\VsDevCmd.bat -arch=amd64 -host_arch=amd64
           # See the comments above in the Linux job for why we define each of

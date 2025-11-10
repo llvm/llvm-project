@@ -99,7 +99,8 @@ bool DependencyFinderASTVisitor::VisitVarDecl(VarDecl *V) {
 /// If we already created a variable for TheLoop, check to make sure
 /// that the name was not already taken.
 bool DeclFinderASTVisitor::VisitForStmt(ForStmt *TheLoop) {
-  StmtGeneratedVarNameMap::const_iterator I = GeneratedDecls->find(TheLoop);
+  const StmtGeneratedVarNameMap::const_iterator I =
+      GeneratedDecls->find(TheLoop);
   if (I != GeneratedDecls->end() && I->second == Name) {
     Found = true;
     return false;
@@ -129,7 +130,7 @@ bool DeclFinderASTVisitor::VisitDeclRefExpr(DeclRefExpr *DeclRef) {
 /// If the new variable name conflicts with any type used in the loop,
 /// then we mark that variable name as taken.
 bool DeclFinderASTVisitor::VisitTypeLoc(TypeLoc TL) {
-  QualType QType = TL.getType();
+  const QualType QType = TL.getType();
 
   // Check if our name conflicts with a type, to handle for typedefs.
   if (QType.getAsString() == Name) {
@@ -359,7 +360,7 @@ static bool isAliasDecl(ASTContext *Context, const Decl *TheDecl,
   // Check that the declared type is the same as (or a reference to) the
   // container type.
   if (!OnlyCasts) {
-    QualType InitType = Init->getType();
+    const QualType InitType = Init->getType();
     QualType DeclarationType = VDecl->getType();
     if (!DeclarationType.isNull() && DeclarationType->isReferenceType())
       DeclarationType = DeclarationType.getNonReferenceType();
@@ -435,7 +436,7 @@ static bool arrayMatchesBoundExpr(ASTContext *Context,
       ConditionExpr->getIntegerConstantExpr(*Context);
   if (!ConditionSize)
     return false;
-  llvm::APSInt ArraySize(ConstType->getSize());
+  const llvm::APSInt ArraySize(ConstType->getSize());
   return llvm::APSInt::isSameValue(*ConditionSize, ArraySize);
 }
 
@@ -566,7 +567,7 @@ bool ForLoopIndexUseVisitor::TraverseMemberExpr(MemberExpr *Member) {
 
     // FIXME: This works around not having the location of the arrow operator.
     // Consider adding OperatorLoc to MemberExpr?
-    SourceLocation ArrowLoc = Lexer::getLocForEndOfToken(
+    const SourceLocation ArrowLoc = Lexer::getLocForEndOfToken(
         Base->getExprLoc(), 0, Context->getSourceManager(),
         Context->getLangOpts());
     // If something complicated is happening (i.e. the next token isn't an
@@ -816,7 +817,7 @@ bool ForLoopIndexUseVisitor::traverseStmtImpl(Stmt *S) {
   const Stmt *OldNextParent = NextStmtParent;
   CurrStmtParent = NextStmtParent;
   NextStmtParent = S;
-  bool Result = VisitorBase::TraverseStmt(S);
+  const bool Result = VisitorBase::TraverseStmt(S);
   NextStmtParent = OldNextParent;
   return Result;
 }
@@ -845,7 +846,7 @@ std::string VariableNamer::createIndexName() {
   if (TheContainer)
     ContainerName = TheContainer->getName();
 
-  size_t Len = ContainerName.size();
+  const size_t Len = ContainerName.size();
   if (Len > 1 && ContainerName.ends_with(Style == NS_UpperCase ? "S" : "s")) {
     IteratorName = std::string(ContainerName.substr(0, Len - 1));
     // E.g.: (auto thing : things)
@@ -871,7 +872,7 @@ std::string VariableNamer::createIndexName() {
 /// converter in a loop nested within SourceStmt.
 bool VariableNamer::declarationExists(StringRef Symbol) {
   assert(Context != nullptr && "Expected an ASTContext");
-  IdentifierInfo &Ident = Context->Idents.get(Symbol);
+  const IdentifierInfo &Ident = Context->Idents.get(Symbol);
 
   // Check if the symbol is not an identifier (ie. is a keyword or alias).
   if (!isAnyIdentifier(Ident.getTokenID()))
@@ -883,7 +884,7 @@ bool VariableNamer::declarationExists(StringRef Symbol) {
 
   // Determine if the symbol was generated in a parent context.
   for (const Stmt *S = SourceStmt; S != nullptr; S = ReverseAST->lookup(S)) {
-    StmtGeneratedVarNameMap::const_iterator I = GeneratedDecls->find(S);
+    const StmtGeneratedVarNameMap::const_iterator I = GeneratedDecls->find(S);
     if (I != GeneratedDecls->end() && I->second == Symbol)
       return true;
   }

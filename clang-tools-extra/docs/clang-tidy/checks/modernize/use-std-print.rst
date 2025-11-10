@@ -122,7 +122,7 @@ Options
 
 .. option:: PrintfLikeFunctions
 
-   A semicolon-separated list of regular expressions matching the 
+   A semicolon-separated list of regular expressions matching the
    (fully qualified) names of functions to replace, with the requirement
    that the first parameter contains the printf-style format string and the
    arguments to be formatted follow immediately afterwards. Qualified member
@@ -134,13 +134,13 @@ Options
 
 .. option:: FprintfLikeFunctions
 
-   A semicolon-separated list of regular expressions matching the 
+   A semicolon-separated list of regular expressions matching the
    (fully qualified) names of functions to replace, with the requirement
    that the first parameter is retained, the second parameter contains the
    printf-style format string and the arguments to be formatted follow
    immediately afterwards. Qualified member function names are supported,
    but the replacement function name must be unqualified. If neither this
-   option nor `PrintfLikeFunctions` are set then the default value is 
+   option nor `PrintfLikeFunctions` are set then the default value is
    `fprintf;absl::FPrintF`, otherwise it is the empty string.
 
 
