@@ -90,7 +90,7 @@ public:
   exception_ptr(const exception_ptr&) _NOEXCEPT;
   exception_ptr& operator=(const exception_ptr&) _NOEXCEPT;
   ~exception_ptr() _NOEXCEPT;
-#  else // _LIBCPP_BUILDING_LIBRARY
+#  else  // _LIBCPP_BUILDING_LIBRARY
   _LIBCPP_HIDE_FROM_ABI exception_ptr(const exception_ptr&) _NOEXCEPT : __ptr_(__other.__ptr_) {
     if (__ptr_)
       __increment_refcount(__ptr_);
