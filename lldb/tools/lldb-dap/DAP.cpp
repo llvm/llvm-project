@@ -1393,7 +1393,7 @@ void DAP::EventThread() {
 
     const uint32_t event_mask = event.GetType();
     if (lldb::SBProcess::EventIsProcessEvent(event)) {
-      HandleProcessEvent(event, done);
+      HandleProcessEvent(event, /*&process_exited=*/done);
     } else if (lldb::SBTarget::EventIsTargetEvent(event)) {
       HandleTargetEvent(event);
     } else if (lldb::SBBreakpoint::EventIsBreakpointEvent(event)) {
