@@ -5108,8 +5108,8 @@ InstructionCost LoopVectorizationCostModel::expectedCost(ElementCount VF) {
     // unconditionally executed. For the scalar case, we may not always execute
     // the predicated block, if it is an if-else block. Thus, scale the block's
     // cost by the probability of executing it.
-    // getPredBlockCostDivisor won't include blocks that are only predicated due
-    // to tail folded loops
+    // getPredBlockCostDivisor will return 1 for blocks that are only predicated
+    // by the header mask when folding the tail.
     if (VF.isScalar())
       BlockCost /= getPredBlockCostDivisor(CostKind, BB);
 
@@ -6758,8 +6758,7 @@ bool VPCostContext::skipCostComputation(Instruction *UI, bool IsVector) const {
          SkipCostComputation.contains(UI);
 }
 
-unsigned VPCostContext::getPredBlockCostDivisor(
-    TargetTransformInfo::TargetCostKind CostKind, BasicBlock *BB) const {
+unsigned VPCostContext::getPredBlockCostDivisor(BasicBlock *BB) const {
   return CM.getPredBlockCostDivisor(CostKind, BB);
 }
 
