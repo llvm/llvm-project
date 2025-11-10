@@ -358,7 +358,6 @@ DiagnosedSilenceableFailure
 transform::SetGPULaunchThreadsOp::apply(transform::TransformRewriter &rewriter,
                                         transform::TransformResults &results,
                                         transform::TransformState &state) {
-
   auto targetOps = state.getPayloadOps(getTarget());
   if (!llvm::hasSingleElement(targetOps)) {
     return emitDefiniteFailure() << "Requires exactly one targetOp handle (got "
@@ -382,7 +381,8 @@ transform::SetGPULaunchThreadsOp::apply(transform::TransformRewriter &rewriter,
 
   if (threads.size() != 3) {
     return emitSilenceableFailure(getLoc())
-           << "Expected threads to be a 3D vector";
+           << "Expected threads argument to consist of three values (got "
+           << threads.size() << ")";
   }
 
   rewriter.setInsertionPoint(launchOp);

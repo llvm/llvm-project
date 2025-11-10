@@ -167,11 +167,13 @@ def SetGPULaunchThreadsOp
       TransformOpInterface
     ]> {
 
-  let summary = "Set number of threads for a given gpu.launch operation";
-  let description = "Set number of threads for a given `gpu.launch` operation.";
+  let summary = "Set number of threads for a given gpu.launch operation"; let
+  description = [{
+    Overrides the x,y,z threads operands of a given `gpu.launch` operation in-place.
+  }];
 
-  let arguments = (ins TransformHandleTypeInterface : $target,
-                   Variadic<TransformAnyParamTypeOrAnyHandle> : $threads,
+  let arguments = (ins TransformHandleTypeInterface:$target,
+                   Variadic<TransformAnyParamTypeOrAnyHandle>:$threads,
                    DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_threads
                    );
   let results = (outs);

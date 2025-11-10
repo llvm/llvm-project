@@ -120,7 +120,7 @@ def setGPULaunchThreadsOp():
     sequence = transform.SequenceOp(
         transform.FailurePropagationMode.Propagate,
         [],
-        transform.OperationType.get("gpu.lauch"),
+        transform.OperationType.get("gpu.launch"),
     )
     with InsertionPoint(sequence.body):
         xegpu.SetGPULaunchThreadsOp(sequence.bodyTarget, threads=[8, 4, 1])
