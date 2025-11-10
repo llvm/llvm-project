@@ -22,13 +22,12 @@
 
 template <typename...>
 void test_structured_bindings() {
-  constexpr static auto [... empty] = std::make_index_sequence<0>();
+  auto [... empty] = std::make_index_sequence<0>();
   static_assert(sizeof...(empty) == 0);
 
-  constexpr static auto [... size4] = std::make_index_sequence<4>();
+  auto [... size4] = std::make_index_sequence<4>();
   static_assert(sizeof...(size4) == 4);
 
-  // these cannot yet be static_asserts
   assert(size4...[0] == 0);
   assert(size4...[1] == 1);
   assert(size4...[2] == 2);
