@@ -1780,6 +1780,16 @@ static unsigned sForm(MachineInstr &Instr) {
   case AArch64::SUBSWri:
   case AArch64::SUBSXrr:
   case AArch64::SUBSXri:
+  case AArch64::ANDSWri:
+  case AArch64::ANDSWrr:
+  case AArch64::ANDSWrs:
+  case AArch64::ANDSXri:
+  case AArch64::ANDSXrr:
+  case AArch64::ANDSXrs:
+  case AArch64::BICSWrr:
+  case AArch64::BICSXrr:
+  case AArch64::BICSWrs:
+  case AArch64::BICSXrs:
     return Instr.getOpcode();
 
   case AArch64::ADDWrr:
@@ -1810,6 +1820,22 @@ static unsigned sForm(MachineInstr &Instr) {
     return AArch64::ANDSWri;
   case AArch64::ANDXri:
     return AArch64::ANDSXri;
+  case AArch64::ANDWrr:
+    return AArch64::ANDSWrr;
+  case AArch64::ANDWrs:
+    return AArch64::ANDSWrs;
+  case AArch64::ANDXrr:
+    return AArch64::ANDSXrr;
+  case AArch64::ANDXrs:
+    return AArch64::ANDSXrs;
+  case AArch64::BICWrr:
+    return AArch64::BICSWrr;
+  case AArch64::BICXrr:
+    return AArch64::BICSXrr;
+  case AArch64::BICWrs:
+    return AArch64::BICSWrs;
+  case AArch64::BICXrs:
+    return AArch64::BICSXrs;
   }
 }
 
@@ -1947,6 +1973,25 @@ static bool isSUBSRegImm(unsigned Opcode) {
   return Opcode == AArch64::SUBSWri || Opcode == AArch64::SUBSXri;
 }
 
+static bool isANDOpcode(MachineInstr &MI) {
+  unsigned Opc = sForm(MI);
+  switch (Opc) {
+  case AArch64::ANDSWri:
+  case AArch64::ANDSWrr:
+  case AArch64::ANDSWrs:
+  case AArch64::ANDSXri:
+  case AArch64::ANDSXrr:
+  case AArch64::ANDSXrs:
+  case AArch64::BICSWrr:
+  case AArch64::BICSXrr:
+  case AArch64::BICSWrs:
+  case AArch64::BICSXrs:
+    return true;
+  default:
+    return false;
+  }
+}
+
 /// Check if CmpInstr can be substituted by MI.
 ///
 /// CmpInstr can be substituted:
@@ -1984,7 +2029,8 @@ static bool canInstrSubstituteCmpInstr(MachineInstr &MI, MachineInstr &CmpInstr,
   // 1) MI and CmpInstr set N and V to the same value.
   // 2) If MI is add/sub with no-signed-wrap, it produces a poison value when
   //    signed overflow occurs, so CmpInstr could still be simplified away.
-  if (NZVCUsed->V && !MI.getFlag(MachineInstr::NoSWrap))
+  // Note that Ands and Bics instructions always clear the V flag.
+  if (NZVCUsed->V && !MI.getFlag(MachineInstr::NoSWrap) && !isANDOpcode(MI))
     return false;
 
   AccessKind AccessToCheck = AK_Write;
