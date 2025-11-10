@@ -241,10 +241,12 @@ subroutine unstructured_do_concurrent
 end
 ! CHECK-LABEL: func.func @_QPunstructured_do_concurrent
 ! CHECK:         %[[ITER_VAR:.*]] = fir.alloca i32
+
 ! CHECK:       ^[[HEADER]]:
 ! CHECK:         %{{.*}} = fir.load %[[ITER_VAR]] : !fir.ref<i32>
 ! CHECK:         cf.cond_br %{{.*}}, ^[[BODY:.*]], ^[[EXIT:.*]]
+
 ! CHECK:       ^[[BODY]]:
 ! CHECK-NEXT:    %{{.*}} = fir.alloca !fir.logical<4> {bindc_name = "success", {{.*}}}
 ! CHECK:       ^[[EXIT]]:
-! CHECK:    return
+! CHECK-NEXT:    return
