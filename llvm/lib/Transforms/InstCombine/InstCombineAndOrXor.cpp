@@ -3199,6 +3199,44 @@ static Value *combineOrOfImmCmpToBitExtract(Instruction &Or,
     APInt Bound = RHSAP.ugt(LHSAP) ? RHSAP : LHSAP;
     return CreateBitExtractSeq(BitMap, Bound + 1, X);
   }
+
+  // Expand an already existing BitMap sequence
+  // Match: (or (%BitMapSeq(X)), (icmp eq X, Imm))
+  ConstantInt *BitMap, *Bound, *CmpImm;
+  Value *Cmp;
+  if (match(&Or, m_OneUse(m_c_Or(m_Value(Cmp),
+                                 m_OneUse(m_Select(
+                                     m_SpecificICmp(ICmpInst::ICMP_ULT,
+                                                    m_ZExtOrSelf(m_Value(X)),
+                                                    m_ConstantInt(Bound)),
+                                     m_OneUse(m_Trunc(m_OneUse(m_Shr(
+                                         m_ConstantInt(BitMap),
+                                         m_ZExtOrTruncOrSelf(m_Deferred(X)))))),
+                                     m_Zero()))))) &&
+      isICmpEqImm(Cmp, CmpImm, X)) {
+    if (!isGuaranteedNotToBeUndefOrPoison(X))
+      return nullptr;
+
+    APInt NewAP = CmpImm->getValue();
+    APInt BitMapAP = BitMap->getValue();
+    APInt BoundAP = Bound->getValue().zextOrTrunc(XLen);
+    // BitMap must fit in native arch register
+    if (!validImm(NewAP) || !DL.fitsInLegalInteger(BitMapAP.getActiveBits()))
+      return nullptr;
+
+    NewAP = NewAP.zextOrTrunc(XLen);
+    BitMapAP = BitMapAP.zextOrTrunc(XLen);
+
+    // Bounding immediate must be greater than the largest bit in the BitMap
+    // and less then XLen
+    if (BoundAP.ult(BitMapAP.getActiveBits()) || BoundAP.ugt(XLen))
+      return nullptr;
+
+    if (NewAP.uge(BoundAP))
+      BoundAP = NewAP + 1;
+    BitMapAP |= (APInt(XLen, 1) << NewAP);
+    return CreateBitExtractSeq(BitMapAP, BoundAP, X);
+  }
   return nullptr;
 }
 
