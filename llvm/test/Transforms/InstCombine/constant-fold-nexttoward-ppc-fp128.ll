@@ -12,8 +12,7 @@ attributes #0 = { willreturn memory(errnomem: write) }
 
 define double @nexttoward_can_constant_fold_up_direction() {
 ; CHECK-LABEL: define double @nexttoward_can_constant_fold_up_direction() {
-; CHECK-NEXT:    [[NEXT:%.*]] = call double @nexttoward(double noundef 1.000000e+00, ppc_fp128 0xM40000000000000000000000000000000)
-; CHECK-NEXT:    ret double [[NEXT]]
+; CHECK-NEXT:    ret double 0x3FF0000000000001
 ;
   %arg = fpext double 2.0 to ppc_fp128
   %next = call double @nexttoward(double noundef 1.0, ppc_fp128 %arg)
@@ -21,8 +20,7 @@ define double @nexttoward_can_constant_fold_up_direction() {
 }
 define double @nexttoward_can_constant_fold_down_direction() {
 ; CHECK-LABEL: define double @nexttoward_can_constant_fold_down_direction() {
-; CHECK-NEXT:    [[NEXT:%.*]] = call double @nexttoward(double noundef 1.000000e+00, ppc_fp128 0xM00000000000000000000000000000000)
-; CHECK-NEXT:    ret double [[NEXT]]
+; CHECK-NEXT:    ret double 0x3FEFFFFFFFFFFFFF
 ;
   %arg = fpext double 0.0 to ppc_fp128
   %next = call double @nexttoward(double noundef 1.0, ppc_fp128 %arg)
@@ -30,8 +28,7 @@ define double @nexttoward_can_constant_fold_down_direction() {
 }
 define double @nexttoward_can_constant_fold_equal_args() {
 ; CHECK-LABEL: define double @nexttoward_can_constant_fold_equal_args() {
-; CHECK-NEXT:    [[NEXT:%.*]] = call double @nexttoward(double 1.000000e+00, ppc_fp128 0xM3FF00000000000000000000000000000)
-; CHECK-NEXT:    ret double [[NEXT]]
+; CHECK-NEXT:    ret double 1.000000e+00
 ;
   %arg = fpext double 1.0 to ppc_fp128
   %next = call double @nexttoward(double 1.0, ppc_fp128 %arg)
@@ -39,8 +36,7 @@ define double @nexttoward_can_constant_fold_equal_args() {
 }
 define double @nexttoward_can_constant_fold_with_nan_arg() {
 ; CHECK-LABEL: define double @nexttoward_can_constant_fold_with_nan_arg() {
-; CHECK-NEXT:    [[NEXT:%.*]] = call double @nexttoward(double 1.000000e+00, ppc_fp128 0xM7FF80000000000000000000000000000)
-; CHECK-NEXT:    ret double [[NEXT]]
+; CHECK-NEXT:    ret double 0x7FF8000000000000
 ;
   %nan = load double, double* @dbl_nan
   %arg = fpext double %nan to ppc_fp128
@@ -50,7 +46,7 @@ define double @nexttoward_can_constant_fold_with_nan_arg() {
 define double @nexttoward_not_marked_dead_on_pos_overflow() {
 ; CHECK-LABEL: define double @nexttoward_not_marked_dead_on_pos_overflow() {
 ; CHECK-NEXT:    [[NEXT:%.*]] = call double @nexttoward(double 0x7FEFFFFFFFFFFFFF, ppc_fp128 0xM7FF00000000000000000000000000000)
-; CHECK-NEXT:    ret double [[NEXT]]
+; CHECK-NEXT:    ret double 0x7FF0000000000000
 ;
   %pos_max = load double, double* @dbl_pos_max
   %pos_inf = load double, double* @dbl_pos_infinity
@@ -61,7 +57,7 @@ define double @nexttoward_not_marked_dead_on_pos_overflow() {
 define double @nexttoward_not_marked_dead_on_neg_overflow() {
 ; CHECK-LABEL: define double @nexttoward_not_marked_dead_on_neg_overflow() {
 ; CHECK-NEXT:    [[NEXT:%.*]] = call double @nexttoward(double 0xFFEFFFFFFFFFFFFF, ppc_fp128 0xMFFF00000000000000000000000000000)
-; CHECK-NEXT:    ret double [[NEXT]]
+; CHECK-NEXT:    ret double 0xFFF0000000000000
 ;
   %neg_max = load double, double* @dbl_neg_max
   %neg_inf = load double, double* @dbl_neg_infinity
@@ -72,7 +68,7 @@ define double @nexttoward_not_marked_dead_on_neg_overflow() {
 define double @nexttoward_not_marked_dead_on_zero_from_above() {
 ; CHECK-LABEL: define double @nexttoward_not_marked_dead_on_zero_from_above() {
 ; CHECK-NEXT:    [[NEXT:%.*]] = call double @nexttoward(double 4.940660e-324, ppc_fp128 0xM00000000000000000000000000000000)
-; CHECK-NEXT:    ret double [[NEXT]]
+; CHECK-NEXT:    ret double 0.000000e+00
 ;
   %subnormal = load double, double* @dbl_pos_min_subnormal
   %zero = fpext double 0.0 to ppc_fp128
@@ -82,7 +78,7 @@ define double @nexttoward_not_marked_dead_on_zero_from_above() {
 define double @nexttoward_not_marked_dead_on_zero_from_below() {
 ; CHECK-LABEL: define double @nexttoward_not_marked_dead_on_zero_from_below() {
 ; CHECK-NEXT:    [[NEXT:%.*]] = call double @nexttoward(double -4.940660e-324, ppc_fp128 0xM00000000000000000000000000000000)
-; CHECK-NEXT:    ret double [[NEXT]]
+; CHECK-NEXT:    ret double -0.000000e+00
 ;
   %subnormal = load double, double* @dbl_neg_min_subnormal
   %zero = fpext double 0.0 to ppc_fp128
@@ -92,7 +88,7 @@ define double @nexttoward_not_marked_dead_on_zero_from_below() {
 define double @nexttoward_not_marked_dead_on_subnormal() {
 ; CHECK-LABEL: define double @nexttoward_not_marked_dead_on_subnormal() {
 ; CHECK-NEXT:    [[NEXT:%.*]] = call double @nexttoward(double 4.940660e-324, ppc_fp128 0xM3FF00000000000000000000000000000)
-; CHECK-NEXT:    ret double [[NEXT]]
+; CHECK-NEXT:    ret double 9.881310e-324
 ;
   %subnormal = load double, double* @dbl_pos_min_subnormal
   %target = fpext double 1.0 to ppc_fp128
@@ -106,8 +102,7 @@ define double @nexttoward_not_marked_dead_on_subnormal() {
 
 define float @nexttowardf_can_constant_fold_up_direction() {
 ; CHECK-LABEL: define float @nexttowardf_can_constant_fold_up_direction() {
-; CHECK-NEXT:    [[NEXT:%.*]] = call float @nexttowardf(float noundef 1.000000e+00, ppc_fp128 0xM40000000000000000000000000000000)
-; CHECK-NEXT:    ret float [[NEXT]]
+; CHECK-NEXT:    ret float 0x3FF0000020000000
 ;
   %arg = fpext float 2.0 to ppc_fp128
   %next = call float @nexttowardf(float noundef 1.0, ppc_fp128 %arg)
@@ -115,8 +110,7 @@ define float @nexttowardf_can_constant_fold_up_direction() {
 }
 define float @nexttowardf_can_constant_fold_down_direction() {
 ; CHECK-LABEL: define float @nexttowardf_can_constant_fold_down_direction() {
-; CHECK-NEXT:    [[NEXT:%.*]] = call float @nexttowardf(float noundef 1.000000e+00, ppc_fp128 0xM00000000000000000000000000000000)
-; CHECK-NEXT:    ret float [[NEXT]]
+; CHECK-NEXT:    ret float 0x3FEFFFFFE0000000
 ;
   %arg = fpext float 0.0 to ppc_fp128
   %next = call float @nexttowardf(float noundef 1.0, ppc_fp128 %arg)
@@ -124,17 +118,15 @@ define float @nexttowardf_can_constant_fold_down_direction() {
 }
 define float @nexttowardf_can_constant_fold_equal_args() {
 ; CHECK-LABEL: define float @nexttowardf_can_constant_fold_equal_args() {
-; CHECK-NEXT:    [[NEXT:%.*]] = call float @nexttoward(float 1.000000e+00, ppc_fp128 0xM3FF00000000000000000000000000000)
-; CHECK-NEXT:    ret float [[NEXT]]
+; CHECK-NEXT:    ret float 1.000000e+00
 ;
   %arg = fpext float 1.0 to ppc_fp128
-  %next = call float @nexttoward(float 1.0, ppc_fp128 %arg)
+  %next = call float @nexttowardf(float 1.0, ppc_fp128 %arg)
   ret float %next
 }
 define float @nexttowardf_can_constant_fold_with_nan_arg() {
 ; CHECK-LABEL: define float @nexttowardf_can_constant_fold_with_nan_arg() {
-; CHECK-NEXT:    [[NEXT:%.*]] = call float @nexttowardf(float 1.000000e+00, ppc_fp128 0xM7FF80000000000000000000000000000)
-; CHECK-NEXT:    ret float [[NEXT]]
+; CHECK-NEXT:    ret float 0x7FF8000000000000
 ;
   %nan = load float, float* @flt_nan
   %ext_nan = fpext float %nan to ppc_fp128
@@ -144,7 +136,7 @@ define float @nexttowardf_can_constant_fold_with_nan_arg() {
 define float @nexttowardf_not_marked_dead_on_pos_overflow () {
 ; CHECK-LABEL: define float @nexttowardf_not_marked_dead_on_pos_overflow() {
 ; CHECK-NEXT:    [[NEXT:%.*]] = call float @nexttowardf(float 0x47EFFFFFE0000000, ppc_fp128 0xM7FF00000000000000000000000000000)
-; CHECK-NEXT:    ret float [[NEXT]]
+; CHECK-NEXT:    ret float 0x7FF0000000000000
 ;
   %pos_max = load float, float* @flt_pos_max
   %pos_inf = load float, float* @flt_pos_infinity
@@ -155,7 +147,7 @@ define float @nexttowardf_not_marked_dead_on_pos_overflow () {
 define float @nexttowardf_not_marked_dead_on_neg_overflow() {
 ; CHECK-LABEL: define float @nexttowardf_not_marked_dead_on_neg_overflow() {
 ; CHECK-NEXT:    [[NEXT:%.*]] = call float @nexttowardf(float 0xC7EFFFFFE0000000, ppc_fp128 0xMFFF00000000000000000000000000000)
-; CHECK-NEXT:    ret float [[NEXT]]
+; CHECK-NEXT:    ret float 0xFFF0000000000000
 ;
   %neg_max = load float, float* @flt_neg_max
   %neg_inf = load float, float* @flt_neg_infinity
@@ -166,7 +158,7 @@ define float @nexttowardf_not_marked_dead_on_neg_overflow() {
 define float @nexttowardf_not_marked_dead_on_zero_from_above() {
 ; CHECK-LABEL: define float @nexttowardf_not_marked_dead_on_zero_from_above() {
 ; CHECK-NEXT:    [[NEXT:%.*]] = call float @nexttowardf(float 0x36A0000000000000, ppc_fp128 0xM00000000000000000000000000000000)
-; CHECK-NEXT:    ret float [[NEXT]]
+; CHECK-NEXT:    ret float 0.000000e+00
 ;
   %min_subnormal = load float, float* @flt_pos_min_subnormal
   %zero = fpext float 0.0 to ppc_fp128
@@ -176,7 +168,7 @@ define float @nexttowardf_not_marked_dead_on_zero_from_above() {
 define float @nexttowardf_not_marked_dead_on_zero_from_below() {
 ; CHECK-LABEL: define float @nexttowardf_not_marked_dead_on_zero_from_below() {
 ; CHECK-NEXT:    [[NEXT:%.*]] = call float @nexttowardf(float 0xB6A0000000000000, ppc_fp128 0xM00000000000000000000000000000000)
-; CHECK-NEXT:    ret float [[NEXT]]
+; CHECK-NEXT:    ret float -0.000000e+00
 ;
   %min_subnormal = load float, float* @flt_neg_min_subnormal
   %zero = fpext float 0.0 to ppc_fp128
@@ -186,7 +178,7 @@ define float @nexttowardf_not_marked_dead_on_zero_from_below() {
 define float @nexttowardf_not_marked_dead_on_subnormal() {
 ; CHECK-LABEL: define float @nexttowardf_not_marked_dead_on_subnormal() {
 ; CHECK-NEXT:    [[NEXT:%.*]] = call float @nexttowardf(float 0x36A0000000000000, ppc_fp128 0xM3FF00000000000000000000000000000)
-; CHECK-NEXT:    ret float [[NEXT]]
+; CHECK-NEXT:    ret float 0x36B0000000000000
 ;
   %subnormal = load float, float* @flt_pos_min_subnormal
   %target = fpext float 1.0 to ppc_fp128

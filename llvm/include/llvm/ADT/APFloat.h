@@ -1149,6 +1149,19 @@ public:
   /// \param Semantics - type float semantics
   LLVM_ABI static APFloat getAllOnesValue(const fltSemantics &Semantics);
 
+  /// Returns a copy of this APFloat with the requested semantics.
+  /// The requested semantics should be equal to or stronger
+  /// than the semantics of the current instance.
+  APFloat getPromoted(const fltSemantics &Sem) const {
+    assert(isRepresentableBy(this->getSemantics(), Sem) &&
+           "Target semantics will lose information.");
+    APFloat Val(*this);
+    bool LosesInfo;
+    Val.convert(Sem, rmNearestTiesToEven, &LosesInfo);
+    assert(!LosesInfo);
+    return Val;
+  }
+
   /// Returns true if the given semantics has actual significand.
   ///
   /// \param Sem - type float semantics

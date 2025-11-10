@@ -1996,7 +1996,9 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
            Name == "log10f" || Name == "logb" || Name == "logbf" ||
            Name == "log1p" || Name == "log1pf";
   case 'n':
-    return Name == "nearbyint" || Name == "nearbyintf";
+    return Name == "nearbyint" || Name == "nearbyintf" || Name == "nextafter" ||
+           Name == "nextafterf" || Name == "nexttoward" ||
+           Name == "nexttowardf";
   case 'p':
     return Name == "pow" || Name == "powf";
   case 'r':
@@ -3221,6 +3223,26 @@ static Constant *ConstantFoldLibCall2(StringRef Name, Type *Ty,
     if (TLI->has(Func))
       return ConstantFoldBinaryFP(atan2, Op1V, Op2V, Ty);
     break;
+  case LibFunc_nextafter:
+  case LibFunc_nextafterf:
+  case LibFunc_nexttoward:
+  case LibFunc_nexttowardf:
+    if (TLI->has(Func)) {
+      if (Op1V.isNaN() || Op2V.isNaN()) {
+        return ConstantFP::get(Ty->getContext(),
+                               APFloat::getNaN(Ty->getFltSemantics()));
+      }
+
+      APFloat PromotedOp1V = Op1V.getPromoted(APFloat::IEEEquad());
+      APFloat PromotedOp2V = Op2V.getPromoted(APFloat::IEEEquad());
+      if (PromotedOp1V == PromotedOp2V) {
+        return ConstantFP::get(Ty->getContext(), Op1V);
+      }
+
+      APFloat Next(Op1V);
+      Next.next(/*nextDown=*/PromotedOp1V > PromotedOp2V);
+      return ConstantFP::get(Ty->getContext(), Next);
+    }
   }
 
   return nullptr;
@@ -4655,6 +4677,22 @@ bool llvm::isMathLibCallNoop(const CallBase *Call,
         // may occur, so allow for that possibility.
         return !Op0.isZero() || !Op1.isZero();
 
+      case LibFunc_nextafter:
+      case LibFunc_nextafterf:
+      case LibFunc_nextafterl:
+      case LibFunc_nexttoward:
+      case LibFunc_nexttowardf:
+      case LibFunc_nexttowardl: {
+        APFloat PromotedOp0 = Op0.getPromoted(APFloat::IEEEquad());
+        APFloat PromotedOp1 = Op1.getPromoted(APFloat::IEEEquad());
+        if (PromotedOp0 == PromotedOp1)
+          return true;
+
+        APFloat Next(Op0);
+        Next.next(/*nextDown=*/PromotedOp0 > PromotedOp1);
+        bool DidOverflow = Op0.isLargest() && Next.isInfinity();
+        return !Next.isZero() && !Next.isDenormal() && !DidOverflow;
+      }
       default:
         break;
       }
