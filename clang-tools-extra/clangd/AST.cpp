@@ -1040,5 +1040,26 @@ bool isExpandedFromParameterPack(const ParmVarDecl *D) {
   return getUnderlyingPackType(D) != nullptr;
 }
 
+bool isLikelyForwardingFunction(FunctionTemplateDecl *FT) {
+  const auto *FD = FT->getTemplatedDecl();
+  const auto NumParams = FD->getNumParams();
+  // Check whether its last parameter is a parameter pack...
+  if (NumParams > 0) {
+    const auto *LastParam = FD->getParamDecl(NumParams - 1);
+    if (const auto *PET = dyn_cast<PackExpansionType>(LastParam->getType())) {
+      // ... of the type T&&... or T...
+      const auto BaseType = PET->getPattern().getNonReferenceType();
+      if (const auto *TTPT =
+              dyn_cast<TemplateTypeParmType>(BaseType.getTypePtr())) {
+        // ... whose template parameter comes from the function directly
+        if (FT->getTemplateParameters()->getDepth() == TTPT->getDepth()) {
+          return true;
+        }
+      }
+    }
+  }
+  return false;
+}
+
 } // namespace clangd
 } // namespace clang
