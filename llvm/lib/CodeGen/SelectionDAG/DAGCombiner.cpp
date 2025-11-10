@@ -18692,8 +18692,8 @@ SDValue DAGCombiner::visitFDIV(SDNode *N) {
       if (Sqrt.getNode()) {
         // If the other multiply operand is known positive, pull it into the
         // sqrt. That will eliminate the division if we convert to an estimate.
-        if (Flags.hasAllowReassociation() && N1.hasOneUse() &&
-            N1->getFlags().hasAllowReassociation() && Sqrt.hasOneUse()) {
+        if (N1.hasOneUse() &&
+            Sqrt.hasOneUse()) {
           SDValue A;
           if (Y.getOpcode() == ISD::FABS && Y.hasOneUse())
             A = Y.getOperand(0);
@@ -18715,7 +18715,9 @@ SDValue DAGCombiner::visitFDIV(SDNode *N) {
 
         // We found a FSQRT, so try to make this fold:
         // X / (Y * sqrt(Z)) -> X * (rsqrt(Z) / Y)
-        if (SDValue Rsqrt = buildRsqrtEstimate(Sqrt.getOperand(0))) {
+	SDValue Rsqrt;
+        if (Sqrt->getFlags().hasAllowReciprocal() && Y->getFlags().hasAllowReciprocal()) {
+	  Rsqrt = buildRsqrtEstimate(Sqrt.getOperand(0));
           SDValue Div = DAG.getNode(ISD::FDIV, SDLoc(N1), VT, Rsqrt, Y);
           AddToWorklist(Div.getNode());
           return DAG.getNode(ISD::FMUL, DL, VT, N0, Div);
