@@ -26,16 +26,16 @@ define i32 @v_underflow_compare_fold_i32(i32 %a, i32 %b) #0 {
 ; GFX9-LABEL: v_underflow_compare_fold_i32:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_sub_co_u32_e32 v1, vcc, v0, v1
-; GFX9-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
+; GFX9-NEXT:    v_sub_u32_e32 v1, v0, v1
+; GFX9-NEXT:    v_min_u32_e32 v0, v1, v0
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: v_underflow_compare_fold_i32:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_sub_co_u32 v1, vcc_lo, v0, v1
+; GFX11-NEXT:    v_sub_nc_u32_e32 v1, v0, v1
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc_lo
+; GFX11-NEXT:    v_min_u32_e32 v0, v1, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %sub = sub i32 %a, %b
   %cond = call i32 @llvm.umin.i32(i32 %sub, i32 %a)
@@ -46,16 +46,16 @@ define i32 @v_underflow_compare_fold_i32_commute(i32 %a, i32 %b) #0 {
 ; GFX9-LABEL: v_underflow_compare_fold_i32_commute:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_sub_co_u32_e32 v1, vcc, v0, v1
-; GFX9-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
+; GFX9-NEXT:    v_sub_u32_e32 v1, v0, v1
+; GFX9-NEXT:    v_min_u32_e32 v0, v0, v1
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: v_underflow_compare_fold_i32_commute:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_sub_co_u32 v1, vcc_lo, v0, v1
+; GFX11-NEXT:    v_sub_nc_u32_e32 v1, v0, v1
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc_lo
+; GFX11-NEXT:    v_min_u32_e32 v0, v0, v1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %sub = sub i32 %a, %b
   %cond = call i32 @llvm.umin.i32(i32 %a, i32 %sub)
@@ -66,20 +66,19 @@ define i32 @v_underflow_compare_fold_i32_multi_use(i32 %a, i32 %b, ptr addrspace
 ; GFX9-LABEL: v_underflow_compare_fold_i32_multi_use:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_sub_u32_e32 v4, v0, v1
-; GFX9-NEXT:    v_sub_co_u32_e32 v1, vcc, v0, v1
-; GFX9-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
-; GFX9-NEXT:    global_store_dword v[2:3], v4, off
+; GFX9-NEXT:    v_sub_u32_e32 v1, v0, v1
+; GFX9-NEXT:    v_min_u32_e32 v0, v1, v0
+; GFX9-NEXT:    global_store_dword v[2:3], v1, off
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: v_underflow_compare_fold_i32_multi_use:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_sub_nc_u32_e32 v4, v0, v1
-; GFX11-NEXT:    v_sub_co_u32 v1, vcc_lo, v0, v1
-; GFX11-NEXT:    global_store_b32 v[2:3], v4, off
-; GFX11-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc_lo
+; GFX11-NEXT:    v_sub_nc_u32_e32 v1, v0, v1
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_min_u32_e32 v0, v1, v0
+; GFX11-NEXT:    global_store_b32 v[2:3], v1, off
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %sub = sub i32 %a, %b
   store i32 %sub, ptr addrspace(1) %ptr
@@ -191,19 +190,15 @@ define amdgpu_ps i16 @s_underflow_compare_fold_i16(i16 inreg %a, i16 inreg %b) #
 define amdgpu_ps i32 @s_underflow_compare_fold_i32(i32 inreg %a, i32 inreg %b) #0 {
 ; GFX9-LABEL: s_underflow_compare_fold_i32:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    v_mov_b32_e32 v0, s1
-; GFX9-NEXT:    v_mov_b32_e32 v1, s0
-; GFX9-NEXT:    v_sub_co_u32_e32 v0, vcc, s0, v0
-; GFX9-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
-; GFX9-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX9-NEXT:    s_sub_i32 s1, s0, s1
+; GFX9-NEXT:    s_min_u32 s0, s1, s0
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: s_underflow_compare_fold_i32:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_sub_co_u32 v0, s1, s0, s1
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_cndmask_b32_e64 v0, v0, s0, s1
-; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX11-NEXT:    s_sub_i32 s1, s0, s1
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_min_u32 s0, s1, s0
 ; GFX11-NEXT:    ; return to shader part epilog
   %sub = sub i32 %a, %b
   %cond = call i32 @llvm.umin.i32(i32 %sub, i32 %a)

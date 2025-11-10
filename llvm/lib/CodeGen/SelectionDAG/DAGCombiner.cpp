@@ -6219,7 +6219,8 @@ SDValue DAGCombiner::visitIMINMAX(SDNode *N) {
                                         SDLoc(N), VT, N0, N1))
     return SD;
 
-  if (TLI.isOperationLegalOrCustom(ISD::USUBO, VT)) {
+  if (TLI.isOperationLegalOrCustom(ISD::USUBO, VT) &&
+      !TLI.isOperationLegalOrCustom(ISD::UMIN, VT)) {
     SDValue B;
 
     // (umin (sub a, b), a) -> (usubo a, b); (select usubo.1, a, usubo.0)
