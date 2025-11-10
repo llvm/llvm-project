@@ -1818,7 +1818,7 @@ void CGOpenMPRuntime::registerVTableOffloadEntry(llvm::GlobalVariable *VTable,
         CGM.getModule(), VTable->getType(),
         /*isConstant=*/true, llvm::GlobalValue::ExternalLinkage, VTable,
         AddrName,
-        /*InsertBefore*/ nullptr, llvm::GlobalValue::NotThreadLocal,
+        /*InsertBefore=*/ nullptr, llvm::GlobalValue::NotThreadLocal,
         CGM.getModule().getDataLayout().getDefaultGlobalsAddressSpace());
     Addr->setVisibility(llvm::GlobalValue::ProtectedVisibility);
   }
