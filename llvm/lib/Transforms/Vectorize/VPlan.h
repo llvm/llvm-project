@@ -3975,7 +3975,9 @@ class LLVM_ABI_FOR_TEST VPRegionBlock : public VPBlockBase {
   VPBlockBase *Exiting;
 
   /// Holds the Canonical IV of the loop region along with additional
-  /// information. If CanIV is nullptr, the region is a replicating region.
+  /// information. If CanIV is nullptr, the region is a replicating region. Loop
+  /// regions retain their canonical IVs until they are dissolved, even if they
+  /// may not have any users.
   VPCanonicalIVInfo *CanIVInfo = nullptr;
 
   /// Use VPlan::createVPRegionBlock to create VPRegionBlocks.

@@ -8385,8 +8385,8 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
       auto *SingleDef = cast<VPSingleDefRecipe>(&R);
       auto *UnderlyingValue = SingleDef->getUnderlyingValue();
-      // Skip recipes that do not need transforming, including canonical IV,
-      // wide canonical IV and VPInstructions without underlying values. The
+      // Skip recipes that do not need transforming, including blends,
+      // widened canonical IV and VPInstructions without underlying values. The
       // latter are added above for masking.
       // FIXME: Migrate code relying on the underlying instruction from VPlan0
       // to construct recipes below to not use the underlying instruction.
@@ -9393,7 +9393,7 @@ static void preparePlanForMainVectorLoop(VPlan &MainPlan, VPlan &EpiPlan) {
     VPBuilder ScalarPHBuilder(MainScalarPH, MainScalarPH->begin());
     Type *Ty = VPTypeAnalysis(MainPlan).inferScalarType(VectorTC);
     ResumePhi = ScalarPHBuilder.createScalarPhi(
-        {VectorTC, MainPlan.getOrAddLiveIn(Constant::getNullValue(Ty))}, {},
+        {VectorTC, MainPlan.getConstantInt(Ty, 0)}, {},
         "vec.epilog.resume.val");
   } else {
     ResumePhi = cast<VPPhi>(&*ResumePhiIter);

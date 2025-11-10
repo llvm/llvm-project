@@ -860,8 +860,7 @@ void VPRegionBlock::dissolveToCFGLoop() {
     auto *ScalarR =
         VPBuilder(Header, Header->begin())
             .createScalarPhi(
-                {Plan.getOrAddLiveIn(ConstantInt::get(CanIVInfo->getType(), 0)),
-                 CanIVInc},
+                {Plan.getConstantInt(CanIVInfo->getType(), 0), CanIVInc},
                 CanIVInfo->getDebugLoc(), "index");
     CanIV->replaceAllUsesWith(ScalarR);
   }
@@ -880,6 +879,7 @@ void VPRegionBlock::dissolveToCFGLoop() {
 }
 
 VPInstruction *VPRegionBlock::getCanonicalIVIncrement() {
+  // TODO: Represent the increment as VPRegionValue as well.
   auto *ExitingLatch = cast<VPBasicBlock>(getExiting());
   VPValue *CanIV = getCanonicalIV();
   assert(CanIV && "Expected a canonical IV");
@@ -1234,6 +1234,9 @@ VPlan *VPlan::duplicate() {
   // TripCount is cloned. In any case NewPlan->TripCount is updated below.
 
   if (auto *LoopRegion = getVectorLoopRegion()) {
+    assert(LoopRegion->getCanonicalIV() &&
+           NewPlan->getVectorLoopRegion()->getCanonicalIV() &&
+           "Loop regions of both plans must have canonical IVs.");
     Old2NewVPValues[LoopRegion->getCanonicalIV()] =
         NewPlan->getVectorLoopRegion()->getCanonicalIV();
   }
