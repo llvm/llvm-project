@@ -1,6 +1,6 @@
 // REQUIRES: target-x86_64 || target=hexagon{{.*}}
 // RUN: %clang -c -O2 -emit-llvm %S/external_library.c -o %t.rlib.bc
-// RUN: %clang -c -O2 -fenable-ripple -emit-llvm -S -o - -fripple-lib %t.rlib.bc %s | FileCheck %s
+// RUN: %clang -c -O2 -fenable-ripple -emit-llvm -S -o - -fripple-lib %t.rlib.bc -mllvm -ripple-disable-link %s | FileCheck %s
 
 #include "external_library.h"
 #include <stddef.h>

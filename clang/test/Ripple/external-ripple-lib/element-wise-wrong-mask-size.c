@@ -1,6 +1,6 @@
 // REQUIRES: target-x86_64 || target=hexagon{{.*}}
 // RUN: %clang -g -c -O2 -emit-llvm %s -DCOMPILE_LIB=1 -o %t.bc
-// RUN: %clang -g -O2 -fenable-ripple -fripple-lib=%t.bc -emit-llvm -S %s 2> %t; FileCheck %s --input-file %t
+// RUN: %clang -g -O2 -fenable-ripple -fripple-lib=%t.bc -emit-llvm -S -mllvm -ripple-disable-link %s 2> %t; FileCheck %s --input-file %t
 
 #ifdef COMPILE_LIB
 

@@ -62,6 +62,7 @@
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/HipStdPar/HipStdPar.h"
 #include "llvm/Transforms/IPO/EmbedBitcodePass.h"
+#include "llvm/Transforms/IPO/InlineBitcodeLibrary.h"
 #include "llvm/Transforms/IPO/InferFunctionAttrs.h"
 #include "llvm/Transforms/IPO/LowerTypeTests.h"
 #include "llvm/Transforms/IPO/ThinLTOBitcodeWriter.h"
@@ -122,6 +123,10 @@ static cl::opt<PGOOptions::ColdFuncOpt> ClPGOColdFuncAttr(
                           "Mark cold functions with minsize."),
                clEnumValN(PGOOptions::ColdFuncOpt::OptNone, "optnone",
                           "Mark cold functions with optnone.")));
+
+static cl::opt<bool> EnableLinkBitcode("enable-inline-bitcode-library",
+  cl::init(true),
+  cl::desc("Enable LinkBitCode Pass"));
 
 LLVM_ABI extern cl::opt<InstrProfCorrelator::ProfCorrelatorKind>
     ProfileCorrelate;
@@ -1119,6 +1124,12 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
                               ThinOrFullLTOPhase Phase) {
             TargetMachine *LTM = TM.get() ? (TM.get()).get() : nullptr;
             MPM.addPass(RippleModulePass(LTM));
+            llvm::Triple TargetTriple = Triple(TM.get()->getTargetTriple());
+            if ((TargetTriple.isHexagon() || TargetTriple.isAArch64() ||
+                 TargetTriple.isX86()) &&
+                EnableLinkBitcode) {
+              MPM.addPass(InlineBitcodeLibraryPass());
+            }
           });
 
     if (CodeGenOpts.FatLTO) {

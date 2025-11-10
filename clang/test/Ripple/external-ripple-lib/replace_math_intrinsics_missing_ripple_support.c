@@ -1,6 +1,6 @@
 // REQUIRES: target-x86_64 || target-aarch64 || target=hexagon{{.*}}
 // RUN: %clang -c -O2 -emit-llvm %S/external_library.c -o %t
-// RUN: %clang -Wall -Wextra -Wripple -Wpedantic -g -O2 -fenable-ripple -emit-llvm -S -ffast-math -fripple-lib %t %s -ferror-limit=500 2>%t.err; FileCheck %s --input-file=%t.err
+// RUN: %clang -Wall -Wextra -Wripple -Wpedantic -g -O2 -fenable-ripple -emit-llvm -S -ffast-math -fripple-lib %t -mllvm -ripple-disable-link %s -mllvm -ripple-disable-link -ferror-limit=500 2>%t.err; FileCheck %s --input-file=%t.err
 
 #include <ripple.h>
 

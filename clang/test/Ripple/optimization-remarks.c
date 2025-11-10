@@ -1,7 +1,7 @@
 // REQUIRES: target=hexagon{{.*}} || target-aarch64 || target-x86_64
 // RUN: %clang -g -S -O2 -emit-llvm %s -DCOMPILE_LIB=1 -o %t.ll
-// RUN: %clang -fenable-ripple -fripple-lib=%t.ll -S -emit-llvm -O2 -ffast-math %s -o %t -Rpass=ripple 2> %t.err && FileCheck %s --input-file=%t.err --check-prefix=SUCCESS
-// RUN: %clang -fenable-ripple -fripple-lib=%t.ll -S -emit-llvm -O2 -ffast-math %s -o %t -Rpass-missed=ripple 2> %t.err && FileCheck %s --input-file=%t.err --check-prefix=FAILURE
+// RUN: %clang -fenable-ripple -fripple-lib=%t.ll -S -emit-llvm -O2 -ffast-math %s -o %t -Rpass=ripple -mllvm -ripple-disable-link 2> %t.err && FileCheck %s --input-file=%t.err --check-prefix=SUCCESS
+// RUN: %clang -fenable-ripple -fripple-lib=%t.ll -S -emit-llvm -O2 -ffast-math %s -o %t -Rpass-missed=ripple -mllvm -ripple-disable-link 2> %t.err && FileCheck %s --input-file=%t.err --check-prefix=FAILURE
 #ifdef COMPILE_LIB
 
 #include <stdint.h>

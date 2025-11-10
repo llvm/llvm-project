@@ -91,6 +91,7 @@ MODULE_PASS("hipstdpar-select-accelerator-code",
             HipStdParAcceleratorCodeSelectionPass())
 MODULE_PASS("hotcoldsplit", HotColdSplittingPass())
 MODULE_PASS("inferattrs", InferFunctionAttrsPass())
+MODULE_PASS("inline-bitcode-library", InlineBitcodeLibraryPass())
 MODULE_PASS("inliner-ml-advisor-release",
             ModuleInlinerWrapperPass(getInlineParams(), true, {},
                                      InliningAdvisorMode::Release, 0))

@@ -1,6 +1,6 @@
 // REQUIRES: hexagon-registered-target
 // RUN: %clang --target=hexagon-unknown-elf -g -c -O2 -emit-llvm %S/external_library.c -o %t.rlib.bc
-// RUN: %clang --target=hexagon-unknown-elf -c -O2 -fenable-ripple -fripple-lib=%t.rlib.bc -emit-llvm -S -o - %s | FileCheck %s
+// RUN: %clang --target=hexagon-unknown-elf -c -O2 -fno-discard-value-names -fenable-ripple -fripple-lib=%t.rlib.bc -emit-llvm -S -o - -mllvm -ripple-disable-link %s | FileCheck %s
 
 #include "external_library.h"
 #include <stddef.h>
