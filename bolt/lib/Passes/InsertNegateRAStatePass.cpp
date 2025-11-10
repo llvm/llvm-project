@@ -91,7 +91,8 @@ void InsertNegateRAState::coverFunctionFragmentStart(BinaryFunction &BF,
       });
   // If a function is already split in the input, the first FF can also start
   // with Signed state. This covers that scenario as well.
-  auto RAState = BC.MIB->getRAState(*(*FirstNonEmpty)->begin());
+  auto II = (*FirstNonEmpty)->getFirstNonPseudo();
+  auto RAState = BC.MIB->getRAState(*II);
   if (!RAState) {
     BC.errs() << "BOLT-ERROR: unknown RAState after inferUnknownStates "
               << " in function " << BF.getPrintName() << "\n";
@@ -99,7 +100,7 @@ void InsertNegateRAState::coverFunctionFragmentStart(BinaryFunction &BF,
     return;
   }
   if (*RAState)
-    BF.addCFIInstruction(*FirstNonEmpty, (*FirstNonEmpty)->begin(),
+    BF.addCFIInstruction(*FirstNonEmpty, II,
                          MCCFIInstruction::createNegateRAState(nullptr));
 }
 
