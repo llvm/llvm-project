@@ -356,3 +356,14 @@ void nonInlineFunctionCallPtr() {
   (void)a;
   (void)c;
 }
+
+// ----------------------------------------------------------------------------//
+// Misc
+// ----------------------------------------------------------------------------//
+
+using uintptr_t = unsigned long long;
+
+void unknownVal() {
+  // force the argument to be UnknownVal
+  (void)std::get<int>(*(std::variant<int, float>*)(uintptr_t)3.14f); // no crash
+}
