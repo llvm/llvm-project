@@ -314,11 +314,9 @@ bool BasicBlockSections::handleBBSections(MachineFunction &MF) {
 
   DenseMap<UniqueBBID, BBClusterInfo> FuncClusterInfo;
   if (BBSectionsType == BasicBlockSection::List) {
-    auto [HasProfile, ClusterInfo] =
+    auto ClusterInfo =
         getAnalysis<BasicBlockSectionsProfileReaderWrapperPass>()
             .getClusterInfoForFunction(MF.getName());
-    if (!HasProfile)
-      return false;
     for (auto &BBClusterInfo : ClusterInfo) {
       FuncClusterInfo.try_emplace(BBClusterInfo.BBID, BBClusterInfo);
     }
