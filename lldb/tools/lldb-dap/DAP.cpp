@@ -657,15 +657,6 @@ std::optional<protocol::Source> DAP::ResolveSource(const lldb::SBFrame &frame) {
   if (!frame.IsValid())
     return std::nullopt;
 
-  // IMPORTANT: Get line entry from symbol context, NOT from PC address.
-  // When a frame's PC points to a return address (the instruction
-  // after a call), that address may have line number 0 for compiler generated
-  // code.
-  //
-  // EXAMPLE: If PC is at 0x1004 (frame return address after the call
-  // instruction) with no line info, but 0x1003 (in the middle of previous call
-  // instruction) is at line 42, symbol context returns line 42.
-
   const lldb::SBLineEntry frame_line_entry = frame.GetLineEntry();
   if (DisplayAssemblySource(debugger, frame_line_entry)) {
     const lldb::SBAddress frame_pc = frame.GetPCAddress();

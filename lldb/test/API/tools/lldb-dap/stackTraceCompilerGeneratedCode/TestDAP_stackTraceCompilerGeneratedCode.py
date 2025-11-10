@@ -10,7 +10,6 @@ from lldbsuite.test.lldbtest import *
 
 
 class TestDAP_stackTraceCompilerGeneratedCode(lldbdap_testcase.DAPTestCaseBase):
-    @skipIfWindows
     def test_non_leaf_frame_compiler_generate_code(self):
         """
         Test that non-leaf frames with compiler-generated code are properly resolved.
@@ -42,7 +41,6 @@ class TestDAP_stackTraceCompilerGeneratedCode(lldbdap_testcase.DAPTestCaseBase):
         # Examine the foo() frame (stack_frames[1])
         # This is the critical frame containing compiler-generated code
         foo_frame = stack_frames[1]
-        print(f"foo_frame: {foo_frame}")
 
         # Verify that the frame's line number points to the bar() call,
         # not to the compiler-generated code after it
@@ -65,3 +63,4 @@ class TestDAP_stackTraceCompilerGeneratedCode(lldbdap_testcase.DAPTestCaseBase):
         # Verify that this didn't happen - the path should be a real file path.
         foo_path = foo_frame.get("source", {}).get("path")
         self.assertNotIn("`", foo_path, "Expected foo source path to not contain `")
+        self.continue_to_exit()
