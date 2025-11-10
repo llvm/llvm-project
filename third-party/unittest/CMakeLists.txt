@@ -123,7 +123,7 @@ endif()
 
 
 add_llvm_library("${gtest_name}_main"
-  googletest/src/gtest_main.cc
+  ${gtest_main_src}
 
   LINK_LIBS
   "${gtest_name}"
