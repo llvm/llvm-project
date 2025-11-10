@@ -226,6 +226,11 @@ New checks
   Finds virtual function overrides with different visibility than the function
   in the base class.
 
+- New :doc:`readability-constant-operand-order
+  <clang-tidy/checks/readability/constant-operand-order>` check.
+
+  FIXME: Write a short description.
+
 - New :doc:`readability-redundant-parentheses
   <clang-tidy/checks/readability/redundant-parentheses>` check.
 

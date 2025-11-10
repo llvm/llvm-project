@@ -11,6 +11,7 @@ add_clang_library(clangTidyReadabilityModule STATIC
   AvoidUnconditionalPreprocessorIfCheck.cpp
   BracesAroundStatementsCheck.cpp
   ConstReturnTypeCheck.cpp
+  ConstantOperandOrderCheck.cpp
   ContainerContainsCheck.cpp
   ContainerDataPointerCheck.cpp
   ContainerSizeEmptyCheck.cpp
