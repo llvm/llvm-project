@@ -268,44 +268,25 @@ specializeToConvOp(RewriterBase &rewriter, GenericOp genericOp,
 static FailureOr<LinalgOp> specializeLinalgConvolutions(RewriterBase &rewriter,
                                                         GenericOp genericOp) {
   SmallVector<int64_t> dilations, strides;
+#define CONV_OP_SPECIALIZER(ConvOpTy)                                          \
+  if (isaConvolutionOpOfType<ConvOpTy>(genericOp, &dilations, &strides))       \
+    return specializeToConvOp<ConvOpTy>(rewriter, genericOp, dilations,        \
+                                        strides);                              \
   // -----------------------------
   // Depthwise Convolution ops.
   // -----------------------------
-  if (isaConvolutionOpOfType<linalg::DepthwiseConv1DNwcWcOp>(
-          genericOp, &dilations, &strides))
-    return specializeToConvOp<linalg::DepthwiseConv1DNwcWcOp>(
-        rewriter, genericOp, dilations, strides);
-  if (isaConvolutionOpOfType<linalg::DepthwiseConv2DNchwChwOp>(
-          genericOp, &dilations, &strides))
-    return specializeToConvOp<linalg::DepthwiseConv2DNchwChwOp>(
-        rewriter, genericOp, dilations, strides);
-  if (isaConvolutionOpOfType<linalg::DepthwiseConv3DNdhwcDhwcmOp>(
-          genericOp, &dilations, &strides))
-    return specializeToConvOp<linalg::DepthwiseConv3DNdhwcDhwcmOp>(
-        rewriter, genericOp, dilations, strides);
+  CONV_OP_SPECIALIZER(linalg::DepthwiseConv1DNwcWcOp);
+  CONV_OP_SPECIALIZER(linalg::DepthwiseConv2DNchwChwOp);
+  CONV_OP_SPECIALIZER(linalg::DepthwiseConv3DNdhwcDhwcmOp);
   // -----------------------------
   // Pooling ops.
   // -----------------------------
-  if (isaConvolutionOpOfType<linalg::PoolingNhwcMaxOp>(genericOp, &dilations,
-                                                       &strides))
-    return specializeToConvOp<linalg::PoolingNhwcMaxOp>(rewriter, genericOp,
-                                                        dilations, strides);
-  if (isaConvolutionOpOfType<linalg::PoolingNhwcMinOp>(genericOp, &dilations,
-                                                       &strides))
-    return specializeToConvOp<linalg::PoolingNhwcMinOp>(rewriter, genericOp,
-                                                        dilations, strides);
-  if (isaConvolutionOpOfType<linalg::PoolingNhwcSumOp>(genericOp, &dilations,
-                                                       &strides))
-    return specializeToConvOp<linalg::PoolingNhwcSumOp>(rewriter, genericOp,
-                                                        dilations, strides);
-  if (isaConvolutionOpOfType<linalg::PoolingNhwcMaxUnsignedOp>(
-          genericOp, &dilations, &strides))
-    return specializeToConvOp<linalg::PoolingNhwcMaxUnsignedOp>(
-        rewriter, genericOp, dilations, strides);
-  if (isaConvolutionOpOfType<linalg::PoolingNhwcMinUnsignedOp>(
-          genericOp, &dilations, &strides))
-    return specializeToConvOp<linalg::PoolingNhwcMinUnsignedOp>(
-        rewriter, genericOp, dilations, strides);
+  CONV_OP_SPECIALIZER(linalg::PoolingNhwcMaxOp);
+  CONV_OP_SPECIALIZER(linalg::PoolingNhwcMinOp);
+  CONV_OP_SPECIALIZER(linalg::PoolingNhwcSumOp);
+  CONV_OP_SPECIALIZER(linalg::PoolingNhwcMaxUnsignedOp);
+  CONV_OP_SPECIALIZER(linalg::PoolingNhwcMinUnsignedOp);
+#undef CONV_OP_SPECIALIZER
   return failure();
 }
 

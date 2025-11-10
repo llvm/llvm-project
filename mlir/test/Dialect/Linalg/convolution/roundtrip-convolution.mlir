@@ -112,6 +112,8 @@ func.func @pooling_nhwc_min_unsigned_integer(%input: tensor<?x?x?x?xi32>, %filte
 // CHECK-SAME:      dilations = dense<1> : tensor<2xi64>, strides = dense<1> : tensor<2xi64>
 //  CHECK-NOT:   linalg.generic
 
+// -----
+
 func.func @pooling_nhwc_min_unsigned_float(%input: tensor<?x?x?x?xf32>, %filter: tensor<?x?xf32>, %output: tensor<?x?x?x?xf32>) -> tensor<?x?x?x?xf32> {
   %0 = linalg.pooling_nhwc_min_unsigned
          {dilations = dense<1> : tensor<2xi64>, strides = dense<1> : tensor<2xi64>}
