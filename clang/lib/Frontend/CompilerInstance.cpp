@@ -546,8 +546,8 @@ void CompilerInstance::createPreprocessor(TranslationUnitKind TUKind) {
   if (GetDependencyDirectives)
     PP->setDependencyDirectivesGetter(*GetDependencyDirectives);
 
-  if (!LiteralConverter::setConvertersFromOptions(PP->getLiteralConverter(),
-                                                  getLangOpts(), getTarget()))
+  if (LiteralConverter::setConvertersFromOptions(PP->getLiteralConverter(),
+                                                 getLangOpts(), getTarget()))
     PP->getDiagnostics().Report(clang::diag::err_fe_literal_conv_config);
 }
 
