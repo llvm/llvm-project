@@ -7122,7 +7122,12 @@ defm dump_parse_tree : BooleanFFlag<"dump-parse-tree">, Group<gfortran_Group>;
 defm external_blas : BooleanFFlag<"external-blas">, Group<gfortran_Group>;
 defm f2c : BooleanFFlag<"f2c">, Group<gfortran_Group>;
 defm frontend_optimize : BooleanFFlag<"frontend-optimize">, Group<gfortran_Group>;
-defm init_local_zero : BooleanFFlag<"init-local-zero">, Group<gfortran_Group>;
+defm init_local_zero
+    : BooleanFFlag<"init-local-zero">,
+      Group<gfortran_Group>,
+      Visibility<[FlangOption, FC1Option]>,
+      HelpText<"Initialize real/integer/character/logical/complex type "
+               "to zero.">;
 defm integer_4_integer_8 : BooleanFFlag<"integer-4-integer-8">, Group<gfortran_Group>;
 defm max_identifier_length : BooleanFFlag<"max-identifier-length">, Group<gfortran_Group>;
 defm module_private : BooleanFFlag<"module-private">, Group<gfortran_Group>;

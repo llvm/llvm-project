@@ -384,6 +384,159 @@ private:
   llvm::SmallSetVector<Fortran::semantics::SymbolRef, 32> seen;
 };
 
+// Helper class to encapsulate utilities related to emission of implicit
+// assignments. `Implicit` here implies the assignment does not
+// exist in the Fortran source, but is implicit through definition
+// of one or more flagsets (like -finit-* family of flags).
+// General purpose usage of these utilities outside the
+// scope detailed here is discouraged, and is probably wrong.
+class ImplicitAssignmentGenerator {
+private:
+  Fortran::lower::LoweringBridge &bridge;
+  bool isInitLocalZeroFlagDefined;
+
+  /*
+   * Generates a parser::Variable for `sym` and fills
+   * in the correct source location for the designator.
+   */
+  Fortran::parser::Variable generateLHS(const Fortran::semantics::Symbol &sym) {
+    Fortran::parser::Designator designator = Fortran::parser::Designator{
+        Fortran::parser::DataRef{Fortran::parser::Name{
+            Fortran::parser::FindSourceLocation(sym.name()),
+            const_cast<Fortran::semantics::Symbol *>(&sym)}}};
+    designator.source = Fortran::parser::FindSourceLocation(sym.name());
+    Fortran::parser::Variable variable = Fortran::parser::Variable{
+        Fortran::common::Indirection<Fortran::parser::Designator>{
+            std::move(designator)}};
+    return variable;
+  }
+
+  /*
+   * Integer, Real, and Complex types can be initialized through
+   * IntLiteralConstant. Further implicit casts will ensure
+   * type compatiblity. Default initialization to `0`.
+   */
+  Fortran::parser::Expr generateIntLiteralConstant(uint32_t init = 0) {
+    std::string val = std::to_string(init);
+    return Fortran::parser::Expr{
+        Fortran::parser::LiteralConstant{Fortran::parser::IntLiteralConstant{
+            Fortran::parser::CharBlock{val.c_str(), val.size()},
+            std::optional<Fortran::parser::KindParam>{}}}};
+  }
+
+  /*
+   * Logical types can be initialized with a LogicalLiteralConstant
+   * set to <true/false>. Defaults to `false`.
+   */
+  Fortran::parser::Expr generateLogicalLiteralConstant(bool init = false) {
+    return (init == false)
+               ? Fortran::parser::Expr{Fortran::parser::LiteralConstant{
+                     Fortran::parser::LogicalLiteralConstant{
+                         false, std::optional<Fortran::parser::KindParam>{}}}}
+               : Fortran::parser::Expr{Fortran::parser::LiteralConstant{
+                     Fortran::parser::LogicalLiteralConstant{
+                         true, std::optional<Fortran::parser::KindParam>{}}}};
+  }
+
+  /*
+   * Character types can be initialized with a FunctionReference
+   * to `achar(init)`. Defaults to `achar(0)`.
+   */
+  Fortran::parser::Expr
+  generateACharReference(Fortran::parser::CharBlock &currentPosition,
+                         const Fortran::semantics::Symbol &sym,
+                         std::string init = "0") {
+    // Construct a parser::Name for `achar`
+    std::string funcNameStr = "achar";
+    Fortran::parser::CharBlock funcCharBlock =
+        Fortran::parser::CharBlock{funcNameStr.c_str(), funcNameStr.size()};
+    Fortran::parser::Name funcName = Fortran::parser::Name{
+        Fortran::parser::CharBlock{funcNameStr.c_str(), funcNameStr.size()}};
+    Fortran::semantics::Scope &scope =
+        bridge.getSemanticsContext().FindScope(currentPosition);
+    Fortran::semantics::Symbol *funcSym = scope.FindSymbol(funcCharBlock);
+    if (funcSym) {
+      funcName.symbol = std::move(funcSym);
+    } else {
+      Fortran::semantics::Symbol &symbol =
+          bridge.getSemanticsContext()
+              .FindScope(currentPosition)
+              .MakeSymbol(
+                  funcCharBlock,
+                  Fortran::semantics::Attrs{Fortran::semantics::Attr::ELEMENTAL,
+                                            Fortran::semantics::Attr::INTRINSIC,
+                                            Fortran::semantics::Attr::PURE},
+                  Fortran::semantics::ProcEntityDetails{});
+      funcName.symbol = std::move(&symbol);
+    }
+
+    // Construct a RHS expression including a FunctionReference
+    // to `achar(init)`
+    Fortran::parser::Expr intExpr = Fortran::parser::Expr{
+        Fortran::parser::LiteralConstant{Fortran::parser::IntLiteralConstant{
+            Fortran::parser::CharBlock{init.c_str(), init.size()},
+            std::optional<Fortran::parser::KindParam>{}}}};
+    Fortran::common::Indirection<Fortran::parser::Expr> indirExpr{
+        std::move(intExpr)};
+    Fortran::parser::ActualArg actualArg{std::move(indirExpr)};
+
+    Fortran::parser::ActualArgSpec argSpec = Fortran::parser::ActualArgSpec{
+        std::make_tuple(std::nullopt, std::move(actualArg))};
+    std::list<Fortran::parser::ActualArgSpec> argSpecList;
+    argSpecList.push_back(std::move(argSpec));
+    Fortran::parser::ProcedureDesignator procDesignator =
+        Fortran::parser::ProcedureDesignator{std::move(funcName)};
+    Fortran::parser::Call call = Fortran::parser::Call{
+        std::make_tuple(std::move(procDesignator), std::move(argSpecList))};
+    Fortran::parser::FunctionReference funcRef =
+        Fortran::parser::FunctionReference{std::move(call)};
+    funcRef.source = Fortran::parser::FindSourceLocation(sym.name());
+    return Fortran::parser::Expr{std::move(funcRef)};
+  }
+
+  /*
+   * Utility to wrap the LHS variable `var` and RHS expression `expr` into
+   * an assignment.
+   */
+  inline std::unique_ptr<Fortran::parser::AssignmentStmt>
+  makeAssignment(Fortran::parser::Variable &var, Fortran::parser::Expr expr) {
+    Fortran::parser::AssignmentStmt stmt = Fortran::parser::AssignmentStmt{
+        std::make_tuple(std::move(var), std::move(expr))};
+    return std::make_unique<Fortran::parser::AssignmentStmt>(std::move(stmt));
+  }
+
+public:
+  ImplicitAssignmentGenerator(Fortran::lower::LoweringBridge &bridge,
+                              bool isInitLocalZeroFlagDefined)
+      : bridge(bridge), isInitLocalZeroFlagDefined(isInitLocalZeroFlagDefined) {
+  }
+
+  std::unique_ptr<Fortran::parser::AssignmentStmt>
+  emitAssignment(Fortran::parser::CharBlock &currentPosition,
+                 const Fortran::semantics::Symbol &sym) {
+    if (isInitLocalZeroFlagDefined) {
+      Fortran::parser::Variable var = generateLHS(sym);
+      const Fortran::semantics::DeclTypeSpec *declTy = sym.GetType();
+
+      if (declTy->IsNumeric(Fortran::semantics::TypeCategory::Integer) ||
+          declTy->IsNumeric(Fortran::semantics::TypeCategory::Real) ||
+          declTy->IsNumeric(Fortran::semantics::TypeCategory::Complex))
+        return makeAssignment(var, generateIntLiteralConstant());
+
+      else if (declTy->category() ==
+               Fortran::semantics::DeclTypeSpec::Category::Logical)
+        return makeAssignment(var, generateLogicalLiteralConstant());
+
+      else if (declTy->category() ==
+               Fortran::semantics::DeclTypeSpec::Category::Character)
+        return makeAssignment(var,
+                              generateACharReference(currentPosition, sym));
+    }
+
+    return nullptr;
+  }
+};
+
 using IncrementLoopNestInfo = llvm::SmallVector<IncrementLoopInfo, 8>;
 } // namespace
 
@@ -6010,6 +6163,57 @@ private:
   void instantiateVar(const Fortran::lower::pft::Variable &var,
                       Fortran::lower::AggregateStoreMap &storeMap) {
     Fortran::lower::instantiateVariable(*this, var, localSymbols, storeMap);
+
+    /// Implicit assignment is defined by the `-finit-*` family of flags.
+    /// These options do not initialize:
+    ///   1) Any variable already initialized
+    ///   2) objects with the POINTER attribute
+    ///   3) allocatable arrays
+    ///   4) variables that appear in an EQUIVALENCE statement
+
+    auto isEligibleForImplicitAssignment = [&var]() -> bool {
+      if (!var.hasSymbol())
+        return false;
+
+      const Fortran::semantics::Symbol &sym = var.getSymbol();
+      if (const auto *details =
+              sym.detailsIf<Fortran::semantics::ObjectEntityDetails>()) {
+        if (details->init())
+          return false;
+      }
+
+      if (sym.attrs().test(Fortran::semantics::Attr::POINTER))
+        return false;
+
+      if (sym.Rank() > 0 &&
+          sym.attrs().test(Fortran::semantics::Attr::ALLOCATABLE))
+        return false;
+
+      if (Fortran::lower::pft::getDependentVariableList(sym).size() > 1)
+        return false;
+
+      return true;
+    };
+
+    if (isEligibleForImplicitAssignment()) {
+      // Internal state of this class holds only the -finit-* flagsets. Hence
+      // can be reused for different symbols. Also minimizes the number of
+      // calls to `getLoweringOptions()`.
+      static ImplicitAssignmentGenerator implicitAssignmentGenerator{
+          bridge,
+          /*isInitLocalZeroFlagDefined=*/getLoweringOptions()
+                  .getInitLocalZeroDef() == 1};
+      std::unique_ptr<Fortran::parser::AssignmentStmt> stmt =
+          implicitAssignmentGenerator.emitAssignment(currentPosition,
+                                                     var.getSymbol());
+      if (stmt.get()) {
+        Fortran::evaluate::ExpressionAnalyzer ea{bridge.getSemanticsContext()};
+        const Fortran::evaluate::Assignment *assign = ea.Analyze(*stmt.get());
+        if (assign)
+          genAssignment(*assign);
+      }
+    }
+
     if (var.hasSymbol())
       genOpenMPSymbolProperties(*this, var);
   }
