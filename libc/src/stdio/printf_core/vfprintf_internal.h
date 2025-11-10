@@ -54,8 +54,8 @@ LIBC_INLINE FileIOResult fwrite_unlocked(const void *ptr, size_t size,
   // which we need to propagate back into our code. fwrite only modifies errno
   // if there was an error, and errno may have previously been nonzero. Only
   // return errno if there was an error.
-  auto bytes = ::fwrite_unlocked(ptr, size, nmemb, f);
-  return {bytes, bytes == nmemb * size ? 0 : errno};
+  size_t bytes = ::fwrite_unlocked(ptr, size, nmemb, f);
+  return {bytes, bytes == size ? 0 : errno};
 }
 #endif // LIBC_COPT_STDIO_USE_SYSTEM_FILE
 } // namespace internal
