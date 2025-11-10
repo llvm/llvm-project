@@ -1,7 +1,7 @@
-// RUN: %check_clang_tidy --match-partial-fixes -check-suffix=0-0 %s modernize-use-auto %t -- -config="{CheckOptions: {modernize-use-auto.RemoveStars: false, modernize-use-auto.MinTypeNameLength: 0}}" -- -frtti
-// RUN: %check_clang_tidy --match-partial-fixes -check-suffix=0-8 %s modernize-use-auto %t -- -config="{CheckOptions: {modernize-use-auto.RemoveStars: false, modernize-use-auto.MinTypeNameLength: 8}}" -- -frtti
-// RUN: %check_clang_tidy --match-partial-fixes -check-suffix=1-0 %s modernize-use-auto %t -- -config="{CheckOptions: {modernize-use-auto.RemoveStars: true, modernize-use-auto.MinTypeNameLength: 0}}" -- -frtti
-// RUN: %check_clang_tidy --match-partial-fixes -check-suffix=1-8 %s modernize-use-auto %t -- -config="{CheckOptions: {modernize-use-auto.RemoveStars: true, modernize-use-auto.MinTypeNameLength: 8}}" -- -frtti
+// RUN: %check_clang_tidy -check-suffix=0-0 %s modernize-use-auto %t -- -config="{CheckOptions: {modernize-use-auto.RemoveStars: false, modernize-use-auto.MinTypeNameLength: 0}}" -- -frtti
+// RUN: %check_clang_tidy -check-suffix=0-8 %s modernize-use-auto %t -- -config="{CheckOptions: {modernize-use-auto.RemoveStars: false, modernize-use-auto.MinTypeNameLength: 8}}" -- -frtti
+// RUN: %check_clang_tidy -check-suffix=1-0 %s modernize-use-auto %t -- -config="{CheckOptions: {modernize-use-auto.RemoveStars: true, modernize-use-auto.MinTypeNameLength: 0}}" -- -frtti
+// RUN: %check_clang_tidy -check-suffix=1-8 %s modernize-use-auto %t -- -config="{CheckOptions: {modernize-use-auto.RemoveStars: true, modernize-use-auto.MinTypeNameLength: 8}}" -- -frtti
 
 template <class T> extern T foo();
 template <class T> struct P {  explicit P(T t) : t_(t) {}  T t_;};
@@ -17,10 +17,10 @@ int bar() {
     // CHECK-FIXES-1-0: auto  i = {{.*}}
     // CHECK-FIXES-1-8: long i = {{.*}}
     const long ci = static_cast<long>(foo<const long>());
-    // CHECK-FIXES-0-0: auto ci = {{.*}}
-    // CHECK-FIXES-0-8: long ci = {{.*}}
-    // CHECK-FIXES-1-0: auto  ci = {{.*}}
-    // CHECK-FIXES-1-8: long ci = {{.*}}
+    // CHECK-FIXES-0-0: const auto ci = {{.*}}
+    // CHECK-FIXES-0-8: const long ci = {{.*}}
+    // CHECK-FIXES-1-0: const auto  ci = {{.*}}
+    // CHECK-FIXES-1-8: const long ci = {{.*}}
     long *pi = static_cast<long *>(foo<long *>());
     // CHECK-FIXES-0-0: auto *pi = {{.*}}
     // CHECK-FIXES-0-8: long *pi = {{.*}}

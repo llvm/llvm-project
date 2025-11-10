@@ -446,6 +446,7 @@ bool FrontendActionFactory::runInvocation(
     DiagnosticConsumer *DiagConsumer) {
   // Create a compiler instance to handle the actual work.
   CompilerInstance Compiler(std::move(Invocation), std::move(PCHContainerOps));
+  Compiler.setVirtualFileSystem(Files->getVirtualFileSystemPtr());
   Compiler.setFileManager(Files);
 
   // The FrontendAction can have lifetime requirements for Compiler or its

@@ -401,7 +401,8 @@ TEST(ValueMapperTest, mapValueLocalAsMetadataToConstant) {
 class TestTypeRemapper : public ValueMapTypeRemapper {
 public:
   TestTypeRemapper(Type *Ty) : DstTy(Ty) { }
-  Type *remapType(Type *srcTy) { return DstTy; }
+  Type *remapType(Type *srcTy) override { return DstTy; }
+
 private:
   Type *DstTy;
 };

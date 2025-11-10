@@ -382,8 +382,7 @@ struct WrapperFunction {
     if (ArgBytes.getOutOfBandError())
       return Return(Session, CallCtx, ArgBytes.release());
 
-    if (auto Args =
-            S.arguments().template deserialize<ArgTuple>(std::move(ArgBytes)))
+    if (auto Args = S.arguments().template deserialize<ArgTuple>(ArgBytes))
       std::apply(HandlerTraits::forwardArgsAsRequested(bind_front(
                      std::forward<Handler>(H),
                      detail::StructuredYield<RetTupleType, Serializer>(

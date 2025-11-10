@@ -996,6 +996,8 @@ cc_library(
     srcs = glob([
         "lib/Analysis/FlowSensitive/Models/*.cpp",
         "lib/Analysis/FlowSensitive/*.cpp",
+        "lib/Analysis/LifetimeSafety/*.cpp",
+        "lib/Analysis/LifetimeSafety/*.h",
         "lib/Analysis/*.cpp",
     ]) + [
         ":analysis_htmllogger_gen",

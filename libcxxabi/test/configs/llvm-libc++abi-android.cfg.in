@@ -29,7 +29,7 @@ config.substitutions.append(('%{link_flags}',
 config.substitutions.append(('%{exec}',
     '%{executor}' +
     ' --job-limit-socket ' + libcxx.test.android.adb_job_limit_socket() +
-    ' --prepend-path-env LD_LIBRARY_PATH /data/local/tmp/libc++ --execdir %T -- '
+    ' --prepend-path-env LD_LIBRARY_PATH /data/local/tmp/libc++ --execdir %{temp} -- '
 ))
 
 libcxx.test.config.configure(

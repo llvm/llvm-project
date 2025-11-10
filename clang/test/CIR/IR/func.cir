@@ -110,4 +110,36 @@ cir.func builtin @builtin() {
 }
 // CHECK: cir.func{{.*}} builtin @builtin()
 
+cir.func @global_ctor_func() global_ctor {
+  cir.return
+}
+
+// CHECK: cir.func @global_ctor_func() global_ctor {
+// CHECK:   cir.return
+// CHECK: }
+
+cir.func @global_ctor_with_priority() global_ctor(200) {
+  cir.return
+}
+
+// CHECK: cir.func @global_ctor_with_priority() global_ctor(200) {
+// CHECK:   cir.return
+// CHECK: }
+
+cir.func @global_dtor_func() global_dtor {
+  cir.return
+}
+
+// CHECK: cir.func @global_dtor_func() global_dtor {
+// CHECK:   cir.return
+// CHECK: }
+
+cir.func @global_dtor_with_priority() global_dtor(201) {
+  cir.return
+}
+
+// CHECK: cir.func @global_dtor_with_priority() global_dtor(201) {
+// CHECK:   cir.return
+// CHECK: }
+
 }

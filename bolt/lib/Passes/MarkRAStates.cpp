@@ -43,10 +43,11 @@ bool MarkRAStates::runOnFunction(BinaryFunction &BF) {
         // Not all functions have .cfi_negate_ra_state in them. But if one does,
         // we expect psign/pauth instructions to have the hasNegateRAState
         // annotation.
-        BF.setIgnored();
         BC.outs() << "BOLT-INFO: inconsistent RAStates in function "
                   << BF.getPrintName()
                   << ": ptr sign/auth inst without .cfi_negate_ra_state\n";
+        std::lock_guard<std::mutex> Lock(IgnoreMutex);
+        BF.setIgnored();
         return false;
       }
     }
@@ -67,6 +68,7 @@ bool MarkRAStates::runOnFunction(BinaryFunction &BF) {
           BC.outs() << "BOLT-INFO: inconsistent RAStates in function "
                     << BF.getPrintName()
                     << ": ptr signing inst encountered in Signed RA state\n";
+          std::lock_guard<std::mutex> Lock(IgnoreMutex);
           BF.setIgnored();
           return false;
         }
@@ -80,6 +82,7 @@ bool MarkRAStates::runOnFunction(BinaryFunction &BF) {
                     << BF.getPrintName()
                     << ": ptr authenticating inst encountered in Unsigned RA "
                        "state\n";
+          std::lock_guard<std::mutex> Lock(IgnoreMutex);
           BF.setIgnored();
           return false;
         }

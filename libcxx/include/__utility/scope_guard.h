@@ -43,6 +43,8 @@ public:
 #endif
 };
 
+_LIBCPP_CTAD_SUPPORTED_FOR_TYPE(__scope_guard);
+
 template <class _Func>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 __scope_guard<_Func> __make_scope_guard(_Func __func) {
   return __scope_guard<_Func>(std::move(__func));
