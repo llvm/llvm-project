@@ -7,34 +7,37 @@
 # To run the tests for Google Test itself on Linux, use 'make test' or
 # ctest.  You can select which tests to run using 'ctest -R regex'.
 # For more options, run 'ctest --help'.
-#
-# Do not add_subdirectory(third-party/unittest) this file directly.
-# Instead use:
-#
-#     include(AddGTest)
-#     build_gtest(llvm_gtest [LLVM_SUPPORT])
-#
 ########################################################################
 #
 # Project-wide settings
 
 set(LLVM_SUBPROJECT_TITLE "Third-Party/Google Test")
 
-if (NOT gtest_name)
-  message(FATAL_ERROR "Do not add_subdirectory GTest directly. Use the
-    following helper function instead:
+if(LLVM_RUNTIMES_BUILD)
+  # This instance of GTest is use for unittests for the runtime libraries. It
+  # must not link to LLVMSupport (used for llvm::raw_ostream and llvm::cl
+  # support) of the host build: It may be a different architecture and/or
+  # using a different C++ ABI such as libcxx/libstdc++.
+  set(GTEST_LLVM_COMPONENTS "")
 
-    include(AddGTest)
-    build_gtest(llvm_gtest [LLVM_SUPPORT])
-  ")
-endif ()
+  # We cannot use llvm_gtest for the target; it would clash with
+  # find_package(LLVM) with LLVM_EXPORT_GTEST=ON. Instead, we define an alias
+  # default_gtest that points to llvm_gtest in the LLVM build and
+  # runtimes_gtest in an runtimes build.
+  set(gtest_name "runtimes_gtest")
 
-if (GTEST_USE_LLVM)
-  set(GTEST_LLVM_COMPONENTS "Support") # For llvm::raw_ostream
-else ()
-  # Override locally; never install a non-LLVM GTest
+  # Override locally; never install the runtimes-GTest.
   set(LLVM_INSTALL_GTEST OFF)
-endif ()
+
+  # Build the library containing main() so unittests need less boilerplate.
+  # UnitTestMain/TestMain.cpp always needs LLVMSupport, use GTest's original
+  # main when unavailable.
+  set(gtest_main_src googletest/src/gtest_main.cc)
+else()
+  set(GTEST_LLVM_COMPONENTS "Support")
+  set(gtest_name "llvm_gtest")
+  set(gtest_main_src UnitTestMain/TestMain.cpp)
+endif()
 
 if(WIN32)
   add_definitions(-DGTEST_OS_WINDOWS=1)
@@ -62,10 +65,6 @@ add_definitions( -DGTEST_HAS_RTTI=0 )
 if (HAVE_LIBPTHREAD)
   list(APPEND LIBS pthread)
 endif()
-
-# Make available for runtimes using the LLVM buildtree
-# (required for unittests in bootstrapping builds)
-set(EXCLUDE_FROM_ALL OFF)
 
 # Install GTest only if requested.
 set(BUILDTREE_ONLY BUILDTREE_ONLY)
@@ -99,7 +98,6 @@ if (NOT LLVM_ENABLE_THREADS)
   target_compile_definitions("${gtest_name}" PUBLIC GTEST_HAS_PTHREAD=0)
 endif ()
 
-# Top-level include directory required for "llvm/Support/raw_os_ostream.h"
 target_include_directories("${gtest_name}"
   PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/googletest/include>
          $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/googlemock/include>
@@ -109,33 +107,29 @@ target_include_directories("${gtest_name}"
   PRIVATE googletest googlemock
   )
 
-# When used from the buildtree, also force use of buildtree LLVM headers,
-# (instead locally installed version)
-# FIXME: Shouldn't this be done for all LLVM libraries? Currently, LLVM uses a
-# big giant `include_directories( ${LLVM_INCLUDE_DIR} ${LLVM_MAIN_INCLUDE_DIR})`
-# which CMake does not add to the import library.
-if (GTEST_USE_LLVM)
+if(LLVM_RUNTIMES_BUILD)
+  target_compile_definitions("${gtest_name}" PUBLIC GTEST_NO_LLVM_SUPPORT=1)
+else()
+  # When used from the buildtree, also force use of buildtree LLVM headers,
+  # (instead locally installed version)
+  # FIXME: Shouldn't this be done for all LLVM libraries? Currently, LLVM uses a
+  # big giant `include_directories( ${LLVM_INCLUDE_DIR} ${LLVM_MAIN_INCLUDE_DIR})`
+  # which CMake does not add to the import library.
   target_include_directories("${gtest_name}" BEFORE
     PUBLIC $<BUILD_INTERFACE:${LLVM_SOURCE_DIR}/include>
            $<BUILD_INTERFACE:${LLVM_BINARY_DIR}/include>
     )
-else ()
-  target_compile_definitions("${gtest_name}" PUBLIC GTEST_NO_LLVM_SUPPORT=1)
-endif ()
+endif()
 
-# Library that contains main()
-if (GTEST_USE_LLVM)
-  add_subdirectory(UnitTestMain)
-else ()
-  add_llvm_library("${gtest_name}_main"
-    googletest/src/gtest_main.cc
 
-    LINK_LIBS
-    "${gtest_name}"
+add_llvm_library("${gtest_name}_main"
+  googletest/src/gtest_main.cc
 
-    ${BUILDTREE_ONLY}
-  )
-endif ()
+  LINK_LIBS
+  "${gtest_name}"
+
+  ${BUILDTREE_ONLY}
+)
 
 if (LLVM_INSTALL_GTEST)
   install(DIRECTORY googletest/include/gtest/ DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/llvm-gtest/gtest/" COMPONENT "${gtest_name}")
@@ -159,5 +153,14 @@ function (gtest_remove_dylib_from_link_interface target)
   endif()
 endfunction()
 
-gtest_remove_dylib_from_link_interface("${gtest_name}")
-gtest_remove_dylib_from_link_interface("${gtest_name}_main")
+if (NOT LLVM_RUNTIMES_BUILD)
+  gtest_remove_dylib_from_link_interface("${gtest_name}")
+  gtest_remove_dylib_from_link_interface("${gtest_name}_main")
+endif ()
+
+# The build processing this file always uses this GTest for unittests.
+# Projects that do not use the LLVM_ENABLE_PROJECTS mechanism, but are
+# standalone-builds using find_package(LLVM) can define these aliases
+# explicitly.
+add_library(default_gtest ALIAS "${gtest_name}")
+add_library(default_gtest_main ALIAS "${gtest_name}_main")

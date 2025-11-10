@@ -22,7 +22,8 @@ if (CMAKE_CROSSCOMPILING)
   return ()
 endif ()
 
-make_gtest_target()
+# Make the targets default_gtest and default_gtest_main available.
+build_gtest()
 
 add_dependencies(flang-rt-test-depends
   FlangRTUnitTests

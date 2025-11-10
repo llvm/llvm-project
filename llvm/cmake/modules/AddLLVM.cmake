@@ -1802,7 +1802,13 @@ function(add_unittest test_suite test_name)
   # libpthreads overrides some standard library symbols, so main
   # executable must be linked with it in order to provide consistent
   # API for all shared libaries loaded by this executable.
-  target_link_libraries(${test_name} PRIVATE default_gtest_main default_gtest ${LLVM_PTHREAD_LIB})
+  # default_gtest should be an alias to either llvm_gtest or runtimes_gtest.
+  # If it is not defined, fall back to llvm_gtest.
+  if(TARGET default_gtest)
+    target_link_libraries(${test_name} PRIVATE default_gtest_main default_gtest ${LLVM_PTHREAD_LIB})
+  else ()
+    target_link_libraries(${test_name} PRIVATE llvm_gtest_main llvm_gtest ${LLVM_PTHREAD_LIB})
+  endif ()
 
   add_dependencies(${test_suite} ${test_name})
 endfunction()
