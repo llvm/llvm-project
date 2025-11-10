@@ -9859,7 +9859,7 @@ SDValue DAGCombiner::MatchLoadCombine(SDNode *N) {
   for (LoadSDNode *L : Loads)
     DAG.makeEquivalentMemoryOrdering(L, NewLoad);
 
-  // If no transform is needed the return the new load.
+  // If no transform is needed then return the new load.
   if (!NeedsBswap && !IsRotated)
     return NewLoad;
 
