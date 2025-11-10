@@ -19,12 +19,13 @@
 // template<size_t I, class T, T... Values>
 //   constexpr T get(integer_sequence<T, Values...>) noexcept;
 
-#include <tuple>
-#include <utility>
-#include <type_traits>
 #include <cassert>
+#include <tuple>
+#include <type_traits>
+#include <utility>
 
 constexpr void test() {
+  // std::tuple_size_v
   using empty = std::integer_sequence<int>;
   static_assert(std::tuple_size_v<empty> == 0);
   static_assert(std::tuple_size_v<const empty> == 0);
@@ -33,6 +34,7 @@ constexpr void test() {
   static_assert(std::tuple_size_v<size4> == 4);
   static_assert(std::tuple_size_v<const size4> == 4);
 
+  // std::tuple_element_t
   static_assert(std::is_same_v<std::tuple_element_t<0, size4>, int>);
   static_assert(std::is_same_v<std::tuple_element_t<1, size4>, int>);
   static_assert(std::is_same_v<std::tuple_element_t<2, size4>, int>);
@@ -43,6 +45,7 @@ constexpr void test() {
   static_assert(std::is_same_v<std::tuple_element_t<2, const size4>, int>);
   static_assert(std::is_same_v<std::tuple_element_t<3, const size4>, int>);
 
+  // std::get
   constexpr static size4 seq4{};
   static_assert(get<0>(seq4) == 9);
   static_assert(get<1>(seq4) == 8);
