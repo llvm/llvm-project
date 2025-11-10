@@ -19,5 +19,4 @@ int fchown(int fildes, uid_t owner, gid_t group);
 
 } // namespace LIBC_NAMESPACE_DECL
 
-
-#endif  // LLVM_LIBC_SRC_UNISTD_FCHOWN_H_
+#endif // LLVM_LIBC_SRC_UNISTD_FCHOWN_H_
