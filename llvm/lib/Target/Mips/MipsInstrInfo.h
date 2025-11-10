@@ -55,7 +55,8 @@ public:
     BT_Indirect    // One indirct branch.
   };
 
-  explicit MipsInstrInfo(const MipsSubtarget &STI, unsigned UncondBrOpc);
+  explicit MipsInstrInfo(const MipsSubtarget &STI, const MipsRegisterInfo &RI,
+                         unsigned UncondBrOpc);
 
   MCInst getNop() const override;
 
@@ -130,7 +131,10 @@ public:
   /// getRegisterInfo - TargetInstrInfo is a superset of MRegister info.  As
   /// such, whenever a client has an instance of instruction info, it should
   /// always be able to get register info as well (through this method).
-  virtual const MipsRegisterInfo &getRegisterInfo() const = 0;
+  const MipsRegisterInfo &getRegisterInfo() const {
+    return static_cast<const MipsRegisterInfo &>(
+        TargetInstrInfo::getRegisterInfo());
+  }
 
   virtual unsigned getOppositeBranchOpc(unsigned Opc) const = 0;
 

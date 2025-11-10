@@ -1231,6 +1231,7 @@ cc_library(
         ":format",
         ":frontend",
         ":lex",
+        ":options",
         ":rewrite",
         ":support",
         ":tooling_core",
@@ -1501,10 +1502,23 @@ cc_library(
 
 gentbl_cc_library(
     name = "driver_options_inc_gen",
-    tbl_outs = {"include/clang/Driver/Options.inc": ["-gen-opt-parser-defs"]},
+    tbl_outs = {"include/clang/Options/Options.inc": ["-gen-opt-parser-defs"]},
     tblgen = "//llvm:llvm-tblgen",
-    td_file = "include/clang/Driver/Options.td",
+    td_file = "include/clang/Options/Options.td",
     deps = ["//llvm:OptParserTdFiles"],
+)
+
+cc_library(
+    name = "options",
+    srcs = glob(["lib/Options/*.cpp"]),
+    hdrs = glob(["include/clang/Options/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":basic",
+        ":driver_options_inc_gen",
+        ":static_analyzer_checkers_gen",
+        "//llvm:Option",
+    ],
 )
 
 cc_library(
@@ -1544,6 +1558,7 @@ cc_library(
         ":config",
         ":driver_options_inc_gen",
         ":lex",
+        ":options",
         ":parse",
         ":static_analyzer_checkers_gen",
         "//llvm:BinaryFormat",
@@ -1700,6 +1715,7 @@ cc_library(
         ":driver_options_inc_gen",
         ":edit",
         ":lex",
+        ":options",
         ":parse",
         ":sema",
         ":serialization",
@@ -1769,6 +1785,7 @@ cc_library(
         ":frontend",
         ":frontend_tool",
         ":lex",
+        ":options",
         ":parse",
         ":sema",
         ":serialization",
@@ -2001,6 +2018,7 @@ cc_library(
         ":extract_api",
         ":frontend",
         ":frontend_rewrite",
+        ":options",
         ":static_analyzer_frontend",
         "//llvm:Option",
         "//llvm:Support",
@@ -2176,6 +2194,7 @@ cc_library(
         ":frontend_rewrite",
         ":frontend_tool",
         ":lex",
+        ":options",
         ":parse",
         ":sema",
         ":serialization",
@@ -2258,6 +2277,7 @@ cc_binary(
         ":driver",
         ":frontend",
         ":frontend_rewrite",
+        ":options",
         ":serialization",
         ":static_analyzer_frontend",
         ":tooling",

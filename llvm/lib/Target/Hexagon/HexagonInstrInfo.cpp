@@ -118,9 +118,9 @@ const int Hexagon_ADDI_OFFSET_MIN = -32768;
 void HexagonInstrInfo::anchor() {}
 
 HexagonInstrInfo::HexagonInstrInfo(const HexagonSubtarget &ST)
-    : HexagonGenInstrInfo(ST, Hexagon::ADJCALLSTACKDOWN,
+    : HexagonGenInstrInfo(ST, RegInfo, Hexagon::ADJCALLSTACKDOWN,
                           Hexagon::ADJCALLSTACKUP),
-      Subtarget(ST) {}
+      RegInfo(ST.getHwMode()), Subtarget(ST) {}
 
 namespace llvm {
 namespace HexagonFUnits {
