@@ -357,7 +357,7 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     Value *HandleOp = EmitScalarExpr(E->getArg(0));
     Value *IndexOp = EmitScalarExpr(E->getArg(1));
 
-    // Get the *address* of the status argument (since it's a reference)
+    // Get the *address* of the status argument to write to it by reference
     LValue StatusLVal = EmitLValue(E->getArg(2));
     Address StatusAddr = StatusLVal.getAddress();
 
@@ -370,11 +370,9 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
                                ? llvm::Intrinsic::dx_resource_load_rawbuffer
                                : llvm::Intrinsic::dx_resource_load_typedbuffer;
 
-    QualType BuiltinRetTy = E->getType();
-    llvm::Type *DataTy = ConvertType(BuiltinRetTy->getPointeeType());
-
-    llvm::Type *IntrinsicRetTy = llvm::StructType::get(
-        Builder.getContext(), {DataTy, Builder.getInt1Ty()});
+    llvm::Type *DataTy = ConvertType(E->getType());
+    llvm::Type *RetTy = llvm::StructType::get(Builder.getContext(),
+                                              {DataTy, Builder.getInt1Ty()});
 
     SmallVector<Value *, 3> Args;
     Args.push_back(HandleOp);
@@ -386,7 +384,7 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
 
     // Call the intrinsic (returns a struct)
     Value *ResRet =
-        Builder.CreateIntrinsic(IntrinsicRetTy, IntrID, Args, {}, "ld.struct");
+        Builder.CreateIntrinsic(RetTy, IntrID, Args, {}, "ld.struct");
 
     // Extract the loaded data (first element of the struct)
     Value *LoadedValue = Builder.CreateExtractValue(ResRet, {0}, "ld.value");

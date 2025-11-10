@@ -47,12 +47,12 @@ export float TestLoadWithStatus() {
 }
 
 // CHECK: define noundef nofpclass(nan inf) float @TestLoadWithStatus()()
-// CHECK: call {{.*}} float @hlsl::Buffer<float>::Load(unsigned int, unsigned int&)(ptr {{.*}} @Buf, i32 noundef 1, ptr noundef nonnull align 4 dereferenceable(4) %s1)
-// CHECK: call {{.*}} <4 x i32> @hlsl::RWBuffer<unsigned int vector[4]>::Load(unsigned int, unsigned int&)(ptr {{.*}} @RWBuf, i32 noundef 2, ptr noundef nonnull align 4 dereferenceable(4) %s2)
+// CHECK: call {{.*}} float @hlsl::Buffer<float>::Load(unsigned int, unsigned int&)(ptr {{.*}} @Buf, i32 noundef 1, ptr noalias noundef nonnull align 4 dereferenceable(4) %tmp)
+// CHECK: call {{.*}} <4 x i32> @hlsl::RWBuffer<unsigned int vector[4]>::Load(unsigned int, unsigned int&)(ptr {{.*}} @RWBuf, i32 noundef 2, ptr noalias noundef nonnull align 4 dereferenceable(4) %tmp1)
 // CHECK: add
 // CHECK: ret float
 
-// CHECK: define {{.*}} float @hlsl::Buffer<float>::Load(unsigned int, unsigned int&)(ptr {{.*}} %this, i32 noundef %Index, ptr noundef nonnull align 4 dereferenceable(4) %Status)
+// CHECK: define {{.*}} float @hlsl::Buffer<float>::Load(unsigned int, unsigned int&)(ptr {{.*}} %this, i32 noundef %Index, ptr noalias noundef nonnull align 4 dereferenceable(4) %Status)
 // CHECK: %__handle = getelementptr inbounds nuw %"class.hlsl::Buffer", ptr %{{.*}}, i32 0, i32 0
 // DXIL-NEXT: %[[HANDLE:.*]] = load target("dx.TypedBuffer", float, 0, 0, 0), ptr %__handle
 // CHECK-NEXT: %[[INDEX:.*]] = load i32, ptr %Index.addr

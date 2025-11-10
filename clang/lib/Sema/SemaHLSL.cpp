@@ -3016,17 +3016,13 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
         CheckArgTypeMatches(&SemaRef, TheCall->getArg(1),
                             SemaRef.getASTContext().UnsignedIntTy) ||
         CheckArgTypeMatches(&SemaRef, TheCall->getArg(2),
-                            SemaRef.getASTContext().UnsignedIntTy))
+                            SemaRef.getASTContext().BoolTy))
       return true;
 
     auto *ResourceTy =
         TheCall->getArg(0)->getType()->castAs<HLSLAttributedResourceType>();
-    QualType ContainedTy = ResourceTy->getContainedType();
-    auto ReturnType =
-        SemaRef.Context.getAddrSpaceQualType(ContainedTy, LangAS::hlsl_device);
-    ReturnType = SemaRef.Context.getPointerType(ReturnType);
+    QualType ReturnType = ResourceTy->getContainedType();
     TheCall->setType(ReturnType);
-    TheCall->setValueKind(VK_LValue);
 
     break;
   }

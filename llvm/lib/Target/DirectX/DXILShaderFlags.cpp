@@ -100,6 +100,27 @@ static bool checkWaveOps(Intrinsic::ID IID) {
   }
 }
 
+// Checks to see if the status bit from a load with status
+// instruction is ever extracted.
+// This is our proof that the module requires TiledResources
+// to be set, as if check access fully mapped was used.
+bool checkIfStatusIsExtracted(const Instruction &I) {
+  // Iterate over all uses of the instruction
+  for (const Use &U : I.uses()) {
+    const User *UserInst = U.getUser();
+
+    // Check if the user is an ExtractValue instruction
+    if (const ExtractValueInst *EVI = dyn_cast<ExtractValueInst>(UserInst)) {
+      // ExtractValueInst has a list of indices; check if it extracts index 1
+      if (EVI->getNumIndices() == 1 && EVI->getIndices()[0] == 1) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
 /// Update the shader flags mask based on the given instruction.
 /// \param CSF Shader flags mask to update.
 /// \param I Instruction to check.
@@ -192,6 +213,13 @@ void ModuleShaderFlags::updateFunctionFlags(ComputedShaderFlags &CSF,
           DRTM[cast<TargetExtType>(II->getArgOperand(0)->getType())];
       if (RTI.isTyped())
         CSF.TypedUAVLoadAdditionalFormats |= RTI.getTyped().ElementCount > 1;
+      if (!CSF.TiledResources && checkIfStatusIsExtracted(I))
+        CSF.TiledResources = true;
+      break;
+    }
+    case Intrinsic::dx_resource_load_rawbuffer: {
+      if (!CSF.TiledResources && checkIfStatusIsExtracted(I))
+        CSF.TiledResources = true;
       break;
     }
     }

@@ -202,7 +202,7 @@ public:
   BuiltinTypeMethodBuilder &declareLocalVar(LocalVar &Var);
   template <typename... Ts>
   BuiltinTypeMethodBuilder &callBuiltin(StringRef BuiltinName,
-                                        QualType ReturnType, Ts... ArgSpecs);
+                                        QualType ReturnType, Ts &&...ArgSpecs);
   template <typename TLHS, typename TRHS>
   BuiltinTypeMethodBuilder &assign(TLHS LHS, TRHS RHS);
   template <typename T> BuiltinTypeMethodBuilder &dereference(T Ptr);
@@ -572,7 +572,7 @@ BuiltinTypeMethodBuilder &BuiltinTypeMethodBuilder::returnThis() {
 template <typename... Ts>
 BuiltinTypeMethodBuilder &
 BuiltinTypeMethodBuilder::callBuiltin(StringRef BuiltinName,
-                                      QualType ReturnType, Ts... ArgSpecs) {
+                                      QualType ReturnType, Ts &&...ArgSpecs) {
   ensureCompleteDecl();
 
   std::array<Expr *, sizeof...(ArgSpecs)> Args{
@@ -1240,23 +1240,20 @@ BuiltinTypeDeclBuilder::addLoadWithStatusFunction(DeclarationName &Name,
   ASTContext &AST = SemaRef.getASTContext();
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;
 
-  QualType ElemTy = getHandleElementType();
-  QualType AddrSpaceElemTy =
-      AST.getAddrSpaceQualType(ElemTy, LangAS::hlsl_device);
-  QualType ElemPtrTy = AST.getPointerType(AddrSpaceElemTy);
-  QualType ReturnTy;
+  QualType ReturnTy = getHandleElementType();
+  BuiltinTypeMethodBuilder::LocalVar ResultVar("Result", ReturnTy);
+  BuiltinTypeMethodBuilder::LocalVar StatusVar("StatusBool", AST.BoolTy);
 
-  ReturnTy = ElemTy;
-  if (IsConst)
-    ReturnTy.addConst();
-
-  QualType StatusRefTy = AST.getLValueReferenceType(AST.UnsignedIntTy);
   return BuiltinTypeMethodBuilder(*this, Name, ReturnTy, IsConst)
       .addParam("Index", AST.UnsignedIntTy)
-      .addParam("Status", StatusRefTy)
-      .callBuiltin("__builtin_hlsl_resource_load_with_status", ElemPtrTy,
-                   PH::Handle, PH::_0, PH::_1)
-      .dereference(PH::LastStmt)
+      .addParam("Status", AST.UnsignedIntTy, HLSLParamModifierAttr::Keyword_out)
+      .declareLocalVar(ResultVar)
+      .declareLocalVar(StatusVar)
+      .callBuiltin("__builtin_hlsl_resource_load_with_status", ReturnTy,
+                   PH::Handle, PH::_0, StatusVar)
+      .assign(ResultVar, PH::LastStmt)
+      .assign(PH::_1, StatusVar)
+      .returnValue(ResultVar)
       .finalize();
 }
 
