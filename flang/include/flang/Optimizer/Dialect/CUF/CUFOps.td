@@ -47,8 +47,8 @@ def cuf_AllocOp : cuf_Op<"alloc", [AttrSizedOperandSegments]> {
   );
 
   // Value-scoped Allocate on the returned reference
-  let results = (outs Res<fir_ReferenceType, "",
-                          [MemAlloc<DefaultResource>]>:$ptr);
+  let results =
+      (outs Res<fir_ReferenceType, "", [MemAlloc<DefaultResource>]>:$ptr);
 
   let assemblyFormat = [{
     $in_type (`(` $typeparams^ `:` type($typeparams) `)`)?
@@ -95,13 +95,14 @@ def cuf_AllocateOp : cuf_Op<"allocate", [AttrSizedOperandSegments]> {
   }];
 
   // Value-scoped Allocate on the descriptor being allocated
-  let arguments = (ins Arg<fir_ReferenceType, "",
-                           [MemAlloc<DefaultResource>, MemRead, MemWrite]>:$box,
-      Arg<Optional<AnyRefOrBoxType>, "", [MemWrite]>:$errmsg,
-      Optional<fir_ReferenceType>:$stream,
-      Arg<Optional<AnyRefOrBoxType>, "", [MemWrite]>:$pinned,
-      Arg<Optional<AnyRefOrBoxType>, "", [MemRead]>:$source,
-      cuf_DataAttributeAttr:$data_attr, UnitAttr:$hasStat);
+  let arguments =
+      (ins Arg<fir_ReferenceType,
+               "", [MemAlloc<DefaultResource>, MemRead, MemWrite]>:$box,
+          Arg<Optional<AnyRefOrBoxType>, "", [MemWrite]>:$errmsg,
+          Optional<fir_ReferenceType>:$stream,
+          Arg<Optional<AnyRefOrBoxType>, "", [MemWrite]>:$pinned,
+          Arg<Optional<AnyRefOrBoxType>, "", [MemRead]>:$source,
+          cuf_DataAttributeAttr:$data_attr, UnitAttr:$hasStat);
 
   let results = (outs AnyIntegerType:$stat);
 
