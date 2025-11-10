@@ -580,6 +580,8 @@ Android Support
 
 Windows Support
 ^^^^^^^^^^^^^^^
+- clang-cl now supports /arch:AVX10.1 and /arch:AVX10.2.
+- clang-cl now supports /vlen, /vlen=256 and /vlen=512.
 
 LoongArch Support
 ^^^^^^^^^^^^^^^^^
