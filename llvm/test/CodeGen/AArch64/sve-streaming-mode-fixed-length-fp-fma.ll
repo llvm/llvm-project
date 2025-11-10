@@ -208,9 +208,8 @@ define void @fma_v16f16(ptr %a, ptr %b, ptr %c) {
 ; CHECK-NEXT:    ldp q1, q5, [x2]
 ; CHECK-NEXT:    ldp q2, q3, [x0]
 ; CHECK-NEXT:    fmad z0.h, p0/m, z2.h, z1.h
-; CHECK-NEXT:    movprfx z1, z5
-; CHECK-NEXT:    fmla z1.h, p0/m, z3.h, z4.h
-; CHECK-NEXT:    stp q0, q1, [x0]
+; CHECK-NEXT:    fmad z3.h, p0/m, z4.h, z5.h
+; CHECK-NEXT:    stp q0, q3, [x0]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: fma_v16f16:
@@ -526,9 +525,8 @@ define void @fma_v8f32(ptr %a, ptr %b, ptr %c) {
 ; CHECK-NEXT:    ldp q1, q5, [x2]
 ; CHECK-NEXT:    ldp q2, q3, [x0]
 ; CHECK-NEXT:    fmad z0.s, p0/m, z2.s, z1.s
-; CHECK-NEXT:    movprfx z1, z5
-; CHECK-NEXT:    fmla z1.s, p0/m, z3.s, z4.s
-; CHECK-NEXT:    stp q0, q1, [x0]
+; CHECK-NEXT:    fmad z3.s, p0/m, z4.s, z5.s
+; CHECK-NEXT:    stp q0, q3, [x0]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: fma_v8f32:
@@ -642,9 +640,8 @@ define void @fma_v4f64(ptr %a, ptr %b, ptr %c) {
 ; CHECK-NEXT:    ldp q1, q5, [x2]
 ; CHECK-NEXT:    ldp q2, q3, [x0]
 ; CHECK-NEXT:    fmad z0.d, p0/m, z2.d, z1.d
-; CHECK-NEXT:    movprfx z1, z5
-; CHECK-NEXT:    fmla z1.d, p0/m, z3.d, z4.d
-; CHECK-NEXT:    stp q0, q1, [x0]
+; CHECK-NEXT:    fmad z3.d, p0/m, z4.d, z5.d
+; CHECK-NEXT:    stp q0, q3, [x0]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: fma_v4f64:

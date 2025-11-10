@@ -31,11 +31,11 @@
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/InputInfo.h"
 #include "clang/Driver/Job.h"
-#include "clang/Driver/Options.h"
 #include "clang/Driver/SanitizerArgs.h"
 #include "clang/Driver/ToolChain.h"
 #include "clang/Driver/Util.h"
 #include "clang/Driver/XRayArgs.h"
+#include "clang/Options/Options.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallString.h"
@@ -69,8 +69,7 @@ using namespace llvm::opt;
 
 static bool useFramePointerForTargetByDefault(const llvm::opt::ArgList &Args,
                                               const llvm::Triple &Triple) {
-  if (Args.hasArg(clang::driver::options::OPT_pg) &&
-      !Args.hasArg(clang::driver::options::OPT_mfentry))
+  if (Args.hasArg(options::OPT_pg) && !Args.hasArg(options::OPT_mfentry))
     return true;
 
   if (Triple.isAndroid())
@@ -249,17 +248,16 @@ getFramePointerKind(const llvm::opt::ArgList &Args,
   // without requiring new frame records to be created.
 
   bool DefaultFP = useFramePointerForTargetByDefault(Args, Triple);
-  bool EnableFP =
-      mustUseNonLeafFramePointerForTarget(Triple) ||
-      Args.hasFlag(clang::driver::options::OPT_fno_omit_frame_pointer,
-                   clang::driver::options::OPT_fomit_frame_pointer, DefaultFP);
+  bool EnableFP = mustUseNonLeafFramePointerForTarget(Triple) ||
+                  Args.hasFlag(options::OPT_fno_omit_frame_pointer,
+                               options::OPT_fomit_frame_pointer, DefaultFP);
 
   bool DefaultLeafFP =
       useLeafFramePointerForTargetByDefault(Triple) ||
       (EnableFP && framePointerImpliesLeafFramePointer(Args, Triple));
-  bool EnableLeafFP = Args.hasFlag(
-      clang::driver::options::OPT_mno_omit_leaf_frame_pointer,
-      clang::driver::options::OPT_momit_leaf_frame_pointer, DefaultLeafFP);
+  bool EnableLeafFP =
+      Args.hasFlag(options::OPT_mno_omit_leaf_frame_pointer,
+                   options::OPT_momit_leaf_frame_pointer, DefaultLeafFP);
 
   bool FPRegReserved = EnableFP || mustMaintainValidFrameChain(Args, Triple);
 
@@ -753,7 +751,7 @@ std::string tools::getCPUName(const Driver &D, const ArgList &Args,
   case llvm::Triple::ppcle:
   case llvm::Triple::ppc64:
   case llvm::Triple::ppc64le:
-    if (Arg *A = Args.getLastArg(clang::driver::options::OPT_mcpu_EQ))
+    if (Arg *A = Args.getLastArg(options::OPT_mcpu_EQ))
       return std::string(
           llvm::PPC::getNormalizedPPCTargetCPU(T, A->getValue()));
     return std::string(llvm::PPC::getNormalizedPPCTargetCPU(T));
@@ -1733,7 +1731,7 @@ bool tools::addSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
     if (SanArgs.needsFuzzerInterceptors())
       addSanitizerRuntime(TC, Args, CmdArgs, "fuzzer_interceptors", false,
                           true);
-    if (!Args.hasArg(clang::driver::options::OPT_nostdlibxx)) {
+    if (!Args.hasArg(options::OPT_nostdlibxx)) {
       bool OnlyLibstdcxxStatic = Args.hasArg(options::OPT_static_libstdcxx) &&
                                  !Args.hasArg(options::OPT_static);
       if (OnlyLibstdcxxStatic)
@@ -3385,7 +3383,7 @@ void tools::handleInterchangeLoopsArgs(const ArgList &Args,
 // Otherwise, return an empty string and issue a diagnosic message if needed.
 StringRef tools::parseMPreferVectorWidthOption(clang::DiagnosticsEngine &Diags,
                                                const llvm::opt::ArgList &Args) {
-  Arg *A = Args.getLastArg(clang::driver::options::OPT_mprefer_vector_width_EQ);
+  Arg *A = Args.getLastArg(options::OPT_mprefer_vector_width_EQ);
   if (!A)
     return "";
 

@@ -1944,6 +1944,10 @@ void InstrLowerer::emitNameData() {
   NamesVar = new GlobalVariable(M, NamesVal->getType(), true,
                                 GlobalValue::PrivateLinkage, NamesVal,
                                 getInstrProfNamesVarName());
+  if (isGPUProfTarget(M)) {
+    NamesVar->setLinkage(GlobalValue::ExternalLinkage);
+    NamesVar->setVisibility(GlobalValue::ProtectedVisibility);
+  }
 
   NamesSize = CompressedNameStr.size();
   setGlobalVariableLargeSection(TT, *NamesVar);

@@ -8,6 +8,7 @@
 
 #include "llvm/Frontend/Driver/CodeGenOptions.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/IR/SystemLibraries.h"
 #include "llvm/ProfileData/InstrProfCorrelator.h"
 #include "llvm/TargetParser/Triple.h"
 
@@ -25,35 +26,35 @@ TargetLibraryInfoImpl *createTLII(const llvm::Triple &TargetTriple,
   using VectorLibrary = llvm::driver::VectorLibrary;
   switch (Veclib) {
   case VectorLibrary::Accelerate:
-    TLII->addVectorizableFunctionsFromVecLib(TargetLibraryInfoImpl::Accelerate,
+    TLII->addVectorizableFunctionsFromVecLib(llvm::VectorLibrary::Accelerate,
                                              TargetTriple);
     break;
   case VectorLibrary::LIBMVEC:
-    TLII->addVectorizableFunctionsFromVecLib(TargetLibraryInfoImpl::LIBMVEC,
+    TLII->addVectorizableFunctionsFromVecLib(llvm::VectorLibrary::LIBMVEC,
                                              TargetTriple);
     break;
   case VectorLibrary::MASSV:
-    TLII->addVectorizableFunctionsFromVecLib(TargetLibraryInfoImpl::MASSV,
+    TLII->addVectorizableFunctionsFromVecLib(llvm::VectorLibrary::MASSV,
                                              TargetTriple);
     break;
   case VectorLibrary::SVML:
-    TLII->addVectorizableFunctionsFromVecLib(TargetLibraryInfoImpl::SVML,
+    TLII->addVectorizableFunctionsFromVecLib(llvm::VectorLibrary::SVML,
                                              TargetTriple);
     break;
   case VectorLibrary::SLEEF:
-    TLII->addVectorizableFunctionsFromVecLib(TargetLibraryInfoImpl::SLEEFGNUABI,
+    TLII->addVectorizableFunctionsFromVecLib(llvm::VectorLibrary::SLEEFGNUABI,
                                              TargetTriple);
     break;
   case VectorLibrary::Darwin_libsystem_m:
     TLII->addVectorizableFunctionsFromVecLib(
-        TargetLibraryInfoImpl::DarwinLibSystemM, TargetTriple);
+        llvm::VectorLibrary::DarwinLibSystemM, TargetTriple);
     break;
   case VectorLibrary::ArmPL:
-    TLII->addVectorizableFunctionsFromVecLib(TargetLibraryInfoImpl::ArmPL,
+    TLII->addVectorizableFunctionsFromVecLib(llvm::VectorLibrary::ArmPL,
                                              TargetTriple);
     break;
   case VectorLibrary::AMDLIBM:
-    TLII->addVectorizableFunctionsFromVecLib(TargetLibraryInfoImpl::AMDLIBM,
+    TLII->addVectorizableFunctionsFromVecLib(llvm::VectorLibrary::AMDLIBM,
                                              TargetTriple);
     break;
   default:

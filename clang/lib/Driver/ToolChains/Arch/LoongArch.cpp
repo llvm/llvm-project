@@ -11,7 +11,7 @@
 #include "clang/Basic/DiagnosticDriver.h"
 #include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/Options.h"
+#include "clang/Options/Options.h"
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/LoongArchTargetParser.h"
 
@@ -130,8 +130,7 @@ void loongarch::getLoongArchTargetFeatures(const Driver &D,
                                            const ArgList &Args,
                                            std::vector<StringRef> &Features) {
   // Enable the `lsx` feature on 64-bit LoongArch by default.
-  if (Triple.isLoongArch64() &&
-      (!Args.hasArgNoClaim(clang::driver::options::OPT_march_EQ)))
+  if (Triple.isLoongArch64() && (!Args.hasArgNoClaim(options::OPT_march_EQ)))
     Features.push_back("+lsx");
 
   // -mrelax is default, unless -mno-relax is specified.

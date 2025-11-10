@@ -3888,6 +3888,7 @@ cc_library(
         ":XeGPUDialect",
         ":XeGPUTransformOpsIncGen",
         ":XeGPUUtils",
+        "//llvm:Support",
     ],
 )
 
