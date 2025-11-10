@@ -952,7 +952,9 @@ def NVVM_BarrierOp : NVVM_Op<"barrier", [AttrSizedOperandSegments]> {
     - `numberOfThreads`: Specifies the number of threads participating in the barrier. 
       When specified, the value must be a multiple of the warp size. If not specified, 
       all threads in the CTA participate in the barrier.
-    - `reductionOp`
+    - `reductionOp`: specifies the reduction operation (`popc`, `and`, `or`).
+    - `reductionPredicate`: specifies the predicate to be used with the
+      `reductionOp`. 
 
     The barrier operation guarantees that when the barrier completes, prior memory 
     accesses requested by participating threads are performed relative to all threads 
