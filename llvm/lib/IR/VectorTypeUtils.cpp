@@ -8,9 +8,19 @@
 
 #include "llvm/IR/VectorTypeUtils.h"
 #include "llvm/ADT/SmallVectorExtras.h"
-#include "llvm/Analysis/VectorUtils.h"
+#include "llvm/IR/Intrinsics.h"
 
 using namespace llvm;
+
+bool llvm::isVectorIntrinsicWithStructReturnScalarAtField(unsigned ID,
+                                                          int EleIdx) {
+  switch (ID) {
+  case Intrinsic::vp_load_ff:
+    return EleIdx == 1;
+  default:
+    return false;
+  }
+}
 
 /// A helper for converting structs of scalar types to structs of vector types.
 /// Note: Only unpacked literal struct types are supported.

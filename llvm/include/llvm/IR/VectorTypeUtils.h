@@ -14,6 +14,11 @@
 
 namespace llvm {
 
+/// Identifies if the vector form of the intrinsic that returns a struct has
+/// a scalar element at the struct element index \p EleIdx.
+LLVM_ABI bool isVectorIntrinsicWithStructReturnScalarAtField(unsigned ID,
+                                                             int EleIdx);
+
 /// A helper function for converting Scalar types to vector types. If
 /// the incoming type is void, we return void. If the EC represents a
 /// scalar, we return the scalar type.
@@ -32,7 +37,7 @@ inline Type *toVectorTy(Type *Scalar, unsigned VF) {
 ///   - If \p EC is scalar, \p StructTy is returned unchanged
 ///   - Only unpacked literal struct types are supported
 ///   vector types.
-///   - If IID (Intrinsic::ID) is provided, only fields that are vector types
+///   - If IID (Intrinsic ID) is provided, only fields that are vector types
 ///   are widened.
 LLVM_ABI Type *toVectorizedStructTy(StructType *StructTy, ElementCount EC,
                                     unsigned IID = 0);
