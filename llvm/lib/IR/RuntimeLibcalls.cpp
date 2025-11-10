@@ -209,9 +209,7 @@ RuntimeLibcallsInfo::getFunctionTy(LLVMContext &Ctx, const Triple &TT,
                       LibcallImpl == RTLIB::impl__ZGVsNxvl8l8_sincospi ||
                       LibcallImpl == RTLIB::impl_armpl_svsincospi_f32_x ||
                       LibcallImpl == RTLIB::impl_armpl_svsincospi_f64_x;
-    Type *VecTy =
-        IsScalable ? static_cast<Type *>(ScalableVectorType::get(ScalarTy, EC))
-                   : static_cast<Type *>(FixedVectorType::get(ScalarTy, EC));
+    VectorType *VecTy = VectorType::get(ScalarTy, EC, IsScalable);
 
     for (Attribute::AttrKind Attr : CommonFnAttrs)
       FuncAttrBuilder.addAttribute(Attr);
