@@ -6240,7 +6240,7 @@ define void @legalization_crash() {
   ret void
 }
 
-; Test that BitInt cases won't crash at cost model.
+; Test that types that need to be split go through BasicTTIImpl.
 define void @BitInt_crash() {
 ; ZVE64X-LABEL: 'BitInt_crash'
 ; ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2043 for instruction: %1 = bitcast <16 x i64> poison to <512 x i2>
