@@ -433,7 +433,7 @@ bool money_get<_CharT, _InputIterator>::__do_get(
           __err |= ios_base::failbit;
           return false;
         }
-        for (++__b; __fd > 0; --__fd, ++__b) {
+        for (++__b; __fd > 0; --__fd, (void)++__b) {
           if (__b == __e || !__ct.is(ctype_base::digit, *__b)) {
             __err |= ios_base::failbit;
             return false;
@@ -451,7 +451,7 @@ bool money_get<_CharT, _InputIterator>::__do_get(
     }
   }
   if (__trailing_sign) {
-    for (unsigned __i = 1; __i < __trailing_sign->size(); ++__i, ++__b) {
+    for (unsigned __i = 1; __i < __trailing_sign->size(); ++__i, (void)++__b) {
       if (__b == __e || *__b != (*__trailing_sign)[__i]) {
         __err |= ios_base::failbit;
         return false;

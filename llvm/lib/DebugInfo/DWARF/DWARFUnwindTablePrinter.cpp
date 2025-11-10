@@ -15,7 +15,6 @@
 #include <cassert>
 #include <cinttypes>
 #include <cstdint>
-#include <optional>
 
 using namespace llvm;
 using namespace dwarf;

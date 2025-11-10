@@ -24,7 +24,6 @@
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
-#include <optional>
 #include <utility>
 
 namespace llvm {
