@@ -137,7 +137,8 @@ define i16 @for_phi_removed(ptr  %src) {
 ; UNROLL-NO-IC-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[TMP0]], i64 0
 ; UNROLL-NO-IC-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; UNROLL-NO-IC-NEXT:    [[TMP1:%.*]] = icmp eq <4 x i32> [[BROADCAST_SPLAT]], zeroinitializer
-; UNROLL-NO-IC-NEXT:    [[TMP2:%.*]] = select <4 x i1> [[TMP1]], <4 x i16> splat (i16 1), <4 x i16> zeroinitializer
+; UNROLL-NO-IC-NEXT:    [[TMP4:%.*]] = extractelement <4 x i1> [[TMP1]], i32 0
+; UNROLL-NO-IC-NEXT:    [[TMP2:%.*]] = select i1 [[TMP4]], <4 x i16> splat (i16 1), <4 x i16> zeroinitializer
 ; UNROLL-NO-IC-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
 ; UNROLL-NO-IC-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[INDEX_NEXT]], 104
 ; UNROLL-NO-IC-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
@@ -202,7 +203,8 @@ define i16 @for_phi_removed(ptr  %src) {
 ; SINK-AFTER-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[TMP0]], i64 0
 ; SINK-AFTER-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; SINK-AFTER-NEXT:    [[TMP1:%.*]] = icmp eq <4 x i32> [[BROADCAST_SPLAT]], zeroinitializer
-; SINK-AFTER-NEXT:    [[TMP2:%.*]] = select <4 x i1> [[TMP1]], <4 x i16> splat (i16 1), <4 x i16> zeroinitializer
+; SINK-AFTER-NEXT:    [[TMP4:%.*]] = extractelement <4 x i1> [[TMP1]], i32 0
+; SINK-AFTER-NEXT:    [[TMP2:%.*]] = select i1 [[TMP4]], <4 x i16> splat (i16 1), <4 x i16> zeroinitializer
 ; SINK-AFTER-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; SINK-AFTER-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[INDEX_NEXT]], 108
 ; SINK-AFTER-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]

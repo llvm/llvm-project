@@ -1700,12 +1700,12 @@ public:
   void Post(const parser::OpenMPDeclareTargetConstruct &) {
     SkipImplicitTyping(false);
   }
-  bool Pre(const parser::OpenMPDeclarativeAllocate &x) {
+  bool Pre(const parser::OmpAllocateDirective &x) {
     AddOmpSourceRange(x.source);
     SkipImplicitTyping(true);
     return true;
   }
-  void Post(const parser::OpenMPDeclarativeAllocate &) {
+  void Post(const parser::OmpAllocateDirective &) {
     SkipImplicitTyping(false);
     messageHandler().set_currStmtSource(std::nullopt);
   }
@@ -10065,6 +10065,7 @@ void ResolveNamesVisitor::Post(const parser::CompilerDirective &x) {
       std::holds_alternative<parser::CompilerDirective::NoUnrollAndJam>(x.u) ||
       std::holds_alternative<parser::CompilerDirective::ForceInline>(x.u) ||
       std::holds_alternative<parser::CompilerDirective::Inline>(x.u) ||
+      std::holds_alternative<parser::CompilerDirective::Prefetch>(x.u) ||
       std::holds_alternative<parser::CompilerDirective::NoInline>(x.u)) {
     return;
   }
