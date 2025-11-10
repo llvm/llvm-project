@@ -3708,6 +3708,7 @@ static void RenderHLSLOptions(const ArgList &Args, ArgStringList &CmdArgs,
       options::OPT_emit_obj,
       options::OPT_disable_llvm_passes,
       options::OPT_fnative_half_type,
+      options::OPT_fnative_int16_type,
       options::OPT_hlsl_entrypoint,
       options::OPT_fdx_rootsignature_define,
       options::OPT_fdx_rootsignature_version,
@@ -7878,10 +7879,13 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                        !TC.getTriple().isAndroid() && TC.useIntegratedAs()))
     CmdArgs.push_back("-faddrsig");
 
-  if ((Triple.isOSBinFormatELF() || Triple.isOSBinFormatMachO()) &&
+  const bool HasDefaultDwarf2CFIASM =
+      (Triple.isOSBinFormatELF() || Triple.isOSBinFormatMachO()) &&
       (EH || UnwindTables || AsyncUnwindTables ||
-       DebugInfoKind != llvm::codegenoptions::NoDebugInfo))
-    CmdArgs.push_back("-D__GCC_HAVE_DWARF2_CFI_ASM=1");
+       DebugInfoKind != llvm::codegenoptions::NoDebugInfo);
+  if (Args.hasFlag(options::OPT_fdwarf2_cfi_asm,
+                   options::OPT_fno_dwarf2_cfi_asm, HasDefaultDwarf2CFIASM))
+    CmdArgs.push_back("-fdwarf2-cfi-asm");
 
   if (Arg *A = Args.getLastArg(options::OPT_fsymbol_partition_EQ)) {
     std::string Str = A->getAsString(Args);
@@ -8261,6 +8265,30 @@ void Clang::AddClangCLArgs(const ArgList &Args, types::ID InputType,
      D.Diag(diag::err_drv_argument_not_allowed_with) << "/GR"
                                                      << "/kernel";
  }
+
+  if (const Arg *A = Args.getLastArg(options::OPT__SLASH_vlen,
+                                     options::OPT__SLASH_vlen_EQ_256,
+                                     options::OPT__SLASH_vlen_EQ_512)) {
+    llvm::Triple::ArchType AT = getToolChain().getArch();
+    StringRef Default = AT == llvm::Triple::x86 ? "IA32" : "SSE2";
+    StringRef Arch = Args.getLastArgValue(options::OPT__SLASH_arch, Default);
+
+    if (A->getOption().matches(options::OPT__SLASH_vlen_EQ_512)) {
+      if (Arch == "AVX512F" || Arch == "AVX512")
+        CmdArgs.push_back("-mprefer-vector-width=512");
+      else
+        D.Diag(diag::warn_drv_argument_not_allowed_with)
+            << "/vlen=512" << std::string("/arch:").append(Arch);
+    }
+
+    if (A->getOption().matches(options::OPT__SLASH_vlen_EQ_256)) {
+      if (Arch == "AVX512F" || Arch == "AVX512")
+        CmdArgs.push_back("-mprefer-vector-width=256");
+      else if (Arch != "AVX" && Arch != "AVX2")
+        D.Diag(diag::warn_drv_argument_not_allowed_with)
+            << "/vlen=256" << std::string("/arch:").append(Arch);
+    }
+  }
 
   Arg *MostGeneralArg = Args.getLastArg(options::OPT__SLASH_vmg);
   Arg *BestCaseArg = Args.getLastArg(options::OPT__SLASH_vmb);

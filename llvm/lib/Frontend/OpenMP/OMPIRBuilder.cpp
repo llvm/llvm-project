@@ -528,7 +528,7 @@ void OpenMPIRBuilder::getKernelArgsVector(TargetKernelArgs &KernelArgs,
   Value *Version = Builder.getInt32(OMP_KERNEL_ARG_VERSION);
   Value *PointerNum = Builder.getInt32(KernelArgs.NumTargetItems);
   auto Int32Ty = Type::getInt32Ty(Builder.getContext());
-  constexpr const size_t MaxDim = 3;
+  constexpr size_t MaxDim = 3;
   Value *ZeroArray = Constant::getNullValue(ArrayType::get(Int32Ty, MaxDim));
   Value *Flags = Builder.getInt64(KernelArgs.HasNoWait);
 
@@ -8460,9 +8460,8 @@ OpenMPIRBuilder::createPlatformSpecificName(ArrayRef<StringRef> Parts) const {
                                                 Config.separator());
 }
 
-GlobalVariable *
-OpenMPIRBuilder::getOrCreateInternalVariable(Type *Ty, const StringRef &Name,
-                                             unsigned AddressSpace) {
+GlobalVariable *OpenMPIRBuilder::getOrCreateInternalVariable(
+    Type *Ty, const StringRef &Name, std::optional<unsigned> AddressSpace) {
   auto &Elem = *InternalVars.try_emplace(Name, nullptr).first;
   if (Elem.second) {
     assert(Elem.second->getValueType() == Ty &&
@@ -8472,16 +8471,18 @@ OpenMPIRBuilder::getOrCreateInternalVariable(Type *Ty, const StringRef &Name,
     // variable for possibly changing that to internal or private, or maybe
     // create different versions of the function for different OMP internal
     // variables.
+    const DataLayout &DL = M.getDataLayout();
+    unsigned AddressSpaceVal =
+        AddressSpace ? *AddressSpace : DL.getDefaultGlobalsAddressSpace();
     auto Linkage = this->M.getTargetTriple().getArch() == Triple::wasm32
                        ? GlobalValue::InternalLinkage
                        : GlobalValue::CommonLinkage;
     auto *GV = new GlobalVariable(M, Ty, /*IsConstant=*/false, Linkage,
                                   Constant::getNullValue(Ty), Elem.first(),
                                   /*InsertBefore=*/nullptr,
-                                  GlobalValue::NotThreadLocal, AddressSpace);
-    const DataLayout &DL = M.getDataLayout();
+                                  GlobalValue::NotThreadLocal, AddressSpaceVal);
     const llvm::Align TypeAlign = DL.getABITypeAlign(Ty);
-    const llvm::Align PtrAlign = DL.getPointerABIAlignment(AddressSpace);
+    const llvm::Align PtrAlign = DL.getPointerABIAlignment(AddressSpaceVal);
     GV->setAlignment(std::max(TypeAlign, PtrAlign));
     Elem.second = GV;
   }

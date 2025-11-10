@@ -70,7 +70,7 @@ int main(int argc, char *argv[]) {
   // TEST3: WARNING: ThreadSanitizer: race on MyLibrary::MyObject
   // TEST3: {{Modifying|Read-only}} access of MyLibrary::MyObject at
   // TEST3: {{ObjectWrite|ObjectRead}}
-  // TEST3: Previous {{modifying|Read-only}} access of MyLibrary::MyObject at
+  // TEST3: Previous {{modifying|read-only}} access of MyLibrary::MyObject at
   // TEST3: {{ObjectWrite|ObjectRead}}
   // TEST3: Location is MyLibrary::MyObject of size 16 at
   // TEST3: {{ObjectCreate}}

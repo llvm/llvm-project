@@ -1684,13 +1684,15 @@ using Cosubscript = ScalarIntExpr;
 WRAPPER_CLASS(TeamValue, Scalar<common::Indirection<Expr>>);
 
 // R926 image-selector-spec ->
+//        NOTIFY = notify-variable |
 //        STAT = stat-variable | TEAM = team-value |
 //        TEAM_NUMBER = scalar-int-expr
 struct ImageSelectorSpec {
   WRAPPER_CLASS(Stat, Scalar<Integer<common::Indirection<Variable>>>);
   WRAPPER_CLASS(Team_Number, ScalarIntExpr);
+  WRAPPER_CLASS(Notify, Scalar<common::Indirection<Variable>>);
   UNION_CLASS_BOILERPLATE(ImageSelectorSpec);
-  std::variant<Stat, TeamValue, Team_Number> u;
+  std::variant<Notify, Stat, TeamValue, Team_Number> u;
 };
 
 // R924 image-selector ->
@@ -3358,6 +3360,7 @@ struct StmtFunctionStmt {
 // !DIR$ NOVECTOR
 // !DIR$ NOUNROLL
 // !DIR$ NOUNROLL_AND_JAM
+// !DIR$ PREFETCH designator[, designator]...
 // !DIR$ FORCEINLINE
 // !DIR$ INLINE
 // !DIR$ NOINLINE
@@ -3386,6 +3389,10 @@ struct CompilerDirective {
   struct UnrollAndJam {
     WRAPPER_CLASS_BOILERPLATE(UnrollAndJam, std::optional<std::uint64_t>);
   };
+  struct Prefetch {
+    WRAPPER_CLASS_BOILERPLATE(
+        Prefetch, std::list<common::Indirection<Designator>>);
+  };
   EMPTY_CLASS(NoVector);
   EMPTY_CLASS(NoUnroll);
   EMPTY_CLASS(NoUnrollAndJam);
@@ -3396,7 +3403,8 @@ struct CompilerDirective {
   CharBlock source;
   std::variant<std::list<IgnoreTKR>, LoopCount, std::list<AssumeAligned>,
       VectorAlways, std::list<NameValue>, Unroll, UnrollAndJam, Unrecognized,
-      NoVector, NoUnroll, NoUnrollAndJam, ForceInline, Inline, NoInline>
+      NoVector, NoUnroll, NoUnrollAndJam, ForceInline, Inline, NoInline,
+      Prefetch>
       u;
 };
 
@@ -4825,6 +4833,14 @@ struct OmpTaskReductionClause {
   std::tuple<MODIFIERS(), OmpObjectList> t;
 };
 
+// Ref: [6.0:442]
+// threadset-clause ->
+//     THREADSET(omp_pool|omp_team)
+struct OmpThreadsetClause {
+  ENUM_CLASS(ThreadsetPolicy, Omp_Pool, Omp_Team)
+  WRAPPER_CLASS_BOILERPLATE(OmpThreadsetClause, ThreadsetPolicy);
+};
+
 // Ref: [4.5:107-109], [5.0:176-180], [5.1:205-210], [5.2:167-168]
 //
 // to-clause (in DECLARE TARGET) ->
@@ -5143,17 +5159,42 @@ struct OpenMPThreadprivate {
   CharBlock source;
 };
 
-// 2.11.3 allocate -> ALLOCATE (variable-name-list) [clause]
-struct OpenMPDeclarativeAllocate {
-  TUPLE_CLASS_BOILERPLATE(OpenMPDeclarativeAllocate);
-  CharBlock source;
-  std::tuple<Verbatim, OmpObjectList, OmpClauseList> t;
+// Ref: [4.5:310-312], [5.0:156-158], [5.1:181-184], [5.2:176-177],
+//      [6.0:310-312]
+//
+// allocate-directive ->
+//    ALLOCATE (variable-list-item...) |            // since 4.5
+//    ALLOCATE (variable-list-item...)              // since 5.0, until 5.1
+//    ...
+//    allocate-stmt
+//
+// The first form is the "declarative-allocate", and is a declarative
+// directive. The second is the "executable-allocate" and is an executable
+// directive. The executable form was deprecated in 5.2.
+//
+// The executable-allocate consists of several ALLOCATE directives. Since
+// in the parse tree every type corresponding to a directive only corresponds
+// to a single directive, the executable form is represented by a sequence
+// of nested OmpAlocateDirectives, e.g.
+//    !$OMP ALLOCATE(x)
+//    !$OMP ALLOCATE(y)
+//    ALLOCATE(x, y)
+// will become
+//    OmpAllocateDirective
+//    |- ALLOCATE(x)            // begin directive
+//    `- OmpAllocateDirective   // block
+//       |- ALLOCATE(y)            // begin directive
+//       `- ALLOCATE(x, y)         // block
+//
+// The block in the declarative-allocate will be empty.
+struct OmpAllocateDirective : public OmpBlockConstruct {
+  INHERITED_TUPLE_CLASS_BOILERPLATE(OmpAllocateDirective, OmpBlockConstruct);
 };
 
 struct OpenMPDeclarativeConstruct {
   UNION_CLASS_BOILERPLATE(OpenMPDeclarativeConstruct);
   CharBlock source;
-  std::variant<OpenMPDeclarativeAllocate, OpenMPDeclarativeAssumes,
+  std::variant<OmpAllocateDirective, OpenMPDeclarativeAssumes,
       OpenMPDeclareMapperConstruct, OpenMPDeclareReductionConstruct,
       OpenMPDeclareSimdConstruct, OpenMPDeclareTargetConstruct,
       OmpDeclareVariantDirective, OpenMPGroupprivate, OpenMPThreadprivate,
@@ -5164,19 +5205,6 @@ struct OpenMPDeclarativeConstruct {
 
 struct OpenMPCriticalConstruct : public OmpBlockConstruct {
   INHERITED_TUPLE_CLASS_BOILERPLATE(OpenMPCriticalConstruct, OmpBlockConstruct);
-};
-
-// 2.11.3 allocate -> ALLOCATE [(variable-name-list)] [clause]
-//        [ALLOCATE (variable-name-list) [clause] [...]]
-//        allocate-statement
-//        clause -> allocator-clause
-struct OpenMPExecutableAllocate {
-  TUPLE_CLASS_BOILERPLATE(OpenMPExecutableAllocate);
-  CharBlock source;
-  std::tuple<Verbatim, std::optional<OmpObjectList>, OmpClauseList,
-      std::optional<std::list<OpenMPDeclarativeAllocate>>,
-      Statement<AllocateStmt>>
-      t;
 };
 
 // Ref: [5.2:180-181], [6.0:315]
@@ -5334,9 +5362,9 @@ struct OpenMPConstruct {
   UNION_CLASS_BOILERPLATE(OpenMPConstruct);
   std::variant<OpenMPStandaloneConstruct, OpenMPSectionsConstruct,
       OpenMPSectionConstruct, OpenMPLoopConstruct, OmpBlockConstruct,
-      OpenMPAtomicConstruct, OpenMPDeclarativeAllocate, OpenMPDispatchConstruct,
-      OpenMPUtilityConstruct, OpenMPExecutableAllocate,
-      OpenMPAllocatorsConstruct, OpenMPAssumeConstruct, OpenMPCriticalConstruct>
+      OpenMPAtomicConstruct, OmpAllocateDirective, OpenMPDispatchConstruct,
+      OpenMPUtilityConstruct, OpenMPAllocatorsConstruct, OpenMPAssumeConstruct,
+      OpenMPCriticalConstruct>
       u;
 };
 

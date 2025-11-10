@@ -302,7 +302,6 @@ private:
   /// (e.g. scalarization).
   std::optional<InstructionCost> getMultipleResultIntrinsicVectorLibCallCost(
       const IntrinsicCostAttributes &ICA, TTI::TargetCostKind CostKind,
-      RTLIB::Libcall LC,
       std::optional<unsigned> CallRetElementIndex = {}) const {
     Type *RetTy = ICA.getReturnType();
     // Vector variants of the intrinsic can be mapped to a vector library call.
@@ -311,26 +310,68 @@ private:
         !isVectorizedStructTy(cast<StructType>(RetTy)))
       return std::nullopt;
 
+    Type *Ty = getContainedTypes(RetTy).front();
+    EVT VT = getTLI()->getValueType(DL, Ty);
+
+    EVT ScalarVT = VT.getScalarType();
+    RTLIB::Libcall LC = RTLIB::UNKNOWN_LIBCALL;
+
+    /// Migration flag. IsVectorCall cases directly know about the vector
+    /// libcall in RuntimeLibcallsInfo and shouldn't try to use
+    /// LibInfo->getVectorMappingInfo.
+    bool IsVectorCall = false;
+
+    switch (ICA.getID()) {
+    case Intrinsic::modf:
+      LC = RTLIB::getMODF(ScalarVT);
+      break;
+    case Intrinsic::sincospi:
+      LC = RTLIB::getSINCOSPI(VT);
+      if (LC == RTLIB::UNKNOWN_LIBCALL)
+        LC = RTLIB::getSINCOSPI(ScalarVT);
+      else if (VT.isVector())
+        IsVectorCall = true;
+
+      break;
+    case Intrinsic::sincos:
+      LC = RTLIB::getSINCOS(ScalarVT);
+      break;
+    default:
+      return std::nullopt;
+    }
+
     // Find associated libcall.
-    const char *LCName = getTLI()->getLibcallName(LC);
-    if (!LCName)
+    RTLIB::LibcallImpl LibcallImpl = getTLI()->getLibcallImpl(LC);
+    if (LibcallImpl == RTLIB::Unsupported)
       return std::nullopt;
 
+    StringRef LCName =
+        RTLIB::RuntimeLibcallsInfo::getLibcallImplName(LibcallImpl);
+
     // Search for a corresponding vector variant.
+    //
+    // FIXME: Should use RuntimeLibcallsInfo, not TargetLibraryInfo to get the
+    // vector mapping.
     LLVMContext &Ctx = RetTy->getContext();
     ElementCount VF = getVectorizedTypeVF(RetTy);
     VecDesc const *VD = nullptr;
-    for (bool Masked : {false, true}) {
-      if ((VD = LibInfo->getVectorMappingInfo(LCName, VF, Masked)))
-        break;
+
+    if (!IsVectorCall) {
+      for (bool Masked : {false, true}) {
+        if ((VD = LibInfo->getVectorMappingInfo(LCName, VF, Masked)))
+          break;
+      }
+      if (!VD)
+        return std::nullopt;
     }
-    if (!VD)
-      return std::nullopt;
 
     // Cost the call + mask.
     auto Cost =
         thisT()->getCallInstrCost(nullptr, RetTy, ICA.getArgTypes(), CostKind);
-    if (VD->isMasked()) {
+
+    if ((VD && VD->isMasked()) ||
+        (IsVectorCall &&
+         RTLIB::RuntimeLibcallsInfo::hasVectorMaskArgument(LibcallImpl))) {
       auto VecTy = VectorType::get(IntegerType::getInt1Ty(Ctx), VF);
       Cost += thisT()->getShuffleCost(TargetTransformInfo::SK_Broadcast, VecTy,
                                       VecTy, {}, CostKind, 0, nullptr, {});
@@ -1306,8 +1347,8 @@ public:
       bool SplitDst =
           TLI->getTypeAction(Dst->getContext(), TLI->getValueType(DL, Dst)) ==
           TargetLowering::TypeSplitVector;
-      if ((SplitSrc || SplitDst) && SrcVTy->getElementCount().isVector() &&
-          DstVTy->getElementCount().isVector()) {
+      if ((SplitSrc || SplitDst) && SrcVTy->getElementCount().isKnownEven() &&
+          DstVTy->getElementCount().isKnownEven()) {
         Type *SplitDstTy = VectorType::getHalfElementsVectorType(DstVTy);
         Type *SplitSrcTy = VectorType::getHalfElementsVectorType(SrcVTy);
         const T *TTI = thisT();
@@ -2137,22 +2178,6 @@ public:
     case Intrinsic::modf:
     case Intrinsic::sincos:
     case Intrinsic::sincospi: {
-      Type *Ty = getContainedTypes(RetTy).front();
-      EVT VT = getTLI()->getValueType(DL, Ty);
-
-      RTLIB::Libcall LC = [&] {
-        switch (ICA.getID()) {
-        case Intrinsic::modf:
-          return RTLIB::getMODF;
-        case Intrinsic::sincos:
-          return RTLIB::getSINCOS;
-        case Intrinsic::sincospi:
-          return RTLIB::getSINCOSPI;
-        default:
-          llvm_unreachable("unexpected intrinsic");
-        }
-      }()(VT.getScalarType());
-
       std::optional<unsigned> CallRetElementIndex;
       // The first element of the modf result is returned by value in the
       // libcall.
@@ -2160,7 +2185,7 @@ public:
         CallRetElementIndex = 0;
 
       if (auto Cost = getMultipleResultIntrinsicVectorLibCallCost(
-              ICA, CostKind, LC, CallRetElementIndex))
+              ICA, CostKind, CallRetElementIndex))
         return *Cost;
       // Otherwise, fallback to default scalarization cost.
       break;

@@ -935,7 +935,7 @@ static std::optional<uint32_t> mfmaTypeSelectCode(Type mlirElemType) {
       .Case([](Float6E2M3FNType) { return 2u; })
       .Case([](Float6E3M2FNType) { return 3u; })
       .Case([](Float4E2M1FNType) { return 4u; })
-      .Default([](Type) { return std::nullopt; });
+      .Default(std::nullopt);
 }
 
 /// If there is a scaled MFMA instruction for the input element types `aType`
@@ -1043,7 +1043,7 @@ wmmaOpToIntrinsicRDNA(Type elemSourceType, Type elemBSourceType,
       return ROCDL::wmma_i32_16x16x32_iu4::getOperationName();
   }
 
-  llvm_unreachable("Unsupported k value");
+  return std::nullopt;
 }
 
 /// Return the `rocdl` intrinsic corresponding to a WMMA operation `wmma`
@@ -1135,7 +1135,7 @@ static std::optional<StringRef> wmmaOpToIntrinsicGfx1250(Type elemSourceType,
     return std::nullopt;
   }
 
-  llvm_unreachable("Unsupported k value");
+  return std::nullopt;
 }
 
 /// Returns the `rocdl` intrinsic corresponding to a WMMA operation `wmma`
@@ -1164,7 +1164,7 @@ static std::optional<StringRef> wmmaOpToIntrinsic(WMMAOp wmma,
     return wmmaOpToIntrinsicGfx1250(elemSourceType, elemBSourceType,
                                     elemDestType, k);
 
-  llvm_unreachable("unhandled WMMA case");
+  return std::nullopt;
 }
 
 namespace {
