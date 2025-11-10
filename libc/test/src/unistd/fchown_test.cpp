@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/fcntl/open.h"
-#include "src/unistd/fchown.h"
 #include "src/unistd/close.h"
+#include "src/unistd/fchown.h"
 #include "src/unistd/getgid.h"
 #include "src/unistd/getuid.h"
 #include "src/unistd/unlink.h"
@@ -46,6 +46,5 @@ TEST_F(LlvmLibcFchownTest, FchownSuccess) {
 
 TEST_F(LlvmLibcFchownTest, ChownInvalidFileDescriptor) {
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
-  ASSERT_THAT(LIBC_NAMESPACE::chown(-1, 1000, 1000),
-              Fails(ENOENT));
+  ASSERT_THAT(LIBC_NAMESPACE::chown(-1, 1000, 1000), Fails(ENOENT));
 }
