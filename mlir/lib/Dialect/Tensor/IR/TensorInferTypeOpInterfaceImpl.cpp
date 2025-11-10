@@ -77,6 +77,9 @@ namespace {
 struct ReifyExpandShapeOp
     : public ReifyRankedShapedTypeOpInterface::ExternalModel<ReifyExpandShapeOp,
                                                              ExpandShapeOp> {
+  using Base =
+      ReifyRankedShapedTypeOpInterface::ExternalModel<ReifyExpandShapeOp,
+                                                      ExpandShapeOp>;
   LogicalResult
   reifyResultShapes(Operation *op, OpBuilder &b,
                     ReifiedRankedShapedTypeDims &reifyResultShapes) const {

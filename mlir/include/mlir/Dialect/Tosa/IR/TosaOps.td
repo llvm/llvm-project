@@ -2219,7 +2219,8 @@ def Tosa_TileOp : Tosa_InferShapedTypeOp<"tile"> {
 // Operator: transpose
 //===----------------------------------------------------------------------===//
 def Tosa_TransposeOp : Tosa_InferShapedTypeOp<"transpose",
-                [DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>,
+                [DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface ,
+                                           ["reifyResultShapes"]>,
                  AllElementTypesMatch<["input1", "output"]>]> {
   let summary = "Transpose operator.";
 

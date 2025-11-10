@@ -44,7 +44,7 @@ contains
 
   integer pure function decode(c)
     character(2), intent(in) :: c
-    decode = modulo(iachar(c(2:2))-49,10)+1 
+    decode = modulo(iachar(c(2:2))-49,10)+1
   end function
 
   subroutine test_no_conflict(x)

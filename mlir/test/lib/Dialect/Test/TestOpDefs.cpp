@@ -320,10 +320,10 @@ LogicalResult OpWithResultShapeInterfaceOp::reifyReturnTypeShapes(
 }
 
 //===----------------------------------------------------------------------===//
-// OpWithResultShapePerDimInterfaceOp
+// ReifyShapedTypeUsingReifyResultShapesOp
 //===----------------------------------------------------------------------===//
 
-LogicalResult OpWithResultShapePerDimInterfaceOp::reifyResultShapes(
+LogicalResult ReifyShapedTypeUsingReifyResultShapesOp::reifyResultShapes(
     OpBuilder &builder, ReifiedRankedShapedTypeDims &shapes) {
   Location loc = getLoc();
   shapes.reserve(getNumOperands());
@@ -342,6 +342,103 @@ LogicalResult OpWithResultShapePerDimInterfaceOp::reifyResultShapes(
     shapes.emplace_back(std::move(currShape));
   }
   return success();
+}
+
+//===----------------------------------------------------------------------===//
+// ReifyShapedTypeUsingReifyShapeOfResultOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult ReifyShapedTypeUsingReifyShapeOfResultOp::reifyResultShapes(
+    OpBuilder &builder, ReifiedRankedShapedTypeDims &shapes) {
+  return failure();
+}
+
+FailureOr<SmallVector<OpFoldResult>>
+ReifyShapedTypeUsingReifyShapeOfResultOp::reifyShapeOfResult(OpBuilder &builder,
+                                                             int resultIndex) {
+  Location loc = getLoc();
+  Value sourceOperand = getOperand(getNumOperands() - 1 - resultIndex);
+  SmallVector<OpFoldResult> shape =
+      tensor::getMixedSizes(builder, loc, sourceOperand);
+  return shape;
+}
+
+//===----------------------------------------------------------------------===//
+// ReifyShapedTypeUsingReifyDimOfResultOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult ReifyShapedTypeUsingReifyDimOfResultOp::reifyResultShapes(
+    OpBuilder &builder, ReifiedRankedShapedTypeDims &shapes) {
+  return failure();
+}
+
+FailureOr<SmallVector<OpFoldResult>>
+ReifyShapedTypeUsingReifyDimOfResultOp::reifyShapeOfResult(OpBuilder &builder,
+                                                           int resultIndex) {
+  return failure();
+}
+
+FailureOr<OpFoldResult>
+ReifyShapedTypeUsingReifyDimOfResultOp::reifyDimOfResult(OpBuilder &builder,
+                                                         int resultIndex,
+                                                         int dim) {
+  Location loc = getLoc();
+  Value sourceOperand = getOperand(getNumOperands() - 1 - resultIndex);
+  OpFoldResult shape = tensor::getMixedSize(builder, loc, sourceOperand, dim);
+  return shape;
+}
+
+//===----------------------------------------------------------------------===//
+// UnreifableResultShapesOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult UnreifiableResultShapesOp::reifyResultShapes(
+    OpBuilder &builder, ReifiedRankedShapedTypeDims &shapes) {
+  Location loc = getLoc();
+  shapes.resize(1);
+  shapes[0] = {tensor::getMixedSize(builder, loc, getOperand(), 0),
+               OpFoldResult()};
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// UnreifableResultShapeOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult UnreifiableResultShapeOp::reifyResultShapes(
+    OpBuilder &builder, ReifiedRankedShapedTypeDims &shapes) {
+  return failure();
+}
+
+FailureOr<SmallVector<OpFoldResult>>
+UnreifiableResultShapeOp::reifyShapeOfResult(OpBuilder &builder,
+                                             int resultIndex) {
+  SmallVector<OpFoldResult> shape = {
+      tensor::getMixedSize(builder, getLoc(), getOperand(), 0), OpFoldResult()};
+  return shape;
+}
+
+//===----------------------------------------------------------------------===//
+// UnreifableResultShapeOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult UnreifiableDimOfResultShapeOp::reifyResultShapes(
+    OpBuilder &builder, ReifiedRankedShapedTypeDims &shapes) {
+  return failure();
+}
+
+FailureOr<SmallVector<OpFoldResult>>
+UnreifiableDimOfResultShapeOp::reifyShapeOfResult(OpBuilder &builder,
+                                                  int resultIndex) {
+  return failure();
+}
+
+FailureOr<OpFoldResult>
+UnreifiableDimOfResultShapeOp::reifyDimOfResult(OpBuilder &builder,
+                                                int resultIndex, int dim) {
+  if (dim == 0)
+    return tensor::getMixedSize(builder, getLoc(), getOperand(), 0);
+  return failure();
 }
 
 //===----------------------------------------------------------------------===//

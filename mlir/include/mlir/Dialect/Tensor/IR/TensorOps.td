@@ -131,7 +131,9 @@ def Tensor_CastOp : Tensor_Op<"cast", [
 def Tensor_ConcatOp : Tensor_Op<"concat",
     [Pure,
      DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
-     DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>]> {
+     DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface, [
+       "reifyResultShapes"]>,
+     ]> {
   let summary = "tensor concatenation operation";
   let description = [{
     The "concat" operation constructs a tensor out of a variadic list of input
@@ -261,7 +263,8 @@ def Tensor_DimOp : Tensor_Op<"dim", [
 
 def Tensor_EmptyOp : Tensor_Op<"empty",
     [Pure,
-     DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>]> {
+     DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface, [
+       "reifyResultShapes"]>]> {
   let summary = "empty tensor operation";
 
   let description = [{
@@ -358,7 +361,8 @@ def Tensor_ExtractOp : Tensor_Op<"extract", [
 
 def Tensor_ExtractSliceOp : Tensor_OpWithOffsetSizesAndStrides<"extract_slice", [
     DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
-    DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>,
+    DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface, [
+      "reifyResultShapes"]>,
     AttrSizedOperandSegments,
     Pure,
     OffsetSizeAndStrideOpInterface
@@ -740,7 +744,8 @@ def Tensor_GatherOp : Tensor_Op<"gather", [
 def Tensor_GenerateOp : Tensor_Op<"generate", [
     DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
     RecursiveMemoryEffects,
-    DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>,
+    DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface, [
+      "reifyResultShapes"]>,
     SingleBlockImplicitTerminator<"mlir::tensor::YieldOp">]> {
   let summary = "Creates a dynamically sized tensor from elements";
   let description = [{
@@ -835,7 +840,8 @@ def Tensor_InsertOp : Tensor_Op<"insert", [
 
 def Tensor_InsertSliceOp : Tensor_OpWithOffsetSizesAndStrides<"insert_slice", [
     DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
-    DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>,
+    DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface, [
+      "reifyResultShapes"]>,
     AttrSizedOperandSegments,
     DestinationStyleOpInterface,
     Pure,
@@ -1256,7 +1262,8 @@ def Tensor_CollapseShapeOp : Tensor_ReassociativeReshapeOp<"collapse_shape"> {
 
 def Tensor_PadOp : Tensor_Op<"pad", [
     DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
-    DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>,
+    DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface, [
+      "reifyResultShapes"]>,
     AttrSizedOperandSegments,
     Pure,
     SingleBlockImplicitTerminator<"mlir::tensor::YieldOp">]> {
@@ -1764,7 +1771,8 @@ def Tensor_ScatterOp : Tensor_Op<"scatter", [
 
 def Tensor_SplatOp : Tensor_Op<"splat", [
     DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
-    DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>,
+    DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface, 
+      ["reifyResultShapes"]>,
     Pure,
     TypesMatchWith<"operand type matches element type of result",
                    "aggregate", "input",

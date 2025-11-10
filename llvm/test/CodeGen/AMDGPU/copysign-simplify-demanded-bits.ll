@@ -345,15 +345,13 @@ define float @test_copysign_pow_fast_f32__integral_y(float %x, i32 %y.i) {
 ; GFX9-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v3
 ; GFX9-NEXT:    v_cndmask_b32_e32 v3, 0, v4, vcc
 ; GFX9-NEXT:    v_fma_f32 v2, v2, v1, v3
-; GFX9-NEXT:    v_cvt_i32_f32_e32 v1, v1
 ; GFX9-NEXT:    v_exp_f32_e32 v2, v2
+; GFX9-NEXT:    v_cvt_i32_f32_e32 v1, v1
 ; GFX9-NEXT:    v_not_b32_e32 v3, 63
 ; GFX9-NEXT:    v_cndmask_b32_e32 v3, 0, v3, vcc
-; GFX9-NEXT:    v_lshlrev_b32_e32 v1, 31, v1
 ; GFX9-NEXT:    v_ldexp_f32 v2, v2, v3
-; GFX9-NEXT:    v_and_b32_e32 v0, v1, v0
-; GFX9-NEXT:    s_brev_b32 s4, -2
-; GFX9-NEXT:    v_bfi_b32 v0, s4, v2, v0
+; GFX9-NEXT:    v_lshlrev_b32_e32 v1, 31, v1
+; GFX9-NEXT:    v_and_or_b32 v0, v1, v0, v2
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %y = sitofp i32 %y.i to float
   %y.fptosi = fptosi float %y to i32
@@ -379,7 +377,7 @@ define double @test_pow_fast_f64integral_y(double %x, i32 %y.i) #0 {
 ; GFX9-NEXT:    s_or_saveexec_b64 s[18:19], -1
 ; GFX9-NEXT:    buffer_store_dword v43, off, s[0:3], s33 offset:12 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_mov_b64 exec, s[18:19]
-; GFX9-NEXT:    v_writelane_b32 v43, s16, 15
+; GFX9-NEXT:    v_writelane_b32 v43, s16, 14
 ; GFX9-NEXT:    v_writelane_b32 v43, s30, 0
 ; GFX9-NEXT:    v_writelane_b32 v43, s31, 1
 ; GFX9-NEXT:    v_writelane_b32 v43, s34, 2
@@ -391,19 +389,18 @@ define double @test_pow_fast_f64integral_y(double %x, i32 %y.i) #0 {
 ; GFX9-NEXT:    v_writelane_b32 v43, s48, 8
 ; GFX9-NEXT:    v_writelane_b32 v43, s49, 9
 ; GFX9-NEXT:    v_writelane_b32 v43, s50, 10
-; GFX9-NEXT:    v_writelane_b32 v43, s51, 11
 ; GFX9-NEXT:    s_addk_i32 s32, 0x800
 ; GFX9-NEXT:    buffer_store_dword v40, off, s[0:3], s33 offset:8 ; 4-byte Folded Spill
 ; GFX9-NEXT:    buffer_store_dword v41, off, s[0:3], s33 offset:4 ; 4-byte Folded Spill
 ; GFX9-NEXT:    buffer_store_dword v42, off, s[0:3], s33 ; 4-byte Folded Spill
-; GFX9-NEXT:    v_writelane_b32 v43, s52, 12
+; GFX9-NEXT:    v_writelane_b32 v43, s51, 11
 ; GFX9-NEXT:    v_mov_b32_e32 v42, v1
-; GFX9-NEXT:    v_writelane_b32 v43, s53, 13
+; GFX9-NEXT:    v_writelane_b32 v43, s52, 12
 ; GFX9-NEXT:    v_and_b32_e32 v1, 0x7fffffff, v42
 ; GFX9-NEXT:    s_getpc_b64 s[16:17]
 ; GFX9-NEXT:    s_add_u32 s16, s16, _Z4log2d@rel32@lo+4
 ; GFX9-NEXT:    s_addc_u32 s17, s17, _Z4log2d@rel32@hi+12
-; GFX9-NEXT:    v_writelane_b32 v43, s54, 14
+; GFX9-NEXT:    v_writelane_b32 v43, s53, 13
 ; GFX9-NEXT:    v_mov_b32_e32 v40, v31
 ; GFX9-NEXT:    v_mov_b32_e32 v41, v2
 ; GFX9-NEXT:    s_mov_b32 s50, s15
@@ -414,7 +411,6 @@ define double @test_pow_fast_f64integral_y(double %x, i32 %y.i) #0 {
 ; GFX9-NEXT:    s_mov_b64 s[36:37], s[8:9]
 ; GFX9-NEXT:    s_mov_b64 s[38:39], s[6:7]
 ; GFX9-NEXT:    s_mov_b64 s[48:49], s[4:5]
-; GFX9-NEXT:    s_brev_b32 s54, -2
 ; GFX9-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; GFX9-NEXT:    v_cvt_f64_i32_e32 v[2:3], v41
 ; GFX9-NEXT:    s_getpc_b64 s[16:17]
@@ -436,8 +432,7 @@ define double @test_pow_fast_f64integral_y(double %x, i32 %y.i) #0 {
 ; GFX9-NEXT:    buffer_load_dword v42, off, s[0:3], s33 ; 4-byte Folded Reload
 ; GFX9-NEXT:    buffer_load_dword v41, off, s[0:3], s33 offset:4 ; 4-byte Folded Reload
 ; GFX9-NEXT:    buffer_load_dword v40, off, s[0:3], s33 offset:8 ; 4-byte Folded Reload
-; GFX9-NEXT:    v_bfi_b32 v1, s54, v1, v2
-; GFX9-NEXT:    v_readlane_b32 s54, v43, 14
+; GFX9-NEXT:    v_or_b32_e32 v1, v1, v2
 ; GFX9-NEXT:    v_readlane_b32 s53, v43, 13
 ; GFX9-NEXT:    v_readlane_b32 s52, v43, 12
 ; GFX9-NEXT:    v_readlane_b32 s51, v43, 11
@@ -453,7 +448,7 @@ define double @test_pow_fast_f64integral_y(double %x, i32 %y.i) #0 {
 ; GFX9-NEXT:    v_readlane_b32 s31, v43, 1
 ; GFX9-NEXT:    v_readlane_b32 s30, v43, 0
 ; GFX9-NEXT:    s_mov_b32 s32, s33
-; GFX9-NEXT:    v_readlane_b32 s4, v43, 15
+; GFX9-NEXT:    v_readlane_b32 s4, v43, 14
 ; GFX9-NEXT:    s_or_saveexec_b64 s[6:7], -1
 ; GFX9-NEXT:    buffer_load_dword v43, off, s[0:3], s33 offset:12 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_mov_b64 exec, s[6:7]

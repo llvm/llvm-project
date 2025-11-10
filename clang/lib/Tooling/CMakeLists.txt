@@ -40,7 +40,6 @@ add_clang_library(clangTooling
   clangASTMatchers
   clangBasic
   clangDriver
-  clangOptions
   clangFormat
   clangFrontend
   clangLex

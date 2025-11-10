@@ -134,22 +134,18 @@ define i16 @for_phi_removed(ptr  %src) {
 ; UNROLL-NO-IC:       [[VECTOR_BODY]]:
 ; UNROLL-NO-IC-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; UNROLL-NO-IC-NEXT:    [[TMP0:%.*]] = load i32, ptr [[SRC]], align 4
-; UNROLL-NO-IC-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[TMP0]], i64 0
-; UNROLL-NO-IC-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
-; UNROLL-NO-IC-NEXT:    [[TMP1:%.*]] = icmp eq <4 x i32> [[BROADCAST_SPLAT]], zeroinitializer
-; UNROLL-NO-IC-NEXT:    [[TMP4:%.*]] = extractelement <4 x i1> [[TMP1]], i32 0
-; UNROLL-NO-IC-NEXT:    [[TMP2:%.*]] = select i1 [[TMP4]], <4 x i16> splat (i16 1), <4 x i16> zeroinitializer
+; UNROLL-NO-IC-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[TMP0]], 0
+; UNROLL-NO-IC-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i16 1, i16 0
 ; UNROLL-NO-IC-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
 ; UNROLL-NO-IC-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[INDEX_NEXT]], 104
 ; UNROLL-NO-IC-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; UNROLL-NO-IC:       [[MIDDLE_BLOCK]]:
-; UNROLL-NO-IC-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i16> [[TMP2]], i32 3
 ; UNROLL-NO-IC-NEXT:    br label %[[SCALAR_PH:.*]]
 ; UNROLL-NO-IC:       [[SCALAR_PH]]:
 ; UNROLL-NO-IC-NEXT:    br label %[[LOOP:.*]]
 ; UNROLL-NO-IC:       [[LOOP]]:
 ; UNROLL-NO-IC-NEXT:    [[IV:%.*]] = phi i16 [ 104, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; UNROLL-NO-IC-NEXT:    [[P:%.*]] = phi i16 [ [[VECTOR_RECUR_EXTRACT]], %[[SCALAR_PH]] ], [ [[SEL:%.*]], %[[LOOP]] ]
+; UNROLL-NO-IC-NEXT:    [[P:%.*]] = phi i16 [ [[TMP2]], %[[SCALAR_PH]] ], [ [[SEL:%.*]], %[[LOOP]] ]
 ; UNROLL-NO-IC-NEXT:    [[L:%.*]] = load i32, ptr [[SRC]], align 4
 ; UNROLL-NO-IC-NEXT:    [[C:%.*]] = icmp eq i32 [[L]], 0
 ; UNROLL-NO-IC-NEXT:    [[SEL]] = select i1 [[C]], i16 1, i16 0
@@ -200,22 +196,18 @@ define i16 @for_phi_removed(ptr  %src) {
 ; SINK-AFTER:       [[VECTOR_BODY]]:
 ; SINK-AFTER-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; SINK-AFTER-NEXT:    [[TMP0:%.*]] = load i32, ptr [[SRC]], align 4
-; SINK-AFTER-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[TMP0]], i64 0
-; SINK-AFTER-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
-; SINK-AFTER-NEXT:    [[TMP1:%.*]] = icmp eq <4 x i32> [[BROADCAST_SPLAT]], zeroinitializer
-; SINK-AFTER-NEXT:    [[TMP4:%.*]] = extractelement <4 x i1> [[TMP1]], i32 0
-; SINK-AFTER-NEXT:    [[TMP2:%.*]] = select i1 [[TMP4]], <4 x i16> splat (i16 1), <4 x i16> zeroinitializer
+; SINK-AFTER-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[TMP0]], 0
+; SINK-AFTER-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i16 1, i16 0
 ; SINK-AFTER-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; SINK-AFTER-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[INDEX_NEXT]], 108
 ; SINK-AFTER-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; SINK-AFTER:       [[MIDDLE_BLOCK]]:
-; SINK-AFTER-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i16> [[TMP2]], i32 3
 ; SINK-AFTER-NEXT:    br label %[[SCALAR_PH:.*]]
 ; SINK-AFTER:       [[SCALAR_PH]]:
 ; SINK-AFTER-NEXT:    br label %[[LOOP:.*]]
 ; SINK-AFTER:       [[LOOP]]:
 ; SINK-AFTER-NEXT:    [[IV:%.*]] = phi i16 [ 108, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; SINK-AFTER-NEXT:    [[P:%.*]] = phi i16 [ [[VECTOR_RECUR_EXTRACT]], %[[SCALAR_PH]] ], [ [[SEL:%.*]], %[[LOOP]] ]
+; SINK-AFTER-NEXT:    [[P:%.*]] = phi i16 [ [[TMP2]], %[[SCALAR_PH]] ], [ [[SEL:%.*]], %[[LOOP]] ]
 ; SINK-AFTER-NEXT:    [[L:%.*]] = load i32, ptr [[SRC]], align 4
 ; SINK-AFTER-NEXT:    [[C:%.*]] = icmp eq i32 [[L]], 0
 ; SINK-AFTER-NEXT:    [[SEL]] = select i1 [[C]], i16 1, i16 0

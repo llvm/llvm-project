@@ -691,17 +691,16 @@ define amdgpu_kernel void @orxor2or1(ptr addrspace(1) %in, i32 %a, i32 %b) {
 ; SI-LABEL: orxor2or1:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
-; SI-NEXT:    s_mov_b32 s7, 0xf000
-; SI-NEXT:    s_mov_b32 s6, -1
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    s_mov_b32 s4, s0
-; SI-NEXT:    s_lshl_b32 s0, s2, 7
-; SI-NEXT:    s_or_b32 s0, s3, s0
-; SI-NEXT:    s_cmp_eq_u32 s0, 0
-; SI-NEXT:    s_cselect_b32 s0, s2, s3
-; SI-NEXT:    s_mov_b32 s5, s1
-; SI-NEXT:    v_mov_b32_e32 v0, s0
-; SI-NEXT:    buffer_store_dword v0, off, s[4:7], 0
+; SI-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; SI-NEXT:    s_lshl_b32 s6, s4, 7
+; SI-NEXT:    s_or_b32 s6, s5, s6
+; SI-NEXT:    s_cmp_eq_u32 s6, 0
+; SI-NEXT:    s_cselect_b32 s4, s4, s5
+; SI-NEXT:    s_mov_b32 s3, 0xf000
+; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    v_mov_b32_e32 v0, s4
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
 ;
 ; VI-LABEL: orxor2or1:

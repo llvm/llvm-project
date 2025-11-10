@@ -298,14 +298,13 @@ define amdgpu_kernel void @scalar_xor_i32(ptr addrspace(1) %out, i32 %a, i32 %b)
 ; SI-LABEL: scalar_xor_i32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
-; SI-NEXT:    s_mov_b32 s7, 0xf000
-; SI-NEXT:    s_mov_b32 s6, -1
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    s_mov_b32 s4, s0
-; SI-NEXT:    s_xor_b32 s0, s2, s3
-; SI-NEXT:    s_mov_b32 s5, s1
-; SI-NEXT:    v_mov_b32_e32 v0, s0
-; SI-NEXT:    buffer_store_dword v0, off, s[4:7], 0
+; SI-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; SI-NEXT:    s_xor_b32 s4, s4, s5
+; SI-NEXT:    s_mov_b32 s3, 0xf000
+; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    v_mov_b32_e32 v0, s4
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
 ;
 ; VI-LABEL: scalar_xor_i32:

@@ -45,7 +45,6 @@
 #include "llvm/Analysis/IR2Vec.h"
 #include "llvm/Analysis/IVUsers.h"
 #include "llvm/Analysis/InlineAdvisor.h"
-#include "llvm/Analysis/InlineSizeEstimatorAnalysis.h"
 #include "llvm/Analysis/InstCount.h"
 #include "llvm/Analysis/KernelInfo.h"
 #include "llvm/Analysis/LastRunTrackingAnalysis.h"

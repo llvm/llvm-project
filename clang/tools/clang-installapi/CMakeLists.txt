@@ -25,7 +25,6 @@ clang_target_link_libraries(clang-installapi
   clangAST
   clangInstallAPI
   clangBasic
-  clangOptions
   clangDriver
   clangFrontend
   clangTooling

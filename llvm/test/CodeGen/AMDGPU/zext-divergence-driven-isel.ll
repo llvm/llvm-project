@@ -5,15 +5,14 @@ define amdgpu_kernel void @zext_i16_to_i32_uniform(ptr addrspace(1) %out, i16 %a
 ; GCN-LABEL: zext_i16_to_i32_uniform:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
-; GCN-NEXT:    s_mov_b32 s7, 0xf000
-; GCN-NEXT:    s_mov_b32 s6, -1
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_mov_b32 s4, s0
-; GCN-NEXT:    s_and_b32 s0, s2, 0xffff
-; GCN-NEXT:    s_add_i32 s0, s3, s0
-; GCN-NEXT:    s_mov_b32 s5, s1
-; GCN-NEXT:    v_mov_b32_e32 v0, s0
-; GCN-NEXT:    buffer_store_dword v0, off, s[4:7], 0
+; GCN-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; GCN-NEXT:    s_and_b32 s4, s4, 0xffff
+; GCN-NEXT:    s_add_i32 s4, s5, s4
+; GCN-NEXT:    s_mov_b32 s3, 0xf000
+; GCN-NEXT:    s_mov_b32 s2, -1
+; GCN-NEXT:    v_mov_b32_e32 v0, s4
+; GCN-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GCN-NEXT:    s_endpgm
   %zext = zext i16 %a to i32
   %res = add i32 %b, %zext

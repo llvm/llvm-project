@@ -2072,6 +2072,10 @@ public:
   /// We use this predicate to simplify operations downstream.
   LLVM_ABI bool SignBitIsZero(SDValue Op, unsigned Depth = 0) const;
 
+  /// Return true if the sign bit of Op is known to be zero, for a
+  /// floating-point value.
+  LLVM_ABI bool SignBitIsZeroFP(SDValue Op, unsigned Depth = 0) const;
+
   /// Return true if 'Op & Mask' is known to be zero.  We
   /// use this predicate to simplify operations downstream.  Op and Mask are
   /// known to be the same type.

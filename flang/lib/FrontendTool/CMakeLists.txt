@@ -18,6 +18,5 @@ add_flang_library(flangFrontendTool
 
   CLANG_LIBS
   clangBasic
-  clangOptions
   clangDriver
 )
