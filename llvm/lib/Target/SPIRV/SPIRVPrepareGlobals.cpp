@@ -45,6 +45,14 @@ bool tryExtendLLVMBitcodeMarker(GlobalVariable &Bitcode) {
   return true;
 }
 
+// In HIP, dynamic LDS variables are represented using 0-element global arrays
+// in the __shared__ language address-space.
+//
+//  extern __shared__ int LDS[];
+//
+// These are not representable in SPIRV directly.
+// To represent them, for AMD, we use an array with UINT32_MAX-elements.
+// These are reverse translated to 0-element arrays.
 bool tryExtendDynamicLDSGlobal(GlobalVariable &GV) {
   constexpr unsigned WorkgroupAS =
       storageClassToAddressSpace(SPIRV::StorageClass::Workgroup);
