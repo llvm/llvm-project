@@ -263,6 +263,8 @@ static void createCBufferLoad(IntrinsicInst *II, LoadInst *LI, Value *Offset,
   auto *Elt =
       Builder.CreateExtractValue(CBufLoad, {CurrentIndex++}, Name + ".extract");
 
+  // At this point we've loaded the first scalar of our result, but our original
+  // type may have been a vector.
   unsigned int Remaining =
       ((DL.getTypeSizeInBits(Ty) / 8) / Intrin.EltSize) - 1;
   if (Remaining == 0) {
