@@ -1313,6 +1313,27 @@ Register SIInstrInfo::insertNE(MachineBasicBlock *MBB,
   return Reg;
 }
 
+MachineInstr *
+SIInstrInfo::pierceThroughRegSequence(const MachineInstr &MI) const {
+  const MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
+  int64_t SubRegValues[2];
+  bool SubRegIsConst[2];
+  MachineInstr *RealDefs[2];
+  for (unsigned I : {2, 4}) {
+    unsigned ArrayIdx = MI.getOperand(I).getImm() == AMDGPU::sub0 ? 0 : 1;
+    Register Subreg = MI.getOperand(I - 1).getReg();
+    RealDefs[ArrayIdx] = MRI.getUniqueVRegDef(Subreg);
+    SubRegIsConst[ArrayIdx] = getConstValDefinedInReg(
+        *RealDefs[ArrayIdx], Subreg, SubRegValues[ArrayIdx]);
+  }
+
+  for (unsigned I : {0, 1})
+    if (SubRegIsConst[I] && !SubRegValues[I])
+      return RealDefs[(I + 1) % 2];
+
+  return nullptr;
+}
+
 bool SIInstrInfo::getConstValDefinedInReg(const MachineInstr &MI,
                                           const Register Reg,
                                           int64_t &ImmVal) const {
@@ -10996,6 +11017,9 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
     MachineInstr *Def = MRI->getVRegDef(SrcReg);
     if (!Def)
       return false;
+
+    if (MachineInstr *RegSequenceDef = pierceThroughRegSequence(*Def))
+      Def = RegSequenceDef;
 
     // For S_OP that set SCC = DST!=0, do the transformation
     //
