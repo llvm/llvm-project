@@ -1697,9 +1697,6 @@ LLVM_READNONE
 bool isInlinableLiteralFP16(int16_t Literal, bool HasInv2Pi);
 
 LLVM_READNONE
-bool isInlinableLiteralBF16(int16_t Literal, bool HasInv2Pi);
-
-LLVM_READNONE
 bool isInlinableLiteralI16(int32_t Literal, bool HasInv2Pi);
 
 LLVM_READNONE
@@ -1727,7 +1724,7 @@ LLVM_READNONE
 bool isValid32BitLiteral(uint64_t Val, bool IsFP64);
 
 LLVM_READNONE
-int64_t encode32BitLiteral(int64_t Imm, OperandType Type);
+int64_t encode32BitLiteral(int64_t Imm, OperandType Type, bool IsLit);
 
 bool isArgPassedInSGPR(const Argument *Arg);
 

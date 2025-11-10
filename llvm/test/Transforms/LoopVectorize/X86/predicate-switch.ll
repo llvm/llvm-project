@@ -28,7 +28,7 @@ define void @switch_default_to_latch_common_dest(ptr %start, ptr %end) {
 ; COST-NEXT:    [[TMP7:%.*]] = icmp eq <4 x i64> [[WIDE_LOAD]], splat (i64 -12)
 ; COST-NEXT:    [[TMP8:%.*]] = icmp eq <4 x i64> [[WIDE_LOAD]], splat (i64 13)
 ; COST-NEXT:    [[TMP10:%.*]] = or <4 x i1> [[TMP7]], [[TMP8]]
-; COST-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 42), ptr [[NEXT_GEP]], i32 1, <4 x i1> [[TMP10]])
+; COST-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 42), ptr align 1 [[NEXT_GEP]], <4 x i1> [[TMP10]])
 ; COST-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; COST-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; COST-NEXT:    br i1 [[TMP11]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
@@ -85,8 +85,8 @@ define void @switch_default_to_latch_common_dest(ptr %start, ptr %end) {
 ; FORCED-NEXT:    [[TMP12:%.*]] = icmp eq <4 x i64> [[WIDE_LOAD4]], splat (i64 13)
 ; FORCED-NEXT:    [[TMP15:%.*]] = or <4 x i1> [[TMP9]], [[TMP11]]
 ; FORCED-NEXT:    [[TMP16:%.*]] = or <4 x i1> [[TMP10]], [[TMP12]]
-; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 42), ptr [[NEXT_GEP]], i32 1, <4 x i1> [[TMP15]])
-; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 42), ptr [[TMP8]], i32 1, <4 x i1> [[TMP16]])
+; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 42), ptr align 1 [[NEXT_GEP]], <4 x i1> [[TMP15]])
+; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 42), ptr align 1 [[TMP8]], <4 x i1> [[TMP16]])
 ; FORCED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; FORCED-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; FORCED-NEXT:    br i1 [[TMP17]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
@@ -165,7 +165,7 @@ define void @switch_default_to_latch_common_dest_using_branches(ptr %start, ptr 
 ; COST-NEXT:    [[TMP9:%.*]] = xor <4 x i1> [[TMP7]], splat (i1 true)
 ; COST-NEXT:    [[TMP10:%.*]] = select <4 x i1> [[TMP9]], <4 x i1> [[TMP8]], <4 x i1> zeroinitializer
 ; COST-NEXT:    [[TMP11:%.*]] = or <4 x i1> [[TMP10]], [[TMP7]]
-; COST-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 42), ptr [[NEXT_GEP]], i32 1, <4 x i1> [[TMP11]])
+; COST-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 42), ptr align 1 [[NEXT_GEP]], <4 x i1> [[TMP11]])
 ; COST-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; COST-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; COST-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
@@ -227,8 +227,8 @@ define void @switch_default_to_latch_common_dest_using_branches(ptr %start, ptr 
 ; FORCED-NEXT:    [[TMP16:%.*]] = select <4 x i1> [[TMP14]], <4 x i1> [[TMP12]], <4 x i1> zeroinitializer
 ; FORCED-NEXT:    [[TMP17:%.*]] = or <4 x i1> [[TMP15]], [[TMP9]]
 ; FORCED-NEXT:    [[TMP18:%.*]] = or <4 x i1> [[TMP16]], [[TMP10]]
-; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 42), ptr [[NEXT_GEP]], i32 1, <4 x i1> [[TMP17]])
-; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 42), ptr [[TMP8]], i32 1, <4 x i1> [[TMP18]])
+; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 42), ptr align 1 [[NEXT_GEP]], <4 x i1> [[TMP17]])
+; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 42), ptr align 1 [[TMP8]], <4 x i1> [[TMP18]])
 ; FORCED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; FORCED-NEXT:    [[TMP19:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; FORCED-NEXT:    br i1 [[TMP19]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
@@ -352,14 +352,14 @@ define void @switch_all_dests_distinct(ptr %start, ptr %end) {
 ; FORCED-NEXT:    [[TMP18:%.*]] = or <4 x i1> [[TMP16]], [[TMP14]]
 ; FORCED-NEXT:    [[TMP19:%.*]] = xor <4 x i1> [[TMP17]], splat (i1 true)
 ; FORCED-NEXT:    [[TMP20:%.*]] = xor <4 x i1> [[TMP18]], splat (i1 true)
-; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 1), ptr [[NEXT_GEP]], i32 1, <4 x i1> [[TMP13]])
-; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 1), ptr [[TMP8]], i32 1, <4 x i1> [[TMP14]])
-; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> zeroinitializer, ptr [[NEXT_GEP]], i32 1, <4 x i1> [[TMP11]])
-; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> zeroinitializer, ptr [[TMP8]], i32 1, <4 x i1> [[TMP12]])
-; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 42), ptr [[NEXT_GEP]], i32 1, <4 x i1> [[TMP9]])
-; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 42), ptr [[TMP8]], i32 1, <4 x i1> [[TMP10]])
-; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 2), ptr [[NEXT_GEP]], i32 1, <4 x i1> [[TMP19]])
-; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 2), ptr [[TMP8]], i32 1, <4 x i1> [[TMP20]])
+; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 1), ptr align 1 [[NEXT_GEP]], <4 x i1> [[TMP13]])
+; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 1), ptr align 1 [[TMP8]], <4 x i1> [[TMP14]])
+; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> zeroinitializer, ptr align 1 [[NEXT_GEP]], <4 x i1> [[TMP11]])
+; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> zeroinitializer, ptr align 1 [[TMP8]], <4 x i1> [[TMP12]])
+; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 42), ptr align 1 [[NEXT_GEP]], <4 x i1> [[TMP9]])
+; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 42), ptr align 1 [[TMP8]], <4 x i1> [[TMP10]])
+; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 2), ptr align 1 [[NEXT_GEP]], <4 x i1> [[TMP19]])
+; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 2), ptr align 1 [[TMP8]], <4 x i1> [[TMP20]])
 ; FORCED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; FORCED-NEXT:    [[TMP21:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; FORCED-NEXT:    br i1 [[TMP21]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
@@ -463,10 +463,10 @@ define void @switch_all_dests_distinct_variant_using_branches(ptr %start, ptr %e
 ; COST-NEXT:    [[TMP11:%.*]] = xor <4 x i1> [[TMP8]], splat (i1 true)
 ; COST-NEXT:    [[TMP12:%.*]] = select <4 x i1> [[TMP11]], <4 x i1> [[TMP9]], <4 x i1> zeroinitializer
 ; COST-NEXT:    [[TMP13:%.*]] = select <4 x i1> [[TMP10]], <4 x i1> [[TMP12]], <4 x i1> zeroinitializer
-; COST-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 1), ptr [[NEXT_GEP]], i32 1, <4 x i1> [[TMP13]])
+; COST-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 1), ptr align 1 [[NEXT_GEP]], <4 x i1> [[TMP13]])
 ; COST-NEXT:    [[TMP14:%.*]] = select <4 x i1> [[TMP10]], <4 x i1> [[TMP8]], <4 x i1> zeroinitializer
-; COST-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> zeroinitializer, ptr [[NEXT_GEP]], i32 1, <4 x i1> [[TMP14]])
-; COST-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 42), ptr [[NEXT_GEP]], i32 1, <4 x i1> [[TMP7]])
+; COST-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> zeroinitializer, ptr align 1 [[NEXT_GEP]], <4 x i1> [[TMP14]])
+; COST-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 42), ptr align 1 [[NEXT_GEP]], <4 x i1> [[TMP7]])
 ; COST-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; COST-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; COST-NEXT:    br i1 [[TMP15]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
@@ -544,14 +544,14 @@ define void @switch_all_dests_distinct_variant_using_branches(ptr %start, ptr %e
 ; FORCED-NEXT:    [[TMP20:%.*]] = select <4 x i1> [[TMP18]], <4 x i1> [[TMP14]], <4 x i1> zeroinitializer
 ; FORCED-NEXT:    [[TMP21:%.*]] = select <4 x i1> [[TMP15]], <4 x i1> [[TMP19]], <4 x i1> zeroinitializer
 ; FORCED-NEXT:    [[TMP22:%.*]] = select <4 x i1> [[TMP16]], <4 x i1> [[TMP20]], <4 x i1> zeroinitializer
-; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 1), ptr [[NEXT_GEP]], i32 1, <4 x i1> [[TMP21]])
-; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 1), ptr [[TMP8]], i32 1, <4 x i1> [[TMP22]])
+; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 1), ptr align 1 [[NEXT_GEP]], <4 x i1> [[TMP21]])
+; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 1), ptr align 1 [[TMP8]], <4 x i1> [[TMP22]])
 ; FORCED-NEXT:    [[TMP23:%.*]] = select <4 x i1> [[TMP15]], <4 x i1> [[TMP11]], <4 x i1> zeroinitializer
 ; FORCED-NEXT:    [[TMP24:%.*]] = select <4 x i1> [[TMP16]], <4 x i1> [[TMP12]], <4 x i1> zeroinitializer
-; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> zeroinitializer, ptr [[NEXT_GEP]], i32 1, <4 x i1> [[TMP23]])
-; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> zeroinitializer, ptr [[TMP8]], i32 1, <4 x i1> [[TMP24]])
-; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 42), ptr [[NEXT_GEP]], i32 1, <4 x i1> [[TMP9]])
-; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 42), ptr [[TMP8]], i32 1, <4 x i1> [[TMP10]])
+; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> zeroinitializer, ptr align 1 [[NEXT_GEP]], <4 x i1> [[TMP23]])
+; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> zeroinitializer, ptr align 1 [[TMP8]], <4 x i1> [[TMP24]])
+; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 42), ptr align 1 [[NEXT_GEP]], <4 x i1> [[TMP9]])
+; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 42), ptr align 1 [[TMP8]], <4 x i1> [[TMP10]])
 ; FORCED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; FORCED-NEXT:    [[TMP25:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; FORCED-NEXT:    br i1 [[TMP25]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
@@ -710,12 +710,12 @@ define void @switch_multiple_common_dests(ptr %start, ptr %end) {
 ; FORCED-NEXT:    [[TMP38:%.*]] = or <4 x i1> [[TMP28]], [[TMP36]]
 ; FORCED-NEXT:    [[TMP39:%.*]] = xor <4 x i1> [[TMP37]], splat (i1 true)
 ; FORCED-NEXT:    [[TMP40:%.*]] = xor <4 x i1> [[TMP38]], splat (i1 true)
-; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> zeroinitializer, ptr [[NEXT_GEP]], i32 1, <4 x i1> [[TMP35]])
-; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> zeroinitializer, ptr [[TMP8]], i32 1, <4 x i1> [[TMP36]])
-; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 42), ptr [[NEXT_GEP]], i32 1, <4 x i1> [[TMP27]])
-; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 42), ptr [[TMP8]], i32 1, <4 x i1> [[TMP28]])
-; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 2), ptr [[NEXT_GEP]], i32 1, <4 x i1> [[TMP39]])
-; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 2), ptr [[TMP8]], i32 1, <4 x i1> [[TMP40]])
+; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> zeroinitializer, ptr align 1 [[NEXT_GEP]], <4 x i1> [[TMP35]])
+; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> zeroinitializer, ptr align 1 [[TMP8]], <4 x i1> [[TMP36]])
+; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 42), ptr align 1 [[NEXT_GEP]], <4 x i1> [[TMP27]])
+; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 42), ptr align 1 [[TMP8]], <4 x i1> [[TMP28]])
+; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 2), ptr align 1 [[NEXT_GEP]], <4 x i1> [[TMP39]])
+; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 2), ptr align 1 [[TMP8]], <4 x i1> [[TMP40]])
 ; FORCED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; FORCED-NEXT:    [[TMP41:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; FORCED-NEXT:    br i1 [[TMP41]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
@@ -847,12 +847,12 @@ define void @switch4_default_common_dest_with_case(ptr %start, ptr %end) {
 ; FORCED-NEXT:    [[TMP18:%.*]] = or <4 x i1> [[TMP16]], [[TMP12]]
 ; FORCED-NEXT:    [[TMP20:%.*]] = xor <4 x i1> [[TMP17]], splat (i1 true)
 ; FORCED-NEXT:    [[TMP21:%.*]] = xor <4 x i1> [[TMP18]], splat (i1 true)
-; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> zeroinitializer, ptr [[NEXT_GEP]], i32 1, <4 x i1> [[TMP11]])
-; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> zeroinitializer, ptr [[TMP8]], i32 1, <4 x i1> [[TMP12]])
-; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 42), ptr [[NEXT_GEP]], i32 1, <4 x i1> [[TMP15]])
-; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 42), ptr [[TMP8]], i32 1, <4 x i1> [[TMP16]])
-; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 2), ptr [[NEXT_GEP]], i32 1, <4 x i1> [[TMP20]])
-; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 2), ptr [[TMP8]], i32 1, <4 x i1> [[TMP21]])
+; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> zeroinitializer, ptr align 1 [[NEXT_GEP]], <4 x i1> [[TMP11]])
+; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> zeroinitializer, ptr align 1 [[TMP8]], <4 x i1> [[TMP12]])
+; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 42), ptr align 1 [[NEXT_GEP]], <4 x i1> [[TMP15]])
+; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 42), ptr align 1 [[TMP8]], <4 x i1> [[TMP16]])
+; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 2), ptr align 1 [[NEXT_GEP]], <4 x i1> [[TMP20]])
+; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 2), ptr align 1 [[TMP8]], <4 x i1> [[TMP21]])
 ; FORCED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; FORCED-NEXT:    [[TMP19:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; FORCED-NEXT:    br i1 [[TMP19]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
@@ -952,9 +952,9 @@ define void @switch_under_br_default_common_dest_with_case(ptr %start, ptr %end,
 ; COST-NEXT:    [[TMP12:%.*]] = or <4 x i1> [[TMP10]], [[TMP11]]
 ; COST-NEXT:    [[TMP13:%.*]] = xor <4 x i1> [[TMP12]], splat (i1 true)
 ; COST-NEXT:    [[TMP14:%.*]] = select <4 x i1> [[TMP7]], <4 x i1> [[TMP13]], <4 x i1> zeroinitializer
-; COST-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> zeroinitializer, ptr [[NEXT_GEP]], i32 1, <4 x i1> [[TMP11]])
-; COST-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 42), ptr [[NEXT_GEP]], i32 1, <4 x i1> [[TMP10]])
-; COST-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 2), ptr [[NEXT_GEP]], i32 1, <4 x i1> [[TMP14]])
+; COST-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> zeroinitializer, ptr align 1 [[NEXT_GEP]], <4 x i1> [[TMP11]])
+; COST-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 42), ptr align 1 [[NEXT_GEP]], <4 x i1> [[TMP10]])
+; COST-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 2), ptr align 1 [[NEXT_GEP]], <4 x i1> [[TMP14]])
 ; COST-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; COST-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; COST-NEXT:    br i1 [[TMP16]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
@@ -1033,12 +1033,12 @@ define void @switch_under_br_default_common_dest_with_case(ptr %start, ptr %end,
 ; FORCED-NEXT:    [[TMP22:%.*]] = xor <4 x i1> [[TMP20]], splat (i1 true)
 ; FORCED-NEXT:    [[TMP23:%.*]] = select <4 x i1> [[TMP9]], <4 x i1> [[TMP21]], <4 x i1> zeroinitializer
 ; FORCED-NEXT:    [[TMP24:%.*]] = select <4 x i1> [[TMP10]], <4 x i1> [[TMP22]], <4 x i1> zeroinitializer
-; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> zeroinitializer, ptr [[NEXT_GEP]], i32 1, <4 x i1> [[TMP25]])
-; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> zeroinitializer, ptr [[TMP8]], i32 1, <4 x i1> [[TMP26]])
-; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 42), ptr [[NEXT_GEP]], i32 1, <4 x i1> [[TMP15]])
-; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 42), ptr [[TMP8]], i32 1, <4 x i1> [[TMP16]])
-; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 2), ptr [[NEXT_GEP]], i32 1, <4 x i1> [[TMP23]])
-; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 2), ptr [[TMP8]], i32 1, <4 x i1> [[TMP24]])
+; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> zeroinitializer, ptr align 1 [[NEXT_GEP]], <4 x i1> [[TMP25]])
+; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> zeroinitializer, ptr align 1 [[TMP8]], <4 x i1> [[TMP26]])
+; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 42), ptr align 1 [[NEXT_GEP]], <4 x i1> [[TMP15]])
+; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 42), ptr align 1 [[TMP8]], <4 x i1> [[TMP16]])
+; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 2), ptr align 1 [[NEXT_GEP]], <4 x i1> [[TMP23]])
+; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 2), ptr align 1 [[TMP8]], <4 x i1> [[TMP24]])
 ; FORCED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; FORCED-NEXT:    [[TMP19:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; FORCED-NEXT:    br i1 [[TMP19]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
@@ -1186,16 +1186,16 @@ define void @br_under_switch_default_common_dest_with_case(ptr %start, ptr %end,
 ; FORCED-NEXT:    [[TMP28:%.*]] = select <4 x i1> [[TMP10]], <4 x i1> [[TMP20]], <4 x i1> zeroinitializer
 ; FORCED-NEXT:    [[TMP29:%.*]] = or <4 x i1> [[TMP27]], [[TMP25]]
 ; FORCED-NEXT:    [[TMP30:%.*]] = or <4 x i1> [[TMP28]], [[TMP26]]
-; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> zeroinitializer, ptr [[NEXT_GEP]], i32 1, <4 x i1> [[TMP29]])
-; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> zeroinitializer, ptr [[TMP8]], i32 1, <4 x i1> [[TMP30]])
+; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> zeroinitializer, ptr align 1 [[NEXT_GEP]], <4 x i1> [[TMP29]])
+; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> zeroinitializer, ptr align 1 [[TMP8]], <4 x i1> [[TMP30]])
 ; FORCED-NEXT:    [[TMP32:%.*]] = select <4 x i1> [[TMP9]], <4 x i1> [[TMP17]], <4 x i1> zeroinitializer
 ; FORCED-NEXT:    [[TMP33:%.*]] = select <4 x i1> [[TMP10]], <4 x i1> [[TMP18]], <4 x i1> zeroinitializer
-; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 42), ptr [[NEXT_GEP]], i32 1, <4 x i1> [[TMP32]])
-; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 42), ptr [[TMP8]], i32 1, <4 x i1> [[TMP33]])
+; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 42), ptr align 1 [[NEXT_GEP]], <4 x i1> [[TMP32]])
+; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 42), ptr align 1 [[TMP8]], <4 x i1> [[TMP33]])
 ; FORCED-NEXT:    [[TMP36:%.*]] = or <4 x i1> [[TMP32]], [[TMP15]]
 ; FORCED-NEXT:    [[TMP37:%.*]] = or <4 x i1> [[TMP33]], [[TMP16]]
-; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 2), ptr [[NEXT_GEP]], i32 1, <4 x i1> [[TMP36]])
-; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 2), ptr [[TMP8]], i32 1, <4 x i1> [[TMP37]])
+; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 2), ptr align 1 [[NEXT_GEP]], <4 x i1> [[TMP36]])
+; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 2), ptr align 1 [[TMP8]], <4 x i1> [[TMP37]])
 ; FORCED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; FORCED-NEXT:    [[TMP31:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; FORCED-NEXT:    br i1 [[TMP31]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
@@ -1356,8 +1356,8 @@ define void @large_number_of_cases(ptr %start, ptr %end) {
 ; FORCED-NEXT:    [[TMP40:%.*]] = or <4 x i1> [[TMP38]], [[TMP24]]
 ; FORCED-NEXT:    [[TMP57:%.*]] = or <4 x i1> [[TMP39]], [[TMP25]]
 ; FORCED-NEXT:    [[TMP58:%.*]] = or <4 x i1> [[TMP40]], [[TMP26]]
-; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 42), ptr [[NEXT_GEP]], i32 1, <4 x i1> [[TMP57]])
-; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 42), ptr [[TMP8]], i32 1, <4 x i1> [[TMP58]])
+; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 42), ptr align 1 [[NEXT_GEP]], <4 x i1> [[TMP57]])
+; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 42), ptr align 1 [[TMP8]], <4 x i1> [[TMP58]])
 ; FORCED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; FORCED-NEXT:    [[TMP59:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; FORCED-NEXT:    br i1 [[TMP59]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP18:![0-9]+]]

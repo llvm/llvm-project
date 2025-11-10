@@ -97,8 +97,8 @@ if.end:
   ret ptr %x.0
 }
 
-!0 = !{!"int"}
-!1 = !{!"char[4]"}
+!0 = !{!"int", i1 0}
+!1 = !{!"char[4]", i1 0}
 ;.
-; CHECK: [[META0]] = !{!"int"}
+; CHECK: [[META0]] = !{!"int", i1 false}
 ;.

@@ -721,6 +721,9 @@ bool InlineSpiller::reMaterializeFor(LiveInterval &VirtReg, MachineInstr &MI) {
   // Allocate a new register for the remat.
   Register NewVReg = Edit->createFrom(Original);
 
+  // Constrain it to the register class of MI.
+  MRI.constrainRegClass(NewVReg, MRI.getRegClass(VirtReg.reg()));
+
   // Finally we can rematerialize OrigMI before MI.
   SlotIndex DefIdx =
       Edit->rematerializeAt(*MI.getParent(), MI, NewVReg, RM, TRI);

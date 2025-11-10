@@ -11,17 +11,20 @@
 #include "src/__support/common.h"
 
 #include "hdr/unistd_macros.h"
+#include "src/__support/OSUtil/linux/auxv.h"
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
-#include "src/sys/auxv/getauxval.h"
-#include <sys/auxv.h>
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(long, sysconf, (int name)) {
   long ret = 0;
-  if (name == _SC_PAGESIZE)
-    return static_cast<long>(getauxval(AT_PAGESZ));
+  if (name == _SC_PAGESIZE) {
+    cpp::optional<unsigned long> page_size = auxv::get(AT_PAGESZ);
+    if (page_size)
+      return static_cast<long>(*page_size);
+    ret = -1;
+  }
 
   // TODO: Complete the rest of the sysconf options.
   if (ret < 0) {

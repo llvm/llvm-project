@@ -668,6 +668,7 @@ bool SparcInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
              .addImm(-1);
     MIBundleBuilder(MBB, InstSTBAR, InstLDSTUB);
     MBB.erase(MI);
+    return true;
   }
   }
   return false;

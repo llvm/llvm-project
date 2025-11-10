@@ -1774,3 +1774,88 @@ define i128 @combine_i128_sdiv_const100(i128 %x) {
   %1 = sdiv i128 %x, 100
   ret i128 %1
 }
+
+; The following only becomes an sdiv_by_one after type legalisation, after which
+; the splatted scalar constant has a different type to the splat vector. This
+; test verifies DAGCombiner does not care about this type difference.
+define <16 x i16> @combine_vec_sdiv_by_one_obfuscated(<16 x i16> %x) "target-features"="+sve" {
+; CHECK-SD-LABEL: combine_vec_sdiv_by_one_obfuscated:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: combine_vec_sdiv_by_one_obfuscated:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-GI-NEXT:    movi v3.8h, #1
+; CHECK-GI-NEXT:    smov w8, v0.h[0]
+; CHECK-GI-NEXT:    mov v3.h[0], v2.h[0]
+; CHECK-GI-NEXT:    smov w9, v3.h[0]
+; CHECK-GI-NEXT:    smov w16, v3.h[7]
+; CHECK-GI-NEXT:    sdiv w14, w8, w9
+; CHECK-GI-NEXT:    smov w8, v0.h[1]
+; CHECK-GI-NEXT:    smov w9, v3.h[1]
+; CHECK-GI-NEXT:    sdiv w15, w8, w9
+; CHECK-GI-NEXT:    smov w8, v0.h[2]
+; CHECK-GI-NEXT:    smov w9, v3.h[2]
+; CHECK-GI-NEXT:    sdiv w13, w8, w9
+; CHECK-GI-NEXT:    smov w8, v0.h[3]
+; CHECK-GI-NEXT:    smov w9, v3.h[3]
+; CHECK-GI-NEXT:    sdiv w12, w8, w9
+; CHECK-GI-NEXT:    smov w8, v0.h[4]
+; CHECK-GI-NEXT:    smov w9, v3.h[4]
+; CHECK-GI-NEXT:    sdiv w11, w8, w9
+; CHECK-GI-NEXT:    smov w8, v0.h[5]
+; CHECK-GI-NEXT:    smov w9, v3.h[5]
+; CHECK-GI-NEXT:    sdiv w10, w8, w9
+; CHECK-GI-NEXT:    smov w8, v0.h[6]
+; CHECK-GI-NEXT:    smov w9, v3.h[6]
+; CHECK-GI-NEXT:    movi v3.8h, #1
+; CHECK-GI-NEXT:    smov w17, v3.h[0]
+; CHECK-GI-NEXT:    smov w18, v3.h[1]
+; CHECK-GI-NEXT:    smov w0, v3.h[2]
+; CHECK-GI-NEXT:    smov w1, v3.h[3]
+; CHECK-GI-NEXT:    smov w2, v3.h[4]
+; CHECK-GI-NEXT:    smov w3, v3.h[5]
+; CHECK-GI-NEXT:    sdiv w8, w8, w9
+; CHECK-GI-NEXT:    smov w9, v0.h[7]
+; CHECK-GI-NEXT:    fmov s0, w14
+; CHECK-GI-NEXT:    mov v0.h[1], w15
+; CHECK-GI-NEXT:    smov w15, v1.h[6]
+; CHECK-GI-NEXT:    mov v0.h[2], w13
+; CHECK-GI-NEXT:    sdiv w9, w9, w16
+; CHECK-GI-NEXT:    smov w16, v1.h[0]
+; CHECK-GI-NEXT:    mov v0.h[3], w12
+; CHECK-GI-NEXT:    smov w12, v1.h[7]
+; CHECK-GI-NEXT:    mov v0.h[4], w11
+; CHECK-GI-NEXT:    sdiv w16, w16, w17
+; CHECK-GI-NEXT:    smov w17, v1.h[1]
+; CHECK-GI-NEXT:    mov v0.h[5], w10
+; CHECK-GI-NEXT:    mov v0.h[6], w8
+; CHECK-GI-NEXT:    sdiv w17, w17, w18
+; CHECK-GI-NEXT:    smov w18, v1.h[2]
+; CHECK-GI-NEXT:    fmov s2, w16
+; CHECK-GI-NEXT:    smov w16, v3.h[6]
+; CHECK-GI-NEXT:    mov v0.h[7], w9
+; CHECK-GI-NEXT:    sdiv w18, w18, w0
+; CHECK-GI-NEXT:    smov w0, v1.h[3]
+; CHECK-GI-NEXT:    mov v2.h[1], w17
+; CHECK-GI-NEXT:    sdiv w0, w0, w1
+; CHECK-GI-NEXT:    smov w1, v1.h[4]
+; CHECK-GI-NEXT:    mov v2.h[2], w18
+; CHECK-GI-NEXT:    sdiv w1, w1, w2
+; CHECK-GI-NEXT:    smov w2, v1.h[5]
+; CHECK-GI-NEXT:    mov v2.h[3], w0
+; CHECK-GI-NEXT:    sdiv w14, w2, w3
+; CHECK-GI-NEXT:    mov v2.h[4], w1
+; CHECK-GI-NEXT:    sdiv w13, w15, w16
+; CHECK-GI-NEXT:    smov w15, v3.h[7]
+; CHECK-GI-NEXT:    mov v2.h[5], w14
+; CHECK-GI-NEXT:    sdiv w10, w12, w15
+; CHECK-GI-NEXT:    mov v2.h[6], w13
+; CHECK-GI-NEXT:    mov v2.h[7], w10
+; CHECK-GI-NEXT:    mov v1.16b, v2.16b
+; CHECK-GI-NEXT:    ret
+  %zero_and_ones = shufflevector <16 x i16> zeroinitializer, <16 x i16> splat (i16 1), <16 x i32> <i32 0, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+  %div = sdiv <16 x i16> %x, %zero_and_ones
+  ret <16 x i16> %div
+}
