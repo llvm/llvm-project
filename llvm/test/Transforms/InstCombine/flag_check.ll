@@ -7,9 +7,11 @@ define i1 @or_icmp_2(i32 signext noundef %type) {
 ; CHECK-LABEL: define i1 @or_icmp_2(
 ; CHECK-SAME: i32 noundef signext [[TYPE:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TYPE]], 6
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[TYPE]], 0
-; CHECK-NEXT:    [[OR_COND:%.*]] = or i1 [[CMP]], [[CMP1]]
+; CHECK-NEXT:    [[TMP0:%.*]] = zext nneg i32 [[TYPE]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i64 65, [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[TYPE]], 7
+; CHECK-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP1]] to i1
+; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[TMP2]], i1 [[TMP3]], i1 false
 ; CHECK-NEXT:    ret i1 [[OR_COND]]
 ;
 entry:
@@ -23,9 +25,11 @@ define i1 @or_icmp_3(i32 signext noundef %type) {
 ; CHECK-LABEL: define i1 @or_icmp_3(
 ; CHECK-SAME: i32 noundef signext [[TYPE:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TYPE]], 6
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[TYPE]], 0
-; CHECK-NEXT:    [[OR_COND:%.*]] = or i1 [[CMP]], [[CMP1]]
+; CHECK-NEXT:    [[TMP0:%.*]] = zext nneg i32 [[TYPE]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i64 65, [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[TYPE]], 7
+; CHECK-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP1]] to i1
+; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[TMP2]], i1 [[TMP3]], i1 false
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[TYPE]], 15
 ; CHECK-NEXT:    [[OR_COND1:%.*]] = or i1 [[CMP2]], [[OR_COND]]
 ; CHECK-NEXT:    ret i1 [[OR_COND1]]
@@ -43,9 +47,11 @@ define i1 @or_icmp_7(i32 signext noundef %type) {
 ; CHECK-LABEL: define i1 @or_icmp_7(
 ; CHECK-SAME: i32 noundef signext [[TYPE:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TYPE]], 6
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[TYPE]], 0
-; CHECK-NEXT:    [[OR_COND:%.*]] = or i1 [[CMP]], [[CMP1]]
+; CHECK-NEXT:    [[TMP0:%.*]] = zext nneg i32 [[TYPE]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i64 65, [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[TYPE]], 7
+; CHECK-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP1]] to i1
+; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[TMP2]], i1 [[TMP3]], i1 false
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[TYPE]], 17
 ; CHECK-NEXT:    [[OR_COND1:%.*]] = or i1 [[CMP2]], [[OR_COND]]
 ; CHECK-NEXT:    [[CMP3:%.*]] = icmp eq i32 [[TYPE]], 3
@@ -135,9 +141,10 @@ define i1 @or_icmp_i64(i64 signext noundef %type) {
 ; CHECK-LABEL: define i1 @or_icmp_i64(
 ; CHECK-SAME: i64 noundef signext [[TYPE:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[TYPE]], 6
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i64 [[TYPE]], 0
-; CHECK-NEXT:    [[OR_COND:%.*]] = or i1 [[CMP]], [[CMP1]]
+; CHECK-NEXT:    [[TMP0:%.*]] = lshr i64 65, [[TYPE]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i64 [[TYPE]], 7
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP0]] to i1
+; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[TMP1]], i1 [[TMP2]], i1 false
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i64 [[TYPE]], 15
 ; CHECK-NEXT:    [[OR_COND1:%.*]] = or i1 [[CMP2]], [[OR_COND]]
 ; CHECK-NEXT:    ret i1 [[OR_COND1]]
@@ -312,9 +319,11 @@ define i1 @or_icmp_i128(i128 signext noundef %type) {
 ; CHECK-LABEL: define i1 @or_icmp_i128(
 ; CHECK-SAME: i128 noundef signext [[TYPE:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i128 [[TYPE]], 6
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i128 [[TYPE]], 0
-; CHECK-NEXT:    [[OR_COND:%.*]] = or i1 [[CMP]], [[CMP1]]
+; CHECK-NEXT:    [[TMP0:%.*]] = trunc i128 [[TYPE]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i64 65, [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i128 [[TYPE]], 7
+; CHECK-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP1]] to i1
+; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[TMP2]], i1 [[TMP3]], i1 false
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i128 [[TYPE]], 15
 ; CHECK-NEXT:    [[OR_COND1:%.*]] = or i1 [[CMP2]], [[OR_COND]]
 ; CHECK-NEXT:    ret i1 [[OR_COND1]]
