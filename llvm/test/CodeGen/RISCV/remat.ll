@@ -294,7 +294,8 @@ define void @remat_load(i32 %0, i32 %1, i32 %2, i32 %3, i32 %4, i32 %5, i32 %6, 
 ; CHECK-NEXT:    addi sp, sp, 208
 ; CHECK-NEXT:    ret
 entry:
-  ; Force loading the stack arguments to create their live interval
+  ; Add a use of the stack arguments here so that we will have to load them from
+  ; the stack before the inline asm
   store volatile i8 %stackarg0, ptr %p
   store volatile i16 %stackarg1, ptr %p
   store volatile i32 %stackarg2, ptr %p
