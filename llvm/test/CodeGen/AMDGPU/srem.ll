@@ -1501,8 +1501,6 @@ define amdgpu_kernel void @srem_i64(ptr addrspace(1) %out, ptr addrspace(1) %in)
 ; GCN-NEXT:    v_readfirstlane_b32 s3, v3
 ; GCN-NEXT:    v_readfirstlane_b32 s2, v2
 ; GCN-NEXT:    s_or_b64 s[6:7], s[4:5], s[2:3]
-; GCN-NEXT:    s_mov_b32 s6, 0
-; GCN-NEXT:    s_cmp_lg_u64 s[6:7], 0
 ; GCN-NEXT:    s_cbranch_scc0 .LBB8_4
 ; GCN-NEXT:  ; %bb.1:
 ; GCN-NEXT:    s_ashr_i32 s6, s3, 31
@@ -1832,8 +1830,6 @@ define amdgpu_kernel void @srem_i64(ptr addrspace(1) %out, ptr addrspace(1) %in)
 ; TONGA-NEXT:    v_readfirstlane_b32 s3, v3
 ; TONGA-NEXT:    v_readfirstlane_b32 s2, v2
 ; TONGA-NEXT:    s_or_b64 s[6:7], s[4:5], s[2:3]
-; TONGA-NEXT:    s_mov_b32 s6, 0
-; TONGA-NEXT:    s_cmp_lg_u64 s[6:7], 0
 ; TONGA-NEXT:    s_cbranch_scc0 .LBB8_3
 ; TONGA-NEXT:  ; %bb.1:
 ; TONGA-NEXT:    s_ashr_i32 s6, s3, 31
@@ -2701,12 +2697,10 @@ define amdgpu_kernel void @srem_v2i64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_readfirstlane_b32 s11, v5
 ; GCN-NEXT:    v_readfirstlane_b32 s10, v4
-; GCN-NEXT:    s_or_b64 s[6:7], s[10:11], s[8:9]
-; GCN-NEXT:    s_mov_b32 s6, 0
 ; GCN-NEXT:    v_readfirstlane_b32 s3, v3
 ; GCN-NEXT:    v_readfirstlane_b32 s2, v2
 ; GCN-NEXT:    v_readfirstlane_b32 s5, v7
-; GCN-NEXT:    s_cmp_lg_u64 s[6:7], 0
+; GCN-NEXT:    s_or_b64 s[6:7], s[10:11], s[8:9]
 ; GCN-NEXT:    v_readfirstlane_b32 s4, v6
 ; GCN-NEXT:    s_cbranch_scc0 .LBB10_6
 ; GCN-NEXT:  ; %bb.1:
@@ -2855,8 +2849,6 @@ define amdgpu_kernel void @srem_v2i64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GCN-NEXT:    s_cselect_b32 s6, s9, s6
 ; GCN-NEXT:  .LBB10_3:
 ; GCN-NEXT:    s_or_b64 s[8:9], s[4:5], s[2:3]
-; GCN-NEXT:    s_mov_b32 s8, 0
-; GCN-NEXT:    s_cmp_lg_u64 s[8:9], 0
 ; GCN-NEXT:    s_cbranch_scc0 .LBB10_7
 ; GCN-NEXT:  ; %bb.4:
 ; GCN-NEXT:    s_ashr_i32 s8, s3, 31
@@ -3344,8 +3336,6 @@ define amdgpu_kernel void @srem_v2i64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; TONGA-NEXT:    v_readfirstlane_b32 s3, v5
 ; TONGA-NEXT:    v_readfirstlane_b32 s2, v4
 ; TONGA-NEXT:    s_or_b64 s[6:7], s[2:3], s[0:1]
-; TONGA-NEXT:    s_mov_b32 s6, 0
-; TONGA-NEXT:    s_cmp_lg_u64 s[6:7], 0
 ; TONGA-NEXT:    s_cbranch_scc0 .LBB10_3
 ; TONGA-NEXT:  ; %bb.1:
 ; TONGA-NEXT:    s_ashr_i32 s6, s1, 31
@@ -4878,8 +4868,6 @@ define amdgpu_kernel void @srem_v4i64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_readfirstlane_b32 s19, v13
 ; GCN-NEXT:    v_readfirstlane_b32 s18, v12
-; GCN-NEXT:    s_or_b64 s[6:7], s[18:19], s[16:17]
-; GCN-NEXT:    s_mov_b32 s6, 0
 ; GCN-NEXT:    v_readfirstlane_b32 s2, v2
 ; GCN-NEXT:    v_readfirstlane_b32 s9, v1
 ; GCN-NEXT:    v_readfirstlane_b32 s8, v0
@@ -4890,9 +4878,9 @@ define amdgpu_kernel void @srem_v4i64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GCN-NEXT:    v_readfirstlane_b32 s11, v9
 ; GCN-NEXT:    v_readfirstlane_b32 s10, v8
 ; GCN-NEXT:    v_readfirstlane_b32 s15, v15
-; GCN-NEXT:    s_cmp_lg_u64 s[6:7], 0
+; GCN-NEXT:    s_or_b64 s[6:7], s[18:19], s[16:17]
 ; GCN-NEXT:    v_readfirstlane_b32 s14, v14
-; GCN-NEXT:    s_cbranch_scc0 .LBB12_6
+; GCN-NEXT:    s_cbranch_scc0 .LBB12_10
 ; GCN-NEXT:  ; %bb.1:
 ; GCN-NEXT:    s_ashr_i32 s6, s17, 31
 ; GCN-NEXT:    s_add_u32 s20, s16, s6
@@ -5039,9 +5027,7 @@ define amdgpu_kernel void @srem_v4i64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GCN-NEXT:    s_cselect_b32 s6, s17, s6
 ; GCN-NEXT:  .LBB12_3:
 ; GCN-NEXT:    s_or_b64 s[16:17], s[14:15], s[12:13]
-; GCN-NEXT:    s_mov_b32 s16, 0
-; GCN-NEXT:    s_cmp_lg_u64 s[16:17], 0
-; GCN-NEXT:    s_cbranch_scc0 .LBB12_7
+; GCN-NEXT:    s_cbranch_scc0 .LBB12_11
 ; GCN-NEXT:  ; %bb.4:
 ; GCN-NEXT:    s_ashr_i32 s16, s13, 31
 ; GCN-NEXT:    s_add_u32 s18, s12, s16
@@ -5165,7 +5151,7 @@ define amdgpu_kernel void @srem_v4i64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GCN-NEXT:    s_xor_b64 s[18:19], s[18:19], s[20:21]
 ; GCN-NEXT:    s_sub_u32 s18, s18, s20
 ; GCN-NEXT:    s_subb_u32 s19, s19, s20
-; GCN-NEXT:    s_cbranch_execnz .LBB12_8
+; GCN-NEXT:    s_cbranch_execnz .LBB12_12
 ; GCN-NEXT:  .LBB12_5:
 ; GCN-NEXT:    v_cvt_f32_u32_e32 v0, s12
 ; GCN-NEXT:    s_sub_i32 s13, 0, s12
@@ -5185,22 +5171,35 @@ define amdgpu_kernel void @srem_v4i64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GCN-NEXT:    v_subrev_u32_e32 v1, s12, v0
 ; GCN-NEXT:    v_cmp_le_u32_e32 vcc, s12, v0
 ; GCN-NEXT:    v_cndmask_b32_e32 v2, v0, v1, vcc
-; GCN-NEXT:    s_branch .LBB12_9
+; GCN-NEXT:    s_or_b64 s[12:13], s[10:11], s[8:9]
+; GCN-NEXT:    s_cbranch_scc1 .LBB12_13
 ; GCN-NEXT:  .LBB12_6:
+; GCN-NEXT:    ; implicit-def: $sgpr14_sgpr15
+; GCN-NEXT:    s_branch .LBB12_14
+; GCN-NEXT:  .LBB12_7:
+; GCN-NEXT:    v_mov_b32_e32 v4, s14
+; GCN-NEXT:    v_mov_b32_e32 v5, s15
+; GCN-NEXT:    s_or_b64 s[8:9], s[4:5], s[2:3]
+; GCN-NEXT:    s_cbranch_scc1 .LBB12_15
+; GCN-NEXT:  .LBB12_8:
+; GCN-NEXT:    ; implicit-def: $sgpr10_sgpr11
+; GCN-NEXT:    s_branch .LBB12_16
+; GCN-NEXT:  .LBB12_9:
+; GCN-NEXT:    v_mov_b32_e32 v6, s10
+; GCN-NEXT:    v_mov_b32_e32 v7, s11
+; GCN-NEXT:    s_branch .LBB12_17
+; GCN-NEXT:  .LBB12_10:
 ; GCN-NEXT:    ; implicit-def: $sgpr6_sgpr7
 ; GCN-NEXT:    s_branch .LBB12_2
-; GCN-NEXT:  .LBB12_7:
+; GCN-NEXT:  .LBB12_11:
 ; GCN-NEXT:    ; implicit-def: $sgpr18_sgpr19
 ; GCN-NEXT:    s_branch .LBB12_5
-; GCN-NEXT:  .LBB12_8:
+; GCN-NEXT:  .LBB12_12:
 ; GCN-NEXT:    v_mov_b32_e32 v2, s18
 ; GCN-NEXT:    v_mov_b32_e32 v3, s19
-; GCN-NEXT:  .LBB12_9:
 ; GCN-NEXT:    s_or_b64 s[12:13], s[10:11], s[8:9]
-; GCN-NEXT:    s_mov_b32 s12, 0
-; GCN-NEXT:    s_cmp_lg_u64 s[12:13], 0
-; GCN-NEXT:    s_cbranch_scc0 .LBB12_12
-; GCN-NEXT:  ; %bb.10:
+; GCN-NEXT:    s_cbranch_scc0 .LBB12_6
+; GCN-NEXT:  .LBB12_13:
 ; GCN-NEXT:    s_ashr_i32 s12, s9, 31
 ; GCN-NEXT:    s_add_u32 s14, s8, s12
 ; GCN-NEXT:    s_mov_b32 s13, s12
@@ -5323,8 +5322,8 @@ define amdgpu_kernel void @srem_v4i64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GCN-NEXT:    s_xor_b64 s[14:15], s[14:15], s[16:17]
 ; GCN-NEXT:    s_sub_u32 s14, s14, s16
 ; GCN-NEXT:    s_subb_u32 s15, s15, s16
-; GCN-NEXT:    s_cbranch_execnz .LBB12_13
-; GCN-NEXT:  .LBB12_11:
+; GCN-NEXT:    s_cbranch_execnz .LBB12_7
+; GCN-NEXT:  .LBB12_14:
 ; GCN-NEXT:    v_cvt_f32_u32_e32 v0, s8
 ; GCN-NEXT:    s_sub_i32 s9, 0, s8
 ; GCN-NEXT:    v_mov_b32_e32 v5, 0
@@ -5343,19 +5342,9 @@ define amdgpu_kernel void @srem_v4i64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GCN-NEXT:    v_subrev_u32_e32 v1, s8, v0
 ; GCN-NEXT:    v_cmp_le_u32_e32 vcc, s8, v0
 ; GCN-NEXT:    v_cndmask_b32_e32 v4, v0, v1, vcc
-; GCN-NEXT:    s_branch .LBB12_14
-; GCN-NEXT:  .LBB12_12:
-; GCN-NEXT:    ; implicit-def: $sgpr14_sgpr15
-; GCN-NEXT:    s_branch .LBB12_11
-; GCN-NEXT:  .LBB12_13:
-; GCN-NEXT:    v_mov_b32_e32 v4, s14
-; GCN-NEXT:    v_mov_b32_e32 v5, s15
-; GCN-NEXT:  .LBB12_14:
 ; GCN-NEXT:    s_or_b64 s[8:9], s[4:5], s[2:3]
-; GCN-NEXT:    s_mov_b32 s8, 0
-; GCN-NEXT:    s_cmp_lg_u64 s[8:9], 0
-; GCN-NEXT:    s_cbranch_scc0 .LBB12_17
-; GCN-NEXT:  ; %bb.15:
+; GCN-NEXT:    s_cbranch_scc0 .LBB12_8
+; GCN-NEXT:  .LBB12_15:
 ; GCN-NEXT:    s_ashr_i32 s8, s3, 31
 ; GCN-NEXT:    s_add_u32 s10, s2, s8
 ; GCN-NEXT:    s_mov_b32 s9, s8
@@ -5478,7 +5467,7 @@ define amdgpu_kernel void @srem_v4i64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GCN-NEXT:    s_xor_b64 s[10:11], s[10:11], s[12:13]
 ; GCN-NEXT:    s_sub_u32 s10, s10, s12
 ; GCN-NEXT:    s_subb_u32 s11, s11, s12
-; GCN-NEXT:    s_cbranch_execnz .LBB12_18
+; GCN-NEXT:    s_cbranch_execnz .LBB12_9
 ; GCN-NEXT:  .LBB12_16:
 ; GCN-NEXT:    v_cvt_f32_u32_e32 v0, s2
 ; GCN-NEXT:    s_sub_i32 s3, 0, s2
@@ -5498,14 +5487,7 @@ define amdgpu_kernel void @srem_v4i64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GCN-NEXT:    v_subrev_u32_e32 v1, s2, v0
 ; GCN-NEXT:    v_cmp_le_u32_e32 vcc, s2, v0
 ; GCN-NEXT:    v_cndmask_b32_e32 v6, v0, v1, vcc
-; GCN-NEXT:    s_branch .LBB12_19
 ; GCN-NEXT:  .LBB12_17:
-; GCN-NEXT:    ; implicit-def: $sgpr10_sgpr11
-; GCN-NEXT:    s_branch .LBB12_16
-; GCN-NEXT:  .LBB12_18:
-; GCN-NEXT:    v_mov_b32_e32 v6, s10
-; GCN-NEXT:    v_mov_b32_e32 v7, s11
-; GCN-NEXT:  .LBB12_19:
 ; GCN-NEXT:    v_mov_b32_e32 v8, 0
 ; GCN-NEXT:    v_mov_b32_e32 v0, s6
 ; GCN-NEXT:    v_mov_b32_e32 v1, s7
@@ -6119,23 +6101,23 @@ define amdgpu_kernel void @srem_v4i64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; TONGA:       ; %bb.0:
 ; TONGA-NEXT:    s_load_dwordx4 s[4:7], s[4:5], 0x24
 ; TONGA-NEXT:    s_waitcnt lgkmcnt(0)
-; TONGA-NEXT:    s_add_u32 s0, s6, 48
 ; TONGA-NEXT:    v_mov_b32_e32 v0, s6
-; TONGA-NEXT:    s_addc_u32 s1, s7, 0
+; TONGA-NEXT:    s_add_u32 s0, s6, 48
 ; TONGA-NEXT:    v_mov_b32_e32 v1, s7
-; TONGA-NEXT:    s_add_u32 s2, s6, 32
+; TONGA-NEXT:    s_addc_u32 s1, s7, 0
 ; TONGA-NEXT:    flat_load_dwordx4 v[14:17], v[0:1]
-; TONGA-NEXT:    s_addc_u32 s3, s7, 0
-; TONGA-NEXT:    v_mov_b32_e32 v0, s2
-; TONGA-NEXT:    v_mov_b32_e32 v1, s3
-; TONGA-NEXT:    flat_load_dwordx4 v[10:13], v[0:1]
 ; TONGA-NEXT:    v_mov_b32_e32 v0, s0
 ; TONGA-NEXT:    v_mov_b32_e32 v1, s1
+; TONGA-NEXT:    s_add_u32 s0, s6, 32
+; TONGA-NEXT:    s_addc_u32 s1, s7, 0
+; TONGA-NEXT:    v_mov_b32_e32 v3, s1
+; TONGA-NEXT:    v_mov_b32_e32 v2, s0
 ; TONGA-NEXT:    s_add_u32 s0, s6, 16
 ; TONGA-NEXT:    s_addc_u32 s1, s7, 0
 ; TONGA-NEXT:    v_mov_b32_e32 v5, s1
-; TONGA-NEXT:    v_mov_b32_e32 v4, s0
+; TONGA-NEXT:    flat_load_dwordx4 v[10:13], v[2:3]
 ; TONGA-NEXT:    flat_load_dwordx4 v[0:3], v[0:1]
+; TONGA-NEXT:    v_mov_b32_e32 v4, s0
 ; TONGA-NEXT:    flat_load_dwordx4 v[4:7], v[4:5]
 ; TONGA-NEXT:    s_waitcnt vmcnt(3)
 ; TONGA-NEXT:    v_readfirstlane_b32 s3, v15
@@ -6144,8 +6126,6 @@ define amdgpu_kernel void @srem_v4i64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; TONGA-NEXT:    v_readfirstlane_b32 s1, v11
 ; TONGA-NEXT:    v_readfirstlane_b32 s0, v10
 ; TONGA-NEXT:    s_or_b64 s[6:7], s[2:3], s[0:1]
-; TONGA-NEXT:    s_mov_b32 s6, 0
-; TONGA-NEXT:    s_cmp_lg_u64 s[6:7], 0
 ; TONGA-NEXT:    s_cbranch_scc0 .LBB12_3
 ; TONGA-NEXT:  ; %bb.1:
 ; TONGA-NEXT:    s_ashr_i32 s6, s1, 31
