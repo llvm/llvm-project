@@ -457,21 +457,24 @@ static Value *GEPToVectorIndex(GetElementPtrInst *GEP, AllocaInst *Alloca,
   const auto &VarOffset = VarOffsets.front();
   APInt OffsetQuot;
   APInt::sdivrem(VarOffset.second, VecElemSize, OffsetQuot, Rem);
-
-  Value *Scaled = nullptr;
+  Value *Offset = VarOffset.first;
   if (Rem != 0 || OffsetQuot.isZero()) {
     unsigned ElemSizeShift = Log2_64(VecElemSize);
-    Scaled = Builder.CreateLShr(VarOffset.first, ElemSizeShift);
+    SimplifyQuery SQ(DL);
+    SQ.CxtI = GEP;
+    KnownBits KB = computeKnownBits(VarOffset.first, SQ);
+    // Bail out if the index may point into the middle of an element.
+    if (KB.countMinTrailingZeros() < ElemSizeShift)
+      return nullptr;
+
+    Value *Scaled = Builder.CreateLShr(VarOffset.first, ElemSizeShift);
     if (Instruction *NewInst = dyn_cast<Instruction>(Scaled))
       NewInsts.push_back(NewInst);
+
+    Offset = Scaled;
     OffsetQuot = APInt(BW, 1);
     Rem = 0;
   }
-
-  Value *Offset = VarOffset.first;
-
-  if (Scaled)
-    Offset = Scaled;
 
   if (!isa<IntegerType>(Offset->getType()))
     return nullptr;
