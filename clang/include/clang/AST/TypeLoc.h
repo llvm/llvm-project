@@ -1304,6 +1304,7 @@ public:
   }
 };
 
+class Sema;
 struct BoundsAttributedLocInfo {
   SourceRange Range;
 };
@@ -1320,6 +1321,9 @@ public:
     getLocalData()->Range = Range;
   }
   SourceRange getAttrRange() const { return getLocalData()->Range; }
+
+  StringRef getAttrNameAsWritten(Sema &S) const;
+  SourceRange getAttrNameRange(Sema &S) const;
 
   unsigned getLocalDataSize() const { return sizeof(BoundsAttributedLocInfo); }
 };
