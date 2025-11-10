@@ -242,6 +242,10 @@ Interpreter::Interpreter(lldb::TargetSP target, llvm::StringRef expr,
 llvm::Expected<lldb::ValueObjectSP> Interpreter::Evaluate(const ASTNode *node) {
   // Evaluate an AST.
   auto value_or_error = node->Accept(this);
+  // Convert SP with a nullptr to an error.
+  if (value_or_error && !*value_or_error)
+    return llvm::make_error<DILDiagnosticError>(m_expr, "invalid value object",
+                                                node->GetLocation());
   // Return the computed value-or-error. The caller is responsible for
   // checking if an error occured during the evaluation.
   return value_or_error;
