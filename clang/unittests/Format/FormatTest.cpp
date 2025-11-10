@@ -22272,6 +22272,19 @@ TEST_F(FormatTest, CatchAlignArrayOfStructuresLeftAlignment) {
                "});",
                Style);
 
+  verifyNoCrash(
+      "PANEL_Ic PANEL_ic[PANEL_IC_NUMBER] =\n"
+      "    {\n"
+      "        {PIC(0),   PIC(0),   PIC(99),  PIC(81),  0}, // Backbox\n"
+      "        {PIC(1),   PIC(83),  PIC(191), PIC(137), 0}, // AK47\n"
+      "\n"
+      "#define PICALL1(a, b, c, d) \\\n"
+      "    { PIC(a), PIC(b), PIC(c), PIC(d), 1 }\n"
+      "\n"
+      "        PICALL1(1, 1, 75, 50),\n"
+      "};",
+      Style);
+
   Style.AlignEscapedNewlines = FormatStyle::ENAS_DontAlign;
   verifyFormat("#define FOO \\\n"
                "  int foo[][2] = { \\\n"
