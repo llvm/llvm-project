@@ -158,7 +158,7 @@ private:
   unsigned maskI1Value(unsigned Reg, const Value *V);
   unsigned getRegForI1Value(const Value *V, const BasicBlock *BB, bool &Not);
   unsigned truncate(unsigned Reg, const Value *V, MVT::SimpleValueType From,
-                      MVT::SimpleValueType To);
+                    MVT::SimpleValueType To);
   unsigned zeroExtendToI32(unsigned Reg, const Value *V,
                            MVT::SimpleValueType From);
   unsigned signExtendToI32(unsigned Reg, const Value *V,
@@ -522,8 +522,8 @@ unsigned WebAssemblyFastISel::signExtendToI32(unsigned Reg, const Value *V,
 }
 
 unsigned WebAssemblyFastISel::truncate(unsigned Reg, const Value *V,
-                                    MVT::SimpleValueType From,
-                                    MVT::SimpleValueType To) {
+                                       MVT::SimpleValueType From,
+                                       MVT::SimpleValueType To) {
   if (From == MVT::i64) {
     if (To == MVT::i64)
       return copyValue(Reg);
