@@ -31,16 +31,16 @@ def SetDescLayoutOp : Op<Transform_Dialect, "xegpu.set_desc_layout", [
   }];
 
   let arguments = (ins
-                   TransformHandleTypeInterface : $target,
-                   Variadic<TransformAnyParamTypeOrAnyHandle> : $sg_layout,
-                   Variadic<TransformAnyParamTypeOrAnyHandle> : $sg_data,
-                   Variadic<TransformAnyParamTypeOrAnyHandle> : $inst_data,
+                   TransformHandleTypeInterface:$target,
+                   Variadic<TransformAnyParamTypeOrAnyHandle>:$sg_layout,
+                   Variadic<TransformAnyParamTypeOrAnyHandle>:$sg_data,
+                   Variadic<TransformAnyParamTypeOrAnyHandle>:$inst_data,
                    DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_sg_layout,
                    DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_sg_data,
                    DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_inst_data
                    );
 
-  let results = (outs TransformHandleTypeInterface : $transformed);
+  let results = (outs TransformHandleTypeInterface:$transformed);
   let builders = [
     OpBuilder<(ins "Value":$target,
                    "ArrayRef<OpFoldResult>":$mixedSgLayout,
@@ -92,11 +92,11 @@ def SetOpLayoutAttrOp : Op<Transform_Dialect, "xegpu.set_op_layout_attr", [
     is defined by the `sg_layout`, `sg_data` and optional `inst_data` attributes.
   }];
 
-  let arguments = (ins TransformHandleTypeInterface : $target,
-                   DefaultValuedOptionalAttr<I64Attr, "0"> : $index,
-                   Variadic<TransformAnyParamTypeOrAnyHandle> : $sg_layout,
-                   Variadic<TransformAnyParamTypeOrAnyHandle> : $sg_data,
-                   Variadic<TransformAnyParamTypeOrAnyHandle> : $inst_data,
+  let arguments = (ins TransformHandleTypeInterface:$target,
+                   DefaultValuedOptionalAttr<I64Attr, "0">:$index,
+                   Variadic<TransformAnyParamTypeOrAnyHandle>:$sg_layout,
+                   Variadic<TransformAnyParamTypeOrAnyHandle>:$sg_data,
+                   Variadic<TransformAnyParamTypeOrAnyHandle>:$inst_data,
                    DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_sg_layout,
                    DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_sg_data,
                    DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_inst_data,

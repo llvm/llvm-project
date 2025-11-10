@@ -92,8 +92,7 @@ createLayoutAttr(MLIRContext *ctx, ArrayRef<int32_t> sgLayout,
 
 /// Generate `xegpu::LayoutAttr` from op mixed layout values.
 DiagnosedSilenceableFailure
-getLayoutAttrFromOperands(transform::TransformRewriter &rewriter,
-                          transform::TransformState &state,
+getLayoutAttrFromOperands(MLIRContext *ctx, transform::TransformState &state,
                           TransformOpInterface transformOp,
                           ArrayRef<::mlir::OpFoldResult> mixedSgLayout,
                           ArrayRef<::mlir::OpFoldResult> mixedSgData,
@@ -116,8 +115,7 @@ getLayoutAttrFromOperands(transform::TransformRewriter &rewriter,
                            ? std::nullopt
                            : std::optional<ArrayRef<int32_t>>(instData);
 
-  layoutAttr =
-      createLayoutAttr(rewriter.getContext(), sgLayout, sgData, maybeInstData);
+  layoutAttr = createLayoutAttr(ctx, sgLayout, sgData, maybeInstData);
 
   return DiagnosedSilenceableFailure::success();
 }
@@ -175,7 +173,7 @@ transform::SetDescLayoutOp::apply(transform::TransformRewriter &rewriter,
   Operation *target = *targetOps.begin();
 
   xegpu::LayoutAttr layoutAttr = nullptr;
-  auto status = getLayoutAttrFromOperands(rewriter, state, (*this),
+  auto status = getLayoutAttrFromOperands(getContext(), state, (*this),
                                           getMixedSgLayout(), getMixedSgData(),
                                           getMixedInstData(), layoutAttr);
   if (!status.succeeded())
@@ -235,7 +233,6 @@ DiagnosedSilenceableFailure
 transform::SetOpLayoutAttrOp::apply(transform::TransformRewriter &rewriter,
                                     transform::TransformResults &results,
                                     transform::TransformState &state) {
-
   auto targetOps = state.getPayloadOps(getTarget());
   if (!llvm::hasSingleElement(targetOps)) {
     return emitDefiniteFailure() << "Requires exactly one targetOp handle (got "
@@ -256,18 +253,17 @@ transform::SetOpLayoutAttrOp::apply(transform::TransformRewriter &rewriter,
   }
 
   xegpu::LayoutAttr layoutAttr = nullptr;
-  auto status = getLayoutAttrFromOperands(rewriter, state, (*this),
+  auto status = getLayoutAttrFromOperands(getContext(), state, (*this),
                                           getMixedSgLayout(), getMixedSgData(),
                                           getMixedInstData(), layoutAttr);
   if (!status.succeeded())
     return status;
 
   // Set layout attribute for the op result or operand
-  if (resultTarget) {
+  if (resultTarget)
     xegpu::setDistributeLayoutAttr(target->getResult(index), layoutAttr);
-  } else {
+  else
     xegpu::setDistributeLayoutAttr(target->getOpOperand(index), layoutAttr);
-  }
   return DiagnosedSilenceableFailure::success();
 }
 

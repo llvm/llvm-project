@@ -76,9 +76,9 @@ class SetOpLayoutAttrOp(SetOpLayoutAttrOp):
         sg_layout: MixedValues,
         sg_data: MixedValues,
         *,
-        inst_data: MixedValues = None,
-        index: Union[int, Attribute] = None,
-        result: Union[bool, Attribute] = None,
+        inst_data: Optional[MixedValues] = None,
+        index: Optional[Union[int, Attribute]] = None,
+        result: Optional[Union[bool, Attribute]] = None,
         loc=None,
         ip=None,
     ):
