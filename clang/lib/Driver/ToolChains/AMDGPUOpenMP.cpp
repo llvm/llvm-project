@@ -10,8 +10,8 @@
 #include "AMDGPU.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
+#include "clang/Driver/Options.h"
 #include "clang/Driver/Tool.h"
-#include "clang/Options/Options.h"
 #include "llvm/ADT/STLExtras.h"
 
 using namespace clang::driver;
