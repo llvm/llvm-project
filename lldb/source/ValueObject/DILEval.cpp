@@ -43,14 +43,14 @@ static CompilerType GetBasicType(lldb::TypeSystemSP type_system,
 }
 
 static lldb::ValueObjectSP
-ArrayToPointerConversion(lldb::ValueObjectSP valobj,
+ArrayToPointerConversion(ValueObject &valobj,
                          std::shared_ptr<ExecutionContextScope> ctx) {
-  uint64_t addr = valobj->GetLoadAddress();
+  uint64_t addr = valobj.GetLoadAddress();
   ExecutionContext exe_ctx;
   ctx->CalculateExecutionContext(exe_ctx);
   return ValueObject::CreateValueObjectFromAddress(
       "result", addr, exe_ctx,
-      valobj->GetCompilerType().GetArrayElementType(ctx.get()).GetPointerType(),
+      valobj.GetCompilerType().GetArrayElementType(ctx.get()).GetPointerType(),
       /* do_deref */ false);
 }
 
@@ -62,8 +62,8 @@ Interpreter::UnaryConversion(lldb::ValueObjectSP valobj) {
       GetTypeSystemFromCU(m_exe_ctx_scope);
   if (!type_system)
     return type_system.takeError();
+
   CompilerType in_type = valobj->GetCompilerType();
-  CompilerType result_type;
   if (valobj->IsBitfield()) {
     // Promote bitfields. If `int` can represent the bitfield value, it is
     // converted to `int`. Otherwise, if `unsigned int` can represent it, it
@@ -100,7 +100,7 @@ Interpreter::UnaryConversion(lldb::ValueObjectSP valobj) {
   }
 
   if (in_type.IsArrayType())
-    valobj = ArrayToPointerConversion(valobj, m_exe_ctx_scope);
+    valobj = ArrayToPointerConversion(*valobj, m_exe_ctx_scope);
 
   if (valobj->GetCompilerType().IsInteger() ||
       valobj->GetCompilerType().IsUnscopedEnumerationType()) {
