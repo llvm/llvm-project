@@ -1315,7 +1315,7 @@ Register SIInstrInfo::insertNE(MachineBasicBlock *MBB,
 
 MachineInstr *
 SIInstrInfo::pierceThroughRegSequence(const MachineInstr &MI) const {
-  if (MI.getOpcode() != AMDGPU::REG_SEQUENCE)
+  if (MI.getOpcode() != AMDGPU::REG_SEQUENCE || MI.getNumOperands() != 5)
     return nullptr;
 
   const MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
@@ -1331,7 +1331,11 @@ SIInstrInfo::pierceThroughRegSequence(const MachineInstr &MI) const {
   }
 
   for (unsigned I : {0, 1})
-    if (SubRegIsConst[I] && !SubRegValues[I])
+    if (SubRegIsConst[I] && !SubRegValues[I] &&
+        MRI.getRegClass(RealDefs[(I + 1) % 2]->getOperand(0).getReg())
+                    ->MC->getSizeInBits() *
+                2 ==
+        MRI.getRegClass(MI.getOperand(0).getReg())->MC->getSizeInBits())
       return RealDefs[(I + 1) % 2];
 
   return nullptr;
