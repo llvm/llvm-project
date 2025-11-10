@@ -22,13 +22,9 @@
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
-#include "src/__support/macros/properties/cpu_features.h"
 #include "src/string/memory_utils/inline_memcpy.h"
 
-// SVE implementation has fault safety
-#if defined(LIBC_TARGET_CPU_HAS_SVE)
-#include "src/string/memory_utils/aarch64/inline_strlen.h"
-#elif defined(LIBC_COPT_STRING_UNSAFE_WIDE_READ)
+#if defined(LIBC_COPT_STRING_UNSAFE_WIDE_READ)
 #if LIBC_HAS_VECTOR_TYPE
 #include "src/string/memory_utils/generic/inline_strlen.h"
 #elif defined(LIBC_TARGET_ARCH_IS_X86)
@@ -37,8 +33,8 @@
 #include "src/string/memory_utils/aarch64/inline_strlen.h"
 #else
 namespace string_length_impl = LIBC_NAMESPACE::wide_read;
-#endif // LIBC_TARGET_CPU_HAS_SVE
-#endif // defined(LIBC_TARGET_CPU_HAS_SVE)
+#endif
+#endif // defined(LIBC_COPT_STRING_UNSAFE_WIDE_READ)
 
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
