@@ -1419,11 +1419,12 @@ void SIFrameLowering::emitEpilogue(MachineFunction &MF,
       LiveUnits.addReg(FramePtrRegScratchCopy);
     }
 
-    emitCSRSpillRestores(MF, MBB, MBBI, DL, LiveUnits, FramePtrReg,
+    emitCSRSpillRestores(MF, MBB, MBBI, DL, LiveUnits,
+                         FuncInfo->isChainFunction() ? Register() : FramePtrReg,
                          FramePtrRegScratchCopy);
   }
 
-  if (FPSaved) {
+  if (FPSaved && !FuncInfo->isChainFunction()) {
     // Insert the copy to restore FP.
     Register SrcReg = SGPRForFPSaveRestoreCopy ? SGPRForFPSaveRestoreCopy
                                                : FramePtrRegScratchCopy;

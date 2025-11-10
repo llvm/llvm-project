@@ -98,7 +98,6 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
     // set one up. For now, we can use s32 to match what amdgpu_gfx functions
     // would use if called, but this can be revisited.
     // FIXME: Only reserve this if we actually need it.
-    FrameOffsetReg = AMDGPU::SGPR33;
     StackPtrOffsetReg = AMDGPU::SGPR32;
 
     ScratchRSrcReg = AMDGPU::SGPR48_SGPR49_SGPR50_SGPR51;
