@@ -43,6 +43,7 @@ add_lldb_library(lldbTarget
   RegisterNumber.cpp
   RemoteAwarePlatform.cpp
   ScriptedThreadPlan.cpp
+  SyntheticFrameProvider.cpp
   SectionLoadHistory.cpp
   SectionLoadList.cpp
   StackFrame.cpp

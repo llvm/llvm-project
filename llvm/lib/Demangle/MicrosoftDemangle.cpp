@@ -15,15 +15,12 @@
 
 #include "llvm/Demangle/MicrosoftDemangle.h"
 
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/Demangle/DemangleConfig.h"
 #include "llvm/Demangle/MicrosoftDemangleNodes.h"
 #include "llvm/Demangle/StringViewExtras.h"
 #include "llvm/Demangle/Utility.h"
 
-#include <array>
 #include <cctype>
 #include <cstdio>
 #include <optional>
@@ -279,13 +276,16 @@ demanglePointerCVQualifiers(std::string_view &MangledName) {
   DEMANGLE_UNREACHABLE;
 }
 
-static NodeArrayNode *smallVecToNodeArray(ArenaAllocator &Arena,
-                                          ArrayRef<Node *> Vec) {
-  NodeArrayNode *Arr = Arena.alloc<NodeArrayNode>();
-  Arr->Count = Vec.size();
-  Arr->Nodes = Arena.allocArray<Node *>(Vec.size());
-  std::memcpy(Arr->Nodes, Vec.data(), Vec.size() * sizeof(Node *));
-  return Arr;
+static NodeArrayNode *nodeListToNodeArray(ArenaAllocator &Arena, NodeList *Head,
+                                          size_t Count) {
+  NodeArrayNode *N = Arena.alloc<NodeArrayNode>();
+  N->Count = Count;
+  N->Nodes = Arena.allocArray<Node *>(Count);
+  for (size_t I = 0; I < Count; ++I) {
+    N->Nodes[I] = Head->N;
+    Head = Head->Next;
+  }
+  return N;
 }
 
 std::string_view Demangler::copyString(std::string_view Borrowed) {
@@ -335,17 +335,28 @@ Demangler::demangleSpecialTableSymbolNode(std::string_view &MangledName,
 
   std::tie(STSN->Quals, IsMember) = demangleQualifiers(MangledName);
 
-  SmallVector<Node *, 1> TargetNames;
+  NodeList *TargetCurrent = nullptr;
+  NodeList *TargetHead = nullptr;
+  size_t Count = 0;
   while (!consumeFront(MangledName, '@')) {
+    ++Count;
+
+    NodeList *Next = Arena.alloc<NodeList>();
+    if (TargetCurrent)
+      TargetCurrent->Next = Next;
+    else
+      TargetHead = Next;
+
+    TargetCurrent = Next;
     QualifiedNameNode *QN = demangleFullyQualifiedTypeName(MangledName);
     if (Error)
       return nullptr;
     assert(QN);
-    TargetNames.push_back(QN);
+    TargetCurrent->N = QN;
   }
 
-  if (!TargetNames.empty())
-    STSN->TargetNames = smallVecToNodeArray(Arena, TargetNames);
+  if (Count > 0)
+    STSN->TargetNames = nodeListToNodeArray(Arena, TargetHead, Count);
 
   return STSN;
 }
@@ -1625,18 +1636,6 @@ Demangler::demangleNameScopePiece(std::string_view &MangledName) {
     return demangleLocallyScopedNamePiece(MangledName);
 
   return demangleSimpleName(MangledName, /*Memorize=*/true);
-}
-
-static NodeArrayNode *nodeListToNodeArray(ArenaAllocator &Arena, NodeList *Head,
-                                          size_t Count) {
-  NodeArrayNode *N = Arena.alloc<NodeArrayNode>();
-  N->Count = Count;
-  N->Nodes = Arena.allocArray<Node *>(Count);
-  for (size_t I = 0; I < Count; ++I) {
-    N->Nodes[I] = Head->N;
-    Head = Head->Next;
-  }
-  return N;
 }
 
 QualifiedNameNode *
