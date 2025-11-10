@@ -32,7 +32,8 @@ public:
 
   ~BreakpointLocationCollection();
 
-  BreakpointLocationCollection &operator=(const BreakpointLocationCollection &rhs);
+  BreakpointLocationCollection &
+  operator=(const BreakpointLocationCollection &rhs);
 
   /// Add the breakpoint \a bp_loc_sp to the list.
   ///
@@ -172,14 +173,14 @@ private:
                          lldb::break_id_t break_loc_id) const;
 
   collection m_break_loc_collection;
-  mutable std::mutex m_collection_mutex;
+  mutable std::recursive_mutex m_collection_mutex;
   /// These are used if we're preserving breakpoints in this list:
   const bool m_preserving_bkpts = false;
   std::map<std::pair<lldb::break_id_t, lldb::break_id_t>, lldb::BreakpointSP>
       m_preserved_bps;
 
 public:
-  typedef LockingAdaptedIterable<std::mutex, collection>
+  typedef LockingAdaptedIterable<std::recursive_mutex, collection>
       BreakpointLocationCollectionIterable;
   BreakpointLocationCollectionIterable BreakpointLocations() {
     return BreakpointLocationCollectionIterable(m_break_loc_collection,
