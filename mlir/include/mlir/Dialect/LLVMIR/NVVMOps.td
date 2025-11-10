@@ -512,8 +512,7 @@ def NVVM_ReduxOp :
 //===----------------------------------------------------------------------===//
 
 def NVVM_NanosleepOp : NVVM_Op<"nanosleep">,
-  Arguments<(ins 
-  ConfinedAttr<I32Attr, [IntMinValue<1>, IntMaxValue<1000000>]>:$duration)> 
+  Arguments<(ins I32:$duration)> 
 {
   let summary = "Suspends the thread for a specified duration.";
 
@@ -531,8 +530,7 @@ def NVVM_NanosleepOp : NVVM_Op<"nanosleep">,
   
   string llvmBuilder = [{
       createIntrinsicCall(builder, 
-                          llvm::Intrinsic::nvvm_nanosleep, 
-                          {builder.getInt32($duration)});
+                          llvm::Intrinsic::nvvm_nanosleep, {$duration});
   }];
   let assemblyFormat = "attr-dict $duration";
 }
