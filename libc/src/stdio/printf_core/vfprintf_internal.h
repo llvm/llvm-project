@@ -51,8 +51,14 @@ LIBC_INLINE void funlockfile(::FILE *f) { ::funlockfile(f); }
 LIBC_INLINE FileIOResult fwrite_unlocked(const void *ptr, size_t size,
                                          size_t nmemb, ::FILE *f) {
   // Need to use system errno in this case, as system write will set this errno
-  // which we need to propagate back into our code.
-  return {::fwrite_unlocked(ptr, size, nmemb, f), errno};
+  // which we need to propagate back into our code. fwrite only modifies errno
+  // if there was an error, and errno may have previously been nonzero. Only
+  // return errno if there was an error.
+  auto bytes = ::fwrite_unlocked(ptr, size, nmemb, f);
+  if (bytes == nmemb * size)
+    return bytes;
+  else
+    return errno;
 }
 #endif // LIBC_COPT_STDIO_USE_SYSTEM_FILE
 } // namespace internal
