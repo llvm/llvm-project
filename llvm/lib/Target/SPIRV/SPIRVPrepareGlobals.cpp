@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "SPIRV.h"
+#include "SPIRVUtils.h"
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/Module.h"
@@ -45,7 +46,8 @@ bool tryExtendLLVMBitcodeMarker(GlobalVariable &Bitcode) {
 }
 
 bool tryExtendDynamicLDSGlobal(GlobalVariable &GV) {
-  constexpr unsigned WorkgroupAS = 3;
+  constexpr unsigned WorkgroupAS =
+      storageClassToAddressSpace(SPIRV::StorageClass::Workgroup);
   const bool IsWorkgroupExternal =
       GV.hasExternalLinkage() && GV.getAddressSpace() == WorkgroupAS;
   if (!IsWorkgroupExternal)
