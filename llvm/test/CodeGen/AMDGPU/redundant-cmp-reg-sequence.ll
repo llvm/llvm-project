@@ -4,9 +4,8 @@ define amdgpu_ps i64 @ordertest(i64 inreg %val0) {
 ; CHECK-LABEL: ordertest:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_lshr_b32 s0, s1, 2
-; CHECK-NEXT:    s_mov_b32 s1, 0
-; CHECK-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; CHECK-NEXT:    s_cselect_b64 s[2:3], -1, 0
+; CHECK-NEXT:    s_mov_b32 s1, 0
 ; CHECK-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s[2:3]
 ; CHECK-NEXT:    v_lshrrev_b64 v[0:1], v2, s[0:1]
 ; CHECK-NEXT:    v_xor_b32_e32 v0, v2, v0
