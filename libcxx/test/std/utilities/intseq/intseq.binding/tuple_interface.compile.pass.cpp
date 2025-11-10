@@ -20,6 +20,7 @@
 //   constexpr T get(integer_sequence<T, Values...>) noexcept;
 
 #include <cassert>
+#include <concepts>
 #include <tuple>
 #include <type_traits>
 #include <utility>
@@ -51,4 +52,9 @@ constexpr void test() {
   static_assert(get<1>(seq4) == 8);
   static_assert(get<2>(seq4) == 7);
   static_assert(get<3>(seq4) == 2);
+
+  static_assert(noexcept(get<0>(seq4)));
+
+  constexpr std::same_as<int> decltype(auto) r = get<0>(seq4);
+  static_assert(r == 9);
 }
