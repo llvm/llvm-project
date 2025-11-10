@@ -1317,9 +1317,7 @@ public:
   void initializeLocal(ASTContext &Context, SourceLocation Loc) {
     setAttrRange({Loc, Loc});
   }
-  void setAttrRange(SourceRange Range) {
-    getLocalData()->Range = Range;
-  }
+  void setAttrRange(SourceRange Range) { getLocalData()->Range = Range; }
   SourceRange getAttrRange() const { return getLocalData()->Range; }
 
   StringRef getAttrNameAsWritten(Sema &S) const;

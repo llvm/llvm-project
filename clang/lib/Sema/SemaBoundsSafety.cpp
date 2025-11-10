@@ -263,16 +263,14 @@ SourceRange BoundsAttributedTypeLoc::getAttrNameRange(Sema &S) const {
 }
 
 static TypeSourceInfo *getTSI(const Decl *D) {
-  if (const auto* DD = dyn_cast<DeclaratorDecl>(D)) {
+  if (const auto *DD = dyn_cast<DeclaratorDecl>(D)) {
     return DD->getTypeSourceInfo();
   }
   return nullptr;
 }
 
 struct TypeLocFinder : public ConstStmtVisitor<TypeLocFinder, TypeLoc> {
-  TypeLoc VisitParenExpr(const ParenExpr* E) {
-    return Visit(E->getSubExpr());
-  }
+  TypeLoc VisitParenExpr(const ParenExpr *E) { return Visit(E->getSubExpr()); }
 
   TypeLoc VisitDeclRefExpr(const DeclRefExpr *E) {
     return getTSI(E->getDecl())->getTypeLoc();
