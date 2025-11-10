@@ -5368,7 +5368,6 @@ private:
           Lane = P.first->ReorderIndices[Lane];
         assert(Lane < static_cast<int>(P.first->Scalars.size()) &&
                "Couldn't find extract lane");
-        SmallVector<unsigned> OpIndices;
         for (unsigned OpIdx :
              seq<unsigned>(::getNumberOfPotentiallyCommutativeOps(
                  P.first->getMainOp()))) {
@@ -8815,7 +8814,6 @@ void BoUpSLP::buildExternalUses(
     const ExtraValueToDebugLocsMap &ExternallyUsedValues) {
   const size_t NumVectScalars = ScalarToTreeEntries.size() + 1;
   DenseMap<Value *, unsigned> ScalarToExtUses;
-  SmallPtrSet<Value *, 4> ExternalUsers;
   // Collect the values that we need to extract from the tree.
   for (auto &TEPtr : VectorizableTree) {
     TreeEntry *Entry = TEPtr.get();
@@ -20996,6 +20994,15 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
         return false;
       }))
     return std::nullopt;
+  if (S.areInstructionsWithCopyableElements() && EI && EI.UserTE->hasState() &&
+      EI.UserTE->hasCopyableElements() &&
+      EI.UserTE->getMainOp()->getParent() == S.getMainOp()->getParent() &&
+      all_of(VL, [&](Value *V) {
+        if (S.isCopyableElement(V))
+          return true;
+        return isUsedOutsideBlock(V);
+      }))
+    return std::nullopt;
   bool HasCopyables = S.areInstructionsWithCopyableElements();
   if (((!HasCopyables && doesNotNeedToSchedule(VL)) ||
        all_of(VL, [&](Value *V) { return S.isNonSchedulable(V); }))) {
@@ -21215,7 +21222,6 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
     }
     ScheduledBundlesList.pop_back();
     SmallVector<ScheduleData *> ControlDependentMembers;
-    SmallPtrSet<Instruction *, 4> Visited;
     for (Value *V : VL) {
       if (S.isNonSchedulable(V))
         continue;

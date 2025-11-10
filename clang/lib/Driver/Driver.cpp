@@ -60,13 +60,13 @@
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/InputInfo.h"
 #include "clang/Driver/Job.h"
-#include "clang/Driver/Options.h"
 #include "clang/Driver/Phases.h"
 #include "clang/Driver/SanitizerArgs.h"
 #include "clang/Driver/Tool.h"
 #include "clang/Driver/ToolChain.h"
 #include "clang/Driver/Types.h"
 #include "clang/Lex/DependencyDirectivesScanner.h"
+#include "clang/Options/Options.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
@@ -3857,6 +3857,9 @@ class OffloadingActionBuilder final {
   /// Flag set to true if all valid builders allow file bundling/unbundling.
   bool CanUseBundler;
 
+  /// Flag set to false if an argument turns off bundling.
+  bool ShouldUseBundler;
+
 public:
   OffloadingActionBuilder(Compilation &C, DerivedArgList &Args,
                           const Driver::InputList &Inputs)
@@ -3891,6 +3894,9 @@ public:
     }
     CanUseBundler =
         ValidBuilders && ValidBuilders == ValidBuildersSupportingBundling;
+
+    ShouldUseBundler = Args.hasFlag(options::OPT_gpu_bundle_output,
+                                    options::OPT_no_gpu_bundle_output, true);
   }
 
   ~OffloadingActionBuilder() {
@@ -4042,11 +4048,11 @@ public:
       SB->appendTopLevelActions(OffloadAL);
     }
 
-    // If we can use the bundler, replace the host action by the bundling one in
-    // the resulting list. Otherwise, just append the device actions. For
-    // device only compilation, HostAction is a null pointer, therefore only do
-    // this when HostAction is not a null pointer.
-    if (CanUseBundler && HostAction &&
+    // If we can and should use the bundler, replace the host action by the
+    // bundling one in the resulting list. Otherwise, just append the device
+    // actions. For device only compilation, HostAction is a null pointer,
+    // therefore only do this when HostAction is not a null pointer.
+    if (CanUseBundler && ShouldUseBundler && HostAction &&
         HostAction->getType() != types::TY_Nothing && !OffloadAL.empty()) {
       // Add the host action to the list in order to create the bundling action.
       OffloadAL.push_back(HostAction);

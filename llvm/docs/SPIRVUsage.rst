@@ -167,12 +167,16 @@ Below is a list of supported SPIR-V extensions, sorted alphabetically by their e
      - Adds atomic add instruction on floating-point numbers.
    * - ``SPV_EXT_shader_atomic_float_min_max``
      - Adds atomic min and max instruction on floating-point numbers.
+   * - ``SPV_INTEL_16bit_atomics``
+     - Extends the SPV_EXT_shader_atomic_float_add and SPV_EXT_shader_atomic_float_min_max to support addition, minimum and maximum on 16-bit `bfloat16` floating-point numbers in memory.
    * - ``SPV_INTEL_2d_block_io``
      - Adds additional subgroup block prefetch, load, load transposed, load transformed and store instructions to read two-dimensional blocks of data from a two-dimensional region of memory, or to write two-dimensional blocks of data to a two dimensional region of memory.
    * - ``SPV_INTEL_arbitrary_precision_integers``
      - Allows generating arbitrary width integer types.
    * - ``SPV_INTEL_bindless_images``
      - Adds instructions to convert convert unsigned integer handles to images, samplers and sampled images.
+   * - ``SPV_INTEL_bfloat16_arithmetic``
+     - Allows the use of 16-bit bfloat16 values in arithmetic and relational operators.
    * - ``SPV_INTEL_bfloat16_conversion``
      - Adds instructions to convert between single-precision 32-bit floating-point values and 16-bit bfloat16 values.
    * - ``SPV_INTEL_cache_controls``
@@ -239,6 +243,8 @@ Below is a list of supported SPIR-V extensions, sorted alphabetically by their e
      - Adds predicated load and store instructions that conditionally read from or write to memory based on a boolean predicate.
    * - ``SPV_KHR_maximal_reconvergence``
      - Adds execution mode and capability to enable maximal reconvergence.
+   * - ``SPV_ALTERA_blocking_pipes``
+     - Adds new pipe read and write functions that have blocking semantics instead of the non-blocking semantics of the existing pipe read/write functions.
 
 SPIR-V representation in LLVM IR
 ================================

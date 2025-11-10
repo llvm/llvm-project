@@ -146,7 +146,7 @@ for LLVM infrastructure.
 Using Fully Qualified Container Names
 -------------------------------------
 
-When referencing container images from a registry, such as in Github Actions
+When referencing container images from a registry, such as in GitHub Actions
 workflows, or in ``Dockerfile`` files used for building images, prefer fully
 qualified names (i.e., including the registry domain) over just the image.
 For example, prefer ``docker.io/ubuntu:24.04`` over ``ubuntu:24.04``. This
