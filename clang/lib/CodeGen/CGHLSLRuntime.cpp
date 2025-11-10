@@ -1532,11 +1532,12 @@ public:
   bool emitCopy(QualType CType) {
     LayoutTy = HLSLBufferLayoutBuilder(CGF.CGM).layOutType(CType);
 
-    // TODO: We should be able to fall back to a regular memcpy if the layout
-    // type doesn't have any padding, but that runs into issues in the backend
-    // currently.
-    //
-    // See https://github.com/llvm/wg-hlsl/issues/351
+    // If the layout type matches the original type, we can just fall back to a
+    // regular memcpy.
+    llvm::Type *OrigTy = CGF.CGM.getTypes().ConvertTypeForMem(CType);
+    if (LayoutTy == OrigTy)
+      return false;
+
     emitCopyAtIndices(LayoutTy, llvm::ConstantInt::get(CGF.SizeTy, 0),
                       llvm::ConstantInt::get(CGF.SizeTy, 0));
     return true;
