@@ -314,16 +314,16 @@ Options
 
 .. option:: IgnoreSmartPointerDereference
 
-   If set to ``true`` (default is ``false``), the check ignores optionals that
+   If set to `true`, the check ignores optionals that
    are reached through overloaded smart-pointer-like dereference (``operator*``,
    ``operator->``) on classes other than the optional type itself. This helps
    avoid false positives where the analysis cannot equate results across such
-   calls. Note: This does not cover access through ``operator[]``.
+   calls. This does not cover access through ``operator[]``. Default is `false`.
 
 .. option:: IgnoreValueCalls
 
-   If set to ``true`` (default is ``false``), the check does not diagnose calls
+   If set to `true`, the check does not diagnose calls
    to ``optional::value()``. Diagnostics for ``operator*()`` and
    ``operator->()`` remain enabled. This is useful for codebases that
    intentionally rely on ``value()`` for defined, guarded access while still
-   flagging UB-prone operator dereferences.
+   flagging UB-prone operator dereferences. Default is `false`.

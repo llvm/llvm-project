@@ -1153,41 +1153,30 @@ auto buildDiagnoseMatchSwitch(
   // FIXME: Evaluate the efficiency of matchers. If using matchers results in a
   // lot of duplicated work (e.g. string comparisons), consider providing APIs
   // that avoid it through memoization.
-  auto IgnorableOptional = ignorableOptional(Options);
-  if (Options.IgnoreValueCalls) {
-    // Only diagnose operator-based unwraps. Value calls are ignored.
-    return CFGMatchSwitchBuilder<
-               const Environment,
-               llvm::SmallVector<UncheckedOptionalAccessDiagnostic>>()
-        // optional::operator*, optional::operator->
-        .CaseOfCFGStmt<CallExpr>(valueOperatorCall(IgnorableOptional),
-                                 [](const CallExpr *E,
-                                    const MatchFinder::MatchResult &,
-                                    const Environment &Env) {
-                                   return diagnoseUnwrapCall(E->getArg(0), Env);
-                                 })
+  const auto IgnorableOptional = ignorableOptional(Options);
+
+  auto Builder = CFGMatchSwitchBuilder<
+                     const Environment,
+                     llvm::SmallVector<UncheckedOptionalAccessDiagnostic>>()
+                     .CaseOfCFGStmt<CallExpr>(
+                         valueOperatorCall(IgnorableOptional),
+                         [](const CallExpr *E, const MatchFinder::MatchResult &,
+                            const Environment &Env) {
+                           return diagnoseUnwrapCall(E->getArg(0), Env);
+                         });
+
+  if (!Options.IgnoreValueCalls) {
+    return std::move(Builder)
+        .CaseOfCFGStmt<CXXMemberCallExpr>(
+            valueCall(IgnorableOptional),
+            [](const CXXMemberCallExpr *E, const MatchFinder::MatchResult &,
+               const Environment &Env) {
+              return diagnoseUnwrapCall(E->getImplicitObjectArgument(), Env);
+            })
         .Build();
   }
 
-  return CFGMatchSwitchBuilder<
-             const Environment,
-             llvm::SmallVector<UncheckedOptionalAccessDiagnostic>>()
-      // optional::value
-      .CaseOfCFGStmt<CXXMemberCallExpr>(
-          valueCall(IgnorableOptional),
-          [](const CXXMemberCallExpr *E, const MatchFinder::MatchResult &,
-             const Environment &Env) {
-            return diagnoseUnwrapCall(E->getImplicitObjectArgument(), Env);
-          })
-
-      // optional::operator*, optional::operator->
-      .CaseOfCFGStmt<CallExpr>(valueOperatorCall(IgnorableOptional),
-                               [](const CallExpr *E,
-                                  const MatchFinder::MatchResult &,
-                                  const Environment &Env) {
-                                 return diagnoseUnwrapCall(E->getArg(0), Env);
-                               })
-      .Build();
+  return std::move(Builder).Build();
 }
 
 } // namespace

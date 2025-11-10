@@ -352,9 +352,10 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/unchecked-optional-access>` check by supporting
   ``NullableValue::makeValue`` and ``NullableValue::makeValueInplace`` to
   prevent false-positives for ``BloombergLP::bdlb::NullableValue`` type, and by
-  adding the ``IgnoreValueCalls`` option to suppress diagnostics for
-  ``optional::value()`` while still diagnosing UB-prone dereferences via
-  ``operator*`` and ``operator->``.
+  adding the `IgnoreValueCalls` option to suppress diagnostics for
+  ``optional::value()`` and the `IgnoreSmartPointerDereference` option to
+  ignore optionals reached via smart-pointer-like dereference, while still
+  diagnosing UB-prone dereferences via ``operator*`` and ``operator->``.
 
 - Improved :doc:`bugprone-unhandled-self-assignment
   <clang-tidy/checks/bugprone/unhandled-self-assignment>` check by adding
