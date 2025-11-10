@@ -1232,6 +1232,30 @@ public:
   /// Superset of instructions that return true for isScalarWithPredication.
   bool isPredicatedInst(Instruction *I) const;
 
+  /// A helper function that returns how much we should divide the cost of a
+  /// predicated block by. Typically this is the reciprocal of the block
+  /// probability, i.e. if we return X we are assuming the predicated block will
+  /// execute once for every X iterations of the loop header so the block should
+  /// only contribute 1/X of its cost to the total cost calculation, but when
+  /// optimizing for code size it will just be 1 as code size costs don't depend
+  /// on execution probabilities.
+  ///
+  /// TODO: We should use actual block probability here, if available.
+  /// Currently, we always assume predicated blocks have a 50% chance of
+  /// executing, apart from blocks that are only predicated due to tail folding.
+  inline unsigned
+  getPredBlockCostDivisor(TargetTransformInfo::TargetCostKind CostKind,
+                          BasicBlock *BB) const {
+    // If a block wasn't originally predicated but was predicated due to
+    // e.g. tail folding, don't divide the cost. Tail folded loops may still be
+    // predicated in the final vector loop iteration, but for most loops that
+    // don't have low trip counts we can expect their probability to be close to
+    // zero.
+    if (!Legal->blockNeedsPredication(BB))
+      return 1;
+    return CostKind == TTI::TCK_CodeSize ? 1 : 2;
+  }
+
   /// Return the costs for our two available strategies for lowering a
   /// div/rem operation which requires speculating at least one lane.
   /// First result is for scalarization (will be invalid for scalable
@@ -2887,7 +2911,8 @@ LoopVectorizationCostModel::getDivRemSpeculationCost(Instruction *I,
     // Scale the cost by the probability of executing the predicated blocks.
     // This assumes the predicated block for each vector lane is equally
     // likely.
-    ScalarizationCost = ScalarizationCost / getPredBlockCostDivisor(CostKind);
+    ScalarizationCost =
+        ScalarizationCost / getPredBlockCostDivisor(CostKind, I->getParent());
   }
 
   InstructionCost SafeDivisorCost = 0;
@@ -5032,7 +5057,7 @@ InstructionCost LoopVectorizationCostModel::computePredInstDiscount(
       }
 
     // Scale the total scalar cost by block probability.
-    ScalarCost /= getPredBlockCostDivisor(CostKind);
+    ScalarCost /= getPredBlockCostDivisor(CostKind, I->getParent());
 
     // Compute the discount. A non-negative discount means the vector version
     // of the instruction costs more, and scalarizing would be beneficial.
@@ -5082,10 +5107,11 @@ InstructionCost LoopVectorizationCostModel::expectedCost(ElementCount VF) {
     // stores and instructions that may divide by zero) will now be
     // unconditionally executed. For the scalar case, we may not always execute
     // the predicated block, if it is an if-else block. Thus, scale the block's
-    // cost by the probability of executing it. blockNeedsPredication from
-    // Legal is used so as to not include all blocks in tail folded loops.
-    if (VF.isScalar() && Legal->blockNeedsPredication(BB))
-      BlockCost /= getPredBlockCostDivisor(CostKind);
+    // cost by the probability of executing it.
+    // getPredBlockCostDivisor will return 1 for blocks that are only predicated
+    // by the header mask when folding the tail.
+    if (VF.isScalar())
+      BlockCost /= getPredBlockCostDivisor(CostKind, BB);
 
     Cost += BlockCost;
   }
@@ -5164,7 +5190,7 @@ LoopVectorizationCostModel::getMemInstScalarizationCost(Instruction *I,
   // conditional branches, but may not be executed for each vector lane. Scale
   // the cost by the probability of executing the predicated block.
   if (isPredicatedInst(I)) {
-    Cost /= getPredBlockCostDivisor(CostKind);
+    Cost /= getPredBlockCostDivisor(CostKind, I->getParent());
 
     // Add the cost of an i1 extract and a branch
     auto *VecI1Ty =
@@ -6732,6 +6758,10 @@ bool VPCostContext::skipCostComputation(Instruction *UI, bool IsVector) const {
          SkipCostComputation.contains(UI);
 }
 
+unsigned VPCostContext::getPredBlockCostDivisor(BasicBlock *BB) const {
+  return CM.getPredBlockCostDivisor(CostKind, BB);
+}
+
 InstructionCost
 LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
                                           VPCostContext &CostCtx) const {
@@ -8157,9 +8187,10 @@ VPRecipeBase *VPRecipeBuilder::tryToCreateWidenRecipe(VPSingleDefRecipe *R,
     return new VPWidenSelectRecipe(*cast<SelectInst>(Instr), R->operands());
 
   if (Instruction::isCast(VPI->getOpcode())) {
+    auto *CastR = cast<VPInstructionWithType>(R);
     auto *CI = cast<CastInst>(Instr);
     return new VPWidenCastRecipe(CI->getOpcode(), VPI->getOperand(0),
-                                 CI->getType(), *CI);
+                                 CastR->getResultType(), *CI);
   }
 
   return tryToWiden(VPI);
