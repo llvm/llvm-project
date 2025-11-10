@@ -199,7 +199,6 @@ def ArithToAPFloatConversionPass
     floating-point arithmetic operations.
   }];
   let dependentDialects = ["func::FuncDialect"];
-  let options = [];
 }
 
 //===----------------------------------------------------------------------===//

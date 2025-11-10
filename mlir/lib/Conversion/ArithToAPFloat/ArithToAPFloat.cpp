@@ -15,6 +15,9 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/Transforms/WalkPatternRewriteDriver.h"
+#include "llvm/Support/Debug.h"
+
+#define DEBUG_TYPE "arith-to-apfloat"
 
 namespace mlir {
 #define GEN_PASS_DEF_ARITHTOAPFLOATCONVERSIONPASS
@@ -23,6 +26,22 @@ namespace mlir {
 
 using namespace mlir;
 using namespace mlir::func;
+
+static FuncOp createFnDecl(OpBuilder &b, SymbolOpInterface symTable,
+                           StringRef name, FunctionType funcT, bool setPrivate,
+                           SymbolTableCollection *symbolTables = nullptr) {
+  OpBuilder::InsertionGuard g(b);
+  assert(!symTable->getRegion(0).empty() && "expected non-empty region");
+  b.setInsertionPointToStart(&symTable->getRegion(0).front());
+  FuncOp funcOp = FuncOp::create(b, symTable->getLoc(), name, funcT);
+  if (setPrivate)
+    funcOp.setPrivate();
+  if (symbolTables) {
+    SymbolTable &symbolTable = symbolTables->getSymbolTable(symTable);
+    symbolTable.insert(funcOp, symTable->getRegion(0).front().begin());
+  }
+  return funcOp;
+}
 
 /// Helper function to look up or create the symbol for a runtime library
 /// function for a binary arithmetic operation.
@@ -34,34 +53,42 @@ using namespace mlir::func;
 /// This function will return a failure if the function is found but has an
 /// unexpected signature.
 ///
-static FailureOr<Operation *>
-lookupOrCreateBinaryFn(OpBuilder &b, Operation *moduleOp, StringRef name,
+static FailureOr<FuncOp>
+lookupOrCreateBinaryFn(OpBuilder &b, SymbolOpInterface symTable, StringRef name,
                        SymbolTableCollection *symbolTables = nullptr) {
-  auto i32Type = IntegerType::get(moduleOp->getContext(), 32);
-  auto i64Type = IntegerType::get(moduleOp->getContext(), 64);
-  return lookupOrCreateFnDecl(b, moduleOp,
-                              (llvm::Twine("_mlir_apfloat_") + name).str(),
-                              {i32Type, i64Type, i64Type}, {i64Type},
-                              /*setPrivate=*/true, symbolTables);
+  auto i32Type = IntegerType::get(symTable->getContext(), 32);
+  auto i64Type = IntegerType::get(symTable->getContext(), 64);
+
+  std::string funcName = (llvm::Twine("__mlir_apfloat_") + name).str();
+  FunctionType funcT =
+      FunctionType::get(b.getContext(), {i32Type, i64Type, i64Type}, {i64Type});
+  FailureOr<FuncOp> func =
+      lookupFnDecl(symTable, funcName, funcT, symbolTables);
+  // Failed due to type mismatch.
+  if (failed(func))
+    return func;
+  // Successfully matched existing decl.
+  if (*func)
+    return *func;
+
+  return createFnDecl(b, symTable, funcName, funcT,
+                      /*setPrivate=*/true, symbolTables);
 }
 
 /// Rewrite a binary arithmetic operation to an APFloat function call.
 template <typename OpTy, const char *APFloatName>
-struct ArithOpToAPFloatConversion final : OpRewritePattern<OpTy> {
-  using OpRewritePattern<OpTy>::OpRewritePattern;
+struct BinaryArithOpToAPFloatConversion final : OpRewritePattern<OpTy> {
+  BinaryArithOpToAPFloatConversion(MLIRContext *context, PatternBenefit benefit,
+                                   SymbolOpInterface symTable)
+      : OpRewritePattern<OpTy>(context, benefit), symTable(symTable) {};
 
   LogicalResult matchAndRewrite(OpTy op,
                                 PatternRewriter &rewriter) const override {
-    auto moduleOp = op->template getParentOfType<ModuleOp>();
-    if (!moduleOp) {
-      return rewriter.notifyMatchFailure(
-          op, "arith op must be contained within a builtin.module");
-    }
     // Get APFloat function from runtime library.
-    FailureOr<Operation *> fn =
-        lookupOrCreateBinaryFn(rewriter, moduleOp, APFloatName);
+    FailureOr<FuncOp> fn =
+        lookupOrCreateBinaryFn(rewriter, symTable, APFloatName);
     if (failed(fn))
-      return op->emitError("failed to lookup or create APFloat function");
+      return fn;
 
     rewriter.setInsertionPoint(op);
     // Cast operands to 64-bit integers.
@@ -94,6 +121,8 @@ struct ArithOpToAPFloatConversion final : OpRewritePattern<OpTy> {
         op, arith::BitcastOp::create(rewriter, loc, floatTy, truncatedBits));
     return success();
   }
+
+  SymbolOpInterface symTable;
 };
 
 namespace {
@@ -109,12 +138,24 @@ struct ArithToAPFloatConversionPass final
     static const char multiply[] = "multiply";
     static const char divide[] = "divide";
     static const char remainder[] = "remainder";
-    patterns.add<ArithOpToAPFloatConversion<arith::AddFOp, add>,
-                 ArithOpToAPFloatConversion<arith::SubFOp, subtract>,
-                 ArithOpToAPFloatConversion<arith::MulFOp, multiply>,
-                 ArithOpToAPFloatConversion<arith::DivFOp, divide>,
-                 ArithOpToAPFloatConversion<arith::RemFOp, remainder>>(context);
+    patterns.add<BinaryArithOpToAPFloatConversion<arith::AddFOp, add>,
+                 BinaryArithOpToAPFloatConversion<arith::SubFOp, subtract>,
+                 BinaryArithOpToAPFloatConversion<arith::MulFOp, multiply>,
+                 BinaryArithOpToAPFloatConversion<arith::DivFOp, divide>,
+                 BinaryArithOpToAPFloatConversion<arith::RemFOp, remainder>>(
+        context, 1, getOperation());
+    LogicalResult result = success();
+    ScopedDiagnosticHandler scopedHandler(context, [&result](Diagnostic &diag) {
+      if (diag.getSeverity() == DiagnosticSeverity::Error) {
+        result = failure();
+      }
+      // NB: if you don't return failure, no other diag handlers will fire (see
+      // mlir/lib/IR/Diagnostics.cpp:DiagnosticEngineImpl::emit).
+      return failure();
+    });
     walkAndApplyPatterns(getOperation(), std::move(patterns));
+    if (failed(result))
+      return signalPassFailure();
   }
 };
 } // namespace

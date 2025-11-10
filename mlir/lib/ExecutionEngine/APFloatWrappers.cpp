@@ -29,7 +29,7 @@
 
 /// Binary operations without rounding mode.
 #define APFLOAT_BINARY_OP(OP)                                                  \
-  int64_t MLIR_APFLOAT_WRAPPERS_EXPORTED _mlir_apfloat_##OP(                   \
+  int64_t MLIR_APFLOAT_WRAPPERS_EXPORTED __mlir_apfloat_##OP(                   \
       int32_t semantics, uint64_t a, uint64_t b) {                             \
     const llvm::fltSemantics &sem = llvm::APFloatBase::EnumToSemantics(        \
         static_cast<llvm::APFloatBase::Semantics>(semantics));                 \
@@ -42,7 +42,7 @@
 
 /// Binary operations with rounding mode.
 #define APFLOAT_BINARY_OP_ROUNDING_MODE(OP, ROUNDING_MODE)                     \
-  int64_t MLIR_APFLOAT_WRAPPERS_EXPORTED _mlir_apfloat_##OP(                   \
+  int64_t MLIR_APFLOAT_WRAPPERS_EXPORTED __mlir_apfloat_##OP(                   \
       int32_t semantics, uint64_t a, uint64_t b) {                             \
     const llvm::fltSemantics &sem = llvm::APFloatBase::EnumToSemantics(        \
         static_cast<llvm::APFloatBase::Semantics>(semantics));                 \

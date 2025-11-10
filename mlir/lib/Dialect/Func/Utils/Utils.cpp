@@ -256,44 +256,26 @@ func::deduplicateArgsOfFuncOp(RewriterBase &rewriter, func::FuncOp funcOp,
 }
 
 FailureOr<func::FuncOp>
-func::lookupOrCreateFnDecl(OpBuilder &b, Operation *moduleOp, StringRef name,
-                           ArrayRef<Type> paramTypes,
-                           ArrayRef<Type> resultTypes, bool setPrivate,
-                           SymbolTableCollection *symbolTables) {
-  assert(moduleOp->hasTrait<OpTrait::SymbolTable>() &&
-         "expected SymbolTable operation");
-
+func::lookupFnDecl(SymbolOpInterface symTable, StringRef name,
+                   FunctionType funcT, SymbolTableCollection *symbolTables) {
   FuncOp func;
   if (symbolTables) {
     func = symbolTables->lookupSymbolIn<FuncOp>(
-        moduleOp, StringAttr::get(moduleOp->getContext(), name));
+        symTable, StringAttr::get(symTable->getContext(), name));
   } else {
     func = llvm::dyn_cast_or_null<FuncOp>(
-        SymbolTable::lookupSymbolIn(moduleOp, name));
+        SymbolTable::lookupSymbolIn(symTable, name));
   }
 
-  FunctionType funcT =
-      FunctionType::get(b.getContext(), paramTypes, resultTypes);
-  // Assert the signature of the found function is same as expected
-  if (func) {
-    if (funcT != func.getFunctionType()) {
-      func.emitError("redefinition of function '")
-          << name << "' of different type " << funcT << " is prohibited";
-      return failure();
-    }
+  if (!func)
     return func;
-  }
 
-  OpBuilder::InsertionGuard g(b);
-  assert(!moduleOp->getRegion(0).empty() && "expected non-empty region");
-  b.setInsertionPointToStart(&moduleOp->getRegion(0).front());
-  FuncOp funcOp = FuncOp::create(b, moduleOp->getLoc(), name, funcT);
-  if (setPrivate)
-    funcOp.setPrivate();
-  if (symbolTables) {
-    SymbolTable &symbolTable = symbolTables->getSymbolTable(moduleOp);
-    symbolTable.insert(funcOp, moduleOp->getRegion(0).front().begin());
+  mlir::FunctionType foundFuncT = func.getFunctionType();
+  // Assert the signature of the found function is same as expected
+  if (funcT != foundFuncT) {
+    return func.emitError("matched function '")
+           << name << "' but with different type: " << foundFuncT
+           << " (expected " << funcT << ")";
   }
-
-  return funcOp;
+  return func;
 }
