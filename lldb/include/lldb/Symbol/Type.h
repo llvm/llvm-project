@@ -507,7 +507,7 @@ public:
 
   lldb::Format GetFormat();
 
-  lldb::Encoding GetEncoding(uint64_t &count);
+  lldb::Encoding GetEncoding();
 
   SymbolContextScope *GetSymbolContextScope() { return m_context; }
   const SymbolContextScope *GetSymbolContextScope() const { return m_context; }

@@ -71,6 +71,7 @@ bool AArch64RegisterInfo::regNeedsCFI(MCRegister Reg,
 const MCPhysReg *
 AArch64RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   assert(MF && "Invalid MachineFunction pointer.");
+  auto &AFI = *MF->getInfo<AArch64FunctionInfo>();
 
   if (MF->getFunction().getCallingConv() == CallingConv::GHC)
     // GHC set of callee saved regs is empty as all those regs are
@@ -89,6 +90,16 @@ AArch64RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   if (MF->getSubtarget<AArch64Subtarget>().isTargetDarwin())
     return getDarwinCalleeSavedRegs(MF);
 
+  if (MF->getFunction().getCallingConv() == CallingConv::PreserveMost)
+    return MF->getSubtarget<AArch64Subtarget>().isTargetWindows()
+               ? CSR_Win_AArch64_RT_MostRegs_SaveList
+               : CSR_AArch64_RT_MostRegs_SaveList;
+
+  if (MF->getFunction().getCallingConv() == CallingConv::PreserveAll)
+    return MF->getSubtarget<AArch64Subtarget>().isTargetWindows()
+               ? CSR_Win_AArch64_RT_AllRegs_SaveList
+               : CSR_AArch64_RT_AllRegs_SaveList;
+
   if (MF->getFunction().getCallingConv() == CallingConv::CFGuard_Check)
     return CSR_Win_AArch64_CFGuard_Check_SaveList;
   if (MF->getSubtarget<AArch64Subtarget>().isTargetWindows()) {
@@ -101,10 +112,7 @@ AArch64RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
       return CSR_Win_AArch64_AAPCS_SwiftTail_SaveList;
     if (MF->getFunction().getCallingConv() == CallingConv::AArch64_VectorCall)
       return CSR_Win_AArch64_AAVPCS_SaveList;
-    if (MF->getFunction().getCallingConv() ==
-        CallingConv::AArch64_SVE_VectorCall)
-      return CSR_Win_AArch64_SVE_AAPCS_SaveList;
-    if (MF->getInfo<AArch64FunctionInfo>()->isSVECC())
+    if (AFI.hasSVE_AAPCS(*MF))
       return CSR_Win_AArch64_SVE_AAPCS_SaveList;
     return CSR_Win_AArch64_AAPCS_SaveList;
   }
@@ -140,15 +148,11 @@ AArch64RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
     return CSR_AArch64_AAPCS_SwiftError_SaveList;
   if (MF->getFunction().getCallingConv() == CallingConv::SwiftTail)
     return CSR_AArch64_AAPCS_SwiftTail_SaveList;
-  if (MF->getFunction().getCallingConv() == CallingConv::PreserveMost)
-    return CSR_AArch64_RT_MostRegs_SaveList;
-  if (MF->getFunction().getCallingConv() == CallingConv::PreserveAll)
-    return CSR_AArch64_RT_AllRegs_SaveList;
   if (MF->getFunction().getCallingConv() == CallingConv::Win64)
     // This is for OSes other than Windows; Windows is a separate case further
     // above.
     return CSR_AArch64_AAPCS_X18_SaveList;
-  if (MF->getInfo<AArch64FunctionInfo>()->isSVECC())
+  if (AFI.hasSVE_AAPCS(*MF))
     return CSR_AArch64_SVE_AAPCS_SaveList;
   return CSR_AArch64_AAPCS_SaveList;
 }
@@ -158,6 +162,7 @@ AArch64RegisterInfo::getDarwinCalleeSavedRegs(const MachineFunction *MF) const {
   assert(MF && "Invalid MachineFunction pointer.");
   assert(MF->getSubtarget<AArch64Subtarget>().isTargetDarwin() &&
          "Invalid subtarget for getDarwinCalleeSavedRegs");
+  auto &AFI = *MF->getInfo<AArch64FunctionInfo>();
 
   if (MF->getFunction().getCallingConv() == CallingConv::CFGuard_Check)
     report_fatal_error(
@@ -205,7 +210,7 @@ AArch64RegisterInfo::getDarwinCalleeSavedRegs(const MachineFunction *MF) const {
     return CSR_Darwin_AArch64_RT_AllRegs_SaveList;
   if (MF->getFunction().getCallingConv() == CallingConv::Win64)
     return CSR_Darwin_AArch64_AAPCS_Win64_SaveList;
-  if (MF->getInfo<AArch64FunctionInfo>()->isSVECC())
+  if (AFI.hasSVE_AAPCS(*MF))
     return CSR_Darwin_AArch64_SVE_AAPCS_SaveList;
   return CSR_Darwin_AArch64_AAPCS_SaveList;
 }
@@ -621,7 +626,7 @@ AArch64RegisterInfo::getCrossCopyRegClass(const TargetRegisterClass *RC) const {
   return RC;
 }
 
-unsigned AArch64RegisterInfo::getBaseRegister() const { return AArch64::X19; }
+MCRegister AArch64RegisterInfo::getBaseRegister() const { return AArch64::X19; }
 
 bool AArch64RegisterInfo::hasBasePointer(const MachineFunction &MF) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
@@ -643,7 +648,7 @@ bool AArch64RegisterInfo::hasBasePointer(const MachineFunction &MF) const {
     if (ST.hasSVE() || ST.isStreaming()) {
       // Frames that have variable sized objects and scalable SVE objects,
       // should always use a basepointer.
-      if (!AFI->hasCalculatedStackSizeSVE() || AFI->getStackSizeSVE())
+      if (!AFI->hasCalculatedStackSizeSVE() || AFI->hasSVEStackSize())
         return true;
     }
 
@@ -783,7 +788,7 @@ AArch64RegisterInfo::useFPForScavengingIndex(const MachineFunction &MF) const {
   assert((!MF.getSubtarget<AArch64Subtarget>().hasSVE() ||
           AFI->hasCalculatedStackSizeSVE()) &&
          "Expected SVE area to be calculated by this point");
-  return TFI.hasFP(MF) && !hasStackRealignment(MF) && !AFI->getStackSizeSVE() &&
+  return TFI.hasFP(MF) && !hasStackRealignment(MF) && !AFI->hasSVEStackSize() &&
          !AFI->hasStackHazardSlotIndex();
 }
 

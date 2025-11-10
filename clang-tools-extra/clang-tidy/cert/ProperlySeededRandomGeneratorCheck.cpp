@@ -20,7 +20,7 @@ ProperlySeededRandomGeneratorCheck::ProperlySeededRandomGeneratorCheck(
     : ClangTidyCheck(Name, Context),
       RawDisallowedSeedTypes(
           Options.get("DisallowedSeedTypes", "time_t,std::time_t")) {
-  StringRef(RawDisallowedSeedTypes).split(DisallowedSeedTypes, ',');
+  RawDisallowedSeedTypes.split(DisallowedSeedTypes, ',');
 }
 
 void ProperlySeededRandomGeneratorCheck::storeOptions(

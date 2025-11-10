@@ -120,7 +120,11 @@ static bool shouldLoopVersion(const ArgList &Args) {
   return false;
 }
 
-void Flang::addOtherOptions(const ArgList &Args, ArgStringList &CmdArgs) const {
+void Flang::addDebugOptions(const llvm::opt::ArgList &Args, const JobAction &JA,
+                            const InputInfo &Output, const InputInfo &Input,
+                            llvm::opt::ArgStringList &CmdArgs) const {
+  const auto &TC = getToolChain();
+  const Driver &D = TC.getDriver();
   Args.addAllArgs(CmdArgs,
                   {options::OPT_module_dir, options::OPT_fdebug_module_writer,
                    options::OPT_fintrinsic_modules_path, options::OPT_pedantic,
@@ -131,19 +135,59 @@ void Flang::addOtherOptions(const ArgList &Args, ArgStringList &CmdArgs) const {
                    options::OPT_finstrument_functions});
 
   llvm::codegenoptions::DebugInfoKind DebugInfoKind;
+  bool hasDwarfNArg = getDwarfNArg(Args) != nullptr;
   if (Args.hasArg(options::OPT_gN_Group)) {
     Arg *gNArg = Args.getLastArg(options::OPT_gN_Group);
     DebugInfoKind = debugLevelToInfoKind(*gNArg);
-  } else if (Args.hasArg(options::OPT_g_Group)) {
+  } else if (Args.hasArg(options::OPT_g_Flag) || hasDwarfNArg) {
     DebugInfoKind = llvm::codegenoptions::FullDebugInfo;
   } else {
     DebugInfoKind = llvm::codegenoptions::NoDebugInfo;
   }
   addDebugInfoKind(CmdArgs, DebugInfoKind);
-  if (getDwarfNArg(Args)) {
+  if (hasDwarfNArg) {
     const unsigned DwarfVersion = getDwarfVersion(getToolChain(), Args);
     CmdArgs.push_back(
         Args.MakeArgString("-dwarf-version=" + Twine(DwarfVersion)));
+  }
+  if (Args.hasArg(options::OPT_gsplit_dwarf) ||
+      Args.hasArg(options::OPT_gsplit_dwarf_EQ)) {
+    // FIXME: -gsplit-dwarf on AIX is currently unimplemented.
+    if (TC.getTriple().isOSAIX()) {
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+          << Args.getLastArg(options::OPT_gsplit_dwarf)->getSpelling()
+          << TC.getTriple().str();
+      return;
+    }
+    if (DebugInfoKind == llvm::codegenoptions::NoDebugInfo)
+      return;
+
+    Arg *SplitDWARFArg;
+    DwarfFissionKind DwarfFission = getDebugFissionKind(D, Args, SplitDWARFArg);
+
+    if (DwarfFission == DwarfFissionKind::None ||
+        !checkDebugInfoOption(SplitDWARFArg, Args, D, TC))
+      return;
+
+    if (!TC.getTriple().isOSBinFormatELF() &&
+        !TC.getTriple().isOSBinFormatWasm() &&
+        !TC.getTriple().isOSBinFormatCOFF()) {
+      D.Diag(diag::warn_drv_unsupported_debug_info_opt_for_target)
+          << SplitDWARFArg->getSpelling() << TC.getTriple().str();
+      return;
+    }
+
+    if (!isa<AssembleJobAction>(JA) && !isa<CompileJobAction>(JA) &&
+        isa<BackendJobAction>(JA))
+      return;
+
+    const char *SplitDWARFOut = SplitDebugName(JA, Args, Input, Output);
+    CmdArgs.push_back("-split-dwarf-file");
+    CmdArgs.push_back(SplitDWARFOut);
+    if (DwarfFission == DwarfFissionKind::Split) {
+      CmdArgs.push_back("-split-dwarf-output");
+      CmdArgs.push_back(SplitDWARFOut);
+    }
   }
 }
 
@@ -649,6 +693,7 @@ static void addFloatingPointOptions(const Driver &D, const ArgList &Args,
   bool AssociativeMath = false;
   bool ReciprocalMath = false;
 
+  StringRef LastComplexRangeOption;
   LangOptions::ComplexRangeKind Range = LangOptions::ComplexRangeKind::CX_None;
 
   if (const Arg *A = Args.getLastArg(options::OPT_ffp_contract)) {
@@ -676,17 +721,22 @@ static void addFloatingPointOptions(const Driver &D, const ArgList &Args,
       continue;
 
     case options::OPT_fcomplex_arithmetic_EQ: {
+      LangOptions::ComplexRangeKind NewRange;
       StringRef Val = A->getValue();
       if (Val == "full")
-        Range = LangOptions::ComplexRangeKind::CX_Full;
+        NewRange = LangOptions::ComplexRangeKind::CX_Full;
       else if (Val == "improved")
-        Range = LangOptions::ComplexRangeKind::CX_Improved;
+        NewRange = LangOptions::ComplexRangeKind::CX_Improved;
       else if (Val == "basic")
-        Range = LangOptions::ComplexRangeKind::CX_Basic;
+        NewRange = LangOptions::ComplexRangeKind::CX_Basic;
       else {
         D.Diag(diag::err_drv_unsupported_option_argument)
             << A->getSpelling() << Val;
+        break;
       }
+
+      setComplexRange(D, Args.MakeArgString(A->getSpelling() + Val), NewRange,
+                      LastComplexRangeOption, Range);
       break;
     }
     case options::OPT_fhonor_infinities:
@@ -735,6 +785,9 @@ static void addFloatingPointOptions(const Driver &D, const ArgList &Args,
       ApproxFunc = true;
       SignedZeros = false;
       FPContract = "fast";
+      setComplexRange(D, A->getSpelling(),
+                      LangOptions::ComplexRangeKind::CX_Basic,
+                      LastComplexRangeOption, Range);
       break;
     case options::OPT_fno_fast_math:
       HonorINFs = true;
@@ -748,6 +801,9 @@ static void addFloatingPointOptions(const Driver &D, const ArgList &Args,
       // --ffp-contract=off -fno-fast-math --> -ffp-contract=off
       if (FPContract == "fast")
         FPContract = "";
+      setComplexRange(D, A->getSpelling(),
+                      LangOptions::ComplexRangeKind::CX_None,
+                      LastComplexRangeOption, Range);
       break;
     }
 
@@ -765,6 +821,9 @@ static void addFloatingPointOptions(const Driver &D, const ArgList &Args,
     CmdArgs.push_back(Args.MakeArgString("-fcomplex-arithmetic=" +
                                          complexRangeKindToStr(Range)));
   }
+
+  if (Args.hasArg(options::OPT_fno_fast_real_mod))
+    CmdArgs.push_back("-fno-fast-real-mod");
 
   if (!HonorINFs && !HonorNaNs && AssociativeMath && ReciprocalMath &&
       ApproxFunc && !SignedZeros &&
@@ -886,6 +945,13 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
     assert(false && "Unexpected action class for Flang tool.");
   }
 
+  // We support some options that are invalid for Fortran and have no effect.
+  // These are solely for compatibility with other compilers. Emit a warning if
+  // any such options are provided, then proceed normally.
+  for (options::ID Opt : {options::OPT_fbuiltin, options::OPT_fno_builtin})
+    if (const Arg *A = Args.getLastArg(Opt))
+      D.Diag(diag::warn_drv_invalid_argument_for_flang) << A->getSpelling();
+
   const InputInfo &Input = Inputs[0];
   types::ID InputType = Input.getType();
 
@@ -936,8 +1002,8 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
   if (willEmitRemarks(Args))
     renderRemarksOptions(Args, CmdArgs, Input);
 
-  // Add other compile options
-  addOtherOptions(Args, CmdArgs);
+  // Add debug compile options
+  addDebugOptions(Args, JA, Output, Input, CmdArgs);
 
   // Disable all warnings
   // TODO: Handle interactions between -w, -pedantic, -Wall, -WOption

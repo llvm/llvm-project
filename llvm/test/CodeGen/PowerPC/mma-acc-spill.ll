@@ -13,6 +13,13 @@
 ; RUN:   -mcpu=pwr11 -ppc-asm-full-reg-names -disable-auto-paired-vec-st=false \
 ; RUN:   -ppc-vsr-nums-as-vr < %s | FileCheck %s --check-prefix=CHECK-BE
 
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu \
+; RUN:   -mcpu=future -ppc-asm-full-reg-names -disable-auto-paired-vec-st=false \
+; RUN:   -ppc-vsr-nums-as-vr < %s | FileCheck %s --check-prefix=CHECK-LE-WACC
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64-unknown-linux-gnu \
+; RUN:   -mcpu=future -ppc-asm-full-reg-names -disable-auto-paired-vec-st=false \
+; RUN:   -ppc-vsr-nums-as-vr < %s | FileCheck %s --check-prefix=CHECK-BE-WACC
+
 declare <512 x i1> @llvm.ppc.mma.xvf16ger2pp(<512 x i1>, <16 x i8>, <16 x i8>)
 declare <512 x i1> @llvm.ppc.mma.assemble.acc(<16 x i8>, <16 x i8>, <16 x i8>, <16 x i8>)
 declare void @foo()
@@ -119,6 +126,101 @@ define void @intrinsics1(<16 x i8> %vc1, <16 x i8> %vc2, <16 x i8> %vc3, <16 x i
 ; CHECK-BE-NEXT:    ld r0, 16(r1)
 ; CHECK-BE-NEXT:    mtlr r0
 ; CHECK-BE-NEXT:    blr
+;
+; CHECK-LE-WACC-LABEL: intrinsics1:
+; CHECK-LE-WACC:       # %bb.0:
+; CHECK-LE-WACC-NEXT:    mflr r0
+; CHECK-LE-WACC-NEXT:    std r0, 16(r1)
+; CHECK-LE-WACC-NEXT:    stdu r1, -176(r1)
+; CHECK-LE-WACC-NEXT:    .cfi_def_cfa_offset 176
+; CHECK-LE-WACC-NEXT:    .cfi_offset lr, 16
+; CHECK-LE-WACC-NEXT:    .cfi_offset r30, -16
+; CHECK-LE-WACC-NEXT:    .cfi_offset v28, -80
+; CHECK-LE-WACC-NEXT:    .cfi_offset v29, -64
+; CHECK-LE-WACC-NEXT:    .cfi_offset v30, -48
+; CHECK-LE-WACC-NEXT:    .cfi_offset v31, -32
+; CHECK-LE-WACC-NEXT:    stxv v28, 96(r1) # 16-byte Folded Spill
+; CHECK-LE-WACC-NEXT:    stxv v29, 112(r1) # 16-byte Folded Spill
+; CHECK-LE-WACC-NEXT:    stxv v30, 128(r1) # 16-byte Folded Spill
+; CHECK-LE-WACC-NEXT:    stxv v31, 144(r1) # 16-byte Folded Spill
+; CHECK-LE-WACC-NEXT:    vmr v31, v5
+; CHECK-LE-WACC-NEXT:    vmr v29, v3
+; CHECK-LE-WACC-NEXT:    vmr v30, v4
+; CHECK-LE-WACC-NEXT:    vmr v28, v2
+; CHECK-LE-WACC-NEXT:    std r30, 160(r1) # 8-byte Folded Spill
+; CHECK-LE-WACC-NEXT:    ld r30, 272(r1)
+; CHECK-LE-WACC-NEXT:    dmxxinstdmr512 wacc0, vsp60, vsp62, 0
+; CHECK-LE-WACC-NEXT:    xvf16ger2pp wacc0, v2, v4
+; CHECK-LE-WACC-NEXT:    dmxxextfdmr512 vsp36, vsp34, wacc0, 0
+; CHECK-LE-WACC-NEXT:    stxvp vsp36, 64(r1)
+; CHECK-LE-WACC-NEXT:    stxvp vsp34, 32(r1)
+; CHECK-LE-WACC-NEXT:    bl foo@notoc
+; CHECK-LE-WACC-NEXT:    lxvp vsp34, 64(r1)
+; CHECK-LE-WACC-NEXT:    lxvp vsp36, 32(r1)
+; CHECK-LE-WACC-NEXT:    dmxxinstdmr512 wacc0, vsp34, vsp36, 0
+; CHECK-LE-WACC-NEXT:    xvf16ger2pp wacc0, v28, v30
+; CHECK-LE-WACC-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
+; CHECK-LE-WACC-NEXT:    stxv v4, 48(r30)
+; CHECK-LE-WACC-NEXT:    stxv v5, 32(r30)
+; CHECK-LE-WACC-NEXT:    stxv v2, 16(r30)
+; CHECK-LE-WACC-NEXT:    stxv v3, 0(r30)
+; CHECK-LE-WACC-NEXT:    lxv v31, 144(r1) # 16-byte Folded Reload
+; CHECK-LE-WACC-NEXT:    lxv v30, 128(r1) # 16-byte Folded Reload
+; CHECK-LE-WACC-NEXT:    lxv v29, 112(r1) # 16-byte Folded Reload
+; CHECK-LE-WACC-NEXT:    lxv v28, 96(r1) # 16-byte Folded Reload
+; CHECK-LE-WACC-NEXT:    ld r30, 160(r1) # 8-byte Folded Reload
+; CHECK-LE-WACC-NEXT:    addi r1, r1, 176
+; CHECK-LE-WACC-NEXT:    ld r0, 16(r1)
+; CHECK-LE-WACC-NEXT:    mtlr r0
+; CHECK-LE-WACC-NEXT:    blr
+;
+; CHECK-BE-WACC-LABEL: intrinsics1:
+; CHECK-BE-WACC:       # %bb.0:
+; CHECK-BE-WACC-NEXT:    mflr r0
+; CHECK-BE-WACC-NEXT:    std r0, 16(r1)
+; CHECK-BE-WACC-NEXT:    stdu r1, -256(r1)
+; CHECK-BE-WACC-NEXT:    .cfi_def_cfa_offset 256
+; CHECK-BE-WACC-NEXT:    .cfi_offset lr, 16
+; CHECK-BE-WACC-NEXT:    .cfi_offset r30, -16
+; CHECK-BE-WACC-NEXT:    .cfi_offset v28, -80
+; CHECK-BE-WACC-NEXT:    .cfi_offset v29, -64
+; CHECK-BE-WACC-NEXT:    .cfi_offset v30, -48
+; CHECK-BE-WACC-NEXT:    .cfi_offset v31, -32
+; CHECK-BE-WACC-NEXT:    stxv v28, 176(r1) # 16-byte Folded Spill
+; CHECK-BE-WACC-NEXT:    stxv v29, 192(r1) # 16-byte Folded Spill
+; CHECK-BE-WACC-NEXT:    stxv v30, 208(r1) # 16-byte Folded Spill
+; CHECK-BE-WACC-NEXT:    stxv v31, 224(r1) # 16-byte Folded Spill
+; CHECK-BE-WACC-NEXT:    vmr v31, v5
+; CHECK-BE-WACC-NEXT:    vmr v29, v3
+; CHECK-BE-WACC-NEXT:    vmr v30, v4
+; CHECK-BE-WACC-NEXT:    vmr v28, v2
+; CHECK-BE-WACC-NEXT:    std r30, 240(r1) # 8-byte Folded Spill
+; CHECK-BE-WACC-NEXT:    ld r30, 368(r1)
+; CHECK-BE-WACC-NEXT:    dmxxinstdmr512 wacc0, vsp60, vsp62, 0
+; CHECK-BE-WACC-NEXT:    xvf16ger2pp wacc0, v2, v4
+; CHECK-BE-WACC-NEXT:    dmxxextfdmr512 vsp36, vsp34, wacc0, 0
+; CHECK-BE-WACC-NEXT:    stxvp vsp36, 112(r1)
+; CHECK-BE-WACC-NEXT:    stxvp vsp34, 144(r1)
+; CHECK-BE-WACC-NEXT:    bl foo
+; CHECK-BE-WACC-NEXT:    nop
+; CHECK-BE-WACC-NEXT:    lxvp vsp34, 112(r1)
+; CHECK-BE-WACC-NEXT:    lxvp vsp36, 144(r1)
+; CHECK-BE-WACC-NEXT:    dmxxinstdmr512 wacc0, vsp34, vsp36, 0
+; CHECK-BE-WACC-NEXT:    xvf16ger2pp wacc0, v28, v30
+; CHECK-BE-WACC-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
+; CHECK-BE-WACC-NEXT:    stxv v5, 48(r30)
+; CHECK-BE-WACC-NEXT:    stxv v4, 32(r30)
+; CHECK-BE-WACC-NEXT:    stxv v3, 16(r30)
+; CHECK-BE-WACC-NEXT:    stxv v2, 0(r30)
+; CHECK-BE-WACC-NEXT:    lxv v31, 224(r1) # 16-byte Folded Reload
+; CHECK-BE-WACC-NEXT:    lxv v30, 208(r1) # 16-byte Folded Reload
+; CHECK-BE-WACC-NEXT:    lxv v29, 192(r1) # 16-byte Folded Reload
+; CHECK-BE-WACC-NEXT:    lxv v28, 176(r1) # 16-byte Folded Reload
+; CHECK-BE-WACC-NEXT:    ld r30, 240(r1) # 8-byte Folded Reload
+; CHECK-BE-WACC-NEXT:    addi r1, r1, 256
+; CHECK-BE-WACC-NEXT:    ld r0, 16(r1)
+; CHECK-BE-WACC-NEXT:    mtlr r0
+; CHECK-BE-WACC-NEXT:    blr
   %1 = tail call <512 x i1> @llvm.ppc.mma.assemble.acc(<16 x i8> %vc1, <16 x i8> %vc2, <16 x i8> %vc3, <16 x i8> %vc4)
   %2 = tail call <512 x i1> @llvm.ppc.mma.xvf16ger2pp(<512 x i1> %1, <16 x i8> %vc1, <16 x i8> %vc3)
   tail call void @foo()

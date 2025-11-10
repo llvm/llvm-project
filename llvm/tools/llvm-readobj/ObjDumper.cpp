@@ -16,6 +16,8 @@
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/Decompressor.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Object/OffloadBinary.h"
+#include "llvm/Object/OffloadBundle.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/ScopedPrinter.h"
@@ -39,7 +41,7 @@ ObjDumper::ObjDumper(ScopedPrinter &Writer, StringRef ObjName) : W(Writer) {
   };
 }
 
-ObjDumper::~ObjDumper() {}
+ObjDumper::~ObjDumper() = default;
 
 void ObjDumper::reportUniqueWarning(Error Err) const {
   reportUniqueWarning(toString(std::move(Err)));
@@ -228,6 +230,16 @@ void ObjDumper::printSectionsAsHex(const object::ObjectFile &Obj,
       W.getOStream() << '\n';
     }
   }
+}
+
+void ObjDumper::printOffloading(const object::ObjectFile &Obj) {
+  SmallVector<llvm::object::OffloadBundleFatBin> Bundles;
+  if (Error Err = object::extractOffloadBundleFatBinary(Obj, Bundles))
+    reportWarning(std::move(Err), Obj.getFileName());
+
+  // Print out all the FatBin Bundles that are contained in this buffer.
+  for (const auto &[Index, Bundle] : llvm::enumerate(Bundles))
+    Bundle.printEntriesAsURI();
 }
 
 } // namespace llvm

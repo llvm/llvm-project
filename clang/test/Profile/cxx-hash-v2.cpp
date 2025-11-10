@@ -6,8 +6,8 @@
 // RUN: diff %t.hashes %t.hashes.unique
 
 // RUN: llvm-profdata merge %S/Inputs/cxx-hash-v2.proftext -o %t.profdata
-// RUN: %clang_cc1 -std=c++11 -fexceptions -fcxx-exceptions -triple x86_64-apple-macosx10.9 -main-file-name cxx-hash-v2.mm %s -o /dev/null -emit-llvm -fprofile-instrument-use-path=%t.profdata 2>&1 | FileCheck %s -allow-empty
-// RUN: %clang_cc1 -std=c++11 -fexceptions -fcxx-exceptions -triple x86_64-apple-macosx10.9 -main-file-name cxx-hash-v2.mm %s -o /dev/null -emit-llvm -fprofile-instrument-use-path=%S/Inputs/cxx-hash-v2.profdata.v5 2>&1 | FileCheck %s -allow-empty
+// RUN: %clang_cc1 -std=c++11 -fexceptions -fcxx-exceptions -triple x86_64-apple-macosx10.9 -main-file-name cxx-hash-v2.mm %s -o /dev/null -emit-llvm -fprofile-instrument-use=clang -fprofile-instrument-use-path=%t.profdata 2>&1 | FileCheck %s -allow-empty
+// RUN: %clang_cc1 -std=c++11 -fexceptions -fcxx-exceptions -triple x86_64-apple-macosx10.9 -main-file-name cxx-hash-v2.mm %s -o /dev/null -emit-llvm -fprofile-instrument-use=clang -fprofile-instrument-use-path=%S/Inputs/cxx-hash-v2.profdata.v5 2>&1 | FileCheck %s -allow-empty
 
 // CHECK-NOT: warning: profile data may be out of date
 

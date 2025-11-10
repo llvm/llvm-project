@@ -29,8 +29,8 @@ body:             |
   bb.0 (%ir-block.0):
     %0(s32) = IMPLICIT_DEF
     %1(s32) = IMPLICIT_DEF
-    %2(s1) = IMPLICIT_DEF
-    %3(s32), %4(s1) = G_UADDE %0, %1, %2
+    %2(s8) = IMPLICIT_DEF
+    %3(s32), %4(s8) = G_UADDE %0, %1, %2
     RET 0
 
 ...

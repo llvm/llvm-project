@@ -17,7 +17,8 @@ using namespace lldb;
 using namespace lldb_private;
 
 // BreakpointLocationCollection constructor
-BreakpointLocationCollection::BreakpointLocationCollection() = default;
+BreakpointLocationCollection::BreakpointLocationCollection(bool preserving)
+    : m_preserving_bkpts(preserving) {}
 
 // Destructor
 BreakpointLocationCollection::~BreakpointLocationCollection() = default;
@@ -26,8 +27,19 @@ void BreakpointLocationCollection::Add(const BreakpointLocationSP &bp_loc) {
   std::lock_guard<std::mutex> guard(m_collection_mutex);
   BreakpointLocationSP old_bp_loc =
       FindByIDPair(bp_loc->GetBreakpoint().GetID(), bp_loc->GetID());
-  if (!old_bp_loc.get())
+  if (!old_bp_loc.get()) {
     m_break_loc_collection.push_back(bp_loc);
+    if (m_preserving_bkpts) {
+      lldb::break_id_t bp_loc_id = bp_loc->GetID();
+      Breakpoint &bkpt = bp_loc->GetBreakpoint();
+      lldb::break_id_t bp_id = bkpt.GetID();
+      std::pair<lldb::break_id_t, lldb::break_id_t> key =
+          std::make_pair(bp_id, bp_loc_id);
+      auto entry = m_preserved_bps.find(key);
+      if (entry == m_preserved_bps.end())
+        m_preserved_bps.emplace(key, bkpt.shared_from_this());
+    }
+  }
 }
 
 bool BreakpointLocationCollection::Remove(lldb::break_id_t bp_id,
@@ -35,6 +47,15 @@ bool BreakpointLocationCollection::Remove(lldb::break_id_t bp_id,
   std::lock_guard<std::mutex> guard(m_collection_mutex);
   collection::iterator pos = GetIDPairIterator(bp_id, bp_loc_id); // Predicate
   if (pos != m_break_loc_collection.end()) {
+    if (m_preserving_bkpts) {
+      std::pair<lldb::break_id_t, lldb::break_id_t> key =
+          std::make_pair(bp_id, bp_loc_id);
+      auto entry = m_preserved_bps.find(key);
+      if (entry == m_preserved_bps.end())
+        assert(0 && "Breakpoint added to collection but not preserving map.");
+      else
+        m_preserved_bps.erase(entry);
+    }
     m_break_loc_collection.erase(pos);
     return true;
   }
@@ -115,7 +136,8 @@ BreakpointLocationCollection::GetByIndex(size_t i) const {
 }
 
 bool BreakpointLocationCollection::ShouldStop(
-    StoppointCallbackContext *context) {
+    StoppointCallbackContext *context,
+    BreakpointLocationCollection &stopped_bp_locs) {
   bool shouldStop = false;
   size_t i = 0;
   size_t prev_size = GetSize();
@@ -123,9 +145,20 @@ bool BreakpointLocationCollection::ShouldStop(
     // ShouldStop can remove the breakpoint from the list, or even delete
     // it, so we should
     BreakpointLocationSP cur_loc_sp = GetByIndex(i);
+    BreakpointLocationSP reported_loc_sp;
     BreakpointSP keep_bkpt_alive_sp = cur_loc_sp->GetBreakpoint().shared_from_this();
-    if (cur_loc_sp->ShouldStop(context))
+    // We're building up the list or which locations claim responsibility for
+    // this stop.  If the location's ShouldStop defers to a facade location by
+    // returning a non-null reported location, we want to use that.  Otherwise
+    // use the original location.
+    if (cur_loc_sp->ShouldStop(context, reported_loc_sp)) {
+      if (reported_loc_sp)
+        stopped_bp_locs.Add(reported_loc_sp);
+      else
+        stopped_bp_locs.Add(cur_loc_sp);
+
       shouldStop = true;
+    }
 
     if (prev_size == GetSize())
       i++;

@@ -44,6 +44,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetOptions.h"
+#include <atomic>
 #include <optional>
 
 using namespace llvm;
@@ -755,7 +756,7 @@ static bool regIsPICBase(Register BaseReg, const MachineRegisterInfo &MRI) {
   return isPICBase;
 }
 
-bool X86InstrInfo::isReallyTriviallyReMaterializable(
+bool X86InstrInfo::isReMaterializableImpl(
     const MachineInstr &MI) const {
   switch (MI.getOpcode()) {
   default:
@@ -951,7 +952,7 @@ bool X86InstrInfo::isReallyTriviallyReMaterializable(
     break;
   }
   }
-  return TargetInstrInfo::isReallyTriviallyReMaterializable(MI);
+  return TargetInstrInfo::isReMaterializableImpl(MI);
 }
 
 void X86InstrInfo::reMaterialize(MachineBasicBlock &MBB,
@@ -2573,10 +2574,13 @@ MachineInstr *X86InstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
   case X86::VCMPPSZ256rri:
   case X86::VCMPPDZrrik:
   case X86::VCMPPSZrrik:
+  case X86::VCMPPHZrrik:
   case X86::VCMPPDZ128rrik:
   case X86::VCMPPSZ128rrik:
+  case X86::VCMPPHZ128rrik:
   case X86::VCMPPDZ256rrik:
   case X86::VCMPPSZ256rrik:
+  case X86::VCMPPHZ256rrik:
     WorkingMI = CloneIfNew(MI);
     WorkingMI->getOperand(MI.getNumExplicitOperands() - 1)
         .setImm(X86::getSwappedVCMPImm(
@@ -2830,10 +2834,13 @@ bool X86InstrInfo::findCommutedOpIndices(const MachineInstr &MI,
   case X86::VCMPPSZ256rri:
   case X86::VCMPPDZrrik:
   case X86::VCMPPSZrrik:
+  case X86::VCMPPHZrrik:
   case X86::VCMPPDZ128rrik:
   case X86::VCMPPSZ128rrik:
+  case X86::VCMPPHZ128rrik:
   case X86::VCMPPDZ256rrik:
-  case X86::VCMPPSZ256rrik: {
+  case X86::VCMPPSZ256rrik:
+  case X86::VCMPPHZ256rrik: {
     unsigned OpOffset = X86II::isKMasked(Desc.TSFlags) ? 1 : 0;
 
     // Float comparison can be safely commuted for
@@ -4537,11 +4544,6 @@ static unsigned getLoadStoreRegOpcode(Register Reg,
     return Load ? GET_EGPR_IF_ENABLED(X86::TILELOADD)
                 : GET_EGPR_IF_ENABLED(X86::TILESTORED);
 #undef GET_EGPR_IF_ENABLED
-  case 2048:
-    assert(X86::TILEPAIRRegClass.hasSubClassEq(RC) &&
-           "Unknown 2048-byte regclass");
-    assert(STI.hasAMXTILE() && "Using 2048-bit register requires AMX-TILE");
-    return Load ? X86::PTILEPAIRLOAD : X86::PTILEPAIRSTORE;
   }
 }
 
@@ -4736,8 +4738,6 @@ static bool isAMXOpcode(unsigned Opc) {
   case X86::TILESTORED:
   case X86::TILELOADD_EVEX:
   case X86::TILESTORED_EVEX:
-  case X86::PTILEPAIRLOAD:
-  case X86::PTILEPAIRSTORE:
     return true;
   }
 }
@@ -4750,8 +4750,7 @@ void X86InstrInfo::loadStoreTileReg(MachineBasicBlock &MBB,
   default:
     llvm_unreachable("Unexpected special opcode!");
   case X86::TILESTORED:
-  case X86::TILESTORED_EVEX:
-  case X86::PTILEPAIRSTORE: {
+  case X86::TILESTORED_EVEX: {
     // tilestored %tmm, (%sp, %idx)
     MachineRegisterInfo &RegInfo = MBB.getParent()->getRegInfo();
     Register VirtReg = RegInfo.createVirtualRegister(&X86::GR64_NOSPRegClass);
@@ -4765,8 +4764,7 @@ void X86InstrInfo::loadStoreTileReg(MachineBasicBlock &MBB,
     break;
   }
   case X86::TILELOADD:
-  case X86::TILELOADD_EVEX:
-  case X86::PTILEPAIRLOAD: {
+  case X86::TILELOADD_EVEX: {
     // tileloadd (%sp, %idx), %tmm
     MachineRegisterInfo &RegInfo = MBB.getParent()->getRegInfo();
     Register VirtReg = RegInfo.createVirtualRegister(&X86::GR64_NOSPRegClass);
@@ -8106,6 +8104,39 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
     MachineBasicBlock::iterator InsertPt, MachineInstr &LoadMI,
     LiveIntervals *LIS) const {
 
+  // If LoadMI is a masked load, check MI having the same mask.
+  const MCInstrDesc &MCID = get(LoadMI.getOpcode());
+  unsigned NumOps = MCID.getNumOperands();
+  if (NumOps >= 3) {
+    Register MaskReg;
+    const MachineOperand &Op1 = LoadMI.getOperand(1);
+    const MachineOperand &Op2 = LoadMI.getOperand(2);
+
+    auto IsVKWMClass = [](const TargetRegisterClass *RC) {
+      return RC == &X86::VK2WMRegClass || RC == &X86::VK4WMRegClass ||
+             RC == &X86::VK8WMRegClass || RC == &X86::VK16WMRegClass ||
+             RC == &X86::VK32WMRegClass || RC == &X86::VK64WMRegClass;
+    };
+
+    if (Op1.isReg() && IsVKWMClass(getRegClass(MCID, 1, &RI)))
+      MaskReg = Op1.getReg();
+    else if (Op2.isReg() && IsVKWMClass(getRegClass(MCID, 2, &RI)))
+      MaskReg = Op2.getReg();
+
+    if (MaskReg) {
+      bool HasSameMask = false;
+      for (unsigned I = 1, E = MI.getDesc().getNumOperands(); I < E; ++I) {
+        const MachineOperand &Op = MI.getOperand(I);
+        if (Op.isReg() && Op.getReg() == MaskReg) {
+          HasSameMask = true;
+          break;
+        }
+      }
+      if (!HasSameMask)
+        return nullptr;
+    }
+  }
+
   // TODO: Support the case where LoadMI loads a wide register, but MI
   // only uses a subreg.
   for (auto Op : Ops) {
@@ -8114,7 +8145,6 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
   }
 
   // If loading from a FrameIndex, fold directly from the FrameIndex.
-  unsigned NumOps = LoadMI.getDesc().getNumOperands();
   int FrameIndex;
   if (isLoadFromStackSlot(LoadMI, FrameIndex)) {
     if (isNonFoldablePartialRegisterLoad(LoadMI, MI, MF))
@@ -10770,39 +10800,27 @@ void X86InstrInfo::buildClearRegister(Register Reg, MachineBasicBlock &MBB,
     if (!ST.hasSSE1())
       return;
 
-    // PXOR is safe to use because it doesn't affect flags.
-    BuildMI(MBB, Iter, DL, get(X86::PXORrr), Reg)
-        .addReg(Reg, RegState::Undef)
-        .addReg(Reg, RegState::Undef);
+    BuildMI(MBB, Iter, DL, get(X86::V_SET0), Reg);
   } else if (X86::VR256RegClass.contains(Reg)) {
     // YMM#
     if (!ST.hasAVX())
       return;
 
-    // VPXOR is safe to use because it doesn't affect flags.
-    BuildMI(MBB, Iter, DL, get(X86::VPXORrr), Reg)
-        .addReg(Reg, RegState::Undef)
-        .addReg(Reg, RegState::Undef);
+    BuildMI(MBB, Iter, DL, get(X86::AVX_SET0), Reg);
   } else if (X86::VR512RegClass.contains(Reg)) {
     // ZMM#
     if (!ST.hasAVX512())
       return;
 
-    // VPXORY is safe to use because it doesn't affect flags.
-    BuildMI(MBB, Iter, DL, get(X86::VPXORYrr), Reg)
-        .addReg(Reg, RegState::Undef)
-        .addReg(Reg, RegState::Undef);
+    BuildMI(MBB, Iter, DL, get(X86::AVX512_512_SET0), Reg);
   } else if (X86::VK1RegClass.contains(Reg) || X86::VK2RegClass.contains(Reg) ||
              X86::VK4RegClass.contains(Reg) || X86::VK8RegClass.contains(Reg) ||
              X86::VK16RegClass.contains(Reg)) {
     if (!ST.hasVLX())
       return;
 
-    // KXOR is safe to use because it doesn't affect flags.
-    unsigned Op = ST.hasBWI() ? X86::KXORQkk : X86::KXORWkk;
-    BuildMI(MBB, Iter, DL, get(Op), Reg)
-        .addReg(Reg, RegState::Undef)
-        .addReg(Reg, RegState::Undef);
+    unsigned Op = ST.hasBWI() ? X86::KSET0Q : X86::KSET0W;
+    BuildMI(MBB, Iter, DL, get(Op), Reg);
   }
 }
 

@@ -247,32 +247,12 @@ entry:
 }
 
 define void @shl0(ptr noalias %dst, ptr noalias %src) {
-; NON-POW2-LABEL: @shl0(
-; NON-POW2-NEXT:  entry:
-; NON-POW2-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds i32, ptr [[SRC:%.*]], i64 1
-; NON-POW2-NEXT:    [[TMP0:%.*]] = load i32, ptr [[SRC]], align 4
-; NON-POW2-NEXT:    [[INCDEC_PTR1:%.*]] = getelementptr inbounds i32, ptr [[DST:%.*]], i64 1
-; NON-POW2-NEXT:    store i32 [[TMP0]], ptr [[DST]], align 4
-; NON-POW2-NEXT:    [[TMP1:%.*]] = load <3 x i32>, ptr [[INCDEC_PTR]], align 4
-; NON-POW2-NEXT:    [[TMP2:%.*]] = shl <3 x i32> [[TMP1]], <i32 1, i32 2, i32 3>
-; NON-POW2-NEXT:    store <3 x i32> [[TMP2]], ptr [[INCDEC_PTR1]], align 4
-; NON-POW2-NEXT:    ret void
-;
-; POW2-ONLY-LABEL: @shl0(
-; POW2-ONLY-NEXT:  entry:
-; POW2-ONLY-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds i32, ptr [[SRC:%.*]], i64 1
-; POW2-ONLY-NEXT:    [[TMP0:%.*]] = load i32, ptr [[SRC]], align 4
-; POW2-ONLY-NEXT:    [[INCDEC_PTR1:%.*]] = getelementptr inbounds i32, ptr [[DST:%.*]], i64 1
-; POW2-ONLY-NEXT:    store i32 [[TMP0]], ptr [[DST]], align 4
-; POW2-ONLY-NEXT:    [[INCDEC_PTR4:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 3
-; POW2-ONLY-NEXT:    [[INCDEC_PTR6:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 3
-; POW2-ONLY-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[INCDEC_PTR]], align 4
-; POW2-ONLY-NEXT:    [[TMP2:%.*]] = shl <2 x i32> [[TMP1]], <i32 1, i32 2>
-; POW2-ONLY-NEXT:    store <2 x i32> [[TMP2]], ptr [[INCDEC_PTR1]], align 4
-; POW2-ONLY-NEXT:    [[TMP3:%.*]] = load i32, ptr [[INCDEC_PTR4]], align 4
-; POW2-ONLY-NEXT:    [[SHL8:%.*]] = shl i32 [[TMP3]], 3
-; POW2-ONLY-NEXT:    store i32 [[SHL8]], ptr [[INCDEC_PTR6]], align 4
-; POW2-ONLY-NEXT:    ret void
+; CHECK-LABEL: @shl0(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[SRC:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = shl <4 x i32> [[TMP0]], <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    store <4 x i32> [[TMP1]], ptr [[DST:%.*]], align 4
+; CHECK-NEXT:    ret void
 ;
 entry:
   %incdec.ptr = getelementptr inbounds i32, ptr %src, i64 1

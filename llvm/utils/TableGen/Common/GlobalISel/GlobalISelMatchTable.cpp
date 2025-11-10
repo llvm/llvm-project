@@ -457,7 +457,7 @@ std::optional<LLTCodeGen> llvm::gi::MVTToLLT(MVT::SimpleValueType SVT) {
 
 void Matcher::optimize() {}
 
-Matcher::~Matcher() {}
+Matcher::~Matcher() = default;
 
 //===- GroupMatcher -------------------------------------------------------===//
 
@@ -1150,11 +1150,11 @@ void RuleMatcher::insnmatchers_pop_front() { Matchers.erase(Matchers.begin()); }
 
 //===- PredicateMatcher ---------------------------------------------------===//
 
-PredicateMatcher::~PredicateMatcher() {}
+PredicateMatcher::~PredicateMatcher() = default;
 
 //===- OperandPredicateMatcher --------------------------------------------===//
 
-OperandPredicateMatcher::~OperandPredicateMatcher() {}
+OperandPredicateMatcher::~OperandPredicateMatcher() = default;
 
 bool OperandPredicateMatcher::isHigherPriorityThan(
     const OperandPredicateMatcher &B) const {
@@ -1467,7 +1467,9 @@ Error OperandMatcher::addTypeCheckPredicate(const TypeSetByHwMode &VTy,
   if (!VTy.isMachineValueType())
     return failUnsupported("unsupported typeset");
 
-  if (VTy.getMachineValueType() == MVT::iPTR && OperandIsAPointer) {
+  if ((VTy.getMachineValueType() == MVT::iPTR ||
+       VTy.getMachineValueType() == MVT::cPTR) &&
+      OperandIsAPointer) {
     addPredicate<PointerToAnyOperandMatcher>(0);
     return Error::success();
   }
@@ -1939,7 +1941,7 @@ bool InstructionOperandMatcher::isHigherPriorityThan(
 
 //===- OperandRenderer ----------------------------------------------------===//
 
-OperandRenderer::~OperandRenderer() {}
+OperandRenderer::~OperandRenderer() = default;
 
 //===- CopyRenderer -------------------------------------------------------===//
 

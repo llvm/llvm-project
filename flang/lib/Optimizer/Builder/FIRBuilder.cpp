@@ -1943,7 +1943,7 @@ void fir::factory::genDimInfoFromBox(
     return;
 
   unsigned rank = fir::getBoxRank(boxType);
-  assert(rank != 0 && "must be an array of known rank");
+  assert(!boxType.isAssumedRank() && "must be an array of known rank");
   mlir::Type idxTy = builder.getIndexType();
   for (unsigned i = 0; i < rank; ++i) {
     mlir::Value dim = builder.createIntegerConstant(loc, idxTy, i);
@@ -1973,4 +1973,26 @@ mlir::Value fir::factory::genLifetimeStart(mlir::OpBuilder &builder,
 void fir::factory::genLifetimeEnd(mlir::OpBuilder &builder, mlir::Location loc,
                                   mlir::Value cast) {
   mlir::LLVM::LifetimeEndOp::create(builder, loc, cast);
+}
+
+mlir::Value fir::factory::getDescriptorWithNewBaseAddress(
+    fir::FirOpBuilder &builder, mlir::Location loc, mlir::Value box,
+    mlir::Value newAddr) {
+  auto boxType = llvm::dyn_cast<fir::BaseBoxType>(box.getType());
+  assert(boxType &&
+         "expected a box type input in getDescriptorWithNewBaseAddress");
+  if (boxType.isAssumedRank())
+    TODO(loc, "changing descriptor base address for an assumed rank entity");
+  llvm::SmallVector<mlir::Value> lbounds;
+  fir::factory::genDimInfoFromBox(builder, loc, box, &lbounds,
+                                  /*extents=*/nullptr, /*strides=*/nullptr);
+  fir::BoxValue inputBoxValue(box, lbounds, /*explicitParams=*/{});
+  fir::ExtendedValue openedInput =
+      fir::factory::readBoxValue(builder, loc, inputBoxValue);
+  mlir::Value shape = fir::isArray(openedInput)
+                          ? builder.createShape(loc, openedInput)
+                          : mlir::Value{};
+  mlir::Value typeMold = fir::isPolymorphicType(boxType) ? box : mlir::Value{};
+  return builder.createBox(loc, boxType, newAddr, shape, /*slice=*/{},
+                           fir::getTypeParams(openedInput), typeMold);
 }

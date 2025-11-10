@@ -30,7 +30,7 @@ def _getAndroidDeviceApi(cfg):
             r"""
                 #include <android/api-level.h>
                 #include <stdio.h>
-                int main() {
+                int main(int, char**) {
                     printf("%d\n", android_get_device_api_level());
                     return 0;
                 }
@@ -66,7 +66,7 @@ def _mingwSupportsModules(cfg):
         #else
         // __MINGW64_VERSION_MAJOR > 12 should be ok.
         #endif
-        int main() { return 0; }
+        int main(int, char**) { return 0; }
         """,
     )
 
@@ -474,7 +474,7 @@ def _getLocaleFlagsAction(cfg, locale, alts, members):
         #include <wchar.h>
 
         // Print each requested locale conversion member on separate lines.
-        int main() {
+        int main(int, char**) {
           const char* locales[] = { %s };
           for (int loc_i = 0; loc_i < %d; ++loc_i) {
             if (!setlocale(LC_ALL, locales[loc_i])) {
@@ -629,7 +629,7 @@ DEFAULT_FEATURES += [
             """
             #include <stdio.h>
             #include <windows.h>
-            int main() {
+            int main(int, char**) {
               CHAR tempDirPath[MAX_PATH];
               DWORD tempPathRet = GetTempPathA(MAX_PATH, tempDirPath);
               if (tempPathRet == 0 || tempPathRet > MAX_PATH) {
@@ -734,16 +734,44 @@ DEFAULT_FEATURES += [
 # Those are used for backdeployment features below, do not use directly in tests.
 DEFAULT_FEATURES += [
     Feature(
+        name="_target-has-llvm-22",
+        when=lambda cfg: BooleanExpression.evaluate(
+            "TBD",
+            cfg.available_features,
+        ),
+    ),
+    Feature(
+        name="_target-has-llvm-21",
+        when=lambda cfg: BooleanExpression.evaluate(
+            "TBD",
+            cfg.available_features,
+        ),
+    ),
+    Feature(
+        name="_target-has-llvm-20",
+        when=lambda cfg: BooleanExpression.evaluate(
+            "_target-has-llvm-21 || target={{.+}}-apple-macosx{{26.[0-9](.\d+)?}}",
+            cfg.available_features,
+        ),
+    ),
+    Feature(
+        name="_target-has-llvm-19",
+        when=lambda cfg: BooleanExpression.evaluate(
+            "_target-has-llvm-20 || target={{.+}}-apple-macosx{{15.[4-9](.\d+)?}}",
+            cfg.available_features,
+        ),
+    ),
+    Feature(
         name="_target-has-llvm-18",
         when=lambda cfg: BooleanExpression.evaluate(
-            "target={{.+}}-apple-macosx{{15(.[0-9]+)?(.[0-9]+)?}}",
+            "_target-has-llvm-19 || target={{.+}}-apple-macosx{{15.[0-3](.\d+)?}}",
             cfg.available_features,
         ),
     ),
     Feature(
         name="_target-has-llvm-17",
         when=lambda cfg: BooleanExpression.evaluate(
-            "_target-has-llvm-18 || target={{.+}}-apple-macosx{{14.[4-9](.[0-9]+)?}} || target={{.+}}-apple-macosx{{1[5-9]([.].+)?}}",
+            "_target-has-llvm-18 || target={{.+}}-apple-macosx{{14.[4-9](.\d+)?}}",
             cfg.available_features,
         ),
     ),
@@ -779,27 +807,6 @@ DEFAULT_FEATURES += [
         name="_target-has-llvm-12",
         when=lambda cfg: BooleanExpression.evaluate(
             "_target-has-llvm-13 || target={{.+}}-apple-macosx{{12.[3-9](.[0-9]+)?}}",
-            cfg.available_features,
-        ),
-    ),
-    Feature(
-        name="_target-has-llvm-11",
-        when=lambda cfg: BooleanExpression.evaluate(
-            "_target-has-llvm-12 || target={{.+}}-apple-macosx{{(11.[0-9]|12.[0-2])(.[0-9]+)?}}",
-            cfg.available_features,
-        ),
-    ),
-    Feature(
-        name="_target-has-llvm-10",
-        when=lambda cfg: BooleanExpression.evaluate(
-            "_target-has-llvm-11",
-            cfg.available_features,
-        ),
-    ),
-    Feature(
-        name="_target-has-llvm-9",
-        when=lambda cfg: BooleanExpression.evaluate(
-            "_target-has-llvm-10 || target={{.+}}-apple-macosx{{10.15(.[0-9]+)?}}",
             cfg.available_features,
         ),
     ),
@@ -842,7 +849,7 @@ DEFAULT_FEATURES += [
 # a libc++ flavor that enables availability markup. Similarly, a test could fail when
 # run against the system library of an older version of FreeBSD, even though FreeBSD
 # doesn't provide availability markup at the time of writing this.
-for version in ("9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20"):
+for version in ("12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22"):
     DEFAULT_FEATURES.append(
         Feature(
             name="using-built-library-before-llvm-{}".format(version),
@@ -854,22 +861,6 @@ for version in ("9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19",
     )
 
 DEFAULT_FEATURES += [
-    # Tests that require std::filesystem support in the built library
-    Feature(
-        name="availability-filesystem-missing",
-        when=lambda cfg: BooleanExpression.evaluate(
-            "!libcpp-has-no-availability-markup && (stdlib=apple-libc++ && !_target-has-llvm-9)",
-            cfg.available_features,
-        ),
-    ),
-    # Tests that require the C++20 synchronization library (P1135R6 implemented by https://llvm.org/D68480) in the built library
-    Feature(
-        name="availability-synchronization_library-missing",
-        when=lambda cfg: BooleanExpression.evaluate(
-            "!libcpp-has-no-availability-markup && (stdlib=apple-libc++ && !_target-has-llvm-11)",
-            cfg.available_features,
-        ),
-    ),
     # Tests that require https://wg21.link/P0482 support in the built library
     Feature(
         name="availability-char8_t_support-missing",

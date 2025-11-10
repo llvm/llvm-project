@@ -69,7 +69,8 @@ frameInfo:
   hasCalls:        true
   maxCallFrameSize: 0
 machineFunctionInfo:
-  stackSizeSVE:     0
+  stackSizeZPR:     0
+  stackSizePPR:     0
 stack:
   - { id: 0, type: spill-slot, offset: -20, size: 4, alignment: 4, stack-id: default }
   - { id: 1, type: spill-slot, offset: -8, size: 8, alignment: 8, stack-id: default,

@@ -46,10 +46,10 @@ Getting the Source Code and Building LLVM
      stacked pull requests and reverts), you can filter them from your
      `git fetch` (or `git pull`) with this configuration:
 
-.. code-block:: console
-
-  git config --add remote.origin.fetch '^refs/heads/users/*'
-  git config --add remote.origin.fetch '^refs/heads/revert-*'
+   .. code-block:: console
+   
+     git config --add remote.origin.fetch '^refs/heads/users/*'
+     git config --add remote.origin.fetch '^refs/heads/revert-*'
 
 #. Configure and build LLVM and Clang:
 

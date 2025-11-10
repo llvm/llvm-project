@@ -11,4 +11,9 @@ void CSMain(int GI : SV_GroupIndex, uint ID : SV_DispatchThreadID, uint GID : SV
 // CHECK-NEXT: HLSLSV_GroupIDAttr
 // CHECK-NEXT: ParmVarDecl 0x{{[0-9a-fA-F]+}} <{{.*}}> col:96 GThreadID 'uint'
 // CHECK-NEXT: HLSLSV_GroupThreadIDAttr
+
+// CHECK:      HLSLSV_GroupIndexAttr 0x{{[0-9a-fA-F]+}} <{{.*}}> ParmVar 0x{{[0-9a-fA-F]+}} 'GI' 'int' 0
+// CHECK-NEXT: HLSLSV_DispatchThreadIDAttr 0x{{[0-9a-fA-F]+}} <{{.*}}> ParmVar 0x{{[0-9a-fA-F]+}} 'ID' 'uint':'unsigned int' 0
+// CHECK-NEXT: HLSLSV_GroupIDAttr 0x{{[0-9a-fA-F]+}} <{{.*}}> ParmVar 0x{{[0-9a-fA-F]+}} 'GID' 'uint':'unsigned int' 0
+// CHECK-NEXT: HLSLSV_GroupThreadIDAttr 0x{{[0-9a-fA-F]+}} <{{.*}}> ParmVar 0x{{[0-9a-fA-F]+}} 'GThreadID' 'uint':'unsigned int' 0
 }
