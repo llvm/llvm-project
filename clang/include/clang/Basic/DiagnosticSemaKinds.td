@@ -6339,18 +6339,13 @@ def warn_c2y_compat_internal_in_extern_inline : Warning<
   "using static %select{function|variable}0 %1 in an inline function with "
   "external linkage is incompatible with standards before C2y">,
   InGroup<CPre2yCompat>, DefaultIgnore;
-def ext_static_local_in_extern_inline
-    : ExtWarn<"non-constant static local variable in an inline function with "
-              "external linkage is a C2y extension">,
-      InGroup<StaticLocalInInline>;
-def ext_static_local_in_extern_inline_quiet
-    : Extension<ext_static_local_in_extern_inline.Summary>,
-      InGroup<StaticLocalInInline>;
-def warn_c2y_compat_static_local_in_extern_inline
-    : Warning<"non-constant static local variable in an inline function with "
-              "external linkage is incompatible with standards before C2y">,
-      InGroup<CPre2yCompat>,
-      DefaultIgnore;
+def ext_static_local_in_extern_inline : ExtWarn<
+  "non-constant static local variable in an inline function with "
+  "external linkage is a C2y extension">, InGroup<StaticLocalInInline>;
+def warn_c2y_compat_static_local_in_extern_inline : Warning<
+  "non-constant static local variable in an inline function with "
+  "external linkage is incompatible with standards before C2y">,
+  InGroup<CPre2yCompat>, DefaultIgnore;
 def note_convert_inline_to_static : Note<
   "use 'static' to give inline function %0 internal linkage">;
 

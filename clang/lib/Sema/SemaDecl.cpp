@@ -8128,8 +8128,6 @@ NamedDecl *Sema::ActOnVariableDeclarator(
       unsigned DiagID;
       if (getLangOpts().C2y)
         DiagID = diag::warn_c2y_compat_static_local_in_extern_inline;
-      else if (getSourceManager().isInMainFile(D.getBeginLoc()))
-        DiagID = diag::ext_static_local_in_extern_inline_quiet;
       else
         DiagID = diag::ext_static_local_in_extern_inline;
 
