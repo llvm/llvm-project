@@ -358,6 +358,10 @@ SpecialCaseList::inSectionBlame(StringRef Section, StringRef Prefix,
   return NotFound;
 }
 
+bool SpecialCaseList::Section::matchName(StringRef Name) const {
+  return SectionMatcher.matchAny(Name);
+}
+
 const SpecialCaseList::Matcher *
 SpecialCaseList::Section::findMatcher(StringRef Prefix,
                                       StringRef Category) const {
@@ -392,6 +396,10 @@ StringRef SpecialCaseList::Section::getLongestMatch(StringRef Prefix,
   if (const Matcher *M = findMatcher(Prefix, Category))
     return M->match(Query).first;
   return {};
+}
+
+bool SpecialCaseList::Section::hasPrefix(StringRef Prefix) const {
+  return Entries.find(Prefix) != Entries.end();
 }
 
 } // namespace llvm
