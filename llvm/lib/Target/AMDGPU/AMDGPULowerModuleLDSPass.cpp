@@ -608,8 +608,6 @@ public:
             ? LDSToKernelsThatNeedToAccessItIndirectly[HybridModuleRoot]
             : EmptySet;
 
-    const size_t HybridModuleRootKernelsSize = HybridModuleRootKernels.size();
-
     for (auto &K : LDSToKernelsThatNeedToAccessItIndirectly) {
       // Each iteration of this loop assigns exactly one global variable to
       // exactly one of the implementation strategies.
@@ -649,8 +647,7 @@ public:
           ModuleScopeVariables.insert(GV);
         } else if (K.second.size() == 1) {
           KernelAccessVariables.insert(GV);
-        } else if (K.second.size() == HybridModuleRootKernelsSize &&
-                   set_is_subset(K.second, HybridModuleRootKernels)) {
+        } else if (K.second == HybridModuleRootKernels) {
           ModuleScopeVariables.insert(GV);
         } else {
           TableLookupVariables.insert(GV);

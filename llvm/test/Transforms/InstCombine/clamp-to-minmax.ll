@@ -172,10 +172,8 @@ define float @clamp_negative_wrong_const(float %x) {
 ; Like @clamp_test_1 but both are min
 define float @clamp_negative_same_op(float %x) {
 ; CHECK-LABEL: @clamp_negative_same_op(
-; CHECK-NEXT:    [[INNER_CMP_INV:%.*]] = fcmp fast oge float [[X:%.*]], 2.550000e+02
-; CHECK-NEXT:    [[INNER_SEL:%.*]] = select nnan ninf i1 [[INNER_CMP_INV]], float 2.550000e+02, float [[X]]
-; CHECK-NEXT:    [[OUTER_CMP:%.*]] = fcmp fast ult float [[X]], 1.000000e+00
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[OUTER_CMP]], float [[INNER_SEL]], float 1.000000e+00
+; CHECK-NEXT:    [[OUTER_CMP_INV:%.*]] = fcmp fast oge float [[X:%.*]], 1.000000e+00
+; CHECK-NEXT:    [[R:%.*]] = select nnan ninf i1 [[OUTER_CMP_INV]], float 1.000000e+00, float [[X]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %inner_cmp = fcmp fast ult float %x, 255.0

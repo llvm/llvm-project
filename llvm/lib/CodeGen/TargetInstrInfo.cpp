@@ -1657,12 +1657,6 @@ bool TargetInstrInfo::isReMaterializableImpl(
     // same virtual register, though.
     if (MO.isDef() && Reg != DefReg)
       return false;
-
-    // Don't allow any virtual-register uses. Rematting an instruction with
-    // virtual register uses would length the live ranges of the uses, which
-    // is not necessarily a good idea, certainly not "trivial".
-    if (MO.isUse())
-      return false;
   }
 
   // Everything checked out.

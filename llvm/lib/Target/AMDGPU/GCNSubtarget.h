@@ -60,7 +60,6 @@ private:
 
 protected:
   // Basic subtarget description.
-  Triple TargetTriple;
   AMDGPU::IsaInfo::AMDGPUTargetID TargetID;
   unsigned Gen = INVALID;
   InstrItineraryData InstrItins;
@@ -278,6 +277,8 @@ protected:
   bool HasLshlAddU64Inst = false;
   bool HasAddSubU64Insts = false;
   bool HasMadU32Inst = false;
+  bool HasAddMinMaxInsts = false;
+  bool HasPkAddMinMaxInsts = false;
   bool HasPointSampleAccel = false;
   bool HasLdsBarrierArriveAtomic = false;
   bool HasSetPrioIncWgInst = false;
@@ -287,6 +288,9 @@ protected:
   bool HasGloballyAddressableScratch = false;
 
   bool Has45BitNumRecordsBufferResource = false;
+
+  bool HasClusters = false;
+  bool RequiresWaitsBeforeSystemScopeStores = false;
 
   // Dummy feature to use for assembler in tablegen.
   bool FeatureDisable = false;
@@ -1566,10 +1570,10 @@ public:
   bool hasIntMinMax64() const { return GFX1250Insts; }
 
   // \returns true if the target has V_ADD_{MIN|MAX}_{I|U}32 instructions.
-  bool hasAddMinMaxInsts() const { return GFX1250Insts; }
+  bool hasAddMinMaxInsts() const { return HasAddMinMaxInsts; }
 
   // \returns true if the target has V_PK_ADD_{MIN|MAX}_{I|U}16 instructions.
-  bool hasPkAddMinMaxInsts() const { return GFX1250Insts; }
+  bool hasPkAddMinMaxInsts() const { return HasPkAddMinMaxInsts; }
 
   // \returns true if the target has V_PK_{MIN|MAX}3_{I|U}16 instructions.
   bool hasPkMinMax3Insts() const { return GFX1250Insts; }
@@ -1837,7 +1841,7 @@ public:
   }
 
   /// \returns true if the subtarget supports clusters of workgroups.
-  bool hasClusters() const { return GFX1250Insts; }
+  bool hasClusters() const { return HasClusters; }
 
   /// \returns true if the subtarget requires a wait for xcnt before atomic
   /// flat/global stores & rmw.
@@ -1857,6 +1861,10 @@ public:
   /// num_records.
   bool has45BitNumRecordsBufferResource() const {
     return Has45BitNumRecordsBufferResource;
+  }
+
+  bool requiresWaitsBeforeSystemScopeStores() const {
+    return RequiresWaitsBeforeSystemScopeStores;
   }
 };
 

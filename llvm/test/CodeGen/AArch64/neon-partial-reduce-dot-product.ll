@@ -1451,3 +1451,52 @@ define <4 x i32> @partial_reduce_shl_zext_non_const_rhs(<16 x i8> %l, <4 x i32> 
   %red = tail call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> %part, <16 x i32> %shift)
   ret <4 x i32> %red
 }
+
+define <2 x i32> @udot_v16i8tov2i32(<2 x i32> %acc, <16 x i8> %input) {
+; CHECK-NODOT-LABEL: udot_v16i8tov2i32:
+; CHECK-NODOT:       // %bb.0: // %entry
+; CHECK-NODOT-NEXT:    ushll v2.8h, v1.8b, #0
+; CHECK-NODOT-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NODOT-NEXT:    ushll2 v1.8h, v1.16b, #0
+; CHECK-NODOT-NEXT:    ushll v3.4s, v2.4h, #0
+; CHECK-NODOT-NEXT:    uaddw v0.4s, v0.4s, v2.4h
+; CHECK-NODOT-NEXT:    ushll2 v4.4s, v2.8h, #0
+; CHECK-NODOT-NEXT:    ext v2.16b, v2.16b, v2.16b, #8
+; CHECK-NODOT-NEXT:    ext v3.16b, v3.16b, v3.16b, #8
+; CHECK-NODOT-NEXT:    add v0.2s, v3.2s, v0.2s
+; CHECK-NODOT-NEXT:    ext v3.16b, v4.16b, v4.16b, #8
+; CHECK-NODOT-NEXT:    uaddw v0.4s, v0.4s, v2.4h
+; CHECK-NODOT-NEXT:    ushll v2.4s, v1.4h, #0
+; CHECK-NODOT-NEXT:    add v0.2s, v3.2s, v0.2s
+; CHECK-NODOT-NEXT:    ext v2.16b, v2.16b, v2.16b, #8
+; CHECK-NODOT-NEXT:    ushll2 v3.4s, v1.8h, #0
+; CHECK-NODOT-NEXT:    uaddw v0.4s, v0.4s, v1.4h
+; CHECK-NODOT-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-NODOT-NEXT:    add v0.2s, v2.2s, v0.2s
+; CHECK-NODOT-NEXT:    ext v2.16b, v3.16b, v3.16b, #8
+; CHECK-NODOT-NEXT:    uaddw v0.4s, v0.4s, v1.4h
+; CHECK-NODOT-NEXT:    add v0.2s, v2.2s, v0.2s
+; CHECK-NODOT-NEXT:    ret
+;
+; CHECK-DOT-LABEL: udot_v16i8tov2i32:
+; CHECK-DOT:       // %bb.0: // %entry
+; CHECK-DOT-NEXT:    movi v2.16b, #1
+; CHECK-DOT-NEXT:    fmov d0, d0
+; CHECK-DOT-NEXT:    udot v0.4s, v1.16b, v2.16b
+; CHECK-DOT-NEXT:    addp v0.4s, v0.4s, v0.4s
+; CHECK-DOT-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-DOT-NEXT:    ret
+;
+; CHECK-DOT-I8MM-LABEL: udot_v16i8tov2i32:
+; CHECK-DOT-I8MM:       // %bb.0: // %entry
+; CHECK-DOT-I8MM-NEXT:    movi v2.16b, #1
+; CHECK-DOT-I8MM-NEXT:    fmov d0, d0
+; CHECK-DOT-I8MM-NEXT:    udot v0.4s, v1.16b, v2.16b
+; CHECK-DOT-I8MM-NEXT:    addp v0.4s, v0.4s, v0.4s
+; CHECK-DOT-I8MM-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-DOT-I8MM-NEXT:    ret
+entry:
+    %input.wide = zext <16 x i8> %input to <16 x i32>
+    %partial.reduce = tail call <2 x i32> @llvm.vector.partial.reduce.add(<2 x i32> %acc, <16 x i32> %input.wide)
+    ret <2 x i32> %partial.reduce
+}

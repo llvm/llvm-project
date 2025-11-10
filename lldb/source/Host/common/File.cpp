@@ -81,18 +81,17 @@ File::GetStreamOpenModeFromOptions(File::OpenOptions options) {
 Expected<File::OpenOptions> File::GetOptionsFromMode(llvm::StringRef mode) {
   OpenOptions opts =
       llvm::StringSwitch<OpenOptions>(mode)
-          .Cases("r", "rb", eOpenOptionReadOnly)
-          .Cases("w", "wb", eOpenOptionWriteOnly)
-          .Cases("a", "ab",
-                 eOpenOptionWriteOnly | eOpenOptionAppend |
-                 eOpenOptionCanCreate)
-          .Cases("r+", "rb+", "r+b", eOpenOptionReadWrite)
-          .Cases("w+", "wb+", "w+b",
-                 eOpenOptionReadWrite | eOpenOptionCanCreate |
-                 eOpenOptionTruncate)
-          .Cases("a+", "ab+", "a+b",
-                 eOpenOptionReadWrite | eOpenOptionAppend |
-                     eOpenOptionCanCreate)
+          .Cases({"r", "rb"}, eOpenOptionReadOnly)
+          .Cases({"w", "wb"}, eOpenOptionWriteOnly)
+          .Cases({"a", "ab"}, eOpenOptionWriteOnly | eOpenOptionAppend |
+                                  eOpenOptionCanCreate)
+          .Cases({"r+", "rb+", "r+b"}, eOpenOptionReadWrite)
+          .Cases({"w+", "wb+", "w+b"}, eOpenOptionReadWrite |
+                                           eOpenOptionCanCreate |
+                                           eOpenOptionTruncate)
+          .Cases({"a+", "ab+", "a+b"}, eOpenOptionReadWrite |
+                                           eOpenOptionAppend |
+                                           eOpenOptionCanCreate)
           .Default(eOpenOptionInvalid);
   if (opts != eOpenOptionInvalid)
     return opts;

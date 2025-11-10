@@ -139,6 +139,13 @@ namespace llvm {
 }
 
 namespace llvm {
+namespace AArch64CMHPriorityHint {
+#define GET_CMHPRIORITYHINT_IMPL
+#include "AArch64GenSystemOperands.inc"
+} // namespace AArch64CMHPriorityHint
+} // namespace llvm
+
+namespace llvm {
   namespace AArch64SysReg {
 #define GET_SysRegsList_IMPL
 #include "AArch64GenSystemOperands.inc"
@@ -184,6 +191,39 @@ namespace llvm {
 #include "AArch64GenSystemOperands.inc"
   }
 }
+
+namespace llvm {
+namespace AArch64TLBIP {
+#define GET_TLBIPTable_IMPL
+#include "AArch64GenSystemOperands.inc"
+} // namespace AArch64TLBIP
+
+namespace AArch64MLBI {
+#define GET_MLBITable_IMPL
+#include "AArch64GenSystemOperands.inc"
+} // namespace AArch64MLBI
+} // namespace llvm
+
+namespace llvm {
+namespace AArch64GIC {
+#define GET_GICTable_IMPL
+#include "AArch64GenSystemOperands.inc"
+} // namespace AArch64GIC
+} // namespace llvm
+
+namespace llvm {
+namespace AArch64GICR {
+#define GET_GICRTable_IMPL
+#include "AArch64GenSystemOperands.inc"
+} // namespace AArch64GICR
+} // namespace llvm
+
+namespace llvm {
+namespace AArch64GSB {
+#define GET_GSBTable_IMPL
+#include "AArch64GenSystemOperands.inc"
+} // namespace AArch64GSB
+} // namespace llvm
 
 namespace llvm {
   namespace AArch64SVCR {

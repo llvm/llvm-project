@@ -1896,7 +1896,7 @@ bool CodeGenModule::MayDropFunctionReturn(const ASTContext &Context,
   // complex destructor or a non-trivially copyable type.
   if (const RecordType *RT =
           ReturnType.getCanonicalType()->getAsCanonical<RecordType>()) {
-    if (const auto *ClassDecl = dyn_cast<CXXRecordDecl>(RT->getOriginalDecl()))
+    if (const auto *ClassDecl = dyn_cast<CXXRecordDecl>(RT->getDecl()))
       return ClassDecl->hasTrivialDestructor();
   }
   return ReturnType.isTriviallyCopyableType(Context);
@@ -2012,13 +2012,6 @@ static void getTrivialDefaultFunctionAttributes(
       FuncAttrs.addAttribute("no-infs-fp-math", "true");
     if (LangOpts.NoHonorNaNs)
       FuncAttrs.addAttribute("no-nans-fp-math", "true");
-    if (LangOpts.AllowFPReassoc && LangOpts.AllowRecip &&
-        LangOpts.NoSignedZero && LangOpts.ApproxFunc &&
-        (LangOpts.getDefaultFPContractMode() ==
-             LangOptions::FPModeKind::FPM_Fast ||
-         LangOpts.getDefaultFPContractMode() ==
-             LangOptions::FPModeKind::FPM_FastHonorPragmas))
-      FuncAttrs.addAttribute("unsafe-fp-math", "true");
     if (CodeGenOpts.SoftFloat)
       FuncAttrs.addAttribute("use-soft-float", "true");
     FuncAttrs.addAttribute("stack-protector-buffer-size",
@@ -3018,8 +3011,7 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
 
   ArgNo = 0;
   if (AddedPotentialArgAccess && MemAttrForPtrArgs) {
-    llvm::FunctionType *FunctionType = FunctionType =
-        getTypes().GetFunctionType(FI);
+    llvm::FunctionType *FunctionType = getTypes().GetFunctionType(FI);
     for (CGFunctionInfo::const_arg_iterator I = FI.arg_begin(),
                                             E = FI.arg_end();
          I != E; ++I, ++ArgNo) {
@@ -3861,7 +3853,7 @@ static void setUsedBits(CodeGenModule &CGM, const RecordType *RTy, int Offset,
                         SmallVectorImpl<uint64_t> &Bits) {
   ASTContext &Context = CGM.getContext();
   int CharWidth = Context.getCharWidth();
-  const RecordDecl *RD = RTy->getOriginalDecl()->getDefinition();
+  const RecordDecl *RD = RTy->getDecl()->getDefinition();
   const ASTRecordLayout &ASTLayout = Context.getASTRecordLayout(RD);
   const CGRecordLayout &Layout = CGM.getTypes().getCGRecordLayout(RD);
 
@@ -5945,8 +5937,24 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
       CI->getCalledFunction()->getName().starts_with("_Z4sqrt")) {
     SetSqrtFPAccuracy(CI);
   }
-  if (callOrInvoke)
+  if (callOrInvoke) {
     *callOrInvoke = CI;
+    if (CGM.getCodeGenOpts().CallGraphSection) {
+      QualType CST;
+      if (TargetDecl && TargetDecl->getFunctionType())
+        CST = QualType(TargetDecl->getFunctionType(), 0);
+      else if (const auto *FPT =
+                   Callee.getAbstractInfo().getCalleeFunctionProtoType())
+        CST = QualType(FPT, 0);
+      else
+        llvm_unreachable(
+            "Cannot find the callee type to generate callee_type metadata.");
+
+      // Set type identifier metadata of indirect calls for call graph section.
+      if (!CST.isNull())
+        CGM.createCalleeTypeMetadataForIcall(CST, *callOrInvoke);
+    }
+  }
 
   // If this is within a function that has the guard(nocf) attribute and is an
   // indirect call, add the "guard_nocf" attribute to this call to indicate that
