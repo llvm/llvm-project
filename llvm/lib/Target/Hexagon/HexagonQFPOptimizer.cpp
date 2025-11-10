@@ -77,7 +77,6 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include <map>
-#include <vector>
 
 #define DEBUG_TYPE "hexagon-qfp-optimizer"
 

@@ -1288,8 +1288,9 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
   // Look through broadcast of single-scalar when used as select conditions; in
   // that case the scalar condition can be used directly.
   if (match(Def,
-            m_Select(m_Broadcast(m_VPValue(C)), m_VPValue(), m_VPValue())) &&
-      vputils::isSingleScalar(C)) {
+            m_Select(m_Broadcast(m_VPValue(C)), m_VPValue(), m_VPValue()))) {
+    assert(vputils::isSingleScalar(C) &&
+           "broadcast operand must be single-scalar");
     Def->setOperand(0, C);
     return;
   }
