@@ -58,14 +58,6 @@
 #include "RWMutex.hpp"
 #include "Unwind-EHABI.h"
 
-#if defined(__AARCH64EB__)
-#define MOVZ_X8_8B 0x681180d2
-#define SVC_0 0x010000d4
-#else
-#define MOVZ_X8_8B 0xd2801168
-#define SVC_0 0xd4000001
-#endif
-
 #if defined(_LIBUNWIND_SUPPORT_SEH_UNWIND)
 // Provide a definition for the DISPATCHER_CONTEXT struct for old (Win7 and
 // earlier) SDKs.
@@ -2811,6 +2803,21 @@ void UnwindCursor<A, R>::setInfoBasedOnIPRegister(bool isReturnAddress) {
 
 #if defined(_LIBUNWIND_CHECK_LINUX_SIGRETURN) &&                               \
     defined(_LIBUNWIND_TARGET_AARCH64)
+
+/*
+ * The linux sigreturn restorer stub will always have the form:
+ *
+ *  d2801168        movz    x8, #0x8b
+ *  d4000001        svc     #0x0
+ */
+#if defined(__AARCH64EB__)
+#define MOVZ_X8_8B 0x681180d2
+#define SVC_0 0x010000d4
+#else
+#define MOVZ_X8_8B 0xd2801168
+#define SVC_0 0xd4000001
+#endif
+
 template <typename A, typename R>
 bool UnwindCursor<A, R>::setInfoForSigReturn(Registers_arm64 &) {
   // Look for the sigreturn trampoline. The trampoline's body is two
