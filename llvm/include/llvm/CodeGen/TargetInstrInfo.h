@@ -436,7 +436,10 @@ public:
   /// MachineSink determines on its own whether the instruction is safe to sink;
   /// this gives the target a hook to override the default behavior with regards
   /// to which instructions should be sunk.
+  ///
+  /// shouldPostRASink() is used by PostRAMachineSink.
   virtual bool shouldSink(const MachineInstr &MI) const { return true; }
+  virtual bool shouldPostRASink(const MachineInstr &MI) const { return true; }
 
   /// Return false if the instruction should not be hoisted by MachineLICM.
   ///
