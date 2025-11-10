@@ -826,12 +826,12 @@ def Tosa_IntDivOp : Tosa_ElementwiseOp<"intdiv", [SameOperandsAndResultElementTy
   }];
 
   let arguments = (ins
-    Tosa_Int32Tensor:$input1,
-    Tosa_Int32Tensor:$input2
+    Tosa_Int32Or64Tensor:$input1,
+    Tosa_Int32Or64Tensor:$input2
   );
 
   let results = (outs
-    Tosa_Int32Tensor:$output
+    Tosa_Int32Or64Tensor:$output
   );
 
   list<Availability> availability = [
