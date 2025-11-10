@@ -2849,24 +2849,24 @@ def lookupPLBIByName : SearchIndex {
 }
 
 multiclass PLBI<string name, bits<3> op1, bits<4> crn, bits<3> op2,
-                bit needsreg> {
+                bit needsreg, bit optreg> {
   // Entries containing "IS" or "OS" allow optional regs when +tlbid enabled
   def : PLBIEntry<op1, crn, 0b0111, op2, name,         needsreg, 0>;
-  def : PLBIEntry<op1, crn, 0b0011, op2, name#"IS",    needsreg, 1>;
-  def : PLBIEntry<op1, crn, 0b0001, op2, name#"OS",    needsreg, 1>;
+  def : PLBIEntry<op1, crn, 0b0011, op2, name#"IS",    needsreg, optreg>;
+  def : PLBIEntry<op1, crn, 0b0001, op2, name#"OS",    needsreg, optreg>;
   def : PLBIEntry<op1, crn, 0b1111, op2, name#"NXS",   needsreg, 0>;
-  def : PLBIEntry<op1, crn, 0b1011, op2, name#"ISNXS", needsreg, 1>;
-  def : PLBIEntry<op1, crn, 0b1001, op2, name#"OSNXS", needsreg, 1>;
+  def : PLBIEntry<op1, crn, 0b1011, op2, name#"ISNXS", needsreg, optreg>;
+  def : PLBIEntry<op1, crn, 0b1001, op2, name#"OSNXS", needsreg, optreg>;
 }
 
 // CRm defines above six variants of each instruction. It is omitted here.
-//                     Op1    CRn     Op2    needsreg
-defm : PLBI<"ALLE3",   0b110, 0b1010, 0b000, 1>;
-defm : PLBI<"ALLE2",   0b100, 0b1010, 0b000, 0>;
-defm : PLBI<"ALLE1",   0b100, 0b1010, 0b100, 0>;
-defm : PLBI<"VMALLE1", 0b000, 0b1010, 0b000, 0>;
-defm : PLBI<"ASIDE1",  0b000, 0b1010, 0b010, 1>;
-defm : PLBI<"PERME3",  0b110, 0b1010, 0b001, 1>;
-defm : PLBI<"PERME2",  0b100, 0b1010, 0b001, 1>;
-defm : PLBI<"PERME1",  0b000, 0b1010, 0b001, 1>;
-defm : PLBI<"PERMAE1", 0b000, 0b1010, 0b011, 1>;
+//                     Op1    CRn     Op2    nr optreg
+defm : PLBI<"ALLE3",   0b110, 0b1010, 0b000, 0, 0>;
+defm : PLBI<"ALLE2",   0b100, 0b1010, 0b000, 0, 1>;
+defm : PLBI<"ALLE1",   0b100, 0b1010, 0b100, 0, 1>;
+defm : PLBI<"VMALLE1", 0b000, 0b1010, 0b000, 0, 1>;
+defm : PLBI<"ASIDE1",  0b000, 0b1010, 0b010, 1, 0>;
+defm : PLBI<"PERME3",  0b110, 0b1010, 0b001, 1, 0>;
+defm : PLBI<"PERME2",  0b100, 0b1010, 0b001, 1, 0>;
+defm : PLBI<"PERME1",  0b000, 0b1010, 0b001, 1, 0>;
+defm : PLBI<"PERMAE1", 0b000, 0b1010, 0b011, 1, 0>;
