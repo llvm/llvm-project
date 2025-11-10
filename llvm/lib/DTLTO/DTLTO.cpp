@@ -19,6 +19,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/LTO/LTO.h"
+#include "llvm/Object/Archive.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MemoryBufferRef.h"
@@ -76,9 +77,6 @@ SmallString<64> computeThinArchiveMemberPath(const StringRef ArchivePath,
   return MemberPath;
 }
 
-// Magic string identifying thin archive files.
-static constexpr StringLiteral THIN_ARCHIVE_MAGIC = "!<thin>\n";
-
 // Determines if a file at the given path is a thin archive file.
 //
 // This function uses a cache to avoid repeatedly reading the same file.
@@ -99,14 +97,15 @@ Expected<bool> isThinArchive(const StringRef ArchivePath) {
     return createStringError(inconvertibleErrorCode(),
                              "Failed to get file size from archive %s: %s",
                              ArchivePath.data(), EC.message().c_str());
-  if (FileSize < THIN_ARCHIVE_MAGIC.size())
+  if (FileSize < sizeof(object::ThinArchiveMagic))
     return createStringError(inconvertibleErrorCode(),
                              "Archive file size is too small %s",
                              ArchivePath.data());
 
   // Read only the first few bytes containing the magic signature.
   ErrorOr<std::unique_ptr<MemoryBuffer>> MemBufferOrError =
-      MemoryBuffer::getFileSlice(ArchivePath, THIN_ARCHIVE_MAGIC.size(), 0);
+      MemoryBuffer::getFileSlice(ArchivePath, sizeof(object::ThinArchiveMagic),
+                                 0);
 
   if ((EC = MemBufferOrError.getError()))
     return createStringError(inconvertibleErrorCode(),
@@ -119,7 +118,7 @@ Expected<bool> isThinArchive(const StringRef ArchivePath) {
                              "Unknown format for archive %s",
                              ArchivePath.data());
 
-  IsThin = MemBuf.starts_with(THIN_ARCHIVE_MAGIC);
+  IsThin = MemBuf.starts_with(object::ThinArchiveMagic);
 
   // Cache the result
   ArchiveFiles[ArchivePath] = IsThin;
