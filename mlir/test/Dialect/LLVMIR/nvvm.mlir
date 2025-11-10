@@ -36,17 +36,17 @@ func.func @nvvm_rcp(%arg0: f32) -> f32 {
   llvm.return %0 : f32
 }
 
-// CHECK-LABEL: @nvvm_lg2_f32
-func.func @nvvm_lg2_f32(%arg0: f32) -> f32 {
+// CHECK-LABEL: @nvvm_lg2_approx_f
+func.func @nvvm_lg2_approx_f(%arg0: f32) -> f32 {
   // CHECK: nvvm.lg2.approx.f %arg0 : f32
   %0 = nvvm.lg2.approx.f %arg0 : f32
   llvm.return %0 : f32
 }
 
-// CHECK-LABEL: @nvvm_lg2_ftz_f32
-func.func @nvvm_lg2_ftz_f32(%arg0: f32) -> f32 {
-  // CHECK: nvvm.lg2.approx.ftz.f %arg0 : f32
-  %0 = nvvm.lg2.approx.ftz.f %arg0 : f32
+// CHECK-LABEL: @nvvm_lg2_approx_ftz_f
+func.func @nvvm_lg2_approx_ftz_f(%arg0: f32) -> f32 {
+  // CHECK: nvvm.lg2.approx.f %arg0 {ftz = true} : f32
+  %0 = nvvm.lg2.approx.f %arg0 {ftz = true} : f32
   llvm.return %0 : f32
 }
 
