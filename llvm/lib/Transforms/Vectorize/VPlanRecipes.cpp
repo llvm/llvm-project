@@ -310,7 +310,6 @@ VPPartialReductionRecipe::computeCost(ElementCount VF,
                                       VPCostContext &Ctx) const {
   std::optional<unsigned> Opcode;
   VPValue *Op = getVecOp();
-  uint64_t MulConst;
 
   InstructionCost CondCost = 0;
   if (isConditional()) {
@@ -326,7 +325,7 @@ VPPartialReductionRecipe::computeCost(ElementCount VF,
   // should have been turned into a VPExpressionRecipe.
   // FIXME: Replace the entire function with this once all partial reduction
   // variants are bundled into VPExpressionRecipe.
-  if (!match(Op, m_Mul(m_VPValue(), m_ConstantInt(MulConst)))) {
+  if (!match(Op, m_Mul(m_VPValue(), m_ConstantInt()))) {
     auto *PhiType = Ctx.Types.inferScalarType(getChainOp());
     auto *InputType = Ctx.Types.inferScalarType(getVecOp());
     return CondCost + Ctx.TTI.getPartialReductionCost(
