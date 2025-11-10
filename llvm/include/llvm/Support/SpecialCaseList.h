@@ -209,7 +209,7 @@ protected:
 
     Section(Section &&) = default;
 
-    // Returns name of the section, it's entire string in [].
+    // Returns name of the section, its entire string in [].
     StringRef name() const { return SectionStr; }
 
     // Returns true of string 'Name' matches section name interpreted as a glob.
