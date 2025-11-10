@@ -1570,17 +1570,16 @@ private:
 std::optional<bool> ActualArgNeedsCopy(const ActualArgument *actual,
     const characteristics::DummyArgument *dummy, FoldingContext &fc,
     bool forCopyOut) {
-  constexpr auto unknown = std::nullopt;
   if (!actual) {
-    return unknown;
+    return std::nullopt;
   }
   if (actual->isAlternateReturn()) {
-    return unknown;
+    return std::nullopt;
   }
   const auto *dummyObj{dummy
           ? std::get_if<characteristics::DummyDataObject>(&dummy->u)
           : nullptr};
-  const bool forCopyIn = !forCopyOut;
+  const bool forCopyIn{!forCopyOut};
   if (!evaluate::IsVariable(*actual)) {
     // Expressions are copy-in, but not copy-out.
     return forCopyIn;
@@ -1608,7 +1607,7 @@ std::optional<bool> ActualArgNeedsCopy(const ActualArgument *actual,
     if (!check.HaveArrayOrAssumedRankArgs()) {
       return false;
     }
-    if (maybeContigActual) {
+    if (maybeContigActual.has_value()) {
       // We know whether actual arg is contiguous or not
       bool isContiguousActual{maybeContigActual.value()};
       bool actualArgNeedsCopy{
@@ -1620,13 +1619,13 @@ std::optional<bool> ActualArgNeedsCopy(const ActualArgument *actual,
       return check.DummyNeedsContiguity();
     }
   } else { // Implicit interface
-    if (maybeContigActual) {
+    if (maybeContigActual.has_value()) {
       // If known contiguous, don't copy in/out.
       // If known non-contiguous, copy in/out.
-      return !(maybeContigActual.value());
+      return !*maybeContigActual;
     }
   }
-  return unknown;
+  return std::nullopt;
 }
 
 } // namespace Fortran::evaluate
