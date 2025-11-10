@@ -185,7 +185,7 @@ def sort_blocks(blocks: List[Tuple[str, List[str]]]) -> List[List[str]]:
 
     Duplicates are preserved; merging is left to authors to handle manually.
     """
-    return [b for _, b in sorted(blocks, key=lambda kb: kb[0])]
+    return list(map(itemgetter(1), sorted(blocks, key=itemgetter(0)))
 
 
 def find_duplicate_entries(
