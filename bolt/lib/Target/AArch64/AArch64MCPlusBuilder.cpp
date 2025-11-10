@@ -164,11 +164,53 @@ public:
 
   bool isPush(const MCInst &Inst) const override {
     return isStoreToStack(Inst);
-  };
+  }
 
   bool isPop(const MCInst &Inst) const override {
     return isLoadFromStack(Inst);
-  };
+  }
+
+  // We look for instructions that load from stack or make stack pointer
+  // adjustment, and assume the basic block is an epilogue if and only if
+  // such instructions are present and also immediately precede the branch
+  // instruction that ends the basic block.
+  bool isEpilogue(const BinaryBasicBlock &BB) const override {
+    if (BB.succ_size())
+      return false;
+
+    bool SeenLoadFromStack = false;
+    bool SeenStackPointerAdjustment = false;
+    for (const MCInst &Instr : BB) {
+      // Skip CFI pseudo instruction.
+      if (isCFI(Instr))
+        continue;
+
+      bool IsPop = isPop(Instr);
+      // A load from stack instruction could do SP adjustment in pre-index or
+      // post-index form, which we can skip to check for epilogue recognition
+      // purpose.
+      bool IsSPAdj = (isADD(Instr) || isMOVW(Instr)) &&
+                     Instr.getOperand(0).isReg() &&
+                     Instr.getOperand(0).getReg() == AArch64::SP;
+      SeenLoadFromStack |= IsPop;
+      SeenStackPointerAdjustment |= IsSPAdj;
+
+      if (!SeenLoadFromStack && !SeenStackPointerAdjustment)
+        continue;
+      if (IsPop || IsSPAdj || isPAuthOnLR(Instr))
+        continue;
+      if (isReturn(Instr))
+        return true;
+      if (isBranch(Instr))
+        break;
+
+      // Any previously seen load from stack or stack adjustment instruction
+      // is definitely not part of epilogue code sequence, so reset these two.
+      SeenLoadFromStack = false;
+      SeenStackPointerAdjustment = false;
+    }
+    return SeenLoadFromStack || SeenStackPointerAdjustment;
+  }
 
   void createCall(MCInst &Inst, const MCSymbol *Target,
                   MCContext *Ctx) override {

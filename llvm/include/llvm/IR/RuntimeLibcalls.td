@@ -2333,7 +2333,7 @@ defset list<RuntimeLibcallImpl> PPCRuntimeLibcalls = {
 
 defset list<RuntimeLibcallImpl> PPC64AIXCallList = {
   def ___memcmp64 : RuntimeLibcallImpl<MEMCMP>;
-  def ___memmove64 : RuntimeLibcallImpl<MEMCPY>;
+  def ___memmove64 : RuntimeLibcallImpl<MEMMOVE>;
   def ___memset64 : RuntimeLibcallImpl<MEMSET>;
   def ___bzero64 : RuntimeLibcallImpl<BZERO>;
   def ___strlen64 : RuntimeLibcallImpl<STRLEN>;
