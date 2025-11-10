@@ -3,11 +3,11 @@
 ; optimization remark when the loop vectorizer is disabled by loop metadata.
 
 ; REQUIRES: asserts
-; RUN: opt -passes=loop-vectorize -pass-remarks=loop-vectorize \
+; RUN: opt -S -passes=loop-vectorize -pass-remarks=loop-vectorize \
 ; RUN:     -pass-remarks-missed=loop-vectorize \
-; RUN:     -pass-remarks-analysis=loop-vectorize -debug -disable-output \
-; RUN:     < %s 2>&1 | FileCheck --check-prefix=METADATA %s
-; METADATA-LABEL: disabled_loop_vectorization:
+; RUN:     -pass-remarks-analysis=loop-vectorize -debug \
+; RUN:     < %s 2>&1 | FileCheck --dump-input=always --check-prefix=METADATA %s
+; METADATA-LABEL: 'disabled_loop_vectorization' from <stdin>
 ; METADATA-NOT: LV: We can vectorize this loop
 ; METADATA-NOT: LV: Not vectorizing: loop hasDisableAllTransformsHint
 ; METADATA-NOT: LV: Not vectorizing: VectorizeOnlyWhenForced is set
@@ -26,12 +26,12 @@
 
 ; Strip metadata for FORCEDONLY run, keep it for METADATA run
 ; RUN: sed 's/,[[:space:]]*!llvm\.loop[[:space:]]*!0//' %s | \
-; RUN: opt -passes='loop-vectorize<vectorize-forced-only>' \
+; RUN: opt -S -passes='loop-vectorize<vectorize-forced-only>' \
 ; RUN:   -pass-remarks=loop-vectorize \
 ; RUN:   -pass-remarks-missed=loop-vectorize \
-; RUN:   -pass-remarks-analysis=loop-vectorize -debug -disable-output \
-; RUN:   2>&1 | FileCheck --check-prefix=FORCEDONLY %s
-; FORCEDONLY-LABEL: disabled_loop_vectorization:
+; RUN:   -pass-remarks-analysis=loop-vectorize -debug \
+; RUN:   2>&1 | FileCheck --dump-input=always --check-prefix=FORCEDONLY %s
+; FORCEDONLY-LABEL: 'disabled_loop_vectorization' from <stdin>
 ; FORCEDONLY-NOT: LV: We can vectorize this loop
 ; FORCEDONLY-NOT: LV: Not vectorizing: loop hasDisableAllTransformsHint
 ; FORCEDONLY-NOT: LV: Not vectorizing: #pragma vectorize disable
@@ -50,7 +50,7 @@ entry:
 loop:
   %iv = phi i64 [ 0, %entry ], [ %inc, %loop ]
   %arrayidx = getelementptr inbounds nuw double, ptr %src, i64 %iv
-  store double 0, ptr %arrayidx, align 8
+  store double 0.0, ptr %arrayidx, align 8
   %inc = add nuw nsw i64 %iv, 1
   %exitcond.not = icmp eq i64 %inc, 15
   br i1 %exitcond.not, label %exit, label %loop, !llvm.loop !0
@@ -67,12 +67,12 @@ exit:
 ; optimization remark when the loop vectorizer is disabled by loop metadata
 ; that requests no loop transformations.
 
-; RUN: opt -passes=loop-vectorize -pass-remarks=loop-vectorize \
+; RUN: opt -S -passes=loop-vectorize -pass-remarks=loop-vectorize \
 ; RUN:     -pass-remarks-missed=loop-vectorize \
-; RUN:     -pass-remarks-analysis=loop-vectorize -debug -disable-output \
+; RUN:     -pass-remarks-analysis=loop-vectorize -debug \
 ; RUN:     -force-vector-interleave=1 -force-vector-width=2 \
-; RUN:     < %s 2>&1 | FileCheck %s
-; CHECK-LABEL: disable_nonforced:
+; RUN:     < %s 2>&1 | FileCheck --dump-input=always %s
+; CHECK-LABEL: 'disable_nonforced' from <stdin>
 ; CHECK-NOT: LV: We can vectorize this loop
 ; CHECK-NOT: LV: Not vectorizing: #pragma vectorize disable.
 ; CHECK-NOT: LV: Not vectorizing: VectorizeOnlyWhenForced is set
