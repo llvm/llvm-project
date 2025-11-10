@@ -122,4 +122,19 @@ contains
 !CHECK: hlfir.copy_out
     call s7(c1, c2, n)
   end subroutine call_s7
+  subroutine call_s8()
+    interface
+      subroutine s8(buf)
+        ! IGNORE_TKR(C) takes precendence over CONTIGUOUS
+        !DIR$ IGNORE_TKR(C) buf
+        real, contiguous :: buf(:)
+      end subroutine
+    end interface
+    real a(10)
+!CHECK-LABEL: func.func @_QMtestPcall_s8
+!CHECK-NOT: hlfir.copy_in
+!CHECK: fir.call @_QPs8
+!CHECK-NOT: hlfir.copy_out
+    call s8(a(1:5:2))
+  end subroutine call_s8
 end module
