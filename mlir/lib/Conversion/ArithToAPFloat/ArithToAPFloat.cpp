@@ -54,8 +54,8 @@ struct ArithOpToAPFloatConversion final : OpRewritePattern<OpTy> {
                                 PatternRewriter &rewriter) const override {
     auto moduleOp = op->template getParentOfType<ModuleOp>();
     if (!moduleOp) {
-      op.emitError("arith op must be contained within a builtin.module");
-      return failure();
+      return rewriter.notifyMatchFailure(
+          op, "arith op must be contained within a builtin.module");
     }
     // Get APFloat function from runtime library.
     FailureOr<Operation *> fn =
