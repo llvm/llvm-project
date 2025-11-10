@@ -1758,6 +1758,9 @@ static Value *simplifyOperationIntoSelectOperand(Instruction &I, SelectInst *SI,
                                     m_Specific(Op), m_Value(V))) &&
                isGuaranteedNotToBeUndefOrPoison(V)) {
       // Pass
+    } else if (match(Op, m_ZExt(m_Specific(SI->getCondition())))) {
+      V = IsTrueArm ? ConstantInt::get(Op->getType(), 1)
+                    : ConstantInt::getNullValue(Op->getType());
     } else {
       V = Op;
     }
@@ -2261,11 +2264,11 @@ Instruction *InstCombinerImpl::foldBinopWithPhiOperands(BinaryOperator &BO) {
 }
 
 Instruction *InstCombinerImpl::foldBinOpIntoSelectOrPhi(BinaryOperator &I) {
-  if (!isa<Constant>(I.getOperand(1)))
-    return nullptr;
+  bool IsOtherParamConst = isa<Constant>(I.getOperand(1));
 
   if (auto *Sel = dyn_cast<SelectInst>(I.getOperand(0))) {
-    if (Instruction *NewSel = FoldOpIntoSelect(I, Sel))
+    if (Instruction *NewSel =
+            FoldOpIntoSelect(I, Sel, false, !IsOtherParamConst))
       return NewSel;
   } else if (auto *PN = dyn_cast<PHINode>(I.getOperand(0))) {
     if (Instruction *NewPhi = foldOpIntoPhi(I, PN))
@@ -5624,8 +5627,15 @@ bool InstCombinerImpl::run() {
 
       for (Use &U : I->uses()) {
         User *User = U.getUser();
-        if (User->isDroppable())
-          continue;
+        if (User->isDroppable()) {
+          // Do not sink if there are dereferenceable assumes that would be
+          // removed.
+          auto II = dyn_cast<IntrinsicInst>(User);
+          if (II->getIntrinsicID() != Intrinsic::assume ||
+              !II->getOperandBundle("dereferenceable"))
+            continue;
+        }
+
         if (NumUsers > MaxSinkNumUsers)
           return std::nullopt;
 
