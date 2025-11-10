@@ -20,14 +20,14 @@ parameters:
 steps:
 - ${{ if eq(parameters.enablePreviewMicrobuild, 'true') }}:
     - task: MicroBuildSigningPluginPreview@4
-      displayName: Install Preview MicroBuild plugin (Windows)
+      displayName: Install Preview MicroBuild plugin
       inputs: ${{ parameters.microbuildTaskInputs }}
       env: ${{ parameters.microbuildEnv }}
       continueOnError: ${{ parameters.continueOnError }}
       condition: ${{ parameters.condition }}
 - ${{ else }}:
   - task: MicroBuildSigningPlugin@4
-    displayName: Install MicroBuild plugin (Windows)
+    displayName: Install MicroBuild plugin
     inputs: ${{ parameters.microbuildTaskInputs }}
     env: ${{ parameters.microbuildEnv }}
     continueOnError: ${{ parameters.continueOnError }}

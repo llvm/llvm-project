@@ -140,7 +140,7 @@ jobs:
           /p:MaestroApiEndpoint=https://maestro.dot.net
           /p:OfficialBuildId=$(OfficialBuildId)
           -runtimeSourceFeed https://ci.dot.net/internal
-          -runtimeSourceFeedKey $(dotnetbuilds-internal-container-read-token-base64)
+          -runtimeSourceFeedKey '$(dotnetbuilds-internal-container-read-token-base64)'
 
       condition: ${{ parameters.condition }}
       continueOnError: ${{ parameters.continueOnError }}
@@ -189,6 +189,11 @@ jobs:
           BARBuildId: ${{ parameters.BARBuildId }}
           PromoteToChannelIds: ${{ parameters.PromoteToChannelIds }}
           is1ESPipeline: ${{ parameters.is1ESPipeline }}
+          
+      # Darc is targeting 8.0, so make sure it's installed
+      - task: UseDotNet@2
+        inputs:
+          version: 8.0.x
 
       - task: AzureCLI@2
         displayName: Publish Using Darc
@@ -205,8 +210,8 @@ jobs:
             -ArtifactsPublishingAdditionalParameters '${{ parameters.artifactsPublishingAdditionalParameters }}'
             -SymbolPublishingAdditionalParameters '${{ parameters.symbolPublishingAdditionalParameters }}'
             -SkipAssetsPublishing '${{ parameters.isAssetlessBuild }}'
-            -runtimeSourceFeed https://ci.dot.net/internal 
-            -runtimeSourceFeedKey $(dotnetbuilds-internal-container-read-token-base64)
+            -runtimeSourceFeed https://ci.dot.net/internal
+            -runtimeSourceFeedKey '$(dotnetbuilds-internal-container-read-token-base64)'
 
     - ${{ if eq(parameters.enablePublishBuildArtifacts, 'true') }}:
       - template: /eng/common/core-templates/steps/publish-logs.yml

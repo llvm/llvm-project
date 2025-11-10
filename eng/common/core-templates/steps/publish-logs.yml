@@ -26,10 +26,10 @@ steps:
     #  If the file exists - sensitive data for redaction will be sourced from it
     #  (single entry per line, lines starting with '# ' are considered comments and skipped)
     arguments: -InputPath '$(System.DefaultWorkingDirectory)/PostBuildLogs' 
-      -BinlogToolVersion ${{parameters.BinlogToolVersion}}
+      -BinlogToolVersion '${{parameters.BinlogToolVersion}}'
       -TokensFilePath '$(System.DefaultWorkingDirectory)/eng/BinlogSecretsRedactionFile.txt'
       -runtimeSourceFeed https://ci.dot.net/internal 
-      -runtimeSourceFeedKey $(dotnetbuilds-internal-container-read-token-base64)
+      -runtimeSourceFeedKey '$(dotnetbuilds-internal-container-read-token-base64)'
       '$(publishing-dnceng-devdiv-code-r-build-re)'
       '$(MaestroAccessToken)'
       '$(dn-bot-all-orgs-artifact-feeds-rw)'

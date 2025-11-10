@@ -13,7 +13,7 @@
     "dotnet": "10.0.100-rc.2.25502.107"
   },
   "msbuild-sdks": {
-    "Microsoft.DotNet.Arcade.Sdk": "11.0.0-beta.25531.1",
+    "Microsoft.DotNet.Arcade.Sdk": "11.0.0-beta.25560.1",
     "Microsoft.Build.Traversal": "3.4.0"
   }
 }

@@ -313,6 +313,10 @@ stages:
 
       - template: /eng/common/templates/steps/enable-internal-runtimes.yml
 
+      - task: UseDotNet@2
+        inputs:
+          version: 8.0.x
+
       - task: AzureCLI@2
         displayName: Publish Using Darc
         inputs:
@@ -330,4 +334,4 @@ stages:
               -SymbolPublishingAdditionalParameters '${{ parameters.symbolPublishingAdditionalParameters }}'
               -SkipAssetsPublishing '${{ parameters.isAssetlessBuild }}'
               -runtimeSourceFeed https://ci.dot.net/internal 
-              -runtimeSourceFeedKey $(dotnetbuilds-internal-container-read-token-base64)
+              -runtimeSourceFeedKey '$(dotnetbuilds-internal-container-read-token-base64)'
