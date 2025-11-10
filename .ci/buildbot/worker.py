@@ -276,12 +276,10 @@ def run(
         Always clobber the build artifacts, i.e. disable incremental builds.
     """
 
-
     scriptpath = os.path.abspath(scriptpath)
     llvmsrcroot = os.path.abspath(llvmsrcroot)
     stem = pathlib.Path(scriptpath).stem
     workdir_default = f"{stem}.workdir"
-
 
     jobs_default = None
     if jobs_env := os.environ.get("BUILDBOT_JOBS"):
@@ -333,7 +331,7 @@ def run(
     )
     args = parser.parse_args()
 
-    workdir = os.path.abspath( args.workdir)
+    workdir = os.path.abspath(args.workdir)
     clean = args.clean
     clobber = args.clobber
     cachefile = os.path.join(llvmsrcroot, args.cachefile)
@@ -347,7 +345,6 @@ def run(
         ):
             clobber = True
 
-
     # Safety check
     parentdir = os.path.dirname(scriptpath)
     while True:
@@ -360,7 +357,6 @@ def run(
             break
         parentdir = newparentdir
 
-
     w = Worker(
         args,
         clean=clean,
@@ -370,8 +366,6 @@ def run(
         cachefile=cachefile,
         llvmsrcroot=llvmsrcroot,
     )
-
-
 
     if clean:
         # Ensure that the cwd is not the directory we are going to delete. This would not work under Windows. We will chdir to workdir later anyway.
