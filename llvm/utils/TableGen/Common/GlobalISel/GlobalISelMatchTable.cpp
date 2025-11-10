@@ -396,7 +396,7 @@ void LLTCodeGen::emitCxxEnumValue(raw_ostream &OS) const {
       OS << "x86fp80";
     else if (ElemTy.isFloat())
       OS << "f" << ElemTy.getSizeInBits();
-    else if (Ty.isInteger())
+    else if (ElemTy.isInteger())
       OS << "i" << ElemTy.getSizeInBits();
     else
       OS << "s" << ElemTy.getSizeInBits();
