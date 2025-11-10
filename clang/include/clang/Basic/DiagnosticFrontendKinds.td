@@ -189,7 +189,7 @@ def err_verify_no_directives : Error<
 def err_verify_nonconst_addrspace : Error<
   "qualifier 'const' is needed for variables in address space '%0'">;
 def err_verify_message_partial_match
-    : Error<"diagnostic messages not fully matched: %0">;
+    : Error<"diagnostic messages of '%0' severity not fully matched: %1">;
 def err_verify_directive_out_of_order
     : Error<"all diagnostics were successfully matched, but out of order "
             "directives were found: %0">;

@@ -1025,7 +1025,8 @@ static bool IsFromSameFile(SourceManager &SM, SourceLocation DirectiveLoc,
 /// despite '-verify-strict' option being set.
 static unsigned
 PrintPartial(DiagnosticsEngine &Diags, SourceManager &SourceMgr,
-             llvm::SmallVector<std::pair<Directive *, std::string>> &DL) {
+             llvm::SmallVector<std::pair<Directive *, std::string>> &DL,
+             const char *Kind) {
   if (DL.empty())
     return 0;
 
@@ -1048,7 +1049,7 @@ PrintPartial(DiagnosticsEngine &Diags, SourceManager &SourceMgr,
   }
 
   Diags.Report(diag::err_verify_message_partial_match).setForceEmit()
-      << OS.str();
+      << Kind << OS.str();
   return DL.size();
 }
 
@@ -1105,7 +1106,7 @@ static unsigned CheckLists(DiagnosticsEngine &Diags, SourceManager &SourceMgr,
   unsigned num = PrintExpected(Diags, SourceMgr, LeftOnly, Label);
   if (!IgnoreUnexpected)
     num += PrintUnexpected(Diags, &SourceMgr, Right.begin(), Right.end(), Label);
-  num += PrintPartial(Diags, SourceMgr, IncompleteMatches);
+  num += PrintPartial(Diags, SourceMgr, IncompleteMatches, Label);
   return num;
 }
 
