@@ -35,10 +35,8 @@ define float @call_nofpclass_funcs_f32(ptr addrspace(1) %ptr) {
 ; CHECK-NEXT:    v_mov_b32_e32 v3, v0
 ; CHECK-NEXT:    v_mov_b32_e32 v0, v2
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
-; CHECK-NEXT:    v_max_f32_e32 v1, v3, v3
-; CHECK-NEXT:    v_max_f32_e32 v0, v0, v0
 ; CHECK-NEXT:    v_readlane_b32 s30, v4, 0
-; CHECK-NEXT:    v_min_f32_e32 v0, v1, v0
+; CHECK-NEXT:    v_min_f32_e32 v0, v3, v0
 ; CHECK-NEXT:    v_readlane_b32 s31, v4, 1
 ; CHECK-NEXT:    s_mov_b32 s32, s33
 ; CHECK-NEXT:    s_xor_saveexec_b64 s[4:5], -1
@@ -87,13 +85,9 @@ define <2 x float> @call_nofpclass_funcs_v2f32(ptr addrspace(1) %ptr) {
 ; CHECK-NEXT:    v_mov_b32_e32 v0, v3
 ; CHECK-NEXT:    v_mov_b32_e32 v1, v2
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
-; CHECK-NEXT:    v_max_f32_e32 v2, v4, v4
-; CHECK-NEXT:    v_max_f32_e32 v0, v0, v0
-; CHECK-NEXT:    v_min_f32_e32 v0, v2, v0
-; CHECK-NEXT:    v_max_f32_e32 v2, v5, v5
-; CHECK-NEXT:    v_max_f32_e32 v1, v1, v1
 ; CHECK-NEXT:    v_readlane_b32 s30, v6, 0
-; CHECK-NEXT:    v_min_f32_e32 v1, v2, v1
+; CHECK-NEXT:    v_min_f32_e32 v0, v4, v0
+; CHECK-NEXT:    v_min_f32_e32 v1, v5, v1
 ; CHECK-NEXT:    v_readlane_b32 s31, v6, 1
 ; CHECK-NEXT:    s_mov_b32 s32, s33
 ; CHECK-NEXT:    s_xor_saveexec_b64 s[4:5], -1
@@ -142,12 +136,10 @@ define double @call_nofpclass_funcs_f64(ptr addrspace(1) %ptr) {
 ; CHECK-NEXT:    v_mov_b32_e32 v0, v5
 ; CHECK-NEXT:    v_mov_b32_e32 v1, v4
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
-; CHECK-NEXT:    v_max_f64 v[2:3], v[2:3], v[2:3]
-; CHECK-NEXT:    v_max_f64 v[0:1], v[0:1], v[0:1]
 ; CHECK-NEXT:    v_readlane_b32 s30, v6, 0
+; CHECK-NEXT:    v_min_f64 v[0:1], v[2:3], v[0:1]
 ; CHECK-NEXT:    v_readlane_b32 s31, v6, 1
 ; CHECK-NEXT:    s_mov_b32 s32, s33
-; CHECK-NEXT:    v_min_f64 v[0:1], v[2:3], v[0:1]
 ; CHECK-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; CHECK-NEXT:    buffer_load_dword v6, off, s[0:3], s33 ; 4-byte Folded Reload
 ; CHECK-NEXT:    s_mov_b64 exec, s[4:5]
