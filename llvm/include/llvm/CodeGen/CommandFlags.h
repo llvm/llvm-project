@@ -154,10 +154,20 @@ LLVM_ABI bool getJMCInstrument();
 
 LLVM_ABI bool getXCOFFReadOnlyPointers();
 
+enum SaveStatsMode { None, Cwd, Obj };
+
+LLVM_ABI SaveStatsMode getSaveStats();
+
 /// Create this object with static storage to register codegen-related command
 /// line options.
 struct RegisterCodeGenFlags {
   LLVM_ABI RegisterCodeGenFlags();
+};
+
+/// Tools that support stats saving should create this object with static
+/// storage to register the --save-stats command line option.
+struct RegisterSaveStatsFlag {
+  LLVM_ABI RegisterSaveStatsFlag();
 };
 
 LLVM_ABI bool getEnableBBAddrMap();
@@ -202,6 +212,17 @@ LLVM_ABI bool getDefaultValueTrackingVariableLocations(const llvm::Triple &T);
 LLVM_ABI Expected<std::unique_ptr<TargetMachine>> createTargetMachineForTriple(
     StringRef TargetTriple,
     CodeGenOptLevel OptLevel = CodeGenOptLevel::Default);
+
+/// Conditionally enables the collection of LLVM statistics during the tool run,
+/// based on the value of the flag. Must be call before the tool run to actually
+/// collect data.
+LLVM_ABI int MaybeEnableStatistics();
+
+/// Conditionally saves the collected LLVM statistics to the recevied output
+/// file, based on the value of the flag. Shuould be called after the tool run,
+/// and must follow a call to `MaybeEnableStats()` to actually have data to
+/// write.
+LLVM_ABI int MaybeSaveStatistics(StringRef OutputFilename, StringRef ToolName);
 
 } // namespace codegen
 } // namespace llvm
