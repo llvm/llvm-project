@@ -731,7 +731,6 @@ bool SparcInstrInfo::optimizeCompareInstr(
   }
 
   bool IsSafe = false;
-  bool IsRegUsed = false;
   MachineBasicBlock::iterator I = MI;
   MachineBasicBlock::iterator C = CmpInstr;
   MachineBasicBlock::iterator E = CmpInstr.getParent()->end();
@@ -741,8 +740,6 @@ bool SparcInstrInfo::optimizeCompareInstr(
   while (++I != C) {
     if (I->modifiesRegister(SP::ICC, TRI) || I->readsRegister(SP::ICC, TRI))
       return false;
-    if (I->readsRegister(SrcReg, TRI))
-      IsRegUsed = true;
   }
 
   while (++I != E) {
@@ -768,17 +765,12 @@ bool SparcInstrInfo::optimizeCompareInstr(
 
   if (!IsSafe) {
     MachineBasicBlock *MBB = CmpInstr.getParent();
-    for (MachineBasicBlock::succ_iterator SI = MBB->succ_begin(),
-                                          SE = MBB->succ_end();
-         SI != SE; ++SI)
-      if ((*SI)->isLiveIn(SP::ICC))
-        return false;
+    if (any_of(MBB->successors(),
+               [](MachineBasicBlock *Succ) { return Succ->isLiveIn(SP::ICC); }))
+      return false;
   }
 
-  // If the SrcReg use by CmpInstr is a kill that means that it won't be used in
-  // any of the successor blocks. In that case it is safe to set the destination
-  // of MI to %g0.
-  if (!IsRegUsed && CmpInstr.getOperand(1).isKill())
+  if (MRI->hasOneNonDBGUse(SrcReg))
     MI->getOperand(0).setReg(SP::G0);
 
   MI->setDesc(get(NewOpcode));
