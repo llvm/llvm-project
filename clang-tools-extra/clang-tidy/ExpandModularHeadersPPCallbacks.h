@@ -41,9 +41,8 @@ namespace tooling {
 /// non-modular way.
 class ExpandModularHeadersPPCallbacks : public PPCallbacks {
 public:
-  ExpandModularHeadersPPCallbacks(
-      CompilerInstance *CI,
-      IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS);
+  ExpandModularHeadersPPCallbacks(CompilerInstance *CI,
+                                  llvm::vfs::OverlayFileSystem &OverlayFS);
   ~ExpandModularHeadersPPCallbacks() override;
 
   /// Returns the preprocessor that provides callbacks for the whole

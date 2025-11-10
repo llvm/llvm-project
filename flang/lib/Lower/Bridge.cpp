@@ -3275,6 +3275,9 @@ private:
             [&](const Fortran::parser::CompilerDirective::NoInline &) {
               attachInliningDirectiveToStmt(dir, &eval);
             },
+            [&](const Fortran::parser::CompilerDirective::Prefetch &prefetch) {
+              TODO(getCurrentLocation(), "!$dir prefetch");
+            },
             [&](const auto &) {}},
         dir.u);
   }

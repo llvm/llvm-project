@@ -47,9 +47,8 @@ void ContainerContainsCheck::registerMatchers(MatchFinder *Finder) {
   const auto StringNpos = anyOf(declRefExpr(to(varDecl(hasName("npos")))),
                                 memberExpr(member(hasName("npos"))));
 
-  auto AddSimpleMatcher = [&](auto Matcher) {
-    Finder->addMatcher(
-        traverse(TK_IgnoreUnlessSpelledInSource, std::move(Matcher)), this);
+  auto AddSimpleMatcher = [&](const auto &Matcher) {
+    Finder->addMatcher(traverse(TK_IgnoreUnlessSpelledInSource, Matcher), this);
   };
 
   // Find membership tests which use `count()`.

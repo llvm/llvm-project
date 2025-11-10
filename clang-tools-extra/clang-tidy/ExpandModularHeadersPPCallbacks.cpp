@@ -65,8 +65,7 @@ private:
 };
 
 ExpandModularHeadersPPCallbacks::ExpandModularHeadersPPCallbacks(
-    CompilerInstance *CI,
-    IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS)
+    CompilerInstance *CI, llvm::vfs::OverlayFileSystem &OverlayFS)
     : Recorder(std::make_unique<FileRecorder>()), Compiler(*CI),
       InMemoryFs(new llvm::vfs::InMemoryFileSystem),
       Sources(Compiler.getSourceManager()),
@@ -76,7 +75,7 @@ ExpandModularHeadersPPCallbacks::ExpandModularHeadersPPCallbacks(
       LangOpts(Compiler.getLangOpts()), HSOpts(Compiler.getHeaderSearchOpts()) {
   // Add a FileSystem containing the extra files needed in place of modular
   // headers.
-  OverlayFS->pushOverlay(InMemoryFs);
+  OverlayFS.pushOverlay(InMemoryFs);
 
   Diags.setSourceManager(&Sources);
   // FIXME: Investigate whatever is there better way to initialize DiagEngine

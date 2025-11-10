@@ -18,6 +18,7 @@
 #include <initializer_list>
 #include <optional>
 #include <string>
+#include <utility>
 
 // FixItHint - Let the docs script know that this class does provide fixits
 
@@ -217,11 +218,11 @@ utils::UseRangesCheck::ReplacerMap UseRangesCheck::getReplacerMap() const {
   const auto AddFromStd =
       [&](llvm::IntrusiveRefCntPtr<UseRangesCheck::Replacer> Replacer,
           std::initializer_list<StringRef> Names) {
-        AddFrom(Replacer, Names, "std");
+        AddFrom(std::move(Replacer), Names, "std");
       };
 
   const auto AddFromBoost =
-      [&](llvm::IntrusiveRefCntPtr<UseRangesCheck::Replacer> Replacer,
+      [&](const llvm::IntrusiveRefCntPtr<UseRangesCheck::Replacer> &Replacer,
           std::initializer_list<
               std::pair<StringRef, std::initializer_list<StringRef>>>
               NamespaceAndNames) {

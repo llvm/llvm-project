@@ -55,7 +55,7 @@ AST_MATCHER(Expr, hasSideEffects) {
 } // namespace
 
 static auto
-makeExprMatcher(ast_matchers::internal::Matcher<Expr> ArgumentMatcher,
+makeExprMatcher(const ast_matchers::internal::Matcher<Expr> &ArgumentMatcher,
                 ArrayRef<StringRef> MethodNames,
                 ArrayRef<StringRef> FreeNames) {
   return expr(
