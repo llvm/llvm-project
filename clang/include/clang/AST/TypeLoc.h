@@ -793,7 +793,7 @@ struct TagTypeLocInfo {
 class TagTypeLoc : public ConcreteTypeLoc<UnqualTypeLoc, TagTypeLoc, TagType,
                                           TagTypeLocInfo> {
 public:
-  TagDecl *getOriginalDecl() const { return getTypePtr()->getOriginalDecl(); }
+  TagDecl *getDecl() const { return getTypePtr()->getDecl(); }
 
   /// True if the tag was defined in this type specifier.
   bool isDefinition() const;
@@ -854,9 +854,7 @@ class RecordTypeLoc : public InheritingConcreteTypeLoc<TagTypeLoc,
                                                        RecordTypeLoc,
                                                        RecordType> {
 public:
-  RecordDecl *getOriginalDecl() const {
-    return getTypePtr()->getOriginalDecl();
-  }
+  RecordDecl *getDecl() const { return getTypePtr()->getDecl(); }
 };
 
 /// Wrapper for source info for enum types.
@@ -864,7 +862,7 @@ class EnumTypeLoc : public InheritingConcreteTypeLoc<TagTypeLoc,
                                                      EnumTypeLoc,
                                                      EnumType> {
 public:
-  EnumDecl *getOriginalDecl() const { return getTypePtr()->getOriginalDecl(); }
+  EnumDecl *getDecl() const { return getTypePtr()->getDecl(); }
 };
 
 /// Wrapper for source info for injected class names of class
@@ -873,9 +871,7 @@ class InjectedClassNameTypeLoc
     : public InheritingConcreteTypeLoc<TagTypeLoc, InjectedClassNameTypeLoc,
                                        InjectedClassNameType> {
 public:
-  CXXRecordDecl *getOriginalDecl() const {
-    return getTypePtr()->getOriginalDecl();
-  }
+  CXXRecordDecl *getDecl() const { return getTypePtr()->getDecl(); }
 };
 
 /// Wrapper for template type parameters.

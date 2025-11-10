@@ -21,6 +21,7 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/HLSLResource.h"
 #include "clang/AST/Type.h"
+#include "clang/AST/TypeBase.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/DiagnosticSema.h"
@@ -770,23 +771,107 @@ void SemaHLSL::ActOnTopLevelFunction(FunctionDecl *FD) {
   }
 }
 
-bool SemaHLSL::isSemanticValid(FunctionDecl *FD, DeclaratorDecl *D) {
-  const auto *AnnotationAttr = D->getAttr<HLSLAnnotationAttr>();
-  if (AnnotationAttr) {
-    CheckSemanticAnnotation(FD, D, AnnotationAttr);
-    return true;
+HLSLSemanticAttr *SemaHLSL::createSemantic(const SemanticInfo &Info,
+                                           DeclaratorDecl *TargetDecl) {
+  std::string SemanticName = Info.Semantic->getAttrName()->getName().upper();
+
+  if (dyn_cast<HLSLUserSemanticAttr>(Info.Semantic))
+    return createSemanticAttr<HLSLUserSemanticAttr>(*Info.Semantic, TargetDecl,
+                                                    Info.Index);
+
+  if (SemanticName == "SV_DISPATCHTHREADID") {
+    return createSemanticAttr<HLSLSV_DispatchThreadIDAttr>(
+        *Info.Semantic, TargetDecl, Info.Index);
+  } else if (SemanticName == "SV_GROUPINDEX") {
+    return createSemanticAttr<HLSLSV_GroupIndexAttr>(*Info.Semantic, TargetDecl,
+                                                     Info.Index);
+  } else if (SemanticName == "SV_GROUPTHREADID") {
+    return createSemanticAttr<HLSLSV_GroupThreadIDAttr>(*Info.Semantic,
+                                                        TargetDecl, Info.Index);
+  } else if (SemanticName == "SV_GROUPID") {
+    return createSemanticAttr<HLSLSV_GroupIDAttr>(*Info.Semantic, TargetDecl,
+                                                  Info.Index);
+  } else if (SemanticName == "SV_POSITION") {
+    return createSemanticAttr<HLSLSV_PositionAttr>(*Info.Semantic, TargetDecl,
+                                                   Info.Index);
+  } else
+    Diag(Info.Semantic->getLoc(), diag::err_hlsl_unknown_semantic)
+        << *Info.Semantic;
+
+  return nullptr;
+}
+
+bool SemaHLSL::determineActiveSemanticOnScalar(
+    FunctionDecl *FD, DeclaratorDecl *D, SemanticInfo &ActiveSemantic,
+    llvm::StringSet<> &ActiveInputSemantics) {
+
+  if (ActiveSemantic.Semantic == nullptr) {
+    ActiveSemantic.Semantic = D->getAttr<HLSLSemanticAttr>();
+    if (ActiveSemantic.Semantic &&
+        ActiveSemantic.Semantic->isSemanticIndexExplicit())
+      ActiveSemantic.Index = ActiveSemantic.Semantic->getSemanticIndex();
+  }
+
+  if (!ActiveSemantic.Semantic) {
+    Diag(D->getLocation(), diag::err_hlsl_missing_semantic_annotation);
+    return false;
+  }
+
+  auto *A = createSemantic(ActiveSemantic, D);
+  if (!A)
+    return false;
+
+  checkSemanticAnnotation(FD, D, A);
+  FD->addAttr(A);
+
+  unsigned Location = ActiveSemantic.Index.value_or(0);
+
+  const ConstantArrayType *AT = dyn_cast<ConstantArrayType>(D->getType());
+  unsigned ElementCount = AT ? AT->getZExtSize() : 1;
+  ActiveSemantic.Index = Location + ElementCount;
+
+  Twine BaseName = Twine(ActiveSemantic.Semantic->getAttrName()->getName());
+  for (unsigned I = 0; I < ElementCount; ++I) {
+    Twine VariableName = BaseName.concat(Twine(Location + I));
+
+    auto [_, Inserted] = ActiveInputSemantics.insert(VariableName.str());
+    if (!Inserted) {
+      Diag(D->getLocation(), diag::err_hlsl_semantic_index_overlap)
+          << VariableName.str();
+      return false;
+    }
+  }
+
+  return true;
+}
+
+bool SemaHLSL::determineActiveSemantic(
+    FunctionDecl *FD, DeclaratorDecl *D, SemanticInfo &ActiveSemantic,
+    llvm::StringSet<> &ActiveInputSemantics) {
+  if (ActiveSemantic.Semantic == nullptr) {
+    ActiveSemantic.Semantic = D->getAttr<HLSLSemanticAttr>();
+    if (ActiveSemantic.Semantic &&
+        ActiveSemantic.Semantic->isSemanticIndexExplicit())
+      ActiveSemantic.Index = ActiveSemantic.Semantic->getSemanticIndex();
   }
 
   const Type *T = D->getType()->getUnqualifiedDesugaredType();
   const RecordType *RT = dyn_cast<RecordType>(T);
   if (!RT)
-    return false;
+    return determineActiveSemanticOnScalar(FD, D, ActiveSemantic,
+                                           ActiveInputSemantics);
 
-  const RecordDecl *RD = RT->getOriginalDecl();
+  const RecordDecl *RD = RT->getDecl();
   for (FieldDecl *Field : RD->fields()) {
-    if (!isSemanticValid(FD, Field))
+    SemanticInfo Info = ActiveSemantic;
+    if (!determineActiveSemantic(FD, Field, Info, ActiveInputSemantics)) {
+      Diag(Field->getLocation(), diag::note_hlsl_semantic_used_here) << Field;
       return false;
+    }
+    if (ActiveSemantic.Semantic)
+      ActiveSemantic = Info;
   }
+
   return true;
 }
 
@@ -852,9 +937,14 @@ void SemaHLSL::CheckEntryPoint(FunctionDecl *FD) {
     llvm_unreachable("Unhandled environment in triple");
   }
 
+  llvm::StringSet<> ActiveInputSemantics;
   for (ParmVarDecl *Param : FD->parameters()) {
-    if (!isSemanticValid(FD, Param)) {
-      Diag(FD->getLocation(), diag::err_hlsl_missing_semantic_annotation);
+    SemanticInfo ActiveSemantic;
+    ActiveSemantic.Semantic = nullptr;
+    ActiveSemantic.Index = std::nullopt;
+
+    if (!determineActiveSemantic(FD, Param, ActiveSemantic,
+                                 ActiveInputSemantics)) {
       Diag(Param->getLocation(), diag::note_previous_decl) << Param;
       FD->setInvalidDecl();
     }
@@ -862,31 +952,33 @@ void SemaHLSL::CheckEntryPoint(FunctionDecl *FD) {
   // FIXME: Verify return type semantic annotation.
 }
 
-void SemaHLSL::CheckSemanticAnnotation(
-    FunctionDecl *EntryPoint, const Decl *Param,
-    const HLSLAnnotationAttr *AnnotationAttr) {
+void SemaHLSL::checkSemanticAnnotation(FunctionDecl *EntryPoint,
+                                       const Decl *Param,
+                                       const HLSLSemanticAttr *SemanticAttr) {
   auto *ShaderAttr = EntryPoint->getAttr<HLSLShaderAttr>();
   assert(ShaderAttr && "Entry point has no shader attribute");
   llvm::Triple::EnvironmentType ST = ShaderAttr->getType();
 
-  switch (AnnotationAttr->getKind()) {
+  switch (SemanticAttr->getKind()) {
   case attr::HLSLSV_DispatchThreadID:
   case attr::HLSLSV_GroupIndex:
   case attr::HLSLSV_GroupThreadID:
   case attr::HLSLSV_GroupID:
     if (ST == llvm::Triple::Compute)
       return;
-    DiagnoseAttrStageMismatch(AnnotationAttr, ST, {llvm::Triple::Compute});
+    DiagnoseAttrStageMismatch(SemanticAttr, ST, {llvm::Triple::Compute});
     break;
   case attr::HLSLSV_Position:
     // TODO(#143523): allow use on other shader types & output once the overall
     // semantic logic is implemented.
     if (ST == llvm::Triple::Pixel)
       return;
-    DiagnoseAttrStageMismatch(AnnotationAttr, ST, {llvm::Triple::Pixel});
+    DiagnoseAttrStageMismatch(SemanticAttr, ST, {llvm::Triple::Pixel});
     break;
+  case attr::HLSLUserSemantic:
+    return;
   default:
-    llvm_unreachable("Unknown HLSLAnnotationAttr");
+    llvm_unreachable("Unknown SemanticAttr");
   }
 }
 
@@ -1661,28 +1753,30 @@ void SemaHLSL::diagnoseSystemSemanticAttr(Decl *D, const ParsedAttr &AL,
     diagnoseInputIDType(ValueType, AL);
     if (IsOutput)
       Diag(AL.getLoc(), diag::err_hlsl_semantic_output_not_supported) << AL;
-    Attribute = createSemanticAttr<HLSLSV_DispatchThreadIDAttr>(AL, Index);
+    Attribute =
+        createSemanticAttr<HLSLSV_DispatchThreadIDAttr>(AL, nullptr, Index);
   } else if (SemanticName == "SV_GROUPINDEX") {
     if (IsOutput)
       Diag(AL.getLoc(), diag::err_hlsl_semantic_output_not_supported) << AL;
-    Attribute = createSemanticAttr<HLSLSV_GroupIndexAttr>(AL, Index);
+    Attribute = createSemanticAttr<HLSLSV_GroupIndexAttr>(AL, nullptr, Index);
   } else if (SemanticName == "SV_GROUPTHREADID") {
     diagnoseInputIDType(ValueType, AL);
     if (IsOutput)
       Diag(AL.getLoc(), diag::err_hlsl_semantic_output_not_supported) << AL;
-    Attribute = createSemanticAttr<HLSLSV_GroupThreadIDAttr>(AL, Index);
+    Attribute =
+        createSemanticAttr<HLSLSV_GroupThreadIDAttr>(AL, nullptr, Index);
   } else if (SemanticName == "SV_GROUPID") {
     diagnoseInputIDType(ValueType, AL);
     if (IsOutput)
       Diag(AL.getLoc(), diag::err_hlsl_semantic_output_not_supported) << AL;
-    Attribute = createSemanticAttr<HLSLSV_GroupIDAttr>(AL, Index);
+    Attribute = createSemanticAttr<HLSLSV_GroupIDAttr>(AL, nullptr, Index);
   } else if (SemanticName == "SV_POSITION") {
     const auto *VT = ValueType->getAs<VectorType>();
     if (!ValueType->hasFloatingRepresentation() ||
         (VT && VT->getNumElements() > 4))
       Diag(AL.getLoc(), diag::err_hlsl_attr_invalid_type)
           << AL << "float/float1/float2/float3/float4";
-    Attribute = createSemanticAttr<HLSLSV_PositionAttr>(AL, Index);
+    Attribute = createSemanticAttr<HLSLSV_PositionAttr>(AL, nullptr, Index);
   } else
     Diag(AL.getLoc(), diag::err_hlsl_unknown_semantic) << AL;
 
@@ -1702,7 +1796,7 @@ void SemaHLSL::handleSemanticAttr(Decl *D, const ParsedAttr &AL) {
   if (AL.getAttrName()->getName().starts_with_insensitive("SV_"))
     diagnoseSystemSemanticAttr(D, AL, Index);
   else
-    Diag(AL.getLoc(), diag::err_hlsl_unknown_semantic) << AL;
+    D->addAttr(createSemanticAttr<HLSLUserSemanticAttr>(AL, nullptr, Index));
 }
 
 void SemaHLSL::handlePackOffsetAttr(Decl *D, const ParsedAttr &AL) {
@@ -1986,7 +2080,7 @@ SemaHLSL::TakeLocForHLSLAttribute(const HLSLAttributedResourceType *RT) {
 // requirements and adds them to Bindings
 void SemaHLSL::collectResourceBindingsOnUserRecordDecl(const VarDecl *VD,
                                                        const RecordType *RT) {
-  const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
+  const RecordDecl *RD = RT->getDecl()->getDefinitionOrSelf();
   for (FieldDecl *FD : RD->fields()) {
     const Type *Ty = FD->getType()->getUnqualifiedDesugaredType();
 
@@ -2738,6 +2832,23 @@ static bool CheckUnsignedIntRepresentation(Sema *S, SourceLocation Loc,
   return false;
 }
 
+static bool CheckExpectedBitWidth(Sema *S, CallExpr *TheCall,
+                                  unsigned ArgOrdinal, unsigned Width) {
+  QualType ArgTy = TheCall->getArg(0)->getType();
+  if (auto *VTy = ArgTy->getAs<VectorType>())
+    ArgTy = VTy->getElementType();
+  // ensure arg type has expected bit width
+  uint64_t ElementBitCount =
+      S->getASTContext().getTypeSizeInChars(ArgTy).getQuantity() * 8;
+  if (ElementBitCount != Width) {
+    S->Diag(TheCall->getArg(0)->getBeginLoc(),
+            diag::err_integer_incorrect_bit_count)
+        << Width << ElementBitCount;
+    return true;
+  }
+  return false;
+}
+
 static void SetElementTypeAsReturnType(Sema *S, CallExpr *TheCall,
                                        QualType ReturnType) {
   auto *VecTyA = TheCall->getArg(0)->getType()->getAs<VectorType>();
@@ -2897,24 +3008,16 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
                                    CheckUnsignedIntVecRepresentation))
       return true;
 
-    auto *VTy = TheCall->getArg(0)->getType()->getAs<VectorType>();
     // ensure arg integers are 32-bits
-    uint64_t ElementBitCount = getASTContext()
-                                   .getTypeSizeInChars(VTy->getElementType())
-                                   .getQuantity() *
-                               8;
-    if (ElementBitCount != 32) {
-      SemaRef.Diag(TheCall->getBeginLoc(),
-                   diag::err_integer_incorrect_bit_count)
-          << 32 << ElementBitCount;
+    if (CheckExpectedBitWidth(&SemaRef, TheCall, 0, 32))
       return true;
-    }
 
     // ensure both args are vectors of total bit size of a multiple of 64
+    auto *VTy = TheCall->getArg(0)->getType()->getAs<VectorType>();
     int NumElementsArg = VTy->getNumElements();
     if (NumElementsArg != 2 && NumElementsArg != 4) {
       SemaRef.Diag(TheCall->getBeginLoc(), diag::err_vector_incorrect_bit_count)
-          << 1 /*a multiple of*/ << 64 << NumElementsArg * ElementBitCount;
+          << 1 /*a multiple of*/ << 64 << NumElementsArg * 32;
       return true;
     }
 
@@ -3004,6 +3107,24 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
         MainResType->getWrappedType(), MainResType->getContainedType(),
         MainAttrs);
     TheCall->setType(CounterHandleTy);
+    break;
+  }
+  case Builtin::BI__builtin_hlsl_resource_getdimensions_x: {
+    ASTContext &AST = SemaRef.getASTContext();
+    if (SemaRef.checkArgCount(TheCall, 2) ||
+        CheckResourceHandle(&SemaRef, TheCall, 0) ||
+        CheckArgTypeMatches(&SemaRef, TheCall->getArg(1), AST.UnsignedIntTy) ||
+        CheckModifiableLValue(&SemaRef, TheCall, 1))
+      return true;
+    break;
+  }
+  case Builtin::BI__builtin_hlsl_resource_getstride: {
+    ASTContext &AST = SemaRef.getASTContext();
+    if (SemaRef.checkArgCount(TheCall, 2) ||
+        CheckResourceHandle(&SemaRef, TheCall, 0) ||
+        CheckArgTypeMatches(&SemaRef, TheCall->getArg(1), AST.UnsignedIntTy) ||
+        CheckModifiableLValue(&SemaRef, TheCall, 1))
+      return true;
     break;
   }
   case Builtin::BI__builtin_hlsl_and:
@@ -3197,6 +3318,7 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     break;
   }
   case Builtin::BI__builtin_hlsl_wave_active_max:
+  case Builtin::BI__builtin_hlsl_wave_active_min:
   case Builtin::BI__builtin_hlsl_wave_active_sum: {
     if (SemaRef.checkArgCount(TheCall, 1))
       return true;
@@ -3212,7 +3334,7 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     break;
   }
   // Note these are llvm builtins that we want to catch invalid intrinsic
-  // generation. Normal handling of these builitns will occur elsewhere.
+  // generation. Normal handling of these builtins will occur elsewhere.
   case Builtin::BI__builtin_elementwise_bitreverse: {
     // does not include a check for number of arguments
     // because that is done previously
@@ -3322,6 +3444,30 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     }
     break;
   }
+  case Builtin::BI__builtin_hlsl_elementwise_f16tof32: {
+    if (SemaRef.checkArgCount(TheCall, 1))
+      return true;
+    if (CheckAllArgTypesAreCorrect(&SemaRef, TheCall,
+                                   CheckUnsignedIntRepresentation))
+      return true;
+    // ensure arg integers are 32 bits
+    if (CheckExpectedBitWidth(&SemaRef, TheCall, 0, 32))
+      return true;
+    // check it wasn't a bool type
+    QualType ArgTy = TheCall->getArg(0)->getType();
+    if (auto *VTy = ArgTy->getAs<VectorType>())
+      ArgTy = VTy->getElementType();
+    if (ArgTy->isBooleanType()) {
+      SemaRef.Diag(TheCall->getArg(0)->getBeginLoc(),
+                   diag::err_builtin_invalid_arg_type)
+          << 1 << /* scalar or vector of */ 5 << /* unsigned int */ 3
+          << /* no fp */ 0 << TheCall->getArg(0)->getType();
+      return true;
+    }
+
+    SetElementTypeAsReturnType(&SemaRef, TheCall, getASTContext().FloatTy);
+    break;
+  }
   }
   return false;
 }
@@ -3349,6 +3495,11 @@ static void BuildFlattenedTypeList(QualType BaseTy,
     // add directly to the list instead of to the WorkList.
     if (const auto *VT = dyn_cast<VectorType>(T)) {
       List.insert(List.end(), VT->getNumElements(), VT->getElementType());
+      continue;
+    }
+    if (const auto *MT = dyn_cast<ConstantMatrixType>(T)) {
+      List.insert(List.end(), MT->getNumElementsFlattened(),
+                  MT->getElementType());
       continue;
     }
     if (const auto *RD = T->getAsCXXRecordDecl()) {
@@ -4149,6 +4300,32 @@ class InitListTransformer {
       }
       return true;
     }
+    if (auto *MTy = Ty->getAs<ConstantMatrixType>()) {
+      unsigned Rows = MTy->getNumRows();
+      unsigned Cols = MTy->getNumColumns();
+      QualType ElemTy = MTy->getElementType();
+
+      for (unsigned C = 0; C < Cols; ++C) {
+        for (unsigned R = 0; R < Rows; ++R) {
+          // row index literal
+          Expr *RowIdx = IntegerLiteral::Create(
+              Ctx, llvm::APInt(Ctx.getIntWidth(Ctx.IntTy), R), Ctx.IntTy,
+              E->getBeginLoc());
+          // column index literal
+          Expr *ColIdx = IntegerLiteral::Create(
+              Ctx, llvm::APInt(Ctx.getIntWidth(Ctx.IntTy), C), Ctx.IntTy,
+              E->getBeginLoc());
+          ExprResult ElExpr = S.CreateBuiltinMatrixSubscriptExpr(
+              E, RowIdx, ColIdx, E->getEndLoc());
+          if (ElExpr.isInvalid())
+            return false;
+          if (!castInitializer(ElExpr.get()))
+            return false;
+          ElExpr.get()->setType(ElemTy);
+        }
+      }
+      return true;
+    }
 
     if (auto *ArrTy = dyn_cast<ConstantArrayType>(Ty.getTypePtr())) {
       uint64_t Size = ArrTy->getZExtSize();
@@ -4202,14 +4379,17 @@ class InitListTransformer {
       return *(ArgIt++);
 
     llvm::SmallVector<Expr *> Inits;
-    assert(!isa<MatrixType>(Ty) && "Matrix types not yet supported in HLSL");
     Ty = Ty.getDesugaredType(Ctx);
-    if (Ty->isVectorType() || Ty->isConstantArrayType()) {
+    if (Ty->isVectorType() || Ty->isConstantArrayType() ||
+        Ty->isConstantMatrixType()) {
       QualType ElTy;
       uint64_t Size = 0;
       if (auto *ATy = Ty->getAs<VectorType>()) {
         ElTy = ATy->getElementType();
         Size = ATy->getNumElements();
+      } else if (auto *CMTy = Ty->getAs<ConstantMatrixType>()) {
+        ElTy = CMTy->getElementType();
+        Size = CMTy->getNumElementsFlattened();
       } else {
         auto *VTy = cast<ConstantArrayType>(Ty.getTypePtr());
         ElTy = VTy->getElementType();

@@ -12,8 +12,9 @@
 #include "llvm/IR/Function.h"
 
 namespace llvm {
-
-class AArch64TargetLowering;
+namespace RTLIB {
+struct RuntimeLibcallsInfo;
+}
 
 class Function;
 class CallBase;
@@ -52,14 +53,14 @@ public:
 
   SMEAttrs() = default;
   SMEAttrs(unsigned Mask) { set(Mask); }
-  SMEAttrs(const Function &F, const AArch64TargetLowering *TLI = nullptr)
+  SMEAttrs(const Function &F, const RTLIB::RuntimeLibcallsInfo *RTLCI = nullptr)
       : SMEAttrs(F.getAttributes()) {
-    if (TLI)
-      addKnownFunctionAttrs(F.getName(), *TLI);
+    if (RTLCI)
+      addKnownFunctionAttrs(F.getName(), *RTLCI);
   }
   SMEAttrs(const AttributeList &L);
-  SMEAttrs(StringRef FuncName, const AArch64TargetLowering &TLI) {
-    addKnownFunctionAttrs(FuncName, TLI);
+  SMEAttrs(StringRef FuncName, const RTLIB::RuntimeLibcallsInfo &RTLCI) {
+    addKnownFunctionAttrs(FuncName, RTLCI);
   };
 
   void set(unsigned M, bool Enable = true) {
@@ -157,7 +158,7 @@ public:
 
 private:
   void addKnownFunctionAttrs(StringRef FuncName,
-                             const AArch64TargetLowering &TLI);
+                             const RTLIB::RuntimeLibcallsInfo &RTLCI);
   void validate() const;
 };
 
@@ -175,7 +176,7 @@ public:
                SMEAttrs Callsite = SMEAttrs::Normal)
       : CallerFn(Caller), CalledFn(Callee), Callsite(Callsite) {}
 
-  SMECallAttrs(const CallBase &CB, const AArch64TargetLowering *TLI);
+  SMECallAttrs(const CallBase &CB, const RTLIB::RuntimeLibcallsInfo *RTLCI);
 
   SMEAttrs &caller() { return CallerFn; }
   SMEAttrs &callee() { return IsIndirect ? Callsite : CalledFn; }

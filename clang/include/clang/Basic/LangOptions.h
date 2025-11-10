@@ -25,6 +25,7 @@
 #include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/DXContainer.h"
+#include "llvm/Support/AllocToken.h"
 #include "llvm/TargetParser/Triple.h"
 #include <optional>
 #include <string>
@@ -565,6 +566,13 @@ public:
   bool AtomicFineGrainedMemory = false;
   bool AtomicIgnoreDenormalMode = false;
 
+  /// Maximum number of allocation tokens (0 = no max), nullopt if none set (use
+  /// target default).
+  std::optional<uint64_t> AllocTokenMax;
+
+  /// The allocation token mode.
+  std::optional<llvm::AllocTokenMode> AllocTokenMode;
+
   LangOptions();
 
   /// Set language defaults for the given input language and
@@ -756,6 +764,15 @@ public:
   bool isTargetDevice() const {
     return OpenMPIsTargetDevice || CUDAIsDevice || SYCLIsDevice;
   }
+
+  /// Returns the most applicable C standard-compliant language version code.
+  /// If none could be determined, returns \ref std::nullopt.
+  std::optional<uint32_t> getCLangStd() const;
+
+  /// Returns the most applicable C++ standard-compliant language
+  /// version code.
+  /// If none could be determined, returns \ref std::nullopt.
+  std::optional<uint32_t> getCPlusPlusLangStd() const;
 };
 
 /// Floating point control options

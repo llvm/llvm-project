@@ -140,7 +140,7 @@ public:
     MemAccess = std::make_unique<EPCGenericMemoryAccess>(*EPC, FAs);
   }
 
-  ~EPCGenericMemoryAccessTest() { cantFail(EPC->disconnect()); }
+  ~EPCGenericMemoryAccessTest() override { cantFail(EPC->disconnect()); }
 
 protected:
   std::shared_ptr<SelfExecutorProcessControl> EPC;

@@ -187,7 +187,7 @@ public:
   }
 
   bool hasCLZLike() const {
-    return HasStdExtZbb || HasVendorXTHeadBb ||
+    return HasStdExtZbb || HasStdExtP || HasVendorXTHeadBb ||
            (HasVendorXCVbitmanip && !IsRV64);
   }
   bool hasCTZLike() const {
@@ -197,7 +197,7 @@ public:
     return HasStdExtZbb || (HasVendorXCVbitmanip && !IsRV64);
   }
   bool hasREV8Like() const {
-    return HasStdExtZbb || HasStdExtZbkb || HasVendorXTHeadBb;
+    return HasStdExtZbb || HasStdExtZbkb || HasStdExtP || HasVendorXTHeadBb;
   }
 
   bool hasBEXTILike() const { return HasStdExtZbs || HasVendorXTHeadBs; }
@@ -288,9 +288,12 @@ public:
   bool hasVInstructionsI64() const { return HasStdExtZve64x; }
   bool hasVInstructionsF16Minimal() const { return HasStdExtZvfhmin; }
   bool hasVInstructionsF16() const { return HasStdExtZvfh; }
-  bool hasVInstructionsBF16Minimal() const { return HasStdExtZvfbfmin; }
+  bool hasVInstructionsBF16Minimal() const {
+    return HasStdExtZvfbfmin || HasStdExtZvfbfa;
+  }
   bool hasVInstructionsF32() const { return HasStdExtZve32f; }
   bool hasVInstructionsF64() const { return HasStdExtZve64d; }
+  bool hasVInstructionsBF16() const { return HasStdExtZvfbfa; }
   // F16 and F64 both require F32.
   bool hasVInstructionsAnyF() const { return hasVInstructionsF32(); }
   bool hasVInstructionsFullMultiply() const { return HasStdExtV; }

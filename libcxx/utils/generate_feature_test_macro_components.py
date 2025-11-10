@@ -369,6 +369,16 @@ feature_test_macros = [
             "headers": ["memory"],
         },
         {
+            "name": "__cpp_lib_constexpr_flat_map",
+            "values": {"c++26": 202502},
+            "headers": ["flat_map"],
+        },
+        {
+            "name": "__cpp_lib_constexpr_flat_set",
+            "values": {"c++26": 202502},
+            "headers": ["flat_set"],
+        },
+        {
             "name": "__cpp_lib_constexpr_forward_list",
             "values": {"c++26": 202502},
             "headers": ["forward_list"],
@@ -863,7 +873,8 @@ feature_test_macros = [
                 "c++26": 202306  # P2641R4 Checking if a union alternative is active
             },
             "headers": ["type_traits"],
-            "unimplemented": True,
+            "test_suite_guard": "__has_builtin(__builtin_is_within_lifetime)",
+            "libcxx_guard": "__has_builtin(__builtin_is_within_lifetime)",
         },
         {
             "name": "__cpp_lib_jthread",

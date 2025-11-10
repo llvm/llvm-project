@@ -199,14 +199,14 @@ Status RegisterValue::SetValueFromData(const RegisterInfo &reg_info,
     else if (reg_info.byte_size <= 16) {
       uint64_t data1 = src.GetU64(&src_offset);
       uint64_t data2 = src.GetU64(&src_offset);
-      if (src.GetByteOrder() == eByteOrderBig) {
+      if (src.GetByteOrder() == eByteOrderLittle) {
         int128.x[0] = data1;
         int128.x[1] = data2;
       } else {
         int128.x[0] = data2;
         int128.x[1] = data1;
       }
-      SetUInt128(llvm::APInt(128, 2, int128.x));
+      SetUInt128(llvm::APInt(128, int128.x));
     }
     break;
   case eEncodingIEEE754:
@@ -596,8 +596,10 @@ llvm::APInt RegisterValue::GetAsUInt128(const llvm::APInt &fail_value,
     case 8:
     case 16:
       return llvm::APInt(
-          BITWIDTH_INT128, NUM_OF_WORDS_INT128,
-          (reinterpret_cast<const type128 *>(buffer.bytes.data()))->x);
+          BITWIDTH_INT128,
+          llvm::ArrayRef(
+              (reinterpret_cast<const type128 *>(buffer.bytes.data()))->x,
+              NUM_OF_WORDS_INT128));
     }
   } break;
   }

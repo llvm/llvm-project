@@ -2941,9 +2941,8 @@ _mm256_testnzc_si256(__m256i __a, __m256i __b) {
 ///    A 256-bit vector of [4 x double] containing the double-precision
 ///    floating point values with sign bits to be extracted.
 /// \returns The sign bits from the operand, written to bits [3:0].
-static __inline int __DEFAULT_FN_ATTRS
-_mm256_movemask_pd(__m256d __a)
-{
+static __inline int __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm256_movemask_pd(__m256d __a) {
   return __builtin_ia32_movmskpd256((__v4df)__a);
 }
 
@@ -2959,9 +2958,8 @@ _mm256_movemask_pd(__m256d __a)
 ///    A 256-bit vector of [8 x float] containing the single-precision floating
 ///    point values with sign bits to be extracted.
 /// \returns The sign bits from the operand, written to bits [7:0].
-static __inline int __DEFAULT_FN_ATTRS
-_mm256_movemask_ps(__m256 __a)
-{
+static __inline int __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm256_movemask_ps(__m256 __a) {
   return __builtin_ia32_movmskps256((__v8sf)__a);
 }
 

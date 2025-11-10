@@ -69,7 +69,7 @@ static void printDie(const DWARFDie &DIE) {
 }
 
 /// Lazily parse DWARF DIE and print it out.
-LLVM_ATTRIBUTE_UNUSED
+[[maybe_unused]]
 static void printDie(DWARFUnit &DU, uint64_t DIEOffset) {
   uint64_t OriginalOffsets = DIEOffset;
   uint64_t NextCUOffset = DU.getNextUnitOffset();

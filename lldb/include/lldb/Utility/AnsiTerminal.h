@@ -72,6 +72,17 @@
 
 #define ANSI_ESC_START_LEN 2
 
+// Cursor Position, set cursor to position [l, c] (default = [1, 1]).
+#define ANSI_CSI_CUP(...) ANSI_ESC_START #__VA_ARGS__ "H"
+// Reset cursor to position.
+#define ANSI_CSI_RESET_CURSOR ANSI_CSI_CUP()
+// Erase In Display.
+#define ANSI_CSI_ED(opt) ANSI_ESC_START #opt "J"
+// Erase complete viewport.
+#define ANSI_CSI_ERASE_VIEWPORT ANSI_CSI_ED(2)
+// Erase scrollback.
+#define ANSI_CSI_ERASE_SCROLLBACK ANSI_CSI_ED(3)
+
 // OSC (Operating System Commands)
 // https://invisible-island.net/xterm/ctlseqs/ctlseqs.html
 #define OSC_ESCAPE_START "\033"

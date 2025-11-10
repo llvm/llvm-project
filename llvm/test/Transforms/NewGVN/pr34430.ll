@@ -4,7 +4,7 @@
 source_filename = "bugpoint-output-e4c7d0f.bc"
 
 ;  Make sure we still properly resolve phi cycles when they involve predicateinfo copies of phis.
-define void @hoge(i1 %arg) local_unnamed_addr #0 {
+define void @hoge(i1 %arg) local_unnamed_addr {
 ; CHECK-LABEL: @hoge(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    br i1 %arg, label [[BB6:%.*]], label [[BB1:%.*]]
@@ -40,8 +40,6 @@ bb6:                                              ; preds = %bb4, %bb2, %bb1, %b
   %tmp7 = phi i8 [ %tmp5, %bb4 ], [ %tmp5, %bb2 ], [ 5, %bb1 ], [ undef, %bb ]
   br label %bb4
 }
-
-attributes #0 = { norecurse noreturn nounwind ssp uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="penryn" "target-features"="+cx16,+fxsr,+mmx,+sse,+sse2,+sse3,+sse4.1,+ssse3,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
 
 !llvm.ident = !{!0}
 

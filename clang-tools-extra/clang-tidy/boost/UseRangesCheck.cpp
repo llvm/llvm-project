@@ -342,7 +342,7 @@ void UseRangesCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 DiagnosticBuilder UseRangesCheck::createDiag(const CallExpr &Call) {
-  DiagnosticBuilder D =
+  const DiagnosticBuilder D =
       diag(Call.getBeginLoc(), "use a %0 version of this algorithm");
   D << (Call.getDirectCallee()->isInStdNamespace() ? "boost" : "ranged");
   return D;
