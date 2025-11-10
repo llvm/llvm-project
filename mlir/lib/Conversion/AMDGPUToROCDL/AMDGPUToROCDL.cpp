@@ -682,8 +682,8 @@ static Value castMFMAScaleOperand(ConversionPatternRewriter &rewriter,
 static void wmmaPushInputOperand(
     ConversionPatternRewriter &rewriter, Location loc,
     const TypeConverter *typeConverter, bool isUnsigned, Value llvmInput,
-    Value mlirInput, SmallVector<Value, 4> &operands,
-    SmallVector<NamedAttribute, 4> &attrs, StringRef attrName) {
+    Value mlirInput, SmallVectorImpl<Value> &operands,
+    SmallVectorImpl<NamedAttribute> &attrs, StringRef attrName) {
   Type inputType = llvmInput.getType();
   auto vectorType = dyn_cast<VectorType>(inputType);
   if (!vectorType) {
@@ -741,8 +741,8 @@ static void wmmaPushOutputOperand(ConversionPatternRewriter &rewriter,
                                   Location loc,
                                   const TypeConverter *typeConverter,
                                   Value output, int32_t subwordOffset,
-                                  bool clamp, SmallVector<Value, 4> &operands,
-                                  SmallVector<NamedAttribute, 4> &attrs) {
+                                  bool clamp, SmallVectorImpl<Value> &operands,
+                                  SmallVectorImpl<NamedAttribute> &attrs) {
   Type inputType = output.getType();
   auto vectorType = dyn_cast<VectorType>(inputType);
   Type elemType = vectorType.getElementType();
@@ -1305,9 +1305,9 @@ struct WMMAOpLowering : public ConvertOpToLLVMPattern<WMMAOp> {
     // The WMMA operations represent vectors of bf16s as vectors of i16s
     // (except on gfx1250), so we need to bitcast bfloats to i16 and then
     // bitcast them back.
-    auto aType = dyn_cast<VectorType>(adaptor.getSourceA().getType());
-    auto bType = dyn_cast<VectorType>(adaptor.getSourceA().getType());
-    auto destCType = dyn_cast<VectorType>(adaptor.getDestC().getType());
+    auto aType = cast<VectorType>(adaptor.getSourceA().getType());
+    auto bType = cast<VectorType>(adaptor.getSourceB().getType());
+    auto destCType = cast<VectorType>(adaptor.getDestC().getType());
     bool castAToI16 = aType.getElementType().isBF16() && !isGFX1250;
     bool castBToI16 = bType.getElementType().isBF16() && !isGFX1250;
     bool castDestCToI16 = destCType.getElementType().isBF16() && !isGFX1250;

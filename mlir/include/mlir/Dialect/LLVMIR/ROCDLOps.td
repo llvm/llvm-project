@@ -590,7 +590,7 @@ class ROCDL_WMMA_IntrOp<string mnemonic, Type AB, Type CD> : ROCDL_IntrOp<mnemon
              LLVM_ScalarOrVectorOf<CD>:$C)> {
   let results = (outs LLVM_ScalarOrVectorOf<CD>:$res);
   let assemblyFormat = [{
-    $A `,` $B `,` $C attr-dict `:` `(`type($A) `,` type($B) `,` type($C)`)` `->` type($res)
+    $A `,` $B `,` $C attr-dict `:` functional-type(operands, $res)
   }];
 }
 
@@ -603,7 +603,7 @@ class ROCDL_WMMA_Opsel_IntrOp<string mnemonic, Type AB, Type CD> : ROCDL_IntrOp<
              DefaultValuedAttr<I1Attr, "0">:$opsel)> {
   let results = (outs LLVM_ScalarOrVectorOf<CD>:$res);
   let assemblyFormat = [{
-    $A `,` $B `,` $C attr-dict `:` `(`type($A) `,` type($B) `,` type($C)`)` `->` type($res)
+    $A `,` $B `,` $C attr-dict `:` functional-type(operands, $res)
   }];
 }
 
@@ -618,7 +618,7 @@ class ROCDL_WMMA_IU_IntrOp<string mnemonic, Type AB, Type CD> : ROCDL_IntrOp<mne
              DefaultValuedAttr<I1Attr, "0">:$clamp)> {
   let results = (outs LLVM_ScalarOrVectorOf<CD>:$res);
   let assemblyFormat = [{
-    $A `,` $B `,` $C attr-dict `:` `(`type($A) `,` type($B) `,` type($C)`)` `->` type($res)
+    $A `,` $B `,` $C attr-dict `:` functional-type(operands, $res)
   }];
 }
 
@@ -635,7 +635,7 @@ class ROCDL_WMMA_ModsAll_Reuse_IntrOp<string mnemonic, Type AB, Type CD> : ROCDL
              DefaultValuedAttr<I1Attr, "0">:$reuseB)> {
   let results = (outs LLVM_ScalarOrVectorOf<CD>:$res);
   let assemblyFormat = [{
-    $A `,` $B `,` $C attr-dict `:` `(`type($A) `,` type($B) `,` type($C)`)` `->` type($res)
+    $A `,` $B `,` $C attr-dict `:` functional-type(operands, $res)
   }];
 }
 
@@ -650,7 +650,7 @@ class ROCDL_WMMA_ModsC_IntrOp<string mnemonic, Type AB, Type CD> : ROCDL_IntrOp<
              DefaultValuedAttr<I1Attr, "0">:$reuseB)> {
   let results = (outs LLVM_ScalarOrVectorOf<CD>:$res);
   let assemblyFormat = [{
-    $A `,` $B `,` $C attr-dict `:` `(`type($A) `,` type($B) `,` type($C)`)` `->` type($res)
+    $A `,` $B `,` $C attr-dict `:` functional-type(operands, $res)
   }];
 }
 
@@ -667,7 +667,7 @@ class ROCDL_WMMA_ModsAll_Diff_IntrOp<string mnemonic, Type AB, Type C, Type D> :
              DefaultValuedAttr<I1Attr, "0">:$reuseB)> {
   let results = (outs LLVM_ScalarOrVectorOf<D>:$res);
   let assemblyFormat = [{
-    $A `,` $B `,` $C attr-dict `:` `(`type($A) `,` type($B) `,` type($C)`)` `->` type($res)
+    $A `,` $B `,` $C attr-dict `:` functional-type(operands, $res)
   }];
 }
 
@@ -683,7 +683,7 @@ class ROCDL_WMMA_ModsAB_IntrOp<string mnemonic, Type AB, Type CD> : ROCDL_IntrOp
              DefaultValuedAttr<I1Attr, "0">:$reuseB)> {
   let results = (outs LLVM_ScalarOrVectorOf<CD>:$res);
   let assemblyFormat = [{
-    $A `,` $B `,` $C attr-dict `:` `(`type($A) `,` type($B) `,` type($C)`)` `->` type($res)
+    $A `,` $B `,` $C attr-dict `:` functional-type(operands, $res)
   }];
 }
 
