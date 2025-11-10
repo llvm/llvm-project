@@ -20,8 +20,18 @@
 #include <cassert>
 #include <utility>
 
-template <typename...>
 void test_structured_bindings() {
+  auto [elt0, elt1, elt2, elt3] = std::make_index_sequence<4>();
+  
+  assert(elt0 == 0);
+  assert(elt1 == 1);
+  assert(elt2 == 2);
+  assert(elt3 == 3);
+}
+
+#if __cpp_structured_bindings >= 202411L
+template <typename...>
+void test_p1061_structured_bindings() {
   auto [... empty] = std::make_index_sequence<0>();
   static_assert(sizeof...(empty) == 0);
 
@@ -33,8 +43,12 @@ void test_structured_bindings() {
   assert(size4...[2] == 2);
   assert(size4...[3] == 3);
 }
+#endif
 
 int main(int, char**) {
   test_structured_bindings();
+#if __cpp_structured_bindings >= 202411L
+  test_p1061_structured_bindings();
+#endif
   return 0;
 }
