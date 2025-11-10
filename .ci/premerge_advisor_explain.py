@@ -86,7 +86,7 @@ def main(
                 ":white_check_mark: With the latest revision this PR passed "
                 "the premerge checks.",
             )
-            if comment["id"]:
+            if "id" in comment:
                 json.dump([comment], comment_file_handle)
     junit_objects, ninja_logs = generate_test_report_lib.load_info_from_files(
         build_log_files
