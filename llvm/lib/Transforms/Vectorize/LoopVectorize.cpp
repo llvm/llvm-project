@@ -2875,8 +2875,7 @@ unsigned LoopVectorizationCostModel::getPredBlockCostDivisor(
   uint64_t BBFreq = BFI->getBlockFreq(BB).getFrequency();
   assert(HeaderFreq >= BBFreq &&
          "Header has smaller block freq than dominated BB?");
-  return BFI->getBlockFreq(TheLoop->getHeader()).getFrequency() /
-         BFI->getBlockFreq(BB).getFrequency();
+  return HeaderFreq / BBFreq;
 }
 
 std::pair<InstructionCost, InstructionCost>
