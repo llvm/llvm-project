@@ -13,7 +13,7 @@
 
 #include <optional>
 
-#include "llvm/Support/Debug.h"
+#include "llvm/Support/DebugLog.h"
 #define DEBUG_TYPE "xegpu-transforms"
 
 using namespace mlir;
@@ -88,14 +88,13 @@ static std::optional<T> findProducerOfType(Value val) {
   if (!currentValue.getDefiningOp()) {
     // Value may be a block argument initialized outside a loop.
     if (val.getNumUses() == 0) {
-      LLVM_DEBUG(llvm::dbgs()
-                 << "Failed to find producer op, value has no uses.");
+      LDBG() << "Failed to find producer op, value has no uses.";
       return std::nullopt;
     }
     auto userOp = val.getUsers().begin();
     auto parentLoop = userOp->getParentOfType<LoopLikeOpInterface>();
     if (!parentLoop) {
-      LLVM_DEBUG(llvm::dbgs() << "Failed to find producer op, not in a loop.");
+      LDBG() << "Failed to find producer op, not in a loop.";
       return std::nullopt;
     }
     int64_t iterArgIdx;
@@ -104,8 +103,7 @@ static std::optional<T> findProducerOfType(Value val) {
       iterArgIdx = iterArg.getArgNumber() - numInductionVars;
       currentValue = parentLoop.getInits()[iterArgIdx];
     } else {
-      LLVM_DEBUG(llvm::dbgs()
-                 << "Failed to find producer op, value not in init values.");
+      LDBG() << "Failed to find producer op, value not in init values.";
       return std::nullopt;
     }
   }
@@ -159,7 +157,6 @@ DiagnosedSilenceableFailure
 transform::GetDescOp::apply(transform::TransformRewriter &rewriter,
                             transform::TransformResults &results,
                             transform::TransformState &state) {
-
   auto targetValues = state.getPayloadValues(getTarget());
   if (!llvm::hasSingleElement(targetValues)) {
     return emitDefiniteFailure()
@@ -170,7 +167,9 @@ transform::GetDescOp::apply(transform::TransformRewriter &rewriter,
   auto maybeDescOp =
       findProducerOfType<xegpu::CreateNdDescOp>(*targetValues.begin());
   if (!maybeDescOp) {
-    return emitSilenceableFailure(getLoc()) << "Could not find descriptor op.";
+    return emitSilenceableFailure(getLoc())
+           << "Could not find a matching descriptor op when walking the "
+              "producer chain of the first operand.";
   }
 
   results.set(llvm::cast<OpResult>(getResult()), {*maybeDescOp});
