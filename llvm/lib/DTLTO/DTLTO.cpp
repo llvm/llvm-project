@@ -36,8 +36,6 @@ namespace dtlto {
 // Removes any temporary regular archive member files that were created during
 // processing.
 TempFilesRemover::~TempFilesRemover() {
-  if (!Lto)
-    return;
   for (auto &Input : Lto->InputFiles) {
     if (Input->isMemberOfArchive())
       sys::fs::remove(Input->getName(), /*IgnoreNonExisting=*/true);
