@@ -253,6 +253,8 @@ static void createCBufferLoad(IntrinsicInst *II, LoadInst *LI, Value *Offset,
 
   assert(!(CurrentIndex && Offset) &&
          "Dynamic indexing into elements of cbuffer rows is not supported");
+  // At this point if we have a non-constant offset it has to be an array
+  // offset, so we can assume that it's a multiple of the row size.
   if (Offset)
     CurrentRow = FixedOffset ? Builder.CreateAdd(CurrentRow, Offset) : Offset;
 
