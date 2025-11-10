@@ -110,6 +110,31 @@ define void @memset_i32(ptr %dest, i8 %val, i64 %len) {
   ret void
 }
 
+; CHECK-LABEL: memcpy_0:
+; CHECK-NEXT: .functype memcpy_0 (i64, i64) -> ()
+; CHECK-NEXT: return
+define void @memcpy_0(ptr %dest, ptr %src) {
+  call void @llvm.memcpy.p0.p0.i64(ptr %dest, ptr %src, i64 0, i1 0)
+  ret void
+}
+
+; CHECK-LABEL: memmove_0:
+; CHECK-NEXT: .functype memmove_0 (i64, i64) -> ()
+; CHECK-NEXT: return
+define void @memmove_0(ptr %dest, ptr %src) {
+  call void @llvm.memmove.p0.p0.i64(ptr %dest, ptr %src, i64 0, i1 0)
+  ret void
+}
+
+; CHECK-LABEL: memset_0:
+; NO-BULK-MEM-NOT: memory.fill
+; BULK-MEM-NEXT: .functype memset_0 (i64, i32) -> ()
+; BULK-MEM-NEXT: return
+define void @memset_0(ptr %dest, i8 %val) {
+  call void @llvm.memset.p0.i64(ptr %dest, i8 %val, i64 0, i1 0)
+  ret void
+}
+
 ; CHECK-LABEL: memcpy_1:
 ; CHECK-NEXT: .functype memcpy_1 (i64, i64) -> ()
 ; CHECK-NEXT: i32.load8_u $push[[L0:[0-9]+]]=, 0($1)
@@ -143,14 +168,8 @@ define void @memset_1(ptr %dest, i8 %val) {
 ; CHECK-LABEL: memcpy_1024:
 ; NO-BULK-MEM-NOT: memory.copy
 ; BULK-MEM-NEXT: .functype memcpy_1024 (i64, i64) -> ()
-; BULK-MEM-NEXT: block
-; BULK-MEM-NEXT: i64.const	$push[[L1:[0-9]+]]=, 1024
-; BULK-MEM-NEXT: i64.eqz 	$push0=, $pop[[L1]]
-; BULK-MEM-NEXT: br_if   	0, $pop0
 ; BULK-MEM-NEXT: i64.const	$push[[L0:[0-9]+]]=, 1024
 ; BULK-MEM-NEXT: memory.copy	0, 0, $0, $1, $pop[[L0]]
-; BULK-MEM-NEXT: .LBB{{.*}}:
-; BULK-MEM-NEXT: end_block
 ; BULK-MEM-NEXT: return
 define void @memcpy_1024(ptr %dest, ptr %src) {
   call void @llvm.memcpy.p0.p0.i64(ptr %dest, ptr %src, i64 1024, i1 0)
@@ -160,14 +179,8 @@ define void @memcpy_1024(ptr %dest, ptr %src) {
 ; CHECK-LABEL: memmove_1024:
 ; NO-BULK-MEM-NOT: memory.copy
 ; BULK-MEM-NEXT: .functype memmove_1024 (i64, i64) -> ()
-; BULK-MEM-NEXT: block
-; BULK-MEM-NEXT: i64.const	$push[[L1:[0-9]+]]=, 1024
-; BULK-MEM-NEXT: i64.eqz 	$push0=, $pop[[L1]]
-; BULK-MEM-NEXT: br_if   	0, $pop0
 ; BULK-MEM-NEXT: i64.const	$push[[L0:[0-9]+]]=, 1024
 ; BULK-MEM-NEXT: memory.copy	0, 0, $0, $1, $pop[[L0]]
-; BULK-MEM-NEXT: .LBB{{.*}}:
-; BULK-MEM-NEXT: end_block
 ; BULK-MEM-NEXT: return
 define void @memmove_1024(ptr %dest, ptr %src) {
   call void @llvm.memmove.p0.p0.i64(ptr %dest, ptr %src, i64 1024, i1 0)
@@ -177,14 +190,8 @@ define void @memmove_1024(ptr %dest, ptr %src) {
 ; CHECK-LABEL: memset_1024:
 ; NO-BULK-MEM-NOT: memory.fill
 ; BULK-MEM-NEXT: .functype memset_1024 (i64, i32) -> ()
-; BULK-MEM-NEXT: block
-; BULK-MEM-NEXT: i64.const	$push[[L1:[0-9]+]]=, 1024
-; BULK-MEM-NEXT: i64.eqz 	$push0=, $pop[[L1]]
-; BULK-MEM-NEXT: br_if   	0, $pop0
 ; BULK-MEM-NEXT: i64.const	$push[[L0:[0-9]+]]=, 1024
 ; BULK-MEM-NEXT: memory.fill	0, $0, $1, $pop[[L0]]
-; BULK-MEM-NEXT: .LBB{{.*}}:
-; BULK-MEM-NEXT: end_block
 ; BULK-MEM-NEXT: return
 define void @memset_1024(ptr %dest, i8 %val) {
   call void @llvm.memset.p0.i64(ptr %dest, i8 %val, i64 1024, i1 0)
@@ -207,17 +214,11 @@ define void @memset_1024(ptr %dest, i8 %val) {
 ; BULK-MEM-NEXT: .functype memcpy_alloca_src (i64) -> ()
 ; BULK-MEM-NEXT: global.get	$push[[L1:[0-9]+]]=, __stack_pointer
 ; BULK-MEM-NEXT: i64.const	$push[[L0:[0-9]+]]=, 112
-; BULK-MEM-NEXT: i64.sub 	$[[L2:[0-9]+]]=, $pop[[L1]], $pop[[L0]]
-; BULK-MEM-NEXT: block
-; BULK-MEM-NEXT: i64.const	$push[[L3:[0-9]+]]=, 100
-; BULK-MEM-NEXT: i64.eqz 	$push[[L4:[0-9]+]]=, $pop[[L3]]
-; BULK-MEM-NEXT: br_if   	0, $pop[[L4]]
-; BULK-MEM-NEXT: i64.const	$push[[L5:[0-9]+]]=, 12
-; BULK-MEM-NEXT: i64.add 	$push[[L6:[0-9]+]]=, $[[L2]], $pop[[L5]]
-; BULK-MEM-NEXT: i64.const	$push[[L7:[0-9]+]]=, 100
-; BULK-MEM-NEXT: memory.copy	0, 0, $0, $pop[[L6]], $pop[[L7]]
-; BULK-MEM-NEXT: .LBB{{.*}}:
-; BULK-MEM-NEXT: end_block
+; BULK-MEM-NEXT: i64.sub 	$push[[L2:[0-9]+]]=, $pop[[L1]], $pop[[L0]]
+; BULK-MEM-NEXT: i64.const	$push[[L3:[0-9]+]]=, 12
+; BULK-MEM-NEXT: i64.add 	$push[[L4:[0-9]+]]=, $pop[[L2]], $pop[[L3]]
+; BULK-MEM-NEXT: i64.const	$push[[L5:[0-9]+]]=, 100
+; BULK-MEM-NEXT: memory.copy	0, 0, $0, $pop[[L4]], $pop[[L5]]
 ; BULK-MEM-NEXT: return
 define void @memcpy_alloca_src(ptr %dst) {
   %a = alloca [100 x i8]
@@ -230,17 +231,11 @@ define void @memcpy_alloca_src(ptr %dst) {
 ; BULK-MEM-NEXT: .functype memcpy_alloca_dst (i64) -> ()
 ; BULK-MEM-NEXT: global.get	$push[[L1:[0-9]+]]=, __stack_pointer
 ; BULK-MEM-NEXT: i64.const	$push[[L0:[0-9]+]]=, 112
-; BULK-MEM-NEXT: i64.sub 	$[[L2:[0-9]+]]=, $pop[[L1]], $pop[[L0]]
-; BULK-MEM-NEXT: block
-; BULK-MEM-NEXT: i64.const	$push[[L3:[0-9]+]]=, 100
-; BULK-MEM-NEXT: i64.eqz 	$push[[L4:[0-9]+]]=, $pop[[L3]]
-; BULK-MEM-NEXT: br_if   	0, $pop[[L4]]
-; BULK-MEM-NEXT: i64.const	$push[[L5:[0-9]+]]=, 12
-; BULK-MEM-NEXT: i64.add 	$push[[L6:[0-9]+]]=, $[[L2]], $pop[[L5]]
-; BULK-MEM-NEXT: i64.const	$push[[L7:[0-9]+]]=, 100
-; BULK-MEM-NEXT: memory.copy	0, 0, $pop[[L6]], $0, $pop[[L7]]
-; BULK-MEM-NEXT: .LBB{{.*}}:
-; BULK-MEM-NEXT: end_block
+; BULK-MEM-NEXT: i64.sub 	$push[[L2:[0-9]+]]=, $pop[[L1]], $pop[[L0]]
+; BULK-MEM-NEXT: i64.const	$push[[L3:[0-9]+]]=, 12
+; BULK-MEM-NEXT: i64.add 	$push[[L4:[0-9]+]]=, $pop[[L2]], $pop[[L3]]
+; BULK-MEM-NEXT: i64.const	$push[[L5:[0-9]+]]=, 100
+; BULK-MEM-NEXT: memory.copy	0, 0, $pop[[L4]], $0, $pop[[L5]]
 ; BULK-MEM-NEXT: return
 define void @memcpy_alloca_dst(ptr %src) {
   %a = alloca [100 x i8]
@@ -253,17 +248,11 @@ define void @memcpy_alloca_dst(ptr %src) {
 ; BULK-MEM-NEXT: .functype memset_alloca (i32) -> ()
 ; BULK-MEM-NEXT: global.get	$push[[L1:[0-9]+]]=, __stack_pointer
 ; BULK-MEM-NEXT: i64.const	$push[[L0:[0-9]+]]=, 112
-; BULK-MEM-NEXT: i64.sub 	$1=, $pop[[L1]], $pop[[L0]]
-; BULK-MEM-NEXT: block
-; BULK-MEM-NEXT: i64.const	$push[[L2:[0-9]+]]=, 100
-; BULK-MEM-NEXT: i64.eqz 	$push[[L3:[0-9]+]]=, $pop[[L2]]
-; BULK-MEM-NEXT: br_if   	0, $pop[[L3]]
-; BULK-MEM-NEXT: i64.const	$push[[L4:[0-9]+]]=, 12
-; BULK-MEM-NEXT: i64.add 	$push[[L5:[0-9]+]]=, $1, $pop[[L4]]
-; BULK-MEM-NEXT: i64.const	$push[[L6:[0-9]+]]=, 100
-; BULK-MEM-NEXT: memory.fill	0, $pop[[L5]], $0, $pop[[L6]]
-; BULK-MEM-NEXT: .LBB{{.*}}:
-; BULK-MEM-NEXT: end_block
+; BULK-MEM-NEXT: i64.sub 	$push[[L2:[0-9]+]]=, $pop[[L1]], $pop[[L0]]
+; BULK-MEM-NEXT: i64.const	$push[[L3:[0-9]+]]=, 12
+; BULK-MEM-NEXT: i64.add 	$push[[L4:[0-9]+]]=, $pop[[L2]], $pop[[L3]]
+; BULK-MEM-NEXT: i64.const	$push[[L5:[0-9]+]]=, 100
+; BULK-MEM-NEXT: memory.fill	0, $pop[[L4]], $0, $pop[[L5]]
 ; BULK-MEM-NEXT: return
 define void @memset_alloca(i8 %val) {
   %a = alloca [100 x i8]

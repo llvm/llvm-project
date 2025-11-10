@@ -245,6 +245,7 @@ public:
   }
 
   ISD::NodeType getExtendForAtomicCmpSwapArg() const override;
+  ISD::NodeType getExtendForAtomicRMWArg(unsigned Op) const override;
 
   bool shouldTransformSignedTruncationCheck(EVT XVT,
                                             unsigned KeptBits) const override;
@@ -463,6 +464,8 @@ public:
                                             MachineBasicBlock *MBB) const;
 
   ArrayRef<MCPhysReg> getRoundingControlRegisters() const override;
+
+  bool shouldFoldMaskToVariableShiftPair(SDValue Y) const override;
 
   /// Match a mask which "spreads" the leading elements of a vector evenly
   /// across the result.  Factor is the spread amount, and Index is the

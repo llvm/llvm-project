@@ -20,6 +20,7 @@
 #include <string>
 
 namespace llvm {
+
 // Simple RAII helper for emitting ifdef-undef-endif scope.
 class IfDefEmitter {
 public:
@@ -34,32 +35,56 @@ private:
   raw_ostream &OS;
 };
 
+// Simple RAII helper for emitting header include guard (ifndef-define-endif).
+class IncludeGuardEmitter {
+public:
+  IncludeGuardEmitter(raw_ostream &OS, StringRef Name)
+      : Name(Name.str()), OS(OS) {
+    OS << "#ifndef " << Name << "\n"
+       << "#define " << Name << "\n\n";
+  }
+  ~IncludeGuardEmitter() { OS << "\n#endif // " << Name << "\n"; }
+
+private:
+  std::string Name;
+  raw_ostream &OS;
+};
+
 // Simple RAII helper for emitting namespace scope. Name can be a single
-// namespace (empty for anonymous namespace) or nested namespace.
+// namespace or nested namespace. If the name is empty, will not generate any
+// namespace scope.
 class NamespaceEmitter {
 public:
-  NamespaceEmitter(raw_ostream &OS, StringRef Name) : OS(OS) {
-    emitNamespaceStarts(Name);
+  NamespaceEmitter(raw_ostream &OS, StringRef NameUntrimmed)
+      : Name(trim(NameUntrimmed).str()), OS(OS) {
+    if (!Name.empty())
+      OS << "namespace " << Name << " {\n\n";
   }
 
   ~NamespaceEmitter() { close(); }
 
   // Explicit function to close the namespace scopes.
   void close() {
-    for (StringRef NS : llvm::reverse(Namespaces))
-      OS << "} // namespace " << NS << "\n";
-    Namespaces.clear();
+    if (!Closed && !Name.empty())
+      OS << "\n} // namespace " << Name << "\n";
+    Closed = true;
   }
 
 private:
-  void emitNamespaceStarts(StringRef Name) {
-    llvm::SplitString(Name, Namespaces, "::");
-    for (StringRef NS : Namespaces)
-      OS << "namespace " << NS << " {\n";
+  // Trim "::" prefix. If the namespace specified is ""::mlir::toy", then the
+  // generated namespace scope needs to use
+  //
+  // namespace mlir::toy {
+  // }
+  //
+  // and cannot use "namespace ::mlir::toy".
+  static StringRef trim(StringRef Name) {
+    Name.consume_front("::");
+    return Name;
   }
-
-  SmallVector<StringRef, 2> Namespaces;
+  std::string Name;
   raw_ostream &OS;
+  bool Closed = false;
 };
 
 } // end namespace llvm

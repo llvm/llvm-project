@@ -107,6 +107,8 @@ static const std::map<std::string, SPIRV::Extension::Extension, std::less<>>
          SPIRV::Extension::Extension::SPV_INTEL_inline_assembly},
         {"SPV_INTEL_bindless_images",
          SPIRV::Extension::Extension::SPV_INTEL_bindless_images},
+        {"SPV_INTEL_bfloat16_arithmetic",
+         SPIRV::Extension::Extension::SPV_INTEL_bfloat16_arithmetic},
         {"SPV_INTEL_bfloat16_conversion",
          SPIRV::Extension::Extension::SPV_INTEL_bfloat16_conversion},
         {"SPV_KHR_subgroup_rotate",
@@ -153,7 +155,13 @@ static const std::map<std::string, SPIRV::Extension::Extension, std::less<>>
          SPIRV::Extension::Extension::
              SPV_EXT_relaxed_printf_string_address_space},
         {"SPV_INTEL_predicated_io",
-         SPIRV::Extension::Extension::SPV_INTEL_predicated_io}};
+         SPIRV::Extension::Extension::SPV_INTEL_predicated_io},
+        {"SPV_KHR_maximal_reconvergence",
+         SPIRV::Extension::Extension::SPV_KHR_maximal_reconvergence},
+        {"SPV_INTEL_kernel_attributes",
+         SPIRV::Extension::Extension::SPV_INTEL_kernel_attributes},
+        {"SPV_ALTERA_blocking_pipes",
+         SPIRV::Extension::Extension::SPV_ALTERA_blocking_pipes}};
 
 bool SPIRVExtensionsParser::parse(cl::Option &O, StringRef ArgName,
                                   StringRef ArgValue,

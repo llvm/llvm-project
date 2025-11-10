@@ -447,8 +447,8 @@ define void @unknown_metadata(ptr nocapture %a, ptr noalias %b, i64 %size) {
 ; INTERLEAVE-NEXT:    [[STEP_ADD3:%.*]] = add <2 x i32> [[VEC_IND1]], splat (i32 2)
 ; INTERLEAVE-NEXT:    [[TMP0:%.*]] = getelementptr inbounds ptr, ptr [[A]], i64 [[INDEX]], !custom_md [[META2:![0-9]+]]
 ; INTERLEAVE-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[B]], <2 x i64> [[VEC_IND]]
-; INTERLEAVE-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[B]], <2 x i64> [[STEP_ADD]]
 ; INTERLEAVE-NEXT:    [[TMP3:%.*]] = extractelement <2 x ptr> [[TMP1]], i32 0
+; INTERLEAVE-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[B]], <2 x i64> [[STEP_ADD]]
 ; INTERLEAVE-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[TMP3]], i32 2
 ; INTERLEAVE-NEXT:    store <2 x i32> [[VEC_IND1]], ptr [[TMP3]], align 4
 ; INTERLEAVE-NEXT:    store <2 x i32> [[STEP_ADD3]], ptr [[TMP5]], align 4

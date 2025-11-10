@@ -2,13 +2,18 @@ add_llvm_component_library(LLVMCAS
   ActionCache.cpp
   ActionCaches.cpp
   BuiltinCAS.cpp
+  BuiltinUnifiedCASDatabases.cpp
   DatabaseFile.cpp
   InMemoryCAS.cpp
   MappedFileRegionArena.cpp
   ObjectStore.cpp
+  OnDiskCAS.cpp
   OnDiskCommon.cpp
   OnDiskDataAllocator.cpp
+  OnDiskGraphDB.cpp
+  OnDiskKeyValueDB.cpp
   OnDiskTrieRawHashMap.cpp
+  UnifiedOnDiskCache.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/CAS

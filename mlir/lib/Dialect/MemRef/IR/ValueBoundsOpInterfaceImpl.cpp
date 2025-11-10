@@ -59,6 +59,17 @@ struct DimOpInterface
   }
 };
 
+struct ExpandShapeOpInterface
+    : public ValueBoundsOpInterface::ExternalModel<ExpandShapeOpInterface,
+                                                   memref::ExpandShapeOp> {
+  void populateBoundsForShapedValueDim(Operation *op, Value value, int64_t dim,
+                                       ValueBoundsConstraintSet &cstr) const {
+    auto expandOp = cast<memref::ExpandShapeOp>(op);
+    assert(value == expandOp.getResult() && "invalid value");
+    cstr.bound(value)[dim] == expandOp.getMixedOutputShape()[dim];
+  }
+};
+
 struct GetGlobalOpInterface
     : public ValueBoundsOpInterface::ExternalModel<GetGlobalOpInterface,
                                                    GetGlobalOp> {
@@ -84,6 +95,27 @@ struct RankOpInterface
     if (!memrefType)
       return;
     cstr.bound(value) == memrefType.getRank();
+  }
+};
+
+struct CollapseShapeOpInterface
+    : public ValueBoundsOpInterface::ExternalModel<CollapseShapeOpInterface,
+                                                   memref::CollapseShapeOp> {
+  void populateBoundsForShapedValueDim(Operation *op, Value value, int64_t dim,
+                                       ValueBoundsConstraintSet &cstr) const {
+    auto collapseOp = cast<memref::CollapseShapeOp>(op);
+    assert(value == collapseOp.getResult() && "invalid value");
+
+    // Multiply the expressions for the dimensions in the reassociation group.
+    const ReassociationIndices reassocIndices =
+        collapseOp.getReassociationIndices()[dim];
+    AffineExpr productExpr =
+        cstr.getExpr(collapseOp.getSrc(), reassocIndices[0]);
+    for (size_t i = 1; i < reassocIndices.size(); ++i) {
+      productExpr =
+          productExpr * cstr.getExpr(collapseOp.getSrc(), reassocIndices[i]);
+    }
+    cstr.bound(value)[dim] == productExpr;
   }
 };
 
@@ -123,6 +155,10 @@ void mlir::memref::registerValueBoundsOpInterfaceExternalModels(
         memref::AllocOpInterface<memref::AllocaOp>>(*ctx);
     memref::CastOp::attachInterface<memref::CastOpInterface>(*ctx);
     memref::DimOp::attachInterface<memref::DimOpInterface>(*ctx);
+    memref::CollapseShapeOp::attachInterface<memref::CollapseShapeOpInterface>(
+        *ctx);
+    memref::ExpandShapeOp::attachInterface<memref::ExpandShapeOpInterface>(
+        *ctx);
     memref::GetGlobalOp::attachInterface<memref::GetGlobalOpInterface>(*ctx);
     memref::RankOp::attachInterface<memref::RankOpInterface>(*ctx);
     memref::SubViewOp::attachInterface<memref::SubViewOpInterface>(*ctx);
