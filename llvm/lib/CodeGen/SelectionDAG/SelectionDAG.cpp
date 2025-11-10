@@ -4129,15 +4129,13 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     const FPClassTest NegativeTestMask = fcNan | fcNegative;
     if ((NoFPClass & NegativeTestMask) == NegativeTestMask) {
       // Cannot be negative.
-      Known.Zero.setSignBit();
-      Known.One.clearSignBit();
+      Known.makeNonNegative();
     }
 
     const FPClassTest PositiveTestMask = fcNan | fcPositive;
     if ((NoFPClass & PositiveTestMask) == PositiveTestMask) {
       // Cannot be positive.
-      Known.Zero.clearSignBit();
-      Known.One.setSignBit();
+      Known.makeNegative();
     }
 
     break;
