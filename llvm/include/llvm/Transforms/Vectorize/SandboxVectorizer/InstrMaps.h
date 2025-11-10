@@ -19,7 +19,6 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/VecUtils.h"
-#include <algorithm>
 
 namespace llvm::sandboxir {
 

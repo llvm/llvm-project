@@ -17,7 +17,6 @@
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "gtest/gtest.h"
-#include <algorithm>
 
 using namespace llvm;
 

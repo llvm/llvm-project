@@ -612,13 +612,10 @@ void SPIRVAsmPrinter::outputExecutionMode(const Module &M) {
         // Collect the SPIRVTypes for fp16, fp32, and fp64 and the constant of
         // type int32 with 0 value to represent the FP Fast Math Mode.
         std::vector<const MachineInstr *> SPIRVFloatTypes;
-        const MachineInstr *ConstZero = nullptr;
+        const MachineInstr *ConstZeroInt32 = nullptr;
         for (const MachineInstr *MI :
              MAI->getMSInstrs(SPIRV::MB_TypeConstVars)) {
-          // Skip if the instruction is not OpTypeFloat or OpConstant.
           unsigned OpCode = MI->getOpcode();
-          if (OpCode != SPIRV::OpTypeFloat && OpCode != SPIRV::OpConstantNull)
-            continue;
 
           // Collect the SPIRV type if it's a float.
           if (OpCode == SPIRV::OpTypeFloat) {
@@ -629,14 +626,18 @@ void SPIRVAsmPrinter::outputExecutionMode(const Module &M) {
               continue;
             }
             SPIRVFloatTypes.push_back(MI);
-          } else {
+            continue;
+          }
+
+          if (OpCode == SPIRV::OpConstantNull) {
             // Check if the constant is int32, if not skip it.
             const MachineRegisterInfo &MRI = MI->getMF()->getRegInfo();
             MachineInstr *TypeMI = MRI.getVRegDef(MI->getOperand(1).getReg());
-            if (!TypeMI || TypeMI->getOperand(1).getImm() != 32)
-              continue;
-
-            ConstZero = MI;
+            bool IsInt32Ty = TypeMI &&
+                             TypeMI->getOpcode() == SPIRV::OpTypeInt &&
+                             TypeMI->getOperand(1).getImm() == 32;
+            if (IsInt32Ty)
+              ConstZeroInt32 = MI;
           }
         }
 
@@ -657,9 +658,9 @@ void SPIRVAsmPrinter::outputExecutionMode(const Module &M) {
           MCRegister TypeReg =
               MAI->getRegisterAlias(MF, MI->getOperand(0).getReg());
           Inst.addOperand(MCOperand::createReg(TypeReg));
-          assert(ConstZero && "There should be a constant zero.");
+          assert(ConstZeroInt32 && "There should be a constant zero.");
           MCRegister ConstReg = MAI->getRegisterAlias(
-              ConstZero->getMF(), ConstZero->getOperand(0).getReg());
+              ConstZeroInt32->getMF(), ConstZeroInt32->getOperand(0).getReg());
           Inst.addOperand(MCOperand::createReg(ConstReg));
           outputMCInst(Inst);
         }

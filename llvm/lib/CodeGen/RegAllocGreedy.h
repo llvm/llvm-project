@@ -33,7 +33,6 @@
 #include "llvm/CodeGen/SpillPlacement.h"
 #include "llvm/CodeGen/Spiller.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
-#include <algorithm>
 #include <cstdint>
 #include <memory>
 #include <queue>
