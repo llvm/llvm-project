@@ -21,6 +21,49 @@
 using namespace clang;
 using namespace clang::CIRGen;
 
+/// Get integer from a mlir::Value that is an int constant or a constant op.
+static int64_t getIntValueFromConstOp(mlir::Value val) {
+  return val.getDefiningOp<cir::ConstantOp>().getIntValue().getSExtValue();
+}
+
+static mlir::Value emitClFlush(CIRGenFunction& cgf,
+                               const CallExpr* e,
+                               mlir::Value& op) {
+    mlir::Type voidTy = cir::VoidType::get(&cgf.getMLIRContext());
+    mlir::Location location = cgf.getLoc(e->getExprLoc());
+    return cgf.getBuilder()
+        .create<cir::LLVMIntrinsicCallOp>(
+            location, cgf.getBuilder().getStringAttr("x86.sse2.clflush"),
+            voidTy, op)
+        .getResult();
+}
+
+static mlir::Value emitPrefetch(CIRGenFunction& cgf,
+                                const CallExpr* e,
+                                mlir::Value& addr,
+                                int64_t hint) {
+  CIRGenBuilderTy& builder = cgf.getBuilder();
+  mlir::Type voidTy = cir::VoidType::get(&cgf.getMLIRContext());
+  mlir::Type sInt32Ty = cir::IntType::get(&cgf.getMLIRContext(), 32, true);
+  mlir::Value address = builder.createPtrBitcast(addr, voidTy);
+  mlir::Location location = cgf.getLoc(e->getExprLoc());
+  mlir::Value rw =
+      cir::ConstantOp::create(builder, location,
+                              cir::IntAttr::get(sInt32Ty, (hint >> 2) & 0x1));
+  mlir::Value locality =
+      cir::ConstantOp::create(builder, location,
+                              cir::IntAttr::get(sInt32Ty, hint & 0x3));
+  mlir::Value data = cir::ConstantOp::create(builder, location,
+                                             cir::IntAttr::get(sInt32Ty, 1));
+
+  return cir::LLVMIntrinsicCallOp::create(
+             builder, location,
+             builder.getStringAttr("prefetch"), voidTy,
+             mlir::ValueRange{address, rw, locality, data})
+      .getResult();
+}
+
+
 mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
                                                const CallExpr *e) {
   if (builtinID == Builtin::BI__builtin_cpu_is) {
@@ -43,11 +86,28 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   // Find out if any arguments are required to be integer constant expressions.
   assert(!cir::MissingFeatures::handleBuiltinICEArguments());
 
+  // The operands of the builtin call
+  llvm::SmallVector<mlir::Value, 4> ops;
+
+  // `ICEArguments` is a bitmap indicating whether the argument at the i-th bit
+  // is required to be a constant integer expression.
+  unsigned ICEArguments = 0;
+  ASTContext::GetBuiltinTypeError error;
+  getContext().GetBuiltinType(builtinID, error, &ICEArguments);
+  assert(error == ASTContext::GE_None && "Error while getting builtin type.");
+
+  const unsigned numArgs = e->getNumArgs();
+  for (unsigned i = 0; i != numArgs; i++) {
+    ops.push_back(emitScalarOrConstFoldImmArg(ICEArguments, i, e));
+  }
+
   switch (builtinID) {
   default:
     return {};
   case X86::BI_mm_prefetch:
+    return emitPrefetch(*this, e, ops[0], getIntValueFromConstOp(ops[1]));
   case X86::BI_mm_clflush:
+    return emitClFlush(*this, e, ops[0]);
   case X86::BI_mm_lfence:
   case X86::BI_mm_pause:
   case X86::BI_mm_mfence:
