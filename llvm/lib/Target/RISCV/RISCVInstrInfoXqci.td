@@ -817,6 +817,17 @@ class QCIRVInst48EJ<bits<2> func2, string opcodestr>
   let Inst{6-0} = 0b0011111;
 }
 
+class SFBQCLI
+    : Pseudo<(outs GPR:$dst),
+             (ins GPR:$lhs, GPR:$rhs, cond_code:$cc, GPR:$falsev, GPR:$rs1,
+                  simm20_li:$imm), []> {
+  let hasSideEffects = 0;
+  let mayLoad = 0;
+  let mayStore = 0;
+  let Size = 8;
+  let Constraints = "$dst = $falsev";
+}
+
 class SFBQCELI
     : Pseudo<(outs GPR:$dst),
              (ins GPR:$lhs, GPR:$rhs, cond_code:$cc, GPR:$falsev, GPR:$rs1,
@@ -1320,7 +1331,7 @@ def PseudoQC_E_SW : PseudoStore<"qc.e.sw">;
 } // Predicates = [HasVendorXqcilo, IsRV32]
 
 let Predicates = [HasShortForwardBranchOpt] in {
-def PseudoCCQCLI : SFBLUI;
+def PseudoCCQCLI : SFBQCLI;
 def PseudoCCQCELI : SFBQCELI;
 }
 
