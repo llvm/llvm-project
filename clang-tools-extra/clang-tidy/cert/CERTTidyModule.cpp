@@ -42,7 +42,6 @@
 #include "../readability/EnumInitialValueCheck.h"
 #include "../readability/UppercaseLiteralSuffixCheck.h"
 #include "LimitedRandomnessCheck.h"
-#include "ThrownExceptionTypeCheck.h"
 
 namespace {
 
