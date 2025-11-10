@@ -4152,7 +4152,8 @@ define void @store_load_i64_aligned(ptr addrspace(5) nocapture %arg) {
 ; GFX942-LABEL: store_load_i64_aligned:
 ; GFX942:       ; %bb.0: ; %bb
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942-NEXT:    v_mov_b64_e32 v[2:3], 15
+; GFX942-NEXT:    v_mov_b32_e32 v2, 15
+; GFX942-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX942-NEXT:    scratch_store_dwordx2 v0, v[2:3], off sc0 sc1
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    scratch_load_dwordx2 v[0:1], v0, off sc0 sc1
@@ -4262,7 +4263,8 @@ define void @store_load_i64_unaligned(ptr addrspace(5) nocapture %arg) {
 ; GFX942-LABEL: store_load_i64_unaligned:
 ; GFX942:       ; %bb.0: ; %bb
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942-NEXT:    v_mov_b64_e32 v[2:3], 15
+; GFX942-NEXT:    v_mov_b32_e32 v2, 15
+; GFX942-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX942-NEXT:    scratch_store_dwordx2 v0, v[2:3], off sc0 sc1
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    scratch_load_dwordx2 v[0:1], v0, off sc0 sc1

@@ -25,23 +25,22 @@ extern "C" {
 void *RTDEF(CUFMemAlloc)(
     std::size_t bytes, unsigned type, const char *sourceFile, int sourceLine) {
   void *ptr = nullptr;
-  if (bytes != 0) {
-    if (type == kMemTypeDevice) {
-      if (Fortran::runtime::executionEnvironment.cudaDeviceIsManaged) {
-        CUDA_REPORT_IF_ERROR(
-            cudaMallocManaged((void **)&ptr, bytes, cudaMemAttachGlobal));
-      } else {
-        CUDA_REPORT_IF_ERROR(cudaMalloc((void **)&ptr, bytes));
-      }
-    } else if (type == kMemTypeManaged || type == kMemTypeUnified) {
+  bytes = bytes ? bytes : 1;
+  if (type == kMemTypeDevice) {
+    if (Fortran::runtime::executionEnvironment.cudaDeviceIsManaged) {
       CUDA_REPORT_IF_ERROR(
           cudaMallocManaged((void **)&ptr, bytes, cudaMemAttachGlobal));
-    } else if (type == kMemTypePinned) {
-      CUDA_REPORT_IF_ERROR(cudaMallocHost((void **)&ptr, bytes));
     } else {
-      Terminator terminator{sourceFile, sourceLine};
-      terminator.Crash("unsupported memory type");
+      CUDA_REPORT_IF_ERROR(cudaMalloc((void **)&ptr, bytes));
     }
+  } else if (type == kMemTypeManaged || type == kMemTypeUnified) {
+    CUDA_REPORT_IF_ERROR(
+        cudaMallocManaged((void **)&ptr, bytes, cudaMemAttachGlobal));
+  } else if (type == kMemTypePinned) {
+    CUDA_REPORT_IF_ERROR(cudaMallocHost((void **)&ptr, bytes));
+  } else {
+    Terminator terminator{sourceFile, sourceLine};
+    terminator.Crash("unsupported memory type");
   }
   return ptr;
 }

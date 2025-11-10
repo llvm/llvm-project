@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.2-library %s -fnative-half-type -verify
+// RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.2-library %s -fnative-half-type -fnative-int16-type -verify
 
 uint16_t test_asuint16_less_argument()
 {

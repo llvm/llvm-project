@@ -91,7 +91,7 @@ mlir::vector::isTranspose2DSlice(vector::TransposeOp op) {
 
   // Check whether the two source vector dimensions that are greater than one
   // must be transposed with each other so that we can apply one of the 2-D
-  // transpose pattens. Otherwise, these patterns are not applicable.
+  // transpose patterns. Otherwise, these patterns are not applicable.
   if (!areDimsTransposedIn2DSlice(srcGtOneDims[0], srcGtOneDims[1],
                                   op.getPermutation()))
     return failure();
@@ -319,7 +319,7 @@ bool vector::isLinearizableVector(VectorType type) {
 Value vector::createReadOrMaskedRead(OpBuilder &builder, Location loc,
                                      Value source,
                                      ArrayRef<int64_t> inputVectorSizes,
-                                     Value padValue,
+                                     std::optional<Value> padValue,
                                      bool useInBoundsInsteadOfMasking,
                                      ArrayRef<bool> inputScalableVecDims) {
   assert(!llvm::is_contained(inputVectorSizes, ShapedType::kDynamic) &&
@@ -328,9 +328,11 @@ Value vector::createReadOrMaskedRead(OpBuilder &builder, Location loc,
   auto sourceShape = sourceShapedType.getShape();
   assert(sourceShape.size() == inputVectorSizes.size() &&
          "expected same ranks.");
-  auto vectorType = VectorType::get(inputVectorSizes, padValue.getType(),
-                                    inputScalableVecDims);
-  assert(padValue.getType() == sourceShapedType.getElementType() &&
+  auto vectorType =
+      VectorType::get(inputVectorSizes, sourceShapedType.getElementType(),
+                      inputScalableVecDims);
+  assert((!padValue.has_value() ||
+          padValue.value().getType() == sourceShapedType.getElementType()) &&
          "expected same pad element type to match source element type");
   int64_t readRank = inputVectorSizes.size();
   auto zero = arith::ConstantIndexOp::create(builder, loc, 0);

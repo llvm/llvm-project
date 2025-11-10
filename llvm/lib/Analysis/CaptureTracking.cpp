@@ -320,8 +320,12 @@ UseCaptureInfo llvm::DetermineUseCaptureKind(const Use &U, const Value *Base) {
     return CaptureComponents::None;
   case Instruction::Store:
     // Stored the pointer - conservatively assume it may be captured.
+    if (U.getOperandNo() == 0)
+      return MDNode::toCaptureComponents(
+          I->getMetadata(LLVMContext::MD_captures));
+
     // Volatile stores make the address observable.
-    if (U.getOperandNo() == 0 || cast<StoreInst>(I)->isVolatile())
+    if (cast<StoreInst>(I)->isVolatile())
       return CaptureComponents::All;
     return CaptureComponents::None;
   case Instruction::AtomicRMW: {

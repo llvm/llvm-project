@@ -435,7 +435,7 @@ define void @fn_param(<vscale x 2 x float> %a, ptr %b) sanitize_memory {
 define void @test_param(ptr %a, ptr %b) sanitize_memory {
 ; CHECK-LABEL: define void @test_param(
 ; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <vscale x 2 x float>, ptr [[A]], align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[A]] to i64
@@ -455,8 +455,8 @@ define void @test_param(ptr %a, ptr %b) sanitize_memory {
 ;
 ; ORIGIN-LABEL: define void @test_param(
 ; ORIGIN-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
-; ORIGIN-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
-; ORIGIN-NEXT:    [[TMP2:%.*]] = load i32, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_origin_tls to i64), i64 8) to ptr), align 4
+; ORIGIN-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
+; ORIGIN-NEXT:    [[TMP2:%.*]] = load i32, ptr getelementptr (i8, ptr @__msan_param_origin_tls, i64 8), align 4
 ; ORIGIN-NEXT:    call void @llvm.donothing()
 ; ORIGIN-NEXT:    [[TMP3:%.*]] = load <vscale x 2 x float>, ptr [[A]], align 8
 ; ORIGIN-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[A]] to i64

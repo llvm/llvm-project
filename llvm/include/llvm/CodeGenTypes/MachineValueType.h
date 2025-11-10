@@ -582,6 +582,12 @@ namespace llvm {
                                 MVT::LAST_FP_SCALABLE_VECTOR_VALUETYPE,
                                 force_iteration_on_noniterable_enum);
     }
+
+    static auto cheri_capability_valuetypes() {
+      return enum_seq_inclusive(MVT::FIRST_CHERI_CAPABILITY_VALUETYPE,
+                                MVT::LAST_CHERI_CAPABILITY_VALUETYPE,
+                                force_iteration_on_noniterable_enum);
+    }
     /// @}
   };
 

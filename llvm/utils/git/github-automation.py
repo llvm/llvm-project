@@ -297,9 +297,12 @@ class CommitRequestGreeter:
                 print(e)
                 continue
 
+        total_prs_url = f"https://github.com/llvm/llvm-project/pulls?q=author%3A{self.issue.user.login}+is%3Apr"
+        merged_prs_url = total_prs_url + "+is%3Amerged"
         comment = f"""
             ### Activity Summary:
-            * [{total_prs} Pull Requests](https://github.com/llvm/llvm-project/pulls/{self.issue.user.login}) ({merged_prs} merged)
+            * [{total_prs} Pull Requests]({total_prs_url})
+            * [{merged_prs} Merged Pull Requests]({merged_prs_url})
             * Top 3 Committers: {get_user_values_str(get_top_values(merged_by))}
             * Top 3 Reviewers: {get_user_values_str(get_top_values(reviewed_by))}
         """

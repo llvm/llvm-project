@@ -76,23 +76,6 @@ define void @always_taken(ptr noalias %p0, ptr noalias %p1, i1 %c0, i1 %c1) {
 ; CHECK-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
-; CHECK:       [[SCALAR_PH:.*]]:
-; CHECK-NEXT:    br label %[[LOOP:.*]]
-; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LATCH:.*]] ]
-; CHECK-NEXT:    br i1 [[C0]], label %[[THEN_0:.*]], label %[[LATCH]], !prof [[PROF3:![0-9]+]]
-; CHECK:       [[THEN_0]]:
-; CHECK-NEXT:    br i1 [[C1]], label %[[THEN_1:.*]], label %[[LATCH]], !prof [[PROF3]]
-; CHECK:       [[THEN_1]]:
-; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr i32, ptr [[P0]], i32 [[IV]]
-; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[GEP0]], align 4
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i32, ptr [[P1]], i32 [[X]]
-; CHECK-NEXT:    store i32 0, ptr [[GEP1]], align 4
-; CHECK-NEXT:    br label %[[LATCH]]
-; CHECK:       [[LATCH]]:
-; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
-; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i32 [[IV_NEXT]], 1024
-; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT]], label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;

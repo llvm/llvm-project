@@ -32,6 +32,7 @@ def file_header : FF<"file-header", "Display file header">;
 def headers : FF<"headers", "Equivalent to setting: --file-header, --program-headers, --section-headers">;
 defm hex_dump : Eq<"hex-dump", "Display the specified section(s) as hexadecimal bytes">, MetaVarName<"<name or index>">;
 def pretty_print : FF<"pretty-print", "Pretty print JSON output">;
+def offloading : FF<"offloading", "Display the content of the offloading section">;
 def relocs : FF<"relocs", "Display the relocation entries in the file">;
 def section_data : FF<"section-data", "Display section data for each section shown. This option has no effect for GNU style output">;
 def section_details : FF<"section-details", "Display the section details">;

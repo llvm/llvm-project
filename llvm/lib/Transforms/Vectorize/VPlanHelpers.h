@@ -334,12 +334,15 @@ struct VPCostContext {
   LoopVectorizationCostModel &CM;
   SmallPtrSet<Instruction *, 8> SkipCostComputation;
   TargetTransformInfo::TargetCostKind CostKind;
+  ScalarEvolution &SE;
+  const Loop *L;
 
   VPCostContext(const TargetTransformInfo &TTI, const TargetLibraryInfo &TLI,
                 const VPlan &Plan, LoopVectorizationCostModel &CM,
-                TargetTransformInfo::TargetCostKind CostKind)
+                TargetTransformInfo::TargetCostKind CostKind,
+                ScalarEvolution &SE, const Loop *L)
       : TTI(TTI), TLI(TLI), Types(Plan), LLVMCtx(Plan.getContext()), CM(CM),
-        CostKind(CostKind) {}
+        CostKind(CostKind), SE(SE), L(L) {}
 
   /// Return the cost for \p UI with \p VF using the legacy cost model as
   /// fallback until computing the cost of all recipes migrates to VPlan.
@@ -348,6 +351,10 @@ struct VPCostContext {
   /// Return true if the cost for \p UI shouldn't be computed, e.g. because it
   /// has already been pre-computed.
   bool skipCostComputation(Instruction *UI, bool IsVector) const;
+
+  /// \returns how much the cost of a predicated block should be divided by.
+  /// Forwards to LoopVectorizationCostModel::getPredBlockCostDivisor.
+  unsigned getPredBlockCostDivisor(BasicBlock *BB) const;
 
   /// Returns the OperandInfo for \p V, if it is a live-in.
   TargetTransformInfo::OperandValueInfo getOperandInfo(VPValue *V) const;
@@ -359,13 +366,12 @@ struct VPCostContext {
 
   /// Estimate the overhead of scalarizing a recipe with result type \p ResultTy
   /// and \p Operands with \p VF. This is a convenience wrapper for the
-  /// type-based getScalarizationOverhead API.
-  InstructionCost getScalarizationOverhead(Type *ResultTy,
-                                           ArrayRef<const VPValue *> Operands,
-                                           ElementCount VF);
-
-  unsigned getPredBlockCostDivisor(TargetTransformInfo::TargetCostKind CostKind,
-                                   const BasicBlock *BB) const;
+  /// type-based getScalarizationOverhead API. If \p AlwaysIncludeReplicatingR
+  /// is true, always compute the cost of scalarizing replicating operands.
+  InstructionCost
+  getScalarizationOverhead(Type *ResultTy, ArrayRef<const VPValue *> Operands,
+                           ElementCount VF,
+                           bool AlwaysIncludeReplicatingR = false);
 };
 
 /// This class can be used to assign names to VPValues. For VPValues without
@@ -456,6 +462,10 @@ public:
 };
 #endif
 
+/// Check if a constant \p CI can be safely treated as having been extended
+/// from a narrower type with the given extension kind.
+bool canConstantBeExtended(const APInt *C, Type *NarrowType,
+                           TTI::PartialReductionExtendKind ExtKind);
 } // end namespace llvm
 
 #endif // LLVM_TRANSFORMS_VECTORIZE_VPLAN_H

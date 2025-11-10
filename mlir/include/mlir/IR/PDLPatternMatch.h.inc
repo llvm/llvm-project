@@ -53,7 +53,7 @@ public:
   /// value is not an instance of `T`.
   template <typename T,
             typename ResultT = std::conditional_t<
-                std::is_convertible<T, bool>::value, T, std::optional<T>>>
+                std::is_constructible_v<bool, T>, T, std::optional<T>>>
   ResultT dyn_cast() const {
     return isa<T>() ? castImpl<T>() : ResultT();
   }

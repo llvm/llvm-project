@@ -37,11 +37,11 @@ namespace internal {
 template <typename T> struct HasHandle {
 private:
   template <typename ClassT>
-  static auto check(ClassT *) -> typename std::is_same<
-      decltype(std::declval<RefactoringOptionVisitor>().visit(
-          std::declval<RefactoringOption>(),
-          *std::declval<std::optional<T> *>())),
-      void>::type;
+  static auto check(ClassT *)
+      -> std::is_same<decltype(std::declval<RefactoringOptionVisitor>().visit(
+                          std::declval<RefactoringOption>(),
+                          *std::declval<std::optional<T> *>())),
+                      void>;
 
   template <typename> static std::false_type check(...);
 

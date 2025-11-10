@@ -10,6 +10,8 @@ add_benchmark(GetIntrinsicForClangBuiltin GetIntrinsicForClangBuiltin.cpp PARTIA
 add_benchmark(FormatVariadicBM FormatVariadicBM.cpp PARTIAL_SOURCES_INTENDED)
 add_benchmark(GetIntrinsicInfoTableEntriesBM GetIntrinsicInfoTableEntriesBM.cpp PARTIAL_SOURCES_INTENDED)
 add_benchmark(SandboxIRBench SandboxIRBench.cpp PARTIAL_SOURCES_INTENDED)
+add_benchmark(MustacheBench Mustache.cpp PARTIAL_SOURCES_INTENDED)
+add_benchmark(SpecialCaseListBM SpecialCaseListBM.cpp PARTIAL_SOURCES_INTENDED)
 
 add_benchmark(RuntimeLibcallsBench RuntimeLibcalls.cpp PARTIAL_SOURCES_INTENDED)
 
@@ -20,7 +22,7 @@ if(NOT LLVM_TOOL_LLVM_DRIVER_BUILD)
   get_host_tool_path(llvm-nm LLVM_NM llvm_nm_exe llvm_nm_target)
   get_host_tool_path(llc LLC llc_exe llc_target)
 
-  if(${llc_exe} AND ${llvm_nm_exe})
+  if(llc_exe AND llvm_nm_exe)
     # Extract the list of symbols in a random utility as sample data.
     set(SYMBOL_TEST_DATA_FILE "sample_symbol_list.txt")
     set(SYMBOL_TEST_DATA_SOURCE_BINARY ${llc_exe})

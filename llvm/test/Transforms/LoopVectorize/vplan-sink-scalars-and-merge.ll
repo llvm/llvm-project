@@ -1,6 +1,6 @@
 ; REQUIRES: asserts
 
-; RUN: opt -passes=loop-vectorize -force-vector-interleave=1 -force-vector-width=2 -debug -disable-output %s 2>&1 | FileCheck %s
+; RUN: opt -passes=loop-vectorize -force-vector-interleave=1 -force-vector-width=2 -force-widen-divrem-via-safe-divisor=0 -debug -disable-output %s 2>&1 | FileCheck %s
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 
@@ -28,63 +28,55 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ; CHECK-NEXT: vector.body:
 ; CHECK-NEXT:   EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
 ; CHECK-NEXT:   ir<%iv> = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VF]]>
-; CHECK-NEXT:   vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>, vp<[[VF]]>
 ; CHECK-NEXT:   EMIT vp<[[MASK:%.+]]> = icmp ule ir<%iv>, vp<[[BTC]]>
-; CHECK-NEXT: Successor(s): pred.load
-; CHECK-EMPTY:
-; CHECK-NEXT:  <xVFxUF> pred.load: {
-; CHECK-NEXT:    pred.load.entry:
-; CHECK-NEXT:      BRANCH-ON-MASK vp<[[MASK]]>
-; CHECK-NEXT:    Successor(s): pred.load.if, pred.load.continue
-; CHECK-EMPTY:
-; CHECK-NEXT:    pred.load.if:
-; CHECK-NEXT:      REPLICATE ir<%gep.b> = getelementptr inbounds ir<@b>, ir<0>, vp<[[STEPS]]>
-; CHECK-NEXT:      REPLICATE ir<%lv.b> = load ir<%gep.b> (S->V)
-; CHECK-NEXT:    Successor(s): pred.load.continue
-; CHECK-EMPTY:
-; CHECK-NEXT:    pred.load.continue:
-; CHECK-NEXT:      PHI-PREDICATED-INSTRUCTION vp<%8> = ir<%lv.b>
-; CHECK-NEXT:    No successors
-; CHECK-NEXT:  }
-; CHECK-NEXT:  Successor(s): loop.0
-; CHECK-EMPTY:
-; CHECK-NEXT:  loop.0:
-; CHECK-NEXT:    WIDEN ir<%add> = add vp<%8>, ir<10>
-; CHECK-NEXT:    WIDEN ir<%mul> = mul ir<2>, ir<%add>
-; CHECK-NEXT:  Successor(s): pred.store
-; CHECK-EMPTY:
-; CHECK-NEXT:  <xVFxUF> pred.store: {
-; CHECK-NEXT:    pred.store.entry:
-; CHECK-NEXT:      BRANCH-ON-MASK vp<[[MASK]]>
-; CHECK-NEXT:    Successor(s): pred.store.if, pred.store.continue
-; CHECK-EMPTY:
-; CHECK-NEXT:    pred.store.if:
-; CHECK-NEXT:      REPLICATE ir<%gep.a> = getelementptr inbounds ir<@a>, ir<0>, vp<[[STEPS]]>
-; CHECK-NEXT:      REPLICATE store ir<%mul>, ir<%gep.a>
-; CHECK-NEXT:    Successor(s): pred.store.continue
-; CHECK-EMPTY:
-; CHECK-NEXT:    pred.store.continue:
-; CHECK-NEXT:    No successors
-; CHECK-NEXT:  }
-; CHECK-NEXT: Successor(s): loop.1
-; CHECK:      loop.1:
+; CHECK-NEXT:   WIDEN ir<%cond> = icmp eq ir<%iv>, ir<%x>
+; CHECK-NEXT:   EMIT vp<[[AND:%.+]]> = logical-and vp<[[MASK]]>, ir<%cond>
+; CHECK-NEXT: Successor(s): pred.store
+
+; CHECK:      <xVFxUF> pred.store: {
+; CHECK-NEXT:   pred.store.entry:
+; CHECK-NEXT:     BRANCH-ON-MASK vp<[[AND]]>
+; CHECK-NEXT:   Successor(s): pred.store.if, pred.store.continue
+
+; CHECK:      pred.store.if:
+; CHECK-NEXT:     vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
+; CHECK-NEXT:     REPLICATE ir<%gep.b> = getelementptr inbounds ir<@b>, ir<0>, vp<[[STEPS]]>
+; CHECK-NEXT:     REPLICATE ir<%lv.b> = load ir<%gep.b>
+; CHECK-NEXT:     REPLICATE ir<%add> = add ir<%lv.b>, ir<10>
+; CHECK-NEXT:     REPLICATE ir<%gep.a> = getelementptr inbounds ir<@a>, ir<0>, vp<[[STEPS]]
+; CHECK-NEXT:     REPLICATE ir<%mul> = mul ir<2>, ir<%add>
+; CHECK-NEXT:     REPLICATE store ir<%mul>, ir<%gep.a>
+; CHECK-NEXT:   Successor(s): pred.store.continue
+
+; CHECK:      pred.store.continue:
+; CHECK-NEXT:   No successors
+; CHECK-NEXT: }
+
+; CHECK:      if.1:
 ; CHECK-NEXT:   EMIT vp<[[CAN_IV_NEXT:%.+]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
 ; CHECK-NEXT:   EMIT branch-on-count vp<[[CAN_IV_NEXT]]>, vp<[[VEC_TC]]>
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 ;
-define void @sink1(i32 %k) {
+define void @sink1(i32 %k, i32 %x) {
 entry:
   br label %loop
 
 loop:
-  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %latch ]
+  %cond = icmp eq i32 %iv, %x
+  br i1 %cond, label %if, label %latch
+
+if:
   %gep.b = getelementptr inbounds [2048 x i32], ptr @b, i32 0, i32 %iv
   %lv.b  = load i32, ptr %gep.b, align 4
   %add = add i32 %lv.b, 10
   %mul = mul i32 2, %add
   %gep.a = getelementptr inbounds [2048 x i32], ptr @a, i32 0, i32 %iv
   store i32 %mul, ptr %gep.a, align 4
+  br label %latch
+
+latch:
   %iv.next = add i32 %iv, 1
   %large = icmp sge i32 %iv, 8
   %exitcond = icmp eq i32 %iv, %k
@@ -777,46 +769,28 @@ define void @update_2_uses_in_same_recipe_in_merged_block(i32 %k) {
 ; CHECK-NEXT: vector.body:
 ; CHECK-NEXT:   EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
 ; CHECK-NEXT:   ir<%iv> = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VF]]>
-; CHECK-NEXT:   vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>, vp<[[VF]]>
 ; CHECK-NEXT:   EMIT vp<[[MASK:%.+]]> = icmp ule ir<%iv>, vp<[[BTC]]>
-; CHECK-NEXT:   REPLICATE ir<%gep.a> = getelementptr inbounds ir<@a>, ir<0>, vp<[[STEPS]]>
-; CHECK-NEXT:  Successor(s): pred.load
+; CHECK-NEXT: Successor(s): pred.store
 ; CHECK-EMPTY:
-; CHECK-NEXT:  <xVFxUF> pred.load: {
-; CHECK-NEXT:    pred.load.entry:
-; CHECK-NEXT:      BRANCH-ON-MASK vp<[[MASK]]>
-; CHECK-NEXT:    Successor(s): pred.load.if, pred.load.continue
+; CHECK-NEXT: <xVFxUF> pred.store: {
+; CHECK-NEXT:   pred.store.entry:
+; CHECK-NEXT:     BRANCH-ON-MASK vp<[[MASK]]>
+; CHECK-NEXT:   Successor(s): pred.store.if, pred.store.continue
 ; CHECK-EMPTY:
-; CHECK-NEXT:    pred.load.if:
-; CHECK-NEXT:      REPLICATE ir<%lv.a> = load ir<%gep.a> (S->V)
-; CHECK-NEXT:    Successor(s): pred.load.continue
+; CHECK-NEXT:   pred.store.if:
+; CHECK-NEXT:     vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
+; CHECK-NEXT:     REPLICATE ir<%gep.a> = getelementptr inbounds ir<@a>, ir<0>, vp<[[STEPS]]>
+; CHECK-NEXT:     REPLICATE ir<%lv.a> = load ir<%gep.a>
+; CHECK-NEXT:     REPLICATE ir<%div> = sdiv ir<%lv.a>, ir<%lv.a>
+; CHECK-NEXT:     REPLICATE store ir<%div>, ir<%gep.a>
+; CHECK-NEXT:   Successor(s): pred.store.continue
 ; CHECK-EMPTY:
-; CHECK-NEXT:    pred.load.continue:
-; CHECK-NEXT:      PHI-PREDICATED-INSTRUCTION vp<[[PRED:%.+]]> = ir<%lv.a>
-; CHECK-NEXT:    No successors
-; CHECK-NEXT:  }
-; CHECK-NEXT:  Successor(s): loop.0
+; CHECK-NEXT:   pred.store.continue:
+; CHECK-NEXT:   No successors
+; CHECK-NEXT: }
+; CHECK-NEXT: Successor(s): loop.2
 ; CHECK-EMPTY:
-; CHECK-NEXT:  loop.0:
-; CHECK-NEXT:    EMIT vp<[[SELECT:%.+]]> = select vp<[[MASK]]>, vp<[[PRED]]>, ir<1>
-; CHECK-NEXT:    WIDEN ir<%div> = sdiv vp<[[PRED]]>, vp<[[SELECT]]>
-; CHECK-NEXT:  Successor(s): pred.store
-; CHECK-EMPTY:
-; CHECK-NEXT:  <xVFxUF> pred.store: {
-; CHECK-NEXT:    pred.store.entry:
-; CHECK-NEXT:      BRANCH-ON-MASK vp<[[MASK]]>
-; CHECK-NEXT:    Successor(s): pred.store.if, pred.store.continue
-; CHECK-EMPTY:
-; CHECK-NEXT:    pred.store.if:
-; CHECK-NEXT:      REPLICATE store ir<%div>, ir<%gep.a>
-; CHECK-NEXT:    Successor(s): pred.store.continue
-; CHECK-EMPTY:
-; CHECK-NEXT:    pred.store.continue:
-; CHECK-NEXT:    No successors
-; CHECK-NEXT:  }
-; CHECK-NEXT:  Successor(s): loop.1
-; CHECK-EMPTY:
-; CHECK-NEXT:  loop.1:
+; CHECK-NEXT: loop.2:
 ; CHECK-NEXT:   EMIT vp<[[CAN_IV_NEXT:%.+]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
 ; CHECK-NEXT:   EMIT branch-on-count vp<[[CAN_IV_NEXT]]>, vp<[[VEC_TC]]>
 ; CHECK-NEXT: No successors
@@ -884,8 +858,6 @@ define void @recipe_in_merge_candidate_used_by_first_order_recurrence(i32 %k) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT: loop.0:
 ; CHECK-NEXT:   EMIT vp<[[SPLICE:%.+]]> = first-order splice ir<%for>, vp<[[PRED]]>
-; CHECK-NEXT:   EMIT vp<[[SELECT:%.+]]> = select vp<[[MASK]]>, vp<[[PRED]]>, ir<1>
-; CHECK-NEXT:   WIDEN ir<%div> = sdiv vp<[[SPLICE]]>, vp<[[SELECT]]>
 ; CHECK-NEXT: Successor(s): pred.store
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <xVFxUF> pred.store: {
@@ -894,15 +866,16 @@ define void @recipe_in_merge_candidate_used_by_first_order_recurrence(i32 %k) {
 ; CHECK-NEXT:   Successor(s): pred.store.if, pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   pred.store.if:
+; CHECK-NEXT:     REPLICATE ir<%div> = sdiv vp<[[SPLICE]]>, vp<[[PRED]]>
 ; CHECK-NEXT:     REPLICATE store ir<%div>, ir<%gep.a>
 ; CHECK-NEXT:   Successor(s): pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   pred.store.continue:
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }
-; CHECK-NEXT: Successor(s): loop.1
+; CHECK-NEXT: Successor(s): loop.2
 ; CHECK-EMPTY:
-; CHECK-NEXT: loop.1:
+; CHECK-NEXT: loop.2:
 ; CHECK-NEXT:   EMIT vp<[[CAN_IV_NEXT:%.+]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
 ; CHECK-NEXT:   EMIT branch-on-count vp<[[CAN_IV_NEXT]]>, vp<[[VEC_TC]]>
 ; CHECK-NEXT: No successors

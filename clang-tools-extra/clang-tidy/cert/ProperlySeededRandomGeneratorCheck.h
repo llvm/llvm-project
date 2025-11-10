@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CERT_PROPERLY_SEEDED_RANDOM_GENERATOR_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CERT_PROPERLY_SEEDED_RANDOM_GENERATOR_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CERT_PROPERLYSEEDEDRANDOMGENERATORCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CERT_PROPERLYSEEDEDRANDOMGENERATORCHECK_H
 
 #include "../ClangTidyCheck.h"
 #include <string>
@@ -33,10 +33,10 @@ private:
   void checkSeed(const ast_matchers::MatchFinder::MatchResult &Result,
                  const T *Func);
 
-  std::string RawDisallowedSeedTypes;
+  StringRef RawDisallowedSeedTypes;
   SmallVector<StringRef, 5> DisallowedSeedTypes;
 };
 
 } // namespace clang::tidy::cert
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CERT_PROPERLY_SEEDED_RANDOM_GENERATOR_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CERT_PROPERLYSEEDEDRANDOMGENERATORCHECK_H

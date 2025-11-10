@@ -3,12 +3,10 @@
 // RUN: %not --crash env -u LLVM_DISABLE_SYMBOLIZATION OFFLOAD_TRACK_ALLOCATION_TRACES=1 %libomptarget-run-generic 2>&1 | %fcheck-generic --check-prefixes=CHECK
 // clang-format on
 
-// UNSUPPORTED: aarch64-unknown-linux-gnu
-// UNSUPPORTED: aarch64-unknown-linux-gnu-LTO
-// UNSUPPORTED: x86_64-unknown-linux-gnu
-// UNSUPPORTED: x86_64-unknown-linux-gnu-LTO
-// UNSUPPORTED: s390x-ibm-linux-gnu
-// UNSUPPORTED: s390x-ibm-linux-gnu-LTO
+// FIXME: https://github.com/llvm/llvm-project/issues/161265
+// UNSUPPORTED: nvidiagpu
+//
+// REQUIRES: gpu
 
 // If offload memory pooling is enabled for a large allocation, reuse error is
 // not detected. UNSUPPORTED: large_allocation_memory_pool

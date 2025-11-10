@@ -2,7 +2,7 @@
 // DEFINE:    -transform-interpreter -test-transform-dialect-erase-schedule \
 // DEFINE:    -cse -canonicalize -test-lower-to-llvm
 // DEFINE: %{entry_point} = main
-// DEFINE: %{run} = mlir-runner -e %{entry_point} -entry-point-result=void \
+// DEFINE: %{run} = %mcr_aarch64_cmd -e %{entry_point} -entry-point-result=void --march=aarch64 --mattr="+sve"\
 // DEFINE:    -shared-libs=%mlir_runner_utils,%mlir_c_runner_utils
 
 // RUN: %{compile} | %{run} | FileCheck %s

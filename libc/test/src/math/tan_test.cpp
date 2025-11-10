@@ -7,10 +7,17 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/macros/optimization.h"
 #include "src/math/tan.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
+
+#ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+#define TOLERANCE 4
+#else
+#define TOLERANCE 0
+#endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
 using LlvmLibcTanTest = LIBC_NAMESPACE::testing::FPTest<double>;
 
@@ -53,9 +60,9 @@ TEST_F(LlvmLibcTanTest, TrickyInputs) {
   for (int i = 0; i < N; ++i) {
     double x = INPUTS[i];
     ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Tan, x,
-                                   LIBC_NAMESPACE::tan(x), 0.5);
+                                   LIBC_NAMESPACE::tan(x), TOLERANCE + 0.5);
     ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Tan, -x,
-                                   LIBC_NAMESPACE::tan(-x), 0.5);
+                                   LIBC_NAMESPACE::tan(-x), TOLERANCE + 0.5);
   }
 }
 
@@ -89,7 +96,7 @@ TEST_F(LlvmLibcTanTest, InDoubleRange) {
       ++tested;
 
       if (!TEST_MPFR_MATCH_ROUNDING_SILENTLY(mpfr::Operation::Tan, x, result,
-                                             0.5, rounding_mode)) {
+                                             TOLERANCE + 0.5, rounding_mode)) {
         ++fails;
         while (!TEST_MPFR_MATCH_ROUNDING_SILENTLY(mpfr::Operation::Tan, x,
                                                   result, ulp, rounding_mode)) {

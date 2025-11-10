@@ -192,6 +192,13 @@ llvm.func @rocdl.barrier() {
   llvm.return
 }
 
+llvm.func @rocdl.s.barrier.init(%ptr : !llvm.ptr<3>) {
+  // CHECK-LABEL: rocdl.s.barrier.init
+  // CHECK: call void @llvm.amdgcn.s.barrier.init(ptr addrspace(3) %[[PTR:.+]], i32 1)
+  rocdl.s.barrier.init %ptr, 1
+  llvm.return
+}
+
 llvm.func @rocdl.s.barrier.signal() {
   // CHECK-LABEL: rocdl.s.barrier.signal
   // CHECK-NEXT: call void @llvm.amdgcn.s.barrier.signal(i32 -1)
@@ -199,10 +206,45 @@ llvm.func @rocdl.s.barrier.signal() {
   llvm.return
 }
 
+llvm.func @rocdl.s.barrier.signal.var(%ptr : !llvm.ptr<3>) {
+  // CHECK-LABEL: rocdl.s.barrier.signal.var
+  // CHECK: call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(3) %[[PTR:.+]], i32 1)
+  rocdl.s.barrier.signal.var %ptr, 1
+  llvm.return
+}
+
+llvm.func @rocdl.s.barrier.join(%ptr : !llvm.ptr<3>) {
+  // CHECK-LABEL: rocdl.s.barrier.join
+  // CHECK: call void @llvm.amdgcn.s.barrier.join(ptr addrspace(3) %[[PTR:.+]])
+  rocdl.s.barrier.join %ptr
+  llvm.return
+}
+
+llvm.func @rocdl.s.barrier.leave() {
+  // CHECK-LABEL: rocdl.s.barrier.leave
+  // CHECK: call void @llvm.amdgcn.s.barrier.leave(i16 1)
+  rocdl.s.barrier.leave 1
+  llvm.return
+}
+
 llvm.func @rocdl.s.barrier.wait() {
   // CHECK-LABEL: rocdl.s.barrier.wait
   // CHECK-NEXT: call void @llvm.amdgcn.s.barrier.wait(i16 -1)
   rocdl.s.barrier.wait -1
+  llvm.return
+}
+
+llvm.func @rocdl.s.barrier.signal.isfirst() {
+  // CHECK-LABEL: rocdl.s.barrier.signal.isfirst
+  // CHECK:  %[[OUT:.+]] = call i1 @llvm.amdgcn.s.barrier.signal.isfirst(i32 1)
+  %0 = rocdl.s.barrier.signal.isfirst 1 : i1
+  llvm.return
+}
+
+llvm.func @rocdl.s.get.barrier.state() {
+  // CHECK-LABEL: rocdl.s.get.barrier.state
+  // CHECK: %[[STATE:.+]] = call i32 @llvm.amdgcn.s.get.barrier.state(i32 1)
+  %0 = rocdl.s.get.barrier.state 1 : i32
   llvm.return
 }
 
@@ -231,6 +273,20 @@ llvm.func @rocdl.s.wait.expcnt() {
   // CHECK-LABEL: rocdl.s.wait.expcnt
   // CHECK-NEXT: call void @llvm.amdgcn.s.wait.expcnt(i16 0)
   rocdl.s.wait.expcnt 0
+  llvm.return
+}
+
+llvm.func @rocdl.s.wait.asynccnt() {
+  // CHECK-LABEL: rocdl.s.wait.asynccnt
+  // CHECK-NEXT: call void @llvm.amdgcn.s.wait.asynccnt(i16 0)
+  rocdl.s.wait.asynccnt 0
+  llvm.return
+}
+
+llvm.func @rocdl.s.wait.tensorcnt() {
+  // CHECK-LABEL: rocdl.s.wait.tensorcnt
+  // CHECK-NEXT: call void @llvm.amdgcn.s.wait.tensorcnt(i16 0)
+  rocdl.s.wait.tensorcnt 0
   llvm.return
 }
 
@@ -816,9 +872,11 @@ llvm.func @rocdl.mfma.scale.f32.16x16x128.f8f6f4(%arg0 : i32,
 }
 
 llvm.func @rocdl.wmma(%arg0 : vector<8xf32>, %arg1 : vector<16 x f16>, %arg2 : vector<16 x i16>, %arg3 : vector<8 x i32>,
-                      %arg4 : vector<2xi32>, %arg5 : vector<4xi32>, %arg6 : vector<4xf32>, %arg7 : vector<8xf16>, %arg8 : vector<8xi16>) -> vector<8xf32> {
+                      %arg4 : vector<2xi32>, %arg5 : vector<4xi32>, %arg6 : vector<4xf32>, %arg7 : vector<8xf16>, %arg8 : vector<8xi16>,
+                      %arg9 : vector<32xf16>, %arg10 : vector<16xf32>, %arg11 : vector<4xf32>, %arg12 : vector<32xf32>, %arg13 : vector<64xf32>, 
+                      %arg14 : vector<64xi32>, %arg15 : vector<64xf16>, %arg16 : vector<16xbf16>, %arg17 : vector<32xbf16>) -> vector<8xf32> {
   %zero = llvm.mlir.constant(false) : i1
-
+  %zero_i16 = llvm.mlir.constant(0 : i16) : i16
   // ---- Wave32 -----
 
   // f16 -> f32
@@ -848,6 +906,83 @@ llvm.func @rocdl.wmma(%arg0 : vector<8xf32>, %arg1 : vector<16 x f16>, %arg2 : v
   // int4 -> int32 (signA = {0,1}, signB = {0,1}, clamp = {0,1})
   // CHECK: call <8 x i32> @llvm.amdgcn.wmma.i32.16x16x32.iu4.v8i32.v2i32(i1 {{.*}}, <2 x i32> %{{.*}}, i1 {{.*}}, <2 x i32> %{{.*}}, <8 x i32> %{{.*}}, i1 {{.*}})
   %r6.gfx12 = rocdl.wmma.i32.16x16x32.iu4 %zero, %arg4, %zero, %arg4, %arg3, %zero : (i1, vector<2xi32>, i1, vector<2xi32>, vector<8xi32>, i1) -> vector<8xi32>
+
+  // f32 -> f32
+  // CHECK: call <4 x float> @llvm.amdgcn.wmma.f32.16x16x4.f32.v4f32.v16f32(i1 {{.*}}, <16 x float> %{{.*}}, i1 {{.*}}, <16 x float> %{{.*}}, i16 0, <4 x float> %{{.*}}, i1 {{.*}}, i1 {{.*}})
+  %r1.gfx1250 = rocdl.wmma.f32.16x16x4.f32 %zero, %arg10, %zero, %arg10, %zero_i16, %arg11, %zero, %zero : (i1, vector<16xf32>, i1, vector<16xf32>, i16, vector<4xf32>, i1, i1) -> vector<4xf32>
+
+  // f16 -> f32
+  // CHECK: call <32 x float> @llvm.amdgcn.wmma.f32.16x16x32.f16.v32f32.v16f16(i1 {{.*}}, <16 x half> %{{.*}}, i1 {{.*}}, <16 x half> %{{.*}}, i16 0, <32 x float> %{{.*}}, i1 {{.*}}, i1 {{.*}})
+  %r2.gfx1250 = rocdl.wmma.f32.16x16x32.f16 %zero, %arg1, %zero, %arg1, %zero_i16, %arg12, %zero, %zero : (i1, vector<16xf16>, i1, vector<16xf16>, i16, vector<32xf32>, i1, i1) -> vector<32xf32>
+
+  // bf16 -> f32
+  // CHECK: call <32 x float> @llvm.amdgcn.wmma.f32.16x16x32.bf16.v32f32.v16bf16(i1 {{.*}}, <16 x bfloat> %{{.*}}, i1 {{.*}}, <16 x bfloat> %{{.*}}, i16 0, <32 x float> %{{.*}}, i1 {{.*}}, i1 {{.*}})
+  %r3.gfx1250 = rocdl.wmma.f32.16x16x32.bf16 %zero, %arg16, %zero, %arg16, %zero_i16, %arg12, %zero, %zero : (i1, vector<16xbf16>, i1, vector<16xbf16>, i16, vector<32xf32>, i1, i1) -> vector<32xf32>
+
+  // f16 -> f16
+  // CHECK: call <32 x half> @llvm.amdgcn.wmma.f16.16x16x32.f16.v32f16.v16f16(i1 {{.*}}, <16 x half> %{{.*}}, i1 {{.*}}, <16 x half> %{{.*}}, i16 0, <32 x half> %{{.*}}, i1 {{.*}}, i1 {{.*}})
+  %r4.gfx1250 = rocdl.wmma.f16.16x16x32.f16 %zero, %arg1, %zero, %arg1, %zero_i16, %arg9, %zero, %zero : (i1, vector<16xf16>, i1, vector<16xf16>, i16, vector<32xf16>, i1, i1) -> vector<32xf16>
+
+  // bf16 -> bf16
+  // CHECK: call <32 x bfloat> @llvm.amdgcn.wmma.bf16.16x16x32.bf16.v32bf16.v16bf16(i1 {{.*}}, <16 x bfloat> %{{.*}}, i1 {{.*}}, <16 x bfloat> %{{.*}}, i16 0, <32 x bfloat> %{{.*}}, i1 {{.*}}, i1 {{.*}})
+  %r5.gfx1250 = rocdl.wmma.bf16.16x16x32.bf16 %zero, %arg16, %zero, %arg16, %zero_i16, %arg17, %zero, %zero : (i1, vector<16xbf16>, i1, vector<16xbf16>, i16, vector<32xbf16>, i1, i1) -> vector<32xbf16>
+
+  // bf16 -> bf16 / f32
+  // CHECK: call <32 x bfloat> @llvm.amdgcn.wmma.bf16f32.16x16x32.bf16.v32bf16.v16bf16.v32f32(i1 {{.*}}, <16 x bfloat> %{{.*}}, i1 {{.*}}, <16 x bfloat> %{{.*}}, i16 0, <32 x float> %{{.*}}, i1 {{.*}}, i1 {{.*}})
+  %r6.gfx1250 = rocdl.wmma.bf16f32.16x16x32.bf16 %zero, %arg16, %zero, %arg16, %zero_i16, %arg12, %zero, %zero : (i1, vector<16xbf16>, i1, vector<16xbf16>, i16, vector<32xf32>, i1, i1) -> vector<32xbf16>
+
+  // f8/bf8 -> f16/f32
+  // CHECK: call <64 x float> @llvm.amdgcn.wmma.f32.16x16x64.fp8.fp8.v64f32.v4i32(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, i16 0, <64 x float> %{{.*}}, i1 {{.*}}, i1 {{.*}})
+  %r7.gfx1250 = rocdl.wmma.f32.16x16x64.fp8_fp8 %arg5, %arg5, %zero_i16, %arg13, %zero, %zero : (vector<4xi32>, vector<4xi32>, i16, vector<64xf32>, i1, i1) -> vector<64xf32>
+
+  // CHECK: call <64 x float> @llvm.amdgcn.wmma.f32.16x16x64.fp8.bf8.v64f32.v4i32(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, i16 0, <64 x float> %{{.*}}, i1 {{.*}}, i1 {{.*}})
+  %r8.gfx1250 = rocdl.wmma.f32.16x16x64.fp8_bf8 %arg5, %arg5, %zero_i16, %arg13, %zero, %zero : (vector<4xi32>, vector<4xi32>, i16, vector<64xf32>, i1, i1) -> vector<64xf32>
+
+  // CHECK: call <64 x float> @llvm.amdgcn.wmma.f32.16x16x64.bf8.fp8.v64f32.v4i32(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, i16 0, <64 x float> %{{.*}}, i1 {{.*}}, i1 {{.*}})
+  %r9.gfx1250 = rocdl.wmma.f32.16x16x64.bf8_fp8 %arg5, %arg5, %zero_i16, %arg13, %zero, %zero : (vector<4xi32>, vector<4xi32>, i16, vector<64xf32>, i1, i1) -> vector<64xf32>
+
+  // CHECK: call <64 x float> @llvm.amdgcn.wmma.f32.16x16x64.bf8.bf8.v64f32.v4i32(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, i16 0, <64 x float> %{{.*}}, i1 {{.*}}, i1 {{.*}})
+  %r10.gfx1250 = rocdl.wmma.f32.16x16x64.bf8_bf8 %arg5, %arg5, %zero_i16, %arg13, %zero, %zero : (vector<4xi32>, vector<4xi32>, i16, vector<64xf32>, i1, i1) -> vector<64xf32>
+
+  // CHECK: call <64 x half> @llvm.amdgcn.wmma.f16.16x16x64.fp8.fp8.v64f16.v4i32(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, i16 0, <64 x half> %{{.*}}, i1 {{.*}}, i1 {{.*}})
+  %r11.gfx1250 = rocdl.wmma.f16.16x16x64.fp8_fp8 %arg5, %arg5, %zero_i16, %arg15, %zero, %zero : (vector<4xi32>, vector<4xi32>, i16, vector<64xf16>, i1, i1) -> vector<64xf16>
+
+  // CHECK: call <64 x half> @llvm.amdgcn.wmma.f16.16x16x64.fp8.bf8.v64f16.v4i32(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, i16 0, <64 x half> %{{.*}}, i1 {{.*}}, i1 {{.*}})
+  %r12.gfx1250 = rocdl.wmma.f16.16x16x64.fp8_bf8 %arg5, %arg5, %zero_i16, %arg15, %zero, %zero : (vector<4xi32>, vector<4xi32>, i16, vector<64xf16>, i1, i1) -> vector<64xf16>
+
+  // CHECK: call <64 x half> @llvm.amdgcn.wmma.f16.16x16x64.bf8.fp8.v64f16.v4i32(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, i16 0, <64 x half> %{{.*}}, i1 {{.*}}, i1 {{.*}})
+  %r13.gfx1250 = rocdl.wmma.f16.16x16x64.bf8_fp8 %arg5, %arg5, %zero_i16, %arg15, %zero, %zero : (vector<4xi32>, vector<4xi32>, i16, vector<64xf16>, i1, i1) -> vector<64xf16>
+
+  // CHECK: call <64 x half> @llvm.amdgcn.wmma.f16.16x16x64.bf8.bf8.v64f16.v4i32(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, i16 0, <64 x half> %{{.*}}, i1 {{.*}}, i1 {{.*}})
+  %r14.gfx1250 = rocdl.wmma.f16.16x16x64.bf8_bf8 %arg5, %arg5, %zero_i16, %arg15, %zero, %zero : (vector<4xi32>, vector<4xi32>, i16, vector<64xf16>, i1, i1) -> vector<64xf16>
+
+  // CHECK: call <64 x float> @llvm.amdgcn.wmma.f32.16x16x128.fp8.fp8.v64f32.v4i32(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, i16 0, <64 x float> %{{.*}}, i1 {{.*}}, i1 {{.*}})
+  %r15.gfx1250 = rocdl.wmma.f32.16x16x128.fp8_fp8 %arg5, %arg5, %zero_i16, %arg13, %zero, %zero : (vector<4xi32>, vector<4xi32>, i16, vector<64xf32>, i1, i1) -> vector<64xf32>
+
+  // CHECK: call <64 x float> @llvm.amdgcn.wmma.f32.16x16x128.fp8.bf8.v64f32.v4i32(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, i16 0, <64 x float> %{{.*}}, i1 {{.*}}, i1 {{.*}})
+  %r16.gfx1250 = rocdl.wmma.f32.16x16x128.fp8_bf8 %arg5, %arg5, %zero_i16, %arg13, %zero, %zero : (vector<4xi32>, vector<4xi32>, i16, vector<64xf32>, i1, i1) -> vector<64xf32>
+
+  // CHECK: call <64 x float> @llvm.amdgcn.wmma.f32.16x16x128.bf8.fp8.v64f32.v4i32(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, i16 0, <64 x float> %{{.*}}, i1 {{.*}}, i1 {{.*}})
+  %r17.gfx1250 = rocdl.wmma.f32.16x16x128.bf8_fp8 %arg5, %arg5, %zero_i16, %arg13, %zero, %zero : (vector<4xi32>, vector<4xi32>, i16, vector<64xf32>, i1, i1) -> vector<64xf32>
+
+  // CHECK: call <64 x float> @llvm.amdgcn.wmma.f32.16x16x128.bf8.bf8.v64f32.v4i32(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, i16 0, <64 x float> %{{.*}}, i1 {{.*}}, i1 {{.*}})
+  %r18.gfx1250 = rocdl.wmma.f32.16x16x128.bf8_bf8 %arg5, %arg5, %zero_i16, %arg13, %zero, %zero : (vector<4xi32>, vector<4xi32>, i16, vector<64xf32>, i1, i1) -> vector<64xf32>
+
+  // CHECK: call <64 x half> @llvm.amdgcn.wmma.f16.16x16x128.fp8.fp8.v64f16.v4i32(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, i16 0, <64 x half> %{{.*}}, i1 {{.*}}, i1 {{.*}})
+  %r19.gfx1250 = rocdl.wmma.f16.16x16x128.fp8_fp8 %arg5, %arg5, %zero_i16, %arg15, %zero, %zero : (vector<4xi32>, vector<4xi32>, i16, vector<64xf16>, i1, i1) -> vector<64xf16>
+
+  // CHECK: call <64 x half> @llvm.amdgcn.wmma.f16.16x16x128.fp8.bf8.v64f16.v4i32(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, i16 0, <64 x half> %{{.*}}, i1 {{.*}}, i1 {{.*}})
+  %r20.gfx1250 = rocdl.wmma.f16.16x16x128.fp8_bf8 %arg5, %arg5, %zero_i16, %arg15, %zero, %zero : (vector<4xi32>, vector<4xi32>, i16, vector<64xf16>, i1, i1) -> vector<64xf16>
+
+  // CHECK: call <64 x half> @llvm.amdgcn.wmma.f16.16x16x128.bf8.fp8.v64f16.v4i32(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, i16 0, <64 x half> %{{.*}}, i1 {{.*}}, i1 {{.*}})
+  %r21.gfx1250 = rocdl.wmma.f16.16x16x128.bf8_fp8 %arg5, %arg5, %zero_i16, %arg15, %zero, %zero : (vector<4xi32>, vector<4xi32>, i16, vector<64xf16>, i1, i1) -> vector<64xf16>
+
+  // CHECK: call <64 x half> @llvm.amdgcn.wmma.f16.16x16x128.bf8.bf8.v64f16.v4i32(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, i16 0, <64 x half> %{{.*}}, i1 {{.*}}, i1 {{.*}})
+  %r22.gfx1250 = rocdl.wmma.f16.16x16x128.bf8_bf8 %arg5, %arg5, %zero_i16, %arg15, %zero, %zero : (vector<4xi32>, vector<4xi32>, i16, vector<64xf16>, i1, i1) -> vector<64xf16>
+
+  // iu8 -> i32
+  // CHECK: call <64 x i32> @llvm.amdgcn.wmma.i32.16x16x64.iu8.v64i32.v4i32(i1 {{.*}}, <4 x i32> %{{.*}}, i1 {{.*}}, <4 x i32> %{{.*}}, <64 x i32> %{{.*}}, i1 {{.*}}, i1 {{.*}})
+  %r23.gfx1250 = rocdl.wmma.i32.16x16x64.iu8 %zero, %arg5, %zero, %arg5, %arg14, %zero, %zero : (i1, vector<4xi32>, i1, vector<4xi32>, vector<64xi32>, i1, i1) -> vector<64xi32>
 
   // ---- Wave64 -----
 
@@ -905,12 +1040,55 @@ llvm.func @rocdl.global.load.lds(%src : !llvm.ptr<1>, %dst: !llvm.ptr<3>) {
   llvm.return
 }
 
+// CHECK-LABEL: rocdl.global.load.async.to.lds
+llvm.func @rocdl.global.load.async.to.lds(%src : !llvm.ptr<1>, %dst: !llvm.ptr<3>) {
+  // CHECK: call void @llvm.amdgcn.global.load.async.to.lds.b8
+  rocdl.global.load.async.to.lds.b8 %src, %dst, 0, 0 : !llvm.ptr<1>, !llvm.ptr<3>
+  // CHECK: call void @llvm.amdgcn.global.load.async.to.lds.b32
+  rocdl.global.load.async.to.lds.b32 %src, %dst, 0, 0 : !llvm.ptr<1>, !llvm.ptr<3>
+  // CHECK: call void @llvm.amdgcn.global.load.async.to.lds.b64
+  rocdl.global.load.async.to.lds.b64 %src, %dst, 0, 0 : !llvm.ptr<1>, !llvm.ptr<3>
+  // CHECK: call void @llvm.amdgcn.global.load.async.to.lds.b128
+  rocdl.global.load.async.to.lds.b128 %src, %dst, 0, 0 : !llvm.ptr<1>, !llvm.ptr<3>
+  llvm.return
+}
+
+// CHECK-LABEL: rocdl.tensor.load.to.lds
+llvm.func @rocdl.tensor.load.to.lds(%dgroup0 : vector<4xi32>, %dgroup1 : vector<8xi32>,
+                                    %dgroup2 : vector<4xi32>, %dgroup3 : vector<4xi32>) {
+  // CHECK: call void @llvm.amdgcn.tensor.load.to.lds(<4 x i32> %{{.*}}, <8 x i32> %{{.*}}, <4 x i32> %{{.*}}, <4 x i32> %{{.*}}, i32 0)
+  rocdl.tensor.load.to.lds %dgroup0, %dgroup1, %dgroup2, %dgroup3 cachepolicy 0 : vector<4xi32>, vector<8xi32>
+  llvm.return
+}
+
+// CHECK-LABEL: rocdl.tensor.store.from.lds
+llvm.func @rocdl.tensor.store.from.lds(%dgroup0 : vector<4xi32>, %dgroup1 : vector<8xi32>,
+                                       %dgroup2 : vector<4xi32>, %dgroup3 : vector<4xi32>) {
+  // CHECK: call void @llvm.amdgcn.tensor.store.from.lds(<4 x i32> %{{.*}}, <8 x i32> %{{.*}}, <4 x i32> %{{.*}}, <4 x i32> %{{.*}}, i32 0)
+  rocdl.tensor.store.from.lds %dgroup0, %dgroup1, %dgroup2, %dgroup3 cachepolicy 0 : vector<4xi32>, vector<8xi32>
+  llvm.return
+}
+
+// CHECK-LABEL: rocdl.tensor.load.to.lds.d2
+llvm.func @rocdl.tensor.load.to.lds.d2(%dgroup0 : vector<4xi32>, %dgroup1 : vector<8xi32>) {
+  // CHECK: call void @llvm.amdgcn.tensor.load.to.lds.d2(<4 x i32> %{{.*}}, <8 x i32> %{{.*}}, i32 0)
+  rocdl.tensor.load.to.lds.d2 %dgroup0, %dgroup1 cachepolicy 0 : vector<4xi32>, vector<8xi32>
+  llvm.return
+}
+
+// CHECK-LABEL: rocdl.tensor.store.from.lds.d2
+llvm.func @rocdl.tensor.store.from.lds.d2(%dgroup0 : vector<4xi32>, %dgroup1 : vector<8xi32>) {
+  // CHECK: call void @llvm.amdgcn.tensor.store.from.lds.d2(<4 x i32> %{{.*}}, <8 x i32> %{{.*}}, i32 0)
+  rocdl.tensor.store.from.lds.d2 %dgroup0, %dgroup1 cachepolicy 0 : vector<4xi32>, vector<8xi32>
+  llvm.return
+}
+
 llvm.func @rocdl.make.buffer.rsrc(%ptr : !llvm.ptr,
                                   %stride : i16,
-                                  %numRecords : i32,
+                                  %numRecords : i64,
                                   %flags : i32) -> !llvm.ptr<8> {
   // CHECK-LABEL: rocdl.make.buffer.rsrc
-  // CHECK: %[[rsrc:.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0(ptr %{{.*}}, i16 %{{.*}}, i32 %{{.*}}, i32 %{{.*}})
+  // CHECK: %[[rsrc:.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0(ptr %{{.*}}, i16 %{{.*}}, i64 %{{.*}}, i32 %{{.*}})
   // CHECK: ret ptr addrspace(8) %[[rsrc]]
   %rsrc = rocdl.make.buffer.rsrc %ptr, %stride, %numRecords, %flags : !llvm.ptr to !llvm.ptr<8>
   llvm.return %rsrc : !llvm.ptr<8>
@@ -918,10 +1096,10 @@ llvm.func @rocdl.make.buffer.rsrc(%ptr : !llvm.ptr,
 
 llvm.func @rocdl.make.buffer.rsrc.p7.p1(%ptr : !llvm.ptr<1>,
                                   %stride : i16,
-                                  %numRecords : i32,
+                                  %numRecords : i64,
                                   %flags : i32) -> !llvm.ptr<7> {
   // CHECK-LABEL: rocdl.make.buffer.rsrc.p7.p1
-  // CHECK: %[[rsrc:.*]] = call ptr addrspace(7) @llvm.amdgcn.make.buffer.rsrc.p7.p1(ptr addrspace(1) %{{.*}}, i16 %{{.*}}, i32 %{{.*}}, i32 %{{.*}})
+  // CHECK: %[[rsrc:.*]] = call ptr addrspace(7) @llvm.amdgcn.make.buffer.rsrc.p7.p1(ptr addrspace(1) %{{.*}}, i16 %{{.*}}, i64 %{{.*}}, i32 %{{.*}})
   // CHECK: ret ptr addrspace(7) %[[rsrc]]
   %rsrc = rocdl.make.buffer.rsrc %ptr, %stride, %numRecords, %flags : <1> to <7>
   llvm.return %rsrc : !llvm.ptr<7>
@@ -1298,6 +1476,20 @@ llvm.func @rocdl_last_use(%ptr: !llvm.ptr<1>) -> i32 {
   llvm.return %ret : i32
 }
 
+llvm.func @test_fmed3_f16(%arg0: f16, %arg1: f16, %arg2: f16) -> f16 {
+  // CHECK-LABEL: define half @test_fmed3_f16(half %0, half %1, half %2)
+  %0 = rocdl.fmed3 %arg0, %arg1, %arg2 : f16
+  llvm.return %0 : f16
+  // CHECK: call half @llvm.amdgcn.fmed3.f16(half %0, half %1, half %2)
+}
+
+llvm.func @test_fmed3_f32(%arg0: f32, %arg1: f32, %arg2: f32) -> f32 {
+  // CHECK-LABEL: define float @test_fmed3_f32(float %0, float %1, float %2)
+  %0 = rocdl.fmed3 %arg0, %arg1, %arg2 : f32
+  llvm.return %0 : f32
+  // CHECK: call float @llvm.amdgcn.fmed3.f32(float %0, float %1, float %2)
+}
+
 // CHECK-LABEL: rocdl.cvt.scale.pk8
 // CHECK-SAME:(i32 %[[I32:.+]], <2 x i32> %[[V2I32:.+]], i32 %[[SCALE:.+]])
 llvm.func @rocdl.cvt.scale.pk8(%i32: i32, %v2xi32: vector<2xi32>, %scale: i32) {
@@ -1326,6 +1518,67 @@ llvm.func @rocdl.cvt.scale.pk8(%i32: i32, %v2xi32: vector<2xi32>, %scale: i32) {
   llvm.return
 }
 
+// CHECK-LABEL: rocdl.cvt.scalef32.pk8
+// CHECK-SAME:(<8 x float> %[[V8F32:.+]], <8 x half> %[[V8F16:.+]], <8 x bfloat> %[[V8BF16:.+]], float %[[SCALE:.+]])
+llvm.func @rocdl.cvt.scalef32.pk8(%v8xf32: vector<8xf32>, %v8xf16: vector<8xf16>, %v8xbf16: vector<8xbf16>, %scale: f32) {
+
+  // CHECK: call <2 x i32> @llvm.amdgcn.cvt.scalef32.pk8.fp8.f32(<8 x float> %[[V8F32]], float %[[SCALE]])
+  %0 = rocdl.cvt.scalef32.pk8.fp8.f32 %v8xf32, %scale : vector<2xi32>
+  // CHECK: call <2 x i32> @llvm.amdgcn.cvt.scalef32.pk8.bf8.f32(<8 x float> %[[V8F32]], float %[[SCALE]])
+  %1 = rocdl.cvt.scalef32.pk8.bf8.f32 %v8xf32, %scale : vector<2xi32>
+  // CHECK: call i32 @llvm.amdgcn.cvt.scalef32.pk8.fp4.f32(<8 x float> %[[V8F32]], float %[[SCALE]])
+  %2 = rocdl.cvt.scalef32.pk8.fp4.f32 %v8xf32, %scale : i32
+
+  // CHECK: call <2 x i32> @llvm.amdgcn.cvt.scalef32.pk8.fp8.f16(<8 x half> %[[V8F16]], float %[[SCALE]])
+  %3 = rocdl.cvt.scalef32.pk8.fp8.f16 %v8xf16, %scale : vector<2xi32>
+  // CHECK: call <2 x i32> @llvm.amdgcn.cvt.scalef32.pk8.bf8.f16(<8 x half> %[[V8F16]], float %[[SCALE]])
+  %4 = rocdl.cvt.scalef32.pk8.bf8.f16 %v8xf16, %scale : vector<2xi32>
+  // CHECK: call i32 @llvm.amdgcn.cvt.scalef32.pk8.fp4.f16(<8 x half> %[[V8F16]], float %[[SCALE]])
+  %5 = rocdl.cvt.scalef32.pk8.fp4.f16 %v8xf16, %scale : i32
+
+  // CHECK: call <2 x i32> @llvm.amdgcn.cvt.scalef32.pk8.fp8.bf16(<8 x bfloat> %[[V8BF16]], float %[[SCALE]])
+  %6 = rocdl.cvt.scalef32.pk8.fp8.bf16 %v8xbf16, %scale : vector<2xi32>
+  // CHECK: call <2 x i32> @llvm.amdgcn.cvt.scalef32.pk8.bf8.bf16(<8 x bfloat> %[[V8BF16]], float %[[SCALE]])
+  %7 = rocdl.cvt.scalef32.pk8.bf8.bf16 %v8xbf16, %scale : vector<2xi32>
+  // CHECK: call i32 @llvm.amdgcn.cvt.scalef32.pk8.fp4.bf16(<8 x bfloat> %[[V8BF16]], float %[[SCALE]])
+  %8 = rocdl.cvt.scalef32.pk8.fp4.bf16 %v8xbf16, %scale : i32
+
+  llvm.return
+}
+
+// CHECK-LABEL: rocdl.cvt.scalef32.sr.pk8
+// CHECK-SAME:(<8 x float> %[[V8F32:.+]], <8 x half> %[[V8F16:.+]], <8 x bfloat> %[[V8BF16:.+]], i32 %[[SEED:.+]],  float %[[SCALE:.+]])
+llvm.func @rocdl.cvt.scalef32.sr.pk8(%v8xf32: vector<8xf32>,
+                                     %v8xf16: vector<8xf16>,
+                                     %v8xbf16: vector<8xbf16>,
+                                     %seed: i32,
+                                     %scale: f32) {
+
+  // CHECK: call <2 x i32> @llvm.amdgcn.cvt.scalef32.sr.pk8.fp8.f32(<8 x float> %[[V8F32]], i32 %[[SEED]], float %[[SCALE]])
+  %0 = rocdl.cvt.scalef32.sr.pk8.fp8.f32 %v8xf32, %seed, %scale : vector<2xi32>
+  // CHECK: call <2 x i32> @llvm.amdgcn.cvt.scalef32.sr.pk8.bf8.f32(<8 x float> %[[V8F32]], i32 %[[SEED]], float %[[SCALE]])
+  %1 = rocdl.cvt.scalef32.sr.pk8.bf8.f32 %v8xf32, %seed, %scale : vector<2xi32>
+  // CHECK: call i32 @llvm.amdgcn.cvt.scalef32.sr.pk8.fp4.f32(<8 x float> %[[V8F32]], i32 %[[SEED]], float %[[SCALE]])
+  %2 = rocdl.cvt.scalef32.sr.pk8.fp4.f32 %v8xf32, %seed, %scale : i32
+
+  // CHECK: call <2 x i32> @llvm.amdgcn.cvt.scalef32.sr.pk8.fp8.f16(<8 x half> %[[V8F16]], i32 %[[SEED]], float %[[SCALE]])
+  %3 = rocdl.cvt.scalef32.sr.pk8.fp8.f16 %v8xf16, %seed, %scale : vector<2xi32>
+  // CHECK: call <2 x i32> @llvm.amdgcn.cvt.scalef32.sr.pk8.bf8.f16(<8 x half> %[[V8F16]], i32 %[[SEED]], float %[[SCALE]])
+  %4 = rocdl.cvt.scalef32.sr.pk8.bf8.f16 %v8xf16, %seed, %scale : vector<2xi32>
+  // CHECK: call i32 @llvm.amdgcn.cvt.scalef32.sr.pk8.fp4.f16(<8 x half> %[[V8F16]], i32 %[[SEED]], float %[[SCALE]])
+  %5 = rocdl.cvt.scalef32.sr.pk8.fp4.f16 %v8xf16, %seed, %scale : i32
+
+  // CHECK: call <2 x i32> @llvm.amdgcn.cvt.scalef32.sr.pk8.fp8.bf16(<8 x bfloat> %[[V8BF16]], i32 %[[SEED]], float %[[SCALE]])
+  %6 = rocdl.cvt.scalef32.sr.pk8.fp8.bf16 %v8xbf16, %seed, %scale : vector<2xi32>
+  // CHECK: call <2 x i32> @llvm.amdgcn.cvt.scalef32.sr.pk8.bf8.bf16(<8 x bfloat> %[[V8BF16]], i32 %[[SEED]], float %[[SCALE]])
+  %7 = rocdl.cvt.scalef32.sr.pk8.bf8.bf16 %v8xbf16, %seed, %scale : vector<2xi32>
+  // CHECK: call i32 @llvm.amdgcn.cvt.scalef32.sr.pk8.fp4.bf16(<8 x bfloat> %[[V8BF16]], i32 %[[SEED]], float %[[SCALE]])
+  %8 = rocdl.cvt.scalef32.sr.pk8.fp4.bf16 %v8xbf16, %seed, %scale : i32
+
+  llvm.return
+}
+
+
 // CHECK-LABEL: @rocdl.cvt.scale.pk16
 // CHECK-SAME:(<3 x i32> %[[SRC0:.+]], i32 %[[SCALE:.+]])
 llvm.func @rocdl.cvt.scale.pk16(%v3xi32: vector<3xi32>, %scale:i32) {
@@ -1342,6 +1595,52 @@ llvm.func @rocdl.cvt.scale.pk16(%v3xi32: vector<3xi32>, %scale:i32) {
   %4 = rocdl.cvt.scale.pk16.bf16.bf6 %v3xi32, %scale[0] : vector<16xbf16>
   // CHECK:  call <16 x float> @llvm.amdgcn.cvt.scale.pk16.f32.bf6(<3 x i32> %[[SRC0]], i32 %[[SCALE]], i32 0)
   %5 = rocdl.cvt.scale.pk16.f32.bf6 %v3xi32, %scale[0] : vector<16xf32>
+
+  llvm.return
+}
+
+// CHECK-LABEL: rocdl.cvt.scalef32.pk16
+// CHECK-SAME:(<16 x float> %[[V16F32:.+]], <16 x half> %[[V16F16:.+]], <16 x bfloat> %[[V16BF16:.+]], float %[[SCALE:.+]])
+llvm.func @rocdl.cvt.scalef32.pk16(%v16xf32: vector<16xf32>, %v16xf16: vector<16xf16>, %v16xbf16: vector<16xbf16>, %scale: f32) {
+
+  // CHECK: call <3 x i32> @llvm.amdgcn.cvt.scalef32.pk16.fp6.f16(<16 x half> %[[V16F16]], float %[[SCALE]])
+  %0 = rocdl.cvt.scalef32.pk16.fp6.f16 %v16xf16, %scale : vector<3xi32>
+  // CHECK: call <3 x i32> @llvm.amdgcn.cvt.scalef32.pk16.fp6.bf16(<16 x bfloat> %[[V16BF16]], float %[[SCALE]])
+  %1 = rocdl.cvt.scalef32.pk16.fp6.bf16 %v16xbf16, %scale : vector<3xi32>
+  // CHECK: call <3 x i32> @llvm.amdgcn.cvt.scalef32.pk16.fp6.f32(<16 x float> %[[V16F32]], float %[[SCALE]])
+  %2 = rocdl.cvt.scalef32.pk16.fp6.f32 %v16xf32, %scale : vector<3xi32>
+
+  // CHECK: call <3 x i32> @llvm.amdgcn.cvt.scalef32.pk16.bf6.f16(<16 x half> %[[V16F16]], float %[[SCALE]])
+  %3 = rocdl.cvt.scalef32.pk16.bf6.f16 %v16xf16, %scale : vector<3xi32>
+  // CHECK: call <3 x i32> @llvm.amdgcn.cvt.scalef32.pk16.bf6.bf16(<16 x bfloat> %[[V16BF16]], float %[[SCALE]])
+  %4 = rocdl.cvt.scalef32.pk16.bf6.bf16 %v16xbf16, %scale : vector<3xi32>
+  // CHECK: call <3 x i32> @llvm.amdgcn.cvt.scalef32.pk16.bf6.f32(<16 x float> %[[V16F32]], float %[[SCALE]])
+  %5 = rocdl.cvt.scalef32.pk16.bf6.f32 %v16xf32, %scale : vector<3xi32>
+
+  llvm.return
+}
+
+// CHECK-LABEL: rocdl.cvt.scalef32.sr.pk16
+// CHECK-SAME:(<16 x float> %[[V16F32:.+]], <16 x half> %[[V16F16:.+]], <16 x bfloat> %[[V16BF16:.+]], i32 %[[SEED:.+]],  float %[[SCALE:.+]])
+llvm.func @rocdl.cvt.scalef32.sr.pk16(%v16xf32: vector<16xf32>,
+                                     %v16xf16: vector<16xf16>,
+                                     %v16xbf16: vector<16xbf16>,
+                                     %seed: i32,
+                                     %scale: f32) {
+
+  // CHECK: call <3 x i32> @llvm.amdgcn.cvt.scalef32.sr.pk16.fp6.f16(<16 x half> %[[V16F16]], i32 %[[SEED]], float %[[SCALE]])
+  %0 = rocdl.cvt.scalef32.sr.pk16.fp6.f16 %v16xf16, %seed, %scale : vector<3xi32>
+  // CHECK: call <3 x i32> @llvm.amdgcn.cvt.scalef32.sr.pk16.fp6.bf16(<16 x bfloat> %[[V16BF16]], i32 %[[SEED]], float %[[SCALE]])
+  %1 = rocdl.cvt.scalef32.sr.pk16.fp6.bf16 %v16xbf16, %seed, %scale : vector<3xi32>
+  // CHECK: call <3 x i32> @llvm.amdgcn.cvt.scalef32.sr.pk16.fp6.f32(<16 x float> %[[V16F32]], i32 %[[SEED]], float %[[SCALE]])
+  %2 = rocdl.cvt.scalef32.sr.pk16.fp6.f32 %v16xf32, %seed, %scale : vector<3xi32>
+
+  // CHECK: call <3 x i32> @llvm.amdgcn.cvt.scalef32.sr.pk16.bf6.f16(<16 x half> %[[V16F16]], i32 %[[SEED]], float %[[SCALE]])
+  %3 = rocdl.cvt.scalef32.sr.pk16.bf6.f16 %v16xf16, %seed, %scale : vector<3xi32>
+  // CHECK: call <3 x i32> @llvm.amdgcn.cvt.scalef32.sr.pk16.bf6.bf16(<16 x bfloat> %[[V16BF16]], i32 %[[SEED]], float %[[SCALE]])
+  %4 = rocdl.cvt.scalef32.sr.pk16.bf6.bf16 %v16xbf16, %seed, %scale : vector<3xi32>
+  // CHECK: call <3 x i32> @llvm.amdgcn.cvt.scalef32.sr.pk16.bf6.f32(<16 x float> %[[V16F32]], i32 %[[SEED]], float %[[SCALE]])
+  %5 = rocdl.cvt.scalef32.sr.pk16.bf6.f32 %v16xf32, %seed, %scale : vector<3xi32>
 
   llvm.return
 }

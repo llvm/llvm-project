@@ -23,7 +23,6 @@
 #include <__debug_utils/sanitizers.h>
 #include <__format/enable_insertable.h>
 #include <__fwd/vector.h>
-#include <__iterator/advance.h>
 #include <__iterator/bounded_iter.h>
 #include <__iterator/concepts.h>
 #include <__iterator/distance.h>
@@ -177,7 +176,7 @@ public:
     __guard.__complete();
   }
 
-  template <__enable_if_t<__is_allocator<_Allocator>::value, int> = 0>
+  template <__enable_if_t<__is_allocator_v<_Allocator>, int> = 0>
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI
   vector(size_type __n, const value_type& __x, const allocator_type& __a)
       : __alloc_(__a) {
@@ -845,22 +844,22 @@ private:
 
 #if _LIBCPP_STD_VER >= 17
 template <class _InputIterator,
-          class _Alloc = allocator<__iter_value_type<_InputIterator>>,
+          class _Alloc = allocator<__iterator_value_type<_InputIterator>>,
           class        = enable_if_t<__has_input_iterator_category<_InputIterator>::value>,
-          class        = enable_if_t<__is_allocator<_Alloc>::value> >
-vector(_InputIterator, _InputIterator) -> vector<__iter_value_type<_InputIterator>, _Alloc>;
+          class        = enable_if_t<__is_allocator_v<_Alloc>>>
+vector(_InputIterator, _InputIterator) -> vector<__iterator_value_type<_InputIterator>, _Alloc>;
 
 template <class _InputIterator,
           class _Alloc,
           class = enable_if_t<__has_input_iterator_category<_InputIterator>::value>,
-          class = enable_if_t<__is_allocator<_Alloc>::value> >
-vector(_InputIterator, _InputIterator, _Alloc) -> vector<__iter_value_type<_InputIterator>, _Alloc>;
+          class = enable_if_t<__is_allocator_v<_Alloc>>>
+vector(_InputIterator, _InputIterator, _Alloc) -> vector<__iterator_value_type<_InputIterator>, _Alloc>;
 #endif
 
 #if _LIBCPP_STD_VER >= 23
 template <ranges::input_range _Range,
           class _Alloc = allocator<ranges::range_value_t<_Range>>,
-          class        = enable_if_t<__is_allocator<_Alloc>::value> >
+          class        = enable_if_t<__is_allocator_v<_Alloc>>>
 vector(from_range_t, _Range&&, _Alloc = _Alloc()) -> vector<ranges::range_value_t<_Range>, _Alloc>;
 #endif
 
