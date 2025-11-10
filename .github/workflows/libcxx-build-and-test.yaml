@@ -249,11 +249,11 @@ jobs:
         - { config: clang-cl-no-vcruntime,    mingw: false, cc: clang-cl, cxx: clang-cl }
         - { config: clang-cl-debug,           mingw: false, cc: clang-cl, cxx: clang-cl }
         - { config: clang-cl-static-crt,      mingw: false, cc: clang-cl, cxx: clang-cl }
-        - { config: mingw-dll,                mingw: true,  cc: clang-cl, cxx: clang-cl }
+        - { config: mingw-dll,                mingw: true,  cc: cc,       cxx: c++ }
         - { config: mingw-dll,                mingw: true,  cc: i686-w64-mingw32-clang, cxx: i686-w64-mingw32-clang++ }
-        - { config: mingw-static,             mingw: true,  cc: clang-cl, cxx: clang-cl }
-        - { config: mingw-incomplete-sysroot, mingw: true,  cc: clang-cl, cxx: clang-cl }
-        - { config: mingw-static,             mingw: true,  cc: clang-cl, cxx: clang-cl, runner: windows-11-arm }
+        - { config: mingw-static,             mingw: true,  cc: cc,       cxx: c++ }
+        - { config: mingw-incomplete-sysroot, mingw: true,  cc: cc,       cxx: c++ }
+        - { config: mingw-static,             mingw: true,  cc: cc,       cxx: c++, runner: windows-11-arm }
     runs-on: ${{ matrix.runner != '' && matrix.runner || 'windows-2022' }}
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
