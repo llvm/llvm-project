@@ -64,3 +64,52 @@ def setDescLayoutInstData():
     # CHECK: sg_layout = [6, 4]
     # CHECK: sg_data = [32, 16]
     # CHECK: inst_data = [8, 16]
+
+
+@run
+def setOpLayoutAttrOperandMinimal():
+    sequence = transform.SequenceOp(
+        transform.FailurePropagationMode.Propagate,
+        [],
+        transform.OperationType.get("xegpu.dpas"),
+    )
+    with InsertionPoint(sequence.body):
+        xegpu.SetOpLayoutAttrOp(
+            sequence.bodyTarget,
+            sg_layout=[6, 4],
+            sg_data=[32, 16],
+        )
+        transform.YieldOp()
+    # CHECK-LABEL: TEST: setOpLayoutAttr
+    # CHECK: transform.xegpu.set_op_layout_attr %
+    # NO-CHECK: index = 0
+    # NO-CHECK: result
+    # CHECK: sg_layout = [6, 4]
+    # CHECK: sg_data = [32, 16]
+    # NO-CHECK: inst_data
+
+
+@run
+def setOpLayoutAttrResult():
+    sequence = transform.SequenceOp(
+        transform.FailurePropagationMode.Propagate,
+        [],
+        transform.OperationType.get("xegpu.dpas"),
+    )
+    with InsertionPoint(sequence.body):
+        xegpu.SetOpLayoutAttrOp(
+            sequence.bodyTarget,
+            index=0,
+            sg_layout=[6, 4],
+            sg_data=[32, 16],
+            inst_data=[8, 16],
+            result=True,
+        )
+        transform.YieldOp()
+    # CHECK-LABEL: TEST: setOpLayoutAttr
+    # CHECK: transform.xegpu.set_op_layout_attr %
+    # NO-CHECK: index = 0
+    # CHECK: result
+    # CHECK: sg_layout = [6, 4]
+    # CHECK: sg_data = [32, 16]
+    # CHECK: inst_data = [8, 16]
