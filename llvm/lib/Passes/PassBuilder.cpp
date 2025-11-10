@@ -900,6 +900,11 @@ Expected<bool> parseEntryExitInstrumenterPassOptions(StringRef Params) {
                                             "EntryExitInstrumenter");
 }
 
+Expected<bool> parseDropUnnecessaryAssumesPassOptions(StringRef Params) {
+  return PassBuilder::parseSinglePassOption(Params, "drop-deref",
+                                            "DropUnnecessaryAssumes");
+}
+
 Expected<bool> parseLoopExtractorPassOptions(StringRef Params) {
   return PassBuilder::parseSinglePassOption(Params, "single", "LoopExtractor");
 }
