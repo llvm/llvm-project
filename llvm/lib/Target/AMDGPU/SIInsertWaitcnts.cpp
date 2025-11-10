@@ -1301,7 +1301,7 @@ bool WaitcntBrackets::canOptimizeXCntWithLoadCnt(const AMDGPU::Waitcnt &Wait) {
   // stores. VMEM loads retun in order, so if we only have loads XCnt is
   // decremented to the same number as LOADCnt.
   return Wait.LoadCnt != ~0u && hasPendingEvent(VMEM_GROUP) &&
-         !hasPendingEvent(STORE_CNT) && !hasPendingEvent(SMEM_GROUP);
+         !hasPendingEvent(STORE_CNT);
 }
 
 void WaitcntBrackets::simplifyXcnt(AMDGPU::Waitcnt &CheckWait,
@@ -1311,15 +1311,17 @@ void WaitcntBrackets::simplifyXcnt(AMDGPU::Waitcnt &CheckWait,
   // be pending SMEM and VMEM events active at the same time.
   // In such cases, only clear one active event at a time.
   if (hasRedundantXCntWithKmCnt(CheckWait)) {
-    if (hasPendingEvent(VMEM_GROUP)) {
-      // Only clear the SMEM_GROUP event, but VMEM_GROUP could still require
-      // handling.
-      PendingEvents &= ~(1 << SMEM_GROUP);
-    } else {
+    if (!hasMixedPendingEvents(X_CNT)) {
       applyWaitcnt(X_CNT, 0);
+    } else {
+      PendingEvents &= ~(1 << SMEM_GROUP);
     }
   } else if (canOptimizeXCntWithLoadCnt(CheckWait)) {
-    applyWaitcnt(X_CNT, std::min(CheckWait.XCnt, CheckWait.LoadCnt));
+    if (!hasMixedPendingEvents(X_CNT)) {
+      applyWaitcnt(X_CNT, std::min(CheckWait.XCnt, CheckWait.LoadCnt));
+    } else if (CheckWait.LoadCnt == 0) {
+      PendingEvents &= ~(1 << VMEM_GROUP);
+    }
   }
   simplifyWaitcnt(X_CNT, UpdateWait.XCnt);
 }
