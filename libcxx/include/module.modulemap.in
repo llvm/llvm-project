@@ -2124,7 +2124,6 @@ module std [system] {
     module tuple_like_no_subrange   { header "__tuple/tuple_like_no_subrange.h" }
     module tuple_like               { header "__tuple/tuple_like.h" }
     module tuple_size               { header "__tuple/tuple_size.h" }
-    module tuple_types              { header "__tuple/tuple_types.h" }
 
     header "tuple"
     export *
