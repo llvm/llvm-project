@@ -54,8 +54,6 @@ class TestSwiftClosureVarNotCaptured(TestBase):
     @swiftTest
     def test_simple_closure(self):
         self.build()
-        # rdar://158447239
-        self.runCmd('settings set target.experimental.use-DIL false')
         (target, process, thread) = self.get_to_bkpt("break_simple_closure")
         check_not_captured_error(self, thread.frames[0], "var_in_foo", "func_1(arg:)")
         check_not_captured_error(self, thread.frames[0], "arg", "func_1(arg:)")
@@ -64,8 +62,6 @@ class TestSwiftClosureVarNotCaptured(TestBase):
     @swiftTest
     def test_nested_closure(self):
         self.build()
-        # rdar://158447239
-        self.runCmd('settings set target.experimental.use-DIL false')
         (target, process, thread) = self.get_to_bkpt("break_double_closure_1")
         check_not_captured_error(self, thread.frames[0], "var_in_foo", "func_2(arg:)")
         check_not_captured_error(self, thread.frames[0], "arg", "func_2(arg:)")
@@ -92,8 +88,6 @@ class TestSwiftClosureVarNotCaptured(TestBase):
     @skipIf(oslist=["windows", "linux"])
     def test_async_closure(self):
         self.build()
-        # rdar://158447239
-        self.runCmd('settings set target.experimental.use-DIL false')
         (target, process, thread) = self.get_to_bkpt("break_async_closure_1")
         check_not_captured_error(self, thread.frames[0], "var_in_foo", "func_3(arg:)")
         check_not_captured_error(self, thread.frames[0], "arg", "func_3(arg:)")
@@ -115,8 +109,6 @@ class TestSwiftClosureVarNotCaptured(TestBase):
     @swiftTest
     def test_ctor_class_closure(self):
         self.build()
-        # rdar://158447239
-        self.runCmd('settings set target.experimental.use-DIL false')
         (target, process, thread) = self.get_to_bkpt("break_ctor_class")
         check_not_captured_error(
             self, thread.frames[0], "input", "MY_CLASS.init(input:)"
@@ -174,8 +166,6 @@ class TestSwiftClosureVarNotCaptured(TestBase):
     @swiftTest
     def test_ctor_struct_closure(self):
         self.build()
-        # rdar://158447239
-        self.runCmd('settings set target.experimental.use-DIL false')
         (target, process, thread) = self.get_to_bkpt("break_ctor_struct")
         check_not_captured_error(
             self, thread.frames[0], "input", "MY_STRUCT.init(input:)"
@@ -233,8 +223,6 @@ class TestSwiftClosureVarNotCaptured(TestBase):
     @swiftTest
     def test_ctor_enum_closure(self):
         self.build()
-        # rdar://158447239
-        self.runCmd('settings set target.experimental.use-DIL false')
         (target, process, thread) = self.get_to_bkpt("break_ctor_enum")
         check_not_captured_error(
             self, thread.frames[0], "input", "MY_ENUM.init(input:)"
