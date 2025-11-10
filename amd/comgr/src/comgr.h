@@ -133,6 +133,15 @@ public:
   ~ScopedDataObjectReleaser() { Obj->release(); }
 };
 
+class ScopedDataSetReleaser {
+  amd_comgr_data_set_t Set;
+
+public:
+  ScopedDataSetReleaser(amd_comgr_data_set_t Set) : Set(Set) {}
+
+  ~ScopedDataSetReleaser() { amd_comgr_destroy_data_set(Set); }
+};
+
 struct DataSet {
 
   DataSet();

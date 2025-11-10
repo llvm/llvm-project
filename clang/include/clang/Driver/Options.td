@@ -741,6 +741,7 @@ def gcc_toolchain : Joined<["--"], "gcc-toolchain=">, Flags<[NoXarchOption]>,
     "Specify a directory where Flang can find 'lib{,32,64}/gcc{,-cross}/$triple/$version'. "
     "Flang will use the GCC installation with the largest version">;
 def gcc_triple_EQ : Joined<["--"], "gcc-triple=">,
+  Visibility<[ClangOption, FlangOption]>,
   HelpText<"Search for the GCC installation with the specified triple.">;
 def CC : Flag<["-"], "CC">, Visibility<[ClangOption, CC1Option]>,
   Group<Preprocessor_Group>,
@@ -952,9 +953,9 @@ def Xarch__
   the host system, which can be used to suppress incompatible GPU arguments.}]>,
       MetaVarName<"<arch> <arg>">;
 def Xarch_host : Separate<["-"], "Xarch_host">, Flags<[NoXarchOption]>,
-  HelpText<"Pass <arg> to the CUDA/HIP host compilation">, MetaVarName<"<arg>">;
+  HelpText<"Pass <arg> to host compilation in the offloading toolchain">, MetaVarName<"<arg>">;
 def Xarch_device : Separate<["-"], "Xarch_device">, Flags<[NoXarchOption]>,
-  HelpText<"Pass <arg> to the CUDA/HIP device compilation">, MetaVarName<"<arg>">;
+  HelpText<"Pass <arg> to device compilation in the offloading toolchain">, MetaVarName<"<arg>">;
 def Xassembler : Separate<["-"], "Xassembler">,
   HelpText<"Pass <arg> to the assembler">, MetaVarName<"<arg>">,
   Group<CompileOnly_Group>;
@@ -2163,8 +2164,12 @@ defm dollars_in_identifiers : BoolFOption<"dollars-in-identifiers",
   PosFlag<SetTrue, [], [ClangOption], "Allow">,
   NegFlag<SetFalse, [], [ClangOption], "Disallow">,
   BothFlags<[], [ClangOption, CC1Option], " '$' in identifiers">>;
-def fdwarf2_cfi_asm : Flag<["-"], "fdwarf2-cfi-asm">, Group<clang_ignored_f_Group>;
-def fno_dwarf2_cfi_asm : Flag<["-"], "fno-dwarf2-cfi-asm">, Group<clang_ignored_f_Group>;
+
+defm dwarf2_cfi_asm
+    : BoolFOption<"dwarf2-cfi-asm", CodeGenOpts<"Dwarf2CFIAsm">, DefaultFalse,
+                  PosFlag<SetTrue, [], [ClangOption, CC1Option]>,
+                  NegFlag<SetFalse>>;
+
 defm dwarf_directory_asm : BoolFOption<"dwarf-directory-asm",
   CodeGenOpts<"NoDwarfDirectoryAsm">, DefaultFalse,
   NegFlag<SetTrue, [], [ClangOption, CC1Option]>,
@@ -9391,6 +9396,12 @@ def : CLFlag<"Qscatter-">, Alias<mno_scatter>,
 
 def _SLASH_arch : CLCompileJoined<"arch:">,
   HelpText<"Set architecture for code generation">;
+def _SLASH_vlen : CLFlag<"vlen">,
+  HelpText<"Set default vector length for autovectorization and other optimizations">;
+def _SLASH_vlen_EQ_256 : CLFlag<"vlen=256">,
+  HelpText<"Set vector length of 256 bits for autovectorization and other optimizations">;
+def _SLASH_vlen_EQ_512 : CLFlag<"vlen=512">,
+  HelpText<"Set vector length of 512 bits for autovectorization and other optimizations">;
 
 def _SLASH_M_Group : OptionGroup<"</M group>">, Group<cl_compile_Group>;
 def _SLASH_volatile_Group : OptionGroup<"</volatile group>">,

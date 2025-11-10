@@ -20824,6 +20824,13 @@ TEST_F(FormatTest, AlignWithLineBreaks) {
                "    argument1,\n"
                "    argument2);",
                Style);
+
+  Style.ColumnLimit = 45;
+  verifyFormat("auto xxxxxxxx = foo;\n"
+               "auto x = whatever ? some / long -\n"
+               "                        computition / stuff\n"
+               "                  : random;",
+               Style);
 }
 
 TEST_F(FormatTest, AlignWithInitializerPeriods) {

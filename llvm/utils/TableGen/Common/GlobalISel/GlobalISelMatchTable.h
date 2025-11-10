@@ -529,10 +529,10 @@ protected:
 
   ArrayRef<SMLoc> SrcLoc;
 
-  typedef std::tuple<const Record *, unsigned, unsigned>
-      DefinedComplexPatternSubOperand;
-  typedef StringMap<DefinedComplexPatternSubOperand>
-      DefinedComplexPatternSubOperandMap;
+  using DefinedComplexPatternSubOperand =
+      std::tuple<const Record *, unsigned, unsigned>;
+  using DefinedComplexPatternSubOperandMap =
+      StringMap<DefinedComplexPatternSubOperand>;
   /// A map of Symbolic Names to ComplexPattern sub-operands.
   DefinedComplexPatternSubOperandMap ComplexSubOperands;
   /// A map used to for multiple referenced error check of ComplexSubOperand.
@@ -622,7 +622,7 @@ public:
   DefinedInsnVariablesMap::const_iterator defined_insn_vars_end() const {
     return InsnVariableIDs.end();
   }
-  iterator_range<typename DefinedInsnVariablesMap::const_iterator>
+  iterator_range<DefinedInsnVariablesMap::const_iterator>
   defined_insn_vars() const {
     return make_range(defined_insn_vars_begin(), defined_insn_vars_end());
   }
@@ -633,8 +633,7 @@ public:
   MutatableInsnSet::const_iterator mutatable_insns_end() const {
     return MutatableInsns.end();
   }
-  iterator_range<typename MutatableInsnSet::const_iterator>
-  mutatable_insns() const {
+  iterator_range<MutatableInsnSet::const_iterator> mutatable_insns() const {
     return make_range(mutatable_insns_begin(), mutatable_insns_end());
   }
   void reserveInsnMatcherForMutation(InstructionMatcher *InsnMatcher) {
@@ -1778,7 +1777,7 @@ public:
 /// * Has an nsw/nuw flag or doesn't.
 class InstructionMatcher final : public PredicateListMatcher<PredicateMatcher> {
 protected:
-  typedef std::vector<std::unique_ptr<OperandMatcher>> OperandVec;
+  using OperandVec = std::vector<std::unique_ptr<OperandMatcher>>;
 
   RuleMatcher &Rule;
 

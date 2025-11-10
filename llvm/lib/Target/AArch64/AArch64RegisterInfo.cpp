@@ -90,6 +90,16 @@ AArch64RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   if (MF->getSubtarget<AArch64Subtarget>().isTargetDarwin())
     return getDarwinCalleeSavedRegs(MF);
 
+  if (MF->getFunction().getCallingConv() == CallingConv::PreserveMost)
+    return MF->getSubtarget<AArch64Subtarget>().isTargetWindows()
+               ? CSR_Win_AArch64_RT_MostRegs_SaveList
+               : CSR_AArch64_RT_MostRegs_SaveList;
+
+  if (MF->getFunction().getCallingConv() == CallingConv::PreserveAll)
+    return MF->getSubtarget<AArch64Subtarget>().isTargetWindows()
+               ? CSR_Win_AArch64_RT_AllRegs_SaveList
+               : CSR_AArch64_RT_AllRegs_SaveList;
+
   if (MF->getFunction().getCallingConv() == CallingConv::CFGuard_Check)
     return CSR_Win_AArch64_CFGuard_Check_SaveList;
   if (MF->getSubtarget<AArch64Subtarget>().isTargetWindows()) {
@@ -138,10 +148,6 @@ AArch64RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
     return CSR_AArch64_AAPCS_SwiftError_SaveList;
   if (MF->getFunction().getCallingConv() == CallingConv::SwiftTail)
     return CSR_AArch64_AAPCS_SwiftTail_SaveList;
-  if (MF->getFunction().getCallingConv() == CallingConv::PreserveMost)
-    return CSR_AArch64_RT_MostRegs_SaveList;
-  if (MF->getFunction().getCallingConv() == CallingConv::PreserveAll)
-    return CSR_AArch64_RT_AllRegs_SaveList;
   if (MF->getFunction().getCallingConv() == CallingConv::Win64)
     // This is for OSes other than Windows; Windows is a separate case further
     // above.

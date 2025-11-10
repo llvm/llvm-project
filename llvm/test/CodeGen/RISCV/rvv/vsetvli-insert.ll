@@ -863,3 +863,19 @@ entry:
     i64 2)
   ret <vscale x 1 x double> %2
 }
+
+; The two vsetvlis will be coalesced so the add will be made dead and
+; removed. Make sure we shrink the live interval of %x.
+define void @non_li_addi(i64 %x, ptr %p) {
+; CHECK-LABEL: non_li_addi:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
+; CHECK-NEXT:    ret
+entry:
+  %add = add i64 %x, 1
+  %0 = tail call i64 @llvm.riscv.vsetvli(i64 %add, i64 3, i64 0)
+  %1 = call <vscale x 8 x i8> @llvm.riscv.vle(<vscale x 8 x i8> poison, ptr %p, i64 %0)
+  %2 = tail call i64 @llvm.riscv.vsetvli(i64 1, i64 3, i64 0)
+  %3 = tail call { <vscale x 8 x i8>, i64 } @llvm.riscv.vleff(<vscale x 8 x i8> poison, ptr %p, i64 %2)
+  ret void
+}

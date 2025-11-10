@@ -159,8 +159,6 @@ std::vector<SectionNameAndRange> getTextSections(const BinaryContext *BC) {
 }
 }
 
-constexpr uint64_t DataAggregator::KernelBaseAddr;
-
 DataAggregator::~DataAggregator() { deleteTempFiles(); }
 
 namespace {
@@ -564,13 +562,18 @@ void DataAggregator::imputeFallThroughs() {
     // Skip fall-throughs in external code.
     if (Trace.From == Trace::EXTERNAL)
       continue;
-    std::pair CurrentBranch(Trace.Branch, Trace.From);
+    if (std::pair CurrentBranch(Trace.Branch, Trace.From);
+        CurrentBranch != PrevBranch) {
+      // New group: reset aggregates.
+      AggregateCount = AggregateFallthroughSize = 0;
+      PrevBranch = CurrentBranch;
+    }
     // BR_ONLY must be the last trace in the group
     if (Trace.To == Trace::BR_ONLY) {
       // If the group is not empty, use aggregate values, otherwise 0-length
       // for unconditional jumps (call/ret/uncond branch) or 1-length for others
       uint64_t InferredBytes =
-          PrevBranch == CurrentBranch
+          AggregateFallthroughSize
               ? AggregateFallthroughSize / AggregateCount
               : !checkUnconditionalControlTransfer(Trace.From);
       Trace.To = Trace.From + InferredBytes;
@@ -578,16 +581,11 @@ void DataAggregator::imputeFallThroughs() {
                         << " bytes)\n");
       ++InferredTraces;
     } else {
-      // Trace with a valid fall-through
-      // New group: reset aggregates.
-      if (CurrentBranch != PrevBranch)
-        AggregateCount = AggregateFallthroughSize = 0;
       // Only use valid fall-through lengths
       if (Trace.To != Trace::EXTERNAL)
         AggregateFallthroughSize += (Trace.To - Trace.From) * Info.TakenCount;
       AggregateCount += Info.TakenCount;
     }
-    PrevBranch = CurrentBranch;
   }
   if (opts::Verbosity >= 1)
     outs() << "BOLT-INFO: imputed " << InferredTraces << " traces\n";
