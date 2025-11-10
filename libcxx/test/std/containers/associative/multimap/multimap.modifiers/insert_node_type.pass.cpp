@@ -20,19 +20,19 @@
 #include "min_allocator.h"
 
 template <class Container>
-TEST_CONSTEXPR_CXX26 std::pair<Container, typename Container::node_type>
-node_factory(typename Container::key_type const& key, typename Container::mapped_type const& mapped) {
-  Container c;
+TEST_CONSTEXPR_CXX26 typename Container::node_type
+node_factory(Container& c, typename Container::key_type const& key, typename Container::mapped_type const& mapped) {
   auto it = c.insert({key, mapped});
-  return {c, c.extract(it)};
+  return c.extract(it);
 }
 
 template <class Container>
 TEST_CONSTEXPR_CXX26 void test(Container& c) {
   auto* nf = &node_factory<Container>;
+  Container c2;
 
   for (int i = 0; i != 10; ++i) {
-    auto [/*Container*/ staticContainer, /*typename Container::node_type*/ node] = nf(i, i + 1);
+    auto node = nf(c2, i, i + 1);
     assert(!node.empty());
     typename Container::iterator it = c.insert(std::move(node));
     assert(node.empty());
@@ -49,7 +49,7 @@ TEST_CONSTEXPR_CXX26 void test(Container& c) {
   }
 
   { // Insert duplicate node.
-    auto [/*Container*/ staticContainer, /*typename Container::node_type*/ dupl] = nf(0, 42);
+    auto dupl                          = nf(c2, 0, 42);
     auto it                            = c.insert(std::move(dupl));
     assert(dupl.empty());
     assert(it != c.end());
