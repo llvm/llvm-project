@@ -231,8 +231,8 @@ RuntimeLibcallsInfo::getFunctionTy(LLVMContext &Ctx, const Triple &TT,
 
     PointerType *PtrTy = PointerType::get(Ctx, 0);
     SmallVector<Type *, 4> ArgTys = {VecTy, PtrTy, PtrTy};
-    if (IsScalable && hasVectorMaskArgument(LibcallImpl))
-      ArgTys.push_back(ScalableVectorType::get(Type::getInt1Ty(Ctx), EC));
+    if (hasVectorMaskArgument(LibcallImpl))
+      ArgTys.push_back(VectorType::get(Type::getInt1Ty(Ctx), EC, IsScalable));
 
     return {FunctionType::get(Type::getVoidTy(Ctx), ArgTys, false), Attrs};
   }
