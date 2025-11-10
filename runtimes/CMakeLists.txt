@@ -256,13 +256,23 @@ endif()
 # This can be used to detect whether we're in the runtimes build.
 set(LLVM_RUNTIMES_BUILD ON)
 
+
 # Make GTest available to all runtimes
-if (LLVM_INCLUDE_TESTS)
+# The runtime must call make_gtest_target() for it to become available. This is
+# to avoid build failures when gtest is not actually needed. In particular,
+# mingw-incomplete-sysroot is missing header files that GTest needs to compile.
+function(make_gtest_target)
+  if(TARGET default_gtest)
+    # Already available
+    return ()
+  endif ()
+
   include(AddGTest)
   build_gtest(runtimes_gtest)
   add_library(default_gtest ALIAS runtimes_gtest)
   add_library(default_gtest_main ALIAS runtimes_gtest_main)
-endif ()
+endfunction()
+
 
 foreach(entry ${runtimes})
   get_filename_component(projName ${entry} NAME)
