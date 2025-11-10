@@ -96,8 +96,8 @@ private:
                        Register &SecondReg, Register &BaseReg,
                        MachineOperand *&OffsetOp);
   bool rescheduleOps(MachineBasicBlock *MBB,
-                     SmallVectorImpl<MachineInstr *> &Ops,
-                     BaseRegInfo Base, bool IsLoad,
+                     SmallVectorImpl<MachineInstr *> &Ops, BaseRegInfo Base,
+                     bool IsLoad,
                      DenseMap<MachineInstr *, unsigned> &MI2LocMap);
   bool isSafeToMove(MachineInstr *MI, MachineInstr *Target, bool MoveForward);
   MemOffset getMemoryOpOffset(const MachineInstr &MI);
@@ -184,8 +184,7 @@ RISCVPreAllocZilsdOpt::getMemoryOpOffset(const MachineInstr &MI) {
 
 bool RISCVPreAllocZilsdOpt::canFormLdSdPair(
     MachineInstr *Op0, MachineInstr *Op1, Register &FirstReg,
-    Register &SecondReg, Register &BaseReg,
-    MachineOperand *&OffsetOp) {
+    Register &SecondReg, Register &BaseReg, MachineOperand *&OffsetOp) {
 
   unsigned Opcode = Op0->getOpcode();
 
