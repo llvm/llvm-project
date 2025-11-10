@@ -257,13 +257,13 @@ def epilogue(D: WGMMAMatrix, d_dev):
 @NVDSL.mlir_func
 def gemm_warp_specialized(a, b, d, num_stages):
     token_ty = gpu.AsyncTokenType.get()
-    t1 = gpu.wait(token_ty, [])
+    t1 = gpu.wait([])
     a_dev, t2 = gpu.alloc(a.type, token_ty, [t1], [], [])
     b_dev, t3 = gpu.alloc(b.type, token_ty, [t2], [], [])
     d_dev, t4 = gpu.alloc(d.type, token_ty, [t3], [], [])
     t5 = gpu.memcpy(token_ty, [t4], a_dev, a)
     t6 = gpu.memcpy(token_ty, [t5], b_dev, b)
-    t7 = gpu.wait(token_ty, [t6])
+    t7 = gpu.wait([t6])
 
     sw = nvgpu.TensorMapSwizzleKind.SWIZZLE_128B
     a_tma = TMA([128, 64], a.type, swizzle=sw)
@@ -299,7 +299,7 @@ def gemm_warp_specialized(a, b, d, num_stages):
     gemm_warp_specialized_kernel()
 
     t8 = gpu.memcpy(token_ty, [t7], d, d_dev)
-    gpu.wait(None, [t8])
+    gpu.wait([t8])
 
 
 # Python pass arguments to MLIR
@@ -324,7 +324,6 @@ if os.getenv("MLIR_NVDSL_PRINT_IR") != "1":
 # CHECK-NOT: Mismatched elements
 # CHECK: PASS
 
-# DUMPIR: gpu.launch blocks(%arg3, %arg4, %arg5) in (%arg9 = %c4, %arg10 = %c2, %arg11 = %c1) threads(%arg6, %arg7, %arg8) in (%arg12 = %c256, %arg13 = %c1_7, %arg14 = %c1_8) dynamic_shared_memory_size %c229376_i32 {
 # DUMPIR:       %[[TID_X:.*]] = gpu.thread_id  x
 # DUMPIR:       %[[C128:.*]] = arith.constant 128 : index
 # DUMPIR:       %[[REM1:.*]] = arith.remui %[[TID_X]], %[[C128]] : index

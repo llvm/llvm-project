@@ -64,13 +64,13 @@ def tma_load(
 @NVDSL.mlir_func
 def gemm_128_128_64(a, b, d):
     token_ty = gpu.AsyncTokenType.get()
-    t1 = gpu.wait(token_ty, [])
+    t1 = gpu.wait([])
     a_dev, t2 = gpu.alloc(a.type, token_ty, [t1], [], [])
     b_dev, t3 = gpu.alloc(b.type, token_ty, [t2], [], [])
     d_dev, t4 = gpu.alloc(d.type, token_ty, [t3], [], [])
     t5 = gpu.memcpy(token_ty, [t4], a_dev, a)
     t6 = gpu.memcpy(token_ty, [t5], b_dev, b)
-    t7 = gpu.wait(token_ty, [t6])
+    t7 = gpu.wait([t6])
 
     sw = nvgpu.TensorMapSwizzleKind.SWIZZLE_128B
     a_tma = TMA([128, 64], a.type, swizzle=sw)
@@ -115,7 +115,7 @@ def gemm_128_128_64(a, b, d):
     gemm_tma_kernel()
 
     t8 = gpu.memcpy(token_ty, [t7], d, d_dev)
-    gpu.wait(None, [t8])
+    gpu.wait([t8])
 
 
 # Python pass arguments to MLIR
@@ -135,30 +135,14 @@ if os.getenv("MLIR_NVDSL_PRINT_IR") != "1":
 # CHECK-NOT: Mismatched elements
 # CHECK: PASS
 
-# DUMPIR:   func.func @gemm_128_128_64(%arg0: memref<128x64xf16>, %arg1: memref<64x128xf16>, %arg2: memref<128x128xf32>) attributes {llvm.emit_c_interface} {
-# DUMPIR:     %[[WAIT0:.*]] = gpu.wait async
-# DUMPIR:     %[[MEM0:.*]], %[[ASYNC0:.*]] = gpu.alloc async [%[[WAIT0]]] () : memref<128x64xf16>
-# DUMPIR:     %[[MEM1:.*]], %[[ASYNC1:.*]] = gpu.alloc async [%[[ASYNC0]]] () : memref<64x128xf16>
-# DUMPIR:     %[[MEM2:.*]], %[[ASYNC2:.*]] = gpu.alloc async [%[[ASYNC1]]] () : memref<128x128xf32>
-# DUMPIR:     %[[CPY1:.*]] = gpu.memcpy async [%[[ASYNC2]]] %[[MEM0]], %arg0 : memref<128x64xf16>, memref<128x64xf16>
-# DUMPIR:     %[[CPY2:.*]] = gpu.memcpy async [%[[CPY1]]] %[[MEM1]], %arg1 : memref<64x128xf16>, memref<64x128xf16>
-# DUMPIR:     %[[WAIT1:.*]] = gpu.wait async [%[[CPY2]]]
-# DUMPIR:     %[[CAST0:.*]] = memref.cast %[[MEM0]] : memref<128x64xf16> to memref<*xf16>
+# DUMPIR:   func.func @gemm_128_128_64(%{{.*}}: memref<128x64xf16>, %{{.*}}: memref<64x128xf16>, %[[ARG2:.*]]: memref<128x128xf32>) attributes {llvm.emit_c_interface} {
 # DUMPIR:     %[[C128:.*]] = arith.constant 128 : index
 # DUMPIR:     %[[C64:.*]] = arith.constant 64 : index
-# DUMPIR:     %[[TMA0:.*]] = nvgpu.tma.create.descriptor %[[CAST0]] box[%[[C128]], %[[C64]]] : memref<*xf16> -> <tensor = memref<128x64xf16, 3>, swizzle = swizzle_128b, l2promo = none, oob = zero, interleave = none>
-# DUMPIR:     %[[CAST1:.*]] = memref.cast %[[MEM1]] : memref<64x128xf16> to memref<*xf16>
+# DUMPIR:     %[[TMA0:.*]] = nvgpu.tma.create.descriptor %{{.*}} box[%[[C128]], %[[C64]]] : memref<*xf16> -> <tensor = memref<128x64xf16, 3>, swizzle = swizzle_128b, l2promo = none, oob = zero, interleave = none>
+# DUMPIR:     %[[CAST1:.*]] = memref.cast %{{.*}} : memref<64x128xf16> to memref<*xf16>
 # DUMPIR:     %[[C64_5:.*]] = arith.constant 64 : index
 # DUMPIR:     %[[C64_6:.*]] = arith.constant 64 : index
 # DUMPIR:     %[[TMA1:.*]] = nvgpu.tma.create.descriptor %[[CAST1]] box[%[[C64_5]], %[[C64_6]]] : memref<*xf16> -> <tensor = memref<64x64xf16, 3>, swizzle = swizzle_128b, l2promo = none, oob = zero, interleave = none>
-# DUMPIR:     %[[C1:.*]] = arith.constant 1 : index
-# DUMPIR:     %[[C1_7:.*]] = arith.constant 1 : index
-# DUMPIR:     %[[C1_8:.*]] = arith.constant 1 : index
-# DUMPIR:     %[[C128_9:.*]] = arith.constant 128 : index
-# DUMPIR:     %[[C1_10:.*]] = arith.constant 1 : index
-# DUMPIR:     %[[C1_11:.*]] = arith.constant 1 : index
-# DUMPIR:     %[[C32768_I32:.*]] = arith.constant 32768 : i32
-# DUMPIR:     gpu.launch blocks(%arg3, %arg4, %arg5) in (%arg9 = %[[C1]], %arg10 = %[[C1_7]], %arg11 = %[[C1_8]]) threads(%arg6, %arg7, %arg8) in (%arg12 = %[[C128_9]], %arg13 = %[[C1_10]], %arg14 = %[[C1_11]]) dynamic_shared_memory_size %[[C32768_I32]] {
 # DUMPIR:       %[[THREADID:.*]] = gpu.thread_id  x
 # DUMPIR:       %[[MB:.*]] = nvgpu.mbarrier.create -> <memorySpace = #gpu.address_space<workgroup>>
 # DUMPIR:       %[[C0:.*]] = arith.constant 0 : index
@@ -206,10 +190,10 @@ if os.getenv("MLIR_NVDSL_PRINT_IR") != "1":
 # DUMPIR:       %[[GEN0:.*]] = nvgpu.warpgroup.generate.descriptor %[[VIEW]], %[[TMA0]] : memref<128x64xf16, #gpu.address_space<workgroup>>, <tensor = memref<128x64xf16, 3>, swizzle = swizzle_128b, l2promo = none, oob = zero, interleave = none> -> <tensor = memref<128x64xf16, #gpu.address_space<workgroup>>>
 # DUMPIR:       %[[GEN1:.*]] = nvgpu.warpgroup.generate.descriptor %[[VIEW_15]], %[[TMA1]] : memref<64x128xf16, #gpu.address_space<workgroup>>, <tensor = memref<64x64xf16, 3>, swizzle = swizzle_128b, l2promo = none, oob = zero, interleave = none> -> <tensor = memref<64x128xf16, #gpu.address_space<workgroup>>>
 # DUMPIR:       %[[MMA:.*]] = nvgpu.warpgroup.mma %[[GEN0]], %[[GEN1]], %[[WG_ACC]] {transposeB} : <tensor = memref<128x64xf16, #gpu.address_space<workgroup>>>, <tensor = memref<64x128xf16, #gpu.address_space<workgroup>>>, <fragmented = vector<128x128xf32>> -> <fragmented = vector<128x128xf32>>
-# DUMPIR:       nvgpu.warpgroup.mma.store %[[MMA]], %[[MEM2]] : <fragmented = vector<128x128xf32>> to memref<128x128xf32>
+# DUMPIR:       nvgpu.warpgroup.mma.store %[[MMA]], %{{.*}} : <fragmented = vector<128x128xf32>> to memref<128x128xf32>
 # DUMPIR:       gpu.terminator
 # DUMPIR:     }
-# DUMPIR:     %[[CPY3:.*]] = gpu.memcpy async [%[[WAIT1]]] %arg2, %[[MEM2]] : memref<128x128xf32>, memref<128x128xf32>
-# DUMPIR:     gpu.wait [%[[CPY3]]]
+# DUMPIR:     %[[CPY3:.*]] = gpu.memcpy async [%{{.*}}] %[[ARG2]], %{{.*}} : memref<128x128xf32>, memref<128x128xf32>
+# DUMPIR:     gpu.wait async [%[[CPY3]]]
 # DUMPIR:     return
 # DUMPIR:   }

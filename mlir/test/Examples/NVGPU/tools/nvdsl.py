@@ -311,13 +311,10 @@ class NVDSL:
             @functools.wraps(func)
             def wrapper(*args, **kwargs):
                 launch_op = gpu.LaunchOp(
-                    None,
-                    [],
-                    *map(const, grid),
-                    *map(const, block),
-                    dynamicSharedMemorySize=arith.constant(T.i32(), smem),
+                    grid_size=grid,
+                    block_size=block,
+                    dynamic_shared_memory_size=arith.constant(T.i32(), smem),
                 )
-                launch_op.body.blocks.append(*([T.index()] * 12))
                 with ir.InsertionPoint(launch_op.body.blocks[0]):
                     result = func(*args, **kwargs)
                     gpu.terminator()

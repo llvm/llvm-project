@@ -37,7 +37,7 @@ def main(alpha):
         # + operator generates arith.addi
         myValue = alpha + tidx
         # Print from a GPU thread
-        gpu.printf("GPU thread %llu has %llu\n", [tidx, myValue])
+        gpu.printf("GPU thread %llu has %llu\n", tidx, myValue)
 
     # 3. Call the GPU kernel
     kernel()
@@ -53,13 +53,13 @@ main(alpha)
 # CHECK: GPU thread 3 has 103
 
 # DUMPIR:   func.func @main(%arg0: index) attributes {llvm.emit_c_interface} {
+# DUMPIR:     %[[C0_I32:.*]] = arith.constant 0 : i32
 # DUMPIR:     %[[C1:.*]] = arith.constant 1 : index
 # DUMPIR:     %[[C1_0:.*]] = arith.constant 1 : index
 # DUMPIR:     %[[C1_1:.*]] = arith.constant 1 : index
 # DUMPIR:     %[[C4:.*]] = arith.constant 4 : index
 # DUMPIR:     %[[C1_2:.*]] = arith.constant 1 : index
 # DUMPIR:     %[[C1_3:.*]] = arith.constant 1 : index
-# DUMPIR:     %[[C0_I32:.*]] = arith.constant 0 : i32
 # DUMPIR:     gpu.launch blocks(%arg1, %arg2, %arg3) in (%arg7 = %[[C1]], %arg8 = %[[C1_0]], %arg9 = %[[C1_1]]) threads(%arg4, %arg5, %arg6) in (%arg10 = %[[C4]], %arg11 = %[[C1_2]], %arg12 = %[[C1_3]]) dynamic_shared_memory_size %[[C0_I32]] {
 # DUMPIR:       %[[TIDX:.*]] = gpu.thread_id  x
 # DUMPIR:       %[[MYVAL:.*]] = arith.addi %arg0, %[[TIDX]] : index
