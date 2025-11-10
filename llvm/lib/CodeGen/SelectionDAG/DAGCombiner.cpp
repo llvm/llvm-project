@@ -9772,12 +9772,39 @@ SDValue DAGCombiner::MatchLoadCombine(SDNode *N) {
                           MemVT))
     return SDValue();
 
+  auto IsRotateLoaded = [](
+      ArrayRef<int64_t> ByteOffsets, int64_t FirstOffset, unsigned BitWidth) {
+    // Ensure that we have the correct width type, we want to combine two 32 loads into a 64 bit load.
+    if (BitWidth != 64 || ByteOffsets.size() != 8)
+      return false;
+
+    constexpr unsigned FourBytes = 4;
+
+    for (unsigned i = 0; i < FourBytes; ++i) {
+      // Check the lower 4 bytes come from the higher memory address.
+      if (ByteOffsets[i] != FirstOffset + i + FourBytes)
+        return false;
+      // Check the higher 4 bytes come from the lower memory adderess.
+      if (ByteOffsets[i + FourBytes] != FirstOffset + i)
+        return false;
+    }
+    return true;
+  };
+
   // Check if the bytes of the OR we are looking at match with either big or
   // little endian value load
   std::optional<bool> IsBigEndian = isBigEndian(
       ArrayRef(ByteOffsets).drop_back(ZeroExtendedBytes), FirstOffset);
-  if (!IsBigEndian)
-    return SDValue();
+  
+  bool IsRotated = false;
+  if (!IsBigEndian) {
+    IsRotated =
+          IsRotateLoaded(ArrayRef(ByteOffsets).drop_back(ZeroExtendedBytes),
+                         FirstOffset, VT.getSizeInBits());
+    
+    if (!IsRotated)
+      return SDValue();
+  }
 
   assert(FirstByteProvider && "must be set");
 
@@ -9791,8 +9818,9 @@ SDValue DAGCombiner::MatchLoadCombine(SDNode *N) {
   // replace it with a single (possibly zero-extended) load and bswap + shift if
   // needed.
 
-  // If the load needs byte swap check if the target supports it
-  bool NeedsBswap = IsBigEndianTarget != *IsBigEndian;
+  // If the load needs byte swap check if the target supports it, make sure that
+  // we are not rotating.
+  bool NeedsBswap = !IsRotated && (IsBigEndianTarget != *IsBigEndian);
 
   // Before legalize we can introduce illegal bswaps which will be later
   // converted to an explicit bswap sequence. This way we end up with a single
@@ -9803,8 +9831,12 @@ SDValue DAGCombiner::MatchLoadCombine(SDNode *N) {
       !TLI.isOperationLegal(ISD::BSWAP, VT))
     return SDValue();
 
-  // If we need to bswap and zero extend, we have to insert a shift. Check that
-  // it is legal.
+  // If we need to rotate make sure that is legal.
+  if (IsRotated && LegalOperations && !TLI.isOperationLegal(ISD::ROTR, VT))
+    return SDValue();
+
+  // If we need to bswap and zero extend, we have to insert a shift. Check
+  // thatunsigned Fast = 0; it is legal.
   if (NeedsBswap && NeedsZext && LegalOperations &&
       !TLI.isOperationLegal(ISD::SHL, VT))
     return SDValue();
@@ -9826,15 +9858,33 @@ SDValue DAGCombiner::MatchLoadCombine(SDNode *N) {
   for (LoadSDNode *L : Loads)
     DAG.makeEquivalentMemoryOrdering(L, NewLoad);
 
-  if (!NeedsBswap)
+  // If no transform is needed the return the new load.
+  if (!NeedsBswap && !IsRotated)
     return NewLoad;
 
-  SDValue ShiftedLoad =
-      NeedsZext ? DAG.getNode(ISD::SHL, SDLoc(N), VT, NewLoad,
-                              DAG.getShiftAmountConstant(ZeroExtendedBytes * 8,
-                                                         VT, SDLoc(N)))
-                : NewLoad;
-  return DAG.getNode(ISD::BSWAP, SDLoc(N), VT, ShiftedLoad);
+  // If we detect the need to BSWAP build the new node and return it.
+  if (NeedsBswap) {
+    SDValue ShiftedLoad =
+        NeedsZext ? DAG.getNode(ISD::SHL, SDLoc(N), VT, NewLoad,
+                                DAG.getShiftAmountConstant(
+                                    ZeroExtendedBytes * 8, VT, SDLoc(N)))
+                  : NewLoad;
+    return DAG.getNode(ISD::BSWAP, SDLoc(N), VT, ShiftedLoad);
+  }
+
+  // If we detect we need to rotate build the new ROTR node.
+  if (IsRotated) {
+    // The amount to rotate is half that of the size, i.e 32 bits for an i64
+    unsigned RotateAmount = VT.getSizeInBits() / 2;
+
+    EVT ShiftAmountTy =
+        TLI.getShiftAmountTy(NewLoad.getValueType(), DAG.getDataLayout());
+
+    return DAG.getNode(ISD::ROTR, SDLoc(N), VT, NewLoad,
+                       DAG.getConstant(RotateAmount, SDLoc(N), ShiftAmountTy));
+  }
+
+  llvm_unreachable("Should have returned a transformed load value");
 }
 
 // If the target has andn, bsl, or a similar bit-select instruction,
