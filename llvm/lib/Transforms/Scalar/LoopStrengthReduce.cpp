@@ -1423,8 +1423,9 @@ void Cost::RateRegister(const Formula &F, const SCEV *Reg,
     }
 
     unsigned LoopCost = 1;
-    if (TTI->isIndexedLoadLegal(TTI->MIM_PostInc, AR->getType()) ||
-        TTI->isIndexedStoreLegal(TTI->MIM_PostInc, AR->getType())) {
+    if (LU.Kind == LSRUse::Address &&
+        (TTI->isIndexedLoadLegal(TTI->MIM_PostInc, AR->getType()) ||
+         TTI->isIndexedStoreLegal(TTI->MIM_PostInc, AR->getType()))) {
       const SCEV *Start;
       const APInt *Step;
       if (match(AR, m_scev_AffineAddRec(m_SCEV(Start), m_scev_APInt(Step)))) {
