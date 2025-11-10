@@ -19,6 +19,7 @@
 #include "clang/AST/NestedNameSpecifierBase.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/TypeBase.h"
+#include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
@@ -1303,7 +1304,9 @@ public:
   }
 };
 
-struct BoundsAttributedLocInfo {};
+struct BoundsAttributedLocInfo {
+  SourceRange Range;
+};
 class BoundsAttributedTypeLoc
     : public ConcreteTypeLoc<UnqualTypeLoc, BoundsAttributedTypeLoc,
                              BoundsAttributedType, BoundsAttributedLocInfo> {
@@ -1311,10 +1314,14 @@ public:
   TypeLoc getInnerLoc() const { return getInnerTypeLoc(); }
   QualType getInnerType() const { return getTypePtr()->desugar(); }
   void initializeLocal(ASTContext &Context, SourceLocation Loc) {
-    // nothing to do
+    setAttrRange({Loc, Loc});
   }
-  // LocalData is empty and TypeLocBuilder doesn't handle DataSize 1.
-  unsigned getLocalDataSize() const { return 0; }
+  void setAttrRange(SourceRange Range) {
+    getLocalData()->Range = Range;
+  }
+  SourceRange getAttrRange() const { return getLocalData()->Range; }
+
+  unsigned getLocalDataSize() const { return sizeof(BoundsAttributedLocInfo); }
 };
 
 class CountAttributedTypeLoc final
@@ -1325,8 +1332,6 @@ public:
   Expr *getCountExpr() const { return getTypePtr()->getCountExpr(); }
   bool isCountInBytes() const { return getTypePtr()->isCountInBytes(); }
   bool isOrNull() const { return getTypePtr()->isOrNull(); }
-
-  SourceRange getLocalSourceRange() const;
 };
 
 struct MacroQualifiedLocInfo {
