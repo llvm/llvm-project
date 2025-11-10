@@ -558,13 +558,14 @@ define dso_local <2 x float> @multiuse_of_single_value_from_vbroadcast_load(ptr 
 ; X64-SSSE3-NEXT:    pushq %rbx
 ; X64-SSSE3-NEXT:    subq $16, %rsp
 ; X64-SSSE3-NEXT:    movq %rsi, %rbx
-; X64-SSSE3-NEXT:    movddup {{.*#+}} xmm0 = mem[0,0]
-; X64-SSSE3-NEXT:    movapd %xmm0, (%rsp) # 16-byte Spill
-; X64-SSSE3-NEXT:    movlpd %xmm0, (%rdi)
+; X64-SSSE3-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X64-SSSE3-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
+; X64-SSSE3-NEXT:    movsd %xmm0, (%rdi)
 ; X64-SSSE3-NEXT:    movaps 32(%rsi), %xmm0
 ; X64-SSSE3-NEXT:    callq ccosf@PLT
 ; X64-SSSE3-NEXT:    movlps %xmm0, 32(%rbx)
-; X64-SSSE3-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
+; X64-SSSE3-NEXT:    movddup (%rsp), %xmm0 # 16-byte Folded Reload
+; X64-SSSE3-NEXT:    # xmm0 = mem[0,0]
 ; X64-SSSE3-NEXT:    callq ccosf@PLT
 ; X64-SSSE3-NEXT:    addq $16, %rsp
 ; X64-SSSE3-NEXT:    popq %rbx

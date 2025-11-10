@@ -708,7 +708,7 @@ bool TargetLowering::SimplifyDemandedBits(SDValue Op, const APInt &DemandedBits,
 // TODO: Under what circumstances can we create nodes? Constant folding?
 SDValue TargetLowering::SimplifyMultipleUseDemandedBits(
     SDValue Op, const APInt &DemandedBits, const APInt &DemandedElts,
-    SelectionDAG &DAG, unsigned Depth) const {
+    const APInt &DoNotPoisonEltMask, SelectionDAG &DAG, unsigned Depth) const {
   EVT VT = Op.getValueType();
 
   // Limit search depth.
@@ -742,43 +742,58 @@ SDValue TargetLowering::SimplifyMultipleUseDemandedBits(
     unsigned NumDstEltBits = DstVT.getScalarSizeInBits();
     if (NumSrcEltBits == NumDstEltBits)
       if (SDValue V = SimplifyMultipleUseDemandedBits(
-              Src, DemandedBits, DemandedElts, DAG, Depth + 1))
+              Src, DemandedBits, DemandedElts, DoNotPoisonEltMask, DAG,
+              Depth + 1))
         return DAG.getBitcast(DstVT, V);
 
+    // Bitcast from 'small element' src vector to 'large element' vector.
     if (SrcVT.isVector() && (NumDstEltBits % NumSrcEltBits) == 0) {
       unsigned Scale = NumDstEltBits / NumSrcEltBits;
       unsigned NumSrcElts = SrcVT.getVectorNumElements();
       APInt DemandedSrcBits = APInt::getZero(NumSrcEltBits);
+      APInt DemandedSrcElts = APInt::getZero(NumSrcElts);
       for (unsigned i = 0; i != Scale; ++i) {
         unsigned EltOffset = IsLE ? i : (Scale - 1 - i);
         unsigned BitOffset = EltOffset * NumSrcEltBits;
-        DemandedSrcBits |= DemandedBits.extractBits(NumSrcEltBits, BitOffset);
+         APInt Sub = DemandedBits.extractBits(NumSrcEltBits, BitOffset);
+        if (!Sub.isZero()) {
+          DemandedSrcBits |= Sub;
+          for (unsigned j = 0; j != NumElts; ++j)
+            if (DemandedElts[j])
+              DemandedSrcElts.setBit((j * Scale) + i);
+        }
       }
-      // Recursive calls below may turn not demanded elements into poison, so we
-      // need to demand all smaller source elements that maps to a demanded
-      // destination element.
-      APInt DemandedSrcElts = APIntOps::ScaleBitMask(DemandedElts, NumSrcElts);
+      // Need to semi-demand all smaller source elements that maps to a demanded
+      // destination element or a destination element that must not be poisoned.
+      APInt DoNotPoisonSrcElts =
+          APIntOps::ScaleBitMask(DemandedElts | DoNotPoisonEltMask, NumSrcElts);
 
       if (SDValue V = SimplifyMultipleUseDemandedBits(
-              Src, DemandedSrcBits, DemandedSrcElts, DAG, Depth + 1))
+              Src, DemandedSrcBits, DemandedSrcElts, DoNotPoisonSrcElts, DAG,
+              Depth + 1))
         return DAG.getBitcast(DstVT, V);
     }
 
+    // Bitcast from 'large element' src vector to 'small element' vector.
     // TODO - bigendian once we have test coverage.
     if (IsLE && (NumSrcEltBits % NumDstEltBits) == 0) {
       unsigned Scale = NumSrcEltBits / NumDstEltBits;
       unsigned NumSrcElts = SrcVT.isVector() ? SrcVT.getVectorNumElements() : 1;
       APInt DemandedSrcBits = APInt::getZero(NumSrcEltBits);
       APInt DemandedSrcElts = APInt::getZero(NumSrcElts);
+      APInt DoNotPoisonSrcElts = APInt::getZero(NumSrcElts);
       for (unsigned i = 0; i != NumElts; ++i)
         if (DemandedElts[i]) {
           unsigned Offset = (i % Scale) * NumDstEltBits;
           DemandedSrcBits.insertBits(DemandedBits, Offset);
           DemandedSrcElts.setBit(i / Scale);
+        } else if (DoNotPoisonEltMask[i]) {
+          DoNotPoisonSrcElts.setBit(i / Scale);
         }
 
       if (SDValue V = SimplifyMultipleUseDemandedBits(
-              Src, DemandedSrcBits, DemandedSrcElts, DAG, Depth + 1))
+              Src, DemandedSrcBits, DemandedSrcElts, DoNotPoisonSrcElts, DAG,
+              Depth + 1))
         return DAG.getBitcast(DstVT, V);
     }
 
@@ -835,12 +850,12 @@ SDValue TargetLowering::SimplifyMultipleUseDemandedBits(
   case ISD::SHL: {
     // If we are only demanding sign bits then we can use the shift source
     // directly.
-    if (std::optional<unsigned> MaxSA =
-            DAG.getValidMaximumShiftAmount(Op, DemandedElts, Depth + 1)) {
+    if (std::optional<unsigned> MaxSA = DAG.getValidMaximumShiftAmount(
+            Op, DemandedElts | DoNotPoisonEltMask, Depth + 1)) {
       SDValue Op0 = Op.getOperand(0);
       unsigned ShAmt = *MaxSA;
-      unsigned NumSignBits =
-          DAG.ComputeNumSignBits(Op0, DemandedElts, Depth + 1);
+      unsigned NumSignBits = DAG.ComputeNumSignBits(
+          Op0, DemandedElts | DoNotPoisonEltMask, Depth + 1);
       unsigned UpperDemandedBits = BitWidth - DemandedBits.countr_zero();
       if (NumSignBits > ShAmt && (NumSignBits - ShAmt) >= (UpperDemandedBits))
         return Op0;
@@ -850,15 +865,15 @@ SDValue TargetLowering::SimplifyMultipleUseDemandedBits(
   case ISD::SRL: {
     // If we are only demanding sign bits then we can use the shift source
     // directly.
-    if (std::optional<unsigned> MaxSA =
-            DAG.getValidMaximumShiftAmount(Op, DemandedElts, Depth + 1)) {
+    if (std::optional<unsigned> MaxSA = DAG.getValidMaximumShiftAmount(
+            Op, DemandedElts | DoNotPoisonEltMask, Depth + 1)) {
       SDValue Op0 = Op.getOperand(0);
       unsigned ShAmt = *MaxSA;
       // Must already be signbits in DemandedBits bounds, and can't demand any
       // shifted in zeroes.
       if (DemandedBits.countl_zero() >= ShAmt) {
-        unsigned NumSignBits =
-            DAG.ComputeNumSignBits(Op0, DemandedElts, Depth + 1);
+        unsigned NumSignBits = DAG.ComputeNumSignBits(
+            Op0, DemandedElts | DoNotPoisonEltMask, Depth + 1);
         if (DemandedBits.countr_zero() >= (BitWidth - NumSignBits))
           return Op0;
       }
@@ -895,7 +910,9 @@ SDValue TargetLowering::SimplifyMultipleUseDemandedBits(
         shouldRemoveRedundantExtend(Op))
       return Op0;
     // If the input is already sign extended, just drop the extension.
-    unsigned NumSignBits = DAG.ComputeNumSignBits(Op0, DemandedElts, Depth + 1);
+    // FIXME: Can we skip DoNotPoisonEltMask here?
+    unsigned NumSignBits = DAG.ComputeNumSignBits(
+        Op0, DemandedElts | DoNotPoisonEltMask, Depth + 1);
     if (NumSignBits >= (BitWidth - ExBits + 1))
       return Op0;
     break;
@@ -911,7 +928,8 @@ SDValue TargetLowering::SimplifyMultipleUseDemandedBits(
     SDValue Src = Op.getOperand(0);
     EVT SrcVT = Src.getValueType();
     EVT DstVT = Op.getValueType();
-    if (IsLE && DemandedElts == 1 &&
+    // FIXME: Can we skip DoNotPoisonEltMask here?
+    if (IsLE && (DemandedElts | DoNotPoisonEltMask) == 1 &&
         DstVT.getSizeInBits() == SrcVT.getSizeInBits() &&
         DemandedBits.getActiveBits() <= SrcVT.getScalarSizeInBits()) {
       return DAG.getBitcast(DstVT, Src);
@@ -926,8 +944,10 @@ SDValue TargetLowering::SimplifyMultipleUseDemandedBits(
     SDValue Vec = Op.getOperand(0);
     auto *CIdx = dyn_cast<ConstantSDNode>(Op.getOperand(2));
     EVT VecVT = Vec.getValueType();
+    // FIXME: Handle DoNotPoisonEltMask better.
     if (CIdx && CIdx->getAPIntValue().ult(VecVT.getVectorNumElements()) &&
-        !DemandedElts[CIdx->getZExtValue()])
+        !DemandedElts[CIdx->getZExtValue()] &&
+        !DoNotPoisonEltMask[CIdx->getZExtValue()])
       return Vec;
     break;
   }
@@ -940,8 +960,10 @@ SDValue TargetLowering::SimplifyMultipleUseDemandedBits(
     uint64_t Idx = Op.getConstantOperandVal(2);
     unsigned NumSubElts = Sub.getValueType().getVectorNumElements();
     APInt DemandedSubElts = DemandedElts.extractBits(NumSubElts, Idx);
+    APInt DoNotPoisonSubElts = DoNotPoisonEltMask.extractBits(NumSubElts, Idx);
     // If we don't demand the inserted subvector, return the base vector.
-    if (DemandedSubElts == 0)
+    // FIXME: Handle DoNotPoisonEltMask better.
+    if (DemandedSubElts == 0 && DoNotPoisonSubElts == 0)
       return Vec;
     break;
   }
@@ -954,9 +976,10 @@ SDValue TargetLowering::SimplifyMultipleUseDemandedBits(
     bool AllUndef = true, IdentityLHS = true, IdentityRHS = true;
     for (unsigned i = 0; i != NumElts; ++i) {
       int M = ShuffleMask[i];
-      if (M < 0 || !DemandedElts[i])
+      if (M < 0 || (!DemandedElts[i] && !DoNotPoisonEltMask[i]))
         continue;
-      AllUndef = false;
+      if (DemandedElts[i])
+        AllUndef = false;
       IdentityLHS &= (M == (int)i);
       IdentityRHS &= ((M - NumElts) == i);
     }
@@ -977,11 +1000,19 @@ SDValue TargetLowering::SimplifyMultipleUseDemandedBits(
 
     if (Op.getOpcode() >= ISD::BUILTIN_OP_END)
       if (SDValue V = SimplifyMultipleUseDemandedBitsForTargetNode(
-              Op, DemandedBits, DemandedElts, DAG, Depth))
+              Op, DemandedBits, DemandedElts, DoNotPoisonEltMask, DAG, Depth))
         return V;
     break;
   }
   return SDValue();
+}
+
+SDValue TargetLowering::SimplifyMultipleUseDemandedBits(
+    SDValue Op, const APInt &DemandedBits, const APInt &DemandedElts,
+    SelectionDAG &DAG, unsigned Depth) const {
+  APInt DoNotPoisonEltMask = APInt::getZero(DemandedElts.getBitWidth());
+  return SimplifyMultipleUseDemandedBits(Op, DemandedBits, DemandedElts,
+                                         DoNotPoisonEltMask, DAG, Depth);
 }
 
 SDValue TargetLowering::SimplifyMultipleUseDemandedBits(
@@ -994,15 +1025,17 @@ SDValue TargetLowering::SimplifyMultipleUseDemandedBits(
   APInt DemandedElts = VT.isFixedLengthVector()
                            ? APInt::getAllOnes(VT.getVectorNumElements())
                            : APInt(1, 1);
-  return SimplifyMultipleUseDemandedBits(Op, DemandedBits, DemandedElts, DAG,
-                                         Depth);
+  APInt DoNotPoisonEltMask = APInt::getZero(DemandedElts.getBitWidth());
+  return SimplifyMultipleUseDemandedBits(Op, DemandedBits, DemandedElts,
+                                         DoNotPoisonEltMask, DAG, Depth);
 }
 
 SDValue TargetLowering::SimplifyMultipleUseDemandedVectorElts(
-    SDValue Op, const APInt &DemandedElts, SelectionDAG &DAG,
-    unsigned Depth) const {
+    SDValue Op, const APInt &DemandedElts, const APInt &DoNotPoisonEltMask,
+    SelectionDAG &DAG, unsigned Depth) const {
   APInt DemandedBits = APInt::getAllOnes(Op.getScalarValueSizeInBits());
-  return SimplifyMultipleUseDemandedBits(Op, DemandedBits, DemandedElts, DAG,
+  return SimplifyMultipleUseDemandedBits(Op, DemandedBits, DemandedElts,
+                                         DoNotPoisonEltMask, DAG,
                                          Depth);
 }
 
@@ -2766,33 +2799,54 @@ bool TargetLowering::SimplifyDemandedBits(
                              TLO.DAG.getNode(ISD::SHL, dl, VT, Sign, ShAmt));
       }
     }
-
-    // Bitcast from a vector using SimplifyDemanded Bits/VectorElts.
+    // Bitcast from 'small element' src vector to 'large element' vector.
     // Demand the elt/bit if any of the original elts/bits are demanded.
     if (SrcVT.isVector() && (BitWidth % NumSrcEltBits) == 0) {
       unsigned Scale = BitWidth / NumSrcEltBits;
       unsigned NumSrcElts = SrcVT.getVectorNumElements();
       APInt DemandedSrcBits = APInt::getZero(NumSrcEltBits);
+      APInt DemandedSrcElts = APInt::getZero(NumSrcElts);
       for (unsigned i = 0; i != Scale; ++i) {
         unsigned EltOffset = IsLE ? i : (Scale - 1 - i);
         unsigned BitOffset = EltOffset * NumSrcEltBits;
-        DemandedSrcBits |= DemandedBits.extractBits(NumSrcEltBits, BitOffset);
+        APInt Sub = DemandedBits.extractBits(NumSrcEltBits, BitOffset);
+        if (!Sub.isZero()) {
+          DemandedSrcBits |= Sub;
+          for (unsigned j = 0; j != NumElts; ++j)
+            if (DemandedElts[j])
+              DemandedSrcElts.setBit((j * Scale) + i);
+        }
       }
-      // Recursive calls below may turn not demanded elements into poison, so we
-      // need to demand all smaller source elements that maps to a demanded
-      // destination element.
-      APInt DemandedSrcElts = APIntOps::ScaleBitMask(DemandedElts, NumSrcElts);
+      // Need to "semi demand" all smaller source elements that maps to a
+      // demanded destination element, since recursive calls below may turn not
+      // demanded elements into poison. Instead of demanding such elements we
+      // use a special bitmask to indicate that the recursive calls must not
+      // turn such elements into poison.
+      APInt DoNotPoisonSrcElts = APIntOps::ScaleBitMask(DemandedElts,
+                                                        NumSrcElts);
 
       APInt KnownSrcUndef, KnownSrcZero;
-      if (SimplifyDemandedVectorElts(Src, DemandedSrcElts, KnownSrcUndef,
-                                     KnownSrcZero, TLO, Depth + 1))
+      if (SimplifyDemandedVectorElts(Src, DemandedSrcElts, DoNotPoisonSrcElts,
+                                     KnownSrcUndef, KnownSrcZero, TLO,
+                                     Depth + 1))
         return true;
 
       KnownBits KnownSrcBits;
-      if (SimplifyDemandedBits(Src, DemandedSrcBits, DemandedSrcElts,
+      if (SimplifyDemandedBits(Src, DemandedSrcBits,
+                               DemandedSrcElts | DoNotPoisonSrcElts,
                                KnownSrcBits, TLO, Depth + 1))
         return true;
+
+      if (!DemandedSrcBits.isAllOnes() || !DemandedSrcElts.isAllOnes()) {
+        if (SDValue DemandedSrc = SimplifyMultipleUseDemandedBits(
+                Src, DemandedSrcBits, DemandedSrcElts, DoNotPoisonSrcElts,
+                TLO.DAG, Depth + 1)) {
+          SDValue NewOp = TLO.DAG.getBitcast(VT, DemandedSrc);
+          return TLO.CombineTo(Op, NewOp);
+        }
+      }
     } else if (IsLE && (NumSrcEltBits % BitWidth) == 0) {
+      // Bitcast from 'large element' src vector to 'small element' vector.
       // TODO - bigendian once we have test coverage.
       unsigned Scale = NumSrcEltBits / BitWidth;
       unsigned NumSrcElts = SrcVT.isVector() ? SrcVT.getVectorNumElements() : 1;
@@ -2805,10 +2859,12 @@ bool TargetLowering::SimplifyDemandedBits(
           DemandedSrcElts.setBit(i / Scale);
         }
 
+      APInt DoNotPoisonEltMask = APInt::getZero(NumSrcElts);
+
       if (SrcVT.isVector()) {
         APInt KnownSrcUndef, KnownSrcZero;
-        if (SimplifyDemandedVectorElts(Src, DemandedSrcElts, KnownSrcUndef,
-                                       KnownSrcZero, TLO, Depth + 1))
+        if (SimplifyDemandedVectorElts(Src, DemandedSrcElts, DoNotPoisonEltMask,
+                                       KnownSrcUndef, KnownSrcZero, TLO, Depth + 1))
           return true;
       }
 
@@ -3103,8 +3159,9 @@ bool TargetLowering::SimplifyDemandedVectorElts(SDValue Op,
                         !DCI.isBeforeLegalizeOps());
 
   APInt KnownUndef, KnownZero;
-  bool Simplified =
-      SimplifyDemandedVectorElts(Op, DemandedElts, KnownUndef, KnownZero, TLO);
+  APInt DoNotPoisonEltMask = APInt::getZero(DemandedElts.getBitWidth());
+  bool Simplified = SimplifyDemandedVectorElts(
+      Op, DemandedElts, DoNotPoisonEltMask, KnownUndef, KnownZero, TLO);
   if (Simplified) {
     DCI.AddToWorklist(Op.getNode());
     DCI.CommitTargetLoweringOpt(TLO);
@@ -3165,6 +3222,16 @@ bool TargetLowering::SimplifyDemandedVectorElts(
     SDValue Op, const APInt &OriginalDemandedElts, APInt &KnownUndef,
     APInt &KnownZero, TargetLoweringOpt &TLO, unsigned Depth,
     bool AssumeSingleUse) const {
+  APInt DoNotPoisonEltMask = APInt::getZero(OriginalDemandedElts.getBitWidth());
+  return SimplifyDemandedVectorElts(Op, OriginalDemandedElts,
+                                    DoNotPoisonEltMask, KnownUndef, KnownZero,
+                                    TLO, Depth, AssumeSingleUse);
+}
+
+bool TargetLowering::SimplifyDemandedVectorElts(
+    SDValue Op, const APInt &OriginalDemandedElts,
+    const APInt &DoNotPoisonEltMask, APInt &KnownUndef, APInt &KnownZero,
+    TargetLoweringOpt &TLO, unsigned Depth, bool AssumeSingleUse) const {
   EVT VT = Op.getValueType();
   unsigned Opcode = Op.getOpcode();
   APInt DemandedElts = OriginalDemandedElts;
@@ -3203,6 +3270,7 @@ bool TargetLowering::SimplifyDemandedVectorElts(
   if (Depth >= SelectionDAG::MaxRecursionDepth)
     return false;
 
+  APInt DemandedEltsInclDoNotPoison = DemandedElts | DoNotPoisonEltMask;
   SDLoc DL(Op);
   unsigned EltSizeInBits = VT.getScalarSizeInBits();
   bool IsLE = TLO.DAG.getDataLayout().isLittleEndian();
@@ -3210,10 +3278,10 @@ bool TargetLowering::SimplifyDemandedVectorElts(
   // Helper for demanding the specified elements and all the bits of both binary
   // operands.
   auto SimplifyDemandedVectorEltsBinOp = [&](SDValue Op0, SDValue Op1) {
-    SDValue NewOp0 = SimplifyMultipleUseDemandedVectorElts(Op0, DemandedElts,
-                                                           TLO.DAG, Depth + 1);
-    SDValue NewOp1 = SimplifyMultipleUseDemandedVectorElts(Op1, DemandedElts,
-                                                           TLO.DAG, Depth + 1);
+    SDValue NewOp0 = SimplifyMultipleUseDemandedVectorElts(
+        Op0, DemandedElts, DoNotPoisonEltMask, TLO.DAG, Depth + 1);
+    SDValue NewOp1 = SimplifyMultipleUseDemandedVectorElts(
+        Op1, DemandedElts, DoNotPoisonEltMask, TLO.DAG, Depth + 1);
     if (NewOp0 || NewOp1) {
       SDValue NewOp =
           TLO.DAG.getNode(Opcode, SDLoc(Op), VT, NewOp0 ? NewOp0 : Op0,
@@ -3257,17 +3325,20 @@ bool TargetLowering::SimplifyDemandedVectorElts(
     // Fast handling of 'identity' bitcasts.
     unsigned NumSrcElts = SrcVT.getVectorNumElements();
     if (NumSrcElts == NumElts)
-      return SimplifyDemandedVectorElts(Src, DemandedElts, KnownUndef,
-                                        KnownZero, TLO, Depth + 1);
+      return SimplifyDemandedVectorElts(Src, DemandedElts, DoNotPoisonEltMask,
+                                        KnownUndef, KnownZero, TLO, Depth + 1);
 
-    APInt SrcDemandedElts, SrcZero, SrcUndef;
+    APInt SrcDemandedElts, SrcDoNotPoisonEltMask, SrcZero, SrcUndef;
 
     // Bitcast from 'large element' src vector to 'small element' vector, we
     // must demand a source element if any DemandedElt maps to it.
     if ((NumElts % NumSrcElts) == 0) {
       unsigned Scale = NumElts / NumSrcElts;
       SrcDemandedElts = APIntOps::ScaleBitMask(DemandedElts, NumSrcElts);
-      if (SimplifyDemandedVectorElts(Src, SrcDemandedElts, SrcUndef, SrcZero,
+      SrcDoNotPoisonEltMask =
+          APIntOps::ScaleBitMask(DoNotPoisonEltMask, NumSrcElts);
+      if (SimplifyDemandedVectorElts(Src, SrcDemandedElts,
+                                     SrcDoNotPoisonEltMask, SrcUndef, SrcZero,
                                      TLO, Depth + 1))
         return true;
 
@@ -3284,7 +3355,8 @@ bool TargetLowering::SimplifyDemandedVectorElts(
           }
 
         KnownBits Known;
-        if (SimplifyDemandedBits(Src, SrcDemandedBits, SrcDemandedElts, Known,
+        if (SimplifyDemandedBits(Src, SrcDemandedBits,
+                                 SrcDemandedElts | SrcDoNotPoisonEltMask, Known,
                                  TLO, Depth + 1))
           return true;
 
@@ -3322,7 +3394,10 @@ bool TargetLowering::SimplifyDemandedVectorElts(
     if ((NumSrcElts % NumElts) == 0) {
       unsigned Scale = NumSrcElts / NumElts;
       SrcDemandedElts = APIntOps::ScaleBitMask(DemandedElts, NumSrcElts);
-      if (SimplifyDemandedVectorElts(Src, SrcDemandedElts, SrcUndef, SrcZero,
+      SrcDoNotPoisonEltMask =
+          APIntOps::ScaleBitMask(DoNotPoisonEltMask, NumSrcElts);
+      if (SimplifyDemandedVectorElts(Src, SrcDemandedElts,
+                                     SrcDoNotPoisonEltMask, SrcUndef, SrcZero,
                                      TLO, Depth + 1))
         return true;
 
@@ -3341,7 +3416,8 @@ bool TargetLowering::SimplifyDemandedVectorElts(
   }
   case ISD::FREEZE: {
     SDValue N0 = Op.getOperand(0);
-    if (TLO.DAG.isGuaranteedNotToBeUndefOrPoison(N0, DemandedElts,
+    if (TLO.DAG.isGuaranteedNotToBeUndefOrPoison(N0,
+                                                 DemandedEltsInclDoNotPoison,
                                                  /*PoisonOnly=*/false,
                                                  Depth + 1))
       return TLO.CombineTo(Op, N0);
@@ -3391,9 +3467,11 @@ bool TargetLowering::SimplifyDemandedVectorElts(
     for (unsigned i = 0; i != NumSubVecs; ++i) {
       SDValue SubOp = Op.getOperand(i);
       APInt SubElts = DemandedElts.extractBits(NumSubElts, i * NumSubElts);
+      APInt DoNotPoisonSubElts =
+          DoNotPoisonEltMask.extractBits(NumSubElts, i * NumSubElts);
       APInt SubUndef, SubZero;
-      if (SimplifyDemandedVectorElts(SubOp, SubElts, SubUndef, SubZero, TLO,
-                                     Depth + 1))
+      if (SimplifyDemandedVectorElts(SubOp, SubElts, DoNotPoisonSubElts,
+                                     SubUndef, SubZero, TLO, Depth + 1))
         return true;
       KnownUndef.insertBits(SubUndef, i * NumSubElts);
       KnownZero.insertBits(SubZero, i * NumSubElts);
@@ -3406,10 +3484,18 @@ bool TargetLowering::SimplifyDemandedVectorElts(
       for (unsigned i = 0; i != NumSubVecs; ++i) {
         SDValue SubOp = Op.getOperand(i);
         APInt SubElts = DemandedElts.extractBits(NumSubElts, i * NumSubElts);
-        SDValue NewSubOp = SimplifyMultipleUseDemandedVectorElts(
-            SubOp, SubElts, TLO.DAG, Depth + 1);
-        DemandedSubOps.push_back(NewSubOp ? NewSubOp : SubOp);
-        FoundNewSub = NewSubOp ? true : FoundNewSub;
+        APInt DoNotPoisonSubElts =
+            DoNotPoisonEltMask.extractBits(NumSubElts, i * NumSubElts);
+        if (SubElts != 0) {
+          SDValue NewSubOp = SimplifyMultipleUseDemandedVectorElts(
+              SubOp, SubElts, DoNotPoisonSubElts, TLO.DAG, Depth + 1);
+          DemandedSubOps.push_back(NewSubOp ? NewSubOp : SubOp);
+          FoundNewSub = NewSubOp ? true : FoundNewSub;
+        } else if (!SubOp.isUndef()) {
+          DemandedSubOps.push_back(TLO.DAG.getUNDEF(SubOp.getValueType()));
+          FoundNewSub = true;
+        } else
+          DemandedSubOps.push_back(SubOp);
       }
       if (FoundNewSub) {
         SDValue NewOp =
@@ -3425,18 +3511,28 @@ bool TargetLowering::SimplifyDemandedVectorElts(
     SDValue Src = Op.getOperand(0);
     SDValue Sub = Op.getOperand(1);
     uint64_t Idx = Op.getConstantOperandVal(2);
-    unsigned NumSubElts = Sub.getValueType().getVectorNumElements();
+    EVT SubVT = Sub.getValueType();
+    unsigned NumSubElts = SubVT.getVectorNumElements();
     APInt DemandedSubElts = DemandedElts.extractBits(NumSubElts, Idx);
+    APInt DoNoPoisonSubElts = DoNotPoisonEltMask.extractBits(NumSubElts, Idx);
     APInt DemandedSrcElts = DemandedElts;
     DemandedSrcElts.clearBits(Idx, Idx + NumSubElts);
+    APInt DoNoPoisonSrcElts = DoNotPoisonEltMask;
+    DoNoPoisonSrcElts.clearBits(Idx, Idx + NumSubElts);
 
-    // If none of the sub operand elements are demanded, bypass the insert.
-    if (!DemandedSubElts)
+    // If none of the sub operand elements are demanded and may be poisoned,
+    // bypass the insert.
+    if (!DemandedSubElts && !DoNoPoisonSubElts)
       return TLO.CombineTo(Op, Src);
+    // If none of the sub operand elements are demanded, replace it with undef.
+    if (!DemandedSubElts && !Sub.isUndef())
+      return TLO.CombineTo(Op, TLO.DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT,
+                                               Src, TLO.DAG.getUNDEF(SubVT),
+                                               Op.getOperand(2)));
 
     APInt SubUndef, SubZero;
-    if (SimplifyDemandedVectorElts(Sub, DemandedSubElts, SubUndef, SubZero, TLO,
-                                   Depth + 1))
+    if (SimplifyDemandedVectorElts(Sub, DemandedSubElts, DoNoPoisonSubElts,
+                                   SubUndef, SubZero, TLO, Depth + 1))
       return true;
 
     // If none of the src operand elements are demanded, replace it with undef.
@@ -3445,8 +3541,8 @@ bool TargetLowering::SimplifyDemandedVectorElts(
                                                TLO.DAG.getUNDEF(VT), Sub,
                                                Op.getOperand(2)));
 
-    if (SimplifyDemandedVectorElts(Src, DemandedSrcElts, KnownUndef, KnownZero,
-                                   TLO, Depth + 1))
+    if (SimplifyDemandedVectorElts(Src, DemandedSrcElts, DoNoPoisonSrcElts,
+                                   KnownUndef, KnownZero, TLO, Depth + 1))
       return true;
     KnownUndef.insertBits(SubUndef, Idx);
     KnownZero.insertBits(SubZero, Idx);
@@ -3454,9 +3550,9 @@ bool TargetLowering::SimplifyDemandedVectorElts(
     // Attempt to avoid multi-use ops if we don't need anything from them.
     if (!DemandedSrcElts.isAllOnes() || !DemandedSubElts.isAllOnes()) {
       SDValue NewSrc = SimplifyMultipleUseDemandedVectorElts(
-          Src, DemandedSrcElts, TLO.DAG, Depth + 1);
+          Src, DemandedSrcElts, DoNoPoisonSrcElts, TLO.DAG, Depth + 1);
       SDValue NewSub = SimplifyMultipleUseDemandedVectorElts(
-          Sub, DemandedSubElts, TLO.DAG, Depth + 1);
+          Sub, DemandedSubElts, DoNoPoisonSubElts, TLO.DAG, Depth + 1);
       if (NewSrc || NewSub) {
         NewSrc = NewSrc ? NewSrc : Src;
         NewSub = NewSub ? NewSub : Sub;
@@ -3475,10 +3571,11 @@ bool TargetLowering::SimplifyDemandedVectorElts(
     uint64_t Idx = Op.getConstantOperandVal(1);
     unsigned NumSrcElts = Src.getValueType().getVectorNumElements();
     APInt DemandedSrcElts = DemandedElts.zext(NumSrcElts).shl(Idx);
+    APInt DoNotPoisonSrcElts = DoNotPoisonEltMask.zext(NumSrcElts).shl(Idx);
 
     APInt SrcUndef, SrcZero;
-    if (SimplifyDemandedVectorElts(Src, DemandedSrcElts, SrcUndef, SrcZero, TLO,
-                                   Depth + 1))
+    if (SimplifyDemandedVectorElts(Src, DemandedSrcElts, DoNotPoisonSrcElts,
+                                   SrcUndef, SrcZero, TLO, Depth + 1))
       return true;
     KnownUndef = SrcUndef.extractBits(NumElts, Idx);
     KnownZero = SrcZero.extractBits(NumElts, Idx);
@@ -3486,7 +3583,7 @@ bool TargetLowering::SimplifyDemandedVectorElts(
     // Attempt to avoid multi-use ops if we don't need anything from them.
     if (!DemandedElts.isAllOnes()) {
       SDValue NewSrc = SimplifyMultipleUseDemandedVectorElts(
-          Src, DemandedSrcElts, TLO.DAG, Depth + 1);
+          Src, DemandedSrcElts, DoNotPoisonSrcElts, TLO.DAG, Depth + 1);
       if (NewSrc) {
         SDValue NewOp = TLO.DAG.getNode(Op.getOpcode(), SDLoc(Op), VT, NewSrc,
                                         Op.getOperand(1));
@@ -3498,18 +3595,26 @@ bool TargetLowering::SimplifyDemandedVectorElts(
   case ISD::INSERT_VECTOR_ELT: {
     SDValue Vec = Op.getOperand(0);
     SDValue Scl = Op.getOperand(1);
+    EVT SclVT = Scl.getValueType();
     auto *CIdx = dyn_cast<ConstantSDNode>(Op.getOperand(2));
 
     // For a legal, constant insertion index, if we don't need this insertion
     // then strip it, else remove it from the demanded elts.
     if (CIdx && CIdx->getAPIntValue().ult(NumElts)) {
       unsigned Idx = CIdx->getZExtValue();
-      if (!DemandedElts[Idx])
+      if (!DemandedEltsInclDoNotPoison[Idx])
         return TLO.CombineTo(Op, Vec);
+      if (!DemandedElts[Idx] && !Scl.isUndef())
+        return TLO.CombineTo(Op, TLO.DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, VT,
+                                                 Vec, TLO.DAG.getUNDEF(SclVT),
+                                                 Op.getOperand(2)));
 
       APInt DemandedVecElts(DemandedElts);
       DemandedVecElts.clearBit(Idx);
-      if (SimplifyDemandedVectorElts(Vec, DemandedVecElts, KnownUndef,
+      APInt SrcDoNotPoisonEltMask(DoNotPoisonEltMask);
+      SrcDoNotPoisonEltMask.clearBit(Idx);
+      if (SimplifyDemandedVectorElts(Vec, DemandedVecElts,
+                                     SrcDoNotPoisonEltMask, KnownUndef,
                                      KnownZero, TLO, Depth + 1))
         return true;
 
@@ -3520,8 +3625,8 @@ bool TargetLowering::SimplifyDemandedVectorElts(
     }
 
     APInt VecUndef, VecZero;
-    if (SimplifyDemandedVectorElts(Vec, DemandedElts, VecUndef, VecZero, TLO,
-                                   Depth + 1))
+    if (SimplifyDemandedVectorElts(Vec, DemandedElts, DoNotPoisonEltMask,
+                                   VecUndef, VecZero, TLO, Depth + 1))
       return true;
     // Without knowing the insertion index we can't set KnownUndef/KnownZero.
     break;
@@ -3534,20 +3639,18 @@ bool TargetLowering::SimplifyDemandedVectorElts(
     // Try to transform the select condition based on the current demanded
     // elements.
     APInt UndefSel, ZeroSel;
-    if (SimplifyDemandedVectorElts(Sel, DemandedElts, UndefSel, ZeroSel, TLO,
-                                   Depth + 1))
+    if (SimplifyDemandedVectorElts(Sel, DemandedElts, DoNotPoisonEltMask,
+                                   UndefSel, ZeroSel, TLO, Depth + 1))
       return true;
 
     // See if we can simplify either vselect operand.
-    APInt DemandedLHS(DemandedElts);
-    APInt DemandedRHS(DemandedElts);
     APInt UndefLHS, ZeroLHS;
     APInt UndefRHS, ZeroRHS;
-    if (SimplifyDemandedVectorElts(LHS, DemandedLHS, UndefLHS, ZeroLHS, TLO,
-                                   Depth + 1))
+    if (SimplifyDemandedVectorElts(LHS, DemandedElts, DoNotPoisonEltMask,
+                                   UndefLHS, ZeroLHS, TLO, Depth + 1))
       return true;
-    if (SimplifyDemandedVectorElts(RHS, DemandedRHS, UndefRHS, ZeroRHS, TLO,
-                                   Depth + 1))
+    if (SimplifyDemandedVectorElts(RHS, DemandedElts, DoNotPoisonEltMask,
+                                   UndefRHS, ZeroRHS, TLO, Depth + 1))
       return true;
 
     KnownUndef = UndefLHS & UndefRHS;
@@ -3557,8 +3660,8 @@ bool TargetLowering::SimplifyDemandedVectorElts(
     // select value element.
     APInt DemandedSel = DemandedElts & ~KnownZero;
     if (DemandedSel != DemandedElts)
-      if (SimplifyDemandedVectorElts(Sel, DemandedSel, UndefSel, ZeroSel, TLO,
-                                     Depth + 1))
+      if (SimplifyDemandedVectorElts(Sel, DemandedSel, DoNotPoisonEltMask,
+                                     UndefSel, ZeroSel, TLO, Depth + 1))
         return true;
 
     break;
@@ -3568,19 +3671,16 @@ bool TargetLowering::SimplifyDemandedVectorElts(
     SDValue RHS = Op.getOperand(1);
     ArrayRef<int> ShuffleMask = cast<ShuffleVectorSDNode>(Op)->getMask();
 
-    // Collect demanded elements from shuffle operands..
-    APInt DemandedLHS(NumElts, 0);
-    APInt DemandedRHS(NumElts, 0);
-    for (unsigned i = 0; i != NumElts; ++i) {
-      int M = ShuffleMask[i];
-      if (M < 0 || !DemandedElts[i])
-        continue;
-      assert(0 <= M && M < (int)(2 * NumElts) && "Shuffle index out of range");
-      if (M < (int)NumElts)
-        DemandedLHS.setBit(M);
-      else
-        DemandedRHS.setBit(M - NumElts);
-    }
+    // Collect demanded elements from shuffle operands.
+    APInt DemandedLHS, DemandedRHS;
+    APInt DoNotPoisonLHS, DoNotPoisonRHS;
+    if (!getShuffleDemandedElts(NumElts, ShuffleMask, DemandedElts, DemandedLHS,
+                                DemandedRHS,
+                                /*AllowUndefElts=*/true) ||
+        !getShuffleDemandedElts(NumElts, ShuffleMask, DoNotPoisonEltMask,
+                                DoNotPoisonLHS, DoNotPoisonRHS,
+                                /*AllowUndefElts=*/true))
+      break;
 
     // If either side isn't demanded, replace it by UNDEF. We handle this
     // explicitly here to also simplify in case of multiple uses (on the
@@ -3598,11 +3698,11 @@ bool TargetLowering::SimplifyDemandedVectorElts(
     // See if we can simplify either shuffle operand.
     APInt UndefLHS, ZeroLHS;
     APInt UndefRHS, ZeroRHS;
-    if (SimplifyDemandedVectorElts(LHS, DemandedLHS, UndefLHS, ZeroLHS, TLO,
-                                   Depth + 1))
+    if (SimplifyDemandedVectorElts(LHS, DemandedLHS, DoNotPoisonLHS, UndefLHS,
+                                   ZeroLHS, TLO, Depth + 1))
       return true;
-    if (SimplifyDemandedVectorElts(RHS, DemandedRHS, UndefRHS, ZeroRHS, TLO,
-                                   Depth + 1))
+    if (SimplifyDemandedVectorElts(RHS, DemandedRHS, DoNotPoisonRHS, UndefRHS,
+                                   ZeroRHS, TLO, Depth + 1))
       return true;
 
     // Simplify mask using undef elements from LHS/RHS.
@@ -3656,9 +3756,10 @@ bool TargetLowering::SimplifyDemandedVectorElts(
     APInt SrcUndef, SrcZero;
     SDValue Src = Op.getOperand(0);
     unsigned NumSrcElts = Src.getValueType().getVectorNumElements();
-    APInt DemandedSrcElts = DemandedElts.zext(NumSrcElts);
-    if (SimplifyDemandedVectorElts(Src, DemandedSrcElts, SrcUndef, SrcZero, TLO,
-                                   Depth + 1))
+    APInt DemandedSrcElts = DemandedEltsInclDoNotPoison.zext(NumSrcElts);
+    APInt SrcDoNotPoisonEltMask = APInt::getZero(NumSrcElts);
+    if (SimplifyDemandedVectorElts(Src, DemandedSrcElts, SrcDoNotPoisonEltMask,
+                                   SrcUndef, SrcZero, TLO, Depth + 1))
       return true;
     KnownZero = SrcZero.zextOrTrunc(NumElts);
     KnownUndef = SrcUndef.zextOrTrunc(NumElts);
@@ -3705,8 +3806,9 @@ bool TargetLowering::SimplifyDemandedVectorElts(
     SDValue Op1 = Op.getOperand(1);
     if (Op0 == Op1 && Op->isOnlyUserOf(Op0.getNode())) {
       APInt UndefLHS, ZeroLHS;
-      if (SimplifyDemandedVectorElts(Op0, DemandedElts, UndefLHS, ZeroLHS, TLO,
-                                     Depth + 1, /*AssumeSingleUse*/ true))
+      if (SimplifyDemandedVectorElts(Op0, DemandedElts, DoNotPoisonEltMask,
+                                     UndefLHS, ZeroLHS, TLO, Depth + 1,
+                                     /*AssumeSingleUse*/ true))
         return true;
     }
     [[fallthrough]];
@@ -3727,12 +3829,12 @@ bool TargetLowering::SimplifyDemandedVectorElts(
     SDValue Op1 = Op.getOperand(1);
 
     APInt UndefRHS, ZeroRHS;
-    if (SimplifyDemandedVectorElts(Op1, DemandedElts, UndefRHS, ZeroRHS, TLO,
-                                   Depth + 1))
+    if (SimplifyDemandedVectorElts(Op1, DemandedElts, DoNotPoisonEltMask,
+                                   UndefRHS, ZeroRHS, TLO, Depth + 1))
       return true;
     APInt UndefLHS, ZeroLHS;
-    if (SimplifyDemandedVectorElts(Op0, DemandedElts, UndefLHS, ZeroLHS, TLO,
-                                   Depth + 1))
+    if (SimplifyDemandedVectorElts(Op0, DemandedElts, DoNotPoisonEltMask,
+                                   UndefLHS, ZeroLHS, TLO, Depth + 1))
       return true;
 
     KnownZero = ZeroLHS & ZeroRHS;
@@ -3754,12 +3856,12 @@ bool TargetLowering::SimplifyDemandedVectorElts(
     SDValue Op1 = Op.getOperand(1);
 
     APInt UndefRHS, ZeroRHS;
-    if (SimplifyDemandedVectorElts(Op1, DemandedElts, UndefRHS, ZeroRHS, TLO,
-                                   Depth + 1))
+    if (SimplifyDemandedVectorElts(Op1, DemandedElts, DoNotPoisonEltMask,
+                                   UndefRHS, ZeroRHS, TLO, Depth + 1))
       return true;
     APInt UndefLHS, ZeroLHS;
-    if (SimplifyDemandedVectorElts(Op0, DemandedElts, UndefLHS, ZeroLHS, TLO,
-                                   Depth + 1))
+    if (SimplifyDemandedVectorElts(Op0, DemandedElts, DoNotPoisonEltMask,
+                                   UndefLHS, ZeroLHS, TLO, Depth + 1))
       return true;
 
     KnownZero = ZeroLHS;
@@ -3780,14 +3882,14 @@ bool TargetLowering::SimplifyDemandedVectorElts(
     SDValue Op1 = Op.getOperand(1);
 
     APInt SrcUndef, SrcZero;
-    if (SimplifyDemandedVectorElts(Op1, DemandedElts, SrcUndef, SrcZero, TLO,
-                                   Depth + 1))
+    if (SimplifyDemandedVectorElts(Op1, DemandedElts, DoNotPoisonEltMask,
+                                   SrcUndef, SrcZero, TLO, Depth + 1))
       return true;
     // If we know that a demanded element was zero in Op1 we don't need to
     // demand it in Op0 - its guaranteed to be zero.
     APInt DemandedElts0 = DemandedElts & ~SrcZero;
-    if (SimplifyDemandedVectorElts(Op0, DemandedElts0, KnownUndef, KnownZero,
-                                   TLO, Depth + 1))
+    if (SimplifyDemandedVectorElts(Op0, DemandedElts0, DoNotPoisonEltMask,
+                                   KnownUndef, KnownZero, TLO, Depth + 1))
       return true;
 
     KnownUndef &= DemandedElts0;
@@ -3816,13 +3918,15 @@ bool TargetLowering::SimplifyDemandedVectorElts(
   case ISD::TRUNCATE:
   case ISD::SIGN_EXTEND:
   case ISD::ZERO_EXTEND:
-    if (SimplifyDemandedVectorElts(Op.getOperand(0), DemandedElts, KnownUndef,
-                                   KnownZero, TLO, Depth + 1))
+    if (SimplifyDemandedVectorElts(Op.getOperand(0), DemandedElts,
+                                   DoNotPoisonEltMask, KnownUndef, KnownZero,
+                                   TLO, Depth + 1))
       return true;
 
     if (!DemandedElts.isAllOnes())
       if (SDValue NewOp = SimplifyMultipleUseDemandedVectorElts(
-              Op.getOperand(0), DemandedElts, TLO.DAG, Depth + 1))
+              Op.getOperand(0), DemandedElts, DoNotPoisonEltMask, TLO.DAG,
+              Depth + 1))
         return TLO.CombineTo(Op, TLO.DAG.getNode(Opcode, SDLoc(Op), VT, NewOp));
 
     if (Op.getOpcode() == ISD::ZERO_EXTEND) {
@@ -3836,20 +3940,23 @@ bool TargetLowering::SimplifyDemandedVectorElts(
   case ISD::UINT_TO_FP:
   case ISD::FP_TO_SINT:
   case ISD::FP_TO_UINT:
-    if (SimplifyDemandedVectorElts(Op.getOperand(0), DemandedElts, KnownUndef,
-                                   KnownZero, TLO, Depth + 1))
+    if (SimplifyDemandedVectorElts(Op.getOperand(0), DemandedElts,
+                                   DoNotPoisonEltMask, KnownUndef, KnownZero,
+                                   TLO, Depth + 1))
       return true;
     // Don't fall through to generic undef -> undef handling.
     return false;
   default: {
     if (Op.getOpcode() >= ISD::BUILTIN_OP_END) {
-      if (SimplifyDemandedVectorEltsForTargetNode(Op, DemandedElts, KnownUndef,
-                                                  KnownZero, TLO, Depth))
+      if (SimplifyDemandedVectorEltsForTargetNode(
+              Op, DemandedElts, DoNotPoisonEltMask, KnownUndef, KnownZero, TLO,
+              Depth))
         return true;
     } else {
       KnownBits Known;
       APInt DemandedBits = APInt::getAllOnes(EltSizeInBits);
-      if (SimplifyDemandedBits(Op, DemandedBits, OriginalDemandedElts, Known,
+      if (SimplifyDemandedBits(Op, DemandedBits,
+                               OriginalDemandedElts | DoNotPoisonEltMask, Known,
                                TLO, Depth, AssumeSingleUse))
         return true;
     }
@@ -3930,8 +4037,9 @@ unsigned TargetLowering::computeNumSignBitsForTargetInstr(
 }
 
 bool TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
-    SDValue Op, const APInt &DemandedElts, APInt &KnownUndef, APInt &KnownZero,
-    TargetLoweringOpt &TLO, unsigned Depth) const {
+    SDValue Op, const APInt &DemandedElts, const APInt &DoNotPoisonEltMask,
+    APInt &KnownUndef, APInt &KnownZero, TargetLoweringOpt &TLO,
+    unsigned Depth) const {
   assert((Op.getOpcode() >= ISD::BUILTIN_OP_END ||
           Op.getOpcode() == ISD::INTRINSIC_WO_CHAIN ||
           Op.getOpcode() == ISD::INTRINSIC_W_CHAIN ||
@@ -3950,12 +4058,14 @@ bool TargetLowering::SimplifyDemandedBitsForTargetNode(
           Op.getOpcode() == ISD::INTRINSIC_VOID) &&
          "Should use SimplifyDemandedBits if you don't know whether Op"
          " is a target node!");
-  computeKnownBitsForTargetNode(Op, Known, DemandedElts, TLO.DAG, Depth);
+  computeKnownBitsForTargetNode(Op, Known, DemandedElts,
+                                TLO.DAG, Depth);
   return false;
 }
 
 SDValue TargetLowering::SimplifyMultipleUseDemandedBitsForTargetNode(
     SDValue Op, const APInt &DemandedBits, const APInt &DemandedElts,
+    const APInt &DoNotPoisonEltMask,
     SelectionDAG &DAG, unsigned Depth) const {
   assert(
       (Op.getOpcode() >= ISD::BUILTIN_OP_END ||

@@ -1114,8 +1114,8 @@ define void @main.45() #0 {
 ; CHECK-LIBCALL-NEXT:    pushq %rbx
 ; CHECK-LIBCALL-NEXT:    subq $16, %rsp
 ; CHECK-LIBCALL-NEXT:    pinsrw $0, (%rax), %xmm0
+; CHECK-LIBCALL-NEXT:    movdqa %xmm0, (%rsp) # 16-byte Spill
 ; CHECK-LIBCALL-NEXT:    pshuflw {{.*#+}} xmm1 = xmm0[0,0,0,0,4,5,6,7]
-; CHECK-LIBCALL-NEXT:    movdqa %xmm1, (%rsp) # 16-byte Spill
 ; CHECK-LIBCALL-NEXT:    movq %xmm1, %rbx
 ; CHECK-LIBCALL-NEXT:    movq %rbx, %r14
 ; CHECK-LIBCALL-NEXT:    shrq $48, %r14
@@ -1127,14 +1127,14 @@ define void @main.45() #0 {
 ; CHECK-LIBCALL-NEXT:    movdqa (%rsp), %xmm0 # 16-byte Reload
 ; CHECK-LIBCALL-NEXT:    pextrw $0, %xmm0, %eax
 ; CHECK-LIBCALL-NEXT:    movl $32256, %ecx # imm = 0x7E00
-; CHECK-LIBCALL-NEXT:    cmovpl %ecx, %eax
 ; CHECK-LIBCALL-NEXT:    cmovpl %ecx, %ebx
 ; CHECK-LIBCALL-NEXT:    cmovpl %ecx, %r15d
 ; CHECK-LIBCALL-NEXT:    cmovpl %ecx, %r14d
+; CHECK-LIBCALL-NEXT:    cmovpl %ecx, %eax
+; CHECK-LIBCALL-NEXT:    movw %ax, (%rax)
 ; CHECK-LIBCALL-NEXT:    movw %r14w, (%rax)
 ; CHECK-LIBCALL-NEXT:    movw %r15w, (%rax)
 ; CHECK-LIBCALL-NEXT:    movw %bx, (%rax)
-; CHECK-LIBCALL-NEXT:    movw %ax, (%rax)
 ; CHECK-LIBCALL-NEXT:    addq $16, %rsp
 ; CHECK-LIBCALL-NEXT:    popq %rbx
 ; CHECK-LIBCALL-NEXT:    popq %r14

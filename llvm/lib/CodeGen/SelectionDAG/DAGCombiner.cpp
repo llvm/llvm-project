@@ -1466,8 +1466,10 @@ bool DAGCombiner::SimplifyDemandedVectorElts(SDValue Op,
                                              bool AssumeSingleUse) {
   TargetLowering::TargetLoweringOpt TLO(DAG, LegalTypes, LegalOperations);
   APInt KnownUndef, KnownZero;
-  if (!TLI.SimplifyDemandedVectorElts(Op, DemandedElts, KnownUndef, KnownZero,
-                                      TLO, 0, AssumeSingleUse))
+  APInt DoNotPoisonElts = APInt::getZero(DemandedElts.getBitWidth());
+  if (!TLI.SimplifyDemandedVectorElts(Op, DemandedElts, DoNotPoisonElts,
+                                      KnownUndef, KnownZero, TLO, 0,
+                                      AssumeSingleUse))
     return false;
 
   // Revisit the node.

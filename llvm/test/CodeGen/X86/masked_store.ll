@@ -6178,7 +6178,7 @@ define void @undefshuffle(<8 x i1> %i0, ptr %src, ptr %dst) nounwind {
 ; AVX2-LABEL: undefshuffle:
 ; AVX2:       ## %bb.0:
 ; AVX2-NEXT:    ## kill: def $xmm0 killed $xmm0 def $ymm0
-; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,u,u,2,3,u,u,4,5,u,u,6,7,u,u],zero,zero,ymm0[u,u],zero,zero,ymm0[u,u],zero,zero,ymm0[u,u],zero,zero,ymm0[u,u]
+; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,u,u,u,2,u,u,u,4,u,u,u,6,u,u,u],zero,ymm0[u,u,u],zero,ymm0[u,u,u],zero,ymm0[u,u,u],zero,ymm0[u,u,u]
 ; AVX2-NEXT:    vpslld $31, %ymm0, %ymm0
 ; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX2-NEXT:    vpmaskmovd %ymm1, %ymm0, (%rsi)

@@ -4231,6 +4231,16 @@ public:
   /// More limited version of SimplifyDemandedBits that can be used to "look
   /// through" ops that don't contribute to the DemandedBits/DemandedElts -
   /// bitwise ops etc.
+  /// Vector elements that aren't demanded can be turned into poison unless the
+  /// corresponding bit in the \p DoNotPoisonEltMask is set.
+  SDValue SimplifyMultipleUseDemandedBits(SDValue Op, const APInt &DemandedBits,
+                                          const APInt &DemandedElts,
+                                          const APInt &DoNotPoisonEltMask,
+                                          SelectionDAG &DAG,
+                                          unsigned Depth = 0) const;
+
+  /// Helper wrapper around SimplifyMultipleUseDemandedBits, with
+  /// DoNotPoisonEltMask being set to zero.
   SDValue SimplifyMultipleUseDemandedBits(SDValue Op, const APInt &DemandedBits,
                                           const APInt &DemandedElts,
                                           SelectionDAG &DAG,
@@ -4246,6 +4256,7 @@ public:
   /// bits from only some vector elements.
   SDValue SimplifyMultipleUseDemandedVectorElts(SDValue Op,
                                                 const APInt &DemandedElts,
+                                                const APInt &DoNotPoisonEltMask,
                                                 SelectionDAG &DAG,
                                                 unsigned Depth = 0) const;
 
@@ -4263,6 +4274,15 @@ public:
   ///    results of this function, because simply replacing TLO.Old
   ///    with TLO.New will be incorrect when this parameter is true and TLO.Old
   ///    has multiple uses.
+  /// Vector elements that aren't demanded can be turned into poison unless the
+  /// corresponding bit in \p DoNotPoisonEltMask is set.
+  bool SimplifyDemandedVectorElts(SDValue Op, const APInt &DemandedEltMask,
+                                  const APInt &DoNotPoisonEltMask,
+                                  APInt &KnownUndef, APInt &KnownZero,
+                                  TargetLoweringOpt &TLO, unsigned Depth = 0,
+                                  bool AssumeSingleUse = false) const;
+  /// Version of SimplifyDemandedVectorElts without the DoNotPoisonEltMask
+  /// argument. All undemanded elements can be turned into poison.
   bool SimplifyDemandedVectorElts(SDValue Op, const APInt &DemandedEltMask,
                                   APInt &KnownUndef, APInt &KnownZero,
                                   TargetLoweringOpt &TLO, unsigned Depth = 0,
@@ -4347,8 +4367,9 @@ public:
   /// (used to simplify the caller). The KnownUndef/Zero elements may only be
   /// accurate for those bits in the DemandedMask.
   virtual bool SimplifyDemandedVectorEltsForTargetNode(
-      SDValue Op, const APInt &DemandedElts, APInt &KnownUndef,
-      APInt &KnownZero, TargetLoweringOpt &TLO, unsigned Depth = 0) const;
+      SDValue Op, const APInt &DemandedElts, const APInt &DoNotPoisonEltMask,
+      APInt &KnownUndef, APInt &KnownZero, TargetLoweringOpt &TLO,
+      unsigned Depth = 0) const;
 
   /// Attempt to simplify any target nodes based on the demanded bits/elts,
   /// returning true on success. Otherwise, analyze the
@@ -4367,6 +4388,7 @@ public:
   /// bitwise ops etc.
   virtual SDValue SimplifyMultipleUseDemandedBitsForTargetNode(
       SDValue Op, const APInt &DemandedBits, const APInt &DemandedElts,
+      const APInt &DoNotPoisonEltMask,
       SelectionDAG &DAG, unsigned Depth) const;
 
   /// Return true if this function can prove that \p Op is never poison
