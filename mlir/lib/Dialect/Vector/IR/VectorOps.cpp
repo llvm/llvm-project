@@ -717,7 +717,15 @@ Value mlir::vector::getVectorReductionOp(arith::AtomicRMWKind op,
   case arith::AtomicRMWKind::ori:
     return vector::ReductionOp::create(builder, vector.getLoc(),
                                        CombiningKind::OR, vector);
-  // TODO: Add remaining reduction operations.
+  case arith::AtomicRMWKind::minnumf:
+    return vector::ReductionOp::create(builder, vector.getLoc(),
+                                       CombiningKind::MINNUMF, vector);
+  case arith::AtomicRMWKind::maxnumf:
+    return vector::ReductionOp::create(builder, vector.getLoc(),
+                                       CombiningKind::MAXNUMF, vector);
+  case arith::AtomicRMWKind::xori:
+    return vector::ReductionOp::create(builder, vector.getLoc(),
+                                       CombiningKind::XOR, vector);
   default:
     (void)emitOptionalError(loc, "Reduction operation type not supported");
     break;
@@ -4336,7 +4344,7 @@ OpFoldResult ExtractStridedSliceOp::fold(FoldAdaptor adaptor) {
   // ExtractStridedSliceOp(splat ConstantOp) -> ConstantOp.
   if (auto splat =
           llvm::dyn_cast_if_present<SplatElementsAttr>(adaptor.getSource()))
-    DenseElementsAttr::get(getType(), splat.getSplatValue<Attribute>());
+    return DenseElementsAttr::get(getType(), splat.getSplatValue<Attribute>());
 
   // ExtractStridedSliceOp(non-splat ConstantOp) -> ConstantOp.
   return foldExtractStridedSliceNonSplatConstant(*this, adaptor.getSource());
