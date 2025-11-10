@@ -43,6 +43,7 @@ def get_comment(
     comment_id = get_comment_id(platform.system(), pr)
     if comment_id:
         comment["id"] = comment_id
+    return comment
 
 
 def main(
