@@ -724,6 +724,14 @@ def HasStdExtZfhOrZvfh
                          "'Zfh' (Half-Precision Floating-Point) or "
                          "'Zvfh' (Vector Half-Precision Floating-Point)">;
 
+def FeatureStdExtZvfofp4min
+    : RISCVExperimentalExtension<0, 1, "Vector OFP4 Converts",
+                                 [FeatureStdExtZve32f]>;
+def HasStdExtZvfofp4min
+    : Predicate<"Subtarget->hasStdExtZvfofp4min()">,
+      AssemblerPredicate<(all_of FeatureStdExtZvfofp4min),
+                          "'Zvfofp4min' (Vector OFP4 Converts)">;
+
 def FeatureStdExtZvfofp8min
     : RISCVExperimentalExtension<0, 2,
                                  "Vector OFP8 Converts", [FeatureStdExtZve32f]>;
