@@ -196,18 +196,7 @@ Status RegisterValue::SetValueFromData(const RegisterInfo &reg_info,
       SetUInt32(src.GetMaxU32(&src_offset, src_len));
     else if (reg_info.byte_size <= 8)
       SetUInt64(src.GetMaxU64(&src_offset, src_len));
-    else if (reg_info.byte_size == 16) {
-      uint64_t data1 = src.GetU64(&src_offset);
-      uint64_t data2 = src.GetU64(&src_offset);
-      if (src.GetByteOrder() == eByteOrderLittle) {
-        int128.x[0] = data1;
-        int128.x[1] = data2;
-      } else {
-        int128.x[0] = data2;
-        int128.x[1] = data1;
-      }
-      SetUIntN(llvm::APInt(128, int128.x));
-    } else {
+    else {
       std::vector<uint8_t> native_endian_src(src_len, 0);
       src.ExtractBytes(src_offset, src_len,
                        llvm::sys::IsLittleEndianHost ? eByteOrderLittle
