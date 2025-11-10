@@ -30,6 +30,7 @@ import os
 import re
 import sys
 from typing import Dict, List, Optional, Sequence, Tuple, Union, overload
+from operator import itemgetter
 
 # Matches a :doc:`label <path>` or :doc:`label` reference anywhere in text and
 # captures the label. Used to sort bullet items alphabetically in ReleaseNotes
@@ -185,7 +186,7 @@ def sort_blocks(blocks: List[Tuple[str, List[str]]]) -> List[List[str]]:
 
     Duplicates are preserved; merging is left to authors to handle manually.
     """
-    return list(map(itemgetter(1), sorted(blocks, key=itemgetter(0)))
+    return list(map(itemgetter(1), sorted(blocks, key=itemgetter(0))))
 
 
 def find_duplicate_entries(
