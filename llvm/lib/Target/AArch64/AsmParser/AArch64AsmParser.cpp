@@ -5972,19 +5972,7 @@ bool AArch64AsmParser::validateInstruction(MCInst &Inst, SMLoc &IDLoc,
   case AArch64::MOPSSETGE:
   case AArch64::MOPSSETGET:
   case AArch64::MOPSSETGEN:
-  case AArch64::MOPSSETGETN:
-  case AArch64::SETGOP:
-  case AArch64::SETGOPT:
-  case AArch64::SETGOPN:
-  case AArch64::SETGOPTN:
-  case AArch64::SETGOM:
-  case AArch64::SETGOMT:
-  case AArch64::SETGOMN:
-  case AArch64::SETGOMTN:
-  case AArch64::SETGOE:
-  case AArch64::SETGOET:
-  case AArch64::SETGOEN:
-  case AArch64::SETGOETN: {
+  case AArch64::MOPSSETGETN: {
     MCRegister Xd_wb = Inst.getOperand(0).getReg();
     MCRegister Xn_wb = Inst.getOperand(1).getReg();
     MCRegister Xd = Inst.getOperand(2).getReg();
@@ -6004,6 +5992,33 @@ bool AArch64AsmParser::validateInstruction(MCInst &Inst, SMLoc &IDLoc,
                            " registers are the same");
     if (Xn == Xm)
       return Error(Loc[0], "invalid SET instruction, source and size"
+                           " registers are the same");
+    break;
+  }
+  case AArch64::SETGOP:
+  case AArch64::SETGOPT:
+  case AArch64::SETGOPN:
+  case AArch64::SETGOPTN:
+  case AArch64::SETGOM:
+  case AArch64::SETGOMT:
+  case AArch64::SETGOMN:
+  case AArch64::SETGOMTN:
+  case AArch64::SETGOE:
+  case AArch64::SETGOET:
+  case AArch64::SETGOEN:
+  case AArch64::SETGOETN: {
+    MCRegister Xd_wb = Inst.getOperand(0).getReg();
+    MCRegister Xn_wb = Inst.getOperand(1).getReg();
+    MCRegister Xd = Inst.getOperand(2).getReg();
+    MCRegister Xn = Inst.getOperand(3).getReg();
+    if (Xd_wb != Xd)
+      return Error(Loc[0],
+                   "invalid SET instruction, Xd_wb and Xd do not match");
+    if (Xn_wb != Xn)
+      return Error(Loc[0],
+                   "invalid SET instruction, Xn_wb and Xn do not match");
+    if (Xd == Xn)
+      return Error(Loc[0], "invalid SET instruction, destination and size"
                            " registers are the same");
     break;
   }

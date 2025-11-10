@@ -12588,12 +12588,10 @@ class MOPSMemoryCopy<bits<2> opcode, bits<2> op1, bits<2> op2, string asm>
 class MOPSMemoryMove<bits<2> opcode, bits<2> op1, bits<2> op2, string asm>
   : MOPSMemoryCopyMoveBase<1, opcode, op1, op2, asm>;
 
-class MOPSMemorySetBase<bit isTagging, bits<2> opcode, bit op1, bit op2,
-                        bit op3, string asm>
-  : I<(outs GPR64common:$Rd_wb, GPR64:$Rn_wb),
-      (ins GPR64common:$Rd, GPR64:$Rn, GPR64:$Rm),
-      asm, "\t[$Rd]!, $Rn!, $Rm",
-      "$Rd = $Rd_wb,$Rn = $Rn_wb", []>,
+class MOPSMemorySetBase<dag ins, string operands, bit isTagging, bits<2> opcode,
+                        bit op1, bit op2, bit op3, string asm>
+  : I<(outs GPR64common:$Rd_wb, GPR64:$Rn_wb), ins,
+      asm, operands, "$Rd = $Rd_wb,$Rn = $Rn_wb", []>,
     Sched<[]> {
   bits<5> Rd;
   bits<5> Rn;
@@ -12610,22 +12608,28 @@ class MOPSMemorySetBase<bit isTagging, bits<2> opcode, bit op1, bit op2,
   let Inst{9-5} = Rn;
   let Inst{4-0} = Rd;
 
-  let DecoderMethod = "DecodeSETMemOpInstruction";
   let mayLoad = 0;
   let mayStore = 1;
 }
 
 class MOPSMemorySet<bits<2> opcode, bit op1, bit op2, bit op3, string asm>
-  : MOPSMemorySetBase<0, opcode, op1, op2, op3, asm>;
+  : MOPSMemorySetBase<(ins GPR64common:$Rd, GPR64:$Rn, GPR64:$Rm),
+                       "\t[$Rd]!, $Rn!, $Rm", 0, opcode, op1, op2, op3, asm> {
+  let DecoderMethod = "DecodeSETMemOpInstruction";
+}
 
 class MOPSMemorySetTagging<bits<2> opcode, bit op1, bit op2, bit op3, string asm>
-  : MOPSMemorySetBase<1, opcode, op1, op2, op3, asm>;
+  : MOPSMemorySetBase<(ins GPR64common:$Rd, GPR64:$Rn, GPR64:$Rm),
+                       "\t[$Rd]!, $Rn!, $Rm", 1, opcode, op1, op2, op3, asm> {
+  let DecoderMethod = "DecodeSETMemOpInstruction";
+}
 
 class MOPSGoMemorySetTagging<bits<2> opcode, bit op1, bit op2, bit op3, string asm>
-  : MOPSMemorySetBase<1, opcode, op1, op2, op3, asm> {
-  // No `Rm` operand is required, as all bits are set to 1
-  let AsmString = !strconcat(asm, "\t[$Rd]!, $Rn!");
+  : MOPSMemorySetBase<(ins GPR64common:$Rd, GPR64:$Rn),
+                       "\t[$Rd]!, $Rn!", 1, opcode, op1, op2, op3, asm> {
+  // No `Rm` operand, as all bits must be set to 1
   let Inst{20-16} = 0b11111;
+  let DecoderMethod = "DecodeSETMemGoOpInstruction";
 }
 
 multiclass MOPSMemoryCopyInsns<bits<2> opcode, string asm> {
