@@ -1,5 +1,6 @@
 ; REQUIRES: asserts
 
+; RUN: rm -rf %t.dir && mkdir -p %t.dir && cd %t.dir
 ; RUN: llc --save-stats=obj -o %t.s %s && cat %t.stats | FileCheck %s
 ; RUN: llc --save-stats=cwd -o %t.s %s && cat %{t:stem}.tmp.stats | FileCheck %s
 ; RUN: llc --save-stats -o %t.s %s && cat %{t:stem}.tmp.stats | FileCheck %s

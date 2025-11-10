@@ -35,6 +35,8 @@ subroutine local_derived()
   ! CHECK-DAG: fir.alloca !fir.type<_QMdTr{x:f32}>
   type(r) :: some_r
   type(c2) :: some_c2
+  print *, some_c2%ch_array(1,1)
+  print *, some_r%x
 end subroutine
 
 ! CHECK-LABEL: func @_QMdPsaved_derived(

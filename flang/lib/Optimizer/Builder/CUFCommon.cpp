@@ -9,6 +9,7 @@
 #include "flang/Optimizer/Builder/CUFCommon.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Dialect/CUF/CUFOps.h"
+#include "flang/Optimizer/Dialect/Support/KindMapping.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
@@ -90,4 +91,26 @@ void cuf::genPointerSync(const mlir::Value box, fir::FirOpBuilder &builder) {
       }
     }
   }
+}
+
+int cuf::computeElementByteSize(mlir::Location loc, mlir::Type type,
+                                fir::KindMapping &kindMap,
+                                bool emitErrorOnFailure) {
+  auto eleTy = fir::unwrapSequenceType(type);
+  if (auto t{mlir::dyn_cast<mlir::IntegerType>(eleTy)})
+    return t.getWidth() / 8;
+  if (auto t{mlir::dyn_cast<mlir::FloatType>(eleTy)})
+    return t.getWidth() / 8;
+  if (auto t{mlir::dyn_cast<fir::LogicalType>(eleTy)})
+    return kindMap.getLogicalBitsize(t.getFKind()) / 8;
+  if (auto t{mlir::dyn_cast<mlir::ComplexType>(eleTy)}) {
+    int elemSize =
+        mlir::cast<mlir::FloatType>(t.getElementType()).getWidth() / 8;
+    return 2 * elemSize;
+  }
+  if (auto t{mlir::dyn_cast<fir::CharacterType>(eleTy)})
+    return kindMap.getCharacterBitsize(t.getFKind()) / 8;
+  if (emitErrorOnFailure)
+    mlir::emitError(loc, "unsupported type");
+  return 0;
 }

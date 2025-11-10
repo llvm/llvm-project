@@ -58,7 +58,7 @@ public:
   /// such, whenever a client has an instance of instruction info, it should
   /// always be able to get register info as well (through this method).
   ///
-  const ThumbRegisterInfo &getRegisterInfo() const override { return RI; }
+  const ThumbRegisterInfo &getRegisterInfo() const { return RI; }
 
   MachineInstr *optimizeSelect(MachineInstr &MI,
                                SmallPtrSetImpl<MachineInstr *> &SeenMIs,

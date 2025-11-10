@@ -235,6 +235,7 @@ end subroutine
 subroutine unstructured_do_concurrent
   logical :: success
   do concurrent (i=1:10) local(success)
+    success = .false.
     error stop "fail"
   enddo
 end

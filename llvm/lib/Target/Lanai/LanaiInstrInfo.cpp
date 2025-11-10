@@ -27,7 +27,8 @@ using namespace llvm;
 #include "LanaiGenInstrInfo.inc"
 
 LanaiInstrInfo::LanaiInstrInfo(const LanaiSubtarget &STI)
-    : LanaiGenInstrInfo(STI, Lanai::ADJCALLSTACKDOWN, Lanai::ADJCALLSTACKUP),
+    : LanaiGenInstrInfo(STI, RegisterInfo, Lanai::ADJCALLSTACKDOWN,
+                        Lanai::ADJCALLSTACKUP),
       RegisterInfo() {}
 
 void LanaiInstrInfo::copyPhysReg(MachineBasicBlock &MBB,

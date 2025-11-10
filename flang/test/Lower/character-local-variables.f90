@@ -8,6 +8,7 @@
 subroutine scalar_cst_len()
   character(10) :: c
   ! CHECK: fir.alloca !fir.char<1,10> {{{.*}}uniq_name = "_QFscalar_cst_lenEc"}
+  print *, c
 end subroutine
 
 ! CHECK-LABEL: func @_QPscalar_dyn_len
@@ -19,12 +20,14 @@ subroutine scalar_dyn_len(l)
   ! CHECK: %[[is_positive:.*]] = arith.cmpi sgt, %[[lexpr]], %c0{{.*}} : i32
   ! CHECK: %[[l:.*]] = arith.select %[[is_positive]], %[[lexpr]], %c0{{.*}} : i32
   ! CHECK: fir.alloca !fir.char<1,?>(%[[l]] : i32) {{{.*}}uniq_name = "_QFscalar_dyn_lenEc"}
+  print *, c
 end subroutine
 
 ! CHECK-LABEL: func @_QPcst_array_cst_len
 subroutine cst_array_cst_len()
   character(10) :: c(20)
   ! CHECK: fir.alloca !fir.array<20x!fir.char<1,10>> {{{.*}}uniq_name = "_QFcst_array_cst_lenEc"}
+  print *, c(1)
 end subroutine
 
 ! CHECK-LABEL: func @_QPcst_array_dyn_len
@@ -36,6 +39,7 @@ subroutine cst_array_dyn_len(l)
   ! CHECK: %[[is_positive:.*]] = arith.cmpi sgt, %[[lexpr]], %c0{{.*}} : i32
   ! CHECK: %[[l:.*]] = arith.select %[[is_positive]], %[[lexpr]], %c0{{.*}} : i32
   ! CHECK: fir.alloca !fir.array<10x!fir.char<1,?>>(%[[l]] : i32) {{{.*}}uniq_name = "_QFcst_array_dyn_lenEc"}
+  print *, c(1)
 end subroutine
 
 ! CHECK-LABEL: func @_QPdyn_array_cst_len
@@ -48,6 +52,7 @@ subroutine dyn_array_cst_len(n)
   ! CHECK: %[[is_positive:.*]] = arith.cmpi sgt, %[[ni]], %c0{{.*}} : index
   ! CHECK: %[[extent:.*]] = arith.select %[[is_positive]], %[[ni]], %c0{{.*}} : index
   ! CHECK: fir.alloca !fir.array<?x!fir.char<1,10>>, %[[extent]] {{{.*}}uniq_name = "_QFdyn_array_cst_lenEc"}
+  print *, c(1)
 end subroutine
 
 ! CHECK: func @_QPdyn_array_dyn_len
@@ -63,12 +68,14 @@ subroutine dyn_array_dyn_len(l, n)
   ! CHECK: %[[is_positive:.*]] = arith.cmpi sgt, %[[ni]], %c0{{.*}} : index
   ! CHECK: %[[extent:.*]] = arith.select %[[is_positive]], %[[ni]], %c0{{.*}} : index
   ! CHECK: fir.alloca !fir.array<?x!fir.char<1,?>>(%[[l]] : i32), %[[extent]] {{{.*}}uniq_name = "_QFdyn_array_dyn_lenEc"}
+  print *, c(1)
 end subroutine
 
 ! CHECK-LABEL: func @_QPcst_array_cst_len_lb
 subroutine cst_array_cst_len_lb()
   character(10) :: c(11:30)
   ! CHECK: fir.alloca !fir.array<20x!fir.char<1,10>> {{{.*}}uniq_name = "_QFcst_array_cst_len_lbEc"}
+  print *, c(11)
 end subroutine
 
 ! CHECK-LABEL: func @_QPcst_array_dyn_len_lb
@@ -80,6 +87,7 @@ subroutine cst_array_dyn_len_lb(l)
   ! CHECK: %[[is_positive:.*]] = arith.cmpi sgt, %[[lexpr]], %c0{{.*}} : i64
   ! CHECK: %[[l:.*]] = arith.select %[[is_positive]], %[[lexpr]], %c0{{.*}} : i64
   ! CHECK: fir.alloca !fir.array<10x!fir.char<1,?>>(%[[l]] : i64) {{{.*}}uniq_name = "_QFcst_array_dyn_len_lbEc"}
+  print *, c(11)
 end subroutine
 
 ! CHECK-LABEL: func @_QPdyn_array_cst_len_lb
@@ -94,6 +102,7 @@ subroutine dyn_array_cst_len_lb(n)
   ! CHECK: %[[is_positive:.*]] = arith.cmpi sgt, %[[raw_extent]], %c0{{.*}} : index
   ! CHECK: %[[extent:.*]] = arith.select %[[is_positive]], %[[raw_extent]], %c0{{.*}} : index
   ! CHECK: fir.alloca !fir.array<?x!fir.char<1,10>>, %[[extent]] {{{.*}}uniq_name = "_QFdyn_array_cst_len_lbEc"}
+  print *, c(11)
 end subroutine
 
 ! CHECK-LABEL: func @_QPdyn_array_dyn_len_lb
@@ -111,6 +120,7 @@ subroutine dyn_array_dyn_len_lb(l, n)
   ! CHECK: %[[is_positive:.*]] = arith.cmpi sgt, %[[raw_extent]], %c0{{.*}} : index
   ! CHECK: %[[extent:.*]] = arith.select %[[is_positive]], %[[raw_extent]], %c0{{.*}} : index
   ! CHECK: fir.alloca !fir.array<?x!fir.char<1,?>>(%[[l]] : i64), %[[extent]] {{{.*}}uniq_name = "_QFdyn_array_dyn_len_lbEc"}
+  print *, c(11)
 end subroutine
 
 ! Test that the length of assumed length parameter is correctly deduced in lowering.
@@ -129,4 +139,5 @@ end
 subroutine scalar_cst_neg_len()
   character(-1) :: c
   ! CHECK: fir.alloca !fir.char<1,0> {{{.*}}uniq_name = "_QFscalar_cst_neg_lenEc"}
+  print *, c
 end subroutine

@@ -1103,7 +1103,8 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
       Twine ClassName = TargetName + "GenInstrInfo";
       OS << "struct " << ClassName << " : public TargetInstrInfo {\n"
          << "  explicit " << ClassName
-         << "(const TargetSubtargetInfo &STI, unsigned CFSetupOpcode = ~0u, "
+         << "(const TargetSubtargetInfo &STI, const TargetRegisterInfo &TRI, "
+            "unsigned CFSetupOpcode = ~0u, "
             "unsigned CFDestroyOpcode = ~0u, "
             "unsigned CatchRetOpcode = ~0u, unsigned ReturnOpcode = ~0u);\n"
          << "  ~" << ClassName << "() override = default;\n"
@@ -1157,9 +1158,11 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
          << TargetName << "InstrComplexDeprecationInfos[];\n";
     Twine ClassName = TargetName + "GenInstrInfo";
     OS << ClassName << "::" << ClassName
-       << "(const TargetSubtargetInfo &STI, unsigned CFSetupOpcode, unsigned "
+       << "(const TargetSubtargetInfo &STI, const TargetRegisterInfo &TRI, "
+          "unsigned CFSetupOpcode, unsigned "
           "CFDestroyOpcode, unsigned CatchRetOpcode, unsigned ReturnOpcode)\n"
-       << "  : TargetInstrInfo(CFSetupOpcode, CFDestroyOpcode, CatchRetOpcode, "
+       << "  : TargetInstrInfo(TRI, CFSetupOpcode, CFDestroyOpcode, "
+          "CatchRetOpcode, "
           "ReturnOpcode";
     if (NumClassesByHwMode != 0)
       OS << ", " << TargetName

@@ -112,7 +112,6 @@ private:
 
   RISCVFrameLowering FrameLowering;
   RISCVInstrInfo InstrInfo;
-  RISCVRegisterInfo RegInfo;
   RISCVTargetLowering TLInfo;
 
   /// Initializes using the passed in CPU and feature strings so that we can
@@ -140,7 +139,7 @@ public:
   }
   const RISCVInstrInfo *getInstrInfo() const override { return &InstrInfo; }
   const RISCVRegisterInfo *getRegisterInfo() const override {
-    return &RegInfo;
+    return &InstrInfo.getRegisterInfo();
   }
   const RISCVTargetLowering *getTargetLowering() const override {
     return &TLInfo;

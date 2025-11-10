@@ -43,7 +43,7 @@ namespace XCore {
 void XCoreInstrInfo::anchor() {}
 
 XCoreInstrInfo::XCoreInstrInfo(const XCoreSubtarget &ST)
-    : XCoreGenInstrInfo(ST, XCore::ADJCALLSTACKDOWN, XCore::ADJCALLSTACKUP),
+    : XCoreGenInstrInfo(ST, RI, XCore::ADJCALLSTACKDOWN, XCore::ADJCALLSTACKUP),
       RI() {}
 
 static bool isZeroImm(const MachineOperand &op) {

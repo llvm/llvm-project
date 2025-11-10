@@ -5081,17 +5081,17 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       unsigned MinNumRegsRequired = DstSize / 32;
 
       const SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
+      bool UseAGPRForm = Info->selectAGPRFormMFMA(MinNumRegsRequired);
+
       OpdsMapping[0] =
-          Info->getMinNumAGPRs() >= MinNumRegsRequired
-              ? getAGPROpMapping(MI.getOperand(0).getReg(), MRI, *TRI)
-              : getVGPROpMapping(MI.getOperand(0).getReg(), MRI, *TRI);
+          UseAGPRForm ? getAGPROpMapping(MI.getOperand(0).getReg(), MRI, *TRI)
+                      : getVGPROpMapping(MI.getOperand(0).getReg(), MRI, *TRI);
 
       OpdsMapping[2] = getVGPROpMapping(MI.getOperand(2).getReg(), MRI, *TRI);
       OpdsMapping[3] = getVGPROpMapping(MI.getOperand(3).getReg(), MRI, *TRI);
       OpdsMapping[4] =
-          Info->getMinNumAGPRs() >= MinNumRegsRequired
-              ? getAGPROpMapping(MI.getOperand(4).getReg(), MRI, *TRI)
-              : getVGPROpMapping(MI.getOperand(4).getReg(), MRI, *TRI);
+          UseAGPRForm ? getAGPROpMapping(MI.getOperand(4).getReg(), MRI, *TRI)
+                      : getVGPROpMapping(MI.getOperand(4).getReg(), MRI, *TRI);
 
       OpdsMapping[8] = getVGPROpMapping(MI.getOperand(8).getReg(), MRI, *TRI);
       OpdsMapping[10] = getVGPROpMapping(MI.getOperand(10).getReg(), MRI, *TRI);

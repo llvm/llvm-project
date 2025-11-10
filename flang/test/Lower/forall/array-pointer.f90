@@ -318,7 +318,6 @@ end subroutine s2_3
 ! CHECK-LABEL: func @_QPs2_3(
 ! CHECK-SAME:                %[[VAL_0:.*]]: !fir.box<!fir.array<?x!fir.type<_QMarray_of_pointer_testTt{ip:!fir.box<!fir.ptr<i32>>}>>> {fir.bindc_name = "x"}) {
 ! CHECK:         %[[VAL_1:.*]] = fir.alloca i32 {adapt.valuebyref, bindc_name = "i"}
-! CHECK:         %[[VAL_2:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>> {bindc_name = "y", fir.target, uniq_name = "_QFs2_3Ey"}
 ! CHECK:         %[[VAL_3:.*]] = fir.alloca !fir.heap<!fir.array<?xi32>> {uniq_name = "_QFs2_3Ey.addr"}
 ! CHECK:         %[[VAL_4:.*]] = fir.alloca index {uniq_name = "_QFs2_3Ey.lb0"}
 ! CHECK:         %[[VAL_5:.*]] = fir.alloca index {uniq_name = "_QFs2_3Ey.ext0"}
