@@ -4673,13 +4673,14 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Copyin &x) {
 void OmpStructureChecker::CheckStructureComponent(
     const parser::OmpObjectList &objects, llvm::omp::Clause clauseId) {
   auto CheckComponent{[&](const parser::Designator &designator) {
-    if (const parser::DataRef *dataRef{std::get_if<parser::DataRef>(&designator.u)}) {
+    if (const parser::DataRef *dataRef{
+            std::get_if<parser::DataRef>(&designator.u)}) {
       if (!IsDataRefTypeParamInquiry(dataRef)) {
         const auto expr = AnalyzeExpr(context_, designator);
         if (expr.has_value() && evaluate::HasStructureComponent(expr.value())) {
           context_.Say(designator.source,
-            "A variable that is part of another variable cannot appear on the %s clause"_err_en_US,
-            parser::ToUpperCaseLetters(getClauseName(clauseId).str()));
+              "A variable that is part of another variable cannot appear on the %s clause"_err_en_US,
+              parser::ToUpperCaseLetters(getClauseName(clauseId).str()));
         }
       }
     }

@@ -1211,7 +1211,8 @@ bool HasConstant(const Expr<SomeType> &expr) {
 }
 
 // HasStructureComponent()
-struct HasStructureComponentHelper : public AnyTraverse<HasStructureComponentHelper, bool, false> {
+struct HasStructureComponentHelper
+    : public AnyTraverse<HasStructureComponentHelper, bool, false> {
   using Base = AnyTraverse<HasStructureComponentHelper, bool, false>;
   HasStructureComponentHelper() : Base(*this) {}
   using Base::operator();
@@ -1222,9 +1223,7 @@ struct HasStructureComponentHelper : public AnyTraverse<HasStructureComponentHel
   bool operator()(const NamedEntity &NamedEntity) const {
     return NamedEntity.UnwrapComponent() != nullptr;
   }
-  bool operator()(const Component &) const {
-    return true;
-  }
+  bool operator()(const Component &) const { return true; }
 };
 
 bool HasStructureComponent(const Expr<SomeType> &expr) {
