@@ -2176,13 +2176,13 @@ bool SIFrameLowering::hasFPImpl(const MachineFunction &MF) const {
     return MFI.getStackSize() != 0;
   }
 
-  return (frameTriviallyRequiresSP(MFI) &&
-          !MF.getInfo<SIMachineFunctionInfo>()->isChainFunction()) ||
-         MFI.isFrameAddressTaken() ||
-         MF.getSubtarget<GCNSubtarget>().getRegisterInfo()->hasStackRealignment(
-             MF) ||
-         mayReserveScratchForCWSR(MF) ||
-         MF.getTarget().Options.DisableFramePointerElim(MF);
+  return !MF.getInfo<SIMachineFunctionInfo>()->isChainFunction() &&
+         (frameTriviallyRequiresSP(MFI) || MFI.isFrameAddressTaken() ||
+          MF.getSubtarget<GCNSubtarget>()
+              .getRegisterInfo()
+              ->hasStackRealignment(MF) ||
+          mayReserveScratchForCWSR(MF) ||
+          MF.getTarget().Options.DisableFramePointerElim(MF));
 }
 
 bool SIFrameLowering::mayReserveScratchForCWSR(

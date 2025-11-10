@@ -66,4 +66,19 @@ define amdgpu_cs_chain void @indirect(ptr %callee) {
   unreachable
 }
 
+define amdgpu_cs_chain void @fp_all() #0 {
+; CHECK-LABEL: fp_all:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_mov_b32 s0, 0
+; CHECK-NEXT:    v_mov_b32_e32 v0, s0
+; CHECK-NEXT:    scratch_store_dword off, v0, off
+; CHECK-NEXT:    s_endpgm
+  %v = alloca i32, align 4, addrspace(5)
+  store i32 0, ptr addrspace(5) %v, align 4
+  ret void
+}
+
+attributes #0 = { "frame-pointer"="all" }
+
 declare void @llvm.amdgcn.cs.chain.p0.i64.v3i32.sl_i32p5i32i32s(ptr, i64, <3 x i32>, { i32, ptr addrspace(5), i32, i32 }, i32 immarg, ...)
