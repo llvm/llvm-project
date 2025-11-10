@@ -6,15 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ThrownExceptionTypeCheck.h"
+#include "ExceptionCopyConstructorThrowsCheck.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
 using namespace clang::ast_matchers;
 
-namespace clang::tidy::cert {
+namespace clang::tidy::bugprone {
 
-void ThrownExceptionTypeCheck::registerMatchers(MatchFinder *Finder) {
+void ExceptionCopyConstructorThrowsCheck::registerMatchers(
+    MatchFinder *Finder) {
   Finder->addMatcher(
       traverse(
           TK_AsIs,
@@ -25,10 +26,11 @@ void ThrownExceptionTypeCheck::registerMatchers(MatchFinder *Finder) {
       this);
 }
 
-void ThrownExceptionTypeCheck::check(const MatchFinder::MatchResult &Result) {
+void ExceptionCopyConstructorThrowsCheck::check(
+    const MatchFinder::MatchResult &Result) {
   const auto *E = Result.Nodes.getNodeAs<Expr>("expr");
   diag(E->getExprLoc(),
        "thrown exception type is not nothrow copy constructible");
 }
 
-} // namespace clang::tidy::cert
+} // namespace clang::tidy::bugprone
