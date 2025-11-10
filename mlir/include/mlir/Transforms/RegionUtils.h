@@ -85,11 +85,15 @@ LogicalResult moveOperationDependencies(RewriterBase &rewriter, Operation *op,
 /// only for movement of definitions within the same basic block. Note that this
 /// is an all-or-nothing approach. Either definitions of all values are moved
 /// before insertion point, or none of them are.
+/// If `ignoreSideEffect` is set, this will allow movement of all dependent
+/// producers regardless of whether they are side effecting.
 LogicalResult moveValueDefinitions(RewriterBase &rewriter, ValueRange values,
                                    Operation *insertionPoint,
-                                   DominanceInfo &dominance);
+                                   DominanceInfo &dominance,
+                                   bool ignoreSideEffects = true);
 LogicalResult moveValueDefinitions(RewriterBase &rewriter, ValueRange values,
-                                   Operation *insertionPoint);
+                                   Operation *insertionPoint,
+                                   bool ignoreSideEffects = true);
 
 /// Run a set of structural simplifications over the given regions. This
 /// includes transformations like unreachable block elimination, dead argument
