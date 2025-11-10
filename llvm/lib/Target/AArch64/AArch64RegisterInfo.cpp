@@ -1157,6 +1157,9 @@ bool AArch64RegisterInfo::getRegAllocationHints(
   // a movprfx.
   const TargetRegisterClass *RegRC = MRI.getRegClass(VirtReg);
   if (AArch64::ZPRRegClass.hasSubClassEq(RegRC)) {
+    bool ConsiderOnlyHints = TargetRegisterInfo::getRegAllocationHints(
+        VirtReg, Order, Hints, MF, VRM);
+
     for (const MachineOperand &DefOp : MRI.def_operands(VirtReg)) {
       const MachineInstr &Def = *DefOp.getParent();
       if (DefOp.isImplicit() ||
@@ -1168,26 +1171,33 @@ bool AArch64RegisterInfo::getRegAllocationHints(
           TII->get(AArch64::getSVEPseudoMap(Def.getOpcode())).TSFlags;
 
       for (MCPhysReg R : Order) {
-        auto AddHintIfSuitable = [&](MCPhysReg R, const MachineOperand &MO) {
-          // R is a suitable register hint if there exists an operand for the
-          // instruction that is not yet allocated a register or if R matches
-          // one of the other source operands.
-          if (!VRM->hasPhys(MO.getReg()) || VRM->getPhys(MO.getReg()) == R)
+        auto AddHintIfSuitable = [&](MCPhysReg R,
+                                     const MachineOperand &MO) -> bool {
+          // R is a suitable register hint if:
+          // * R is one of the source operands.
+          // * The register allocator has not suggested any hints and one of the
+          //   instruction's source operands does not yet have a register
+          //   allocated for it.
+          if (VRM->getPhys(MO.getReg()) == R ||
+              (!VRM->hasPhys(MO.getReg()) && Hints.empty())) {
             Hints.push_back(R);
+            return true;
+          }
+          return false;
         };
 
         switch (InstFlags & AArch64::DestructiveInstTypeMask) {
         default:
           break;
         case AArch64::DestructiveTernaryCommWithRev:
-          AddHintIfSuitable(R, Def.getOperand(2));
-          AddHintIfSuitable(R, Def.getOperand(3));
-          AddHintIfSuitable(R, Def.getOperand(4));
+          AddHintIfSuitable(R, Def.getOperand(2)) ||
+              AddHintIfSuitable(R, Def.getOperand(3)) ||
+              AddHintIfSuitable(R, Def.getOperand(4));
           break;
         case AArch64::DestructiveBinaryComm:
         case AArch64::DestructiveBinaryCommWithRev:
-          AddHintIfSuitable(R, Def.getOperand(2));
-          AddHintIfSuitable(R, Def.getOperand(3));
+          AddHintIfSuitable(R, Def.getOperand(2)) ||
+              AddHintIfSuitable(R, Def.getOperand(3));
           break;
         case AArch64::DestructiveBinary:
         case AArch64::DestructiveBinaryImm:
@@ -1198,8 +1208,7 @@ bool AArch64RegisterInfo::getRegAllocationHints(
     }
 
     if (Hints.size())
-      return TargetRegisterInfo::getRegAllocationHints(VirtReg, Order, Hints,
-                                                       MF, VRM);
+      return ConsiderOnlyHints;
   }
 
   if (!ST.hasSME() || !ST.isStreaming())
