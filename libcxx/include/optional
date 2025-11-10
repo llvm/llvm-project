@@ -622,8 +622,8 @@ struct __optional_iterator<
     enable_if_t<!(is_lvalue_reference_v<_Tp> && is_function_v<__libcpp_remove_reference_t<_Tp>>) &&
                 !(is_lvalue_reference_v<_Tp> && is_array_v<__libcpp_remove_reference_t<_Tp>>)> > {
 private:
-  using __pointer _LIBCPP_NODEBUG       = std::add_pointer_t<remove_reference_t<_Tp>>;
-  using __const_pointer _LIBCPP_NODEBUG = std::add_pointer_t<const remove_reference_t<_Tp>>;
+  using __pointer _LIBCPP_NODEBUG       = add_pointer_t<remove_reference_t<_Tp>>;
+  using __const_pointer _LIBCPP_NODEBUG = add_pointer_t<const remove_reference_t<_Tp>>;
 
 public:
 #    if _LIBCPP_STD_VER >= 26
@@ -640,16 +640,16 @@ public:
     auto& __derived_self = static_cast<optional<_Tp>&>(*this);
     auto __ptr           = [&__derived_self]() {
       if constexpr (is_lvalue_reference_v<_Tp>) {
-        return __derived_self.has_value() ? std::addressof(__derived_self.__get()) : nullptr;
+        return __derived_self.has_value() ? addressof(__derived_self.__get()) : nullptr;
       }
-      return std::addressof(__derived_self.__get());
+      return addressof(__derived_self.__get());
     }();
 
 #      ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_OPTIONAL
-    return std::__make_bounded_iter(
-        std::__wrap_iter<__pointer>(__ptr),
-        std::__wrap_iter<__pointer>(__ptr),
-        std::__wrap_iter<__pointer>(__ptr) + (__derived_self.has_value() ? 1 : 0));
+    return __make_bounded_iter(
+        __wrap_iter<__pointer>(__ptr),
+        __wrap_iter<__pointer>(__ptr),
+        __wrap_iter<__pointer>(__ptr) + (__derived_self.has_value() ? 1 : 0));
 #      else
     return iterator(__ptr);
 #      endif
@@ -659,16 +659,16 @@ public:
     auto& __derived_self = static_cast<const optional<_Tp>&>(*this);
     auto* __ptr          = [&__derived_self]() {
       if constexpr (is_lvalue_reference_v<_Tp>) {
-        return __derived_self.has_value() ? std::addressof(__derived_self.__get()) : nullptr;
+        return __derived_self.has_value() ? addressof(__derived_self.__get()) : nullptr;
       }
-      return std::addressof(__derived_self.__get());
+      return addressof(__derived_self.__get());
     }();
 
 #      ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_OPTIONAL
-    return std::__make_bounded_iter(
-        std::__wrap_iter<__const_pointer>(__ptr),
-        std::__wrap_iter<__const_pointer>(__ptr),
-        std::__wrap_iter<__const_pointer>(__ptr) + (__derived_self.has_value() ? 1 : 0));
+    return __make_bounded_iter(
+        __wrap_iter<__const_pointer>(__ptr),
+        __wrap_iter<__const_pointer>(__ptr),
+        __wrap_iter<__const_pointer>(__ptr) + (__derived_self.has_value() ? 1 : 0));
 #      else
     return const_iterator(__ptr);
 #      endif
