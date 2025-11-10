@@ -2672,6 +2672,13 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
   case Intrinsic::experimental_convergence_entry:
   case Intrinsic::experimental_convergence_loop:
     return translateConvergenceControlIntrinsic(CI, ID, MIRBuilder);
+  case Intrinsic::reloc_none: {
+    Metadata *MD = cast<MetadataAsValue>(CI.getArgOperand(0))->getMetadata();
+    StringRef SymbolName = cast<MDString>(MD)->getString();
+    MIRBuilder.buildInstr(TargetOpcode::RELOC_NONE)
+        .addExternalSymbol(SymbolName.data());
+    return true;
+  }
   }
   return false;
 }
@@ -2769,7 +2776,7 @@ bool IRTranslator::translateCallBase(const CallBase &CB,
 }
 
 bool IRTranslator::translateCall(const User &U, MachineIRBuilder &MIRBuilder) {
-  if (!MF->getTarget().getTargetTriple().isSPIRV() && !mayTranslateUserTypes(U))
+  if (!mayTranslateUserTypes(U))
     return false;
 
   const CallInst &CI = cast<CallInst>(U);
@@ -2807,20 +2814,34 @@ bool IRTranslator::translateCall(const User &U, MachineIRBuilder &MIRBuilder) {
   if (translateKnownIntrinsic(CI, ID, MIRBuilder))
     return true;
 
+  TargetLowering::IntrinsicInfo Info;
+  bool IsTgtMemIntrinsic = TLI->getTgtMemIntrinsic(Info, CI, *MF, ID);
+
+  return translateIntrinsic(CI, ID, MIRBuilder,
+                            IsTgtMemIntrinsic ? &Info : nullptr);
+}
+
+/// Translate a call to an intrinsic.
+/// Depending on whether TLI->getTgtMemIntrinsic() is true, TgtMemIntrinsicInfo
+/// is a pointer to the correspondingly populated IntrinsicInfo object.
+/// Otherwise, this pointer is null.
+bool IRTranslator::translateIntrinsic(
+    const CallBase &CB, Intrinsic::ID ID, MachineIRBuilder &MIRBuilder,
+    const TargetLowering::IntrinsicInfo *TgtMemIntrinsicInfo) {
   ArrayRef<Register> ResultRegs;
-  if (!CI.getType()->isVoidTy())
-    ResultRegs = getOrCreateVRegs(CI);
+  if (!CB.getType()->isVoidTy())
+    ResultRegs = getOrCreateVRegs(CB);
 
   // Ignore the callsite attributes. Backend code is most likely not expecting
   // an intrinsic to sometimes have side effects and sometimes not.
   MachineInstrBuilder MIB = MIRBuilder.buildIntrinsic(ID, ResultRegs);
-  if (isa<FPMathOperator>(CI))
-    MIB->copyIRFlags(CI);
+  if (isa<FPMathOperator>(CB))
+    MIB->copyIRFlags(CB);
 
-  for (const auto &Arg : enumerate(CI.args())) {
+  for (const auto &Arg : enumerate(CB.args())) {
     // If this is required to be an immediate, don't materialize it in a
     // register.
-    if (CI.paramHasAttr(Arg.index(), Attribute::ImmArg)) {
+    if (CB.paramHasAttr(Arg.index(), Attribute::ImmArg)) {
       if (ConstantInt *CI = dyn_cast<ConstantInt>(Arg.value())) {
         // imm arguments are more convenient than cimm (and realistically
         // probably sufficient), so use them.
@@ -2849,29 +2870,33 @@ bool IRTranslator::translateCall(const User &U, MachineIRBuilder &MIRBuilder) {
   }
 
   // Add a MachineMemOperand if it is a target mem intrinsic.
-  TargetLowering::IntrinsicInfo Info;
-  // TODO: Add a GlobalISel version of getTgtMemIntrinsic.
-  if (TLI->getTgtMemIntrinsic(Info, CI, *MF, ID)) {
-    Align Alignment = Info.align.value_or(
-        DL->getABITypeAlign(Info.memVT.getTypeForEVT(F->getContext())));
-    LLT MemTy = Info.memVT.isSimple()
-                    ? TLI->getLLTForMVT(Info.memVT.getSimpleVT())
-                    : LLT::scalar(Info.memVT.getStoreSizeInBits());
+  if (TgtMemIntrinsicInfo) {
+    const Function *F = CB.getCalledFunction();
+
+    Align Alignment = TgtMemIntrinsicInfo->align.value_or(DL->getABITypeAlign(
+        TgtMemIntrinsicInfo->memVT.getTypeForEVT(F->getContext())));
+    LLT MemTy =
+        TgtMemIntrinsicInfo->memVT.isSimple()
+            ? TLI->getLLTForMVT(TgtMemIntrinsicInfo->memVT.getSimpleVT())
+            : LLT::scalar(TgtMemIntrinsicInfo->memVT.getStoreSizeInBits());
 
     // TODO: We currently just fallback to address space 0 if getTgtMemIntrinsic
     //       didn't yield anything useful.
     MachinePointerInfo MPI;
-    if (Info.ptrVal)
-      MPI = MachinePointerInfo(Info.ptrVal, Info.offset);
-    else if (Info.fallbackAddressSpace)
-      MPI = MachinePointerInfo(*Info.fallbackAddressSpace);
+    if (TgtMemIntrinsicInfo->ptrVal) {
+      MPI = MachinePointerInfo(TgtMemIntrinsicInfo->ptrVal,
+                               TgtMemIntrinsicInfo->offset);
+    } else if (TgtMemIntrinsicInfo->fallbackAddressSpace) {
+      MPI = MachinePointerInfo(*TgtMemIntrinsicInfo->fallbackAddressSpace);
+    }
     MIB.addMemOperand(MF->getMachineMemOperand(
-        MPI, Info.flags, MemTy, Alignment, CI.getAAMetadata(),
-        /*Ranges=*/nullptr, Info.ssid, Info.order, Info.failureOrder));
+        MPI, TgtMemIntrinsicInfo->flags, MemTy, Alignment, CB.getAAMetadata(),
+        /*Ranges=*/nullptr, TgtMemIntrinsicInfo->ssid,
+        TgtMemIntrinsicInfo->order, TgtMemIntrinsicInfo->failureOrder));
   }
 
-  if (CI.isConvergent()) {
-    if (auto Bundle = CI.getOperandBundle(LLVMContext::OB_convergencectrl)) {
+  if (CB.isConvergent()) {
+    if (auto Bundle = CB.getOperandBundle(LLVMContext::OB_convergencectrl)) {
       auto *Token = Bundle->Inputs[0].get();
       Register TokenReg = getOrCreateVReg(*Token);
       MIB.addUse(TokenReg, RegState::Implicit);
@@ -3785,16 +3810,19 @@ bool IRTranslator::translate(const Constant &C, Register Reg) {
 }
 
 bool IRTranslator::mayTranslateUserTypes(const User &U) const {
+  const TargetMachine &TM = TLI->getTargetMachine();
   if (TLI->getTargetMachine().Options.EnableGlobalISelExtendedLLT)
     return true;
 
   // BF16 cannot currently be represented by default LLT, to avoid miscompiles
   // we prevent any instructions using them in targets with disabled
   // TargetOptions::EnableGlobalISelExtendedLLT.
-  return !U.getType()->getScalarType()->isBFloatTy() &&
+  // SPIRV target is exception.
+  return TM.getTargetTriple().isSPIRV() ||
+         (!U.getType()->getScalarType()->isBFloatTy() &&
          !any_of(U.operands(), [](Value *V) {
            return V->getType()->getScalarType()->isBFloatTy();
-         });
+         }));
 }
 
 bool IRTranslator::finalizeBasicBlock(const BasicBlock &BB,

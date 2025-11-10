@@ -533,12 +533,12 @@ private:
 
   /// BitFieldInfo: {Size, Offset}
   typedef int BitFieldInfo[2];
-  static const constexpr BitFieldInfo VectorScalableFieldInfo{1, 0};
-  static const constexpr BitFieldInfo VectorElementsFieldInfo{16, 4};
-  static const constexpr BitFieldInfo FPFieldInfo{3, 20};
-  static const constexpr BitFieldInfo PointerAddressSpaceFieldInfo{24, 20};
-  static const constexpr BitFieldInfo ScalarSizeFieldInfo{32, 28};
-  static const constexpr BitFieldInfo PointerSizeFieldInfo{16, 44};
+  static constexpr BitFieldInfo VectorScalableFieldInfo{1, 0};
+  static constexpr BitFieldInfo VectorElementsFieldInfo{16, 4};
+  static constexpr BitFieldInfo FPFieldInfo{3, 20};
+  static constexpr BitFieldInfo PointerAddressSpaceFieldInfo{24, 20};
+  static constexpr BitFieldInfo ScalarSizeFieldInfo{32, 28};
+  static constexpr BitFieldInfo PointerSizeFieldInfo{16, 44};
 
   uint64_t RawData : 60;
   Kind Info : 4;

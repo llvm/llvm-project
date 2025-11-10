@@ -2,9 +2,6 @@
 // RUN: not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-FWRITE
 // RUN: not %run %t 1 2>&1 | FileCheck %s --check-prefix=CHECK-FREAD
 
-// Symbolizer fails to find test functions on current macOS bot version
-// XFAIL: system-darwin && target=arm{{.*}}
-
 #include <stdio.h>
 #include <stdlib.h>
 
