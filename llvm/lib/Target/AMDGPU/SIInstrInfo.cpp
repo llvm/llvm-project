@@ -1315,6 +1315,9 @@ Register SIInstrInfo::insertNE(MachineBasicBlock *MBB,
 
 MachineInstr *
 SIInstrInfo::pierceThroughRegSequence(const MachineInstr &MI) const {
+  if (MI.getOpcode() != AMDGPU::REG_SEQUENCE)
+    return nullptr;
+
   const MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
   int64_t SubRegValues[2];
   bool SubRegIsConst[2];
