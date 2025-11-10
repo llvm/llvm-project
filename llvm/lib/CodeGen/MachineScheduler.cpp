@@ -334,7 +334,7 @@ public:
     LiveIntervals &LIS;
   };
 
-  MachineSchedulerImpl() {}
+  MachineSchedulerImpl() = default;
   // Migration only
   void setLegacyPass(MachineFunctionPass *P) { this->P = P; }
   void setMFAM(MachineFunctionAnalysisManager *MFAM) { this->MFAM = MFAM; }
@@ -358,7 +358,7 @@ public:
     MachineLoopInfo &MLI;
     AAResults &AA;
   };
-  PostMachineSchedulerImpl() {}
+  PostMachineSchedulerImpl() = default;
   // Migration only
   void setLegacyPass(MachineFunctionPass *P) { this->P = P; }
   void setMFAM(MachineFunctionAnalysisManager *MFAM) { this->MFAM = MFAM; }
@@ -2559,7 +2559,7 @@ init(ScheduleDAGMI *dag, const TargetSchedModel *smodel, SchedRemainder *rem) {
     for (unsigned i = 0; i < ResourceCount; ++i) {
       ReservedCyclesIndex[i] = NumUnits;
       NumUnits += SchedModel->getProcResource(i)->NumUnits;
-      if (isUnbufferedGroup(i)) {
+      if (isReservedGroup(i)) {
         auto SubUnits = SchedModel->getProcResource(i)->SubUnitsIdxBegin;
         for (unsigned U = 0, UE = SchedModel->getProcResource(i)->NumUnits;
              U != UE; ++U)
@@ -2631,7 +2631,7 @@ SchedBoundary::getNextResourceCycle(const MCSchedClassDesc *SC, unsigned PIdx,
   assert(NumberOfInstances > 0 &&
          "Cannot have zero instances of a ProcResource");
 
-  if (isUnbufferedGroup(PIdx)) {
+  if (isReservedGroup(PIdx)) {
     // If any subunits are used by the instruction, report that the
     // subunits of the resource group are available at the first cycle
     // in which the unit is available, effectively removing the group

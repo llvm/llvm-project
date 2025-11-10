@@ -1583,7 +1583,10 @@ void RISCVInsertVSETVLI::emitVSETVLIs(MachineBasicBlock &MBB) {
               if (!TII->isAddImmediate(*DeadMI, Reg))
                 continue;
               LIS->RemoveMachineInstrFromMaps(*DeadMI);
+              Register AddReg = DeadMI->getOperand(1).getReg();
               DeadMI->eraseFromParent();
+              if (AddReg.isVirtual())
+                LIS->shrinkToUses(&LIS->getInterval(AddReg));
             }
           }
         }
@@ -1869,11 +1872,15 @@ void RISCVInsertVSETVLI::coalesceVSETVLIs(MachineBasicBlock &MBB) const {
   // Loop over the dead AVL values, and delete them now.  This has
   // to be outside the above loop to avoid invalidating iterators.
   for (auto *MI : ToDelete) {
+    assert(MI->getOpcode() == RISCV::ADDI);
+    Register AddReg = MI->getOperand(1).getReg();
     if (LIS) {
       LIS->removeInterval(MI->getOperand(0).getReg());
       LIS->RemoveMachineInstrFromMaps(*MI);
     }
     MI->eraseFromParent();
+    if (LIS && AddReg.isVirtual())
+      LIS->shrinkToUses(&LIS->getInterval(AddReg));
   }
 }
 
