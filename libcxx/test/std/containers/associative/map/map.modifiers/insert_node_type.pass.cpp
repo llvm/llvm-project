@@ -42,20 +42,21 @@ TEST_CONSTEXPR_CXX26 void verify_insert_return_type(T&& t) {
 }
 
 template <class Container>
-TEST_CONSTEXPR_CXX26 std::pair<Container, typename Container::node_type>
-node_factory(typename Container::key_type const& key, typename Container::mapped_type const& mapped) {
-  Container c;
+TEST_CONSTEXPR_CXX26 typename Container::node_type
+node_factory(Container& c, typename Container::key_type const& key, typename Container::mapped_type const& mapped) {
   auto p = c.insert({key, mapped});
   assert(p.second);
-  return {c, c.extract(p.first)};
+  return c.extract(p.first);
 }
 
 template <class Container>
 TEST_CONSTEXPR_CXX26 void testContainer(Container& c) {
   auto* nf = &node_factory<Container>;
 
+  Container c2;
+
   for (int i = 0; i != 10; ++i) {
-    auto [/*Container*/ staticContainer, /*typename Container::node_type*/ node] = nf(i, i + 1);
+    typename Container::node_type node = nf(c2, i, i + 1);
     assert(!node.empty());
     typename Container::insert_return_type irt = c.insert(std::move(node));
     assert(node.empty());
@@ -78,7 +79,7 @@ TEST_CONSTEXPR_CXX26 void testContainer(Container& c) {
   }
 
   { // Insert duplicate node.
-    auto [/*Container*/ staticContainer, /*typename Container::node_type*/ dupl] = nf(0, 42);
+    typename Container::node_type dupl = nf(c2, 0, 42);
     auto irt                           = c.insert(std::move(dupl));
     assert(dupl.empty());
     assert(!irt.inserted);
