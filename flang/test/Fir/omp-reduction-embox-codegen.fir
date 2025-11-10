@@ -11,8 +11,6 @@ omp.declare_reduction @test_reduction : !fir.ref<!fir.box<i32>> init {
 ^bb0(%arg0: !fir.ref<!fir.box<i32>>):
   %0 = fir.alloca !fir.box<i32>
   %1 = fir.alloca i32
-  %c0 = arith.constant 0 : i32
-  fir.store %c0 to %1 : !fir.ref<i32>
   %2 = fir.embox %1 : (!fir.ref<i32>) -> !fir.box<i32>
 
   // use the embox for something so it isn't removed
