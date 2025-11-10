@@ -973,7 +973,7 @@ def NVVM_BarrierOp : NVVM_Op<"barrier", [AttrSizedOperandSegments]> {
 
   let arguments = (ins Optional<I32>:$barrierId, Optional<I32>:$numberOfThreads,
       OptionalAttr<BarrierReductionAttr>:$reductionOp,
-      Optional<I32>:$reductionPredicate);
+      Optional<I32>:$reductionOperand);
   string llvmBuilder = [{
     llvm::Value *id = $barrierId ? $barrierId : builder.getInt32(0);
     if ($numberOfThreads)
@@ -982,7 +982,7 @@ def NVVM_BarrierOp : NVVM_Op<"barrier", [AttrSizedOperandSegments]> {
           {id, $numberOfThreads});
     else if ($reductionOp)
       createIntrinsicCall(
-          builder, getBarrierIntrinsicID($reductionOp), {$reductionPredicate});
+          builder, getBarrierIntrinsicID($reductionOp), {$reductionOperand});
     else
       createIntrinsicCall(
           builder, llvm::Intrinsic::nvvm_barrier_cta_sync_aligned_all, {id});
@@ -993,7 +993,7 @@ def NVVM_BarrierOp : NVVM_Op<"barrier", [AttrSizedOperandSegments]> {
 
   let assemblyFormat =
       "(`id` `=` $barrierId^)? (`number_of_threads` `=` $numberOfThreads^)? "
-      "($reductionOp^ $reductionPredicate)? (`->` type($res)^)? attr-dict";
+      "($reductionOp^ $reductionOperand)? (`->` type($res)^)? attr-dict";
 
   let builders = [OpBuilder<(ins), [{
       return build($_builder, $_state, TypeRange{}, Value{}, Value{}, {}, Value{});
