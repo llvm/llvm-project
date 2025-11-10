@@ -387,3 +387,14 @@ struct Counter {
 // Passing an lvalue by value makes a non-elidable copy.
 constexpr int PassByValue(Counter c) { return c.copies; }
 static_assert(PassByValue(Counter(0)) == 0, "expect no copies");
+
+namespace PointerCast {
+  /// The two interpreters disagree here.
+  struct S { int x, y; } s;
+  constexpr S* sptr = &s;
+  struct U {};
+  struct Str {
+    int e : (Str*)(sptr) == (Str*)(sptr); // expected-error {{not an integral constant expression}} \
+                                          // expected-note {{cast that performs the conversions of a reinterpret_cast}}
+  };
+}
