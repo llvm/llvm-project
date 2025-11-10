@@ -409,7 +409,7 @@ void DataSharingProcessor::insertLastPrivateCompare(mlir::Operation *op) {
   } else {
     TODO(converter.getCurrentLocation(),
          "lastprivate clause in constructs other than "
-         "simd/worksharing-loop");
+         "simd/worksharing-loop/taskloop");
   }
 }
 
