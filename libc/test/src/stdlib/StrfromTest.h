@@ -8,6 +8,7 @@
 
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/macros/properties/architectures.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
@@ -484,7 +485,9 @@ public:
     ASSERT_STREQ_LEN(written, buff, "-NAN");
   }
 
+  // https://github.com/llvm/llvm-project/issues/166795
   void charsWrittenOverflow(FunctionT func) {
+#ifndef LIBC_TARGET_ARCH_IS_RISCV32
     char buff[100];
     // Trigger an overflow in the return value of strfrom by writing more than
     // INT_MAX bytes.
@@ -492,6 +495,7 @@ public:
 
     EXPECT_LT(result, 0);
     ASSERT_ERRNO_FAILURE();
+#endif
   }
 };
 

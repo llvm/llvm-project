@@ -148,10 +148,18 @@ void Value::destroyValueName() {
 }
 
 bool Value::hasNUses(unsigned N) const {
+  if (!UseList)
+    return N == 0;
+
+  // TODO: Disallow for ConstantData and remove !UseList check?
   return hasNItems(use_begin(), use_end(), N);
 }
 
 bool Value::hasNUsesOrMore(unsigned N) const {
+  // TODO: Disallow for ConstantData and remove !UseList check?
+  if (!UseList)
+    return N == 0;
+
   return hasNItemsOrMore(use_begin(), use_end(), N);
 }
 
