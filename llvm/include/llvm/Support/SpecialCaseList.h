@@ -201,17 +201,22 @@ private:
   using SectionEntries = StringMap<StringMap<Matcher>>;
 
 protected:
-  struct Section {
+  class Section {
+  public:
     Section(StringRef Str, unsigned FileIdx, bool UseGlobs)
         : SectionMatcher(UseGlobs, /*RemoveDotSlash=*/false), SectionStr(Str),
           FileIdx(FileIdx) {}
 
     Section(Section &&) = default;
 
-    Matcher SectionMatcher;
-    SectionEntries Entries;
-    std::string SectionStr;
-    unsigned FileIdx;
+    // Return name of the section, its entire string in [].
+    StringRef name() const { return SectionStr; }
+
+    // Returns true if string 'Name' matches section name interpreted as a glob.
+    LLVM_ABI bool matchName(StringRef Name) const;
+
+    // Return sequence number of the file where this section is defined.
+    unsigned fileIndex() const { return FileIdx; }
 
     // Helper method to search by Prefix, Query, and Category. Returns
     // 1-based line number on which rule is defined, or 0 if there is no match.
@@ -223,11 +228,19 @@ protected:
     LLVM_ABI StringRef getLongestMatch(StringRef Prefix, StringRef Query,
                                        StringRef Category) const;
 
+    /// Returns true if the section has any entries for the given prefix.
+    LLVM_ABI bool hasPrefix(StringRef Prefix) const;
+
   private:
     friend class SpecialCaseList;
     LLVM_ABI void preprocess(bool OrderBySize);
     LLVM_ABI const SpecialCaseList::Matcher *
     findMatcher(StringRef Prefix, StringRef Category) const;
+
+    Matcher SectionMatcher;
+    std::string SectionStr;
+    SectionEntries Entries;
+    unsigned FileIdx;
   };
 
   ArrayRef<const Section> sections() const { return Sections; }

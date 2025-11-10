@@ -99,8 +99,8 @@ VPValue::VPValue(const unsigned char SC, Value *UV, VPDef *Def)
 
 VPValue::~VPValue() {
   assert(Users.empty() && "trying to delete a VPValue with remaining users");
-  if (VPDef *D = getDefiningRecipe())
-    D->removeDefinedValue(this);
+  if (VPDef *Def = getDefiningRecipe())
+    Def->removeDefinedValue(this);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

@@ -958,6 +958,11 @@ public:
 
   /// Add metadata with kind \p Kind and \p Node.
   void addMetadata(unsigned Kind, MDNode *Node) {
+    assert(none_of(Metadata,
+                   [Kind](const std::pair<unsigned, MDNode *> &P) {
+                     return P.first == Kind;
+                   }) &&
+           "Kind must appear at most once in Metadata");
     Metadata.emplace_back(Kind, Node);
   }
 

@@ -6,7 +6,6 @@ set(LLVM_LINK_COMPONENTS
 add_clang_library(clangTidyCERTModule STATIC
   CERTTidyModule.cpp
   LimitedRandomnessCheck.cpp
-  ProperlySeededRandomGeneratorCheck.cpp
 
   LINK_LIBS
   clangTidy
