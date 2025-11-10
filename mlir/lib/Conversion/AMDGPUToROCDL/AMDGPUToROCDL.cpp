@@ -1613,9 +1613,129 @@ LogicalResult ExtPackedFp8OpLowering::matchAndRewrite(
   return success();
 }
 
+int getScaleSel(int blockSize, int bitWidth, int firstScaleLane,
+                int firstScaleByte) {
+  // When lowering amdgpu.scaled_ext_packed816 to
+  // rocdl.cvt.scale.pk*.f*.f* operations, the
+  // attributes blockSize, sourceType, firstScaleLane and firstScaleByte
+  // are merged into a single attribute scaleSel.
+  //
+  // This is how those values are merged together.
+  assert(llvm::is_contained({16, 32}, blockSize));
+  assert(llvm::is_contained({4, 6, 8}, bitWidth));
+
+  const bool is_fp8 = bitWidth == 8;
+  const bool is_block_16 = blockSize == 16;
+
+  if (!is_fp8 && firstScaleLane == 0 && firstScaleByte == 0 && !is_block_16) {
+    return 0b000;
+  }
+  if (!is_fp8 && firstScaleLane == 0 && firstScaleByte == 0 && is_block_16) {
+    return 0b001;
+  }
+  if (!is_fp8 && firstScaleLane == 0 && firstScaleByte == 2 && !is_block_16) {
+    return 0b010;
+  }
+  if (!is_fp8 && firstScaleLane == 0 && firstScaleByte == 2 && is_block_16) {
+    return 0b011;
+  }
+  if (!is_fp8 && firstScaleLane == 1 && firstScaleByte == 0 && !is_block_16) {
+    return 0b100;
+  }
+  if (!is_fp8 && firstScaleLane == 1 && firstScaleByte == 0 && is_block_16) {
+    return 0b101;
+  }
+  if (!is_fp8 && firstScaleLane == 1 && firstScaleByte == 2 && !is_block_16) {
+    return 0b110;
+  }
+  if (!is_fp8 && firstScaleLane == 1 && firstScaleByte == 2 && is_block_16) {
+    return 0b111;
+  }
+
+  if (is_fp8 && firstScaleLane == 0 && firstScaleByte == 0 && !is_block_16) {
+    return 0b0000;
+  }
+  if (is_fp8 && firstScaleLane == 0 && firstScaleByte == 0 && is_block_16) {
+    return 0b0001;
+  }
+  if (is_fp8 && firstScaleLane == 0 && firstScaleByte == 1 && !is_block_16) {
+    return 0b0010;
+  }
+  if (is_fp8 && firstScaleLane == 0 && firstScaleByte == 2 && !is_block_16) {
+    return 0b0100;
+  }
+  if (is_fp8 && firstScaleLane == 0 && firstScaleByte == 3 && !is_block_16) {
+    return 0b0110;
+  }
+  if (is_fp8 && firstScaleLane == 1 && firstScaleByte == 1 && !is_block_16) {
+    return 0b1010;
+  }
+  if (is_fp8 && firstScaleLane == 1 && firstScaleByte == 2 && !is_block_16) {
+    return 0b1100;
+  }
+  if (is_fp8 && firstScaleLane == 1 && firstScaleByte == 2 && is_block_16) {
+    return 0b1101;
+  }
+  if (is_fp8 && firstScaleLane == 1 && firstScaleByte == 3 && !is_block_16) {
+    return 0b1110;
+  }
+
+  llvm_unreachable("invalid combination of firstScaleLane, firstScaleByte, "
+                   "blockSize and type.");
+  return 0;
+}
+
 LogicalResult ScaledExtPacked816OpLowering::matchAndRewrite(
     ScaledExtPacked816Op op, ScaledExtPacked816OpAdaptor adaptor,
     ConversionPatternRewriter &rewriter) const {
+
+  int firstScaleLane = op.getFirstScaleLane();
+  int firstScaleByte = op.getFirstScaleByte();
+  int blockSize = op.getBlockSize();
+  auto sourceType = cast<VectorType>(op.getSource().getType());
+  auto srcElemType = cast<FloatType>(sourceType.getElementType());
+  int bitWidth = srcElemType.getWidth();
+  int scaleSel =
+      getScaleSel(blockSize, bitWidth, firstScaleLane, firstScaleByte);
+
+  auto targetType = cast<VectorType>(op.getResult().getType());
+  auto tgtElemType = cast<FloatType>(targetType.getElementType());
+  Location loc = op.getLoc();
+  // Ok, so we need to construct ops depending on the sourceType and targetType.
+  // smallT = [Fp4, Fp8, Bf8]
+  // largeT = [F16, Bf16, F32]
+  // CvtPkScalePk{8}${largeT}${smallT}
+  if (isa<Float4E2M1FNType>(srcElemType) and isa<Float16Type>(tgtElemType)) {
+    ROCDL::CvtPkScalePk8F16Fp4Op::create(
+        rewriter, loc, op.getResult().getType(), adaptor.getSource(),
+        adaptor.getScale(), scaleSel);
+    return success();
+  }
+  /*
+  CvtPkScalePk8F16Fp8Op
+  CvtPkScalePk8F16Bf8Op
+
+  CvtPkScalePk8Bf16Fp4Op
+  CvtPkScalePk8Bf16Fp8Op
+  CvtPkScalePk8Bf16Bf8Op
+
+  CvtPkScalePk8F32Fp4Op
+  CvtPkScalePk8F32Fp8Op
+  CvtPkScalePk8F32Bf8Op
+
+  // smallT = [Fp6, Bf6]
+  // largeT = [F16, Bf16, F32]
+  // CvtPkScalePk{16}${largeT}${smallT}
+  CvtPkScale16F16Fp6Op
+  CvtPkScale16F16Bf6Op
+
+  CvtPkScale16Bf16Fp6Op
+  CvtPkScale16Bf16Bf6Op
+
+  CvtPkScale16F32Fp6Op
+  CvtPkScale16F32Bf6Op
+  */
+
   return failure();
 }
 
