@@ -7,6 +7,7 @@
 ; RUN:     -pass-remarks-missed=loop-vectorize \
 ; RUN:     -pass-remarks-analysis=loop-vectorize -debug -disable-output \
 ; RUN:     < %s 2>&1 | FileCheck --check-prefix=METADATA %s
+; METADATA-LABEL: disabled_loop_vectorization:
 ; METADATA-NOT: LV: We can vectorize this loop
 ; METADATA-NOT: LV: Not vectorizing: loop hasDisableAllTransformsHint
 ; METADATA-NOT: LV: Not vectorizing: VectorizeOnlyWhenForced is set
@@ -30,6 +31,7 @@
 ; RUN:   -pass-remarks-missed=loop-vectorize \
 ; RUN:   -pass-remarks-analysis=loop-vectorize -debug -disable-output \
 ; RUN:   2>&1 | FileCheck --check-prefix=FORCEDONLY %s
+; FORCEDONLY-LABEL: disabled_loop_vectorization:
 ; FORCEDONLY-NOT: LV: We can vectorize this loop
 ; FORCEDONLY-NOT: LV: Not vectorizing: loop hasDisableAllTransformsHint
 ; FORCEDONLY-NOT: LV: Not vectorizing: #pragma vectorize disable
@@ -70,6 +72,7 @@ exit:
 ; RUN:     -pass-remarks-analysis=loop-vectorize -debug -disable-output \
 ; RUN:     -force-vector-interleave=1 -force-vector-width=2 \
 ; RUN:     < %s 2>&1 | FileCheck %s
+; CHECK-LABEL: disable_nonforced:
 ; CHECK-NOT: LV: We can vectorize this loop
 ; CHECK-NOT: LV: Not vectorizing: #pragma vectorize disable.
 ; CHECK-NOT: LV: Not vectorizing: VectorizeOnlyWhenForced is set
