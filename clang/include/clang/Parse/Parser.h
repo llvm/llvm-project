@@ -1164,8 +1164,8 @@ private:
     unsigned NestedTypeLevel;
 
     explicit LateParsedAttribute(Parser *P, IdentifierInfo &Name,
-                                 SourceLocation Loc, unsigned Level = 0)
-        : Self(P), AttrName(Name), AttrNameLoc(Loc), NestedTypeLevel(Level) {}
+                                 SourceLocation Loc, unsigned NestedTypeLevel = 0)
+        : Self(P), AttrName(Name), AttrNameLoc(Loc), NestedTypeLevel(NestedTypeLevel) {}
 
     void ParseLexedAttributes() override;
 

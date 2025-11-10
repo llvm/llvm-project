@@ -3145,7 +3145,7 @@ void Parser::DistributeCLateParsedAttrs(Declarator &D, Decl *Dcl,
   if (!LateAttrs)
     return;
 
-  unsigned NestedLevel = 0;
+  unsigned NestedTypeLevel = 0;
   for (unsigned i = 0; i < D.getNumTypeObjects(); ++i) {
     DeclaratorChunk &DC = D.getTypeObject(i);
 
@@ -3160,10 +3160,10 @@ void Parser::DistributeCLateParsedAttrs(Declarator &D, Decl *Dcl,
     // Extract `LateParsedAttribute *` from `DeclaratorChunk`.
     for (auto *OpaqueLA : DC.LateAttrList) {
       auto *LA = static_cast<LateParsedAttribute *>(OpaqueLA);
-      LA->NestedTypeLevel = NestedLevel;
+      LA->NestedTypeLevel = NestedTypeLevel;
       LateAttrs->push_back(LA);
     }
-    NestedLevel++;
+    NestedTypeLevel++;
   }
 
   // Attach `Decl *` to each `LateParsedAttribute *`.
@@ -6489,8 +6489,10 @@ void Parser::ParseDeclaratorInternal(Declarator &D,
     if (Kind == tok::star) {
       DeclaratorChunk::LateAttrListTy OpaqueLateAttrList;
       if (getLangOpts().ExperimentalLateParseAttributes && !LateAttrs.empty()) {
+        // TODO: Support `counted_by` in function parameters, return types, and
+        // other contexts (Issue #167365).
         if (!D.isFunctionDeclarator()) {
-          for (auto LA : LateAttrs) {
+          for (LateParsedAttribute *LA : LateAttrs) {
             OpaqueLateAttrList.push_back(LA);
           }
         }

@@ -102,9 +102,6 @@ struct on_pointer_anon_count {
 //==============================================================================
 // __sized_by on struct member pointer in type attribute position
 //==============================================================================
-// TODO: Correctly parse sized_by as a type attribute. Currently it is parsed
-// as a declaration attribute and is **not** late parsed resulting in the `size`
-// field being unavailable.
 
 struct on_member_pointer_complete_ty_ty_pos {
   struct size_known *__sized_by(size) buf;
@@ -156,7 +153,7 @@ struct on_member_pointer_fn_ptr_ty_typedef_ty_pos {
 };
 
 struct on_member_pointer_fn_ptr_ty_ty_pos_inner {
-  // expected-error@+1{{}}
+  // expected-error@+1{{'sized_by' attribute on nested pointer type is not allowed}}
   void (* __sized_by(size) * fn_ptr)(void);
   int size;
 };
@@ -174,9 +171,7 @@ struct on_member_pointer_struct_with_annotated_vla_ty_pos {
 };
 
 struct on_nested_pointer_inner {
-  // TODO: This should be disallowed because in the `-fbounds-safety` model
-  // `__sized_by` can only be nested when used in function parameters.
-  // expected-error@+1{{}}
+  // expected-error@+1{{'sized_by' attribute on nested pointer type is not allowed}}
   struct size_known *__sized_by(size) *buf;
   int size;
 };

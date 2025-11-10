@@ -1238,7 +1238,11 @@ struct DeclaratorChunk {
 
   ParsedAttributesView AttrList;
 
-  using LateAttrListTy = SmallVector<void *, 1>;
+  /// Stores pointers to `Parser::LateParsedAttribute`. We use `void*` here
+  /// because `LateParsedAttribute` is a nested struct of `class Parser` and
+  /// cannot be forward-declared.
+  using LateAttrOpaquePtr = void *;
+  using LateAttrListTy = SmallVector<LateAttrOpaquePtr, 1>;
   LateAttrListTy LateAttrList;
 
   struct PointerTypeInfo {
@@ -2329,7 +2333,7 @@ public:
   /// of those attributes from the parameter.
   void AddTypeInfo(const DeclaratorChunk &TI, ParsedAttributes &&attrs,
                    SourceLocation EndLoc,
-                   const DeclaratorChunk::LateAttrListTy &LateAttrs = {}) {
+                   ArrayRef<DeclaratorChunk::LateAttrOpaquePtr> LateAttrs = {}) {
     DeclTypeInfo.push_back(TI);
     DeclTypeInfo.back().getAttrs().prepend(attrs.begin(), attrs.end());
     getAttributePool().takeAllFrom(attrs.getPool());
