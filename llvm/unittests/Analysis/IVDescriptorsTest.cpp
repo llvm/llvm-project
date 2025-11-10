@@ -10,6 +10,7 @@
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
+#include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/Dominators.h"
@@ -257,5 +258,135 @@ for.end:
         EXPECT_TRUE(IsRdxPhi);
         RecurKind Kind = Rdx.getRecurrenceKind();
         EXPECT_EQ(Kind, RecurKind::FMax);
+      });
+}
+
+TEST(IVDescriptorsTest, MonotonicIntVar) {
+  // Parse the module.
+  LLVMContext Context;
+
+  std::unique_ptr<Module> M =
+      parseIR(Context,
+              R"(define void @foo(i32 %start, i1 %cond, i64 %n) {
+entry:
+  br label %for.body
+
+for.body:
+  %i = phi i64 [ 0, %entry ], [ %i.next, %for.inc ]
+  %monotonic = phi i32 [ %start, %entry ], [ %monotonic.next, %for.inc ]
+  br i1 %cond, label %if.then, label %for.inc
+
+if.then:
+  %inc = add nsw i32 %monotonic, 1
+  br label %for.inc
+
+for.inc:
+  %monotonic.next = phi i32 [ %inc, %if.then ], [ %monotonic, %for.body ]
+  %i.next = add nuw nsw i64 %i, 1
+  %exitcond.not = icmp eq i64 %i.next, %n
+  br i1 %exitcond.not, label %for.end, label %for.body
+
+for.end:
+  ret void
+})");
+
+  runWithLoopInfoAndSE(
+      *M, "foo", [&](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+        Function::iterator FI = F.begin();
+        // First basic block is entry - skip it.
+        BasicBlock *Header = &*(++FI);
+        assert(Header->getName() == "for.body");
+        Loop *L = LI.getLoopFor(Header);
+        EXPECT_NE(L, nullptr);
+        BasicBlock::iterator BBI = Header->begin();
+        assert((&*BBI)->getName() == "i");
+        PHINode *Phi = dyn_cast<PHINode>(&*(++BBI));
+        assert(Phi->getName() == "monotonic");
+        BasicBlock *IfThen = &*(++FI);
+        assert(IfThen->getName() == "if.then");
+        Instruction *StepInst = &*(IfThen->begin());
+        assert(StepInst->getName() == "inc");
+        BasicBlock *IfEnd = &*(++FI);
+        assert(IfEnd->getName() == "for.inc");
+        auto *ChainPhi = dyn_cast<PHINode>(&*(IfEnd->begin()));
+        assert(ChainPhi->getName() == "monotonic.next");
+        MonotonicDescriptor Desc;
+        bool IsMonotonicPhi =
+            MonotonicDescriptor::isMonotonicPHI(Phi, L, Desc, SE);
+        EXPECT_TRUE(IsMonotonicPhi);
+        auto &Chain = Desc.getChain();
+        EXPECT_TRUE(Chain.size() == 1 && Chain.contains(ChainPhi));
+        EXPECT_EQ(Desc.getStepInst(), StepInst);
+        EXPECT_EQ(Desc.getPredicateEdge(),
+                  MonotonicDescriptor::Edge(IfThen, IfEnd));
+        auto *StartSCEV = SE.getSCEV(F.getArg(0));
+        auto *StepSCEV = SE.getConstant(StartSCEV->getType(), 1);
+        EXPECT_EQ(Desc.getExpr(),
+                  SE.getAddRecExpr(StartSCEV, StepSCEV, L, SCEV::FlagNW));
+      });
+}
+
+TEST(IVDescriptorsTest, MonotonicPtrVar) {
+  // Parse the module.
+  LLVMContext Context;
+
+  std::unique_ptr<Module> M =
+      parseIR(Context,
+              R"(define void @foo(ptr %start, i1 %cond, i64 %n) {
+entry:
+  br label %for.body
+
+for.body:
+  %i = phi i64 [ 0, %entry ], [ %i.next, %for.inc ]
+  %monotonic = phi ptr [ %start, %entry ], [ %monotonic.next, %for.inc ]
+  br i1 %cond, label %if.then, label %for.inc
+
+if.then:
+  %inc = getelementptr inbounds i8, ptr %monotonic, i64 4
+  br label %for.inc
+
+for.inc:
+  %monotonic.next = phi ptr [ %inc, %if.then ], [ %monotonic, %for.body ]
+  %i.next = add nuw nsw i64 %i, 1
+  %exitcond.not = icmp eq i64 %i.next, %n
+  br i1 %exitcond.not, label %for.end, label %for.body
+
+for.end:
+  ret void
+})");
+
+  runWithLoopInfoAndSE(
+      *M, "foo", [&](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+        Function::iterator FI = F.begin();
+        // First basic block is entry - skip it.
+        BasicBlock *Header = &*(++FI);
+        assert(Header->getName() == "for.body");
+        Loop *L = LI.getLoopFor(Header);
+        EXPECT_NE(L, nullptr);
+        BasicBlock::iterator BBI = Header->begin();
+        assert((&*BBI)->getName() == "i");
+        PHINode *Phi = dyn_cast<PHINode>(&*(++BBI));
+        assert(Phi->getName() == "monotonic");
+        BasicBlock *IfThen = &*(++FI);
+        assert(IfThen->getName() == "if.then");
+        Instruction *StepInst = &*(IfThen->begin());
+        assert(StepInst->getName() == "inc");
+        BasicBlock *IfEnd = &*(++FI);
+        assert(IfEnd->getName() == "for.inc");
+        auto *ChainPhi = dyn_cast<PHINode>(&*(IfEnd->begin()));
+        assert(ChainPhi->getName() == "monotonic.next");
+        MonotonicDescriptor Desc;
+        bool IsMonotonicPhi =
+            MonotonicDescriptor::isMonotonicPHI(Phi, L, Desc, SE);
+        EXPECT_TRUE(IsMonotonicPhi);
+        auto &Chain = Desc.getChain();
+        EXPECT_TRUE(Chain.size() == 1 && Chain.contains(ChainPhi));
+        EXPECT_EQ(Desc.getStepInst(), StepInst);
+        EXPECT_EQ(Desc.getPredicateEdge(),
+                  MonotonicDescriptor::Edge(IfThen, IfEnd));
+        auto *StartSCEV = SE.getSCEV(F.getArg(0));
+        auto *StepSCEV = SE.getConstant(StartSCEV->getType(), 4);
+        EXPECT_EQ(Desc.getExpr(),
+                  SE.getAddRecExpr(StartSCEV, StepSCEV, L, SCEV::FlagNW));
       });
 }
