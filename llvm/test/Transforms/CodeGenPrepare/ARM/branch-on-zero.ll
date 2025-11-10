@@ -260,8 +260,7 @@ else:
 define i64 @lshr64(i64 %a) {
 ; CHECK-LABEL: @lshr64(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[C:%.*]] = icmp ult i64 [[A:%.*]], 1099511627776
-; CHECK-NEXT:    [[L:%.*]] = lshr i64 [[A]], 40
+; CHECK-NEXT:    [[L:%.*]] = lshr i64 [[A:%.*]], 40
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i64 [[L]], 0
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
@@ -284,8 +283,7 @@ else:
 define i128 @lshr128(i128 %a) {
 ; CHECK-LABEL: @lshr128(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[C:%.*]] = icmp ult i128 [[A:%.*]], 36893488147419103232
-; CHECK-NEXT:    [[L:%.*]] = lshr i128 [[A]], 65
+; CHECK-NEXT:    [[L:%.*]] = lshr i128 [[A:%.*]], 65
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i128 [[L]], 0
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:

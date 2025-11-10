@@ -1848,8 +1848,14 @@ static bool sinkCmpExpression(CmpInst *Cmp, const TargetLowering &TLI,
   if (TLI.useSoftFloat() && isa<FCmpInst>(Cmp))
     return false;
 
-  // Avoid sinking larger than legal integer comparisons.
-  if (Cmp->getOperand(0)->getType()->isIntegerTy() &&
+  bool UsedInPhiOrCurrentBlock = any_of(Cmp->users(), [Cmp](User *U) {
+    return isa<PHINode>(U) ||
+           cast<Instruction>(U)->getParent() == Cmp->getParent();
+  });
+
+  // Avoid sinking larger than legal integer comparisons unless its ONLY used in
+  // another BB.
+  if (UsedInPhiOrCurrentBlock && Cmp->getOperand(0)->getType()->isIntegerTy() &&
       Cmp->getOperand(0)->getType()->getScalarSizeInBits() >
           DL.getLargestLegalIntTypeSizeInBits())
     return false;

@@ -41,12 +41,11 @@ define i64 @optbranch_64(i64 %Arg) {
 ; RV32-NEXT:    seqz a2, a0
 ; RV32-NEXT:    add a1, a1, a2
 ; RV32-NEXT:    or a2, a0, a1
-; RV32-NEXT:    beqz a2, .LBB1_2
-; RV32-NEXT:  # %bb.1: # %bb3
-; RV32-NEXT:    ret
-; RV32-NEXT:  .LBB1_2: # %bb2
+; RV32-NEXT:    bnez a2, .LBB1_2
+; RV32-NEXT:  # %bb.1: # %bb2
 ; RV32-NEXT:    li a0, -1
 ; RV32-NEXT:    li a1, -1
+; RV32-NEXT:  .LBB1_2: # %bb3
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: optbranch_64:

@@ -34,16 +34,16 @@ define void @f(ptr nocapture %arg, ptr nocapture %arg1, ptr nocapture %arg2, ptr
 ; CHECK-NEXT:    .cfi_offset %edi, -16
 ; CHECK-NEXT:    .cfi_offset %ebx, -12
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    movl $0, {{[-0-9]+}}(%e{{[sb]}}p) ## 4-byte Folded Spill
+; CHECK-NEXT:    xorl %edi, %edi
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:  Ltmp0: ## EH_LABEL
-; CHECK-NEXT:    ## implicit-def: $edi
+; CHECK-NEXT:    ## implicit-def: $ebx
 ; CHECK-NEXT:    calll __Znam
 ; CHECK-NEXT:  Ltmp1: ## EH_LABEL
 ; CHECK-NEXT:  ## %bb.1: ## %bb11
 ; CHECK-NEXT:    movl %eax, %esi
-; CHECK-NEXT:    movb $1, %bl
-; CHECK-NEXT:    testb %bl, %bl
+; CHECK-NEXT:    movb $1, %al
+; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    jne LBB0_2
 ; CHECK-NEXT:  ## %bb.7: ## %bb31
 ; CHECK-NEXT:    ## implicit-def: $eax
@@ -53,7 +53,8 @@ define void @f(ptr nocapture %arg, ptr nocapture %arg1, ptr nocapture %arg2, ptr
 ; CHECK-NEXT:    ## Child Loop BB0_13 Depth 2
 ; CHECK-NEXT:    ## Child Loop BB0_16 Depth 3
 ; CHECK-NEXT:    ## Child Loop BB0_21 Depth 2
-; CHECK-NEXT:    testb %bl, %bl
+; CHECK-NEXT:    movb $1, %al
+; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    jne LBB0_9
 ; CHECK-NEXT:  ## %bb.10: ## %bb41
 ; CHECK-NEXT:    ## in Loop: Header=BB0_8 Depth=1
@@ -66,7 +67,9 @@ define void @f(ptr nocapture %arg, ptr nocapture %arg1, ptr nocapture %arg2, ptr
 ; CHECK-NEXT:  Ltmp3: ## EH_LABEL
 ; CHECK-NEXT:  ## %bb.11: ## %bb42
 ; CHECK-NEXT:    ## in Loop: Header=BB0_8 Depth=1
-; CHECK-NEXT:    testb %bl, %bl
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    decl %eax
+; CHECK-NEXT:    testl %eax, %eax
 ; CHECK-NEXT:    jne LBB0_18
 ; CHECK-NEXT:  ## %bb.12: ## %bb45.preheader
 ; CHECK-NEXT:    ## in Loop: Header=BB0_8 Depth=1
@@ -75,7 +78,8 @@ define void @f(ptr nocapture %arg, ptr nocapture %arg1, ptr nocapture %arg2, ptr
 ; CHECK-NEXT:    ## Parent Loop BB0_8 Depth=1
 ; CHECK-NEXT:    ## => This Loop Header: Depth=2
 ; CHECK-NEXT:    ## Child Loop BB0_16 Depth 3
-; CHECK-NEXT:    testb %bl, %bl
+; CHECK-NEXT:    movb $1, %cl
+; CHECK-NEXT:    testb %cl, %cl
 ; CHECK-NEXT:    jne LBB0_19
 ; CHECK-NEXT:  ## %bb.14: ## %bb48
 ; CHECK-NEXT:    ## in Loop: Header=BB0_13 Depth=2
@@ -84,14 +88,14 @@ define void @f(ptr nocapture %arg, ptr nocapture %arg1, ptr nocapture %arg2, ptr
 ; CHECK-NEXT:    ## in Loop: Header=BB0_13 Depth=2
 ; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    movl %esi, %edx
-; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edi ## 4-byte Reload
+; CHECK-NEXT:    movl %edi, %ebx
 ; CHECK-NEXT:  LBB0_16: ## %bb49
 ; CHECK-NEXT:    ## Parent Loop BB0_8 Depth=1
 ; CHECK-NEXT:    ## Parent Loop BB0_13 Depth=2
 ; CHECK-NEXT:    ## => This Inner Loop Header: Depth=3
 ; CHECK-NEXT:    incl %ecx
 ; CHECK-NEXT:    addl $4, %edx
-; CHECK-NEXT:    decl %edi
+; CHECK-NEXT:    decl %ebx
 ; CHECK-NEXT:    jne LBB0_16
 ; CHECK-NEXT:  LBB0_17: ## %bb57
 ; CHECK-NEXT:    ## in Loop: Header=BB0_13 Depth=2
@@ -103,12 +107,13 @@ define void @f(ptr nocapture %arg, ptr nocapture %arg1, ptr nocapture %arg2, ptr
 ; CHECK-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movl $0, (%esp)
 ; CHECK-NEXT:    calll ___bzero
-; CHECK-NEXT:    testb %bl, %bl
+; CHECK-NEXT:    movb $1, %al
+; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    jne LBB0_22
 ; CHECK-NEXT:  ## %bb.20: ## %bb61.preheader
 ; CHECK-NEXT:    ## in Loop: Header=BB0_8 Depth=1
 ; CHECK-NEXT:    movl %esi, %eax
-; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx ## 4-byte Reload
+; CHECK-NEXT:    movl %edi, %ecx
 ; CHECK-NEXT:  LBB0_21: ## %bb61
 ; CHECK-NEXT:    ## Parent Loop BB0_8 Depth=1
 ; CHECK-NEXT:    ## => This Inner Loop Header: Depth=2
@@ -122,13 +127,13 @@ define void @f(ptr nocapture %arg, ptr nocapture %arg1, ptr nocapture %arg2, ptr
 ; CHECK-NEXT:    jmp LBB0_8
 ; CHECK-NEXT:  LBB0_18: ## %bb43
 ; CHECK-NEXT:  Ltmp5: ## EH_LABEL
-; CHECK-NEXT:    movl %esi, %edi
+; CHECK-NEXT:    movl %esi, %ebx
 ; CHECK-NEXT:    calll _OnOverFlow
 ; CHECK-NEXT:  Ltmp6: ## EH_LABEL
 ; CHECK-NEXT:    jmp LBB0_3
 ; CHECK-NEXT:  LBB0_2: ## %bb29
 ; CHECK-NEXT:  Ltmp7: ## EH_LABEL
-; CHECK-NEXT:    movl %esi, %edi
+; CHECK-NEXT:    movl %esi, %ebx
 ; CHECK-NEXT:    calll _OnOverFlow
 ; CHECK-NEXT:  Ltmp8: ## EH_LABEL
 ; CHECK-NEXT:  LBB0_3: ## %bb30
@@ -136,9 +141,9 @@ define void @f(ptr nocapture %arg, ptr nocapture %arg1, ptr nocapture %arg2, ptr
 ; CHECK-NEXT:  LBB0_4: ## %bb20.loopexit
 ; CHECK-NEXT:  Ltmp4: ## EH_LABEL
 ; CHECK-NEXT:  LBB0_9:
-; CHECK-NEXT:    movl %esi, %edi
+; CHECK-NEXT:    movl %esi, %ebx
 ; CHECK-NEXT:  LBB0_6: ## %bb23
-; CHECK-NEXT:    testl %edi, %edi
+; CHECK-NEXT:    testl %ebx, %ebx
 ; CHECK-NEXT:    addl $28, %esp
 ; CHECK-NEXT:    popl %esi
 ; CHECK-NEXT:    popl %edi

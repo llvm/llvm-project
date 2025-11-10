@@ -39,50 +39,46 @@ define i32 @icmp64_sge_0(i64 %x, i64 %y, i32 %a, i32 %b, i1 %c) {
 ;
 ; CHECKV7M-LABEL: icmp64_sge_0:
 ; CHECKV7M:       @ %bb.0:
-; CHECKV7M-NEXT:    mvns r0, r1
-; CHECKV7M-NEXT:    lsrs r2, r0, #31
 ; CHECKV7M-NEXT:    ldr r0, [sp, #8]
 ; CHECKV7M-NEXT:    lsls r0, r0, #31
-; CHECKV7M-NEXT:    ldrd r1, r0, [sp]
+; CHECKV7M-NEXT:    ldrd r2, r0, [sp]
 ; CHECKV7M-NEXT:    beq .LBB0_2
 ; CHECKV7M-NEXT:  @ %bb.1: @ %then
-; CHECKV7M-NEXT:    cmp r2, #0
-; CHECKV7M-NEXT:    mov r2, r0
-; CHECKV7M-NEXT:    it ne
-; CHECKV7M-NEXT:    movne r2, r1
 ; CHECKV7M-NEXT:    cmp.w r3, #-1
+; CHECKV7M-NEXT:    mov r3, r0
 ; CHECKV7M-NEXT:    it gt
-; CHECKV7M-NEXT:    movgt r0, r1
-; CHECKV7M-NEXT:    add r0, r2
+; CHECKV7M-NEXT:    movgt r3, r2
+; CHECKV7M-NEXT:    cmp.w r1, #-1
+; CHECKV7M-NEXT:    it gt
+; CHECKV7M-NEXT:    movgt r0, r2
+; CHECKV7M-NEXT:    add r0, r3
 ; CHECKV7M-NEXT:    bx lr
 ; CHECKV7M-NEXT:  .LBB0_2: @ %else
-; CHECKV7M-NEXT:    cmp r2, #0
-; CHECKV7M-NEXT:    it ne
-; CHECKV7M-NEXT:    movne r0, r1
+; CHECKV7M-NEXT:    cmp.w r1, #-1
+; CHECKV7M-NEXT:    it gt
+; CHECKV7M-NEXT:    movgt r0, r2
 ; CHECKV7M-NEXT:    bx lr
 ;
 ; CHECKV7A-LABEL: icmp64_sge_0:
 ; CHECKV7A:       @ %bb.0:
 ; CHECKV7A-NEXT:    ldr r2, [sp, #8]
-; CHECKV7A-NEXT:    mvns r1, r1
 ; CHECKV7A-NEXT:    ldrd r12, r0, [sp]
-; CHECKV7A-NEXT:    lsrs r1, r1, #31
 ; CHECKV7A-NEXT:    lsls r2, r2, #31
 ; CHECKV7A-NEXT:    beq .LBB0_2
 ; CHECKV7A-NEXT:  @ %bb.1: @ %then
-; CHECKV7A-NEXT:    cmp r1, #0
-; CHECKV7A-NEXT:    mov r1, r0
-; CHECKV7A-NEXT:    it ne
-; CHECKV7A-NEXT:    movne r1, r12
 ; CHECKV7A-NEXT:    cmp.w r3, #-1
+; CHECKV7A-NEXT:    mov r2, r0
+; CHECKV7A-NEXT:    it gt
+; CHECKV7A-NEXT:    movgt r2, r12
+; CHECKV7A-NEXT:    cmp.w r1, #-1
 ; CHECKV7A-NEXT:    it gt
 ; CHECKV7A-NEXT:    movgt r0, r12
-; CHECKV7A-NEXT:    add r0, r1
+; CHECKV7A-NEXT:    add r0, r2
 ; CHECKV7A-NEXT:    bx lr
 ; CHECKV7A-NEXT:  .LBB0_2: @ %else
-; CHECKV7A-NEXT:    cmp r1, #0
-; CHECKV7A-NEXT:    it ne
-; CHECKV7A-NEXT:    movne r0, r12
+; CHECKV7A-NEXT:    cmp.w r1, #-1
+; CHECKV7A-NEXT:    it gt
+; CHECKV7A-NEXT:    movgt r0, r12
 ; CHECKV7A-NEXT:    bx lr
   br i1 %c, label %then, label %else
 then:

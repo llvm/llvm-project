@@ -59,7 +59,6 @@ define void @test1(ptr nocapture noundef writeonly %dst, i32 noundef signext %i_
 ; RV32-NEXT:    sltu t5, a0, t6
 ; RV32-NEXT:    sltu t6, a2, t3
 ; RV32-NEXT:    and t5, t5, t6
-; RV32-NEXT:    sltu t1, a6, t1
 ; RV32-NEXT:    sltu t4, a0, t4
 ; RV32-NEXT:    sltu t3, a4, t3
 ; RV32-NEXT:    and t3, t4, t3
@@ -67,6 +66,7 @@ define void @test1(ptr nocapture noundef writeonly %dst, i32 noundef signext %i_
 ; RV32-NEXT:    srli t4, t4, 31
 ; RV32-NEXT:    or t4, t5, t4
 ; RV32-NEXT:    or t5, a1, a5
+; RV32-NEXT:    sltu t1, a6, t1
 ; RV32-NEXT:    srli t5, t5, 31
 ; RV32-NEXT:    or t3, t3, t5
 ; RV32-NEXT:    or t3, t4, t3
