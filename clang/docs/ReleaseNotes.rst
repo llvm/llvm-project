@@ -69,8 +69,6 @@ Potentially Breaking Changes
   call the member ``operator delete`` instead of the expected global
   delete operator. The old behavior is retained under ``-fclang-abi-compat=21``
   flag.
-- Clang warning suppressions file, ``--warning-suppression-mappings=``, now will
-  use the last matching entry instead of the longest one.
 - Trailing null statements in GNU statement expressions are no longer
   ignored by Clang; they now result in a void type. Clang previously
   matched GCC's behavior, which was recently clarified to be incorrect.

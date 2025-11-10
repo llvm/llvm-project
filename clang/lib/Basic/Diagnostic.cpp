@@ -525,7 +525,8 @@ std::unique_ptr<WarningsSpecialCaseList>
 WarningsSpecialCaseList::create(const llvm::MemoryBuffer &Input,
                                 std::string &Err) {
   auto WarningSuppressionList = std::make_unique<WarningsSpecialCaseList>();
-  if (!WarningSuppressionList->createInternal(&Input, Err))
+  if (!WarningSuppressionList->createInternal(&Input, Err,
+                                              /*OrderBySize=*/true))
     return nullptr;
   return WarningSuppressionList;
 }
@@ -533,7 +534,7 @@ WarningsSpecialCaseList::create(const llvm::MemoryBuffer &Input,
 void WarningsSpecialCaseList::processSections(DiagnosticsEngine &Diags) {
   static constexpr auto WarningFlavor = clang::diag::Flavor::WarningOrError;
   for (const auto &SectionEntry : sections()) {
-    StringRef DiagGroup = SectionEntry.name();
+    StringRef DiagGroup = SectionEntry.SectionStr;
     if (DiagGroup == "*") {
       // Drop the default section introduced by special case list, we only
       // support exact diagnostic group names.
@@ -587,12 +588,15 @@ bool WarningsSpecialCaseList::isDiagSuppressed(diag::kind DiagId,
 
   StringRef F = llvm::sys::path::remove_leading_dotslash(PLoc.getFilename());
 
-  unsigned LastSup = DiagSection->getLastMatch("src", F, "");
-  if (LastSup == 0)
+  StringRef LongestSup = DiagSection->getLongestMatch("src", F, "");
+  if (LongestSup.empty())
     return false;
 
-  unsigned LastEmit = DiagSection->getLastMatch("src", F, "emit");
-  return LastSup > LastEmit;
+  StringRef LongestEmit = DiagSection->getLongestMatch("src", F, "emit");
+  if (LongestEmit.empty())
+    return true;
+
+  return LongestSup.size() > LongestEmit.size();
 }
 
 bool DiagnosticsEngine::isSuppressedViaMapping(diag::kind DiagId,

@@ -42,7 +42,7 @@ void SanitizerSpecialCaseList::createSanitizerSections() {
     SanitizerMask Mask;
 
 #define SANITIZER(NAME, ID)                                                    \
-  if (S.matchName(NAME))                                                       \
+  if (S.SectionMatcher.matchAny(NAME))                                         \
     Mask |= SanitizerKind::ID;
 #define SANITIZER_GROUP(NAME, ID, ALIAS) SANITIZER(NAME, ID)
 
@@ -68,7 +68,7 @@ SanitizerSpecialCaseList::inSectionBlame(SanitizerMask Mask, StringRef Prefix,
     if (S.Mask & Mask) {
       unsigned LineNum = S.S.getLastMatch(Prefix, Query, Category);
       if (LineNum > 0)
-        return {S.S.fileIndex(), LineNum};
+        return {S.S.FileIdx, LineNum};
     }
   }
   return NotFound;
