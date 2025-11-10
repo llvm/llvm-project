@@ -31,9 +31,6 @@ func.func private @_test_inline_copy_in(%arg0: !fir.box<!fir.array<?x?x?xf64>> {
   fir.call @_QFPsb(%18, %19#0) fastmath<contract> : (!fir.ref<!fir.array<?xf64>>, !fir.ref<i32>) -> ()
   hlfir.copy_out %0, %17#1 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>, i1) -> ()
   hlfir.end_associate %19#1, %19#2 : !fir.ref<i32>, i1
-  // Keep %0 live to avoid DCE after inlining when no copy_out is needed.
-  %zb0 = fir.zero_bits !fir.box<!fir.heap<!fir.array<?xf64>>>
-  fir.store %zb0 to %0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>
   return
 }
 
@@ -78,7 +75,7 @@ func.func private @_test_inline_copy_in(%arg0: !fir.box<!fir.array<?x?x?xf64>> {
 // CHECK:    %[[VAL_22:.*]] = fir.box_addr %[[VAL_21:.*]]#0 : (!fir.box<!fir.array<?xf64>>) -> !fir.ref<!fir.array<?xf64>>
 // CHECK:    %[[VAL_23:.*]]:3 = hlfir.associate %[[VAL_5:.*]] {adapt.valuebyref} : (i32) -> (!fir.ref<i32>, !fir.ref<i32>, i1)
 // CHECK:    fir.call @_QFPsb(%[[VAL_22:.*]], %[[VAL_23:.*]]#0) fastmath<contract> : (!fir.ref<!fir.array<?xf64>>, !fir.ref<i32>) -> ()
-// CHECK:    hlfir.copy_out %16, %15#1 : (!fir.ref<!fir.box<!fir.array<?xf64>>>, i1) -> ()
+// CHECK:    hlfir.copy_out %{{.*}}, %[[VAL_21:.*]]#1 : (!fir.ref<!fir.box<!fir.array<?xf64>>>, i1) -> ()
 // CHECK:    hlfir.end_associate %[[VAL_23:.*]]#1, %[[VAL_23:.*]]#2 : !fir.ref<i32>, i1
 // CHECK:    return
 // CHECK:  }
@@ -113,9 +110,6 @@ func.func private @_test_no_inline_copy_in(%arg0: !fir.box<!fir.array<?x?x?xf64>
   fir.call @_QFPsb(%18, %19#1) fastmath<contract> : (!fir.ref<!fir.array<?xf64>>, !fir.ref<i32>) -> ()
   hlfir.copy_out %0, %17#1 to %16 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>, i1, !fir.box<!fir.array<?xf64>>) -> ()
   hlfir.end_associate %19#1, %19#2 : !fir.ref<i32>, i1
-  // Keep %0 live to avoid DCE after inlining.
-  %zb1 = fir.zero_bits !fir.box<!fir.heap<!fir.array<?xf64>>>
-  fir.store %zb1 to %0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>
   return
 }
 
@@ -166,9 +160,6 @@ func.func @_QPoptional_copy_in_out(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc
   }
   fir.call @_QPtakes_optional_explicit(%4#0) fastmath<contract> : (!fir.ref<!fir.array<?xf32>>) -> ()
   hlfir.copy_out %0, %4#1 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, i1) -> ()
-  // Keep %0 live to avoid DCE after inlining.
-  %zb2 = fir.zero_bits !fir.box<!fir.heap<!fir.array<?xf32>>>
-  fir.store %zb2 to %0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
   return
 }
 
@@ -200,9 +191,6 @@ func.func @_QPtest_copy_in_out_2(%arg0: !fir.box<!fir.array<*:f32>> {fir.bindc_n
   %3:2 = hlfir.copy_in %2#0 to %0 : (!fir.box<!fir.array<*:f32>>, !fir.ref<!fir.box<!fir.heap<!fir.array<*:f32>>>>) -> (!fir.box<!fir.array<*:f32>>, i1)
   fir.call @_QPtakes_contiguous_intentin(%3#0) fastmath<contract> : (!fir.box<!fir.array<*:f32>>) -> ()
   hlfir.copy_out %0, %3#1 : (!fir.ref<!fir.box<!fir.heap<!fir.array<*:f32>>>>, i1) -> ()
-  // Keep %0 live to avoid DCE after inlining.
-  %zb3 = fir.zero_bits !fir.box<!fir.heap<!fir.array<*:f32>>>
-  fir.store %zb3 to %0 : !fir.ref<!fir.box<!fir.heap<!fir.array<*:f32>>>>
   return
 }
 
