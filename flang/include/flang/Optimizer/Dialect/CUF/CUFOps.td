@@ -26,8 +26,7 @@ include "mlir/IR/BuiltinAttributes.td"
 class cuf_Op<string mnemonic, list<Trait> traits>
     : Op<CUFDialect, mnemonic, traits>;
 
-def cuf_AllocOp : cuf_Op<"alloc", [AttrSizedOperandSegments,
-    MemoryEffects<[MemAlloc]>]> {
+def cuf_AllocOp : cuf_Op<"alloc", [AttrSizedOperandSegments]> {
   let summary = "Allocate an object on device";
 
   let description = [{
@@ -47,7 +46,9 @@ def cuf_AllocOp : cuf_Op<"alloc", [AttrSizedOperandSegments,
     cuf_DataAttributeAttr:$data_attr
   );
 
-  let results = (outs fir_ReferenceType:$ptr);
+  // Value-scoped Allocate on the returned reference
+  let results = (outs Res<fir_ReferenceType, "",
+                          [MemAlloc<DefaultResource>]>:$ptr);
 
   let assemblyFormat = [{
     $in_type (`(` $typeparams^ `:` type($typeparams) `)`)?
@@ -84,8 +85,7 @@ def cuf_FreeOp : cuf_Op<"free", [MemoryEffects<[MemFree]>]> {
   let hasVerifier = 1;
 }
 
-def cuf_AllocateOp : cuf_Op<"allocate", [AttrSizedOperandSegments,
-    MemoryEffects<[MemAlloc<DefaultResource>]>]> {
+def cuf_AllocateOp : cuf_Op<"allocate", [AttrSizedOperandSegments]> {
   let summary = "Perform the device allocation of data of an allocatable";
 
   let description = [{
@@ -94,7 +94,9 @@ def cuf_AllocateOp : cuf_Op<"allocate", [AttrSizedOperandSegments,
     is initialized before with the standard flang runtime calls.
   }];
 
-  let arguments = (ins Arg<fir_ReferenceType, "", [MemRead, MemWrite]>:$box,
+  // Value-scoped Allocate on the descriptor being allocated
+  let arguments = (ins Arg<fir_ReferenceType, "",
+                           [MemAlloc<DefaultResource>, MemRead, MemWrite]>:$box,
       Arg<Optional<AnyRefOrBoxType>, "", [MemWrite]>:$errmsg,
       Optional<fir_ReferenceType>:$stream,
       Arg<Optional<AnyRefOrBoxType>, "", [MemWrite]>:$pinned,
