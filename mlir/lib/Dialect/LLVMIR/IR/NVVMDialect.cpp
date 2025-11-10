@@ -1519,7 +1519,7 @@ LogicalResult NVVM::BarrierOp::verify() {
         "barrier id is missing, it should be set between 0 to 15");
 
   if (getBarrierId() && (getReductionOp() || getReductionPredicate()))
-    return emitOpError("reduction are only available for barrier id 0");
+    return emitOpError("reduction are only available when id is 0");
 
   if ((getReductionOp() && !getReductionPredicate()) ||
       (!getReductionOp() && getReductionPredicate()))
