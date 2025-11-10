@@ -176,10 +176,6 @@ void BPFAsmPrinter::emitInstruction(const MachineInstr *MI) {
         if (const GlobalValue *GV = Op.getGlobal())
           if (GV->getName() == BPF_TRAP)
             SawTrapCall = true;
-      } else if (Op.isSymbol()) {
-        if (const MCSymbol *Sym = Op.getMCSymbol())
-          if (Sym->getName() == BPF_TRAP)
-            SawTrapCall = true;
       }
     }
   }

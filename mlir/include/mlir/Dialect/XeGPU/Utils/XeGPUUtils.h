@@ -166,6 +166,15 @@ SmallVector<OpFoldResult> addElementwise(OpBuilder &builder, Location loc,
 SmallVector<OpFoldResult> addWithRightAligned(OpBuilder &builder, Location loc,
                                               ArrayRef<OpFoldResult> lhs,
                                               ArrayRef<OpFoldResult> rhs);
+
+/// Helper Function to find a proper instruction multiple for the user-supplied
+/// sg-level data shape (diven by `dim`). `candidates` are uArch allowed shapes.
+/// `candidateMultiples` are uArch multiples of such shapes (i.e. block count or
+/// array length).
+template <typename T>
+int getLargestDivisor(T dim, ArrayRef<T> candidates,
+                      ArrayRef<T> candidateMultiples = {});
+
 } // namespace xegpu
 
 } // namespace mlir
