@@ -182,6 +182,10 @@ foreach FPTy = ["F32", "F64", "F80", "F128", "PPCF128"] in {
   def MODF_#FPTy : RuntimeLibcall;
 }
 
+foreach VecTy = ["V4F32", "V2F64", "NXV4F32", "NXV2F64"] in {
+  def SINCOSPI_#VecTy : RuntimeLibcall;
+}
+
 def FEGETENV : RuntimeLibcall;
 def FESETENV : RuntimeLibcall;
 
@@ -1079,6 +1083,28 @@ def __security_check_cookie_arm64ec : RuntimeLibcallImpl<SECURITY_CHECK_COOKIE,
   "#__security_check_cookie_arm64ec">;
 
 //===----------------------------------------------------------------------===//
+// sleef calls
+//===----------------------------------------------------------------------===//
+
+defset list<RuntimeLibcallImpl> SleefLibcalls = {
+  def _ZGVnN4vl4l4_sincospif : RuntimeLibcallImpl<SINCOSPI_V4F32>;
+  def _ZGVnN2vl8l8_sincospi : RuntimeLibcallImpl<SINCOSPI_V2F64>;
+  def _ZGVsNxvl4l4_sincospif : RuntimeLibcallImpl<SINCOSPI_NXV4F32>;
+  def _ZGVsNxvl8l8_sincospi : RuntimeLibcallImpl<SINCOSPI_NXV2F64>;
+}
+
+//===----------------------------------------------------------------------===//
+// ARMPL calls
+//===----------------------------------------------------------------------===//
+
+defset list<RuntimeLibcallImpl> ARMPLLibcalls = {
+  def armpl_vsincospiq_f32 : RuntimeLibcallImpl<SINCOSPI_V4F32>;
+  def armpl_vsincospiq_f64 : RuntimeLibcallImpl<SINCOSPI_V2F64>;
+  def armpl_svsincospi_f32_x : RuntimeLibcallImpl<SINCOSPI_NXV4F32>;
+  def armpl_svsincospi_f64_x : RuntimeLibcallImpl<SINCOSPI_NXV2F64>;
+}
+
+//===----------------------------------------------------------------------===//
 // F128 libm Runtime Libcalls
 //===----------------------------------------------------------------------===//
 
@@ -1585,7 +1611,7 @@ def __aeabi_f2ulz : RuntimeLibcallImpl<FPTOUINT_F32_I64>; // CallingConv::ARM_AA
 // RTABI chapter 4.1.2, Table 7
 def __aeabi_d2f : RuntimeLibcallImpl<FPROUND_F64_F32>; // CallingConv::ARM_AAPCS
 def __aeabi_d2h : RuntimeLibcallImpl<FPROUND_F64_F16>; // CallingConv::ARM_AAPCS
-def  __aeabi_f2d : RuntimeLibcallImpl<FPEXT_F32_F64>; // CallingConv::ARM_AAPCS
+def __aeabi_f2d : RuntimeLibcallImpl<FPEXT_F32_F64>; // CallingConv::ARM_AAPCS
 
 // Integer to floating-point conversions.
 // RTABI chapter 4.1.2, Table 8
@@ -2333,7 +2359,7 @@ defset list<RuntimeLibcallImpl> PPCRuntimeLibcalls = {
 
 defset list<RuntimeLibcallImpl> PPC64AIXCallList = {
   def ___memcmp64 : RuntimeLibcallImpl<MEMCMP>;
-  def ___memmove64 : RuntimeLibcallImpl<MEMCPY>;
+  def ___memmove64 : RuntimeLibcallImpl<MEMMOVE>;
   def ___memset64 : RuntimeLibcallImpl<MEMSET>;
   def ___bzero64 : RuntimeLibcallImpl<BZERO>;
   def ___strlen64 : RuntimeLibcallImpl<STRLEN>;

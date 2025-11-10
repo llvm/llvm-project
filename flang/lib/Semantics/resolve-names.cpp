@@ -1605,6 +1605,12 @@ public:
     Post(static_cast<const parser::OmpDirectiveSpecification &>(x));
   }
 
+  void Post(const parser::OmpTypeName &);
+  bool Pre(const parser::OmpStylizedDeclaration &);
+  void Post(const parser::OmpStylizedDeclaration &);
+  bool Pre(const parser::OmpStylizedInstance &);
+  void Post(const parser::OmpStylizedInstance &);
+
   bool Pre(const parser::OpenMPDeclareMapperConstruct &x) {
     AddOmpSourceRange(x.source);
     return true;
@@ -1612,18 +1618,6 @@ public:
 
   bool Pre(const parser::OpenMPDeclareSimdConstruct &x) {
     AddOmpSourceRange(x.source);
-    return true;
-  }
-
-  bool Pre(const parser::OmpInitializerProc &x) {
-    auto &procDes = std::get<parser::ProcedureDesignator>(x.t);
-    auto &name = std::get<parser::Name>(procDes.u);
-    auto *symbol{FindSymbol(NonDerivedTypeScope(), name)};
-    if (!symbol) {
-      context().Say(name.source,
-          "Implicit subroutine declaration '%s' in DECLARE REDUCTION"_err_en_US,
-          name.source);
-    }
     return true;
   }
 
@@ -1706,12 +1700,12 @@ public:
   void Post(const parser::OpenMPDeclareTargetConstruct &) {
     SkipImplicitTyping(false);
   }
-  bool Pre(const parser::OpenMPDeclarativeAllocate &x) {
+  bool Pre(const parser::OmpAllocateDirective &x) {
     AddOmpSourceRange(x.source);
     SkipImplicitTyping(true);
     return true;
   }
-  void Post(const parser::OpenMPDeclarativeAllocate &) {
+  void Post(const parser::OmpAllocateDirective &) {
     SkipImplicitTyping(false);
     messageHandler().set_currStmtSource(std::nullopt);
   }
@@ -1772,14 +1766,6 @@ public:
     messageHandler().set_currStmtSource(std::nullopt);
   }
 
-  bool Pre(const parser::OmpTypeName &x) {
-    BeginDeclTypeSpec();
-    return true;
-  }
-  void Post(const parser::OmpTypeName &x) { //
-    EndDeclTypeSpec();
-  }
-
   bool Pre(const parser::OpenMPConstruct &x) {
     // Indicate that the current directive is not a declarative one.
     declaratives_.push_back(nullptr);
@@ -1833,6 +1819,30 @@ void OmpVisitor::Post(const parser::OmpBlockConstruct &x) {
   if (NeedsScope(x)) {
     PopScope();
   }
+}
+
+void OmpVisitor::Post(const parser::OmpTypeName &x) {
+  x.declTypeSpec = GetDeclTypeSpec();
+}
+
+bool OmpVisitor::Pre(const parser::OmpStylizedDeclaration &x) {
+  BeginDecl();
+  Walk(x.type.get());
+  Walk(x.var);
+  return true;
+}
+
+void OmpVisitor::Post(const parser::OmpStylizedDeclaration &x) { //
+  EndDecl();
+}
+
+bool OmpVisitor::Pre(const parser::OmpStylizedInstance &x) {
+  PushScope(Scope::Kind::OtherConstruct, nullptr);
+  return true;
+}
+
+void OmpVisitor::Post(const parser::OmpStylizedInstance &x) { //
+  PopScope();
 }
 
 bool OmpVisitor::Pre(const parser::OmpMapClause &x) {
@@ -1969,50 +1979,19 @@ void OmpVisitor::ProcessReductionSpecifier(
     }
   }
 
-  auto &typeList{std::get<parser::OmpTypeNameList>(spec.t)};
-
-  // Create a temporary variable declaration for the four variables
-  // used in the reduction specifier and initializer (omp_out, omp_in,
-  // omp_priv and omp_orig), with the type in the  typeList.
-  //
-  // In theory it would be possible to create only variables that are
-  // actually used, but that requires walking the entire parse-tree of the
-  // expressions, and finding the relevant variables [there may well be other
-  // variables involved too].
-  //
-  // This allows doing semantic analysis where the type is a derived type
-  // e.g omp_out%x = omp_out%x + omp_in%x.
-  //
-  // These need to be temporary (in their own scope). If they are created
-  // as variables in the outer scope, if there's more than one type in the
-  // typelist, duplicate symbols will be reported.
-  const parser::CharBlock ompVarNames[]{
-      {"omp_in", 6}, {"omp_out", 7}, {"omp_priv", 8}, {"omp_orig", 8}};
-
-  for (auto &t : typeList.v) {
-    PushScope(Scope::Kind::OtherConstruct, nullptr);
-    BeginDeclTypeSpec();
-    // We need to walk t.u because Walk(t) does it's own BeginDeclTypeSpec.
-    Walk(t.u);
-
-    // Only process types we can find. There will be an error later on when
-    // a type isn't found.
-    if (const DeclTypeSpec *typeSpec{GetDeclTypeSpec()}) {
-      reductionDetails->AddType(*typeSpec);
-
-      for (auto &nm : ompVarNames) {
-        ObjectEntityDetails details{};
-        details.set_type(*typeSpec);
-        MakeSymbol(nm, Attrs{}, std::move(details));
-      }
-    }
-    EndDeclTypeSpec();
-    Walk(std::get<std::optional<parser::OmpCombinerExpression>>(spec.t));
-    Walk(clauses);
-    PopScope();
-  }
-
   reductionDetails->AddDecl(declaratives_.back());
+
+  // Do not walk OmpTypeNameList. The types on the list will be visited
+  // during procesing of OmpCombinerExpression.
+  Walk(std::get<std::optional<parser::OmpCombinerExpression>>(spec.t));
+  Walk(clauses);
+
+  for (auto &type : std::get<parser::OmpTypeNameList>(spec.t).v) {
+    // The declTypeSpec can be null if there is some semantic error.
+    if (type.declTypeSpec) {
+      reductionDetails->AddType(*type.declTypeSpec);
+    }
+  }
 
   if (!symbol) {
     symbol = &MakeSymbol(mangledName, Attrs{}, std::move(*reductionDetails));
@@ -9456,13 +9435,18 @@ bool ResolveNamesVisitor::SetProcFlag(
     SayWithDecl(name, symbol,
         "Implicit declaration of function '%s' has a different result type than in previous declaration"_err_en_US);
     return false;
-  } else if (symbol.has<ProcEntityDetails>()) {
-    symbol.set(flag); // in case it hasn't been set yet
-    if (flag == Symbol::Flag::Function) {
-      ApplyImplicitRules(symbol);
-    }
-    if (symbol.attrs().test(Attr::INTRINSIC)) {
-      AcquireIntrinsicProcedureFlags(symbol);
+  } else if (const auto *proc{symbol.detailsIf<ProcEntityDetails>()}) {
+    if (IsPointer(symbol) && !proc->type() && !proc->procInterface()) {
+      // PROCEDURE(), POINTER -- errors will be emitted later about a lack
+      // of known characteristics if used as a function
+    } else {
+      symbol.set(flag); // in case it hasn't been set yet
+      if (flag == Symbol::Flag::Function) {
+        ApplyImplicitRules(symbol);
+      }
+      if (symbol.attrs().test(Attr::INTRINSIC)) {
+        AcquireIntrinsicProcedureFlags(symbol);
+      }
     }
   } else if (symbol.GetType() && flag == Symbol::Flag::Subroutine) {
     SayWithDecl(
@@ -10081,6 +10065,7 @@ void ResolveNamesVisitor::Post(const parser::CompilerDirective &x) {
       std::holds_alternative<parser::CompilerDirective::NoUnrollAndJam>(x.u) ||
       std::holds_alternative<parser::CompilerDirective::ForceInline>(x.u) ||
       std::holds_alternative<parser::CompilerDirective::Inline>(x.u) ||
+      std::holds_alternative<parser::CompilerDirective::Prefetch>(x.u) ||
       std::holds_alternative<parser::CompilerDirective::NoInline>(x.u)) {
     return;
   }
@@ -10129,6 +10114,9 @@ void ResolveNamesVisitor::Post(const parser::CompilerDirective &x) {
                 break;
               case 'c':
                 set.set(common::IgnoreTKR::Contiguous);
+                break;
+              case 'p':
+                set.set(common::IgnoreTKR::Pointer);
                 break;
               case 'a':
                 set = common::ignoreTKRAll;
