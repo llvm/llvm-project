@@ -8,7 +8,7 @@
 
 #include "X86.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Options/Options.h"
+#include "clang/Driver/Options.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Option/ArgList.h"
@@ -21,7 +21,7 @@ using namespace llvm::opt;
 
 std::string x86::getX86TargetCPU(const Driver &D, const ArgList &Args,
                                  const llvm::Triple &Triple) {
-  if (const Arg *A = Args.getLastArg(options::OPT_march_EQ)) {
+  if (const Arg *A = Args.getLastArg(clang::driver::options::OPT_march_EQ)) {
     StringRef CPU = A->getValue();
     if (CPU != "native")
       return std::string(CPU);
@@ -119,7 +119,7 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
                                std::vector<StringRef> &Features) {
   // Claim and report unsupported -mabi=. Note: we don't support "sysv_abi" or
   // "ms_abi" as default function attributes.
-  if (const Arg *A = Args.getLastArg(options::OPT_mabi_EQ)) {
+  if (const Arg *A = Args.getLastArg(clang::driver::options::OPT_mabi_EQ)) {
     StringRef DefaultAbi =
         (Triple.isOSWindows() || Triple.isUEFI()) ? "ms" : "sysv";
     if (A->getValue() != DefaultAbi)
@@ -128,7 +128,7 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
   }
 
   // If -march=native, autodetect the feature list.
-  if (const Arg *A = Args.getLastArg(options::OPT_march_EQ)) {
+  if (const Arg *A = Args.getLastArg(clang::driver::options::OPT_march_EQ)) {
     if (StringRef(A->getValue()) == "native") {
       for (auto &F : llvm::sys::getHostCPUFeatures())
         Features.push_back(
@@ -163,7 +163,7 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
   // flags). This is a bit hacky but keeps existing usages working. We should
   // consider deprecating this and instead warn if the user requests external
   // retpoline thunks and *doesn't* request some form of retpolines.
-  auto SpectreOpt = options::ID::OPT_INVALID;
+  auto SpectreOpt = clang::driver::options::ID::OPT_INVALID;
   if (Args.hasArgNoClaim(options::OPT_mretpoline, options::OPT_mno_retpoline,
                          options::OPT_mspeculative_load_hardening,
                          options::OPT_mno_speculative_load_hardening)) {
@@ -189,7 +189,7 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
     SpectreOpt = options::OPT_mretpoline_external_thunk;
   }
 
-  auto LVIOpt = options::ID::OPT_INVALID;
+  auto LVIOpt = clang::driver::options::ID::OPT_INVALID;
   if (Args.hasFlag(options::OPT_mlvi_hardening, options::OPT_mno_lvi_hardening,
                    false)) {
     Features.push_back("+lvi-load-hardening");
@@ -207,7 +207,7 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
           << D.getOpts().getOptionName(options::OPT_mlvi_hardening)
           << D.getOpts().getOptionName(options::OPT_m_seses);
 
-    if (SpectreOpt != options::ID::OPT_INVALID)
+    if (SpectreOpt != clang::driver::options::ID::OPT_INVALID)
       D.Diag(diag::err_drv_argument_not_allowed_with)
           << D.getOpts().getOptionName(SpectreOpt)
           << D.getOpts().getOptionName(options::OPT_m_seses);
@@ -219,8 +219,8 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
     }
   }
 
-  if (SpectreOpt != options::ID::OPT_INVALID &&
-      LVIOpt != options::ID::OPT_INVALID) {
+  if (SpectreOpt != clang::driver::options::ID::OPT_INVALID &&
+      LVIOpt != clang::driver::options::ID::OPT_INVALID) {
     D.Diag(diag::err_drv_argument_not_allowed_with)
         << D.getOpts().getOptionName(SpectreOpt)
         << D.getOpts().getOptionName(LVIOpt);
