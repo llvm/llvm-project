@@ -313,17 +313,6 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
   llvm::TimerGroup::clearAll();
 
   if (llvm::timeTraceProfilerEnabled()) {
-    // It is possible that the compiler instance doesn't own a file manager here
-    // if we're compiling a module unit. Since the file manager are owned by AST
-    // when we're compiling a module unit. So the file manager may be invalid
-    // here.
-    //
-    // It should be fine to create file manager here since the file system
-    // options are stored in the compiler invocation and we can recreate the VFS
-    // from the compiler invocation.
-    if (!Clang->hasFileManager())
-      Clang->createFileManager();
-
     if (auto profilerOutput = Clang->createOutputFile(
             Clang->getFrontendOpts().TimeTracePath, /*Binary=*/false,
             /*RemoveFileOnSignal=*/false,
