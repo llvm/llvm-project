@@ -130,7 +130,8 @@ bool TypeSystem::IsPromotableIntegerType(lldb::opaque_compiler_type_t type) {
 llvm::Expected<CompilerType>
 TypeSystem::DoIntegralPromotion(CompilerType from,
                                 ExecutionContextScope *exe_scope) {
-  return CompilerType();
+  return llvm::createStringError(
+      "Integral promotion is not implemented for this TypeSystem");
 }
 
 bool TypeSystem::IsTemplateType(lldb::opaque_compiler_type_t type) {
