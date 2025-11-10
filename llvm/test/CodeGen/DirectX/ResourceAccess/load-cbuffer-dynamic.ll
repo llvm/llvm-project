@@ -4,9 +4,9 @@
 
 ; cbuffer CB : register(b0) {
 ;   uint s[10]; // offset   0,  size  4 (+12) * 10
-;   uint t[10]; // offset 160,  size  4 (+12) * 10
+;   uint t[12]; // offset 160,  size  4 (+12) * 12
 ; }
-%__cblayout_CB = type <{ <{ [9 x <{ i32, target("dx.Padding", 12) }>], i32 }> }>
+%__cblayout_CB = type <{ <{ [9 x <{ i32, target("dx.Padding", 12) }>], i32 }>, target("dx.Padding", 12), <{ [11 x <{ i32, target("dx.Padding", 12) }>], i32 }> }>
 
 @CB.cb = local_unnamed_addr global target("dx.CBuffer", %__cblayout_CB) poison
 
