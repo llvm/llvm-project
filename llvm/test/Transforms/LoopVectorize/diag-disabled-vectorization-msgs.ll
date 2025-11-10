@@ -41,20 +41,20 @@
 ; FORCEDONLY-SAME: loop not vectorized: only vectorizing loops that explicitly request it
 ; FORCEDONLY: LV: Loop hints prevent vectorization
 
-define i64 @disabled_loop_vectorization(ptr %src) {
+define void @disabled_loop_vectorization(ptr %src) {
 entry:
   br label %loop
 
 loop:
   %iv = phi i64 [ 0, %entry ], [ %inc, %loop ]
   %arrayidx = getelementptr inbounds nuw double, ptr %src, i64 %iv
-  store double 1.234e+0, ptr %arrayidx, align 8
+  store double 0, ptr %arrayidx, align 8
   %inc = add nuw nsw i64 %iv, 1
   %exitcond.not = icmp eq i64 %inc, 15
   br i1 %exitcond.not, label %exit, label %loop, !llvm.loop !0
 
 exit:
-  ret i64 0
+  ret void
 }
 
 !0 = distinct !{!0, !1}
