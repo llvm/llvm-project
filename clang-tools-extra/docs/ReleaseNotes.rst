@@ -62,13 +62,6 @@ Potentially Breaking Changes
   From now on, users should specify explicitly that they want CSA checks to run
   in :program:`clang-tidy` via `clang-analyzer-*`.
 
-- Renamed :program:`clang-tidy`'s option name of check
-  :doc:`bugprone-easily-swappable-parameters
-  <clang-tidy/checks/bugprone/easily-swappable-parameters>` from
-  ``NamePrefixSuffixSilenceDissimilarityTreshold`` to
-  ``NamePrefixSuffixSilenceDissimilarityThreshold``,
-  correcting a spelling mistake.
-
 - Renamed a few :program:`clang-tidy` check options, as they
   were misspelled:
 
