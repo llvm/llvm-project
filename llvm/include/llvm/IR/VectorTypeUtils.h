@@ -31,7 +31,11 @@ inline Type *toVectorTy(Type *Scalar, unsigned VF) {
 /// Note:
 ///   - If \p EC is scalar, \p StructTy is returned unchanged
 ///   - Only unpacked literal struct types are supported
-LLVM_ABI Type *toVectorizedStructTy(StructType *StructTy, ElementCount EC);
+///   vector types.
+///   - If IID (Intrinsic::ID) is provided, only fields that are vector types
+///   are widened.
+LLVM_ABI Type *toVectorizedStructTy(StructType *StructTy, ElementCount EC,
+                                    unsigned IID = 0);
 
 /// A helper for converting structs of vector types to structs of scalar types.
 /// Note: Only unpacked literal struct types are supported.
@@ -45,17 +49,6 @@ LLVM_ABI bool isVectorizedStructTy(StructType *StructTy);
 /// are scalars that can be used as vector element types.
 LLVM_ABI bool canVectorizeStructTy(StructType *StructTy);
 
-/// A helper for converting to vectorized return types. For scalar types, this
-/// is equivalent to calling `toVectorTy`. For struct types, this returns a new
-/// struct where each element type has been widened to a vector type.
-/// Note:
-///   - If the incoming type is void, we return void
-///   - If \p EC is scalar, \p Ty is returned unchanged
-///   - Only unpacked literal struct types are supported
-///   - If IID (Intrinsic::ID) is provided, only fields that are vector types
-///   are widened.
-LLVM_ABI Type *toVectorizedRetTy(Type *Ty, ElementCount EC, unsigned IID = 0);
-
 /// A helper for converting to vectorized types. For scalar types, this is
 /// equivalent to calling `toVectorTy`. For struct types, this returns a new
 /// struct where each element type has been widened to a vector type.
@@ -63,9 +56,9 @@ LLVM_ABI Type *toVectorizedRetTy(Type *Ty, ElementCount EC, unsigned IID = 0);
 ///   - If the incoming type is void, we return void
 ///   - If \p EC is scalar, \p Ty is returned unchanged
 ///   - Only unpacked literal struct types are supported
-inline Type *toVectorizedTy(Type *Ty, ElementCount EC) {
+inline Type *toVectorizedTy(Type *Ty, ElementCount EC, unsigned IID = 0) {
   if (StructType *StructTy = dyn_cast<StructType>(Ty))
-    return toVectorizedStructTy(StructTy, EC);
+    return toVectorizedStructTy(StructTy, EC, IID);
   return toVectorTy(Ty, EC);
 }
 

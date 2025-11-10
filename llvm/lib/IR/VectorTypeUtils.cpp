@@ -14,7 +14,8 @@ using namespace llvm;
 
 /// A helper for converting structs of scalar types to structs of vector types.
 /// Note: Only unpacked literal struct types are supported.
-Type *llvm::toVectorizedStructTy(StructType *StructTy, ElementCount EC) {
+Type *llvm::toVectorizedStructTy(StructType *StructTy, ElementCount EC,
+                                 unsigned IID) {
   if (EC.isScalar())
     return StructTy;
   assert(isUnpackedStructLiteral(StructTy) &&
@@ -23,33 +24,13 @@ Type *llvm::toVectorizedStructTy(StructType *StructTy, ElementCount EC) {
          "expected all element types to be valid vector element types");
   return StructType::get(
       StructTy->getContext(),
-      map_to_vector(StructTy->elements(), [&](Type *ElTy) -> Type * {
+      map_to_vector(enumerate(StructTy->elements()), [&](auto It) -> Type * {
+        Type *ElTy = It.value();
+        if (IID != 0 &&
+            isVectorIntrinsicWithStructReturnScalarAtField(IID, It.index()))
+          return ElTy;
         return VectorType::get(ElTy, EC);
       }));
-}
-
-Type *llvm::toVectorizedRetTy(Type *Ty, ElementCount EC, unsigned IID) {
-  if (EC.isScalar())
-    return Ty;
-
-  if (StructType *StructTy = dyn_cast<StructType>(Ty)) {
-    assert(isUnpackedStructLiteral(StructTy) &&
-           "expected unpacked struct literal");
-    assert(all_of(StructTy->elements(), VectorType::isValidElementType) &&
-           "expected all element types to be valid vector element types");
-    return StructType::get(
-        StructTy->getContext(),
-        map_to_vector(enumerate(StructTy->elements()), [&](auto It) -> Type * {
-          Type *ElTy = It.value();
-          if (IID != 0 &&
-              isVectorIntrinsicWithStructReturnScalarAtField(IID, It.index()))
-            return ElTy;
-          return VectorType::get(ElTy, EC);
-        }));
-  }
-  if (IID != 0 && isVectorIntrinsicWithScalarOpAtArg(IID, -1, nullptr))
-    return Ty;
-  return toVectorTy(Ty, EC);
 }
 
 /// A helper for converting structs of vector types to structs of scalar types.
