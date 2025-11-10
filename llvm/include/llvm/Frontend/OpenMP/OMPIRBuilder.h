@@ -3669,7 +3669,7 @@ public:
   /// \param Name Name of the variable.
   LLVM_ABI GlobalVariable *
   getOrCreateInternalVariable(Type *Ty, const StringRef &Name,
-                              unsigned AddressSpace = 0);
+                              std::optional<unsigned> AddressSpace = {});
 };
 
 /// Class to represented the control flow structure of an OpenMP canonical loop.
