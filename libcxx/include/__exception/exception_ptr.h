@@ -31,17 +31,6 @@ _LIBCPP_PUSH_MACROS
 
 #ifndef _LIBCPP_ABI_MICROSOFT
 
-// Previously, parts of exception_ptr were defined out-of-line, which prevented
-// useful compiler optimizations. Changing the out-of-line definitions to inline
-// definitions is an ABI break, however. To prevent this, we have to make sure
-// the symbols remain available in the libc++ library, in addition to being
-// defined inline here in this header.
-#  ifdef _LIBCPP_BUILDING_LIBRARY
-#    define _LIBCPP_EXPORTED_FROM_LIB_INLINEABLE
-#  else
-#    define _LIBCPP_EXPORTED_FROM_LIB_INLINEABLE _LIBCPP_HIDE_FROM_ABI
-#  endif
-
 #  if _LIBCPP_AVAILABILITY_HAS_INIT_PRIMARY_EXCEPTION
 
 namespace __cxxabiv1 {
@@ -79,8 +68,8 @@ inline _LIBCPP_HIDE_FROM_ABI void swap(exception_ptr& __x, exception_ptr& __y) _
 class _LIBCPP_EXPORTED_FROM_ABI exception_ptr {
   void* __ptr_;
 
-  static void __increment_refcount([[__gnu__::__nonnull__]] _LIBCPP_NOESCAPE void* __ptr) _NOEXCEPT;
-  static void __decrement_refcount([[__gnu__::__nonnull__]] _LIBCPP_NOESCAPE void* __ptr) _NOEXCEPT;
+  static void __increment_refcount([[__gnu__::__nonnull__]] _LIBCPP_NOESCAPE void*) _NOEXCEPT;
+  static void __decrement_refcount([[__gnu__::__nonnull__]] _LIBCPP_NOESCAPE void*) _NOEXCEPT;
 
   static exception_ptr __from_native_exception_pointer(void*) _NOEXCEPT;
 
@@ -96,11 +85,35 @@ public:
   _LIBCPP_HIDE_FROM_ABI exception_ptr() _NOEXCEPT : __ptr_() {}
   _LIBCPP_HIDE_FROM_ABI exception_ptr(nullptr_t) _NOEXCEPT : __ptr_() {}
 
-  _LIBCPP_EXPORTED_FROM_LIB_INLINEABLE exception_ptr(const exception_ptr&) _NOEXCEPT;
+// These symbols are still exported from the library to prevent ABI breakage.
+#  ifdef _LIBCPP_BUILDING_LIBRARY
+  exception_ptr(const exception_ptr&) _NOEXCEPT;
+  exception_ptr& operator=(const exception_ptr&) _NOEXCEPT;
+  ~exception_ptr() _NOEXCEPT;
+#  else // _LIBCPP_BUILDING_LIBRARY
+  _LIBCPP_HIDE_FROM_ABI exception_ptr(const exception_ptr&) _NOEXCEPT : __ptr_(__other.__ptr_) {
+    if (__ptr_)
+      __increment_refcount(__ptr_);
+  }
+  _LIBCPP_HIDE_FROM_ABI exception_ptr& operator=(const exception_ptr&) _NOEXCEPT {
+    if (__ptr_ != __other.__ptr_) {
+      if (__other.__ptr_)
+        __increment_refcount(__other.__ptr_);
+      if (__ptr_)
+        __decrement_refcount(__ptr_);
+      __ptr_ = __other.__ptr_;
+    }
+    return *this;
+  }
+  _LIBCPP_HIDE_FROM_ABI ~exception_ptr() _NOEXCEPT {
+    if (__ptr_)
+      __decrement_refcount(__ptr_);
+  }
+#  endif // _LIBCPP_BUILDING_LIBRARY
+
   _LIBCPP_HIDE_FROM_ABI exception_ptr(exception_ptr&& __other) _NOEXCEPT : __ptr_(__other.__ptr_) {
     __other.__ptr_ = nullptr;
   }
-  _LIBCPP_EXPORTED_FROM_LIB_INLINEABLE exception_ptr& operator=(const exception_ptr&) _NOEXCEPT;
   _LIBCPP_HIDE_FROM_ABI exception_ptr& operator=(exception_ptr&& __other) _NOEXCEPT {
     if (__ptr_)
       __decrement_refcount(__ptr_);
@@ -108,7 +121,6 @@ public:
     __other.__ptr_ = nullptr;
     return *this;
   }
-  _LIBCPP_EXPORTED_FROM_LIB_INLINEABLE ~exception_ptr() _NOEXCEPT;
 
   _LIBCPP_HIDE_FROM_ABI explicit operator bool() const _NOEXCEPT { return __ptr_ != nullptr; }
 
@@ -125,32 +137,6 @@ public:
   friend _LIBCPP_EXPORTED_FROM_ABI exception_ptr current_exception() _NOEXCEPT;
   friend _LIBCPP_EXPORTED_FROM_ABI void rethrow_exception(exception_ptr);
 };
-
-#  ifndef _LIBCPP_BUILDING_LIBRARY
-
-_LIBCPP_EXPORTED_FROM_LIB_INLINEABLE inline exception_ptr::exception_ptr(const exception_ptr& __other) _NOEXCEPT
-    : __ptr_(__other.__ptr_) {
-  if (__ptr_)
-    __increment_refcount(__ptr_);
-}
-
-_LIBCPP_EXPORTED_FROM_LIB_INLINEABLE inline exception_ptr& exception_ptr::operator=(const exception_ptr& __other) _NOEXCEPT {
-  if (__ptr_ != __other.__ptr_) {
-    if (__other.__ptr_)
-      __increment_refcount(__other.__ptr_);
-    if (__ptr_)
-      __decrement_refcount(__ptr_);
-    __ptr_ = __other.__ptr_;
-  }
-  return *this;
-}
-
-_LIBCPP_EXPORTED_FROM_LIB_INLINEABLE inline exception_ptr::~exception_ptr() _NOEXCEPT {
-  if (__ptr_)
-    __decrement_refcount(__ptr_);
-}
-
-#  endif // _LIBCPP_BUILDING_LIBRARY
 
 inline _LIBCPP_HIDE_FROM_ABI void swap(exception_ptr& __x, exception_ptr& __y) _NOEXCEPT {
   std::swap(__x.__ptr_, __y.__ptr_);
