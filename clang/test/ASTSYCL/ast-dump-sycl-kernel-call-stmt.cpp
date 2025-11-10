@@ -401,7 +401,7 @@ void foo() {
 // CHECK-NEXT: | | | |     |-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'a' 'int'
 // CHECK-NEXT: | | | |     `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'b' 'int'
 // CHECK-NEXT: | | | `-SYCLKernelEntryPointAttr {{.*}} KNT
-// CHECK-NEXT: | | `-CXXMethodDecl {{.*}} used skep9 {{.*}} implicit_instantiation implicit-inline
+// CHECK-NEXT: | | `-CXXMethodDecl {{.*}} used skep9 {{.*}} implicit_instantiation implicit-inline instantiated_from 0x{{.*}}
 // CHECK-NEXT: | |   |-TemplateArgument type 'KN<9>'
 // CHECK-NEXT: | |   | `-RecordType {{.*}} 'KN<9>' canonical
 // CHECK-NEXT: | |   |   `-ClassTemplateSpecialization {{.*}}'KN'
