@@ -4355,7 +4355,6 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
 
     // Check if all values feeding InterleaveR are matching wide recipes, which
     // operands that can be narrowed.
-    //
     if (!canNarrowOps(InterleaveR->getStoredValues()))
       return;
     StoreGroups.push_back(InterleaveR);
