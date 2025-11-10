@@ -4862,7 +4862,6 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
     return lowerMemcpyInline(MI);
   case G_ZEXT:
   case G_SEXT:
-  case G_FPEXT:
   case G_ANYEXT:
     return lowerEXT(MI);
   case G_TRUNC:
