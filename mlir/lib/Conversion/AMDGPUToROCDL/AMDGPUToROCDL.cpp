@@ -1701,14 +1701,24 @@ LogicalResult ScaledExtPacked816OpLowering::matchAndRewrite(
   auto targetType = cast<VectorType>(op.getResult().getType());
   auto tgtElemType = cast<FloatType>(targetType.getElementType());
   Location loc = op.getLoc();
+  // %scale: vector<4xf8E8M0FNU>
+  // ===========================
+  // %scale: i32
+  IntegerType i32 = rewriter.getI32Type();
+  Value castedScale =
+      LLVM::BitcastOp::create(rewriter, loc, i32, adaptor.getScale());
+
   // Ok, so we need to construct ops depending on the sourceType and targetType.
   // smallT = [Fp4, Fp8, Bf8]
   // largeT = [F16, Bf16, F32]
   // CvtPkScalePk{8}${largeT}${smallT}
   if (isa<Float4E2M1FNType>(srcElemType) and isa<Float16Type>(tgtElemType)) {
-    ROCDL::CvtPkScalePk8F16Fp4Op::create(
-        rewriter, loc, op.getResult().getType(), adaptor.getSource(),
-        adaptor.getScale(), scaleSel);
+    Value castedSource =
+        LLVM::BitcastOp::create(rewriter, loc, i32, adaptor.getSource());
+    auto newOp = ROCDL::CvtPkScalePk8F16Fp4Op::create(
+        rewriter, loc, op.getResult().getType(), castedSource, castedScale,
+        scaleSel);
+    rewriter.replaceOp(op, newOp);
     return success();
   }
   /*
