@@ -2028,6 +2028,7 @@ static std::optional<TypeTrait> StdNameToTypeTrait(StringRef Name) {
       .Case("is_constructible", TypeTrait::TT_IsConstructible)
       .Case("is_final", TypeTrait::UTT_IsFinal)
       .Case("is_abstract", TypeTrait::UTT_IsAbstract)
+      .Case("is_destructible", TypeTrait::UTT_IsDestructible)
       .Default(std::nullopt);
 }
 
@@ -2397,6 +2398,66 @@ static void DiagnoseNonConstructibleReason(
 
   Init.Diagnose(SemaRef, To, InitKind, ArgExprs);
   SemaRef.Diag(D->getLocation(), diag::note_defined_here) << D;
+}
+
+static void DiagnoseNonDestructibleReason(Sema &SemaRef, SourceLocation Loc,
+                                          QualType T) {
+
+  QualType CoreT = T.getCanonicalType();
+  if (const ArrayType *AT = SemaRef.Context.getAsArrayType(CoreT))
+    CoreT = AT->getElementType();
+
+  SemaRef.Diag(Loc, diag::note_unsatisfied_trait)
+      << CoreT << diag::TraitName::Destructible;
+
+  if (CoreT->isFunctionType()) {
+    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::FunctionType;
+    return;
+  }
+
+  if (CoreT->isVoidType()) {
+    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::CVVoidType;
+    return;
+  }
+
+  if (CoreT->isIncompleteType()) {
+    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::IncompleteType;
+    return;
+  }
+
+  const CXXRecordDecl *RD = CoreT->getAsCXXRecordDecl();
+  if (!RD || RD->isInvalidDecl())
+    return;
+
+  const CXXRecordDecl *Def = RD->getDefinition();
+  if (!Def) {
+    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::IncompleteType;
+    return;
+  }
+
+  CXXDestructorDecl *Dtor = Def->getDestructor();
+  if (!Dtor)
+    return;
+
+  if (Dtor->isDeleted()) {
+    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::DeletedDtr << 0
+        << Dtor->getSourceRange();
+    return;
+  }
+
+  AccessSpecifier AS = Dtor->getAccess();
+  if (AS == AS_private || AS == AS_protected) {
+    unsigned Select = (AS == AS_private) ? 0 : 1;
+    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::InaccessibleDtr << Select
+        << Dtor->getSourceRange();
+    return;
+  }
 }
 
 static void DiagnoseNonTriviallyCopyableReason(Sema &SemaRef,
@@ -2888,6 +2949,9 @@ void Sema::DiagnoseTypeTraitDetails(const Expr *E) {
     break;
   case TT_IsConstructible:
     DiagnoseNonConstructibleReason(*this, E->getBeginLoc(), Args);
+    break;
+  case UTT_IsDestructible:
+    DiagnoseNonDestructibleReason(*this, E->getBeginLoc(), Args[0]);
     break;
   case UTT_IsAggregate:
     DiagnoseNonAggregateReason(*this, E->getBeginLoc(), Args[0]);

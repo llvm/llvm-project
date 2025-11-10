@@ -1052,3 +1052,52 @@ static_assert(__is_abstract(U));
 // expected-note@-1 {{because it is not a struct or class type}}
 
 }
+namespace destructible {
+
+struct Incomplete; // expected-note {{forward declaration of 'destructible::Incomplete'}}
+static_assert(__is_destructible(Incomplete));
+// expected-error@-1 {{incomplete type 'Incomplete' used in type trait expression}}
+
+static_assert(__is_destructible(void));
+// expected-error@-1 {{static assertion failed due to requirement '__is_destructible(void)'}} \
+// expected-note@-1 {{'void' is not destructible}} \
+// expected-note@-1 {{because it is a cv void type}}
+
+using F = void();
+static_assert(__is_destructible(F));
+// expected-error@-1 {{static assertion failed due to requirement '__is_destructible(void ())'}} \
+// expected-note@-1 {{'void ()' is not destructible}} \
+// expected-note@-1 {{because it is a function type}}
+
+using Ref = int&;
+static_assert(__is_destructible(Ref)); // no diagnostics (true)
+
+struct DeletedDtor { // #d-DeletedDtor
+  ~DeletedDtor() = delete;
+};
+static_assert(__is_destructible(DeletedDtor));
+// expected-error@-1 {{static assertion failed due to requirement '__is_destructible(destructible::DeletedDtor)'}} \
+// expected-note@-1 {{'destructible::DeletedDtor' is not destructible}} \
+// expected-note@-1 {{because it has a deleted destructor}}
+
+struct PrivateDtor { // #d-PrivateDtor
+private:
+  ~PrivateDtor(); // #d-PrivateDtor-dtor
+};
+static_assert(__is_destructible(PrivateDtor));
+// expected-error@-1 {{static assertion failed due to requirement '__is_destructible(destructible::PrivateDtor)'}} \
+// expected-note@-1 {{'destructible::PrivateDtor' is not destructible}} \
+// expected-note@-1 {{because it has a private destructor}}
+
+struct BaseInaccessible { // #d-BaseInacc
+private:
+  ~BaseInaccessible(); // #d-BaseInacc-dtor
+};
+
+struct DerivedFromInaccessible : BaseInaccessible {}; // #d-DerivedInacc
+static_assert(__is_destructible(DerivedFromInaccessible));
+// expected-error@-1 {{static assertion failed due to requirement '__is_destructible(destructible::DerivedFromInaccessible)'}} \
+// expected-note@-1 {{'destructible::DerivedFromInaccessible' is not destructible}} \
+// expected-note@-1 {{because it has a deleted destructor}}
+
+}
