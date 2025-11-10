@@ -2718,6 +2718,15 @@ def int_amdgcn_call_whole_wave:
              llvm_vararg_ty], // The arguments to the callee.
             [IntrConvergent]>;
 
+// <result>
+//   llvm.amdgcn.subgroup.shuffle <value> <id>
+// value and result can be any scalar of floating-point, integer,
+// or Boolean types, but must be the same type
+def int_amdgcn_subgroup_shuffle :
+  Intrinsic<[llvm_any_ty],                                                            // return types
+            [LLVMMatchType<0>, llvm_i32_ty],                                          // arg types
+            [IntrConvergent, IntrNoMem, IntrNoFree, IntrWillReturn, IntrNoCallback]>; // flags
+
 //===----------------------------------------------------------------------===//
 // CI+ Intrinsics
 //===----------------------------------------------------------------------===//
