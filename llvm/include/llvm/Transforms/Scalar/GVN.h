@@ -407,8 +407,13 @@ private:
   void addDeadBlock(BasicBlock *BB);
   void assignValNumForDeadCode();
   void assignBlockRPONumber(Function &F);
-  
-  bool optimizeMinMaxFindingSelectPattern(SelectInst *Select);
+
+  bool recognizeMinFindingSelectPattern(SelectInst *Select);
+  bool transformMinFindingSelectPattern(Loop *L, BasicBlock *Preheader,
+                                        BasicBlock *BB, Value *LHS, Value *RHS,
+                                        CmpInst *Comparison, SelectInst *Select,
+                                        Value *BasePtr, Value *IndexVal,
+                                        Value *OffsetVal);
 };
 
 /// Create a legacy GVN pass.
