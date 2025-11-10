@@ -40,7 +40,7 @@ struct AvoidUnconditionalPreprocessorIfPPCallbacks : public PPCallbacks {
 
   bool isImmutable(SourceManager &SM, const LangOptions &LangOpts,
                    SourceRange ConditionRange) {
-    SourceLocation Loc = ConditionRange.getBegin();
+    const SourceLocation Loc = ConditionRange.getBegin();
     if (Loc.isMacroID())
       return false;
 

@@ -230,10 +230,8 @@ StringRef ArgList::getSubCommand(
     HandleMultipleSubcommands(SubCommands);
     return {};
   }
-  if (!OtherPositionals.empty()) {
+  if (!OtherPositionals.empty())
     HandleOtherPositionals(OtherPositionals);
-    return {};
-  }
 
   if (SubCommands.size() == 1)
     return SubCommands.front();
