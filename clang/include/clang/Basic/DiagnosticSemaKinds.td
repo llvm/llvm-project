@@ -1776,7 +1776,8 @@ def note_unsatisfied_trait
            "%StandardLayout{standard-layout}|"
            "%Aggregate{aggregate}|"
            "%Final{final}|"
-           "%Abstract{abstract}"
+           "%Abstract{abstract}|"
+           "%Destructible{destructible}"
            "}1">;
 
 def note_unsatisfied_trait_reason
@@ -1808,6 +1809,7 @@ def note_unsatisfied_trait_reason
            "%NonStandardLayoutMember{has a non-standard-layout member %1 of type %2}|"
            "%IndirectBaseWithFields{has an indirect base %1 with data members}|"
            "%DeletedDtr{has a %select{deleted|user-provided}1 destructor}|"
+           "%InaccessibleDtr{has a %select{private|protected}1 destructor}|"
            "%UserProvidedCtr{has a user provided %select{copy|move}1 "
            "constructor}|"
            "%UserDeclaredCtr{has a user-declared constructor}|"
@@ -1823,6 +1825,7 @@ def note_unsatisfied_trait_reason
            "%FunctionType{is a function type}|"
            "%CVVoidType{is a cv void type}|"
            "%IncompleteArrayType{is an incomplete array type}|"
+           "%IncompleteType{is an incomplete type}|"
            "%PrivateProtectedDirectDataMember{has a %select{private|protected}1 direct data member}|"
            "%PrivateProtectedDirectBase{has a %select{private|protected}1 direct base}|"
            "%NotClassOrUnion{is not a class or union type}|"
