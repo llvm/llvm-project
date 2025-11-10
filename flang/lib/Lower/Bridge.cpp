@@ -3290,9 +3290,8 @@ private:
                 // TODO: Don't use default value, instead get the following
                 //       info from the directive
                 uint32_t isWrite{0}, localityHint{3}, isData{1};
-                builder->create<fir::PrefetchOp>(genLocation(dir.source),
-                                                 memRef, isWrite, localityHint,
-                                                 isData);
+                fir::PrefetchOp::create(*builder, genLocation(dir.source),
+                                        memRef, isWrite, localityHint, isData);
               }
             },
             [&](const auto &) {}},
