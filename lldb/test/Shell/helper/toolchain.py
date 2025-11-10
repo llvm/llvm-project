@@ -250,6 +250,15 @@ def use_support_substitutions(config):
             "-L{}".format(config.libcxx_libs_dir),
             "-lc++",
         ]
+    # By default, macOS doesn't allow injecting the ASAN runtime into system processes.
+    if platform.system() in ["Darwin"] and config.llvm_use_sanitizer:
+        system_clang = (
+            subprocess.check_output(["xcrun", "-find", "clang"]).strip().decode("utf-8")
+        )
+        system_liblto = os.path.join(
+            os.path.dirname(os.path.dirname(system_clang)), "lib", "libLTO.dylib"
+        )
+        host_flags += ["-Wl,-lto_library", "-Wl," + system_liblto]
 
     host_flags = " ".join(host_flags)
     config.substitutions.append(("%clang_host", "%clang " + host_flags))

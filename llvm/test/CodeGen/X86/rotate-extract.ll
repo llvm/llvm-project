@@ -203,10 +203,10 @@ define i16 @no_extract_mul(i16 %i) nounwind {
 ; X64-LABEL: no_extract_mul:
 ; X64:       # %bb.0:
 ; X64-NEXT:    # kill: def $edi killed $edi def $rdi
-; X64-NEXT:    leal (%rdi,%rdi,8), %eax
-; X64-NEXT:    # kill: def $edi killed $edi killed $rdi def $rdi
+; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    shll $8, %edi
 ; X64-NEXT:    leal (%rdi,%rdi,8), %ecx
+; X64-NEXT:    leal (%rax,%rax,8), %eax
 ; X64-NEXT:    movzwl %ax, %eax
 ; X64-NEXT:    shrl $9, %eax
 ; X64-NEXT:    orl %ecx, %eax

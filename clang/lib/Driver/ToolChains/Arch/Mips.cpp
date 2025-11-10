@@ -9,7 +9,7 @@
 #include "Mips.h"
 #include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/Options.h"
+#include "clang/Options/Options.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Option/ArgList.h"
 
@@ -49,8 +49,7 @@ void mips::getMipsCPUAndABI(const ArgList &Args, const llvm::Triple &Triple,
     DefMips64CPU = "mips3";
   }
 
-  if (Arg *A = Args.getLastArg(clang::driver::options::OPT_march_EQ,
-                               options::OPT_mcpu_EQ))
+  if (Arg *A = Args.getLastArg(options::OPT_march_EQ, options::OPT_mcpu_EQ))
     CPUName = A->getValue();
 
   if (Arg *A = Args.getLastArg(options::OPT_mabi_EQ)) {

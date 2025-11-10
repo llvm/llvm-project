@@ -9590,6 +9590,27 @@ AArch64InstrInfo::getOutliningCandidateInfo(
 
   unsigned NumBytesToCreateFrame = 0;
 
+  // Avoid splitting ADRP ADD/LDR pair into outlined functions.
+  // These instructions are fused together by the scheduler.
+  // Any candidate where ADRP is the last instruction should be rejected
+  // as that will lead to splitting ADRP pair.
+  MachineInstr &LastMI = RepeatedSequenceLocs[0].back();
+  MachineInstr &FirstMI = RepeatedSequenceLocs[0].front();
+  if (LastMI.getOpcode() == AArch64::ADRP &&
+      (LastMI.getOperand(1).getTargetFlags() & AArch64II::MO_PAGE) != 0 &&
+      (LastMI.getOperand(1).getTargetFlags() & AArch64II::MO_GOT) != 0) {
+    return std::nullopt;
+  }
+
+  // Similarly any candidate where the first instruction is ADD/LDR with a
+  // page offset should be rejected to avoid ADRP splitting.
+  if ((FirstMI.getOpcode() == AArch64::ADDXri ||
+       FirstMI.getOpcode() == AArch64::LDRXui) &&
+      (FirstMI.getOperand(2).getTargetFlags() & AArch64II::MO_PAGEOFF) != 0 &&
+      (FirstMI.getOperand(2).getTargetFlags() & AArch64II::MO_GOT) != 0) {
+    return std::nullopt;
+  }
+
   // We only allow outlining for functions having exactly matching return
   // address signing attributes, i.e., all share the same value for the
   // attribute "sign-return-address" and all share the same type of key they

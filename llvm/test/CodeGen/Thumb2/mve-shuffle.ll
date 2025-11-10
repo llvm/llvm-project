@@ -439,17 +439,18 @@ define arm_aapcs_vfpcc <8 x i16> @shuffle4step_i16(<32 x i16> %src) {
 ; CHECK-NEXT:    vmovx.f16 s1, s14
 ; CHECK-NEXT:    vmovx.f16 s20, s0
 ; CHECK-NEXT:    vins.f16 s23, s1
-; CHECK-NEXT:    vmovx.f16 s1, s2
-; CHECK-NEXT:    vins.f16 s20, s1
+; CHECK-NEXT:    vmov.f32 s1, s2
+; CHECK-NEXT:    vmovx.f16 s2, s2
 ; CHECK-NEXT:    vmovx.f16 s21, s4
-; CHECK-NEXT:    vmovx.f16 s1, s6
+; CHECK-NEXT:    vins.f16 s20, s2
+; CHECK-NEXT:    vmovx.f16 s2, s6
 ; CHECK-NEXT:    vins.f16 s12, s14
 ; CHECK-NEXT:    vins.f16 s8, s10
 ; CHECK-NEXT:    vins.f16 s4, s6
-; CHECK-NEXT:    vins.f16 s21, s1
-; CHECK-NEXT:    vins.f16 s0, s2
-; CHECK-NEXT:    vmov.f32 s1, s4
+; CHECK-NEXT:    vins.f16 s21, s2
+; CHECK-NEXT:    vins.f16 s0, s1
 ; CHECK-NEXT:    vmov.f32 s2, s8
+; CHECK-NEXT:    vmov.f32 s1, s4
 ; CHECK-NEXT:    vmov.f32 s3, s12
 ; CHECK-NEXT:    vadd.i16 q0, q0, q5
 ; CHECK-NEXT:    vadd.i16 q0, q0, q4

@@ -9,7 +9,7 @@
 #include "AArch64.h"
 #include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/Options.h"
+#include "clang/Options/Options.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/TargetParser/AArch64TargetParser.h"
 #include "llvm/TargetParser/Host.h"
@@ -222,7 +222,7 @@ void aarch64::getAArch64TargetFeatures(const Driver &D,
     // Default to 'A' profile if the architecture is not specified.
     success = getAArch64ArchFeaturesFromMarch(D, "armv8-a", Args, Extensions);
 
-  if (success && (A = Args.getLastArg(clang::driver::options::OPT_mtune_EQ)))
+  if (success && (A = Args.getLastArg(options::OPT_mtune_EQ)))
     success =
         getAArch64MicroArchFeaturesFromMtune(D, A->getValue(), Args, Features);
   else if (success && (A = Args.getLastArg(options::OPT_mcpu_EQ)))

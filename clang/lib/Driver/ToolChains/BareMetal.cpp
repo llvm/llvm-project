@@ -18,7 +18,7 @@
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/MultilibBuilder.h"
-#include "clang/Driver/Options.h"
+#include "clang/Options/Options.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/Path.h"
@@ -135,7 +135,7 @@ static std::string computeClangRuntimesSysRoot(const Driver &D,
 bool BareMetal::initGCCInstallation(const llvm::Triple &Triple,
                                     const llvm::opt::ArgList &Args) {
   if (Args.getLastArg(options::OPT_gcc_toolchain) ||
-      Args.getLastArg(clang::driver::options::OPT_gcc_install_dir_EQ)) {
+      Args.getLastArg(clang::options::OPT_gcc_install_dir_EQ)) {
     GCCInstallation.init(Triple, Args);
     return GCCInstallation.isValid();
   }

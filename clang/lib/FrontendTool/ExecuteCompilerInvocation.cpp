@@ -13,7 +13,6 @@
 
 #include "clang/CodeGen/CodeGenAction.h"
 #include "clang/Config/config.h"
-#include "clang/Driver/Options.h"
 #include "clang/ExtractAPI/FrontendActions.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
@@ -22,6 +21,7 @@
 #include "clang/Frontend/FrontendPluginRegistry.h"
 #include "clang/Frontend/Utils.h"
 #include "clang/FrontendTool/Utils.h"
+#include "clang/Options/Options.h"
 #include "clang/Rewrite/Frontend/FrontendActions.h"
 #include "clang/StaticAnalyzer/Frontend/AnalyzerHelpFlags.h"
 #include "clang/StaticAnalyzer/Frontend/FrontendActions.h"
@@ -215,11 +215,11 @@ bool ExecuteCompilerInvocation(CompilerInstance *Clang) {
 
   // Honor -help.
   if (Clang->getFrontendOpts().ShowHelp) {
-    driver::getDriverOptTable().printHelp(
+    getDriverOptTable().printHelp(
         llvm::outs(), "clang -cc1 [options] file...",
         "LLVM 'Clang' Compiler: http://clang.llvm.org",
         /*ShowHidden=*/false, /*ShowAllAliases=*/false,
-        llvm::opt::Visibility(driver::options::CC1Option));
+        llvm::opt::Visibility(options::CC1Option));
     return true;
   }
 

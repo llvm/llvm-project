@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_DRIVER_OPTIONUTILS_H
-#define LLVM_CLANG_DRIVER_OPTIONUTILS_H
+#ifndef LLVM_CLANG_OPTIONS_OPTIONUTILS_H
+#define LLVM_CLANG_OPTIONS_OPTIONUTILS_H
 
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/LLVM.h"
@@ -55,4 +55,4 @@ inline uint64_t getLastArgUInt64Value(const llvm::opt::ArgList &Args,
 
 } // namespace clang
 
-#endif // LLVM_CLANG_DRIVER_OPTIONUTILS_H
+#endif // LLVM_CLANG_OPTIONS_OPTIONUTILS_H
