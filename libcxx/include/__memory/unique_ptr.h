@@ -209,14 +209,10 @@ public:
   template <bool _Dummy = true, class = _EnableIfDeleterConstructible<_BadRValRefType<_Dummy> > >
   _LIBCPP_HIDE_FROM_ABI unique_ptr(pointer __p, _BadRValRefType<_Dummy> __d) = delete;
 
-#if _LIBCPP_STD_VER >= 20
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unique_ptr(unique_ptr&& __u) noexcept
-    requires is_move_constructible_v<_Dp>
-#else
-  _LIBCPP_HIDE_FROM_ABI unique_ptr(_If<is_move_constructible<_Dp>::value, unique_ptr&&, __nat> __u) _NOEXCEPT
-#endif
-      : __ptr_(__u.release()), __deleter_(std::forward<deleter_type>(__u.get_deleter())) {
-  }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23
+  unique_ptr(_If<is_move_constructible<_Dp>::value, unique_ptr&&, __nat> __u) _NOEXCEPT
+      : __ptr_(__u.release()),
+        __deleter_(std::forward<deleter_type>(__u.get_deleter())) {}
 
   template <class _Up,
             class _Ep,
@@ -232,13 +228,8 @@ public:
   _LIBCPP_HIDE_FROM_ABI unique_ptr(auto_ptr<_Up>&& __p) _NOEXCEPT : __ptr_(__p.release()), __deleter_() {}
 #endif
 
-#if _LIBCPP_STD_VER >= 20
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unique_ptr& operator=(unique_ptr&& __u) noexcept
-    requires is_move_assignable_v<_Dp>
-#else
-  _LIBCPP_HIDE_FROM_ABI unique_ptr& operator=(_If<is_move_assignable<_Dp>::value, unique_ptr&&, __nat> __u) _NOEXCEPT
-#endif
-  {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unique_ptr&
+  operator=(_If<is_move_assignable<_Dp>::value, unique_ptr&&, __nat> __u) _NOEXCEPT {
     reset(__u.release());
     __deleter_ = std::forward<deleter_type>(__u.get_deleter());
     return *this;
@@ -542,24 +533,14 @@ public:
             class       = _EnableIfPointerConvertible<_Pp> >
   _LIBCPP_HIDE_FROM_ABI unique_ptr(_Pp __ptr, _BadRValRefType<_Dummy> __deleter) = delete;
 
-#if _LIBCPP_STD_VER >= 20
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unique_ptr(unique_ptr&& __u) noexcept
-    requires is_move_constructible_v<_Dp>
-#else
-  _LIBCPP_HIDE_FROM_ABI unique_ptr(_If<is_move_constructible<_Dp>::value, unique_ptr&&, __nat> __u) _NOEXCEPT
-#endif
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23
+  unique_ptr(_If<is_move_constructible<_Dp>::value, unique_ptr&&, __nat> __u) _NOEXCEPT
       : __ptr_(__u.release()),
         __deleter_(std::forward<deleter_type>(__u.get_deleter())),
-        __checker_(std::move(__u.__checker_)) {
-  }
+        __checker_(std::move(__u.__checker_)) {}
 
-#if _LIBCPP_STD_VER >= 20
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unique_ptr& operator=(unique_ptr&& __u) noexcept
-    requires is_move_assignable_v<_Dp>
-#else
-  _LIBCPP_HIDE_FROM_ABI unique_ptr& operator=(_If<is_move_assignable<_Dp>::value, unique_ptr&&, __nat> __u) _NOEXCEPT
-#endif
-  {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unique_ptr&
+  operator=(_If<is_move_assignable<_Dp>::value, unique_ptr&&, __nat> __u) _NOEXCEPT {
     reset(__u.release());
     __deleter_ = std::forward<deleter_type>(__u.get_deleter());
     __checker_ = std::move(__u.__checker_);
