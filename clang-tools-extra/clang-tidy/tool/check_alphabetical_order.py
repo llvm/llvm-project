@@ -235,7 +235,7 @@ def find_duplicate_entries(
         if len(occs) > 1:
             result.append((key, occs))
 
-    result.sort(key=lambda kv: kv[0])
+    result.sort(key=itemgetter(0))
     return result
 
 
