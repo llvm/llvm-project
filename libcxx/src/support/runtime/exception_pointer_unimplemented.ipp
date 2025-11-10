@@ -11,33 +11,29 @@
 
 namespace std {
 
+#warning exception_ptr not yet implemented
+
 void exception_ptr::__increment_refcount([[__gnu__::__nonnull__]] _LIBCPP_NOESCAPE void* __ptr) noexcept {
-  #warning exception_ptr not yet implemented
   __libcpp_verbose_abort("exception_ptr not yet implemented\n");
 }
 
 void exception_ptr::__decrement_refcount([[__gnu__::__nonnull__]] _LIBCPP_NOESCAPE void* __ptr) noexcept {
-#warning exception_ptr not yet implemented
   __libcpp_verbose_abort("exception_ptr not yet implemented\n");
 }
 
 exception_ptr exception_ptr::__from_native_exception_pointer(void *__e) noexcept {
-#warning exception_ptr not yet implemented
   __libcpp_verbose_abort("exception_ptr not yet implemented\n");
 }
 
 exception_ptr::~exception_ptr() noexcept {
-#warning exception_ptr not yet implemented
   __libcpp_verbose_abort("exception_ptr not yet implemented\n");
 }
 
 exception_ptr::exception_ptr(const exception_ptr& other) noexcept : __ptr_(other.__ptr_) {
-#warning exception_ptr not yet implemented
   __libcpp_verbose_abort("exception_ptr not yet implemented\n");
 }
 
 exception_ptr& exception_ptr::operator=(const exception_ptr& other) noexcept {
-#warning exception_ptr not yet implemented
   __libcpp_verbose_abort("exception_ptr not yet implemented\n");
 }
 
@@ -50,7 +46,6 @@ nested_exception::~nested_exception() noexcept {}
 #endif
 
 [[noreturn]] void nested_exception::rethrow_nested() const {
-#warning exception_ptr not yet implemented
   __libcpp_verbose_abort("exception_ptr not yet implemented\n");
 #if 0
   if (__ptr_ == nullptr)
@@ -60,12 +55,10 @@ nested_exception::~nested_exception() noexcept {}
 }
 
 exception_ptr current_exception() noexcept {
-#warning exception_ptr not yet implemented
   __libcpp_verbose_abort("exception_ptr not yet implemented\n");
 }
 
 [[noreturn]] void rethrow_exception(exception_ptr p) {
-#warning exception_ptr not yet implemented
   __libcpp_verbose_abort("exception_ptr not yet implemented\n");
 }
 
