@@ -427,7 +427,7 @@ TrieRawHashMapHandle::createRecord(MappedFileRegionArena &Alloc,
   return Record;
 }
 
-Expected<OnDiskTrieRawHashMap::const_pointer>
+Expected<OnDiskTrieRawHashMap::ConstOnDiskPtr>
 OnDiskTrieRawHashMap::recoverFromFileOffset(FileOffset Offset) const {
   // Check alignment.
   if (!isAligned(MappedFileRegionArena::getAlign(), Offset.get()))
@@ -448,17 +448,17 @@ OnDiskTrieRawHashMap::recoverFromFileOffset(FileOffset Offset) const {
   // Looks okay...
   TrieRawHashMapHandle::RecordData D =
       Impl->Trie.getRecord(SubtrieSlotValue::getDataOffset(Offset));
-  return const_pointer(D.Proxy, D.getFileOffset());
+  return ConstOnDiskPtr(D.Proxy, D.getFileOffset());
 }
 
-OnDiskTrieRawHashMap::const_pointer
+OnDiskTrieRawHashMap::ConstOnDiskPtr
 OnDiskTrieRawHashMap::find(ArrayRef<uint8_t> Hash) const {
   TrieRawHashMapHandle Trie = Impl->Trie;
   assert(Hash.size() == Trie.getNumHashBytes() && "Invalid hash");
 
   SubtrieHandle S = Trie.getRoot();
   if (!S)
-    return const_pointer();
+    return ConstOnDiskPtr();
 
   TrieHashIndexGenerator IndexGen = Trie.getIndexGen(S, Hash);
   size_t Index = IndexGen.next();
@@ -466,13 +466,13 @@ OnDiskTrieRawHashMap::find(ArrayRef<uint8_t> Hash) const {
     // Try to set the content.
     SubtrieSlotValue V = S.load(Index);
     if (!V)
-      return const_pointer();
+      return ConstOnDiskPtr();
 
     // Check for an exact match.
     if (V.isData()) {
       TrieRawHashMapHandle::RecordData D = Trie.getRecord(V);
-      return D.Proxy.Hash == Hash ? const_pointer(D.Proxy, D.getFileOffset())
-                                  : const_pointer();
+      return D.Proxy.Hash == Hash ? ConstOnDiskPtr(D.Proxy, D.getFileOffset())
+                                  : ConstOnDiskPtr();
     }
 
     Index = IndexGen.next();
@@ -490,7 +490,7 @@ void SubtrieHandle::reinitialize(uint32_t StartBit, uint32_t NumBits) {
   H->NumBits = NumBits;
 }
 
-Expected<OnDiskTrieRawHashMap::pointer>
+Expected<OnDiskTrieRawHashMap::OnDiskPtr>
 OnDiskTrieRawHashMap::insertLazy(ArrayRef<uint8_t> Hash,
                                  LazyInsertOnConstructCB OnConstruct,
                                  LazyInsertOnLeakCB OnLeak) {
@@ -523,7 +523,8 @@ OnDiskTrieRawHashMap::insertLazy(ArrayRef<uint8_t> Hash,
       }
 
       if (S->compare_exchange_strong(Index, Existing, NewRecord->Offset))
-        return pointer(NewRecord->Proxy, NewRecord->Offset.asDataFileOffset());
+        return OnDiskPtr(NewRecord->Proxy,
+                         NewRecord->Offset.asDataFileOffset());
 
       // Race means that Existing is no longer empty; fall through...
     }
@@ -540,8 +541,8 @@ OnDiskTrieRawHashMap::insertLazy(ArrayRef<uint8_t> Hash,
       if (NewRecord && OnLeak)
         OnLeak(NewRecord->Offset.asDataFileOffset(), NewRecord->Proxy,
                ExistingRecord.Offset.asDataFileOffset(), ExistingRecord.Proxy);
-      return pointer(ExistingRecord.Proxy,
-                     ExistingRecord.Offset.asDataFileOffset());
+      return OnDiskPtr(ExistingRecord.Proxy,
+                       ExistingRecord.Offset.asDataFileOffset());
     }
 
     // Sink the existing content as long as the indexes match.
@@ -1101,8 +1102,6 @@ void TrieRawHashMapHandle::print(
 
   if (auto Err = Printer.printRecords())
     OS << "error: " << toString(std::move(Err)) << "\n";
-
-  return;
 }
 
 Error TrieRawHashMapHandle::validate(
@@ -1135,7 +1134,7 @@ OnDiskTrieRawHashMap::create(const Twine &PathTwine, const Twine &TrieNameTwine,
                            "OnDiskTrieRawHashMap is not supported");
 }
 
-Expected<OnDiskTrieRawHashMap::pointer>
+Expected<OnDiskTrieRawHashMap::OnDiskPtr>
 OnDiskTrieRawHashMap::insertLazy(ArrayRef<uint8_t> Hash,
                                  LazyInsertOnConstructCB OnConstruct,
                                  LazyInsertOnLeakCB OnLeak) {
@@ -1143,15 +1142,15 @@ OnDiskTrieRawHashMap::insertLazy(ArrayRef<uint8_t> Hash,
                            "OnDiskTrieRawHashMap is not supported");
 }
 
-Expected<OnDiskTrieRawHashMap::const_pointer>
+Expected<OnDiskTrieRawHashMap::ConstOnDiskPtr>
 OnDiskTrieRawHashMap::recoverFromFileOffset(FileOffset Offset) const {
   return createStringError(make_error_code(std::errc::not_supported),
                            "OnDiskTrieRawHashMap is not supported");
 }
 
-OnDiskTrieRawHashMap::const_pointer
+OnDiskTrieRawHashMap::ConstOnDiskPtr
 OnDiskTrieRawHashMap::find(ArrayRef<uint8_t> Hash) const {
-  return const_pointer();
+  return ConstOnDiskPtr();
 }
 
 void OnDiskTrieRawHashMap::print(

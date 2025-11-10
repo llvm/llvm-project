@@ -27,6 +27,10 @@ class Location;
 class MLIRContext;
 } // namespace mlir
 
+namespace hlfir {
+class ElementalOp;
+} // namespace hlfir
+
 namespace Fortran::lower {
 
 class AbstractConverter;
@@ -58,7 +62,9 @@ cuf::DataAttributeAttr
 translateSymbolCUFDataAttribute(mlir::MLIRContext *mlirContext,
                                 const Fortran::semantics::Symbol &sym);
 
-bool isTransferWithConversion(mlir::Value rhs);
+/// Check if the rhs has an implicit conversion. Return the elemental op if
+/// there is a conversion. Return null otherwise.
+hlfir::ElementalOp isTransferWithConversion(mlir::Value rhs);
 
 } // end namespace Fortran::lower
 

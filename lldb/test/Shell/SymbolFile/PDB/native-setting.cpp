@@ -8,9 +8,9 @@
 // RUN: env LLDB_USE_NATIVE_PDB_READER=0 %lldb %t.exe -o 'target modules dump symfile' 2>&1 | FileCheck --check-prefix=ENV0 %s
 // RUN: env LLDB_USE_NATIVE_PDB_READER=1 %lldb %t.exe -o 'target modules dump symfile' 2>&1 | FileCheck --check-prefix=ENV1 %s
 
-// RUN: env LLDB_USE_NATIVE_PDB_READER=foo %lldb %t.exe -o 'target modules dump symfile' 2>&1 | FileCheck --check-prefix=ENV0 %s
-// RUN: env LLDB_USE_NATIVE_PDB_READER=42 %lldb %t.exe -o 'target modules dump symfile' 2>&1 | FileCheck --check-prefix=ENV0 %s
-// RUN: env LLDB_USE_NATIVE_PDB_READER=-1 %lldb %t.exe -o 'target modules dump symfile' 2>&1 | FileCheck --check-prefix=ENV0 %s
+// RUN: env LLDB_USE_NATIVE_PDB_READER=foo %lldb %t.exe -o 'target modules dump symfile' 2>&1 | FileCheck --check-prefix=ENV1 %s
+// RUN: env LLDB_USE_NATIVE_PDB_READER=42 %lldb %t.exe -o 'target modules dump symfile' 2>&1 | FileCheck --check-prefix=ENV1 %s
+// RUN: env LLDB_USE_NATIVE_PDB_READER=-1 %lldb %t.exe -o 'target modules dump symfile' 2>&1 | FileCheck --check-prefix=ENV1 %s
 
 // RUN: env LLDB_USE_NATIVE_PDB_READER=0 %lldb \
 // RUN:     -o 'settings set plugin.symbol-file.pdb.reader dia' \
@@ -36,7 +36,7 @@
 // NO-ENV-NOT: warning:
 // NO-ENV: (lldb) target modules dump symfile
 // NO-ENV: Dumping debug symbols for 1 modules.
-// NO-ENV: SymbolFile pdb
+// NO-ENV: SymbolFile native-pdb
 
 // ENV0-NOT: warning:
 // ENV0: (lldb) target modules dump symfile

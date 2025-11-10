@@ -479,8 +479,8 @@ struct EmptyBracedIntDefault {
   EmptyBracedIntDefault() : m_i{} {}
   int m_i;
   // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use default member initializer for 'm_i' [modernize-use-default-member-init]
-  // CHECK-FIXES:      {{^  }}EmptyBracedIntDefault()  {}
-  // CHECK-FIXES-NEXT: {{^  }}int m_i{};
+  // CHECK-FIXES:      EmptyBracedIntDefault()  {}
+  // CHECK-FIXES-NEXT: int m_i{};
 };
 
 namespace PR63285 {
@@ -489,32 +489,32 @@ class ArrayValueInit {
   ArrayValueInit() : m_array() {}
   double m_array[1];
   // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: use default member initializer for 'm_array' [modernize-use-default-member-init]
-  // CHECK-FIXES:      {{^  }}ArrayValueInit()  {}
-  // CHECK-FIXES-NEXT: {{^  }}double m_array[1]{};
+  // CHECK-FIXES:      ArrayValueInit()  {}
+  // CHECK-FIXES-NEXT: double m_array[1]{};
 };
 
 class ArrayBraceInit {
   ArrayBraceInit() : m_array{} {}
   double m_array[1];
   // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: use default member initializer for 'm_array' [modernize-use-default-member-init]
-  // CHECK-FIXES:      {{^  }}ArrayBraceInit()  {}
-  // CHECK-FIXES-NEXT: {{^  }}double m_array[1]{};
+  // CHECK-FIXES:      ArrayBraceInit()  {}
+  // CHECK-FIXES-NEXT: double m_array[1]{};
 };
 
 class ArrayBraceInitWithValue {
   ArrayBraceInitWithValue() : m_array{3.14} {}
   double m_array[1];
   // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: use default member initializer for 'm_array' [modernize-use-default-member-init]
-  // CHECK-FIXES:      {{^  }}ArrayBraceInitWithValue()  {}
-  // CHECK-FIXES-NEXT: {{^  }}double m_array[1]{3.14};
+  // CHECK-FIXES:      ArrayBraceInitWithValue()  {}
+  // CHECK-FIXES-NEXT: double m_array[1]{3.14};
 };
 
 class ArrayBraceInitMultipleValues {
   ArrayBraceInitMultipleValues() : m_array{1.0, 2.0, 3.0} {}
   double m_array[3];
   // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: use default member initializer for 'm_array' [modernize-use-default-member-init]
-  // CHECK-FIXES:      {{^  }}ArrayBraceInitMultipleValues()  {}
-  // CHECK-FIXES-NEXT: {{^  }}double m_array[3]{1.0, 2.0, 3.0};
+  // CHECK-FIXES:      ArrayBraceInitMultipleValues()  {}
+  // CHECK-FIXES-NEXT: double m_array[3]{1.0, 2.0, 3.0};
 };
 
 } // namespace PR63285

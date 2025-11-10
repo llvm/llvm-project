@@ -103,7 +103,7 @@ inline Align assumeAligned(uint64_t Value) {
 
 /// This struct is a compact representation of a valid (power of two) or
 /// undefined (0) alignment.
-struct MaybeAlign : public std::optional<Align> {
+struct MaybeAlign : std::optional<Align> {
 private:
   using UP = std::optional<Align>;
 

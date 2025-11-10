@@ -820,3 +820,14 @@ namespace FAM {
     return 1;
   }
 }
+
+namespace MultiDimConstructExpr {
+  struct a {
+    a *p = this;
+  };
+  struct b {
+    a m[3][3];
+  };
+  constexpr b d;
+  static_assert(d.m[2][1].p == &d.m[2][1]);
+}

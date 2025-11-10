@@ -613,7 +613,7 @@ void foo24() {
 // CIR: %[[RESULT:.*]] = cir.alloca !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>, ["r", init]
 // CIR: %[[IDX:.*]] = cir.const #cir.int<1> : !s32i
 // CIR: %[[ARR_PTR:.*]] = cir.cast array_to_ptrdecay %[[ARR]] : !cir.ptr<!cir.array<!cir.complex<!s32i> x 2>> -> !cir.ptr<!cir.complex<!s32i>>
-// CIR: %[[RESULT_VAL:.*]] = cir.ptr_stride(%[[ARR_PTR]] : !cir.ptr<!cir.complex<!s32i>>, %[[IDX]] : !s32i), !cir.ptr<!cir.complex<!s32i>>
+// CIR: %[[RESULT_VAL:.*]] = cir.ptr_stride %[[ARR_PTR]], %[[IDX]] : (!cir.ptr<!cir.complex<!s32i>>, !s32i) -> !cir.ptr<!cir.complex<!s32i>>
 // CIR: %[[TMP:.*]] = cir.load{{.*}} %[[RESULT_VAL]] : !cir.ptr<!cir.complex<!s32i>>, !cir.complex<!s32i>
 // CIR: cir.store{{.*}} %[[TMP]], %[[RESULT]] : !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>
 
@@ -1359,3 +1359,139 @@ void complex_type_argument() {
 // OGCG: store float %[[A_IMAG]], ptr %[[ARG_IMAG_PTR]], align 4
 // OGCG: %[[TMP_ARG:.*]] = load <2 x float>, ptr %[[ARG_ADDR]], align 4
 // OGCG: call void @_Z22complex_type_parameterCf(<2 x float> noundef %[[TMP_ARG]])
+
+float _Complex complex_type_return_type() {
+  return { 1.0f, 2.0f };
+}
+
+// CIR: %[[RET_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["__retval"]
+// CIR: %[[RET_VAL:.*]] = cir.const #cir.const_complex<#cir.fp<1.000000e+00> : !cir.float, #cir.fp<2.000000e+00> : !cir.float> : !cir.complex<!cir.float>
+// CIR: cir.store{{.*}} %[[RET_VAL]], %[[RET_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
+// CIR: %[[TMP_RET:.*]] = cir.load %[[RET_ADDR]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
+// CIR: cir.return %[[TMP_RET]] : !cir.complex<!cir.float>
+
+// TODO(CIR): the difference between the CIR LLVM and OGCG is because the lack of calling convention lowering,
+// LLVM: %[[RET_ADDR:.*]] = alloca { float, float }, i64 1, align 4
+// LLVM: store { float, float } { float 1.000000e+00, float 2.000000e+00 }, ptr %[[RET_ADDR]], align 4
+// LLVM: %[[TMP_RET:.*]] = load { float, float }, ptr %[[RET_ADDR]], align 4
+// LLVM: ret { float, float } %[[TMP_RET]]
+
+// OGCG: %[[RET_ADDR:.*]] = alloca { float, float }, align 4
+// OGCG: %[[RET_VAL_REAL:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[RET_ADDR]], i32 0, i32 0
+// OGCG: %[[RET_VAL_IMAG:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[RET_ADDR]], i32 0, i32 1
+// OGCG: store float 1.000000e+00, ptr %[[RET_VAL_REAL]], align 4
+// OGCG: store float 2.000000e+00, ptr %[[RET_VAL_IMAG]], align 4
+// OGCG: %[[TMP_RET:.*]] = load <2 x float>, ptr %[[RET_ADDR]], align 4
+// OGCG: ret <2 x float> %[[TMP_RET]]
+
+void real_on_scalar_bool() {
+  bool a;
+  bool b = __real__ a;
+}
+
+// CIR: %[[A_ADDR:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["a"]
+// CIR: %[[B_ADDR:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["b", init]
+// CIR: %[[TMP_A:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.bool>, !cir.bool
+// CIR: %[[A_REAL:.*]] = cir.complex.real %[[TMP_A]] : !cir.bool -> !cir.bool
+// CIR: cir.store{{.*}} %[[A_REAL]], %[[B_ADDR]] : !cir.bool, !cir.ptr<!cir.bool>
+
+// LLVM: %[[A_ADDR:.*]] = alloca i8, i64 1, align 1
+// LLVM: %[[B_ADDR:.*]] = alloca i8, i64 1, align 1
+// LLVM: %[[TMP_A:.*]] = load i8, ptr %[[A_ADDR]], align 1
+// LLVM: %[[TMP_A_I1:.*]] = trunc i8 %[[TMP_A]] to i1
+// LLVM: %[[TMP_A_I8:.*]] = zext i1 %[[TMP_A_I1]] to i8
+// LLVM: store i8 %[[TMP_A_I8]], ptr %[[B_ADDR]], align 1
+
+// OGCG: %[[A_ADDR:.*]] = alloca i8, align 1
+// OGCG: %[[B_ADDR:.*]] = alloca i8, align 1
+// OGCG: %[[TMP_A:.*]] = load i8, ptr %[[A_ADDR]], align 1
+// OGCG: %[[TMP_A_I1:.*]] = trunc i8 %[[TMP_A]] to i1
+// OGCG: %[[TMP_A_I8:.*]] = zext i1 %[[TMP_A_I1]] to i8
+// OGCG: store i8 %[[TMP_A_I8]], ptr %[[B_ADDR]], align 1
+
+void imag_on_scalar_bool() {
+  bool a;
+  bool b = __imag__ a;
+}
+
+// CIR: %[[A_ADDR:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["a"]
+// CIR: %[[B_ADDR:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["b", init]
+// CIR: %[[TMP_A:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.bool>, !cir.bool
+// CIR: %[[A_IMAG:.*]] = cir.complex.imag %[[TMP_A]] : !cir.bool -> !cir.bool
+// CIR: cir.store{{.*}} %[[A_IMAG]], %[[B_ADDR]] : !cir.bool, !cir.ptr<!cir.bool>
+
+// LLVM: %[[A_ADDR:.*]] = alloca i8, i64 1, align 1
+// LLVM: %[[B_ADDR:.*]] = alloca i8, i64 1, align 1
+// LLVM: %[[TMP_A:.*]] = load i8, ptr %[[A_ADDR]], align 1
+// LLVM: %[[TMP_A_I1:.*]] = trunc i8 %[[TMP_A]] to i1
+// LLVM: store i8 0, ptr %[[B_ADDR]], align 1
+
+// OGCG: %[[A_ADDR:.*]] = alloca i8, align 1
+// OGCG: %[[B_ADDR:.*]] = alloca i8, align 1
+// OGCG: store i8 0, ptr %[[B_ADDR]], align 1
+
+void function_with_complex_default_arg(
+    float _Complex a = __builtin_complex(1.0f, 2.2f)) {}
+
+// CIR: %[[ARG_0_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["a", init]
+// CIR: cir.store %{{.*}}, %[[ARG_0_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
+
+// TODO(CIR): the difference between the CIR LLVM and OGCG is because the lack of calling convention lowering,
+
+// LLVM: %[[ARG_0_ADDR:.*]] = alloca { float, float }, i64 1, align 4
+// LLVM: store { float, float } %{{.*}}, ptr %[[ARG_0_ADDR]], align 4
+
+// OGCG: %[[ARG_0_ADDR:.*]] = alloca { float, float }, align 4
+// OGCG: store <2 x float> %{{.*}}, ptr %[[ARG_0_ADDR]], align 4
+
+void calling_function_with_default_arg() {
+  function_with_complex_default_arg();
+}
+
+// CIR: %[[DEFAULT_ARG_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["coerce"]
+// CIR: %[[DEFAULT_ARG_VAL:.*]] = cir.const #cir.const_complex<#cir.fp<1.000000e+00> : !cir.float, #cir.fp<2.200000e+00> : !cir.float> : !cir.complex<!cir.float>
+// CIR: cir.store{{.*}} %[[DEFAULT_ARG_VAL]], %[[DEFAULT_ARG_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
+// CIR: %[[TMP_DEFAULT_ARG:.*]] = cir.load{{.*}} %[[DEFAULT_ARG_ADDR]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
+// CIR: cir.call @_Z33function_with_complex_default_argCf(%[[TMP_DEFAULT_ARG]]) : (!cir.complex<!cir.float>) -> ()
+
+// TODO(CIR): the difference between the CIR LLVM and OGCG is because the lack of calling convention lowering,
+
+// LLVM: %[[DEFAULT_ARG_ADDR:.*]] = alloca { float, float }, i64 1, align 4
+// LLVM: store { float, float } { float 1.000000e+00, float 0x40019999A0000000 }, ptr %[[DEFAULT_ARG_ADDR]], align 4
+// LLVM: %[[TMP_DEFAULT_ARG:.*]] = load { float, float }, ptr %[[DEFAULT_ARG_ADDR]], align 4
+// LLVM: call void @_Z33function_with_complex_default_argCf({ float, float } %[[TMP_DEFAULT_ARG]])
+
+// OGCG: %[[DEFAULT_ARG_ADDR:.*]] = alloca { float, float }, align 4
+// OGCG: %[[DEFAULT_ARG_REAL_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[DEFAULT_ARG_ADDR]], i32 0, i32 0
+// OGCG: %[[DEFAULT_ARG_IMAG_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[DEFAULT_ARG_ADDR]], i32 0, i32 1
+// OGCG: store float 1.000000e+00, ptr %[[DEFAULT_ARG_REAL_PTR]], align 4
+// OGCG: store float 0x40019999A0000000, ptr %[[DEFAULT_ARG_IMAG_PTR]], align 4
+// OGCG: %[[TMP_DEFAULT_ARG:.*]] = load <2 x float>, ptr %[[DEFAULT_ARG_ADDR]], align 4
+// OGCG: call void @_Z33function_with_complex_default_argCf(<2 x float> {{.*}} %[[TMP_DEFAULT_ARG]])
+
+void calling_function_that_return_complex() {
+  float _Complex a = complex_type_return_type();
+}
+
+// CIR: %[[A_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["a", init]
+// CIR: %[[RESULT:.*]] = cir.call @_Z24complex_type_return_typev() : () -> !cir.complex<!cir.float>
+// CIR: cir.store{{.*}} %[[RESULT]], %[[A_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
+
+// TODO(CIR): the difference between the CIR LLVM and OGCG is because the lack of calling convention lowering,
+
+// LLVM: %[[A_ADDR:.*]] = alloca { float, float }, i64 1, align 4
+// LLVM: %[[RESULT:.*]] = call { float, float } @_Z24complex_type_return_typev()
+// LLVM: store { float, float } %[[RESULT]], ptr %[[A_ADDR]], align 4
+
+// OGCG: %[[A_ADDR:.*]] = alloca { float, float }, align 4
+// OGCG: %[[RESULT_ADDR:.*]] = alloca { float, float }, align 4
+// OGCG: %[[RESULT:.*]] = call noundef <2 x float> @_Z24complex_type_return_typev()
+// OGCG: store <2 x float> %[[RESULT]], ptr %[[RESULT_ADDR]], align 4
+// OGCG: %[[RESULT_REAL_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[RESULT_ADDR]], i32 0, i32 0
+// OGCG: %[[RESULT_REAL:.*]] = load float, ptr %[[RESULT_REAL_PTR]], align 4
+// OGCG: %[[RESULT_IMAG_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[RESULT_ADDR]], i32 0, i32 1
+// OGCG: %[[RESULT_IMAG:.*]] = load float, ptr %[[RESULT_IMAG_PTR]], align 4
+// OGCG: %[[A_REAL_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[A_ADDR]], i32 0, i32 0
+// OGCG: %[[A_IMAG_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[A_ADDR]], i32 0, i32 1
+// OGCG: store float %[[RESULT_REAL]], ptr %[[A_REAL_PTR]], align 4
+// OGCG: store float %[[RESULT_IMAG]], ptr %[[A_IMAG_PTR]], align 4

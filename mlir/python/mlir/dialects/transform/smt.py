@@ -19,6 +19,7 @@ except ImportError as e:
 class ConstrainParamsOp(ConstrainParamsOp):
     def __init__(
         self,
+        results: Sequence[Type],
         params: Sequence[transform.AnyParamType],
         arg_types: Sequence[Type],
         loc=None,
@@ -27,6 +28,7 @@ class ConstrainParamsOp(ConstrainParamsOp):
         if len(params) != len(arg_types):
             raise ValueError(f"{params=} not same length as {arg_types=}")
         super().__init__(
+            results,
             params,
             loc=loc,
             ip=ip,
@@ -36,3 +38,13 @@ class ConstrainParamsOp(ConstrainParamsOp):
     @property
     def body(self) -> Block:
         return self.regions[0].blocks[0]
+
+
+def constrain_params(
+    results: Sequence[Type],
+    params: Sequence[transform.AnyParamType],
+    arg_types: Sequence[Type],
+    loc=None,
+    ip=None,
+):
+    return ConstrainParamsOp(results, params, arg_types, loc=loc, ip=ip)
