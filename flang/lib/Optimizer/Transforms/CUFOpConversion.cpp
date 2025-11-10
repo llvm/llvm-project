@@ -597,8 +597,8 @@ struct CUFDataTransferOpConversion
                               const mlir::SymbolTable &symtab,
                               mlir::DataLayout *dl,
                               const fir::LLVMTypeConverter *typeConverter)
-      : OpRewritePattern(context), symtab{symtab}, dl{dl}, typeConverter{
-        typeConverter} {}
+      : OpRewritePattern(context), symtab{symtab}, dl{dl},
+        typeConverter{typeConverter} {}
 
   mlir::LogicalResult
   matchAndRewrite(cuf::DataTransferOp op,
