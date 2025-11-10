@@ -217,7 +217,9 @@ updateCalls(ModuleOp module, const AllocDynamicSizesMap &map,
     }
     if (!options.filterFn(&callee))
       return;
-    if (callee.isExternal() || callee.isPublic())
+    if (callee.isPublic() && !options.modifyPublicFunctions)
+      return;
+    if (callee.isExternal())
       return;
 
     SmallVector<Value, 6> replaceWithNewCallResults;
@@ -295,7 +297,9 @@ LogicalResult mlir::bufferization::promoteBufferResultsToOutParams(
   // function.
   AllocDynamicSizesMap map;
   for (auto func : module.getOps<func::FuncOp>()) {
-    if (func.isExternal() || func.isPublic())
+    if (func.isPublic() && !options.modifyPublicFunctions)
+      continue;
+    if (func.isExternal())
       continue;
     if (!options.filterFn(&func))
       continue;
@@ -326,6 +330,8 @@ struct BufferResultsToOutParamsPass
       options.hoistStaticAllocs = true;
     if (hoistDynamicAllocs)
       options.hoistDynamicAllocs = true;
+    if (modifyPublicFunctions)
+      options.modifyPublicFunctions = true;
 
     if (failed(bufferization::promoteBufferResultsToOutParams(getOperation(),
                                                               options)))
