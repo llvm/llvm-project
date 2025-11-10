@@ -373,10 +373,10 @@ func.func @alloca_unlimited_polymorphic_box() {
   %2 = fir.alloca !fir.box<none>
   %3 = fir.alloca !fir.box<!fir.array<?xnone>>
   // Add real uses so allocas are not trivially dead.
-  func.call @__use_class_none(%0) : (!fir.ref<!fir.class<none>>) -> ()
-  func.call @__use_class_array(%1) : (!fir.ref<!fir.class<!fir.array<?xnone>>>) -> ()
-  func.call @__use_box_none(%2) : (!fir.ref<!fir.box<none>>) -> ()
-  func.call @__use_box_array(%3) : (!fir.ref<!fir.box<!fir.array<?xnone>>>) -> ()
+  fir.call @__use_class_none(%0) : (!fir.ref<!fir.class<none>>) -> ()
+  fir.call @__use_class_array(%1) : (!fir.ref<!fir.class<!fir.array<?xnone>>>) -> ()
+  fir.call @__use_box_none(%2) : (!fir.ref<!fir.box<none>>) -> ()
+  fir.call @__use_box_array(%3) : (!fir.ref<!fir.box<!fir.array<?xnone>>>) -> ()
   return
 }
 func.func private @__use_class_none(!fir.ref<!fir.class<none>>) -> ()
