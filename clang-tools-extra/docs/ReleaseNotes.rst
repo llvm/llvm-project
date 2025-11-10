@@ -269,6 +269,10 @@ New check aliases
   <clang-tidy/checks/bugprone/throwing-static-initialization>`
   keeping initial check as an alias to the new one.
 
+- Renamed :doc:`cert-err60-cpp <clang-tidy/checks/cert/err60-cpp>` to
+  :doc:`bugprone-exception-copy-constructor-throws
+  <clang-tidy/checks/bugprone/exception-copy-constructor-throws>`
+
 - Renamed :doc:`cert-flp30-c <clang-tidy/checks/cert/flp30-c>` to
   :doc:`bugprone-float-loop-counter
   <clang-tidy/checks/bugprone/float-loop-counter>`
@@ -302,7 +306,9 @@ Changes in existing checks
   exceptions from captures are now diagnosed, exceptions in the bodies of
   lambdas that aren't actually invoked are not. Additionally, fixed an issue
   where the check wouldn't diagnose throws in arguments to functions or
-  constructors.
+  constructors. Added fine-grained configuration via options 
+  `CheckDestructors`, `CheckMoveMemberFunctions`, `CheckMain`,
+  `CheckedSwapFunctions`, and `CheckNothrowFunctions`.
 
 - Improved :doc:`bugprone-infinite-loop
   <clang-tidy/checks/bugprone/infinite-loop>` check by adding detection for

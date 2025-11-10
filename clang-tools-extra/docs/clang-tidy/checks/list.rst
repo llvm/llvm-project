@@ -98,6 +98,7 @@ Clang-Tidy Checks
    :doc:`bugprone-dynamic-static-initializers <bugprone/dynamic-static-initializers>`,
    :doc:`bugprone-easily-swappable-parameters <bugprone/easily-swappable-parameters>`,
    :doc:`bugprone-empty-catch <bugprone/empty-catch>`,
+   :doc:`bugprone-exception-copy-constructor-throws <bugprone/exception-copy-constructor-throws>`,
    :doc:`bugprone-exception-escape <bugprone/exception-escape>`,
    :doc:`bugprone-float-loop-counter <bugprone/float-loop-counter>`,
    :doc:`bugprone-fold-init-type <bugprone/fold-init-type>`,
@@ -180,6 +181,7 @@ Clang-Tidy Checks
    :doc:`bugprone-virtual-near-miss <bugprone/virtual-near-miss>`, "Yes"
    :doc:`cert-err33-c <cert/err33-c>`,
    :doc:`cert-err60-cpp <cert/err60-cpp>`,
+   :doc:`cert-flp30-c <cert/flp30-c>`,
    :doc:`cert-msc50-cpp <cert/msc50-cpp>`,
    :doc:`cert-msc51-cpp <cert/msc51-cpp>`,
    :doc:`cert-oop58-cpp <cert/oop58-cpp>`,
@@ -449,6 +451,7 @@ Check aliases
    :doc:`cert-err34-c <cert/err34-c>`, :doc:`bugprone-unchecked-string-to-number-conversion <bugprone/unchecked-string-to-number-conversion>`,
    :doc:`cert-err52-cpp <cert/err52-cpp>`, :doc:`modernize-avoid-setjmp-longjmp <modernize/avoid-setjmp-longjmp>`,
    :doc:`cert-err58-cpp <cert/err58-cpp>`, :doc:`bugprone-throwing-static-initialization <bugprone/throwing-static-initialization>`,
+   :doc:`cert-err60-cpp <cert/err60-cpp>`, :doc:`bugprone-exception-copy-constructor-throws <bugprone/exception-copy-constructor-throws>`,
    :doc:`cert-err61-cpp <cert/err61-cpp>`, :doc:`misc-throw-by-value-catch-by-reference <misc/throw-by-value-catch-by-reference>`,
    :doc:`cert-exp42-c <cert/exp42-c>`, :doc:`bugprone-suspicious-memory-comparison <bugprone/suspicious-memory-comparison>`,
    :doc:`cert-fio38-c <cert/fio38-c>`, :doc:`misc-non-copyable-objects <misc/non-copyable-objects>`,
