@@ -1155,26 +1155,30 @@ auto buildDiagnoseMatchSwitch(
   // that avoid it through memoization.
   const auto IgnorableOptional = ignorableOptional(Options);
 
-  auto Builder = CFGMatchSwitchBuilder<
-                     const Environment,
-                     llvm::SmallVector<UncheckedOptionalAccessDiagnostic>>()
-                     .CaseOfCFGStmt<CallExpr>(
-                         valueOperatorCall(IgnorableOptional),
-                         [](const CallExpr *E, const MatchFinder::MatchResult &,
-                            const Environment &Env) {
-                           return diagnoseUnwrapCall(E->getArg(0), Env);
-                         });
+  auto DiagBuilder =
+      CFGMatchSwitchBuilder<
+          const Environment,
+          llvm::SmallVector<UncheckedOptionalAccessDiagnostic>>()
+          // optional::operator*, optional::operator->
+          .CaseOfCFGStmt<CallExpr>(
+              valueOperatorCall(IgnorableOptional),
+              [](const CallExpr *E, const MatchFinder::MatchResult &,
+                 const Environment &Env) {
+                return diagnoseUnwrapCall(E->getArg(0), Env);
+              });
 
-  if (!Options.IgnoreValueCalls) {
-    return std::move(Builder)
-        .CaseOfCFGStmt<CXXMemberCallExpr>(
-            valueCall(IgnorableOptional),
-            [](const CXXMemberCallExpr *E, const MatchFinder::MatchResult &,
-               const Environment &Env) {
-              return diagnoseUnwrapCall(E->getImplicitObjectArgument(), Env);
-            })
-        .Build();
-  }
+  auto Builder = Options.IgnoreValueCalls
+                     ? std::move(DiagBuilder)
+                     : std::move(DiagBuilder)
+                           // optional::value
+                           .CaseOfCFGStmt<CXXMemberCallExpr>(
+                               valueCall(IgnorableOptional),
+                               [](const CXXMemberCallExpr *E,
+                                  const MatchFinder::MatchResult &,
+                                  const Environment &Env) {
+                                 return diagnoseUnwrapCall(
+                                     E->getImplicitObjectArgument(), Env);
+                               });
 
   return std::move(Builder).Build();
 }
