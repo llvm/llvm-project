@@ -296,7 +296,7 @@ end
 ! CHECK-LABEL: _QMdispatch1Pno_pass_array_pointer
 ! CHECK-LABEL: _QMdispatch1Pcall_a1_proc
 
-! Check the layout of the binding table. This is easier to do in FIR than in 
+! Check the layout of the binding table. This is easier to do in FIR than in
 ! LLVM IR.
 
 ! BT-LABEL: fir.type_info @_QMdispatch1Tty_kindK10K20

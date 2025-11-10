@@ -126,16 +126,15 @@ protected:
   SpecialCaseList &operator=(SpecialCaseList const &) = delete;
 
 private:
-  using Match = std::pair<StringRef, unsigned>;
-  static constexpr Match NotMatched = {"", 0};
-
   // Lagacy v1 matcher.
   class RegexMatcher {
   public:
     LLVM_ABI Error insert(StringRef Pattern, unsigned LineNumber);
     LLVM_ABI void preprocess(bool BySize);
 
-    LLVM_ABI Match match(StringRef Query) const;
+    LLVM_ABI void
+    match(StringRef Query,
+          llvm::function_ref<void(StringRef Rule, unsigned LineNo)> Cb) const;
 
     struct Reg {
       Reg(StringRef Name, unsigned LineNo, Regex &&Rg)
@@ -153,7 +152,9 @@ private:
     LLVM_ABI Error insert(StringRef Pattern, unsigned LineNumber);
     LLVM_ABI void preprocess(bool BySize);
 
-    LLVM_ABI Match match(StringRef Query) const;
+    LLVM_ABI void
+    match(StringRef Query,
+          llvm::function_ref<void(StringRef Rule, unsigned LineNo)> Cb) const;
 
     struct Glob {
       Glob(StringRef Name, unsigned LineNo, GlobPattern &&Pattern)
@@ -167,10 +168,11 @@ private:
 
     RadixTree<iterator_range<StringRef::const_iterator>,
               RadixTree<iterator_range<StringRef::const_reverse_iterator>,
-                        SmallVector<int, 1>>>
+                        SmallVector<const GlobMatcher::Glob *, 1>>>
         PrefixSuffixToGlob;
 
-    RadixTree<iterator_range<StringRef::const_iterator>, SmallVector<int, 1>>
+    RadixTree<iterator_range<StringRef::const_iterator>,
+              SmallVector<const GlobMatcher::Glob *, 1>>
         SubstrToGlob;
   };
 
@@ -182,10 +184,14 @@ private:
     LLVM_ABI Error insert(StringRef Pattern, unsigned LineNumber);
     LLVM_ABI void preprocess(bool BySize);
 
-    LLVM_ABI Match match(StringRef Query) const;
+    LLVM_ABI void
+    match(StringRef Query,
+          llvm::function_ref<void(StringRef Rule, unsigned LineNo)> Cb) const;
 
     LLVM_ABI bool matchAny(StringRef Query) const {
-      return match(Query) != NotMatched;
+      bool R = false;
+      match(Query, [&](StringRef, unsigned) { R = true; });
+      return R;
     }
 
     std::variant<RegexMatcher, GlobMatcher> M;
