@@ -3056,7 +3056,8 @@ static bool handleFloatFloatBinOp(EvalInfo &Info, const BinaryOperator *E,
   // FIXME: C++ rules require us to not conform to IEEE 754 here.
   if (LHS.isNaN()) {
     Info.CCEDiag(E, diag::note_constexpr_float_arithmetic) << LHS.isNaN();
-    return Info.noteUndefinedBehavior();
+    bool keepEvaluatingAfterUB = Info.noteUndefinedBehavior();
+    return Info.Ctx.getLangOpts().C23 || keepEvaluatingAfterUB;
   }
 
   return checkFloatingPointResult(Info, E, St);
@@ -19707,7 +19708,8 @@ bool Expr::EvaluateAsInitializer(APValue &Value, const ASTContext &Ctx,
 
   EvalInfo Info(Ctx, EStatus,
                 (IsConstantInitialization &&
-                 (Ctx.getLangOpts().CPlusPlus || Ctx.getLangOpts().C23))
+                 (Ctx.getLangOpts().CPlusPlus ||
+                  (Ctx.getLangOpts().C23 && VD->isConstexpr())))
                     ? EvaluationMode::ConstantExpression
                     : EvaluationMode::ConstantFold);
   Info.setEvaluatingDecl(VD, Value);

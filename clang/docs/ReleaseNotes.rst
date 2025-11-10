@@ -222,6 +222,8 @@ C23 Feature Support
   the same translation unit but from different types.
 - ``-MG`` now silences the "file not found" errors with ``#embed`` when
   scanning for dependencies and encountering an unknown file. #GH165632
+- Allow NaN in constant expression evaluation to maintain consistency with
+  GCC in behavior, even though it's an undefined behavior. #GH161806
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------

@@ -2605,11 +2605,18 @@ APValue *VarDecl::evaluateValueImpl(SmallVectorImpl<PartialDiagnosticAt> &Notes,
   // a constant initializer if we produced notes. In that case, we can't keep
   // the result, because it may only be correct under the assumption that the
   // initializer is a constant context.
-  if (IsConstantInitialization &&
-      (Ctx.getLangOpts().CPlusPlus ||
-       (isConstexpr() && Ctx.getLangOpts().C23)) &&
-      !Notes.empty())
-    Result = false;
+  if (IsConstantInitialization && !Notes.empty()) {
+    if (getLangOpts().CPlusPlus)
+      Result = false;
+
+    // Even though hitting an NaN during constant evaluation is an undefined
+    // behavior, we expect to maintain consistency with GCC in behavior, that
+    // is, allow NaN to appear in constant evaluation.
+    bool isNaN =
+        Eval->Evaluated.isFloat() && Eval->Evaluated.getFloat().isNaN();
+    if (getLangOpts().C23 && !isNaN)
+      Result = false;
+  }
 
   // Ensure the computed APValue is cleaned up later if evaluation succeeded,
   // or that it's empty (so that there's nothing to clean up) if evaluation
@@ -2676,8 +2683,14 @@ bool VarDecl::checkForConstantInitialization(
   assert(!getInit()->isValueDependent());
 
   // Evaluate the initializer to check whether it's a constant expression.
-  Eval->HasConstantInitialization =
-      evaluateValueImpl(Notes, true) && Notes.empty();
+  auto *Result = evaluateValueImpl(Notes, true);
+
+  // Even though hitting an NaN during constant evaluation is an undefined
+  // behavior, we expect to maintain consistency with GCC in behavior, that is,
+  // allow NaN to appear in constant evaluation.
+  bool isNaN = Result && Result->isFloat() && Result->getFloat().isNaN();
+  bool AllowNaN = getLangOpts().C23 && isNaN;
+  Eval->HasConstantInitialization = Result && (Notes.empty() || AllowNaN);
 
   // If evaluation as a constant initializer failed, allow re-evaluation as a
   // non-constant initializer if we later find we want the value.
