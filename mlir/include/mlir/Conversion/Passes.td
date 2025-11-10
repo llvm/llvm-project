@@ -552,6 +552,7 @@ def GpuToLLVMConversionPass : Pass<"gpu-to-llvm", "ModuleOp"> {
            "runtime with the kernel bare pointer calling convention, to enable "
            "dynamic binding of buffers as arguments without static type info."
           >
+    // TODO should an option be made to turn this feature on?
   ];
 
   let dependentDialects = [
