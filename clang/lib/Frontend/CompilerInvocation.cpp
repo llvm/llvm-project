@@ -5303,12 +5303,8 @@ bool CompilerInvocationBase::anyPath(
   PROPAGATE_TRUE_IF(HeaderSearchOpts.ResourceDir);
   PROPAGATE_TRUE_IF(HeaderSearchOpts.ModuleCachePath);
   PROPAGATE_TRUE_IF(HeaderSearchOpts.ModuleUserBuildPath);
-  for (auto I = HeaderSearchOpts.PrebuiltModuleFiles.begin(),
-            E = HeaderSearchOpts.PrebuiltModuleFiles.end();
-       I != E;) {
-    auto Current = I++;
-    PROPAGATE_TRUE_IF(Current->second);
-  }
+  for (const auto &[Name, File] : HeaderSearchOpts.PrebuiltModuleFiles)
+    PROPAGATE_TRUE_IF(File);
   PROPAGATE_TRUE_IF_MANY(HeaderSearchOpts.PrebuiltModulePaths);
   PROPAGATE_TRUE_IF_MANY(HeaderSearchOpts.VFSOverlayFiles);
 
