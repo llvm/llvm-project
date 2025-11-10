@@ -5247,6 +5247,7 @@ RewriteInstance::getOutputSections(ELFObjectFile<ELFT> *File,
   dbgs() << "[shstrtab] assigning name="
          << BinSec.getOutputName() << "\n";
 });
+   SHStrTab.add(BinSec.getOutputName());
 
     NewSection.sh_name = SHStrTab.getOffset(BinSec.getOutputName());
     OutputSections.emplace_back(&BinSec, std::move(NewSection));
