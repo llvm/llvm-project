@@ -54169,7 +54169,8 @@ static SDValue combineFaddCFmul(SDNode *N, SelectionDAG &DAG,
            Bits.getConstant() == AI;
   };
 
-  if (N->getOpcode() != ISD::FADD || !Subtarget.hasFP16() || !N->getFlags().hasAllowContract())
+  if (N->getOpcode() != ISD::FADD || !Subtarget.hasFP16() ||
+      !N->getFlags().hasAllowContract())
     return SDValue();
 
   EVT VT = N->getValueType(0);
@@ -54180,8 +54181,7 @@ static SDValue combineFaddCFmul(SDNode *N, SelectionDAG &DAG,
   SDValue RHS = N->getOperand(1);
   bool IsConj;
   SDValue FAddOp1, MulOp0, MulOp1;
-  auto GetCFmulFrom = [&MulOp0, &MulOp1, &IsConj,
-                       &IsVectorAllNegativeZero,
+  auto GetCFmulFrom = [&MulOp0, &MulOp1, &IsConj, &IsVectorAllNegativeZero,
                        &HasNoSignedZero](SDValue N) -> bool {
     if (!N.hasOneUse() || N.getOpcode() != ISD::BITCAST)
       return false;
