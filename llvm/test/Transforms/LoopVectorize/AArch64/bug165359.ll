@@ -1,4 +1,4 @@
-; RUN: opt < %s -passes=loop-vectorize -S -pass-remarks=loop-vectorize -debug-only=loop-vectorize &> %t
+; RUN: opt < %s -passes=loop-vectorize -S -pass-remarks=loop-vectorize -debug-only=loop-vectorize -disable-output &> %t
 ; RUN: cat %t | FileCheck --check-prefix=CHECK-REMARKS %s
 
 ; CHECK-REMARKS: LV: Recipe with invalid costs prevented vectorization at VF=(vscale x 1): fadd.
