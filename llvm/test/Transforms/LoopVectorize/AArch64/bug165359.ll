@@ -12,10 +12,10 @@ entry:
 
 loop:
   %acc0 = phi double [ %fadd0, %loop ], [ %d0, %entry ]
-  %iv = phi i64 [ 0, %entry ], [ %iv_updated, %loop ]
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
   %fadd0 = fadd double %acc0, %d1
-  %iv_updated = add nsw nuw i64 %iv, 1
-  %exit_cond = icmp eq i64 %iv_updated, %loop_count
+  %iv.next = add nsw nuw i64 %iv, 1
+  %exit_cond = icmp eq i64 %iv.next, %loop_count
   br i1 %exit_cond, label %loopexit, label %loop
 
 loopexit:
