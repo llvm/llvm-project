@@ -1513,6 +1513,8 @@ constexpr inline bool isKernel(CallingConv::ID CC) {
   }
 }
 
+inline bool isKernel(const Function &F) { return isKernel(F.getCallingConv()); }
+
 LLVM_READNONE
 constexpr bool canGuaranteeTCO(CallingConv::ID CC) {
   return CC == CallingConv::Fast;

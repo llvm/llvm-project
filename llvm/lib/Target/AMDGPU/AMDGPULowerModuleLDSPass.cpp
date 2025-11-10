@@ -441,7 +441,7 @@ public:
       return KernelSet;
 
     for (Function &Func : M.functions()) {
-      if (Func.isDeclaration() || !isKernelLDS(&Func))
+      if (Func.isDeclaration() || !isKernel(Func))
         continue;
       for (GlobalVariable *GV : LDSUsesInfo.indirect_access[&Func]) {
         if (VariableSet.contains(GV)) {
@@ -555,7 +555,7 @@ public:
       for (Function &Func : M->functions()) {
         if (Func.isDeclaration())
           continue;
-        if (!isKernelLDS(&Func))
+        if (!isKernel(Func))
           continue;
 
         if (KernelsThatAllocateTableLDS.contains(&Func) ||
@@ -703,7 +703,7 @@ public:
             return false;
           }
           Function *F = I->getFunction();
-          return !isKernelLDS(F);
+          return !isKernel(*F);
         });
 
     // Replace uses of module scope variable from kernel functions that
@@ -711,7 +711,7 @@ public:
     // Record on each kernel whether the module scope global is used by it
 
     for (Function &Func : M.functions()) {
-      if (Func.isDeclaration() || !isKernelLDS(&Func))
+      if (Func.isDeclaration() || !isKernel(Func))
         continue;
 
       if (KernelsThatAllocateModuleLDS.contains(&Func)) {
@@ -743,7 +743,7 @@ public:
 
     DenseMap<Function *, LDSVariableReplacement> KernelToReplacement;
     for (Function &Func : M.functions()) {
-      if (Func.isDeclaration() || !isKernelLDS(&Func))
+      if (Func.isDeclaration() || !isKernel(Func))
         continue;
 
       DenseSet<GlobalVariable *> KernelUsedVariables;
@@ -828,7 +828,7 @@ public:
     // semantics. Setting the alignment here allows this IR pass to accurately
     // predict the exact constant at which it will be allocated.
 
-    assert(isKernelLDS(func));
+    assert(isKernel(*func));
 
     LLVMContext &Ctx = M.getContext();
     const DataLayout &DL = M.getDataLayout();
@@ -878,7 +878,7 @@ public:
       for (auto &func : OrderedKernels) {
 
         if (KernelsThatIndirectlyAllocateDynamicLDS.contains(func)) {
-          assert(isKernelLDS(func));
+          assert(isKernel(*func));
           if (!func->hasName()) {
             reportFatalUsageError("anonymous kernels cannot use LDS variables");
           }
@@ -912,7 +912,7 @@ public:
           auto *I = dyn_cast<Instruction>(U.getUser());
           if (!I)
             continue;
-          if (isKernelLDS(I->getFunction()))
+          if (isKernel(*I->getFunction()))
             continue;
 
           replaceUseWithTableLookup(M, Builder, table, GV, U, nullptr);
@@ -928,7 +928,7 @@ public:
     for (Use &U : GV->uses()) {
       if (auto *I = dyn_cast<Instruction>(U.getUser())) {
         Function *F = I->getFunction();
-        if (isKernelLDS(F) && F != KF) {
+        if (isKernel(*F) && F != KF) {
           NeedsReplacement = true;
           break;
         }
@@ -945,7 +945,7 @@ public:
     for (Use &U : make_early_inc_range(GV->uses())) {
       if (auto *I = dyn_cast<Instruction>(U.getUser())) {
         Function *F = I->getFunction();
-        if (!isKernelLDS(F) || F == KF) {
+        if (!isKernel(*F) || F == KF) {
           U.getUser()->replaceUsesOfWith(GV, NewGV);
         }
       }
@@ -997,7 +997,7 @@ public:
     std::vector<Function *> OrderedKernels;
     for (auto &K : LDSUsesInfo.direct_access) {
       Function *F = K.first;
-      assert(isKernelLDS(F));
+      assert(isKernel(*F));
       OrderedKernels.push_back(F);
     }
     OrderedKernels = sortByName(std::move(OrderedKernels));
@@ -1033,7 +1033,7 @@ public:
     }
     // Also erase those special LDS variables from indirect_access.
     for (auto &K : LDSUsesInfo.indirect_access) {
-      assert(isKernelLDS(K.first));
+      assert(isKernel(*K.first));
       for (GlobalVariable *GV : K.second) {
         if (isNamedBarrier(*GV))
           K.second.erase(GV);
@@ -1058,7 +1058,7 @@ public:
     VariableFunctionMap LDSToKernelsThatNeedToAccessItIndirectly;
     for (auto &K : LDSUsesInfo.indirect_access) {
       Function *F = K.first;
-      assert(isKernelLDS(F));
+      assert(isKernel(*F));
       for (GlobalVariable *GV : K.second) {
         LDSToKernelsThatNeedToAccessItIndirectly[GV].insert(F);
       }
@@ -1157,7 +1157,7 @@ public:
       const DataLayout &DL = M.getDataLayout();
 
       for (Function &Func : M.functions()) {
-        if (Func.isDeclaration() || !isKernelLDS(&Func))
+        if (Func.isDeclaration() || !isKernel(Func))
           continue;
 
         // All three of these are optional. The first variable is allocated at
