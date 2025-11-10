@@ -14,6 +14,7 @@ class RecordType;
 class FieldDecl;
 
 namespace CodeGen {
+class CGHLSLOffsetInfo;
 class CodeGenModule;
 
 //===----------------------------------------------------------------------===//
@@ -35,12 +36,14 @@ public:
   // the Layout is the size followed by offsets for each struct element.
   llvm::TargetExtType *
   createLayoutType(const RecordType *StructType,
-                   const llvm::SmallVector<int32_t> *Packoffsets = nullptr);
+                   const CGHLSLOffsetInfo &OffsetInfo);
 
 private:
   bool layoutField(const clang::FieldDecl *FD, unsigned &EndOffset,
                    unsigned &FieldOffset, llvm::Type *&FieldType,
-                   int Packoffset = -1);
+                   uint32_t Packoffset);
+  bool layoutField(const clang::FieldDecl *FD, unsigned &EndOffset,
+                   unsigned &FieldOffset, llvm::Type *&FieldType);
 };
 
 } // namespace CodeGen
