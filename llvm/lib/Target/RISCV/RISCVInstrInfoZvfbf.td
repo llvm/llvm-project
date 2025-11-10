@@ -769,8 +769,8 @@ let Predicates = [HasStdExtZvfbfa] in {
                                   (vti.Mask true_mask),
                                   VLOpFrag),
               (!cast<Instruction>("PseudoVFSGNJN_ALT_VV_"# vti.LMul.MX#"_E"#vti.SEW)
-        (vti.Vector (IMPLICIT_DEF)),
-                   vti.RegClass:$rs1, vti.RegClass:$rs2, GPR:$vl, vti.Log2SEW, TA_MA)>;
+                   (vti.Vector (IMPLICIT_DEF)), vti.RegClass:$rs1,
+                   vti.RegClass:$rs2, GPR:$vl, vti.Log2SEW, TA_MA)>;
 
     def : Pat<(riscv_fcopysign_vl (vti.Vector vti.RegClass:$rs1),
                                   (SplatFPOp vti.ScalarRegClass:$rs2),
