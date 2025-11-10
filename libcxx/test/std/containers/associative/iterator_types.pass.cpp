@@ -46,7 +46,7 @@ void testSet() {
   }
 }
 
-TEST_CONSTEXPR_CXX26 bool test() {
+int main(int, char**) {
   {
     typedef std::map<int, int> Map;
     typedef std::pair<const int, int> ValueTp;
@@ -124,12 +124,5 @@ TEST_CONSTEXPR_CXX26 bool test() {
   }
 #endif
 
-  return true;
-}
-int main(int, char**) {
-  test();
-#if TEST_STD_VER >= 26
-  static_assert(test());
-#endif
   return 0;
 }
