@@ -147,6 +147,11 @@ public:
   }
   /// @}
 
+  /// Visitation.
+  /// @{
+  bool anyPath(llvm::function_ref<bool(StringRef)> Predicate) const;
+  /// @}
+
   /// Command line generation.
   /// @{
   using StringAllocator = llvm::function_ref<const char *(const Twine &)>;

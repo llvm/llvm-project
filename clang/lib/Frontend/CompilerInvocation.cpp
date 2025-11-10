@@ -5280,6 +5280,84 @@ std::string CompilerInvocation::getModuleHash() const {
   return toString(llvm::APInt(64, Hash), 36, /*Signed=*/false);
 }
 
+bool CompilerInvocationBase::anyPath(
+    llvm::function_ref<bool(StringRef)> Predicate) const {
+#define PROPAGATE_TRUE_IF(PATH)                                                \
+  do {                                                                         \
+    if (Predicate(PATH))                                                       \
+      return true;                                                             \
+  } while (0)
+
+#define PROPAGATE_TRUE_IF_MANY(PATHS)                                          \
+  do {                                                                         \
+    if (llvm::any_of(PATHS, Predicate))                                        \
+      return true;                                                             \
+  } while (0)
+
+  // Header search paths.
+  const auto &HeaderSearchOpts = getHeaderSearchOpts();
+  PROPAGATE_TRUE_IF(HeaderSearchOpts.Sysroot);
+  for (auto &Entry : HeaderSearchOpts.UserEntries)
+    if (Entry.IgnoreSysRoot)
+      PROPAGATE_TRUE_IF(Entry.Path);
+  PROPAGATE_TRUE_IF(HeaderSearchOpts.ResourceDir);
+  PROPAGATE_TRUE_IF(HeaderSearchOpts.ModuleCachePath);
+  PROPAGATE_TRUE_IF(HeaderSearchOpts.ModuleUserBuildPath);
+  for (auto I = HeaderSearchOpts.PrebuiltModuleFiles.begin(),
+            E = HeaderSearchOpts.PrebuiltModuleFiles.end();
+       I != E;) {
+    auto Current = I++;
+    PROPAGATE_TRUE_IF(Current->second);
+  }
+  PROPAGATE_TRUE_IF_MANY(HeaderSearchOpts.PrebuiltModulePaths);
+  PROPAGATE_TRUE_IF_MANY(HeaderSearchOpts.VFSOverlayFiles);
+
+  // Preprocessor options.
+  const auto &PPOpts = getPreprocessorOpts();
+  PROPAGATE_TRUE_IF_MANY(PPOpts.MacroIncludes);
+  PROPAGATE_TRUE_IF_MANY(PPOpts.Includes);
+  PROPAGATE_TRUE_IF(PPOpts.ImplicitPCHInclude);
+
+  // Frontend options.
+  const auto &FrontendOpts = getFrontendOpts();
+  for (const FrontendInputFile &Input : FrontendOpts.Inputs) {
+    if (Input.isBuffer())
+      continue; // FIXME: Can this happen when parsing command-line?
+
+    PROPAGATE_TRUE_IF(Input.getFile());
+  }
+  PROPAGATE_TRUE_IF(FrontendOpts.CodeCompletionAt.FileName);
+  PROPAGATE_TRUE_IF_MANY(FrontendOpts.ModuleMapFiles);
+  PROPAGATE_TRUE_IF_MANY(FrontendOpts.ModuleFiles);
+  PROPAGATE_TRUE_IF_MANY(FrontendOpts.ModulesEmbedFiles);
+  PROPAGATE_TRUE_IF_MANY(FrontendOpts.ASTMergeFiles);
+  PROPAGATE_TRUE_IF(FrontendOpts.OverrideRecordLayoutsFile);
+  PROPAGATE_TRUE_IF(FrontendOpts.StatsFile);
+
+  // Filesystem options.
+  const auto &FileSystemOpts = getFileSystemOpts();
+  PROPAGATE_TRUE_IF(FileSystemOpts.WorkingDir);
+
+  // Codegen options.
+  const auto &CodeGenOpts = getCodeGenOpts();
+  PROPAGATE_TRUE_IF(CodeGenOpts.DebugCompilationDir);
+  PROPAGATE_TRUE_IF(CodeGenOpts.CoverageCompilationDir);
+
+  // Sanitizer options.
+  PROPAGATE_TRUE_IF_MANY(getLangOpts().NoSanitizeFiles);
+
+  // Coverage mappings.
+  PROPAGATE_TRUE_IF(CodeGenOpts.ProfileInstrumentUsePath);
+  PROPAGATE_TRUE_IF(CodeGenOpts.SampleProfileFile);
+  PROPAGATE_TRUE_IF(CodeGenOpts.ProfileRemappingFile);
+
+  // Dependency output options.
+  for (auto &ExtraDep : getDependencyOutputOpts().ExtraDeps)
+    PROPAGATE_TRUE_IF(ExtraDep.first);
+
+  return false;
+}
+
 void CompilerInvocationBase::generateCC1CommandLine(
     ArgumentConsumer Consumer) const {
   llvm::Triple T(getTargetOpts().Triple);
