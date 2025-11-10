@@ -7,11 +7,11 @@
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .half   0
 ; Num Functions
-; CHECK-NEXT:   .word   12
+; CHECK-NEXT:   .word   13
 ; Num LargeConstants
-; CHECK-NEXT:   .word   2
+; CHECK-NEXT:   .word   3
 ; Num Callsites
-; CHECK-NEXT:   .word   16
+; CHECK-NEXT:   .word   17
 
 ; Functions and stack size
 ; CHECK-NEXT:   .quad   constantargs
@@ -50,10 +50,14 @@
 ; CHECK-NEXT:   .quad   needsStackRealignment
 ; CHECK-NEXT:   .quad   -1
 ; CHECK-NEXT:   .quad   1
+; CHECK-NEXT:   .quad   floats
+; CHECK-NEXT:   .quad   32
+; CHECK-NEXT:   .quad   1
 
 ; Num LargeConstants
 ; CHECK-NEXT:   .quad   4294967295
 ; CHECK-NEXT:   .quad   4294967296
+; CHECK-NEXT:   .quad   4609434218613702656
 
 ; Constant arguments
 ;
@@ -282,8 +286,8 @@ define void @liveConstant() {
 ; CHECK-NEXT:   .half   0
 ; CHECK-NEXT:   .half   28
 ;
-; Check that at least one is a spilled entry from RBP.
-; Location: Indirect RBP + ...
+; Check that at least one is a spilled entry from SP.
+; Location: Indirect SP + ...
 ; CHECK:        .byte   3
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .half   8
@@ -303,7 +307,7 @@ entry:
 ; CHECK-NEXT:   .half   0
 ; 1 location
 ; CHECK-NEXT:   .half   1
-; Loc 0: Direct RBP - ofs
+; Loc 0: Direct SP + ofs
 ; CHECK-NEXT:   .byte   2
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .half   8
@@ -316,14 +320,14 @@ entry:
 ; CHECK-NEXT:   .half   0
 ; 2 locations
 ; CHECK-NEXT:   .half   2
-; Loc 0: Direct RBP - ofs
+; Loc 0: Direct SP + ofs
 ; CHECK-NEXT:   .byte   2
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .half   8
 ; CHECK-NEXT:   .half   2
 ; CHECK-NEXT:   .half   0
 ; CHECK-NEXT:   .word
-; Loc 1: Direct RBP - ofs
+; Loc 1: Direct SP + ofs
 ; CHECK-NEXT:   .byte   2
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .half   8
@@ -378,6 +382,104 @@ define void @needsStackRealignment() {
   ret void
 }
 declare void @escape_values(...)
+
+; CHECK-LABEL:  .word   .L{{.*}}-floats
+; CHECK-NEXT:   .half   0
+; Num Locations
+; CHECK-NEXT:   .half   12
+; Loc 0: constant float as constant integer
+; CHECK-NEXT:   .byte   4
+; CHECK-NEXT:   .byte   0
+; CHECK-NEXT:   .half   8
+; CHECK-NEXT:   .half   0
+; CHECK-NEXT:   .half   0
+; CHECK-NEXT:   .word
+; Loc 1: constant double as large constant integer
+; CHECK-NEXT:   .byte   5
+; CHECK-NEXT:   .byte   0
+; CHECK-NEXT:   .half   8
+; CHECK-NEXT:   .half   0
+; CHECK-NEXT:   .half   0
+; CHECK-NEXT:   .word
+; Loc 2: constant half as constant integer
+; CHECK-NEXT:   .byte   4
+; CHECK-NEXT:   .byte   0
+; CHECK-NEXT:   .half   8
+; CHECK-NEXT:   .half   0
+; CHECK-NEXT:   .half   0
+; CHECK-NEXT:   .word
+; Loc 3: constant bfloat as constant integer
+; CHECK-NEXT:   .byte   4
+; CHECK-NEXT:   .byte   0
+; CHECK-NEXT:   .half   8
+; CHECK-NEXT:   .half   0
+; CHECK-NEXT:   .half   0
+; CHECK-NEXT:   .word
+; Loc 4: float value in X register
+; CHECK-NEXT:   .byte   1
+; CHECK-NEXT:   .byte   0
+; CHECK-NEXT:   .half   8
+; CHECK-NEXT:   .half   10
+; CHECK-NEXT:   .half   0
+; CHECK-NEXT:   .word
+; Loc 5: double value in X register
+; CHECK-NEXT:   .byte   1
+; CHECK-NEXT:   .byte   0
+; CHECK-NEXT:   .half   8
+; CHECK-NEXT:   .half   11
+; CHECK-NEXT:   .half   0
+; CHECK-NEXT:   .word
+; Loc 6: half value in X register
+; CHECK-NEXT:   .byte   1
+; CHECK-NEXT:   .byte   0
+; CHECK-NEXT:   .half   8
+; CHECK-NEXT:   .half   12
+; CHECK-NEXT:   .half   0
+; CHECK-NEXT:   .word
+; Loc 7: bfloat value in X register
+; CHECK-NEXT:   .byte   1
+; CHECK-NEXT:   .byte   0
+; CHECK-NEXT:   .half   8
+; CHECK-NEXT:   .half   13
+; CHECK-NEXT:   .half   0
+; CHECK-NEXT:   .word
+; Loc 8: float on stack
+; CHECK-NEXT:   .byte   2
+; CHECK-NEXT:   .byte   0
+; CHECK-NEXT:   .half   8
+; CHECK-NEXT:   .half   2
+; CHECK-NEXT:   .half   0
+; CHECK-NEXT:   .word
+; Loc 9: double on stack
+; CHECK-NEXT:   .byte   2
+; CHECK-NEXT:   .byte   0
+; CHECK-NEXT:   .half   8
+; CHECK-NEXT:   .half   2
+; CHECK-NEXT:   .half   0
+; CHECK-NEXT:   .word
+; Loc 10: half on stack
+; CHECK-NEXT:   .byte   2
+; CHECK-NEXT:   .byte   0
+; CHECK-NEXT:   .half   8
+; CHECK-NEXT:   .half   2
+; CHECK-NEXT:   .half   0
+; CHECK-NEXT:   .word
+; Loc 11: bfloat on stack
+; CHECK-NEXT:   .byte   2
+; CHECK-NEXT:   .byte   0
+; CHECK-NEXT:   .half   8
+; CHECK-NEXT:   .half   2
+; CHECK-NEXT:   .half   0
+; CHECK-NEXT:   .word
+define void @floats(float %f, double %g, half %h, bfloat %i) {
+  %ff = alloca float
+  %gg = alloca double
+  %hh = alloca half
+  %ii = alloca bfloat
+  call void (i64, i32, ...) @llvm.experimental.stackmap(i64 888, i32 0, float 1.25,
+    double 1.5, half 1.5, bfloat 1.5, float %f, double %g, half %h, bfloat %i, ptr %ff, ptr %gg, ptr %hh, ptr %ii)
+  ret void
+}
 
 declare void @llvm.experimental.stackmap(i64, i32, ...)
 declare void @llvm.experimental.patchpoint.void(i64, i32, ptr, i32, ...)

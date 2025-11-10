@@ -10,6 +10,7 @@
 #include "Common/CodeGenDAGPatterns.h" // For SDNodeInfo.
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/TableGen/CodeGenHelpers.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/StringToOffsetTable.h"
 #include "llvm/TableGen/TableGenBackend.h"
@@ -129,9 +130,8 @@ SDNodeInfoEmitter::SDNodeInfoEmitter(const RecordKeeper &RK)
 }
 
 void SDNodeInfoEmitter::emitEnum(raw_ostream &OS) const {
-  OS << "#ifdef GET_SDNODE_ENUM\n";
-  OS << "#undef GET_SDNODE_ENUM\n\n";
-  OS << "namespace llvm::" << TargetSDNodeNamespace << " {\n\n";
+  IfDefEmitter IfDef(OS, "GET_SDNODE_ENUM");
+  NamespaceEmitter NS(OS, "llvm::" + TargetSDNodeNamespace);
 
   if (!NodesByName.empty()) {
     StringRef FirstName = NodesByName.begin()->first;
@@ -145,14 +145,11 @@ void SDNodeInfoEmitter::emitEnum(raw_ostream &OS) const {
 
     OS << "};\n\n";
     OS << "static constexpr unsigned GENERATED_OPCODE_END = " << LastName
-       << " + 1;\n\n";
+       << " + 1;\n";
   } else {
     OS << "static constexpr unsigned GENERATED_OPCODE_END = "
-          "ISD::BUILTIN_OP_END;\n\n";
+          "ISD::BUILTIN_OP_END;\n";
   }
-
-  OS << "} // namespace llvm::" << TargetSDNodeNamespace << "\n\n";
-  OS << "#endif // GET_SDNODE_ENUM\n\n";
 }
 
 std::vector<unsigned> SDNodeInfoEmitter::emitNodeNames(raw_ostream &OS) const {
@@ -324,9 +321,8 @@ static void emitDesc(raw_ostream &OS, StringRef EnumName,
 void SDNodeInfoEmitter::emitDescs(raw_ostream &OS) const {
   StringRef TargetName = Target.getName();
 
-  OS << "#ifdef GET_SDNODE_DESC\n";
-  OS << "#undef GET_SDNODE_DESC\n\n";
-  OS << "namespace llvm {\n";
+  IfDefEmitter IfDef(OS, "GET_SDNODE_DESC");
+  NamespaceEmitter NS(OS, "llvm");
 
   std::vector<unsigned> NameOffsets = emitNodeNames(OS);
   std::vector<std::pair<unsigned, unsigned>> ConstraintOffsetsAndCounts =
@@ -343,11 +339,8 @@ void SDNodeInfoEmitter::emitDescs(raw_ostream &OS) const {
 
   OS << formatv("static const SDNodeInfo {0}GenSDNodeInfo(\n"
                 "    /*NumOpcodes=*/{1}, {0}SDNodeDescs,\n"
-                "    {0}SDNodeNames, {0}SDTypeConstraints);\n\n",
+                "    {0}SDNodeNames, {0}SDTypeConstraints);\n",
                 TargetName, NodesByName.size());
-
-  OS << "} // namespace llvm\n\n";
-  OS << "#endif // GET_SDNODE_DESC\n\n";
 }
 
 void SDNodeInfoEmitter::run(raw_ostream &OS) const {

@@ -30,6 +30,8 @@ struct CatchTypeInfo {
 
 /// A protected scope for zero-cost EH handling.
 class EHScope {
+  EHScopeStack::stable_iterator enclosingEHScope;
+
   class CommonBitFields {
     friend class EHScope;
     unsigned kind : 3;
@@ -79,7 +81,10 @@ protected:
 public:
   enum Kind { Cleanup, Catch, Terminate, Filter };
 
-  EHScope(Kind kind) { commonBits.kind = kind; }
+  EHScope(Kind kind, EHScopeStack::stable_iterator enclosingEHScope)
+      : enclosingEHScope(enclosingEHScope) {
+    commonBits.kind = kind;
+  }
 
   Kind getKind() const { return static_cast<Kind>(commonBits.kind); }
 
@@ -89,6 +94,10 @@ public:
     // signal `hasEHBranches`.
     assert(!cir::MissingFeatures::ehstackBranches());
     return false;
+  }
+
+  EHScopeStack::stable_iterator getEnclosingEHScope() const {
+    return enclosingEHScope;
   }
 };
 
@@ -111,6 +120,8 @@ public:
 
     /// The catch handler for this type.
     mlir::Region *region;
+
+    bool isCatchAll() const { return type.rtti == nullptr; }
   };
 
 private:
@@ -118,12 +129,18 @@ private:
 
   Handler *getHandlers() { return reinterpret_cast<Handler *>(this + 1); }
 
+  const Handler *getHandlers() const {
+    return reinterpret_cast<const Handler *>(this + 1);
+  }
+
 public:
   static size_t getSizeForNumHandlers(unsigned n) {
     return sizeof(EHCatchScope) + n * sizeof(Handler);
   }
 
-  EHCatchScope(unsigned numHandlers) : EHScope(Catch) {
+  EHCatchScope(unsigned numHandlers,
+               EHScopeStack::stable_iterator enclosingEHScope)
+      : EHScope(Catch, enclosingEHScope) {
     catchBits.numHandlers = numHandlers;
     assert(catchBits.numHandlers == numHandlers && "NumHandlers overflow?");
   }
@@ -136,6 +153,11 @@ public:
     getHandlers()[i].region = region;
   }
 
+  const Handler &getHandler(unsigned i) const {
+    assert(i < getNumHandlers());
+    return getHandlers()[i];
+  }
+
   // Clear all handler blocks.
   // FIXME: it's better to always call clearHandlerBlocks in DTOR and have a
   // 'takeHandler' or some such function which removes ownership from the
@@ -143,6 +165,10 @@ public:
   void clearHandlerBlocks() {
     // The blocks are owned by TryOp, nothing to delete.
   }
+
+  using iterator = const Handler *;
+  iterator begin() const { return getHandlers(); }
+  iterator end() const { return getHandlers() + getNumHandlers(); }
 
   static bool classof(const EHScope *scope) {
     return scope->getKind() == Catch;
@@ -176,9 +202,10 @@ public:
   }
 
   EHCleanupScope(unsigned cleanupSize, unsigned fixupDepth,
-                 EHScopeStack::stable_iterator enclosingNormal)
-      : EHScope(EHScope::Cleanup), enclosingNormal(enclosingNormal),
-        fixupDepth(fixupDepth) {
+                 EHScopeStack::stable_iterator enclosingNormal,
+                 EHScopeStack::stable_iterator enclosingEH)
+      : EHScope(EHScope::Cleanup, enclosingEH),
+        enclosingNormal(enclosingNormal), fixupDepth(fixupDepth) {
     // TODO(cir): When exception handling is upstreamed, isNormalCleanup and
     // isEHCleanup will be arguments to the constructor.
     cleanupBits.isNormalCleanup = true;
@@ -235,11 +262,43 @@ public:
 
   EHScope *get() const { return reinterpret_cast<EHScope *>(ptr); }
 
+  EHScope *operator->() const { return get(); }
   EHScope &operator*() const { return *get(); }
+
+  iterator &operator++() {
+    size_t size;
+    switch (get()->getKind()) {
+    case EHScope::Catch:
+      size = EHCatchScope::getSizeForNumHandlers(
+          static_cast<const EHCatchScope *>(get())->getNumHandlers());
+      break;
+
+    case EHScope::Filter:
+      llvm_unreachable("EHScopeStack::iterator Filter");
+      break;
+
+    case EHScope::Cleanup:
+      llvm_unreachable("EHScopeStack::iterator Cleanup");
+      break;
+
+    case EHScope::Terminate:
+      llvm_unreachable("EHScopeStack::iterator Terminate");
+      break;
+    }
+    ptr += llvm::alignTo(size, ScopeStackAlignment);
+    return *this;
+  }
+
+  bool operator==(iterator other) const { return ptr == other.ptr; }
+  bool operator!=(iterator other) const { return ptr != other.ptr; }
 };
 
 inline EHScopeStack::iterator EHScopeStack::begin() const {
   return iterator(startOfData);
+}
+
+inline EHScopeStack::iterator EHScopeStack::end() const {
+  return iterator(endOfBuffer);
 }
 
 inline EHScopeStack::iterator
@@ -254,7 +313,7 @@ inline void EHScopeStack::popCatch() {
   assert(!empty() && "popping exception stack when not empty");
 
   EHCatchScope &scope = llvm::cast<EHCatchScope>(*begin());
-  assert(!cir::MissingFeatures::innermostEHScope());
+  innermostEHScope = scope.getEnclosingEHScope();
   deallocate(EHCatchScope::getSizeForNumHandlers(scope.getNumHandlers()));
 }
 
