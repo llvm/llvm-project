@@ -2492,3 +2492,10 @@ The AMDGPU backend
 The AMDGPU code generator lives in the ``lib/Target/AMDGPU``
 directory. This code generator is capable of targeting a variety of
 AMD GPU processors. Refer to :doc:`AMDGPUUsage` for more information.
+
+The Lightweight Fault Isolation (LFI) backend
+---------------------------------------------
+
+LFI is a backend that allows programs compiled for the target to run in a
+sandboxed environment that is within the same address space as host code. Refer
+to :doc:`LFI` for more information about the LFI backend.
