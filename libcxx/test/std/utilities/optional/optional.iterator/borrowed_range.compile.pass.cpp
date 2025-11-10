@@ -20,7 +20,7 @@
 #include <ranges>
 
 template <typename T>
-constexpr void borrowed_range() {
+void borrowed_range() {
   static_assert(std::ranges::enable_borrowed_range<std::optional<T&>>);
   static_assert(std::ranges::range<std::optional<T&>> == std::ranges::borrowed_range<std::optional<T&>>);
 }
