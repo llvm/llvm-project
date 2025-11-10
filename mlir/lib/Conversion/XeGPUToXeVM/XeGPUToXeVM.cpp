@@ -562,6 +562,8 @@ class LoadStoreMatrixToXeVMPattern : public OpConversionPattern<OpType> {
     VectorType valOrResVecTy = dyn_cast<VectorType>(data.getType());
     if (!valOrResVecTy)
       valOrResVecTy = VectorType::get(1, data.getType());
+    if (valOrResVecTy.getShape().size() != 1)
+      return rewriter.notifyMatchFailure(op, "Expected 1D data vector.");
 
     int64_t elemBitWidth =
         valOrResVecTy.getElementType().getIntOrFloatBitWidth();

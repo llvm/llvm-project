@@ -30,7 +30,7 @@ Possible fixes:
   - marking copy and move constructors and assignment operators deleted.
   - using class member method instead of class member variable with function
     object types.
-  - passing ``this`` pointer as parameter 
+  - passing ``this`` pointer as parameter.
 
 Options
 -------

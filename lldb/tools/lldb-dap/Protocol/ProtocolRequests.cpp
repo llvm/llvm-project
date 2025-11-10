@@ -636,7 +636,7 @@ json::Value toJSON(const ExceptionInfoResponseBody &ERB) {
                       {"breakMode", ERB.breakMode}};
 
   if (!ERB.description.empty())
-    result.insert({"description", ERB.description.c_str()});
+    result.insert({"description", ERB.description});
   if (ERB.details.has_value())
     result.insert({"details", *ERB.details});
 

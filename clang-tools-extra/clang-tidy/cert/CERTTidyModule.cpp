@@ -11,6 +11,10 @@
 #include "../ClangTidyModuleRegistry.h"
 #include "../bugprone/BadSignalToKillThreadCheck.h"
 #include "../bugprone/CommandProcessorCheck.h"
+#include "../bugprone/CopyConstructorMutatesArgumentCheck.h"
+#include "../bugprone/DefaultOperatorNewOnOveralignedTypeCheck.h"
+#include "../bugprone/ExceptionCopyConstructorThrowsCheck.h"
+#include "../bugprone/FloatLoopCounterCheck.h"
 #include "../bugprone/PointerArithmeticOnPolymorphicObjectCheck.h"
 #include "../bugprone/RawMemoryCallOnNonTrivialTypeCheck.h"
 #include "../bugprone/ReservedIdentifierCheck.h"
@@ -18,6 +22,7 @@
 #include "../bugprone/SignedCharMisuseCheck.h"
 #include "../bugprone/SizeofExpressionCheck.h"
 #include "../bugprone/SpuriouslyWakeUpFunctionsCheck.h"
+#include "../bugprone/StdNamespaceModificationCheck.h"
 #include "../bugprone/SuspiciousMemoryComparisonCheck.h"
 #include "../bugprone/ThrowingStaticInitializationCheck.h"
 #include "../bugprone/UncheckedStringToNumberConversionCheck.h"
@@ -27,7 +32,7 @@
 #include "../concurrency/ThreadCanceltypeAsynchronousCheck.h"
 #include "../google/UnnamedNamespaceInHeaderCheck.h"
 #include "../misc/NewDeleteOverloadsCheck.h"
-#include "../misc/NonCopyableObjects.h"
+#include "../misc/NonCopyableObjectsCheck.h"
 #include "../misc/StaticAssertCheck.h"
 #include "../misc/ThrowByValueCatchByReferenceCheck.h"
 #include "../modernize/AvoidSetjmpLongjmpCheck.h"
@@ -35,13 +40,8 @@
 #include "../performance/MoveConstructorInitCheck.h"
 #include "../readability/EnumInitialValueCheck.h"
 #include "../readability/UppercaseLiteralSuffixCheck.h"
-#include "DefaultOperatorNewAlignmentCheck.h"
-#include "DontModifyStdNamespaceCheck.h"
-#include "FloatLoopCounter.h"
 #include "LimitedRandomnessCheck.h"
-#include "MutatingCopyCheck.h"
 #include "ProperlySeededRandomGeneratorCheck.h"
-#include "ThrownExceptionTypeCheck.h"
 
 namespace {
 
@@ -251,7 +251,8 @@ public:
         "cert-dcl51-cpp");
     CheckFactories.registerCheck<misc::NewDeleteOverloadsCheck>(
         "cert-dcl54-cpp");
-    CheckFactories.registerCheck<DontModifyStdNamespaceCheck>("cert-dcl58-cpp");
+    CheckFactories.registerCheck<bugprone::StdNamespaceModificationCheck>(
+        "cert-dcl58-cpp");
     CheckFactories.registerCheck<google::build::UnnamedNamespaceInHeaderCheck>(
         "cert-dcl59-cpp");
     // ERR
@@ -261,12 +262,14 @@ public:
         "cert-err52-cpp");
     CheckFactories.registerCheck<bugprone::ThrowingStaticInitializationCheck>(
         "cert-err58-cpp");
-    CheckFactories.registerCheck<ThrownExceptionTypeCheck>("cert-err60-cpp");
+    CheckFactories.registerCheck<bugprone::ExceptionCopyConstructorThrowsCheck>(
+        "cert-err60-cpp");
     CheckFactories.registerCheck<misc::ThrowByValueCatchByReferenceCheck>(
         "cert-err61-cpp");
     // MEM
-    CheckFactories.registerCheck<DefaultOperatorNewAlignmentCheck>(
-        "cert-mem57-cpp");
+    CheckFactories
+        .registerCheck<bugprone::DefaultOperatorNewOnOveralignedTypeCheck>(
+            "cert-mem57-cpp");
     // MSC
     CheckFactories.registerCheck<LimitedRandomnessCheck>("cert-msc50-cpp");
     CheckFactories.registerCheck<ProperlySeededRandomGeneratorCheck>(
@@ -280,7 +283,8 @@ public:
         "cert-oop54-cpp");
     CheckFactories.registerCheck<bugprone::RawMemoryCallOnNonTrivialTypeCheck>(
         "cert-oop57-cpp");
-    CheckFactories.registerCheck<MutatingCopyCheck>("cert-oop58-cpp");
+    CheckFactories.registerCheck<bugprone::CopyConstructorMutatesArgumentCheck>(
+        "cert-oop58-cpp");
 
     // C checkers
     // ARR
@@ -308,7 +312,8 @@ public:
     CheckFactories.registerCheck<bugprone::SuspiciousMemoryComparisonCheck>(
         "cert-exp42-c");
     // FLP
-    CheckFactories.registerCheck<FloatLoopCounter>("cert-flp30-c");
+    CheckFactories.registerCheck<bugprone::FloatLoopCounterCheck>(
+        "cert-flp30-c");
     CheckFactories.registerCheck<bugprone::SuspiciousMemoryComparisonCheck>(
         "cert-flp37-c");
     // FIO
