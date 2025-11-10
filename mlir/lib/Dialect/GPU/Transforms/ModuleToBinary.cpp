@@ -39,10 +39,10 @@ void GpuModuleToBinaryPass::runOnOperation() {
   RewritePatternSet patterns(&getContext());
   auto targetFormat =
       llvm::StringSwitch<std::optional<CompilationTarget>>(compilationTarget)
-          .Cases("offloading", "llvm", CompilationTarget::Offload)
-          .Cases("assembly", "isa", CompilationTarget::Assembly)
-          .Cases("binary", "bin", CompilationTarget::Binary)
-          .Cases("fatbinary", "fatbin", CompilationTarget::Fatbin)
+          .Cases({"offloading", "llvm"}, CompilationTarget::Offload)
+          .Cases({"assembly", "isa"}, CompilationTarget::Assembly)
+          .Cases({"binary", "bin"}, CompilationTarget::Binary)
+          .Cases({"fatbinary", "fatbin"}, CompilationTarget::Fatbin)
           .Default(std::nullopt);
   if (!targetFormat)
     getOperation()->emitError() << "Invalid format specified.";

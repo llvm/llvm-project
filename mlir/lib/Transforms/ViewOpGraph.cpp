@@ -158,7 +158,8 @@ private:
 
   /// Emit a cluster (subgraph). The specified builder generates the body of the
   /// cluster. Return the anchor node of the cluster.
-  Node emitClusterStmt(function_ref<void()> builder, std::string label = "") {
+  Node emitClusterStmt(function_ref<void()> builder,
+                       const std::string &label = "") {
     int clusterId = ++counter;
     os << "subgraph cluster_" << clusterId << " {\n";
     os.indent();
@@ -269,7 +270,7 @@ private:
   }
 
   /// Emit a node statement.
-  Node emitNodeStmt(std::string label, StringRef shape = kShapeNode,
+  Node emitNodeStmt(const std::string &label, StringRef shape = kShapeNode,
                     StringRef background = "") {
     int nodeId = ++counter;
     AttributeMap attrs;

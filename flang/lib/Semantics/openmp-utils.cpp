@@ -26,7 +26,9 @@
 #include "flang/Parser/openmp-utils.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/expression.h"
+#include "flang/Semantics/scope.h"
 #include "flang/Semantics/semantics.h"
+#include "flang/Semantics/symbol.h"
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
@@ -184,6 +186,23 @@ bool IsExtendedListItem(const Symbol &sym) {
   return IsVariableListItem(sym) || sym.IsSubprogram();
 }
 
+bool IsTypeParamInquiry(const Symbol &sym) {
+  return common::visit( //
+      common::visitors{
+          [&](const MiscDetails &d) {
+            return d.kind() == MiscDetails::Kind::KindParamInquiry ||
+                d.kind() == MiscDetails::Kind::LenParamInquiry;
+          },
+          [&](const TypeParamDetails &s) { return true; },
+          [&](auto &&) { return false; },
+      },
+      sym.details());
+}
+
+bool IsStructureComponent(const Symbol &sym) {
+  return sym.owner().kind() == Scope::Kind::DerivedType;
+}
+
 bool IsVarOrFunctionRef(const MaybeExpr &expr) {
   if (expr) {
     return evaluate::UnwrapProcedureRef(*expr) != nullptr ||
@@ -218,7 +237,7 @@ bool IsMapExitingType(parser::OmpMapType::Value type) {
   }
 }
 
-std::optional<SomeExpr> GetEvaluateExpr(const parser::Expr &parserExpr) {
+MaybeExpr GetEvaluateExpr(const parser::Expr &parserExpr) {
   const parser::TypedExpr &typedExpr{parserExpr.typedExpr};
   // ForwardOwningPointer           typedExpr
   // `- GenericExprWrapper          ^.get()
@@ -505,5 +524,4 @@ bool IsStrictlyStructuredBlock(const parser::Block &block) {
     return false;
   }
 }
-
 } // namespace Fortran::semantics::omp

@@ -278,6 +278,7 @@ struct Config {
   llvm::StringRef dtltoDistributor;
   llvm::SmallVector<llvm::StringRef, 0> dtltoDistributorArgs;
   llvm::StringRef dtltoCompiler;
+  llvm::SmallVector<llvm::StringRef, 0> dtltoCompilerPrependArgs;
   llvm::SmallVector<llvm::StringRef, 0> dtltoCompilerArgs;
   llvm::SmallVector<llvm::StringRef, 0> undefined;
   llvm::SmallVector<SymbolVersion, 0> dynamicList;

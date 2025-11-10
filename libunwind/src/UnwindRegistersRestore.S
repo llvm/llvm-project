@@ -18,6 +18,8 @@
 
 #if defined(_AIX)
   .toc
+#elif defined(__aarch64__) && defined(__ELF__) && defined(_LIBUNWIND_EXECUTE_ONLY_CODE)
+  .section .text,"axy",@progbits,unique,0
 #else
   .text
 #endif
@@ -633,6 +635,10 @@ Lnovec:
   bctr
 
 #elif defined(__aarch64__)
+
+#ifndef __has_feature
+#define __has_feature(__feature) 0
+#endif
 
 #if defined(__ARM_FEATURE_GCS_DEFAULT)
 .arch_extension gcs

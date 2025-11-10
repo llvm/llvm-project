@@ -1510,6 +1510,8 @@ namespace Memcmp {
   static_assert(f());
 #endif
 
+  int unknown;
+  void foo(void) { unknown *= __builtin_memcmp(0, 0, 2); }
 }
 
 namespace Memchr {
@@ -1853,3 +1855,9 @@ namespace InitParam {
 }
 
 #endif
+
+namespace NonBlockPointerStore {
+  int a;
+  void foo(void) { a *= __builtin_sadd_overflow(1, 2, 0); }
+  void foo2(void) { a *= __builtin_addc(1, 2, 0, 0); }
+}

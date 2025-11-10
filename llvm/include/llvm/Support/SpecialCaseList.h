@@ -13,7 +13,10 @@
 #define LLVM_SUPPORT_SPECIALCASELIST_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/RadixTree.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/GlobPattern.h"
@@ -162,6 +165,15 @@ private:
     };
 
     std::vector<GlobMatcher::Glob> Globs;
+
+    RadixTree<iterator_range<StringRef::const_iterator>,
+              RadixTree<iterator_range<StringRef::const_reverse_iterator>,
+                        SmallVector<const GlobMatcher::Glob *, 1>>>
+        PrefixSuffixToGlob;
+
+    RadixTree<iterator_range<StringRef::const_iterator>,
+              SmallVector<const GlobMatcher::Glob *, 1>>
+        SubstrToGlob;
   };
 
   /// Represents a set of patterns and their line numbers

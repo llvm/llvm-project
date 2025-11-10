@@ -18,6 +18,8 @@
 
 #if defined(_AIX)
     .toc
+#elif defined(__aarch64__) && defined(__ELF__) && defined(_LIBUNWIND_EXECUTE_ONLY_CODE)
+    .section .text,"axy",@progbits,unique,0
 #else
     .text
 #endif
@@ -762,6 +764,10 @@ LnoR2Fix:
 
 
 #elif defined(__aarch64__)
+
+#ifndef __has_feature
+#define __has_feature(__feature) 0
+#endif
 
 //
 // extern int __unw_getcontext(unw_context_t* thread_state)
