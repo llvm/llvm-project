@@ -1783,8 +1783,10 @@ PPCRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
 
   // If the instruction is not present in ImmToIdxMap, then it has no immediate
   // form (and must be r+r).
+  // STMW and LMW only have immediate form.
   bool noImmForm = !MI.isInlineAsm() && OpC != TargetOpcode::STACKMAP &&
-                   OpC != TargetOpcode::PATCHPOINT && !ImmToIdxMap.count(OpC);
+                   OpC != TargetOpcode::PATCHPOINT && !ImmToIdxMap.count(OpC) &&
+                   OpC != PPC::STMW && OpC != PPC::LMW;
 
   // Now add the frame object offset to the offset from r1.
   int64_t Offset = MFI.getObjectOffset(FrameIndex);
@@ -1826,10 +1828,10 @@ PPCRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
                             isInt<16>(Offset);
   if (TII.isPrefixed(MI.getOpcode()))
     OffsetFitsMnemonic = isInt<34>(Offset);
-  if (!noImmForm && ((OffsetFitsMnemonic &&
-                      ((Offset % offsetMinAlign(MI)) == 0)) ||
-                     OpC == TargetOpcode::STACKMAP ||
-                     OpC == TargetOpcode::PATCHPOINT)) {
+  if (!noImmForm &&
+      ((OffsetFitsMnemonic && ((Offset % offsetMinAlign(MI)) == 0)) ||
+       OpC == TargetOpcode::STACKMAP || OpC == TargetOpcode::PATCHPOINT ||
+       OpC == PPC::STMW || OpC == PPC::LMW)) {
     MI.getOperand(OffsetOperandNo).ChangeToImmediate(Offset);
     return false;
   }

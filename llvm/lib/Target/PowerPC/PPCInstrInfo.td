@@ -2056,7 +2056,7 @@ def LFIWZX : XForm_25_memOp<31, 887, (outs f8rc:$RST), (ins (memrr $RA, $RB):$ad
 
 // Load Multiple
 let mayLoad = 1, mayStore = 0, hasSideEffects = 0 in
-def LMW : DForm_1<46, (outs gprc:$RST), (ins (memri $D, $RA):$src),
+def LMW : DForm_1<46, (outs gprc:$RST), (ins (memri $D, $RA):$src, variable_ops),
                   "lmw $RST, $src", IIC_LdStLMW, []>;
 
 //===----------------------------------------------------------------------===//
@@ -2206,7 +2206,7 @@ def : Pat<(pre_store f64:$rS, iPTR:$ptrreg, iPTR:$ptroff),
 
 // Store Multiple
 let mayStore = 1, mayLoad = 0, hasSideEffects = 0 in
-def STMW : DForm_1<47, (outs), (ins gprc:$RST, (memri $D, $RA):$dst),
+def STMW : DForm_1<47, (outs), (ins gprc:$RST, (memri $D, $RA):$dst, variable_ops),
                    "stmw $RST, $dst", IIC_LdStLMW, []>;
 
 def SYNC : XForm_24_sync<31, 598, (outs), (ins u2imm:$L),

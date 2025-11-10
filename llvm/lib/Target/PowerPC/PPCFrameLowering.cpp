@@ -40,6 +40,12 @@ EnablePEVectorSpills("ppc-enable-pe-vector-spills",
                      cl::desc("Enable spills in prologue to vector registers."),
                      cl::init(false), cl::Hidden);
 
+static cl::opt<bool>
+    EnableLoadStoreMultiple("ppc-enable-load-store-multiple",
+                            cl::desc("Enable load/store multiple (only "
+                                     "support on 32-bit AIX)."),
+                            cl::init(false), cl::Hidden);
+
 static unsigned computeReturnSaveOffset(const PPCSubtarget &STI) {
   if (STI.isAIXABI())
     return STI.isPPC64() ? 16 : 8;
@@ -2408,6 +2414,53 @@ bool PPCFrameLowering::assignCalleeSavedSpillSlots(
   return AllSpilledToReg;
 }
 
+static bool findConsecutiveLoadStore(const MachineFrameInfo &MFI,
+                                     ArrayRef<CalleeSavedInfo> CSI,
+                                     Register &MergeFrom, int64_t FrameSize) {
+  Register LastReg = PPC::R0;
+  for (unsigned I = 0, E = CSI.size(); I + 1 < E; ++I) {
+    Register CurrReg = CSI[I].getReg();
+    if (LastReg >= PPC::R31)
+      break;
+
+    if (CurrReg < PPC::R13 || CurrReg >= PPC::R31 || CSI[I].isSpilledToReg())
+      continue;
+
+    assert((CSI[I].getFrameIdx() < 0 &&
+            MFI.getObjectSize(CSI[I].getFrameIdx()) == 4) &&
+           "Register is illegal!");
+
+    if (MergeFrom == PPC::R0) {
+      // STMW/LMW only have the immediate form. The offset must fit in int16
+      // otherwise it will be truncated in
+      // PPCRegisterInfo::eliminateFrameIndex().
+      int64_t Offset = FrameSize + MFI.getObjectOffset(CSI[I].getFrameIdx());
+      if (!isInt<16>(Offset))
+        continue;
+
+      // Record the first GPR that STMW/LMW are going to merge since STMW/LMW
+      // save from rN to r31, where rN >= r13.
+      MergeFrom = CurrReg;
+    }
+
+    // Check registers are consecutive.
+    if (CSI[I + 1].getReg().id() - CurrReg.id() != 1) {
+      MergeFrom = PPC::R0;
+      continue;
+    }
+
+    // Frame indexes must be consecutive.
+    assert((CSI[I].getFrameIdx() - CSI[I + 1].getFrameIdx() == 1) &&
+           "Frame index is illegal!");
+
+    LastReg = CSI[I + 1].getReg();
+  }
+
+  return (LastReg == PPC::R31 && MergeFrom >= PPC::R13 && MergeFrom < PPC::R31)
+             ? true
+             : false;
+}
+
 bool PPCFrameLowering::spillCalleeSavedRegisters(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
     ArrayRef<CalleeSavedInfo> CSI, const TargetRegisterInfo *TRI) const {
@@ -2416,6 +2469,7 @@ bool PPCFrameLowering::spillCalleeSavedRegisters(
   const PPCInstrInfo &TII = *Subtarget.getInstrInfo();
   PPCFunctionInfo *FI = MF->getInfo<PPCFunctionInfo>();
   bool MustSaveTOC = FI->mustSaveTOC();
+  const MachineFrameInfo &MFI = MF->getFrameInfo();
   DebugLoc DL;
   bool CRSpilled = false;
   MachineInstrBuilder CRMIB;
@@ -2436,6 +2490,13 @@ bool PPCFrameLowering::spillCalleeSavedRegisters(
         SpilledVSR.second = Info.getReg();
     }
   }
+
+  // STMW save from rN to r31, where r13 <= rN < r31.
+  Register MergeFrom = PPC::R0;
+  bool UseSTMW = false;
+  if (EnableLoadStoreMultiple && Subtarget.isAIXABI() && !Subtarget.isPPC64())
+    UseSTMW = findConsecutiveLoadStore(MFI, CSI, MergeFrom,
+                                       determineFrameLayout(*MF, true));
 
   for (const CalleeSavedInfo &I : CSI) {
     MCRegister Reg = I.getReg();
@@ -2520,9 +2581,26 @@ bool PPCFrameLowering::spillCalleeSavedRegisters(
         // saved vector registers.
         if (Subtarget.needsSwapsForVSXMemOps() &&
             !MF->getFunction().hasFnAttribute(Attribute::NoUnwind))
-          TII.storeRegToStackSlotNoUpd(MBB, MI, Reg, !IsLiveIn,
-                                       I.getFrameIdx(), RC, TRI);
-        else
+          TII.storeRegToStackSlotNoUpd(MBB, MI, Reg, !IsLiveIn, I.getFrameIdx(),
+                                       RC, TRI);
+        else if (UseSTMW && Reg >= MergeFrom && Reg <= PPC::R31) {
+          // Consecutive stores where registers are from MergeFrom to r31 will
+          // be merged into a single STMW.
+          if (Reg != MergeFrom)
+            continue;
+          int FrameIdx = I.getFrameIdx();
+          MachineInstrBuilder MIB = BuildMI(MBB, MI, DL, TII.get(PPC::STMW));
+          MIB.addReg(Reg, getKillRegState(!IsLiveIn));
+          MIB.addImm(0).addFrameIndex(FrameIdx);
+          MachineMemOperand *MMO = MF->getMachineMemOperand(
+              MachinePointerInfo::getFixedStack(*MF, FrameIdx),
+              MachineMemOperand::MOStore, MFI.getObjectSize(FrameIdx),
+              MFI.getObjectAlign(FrameIdx));
+          MIB.addMemOperand(MMO);
+          FI->setHasSpills();
+          for (unsigned I = MergeFrom.id(); I <= Register(PPC::R31).id(); ++I)
+            MIB.addUse(Register(I), RegState::Implicit);
+        } else
           TII.storeRegToStackSlot(MBB, MI, Reg, !IsLiveIn, I.getFrameIdx(), RC,
                                   TRI, Register());
       }
@@ -2609,12 +2687,19 @@ bool PPCFrameLowering::restoreCalleeSavedRegisters(
   MachineFunction *MF = MBB.getParent();
   const PPCInstrInfo &TII = *Subtarget.getInstrInfo();
   PPCFunctionInfo *FI = MF->getInfo<PPCFunctionInfo>();
+  const MachineFrameInfo &MFI = MF->getFrameInfo();
   bool MustSaveTOC = FI->mustSaveTOC();
   bool CR2Spilled = false;
   bool CR3Spilled = false;
   bool CR4Spilled = false;
   unsigned CSIIndex = 0;
   BitVector Restored(TRI->getNumRegs());
+
+  Register MergeFrom = PPC::R0;
+  bool UseLMW = false;
+  if (EnableLoadStoreMultiple && Subtarget.isAIXABI() && !Subtarget.isPPC64())
+    UseLMW = findConsecutiveLoadStore(MFI, CSI, MergeFrom,
+                                      determineFrameLayout(*MF, true));
 
   // Initialize insertion-point logic; we will be restoring in reverse
   // order of spill.
@@ -2692,7 +2777,25 @@ bool PPCFrameLowering::restoreCalleeSavedRegisters(
             !MF->getFunction().hasFnAttribute(Attribute::NoUnwind))
           TII.loadRegFromStackSlotNoUpd(MBB, I, Reg, CSI[i].getFrameIdx(), RC,
                                         TRI);
-        else
+        else if (UseLMW && Reg >= MergeFrom && Reg <= PPC::R31) {
+          // Consecutive loads where registers are from MergeFrom to r31 will
+          // be merged into a single LMW.
+          if (Reg != MergeFrom)
+            continue;
+          int FrameIdx = CSI[i].getFrameIdx();
+          DebugLoc DL;
+          MachineInstrBuilder MIB =
+              BuildMI(MBB, I, DL, TII.get(PPC::LMW), MergeFrom);
+          MIB.addImm(0).addFrameIndex(FrameIdx);
+          MachineMemOperand *MMO = MF->getMachineMemOperand(
+              MachinePointerInfo::getFixedStack(*MF, FrameIdx),
+              MachineMemOperand::MOLoad, MFI.getObjectSize(FrameIdx),
+              MFI.getObjectAlign(FrameIdx));
+          MIB.addMemOperand(MMO);
+          FI->setHasSpills();
+          for (unsigned I = MergeFrom.id(); I <= Register(PPC::R31).id(); ++I)
+            MIB.addDef(Register(I), RegState::Implicit);
+        } else
           TII.loadRegFromStackSlot(MBB, I, Reg, CSI[i].getFrameIdx(), RC, TRI,
                                    Register());
 
