@@ -30,7 +30,7 @@ static bool isOverrideMethod(const FunctionDecl *Function) {
 
 static bool hasAttrAfterParam(const SourceManager *SourceManager,
                               const ParmVarDecl *Param) {
-  return llvm::any_of(Param->attrs(), [&](const auto *Attr) {
+  return llvm::any_of(Param->attrs(), [&](const Attr *Attr) {
     return SourceManager->isBeforeInTranslationUnit(Param->getLocation(),
                                                     Attr->getLocation());
   });

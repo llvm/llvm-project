@@ -45,9 +45,8 @@ AST_MATCHER_P(NamedDecl, hasAnyNameIgnoringTemplates, std::vector<StringRef>,
   // FullNameTrimmed matches any of the given Names.
   const StringRef FullNameTrimmedRef = FullNameTrimmed;
   return llvm::any_of(Names, [&](const StringRef Pattern) {
-    if (Pattern.starts_with("::")) {
+    if (Pattern.starts_with("::"))
       return FullNameTrimmed == Pattern;
-    }
     return FullNameTrimmedRef.ends_with(Pattern) &&
            FullNameTrimmedRef.drop_back(Pattern.size()).ends_with("::");
   });

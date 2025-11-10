@@ -20,8 +20,9 @@ namespace clang::tidy::readability {
 namespace {
 
 AST_MATCHER(CXXMethodDecl, hasOnlyDefaultParameters) {
-  return llvm::all_of(Node.parameters(),
-                      [](const auto *Param) { return Param->hasDefaultArg(); });
+  return llvm::all_of(Node.parameters(), [](const ParmVarDecl *Param) {
+    return Param->hasDefaultArg();
+  });
 }
 
 const auto DefaultSmartPointers = "::std::shared_ptr;::std::unique_ptr;"
