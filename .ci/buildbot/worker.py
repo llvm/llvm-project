@@ -214,31 +214,64 @@ def run(
     workerjobs=None,
     always_clobber=False,
 ):
-    """Runs the boilerplate for a ScriptedBuilder buildbot. It is not necessary to use this function (one can also all run_command() etc. directly), but allows for some more flexibility and safety checks. Arguments passed to this function represent the worker configuration.
+    """
+    Runs the boilerplate for a ScriptedBuilder buildbot. It is not necessary to
+    use this function (one can also all run_command() etc. directly), but allows
+    for some more flexibility and safety checks. Arguments passed to this
+    function represent the worker configuration.
 
-    We use the term 'clean' for resetting the worker to an empty state. This involves deleting ${prefix}/llvm.src as well as ${prefix}/build.
-    The term 'clobber' means deleting build artifacts, but not already downloaded git repositories. Build artifacts including build- and install-directories, but not source directories. Changes in the llvm.src directory will be reset before the next build anyway. Clobber is necessary if the build instructions change. Otherwise, we try an incremental build. We consider 'clean' to imply 'clean_obj'.
+    We use the term 'clean' for resetting the worker to an empty state. This
+    involves deleting ${prefix}/llvm.src as well as ${prefix}/build.
+    The term 'clobber' means deleting build artifacts, but not already
+    downloaded git repositories. Build artifacts including build- and
+    install-directories, but not source directories. Changes in the llvm.src
+    directory will be reset before the next build anyway. Clobber is necessary
+    if the build instructions change. Otherwise, we try an incremental build.
+    We consider 'clean' to imply 'clean_obj'.
 
-    A buildbot worker will invoke this script using this directory structure, where ${prefix} is a dedicated directory for this builder:
+    A buildbot worker will invoke this script using this directory structure,
+    where ${prefix} is a dedicated directory for this builder:
         ${prefix}/llvm.src      # Checkout location for the llvm-source
         ${prefix}/build         # cwd when launching the build script
 
-    The build script is called with --workdir=. parameter, i.e. the build artifacts are written into ${prefix}/build. When cleaning, the worker (NOT the build script) will delete ${prefix}/llvm.src; Deleting any contents of ${prefix}/build is to be done by the builder script, e.g. by this function. The builder script can choose to not delete the complete workdir, e.g. additional source checkouts such as the llvm-test-suite.
+    The build script is called with --workdir=. parameter, i.e. the build
+    artifacts are written into ${prefix}/build. When cleaning, the worker (NOT
+    the build script) will delete ${prefix}/llvm.src; Deleting any contents of
+    ${prefix}/build is to be done by the builder script, e.g. by this function.
+    The builder script can choose to not delete the complete workdir, e.g.
+    additional source checkouts such as the llvm-test-suite.
 
-    The buildbot master will set the 'clean' build property and the environment variable BUILDBOT_CLEAN when in the GUI the option "Clean source code and build directory" is checked by the user. The 'clean_obj' build property and the BUILDBOT_CLEAN_OBJ environment variable will be set when either the "Clean build directory" GUI option is set, or the master detects a change to a CMakeLists.txt or *.cmake file.
+    The buildbot master will set the 'clean' build property and the environment
+    variable BUILDBOT_CLEAN when in the GUI the option "Clean source code and
+    build directory" is checked by the user. The 'clean_obj' build property and
+    the BUILDBOT_CLEAN_OBJ environment variable will be set when either the
+    "Clean build directory" GUI option is set, or the master detects a change
+    to a CMakeLists.txt or *.cmake file.
 
     Parameters
     ----------
     scriptpath
         Pass __file__ from the main builder script.
     llvmsrcroot
-        Absolute path to the llvm-project source checkout. Since the builder script is supposed to be a part of llvm-project itself, the builder script can compute it from __file__.
+        Absolute path to the llvm-project source checkout. Since the builder
+        script is supposed to be a part of llvm-project itself, the builder
+        script can compute it from __file__.
     parser
-        Use this argparse.ArgumentParser instead of creating a new one. Allows adding additional command line switched in addition to the pre-defined ones. Build script are encouraged to apply the pre-defined switches.
+        Use this argparse.ArgumentParser instead of creating a new one. Allows
+        adding additional command line switched in addition to the pre-defined
+        ones. Build script are encouraged to apply the pre-defined switches.
     clobberpaths
-        Directories relative to workdir that need to be deleted if the build configuration changes (due to changes of CMakeLists.txt or changes of configuration parameters). Typically, only source checkouts are not deleted.
+        Directories relative to workdir that need to be deleted if the build
+        configuration changes (due to changes of CMakeLists.txt or changes of
+        configuration parameters). Typically, only source checkouts are not
+        deleted.
     workerjobs
-        Default number of build and test jobs; If set, expected to be the number of jobs of the actual buildbot worker that executes this script. Can be overridden using the --jobs parameter so in case someone needs to reproduce this build, they can adjust the number of jobs for the reproducer platform. Alternatively, the worker can set the BUILDBOT_JOBS environment variable or keep ninja/llvm-lit defaults.
+        Default number of build and test jobs; If set, expected to be the number
+        of jobs of the actual buildbot worker that executes this script. Can be
+        overridden using the --jobs parameter so in case someone needs to
+        reproduce this build, they can adjust the number of jobs for the
+        reproducer platform. Alternatively, the worker can set the
+        BUILDBOT_JOBS environment variable or keep ninja/llvm-lit defaults.
     always_clobber
         Always clobber the build artifacts, i.e. disable incremental builds.
     """
@@ -260,25 +293,32 @@ def run(
 
     parser = parser or argparse.ArgumentParser(
         allow_abbrev=True,
-        description=f"When executed without arguments, builds the worker's LLVM build configuration in {os.path.abspath(workdir_default)}. Some build configuration parameters can be altered using the following switches:",
+        description="When executed without arguments, builds the worker's "
+        f"LLVM build configuration in {os.path.abspath(workdir_default)}. "
+        "Some build configuration parameters can be altered using the "
+        "following switches:",
     )
     parser.add_argument(
         "--workdir",
         default=workdir_default,
-        help="Use this dir as workdir to write the build artifact into. --workdir=. uses the current directory.\nWarning: This directory might be deleted",
+        help="Use this dir as workdir to write the build artifact into. "
+        "--workdir=. uses the current directory.\nWarning: This directory "
+        "might be deleted",
     )
     parser.add_argument(
         "--cachefile",
         default=relative_if_possible(
             pathlib.Path(scriptpath).with_suffix(".cmake"), llvmsrcroot
         ),
-        help="File containing the initial values for the CMakeCache.txt for the llvm build.",
+        help="File containing the initial values for the CMakeCache.txt for "
+        "the llvm build.",
     )
     parser.add_argument(
         "--clean",
         type=bool,
         default=convert_bool(os.environ.get("BUILDBOT_CLEAN")),
-        help="Delete the entire workdir before starting the build, including source directories",
+        help="Delete the entire workdir before starting the build, including "
+        "source directories",
     )
     parser.add_argument(
         "--clobber",
