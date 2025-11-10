@@ -209,7 +209,7 @@ address.
 +---------------------------------+-------------------------------+
 
 Stack pointer modification
-~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 When the stack pointer is modified, we write the modified value to a temporary,
 before loading it back into ``sp`` with a safe ``add``.
