@@ -1335,7 +1335,7 @@ SIInstrInfo::pierceThroughRegSequence(const MachineInstr &MI) const {
         MRI.getRegClass(RealDefs[(I + 1) % 2]->getOperand(0).getReg())
                     ->MC->getSizeInBits() *
                 2 ==
-        MRI.getRegClass(MI.getOperand(0).getReg())->MC->getSizeInBits())
+            MRI.getRegClass(MI.getOperand(0).getReg())->MC->getSizeInBits())
       return RealDefs[(I + 1) % 2];
 
   return nullptr;
