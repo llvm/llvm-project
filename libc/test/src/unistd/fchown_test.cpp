@@ -46,5 +46,5 @@ TEST_F(LlvmLibcFchownTest, FchownSuccess) {
 
 TEST_F(LlvmLibcFchownTest, ChownInvalidFileDescriptor) {
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
-  ASSERT_THAT(LIBC_NAMESPACE::chown(-1, 1000, 1000), Fails(ENOENT));
+  ASSERT_THAT(LIBC_NAMESPACE::fchown(-1, 1000, 1000), Fails(ENOENT));
 }
