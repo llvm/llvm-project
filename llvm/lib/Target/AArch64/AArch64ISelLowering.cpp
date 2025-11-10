@@ -1916,6 +1916,12 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setPartialReduceMLAAction(MLAOps, MVT::nxv4i32, MVT::nxv8i16, Legal);
       setPartialReduceMLAAction(MLAOps, MVT::nxv8i16, MVT::nxv16i8, Legal);
     }
+
+    // Handle floating-point partial reduction
+    if (Subtarget->hasSVE2p1() || Subtarget->hasSME2()) {
+      setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_FMLA, MVT::nxv4f32,
+                                MVT::nxv8f16, Legal);
+    }
   }
 
   // Handle non-aliasing elements mask
@@ -2281,6 +2287,11 @@ void AArch64TargetLowering::addTypeForFixedLengthSVE(MVT VT) {
     else if (VT.getVectorElementType() == MVT::i64)
       setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_SUMLA, VT,
                                 MVT::getVectorVT(MVT::i8, NumElts * 8), Custom);
+  }
+
+  if (Subtarget->hasSVE2p1() && VT.getVectorElementType() == MVT::f32) {
+    setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_FMLA, VT,
+                              MVT::getVectorVT(MVT::f16, NumElts * 2), Custom);
   }
 
   // Lower fixed length vector operations to scalable equivalents.
@@ -7875,6 +7886,7 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
   case ISD::PARTIAL_REDUCE_SMLA:
   case ISD::PARTIAL_REDUCE_UMLA:
   case ISD::PARTIAL_REDUCE_SUMLA:
+  case ISD::PARTIAL_REDUCE_FMLA:
     return LowerPARTIAL_REDUCE_MLA(Op, DAG);
   }
 }
@@ -22296,6 +22308,37 @@ static SDValue performExtBinopLoadFold(SDNode *N, SelectionDAG &DAG) {
   return DAG.getNode(N->getOpcode(), DL, VT, Ext0, NShift);
 }
 
+// Attempt to combine the following patterns:
+//   SUB x, (CSET LO, (CMP a, b)) -> SBC x, 0, (CMP a, b)
+//   SUB (SUB x, y), (CSET LO, (CMP a, b)) -> SBC x, y, (CMP a, b)
+// The CSET may be preceded by a ZEXT.
+static SDValue performSubWithBorrowCombine(SDNode *N, SelectionDAG &DAG) {
+  if (N->getOpcode() != ISD::SUB)
+    return SDValue();
+
+  EVT VT = N->getValueType(0);
+  if (VT != MVT::i32 && VT != MVT::i64)
+    return SDValue();
+
+  SDValue N1 = N->getOperand(1);
+  if (N1.getOpcode() == ISD::ZERO_EXTEND && N1.hasOneUse())
+    N1 = N1.getOperand(0);
+  if (!N1.hasOneUse() || getCSETCondCode(N1) != AArch64CC::LO)
+    return SDValue();
+
+  SDValue Flags = N1.getOperand(3);
+  if (Flags.getOpcode() != AArch64ISD::SUBS)
+    return SDValue();
+
+  SDLoc DL(N);
+  SDValue N0 = N->getOperand(0);
+  if (N0->getOpcode() == ISD::SUB)
+    return DAG.getNode(AArch64ISD::SBC, DL, VT, N0.getOperand(0),
+                       N0.getOperand(1), Flags);
+  return DAG.getNode(AArch64ISD::SBC, DL, VT, N0, DAG.getConstant(0, DL, VT),
+                     Flags);
+}
+
 static SDValue performAddSubCombine(SDNode *N,
                                     TargetLowering::DAGCombinerInfo &DCI) {
   // Try to change sum of two reductions.
@@ -22316,6 +22359,8 @@ static SDValue performAddSubCombine(SDNode *N,
   if (SDValue Val = performSVEMulAddSubCombine(N, DCI))
     return Val;
   if (SDValue Val = performAddSubIntoVectorOp(N, DCI.DAG))
+    return Val;
+  if (SDValue Val = performSubWithBorrowCombine(N, DCI.DAG))
     return Val;
 
   if (SDValue Val = performExtBinopLoadFold(N, DCI.DAG))
@@ -26038,7 +26083,7 @@ static SDValue performCSELCombine(SDNode *N,
   // CSEL 0, cttz(X), eq(X, 0) -> AND cttz bitwidth-1
   // CSEL cttz(X), 0, ne(X, 0) -> AND cttz bitwidth-1
   if (SDValue Folded = foldCSELofCTTZ(N, DAG))
-		return Folded;
+    return Folded;
 
   // CSEL a, b, cc, SUBS(x, y) -> CSEL a, b, swapped(cc), SUBS(y, x)
   // if SUB(y, x) already exists and we can produce a swapped predicate for cc.

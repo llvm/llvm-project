@@ -16185,9 +16185,7 @@ ExprResult Sema::BuildStmtExpr(SourceLocation LPLoc, Stmt *SubStmt,
   QualType Ty = Context.VoidTy;
   bool StmtExprMayBindToTemp = false;
   if (!Compound->body_empty()) {
-    // For GCC compatibility we get the last Stmt excluding trailing NullStmts.
-    if (const auto *LastStmt =
-            dyn_cast<ValueStmt>(Compound->getStmtExprResult())) {
+    if (const auto *LastStmt = dyn_cast<ValueStmt>(Compound->body_back())) {
       if (const Expr *Value = LastStmt->getExprStmt()) {
         StmtExprMayBindToTemp = true;
         Ty = Value->getType();

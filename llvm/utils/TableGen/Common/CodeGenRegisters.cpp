@@ -2163,7 +2163,7 @@ void CodeGenRegBank::computeRegUnitLaneMasks() {
     CodeGenRegister::RegUnitLaneMaskList RegUnitLaneMasks(
         RegUnits.count(), LaneBitmask::getAll());
     // Iterate through SubRegisters.
-    typedef CodeGenRegister::SubRegMap SubRegMap;
+    using SubRegMap = CodeGenRegister::SubRegMap;
     const SubRegMap &SubRegs = Register.getSubRegs();
     for (auto [SubRegIndex, SubReg] : SubRegs) {
       // Ignore non-leaf subregisters, their lane masks are fully covered by
@@ -2282,9 +2282,8 @@ void CodeGenRegBank::inferCommonSubClass(CodeGenRegisterClass *RC) {
 //
 void CodeGenRegBank::inferSubClassWithSubReg(CodeGenRegisterClass *RC) {
   // Map SubRegIndex to set of registers in RC supporting that SubRegIndex.
-  typedef std::map<const CodeGenSubRegIndex *, CodeGenRegister::Vec,
-                   deref<std::less<>>>
-      SubReg2SetMap;
+  using SubReg2SetMap = std::map<const CodeGenSubRegIndex *,
+                                 CodeGenRegister::Vec, deref<std::less<>>>;
 
   // Compute the set of registers supporting each SubRegIndex.
   SubReg2SetMap SRSets;
