@@ -8,7 +8,6 @@ define i64 @std_find_i16_constant_offset_with_assumptions(ptr %first.coerce, i16
 ; CHECK-SAME: ptr [[FIRST_COERCE:%.*]], i16 noundef signext [[S:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[FIRST_COERCE]], i64 2) ]
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[FIRST_COERCE]], i64 256) ]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i16> poison, i16 [[S]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i16> [[BROADCAST_SPLATINSERT]], <8 x i16> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -133,15 +132,14 @@ define ptr @std_find_caller(ptr noundef %first, ptr noundef %last) {
 ; CHECK-LABEL: define noundef ptr @std_find_caller(
 ; CHECK-SAME: ptr noundef [[FIRST:%.*]], ptr noundef [[LAST:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[FIRST3:%.*]] = ptrtoint ptr [[FIRST]] to i64
-; CHECK-NEXT:    [[LAST_I64:%.*]] = ptrtoint ptr [[LAST]] to i64
-; CHECK-NEXT:    [[PTR_SUB:%.*]] = sub i64 [[LAST_I64]], [[FIRST3]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[FIRST]], i64 2) ]
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[LAST]], i64 2) ]
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[FIRST]], i64 [[PTR_SUB]]) ]
 ; CHECK-NEXT:    [[PRE_I:%.*]] = icmp eq ptr [[FIRST]], [[LAST]]
 ; CHECK-NEXT:    br i1 [[PRE_I]], label %[[STD_FIND_GENERIC_IMPL_EXIT:.*]], label %[[LOOP_HEADER_I_PREHEADER:.*]]
 ; CHECK:       [[LOOP_HEADER_I_PREHEADER]]:
+; CHECK-NEXT:    [[LAST_I64:%.*]] = ptrtoint ptr [[LAST]] to i64
+; CHECK-NEXT:    [[FIRST3:%.*]] = ptrtoint ptr [[FIRST]] to i64
+; CHECK-NEXT:    [[PTR_SUB:%.*]] = sub i64 [[LAST_I64]], [[FIRST3]]
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[FIRST]], i64 [[PTR_SUB]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[LAST_I64]], -2
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[FIRST3]]

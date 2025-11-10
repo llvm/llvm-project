@@ -4444,6 +4444,11 @@ defm PRFUM : PrefetchUnscaled<0b11, 0, 0b10, "prfum",
                   [(AArch64Prefetch timm:$Rt,
                                   (am_unscaled64 GPR64sp:$Rn, simm9:$offset))]>;
 
+// PRFM falls back to PRFUM for negative or unaligned offsets (not a multiple
+// of 8).
+def : InstAlias<"prfm $Rt, [$Rn, $offset]",
+                (PRFUMi prfop:$Rt, GPR64sp:$Rn, simm9_offset_fb64:$offset), 0>;
+
 //---
 // (unscaled immediate, unprivileged)
 defm LDTRX : LoadUnprivileged<0b11, 0, 0b01, GPR64, "ldtr">;
