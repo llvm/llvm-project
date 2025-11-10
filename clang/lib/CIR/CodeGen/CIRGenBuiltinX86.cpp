@@ -31,11 +31,10 @@ static mlir::Value emitClFlush(CIRGenFunction& cgf,
                                mlir::Value& op) {
     mlir::Type voidTy = cir::VoidType::get(&cgf.getMLIRContext());
     mlir::Location location = cgf.getLoc(e->getExprLoc());
-    return cgf.getBuilder()
-        .create<cir::LLVMIntrinsicCallOp>(
-            location, cgf.getBuilder().getStringAttr("x86.sse2.clflush"),
-            voidTy, op)
-        .getResult();
+    return cir::LLVMIntrinsicCallOp::create(
+          cgf.getBuilder(), location, 
+          cgf.getBuilder().getStringAttr("x86.sse2.clflush"), voidTy, op)
+      .getResult();
 }
 
 static mlir::Value emitPrefetch(CIRGenFunction& cgf,
