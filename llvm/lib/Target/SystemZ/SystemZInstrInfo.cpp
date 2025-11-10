@@ -60,7 +60,7 @@ static uint64_t allOnes(unsigned int Count) {
 void SystemZInstrInfo::anchor() {}
 
 SystemZInstrInfo::SystemZInstrInfo(const SystemZSubtarget &sti)
-    : SystemZGenInstrInfo(sti, -1, -1),
+    : SystemZGenInstrInfo(sti, RI, -1, -1),
       RI(sti.getSpecialRegisters()->getReturnFunctionAddressRegister(),
          sti.getHwMode()),
       STI(sti) {}
