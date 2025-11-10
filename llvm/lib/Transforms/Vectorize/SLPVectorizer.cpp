@@ -21222,7 +21222,6 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
     }
     ScheduledBundlesList.pop_back();
     SmallVector<ScheduleData *> ControlDependentMembers;
-    SmallPtrSet<Instruction *, 4> Visited;
     for (Value *V : VL) {
       if (S.isNonSchedulable(V))
         continue;
