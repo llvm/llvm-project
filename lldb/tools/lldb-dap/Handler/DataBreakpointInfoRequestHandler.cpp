@@ -16,7 +16,7 @@
 
 namespace lldb_dap {
 
-static bool CheckAddress(DAP &dap, lldb::addr_t load_addr) {
+static bool IsRW(DAP &dap, lldb::addr_t load_addr) {
   lldb::SBMemoryRegionInfo region;
   lldb::SBError err =
       dap.target.GetProcess().GetMemoryRegionInfo(load_addr, region);
@@ -72,7 +72,7 @@ DataBreakpointInfoRequestHandler::Run(
       if (data.IsValid()) {
         size = llvm::utostr(data.GetByteSize());
         addr = llvm::utohexstr(load_addr);
-        if (!CheckAddress(dap, load_addr)) {
+        if (!IsRW(dap, load_addr)) {
           is_data_ok = false;
           response.description = "memory region for address " + addr +
                                  " has no read or write permissions";
@@ -89,7 +89,7 @@ DataBreakpointInfoRequestHandler::Run(
       addr = args.name.substr(2);
     else
       addr = llvm::utohexstr(std::stoull(args.name));
-    if (!CheckAddress(dap, std::stoull(addr, 0, 16))) {
+    if (!IsRW(dap, std::stoull(addr, 0, 16))) {
       is_data_ok = false;
       response.description = "memory region for address " + addr +
                              " has no read or write permissions";

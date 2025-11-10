@@ -1239,19 +1239,13 @@ class DebugCommunication(object):
         stackFrame = self.get_stackFrame(frameIndex=frameIndex, threadId=threadId)
         if stackFrame is None:
             return []
-        args_dict = (
-            {
-                "variablesReference": variablesReference,
-                "name": name,
-                "frameId": stackFrame["id"],
-            }
-            if size is None
-            else {
-                "bytes": size,
-                "name": name,
-                "asAddress": True,
-            }
-        )
+        args_dict = {"name": name}
+        if size is None:
+            args_dict["variablesReference"] = variablesReference
+            args_dict["frameId"] = stackFrame["id"]
+        else:
+            args_dict["asAddress"] = True
+            args_dict["bytes"] = size
         command_dict = {
             "command": "dataBreakpointInfo",
             "type": "request",
