@@ -24,7 +24,6 @@
 #include <iomanip>
 #include <mutex>
 #include <sstream>
-#include <type_traits>
 
 namespace llvm {
 
