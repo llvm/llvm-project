@@ -1231,6 +1231,7 @@ cc_library(
         ":format",
         ":frontend",
         ":lex",
+        ":options",
         ":rewrite",
         ":support",
         ":tooling_core",
@@ -1508,6 +1509,19 @@ gentbl_cc_library(
 )
 
 cc_library(
+    name = "options",
+    srcs = glob(["lib/Options/*.cpp"]),
+    hdrs = glob(["include/clang/Options/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":basic",
+        ":driver_options_inc_gen",
+        ":static_analyzer_checkers_gen",
+        "//llvm:Option",
+    ],
+)
+
+cc_library(
     name = "driver",
     srcs = glob(
         [
@@ -1544,6 +1558,7 @@ cc_library(
         ":config",
         ":driver_options_inc_gen",
         ":lex",
+        ":options",
         ":parse",
         ":static_analyzer_checkers_gen",
         "//llvm:BinaryFormat",
@@ -1700,6 +1715,7 @@ cc_library(
         ":driver_options_inc_gen",
         ":edit",
         ":lex",
+        ":options",
         ":parse",
         ":sema",
         ":serialization",
