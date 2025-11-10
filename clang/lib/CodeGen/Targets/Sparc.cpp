@@ -36,9 +36,7 @@ ABIArgInfo SparcV8ABIInfo::classifyReturnType(QualType Ty) const {
     return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace());
 
   if (Ty->isAnyComplexType()) {
-    auto AI = ABIArgInfo::getDirect();
-    AI.setInReg(true);
-    return AI;
+    return ABIArgInfo::getDirectInReg();
   }
 
   return DefaultABIInfo::classifyReturnType(Ty);
@@ -52,7 +50,6 @@ ABIArgInfo SparcV8ABIInfo::classifyArgumentType(QualType Ty) const {
 }
 
 void SparcV8ABIInfo::computeInfo(CGFunctionInfo &FI) const {
-
   FI.getReturnInfo() = classifyReturnType(FI.getReturnType());
   for (auto &Arg : FI.arguments())
     Arg.info = classifyArgumentType(Arg.type);

@@ -1011,7 +1011,7 @@ else ()
 
       # For RISCV32 and 32-bit SPARC, we must force enable int128 for compiling long
       # double routines.
-      if(COMPILER_RT_ENABLE_SOFTWARE_INT128 OR "${arch}" MATCHES "riscv32|sparc$" AND NOT CMAKE_COMPILER_IS_GNUCC)
+      if(COMPILER_RT_ENABLE_SOFTWARE_INT128 OR "${arch}" STREQUAL "riscv32" OR ("${arch}" STREQUAL "sparc" AND NOT CMAKE_COMPILER_IS_GNUCC))
         list(APPEND BUILTIN_CFLAGS_${arch} -fforce-enable-int128)
       endif()
 

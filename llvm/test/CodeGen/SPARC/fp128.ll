@@ -242,7 +242,23 @@ entry:
   ret void
 }
 
-define fp128 @f128_direct(fp128 %num) {
+define fp128 @f128_direct(fp128 %num) nounwind {
+; CHECK-LABEL: f128_direct:
+; CHECK:       ! %bb.0:
+; CHECK-NEXT:    save %sp, -136, %sp
+; CHECK-NEXT:    ldd [%fp+92], %f0
+; CHECK-NEXT:    ldd [%fp+100], %f4
+; CHECK-NEXT:    add %fp, -32, %i0
+; CHECK-NEXT:    st %i0, [%sp+96]
+; CHECK-NEXT:    add %fp, -16, %i0
+; CHECK-NEXT:    st %i0, [%sp+92]
+; CHECK-NEXT:    std %f4, [%fp+-24]
+; CHECK-NEXT:    std %f0, [%fp+-32]
+; CHECK-NEXT:    std %f4, [%fp+-8]
+; CHECK-NEXT:    call f128_callee
+; CHECK-NEXT:    std %f0, [%fp+-16]
+; CHECK-NEXT:    ret
+; CHECK-NEXT:    restore
     %ret = call fp128 @f128_callee(fp128 %num, fp128 %num)
     ret fp128 %ret
 }
