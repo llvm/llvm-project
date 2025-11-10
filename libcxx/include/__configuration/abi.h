@@ -83,6 +83,7 @@
 #  define _LIBCPP_ABI_USE_WRAP_ITER_IN_STD_ARRAY
 #  define _LIBCPP_ABI_USE_WRAP_ITER_IN_STD_STRING_VIEW
 #  define _LIBCPP_ABI_VARIANT_INDEX_TYPE_OPTIMIZATION
+#  define _LIBCPP_ABI_OPTIONAL_USE_TOMBSTONE_TRAITS
 
 #elif _LIBCPP_ABI_VERSION == 1
 #  if !(defined(_LIBCPP_OBJECT_FORMAT_COFF) || defined(_LIBCPP_OBJECT_FORMAT_XCOFF))
@@ -101,6 +102,9 @@
 #  if defined(__FreeBSD__)
 #    define _LIBCPP_DEPRECATED_ABI_DISABLE_PAIR_TRIVIAL_COPY_CTOR
 #  endif
+
+// TODO: This shouldn't be in the final commit - this just to test the changes across all the different configurations
+#  define _LIBCPP_ABI_OPTIONAL_USE_TOMBSTONE_TRAITS
 #endif
 
 // TODO(LLVM 22): Remove this check

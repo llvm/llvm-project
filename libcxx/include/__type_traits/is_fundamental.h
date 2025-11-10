@@ -11,6 +11,7 @@
 
 #include <__config>
 #include <__type_traits/integral_constant.h>
+#include <__type_traits/is_arithmetic.h>
 #include <__type_traits/is_null_pointer.h>
 #include <__type_traits/is_void.h>
 

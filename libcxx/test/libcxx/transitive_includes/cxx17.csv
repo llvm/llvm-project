@@ -617,8 +617,10 @@ experimental/iterator variant
 experimental/iterator version
 experimental/memory cstddef
 experimental/memory cstdint
+experimental/memory cstdlib
 experimental/memory cstring
 experimental/memory limits
+experimental/memory new
 experimental/memory type_traits
 experimental/memory version
 experimental/propagate_const cstddef
@@ -643,6 +645,7 @@ experimental/utility cstdlib
 experimental/utility initializer_list
 experimental/utility iosfwd
 experimental/utility limits
+experimental/utility new
 experimental/utility type_traits
 experimental/utility utility
 experimental/utility version
@@ -2512,6 +2515,7 @@ utility cstdlib
 utility initializer_list
 utility iosfwd
 utility limits
+utility new
 utility type_traits
 utility version
 valarray algorithm

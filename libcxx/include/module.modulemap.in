@@ -1678,6 +1678,10 @@ module std [system] {
       header "__memory/temporary_buffer.h"
       export std.utility.pair // return type of std::get_temporary_buffer()
     }
+    module tombstone_traits                   {
+      header "__memory/tombstone_traits.h"
+      export std.utility.piecewise_construct
+    }
     module uninitialized_algorithms {
       header "__memory/uninitialized_algorithms.h"
       export std.utility.pair

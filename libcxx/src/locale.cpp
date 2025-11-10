@@ -152,6 +152,8 @@ private:
   void install_from(const __imp& other);
 };
 
+static_assert(alignof(locale::__imp) == alignof(void*), "__tombstone_traits alignment is wrong!");
+
 locale::__imp::__imp(size_t refs) : facet(refs), facets_(N), name_("C") {
   facets_.clear();
   install(&make<std::collate<char> >(1u));

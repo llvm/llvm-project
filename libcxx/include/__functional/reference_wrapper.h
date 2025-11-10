@@ -13,8 +13,10 @@
 #include <__compare/synth_three_way.h>
 #include <__concepts/convertible_to.h>
 #include <__config>
+#include <__cstddef/size_t.h>
 #include <__functional/weak_result_type.h>
 #include <__memory/addressof.h>
+#include <__memory/tombstone_traits.h>
 #include <__type_traits/common_reference.h>
 #include <__type_traits/desugars_to.h>
 #include <__type_traits/enable_if.h>
@@ -125,7 +127,27 @@ public:
 #if _LIBCPP_STD_VER >= 17
 template <class _Tp>
 reference_wrapper(_Tp&) -> reference_wrapper<_Tp>;
-#endif
+
+template <class _Tp>
+struct __tombstone_traits<reference_wrapper<_Tp>> {
+  // reference_wrapper<_Tp> is conceptually that same as _Tp& and can only be constructed from a _Tp&. Since references
+  // can never be null, reference_wrapper can also never be null, allowing us to use it as an invalid state.
+
+  template <class _Payload, size_t _Np>
+  struct __representation;
+
+  template <class _Payload>
+  struct __representation<_Payload, 0> {
+    template <class... _Args>
+    constexpr __representation(_Args&&... __args) : __payload_(std::forward<_Args>(__args)...), __value_(nullptr) {}
+
+    bool __is_tombstone() { return __value_ == nullptr; }
+
+    _LIBCPP_NO_UNIQUE_ADDRESS _Payload __payload_;
+    _Tp* __value_;
+  };
+};
+#endif // _LIBCPP_STD_VER >= 17
 
 template <class _Tp>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 reference_wrapper<_Tp> ref(_Tp& __t) _NOEXCEPT {

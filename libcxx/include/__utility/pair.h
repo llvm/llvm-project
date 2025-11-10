@@ -18,6 +18,7 @@
 #include <__fwd/array.h>
 #include <__fwd/pair.h>
 #include <__fwd/tuple.h>
+#include <__memory/tombstone_traits.h>
 #include <__tuple/tuple_like_no_subrange.h>
 #include <__tuple/tuple_size.h>
 #include <__type_traits/common_reference.h>
@@ -450,6 +451,27 @@ private:
 #if _LIBCPP_STD_VER >= 17
 template <class _T1, class _T2>
 pair(_T1, _T2) -> pair<_T1, _T2>;
+#endif // _LIBCPP_STD_VER >= 17
+
+#if 0
+template <class _Tp, class _Up, bool __first_tombstone>
+struct __tombstone_traits_pair;
+
+template <class _Tp, class _Up>
+struct __tombstone_traits_pair<_Tp, _Up, true> : __tombstone_traits<_Tp> {
+  static_assert(__builtin_offsetof(pair<_Tp, _Up>, first) == 0);
+};
+
+template <class _Tp, class _Up>
+struct __tombstone_traits_pair<_Tp, _Up, false> {
+  static constexpr auto __disengaged_value_ = __tombstone_traits<_Up>::__disengaged_value_;
+  static constexpr size_t __is_disengaged_offset_ =
+      __builtin_offsetof(pair<_Tp, _Up>, second) + __tombstone_traits<_Up>::__is_disengaged_offset_;
+};
+
+template <class _Tp, class _Up>
+struct __tombstone_traits<__enable_specialization_if<__has_tombstone_v<_Tp> || __has_tombstone_v<_Up>, pair<_Tp, _Up>>>
+    : __tombstone_traits_pair<_Tp, _Up, __has_tombstone_v<_Tp>> {};
 #endif
 
 // [pairs.spec], specialized algorithms
