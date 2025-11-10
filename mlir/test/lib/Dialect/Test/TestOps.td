@@ -30,6 +30,7 @@ include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/LoopLikeInterface.td"
 include "mlir/Interfaces/MemorySlotInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
+include "mlir/Interfaces/TilingInterface.td"
 include "mlir/Interfaces/ValueBoundsOpInterface.td"
 include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.td"
 include "mlir/Dialect/Bufferization/IR/BufferizationTypeInterfaces.td"
@@ -2581,7 +2582,7 @@ def LoopBlockTerminatorOp : TEST_Op<"loop_block_term",
 
 def TestNoTerminatorOp : TEST_Op<"switch_with_no_break", [
     NoTerminator,
-    DeclareOpInterfaceMethods<RegionBranchOpInterface, ["getSuccessorRegions"]>
+    DeclareOpInterfaceMethods<RegionBranchOpInterface>
   ]> {
   let arguments = (ins Index:$arg, DenseI64ArrayAttr:$cases);
   let regions = (region VariadicRegion<SizedRegion<1>>:$caseRegions);
@@ -2885,6 +2886,20 @@ def TestLinalgFillOp :
       return getOutputsMutable();
     }
   }];
+}
+
+//===----------------------------------------------------------------------===//
+// Test TilingInterface.
+//===----------------------------------------------------------------------===//
+
+def Test_TilingNoDpsOp : TEST_Op<"tiling_no_dps_op",
+    [Pure, DeclareOpInterfaceMethods<TilingInterface,
+      ["getIterationDomain",
+       "getLoopIteratorTypes",
+       "getResultTilePosition",
+       "getTiledImplementation"]>]> {
+  let arguments = (ins AnyRankedTensor:$lhs, AnyRankedTensor:$rhs);
+  let results = (outs AnyRankedTensor:$result);
 }
 
 //===----------------------------------------------------------------------===//

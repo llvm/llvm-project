@@ -1,7 +1,11 @@
 // REQUIRES: aarch64-registered-target
 
-// RUN: %clang -target aarch64-linux-pauthtest   %s -S -emit-llvm -o - 2>&1 | FileCheck --implicit-check-not=warning: %s
-// RUN: %clang -target aarch64 -fptrauth-returns %s -S -emit-llvm -o - 2>&1 | FileCheck --implicit-check-not=warning: %s
+// RUN:     %clang -target aarch64-linux-pauthtest   %s -S -emit-llvm -o - 2>&1 | FileCheck --implicit-check-not=warning: %s
+// RUN: not %clang -target aarch64 -fptrauth-returns %s -S -emit-llvm -o - 2>&1 | FileCheck --implicit-check-not=warning: --check-prefix=PTRAUTH-RETURNS %s
+
+// Clang fails early, no LLVM IR output produced.
+// PTRAUTH-RETURNS: clang: error: unsupported option '-fptrauth-returns' for target 'aarch64'
+// PTRAUTH-RETURNS-NOT: attributes
 
 /// Unsupported with pauthtest, warning emitted
 __attribute__((target("branch-protection=pac-ret"))) void f1() {}
