@@ -3903,7 +3903,12 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   //          adding/"accumulating" %s. "Accumulation" stores the result in one
   //          of the source registers, but this accumulate vs. add distinction
   //          is lost when dealing with LLVM intrinsics.)
+  //
+  // ZeroPurifies means that multiplying a known-zero with an uninitialized
+  // value results in an initialized value. This is applicable for integer
+  // multiplication, but not floating-point (counter-example: NaN).
   void handleVectorPmaddIntrinsic(IntrinsicInst &I, unsigned ReductionFactor,
+                                  bool ZeroPurifies,
                                   unsigned EltSizeInBits = 0) {
     IRBuilder<> IRB(&I);
 
@@ -3945,7 +3950,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       assert(AccumulatorType == ReturnType);
     }
 
-    FixedVectorType *ImplicitReturnType = ReturnType;
+    FixedVectorType *ImplicitReturnType =
+        cast<FixedVectorType>(getShadowTy(ReturnType));
     // Step 1: instrument multiplication of corresponding vector elements
     if (EltSizeInBits) {
       ImplicitReturnType = cast<FixedVectorType>(
@@ -3964,30 +3970,40 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
              ReturnType->getNumElements() * ReductionFactor);
     }
 
-    // Multiplying an *initialized* zero by an uninitialized element results in
-    // an initialized zero element.
-    //
-    // This is analogous to bitwise AND, where "AND" of 0 and a poisoned value
-    // results in an unpoisoned value. We can therefore adapt the visitAnd()
-    // instrumentation:
-    //   OutShadow =   (SaNonZero & SbNonZero)
-    //               | (VaNonZero & SbNonZero)
-    //               | (SaNonZero & VbNonZero)
-    //   where non-zero is checked on a per-element basis (not per bit).
-    Value *SZero = Constant::getNullValue(Va->getType());
-    Value *VZero = Constant::getNullValue(Sa->getType());
-    Value *SaNonZero = IRB.CreateICmpNE(Sa, SZero);
-    Value *SbNonZero = IRB.CreateICmpNE(Sb, SZero);
-    Value *VaNonZero = IRB.CreateICmpNE(Va, VZero);
-    Value *VbNonZero = IRB.CreateICmpNE(Vb, VZero);
-
-    Value *SaAndSbNonZero = IRB.CreateAnd(SaNonZero, SbNonZero);
-    Value *VaAndSbNonZero = IRB.CreateAnd(VaNonZero, SbNonZero);
-    Value *SaAndVbNonZero = IRB.CreateAnd(SaNonZero, VbNonZero);
-
     // Each element of the vector is represented by a single bit (poisoned or
     // not) e.g., <8 x i1>.
-    Value *And = IRB.CreateOr({SaAndSbNonZero, VaAndSbNonZero, SaAndVbNonZero});
+    Value *SaNonZero = IRB.CreateIsNotNull(Sa);
+    Value *SbNonZero = IRB.CreateIsNotNull(Sb);
+    Value *And;
+    if (ZeroPurifies) {
+      // Multiplying an *initialized* zero by an uninitialized element results
+      // in an initialized zero element.
+      //
+      // This is analogous to bitwise AND, where "AND" of 0 and a poisoned value
+      // results in an unpoisoned value. We can therefore adapt the visitAnd()
+      // instrumentation:
+      //   OutShadow =   (SaNonZero & SbNonZero)
+      //               | (VaNonZero & SbNonZero)
+      //               | (SaNonZero & VbNonZero)
+      //   where non-zero is checked on a per-element basis (not per bit).
+      Value *VaInt = Va;
+      Value *VbInt = Vb;
+      if (!Va->getType()->isIntegerTy()) {
+        VaInt = CreateAppToShadowCast(IRB, Va);
+        VbInt = CreateAppToShadowCast(IRB, Vb);
+      }
+
+      Value *VaNonZero = IRB.CreateIsNotNull(VaInt);
+      Value *VbNonZero = IRB.CreateIsNotNull(VbInt);
+
+      Value *SaAndSbNonZero = IRB.CreateAnd(SaNonZero, SbNonZero);
+      Value *VaAndSbNonZero = IRB.CreateAnd(VaNonZero, SbNonZero);
+      Value *SaAndVbNonZero = IRB.CreateAnd(SaNonZero, VbNonZero);
+
+      And = IRB.CreateOr({SaAndSbNonZero, VaAndSbNonZero, SaAndVbNonZero});
+    } else {
+      And = IRB.CreateOr({SaNonZero, SbNonZero});
+    }
 
     // Extend <8 x i1> to <8 x i16>.
     // (The real pmadd intrinsic would have computed intermediate values of
@@ -5752,17 +5768,20 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::x86_ssse3_pmadd_ub_sw_128:
     case Intrinsic::x86_avx2_pmadd_ub_sw:
     case Intrinsic::x86_avx512_pmaddubs_w_512:
-      handleVectorPmaddIntrinsic(I, /*ReductionFactor=*/2);
+      handleVectorPmaddIntrinsic(I, /*ReductionFactor=*/2,
+                                 /*ZeroPurifies=*/true);
       break;
 
     // <1 x i64> @llvm.x86.ssse3.pmadd.ub.sw(<1 x i64>, <1 x i64>)
     case Intrinsic::x86_ssse3_pmadd_ub_sw:
-      handleVectorPmaddIntrinsic(I, /*ReductionFactor=*/2, /*EltSize=*/8);
+      handleVectorPmaddIntrinsic(I, /*ReductionFactor=*/2,
+                                 /*ZeroPurifies=*/true, /*EltSizeInBits=*/8);
       break;
 
     // <1 x i64> @llvm.x86.mmx.pmadd.wd(<1 x i64>, <1 x i64>)
     case Intrinsic::x86_mmx_pmadd_wd:
-      handleVectorPmaddIntrinsic(I, /*ReductionFactor=*/2, /*EltSize=*/16);
+      handleVectorPmaddIntrinsic(I, /*ReductionFactor=*/2,
+                                 /*ZeroPurifies=*/true, /*EltSizeInBits=*/16);
       break;
 
     // AVX Vector Neural Network Instructions: bytes
@@ -5848,7 +5867,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::x86_avx2_vpdpbuuds_128:
     case Intrinsic::x86_avx2_vpdpbuuds_256:
     case Intrinsic::x86_avx10_vpdpbuuds_512:
-      handleVectorPmaddIntrinsic(I, /*ReductionFactor=*/4, /*EltSize=*/8);
+      handleVectorPmaddIntrinsic(I, /*ReductionFactor=*/4,
+                                 /*ZeroPurifies=*/true, /*EltSizeInBits=*/8);
       break;
 
     // AVX Vector Neural Network Instructions: words
@@ -5901,7 +5921,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::x86_avx512_vpdpwssds_128:
     case Intrinsic::x86_avx512_vpdpwssds_256:
     case Intrinsic::x86_avx512_vpdpwssds_512:
-      handleVectorPmaddIntrinsic(I, /*ReductionFactor=*/2, /*EltSize=*/16);
+      handleVectorPmaddIntrinsic(I, /*ReductionFactor=*/2,
+                                 /*ZeroPurifies=*/true, /*EltSizeInBits=*/16);
       break;
 
       // TODO: Dot Product of BF16 Pairs Accumulated Into Packed Single
