@@ -576,6 +576,13 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
     assert(opResult.getOwner() == defOp && "v must be a result of defOp");
     ty = opResult.getType();
     llvm::TypeSwitch<Operation *>(defOp)
+        .Case<hlfir::AsExprOp>([&](auto op) {
+          // TODO: we should probably always report hlfir.as_expr
+          // as a unique source, and let the codegen decide whether
+          // to use the original buffer or create a copy.
+          v = op.getVar();
+          defOp = v.getDefiningOp();
+        })
         .Case<hlfir::AssociateOp>([&](auto op) {
           assert(opResult != op.getMustFreeStrorageFlag() &&
                  "MustFreeStorageFlag result is not an aliasing candidate");

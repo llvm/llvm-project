@@ -950,8 +950,8 @@ def hlfir_EndAssociateOp : hlfir_Op<"end_associate", [MemoryEffects<[MemFree]>]>
 }
 
 def hlfir_AsExprOp
-    : hlfir_Op<"as_expr", [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
-                           fir_FortranObjectViewOpInterface]> {
+    : hlfir_Op<
+          "as_expr", [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
   let summary = "Take the value of an array, character or derived variable";
 
   let description = [{
@@ -975,9 +975,6 @@ def hlfir_AsExprOp
   let extraClassDeclaration = [{
     // Is this a "move" ?
     bool isMove() { return getMustFree() != mlir::Value{}; }
-    // FortranObjectViewOpInterface methods:
-    mlir::Value getViewSource(mlir::OpResult) { return getVar(); }
-    std::optional<std::int64_t> getViewOffset(mlir::OpResult) { return 0; }
   }];
 
   let assemblyFormat = [{
