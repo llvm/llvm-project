@@ -7368,13 +7368,10 @@ static SDValue lowerLaneOp(const SITargetLowering &TLI, SDNode *N,
   return DAG.getBitcast(VT, UnrolledLaneOp);
 }
 
-// Right now, only subgroup.shuffle implemented, but other
-// future subgroup ops can use this function too
-static SDValue lowerSubgroupOp(const SITargetLowering &TLI, SDNode *N,
-                           SelectionDAG &DAG) {
+static SDValue lowerSubgroupShuffle(const SITargetLowering &TLI, SDNode *N,
+                                    SelectionDAG &DAG) {
   EVT VT = N->getValueType(0);
   unsigned ValSize = VT.getSizeInBits();
-  unsigned IID = N->getConstantOperandVal(0);
   SDLoc SL(N);
 
   SDValue Value = N->getOperand(1);
@@ -7398,60 +7395,53 @@ static SDValue lowerSubgroupOp(const SITargetLowering &TLI, SDNode *N,
     return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, SL, RetVT, Operands);
   };
 
-  switch (IID) {
-  case Intrinsic::amdgcn_subgroup_shuffle:
-    if (TLI.getSubtarget()->supportsWaveWideBPermute()) {
-      // If we can bpermute across the whole wave, then just do that
-      SDValue BPermute = MakeIntrinsic(Intrinsic::amdgcn_ds_bpermute,
-                                       MVT::i32, {ShiftedIndex, Value32});
-      return DAG.getBitcast(VT, BPermute);
-    } else {
-      assert(TLI.getSubtarget()->isWave64());
+  if (TLI.getSubtarget()->supportsWaveWideBPermute()) {
+    // If we can bpermute across the whole wave, then just do that
+    SDValue BPermute = MakeIntrinsic(Intrinsic::amdgcn_ds_bpermute, MVT::i32,
+                                     {ShiftedIndex, Value32});
+    return DAG.getBitcast(VT, BPermute);
+  } else {
+    assert(TLI.getSubtarget()->isWave64());
 
-      // Otherwise, we need to make use of whole wave mode
-      SDValue PoisonVal = DAG.getPOISON(Value32->getValueType(0));
-      SDValue PoisonIndex = DAG.getPOISON(ShiftedIndex->getValueType(0));
+    // Otherwise, we need to make use of whole wave mode
+    SDValue PoisonVal = DAG.getPOISON(Value32->getValueType(0));
+    SDValue PoisonIndex = DAG.getPOISON(ShiftedIndex->getValueType(0));
 
-      // Set inactive lanes to poison
-      SDValue WWMValue = MakeIntrinsic(Intrinsic::amdgcn_set_inactive,
-                                       MVT::i32, {Value32, PoisonVal});
-      SDValue WWMIndex = MakeIntrinsic(Intrinsic::amdgcn_set_inactive,
-                                       MVT::i32, {ShiftedIndex, PoisonIndex});
+    // Set inactive lanes to poison
+    SDValue WWMValue = MakeIntrinsic(Intrinsic::amdgcn_set_inactive, MVT::i32,
+                                     {Value32, PoisonVal});
+    SDValue WWMIndex = MakeIntrinsic(Intrinsic::amdgcn_set_inactive, MVT::i32,
+                                     {ShiftedIndex, PoisonIndex});
 
-      SDValue Swapped = MakeIntrinsic(Intrinsic::amdgcn_permlane64,
-                                      MVT::i32, {WWMValue});
+    SDValue Swapped =
+        MakeIntrinsic(Intrinsic::amdgcn_permlane64, MVT::i32, {WWMValue});
 
-      // Get permutation of each half, then we'll select which one to use
-      SDValue BPermSameHalf = MakeIntrinsic(Intrinsic::amdgcn_ds_bpermute,
-                                            MVT::i32, {WWMIndex, WWMValue});
-      SDValue BPermOtherHalf = MakeIntrinsic(Intrinsic::amdgcn_ds_bpermute,
-                                             MVT::i32, {WWMIndex, Swapped});
-      SDValue BPermOtherHalfWWM = MakeIntrinsic(Intrinsic::amdgcn_wwm,
-                                                MVT::i32, {BPermOtherHalf});
+    // Get permutation of each half, then we'll select which one to use
+    SDValue BPermSameHalf = MakeIntrinsic(Intrinsic::amdgcn_ds_bpermute,
+                                          MVT::i32, {WWMIndex, WWMValue});
+    SDValue BPermOtherHalf = MakeIntrinsic(Intrinsic::amdgcn_ds_bpermute,
+                                           MVT::i32, {WWMIndex, Swapped});
+    SDValue BPermOtherHalfWWM =
+        MakeIntrinsic(Intrinsic::amdgcn_wwm, MVT::i32, {BPermOtherHalf});
 
-      // Select which side to take the permute from
-      SDValue ThreadIDMask = DAG.getTargetConstant(UINT32_MAX, SL, MVT::i32);
-      SDValue ThreadIDLo = MakeIntrinsic(Intrinsic::amdgcn_mbcnt_lo, MVT::i32,
-                                         {ThreadIDMask,
-                                          DAG.getTargetConstant(0, SL,
-                                                                MVT::i32)});
-      SDValue ThreadID = MakeIntrinsic(Intrinsic::amdgcn_mbcnt_hi, MVT::i32,
-                                       {ThreadIDMask, ThreadIDLo});
+    // Select which side to take the permute from
+    SDValue ThreadIDMask = DAG.getTargetConstant(UINT32_MAX, SL, MVT::i32);
+    SDValue ThreadIDLo =
+        MakeIntrinsic(Intrinsic::amdgcn_mbcnt_lo, MVT::i32,
+                      {ThreadIDMask, DAG.getTargetConstant(0, SL, MVT::i32)});
+    SDValue ThreadID = MakeIntrinsic(Intrinsic::amdgcn_mbcnt_hi, MVT::i32,
+                                     {ThreadIDMask, ThreadIDLo});
 
-      SDValue SameOrOtherHalf = DAG.getNode(ISD::AND, SL, MVT::i32,
-                                           DAG.getNode(ISD::XOR, SL, MVT::i32,
-                                                       ThreadID, Index),
-                                           DAG.getTargetConstant(32, SL,
-                                                                MVT::i32));
-      SDValue UseSameHalf = DAG.getSetCC(SL, MVT::i1, SameOrOtherHalf,
-                                             DAG.getConstant(0, SL, MVT::i32),
-                                             ISD::SETEQ);
-      SDValue Result = DAG.getSelect(SL, MVT::i32, UseSameHalf,
-                                     BPermSameHalf, BPermOtherHalfWWM);
-      return DAG.getBitcast(VT, Result);
-    }
-  default:
-    return SDValue();
+    SDValue SameOrOtherHalf =
+        DAG.getNode(ISD::AND, SL, MVT::i32,
+                    DAG.getNode(ISD::XOR, SL, MVT::i32, ThreadID, Index),
+                    DAG.getTargetConstant(32, SL, MVT::i32));
+    SDValue UseSameHalf =
+        DAG.getSetCC(SL, MVT::i1, SameOrOtherHalf,
+                     DAG.getConstant(0, SL, MVT::i32), ISD::SETEQ);
+    SDValue Result = DAG.getSelect(SL, MVT::i32, UseSameHalf, BPermSameHalf,
+                                   BPermOtherHalfWWM);
+    return DAG.getBitcast(VT, Result);
   }
 }
 
@@ -10374,7 +10364,7 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return DAG.getMergeValues(Poisons, SDLoc(Op));
   }
   case Intrinsic::amdgcn_subgroup_shuffle:
-    return lowerSubgroupOp(*this, Op.getNode(), DAG);
+    return lowerSubgroupShuffle(*this, Op.getNode(), DAG);
   default:
     if (const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr =
             AMDGPU::getImageDimIntrinsicInfo(IntrinsicID))
