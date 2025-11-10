@@ -613,8 +613,7 @@ static void collectOtherInstr(MachineInstr &MI, SPIRV::ModuleAnalysisInfo &MAI,
               << FinalFlags << "\n";
           MachineInstr *OrigMINonConst = const_cast<MachineInstr *>(OrigMI);
           MachineOperand &OrigFlagsOp = OrigMINonConst->getOperand(2);
-          OrigFlagsOp =
-              MachineOperand::CreateImm(static_cast<unsigned>(FinalFlags));
+          OrigFlagsOp = MachineOperand::CreateImm(FinalFlags);
           return; // Merge done, so we found a duplicate; don't add it to MAI.MS
         }
       }
@@ -1059,6 +1058,13 @@ static void addOpTypeImageReqs(const MachineInstr &MI,
   }
 }
 
+static bool isBFloat16Type(const SPIRVType *TypeDef) {
+  return TypeDef && TypeDef->getNumOperands() == 3 &&
+         TypeDef->getOpcode() == SPIRV::OpTypeFloat &&
+         TypeDef->getOperand(1).getImm() == 16 &&
+         TypeDef->getOperand(2).getImm() == SPIRV::FPEncoding::BFloat16KHR;
+}
+
 // Add requirements for handling atomic float instructions
 #define ATOM_FLT_REQ_EXT_MSG(ExtName)                                          \
   "The atomic float instruction requires the following SPIR-V "                \
@@ -1082,11 +1088,21 @@ static void AddAtomicFloatRequirements(const MachineInstr &MI,
     Reqs.addExtension(SPIRV::Extension::SPV_EXT_shader_atomic_float_add);
     switch (BitWidth) {
     case 16:
-      if (!ST.canUseExtension(
-              SPIRV::Extension::SPV_EXT_shader_atomic_float16_add))
-        report_fatal_error(ATOM_FLT_REQ_EXT_MSG("16_add"), false);
-      Reqs.addExtension(SPIRV::Extension::SPV_EXT_shader_atomic_float16_add);
-      Reqs.addCapability(SPIRV::Capability::AtomicFloat16AddEXT);
+      if (isBFloat16Type(TypeDef)) {
+        if (!ST.canUseExtension(SPIRV::Extension::SPV_INTEL_16bit_atomics))
+          report_fatal_error(
+              "The atomic bfloat16 instruction requires the following SPIR-V "
+              "extension: SPV_INTEL_16bit_atomics",
+              false);
+        Reqs.addExtension(SPIRV::Extension::SPV_INTEL_16bit_atomics);
+        Reqs.addCapability(SPIRV::Capability::AtomicBFloat16AddINTEL);
+      } else {
+        if (!ST.canUseExtension(
+                SPIRV::Extension::SPV_EXT_shader_atomic_float16_add))
+          report_fatal_error(ATOM_FLT_REQ_EXT_MSG("16_add"), false);
+        Reqs.addExtension(SPIRV::Extension::SPV_EXT_shader_atomic_float16_add);
+        Reqs.addCapability(SPIRV::Capability::AtomicFloat16AddEXT);
+      }
       break;
     case 32:
       Reqs.addCapability(SPIRV::Capability::AtomicFloat32AddEXT);
@@ -1105,7 +1121,17 @@ static void AddAtomicFloatRequirements(const MachineInstr &MI,
     Reqs.addExtension(SPIRV::Extension::SPV_EXT_shader_atomic_float_min_max);
     switch (BitWidth) {
     case 16:
-      Reqs.addCapability(SPIRV::Capability::AtomicFloat16MinMaxEXT);
+      if (isBFloat16Type(TypeDef)) {
+        if (!ST.canUseExtension(SPIRV::Extension::SPV_INTEL_16bit_atomics))
+          report_fatal_error(
+              "The atomic bfloat16 instruction requires the following SPIR-V "
+              "extension: SPV_INTEL_16bit_atomics",
+              false);
+        Reqs.addExtension(SPIRV::Extension::SPV_INTEL_16bit_atomics);
+        Reqs.addCapability(SPIRV::Capability::AtomicBFloat16MinMaxINTEL);
+      } else {
+        Reqs.addCapability(SPIRV::Capability::AtomicFloat16MinMaxEXT);
+      }
       break;
     case 32:
       Reqs.addCapability(SPIRV::Capability::AtomicFloat32MinMaxEXT);
@@ -1329,13 +1355,6 @@ void addPrintfRequirements(const MachineInstr &MI,
   }
 }
 
-static bool isBFloat16Type(const SPIRVType *TypeDef) {
-  return TypeDef && TypeDef->getNumOperands() == 3 &&
-         TypeDef->getOpcode() == SPIRV::OpTypeFloat &&
-         TypeDef->getOperand(1).getImm() == 16 &&
-         TypeDef->getOperand(2).getImm() == SPIRV::FPEncoding::BFloat16KHR;
-}
-
 void addInstrRequirements(const MachineInstr &MI,
                           SPIRV::ModuleAnalysisInfo &MAI,
                           const SPIRVSubtarget &ST) {
@@ -1436,6 +1455,8 @@ void addInstrRequirements(const MachineInstr &MI,
       addPrintfRequirements(MI, Reqs, ST);
       break;
     }
+    // TODO: handle bfloat16 extended instructions when
+    // SPV_INTEL_bfloat16_arithmetic is enabled.
     break;
   }
   case SPIRV::OpAliasDomainDeclINTEL:
@@ -1884,6 +1905,13 @@ void addInstrRequirements(const MachineInstr &MI,
     Reqs.addCapability(
         SPIRV::Capability::CooperativeMatrixCheckedInstructionsINTEL);
     break;
+  case SPIRV::OpReadPipeBlockingALTERA:
+  case SPIRV::OpWritePipeBlockingALTERA:
+    if (ST.canUseExtension(SPIRV::Extension::SPV_ALTERA_blocking_pipes)) {
+      Reqs.addExtension(SPIRV::Extension::SPV_ALTERA_blocking_pipes);
+      Reqs.addCapability(SPIRV::Capability::BlockingPipesALTERA);
+    }
+    break;
   case SPIRV::OpCooperativeMatrixGetElementCoordINTEL:
     if (!ST.canUseExtension(SPIRV::Extension::SPV_INTEL_joint_matrix))
       report_fatal_error("OpCooperativeMatrixGetElementCoordINTEL requires the "
@@ -2061,7 +2089,64 @@ void addInstrRequirements(const MachineInstr &MI,
     Reqs.addCapability(SPIRV::Capability::PredicatedIOINTEL);
     break;
   }
-
+  case SPIRV::OpFAddS:
+  case SPIRV::OpFSubS:
+  case SPIRV::OpFMulS:
+  case SPIRV::OpFDivS:
+  case SPIRV::OpFRemS:
+  case SPIRV::OpFMod:
+  case SPIRV::OpFNegate:
+  case SPIRV::OpFAddV:
+  case SPIRV::OpFSubV:
+  case SPIRV::OpFMulV:
+  case SPIRV::OpFDivV:
+  case SPIRV::OpFRemV:
+  case SPIRV::OpFNegateV: {
+    const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
+    SPIRVType *TypeDef = MRI.getVRegDef(MI.getOperand(1).getReg());
+    if (TypeDef->getOpcode() == SPIRV::OpTypeVector)
+      TypeDef = MRI.getVRegDef(TypeDef->getOperand(1).getReg());
+    if (isBFloat16Type(TypeDef)) {
+      if (!ST.canUseExtension(SPIRV::Extension::SPV_INTEL_bfloat16_arithmetic))
+        report_fatal_error(
+            "Arithmetic instructions with bfloat16 arguments require the "
+            "following SPIR-V extension: SPV_INTEL_bfloat16_arithmetic",
+            false);
+      Reqs.addExtension(SPIRV::Extension::SPV_INTEL_bfloat16_arithmetic);
+      Reqs.addCapability(SPIRV::Capability::BFloat16ArithmeticINTEL);
+    }
+    break;
+  }
+  case SPIRV::OpOrdered:
+  case SPIRV::OpUnordered:
+  case SPIRV::OpFOrdEqual:
+  case SPIRV::OpFOrdNotEqual:
+  case SPIRV::OpFOrdLessThan:
+  case SPIRV::OpFOrdLessThanEqual:
+  case SPIRV::OpFOrdGreaterThan:
+  case SPIRV::OpFOrdGreaterThanEqual:
+  case SPIRV::OpFUnordEqual:
+  case SPIRV::OpFUnordNotEqual:
+  case SPIRV::OpFUnordLessThan:
+  case SPIRV::OpFUnordLessThanEqual:
+  case SPIRV::OpFUnordGreaterThan:
+  case SPIRV::OpFUnordGreaterThanEqual: {
+    const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
+    MachineInstr *OperandDef = MRI.getVRegDef(MI.getOperand(2).getReg());
+    SPIRVType *TypeDef = MRI.getVRegDef(OperandDef->getOperand(1).getReg());
+    if (TypeDef->getOpcode() == SPIRV::OpTypeVector)
+      TypeDef = MRI.getVRegDef(TypeDef->getOperand(1).getReg());
+    if (isBFloat16Type(TypeDef)) {
+      if (!ST.canUseExtension(SPIRV::Extension::SPV_INTEL_bfloat16_arithmetic))
+        report_fatal_error(
+            "Relational instructions with bfloat16 arguments require the "
+            "following SPIR-V extension: SPV_INTEL_bfloat16_arithmetic",
+            false);
+      Reqs.addExtension(SPIRV::Extension::SPV_INTEL_bfloat16_arithmetic);
+      Reqs.addCapability(SPIRV::Capability::BFloat16ArithmeticINTEL);
+    }
+    break;
+  }
   default:
     break;
   }
@@ -2181,6 +2266,10 @@ static void collectReqs(const Module &M, SPIRV::ModuleAnalysisInfo &MAI,
       MAI.Reqs.getAndAddRequirements(
           SPIRV::OperandCategory::ExecutionModeOperand,
           SPIRV::ExecutionMode::SubgroupSize, ST);
+    if (F.getMetadata("max_work_group_size"))
+      MAI.Reqs.getAndAddRequirements(
+          SPIRV::OperandCategory::ExecutionModeOperand,
+          SPIRV::ExecutionMode::MaxWorkgroupSizeINTEL, ST);
     if (F.getMetadata("vec_type_hint"))
       MAI.Reqs.getAndAddRequirements(
           SPIRV::OperandCategory::ExecutionModeOperand,
