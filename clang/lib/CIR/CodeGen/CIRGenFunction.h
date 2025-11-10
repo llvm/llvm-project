@@ -153,7 +153,7 @@ public:
   mlir::Operation *curFn = nullptr;
 
   /// Save Parameter Decl for coroutine.
-  llvm::SmallVector<const ParmVarDecl *, 4> fnArgs;
+  llvm::SmallVector<const ParmVarDecl *> fnArgs;
 
   using DeclMapTy = llvm::DenseMap<const clang::Decl *, Address>;
   /// This keeps track of the CIR allocas or globals for local C
