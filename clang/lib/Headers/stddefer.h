@@ -10,11 +10,8 @@
 #ifndef __CLANG_STDDEFER_H
 #define __CLANG_STDDEFER_H
 
-/* Provide 'defer' if '_Defer' is supported and update the predefined
-   macro accordingly. */
-#if defined __STDC_DEFER_TS25755__ && __STDC_DEFER_TS25755__ == 1
-#undef __STDC_DEFER_TS25755__
-#define __STDC_DEFER_TS25755__ 2
+/* Provide 'defer' if '_Defer' is supported. */
+#ifdef __STDC_DEFER_TS25755__
 #define __STDC_VERSION_STDDEFER_H__ 202602L
 #define defer _Defer
 #endif
