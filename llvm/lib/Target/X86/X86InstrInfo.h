@@ -246,9 +246,8 @@ public:
   /// GR*RegClass (definition in TD file)
   /// ->
   /// GR*_NOREX2RegClass (Returned register class)
-  const TargetRegisterClass *
-  getRegClass(const MCInstrDesc &MCID, unsigned OpNum,
-              const TargetRegisterInfo *TRI) const override;
+  const TargetRegisterClass *getRegClass(const MCInstrDesc &MCID,
+                                         unsigned OpNum) const override;
 
   /// getRegisterInfo - TargetInstrInfo is a superset of MRegister info.  As
   /// such, whenever a client has an instance of instruction info, it should

@@ -1622,9 +1622,8 @@ public:
   /// Return true if this opcode should not be used by codegen.
   bool isAsmOnlyOpcode(int MCOp) const;
 
-  const TargetRegisterClass *
-  getRegClass(const MCInstrDesc &TID, unsigned OpNum,
-              const TargetRegisterInfo *TRI) const override;
+  const TargetRegisterClass *getRegClass(const MCInstrDesc &TID,
+                                         unsigned OpNum) const override;
 
   void fixImplicitOperands(MachineInstr &MI) const;
 
