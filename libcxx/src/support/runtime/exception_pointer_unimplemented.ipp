@@ -21,22 +21,6 @@ void exception_ptr::__decrement_refcount([[__gnu__::__nonnull__]] _LIBCPP_NOESCA
   __libcpp_verbose_abort("exception_ptr not yet implemented\n");
 }
 
-exception_ptr exception_ptr::__from_native_exception_pointer(void *__e) noexcept {
-  __libcpp_verbose_abort("exception_ptr not yet implemented\n");
-}
-
-exception_ptr::~exception_ptr() noexcept {
-  __libcpp_verbose_abort("exception_ptr not yet implemented\n");
-}
-
-exception_ptr::exception_ptr(const exception_ptr& other) noexcept : __ptr_(other.__ptr_) {
-  __libcpp_verbose_abort("exception_ptr not yet implemented\n");
-}
-
-exception_ptr& exception_ptr::operator=(const exception_ptr& other) noexcept {
-  __libcpp_verbose_abort("exception_ptr not yet implemented\n");
-}
-
 nested_exception::nested_exception() noexcept : __ptr_(current_exception()) {}
 
 #if !defined(__GLIBCXX__)
