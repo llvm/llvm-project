@@ -1609,11 +1609,15 @@ std::optional<bool> ActualArgNeedsCopy(const ActualArgument *actual,
       return false;
     }
     if (maybeContigActual) {
+      // We know whether actual arg is contiguous or not
       bool isContiguousActual{maybeContigActual.value()};
-      if ((!isContiguousActual || check.HavePolymorphicDifferences()) &&
-          check.DummyNeedsContiguity()) {
-        return true;
-      }
+      bool actualArgNeedsCopy{
+          (!isContiguousActual || check.HavePolymorphicDifferences()) &&
+          check.DummyNeedsContiguity()};
+      return actualArgNeedsCopy;
+    } else {
+      // We don't know whether actual arg is contiguous or not
+      return check.DummyNeedsContiguity();
     }
   } else { // Implicit interface
     if (maybeContigActual) {
