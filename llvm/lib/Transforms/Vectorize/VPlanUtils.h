@@ -74,7 +74,8 @@ getRecipesForUncountableExit(VPlan &Plan,
                              SmallVectorImpl<VPRecipeBase *> &GEPs);
 
 /// Return a MemoryLocation for \p R with noalias metadata populated from
-/// \p R. The pointer of the location is conservatively set to nullptr.
+/// \p R, if the recipe is supported and std::nullopt otherwise. The pointer of
+/// the location is conservatively set to nullptr.
 std::optional<MemoryLocation> getMemoryLocation(const VPRecipeBase &R);
 } // namespace vputils
 
