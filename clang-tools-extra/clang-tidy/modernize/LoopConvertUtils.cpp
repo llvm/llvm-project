@@ -89,7 +89,8 @@ bool DependencyFinderASTVisitor::VisitVarDecl(VarDecl *V) {
 
   // Next, check if the variable was removed from existence by an earlier
   // iteration.
-  if (llvm::all_of(*ReplacedVars, [&](const auto &I) { return I.second != V; }))
+  if (llvm::none_of(*ReplacedVars,
+                    [&](const auto &I) { return I.second == V; }))
     return true;
   DependsOnInsideVariable = true;
   return false;

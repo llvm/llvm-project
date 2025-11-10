@@ -759,7 +759,7 @@ bool SuspiciousCallArgumentCheck::areParamAndArgComparable(
 
 bool SuspiciousCallArgumentCheck::areArgsSwapped(std::size_t Position1,
                                                  std::size_t Position2) const {
-  return llvm::any_of(AppliedHeuristics, [&](Heuristic H) {
+  return llvm::any_of(AppliedHeuristics, [&](const Heuristic &H) {
     bool A1ToP2Similar = areNamesSimilar(
         ArgNames[Position2], ParamNames[Position1], H, BoundKind::SimilarAbove);
     bool A2ToP1Similar = areNamesSimilar(

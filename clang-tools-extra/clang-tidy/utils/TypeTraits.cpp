@@ -68,13 +68,10 @@ bool recordIsTriviallyDefaultConstructible(const RecordDecl &RecordDecl,
       return false;
   }
   // If all its direct bases are trivially constructible.
-  if (!llvm::all_of(ClassDecl->bases(), [&](const CXXBaseSpecifier &Base) {
-        return isTriviallyDefaultConstructible(Base.getType(), Context) &&
-               !Base.isVirtual();
-      }))
-    return false;
-
-  return true;
+  return llvm::all_of(ClassDecl->bases(), [&](const CXXBaseSpecifier &Base) {
+    return isTriviallyDefaultConstructible(Base.getType(), Context) &&
+           !Base.isVirtual();
+  });
 }
 
 // Based on QualType::isTrivial.

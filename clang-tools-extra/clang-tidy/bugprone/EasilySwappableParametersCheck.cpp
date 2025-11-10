@@ -1589,7 +1589,7 @@ static bool lazyMapOfSetsIntersectionExists(const MapTy &Map, const ElemTy &E1,
   if (E1Iterator == Map.end() || E2Iterator == Map.end())
     return false;
 
-  return llvm::any_of(E1Iterator->second, [&](const auto &E1SetElem) {
+  return llvm::any_of(E1Iterator->second, [&E2Iterator](const auto &E1SetElem) {
     return E2Iterator->second.contains(E1SetElem);
   });
 }

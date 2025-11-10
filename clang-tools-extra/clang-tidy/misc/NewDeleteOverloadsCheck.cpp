@@ -114,12 +114,12 @@ hasCorrespondingOverloadInBaseClass(const CXXMethodDecl *MD,
     RD = MD->getParent();
   }
 
-  return llvm::any_of(RD->bases(), [&](const auto &BS) {
+  return llvm::any_of(RD->bases(), [&](const CXXBaseSpecifier &BS) {
     // We can't say much about a dependent base class, but to avoid false
     // positives assume it can have a corresponding overload.
     if (BS.getType()->isDependentType())
       return true;
-    if (const auto *BaseRD = BS.getType()->getAsCXXRecordDecl())
+    if (const CXXRecordDecl *BaseRD = BS.getType()->getAsCXXRecordDecl())
       return hasCorrespondingOverloadInBaseClass(MD, BaseRD);
     return false;
   });
