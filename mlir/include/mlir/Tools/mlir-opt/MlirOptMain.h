@@ -359,6 +359,20 @@ protected:
 /// the loaded IR.
 using PassPipelineFn = llvm::function_ref<LogicalResult(PassManager &pm)>;
 
+/// Register basic command line options.
+/// - toolName is used for the header displayed by `--help`.
+/// - registry should contain all the dialects that can be parsed in the source.
+/// - return std::string for help header.
+std::string registerCLIOptions(llvm::StringRef toolName,
+                               DialectRegistry &registry);
+
+/// Parse command line options.
+/// - helpHeader is used for the header displayed by `--help`.
+/// - return std::pair<std::string, std::string> for
+///   inputFilename and outputFilename command line option values.
+std::pair<std::string, std::string> parseCLIOptions(int argc, char **argv,
+                                                    llvm::StringRef helpHeader);
+
 /// Register and parse command line options.
 /// - toolName is used for the header displayed by `--help`.
 /// - registry should contain all the dialects that can be parsed in the source.

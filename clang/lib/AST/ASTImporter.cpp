@@ -696,6 +696,10 @@ namespace clang {
     ExpectedStmt VisitCXXFoldExpr(CXXFoldExpr *E);
     ExpectedStmt VisitRequiresExpr(RequiresExpr* E);
     ExpectedStmt VisitConceptSpecializationExpr(ConceptSpecializationExpr* E);
+    ExpectedStmt
+    VisitSubstNonTypeTemplateParmPackExpr(SubstNonTypeTemplateParmPackExpr *E);
+    ExpectedStmt VisitPseudoObjectExpr(PseudoObjectExpr *E);
+    ExpectedStmt VisitCXXParenListInitExpr(CXXParenListInitExpr *E);
 
     // Helper for chaining together multiple imports. If an error is detected,
     // subsequent imports will return default constructed nodes, so that failure
@@ -9271,6 +9275,50 @@ ASTNodeImporter::VisitConceptSpecializationExpr(ConceptSpecializationExpr *E) {
   return ConceptSpecializationExpr::Create(
       Importer.getToContext(), CL,
       const_cast<ImplicitConceptSpecializationDecl *>(CSD), &Satisfaction);
+}
+
+ExpectedStmt ASTNodeImporter::VisitSubstNonTypeTemplateParmPackExpr(
+    SubstNonTypeTemplateParmPackExpr *E) {
+  Error Err = Error::success();
+  auto ToType = importChecked(Err, E->getType());
+  auto ToPackLoc = importChecked(Err, E->getParameterPackLocation());
+  auto ToArgPack = importChecked(Err, E->getArgumentPack());
+  auto ToAssociatedDecl = importChecked(Err, E->getAssociatedDecl());
+  if (Err)
+    return std::move(Err);
+
+  return new (Importer.getToContext()) SubstNonTypeTemplateParmPackExpr(
+      ToType, E->getValueKind(), ToPackLoc, ToArgPack, ToAssociatedDecl,
+      E->getIndex(), E->getFinal());
+}
+
+ExpectedStmt ASTNodeImporter::VisitPseudoObjectExpr(PseudoObjectExpr *E) {
+  SmallVector<Expr *, 4> ToSemantics(E->getNumSemanticExprs());
+  if (Error Err = ImportContainerChecked(E->semantics(), ToSemantics))
+    return std::move(Err);
+  auto ToSyntOrErr = import(E->getSyntacticForm());
+  if (!ToSyntOrErr)
+    return ToSyntOrErr.takeError();
+  return PseudoObjectExpr::Create(Importer.getToContext(), *ToSyntOrErr,
+                                  ToSemantics, E->getResultExprIndex());
+}
+
+ExpectedStmt
+ASTNodeImporter::VisitCXXParenListInitExpr(CXXParenListInitExpr *E) {
+  Error Err = Error::success();
+  auto ToType = importChecked(Err, E->getType());
+  auto ToInitLoc = importChecked(Err, E->getInitLoc());
+  auto ToBeginLoc = importChecked(Err, E->getBeginLoc());
+  auto ToEndLoc = importChecked(Err, E->getEndLoc());
+  if (Err)
+    return std::move(Err);
+
+  SmallVector<Expr *, 4> ToArgs(E->getInitExprs().size());
+  if (Error Err = ImportContainerChecked(E->getInitExprs(), ToArgs))
+    return std::move(Err);
+  return CXXParenListInitExpr::Create(Importer.getToContext(), ToArgs, ToType,
+                                      E->getUserSpecifiedInitExprs().size(),
+                                      ToInitLoc, ToBeginLoc, ToEndLoc);
 }
 
 Error ASTNodeImporter::ImportOverriddenMethods(CXXMethodDecl *ToMethod,
