@@ -804,7 +804,19 @@ class GccBuilder(Builder):
         args.extend(self._obj_file_names())
 
         if sys.platform == "darwin":
+            # By default, macOS doesn't allow injecting the ASAN
+            # runtime into system processes.
+            system_clang = (
+                subprocess.check_output(["xcrun", "-find", "clang"])
+                .strip()
+                .decode("utf-8")
+            )
+            system_liblto = os.path.join(
+                os.path.dirname(os.path.dirname(system_clang)), "lib", "libLTO.dylib"
+            )
             args.extend(["-isysroot", self.apple_sdk])
+            args.extend(["-Wl,-lto_library", "-Wl," + system_liblto])
+
         elif self.objc_gnustep_lib:
             args.extend(["-L", self.objc_gnustep_lib, "-lobjc"])
             if sys.platform == "linux":
