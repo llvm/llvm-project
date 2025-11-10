@@ -2714,7 +2714,7 @@ public:
                   });
               return out;
             },
-            "Returns a list of (name, attribute) tuples.");
+            "Returns a list of `(name, attribute)` tuples.");
   }
 
 private:
@@ -3017,7 +3017,7 @@ void mlir::python::populateIRCore(nb::module_ &m) {
           "Gets a container for accessing dialects by name.")
       .def_prop_ro(
           "d", [](PyMlirContext &self) { return PyDialects(self.getRef()); },
-          "Alias for 'dialects'.")
+          "Alias for `dialects`.")
       .def(
           "get_dialect_descriptor",
           [=](PyMlirContext &self, std::string &name) {
@@ -3209,7 +3209,7 @@ void mlir::python::populateIRCore(nb::module_ &m) {
       .def_static(MLIR_PYTHON_CAPI_FACTORY_ATTR,
                   &PyDialectRegistry::createFromCapsule,
                   "Creates a DialectRegistry from a capsule wrapping "
-                  "MlirDialectRegistry.")
+                  "`MlirDialectRegistry`.")
       .def(nb::init<>(), "Creates a new empty dialect registry.");
 
   //----------------------------------------------------------------------------
@@ -3320,13 +3320,13 @@ void mlir::python::populateIRCore(nb::module_ &m) {
           },
           "Gets the filename from a FileLineColLoc.")
       .def_prop_ro("start_line", mlirLocationFileLineColRangeGetStartLine,
-                   "Gets the start line number from a FileLineColLoc.")
+                   "Gets the start line number from a `FileLineColLoc`.")
       .def_prop_ro("start_col", mlirLocationFileLineColRangeGetStartColumn,
-                   "Gets the start column number from a FileLineColLoc.")
+                   "Gets the start column number from a `FileLineColLoc`.")
       .def_prop_ro("end_line", mlirLocationFileLineColRangeGetEndLine,
-                   "Gets the end line number from a FileLineColLoc.")
+                   "Gets the end line number from a `FileLineColLoc`.")
       .def_prop_ro("end_col", mlirLocationFileLineColRangeGetEndColumn,
-                   "Gets the end column number from a FileLineColLoc.")
+                   "Gets the end column number from a `FileLineColLoc`.")
       .def_static(
           "fused",
           [](const std::vector<PyLocation> &pyLocations,
@@ -3346,7 +3346,7 @@ void mlir::python::populateIRCore(nb::module_ &m) {
           "Gets a Location representing a fused location with optional "
           "metadata.")
       .def("is_a_fused", mlirLocationIsAFused,
-           "Returns True if this location is a FusedLoc.")
+           "Returns True if this location is a `FusedLoc`.")
       .def_prop_ro(
           "locations",
           [](PyLocation &self) {
@@ -3360,7 +3360,7 @@ void mlir::python::populateIRCore(nb::module_ &m) {
               pyLocations.emplace_back(self.getContext(), locations[i]);
             return pyLocations;
           },
-          "Gets the list of locations from a FusedLoc.")
+          "Gets the list of locations from a `FusedLoc`.")
       .def_static(
           "name",
           [](std::string name, std::optional<PyLocation> childLoc,
@@ -3377,20 +3377,20 @@ void mlir::python::populateIRCore(nb::module_ &m) {
           "Gets a Location representing a named location with optional child "
           "location.")
       .def("is_a_name", mlirLocationIsAName,
-           "Returns True if this location is a NameLoc.")
+           "Returns True if this location is a `NameLoc`.")
       .def_prop_ro(
           "name_str",
           [](MlirLocation loc) {
             return mlirIdentifierStr(mlirLocationNameGetName(loc));
           },
-          "Gets the name string from a NameLoc.")
+          "Gets the name string from a `NameLoc`.")
       .def_prop_ro(
           "child_loc",
           [](PyLocation &self) {
             return PyLocation(self.getContext(),
                               mlirLocationNameGetChildLoc(self));
           },
-          "Gets the child location from a NameLoc.")
+          "Gets the child location from a `NameLoc`.")
       .def_static(
           "from_attr",
           [](PyAttribute &attribute, DefaultingPyMlirContext context) {
@@ -3398,20 +3398,20 @@ void mlir::python::populateIRCore(nb::module_ &m) {
                               mlirLocationFromAttribute(attribute));
           },
           nb::arg("attribute"), nb::arg("context") = nb::none(),
-          "Gets a Location from a LocationAttr.")
+          "Gets a Location from a `LocationAttr`.")
       .def_prop_ro(
           "context",
           [](PyLocation &self) -> nb::typed<nb::object, PyMlirContext> {
             return self.getContext().getObject();
           },
-          "Context that owns the Location.")
+          "Context that owns the `Location`.")
       .def_prop_ro(
           "attr",
           [](PyLocation &self) {
             return PyAttribute(self.getContext(),
                                mlirLocationGetAttribute(self));
           },
-          "Get the underlying LocationAttr.")
+          "Get the underlying `LocationAttr`.")
       .def(
           "emit_error",
           [](PyLocation &self, std::string message) {
@@ -3441,10 +3441,10 @@ void mlir::python::populateIRCore(nb::module_ &m) {
                    "Gets a capsule wrapping the MlirModule.")
       .def_static(MLIR_PYTHON_CAPI_FACTORY_ATTR, &PyModule::createFromCapsule,
                   R"(
-                    Creates a Module from a MlirModule wrapped by a capsule (i.e. module._CAPIPtr).
+                    Creates a Module from a `MlirModule` wrapped by a capsule (i.e. `module._CAPIPtr`).
 
-                    This returns a new object **BUT** _clear_mlir_module(module) must be called to
-                    prevent double-frees (of the underlying mlir::Module).)")
+                    This returns a new object **BUT** `_clear_mlir_module(module)` must be called to
+                    prevent double-frees (of the underlying `mlir::Module`).)")
       .def("_clear_mlir_module", &PyModule::clearMlirModule,
            R"(
              Clears the internal MLIR module reference.
@@ -3504,7 +3504,7 @@ void mlir::python::populateIRCore(nb::module_ &m) {
           [](PyModule &self) -> nb::typed<nb::object, PyMlirContext> {
             return self.getContext().getObject();
           },
-          "Context that created the Module.")
+          "Context that created the `Module`.")
       .def_prop_ro(
           "operation",
           [](PyModule &self) -> nb::typed<nb::object, PyOperation> {
@@ -3564,7 +3564,7 @@ void mlir::python::populateIRCore(nb::module_ &m) {
           [](PyOperationBase &self) {
             return self.getOperation().getCapsule();
           },
-          "Gets a capsule wrapping the MlirOperation.")
+          "Gets a capsule wrapping the `MlirOperation`.")
       .def(
           "__eq__",
           [](PyOperationBase &self, PyOperationBase &other) {
@@ -3596,7 +3596,7 @@ void mlir::python::populateIRCore(nb::module_ &m) {
             concreteOperation.checkValid();
             return concreteOperation.getContext().getObject();
           },
-          "Context that owns the Operation.")
+          "Context that owns the operation.")
       .def_prop_ro(
           "name",
           [](PyOperationBase &self) {
@@ -3657,7 +3657,7 @@ void mlir::python::populateIRCore(nb::module_ &m) {
               return parent->getObject();
             return {};
           },
-          "Returns the parent operation, or None if at top level.")
+          "Returns the parent operation, or `None` if at top level.")
       .def(
           "__str__",
           [](PyOperationBase &self) {
@@ -3683,9 +3683,9 @@ void mlir::python::populateIRCore(nb::module_ &m) {
              Prints the assembly form of the operation to a file like object.
 
              Args:
-               state: AsmState capturing the operation numbering and flags.
+               state: `AsmState` capturing the operation numbering and flags.
                file: Optional file like object to write to. Defaults to sys.stdout.
-               binary: Whether to write bytes (True) or str (False). Defaults to False.)")
+               binary: Whether to write `bytes` (True) or `str` (False). Defaults to False.)")
       .def("print",
            nb::overload_cast<std::optional<int64_t>, std::optional<int64_t>,
                              bool, bool, bool, bool, bool, bool, nb::object,
@@ -3761,7 +3761,7 @@ void mlir::python::populateIRCore(nb::module_ &m) {
               ... others ...: See the print() method for common keyword arguments for
                 configuring the printout.
             Returns:
-              Either a bytes or str object, depending on the setting of the 'binary'
+              Either a bytes or str object, depending on the setting of the `binary`
               argument.)")
       .def("verify", &PyOperationBase::verify,
            "Verify the operation. Raises MLIRError if verification fails, and "
@@ -3781,7 +3781,7 @@ void mlir::python::populateIRCore(nb::module_ &m) {
                other: Another operation in the same parent block.
 
              Returns:
-               True if this operation is before 'other' in the operation list of the parent block.)")
+               True if this operation is before `other` in the operation list of the parent block.)")
       .def(
           "clone",
           [](PyOperationBase &self,
@@ -3874,7 +3874,7 @@ void mlir::python::populateIRCore(nb::module_ &m) {
             Creates a new operation.
 
             Args:
-              name: Operation name (e.g. "dialect.operation").
+              name: Operation name (e.g. `dialect.operation`).
               results: Optional sequence of Type representing op result types.
               operands: Optional operands of the operation.
               attributes: Optional Dict of {str: Attribute}.
@@ -3884,7 +3884,7 @@ void mlir::python::populateIRCore(nb::module_ &m) {
               ip: Optional InsertionPoint (defaults to resolve from context manager or set to False to disable insertion, even with an insertion point set in the context manager).
               infer_type: Whether to infer result types (default = False).
             Returns:
-              A new "detached" Operation object. Detached operations can be added to blocks, which causes them to become "attached.")")
+              A new detached Operation object. Detached operations can be added to blocks, which causes them to become attached.)")
       .def_static(
           "parse",
           [](const std::string &sourceStr, const std::string &sourceName,
@@ -4320,7 +4320,7 @@ void mlir::python::populateIRCore(nb::module_ &m) {
                operation: The operation to insert.)")
       .def_prop_ro(
           "block", [](PyInsertionPoint &self) { return self.getBlock(); },
-          "Returns the block that this InsertionPoint points to.")
+          "Returns the block that this `InsertionPoint` points to.")
       .def_prop_ro(
           "ref_operation",
           [](PyInsertionPoint &self)
@@ -4341,12 +4341,12 @@ void mlir::python::populateIRCore(nb::module_ &m) {
       // Delegate to the PyAttribute copy constructor, which will also lifetime
       // extend the backing context which owns the MlirAttribute.
       .def(nb::init<PyAttribute &>(), nb::arg("cast_from_type"),
-           "Casts the passed attribute to the generic Attribute.")
+           "Casts the passed attribute to the generic `Attribute`.")
       .def_prop_ro(MLIR_PYTHON_CAPI_PTR_ATTR, &PyAttribute::getCapsule,
                    "Gets a capsule wrapping the MlirAttribute.")
-      .def_static(MLIR_PYTHON_CAPI_FACTORY_ATTR,
-                  &PyAttribute::createFromCapsule,
-                  "Creates an Attribute from a capsule wrapping MlirAttribute.")
+      .def_static(
+          MLIR_PYTHON_CAPI_FACTORY_ATTR, &PyAttribute::createFromCapsule,
+          "Creates an Attribute from a capsule wrapping `MlirAttribute`.")
       .def_static(
           "parse",
           [](const std::string &attrSpec, DefaultingPyMlirContext context)
@@ -4359,21 +4359,21 @@ void mlir::python::populateIRCore(nb::module_ &m) {
             return PyAttribute(context.get()->getRef(), attr).maybeDownCast();
           },
           nb::arg("asm"), nb::arg("context") = nb::none(),
-          "Parses an attribute from an assembly form. Raises an MLIRError on "
+          "Parses an attribute from an assembly form. Raises an `MLIRError` on "
           "failure.")
       .def_prop_ro(
           "context",
           [](PyAttribute &self) -> nb::typed<nb::object, PyMlirContext> {
             return self.getContext().getObject();
           },
-          "Context that owns the Attribute.")
+          "Context that owns the `Attribute`.")
       .def_prop_ro(
           "type",
           [](PyAttribute &self) -> nb::typed<nb::object, PyType> {
             return PyType(self.getContext(), mlirAttributeGetType(self))
                 .maybeDownCast();
           },
-          "Returns the type of the attribute.")
+          "Returns the type of the `Attribute`.")
       .def(
           "get_named",
           [](PyAttribute &self, std::string name) {
@@ -4381,13 +4381,13 @@ void mlir::python::populateIRCore(nb::module_ &m) {
           },
           nb::keep_alive<0, 1>(),
           R"(
-            Binds a name to the attribute, creating a NamedAttribute.
+            Binds a name to the attribute, creating a `NamedAttribute`.
 
             Args:
-              name: The name to bind to the attribute.
+              name: The name to bind to the `Attribute`.
 
             Returns:
-              A NamedAttribute with the given name and this attribute.)")
+              A `NamedAttribute` with the given name and this attribute.)")
       .def(
           "__eq__",
           [](PyAttribute &self, PyAttribute &other) { return self == other; },
@@ -4438,7 +4438,7 @@ void mlir::python::populateIRCore(nb::module_ &m) {
                    "mlirTypeID was expected to be non-null.");
             return PyTypeID(mlirTypeID);
           },
-          "Returns the TypeID of the attribute.")
+          "Returns the `TypeID` of the attribute.")
       .def(
           MLIR_PYTHON_MAYBE_DOWNCAST_ATTR,
           [](PyAttribute &self) -> nb::typed<nb::object, PyAttribute> {
@@ -4471,12 +4471,12 @@ void mlir::python::populateIRCore(nb::module_ &m) {
           [](PyNamedAttribute &self) {
             return mlirIdentifierStr(self.namedAttr.name);
           },
-          "The name of the NamedAttribute binding.")
+          "The name of the `NamedAttribute` binding.")
       .def_prop_ro(
           "attr",
           [](PyNamedAttribute &self) { return self.namedAttr.attribute; },
           nb::keep_alive<0, 1>(), nb::sig("def attr(self) -> Attribute"),
-          "The underlying generic attribute of the NamedAttribute binding.");
+          "The underlying generic attribute of the `NamedAttribute` binding.");
 
   //----------------------------------------------------------------------------
   // Mapping of PyType.
@@ -4485,11 +4485,11 @@ void mlir::python::populateIRCore(nb::module_ &m) {
       // Delegate to the PyType copy constructor, which will also lifetime
       // extend the backing context which owns the MlirType.
       .def(nb::init<PyType &>(), nb::arg("cast_from_type"),
-           "Casts the passed type to the generic Type.")
+           "Casts the passed type to the generic `Type`.")
       .def_prop_ro(MLIR_PYTHON_CAPI_PTR_ATTR, &PyType::getCapsule,
-                   "Gets a capsule wrapping the MlirType.")
+                   "Gets a capsule wrapping the `MlirType`.")
       .def_static(MLIR_PYTHON_CAPI_FACTORY_ATTR, &PyType::createFromCapsule,
-                  "Creates a Type from a capsule wrapping MlirType.")
+                  "Creates a Type from a capsule wrapping `MlirType`.")
       .def_static(
           "parse",
           [](std::string typeSpec,
@@ -4505,7 +4505,7 @@ void mlir::python::populateIRCore(nb::module_ &m) {
           R"(
             Parses the assembly form of a type.
 
-            Returns a Type object or raises an MLIRError if the type cannot be parsed.
+            Returns a Type object or raises an `MLIRError` if the type cannot be parsed.
 
             See also: https://mlir.llvm.org/docs/LangRef/#type-system)")
       .def_prop_ro(
@@ -4513,7 +4513,7 @@ void mlir::python::populateIRCore(nb::module_ &m) {
           [](PyType &self) -> nb::typed<nb::object, PyMlirContext> {
             return self.getContext().getObject();
           },
-          "Context that owns the Type.")
+          "Context that owns the `Type`.")
       .def(
           "__eq__", [](PyType &self, PyType &other) { return self == other; },
           "Compares two types for equality.")
@@ -4526,7 +4526,7 @@ void mlir::python::populateIRCore(nb::module_ &m) {
           [](PyType &self) {
             return static_cast<size_t>(llvm::hash_value(self.get().ptr));
           },
-          "Returns the hash value of the type.")
+          "Returns the hash value of the `Type`.")
       .def(
           "dump", [](PyType &self) { mlirTypeDump(self); }, kDumpDocstring)
       .def(
@@ -4537,7 +4537,7 @@ void mlir::python::populateIRCore(nb::module_ &m) {
                           printAccum.getUserData());
             return printAccum.join();
           },
-          "Returns the assembly form of the type.")
+          "Returns the assembly form of the `Type`.")
       .def(
           "__repr__",
           [](PyType &self) {
@@ -4552,13 +4552,13 @@ void mlir::python::populateIRCore(nb::module_ &m) {
             printAccum.parts.append(")");
             return printAccum.join();
           },
-          "Returns a string representation of the Type.")
+          "Returns a string representation of the `Type`.")
       .def(
           MLIR_PYTHON_MAYBE_DOWNCAST_ATTR,
           [](PyType &self) -> nb::typed<nb::object, PyType> {
             return self.maybeDownCast();
           },
-          "Downcasts the Type to a more specific Type if possible.")
+          "Downcasts the Type to a more specific `Type` if possible.")
       .def_prop_ro(
           "typeid",
           [](PyType &self) {
@@ -4569,24 +4569,25 @@ void mlir::python::populateIRCore(nb::module_ &m) {
             throw nb::value_error(
                 (origRepr + llvm::Twine(" has no typeid.")).str().c_str());
           },
-          "Returns the TypeID of the Type, or raises ValueError if Type has no "
-          "TypeID.");
+          "Returns the `TypeID` of the `Type`, or raises `ValueError` if "
+          "`Type` has no "
+          "`TypeID`.");
 
   //----------------------------------------------------------------------------
   // Mapping of PyTypeID.
   //----------------------------------------------------------------------------
   nb::class_<PyTypeID>(m, "TypeID")
       .def_prop_ro(MLIR_PYTHON_CAPI_PTR_ATTR, &PyTypeID::getCapsule,
-                   "Gets a capsule wrapping the MlirTypeID.")
+                   "Gets a capsule wrapping the `MlirTypeID`.")
       .def_static(MLIR_PYTHON_CAPI_FACTORY_ATTR, &PyTypeID::createFromCapsule,
-                  "Creates a TypeID from a capsule wrapping MlirTypeID.")
+                  "Creates a `TypeID` from a capsule wrapping `MlirTypeID`.")
       // Note, this tests whether the underlying TypeIDs are the same,
       // not whether the wrapper MlirTypeIDs are the same, nor whether
       // the Python objects are the same (i.e., PyTypeID is a value type).
       .def(
           "__eq__",
           [](PyTypeID &self, PyTypeID &other) { return self == other; },
-          "Compares two TypeIDs for equality.")
+          "Compares two `TypeID`s for equality.")
       .def(
           "__eq__",
           [](PyTypeID &self, const nb::object &other) { return false; },
@@ -4599,18 +4600,18 @@ void mlir::python::populateIRCore(nb::module_ &m) {
           [](PyTypeID &self) {
             return static_cast<size_t>(mlirTypeIDHashValue(self));
           },
-          "Returns the hash value of the TypeID.");
+          "Returns the hash value of the `TypeID`.");
 
   //----------------------------------------------------------------------------
   // Mapping of Value.
   //----------------------------------------------------------------------------
   nb::class_<PyValue>(m, "Value")
       .def(nb::init<PyValue &>(), nb::keep_alive<0, 1>(), nb::arg("value"),
-           "Creates a Value reference from another Value.")
+           "Creates a Value reference from another `Value`.")
       .def_prop_ro(MLIR_PYTHON_CAPI_PTR_ATTR, &PyValue::getCapsule,
-                   "Gets a capsule wrapping the MlirValue.")
+                   "Gets a capsule wrapping the `MlirValue`.")
       .def_static(MLIR_PYTHON_CAPI_FACTORY_ATTR, &PyValue::createFromCapsule,
-                  "Creates a Value from a capsule wrapping MlirValue.")
+                  "Creates a `Value` from a capsule wrapping `MlirValue`.")
       .def_prop_ro(
           "context",
           [](PyValue &self) -> nb::typed<nb::object, PyMlirContext> {
@@ -4641,7 +4642,8 @@ void mlir::python::populateIRCore(nb::module_ &m) {
             assert(false && "Value must be a block argument or an op result");
             return nb::none();
           },
-          "Returns the owner of the value (Operation for results, Block for "
+          "Returns the owner of the value (`Operation` for results, `Block` "
+          "for "
           "arguments).")
       .def_prop_ro(
           "uses",
@@ -4709,7 +4711,7 @@ void mlir::python::populateIRCore(nb::module_ &m) {
               use_name_loc_as_prefix: Whether to use the location attribute (NameLoc) as prefix.
 
             Returns:
-              The value's name as it appears in IR (e.g., %0, %arg0).)")
+              The value's name as it appears in IR (e.g., `%0`, `%arg0`).)")
       .def(
           "get_name",
           [](PyValue &self, PyAsmState &state) {
@@ -4742,7 +4744,7 @@ void mlir::python::populateIRCore(nb::module_ &m) {
             mlirValueReplaceAllUsesOfWith(self.get(), with.get());
           },
           "Replace all uses of value with the new value, updating anything in "
-          "the IR that uses 'self' to use the other value instead.")
+          "the IR that uses `self` to use the other value instead.")
       .def(
           "replace_all_uses_except",
           [](PyValue &self, PyValue &with, PyOperation &exception) {
@@ -4793,7 +4795,7 @@ void mlir::python::populateIRCore(nb::module_ &m) {
           [](PyValue &self) -> nb::typed<nb::object, PyValue> {
             return self.maybeDownCast();
           },
-          "Downcasts the Value to a more specific kind if possible.")
+          "Downcasts the `Value` to a more specific kind if possible.")
       .def_prop_ro(
           "location",
           [](MlirValue self) {
@@ -4811,7 +4813,7 @@ void mlir::python::populateIRCore(nb::module_ &m) {
       .def(nb::init<PyValue &, bool>(), nb::arg("value"),
            nb::arg("use_local_scope") = false,
            R"(
-             Creates an AsmState for consistent SSA value naming.
+             Creates an `AsmState` for consistent SSA value naming.
 
              Args:
                value: The value to create state for.
@@ -4834,7 +4836,7 @@ void mlir::python::populateIRCore(nb::module_ &m) {
              Creates a symbol table for an operation.
 
              Args:
-               operation: The Operation that defines a symbol table (e.g., a Module).
+               operation: The `Operation` that defines a symbol table (e.g., a `ModuleOp`).
 
              Raises:
                TypeError: If the operation is not a symbol table.)")
