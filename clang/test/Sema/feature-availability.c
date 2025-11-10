@@ -237,8 +237,17 @@ __attribute__((availability(domain:feature1, AVAIL))) struct S0 g11;
 
 void test0(void) {
   func12(); // expected-error {{cannot use 'func12' because feature 'feature1' is unavailable in this context}}
+  // expected-note@-1 {{enclose 'func12' in a __builtin_available}}
+  // CHECK: fix-it:"{{.*}}feature-availability.c":{[[@LINE-2]]:3-[[@LINE-2]]:3}:"if (__builtin_available(domain:feature1)) {"
+  // CHECK: fix-it:"{{.*}}feature-availability.c":{[[@LINE-3]]:12-[[@LINE-3]]:12}:"} else {}"
   func7(); // expected-error {{cannot use 'func7' because feature 'feature1' is available in this context}}}
+  // expected-note@-1 {{enclose 'func7' in a __builtin_available}}
+  // CHECK: fix-it:"{{.*}}feature-availability.c":{[[@LINE-2]]:3-[[@LINE-2]]:3}:"if (__builtin_available(domain:feature1)) {} else {"
+  // CHECK: fix-it:"{{.*}}feature-availability.c":{[[@LINE-3]]:11-[[@LINE-3]]:11}:"}"
   func19(); // expected-error {{cannot use 'func19' because feature 'feature1' is unavailable in this context}}
+  // expected-note@-1 {{enclose 'func19' in a __builtin_available}}
+  // CHECK: fix-it:"{{.*}}feature-availability.c":{[[@LINE-2]]:3-[[@LINE-2]]:3}:"if (__builtin_available(domain:feature1)) {"
+  // CHECK: fix-it:"{{.*}}feature-availability.c":{[[@LINE-3]]:12-[[@LINE-3]]:12}:"} else {}"
 
   if (__builtin_available(domain:feature1, domain:feature2)) // expected-error {{cannot pass a domain argument along with other arguments}}
     ;
@@ -246,18 +255,33 @@ void test0(void) {
   if (__builtin_available(domain:feature1)) {
     func12();
     func7(); // expected-error {{cannot use 'func7' because feature 'feature1' is available in this context}}}
+    // expected-note@-1 {{enclose 'func7' in a __builtin_available}}
+    // CHECK: fix-it:"{{.*}}feature-availability.c":{[[@LINE-2]]:5-[[@LINE-2]]:5}:"if (__builtin_available(domain:feature1)) {} else {"
+    // CHECK: fix-it:"{{.*}}feature-availability.c":{[[@LINE-3]]:13-[[@LINE-3]]:13}:"}"
     func13(); // expected-error {{cannot use 'func13' because feature 'feature2' is unavailable in this context}}
+    // expected-note@-1 {{enclose 'func13' in a __builtin_available}}
+    // CHECK: fix-it:"{{.*}}feature-availability.c":{[[@LINE-2]]:5-[[@LINE-2]]:5}:"if (__builtin_available(domain:feature2)) {"
+    // CHECK: fix-it:"{{.*}}feature-availability.c":{[[@LINE-3]]:14-[[@LINE-3]]:14}:"} else {}"
     if (__builtin_available(domain:feature2)) {
       func13();
       func9(); // expected-error {{cannot use 'func9' because feature 'feature2' is available in this context}}}
+      // expected-note@-1 {{enclose 'func9' in a __builtin_available}}
+      // CHECK: fix-it:"{{.*}}feature-availability.c":{[[@LINE-2]]:7-[[@LINE-2]]:7}:"if (__builtin_available(domain:feature2)) {} else {"
+      // CHECK: fix-it:"{{.*}}feature-availability.c":{[[@LINE-3]]:15-[[@LINE-3]]:15}:"}"
       func12();
     } else {
       func13(); // expected-error {{cannot use 'func13' because feature 'feature2' is unavailable in this context}}
+      // expected-note@-1 {{enclose 'func13' in a __builtin_available}}
+      // CHECK: fix-it:"{{.*}}feature-availability.c":{[[@LINE-2]]:7-[[@LINE-2]]:7}:"if (__builtin_available(domain:feature2)) {"
+      // CHECK: fix-it:"{{.*}}feature-availability.c":{[[@LINE-3]]:16-[[@LINE-3]]:16}:"} else {}"
       func9();
       func12();
     }
   } else {
     func12(); // expected-error {{cannot use 'func12' because feature 'feature1' is unavailable in this context}}
+    // expected-note@-1 {{enclose 'func12' in a __builtin_available}}
+    // CHECK: fix-it:"{{.*}}feature-availability.c":{[[@LINE-2]]:5-[[@LINE-2]]:5}:"if (__builtin_available(domain:feature1)) {"
+    // CHECK: fix-it:"{{.*}}feature-availability.c":{[[@LINE-3]]:14-[[@LINE-3]]:14}:"} else {}"
     func7();
   }
 }
@@ -266,11 +290,17 @@ void test0(void) {
 void test1(void) {
   func12();
   func7(); // expected-error {{cannot use 'func7' because feature 'feature1' is available in this context}}}
+  // expected-note@-1 {{enclose 'func7' in a __builtin_available}}
+  // CHECK: fix-it:"{{.*}}feature-availability.c":{[[@LINE-2]]:3-[[@LINE-2]]:3}:"if (__builtin_available(domain:feature1)) {} else {"
+  // CHECK: fix-it:"{{.*}}feature-availability.c":{[[@LINE-3]]:11-[[@LINE-3]]:11}:"}"
 }
 
  __attribute__((availability(domain:feature1, UNAVAIL)))
 void test2(void) {
   func12(); // expected-error {{cannot use 'func12' because feature 'feature1' is unavailable in this context}}
+  // expected-note@-1 {{enclose 'func12' in a __builtin_available}}
+  // CHECK: fix-it:"{{.*}}feature-availability.c":{[[@LINE-2]]:3-[[@LINE-2]]:3}:"if (__builtin_available(domain:feature1)) {"
+  // CHECK: fix-it:"{{.*}}feature-availability.c":{[[@LINE-3]]:12-[[@LINE-3]]:12}:"} else {}"
   func7();
 }
 
@@ -278,7 +308,13 @@ __attribute__((availability(domain:feature3, AVAIL)))
 void test3(void) {
   ^ {
     func12(); // expected-error {{cannot use 'func12' because feature 'feature1' is unavailable in this context}}
+    // expected-note@-1 {{enclose 'func12' in a __builtin_available}}
+    // CHECK: fix-it:"{{.*}}feature-availability.c":{[[@LINE-2]]:5-[[@LINE-2]]:5}:"if (__builtin_available(domain:feature1)) {"
+    // CHECK: fix-it:"{{.*}}feature-availability.c":{[[@LINE-3]]:14-[[@LINE-3]]:14}:"} else {}"
     func7(); // expected-error {{cannot use 'func7' because feature 'feature1' is available in this context}}}
+    // expected-note@-1 {{enclose 'func7' in a __builtin_available}}
+    // CHECK: fix-it:"{{.*}}feature-availability.c":{[[@LINE-2]]:5-[[@LINE-2]]:5}:"if (__builtin_available(domain:feature1)) {} else {"
+    // CHECK: fix-it:"{{.*}}feature-availability.c":{[[@LINE-3]]:13-[[@LINE-3]]:13}:"}"
     func20();
   }();
 
@@ -286,18 +322,30 @@ void test3(void) {
     ^{
       func12();
       func7(); // expected-error {{cannot use 'func7' because feature 'feature1' is available in this context}}}
+      // expected-note@-1 {{enclose 'func7' in a __builtin_available}}
+      // CHECK: fix-it:"{{.*}}feature-availability.c":{[[@LINE-2]]:7-[[@LINE-2]]:7}:"if (__builtin_available(domain:feature1)) {} else {"
+      // CHECK: fix-it:"{{.*}}feature-availability.c":{[[@LINE-3]]:15-[[@LINE-3]]:15}:"}"
       func20();
       if (__builtin_available(domain:feature2)) {
         func13();
         func9(); // expected-error {{cannot use 'func9' because feature 'feature2' is available in this context}}}
+        // expected-note@-1 {{enclose 'func9' in a __builtin_available}}
+        // CHECK: fix-it:"{{.*}}feature-availability.c":{[[@LINE-2]]:9-[[@LINE-2]]:9}:"if (__builtin_available(domain:feature2)) {} else {"
+        // CHECK: fix-it:"{{.*}}feature-availability.c":{[[@LINE-3]]:17-[[@LINE-3]]:17}:"}"
       } else {
         func13(); // expected-error {{cannot use 'func13' because feature 'feature2' is unavailable in this context}}
+        // expected-note@-1 {{enclose 'func13' in a __builtin_available}}
+        // CHECK: fix-it:"{{.*}}feature-availability.c":{[[@LINE-2]]:9-[[@LINE-2]]:9}:"if (__builtin_available(domain:feature2)) {"
+        // CHECK: fix-it:"{{.*}}feature-availability.c":{[[@LINE-3]]:18-[[@LINE-3]]:18}:"} else {}"
         func9();
       }
     }();
   } else {
     ^{
       func12(); // expected-error {{cannot use 'func12' because feature 'feature1' is unavailable in this context}}
+      // expected-note@-1 {{enclose 'func12' in a __builtin_available}}
+      // CHECK: fix-it:"{{.*}}feature-availability.c":{[[@LINE-2]]:7-[[@LINE-2]]:7}:"if (__builtin_available(domain:feature1)) {"
+      // CHECK: fix-it:"{{.*}}feature-availability.c":{[[@LINE-3]]:16-[[@LINE-3]]:16}:"} else {}"
       func7();
       func20();
     }();
@@ -306,6 +354,10 @@ void test3(void) {
 
 void test4(struct S0 *s0) { // expected-error {{cannot use 'S0' because feature 'feature1' is unavailable in this context}}
   g11.i0 = 0; // expected-error {{cannot use 'g11' because feature 'feature1' is unavailable in this context}} expected-error {{cannot use 'i0' because feature 'feature1' is unavailable in this context}}
+  // expected-note@-1 {{enclose 'g11' in a __builtin_available}}
+  // expected-note@-2 {{enclose 'i0' in a __builtin_available}}
+  // CHECK: fix-it:"{{.*}}feature-availability.c":{[[@LINE-3]]:3-[[@LINE-3]]:3}:"if (__builtin_available(domain:feature1)) {"
+  // CHECK: fix-it:"{{.*}}feature-availability.c":{[[@LINE-4]]:14-[[@LINE-4]]:14}:"} else {}"
 }
 
 void test5(int c) {
@@ -331,24 +383,60 @@ void test6(void) {
     if (__builtin_available(domain:feature2)) {
       func15();
       func16(); // expected-error {{cannot use 'func16' because feature 'feature2' is available in this context}}}
+      // expected-note@-1 {{enclose 'func16' in a __builtin_available}}
+      // CHECK: fix-it:"{{.*}}feature-availability.c":{[[@LINE-2]]:7-[[@LINE-2]]:7}:"if (__builtin_available(domain:feature2)) {} else {"
+      // CHECK: fix-it:"{{.*}}feature-availability.c":{[[@LINE-3]]:16-[[@LINE-3]]:16}:"}"
       func17(); // expected-error {{cannot use 'func17' because feature 'feature1' is available in this context}}}
+      // expected-note@-1 {{enclose 'func17' in a __builtin_available}}
+      // CHECK: fix-it:"{{.*}}feature-availability.c":{[[@LINE-2]]:7-[[@LINE-2]]:7}:"if (__builtin_available(domain:feature1)) {} else {"
+      // CHECK: fix-it:"{{.*}}feature-availability.c":{[[@LINE-3]]:16-[[@LINE-3]]:16}:"}"
       func18(); // expected-error {{cannot use 'func18' because feature 'feature1' is available in this context}}} expected-error {{cannot use 'func18' because feature 'feature2' is available in this context}}}
+      // expected-note@-1 {{enclose 'func18' in a __builtin_available}}
+      // CHECK: fix-it:"{{.*}}feature-availability.c":{[[@LINE-2]]:7-[[@LINE-2]]:7}:"if (__builtin_available(domain:feature1)) {} else {if (__builtin_available(domain:feature2)) {} else {"
+      // CHECK: fix-it:"{{.*}}feature-availability.c":{[[@LINE-3]]:16-[[@LINE-3]]:16}:"}}"
     } else {
       func15(); // expected-error {{cannot use 'func15' because feature 'feature2' is unavailable in this context}}
+      // expected-note@-1 {{enclose 'func15' in a __builtin_available}}
+      // CHECK: fix-it:"{{.*}}feature-availability.c":{[[@LINE-2]]:7-[[@LINE-2]]:7}:"if (__builtin_available(domain:feature2)) {"
+      // CHECK: fix-it:"{{.*}}feature-availability.c":{[[@LINE-3]]:16-[[@LINE-3]]:16}:"} else {}"
       func16();
       func17(); // expected-error {{cannot use 'func17' because feature 'feature1' is available in this context}}} expected-error {{cannot use 'func17' because feature 'feature2' is unavailable in this context}}
+      // expected-note@-1 {{enclose 'func17' in a __builtin_available}}
+      // CHECK: fix-it:"{{.*}}feature-availability.c":{[[@LINE-2]]:7-[[@LINE-2]]:7}:"if (__builtin_available(domain:feature1)) {} else {if (__builtin_available(domain:feature2)) {"
+      // CHECK: fix-it:"{{.*}}feature-availability.c":{[[@LINE-3]]:16-[[@LINE-3]]:16}:"} else {}}"
       func18(); // expected-error {{cannot use 'func18' because feature 'feature1' is available in this context}}}
+      // expected-note@-1 {{enclose 'func18' in a __builtin_available}}
+      // CHECK: fix-it:"{{.*}}feature-availability.c":{[[@LINE-2]]:7-[[@LINE-2]]:7}:"if (__builtin_available(domain:feature1)) {} else {"
+      // CHECK: fix-it:"{{.*}}feature-availability.c":{[[@LINE-3]]:16-[[@LINE-3]]:16}:"}"
     }
   } else {
     if (__builtin_available(domain:feature2)) {
       func15(); // expected-error {{cannot use 'func15' because feature 'feature1' is unavailable in this context}}
+      // expected-note@-1 {{enclose 'func15' in a __builtin_available}}
+      // CHECK: fix-it:"{{.*}}feature-availability.c":{[[@LINE-2]]:7-[[@LINE-2]]:7}:"if (__builtin_available(domain:feature1)) {"
+      // CHECK: fix-it:"{{.*}}feature-availability.c":{[[@LINE-3]]:16-[[@LINE-3]]:16}:"} else {}"
       func16(); // expected-error {{cannot use 'func16' because feature 'feature1' is unavailable in this context}} expected-error {{cannot use 'func16' because feature 'feature2' is available in this context}}}
+      // expected-note@-1 {{enclose 'func16' in a __builtin_available}}
+      // CHECK: fix-it:"{{.*}}feature-availability.c":{[[@LINE-2]]:7-[[@LINE-2]]:7}:"if (__builtin_available(domain:feature1)) {if (__builtin_available(domain:feature2)) {} else {"
+      // CHECK: fix-it:"{{.*}}feature-availability.c":{[[@LINE-3]]:16-[[@LINE-3]]:16}:"}} else {}"
       func17();
       func18(); // expected-error {{cannot use 'func18' because feature 'feature2' is available in this context}}}
+      // expected-note@-1 {{enclose 'func18' in a __builtin_available}}
+      // CHECK: fix-it:"{{.*}}feature-availability.c":{[[@LINE-2]]:7-[[@LINE-2]]:7}:"if (__builtin_available(domain:feature2)) {} else {"
+      // CHECK: fix-it:"{{.*}}feature-availability.c":{[[@LINE-3]]:16-[[@LINE-3]]:16}:"}"
     } else {
       func15(); // expected-error {{cannot use 'func15' because feature 'feature1' is unavailable in this context}} expected-error {{cannot use 'func15' because feature 'feature2' is unavailable in this context}}
+      // expected-note@-1 {{enclose 'func15' in a __builtin_available}}
+      // CHECK: fix-it:"{{.*}}feature-availability.c":{[[@LINE-2]]:7-[[@LINE-2]]:7}:"if (__builtin_available(domain:feature1)) {if (__builtin_available(domain:feature2)) {"
+      // CHECK: fix-it:"{{.*}}feature-availability.c":{[[@LINE-3]]:16-[[@LINE-3]]:16}:"} else {}} else {}"
       func16(); // expected-error {{cannot use 'func16' because feature 'feature1' is unavailable in this context}}
+      // expected-note@-1 {{enclose 'func16' in a __builtin_available}}
+      // CHECK: fix-it:"{{.*}}feature-availability.c":{[[@LINE-2]]:7-[[@LINE-2]]:7}:"if (__builtin_available(domain:feature1)) {"
+      // CHECK: fix-it:"{{.*}}feature-availability.c":{[[@LINE-3]]:16-[[@LINE-3]]:16}:"} else {}"
       func17(); // expected-error {{cannot use 'func17' because feature 'feature2' is unavailable in this context}}
+      // expected-note@-1 {{enclose 'func17' in a __builtin_available}}
+      // CHECK: fix-it:"{{.*}}feature-availability.c":{[[@LINE-2]]:7-[[@LINE-2]]:7}:"if (__builtin_available(domain:feature2)) {"
+      // CHECK: fix-it:"{{.*}}feature-availability.c":{[[@LINE-3]]:16-[[@LINE-3]]:16}:"} else {}"
       func18();
     }
   }
@@ -356,12 +444,21 @@ void test6(void) {
 
 void test7(void) {
   enum E e; // expected-error {{cannot use 'E' because feature 'feature1' is unavailable in this context}}
+  // expected-note@-1 {{enclose 'E' in a __builtin_available}}
+  // CHECK: fix-it:"{{.*}}feature-availability.c":{[[@LINE-2]]:3-[[@LINE-2]]:3}:"if (__builtin_available(domain:feature1)) {"
+  // CHECK: fix-it:"{{.*}}feature-availability.c":{[[@LINE-3]]:12-[[@LINE-3]]:12}:"} else {}"
   struct S0 s0; // expected-error {{cannot use 'S0' because feature 'feature1' is unavailable in this context}}
+  // expected-note@-1 {{enclose 'S0' in a __builtin_available}}
+  // CHECK: fix-it:"{{.*}}feature-availability.c":{[[@LINE-2]]:3-[[@LINE-2]]:3}:"if (__builtin_available(domain:feature1)) {"
+  // CHECK: fix-it:"{{.*}}feature-availability.c":{[[@LINE-3]]:16-[[@LINE-3]]:16}:"} else {}"
 
   if (__builtin_available(domain:feature1)) {
     enum E e;
     e = EA;
     e = EB; // expected-error {{cannot use 'EB' because feature 'feature2' is unavailable in this context}}
+    // expected-note@-1 {{enclose 'EB' in a __builtin_available}}
+    // CHECK: fix-it:"{{.*}}feature-availability.c":{[[@LINE-2]]:5-[[@LINE-2]]:5}:"if (__builtin_available(domain:feature2)) {"
+    // CHECK: fix-it:"{{.*}}feature-availability.c":{[[@LINE-3]]:12-[[@LINE-3]]:12}:"} else {}"
 
     switch (e) {
     case EA: {
@@ -371,14 +468,26 @@ void test7(void) {
     }
     case EB: // no diagnostic
       e = EB; // expected-error {{cannot use 'EB' because feature 'feature2' is unavailable in this context}}
+      // expected-note@-1 {{enclose 'EB' in a __builtin_available}}
+      // CHECK: fix-it:"{{.*}}feature-availability.c":{[[@LINE-2]]:7-[[@LINE-2]]:7}:"if (__builtin_available(domain:feature2)) {"
+      // CHECK: fix-it:"{{.*}}feature-availability.c":{[[@LINE-3]]:14-[[@LINE-3]]:14}:"} else {}"
       break;
     }
   }
 
   if (__builtin_available(domain:feature2)) {
     enum E e; // expected-error {{cannot use 'E' because feature 'feature1' is unavailable in this context}}
+    // expected-note@-1 {{enclose 'E' in a __builtin_available}}
+    // CHECK: fix-it:"{{.*}}feature-availability.c":{[[@LINE-2]]:5-[[@LINE-2]]:5}:"if (__builtin_available(domain:feature1)) {"
+    // CHECK: fix-it:"{{.*}}feature-availability.c":{[[@LINE+5]]:12-[[@LINE+5]]:12}:"} else {}"
     e = EA; // expected-error {{cannot use 'EA' because feature 'feature1' is unavailable in this context}}
+    // expected-note@-1 {{enclose 'EA' in a __builtin_available}}
+    // CHECK: fix-it:"{{.*}}feature-availability.c":{[[@LINE-2]]:5-[[@LINE-2]]:5}:"if (__builtin_available(domain:feature1)) {"
+    // CHECK: fix-it:"{{.*}}feature-availability.c":{[[@LINE-3]]:12-[[@LINE-3]]:12}:"} else {}"
     e = EB; // expected-error {{cannot use 'EB' because feature 'feature1' is unavailable in this context}}
+    // expected-note@-1 {{enclose 'EB' in a __builtin_available}}
+    // CHECK: fix-it:"{{.*}}feature-availability.c":{[[@LINE-2]]:5-[[@LINE-2]]:5}:"if (__builtin_available(domain:feature1)) {"
+    // CHECK: fix-it:"{{.*}}feature-availability.c":{[[@LINE-3]]:12-[[@LINE-3]]:12}:"} else {}"
   }
 }
 
@@ -386,10 +495,16 @@ void test7(void) {
 void test8(void) {
   func21();
   func22(); // expected-error {{cannot use 'func22' because feature 'feature5' is available in this context}}
+  // expected-note@-1 {{enclose 'func22' in a __builtin_available}}
+  // CHECK: fix-it:"{{.*}}feature-availability.c":{[[@LINE-2]]:3-[[@LINE-2]]:3}:"if (__builtin_available(domain:feature5)) {} else {"
+  // CHECK: fix-it:"{{.*}}feature-availability.c":{[[@LINE-3]]:12-[[@LINE-3]]:12}:"}"
 
   if (__builtin_available(domain:feature5)) {
     func21();
     func22(); // expected-error {{cannot use 'func22' because feature 'feature5' is available in this context}}
+    // expected-note@-1 {{enclose 'func22' in a __builtin_available}}
+    // CHECK: fix-it:"{{.*}}feature-availability.c":{[[@LINE-2]]:5-[[@LINE-2]]:5}:"if (__builtin_available(domain:feature5)) {} else {"
+    // CHECK: fix-it:"{{.*}}feature-availability.c":{[[@LINE-3]]:14-[[@LINE-3]]:14}:"}"
   } else {
     func21();
     func22();
@@ -412,3 +527,21 @@ void test_deprecated_feature(void) {
     ;
 }
 #endif
+
+void test_fixit0(void) {
+  int i1 = 1, i2 = g0; // expected-error {{cannot use 'g0' because feature 'feature1' is unavailable in this context}}
+  // expected-note@-1 {{enclose 'g0' in a __builtin_available}}
+  // CHECK: fix-it:"{{.*}}feature-availability.c":{[[@LINE-2]]:3-[[@LINE-2]]:3}:"if (__builtin_available(domain:feature1)) {"
+  // CHECK: fix-it:"{{.*}}feature-availability.c":{[[@LINE+2]]:12-[[@LINE+2]]:12}:"} else {}"
+  (void)i2;
+  (void)i1;
+}
+
+void test_fixit1(void) {
+  int i1 = g0; // expected-error {{cannot use 'g0' because feature 'feature1' is unavailable in this context}}
+  // expected-note@-1 {{enclose 'g0' in a __builtin_available}}
+  // CHECK: fix-it:"{{.*}}feature-availability.c":{[[@LINE-2]]:3-[[@LINE-2]]:3}:"if (__builtin_available(domain:feature1)) {"
+  // CHECK: fix-it:"{{.*}}feature-availability.c":{[[@LINE+2]]:12-[[@LINE+2]]:12}:"} else {}"
+  int i2 = i1;
+  (void)i2;
+}

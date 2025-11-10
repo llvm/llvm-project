@@ -63,6 +63,7 @@ class DiagnoseUnguardedFeatureAvailability
     bool Unavailable;
   };
 
+  SmallVector<const Stmt *, 16> StmtStack;
   SmallVector<FeatureAvailInfo, 4> FeatureStack;
 
   bool isFeatureUseGuarded(const DomainAvailabilityAttr *Attr) const;
@@ -74,7 +75,16 @@ public:
                                        Decl *Ctx = nullptr)
       : SemaRef(SemaRef), D(D) {}
 
-  void diagnoseDeclFeatureAvailability(const NamedDecl *D, SourceLocation Loc);
+  void diagnoseDeclFeatureAvailability(const NamedDecl *D, SourceRange Range);
+
+  bool TraverseStmt(Stmt *S) {
+    if (!S)
+      return true;
+    StmtStack.push_back(S);
+    bool Result = Base::TraverseStmt(S);
+    StmtStack.pop_back();
+    return Result;
+  }
 
   bool TraverseIfStmt(IfStmt *If);
 
@@ -84,18 +94,18 @@ public:
   }
 
   bool VisitDeclRefExpr(DeclRefExpr *DRE) {
-    diagnoseDeclFeatureAvailability(DRE->getDecl(), DRE->getBeginLoc());
+    diagnoseDeclFeatureAvailability(DRE->getDecl(), DRE->getSourceRange());
     return true;
   }
 
   bool VisitMemberExpr(MemberExpr *ME) {
-    diagnoseDeclFeatureAvailability(ME->getMemberDecl(), ME->getBeginLoc());
+    diagnoseDeclFeatureAvailability(ME->getMemberDecl(), ME->getSourceRange());
     return true;
   }
 
   bool VisitObjCMessageExpr(ObjCMessageExpr *OME) {
     if (auto *MD = OME->getMethodDecl())
-      diagnoseDeclFeatureAvailability(MD, OME->getBeginLoc());
+      diagnoseDeclFeatureAvailability(MD, OME->getSourceRange());
     return true;
   }
 
@@ -172,8 +182,61 @@ bool DiagnoseUnguardedFeatureAvailability::isFeatureUseGuarded(
   return ::isFeatureUseGuarded(Attr, D, SemaRef.Context);
 }
 
+/// Returns true if the given statement can be a body-like child of \p Parent.
+bool isBodyLikeChildStmt(const Stmt *S, const Stmt *Parent) {
+  switch (Parent->getStmtClass()) {
+  case Stmt::IfStmtClass:
+    return cast<IfStmt>(Parent)->getThen() == S ||
+           cast<IfStmt>(Parent)->getElse() == S;
+  case Stmt::WhileStmtClass:
+    return cast<WhileStmt>(Parent)->getBody() == S;
+  case Stmt::DoStmtClass:
+    return cast<DoStmt>(Parent)->getBody() == S;
+  case Stmt::ForStmtClass:
+    return cast<ForStmt>(Parent)->getBody() == S;
+  case Stmt::CXXForRangeStmtClass:
+    return cast<CXXForRangeStmt>(Parent)->getBody() == S;
+  case Stmt::ObjCForCollectionStmtClass:
+    return cast<ObjCForCollectionStmt>(Parent)->getBody() == S;
+  case Stmt::CaseStmtClass:
+  case Stmt::DefaultStmtClass:
+    return cast<SwitchCase>(Parent)->getSubStmt() == S;
+  default:
+    return false;
+  }
+}
+
+/// Traverses the AST and finds the last statement that used a declaration in
+/// the given list.
+class LastDeclUSEFinder : public RecursiveASTVisitor<LastDeclUSEFinder> {
+  llvm::SmallSet<const Decl *, 4> Decls;
+
+public:
+  bool VisitDeclRefExpr(DeclRefExpr *DRE) {
+    if (Decls.contains(DRE->getDecl()))
+      return false;
+    return true;
+  }
+
+  static const Stmt *findLastStmtThatUsesDecl(const DeclStmt *UseStmt,
+                                              const CompoundStmt *Scope) {
+    LastDeclUSEFinder Visitor;
+    Visitor.Decls.insert(UseStmt->decl_begin(), UseStmt->decl_end());
+    const Stmt *LastUse = UseStmt;
+    for (const Stmt *S : Scope->body()) {
+      if (!Visitor.TraverseStmt(const_cast<Stmt *>(S)))
+        LastUse = S;
+      if (auto *DS = dyn_cast<DeclStmt>(S))
+        Visitor.Decls.insert(DS->decl_begin(), DS->decl_end());
+    }
+    return LastUse;
+  }
+};
+
 void DiagnoseUnguardedFeatureAvailability::diagnoseDeclFeatureAvailability(
-    const NamedDecl *D, SourceLocation Loc) {
+    const NamedDecl *D, SourceRange Range) {
+  SourceLocation Loc = Range.getBegin();
+  SmallVector<const DomainAvailabilityAttr *, 1> Attrs;
   for (auto *Attr : D->specific_attrs<DomainAvailabilityAttr>()) {
     std::string FeatureUse = Attr->getDomain().str();
     // Skip checking if the feature is always enabled.
@@ -182,10 +245,84 @@ void DiagnoseUnguardedFeatureAvailability::diagnoseDeclFeatureAvailability(
             FeatureAvailKind::AlwaysAvailable)
       continue;
 
-    if (!isFeatureUseGuarded(Attr))
+    if (!isFeatureUseGuarded(Attr)) {
       SemaRef.Diag(Loc, diag::err_unguarded_feature)
           << D << FeatureUse << Attr->getUnavailable();
+      Attrs.push_back(Attr);
+    }
   }
+
+  if (Attrs.empty())
+    return;
+
+  auto FixitDiag =
+      SemaRef.Diag(Range.getBegin(),
+                   diag::note_silence_unguarded_availability_domain)
+      << Range << D
+      << (SemaRef.getLangOpts().ObjC ? /*@available*/ 0
+                                     : /*__builtin_available*/ 1);
+
+  // Find the statement which should be enclosed in the if @available check.
+  if (StmtStack.empty())
+    return;
+
+  const Stmt *StmtOfUse = StmtStack.back();
+  const CompoundStmt *Scope = nullptr;
+  for (const Stmt *S : llvm::reverse(StmtStack)) {
+    if (const auto *CS = dyn_cast<CompoundStmt>(S)) {
+      Scope = CS;
+      break;
+    }
+    if (isBodyLikeChildStmt(StmtOfUse, S)) {
+      // The declaration won't be seen outside of the statement, so we don't
+      // have to wrap the uses of any declared variables in if (@available).
+      // Therefore we can avoid setting Scope here.
+      break;
+    }
+
+    StmtOfUse = S;
+  }
+
+  const Stmt *LastStmtOfUse = nullptr;
+  if (auto *DS = dyn_cast<DeclStmt>(StmtOfUse); DS && Scope)
+    LastStmtOfUse = LastDeclUSEFinder::findLastStmtThatUsesDecl(DS, Scope);
+
+  const SourceManager &SM = SemaRef.getSourceManager();
+  SourceLocation IfInsertionLoc = SM.getExpansionLoc(StmtOfUse->getBeginLoc());
+  SourceLocation StmtEndLoc =
+      SM.getExpansionRange(
+            (LastStmtOfUse ? LastStmtOfUse : StmtOfUse)->getEndLoc())
+          .getEnd();
+
+  if (SM.getFileID(IfInsertionLoc) != SM.getFileID(StmtEndLoc))
+    return;
+
+  std::string Prefix;
+  llvm::raw_string_ostream FixItOS(Prefix);
+  StringRef AvailStr =
+      SemaRef.getLangOpts().ObjC ? "@available" : "__builtin_available";
+  for (auto *A : Attrs) {
+    FixItOS << "if (" << AvailStr << "(domain:" << A->getDomain() << ")) {";
+    if (A->getUnavailable())
+      FixItOS << "} else {";
+  }
+
+  FixitDiag << FixItHint::CreateInsertion(IfInsertionLoc, FixItOS.str());
+  FixItOS.str().clear();
+
+  for (auto *A : llvm::reverse(Attrs)) {
+    FixItOS << "}";
+    if (!A->getUnavailable())
+      FixItOS << " else {}";
+  }
+
+  SourceLocation ElseInsertionLoc = Lexer::findLocationAfterToken(
+      StmtEndLoc, tok::semi, SM, SemaRef.getLangOpts(),
+      /*SkipTrailingWhitespaceAndNewLine=*/false);
+  if (ElseInsertionLoc.isInvalid())
+    ElseInsertionLoc =
+        Lexer::getLocForEndOfToken(StmtEndLoc, 0, SM, SemaRef.getLangOpts());
+  FixitDiag << FixItHint::CreateInsertion(ElseInsertionLoc, FixItOS.str());
 }
 
 bool DiagnoseUnguardedFeatureAvailability::VisitTypeLoc(TypeLoc Ty) {
@@ -197,13 +334,13 @@ bool DiagnoseUnguardedFeatureAvailability::VisitTypeLoc(TypeLoc Ty) {
 
   if (const auto *TT = dyn_cast<TagType>(TyPtr)) {
     TagDecl *TD = TT->getDecl();
-    diagnoseDeclFeatureAvailability(TD, Ty.getBeginLoc());
+    diagnoseDeclFeatureAvailability(TD, Ty.getSourceRange());
   } else if (const auto *TD = dyn_cast<TypedefType>(TyPtr)) {
     TypedefNameDecl *D = TD->getDecl();
-    diagnoseDeclFeatureAvailability(D, Ty.getBeginLoc());
+    diagnoseDeclFeatureAvailability(D, Ty.getSourceRange());
   } else if (const auto *ObjCO = dyn_cast<ObjCObjectType>(TyPtr)) {
     if (NamedDecl *D = ObjCO->getInterface())
-      diagnoseDeclFeatureAvailability(D, Ty.getBeginLoc());
+      diagnoseDeclFeatureAvailability(D, Ty.getSourceRange());
   }
 
   return true;

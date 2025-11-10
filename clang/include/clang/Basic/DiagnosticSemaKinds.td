@@ -4131,6 +4131,10 @@ def note_feature_incompatible0 : Note<
   "feature attribute %0">;
 def note_feature_incompatible1 : Note<
   "is incompatible with %0">;
+def note_silence_unguarded_availability_domain : Note<
+  "enclose %0 in %select{an @available|a __builtin_available}1 check to silence "
+  "this warning">;
+
 def warn_unguarded_availability_unavailable :
   Warning<"%0 is unavailable">,
   InGroup<UnguardedAvailability>, DefaultIgnore;

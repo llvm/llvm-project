@@ -88,6 +88,7 @@ __attribute__((availability(domain:feature1, AVAIL))) // expected-note {{is inco
 -(void)m0 {
   func1();
   func3(); // expected-error {{cannot use 'func3' because feature 'feature1' is available in this context}}
+  // expected-note@-1 {{enclose 'func3' in an @available}}
 }
 -(void)m1 {
   self.p1 = 1;
@@ -208,8 +209,10 @@ __attribute__((availability(domain:feature1, AVAIL)))
   // Check that this method doesn't inherit the domain availablity attribute
   // from the base class method.
   func1(); // enabled-error {{cannot use 'func1' because feature 'feature1' is unavailable in this context}}
+  // enabled-note@-1 {{enclose 'func1' in an @available}}
 
   [super m4]; // enabled-error {{cannot use 'm4' because feature 'feature1' is unavailable in this context}}
+  // enabled-note@-1 {{enclose 'm4' in an @available}}
 }
 @end
 
