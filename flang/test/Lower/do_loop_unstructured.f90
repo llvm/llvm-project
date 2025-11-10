@@ -248,5 +248,6 @@ end
 
 ! CHECK:       ^[[BODY]]:
 ! CHECK-NEXT:    %{{.*}} = fir.alloca !fir.logical<4> {bindc_name = "success", {{.*}}}
+
 ! CHECK:       ^[[EXIT]]:
 ! CHECK-NEXT:    return
