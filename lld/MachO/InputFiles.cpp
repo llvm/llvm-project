@@ -809,9 +809,8 @@ void ObjFile::parseSymbols(ArrayRef<typename LP::section> sectionHeaders,
 
     if ((sym.n_type & N_TYPE) == N_SECT) {
       if (sym.n_sect == 0) {
-        error("Section symbol " + StringRef(strtab + sym.n_strx) + " in " +
+        fatal("Section symbol " + StringRef(strtab + sym.n_strx) + " in " +
               toString(this) + " has an invalid section index of 0");
-        llvm_unreachable("Section symbol without an associated section.");
       }
       Subsections &subsections = sections[sym.n_sect - 1]->subsections;
       // parseSections() may have chosen not to parse this section.
