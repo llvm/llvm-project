@@ -180,8 +180,6 @@ Status RegisterValue::SetValueFromData(const RegisterInfo &reg_info,
   if (src_len > reg_info.byte_size)
     src_len = reg_info.byte_size;
 
-  type128 int128;
-
   m_type = eTypeInvalid;
   switch (reg_info.encoding) {
   case eEncodingInvalid:
