@@ -3238,6 +3238,10 @@ def fms_compatibility : Flag<["-"], "fms-compatibility">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option, CLOption]>,
   HelpText<"Enable full Microsoft Visual C++ compatibility">,
   MarshallingInfoFlag<LangOpts<"MSVCCompat">>;
+def fms_preprocessor_compat : Flag<["-"], "fms-preprocessor-compat">, Group<f_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Enable full emulation of the traditional MSVC preprocessor">,
+  MarshallingInfoFlag<LangOpts<"MSVCPreprocessor">>;
 def fms_define_stdc : Flag<["-"], "fms-define-stdc">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option, CLOption]>,
   HelpText<"Define '__STDC__' to '1' in MSVC Compatibility mode">,
@@ -3614,6 +3618,8 @@ def fno_ms_extensions : Flag<["-"], "fno-ms-extensions">, Group<f_Group>,
   Visibility<[ClangOption, CLOption]>;
 def fno_ms_compatibility : Flag<["-"], "fno-ms-compatibility">, Group<f_Group>,
   Visibility<[ClangOption, CLOption]>;
+def fno_ms_preprocessor_compat : Flag<["-"], "fno-ms-preprocessor-compat">, Group<f_Group>,
+  Visibility<[ClangOption]>;
 def fno_objc_legacy_dispatch : Flag<["-"], "fno-objc-legacy-dispatch">, Group<f_Group>;
 def fno_objc_weak : Flag<["-"], "fno-objc-weak">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>;
@@ -9123,6 +9129,12 @@ def _SLASH_vd : CLJoined<"vd">, HelpText<"Control vtordisp placement">,
   Alias<vtordisp_mode_EQ>;
 def _SLASH_X : CLFlag<"X">,
   HelpText<"Do not add %INCLUDE% to include search path">, Alias<nostdlibinc>;
+def _SLASH_Zc_preprocessor : CLFlag<"Zc:preprocessor">,
+  HelpText<"Use the standard conforming preprocessor">,
+  Alias<fno_ms_preprocessor_compat>;
+def _SLASH_Zc_preprocessor_ : CLFlag<"Zc:preprocessor-">,
+  HelpText<"Use the traditional (non-conforming) preprocessor (default)">,
+  Alias<fms_preprocessor_compat>;
 def _SLASH_Zc___STDC__ : CLFlag<"Zc:__STDC__">,
   HelpText<"Define __STDC__">,
   Alias<fms_define_stdc>;

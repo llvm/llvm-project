@@ -1022,6 +1022,17 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
     }
   }
 
+  if (LangOpts.MSVCPreprocessor) {
+    Builder.defineMacro("_MSVC_TRADITIONAL", "1");
+  } else if (LangOpts.MicrosoftExt) {
+    // Note: when set to 0 this macro implies, under cl.exe, that the
+    // charize operator and /##/ no longer function as they used to.
+    // However, we have special code that cleanly deals with these patterns,
+    // so we'll allow them to exist as extensions, even though we are stating
+    // that we do not support the "traditional" preprocessor.
+    Builder.defineMacro("_MSVC_TRADITIONAL", "0");
+  }
+
   // Macros to help identify the narrow and wide character sets
   // FIXME: clang currently ignores -fexec-charset=. If this changes,
   // then this may need to be updated.

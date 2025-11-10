@@ -269,6 +269,7 @@ LANGOPT(HIPStdParInterposeAlloc, 1, 0, NotCompatible, "Replace allocations / dea
 
 LANGOPT(OpenACC           , 1, 0, NotCompatible, "OpenACC Enabled")
 
+LANGOPT(MSVCPreprocessor , 1, 0, NotCompatible, "Fully emulate the Microsoft Visual C++ traditional (non-conforming) preprocessor")
 LANGOPT(MSVCEnableStdcMacro , 1, 0, NotCompatible, "Define __STDC__ with '-fms-compatibility'")
 LANGOPT(SizedDeallocation , 1, 0, NotCompatible, "sized deallocation")
 LANGOPT(AlignedAllocation , 1, 0, NotCompatible, "aligned allocation")

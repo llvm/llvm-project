@@ -307,12 +307,17 @@ Non-comprehensive list of changes in this release
 
 - Clang now rejects the invalid use of ``constexpr`` with ``auto`` and an explicit type in C. (#GH163090)
 
+- ``_MSVC_TRADITIONAL`` is now defined to ``0`` when using ``-fms-extensions``. The charize operator and ``/##/`` paste trick remain as supported extensions, which is a divergence from MSVC.
+
 New Compiler Flags
 ------------------
 - New option ``-fno-sanitize-debug-trap-reasons`` added to disable emitting trap reasons into the debug info when compiling with trapping UBSan (e.g. ``-fsanitize-trap=undefined``).
 - New option ``-fsanitize-debug-trap-reasons=`` added to control emitting trap reasons into the debug info when compiling with trapping UBSan (e.g. ``-fsanitize-trap=undefined``).
 - New options for enabling allocation token instrumentation: ``-fsanitize=alloc-token``, ``-falloc-token-max=``, ``-fsanitize-alloc-token-fast-abi``, ``-fsanitize-alloc-token-extended``.
 - The ``-resource-dir`` option is now displayed in the list of options shown by ``--help``.
+- The ``-fms-preprocessor-compat`` flag has been added to control whether full emulation of the MSVC traditional preprocessor is performed.
+  Using ``-fms-preprocessor-compat`` will define ``_MSVC_TRADITIONAL`` to ``1``, and enables the full set of functionality required to emulate
+  the old MSVC character buffer based preprocessor as closely as possible. It is enabled by default when using ``-fms-compatibility``, which is the case for clang-cl.
 
 Lanai Support
 ^^^^^^^^^^^^^^
@@ -581,6 +586,8 @@ Android Support
 
 Windows Support
 ^^^^^^^^^^^^^^^
+
+- clang-cl now supports ``/Zc:preprocessor``, which is an alias for ``-fno-ms-preprocessor-compat``.
 
 LoongArch Support
 ^^^^^^^^^^^^^^^^^

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -E -fms-compatibility %s | FileCheck --check-prefix=CHECK-MS-COMPAT %s
+// RUN: %clang_cc1 -E -fms-preprocessor-compat %s | FileCheck --check-prefix=CHECK-MS-COMPAT %s
 // RUN: %clang_cc1 -E %s | FileCheck --check-prefix=CHECK-NO-MS-COMPAT %s
 
 #define FN(x) L#x

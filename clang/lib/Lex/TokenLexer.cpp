@@ -145,7 +145,7 @@ bool TokenLexer::MaybeRemoveCommaBeforeVaArgs(
   // In Microsoft-compatibility mode, a comma is removed in the expansion
   // of " ... , __VA_ARGS__ " if __VA_ARGS__ is empty.  This extension is
   // not supported by gcc.
-  if (!HasPasteOperator && !PP.getLangOpts().MSVCCompat)
+  if (!HasPasteOperator && !PP.getLangOpts().MSVCPreprocessor)
     return false;
 
   // GCC removes the comma in the expansion of " ... , ## __VA_ARGS__ " if
@@ -467,7 +467,7 @@ void TokenLexer::ExpandFunctionArguments() {
         // behavior by not considering single commas from nested macro
         // expansions as argument separators. Set a flag on the token so we can
         // test for this later when the macro expansion is processed.
-        if (PP.getLangOpts().MSVCCompat && NumToks == 1 &&
+        if (PP.getLangOpts().MSVCPreprocessor && NumToks == 1 &&
             ResultToks.back().is(tok::comma))
           ResultToks.back().setFlag(Token::IgnoredComma);
 
@@ -653,7 +653,7 @@ bool TokenLexer::Lex(Token &Tok) {
        // Special processing of L#x macros in -fms-compatibility mode.
        // Microsoft compiler is able to form a wide string literal from
        // 'L#macro_arg' construct in a function-like macro.
-       (PP.getLangOpts().MSVCCompat &&
+       (PP.getLangOpts().MSVCPreprocessor &&
         isWideStringLiteralFromMacro(Tok, Tokens[CurTokenIdx])))) {
     // When handling the microsoft /##/ extension, the final token is
     // returned by pasteTokens, not the pasted token.
@@ -732,7 +732,7 @@ bool TokenLexer::pasteTokens(Token &LHSTok, ArrayRef<Token> TokenStream,
                              unsigned int &CurIdx) {
   assert(CurIdx > 0 && "## can not be the first token within tokens");
   assert((TokenStream[CurIdx].is(tok::hashhash) ||
-         (PP.getLangOpts().MSVCCompat &&
+         (PP.getLangOpts().MSVCPreprocessor &&
           isWideStringLiteralFromMacro(LHSTok, TokenStream[CurIdx]))) &&
              "Token at this Index must be ## or part of the MSVC 'L "
              "#macro-arg' pasting pair");
@@ -740,7 +740,7 @@ bool TokenLexer::pasteTokens(Token &LHSTok, ArrayRef<Token> TokenStream,
   // MSVC: If previous token was pasted, this must be a recovery from an invalid
   // paste operation. Ignore spaces before this token to mimic MSVC output.
   // Required for generating valid UUID strings in some MS headers.
-  if (PP.getLangOpts().MicrosoftExt && (CurIdx >= 2) &&
+  if (PP.getLangOpts().wantsMSVCPreprocessorExtensions() && (CurIdx >= 2) &&
       TokenStream[CurIdx - 2].is(tok::hashhash))
     LHSTok.clearFlag(Token::LeadingSpace);
 
@@ -854,8 +854,8 @@ bool TokenLexer::pasteTokens(Token &LHSTok, ArrayRef<Token> TokenStream,
 
         // Test for the Microsoft extension of /##/ turning into // here on the
         // error path.
-        if (PP.getLangOpts().MicrosoftExt && LHSTok.is(tok::slash) &&
-            RHS.is(tok::slash)) {
+        if (PP.getLangOpts().wantsMSVCPreprocessorExtensions() &&
+            LHSTok.is(tok::slash) && RHS.is(tok::slash)) {
           HandleMicrosoftCommentPaste(LHSTok, Loc);
           return true;
         }

@@ -7056,6 +7056,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     if (!types::isCXX(Input.getType()) &&
         Args.hasArg(options::OPT_fms_define_stdc))
       CmdArgs.push_back("-fms-define-stdc");
+    // FIXME: This should be disabled by default in C11 and newer.
+    if (Args.hasFlag(options::OPT_fms_preprocessor_compat,
+                     options::OPT_fno_ms_preprocessor_compat, true))
+      CmdArgs.push_back("-fms-preprocessor-compat");
   }
 
   if (Triple.isWindowsMSVCEnvironment() && !D.IsCLMode() &&
