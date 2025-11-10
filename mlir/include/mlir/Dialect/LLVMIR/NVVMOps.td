@@ -949,7 +949,7 @@ def NVVM_MBarrierTestWaitOp : NVVM_Op<"mbarrier.test.wait">,
   }];
 
   string llvmBuilder = [{
-    auto [id, args] = NVVM::MBarrierArriveNocompleteOp::getIntrinsicIDAndArgs(
+    auto [id, args] = NVVM::MBarrierTestWaitOp::getIntrinsicIDAndArgs(
                       *op, moduleTranslation, builder);
     $res = createIntrinsicCall(builder, id, args);
   }];
@@ -1234,6 +1234,23 @@ def NVVM_FenceProxyAcquireOp : NVVM_Op<"fence.proxy.acquire">,
   }];
 
   let hasVerifier = 1;
+}
+
+def NVVM_MembarOp : NVVM_Op<"memory.barrier">,
+                    Arguments<(ins MemScopeKindAttr:$scope)> {
+  let summary = "Memory barrier operation";
+  let description = [{
+    `membar` operation guarantees that prior memory accesses requested by this
+    thread are performed at the specified `scope`, before later memory
+    operations requested by this thread following the membar instruction.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#parallel-synchronization-and-communication-instructions-membar)
+  }];
+
+  let assemblyFormat = "$scope attr-dict";
+  let llvmBuilder = [{
+    createIntrinsicCall(builder, getMembarIntrinsicID($scope), {});
+  }];
 }
 
 def NVVM_FenceProxyReleaseOp : NVVM_Op<"fence.proxy.release">,

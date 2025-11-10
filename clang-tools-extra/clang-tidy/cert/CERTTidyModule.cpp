@@ -11,7 +11,9 @@
 #include "../ClangTidyModuleRegistry.h"
 #include "../bugprone/BadSignalToKillThreadCheck.h"
 #include "../bugprone/CommandProcessorCheck.h"
+#include "../bugprone/CopyConstructorMutatesArgumentCheck.h"
 #include "../bugprone/DefaultOperatorNewOnOveralignedTypeCheck.h"
+#include "../bugprone/FloatLoopCounterCheck.h"
 #include "../bugprone/PointerArithmeticOnPolymorphicObjectCheck.h"
 #include "../bugprone/RawMemoryCallOnNonTrivialTypeCheck.h"
 #include "../bugprone/ReservedIdentifierCheck.h"
@@ -29,7 +31,7 @@
 #include "../concurrency/ThreadCanceltypeAsynchronousCheck.h"
 #include "../google/UnnamedNamespaceInHeaderCheck.h"
 #include "../misc/NewDeleteOverloadsCheck.h"
-#include "../misc/NonCopyableObjects.h"
+#include "../misc/NonCopyableObjectsCheck.h"
 #include "../misc/StaticAssertCheck.h"
 #include "../misc/ThrowByValueCatchByReferenceCheck.h"
 #include "../modernize/AvoidSetjmpLongjmpCheck.h"
@@ -37,9 +39,7 @@
 #include "../performance/MoveConstructorInitCheck.h"
 #include "../readability/EnumInitialValueCheck.h"
 #include "../readability/UppercaseLiteralSuffixCheck.h"
-#include "FloatLoopCounter.h"
 #include "LimitedRandomnessCheck.h"
-#include "MutatingCopyCheck.h"
 #include "ProperlySeededRandomGeneratorCheck.h"
 #include "ThrownExceptionTypeCheck.h"
 
@@ -282,7 +282,8 @@ public:
         "cert-oop54-cpp");
     CheckFactories.registerCheck<bugprone::RawMemoryCallOnNonTrivialTypeCheck>(
         "cert-oop57-cpp");
-    CheckFactories.registerCheck<MutatingCopyCheck>("cert-oop58-cpp");
+    CheckFactories.registerCheck<bugprone::CopyConstructorMutatesArgumentCheck>(
+        "cert-oop58-cpp");
 
     // C checkers
     // ARR
@@ -310,7 +311,8 @@ public:
     CheckFactories.registerCheck<bugprone::SuspiciousMemoryComparisonCheck>(
         "cert-exp42-c");
     // FLP
-    CheckFactories.registerCheck<FloatLoopCounter>("cert-flp30-c");
+    CheckFactories.registerCheck<bugprone::FloatLoopCounterCheck>(
+        "cert-flp30-c");
     CheckFactories.registerCheck<bugprone::SuspiciousMemoryComparisonCheck>(
         "cert-flp37-c");
     // FIO

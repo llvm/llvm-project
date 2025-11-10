@@ -117,6 +117,7 @@ bool CheckBitCast(InterpState &S, CodePtr OpPC, bool HasIndeterminateBits,
                   bool TargetIsUCharOrByte);
 bool CheckBCPResult(InterpState &S, const Pointer &Ptr);
 bool CheckDestructor(InterpState &S, CodePtr OpPC, const Pointer &Ptr);
+bool CheckFunctionDecl(InterpState &S, CodePtr OpPC, const FunctionDecl *FD);
 
 bool handleFixedPointOverflow(InterpState &S, CodePtr OpPC,
                               const FixedPoint &FP);
@@ -1915,6 +1916,9 @@ bool Load(InterpState &S, CodePtr OpPC) {
     return false;
   if (!Ptr.isBlockPointer())
     return false;
+  if (const Descriptor *D = Ptr.getFieldDesc();
+      !(D->isPrimitive() || D->isPrimitiveArray()) || D->getPrimType() != Name)
+    return false;
   S.Stk.push<T>(Ptr.deref<T>());
   return true;
 }
@@ -1925,6 +1929,9 @@ bool LoadPop(InterpState &S, CodePtr OpPC) {
   if (!CheckLoad(S, OpPC, Ptr))
     return false;
   if (!Ptr.isBlockPointer())
+    return false;
+  if (const Descriptor *D = Ptr.getFieldDesc();
+      !(D->isPrimitive() || D->isPrimitiveArray()) || D->getPrimType() != Name)
     return false;
   S.Stk.push<T>(Ptr.deref<T>());
   return true;
@@ -3288,12 +3295,18 @@ inline bool InvalidCast(InterpState &S, CodePtr OpPC, CastKind Kind,
                         bool Fatal) {
   const SourceLocation &Loc = S.Current->getLocation(OpPC);
 
-  if (Kind == CastKind::Reinterpret) {
+  switch (Kind) {
+  case CastKind::Reinterpret:
     S.CCEDiag(Loc, diag::note_constexpr_invalid_cast)
-        << static_cast<unsigned>(Kind) << S.Current->getRange(OpPC);
+        << diag::ConstexprInvalidCastKind::Reinterpret
+        << S.Current->getRange(OpPC);
     return !Fatal;
-  }
-  if (Kind == CastKind::Volatile) {
+  case CastKind::ReinterpretLike:
+    S.CCEDiag(Loc, diag::note_constexpr_invalid_cast)
+        << diag::ConstexprInvalidCastKind::ThisConversionOrReinterpret
+        << S.getLangOpts().CPlusPlus << S.Current->getRange(OpPC);
+    return !Fatal;
+  case CastKind::Volatile:
     if (!S.checkingPotentialConstantExpression()) {
       const auto *E = cast<CastExpr>(S.Current->getExpr(OpPC));
       if (S.getLangOpts().CPlusPlus)
@@ -3304,14 +3317,13 @@ inline bool InvalidCast(InterpState &S, CodePtr OpPC, CastKind Kind,
     }
 
     return false;
-  }
-  if (Kind == CastKind::Dynamic) {
+  case CastKind::Dynamic:
     assert(!S.getLangOpts().CPlusPlus20);
-    S.CCEDiag(S.Current->getSource(OpPC), diag::note_constexpr_invalid_cast)
+    S.CCEDiag(Loc, diag::note_constexpr_invalid_cast)
         << diag::ConstexprInvalidCastKind::Dynamic;
     return true;
   }
-
+  llvm_unreachable("Unhandled CastKind");
   return false;
 }
 

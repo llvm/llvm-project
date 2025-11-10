@@ -215,6 +215,7 @@ struct MissingFeatures {
   static bool builtinCallMathErrno() { return false; }
   static bool builtinCheckKind() { return false; }
   static bool cgCapturedStmtInfo() { return false; }
+  static bool countedBySize() { return false; }
   static bool cgFPOptionsRAII() { return false; }
   static bool checkBitfieldClipping() { return false; }
   static bool cirgenABIInfo() { return false; }
