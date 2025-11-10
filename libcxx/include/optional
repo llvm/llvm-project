@@ -640,9 +640,9 @@ public:
     auto& __derived_self = static_cast<optional<_Tp>&>(*this);
     auto __ptr           = [&__derived_self]() {
       if constexpr (is_lvalue_reference_v<_Tp>) {
-        return __derived_self.has_value() ? addressof(__derived_self.__get()) : nullptr;
+        return __derived_self.has_value() ? std::addressof(__derived_self.__get()) : nullptr;
       }
-      return addressof(__derived_self.__get());
+      return std::addressof(__derived_self.__get());
     }();
 
 #      ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_OPTIONAL
@@ -659,9 +659,9 @@ public:
     auto& __derived_self = static_cast<const optional<_Tp>&>(*this);
     auto* __ptr          = [&__derived_self]() {
       if constexpr (is_lvalue_reference_v<_Tp>) {
-        return __derived_self.has_value() ? addressof(__derived_self.__get()) : nullptr;
+        return __derived_self.has_value() ? std::addressof(__derived_self.__get()) : nullptr;
       }
-      return addressof(__derived_self.__get());
+      return std::addressof(__derived_self.__get());
     }();
 
 #      ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_OPTIONAL
