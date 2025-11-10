@@ -1276,7 +1276,7 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   }
 }
 
-bool VPInstruction::onlyFirstLaneUsed(const VPValue *Op) const {
+bool VPInstruction::usesFirstLaneOnly(const VPValue *Op) const {
   assert(is_contained(operands(), Op) && "Op must be an operand of the recipe");
   if (Instruction::isBinaryOp(getOpcode()) || Instruction::isCast(getOpcode()))
     return vputils::onlyFirstLaneUsed(this);
@@ -1325,7 +1325,7 @@ bool VPInstruction::onlyFirstLaneUsed(const VPValue *Op) const {
   llvm_unreachable("switch should return");
 }
 
-bool VPInstruction::onlyFirstPartUsed(const VPValue *Op) const {
+bool VPInstruction::usesFirstPartOnly(const VPValue *Op) const {
   assert(is_contained(operands(), Op) && "Op must be an operand of the recipe");
   if (Instruction::isBinaryOp(getOpcode()))
     return vputils::onlyFirstPartUsed(this);
@@ -1692,7 +1692,7 @@ void VPWidenCallRecipe::execute(VPTransformState &State) {
     if (!VFTy->getParamType(I.index())->isVectorTy())
       Arg = State.get(I.value(), VPLane(0));
     else
-      Arg = State.get(I.value(), onlyFirstLaneUsed(I.value()));
+      Arg = State.get(I.value(), usesFirstLaneOnly(I.value()));
     Args.push_back(Arg);
   }
 
@@ -1761,7 +1761,7 @@ void VPWidenIntrinsicRecipe::execute(VPTransformState &State) {
                                            State.TTI))
       Arg = State.get(I.value(), VPLane(0));
     else
-      Arg = State.get(I.value(), onlyFirstLaneUsed(I.value()));
+      Arg = State.get(I.value(), usesFirstLaneOnly(I.value()));
     if (isVectorIntrinsicWithOverloadTypeAtArg(VectorIntrinsicID, I.index(),
                                                State.TTI))
       TysForDecl.push_back(Arg->getType());
@@ -1843,7 +1843,7 @@ StringRef VPWidenIntrinsicRecipe::getIntrinsicName() const {
   return Intrinsic::getBaseName(VectorIntrinsicID);
 }
 
-bool VPWidenIntrinsicRecipe::onlyFirstLaneUsed(const VPValue *Op) const {
+bool VPWidenIntrinsicRecipe::usesFirstLaneOnly(const VPValue *Op) const {
   assert(is_contained(operands(), Op) && "Op must be an operand of the recipe");
   return all_of(enumerate(operands()), [this, &Op](const auto &X) {
     auto [Idx, V] = X;
@@ -3349,7 +3349,7 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
     // Scale the cost by the probability of executing the predicated blocks.
     // This assumes the predicated block for each vector lane is equally
     // likely.
-    ScalarCost /= getPredBlockCostDivisor(Ctx.CostKind);
+    ScalarCost /= Ctx.getPredBlockCostDivisor(UI->getParent());
     return ScalarCost;
   }
   case Instruction::Load:

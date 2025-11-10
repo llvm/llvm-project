@@ -50,6 +50,7 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/SDPatternMatch.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/TargetCallingConv.h"
@@ -96,7 +97,6 @@
 #include <cctype>
 #include <cstdint>
 #include <cstdlib>
-#include <deque>
 #include <iterator>
 #include <limits>
 #include <optional>
@@ -105,7 +105,6 @@
 #include <vector>
 
 using namespace llvm;
-using namespace llvm::PatternMatch;
 
 #define DEBUG_TYPE "aarch64-lower"
 
@@ -1175,6 +1174,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
 
   setTargetDAGCombine(ISD::SHL);
   setTargetDAGCombine(ISD::VECTOR_DEINTERLEAVE);
+  setTargetDAGCombine(ISD::CTPOP);
 
   // In case of strict alignment, avoid an excessive number of byte wide stores.
   MaxStoresPerMemsetOptSize = 8;
@@ -1916,6 +1916,12 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setPartialReduceMLAAction(MLAOps, MVT::nxv4i32, MVT::nxv8i16, Legal);
       setPartialReduceMLAAction(MLAOps, MVT::nxv8i16, MVT::nxv16i8, Legal);
     }
+
+    // Handle floating-point partial reduction
+    if (Subtarget->hasSVE2p1() || Subtarget->hasSME2()) {
+      setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_FMLA, MVT::nxv4f32,
+                                MVT::nxv8f16, Legal);
+    }
   }
 
   // Handle non-aliasing elements mask
@@ -2281,6 +2287,11 @@ void AArch64TargetLowering::addTypeForFixedLengthSVE(MVT VT) {
     else if (VT.getVectorElementType() == MVT::i64)
       setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_SUMLA, VT,
                                 MVT::getVectorVT(MVT::i8, NumElts * 8), Custom);
+  }
+
+  if (Subtarget->hasSVE2p1() && VT.getVectorElementType() == MVT::f32) {
+    setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_FMLA, VT,
+                              MVT::getVectorVT(MVT::f16, NumElts * 2), Custom);
   }
 
   // Lower fixed length vector operations to scalable equivalents.
@@ -7875,6 +7886,7 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
   case ISD::PARTIAL_REDUCE_SMLA:
   case ISD::PARTIAL_REDUCE_UMLA:
   case ISD::PARTIAL_REDUCE_SUMLA:
+  case ISD::PARTIAL_REDUCE_FMLA:
     return LowerPARTIAL_REDUCE_MLA(Op, DAG);
   }
 }
@@ -11331,9 +11343,10 @@ SDValue AArch64TargetLowering::LowerMinMax(SDValue Op,
     break;
   }
 
+  // Note: This lowering only overrides NEON for v1i64 and v2i64, where we
+  // prefer using SVE if available.
   if (VT.isScalableVector() ||
-      useSVEForFixedLengthVectorVT(
-          VT, /*OverrideNEON=*/Subtarget->useSVEForFixedLengthVectors())) {
+      useSVEForFixedLengthVectorVT(VT, /*OverrideNEON=*/true)) {
     switch (Opcode) {
     default:
       llvm_unreachable("Wrong instruction");
@@ -17555,6 +17568,7 @@ bool AArch64TargetLowering::optimizeExtendOrTruncateConversion(
     // udot instruction.
     if (SrcWidth * 4 <= DstWidth) {
       if (all_of(I->users(), [&](auto *U) {
+            using namespace llvm::PatternMatch;
             auto *SingleUser = cast<Instruction>(&*U);
             if (match(SingleUser, m_c_Mul(m_Specific(I), m_SExt(m_Value()))))
               return true;
@@ -17826,6 +17840,7 @@ bool AArch64TargetLowering::lowerInterleavedLoad(
   // into shift / and masks. For the moment we do this just for uitofp (not
   // zext) to avoid issues with widening instructions.
   if (Shuffles.size() == 4 && all_of(Shuffles, [](ShuffleVectorInst *SI) {
+        using namespace llvm::PatternMatch;
         return SI->hasOneUse() && match(SI->user_back(), m_UIToFP(m_Value())) &&
                SI->getType()->getScalarSizeInBits() * 4 ==
                    SI->user_back()->getType()->getScalarSizeInBits();
@@ -17990,17 +18005,11 @@ bool AArch64TargetLowering::lowerInterleavedStore(Instruction *Store,
                                                   unsigned Factor,
                                                   const APInt &GapMask) const {
 
+  assert(Factor >= 2 && Factor <= getMaxSupportedInterleaveFactor() &&
+         "Invalid interleave factor");
   auto *SI = dyn_cast<StoreInst>(Store);
   if (!SI)
     return false;
-
-  if (isProfitableToInterleaveWithGatherScatter() &&
-      Factor > getMaxSupportedInterleaveFactor())
-    return lowerInterleavedStoreWithShuffle(SI, SVI, Factor);
-
-  assert(Factor >= 2 && Factor <= getMaxSupportedInterleaveFactor() &&
-         "Invalid interleave factor");
-
   assert(!LaneMask && GapMask.popcount() == Factor &&
          "Unexpected mask on store");
 
@@ -18141,126 +18150,6 @@ bool AArch64TargetLowering::lowerInterleavedStore(Instruction *Store,
                                             BaseAddr, LaneLen * Factor);
 
     Ops.push_back(BaseAddr);
-    Builder.CreateCall(StNFunc, Ops);
-  }
-  return true;
-}
-
-/// If the interleaved vector elements are greater than supported MaxFactor,
-/// interleaving the data with additional shuffles can be used to
-/// achieve the same.
-///
-/// Consider the following data with 8 interleaves which are shuffled to store
-/// stN instructions. Data needs to be stored in this order:
-///     [v0, v1, v2, v3, v4, v5, v6, v7]
-///
-///    v0      v4      v2      v6      v1      v5      v3      v7
-///    |       |       |       |       |       |       |       |
-///     \     /         \     /         \     /         \     /
-///   [zip v0,v4]      [zip v2,v6]    [zip v1,v5]      [zip v3,v7] ==> stN = 4
-///        |               |              |                 |
-///         \             /                \               /
-///          \           /                  \             /
-///           \         /                    \           /
-///       [zip [v0,v2,v4,v6]]            [zip [v1,v3,v5,v7]]     ==> stN = 2
-///
-/// For stN = 4, upper half of interleaved data V0, V1, V2, V3 is stored
-/// with one st4 instruction. Lower half, i.e, V4, V5, V6, V7 is stored with
-/// another st4.
-///
-/// For stN = 2, upper half of interleaved data V0, V1 is stored
-/// with one st2 instruction. Second set V2, V3 is stored with another st2.
-/// Total of 4 st2's are required here.
-bool AArch64TargetLowering::lowerInterleavedStoreWithShuffle(
-    StoreInst *SI, ShuffleVectorInst *SVI, unsigned Factor) const {
-  unsigned MaxSupportedFactor = getMaxSupportedInterleaveFactor();
-
-  auto *VecTy = cast<FixedVectorType>(SVI->getType());
-  assert(VecTy->getNumElements() % Factor == 0 && "Invalid interleaved store");
-
-  unsigned LaneLen = VecTy->getNumElements() / Factor;
-  Type *EltTy = VecTy->getElementType();
-  auto *SubVecTy = FixedVectorType::get(EltTy, Factor);
-
-  const DataLayout &DL = SI->getModule()->getDataLayout();
-  bool UseScalable;
-
-  // Skip if we do not have NEON and skip illegal vector types. We can
-  // "legalize" wide vector types into multiple interleaved accesses as long as
-  // the vector types are divisible by 128.
-  if (!Subtarget->hasNEON() ||
-      !isLegalInterleavedAccessType(SubVecTy, DL, UseScalable))
-    return false;
-
-  if (UseScalable)
-    return false;
-
-  std::deque<Value *> Shuffles;
-  Shuffles.push_back(SVI);
-  unsigned ConcatLevel = Factor;
-  // Getting all the interleaved operands.
-  while (ConcatLevel > 1) {
-    unsigned InterleavedOperands = Shuffles.size();
-    for (unsigned i = 0; i < InterleavedOperands; i++) {
-      ShuffleVectorInst *SFL = dyn_cast<ShuffleVectorInst>(Shuffles.front());
-      if (!SFL)
-        return false;
-      Shuffles.pop_front();
-
-      Value *Op0 = SFL->getOperand(0);
-      Value *Op1 = SFL->getOperand(1);
-
-      Shuffles.push_back(dyn_cast<Value>(Op0));
-      Shuffles.push_back(dyn_cast<Value>(Op1));
-    }
-    ConcatLevel >>= 1;
-  }
-
-  IRBuilder<> Builder(SI);
-  auto Mask = createInterleaveMask(LaneLen, 2);
-  SmallVector<int, 16> UpperHalfMask(LaneLen), LowerHalfMask(LaneLen);
-  for (unsigned i = 0; i < LaneLen; i++) {
-    LowerHalfMask[i] = Mask[i];
-    UpperHalfMask[i] = Mask[i + LaneLen];
-  }
-
-  unsigned InterleaveFactor = Factor >> 1;
-  while (InterleaveFactor >= MaxSupportedFactor) {
-    std::deque<Value *> ShufflesIntermediate;
-    ShufflesIntermediate.resize(Factor);
-    for (unsigned j = 0; j < Factor; j += (InterleaveFactor * 2)) {
-      for (unsigned i = 0; i < InterleaveFactor; i++) {
-        auto *Shuffle = Builder.CreateShuffleVector(
-            Shuffles[i + j], Shuffles[i + j + InterleaveFactor], LowerHalfMask);
-        ShufflesIntermediate[i + j] = Shuffle;
-        Shuffle = Builder.CreateShuffleVector(
-            Shuffles[i + j], Shuffles[i + j + InterleaveFactor], UpperHalfMask);
-        ShufflesIntermediate[i + j + InterleaveFactor] = Shuffle;
-      }
-    }
-    Shuffles = ShufflesIntermediate;
-    InterleaveFactor >>= 1;
-  }
-
-  Type *PtrTy = SI->getPointerOperandType();
-  auto *STVTy = FixedVectorType::get(SubVecTy->getElementType(), LaneLen);
-
-  Value *BaseAddr = SI->getPointerOperand();
-  Function *StNFunc = getStructuredStoreFunction(
-      SI->getModule(), MaxSupportedFactor, UseScalable, STVTy, PtrTy);
-  for (unsigned i = 0; i < (Factor / MaxSupportedFactor); i++) {
-    SmallVector<Value *, 5> Ops;
-    for (unsigned j = 0; j < MaxSupportedFactor; j++)
-      Ops.push_back(Shuffles[i * MaxSupportedFactor + j]);
-
-    if (i > 0) {
-      // We will compute the pointer operand of each store from the original
-      // base address using GEPs. Cast the base address to a pointer to the
-      // scalar  element type.
-      BaseAddr = Builder.CreateConstGEP1_32(
-          SubVecTy->getElementType(), BaseAddr, LaneLen * MaxSupportedFactor);
-    }
-    Ops.push_back(Builder.CreateBitCast(BaseAddr, PtrTy));
     Builder.CreateCall(StNFunc, Ops);
   }
   return true;
@@ -22419,6 +22308,37 @@ static SDValue performExtBinopLoadFold(SDNode *N, SelectionDAG &DAG) {
   return DAG.getNode(N->getOpcode(), DL, VT, Ext0, NShift);
 }
 
+// Attempt to combine the following patterns:
+//   SUB x, (CSET LO, (CMP a, b)) -> SBC x, 0, (CMP a, b)
+//   SUB (SUB x, y), (CSET LO, (CMP a, b)) -> SBC x, y, (CMP a, b)
+// The CSET may be preceded by a ZEXT.
+static SDValue performSubWithBorrowCombine(SDNode *N, SelectionDAG &DAG) {
+  if (N->getOpcode() != ISD::SUB)
+    return SDValue();
+
+  EVT VT = N->getValueType(0);
+  if (VT != MVT::i32 && VT != MVT::i64)
+    return SDValue();
+
+  SDValue N1 = N->getOperand(1);
+  if (N1.getOpcode() == ISD::ZERO_EXTEND && N1.hasOneUse())
+    N1 = N1.getOperand(0);
+  if (!N1.hasOneUse() || getCSETCondCode(N1) != AArch64CC::LO)
+    return SDValue();
+
+  SDValue Flags = N1.getOperand(3);
+  if (Flags.getOpcode() != AArch64ISD::SUBS)
+    return SDValue();
+
+  SDLoc DL(N);
+  SDValue N0 = N->getOperand(0);
+  if (N0->getOpcode() == ISD::SUB)
+    return DAG.getNode(AArch64ISD::SBC, DL, VT, N0.getOperand(0),
+                       N0.getOperand(1), Flags);
+  return DAG.getNode(AArch64ISD::SBC, DL, VT, N0, DAG.getConstant(0, DL, VT),
+                     Flags);
+}
+
 static SDValue performAddSubCombine(SDNode *N,
                                     TargetLowering::DAGCombinerInfo &DCI) {
   // Try to change sum of two reductions.
@@ -22439,6 +22359,8 @@ static SDValue performAddSubCombine(SDNode *N,
   if (SDValue Val = performSVEMulAddSubCombine(N, DCI))
     return Val;
   if (SDValue Val = performAddSubIntoVectorOp(N, DCI.DAG))
+    return Val;
+  if (SDValue Val = performSubWithBorrowCombine(N, DCI.DAG))
     return Val;
 
   if (SDValue Val = performExtBinopLoadFold(N, DCI.DAG))
@@ -26161,7 +26083,7 @@ static SDValue performCSELCombine(SDNode *N,
   // CSEL 0, cttz(X), eq(X, 0) -> AND cttz bitwidth-1
   // CSEL cttz(X), 0, ne(X, 0) -> AND cttz bitwidth-1
   if (SDValue Folded = foldCSELofCTTZ(N, DAG))
-		return Folded;
+    return Folded;
 
   // CSEL a, b, cc, SUBS(x, y) -> CSEL a, b, swapped(cc), SUBS(y, x)
   // if SUB(y, x) already exists and we can produce a swapped predicate for cc.
@@ -27968,6 +27890,35 @@ static SDValue performRNDRCombine(SDNode *N, SelectionDAG &DAG) {
       {A, DAG.getZExtOrTrunc(B, DL, MVT::i1), A.getValue(2)}, DL);
 }
 
+static SDValue performCTPOPCombine(SDNode *N,
+                                   TargetLowering::DAGCombinerInfo &DCI,
+                                   SelectionDAG &DAG) {
+  using namespace llvm::SDPatternMatch;
+  if (!DCI.isBeforeLegalize())
+    return SDValue();
+
+  // ctpop(zext(bitcast(vector_mask))) -> neg(signed_reduce_add(vector_mask))
+  SDValue Mask;
+  if (!sd_match(N->getOperand(0), m_ZExt(m_BitCast(m_Value(Mask)))))
+    return SDValue();
+
+  EVT VT = N->getValueType(0);
+  EVT MaskVT = Mask.getValueType();
+
+  if (VT.isVector() || !MaskVT.isFixedLengthVector() ||
+      MaskVT.getVectorElementType() != MVT::i1)
+    return SDValue();
+
+  EVT ReduceInVT =
+      EVT::getVectorVT(*DAG.getContext(), VT, MaskVT.getVectorElementCount());
+
+  SDLoc DL(N);
+  // Sign extend to best fit ZeroOrNegativeOneBooleanContent.
+  SDValue ExtMask = DAG.getNode(ISD::SIGN_EXTEND, DL, ReduceInVT, Mask);
+  SDValue NegPopCount = DAG.getNode(ISD::VECREDUCE_ADD, DL, VT, ExtMask);
+  return DAG.getNegative(NegPopCount, DL, VT);
+}
+
 SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
                                                  DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -28313,6 +28264,8 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
     return performScalarToVectorCombine(N, DCI, DAG);
   case ISD::SHL:
     return performSHLCombine(N, DCI, DAG);
+  case ISD::CTPOP:
+    return performCTPOPCombine(N, DCI, DAG);
   }
   return SDValue();
 }
