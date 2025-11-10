@@ -533,6 +533,17 @@ public:
 
   lldb::RecognizedStackFrameSP GetRecognizedFrame();
 
+  // BEGIN SWIFT
+  // Implement LanguageCPlusPlus::GetParentNameIfClosure and upstream this.
+  // rdar://152321823
+  /// If `sc` represents a "closure-like" function according to `lang`, and
+  /// `missing_var_name` can be found in a parent context, create a diagnostic
+  /// explaining that this variable is available but not captured by the
+  /// closure.
+  std::string
+  GetVariableNotCapturedDiagnostic(llvm::StringRef missing_var_name);
+  // END SWIFT
+
 protected:
   friend class StackFrameList;
 
