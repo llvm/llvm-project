@@ -212,7 +212,7 @@ protected:
     // Returns name of the section, its entire string in [].
     StringRef name() const { return SectionStr; }
 
-    // Returns true of string 'Name' matches section name interpreted as a glob.
+    // Returns true if string 'Name' matches section name interpreted as a glob.
     LLVM_ABI bool matchName(StringRef Name) const;
 
     // Returns sequence number of the file where this section is defined.
