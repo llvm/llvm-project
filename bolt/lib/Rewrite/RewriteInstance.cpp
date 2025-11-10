@@ -4985,6 +4985,11 @@ RewriteInstance::getOutputSections(ELFObjectFile<ELFT> *File,
   std::vector<std::pair<BinarySection *, ELFShdrTy>> OutputSections;
   auto addSection = [&](const ELFShdrTy &Section, BinarySection &BinSec) {
     ELFShdrTy NewSection = Section;
+    LLVM_DEBUG({
+  dbgs() << "[shstrtab] assigning name="
+         << BinSec.getOutputName() << "\n";
+});
+
     NewSection.sh_name = SHStrTab.getOffset(BinSec.getOutputName());
     OutputSections.emplace_back(&BinSec, std::move(NewSection));
   };
