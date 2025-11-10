@@ -592,6 +592,7 @@ class VariableAnnotator {
   llvm::DenseMap<lldb::user_id_t, VariableAnnotation> m_live_vars;
 
   static constexpr const char *kUndefLocation = "undef";
+  static const std::string kUndefLocationFormatted;
 
 public:
   /// Compute annotation strings for a single instruction and update `Live_`.

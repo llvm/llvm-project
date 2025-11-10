@@ -286,6 +286,9 @@ bool Disassembler::ElideMixedSourceAndDisassemblyLine(
   return false;
 }
 
+const std::string VariableAnnotator::kUndefLocationFormatted =
+    llvm::formatv("<{0}>", kUndefLocation).str();
+
 // For each instruction, this block attempts to resolve in-scope variables
 // and determine if the current PC falls within their
 // DWARF location entry. If so, it prints a simplified annotation using the
@@ -309,15 +312,16 @@ std::vector<std::string> VariableAnnotator::Annotate(Instruction &inst,
 
   for (const auto &annotation : structured_annotations) {
     std::string display_string;
-    display_string =
-        llvm::formatv(
-            "{0} = {1}", annotation.variable_name,
-            annotation.location_description == VariableAnnotator::kUndefLocation
-                ? llvm::formatv("<{0}>", VariableAnnotator::kUndefLocation)
-                      .str()
-                : annotation.location_description)
-            .str();
-    events.push_back(display_string);
+    llvm::raw_string_ostream os(display_string);
+
+    os << annotation.variable_name;
+    os << " = ";
+    os << (annotation.location_description == VariableAnnotator::kUndefLocation
+               ? VariableAnnotator::kUndefLocationFormatted
+               : annotation.location_description);
+    os.flush();
+
+    events.push_back(std::move(display_string));
   }
 
   return events;
@@ -423,11 +427,11 @@ VariableAnnotator::AnnotateStructured(Instruction &inst, Target &target,
       if (const char *type_str = type->GetName().AsCString())
         type_name = type_str;
 
-    current_vars.try_emplace(v->GetID(),
-                        VariableAnnotation{std::string(name), std::string(loc),
-                                           true, entry.expr->GetRegisterKind(),
-                                           entry.file_range, decl_file,
-                                           decl_line, type_name});
+    current_vars.try_emplace(
+        v->GetID(),
+        VariableAnnotation{std::string(name), std::string(loc), true,
+                           entry.expr->GetRegisterKind(), entry.file_range,
+                           decl_file, decl_line, type_name});
   }
 
   // Diff m_live_vars → current_vars.
