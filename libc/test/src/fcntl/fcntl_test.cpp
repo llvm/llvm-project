@@ -173,7 +173,7 @@ public:
         LIBC_NAMESPACE::open(TEST_FILE, O_CREAT | O_TRUNC | O_RDWR, S_IRWXU);
     ASSERT_THAT(LIBC_NAMESPACE::close(fd), Succeeds(0));
 
-    struct flock flk = {};
+    flock flk = {};
     flk.l_type = F_RDLCK;
     flk.l_start = 0;
     flk.l_whence = SEEK_SET;
