@@ -45,7 +45,7 @@ static const char kDumpDocstring[] =
 
 static const char kValueReplaceAllUsesExceptDocstring[] =
     R"(Replace all uses of this value with the `with` value, except for those
-in `exceptions`. 'exceptions' can be either a single operation or a list of
+in `exceptions`. `exceptions` can be either a single operation or a list of
 operations.
 )";
 
