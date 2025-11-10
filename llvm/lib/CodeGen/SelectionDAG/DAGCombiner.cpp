@@ -9772,9 +9772,10 @@ SDValue DAGCombiner::MatchLoadCombine(SDNode *N) {
                           MemVT))
     return SDValue();
 
-  auto IsRotateLoaded = [](
-      ArrayRef<int64_t> ByteOffsets, int64_t FirstOffset, unsigned BitWidth) {
-    // Ensure that we have the correct width type, we want to combine two 32 loads into a 64 bit load.
+  auto IsRotateLoaded = [](ArrayRef<int64_t> ByteOffsets, int64_t FirstOffset,
+                           unsigned BitWidth) {
+    // Ensure that we have the correct width type, we want to combine two 32
+    // loads into a 64 bit load.
     if (BitWidth != 64 || ByteOffsets.size() != 8)
       return false;
 
@@ -9795,13 +9796,13 @@ SDValue DAGCombiner::MatchLoadCombine(SDNode *N) {
   // little endian value load
   std::optional<bool> IsBigEndian = isBigEndian(
       ArrayRef(ByteOffsets).drop_back(ZeroExtendedBytes), FirstOffset);
-  
+
   bool IsRotated = false;
   if (!IsBigEndian) {
     IsRotated =
-          IsRotateLoaded(ArrayRef(ByteOffsets).drop_back(ZeroExtendedBytes),
-                         FirstOffset, VT.getSizeInBits());
-    
+        IsRotateLoaded(ArrayRef(ByteOffsets).drop_back(ZeroExtendedBytes),
+                       FirstOffset, VT.getSizeInBits());
+
     if (!IsRotated)
       return SDValue();
   }

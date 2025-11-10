@@ -10,8 +10,6 @@ define i64 @test_load_bswap_to_rotate(ptr %p) {
 ; CHECK-NEXT:    movq (%rdi), %rax
 ; CHECK-NEXT:    rorq $32, %rax
 ; CHECK-NEXT:    retq
-;
-; CHECK-NOT: movl
 
   %p.hi = getelementptr inbounds nuw i8, ptr %p, i64 4
   %lo = load i32, ptr %p
