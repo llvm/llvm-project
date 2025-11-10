@@ -13,6 +13,9 @@
 
 #include <optional>
 
+#include "llvm/Support/DebugLog.h"
+#define DEBUG_TYPE "xegpu-transforms"
+
 using namespace mlir;
 using namespace mlir::transform;
 
@@ -76,6 +79,45 @@ static DiagnosedSilenceableFailure convertMixedValuesToInt(
   return DiagnosedSilenceableFailure::success();
 }
 
+/// Find producer operation of type T for the given value.
+/// It's assumed that producer ops are chained through their first operand.
+/// Producer chain is traced trough loop block arguments (init values).
+template <typename T>
+static std::optional<T> findProducerOfType(Value val) {
+  Value currentValue = val;
+  if (!currentValue.getDefiningOp()) {
+    // Value may be a block argument initialized outside a loop.
+    if (val.getNumUses() == 0) {
+      LDBG() << "Failed to find producer op, value has no uses.";
+      return std::nullopt;
+    }
+    auto userOp = val.getUsers().begin();
+    auto parentLoop = userOp->getParentOfType<LoopLikeOpInterface>();
+    if (!parentLoop) {
+      LDBG() << "Failed to find producer op, not in a loop.";
+      return std::nullopt;
+    }
+    int64_t iterArgIdx;
+    if (auto iterArg = llvm::dyn_cast<BlockArgument>(currentValue)) {
+      auto numInductionVars = parentLoop.getLoopInductionVars()->size();
+      iterArgIdx = iterArg.getArgNumber() - numInductionVars;
+      currentValue = parentLoop.getInits()[iterArgIdx];
+    } else {
+      LDBG() << "Failed to find producer op, value not in init values.";
+      return std::nullopt;
+    }
+  }
+  Operation *producerOp = currentValue.getDefiningOp();
+
+  if (auto matchingOp = dyn_cast<T>(producerOp))
+    return matchingOp;
+
+  if (producerOp->getNumOperands() == 0)
+    return std::nullopt;
+
+  return findProducerOfType<T>(producerOp->getOperand(0));
+}
+
 /// Create a layout attribute from the given parameters.
 static xegpu::LayoutAttr
 createLayoutAttr(MLIRContext *ctx, ArrayRef<int32_t> sgLayout,
@@ -109,6 +151,29 @@ setDescLayout(transform::TransformRewriter &rewriter,
       descOp, descType, descOp.getSource(), descOp.getMixedSizes(),
       descOp.getMixedStrides());
   return newDescOp;
+}
+
+DiagnosedSilenceableFailure
+transform::GetDescOp::apply(transform::TransformRewriter &rewriter,
+                            transform::TransformResults &results,
+                            transform::TransformState &state) {
+  auto targetValues = state.getPayloadValues(getTarget());
+  if (!llvm::hasSingleElement(targetValues)) {
+    return emitDefiniteFailure()
+           << "requires exactly one target value handle (got "
+           << llvm::range_size(targetValues) << ")";
+  }
+
+  auto maybeDescOp =
+      findProducerOfType<xegpu::CreateNdDescOp>(*targetValues.begin());
+  if (!maybeDescOp) {
+    return emitSilenceableFailure(getLoc())
+           << "Could not find a matching descriptor op when walking the "
+              "producer chain of the first operand.";
+  }
+
+  results.set(llvm::cast<OpResult>(getResult()), {*maybeDescOp});
+  return DiagnosedSilenceableFailure::success();
 }
 
 void transform::SetDescLayoutOp::build(OpBuilder &builder,

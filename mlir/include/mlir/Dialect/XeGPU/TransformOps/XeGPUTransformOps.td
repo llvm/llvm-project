@@ -16,6 +16,24 @@ include "mlir/Dialect/Transform/IR/TransformTypes.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/OpBase.td"
 
+def GetDescOp : Op<Transform_Dialect, "xegpu.get_desc_op", [
+  DeclareOpInterfaceMethods<TransformOpInterface>,
+  NavigationTransformOpTrait, MemoryEffectsOpInterface
+]> {
+
+  let summary = "Get a handle to the descriptor op of a value.";
+  let description = [{
+    Traces the producers of the given value until an `xegpu.create_nd_tdesc`
+    descriptor op is found. Returns a handle to it. Currently traces
+    producers by following only the first operand of producer ops.
+  }];
+
+  let arguments = (ins TransformValueHandleTypeInterface:$target);
+
+  let results = (outs TransformHandleTypeInterface:$descHandle);
+  let assemblyFormat = "$target attr-dict `:` functional-type(operands, results)";
+}
+
 def SetDescLayoutOp : Op<Transform_Dialect, "xegpu.set_desc_layout", [
   AttrSizedOperandSegments,
   DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
@@ -31,16 +49,16 @@ def SetDescLayoutOp : Op<Transform_Dialect, "xegpu.set_desc_layout", [
   }];
 
   let arguments = (ins
-                   TransformHandleTypeInterface : $target,
-                   Variadic<TransformAnyParamTypeOrAnyHandle> : $sg_layout,
-                   Variadic<TransformAnyParamTypeOrAnyHandle> : $sg_data,
-                   Variadic<TransformAnyParamTypeOrAnyHandle> : $inst_data,
+                   TransformHandleTypeInterface:$target,
+                   Variadic<TransformAnyParamTypeOrAnyHandle>:$sg_layout,
+                   Variadic<TransformAnyParamTypeOrAnyHandle>:$sg_data,
+                   Variadic<TransformAnyParamTypeOrAnyHandle>:$inst_data,
                    DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_sg_layout,
                    DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_sg_data,
                    DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_inst_data
                    );
 
-  let results = (outs TransformHandleTypeInterface : $transformed);
+  let results = (outs TransformHandleTypeInterface:$transformed);
   let builders = [
     OpBuilder<(ins "Value":$target,
                    "ArrayRef<OpFoldResult>":$mixedSgLayout,
