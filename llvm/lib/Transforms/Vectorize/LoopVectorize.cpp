@@ -251,7 +251,8 @@ static cl::opt<TailFoldingStyle> ForceTailFoldingStyle(
 
 cl::opt<bool> llvm::EnableWideActiveLaneMask(
     "enable-wide-lane-mask", cl::init(false), cl::Hidden,
-    cl::desc("Enable use of wide get active lane mask instructions"));
+    cl::desc("Enable use of wide lane masks when used for control flow in "
+             "tail-folded loops"));
 
 static cl::opt<bool> MaximizeBandwidth(
     "vectorizer-maximize-bandwidth", cl::init(false), cl::Hidden,
@@ -1290,7 +1291,8 @@ public:
     return ScalarEpilogueStatus == CM_ScalarEpilogueAllowed;
   }
 
-  bool preferPredicatedEpilogue() const {
+  /// Returns true if tail-folding is preferred over a scalar epilogue.
+  bool preferPredicatedLoop() const {
     return ScalarEpilogueStatus == CM_ScalarEpilogueNotNeededUsePredicate ||
            ScalarEpilogueStatus == CM_ScalarEpilogueNotAllowedUsePredicate;
   }
@@ -1355,6 +1357,8 @@ public:
     return getTailFoldingStyle() != TailFoldingStyle::None;
   }
 
+  /// Returns true if the use of wide lane masks is requested and the loop is
+  /// using tail-folding with a lane mask for control flow.
   bool useWideActiveLaneMask() const {
     if (!EnableWideActiveLaneMask)
       return false;
@@ -4541,7 +4545,7 @@ LoopVectorizationPlanner::selectInterleaveCount(VPlan &Plan, ElementCount VF,
   // not beneficial. If a scalar epilogue is not allowed for any other reason,
   // do not interleave.
   if (!CM.isScalarEpilogueAllowed() &&
-      !(CM.preferPredicatedEpilogue() && CM.useWideActiveLaneMask()))
+      !(CM.preferPredicatedLoop() && CM.useWideActiveLaneMask()))
     return 1;
 
   if (any_of(Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis(),
