@@ -47,6 +47,7 @@ WARNING_GADGET(DataInvocation)
 // TO_UPSTREAM(BoundsSafety) ON
 WARNING_BOUNDS_SAFETY_GADGET(CountAttributedPointerArgument)
 WARNING_BOUNDS_SAFETY_GADGET(SinglePointerArgument)
+WARNING_BOUNDS_SAFETY_GADGET(SinglePointerAssignment)
 // TO_UPSTREAM(BoundsSafety) OFF
 WARNING_OPTIONAL_GADGET(UnsafeLibcFunctionCall)
 WARNING_OPTIONAL_GADGET(SpanTwoParamConstructor) // Uses of `std::span(arg0, arg1)`

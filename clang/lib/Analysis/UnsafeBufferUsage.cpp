@@ -3533,6 +3533,65 @@ public:
   }
 };
 
+// Represents an assignment to a __single pointer.
+class SinglePointerAssignmentGadget : public WarningGadget {
+private:
+  static constexpr const char *const AssignTag = "SinglePointerAssignment_Assign";
+  const BinaryOperator *Assign;
+
+public:
+  explicit SinglePointerAssignmentGadget(const MatchResult &Result)
+      : WarningGadget(Kind::SinglePointerAssignment),
+        Assign(Result.getNodeAs<BinaryOperator>(AssignTag)) {
+    assert(Assign != nullptr && "Expecting a non-null matching result");
+  }
+
+  static bool classof(const Gadget *G) {
+    return G->getKind() == Kind::SinglePointerAssignment;
+  }
+
+  static bool matches(const Stmt *S, ASTContext &Ctx,
+                      llvm::SmallVectorImpl<MatchResult> &Results) {
+    bool Found = false;
+    findStmtsInUnspecifiedUntypedContext(
+        S, [&Results, &Ctx, &Found](const Stmt *S) {
+          const auto *E = dyn_cast<Expr>(S);
+          if (!E)
+            return;
+          const auto *BO = dyn_cast<BinaryOperator>(E->IgnoreImpCasts());
+          if (!BO || BO->getOpcode() != BO_Assign)
+            return;
+          QualType LHSTy = BO->getLHS()->getType();
+          if (!LHSTy->isSinglePointerType())
+            return;
+          if (isSinglePointerArgumentSafe(Ctx, LHSTy, BO->getRHS()))
+            return;
+          Results.emplace_back(AssignTag, DynTypedNode::create(*BO));
+          Found = true;
+        });
+    return Found;
+  }
+
+  void handleUnsafeOperation(UnsafeBufferUsageHandler &Handler,
+                             bool IsRelatedToDecl,
+                             ASTContext &Ctx) const override {
+    Handler.handleUnsafeSinglePointerAssignment(Assign, IsRelatedToDecl, Ctx);
+  }
+
+  SourceLocation getSourceLoc() const override {
+    return Assign->getOperatorLoc();
+  }
+
+  virtual DeclUseList getClaimedVarUseSites() const override {
+    if (const auto *DRE = dyn_cast<DeclRefExpr>(Assign->getLHS())) {
+      return {DRE};
+    }
+    return {};
+  }
+
+  SmallVector<const Expr *, 1> getUnsafePtrs() const override { return {}; }
+};
+
 /// Scan the function and return a list of gadgets found with provided kits.
 class WarningGadgetMatcher : public FastMatcher {
 

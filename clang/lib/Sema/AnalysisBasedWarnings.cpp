@@ -2601,6 +2601,13 @@ public:
     S.Diag(Arg->getBeginLoc(), diag::warn_unsafe_single_pointer_argument);
   }
 
+  void handleUnsafeSinglePointerAssignment(
+      const BinaryOperator *Assign, [[maybe_unused]] bool IsRelatedToDecl,
+      [[maybe_unused]] ASTContext &Ctx) override {
+    S.Diag(Assign->getOperatorLoc(),
+           diag::warn_unsafe_single_pointer_assignment);
+  }
+
   void handleTooComplexCountAttributedAssign(
       const Expr *E, const ValueDecl *VD, [[maybe_unused]] bool IsRelatedToDecl,
       [[maybe_unused]] ASTContext &Ctx) override {

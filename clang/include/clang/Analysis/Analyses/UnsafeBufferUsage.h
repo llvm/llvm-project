@@ -143,6 +143,13 @@ public:
     handleUnsafeOperation(Arg, IsRelatedToDecl, Ctx);
   }
 
+  /// Invoked when an unsafe assignment to __single pointer is found.
+  virtual void handleUnsafeSinglePointerAssignment(const BinaryOperator *Assign,
+                                                   bool IsRelatedToDecl,
+                                                   ASTContext &Ctx) {
+    handleUnsafeOperation(Assign, IsRelatedToDecl, Ctx);
+  }
+
   virtual void handleTooComplexCountAttributedAssign(const Expr *E,
                                                      const ValueDecl *VD,
                                                      bool IsRelatedToDecl,
