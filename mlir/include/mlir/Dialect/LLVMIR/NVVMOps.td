@@ -979,7 +979,7 @@ def NVVM_BarrierOp : NVVM_Op<"barrier", [AttrSizedOperandSegments]> {
 
   let arguments = (ins Optional<I32>:$barrierId, Optional<I32>:$numberOfThreads,
       OptionalAttr<BarrierReductionAttr>:$reductionOp,
-      Optional<I32>:$reductionOperand);
+      Optional<I32>:$reductionPredicate);
   string llvmBuilder = [{
     auto [id, args] = NVVM::BarrierOp::getIntrinsicIDAndArgs(
                         *op, moduleTranslation, builder);
@@ -994,7 +994,7 @@ def NVVM_BarrierOp : NVVM_Op<"barrier", [AttrSizedOperandSegments]> {
 
   let assemblyFormat =
       "(`id` `=` $barrierId^)? (`number_of_threads` `=` $numberOfThreads^)? "
-      "($reductionOp^ $reductionOperand)? (`->` type($res)^)? attr-dict";
+      "($reductionOp^ $reductionPredicate)? (`->` type($res)^)? attr-dict";
 
   let builders = [OpBuilder<(ins), [{
       return build($_builder, $_state, TypeRange{}, Value{}, Value{}, {}, Value{});

@@ -1518,11 +1518,11 @@ LogicalResult NVVM::BarrierOp::verify() {
     return emitOpError(
         "barrier id is missing, it should be set between 0 to 15");
 
-  if (getBarrierId() && (getReductionOp() || getReductionOperand()))
+  if (getBarrierId() && (getReductionOp() || getReductionPredicate()))
     return emitOpError("reduction are only available when id is 0");
 
-  if ((getReductionOp() && !getReductionOperand()) ||
-      (!getReductionOp() && getReductionOperand()))
+  if ((getReductionOp() && !getReductionPredicate()) ||
+      (!getReductionOp() && getReductionPredicate()))
     return emitOpError("reduction predicate and reduction operation must be "
                        "specified together");
 
@@ -1820,7 +1820,7 @@ mlir::NVVM::IDArgPair NVVM::BarrierOp::getIntrinsicIDAndArgs(
     default:
       llvm_unreachable("Unknown reduction operation for barrier");
     }
-    args.push_back(mt.lookupValue(thisOp.getReductionOperand()));
+    args.push_back(mt.lookupValue(thisOp.getReductionPredicate()));
   } else {
     id = llvm::Intrinsic::nvvm_barrier_cta_sync_aligned_all;
     args.push_back(barrierId);
