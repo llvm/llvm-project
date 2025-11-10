@@ -83,7 +83,7 @@ __amdgpu_buffer_rsrc_t test_amdgcn_make_buffer_rsrc_p1_flags_constant(global voi
 // CHECK-LABEL: @test_amdgcn_make_buffer_p0_nullptr(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[CONV:%.*]] = sext i32 [[NUM:%.*]] to i64
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0(ptr null, i16 [[STRIDE:%.*]], i64 [[CONV]], i32 [[FLAGS:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call align 4294967296 ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0(ptr null, i16 [[STRIDE:%.*]], i64 [[CONV]], i32 [[FLAGS:%.*]])
 // CHECK-NEXT:    ret ptr addrspace(8) [[TMP0]]
 //
 __amdgpu_buffer_rsrc_t test_amdgcn_make_buffer_p0_nullptr(short stride, int num, int flags) {
@@ -93,7 +93,7 @@ __amdgpu_buffer_rsrc_t test_amdgcn_make_buffer_p0_nullptr(short stride, int num,
 // CHECK-LABEL: @test_amdgcn_make_buffer_p1_nullptr(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[CONV:%.*]] = sext i32 [[NUM:%.*]] to i64
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p1(ptr addrspace(1) null, i16 [[STRIDE:%.*]], i64 [[CONV]], i32 [[FLAGS:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call align 4294967296 ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p1(ptr addrspace(1) null, i16 [[STRIDE:%.*]], i64 [[CONV]], i32 [[FLAGS:%.*]])
 // CHECK-NEXT:    ret ptr addrspace(8) [[TMP0]]
 //
 __amdgpu_buffer_rsrc_t test_amdgcn_make_buffer_p1_nullptr(short stride, int num, int flags) {
