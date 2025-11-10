@@ -106,8 +106,9 @@ include_directories(
 if(LLDB_INCLUDE_TESTS)
   # Build the gtest library needed for unittests, if we have LLVM sources
   # handy.
-  if (EXISTS ${LLVM_THIRD_PARTY_DIR}/unittest AND NOT TARGET llvm_gtest)
-    add_subdirectory(${LLVM_THIRD_PARTY_DIR}/unittest third-party/unittest)
+  if (EXISTS ${LLVM_THIRD_PARTY_DIR}/unittest AND NOT TARGET default_gtest)
+    include(AddGTest)
+    build_gtest(lldb_gtest LLVM_SUPPORT)
   endif()
   # LLVMTestingSupport library is needed for Process/gdb-remote.
   if (EXISTS ${LLVM_MAIN_SRC_DIR}/lib/Testing/Support

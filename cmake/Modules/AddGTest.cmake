@@ -9,4 +9,3 @@ function (build_gtest gtest_name)
   endif ()
   add_subdirectory("${LLVM_THIRD_PARTY_DIR}/unittest" "${CMAKE_BINARY_DIR}/third-party/${gtest_name}_gtest")
 endfunction ()
-

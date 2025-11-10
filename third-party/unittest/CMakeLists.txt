@@ -7,11 +7,27 @@
 # To run the tests for Google Test itself on Linux, use 'make test' or
 # ctest.  You can select which tests to run using 'ctest -R regex'.
 # For more options, run 'ctest --help'.
+#
+# Do not add_subdirectory(third-party/unittest) this file directly.
+# Instead use:
+#
+#     include(AddGTest)
+#     build_gtest(llvm_gtest [LLVM_SUPPORT])
+#
 ########################################################################
 #
 # Project-wide settings
 
 set(LLVM_SUBPROJECT_TITLE "Third-Party/Google Test")
+
+if (NOT gtest_name)
+  message(FATAL_ERROR "Do not add_subdirectory GTest directly. Use the
+    following helper function instead:
+
+    include(AddGTest)
+    build_gtest(llvm_gtest [LLVM_SUPPORT])
+  ")
+endif ()
 
 if (GTEST_USE_LLVM)
   set(GTEST_LLVM_COMPONENTS "Support") # For llvm::raw_ostream
