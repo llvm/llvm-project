@@ -3276,7 +3276,24 @@ private:
               attachInliningDirectiveToStmt(dir, &eval);
             },
             [&](const Fortran::parser::CompilerDirective::Prefetch &prefetch) {
-              TODO(getCurrentLocation(), "!$dir prefetch");
+              for (const auto &p : prefetch.v) {
+                Fortran::evaluate::ExpressionAnalyzer ea{
+                    bridge.getSemanticsContext()};
+                Fortran::lower::SomeExpr expr{*ea.Analyze(
+                    std::get<Fortran::parser::DataRef>(p.value().u))};
+                Fortran::lower::StatementContext stmtCtx;
+                mlir::Value memRef{Fortran::lower::convertExprToHLFIR(
+                                       genLocation(dir.source), *this, expr,
+                                       localSymbols, stmtCtx)
+                                       .getBase()};
+
+                // TODO: Don't use default value, instead get the following
+                //       info from the directive
+                uint32_t isWrite{0}, localityHint{3}, isData{1};
+                builder->create<fir::PrefetchOp>(genLocation(dir.source),
+                                                 memRef, isWrite, localityHint,
+                                                 isData);
+              }
             },
             [&](const auto &) {}},
         dir.u);

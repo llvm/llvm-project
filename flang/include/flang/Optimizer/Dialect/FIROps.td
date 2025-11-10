@@ -351,6 +351,36 @@ def fir_StoreOp : fir_Op<"store", [FirAliasTagOpInterface,
   }];
 }
 
+def fir_PrefetchOp : fir_Op<"prefetch", []> {
+  let summary = "prefetch a memory reference";
+
+  let description = [{
+    The prefetch is a hint to the code generator that the memory reference will
+    be used in the near future. The prefetch is not guaranteed to be executed.
+
+    ```
+      %a = ... -> !fir.ref<i32>
+      fir.prefetch %a {cacheType = 1 : i32, localityHint = 3 : i32, rw = 0 : i32} : !fir.ref<i32>
+      // ...
+      fir.load %a : !fir.ref<i32> // use the prefetched value
+    ```
+  }];
+
+  /// `memref' is the address to be prefetched
+  /// `rw'          : rw specifier >
+  ///                  read is 0, write is 1
+  /// `localityHint': temporal locality specifier >
+  ///                  value ranging from 0 - no locality to 3 - extremely local
+  /// `cacheType'   : cache type specifier >
+  ///                  instruction cache is 0, data cache is 1
+  let arguments = (ins AnyReferenceLike:$memref,
+      ConfinedAttr<I32Attr, [IntMinValue<0>, IntMaxValue<1>]>:$rw,
+      ConfinedAttr<I32Attr, [IntMinValue<0>, IntMaxValue<3>]>:$localityHint,
+      ConfinedAttr<I32Attr, [IntMinValue<0>, IntMaxValue<1>]>:$cacheType);
+
+  let assemblyFormat = "$memref attr-dict `:` type(operands)";
+}
+
 def fir_CopyOp : fir_Op<"copy", [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
   let summary = "copy constant size memory";
 
