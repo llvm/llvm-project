@@ -508,6 +508,10 @@ def TargetMicrosoftRecordLayout : TargetArch<["x86", "x86_64", "arm", "thumb",
   let CustomCode = [{ Target.hasMicrosoftRecordLayout() }];
 }
 
+def TargetMustTailAvaiable:  TargetSpec {
+  let CustomCode = [{ Target.hasMustTail() }];
+}
+
 def TargetELF : TargetSpec {
   let ObjectFormats = ["ELF"];
 }
@@ -1913,7 +1917,7 @@ def NoMerge : DeclOrStmtAttr {
                              "functions, statements and variables">;
 }
 
-def MustTail : StmtAttr {
+def MustTail : StmtAttr, TargetSpecificAttr<TargetMustTailAvaiable> {
   let Spellings = [Clang<"musttail">];
   let Documentation = [MustTailDocs];
   let Subjects = SubjectList<[ReturnStmt], ErrorDiag, "return statements">;

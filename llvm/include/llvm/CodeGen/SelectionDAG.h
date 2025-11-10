@@ -1725,8 +1725,16 @@ public:
   /// value.
   LLVM_ABI bool
   expandMultipleResultFPLibCall(RTLIB::Libcall LC, SDNode *Node,
-                                SmallVectorImpl<SDValue> &Results,
+                                SmallVectorImpl<SDValue> &Results, EVT CallType,
                                 std::optional<unsigned> CallRetResNo = {});
+
+  // FIXME: Ths should be removed, and form using RTLIB::Libcall should be
+  // preferred. Callers should resolve the exact type libcall to use.
+  LLVM_ABI bool
+  expandMultipleResultFPLibCall(StringRef LibcallName, CallingConv::ID CC,
+                                SDNode *Node, SmallVectorImpl<SDValue> &Results,
+                                std::optional<unsigned> CallRetResNo = {},
+                                bool IsVectorMasked = false);
 
   /// Expand the specified \c ISD::VAARG node as the Legalize pass would.
   LLVM_ABI SDValue expandVAArg(SDNode *Node);

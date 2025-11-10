@@ -2514,18 +2514,20 @@ static bool canFoldStoreIntoLibCallOutputPointers(StoreSDNode *StoreNode,
 
 bool SelectionDAG::expandMultipleResultFPLibCall(
     RTLIB::Libcall LC, SDNode *Node, SmallVectorImpl<SDValue> &Results,
-    std::optional<unsigned> CallRetResNo) {
-  LLVMContext &Ctx = *getContext();
-  EVT VT = Node->getValueType(0);
-  unsigned NumResults = Node->getNumValues();
-
+    EVT CallVT, std::optional<unsigned> CallRetResNo) {
   if (LC == RTLIB::UNKNOWN_LIBCALL)
     return false;
 
-  const char *LCName = TLI->getLibcallName(LC);
-  if (!LCName)
+  EVT VT = Node->getValueType(0);
+
+  RTLIB::LibcallImpl Impl = TLI->getLibcallImpl(LC);
+  if (Impl == RTLIB::Unsupported)
     return false;
 
+  StringRef LCName = TLI->getLibcallImplName(Impl);
+
+  // FIXME: This should not use TargetLibraryInfo. There should be
+  // RTLIB::Libcall entries for each used vector type, and directly matched.
   auto getVecDesc = [&]() -> VecDesc const * {
     for (bool Masked : {false, true}) {
       if (VecDesc const *VD = getLibInfo().getVectorMappingInfo(
@@ -2538,8 +2540,33 @@ bool SelectionDAG::expandMultipleResultFPLibCall(
 
   // For vector types, we must find a vector mapping for the libcall.
   VecDesc const *VD = nullptr;
-  if (VT.isVector() && !(VD = getVecDesc()))
+  if (VT.isVector() && !CallVT.isVector() && !(VD = getVecDesc()))
     return false;
+
+  bool IsMasked = (VD && VD->isMasked()) ||
+                  RTLIB::RuntimeLibcallsInfo::hasVectorMaskArgument(Impl);
+
+  // This wrapper function exists because getVectorMappingInfo works in terms of
+  // function names instead of RTLIB enums.
+
+  // FIXME: If we used a vector mapping, this assumes the calling convention of
+  // the vector function is the same as the scalar.
+
+  StringRef Name = VD ? VD->getVectorFnName() : LCName;
+
+  return expandMultipleResultFPLibCall(Name,
+                                       TLI->getLibcallImplCallingConv(Impl),
+                                       Node, Results, CallRetResNo, IsMasked);
+}
+
+// FIXME: This belongs in TargetLowering
+bool SelectionDAG::expandMultipleResultFPLibCall(
+    StringRef Name, CallingConv::ID CC, SDNode *Node,
+    SmallVectorImpl<SDValue> &Results, std::optional<unsigned> CallRetResNo,
+    bool IsMasked) {
+  LLVMContext &Ctx = *getContext();
+  EVT VT = Node->getValueType(0);
+  unsigned NumResults = Node->getNumValues();
 
   // Find users of the node that store the results (and share input chains). The
   // destination pointers can be used instead of creating stack allocations.
@@ -2598,7 +2625,7 @@ bool SelectionDAG::expandMultipleResultFPLibCall(
   SDLoc DL(Node);
 
   // Pass the vector mask (if required).
-  if (VD && VD->isMasked()) {
+  if (IsMasked) {
     EVT MaskVT = TLI->getSetCCResultType(getDataLayout(), Ctx, VT);
     SDValue Mask = getBoolConstant(true, DL, MaskVT, VT);
     Args.emplace_back(Mask, MaskVT.getTypeForEVT(Ctx));
@@ -2608,11 +2635,11 @@ bool SelectionDAG::expandMultipleResultFPLibCall(
                       ? Node->getValueType(*CallRetResNo).getTypeForEVT(Ctx)
                       : Type::getVoidTy(Ctx);
   SDValue InChain = StoresInChain ? StoresInChain : getEntryNode();
-  SDValue Callee = getExternalSymbol(VD ? VD->getVectorFnName().data() : LCName,
-                                     TLI->getPointerTy(getDataLayout()));
+  SDValue Callee =
+      getExternalSymbol(Name.data(), TLI->getPointerTy(getDataLayout()));
   TargetLowering::CallLoweringInfo CLI(*this);
-  CLI.setDebugLoc(DL).setChain(InChain).setLibCallee(
-      TLI->getLibcallCallingConv(LC), RetType, Callee, std::move(Args));
+  CLI.setDebugLoc(DL).setChain(InChain).setLibCallee(CC, RetType, Callee,
+                                                     std::move(Args));
 
   auto [Call, CallChain] = TLI->LowerCallTo(CLI);
 
