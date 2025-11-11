@@ -36,12 +36,6 @@ void AArch64SelectionDAGInfo::verifyTargetNode(const SelectionDAG &DAG,
   case AArch64ISD::WrapperLarge:
     // operand #0 must have type i32, but has type i64
     return;
-  case AArch64ISD::LDNP:
-    // result #0 must have type v4i32, but has type v2f64
-    return;
-  case AArch64ISD::STNP:
-    // operand #1 must have type v4i32, but has type v2i64
-    return;
   }
 
   SelectionDAGGenTargetInfo::verifyTargetNode(DAG, N);
