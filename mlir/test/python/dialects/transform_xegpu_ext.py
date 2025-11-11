@@ -25,7 +25,7 @@ def getDescOpDefaultIndex():
     )
     with InsertionPoint(sequence.body):
         operand = transform.GetOperandOp(AnyValueType.get(), sequence.bodyTarget, [0])
-        desc_handle = xegpu.GetDescOp(operand)
+        desc_handle = xegpu.get_desc_op(operand)
         transform.YieldOp()
     # CHECK-LABEL: TEST: getDescOpDefaultIndex
     # CHECK: transform.xegpu.get_desc_op %
@@ -39,7 +39,7 @@ def setDescLayoutMinimal():
         transform.OperationType.get("xegpu.create_nd_tdesc"),
     )
     with InsertionPoint(sequence.body):
-        xegpu.SetDescLayoutOp(sequence.bodyTarget, sg_layout=[6, 4], sg_data=[32, 16])
+        xegpu.set_desc_layout(sequence.bodyTarget, sg_layout=[6, 4], sg_data=[32, 16])
         transform.YieldOp()
     # CHECK-LABEL: TEST: setDescLayoutMinimal
     # CHECK: %0 = transform.xegpu.set_desc_layout %
@@ -55,7 +55,7 @@ def setDescLayoutInstData():
         transform.OperationType.get("xegpu.create_nd_tdesc"),
     )
     with InsertionPoint(sequence.body):
-        xegpu.SetDescLayoutOp(
+        xegpu.set_desc_layout(
             sequence.bodyTarget, sg_layout=[6, 4], sg_data=[32, 16], inst_data=[8, 16]
         )
         transform.YieldOp()
@@ -74,7 +74,7 @@ def setOpLayoutAttrOperandMinimal():
         transform.OperationType.get("xegpu.dpas"),
     )
     with InsertionPoint(sequence.body):
-        xegpu.SetOpLayoutAttrOp(
+        xegpu.set_op_layout_attr(
             sequence.bodyTarget,
             sg_layout=[6, 4],
             sg_data=[32, 16],
@@ -97,7 +97,7 @@ def setOpLayoutAttrResult():
         transform.OperationType.get("xegpu.dpas"),
     )
     with InsertionPoint(sequence.body):
-        xegpu.SetOpLayoutAttrOp(
+        xegpu.set_op_layout_attr(
             sequence.bodyTarget,
             index=0,
             sg_layout=[6, 4],
@@ -204,7 +204,7 @@ def ConvertLayoutMinimal():
     )
     with InsertionPoint(sequence.body):
         operand = transform.GetOperandOp(AnyValueType.get(), sequence.bodyTarget, [0])
-        xegpu.ConvertLayoutOp(
+        xegpu.convert_layout(
             operand,
             sg_layout=[6, 4],
             sg_data=[32, 16],
@@ -225,7 +225,7 @@ def ConvertLayout():
     )
     with InsertionPoint(sequence.body):
         operand = transform.GetOperandOp(AnyValueType.get(), sequence.bodyTarget, [1])
-        xegpu.ConvertLayoutOp(
+        xegpu.convert_layout(
             operand,
             sg_layout=[6, 4],
             sg_data=[32, 16],

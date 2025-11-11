@@ -42,6 +42,15 @@ class GetDescOp(GetDescOp):
         )
 
 
+def get_desc_op(
+    target: Value,
+    *,
+    loc=None,
+    ip=None,
+) -> GetDescOp:
+    return GetDescOp(target, loc=loc, ip=ip)
+
+
 @_ods_cext.register_operation(_Dialect, replace=True)
 class SetDescLayoutOp(SetDescLayoutOp):
     """Specialization for SetDescLayoutOp class."""
@@ -86,6 +95,25 @@ class SetDescLayoutOp(SetDescLayoutOp):
             loc=loc,
             ip=ip,
         )
+
+
+def set_desc_layout(
+    target: Union[Operation, Value],
+    sg_layout: MixedValues,
+    sg_data: MixedValues,
+    *,
+    inst_data: Optional[MixedValues] = None,
+    loc=None,
+    ip=None,
+) -> SetDescLayoutOp:
+    return SetDescLayoutOp(
+        target,
+        sg_layout,
+        sg_data,
+        inst_data=inst_data,
+        loc=loc,
+        ip=ip,
+    )
 
 
 @_ods_cext.register_operation(_Dialect, replace=True)
@@ -133,6 +161,29 @@ class SetOpLayoutAttrOp(SetOpLayoutAttrOp):
             loc=loc,
             ip=ip,
         )
+
+
+def set_op_layout_attr(
+    target: Union[Operation, Value],
+    sg_layout: MixedValues,
+    sg_data: MixedValues,
+    *,
+    inst_data: Optional[MixedValues] = None,
+    index: Optional[Union[int, Attribute]] = None,
+    result: Optional[Union[bool, Attribute]] = None,
+    loc=None,
+    ip=None,
+) -> SetOpLayoutAttrOp:
+    return SetOpLayoutAttrOp(
+        target,
+        sg_layout,
+        sg_data,
+        inst_data=inst_data,
+        index=index,
+        result=result,
+        loc=loc,
+        ip=ip,
+    )
 
 
 @_ods_cext.register_operation(_Dialect, replace=True)
@@ -254,3 +305,22 @@ class ConvertLayoutOp(ConvertLayoutOp):
             loc=loc,
             ip=ip,
         )
+
+
+def convert_layout(
+    target: Value,
+    sg_layout: MixedValues,
+    sg_data: MixedValues,
+    *,
+    inst_data: Optional[MixedValues] = None,
+    loc=None,
+    ip=None,
+) -> ConvertLayoutOp:
+    return ConvertLayoutOp(
+        target,
+        sg_layout,
+        sg_data,
+        inst_data=inst_data,
+        loc=loc,
+        ip=ip,
+    )
