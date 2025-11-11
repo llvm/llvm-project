@@ -22,10 +22,7 @@
 #include "RISCVInstrInfo.h"
 #include "RISCVSubtarget.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/PostOrderIterator.h"
-#include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -59,7 +56,7 @@ struct LivenessInfo {
   std::set<Register> LiveOut;
 
   /// Registers that are defined in this block
-  std::set<Register> Def;
+  std::set<Register> Gen;
 
   /// Registers that are used in this block before being defined (if at all).
   std::set<Register> Use;
@@ -174,29 +171,16 @@ void RISCVLiveVariables::processInstruction(const MachineInstr &MI,
     if (!isTrackableRegister(Reg, TRI, MRI))
       continue;
 
-    if (MO.isDef()) {
-      // This is a definition
-      Info.Def.insert(Reg);
-
-      // Also handle sub-registers for physical registers
-      if (Reg.isPhysical()) {
-        for (MCSubRegIterator SubRegs(Reg, TRI, /*IncludeSelf=*/false);
-             SubRegs.isValid(); ++SubRegs) {
-          Info.Def.insert(*SubRegs);
-        }
-      }
-    }
-
     if (MO.isUse()) {
       // This is a use - only add to Use set if not already defined in this block
-      if (Info.Def.find(Reg) == Info.Def.end()) {
+      if (Info.Gen.find(Reg) == Info.Gen.end()) {
         Info.Use.insert(Reg);
 
         // Also handle sub-registers for physical registers
         if (Reg.isPhysical()) {
           for (MCSubRegIterator SubRegs(Reg, TRI, /*IncludeSelf=*/false);
                SubRegs.isValid(); ++SubRegs) {
-            if (Info.Def.find(*SubRegs) == Info.Def.end()) {
+            if (Info.Gen.find(*SubRegs) == Info.Gen.end()) {
               Info.Use.insert(*SubRegs);
             }
           }
@@ -206,8 +190,21 @@ void RISCVLiveVariables::processInstruction(const MachineInstr &MI,
 
     // Handle implicit operands (like condition codes, stack pointer updates)
     if (MO.isImplicit() && MO.isUse() && Reg.isPhysical()) {
-      if (Info.Def.find(Reg) == Info.Def.end()) {
+      if (Info.Gen.find(Reg) == Info.Gen.end()) {
         Info.Use.insert(Reg);
+      }
+    }
+
+    if (MO.isDef()) {
+      // This is a definition
+      Info.Gen.insert(Reg);
+
+      // Also handle sub-registers for physical registers
+      if (Reg.isPhysical()) {
+        for (MCSubRegIterator SubRegs(Reg, TRI, /*IncludeSelf=*/false);
+             SubRegs.isValid(); ++SubRegs) {
+          Info.Gen.insert(*SubRegs);
+        }
       }
     }
   }
@@ -225,7 +222,7 @@ void RISCVLiveVariables::processInstruction(const MachineInstr &MI,
 
         // Mark as defined (clobbered)
         if (isTrackableRegister(Register(PhysReg), TRI, MRI)) {
-          Info.Def.insert(Register(PhysReg));
+          Info.Gen.insert(Register(PhysReg));
         }
       }
     }
@@ -238,7 +235,7 @@ void RISCVLiveVariables::computeLocalLiveness(MachineFunction &MF) {
   // Process each basic block
   for (MachineBasicBlock &MBB : MF) {
     LivenessInfo &Info = BlockLiveness[&MBB];
-    Info.Def.clear();
+    Info.Gen.clear();
     Info.Use.clear();
 
     // Process instructions in forward order to build Use and Def sets
@@ -267,7 +264,7 @@ void RISCVLiveVariables::computeGlobalLiveness(MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << "Computing global liveness (fixed-point iteration)\n");
 
   bool Changed = true;
-  unsigned Iterations = 0;
+  [[maybe_unused]] unsigned Iterations = 0;
 
   // Iterate until we reach a fixed point
   // Live-out[B] = Union of Live-in[S] for all successors S of B
@@ -296,7 +293,7 @@ void RISCVLiveVariables::computeGlobalLiveness(MachineFunction &MF) {
       std::set<Register> NewLiveIn = Info.Use;
 
       for (Register Reg : Info.LiveOut) {
-        if (Info.Def.find(Reg) == Info.Def.end()) {
+        if (Info.Gen.find(Reg) == Info.Gen.end()) {
           NewLiveIn.insert(Reg);
         }
       }
@@ -420,7 +417,7 @@ void RISCVLiveVariables::print(raw_ostream &OS, const Module *M) const {
     OS << "}\n";
 
     OS << "  Def:      { ";
-    for (Register Reg : Info.Def) {
+    for (Register Reg : Info.Gen) {
       OS << printReg(Reg, TRI) << " ";
     }
     OS << "}\n\n";

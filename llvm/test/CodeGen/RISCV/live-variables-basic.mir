@@ -36,6 +36,16 @@
     %t4 = add i64 %t3, %b
     ret i64 %t4
   }
+
+  define i64 @test_gen_kill(i64 %a, i64 %b, i64 %c) {
+  entry:
+    %t1 = add i64 %a, %b
+    %t2 = mul i64 %t1, %c
+    %t3 = sub i64 %t2, %a
+    %t4 = add i64 %t3, %b
+    ret i64 %t4
+  }
+
 ...
 ---
 name:            test_simple_add
