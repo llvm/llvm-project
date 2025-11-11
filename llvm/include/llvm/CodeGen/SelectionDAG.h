@@ -1260,9 +1260,15 @@ public:
   /// stack arguments from being clobbered.
   LLVM_ABI SDValue getStackArgumentTokenFactor(SDValue Chain);
 
-  std::pair<SDValue, SDValue> getMemcmp(SDValue Chain, const SDLoc &dl,
-                                        SDValue Dst, SDValue Src, SDValue Size,
-                                        const CallInst *CI);
+  /// Lower a memcmp operation into a target library call and return the
+  /// resulting chain and call result as SelectionDAG SDValues.
+  LLVM_ABI std::pair<SDValue, SDValue> getMemcmp(SDValue Chain, const SDLoc &dl,
+                                                 SDValue Dst, SDValue Src,
+                                                 SDValue Size,
+                                                 const CallInst *CI);
+
+  /// Lower a strlen operation into a target library call and return the
+  /// resulting chain and call result as SelectionDAG SDValues.
   LLVM_ABI std::pair<SDValue, SDValue>
   getStrlen(SDValue Chain, const SDLoc &dl, SDValue Src, const CallInst *CI);
 
@@ -1719,8 +1725,16 @@ public:
   /// value.
   LLVM_ABI bool
   expandMultipleResultFPLibCall(RTLIB::Libcall LC, SDNode *Node,
-                                SmallVectorImpl<SDValue> &Results,
+                                SmallVectorImpl<SDValue> &Results, EVT CallType,
                                 std::optional<unsigned> CallRetResNo = {});
+
+  // FIXME: Ths should be removed, and form using RTLIB::Libcall should be
+  // preferred. Callers should resolve the exact type libcall to use.
+  LLVM_ABI bool
+  expandMultipleResultFPLibCall(StringRef LibcallName, CallingConv::ID CC,
+                                SDNode *Node, SmallVectorImpl<SDValue> &Results,
+                                std::optional<unsigned> CallRetResNo = {},
+                                bool IsVectorMasked = false);
 
   /// Expand the specified \c ISD::VAARG node as the Legalize pass would.
   LLVM_ABI SDValue expandVAArg(SDNode *Node);
@@ -2065,6 +2079,10 @@ public:
   /// Return true if the sign bit of Op is known to be zero.
   /// We use this predicate to simplify operations downstream.
   LLVM_ABI bool SignBitIsZero(SDValue Op, unsigned Depth = 0) const;
+
+  /// Return true if the sign bit of Op is known to be zero, for a
+  /// floating-point value.
+  LLVM_ABI bool SignBitIsZeroFP(SDValue Op, unsigned Depth = 0) const;
 
   /// Return true if 'Op & Mask' is known to be zero.  We
   /// use this predicate to simplify operations downstream.  Op and Mask are
