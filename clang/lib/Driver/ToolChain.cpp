@@ -21,9 +21,9 @@
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/InputInfo.h"
 #include "clang/Driver/Job.h"
-#include "clang/Driver/Options.h"
 #include "clang/Driver/SanitizerArgs.h"
 #include "clang/Driver/XRayArgs.h"
+#include "clang/Options/Options.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -338,7 +338,7 @@ static void getRISCVMultilibFlags(const Driver &D, const llvm::Triple &Triple,
 
 Multilib::flags_list
 ToolChain::getMultilibFlags(const llvm::opt::ArgList &Args) const {
-  using namespace clang::driver::options;
+  using namespace clang::options;
 
   std::vector<std::string> Result;
   const llvm::Triple Triple(ComputeEffectiveClangTriple(Args));
@@ -851,8 +851,11 @@ void ToolChain::addFortranRuntimeLibs(const ArgList &Args,
                    options::OPT_fno_openmp, false)) {
     Driver::OpenMPRuntimeKind OMPRuntime = getDriver().getOpenMPRuntime(Args);
     ToolChain::RuntimeLibType RuntimeLib = GetRuntimeLibType(Args);
-    if (OMPRuntime == Driver::OMPRT_OMP && RuntimeLib == ToolChain::RLT_Libgcc)
+    if ((OMPRuntime == Driver::OMPRT_OMP &&
+         RuntimeLib == ToolChain::RLT_Libgcc) &&
+        !getTriple().isKnownWindowsMSVCEnvironment()) {
       CmdArgs.push_back("-latomic");
+    }
   }
 }
 
@@ -1802,7 +1805,7 @@ void ToolChain::TranslateXarchArgs(
   unsigned Index = BaseArgs.MakeIndex(A->getValue(ValuePos));
   unsigned Prev = Index;
   std::unique_ptr<llvm::opt::Arg> XarchArg(Opts.ParseOneArg(
-      Args, Index, llvm::opt::Visibility(clang::driver::options::ClangOption)));
+      Args, Index, llvm::opt::Visibility(options::ClangOption)));
 
   // If the argument parsing failed or more than one argument was
   // consumed, the -Xarch_ argument's parameter tried to consume

@@ -4295,17 +4295,17 @@ used by other languages. (This prefix is also added to the standard Itanium
 C++ ABI prefix on "mangled" symbol names, so that e.g. on such targets the true
 symbol name for a C++ variable declared as ``int cppvar;`` would be
 ``__Z6cppvar``; note the two underscores.)  This prefix is *not* added to the
-symbol names specified by the ``asm`` attribute; programmers wishing to match a
-C symbol name must compensate for this.
+symbol names specified by the ``__asm`` attribute; programmers wishing to match
+a C symbol name must compensate for this.
 
 For example, consider the following C code:
 
 .. code-block:: c
 
-  int var1 asm("altvar") = 1;  // "altvar" in symbol table.
+  int var1 __asm("altvar") = 1;  // "altvar" in symbol table.
   int var2 = 1; // "_var2" in symbol table.
 
-  void func1(void) asm("altfunc");
+  void func1(void) __asm("altfunc");
   void func1(void) {} // "altfunc" in symbol table.
   void func2(void) {} // "_func2" in symbol table.
 

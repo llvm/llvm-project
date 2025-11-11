@@ -1420,10 +1420,26 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
       // broadcasts.
       if (!vputils::isSingleScalar(RepOrWidenR) ||
           !all_of(RepOrWidenR->users(), [RepOrWidenR](const VPUser *U) {
-            return U->usesScalars(RepOrWidenR) ||
-                   match(cast<VPRecipeBase>(U),
-                         m_CombineOr(m_ExtractLastElement(m_VPValue()),
-                                     m_ExtractLastLanePerPart(m_VPValue())));
+            if (auto *Store = dyn_cast<VPWidenStoreRecipe>(U)) {
+              // VPWidenStore doesn't have users, and stores are always
+              // profitable to widen: hence, permitting single-scalar stored
+              // values is an important leaf condition. The assert must hold as
+              // we checked the RepOrWidenR operand against
+              // vputils::isSingleScalar.
+              assert(RepOrWidenR == Store->getAddr() ||
+                     vputils::isSingleScalar(Store->getStoredValue()));
+              return true;
+            }
+
+            if (auto *VPI = dyn_cast<VPInstruction>(U)) {
+              unsigned Opcode = VPI->getOpcode();
+              if (Opcode == VPInstruction::ExtractLastElement ||
+                  Opcode == VPInstruction::ExtractLastLanePerPart ||
+                  Opcode == VPInstruction::ExtractPenultimateElement)
+                return true;
+            }
+
+            return U->usesScalars(RepOrWidenR);
           }))
         continue;
 
@@ -1745,17 +1761,17 @@ static bool simplifyBranchConditionForVFAndUF(VPlan &Plan, ElementCount BestVF,
   if (match(Term, m_BranchOnCount()) ||
       match(Term, m_BranchOnCond(m_Not(m_ActiveLaneMask(
                       m_VPValue(), m_VPValue(), m_VPValue()))))) {
-    // Try to simplify the branch condition if TC <= VF * UF when the latch
-    // terminator is   BranchOnCount or BranchOnCond where the input is
-    // Not(ActiveLaneMask).
-    const SCEV *TripCount =
-        vputils::getSCEVExprForVPValue(Plan.getTripCount(), SE);
-    assert(!isa<SCEVCouldNotCompute>(TripCount) &&
+    // Try to simplify the branch condition if VectorTC <= VF * UF when the
+    // latch terminator is BranchOnCount or BranchOnCond(Not(ActiveLaneMask)).
+    const SCEV *VectorTripCount =
+        vputils::getSCEVExprForVPValue(&Plan.getVectorTripCount(), SE);
+    if (isa<SCEVCouldNotCompute>(VectorTripCount))
+      VectorTripCount = vputils::getSCEVExprForVPValue(Plan.getTripCount(), SE);
+    assert(!isa<SCEVCouldNotCompute>(VectorTripCount) &&
            "Trip count SCEV must be computable");
     ElementCount NumElements = BestVF.multiplyCoefficientBy(BestUF);
-    const SCEV *C = SE.getElementCount(TripCount->getType(), NumElements);
-    if (TripCount->isZero() ||
-        !SE.isKnownPredicate(CmpInst::ICMP_ULE, TripCount, C))
+    const SCEV *C = SE.getElementCount(VectorTripCount->getType(), NumElements);
+    if (!SE.isKnownPredicate(CmpInst::ICMP_ULE, VectorTripCount, C))
       return false;
   } else if (match(Term, m_BranchOnCond(m_VPValue(Cond)))) {
     // For BranchOnCond, check if we can prove the condition to be true using VF
@@ -4131,13 +4147,13 @@ VPlanTransforms::expandSCEVs(VPlan &Plan, ScalarEvolution &SE) {
 /// is defined at \p Idx of a load interleave group.
 static bool canNarrowLoad(VPWidenRecipe *WideMember0, unsigned OpIdx,
                           VPValue *OpV, unsigned Idx) {
-  auto *DefR = OpV->getDefiningRecipe();
-  if (!DefR)
-    return WideMember0->getOperand(OpIdx) == OpV;
-  if (auto *W = dyn_cast<VPWidenLoadRecipe>(DefR))
-    return !W->getMask() && WideMember0->getOperand(OpIdx) == OpV;
-
-  if (auto *IR = dyn_cast<VPInterleaveRecipe>(DefR))
+  VPValue *Member0Op = WideMember0->getOperand(OpIdx);
+  VPRecipeBase *Member0OpR = Member0Op->getDefiningRecipe();
+  if (!Member0OpR)
+    return Member0Op == OpV;
+  if (auto *W = dyn_cast<VPWidenLoadRecipe>(Member0OpR))
+    return !W->getMask() && Member0Op == OpV;
+  if (auto *IR = dyn_cast<VPInterleaveRecipe>(Member0OpR))
     return IR->getInterleaveGroup()->isFull() && IR->getVPValue(Idx) == OpV;
   return false;
 }
