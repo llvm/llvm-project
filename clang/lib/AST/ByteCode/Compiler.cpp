@@ -209,19 +209,6 @@ private:
 } // namespace clang
 
 template <class Emitter>
-bool Compiler<Emitter>::isValidBitCast(const CastExpr *E) {
-  QualType FromTy = E->getSubExpr()->getType()->getPointeeType();
-  QualType ToTy = E->getType()->getPointeeType();
-
-  if (classify(FromTy) == classify(ToTy))
-    return true;
-
-  if (FromTy->isVoidType() || ToTy->isVoidType())
-    return true;
-  return false;
-}
-
-template <class Emitter>
 bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
   const Expr *SubExpr = CE->getSubExpr();
 
@@ -506,12 +493,9 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
     if (!FromT || !ToT)
       return false;
 
-    if (!this->isValidBitCast(CE) &&
-        !this->emitInvalidCast(CastKind::ReinterpretLike, /*Fatal=*/false, CE))
-      return false;
-
     assert(isPtrType(*FromT));
     assert(isPtrType(*ToT));
+    bool SrcIsVoidPtr = SubExprTy->isVoidPointerType();
     if (FromT == ToT) {
       if (CE->getType()->isVoidPointerType() &&
           !SubExprTy->isFunctionPointerType()) {
@@ -520,6 +504,10 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
 
       if (!this->visit(SubExpr))
         return false;
+      if (!this->emitCheckBitCast(CETy->getPointeeType().getTypePtr(),
+                                  SrcIsVoidPtr, CE))
+        return false;
+
       if (CE->getType()->isFunctionPointerType() ||
           SubExprTy->isFunctionPointerType()) {
         return this->emitFnPtrCast(CE);

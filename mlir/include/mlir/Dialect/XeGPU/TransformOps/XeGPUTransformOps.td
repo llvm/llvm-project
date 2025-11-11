@@ -16,6 +16,24 @@ include "mlir/Dialect/Transform/IR/TransformTypes.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/OpBase.td"
 
+def GetDescOp : Op<Transform_Dialect, "xegpu.get_desc_op", [
+  DeclareOpInterfaceMethods<TransformOpInterface>,
+  NavigationTransformOpTrait, MemoryEffectsOpInterface
+]> {
+
+  let summary = "Get a handle to the descriptor op of a value.";
+  let description = [{
+    Traces the producers of the given value until an `xegpu.create_nd_tdesc`
+    descriptor op is found. Returns a handle to it. Currently traces
+    producers by following only the first operand of producer ops.
+  }];
+
+  let arguments = (ins TransformValueHandleTypeInterface:$target);
+
+  let results = (outs TransformHandleTypeInterface:$descHandle);
+  let assemblyFormat = "$target attr-dict `:` functional-type(operands, results)";
+}
+
 def SetDescLayoutOp : Op<Transform_Dialect, "xegpu.set_desc_layout", [
   AttrSizedOperandSegments,
   DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
@@ -31,16 +49,16 @@ def SetDescLayoutOp : Op<Transform_Dialect, "xegpu.set_desc_layout", [
   }];
 
   let arguments = (ins
-                   TransformHandleTypeInterface : $target,
-                   Variadic<TransformAnyParamTypeOrAnyHandle> : $sg_layout,
-                   Variadic<TransformAnyParamTypeOrAnyHandle> : $sg_data,
-                   Variadic<TransformAnyParamTypeOrAnyHandle> : $inst_data,
+                   TransformHandleTypeInterface:$target,
+                   Variadic<TransformAnyParamTypeOrAnyHandle>:$sg_layout,
+                   Variadic<TransformAnyParamTypeOrAnyHandle>:$sg_data,
+                   Variadic<TransformAnyParamTypeOrAnyHandle>:$inst_data,
                    DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_sg_layout,
                    DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_sg_data,
                    DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_inst_data
                    );
 
-  let results = (outs TransformHandleTypeInterface : $transformed);
+  let results = (outs TransformHandleTypeInterface:$transformed);
   let builders = [
     OpBuilder<(ins "Value":$target,
                    "ArrayRef<OpFoldResult>":$mixedSgLayout,
@@ -55,6 +73,71 @@ def SetDescLayoutOp : Op<Transform_Dialect, "xegpu.set_desc_layout", [
     `sg_data` `=` custom<DynamicIndexList>($sg_data, $static_sg_data)
     (`inst_data` `=` custom<DynamicIndexList>($inst_data, $static_inst_data)^)?
     attr-dict `:` functional-type(operands, results)
+  }];
+
+  let extraClassDeclaration = [{
+    ::mlir::DiagnosedSilenceableFailure apply(
+        ::mlir::transform::TransformRewriter &rewriter,
+        ::mlir::transform::TransformResults &transformResults,
+        ::mlir::transform::TransformState &state);
+
+    ::llvm::SmallVector<::mlir::OpFoldResult> getMixedSgLayout() {
+      Builder b(getContext());
+      return getMixedValues(getStaticSgLayout(), getSgLayout(), b);
+    }
+    ::llvm::SmallVector<::mlir::OpFoldResult> getMixedSgData() {
+      Builder b(getContext());
+      return getMixedValues(getStaticSgData(), getSgData(), b);
+    }
+    ::llvm::SmallVector<::mlir::OpFoldResult> getMixedInstData() {
+      Builder b(getContext());
+      return getMixedValues(getStaticInstData(), getInstData(), b);
+    }
+  }];
+}
+
+def SetOpLayoutAttrOp : Op<Transform_Dialect, "xegpu.set_op_layout_attr", [
+  AttrSizedOperandSegments,
+  DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+  TransformOpInterface
+]> {
+
+  let summary = "Set xegpu.layout attribute of an op.";
+  let description = [{
+    Sets the `xegpu.layout` attribute of an op. If `result=true`, sets the
+    `layout_result_{index}`, otherwise `layout_operand_{index}` attribute. The
+    target operand/result value is defined by the `index` argument. The layout
+    is defined by the `sg_layout`, `sg_data` and optional `inst_data` attributes.
+  }];
+
+  let arguments = (ins TransformHandleTypeInterface:$target,
+                   DefaultValuedOptionalAttr<I64Attr, "0">:$index,
+                   Variadic<TransformAnyParamTypeOrAnyHandle>:$sg_layout,
+                   Variadic<TransformAnyParamTypeOrAnyHandle>:$sg_data,
+                   Variadic<TransformAnyParamTypeOrAnyHandle>:$inst_data,
+                   DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_sg_layout,
+                   DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_sg_data,
+                   DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_inst_data,
+                   DefaultValuedAttr<UnitAttr, "false">:$result
+                   );
+
+  let results = (outs);
+  let builders = [
+    OpBuilder<(ins "Value":$target,
+                   "int64_t":$index,
+                   "ArrayRef<OpFoldResult>":$mixedSgLayout,
+                   "ArrayRef<OpFoldResult>":$mixedSgData,
+                   "ArrayRef<OpFoldResult>":$mixedInstData,
+                   CArg<"bool", "false">:$result
+                   )>,
+  ];
+
+  let assemblyFormat = [{
+    $target (`result` $result^)? (`index` `=` $index^)?
+    `sg_layout` `=` custom<DynamicIndexList>($sg_layout, $static_sg_layout)
+    `sg_data` `=` custom<DynamicIndexList>($sg_data, $static_sg_data)
+    (`inst_data` `=` custom<DynamicIndexList>($inst_data, $static_inst_data)^)?
+    attr-dict `:` qualified(type(operands))
   }];
 
   let extraClassDeclaration = [{
