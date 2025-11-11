@@ -164,7 +164,7 @@ static inline std::string getSecName(SecType Type) {
   }
 }
 
-// Types of sample profile which can be in placed in SecTypifiedProfile
+// Types of sample profile which can be placed in SecTypifiedProfile
 enum ProfTypes { ProfTypeLBR = 0, ProfTypeNum };
 
 // Entry type of section header table used by SampleProfileExtBinaryBaseReader
