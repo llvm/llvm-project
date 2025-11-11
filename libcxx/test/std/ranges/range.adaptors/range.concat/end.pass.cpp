@@ -47,6 +47,37 @@ constexpr bool test() {
     static_assert(std::is_same_v<decltype(v.end()), std::default_sentinel_t>);
   }
 
+  {
+    // all the ranges but the last one are input ranges, the last range is common => end() returns sentinel
+    using Iter      = cpp20_input_iterator<const int*>;
+    using Sentinel  = sentinel_wrapper<Iter>;
+    using InputView = minimal_view<Iter, Sentinel>;
+
+    std::array<int, 3> arr{1, 2, 3};
+    auto v = std::views::concat(InputView{Iter{buffer1}, Sentinel{Iter{buffer1 + 5}}}, arr);
+    static_assert(std::same_as<decltype(v.end()), std::default_sentinel_t>);
+  }
+
+  {
+    // first range is forward range, the last range is common => end() does not return sentinel
+    using Iter        = forward_iterator<const int*>;
+    using Sentinel    = sentinel_wrapper<Iter>;
+    using ForwardView = minimal_view<Iter, Sentinel>;
+
+    std::array<int, 2> arr{6, 7};
+    auto v = std::views::concat(ForwardView{Iter{buffer1}, Sentinel{Iter{buffer1 + 5}}}, arr);
+    static_assert(!std::same_as<decltype(v.end()), std::default_sentinel_t>);
+    static_assert(std::same_as<decltype(v.end()), decltype(v.begin())>);
+
+    auto it   = v.begin();
+    auto last = v.end();
+    int sum   = 0;
+    for (; it != last; it++) {
+      sum += *it;
+    }
+    assert(sum == 1 + 2 + 3 + 4 + 5 + 6 + 7);
+  }
+
   return true;
 }
 
