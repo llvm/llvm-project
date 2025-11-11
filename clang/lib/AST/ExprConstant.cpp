@@ -12146,11 +12146,15 @@ static bool evalShuffleGeneric(
     if (SrcIdx < 0) {
       // Zero out this element
       QualType ElemTy = VT->getElementType();
-      if (ElemTy->isFloatingType()) {
+      if (ElemTy->isRealFloatingType()) {
         ResultElements.push_back(
             APValue(APFloat::getZero(Info.Ctx.getFloatTypeSemantics(ElemTy))));
+      } else if (ElemTy->isIntegerType()) {
+        APValue Zero(Info.Ctx.MakeIntValue(0, ElemTy));
+        ResultElements.push_back(APValue(Zero));
       } else {
-        ResultElements.push_back(APValue(Info.Ctx.MakeIntValue(0, ElemTy)));
+        // Other types of fallback logic
+        ResultElements.push_back(APValue());
       }
     } else {
       const APValue &Src = (SrcVecIdx == 0) ? A : B;
@@ -12929,16 +12933,16 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     APValue R;
     if (!evalShuffleGeneric(
             Info, E, R,
-            [](unsigned DstIdx, unsigned ShuffleMask) -> std::pair<unsigned, int> {
+            [](unsigned DstIdx,
+               unsigned ShuffleMask) -> std::pair<unsigned, int> {
               uint8_t Ctlb = static_cast<uint8_t>(ShuffleMask);
-              if (Ctlb & 0x80) {
+              if (Ctlb & 0x80)
                 return std::make_pair(0, -1);
-              } else {
-                unsigned LaneBase = (DstIdx / 16) * 16;
-                unsigned SrcOffset = Ctlb & 0x0F;
-                unsigned SrcIdx = LaneBase + SrcOffset;
-                return std::make_pair(0, static_cast<int>(SrcIdx));
-              }
+
+              unsigned LaneBase = (DstIdx / 16) * 16;
+              unsigned SrcOffset = Ctlb & 0x0F;
+              unsigned SrcIdx = LaneBase + SrcOffset;
+              return std::make_pair(0, static_cast<int>(SrcIdx));
             }))
       return false;
     return Success(R, E);
@@ -12961,7 +12965,7 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
                 unsigned Sel = (Mask >> (2 * LaneIdx)) & 0x3;
                 return std::make_pair(0, static_cast<int>(LaneBase + Sel));
               }
-                return std::make_pair(0, static_cast<int>(DstIdx));
+              return std::make_pair(0, static_cast<int>(DstIdx));
             }))
       return false;
     return Success(R, E);
@@ -12983,9 +12987,10 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
               if (LaneIdx >= HalfSize) {
                 unsigned Rel = LaneIdx - HalfSize;
                 unsigned Sel = (Mask >> (2 * Rel)) & 0x3;
-                return std::make_pair(0, static_cast<int>(LaneBase + HalfSize + Sel));
+                return std::make_pair(
+                    0, static_cast<int>(LaneBase + HalfSize + Sel));
               }
-                return std::make_pair(0, static_cast<int>(DstIdx));
+              return std::make_pair(0, static_cast<int>(DstIdx));
             }))
       return false;
     return Success(R, E);
@@ -13491,14 +13496,15 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
             [](unsigned DstIdx, unsigned Shift) -> std::pair<unsigned, int> {
               unsigned LaneBase = (DstIdx / 16) * 16;
               unsigned LaneIdx = DstIdx % 16;
-              if (LaneIdx < Shift) {
+              if (LaneIdx < Shift)
                 return std::make_pair(0, -1);
-              }
-                return std::make_pair(0, static_cast<int>(LaneBase + LaneIdx - Shift));
+
+              return std::make_pair(
+                  0, static_cast<int>(LaneBase + LaneIdx - Shift));
             }))
       return false;
     return Success(R, E);
-}
+  }
 
   case X86::BI__builtin_ia32_psrldqi128_byteshift:
   case X86::BI__builtin_ia32_psrldqi256_byteshift:
@@ -13509,14 +13515,15 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
             [](unsigned DstIdx, unsigned Shift) -> std::pair<unsigned, int> {
               unsigned LaneBase = (DstIdx / 16) * 16;
               unsigned LaneIdx = DstIdx % 16;
-              if (LaneIdx + Shift < 16) {
-                return std::make_pair(0, static_cast<int>(LaneBase + LaneIdx + Shift));
-              }
-                return std::make_pair(0, -1);
+              if (LaneIdx + Shift < 16)
+                return std::make_pair(
+                    0, static_cast<int>(LaneBase + LaneIdx + Shift));
+
+              return std::make_pair(0, -1);
             }))
       return false;
     return Success(R, E);
-}
+  }
   case X86::BI__builtin_ia32_vpermi2varq128:
   case X86::BI__builtin_ia32_vpermi2varpd128: {
     APValue R;

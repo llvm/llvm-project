@@ -4474,14 +4474,13 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
     return interp__builtin_ia32_shuffle_generic(
         S, OpPC, Call, [](unsigned DstIdx, unsigned ShuffleMask) {
           uint8_t Ctlb = static_cast<uint8_t>(ShuffleMask);
-          if (Ctlb & 0x80) {
+          if (Ctlb & 0x80)
             return std::make_pair(0, -1);
-          } else {
-            unsigned LaneBase = (DstIdx / 16) * 16;
-            unsigned SrcOffset = Ctlb & 0x0F;
-            unsigned SrcIdx = LaneBase + SrcOffset;
-            return std::make_pair(0, static_cast<int>(SrcIdx));
-            }
+
+          unsigned LaneBase = (DstIdx / 16) * 16;
+          unsigned SrcOffset = Ctlb & 0x0F;
+          unsigned SrcIdx = LaneBase + SrcOffset;
+          return std::make_pair(0, static_cast<int>(SrcIdx));
         });
 
   case X86::BI__builtin_ia32_pshuflw:
@@ -4494,9 +4493,9 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
           if (LaneIdx < 4) {
             unsigned Sel = (ShuffleMask >> (2 * LaneIdx)) & 0x3;
             return std::make_pair(0, static_cast<int>(LaneBase + Sel));
-          } else {
-            return std::make_pair(0, static_cast<int>(DstIdx));
           }
+
+          return std::make_pair(0, static_cast<int>(DstIdx));
         });
 
   case X86::BI__builtin_ia32_pshufhw:
@@ -4509,9 +4508,9 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
           if (LaneIdx >= 4) {
             unsigned Sel = (ShuffleMask >> (2 * (LaneIdx - 4))) & 0x3;
             return std::make_pair(0, static_cast<int>(LaneBase + 4 + Sel));
-          } else {
-            return std::make_pair(0, static_cast<int>(DstIdx));
           }
+
+          return std::make_pair(0, static_cast<int>(DstIdx));
         });
 
   case X86::BI__builtin_ia32_pshufd:
@@ -4686,12 +4685,11 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
         [](unsigned DstIdx, unsigned Shift) -> std::pair<unsigned, int> {
           unsigned LaneBase = (DstIdx / 16) * 16;
           unsigned LaneIdx = DstIdx % 16;
-          if (LaneIdx < Shift) {
+          if (LaneIdx < Shift)
             return std::make_pair(0, -1);
-          }
 
-            return std::make_pair(0, static_cast<int>(LaneBase + LaneIdx - Shift));
-
+          return std::make_pair(0,
+                                static_cast<int>(LaneBase + LaneIdx - Shift));
         });
 
   case X86::BI__builtin_ia32_psrldqi128_byteshift:
@@ -4706,9 +4704,9 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
         [](unsigned DstIdx, unsigned Shift) -> std::pair<unsigned, int> {
           unsigned LaneBase = (DstIdx / 16) * 16;
           unsigned LaneIdx = DstIdx % 16;
-          if (LaneIdx + Shift < 16) {
-            return std::make_pair(0, static_cast<int>(LaneBase + LaneIdx + Shift));
-          }
+          if (LaneIdx + Shift < 16)
+            return std::make_pair(0,
+                                  static_cast<int>(LaneBase + LaneIdx + Shift));
 
           return std::make_pair(0, -1);
         });
