@@ -122,6 +122,11 @@ cl::opt<bool> StaleMatchingWithPseudoProbes(
     cl::desc("Turns on stale matching with block pseudo probes."),
     cl::init(false), cl::ReallyHidden, cl::cat(BoltOptCategory));
 
+cl::opt<bool> StaleMatchingWithHashes(
+    "stale-matching-with-hashes",
+    cl::desc("Turns on stale matching with block hashes."),
+    cl::init(true), cl::ReallyHidden, cl::cat(BoltOptCategory));
+
 } // namespace opts
 
 namespace llvm {
@@ -726,16 +731,16 @@ size_t matchWeights(BinaryContext &BC,
             matchProbe(CSI.InlineTreeNode, CSI.Probe);
       }
     }
-    ProfileBlockMatchMap StaleMatchedBlocks = matchBlocks(
-        BC, *YamlBF, HashFunction, IdToYamlBF, Matcher, BlendedHashes);
-    for (const auto &[Id, FlowBlockPair] : StaleMatchedBlocks)
-      // TBD: determine scaling factor
-      if (!MatchedBlocks.contains(Id))
-        MatchedBlocks[Id] = FlowBlockPair;
+    if (opts::StaleMatchingWithHashes)
+      for (const auto &[Id, FlowBlockPair] : matchBlocks(
+               BC, *YamlBF, HashFunction, IdToYamlBF, Matcher, BlendedHashes))
+        // TBD: determine scaling factor
+        if (!MatchedBlocks.contains(Id))
+          MatchedBlocks[Id] = FlowBlockPair;
 
     transferEdgeWeights(MatchedBlocks, OutWeight, InWeight, *YamlBF);
   }
-  if (ProbeMatchSpecs.empty()) {
+  if (opts::StaleMatchingWithHashes && ProbeMatchSpecs.empty()) {
     ProfileBlockMatchMap MatchedBlocks = matchBlocks(
         BC, YamlBF, HashFunction, IdToYamlBF, Matcher, BlendedHashes);
     transferEdgeWeights(MatchedBlocks, OutWeight, InWeight, YamlBF);
