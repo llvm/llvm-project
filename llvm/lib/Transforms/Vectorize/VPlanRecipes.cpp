@@ -676,14 +676,6 @@ Value *VPInstruction::generate(VPTransformState &State) {
   }
   case Instruction::Select: {
     bool OnlyFirstLaneUsed = vputils::onlyFirstLaneUsed(this);
-/*    if (!OnlyFirstLaneUsed) {*/
-      /*auto IsVectorToScalar = [](VPValue *V) {*/
-        /*auto *VI = dyn_cast<VPInstruction>(V);*/
-        /*return VI && VI->isVectorToScalar();*/
-      /*};*/
-      /*OnlyFirstLaneUsed =*/
-          /*IsVectorToScalar(getOperand(1)) && IsVectorToScalar(getOperand(2));*/
-    /*}*/
     Value *Cond =
         State.get(getOperand(0),
                   OnlyFirstLaneUsed || vputils::isSingleScalar(getOperand(0)));

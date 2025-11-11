@@ -365,16 +365,14 @@ void UnrollState::unrollBlock(VPBlockBase *VPB) {
       continue;
     }
     VPValue *Op0;
-    if (match(&R, m_VPInstruction<VPInstruction::ExtractLane>(
-                      m_VPValue(Op0), m_VPValue(Op1)))) {
+    if (match(&R, m_ExtractLane(m_VPValue(Op0), m_VPValue(Op1)))) {
       addUniformForAllParts(cast<VPInstruction>(&R));
       for (unsigned Part = 1; Part != UF; ++Part)
         R.addOperand(getValueForPart(Op1, Part));
       continue;
     }
     if (match(&R, m_ExtractLastElement(m_VPValue(Op0))) ||
-        match(&R, m_VPInstruction<VPInstruction::ExtractPenultimateElement>(
-                      m_VPValue(Op0)))) {
+        match(&R, m_ExtractPenultimateElement(m_VPValue(Op0)))) {
       addUniformForAllParts(cast<VPSingleDefRecipe>(&R));
       if (isa<VPFirstOrderRecurrencePHIRecipe>(Op0)) {
         assert(match(&R, m_ExtractLastElement(m_VPValue())) &&

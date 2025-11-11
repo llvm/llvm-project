@@ -45,7 +45,8 @@ define i64 @test1(i64 %y) {
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq <4 x i64> [[BROADCAST_SPLAT]], zeroinitializer
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor <4 x i64> splat (i64 3), [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP0]], <4 x i64> splat (i64 77), <4 x i64> [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x i1> [[TMP0]], i32 0
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select i1 [[TMP2]], <4 x i64> splat (i64 77), <4 x i64> [[TMP1]]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    br label [[MIDDLE_BLOCK:%.*]]
@@ -90,7 +91,8 @@ define i64 @test2(i64 %y) {
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[Y:%.*]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq <4 x i64> [[BROADCAST_SPLAT]], zeroinitializer
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP0]], <4 x i64> splat (i64 77), <4 x i64> splat (i64 55)
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x i1> [[TMP0]], i32 0
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select i1 [[TMP1]], <4 x i64> splat (i64 77), <4 x i64> splat (i64 55)
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    br label [[MIDDLE_BLOCK:%.*]]
@@ -136,7 +138,8 @@ define i32 @test3(i64 %y) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq <4 x i64> [[BROADCAST_SPLAT]], zeroinitializer
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       vector.body:
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP0]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>, <4 x i32> splat (i32 55)
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x i1> [[TMP0]], i32 0
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select i1 [[TMP1]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>, <4 x i32> splat (i32 55)
 ; CHECK-NEXT:    br label [[MIDDLE_BLOCK:%.*]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> <i1 false, i1 false, i1 false, i1 true>, i1 true)

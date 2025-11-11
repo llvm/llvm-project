@@ -246,8 +246,8 @@ bool VPlanVerifier::verifyLastActiveLaneRecipe(
     // Masks derived from EVL are also fine.
     auto BroadcastOrEVL =
         m_CombineOr(m_Broadcast(m_EVL(m_VPValue())), m_EVL(m_VPValue()));
-    if (match(Op, m_ICmp(m_StepVector(), BroadcastOrEVL)) ||
-        match(Op, m_ICmp(BroadcastOrEVL, m_StepVector())))
+    if (match(Op, m_CombineOr(m_ICmp(m_StepVector(), BroadcastOrEVL),
+                              m_ICmp(BroadcastOrEVL, m_StepVector()))))
       continue;
 
     errs() << "LastActiveLane operand ";

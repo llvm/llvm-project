@@ -806,8 +806,8 @@ static VPValue *optimizeEarlyExitInductionUser(VPlan &Plan,
                                                VPValue *Op,
                                                ScalarEvolution &SE) {
   VPValue *Incoming, *Mask;
-  if (!match(Op, m_VPInstruction<VPInstruction::ExtractLane>(
-                     m_FirstActiveLane(m_VPValue(Mask)), m_VPValue(Incoming))))
+  if (!match(Op, m_ExtractLane(m_FirstActiveLane(m_VPValue(Mask)),
+                               m_VPValue(Incoming))))
     return nullptr;
 
   auto *WideIV = getOptimizableIVOf(Incoming, SE);
@@ -1264,8 +1264,7 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
   }
 
   // Look through ExtractPenultimateElement (BuildVector ....).
-  if (match(Def, m_VPInstruction<VPInstruction::ExtractPenultimateElement>(
-                     m_BuildVector()))) {
+  if (match(Def, m_ExtractPenultimateElement(m_BuildVector()))) {
     auto *BuildVector = cast<VPInstruction>(Def->getOperand(0));
     Def->replaceAllUsesWith(
         BuildVector->getOperand(BuildVector->getNumOperands() - 2));
@@ -2046,14 +2045,13 @@ bool VPlanTransforms::adjustFixedOrderRecurrences(VPlan &Plan,
     // all users.
     RecurSplice->setOperand(0, FOR);
 
-    // Check for users extracting the second-to-last active lane of the FOR. If
-    // only a single lane is active in the current iteration, we need to select
-    // the last element of the value from the previous iteration, directly from
-    // the FOR phi.
+    // Check for users extracting at the penultimate active lane of the FOR.
+    // If only a single lane is active in the current iteration, we need to
+    // select the last element from the previous iteration (from the FOR phi
+    // directly).
     for (VPUser *U : RecurSplice->users()) {
-      if (!match(U,
-                 m_VPInstruction<VPInstruction::ExtractLane>(
-                     m_LastActiveLane(m_VPValue()), m_Specific(RecurSplice))))
+      if (!match(U, m_ExtractLane(m_LastActiveLane(m_VPValue()),
+                                  m_Specific(RecurSplice))))
         continue;
 
       VPBuilder B(cast<VPInstruction>(U));
