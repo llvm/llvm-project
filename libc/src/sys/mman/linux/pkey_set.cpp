@@ -13,12 +13,7 @@
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
-
-#if defined(LIBC_TARGET_ARCH_IS_X86_64)
-#include "src/sys/mman/linux/x86_64/pkey_common.h"
-#else
-#include "src/sys/mman/linux/generic/pkey_common.h"
-#endif
+#include "src/sys/mman/linux/pkey_common.h"
 
 namespace LIBC_NAMESPACE_DECL {
 

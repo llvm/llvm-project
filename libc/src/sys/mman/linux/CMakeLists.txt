@@ -198,6 +198,14 @@ add_entrypoint_object(
     libc.src.errno.errno
 )
 
+add_header_library(
+  pkey_common
+  HDRS
+    pkey_common.h
+  DEPENDS
+    .${ARCH_SUBDIRECTORY}.pkey_common
+)
+
 add_entrypoint_object(
   pkey_free
   SRCS
@@ -222,7 +230,7 @@ add_entrypoint_object(
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
-    .${ARCH_SUBDIRECTORY}.pkey_common
+    .pkey_common
 )
 
 add_entrypoint_object(
@@ -250,7 +258,7 @@ add_entrypoint_object(
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
-    .${ARCH_SUBDIRECTORY}.pkey_common
+    .pkey_common
 )
 
 add_entrypoint_object(

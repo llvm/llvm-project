@@ -7114,13 +7114,16 @@ libc_function(
 
 libc_support_library(
     name = "pkey_common",
-    hdrs = select({
-        "@platforms//cpu:x86_64": ["src/sys/mman/linux/x86_64/pkey_common.h"],
+    hdrs = [
+        "src/sys/mman/linux/pkey_common.h",
+    ] + select({
+        PLATFORM_CPU_X86_64: ["src/sys/mman/linux/x86_64/pkey_common.h"],
         "//conditions:default": ["src/sys/mman/linux/generic/pkey_common.h"],
     }),
     deps = [
         ":__support_common",
         ":__support_error_or",
+        ":__support_macros_properties_architectures",
         ":hdr_errno_macros",
         ":hdr_stdint_proxy",
     ],
