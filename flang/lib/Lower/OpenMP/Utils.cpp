@@ -77,14 +77,14 @@ mlir::FlatSymbolRefAttr getOrGenImplicitDefaultDeclareMapper(
   mlir::OpBuilder::InsertionGuard guard(firOpBuilder);
 
   firOpBuilder.setInsertionPointToStart(converter.getModuleOp().getBody());
-  auto declMapperOp = firOpBuilder.create<mlir::omp::DeclareMapperOp>(
-      loc, mapperNameStr, recordType);
+  auto declMapperOp = mlir::omp::DeclareMapperOp::create(
+      firOpBuilder, loc, mapperNameStr, recordType);
   auto &region = declMapperOp.getRegion();
   firOpBuilder.createBlock(&region);
   auto mapperArg = region.addArgument(firOpBuilder.getRefType(recordType), loc);
 
-  auto declareOp =
-      firOpBuilder.create<hlfir::DeclareOp>(loc, mapperArg, /*uniq_name=*/"");
+  auto declareOp = hlfir::DeclareOp::create(firOpBuilder, loc, mapperArg,
+                                            /*uniq_name=*/"");
 
   const auto genBoundsOps = [&](mlir::Value mapVal,
                                 llvm::SmallVectorImpl<mlir::Value> &bounds) {
@@ -103,11 +103,11 @@ mlir::FlatSymbolRefAttr getOrGenImplicitDefaultDeclareMapper(
 
   const auto getFieldRef = [&](mlir::Value rec, llvm::StringRef fieldName,
                                mlir::Type fieldTy, mlir::Type recType) {
-    mlir::Value field = firOpBuilder.create<fir::FieldIndexOp>(
-        loc, fir::FieldType::get(recType.getContext()), fieldName, recType,
-        fir::getTypeParams(rec));
-    return firOpBuilder.create<fir::CoordinateOp>(
-        loc, firOpBuilder.getRefType(fieldTy), rec, field);
+    mlir::Value field = fir::FieldIndexOp::create(
+        firOpBuilder, loc, fir::FieldType::get(recType.getContext()), fieldName,
+        recType, fir::getTypeParams(rec));
+    return fir::CoordinateOp::create(
+        firOpBuilder, loc, firOpBuilder.getRefType(fieldTy), rec, field);
   };
 
   mlir::omp::DeclareMapperInfoOperands clauseOps;
@@ -163,7 +163,7 @@ mlir::FlatSymbolRefAttr getOrGenImplicitDefaultDeclareMapper(
       /*partialMap=*/true);
 
   clauseOps.mapVars.emplace_back(mapOp);
-  firOpBuilder.create<mlir::omp::DeclareMapperInfoOp>(loc, clauseOps.mapVars);
+  mlir::omp::DeclareMapperInfoOp::create(firOpBuilder, loc, clauseOps.mapVars);
   return mlir::FlatSymbolRefAttr::get(&converter.getMLIRContext(),
                                       mapperNameStr);
 }
