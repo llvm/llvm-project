@@ -110,14 +110,16 @@ def parse_args():
     format_group = parser.add_argument_group("Output Format")
     format_group.add_argument(
         "--test-output",
-        help="Control whether the executed commands and their outputs are printed after each test has executed (default off)",
+        help="Control whether the executed commands and their outputs are printed after each test has executed (default off). "
+        "If --print-result-after is set lower than the level given to --test-output, --print-result-after is raised to match.",
         choices=["off", "failed", "all"],
         default="off",
         action=TestOutputAction,
     )
     format_group.add_argument(
         "--print-result-after",
-        help="Control which the executed test names and results are printed after each test has executed (default all)",
+        help="Control which the executed test names and results are printed after each test has executed (default all). "
+        "If --test-output is set higher than the level given to --print-result-after, --test-output is lowered to match.",
         choices=["off", "failed", "all"],
         default="all",
         action=TestOutputAction,
