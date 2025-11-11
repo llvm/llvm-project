@@ -10,4 +10,3 @@ entry:
 }
 
 declare float @llvm.spv.ddy.coarse.f32(float)
-

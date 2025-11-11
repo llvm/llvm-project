@@ -1,7 +1,5 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.6-library %s -fnative-half-type -verify
 
-typedef float float2 __attribute__((ext_vector_type(2)));
-
 float no_arg() {
   return __builtin_hlsl_elementwise_ddx_coarse();
   // expected-error@-1 {{too few arguments to function call, expected 1, have 0}}

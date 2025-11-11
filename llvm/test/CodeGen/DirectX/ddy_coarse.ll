@@ -38,4 +38,3 @@ entry:
 declare half @llvm.dx.ddy.coarse.f16(half)
 declare float @llvm.dx.ddy.coarse.f32(float)
 declare <4 x float> @llvm.dx.ddy.coarse.v4f32(<4 x float>)
-
