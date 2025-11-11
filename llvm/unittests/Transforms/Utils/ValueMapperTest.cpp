@@ -74,7 +74,7 @@ TEST(ValueMapperTest, mapMDNodeDuplicatedCycle) {
 
   // Create a cycle that references G0.
   MDNode *N0; // !0 = !{!1}
-  MDNode *N1; // !1 = !{!0, i8* @G0}
+  MDNode *N1; // !1 = !{!0, ptr @G0}
   {
     auto T0 = MDTuple::getTemporary(Context, nullptr);
     Metadata *Ops1[] = {T0.get(), ConstantAsMetadata::get(G0.get())};

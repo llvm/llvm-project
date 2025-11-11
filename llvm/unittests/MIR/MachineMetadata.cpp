@@ -205,8 +205,8 @@ TEST_F(MachineMetadataTest, MMSlotTrackerAArch64) {
 
   StringRef MIRString = R"MIR(
 --- |
-  define i32 @test0(i32* %p) {
-    %r = load i32, i32* %p, align 4
+  define i32 @test0(ptr %p) {
+    %r = load i32, ptr %p, align 4
     ret i32 %r
   }
 ...
@@ -354,8 +354,8 @@ TEST_F(MachineMetadataTest, MMSlotTrackerX64) {
 
   StringRef MIRString = R"MIR(
 --- |
-  define i32 @test0(i32* %p) {
-    %r = load i32, i32* %p, align 4
+  define i32 @test0(ptr %p) {
+    %r = load i32, ptr %p, align 4
     ret i32 %r
   }
 ...
@@ -446,8 +446,8 @@ TEST_F(MachineMetadataTest, MMSlotTrackerAMDGPU) {
 
   StringRef MIRString = R"MIR(
 --- |
-  define i32 @test0(i32* %p) {
-    %r = load i32, i32* %p, align 4
+  define i32 @test0(ptr %p) {
+    %r = load i32, ptr %p, align 4
     ret i32 %r
   }
 ...

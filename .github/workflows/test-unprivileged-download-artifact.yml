@@ -1,0 +1,54 @@
+name: Test Unprivileged Download Artifact Action
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/test-unprivileged-download-artifact.yml
+      - '.github/workflows/unprivileged-download-artifact/**'
+  pull_request:
+    paths:
+      - .github/workflows/test-unprivileged-download-artifact.yml
+      - '.github/workflows/unprivileged-download-artifact/**'
+
+jobs:
+  upload-test-artifact:
+    name: Upload Test Artifact
+    if: github.repository_owner == 'llvm'
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Create Test File
+        run: |
+          echo "test" > comment
+      - name: Upload Test File
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: workflow-args
+          path: |
+            comment
+
+  test-download:
+    name: Test Unprivileged Download Artifact
+    if: github.repository_owner == 'llvm'
+    runs-on: ubuntu-24.04
+    needs: [ upload-test-artifact ]
+    steps:
+      - name: Chekcout LLVM
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          sparse-checkout: |
+            .github/workflows/unprivileged-download-artifact/action.yml
+      - name: Download Artifact
+        uses: ./.github/workflows/unprivileged-download-artifact
+        id: download-artifact
+        with:
+          run-id: ${{ github.run_id }}
+          artifact-name: workflow-args
+      - name: Assert That Contents are the Same
+        run: |
+          cat comment
+          [[ "$(cat comment)" == "test" ]]
