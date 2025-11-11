@@ -1053,10 +1053,10 @@ define i32 @multiccmp(i32 %s0, i32 %s1, i32 %s2, i32 %s3, i32 %x, i32 %y) #0 {
 ; CHECK-SD-NEXT:    mov x19, x5
 ; CHECK-SD-NEXT:    cmp w0, w1
 ; CHECK-SD-NEXT:    ccmp w2, w3, #4, gt
-; CHECK-SD-NEXT:    mrs x20, NZCV
+; CHECK-SD-NEXT:    cset w20, ne
 ; CHECK-SD-NEXT:    csel w0, w5, w4, ne
 ; CHECK-SD-NEXT:    bl _callee
-; CHECK-SD-NEXT:    msr NZCV, x20
+; CHECK-SD-NEXT:    cmp w20, #0
 ; CHECK-SD-NEXT:    csel w0, w0, w19, ne
 ; CHECK-SD-NEXT:    bl _callee
 ; CHECK-SD-NEXT:    ldp x29, x30, [sp, #16] ; 16-byte Folded Reload
