@@ -1048,7 +1048,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
 
     if (Subtarget->enablePExtCodeGen() && isApplicableToPLI(Imm) &&
         hasAllWUsers(Node)) {
-      // If its 4 packed 8-bit integers or 2 packed signed 16-bit integers, we
+      // If it's 4 packed 8-bit integers or 2 packed signed 16-bit integers, we
       // can simply copy lower 32 bits to higher 32 bits to make it able to
       // rematerialize to PLI_B or PLI_H
       Imm = ((uint64_t)Imm << 32) | (Imm & 0xFFFFFFFF);
