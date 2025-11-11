@@ -35,7 +35,7 @@ jobs:
     name: Test Unprivileged Download Artifact
     if: github.repository_owner == 'llvm'
     runs-on: ubuntu-24.04
-    needs: [ upload-test-artifacts ]
+    needs: [ upload-test-artifact ]
     steps:
       - name: Download Artifact
         uses: ./.github/workflows/unprivileged-download-artifact
