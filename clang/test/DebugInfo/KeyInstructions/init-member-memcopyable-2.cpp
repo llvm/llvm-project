@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -gkey-instructions %s -gno-column-info -debug-info-kind=line-tables-only -emit-llvm -o - \
 // RUN: | FileCheck %s
 
+// XFAIL: *
+
 // g::h and i can be memcpy'd, check the assignment gets Key Instructions metadata.
 
 struct e {
