@@ -471,6 +471,12 @@ public:
     return std::move(StrOffsetsBuffer);
   }
 
+  /// Returns strings of .debug_str_offsets.
+  StringRef getBufferStr() {
+    return StringRef(reinterpret_cast<const char *>(StrOffsetsBuffer->data()),
+                     StrOffsetsBuffer->size());
+  }
+
   /// Initializes Buffer and Stream.
   void initialize(DWARFUnit &Unit);
 
@@ -505,6 +511,12 @@ public:
   }
   std::unique_ptr<DebugStrBufferVector> releaseBuffer() {
     return std::move(StrBuffer);
+  }
+
+  /// Returns strings of .debug_str.
+  StringRef getBufferStr() {
+    return StringRef(reinterpret_cast<const char *>(StrBuffer->data()),
+                     StrBuffer->size());
   }
 
   /// Adds string to .debug_str.

@@ -46,7 +46,7 @@ int main(void) {
 // CHECK-USM-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK-USM:       user_code.entry:
 // CHECK-USM-NEXT:    store i32 1, ptr [[TMP0]], align 4
-// CHECK-USM-NEXT:    [[TMP2:%.*]] = load ptr, ptr addrspace(1) @pGI_decl_tgt_ref_ptr, align 8
+// CHECK-USM-NEXT:    [[TMP2:%.*]] = load ptr, ptr @pGI_decl_tgt_ref_ptr, align 8
 // CHECK-USM-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[TMP2]], align 8
 // CHECK-USM-NEXT:    store i32 2, ptr [[TMP3]], align 4
 // CHECK-USM-NEXT:    call void @__kmpc_target_deinit()
