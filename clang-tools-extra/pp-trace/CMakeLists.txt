@@ -14,7 +14,6 @@ clang_target_link_libraries(pp-trace
   PRIVATE
   clangAST
   clangBasic
-  clangOptions
   clangFrontend
   clangLex
   clangSerialization
