@@ -17,6 +17,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/ProfDataUtils.h"
+#include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/BranchProbability.h"
 #include "llvm/Support/CommandLine.h"
 
@@ -40,6 +41,10 @@ static cl::opt<uint32_t> SelectFalseWeight(
     "profcheck-default-select-false-weight", cl::init(3U),
     cl::desc("When annotating `select` instructions, this value will be used "
              "for the second ('false') case."));
+static cl::opt<bool> AnnotateIndirectCalls(
+    "profcheck-annotate-indirect-calls", cl::init(true),
+    cl::desc("Also inject (if missing) MD_prof for indirect calls"));
+
 namespace {
 class ProfileInjector {
   Function &F;
@@ -100,12 +105,24 @@ bool ProfileInjector::inject() {
   // and numerically that may make for a poor unit test.
   uint32_t WeightsForTestOffset = 0;
   for (auto &BB : F) {
-    if (AnnotateSelect) {
-      for (auto &I : BB) {
-        if (isa<SelectInst>(I) && !I.getMetadata(LLVMContext::MD_prof))
-          setBranchWeights(I, {SelectTrueWeight, SelectFalseWeight},
-                           /*IsExpected=*/false);
-      }
+    for (auto &I : BB) {
+      // Annotate instructions that support MD_prof metadata, such as `select`
+      // and indirect calls - *if* they don't already have that metadata.
+      if (AnnotateSelect && isa<SelectInst>(I) &&
+          !I.getMetadata(LLVMContext::MD_prof))
+        setBranchWeights(I, {SelectTrueWeight, SelectFalseWeight},
+                         /*IsExpected=*/false);
+      if (AnnotateIndirectCalls)
+        if (auto *CB = dyn_cast<CallBase>(&I))
+          if (CB->isIndirectCall() && !CB->getMetadata(LLVMContext::MD_prof))
+            // add a valid-format but bogus indirect call profile. Neither the
+            // GUIDs nor the counts are meant to matter.
+            annotateValueSite(*F.getParent(), *CB,
+                              {{/*.Value=*/2345, /*.Count=*/10},
+                               {/*.Value=*/5678, /*.Count=*/20}},
+                              /*Sum=*/30,
+                              InstrProfValueKind::IPVK_IndirectCallTarget,
+                              /*MaxMDCount=*/30);
     }
     auto *Term = getTerminatorBenefitingFromMDProf(BB);
     if (!Term || Term->getMetadata(LLVMContext::MD_prof))
@@ -183,11 +200,16 @@ PreservedAnalyses ProfileVerifierPass::run(Function &F,
     return PreservedAnalyses::all();
   }
   for (const auto &BB : F) {
-    if (AnnotateSelect) {
-      for (const auto &I : BB)
-        if (isa<SelectInst>(I) && !I.getMetadata(LLVMContext::MD_prof))
-          F.getContext().emitError(
-              "Profile verification failed: select annotation missing");
+    for (const auto &I : BB) {
+      if (AnnotateSelect && isa<SelectInst>(I) &&
+          !I.getMetadata(LLVMContext::MD_prof))
+        F.getContext().emitError(
+            "Profile verification failed: select annotation missing");
+      if (AnnotateIndirectCalls)
+        if (const auto *CB = dyn_cast<CallBase>(&I))
+          if (CB->isIndirectCall() && !I.getMetadata(LLVMContext::MD_prof))
+            F.getContext().emitError("Profile verification failed: indirect "
+                                     "call annotation missing");
     }
     if (const auto *Term =
             ProfileInjector::getTerminatorBenefitingFromMDProf(BB))
