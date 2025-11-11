@@ -157,8 +157,6 @@ private:
                             MachineMemOperand *MMO);
   unsigned maskI1Value(unsigned Reg, const Value *V);
   unsigned getRegForI1Value(const Value *V, const BasicBlock *BB, bool &Not);
-  unsigned truncate(unsigned Reg, const Value *V, MVT::SimpleValueType From,
-                    MVT::SimpleValueType To);
   unsigned zeroExtendToI32(unsigned Reg, const Value *V,
                            MVT::SimpleValueType From);
   unsigned signExtendToI32(unsigned Reg, const Value *V,
@@ -519,28 +517,6 @@ unsigned WebAssemblyFastISel::signExtendToI32(unsigned Reg, const Value *V,
       .addReg(Imm);
 
   return Right;
-}
-
-unsigned WebAssemblyFastISel::truncate(unsigned Reg, const Value *V,
-                                       MVT::SimpleValueType From,
-                                       MVT::SimpleValueType To) {
-  if (From == MVT::i64) {
-    if (To == MVT::i64)
-      return copyValue(Reg);
-
-    if (To == MVT::i1 || To == MVT::i8 || To == MVT::i16 || To == MVT::i32) {
-      Register Result = createResultReg(&WebAssembly::I32RegClass);
-      BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
-              TII.get(WebAssembly::I32_WRAP_I64), Result)
-          .addReg(Reg);
-      return Result;
-    }
-  }
-
-  if (From == MVT::i32)
-    return copyValue(Reg);
-
-  return 0;
 }
 
 unsigned WebAssemblyFastISel::zeroExtend(unsigned Reg, const Value *V,
@@ -1018,7 +994,28 @@ bool WebAssemblyFastISel::selectTrunc(const Instruction *I) {
   Register In = getRegForValue(Op);
   if (In == 0)
     return false;
-  unsigned Reg = truncate(In, Op, From, To);
+
+  auto Truncate = [&](Register Reg) -> unsigned {
+    if (From == MVT::i64) {
+      if (To == MVT::i64)
+        return copyValue(Reg);
+
+      if (To == MVT::i1 || To == MVT::i8 || To == MVT::i16 || To == MVT::i32) {
+        Register Result = createResultReg(&WebAssembly::I32RegClass);
+        BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
+                TII.get(WebAssembly::I32_WRAP_I64), Result)
+            .addReg(Reg);
+        return Result;
+      }
+    }
+
+    if (From == MVT::i32)
+      return copyValue(Reg);
+
+    return 0;
+  };
+
+  unsigned Reg = Truncate(In);
   if (Reg == 0)
     return false;
 
