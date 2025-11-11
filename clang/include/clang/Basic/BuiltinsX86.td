@@ -93,7 +93,7 @@ let Attributes = [Const, NoThrow, RequiredVectorWidth<128>] in {
   }
 
 
-  let Features = "sse3" in {
+  let Features = "sse3", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<128>] in {
     foreach Op = ["addsub"] in {
       def Op#ps : X86Builtin<"_Vector<4, float>(_Vector<4, float>, _Vector<4, float>)">;
       def Op#pd : X86Builtin<"_Vector<2, double>(_Vector<2, double>, _Vector<2, double>)">;
@@ -121,7 +121,7 @@ let Attributes = [Const, NoThrow, RequiredVectorWidth<128>] in {
 }
 
 // AVX
-let Attributes = [Const, NoThrow, RequiredVectorWidth<256>], Features = "avx" in {
+let Attributes = [Const, NoThrow, Constexpr, RequiredVectorWidth<256>], Features = "avx" in {
   foreach Op = ["addsub", "max", "min"] in {
     def Op#pd256 : X86Builtin<"_Vector<4, double>(_Vector<4, double>, _Vector<4, double>)">;
     def Op#ps256 : X86Builtin<"_Vector<8, float>(_Vector<8, float>, _Vector<8, float>)">;
@@ -4124,7 +4124,7 @@ let Features = "avx512bf16", Attributes = [NoThrow, Const, RequiredVectorWidth<1
   def selectsbf_128 : X86Builtin<"_Vector<8, __bf16>(unsigned char, _Vector<8, __bf16>, _Vector<8, __bf16>)">;
 }
 
-let Features = "avx512f", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
+let Features = "avx512f", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<128>] in {
   def selectss_128 : X86Builtin<"_Vector<4, float>(unsigned char, _Vector<4, float>, _Vector<4, float>)">;
   def selectsd_128 : X86Builtin<"_Vector<2, double>(unsigned char, _Vector<2, double>, _Vector<2, double>)">;
 }
