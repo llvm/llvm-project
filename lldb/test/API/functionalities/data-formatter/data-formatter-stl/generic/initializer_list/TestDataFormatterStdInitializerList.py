@@ -38,3 +38,8 @@ class InitializerListTestCase(TestBase):
     def test_libcxx(self):
         self.build(dictionary={"USE_LIBCPP": 1})
         self.do_test()
+
+    @add_test_categories(["libstdcxx"])
+    def test_libstdcpp(self):
+        self.build(dictionary={"USE_LIBSTDCPP": 1})
+        self.do_test()

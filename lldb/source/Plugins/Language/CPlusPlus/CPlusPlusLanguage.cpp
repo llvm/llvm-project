@@ -899,11 +899,6 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
       "libc++ std::unordered containers synthetic children",
       "^std::__[[:alnum:]]+::unordered_(multi)?(map|set)<.+> >$",
       stl_synth_flags, true);
-  AddCXXSynthetic(
-      cpp_category_sp,
-      lldb_private::formatters::LibcxxInitializerListSyntheticFrontEndCreator,
-      "libc++ std::initializer_list synthetic children",
-      "^std::initializer_list<.+>$", stl_synth_flags, true);
   AddCXXSynthetic(cpp_category_sp, LibcxxQueueFrontEndCreator,
                   "libc++ std::queue synthetic children",
                   "^std::__[[:alnum:]]+::queue<.+>$", stl_synth_flags, true);
@@ -1705,6 +1700,11 @@ static void LoadCommonStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
           },
           "MSVC STL/libstdc++ std::wstring summary provider"));
 
+  AddCXXSynthetic(cpp_category_sp,
+                  GenericInitializerListSyntheticFrontEndCreator,
+                  "libc++/libstdc++ std::initializer_list synthetic children",
+                  "^std::initializer_list<.+>$", stl_synth_flags, true);
+
   stl_summary_flags.SetDontShowChildren(false);
   stl_summary_flags.SetSkipPointers(false);
 
@@ -1748,6 +1748,9 @@ static void LoadCommonStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
                   "^std::(multi)?(map|set)<.+>(( )?&)?$", stl_synth_flags,
                   true);
 
+  AddCXXSummary(cpp_category_sp, ContainerSizeSummaryProvider,
+                "libc++/libstdc++ std::initializer_list summary provider",
+                "^std::initializer_list<.+>$", stl_summary_flags, true);
   AddCXXSummary(cpp_category_sp, GenericSmartPointerSummaryProvider,
                 "MSVC STL/libstdc++ std::shared_ptr summary provider",
                 "^std::shared_ptr<.+>(( )?&)?$", stl_summary_flags, true);
