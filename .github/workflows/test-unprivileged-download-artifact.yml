@@ -29,7 +29,7 @@ jobs:
         with:
           name: workflow-args
           path: |
-            comments
+            comment
 
   test-download:
     name: Test Unprivileged Download Artifact
