@@ -2445,6 +2445,8 @@ public:
   ///
   /// \param FD The FieldDecl to apply the attribute to
   /// \param E The count expression on the attribute
+  /// \param NestedTypeLevel The pointer indirection level where the attribute
+  ///                        applies
   /// \param CountInBytes If true the attribute is from the "sized_by" family of
   ///                     attributes. If the false the attribute is from
   ///                     "counted_by" family of attributes.
@@ -2457,8 +2459,9 @@ public:
   /// `counted_by_or_null` attribute.
   ///
   /// \returns false iff semantically valid.
-  bool CheckCountedByAttrOnField(FieldDecl *FD, Expr *E, unsigned Level,
-                                 bool CountInBytes, bool OrNull);
+  bool CheckCountedByAttrOnField(FieldDecl *FD, Expr *E,
+                                 unsigned NestedTypeLevel, bool CountInBytes,
+                                 bool OrNull);
 
   /// Perform Bounds Safety Semantic checks for assigning to a `__counted_by` or
   /// `__counted_by_or_null` pointer type \param LHSTy.
