@@ -2507,9 +2507,10 @@ void VPWidenGEPRecipe::execute(VPTransformState &State) {
   // is vector-typed. Thus, to keep the representation compact, we only use
   // vector-typed operands for loop-varying values.
 
-  assert(!all_of(operands(), [](VPValue *Op) {
-    return Op->isDefinedOutsideLoopRegions();
-  }) && "Expected at least one loop-variant operand");
+  assert(
+      any_of(operands(),
+             [](VPValue *Op) { return !Op->isDefinedOutsideLoopRegions(); }) &&
+      "Expected at least one loop-variant operand");
 
   // If the GEP has at least one loop-varying operand, we are sure to
   // produce a vector of pointers unless VF is scalar.
