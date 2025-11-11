@@ -46,7 +46,8 @@ multiclass PseudoVABS {
 multiclass VPseudoVWABD_VV {
   foreach m = MxListW in {
     defvar mx = m.MX;
-    defm "" : VPseudoTernaryW_VV<m, Commutable = 1>,
+    // TODO: These instructions are commutable, we should support it.
+    defm "" : VPseudoTernaryW_VV<m, Commutable = 0>,
               SchedTernary<"WriteVIWMulAddV", "ReadVIWMulAddV",
                            "ReadVIWMulAddV", "ReadVIWMulAddV", mx>;
   }
