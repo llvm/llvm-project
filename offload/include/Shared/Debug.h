@@ -210,17 +210,30 @@ inline uint32_t getDebugLevel() {
 // defined for each debug message but by default they are "default" and "1"
 // respectively.
 //
-// For liboffload and plugins, use OFFLOAD_DEBUG(...)
-// For libomptarget, use OPENMP_DEBUG(...)
 // Constructing messages should be done using C++ stream style syntax.
 //
 // Usage examples:
-// OFFLOAD_DEBUG("type1", 2, "This is a level 2 message of type1");
-// OFFLOAD_DEBUG("Init", "This is a default level of the init type");
-// OPENMP_DEBUG("This is a level 1 message of the default type");
-// OFFLOAD_DEBUG("Init", 3, NumDevices << " were initialized\n");
-// OFFLOAD_DEBUG("Kernel", "Starting kernel " << KernelName << " on device " <<
-//               DeviceId);
+// ODBG("type1", 2) << "This is a level 2 message of type1";
+// ODBG("Init") << "This is a default level of the init type";
+// ODBG() << "This is a level 1 message of the default type";
+// ODBG("Init", 3) << NumDevices << " were initialized";
+// ODBG("Kernel") << "Launching " << KernelName << " on device " << DeviceId;
+//
+// Additionally, ODBG_IF_LEVEL can be used to have parts of a stream to provide
+// additional detail at different levels without needing to split the message.
+// Using ODBG_RESET_LEVEL will reset the level back to the original level.
+// E.g.:
+// ODBG("Mapping", 2) << "Function F"
+//   << ODBG_IF_LEVEL(3) << " with argument value=" << Arg
+//   << ODBG_IF_LEVEL(4) << " and address=" << &Arg
+//   << ODBG_RESET_LEVEL() << " called";
+//
+// Similarly the ODBG_ONLY_LEVEL can be used to print parts of a stream only at
+// a specific level, e.g.:
+// ODBG() << "Starting computation "
+//   << ODBG_ONLY_LEVEL(1) << "on a device"
+//   << ODBG_ONLY_LEVEL(2) << "and mapping data on device" << DeviceId;
+//   << ODBG_ONLY_LEVEL(3) << dumpDetailedMappingInfo(DeviceId);
 //
 // Message output can be controlled by setting LIBOMPTARGET_DEBUG or
 // LIBOFFLOAD_DEBUG environment variables. Their syntax is as follows:
@@ -245,8 +258,8 @@ inline uint32_t getDebugLevel() {
 //                                   of level 4 or lower and messages of type
 //                                   "init" of level 1 or lower)
 //
-// For very specific cases where more control is needed, use OFFLOAD_DEBUG_RAW
-// or OFFLOAD_DEBUG_BASE. See below for details.
+// For very specific cases where more control is needed, use ODBG_STREAM or
+// ODBG_BASE. See below for details.
 
 namespace llvm::offload::debug {
 
@@ -264,7 +277,7 @@ struct DebugSettings {
 };
 
 /// dbgs - Return a circular-buffered debug stream.
-inline llvm::raw_ostream &dbgs() {
+[[maybe_unused]] static llvm::raw_ostream &dbgs() {
   // Do one-time initialization in a thread-safe way.
   static struct dbgstream {
     llvm::circular_raw_ostream strm;
@@ -275,7 +288,7 @@ inline llvm::raw_ostream &dbgs() {
   return thestrm.strm;
 }
 
-inline DebugFilter parseDebugFilter(StringRef Filter) {
+[[maybe_unused]] static DebugFilter parseDebugFilter(StringRef Filter) {
   size_t Pos = Filter.find(':');
   if (Pos == StringRef::npos)
     return {Filter, 1};
@@ -288,7 +301,7 @@ inline DebugFilter parseDebugFilter(StringRef Filter) {
   return {Type, Level};
 }
 
-inline DebugSettings &getDebugSettings() {
+[[maybe_unused]] static DebugSettings &getDebugSettings() {
   static DebugSettings Settings;
   static std::once_flag Flag{};
   std::call_once(Flag, []() {
@@ -329,67 +342,174 @@ inline DebugSettings &getDebugSettings() {
 
 inline bool isDebugEnabled() { return getDebugSettings().Enabled; }
 
-inline bool shouldPrintDebug(const char *Component, const char *Type,
-                             uint32_t Level) {
+[[maybe_unused]] static bool
+shouldPrintDebug(const char *Component, const char *Type, uint32_t &Level) {
   const auto &Settings = getDebugSettings();
   if (!Settings.Enabled)
     return false;
 
-  if (Settings.Filters.empty())
-    return Level <= Settings.DefaultLevel;
+  if (Settings.Filters.empty()) {
+    if (Level <= Settings.DefaultLevel) {
+      Level = Settings.DefaultLevel;
+      return true;
+    }
+    return false;
+  }
 
   for (const auto &DT : Settings.Filters) {
     if (DT.Level < Level)
       continue;
-    if (DT.Type.equals_insensitive(Type))
+    if (DT.Type.equals_insensitive(Type) ||
+        DT.Type.equals_insensitive(Component)) {
+      Level = DT.Level;
       return true;
-    if (DT.Type.equals_insensitive(Component))
-      return true;
+    }
   }
 
   return false;
 }
 
-#define OFFLOAD_DEBUG_BASE(Component, Type, Level, ...)                        \
-  do {                                                                         \
-    if (llvm::offload::debug::isDebugEnabled() &&                              \
-        llvm::offload::debug::shouldPrintDebug(Component, Type, Level))        \
-      __VA_ARGS__;                                                             \
-  } while (0)
+/// A raw_ostream that tracks `\n` and print the prefix after each
+/// newline. Based on raw_ldbg_ostream from Support/DebugLog.h
+class LLVM_ABI odbg_ostream final : public raw_ostream {
+public:
+  enum IfLevel : uint32_t;
+  enum OnlyLevel : uint32_t;
 
-#define OFFLOAD_DEBUG_RAW(Type, Level, X)                                      \
-  OFFLOAD_DEBUG_BASE(GETNAME(TARGET_NAME), Type, Level, X)
+private:
+  std::string Prefix;
+  raw_ostream &Os;
+  uint32_t BaseLevel;
+  bool ShouldPrefixNextString;
+  bool ShouldEmitNewLineOnDestruction;
 
-#define OFFLOAD_DEBUG_1(X)                                                     \
-  OFFLOAD_DEBUG_BASE(GETNAME(TARGET_NAME), "default", 1,                       \
-                     llvm::offload::debug::dbgs()                              \
-                         << DEBUG_PREFIX << " --> " << X)
+  /// If the stream is muted, writes to it are ignored
+  bool Muted = false;
 
-#define OFFLOAD_DEBUG_2(Type, X)                                               \
-  OFFLOAD_DEBUG_BASE(GETNAME(TARGET_NAME), Type, 1,                            \
-                     llvm::offload::debug::dbgs()                              \
-                         << DEBUG_PREFIX << " --> " << X)
+  /// Split the line on newlines and insert the prefix before each
+  /// newline. Forward everything to the underlying stream.
+  void write_impl(const char *Ptr, size_t Size) final {
+    if (Muted)
+      return;
 
-#define OFFLOAD_DEBUG_3(Type, Level, X)                                        \
-  OFFLOAD_DEBUG_BASE(GETNAME(TARGET_NAME), Type, Level,                        \
-                     llvm::offload::debug::dbgs()                              \
-                         << DEBUG_PREFIX << " --> " << X)
+    auto Str = StringRef(Ptr, Size);
+    auto Eol = Str.find('\n');
+    // Handle `\n` occurring in the string, ensure to print the prefix at the
+    // beginning of each line.
+    while (Eol != StringRef::npos) {
+      // Take the line up to the newline (including the newline).
+      StringRef Line = Str.take_front(Eol + 1);
+      if (!Line.empty())
+        writeWithPrefix(Line);
+      // We printed a newline, record here to print a prefix.
+      ShouldPrefixNextString = true;
+      Str = Str.drop_front(Eol + 1);
+      Eol = Str.find('\n');
+    }
+    if (!Str.empty())
+      writeWithPrefix(Str);
+  }
+  void emitPrefix() { Os.write(Prefix.c_str(), Prefix.size()); }
+  void writeWithPrefix(StringRef Str) {
+    if (ShouldPrefixNextString) {
+      emitPrefix();
+      ShouldPrefixNextString = false;
+    }
+    Os.write(Str.data(), Str.size());
+  }
 
-#define OFFLOAD_SELECT(Type, Level, X, NArgs, ...) OFFLOAD_DEBUG_##NArgs
+public:
+  explicit odbg_ostream(std::string Prefix, raw_ostream &Os, uint32_t BaseLevel,
+                        bool ShouldPrefixNextString = true,
+                        bool ShouldEmitNewLineOnDestruction = false)
+      : Prefix(std::move(Prefix)), Os(Os), BaseLevel(BaseLevel),
+        ShouldPrefixNextString(ShouldPrefixNextString),
+        ShouldEmitNewLineOnDestruction(ShouldEmitNewLineOnDestruction) {
+    SetUnbuffered();
+  }
+  ~odbg_ostream() final {
+    if (ShouldEmitNewLineOnDestruction)
+      Os << '\n';
+  }
 
-// To be used in liboffload and plugins
-#define OFFLOAD_DEBUG(...) OFFLOAD_SELECT(__VA_ARGS__, 3, 2, 1)(__VA_ARGS__)
+  /// Forward the current_pos method to the underlying stream.
+  uint64_t current_pos() const final { return Os.tell(); }
 
-// To be used in libomptarget only
-#define OPENMP_DEBUG(...) OFFLOAD_DEBUG(__VA_ARGS__)
+  /// Some of the `<<` operators expect an lvalue, so we trick the type
+  /// system.
+  odbg_ostream &asLvalue() { return *this; }
+
+  void shouldMute(const IfLevel Filter) { Muted = Filter > BaseLevel; }
+  void shouldMute(const OnlyLevel Filter) { Muted = BaseLevel != Filter; }
+};
+
+/// Compute the prefix for the debug log in the form of:
+/// "Component --> "
+[[maybe_unused]] static std::string computePrefix(StringRef Component,
+                                                  StringRef DebugType) {
+  std::string Prefix;
+  raw_string_ostream OsPrefix(Prefix);
+  OsPrefix << Component << " --> ";
+  return OsPrefix.str();
+}
+
+static inline raw_ostream &operator<<(raw_ostream &Os,
+                                      const odbg_ostream::IfLevel Filter) {
+  odbg_ostream &Dbg = static_cast<odbg_ostream &>(Os);
+  Dbg.shouldMute(Filter);
+  return Dbg;
+}
+
+static inline raw_ostream &operator<<(raw_ostream &Os,
+                                      const odbg_ostream::OnlyLevel Filter) {
+  odbg_ostream &Dbg = static_cast<odbg_ostream &>(Os);
+  Dbg.shouldMute(Filter);
+  return Dbg;
+}
+
+#define ODBG_BASE(Stream, Component, Prefix, Type, Level)                      \
+  for (uint32_t RealLevel = (Level),                                           \
+                _c = llvm::offload::debug::isDebugEnabled() &&                 \
+                     llvm::offload::debug::shouldPrintDebug(                   \
+                         (Component), (Type), RealLevel);                      \
+       _c; _c = 0)                                                             \
+  ::llvm::offload::debug::odbg_ostream{                                        \
+      ::llvm::offload::debug::computePrefix((Prefix), (Type)), (Stream),       \
+      RealLevel, /*ShouldPrefixNextString=*/true,                              \
+      /*ShouldEmitNewLineOnDestruction=*/true}                                 \
+      .asLvalue()
+
+#define ODBG_STREAM(Stream, Type, Level)                                       \
+  ODBG_BASE(Stream, GETNAME(TARGET_NAME), DEBUG_PREFIX, Type, Level)
+
+#define ODBG_0() ODBG_2("default", 1)
+#define ODBG_1(Type) ODBG_2(Type, 1)
+#define ODBG_2(Type, Level)                                                    \
+  ODBG_STREAM(llvm::offload::debug::dbgs(), Type, Level)
+#define ODBG_SELECT(Type, Level, NArgs, ...) ODBG_##NArgs
+
+#define ODBG_IF_LEVEL(Level)                                                   \
+  static_cast<llvm::offload::debug::odbg_ostream::IfLevel>(Level)
+#define ODBG_ONLY_LEVEL(Level)                                                 \
+  static_cast<llvm::offload::debug::odbg_ostream::OnlyLevel>(Level)
+#define ODBG_RESET_LEVEL()                                                     \
+  static_cast<llvm::offload::debug::odbg_ostream::IfLevel>(0)
+
+#define ODBG(...) ODBG_SELECT(__VA_ARGS__ __VA_OPT__(, ) 2, 1, 0)(__VA_ARGS__)
 
 #else
 
+#define ODBG_NULL                                                              \
+  for (bool _c = false; _c; _c = false)                                        \
+  ::llvm::nulls()
+
 // Don't print anything if debugging is disabled
-#define OFFLOAD_DEBUG_BASE(Component, Type, Level, ...)
-#define OFFLOAD_DEBUG_RAW(Type, Level, X)
-#define OFFLOAD_DEBUG(...)
-#define OPENMP_DEBUG(...)
+#define ODBG_BASE(Stream, Component, Prefix, Type, Level) ODBG_NULL
+#define ODBG_STREAM(Stream, Type, Level) ODBG_NULL
+#define ODBG_IF_LEVEL(Level) 0
+#define ODBG_ONLY_LEVEL(Level) 0
+#define ODBG_RESET_LEVEL() 0
+#define ODBG(...) ODBG_NULL
 
 #endif
 

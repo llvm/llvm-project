@@ -36,7 +36,7 @@ void PluginManager::init() {
     return;
   }
 
-  OPENMP_DEBUG("Init", "Loading RTLs\n");
+  ODBG("Init") << "Loading RTLs";
 
   // Attempt to create an instance of each supported plugin.
 #define PLUGIN_TARGET(Name)                                                    \
