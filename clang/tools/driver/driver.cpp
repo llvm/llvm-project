@@ -350,8 +350,8 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
   unsigned NumParallelJobs =
       getLastArgIntValue(ArgList, options::OPT_parallel_jobs_EQ, 1, Diags);
   UseNewCC1Process =
-      ArgList.hasFlag(clang::driver::options::OPT_fno_integrated_cc1,
-                      clang::driver::options::OPT_fintegrated_cc1,
+      ArgList.hasFlag(clang::options::OPT_fno_integrated_cc1,
+                      clang::options::OPT_fintegrated_cc1,
                       /*Default=*/NumParallelJobs > 1 ? true : CLANG_SPAWN_CC1);
 
   if (!DiagOpts->DiagnosticSerializationFile.empty()) {

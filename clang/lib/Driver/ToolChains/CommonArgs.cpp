@@ -1438,7 +1438,7 @@ void tools::addOpenMPRuntimeSpecificRPath(const ToolChain &TC,
       addRPathCmdArg(Args, CmdArgs, CandidateRPath_lib);
 
     std::string rocmPath =
-        Args.getLastArgValue(clang::driver::options::OPT_rocm_path_EQ).str();
+        Args.getLastArgValue(clang::options::OPT_rocm_path_EQ).str();
     if (rocmPath.size() != 0) {
       std::string rocmPath_lib = rocmPath + "/lib";
       std::string rocmPath_suf = rocmPath + "/" + LibSuffix;

@@ -734,7 +734,7 @@ void Linux::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
   if (DriverArgs.hasArg(options::OPT_nostdinc))
     return;
 
-  if (DriverArgs.hasArg(clang::driver::options::OPT_fopenmp)) {
+  if (DriverArgs.hasArg(clang::options::OPT_fopenmp)) {
     // Look for system files in our compiler AOMP/include dir first
     addSystemInclude(DriverArgs, CC1Args,
                      DriverArgs.MakeArgString(D.Dir + "/../include"));

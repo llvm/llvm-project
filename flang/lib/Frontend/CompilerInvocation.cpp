@@ -481,17 +481,16 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
     opts.Underscoring = 0;
   }
 
-  if (args.hasFlag(clang::driver::options::OPT_foffload_global_filtering,
-                   clang::driver::options::OPT_fno_offload_global_filtering,
-                   false)) {
+  if (args.hasFlag(clang::options::OPT_foffload_global_filtering,
+                   clang::options::OPT_fno_offload_global_filtering, false)) {
     opts.OffloadGlobalFiltering = 1;
   }
 
   parseDoConcurrentMapping(opts, args, diags);
 
   opts.DeferDescriptorMapping =
-      args.hasFlag(clang::driver::options::OPT_fdefer_desc_map,
-                   clang::driver::options::OPT_fno_defer_desc_map, true);
+      args.hasFlag(clang::options::OPT_fdefer_desc_map,
+                   clang::options::OPT_fno_defer_desc_map, true);
 
   if (const llvm::opt::Arg *arg =
           args.getLastArg(clang::options::OPT_complex_range_EQ)) {
@@ -872,7 +871,7 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
                                     false));
 
   // -ffast-amd-memory-allocator
-  if (args.hasArg(clang::driver::options::OPT_ffast_amd_memory_allocator)) {
+  if (args.hasArg(clang::options::OPT_ffast_amd_memory_allocator)) {
     opts.features.Enable(
         (Fortran::common::LanguageFeature::AmdMemoryAllocator));
   }
@@ -1339,8 +1338,7 @@ static bool parseOpenMPArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
     }
   }
 
-  if (args.hasArg(
-          clang::driver::options::OPT_famd_allow_threadprivate_equivalence))
+  if (args.hasArg(clang::options::OPT_famd_allow_threadprivate_equivalence))
     res.getLangOpts().AllowThreadprivateEquivalence = true;
 
   return diags.getNumErrors() == numErrorsBefore;
