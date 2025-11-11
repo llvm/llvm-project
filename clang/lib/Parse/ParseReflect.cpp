@@ -16,21 +16,22 @@
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
 using namespace clang;
 
-ExprResult Parser::ParseCXXReflectExpression(SourceLocation DoubleCaretLoc) {
+ExprResult Parser::ParseCXXReflectExpression() {
   // TODO(reflection) : support parsing for more reflect-expressions.
   EnterExpressionEvaluationContext Unevaluated(
       Actions, Sema::ExpressionEvaluationContext::Unevaluated);
+  assert(Tok.is(tok::caretcaret) && "expecting reflection operator ^^");
+  SourceLocation DoubleCaretLoc = Tok.getLocation();
+  ConsumeToken();
 
   CXXScopeSpec SS;
   if (ParseOptionalCXXScopeSpecifier(SS, /*ObjectType=*/nullptr,
                                      /*ObjectHasErrors=*/false,
                                      /*EnteringContext=*/false)) {
-    SkipUntil(tok::semi, StopAtSemi | StopBeforeMatch);
     return ExprError();
   }
 
   SourceLocation OperandLoc = Tok.getLocation();
-  TentativeParsingAction TPA(*this);
 
   if (Tok.isOneOf(tok::identifier, tok::kw_operator, tok::kw_template,
                   tok::tilde, tok::annot_template_id)) {
@@ -39,18 +40,15 @@ ExprResult Parser::ParseCXXReflectExpression(SourceLocation DoubleCaretLoc) {
     // - nested-name-specifier identifier ::
     // - namespace-name ::
     // - nested-name-specifier template_opt simple-template-id
-    TPA.Revert();
     Diag(OperandLoc, diag::err_cannot_reflect_operand);
     return ExprError();
   } else if (SS.isValid() &&
              SS.getScopeRep().getKind() == NestedNameSpecifier::Kind::Global) {
     // global namespace ::.
-    TPA.Commit();
     Decl *TUDecl = Actions.getASTContext().getTranslationUnitDecl();
     return Actions.ActOnCXXReflectExpr(DoubleCaretLoc, SourceLocation(),
                                        TUDecl);
   }
-  TPA.Revert();
 
   if (isCXXTypeId(TentativeCXXTypeIdContext::AsReflectionOperand)) {
     TypeResult TR = ParseTypeName(/*TypeOf=*/nullptr);

@@ -5162,11 +5162,10 @@ private:
   // Reflection parsing
 
   /// ParseCXXReflectExpression - parses the operand of reflection operator
-  /// \param DoubleCaretLoc the location of the double caret operator
   ///
   /// \returns on success, an expression holding the constructed CXXReflectExpr;
   ///          on failture, an ExprError
-  ExprResult ParseCXXReflectExpression(SourceLocation DoubleCaretLoc);
+  ExprResult ParseCXXReflectExpression();
 
   //
   //
@@ -5177,8 +5176,6 @@ private:
   /// \name HLSL Constructs
   /// Implementations are in ParseHLSL.cpp
   ///@{
-
-  //===--------------------------------------------------------------------===//
 
 private:
   bool MaybeParseHLSLAnnotations(Declarator &D,
