@@ -70,6 +70,10 @@ Changes to the LLVM IR
 * Added `@llvm.reloc.none` intrinsic to emit null relocations to symbols. This
   emits an undefined symbol reference without adding any dedicated code or data to
   to bear the relocation.
+* Added `modular-format` attribute to dynamically pull in aspects of libc
+  format string function implementations from statically-linked libc's based on
+  the requirements of each call. Currently only `float` is supported; this can
+  keep floating point support out of printf if it can be proven unused.
 
 Changes to LLVM infrastructure
 ------------------------------
