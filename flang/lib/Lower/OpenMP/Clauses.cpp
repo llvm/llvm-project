@@ -1499,7 +1499,7 @@ Threadset make(const parser::OmpClause::Threadset &inp,
 }
 
 Transparent make(const parser::OmpClause::Transparent &inp,
-               semantics::SemanticsContext &semaCtx) {
+                 semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::OmpTransparentClause
   using wrapped = parser::OmpTransparentClause;
 
