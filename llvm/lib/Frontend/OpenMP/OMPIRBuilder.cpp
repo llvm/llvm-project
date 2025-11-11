@@ -4888,6 +4888,9 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::applyStaticWorkshareLoop(
       LoopType != WorksharingLoopType::DistributeStaticLoop) {
     Constant *DistScheduleSchedType = ConstantInt::get(
         I32Type, static_cast<int>(omp::OMPScheduleType::OrderedDistribute));
+    // We want to emit a second init function call for the dist_schedule clause
+    // to the Distribute construct. This should only be done however if a
+    // Workshare Loop is nested within a Distribute Construct
     BuildInitCall(DistScheduleSchedType, Builder);
   }
   Value *LowerBound = Builder.CreateLoad(IVTy, PLowerBound);
