@@ -201,3 +201,13 @@ class InsertPrefetchOp(InsertPrefetchOp):
             loc=loc,
             ip=ip,
         )
+
+
+def insert_prefetch(
+    target: Value,
+    *,
+    nb_prefetch: Optional[MixedInt] = 1,
+    loc=None,
+    ip=None,
+) -> OpResult:
+    return InsertPrefetchOp(target, nb_prefetch=nb_prefetch, loc=loc, ip=ip).result

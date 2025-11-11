@@ -139,7 +139,7 @@ def insertPrefetch0():
     )
     with InsertionPoint(sequence.body):
         operand = transform.GetOperandOp(AnyValueType.get(), sequence.bodyTarget, [0])
-        xegpu.InsertPrefetchOp(
+        xegpu.insert_prefetch(
             operand,
         )
         transform.YieldOp()
@@ -157,7 +157,7 @@ def insertPrefetchNbPrefetch():
     )
     with InsertionPoint(sequence.body):
         operand = transform.GetOperandOp(AnyValueType.get(), sequence.bodyTarget, [0])
-        xegpu.InsertPrefetchOp(
+        xegpu.insert_prefetch(
             operand,
             nb_prefetch=2,
         )
@@ -183,7 +183,7 @@ def insertPrefetchNbPrefetchParam():
             param_int32_t,
             IntegerAttr.get(int32_t, 2),
         )
-        xegpu.InsertPrefetchOp(
+        xegpu.insert_prefetch(
             operand,
             nb_prefetch=nb_param,
         )
