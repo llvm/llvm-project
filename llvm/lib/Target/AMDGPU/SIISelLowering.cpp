@@ -17367,12 +17367,14 @@ void SITargetLowering::AddMemOpInit(MachineInstr &MI) const {
     // Abandon attempt if the dst size isn't large enough
     // - this is in fact an error but this is picked up elsewhere and
     // reported correctly.
-    uint32_t DstSize =
-        TRI.getRegSizeInBits(*TII->getOpRegClass(MI, DstIdx)) / 32;
+    const TargetRegisterClass *DstRC = TII->getRegClass(MI.getDesc(), DstIdx);
+
+    uint32_t DstSize = TRI.getRegSizeInBits(*DstRC) / 32;
     if (DstSize < InitIdx)
       return;
   } else if (TII->isMUBUF(MI) && AMDGPU::getMUBUFTfe(MI.getOpcode())) {
-    InitIdx = TRI.getRegSizeInBits(*TII->getOpRegClass(MI, DstIdx)) / 32;
+    const TargetRegisterClass *DstRC = TII->getRegClass(MI.getDesc(), DstIdx);
+    InitIdx = TRI.getRegSizeInBits(*DstRC) / 32;
   } else {
     return;
   }

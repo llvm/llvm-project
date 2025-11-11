@@ -2496,7 +2496,8 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
 
   if (Attribute FPAttr = Attrs.getFnAttr("frame-pointer"); FPAttr.isValid()) {
     StringRef FP = FPAttr.getValueAsString();
-    if (FP != "all" && FP != "non-leaf" && FP != "none" && FP != "reserved")
+    if (FP != "all" && FP != "non-leaf" && FP != "none" && FP != "reserved" &&
+        FP != "non-leaf-no-reserve")
       CheckFailed("invalid value for 'frame-pointer' attribute: " + FP, V);
   }
 

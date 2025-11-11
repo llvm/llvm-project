@@ -54,7 +54,7 @@ CODEGENOPT(SeparateNamedSections, 1, 0, Benign) ///< Set for -fseparate-named-se
 CODEGENOPT(EnableAIXExtendedAltivecABI, 1, 0, Benign) ///< Set for -mabi=vec-extabi. Enables the extended Altivec ABI on AIX.
 CODEGENOPT(XCOFFReadOnlyPointers, 1, 0, Benign) ///< Set for -mxcoff-roptr.
 CODEGENOPT(AllTocData, 1, 0, Benign) ///< AIX -mtocdata
-ENUM_CODEGENOPT(FramePointer, FramePointerKind, 2, FramePointerKind::None, Benign) /// frame-pointer: all,non-leaf,reserved,none
+ENUM_CODEGENOPT(FramePointer, FramePointerKind, 3, FramePointerKind::None, Benign) /// frame-pointer: all,non-leaf,non-leaf-no-reserve,reserved,none
 
 ENUM_CODEGENOPT(ExceptionHandling, ExceptionHandlingKind, 3, ExceptionHandlingKind::None, NotCompatible)
 

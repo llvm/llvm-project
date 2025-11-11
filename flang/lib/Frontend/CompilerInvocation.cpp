@@ -309,6 +309,8 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
         llvm::StringSwitch<std::optional<llvm::FramePointerKind>>(a->getValue())
             .Case("none", llvm::FramePointerKind::None)
             .Case("non-leaf", llvm::FramePointerKind::NonLeaf)
+            .Case("non-leaf-no-reserve",
+                  llvm::FramePointerKind::NonLeafNoReserve)
             .Case("reserved", llvm::FramePointerKind::Reserved)
             .Case("all", llvm::FramePointerKind::All)
             .Default(std::nullopt);

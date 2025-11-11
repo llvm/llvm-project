@@ -336,7 +336,7 @@ void AMDGPUInstPrinter::printSymbolicFormat(const MCInst *MI,
 
 // \returns a low 256 vgpr representing a high vgpr \p Reg [v256..v1023] or
 // \p Reg itself otherwise.
-static MCPhysReg getRegForPrinting(MCPhysReg Reg, const MCRegisterInfo &MRI) {
+static MCRegister getRegForPrinting(MCRegister Reg, const MCRegisterInfo &MRI) {
   unsigned Enc = MRI.getEncodingValue(Reg);
   unsigned Idx = Enc & AMDGPU::HWEncoding::REG_IDX_MASK;
   if (Idx < 0x100)
@@ -355,10 +355,10 @@ static MCPhysReg getRegForPrinting(MCPhysReg Reg, const MCRegisterInfo &MRI) {
 }
 
 // Restore MSBs of a VGPR above 255 from the MCInstrAnalysis.
-static MCPhysReg getRegFromMIA(MCPhysReg Reg, unsigned OpNo,
-                               const MCInstrDesc &Desc,
-                               const MCRegisterInfo &MRI,
-                               const AMDGPUMCInstrAnalysis &MIA) {
+static MCRegister getRegFromMIA(MCRegister Reg, unsigned OpNo,
+                                const MCInstrDesc &Desc,
+                                const MCRegisterInfo &MRI,
+                                const AMDGPUMCInstrAnalysis &MIA) {
   unsigned VgprMSBs = MIA.getVgprMSBs();
   if (!VgprMSBs)
     return Reg;
@@ -403,10 +403,10 @@ void AMDGPUInstPrinter::printRegOperand(MCRegister Reg, raw_ostream &O,
   }
 #endif
 
-  unsigned PrintReg = getRegForPrinting(Reg, MRI);
+  MCRegister PrintReg = getRegForPrinting(Reg, MRI);
   O << getRegisterName(PrintReg);
 
-  if (PrintReg != Reg.id())
+  if (PrintReg != Reg)
     O << " /*" << getRegisterName(Reg) << "*/";
 }
 

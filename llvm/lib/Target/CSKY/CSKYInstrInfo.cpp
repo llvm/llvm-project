@@ -24,8 +24,9 @@ using namespace llvm;
 #define GET_INSTRINFO_CTOR_DTOR
 #include "CSKYGenInstrInfo.inc"
 
-CSKYInstrInfo::CSKYInstrInfo(const CSKYSubtarget &STI)
-    : CSKYGenInstrInfo(STI, RI, CSKY::ADJCALLSTACKDOWN, CSKY::ADJCALLSTACKUP),
+CSKYInstrInfo::CSKYInstrInfo(const CSKYSubtarget &STI,
+                             const CSKYRegisterInfo &TRI)
+    : CSKYGenInstrInfo(STI, TRI, CSKY::ADJCALLSTACKDOWN, CSKY::ADJCALLSTACKUP),
       STI(STI) {
   v2sf = STI.hasFPUv2SingleFloat();
   v2df = STI.hasFPUv2DoubleFloat();
@@ -393,7 +394,6 @@ void CSKYInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
                                         MachineBasicBlock::iterator I,
                                         Register SrcReg, bool IsKill, int FI,
                                         const TargetRegisterClass *RC,
-                                        const TargetRegisterInfo *TRI,
                                         Register VReg,
                                         MachineInstr::MIFlag Flags) const {
   DebugLoc DL;
@@ -434,10 +434,12 @@ void CSKYInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
       .addMemOperand(MMO);
 }
 
-void CSKYInstrInfo::loadRegFromStackSlot(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator I, Register DestReg,
-    int FI, const TargetRegisterClass *RC, const TargetRegisterInfo *TRI,
-    Register VReg, MachineInstr::MIFlag Flags) const {
+void CSKYInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
+                                         MachineBasicBlock::iterator I,
+                                         Register DestReg, int FI,
+                                         const TargetRegisterClass *RC,
+                                         Register VReg,
+                                         MachineInstr::MIFlag Flags) const {
   DebugLoc DL;
   if (I != MBB.end())
     DL = I->getDebugLoc();

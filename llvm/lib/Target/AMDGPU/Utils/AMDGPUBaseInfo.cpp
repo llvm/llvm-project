@@ -897,7 +897,7 @@ unsigned ComponentInfo::getIndexInParsedOperands(unsigned CompOprIdx) const {
 }
 
 std::optional<unsigned> InstInfo::getInvalidCompOperandIndex(
-    std::function<unsigned(unsigned, unsigned)> GetRegIdx,
+    std::function<MCRegister(unsigned, unsigned)> GetRegIdx,
     const MCRegisterInfo &MRI, bool SkipSrc, bool AllowSameVGPR,
     bool VOPD3) const {
 
@@ -914,12 +914,13 @@ std::optional<unsigned> InstInfo::getInvalidCompOperandIndex(
       BaseX = X;
     if (!BaseY)
       BaseY = Y;
-    if ((BaseX & BanksMask) == (BaseY & BanksMask))
+    if ((BaseX.id() & BanksMask) == (BaseY.id() & BanksMask))
       return true;
     if (BaseX != X /* This is 64-bit register */ &&
-        ((BaseX + 1) & BanksMask) == (BaseY & BanksMask))
+        ((BaseX.id() + 1) & BanksMask) == (BaseY.id() & BanksMask))
       return true;
-    if (BaseY != Y && (BaseX & BanksMask) == ((BaseY + 1) & BanksMask))
+    if (BaseY != Y &&
+        (BaseX.id() & BanksMask) == ((BaseY.id() + 1) & BanksMask))
       return true;
 
     // If both are 64-bit bank conflict will be detected yet while checking
@@ -968,7 +969,7 @@ std::optional<unsigned> InstInfo::getInvalidCompOperandIndex(
 // if the operand is not a register or not a VGPR.
 InstInfo::RegIndices
 InstInfo::getRegIndices(unsigned CompIdx,
-                        std::function<unsigned(unsigned, unsigned)> GetRegIdx,
+                        std::function<MCRegister(unsigned, unsigned)> GetRegIdx,
                         bool VOPD3) const {
   assert(CompIdx < COMPONENTS_NUM);
 
@@ -983,7 +984,7 @@ InstInfo::getRegIndices(unsigned CompIdx,
         Comp.hasRegSrcOperand(CompSrcIdx)
             ? GetRegIdx(CompIdx,
                         Comp.getIndexOfSrcInMCOperands(CompSrcIdx, VOPD3))
-            : 0;
+            : MCRegister();
   }
   return RegIndices;
 }
@@ -2697,8 +2698,8 @@ MCRegister getMCReg(MCRegister Reg, const MCSubtargetInfo &STI) {
 
 MCRegister mc2PseudoReg(MCRegister Reg) { MAP_REG2REG }
 
-bool isInlineValue(unsigned Reg) {
-  switch (Reg) {
+bool isInlineValue(MCRegister Reg) {
+  switch (Reg.id()) {
   case AMDGPU::SRC_SHARED_BASE_LO:
   case AMDGPU::SRC_SHARED_BASE:
   case AMDGPU::SRC_SHARED_LIMIT_LO:
@@ -3361,7 +3362,7 @@ const GcnBufferFormatInfo *getGcnBufferFormatInfo(uint8_t Format,
                           : getGfx9BufferFormatInfo(Format);
 }
 
-const MCRegisterClass *getVGPRPhysRegClass(MCPhysReg Reg,
+const MCRegisterClass *getVGPRPhysRegClass(MCRegister Reg,
                                            const MCRegisterInfo &MRI) {
   const unsigned VGPRClasses[] = {
       AMDGPU::VGPR_16RegClassID,  AMDGPU::VGPR_32RegClassID,
@@ -3382,22 +3383,22 @@ const MCRegisterClass *getVGPRPhysRegClass(MCPhysReg Reg,
   return nullptr;
 }
 
-unsigned getVGPREncodingMSBs(MCPhysReg Reg, const MCRegisterInfo &MRI) {
+unsigned getVGPREncodingMSBs(MCRegister Reg, const MCRegisterInfo &MRI) {
   unsigned Enc = MRI.getEncodingValue(Reg);
   unsigned Idx = Enc & AMDGPU::HWEncoding::REG_IDX_MASK;
   return Idx >> 8;
 }
 
-MCPhysReg getVGPRWithMSBs(MCPhysReg Reg, unsigned MSBs,
-                          const MCRegisterInfo &MRI) {
+MCRegister getVGPRWithMSBs(MCRegister Reg, unsigned MSBs,
+                           const MCRegisterInfo &MRI) {
   unsigned Enc = MRI.getEncodingValue(Reg);
   unsigned Idx = Enc & AMDGPU::HWEncoding::REG_IDX_MASK;
   if (Idx >= 0x100)
-    return AMDGPU::NoRegister;
+    return MCRegister();
 
   const MCRegisterClass *RC = getVGPRPhysRegClass(Reg, MRI);
   if (!RC)
-    return AMDGPU::NoRegister;
+    return MCRegister();
 
   Idx |= MSBs << 8;
   if (RC->getID() == AMDGPU::VGPR_16RegClassID) {
