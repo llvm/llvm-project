@@ -25,12 +25,15 @@ using namespace __cxxabiv1;
 #elif defined(_LIBCPPABI_VERSION)
 #  include "support/runtime/exception_libcxxabi.ipp"
 #  include "support/runtime/exception_pointer_cxxabi.ipp"
+#  include "support/runtime/exception_pointer_refcounted.ipp"
 #elif defined(LIBCXXRT)
 #  include "support/runtime/exception_libcxxrt.ipp"
 #  include "support/runtime/exception_pointer_cxxabi.ipp"
+#  include "support/runtime/exception_pointer_refcounted.ipp"
 #elif defined(__GLIBCXX__)
 #  include "support/runtime/exception_glibcxx.ipp"
 #  include "support/runtime/exception_pointer_glibcxx.ipp"
+#  include "support/runtime/exception_pointer_refcounted.ipp"
 #else
 #  include "include/atomic_support.h"
 #  include "support/runtime/exception_fallback.ipp"

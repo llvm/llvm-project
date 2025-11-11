@@ -276,6 +276,12 @@
 #define _LIBCPP_AVAILABILITY_HAS_PMR _LIBCPP_INTRODUCED_IN_LLVM_16
 #define _LIBCPP_AVAILABILITY_PMR
 
+// This macro controls the availability of exception_ptr::__{inc,dec}rement_refcount
+// which are used in the inline implementations of exception_ptr's move constructor,
+// assignment operator, and destructor (see libcxx/include/__exception/exception_ptr.h).
+#define _LIBCPP_AVAILABILITY_HAS_INCREMENT_DECREMENT_REFCOUNT_EXCEPTION_PTR _LIBCPP_INTRODUCED_IN_LLVM_21
+// No attribute, since we've have a fallback implementation in the headers
+
 // These macros controls the availability of __cxa_init_primary_exception
 // in the built library, which std::make_exception_ptr might use
 // (see libcxx/include/__exception/exception_ptr.h).

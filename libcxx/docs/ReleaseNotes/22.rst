@@ -82,6 +82,9 @@ Improvements and New Features
   iterators, resulting in a performance improvement for ``std::deque<short>`` and
   ``std::join_view<vector<vector<short>>>`` iterators.
 
+- ``std::exception_ptr`` was optimized, allowing the compiler to generate better code especially for empty
+  ``std::exception_ptr`` values.
+
 Deprecations and Removals
 -------------------------
 

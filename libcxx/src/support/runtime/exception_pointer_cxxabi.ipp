@@ -13,27 +13,12 @@
 
 namespace std {
 
-exception_ptr::~exception_ptr() noexcept { __cxa_decrement_exception_refcount(__ptr_); }
-
-exception_ptr::exception_ptr(const exception_ptr& other) noexcept : __ptr_(other.__ptr_) {
-  __cxa_increment_exception_refcount(__ptr_);
+void exception_ptr::__increment_refcount([[__gnu__::__nonnull__]] _LIBCPP_NOESCAPE void* __ptr) noexcept {
+  __cxa_increment_exception_refcount(__ptr);
 }
 
-exception_ptr& exception_ptr::operator=(const exception_ptr& other) noexcept {
-  if (__ptr_ != other.__ptr_) {
-    __cxa_increment_exception_refcount(other.__ptr_);
-    __cxa_decrement_exception_refcount(__ptr_);
-    __ptr_ = other.__ptr_;
-  }
-  return *this;
-}
-
-exception_ptr exception_ptr::__from_native_exception_pointer(void* __e) noexcept {
-  exception_ptr ptr;
-  ptr.__ptr_ = __e;
-  __cxa_increment_exception_refcount(ptr.__ptr_);
-
-  return ptr;
+void exception_ptr::__decrement_refcount([[__gnu__::__nonnull__]] _LIBCPP_NOESCAPE void* __ptr) noexcept {
+  __cxa_decrement_exception_refcount(__ptr);
 }
 
 nested_exception::nested_exception() noexcept : __ptr_(current_exception()) {}
