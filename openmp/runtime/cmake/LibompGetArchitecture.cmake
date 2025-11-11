@@ -17,6 +17,9 @@ function(libomp_get_architecture return_arch)
   set(detect_arch_src_txt "
     #if defined(__KNC__)
       #error ARCHITECTURE=mic
+    // arm64ec also defines _M_AMD64 so this needs to be checked before that
+    #elif defined(_M_ARM64EC)
+      #error ARCHITECTURE=arm64ec
     #elif defined(__amd64__) || defined(__amd64) || defined(__x86_64__) || defined(__x86_64) || defined(_M_X64) || defined(_M_AMD64)
       #error ARCHITECTURE=x86_64
     #elif defined(__i386) || defined(__i386__) || defined(__IA32__) || defined(_M_I86) || defined(_M_IX86) || defined(__X86__) || defined(_X86_)

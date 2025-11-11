@@ -53,6 +53,8 @@ else() # Part of LLVM build
     set(LIBOMP_ARCH aarch64_32)
   elseif(LIBOMP_NATIVE_ARCH MATCHES "aarch64")
     set(LIBOMP_ARCH aarch64)
+  elseif(LIBOMP_NATIVE_ARCH MATCHES "arm64ec")
+    set(LIBOMP_ARCH arm64ec)
   elseif(LIBOMP_NATIVE_ARCH MATCHES "arm64")
     set(LIBOMP_ARCH aarch64)
   elseif(LIBOMP_NATIVE_ARCH MATCHES "arm")
@@ -91,7 +93,7 @@ if(LIBOMP_ARCH STREQUAL "aarch64")
   endif()
 endif()
 
-libomp_check_variable(LIBOMP_ARCH 32e x86_64 32 i386 arm ppc ppc64 ppc64le aarch64 aarch64_32 aarch64_a64fx mic mips mips64 riscv64 loongarch64 ve s390x sparc sparcv9 wasm32)
+libomp_check_variable(LIBOMP_ARCH 32e x86_64 32 i386 arm ppc ppc64 ppc64le aarch64 aarch64_32 aarch64_a64fx arm64ec mic mips mips64 riscv64 loongarch64 ve s390x sparc sparcv9 wasm32)
 
 set(LIBOMP_LIB_TYPE normal CACHE STRING
   "Performance,Profiling,Stubs library (normal/profile/stubs)")
@@ -193,6 +195,8 @@ elseif("${LIBOMP_ARCH}" STREQUAL "aarch64_32") # AARCH64_32 architecture
   set(AARCH64_32 TRUE)
 elseif("${LIBOMP_ARCH}" STREQUAL "aarch64_a64fx") # AARCH64_A64FX architecture
   set(AARCH64_A64FX TRUE)
+elseif("${LIBOMP_ARCH}" STREQUAL "arm64ec") # ARM64EC architecture
+  set(ARM64EC TRUE)
 elseif("${LIBOMP_ARCH}" STREQUAL "mic") # Intel(R) Many Integrated Core Architecture
   set(MIC TRUE)
 elseif("${LIBOMP_ARCH}" STREQUAL "mips") # MIPS architecture

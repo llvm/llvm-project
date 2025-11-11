@@ -12,7 +12,8 @@
 
 #include "kmp.h"
 
-#if (KMP_ARCH_X86 || KMP_ARCH_X86_64 || KMP_ARCH_AARCH64 || KMP_ARCH_ARM)
+#if (KMP_ARCH_X86 || KMP_ARCH_X86_64 || KMP_ARCH_AARCH64 || KMP_ARCH_ARM ||    \
+     KMP_ARCH_ARM64EC)
 /* Only 32-bit "add-exchange" instruction on IA-32 architecture causes us to
    use compare_and_store for these routines */
 
@@ -134,7 +135,7 @@ kmp_uint64 __kmp_test_then_and64(volatile kmp_uint64 *p, kmp_uint64 d) {
   return old_value;
 }
 
-#if KMP_ARCH_AARCH64 && KMP_COMPILER_MSVC
+#if (KMP_ARCH_AARCH64 && KMP_COMPILER_MSVC) || KMP_ARCH_ARM64EC
 // For !KMP_COMPILER_MSVC, this function is provided in assembly form
 // by z_Linux_asm.S.
 int __kmp_invoke_microtask(microtask_t pkfn, int gtid, int tid, int argc,
@@ -189,4 +190,5 @@ int __kmp_invoke_microtask(microtask_t pkfn, int gtid, int tid, int argc,
 }
 #endif
 
-#endif /* KMP_ARCH_X86 || KMP_ARCH_X86_64 || KMP_ARCH_AARCH64 || KMP_ARCH_ARM */
+#endif /* KMP_ARCH_X86 || KMP_ARCH_X86_64 || KMP_ARCH_AARCH64 || KMP_ARCH_ARM  \
+          || KMP_ARCH_ARM64EC */
