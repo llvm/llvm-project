@@ -272,10 +272,9 @@ getFramePointerKind(const llvm::opt::ArgList &Args,
       Args.hasFlag(options::OPT_mno_omit_leaf_frame_pointer,
                    options::OPT_momit_leaf_frame_pointer, DefaultLeafFP);
 
-  bool FPRegReserved =
-      Args.hasFlag(options::OPT_mreserve_frame_pointer_reg,
-                   options::OPT_mno_reserve_frame_pointer_reg,
-                   mustMaintainValidFrameChain(Args, Triple));
+  bool FPRegReserved = Args.hasFlag(options::OPT_mreserve_frame_pointer_reg,
+                                    options::OPT_mno_reserve_frame_pointer_reg,
+                                    mustMaintainValidFrameChain(Args, Triple));
 
   if (EnableFP) {
     if (EnableLeafFP)
