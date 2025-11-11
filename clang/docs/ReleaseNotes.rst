@@ -725,6 +725,7 @@ OpenMP Support
 - Added support for 'omp fuse' directive.
 - Updated parsing and semantic analysis support for ``nowait`` clause to accept
   optional argument in OpenMP >= 60.
+- Added support for ``default`` clause on ``target`` directive.
 
 Improvements
 ^^^^^^^^^^^^
