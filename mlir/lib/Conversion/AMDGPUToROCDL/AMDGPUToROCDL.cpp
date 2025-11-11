@@ -1715,6 +1715,7 @@ LogicalResult ScaledExtPacked816OpLowering::matchAndRewrite(
   //
   // largeT = [F16, Bf16, F32]
   // CvtPkScalePk8${largeT}${smallT}
+  Value source = adaptor.getSource();
 
   if (isa<Float4E2M1FNType>(srcElemType) and destElemType.isF16()) {
     // CvtPkScalePk8F16Fp4Op
@@ -1726,7 +1727,6 @@ LogicalResult ScaledExtPacked816OpLowering::matchAndRewrite(
   } else if (isa<Float8E4M3FNType>(srcElemType) and destElemType.isF16()) {
     // CvtPkScalePk8F16Fp8Op
     // vector<8xf8E4M3FN>
-    Value source = adaptor.getSource();
 
     // vector<2xi32>
     VectorType v2xi32 = VectorType::get(2, i32);
@@ -1737,7 +1737,6 @@ LogicalResult ScaledExtPacked816OpLowering::matchAndRewrite(
   } else if (isa<Float8E5M2Type>(srcElemType) and destElemType.isF16()) {
     // CvtPkScalePk8F16Bf8Op
     // vector<8xf8E5M2>
-    Value source = adaptor.getSource();
 
     // vector<2xi32>
     VectorType v2xi32 = VectorType::get(2, i32);
@@ -1755,7 +1754,6 @@ LogicalResult ScaledExtPacked816OpLowering::matchAndRewrite(
   } else if (isa<Float8E4M3FNType>(srcElemType) and destElemType.isBF16()) {
     // CvtPkScalePk8Bf16Fp8Op
     // vector<8xf8E4M3FN>
-    Value source = adaptor.getSource();
 
     // vector<2xi32>
     VectorType v2xi32 = VectorType::get(2, i32);
@@ -1766,7 +1764,6 @@ LogicalResult ScaledExtPacked816OpLowering::matchAndRewrite(
   } else if (isa<Float8E5M2Type>(srcElemType) and destElemType.isBF16()) {
     // CvtPkScalePk8Bf16Bf8Op
     // vector<8xf8E5M2>
-    Value source = adaptor.getSource();
 
     // vector<2xi32>
     VectorType v2xi32 = VectorType::get(2, i32);
@@ -1784,7 +1781,6 @@ LogicalResult ScaledExtPacked816OpLowering::matchAndRewrite(
   } else if (isa<Float8E4M3FNType>(srcElemType) and destElemType.isF32()) {
     // CvtPkScalePk8F32Fp8Op
     // vector<8xf8E4M3FN>
-    Value source = adaptor.getSource();
 
     // vector<2xi32>
     VectorType v2xi32 = VectorType::get(2, i32);
@@ -1795,7 +1791,6 @@ LogicalResult ScaledExtPacked816OpLowering::matchAndRewrite(
   } else if (isa<Float8E5M2Type>(srcElemType) and destElemType.isF32()) {
     // CvtPkScalePk8F32Bf8Op
     // vector<8xf8E5M2>
-    Value source = adaptor.getSource();
 
     // vector<2xi32>
     VectorType v2xi32 = VectorType::get(2, i32);
@@ -1813,7 +1808,6 @@ LogicalResult ScaledExtPacked816OpLowering::matchAndRewrite(
   // CvtPkScalePk16${largeT}${smallT}
   else if (isa<Float6E2M3FNType>(srcElemType) and destElemType.isF16()) {
     // CvtPkScale16F16Fp6Op
-    Value source = adaptor.getSource();
     VectorType v3xi32 = VectorType::get(3, i32);
     Value castedSource = LLVM::BitcastOp::create(rewriter, loc, v3xi32, source);
 
@@ -1821,7 +1815,6 @@ LogicalResult ScaledExtPacked816OpLowering::matchAndRewrite(
         op, op.getResult().getType(), castedSource, castedScale, scaleSel);
   } else if (isa<Float6E3M2FNType>(srcElemType) and destElemType.isF16()) {
     // CvtPkScale16F16Bf6Op
-    Value source = adaptor.getSource();
     VectorType v3xi32 = VectorType::get(3, i32);
     Value castedSource = LLVM::BitcastOp::create(rewriter, loc, v3xi32, source);
 
@@ -1829,7 +1822,6 @@ LogicalResult ScaledExtPacked816OpLowering::matchAndRewrite(
         op, op.getResult().getType(), castedSource, castedScale, scaleSel);
   } else if (isa<Float6E2M3FNType>(srcElemType) and destElemType.isBF16()) {
     // CvtPkScale16Bf16Fp6Op
-    Value source = adaptor.getSource();
     VectorType v3xi32 = VectorType::get(3, i32);
     Value castedSource = LLVM::BitcastOp::create(rewriter, loc, v3xi32, source);
 
@@ -1837,7 +1829,6 @@ LogicalResult ScaledExtPacked816OpLowering::matchAndRewrite(
         op, op.getResult().getType(), castedSource, castedScale, scaleSel);
   } else if (isa<Float6E3M2FNType>(srcElemType) and destElemType.isBF16()) {
     // CvtPkScale16Bf16Bf6Op
-    Value source = adaptor.getSource();
     VectorType v3xi32 = VectorType::get(3, i32);
     Value castedSource = LLVM::BitcastOp::create(rewriter, loc, v3xi32, source);
 
@@ -1845,7 +1836,6 @@ LogicalResult ScaledExtPacked816OpLowering::matchAndRewrite(
         op, op.getResult().getType(), castedSource, castedScale, scaleSel);
   } else if (isa<Float6E2M3FNType>(srcElemType) and destElemType.isF32()) {
     // CvtPkScale16F32Fp6Op
-    Value source = adaptor.getSource();
     VectorType v3xi32 = VectorType::get(3, i32);
     Value castedSource = LLVM::BitcastOp::create(rewriter, loc, v3xi32, source);
 
@@ -1853,7 +1843,6 @@ LogicalResult ScaledExtPacked816OpLowering::matchAndRewrite(
         op, op.getResult().getType(), castedSource, castedScale, scaleSel);
   } else if (isa<Float6E3M2FNType>(srcElemType) and destElemType.isF32()) {
     // CvtPkScale16F32Bf6Op
-    Value source = adaptor.getSource();
     VectorType v3xi32 = VectorType::get(3, i32);
     Value castedSource = LLVM::BitcastOp::create(rewriter, loc, v3xi32, source);
 
