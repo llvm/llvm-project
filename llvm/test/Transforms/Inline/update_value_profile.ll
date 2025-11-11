@@ -9,12 +9,16 @@ define i32 @callee(ptr %0, i32 %1) !prof !19 {
 ; CHECK-LABEL: define i32 @callee(
 ; CHECK-SAME: ptr [[TMP0:%.*]], i32 [[TMP1:%.*]]) !prof [[PROF0:![0-9]+]] {
 ; CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[TMP0]], align 8, !prof [[PROF1:![0-9]+]]
+; CHECK-NEXT:    [[TEST:%.*]] = tail call i1 @llvm.type.test(ptr [[TMP3]], metadata !"_ZTS4Base")
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TEST]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr [[TMP3]], i64 8
 ; CHECK-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[TMP4]], align 8
 ; CHECK-NEXT:    [[TMP6:%.*]] = tail call i32 [[TMP5]](ptr [[TMP0]], i32 [[TMP1]]), !prof [[PROF2:![0-9]+]]
 ; CHECK-NEXT:    ret i32 [[TMP6]]
 ;
   %3 = load ptr, ptr %0, !prof !15
+  %test = tail call i1 @llvm.type.test(ptr %3, metadata !"_ZTS4Base")
+  tail call void @llvm.assume(i1 %test)
   %5 = getelementptr inbounds i8, ptr %3, i64 8
   %6 = load ptr, ptr %5
   %7 = tail call i32 %6(ptr %0, i32 %1), !prof !16
@@ -26,6 +30,8 @@ define i32 @caller1(i32 %0) !prof !17 {
 ; CHECK-SAME: i32 [[TMP0:%.*]]) !prof [[PROF3:![0-9]+]] {
 ; CHECK-NEXT:    [[TMP2:%.*]] = tail call ptr @_Z10createTypei(i32 [[TMP0]])
 ; CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[TMP2]], align 8, !prof [[PROF4:![0-9]+]]
+; CHECK-NEXT:    [[TEST_I:%.*]] = tail call i1 @llvm.type.test(ptr [[TMP3]], metadata !"_ZTS4Base")
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TEST_I]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr [[TMP3]], i64 8
 ; CHECK-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[TMP4]], align 8
 ; CHECK-NEXT:    [[TMP6:%.*]] = tail call i32 [[TMP5]](ptr [[TMP2]], i32 [[TMP0]]), !prof [[PROF5:![0-9]+]]
@@ -41,6 +47,8 @@ define i32 @caller2(i32 %0) !prof !18  {
 ; CHECK-SAME: i32 [[TMP0:%.*]]) !prof [[PROF6:![0-9]+]] {
 ; CHECK-NEXT:    [[TMP2:%.*]] = tail call ptr @_Z10createTypei(i32 [[TMP0]])
 ; CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[TMP2]], align 8, !prof [[PROF7:![0-9]+]]
+; CHECK-NEXT:    [[TEST_I:%.*]] = tail call i1 @llvm.type.test(ptr [[TMP3]], metadata !"_ZTS4Base")
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TEST_I]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr [[TMP3]], i64 8
 ; CHECK-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[TMP4]], align 8
 ; CHECK-NEXT:    [[TMP6:%.*]] = tail call i32 [[TMP5]](ptr [[TMP2]], i32 [[TMP0]]), !prof [[PROF8:![0-9]+]]

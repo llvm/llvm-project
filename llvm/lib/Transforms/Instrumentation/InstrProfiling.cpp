@@ -336,6 +336,9 @@ private:
   /// Force emitting of name vars for unused functions.
   void lowerCoverageData(GlobalVariable *CoverageNamesVar);
 
+  /// Lower the type test intrinsic.
+  bool lowerInstrTypeTest();
+
   /// Replace instrprof.mcdc.tvbitmask.update with a shift and or instruction
   /// using the index represented by the a temp value into a bitmap.
   void lowerMCDCTestVectorBitmapUpdate(InstrProfMCDCTVBitmapUpdate *Ins);
@@ -931,8 +934,42 @@ static bool containsProfilingIntrinsics(Module &M) {
          containsIntrinsic(Intrinsic::instrprof_value_profile);
 }
 
+static void dropTypeTests(Module &M, Function &TypeTestFunc,
+                          bool ShouldDropAll) {
+  for (Use &U : llvm::make_early_inc_range(TypeTestFunc.uses())) {
+    auto *CI = cast<CallInst>(U.getUser());
+    // Find and erase llvm.assume intrinsics for this llvm.type.test call.
+    for (Use &CIU : llvm::make_early_inc_range(CI->uses()))
+      if (auto *Assume = dyn_cast<AssumeInst>(CIU.getUser()))
+        Assume->eraseFromParent();
+    // If the assume was merged with another assume, we might have a use on a
+    // phi (which will feed the assume). Simply replace the use on the phi
+    // with "true" and leave the merged assume.
+    //
+    // If ShouldDropAll is set, then we  we need to update any remaining uses,
+    // regardless of the instruction type.
+    if (!CI->use_empty()) {
+      assert(ShouldDropAll || all_of(CI->users(), [](User *U) -> bool {
+               return isa<PHINode>(U);
+             }));
+      CI->replaceAllUsesWith(ConstantInt::getTrue(M.getContext()));
+    }
+    CI->eraseFromParent();
+  }
+}
+
+bool InstrLowerer::lowerInstrTypeTest() {
+  Function *InstrTypeTestFunc =
+      Intrinsic::getDeclarationIfExists(&M, Intrinsic::instr_type_test);
+  if (!InstrTypeTestFunc)
+    return false;
+
+  dropTypeTests(M, *InstrTypeTestFunc, true);
+  return true;
+}
+
 bool InstrLowerer::lower() {
-  bool MadeChange = false;
+  bool MadeChange = lowerInstrTypeTest();
   bool NeedsRuntimeHook = needsRuntimeHookUnconditionally(TT);
   if (NeedsRuntimeHook)
     MadeChange = emitRuntimeHook();

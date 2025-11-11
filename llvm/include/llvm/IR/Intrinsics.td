@@ -2544,6 +2544,11 @@ def int_type_checked_load_relative : DefaultAttrsIntrinsic<[llvm_ptr_ty, llvm_i1
 def int_public_type_test : DefaultAttrsIntrinsic<[llvm_i1_ty], [llvm_ptr_ty, llvm_metadata_ty],
                               [IntrNoMem, IntrSpeculatable]>;
 
+// Test whether a pointer is associated with a type metadata identifier.
+// TODO: If the return type isn't used by llvm.assume, make it no return.
+def int_instr_type_test : DefaultAttrsIntrinsic<[llvm_i1_ty], [llvm_ptr_ty, llvm_metadata_ty],
+                              [IntrNoMem, IntrSpeculatable]>;
+
 // Create a branch funnel that implements an indirect call to a limited set of
 // callees. This needs to be a musttail call.
 def int_icall_branch_funnel : DefaultAttrsIntrinsic<[], [llvm_vararg_ty], []>;

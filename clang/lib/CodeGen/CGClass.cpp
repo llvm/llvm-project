@@ -2769,12 +2769,15 @@ LeastDerivedClassWithSameLayout(const CXXRecordDecl *RD) {
 void CodeGenFunction::EmitTypeMetadataCodeForVCall(const CXXRecordDecl *RD,
                                                    llvm::Value *VTable,
                                                    SourceLocation Loc) {
+  const bool EmitTypeTests = (CGM.getCodeGenOpts().WholeProgramVTables &&
+                              // Don't insert type test assumes if we are
+                              // forcing public visibility.
+                              !CGM.AlwaysHasLTOVisibilityPublic(RD));
+  // TODO: Add a new Clang option.
+  const bool EmitInstrTypeTests = CGM.getCodeGenOpts().hasProfileIRInstr();
   if (SanOpts.has(SanitizerKind::CFIVCall))
     EmitVTablePtrCheckForCall(RD, VTable, CodeGenFunction::CFITCK_VCall, Loc);
-  else if (CGM.getCodeGenOpts().WholeProgramVTables &&
-           // Don't insert type test assumes if we are forcing public
-           // visibility.
-           !CGM.AlwaysHasLTOVisibilityPublic(RD)) {
+  else if (EmitTypeTests || EmitInstrTypeTests) {
     CanQualType Ty = CGM.getContext().getCanonicalTagType(RD);
     llvm::Metadata *MD = CGM.CreateMetadataIdentifierForType(Ty);
     llvm::Value *TypeId =
@@ -2784,9 +2787,14 @@ void CodeGenFunction::EmitTypeMetadataCodeForVCall(const CXXRecordDecl *RD,
     // @llvm.type.test(). Otherwise emit @llvm.public.type.test(), which WPD
     // will convert to @llvm.type.test() if we assert at link time that we have
     // whole program visibility.
-    llvm::Intrinsic::ID IID = CGM.HasHiddenLTOVisibility(RD)
-                                  ? llvm::Intrinsic::type_test
-                                  : llvm::Intrinsic::public_type_test;
+    llvm::Intrinsic::ID IID;
+    if (EmitTypeTests) {
+      IID = CGM.HasHiddenLTOVisibility(RD) ? llvm::Intrinsic::type_test
+                                           : llvm::Intrinsic::public_type_test;
+    } else {
+      assert(EmitInstrTypeTests && "expected EmitInstrTypeTests");
+      IID = llvm::Intrinsic::instr_type_test;
+    }
     llvm::Value *TypeTest =
         Builder.CreateCall(CGM.getIntrinsic(IID), {VTable, TypeId});
     Builder.CreateCall(CGM.getIntrinsic(llvm::Intrinsic::assume), TypeTest);

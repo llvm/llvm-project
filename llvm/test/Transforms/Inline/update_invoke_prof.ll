@@ -7,6 +7,7 @@
 declare i32 @__gxx_personality_v0(...)
 
 define void @caller(ptr %func) personality ptr @__gxx_personality_v0 !prof !15 {
+;
   call void @callee(ptr %func), !prof !16
 
   ret void
@@ -18,6 +19,8 @@ declare void @callee2(ptr %func)
 
 define void @callee(ptr %obj) personality ptr @__gxx_personality_v0 !prof !17 {
   %vtable = load ptr, ptr %obj, !prof !21
+  %test = tail call i1 @llvm.public.type.test(ptr %vtable, metadata !"_ZTS4Base")
+  tail call void @llvm.assume(i1 %test)
   %func = load ptr, ptr %vtable
   invoke void %func()
   to label %next unwind label %lpad, !prof !18
@@ -38,6 +41,14 @@ lpad:
 ret:
   ret void
 }
+
+declare i1 @llvm.public.type.test(ptr, metadata) #1
+
+declare void @llvm.assume(i1 noundef) #2
+
+attributes #0 = { mustprogress uwtable "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cmov,+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" }
+attributes #1 = { mustprogress nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+attributes #2 = { mustprogress nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: write) }
 
 !llvm.module.flags = !{!1}
 !1 = !{i32 1, !"ProfileSummary", !2}
@@ -65,6 +76,8 @@ ret:
 ; CHECK-LABEL: define void @caller(
 ; CHECK-SAME: ptr [[FUNC:%.*]]) personality ptr @__gxx_personality_v0 !prof [[PROF14:![0-9]+]] {
 ; CHECK-NEXT:    [[VTABLE_I:%.*]] = load ptr, ptr [[FUNC]], align 8, !prof [[PROF15:![0-9]+]]
+; CHECK-NEXT:    [[TEST_I:%.*]] = call i1 @llvm.public.type.test(ptr [[VTABLE_I]], metadata !"_ZTS4Base")
+; CHECK-NEXT:    call void @llvm.assume(i1 [[TEST_I]])
 ; CHECK-NEXT:    [[FUNC_I:%.*]] = load ptr, ptr [[VTABLE_I]], align 8
 ; CHECK-NEXT:    invoke void [[FUNC_I]]()
 ; CHECK-NEXT:            to label %[[NEXT_I:.*]] unwind label %[[LPAD_I:.*]], !prof [[PROF16:![0-9]+]]
@@ -74,11 +87,13 @@ ret:
 ; CHECK:       [[CONT_I]]:
 ; CHECK-NEXT:    invoke void @callee2(ptr [[FUNC_I]])
 ; CHECK-NEXT:            to label %[[CALLEE_EXIT:.*]] unwind label %[[LPAD_I]], !prof [[PROF18:![0-9]+]]
-;
+
 
 ; CHECK-LABEL: define void @callee(
 ; CHECK-SAME: ptr [[OBJ:%.*]]) personality ptr @__gxx_personality_v0 !prof [[PROF19:![0-9]+]] {
 ; CHECK-NEXT:    [[VTABLE:%.*]] = load ptr, ptr [[OBJ]], align 8, !prof [[PROF20:![0-9]+]]
+; CHECK-NEXT:    [[TEST:%.*]] = tail call i1 @llvm.public.type.test(ptr [[VTABLE]], metadata !"_ZTS4Base")
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TEST]])
 ; CHECK-NEXT:    [[FUNC:%.*]] = load ptr, ptr [[VTABLE]], align 8
 ; CHECK-NEXT:    invoke void [[FUNC]]()
 ; CHECK-NEXT:            to label %[[NEXT:.*]] unwind label %[[LPAD:.*]], !prof [[PROF21:![0-9]+]]
@@ -89,6 +104,8 @@ ret:
 ; CHECK-NEXT:    invoke void @callee2(ptr [[FUNC]])
 ; CHECK-NEXT:            to label %[[RET:.*]] unwind label %[[LPAD]], !prof [[PROF18]]
 
+
+
 ; CHECK: [[PROF14]] = !{!"function_entry_count", i64 1000}
 ; CHECK: [[PROF15]] = !{!"VP", i32 2, i64 1000, i64 789, i64 600, i64 321, i64 400}
 ; CHECK: [[PROF16]] = !{!"VP", i32 0, i64 1000, i64 123, i64 600, i64 456, i64 400}
@@ -98,3 +115,4 @@ ret:
 ; CHECK: [[PROF20]] = !{!"VP", i32 2, i64 500, i64 789, i64 300, i64 321, i64 200}
 ; CHECK: [[PROF21]] = !{!"VP", i32 0, i64 500, i64 123, i64 300, i64 456, i64 200}
 ; CHECK: [[PROF22]] = !{!"branch_weights", i32 500}
+
