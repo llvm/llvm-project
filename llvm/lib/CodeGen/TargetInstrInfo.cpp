@@ -794,11 +794,11 @@ MachineInstr *TargetInstrInfo::foldMemoryOperand(MachineInstr &MI,
       // code.
       BuildMI(*MBB, Pos, MI.getDebugLoc(), get(TargetOpcode::KILL)).add(MO);
     } else {
-      storeRegToStackSlot(*MBB, Pos, MO.getReg(), MO.isKill(), FI, RC, &TRI,
+      storeRegToStackSlot(*MBB, Pos, MO.getReg(), MO.isKill(), FI, RC,
                           Register());
     }
   } else
-    loadRegFromStackSlot(*MBB, Pos, MO.getReg(), FI, RC, &TRI, Register());
+    loadRegFromStackSlot(*MBB, Pos, MO.getReg(), FI, RC, Register());
 
   return &*--Pos;
 }
