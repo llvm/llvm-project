@@ -1729,6 +1729,7 @@ cc_library(
     copts = llvm_copts,
     deps = [
         ":Analysis",
+        ":Core",
         ":ProfileData",
         ":Support",
         ":TargetParser",
@@ -2317,6 +2318,7 @@ llvm_target_lib_list = [lib for lib in [
             "lib/Target/BPF/BPFGenInstrInfo.inc": ["-gen-instr-info"],
             "lib/Target/BPF/BPFGenRegisterInfo.inc": ["-gen-register-info"],
             "lib/Target/BPF/BPFGenSubtargetInfo.inc": ["-gen-subtarget"],
+            "lib/Target/BPF/BPFGenSDNodeInfo.inc": ["-gen-sd-node-info"],
         },
     },
     {
