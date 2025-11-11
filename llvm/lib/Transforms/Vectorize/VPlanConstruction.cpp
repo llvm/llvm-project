@@ -40,6 +40,10 @@ class PlainCFGBuilder {
   // Vectorization plan that we are working on.
   std::unique_ptr<VPlan> Plan;
 
+  PredicatedScalarEvolution *PSE;
+
+  LoopAccessInfoManager *LAIs;
+
   // Builder of the VPlan instruction-level representation.
   VPBuilder VPIRBuilder;
 
@@ -65,8 +69,10 @@ class PlainCFGBuilder {
   void createVPInstructionsForVPBB(VPBasicBlock *VPBB, BasicBlock *BB);
 
 public:
-  PlainCFGBuilder(Loop *Lp, LoopInfo *LI)
-      : TheLoop(Lp), LI(LI), Plan(std::make_unique<VPlan>(Lp)) {}
+  PlainCFGBuilder(Loop *Lp, LoopInfo *LI, PredicatedScalarEvolution *PSE,
+                  LoopAccessInfoManager *LAIs)
+      : TheLoop(Lp), LI(LI), Plan(std::make_unique<VPlan>(Lp)), PSE(PSE),
+        LAIs(LAIs) {}
 
   /// Build plain CFG for TheLoop and connect it to Plan's entry.
   std::unique_ptr<VPlan> buildPlainCFG();
@@ -537,8 +543,9 @@ static void addInitialSkeleton(VPlan &Plan, Type *InductionTy, DebugLoc IVDL,
 
 std::unique_ptr<VPlan>
 VPlanTransforms::buildVPlan0(Loop *TheLoop, LoopInfo &LI, Type *InductionTy,
-                             DebugLoc IVDL, PredicatedScalarEvolution &PSE) {
-  PlainCFGBuilder Builder(TheLoop, &LI);
+                             DebugLoc IVDL, PredicatedScalarEvolution &PSE,
+                             LoopAccessInfoManager *LAIs) {
+  PlainCFGBuilder Builder(TheLoop, &LI, &PSE, LAIs);
   std::unique_ptr<VPlan> VPlan0 = Builder.buildPlainCFG();
   addInitialSkeleton(*VPlan0, InductionTy, IVDL, PSE, TheLoop);
   return VPlan0;

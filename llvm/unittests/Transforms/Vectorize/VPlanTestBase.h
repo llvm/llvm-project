@@ -18,7 +18,10 @@
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/Analysis/TargetTransformInfoImpl.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Verifier.h"
@@ -26,6 +29,11 @@
 #include "gtest/gtest.h"
 
 namespace llvm {
+
+struct TargetTransformInfoImpl : TargetTransformInfoImplBase {
+  TargetTransformInfoImpl(const DataLayout &DL)
+      : TargetTransformInfoImplBase(DL) {}
+};
 
 /// Helper class to create a module from an assembly string and VPlans for a
 /// given loop entry block.
@@ -41,6 +49,11 @@ protected:
   std::unique_ptr<ScalarEvolution> SE;
   std::unique_ptr<TargetLibraryInfoImpl> TLII;
   std::unique_ptr<TargetLibraryInfo> TLI;
+  std::unique_ptr<TargetTransformInfoImplBase> TTII;
+  std::unique_ptr<TargetTransformInfo> TTI;
+  std::unique_ptr<AAResults> AA;
+  std::unique_ptr<MemorySSA> MSSA;
+  std::unique_ptr<LoopAccessInfoManager> LAIs;
 
   VPlanTestIRBase()
       : DL("e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-"
@@ -54,6 +67,7 @@ protected:
     EXPECT_TRUE(M);
     TLII = std::make_unique<TargetLibraryInfoImpl>(M->getTargetTriple());
     TLI = std::make_unique<TargetLibraryInfo>(*TLII);
+    TTI = std::make_unique<TargetTransformInfo>(DL);
     return *M;
   }
 
@@ -62,6 +76,10 @@ protected:
     LI.reset(new LoopInfo(*DT));
     AC.reset(new AssumptionCache(F));
     SE.reset(new ScalarEvolution(F, *TLI, *AC, *DT, *LI));
+    AA.reset(new AAResults(*TLI));
+    MSSA.reset(new MemorySSA(F, &*AA, &*DT));
+    LAIs.reset(new LoopAccessInfoManager(*SE, *AA, *DT, *LI, &*TTI, &*TLI, &*AC,
+                                         &*MSSA));
   }
 
   /// Build the VPlan for the loop starting from \p LoopHeader.
@@ -73,7 +91,7 @@ protected:
     Loop *L = LI->getLoopFor(LoopHeader);
     PredicatedScalarEvolution PSE(*SE, *L);
     auto Plan = VPlanTransforms::buildVPlan0(L, *LI, IntegerType::get(*Ctx, 64),
-                                             {}, PSE);
+                                             {}, PSE, LAIs.get());
 
     VPlanTransforms::handleEarlyExits(*Plan, HasUncountableExit);
     VPlanTransforms::addMiddleCheck(*Plan, true, false);
