@@ -988,6 +988,13 @@ public:
     return !empty() && back().isEHScopeReturn();
   }
 
+  /// Convenience function that returns true if the block exits the function
+  /// without returning.
+  bool isNoReturnBlock() const {
+    return !empty() && succ_empty() && !back().isReturn() &&
+           !back().isIndirectBranch();
+  }
+
   /// Split a basic block into 2 pieces at \p SplitPoint. A new block will be
   /// inserted after this block, and all instructions after \p SplitInst moved
   /// to it (\p SplitInst will be in the original block). If \p LIS is provided,

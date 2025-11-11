@@ -10,26 +10,25 @@ define noundef i32 @early_exit_or_throw(i32 %in) personality ptr @__gxx_personal
 ; CHECK-NEXT:    .cfi_personality 156, DW.ref.__gxx_personality_v0
 ; CHECK-NEXT:    .cfi_lsda 28, .Lexception0
 ; CHECK-NEXT:  // %bb.0: // %entry
+; CHECK-NEXT:    cmp w0, #1
+; CHECK-NEXT:    b.eq .LBB0_2
+; CHECK-NEXT:  // %bb.1: // %exit
+; CHECK-NEXT:    mov w0, wzr
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB0_2: // %setup
 ; CHECK-NEXT:    str x30, [sp, #-32]! // 8-byte Folded Spill
 ; CHECK-NEXT:    stp x20, x19, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEXT:    .cfi_offset w20, -16
 ; CHECK-NEXT:    .cfi_offset w30, -32
-; CHECK-NEXT:    cmp w0, #1
-; CHECK-NEXT:    b.eq .LBB1_2
-; CHECK-NEXT:  // %bb.1: // %exit
-; CHECK-NEXT:    ldp x20, x19, [sp, #16] // 16-byte Folded Reload
-; CHECK-NEXT:    mov w0, wzr
-; CHECK-NEXT:    ldr x30, [sp], #32 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB1_2: // %setup
 ; CHECK-NEXT:    mov w0, #32 // =0x20
 ; CHECK-NEXT:    bl __cxa_allocate_exception
-; CHECK-NEXT:    mov x19, x0
 ; CHECK-NEXT:  .Ltmp0: // EH_LABEL
 ; CHECK-NEXT:    bl construct_exception
 ; CHECK-NEXT:  .Ltmp1: // EH_LABEL
+; CHECK-NEXT:    ldp x20, x19, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp], #32 // 8-byte Folded Reload
 ; CHECK-NEXT:  // %bb.3: // %throw
 ; CHECK-NEXT:    adrp x2, :got:destruct_exception
 ; CHECK-NEXT:    adrp x1, exception
@@ -37,7 +36,7 @@ define noundef i32 @early_exit_or_throw(i32 %in) personality ptr @__gxx_personal
 ; CHECK-NEXT:    ldr x2, [x2, :got_lo12:destruct_exception]
 ; CHECK-NEXT:    mov x0, x19
 ; CHECK-NEXT:    bl __cxa_throw
-; CHECK-NEXT:  .LBB1_4: // %teardown
+; CHECK-NEXT:  .LBB0_4: // %teardown
 ; CHECK-NEXT:  .Ltmp2: // EH_LABEL
 ; CHECK-NEXT:    mov x20, x0
 ; CHECK-NEXT:    mov x0, x19
