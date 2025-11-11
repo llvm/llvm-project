@@ -238,27 +238,16 @@ unsigned Matcher::match(StringRef Query) const {
 } // namespace
 
 class SpecialCaseList::Section::SectionImpl {
-  friend class SpecialCaseList;
+public:
   const Matcher *findMatcher(StringRef Prefix, StringRef Category) const;
 
-public:
   using SectionEntries = StringMap<StringMap<Matcher>>;
 
-  SectionImpl(StringRef Str, bool UseGlobs)
+  explicit SectionImpl(bool UseGlobs)
       : SectionMatcher(UseGlobs, /*RemoveDotSlash=*/false) {}
 
   Matcher SectionMatcher;
   SectionEntries Entries;
-
-  // Helper method to search by Prefix, Query, and Category. Returns
-  // 1-based line number on which rule is defined, or 0 if there is no match.
-  unsigned getLastMatch(StringRef Prefix, StringRef Query,
-                        StringRef Category) const;
-
-  // Helper method to search by Prefix, Query, and Category. Returns
-  // matching rule, or empty string if there is no match.
-  StringRef getLongestMatch(StringRef Prefix, StringRef Query,
-                            StringRef Category) const;
 };
 
 // TODO: Refactor this to return Expected<...>
@@ -312,10 +301,6 @@ bool SpecialCaseList::createInternal(const MemoryBuffer *MB,
   if (!parse(0, MB, Error))
     return false;
   return true;
-}
-
-const std::vector<SpecialCaseList::Section> &SpecialCaseList::sections() const {
-  return Sections;
 }
 
 Expected<SpecialCaseList::Section *>
@@ -438,9 +423,10 @@ SpecialCaseList::inSectionBlame(StringRef Section, StringRef Prefix,
 SpecialCaseList::Section::Section(StringRef Str, unsigned FileIdx,
                                   bool UseGlobs)
     : Name(Str), FileIdx(FileIdx),
-      Impl(std::make_unique<SectionImpl>(Str, UseGlobs)) {}
+      Impl(std::make_unique<SectionImpl>(UseGlobs)) {}
 
 SpecialCaseList::Section::Section(Section &&) = default;
+
 SpecialCaseList::Section::~Section() = default;
 
 bool SpecialCaseList::Section::matchName(StringRef Name) const {
