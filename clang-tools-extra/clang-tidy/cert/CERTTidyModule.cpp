@@ -13,8 +13,10 @@
 #include "../bugprone/CommandProcessorCheck.h"
 #include "../bugprone/CopyConstructorMutatesArgumentCheck.h"
 #include "../bugprone/DefaultOperatorNewOnOveralignedTypeCheck.h"
+#include "../bugprone/ExceptionCopyConstructorThrowsCheck.h"
 #include "../bugprone/FloatLoopCounterCheck.h"
 #include "../bugprone/PointerArithmeticOnPolymorphicObjectCheck.h"
+#include "../bugprone/RandomGeneratorSeedCheck.h"
 #include "../bugprone/RawMemoryCallOnNonTrivialTypeCheck.h"
 #include "../bugprone/ReservedIdentifierCheck.h"
 #include "../bugprone/SignalHandlerCheck.h"
@@ -40,8 +42,6 @@
 #include "../readability/EnumInitialValueCheck.h"
 #include "../readability/UppercaseLiteralSuffixCheck.h"
 #include "LimitedRandomnessCheck.h"
-#include "ProperlySeededRandomGeneratorCheck.h"
-#include "ThrownExceptionTypeCheck.h"
 
 namespace {
 
@@ -262,7 +262,8 @@ public:
         "cert-err52-cpp");
     CheckFactories.registerCheck<bugprone::ThrowingStaticInitializationCheck>(
         "cert-err58-cpp");
-    CheckFactories.registerCheck<ThrownExceptionTypeCheck>("cert-err60-cpp");
+    CheckFactories.registerCheck<bugprone::ExceptionCopyConstructorThrowsCheck>(
+        "cert-err60-cpp");
     CheckFactories.registerCheck<misc::ThrowByValueCatchByReferenceCheck>(
         "cert-err61-cpp");
     // MEM
@@ -271,7 +272,7 @@ public:
             "cert-mem57-cpp");
     // MSC
     CheckFactories.registerCheck<LimitedRandomnessCheck>("cert-msc50-cpp");
-    CheckFactories.registerCheck<ProperlySeededRandomGeneratorCheck>(
+    CheckFactories.registerCheck<bugprone::RandomGeneratorSeedCheck>(
         "cert-msc51-cpp");
     CheckFactories.registerCheck<bugprone::SignalHandlerCheck>(
         "cert-msc54-cpp");
@@ -324,7 +325,7 @@ public:
     CheckFactories.registerCheck<bugprone::UnsafeFunctionsCheck>(
         "cert-msc24-c");
     CheckFactories.registerCheck<LimitedRandomnessCheck>("cert-msc30-c");
-    CheckFactories.registerCheck<ProperlySeededRandomGeneratorCheck>(
+    CheckFactories.registerCheck<bugprone::RandomGeneratorSeedCheck>(
         "cert-msc32-c");
     CheckFactories.registerCheck<bugprone::UnsafeFunctionsCheck>(
         "cert-msc33-c");
