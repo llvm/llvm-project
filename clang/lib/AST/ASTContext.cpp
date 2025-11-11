@@ -3108,9 +3108,9 @@ TypeSourceInfo *ASTContext::CreateTypeSourceInfo(QualType T,
 
 TypeSourceInfo *ASTContext::getTrivialTypeSourceInfo(QualType T,
                                                      SourceLocation L) const {
-  TypeSourceInfo *DI = CreateTypeSourceInfo(T);
-  DI->getTypeLoc().initialize(const_cast<ASTContext &>(*this), L);
-  return DI;
+  TypeSourceInfo *TSI = CreateTypeSourceInfo(T);
+  TSI->getTypeLoc().initialize(const_cast<ASTContext &>(*this), L);
+  return TSI;
 }
 
 const ASTRecordLayout &
@@ -5891,11 +5891,11 @@ TypeSourceInfo *ASTContext::getTemplateSpecializationTypeInfo(
   QualType TST = getTemplateSpecializationType(
       Keyword, Name, SpecifiedArgs.arguments(), CanonicalArgs, Underlying);
 
-  TypeSourceInfo *DI = CreateTypeSourceInfo(TST);
-  DI->getTypeLoc().castAs<TemplateSpecializationTypeLoc>().set(
+  TypeSourceInfo *TSI = CreateTypeSourceInfo(TST);
+  TSI->getTypeLoc().castAs<TemplateSpecializationTypeLoc>().set(
       ElaboratedKeywordLoc, QualifierLoc, TemplateKeywordLoc, NameLoc,
       SpecifiedArgs);
-  return DI;
+  return TSI;
 }
 
 QualType ASTContext::getTemplateSpecializationType(

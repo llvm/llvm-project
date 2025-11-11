@@ -962,16 +962,29 @@ DIType *DIDerivedType::getClassType() const {
   assert(getTag() == dwarf::DW_TAG_ptr_to_member_type);
   return cast_or_null<DIType>(getExtraData());
 }
+
+// Helper function to extract ConstantAsMetadata from ExtraData,
+// handling extra data MDTuple unwrapping if needed.
+static ConstantAsMetadata *extractConstantMetadata(Metadata *ExtraData) {
+  Metadata *ED = ExtraData;
+  if (auto *Tuple = dyn_cast_or_null<MDTuple>(ED)) {
+    if (Tuple->getNumOperands() != 1)
+      return nullptr;
+    ED = Tuple->getOperand(0);
+  }
+  return cast_or_null<ConstantAsMetadata>(ED);
+}
+
 uint32_t DIDerivedType::getVBPtrOffset() const {
   assert(getTag() == dwarf::DW_TAG_inheritance);
-  if (auto *CM = cast_or_null<ConstantAsMetadata>(getExtraData()))
+  if (auto *CM = extractConstantMetadata(getExtraData()))
     if (auto *CI = dyn_cast_or_null<ConstantInt>(CM->getValue()))
       return static_cast<uint32_t>(CI->getZExtValue());
   return 0;
 }
 Constant *DIDerivedType::getStorageOffsetInBits() const {
   assert(getTag() == dwarf::DW_TAG_member && isBitField());
-  if (auto *C = cast_or_null<ConstantAsMetadata>(getExtraData()))
+  if (auto *C = extractConstantMetadata(getExtraData()))
     return C->getValue();
   return nullptr;
 }
@@ -980,13 +993,13 @@ Constant *DIDerivedType::getConstant() const {
   assert((getTag() == dwarf::DW_TAG_member ||
           getTag() == dwarf::DW_TAG_variable) &&
          isStaticMember());
-  if (auto *C = cast_or_null<ConstantAsMetadata>(getExtraData()))
+  if (auto *C = extractConstantMetadata(getExtraData()))
     return C->getValue();
   return nullptr;
 }
 Constant *DIDerivedType::getDiscriminantValue() const {
   assert(getTag() == dwarf::DW_TAG_member && !isStaticMember());
-  if (auto *C = cast_or_null<ConstantAsMetadata>(getExtraData()))
+  if (auto *C = extractConstantMetadata(getExtraData()))
     return C->getValue();
   return nullptr;
 }
@@ -1428,6 +1441,19 @@ bool DISubprogram::describes(const Function *F) const {
   assert(F && "Invalid function");
   return F->getSubprogram() == this;
 }
+
+const DIScope *DISubprogram::getRawRetainedNodeScope(const MDNode *N) {
+  return visitRetainedNode<DIScope *>(
+      N, [](const DILocalVariable *LV) { return LV->getScope(); },
+      [](const DILabel *L) { return L->getScope(); },
+      [](const DIImportedEntity *IE) { return IE->getScope(); },
+      [](const Metadata *N) { return nullptr; });
+}
+
+const DILocalScope *DISubprogram::getRetainedNodeScope(const MDNode *N) {
+  return cast<DILocalScope>(getRawRetainedNodeScope(N));
+}
+
 DILexicalBlockBase::DILexicalBlockBase(LLVMContext &C, unsigned ID,
                                        StorageType Storage,
                                        ArrayRef<Metadata *> Ops)

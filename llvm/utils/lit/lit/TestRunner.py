@@ -462,16 +462,15 @@ def executeBuiltinMkdir(cmd, cmd_shenv):
     stderr = StringIO()
     exitCode = 0
     for dir in args:
-        cwd = cmd_shenv.cwd
-        dir = to_unicode(dir) if kIsWindows else to_bytes(dir)
-        cwd = to_unicode(cwd) if kIsWindows else to_bytes(cwd)
-        if not os.path.isabs(dir):
-            dir = lit.util.abs_path_preserve_drive(os.path.join(cwd, dir))
+        dir = pathlib.Path(dir)
+        cwd = pathlib.Path(to_unicode(cmd_shenv.cwd))
+        if not dir.is_absolute():
+            dir = lit.util.abs_path_preserve_drive(cwd / dir)
         if parent:
-            lit.util.mkdir_p(dir)
+            dir.mkdir(parents=True, exist_ok=True)
         else:
             try:
-                lit.util.mkdir(dir)
+                dir.mkdir(exist_ok=True)
             except OSError as err:
                 stderr.write("Error: 'mkdir' command failed, %s\n" % str(err))
                 exitCode = 1
@@ -2411,7 +2410,7 @@ def _runShTest(test, litConfig, useExternalSh, script, tmpBase) -> lit.Test.Resu
         return out, err, exitCode, timeoutInfo, status
 
     # Create the output directory if it does not already exist.
-    lit.util.mkdir_p(os.path.dirname(tmpBase))
+    pathlib.Path(tmpBase).parent.mkdir(parents=True, exist_ok=True)
 
     # Re-run failed tests up to test.allowed_retries times.
     execdir = os.path.dirname(test.getExecPath())
