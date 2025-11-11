@@ -1454,7 +1454,7 @@ LLVM_ABI Printable printReg(Register Reg,
 ///   fp0~st7 - Dual roots.
 ///
 /// Usage: OS << printRegUnit(Unit, TRI) << '\n';
-LLVM_ABI Printable printRegUnit(unsigned Unit, const TargetRegisterInfo *TRI);
+LLVM_ABI Printable printRegUnit(MCRegUnit Unit, const TargetRegisterInfo *TRI);
 
 /// Create Printable object to print virtual registers and physical
 /// registers on a \ref raw_ostream.

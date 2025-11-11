@@ -46071,18 +46071,18 @@ define <32 x bfloat> @v_select_v32bf16(i1 %cond, <32 x bfloat> %a, <32 x bfloat>
 define amdgpu_ps <2 x i32> @s_select_v3bf16(<3 x bfloat> inreg %a, <3 x bfloat> inreg %b, i32 %c) {
 ; GCN-LABEL: s_select_v3bf16:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    v_mul_f32_e64 v1, 1.0, s1
-; GCN-NEXT:    v_mul_f32_e64 v2, 1.0, s0
-; GCN-NEXT:    v_mul_f32_e64 v3, 1.0, s4
-; GCN-NEXT:    v_mul_f32_e64 v4, 1.0, s3
+; GCN-NEXT:    v_mul_f32_e64 v2, 1.0, s1
+; GCN-NEXT:    v_mul_f32_e64 v1, 1.0, s0
+; GCN-NEXT:    v_mul_f32_e64 v4, 1.0, s4
+; GCN-NEXT:    v_mul_f32_e64 v3, 1.0, s3
 ; GCN-NEXT:    v_mul_f32_e64 v5, 1.0, s2
 ; GCN-NEXT:    v_mul_f32_e64 v6, 1.0, s5
-; GCN-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
-; GCN-NEXT:    v_lshrrev_b32_e32 v3, 16, v3
+; GCN-NEXT:    v_lshrrev_b32_e32 v2, 16, v2
+; GCN-NEXT:    v_lshrrev_b32_e32 v4, 16, v4
 ; GCN-NEXT:    v_lshrrev_b32_e32 v5, 16, v5
 ; GCN-NEXT:    v_lshrrev_b32_e32 v6, 16, v6
-; GCN-NEXT:    v_alignbit_b32 v1, v1, v2, 16
-; GCN-NEXT:    v_alignbit_b32 v2, v3, v4, 16
+; GCN-NEXT:    v_lshr_b64 v[1:2], v[1:2], 16
+; GCN-NEXT:    v_lshr_b64 v[2:3], v[3:4], 16
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GCN-NEXT:    v_cndmask_b32_e32 v0, v6, v5, vcc
 ; GCN-NEXT:    v_cndmask_b32_e32 v1, v2, v1, vcc
@@ -46093,13 +46093,13 @@ define amdgpu_ps <2 x i32> @s_select_v3bf16(<3 x bfloat> inreg %a, <3 x bfloat> 
 ; GFX7-LABEL: s_select_v3bf16:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    v_mul_f32_e64 v1, 1.0, s1
-; GFX7-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
-; GFX7-NEXT:    v_mul_f32_e64 v2, 1.0, s0
-; GFX7-NEXT:    v_alignbit_b32 v1, v1, v2, 16
+; GFX7-NEXT:    v_lshrrev_b32_e32 v2, 16, v1
+; GFX7-NEXT:    v_mul_f32_e64 v1, 1.0, s0
+; GFX7-NEXT:    v_lshr_b64 v[1:2], v[1:2], 16
 ; GFX7-NEXT:    v_mul_f32_e64 v2, 1.0, s4
-; GFX7-NEXT:    v_lshrrev_b32_e32 v2, 16, v2
-; GFX7-NEXT:    v_mul_f32_e64 v3, 1.0, s3
-; GFX7-NEXT:    v_alignbit_b32 v2, v2, v3, 16
+; GFX7-NEXT:    v_lshrrev_b32_e32 v3, 16, v2
+; GFX7-NEXT:    v_mul_f32_e64 v2, 1.0, s3
+; GFX7-NEXT:    v_lshr_b64 v[2:3], v[2:3], 16
 ; GFX7-NEXT:    v_mul_f32_e64 v3, 1.0, s2
 ; GFX7-NEXT:    v_mul_f32_e64 v4, 1.0, s5
 ; GFX7-NEXT:    v_lshrrev_b32_e32 v3, 16, v3
@@ -46209,22 +46209,22 @@ define amdgpu_ps <2 x i32> @s_select_v3bf16(<3 x bfloat> inreg %a, <3 x bfloat> 
 define amdgpu_ps <2 x i32> @s_select_v4bf16(<4 x bfloat> inreg %a, <4 x bfloat> inreg %b, i32 %c) {
 ; GCN-LABEL: s_select_v4bf16:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    v_mul_f32_e64 v1, 1.0, s1
-; GCN-NEXT:    v_mul_f32_e64 v2, 1.0, s0
-; GCN-NEXT:    v_mul_f32_e64 v3, 1.0, s5
-; GCN-NEXT:    v_mul_f32_e64 v4, 1.0, s4
-; GCN-NEXT:    v_mul_f32_e64 v5, 1.0, s3
-; GCN-NEXT:    v_mul_f32_e64 v6, 1.0, s2
-; GCN-NEXT:    v_mul_f32_e64 v7, 1.0, s7
-; GCN-NEXT:    v_mul_f32_e64 v8, 1.0, s6
-; GCN-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
-; GCN-NEXT:    v_lshrrev_b32_e32 v3, 16, v3
-; GCN-NEXT:    v_lshrrev_b32_e32 v5, 16, v5
-; GCN-NEXT:    v_lshrrev_b32_e32 v7, 16, v7
-; GCN-NEXT:    v_alignbit_b32 v1, v1, v2, 16
-; GCN-NEXT:    v_alignbit_b32 v2, v3, v4, 16
-; GCN-NEXT:    v_alignbit_b32 v3, v5, v6, 16
-; GCN-NEXT:    v_alignbit_b32 v4, v7, v8, 16
+; GCN-NEXT:    v_mul_f32_e64 v2, 1.0, s1
+; GCN-NEXT:    v_mul_f32_e64 v1, 1.0, s0
+; GCN-NEXT:    v_mul_f32_e64 v4, 1.0, s5
+; GCN-NEXT:    v_mul_f32_e64 v3, 1.0, s4
+; GCN-NEXT:    v_mul_f32_e64 v6, 1.0, s3
+; GCN-NEXT:    v_mul_f32_e64 v5, 1.0, s2
+; GCN-NEXT:    v_mul_f32_e64 v8, 1.0, s7
+; GCN-NEXT:    v_mul_f32_e64 v7, 1.0, s6
+; GCN-NEXT:    v_lshrrev_b32_e32 v2, 16, v2
+; GCN-NEXT:    v_lshrrev_b32_e32 v4, 16, v4
+; GCN-NEXT:    v_lshrrev_b32_e32 v6, 16, v6
+; GCN-NEXT:    v_lshrrev_b32_e32 v8, 16, v8
+; GCN-NEXT:    v_lshr_b64 v[1:2], v[1:2], 16
+; GCN-NEXT:    v_lshr_b64 v[2:3], v[3:4], 16
+; GCN-NEXT:    v_lshr_b64 v[3:4], v[5:6], 16
+; GCN-NEXT:    v_lshr_b64 v[4:5], v[7:8], 16
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GCN-NEXT:    v_cndmask_b32_e32 v0, v4, v3, vcc
 ; GCN-NEXT:    v_cndmask_b32_e32 v1, v2, v1, vcc
@@ -46235,21 +46235,21 @@ define amdgpu_ps <2 x i32> @s_select_v4bf16(<4 x bfloat> inreg %a, <4 x bfloat> 
 ; GFX7-LABEL: s_select_v4bf16:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    v_mul_f32_e64 v1, 1.0, s1
-; GFX7-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
-; GFX7-NEXT:    v_mul_f32_e64 v2, 1.0, s0
-; GFX7-NEXT:    v_alignbit_b32 v1, v1, v2, 16
+; GFX7-NEXT:    v_lshrrev_b32_e32 v2, 16, v1
+; GFX7-NEXT:    v_mul_f32_e64 v1, 1.0, s0
+; GFX7-NEXT:    v_lshr_b64 v[1:2], v[1:2], 16
 ; GFX7-NEXT:    v_mul_f32_e64 v2, 1.0, s5
-; GFX7-NEXT:    v_lshrrev_b32_e32 v2, 16, v2
-; GFX7-NEXT:    v_mul_f32_e64 v3, 1.0, s4
-; GFX7-NEXT:    v_alignbit_b32 v2, v2, v3, 16
+; GFX7-NEXT:    v_lshrrev_b32_e32 v3, 16, v2
+; GFX7-NEXT:    v_mul_f32_e64 v2, 1.0, s4
+; GFX7-NEXT:    v_lshr_b64 v[2:3], v[2:3], 16
 ; GFX7-NEXT:    v_mul_f32_e64 v3, 1.0, s3
-; GFX7-NEXT:    v_lshrrev_b32_e32 v3, 16, v3
-; GFX7-NEXT:    v_mul_f32_e64 v4, 1.0, s2
-; GFX7-NEXT:    v_alignbit_b32 v3, v3, v4, 16
+; GFX7-NEXT:    v_lshrrev_b32_e32 v4, 16, v3
+; GFX7-NEXT:    v_mul_f32_e64 v3, 1.0, s2
+; GFX7-NEXT:    v_lshr_b64 v[3:4], v[3:4], 16
 ; GFX7-NEXT:    v_mul_f32_e64 v4, 1.0, s7
-; GFX7-NEXT:    v_lshrrev_b32_e32 v4, 16, v4
-; GFX7-NEXT:    v_mul_f32_e64 v5, 1.0, s6
-; GFX7-NEXT:    v_alignbit_b32 v4, v4, v5, 16
+; GFX7-NEXT:    v_lshrrev_b32_e32 v5, 16, v4
+; GFX7-NEXT:    v_mul_f32_e64 v4, 1.0, s6
+; GFX7-NEXT:    v_lshr_b64 v[4:5], v[4:5], 16
 ; GFX7-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX7-NEXT:    v_cndmask_b32_e32 v0, v4, v3, vcc
 ; GFX7-NEXT:    v_cndmask_b32_e32 v1, v2, v1, vcc

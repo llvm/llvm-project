@@ -2437,10 +2437,6 @@ module std_stdatomic_h [system] {
   header "stdatomic.h"
   export *
 }
-module std_stdbool_h [system] {
-  // <stdbool.h>'s __bool_true_false_are_defined macro requires textual inclusion.
-  textual header "stdbool.h"
-}
 module std_stddef_h [system] {
   // <stddef.h> supports being included multiple times with different pre-defined macros
   textual header "stddef.h"
