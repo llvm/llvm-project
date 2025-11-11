@@ -161,4 +161,43 @@ def SetOpLayoutAttrOp : Op<Transform_Dialect, "xegpu.set_op_layout_attr", [
   }];
 }
 
+def SetGPULaunchThreadsOp
+    : Op<Transform_Dialect, "xegpu.set_gpu_launch_threads", [
+      DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+      TransformOpInterface
+    ]> {
+
+  let summary = "Set number of threads for a given gpu.launch operation";
+  let description = [{
+    Overrides the x,y,z threads operands of a given `gpu.launch` operation in-place.
+  }];
+
+  let arguments = (ins TransformHandleTypeInterface:$target,
+                   Variadic<TransformAnyParamTypeOrAnyHandle>:$threads,
+                   DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_threads
+                   );
+  let results = (outs);
+  let builders = [
+    OpBuilder<(ins "Value":$target, "ArrayRef<OpFoldResult>":$mixedThreads)>,
+  ];
+
+  let assemblyFormat = [{
+    $target
+    `threads` `=` custom<DynamicIndexList>($threads, $static_threads)
+    attr-dict `:` qualified(type(operands))
+  }];
+
+  let extraClassDeclaration = [{
+    ::mlir::DiagnosedSilenceableFailure apply(
+        ::mlir::transform::TransformRewriter &rewriter,
+        ::mlir::transform::TransformResults &transformResults,
+        ::mlir::transform::TransformState &state);
+
+    ::llvm::SmallVector<::mlir::OpFoldResult> getMixedThreads() {
+      Builder b(getContext());
+      return getMixedValues(getStaticThreads(), getThreads(), b);
+    }
+  }];
+}
+
 #endif // XEGPU_TRANSFORM_OPS
