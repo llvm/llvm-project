@@ -114,11 +114,9 @@ class MapsForPrivatizedSymbolsPass
         captureKind = mlir::omp::VariableCaptureKind::ByCopy;
       }
     }
-    // TODO: We should be looking at the defaultmap here. However, at this time
-    // defaultmap on a target directive ins't modelled in the omp MLIR directive
-    // Once that is in place, we should move both lowering and this pass
-    // to use a utility function (like getImplicitMapTypeAndKind in
-    // lib/Lower/OpenMP/OpenMP.cpp) to get the mapFlag value here.
+
+    // Use tofrom if what we are mapping is not a trivial type. In all
+    // likelihood, it is a descriptor
     mlir::omp::ClauseMapFlags mapFlag;
     if (fir::isa_trivial(fir::unwrapRefType(varType)) ||
         fir::isa_char(fir::unwrapRefType(varType)))
