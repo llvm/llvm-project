@@ -768,7 +768,7 @@ int cc1depscand_main(ArrayRef<const char *> Argv, const char *Argv0,
     reportError("unknown command '" + Command + "'");
   }
 
-  Server.TimeoutSeconds = LongRunning ? 45 : 15;
+  Server.TimeoutSeconds = LongRunning ? 120 : 15;
 
   // Daemonize.
   if (::signal(SIGHUP, SIG_IGN) == SIG_ERR)

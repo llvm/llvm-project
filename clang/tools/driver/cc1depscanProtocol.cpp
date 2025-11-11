@@ -117,8 +117,8 @@ Expected<ScanDaemon> ScanDaemon::connectToDaemon(StringRef BasePath,
   if (!Socket)
     return reportError(Socket.takeError());
 
-  // Wait up to 30 seconds.
-  constexpr int MaxWait = 30 * 1000 * 1000;
+  // Wait up to 60 seconds.
+  constexpr int MaxWait = 60 * 1000 * 1000;
   int NextBackoff = 0;
   int TotalBackoff = 0;
   while (TotalBackoff < MaxWait) {
@@ -139,8 +139,9 @@ Expected<ScanDaemon> ScanDaemon::connectToDaemon(StringRef BasePath,
           std::error_code(errno, std::generic_category())));
   }
 
-  return reportError(
-      llvm::errorCodeToError(std::error_code(ENOENT, std::generic_category())));
+  return llvm::createStringError(
+      std::make_error_code(std::errc::timed_out),
+      "timeout when connecting to scan daemon on path: '" + BasePath + "'");
 }
 
 Expected<ScanDaemon> ScanDaemon::launchDaemon(StringRef BasePath,
