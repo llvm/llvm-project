@@ -1003,6 +1003,172 @@ private:
   vector::UnrollVectorOptions options;
 };
 
+static bool isContiguousExtract(ArrayRef<int64_t> targetShape,
+                                ArrayRef<int64_t> resultShape) {
+  if (targetShape.size() > resultShape.size()) {
+    return false;
+  }
+
+  size_t rankDiff = resultShape.size() - targetShape.size();
+  // Inner dimensions must match exactly & total resultElements should be
+  // evenly divisible by targetElements.
+  for (size_t i = 1; i < targetShape.size(); ++i) {
+    if (targetShape[i] != resultShape[rankDiff + i]) {
+      return false;
+    }
+  }
+
+  int64_t targetElements = ShapedType::getNumElements(targetShape);
+  int64_t resultElements = ShapedType::getNumElements(resultShape);
+  if (resultElements % targetElements != 0) {
+    return false;
+  }
+  return true;
+}
+
+// Calculate the shape to extract from source
+static std::optional<SmallVector<int64_t>>
+calculateSourceExtractShape(ArrayRef<int64_t> sourceShape,
+                            int64_t targetElements) {
+  SmallVector<int64_t> extractShape;
+  int64_t remainingElements = targetElements;
+
+  // Build extract shape from innermost dimension outward to ensure contiguity
+  for (int i = sourceShape.size() - 1; i >= 0 && remainingElements > 1; --i) {
+    int64_t takeFromDim = std::min(remainingElements, sourceShape[i]);
+    extractShape.insert(extractShape.begin(), takeFromDim);
+
+    if (remainingElements % takeFromDim != 0) {
+      return std::nullopt; // Not evenly divisible
+    }
+    remainingElements /= takeFromDim;
+  }
+
+  // Fill remaining dimensions with 1
+  while (extractShape.size() < sourceShape.size()) {
+    extractShape.insert(extractShape.begin(), 1);
+  }
+
+  if (ShapedType::getNumElements(extractShape) != targetElements) {
+    return std::nullopt;
+  }
+
+  return extractShape;
+}
+
+// Convert result offsets to source offsets via linear position
+static SmallVector<int64_t>
+calculateSourceOffsets(ArrayRef<int64_t> resultOffsets,
+                       ArrayRef<int64_t> sourceStrides,
+                       ArrayRef<int64_t> resultStrides) {
+  // Convert result offsets to linear position
+  int64_t linearIndex = linearize(resultOffsets, resultStrides);
+  // Convert linear position to source offsets
+  SmallVector<int64_t> sourceOffsets = delinearize(linearIndex, sourceStrides);
+  return sourceOffsets;
+}
+
+/// This pattern unrolls `vector.shape_cast` operations according to the
+/// provided target unroll shape. It unrolls a large shape cast into smaller
+/// shape casts by extracting contiguous slices from the source vector, casting
+/// each slice to the target shape, and assembling the result by inserting each
+/// computed segment into the appropriate offset of the result vector.
+///
+/// This pattern only applies when contiguous slices can be extracted from the
+/// source vector and inserted into the result vector such that each slice
+/// remains a valid vector (and not decompose to scalars). In these cases, the
+/// unrolling proceeds as:
+/// vector.extract_strided_slice -> vector.shape_cast (on the slice) ->
+/// vector.insert_strided_slice
+///
+/// Example:
+///   Given a shape cast operation:
+///     %0 = vector.shape_cast %src : vector<8x2xf32> to vector<4x4xf32>
+///
+///   and a target unroll shape of <2x4>, the pattern produces:
+///
+///     %zero = arith.constant dense<0.0> : vector<4x4xf32>
+///     %s0 = vector.extract_strided_slice %src [0, 0], [4, 2], [1, 1]
+///       : vector<8x2xf32> to vector<4x2xf32>
+///     %sc0 = vector.shape_cast %s0 : vector<4x2xf32> to vector<2x4xf32>
+///     %i0 = vector.insert_strided_slice %sc0, %zero [0, 0], [1, 1]
+///       : vector<2x4xf32> into vector<4x4xf32>
+///     %s1 = vector.extract_strided_slice %src [4, 0], [4, 2], [1, 1]
+///       : vector<8x2xf32> to vector<4x2xf32>
+///     %sc1 = vector.shape_cast %s1 : vector<4x2xf32> to vector<2x4xf32>
+///     %i1 = vector.insert_strided_slice %sc1, %i0 [2, 0], [1, 1]
+///       : vector<2x4xf32> into vector<4x4xf32>
+///
+struct UnrollShapeCastPattern : public OpRewritePattern<vector::ShapeCastOp> {
+  UnrollShapeCastPattern(MLIRContext *context,
+                         const vector::UnrollVectorOptions &options,
+                         PatternBenefit benefit = 1)
+      : OpRewritePattern<vector::ShapeCastOp>(context, benefit),
+        options(options) {}
+
+  LogicalResult matchAndRewrite(vector::ShapeCastOp shapeCastOp,
+                                PatternRewriter &rewriter) const override {
+    auto targetShape = getTargetShape(options, shapeCastOp);
+    if (!targetShape)
+      return failure();
+
+    VectorType sourceType = shapeCastOp.getSourceVectorType();
+    VectorType resultType = shapeCastOp.getResultVectorType();
+    ArrayRef<int64_t> sourceShape = sourceType.getShape();
+    ArrayRef<int64_t> resultShape = resultType.getShape();
+
+    if (!isContiguousExtract(*targetShape, resultShape)) {
+      return rewriter.notifyMatchFailure(shapeCastOp,
+                                         "Only supports cases where contiguous "
+                                         "extraction is possible");
+    }
+
+    int64_t targetElements = ShapedType::getNumElements(*targetShape);
+
+    // Calculate the shape to extract from source
+    auto extractShape =
+        calculateSourceExtractShape(sourceShape, targetElements);
+    if (!extractShape) {
+      return rewriter.notifyMatchFailure(
+          shapeCastOp,
+          "cannot extract target number of elements contiguously from source");
+    }
+
+    Location loc = shapeCastOp.getLoc();
+
+    // Create result vector initialized to zero
+    Value result = arith::ConstantOp::create(rewriter, loc, resultType,
+                                             rewriter.getZeroAttr(resultType));
+
+    VectorType targetType =
+        VectorType::get(*targetShape, sourceType.getElementType());
+
+    SmallVector<int64_t> extractStrides(extractShape->size(), 1);
+    SmallVector<int64_t> insertStrides(targetShape->size(), 1);
+    SmallVector<int64_t> sourceStrides = computeStrides(sourceShape);
+    SmallVector<int64_t> resultStrides = computeStrides(resultShape);
+
+    for (SmallVector<int64_t> resultOffsets :
+         StaticTileOffsetRange(resultShape, *targetShape)) {
+      SmallVector<int64_t> sourceOffsets =
+          calculateSourceOffsets(resultOffsets, sourceStrides, resultStrides);
+      Value sourceChunk = rewriter.createOrFold<vector::ExtractStridedSliceOp>(
+          loc, shapeCastOp.getSource(), sourceOffsets, *extractShape,
+          extractStrides);
+      Value targetChunk = rewriter.createOrFold<vector::ShapeCastOp>(
+          loc, targetType, sourceChunk);
+      result = rewriter.createOrFold<vector::InsertStridedSliceOp>(
+          loc, targetChunk, result, resultOffsets, insertStrides);
+    }
+
+    rewriter.replaceOp(shapeCastOp, result);
+    return success();
+  }
+
+private:
+  vector::UnrollVectorOptions options;
+};
+
 } // namespace
 
 void mlir::vector::populateVectorUnrollPatterns(
@@ -1013,8 +1179,8 @@ void mlir::vector::populateVectorUnrollPatterns(
                UnrollReductionPattern, UnrollMultiReductionPattern,
                UnrollTransposePattern, UnrollGatherPattern, UnrollLoadPattern,
                UnrollStorePattern, UnrollBroadcastPattern, UnrollFromElements,
-               UnrollToElements, UnrollStepPattern>(patterns.getContext(),
-                                                    options, benefit);
+               UnrollToElements, UnrollStepPattern, UnrollShapeCastPattern>(
+      patterns.getContext(), options, benefit);
 }
 
 void mlir::vector::populateVectorToElementsUnrollPatterns(

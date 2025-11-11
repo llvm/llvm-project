@@ -180,6 +180,12 @@ struct TestVectorUnrollingPatterns
                                      }));
     populateVectorUnrollPatterns(
         patterns, UnrollVectorOptions()
+                      .setNativeShape(ArrayRef<int64_t>{2, 4})
+                      .setFilterConstraint([](Operation *op) {
+                        return success(isa<vector::ShapeCastOp>(op));
+                      }));
+    populateVectorUnrollPatterns(
+        patterns, UnrollVectorOptions()
                       .setNativeShape(ArrayRef<int64_t>{1, 3, 4, 2})
                       .setFilterConstraint([](Operation *op) {
                         return success(isa<vector::TransposeOp>(op));
