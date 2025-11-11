@@ -114,22 +114,43 @@ jobs:
             -DCOMPILER_RT_SCUDO_STANDALONE_BUILD_SHARED=OFF"
         fi
 
-        cmake -B ${{ steps.strings.outputs.build-output-dir }} \
-        -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }} \
-        -DCMAKE_C_COMPILER=${{ matrix.c_compiler }} \
-        -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
-        -DCMAKE_C_COMPILER_LAUNCHER=sccache \
-        -DCMAKE_CXX_COMPILER_LAUNCHER=sccache \
-        -DCMAKE_INSTALL_PREFIX=${{ steps.strings.outputs.build-install-dir }} \
-        -DLLVM_RUNTIME_TARGETS=${{ matrix.target }} \
-        -DLLVM_ENABLE_RUNTIMES="$RUNTIMES" \
-        -DLLVM_LIBC_FULL_BUILD=ON \
-        -G Ninja \
-        -S ${{ github.workspace }}/runtimes \
-        $CMAKE_FLAGS
+        if [[ ${{ matrix.enable_baremetal_build == "ON" ]]; then
+          cmake -B ${{ steps.strings.outputs.build-output-dir }} \
+          -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }} \
+          -DCMAKE_C_COMPILER=${{ matrix.c_compiler }} \
+          -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+          -DCMAKE_C_COMPILER_LAUNCHER=sccache \
+          -DCMAKE_CXX_COMPILER_LAUNCHER=sccache \
+          -DCMAKE_INSTALL_PREFIX=${{ steps.strings.outputs.build-install-dir }} \
+          -DLLVM_RUNTIME_TARGETS=${{ matrix.target }} \
+          -DLLVM_ENABLE_RUNTIMES="$RUNTIMES" \
+          -DLLVM_LIBC_FULL_BUILD=ON \
+          -G Ninja \
+          -S ${{ github.workspace }}/runtimes \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DLLVM_LIBC_FULL_BUILD=ON \
+          -DCMAKE_C_COMPILER_TARGET=armv6m-none-abi \
+          -DCMAKE_CXX_COMPILER_TARGET=armv6m-none-abi \
+          -DCMAKE_ASM_COMPILER_TARGET=armv6m-none-abi \
+          -DCMAKE_C_FLAGS=-mfloat-abi=soft \
+          -DCMAKE_CXX_FLAGS=-mfloat-abi=soft
+        else
+          cmake -B ${{ steps.strings.outputs.build-output-dir }} \
+          -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }} \
+          -DCMAKE_C_COMPILER=${{ matrix.c_compiler }} \
+          -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+          -DCMAKE_C_COMPILER_LAUNCHER=sccache \
+          -DCMAKE_CXX_COMPILER_LAUNCHER=sccache \
+          -DCMAKE_INSTALL_PREFIX=${{ steps.strings.outputs.build-install-dir }} \
+          -DLLVM_RUNTIME_TARGETS=${{ matrix.target }} \
+          -DLLVM_ENABLE_RUNTIMES="$RUNTIMES" \
+          -DLLVM_LIBC_FULL_BUILD=ON \
+          -G Ninja \
+          -S ${{ github.workspace }}/runtimes \
+          $CMAKE_FLAGS
+        fi
 
     - name: Build
-      if: ${{ matrix.enable_baremetal_build == "OFF" }}
       run: >
         cmake 
         --build ${{ steps.strings.outputs.build-output-dir }} 
@@ -144,36 +165,3 @@ jobs:
         --build ${{ steps.strings.outputs.build-output-dir }} 
         --parallel
         --target check-libc
-
-    - name: Configure baremetal
-      if: ${{ matrix.enable_baremetal_build == "ON" }}
-      run: |
-        export RUNTIMES="libc"
-
-        cmake -B ${{ steps.strings.outputs.build-output-dir }} \
-        -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }} \
-        -DCMAKE_C_COMPILER=${{ matrix.c_compiler }} \
-        -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
-        -DCMAKE_C_COMPILER_LAUNCHER=sccache \
-        -DCMAKE_CXX_COMPILER_LAUNCHER=sccache \
-        -DCMAKE_INSTALL_PREFIX=${{ steps.strings.outputs.build-install-dir }} \
-        -DLLVM_RUNTIME_TARGETS=${{ matrix.target }} \
-        -DLLVM_ENABLE_RUNTIMES="$RUNTIMES" \
-        -DLLVM_LIBC_FULL_BUILD=ON \
-        -G Ninja \
-        -S ${{ github.workspace }}/runtimes \
-        -DCMAKE_BUILD_TYPE=Release \
-        -DLLVM_LIBC_FULL_BUILD=ON \
-        -DCMAKE_C_COMPILER_TARGET=armv6m-none-abi \
-        -DCMAKE_CXX_COMPILER_TARGET=armv6m-none-abi \
-        -DCMAKE_ASM_COMPILER_TARGET=armv6m-none-abi \
-        -DCMAKE_C_FLAGS=-mfloat-abi=soft \
-        -DCMAKE_CXX_FLAGS=-mfloat-abi=soft
-
-    - name: Build baremetal
-      if: ${{ matrix.enable_baremetal_build == "ON" }}
-      run: >
-        cmake
-        --build ${{ steps.strings.outputs.build-output-dir }}
-        --parallel
-        --target install
