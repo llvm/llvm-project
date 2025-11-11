@@ -250,6 +250,19 @@ BasicValueFactory::evalAPSInt(BinaryOperator::Opcode Op, const llvm::APSInt &V1,
       llvm_unreachable("Invalid Opcode.");
 
     case BO_Mul:
+      // For large bit widths (like __int128), check for potential crashes
+      if (V1.getBitWidth() >= 128 || V2.getBitWidth() >= 128) {
+        // If either operand is zero, result is zero
+        if (V1 == 0 || V2 == 0) {
+          return getValue(llvm::APSInt(llvm::APInt::getZero(std::max(V1.getBitWidth(), V2.getBitWidth())),
+                                       V1.isUnsigned() && V2.isUnsigned()));
+        }
+
+        // For __int128 types, be conservative to avoid crashes in APInt multiplication
+        // This happens when multiplying unsigned __int128 with large values (like negative
+        // numbers converted to unsigned)
+        return std::nullopt;
+      }
       return getValue(V1 * V2);
 
     case BO_Div:

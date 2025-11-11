@@ -149,6 +149,12 @@ BuiltinFunctionChecker::checkOverflow(CheckerContext &C, SVal RetVal,
   // Calling a builtin with a non-integer type result produces compiler error.
   assert(Res->isIntegerType());
 
+  // If RetVal is unknown or undefined, we can't determine overflow
+  if (RetVal.isUnknown() || RetVal.isUndef()) {
+    // Return both possibilities as true (may overflow, may not overflow)
+    return {true, true};
+  }
+
   unsigned BitWidth = C.getASTContext().getIntWidth(Res);
   bool IsUnsigned = Res->isUnsignedIntegerType();
 
@@ -163,6 +169,11 @@ BuiltinFunctionChecker::checkOverflow(CheckerContext &C, SVal RetVal,
   ProgramStateRef State = C.getState();
   SVal IsLeMax = SVB.evalBinOp(State, BO_LE, RetVal, MaxVal, Res);
   SVal IsGeMin = SVB.evalBinOp(State, BO_GE, RetVal, MinVal, Res);
+
+  // If the comparison results are unknown, be conservative
+  if (IsLeMax.isUnknown() || IsGeMin.isUnknown()) {
+    return {true, true};
+  }
 
   auto [MayNotOverflow, MayOverflow] =
       State->assume(IsLeMax.castAs<DefinedOrUnknownSVal>());
@@ -201,6 +212,11 @@ void BuiltinFunctionChecker::handleOverflowBuiltin(const CallEvent &Call,
                                                    QualType ResultType) const {
   // Calling a builtin with an incorrect argument count produces compiler error.
   assert(Call.getNumArgs() == 3);
+
+  // If ResultType is null, we can't proceed with the evaluation
+  if (ResultType.isNull()) {
+    return;
+  }
 
   ProgramStateRef State = C.getState();
   SValBuilder &SVB = C.getSValBuilder();
