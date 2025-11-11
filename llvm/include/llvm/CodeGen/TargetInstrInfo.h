@@ -463,8 +463,7 @@ public:
   /// SubIdx.
   virtual void reMaterialize(MachineBasicBlock &MBB,
                              MachineBasicBlock::iterator MI, Register DestReg,
-                             unsigned SubIdx, const MachineInstr &Orig,
-                             const TargetRegisterInfo &TRI) const;
+                             unsigned SubIdx, const MachineInstr &Orig) const;
 
   /// Clones instruction or the whole instruction bundle \p Orig and
   /// insert into \p MBB before \p InsertBefore. The target may update operands
@@ -1197,8 +1196,7 @@ public:
   /// register spill instruction, part of prologue, during the frame lowering.
   virtual void storeRegToStackSlot(
       MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register SrcReg,
-      bool isKill, int FrameIndex, const TargetRegisterClass *RC,
-      const TargetRegisterInfo *TRI, Register VReg,
+      bool isKill, int FrameIndex, const TargetRegisterClass *RC, Register VReg,
       MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const {
     llvm_unreachable("Target didn't implement "
                      "TargetInstrInfo::storeRegToStackSlot!");
@@ -1216,8 +1214,7 @@ public:
   /// register reload instruction, part of epilogue, during the frame lowering.
   virtual void loadRegFromStackSlot(
       MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register DestReg,
-      int FrameIndex, const TargetRegisterClass *RC,
-      const TargetRegisterInfo *TRI, Register VReg,
+      int FrameIndex, const TargetRegisterClass *RC, Register VReg,
       MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const {
     llvm_unreachable("Target didn't implement "
                      "TargetInstrInfo::loadRegFromStackSlot!");

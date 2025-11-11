@@ -24,7 +24,7 @@ asm(R"(
 _end:
   .fill 1024
 __llvm_libc_heap_limit:
-)";
+)");
 
 using LIBC_NAMESPACE::FreeListHeap;
 using LIBC_NAMESPACE::inline_memset;

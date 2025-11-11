@@ -172,7 +172,7 @@ void ExpandPseudo::expandLoadCCond(MachineBasicBlock &MBB, Iter I) {
   Register VR = MRI.createVirtualRegister(RC);
   Register Dst = I->getOperand(0).getReg(), FI = I->getOperand(1).getIndex();
 
-  TII.loadRegFromStack(MBB, I, VR, FI, RC, &RegInfo, 0);
+  TII.loadRegFromStack(MBB, I, VR, FI, RC, 0);
   BuildMI(MBB, I, I->getDebugLoc(), TII.get(TargetOpcode::COPY), Dst)
     .addReg(VR, RegState::Kill);
 }
@@ -189,7 +189,7 @@ void ExpandPseudo::expandStoreCCond(MachineBasicBlock &MBB, Iter I) {
 
   BuildMI(MBB, I, I->getDebugLoc(), TII.get(TargetOpcode::COPY), VR)
     .addReg(Src, getKillRegState(I->getOperand(0).isKill()));
-  TII.storeRegToStack(MBB, I, VR, true, FI, RC, &RegInfo, 0);
+  TII.storeRegToStack(MBB, I, VR, true, FI, RC, 0);
 }
 
 void ExpandPseudo::expandLoadACC(MachineBasicBlock &MBB, Iter I,
@@ -210,9 +210,9 @@ void ExpandPseudo::expandLoadACC(MachineBasicBlock &MBB, Iter I,
   DebugLoc DL = I->getDebugLoc();
   const MCInstrDesc &Desc = TII.get(TargetOpcode::COPY);
 
-  TII.loadRegFromStack(MBB, I, VR0, FI, RC, &RegInfo, 0);
+  TII.loadRegFromStack(MBB, I, VR0, FI, RC, 0);
   BuildMI(MBB, I, DL, Desc, Lo).addReg(VR0, RegState::Kill);
-  TII.loadRegFromStack(MBB, I, VR1, FI, RC, &RegInfo, RegSize);
+  TII.loadRegFromStack(MBB, I, VR1, FI, RC, RegSize);
   BuildMI(MBB, I, DL, Desc, Hi).addReg(VR1, RegState::Kill);
 }
 
@@ -234,9 +234,9 @@ void ExpandPseudo::expandStoreACC(MachineBasicBlock &MBB, Iter I,
   DebugLoc DL = I->getDebugLoc();
 
   BuildMI(MBB, I, DL, TII.get(MFLoOpc), VR0).addReg(Src);
-  TII.storeRegToStack(MBB, I, VR0, true, FI, RC, &RegInfo, 0);
+  TII.storeRegToStack(MBB, I, VR0, true, FI, RC, 0);
   BuildMI(MBB, I, DL, TII.get(MFHiOpc), VR1).addReg(Src, SrcKill);
-  TII.storeRegToStack(MBB, I, VR1, true, FI, RC, &RegInfo, RegSize);
+  TII.storeRegToStack(MBB, I, VR1, true, FI, RC, RegSize);
 }
 
 bool ExpandPseudo::expandCopy(MachineBasicBlock &MBB, Iter I) {
@@ -321,11 +321,9 @@ bool ExpandPseudo::expandBuildPairF64(MachineBasicBlock &MBB,
     int FI = MF.getInfo<MipsFunctionInfo>()->getMoveF64ViaSpillFI(MF, RC2);
     if (!Subtarget.isLittle())
       std::swap(LoReg, HiReg);
-    TII.storeRegToStack(MBB, I, LoReg, I->getOperand(1).isKill(), FI, RC,
-                        &RegInfo, 0);
-    TII.storeRegToStack(MBB, I, HiReg, I->getOperand(2).isKill(), FI, RC,
-                        &RegInfo, 4);
-    TII.loadRegFromStack(MBB, I, DstReg, FI, RC2, &RegInfo, 0);
+    TII.storeRegToStack(MBB, I, LoReg, I->getOperand(1).isKill(), FI, RC, 0);
+    TII.storeRegToStack(MBB, I, HiReg, I->getOperand(2).isKill(), FI, RC, 4);
+    TII.loadRegFromStack(MBB, I, DstReg, FI, RC2, 0);
     return true;
   }
 
@@ -385,8 +383,8 @@ bool ExpandPseudo::expandExtractElementF64(MachineBasicBlock &MBB,
     // We re-use the same spill slot each time so that the stack frame doesn't
     // grow too much in functions with a large number of moves.
     int FI = MF.getInfo<MipsFunctionInfo>()->getMoveF64ViaSpillFI(MF, RC);
-    TII.storeRegToStack(MBB, I, SrcReg, Op1.isKill(), FI, RC, &RegInfo, 0);
-    TII.loadRegFromStack(MBB, I, DstReg, FI, RC2, &RegInfo, Offset);
+    TII.storeRegToStack(MBB, I, SrcReg, Op1.isKill(), FI, RC, 0);
+    TII.loadRegFromStack(MBB, I, DstReg, FI, RC2, Offset);
     return true;
   }
 
@@ -480,8 +478,7 @@ void MipsSEFrameLowering::emitPrologue(MachineFunction &MF,
       if (!MBB.isLiveIn(ABI.GetEhDataReg(I)))
         MBB.addLiveIn(ABI.GetEhDataReg(I));
       TII.storeRegToStackSlot(MBB, MBBI, ABI.GetEhDataReg(I), false,
-                              MipsFI->getEhDataRegFI(I), RC, &RegInfo,
-                              Register());
+                              MipsFI->getEhDataRegFI(I), RC, Register());
     }
 
     // Emit .cfi_offset directives for eh data registers.
@@ -579,8 +576,7 @@ void MipsSEFrameLowering::emitInterruptPrologueStub(
       .setMIFlag(MachineInstr::FrameSetup);
 
   STI.getInstrInfo()->storeRegToStack(MBB, MBBI, Mips::K1, false,
-                                      MipsFI->getISRRegFI(0), PtrRC,
-                                      STI.getRegisterInfo(), 0);
+                                      MipsFI->getISRRegFI(0), PtrRC, 0);
 
   // Fetch and Spill Status
   MBB.addLiveIn(Mips::COP012);
@@ -590,8 +586,7 @@ void MipsSEFrameLowering::emitInterruptPrologueStub(
       .setMIFlag(MachineInstr::FrameSetup);
 
   STI.getInstrInfo()->storeRegToStack(MBB, MBBI, Mips::K1, false,
-                                      MipsFI->getISRRegFI(1), PtrRC,
-                                      STI.getRegisterInfo(), 0);
+                                      MipsFI->getISRRegFI(1), PtrRC, 0);
 
   // Build the configuration for disabling lower priority interrupts. Non EIC
   // interrupts need to be masked off with zero, EIC from the Cause register.
@@ -657,7 +652,6 @@ void MipsSEFrameLowering::emitEpilogue(MachineFunction &MF,
 
   const MipsSEInstrInfo &TII =
       *static_cast<const MipsSEInstrInfo *>(STI.getInstrInfo());
-  const MipsRegisterInfo &RegInfo = *STI.getRegisterInfo();
 
   DebugLoc DL = MBBI != MBB.end() ? MBBI->getDebugLoc() : DebugLoc();
   MipsABIInfo ABI = STI.getABI();
@@ -690,8 +684,7 @@ void MipsSEFrameLowering::emitEpilogue(MachineFunction &MF,
     // Insert instructions that restore eh data registers.
     for (int J = 0; J < 4; ++J) {
       TII.loadRegFromStackSlot(MBB, I, ABI.GetEhDataReg(J),
-                               MipsFI->getEhDataRegFI(J), RC, &RegInfo,
-                               Register());
+                               MipsFI->getEhDataRegFI(J), RC, Register());
     }
   }
 
@@ -722,17 +715,15 @@ void MipsSEFrameLowering::emitInterruptEpilogueStub(
   BuildMI(MBB, MBBI, DL, STI.getInstrInfo()->get(Mips::EHB));
 
   // Restore EPC
-  STI.getInstrInfo()->loadRegFromStackSlot(MBB, MBBI, Mips::K1,
-                                           MipsFI->getISRRegFI(0), PtrRC,
-                                           STI.getRegisterInfo(), Register());
+  STI.getInstrInfo()->loadRegFromStackSlot(
+      MBB, MBBI, Mips::K1, MipsFI->getISRRegFI(0), PtrRC, Register());
   BuildMI(MBB, MBBI, DL, STI.getInstrInfo()->get(Mips::MTC0), Mips::COP014)
       .addReg(Mips::K1)
       .addImm(0);
 
   // Restore Status
-  STI.getInstrInfo()->loadRegFromStackSlot(MBB, MBBI, Mips::K1,
-                                           MipsFI->getISRRegFI(1), PtrRC,
-                                           STI.getRegisterInfo(), Register());
+  STI.getInstrInfo()->loadRegFromStackSlot(
+      MBB, MBBI, Mips::K1, MipsFI->getISRRegFI(1), PtrRC, Register());
   BuildMI(MBB, MBBI, DL, STI.getInstrInfo()->get(Mips::MTC0), Mips::COP012)
       .addReg(Mips::K1)
       .addImm(0);
@@ -795,7 +786,7 @@ bool MipsSEFrameLowering::spillCalleeSavedRegisters(
     // Insert the spill to the stack frame.
     bool IsKill = !IsRAAndRetAddrIsTaken;
     const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
-    TII.storeRegToStackSlot(MBB, MI, Reg, IsKill, I.getFrameIdx(), RC, TRI,
+    TII.storeRegToStackSlot(MBB, MI, Reg, IsKill, I.getFrameIdx(), RC,
                             Register());
   }
 

@@ -355,8 +355,8 @@ void XCoreInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 void XCoreInstrInfo::storeRegToStackSlot(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator I, Register SrcReg,
     bool isKill, int FrameIndex, const TargetRegisterClass *RC,
-    const TargetRegisterInfo *TRI, Register VReg,
-    MachineInstr::MIFlag Flags) const {
+
+    Register VReg, MachineInstr::MIFlag Flags) const {
   DebugLoc DL;
   if (I != MBB.end() && !I->isDebugInstr())
     DL = I->getDebugLoc();
@@ -377,7 +377,6 @@ void XCoreInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
                                           MachineBasicBlock::iterator I,
                                           Register DestReg, int FrameIndex,
                                           const TargetRegisterClass *RC,
-                                          const TargetRegisterInfo *TRI,
                                           Register VReg,
                                           MachineInstr::MIFlag Flags) const {
   DebugLoc DL;

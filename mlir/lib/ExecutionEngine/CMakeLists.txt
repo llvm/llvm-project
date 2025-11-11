@@ -2,6 +2,7 @@
 # is a big dependency which most don't need.
 
 set(LLVM_OPTIONAL_SOURCES
+  APFloatWrappers.cpp
   ArmRunnerUtils.cpp
   ArmSMEStubs.cpp
   AsyncRuntime.cpp
@@ -167,6 +168,15 @@ if(LLVM_ENABLE_PIC)
   set_property(TARGET mlir_float16_utils PROPERTY CXX_STANDARD 17)
   target_compile_definitions(mlir_float16_utils PRIVATE mlir_float16_utils_EXPORTS)
 
+  add_mlir_library(mlir_apfloat_wrappers
+    SHARED
+    APFloatWrappers.cpp
+
+    EXCLUDE_FROM_LIBMLIR
+    )
+  set_property(TARGET mlir_apfloat_wrappers PROPERTY CXX_STANDARD 17)
+  target_compile_definitions(mlir_apfloat_wrappers PRIVATE mlir_apfloat_wrappers_EXPORTS)
+
   add_subdirectory(SparseTensor)
 
   add_mlir_library(mlir_c_runner_utils
@@ -177,6 +187,7 @@ if(LLVM_ENABLE_PIC)
     EXCLUDE_FROM_LIBMLIR
 
     LINK_LIBS PUBLIC
+    mlir_apfloat_wrappers
     mlir_float16_utils
     MLIRSparseTensorEnums
     MLIRSparseTensorRuntime
@@ -191,6 +202,7 @@ if(LLVM_ENABLE_PIC)
     EXCLUDE_FROM_LIBMLIR
 
     LINK_LIBS PUBLIC
+    mlir_apfloat_wrappers
     mlir_float16_utils
   )
   target_compile_definitions(mlir_runner_utils PRIVATE mlir_runner_utils_EXPORTS)

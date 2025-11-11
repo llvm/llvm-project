@@ -1405,7 +1405,7 @@ bool HexagonFrameLowering::insertCSRSpillsInBlock(MachineBasicBlock &MBB,
     bool IsKill = !HRI.isEHReturnCalleeSaveReg(Reg);
     int FI = I.getFrameIdx();
     const TargetRegisterClass *RC = HRI.getMinimalPhysRegClass(Reg);
-    HII.storeRegToStackSlot(MBB, MI, Reg, IsKill, FI, RC, &HRI, Register());
+    HII.storeRegToStackSlot(MBB, MI, Reg, IsKill, FI, RC, Register());
     if (IsKill)
       MBB.addLiveIn(Reg);
   }
@@ -1470,7 +1470,7 @@ bool HexagonFrameLowering::insertCSRRestoresInBlock(MachineBasicBlock &MBB,
     MCRegister Reg = I.getReg();
     const TargetRegisterClass *RC = HRI.getMinimalPhysRegClass(Reg);
     int FI = I.getFrameIdx();
-    HII.loadRegFromStackSlot(MBB, MI, Reg, FI, RC, &HRI, Register());
+    HII.loadRegFromStackSlot(MBB, MI, Reg, FI, RC, Register());
   }
 
   return true;
@@ -1814,8 +1814,7 @@ bool HexagonFrameLowering::expandStoreVecPred(MachineBasicBlock &B,
     .addReg(SrcR, getKillRegState(IsKill))
     .addReg(TmpR0, RegState::Kill);
 
-  auto *HRI = B.getParent()->getSubtarget<HexagonSubtarget>().getRegisterInfo();
-  HII.storeRegToStackSlot(B, It, TmpR1, true, FI, RC, HRI, Register());
+  HII.storeRegToStackSlot(B, It, TmpR1, true, FI, RC, Register());
   expandStoreVec(B, std::prev(It), MRI, HII, NewRegs);
 
   NewRegs.push_back(TmpR0);
@@ -1844,9 +1843,7 @@ bool HexagonFrameLowering::expandLoadVecPred(MachineBasicBlock &B,
 
   BuildMI(B, It, DL, HII.get(Hexagon::A2_tfrsi), TmpR0)
     .addImm(0x01010101);
-  MachineFunction &MF = *B.getParent();
-  auto *HRI = MF.getSubtarget<HexagonSubtarget>().getRegisterInfo();
-  HII.loadRegFromStackSlot(B, It, TmpR1, FI, RC, HRI, Register());
+  HII.loadRegFromStackSlot(B, It, TmpR1, FI, RC, Register());
   expandLoadVec(B, std::prev(It), MRI, HII, NewRegs);
 
   BuildMI(B, It, DL, HII.get(Hexagon::V6_vandvrt), DstR)

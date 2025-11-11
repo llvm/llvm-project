@@ -145,8 +145,8 @@ void XtensaInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 void XtensaInstrInfo::storeRegToStackSlot(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, Register SrcReg,
     bool isKill, int FrameIdx, const TargetRegisterClass *RC,
-    const TargetRegisterInfo *TRI, Register VReg,
-    MachineInstr::MIFlag Flags) const {
+
+    Register VReg, MachineInstr::MIFlag Flags) const {
   DebugLoc DL = MBBI != MBB.end() ? MBBI->getDebugLoc() : DebugLoc();
   unsigned LoadOpcode, StoreOpcode;
   getLoadStoreOpcodes(RC, LoadOpcode, StoreOpcode, FrameIdx);
@@ -155,10 +155,12 @@ void XtensaInstrInfo::storeRegToStackSlot(
   addFrameReference(MIB, FrameIdx);
 }
 
-void XtensaInstrInfo::loadRegFromStackSlot(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, Register DestReg,
-    int FrameIdx, const TargetRegisterClass *RC, const TargetRegisterInfo *TRI,
-    Register VReg, MachineInstr::MIFlag Flags) const {
+void XtensaInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
+                                           MachineBasicBlock::iterator MBBI,
+                                           Register DestReg, int FrameIdx,
+                                           const TargetRegisterClass *RC,
+                                           Register VReg,
+                                           MachineInstr::MIFlag Flags) const {
   DebugLoc DL = MBBI != MBB.end() ? MBBI->getDebugLoc() : DebugLoc();
   unsigned LoadOpcode, StoreOpcode;
   getLoadStoreOpcodes(RC, LoadOpcode, StoreOpcode, FrameIdx);
@@ -544,12 +546,12 @@ void XtensaInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
           "function code size is significantly larger than estimated");
 
     storeRegToStackSlot(MBB, L32R, ScavRegister, /*IsKill=*/true, FrameIndex,
-                        &Xtensa::ARRegClass, &RI, Register());
+                        &Xtensa::ARRegClass, Register());
     RI.eliminateFrameIndex(std::prev(L32R.getIterator()),
                            /*SpAdj=*/0, /*FIOperandNum=*/1);
 
     loadRegFromStackSlot(RestoreBB, RestoreBB.end(), ScavRegister, FrameIndex,
-                         &Xtensa::ARRegClass, &RI, Register());
+                         &Xtensa::ARRegClass, Register());
     RI.eliminateFrameIndex(RestoreBB.back(),
                            /*SpAdj=*/0, /*FIOperandNum=*/1);
     JumpToMBB = &RestoreBB;
