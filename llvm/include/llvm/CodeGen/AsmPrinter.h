@@ -18,7 +18,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/MapVector.h"
-#include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/StaticDataProfileInfo.h"
@@ -207,9 +207,9 @@ private:
     using CGTypeId = uint64_t;
 
     /// Unique target type IDs.
-    SmallSet<CGTypeId, 4> IndirectCalleeTypeIDs;
+    SmallSetVector<CGTypeId, 4> IndirectCalleeTypeIDs;
     /// Unique direct callees.
-    SmallSet<MCSymbol *, 4> DirectCallees;
+    SmallSetVector<MCSymbol *, 4> DirectCallees;
   };
 
   enum CallGraphSectionFormatVersion : uint8_t {

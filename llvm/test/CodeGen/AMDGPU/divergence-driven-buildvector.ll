@@ -487,13 +487,13 @@ define amdgpu_kernel void @uniform_vec_i16_HH(ptr addrspace(1) %out, i32 %a, i32
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
 ; GCN-NEXT:    s_mov_b32 s7, 0xf000
-; GCN-NEXT:    s_mov_b32 s6, -1
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    s_lshr_b32 s3, s3, 16
+; GCN-NEXT:    s_lshr_b64 s[2:3], s[2:3], 16
+; GCN-NEXT:    s_mov_b32 s6, -1
 ; GCN-NEXT:    s_mov_b32 s4, s0
 ; GCN-NEXT:    s_mov_b32 s5, s1
-; GCN-NEXT:    s_lshr_b32 s0, s3, 16
 ; GCN-NEXT:    v_mov_b32_e32 v0, s2
-; GCN-NEXT:    v_alignbit_b32 v0, s0, v0, 16
 ; GCN-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; GCN-NEXT:    s_endpgm
 ;

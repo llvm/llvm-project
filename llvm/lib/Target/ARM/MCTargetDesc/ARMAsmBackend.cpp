@@ -1238,7 +1238,7 @@ uint64_t ARMAsmBackendDarwin::generateCompactUnwindEncoding(
   // Verify standard frame (lr/r7) was used.
   if (CFARegister != ARM::R7) {
     DEBUG_WITH_TYPE("compact-unwind", llvm::dbgs() << "frame register is "
-                                                   << CFARegister
+                                                   << CFARegister.id()
                                                    << " instead of r7\n");
     return CU::UNWIND_ARM_MODE_DWARF;
   }

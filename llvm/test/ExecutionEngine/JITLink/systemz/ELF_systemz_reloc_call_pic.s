@@ -61,8 +61,9 @@ test_call_extern_plt:
 # Check PLT stub relocation for lgrl(Delta32dbl). 
 #
 # jitlink-check: *{4}(stub_addr(elf_pic_reloc.o, extern_out_of_range32) + 2) = \
-# jitlink-check: (got_addr(elf_pic_reloc.o, extern_out_of_range32) - \
-# jitlink-check:   stub_addr(elf_pic_reloc.o, extern_out_of_range32)) >> 1
+# jitlink-check: ((got_addr(elf_pic_reloc.o, extern_out_of_range32) - \
+# jitlink-check:   stub_addr(elf_pic_reloc.o, extern_out_of_range32)) >> 1) \
+# jitlink-check: & 0xffffffff
         .globl  test_call_extern_plt_stub
         .p2align       4
         .type   test_call_extern_plt_stub,@function
