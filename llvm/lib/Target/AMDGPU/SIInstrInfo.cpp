@@ -10775,7 +10775,7 @@ bool SIInstrInfo::invertSCCUse(MachineInstr *SCCDef) const {
   // Scan instructions for SCC uses that need to be inverted until SCC is dead.
   for (MachineInstr &MI :
        make_range(std::next(MachineBasicBlock::iterator(SCCDef)), MBB->end())) {
-    if (MI.findRegisterUseOperandIdx(AMDGPU::SCC, TRI, false) != -1) {
+    if (MI.readsRegister(AMDGPU::SCC, TRI)) {
       if (MI.getOpcode() == AMDGPU::S_CSELECT_B32 ||
           MI.getOpcode() == AMDGPU::S_CSELECT_B64 ||
           MI.getOpcode() == AMDGPU::S_CBRANCH_SCC0 ||
@@ -10784,7 +10784,7 @@ bool SIInstrInfo::invertSCCUse(MachineInstr *SCCDef) const {
       else
         return false;
     }
-    if (MI.modifiesRegister(AMDGPU::SCC, TRI)) {
+    if (MI.definesRegister(AMDGPU::SCC, TRI)) {
       SCCIsDead = true;
       break;
     }
@@ -10798,23 +10798,23 @@ bool SIInstrInfo::invertSCCUse(MachineInstr *SCCDef) const {
     SCCIsDead = MBB->computeRegisterLiveness(TRI, AMDGPU::SCC, MBB->end(), 0) ==
                 MachineBasicBlock::LQR_Dead;
 
+  if (!SCCIsDead)
+    return false;
+
   // Invert uses
-  if (SCCIsDead) {
-    for (auto &MI : InvertInstr) {
-      if (MI->getOpcode() == AMDGPU::S_CSELECT_B32 ||
-          MI->getOpcode() == AMDGPU::S_CSELECT_B64)
-        swapOperands(*MI);
-      else if (MI->getOpcode() == AMDGPU::S_CBRANCH_SCC0 ||
-               MI->getOpcode() == AMDGPU::S_CBRANCH_SCC1)
-        MI->setDesc(get(MI->getOpcode() == AMDGPU::S_CBRANCH_SCC0
-                            ? AMDGPU::S_CBRANCH_SCC1
-                            : AMDGPU::S_CBRANCH_SCC0));
-      else
-        llvm_unreachable("SCC used but no inversion handling");
-    }
-    return true;
+  for (MachineInstr *MI : InvertInstr) {
+    if (MI->getOpcode() == AMDGPU::S_CSELECT_B32 ||
+        MI->getOpcode() == AMDGPU::S_CSELECT_B64)
+      swapOperands(*MI);
+    else if (MI->getOpcode() == AMDGPU::S_CBRANCH_SCC0 ||
+             MI->getOpcode() == AMDGPU::S_CBRANCH_SCC1)
+      MI->setDesc(get(MI->getOpcode() == AMDGPU::S_CBRANCH_SCC0
+                          ? AMDGPU::S_CBRANCH_SCC1
+                          : AMDGPU::S_CBRANCH_SCC0));
+    else
+      llvm_unreachable("SCC used but no inversion handling");
   }
-  return false;
+  return true;
 }
 
 // SCC is already valid after SCCValid.
