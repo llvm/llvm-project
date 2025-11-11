@@ -15,11 +15,11 @@ on:
     branches:
       - main
     paths:
-      - 'libcxx/utils/ci/**'
+      - 'libcxx/utils/ci/docker/**'
       - '.github/workflows/libcxx-build-containers.yml'
   pull_request:
     paths:
-      - 'libcxx/utils/ci/**'
+      - 'libcxx/utils/ci/docker/**'
       - '.github/workflows/libcxx-build-containers.yml'
 
 jobs:
@@ -40,17 +40,18 @@ jobs:
         echo '{ "data-root": "/mnt/docker" }' | sudo tee /etc/docker/daemon.json
         sudo systemctl restart docker
 
-    - name: Build the Linux builder image
-      working-directory: libcxx/utils/ci
-      run: |
-        docker compose build builder-base
-        docker compose build actions-builder
+    - name: Build the base image
+      run: docker compose --file libcxx/utils/ci/docker/docker-compose.yml build libcxx-builder-base
+      env:
+        TAG: ${{ github.sha }}
+
+    - name: Build the Linux Github Actions image
+      run: docker compose --file libcxx/utils/ci/docker/docker-compose.yml build libcxx-linux-builder
       env:
         TAG: ${{ github.sha }}
 
     - name: Build the Android builder image
-      working-directory: libcxx/utils/ci
-      run: docker compose build android-buildkite-builder
+      run: docker compose --file libcxx/utils/ci/docker/docker-compose.yml build android-buildkite-builder
       env:
         TAG: ${{ github.sha }}
 
@@ -61,19 +62,6 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Push the Linux builder image
+    - name: Push the images
       if: github.event_name == 'push'
-      working-directory: libcxx/utils/ci
-      run: |
-        docker compose push builder-base
-        docker compose push actions-builder
-      env:
-        TAG: ${{ github.sha }}
-
-    - name: Push the Android builder image
-      if: github.event_name == 'push'
-      working-directory: libcxx/utils/ci
-      run: |
-        docker compose push android-buildkite-builder
-      env:
-        TAG: ${{ github.sha }}
+      run: docker compose push libcxx-builder-base libcxx-linux-builder android-buildkite-builder
