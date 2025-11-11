@@ -1710,8 +1710,12 @@ LogicalResult ScaledExtPacked816OpLowering::matchAndRewrite(
 
   // Ok, so we need to construct ops depending on the sourceType and targetType.
   // smallT = [Fp4, Fp8, Bf8]
+  //           Bf8 = E5M2
+  //           Fp8 = E4M3
+  //
   // largeT = [F16, Bf16, F32]
   // CvtPkScalePk{8}${largeT}${smallT}
+
   if (isa<Float4E2M1FNType>(srcElemType) and isa<Float16Type>(tgtElemType)) {
     // CvtPkScalePk8F16Fp4Op
     // i32
@@ -1764,9 +1768,9 @@ LogicalResult ScaledExtPacked816OpLowering::matchAndRewrite(
     rewriter.replaceOp(op, newOp);
     return success();
   }
-  if (isa<Float8E5M2Type>(srcElemType) and isa<BFloat16Type>(tgtElemType)) {
+  if (isa<Float8E4M3FNType>(srcElemType) and isa<BFloat16Type>(tgtElemType)) {
     // CvtPkScalePk8Bf16Fp8Op
-    // vector<8xf8E5M2>
+    // vector<8xf8E4M3FN>
     Value source = adaptor.getSource();
 
     // vector<2xi32>
@@ -1779,9 +1783,23 @@ LogicalResult ScaledExtPacked816OpLowering::matchAndRewrite(
     rewriter.replaceOp(op, newOp);
     return success();
   }
+  if (isa<Float8E5M2Type>(srcElemType) and isa<BFloat16Type>(tgtElemType)) {
+    // CvtPkScalePk8Bf16Bf8Op
+    // vector<8xf8E5M2>
+    Value source = adaptor.getSource();
+
+    // vector<2xi32>
+    VectorType v2xi32 = VectorType::get(2, i32);
+    Value castedSource = LLVM::BitcastOp::create(rewriter, loc, v2xi32, source);
+
+    auto newOp = ROCDL::CvtPkScalePk8Bf16Bf8Op::create(
+        rewriter, loc, op.getResult().getType(), castedSource, castedScale,
+        scaleSel);
+    rewriter.replaceOp(op, newOp);
+    return success();
+  }
   /*
 
-  CvtPkScalePk8Bf16Bf8Op
 
   CvtPkScalePk8F32Fp4Op
   CvtPkScalePk8F32Fp8Op
