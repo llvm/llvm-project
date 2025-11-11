@@ -819,7 +819,7 @@ class QCIRVInst48EJ<bits<2> func2, string opcodestr>
 
 class SFBQCLI
     : Pseudo<(outs GPR:$dst),
-             (ins GPR:$lhs, GPR:$rhs, cond_code:$cc, GPR:$falsev, GPR:$rs1,
+             (ins GPR:$lhs, GPR:$rhs, cond_code:$cc, GPR:$falsev,
                   simm20_li:$imm), []> {
   let hasSideEffects = 0;
   let mayLoad = 0;
@@ -830,7 +830,7 @@ class SFBQCLI
 
 class SFBQCELI
     : Pseudo<(outs GPR:$dst),
-             (ins GPR:$lhs, GPR:$rhs, cond_code:$cc, GPR:$falsev, GPR:$rs1,
+             (ins GPR:$lhs, GPR:$rhs, cond_code:$cc, GPR:$falsev,
                   bare_simm32:$imm), []> {
   let hasSideEffects = 0;
   let mayLoad = 0;

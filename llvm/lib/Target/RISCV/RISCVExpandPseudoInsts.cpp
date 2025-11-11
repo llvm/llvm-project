@@ -278,8 +278,7 @@ bool RISCVExpandPseudo::expandCCOp(MachineBasicBlock &MBB,
 
     else if (NewOpc == RISCV::LUI || NewOpc == RISCV::QC_LI ||
              NewOpc == RISCV::QC_E_LI) {
-      BuildMI(TrueBB, DL, TII->get(NewOpc), DestReg)
-          .add(MI.getOperand(5));
+      BuildMI(TrueBB, DL, TII->get(NewOpc), DestReg).add(MI.getOperand(5));
     } else {
       BuildMI(TrueBB, DL, TII->get(NewOpc), DestReg)
           .add(MI.getOperand(5))

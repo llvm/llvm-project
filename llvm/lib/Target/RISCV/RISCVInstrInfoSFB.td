@@ -71,7 +71,7 @@ class SFBALU_ri
 
 class SFBLUI
     : Pseudo<(outs GPR:$dst),
-             (ins GPR:$lhs, GPR:$rhs, cond_code:$cc, GPR:$falsev, GPR:$rs1,
+             (ins GPR:$lhs, GPR:$rhs, cond_code:$cc, GPR:$falsev,
                   uimm20_lui:$imm), []> {
   let hasSideEffects = 0;
   let mayLoad = 0;
