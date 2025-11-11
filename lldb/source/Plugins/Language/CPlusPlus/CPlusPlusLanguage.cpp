@@ -1700,9 +1700,11 @@ static void LoadCommonStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
           },
           "MSVC STL/libstdc++ std::wstring summary provider"));
 
+  // NOTE: it is loaded as a common formatter because the libc++ version is not
+  // in the `__1` namespace, hence we need to dispatch based on the class layout.
   AddCXXSynthetic(cpp_category_sp,
                   GenericInitializerListSyntheticFrontEndCreator,
-                  "libc++/libstdc++ std::initializer_list synthetic children",
+                  "std::initializer_list synthetic children",
                   "^std::initializer_list<.+>$", stl_synth_flags, true);
 
   stl_summary_flags.SetDontShowChildren(false);
