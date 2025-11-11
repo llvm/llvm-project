@@ -888,10 +888,11 @@ void HeaderSearch::DiagnoseHeaderShadowing(
     bool isAngled, int IncluderLoopIndex, ConstSearchDirIterator MainLoopIt) {
 
   if (Diags.isIgnored(diag::warn_header_shadowing, IncludeLoc) ||
-      DiagnosedShadowing || (getFileInfo(*FE).DirInfo != SrcMgr::C_User)) {
-    DiagnosedShadowing = true;
+      DiagnosedShadowing)
     return;
-  }
+  // Ignore diagnostics from system headers.
+  if (MainLoopIt && MainLoopIt->isSystemHeaderDirectory())
+    return;
 
   DiagnosedShadowing = true;
 
