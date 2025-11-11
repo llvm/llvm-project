@@ -24,7 +24,6 @@ namespace llvm {
 class InductionDescriptor;
 class Instruction;
 class LoopVersioning;
-class LoopVectorizationLegality;
 class PHINode;
 class ScalarEvolution;
 class PredicatedScalarEvolution;
@@ -396,8 +395,7 @@ struct VPlanTransforms {
   /// for entire vectors for both the latest mask containing at least one active
   /// element and the corresponding data vector.
   static void convertFindLastRecurrences(VPlan &Plan,
-                                         VPRecipeBuilder &RecipeBuilder,
-                                         LoopVectorizationLegality *Legal);
+                                         VPRecipeBuilder &RecipeBuilder);
 };
 
 } // namespace llvm

@@ -41,7 +41,6 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/TypeSize.h"
 #include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
-#include "llvm/Transforms/Vectorize/LoopVectorizationLegality.h"
 
 using namespace llvm;
 using namespace VPlanPatternMatch;
@@ -4905,9 +4904,7 @@ void VPlanTransforms::addExitUsersForFirstOrderRecurrences(VPlan &Plan,
 }
 
 void VPlanTransforms::convertFindLastRecurrences(
-    VPlan &Plan, VPRecipeBuilder &RecipeBuilder,
-    LoopVectorizationLegality *Legal) {
-  assert(Legal && "Need valid LoopVecLegality");
+    VPlan &Plan, VPRecipeBuilder &RecipeBuilder) {
 
   // May need to do something better than this?
   if (Plan.hasScalarVFOnly())
@@ -4928,55 +4925,55 @@ void VPlanTransforms::convertFindLastRecurrences(
   // middle.block:
   //   result = extract-last-active new.data, new.mask, default.val
 
-  for (const auto &[Phi, RdxDesc] : Legal->getReductionVars()) {
-    if (RecurrenceDescriptor::isFindLastRecurrenceKind(
-            RdxDesc.getRecurrenceKind())) {
-      VPRecipeBase *PhiR = RecipeBuilder.getRecipe(Phi);
-      VPBuilder Builder = VPBuilder::getToInsertAfter(PhiR);
+  for (auto &Phi : Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis()) {
+    auto *PhiR = dyn_cast<VPReductionPHIRecipe>(&Phi);
+    if (!PhiR || !RecurrenceDescriptor::isFindLastRecurrenceKind(
+                     PhiR->getRecurrenceKind()))
+      continue;
 
-      // Add mask phi
-      VPValue *False =
-          Plan.getOrAddLiveIn(ConstantInt::getFalse(Phi->getContext()));
-      auto *MaskPHI = new VPLastActiveMaskPHIRecipe(False, DebugLoc());
-      Builder.insert(MaskPHI);
+    // Find the condition for the select
+    auto *SR = dyn_cast<VPWidenSelectRecipe>(&PhiR->getBackedgeRecipe());
+    if (!SR)
+      continue;
+    VPValue *Cond = SR->getCond();
 
-      // Find the condition for the select
-      SelectInst *Select = cast<SelectInst>(RdxDesc.getLoopExitInstr());
-      auto *SR = cast<VPWidenSelectRecipe>(RecipeBuilder.getRecipe(Select));
-      VPValue *Cond = SR->getCond();
+    // Add mask phi
+    VPBuilder Builder = VPBuilder::getToInsertAfter(PhiR);
+    VPValue *False = Plan.getOrAddLiveIn(
+        ConstantInt::getFalse(PhiR->getUnderlyingValue()->getContext()));
+    auto *MaskPHI = new VPLastActiveMaskPHIRecipe(False, DebugLoc());
+    Builder.insert(MaskPHI);
 
-      // Add select for mask
-      Builder.setInsertPoint(SR);
-      VPValue *AnyOf = Builder.createNaryOp(VPInstruction::AnyOf, {Cond});
-      VPValue *MaskSelect = Builder.createSelect(AnyOf, Cond, MaskPHI);
-      MaskPHI->addOperand(MaskSelect);
+    // Add select for mask
+    Builder.setInsertPoint(SR);
+    VPValue *AnyOf = Builder.createNaryOp(VPInstruction::AnyOf, {Cond});
+    VPValue *MaskSelect = Builder.createSelect(AnyOf, Cond, MaskPHI);
+    MaskPHI->addOperand(MaskSelect);
 
-      // Replace select for data
-      VPValue *DataSelect = Builder.createSelect(
-          AnyOf, SR->getOperand(1), SR->getOperand(2), SR->getDebugLoc());
-      SR->replaceAllUsesWith(DataSelect);
-      SR->eraseFromParent();
+    // Replace select for data
+    VPValue *DataSelect = Builder.createSelect(
+        AnyOf, SR->getOperand(1), SR->getOperand(2), SR->getDebugLoc());
+    SR->replaceAllUsesWith(DataSelect);
+    SR->eraseFromParent();
 
-      // Find final reduction and replace it with an
-      // extract.last.active intrinsic.
-      VPInstruction *RdxResult = nullptr;
-      for (VPUser *U : DataSelect->users()) {
-        VPInstruction *I = dyn_cast<VPInstruction>(U);
-        if (I && I->getOpcode() == VPInstruction::ComputeReductionResult) {
-          RdxResult = I;
-          break;
-        }
+    // Find final reduction and replace it with an
+    // extract.last.active intrinsic.
+    VPInstruction *RdxResult = nullptr;
+    for (VPUser *U : DataSelect->users()) {
+      VPInstruction *I = dyn_cast<VPInstruction>(U);
+      if (I && I->getOpcode() == VPInstruction::ComputeReductionResult) {
+        RdxResult = I;
+        break;
       }
-
-      assert(RdxResult);
-      Builder.setInsertPoint(RdxResult);
-      VPValue *Default = RecipeBuilder.getVPValueOrAddLiveIn(
-          RdxDesc.getRecurrenceStartValue());
-      auto *ExtractLastActive = Builder.createNaryOp(
-          VPInstruction::ExtractLastActive, {DataSelect, MaskSelect, Default},
-          RdxResult->getDebugLoc());
-      RdxResult->replaceAllUsesWith(ExtractLastActive);
-      RdxResult->eraseFromParent();
     }
+
+    assert(RdxResult);
+    Builder.setInsertPoint(RdxResult);
+    auto *ExtractLastActive =
+        Builder.createNaryOp(VPInstruction::ExtractLastActive,
+                             {DataSelect, MaskSelect, PhiR->getStartValue()},
+                             RdxResult->getDebugLoc());
+    RdxResult->replaceAllUsesWith(ExtractLastActive);
+    RdxResult->eraseFromParent();
   }
 }

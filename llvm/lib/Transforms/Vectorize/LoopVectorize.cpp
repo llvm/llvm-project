@@ -8599,7 +8599,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
 
   // Create whole-vector selects for find-last recurrences.
   VPlanTransforms::runPass(VPlanTransforms::convertFindLastRecurrences, *Plan,
-                           RecipeBuilder, Legal);
+                           RecipeBuilder);
 
   if (useActiveLaneMask(Style)) {
     // TODO: Move checks to VPlanTransforms::addActiveLaneMask once
@@ -9603,10 +9603,6 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
           continue;
         }
       }
-    } else if (isa<VPLastActiveMaskPHIRecipe>(R)) {
-      // LastActiveMasks are only used as part of FindLast reductions,
-      // and aren't passed to the scalar loop.
-      continue;
     } else {
       // Retrieve the induction resume values for wide inductions from
       // their original phi nodes in the scalar loop.
