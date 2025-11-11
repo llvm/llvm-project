@@ -103,6 +103,7 @@ MachineDominatorTreeWrapperPass::MachineDominatorTreeWrapperPass()
 char &llvm::MachineDominatorsID = MachineDominatorTreeWrapperPass::ID;
 
 bool MachineDominatorTreeWrapperPass::runOnMachineFunction(MachineFunction &F) {
+  assert(!F.empty() && "Function is empty");
   DT = MachineDominatorTree(F);
   return false;
 }

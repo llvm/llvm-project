@@ -1492,7 +1492,10 @@ public:
 //
 template <> struct GraphTraits<MachineFunction*> :
   public GraphTraits<MachineBasicBlock*> {
-  static NodeRef getEntryNode(MachineFunction *F) { return &F->front(); }
+  static NodeRef getEntryNode(MachineFunction *F) {
+    assert(!F->empty() && "No entry node for an empty function");
+    return &F->front();
+  }
 
   // nodes_iterator/begin/end - Allow iteration over all nodes in the graph
   using nodes_iterator = pointer_iterator<MachineFunction::iterator>;
@@ -1516,7 +1519,10 @@ template <> struct GraphTraits<MachineFunction*> :
 };
 template <> struct GraphTraits<const MachineFunction*> :
   public GraphTraits<const MachineBasicBlock*> {
-  static NodeRef getEntryNode(const MachineFunction *F) { return &F->front(); }
+  static NodeRef getEntryNode(const MachineFunction *F) {
+    assert(!F->empty() && "No entry node for an empty function");
+    return &F->front();
+  }
 
   // nodes_iterator/begin/end - Allow iteration over all nodes in the graph
   using nodes_iterator = pointer_iterator<MachineFunction::const_iterator>;
