@@ -446,10 +446,8 @@ static void updateConvDilationsAndStrides(SmallVector<int64_t> *dilations,
                                           ArrayRef<int64_t> tempStrides) {
   if (!(dilations && strides))
     return;
-  for (auto [dilation, stride] : llvm::zip(tempDilations, tempStrides)) {
-    dilations->push_back(dilation);
-    strides->push_back(stride);
-  }
+  *dilations = SmallVector<int64_t>(tempDilations);
+  *strides = SmallVector<int64_t>(tempStrides);
   return;
 }
 
