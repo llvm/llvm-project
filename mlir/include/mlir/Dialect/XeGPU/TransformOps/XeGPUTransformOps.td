@@ -167,8 +167,8 @@ def SetGPULaunchThreadsOp
       TransformOpInterface
     ]> {
 
-  let summary = "Set number of threads for a given gpu.launch operation"; let
-  description = [{
+  let summary = "Set number of threads for a given gpu.launch operation";
+  let description = [{
     Overrides the x,y,z threads operands of a given `gpu.launch` operation in-place.
   }];
 

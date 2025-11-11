@@ -166,5 +166,5 @@ def set_gpu_launch_threads(
     *,
     loc=None,
     ip=None,
-):
+) -> SetGPULaunchThreadsOp:
     return SetGPULaunchThreadsOp(launch_op, threads, loc=loc, ip=ip)

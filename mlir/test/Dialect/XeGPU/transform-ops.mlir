@@ -269,7 +269,7 @@ func.func @set_gpu_launch_threads(%arg0: memref<4096x4096xf16>) {
   // CHECK-SAME: threads(%{{.*}}, %{{.*}}, %{{.*}}) in (%{{.*}} = %[[C8]], %{{.*}} = %[[C4]], %{{.*}} = %[[C1_0]])
   gpu.launch blocks(%arg3, %arg4, %arg5) in (%arg9 = %c16, %arg10 = %c16, %arg11 = %c1) threads(%arg6, %arg7, %arg8) in (%arg12 = %c1, %arg13 = %c1, %arg14 = %c1) {
     gpu.terminator
-  } {SCFToGPU_visited}
+  }
   return
 }
 module attributes {transform.with_named_sequence} {
@@ -296,7 +296,7 @@ func.func @set_gpu_launch_threads_param(%arg0: memref<4096x4096xf16>) {
   // CHECK-SAME: threads(%{{.*}}, %{{.*}}, %{{.*}}) in (%{{.*}} = %[[C8]], %{{.*}} = %[[C4]], %{{.*}} = %[[C1_0]])
   gpu.launch blocks(%arg3, %arg4, %arg5) in (%arg9 = %c16, %arg10 = %c16, %arg11 = %c1) threads(%arg6, %arg7, %arg8) in (%arg12 = %c1, %arg13 = %c1, %arg14 = %c1) {
     gpu.terminator
-  } {SCFToGPU_visited}
+  }
   return
 }
 module attributes {transform.with_named_sequence} {
