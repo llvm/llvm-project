@@ -47,8 +47,8 @@ def get_desc_op(
     *,
     loc=None,
     ip=None,
-) -> GetDescOp:
-    return GetDescOp(target, loc=loc, ip=ip)
+) -> OpResult:
+    return GetDescOp(target, loc=loc, ip=ip).result
 
 
 @_ods_cext.register_operation(_Dialect, replace=True)
@@ -105,7 +105,7 @@ def set_desc_layout(
     inst_data: Optional[MixedValues] = None,
     loc=None,
     ip=None,
-) -> SetDescLayoutOp:
+) -> OpResult:
     return SetDescLayoutOp(
         target,
         sg_layout,
@@ -113,7 +113,7 @@ def set_desc_layout(
         inst_data=inst_data,
         loc=loc,
         ip=ip,
-    )
+    ).result
 
 
 @_ods_cext.register_operation(_Dialect, replace=True)
