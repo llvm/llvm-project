@@ -24,7 +24,6 @@
 #include <map>
 #include <string>
 #include <tuple>
-#include <utility>
 
 namespace llvm {
 

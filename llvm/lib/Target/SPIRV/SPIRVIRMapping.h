@@ -22,8 +22,6 @@
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 
-#include <type_traits>
-
 namespace llvm {
 namespace SPIRV {
 

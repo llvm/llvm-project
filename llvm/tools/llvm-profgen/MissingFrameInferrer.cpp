@@ -14,7 +14,6 @@
 #include "llvm/ADT/Statistic.h"
 #include <algorithm>
 #include <cstdint>
-#include <iterator>
 #include <queue>
 #include <sys/types.h>
 

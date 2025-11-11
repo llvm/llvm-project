@@ -66,7 +66,6 @@
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include <assert.h>
 #include <numeric>
-#include <type_traits>
 #include <vector>
 
 namespace llvm {

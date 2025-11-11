@@ -12,8 +12,6 @@
 #ifndef LLVM_XRAY_YAMLXRAYRECORD_H
 #define LLVM_XRAY_YAMLXRAYRECORD_H
 
-#include <type_traits>
-
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/XRay/XRayRecord.h"
 

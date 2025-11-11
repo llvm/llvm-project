@@ -59,7 +59,6 @@
 #include <cassert>
 #include <cstdint>
 #include <cstring>
-#include <iterator>
 #include <string>
 #include <tuple>
 #include <utility>

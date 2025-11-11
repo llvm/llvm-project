@@ -132,3 +132,39 @@ class SetOpLayoutAttrOp(SetOpLayoutAttrOp):
             loc=loc,
             ip=ip,
         )
+
+
+class SetGPULaunchThreadsOp(SetGPULaunchThreadsOp):
+    """Specialization for SetGPULaunchThreadsOp class."""
+
+    def __init__(
+        self,
+        launch_op: Union[Operation, Value],
+        threads: MixedValues,
+        *,
+        loc=None,
+        ip=None,
+    ):
+        (
+            dynamic_threads,
+            static_threads,
+            _,
+        ) = _dispatch_dynamic_index_list(threads)
+
+        super().__init__(
+            _get_op_result_or_value(launch_op),
+            dynamic_threads,
+            static_threads=static_threads,
+            loc=loc,
+            ip=ip,
+        )
+
+
+def set_gpu_launch_threads(
+    launch_op: Union[Operation, Value],
+    threads: MixedValues,
+    *,
+    loc=None,
+    ip=None,
+) -> SetGPULaunchThreadsOp:
+    return SetGPULaunchThreadsOp(launch_op, threads, loc=loc, ip=ip)

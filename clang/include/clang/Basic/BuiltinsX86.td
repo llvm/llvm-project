@@ -311,7 +311,7 @@ let Features = "sse3", Attributes = [NoThrow, RequiredVectorWidth<128>] in {
   def lddqu : X86Builtin<"_Vector<16, char>(char const *)">;
 }
 
-let Features = "ssse3", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
+let Features = "ssse3", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<128>] in {
   def palignr128 : X86Builtin<"_Vector<16, char>(_Vector<16, char>, _Vector<16, char>, _Constant int)">;
 }
 
@@ -605,8 +605,7 @@ let Features = "avx", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWid
 
 let Features = "avx2", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in {
   def mpsadbw256 : X86Builtin<"_Vector<32, char>(_Vector<32, char>, _Vector<32, char>, _Constant char)">;
-  def palignr256 : X86Builtin<"_Vector<32, char>(_Vector<32, char>, "
-                              "_Vector<32, char>, _Constant int)">;
+
   def psadbw256
       : X86Builtin<
             "_Vector<4, long long int>(_Vector<32, char>, _Vector<32, char>)">;
@@ -630,6 +629,7 @@ let Features = "avx2", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWi
   def pmovmskb256 : X86Builtin<"int(_Vector<32, char>)">;
   def pavgb256 : X86Builtin<"_Vector<32, unsigned char>(_Vector<32, unsigned char>, _Vector<32, unsigned char>)">;
   def pavgw256 : X86Builtin<"_Vector<16, unsigned short>(_Vector<16, unsigned short>, _Vector<16, unsigned short>)">;
+  def palignr256 : X86Builtin<"_Vector<32, char>(_Vector<32, char>, _Vector<32, char>, _Constant int)">;
 
   def pblendd128 : X86Builtin<"_Vector<4, int>(_Vector<4, int>, _Vector<4, int>, _Constant int)">;
   def pblendd256 : X86Builtin<"_Vector<8, int>(_Vector<8, int>, _Vector<8, int>, _Constant int)">;
@@ -3263,7 +3263,7 @@ let Features = "avx512bw", Attributes = [NoThrow, Const] in {
   def kmovq : X86Builtin<"unsigned long long int(unsigned long long int)">;
 }
 
-let Features = "avx512bw", Attributes = [NoThrow, Const, RequiredVectorWidth<512>] in {
+let Features = "avx512bw", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<512>] in {
   def palignr512 : X86Builtin<"_Vector<64, char>(_Vector<64, char>, _Vector<64, char>, _Constant int)">;
 }
 

@@ -65,7 +65,6 @@
 #include <cassert>
 #include <list>
 #include <tuple>
-#include <utility>
 
 using namespace llvm;
 

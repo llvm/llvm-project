@@ -31,7 +31,6 @@
 #include <algorithm>
 #include <cassert>
 #include <tuple>
-#include <utility>
 
 using namespace llvm;
 

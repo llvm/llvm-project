@@ -12124,8 +12124,17 @@ static bool evalShuffleGeneric(
     if (SrcIdx < 0) {
       // Zero out this element
       QualType ElemTy = VT->getElementType();
-      ResultElements.push_back(
-          APValue(APFloat::getZero(Info.Ctx.getFloatTypeSemantics(ElemTy))));
+      if (ElemTy->isRealFloatingType()) {
+        ResultElements.push_back(
+            APValue(APFloat::getZero(Info.Ctx.getFloatTypeSemantics(ElemTy))));
+      } else if (ElemTy->isIntegerType()) {
+        APValue Zero(Info.Ctx.MakeIntValue(0, ElemTy));
+        ResultElements.push_back(APValue(Zero));
+      } else {
+        // Other types of fallback logic
+        ResultElements.push_back(APValue());
+      }
+
     } else {
       const APValue &Src = (SrcVecIdx == 0) ? A : B;
       ResultElements.push_back(Src.getVectorElt(SrcIdx));
@@ -13555,6 +13564,33 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     }
 
     return Success(APValue(ResultElements.data(), ResultElements.size()), E);
+  }
+
+  case X86::BI__builtin_ia32_palignr128:
+  case X86::BI__builtin_ia32_palignr256:
+  case X86::BI__builtin_ia32_palignr512: {
+    APValue R;
+    if (!evalShuffleGeneric(Info, E, R, [](unsigned DstIdx, unsigned Shift) {
+          // Default to -1 → zero-fill this destination element
+          unsigned VecIdx = 1;
+          int ElemIdx = -1;
+
+          int Lane = DstIdx / 16;
+          int Offset = DstIdx % 16;
+
+          // Elements come from VecB first, then VecA after the shift boundary
+          unsigned ShiftedIdx = Offset + (Shift & 0xFF);
+          if (ShiftedIdx < 16) { // from VecB
+            ElemIdx = ShiftedIdx + (Lane * 16);
+          } else if (ShiftedIdx < 32) { // from VecA
+            VecIdx = 0;
+            ElemIdx = (ShiftedIdx - 16) + (Lane * 16);
+          }
+
+          return std::pair<unsigned, int>{VecIdx, ElemIdx};
+        }))
+      return false;
+    return Success(R, E);
   }
   case X86::BI__builtin_ia32_vpermi2varq128:
   case X86::BI__builtin_ia32_vpermi2varpd128: {
