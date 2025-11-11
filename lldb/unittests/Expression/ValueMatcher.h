@@ -75,7 +75,7 @@ inline void PrintTo(const Value &val, std::ostream *os) {
 /// For HostAddress value types it will match the expected contents of
 /// the host buffer. For other value types it matches against an expected
 /// scalar value.
-class ValueMatcher : public testing::MatcherInterface<const Value &> {
+class ValueMatcher {
 public:
   ValueMatcher(Value::ValueType value_type, const Scalar &expected_scalar,
                Value::ContextType context_type)
@@ -94,8 +94,11 @@ public:
     assert(value_type == Value::ValueType::HostAddress);
   }
 
+  // Typedef to hook into the gtest matcher machinery.
+  using is_gtest_matcher = void;
+
   bool MatchAndExplain(const Value &val,
-                       testing::MatchResultListener *listener) const override {
+                       testing::MatchResultListener *listener) const {
     if (val.GetValueType() != m_value_type) {
       *listener << "value_type mismatch: expected "
                 << Value::GetValueTypeAsCString(m_value_type) << ", got "
@@ -148,14 +151,14 @@ public:
     return true;
   }
 
-  void DescribeTo(std::ostream *os) const override {
+  void DescribeTo(std::ostream *os) const {
     if (!os)
       return;
     FormatValueDetails(*os, m_value_type, m_context_type, m_expected_scalar,
                        m_expected_bytes);
   }
 
-  void DescribeNegationTo(std::ostream *os) const override {
+  void DescribeNegationTo(std::ostream *os) const {
     if (!os)
       return;
     *os << "value does not match";
@@ -174,8 +177,7 @@ private:
 inline testing::Matcher<Value>
 MatchScalarValue(Value::ValueType value_type, const Scalar &expected_scalar,
                  Value::ContextType context_type) {
-  return testing::Matcher<Value>(
-      new ValueMatcher(value_type, expected_scalar, context_type));
+  return ValueMatcher(value_type, expected_scalar, context_type);
 }
 
 /// Matcher for Value with HostAddress type.
@@ -185,8 +187,7 @@ inline testing::Matcher<Value>
 MatchHostValue(Value::ValueType value_type,
                const std::vector<uint8_t> &expected_bytes,
                Value::ContextType context_type) {
-  return testing::Matcher<Value>(
-      new ValueMatcher(value_type, expected_bytes, context_type));
+  return ValueMatcher(value_type, expected_bytes, context_type);
 }
 
 /// Helper to match a Scalar value and context type.
