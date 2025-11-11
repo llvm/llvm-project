@@ -203,13 +203,13 @@ protected:
 
     Section(Section &&) = default;
 
-    // Return name of the section, its entire string in [].
+    // Returns name of the section, its entire string in [].
     StringRef name() const { return SectionStr; }
 
     // Returns true if string 'Name' matches section name interpreted as a glob.
     LLVM_ABI bool matchName(StringRef Name) const;
 
-    // Return sequence number of the file where this section is defined.
+    // Returns sequence number of the file where this section is defined.
     unsigned fileIndex() const { return FileIdx; }
 
     // Helper method to search by Prefix, Query, and Category. Returns
