@@ -2334,7 +2334,6 @@ void VPlanTransforms::optimize(VPlan &Plan) {
   runPass(removeRedundantExpandSCEVRecipes, Plan);
   runPass(simplifyRecipes, Plan);
   runPass(removeBranchOnConst, Plan);
-  runPass(optimizeMasksToEVL, Plan);
   runPass(removeDeadRecipes, Plan);
 
   runPass(createAndOptimizeReplicateRegions, Plan);
@@ -2654,6 +2653,8 @@ void VPlanTransforms::optimizeMasksToEVL(VPlan &Plan) {
         R->eraseFromParent();
     }
   }
+
+  removeDeadRecipes(Plan);
 }
 
 /// After replacing the IV with a EVL-based IV, fixup recipes that use VF to use

@@ -8237,6 +8237,13 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
     }
     VF = SubRange.End;
   }
+
+  if (CM.foldTailWithEVL()) {
+    for (auto &Plan : VPlans) {
+      VPlanTransforms::runPass(VPlanTransforms::optimizeMasksToEVL, *Plan);
+      assert(verifyVPlanIsValid(*Plan) && "VPlan is invalid");
+    }
+  }
 }
 
 VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
