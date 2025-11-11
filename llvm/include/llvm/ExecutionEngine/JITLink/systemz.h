@@ -122,12 +122,12 @@ enum EdgeKind_systemz : Edge::Kind {
   ///
   Delta16,
 
-  /// A 32-bit delta.
+  /// A 32-bit delta shifted by 1.
   ///
   /// Delta from the fixup to the target.
   ///
   /// Fixup expression:
-  ///   Fixup <- (Target - Fixup + Addend : int32) >> 1
+  ///   Fixup <- (Target - Fixup + Addend) >> 1 : int32
   ///
   /// Errors:
   ///   - The result of the fixup expression before shifting right by 1 must
@@ -137,12 +137,12 @@ enum EdgeKind_systemz : Edge::Kind {
   ///
   Delta32dbl,
 
-  /// A 24-bit delta.
+  /// A 24-bit delta shifted by 1.
   ///
   /// Delta from the fixup to the target.
   ///
   /// Fixup expression:
-  ///   Fixup <- (Target - Fixup + Addend : int24) >> 1
+  ///   Fixup <- (Target - Fixup + Addend) >> 1 : int24
   ///
   /// Errors:
   ///   - The result of the fixup expression before shifting right by 1 must
@@ -152,12 +152,12 @@ enum EdgeKind_systemz : Edge::Kind {
   ///
   Delta24dbl,
 
-  /// A 16-bit delta.
+  /// A 16-bit delta shifted by 1.
   ///
   /// Delta from the fixup to the target.
   ///
   /// Fixup expression:
-  ///   Fixup <- (Target - Fixup + Addend : int16) >> 1
+  ///   Fixup <- (Target - Fixup + Addend) >> 1 : int16
   ///
   /// Errors:
   ///   - The result of the fixup expression before shifting right by 1 must
@@ -167,12 +167,12 @@ enum EdgeKind_systemz : Edge::Kind {
   ///
   Delta16dbl,
 
-  /// A 12-bit delta.
+  /// A 12-bit delta shifted by 1.
   ///
   /// Delta from the fixup to the target.
   ///
   /// Fixup expression:
-  ///   Fixup <- (Target - Fixup + Addend : int12) >> 1
+  ///   Fixup <- (Target - Fixup + Addend) >> 1 : int12
   ///
   /// Errors:
   ///   - The result of the fixup expression before shifting right by 1 must
@@ -689,7 +689,7 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
   }
   case Delta32dblGOTBase: {
     assert(GOTSymbol && "No GOT section symbol");
-    int64_t Value = (GOTBase + A - P);
+    int64_t Value = GOTBase + A - P;
     if (!LLVM_UNLIKELY(isInt<33>(Value)))
       return makeTargetOutOfRangeError(G, B, E);
     if (!LLVM_UNLIKELY(isAlignmentCorrect(Value, 2)))
@@ -786,12 +786,12 @@ inline Symbol &createAnonymousPointer(LinkGraph &G, Section &PointerSection,
 /// Create a jump stub block that jumps via the pointer at the given symbol.
 ///
 /// The stub block will have the following default values:
-///   alignment: 8-bit
+///   alignment: 16-bit
 ///   alignment-offset: 0
 inline Block &createPointerJumpStubBlock(LinkGraph &G, Section &StubSection,
                                          Symbol &PointerSymbol) {
   auto &B = G.createContentBlock(StubSection, getStubBlockContent(G),
-                                 orc::ExecutorAddr(), 8, 0);
+                                 orc::ExecutorAddr(), 16, 0);
   B.addEdge(Delta32dbl, 2, PointerSymbol, 2);
   return B;
 }
