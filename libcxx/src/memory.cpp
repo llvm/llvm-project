@@ -132,6 +132,8 @@ __sp_mut& __get_sp_mut(const void* p) {
 
 #endif // _LIBCPP_HAS_THREADS
 
+// Remove std::align from >=v2 dylib ABI, make it an inline function.
+#if _LIBCPP_ABI_VERSION == 1
 void* align(size_t alignment, size_t size, void*& ptr, size_t& space) {
   void* r = nullptr;
   if (size <= space) {
@@ -146,5 +148,6 @@ void* align(size_t alignment, size_t size, void*& ptr, size_t& space) {
   }
   return r;
 }
+#endif
 
 _LIBCPP_END_NAMESPACE_STD

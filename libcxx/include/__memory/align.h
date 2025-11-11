@@ -11,6 +11,7 @@
 
 #include <__config>
 #include <__cstddef/size_t.h>
+#include <cstdint>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -18,7 +19,25 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
+// From >=v2 ABI, std::align is an inline function.
+#if _LIBCPP_ABI_VERSION >= 2
+inline _LIBCPP_HIDE_FROM_ABI void* align(size_t __align, size_t __sz, void*& __ptr, size_t& __space) {
+  void* __r = nullptr;
+  if (__sz <= __space) {
+    char* __p1 = static_cast<char*>(__ptr);
+    char* __p2 = reinterpret_cast<char*>(reinterpret_cast<uintptr_t>(__p1 + (__align - 1)) & -__align);
+    size_t __d = static_cast<size_t>(__p2 - __p1);
+    if (__d <= __space - __sz) {
+      __r   = __p2;
+      __ptr = __r;
+      __space -= __d;
+    }
+  }
+  return __r;
+}
+#else
 _LIBCPP_EXPORTED_FROM_ABI void* align(size_t __align, size_t __sz, void*& __ptr, size_t& __space);
+#endif
 
 _LIBCPP_END_NAMESPACE_STD
 
