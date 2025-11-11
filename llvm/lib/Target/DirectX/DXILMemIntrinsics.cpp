@@ -8,8 +8,10 @@
 
 #include "DXILMemIntrinsics.h"
 #include "DirectX.h"
+#include "llvm/Analysis/DXILResource.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/IntrinsicsDirectX.h"
 #include "llvm/IR/Module.h"
 
 #define DEBUG_TYPE "dxil-mem-intrinsics"
@@ -60,6 +62,54 @@ void expandMemSet(MemSetInst *MemSet) {
   MemSet->eraseFromParent();
 }
 
+static Type *getPointeeType(Value *Ptr, const DataLayout &DL) {
+  if (auto *GV = dyn_cast<GlobalVariable>(Ptr))
+    return GV->getValueType();
+  if (auto *AI = dyn_cast<AllocaInst>(Ptr))
+    return AI->getAllocatedType();
+
+  if (auto *II = dyn_cast<IntrinsicInst>(Ptr)) {
+    if (II->getIntrinsicID() == Intrinsic::dx_resource_getpointer) {
+      Type *Ty = cast<dxil::AnyResourceExtType>(II->getArgOperand(0)->getType())
+                     ->getResourceType();
+      assert(Ty && "getpointer used on untyped resource");
+      return Ty;
+    }
+  }
+
+  if (auto *GEP = dyn_cast<GEPOperator>(Ptr)) {
+    Type *Ty = GEP->getResultElementType();
+    if (!Ty->isIntegerTy(8))
+      return Ty;
+
+    // We have ptradd, so we have to hope there's enough information to work out
+    // what we're indexing.
+    Type *IndexedType = getPointeeType(GEP->getPointerOperand(), DL);
+    if (auto *AT = dyn_cast<ArrayType>(IndexedType))
+      return AT->getElementType();
+
+    if (auto *ST = dyn_cast<StructType>(IndexedType)) {
+      // Indexing a struct should always be constant
+      APInt ConstantOffset(DL.getIndexTypeSizeInBits(GEP->getType()), 0);
+      [[maybe_unused]] bool IsConst =
+          GEP->accumulateConstantOffset(DL, ConstantOffset);
+      assert(IsConst && "Non-constant GEP into struct?");
+
+      // Now, work out what we'll find at that offset.
+      const StructLayout *Layout = DL.getStructLayout(ST);
+      unsigned Idx =
+          Layout->getElementContainingOffset(ConstantOffset.getZExtValue());
+
+      return ST->getTypeAtIndex(Idx);
+    }
+
+    llvm_unreachable("Could not infer type from GEP");
+  }
+
+  llvm_unreachable("Could not calculate pointee type");
+}
+
+
 void expandMemCpy(MemCpyInst *MemCpy) {
   IRBuilder<> Builder(MemCpy);
   Value *Dst = MemCpy->getDest();
@@ -75,23 +125,13 @@ void expandMemCpy(MemCpyInst *MemCpy) {
 
   const DataLayout &DL = Builder.GetInsertBlock()->getModule()->getDataLayout();
 
-  auto GetArrTyFromVal = [](Value *Val) -> ArrayType * {
-    assert(isa<AllocaInst>(Val) ||
-           isa<GlobalVariable>(Val) &&
-               "Expected Val to be an Alloca or Global Variable");
-    if (auto *Alloca = dyn_cast<AllocaInst>(Val))
-      return dyn_cast<ArrayType>(Alloca->getAllocatedType());
-    if (auto *GlobalVar = dyn_cast<GlobalVariable>(Val))
-      return dyn_cast<ArrayType>(GlobalVar->getValueType());
-    return nullptr;
-  };
-
-  ArrayType *DstArrTy = GetArrTyFromVal(Dst);
+  auto *DstArrTy = dyn_cast<ArrayType>(getPointeeType(Dst, DL));
   assert(DstArrTy && "Expected Dst of memcpy to be a Pointer to an Array Type");
   if (auto *DstGlobalVar = dyn_cast<GlobalVariable>(Dst))
     assert(!DstGlobalVar->isConstant() &&
            "The Dst of memcpy must not be a constant Global Variable");
-  [[maybe_unused]] ArrayType *SrcArrTy = GetArrTyFromVal(Src);
+  [[maybe_unused]] auto *SrcArrTy =
+      dyn_cast<ArrayType>(getPointeeType(Src, DL));
   assert(SrcArrTy && "Expected Src of memcpy to be a Pointer to an Array Type");
 
   Type *DstElemTy = DstArrTy->getElementType();
