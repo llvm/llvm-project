@@ -368,15 +368,15 @@ def fir_PrefetchOp : fir_Op<"prefetch", []> {
 
   /// `memref' is the address to be prefetched
   /// `rw'          : rw specifier >
-  ///                  read is 0, write is 1
+  ///                  read is 0 (default), write is 1
   /// `localityHint': temporal locality specifier >
   ///                  value ranging from 0 - no locality to 3 - extremely local
   /// `cacheType'   : cache type specifier >
-  ///                  instruction cache is 0, data cache is 1
-  let arguments = (ins AnyReferenceLike:$memref,
-      ConfinedAttr<I32Attr, [IntMinValue<0>, IntMaxValue<1>]>:$rw,
+  ///                  instruction cache is 0 (default), data cache is 1
+  /// NOTE: The numerical values used here is in reference to the LLVM LangRef
+  let arguments = (ins AnyReferenceLike:$memref, UnitAttr:$rw,
       ConfinedAttr<I32Attr, [IntMinValue<0>, IntMaxValue<3>]>:$localityHint,
-      ConfinedAttr<I32Attr, [IntMinValue<0>, IntMaxValue<1>]>:$cacheType);
+      UnitAttr:$cacheType);
 
   let assemblyFormat = "$memref attr-dict `:` type(operands)";
 }
@@ -974,7 +974,7 @@ def fir_ReboxAssumedRankOp : fir_Op<"rebox_assumed_rank",
     Example:
     ```
       fir.rebox_assumed_rank %1 lbs zeroes : (!fir.box<!fir.array<*:f32>>) -> !fir.box<!fir.array<*:f32>>
-    ```    
+    ```
   }];
 
   let arguments = (ins

@@ -3353,9 +3353,11 @@ struct PrefetchOpConversion : public fir::FIROpConversion<fir::PrefetchOp> {
   llvm::LogicalResult
   matchAndRewrite(fir::PrefetchOp prefetch, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
-    mlir::IntegerAttr rw = prefetch.getRwAttr();
+    mlir::IntegerAttr rw = mlir::IntegerAttr::get(rewriter.getI32Type(),
+                                                  prefetch.getRwAttr() ? 1 : 0);
     mlir::IntegerAttr localityHint = prefetch.getLocalityHintAttr();
-    mlir::IntegerAttr cacheType = prefetch.getCacheTypeAttr();
+    mlir::IntegerAttr cacheType = mlir::IntegerAttr::get(
+        rewriter.getI32Type(), prefetch.getCacheTypeAttr() ? 1 : 0);
     mlir::LLVM::Prefetch::create(rewriter, prefetch.getLoc(),
                                  adaptor.getOperands().front(), rw,
                                  localityHint, cacheType);

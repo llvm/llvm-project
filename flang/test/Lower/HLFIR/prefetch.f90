@@ -18,7 +18,7 @@ subroutine test_prefetch_01()
 
   a = 23
 
-  ! HLFIR: fir.prefetch %[[H_A]]#0 {cacheType = 1 : i32, localityHint = 3 : i32, rw = 0 : i32} : !fir.ref<!fir.array<256xi32>>
+  ! HLFIR: fir.prefetch %[[H_A]]#0 {cacheType, localityHint = 3 : i32} : !fir.ref<!fir.array<256xi32>>
   !dir$ prefetch a
   i = sum(a)
 
@@ -28,8 +28,8 @@ subroutine test_prefetch_01()
   ! HLFIR: %[[H_CON:.*]] = fir.convert %[[H_ADD]] : (i32) -> i64
   ! HLFIR: %[[H_DESIG:.*]] = hlfir.designate %[[H_A]]#0 (%[[H_CON]])  : (!fir.ref<!fir.array<256xi32>>, i64) -> !fir.ref<i32>
 
-  ! HLFIR: fir.prefetch %[[H_DESIG]] {cacheType = 1 : i32, localityHint = 3 : i32, rw = 0 : i32} : !fir.ref<i32>
-  ! HLFIR: fir.prefetch %[[H_J]]#0 {cacheType = 1 : i32, localityHint = 3 : i32, rw = 0 : i32} : !fir.ref<i32>
+  ! HLFIR: fir.prefetch %[[H_DESIG]] {cacheType, localityHint = 3 : i32} : !fir.ref<i32>
+  ! HLFIR: fir.prefetch %[[H_J]]#0 {cacheType, localityHint = 3 : i32} : !fir.ref<i32>
 
   do i = 1, (256 - 64)
     !dir$ prefetch a(i+64), j
@@ -45,17 +45,17 @@ subroutine test_prefetch_02(t1)
   integer, allocatable :: a(:, :)
 
   ! HLFIR: %[[H_DESIG_01:.*]] = hlfir.designate %[[H_ARG0]]#0{"a"}   shape {{.*}}
-  ! HLFIR: fir.prefetch %[[H_DESIG_01]] {cacheType = 1 : i32, localityHint = 3 : i32, rw = 0 : i32} : !fir.ref<!fir.array<256x256xi32>>
+  ! HLFIR: fir.prefetch %[[H_DESIG_01]] {cacheType, localityHint = 3 : i32} : !fir.ref<!fir.array<256x256xi32>>
   !dir$ prefetch t1%a
   a = t1%a ** 2
 
   do i = 1, 256
-    ! HLFIR: fir.prefetch %[[H_A]]#0 {cacheType = 1 : i32, localityHint = 3 : i32, rw = 0 : i32} : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>>
+    ! HLFIR: fir.prefetch %[[H_A]]#0 {cacheType, localityHint = 3 : i32} : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>>
     !dir$ prefetch a
     a(i, :) = a(i, :) + i
     do j = 1, 256
       ! HLFIR: %[[H_DESIG_02:.*]] = hlfir.designate %[[H_ARG0]]#0{"a"} {{.*}}
-      ! HLFIR: fir.prefetch %[[H_DESIG_02]] {cacheType = 1 : i32, localityHint = 3 : i32, rw = 0 : i32} : !fir.ref<i32>
+      ! HLFIR: fir.prefetch %[[H_DESIG_02]] {cacheType, localityHint = 3 : i32} : !fir.ref<i32>
       !dir$ prefetch t1%a(i, j)
       t1%a(i, j) = (a(i, j) + i*j) / t1%a(i, j)
     end do
