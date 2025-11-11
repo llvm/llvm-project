@@ -959,7 +959,6 @@ void SampleProfileWriterBinary::writeTypifiedProfile(const FunctionSamples &S) {
   bool WriteLBRProf = !S.getBodySamples().empty();
   // Other profile types should be added here.
   uint32_t TypesNum = WriteLBRProf;
-  assert(TypesNum && "Empty function samples");
 
   // Write the number of profile types for function.
   encodeULEB128(TypesNum, OS);
