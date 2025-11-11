@@ -22,7 +22,7 @@
 # RUN: yaml2obj %s -o %t
 # RUN: not %lld -platform_version macos 10.14 11.0 -arch arm64 %t 2>&1 | FileCheck %s --check-prefix=FATAL
 
-# FATAL: error: Section symbol ltmp0 in {{.*}} has an invalid section index [0]
+# FATAL: error: section symbol ltmp0 in {{.*}} has an invalid section index [0]
 
 --- !mach-o
 FileHeader:
