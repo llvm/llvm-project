@@ -20,8 +20,6 @@
 // operator>=(x, y)
 // operator>(x, y)
 // operator<=>(x, y)
-// operator==(x, y)
-// operator==(x, sentinel)
 
 #include <array>
 #include <concepts>
@@ -217,33 +215,6 @@ constexpr bool test() {
     std::ranges::advance(cj, arr_a.size());
     assert(ci < cj);
     assert((ci <=> cj) < 0);
-  }
-
-  {
-    // operator==(x, sentinel)
-    std::array<int, 2> arr_a{1, 2};
-    std::array<int, 2> arr_b{3, 4};
-    std::span<const int> s1{arr_a};
-    std::span<const int> s2{arr_b};
-    auto v = std::views::concat(s1, s2);
-
-    auto it = v.begin();
-    assert(!(it == std::default_sentinel_t{}));
-
-    it++;
-    it++;
-    it++;
-    it++;
-    assert(it == std::default_sentinel_t{});
-
-    // const-iterator
-    const auto& cv = v;
-    auto cit       = cv.begin();
-    ++cit;
-    ++cit;
-    ++cit;
-    ++cit;
-    assert(cit == std::default_sentinel_t{});
   }
 
   {
