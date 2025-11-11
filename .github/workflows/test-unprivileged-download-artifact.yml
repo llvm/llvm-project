@@ -43,5 +43,5 @@ jobs:
           artifact-name: workflow-args
       - name: Assert That Contents are the Same
         run: |
-          cat test
+          cat comment
           cat workflow-args
