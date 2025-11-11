@@ -70,14 +70,13 @@ jobs:
     # the images when making changes.
     - name: Create image tarballs
       run: |
-        docker image save --output libcxx-linux-builder-base.tar ghcr.io/llvm/libcxx-linux-builder-base:${{ github.sha }}
-        docker image save --output libcxx-linux-builder.tar ghcr.io/llvm/libcxx-linux-builder:${{ github.sha }}
-        docker image save --output libcxx-android-builder.tar ghcr.io/llvm/libcxx-android-builder:${{ github.sha }}
+        docker image save ghcr.io/llvm/libcxx-linux-builder-base:${{ github.sha }} | gzip > libcxx-linux-builder-base.tar.gz
+        docker image save ghcr.io/llvm/libcxx-linux-builder:${{ github.sha }} | gzip > libcxx-linux-builder.tar.gz
+        docker image save ghcr.io/llvm/libcxx-android-builder:${{ github.sha }} | gzip > libcxx-android-builder.tar.gz
     - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
       with:
           name: libcxx-docker-images
           path: |
-            libcxx-linux-builder-base.tar
-            libcxx-linux-builder.tar
-            libcxx-android-builder.tar
-          compression-level: 6 # gzip or similar
+            libcxx-linux-builder-base.tar.gz
+            libcxx-linux-builder.tar.gz
+            libcxx-android-builder.tar.gz
