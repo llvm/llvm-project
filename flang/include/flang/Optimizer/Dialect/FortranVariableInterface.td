@@ -304,7 +304,7 @@ def fir_FortranObjectViewOpInterface
         Returns the constant offset (in bytes) applied to the corresponding
         operand to produce the resulting view.
         If it is not possible to identify the constant offset,
-        the result in nullopt.
+        the result is nullopt.
         Note that the offset may be negative, e.g. when addressing
         an array section with a negative stride.
       }],
