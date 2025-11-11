@@ -36,6 +36,19 @@ class Builtin_Type<string name, string typeMnemonic, list<Trait> traits = [],
 //===----------------------------------------------------------------------===//
 
 /// Type trait indicating that the type has value semantics.
+///
+/// Reading (from) an SSA value with a value-semantics type always gives the
+/// same value.
+///
+/// Examples:
+/// * An integer SSA value semantically always carries the same integer value.
+/// * Reading (extracting) from a tensor always yields a semantically
+///   equivalent SSA value. (But the extracted value itself does not
+///   necessarily have value semantics.)
+///
+/// Counter examples:
+/// * Loading from a memref may yield different values, depending on the state
+///   of the memory.
 def ValueSemantics : NativeTypeTrait<"ValueSemantics"> {
   let cppNamespace = "::mlir";
 }
@@ -44,7 +57,7 @@ def ValueSemantics : NativeTypeTrait<"ValueSemantics"> {
 // ComplexType
 //===----------------------------------------------------------------------===//
 
-def Builtin_Complex : Builtin_Type<"Complex", "complex"> {
+def Builtin_Complex : Builtin_Type<"Complex", "complex", [ValueSemantics]> {
   let summary = "Complex number with a parameterized element type";
   let description = [{
     Syntax:
@@ -84,7 +97,8 @@ class Builtin_FloatType<string name, string mnemonic,
     : Builtin_Type<name, mnemonic, /*traits=*/[
         DeclareTypeInterfaceMethods<
             FloatTypeInterface,
-            ["getFloatSemantics"] # declaredInterfaceMethods>]> {
+            ["getFloatSemantics"] # declaredInterfaceMethods>,
+        ValueSemantics]> {
 }
 
 // Float types that are cached in MLIRContext.
@@ -470,7 +484,7 @@ def Builtin_Graph : Builtin_FunctionLike<"Graph", "graph">;
 //===----------------------------------------------------------------------===//
 
 def Builtin_Index : Builtin_Type<"Index", "index",
-    [VectorElementTypeInterface]> {
+    [VectorElementTypeInterface, ValueSemantics]> {
   let summary = "Integer-like type with unknown platform-dependent bit width";
   let description = [{
     Syntax:
@@ -501,7 +515,7 @@ def Builtin_Index : Builtin_Type<"Index", "index",
 //===----------------------------------------------------------------------===//
 
 def Builtin_Integer : Builtin_Type<"Integer", "integer",
-    [VectorElementTypeInterface]> {
+    [VectorElementTypeInterface, ValueSemantics]> {
   let summary = "Integer type with arbitrary precision up to a fixed limit";
   let description = [{
     Syntax:
@@ -1099,7 +1113,7 @@ def Builtin_RankedTensor : Builtin_Type<"RankedTensor", "tensor", [
 // TupleType
 //===----------------------------------------------------------------------===//
 
-def Builtin_Tuple : Builtin_Type<"Tuple", "tuple"> {
+def Builtin_Tuple : Builtin_Type<"Tuple", "tuple", [ValueSemantics]> {
   let summary = "Fixed-sized collection of other types";
   let description = [{
     Syntax:
