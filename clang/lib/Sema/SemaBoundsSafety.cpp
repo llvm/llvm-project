@@ -340,8 +340,10 @@ static void EmitIncompleteCountedByPointeeNotes(Sema &S,
       llvm::StringSwitch<StringRef>(Spelling)
           .Case("__counted_by", "__sized_by")
           .Case("counted_by", "sized_by")
+          .Case("__counted_by__", "__sized_by__")
           .Case("__counted_by_or_null", "__sized_by_or_null")
           .Case("counted_by_or_null", "sized_by_or_null")
+          .Case("__counted_by_or_null__", "__sized_by_or_null__")
           .Default("");
   FixItHint Fix;
   if (!FixedSpelling.empty())
