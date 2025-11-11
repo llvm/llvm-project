@@ -53,7 +53,7 @@ static void emitDeclInit(CIRGenFunction &cgf, const VarDecl *varDecl,
     cgf.emitScalarInit(init, cgf.getLoc(varDecl->getLocation()), lv, false);
     break;
   case cir::TEK_Complex:
-    cgf.cgm.errorNYI(varDecl->getSourceRange(), "complex global initializer");
+    cgf.emitComplexExprIntoLValue(init, lv, /*isInit=*/true);
     break;
   case cir::TEK_Aggregate:
     assert(!cir::MissingFeatures::aggValueSlotGC());

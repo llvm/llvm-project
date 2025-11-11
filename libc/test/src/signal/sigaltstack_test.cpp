@@ -33,7 +33,7 @@ static void handler(int) {
   // out or mapped to a register.
   uint8_t var[LOCAL_VAR_SIZE];
   for (int i = 0; i < LOCAL_VAR_SIZE; ++i)
-    var[i] = static_cast<uint8_t>(i);
+    var[i] = i;
   // Verify that array is completely on the alt_stack.
   for (int i = 0; i < LOCAL_VAR_SIZE; ++i) {
     if (!(uintptr_t(var + i) < uintptr_t(alt_stack + ALT_STACK_SIZE) &&

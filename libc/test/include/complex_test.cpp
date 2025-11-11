@@ -27,8 +27,8 @@ TEST(LlvmLibcComplexTest, CMPLXMacro) {
   EXPECT_CFP_EQ(CMPLXL(1.0l, 0), 1.0l);
 
 #ifdef LIBC_TYPES_HAS_CFLOAT16
-  EXPECT_CFP_EQ(CMPLXF16(0, 1.0), static_cast<_Complex _Float16>(I));
-  EXPECT_CFP_EQ(CMPLXF16(1.0, 0), static_cast<_Complex _Float16>(1.0));
+  EXPECT_CFP_EQ(CMPLXF16(0, 1.0), I);
+  EXPECT_CFP_EQ(CMPLXF16(1.0, 0), 1.0);
 #endif // LIBC_TYPES_HAS_CFLOAT16
 
 #ifdef LIBC_TYPES_HAS_CFLOAT128

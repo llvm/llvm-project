@@ -112,7 +112,6 @@ private:
 
   RISCVFrameLowering FrameLowering;
   RISCVInstrInfo InstrInfo;
-  RISCVRegisterInfo RegInfo;
   RISCVTargetLowering TLInfo;
 
   /// Initializes using the passed in CPU and feature strings so that we can
@@ -140,13 +139,14 @@ public:
   }
   const RISCVInstrInfo *getInstrInfo() const override { return &InstrInfo; }
   const RISCVRegisterInfo *getRegisterInfo() const override {
-    return &RegInfo;
+    return &InstrInfo.getRegisterInfo();
   }
   const RISCVTargetLowering *getTargetLowering() const override {
     return &TLInfo;
   }
 
   bool enableMachineScheduler() const override { return true; }
+  bool enableTerminalRule() const override { return true; }
 
   bool enablePostRAScheduler() const override { return UsePostRAScheduler; }
 
@@ -187,7 +187,7 @@ public:
   }
 
   bool hasCLZLike() const {
-    return HasStdExtZbb || HasVendorXTHeadBb ||
+    return HasStdExtZbb || HasStdExtP || HasVendorXTHeadBb ||
            (HasVendorXCVbitmanip && !IsRV64);
   }
   bool hasCTZLike() const {
@@ -197,7 +197,7 @@ public:
     return HasStdExtZbb || (HasVendorXCVbitmanip && !IsRV64);
   }
   bool hasREV8Like() const {
-    return HasStdExtZbb || HasStdExtZbkb || HasVendorXTHeadBb;
+    return HasStdExtZbb || HasStdExtZbkb || HasStdExtP || HasVendorXTHeadBb;
   }
 
   bool hasBEXTILike() const { return HasStdExtZbs || HasVendorXTHeadBs; }

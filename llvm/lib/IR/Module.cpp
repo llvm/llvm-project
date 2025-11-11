@@ -403,9 +403,14 @@ void Module::setModuleFlag(ModFlagBehavior Behavior, StringRef Key,
                            Metadata *Val) {
   NamedMDNode *ModFlags = getOrInsertModuleFlagsMetadata();
   // Replace the flag if it already exists.
-  for (MDNode *Flag : ModFlags->operands()) {
+  for (unsigned i = 0; i < ModFlags->getNumOperands(); ++i) {
+    MDNode *Flag = ModFlags->getOperand(i);
     if (cast<MDString>(Flag->getOperand(1))->getString() == Key) {
-      Flag->replaceOperandWith(2, Val);
+      Type *Int32Ty = Type::getInt32Ty(Context);
+      Metadata *Ops[3] = {
+          ConstantAsMetadata::get(ConstantInt::get(Int32Ty, Behavior)),
+          MDString::get(Context, Key), Val};
+      ModFlags->setOperand(i, MDNode::get(Context, Ops));
       return;
     }
   }

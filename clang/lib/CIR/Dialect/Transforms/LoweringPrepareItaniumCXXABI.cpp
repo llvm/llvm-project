@@ -155,19 +155,19 @@ LoweringPrepareItaniumCXXABI::lowerDynamicCast(cir::CIRBaseBuilderTy &builder,
     return buildDynamicCastAfterNullCheck(builder, op);
 
   mlir::Value srcValueIsNotNull = builder.createPtrToBoolCast(srcValue);
-  return builder
-      .create<cir::TernaryOp>(
-          loc, srcValueIsNotNull,
-          [&](mlir::OpBuilder &, mlir::Location) {
-            mlir::Value castedValue =
-                op.isCastToVoid()
-                    ? buildDynamicCastToVoidAfterNullCheck(builder, astCtx, op)
-                    : buildDynamicCastAfterNullCheck(builder, op);
-            builder.createYield(loc, castedValue);
-          },
-          [&](mlir::OpBuilder &, mlir::Location) {
-            builder.createYield(
-                loc, builder.getNullPtr(op.getType(), loc).getResult());
-          })
+  return cir::TernaryOp::create(
+             builder, loc, srcValueIsNotNull,
+             [&](mlir::OpBuilder &, mlir::Location) {
+               mlir::Value castedValue =
+                   op.isCastToVoid()
+                       ? buildDynamicCastToVoidAfterNullCheck(builder, astCtx,
+                                                              op)
+                       : buildDynamicCastAfterNullCheck(builder, op);
+               builder.createYield(loc, castedValue);
+             },
+             [&](mlir::OpBuilder &, mlir::Location) {
+               builder.createYield(
+                   loc, builder.getNullPtr(op.getType(), loc).getResult());
+             })
       .getResult();
 }
