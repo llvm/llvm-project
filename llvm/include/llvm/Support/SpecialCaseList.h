@@ -197,14 +197,14 @@ private:
 protected:
   class Section {
   public:
-    Section(StringRef Str, unsigned FileIdx, bool UseGlobs)
-        : SectionMatcher(UseGlobs, /*RemoveDotSlash=*/false), SectionStr(Str),
+    Section(StringRef Name, unsigned FileIdx, bool UseGlobs)
+        : SectionMatcher(UseGlobs, /*RemoveDotSlash=*/false), Name(Name),
           FileIdx(FileIdx) {}
 
     Section(Section &&) = default;
 
     // Returns name of the section, its entire string in [].
-    StringRef name() const { return SectionStr; }
+    StringRef name() const { return Name; }
 
     // Returns true if string 'Name' matches section name interpreted as a glob.
     LLVM_ABI bool matchName(StringRef Name) const;
@@ -232,7 +232,7 @@ protected:
     findMatcher(StringRef Prefix, StringRef Category) const;
 
     Matcher SectionMatcher;
-    StringRef SectionStr;
+    StringRef Name;
     SectionEntries Entries;
     unsigned FileIdx;
   };
