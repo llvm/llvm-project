@@ -47,7 +47,7 @@ def XeGPUPropagateLayout : Pass<"xegpu-propagate-layout"> {
     Option<
     "layoutKind", "layout-kind", "std::string",
     /*default=*/"\"lane\"",
-    "Propagate a `sg` / `inst` / `lane` level of xegpu layouts.">
+    "Propagate `inst` / `lane` level of xegpu layouts.">
   ];
 }
 
