@@ -1776,10 +1776,10 @@ static void genTaskloopClauses(
   cp.processIf(llvm::omp::Directive::OMPD_taskloop, clauseOps);
   cp.processInReduction(loc, clauseOps, inReductionSyms);
   cp.processMergeable(clauseOps);
-  cp.processNumTasks(stmtCtx, clauseOps);
   cp.processNogroup(clauseOps);
-  cp.processReduction(loc, clauseOps, reductionSyms);
+  cp.processNumTasks(stmtCtx, clauseOps);
   cp.processPriority(stmtCtx, clauseOps);
+  cp.processReduction(loc, clauseOps, reductionSyms);
   cp.processUntied(clauseOps);
 
   cp.processTODO<clause::Collapse>(loc, llvm::omp::Directive::OMPD_taskloop);
