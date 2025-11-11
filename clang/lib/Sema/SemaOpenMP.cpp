@@ -17332,9 +17332,8 @@ OMPClause *SemaOpenMP::ActOnOpenMPDefaultClause(
   if (IsTargetDefault && M == OMP_DEFAULT_shared)
     return nullptr;
 
-  auto &&SetDefaultClauseAttrs = [&](llvm::omp::DefaultKind M,
-                                     OpenMPDefaultClauseVariableCategory
-                                         VCKind) {
+  auto SetDefaultClauseAttrs = [&](llvm::omp::DefaultKind M,
+                                   OpenMPDefaultClauseVariableCategory VCKind) {
     OpenMPDefaultmapClauseModifier DefMapMod;
     OpenMPDefaultmapClauseKind DefMapKind;
     // default data-sharing-attribute
