@@ -69,10 +69,10 @@ find_unique(Container &&container, Predicate &&pred) {
 namespace tomp {
 
 enum struct ErrorCode : int {
-  NoLeafAllowing,       // No leaf that allows this clause
-  NoLeafPrivatizing,    // No leaf that has a privatizing clause
-  InvalidDirNameMod,    // Invalid directive name modifier
-  RedModNotApplied,     // Reduction modifier not applied
+  NoLeafAllowing,    // No leaf that allows this clause
+  NoLeafPrivatizing, // No leaf that has a privatizing clause
+  InvalidDirNameMod, // Invalid directive name modifier
+  RedModNotApplied,  // Reduction modifier not applied
 };
 
 // ClauseType: Either an instance of ClauseT, or a type derived from ClauseT.

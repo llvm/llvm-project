@@ -277,7 +277,7 @@ struct StringifyClause {
   std::string Str;
 };
 
-std::string stringify(const omp::Clause &C) {
+std::string stringify(const omp::Clause &C) { //
   return StringifyClause(C).Str;
 }
 
@@ -308,8 +308,8 @@ std::string stringify(tomp::ErrorCode E) {
 std::string stringify(std::pair<const omp::Clause *, tomp::ErrorCode> &ER) {
   std::stringstream Stream;
 
-  Stream << "error while applying '" << stringify(*ER.first) << "': "
-         << stringify(ER.second);
+  Stream << "error while applying '" << stringify(*ER.first)
+         << "': " << stringify(ER.second);
   return Stream.str();
 }
 
