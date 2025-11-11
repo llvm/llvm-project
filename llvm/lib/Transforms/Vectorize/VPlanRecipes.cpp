@@ -311,18 +311,27 @@ VPPartialReductionRecipe::computeCost(ElementCount VF,
   std::optional<unsigned> Opcode;
   VPValue *Op = getVecOp();
   uint64_t MulConst;
+
+  InstructionCost CondCost = 0;
+  if (isConditional()) {
+    CmpInst::Predicate Pred = CmpInst::BAD_ICMP_PREDICATE;
+    auto *VecTy = Ctx.Types.inferScalarType(Op);
+    auto *CondTy = Ctx.Types.inferScalarType(getCondOp());
+    CondCost = Ctx.TTI.getCmpSelInstrCost(Instruction::Select, VecTy, CondTy,
+                                          Pred, Ctx.CostKind);
+  }
+
   // If the partial reduction is predicated, a select will be operand 1.
   // If it isn't predicated and the mul isn't operating on a constant, then it
   // should have been turned into a VPExpressionRecipe.
   // FIXME: Replace the entire function with this once all partial reduction
   // variants are bundled into VPExpressionRecipe.
-  if (!match(Op, m_Select(m_VPValue(), m_VPValue(Op), m_VPValue())) &&
-      !match(Op, m_Mul(m_VPValue(), m_ConstantInt(MulConst)))) {
+  if (!match(Op, m_Mul(m_VPValue(), m_ConstantInt(MulConst)))) {
     auto *PhiType = Ctx.Types.inferScalarType(getChainOp());
     auto *InputType = Ctx.Types.inferScalarType(getVecOp());
-    return Ctx.TTI.getPartialReductionCost(getOpcode(), InputType, InputType,
-                                           PhiType, VF, TTI::PR_None,
-                                           TTI::PR_None, {}, Ctx.CostKind);
+    return CondCost + Ctx.TTI.getPartialReductionCost(
+                          getOpcode(), InputType, InputType, PhiType, VF,
+                          TTI::PR_None, TTI::PR_None, {}, Ctx.CostKind);
   }
 
   VPRecipeBase *OpR = Op->getDefiningRecipe();
@@ -381,12 +390,13 @@ VPPartialReductionRecipe::computeCost(ElementCount VF,
   } else if (auto Widen = dyn_cast<VPWidenRecipe>(OpR)) {
     HandleWiden(Widen);
   } else if (auto Reduction = dyn_cast<VPPartialReductionRecipe>(OpR)) {
-    return Reduction->computeCost(VF, Ctx);
+    return CondCost + Reduction->computeCost(VF, Ctx);
   }
   auto *PhiType = Ctx.Types.inferScalarType(getOperand(1));
-  return Ctx.TTI.getPartialReductionCost(getOpcode(), InputTypeA, InputTypeB,
-                                         PhiType, VF, ExtAType, ExtBType,
-                                         Opcode, Ctx.CostKind);
+  return CondCost + Ctx.TTI.getPartialReductionCost(
+                        getOpcode(), InputTypeA, InputTypeB, PhiType, VF,
+                        ExtAType, ExtBType, Opcode, Ctx.CostKind);
+  ;
 }
 
 void VPPartialReductionRecipe::execute(VPTransformState &State) {
@@ -395,11 +405,17 @@ void VPPartialReductionRecipe::execute(VPTransformState &State) {
   assert(getOpcode() == Instruction::Add &&
          "Unhandled partial reduction opcode");
 
-  Value *BinOpVal = State.get(getOperand(1));
-  Value *PhiVal = State.get(getOperand(0));
+  Value *BinOpVal = State.get(getVecOp());
+  Value *PhiVal = State.get(getChainOp());
   assert(PhiVal && BinOpVal && "Phi and Mul must be set");
 
   Type *RetTy = PhiVal->getType();
+
+  if (isConditional()) {
+    Value *Cond = State.get(getCondOp());
+    Value *Zero = ConstantInt::get(BinOpVal->getType(), 0);
+    BinOpVal = Builder.CreateSelect(Cond, BinOpVal, Zero);
+  }
 
   CallInst *V =
       Builder.CreateIntrinsic(RetTy, Intrinsic::vector_partial_reduce_add,
@@ -2507,51 +2523,32 @@ void VPWidenGEPRecipe::execute(VPTransformState &State) {
   // is vector-typed. Thus, to keep the representation compact, we only use
   // vector-typed operands for loop-varying values.
 
-  if (areAllOperandsInvariant()) {
-    // If we are vectorizing, but the GEP has only loop-invariant operands,
-    // the GEP we build (by only using vector-typed operands for
-    // loop-varying values) would be a scalar pointer. Thus, to ensure we
-    // produce a vector of pointers, we need to either arbitrarily pick an
-    // operand to broadcast, or broadcast a clone of the original GEP.
-    // Here, we broadcast a clone of the original.
-    //
-    // TODO: If at some point we decide to scalarize instructions having
-    //       loop-invariant operands, this special case will no longer be
-    //       required. We would add the scalarization decision to
-    //       collectLoopScalars() and teach getVectorValue() to broadcast
-    //       the lane-zero scalar value.
-    SmallVector<Value *> Ops;
-    for (unsigned I = 0, E = getNumOperands(); I != E; I++)
-      Ops.push_back(State.get(getOperand(I), VPLane(0)));
+  assert(
+      any_of(operands(),
+             [](VPValue *Op) { return !Op->isDefinedOutsideLoopRegions(); }) &&
+      "Expected at least one loop-variant operand");
 
-    auto *NewGEP =
-        State.Builder.CreateGEP(getSourceElementType(), Ops[0], drop_begin(Ops),
-                                "", getGEPNoWrapFlags());
-    Value *Splat = State.Builder.CreateVectorSplat(State.VF, NewGEP);
-    State.set(this, Splat);
-  } else {
-    // If the GEP has at least one loop-varying operand, we are sure to
-    // produce a vector of pointers unless VF is scalar.
-    // The pointer operand of the new GEP. If it's loop-invariant, we
-    // won't broadcast it.
-    auto *Ptr = State.get(getOperand(0), isPointerLoopInvariant());
+  // If the GEP has at least one loop-varying operand, we are sure to
+  // produce a vector of pointers unless VF is scalar.
+  // The pointer operand of the new GEP. If it's loop-invariant, we
+  // won't broadcast it.
+  auto *Ptr = State.get(getOperand(0), isPointerLoopInvariant());
 
-    // Collect all the indices for the new GEP. If any index is
-    // loop-invariant, we won't broadcast it.
-    SmallVector<Value *, 4> Indices;
-    for (unsigned I = 1, E = getNumOperands(); I < E; I++) {
-      VPValue *Operand = getOperand(I);
-      Indices.push_back(State.get(Operand, isIndexLoopInvariant(I - 1)));
-    }
-
-    // Create the new GEP. Note that this GEP may be a scalar if VF == 1,
-    // but it should be a vector, otherwise.
-    auto *NewGEP = State.Builder.CreateGEP(getSourceElementType(), Ptr, Indices,
-                                           "", getGEPNoWrapFlags());
-    assert((State.VF.isScalar() || NewGEP->getType()->isVectorTy()) &&
-           "NewGEP is not a pointer vector");
-    State.set(this, NewGEP);
+  // Collect all the indices for the new GEP. If any index is
+  // loop-invariant, we won't broadcast it.
+  SmallVector<Value *, 4> Indices;
+  for (unsigned I = 1, E = getNumOperands(); I < E; I++) {
+    VPValue *Operand = getOperand(I);
+    Indices.push_back(State.get(Operand, isIndexLoopInvariant(I - 1)));
   }
+
+  // Create the new GEP. Note that this GEP may be a scalar if VF == 1,
+  // but it should be a vector, otherwise.
+  auto *NewGEP = State.Builder.CreateGEP(getSourceElementType(), Ptr, Indices,
+                                         "", getGEPNoWrapFlags());
+  assert((State.VF.isScalar() || NewGEP->getType()->isVectorTy()) &&
+         "NewGEP is not a pointer vector");
+  State.set(this, NewGEP);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -3349,7 +3346,7 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
     // Scale the cost by the probability of executing the predicated blocks.
     // This assumes the predicated block for each vector lane is equally
     // likely.
-    ScalarCost /= getPredBlockCostDivisor(Ctx.CostKind);
+    ScalarCost /= Ctx.getPredBlockCostDivisor(UI->getParent());
     return ScalarCost;
   }
   case Instruction::Load:
