@@ -482,9 +482,10 @@ __lldb_apple_objc_v2_get_shared_cache_class_info (void *objc_opt_ro_ptr,
             DEBUG_PRINTF ("clsopt->mask = 0x%8.8x\n", clsopt->mask);
             DEBUG_PRINTF ("classOffsets = %p\n", classOffsets);
 
-            uint32_t original_start_idx = *start_idx;
+            const uint32_t original_start_idx = *start_idx;
 
-            // Always start at the start_idx here. If it's greater than the capacity, it will skip the loop entirely and go to the duplicate handling below.
+            // Always start at the start_idx here. If it's greater than the capacity,
+            // it will skip the loop entirely and go to the duplicate handling below.
             for (uint32_t i=*start_idx; i<clsopt->capacity; ++i)
             {
                 const uint64_t objectCacheOffset = classOffsets[i].objectCacheOffset;
@@ -543,14 +544,17 @@ __lldb_apple_objc_v2_get_shared_cache_class_info (void *objc_opt_ro_ptr,
                 DEBUG_PRINTF ("duplicate_count = %u\n", duplicate_count);
                 DEBUG_PRINTF ("duplicateClassOffsets = %p\n", duplicateClassOffsets);
 
-                uint32_t duplicate_start_idx = *start_idx < clsopt->capacity ? 0 : *start_idx - clsopt->capacity;
+                const uint32_t duplicate_start_idx =
+                      *start_idx < clsopt->capacity ?
+                      0 :
+                      *start_idx - clsopt->capacity;
 
                 for (uint32_t i=duplicate_start_idx; i<duplicate_count; ++i)
                 {
                     const uint64_t objectCacheOffset = duplicateClassOffsets[i].objectCacheOffset;
                     DEBUG_PRINTF("objectCacheOffset[%u] = %u\n", i, objectCacheOffset);
 
-                    if (classOffsets[i].isDuplicate) {
+                    if (duplicateClassOffsets[i].isDuplicate) {
                         DEBUG_PRINTF("isDuplicate = true\n");
                         continue; // duplicate
                     }
@@ -593,8 +597,8 @@ __lldb_apple_objc_v2_get_shared_cache_class_info (void *objc_opt_ro_ptr,
                     ++idx;
                 }
             }
-            // Always make sure start_idx gets updated. There's an edge case where if there are exactly max_class_infos number of classes,
-            // start_idx will not get updated and LLDB will enter an infinite loop reading.
+            // Always make sure start_idx gets updated. Otherwise we have an infinite
+            // loop if there are exactly max_class_infos number of classes.
             if (*start_idx == original_start_idx) {
               *start_idx = idx;
             }
@@ -2444,13 +2448,13 @@ AppleObjCRuntimeV2::SharedCacheClassInfoExtractor::UpdateISAToDescriptorMap() {
     bool already_read_relative_selector_offset = false;
 
     do {
-      // Run the function
+      // Run the function.
       ExpressionResults results =
           get_shared_cache_class_info_function->ExecuteFunction(
               exe_ctx, &m_args, options, diagnostics, return_value);
 
       if (results == eExpressionCompleted) {
-        // The result is the number of ClassInfo structures that were filled in
+        // The result is the number of ClassInfo structures that were filled in.
         num_class_infos_read = return_value.GetScalar().ULong();
         num_class_infos += num_class_infos_read;
         LLDB_LOG(log, "Discovered {0} Objective-C classes in the shared cache",
@@ -2498,19 +2502,15 @@ AppleObjCRuntimeV2::SharedCacheClassInfoExtractor::UpdateISAToDescriptorMap() {
                                           num_class_infos_read);
           }
         }
-      } else {
-        if (log) {
-          LLDB_LOGF(log, "Error evaluating our find class name function.");
-          diagnostics.Dump(log);
-          break;
-        }
+      } else if (log) {
+        LLDB_LOGF(log, "Error evaluating our find class name function.");
+        diagnostics.Dump(log);
+        break;
       }
     } while (num_class_infos_read == max_num_classes_in_buffer);
-  } else {
-    if (log) {
+  } else if (log) {
       LLDB_LOGF(log, "Error writing function arguments.");
       diagnostics.Dump(log);
-    }
   }
 
   LLDB_LOG(log, "Processed {0} Objective-C classes total from the shared cache",
