@@ -4938,6 +4938,12 @@ Action *Driver::BuildOffloadingActions(Compilation &C,
     // Compiling HIP in device-only non-RDC mode requires linking each action
     // individually.
     for (Action *&A : DeviceActions) {
+      auto OsName = A->getOffloadingToolChain()
+                        ? A->getOffloadingToolChain()->getTriple().getOSName()
+                        : StringRef();
+      bool IsHIPSPV = A->getOffloadingToolChain() &&
+                      A->getOffloadingToolChain()->getTriple().isSPIRV() &&
+                      (OsName == "hipspv" || OsName == "chipstar");
       bool IsAMDGCNSPIRV = A->getOffloadingToolChain() &&
                            A->getOffloadingToolChain()->getTriple().getOS() ==
                                llvm::Triple::OSType::AMDHSA &&
@@ -4946,13 +4952,13 @@ Action *Driver::BuildOffloadingActions(Compilation &C,
                                           options::OPT_no_use_spirv_backend,
                                           /*Default=*/false);
 
-      // Special handling for the HIP SPIR-V toolchain in device-only.
+      // Special handling for the HIP SPIR-V toolchains in device-only.
       // The translator path has a linking step, whereas the SPIR-V backend path
       // does not to avoid any external dependency such as spirv-link. The
       // linking step is skipped for the SPIR-V backend path.
       bool IsAMDGCNSPIRVWithBackend = IsAMDGCNSPIRV && UseSPIRVBackend;
 
-      if ((A->getType() != types::TY_Object && !IsAMDGCNSPIRV &&
+      if ((A->getType() != types::TY_Object && !IsAMDGCNSPIRV && !IsHIPSPV &&
            A->getType() != types::TY_LTO_BC) ||
           HIPRelocatableObj || !HIPNoRDC || !offloadDeviceOnly() ||
           (IsAMDGCNSPIRVWithBackend && offloadDeviceOnly()))
@@ -7000,6 +7006,11 @@ const ToolChain &Driver::getToolChain(const ArgList &Args,
         break;
       case llvm::Triple::spirv32:
       case llvm::Triple::spirv64:
+        if (Target.getOSName() == "hipspv") {
+          TC = std::make_unique<toolchains::HIPSPVToolChain>(*this, Target,
+                                                             Args);
+          break;
+        }
         TC = std::make_unique<toolchains::SPIRVToolChain>(*this, Target, Args);
         break;
       case llvm::Triple::csky:
