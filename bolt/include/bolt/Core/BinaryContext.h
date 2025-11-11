@@ -760,10 +760,8 @@ public:
     uint32_t NumExactMatchedBlocks{0};
     ///   the number of loosely matched basic blocks
     uint32_t NumLooseMatchedBlocks{0};
-    ///   the number of exactly pseudo probe matched basic blocks
-    uint32_t NumPseudoProbeExactMatchedBlocks{0};
-    ///   the number of loosely pseudo probe matched basic blocks
-    uint32_t NumPseudoProbeLooseMatchedBlocks{0};
+    ///   the number of pseudo probe matched basic blocks
+    uint32_t NumPseudoProbeMatchedBlocks{0};
     ///   the number of call matched basic blocks
     uint32_t NumCallMatchedBlocks{0};
     ///   the total count of samples in the profile
@@ -772,10 +770,8 @@ public:
     uint64_t ExactMatchedSampleCount{0};
     ///   the count of loosely matched samples
     uint64_t LooseMatchedSampleCount{0};
-    ///   the count of exactly pseudo probe matched samples
-    uint64_t PseudoProbeExactMatchedSampleCount{0};
-    ///   the count of loosely pseudo probe matched samples
-    uint64_t PseudoProbeLooseMatchedSampleCount{0};
+    ///   the count of pseudo probe matched samples
+    uint64_t PseudoProbeMatchedSampleCount{0};
     ///   the count of call matched samples
     uint64_t CallMatchedSampleCount{0};
   } Stats;

@@ -8,7 +8,9 @@
 # RUN:   --print-cfg --funcs=main --infer-stale-profile \
 # RUN:   --stale-matching-with-pseudo-probes 2>&1 | FileCheck %s
 
-# CHECK: BOLT-INFO: inference found an exact pseudo probe match for 100.00% of basic blocks (1 out of 1 stale)
+# CHECK: BOLT-INFO: pseudo probe profile matching matched 100.00% (1/1) inline tree root(s) corresponding to profile or binary functions. Couldn't match 0 roots with mismatching GUIDs, 0 with mismatching hash.
+# CHECK: BOLT-INFO: pseudo probe profile matching matched 100.00% (1/1) inline tree node(s) corresponding to inlined source functions. Couldn't match 0 nodes with mismatching hash, 0 with missing profile node.
+# CHECK: BOLT-INFO: inference found pseudo probe match for 100.00% of basic blocks (1 out of 1 stale)
 
 #--- main.s
  .text
