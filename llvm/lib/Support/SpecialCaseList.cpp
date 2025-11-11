@@ -243,10 +243,10 @@ bool SpecialCaseList::createInternal(const MemoryBuffer *MB, std::string &Error,
 Expected<SpecialCaseList::Section *>
 SpecialCaseList::addSection(StringRef SectionStr, unsigned FileNo,
                             unsigned LineNo, bool UseGlobs) {
+  SectionStr = SectionStr.copy(StrAlloc);
   Sections.emplace_back(SectionStr, FileNo, UseGlobs);
   auto &Section = Sections.back();
 
-  SectionStr = SectionStr.copy(StrAlloc);
   if (auto Err = Section.SectionMatcher.insert(SectionStr, LineNo)) {
     return createStringError(errc::invalid_argument,
                              "malformed section at line " + Twine(LineNo) +
