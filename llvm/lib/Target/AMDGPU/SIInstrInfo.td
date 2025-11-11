@@ -776,11 +776,7 @@ def xnor : PatFrag <
 foreach I = 1-4 in {
 def shl#I#_add : PatFrag <
   (ops node:$src0, node:$src1),
-  (add (shl_oneuse $src0, (i32 I)), $src1)> {
-  // FIXME: Poor substitute for disabling pattern in SelectionDAG
-  let PredicateCode = [{return false;}];
-  let GISelPredicateCode = [{return true;}];
-}
+  (add (shl_oneuse $src0, (i32 I)), $src1)>;
 }
 
 multiclass SIAtomicM0Glue2 <string op_name, bit is_amdgpu = 0,
