@@ -707,3 +707,7 @@ if(build_runtimes)
     set_property(GLOBAL APPEND PROPERTY LLVM_ALL_ADDITIONAL_TEST_TARGETS runtimes ${extra_deps})
   endif()
 endif()
+
+if(LIBOMP_ENABLE_ARM64X)
+  add_dependencies(runtimes-configure runtimes-arm64ec-pc-windows-msvc-build)
+endif()
