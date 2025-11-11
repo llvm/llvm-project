@@ -11,16 +11,44 @@
 #include <cassert>
 #include <list>
 #include <ranges>
+#include <type_traits>
 #include <vector>
 #include "test_iterators.h"
 #include "test_macros.h"
 
-// This tests https://cplusplus.github.io/LWG/issue4082
-// views::concat(r) is well-formed when r is an output_range
+// test concept constraints
 
 template<typename T>
 concept WellFormedView = requires(T& a) {
   std::views::concat(a);
+};
+
+struct X {};
+
+struct BadIter {
+  using value_type = int;
+  int* p;
+
+  BadIter() = default;
+  explicit BadIter(int* q) : p(q) {}
+
+  int& operator*() const { return *p; }
+  BadIter& operator++() {
+    ++p;
+    return *this;
+  }
+  void operator++(int) { ++p; }
+
+  friend bool operator==(const BadIter& a, const BadIter& b) { return a.p == b.p; }
+  friend bool operator!=(const BadIter& a, const BadIter& b) { return !(a == b); }
+
+  friend X iter_move(const BadIter&) { return X{}; }
+};
+
+struct BadView : std::ranges::view_base {
+  int buf_[1] = {0};
+  BadIter begin() const { return BadIter(const_cast<int*>(buf_)); }
+  BadIter end() const { return BadIter(const_cast<int*>(buf_ + 1)); }
 };
 
 struct InputRange {
@@ -82,6 +110,21 @@ int main(int, char**) {
   {
     // inputs are non-concatable
     static_assert(!ConcatViewConstraintsPass<std::vector<int>, std::vector<std::string>>);
+  }
+
+  {
+    // test concept concatable
+    {
+      // concat-reference-t is ill-formed
+      // no common reference between int and string
+      static_assert(!ConcatViewConstraintsPass<std::array<int, 1>, std::array<std::string, 1>>);
+    }
+
+    {
+      // concat-indirectly-readable is ill-formed
+      //   since iter_move of BadIter returns an unrelated type
+      static_assert(!ConcatViewConstraintsPass<BadView, BadView>);
+    }
   }
 
   return 0;

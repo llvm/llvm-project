@@ -8,11 +8,9 @@
 
 // REQUIRES: std-at-least-c++26
 
-// friend constexpr __iterator operator+(const __iterator& __it, difference_type __n)
-//     requires __concat_is_random_access<_Const, _Views...>
+// constexpr __iterator& operator++()
 
-// friend constexpr __iterator operator+(difference_type __n, const __iterator& __it)
-//     requires __concat_is_random_access<_Const, _Views...>
+// constexpr void operator++(int)
 
 #include <array>
 #include <cassert>
@@ -98,6 +96,81 @@ constexpr bool test() {
     assert(*it == a[2]);
     ++it;
     assert(*it == a[3]);
+  }
+
+  // Different underlying range types; ++ crosses from end of first into start of second.
+  {
+    std::span<const int> sa{a};
+    auto sb = std::ranges::subrange{b.data(), b.data() + b.size()};
+    auto v  = std::views::concat(sa, sb);
+
+    auto it = v.begin();
+    for (size_t i = 1; i < a.size(); i++) {
+      ++it;
+    }
+    assert(*it == a.back());
+
+    ++it;
+    assert(*it == b.front());
+
+    auto it2 = v.begin();
+    for (size_t i = 1; i < a.size(); i++) {
+      ++it2;
+    }
+    auto old = it2++;
+    assert(*old == a.back());
+    assert(*it2 == b.front());
+
+    // Same with a const-iterator.
+    const auto& cv = v;
+    auto cit       = cv.begin();
+    for (size_t i = 1; i < a.size(); i++) {
+      ++cit;
+    }
+    ++cit;
+    assert(*cit == b.front());
+  }
+
+  // ++ crosses into next range when that next range is empty.
+  {
+    std::array<int, 0> e{};
+    auto v = std::views::concat(a, e, b);
+
+    auto it = v.begin();
+    for (size_t i = 1; i < a.size(); i++) {
+      ++it;
+    }
+    ++it; //  skip e
+    assert(*it == b.front());
+
+    auto it2 = v.begin();
+    for (size_t i = 1; i < a.size(); i++)
+      ++it2;
+    auto old = it2++;
+    assert(*old == a.back());
+    assert(*it2 == b.front());
+
+    // Const-iterator.
+    const auto& cv = v;
+    auto cit       = cv.begin();
+    for (size_t i = 1; i < a.size(); i++)
+      ++cit;
+    ++cit;
+    assert(*cit == b.front());
+  }
+
+  // Multiple consecutive empty ranges are skipped on ++.
+  {
+    std::array<int, 0> e1{}, e2{};
+    auto v = std::views::concat(a, e1, e2, b);
+
+    auto it = v.begin();
+    for (size_t i = 1; i < a.size(); i++) {
+      ++it;
+    }
+
+    ++it; // skip e1 and e2
+    assert(*it == b.front());
   }
 
   return true;

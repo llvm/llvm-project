@@ -23,6 +23,30 @@
 #include "test_macros.h"
 #include "../types.h"
 
+template <bool NoThrow>
+struct ThowingIter {
+  using iterator_concept  = std::forward_iterator_tag;
+  using iterator_category = std::forward_iterator_tag;
+  using difference_type   = std::ptrdiff_t;
+  using value_type        = int;
+
+  int* p = nullptr;
+
+  constexpr int& operator*() const noexcept { return *p; }
+  constexpr ThowingIter& operator++() noexcept {
+    ++p;
+    return *this;
+  }
+  constexpr ThowingIter operator++(int) noexcept {
+    ThowingIter tmp = *this;
+    ++*this;
+    return tmp;
+  }
+  friend constexpr bool operator==(ThowingIter, ThowingIter) = default;
+
+  friend constexpr int&& iter_move(const ThowingIter& it) noexcept(NoThrow) { return std::move(*it.p); }
+};
+
 struct Range : std::ranges::view_base {
   using Iterator = forward_iterator<int*>;
   using Sentinel = sentinel_wrapper<Iterator>;
@@ -35,53 +59,78 @@ private:
   int* end_;
 };
 
-struct ThrowingMove {
-  ThrowingMove() = default;
-  ThrowingMove(ThrowingMove&&) {}
+struct ThrowingValue {
+  int v{};
+  ThrowingValue() = default;
+  explicit ThrowingValue(int x) noexcept(false) : v(x) {}
+  ThrowingValue(const ThrowingValue&) noexcept(false) = default;
+  ThrowingValue(ThrowingValue&&) noexcept(false)      = default;
 };
 
-template <class Iterator, bool HasNoexceptIterMove>
+template <bool DerefNoThrow>
+struct PValIter {
+  using iterator_concept  = std::input_iterator_tag;
+  using iterator_category = std::input_iterator_tag;
+  using difference_type   = std::ptrdiff_t;
+  using value_type        = std::conditional_t<DerefNoThrow, int, ThrowingValue>;
+
+  int* p = nullptr;
+
+  decltype(auto) operator*() const noexcept(DerefNoThrow) {
+    if constexpr (DerefNoThrow)
+      return *p; // int (noexcept)
+    else
+      return ThrowingValue{*p}; // not noexcept
+  }
+  PValIter& operator++() noexcept {
+    ++p;
+    return *this;
+  }
+  void operator++(int) noexcept { ++p; }
+  friend bool operator==(PValIter, PValIter) = default;
+};
+
+static_assert(std::input_iterator<LRefIter<true>>);
+static_assert(std::input_iterator<LRefIter<false>>);
+static_assert(std::input_iterator<PValIter<true>>);
+static_assert(std::input_iterator<PValIter<false>>);
+
+template <class Iter>
+struct MiniView : std::ranges::view_base {
+  Iter b{}, e{};
+  constexpr MiniView() = default;
+  constexpr MiniView(Iter first, Iter last) : b(first), e(last) {}
+  constexpr Iter begin() const noexcept { return b; }
+  constexpr Iter end() const noexcept { return e; }
+};
+
 constexpr bool test() {
-  using Sentinel = sentinel_wrapper<Iterator>;
-  using View     = minimal_view<Iterator, Sentinel>;
-
+  int buf1[] = {1, 2, 3, 4};
+  int buf2[] = {5, 6, 7};
   {
-    std::array<int, 5> array1{0, 1, 2, 3, 4};
-    std::array<int, 5> array2{5, 6, 7, 8, 9};
+    // All underlying iter_move are noexcept -> concat iterator's iter_move is noexcept
+    using I1 = ThowingIter<true>;
+    using S1 = sentinel_wrapper<I1>;
+    using V1 = MiniView<I1>;
+    V1 v1(I1(buf1), I1(buf1 + 4));
+    V1 v2(I1(buf2), I1(buf2 + 3));
 
-    View v1{Iterator(array1.data()), Sentinel(Iterator(array1.data() + array1.size()))};
-    View v2{Iterator(array2.data()), Sentinel(Iterator(array2.data() + array2.size()))};
-    std::ranges::concat_view view(std::move(v1), std::move(v2));
+    auto cv     = std::views::concat(v1, v2);
+    using Iter  = decltype(cv.begin());
+    using CIter = decltype(std::as_const(cv).begin());
 
-    auto it = view.begin();
-    assert(std::ranges::iter_move(view.begin()) == 0);
-    static_assert(noexcept(iter_move(it)) == HasNoexceptIterMove);
+    static_assert(noexcept(std::ranges::iter_move(std::declval<Iter&>())));
+    static_assert(noexcept(std::ranges::iter_move(std::declval<CIter&>())));
+
+    auto it = cv.begin();
+    (void)std::ranges::iter_move(it);
   }
 
-  {
-    // iter_move may throw
-    auto throwingMoveRange =
-        std::views::iota(0, 2) | std::views::transform([](auto) noexcept { return ThrowingMove{}; });
-    std::ranges::concat_view v(throwingMoveRange);
-    auto it = v.begin();
-    static_assert(!noexcept(std::ranges::iter_move(it)));
-  }
-
-  return true;
-}
-
-constexpr bool tests() {
-  test<cpp17_input_iterator<int*>, /* noexcept */ false>();
-  test<forward_iterator<int*>, /* noexcept */ false>();
-  test<bidirectional_iterator<int*>, /* noexcept */ false>();
-  test<random_access_iterator<int*>, /* noexcept */ false>();
-  test<contiguous_iterator<int*>, /* noexcept */ false>();
-  test<int*, /* noexcept */ true>();
   return true;
 }
 
 int main(int, char**) {
-  tests();
-  static_assert(tests());
+  test();
+  static_assert(test());
   return 0;
 }

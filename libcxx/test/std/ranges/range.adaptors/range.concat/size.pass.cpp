@@ -117,7 +117,13 @@ constexpr bool test() {
     ASSERT_SAME_TYPE(decltype(v.size()), unsigned int);
   }
 
-
+  {
+    // three ranges with different size type
+    std::ranges::concat_view v(UnsignedSizeView{}, IntSizeView{}, StrangeSizeView{});
+    assert(v.size() == 23);
+    // common type between size_t and int should be size_t
+    ASSERT_SAME_TYPE(decltype(v.size()), unsigned int);
+  }
 
   return true;
 }

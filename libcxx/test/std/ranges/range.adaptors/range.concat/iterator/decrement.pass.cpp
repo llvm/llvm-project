@@ -126,13 +126,11 @@ constexpr bool test() {
   {
     auto v = std::views::concat(a, b);
 
-    // Position at the first element of `b`, then -- to land on a.back().
     auto it = v.begin();
     it += a.size();
     --it;
     assert(*it == a.back());
 
-    // Post-decrement variant from b[0]; result is old iterator, `it2` moves to a.back().
     auto it2 = v.begin();
     it2 += a.size();
     auto old = it2--;
@@ -165,7 +163,7 @@ constexpr bool test() {
     auto v = std::views::concat(a, e, b);
 
     auto it = v.begin();
-    it += a.size(); // points at beginning of b
+    it += a.size();
     --it;           // this skips e
     assert(*it == a.back());
 
@@ -189,7 +187,7 @@ constexpr bool test() {
     auto v = std::views::concat(a, e1, e2, b);
 
     auto it = v.begin();
-    it += a.size(); // points to b[0]
+    it += a.size();
     --it;           // skip e2 and e1
     assert(*it == a.back());
   }

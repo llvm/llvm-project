@@ -8,21 +8,20 @@
 
 // REQUIRES: std-at-least-c++26
 
-// friend constexpr iterator operator-(const iterator& it, difference_type n)
-//         requires concat-is-random-access<Const, Views...>;
-
-// friend constexpr difference_type operator-(const iterator& x, const iterator& y)
-//     requires concat-is-random-access<Const, Views...>;
-
-// friend constexpr difference_type operator-(default_sentinel_t, const __iterator& __x)
-//     requires(sized_sentinel_for<sentinel_t<__maybe_const<_Const, _Views>>, iterator_t<__maybe_const<_Const, _Views>>> &&
-//              ...) &&
-//             (__all_but_first_model_sized_range<_Const, _Views...>::value)
-
-// friend constexpr difference_type operator-(const __iterator& __x, default_sentinel_t)
-//     requires(sized_sentinel_for<sentinel_t<__maybe_const<_Const, _Views>>, iterator_t<__maybe_const<_Const, _Views>>> &&
-//              ...) &&
-//             (__all_but_first_model_sized_range<_Const, _Views...>::value)
+// operator-(x, y)
+// operator-(x, sentinel)
+// operator-(sentinel, x)
+// operator-(x, n)
+// operator+(x, n)
+// operator+=(x, n)
+// operator-=(x, n)
+// operator<(x, y)
+// operator<=(x, y)
+// operator>=(x, y)
+// operator>(x, y)
+// operator<=>(x, y)
+// operator==(x, y)
+// operator==(x, sentinel)
 
 #include <array>
 #include <concepts>
@@ -180,6 +179,125 @@ constexpr bool test() {
       static_assert(!std::random_access_iterator<Iter>);
       static_assert(!std::random_access_iterator<CIter>);
     }
+  }
+
+  {
+    // operator <, <=, >, >=
+    std::array<int, 4> arr_a{1, 2, 3, 4};
+    std::array<int, 3> arr_b{5, 6, 7};
+    std::span<const int> s1{arr_a};
+    std::span<const int> s2{arr_b};
+    auto v      = std::views::concat(s1, s2);
+    using Iter  = decltype(v.begin());
+    using CIter = decltype(std::as_const(v).begin());
+    auto i      = v.begin();
+    auto j      = v.begin();
+    std::ranges::advance(j, arr_a.size());
+
+    assert(i < j);
+    assert(i <= j);
+    assert(!(i > j));
+    assert(!(i >= j));
+    auto ord1 = (i <=> j);
+    assert(ord1 < 0);
+    assert((j <=> i) > 0);
+
+    auto k = j;
+    assert(!(j < k));
+    assert(j <= k);
+    assert(!(j > k));
+    assert(j >= k);
+    auto ord2 = (j <=> k);
+    assert(ord2 == 0);
+
+    // const-iterator
+    const auto& cv = v;
+    auto ci        = cv.begin();
+    auto cj        = cv.begin();
+    std::ranges::advance(cj, arr_a.size());
+    assert(ci < cj);
+    assert((ci <=> cj) < 0);
+  }
+
+  {
+    // operator==(x, sentinel)
+    std::array<int, 2> arr_a{1, 2};
+    std::array<int, 2> arr_b{3, 4};
+    std::span<const int> s1{arr_a};
+    std::span<const int> s2{arr_b};
+    auto v = std::views::concat(s1, s2);
+
+    auto it = v.begin();
+    assert(!(it == std::default_sentinel_t{}));
+
+    it++;
+    it++;
+    it++;
+    it++;
+    assert(it == std::default_sentinel_t{});
+
+    // const-iterator
+    const auto& cv = v;
+    auto cit       = cv.begin();
+    ++cit;
+    ++cit;
+    ++cit;
+    ++cit;
+    assert(cit == std::default_sentinel_t{});
+  }
+
+  {
+    // operator+(x, n) and operator+(n, x), where n is negative
+    std::array<int, 4> arr_a{1, 2, 3, 4};
+    std::array<int, 3> arr_b{5, 6, 7};
+    std::span<const int> s1{arr_a};
+    std::span<const int> s2{arr_b};
+    auto v = std::views::concat(s1, s2);
+
+    auto i = v.begin();
+    std::ranges::advance(i, arr_a.size());
+
+    auto j   = i;
+    auto j_1 = j + (-1);
+    assert(*j_1 == arr_a.back());
+    auto j_3 = j + (-3);
+    assert(*j_3 == arr_a[1]);
+
+    // n + x (negative)
+    auto k = (-1) + j;
+    assert(*k == arr_a.back());
+
+    // const-iterator
+    auto ci = std::as_const(v).begin();
+    std::ranges::advance(ci, arr_a.size());
+    auto cj   = ci;
+    auto cj_2 = cj + (-2);
+    assert(*cj_2 == arr_a[2]);
+    auto cjn = (-1) + cj;
+    assert(*cjn == arr_a.back());
+  }
+
+  {
+    // operator-(x, n), where n is negative
+    std::array<int, 4> arr_a{1, 2, 3, 4};
+    std::array<int, 3> arr_b{5, 6, 7};
+    std::span<const int> s1{arr_a};
+    std::span<const int> s2{arr_b};
+    auto v = std::views::concat(s1, s2);
+
+    auto i = v.begin();
+
+    auto j   = i;
+    auto j_1 = j - (-1);
+    assert(*j_1 == arr_a[1]);
+    auto j_3 = j - (-3);
+    assert(*j_3 == arr_a.back());
+
+    // const-iterator
+    auto ci   = std::as_const(v).begin();
+    auto cj   = ci;
+    auto cj_2 = cj - (-2);
+    assert(*cj_2 == arr_a[2]);
   }
 
   return true;
