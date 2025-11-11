@@ -6,29 +6,28 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ProperlySeededRandomGeneratorCheck.h"
+#include "RandomGeneratorSeedCheck.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "llvm/ADT/STLExtras.h"
 
 using namespace clang::ast_matchers;
 
-namespace clang::tidy::cert {
+namespace clang::tidy::bugprone {
 
-ProperlySeededRandomGeneratorCheck::ProperlySeededRandomGeneratorCheck(
-    StringRef Name, ClangTidyContext *Context)
+RandomGeneratorSeedCheck::RandomGeneratorSeedCheck(StringRef Name,
+                                                   ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       RawDisallowedSeedTypes(
           Options.get("DisallowedSeedTypes", "time_t,std::time_t")) {
   RawDisallowedSeedTypes.split(DisallowedSeedTypes, ',');
 }
 
-void ProperlySeededRandomGeneratorCheck::storeOptions(
-    ClangTidyOptions::OptionMap &Opts) {
+void RandomGeneratorSeedCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "DisallowedSeedTypes", RawDisallowedSeedTypes);
 }
 
-void ProperlySeededRandomGeneratorCheck::registerMatchers(MatchFinder *Finder) {
+void RandomGeneratorSeedCheck::registerMatchers(MatchFinder *Finder) {
   auto RandomGeneratorEngineDecl = cxxRecordDecl(hasAnyName(
       "::std::linear_congruential_engine", "::std::mersenne_twister_engine",
       "::std::subtract_with_carry_engine", "::std::discard_block_engine",
@@ -75,8 +74,7 @@ void ProperlySeededRandomGeneratorCheck::registerMatchers(MatchFinder *Finder) {
       this);
 }
 
-void ProperlySeededRandomGeneratorCheck::check(
-    const MatchFinder::MatchResult &Result) {
+void RandomGeneratorSeedCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *Ctor = Result.Nodes.getNodeAs<CXXConstructExpr>("ctor");
   if (Ctor)
     checkSeed(Result, Ctor);
@@ -91,8 +89,8 @@ void ProperlySeededRandomGeneratorCheck::check(
 }
 
 template <class T>
-void ProperlySeededRandomGeneratorCheck::checkSeed(
-    const MatchFinder::MatchResult &Result, const T *Func) {
+void RandomGeneratorSeedCheck::checkSeed(const MatchFinder::MatchResult &Result,
+                                         const T *Func) {
   if (Func->getNumArgs() == 0 || Func->getArg(0)->isDefaultArgument()) {
     diag(Func->getExprLoc(),
          "random number generator seeded with a default argument will generate "
@@ -118,4 +116,4 @@ void ProperlySeededRandomGeneratorCheck::checkSeed(
   }
 }
 
-} // namespace clang::tidy::cert
+} // namespace clang::tidy::bugprone

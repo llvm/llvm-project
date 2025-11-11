@@ -959,6 +959,11 @@ public:
 
   /// Add metadata with kind \p Kind and \p Node.
   void addMetadata(unsigned Kind, MDNode *Node) {
+    assert(none_of(Metadata,
+                   [Kind](const std::pair<unsigned, MDNode *> &P) {
+                     return P.first == Kind;
+                   }) &&
+           "Kind must appear at most once in Metadata");
     Metadata.emplace_back(Kind, Node);
   }
 
@@ -1780,12 +1785,6 @@ class LLVM_ABI_FOR_TEST VPWidenGEPRecipe : public VPRecipeWithIRFlags {
 
   bool isIndexLoopInvariant(unsigned I) const {
     return getOperand(I + 1)->isDefinedOutsideLoopRegions();
-  }
-
-  bool areAllOperandsInvariant() const {
-    return all_of(operands(), [](VPValue *Op) {
-      return Op->isDefinedOutsideLoopRegions();
-    });
   }
 
 public:
