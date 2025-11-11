@@ -103,15 +103,18 @@ define i64 @udiv64_constant_no_add(i64 %a) nounwind {
 ; RV32-NEXT:    mulhu a1, a1, a2
 ; RV32-NEXT:    add a5, a5, a6
 ; RV32-NEXT:    mv t0, t1
+; RV32-NEXT:    mv a1, a1
 ; RV32-NEXT:    sltu a4, a5, a6
 ; RV32-NEXT:    add a5, a5, a7
 ; RV32-NEXT:    sltu a6, t1, t1
 ; RV32-NEXT:    sltiu t1, t1, 0
 ; RV32-NEXT:    add t0, t0, t2
+; RV32-NEXT:    mv a1, a1
 ; RV32-NEXT:    sltu a2, a5, a7
 ; RV32-NEXT:    add a6, a6, t1
 ; RV32-NEXT:    sltu a5, t0, t2
 ; RV32-NEXT:    add t0, t0, a0
+; RV32-NEXT:    mv a1, a1
 ; RV32-NEXT:    add a2, a4, a2
 ; RV32-NEXT:    add a5, a6, a5
 ; RV32-NEXT:    sltu a0, t0, a0
@@ -155,6 +158,7 @@ define i64 @udiv64_constant_add(i64 %a) nounwind {
 ; RV32-NEXT:    mulhu a7, a0, a2
 ; RV32-NEXT:    mulhu t2, a1, a3
 ; RV32-NEXT:    mv t1, t2
+; RV32-NEXT:    mv t1, t1
 ; RV32-NEXT:    mul t2, a1, a3
 ; RV32-NEXT:    mulhu a2, a1, a2
 ; RV32-NEXT:    mulhu a3, a0, a3

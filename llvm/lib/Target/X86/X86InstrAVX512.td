@@ -3161,6 +3161,12 @@ multiclass avx512_mask_setop_w<SDPatternOperator Val> {
 defm KSET0 : avx512_mask_setop_w<immAllZerosV>;
 defm KSET1 : avx512_mask_setop_w<immAllOnesV>;
 
+// 8-bit mask set operations for AVX512DQ
+let Predicates = [HasDQI] in {
+  defm KSET0B : avx512_mask_setop<VK8, v8i1, immAllZerosV>;
+  defm KSET1B : avx512_mask_setop<VK8, v8i1, immAllOnesV>;
+}
+
 // With AVX-512 only, 8-bit mask is promoted to 16-bit mask.
 let Predicates = [HasAVX512] in {
   def : Pat<(v8i1 immAllZerosV), (COPY_TO_REGCLASS (KSET0W), VK8)>;
@@ -3171,6 +3177,34 @@ let Predicates = [HasAVX512] in {
   def : Pat<(v4i1 immAllOnesV),  (COPY_TO_REGCLASS (KSET1W), VK4)>;
   def : Pat<(v2i1 immAllOnesV),  (COPY_TO_REGCLASS (KSET1W), VK2)>;
   def : Pat<(v1i1 immAllOnesV),  (COPY_TO_REGCLASS (KSET1W), VK1)>;
+}
+
+// With AVX512DQ, use 8-bit operations for 8-bit masks to avoid setting upper
+// bits
+let Predicates = [HasDQI] in {
+  def : Pat<(v8i1 immAllZerosV), (KSET0B)>;
+  def : Pat<(v8i1 immAllOnesV), (KSET1B)>;
+}
+
+// Optimize bitconvert of all-ones constants to use kxnor instructions
+let Predicates = [HasDQI] in {
+  def : Pat<(v8i1(bitconvert(i8 255))), (KSET1B)>;
+  def : Pat<(v16i1(bitconvert(i16 255))), (COPY_TO_REGCLASS(KSET1B), VK16)>;
+}
+let Predicates = [HasBWI] in {
+  def : Pat<(v32i1(bitconvert(i32 -1))), (KSET1D)>;
+  def : Pat<(v64i1(bitconvert(i64 -1))), (KSET1Q)>;
+}
+// Submask patterns: lower N bits set in larger mask registers
+let Predicates = [HasBWI, HasDQI] in {
+  // v32i1 submasks
+  def : Pat<(v32i1(bitconvert(i32 255))), (COPY_TO_REGCLASS(KSET1B), VK32)>;
+  def : Pat<(v32i1(bitconvert(i32 65535))), (COPY_TO_REGCLASS(KSET1W), VK32)>;
+  // v64i1 submasks
+  def : Pat<(v64i1(bitconvert(i64 255))), (COPY_TO_REGCLASS(KSET1B), VK64)>;
+  def : Pat<(v64i1(bitconvert(i64 65535))), (COPY_TO_REGCLASS(KSET1W), VK64)>;
+  def : Pat<(v64i1(bitconvert(i64 4294967295))), (COPY_TO_REGCLASS(KSET1D),
+                                                     VK64)>;
 }
 
 // Patterns for kmask insert_subvector/extract_subvector to/from index=0

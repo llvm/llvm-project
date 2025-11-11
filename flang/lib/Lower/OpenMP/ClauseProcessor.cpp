@@ -406,6 +406,11 @@ bool ClauseProcessor::processMergeable(
   return markClauseOccurrence<omp::clause::Mergeable>(result.mergeable);
 }
 
+bool ClauseProcessor::processNogroup(
+    mlir::omp::NogroupClauseOps &result) const {
+  return markClauseOccurrence<omp::clause::Nogroup>(result.nogroup);
+}
+
 bool ClauseProcessor::processNowait(mlir::omp::NowaitClauseOps &result) const {
   return markClauseOccurrence<omp::clause::Nowait>(result.nowait);
 }

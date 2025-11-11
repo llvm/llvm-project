@@ -89,6 +89,7 @@ public:
   bool processInclusive(mlir::Location currentLocation,
                         mlir::omp::InclusiveClauseOps &result) const;
   bool processMergeable(mlir::omp::MergeableClauseOps &result) const;
+  bool processNogroup(mlir::omp::NogroupClauseOps &result) const;
   bool processNowait(mlir::omp::NowaitClauseOps &result) const;
   bool processNumTasks(lower::StatementContext &stmtCtx,
                        mlir::omp::NumTasksClauseOps &result) const;

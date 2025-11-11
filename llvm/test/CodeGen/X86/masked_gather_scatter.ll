@@ -207,15 +207,15 @@ declare void @llvm.masked.scatter.v16i32.v16p0(<16 x i32> , <16 x ptr> , i32 , <
 ; SCALAR-NEXT:   store i32 %Elt2, ptr %Ptr23, align 4
 
 define <8 x i32> @test6(<8 x i32>%a1, <8 x ptr> %ptr) {
-; X64-LABEL: test6:
-; X64:       # %bb.0:
-; X64-NEXT:    kxnorw %k0, %k0, %k1
-; X64-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; X64-NEXT:    kxnorw %k0, %k0, %k2
-; X64-NEXT:    vpgatherqd (,%zmm1), %ymm2 {%k2}
-; X64-NEXT:    vpscatterqd %ymm0, (,%zmm1) {%k1}
-; X64-NEXT:    vmovdqa %ymm2, %ymm0
-; X64-NEXT:    retq
+; X64-KNL-LABEL: test6:
+; X64-KNL:       # %bb.0:
+; X64-KNL-NEXT:    kxnorw %k0, %k0, %k1
+; X64-KNL-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; X64-KNL-NEXT:    kxnorw %k0, %k0, %k2
+; X64-KNL-NEXT:    vpgatherqd (,%zmm1), %ymm2 {%k2}
+; X64-KNL-NEXT:    vpscatterqd %ymm0, (,%zmm1) {%k1}
+; X64-KNL-NEXT:    vmovdqa %ymm2, %ymm0
+; X64-KNL-NEXT:    retq
 ;
 ; X86-KNL-LABEL: test6:
 ; X86-KNL:       # %bb.0:
@@ -230,11 +230,21 @@ define <8 x i32> @test6(<8 x i32>%a1, <8 x ptr> %ptr) {
 ; X86-KNL-NEXT:    vmovdqa %ymm2, %ymm0
 ; X86-KNL-NEXT:    retl
 ;
+; X64-SKX-LABEL: test6:
+; X64-SKX:       # %bb.0:
+; X64-SKX-NEXT:    kxnorb %k0, %k0, %k1
+; X64-SKX-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; X64-SKX-NEXT:    kxnorb %k0, %k0, %k2
+; X64-SKX-NEXT:    vpgatherqd (,%zmm1), %ymm2 {%k2}
+; X64-SKX-NEXT:    vpscatterqd %ymm0, (,%zmm1) {%k1}
+; X64-SKX-NEXT:    vmovdqa %ymm2, %ymm0
+; X64-SKX-NEXT:    retq
+;
 ; X86-SKX-LABEL: test6:
 ; X86-SKX:       # %bb.0:
-; X86-SKX-NEXT:    kxnorw %k0, %k0, %k1
+; X86-SKX-NEXT:    kxnorb %k0, %k0, %k1
 ; X86-SKX-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; X86-SKX-NEXT:    kxnorw %k0, %k0, %k2
+; X86-SKX-NEXT:    kxnorb %k0, %k0, %k2
 ; X86-SKX-NEXT:    vpgatherdd (,%ymm1), %ymm2 {%k2}
 ; X86-SKX-NEXT:    vpscatterdd %ymm0, (,%ymm1) {%k1}
 ; X86-SKX-NEXT:    vmovdqa %ymm2, %ymm0
@@ -397,7 +407,7 @@ define <8 x i32> @test9(ptr %base, <8 x i64> %ind1, <8 x i32>%ind5) {
 ; X64-SKX-SMALL-NEXT:    vpmovzxdq {{.*#+}} zmm1 = ymm1[0],zero,ymm1[1],zero,ymm1[2],zero,ymm1[3],zero,ymm1[4],zero,ymm1[5],zero,ymm1[6],zero,ymm1[7],zero
 ; X64-SKX-SMALL-NEXT:    vpmuldq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm1, %zmm1
 ; X64-SKX-SMALL-NEXT:    vpaddq %zmm1, %zmm0, %zmm1
-; X64-SKX-SMALL-NEXT:    kxnorw %k0, %k0, %k1
+; X64-SKX-SMALL-NEXT:    kxnorb %k0, %k0, %k1
 ; X64-SKX-SMALL-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; X64-SKX-SMALL-NEXT:    vpgatherqd 72(,%zmm1), %ymm0 {%k1}
 ; X64-SKX-SMALL-NEXT:    retq
@@ -412,7 +422,7 @@ define <8 x i32> @test9(ptr %base, <8 x i64> %ind1, <8 x i32>%ind5) {
 ; X64-SKX-LARGE-NEXT:    vpmullq (%rax){1to8}, %zmm0, %zmm0
 ; X64-SKX-LARGE-NEXT:    vpaddq %zmm0, %zmm2, %zmm0
 ; X64-SKX-LARGE-NEXT:    vpaddq %zmm1, %zmm0, %zmm1
-; X64-SKX-LARGE-NEXT:    kxnorw %k0, %k0, %k1
+; X64-SKX-LARGE-NEXT:    kxnorb %k0, %k0, %k1
 ; X64-SKX-LARGE-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; X64-SKX-LARGE-NEXT:    vpgatherqd 72(,%zmm1), %ymm0 {%k1}
 ; X64-SKX-LARGE-NEXT:    retq
@@ -424,7 +434,7 @@ define <8 x i32> @test9(ptr %base, <8 x i64> %ind1, <8 x i32>%ind5) {
 ; X86-SKX-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}{1to8}, %ymm0, %ymm0
 ; X86-SKX-NEXT:    vpaddd {{[0-9]+}}(%esp){1to8}, %ymm0, %ymm0
 ; X86-SKX-NEXT:    vpaddd %ymm1, %ymm0, %ymm1
-; X86-SKX-NEXT:    kxnorw %k0, %k0, %k1
+; X86-SKX-NEXT:    kxnorb %k0, %k0, %k1
 ; X86-SKX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; X86-SKX-NEXT:    vpgatherdd 68(,%ymm1), %ymm0 {%k1}
 ; X86-SKX-NEXT:    retl
@@ -481,7 +491,7 @@ define <8 x i32> @test10(ptr %base, <8 x i64> %i1, <8 x i32>%ind5) {
 ; X64-SKX-SMALL-NEXT:    vpmovzxdq {{.*#+}} zmm1 = ymm1[0],zero,ymm1[1],zero,ymm1[2],zero,ymm1[3],zero,ymm1[4],zero,ymm1[5],zero,ymm1[6],zero,ymm1[7],zero
 ; X64-SKX-SMALL-NEXT:    vpmuldq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm1, %zmm1
 ; X64-SKX-SMALL-NEXT:    vpaddq %zmm1, %zmm0, %zmm1
-; X64-SKX-SMALL-NEXT:    kxnorw %k0, %k0, %k1
+; X64-SKX-SMALL-NEXT:    kxnorb %k0, %k0, %k1
 ; X64-SKX-SMALL-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; X64-SKX-SMALL-NEXT:    vpgatherqd 72(,%zmm1), %ymm0 {%k1}
 ; X64-SKX-SMALL-NEXT:    retq
@@ -496,7 +506,7 @@ define <8 x i32> @test10(ptr %base, <8 x i64> %i1, <8 x i32>%ind5) {
 ; X64-SKX-LARGE-NEXT:    vpmullq (%rax){1to8}, %zmm0, %zmm0
 ; X64-SKX-LARGE-NEXT:    vpaddq %zmm0, %zmm2, %zmm0
 ; X64-SKX-LARGE-NEXT:    vpaddq %zmm1, %zmm0, %zmm1
-; X64-SKX-LARGE-NEXT:    kxnorw %k0, %k0, %k1
+; X64-SKX-LARGE-NEXT:    kxnorb %k0, %k0, %k1
 ; X64-SKX-LARGE-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; X64-SKX-LARGE-NEXT:    vpgatherqd 72(,%zmm1), %ymm0 {%k1}
 ; X64-SKX-LARGE-NEXT:    retq
@@ -508,7 +518,7 @@ define <8 x i32> @test10(ptr %base, <8 x i64> %i1, <8 x i32>%ind5) {
 ; X86-SKX-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}{1to8}, %ymm0, %ymm0
 ; X86-SKX-NEXT:    vpaddd {{[0-9]+}}(%esp){1to8}, %ymm0, %ymm0
 ; X86-SKX-NEXT:    vpaddd %ymm1, %ymm0, %ymm1
-; X86-SKX-NEXT:    kxnorw %k0, %k0, %k1
+; X86-SKX-NEXT:    kxnorb %k0, %k0, %k1
 ; X86-SKX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; X86-SKX-NEXT:    vpgatherdd 68(,%ymm1), %ymm0 {%k1}
 ; X86-SKX-NEXT:    retl
@@ -2465,17 +2475,17 @@ define void @test30b(<3 x ptr> %base, <3 x i32> %ind, <3 x i1> %mask, <3 x i32> 
 
 declare <16 x ptr> @llvm.masked.gather.v16p0.v16p0(<16 x ptr>, i32, <16 x i1>, <16 x ptr>)
 define <16 x ptr> @test31(<16 x ptr> %ptrs) {
-; X64-LABEL: test31:
-; X64:       # %bb.0:
-; X64-NEXT:    kxnorw %k0, %k0, %k1
-; X64-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; X64-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; X64-NEXT:    kxnorw %k0, %k0, %k2
-; X64-NEXT:    vpgatherqq (,%zmm0), %zmm3 {%k2}
-; X64-NEXT:    vpgatherqq (,%zmm1), %zmm2 {%k1}
-; X64-NEXT:    vmovdqa64 %zmm3, %zmm0
-; X64-NEXT:    vmovdqa64 %zmm2, %zmm1
-; X64-NEXT:    retq
+; X64-KNL-LABEL: test31:
+; X64-KNL:       # %bb.0:
+; X64-KNL-NEXT:    kxnorw %k0, %k0, %k1
+; X64-KNL-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; X64-KNL-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; X64-KNL-NEXT:    kxnorw %k0, %k0, %k2
+; X64-KNL-NEXT:    vpgatherqq (,%zmm0), %zmm3 {%k2}
+; X64-KNL-NEXT:    vpgatherqq (,%zmm1), %zmm2 {%k1}
+; X64-KNL-NEXT:    vmovdqa64 %zmm3, %zmm0
+; X64-KNL-NEXT:    vmovdqa64 %zmm2, %zmm1
+; X64-KNL-NEXT:    retq
 ;
 ; X86-LABEL: test31:
 ; X86:       # %bb.0:
@@ -2484,6 +2494,18 @@ define <16 x ptr> @test31(<16 x ptr> %ptrs) {
 ; X86-NEXT:    vpgatherdd (,%zmm0), %zmm1 {%k1}
 ; X86-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; X86-NEXT:    retl
+;
+; X64-SKX-LABEL: test31:
+; X64-SKX:       # %bb.0:
+; X64-SKX-NEXT:    kxnorb %k0, %k0, %k1
+; X64-SKX-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; X64-SKX-NEXT:    kxnorb %k0, %k0, %k2
+; X64-SKX-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; X64-SKX-NEXT:    vpgatherqq (,%zmm0), %zmm3 {%k2}
+; X64-SKX-NEXT:    vpgatherqq (,%zmm1), %zmm2 {%k1}
+; X64-SKX-NEXT:    vmovdqa64 %zmm3, %zmm0
+; X64-SKX-NEXT:    vmovdqa64 %zmm2, %zmm1
+; X64-SKX-NEXT:    retq
   %res = call <16 x ptr> @llvm.masked.gather.v16p0.v16p0(<16 x ptr> %ptrs, i32 4, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <16 x ptr> undef)
   ret <16 x ptr>%res
 }
@@ -3253,17 +3275,17 @@ define <8 x i32> @test_global_array(<8 x i64> %indxs) {
 ; X64-KNL-NEXT:    vmovdqa %ymm1, %ymm0
 ; X64-KNL-NEXT:    retq
 ;
-; X86-LABEL: test_global_array:
-; X86:       # %bb.0:
-; X86-NEXT:    kxnorw %k0, %k0, %k1
-; X86-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; X86-NEXT:    vpgatherqd glob_array(,%zmm0,4), %ymm1 {%k1}
-; X86-NEXT:    vmovdqa %ymm1, %ymm0
-; X86-NEXT:    retl
+; X86-KNL-LABEL: test_global_array:
+; X86-KNL:       # %bb.0:
+; X86-KNL-NEXT:    kxnorw %k0, %k0, %k1
+; X86-KNL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; X86-KNL-NEXT:    vpgatherqd glob_array(,%zmm0,4), %ymm1 {%k1}
+; X86-KNL-NEXT:    vmovdqa %ymm1, %ymm0
+; X86-KNL-NEXT:    retl
 ;
 ; X64-SKX-SMALL-LABEL: test_global_array:
 ; X64-SKX-SMALL:       # %bb.0:
-; X64-SKX-SMALL-NEXT:    kxnorw %k0, %k0, %k1
+; X64-SKX-SMALL-NEXT:    kxnorb %k0, %k0, %k1
 ; X64-SKX-SMALL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; X64-SKX-SMALL-NEXT:    vpgatherqd glob_array(,%zmm0,4), %ymm1 {%k1}
 ; X64-SKX-SMALL-NEXT:    vmovdqa %ymm1, %ymm0
@@ -3272,11 +3294,19 @@ define <8 x i32> @test_global_array(<8 x i64> %indxs) {
 ; X64-SKX-LARGE-LABEL: test_global_array:
 ; X64-SKX-LARGE:       # %bb.0:
 ; X64-SKX-LARGE-NEXT:    movabsq $glob_array, %rax
-; X64-SKX-LARGE-NEXT:    kxnorw %k0, %k0, %k1
+; X64-SKX-LARGE-NEXT:    kxnorb %k0, %k0, %k1
 ; X64-SKX-LARGE-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; X64-SKX-LARGE-NEXT:    vpgatherqd (%rax,%zmm0,4), %ymm1 {%k1}
 ; X64-SKX-LARGE-NEXT:    vmovdqa %ymm1, %ymm0
 ; X64-SKX-LARGE-NEXT:    retq
+;
+; X86-SKX-LABEL: test_global_array:
+; X86-SKX:       # %bb.0:
+; X86-SKX-NEXT:    kxnorb %k0, %k0, %k1
+; X86-SKX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; X86-SKX-NEXT:    vpgatherqd glob_array(,%zmm0,4), %ymm1 {%k1}
+; X86-SKX-NEXT:    vmovdqa %ymm1, %ymm0
+; X86-SKX-NEXT:    retl
   %p = getelementptr inbounds [16 x i32], ptr @glob_array, i64 0, <8 x i64> %indxs
   %g = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %p, i32 8, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <8 x i32> undef)
   ret <8 x i32> %g
@@ -3291,17 +3321,17 @@ define <8 x i32> @test_global_array_zeroinitializer_index(<8 x i64> %indxs) {
 ; X64-KNL-NEXT:    vmovdqa %ymm1, %ymm0
 ; X64-KNL-NEXT:    retq
 ;
-; X86-LABEL: test_global_array_zeroinitializer_index:
-; X86:       # %bb.0:
-; X86-NEXT:    kxnorw %k0, %k0, %k1
-; X86-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; X86-NEXT:    vpgatherqd glob_array(,%zmm0,4), %ymm1 {%k1}
-; X86-NEXT:    vmovdqa %ymm1, %ymm0
-; X86-NEXT:    retl
+; X86-KNL-LABEL: test_global_array_zeroinitializer_index:
+; X86-KNL:       # %bb.0:
+; X86-KNL-NEXT:    kxnorw %k0, %k0, %k1
+; X86-KNL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; X86-KNL-NEXT:    vpgatherqd glob_array(,%zmm0,4), %ymm1 {%k1}
+; X86-KNL-NEXT:    vmovdqa %ymm1, %ymm0
+; X86-KNL-NEXT:    retl
 ;
 ; X64-SKX-SMALL-LABEL: test_global_array_zeroinitializer_index:
 ; X64-SKX-SMALL:       # %bb.0:
-; X64-SKX-SMALL-NEXT:    kxnorw %k0, %k0, %k1
+; X64-SKX-SMALL-NEXT:    kxnorb %k0, %k0, %k1
 ; X64-SKX-SMALL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; X64-SKX-SMALL-NEXT:    vpgatherqd glob_array(,%zmm0,4), %ymm1 {%k1}
 ; X64-SKX-SMALL-NEXT:    vmovdqa %ymm1, %ymm0
@@ -3310,11 +3340,19 @@ define <8 x i32> @test_global_array_zeroinitializer_index(<8 x i64> %indxs) {
 ; X64-SKX-LARGE-LABEL: test_global_array_zeroinitializer_index:
 ; X64-SKX-LARGE:       # %bb.0:
 ; X64-SKX-LARGE-NEXT:    movabsq $glob_array, %rax
-; X64-SKX-LARGE-NEXT:    kxnorw %k0, %k0, %k1
+; X64-SKX-LARGE-NEXT:    kxnorb %k0, %k0, %k1
 ; X64-SKX-LARGE-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; X64-SKX-LARGE-NEXT:    vpgatherqd (%rax,%zmm0,4), %ymm1 {%k1}
 ; X64-SKX-LARGE-NEXT:    vmovdqa %ymm1, %ymm0
 ; X64-SKX-LARGE-NEXT:    retq
+;
+; X86-SKX-LABEL: test_global_array_zeroinitializer_index:
+; X86-SKX:       # %bb.0:
+; X86-SKX-NEXT:    kxnorb %k0, %k0, %k1
+; X86-SKX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; X86-SKX-NEXT:    vpgatherqd glob_array(,%zmm0,4), %ymm1 {%k1}
+; X86-SKX-NEXT:    vmovdqa %ymm1, %ymm0
+; X86-SKX-NEXT:    retl
   %p = getelementptr inbounds [16 x i32], ptr @glob_array, <8 x i64> zeroinitializer, <8 x i64> %indxs
   %g = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %p, i32 8, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <8 x i32> undef)
   ret <8 x i32> %g
@@ -3545,7 +3583,7 @@ define <8 x float> @sext_v8i8_index(ptr %base, <8 x i8> %ind) {
 ; X64-SKX-LABEL: sext_v8i8_index:
 ; X64-SKX:       # %bb.0:
 ; X64-SKX-NEXT:    vpmovsxbd %xmm0, %ymm1
-; X64-SKX-NEXT:    kxnorw %k0, %k0, %k1
+; X64-SKX-NEXT:    kxnorb %k0, %k0, %k1
 ; X64-SKX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; X64-SKX-NEXT:    vgatherdps (%rdi,%ymm1,4), %ymm0 {%k1}
 ; X64-SKX-NEXT:    retq
@@ -3554,7 +3592,7 @@ define <8 x float> @sext_v8i8_index(ptr %base, <8 x i8> %ind) {
 ; X86-SKX:       # %bb.0:
 ; X86-SKX-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SKX-NEXT:    vpmovsxbd %xmm0, %ymm1
-; X86-SKX-NEXT:    kxnorw %k0, %k0, %k1
+; X86-SKX-NEXT:    kxnorb %k0, %k0, %k1
 ; X86-SKX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; X86-SKX-NEXT:    vgatherdps (%eax,%ymm1,4), %ymm0 {%k1}
 ; X86-SKX-NEXT:    retl
@@ -3617,7 +3655,7 @@ define <8 x float> @zext_v8i8_index(ptr %base, <8 x i8> %ind) {
 ; X64-SKX-LABEL: zext_v8i8_index:
 ; X64-SKX:       # %bb.0:
 ; X64-SKX-NEXT:    vpmovzxbd {{.*#+}} ymm1 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero
-; X64-SKX-NEXT:    kxnorw %k0, %k0, %k1
+; X64-SKX-NEXT:    kxnorb %k0, %k0, %k1
 ; X64-SKX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; X64-SKX-NEXT:    vgatherdps (%rdi,%ymm1,4), %ymm0 {%k1}
 ; X64-SKX-NEXT:    retq
@@ -3626,7 +3664,7 @@ define <8 x float> @zext_v8i8_index(ptr %base, <8 x i8> %ind) {
 ; X86-SKX:       # %bb.0:
 ; X86-SKX-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SKX-NEXT:    vpmovzxbd {{.*#+}} ymm1 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero
-; X86-SKX-NEXT:    kxnorw %k0, %k0, %k1
+; X86-SKX-NEXT:    kxnorb %k0, %k0, %k1
 ; X86-SKX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; X86-SKX-NEXT:    vgatherdps (%eax,%ymm1,4), %ymm0 {%k1}
 ; X86-SKX-NEXT:    retl
@@ -4793,19 +4831,19 @@ define <16 x i32> @pr163023_sext(ptr %a0, <16 x i32> %a1) {
 }
 
 define <16 x i32> @pr163023_zext(ptr %a0, <16 x i32> %a1) {
-; X64-LABEL: pr163023_zext:
-; X64:       # %bb.0:
-; X64-NEXT:    vpmovzxdq {{.*#+}} zmm1 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero
-; X64-NEXT:    vextracti64x4 $1, %zmm0, %ymm0
-; X64-NEXT:    vpmovzxdq {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero
-; X64-NEXT:    kxnorw %k0, %k0, %k1
-; X64-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; X64-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; X64-NEXT:    kxnorw %k0, %k0, %k2
-; X64-NEXT:    vpgatherqd (%rdi,%zmm0), %ymm3 {%k2}
-; X64-NEXT:    vpgatherqd (%rdi,%zmm1), %ymm2 {%k1}
-; X64-NEXT:    vinserti64x4 $1, %ymm3, %zmm2, %zmm0
-; X64-NEXT:    retq
+; X64-KNL-LABEL: pr163023_zext:
+; X64-KNL:       # %bb.0:
+; X64-KNL-NEXT:    vpmovzxdq {{.*#+}} zmm1 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero
+; X64-KNL-NEXT:    vextracti64x4 $1, %zmm0, %ymm0
+; X64-KNL-NEXT:    vpmovzxdq {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero
+; X64-KNL-NEXT:    kxnorw %k0, %k0, %k1
+; X64-KNL-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; X64-KNL-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; X64-KNL-NEXT:    kxnorw %k0, %k0, %k2
+; X64-KNL-NEXT:    vpgatherqd (%rdi,%zmm0), %ymm3 {%k2}
+; X64-KNL-NEXT:    vpgatherqd (%rdi,%zmm1), %ymm2 {%k1}
+; X64-KNL-NEXT:    vinserti64x4 $1, %ymm3, %zmm2, %zmm0
+; X64-KNL-NEXT:    retq
 ;
 ; X86-LABEL: pr163023_zext:
 ; X86:       # %bb.0:
@@ -4815,6 +4853,20 @@ define <16 x i32> @pr163023_zext(ptr %a0, <16 x i32> %a1) {
 ; X86-NEXT:    vpgatherdd (%eax,%zmm0), %zmm1 {%k1}
 ; X86-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; X86-NEXT:    retl
+;
+; X64-SKX-LABEL: pr163023_zext:
+; X64-SKX:       # %bb.0:
+; X64-SKX-NEXT:    vpmovzxdq {{.*#+}} zmm1 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero
+; X64-SKX-NEXT:    vextracti64x4 $1, %zmm0, %ymm0
+; X64-SKX-NEXT:    vpmovzxdq {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero
+; X64-SKX-NEXT:    kxnorb %k0, %k0, %k1
+; X64-SKX-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; X64-SKX-NEXT:    kxnorb %k0, %k0, %k2
+; X64-SKX-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; X64-SKX-NEXT:    vpgatherqd (%rdi,%zmm0), %ymm3 {%k2}
+; X64-SKX-NEXT:    vpgatherqd (%rdi,%zmm1), %ymm2 {%k1}
+; X64-SKX-NEXT:    vinserti64x4 $1, %ymm3, %zmm2, %zmm0
+; X64-SKX-NEXT:    retq
   %addr.p = ptrtoint ptr %a0 to i64
   %addr.v = insertelement <1 x i64> poison, i64 %addr.p, i64 0
   %addr.splat = shufflevector <1 x i64> %addr.v, <1 x i64> poison, <16 x i32> zeroinitializer
@@ -4834,21 +4886,37 @@ define <16 x i32> @pr163023_zext(ptr %a0, <16 x i32> %a1) {
 %struct.foo = type { ptr, i64, i16, i16, i32 }
 
 define <8 x i64> @pr45906(<8 x ptr> %ptr) {
-; X64-LABEL: pr45906:
-; X64:       # %bb.0: # %bb
-; X64-NEXT:    kxnorw %k0, %k0, %k1
-; X64-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; X64-NEXT:    vpgatherqq 8(,%zmm0), %zmm1 {%k1}
-; X64-NEXT:    vmovdqa64 %zmm1, %zmm0
-; X64-NEXT:    retq
+; X64-KNL-LABEL: pr45906:
+; X64-KNL:       # %bb.0: # %bb
+; X64-KNL-NEXT:    kxnorw %k0, %k0, %k1
+; X64-KNL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; X64-KNL-NEXT:    vpgatherqq 8(,%zmm0), %zmm1 {%k1}
+; X64-KNL-NEXT:    vmovdqa64 %zmm1, %zmm0
+; X64-KNL-NEXT:    retq
 ;
-; X86-LABEL: pr45906:
-; X86:       # %bb.0: # %bb
-; X86-NEXT:    kxnorw %k0, %k0, %k1
-; X86-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; X86-NEXT:    vpgatherdq 4(,%ymm0), %zmm1 {%k1}
-; X86-NEXT:    vmovdqa64 %zmm1, %zmm0
-; X86-NEXT:    retl
+; X86-KNL-LABEL: pr45906:
+; X86-KNL:       # %bb.0: # %bb
+; X86-KNL-NEXT:    kxnorw %k0, %k0, %k1
+; X86-KNL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; X86-KNL-NEXT:    vpgatherdq 4(,%ymm0), %zmm1 {%k1}
+; X86-KNL-NEXT:    vmovdqa64 %zmm1, %zmm0
+; X86-KNL-NEXT:    retl
+;
+; X64-SKX-LABEL: pr45906:
+; X64-SKX:       # %bb.0: # %bb
+; X64-SKX-NEXT:    kxnorb %k0, %k0, %k1
+; X64-SKX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; X64-SKX-NEXT:    vpgatherqq 8(,%zmm0), %zmm1 {%k1}
+; X64-SKX-NEXT:    vmovdqa64 %zmm1, %zmm0
+; X64-SKX-NEXT:    retq
+;
+; X86-SKX-LABEL: pr45906:
+; X86-SKX:       # %bb.0: # %bb
+; X86-SKX-NEXT:    kxnorb %k0, %k0, %k1
+; X86-SKX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; X86-SKX-NEXT:    vpgatherdq 4(,%ymm0), %zmm1 {%k1}
+; X86-SKX-NEXT:    vmovdqa64 %zmm1, %zmm0
+; X86-SKX-NEXT:    retl
 bb:
   %tmp = getelementptr inbounds %struct.foo, <8 x ptr> %ptr, i64 0, i32 1
   %tmp1 = call <8 x i64> @llvm.masked.gather.v8i64.v8p0(<8 x ptr> %tmp, i32 8, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <8 x i64> undef)
