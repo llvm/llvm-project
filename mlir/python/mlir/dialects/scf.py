@@ -6,7 +6,6 @@
 from ._scf_ops_gen import *
 from ._scf_ops_gen import _Dialect
 from .arith import constant
-import builtins
 
 try:
     from ..ir import *
@@ -264,7 +263,7 @@ class IndexSwitchOp(IndexSwitchOp):
 
     def __init__(
         self,
-        results_,
+        results,
         arg,
         cases,
         case_body_builder=None,
@@ -274,7 +273,7 @@ class IndexSwitchOp(IndexSwitchOp):
     ):
         cases = DenseI64ArrayAttr.get(cases)
         super().__init__(
-            results_, arg, cases, num_caseRegions=len(cases), loc=loc, ip=ip
+            results, arg, cases, num_caseRegions=len(cases), loc=loc, ip=ip
         )
         for region in self.regions:
             region.blocks.append()
@@ -288,22 +287,22 @@ class IndexSwitchOp(IndexSwitchOp):
                 with InsertionPoint(self.case_block(i)):
                     case_body_builder(self, i, self.cases[i])
 
-    @builtins.property
+    @property
     def default_region(self) -> Region:
         return self.regions[0]
 
-    @builtins.property
+    @property
     def default_block(self) -> Block:
         return self.default_region.blocks[0]
 
-    @builtins.property
+    @property
     def case_regions(self) -> Sequence[Region]:
         return self.regions[1:]
 
     def case_region(self, i: int) -> Region:
         return self.case_regions[i]
 
-    @builtins.property
+    @property
     def case_blocks(self) -> Sequence[Block]:
         return [region.blocks[0] for region in self.case_regions]
 
@@ -312,7 +311,7 @@ class IndexSwitchOp(IndexSwitchOp):
 
 
 def index_switch(
-    results_,
+    results,
     arg,
     cases,
     case_body_builder=None,
@@ -321,7 +320,7 @@ def index_switch(
     ip=None,
 ) -> Union[OpResult, OpResultList, IndexSwitchOp]:
     op = IndexSwitchOp(
-        results_=results_,
+        results=results,
         arg=arg,
         cases=cases,
         case_body_builder=case_body_builder,
