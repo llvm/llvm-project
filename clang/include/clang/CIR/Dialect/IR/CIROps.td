@@ -2598,7 +2598,7 @@ def CIR_FuncOp : CIR_Op<"func", [
 def CIR_LLVMIntrinsicCallOp : CIR_Op<"call_llvm_intrinsic"> {
   let summary = "Call to llvm intrinsic functions that is not defined in CIR";
   let description = [{
-    `cir.llvm.intrinsic` operation represents a call-like expression which has
+    `cir.call_llvm_intrinsic` operation represents a call-like expression which has
     return type and arguments that maps directly to a llvm intrinsic.
     It only records intrinsic `intrinsic_name`.
   }];

@@ -1430,14 +1430,14 @@ mlir::Value CIRGenFunction::emitPromotedScalarExpr(const Expr *e,
   return ScalarExprEmitter(*this, builder).Visit(const_cast<Expr *>(e));
 }
 
-mlir::Value CIRGenFunction::emitScalarOrConstFoldImmArg(unsigned ICEArguments,
+mlir::Value CIRGenFunction::emitScalarOrConstFoldImmArg(unsigned iceArguments,
                                                         unsigned index,
                                                         const CallExpr *e) {
   mlir::Value arg{};
 
   // The bit at the specified index indicates whether the argument is required
   // to be a constant integer expression.
-  bool isArgRequiredToBeConstant = (ICEArguments & (1 << index));
+  bool isArgRequiredToBeConstant = (iceArguments & (1 << index));
 
   if (!isArgRequiredToBeConstant) {
     arg = emitScalarExpr(e->getArg(index));
