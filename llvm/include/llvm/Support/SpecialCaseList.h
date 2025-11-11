@@ -232,7 +232,7 @@ protected:
     findMatcher(StringRef Prefix, StringRef Category) const;
 
     Matcher SectionMatcher;
-    std::string SectionStr;
+    StringRef SectionStr;
     SectionEntries Entries;
     unsigned FileIdx;
   };
