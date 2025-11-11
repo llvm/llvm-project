@@ -113,15 +113,18 @@ struct ExtAddrMode {
 ///
 class LLVM_ABI TargetInstrInfo : public MCInstrInfo {
 protected:
+  const TargetRegisterInfo &TRI;
+
   /// Subtarget specific sub-array of MCInstrInfo's RegClassByHwModeTables
   /// (i.e. the table for the active HwMode). This should be indexed by
   /// MCOperandInfo's RegClass field for LookupRegClassByHwMode operands.
   const int16_t *const RegClassByHwMode;
 
-  TargetInstrInfo(unsigned CFSetupOpcode = ~0u, unsigned CFDestroyOpcode = ~0u,
-                  unsigned CatchRetOpcode = ~0u, unsigned ReturnOpcode = ~0u,
+  TargetInstrInfo(const TargetRegisterInfo &TRI, unsigned CFSetupOpcode = ~0u,
+                  unsigned CFDestroyOpcode = ~0u, unsigned CatchRetOpcode = ~0u,
+                  unsigned ReturnOpcode = ~0u,
                   const int16_t *const RegClassByHwModeTable = nullptr)
-      : RegClassByHwMode(RegClassByHwModeTable),
+      : TRI(TRI), RegClassByHwMode(RegClassByHwModeTable),
         CallFrameSetupOpcode(CFSetupOpcode),
         CallFrameDestroyOpcode(CFDestroyOpcode), CatchRetOpcode(CatchRetOpcode),
         ReturnOpcode(ReturnOpcode) {}
@@ -130,6 +133,8 @@ public:
   TargetInstrInfo(const TargetInstrInfo &) = delete;
   TargetInstrInfo &operator=(const TargetInstrInfo &) = delete;
   virtual ~TargetInstrInfo();
+
+  const TargetRegisterInfo &getRegisterInfo() const { return TRI; }
 
   static bool isGenericOpcode(unsigned Opc) {
     return Opc <= TargetOpcode::GENERIC_OP_END;
