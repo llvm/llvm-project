@@ -87,6 +87,11 @@ static cl::opt<bool>
                                "be combined with a shift"),
                       cl::init(true));
 
+// TODO: Support more ops
+static const unsigned ZvfbfaVPOps[] = {ISD::VP_FNEG, ISD::VP_FABS,
+                                       ISD::VP_FCOPYSIGN};
+static const unsigned ZvfbfaOps[] = {ISD::FNEG, ISD::FABS, ISD::FCOPYSIGN};
+
 RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                                          const RISCVSubtarget &STI)
     : TargetLowering(TM), Subtarget(STI) {
@@ -1208,6 +1213,61 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       }
     };
 
+    // Sets common actions for zvfbfa, some of instructions are supported
+    // natively so that we don't need to promote them.
+    const auto SetZvfbfaActions = [&](MVT VT) {
+      setOperationAction({ISD::FP_ROUND, ISD::FP_EXTEND}, VT, Custom);
+      setOperationAction({ISD::STRICT_FP_ROUND, ISD::STRICT_FP_EXTEND}, VT,
+                         Custom);
+      setOperationAction({ISD::VP_FP_ROUND, ISD::VP_FP_EXTEND}, VT, Custom);
+      setOperationAction({ISD::LRINT, ISD::LLRINT}, VT, Custom);
+      setOperationAction({ISD::LROUND, ISD::LLROUND}, VT, Custom);
+      setOperationAction({ISD::VP_MERGE, ISD::VP_SELECT, ISD::SELECT}, VT,
+                         Custom);
+      setOperationAction(ISD::SELECT_CC, VT, Expand);
+      setOperationAction({ISD::VP_SINT_TO_FP, ISD::VP_UINT_TO_FP}, VT, Custom);
+      setOperationAction({ISD::INSERT_VECTOR_ELT, ISD::CONCAT_VECTORS,
+                          ISD::INSERT_SUBVECTOR, ISD::EXTRACT_SUBVECTOR,
+                          ISD::VECTOR_DEINTERLEAVE, ISD::VECTOR_INTERLEAVE,
+                          ISD::VECTOR_REVERSE, ISD::VECTOR_SPLICE,
+                          ISD::VECTOR_COMPRESS},
+                         VT, Custom);
+      setOperationAction(ISD::EXPERIMENTAL_VP_SPLICE, VT, Custom);
+      setOperationAction(ISD::EXPERIMENTAL_VP_REVERSE, VT, Custom);
+
+      setOperationAction(ISD::FCOPYSIGN, VT, Legal);
+      setOperationAction(ZvfbfaVPOps, VT, Custom);
+
+      MVT EltVT = VT.getVectorElementType();
+      if (isTypeLegal(EltVT))
+        setOperationAction({ISD::SPLAT_VECTOR, ISD::EXPERIMENTAL_VP_SPLAT,
+                            ISD::EXTRACT_VECTOR_ELT},
+                           VT, Custom);
+      else
+        setOperationAction({ISD::SPLAT_VECTOR, ISD::EXPERIMENTAL_VP_SPLAT},
+                           EltVT, Custom);
+      setOperationAction({ISD::LOAD, ISD::STORE, ISD::MLOAD, ISD::MSTORE,
+                          ISD::MGATHER, ISD::MSCATTER, ISD::VP_LOAD,
+                          ISD::VP_STORE, ISD::EXPERIMENTAL_VP_STRIDED_LOAD,
+                          ISD::EXPERIMENTAL_VP_STRIDED_STORE, ISD::VP_GATHER,
+                          ISD::VP_SCATTER},
+                         VT, Custom);
+      setOperationAction(ISD::VP_LOAD_FF, VT, Custom);
+
+      // Expand FP operations that need libcalls.
+      setOperationAction(FloatingPointLibCallOps, VT, Expand);
+
+      // Custom split nxv32[b]f16 since nxv32[b]f32 is not legal.
+      if (getLMUL(VT) == RISCVVType::LMUL_8) {
+        setOperationAction(ZvfhminZvfbfminPromoteOps, VT, Custom);
+        setOperationAction(ZvfhminZvfbfminPromoteVPOps, VT, Custom);
+      } else {
+        MVT F32VecVT = MVT::getVectorVT(MVT::f32, VT.getVectorElementCount());
+        setOperationPromotedToType(ZvfhminZvfbfminPromoteOps, VT, F32VecVT);
+        setOperationPromotedToType(ZvfhminZvfbfminPromoteVPOps, VT, F32VecVT);
+      }
+    };
+
     if (Subtarget.hasVInstructionsF16()) {
       for (MVT VT : F16VecVTs) {
         if (!isTypeLegal(VT))
@@ -1222,7 +1282,13 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       }
     }
 
-    if (Subtarget.hasVInstructionsBF16Minimal()) {
+    if (Subtarget.hasVInstructionsBF16()) {
+      for (MVT VT : BF16VecVTs) {
+        if (!isTypeLegal(VT))
+          continue;
+        SetZvfbfaActions(VT);
+      }
+    } else if (Subtarget.hasVInstructionsBF16Minimal()) {
       for (MVT VT : BF16VecVTs) {
         if (!isTypeLegal(VT))
           continue;
@@ -1500,6 +1566,10 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
             // We need to custom legalize bf16 build vectors if Zfbfmin isn't
             // available.
             setOperationAction(ISD::BUILD_VECTOR, MVT::bf16, Custom);
+          }
+          if (Subtarget.hasStdExtZvfbfa()) {
+            setOperationAction(ZvfbfaOps, VT, Custom);
+            setOperationAction(ZvfbfaVPOps, VT, Custom);
           }
           setOperationAction(
               {ISD::VP_MERGE, ISD::VP_SELECT, ISD::VSELECT, ISD::SELECT}, VT,
@@ -7245,7 +7315,11 @@ static bool isPromotedOpNeedingSplit(SDValue Op,
   return (Op.getValueType() == MVT::nxv32f16 &&
           (Subtarget.hasVInstructionsF16Minimal() &&
            !Subtarget.hasVInstructionsF16())) ||
-         Op.getValueType() == MVT::nxv32bf16;
+         (Op.getValueType() == MVT::nxv32bf16 &&
+          Subtarget.hasVInstructionsBF16Minimal() &&
+          (!Subtarget.hasVInstructionsBF16() ||
+           (!llvm::is_contained(ZvfbfaOps, Op.getOpcode()) &&
+            !llvm::is_contained(ZvfbfaVPOps, Op.getOpcode()))));
 }
 
 static SDValue SplitVectorOp(SDValue Op, SelectionDAG &DAG) {
@@ -22129,8 +22203,7 @@ static MachineBasicBlock *emitSplitF64Pseudo(MachineInstr &MI,
 
   MachineFunction &MF = *BB->getParent();
   DebugLoc DL = MI.getDebugLoc();
-  const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
-  const TargetRegisterInfo *RI = MF.getSubtarget().getRegisterInfo();
+  const RISCVInstrInfo &TII = *MF.getSubtarget<RISCVSubtarget>().getInstrInfo();
   Register LoReg = MI.getOperand(0).getReg();
   Register HiReg = MI.getOperand(1).getReg();
   Register SrcReg = MI.getOperand(2).getReg();
@@ -22139,7 +22212,7 @@ static MachineBasicBlock *emitSplitF64Pseudo(MachineInstr &MI,
   int FI = MF.getInfo<RISCVMachineFunctionInfo>()->getMoveF64FrameIndex(MF);
 
   TII.storeRegToStackSlot(*BB, MI, SrcReg, MI.getOperand(2).isKill(), FI, SrcRC,
-                          RI, Register());
+                          Register());
   MachinePointerInfo MPI = MachinePointerInfo::getFixedStack(MF, FI);
   MachineMemOperand *MMOLo =
       MF.getMachineMemOperand(MPI, MachineMemOperand::MOLoad, 4, Align(8));
@@ -22165,8 +22238,7 @@ static MachineBasicBlock *emitBuildPairF64Pseudo(MachineInstr &MI,
 
   MachineFunction &MF = *BB->getParent();
   DebugLoc DL = MI.getDebugLoc();
-  const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
-  const TargetRegisterInfo *RI = MF.getSubtarget().getRegisterInfo();
+  const RISCVInstrInfo &TII = *MF.getSubtarget<RISCVSubtarget>().getInstrInfo();
   Register DstReg = MI.getOperand(0).getReg();
   Register LoReg = MI.getOperand(1).getReg();
   Register HiReg = MI.getOperand(2).getReg();
@@ -22189,7 +22261,7 @@ static MachineBasicBlock *emitBuildPairF64Pseudo(MachineInstr &MI,
       .addFrameIndex(FI)
       .addImm(4)
       .addMemOperand(MMOHi);
-  TII.loadRegFromStackSlot(*BB, MI, DstReg, FI, DstRC, RI, Register());
+  TII.loadRegFromStackSlot(*BB, MI, DstReg, FI, DstRC, Register());
   MI.eraseFromParent(); // The pseudo instruction is gone now.
   return BB;
 }

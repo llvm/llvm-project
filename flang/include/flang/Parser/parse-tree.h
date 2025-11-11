@@ -3360,6 +3360,7 @@ struct StmtFunctionStmt {
 // !DIR$ NOVECTOR
 // !DIR$ NOUNROLL
 // !DIR$ NOUNROLL_AND_JAM
+// !DIR$ PREFETCH designator[, designator]...
 // !DIR$ FORCEINLINE
 // !DIR$ INLINE
 // !DIR$ NOINLINE
@@ -3388,6 +3389,10 @@ struct CompilerDirective {
   struct UnrollAndJam {
     WRAPPER_CLASS_BOILERPLATE(UnrollAndJam, std::optional<std::uint64_t>);
   };
+  struct Prefetch {
+    WRAPPER_CLASS_BOILERPLATE(
+        Prefetch, std::list<common::Indirection<Designator>>);
+  };
   EMPTY_CLASS(NoVector);
   EMPTY_CLASS(NoUnroll);
   EMPTY_CLASS(NoUnrollAndJam);
@@ -3398,7 +3403,8 @@ struct CompilerDirective {
   CharBlock source;
   std::variant<std::list<IgnoreTKR>, LoopCount, std::list<AssumeAligned>,
       VectorAlways, std::list<NameValue>, Unroll, UnrollAndJam, Unrecognized,
-      NoVector, NoUnroll, NoUnrollAndJam, ForceInline, Inline, NoInline>
+      NoVector, NoUnroll, NoUnrollAndJam, ForceInline, Inline, NoInline,
+      Prefetch>
       u;
 };
 

@@ -2856,17 +2856,19 @@ LogicalResult OperationLegalizer::legalizePatternResult(
   assert(impl.pendingRootUpdates.empty() && "dangling root updates");
 
 #if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
-  // Check that the root was either replaced or updated in place.
-  auto newRewrites = llvm::drop_begin(impl.rewrites, curState.numRewrites);
-  auto replacedRoot = [&] {
-    return hasRewrite<ReplaceOperationRewrite>(newRewrites, op);
-  };
-  auto updatedRootInPlace = [&] {
-    return hasRewrite<ModifyOperationRewrite>(newRewrites, op);
-  };
-  if (!replacedRoot() && !updatedRootInPlace())
-    llvm::report_fatal_error(
-        "expected pattern to replace the root operation or modify it in place");
+  if (impl.config.allowPatternRollback) {
+    // Check that the root was either replaced or updated in place.
+    auto newRewrites = llvm::drop_begin(impl.rewrites, curState.numRewrites);
+    auto replacedRoot = [&] {
+      return hasRewrite<ReplaceOperationRewrite>(newRewrites, op);
+    };
+    auto updatedRootInPlace = [&] {
+      return hasRewrite<ModifyOperationRewrite>(newRewrites, op);
+    };
+    if (!replacedRoot() && !updatedRootInPlace())
+      llvm::report_fatal_error("expected pattern to replace the root operation "
+                               "or modify it in place");
+  }
 #endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
 
   // Legalize each of the actions registered during application.

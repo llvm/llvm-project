@@ -248,15 +248,15 @@ define <2 x i1> @extract_v2i1_nxv2i1(<vscale x 2 x i1> %inmask) {
 define <4 x i1> @extract_v4i1_nxv4i1(<vscale x 4 x i1> %inmask) {
 ; CHECK-LABEL: extract_v4i1_nxv4i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z1.s, p0/z, #1 // =0x1
-; CHECK-NEXT:    mov w8, v1.s[1]
-; CHECK-NEXT:    mov v0.16b, v1.16b
-; CHECK-NEXT:    mov w9, v1.s[2]
+; CHECK-NEXT:    mov z0.s, p0/z, #1 // =0x1
+; CHECK-NEXT:    mov w8, v0.s[1]
+; CHECK-NEXT:    mov v1.16b, v0.16b
 ; CHECK-NEXT:    mov v0.h[1], w8
+; CHECK-NEXT:    mov w8, v1.s[2]
+; CHECK-NEXT:    mov v0.h[2], w8
 ; CHECK-NEXT:    mov w8, v1.s[3]
-; CHECK-NEXT:    mov v0.h[2], w9
 ; CHECK-NEXT:    mov v0.h[3], w8
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %mask = call <4 x i1> @llvm.vector.extract.v4i1.nxv4i1(<vscale x 4 x i1> %inmask, i64 0)
   ret <4 x i1> %mask
@@ -265,23 +265,23 @@ define <4 x i1> @extract_v4i1_nxv4i1(<vscale x 4 x i1> %inmask) {
 define <8 x i1> @extract_v8i1_nxv8i1(<vscale x 8 x i1> %inmask) {
 ; CHECK-LABEL: extract_v8i1_nxv8i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z1.h, p0/z, #1 // =0x1
-; CHECK-NEXT:    umov w8, v1.h[1]
-; CHECK-NEXT:    mov v0.16b, v1.16b
-; CHECK-NEXT:    umov w9, v1.h[2]
+; CHECK-NEXT:    mov z0.h, p0/z, #1 // =0x1
+; CHECK-NEXT:    umov w8, v0.h[1]
+; CHECK-NEXT:    mov v1.16b, v0.16b
 ; CHECK-NEXT:    mov v0.b[1], w8
+; CHECK-NEXT:    umov w8, v1.h[2]
+; CHECK-NEXT:    mov v0.b[2], w8
 ; CHECK-NEXT:    umov w8, v1.h[3]
-; CHECK-NEXT:    mov v0.b[2], w9
-; CHECK-NEXT:    umov w9, v1.h[4]
 ; CHECK-NEXT:    mov v0.b[3], w8
+; CHECK-NEXT:    umov w8, v1.h[4]
+; CHECK-NEXT:    mov v0.b[4], w8
 ; CHECK-NEXT:    umov w8, v1.h[5]
-; CHECK-NEXT:    mov v0.b[4], w9
-; CHECK-NEXT:    umov w9, v1.h[6]
 ; CHECK-NEXT:    mov v0.b[5], w8
+; CHECK-NEXT:    umov w8, v1.h[6]
+; CHECK-NEXT:    mov v0.b[6], w8
 ; CHECK-NEXT:    umov w8, v1.h[7]
-; CHECK-NEXT:    mov v0.b[6], w9
 ; CHECK-NEXT:    mov v0.b[7], w8
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %mask = call <8 x i1> @llvm.vector.extract.v8i1.nxv8i1(<vscale x 8 x i1> %inmask, i64 0)
   ret <8 x i1> %mask
@@ -292,9 +292,9 @@ define <8 x i1> @extract_v8i1_nxv8i1(<vscale x 8 x i1> %inmask) {
 define <16 x i1> @extract_v16i1_nxv16i1(<vscale x 16 x i1> %inmask) {
 ; CHECK-LABEL: extract_v16i1_nxv16i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z1.b, p0/z, #1 // =0x1
-; CHECK-NEXT:    mov v0.16b, v1.16b
-; CHECK-NEXT:    mov v0.b[1], v1.b[1]
+; CHECK-NEXT:    mov z0.b, p0/z, #1 // =0x1
+; CHECK-NEXT:    mov v1.16b, v0.16b
+; CHECK-NEXT:    mov v0.b[1], v0.b[1]
 ; CHECK-NEXT:    mov v0.b[2], v1.b[2]
 ; CHECK-NEXT:    mov v0.b[3], v1.b[3]
 ; CHECK-NEXT:    mov v0.b[4], v1.b[4]
@@ -309,6 +309,7 @@ define <16 x i1> @extract_v16i1_nxv16i1(<vscale x 16 x i1> %inmask) {
 ; CHECK-NEXT:    mov v0.b[13], v1.b[13]
 ; CHECK-NEXT:    mov v0.b[14], v1.b[14]
 ; CHECK-NEXT:    mov v0.b[15], v1.b[15]
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %mask = call <16 x i1> @llvm.vector.extract.v16i1.nxv16i1(<vscale x 16 x i1> %inmask, i64 0)
   ret <16 x i1> %mask
