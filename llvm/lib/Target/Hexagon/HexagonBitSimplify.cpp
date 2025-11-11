@@ -1796,7 +1796,7 @@ namespace {
 
     const MachineDominatorTree &MDT;
     const HexagonInstrInfo &HII;
-    const HexagonRegisterInfo &HRI;
+    [[maybe_unused]] const HexagonRegisterInfo &HRI;
     MachineRegisterInfo &MRI;
     BitTracker &BT;
   };
