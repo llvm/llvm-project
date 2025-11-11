@@ -1005,9 +1005,6 @@ def Xoffload_linker : JoinedAndSeparate<["-"], "Xoffload-linker">,
   Visibility<[ClangOption, FlangOption]>,
   HelpText<"Pass <arg> to the offload linkers or the ones identified by -<triple>">,
   MetaVarName<"<triple> <arg>">, Group<Link_Group>;
-def Xopaque_offload_opt : Separate<["-"], "Xopaque-offload-opt">,
-  HelpText<"Pass <arg> to the opaque offload optimizer">,
-  MetaVarName<"<arg>">, Visibility<[ClangOption, FlangOption]>;
 def Xpreprocessor : Separate<["-"], "Xpreprocessor">, Group<Preprocessor_Group>,
   HelpText<"Pass <arg> to the preprocessor">, MetaVarName<"<arg>">;
 def X_Flag : Flag<["-"], "X">, Group<Link_Group>;
@@ -4031,17 +4028,6 @@ defm openmp_optimistic_collapse : BoolFOption<"openmp-optimistic-collapse",
   NegFlag<SetFalse>, BothFlags<[NoArgumentUnused, HelpHidden], []>>;
 def static_openmp: Flag<["-"], "static-openmp">,
   HelpText<"Use the static host OpenMP runtime while linking.">;
-def opaque_offload_linker
-    : Flag<["--"], "opaque-offload-linker">,
-      Visibility<[ClangOption, FlangOption]>,
-      Group<f_Group>,
-      HelpText<"Build/link omp offload binary, construct opaque cmd list "
-               "instead of single clang-linker-wrapper cmd.">;
-def no_opaque_offload_linker : Flag<["--"], "no-opaque-offload-linker">,
-                               Visibility<[ClangOption, FlangOption]>,
-                               Group<f_Group>,
-                               HelpText<"Build/link omp offload binary, using "
-                                        "single clang-linker-wrapper cmd.">;
 def fopenmp_new_driver : Flag<["-"], "fopenmp-new-driver">, Flags<[HelpHidden]>,
   HelpText<"Use the new driver for OpenMP offloading.">;
 def fno_openmp_new_driver : Flag<["-"], "fno-openmp-new-driver">,
