@@ -335,11 +335,16 @@ public:
   /// \param[in] frame_marker
   ///   Optional string that will be prepended to the frame output description.
   ///
+  /// \param[in] skipped_frame_marker
+  ///   Optional string that will be prepended to the first or last non skipped
+  ///   frame output description.
+  ///
   /// \return
   ///   \b true if and only if dumping with the given \p format worked.
   bool DumpUsingFormat(Stream &strm,
                        const lldb_private::FormatEntity::Entry *format,
-                       llvm::StringRef frame_marker = {});
+                       llvm::StringRef frame_marker = {},
+                       llvm::StringRef skipped_frame_marker = {});
 
   /// Print a description for this frame using the frame-format formatter
   /// settings. If the current frame-format settings are invalid, then the
@@ -353,8 +358,13 @@ public:
   ///
   /// \param [in] frame_marker
   ///   Optional string that will be prepended to the frame output description.
+  ///
+  /// \param[in] skipped_frame_marker
+  ///   Optional string that will be prepended to the first or last non skipped
+  ///   frame output description.
   void DumpUsingSettingsFormat(Stream *strm, bool show_unique = false,
-                               const char *frame_marker = nullptr);
+                               const char *frame_marker = nullptr,
+                               const std::wstring skipped_frame_marker = L"");
 
   /// Print a description for this frame using a default format.
   ///
@@ -387,10 +397,15 @@ public:
   /// \param[in] frame_marker
   ///   Passed to DumpUsingSettingsFormat() for the frame info printing.
   ///
+  ///
+  /// \param[in] skipped_frame_marker
+  ///   Optional string that will be prepended to the first or last non skipped
+  ///   frame output description.
   /// \return
   ///   Returns true if successful.
   bool GetStatus(Stream &strm, bool show_frame_info, bool show_source,
-                 bool show_unique = false, const char *frame_marker = nullptr);
+                 bool show_unique = false, const char *frame_marker = nullptr,
+                 const std::wstring skipped_frame_marker = L"");
 
   /// Query whether this frame is a concrete frame on the call stack, or if it
   /// is an inlined frame derived from the debug information and presented by

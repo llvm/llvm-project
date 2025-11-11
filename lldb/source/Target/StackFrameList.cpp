@@ -879,6 +879,24 @@ StackFrameList::GetStackFrameSPForStackFramePtr(StackFrame *stack_frame_ptr) {
   return ret_sp;
 }
 
+bool StackFrameList::IsNextFrameHidden(lldb_private::StackFrame &frame) {
+  uint32_t frame_idx = frame.GetFrameIndex();
+  StackFrameSP frame_sp = GetFrameAtIndex(frame_idx + 1);
+  if (!frame_sp)
+    return false;
+  return frame_sp->IsHidden();
+}
+
+bool StackFrameList::IsPreviousFrameHidden(lldb_private::StackFrame &frame) {
+  uint32_t frame_idx = frame.GetFrameIndex();
+  if (frame_idx == 0)
+    return false;
+  StackFrameSP frame_sp = GetFrameAtIndex(frame_idx - 1);
+  if (!frame_sp)
+    return false;
+  return frame_sp->IsHidden();
+}
+
 size_t StackFrameList::GetStatus(Stream &strm, uint32_t first_frame,
                                  uint32_t num_frames, bool show_frame_info,
                                  uint32_t num_frames_with_source,
@@ -920,6 +938,11 @@ size_t StackFrameList::GetStatus(Stream &strm, uint32_t first_frame,
       else
         marker = unselected_marker;
     }
+    std::wstring skipped_frame_marker = L"　";
+    if (IsPreviousFrameHidden(*frame_sp))
+      skipped_frame_marker = L"﹈";
+    else if (IsNextFrameHidden(*frame_sp))
+      skipped_frame_marker = L"﹇";
 
     // Hide uninteresting frames unless it's the selected frame.
     if (!show_hidden && frame_sp != selected_frame_sp && frame_sp->IsHidden())
@@ -933,10 +956,9 @@ size_t StackFrameList::GetStatus(Stream &strm, uint32_t first_frame,
             m_thread.GetID(), num_frames_displayed))
       break;
 
-
     if (!frame_sp->GetStatus(strm, show_frame_info,
                              num_frames_with_source > (first_frame - frame_idx),
-                             show_unique, marker))
+                             show_unique, marker, skipped_frame_marker))
       break;
     ++num_frames_displayed;
   }

@@ -49,6 +49,14 @@ public:
   /// Resets the selected frame index of this object.
   void ClearSelectedFrameIndex();
 
+  /// Return \code true if the next frame is hidden. False otherwise or if it's
+  /// the last frame.
+  bool IsNextFrameHidden(lldb_private::StackFrame &frame);
+
+  /// Return \code true if the previous frame is hidden. False otherwise or if
+  /// it's the first frame.
+  bool IsPreviousFrameHidden(lldb_private::StackFrame &frame);
+
   /// Get the currently selected frame index.
   /// We should only call SelectMostRelevantFrame if (a) the user hasn't already
   /// selected a frame, and (b) if this really is a user facing

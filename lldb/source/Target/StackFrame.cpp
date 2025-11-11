@@ -37,6 +37,7 @@
 #include "lldb/ValueObject/ValueObjectConstResult.h"
 #include "lldb/ValueObject/ValueObjectMemory.h"
 #include "lldb/ValueObject/ValueObjectVariable.h"
+#include "llvm/Support/ConvertUTF.h"
 
 #include "lldb/lldb-enumerations.h"
 
@@ -1920,11 +1921,13 @@ void StackFrame::CalculateExecutionContext(ExecutionContext &exe_ctx) {
 
 bool StackFrame::DumpUsingFormat(Stream &strm,
                                  const FormatEntity::Entry *format,
-                                 llvm::StringRef frame_marker) {
+                                 llvm::StringRef frame_marker,
+                                 llvm::StringRef skipped_frame_marker) {
   GetSymbolContext(eSymbolContextEverything);
   ExecutionContext exe_ctx(shared_from_this());
   StreamString s;
   s.PutCString(frame_marker);
+  s.PutCString(skipped_frame_marker);
 
   if (format && FormatEntity::Format(*format, s, &m_sc, &exe_ctx, nullptr,
                                      nullptr, false, false)) {
@@ -1934,8 +1937,9 @@ bool StackFrame::DumpUsingFormat(Stream &strm,
   return false;
 }
 
-void StackFrame::DumpUsingSettingsFormat(Stream *strm, bool show_unique,
-                                         const char *frame_marker) {
+void StackFrame::DumpUsingSettingsFormat(
+    Stream *strm, bool show_unique, const char *frame_marker,
+    const std::wstring skipped_frame_marker) {
   if (strm == nullptr)
     return;
 
@@ -1953,7 +1957,11 @@ void StackFrame::DumpUsingSettingsFormat(Stream *strm, bool show_unique,
       frame_format = &format_entry;
     }
   }
-  if (!DumpUsingFormat(*strm, frame_format, frame_marker)) {
+
+  std::string skipped_frame_delimiter_utf8;
+  llvm::convertWideToUTF8(skipped_frame_marker, skipped_frame_delimiter_utf8);
+  if (!DumpUsingFormat(*strm, frame_format, frame_marker,
+                       skipped_frame_delimiter_utf8)) {
     Dump(strm, true, false);
     strm->EOL();
   }
@@ -2034,10 +2042,12 @@ bool StackFrame::HasCachedData() const {
 }
 
 bool StackFrame::GetStatus(Stream &strm, bool show_frame_info, bool show_source,
-                           bool show_unique, const char *frame_marker) {
+                           bool show_unique, const char *frame_marker,
+                           const std::wstring skipped_frame_marker) {
   if (show_frame_info) {
     strm.Indent();
-    DumpUsingSettingsFormat(&strm, show_unique, frame_marker);
+    DumpUsingSettingsFormat(&strm, show_unique, frame_marker,
+                            skipped_frame_marker);
   }
 
   if (show_source) {
