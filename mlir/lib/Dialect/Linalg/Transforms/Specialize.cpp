@@ -249,18 +249,10 @@ specializeToConvOp(RewriterBase &rewriter, GenericOp genericOp,
   SmallVector<Type> resultTypes = genericOp.hasPureTensorSemantics()
                                       ? TypeRange(ValueRange(outputs))
                                       : TypeRange{};
-  LinalgOp namedOp;
-  if constexpr (std::is_same_v<ConvOpTy, linalg::Conv1DOp> ||
-                std::is_same_v<ConvOpTy, linalg::Conv2DOp> ||
-                std::is_same_v<ConvOpTy, linalg::Conv3DOp>) {
-    namedOp = rewriter.replaceOpWithNewOp<ConvOpTy>(genericOp, resultTypes,
-                                                    inputs, outputs);
-  } else {
-    Attribute stridesAttr = rewriter.getI64TensorAttr(strides);
-    Attribute dilationsAttr = rewriter.getI64TensorAttr(dilations);
-    namedOp = rewriter.replaceOpWithNewOp<ConvOpTy>(
-        genericOp, resultTypes, inputs, outputs, stridesAttr, dilationsAttr);
-  }
+  Attribute stridesAttr = rewriter.getI64TensorAttr(strides);
+  Attribute dilationsAttr = rewriter.getI64TensorAttr(dilations);
+  LinalgOp namedOp = rewriter.replaceOpWithNewOp<ConvOpTy>(
+      genericOp, resultTypes, inputs, outputs, stridesAttr, dilationsAttr);
   return namedOp;
 }
 

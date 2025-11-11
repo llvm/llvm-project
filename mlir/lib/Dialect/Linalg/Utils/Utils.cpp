@@ -453,19 +453,16 @@ bool isaConvolutionOpOfType<linalg::DepthwiseConv1DNwcWcOp>(
     return true;
 
   assert(isaConvolutionOpInterface(op) &&
-         "expected linalgOp to implement ConvolutionOpInterface");
+         "expected op to implement ConvolutionOpInterface");
 
   ArrayAttr indexingMaps = op.getIndexingMaps();
   if (!verifyConvIndexingMapSizes(indexingMaps, {3, 2, 3}))
     return false;
 
-  Block *body = op.getBlock();
-  auto yieldOp = cast<linalg::YieldOp>(body->getTerminator());
-  Value yieldVal = yieldOp.getOperand(0);
   unsigned inputMapIdx = 0, filterMapIdx = 1, outputMapIdx = 2;
 
-  SmallVector<int64_t> tempDilations(1, 1);
-  SmallVector<int64_t> tempStrides(1, 1);
+  *dilations = SmallVector<int64_t>(1, 1);
+  *strides = SmallVector<int64_t>(1, 1);
   // Match: N
   if (getAffineMapDim(indexingMaps, inputMapIdx, 0) !=
       getAffineMapDim(indexingMaps, outputMapIdx, 0))
@@ -479,13 +476,14 @@ bool isaConvolutionOpOfType<linalg::DepthwiseConv1DNwcWcOp>(
     return false;
   // Match: W + w
   if (!matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0,
-                                  /*oDim=*/1, tempDilations[0], tempStrides[0]))
+                                  /*oDim=*/1, (*dilations)[0], (*strides)[0]))
     return false;
   // Match body
+  Block *body = op.getBlock();
+  auto yieldOp = cast<linalg::YieldOp>(body->getTerminator());
+  Value yieldVal = yieldOp.getOperand(0);
   if (!bodyMatcherForConvolutionOps(yieldVal, body))
     return false;
-  *dilations = SmallVector<int64_t>(tempDilations);
-  *strides = SmallVector<int64_t>(tempStrides);
   return true;
 }
 
@@ -500,19 +498,16 @@ bool isaConvolutionOpOfType<linalg::DepthwiseConv2DNchwChwOp>(
     return true;
 
   assert(isaConvolutionOpInterface(op) &&
-         "expected linalgOp to implement ConvolutionOpInterface");
+         "expected op to implement ConvolutionOpInterface");
 
   ArrayAttr indexingMaps = op.getIndexingMaps();
   if (!verifyConvIndexingMapSizes(indexingMaps, {4, 3, 4}))
     return false;
 
-  Block *body = op.getBlock();
-  auto yieldOp = cast<linalg::YieldOp>(body->getTerminator());
-  Value yieldVal = yieldOp.getOperand(0);
   unsigned inputMapIdx = 0, filterMapIdx = 1, outputMapIdx = 2;
 
-  SmallVector<int64_t> tempDilations(2, 1);
-  SmallVector<int64_t> tempStrides(2, 1);
+  *dilations = SmallVector<int64_t>(2, 1);
+  *strides = SmallVector<int64_t>(2, 1);
   // Match: N
   if (getAffineMapDim(indexingMaps, inputMapIdx, 0) !=
       getAffineMapDim(indexingMaps, outputMapIdx, 0))
@@ -526,17 +521,18 @@ bool isaConvolutionOpOfType<linalg::DepthwiseConv2DNchwChwOp>(
     return false;
   // Match: H + h
   if (!matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/1,
-                                  /*oDim=*/2, tempDilations[0], tempStrides[0]))
+                                  /*oDim=*/2, (*dilations)[0], (*strides)[0]))
     return false;
   // Match: W + w
   if (!matchConvDimAddExprPattern(indexingMaps, /*iDim=*/3, /*fDim=*/2,
-                                  /*oDim=*/3, tempDilations[1], tempStrides[1]))
+                                  /*oDim=*/3, (*dilations)[1], (*strides)[1]))
     return false;
   // Match body
+  Block *body = op.getBlock();
+  auto yieldOp = cast<linalg::YieldOp>(body->getTerminator());
+  Value yieldVal = yieldOp.getOperand(0);
   if (!bodyMatcherForConvolutionOps(yieldVal, body))
     return false;
-  *dilations = SmallVector<int64_t>(tempDilations);
-  *strides = SmallVector<int64_t>(tempStrides);
   return true;
 }
 
@@ -554,34 +550,31 @@ bool isaConvolutionOpOfType<linalg::DepthwiseConv3DNdhwcDhwcmOp>(
     return true;
 
   assert(isaConvolutionOpInterface(op) &&
-         "expected linalgOp to implement ConvolutionOpInterface");
+         "expected op to implement ConvolutionOpInterface");
 
   ArrayAttr indexingMaps = op.getIndexingMaps();
   if (!verifyConvIndexingMapSizes(indexingMaps, {5, 5, 6}))
     return false;
 
-  Block *body = op.getBlock();
-  auto yieldOp = cast<linalg::YieldOp>(body->getTerminator());
-  Value yieldVal = yieldOp.getOperand(0);
   unsigned inputMapIdx = 0, filterMapIdx = 1, outputMapIdx = 2;
 
-  SmallVector<int64_t> tempDilations(3, 1);
-  SmallVector<int64_t> tempStrides(3, 1);
+  *dilations = SmallVector<int64_t>(3, 1);
+  *strides = SmallVector<int64_t>(3, 1);
   // Match: N
   if (getAffineMapDim(indexingMaps, inputMapIdx, 0) !=
       getAffineMapDim(indexingMaps, outputMapIdx, 0))
     return false;
   // Match: D + d
   if (!matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0,
-                                  /*oDim=*/1, tempDilations[0], tempStrides[0]))
+                                  /*oDim=*/1, (*dilations)[0], (*strides)[0]))
     return false;
   // Match: H + h
   if (!matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/1,
-                                  /*oDim=*/2, tempDilations[1], tempStrides[1]))
+                                  /*oDim=*/2, (*dilations)[1], (*strides)[1]))
     return false;
   // Match: W + w
   if (!matchConvDimAddExprPattern(indexingMaps, /*iDim=*/3, /*fDim=*/2,
-                                  /*oDim=*/3, tempDilations[2], tempStrides[2]))
+                                  /*oDim=*/3, (*dilations)[2], (*strides)[2]))
     return false;
   // Match: C
   if (getAffineMapDim(indexingMaps, inputMapIdx, 4) !=
@@ -595,10 +588,11 @@ bool isaConvolutionOpOfType<linalg::DepthwiseConv3DNdhwcDhwcmOp>(
       getAffineMapDim(indexingMaps, outputMapIdx, 5))
     return false;
   // Match body
+  Block *body = op.getBlock();
+  auto yieldOp = cast<linalg::YieldOp>(body->getTerminator());
+  Value yieldVal = yieldOp.getOperand(0);
   if (!bodyMatcherForConvolutionOps(yieldVal, body))
     return false;
-  *dilations = SmallVector<int64_t>(tempDilations);
-  *strides = SmallVector<int64_t>(tempStrides);
   return true;
 }
 
@@ -613,40 +607,38 @@ bool isaConvolutionOpOfType<linalg::PoolingNhwcMaxOp>(
     return true;
 
   assert(isaConvolutionOpInterface(op) &&
-         "expected linalgOp to implement ConvolutionOpInterface");
+         "expected op to implement ConvolutionOpInterface");
 
   ArrayAttr indexingMaps = op.getIndexingMaps();
   if (!verifyConvIndexingMapSizes(indexingMaps, {4, 2, 4}))
     return false;
 
-  Block *body = op.getBlock();
-  auto yieldOp = cast<linalg::YieldOp>(body->getTerminator());
-  Value yieldVal = yieldOp.getOperand(0);
   unsigned inputMapIdx = 0, outputMapIdx = 2;
 
-  SmallVector<int64_t> tempDilations(2, 1);
-  SmallVector<int64_t> tempStrides(2, 1);
+  *dilations = SmallVector<int64_t>(2, 1);
+  *strides = SmallVector<int64_t>(2, 1);
   // Match: N
   if (getAffineMapDim(indexingMaps, inputMapIdx, 0) !=
       getAffineMapDim(indexingMaps, outputMapIdx, 0))
     return false;
   // Match: H + h
   if (!matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0,
-                                  /*oDim=*/1, tempDilations[0], tempStrides[0]))
+                                  /*oDim=*/1, (*dilations)[0], (*strides)[0]))
     return false;
   // Match: W + w
   if (!matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/1,
-                                  /*oDim=*/2, tempDilations[1], tempStrides[1]))
+                                  /*oDim=*/2, (*dilations)[1], (*strides)[1]))
     return false;
   // Match: C
   if (getAffineMapDim(indexingMaps, inputMapIdx, 3) !=
       getAffineMapDim(indexingMaps, outputMapIdx, 3))
     return false;
   // Match body
+  Block *body = op.getBlock();
+  auto yieldOp = cast<linalg::YieldOp>(body->getTerminator());
+  Value yieldVal = yieldOp.getOperand(0);
   if (!bodyMatcherForMaxSignedPoolOps(yieldVal, body))
     return false;
-  *dilations = SmallVector<int64_t>(tempDilations);
-  *strides = SmallVector<int64_t>(tempStrides);
   return true;
 }
 
@@ -661,40 +653,38 @@ bool isaConvolutionOpOfType<linalg::PoolingNhwcMinOp>(
     return true;
 
   assert(isaConvolutionOpInterface(op) &&
-         "expected linalgOp to implement ConvolutionOpInterface");
+         "expected op to implement ConvolutionOpInterface");
 
   ArrayAttr indexingMaps = op.getIndexingMaps();
   if (!verifyConvIndexingMapSizes(indexingMaps, {4, 2, 4}))
     return false;
 
-  Block *body = op.getBlock();
-  auto yieldOp = cast<linalg::YieldOp>(body->getTerminator());
-  Value yieldVal = yieldOp.getOperand(0);
   unsigned inputMapIdx = 0, outputMapIdx = 2;
 
-  SmallVector<int64_t> tempDilations(2, 1);
-  SmallVector<int64_t> tempStrides(2, 1);
+  *dilations = SmallVector<int64_t>(2, 1);
+  *strides = SmallVector<int64_t>(2, 1);
   // Match: N
   if (getAffineMapDim(indexingMaps, inputMapIdx, 0) !=
       getAffineMapDim(indexingMaps, outputMapIdx, 0))
     return false;
   // Match: H + h
   if (!matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0,
-                                  /*oDim=*/1, tempDilations[0], tempStrides[0]))
+                                  /*oDim=*/1, (*dilations)[0], (*strides)[0]))
     return false;
   // Match: W + w
   if (!matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/1,
-                                  /*oDim=*/2, tempDilations[1], tempStrides[1]))
+                                  /*oDim=*/2, (*dilations)[1], (*strides)[1]))
     return false;
   // Match: C
   if (getAffineMapDim(indexingMaps, inputMapIdx, 3) !=
       getAffineMapDim(indexingMaps, outputMapIdx, 3))
     return false;
   // Match body
+  Block *body = op.getBlock();
+  auto yieldOp = cast<linalg::YieldOp>(body->getTerminator());
+  Value yieldVal = yieldOp.getOperand(0);
   if (!bodyMatcherForMinSignedPoolOps(yieldVal, body))
     return false;
-  *dilations = SmallVector<int64_t>(tempDilations);
-  *strides = SmallVector<int64_t>(tempStrides);
   return true;
 }
 
@@ -709,40 +699,38 @@ bool isaConvolutionOpOfType<linalg::PoolingNhwcSumOp>(
     return true;
 
   assert(isaConvolutionOpInterface(op) &&
-         "expected linalgOp to implement ConvolutionOpInterface");
+         "expected op to implement ConvolutionOpInterface");
 
   ArrayAttr indexingMaps = op.getIndexingMaps();
   if (!verifyConvIndexingMapSizes(indexingMaps, {4, 2, 4}))
     return false;
 
-  Block *body = op.getBlock();
-  auto yieldOp = cast<linalg::YieldOp>(body->getTerminator());
-  Value yieldVal = yieldOp.getOperand(0);
   unsigned inputMapIdx = 0, outputMapIdx = 2;
 
-  SmallVector<int64_t> tempDilations(2, 1);
-  SmallVector<int64_t> tempStrides(2, 1);
+  *dilations = SmallVector<int64_t>(2, 1);
+  *strides = SmallVector<int64_t>(2, 1);
   // Match: N
   if (getAffineMapDim(indexingMaps, inputMapIdx, 0) !=
       getAffineMapDim(indexingMaps, outputMapIdx, 0))
     return false;
   // Match: H + h
   if (!matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0,
-                                  /*oDim=*/1, tempDilations[0], tempStrides[0]))
+                                  /*oDim=*/1, (*dilations)[0], (*strides)[0]))
     return false;
   // Match: W + w
   if (!matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/1,
-                                  /*oDim=*/2, tempDilations[1], tempStrides[1]))
+                                  /*oDim=*/2, (*dilations)[1], (*strides)[1]))
     return false;
   // Match: C
   if (getAffineMapDim(indexingMaps, inputMapIdx, 3) !=
       getAffineMapDim(indexingMaps, outputMapIdx, 3))
     return false;
   // Match body
+  Block *body = op.getBlock();
+  auto yieldOp = cast<linalg::YieldOp>(body->getTerminator());
+  Value yieldVal = yieldOp.getOperand(0);
   if (!bodyMatcherForSumPoolOps(yieldVal, body))
     return false;
-  *dilations = SmallVector<int64_t>(tempDilations);
-  *strides = SmallVector<int64_t>(tempStrides);
   return true;
 }
 
@@ -757,40 +745,38 @@ bool isaConvolutionOpOfType<linalg::PoolingNhwcMaxUnsignedOp>(
     return true;
 
   assert(isaConvolutionOpInterface(op) &&
-         "expected linalgOp to implement ConvolutionOpInterface");
+         "expected op to implement ConvolutionOpInterface");
 
   ArrayAttr indexingMaps = op.getIndexingMaps();
   if (!verifyConvIndexingMapSizes(indexingMaps, {4, 2, 4}))
     return false;
 
-  Block *body = op.getBlock();
-  auto yieldOp = cast<linalg::YieldOp>(body->getTerminator());
-  Value yieldVal = yieldOp.getOperand(0);
   unsigned inputMapIdx = 0, outputMapIdx = 2;
 
-  SmallVector<int64_t> tempDilations(2, 1);
-  SmallVector<int64_t> tempStrides(2, 1);
+  *dilations = SmallVector<int64_t>(2, 1);
+  *strides = SmallVector<int64_t>(2, 1);
   // Match: N
   if (getAffineMapDim(indexingMaps, inputMapIdx, 0) !=
       getAffineMapDim(indexingMaps, outputMapIdx, 0))
     return false;
   // Match: H + h
   if (!matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0,
-                                  /*oDim=*/1, tempDilations[0], tempStrides[0]))
+                                  /*oDim=*/1, (*dilations)[0], (*strides)[0]))
     return false;
   // Match: W + w
   if (!matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/1,
-                                  /*oDim=*/2, tempDilations[1], tempStrides[1]))
+                                  /*oDim=*/2, (*dilations)[1], (*strides)[1]))
     return false;
   // Match: C
   if (getAffineMapDim(indexingMaps, inputMapIdx, 3) !=
       getAffineMapDim(indexingMaps, outputMapIdx, 3))
     return false;
   // Match body
+  Block *body = op.getBlock();
+  auto yieldOp = cast<linalg::YieldOp>(body->getTerminator());
+  Value yieldVal = yieldOp.getOperand(0);
   if (!bodyMatcherForMaxUnsignedPoolOps(yieldVal, body))
     return false;
-  *dilations = SmallVector<int64_t>(tempDilations);
-  *strides = SmallVector<int64_t>(tempStrides);
   return true;
 }
 
@@ -805,40 +791,38 @@ bool isaConvolutionOpOfType<linalg::PoolingNhwcMinUnsignedOp>(
     return true;
 
   assert(isaConvolutionOpInterface(op) &&
-         "expected linalgOp to implement ConvolutionOpInterface");
+         "expected op to implement ConvolutionOpInterface");
 
   ArrayAttr indexingMaps = op.getIndexingMaps();
   if (!verifyConvIndexingMapSizes(indexingMaps, {4, 2, 4}))
     return false;
 
-  Block *body = op.getBlock();
-  auto yieldOp = cast<linalg::YieldOp>(body->getTerminator());
-  Value yieldVal = yieldOp.getOperand(0);
   unsigned inputMapIdx = 0, outputMapIdx = 2;
 
-  SmallVector<int64_t> tempDilations(2, 1);
-  SmallVector<int64_t> tempStrides(2, 1);
+  *dilations = SmallVector<int64_t>(2, 1);
+  *strides = SmallVector<int64_t>(2, 1);
   // Match: N
   if (getAffineMapDim(indexingMaps, inputMapIdx, 0) !=
       getAffineMapDim(indexingMaps, outputMapIdx, 0))
     return false;
   // Match: H + h
   if (!matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0,
-                                  /*oDim=*/1, tempDilations[0], tempStrides[0]))
+                                  /*oDim=*/1, (*dilations)[0], (*strides)[0]))
     return false;
   // Match: W + w
   if (!matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/1,
-                                  /*oDim=*/2, tempDilations[1], tempStrides[1]))
+                                  /*oDim=*/2, (*dilations)[1], (*strides)[1]))
     return false;
   // Match: C
   if (getAffineMapDim(indexingMaps, inputMapIdx, 3) !=
       getAffineMapDim(indexingMaps, outputMapIdx, 3))
     return false;
   // Match body
+  Block *body = op.getBlock();
+  auto yieldOp = cast<linalg::YieldOp>(body->getTerminator());
+  Value yieldVal = yieldOp.getOperand(0);
   if (!bodyMatcherForMinUnsignedPoolOps(yieldVal, body))
     return false;
-  *dilations = SmallVector<int64_t>(tempDilations);
-  *strides = SmallVector<int64_t>(tempStrides);
   return true;
 }
 
