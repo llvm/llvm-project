@@ -19,6 +19,8 @@ class SemanticsContext;
 
 namespace Fortran::semantics {
 bool RewriteParseTree(SemanticsContext &, parser::Program &);
+bool RewriteReductionArrayElements(
+    SemanticsContext &context, parser::Program &program);
 }
 
 #endif // FORTRAN_SEMANTICS_REWRITE_PARSE_TREE_H_
