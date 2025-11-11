@@ -1559,11 +1559,27 @@ void Verifier::visitDISubprogram(const DISubprogram &N) {
     auto *Node = dyn_cast<MDTuple>(RawNode);
     CheckDI(Node, "invalid retained nodes list", &N, RawNode);
     for (Metadata *Op : Node->operands()) {
-      CheckDI(Op && (isa<DILocalVariable>(Op) || isa<DILabel>(Op) ||
-                     isa<DIImportedEntity>(Op)),
+      CheckDI(Op, "nullptr in retained nodes", &N, Node);
+
+      auto True = [](const Metadata *) { return true; };
+      auto False = [](const Metadata *) { return false; };
+      bool IsTypeCorrect =
+          DISubprogram::visitRetainedNode<bool>(Op, True, True, True, False);
+      CheckDI(IsTypeCorrect,
               "invalid retained nodes, expected DILocalVariable, DILabel or "
               "DIImportedEntity",
               &N, Node, Op);
+
+      auto *RetainedNode = cast<DINode>(Op);
+      auto *RetainedNodeScope = dyn_cast_or_null<DILocalScope>(
+          DISubprogram::getRawRetainedNodeScope(RetainedNode));
+      CheckDI(RetainedNodeScope,
+              "invalid retained nodes, retained node is not local", &N, Node,
+              RetainedNode);
+      CheckDI(
+          RetainedNodeScope->getSubprogram() == &N,
+          "invalid retained nodes, retained node does not belong to subprogram",
+          &N, Node, RetainedNode, RetainedNodeScope);
     }
   }
   CheckDI(!hasConflictingReferenceFlags(N.getFlags()),
@@ -6013,6 +6029,12 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     Check(cast<ConstantInt>(Call.getArgOperand(3))->getZExtValue() < 2,
           "cache type argument to llvm.prefetch must be 0-1", Call);
     break;
+  case Intrinsic::reloc_none: {
+    Check(isa<MDString>(
+              cast<MetadataAsValue>(Call.getArgOperand(0))->getMetadata()),
+          "llvm.reloc.none argument must be a metadata string", &Call);
+    break;
+  }
   case Intrinsic::stackprotector:
     Check(isa<AllocaInst>(Call.getArgOperand(1)->stripPointerCasts()),
           "llvm.stackprotector parameter #2 must resolve to an alloca.", Call);
@@ -6577,6 +6599,7 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     }
     break;
   }
+  case Intrinsic::vector_partial_reduce_fadd:
   case Intrinsic::vector_partial_reduce_add: {
     VectorType *AccTy = cast<VectorType>(Call.getArgOperand(0)->getType());
     VectorType *VecTy = cast<VectorType>(Call.getArgOperand(1)->getType());

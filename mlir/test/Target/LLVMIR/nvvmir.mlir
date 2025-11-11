@@ -970,8 +970,8 @@ llvm.func @nvvm_pmevent() {
 // -----
 
 // CHECK-LABEL: @nanosleep
-llvm.func @nanosleep() {
-  // CHECK: call void @llvm.nvvm.nanosleep(i32 4000)
-  nvvm.nanosleep 4000
+llvm.func @nanosleep(%duration: i32) {
+  // CHECK: call void @llvm.nvvm.nanosleep(i32 %{{.*}})
+  nvvm.nanosleep %duration
   llvm.return
 }
