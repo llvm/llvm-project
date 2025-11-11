@@ -114,7 +114,6 @@ attributes #0 = { "frame-pointer"="all" }
 
 ; CHECK: [[PTR_AS_3]]: DW_TAG_pointer_type
 ; CHECK-NEXT: DW_AT_type
-; CHECK-NEXT: DW_AT_address_class (0x00000003)
 ; CHECK-NEXT: DW_AT_LLVM_address_space (0x00000003 "DW_ASPACE_LLVM_AMDGPU_local")
 
 ; CHECK: [[PTR_AS_NONE]]: DW_TAG_pointer_type
@@ -123,7 +122,6 @@ attributes #0 = { "frame-pointer"="all" }
 
 ; CHECK: [[PTR_AS_5]]: DW_TAG_pointer_type
 ; CHECK-NEXT: DW_AT_type
-; CHECK-NEXT: DW_AT_address_class (0x00000005)
 ; CHECK-NEXT: DW_AT_LLVM_address_space (0x00000005 "DW_ASPACE_LLVM_AMDGPU_private_lane")
 
 !llvm.dbg.cu = !{!0}
