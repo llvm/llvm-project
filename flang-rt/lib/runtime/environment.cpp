@@ -17,6 +17,10 @@
 
 #ifdef _WIN32
 extern char **_environ;
+#elif defined(__FreeBSD__)
+// FreeBSD has environ in crt rather than libc. Using "extern char** environ"
+// in the code of a shared library makes it fail to link with -Wl,--no-undefined
+// See https://reviews.freebsd.org/D30842#840642
 #else
 extern char **environ;
 #endif
@@ -104,6 +108,11 @@ void ExecutionEnvironment::Configure(int ac, const char *av[],
 
 #ifdef _WIN32
   envp = _environ;
+#elif defined(__FreeBSD__)
+  auto envpp{reinterpret_cast<char ***>(dlsym(RTLD_DEFAULT, "environ"))};
+  if (envpp) {
+    envp = *envpp;
+  }
 #else
   envp = environ;
 #endif
