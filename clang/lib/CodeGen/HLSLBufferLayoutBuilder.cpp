@@ -198,7 +198,6 @@ bool HLSLBufferLayoutBuilder::layoutField(const FieldDecl *FD,
     // For array of structures, create a new array with a layout type
     // instead of the structure type.
     if (Ty->isStructureOrClassType()) {
-      // TODO: Can we have offsets if we get here from `ConstantBuffer<T>`?
       CGHLSLOffsetInfo EmptyOffsets;
       llvm::Type *NewTy = cast<llvm::TargetExtType>(
           createLayoutType(Ty->getAsCanonical<RecordType>(), EmptyOffsets));
@@ -220,7 +219,6 @@ bool HLSLBufferLayoutBuilder::layoutField(const FieldDecl *FD,
 
   } else if (FieldTy->isStructureOrClassType()) {
     // Create a layout type for the structure
-    // TODO: Can we have offsets if we get here from `ConstantBuffer<T>`?
     CGHLSLOffsetInfo EmptyOffsets;
     ElemLayoutTy = createLayoutType(
         cast<RecordType>(FieldTy->getAsCanonical<RecordType>()), EmptyOffsets);
