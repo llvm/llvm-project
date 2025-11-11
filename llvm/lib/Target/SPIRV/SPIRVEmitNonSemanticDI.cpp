@@ -196,9 +196,9 @@ private:
                            SPIRVCodeGenContext &Ctx,
                            const DenseMap<StringRef, Register> &MacroDefRegs);
 
-  void emitDebugTypeEnum(
-      const SmallPtrSetImpl<const DICompositeType *> &EnumTypes,
-      SPIRVCodeGenContext &Ctx);
+  void
+  emitDebugTypeEnum(const SmallPtrSetImpl<const DICompositeType *> &EnumTypes,
+                    SPIRVCodeGenContext &Ctx);
 
   void emitDebugQualifiedTypes(
       const SmallPtrSetImpl<DIDerivedType *> &QualifiedDerivedTypes,
@@ -625,10 +625,6 @@ void SPIRVEmitNonSemanticDI::emitDebugTypeEnum(
     }
     Register SourceReg =
         findRegisterFromMap(EnumTy->getFile(), Ctx.SourceRegPairs);
-    if (!SourceReg.isValid()) {
-      SourceReg = EmitDIInstruction(SPIRV::NonSemanticExtInst::DebugInfoNone,
-                                    {}, Ctx, false);
-    }
     Register Line = Ctx.GR->buildConstantInt(EnumTy->getLine(), Ctx.MIRBuilder,
                                              Ctx.I32Ty, false);
     Register Column =
@@ -639,10 +635,6 @@ void SPIRVEmitNonSemanticDI::emitDebugTypeEnum(
       llvm::errs() << "Warning: Could not find Parent scope register for Enum: "
                    << EnumTy->getName() << "\n";
       ParentReg = Ctx.GR->getDebugValue(EnumTy->getFile());
-      if (!ParentReg.isValid()) {
-        ParentReg = EmitDIInstruction(SPIRV::NonSemanticExtInst::DebugInfoNone,
-                                      {}, Ctx, false);
-      }
     }
     Register Size = Ctx.GR->buildConstantInt(EnumTy->getSizeInBits(),
                                              Ctx.MIRBuilder, Ctx.I32Ty, false);
@@ -904,12 +896,12 @@ void SPIRVEmitNonSemanticDI::emitDebugPointerTypes(
                                                        Ctx.I32Ty, false, false);
 
     const DIType *BaseTy = PointerDerivedType->getBaseType();
-      bool HasForwardRef = false;
+    bool HasForwardRef = false;
     Register BaseTypeReg =
         findBaseTypeRegisterRecursive(BaseTy, Ctx, HasForwardRef);
 
     if (!BaseTypeReg.isValid()) {
-      llvm::errs() << "Warning: Failed to find or create placeholder for base "
+      llvm::errs() << "Warning: Failed to find or create placeholder for base"
                       "type of pointer.\n";
       BaseTypeReg = EmitDIInstruction(SPIRV::NonSemanticExtInst::DebugInfoNone,
                                       {}, Ctx, false);
@@ -1101,7 +1093,6 @@ void SPIRVEmitNonSemanticDI::emitDebugQualifiedTypes(
       bool IsForwardRef = false;
       Register BaseTypeReg = findBaseTypeRegisterRecursive(
           QualifiedDT->getBaseType(), Ctx, IsForwardRef);
-
       if (!BaseTypeReg.isValid()) {
         llvm::errs()
             << "Warning: Could not find base type for DebugTypeQualifier.\n";
@@ -1109,7 +1100,6 @@ void SPIRVEmitNonSemanticDI::emitDebugQualifiedTypes(
             SPIRV::NonSemanticExtInst::DebugInfoNone, {}, Ctx, false);
         IsForwardRef = false;
       }
-
       const uint32_t QualifierValue =
           mapTagToQualifierEncoding(QualifiedDT->getTag());
       const Register QualifierConstReg = Ctx.GR->buildConstantInt(
@@ -1133,7 +1123,6 @@ void SPIRVEmitNonSemanticDI::emitDebugTypedefs(
     bool HasForwardRef = false;
     Register BaseTypeReg = findBaseTypeRegisterRecursive(
         TypedefDT->getBaseType(), Ctx, HasForwardRef);
-
     if (!BaseTypeReg.isValid()) {
       llvm::errs() << "Warning: Could not find base type for Typedef: "
                    << TypedefDT->getName() << "\n";
@@ -1141,9 +1130,7 @@ void SPIRVEmitNonSemanticDI::emitDebugTypedefs(
                                       {}, Ctx, false);
       HasForwardRef = false;
     }
-
     Register DefReg = Ctx.GR->getDebugValue(TypedefDT);
-
     Register DebugSourceReg =
         findRegisterFromMap(TypedefDT->getFile(), Ctx.SourceRegPairs);
     const Register TypedefNameReg = EmitOpString(TypedefDT->getName(), Ctx);
@@ -1173,8 +1160,14 @@ void SPIRVEmitNonSemanticDI::emitDebugImportedEntities(
         findRegisterFromMap(Imported->getFile(), Ctx.SourceRegPairs);
     // TODO: Handle Entity as there are no current instructions for DINamespace,
     // so replaced by DebugInfoNone
-    const Register EntityReg = EmitDIInstruction(
-        SPIRV::NonSemanticExtInst::DebugInfoNone, {}, Ctx, false);
+    const DINode *Entity = Imported->getEntity();
+    bool HasForwardRef = false;
+    Register EntityReg;
+    if (auto *Ty = dyn_cast<DIType>(Entity))
+      EntityReg = findBaseTypeRegisterRecursive(Ty, Ctx, HasForwardRef);
+    else
+      EntityReg = EmitDIInstruction(SPIRV::NonSemanticExtInst::DebugInfoNone,
+                                    {}, Ctx, false);
     const Register LineReg = Ctx.GR->buildConstantInt(
         Imported->getLine(), Ctx.MIRBuilder, Ctx.I32Ty, false, false);
     const Register ColumnReg =
@@ -1234,7 +1227,6 @@ Register SPIRVEmitNonSemanticDI::emitDebugGlobalVariable(
   const DIType *Ty = DIGV->getType();
   bool HasForwardRef = false;
   Register TypeReg = findBaseTypeRegisterRecursive(Ty, Ctx, HasForwardRef);
-
   if (!TypeReg.isValid()) {
     llvm::errs() << "Warning: Could not find type for Global Variable: " << Name
                  << "\n";
@@ -1242,22 +1234,11 @@ Register SPIRVEmitNonSemanticDI::emitDebugGlobalVariable(
                                 Ctx, false);
     HasForwardRef = false;
   }
-
   Register DebugSourceReg =
       findRegisterFromMap(DIGV->getFile(), Ctx.SourceRegPairs);
   Register ParentReg;
   if (ParentScope) {
     ParentReg = Ctx.GR->getDebugValue(ParentScope);
-    if (!ParentReg.isValid()) {
-      llvm::errs() << "Warning: Could not find parent scope register for "
-                      "Global Variable.\n";
-      ParentReg = EmitDIInstruction(SPIRV::NonSemanticExtInst::DebugInfoNone,
-                                    {}, Ctx, false);
-    }
-  } else {
-    llvm::errs() << "Warning: DIGlobalVariable has no parent scope\n";
-    ParentReg = EmitDIInstruction(SPIRV::NonSemanticExtInst::DebugInfoNone, {},
-                                  Ctx, false);
   }
   // TODO: Handle Variable Location operand
   Register VariableReg = EmitDIInstruction(
@@ -1285,7 +1266,6 @@ void SPIRVEmitNonSemanticDI::emitDebugArrayTypes(
     bool HasForwardRef = false;
     Register BaseTypeReg =
         findBaseTypeRegisterRecursive(ElementType, Ctx, HasForwardRef);
-
     if (!BaseTypeReg.isValid()) {
       llvm::errs()
           << "Warning: Could not find element type for Array/Vector.\n";
@@ -1382,7 +1362,6 @@ void SPIRVEmitNonSemanticDI::emitAllTemplateDebugInstructions(
       if (auto *TTP = dyn_cast<DITemplateTypeParameter>(MD)) {
         TypeReg = findBaseTypeRegisterRecursive(TTP->getType(), Ctx,
                                                 ParamHasForwardRef);
-
         if (!TypeReg.isValid()) {
           llvm::errs()
               << "Warning: Could not find type for DITemplateTypeParameter: "
@@ -1391,6 +1370,7 @@ void SPIRVEmitNonSemanticDI::emitAllTemplateDebugInstructions(
                                       {}, Ctx, false);
           ParamHasForwardRef = false;
         }
+
         if (ParamHasForwardRef)
           HasForwardRef = true;
 
@@ -1414,7 +1394,6 @@ void SPIRVEmitNonSemanticDI::emitAllTemplateDebugInstructions(
           if (TVPTypeForwardRef)
             HasForwardRef = true;
         }
-
         if (!TypeReg.isValid()) {
           llvm::errs()
               << "Warning: Could not find type for DITemplateValueParameter: "
@@ -1422,7 +1401,6 @@ void SPIRVEmitNonSemanticDI::emitAllTemplateDebugInstructions(
           TypeReg = EmitDIInstruction(SPIRV::NonSemanticExtInst::DebugInfoNone,
                                       {}, Ctx, false);
         }
-
         int64_t ActualValue = 0;
         if (auto *CAM = dyn_cast_or_null<ConstantAsMetadata>(TVP->getValue())) {
           if (auto *CI = dyn_cast<ConstantInt>(CAM->getValue())) {
@@ -1663,21 +1641,12 @@ void SPIRVEmitNonSemanticDI::emitDebugTypePtrToMember(
       bool ParentTypeIsFwd = false;
       Register ParentReg =
           findBaseTypeRegisterRecursive(ClassTy, Ctx, ParentTypeIsFwd);
-      if (!ParentReg.isValid()) {
-        llvm::errs()
-            << "Warning: Could not find Parent Type for PtrToMember.\n";
-        ParentReg = EmitDIInstruction(SPIRV::NonSemanticExtInst::DebugInfoNone,
-                                      {}, Ctx, false);
-        ParentTypeIsFwd = false;
-      }
       if (ParentTypeIsFwd)
         OpHasForwardRef = true;
-
       SmallVector<Register, 3> Ops;
       Ops.push_back(MemberTypeReg);
       Ops.push_back(ParentReg);
       Register DefReg = Ctx.GR->getDebugValue(PtrToMemberType);
-
       Register PtrToMemberTypeReg =
           EmitDIInstruction(SPIRV::NonSemanticExtInst::DebugTypePtrToMember,
                             Ops, Ctx, OpHasForwardRef, DefReg);
