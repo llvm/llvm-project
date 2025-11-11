@@ -146,6 +146,7 @@ public:
   }
 
   bool enableMachineScheduler() const override { return true; }
+  bool enableTerminalRule() const override { return true; }
 
   bool enablePostRAScheduler() const override { return UsePostRAScheduler; }
 
