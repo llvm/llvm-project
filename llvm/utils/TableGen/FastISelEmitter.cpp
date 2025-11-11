@@ -71,7 +71,7 @@ public:
 
   const TreePredicateFn &getPredicate(unsigned Idx) { return PredsByName[Idx]; }
 
-  typedef std::vector<TreePredicateFn>::const_iterator iterator;
+  using iterator = std::vector<TreePredicateFn>::const_iterator;
   iterator begin() const { return PredsByName.begin(); }
   iterator end() const { return PredsByName.end(); }
 };
@@ -366,12 +366,12 @@ struct OperandsSignature {
 class FastISelMap {
   // A multimap is needed instead of a "plain" map because the key is
   // the instruction's complexity (an int) and they are not unique.
-  typedef std::multimap<int, InstructionMemo> PredMap;
-  typedef std::map<MVT::SimpleValueType, PredMap> RetPredMap;
-  typedef std::map<MVT::SimpleValueType, RetPredMap> TypeRetPredMap;
-  typedef std::map<StringRef, TypeRetPredMap> OpcodeTypeRetPredMap;
-  typedef std::map<OperandsSignature, OpcodeTypeRetPredMap>
-      OperandsOpcodeTypeRetPredMap;
+  using PredMap = std::multimap<int, InstructionMemo>;
+  using RetPredMap = std::map<MVT::SimpleValueType, PredMap>;
+  using TypeRetPredMap = std::map<MVT::SimpleValueType, RetPredMap>;
+  using OpcodeTypeRetPredMap = std::map<StringRef, TypeRetPredMap>;
+  using OperandsOpcodeTypeRetPredMap =
+      std::map<OperandsSignature, OpcodeTypeRetPredMap>;
 
   OperandsOpcodeTypeRetPredMap SimplePatterns;
 
