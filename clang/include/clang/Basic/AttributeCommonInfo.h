@@ -230,6 +230,8 @@ public:
 
   bool isCXX11Attribute() const { return SyntaxUsed == AS_CXX11 || IsAlignas; }
 
+  bool isCXX26Annotation() const { return SyntaxUsed == AS_Annotation; }
+
   bool isC23Attribute() const { return SyntaxUsed == AS_C23; }
 
   bool isAlignas() const {
