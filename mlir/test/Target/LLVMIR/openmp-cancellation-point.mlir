@@ -102,8 +102,6 @@ llvm.func @cancellation_point_sections() {
 // CHECK:         call void @__kmpc_barrier(ptr @2, i32 %[[VAL_55]])
 // CHECK:         br label %[[VAL_56:.*]]
 // CHECK:       omp_section_loop.after:                           ; preds = %[[VAL_42]]
-// CHECK:         br label %[[VAL_57:.*]]
-// CHECK:       omp_section_loop.aftersections.fini:              ; preds = %[[VAL_56]]
 // CHECK:         ret void
 // CHECK:       omp.section.region.cncl:                          ; preds = %[[VAL_48]]
 // CHECK:         br label %[[VAL_42]]

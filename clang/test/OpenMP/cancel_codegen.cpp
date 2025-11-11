@@ -774,8 +774,6 @@ for (int i = 0; i < argc; ++i) {
 // CHECK3-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2:[0-9]+]], i32 [[OMP_GLOBAL_THREAD_NUM12]])
 // CHECK3-NEXT:    br label [[OMP_SECTION_LOOP_AFTER:%.*]]
 // CHECK3:       omp_section_loop.after:
-// CHECK3-NEXT:    br label [[OMP_SECTION_LOOP_AFTERSECTIONS_FINI:%.*]]
-// CHECK3:       omp_section_loop.aftersections.fini:
 // CHECK3-NEXT:    br label [[OMP_SECTION_LOOP_PREHEADER13:%.*]]
 // CHECK3:       omp_section_loop.preheader13:
 // CHECK3-NEXT:    store i32 0, ptr [[P_LOWERBOUND29]], align 4
@@ -833,8 +831,6 @@ for (int i = 0; i < argc; ++i) {
 // CHECK3-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2]], i32 [[OMP_GLOBAL_THREAD_NUM33]])
 // CHECK3-NEXT:    br label [[OMP_SECTION_LOOP_AFTER19:%.*]]
 // CHECK3:       omp_section_loop.after19:
-// CHECK3-NEXT:    br label [[OMP_SECTION_LOOP_AFTER19SECTIONS_FINI:%.*]]
-// CHECK3:       omp_section_loop.after19sections.fini:
 // CHECK3-NEXT:    [[TMP20:%.*]] = load i32, ptr [[ARGC_ADDR]], align 4
 // CHECK3-NEXT:    store i32 [[TMP20]], ptr [[DOTCAPTURE_EXPR_]], align 4
 // CHECK3-NEXT:    [[TMP21:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
@@ -891,13 +887,11 @@ for (int i = 0; i < argc; ++i) {
 // CHECK3:       .cancel.exit:
 // CHECK3-NEXT:    br label [[CANCEL_EXIT:%.*]]
 // CHECK3:       omp_section_loop.body.case.cncl:
-// CHECK3-NEXT:    br label [[FINI10:.*]]
-// CHECK3:       .fini25:
+// CHECK3-NEXT:    br label [[OMP_SECTION_LOOP_EXIT]]
+// CHECK3:       omp_section_loop.body.case23.cncl:
 // CHECK3-NEXT:    br label [[OMP_SECTION_LOOP_EXIT18]]
 // CHECK3:       omp_section_loop.body.case26.cncl:
-// CHECK3-NEXT:    br label [[FINI29:.*]]
-// CHECK3:       .fini29:
-// CHECK3-NEXT:    br label [[OMP_SECTION_LOOP_EXIT18]]
+// CHECK3-NEXT:    br label [[OMP_REGION_FINALIZE:.*]]
 // CHECK3:       .cancel.continue:
 // CHECK3-NEXT:    br label [[OMP_IF_END:%.*]]
 // CHECK3:       omp_if.else:
@@ -1166,7 +1160,9 @@ for (int i = 0; i < argc; ++i) {
 // CHECK3:       .omp.sections.case2.split:
 // CHECK3-NEXT:    br label [[DOTOMP_SECTIONS_CASE2_SECTION_AFTER:%.*]]
 // CHECK3:       .omp.sections.case2.section.after:
-// CHECK3-NEXT:    br label [[DOTOMP_SECTIONS_EXIT]]
+// CHECK3-NEXT:    br label [[OMP_REGION_FINALIZE]]
+// CHECK3:       omp_region.finalize:
+// CHECK3-NEXT:    br label [[OMP_SECTIONS_EXIT:.*]]
 // CHECK3:       .omp.sections.case2.cncl:
 // CHECK3-NEXT:    br label [[FINI:.*]]
 // CHECK3:       .omp.sections.exit:

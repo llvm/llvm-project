@@ -570,21 +570,33 @@ public:
   using FinalizeCallbackTy = std::function<Error(InsertPointTy CodeGenIP)>;
 
   struct FinalizationInfo {
-    /// The finalization callback provided by the last in-flight invocation of
-    /// createXXXX for the directive of kind DK.
-    FinalizeCallbackTy FiniCB;
-
+    FinalizationInfo(FinalizeCallbackTy FiniCB, omp::Directive DK,
+                     bool IsCancellable)
+        : DK(DK), IsCancellable(IsCancellable), FiniCB(std::move(FiniCB)) {}
     /// The directive kind of the innermost directive that has an associated
     /// region which might require finalization when it is left.
-    omp::Directive DK;
+    const omp::Directive DK;
 
     /// Flag to indicate if the directive is cancellable.
-    bool IsCancellable;
+    const bool IsCancellable;
 
     /// The basic block to which control should be transferred to
     /// implement the FiniCB. Memoized to avoid generating finalization
     /// multiple times.
-    llvm::BasicBlock *FiniBB = nullptr;
+    Expected<BasicBlock *> getFiniBB(IRBuilderBase &Builder);
+
+    /// For cases where there is an unavoidable existing finalization block
+    /// (e.g. loop finialization after omp sections). The existing finalization
+    /// block must not contain any non-finalization code.
+    Error mergeFiniBB(IRBuilderBase &Builder, BasicBlock *ExistingFiniBB);
+
+  private:
+    /// Access via getFiniBB.
+    BasicBlock *FiniBB = nullptr;
+
+    /// The finalization callback provided by the last in-flight invocation of
+    /// createXXXX for the directive of kind DK.
+    FinalizeCallbackTy FiniCB;
   };
 
   /// Push a finalization callback on the finalization stack.
@@ -3341,7 +3353,8 @@ private:
   /// Common interface to finalize the region
   ///
   /// \param OMPD Directive to generate exiting code for
-  /// \param FinIP Insertion point for emitting Finalization code and exit call
+  /// \param FinIP Insertion point for emitting Finalization code and exit call.
+  ///              This block must not contain any non-finalization code.
   /// \param ExitCall Call to the ending OMP Runtime Function
   /// \param HasFinalize indicate if the directive will require finalization
   ///         and has a finalization callback in the stack that
