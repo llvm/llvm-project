@@ -36,7 +36,7 @@ MLIR_CAPI_EXPORTED MlirLinalgContractionDimensions
 mlirLinalgInferContractionDimensions(MlirOperation op);
 
 MLIR_CAPI_EXPORTED MlirLinalgContractionDimensions
-mlirLinalgInferContractionDimensionsFromMaps(MlirAffineMap const *indexingMaps,
+mlirLinalgInferContractionDimensionsFromMaps(const MlirAffineMap *indexingMaps,
                                              intptr_t numMaps);
 
 MLIR_CAPI_EXPORTED bool mlirLinalgIsAConvolutionOp(MlirOperation op);
