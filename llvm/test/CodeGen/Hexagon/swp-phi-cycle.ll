@@ -1,4 +1,5 @@
 ; RUN: llc -mtriple=hexagon-unknown-linux-gnu -enable-pipeliner -debug-only=pipeliner < %s 2>&1 | FileCheck %s
+; REQUIRES: asserts
 
 ; CHECK: Cannot pipeline loop due to PHI cycle
 
