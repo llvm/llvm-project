@@ -11,6 +11,7 @@
 /// (e.g. `counted_by`)
 ///
 //===----------------------------------------------------------------------===//
+
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/StmtVisitor.h"
@@ -22,7 +23,6 @@
 #include "clang/Lex/Lexer.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Sema.h"
-
 #include "llvm/ADT/StringSwitch.h"
 
 namespace clang {
