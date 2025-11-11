@@ -1653,8 +1653,7 @@ static unsigned duplicateCPV(MachineFunction &MF, unsigned &CPI) {
 void ARMBaseInstrInfo::reMaterialize(MachineBasicBlock &MBB,
                                      MachineBasicBlock::iterator I,
                                      Register DestReg, unsigned SubIdx,
-                                     const MachineInstr &Orig,
-                                     const TargetRegisterInfo &TRI) const {
+                                     const MachineInstr &Orig) const {
   unsigned Opcode = Orig.getOpcode();
   switch (Opcode) {
   default: {
