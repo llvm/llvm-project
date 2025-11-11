@@ -10182,4 +10182,113 @@ TEST(APFloatTest, FrexpQuietSNaN) {
   EXPECT_FALSE(Result.isSignaling());
 }
 
+TEST(APFloatTest, getPromoted) {
+  // Strengthening promotions are allowed.
+  bool LosesInfo = false;
+  APFloat ValidPromotionTest(1.0f);
+  APFloat FloatVal = ValidPromotionTest.getPromoted(APFloat::IEEEsingle());
+  APFloat DoubleVal = ValidPromotionTest.getPromoted(APFloat::IEEEdouble());
+  APFloat QuadVal = ValidPromotionTest.getPromoted(APFloat::IEEEquad());
+  APFloat X87DoubleVal =
+      ValidPromotionTest.getPromoted(APFloat::x87DoubleExtended());
+  APFloat PPCDoubleDoubleVal =
+      ValidPromotionTest.getPromoted(APFloat::PPCDoubleDoubleLegacy());
+
+  // Trivial promotions to the same semantics are allowed.
+  FloatVal.getPromoted(FloatVal.getSemantics());
+  DoubleVal.getPromoted(DoubleVal.getSemantics());
+  QuadVal.getPromoted(QuadVal.getSemantics());
+  X87DoubleVal.getPromoted(X87DoubleVal.getSemantics());
+  PPCDoubleDoubleVal.getPromoted(PPCDoubleDoubleVal.getSemantics());
+
+  // Promotions have the expected semantics.
+  EXPECT_EQ(&FloatVal.getSemantics(), &APFloat::IEEEsingle());
+  EXPECT_EQ(&DoubleVal.getSemantics(), &APFloat::IEEEdouble());
+  EXPECT_EQ(&QuadVal.getSemantics(), &APFloat::IEEEquad());
+  EXPECT_EQ(&X87DoubleVal.getSemantics(), &APFloat::x87DoubleExtended());
+  EXPECT_EQ(&PPCDoubleDoubleVal.getSemantics(),
+            &APFloat::PPCDoubleDoubleLegacy());
+
+  // Promotions preserve the initial value.
+  QuadVal.convert(APFloat::IEEEdouble(), APFloat::rmNearestTiesToEven,
+                  &LosesInfo);
+  EXPECT_FALSE(LosesInfo);
+  X87DoubleVal.convert(APFloat::IEEEdouble(), APFloat::rmNearestTiesToEven,
+                       &LosesInfo);
+  EXPECT_FALSE(LosesInfo);
+  PPCDoubleDoubleVal.convert(APFloat::IEEEdouble(),
+                             APFloat::rmNearestTiesToEven, &LosesInfo);
+  EXPECT_FALSE(LosesInfo);
+  EXPECT_EQ(1.0, FloatVal.convertToFloat());
+  EXPECT_EQ(1.0, DoubleVal.convertToDouble());
+  EXPECT_EQ(1.0, QuadVal.convertToDouble());
+  EXPECT_EQ(1.0, X87DoubleVal.convertToDouble());
+  EXPECT_EQ(1.0, PPCDoubleDoubleVal.convertToDouble());
+
+  // All invalid promotions are swiftly killed.
+  APFloat InvalidPromotionTest(1.0f);
+  EXPECT_DEATH(InvalidPromotionTest.getPromoted(APFloat::IEEEhalf()),
+               "Target semantics will lose information");
+  EXPECT_DEATH(InvalidPromotionTest.getPromoted(APFloat::BFloat()),
+               "Target semantics will lose information.");
+
+  APFloat InvalidPromotionDoubleTest =
+      InvalidPromotionTest.getPromoted(APFloat::IEEEdouble());
+  EXPECT_DEATH(InvalidPromotionDoubleTest.getPromoted(APFloat::BFloat()),
+               "Target semantics will lose information.");
+  EXPECT_DEATH(InvalidPromotionDoubleTest.getPromoted(APFloat::IEEEsingle()),
+               "Target semantics will lose information");
+  EXPECT_DEATH(InvalidPromotionDoubleTest.getPromoted(APFloat::IEEEhalf()),
+               "Target semantics will lose information");
+
+  APFloat InvalidPromotionQuadTest =
+      InvalidPromotionTest.getPromoted(APFloat::IEEEquad());
+  EXPECT_DEATH(InvalidPromotionQuadTest.getPromoted(APFloat::BFloat()),
+               "Target semantics will lose information.");
+  EXPECT_DEATH(InvalidPromotionQuadTest.getPromoted(APFloat::IEEEsingle()),
+               "Target semantics will lose information");
+  EXPECT_DEATH(InvalidPromotionQuadTest.getPromoted(APFloat::IEEEhalf()),
+               "Target semantics will lose information");
+  EXPECT_DEATH(InvalidPromotionQuadTest.getPromoted(APFloat::IEEEdouble()),
+               "Target semantics will lose information");
+  EXPECT_DEATH(
+      InvalidPromotionQuadTest.getPromoted(APFloat::x87DoubleExtended()),
+      "Target semantics will lose information");
+  EXPECT_DEATH(
+      InvalidPromotionQuadTest.getPromoted(APFloat::PPCDoubleDoubleLegacy()),
+      "Target semantics will lose information");
+
+  APFloat InvalidPromotionX87Test =
+      InvalidPromotionTest.getPromoted(APFloat::x87DoubleExtended());
+  EXPECT_DEATH(InvalidPromotionX87Test.getPromoted(APFloat::BFloat()),
+               "Target semantics will lose information.");
+  EXPECT_DEATH(InvalidPromotionX87Test.getPromoted(APFloat::IEEEsingle()),
+               "Target semantics will lose information");
+  EXPECT_DEATH(InvalidPromotionX87Test.getPromoted(APFloat::IEEEhalf()),
+               "Target semantics will lose information");
+  EXPECT_DEATH(InvalidPromotionX87Test.getPromoted(APFloat::IEEEdouble()),
+               "Target semantics will lose information");
+  EXPECT_DEATH(
+      InvalidPromotionX87Test.getPromoted(APFloat::PPCDoubleDoubleLegacy()),
+      "Target semantics will lose information");
+
+  APFloat InvalidPromotionPPCDoubleDoubleTest =
+      InvalidPromotionTest.getPromoted(APFloat::PPCDoubleDoubleLegacy());
+  EXPECT_DEATH(
+      InvalidPromotionPPCDoubleDoubleTest.getPromoted(APFloat::BFloat()),
+      "Target semantics will lose information.");
+  EXPECT_DEATH(
+      InvalidPromotionPPCDoubleDoubleTest.getPromoted(APFloat::IEEEsingle()),
+      "Target semantics will lose information");
+  EXPECT_DEATH(
+      InvalidPromotionPPCDoubleDoubleTest.getPromoted(APFloat::IEEEhalf()),
+      "Target semantics will lose information");
+  EXPECT_DEATH(
+      InvalidPromotionPPCDoubleDoubleTest.getPromoted(APFloat::IEEEdouble()),
+      "Target semantics will lose information");
+  EXPECT_DEATH(InvalidPromotionPPCDoubleDoubleTest.getPromoted(
+                   APFloat::x87DoubleExtended()),
+               "Target semantics will lose information");
+}
+
 } // namespace
