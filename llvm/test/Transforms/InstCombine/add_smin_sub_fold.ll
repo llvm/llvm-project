@@ -8,11 +8,11 @@ declare void @use_i16(i16)
 
 define i16 @test_issue_166885(i16 %arg0, i16 %arg1) {
 ; CHECK-LABEL: @test_issue_166885(
-; CHECK-NEXT:    %v2 = icmp slt i16 %arg1, 1
-; CHECK-NEXT:    %v3 = sub nsw i16 %arg1, 1
-; CHECK-NEXT:    %v4 = tail call i16 @llvm.smin.i16(i16 %arg0, i16 %v3)
-; CHECK-NEXT:    %v5 = select i1 %v2, i16 0, i16 %v4
-; CHECK-NEXT:    ret i16 %v5
+; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i16 [[ARG1:%.*]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = call i16 @llvm.smin.i16(i16 [[ARG0:%.*]], i16 [[TMP1]])
+; CHECK-NEXT:    [[V2_INV:%.*]] = icmp sgt i16 [[ARG1]], 0
+; CHECK-NEXT:    [[V5:%.*]] = select i1 [[V2_INV]], i16 [[TMP2]], i16 0
+; CHECK-NEXT:    ret i16 [[V5]]
 ;
   %v0 = sub nsw i16 0, %arg1
   %v1 = sub nsw i16 %arg0, %arg1
@@ -25,11 +25,11 @@ define i16 @test_issue_166885(i16 %arg0, i16 %arg1) {
 
 define i16 @test_commutative(i16 %a, i16 %b) {
 ; CHECK-LABEL: @test_commutative(
-; CHECK-NEXT:    %v2 = icmp slt i16 %b, 1
-; CHECK-NEXT:    %v3 = sub nsw i16 %b, 1
-; CHECK-NEXT:    %v4 = tail call i16 @llvm.smin.i16(i16 %a, i16 %v3)
-; CHECK-NEXT:    %v5 = select i1 %v2, i16 0, i16 %v4
-; CHECK-NEXT:    ret i16 %v5
+; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i16 [[B:%.*]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = call i16 @llvm.smin.i16(i16 [[A:%.*]], i16 [[TMP1]])
+; CHECK-NEXT:    [[V2_INV:%.*]] = icmp sgt i16 [[B]], 0
+; CHECK-NEXT:    [[V5:%.*]] = select i1 [[V2_INV]], i16 [[TMP2]], i16 0
+; CHECK-NEXT:    ret i16 [[V5]]
 ;
   %v0 = sub nsw i16 0, %b
   %v1 = sub nsw i16 %a, %b
@@ -42,11 +42,11 @@ define i16 @test_commutative(i16 %a, i16 %b) {
 
 define i32 @test_i32(i32 %a, i32 %b) {
 ; CHECK-LABEL: @test_i32(
-; CHECK-NEXT:    %v2 = icmp slt i32 %b, 1
-; CHECK-NEXT:    %v3 = sub nsw i32 %b, 1
-; CHECK-NEXT:    %v4 = tail call i32 @llvm.smin.i32(i32 %a, i32 %v3)
-; CHECK-NEXT:    %v5 = select i1 %v2, i32 0, i32 %v4
-; CHECK-NEXT:    ret i32 %v5
+; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i32 [[B:%.*]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.smin.i32(i32 [[A:%.*]], i32 [[TMP1]])
+; CHECK-NEXT:    [[V2_INV:%.*]] = icmp sgt i32 [[B]], 0
+; CHECK-NEXT:    [[V5:%.*]] = select i1 [[V2_INV]], i32 [[TMP2]], i32 0
+; CHECK-NEXT:    ret i32 [[V5]]
 ;
   %v0 = sub nsw i32 0, %b
   %v1 = sub nsw i32 %a, %b
@@ -59,12 +59,11 @@ define i32 @test_i32(i32 %a, i32 %b) {
 
 define <2 x i16> @test_vector(<2 x i16> %a, <2 x i16> %b) {
 ; CHECK-LABEL: @test_vector(
-; CHECK-NEXT:    %v2 = icmp slt <2 x i16> %b, <i16 1, i16 1>
-; CHECK-NEXT:    %v_minus_one = sub nsw <2 x i16> zeroinitializer, <i16 1, i16 1>
-; CHECK-NEXT:    %v3 = add <2 x i16> %b, %v_minus_one
-; CHECK-NEXT:    %v4 = tail call <2 x i16> @llvm.smin.v2i16(<2 x i16> %a, <2 x i16> %v3)
-; CHECK-NEXT:    %v5 = select <2 x i1> %v2, <2 x i16> zeroinitializer, <2 x i16> %v4
-; CHECK-NEXT:    ret <2 x i16> %v5
+; CHECK-NEXT:    [[TMP1:%.*]] = add nsw <2 x i16> [[B:%.*]], splat (i16 -1)
+; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i16> @llvm.smin.v2i16(<2 x i16> [[A:%.*]], <2 x i16> [[TMP1]])
+; CHECK-NEXT:    [[V2_INV:%.*]] = icmp sgt <2 x i16> [[B]], zeroinitializer
+; CHECK-NEXT:    [[V5:%.*]] = select <2 x i1> [[V2_INV]], <2 x i16> [[TMP2]], <2 x i16> zeroinitializer
+; CHECK-NEXT:    ret <2 x i16> [[V5]]
 ;
   %v0 = sub nsw <2 x i16> zeroinitializer, %b
   %v1 = sub nsw <2 x i16> %a, %b
@@ -79,14 +78,14 @@ define <2 x i16> @test_vector(<2 x i16> %a, <2 x i16> %b) {
 
 define i16 @test_multi_use(i16 %a, i16 %b) {
 ; CHECK-LABEL: @test_multi_use(
-; CHECK-NEXT:    %v1 = sub nsw i16 %a, %b
-; CHECK-NEXT:    %v2 = icmp slt i16 %b, 1
-; CHECK-NEXT:    %v3 = tail call i16 @llvm.smin.i16(i16 %v1, i16 -1)
-; CHECK-NEXT:    call void @use_i16(i16 %v3)
-; CHECK-NEXT:    %v0 = sub nsw i16 0, %b
-; CHECK-NEXT:    %v4 = select i1 %v2, i16 %v0, i16 %v3
-; CHECK-NEXT:    %v5 = add nsw i16 %v4, %b
-; CHECK-NEXT:    ret i16 %v5
+; CHECK-NEXT:    [[V0:%.*]] = sub nsw i16 0, [[B:%.*]]
+; CHECK-NEXT:    [[V1:%.*]] = sub nsw i16 [[A:%.*]], [[B]]
+; CHECK-NEXT:    [[V2:%.*]] = icmp slt i16 [[B]], 1
+; CHECK-NEXT:    [[V3:%.*]] = tail call i16 @llvm.smin.i16(i16 [[V1]], i16 -1)
+; CHECK-NEXT:    call void @use_i16(i16 [[V3]])
+; CHECK-NEXT:    [[V4:%.*]] = select i1 [[V2]], i16 [[V0]], i16 [[V3]]
+; CHECK-NEXT:    [[V5:%.*]] = add nsw i16 [[V4]], [[B]]
+; CHECK-NEXT:    ret i16 [[V5]]
 ;
   %v0 = sub nsw i16 0, %b
   %v1 = sub nsw i16 %a, %b
@@ -101,13 +100,13 @@ define i16 @test_multi_use(i16 %a, i16 %b) {
 
 define i16 @test_negative_no_nsw_add(i16 %a, i16 %b) {
 ; CHECK-LABEL: @test_negative_no_nsw_add(
-; CHECK-NEXT:    %v0 = sub nsw i16 0, %b
-; CHECK-NEXT:    %v1 = sub nsw i16 %a, %b
-; CHECK-NEXT:    %v2 = icmp slt i16 %b, 1
-; CHECK-NEXT:    %v3 = tail call i16 @llvm.smin.i16(i16 %v1, i16 -1)
-; CHECK-NEXT:    %v4 = select i1 %v2, i16 %v0, i16 %v3
-; CHECK-NEXT:    %v5 = add i16 %v4, %b
-; CHECK-NEXT:    ret i16 %v5
+; CHECK-NEXT:    [[V0:%.*]] = sub nsw i16 0, [[B:%.*]]
+; CHECK-NEXT:    [[V1:%.*]] = sub nsw i16 [[A:%.*]], [[B]]
+; CHECK-NEXT:    [[V2:%.*]] = icmp slt i16 [[B]], 1
+; CHECK-NEXT:    [[V3:%.*]] = tail call i16 @llvm.smin.i16(i16 [[V1]], i16 -1)
+; CHECK-NEXT:    [[V4:%.*]] = select i1 [[V2]], i16 [[V0]], i16 [[V3]]
+; CHECK-NEXT:    [[V5:%.*]] = add i16 [[V4]], [[B]]
+; CHECK-NEXT:    ret i16 [[V5]]
 ;
   %v0 = sub nsw i16 0, %b
   %v1 = sub nsw i16 %a, %b
@@ -120,13 +119,13 @@ define i16 @test_negative_no_nsw_add(i16 %a, i16 %b) {
 
 define i16 @test_negative_no_nsw_sub(i16 %a, i16 %b) {
 ; CHECK-LABEL: @test_negative_no_nsw_sub(
-; CHECK-NEXT:    %v0 = sub nsw i16 0, %b
-; CHECK-NEXT:    %v1 = sub i16 %a, %b
-; CHECK-NEXT:    %v2 = icmp slt i16 %b, 1
-; CHECK-NEXT:    %v3 = tail call i16 @llvm.smin.i16(i16 %v1, i16 -1)
-; CHECK-NEXT:    %v4 = select i1 %v2, i16 %v0, i16 %v3
-; CHECK-NEXT:    %v5 = add nsw i16 %v4, %b
-; CHECK-NEXT:    ret i16 %v5
+; CHECK-NEXT:    [[V0:%.*]] = sub nsw i16 0, [[B:%.*]]
+; CHECK-NEXT:    [[V1:%.*]] = sub i16 [[A:%.*]], [[B]]
+; CHECK-NEXT:    [[V2:%.*]] = icmp slt i16 [[B]], 1
+; CHECK-NEXT:    [[V3:%.*]] = tail call i16 @llvm.smin.i16(i16 [[V1]], i16 -1)
+; CHECK-NEXT:    [[V4:%.*]] = select i1 [[V2]], i16 [[V0]], i16 [[V3]]
+; CHECK-NEXT:    [[V5:%.*]] = add nsw i16 [[V4]], [[B]]
+; CHECK-NEXT:    ret i16 [[V5]]
 ;
   %v0 = sub nsw i16 0, %b
   %v1 = sub i16 %a, %b

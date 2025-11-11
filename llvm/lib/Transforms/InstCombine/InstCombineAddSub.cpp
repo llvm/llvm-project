@@ -1870,6 +1870,34 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
         Builder.CreateIntrinsic(Intrinsic::umax, {I.getType()}, {A, B}));
   }
 
+  // add nsw (select (Cond, (sub nsw 0, B), smin (sub nsw A, B), -1)), B
+  //   -> select (Cond, 0, smin(A, B - 1))
+  Value *Cond = nullptr;
+  Constant *K = nullptr;
+  Instruction *SubABInst = nullptr;
+  Value *V0_Captured = nullptr;
+  if (I.hasNoSignedWrap() &&
+      match(&I,
+            m_c_BinOp(m_Select(m_Value(Cond), m_Value(V0_Captured),
+                               m_OneUse(m_Intrinsic<Intrinsic::smin>(
+                                   m_Instruction(SubABInst), m_Constant(K)))),
+                      m_Value(B)))) {
+
+    if (match(V0_Captured, m_NSWSub(m_Zero(), m_Deferred(B))) &&
+        match(SubABInst, m_NSWSub(m_Value(A), m_Deferred(B))) && A != B) {
+
+      Constant *One = ConstantInt::get(I.getType(), 1);
+      Value *B_Minus_1 =
+          Builder.CreateSub(B, One, "", /*HasNUW=*/false, /*HasNSW=*/true);
+      Value *NewSMin = Builder.CreateIntrinsic(Intrinsic::smin, {I.getType()},
+                                               {A, B_Minus_1});
+      Value *Zero = Constant::getNullValue(I.getType());
+      Value *NewSelect = Builder.CreateSelect(Cond, Zero, NewSMin, "");
+
+      return replaceInstUsesWith(I, NewSelect);
+    }
+  }
+
   // ctpop(A) + ctpop(B) => ctpop(A | B) if A and B have no bits set in common.
   if (match(LHS, m_OneUse(m_Intrinsic<Intrinsic::ctpop>(m_Value(A)))) &&
       match(RHS, m_OneUse(m_Intrinsic<Intrinsic::ctpop>(m_Value(B)))) &&
