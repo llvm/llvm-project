@@ -918,7 +918,14 @@ private:
 
     __rep() = default;
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __rep(__short __r) : __s(__r) {}
-    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __rep(__long __r) : __l(__r) {}
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __rep(__long __r) : __s() {
+      // For nonstandard value_type, __s can be bigger than __l, because it
+      // contains at least two value_type. So if we're storing a long buffer,
+      // we must set the is_long flag in __s, where __is_long() will look, in
+      // case it isn't set by assigning to __l.
+      __s.__is_long_ = true;
+      __l            = __r;
+    }
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __rep(__uninitialized_tag) {}
   };
 
