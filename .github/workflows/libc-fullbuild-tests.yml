@@ -98,8 +98,6 @@ jobs:
       run: |
         echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
         echo "build-install-dir=${{ github.workspace }}/install" >> "$GITHUB_OUTPUT"
-        echo "build-baremetal-output-dir=${{ github.workspace }}/build_baremetal" >> "$GITHUB_OUTPUT"
-        echo "build-baremetal-install-dir=${{ github.workspace }}/install_baremetal" >> "$GITHUB_OUTPUT"
     
     # Configure libc fullbuild with scudo.
     # Use MinSizeRel to reduce the size of the build.
@@ -147,17 +145,18 @@ jobs:
         --parallel
         --target check-libc
 
-    - name: Configure and build for baremetal
+    - name: Configure baremetal
       if: ${{ matrix.enable_baremetal_build == "ON" }}
       run: |
         export RUNTIMES="libc"
-        cmake -B ${{ steps.strings.outputs.build-baremetal-output-dir }} \
+
+        cmake -B ${{ steps.strings.outputs.build-output-dir }} \
         -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }} \
         -DCMAKE_C_COMPILER=${{ matrix.c_compiler }} \
         -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
         -DCMAKE_C_COMPILER_LAUNCHER=sccache \
         -DCMAKE_CXX_COMPILER_LAUNCHER=sccache \
-        -DCMAKE_INSTALL_PREFIX=${{ steps.strings.outputs.build-baremetal-install-dir }} \
+        -DCMAKE_INSTALL_PREFIX=${{ steps.strings.outputs.build-install-dir }} \
         -DLLVM_RUNTIME_TARGETS=${{ matrix.target }} \
         -DLLVM_ENABLE_RUNTIMES="$RUNTIMES" \
         -DLLVM_LIBC_FULL_BUILD=ON \
@@ -170,10 +169,11 @@ jobs:
         -DCMAKE_ASM_COMPILER_TARGET=armv6m-none-abi \
         -DCMAKE_C_FLAGS=-mfloat-abi=soft \
         -DCMAKE_CXX_FLAGS=-mfloat-abi=soft
+
     - name: Build baremetal
       if: ${{ matrix.enable_baremetal_build == "ON" }}
       run: >
         cmake
-        --build ${{ steps.strings.outputs.build-baremetal-output-dir }}
+        --build ${{ steps.strings.outputs.build-output-dir }}
         --parallel
         --target install
