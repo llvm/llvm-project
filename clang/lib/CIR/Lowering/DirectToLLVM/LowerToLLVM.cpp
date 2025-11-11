@@ -194,6 +194,14 @@ mlir::LogicalResult CIRToLLVMCosOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
+mlir::LogicalResult CIRToLLVMExpOpLowering::matchAndRewrite(
+    cir::ExpOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::Type resTy = typeConverter->convertType(op.getType());
+  rewriter.replaceOpWithNewOp<mlir::LLVM::ExpOp>(op, resTy, adaptor.getSrc());
+  return mlir::success();
+}
+
 static mlir::Value getLLVMIntCast(mlir::ConversionPatternRewriter &rewriter,
                                   mlir::Value llvmSrc, mlir::Type llvmDstIntTy,
                                   bool isUnsigned, uint64_t cirSrcWidth,
@@ -2822,6 +2830,29 @@ static void collectUnreachable(mlir::Operation *parent,
         workList.push_back(succ);
     }
   }
+}
+
+mlir::LogicalResult CIRToLLVMObjSizeOpLowering::matchAndRewrite(
+    cir::ObjSizeOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::Type llvmResTy = getTypeConverter()->convertType(op.getType());
+  mlir::Location loc = op->getLoc();
+
+  mlir::IntegerType i1Ty = rewriter.getI1Type();
+
+  auto i1Val = [&rewriter, &loc, &i1Ty](bool val) {
+    return mlir::LLVM::ConstantOp::create(rewriter, loc, i1Ty, val);
+  };
+
+  replaceOpWithCallLLVMIntrinsicOp(rewriter, op, "llvm.objectsize", llvmResTy,
+                                   {
+                                       adaptor.getPtr(),
+                                       i1Val(op.getMin()),
+                                       i1Val(op.getNullunknown()),
+                                       i1Val(op.getDynamic()),
+                                   });
+
+  return mlir::LogicalResult::success();
 }
 
 void ConvertCIRToLLVMPass::processCIRAttrs(mlir::ModuleOp module) {

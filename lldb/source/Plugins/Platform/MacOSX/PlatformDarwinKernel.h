@@ -60,7 +60,6 @@ public:
 
   Status GetSharedModule(const ModuleSpec &module_spec, Process *process,
                          lldb::ModuleSP &module_sp,
-                         const FileSpecList *module_search_paths_ptr,
                          llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules,
                          bool *did_create_ptr) override;
 
@@ -142,14 +141,14 @@ protected:
 
   Status GetSharedModuleKext(const ModuleSpec &module_spec, Process *process,
                              lldb::ModuleSP &module_sp,
-                             const FileSpecList *module_search_paths_ptr,
                              llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules,
                              bool *did_create_ptr);
 
-  Status GetSharedModuleKernel(
-      const ModuleSpec &module_spec, Process *process,
-      lldb::ModuleSP &module_sp, const FileSpecList *module_search_paths_ptr,
-      llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules, bool *did_create_ptr);
+  Status
+  GetSharedModuleKernel(const ModuleSpec &module_spec, Process *process,
+                        lldb::ModuleSP &module_sp,
+                        llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules,
+                        bool *did_create_ptr);
 
   Status ExamineKextForMatchingUUID(const FileSpec &kext_bundle_path,
                                     const UUID &uuid, const ArchSpec &arch,

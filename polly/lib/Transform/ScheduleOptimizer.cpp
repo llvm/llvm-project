@@ -902,8 +902,24 @@ static void runIslScheduleOptimizerImpl(
     walkScheduleTreeForStatistics(Schedule, 2);
   }
 
+  // Check for why any computation could have failed
   if (MaxOpGuard.hasQuotaExceeded()) {
     POLLY_DEBUG(dbgs() << "Schedule optimizer calculation exceeds ISL quota\n");
+    return;
+  } else if (isl_ctx_last_error(Ctx) != isl_error_none) {
+    POLLY_DEBUG({
+      const char *File = isl_ctx_last_error_file(Ctx);
+      int Line = isl_ctx_last_error_line(Ctx);
+      const char *Msg = isl_ctx_last_error_msg(Ctx);
+      dbgs() << "ISL reported an error during the computation of a new "
+                "schedule at "
+             << File << ":" << Line << ": " << Msg;
+    });
+    isl_ctx_reset_error(Ctx);
+    return;
+  } else if (Schedule.is_null()) {
+    POLLY_DEBUG(dbgs() << "Schedule optimizer did not compute a new schedule "
+                          "for unknown reasons\n");
     return;
   }
 

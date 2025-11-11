@@ -22,9 +22,6 @@ attributes(global) subroutine devsub()
 
   call syncthreads()
   call syncwarp(1)
-  call threadfence()
-  call threadfence_block()
-  call threadfence_system()
   ret = syncthreads_and(1)
   res = syncthreads_and(tid > offset)
   ret = syncthreads_count(1)
@@ -105,10 +102,7 @@ end
 
 ! CHECK-LABEL: func.func @_QPdevsub() attributes {cuf.proc_attr = #cuf.cuda_proc<global>}
 ! CHECK: nvvm.barrier0
-! CHECK: fir.call @llvm.nvvm.bar.warp.sync(%c1{{.*}}) fastmath<contract> : (i32) -> ()
-! CHECK: fir.call @llvm.nvvm.membar.gl() fastmath<contract> : () -> ()
-! CHECK: fir.call @llvm.nvvm.membar.cta() fastmath<contract> : () -> ()
-! CHECK: fir.call @llvm.nvvm.membar.sys() fastmath<contract> : () -> ()
+! CHECK: nvvm.bar.warp.sync %c1{{.*}} : i32 
 ! CHECK: %{{.*}} = fir.call @llvm.nvvm.barrier0.and(%c1{{.*}}) fastmath<contract> : (i32) -> i32
 ! CHECK: %[[A:.*]] = fir.load %{{.*}} : !fir.ref<i32>
 ! CHECK: %[[B:.*]] = fir.load %{{.*}} : !fir.ref<i32>
@@ -219,7 +213,7 @@ end
 ! CHECK-LABEL: func.func @_QPhost1()
 ! CHECK: cuf.kernel
 ! CHECK: nvvm.barrier0
-! CHECK: fir.call @llvm.nvvm.bar.warp.sync(%c1{{.*}}) fastmath<contract> : (i32) -> ()
+! CHECK: nvvm.bar.warp.sync %c1{{.*}} : i32 
 ! CHECK: fir.call @llvm.nvvm.barrier0.and(%c1{{.*}}) fastmath<contract> : (i32) -> i32
 ! CHECK: fir.call @llvm.nvvm.barrier0.popc(%c1{{.*}}) fastmath<contract> : (i32) -> i32
 ! CHECK: fir.call @llvm.nvvm.barrier0.or(%c1{{.*}}) fastmath<contract> : (i32) -> i32
@@ -440,11 +434,11 @@ end subroutine
 
 ! CHECK: %[[LLVM_PTR:.*]] = fir.convert %[[DECL_SHARED]]#0 : (!fir.ref<i64>) -> !llvm.ptr
 ! CHECK: %[[SHARED_PTR:.*]] = llvm.addrspacecast %[[LLVM_PTR]] : !llvm.ptr to !llvm.ptr<3>
-! CHECK: %{{.*}} = nvvm.mbarrier.arrive.shared %[[SHARED_PTR]] : !llvm.ptr<3> -> i64
+! CHECK: %{{.*}} = nvvm.mbarrier.arrive %[[SHARED_PTR]] : !llvm.ptr<3> -> i64
 
 ! CHECK: %[[LLVM_PTR:.*]] = fir.convert %[[DECL_SHARED]]#0 : (!fir.ref<i64>) -> !llvm.ptr
 ! CHECK: %[[SHARED_PTR:.*]] = llvm.addrspacecast %[[LLVM_PTR]] : !llvm.ptr to !llvm.ptr<3>
-! CHECK: nvvm.mbarrier.arrive.expect_tx %[[SHARED_PTR]], %{{.*}} : !llvm.ptr<3>, i32
+! CHECK: %{{.*}} = nvvm.inline_ptx "mbarrier.arrive.expect_tx.release.cta.shared::cta.b64 %{{.*}}, [%{{.*}}], %{{.*}};" ro(%{{.*}}, %{{.*}} : !llvm.ptr<3>, i32) -> i64
 
 
 attributes(global) subroutine test_fence()

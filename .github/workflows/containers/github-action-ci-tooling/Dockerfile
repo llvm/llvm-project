@@ -22,6 +22,7 @@ RUN apt-get update && \
 
 FROM docker.io/library/ubuntu:24.04 AS base
 ENV LLVM_SYSROOT=/opt/llvm
+ENV PATH=${LLVM_SYSROOT}/bin:${PATH}
 
 # Need nodejs for some of the GitHub actions.
 # Need git for git-clang-format.
@@ -53,7 +54,6 @@ COPY --from=llvm-downloader /llvm-extract/LLVM-${LLVM_VERSION}-Linux-X64/bin/cla
                             /llvm-extract/LLVM-${LLVM_VERSION}-Linux-X64/bin/git-clang-format \
                             ${LLVM_SYSROOT}/bin/
 
-ENV PATH=${LLVM_SYSROOT}/bin:${PATH}
 
 # Install dependencies for 'pr-code-format.yml' job
 COPY llvm/utils/git/requirements_formatting.txt requirements_formatting.txt
@@ -77,7 +77,6 @@ COPY clang-tools-extra/clang-tidy/tool/clang-tidy-diff.py ${LLVM_SYSROOT}/bin/cl
 RUN ln -s ${LLVM_SYSROOT}/bin/clang-${LLVM_VERSION_MAJOR} ${LLVM_SYSROOT}/bin/clang && \
     ln -s ${LLVM_SYSROOT}/bin/clang ${LLVM_SYSROOT}/bin/clang++
 
-ENV PATH=${LLVM_SYSROOT}/bin:${PATH}
 
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y \

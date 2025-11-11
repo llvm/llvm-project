@@ -819,6 +819,7 @@ public:
       Word("TEAM=");
     }
   }
+  void Before(const ImageSelectorSpec::Notify &) { Word("NOTIFY="); }
   void Unparse(const AllocateStmt &x) { // R927
     Word("ALLOCATE(");
     Walk(std::get<std::optional<TypeSpec>>(x.t), "::");
@@ -1853,6 +1854,10 @@ public:
             [&](const CompilerDirective::Unroll &unroll) {
               Word("!DIR$ UNROLL");
               Walk(" ", unroll.v);
+            },
+            [&](const CompilerDirective::Prefetch &prefetch) {
+              Word("!DIR$ PREFETCH");
+              Walk(" ", prefetch.v);
             },
             [&](const CompilerDirective::UnrollAndJam &unrollAndJam) {
               Word("!DIR$ UNROLL_AND_JAM");

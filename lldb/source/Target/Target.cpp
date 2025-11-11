@@ -1779,9 +1779,9 @@ bool Target::SetArchitecture(const ArchSpec &arch_spec, bool set_platform,
               arch_spec.GetArchitectureName(),
               arch_spec.GetTriple().getTriple().c_str());
     ModuleSpec module_spec(executable_sp->GetFileSpec(), other);
-    FileSpecList search_paths = GetExecutableSearchPaths();
+    module_spec.SetTarget(shared_from_this());
     Status error = ModuleList::GetSharedModule(module_spec, executable_sp,
-                                               &search_paths, nullptr, nullptr);
+                                               nullptr, nullptr);
 
     if (!error.Fail() && executable_sp) {
       SetExecutableModule(executable_sp, eLoadDependentsYes);
@@ -2350,6 +2350,7 @@ ModuleSP Target::GetOrCreateModule(const ModuleSpec &orig_module_spec,
 
   // Apply any remappings specified in target.object-map:
   ModuleSpec module_spec(orig_module_spec);
+  module_spec.SetTarget(shared_from_this());
   PathMappingList &obj_mapping = GetObjectPathMap();
   if (std::optional<FileSpec> remapped_obj_file =
           obj_mapping.RemapPath(orig_module_spec.GetFileSpec().GetPath(),
@@ -2408,9 +2409,9 @@ ModuleSP Target::GetOrCreateModule(const ModuleSpec &orig_module_spec,
           transformed_spec.GetFileSpec().SetDirectory(transformed_dir);
           transformed_spec.GetFileSpec().SetFilename(
                 module_spec.GetFileSpec().GetFilename());
+          transformed_spec.SetTarget(shared_from_this());
           error = ModuleList::GetSharedModule(transformed_spec, module_sp,
-                                              &search_paths, &old_modules,
-                                              &did_create_module);
+                                              &old_modules, &did_create_module);
         }
       }
     }
@@ -2426,9 +2427,8 @@ ModuleSP Target::GetOrCreateModule(const ModuleSpec &orig_module_spec,
       // cache.
       if (module_spec.GetUUID().IsValid()) {
         // We have a UUID, it is OK to check the global module list...
-        error =
-            ModuleList::GetSharedModule(module_spec, module_sp, &search_paths,
-                                        &old_modules, &did_create_module);
+        error = ModuleList::GetSharedModule(module_spec, module_sp,
+                                            &old_modules, &did_create_module);
       }
 
       if (!module_sp) {
@@ -2436,8 +2436,8 @@ ModuleSP Target::GetOrCreateModule(const ModuleSpec &orig_module_spec,
         // module in the shared module cache.
         if (m_platform_sp) {
           error = m_platform_sp->GetSharedModule(
-              module_spec, m_process_sp.get(), module_sp, &search_paths,
-              &old_modules, &did_create_module);
+              module_spec, m_process_sp.get(), module_sp, &old_modules,
+              &did_create_module);
         } else {
           error = Status::FromErrorString("no platform is currently set");
         }
@@ -3207,6 +3207,11 @@ bool Target::RunStopHooks(bool at_initial_stop) {
   bool should_stop = false;
   bool requested_continue = false;
 
+  // A stop hook might get deleted while running stop hooks.
+  // We have to decide what that means.  We will follow the rule that deleting
+  // a stop hook while processing these stop hooks will delete it for FUTURE
+  // stops but not this stop.  Fortunately, copying the m_stop_hooks to the
+  // active_hooks list before iterating over the hooks has this effect.
   for (auto cur_hook_sp : active_hooks) {
     bool any_thread_matched = false;
     for (auto exc_ctx : exc_ctx_with_reasons) {
@@ -4945,7 +4950,7 @@ void TargetProperties::SetStandardErrorPath(llvm::StringRef path) {
 
 SourceLanguage TargetProperties::GetLanguage() const {
   const uint32_t idx = ePropertyLanguage;
-  return {GetPropertyAtIndexAs<LanguageType>(idx, {})};
+  return SourceLanguage{GetPropertyAtIndexAs<LanguageType>(idx, {})};
 }
 
 llvm::StringRef TargetProperties::GetExpressionPrefixContents() {
