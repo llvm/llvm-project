@@ -1032,6 +1032,40 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     }
     break;
   }
+  case Intrinsic::loop_dependence_raw_mask:
+  case Intrinsic::loop_dependence_war_mask: {
+    auto *EltSize = cast<ConstantInt>(ICA.getArgs()[2]);
+    EVT VecVT = getTLI()->getValueType(DL, RetTy);
+    // An invalid element size and return type combination must be expanded.
+    bool MustBeExpanded = false;
+    switch (EltSize->getSExtValue()) {
+    case 1:
+      if (VecVT != MVT::v16i1 && VecVT != MVT::nxv16i1)
+        MustBeExpanded = true;
+      break;
+    case 2:
+      if (VecVT != MVT::v8i1 && VecVT != MVT::nxv8i1)
+        MustBeExpanded = true;
+      break;
+    case 4:
+      if (VecVT != MVT::v4i1 && VecVT != MVT::nxv4i1)
+        MustBeExpanded = true;
+      break;
+    case 8:
+      if (VecVT != MVT::v2i1 && VecVT != MVT::nxv2i1)
+        MustBeExpanded = true;
+      break;
+    default:
+      MustBeExpanded = true;
+      // Other element sizes are incompatible with whilewr/rw, so expand instead
+      break;
+    }
+
+    // The whilewr/rw instructions require SVE2 or SME
+    if (MustBeExpanded || (!ST->hasSVE2() && !ST->hasSME()))
+      break;
+    return 1;
+  }
   case Intrinsic::experimental_vector_extract_last_active:
     if (ST->isSVEorStreamingSVEAvailable()) {
       auto [LegalCost, _] = getTypeLegalizationCost(ICA.getArgTypes()[0]);
