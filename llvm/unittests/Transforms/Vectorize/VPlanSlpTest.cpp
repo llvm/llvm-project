@@ -27,6 +27,8 @@ protected:
   std::unique_ptr<LoopAccessInfo> LAI;
   std::unique_ptr<PredicatedScalarEvolution> PSE;
   std::unique_ptr<InterleavedAccessInfo> IAI;
+  std::unique_ptr<TargetTransformInfo> TTI;
+  std::unique_ptr<MemorySSA> MSSA;
 
   VPlanSlpTest()
       : DL("e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-"
@@ -41,8 +43,10 @@ protected:
     AARes.reset(new AAResults(*TLI));
     AARes->addAAResult(*BasicAA);
     PSE.reset(new PredicatedScalarEvolution(*SE, *L));
-    LAI.reset(
-        new LoopAccessInfo(L, &*SE, nullptr, &*TLI, &*AARes, &*DT, &*LI, &*AC));
+    TTI = std::make_unique<TargetTransformInfo>(DL);
+    MSSA.reset(new MemorySSA(F, &*AARes, &*DT));
+    LAI.reset(new LoopAccessInfo(L, &*SE, nullptr, &*TLI, &*AARes, &*DT, &*LI,
+                                 &*AC, &*MSSA));
     IAI.reset(new InterleavedAccessInfo(*PSE, L, &*DT, &*LI, &*LAI));
     IAI->analyzeInterleaving(false);
     return {Plan, *IAI};

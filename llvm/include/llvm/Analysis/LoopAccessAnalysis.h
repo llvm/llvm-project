@@ -28,6 +28,7 @@ class DataLayout;
 class Loop;
 class raw_ostream;
 class TargetTransformInfo;
+class MemorySSA;
 
 /// Collection of parameters shared beetween the Loop Vectorizer and the
 /// Loop Access Analysis.
@@ -181,11 +182,12 @@ public:
   };
 
   MemoryDepChecker(PredicatedScalarEvolution &PSE, AssumptionCache *AC,
-                   DominatorTree *DT, const Loop *L,
+                   MemorySSA *MSSA, DominatorTree *DT, AAResults *AA,
+                   const Loop *L,
                    const DenseMap<Value *, const SCEV *> &SymbolicStrides,
                    unsigned MaxTargetVectorWidthInBits,
                    std::optional<ScalarEvolution::LoopGuards> &LoopGuards)
-      : PSE(PSE), AC(AC), DT(DT), InnermostLoop(L),
+      : PSE(PSE), AC(AC), DT(DT), MSSA(MSSA), AA(AA), InnermostLoop(L),
         SymbolicStrides(SymbolicStrides),
         MaxTargetVectorWidthInBits(MaxTargetVectorWidthInBits),
         LoopGuards(LoopGuards) {}
@@ -292,6 +294,14 @@ public:
     return PointerBounds;
   }
 
+  /// Return if a Load can be hoisted in this loop with a pattern of a
+  /// memory induction variable. This assumes a alias runtime check
+  /// will be used before hoisting.
+  bool
+  isInvariantLoadHoistable(LoadInst *L, ScalarEvolution &SE, StoreInst **S,
+                           const SCEV **Step,
+                           SmallVectorImpl<Instruction *> *Instructions) const;
+
   DominatorTree *getDT() const {
     assert(DT && "requested DT, but it is not available");
     return DT;
@@ -312,6 +322,8 @@ private:
 
   AssumptionCache *AC;
   DominatorTree *DT;
+  MemorySSA *MSSA;
+  AAResults *AA;
 
   const Loop *InnermostLoop;
 
@@ -692,7 +704,7 @@ public:
                           const TargetTransformInfo *TTI,
                           const TargetLibraryInfo *TLI, AAResults *AA,
                           DominatorTree *DT, LoopInfo *LI, AssumptionCache *AC,
-                          bool AllowPartial = false);
+                          MemorySSA *MSSA, bool AllowPartial = false);
 
   /// Return true we can analyze the memory accesses in the loop and there are
   /// no memory dependence cycles. Note that for dependences between loads &
@@ -786,7 +798,8 @@ private:
   /// Analyze the loop. Returns true if all memory access in the loop can be
   /// vectorized.
   bool analyzeLoop(AAResults *AA, const LoopInfo *LI,
-                   const TargetLibraryInfo *TLI, DominatorTree *DT);
+                   const TargetLibraryInfo *TLI, DominatorTree *DT,
+                   MemorySSA *MSSA);
 
   /// Check if the structure of the loop allows it to be analyzed by this
   /// pass.
@@ -963,12 +976,15 @@ class LoopAccessInfoManager {
   TargetTransformInfo *TTI;
   const TargetLibraryInfo *TLI = nullptr;
   AssumptionCache *AC;
+  MemorySSA *MSSA;
 
 public:
   LoopAccessInfoManager(ScalarEvolution &SE, AAResults &AA, DominatorTree &DT,
                         LoopInfo &LI, TargetTransformInfo *TTI,
-                        const TargetLibraryInfo *TLI, AssumptionCache *AC)
-      : SE(SE), AA(AA), DT(DT), LI(LI), TTI(TTI), TLI(TLI), AC(AC) {}
+                        const TargetLibraryInfo *TLI, AssumptionCache *AC,
+                        MemorySSA *MSSA)
+      : SE(SE), AA(AA), DT(DT), LI(LI), TTI(TTI), TLI(TLI), AC(AC), MSSA(MSSA) {
+  }
 
   LLVM_ABI const LoopAccessInfo &getInfo(Loop &L, bool AllowPartial = false);
 
