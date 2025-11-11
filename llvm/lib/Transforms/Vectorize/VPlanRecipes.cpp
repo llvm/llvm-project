@@ -356,7 +356,7 @@ VPPartialReductionRecipe::computeCost(ElementCount VF,
   // recipe.
   auto HandleWiden = [&](VPWidenRecipe *Widen) {
     if (match(Widen, m_Sub(m_ZeroInt(), m_VPValue(Op)))) {
-      Widen = dyn_cast<VPWidenRecipe>(Op->getDefiningRecipe());
+      Widen = dyn_cast<VPWidenRecipe>(Op);
     }
     Opcode = Widen->getOpcode();
     VPRecipeBase *ExtAR = Widen->getOperand(0)->getDefiningRecipe();
@@ -381,11 +381,10 @@ VPPartialReductionRecipe::computeCost(ElementCount VF,
     InputTypeA = Ctx.Types.inferScalarType(OpR->getOperand(0));
     ExtAType = GetExtendKind(OpR);
   } else if (isa<VPReductionPHIRecipe>(OpR)) {
-    auto RedPhiOp1R = getOperand(1)->getDefiningRecipe();
-    if (isa<VPWidenCastRecipe>(RedPhiOp1R)) {
+    if (auto RedPhiOp1R = dyn_cast_or_null<VPWidenCastRecipe>(getOperand(1))) {
       InputTypeA = Ctx.Types.inferScalarType(RedPhiOp1R->getOperand(0));
       ExtAType = GetExtendKind(RedPhiOp1R);
-    } else if (auto Widen = dyn_cast<VPWidenRecipe>(RedPhiOp1R))
+    } else if (auto Widen = dyn_cast_or_null<VPWidenRecipe>(getOperand(1)))
       HandleWiden(Widen);
   } else if (auto Widen = dyn_cast<VPWidenRecipe>(OpR)) {
     HandleWiden(Widen);
@@ -3195,10 +3194,10 @@ bool VPReplicateRecipe::shouldPack() const {
 static const SCEV *getAddressAccessSCEV(const VPValue *Ptr, ScalarEvolution &SE,
                                         const Loop *L) {
   auto *PtrR = Ptr->getDefiningRecipe();
-  if (!PtrR || !((isa<VPReplicateRecipe>(PtrR) &&
-                  cast<VPReplicateRecipe>(PtrR)->getOpcode() ==
+  if (!PtrR || !((isa<VPReplicateRecipe>(Ptr) &&
+                  cast<VPReplicateRecipe>(Ptr)->getOpcode() ==
                       Instruction::GetElementPtr) ||
-                 isa<VPWidenGEPRecipe>(PtrR) ||
+                 isa<VPWidenGEPRecipe>(Ptr) ||
                  match(Ptr, m_GetElementPtr(m_VPValue(), m_VPValue()))))
     return nullptr;
 
