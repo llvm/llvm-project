@@ -120,6 +120,22 @@ func.func @unroll_to_elements_2d() -> (f32, f32, f32, f32) {
 
 // -----
 
+// CHECK-LABEL: @unroll_to_elements_8xf32
+func.func @unroll_to_elements_8xf32() -> (f32, f32) {
+
+  // CHECK: %[[VEC:.+]] = "test.op"
+  // CHECK: %[[V0:.+]] = vector.extract_strided_slice %[[VEC]] {offsets = [0]
+  // CHECK: %[[V1:.+]] = vector.extract_strided_slice %[[VEC]] {offsets = [4]
+  // CHECK: %[[ELEMS0:.+]]:4 = vector.to_elements %[[V0]]
+  // CHECK: %[[ELEMS1:.+]]:4 = vector.to_elements %[[V1]]
+  // CHECK: return %[[ELEMS0]]#3, %[[ELEMS1]]#0
+  %0 = "test.op"() : () -> (vector<8xf32>)
+  %1:8 = vector.to_elements %0 : vector<8xf32>
+  return %1#3, %1#4 : f32, f32
+}
+
+// -----
+
 // In order to verify that the pattern is applied,
 // we need to make sure that the the 2d vector is used
 // by an operation and that extracts are not folded away.

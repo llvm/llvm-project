@@ -24,9 +24,8 @@ def VectorUnrollOpInterface : OpInterface<"VectorUnrollOpInterface"> {
   let methods = [
     InterfaceMethod<
       /*desc=*/[{
-        Return the shape ratio of unrolling to the target vector shape
-        `targetShape`. Return `std::nullopt` if the op cannot be unrolled to the
-        target vector shape.
+        Return the shape of the vector of this operation, which may be used to decide unrolling factors.
+        Return std::nullopt if the op is not applicable for unrolling.
       }],
       /*retTy=*/"::std::optional<::llvm::SmallVector<int64_t, 4>>",
       /*methodName=*/"getShapeForUnroll",
