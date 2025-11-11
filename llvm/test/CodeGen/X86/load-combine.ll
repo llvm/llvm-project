@@ -1331,3 +1331,34 @@ define i64 @test_load_bswap_to_rotate(ptr %p) {
   %or = or disjoint i64 %shl, %conv2
   ret i64 %or
 }
+
+define i64 @test_load_rotate_zext(ptr %p) {
+; CHECK64-LABEL: test_load_rotate_zext:
+; CHECK64:  # %bb.0:
+; CHECK64-NEXT:    movl	(%rdi), %eax
+; CHECK64-NEXT:    rorl	$8, %eax
+; CHECK64-NEXT:    retq
+  %p1 = getelementptr inbounds i8, ptr %p, i64 1
+  %l1 = load i8, ptr %p1, align 1
+  %e1 = zext i8 %l1 to i64
+
+  %p2 = getelementptr inbounds i8, ptr %p, i64 2
+  %l2 = load i8, ptr %p2, align 1
+  %e2 = zext i8 %l2 to i64
+  %s2 = shl i64 %e2, 8
+
+  %p3 = getelementptr inbounds i8, ptr %p, i64 3
+  %l3 = load i8, ptr %p3, align 1
+  %e3 = zext i8 %l3 to i64
+  %s3 = shl i64 %e3, 16
+
+  %p0 = getelementptr inbounds i8, ptr %p, i64 0
+  %l0 = load i8, ptr %p0, align 1
+  %e0 = zext i8 %l0 to i64
+  %s0 = shl i64 %e0, 24
+
+  %or1 = or i64 %e1, %s2
+  %or2 = or i64 %or1, %s3
+  %or3 = or i64 %or2, %s0
+  ret i64 %or3
+}

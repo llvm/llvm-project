@@ -9846,7 +9846,7 @@ SDValue DAGCombiner::MatchLoadCombine(SDNode *N) {
 
     // It is a simple combine.
     if (!NeedsBswap)
-      return NewLoad; 
+      return NewLoad;
 
     // It is a BSWAP combine.
     SDValue ShiftedLoad =
@@ -9864,7 +9864,7 @@ SDValue DAGCombiner::MatchLoadCombine(SDNode *N) {
     // Make sure we can rotate
     if (LegalOperations && !TLI.isOperationLegal(ISD::ROTR, VT))
       return SDValue();
-    
+
     auto *FirstLoad = cast<LoadSDNode>(FirstByteProvider->Src.value());
     if (MemoryByteOffset(*FirstByteProvider) != 0)
       return SDValue();
@@ -9890,9 +9890,9 @@ SDValue DAGCombiner::MatchLoadCombine(SDNode *N) {
         DAG.getNode(ISD::ROTR, SDLoc(N), MemVT, NewLoad,
                     DAG.getConstant(*RotateAmt, SDLoc(N), ShiftAmountTy));
 
-    if (NeedsZext) 
+    if (NeedsZext)
       return DAG.getNode(ISD::ZERO_EXTEND, SDLoc(N), VT, Rotated);
-    
+
     return Rotated;
   }
 
