@@ -3948,3 +3948,13 @@ HexagonTargetLowering::shouldExpandAtomicCmpXchgInIR(
     AtomicCmpXchgInst *AI) const {
   return AtomicExpansionKind::LLSC;
 }
+
+bool HexagonTargetLowering::isMaskAndCmp0FoldingBeneficial(
+    const Instruction &AndI) const {
+  // Only sink 'and' mask to cmp use block if it is masking a single bit since
+  // this will fold the and/cmp/br into a single tstbit instruction.
+  ConstantInt *Mask = dyn_cast<ConstantInt>(AndI.getOperand(1));
+  if (!Mask)
+    return false;
+  return Mask->getValue().isPowerOf2();
+}

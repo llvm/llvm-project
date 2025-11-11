@@ -435,7 +435,7 @@ void SignalHandlerCheck::check(const MatchFinder::MatchResult &Result) {
 
 bool SignalHandlerCheck::checkFunction(
     const FunctionDecl *FD, const Expr *CallOrRef,
-    std::function<void(bool)> ChainReporter) {
+    llvm::function_ref<void(bool)> ChainReporter) {
   const bool FunctionIsCalled = isa<CallExpr>(CallOrRef);
 
   if (isStandardFunction(FD)) {
@@ -471,7 +471,7 @@ bool SignalHandlerCheck::checkFunction(
 
 bool SignalHandlerCheck::checkFunctionCPP14(
     const FunctionDecl *FD, const Expr *CallOrRef,
-    std::function<void(bool)> ChainReporter) {
+    llvm::function_ref<void(bool)> ChainReporter) {
   if (!FD->isExternC()) {
     diag(CallOrRef->getBeginLoc(),
          "functions without C linkage are not allowed as signal "

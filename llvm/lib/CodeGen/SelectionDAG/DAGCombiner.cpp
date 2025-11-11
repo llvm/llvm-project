@@ -18863,6 +18863,26 @@ SDValue DAGCombiner::visitFCOPYSIGN(SDNode *N) {
   if (SimplifyDemandedBits(SDValue(N, 0)))
     return SDValue(N, 0);
 
+  if (VT != N1.getValueType())
+    return SDValue();
+
+  // If this is equivalent to a disjoint or, replace it with one. This can
+  // happen if the sign operand is a sign mask (i.e., x << sign_bit_position).
+  if (DAG.SignBitIsZeroFP(N0) &&
+      DAG.computeKnownBits(N1).Zero.isMaxSignedValue()) {
+    // TODO: Just directly match the shift pattern. computeKnownBits is heavy
+    // for a such a narrowly targeted case.
+    EVT IntVT = VT.changeTypeToInteger();
+    // TODO: It appears to be profitable in some situations to unconditionally
+    // emit a fabs(n0) to perform this combine.
+    SDValue CastSrc0 = DAG.getNode(ISD::BITCAST, DL, IntVT, N0);
+    SDValue CastSrc1 = DAG.getNode(ISD::BITCAST, DL, IntVT, N1);
+
+    SDValue SignOr = DAG.getNode(ISD::OR, DL, IntVT, CastSrc0, CastSrc1,
+                                 SDNodeFlags::Disjoint);
+    return DAG.getNode(ISD::BITCAST, DL, VT, SignOr);
+  }
+
   return SDValue();
 }
 
