@@ -5,7 +5,6 @@ define i32 @known_positive(float nofpclass(nan ninf nzero nsub nnorm) %signbit.z
 ; CHECK-LABEL: known_positive:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_and_b32_e32 v0, 0x7fffffff, v0
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %cast = bitcast float %signbit.zero to i32
   %and = and i32 %cast, 2147483647
@@ -27,7 +26,6 @@ define i32 @known_negative(float nofpclass(nan pinf pzero psub pnorm) %signbit.o
 ; CHECK-LABEL: known_negative:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_or_b32_e32 v0, 0x80000000, v0
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %cast = bitcast float %signbit.one to i32
   %or = or i32 %cast, -2147483648

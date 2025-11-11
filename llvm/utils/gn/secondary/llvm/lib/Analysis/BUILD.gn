@@ -67,7 +67,6 @@ static_library("Analysis") {
     "InlineAdvisor.cpp",
     "InlineCost.cpp",
     "InlineOrder.cpp",
-    "InlineSizeEstimatorAnalysis.cpp",
     "InstCount.cpp",
     "InstructionPrecedenceTracking.cpp",
     "InstructionSimplify.cpp",
