@@ -319,10 +319,6 @@ bool SpecialCaseList::createInternal(const MemoryBuffer *MB, std::string &Error,
   return true;
 }
 
-const std::vector<SpecialCaseList::Section> &SpecialCaseList::sections() const {
-  return Sections;
-}
-
 Expected<SpecialCaseList::Section *>
 SpecialCaseList::addSection(StringRef SectionStr, unsigned FileNo,
                             unsigned LineNo, bool UseGlobs) {
