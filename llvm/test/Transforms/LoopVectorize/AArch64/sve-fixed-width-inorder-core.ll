@@ -7,6 +7,8 @@ define void @sve_add(ptr  %dst, ptr  %a, ptr  %b, i64 %n) {
 ; CHECK-CA510-LABEL: define void @sve_add(
 ; CHECK-CA510-SAME: ptr [[DST:%.*]], ptr [[A:%.*]], ptr [[B:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-CA510-NEXT:  [[ENTRY:.*:]]
+; CHECK-CA510-NEXT:    [[A6:%.*]] = ptrtoint ptr [[A]] to i64
+; CHECK-CA510-NEXT:    [[DST5:%.*]] = ptrtoint ptr [[DST]] to i64
 ; CHECK-CA510-NEXT:    [[B3:%.*]] = ptrtoint ptr [[B]] to i64
 ; CHECK-CA510-NEXT:    [[A2:%.*]] = ptrtoint ptr [[A]] to i64
 ; CHECK-CA510-NEXT:    [[DST1:%.*]] = ptrtoint ptr [[DST]] to i64
@@ -21,7 +23,18 @@ define void @sve_add(ptr  %dst, ptr  %a, ptr  %b, i64 %n) {
 ; CHECK-CA510-NEXT:    [[TMP1:%.*]] = sub i64 [[DST1]], [[B3]]
 ; CHECK-CA510-NEXT:    [[DIFF_CHECK4:%.*]] = icmp ult i64 [[TMP1]], 32
 ; CHECK-CA510-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[DIFF_CHECK]], [[DIFF_CHECK4]]
-; CHECK-CA510-NEXT:    br i1 [[CONFLICT_RDX]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
+; CHECK-CA510-NEXT:    [[TMP12:%.*]] = inttoptr i64 [[A6]] to ptr
+; CHECK-CA510-NEXT:    [[TMP17:%.*]] = inttoptr i64 [[DST5]] to ptr
+; CHECK-CA510-NEXT:    [[ALIAS_LANE_MASK:%.*]] = call <4 x i1> @llvm.loop.dependence.war.mask.v4i1(ptr [[TMP12]], ptr [[TMP17]], i64 4)
+; CHECK-CA510-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[B3]] to ptr
+; CHECK-CA510-NEXT:    [[TMP18:%.*]] = inttoptr i64 [[DST5]] to ptr
+; CHECK-CA510-NEXT:    [[ALIAS_LANE_MASK7:%.*]] = call <4 x i1> @llvm.loop.dependence.war.mask.v4i1(ptr [[TMP4]], ptr [[TMP18]], i64 4)
+; CHECK-CA510-NEXT:    [[TMP19:%.*]] = and <4 x i1> [[ALIAS_LANE_MASK]], [[ALIAS_LANE_MASK7]]
+; CHECK-CA510-NEXT:    [[TMP7:%.*]] = zext <4 x i1> [[TMP19]] to <4 x i8>
+; CHECK-CA510-NEXT:    [[TMP20:%.*]] = call i8 @llvm.vector.reduce.add.v4i8(<4 x i8> [[TMP7]])
+; CHECK-CA510-NEXT:    [[TMP21:%.*]] = zext i8 [[TMP20]] to i64
+; CHECK-CA510-NEXT:    [[TMP22:%.*]] = icmp eq i64 [[TMP21]], 0
+; CHECK-CA510-NEXT:    br i1 [[TMP22]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK-CA510:       [[VECTOR_PH]]:
 ; CHECK-CA510-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 8
 ; CHECK-CA510-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
@@ -42,7 +55,7 @@ define void @sve_add(ptr  %dst, ptr  %a, ptr  %b, i64 %n) {
 ; CHECK-CA510-NEXT:    [[TMP13:%.*]] = getelementptr inbounds nuw float, ptr [[TMP11]], i32 4
 ; CHECK-CA510-NEXT:    store <4 x float> [[TMP9]], ptr [[TMP11]], align 4
 ; CHECK-CA510-NEXT:    store <4 x float> [[TMP10]], ptr [[TMP13]], align 4
-; CHECK-CA510-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP2]], 8
+; CHECK-CA510-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP2]], [[TMP21]]
 ; CHECK-CA510-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-CA510-NEXT:    br i1 [[TMP14]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK-CA510:       [[MIDDLE_BLOCK]]:
@@ -71,6 +84,8 @@ define void @sve_add(ptr  %dst, ptr  %a, ptr  %b, i64 %n) {
 ; CHECK-CA520-LABEL: define void @sve_add(
 ; CHECK-CA520-SAME: ptr [[DST:%.*]], ptr [[A:%.*]], ptr [[B:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-CA520-NEXT:  [[ENTRY:.*:]]
+; CHECK-CA520-NEXT:    [[A6:%.*]] = ptrtoint ptr [[A]] to i64
+; CHECK-CA520-NEXT:    [[DST5:%.*]] = ptrtoint ptr [[DST]] to i64
 ; CHECK-CA520-NEXT:    [[B3:%.*]] = ptrtoint ptr [[B]] to i64
 ; CHECK-CA520-NEXT:    [[A2:%.*]] = ptrtoint ptr [[A]] to i64
 ; CHECK-CA520-NEXT:    [[DST1:%.*]] = ptrtoint ptr [[DST]] to i64
@@ -85,7 +100,18 @@ define void @sve_add(ptr  %dst, ptr  %a, ptr  %b, i64 %n) {
 ; CHECK-CA520-NEXT:    [[TMP1:%.*]] = sub i64 [[DST1]], [[B3]]
 ; CHECK-CA520-NEXT:    [[DIFF_CHECK4:%.*]] = icmp ult i64 [[TMP1]], 32
 ; CHECK-CA520-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[DIFF_CHECK]], [[DIFF_CHECK4]]
-; CHECK-CA520-NEXT:    br i1 [[CONFLICT_RDX]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
+; CHECK-CA520-NEXT:    [[TMP12:%.*]] = inttoptr i64 [[A6]] to ptr
+; CHECK-CA520-NEXT:    [[TMP17:%.*]] = inttoptr i64 [[DST5]] to ptr
+; CHECK-CA520-NEXT:    [[ALIAS_LANE_MASK:%.*]] = call <4 x i1> @llvm.loop.dependence.war.mask.v4i1(ptr [[TMP12]], ptr [[TMP17]], i64 4)
+; CHECK-CA520-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[B3]] to ptr
+; CHECK-CA520-NEXT:    [[TMP18:%.*]] = inttoptr i64 [[DST5]] to ptr
+; CHECK-CA520-NEXT:    [[ALIAS_LANE_MASK7:%.*]] = call <4 x i1> @llvm.loop.dependence.war.mask.v4i1(ptr [[TMP4]], ptr [[TMP18]], i64 4)
+; CHECK-CA520-NEXT:    [[TMP19:%.*]] = and <4 x i1> [[ALIAS_LANE_MASK]], [[ALIAS_LANE_MASK7]]
+; CHECK-CA520-NEXT:    [[TMP7:%.*]] = zext <4 x i1> [[TMP19]] to <4 x i8>
+; CHECK-CA520-NEXT:    [[TMP20:%.*]] = call i8 @llvm.vector.reduce.add.v4i8(<4 x i8> [[TMP7]])
+; CHECK-CA520-NEXT:    [[TMP21:%.*]] = zext i8 [[TMP20]] to i64
+; CHECK-CA520-NEXT:    [[TMP22:%.*]] = icmp eq i64 [[TMP21]], 0
+; CHECK-CA520-NEXT:    br i1 [[TMP22]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK-CA520:       [[VECTOR_PH]]:
 ; CHECK-CA520-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 8
 ; CHECK-CA520-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
@@ -106,7 +132,7 @@ define void @sve_add(ptr  %dst, ptr  %a, ptr  %b, i64 %n) {
 ; CHECK-CA520-NEXT:    [[TMP13:%.*]] = getelementptr inbounds nuw float, ptr [[TMP11]], i32 4
 ; CHECK-CA520-NEXT:    store <4 x float> [[TMP9]], ptr [[TMP11]], align 4
 ; CHECK-CA520-NEXT:    store <4 x float> [[TMP10]], ptr [[TMP13]], align 4
-; CHECK-CA520-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP2]], 8
+; CHECK-CA520-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP2]], [[TMP21]]
 ; CHECK-CA520-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-CA520-NEXT:    br i1 [[TMP14]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK-CA520:       [[MIDDLE_BLOCK]]:
@@ -135,6 +161,8 @@ define void @sve_add(ptr  %dst, ptr  %a, ptr  %b, i64 %n) {
 ; CHECK-CA320-LABEL: define void @sve_add(
 ; CHECK-CA320-SAME: ptr [[DST:%.*]], ptr [[A:%.*]], ptr [[B:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-CA320-NEXT:  [[ENTRY:.*:]]
+; CHECK-CA320-NEXT:    [[A6:%.*]] = ptrtoint ptr [[A]] to i64
+; CHECK-CA320-NEXT:    [[DST5:%.*]] = ptrtoint ptr [[DST]] to i64
 ; CHECK-CA320-NEXT:    [[B3:%.*]] = ptrtoint ptr [[B]] to i64
 ; CHECK-CA320-NEXT:    [[A2:%.*]] = ptrtoint ptr [[A]] to i64
 ; CHECK-CA320-NEXT:    [[DST1:%.*]] = ptrtoint ptr [[DST]] to i64
@@ -149,7 +177,18 @@ define void @sve_add(ptr  %dst, ptr  %a, ptr  %b, i64 %n) {
 ; CHECK-CA320-NEXT:    [[TMP1:%.*]] = sub i64 [[DST1]], [[B3]]
 ; CHECK-CA320-NEXT:    [[DIFF_CHECK4:%.*]] = icmp ult i64 [[TMP1]], 32
 ; CHECK-CA320-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[DIFF_CHECK]], [[DIFF_CHECK4]]
-; CHECK-CA320-NEXT:    br i1 [[CONFLICT_RDX]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
+; CHECK-CA320-NEXT:    [[TMP13:%.*]] = inttoptr i64 [[A6]] to ptr
+; CHECK-CA320-NEXT:    [[TMP14:%.*]] = inttoptr i64 [[DST5]] to ptr
+; CHECK-CA320-NEXT:    [[ALIAS_LANE_MASK:%.*]] = call <4 x i1> @llvm.loop.dependence.war.mask.v4i1(ptr [[TMP13]], ptr [[TMP14]], i64 4)
+; CHECK-CA320-NEXT:    [[TMP15:%.*]] = inttoptr i64 [[B3]] to ptr
+; CHECK-CA320-NEXT:    [[TMP16:%.*]] = inttoptr i64 [[DST5]] to ptr
+; CHECK-CA320-NEXT:    [[ALIAS_LANE_MASK7:%.*]] = call <4 x i1> @llvm.loop.dependence.war.mask.v4i1(ptr [[TMP15]], ptr [[TMP16]], i64 4)
+; CHECK-CA320-NEXT:    [[TMP17:%.*]] = and <4 x i1> [[ALIAS_LANE_MASK]], [[ALIAS_LANE_MASK7]]
+; CHECK-CA320-NEXT:    [[TMP18:%.*]] = zext <4 x i1> [[TMP17]] to <4 x i8>
+; CHECK-CA320-NEXT:    [[TMP19:%.*]] = call i8 @llvm.vector.reduce.add.v4i8(<4 x i8> [[TMP18]])
+; CHECK-CA320-NEXT:    [[TMP20:%.*]] = zext i8 [[TMP19]] to i64
+; CHECK-CA320-NEXT:    [[TMP21:%.*]] = icmp eq i64 [[TMP20]], 0
+; CHECK-CA320-NEXT:    br i1 [[TMP21]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK-CA320:       [[VECTOR_PH]]:
 ; CHECK-CA320-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 8
 ; CHECK-CA320-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
@@ -170,7 +209,7 @@ define void @sve_add(ptr  %dst, ptr  %a, ptr  %b, i64 %n) {
 ; CHECK-CA320-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw float, ptr [[TMP8]], i32 4
 ; CHECK-CA320-NEXT:    store <4 x float> [[TMP6]], ptr [[TMP8]], align 4
 ; CHECK-CA320-NEXT:    store <4 x float> [[TMP7]], ptr [[TMP9]], align 4
-; CHECK-CA320-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
+; CHECK-CA320-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP20]]
 ; CHECK-CA320-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-CA320-NEXT:    br i1 [[TMP10]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK-CA320:       [[MIDDLE_BLOCK]]:

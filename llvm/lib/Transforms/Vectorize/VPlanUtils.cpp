@@ -42,7 +42,9 @@ VPValue *vputils::getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr) {
   if (U && !isa<Instruction>(U->getValue()))
     return Plan.getOrAddLiveIn(U->getValue());
   auto *Expanded = new VPExpandSCEVRecipe(Expr);
-  Plan.getEntry()->appendRecipe(Expanded);
+  VPRecipeBase *ExpandedR = Expanded->getDefiningRecipe();
+
+  ExpandedR->insertBefore(*Plan.getEntry(), Plan.getEntry()->getFirstNonPhi());
   return Expanded;
 }
 

@@ -2190,53 +2190,6 @@ public:
       // Otherwise, fallback to default scalarization cost.
       break;
     }
-    case Intrinsic::loop_dependence_raw_mask:
-    case Intrinsic::loop_dependence_war_mask: {
-      InstructionCost Cost = 0;
-      Type *PtrTy = ICA.getArgTypes()[0];
-      bool IsReadAfterWrite = IID == Intrinsic::loop_dependence_raw_mask;
-
-      Cost +=
-          thisT()->getArithmeticInstrCost(Instruction::Sub, PtrTy, CostKind);
-      if (IsReadAfterWrite) {
-        IntrinsicCostAttributes AbsAttrs(Intrinsic::abs, PtrTy, {PtrTy}, {});
-        Cost += thisT()->getIntrinsicInstrCost(AbsAttrs, CostKind);
-      }
-
-      Cost +=
-          thisT()->getArithmeticInstrCost(Instruction::SDiv, PtrTy, CostKind);
-      Type *CmpTy =
-          getTLI()
-              ->getSetCCResultType(
-                  thisT()->getDataLayout(), RetTy->getContext(),
-                  getTLI()->getValueType(thisT()->getDataLayout(), PtrTy))
-              .getTypeForEVT(RetTy->getContext());
-      Cost += thisT()->getCmpSelInstrCost(
-          BinaryOperator::ICmp, CmpTy, PtrTy,
-          IsReadAfterWrite ? CmpInst::ICMP_EQ : CmpInst::ICMP_SLE, CostKind);
-
-      // The deconstructed active lane mask
-      VectorType *RetTyVec = cast<VectorType>(RetTy);
-      VectorType *SplatTy = cast<VectorType>(RetTyVec->getWithNewType(PtrTy));
-      Cost += thisT()->getShuffleCost(TTI::SK_Broadcast, SplatTy, SplatTy, {},
-                                      CostKind, 0, nullptr);
-      IntrinsicCostAttributes StepVecAttrs(Intrinsic::stepvector, SplatTy, {},
-                                           FMF);
-      Cost += thisT()->getIntrinsicInstrCost(StepVecAttrs, CostKind);
-      Cost += thisT()->getCmpSelInstrCost(BinaryOperator::ICmp, SplatTy,
-                                          SplatTy, CmpInst::ICMP_ULT, CostKind);
-
-      Cost +=
-          thisT()->getCastInstrCost(Instruction::CastOps::ZExt, RetTy, SplatTy,
-                                    TTI::CastContextHint::None, CostKind);
-      Cost += thisT()->getCastInstrCost(Instruction::CastOps::ZExt,
-                                        RetTyVec->getElementType(), CmpTy,
-                                        TTI::CastContextHint::None, CostKind);
-      Cost += thisT()->getShuffleCost(TTI::SK_Broadcast, RetTyVec, RetTyVec, {},
-                                      CostKind, 0, nullptr);
-      Cost += thisT()->getArithmeticInstrCost(Instruction::Or, RetTy, CostKind);
-      return Cost;
-    }
     }
 
     // Assume that we need to scalarize this intrinsic.)

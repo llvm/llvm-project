@@ -2409,22 +2409,6 @@ static VPValue *addVPLaneMaskPhiAndUpdateExitBranch(
   auto *VecPreheader = Plan.getVectorPreheader();
   VPBuilder Builder(VecPreheader);
 
-  // Create an alias mask for each possibly-aliasing pointer pair. If there
-  // are multiple they are combined together with ANDs.
-  VPValue *AliasMask = nullptr;
-
-  for (auto C : RTChecks) {
-    VPValue *Sink = vputils::getOrCreateVPValueForSCEVExpr(Plan, C.SinkStart);
-    VPValue *Src = vputils::getOrCreateVPValueForSCEVExpr(Plan, C.SrcStart);
-    VPAliasLaneMaskRecipe *M =
-        new VPAliasLaneMaskRecipe(Src, Sink, C.AccessSize, C.WriteAfterRead);
-    VecPreheader->appendRecipe(M);
-    if (AliasMask)
-      AliasMask = Builder.createAnd(AliasMask, M);
-    else
-      AliasMask = M;
-  }
-
   // Create the ActiveLaneMask instruction using the correct start values.
   VPValue *TC = Plan.getTripCount();
 
@@ -2451,8 +2435,8 @@ static VPValue *addVPLaneMaskPhiAndUpdateExitBranch(
   VPValue *ALMMultiplier =
       Plan.getConstantInt(TopRegion->getCanonicalIVType(), 1);
   auto *Mask = Builder.createNaryOp(VPInstruction::ActiveLaneMask,
-                                        {EntryIncrement, TC, ALMMultiplier}, DL,
-                                        "active.lane.mask.entry");
+                                    {EntryIncrement, TC, ALMMultiplier}, DL,
+                                    "active.lane.mask.entry");
 
   // Now create the ActiveLaneMaskPhi recipe in the main loop using the
   // preheader ActiveLaneMask instruction.
@@ -2460,29 +2444,6 @@ static VPValue *addVPLaneMaskPhiAndUpdateExitBranch(
       new VPActiveLaneMaskPHIRecipe(Mask, DebugLoc::getUnknown());
   LaneMaskPhi->insertAfter(CanonicalIVPHI);
   VPValue *LaneMask = LaneMaskPhi;
-  if (AliasMask) {
-    VPBuilder CountBuilder =
-        VPBuilder::getToInsertAfter(AliasMask->getDefiningRecipe());
-    VPValue *PopCount = CountBuilder.createNaryOp(VPInstruction::PopCount,
-                                                  {AliasMask}, DL, "popcount");
-    // Increment phi by correct amount.
-    Builder.setInsertPoint(CanonicalIVIncrement);
-
-    VPValue *IncrementBy = PopCount;
-    Type *IVType = CanonicalIVPHI->getScalarType();
-
-    if (IVType->getScalarSizeInBits() < 64)
-      IncrementBy =
-          Builder.createScalarCast(Instruction::Trunc, IncrementBy, IVType,
-                                   CanonicalIVIncrement->getDebugLoc());
-    CanonicalIVIncrement->setOperand(1, IncrementBy);
-
-    // And the alias mask so the iteration only processes non-aliasing lanes
-    Builder.setInsertPoint(CanonicalIVPHI->getParent(),
-                           CanonicalIVPHI->getParent()->getFirstNonPhi());
-    LaneMask = Builder.createNaryOp(Instruction::BinaryOps::And,
-                                    {LaneMaskPhi, AliasMask}, DL);
-  }
 
   // Create the active lane mask for the next iteration of the loop before the
   // original terminator.
