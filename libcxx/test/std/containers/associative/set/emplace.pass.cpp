@@ -13,7 +13,7 @@
 // class set
 
 // template <class... Args>
-//   pair<iterator, bool> emplace(Args&&... args);
+//   constexpr pair<iterator, bool> emplace(Args&&... args); // constexpr since C++26
 
 #include <cassert>
 #include <set>
@@ -23,8 +23,8 @@
 #include "MoveOnly.h"
 #include "min_allocator.h"
 
-int main(int, char**) {
-  {
+TEST_CONSTEXPR_CXX26 bool test() {
+  if (!TEST_IS_CONSTANT_EVALUATED) {
     typedef std::set<DefaultOnly> M;
     typedef std::pair<M::iterator, bool> R;
     M m;
@@ -43,7 +43,8 @@ int main(int, char**) {
     assert(*m.begin() == DefaultOnly());
     assert(DefaultOnly::count == 1);
   }
-  assert(DefaultOnly::count == 0);
+  if (!TEST_IS_CONSTANT_EVALUATED)
+    assert(DefaultOnly::count == 0);
   {
     typedef std::set<Emplaceable> M;
     typedef std::pair<M::iterator, bool> R;
@@ -92,5 +93,12 @@ int main(int, char**) {
     assert(set.begin() == std::get<0>(res));
   }
 
+  return true;
+}
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
   return 0;
 }

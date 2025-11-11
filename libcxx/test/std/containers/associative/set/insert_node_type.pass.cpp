@@ -12,7 +12,7 @@
 
 // class set
 
-// insert_return_type insert(node_type&&);
+// constexpr insert_return_type insert(node_type&&); // constexpr since C++26
 
 #include <memory>
 #include <set>
@@ -21,7 +21,7 @@
 #include "min_allocator.h"
 
 template <class Container, class T>
-void verify_insert_return_type(T&& t) {
+TEST_CONSTEXPR_CXX26 void verify_insert_return_type(T&& t) {
   using verified_type = std::remove_cv_t<std::remove_reference_t<T>>;
   static_assert(std::is_aggregate_v<verified_type>);
   static_assert(std::is_same_v<verified_type, typename Container::insert_return_type>);
@@ -42,19 +42,20 @@ void verify_insert_return_type(T&& t) {
 }
 
 template <class Container>
-typename Container::node_type node_factory(typename Container::key_type const& key) {
-  static Container c;
+TEST_CONSTEXPR_CXX26 typename Container::node_type node_factory(Container& c, typename Container::key_type const& key) {
   auto p = c.insert(key);
   assert(p.second);
   return c.extract(p.first);
 }
 
 template <class Container>
-void test(Container& c) {
+TEST_CONSTEXPR_CXX26 void test(Container& c) {
   auto* nf = &node_factory<Container>;
 
+  Container c2;
+
   for (int i = 0; i != 10; ++i) {
-    typename Container::node_type node = nf(i);
+    typename Container::node_type node = nf(c2, i);
     assert(!node.empty());
     typename Container::insert_return_type irt = c.insert(std::move(node));
     assert(node.empty());
@@ -77,7 +78,7 @@ void test(Container& c) {
   }
 
   { // Insert duplicate node.
-    typename Container::node_type dupl = nf(0);
+    typename Container::node_type dupl = nf(c2, 0);
     auto irt                           = c.insert(std::move(dupl));
     assert(dupl.empty());
     assert(!irt.inserted);
@@ -94,11 +95,18 @@ void test(Container& c) {
   }
 }
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   std::set<int> m;
   test(m);
   std::set<int, std::less<int>, min_allocator<int>> m2;
   test(m2);
 
+  return true;
+}
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
   return 0;
 }

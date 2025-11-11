@@ -189,7 +189,7 @@ constexpr bool test_set_constraints() {
 }
 
 template <template <class...> class Container, class T, class Iter, class Sent, class Comp, class Alloc>
-void test_associative_set_with_input(std::vector<T>&& input) {
+TEST_CONSTEXPR_CXX26 void test_associative_set_with_input(std::vector<T>&& input) {
   { // (range)
     std::ranges::subrange in(Iter(input.data()), Sent(Iter(input.data() + input.size())));
     Container<T> c(std::from_range, in);
@@ -232,7 +232,7 @@ void test_associative_set_with_input(std::vector<T>&& input) {
 }
 
 template <template <class...> class Container, class T, class Iter, class Sent, class Comp, class Alloc>
-void test_associative_set() {
+TEST_CONSTEXPR_CXX26 void test_associative_set() {
   auto test_with_input = &test_associative_set_with_input<Container, T, Iter, Sent, Comp, Alloc>;
 
   // Normal input.
@@ -244,7 +244,7 @@ void test_associative_set() {
 }
 
 template <template <class...> class Container>
-void test_associative_set_move_only() {
+TEST_CONSTEXPR_CXX26 void test_associative_set_move_only() {
   MoveOnly input[5];
   std::ranges::subrange in(std::move_iterator{input}, std::move_iterator{input + 5});
 
@@ -252,8 +252,8 @@ void test_associative_set_move_only() {
 }
 
 template <template <class...> class Container>
-void test_set_exception_safety_throwing_copy() {
-#if !defined(TEST_HAS_NO_EXCEPTIONS)
+TEST_CONSTEXPR_CXX26 void test_set_exception_safety_throwing_copy() {
+#if !defined(TEST_HAS_NO_EXCEPTIONS) && !defined(TEST_IS_CONSTANT_EVALUATED)
   using T = ThrowingCopy<3>;
   T::reset();
   T in[5] = {{1}, {2}, {3}, {4}, {5}};
@@ -270,8 +270,8 @@ void test_set_exception_safety_throwing_copy() {
 }
 
 template <template <class...> class Container, class T>
-void test_set_exception_safety_throwing_allocator() {
-#if !defined(TEST_HAS_NO_EXCEPTIONS)
+TEST_CONSTEXPR_CXX26 void test_set_exception_safety_throwing_allocator() {
+#if !defined(TEST_HAS_NO_EXCEPTIONS) && !defined(TEST_IS_CONSTANT_EVALUATED)
   T in[] = {1, 2};
 
   try {

@@ -12,7 +12,7 @@
 
 // class set
 
-// set(set&& s, const allocator_type& a);
+// constexpr set(set&& s, const allocator_type& a); // constexpr since C++26
 
 #include <set>
 #include <cassert>
@@ -24,7 +24,7 @@
 #include "test_allocator.h"
 #include "Counter.h"
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   {
     typedef MoveOnly V;
     typedef test_less<MoveOnly> C;
@@ -73,7 +73,7 @@ int main(int, char**) {
     assert(m3.key_comp() == C(5));
     LIBCPP_ASSERT(m1.empty());
   }
-  {
+  if (!TEST_IS_CONSTANT_EVALUATED) {
     typedef Counter<int> V;
     typedef std::less<V> C;
     typedef test_allocator<V> A;
@@ -111,5 +111,12 @@ int main(int, char**) {
     assert(Counter_base::gConstructed == 0);
   }
 
+  return true;
+}
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
   return 0;
 }
