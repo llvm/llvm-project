@@ -4540,7 +4540,7 @@ LoopVectorizationPlanner::selectInterleaveCount(VPlan &Plan, ElementCount VF,
   // 3. We don't interleave if we think that we will spill registers to memory
   // due to the increased register pressure.
 
-  // Only interleave tail-folded loops if wide lane masks requested, as the
+  // Only interleave tail-folded loops if wide lane masks are requested, as the
   // overhead of multiple instructions to calculate the predicate is likely
   // not beneficial. If a scalar epilogue is not allowed for any other reason,
   // do not interleave.
