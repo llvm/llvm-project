@@ -1798,9 +1798,18 @@ LogicalResult ScaledExtPacked816OpLowering::matchAndRewrite(
     rewriter.replaceOp(op, newOp);
     return success();
   }
+  if (isa<Float4E2M1FNType>(srcElemType) and isa<Float32Type>(tgtElemType)) {
+    // CvtPkScalePk8F32Fp4Op
+    // i32
+    Value castedSource =
+        LLVM::BitcastOp::create(rewriter, loc, i32, adaptor.getSource());
+    auto newOp = ROCDL::CvtPkScalePk8F32Fp4Op::create(
+        rewriter, loc, op.getResult().getType(), castedSource, castedScale,
+        scaleSel);
+    rewriter.replaceOp(op, newOp);
+    return success();
+  }
   /*
-
-
   CvtPkScalePk8F32Fp4Op
   CvtPkScalePk8F32Fp8Op
   CvtPkScalePk8F32Bf8Op
