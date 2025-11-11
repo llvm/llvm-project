@@ -4,8 +4,8 @@ gpu.module @test_kernel [#xevm.target<chip = "pvc">] {
 
  // e.g. for mem_desc<32x32xf16, @strides=[1, 16]>
   // its memory layout tuple is (blocked shape = [1,1,32,32],strides=[1024,1024,32,1])
-  //CHECK-LABEL: load_store_matrix_1
-  gpu.func @load_store_matrix_1(%arg0: memref<4096xi8, 3>) -> f32 {
+  //CHECK-LABEL: load_store_matrix_plain
+  gpu.func @load_store_matrix_plain(%arg0: memref<4096xi8, 3>) -> f32 {
     %0 = xegpu.create_mem_desc %arg0 : memref<4096xi8, 3> -> !xegpu.mem_desc<32x32xf32>
 
     //CHECK: %[[TID:.*]] = gpu.thread_id x
@@ -26,10 +26,38 @@ gpu.module @test_kernel [#xevm.target<chip = "pvc">] {
     gpu.return %1: f32
   }
 
+  //CHECK-LABEL: load_store_matrix_plain_2d_input
+  gpu.func @load_store_matrix_plain(%arg0: memref<8192xi8, 3>) -> f32 {
+
+    %view = memref.view %arg0[0][]: memref<8192xi8, 3> to memref<64x32xf32, 3>
+    
+    %subview = memref.subview %view[64, 0] [64, 128] [1, 1] : memref<64x32xf32, 3> to memref<32x32xf32, strided<[32, 1], offset: 1024>, 3>
+
+    %0 = xegpu.create_mem_desc %subview : memref<32x32xf32, strided<[32, 1], offset: 1024>, 3> -> !xegpu.mem_desc<32x32xf32>
+
+    //CHECK: %[[TID:.*]] = gpu.thread_id x
+    //CHECK: %[[C1:.*]] = arith.constant 1 : index
+    //CHECK: %[[MUL1:.*]] = arith.muli %[[TID]], %[[C1]] : index
+    //CHECK: %[[C4:.*]] = arith.constant 4 : i32
+    //CHECK: %[[MUL2:.*]] = arith.muli {{.*}}, %[[C4]] : i32
+    //CHECK: llvm.load {{.*}} : !llvm.ptr<3> -> f32
+
+    %tid_x = gpu.thread_id x
+    %c0 = arith.constant 0 : index
+    %1 = xegpu.load_matrix %0[%c0, %tid_x]: !xegpu.mem_desc<32x32xf32>, index, index -> f32
+
+    //CHECK: llvm.store {{.*}}, {{.*}} : f32, !llvm.ptr<3>
+
+     xegpu.store_matrix %1, %0[%c0, %tid_x]: f32, !xegpu.mem_desc<32x32xf32>, index, index
+
+    gpu.return %1: f32
+  }
+
+
 // e.g. for mem_desc<32x64xf16, @block=[16, 16], @strides=[1, 32]>
   // its memory layout tuple is ([2,4,16,16],[256,512,1,16])
-  //CHECK-LABEL: load_store_matrix_2
-  gpu.func @load_store_matrix_2(%arg0: memref<4096xi8, 3>) -> f16 {
+  //CHECK-LABEL: load_store_matrix_blocked_strided
+  gpu.func @load_store_matrix_blocked_strided(%arg0: memref<4096xi8, 3>) -> f16 {
     %0 = xegpu.create_mem_desc %arg0 : memref<4096xi8, 3> -> !xegpu.mem_desc<32x64xf16, #xegpu.mem_layout<stride = [1, 32], block = [16, 16]>>
     //CHECK: %[[c0:.*]] = arith.constant 0 : index
     //CHECK: %[[tid_x:.*]] = gpu.thread_id x
@@ -68,8 +96,8 @@ gpu.module @test_kernel [#xevm.target<chip = "pvc">] {
 
   // e.g. for mem_desc<32x64xf16, @block=[16, 16]>
   // its memory layout tuple is ([2,4,16,16],[1024,256,16,1])
-  //CHECK-LABEL: load_store_matrix_3
-  gpu.func @load_store_matrix_3(%arg0: memref<4096xi8, 3>) -> f16 {
+  //CHECK-LABEL: load_store_matrix_blocked_nostride
+  gpu.func @load_store_matrix_blocked_nostride(%arg0: memref<4096xi8, 3>) -> f16 {
     //CHECK: %[[c0:.*]] = arith.constant 0 : index
     //CHECK: %[[view:.*]] = memref.view %arg0[%[[c0]]][] : memref<4096xi8, 3> to memref<2048xf16, 3>
     %0 = xegpu.create_mem_desc %arg0 : memref<4096xi8, 3> -> !xegpu.mem_desc<32x64xf16, #xegpu.mem_layout<block = [16, 16]>>
@@ -110,8 +138,8 @@ gpu.module @test_kernel [#xevm.target<chip = "pvc">] {
 
    // e.g. for mem_desc<32x64xf16, @block=[16, 16], @strides=[1, 16]>
   // its memory layout tuple is ([2,4,16,16],[256,512,1,16])
-  //CHECK-LABEL: load_store_matrix_4
-  gpu.func @load_store_matrix_4(%arg0: memref<4096xi8, 3>) -> vector<8xf16> {
+  //CHECK-LABEL: load_store_matrix_blocked_strided_return_vector
+  gpu.func @load_store_matrix_blocked_strided_return_vector(%arg0: memref<4096xi8, 3>) -> vector<8xf16> {
     %0 = xegpu.create_mem_desc %arg0 : memref<4096xi8, 3> -> !xegpu.mem_desc<32x64xf16, #xegpu.mem_layout<stride = [1, 32], block = [16, 16]>>
 
     //CHECK: %[[c0:.*]] = arith.constant 0 : index
@@ -150,8 +178,8 @@ gpu.module @test_kernel [#xevm.target<chip = "pvc">] {
  
   // e.g. for mem_desc<32x64xf16, @block=[16, 16]>
   // its memory layout tuple is ([2,4,16,16],[1024,256,16,1])
-  //CHECK-LABEL: load_store_matrix_5
-  gpu.func @load_store_matrix_5(%arg0: memref<4096xi8, 3>) -> vector<8xf16> {
+  //CHECK-LABEL: load_store_matrix_blocked_subgroupblockio
+  gpu.func @load_store_matrix_blocked_subgroupblockio(%arg0: memref<4096xi8, 3>) -> vector<8xf16> {
     //CHECK: %[[c0:.*]] = arith.constant 0 : index
     //CHECK: %[[view:.*]] = memref.view %arg0[%[[c0]]][] : memref<4096xi8, 3> to memref<2048xf16, 3>
  
