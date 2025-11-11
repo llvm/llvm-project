@@ -4862,7 +4862,8 @@ struct OmpToClause {
 // transparent-clause ->
 //    TRANSPARENT[(impex-type)]                     // since 6.0
 struct OmpTransparentClause {
-  ENUM_CLASS(TransparentPolicy, Omp_Not_Impex, Omp_Import, Omp_Export, Omp_Impex)
+  ENUM_CLASS(
+      TransparentPolicy, Omp_Not_Impex, Omp_Import, Omp_Export, Omp_Impex)
   WRAPPER_CLASS_BOILERPLATE(OmpTransparentClause, TransparentPolicy);
 };
 
