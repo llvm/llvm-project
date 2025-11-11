@@ -1,4 +1,5 @@
 add_flang_library(FIRSupport
+  BoxValue.cpp
   DataLayout.cpp
   InitFIR.cpp
   InternalNames.cpp
