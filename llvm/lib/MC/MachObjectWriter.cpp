@@ -28,6 +28,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/SMLoc.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
@@ -583,9 +584,11 @@ void MachObjectWriter::computeSymbolTable(
   // Build section lookup table.
   DenseMap<const MCSection*, uint8_t> SectionIndexMap;
   unsigned Index = 1;
-  for (MCSection &Sec : Asm)
+  for (MCSection &Sec : Asm) {
     SectionIndexMap[&Sec] = Index++;
-  assert(Index <= 256 && "Too many sections!");
+  }
+  if(Index > 256)
+    getContext().reportError(SMLoc(), "Too many sections!");
 
   // Build the string table.
   for (const MCSymbol &Symbol : Asm.symbols()) {
@@ -622,7 +625,8 @@ void MachObjectWriter::computeSymbolTable(
       ExternalSymbolData.push_back(MSD);
     } else {
       MSD.SectionIndex = SectionIndexMap.lookup(&Symbol.getSection());
-      assert(MSD.SectionIndex && "Invalid section index!");
+      if(!MSD.SectionIndex)
+        Asm.getContext().reportError(SMLoc(), "Invalid section index!");
       ExternalSymbolData.push_back(MSD);
     }
   }
@@ -646,8 +650,8 @@ void MachObjectWriter::computeSymbolTable(
       LocalSymbolData.push_back(MSD);
     } else {
       MSD.SectionIndex = SectionIndexMap.lookup(&Symbol.getSection());
-      if (!MSD.SectionIndex)
-        report_fatal_error("Invalid section index!");
+      if(!MSD.SectionIndex)
+        getContext().reportError(SMLoc(), "Invalid section index!");
       LocalSymbolData.push_back(MSD);
     }
   }
