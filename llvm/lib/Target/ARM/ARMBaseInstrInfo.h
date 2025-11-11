@@ -44,7 +44,8 @@ class ARMBaseInstrInfo : public ARMGenInstrInfo {
 
 protected:
   // Can be only subclassed.
-  explicit ARMBaseInstrInfo(const ARMSubtarget &STI);
+  explicit ARMBaseInstrInfo(const ARMSubtarget &STI,
+                            const ARMBaseRegisterInfo &TRI);
 
   void expandLoadStackGuardBase(MachineBasicBlock::iterator MI,
                                 unsigned LoadImmOpc, unsigned LoadOpc) const;
@@ -125,7 +126,11 @@ public:
   // if there is not such an opcode.
   virtual unsigned getUnindexedOpcode(unsigned Opc) const = 0;
 
-  virtual const ARMBaseRegisterInfo &getRegisterInfo() const = 0;
+  const ARMBaseRegisterInfo &getRegisterInfo() const {
+    return static_cast<const ARMBaseRegisterInfo &>(
+        TargetInstrInfo::getRegisterInfo());
+  }
+
   const ARMSubtarget &getSubtarget() const { return Subtarget; }
 
   ScheduleHazardRecognizer *

@@ -8,3 +8,6 @@ breaks build of ROCmValidationSuite
 breaks fortran declare-target-link1
 [OMPIRBuilder] Fix addrspace of internal critical section lock (#166459
 ---
+complicated to land parallel-EQ
+Reland "[clang] Refactor option-related code from clangDriver into new clangOptions library" (#167374)
+---
