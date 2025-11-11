@@ -209,19 +209,6 @@ private:
 } // namespace clang
 
 template <class Emitter>
-bool Compiler<Emitter>::isValidBitCast(const CastExpr *E) {
-  QualType FromTy = E->getSubExpr()->getType()->getPointeeType();
-  QualType ToTy = E->getType()->getPointeeType();
-
-  if (classify(FromTy) == classify(ToTy))
-    return true;
-
-  if (FromTy->isVoidType() || ToTy->isVoidType())
-    return true;
-  return false;
-}
-
-template <class Emitter>
 bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
   const Expr *SubExpr = CE->getSubExpr();
 
@@ -506,12 +493,9 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
     if (!FromT || !ToT)
       return false;
 
-    if (!this->isValidBitCast(CE) &&
-        !this->emitInvalidCast(CastKind::ReinterpretLike, /*Fatal=*/false, CE))
-      return false;
-
     assert(isPtrType(*FromT));
     assert(isPtrType(*ToT));
+    bool SrcIsVoidPtr = SubExprTy->isVoidPointerType();
     if (FromT == ToT) {
       if (CE->getType()->isVoidPointerType() &&
           !SubExprTy->isFunctionPointerType()) {
@@ -520,6 +504,10 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
 
       if (!this->visit(SubExpr))
         return false;
+      if (!this->emitCheckBitCast(CETy->getPointeeType().getTypePtr(),
+                                  SrcIsVoidPtr, CE))
+        return false;
+
       if (CE->getType()->isFunctionPointerType() ||
           SubExprTy->isFunctionPointerType()) {
         return this->emitFnPtrCast(CE);
@@ -2508,7 +2496,7 @@ bool Compiler<Emitter>::VisitAbstractConditionalOperator(
   };
 
   if (std::optional<bool> BoolValue = getBoolValue(Condition)) {
-    if (BoolValue)
+    if (*BoolValue)
       return visitChildExpr(TrueExpr);
     return visitChildExpr(FalseExpr);
   }
@@ -3235,7 +3223,8 @@ bool Compiler<Emitter>::VisitCXXConstructExpr(const CXXConstructExpr *E) {
       return this->visitInitializer(E->getArg(0));
 
     // Zero initialization.
-    if (E->requiresZeroInitialization()) {
+    bool ZeroInit = E->requiresZeroInitialization();
+    if (ZeroInit) {
       const Record *R = getRecord(E->getType());
 
       if (!this->visitZeroRecordInitializer(R, E))
@@ -3244,6 +3233,19 @@ bool Compiler<Emitter>::VisitCXXConstructExpr(const CXXConstructExpr *E) {
       // If the constructor is trivial anyway, we're done.
       if (Ctor->isTrivial())
         return true;
+    }
+
+    // Avoid materializing a temporary for an elidable copy/move constructor.
+    if (!ZeroInit && E->isElidable()) {
+      const Expr *SrcObj = E->getArg(0);
+      assert(SrcObj->isTemporaryObject(Ctx.getASTContext(), Ctor->getParent()));
+      assert(Ctx.getASTContext().hasSameUnqualifiedType(E->getType(),
+                                                        SrcObj->getType()));
+      if (const auto *ME = dyn_cast<MaterializeTemporaryExpr>(SrcObj)) {
+        if (!this->emitCheckFunctionDecl(Ctor, E))
+          return false;
+        return this->visitInitializer(ME->getSubExpr());
+      }
     }
 
     const Function *Func = getFunction(Ctor);
@@ -5430,8 +5432,7 @@ bool Compiler<Emitter>::VisitCXXThisExpr(const CXXThisExpr *E) {
   unsigned EndIndex = 0;
   // Find the init list.
   for (StartIndex = InitStack.size() - 1; StartIndex > 0; --StartIndex) {
-    if (InitStack[StartIndex].Kind == InitLink::K_InitList ||
-        InitStack[StartIndex].Kind == InitLink::K_This) {
+    if (InitStack[StartIndex].Kind == InitLink::K_DIE) {
       EndIndex = StartIndex;
       --StartIndex;
       break;
@@ -5444,7 +5445,8 @@ bool Compiler<Emitter>::VisitCXXThisExpr(const CXXThisExpr *E) {
       continue;
 
     if (InitStack[StartIndex].Kind != InitLink::K_Field &&
-        InitStack[StartIndex].Kind != InitLink::K_Elem)
+        InitStack[StartIndex].Kind != InitLink::K_Elem &&
+        InitStack[StartIndex].Kind != InitLink::K_DIE)
       break;
   }
 
@@ -5455,7 +5457,8 @@ bool Compiler<Emitter>::VisitCXXThisExpr(const CXXThisExpr *E) {
 
   // Emit the instructions.
   for (unsigned I = StartIndex; I != (EndIndex + 1); ++I) {
-    if (InitStack[I].Kind == InitLink::K_InitList)
+    if (InitStack[I].Kind == InitLink::K_InitList ||
+        InitStack[I].Kind == InitLink::K_DIE)
       continue;
     if (!InitStack[I].template emit<Emitter>(this, E))
       return false;
@@ -6326,8 +6329,8 @@ bool Compiler<Emitter>::compileConstructor(const CXXConstructorDecl *Ctor) {
 
       unsigned FirstLinkOffset =
           R->getField(cast<FieldDecl>(IFD->chain()[0]))->Offset;
-      InitStackScope<Emitter> ISS(this, isa<CXXDefaultInitExpr>(InitExpr));
       InitLinkScope<Emitter> ILS(this, InitLink::Field(FirstLinkOffset));
+      InitStackScope<Emitter> ISS(this, isa<CXXDefaultInitExpr>(InitExpr));
       if (!emitFieldInitializer(NestedField, NestedFieldOffset, InitExpr,
                                 IsUnion))
         return false;

@@ -29,7 +29,6 @@
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
 #include <memory>
-#include <string>
 #include <utility>
 
 using namespace llvm;
