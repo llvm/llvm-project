@@ -1293,7 +1293,6 @@ public:
                            "from latch block\n");
       return true;
     }
-
     if (IsVectorizing && InterleaveInfo.requiresScalarEpilogue()) {
       LLVM_DEBUG(dbgs() << "LV: Loop requires scalar epilogue: "
                            "interleaved group requires scalar epilogue\n");
