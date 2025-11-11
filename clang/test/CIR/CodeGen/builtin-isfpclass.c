@@ -1,72 +1,117 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.cir
-// RUN: FileCheck --input-file=%t.cir %s
-
+// RUN: FileCheck --input-file=%t.cir %s -check-prefix=CIR
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o %t.cir
+// RUN: FileCheck --input-file=%t.cir %s -check-prefix=LLVM
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.cir
+// RUN: FileCheck --input-file=%t.cir %s -check-prefix=OGCG
 int finite(double);
 
 // CHECK: cir.func {{.*}}@test_is_finite
 void test_is_finite(__fp16 *H, float F, double D, long double LD) {
     volatile int res;
     res = __builtin_isinf(*H);
-    // CHECK: cir.is_fp_class %{{.*}}, 516 : (!cir.f16) -> !cir.bool
+    // CIR: cir.is_fp_class %{{.*}}, 516 : (!cir.f16) -> !cir.bool
+    // LLVM: call i1 @llvm.is.fpclass.f16(half {{.*}}, i32 516)
+    // OGCG: call i1 @llvm.is.fpclass.f16(half {{.*}}, i32 516)
 
     res = __builtin_isinf(F);
-    // CHECK: cir.is_fp_class %{{.*}}, 516 : (!cir.float) -> !cir.bool
+    // CIR: cir.is_fp_class %{{.*}}, 516 : (!cir.float) -> !cir.bool
+    // LLVM: call i1 @llvm.is.fpclass.f32(float {{.*}}, i32 516)
+    // OGCG: call i1 @llvm.is.fpclass.f32(float {{.*}}, i32 516)
 
     res = __builtin_isinf(D);
-    // CHECK: cir.is_fp_class %{{.*}}, 516 : (!cir.double) -> !cir.bool
+    // CIR: cir.is_fp_class %{{.*}}, 516 : (!cir.double) -> !cir.bool
+    // LLVM: call i1 @llvm.is.fpclass.f64(double {{.*}}, i32 516)
+    // OGCG: call i1 @llvm.is.fpclass.f64(double {{.*}}, i32 516)
 
     res = __builtin_isinf(LD);
-    // CHECK: cir.is_fp_class %{{.*}}, 516 : (!cir.long_double<!cir.f80>) -> !cir.bool
+    // CIR: cir.is_fp_class %{{.*}}, 516 : (!cir.long_double<!cir.f80>) -> !cir.bool
+    // LLVM: call i1 @llvm.is.fpclass.f80(x86_fp80 {{.*}}, i32 516)
+    // OGCG: call i1 @llvm.is.fpclass.f80(x86_fp80 {{.*}}, i32 516)
 
     res = __builtin_isfinite(*H);
-    // CHECK: cir.is_fp_class %{{.*}}, 504 : (!cir.f16) -> !cir.bool
-    res = __builtin_isfinite(F);
-    // CHECK: cir.is_fp_class %{{.*}}, 504 : (!cir.float) -> !cir.bool
-    res = finite(D);
-    // CHECK: cir.call @finite(%{{.*}}) nothrow side_effect(const) : (!cir.double) -> !s32i
+    // CIR: cir.is_fp_class %{{.*}}, 504 : (!cir.f16) -> !cir.bool
+    // LLVM: call i1 @llvm.is.fpclass.f16(half {{.*}}, i32 504)
+    // OGCG: call i1 @llvm.is.fpclass.f16(half {{.*}}, i32 504)
 
+    res = __builtin_isfinite(F);
+    // CIR: cir.is_fp_class %{{.*}}, 504 : (!cir.float) -> !cir.bool
+    // LLVM: call i1 @llvm.is.fpclass.f32(float {{.*}}, i32 504)
+    // OGCG: call i1 @llvm.is.fpclass.f32(float {{.*}}, i32 504)
+
+    res = finite(D);
+    // CIR: cir.call @finite(%{{.*}}) nothrow side_effect(const) : (!cir.double) -> !s32i
+    // LLVM: call i32 @finite(double {{.*}})
+    // OGCG: call i1 @llvm.is.fpclass.f64(double %20, i32 504)
     res = __builtin_isnormal(*H);
-    // CHECK: cir.is_fp_class %{{.*}}, 264 : (!cir.f16) -> !cir.bool
+    // CIR: cir.is_fp_class %{{.*}}, 264 : (!cir.f16) -> !cir.bool
+    // LLVM: call i1 @llvm.is.fpclass.f16(half {{.*}}, i32 264)
+    // OGCG: call i1 @llvm.is.fpclass.f16(half {{.*}}, i32 264)
+
     res = __builtin_isnormal(F);
-    // CHECK: cir.is_fp_class %{{.*}}, 264 : (!cir.float) -> !cir.bool
+    // CIR: cir.is_fp_class %{{.*}}, 264 : (!cir.float) -> !cir.bool
+    // LLVM: call i1 @llvm.is.fpclass.f32(float {{.*}}, i32 264)
+    // OGCG: call i1 @llvm.is.fpclass.f32(float {{.*}}, i32 264)
 
     res = __builtin_issubnormal(F);
-    // CHECK: cir.is_fp_class %{{.*}}, 144 : (!cir.float) -> !cir.bool
+    // CIR: cir.is_fp_class %{{.*}}, 144 : (!cir.float) -> !cir.bool
+    // LLVM: call i1 @llvm.is.fpclass.f32(float {{.*}}, i32 144)
+    // OGCG: call i1 @llvm.is.fpclass.f32(float {{.*}}, i32 144)
     res = __builtin_iszero(F);
-    // CHECK: cir.is_fp_class %{{.*}}, 96 : (!cir.float) -> !cir.bool
+    // CIR: cir.is_fp_class %{{.*}}, 96 : (!cir.float) -> !cir.bool
+    // LLVM: call i1 @llvm.is.fpclass.f32(float {{.*}}, i32 96)
+    // OGCG: call i1 @llvm.is.fpclass.f32(float {{.*}}, i32 96)
     res = __builtin_issignaling(F);
-    // CHECK: cir.is_fp_class %{{.*}}, 1 : (!cir.float) -> !cir.bool
+    // CIR: cir.is_fp_class %{{.*}}, 1 : (!cir.float) -> !cir.bool
+    // LLVM: call i1 @llvm.is.fpclass.f32(float {{.*}}, i32 1)
+    // OGCG: call i1 @llvm.is.fpclass.f32(float {{.*}}, i32 1)
 }
 
 _Bool check_isfpclass_finite(float x) {
   return __builtin_isfpclass(x, 504 /*Finite*/);
 }
 
-// CHECK: cir.func {{.*}}@check_isfpclass_finite
-// CHECK: cir.is_fp_class %{{.*}}, 504 : (!cir.float)
+// CIR: cir.func {{.*}}@check_isfpclass_finite
+// CIR: cir.is_fp_class %{{.*}}, 504 : (!cir.float)
+// LLVM: @check_isfpclass_finite
+// LLVM: call i1 @llvm.is.fpclass.f32(float {{.*}}, i32 504)
+// OGCG: @check_isfpclass_finite
+// OGCG: call i1 @llvm.is.fpclass.f32(float {{.*}}, i32 504)
 
 _Bool check_isfpclass_nan_f32(float x) {
   return __builtin_isfpclass(x, 3 /*NaN*/);
 }
 
-// CHECK: cir.func {{.*}}@check_isfpclass_nan_f32
-// CHECK: cir.is_fp_class %{{.*}}, 3 : (!cir.float)
+// CIR: cir.func {{.*}}@check_isfpclass_nan_f32
+// CIR: cir.is_fp_class %{{.*}}, 3 : (!cir.float)
+// LLVM: @check_isfpclass_nan_f32
+// LLVM: call i1 @llvm.is.fpclass.f32(float {{.*}}, i32 3)
+// OGCG: @check_isfpclass_nan_f32
+// OGCG: call i1 @llvm.is.fpclass.f32(float {{.*}}, i32 3)
 
 
 _Bool check_isfpclass_snan_f64(double x) {
   return __builtin_isfpclass(x, 1 /*SNaN*/);
 }
 
-// CHECK: cir.func {{.*}}@check_isfpclass_snan_f64
-// CHECK: cir.is_fp_class %{{.*}}, 1 : (!cir.double)
+// CIR: cir.func {{.*}}@check_isfpclass_snan_f64
+// CIR: cir.is_fp_class %{{.*}}, 1 : (!cir.double)
+// LLVM: @check_isfpclass_snan_f64
+// LLVM: call i1 @llvm.is.fpclass.f64(double {{.*}}, i32 1)
+// OGCG: @check_isfpclass_snan_f64
+// OGCG: call i1 @llvm.is.fpclass.f64(double {{.*}}, i32 1)
 
 
 _Bool check_isfpclass_zero_f16(_Float16 x) {
   return __builtin_isfpclass(x, 96 /*Zero*/);
 }
 
-// CHECK: cir.func {{.*}}@check_isfpclass_zero_f16
-// CHECK: cir.is_fp_class %{{.*}}, 96 : (!cir.f16)
+// CIR: cir.func {{.*}}@check_isfpclass_zero_f16
+// CIR: cir.is_fp_class %{{.*}}, 96 : (!cir.f16)
+// LLVM: @check_isfpclass_zero_f16
+// LLVM: call i1 @llvm.is.fpclass.f16(half {{.*}}, i32 96)
+// OGCG: @check_isfpclass_zero_f16
+// OGCG: call i1 @llvm.is.fpclass.f16(half {{.*}}, i32 96)
 
 // Update when we support FP pragma in functions and can convert BoolType in prvalue to i1.
 

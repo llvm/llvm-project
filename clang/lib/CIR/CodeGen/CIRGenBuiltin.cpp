@@ -29,16 +29,6 @@ using namespace clang;
 using namespace clang::CIRGen;
 using namespace llvm;
 
-static mlir::Value tryUseTestFPKind(CIRGenFunction &cgf, unsigned BuiltinID,
-                                    mlir::Value V) {
-  if (cgf.getBuilder().getIsFPConstrained() &&
-      cgf.getBuilder().getDefaultConstrainedExcept() != cir::fp::ebIgnore) {
-    if (mlir::Value Result = cgf.getTargetHooks().testFPKind(
-            V, BuiltinID, cgf.getBuilder(), cgf.cgm))
-      return Result;
-  }
-  return nullptr;
-}
 static RValue emitLibraryCall(CIRGenFunction &cgf, const FunctionDecl *fd,
                               const CallExpr *e, mlir::Operation *calleeValue) {
   CIRGenCallee callee = CIRGenCallee::forDirect(calleeValue, GlobalDecl(fd));
@@ -538,36 +528,31 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   //  if the floating-point value, specified by the first argument, falls into
   //  any of data classes, specified by the second argument.
   case Builtin::BI__builtin_isnan: {
-    CIRGenFunction::CIRGenFPOptionsRAII fpOptsRaii(*this, e);
+    assert(!cir::MissingFeatures::cgFPOptionsRAII());
     mlir::Value v = emitScalarExpr(e->getArg(0));
-    if (mlir::Value result = tryUseTestFPKind(*this, builtinID, v))
-      return RValue::get(result);
+    assert(!cir::MissingFeatures::fpConstraints());
     mlir::Location loc = getLoc(e->getBeginLoc());
-    // FIXME: We should use builder.createZExt once createZExt is available.
-    return RValue::get(builder.createZExtOrBitCast(
-        loc, builder.createIsFPClass(loc, v, FPClassTest::fcNan),
+    return RValue::get(builder.createBoolToInt(
+        builder.createIsFPClass(loc, v, FPClassTest::fcNan),
         convertType(e->getType())));
   }
 
   case Builtin::BI__builtin_issignaling: {
-    CIRGenFunction::CIRGenFPOptionsRAII fpOptsRaii(*this, e);
+    assert(!cir::MissingFeatures::cgFPOptionsRAII());
     mlir::Value v = emitScalarExpr(e->getArg(0));
     mlir::Location loc = getLoc(e->getBeginLoc());
-    // FIXME: We should use builder.createZExt once createZExt is available.
-    return RValue::get(builder.createZExtOrBitCast(
-        loc, builder.createIsFPClass(loc, v, FPClassTest::fcSNan),
+    return RValue::get(builder.createBoolToInt(
+        builder.createIsFPClass(loc, v, FPClassTest::fcSNan),
         convertType(e->getType())));
   }
 
   case Builtin::BI__builtin_isinf: {
-    CIRGenFunction::CIRGenFPOptionsRAII fpOptsRaii(*this, e);
+    assert(!cir::MissingFeatures::cgFPOptionsRAII());
     mlir::Value v = emitScalarExpr(e->getArg(0));
-    if (mlir::Value result = tryUseTestFPKind(*this, builtinID, v))
-      return RValue::get(result);
+    assert(!cir::MissingFeatures::fpConstraints());
     mlir::Location loc = getLoc(e->getBeginLoc());
-    // FIXME: We should use builder.createZExt once createZExt is available.
-    return RValue::get(builder.createZExtOrBitCast(
-        loc, builder.createIsFPClass(loc, v, FPClassTest::fcInf),
+    return RValue::get(builder.createBoolToInt(
+        builder.createIsFPClass(loc, v, FPClassTest::fcInf),
         convertType(e->getType())));
   }
 
@@ -578,44 +563,39 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BIfinitel:
   case Builtin::BI__finitel:
   case Builtin::BI__builtin_isfinite: {
-    CIRGenFunction::CIRGenFPOptionsRAII fpOptsRaii(*this, e);
+    assert(!cir::MissingFeatures::cgFPOptionsRAII());
     mlir::Value v = emitScalarExpr(e->getArg(0));
-    if (mlir::Value result = tryUseTestFPKind(*this, builtinID, v))
-      return RValue::get(result);
+    assert(!cir::MissingFeatures::fpConstraints());
     mlir::Location loc = getLoc(e->getBeginLoc());
-    // FIXME: We should use builder.createZExt once createZExt is available.
-    return RValue::get(builder.createZExtOrBitCast(
-        loc, builder.createIsFPClass(loc, v, FPClassTest::fcFinite),
+    return RValue::get(builder.createBoolToInt(
+        builder.createIsFPClass(loc, v, FPClassTest::fcFinite),
         convertType(e->getType())));
   }
 
   case Builtin::BI__builtin_isnormal: {
-    CIRGenFunction::CIRGenFPOptionsRAII fpOptsRaii(*this, e);
+    assert(!cir::MissingFeatures::cgFPOptionsRAII());
     mlir::Value v = emitScalarExpr(e->getArg(0));
     mlir::Location loc = getLoc(e->getBeginLoc());
-    // FIXME: We should use builder.createZExt once createZExt is available.
-    return RValue::get(builder.createZExtOrBitCast(
-        loc, builder.createIsFPClass(loc, v, FPClassTest::fcNormal),
+    return RValue::get(builder.createBoolToInt(
+        builder.createIsFPClass(loc, v, FPClassTest::fcNormal),
         convertType(e->getType())));
   }
 
   case Builtin::BI__builtin_issubnormal: {
-    CIRGenFunction::CIRGenFPOptionsRAII fpOptsRaii(*this, e);
+    assert(!cir::MissingFeatures::cgFPOptionsRAII());
     mlir::Value v = emitScalarExpr(e->getArg(0));
     mlir::Location loc = getLoc(e->getBeginLoc());
-    // FIXME: We should use builder.createZExt once createZExt is available.
-    return RValue::get(builder.createZExtOrBitCast(
-        loc, builder.createIsFPClass(loc, v, FPClassTest::fcSubnormal),
+    return RValue::get(builder.createBoolToInt(
+        builder.createIsFPClass(loc, v, FPClassTest::fcSubnormal),
         convertType(e->getType())));
   }
 
   case Builtin::BI__builtin_iszero: {
-    CIRGenFunction::CIRGenFPOptionsRAII fpOptsRaii(*this, e);
+    assert(!cir::MissingFeatures::cgFPOptionsRAII());
     mlir::Value v = emitScalarExpr(e->getArg(0));
     mlir::Location loc = getLoc(e->getBeginLoc());
-    // FIXME: We should use builder.createZExt once createZExt is available.
-    return RValue::get(builder.createZExtOrBitCast(
-        loc, builder.createIsFPClass(loc, v, FPClassTest::fcZero),
+    return RValue::get(builder.createBoolToInt(
+        builder.createIsFPClass(loc, v, FPClassTest::fcZero),
         convertType(e->getType())));
   }
   case Builtin::BI__builtin_isfpclass: {
@@ -623,24 +603,22 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     if (!e->getArg(1)->EvaluateAsInt(result, cgm.getASTContext()))
       break;
 
-    CIRGenFunction::CIRGenFPOptionsRAII fpOptsRaii(*this, e);
+    assert(!cir::MissingFeatures::cgFPOptionsRAII());
     mlir::Value v = emitScalarExpr(e->getArg(0));
     uint64_t test = result.Val.getInt().getLimitedValue();
     mlir::Location loc = getLoc(e->getBeginLoc());
     //
-    // // FIXME: We should use builder.createZExt once createZExt is available.
-    return RValue::get(builder.createZExtOrBitCast(
-        loc, builder.createIsFPClass(loc, v, test), convertType(e->getType())));
+    return RValue::get(builder.createBoolToInt(
+        builder.createIsFPClass(loc, v, test), convertType(e->getType())));
   }
   }
 
   // If this is an alias for a lib function (e.g. __builtin_sin), emit
   // the call using the normal call path, but using the unmangled
   // version of the function name.
-  if (getContext().BuiltinInfo.isLibFunction(builtinID)) {
+  if (getContext().BuiltinInfo.isLibFunction(builtinID))
     return emitLibraryCall(*this, fd, e,
                            cgm.getBuiltinLibFunction(fd, builtinID));
-  }
 
   // Some target-specific builtins can have aggregate return values, e.g.
   // __builtin_arm_mve_vld2q_u32. So if the result is an aggregate, force

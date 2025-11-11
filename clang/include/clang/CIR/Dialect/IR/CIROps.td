@@ -4030,17 +4030,17 @@ def CIR_IsFPClassOp : CIR_Op<"is_fp_class"> {
     The flags must be a compile time constant and the values are:
 
     | Bit # | floating-point class |
-    | -------- | ------- |
-    | 0 | Signaling NaN      |
-    | 1 | Quiet NaN          |
-    | 2 | Negative infinity  |
-    | 3 | Negative normal    |
-    | 4 | Negative subnormal |
-    | 5 | Negative zero      |
-    | 6 | Positive zero      |
-    | 7 | Positive subnormal |
-    | 8 | Positive normal    |
-    | 9 | Positive infinity  |
+    | ----- | -------------------- |
+    |  0    | Signaling NaN        |
+    |  1    | Quiet NaN            |
+    |  2    | Negative infinity    |
+    |  3    | Negative normal      |
+    |  4    | Negative subnormal   |
+    |  5    | Negative zero        |
+    |  6    | Positive zero        |
+    |  7    | Positive subnormal   |
+    |  8    | Positive normal      |
+    |  9    | Positive infinity    |
   }];
 
   let arguments = (ins CIR_AnyFloatType:$src,

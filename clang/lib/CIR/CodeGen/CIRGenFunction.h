@@ -180,20 +180,6 @@ public:
   /// Sanitizers enabled for this function.
   clang::SanitizerSet sanOpts;
 
-  class CIRGenFPOptionsRAII {
-  public:
-    CIRGenFPOptionsRAII(CIRGenFunction &cgf, FPOptions fpFeatures);
-    CIRGenFPOptionsRAII(CIRGenFunction &cgf, const clang::Expr *e);
-    ~CIRGenFPOptionsRAII();
-
-  private:
-    void constructorHelper(clang::FPOptions fpFeatures);
-    CIRGenFunction &cgf;
-    clang::FPOptions oldFpFeatures;
-    cir::fp::ExceptionBehavior oldExcept;
-    llvm::RoundingMode oldRounding;
-  };
-  clang::FPOptions curFpFeatures;
 
   /// The symbol table maps a variable name to a value in the current scope.
   /// Entering a function creates a new scope, and the function arguments are
