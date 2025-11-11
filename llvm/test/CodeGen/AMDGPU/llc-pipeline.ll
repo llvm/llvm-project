@@ -10,6 +10,8 @@
 ; RUN:   | FileCheck -match-full-lines -strict-whitespace -check-prefix=GCN-O2 %s
 ; RUN: llc -O3 -mtriple=amdgcn--amdhsa -disable-verify -debug-pass=Structure < %s 2>&1 \
 ; RUN:   | FileCheck -match-full-lines -strict-whitespace -check-prefix=GCN-O3 %s
+; RUN: llc -O3 -mtriple=amdgcn--amdhsa -disable-verify -debug-pass=Structure < %s 2>&1 \
+; RUN:   | FileCheck -match-full-lines -strict-whitespace -check-prefix=INLINER %s
 
 ; REQUIRES: asserts
 
@@ -1440,6 +1442,344 @@
 ; GCN-O3-NEXT:        AMDGPU Assembly Printer
 ; GCN-O3-NEXT:        Free MachineFunction
 
+; INLINER:Target Library Information
+; INLINER-NEXT:Target Pass Configuration
+; INLINER-NEXT:Machine Module Information
+; INLINER-NEXT:Target Transform Information
+; INLINER-NEXT:Assumption Cache Tracker
+; INLINER-NEXT:Profile summary info
+; INLINER-NEXT:AMDGPU Address space based Alias Analysis
+; INLINER-NEXT:External Alias Analysis
+; INLINER-NEXT:Type-Based Alias Analysis
+; INLINER-NEXT:Scoped NoAlias Alias Analysis
+; INLINER-NEXT:Argument Register Usage Information Storage
+; INLINER-NEXT:Create Garbage Collector Module Metadata
+; INLINER-NEXT:Machine Branch Probability Analysis
+; INLINER-NEXT:Register Usage Information Storage
+; INLINER-NEXT:Default Regalloc Eviction Advisor
+; INLINER-NEXT:Default Regalloc Priority Advisor
+; INLINER-NEXT:  ModulePass Manager
+; INLINER-NEXT:    Pre-ISel Intrinsic Lowering
+; INLINER-NEXT:    FunctionPass Manager
+; INLINER-NEXT:      Expand large div/rem
+; INLINER-NEXT:      Expand fp
+; INLINER-NEXT:    AMDGPU Remove Incompatible Functions
+; INLINER-NEXT:    AMDGPU Printf lowering
+; INLINER-NEXT:    Lower ctors and dtors for AMDGPU
+; INLINER-NEXT:    FunctionPass Manager
+; INLINER-NEXT:      AMDGPU Image Intrinsic Optimizer
+; INLINER-NEXT:      Dominator Tree Construction
+; INLINER-NEXT:      Cycle Info Analysis
+; INLINER-NEXT:      Uniformity Analysis
+; INLINER-NEXT:      AMDGPU Uniform Intrinsic Combine
+; INLINER-NEXT:    Expand variadic functions
+; INLINER-NEXT:    AMDGPU Inline All Functions
+; INLINER-NEXT:    Inliner for always_inline functions
+; INLINER-NEXT:      FunctionPass Manager
+; INLINER-NEXT:        Dominator Tree Construction
+; INLINER-NEXT:        Basic Alias Analysis (stateless AA impl)
+; INLINER-NEXT:        Function Alias Analysis Results
+; INLINER-NEXT:    Externalize enqueued block runtime handles
+; INLINER-NEXT:    AMDGPU lowering of execution synchronization
+; INLINER-NEXT:    AMDGPU Software lowering of LDS
+; INLINER-NEXT:    Lower uses of LDS variables from non-kernel functions
+; INLINER-NEXT:    FunctionPass Manager
+; INLINER-NEXT:      Dominator Tree Construction
+; INLINER-NEXT:      Cycle Info Analysis
+; INLINER-NEXT:      Uniformity Analysis
+; INLINER-NEXT:      AMDGPU atomic optimizations
+; INLINER-NEXT:      Expand Atomic instructions
+; INLINER-NEXT:      Dominator Tree Construction
+; INLINER-NEXT:      Natural Loop Information
+; INLINER-NEXT:      AMDGPU Promote Alloca
+; INLINER-NEXT:      Split GEPs to a variadic base and a constant offset for better CSE
+; INLINER-NEXT:      Scalar Evolution Analysis
+; INLINER-NEXT:      Straight line strength reduction
+; INLINER-NEXT:      Basic Alias Analysis (stateless AA impl)
+; INLINER-NEXT:      Function Alias Analysis Results
+; INLINER-NEXT:      Memory Dependence Analysis
+; INLINER-NEXT:      Lazy Branch Probability Analysis
+; INLINER-NEXT:      Lazy Block Frequency Analysis
+; INLINER-NEXT:      Optimization Remark Emitter
+; INLINER-NEXT:      Global Value Numbering
+; INLINER-NEXT:      Scalar Evolution Analysis
+; INLINER-NEXT:      Nary reassociation
+; INLINER-NEXT:      Early CSE
+; INLINER-NEXT:      Cycle Info Analysis
+; INLINER-NEXT:      Uniformity Analysis
+; INLINER-NEXT:      AMDGPU IR optimizations
+; INLINER-NEXT:      Basic Alias Analysis (stateless AA impl)
+; INLINER-NEXT:      Function Alias Analysis Results
+; INLINER-NEXT:      Memory SSA
+; INLINER-NEXT:      Canonicalize natural loops
+; INLINER-NEXT:      LCSSA Verifier
+; INLINER-NEXT:      Loop-Closed SSA Form Pass
+; INLINER-NEXT:      Scalar Evolution Analysis
+; INLINER-NEXT:      Lazy Branch Probability Analysis
+; INLINER-NEXT:      Lazy Block Frequency Analysis
+; INLINER-NEXT:      Loop Pass Manager
+; INLINER-NEXT:        Loop Invariant Code Motion
+; INLINER-NEXT:      Loop Pass Manager
+; INLINER-NEXT:        Canonicalize Freeze Instructions in Loops
+; INLINER-NEXT:        Induction Variable Users
+; INLINER-NEXT:        Loop Strength Reduction
+; INLINER-NEXT:      Basic Alias Analysis (stateless AA impl)
+; INLINER-NEXT:      Function Alias Analysis Results
+; INLINER-NEXT:      Merge contiguous icmps into a memcmp
+; INLINER-NEXT:      Natural Loop Information
+; INLINER-NEXT:      Lazy Branch Probability Analysis
+; INLINER-NEXT:      Lazy Block Frequency Analysis
+; INLINER-NEXT:      Expand memcmp() to load/stores
+; INLINER-NEXT:      Remove unreachable blocks from the CFG
+; INLINER-NEXT:      Natural Loop Information
+; INLINER-NEXT:      Post-Dominator Tree Construction
+; INLINER-NEXT:      Branch Probability Analysis
+; INLINER-NEXT:      Block Frequency Analysis
+; INLINER-NEXT:      Constant Hoisting
+; INLINER-NEXT:      Replace intrinsics with calls to vector library
+; INLINER-NEXT:      Lazy Branch Probability Analysis
+; INLINER-NEXT:      Lazy Block Frequency Analysis
+; INLINER-NEXT:      Optimization Remark Emitter
+; INLINER-NEXT:      Partially inline calls to library functions
+; INLINER-NEXT:      Instrument function entry/exit with calls to e.g. mcount() (post inlining)
+; INLINER-NEXT:      Scalarize Masked Memory Intrinsics
+; INLINER-NEXT:      Expand reduction intrinsics
+; INLINER-NEXT:      Natural Loop Information
+; INLINER-NEXT:      Basic Alias Analysis (stateless AA impl)
+; INLINER-NEXT:      Function Alias Analysis Results
+; INLINER-NEXT:      Memory Dependence Analysis
+; INLINER-NEXT:      Lazy Branch Probability Analysis
+; INLINER-NEXT:      Lazy Block Frequency Analysis
+; INLINER-NEXT:      Optimization Remark Emitter
+; INLINER-NEXT:      Global Value Numbering
+; INLINER-NEXT:    AMDGPU Preload Kernel Arguments
+; INLINER-NEXT:    FunctionPass Manager
+; INLINER-NEXT:      AMDGPU Lower Kernel Arguments
+; INLINER-NEXT:      Dominator Tree Construction
+; INLINER-NEXT:      Natural Loop Information
+; INLINER-NEXT:      CodeGen Prepare
+; INLINER-NEXT:      Dominator Tree Construction
+; INLINER-NEXT:      Basic Alias Analysis (stateless AA impl)
+; INLINER-NEXT:      Function Alias Analysis Results
+; INLINER-NEXT:      Natural Loop Information
+; INLINER-NEXT:      Scalar Evolution Analysis
+; INLINER-NEXT:      GPU Load and Store Vectorizer
+; INLINER-NEXT:    Lower buffer fat pointer operations to buffer resources
+; INLINER-NEXT:    AMDGPU lower intrinsics
+; INLINER-NEXT:    CallGraph Construction
+; INLINER-NEXT:    Call Graph SCC Pass Manager
+; INLINER-NEXT:      DummyCGSCCPass
+; INLINER-NEXT:      FunctionPass Manager
+; INLINER-NEXT:        Lazy Value Information Analysis
+; INLINER-NEXT:        Lower SwitchInst's to branches
+; INLINER-NEXT:        Lower invoke and unwind, for unwindless code generators
+; INLINER-NEXT:        Remove unreachable blocks from the CFG
+; INLINER-NEXT:        Dominator Tree Construction
+; INLINER-NEXT:        Basic Alias Analysis (stateless AA impl)
+; INLINER-NEXT:        Function Alias Analysis Results
+; INLINER-NEXT:        Flatten the CFG
+; INLINER-NEXT:        Dominator Tree Construction
+; INLINER-NEXT:        Basic Alias Analysis (stateless AA impl)
+; INLINER-NEXT:        Function Alias Analysis Results
+; INLINER-NEXT:        Natural Loop Information
+; INLINER-NEXT:        Code sinking
+; INLINER-NEXT:        Cycle Info Analysis
+; INLINER-NEXT:        Uniformity Analysis
+; INLINER-NEXT:        AMDGPU IR late optimizations
+; INLINER-NEXT:        Post-Dominator Tree Construction
+; INLINER-NEXT:        Uniformity Analysis
+; INLINER-NEXT:        Unify divergent function exit nodes
+; INLINER-NEXT:        Dominator Tree Construction
+; INLINER-NEXT:        Cycle Info Analysis
+; INLINER-NEXT:        Convert irreducible control-flow into natural loops
+; INLINER-NEXT:        Natural Loop Information
+; INLINER-NEXT:        Fixup each natural loop to have a single exit block
+; INLINER-NEXT:        Post-Dominator Tree Construction
+; INLINER-NEXT:        Dominance Frontier Construction
+; INLINER-NEXT:        Detect single entry single exit regions
+; INLINER-NEXT:        Region Pass Manager
+; INLINER-NEXT:          Structurize control flow
+; INLINER-NEXT:        Cycle Info Analysis
+; INLINER-NEXT:        Uniformity Analysis
+; INLINER-NEXT:        Basic Alias Analysis (stateless AA impl)
+; INLINER-NEXT:        Function Alias Analysis Results
+; INLINER-NEXT:        Memory SSA
+; INLINER-NEXT:        AMDGPU Annotate Uniform Values
+; INLINER-NEXT:        Natural Loop Information
+; INLINER-NEXT:        SI annotate control flow
+; INLINER-NEXT:        Cycle Info Analysis
+; INLINER-NEXT:        Uniformity Analysis
+; INLINER-NEXT:        AMDGPU Rewrite Undef for PHI
+; INLINER-NEXT:        LCSSA Verifier
+; INLINER-NEXT:        Loop-Closed SSA Form Pass
+; INLINER-NEXT:      Analysis if a function is memory bound
+; INLINER-NEXT:      DummyCGSCCPass
+; INLINER-NEXT:      FunctionPass Manager
+; INLINER-NEXT:        Dominator Tree Construction
+; INLINER-NEXT:        Basic Alias Analysis (stateless AA impl)
+; INLINER-NEXT:        Function Alias Analysis Results
+; INLINER-NEXT:        ObjC ARC contraction
+; INLINER-NEXT:        Prepare callbr
+; INLINER-NEXT:        Safe Stack instrumentation pass
+; INLINER-NEXT:        Insert stack protectors
+; INLINER-NEXT:        Cycle Info Analysis
+; INLINER-NEXT:        Uniformity Analysis
+; INLINER-NEXT:        Basic Alias Analysis (stateless AA impl)
+; INLINER-NEXT:        Function Alias Analysis Results
+; INLINER-NEXT:        Natural Loop Information
+; INLINER-NEXT:        Post-Dominator Tree Construction
+; INLINER-NEXT:        Branch Probability Analysis
+; INLINER-NEXT:        Assignment Tracking Analysis
+; INLINER-NEXT:        Lazy Branch Probability Analysis
+; INLINER-NEXT:        Lazy Block Frequency Analysis
+; INLINER-NEXT:        AMDGPU DAG->DAG Pattern Instruction Selection
+; INLINER-NEXT:        MachineDominator Tree Construction
+; INLINER-NEXT:        SI Fix SGPR copies
+; INLINER-NEXT:        MachinePostDominator Tree Construction
+; INLINER-NEXT:        SI Lower i1 Copies
+; INLINER-NEXT:        Finalize ISel and expand pseudo-instructions
+; INLINER-NEXT:        Lazy Machine Block Frequency Analysis
+; INLINER-NEXT:        Early Tail Duplication
+; INLINER-NEXT:        Optimize machine instruction PHIs
+; INLINER-NEXT:        Slot index numbering
+; INLINER-NEXT:        Merge disjoint stack slots
+; INLINER-NEXT:        Local Stack Slot Allocation
+; INLINER-NEXT:        Remove dead machine instructions
+; INLINER-NEXT:        MachineDominator Tree Construction
+; INLINER-NEXT:        Machine Natural Loop Construction
+; INLINER-NEXT:        Machine Block Frequency Analysis
+; INLINER-NEXT:        Early Machine Loop Invariant Code Motion
+; INLINER-NEXT:        MachineDominator Tree Construction
+; INLINER-NEXT:        Machine Block Frequency Analysis
+; INLINER-NEXT:        Machine Common Subexpression Elimination
+; INLINER-NEXT:        MachinePostDominator Tree Construction
+; INLINER-NEXT:        Machine Cycle Info Analysis
+; INLINER-NEXT:        Machine code sinking
+; INLINER-NEXT:        Peephole Optimizations
+; INLINER-NEXT:        Remove dead machine instructions
+; INLINER-NEXT:        SI Fold Operands
+; INLINER-NEXT:        GCN DPP Combine
+; INLINER-NEXT:        SI Load Store Optimizer
+; INLINER-NEXT:        SI Peephole SDWA
+; INLINER-NEXT:        Machine Block Frequency Analysis
+; INLINER-NEXT:        MachineDominator Tree Construction
+; INLINER-NEXT:        Early Machine Loop Invariant Code Motion
+; INLINER-NEXT:        MachineDominator Tree Construction
+; INLINER-NEXT:        Machine Block Frequency Analysis
+; INLINER-NEXT:        Machine Common Subexpression Elimination
+; INLINER-NEXT:        SI Fold Operands
+; INLINER-NEXT:        Remove dead machine instructions
+; INLINER-NEXT:        SI Shrink Instructions
+; INLINER-NEXT:        Register Usage Information Propagation
+; INLINER-NEXT:        AMDGPU Prepare AGPR Alloc
+; INLINER-NEXT:        Detect Dead Lanes
+; INLINER-NEXT:        Remove dead machine instructions
+; INLINER-NEXT:        Init Undef Pass
+; INLINER-NEXT:        Process Implicit Definitions
+; INLINER-NEXT:        Remove unreachable machine basic blocks
+; INLINER-NEXT:        Live Variable Analysis
+; INLINER-NEXT:        SI Optimize VGPR LiveRange
+; INLINER-NEXT:        Eliminate PHI nodes for register allocation
+; INLINER-NEXT:        SI Lower control flow pseudo instructions
+; INLINER-NEXT:        Two-Address instruction pass
+; INLINER-NEXT:        Slot index numbering
+; INLINER-NEXT:        Live Interval Analysis
+; INLINER-NEXT:        Machine Natural Loop Construction
+; INLINER-NEXT:        Register Coalescer
+; INLINER-NEXT:        Rename Disconnected Subregister Components
+; INLINER-NEXT:        Rewrite Partial Register Uses
+; INLINER-NEXT:        Machine Instruction Scheduler
+; INLINER-NEXT:        AMDGPU Pre-RA optimizations
+; INLINER-NEXT:        SI Whole Quad Mode
+; INLINER-NEXT:        SI optimize exec mask operations pre-RA
+; INLINER-NEXT:        SI Form memory clauses
+; INLINER-NEXT:        AMDGPU Pre-RA Long Branch Reg
+; INLINER-NEXT:        Machine Natural Loop Construction
+; INLINER-NEXT:        Machine Block Frequency Analysis
+; INLINER-NEXT:        Debug Variable Analysis
+; INLINER-NEXT:        Live Stack Slot Analysis
+; INLINER-NEXT:        Virtual Register Map
+; INLINER-NEXT:        Live Register Matrix
+; INLINER-NEXT:        Bundle Machine CFG Edges
+; INLINER-NEXT:        Spill Code Placement Analysis
+; INLINER-NEXT:        Lazy Machine Block Frequency Analysis
+; INLINER-NEXT:        Machine Optimization Remark Emitter
+; INLINER-NEXT:        Greedy Register Allocator
+; INLINER-NEXT:        Virtual Register Rewriter
+; INLINER-NEXT:        Stack Slot Coloring
+; INLINER-NEXT:        SI lower SGPR spill instructions
+; INLINER-NEXT:        Virtual Register Map
+; INLINER-NEXT:        Live Register Matrix
+; INLINER-NEXT:        SI Pre-allocate WWM Registers
+; INLINER-NEXT:        Live Stack Slot Analysis
+; INLINER-NEXT:        Greedy Register Allocator
+; INLINER-NEXT:        SI Lower WWM Copies
+; INLINER-NEXT:        Virtual Register Rewriter
+; INLINER-NEXT:        AMDGPU Reserve WWM Registers
+; INLINER-NEXT:        Virtual Register Map
+; INLINER-NEXT:        Live Register Matrix
+; INLINER-NEXT:        Greedy Register Allocator
+; INLINER-NEXT:        GCN NSA Reassign
+; INLINER-NEXT:        AMDGPU Rewrite AGPR-Copy-MFMA
+; INLINER-NEXT:        Virtual Register Rewriter
+; INLINER-NEXT:        AMDGPU Mark Last Scratch Load
+; INLINER-NEXT:        Stack Slot Coloring
+; INLINER-NEXT:        Machine Copy Propagation Pass
+; INLINER-NEXT:        Machine Loop Invariant Code Motion
+; INLINER-NEXT:        SI Fix VGPR copies
+; INLINER-NEXT:        SI optimize exec mask operations
+; INLINER-NEXT:        Remove Redundant DEBUG_VALUE analysis
+; INLINER-NEXT:        Fixup Statepoint Caller Saved
+; INLINER-NEXT:        PostRA Machine Sink
+; INLINER-NEXT:        Machine Block Frequency Analysis
+; INLINER-NEXT:        MachineDominator Tree Construction
+; INLINER-NEXT:        MachinePostDominator Tree Construction
+; INLINER-NEXT:        Lazy Machine Block Frequency Analysis
+; INLINER-NEXT:        Machine Optimization Remark Emitter
+; INLINER-NEXT:        Shrink Wrapping analysis
+; INLINER-NEXT:        Prologue/Epilogue Insertion & Frame Finalization
+; INLINER-NEXT:        Machine Late Instructions Cleanup Pass
+; INLINER-NEXT:        Control Flow Optimizer
+; INLINER-NEXT:        Lazy Machine Block Frequency Analysis
+; INLINER-NEXT:        Tail Duplication
+; INLINER-NEXT:        Machine Copy Propagation Pass
+; INLINER-NEXT:        Post-RA pseudo instruction expansion pass
+; INLINER-NEXT:        SI Shrink Instructions
+; INLINER-NEXT:        SI post-RA bundler
+; INLINER-NEXT:        MachineDominator Tree Construction
+; INLINER-NEXT:        Machine Natural Loop Construction
+; INLINER-NEXT:        PostRA Machine Instruction Scheduler
+; INLINER-NEXT:        Machine Block Frequency Analysis
+; INLINER-NEXT:        MachinePostDominator Tree Construction
+; INLINER-NEXT:        Branch Probability Basic Block Placement
+; INLINER-NEXT:        Insert fentry calls
+; INLINER-NEXT:        Insert XRay ops
+; INLINER-NEXT:        GCN Create VOPD Instructions
+; INLINER-NEXT:        SI Memory Legalizer
+; INLINER-NEXT:        MachineDominator Tree Construction
+; INLINER-NEXT:        Machine Natural Loop Construction
+; INLINER-NEXT:        MachinePostDominator Tree Construction
+; INLINER-NEXT:        SI insert wait instructions
+; INLINER-NEXT:        Insert required mode register values
+; INLINER-NEXT:        SI Insert Hard Clauses
+; INLINER-NEXT:        SI Final Branch Preparation
+; INLINER-NEXT:        SI peephole optimizations
+; INLINER-NEXT:        Post RA hazard recognizer
+; INLINER-NEXT:        AMDGPU Insert waits for SGPR read hazards
+; INLINER-NEXT:        AMDGPU Lower VGPR Encoding
+; INLINER-NEXT:        AMDGPU Insert Delay ALU
+; INLINER-NEXT:        Branch relaxation pass
+; INLINER-NEXT:        Register Usage Information Collector Pass
+; INLINER-NEXT:        Remove Loads Into Fake Uses
+; INLINER-NEXT:        Live DEBUG_VALUE analysis
+; INLINER-NEXT:        Machine Sanitizer Binary Metadata
+; INLINER-NEXT:        AMDGPU Preload Kernel Arguments Prolog
+; INLINER-NEXT:        Lazy Machine Block Frequency Analysis
+; INLINER-NEXT:        Machine Optimization Remark Emitter
+; INLINER-NEXT:        Stack Frame Layout Analysis
+; INLINER-NEXT:        Function register usage analysis
+; INLINER-NEXT:        AMDGPU Assembly Printer
+; INLINER-NEXT:        Free MachineFunction
 define void @empty() {
   ret void
 }
