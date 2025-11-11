@@ -15,9 +15,8 @@ namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
 [[noreturn]] void exit(int status) {
-  for (;;) {
+  for (;;)
     LIBC_NAMESPACE::syscall_impl<long>(SYS_exit, status);
-  }
 }
 
 } // namespace internal

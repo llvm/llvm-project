@@ -21,19 +21,17 @@ namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
 ErrorOr<int> clock_gettime(clockid_t clockid, struct timespec *ts) {
-  if (clockid != CLOCK_REALTIME) {
+  if (clockid != CLOCK_REALTIME)
     return Error(EINVAL);
-  }
   struct timeval tv;
   // The second argument to gettimeofday is a timezone pointer
   // The third argument is mach_absolute_time
   // Both of these, we don't need here, so they are 0
   long ret = LIBC_NAMESPACE::syscall_impl<long>(
       SYS_gettimeofday, reinterpret_cast<long>(&tv), 0, 0);
-  if (ret != 0) {
+  if (ret != 0)
     // The syscall returns -1 on error and sets errno.
     return Error(EINVAL);
-  }
 
   ts->tv_sec = tv.tv_sec;
   ts->tv_nsec = tv.tv_usec * 1000;
