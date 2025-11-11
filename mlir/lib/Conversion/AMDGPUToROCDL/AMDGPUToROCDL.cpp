@@ -1709,12 +1709,15 @@ LogicalResult ScaledExtPacked816OpLowering::matchAndRewrite(
   Type packedType;
   if (isa<Float4E2M1FNType>(srcElemType)) {
     packedType = i32;
+    packedType = getTypeConverter()->convertType(packedType);
   } else if (isa<Float8E4M3FNType>(srcElemType) ||
              isa<Float8E5M2Type>(srcElemType)) {
     packedType = VectorType::get(2, i32);
+    packedType = getTypeConverter()->convertType(packedType);
   } else if (isa<Float6E2M3FNType>(srcElemType) ||
              isa<Float6E3M2FNType>(srcElemType)) {
     packedType = VectorType::get(3, i32);
+    packedType = getTypeConverter()->convertType(packedType);
   } else {
     llvm_unreachable("invalid element type for scaled ext");
   }
