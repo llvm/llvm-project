@@ -17,17 +17,12 @@
 #include <__memory/construct_at.h>
 #include <__type_traits/decay.h>
 #include <__type_traits/is_pointer.h>
-#include <__utility/move.h>
-#include <__utility/swap.h>
 #include <__verbose_abort>
 #include <typeinfo>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
-
-_LIBCPP_PUSH_MACROS
-#include <__undef_macros>
 
 #ifndef _LIBCPP_ABI_MICROSOFT
 
@@ -62,8 +57,6 @@ _LIBCPP_OVERRIDABLE_FUNC_VIS __cxa_exception* __cxa_init_primary_exception(
 _LIBCPP_BEGIN_UNVERSIONED_NAMESPACE_STD
 
 #ifndef _LIBCPP_ABI_MICROSOFT
-
-inline _LIBCPP_HIDE_FROM_ABI void swap(exception_ptr& __x, exception_ptr& __y) _NOEXCEPT;
 
 class _LIBCPP_EXPORTED_FROM_ABI exception_ptr {
   void* __ptr_;
@@ -132,15 +125,9 @@ public:
     return !(__x == __y);
   }
 
-  friend _LIBCPP_HIDE_FROM_ABI void swap(exception_ptr& __x, exception_ptr& __y) _NOEXCEPT;
-
   friend _LIBCPP_EXPORTED_FROM_ABI exception_ptr current_exception() _NOEXCEPT;
   friend _LIBCPP_EXPORTED_FROM_ABI void rethrow_exception(exception_ptr);
 };
-
-inline _LIBCPP_HIDE_FROM_ABI void swap(exception_ptr& __x, exception_ptr& __y) _NOEXCEPT {
-  std::swap(__x.__ptr_, __y.__ptr_);
-}
 
 #  if _LIBCPP_HAS_EXCEPTIONS
 #    if _LIBCPP_AVAILABILITY_HAS_INIT_PRIMARY_EXCEPTION
@@ -250,7 +237,5 @@ _LIBCPP_HIDE_FROM_ABI exception_ptr make_exception_ptr(_Ep __e) _NOEXCEPT {
 
 #endif // _LIBCPP_ABI_MICROSOFT
 _LIBCPP_END_UNVERSIONED_NAMESPACE_STD
-
-_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___EXCEPTION_EXCEPTION_PTR_H
