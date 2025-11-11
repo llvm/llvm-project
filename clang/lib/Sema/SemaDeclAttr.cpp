@@ -1966,8 +1966,16 @@ static bool isKnownToAlwaysThrow(const FunctionDecl *FD) {
   if (const auto *EWC = dyn_cast<ExprWithCleanups>(OnlyStmt)) {
     OnlyStmt = EWC->getSubExpr();
   }
-  // Check if the only statement is a throw expression.
-  return isa<CXXThrowExpr>(OnlyStmt);
+
+  if (isa<CXXThrowExpr>(OnlyStmt)) {
+    const auto *MD = dyn_cast<CXXMethodDecl>(FD);
+    if (MD && MD->isVirtual()) {
+      const auto *RD = MD->getParent();
+      return MD->hasAttr<FinalAttr>() || (RD && RD->isEffectivelyFinal());
+    }
+    return true;
+  }
+  return false;
 }
 
 void clang::inferNoReturnAttr(Sema &S, const Decl *D) {
