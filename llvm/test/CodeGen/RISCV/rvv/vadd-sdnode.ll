@@ -814,6 +814,21 @@ define <vscale x 8 x i32> @vadd_vv_mask_nxv8i32(<vscale x 8 x i32> %va, <vscale 
   ret <vscale x 8 x i32> %vc
 }
 
+define <vscale x 8 x i32> @vadd_vv_mask_nxv8i32_novmerge(<vscale x 8 x i32> %va, <vscale x 8 x i32> %vb,
+; CHECK-LABEL: vadd_vv_mask_nxv8i32_novmerge:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
+; CHECK-NEXT:    vmseq.vi v0, v8, 1
+; CHECK-NEXT:    vadd.vv v8, v16, v12
+; CHECK-NEXT:    vmerge.vvm v8, v8, v16, v0
+; CHECK-NEXT:    ret
+                                                         <vscale x 8 x i32> %vc) {
+  %mask = icmp eq <vscale x 8 x i32> %va, splat (i32 1)
+  %vs = select <vscale x 8 x i1> %mask, <vscale x 8 x i32> zeroinitializer , <vscale x 8 x i32> %vb
+  %vr = add nsw <vscale x 8 x i32> %vc, %vs
+  ret <vscale x 8 x i32> %vr
+}
+
 define <vscale x 8 x i32> @vadd_vx_mask_nxv8i32(<vscale x 8 x i32> %va, i32 signext %b, <vscale x 8 x i1> %mask) {
 ; CHECK-LABEL: vadd_vx_mask_nxv8i32:
 ; CHECK:       # %bb.0:
