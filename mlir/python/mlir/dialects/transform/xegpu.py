@@ -295,6 +295,7 @@ class ConvertLayoutOp(ConvertLayoutOp):
             _,
         ) = _dispatch_dynamic_index_list(inst_data)
         super().__init__(
+            transform.AnyOpType.get(),
             target,
             dynamic_sg_layout,
             dynamic_sg_data,
@@ -323,4 +324,4 @@ def convert_layout(
         inst_data=inst_data,
         loc=loc,
         ip=ip,
-    )
+    ).result

@@ -614,18 +614,18 @@ transform::ConvertLayoutOp::apply(transform::TransformRewriter &rewriter,
            << "Value has no users to insert layout conversion.";
   Operation *userOp = *value.getUsers().begin();
 
-  if (producerLayoutAttr != targetLayoutAttr) {
-    rewriter.setInsertionPoint(userOp);
-    auto convLayoutOp = xegpu::ConvertLayoutOp::create(
-        rewriter, value.getLoc(), value.getType(), value, producerLayoutAttr,
-        targetLayoutAttr);
-    // Replace load op result with the converted layout.
-    rewriter.replaceUsesWithIf(
-        value, convLayoutOp.getResult(), [&](OpOperand &use) {
-          return use.getOwner() != convLayoutOp.getOperation();
-        });
-  }
+  // Emit convert_layout op.
+  rewriter.setInsertionPoint(userOp);
+  auto convLayoutOp = xegpu::ConvertLayoutOp::create(
+      rewriter, value.getLoc(), value.getType(), value, producerLayoutAttr,
+      targetLayoutAttr);
+  // Replace load op result with the converted layout.
+  rewriter.replaceUsesWithIf(
+      value, convLayoutOp.getResult(), [&](OpOperand &use) {
+        return use.getOwner() != convLayoutOp.getOperation();
+      });
 
+  results.set(llvm::cast<OpResult>(getResult()), {convLayoutOp});
   return DiagnosedSilenceableFailure::success();
 }
 
@@ -635,6 +635,7 @@ void transform::ConvertLayoutOp::getEffects(
   onlyReadsHandle(getSgLayoutMutable(), effects);
   onlyReadsHandle(getSgDataMutable(), effects);
   onlyReadsHandle(getInstDataMutable(), effects);
+  producesHandle(getOperation()->getOpResults(), effects);
   modifiesPayload(effects);
 }
 

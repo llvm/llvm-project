@@ -257,7 +257,8 @@ def ConvertLayoutOp : Op<Transform_Dialect, "xegpu.convert_layout", [
     failure is emitted if source layout cannot be found. An
     `xegpu.convert_layout` op, whose destination layout is defined by the
     `sg_layout`, `sg_data` and optional `inst_data` attributes, is emitted
-    before the first use of the value.
+    before the first use of the value. Returns a handle to the emitted
+    `xegpu.convert_layout` op.
   }];
 
   let arguments = (ins TransformValueHandleTypeInterface:$target,
@@ -269,7 +270,7 @@ def ConvertLayoutOp : Op<Transform_Dialect, "xegpu.convert_layout", [
                    DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_inst_data
                    );
 
-  let results = (outs);
+  let results = (outs TransformHandleTypeInterface:$newConvertOp);
   let builders = [
     OpBuilder<(ins "Value":$target,
                    "ArrayRef<OpFoldResult>":$mixedSgLayout,
@@ -283,7 +284,7 @@ def ConvertLayoutOp : Op<Transform_Dialect, "xegpu.convert_layout", [
     `sg_layout` `=` custom<DynamicIndexList>($sg_layout, $static_sg_layout)
     `sg_data` `=` custom<DynamicIndexList>($sg_data, $static_sg_data)
     (`inst_data` `=` custom<DynamicIndexList>($inst_data, $static_inst_data)^)?
-    attr-dict `:` qualified(type(operands))
+    attr-dict `:` functional-type(operands, results)
   }];
 
   let extraClassDeclaration = [{

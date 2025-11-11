@@ -172,7 +172,7 @@ module attributes {transform.with_named_sequence} {
     %0 = transform.structured.match ops{["arith.truncf"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     %1 = transform.get_operand %0[0] : (!transform.any_op) -> !transform.any_value
     // expected-error@below {{Could not find a layout attribute in the producer chain.}}
-    transform.xegpu.convert_layout %1 sg_layout = [8, 4] sg_data = [32, 32] inst_data = [8, 16] : !transform.any_value
+    transform.xegpu.convert_layout %1 sg_layout = [8, 4] sg_data = [32, 32] inst_data = [8, 16] : (!transform.any_value) -> !transform.any_op
     transform.yield
   }
 }
