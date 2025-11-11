@@ -2452,7 +2452,7 @@ static void DiagnoseNonDestructibleReason(Sema &SemaRef, SourceLocation Loc,
 
   AccessSpecifier AS = Dtor->getAccess();
   if (AS == AS_private || AS == AS_protected) {
-    unsigned Select = (AS == AS_private) ? 0 : 1;
+    unsigned Select = AS != AS_private;
     SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
         << diag::TraitNotSatisfiedReason::InaccessibleDtr << Select
         << Dtor->getSourceRange();
