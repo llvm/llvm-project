@@ -1502,9 +1502,9 @@ cc_library(
 
 gentbl_cc_library(
     name = "driver_options_inc_gen",
-    tbl_outs = {"include/clang/Driver/Options.inc": ["-gen-opt-parser-defs"]},
+    tbl_outs = {"include/clang/Options/Options.inc": ["-gen-opt-parser-defs"]},
     tblgen = "//llvm:llvm-tblgen",
-    td_file = "include/clang/Driver/Options.td",
+    td_file = "include/clang/Options/Options.td",
     deps = ["//llvm:OptParserTdFiles"],
 )
 
