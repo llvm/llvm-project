@@ -562,12 +562,10 @@ transform::ConvertLayoutOp::apply(transform::TransformRewriter &rewriter,
                                   transform::TransformResults &results,
                                   transform::TransformState &state) {
   auto targetValues = state.getPayloadValues(getTarget());
-  if (!llvm::hasSingleElement(targetValues)) {
+  if (!llvm::hasSingleElement(targetValues))
     return emitDefiniteFailure()
            << "requires exactly one target value handle (got "
            << llvm::range_size(targetValues) << ")";
-  }
-
   auto value = *targetValues.begin();
 
   xegpu::LayoutAttr layoutAttr = nullptr;
@@ -579,17 +577,15 @@ transform::ConvertLayoutOp::apply(transform::TransformRewriter &rewriter,
 
   // Get load op.
   auto maybeLoadOp = findProducerOfType<xegpu::LoadNdOp>(value);
-  if (!maybeLoadOp) {
+  if (!maybeLoadOp)
     return emitSilenceableFailure(getLoc()) << "Could not find load op.";
-  }
   auto loadOp = *maybeLoadOp;
   // Get load op operand value layout
   auto producerLayoutAttr =
       xegpu::getDistributeLayoutAttr(loadOp.getOperand(0));
-  if (!producerLayoutAttr) {
+  if (!producerLayoutAttr)
     return emitSilenceableFailure(getLoc())
            << "Operand producer op does not have a layout attr.";
-  }
 
   if (producerLayoutAttr != layoutAttr) {
     rewriter.setInsertionPointAfter(loadOp.getOperation());
