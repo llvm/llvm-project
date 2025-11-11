@@ -1456,8 +1456,8 @@ MCOperand AMDGPUDisassembler::errOperand(unsigned V,
   return MCOperand();
 }
 
-inline MCOperand AMDGPUDisassembler::createRegOperand(MCRegister RegId) const {
-  return MCOperand::createReg(AMDGPU::getMCReg(RegId, STI));
+inline MCOperand AMDGPUDisassembler::createRegOperand(MCRegister Reg) const {
+  return MCOperand::createReg(AMDGPU::getMCReg(Reg, STI));
 }
 
 inline
