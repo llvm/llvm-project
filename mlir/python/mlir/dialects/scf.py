@@ -12,6 +12,7 @@ try:
     from ._ods_common import (
         get_op_result_or_value as _get_op_result_or_value,
         get_op_results_or_values as _get_op_results_or_values,
+        get_op_result_or_op_results as _get_op_result_or_op_results,
         _cext as _ods_cext,
     )
 except ImportError as e:
@@ -254,3 +255,77 @@ def for_(
             yield iv, iter_args[0], for_op.results[0]
         else:
             yield iv
+
+
+@_ods_cext.register_operation(_Dialect, replace=True)
+class IndexSwitchOp(IndexSwitchOp):
+    __doc__ = IndexSwitchOp.__doc__
+
+    def __init__(
+        self,
+        results,
+        arg,
+        cases,
+        case_body_builder=None,
+        default_body_builder=None,
+        loc=None,
+        ip=None,
+    ):
+        cases = DenseI64ArrayAttr.get(cases)
+        super().__init__(
+            results, arg, cases, num_caseRegions=len(cases), loc=loc, ip=ip
+        )
+        for region in self.regions:
+            region.blocks.append()
+
+        if default_body_builder is not None:
+            with InsertionPoint(self.default_block):
+                default_body_builder(self)
+
+        if case_body_builder is not None:
+            for i, case in enumerate(cases):
+                with InsertionPoint(self.case_block(i)):
+                    case_body_builder(self, i, self.cases[i])
+
+    @property
+    def default_region(self) -> Region:
+        return self.regions[0]
+
+    @property
+    def default_block(self) -> Block:
+        return self.default_region.blocks[0]
+
+    @property
+    def case_regions(self) -> Sequence[Region]:
+        return self.regions[1:]
+
+    def case_region(self, i: int) -> Region:
+        return self.case_regions[i]
+
+    @property
+    def case_blocks(self) -> Sequence[Block]:
+        return [region.blocks[0] for region in self.case_regions]
+
+    def case_block(self, i: int) -> Block:
+        return self.case_regions[i].blocks[0]
+
+
+def index_switch(
+    results,
+    arg,
+    cases,
+    case_body_builder=None,
+    default_body_builder=None,
+    loc=None,
+    ip=None,
+) -> Union[OpResult, OpResultList, IndexSwitchOp]:
+    op = IndexSwitchOp(
+        results=results,
+        arg=arg,
+        cases=cases,
+        case_body_builder=case_body_builder,
+        default_body_builder=default_body_builder,
+        loc=loc,
+        ip=ip,
+    )
+    return _get_op_result_or_op_results(op)
