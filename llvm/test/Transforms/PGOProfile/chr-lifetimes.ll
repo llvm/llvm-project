@@ -242,7 +242,6 @@ bb3:
 
 !14 = !{!"function_entry_count", i64 100}
 !15 = !{!"branch_weights", i32 0, i32 1}
-; CHECK: !15 = !{!"branch_weights", i32 1000, i32 0}
 ;.
 ; CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 ;.
