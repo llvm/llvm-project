@@ -352,19 +352,17 @@ int main(int argc, const char **argv) {
     Interp = ExitOnErr(clang::Interpreter::create(std::move(CI), Config));
   }
 
-  if (Config.IsOutOfProcess) {
-    static const char *const InitUnbufferedStreams = R"(
-      #include <stdio.h>
-      __attribute__((constructor))
-      static void __clang_repl_ioinit(void) {
-        setvbuf(stdout, NULL, _IONBF, 0);
-        setvbuf(stderr, NULL, _IONBF, 0);
-      }
-    )";
+  static const char *const InitUnbufferedStreams = R"(
+    #include <stdio.h>
+    __attribute__((constructor))
+    static void __clang_repl_ioinit(void) {
+      setvbuf(stdout, NULL, _IONBF, 0);
+      setvbuf(stderr, NULL, _IONBF, 0);
+    }
+  )";
 
-    if (auto Err = Interp->ParseAndExecute(InitUnbufferedStreams))
-      llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "error: ");
-  }
+  if (auto Err = Interp->ParseAndExecute(InitUnbufferedStreams))
+    llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "error: ");
 
   bool HasError = false;
 
