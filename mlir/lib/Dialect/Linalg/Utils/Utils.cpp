@@ -438,19 +438,6 @@ static bool verifyConvIndexingMapSizes(ArrayAttr indexingMaps,
   return true;
 }
 
-/// Utility to update `dilations` and `strides` by copy the corresponding data
-/// from `tempDilations` and `tempStrides`.
-static void updateConvDilationsAndStrides(SmallVector<int64_t> *dilations,
-                                          SmallVector<int64_t> *strides,
-                                          ArrayRef<int64_t> tempDilations,
-                                          ArrayRef<int64_t> tempStrides) {
-  if (!(dilations && strides))
-    return;
-  *dilations = SmallVector<int64_t>(tempDilations);
-  *strides = SmallVector<int64_t>(tempStrides);
-  return;
-}
-
 // ---------------------------------------------
 // Matchers for specific convolution operation.
 // ---------------------------------------------
@@ -497,7 +484,8 @@ bool isaConvolutionOpOfType<linalg::DepthwiseConv1DNwcWcOp>(
   // Match body
   if (!bodyMatcherForConvolutionOps(yieldVal, body))
     return false;
-  updateConvDilationsAndStrides(dilations, strides, tempDilations, tempStrides);
+  *dilations = SmallVector<int64_t>(tempDilations);
+  *strides = SmallVector<int64_t>(tempStrides);
   return true;
 }
 
@@ -547,7 +535,8 @@ bool isaConvolutionOpOfType<linalg::DepthwiseConv2DNchwChwOp>(
   // Match body
   if (!bodyMatcherForConvolutionOps(yieldVal, body))
     return false;
-  updateConvDilationsAndStrides(dilations, strides, tempDilations, tempStrides);
+  *dilations = SmallVector<int64_t>(tempDilations);
+  *strides = SmallVector<int64_t>(tempStrides);
   return true;
 }
 
@@ -608,7 +597,8 @@ bool isaConvolutionOpOfType<linalg::DepthwiseConv3DNdhwcDhwcmOp>(
   // Match body
   if (!bodyMatcherForConvolutionOps(yieldVal, body))
     return false;
-  updateConvDilationsAndStrides(dilations, strides, tempDilations, tempStrides);
+  *dilations = SmallVector<int64_t>(tempDilations);
+  *strides = SmallVector<int64_t>(tempStrides);
   return true;
 }
 
@@ -655,7 +645,8 @@ bool isaConvolutionOpOfType<linalg::PoolingNhwcMaxOp>(
   // Match body
   if (!bodyMatcherForMaxSignedPoolOps(yieldVal, body))
     return false;
-  updateConvDilationsAndStrides(dilations, strides, tempDilations, tempStrides);
+  *dilations = SmallVector<int64_t>(tempDilations);
+  *strides = SmallVector<int64_t>(tempStrides);
   return true;
 }
 
@@ -702,7 +693,8 @@ bool isaConvolutionOpOfType<linalg::PoolingNhwcMinOp>(
   // Match body
   if (!bodyMatcherForMinSignedPoolOps(yieldVal, body))
     return false;
-  updateConvDilationsAndStrides(dilations, strides, tempDilations, tempStrides);
+  *dilations = SmallVector<int64_t>(tempDilations);
+  *strides = SmallVector<int64_t>(tempStrides);
   return true;
 }
 
@@ -749,7 +741,8 @@ bool isaConvolutionOpOfType<linalg::PoolingNhwcSumOp>(
   // Match body
   if (!bodyMatcherForSumPoolOps(yieldVal, body))
     return false;
-  updateConvDilationsAndStrides(dilations, strides, tempDilations, tempStrides);
+  *dilations = SmallVector<int64_t>(tempDilations);
+  *strides = SmallVector<int64_t>(tempStrides);
   return true;
 }
 
@@ -796,7 +789,8 @@ bool isaConvolutionOpOfType<linalg::PoolingNhwcMaxUnsignedOp>(
   // Match body
   if (!bodyMatcherForMaxUnsignedPoolOps(yieldVal, body))
     return false;
-  updateConvDilationsAndStrides(dilations, strides, tempDilations, tempStrides);
+  *dilations = SmallVector<int64_t>(tempDilations);
+  *strides = SmallVector<int64_t>(tempStrides);
   return true;
 }
 
@@ -843,7 +837,8 @@ bool isaConvolutionOpOfType<linalg::PoolingNhwcMinUnsignedOp>(
   // Match body
   if (!bodyMatcherForMinUnsignedPoolOps(yieldVal, body))
     return false;
-  updateConvDilationsAndStrides(dilations, strides, tempDilations, tempStrides);
+  *dilations = SmallVector<int64_t>(tempDilations);
+  *strides = SmallVector<int64_t>(tempStrides);
   return true;
 }
 
