@@ -54,7 +54,10 @@ ArrayToPointerConversion(ValueObject &valobj, ExecutionContextScope &ctx) {
 }
 
 llvm::Expected<lldb::ValueObjectSP>
-Interpreter::UnaryConversion(lldb::ValueObjectSP valobj) {
+Interpreter::UnaryConversion(lldb::ValueObjectSP valobj, uint32_t location) {
+  if (!valobj)
+    return llvm::make_error<DILDiagnosticError>(m_expr, "invalid value object",
+                                                location);
   llvm::Expected<lldb::TypeSystemSP> type_system =
       GetTypeSystemFromCU(m_exe_ctx_scope);
   if (!type_system)
@@ -311,7 +314,8 @@ Interpreter::Visit(const UnaryOpNode *node) {
       if (error.Fail())
         return error.ToError();
     }
-    llvm::Expected<lldb::ValueObjectSP> conv_op = UnaryConversion(operand);
+    llvm::Expected<lldb::ValueObjectSP> conv_op =
+        UnaryConversion(operand, node->GetOperand()->GetLocation());
     if (!conv_op)
       return conv_op;
     operand = *conv_op;
@@ -340,7 +344,8 @@ Interpreter::Visit(const UnaryOpNode *node) {
       if (error.Fail())
         return error.ToError();
     }
-    llvm::Expected<lldb::ValueObjectSP> conv_op = UnaryConversion(operand);
+    llvm::Expected<lldb::ValueObjectSP> conv_op =
+        UnaryConversion(operand, node->GetOperand()->GetLocation());
     if (!conv_op)
       return conv_op;
     operand = *conv_op;
