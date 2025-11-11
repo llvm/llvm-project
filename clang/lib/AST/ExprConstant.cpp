@@ -11669,11 +11669,8 @@ static bool evalShuffleGeneric(
         ResultElements.push_back(
             APValue(APFloat::getZero(Info.Ctx.getFloatTypeSemantics(ElemTy))));
       } else if (ElemTy->isIntegerType()) {
-        unsigned BitWidth = Info.Ctx.getTypeSize(ElemTy);
-        bool IsUnsigned = ElemTy->isUnsignedIntegerType();
-        llvm::APSInt ZeroValue(BitWidth, IsUnsigned);
-        ZeroValue = 0;
-        ResultElements.push_back(APValue(ZeroValue));
+        APValue Zero(Info.Ctx.MakeIntValue(0, ElemTy));
+        ResultElements.push_back(APValue(Zero));
       } else {
         // Other types of fallback logic
         ResultElements.push_back(APValue());
