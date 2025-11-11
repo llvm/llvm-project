@@ -75,6 +75,10 @@ RUN <<EOF
   rm -rf tmp
 EOF
 
+# Create the libcxx-builder user
+RUN sudo useradd --create-home libcxx-builder
+WORKDIR /home/libcxx-builder
+
 # Install the Buildkite agent and dependencies. This must be done as non-root
 # for the Buildkite agent to be installed in a path where we can find it.
 #
@@ -90,7 +94,6 @@ EOF
 ENV PATH="${PATH}:/home/libcxx-builder/.buildkite-agent/bin"
 
 # Install Docker
-USER root
 RUN <<EOF
   set -e
   curl -fsSL https://get.docker.com -o /tmp/get-docker.sh
@@ -104,12 +107,8 @@ RUN <<EOF
   chmod u+s /usr/bin/docker
 EOF
 
-# Create the libcxx-builder user
-RUN sudo useradd --create-home libcxx-builder
-USER libcxx-builder
-WORKDIR /home/libcxx-builder
-
 # Setup the Buildkite agent command line to do Android setup stuff first.
+USER libcxx-builder
 COPY libcxx/utils/ci/vendor/android/container-setup.sh /opt/android/container-setup.sh
 ENV PATH="/opt/android/sdk/platform-tools:${PATH}"
 CMD /opt/android/container-setup.sh && buildkite-agent start
