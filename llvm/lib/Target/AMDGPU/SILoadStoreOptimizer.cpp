@@ -233,10 +233,11 @@ private:
 
   void copyToDestRegs(CombineInfo &CI, CombineInfo &Paired,
                       MachineBasicBlock::iterator InsertBefore,
-                      AMDGPU::OpName OpName, Register DestReg) const;
+                      const DebugLoc &DL, AMDGPU::OpName OpName,
+                      Register DestReg) const;
   Register copyFromSrcRegs(CombineInfo &CI, CombineInfo &Paired,
                            MachineBasicBlock::iterator InsertBefore,
-                           AMDGPU::OpName OpName) const;
+                           const DebugLoc &DL, AMDGPU::OpName OpName) const;
 
   unsigned read2Opcode(unsigned EltSize) const;
   unsigned read2ST64Opcode(unsigned EltSize) const;
@@ -1336,11 +1337,9 @@ SILoadStoreOptimizer::checkAndPrepareMerge(CombineInfo &CI,
     int Data1Idx = AMDGPU::getNamedOperandIdx(Write2Opc.getOpcode(),
                                               AMDGPU::OpName::data1);
 
-    const TargetRegisterClass *DataRC0 =
-        TII->getRegClass(Write2Opc, Data0Idx, TRI);
+    const TargetRegisterClass *DataRC0 = TII->getRegClass(Write2Opc, Data0Idx);
 
-    const TargetRegisterClass *DataRC1 =
-        TII->getRegClass(Write2Opc, Data1Idx, TRI);
+    const TargetRegisterClass *DataRC1 = TII->getRegClass(Write2Opc, Data1Idx);
 
     if (unsigned SubReg = Data0->getSubReg()) {
       DataRC0 = TRI->getMatchingSuperRegClass(MRI->getRegClass(Data0->getReg()),
@@ -1367,10 +1366,9 @@ SILoadStoreOptimizer::checkAndPrepareMerge(CombineInfo &CI,
 // Paired.
 void SILoadStoreOptimizer::copyToDestRegs(
     CombineInfo &CI, CombineInfo &Paired,
-    MachineBasicBlock::iterator InsertBefore, AMDGPU::OpName OpName,
-    Register DestReg) const {
+    MachineBasicBlock::iterator InsertBefore, const DebugLoc &DL,
+    AMDGPU::OpName OpName, Register DestReg) const {
   MachineBasicBlock *MBB = CI.I->getParent();
-  DebugLoc DL = CI.I->getDebugLoc();
 
   auto [SubRegIdx0, SubRegIdx1] = getSubRegIdxs(CI, Paired);
 
@@ -1398,9 +1396,9 @@ void SILoadStoreOptimizer::copyToDestRegs(
 Register
 SILoadStoreOptimizer::copyFromSrcRegs(CombineInfo &CI, CombineInfo &Paired,
                                       MachineBasicBlock::iterator InsertBefore,
+                                      const DebugLoc &DL,
                                       AMDGPU::OpName OpName) const {
   MachineBasicBlock *MBB = CI.I->getParent();
-  DebugLoc DL = CI.I->getDebugLoc();
 
   auto [SubRegIdx0, SubRegIdx1] = getSubRegIdxs(CI, Paired);
 
@@ -1456,7 +1454,8 @@ SILoadStoreOptimizer::mergeRead2Pair(CombineInfo &CI, CombineInfo &Paired,
   const TargetRegisterClass *SuperRC = getTargetRegisterClass(CI, Paired);
   Register DestReg = MRI->createVirtualRegister(SuperRC);
 
-  DebugLoc DL = CI.I->getDebugLoc();
+  DebugLoc DL =
+      DebugLoc::getMergedLocation(CI.I->getDebugLoc(), Paired.I->getDebugLoc());
 
   Register BaseReg = AddrReg->getReg();
   unsigned BaseSubReg = AddrReg->getSubReg();
@@ -1484,7 +1483,7 @@ SILoadStoreOptimizer::mergeRead2Pair(CombineInfo &CI, CombineInfo &Paired,
           .addImm(0)                                 // gds
           .cloneMergedMemRefs({&*CI.I, &*Paired.I});
 
-  copyToDestRegs(CI, Paired, InsertBefore, AMDGPU::OpName::vdst, DestReg);
+  copyToDestRegs(CI, Paired, InsertBefore, DL, AMDGPU::OpName::vdst, DestReg);
 
   CI.I->eraseFromParent();
   Paired.I->eraseFromParent();
@@ -1541,7 +1540,8 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeWrite2Pair(
          (NewOffset0 != NewOffset1) && "Computed offset doesn't fit");
 
   const MCInstrDesc &Write2Desc = TII->get(Opc);
-  DebugLoc DL = CI.I->getDebugLoc();
+  DebugLoc DL =
+      DebugLoc::getMergedLocation(CI.I->getDebugLoc(), Paired.I->getDebugLoc());
 
   Register BaseReg = AddrReg->getReg();
   unsigned BaseSubReg = AddrReg->getSubReg();
@@ -1582,7 +1582,9 @@ MachineBasicBlock::iterator
 SILoadStoreOptimizer::mergeImagePair(CombineInfo &CI, CombineInfo &Paired,
                                      MachineBasicBlock::iterator InsertBefore) {
   MachineBasicBlock *MBB = CI.I->getParent();
-  DebugLoc DL = CI.I->getDebugLoc();
+  DebugLoc DL =
+      DebugLoc::getMergedLocation(CI.I->getDebugLoc(), Paired.I->getDebugLoc());
+
   const unsigned Opcode = getNewOpcode(CI, Paired);
 
   const TargetRegisterClass *SuperRC = getTargetRegisterClass(CI, Paired);
@@ -1607,7 +1609,7 @@ SILoadStoreOptimizer::mergeImagePair(CombineInfo &CI, CombineInfo &Paired,
 
   MachineInstr *New = MIB.addMemOperand(combineKnownAdjacentMMOs(CI, Paired));
 
-  copyToDestRegs(CI, Paired, InsertBefore, AMDGPU::OpName::vdata, DestReg);
+  copyToDestRegs(CI, Paired, InsertBefore, DL, AMDGPU::OpName::vdata, DestReg);
 
   CI.I->eraseFromParent();
   Paired.I->eraseFromParent();
@@ -1618,7 +1620,9 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeSMemLoadImmPair(
     CombineInfo &CI, CombineInfo &Paired,
     MachineBasicBlock::iterator InsertBefore) {
   MachineBasicBlock *MBB = CI.I->getParent();
-  DebugLoc DL = CI.I->getDebugLoc();
+  DebugLoc DL =
+      DebugLoc::getMergedLocation(CI.I->getDebugLoc(), Paired.I->getDebugLoc());
+
   const unsigned Opcode = getNewOpcode(CI, Paired);
 
   const TargetRegisterClass *SuperRC = getTargetRegisterClass(CI, Paired);
@@ -1639,7 +1643,7 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeSMemLoadImmPair(
   New.addImm(MergedOffset);
   New.addImm(CI.CPol).addMemOperand(combineKnownAdjacentMMOs(CI, Paired));
 
-  copyToDestRegs(CI, Paired, InsertBefore, AMDGPU::OpName::sdst, DestReg);
+  copyToDestRegs(CI, Paired, InsertBefore, DL, AMDGPU::OpName::sdst, DestReg);
 
   CI.I->eraseFromParent();
   Paired.I->eraseFromParent();
@@ -1650,7 +1654,9 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeBufferLoadPair(
     CombineInfo &CI, CombineInfo &Paired,
     MachineBasicBlock::iterator InsertBefore) {
   MachineBasicBlock *MBB = CI.I->getParent();
-  DebugLoc DL = CI.I->getDebugLoc();
+
+  DebugLoc DL =
+      DebugLoc::getMergedLocation(CI.I->getDebugLoc(), Paired.I->getDebugLoc());
 
   const unsigned Opcode = getNewOpcode(CI, Paired);
 
@@ -1680,7 +1686,7 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeBufferLoadPair(
         .addImm(0)            // swz
         .addMemOperand(combineKnownAdjacentMMOs(CI, Paired));
 
-  copyToDestRegs(CI, Paired, InsertBefore, AMDGPU::OpName::vdata, DestReg);
+  copyToDestRegs(CI, Paired, InsertBefore, DL, AMDGPU::OpName::vdata, DestReg);
 
   CI.I->eraseFromParent();
   Paired.I->eraseFromParent();
@@ -1691,7 +1697,9 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeTBufferLoadPair(
     CombineInfo &CI, CombineInfo &Paired,
     MachineBasicBlock::iterator InsertBefore) {
   MachineBasicBlock *MBB = CI.I->getParent();
-  DebugLoc DL = CI.I->getDebugLoc();
+
+  DebugLoc DL =
+      DebugLoc::getMergedLocation(CI.I->getDebugLoc(), Paired.I->getDebugLoc());
 
   const unsigned Opcode = getNewOpcode(CI, Paired);
 
@@ -1731,7 +1739,7 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeTBufferLoadPair(
           .addImm(0)            // swz
           .addMemOperand(combineKnownAdjacentMMOs(CI, Paired));
 
-  copyToDestRegs(CI, Paired, InsertBefore, AMDGPU::OpName::vdata, DestReg);
+  copyToDestRegs(CI, Paired, InsertBefore, DL, AMDGPU::OpName::vdata, DestReg);
 
   CI.I->eraseFromParent();
   Paired.I->eraseFromParent();
@@ -1742,12 +1750,13 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeTBufferStorePair(
     CombineInfo &CI, CombineInfo &Paired,
     MachineBasicBlock::iterator InsertBefore) {
   MachineBasicBlock *MBB = CI.I->getParent();
-  DebugLoc DL = CI.I->getDebugLoc();
+  DebugLoc DL =
+      DebugLoc::getMergedLocation(CI.I->getDebugLoc(), Paired.I->getDebugLoc());
 
   const unsigned Opcode = getNewOpcode(CI, Paired);
 
   Register SrcReg =
-      copyFromSrcRegs(CI, Paired, InsertBefore, AMDGPU::OpName::vdata);
+      copyFromSrcRegs(CI, Paired, InsertBefore, DL, AMDGPU::OpName::vdata);
 
   auto MIB = BuildMI(*MBB, InsertBefore, DL, TII->get(Opcode))
                  .addReg(SrcReg, RegState::Kill);
@@ -1789,7 +1798,9 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeFlatLoadPair(
     CombineInfo &CI, CombineInfo &Paired,
     MachineBasicBlock::iterator InsertBefore) {
   MachineBasicBlock *MBB = CI.I->getParent();
-  DebugLoc DL = CI.I->getDebugLoc();
+
+  DebugLoc DL =
+      DebugLoc::getMergedLocation(CI.I->getDebugLoc(), Paired.I->getDebugLoc());
 
   const unsigned Opcode = getNewOpcode(CI, Paired);
 
@@ -1807,7 +1818,7 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeFlatLoadPair(
        .addImm(CI.CPol)
        .addMemOperand(combineKnownAdjacentMMOs(CI, Paired));
 
-  copyToDestRegs(CI, Paired, InsertBefore, AMDGPU::OpName::vdst, DestReg);
+  copyToDestRegs(CI, Paired, InsertBefore, DL, AMDGPU::OpName::vdst, DestReg);
 
   CI.I->eraseFromParent();
   Paired.I->eraseFromParent();
@@ -1818,12 +1829,14 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeFlatStorePair(
     CombineInfo &CI, CombineInfo &Paired,
     MachineBasicBlock::iterator InsertBefore) {
   MachineBasicBlock *MBB = CI.I->getParent();
-  DebugLoc DL = CI.I->getDebugLoc();
+
+  DebugLoc DL =
+      DebugLoc::getMergedLocation(CI.I->getDebugLoc(), Paired.I->getDebugLoc());
 
   const unsigned Opcode = getNewOpcode(CI, Paired);
 
   Register SrcReg =
-      copyFromSrcRegs(CI, Paired, InsertBefore, AMDGPU::OpName::vdata);
+      copyFromSrcRegs(CI, Paired, InsertBefore, DL, AMDGPU::OpName::vdata);
 
   auto MIB = BuildMI(*MBB, InsertBefore, DL, TII->get(Opcode))
                  .add(*TII->getNamedOperand(*CI.I, AMDGPU::OpName::vaddr))
@@ -2094,12 +2107,13 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeBufferStorePair(
     CombineInfo &CI, CombineInfo &Paired,
     MachineBasicBlock::iterator InsertBefore) {
   MachineBasicBlock *MBB = CI.I->getParent();
-  DebugLoc DL = CI.I->getDebugLoc();
+  DebugLoc DL =
+      DebugLoc::getMergedLocation(CI.I->getDebugLoc(), Paired.I->getDebugLoc());
 
   const unsigned Opcode = getNewOpcode(CI, Paired);
 
   Register SrcReg =
-      copyFromSrcRegs(CI, Paired, InsertBefore, AMDGPU::OpName::vdata);
+      copyFromSrcRegs(CI, Paired, InsertBefore, DL, AMDGPU::OpName::vdata);
 
   auto MIB = BuildMI(*MBB, InsertBefore, DL, TII->get(Opcode))
                  .addReg(SrcReg, RegState::Kill);

@@ -1374,7 +1374,7 @@ bool RegisterCoalescer::reMaterializeDef(const CoalescerPair &CP,
   }
 
   const unsigned DefSubIdx = DefMI->getOperand(0).getSubReg();
-  const TargetRegisterClass *DefRC = TII->getRegClass(MCID, 0, TRI);
+  const TargetRegisterClass *DefRC = TII->getRegClass(MCID, 0);
   if (!DefMI->isImplicitDef()) {
     if (DstReg.isPhysical()) {
       Register NewDstReg = DstReg;

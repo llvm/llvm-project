@@ -58,9 +58,8 @@ static cl::opt<unsigned int> MaxAccumulatorWidth(
 
 TargetInstrInfo::~TargetInstrInfo() = default;
 
-const TargetRegisterClass *
-TargetInstrInfo::getRegClass(const MCInstrDesc &MCID, unsigned OpNum,
-                             const TargetRegisterInfo * /*RemoveMe*/) const {
+const TargetRegisterClass *TargetInstrInfo::getRegClass(const MCInstrDesc &MCID,
+                                                        unsigned OpNum) const {
   if (OpNum >= MCID.getNumOperands())
     return nullptr;
 

@@ -11063,8 +11063,6 @@ static Register cloneInstr(const MachineInstr *MI, unsigned ReplaceOprNum,
                            MachineBasicBlock::iterator InsertTo) {
   MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
   const TargetInstrInfo *TII = MBB.getParent()->getSubtarget().getInstrInfo();
-  const TargetRegisterInfo *TRI =
-      MBB.getParent()->getSubtarget().getRegisterInfo();
   MachineInstr *NewMI = MBB.getParent()->CloneMachineInstr(MI);
   Register Result = 0;
   for (unsigned I = 0; I < NewMI->getNumOperands(); ++I) {
@@ -11073,8 +11071,7 @@ static Register cloneInstr(const MachineInstr *MI, unsigned ReplaceOprNum,
           MRI.getRegClass(NewMI->getOperand(0).getReg()));
       NewMI->getOperand(I).setReg(Result);
     } else if (I == ReplaceOprNum) {
-      MRI.constrainRegClass(ReplaceReg,
-                            TII->getRegClass(NewMI->getDesc(), I, TRI));
+      MRI.constrainRegClass(ReplaceReg, TII->getRegClass(NewMI->getDesc(), I));
       NewMI->getOperand(I).setReg(ReplaceReg);
     }
   }

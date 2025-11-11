@@ -2225,7 +2225,7 @@ void HexagonFrameLowering::optimizeSpillSlots(MachineFunction &MF,
         if (!Bad) {
           // If the addressing mode is ok, check the register class.
           unsigned OpNum = Load ? 0 : 2;
-          auto *RC = HII.getRegClass(In.getDesc(), OpNum, &HRI);
+          auto *RC = HII.getRegClass(In.getDesc(), OpNum);
           RC = getCommonRC(SI.RC, RC);
           if (RC == nullptr)
             Bad = true;
@@ -2395,7 +2395,7 @@ void HexagonFrameLowering::optimizeSpillSlots(MachineFunction &MF,
 
         HexagonBlockRanges::RegisterRef SrcRR = { SrcOp.getReg(),
                                                   SrcOp.getSubReg() };
-        auto *RC = HII.getRegClass(SI.getDesc(), 2, &HRI);
+        auto *RC = HII.getRegClass(SI.getDesc(), 2);
         // The this-> is needed to unconfuse MSVC.
         Register FoundR = this->findPhysReg(MF, Range, IM, DM, RC);
         LLVM_DEBUG(dbgs() << "Replacement reg:" << printReg(FoundR, &HRI)

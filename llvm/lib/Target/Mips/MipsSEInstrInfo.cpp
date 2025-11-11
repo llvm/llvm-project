@@ -678,8 +678,8 @@ MipsSEInstrInfo::compareOpndSize(unsigned Opc,
   const MCInstrDesc &Desc = get(Opc);
   assert(Desc.NumOperands == 2 && "Unary instruction expected.");
   const MipsRegisterInfo *RI = &getRegisterInfo();
-  unsigned DstRegSize = RI->getRegSizeInBits(*getRegClass(Desc, 0, RI));
-  unsigned SrcRegSize = RI->getRegSizeInBits(*getRegClass(Desc, 1, RI));
+  unsigned DstRegSize = RI->getRegSizeInBits(*getRegClass(Desc, 0));
+  unsigned SrcRegSize = RI->getRegSizeInBits(*getRegClass(Desc, 1));
 
   return std::make_pair(DstRegSize > SrcRegSize, DstRegSize < SrcRegSize);
 }
