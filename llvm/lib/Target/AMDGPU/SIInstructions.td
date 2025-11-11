@@ -791,7 +791,9 @@ def : GCNPat<
   (SI_CALL_ISEL $src0, (i64 0))
 >;
 
-// Handle fshr with uniform inputs to map to scalar instructions
+// Funnel shift right (fshr) patterns for uniform inputs.
+// These patterns implement this using scalar instructions by constructing a 64-bit
+// value {a, b} and performing a single right shift.
 def : GCNPat<(UniformTernaryFrag<fshr> i32:$src0, i32:$src1, i32:$src2),
   (i32 (EXTRACT_SUBREG (S_LSHR_B64 (REG_SEQUENCE SReg_64, $src1, sub0, $src0, sub1), (S_AND_B32 $src2, (i32 31))), sub0))
 >;
@@ -2709,7 +2711,6 @@ def : GCNPat<(fshr i32:$src0, i32:$src1, i32:$src2),
                                   /* src2_modifiers */ 0,
                                   $src2, /* clamp */ 0, /* op_sel */ 0)
 >;
-
 } // isGFX9GFX10
 } // end True16Predicate = NotHasTrue16BitInsts
 
@@ -2738,7 +2739,6 @@ def : GCNPat<(fshr i32:$src0, i32:$src1, i32:$src2),
                           /* src2_modifiers */ 0,
                           (EXTRACT_SUBREG VGPR_32:$src2, lo16),
                           /* clamp */ 0, /* op_sel */ 0)>;
-
 } // end True16Predicate = UseRealTrue16Insts
 
 let True16Predicate = UseFakeTrue16Insts in {
@@ -2774,7 +2774,6 @@ def : GCNPat<(fshr i32:$src0, i32:$src1, i32:$src2),
                                 /* src2_modifiers */ 0,
                                 $src2, /* clamp */ 0, /* op_sel */ 0)
 >;
-
 } // end True16Predicate = UseFakeTrue16Insts
 
 /********** ====================== **********/
@@ -3863,7 +3862,6 @@ class PackB32Pat<Instruction inst> : GCNPat <
   (inst $src0_mods, VGPR_32:$src0, $src1_mods, VGPR_32:$src1)
 >;
 }
-
 let SubtargetPredicate = isGFX9Plus in {  
 let True16Predicate = NotHasTrue16BitInsts in
   def : PackB32Pat<V_PACK_B32_F16_e64>;
