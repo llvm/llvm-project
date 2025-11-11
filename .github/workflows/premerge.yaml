@@ -204,7 +204,8 @@ jobs:
         with:
           max-size: "2000M"
       - name: Install Ninja
-        uses: llvm/actions/install-ninja@42d80571b13f4599bbefbc7189728b64723c7f78 # main
+        run: |
+          brew install ninja
       - name: Build and Test
         run: |
           source <(git diff --name-only HEAD~1...HEAD | python3 .ci/compute_projects.py)

@@ -472,17 +472,17 @@ static constexpr IntrinsicHandler cudaHandlers[]{
      /*isElemental=*/false},
     {"threadfence",
      static_cast<CUDAIntrinsicLibrary::SubroutineGenerator>(
-         &CI::genThreadFence),
+         &CI::genThreadFence<mlir::NVVM::MemScopeKind::GPU>),
      {},
      /*isElemental=*/false},
     {"threadfence_block",
      static_cast<CUDAIntrinsicLibrary::SubroutineGenerator>(
-         &CI::genThreadFenceBlock),
+         &CI::genThreadFence<mlir::NVVM::MemScopeKind::CTA>),
      {},
      /*isElemental=*/false},
     {"threadfence_system",
      static_cast<CUDAIntrinsicLibrary::SubroutineGenerator>(
-         &CI::genThreadFenceSystem),
+         &CI::genThreadFence<mlir::NVVM::MemScopeKind::SYS>),
      {},
      /*isElemental=*/false},
     {"tma_bulk_commit_group",
@@ -1306,25 +1306,12 @@ CUDAIntrinsicLibrary::genThisWarp(mlir::Type resultType,
   return res;
 }
 
-// THREADFENCE
+// THREADFENCE, THREADFENCE_BLOCK, THREADFENCE_SYSTEM
+template <mlir::NVVM::MemScopeKind scope>
 void CUDAIntrinsicLibrary::genThreadFence(
     llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 0);
-  mlir::NVVM::MembarOp::create(builder, loc, mlir::NVVM::MemScopeKind::GPU);
-}
-
-// THREADFENCE_BLOCK
-void CUDAIntrinsicLibrary::genThreadFenceBlock(
-    llvm::ArrayRef<fir::ExtendedValue> args) {
-  assert(args.size() == 0);
-  mlir::NVVM::MembarOp::create(builder, loc, mlir::NVVM::MemScopeKind::CTA);
-}
-
-// THREADFENCE_SYSTEM
-void CUDAIntrinsicLibrary::genThreadFenceSystem(
-    llvm::ArrayRef<fir::ExtendedValue> args) {
-  assert(args.size() == 0);
-  mlir::NVVM::MembarOp::create(builder, loc, mlir::NVVM::MemScopeKind::SYS);
+  mlir::NVVM::MembarOp::create(builder, loc, scope);
 }
 
 // TMA_BULK_COMMIT_GROUP
