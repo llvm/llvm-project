@@ -4731,12 +4731,12 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
           int Offset = DstIdx % 16;
 
           // Elements come from VecB first, then VecA after the shift boundary
-          unsigned ShiftedIdx = Offset + Shift;
+          unsigned ShiftedIdx = Offset + (Shift & 0xFF);
           if (ShiftedIdx < 16) { // from VecB
-            ElemIdx = ShiftedIdx + Lane * 16;
+            ElemIdx = ShiftedIdx + (Lane * 16);
           } else if (ShiftedIdx < 32) { // from VecA
             VecIdx = 0;
-            ElemIdx = ShiftedIdx - 16 + Lane * 16;
+            ElemIdx = (ShiftedIdx - 16) + (Lane * 16);
           }
 
           return std::pair<unsigned, int>{VecIdx, ElemIdx};
