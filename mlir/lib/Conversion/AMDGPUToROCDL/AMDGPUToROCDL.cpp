@@ -1725,9 +1725,8 @@ LogicalResult ScaledExtPacked816OpLowering::matchAndRewrite(
         rewriter, loc, op.getResult().getType(), castedSource, castedScale,
         scaleSel);
     rewriter.replaceOp(op, newOp);
-    return success();
-  }
-  if (isa<Float8E4M3FNType>(srcElemType) and isa<Float16Type>(tgtElemType)) {
+  } else if (isa<Float8E4M3FNType>(srcElemType) and
+             isa<Float16Type>(tgtElemType)) {
     // CvtPkScalePk8F16Fp8Op
     // vector<8xf8E4M3FN>
     Value source = adaptor.getSource();
@@ -1740,9 +1739,8 @@ LogicalResult ScaledExtPacked816OpLowering::matchAndRewrite(
         rewriter, loc, op.getResult().getType(), castedSource, castedScale,
         scaleSel);
     rewriter.replaceOp(op, newOp);
-    return success();
-  }
-  if (isa<Float8E5M2Type>(srcElemType) and isa<Float16Type>(tgtElemType)) {
+  } else if (isa<Float8E5M2Type>(srcElemType) and
+             isa<Float16Type>(tgtElemType)) {
     // CvtPkScalePk8F16Bf8Op
     // vector<8xf8E5M2>
     Value source = adaptor.getSource();
@@ -1755,9 +1753,8 @@ LogicalResult ScaledExtPacked816OpLowering::matchAndRewrite(
         rewriter, loc, op.getResult().getType(), castedSource, castedScale,
         scaleSel);
     rewriter.replaceOp(op, newOp);
-    return success();
-  }
-  if (isa<Float4E2M1FNType>(srcElemType) and isa<BFloat16Type>(tgtElemType)) {
+  } else if (isa<Float4E2M1FNType>(srcElemType) and
+             isa<BFloat16Type>(tgtElemType)) {
     // CvtPkScalePk8Bf16Fp4Op
     // i32
     Value castedSource =
@@ -1766,9 +1763,8 @@ LogicalResult ScaledExtPacked816OpLowering::matchAndRewrite(
         rewriter, loc, op.getResult().getType(), castedSource, castedScale,
         scaleSel);
     rewriter.replaceOp(op, newOp);
-    return success();
-  }
-  if (isa<Float8E4M3FNType>(srcElemType) and isa<BFloat16Type>(tgtElemType)) {
+  } else if (isa<Float8E4M3FNType>(srcElemType) and
+             isa<BFloat16Type>(tgtElemType)) {
     // CvtPkScalePk8Bf16Fp8Op
     // vector<8xf8E4M3FN>
     Value source = adaptor.getSource();
@@ -1781,9 +1777,8 @@ LogicalResult ScaledExtPacked816OpLowering::matchAndRewrite(
         rewriter, loc, op.getResult().getType(), castedSource, castedScale,
         scaleSel);
     rewriter.replaceOp(op, newOp);
-    return success();
-  }
-  if (isa<Float8E5M2Type>(srcElemType) and isa<BFloat16Type>(tgtElemType)) {
+  } else if (isa<Float8E5M2Type>(srcElemType) and
+             isa<BFloat16Type>(tgtElemType)) {
     // CvtPkScalePk8Bf16Bf8Op
     // vector<8xf8E5M2>
     Value source = adaptor.getSource();
@@ -1796,9 +1791,8 @@ LogicalResult ScaledExtPacked816OpLowering::matchAndRewrite(
         rewriter, loc, op.getResult().getType(), castedSource, castedScale,
         scaleSel);
     rewriter.replaceOp(op, newOp);
-    return success();
-  }
-  if (isa<Float4E2M1FNType>(srcElemType) and isa<Float32Type>(tgtElemType)) {
+  } else if (isa<Float4E2M1FNType>(srcElemType) and
+             isa<Float32Type>(tgtElemType)) {
     // CvtPkScalePk8F32Fp4Op
     // i32
     Value castedSource =
@@ -1807,9 +1801,8 @@ LogicalResult ScaledExtPacked816OpLowering::matchAndRewrite(
         rewriter, loc, op.getResult().getType(), castedSource, castedScale,
         scaleSel);
     rewriter.replaceOp(op, newOp);
-    return success();
-  }
-  if (isa<Float8E4M3FNType>(srcElemType) and isa<Float32Type>(tgtElemType)) {
+  } else if (isa<Float8E4M3FNType>(srcElemType) and
+             isa<Float32Type>(tgtElemType)) {
     // CvtPkScalePk8F32Fp8Op
     // vector<8xf8E4M3FN>
     Value source = adaptor.getSource();
@@ -1822,9 +1815,8 @@ LogicalResult ScaledExtPacked816OpLowering::matchAndRewrite(
         rewriter, loc, op.getResult().getType(), castedSource, castedScale,
         scaleSel);
     rewriter.replaceOp(op, newOp);
-    return success();
-  }
-  if (isa<Float8E5M2Type>(srcElemType) and isa<Float32Type>(tgtElemType)) {
+  } else if (isa<Float8E5M2Type>(srcElemType) and
+             isa<Float32Type>(tgtElemType)) {
     // CvtPkScalePk8F32Bf8Op
     // vector<8xf8E5M2>
     Value source = adaptor.getSource();
@@ -1837,7 +1829,6 @@ LogicalResult ScaledExtPacked816OpLowering::matchAndRewrite(
         rewriter, loc, op.getResult().getType(), castedSource, castedScale,
         scaleSel);
     rewriter.replaceOp(op, newOp);
-    return success();
   }
   // smallT = [Fp6, Bf6]
   // largeT = [F16, Bf16, F32]
@@ -1846,7 +1837,8 @@ LogicalResult ScaledExtPacked816OpLowering::matchAndRewrite(
   // Bf6 = Float6E3M2FN
 
   // CvtPkScalePk16${largeT}${smallT}
-  if (isa<Float6E2M3FNType>(srcElemType) and isa<Float16Type>(tgtElemType)) {
+  else if (isa<Float6E2M3FNType>(srcElemType) and
+           isa<Float16Type>(tgtElemType)) {
     // CvtPkScale16F16Fp6Op
     Value source = adaptor.getSource();
     VectorType v3xi32 = VectorType::get(3, i32);
@@ -1856,9 +1848,8 @@ LogicalResult ScaledExtPacked816OpLowering::matchAndRewrite(
         rewriter, loc, op.getResult().getType(), castedSource, castedScale,
         scaleSel);
     rewriter.replaceOp(op, newOp);
-    return success();
-  }
-  if (isa<Float6E3M2FNType>(srcElemType) and isa<Float16Type>(tgtElemType)) {
+  } else if (isa<Float6E3M2FNType>(srcElemType) and
+             isa<Float16Type>(tgtElemType)) {
     // CvtPkScale16F16Bf6Op
     Value source = adaptor.getSource();
     VectorType v3xi32 = VectorType::get(3, i32);
@@ -1868,9 +1859,8 @@ LogicalResult ScaledExtPacked816OpLowering::matchAndRewrite(
         rewriter, loc, op.getResult().getType(), castedSource, castedScale,
         scaleSel);
     rewriter.replaceOp(op, newOp);
-    return success();
-  }
-  if (isa<Float6E2M3FNType>(srcElemType) and isa<BFloat16Type>(tgtElemType)) {
+  } else if (isa<Float6E2M3FNType>(srcElemType) and
+             isa<BFloat16Type>(tgtElemType)) {
     // CvtPkScale16Bf16Fp6Op
     Value source = adaptor.getSource();
     VectorType v3xi32 = VectorType::get(3, i32);
@@ -1880,9 +1870,8 @@ LogicalResult ScaledExtPacked816OpLowering::matchAndRewrite(
         rewriter, loc, op.getResult().getType(), castedSource, castedScale,
         scaleSel);
     rewriter.replaceOp(op, newOp);
-    return success();
-  }
-  if (isa<Float6E3M2FNType>(srcElemType) and isa<BFloat16Type>(tgtElemType)) {
+  } else if (isa<Float6E3M2FNType>(srcElemType) and
+             isa<BFloat16Type>(tgtElemType)) {
     // CvtPkScale16Bf16Bf6Op
     Value source = adaptor.getSource();
     VectorType v3xi32 = VectorType::get(3, i32);
@@ -1892,9 +1881,8 @@ LogicalResult ScaledExtPacked816OpLowering::matchAndRewrite(
         rewriter, loc, op.getResult().getType(), castedSource, castedScale,
         scaleSel);
     rewriter.replaceOp(op, newOp);
-    return success();
-  }
-  if (isa<Float6E2M3FNType>(srcElemType) and isa<Float32Type>(tgtElemType)) {
+  } else if (isa<Float6E2M3FNType>(srcElemType) and
+             isa<Float32Type>(tgtElemType)) {
     // CvtPkScale16F32Fp6Op
     Value source = adaptor.getSource();
     VectorType v3xi32 = VectorType::get(3, i32);
@@ -1904,9 +1892,8 @@ LogicalResult ScaledExtPacked816OpLowering::matchAndRewrite(
         rewriter, loc, op.getResult().getType(), castedSource, castedScale,
         scaleSel);
     rewriter.replaceOp(op, newOp);
-    return success();
-  }
-  if (isa<Float6E3M2FNType>(srcElemType) and isa<Float32Type>(tgtElemType)) {
+  } else if (isa<Float6E3M2FNType>(srcElemType) and
+             isa<Float32Type>(tgtElemType)) {
     // CvtPkScale16F32Bf6Op
     Value source = adaptor.getSource();
     VectorType v3xi32 = VectorType::get(3, i32);
@@ -1916,10 +1903,11 @@ LogicalResult ScaledExtPacked816OpLowering::matchAndRewrite(
         rewriter, loc, op.getResult().getType(), castedSource, castedScale,
         scaleSel);
     rewriter.replaceOp(op, newOp);
-    return success();
+  } else {
+    return failure();
   }
 
-  return failure();
+  return success();
 }
 
 LogicalResult ScaledExtPackedOpLowering::matchAndRewrite(
