@@ -1349,63 +1349,61 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     // assume(ballot(x) == ballot(true)) -> x = true
     // assume(ballot(x) == -1)           -> x = true
     // assume(ballot(x) == 0)            -> x = false
-    if (Arg->getType()->isIntegerTy(1)) {
-      for (auto &AssumeVH : IC.getAssumptionCache().assumptionsFor(&II)) {
-        if (!AssumeVH)
-          continue;
+    //
+    // Skip if ballot width < wave size (e.g., ballot.i32 on wave64).
+    if (ST->isWave64() && II.getType()->getIntegerBitWidth() == 32)
+      break; // ballot.i32 on wave64 captures only lanes [0:31]
 
-        auto *Assume = cast<AssumeInst>(AssumeVH);
-        Value *Cond = Assume->getArgOperand(0);
+    for (auto &AssumeVH : IC.getAssumptionCache().assumptionsFor(&II)) {
+      if (!AssumeVH)
+        continue;
 
-        // Check if assume condition is an equality comparison.
-        auto *ICI = dyn_cast<ICmpInst>(Cond);
-        if (!ICI || ICI->getPredicate() != ICmpInst::ICMP_EQ)
-          continue;
+      auto *Assume = cast<AssumeInst>(AssumeVH);
+      Value *Cond = Assume->getArgOperand(0);
 
-        // Extract the ballot and the value being compared against it.
-        Value *LHS = ICI->getOperand(0), *RHS = ICI->getOperand(1);
-        Value *CompareValue = (LHS == &II) ? RHS : (RHS == &II) ? LHS : nullptr;
-        if (!CompareValue)
-          continue;
+      // Check if assume condition is an equality comparison.
+      auto *ICI = dyn_cast<ICmpInst>(Cond);
+      if (!ICI || ICI->getPredicate() != ICmpInst::ICMP_EQ)
+        continue;
 
-        // Determine the constant value of the ballot's condition argument.
-        std::optional<bool> InferredCondValue;
-        if (auto *CI = dyn_cast<ConstantInt>(CompareValue)) {
-          // ballot(x) == -1 means all lanes have x = true.
-          if (CI->isMinusOne())
-            InferredCondValue = true;
-          // ballot(x) == 0 means all lanes have x = false.
-          else if (CI->isZero())
-            InferredCondValue = false;
-        } else if (match(CompareValue,
-                         m_Intrinsic<Intrinsic::amdgcn_ballot>(m_One()))) {
-          // ballot(x) == ballot(true) means x = true.
+      // Extract the ballot and the value being compared against it.
+      Value *LHS = ICI->getOperand(0), *RHS = ICI->getOperand(1);
+      Value *CompareValue = (LHS == &II) ? RHS : (RHS == &II) ? LHS : nullptr;
+      if (!CompareValue)
+        continue;
+
+      // Determine the constant value of the ballot's condition argument.
+      std::optional<bool> InferredCondValue;
+      if (auto *CI = dyn_cast<ConstantInt>(CompareValue)) {
+        // ballot(x) == -1 means all lanes have x = true.
+        if (CI->isMinusOne())
           InferredCondValue = true;
-        } else if (match(CompareValue,
-                         m_Intrinsic<Intrinsic::amdgcn_ballot>(m_Zero()))) {
-          // ballot(x) == ballot(false) means x = false.
+        // ballot(x) == 0 means all lanes have x = false.
+        else if (CI->isZero())
           InferredCondValue = false;
-        }
-
-        if (!InferredCondValue)
-          continue;
-
-        Constant *ReplacementValue =
-            ConstantInt::getBool(Arg->getContext(), *InferredCondValue);
-
-        // Replace dominated uses of the condition argument.
-        bool Changed = false;
-        Arg->replaceUsesWithIf(ReplacementValue, [&](Use &U) {
-          Instruction *UserInst = dyn_cast<Instruction>(U.getUser());
-          bool Dominates =
-              UserInst && IC.getDominatorTree().dominates(Assume, U);
-          Changed |= Dominates;
-          return Dominates;
-        });
-
-        if (Changed)
-          return nullptr;
+      } else if (match(CompareValue,
+                       m_Intrinsic<Intrinsic::amdgcn_ballot>(m_One()))) {
+        // ballot(x) == ballot(true) means x = true (EXEC mask comparison).
+        InferredCondValue = true;
       }
+
+      if (!InferredCondValue)
+        continue;
+
+      Constant *ReplacementValue =
+          ConstantInt::getBool(Arg->getContext(), *InferredCondValue);
+
+      // Replace uses of the condition argument dominated by the assume.
+      bool Changed = false;
+      Arg->replaceUsesWithIf(ReplacementValue, [&](Use &U) {
+        Instruction *UserInst = dyn_cast<Instruction>(U.getUser());
+        bool Dominates = UserInst && IC.getDominatorTree().dominates(Assume, U);
+        Changed |= Dominates;
+        return Dominates;
+      });
+
+      if (Changed)
+        return nullptr;
     }
 
     break;
