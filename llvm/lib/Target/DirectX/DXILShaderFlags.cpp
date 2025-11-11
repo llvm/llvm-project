@@ -105,16 +105,17 @@ static bool checkWaveOps(Intrinsic::ID IID) {
 // This is our proof that the module requires TiledResources
 // to be set, as if check access fully mapped was used.
 bool checkIfStatusIsExtracted(const Instruction &I) {
-  // Iterate over all uses of the instruction
-  for (const Use &U : I.uses()) {
-    const User *UserInst = U.getUser();
-
-    // Check if the user is an ExtractValue instruction
-    if (const ExtractValueInst *EVI = dyn_cast<ExtractValueInst>(UserInst)) {
-      // ExtractValueInst has a list of indices; check if it extracts index 1
-      if (EVI->getNumIndices() == 1 && EVI->getIndices()[0] == 1) {
+  auto *II = dyn_cast<IntrinsicInst>(&I);
+  assert(II);
+  auto IID = II->getIntrinsicID();
+  assert(IID == Intrinsic::dx_resource_load_typedbuffer ||
+         IID == Intrinsic::dx_resource_load_rawbuffer);
+  for (const User *U : I.users()) {
+    if (const ExtractValueInst *EVI = dyn_cast<ExtractValueInst>(U)) {
+      // Resource load operations return a {result, status} pair
+      // check if we extract the status
+      if (EVI->getNumIndices() == 1 && EVI->getIndices()[0] == 1)
         return true;
-      }
     }
   }
 

@@ -365,6 +365,8 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     const HLSLAttributedResourceType *RT =
         HandleTy->getAs<HLSLAttributedResourceType>();
     assert(RT && "Expected a resource type as first parameter");
+    assert(CGM.getTarget().getTriple().getArch() == llvm::Triple::dxil &&
+           "Only DXIL currently implements load with status");
 
     Intrinsic::ID IntrID = RT->getAttrs().RawBuffer
                                ? llvm::Intrinsic::dx_resource_load_rawbuffer
@@ -379,24 +381,25 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     Args.push_back(IndexOp);
 
     if (RT->getAttrs().RawBuffer) {
-      Args.push_back(Builder.getInt32(0)); // dummy offset
+      Value *Offset = Builder.getInt32(0);
+      Args.push_back(Offset);
     }
 
-    // Call the intrinsic (returns a struct)
+    // Call the intrinsic (returns a struct),
+    // Extract the loaded value and status bit (elements within the struct)
+    // Extend the status bit to a 32-bit integer
+    // Store the extended status into the user's reference variable
+    // Return the loaded value
     Value *ResRet =
         Builder.CreateIntrinsic(RetTy, IntrID, Args, {}, "ld.struct");
 
-    // Extract the loaded data (first element of the struct)
     Value *LoadedValue = Builder.CreateExtractValue(ResRet, {0}, "ld.value");
 
-    // Extract the status bit (second element of the struct)
     Value *StatusBit = Builder.CreateExtractValue(ResRet, {1}, "ld.status");
 
-    // Extend the status bit to a 32-bit integer
     Value *ExtendedStatus =
         Builder.CreateZExt(StatusBit, Builder.getInt32Ty(), "ld.status.ext");
 
-    // Store the extended status into the user's reference variable
     Builder.CreateStore(ExtendedStatus, StatusAddr);
 
     return LoadedValue;
