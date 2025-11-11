@@ -21,3 +21,11 @@ void test_mm_prefetch(char const* p) {
   // CIR: cir.prefetch read locality(0) %{{.*}} : !cir.ptr<!void>
   // LLVM: call void @llvm.prefetch.p0(ptr {{.*}}, i32 0, i32 0, i32 1)
 }
+
+void test_mm_sfence(void) {
+  // CIR-LABEL: test_mm_sfence
+  // LLVM-LABEL: test_mm_sfence
+  _mm_sfence();
+  // CIR: {{%.*}} = cir.call_llvm_intrinsic "x86.sse.sfence" : () -> !void
+  // LLVM: call void @llvm.x86.sse.sfence()
+}

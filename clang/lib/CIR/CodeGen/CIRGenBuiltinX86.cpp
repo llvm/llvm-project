@@ -26,13 +26,16 @@ static int64_t getIntValueFromConstOp(mlir::Value val) {
   return val.getDefiningOp<cir::ConstantOp>().getIntValue().getSExtValue();
 }
 
-static mlir::Value emitClFlush(CIRGenFunction &cgf, const CallExpr *e,
-                               mlir::Value &op) {
-  mlir::Type voidTy = cir::VoidType::get(&cgf.getMLIRContext());
+template <typename... Operands>
+static mlir::Value emitIntrinsicCallOp(CIRGenFunction &cgf, const CallExpr *e,
+                                       const std::string &str,
+                                       const mlir::Type &resTy,
+                                       Operands &&...op) {
+  CIRGenBuilderTy &builder = cgf.getBuilder();
   mlir::Location location = cgf.getLoc(e->getExprLoc());
-  return cir::LLVMIntrinsicCallOp::create(
-             cgf.getBuilder(), location,
-             cgf.getBuilder().getStringAttr("x86.sse2.clflush"), voidTy, op)
+  return cir::LLVMIntrinsicCallOp::create(builder, location,
+                                          builder.getStringAttr(str), resTy,
+                                          std::forward<Operands>(op)...)
       .getResult();
 }
 
@@ -46,10 +49,8 @@ static mlir::Value emitPrefetch(CIRGenFunction &cgf, const CallExpr *e,
   mlir::Value locality = builder.getSignedInt(location, hint & 0x3, 32);
   mlir::Value data = builder.getSignedInt(location, 1, 32);
 
-  return cir::LLVMIntrinsicCallOp::create(
-             builder, location, builder.getStringAttr("prefetch"), voidTy,
-             mlir::ValueRange{address, rw, locality, data})
-      .getResult();
+  return emitIntrinsicCallOp(cgf, e, "prefetch", voidTy,
+                             mlir::ValueRange{address, rw, locality, data});
 }
 
 mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
@@ -89,17 +90,24 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
     ops.push_back(emitScalarOrConstFoldImmArg(iceArguments, i, e));
   }
 
+  CIRGenBuilderTy &builder = getBuilder();
+  mlir::Type voidTy = builder.getVoidTy();
+
   switch (builtinID) {
   default:
     return {};
   case X86::BI_mm_prefetch:
     return emitPrefetch(*this, e, ops[0], getIntValueFromConstOp(ops[1]));
   case X86::BI_mm_clflush:
-    return emitClFlush(*this, e, ops[0]);
+    return emitIntrinsicCallOp(*this, e, "x86.sse2.clflush", voidTy, ops[0]);
   case X86::BI_mm_lfence:
+    return emitIntrinsicCallOp(*this, e, "x86.sse2.lfence", voidTy);
   case X86::BI_mm_pause:
+    return emitIntrinsicCallOp(*this, e, "x86.sse2.pause", voidTy);
   case X86::BI_mm_mfence:
+    return emitIntrinsicCallOp(*this, e, "x86.sse2.mfence", voidTy);
   case X86::BI_mm_sfence:
+    return emitIntrinsicCallOp(*this, e, "x86.sse.sfence", voidTy);
   case X86::BI__rdtsc:
   case X86::BI__builtin_ia32_rdtscp:
   case X86::BI__builtin_ia32_lzcnt_u16:

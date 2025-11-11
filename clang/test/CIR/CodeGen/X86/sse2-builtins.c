@@ -21,3 +21,27 @@ void test_mm_clflush(void* A) {
   // CIR-CHECK: {{%.*}} = cir.call_llvm_intrinsic "x86.sse2.clflush" {{%.*}} : (!cir.ptr<!void>) -> !void
   // LLVM-CHECK: call void @llvm.x86.sse2.clflush(ptr {{%.*}})
 }
+
+void test_mm_lfence(void) {
+  // CIR-CHECK-LABEL: test_mm_lfence
+  // LLVM-CHECK-LABEL: test_mm_lfence
+  _mm_lfence();
+  // CIR-CHECK: {{%.*}} = cir.call_llvm_intrinsic "x86.sse2.lfence" : () -> !void
+  // LLVM-CHECK: call void @llvm.x86.sse2.lfence()
+}
+
+void test_mm_mfence(void) {
+  // CIR-CHECK-LABEL: test_mm_mfence
+  // LLVM-CHECK-LABEL: test_mm_mfence
+  _mm_mfence();
+  // CIR-CHECK: {{%.*}} = cir.call_llvm_intrinsic "x86.sse2.mfence" : () -> !void
+  // LLVM-CHECK: call void @llvm.x86.sse2.mfence()
+}
+
+void test_mm_pause(void) {
+  // CIR-LABEL: test_mm_pause
+  // LLVM-LABEL: test_mm_pause
+  _mm_pause();
+  // CIR: {{%.*}} = cir.call_llvm_intrinsic "x86.sse2.pause" : () -> !void
+  // LLVM: call void @llvm.x86.sse2.pause()
+}
