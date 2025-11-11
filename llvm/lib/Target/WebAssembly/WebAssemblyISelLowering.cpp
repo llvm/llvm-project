@@ -319,6 +319,7 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
 
     // Support vector extending
     for (auto T : MVT::integer_fixedlen_vector_valuetypes()) {
+      setOperationAction(ISD::ANY_EXTEND_VECTOR_INREG, T, Custom);
       setOperationAction(ISD::SIGN_EXTEND_VECTOR_INREG, T, Custom);
       setOperationAction(ISD::ZERO_EXTEND_VECTOR_INREG, T, Custom);
     }
@@ -1705,6 +1706,7 @@ SDValue WebAssemblyTargetLowering::LowerOperation(SDValue Op,
     return LowerSIGN_EXTEND_INREG(Op, DAG);
   case ISD::ZERO_EXTEND_VECTOR_INREG:
   case ISD::SIGN_EXTEND_VECTOR_INREG:
+  case ISD::ANY_EXTEND_VECTOR_INREG:
     return LowerEXTEND_VECTOR_INREG(Op, DAG);
   case ISD::BUILD_VECTOR:
     return LowerBUILD_VECTOR(Op, DAG);
@@ -2299,6 +2301,9 @@ WebAssemblyTargetLowering::LowerEXTEND_VECTOR_INREG(SDValue Op,
 
   unsigned Ext;
   switch (Op.getOpcode()) {
+  default:
+    llvm_unreachable("unexpected opcode");
+  case ISD::ANY_EXTEND_VECTOR_INREG:
   case ISD::ZERO_EXTEND_VECTOR_INREG:
     Ext = WebAssemblyISD::EXTEND_LOW_U;
     break;
