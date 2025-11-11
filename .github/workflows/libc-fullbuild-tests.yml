@@ -114,7 +114,7 @@ jobs:
             -DCOMPILER_RT_SCUDO_STANDALONE_BUILD_SHARED=OFF"
         fi
 
-        if [[ ${{ matrix.enable_baremetal_build == "ON" ]]; then
+        if [[ ${{ matrix.enable_baremetal_build}} == "ON" ]]; then
           cmake -B ${{ steps.strings.outputs.build-output-dir }} \
           -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }} \
           -DCMAKE_C_COMPILER=${{ matrix.c_compiler }} \
