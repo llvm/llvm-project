@@ -422,7 +422,8 @@ public:
       break;
     case k_MemoryRegRegImm:
       assert(getMemOffset() != nullptr);
-      OS << "Mem: #" << getMemBase().id() << "+#" << getMemIndexReg().id() << "+";
+      OS << "Mem: #" << getMemBase().id() << "+#" << getMemIndexReg().id()
+         << "+";
       MAI.printExpr(OS, *getMemOffset());
       OS << "\n";
       break;
@@ -723,7 +724,8 @@ public:
   }
 
   static std::unique_ptr<VEOperand>
-  MorphToMEMrri(MCRegister Base, MCRegister Index, std::unique_ptr<VEOperand> Op) {
+  MorphToMEMrri(MCRegister Base, MCRegister Index,
+                std::unique_ptr<VEOperand> Op) {
     const MCExpr *Imm = Op->getImm();
     Op->Kind = k_MemoryRegRegImm;
     Op->Mem.Base = Base;
