@@ -775,6 +775,10 @@ HLSLSemanticAttr *SemaHLSL::createSemantic(const SemanticInfo &Info,
                                            DeclaratorDecl *TargetDecl) {
   std::string SemanticName = Info.Semantic->getAttrName()->getName().upper();
 
+  if (dyn_cast<HLSLUserSemanticAttr>(Info.Semantic))
+    return createSemanticAttr<HLSLUserSemanticAttr>(*Info.Semantic, TargetDecl,
+                                                    Info.Index);
+
   if (SemanticName == "SV_DISPATCHTHREADID") {
     return createSemanticAttr<HLSLSV_DispatchThreadIDAttr>(
         *Info.Semantic, TargetDecl, Info.Index);
@@ -797,9 +801,10 @@ HLSLSemanticAttr *SemaHLSL::createSemantic(const SemanticInfo &Info,
   return nullptr;
 }
 
-bool SemaHLSL::determineActiveSemanticOnScalar(FunctionDecl *FD,
-                                               DeclaratorDecl *D,
-                                               SemanticInfo &ActiveSemantic) {
+bool SemaHLSL::determineActiveSemanticOnScalar(
+    FunctionDecl *FD, DeclaratorDecl *D, SemanticInfo &ActiveSemantic,
+    llvm::StringSet<> &ActiveInputSemantics) {
+
   if (ActiveSemantic.Semantic == nullptr) {
     ActiveSemantic.Semantic = D->getAttr<HLSLSemanticAttr>();
     if (ActiveSemantic.Semantic &&
@@ -818,11 +823,31 @@ bool SemaHLSL::determineActiveSemanticOnScalar(FunctionDecl *FD,
 
   checkSemanticAnnotation(FD, D, A);
   FD->addAttr(A);
+
+  unsigned Location = ActiveSemantic.Index.value_or(0);
+
+  const ConstantArrayType *AT = dyn_cast<ConstantArrayType>(D->getType());
+  unsigned ElementCount = AT ? AT->getZExtSize() : 1;
+  ActiveSemantic.Index = Location + ElementCount;
+
+  Twine BaseName = Twine(ActiveSemantic.Semantic->getAttrName()->getName());
+  for (unsigned I = 0; I < ElementCount; ++I) {
+    Twine VariableName = BaseName.concat(Twine(Location + I));
+
+    auto [_, Inserted] = ActiveInputSemantics.insert(VariableName.str());
+    if (!Inserted) {
+      Diag(D->getLocation(), diag::err_hlsl_semantic_index_overlap)
+          << VariableName.str();
+      return false;
+    }
+  }
+
   return true;
 }
 
-bool SemaHLSL::determineActiveSemantic(FunctionDecl *FD, DeclaratorDecl *D,
-                                       SemanticInfo &ActiveSemantic) {
+bool SemaHLSL::determineActiveSemantic(
+    FunctionDecl *FD, DeclaratorDecl *D, SemanticInfo &ActiveSemantic,
+    llvm::StringSet<> &ActiveInputSemantics) {
   if (ActiveSemantic.Semantic == nullptr) {
     ActiveSemantic.Semantic = D->getAttr<HLSLSemanticAttr>();
     if (ActiveSemantic.Semantic &&
@@ -833,12 +858,13 @@ bool SemaHLSL::determineActiveSemantic(FunctionDecl *FD, DeclaratorDecl *D,
   const Type *T = D->getType()->getUnqualifiedDesugaredType();
   const RecordType *RT = dyn_cast<RecordType>(T);
   if (!RT)
-    return determineActiveSemanticOnScalar(FD, D, ActiveSemantic);
+    return determineActiveSemanticOnScalar(FD, D, ActiveSemantic,
+                                           ActiveInputSemantics);
 
   const RecordDecl *RD = RT->getDecl();
   for (FieldDecl *Field : RD->fields()) {
     SemanticInfo Info = ActiveSemantic;
-    if (!determineActiveSemantic(FD, Field, Info)) {
+    if (!determineActiveSemantic(FD, Field, Info, ActiveInputSemantics)) {
       Diag(Field->getLocation(), diag::note_hlsl_semantic_used_here) << Field;
       return false;
     }
@@ -911,12 +937,14 @@ void SemaHLSL::CheckEntryPoint(FunctionDecl *FD) {
     llvm_unreachable("Unhandled environment in triple");
   }
 
+  llvm::StringSet<> ActiveInputSemantics;
   for (ParmVarDecl *Param : FD->parameters()) {
     SemanticInfo ActiveSemantic;
     ActiveSemantic.Semantic = nullptr;
     ActiveSemantic.Index = std::nullopt;
 
-    if (!determineActiveSemantic(FD, Param, ActiveSemantic)) {
+    if (!determineActiveSemantic(FD, Param, ActiveSemantic,
+                                 ActiveInputSemantics)) {
       Diag(Param->getLocation(), diag::note_previous_decl) << Param;
       FD->setInvalidDecl();
     }
@@ -947,6 +975,8 @@ void SemaHLSL::checkSemanticAnnotation(FunctionDecl *EntryPoint,
       return;
     DiagnoseAttrStageMismatch(SemanticAttr, ST, {llvm::Triple::Pixel});
     break;
+  case attr::HLSLUserSemantic:
+    return;
   default:
     llvm_unreachable("Unknown SemanticAttr");
   }
@@ -1766,7 +1796,7 @@ void SemaHLSL::handleSemanticAttr(Decl *D, const ParsedAttr &AL) {
   if (AL.getAttrName()->getName().starts_with_insensitive("SV_"))
     diagnoseSystemSemanticAttr(D, AL, Index);
   else
-    Diag(AL.getLoc(), diag::err_hlsl_unknown_semantic) << AL;
+    D->addAttr(createSemanticAttr<HLSLUserSemanticAttr>(AL, nullptr, Index));
 }
 
 void SemaHLSL::handlePackOffsetAttr(Decl *D, const ParsedAttr &AL) {
@@ -3880,12 +3910,15 @@ void SemaHLSL::ActOnVariableDeclarator(VarDecl *VD) {
     if (VD->getType()->isHLSLIntangibleType())
       collectResourceBindingsOnVarDecl(VD);
 
-    if (isResourceRecordTypeOrArrayOf(VD) ||
-        VD->hasAttr<HLSLVkConstantIdAttr>()) {
-      // Make the variable for resources static. The global externally visible
-      // storage is accessed through the handle, which is a member. The variable
-      // itself is not externally visible.
+    if (VD->hasAttr<HLSLVkConstantIdAttr>())
       VD->setStorageClass(StorageClass::SC_Static);
+
+    if (isResourceRecordTypeOrArrayOf(VD) &&
+        VD->getStorageClass() != SC_Static) {
+      // Add internal linkage attribute to non-static resource variables. The
+      // global externally visible storage is accessed through the handle, which
+      // is a member. The variable itself is not externally visible.
+      VD->addAttr(InternalLinkageAttr::CreateImplicit(getASTContext()));
     }
 
     // process explicit bindings

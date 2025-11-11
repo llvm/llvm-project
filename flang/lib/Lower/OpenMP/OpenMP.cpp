@@ -1008,9 +1008,7 @@ getImplicitMapTypeAndKind(fir::FirOpBuilder &firOpBuilder,
                           mlir::omp::VariableCaptureKind::ByRef);
     break;
   case DefMap::ImplicitBehavior::Firstprivate:
-  case DefMap::ImplicitBehavior::None:
-    TODO(loc, "Firstprivate and None are currently unsupported defaultmap "
-              "behaviour");
+    TODO(loc, "Firstprivate is currently unsupported defaultmap behaviour");
     break;
   case DefMap::ImplicitBehavior::From:
     return std::make_pair(mapFlag |= mlir::omp::ClauseMapFlags::from,
@@ -1032,8 +1030,9 @@ getImplicitMapTypeAndKind(fir::FirOpBuilder &firOpBuilder,
                           mlir::omp::VariableCaptureKind::ByRef);
     break;
   case DefMap::ImplicitBehavior::Default:
+  case DefMap::ImplicitBehavior::None:
     llvm_unreachable(
-        "Implicit None Behaviour Should Have Been Handled Earlier");
+        "Implicit None and Default behaviour should have been handled earlier");
     break;
   }
 
@@ -1771,16 +1770,19 @@ static void genTaskloopClauses(
     llvm::SmallVectorImpl<const semantics::Symbol *> &inReductionSyms) {
 
   ClauseProcessor cp(converter, semaCtx, clauses);
+  cp.processAllocate(clauseOps);
+  cp.processFinal(stmtCtx, clauseOps);
   cp.processGrainsize(stmtCtx, clauseOps);
+  cp.processIf(llvm::omp::Directive::OMPD_taskloop, clauseOps);
+  cp.processInReduction(loc, clauseOps, inReductionSyms);
+  cp.processMergeable(clauseOps);
   cp.processNumTasks(stmtCtx, clauseOps);
   cp.processNogroup(clauseOps);
   cp.processReduction(loc, clauseOps, reductionSyms);
-  cp.processInReduction(loc, clauseOps, inReductionSyms);
+  cp.processPriority(stmtCtx, clauseOps);
+  cp.processUntied(clauseOps);
 
-  cp.processTODO<clause::Allocate, clause::Collapse, clause::Default,
-                 clause::Final, clause::If, clause::Mergeable, clause::Priority,
-                 clause::Shared, clause::Untied>(
-      loc, llvm::omp::Directive::OMPD_taskloop);
+  cp.processTODO<clause::Collapse>(loc, llvm::omp::Directive::OMPD_taskloop);
 }
 
 static void genTaskwaitClauses(lower::AbstractConverter &converter,

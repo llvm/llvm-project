@@ -87,6 +87,11 @@ static cl::opt<bool>
                                "be combined with a shift"),
                       cl::init(true));
 
+// TODO: Support more ops
+static const unsigned ZvfbfaVPOps[] = {ISD::VP_FNEG, ISD::VP_FABS,
+                                       ISD::VP_FCOPYSIGN};
+static const unsigned ZvfbfaOps[] = {ISD::FNEG, ISD::FABS, ISD::FCOPYSIGN};
+
 RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                                          const RISCVSubtarget &STI)
     : TargetLowering(TM), Subtarget(STI) {
@@ -1208,6 +1213,61 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       }
     };
 
+    // Sets common actions for zvfbfa, some of instructions are supported
+    // natively so that we don't need to promote them.
+    const auto SetZvfbfaActions = [&](MVT VT) {
+      setOperationAction({ISD::FP_ROUND, ISD::FP_EXTEND}, VT, Custom);
+      setOperationAction({ISD::STRICT_FP_ROUND, ISD::STRICT_FP_EXTEND}, VT,
+                         Custom);
+      setOperationAction({ISD::VP_FP_ROUND, ISD::VP_FP_EXTEND}, VT, Custom);
+      setOperationAction({ISD::LRINT, ISD::LLRINT}, VT, Custom);
+      setOperationAction({ISD::LROUND, ISD::LLROUND}, VT, Custom);
+      setOperationAction({ISD::VP_MERGE, ISD::VP_SELECT, ISD::SELECT}, VT,
+                         Custom);
+      setOperationAction(ISD::SELECT_CC, VT, Expand);
+      setOperationAction({ISD::VP_SINT_TO_FP, ISD::VP_UINT_TO_FP}, VT, Custom);
+      setOperationAction({ISD::INSERT_VECTOR_ELT, ISD::CONCAT_VECTORS,
+                          ISD::INSERT_SUBVECTOR, ISD::EXTRACT_SUBVECTOR,
+                          ISD::VECTOR_DEINTERLEAVE, ISD::VECTOR_INTERLEAVE,
+                          ISD::VECTOR_REVERSE, ISD::VECTOR_SPLICE,
+                          ISD::VECTOR_COMPRESS},
+                         VT, Custom);
+      setOperationAction(ISD::EXPERIMENTAL_VP_SPLICE, VT, Custom);
+      setOperationAction(ISD::EXPERIMENTAL_VP_REVERSE, VT, Custom);
+
+      setOperationAction(ISD::FCOPYSIGN, VT, Legal);
+      setOperationAction(ZvfbfaVPOps, VT, Custom);
+
+      MVT EltVT = VT.getVectorElementType();
+      if (isTypeLegal(EltVT))
+        setOperationAction({ISD::SPLAT_VECTOR, ISD::EXPERIMENTAL_VP_SPLAT,
+                            ISD::EXTRACT_VECTOR_ELT},
+                           VT, Custom);
+      else
+        setOperationAction({ISD::SPLAT_VECTOR, ISD::EXPERIMENTAL_VP_SPLAT},
+                           EltVT, Custom);
+      setOperationAction({ISD::LOAD, ISD::STORE, ISD::MLOAD, ISD::MSTORE,
+                          ISD::MGATHER, ISD::MSCATTER, ISD::VP_LOAD,
+                          ISD::VP_STORE, ISD::EXPERIMENTAL_VP_STRIDED_LOAD,
+                          ISD::EXPERIMENTAL_VP_STRIDED_STORE, ISD::VP_GATHER,
+                          ISD::VP_SCATTER},
+                         VT, Custom);
+      setOperationAction(ISD::VP_LOAD_FF, VT, Custom);
+
+      // Expand FP operations that need libcalls.
+      setOperationAction(FloatingPointLibCallOps, VT, Expand);
+
+      // Custom split nxv32[b]f16 since nxv32[b]f32 is not legal.
+      if (getLMUL(VT) == RISCVVType::LMUL_8) {
+        setOperationAction(ZvfhminZvfbfminPromoteOps, VT, Custom);
+        setOperationAction(ZvfhminZvfbfminPromoteVPOps, VT, Custom);
+      } else {
+        MVT F32VecVT = MVT::getVectorVT(MVT::f32, VT.getVectorElementCount());
+        setOperationPromotedToType(ZvfhminZvfbfminPromoteOps, VT, F32VecVT);
+        setOperationPromotedToType(ZvfhminZvfbfminPromoteVPOps, VT, F32VecVT);
+      }
+    };
+
     if (Subtarget.hasVInstructionsF16()) {
       for (MVT VT : F16VecVTs) {
         if (!isTypeLegal(VT))
@@ -1222,7 +1282,13 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       }
     }
 
-    if (Subtarget.hasVInstructionsBF16Minimal()) {
+    if (Subtarget.hasVInstructionsBF16()) {
+      for (MVT VT : BF16VecVTs) {
+        if (!isTypeLegal(VT))
+          continue;
+        SetZvfbfaActions(VT);
+      }
+    } else if (Subtarget.hasVInstructionsBF16Minimal()) {
       for (MVT VT : BF16VecVTs) {
         if (!isTypeLegal(VT))
           continue;
@@ -1500,6 +1566,10 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
             // We need to custom legalize bf16 build vectors if Zfbfmin isn't
             // available.
             setOperationAction(ISD::BUILD_VECTOR, MVT::bf16, Custom);
+          }
+          if (Subtarget.hasStdExtZvfbfa()) {
+            setOperationAction(ZvfbfaOps, VT, Custom);
+            setOperationAction(ZvfbfaVPOps, VT, Custom);
           }
           setOperationAction(
               {ISD::VP_MERGE, ISD::VP_SELECT, ISD::VSELECT, ISD::SELECT}, VT,
@@ -7245,7 +7315,11 @@ static bool isPromotedOpNeedingSplit(SDValue Op,
   return (Op.getValueType() == MVT::nxv32f16 &&
           (Subtarget.hasVInstructionsF16Minimal() &&
            !Subtarget.hasVInstructionsF16())) ||
-         Op.getValueType() == MVT::nxv32bf16;
+         (Op.getValueType() == MVT::nxv32bf16 &&
+          Subtarget.hasVInstructionsBF16Minimal() &&
+          (!Subtarget.hasVInstructionsBF16() ||
+           (!llvm::is_contained(ZvfbfaOps, Op.getOpcode()) &&
+            !llvm::is_contained(ZvfbfaVPOps, Op.getOpcode()))));
 }
 
 static SDValue SplitVectorOp(SDValue Op, SelectionDAG &DAG) {
@@ -16117,6 +16191,46 @@ static SDValue reverseZExtICmpCombine(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(ISD::ZERO_EXTEND, DL, VT, Res);
 }
 
+// (and (i1) f, (setcc c, 0, ne)) -> (czero.nez f, c)
+// (and (i1) f, (setcc c, 0, eq)) -> (czero.eqz f, c)
+// (and (setcc c, 0, ne), (i1) g) -> (czero.nez g, c)
+// (and (setcc c, 0, eq), (i1) g) -> (czero.eqz g, c)
+static SDValue combineANDOfSETCCToCZERO(SDNode *N, SelectionDAG &DAG,
+                                        const RISCVSubtarget &Subtarget) {
+  if (!Subtarget.hasCZEROLike())
+    return SDValue();
+
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+
+  auto IsEqualCompZero = [](SDValue &V) -> bool {
+    if (V.getOpcode() == ISD::SETCC && isNullConstant(V.getOperand(1))) {
+      ISD::CondCode CC = cast<CondCodeSDNode>(V.getOperand(2))->get();
+      if (ISD::isIntEqualitySetCC(CC))
+        return true;
+    }
+    return false;
+  };
+
+  if (!IsEqualCompZero(N0) || !N0.hasOneUse())
+    std::swap(N0, N1);
+  if (!IsEqualCompZero(N0) || !N0.hasOneUse())
+    return SDValue();
+
+  KnownBits Known = DAG.computeKnownBits(N1);
+  if (Known.getMaxValue().ugt(1))
+    return SDValue();
+
+  unsigned CzeroOpcode =
+      (cast<CondCodeSDNode>(N0.getOperand(2))->get() == ISD::SETNE)
+          ? RISCVISD::CZERO_EQZ
+          : RISCVISD::CZERO_NEZ;
+
+  EVT VT = N->getValueType(0);
+  SDLoc DL(N);
+  return DAG.getNode(CzeroOpcode, DL, VT, N1, N0.getOperand(0));
+}
+
 static SDValue reduceANDOfAtomicLoad(SDNode *N,
                                      TargetLowering::DAGCombinerInfo &DCI) {
   SelectionDAG &DAG = DCI.DAG;
@@ -16180,7 +16294,9 @@ static SDValue performANDCombine(SDNode *N,
 
   if (SDValue V = reverseZExtICmpCombine(N, DAG, Subtarget))
     return V;
-
+  if (DCI.isAfterLegalizeDAG())
+    if (SDValue V = combineANDOfSETCCToCZERO(N, DAG, Subtarget))
+      return V;
   if (SDValue V = combineBinOpToReduce(N, DAG, Subtarget))
     return V;
   if (SDValue V = combineBinOpOfExtractToReduceTree(N, DAG, Subtarget))
@@ -16496,32 +16612,62 @@ static SDValue expandMulToAddOrSubOfShl(SDNode *N, SelectionDAG &DAG,
 }
 
 static SDValue getShlAddShlAdd(SDNode *N, SelectionDAG &DAG, unsigned ShX,
-                               unsigned ShY) {
+                               unsigned ShY, bool AddX, unsigned Shift) {
   SDLoc DL(N);
   EVT VT = N->getValueType(0);
   SDValue X = N->getOperand(0);
-  SDValue Mul359 = DAG.getNode(RISCVISD::SHL_ADD, DL, VT, X,
+  // Put the shift first if we can fold a zext into the shift forming a slli.uw.
+  using namespace SDPatternMatch;
+  if (Shift != 0 &&
+      sd_match(X, m_And(m_Value(), m_SpecificInt(UINT64_C(0xffffffff))))) {
+    X = DAG.getNode(ISD::SHL, DL, VT, X, DAG.getConstant(Shift, DL, VT));
+    Shift = 0;
+  }
+  SDValue ShlAdd = DAG.getNode(RISCVISD::SHL_ADD, DL, VT, X,
                                DAG.getTargetConstant(ShY, DL, VT), X);
-  return DAG.getNode(RISCVISD::SHL_ADD, DL, VT, Mul359,
-                     DAG.getTargetConstant(ShX, DL, VT), Mul359);
+  if (ShX != 0)
+    ShlAdd = DAG.getNode(RISCVISD::SHL_ADD, DL, VT, ShlAdd,
+                         DAG.getTargetConstant(ShX, DL, VT), AddX ? X : ShlAdd);
+  if (Shift == 0)
+    return ShlAdd;
+  // Otherwise, put the shl last so that it can fold with following instructions
+  // (e.g. sext or add).
+  return DAG.getNode(ISD::SHL, DL, VT, ShlAdd, DAG.getConstant(Shift, DL, VT));
 }
 
 static SDValue expandMulToShlAddShlAdd(SDNode *N, SelectionDAG &DAG,
-                                       uint64_t MulAmt) {
+                                       uint64_t MulAmt, unsigned Shift) {
   switch (MulAmt) {
+  // 3/5/9 -> (shYadd X, X)
+  case 3:
+    return getShlAddShlAdd(N, DAG, 0, 1, /*AddX=*/false, Shift);
+  case 5:
+    return getShlAddShlAdd(N, DAG, 0, 2, /*AddX=*/false, Shift);
+  case 9:
+    return getShlAddShlAdd(N, DAG, 0, 3, /*AddX=*/false, Shift);
+  // 3/5/9 * 3/5/9 -> (shXadd (shYadd X, X), (shYadd X, X))
   case 5 * 3:
-    return getShlAddShlAdd(N, DAG, 2, 1);
+    return getShlAddShlAdd(N, DAG, 2, 1, /*AddX=*/false, Shift);
   case 9 * 3:
-    return getShlAddShlAdd(N, DAG, 3, 1);
+    return getShlAddShlAdd(N, DAG, 3, 1, /*AddX=*/false, Shift);
   case 5 * 5:
-    return getShlAddShlAdd(N, DAG, 2, 2);
+    return getShlAddShlAdd(N, DAG, 2, 2, /*AddX=*/false, Shift);
   case 9 * 5:
-    return getShlAddShlAdd(N, DAG, 3, 2);
+    return getShlAddShlAdd(N, DAG, 3, 2, /*AddX=*/false, Shift);
   case 9 * 9:
-    return getShlAddShlAdd(N, DAG, 3, 3);
+    return getShlAddShlAdd(N, DAG, 3, 3, /*AddX=*/false, Shift);
   default:
-    return SDValue();
+    break;
   }
+
+  // 2/4/8 * 3/5/9 + 1 -> (shXadd (shYadd X, X), X)
+  int ShX;
+  if (int ShY = isShifted359(MulAmt - 1, ShX)) {
+    assert(ShX != 0 && "MulAmt=4,6,10 handled before");
+    if (ShX <= 3)
+      return getShlAddShlAdd(N, DAG, ShX, ShY, /*AddX=*/true, Shift);
+  }
+  return SDValue();
 }
 
 // Try to expand a scalar multiply to a faster sequence.
@@ -16559,63 +16705,28 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
   // real regressions, and no other target properly freezes X in these cases
   // either.
   if (Subtarget.hasShlAdd(3)) {
-    SDValue X = N->getOperand(0);
-    int Shift;
-    if (int ShXAmount = isShifted359(MulAmt, Shift)) {
-      // 3/5/9 * 2^N -> shl (shXadd X, X), N
-      SDLoc DL(N);
-      // Put the shift first if we can fold a zext into the shift forming
-      // a slli.uw.
-      if (X.getOpcode() == ISD::AND && isa<ConstantSDNode>(X.getOperand(1)) &&
-          X.getConstantOperandVal(1) == UINT64_C(0xffffffff)) {
-        SDValue Shl =
-            DAG.getNode(ISD::SHL, DL, VT, X, DAG.getConstant(Shift, DL, VT));
-        return DAG.getNode(RISCVISD::SHL_ADD, DL, VT, Shl,
-                           DAG.getTargetConstant(ShXAmount, DL, VT), Shl);
-      }
-      // Otherwise, put the shl second so that it can fold with following
-      // instructions (e.g. sext or add).
-      SDValue Mul359 = DAG.getNode(RISCVISD::SHL_ADD, DL, VT, X,
-                                   DAG.getTargetConstant(ShXAmount, DL, VT), X);
-      return DAG.getNode(ISD::SHL, DL, VT, Mul359,
-                         DAG.getConstant(Shift, DL, VT));
-    }
-
-    // 3/5/9 * 3/5/9 -> shXadd (shYadd X, X), (shYadd X, X)
-    if (SDValue V = expandMulToShlAddShlAdd(N, DAG, MulAmt))
+    // 3/5/9 * 2^N -> (shl (shXadd X, X), N)
+    // 3/5/9 * 3/5/9 * 2^N - In particular, this covers multiples
+    // of 25 which happen to be quite common.
+    // (2/4/8 * 3/5/9 + 1) * 2^N
+    unsigned Shift = llvm::countr_zero(MulAmt);
+    if (SDValue V = expandMulToShlAddShlAdd(N, DAG, MulAmt >> Shift, Shift))
       return V;
 
     // If this is a power 2 + 2/4/8, we can use a shift followed by a single
     // shXadd. First check if this a sum of two power of 2s because that's
     // easy. Then count how many zeros are up to the first bit.
-    if (isPowerOf2_64(MulAmt & (MulAmt - 1))) {
-      unsigned ScaleShift = llvm::countr_zero(MulAmt);
-      if (ScaleShift >= 1 && ScaleShift < 4) {
-        unsigned ShiftAmt = Log2_64((MulAmt & (MulAmt - 1)));
-        SDLoc DL(N);
-        SDValue Shift1 =
-            DAG.getNode(ISD::SHL, DL, VT, X, DAG.getConstant(ShiftAmt, DL, VT));
-        return DAG.getNode(RISCVISD::SHL_ADD, DL, VT, X,
-                           DAG.getTargetConstant(ScaleShift, DL, VT), Shift1);
-      }
+    SDValue X = N->getOperand(0);
+    if (Shift >= 1 && Shift <= 3 && isPowerOf2_64(MulAmt & (MulAmt - 1))) {
+      unsigned ShiftAmt = llvm::countr_zero((MulAmt & (MulAmt - 1)));
+      SDLoc DL(N);
+      SDValue Shift1 =
+          DAG.getNode(ISD::SHL, DL, VT, X, DAG.getConstant(ShiftAmt, DL, VT));
+      return DAG.getNode(RISCVISD::SHL_ADD, DL, VT, X,
+                         DAG.getTargetConstant(Shift, DL, VT), Shift1);
     }
 
-    // 2^(1,2,3) * 3,5,9 + 1 -> (shXadd (shYadd x, x), x)
-    // This is the two instruction form, there are also three instruction
-    // variants we could implement.  e.g.
-    //   (2^(1,2,3) * 3,5,9 + 1) << C2
-    //   2^(C1>3) * 3,5,9 +/- 1
-    if (int ShXAmount = isShifted359(MulAmt - 1, Shift)) {
-      assert(Shift != 0 && "MulAmt=4,6,10 handled before");
-      if (Shift <= 3) {
-        SDLoc DL(N);
-        SDValue Mul359 =
-            DAG.getNode(RISCVISD::SHL_ADD, DL, VT, X,
-                        DAG.getTargetConstant(ShXAmount, DL, VT), X);
-        return DAG.getNode(RISCVISD::SHL_ADD, DL, VT, Mul359,
-                           DAG.getTargetConstant(Shift, DL, VT), X);
-      }
-    }
+    // TODO: 2^(C1>3) * 3,5,9 +/- 1
 
     // 2^n + 2/4/8 + 1 -> (add (shl X, C1), (shXadd X, X))
     if (MulAmt > 2 && isPowerOf2_64((MulAmt - 1) & (MulAmt - 2))) {
@@ -16646,14 +16757,6 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
                         DAG.getTargetConstant(Log2_64(Offset - 1), DL, VT), X);
         return DAG.getNode(ISD::SUB, DL, VT, Shift1, Mul359);
       }
-    }
-
-    // 3/5/9 * 3/5/9 * 2^N - In particular, this covers multiples
-    // of 25 which happen to be quite common.
-    Shift = llvm::countr_zero(MulAmt);
-    if (SDValue V = expandMulToShlAddShlAdd(N, DAG, MulAmt >> Shift)) {
-      SDLoc DL(N);
-      return DAG.getNode(ISD::SHL, DL, VT, V, DAG.getConstant(Shift, DL, VT));
     }
   }
 
@@ -17876,6 +17979,7 @@ static SDValue combineOp_VLToVWOp_VL(SDNode *N,
 
   SmallVector<SDNode *> Worklist;
   SmallPtrSet<SDNode *, 8> Inserted;
+  SmallPtrSet<SDNode *, 8> ExtensionsToRemove;
   Worklist.push_back(N);
   Inserted.insert(N);
   SmallVector<CombineResult> CombinesToApply;
@@ -17885,22 +17989,25 @@ static SDValue combineOp_VLToVWOp_VL(SDNode *N,
 
     NodeExtensionHelper LHS(Root, 0, DAG, Subtarget);
     NodeExtensionHelper RHS(Root, 1, DAG, Subtarget);
-    auto AppendUsersIfNeeded = [&Worklist, &Subtarget,
-                                &Inserted](const NodeExtensionHelper &Op) {
-      if (Op.needToPromoteOtherUsers()) {
-        for (SDUse &Use : Op.OrigOperand->uses()) {
-          SDNode *TheUser = Use.getUser();
-          if (!NodeExtensionHelper::isSupportedRoot(TheUser, Subtarget))
-            return false;
-          // We only support the first 2 operands of FMA.
-          if (Use.getOperandNo() >= 2)
-            return false;
-          if (Inserted.insert(TheUser).second)
-            Worklist.push_back(TheUser);
-        }
-      }
-      return true;
-    };
+    auto AppendUsersIfNeeded =
+        [&Worklist, &Subtarget, &Inserted,
+         &ExtensionsToRemove](const NodeExtensionHelper &Op) {
+          if (Op.needToPromoteOtherUsers()) {
+            // Remember that we're supposed to remove this extension.
+            ExtensionsToRemove.insert(Op.OrigOperand.getNode());
+            for (SDUse &Use : Op.OrigOperand->uses()) {
+              SDNode *TheUser = Use.getUser();
+              if (!NodeExtensionHelper::isSupportedRoot(TheUser, Subtarget))
+                return false;
+              // We only support the first 2 operands of FMA.
+              if (Use.getOperandNo() >= 2)
+                return false;
+              if (Inserted.insert(TheUser).second)
+                Worklist.push_back(TheUser);
+            }
+          }
+          return true;
+        };
 
     // Control the compile time by limiting the number of node we look at in
     // total.
@@ -17921,6 +18028,15 @@ static SDValue combineOp_VLToVWOp_VL(SDNode *N,
         std::optional<CombineResult> Res =
             FoldingStrategy(Root, LHS, RHS, DAG, Subtarget);
         if (Res) {
+          // If this strategy wouldn't remove an extension we're supposed to
+          // remove, reject it.
+          if (!Res->LHSExt.has_value() &&
+              ExtensionsToRemove.contains(LHS.OrigOperand.getNode()))
+            continue;
+          if (!Res->RHSExt.has_value() &&
+              ExtensionsToRemove.contains(RHS.OrigOperand.getNode()))
+            continue;
+
           Matched = true;
           CombinesToApply.push_back(*Res);
           // All the inputs that are extended need to be folded, otherwise
@@ -22087,8 +22203,7 @@ static MachineBasicBlock *emitSplitF64Pseudo(MachineInstr &MI,
 
   MachineFunction &MF = *BB->getParent();
   DebugLoc DL = MI.getDebugLoc();
-  const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
-  const TargetRegisterInfo *RI = MF.getSubtarget().getRegisterInfo();
+  const RISCVInstrInfo &TII = *MF.getSubtarget<RISCVSubtarget>().getInstrInfo();
   Register LoReg = MI.getOperand(0).getReg();
   Register HiReg = MI.getOperand(1).getReg();
   Register SrcReg = MI.getOperand(2).getReg();
@@ -22097,7 +22212,7 @@ static MachineBasicBlock *emitSplitF64Pseudo(MachineInstr &MI,
   int FI = MF.getInfo<RISCVMachineFunctionInfo>()->getMoveF64FrameIndex(MF);
 
   TII.storeRegToStackSlot(*BB, MI, SrcReg, MI.getOperand(2).isKill(), FI, SrcRC,
-                          RI, Register());
+                          Register());
   MachinePointerInfo MPI = MachinePointerInfo::getFixedStack(MF, FI);
   MachineMemOperand *MMOLo =
       MF.getMachineMemOperand(MPI, MachineMemOperand::MOLoad, 4, Align(8));
@@ -22123,8 +22238,7 @@ static MachineBasicBlock *emitBuildPairF64Pseudo(MachineInstr &MI,
 
   MachineFunction &MF = *BB->getParent();
   DebugLoc DL = MI.getDebugLoc();
-  const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
-  const TargetRegisterInfo *RI = MF.getSubtarget().getRegisterInfo();
+  const RISCVInstrInfo &TII = *MF.getSubtarget<RISCVSubtarget>().getInstrInfo();
   Register DstReg = MI.getOperand(0).getReg();
   Register LoReg = MI.getOperand(1).getReg();
   Register HiReg = MI.getOperand(2).getReg();
@@ -22147,7 +22261,7 @@ static MachineBasicBlock *emitBuildPairF64Pseudo(MachineInstr &MI,
       .addFrameIndex(FI)
       .addImm(4)
       .addMemOperand(MMOHi);
-  TII.loadRegFromStackSlot(*BB, MI, DstReg, FI, DstRC, RI, Register());
+  TII.loadRegFromStackSlot(*BB, MI, DstReg, FI, DstRC, Register());
   MI.eraseFromParent(); // The pseudo instruction is gone now.
   return BB;
 }
@@ -25308,4 +25422,13 @@ ArrayRef<MCPhysReg> RISCVTargetLowering::getRoundingControlRegisters() const {
     return RCRegs;
   }
   return {};
+}
+
+bool RISCVTargetLowering::shouldFoldMaskToVariableShiftPair(SDValue Y) const {
+  EVT VT = Y.getValueType();
+
+  if (VT.isVector())
+    return false;
+
+  return VT.getSizeInBits() <= Subtarget.getXLen();
 }
