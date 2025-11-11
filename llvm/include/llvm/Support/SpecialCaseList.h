@@ -148,7 +148,7 @@ protected:
     std::unique_ptr<SectionImpl> Impl;
   };
 
-  const std::vector<Section> &sections() const;
+  ArrayRef<const Section> sections() const { return Sections; }
 
 private:
   BumpPtrAllocator StrAlloc;
