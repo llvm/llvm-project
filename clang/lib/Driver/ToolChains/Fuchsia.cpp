@@ -12,8 +12,8 @@
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/MultilibBuilder.h"
-#include "clang/Driver/Options.h"
 #include "clang/Driver/SanitizerArgs.h"
+#include "clang/Options/Options.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
@@ -344,7 +344,7 @@ Tool *Fuchsia::buildStaticLibTool() const {
 
 ToolChain::RuntimeLibType
 Fuchsia::GetRuntimeLibType(const ArgList &Args) const {
-  if (Arg *A = Args.getLastArg(clang::driver::options::OPT_rtlib_EQ)) {
+  if (Arg *A = Args.getLastArg(options::OPT_rtlib_EQ)) {
     StringRef Value = A->getValue();
     if (Value != "compiler-rt")
       getDriver().Diag(clang::diag::err_drv_invalid_rtlib_name)
@@ -483,7 +483,8 @@ SanitizerMask Fuchsia::getSupportedSanitizers() const {
   Res |= SanitizerKind::Leak;
   Res |= SanitizerKind::Scudo;
   Res |= SanitizerKind::Thread;
-  if (getTriple().getArch() == llvm::Triple::x86_64) {
+  if (getTriple().getArch() == llvm::Triple::x86_64 ||
+      getTriple().getArch() == llvm::Triple::x86) {
     Res |= SanitizerKind::SafeStack;
   }
   return Res;
@@ -496,6 +497,7 @@ SanitizerMask Fuchsia::getDefaultSanitizers() const {
   case llvm::Triple::riscv64:
     Res |= SanitizerKind::ShadowCallStack;
     break;
+  case llvm::Triple::x86:
   case llvm::Triple::x86_64:
     Res |= SanitizerKind::SafeStack;
     break;

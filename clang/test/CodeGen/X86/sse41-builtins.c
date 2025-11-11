@@ -307,6 +307,16 @@ __m128 test_mm_insert_ps(__m128 x, __m128 y) {
   return _mm_insert_ps(x, y, 4);
 }
 
+TEST_CONSTEXPR((match_m128(_mm_insert_ps(((__m128)(__v4sf){1.0f, 2.0f, 3.0f, 4.0f}), ((__m128)(__v4sf){10.0f, 20.0f, 30.0f, 40.0f}), 0x10), 1.0f, 10.0f, 3.0f, 4.0f))); // Insert Y[0] into X[1]
+TEST_CONSTEXPR((match_m128(_mm_insert_ps(((__m128)(__v4sf){1.0f, 2.0f, 3.0f, 4.0f}), ((__m128)(__v4sf){10.0f, 20.0f, 30.0f, 40.0f}), 0x00), 10.0f, 2.0f, 3.0f, 4.0f))); // Insert Y[0] into X[0]
+TEST_CONSTEXPR((match_m128(_mm_insert_ps(((__m128)(__v4sf){1.0f, 2.0f, 3.0f, 4.0f}), ((__m128)(__v4sf){10.0f, 20.0f, 30.0f, 40.0f}), 0x20), 1.0f, 2.0f, 10.0f, 4.0f))); // Insert Y[0] into X[2]
+TEST_CONSTEXPR((match_m128(_mm_insert_ps(((__m128)(__v4sf){1.0f, 2.0f, 3.0f, 4.0f}), ((__m128)(__v4sf){10.0f, 20.0f, 30.0f, 40.0f}), 0x30), 1.0f, 2.0f, 3.0f, 10.0f))); // Insert Y[0] into X[3]
+TEST_CONSTEXPR((match_m128(_mm_insert_ps(((__m128)(__v4sf){1.0f, 2.0f, 3.0f, 4.0f}), ((__m128)(__v4sf){10.0f, 20.0f, 30.0f, 40.0f}), 0x80), 30.0f, 2.0f, 3.0f, 4.0f))); // Insert Y[2] into X[0]
+TEST_CONSTEXPR((match_m128(_mm_insert_ps(((__m128)(__v4sf){1.0f, 2.0f, 3.0f, 4.0f}), ((__m128)(__v4sf){10.0f, 20.0f, 30.0f, 40.0f}), 0x01), 0.0f, 2.0f, 3.0f, 4.0f))); // Insert Y[0] into X[0], zero X[0]
+TEST_CONSTEXPR((match_m128(_mm_insert_ps(((__m128)(__v4sf){1.0f, 2.0f, 3.0f, 4.0f}), ((__m128)(__v4sf){10.0f, 20.0f, 30.0f, 40.0f}), 0x0A), 10.0f, 0.0f, 3.0f, 0.0f))); // Insert Y[0] into X[0], zero X[1] and X[3]
+TEST_CONSTEXPR((match_m128(_mm_insert_ps(((__m128)(__v4sf){1.0f, 2.0f, 3.0f, 4.0f}), ((__m128)(__v4sf){10.0f, 20.0f, 30.0f, 40.0f}), 0x0F), 0.0f, 0.0f, 0.0f, 0.0f))); // Insert Y[0] into X[0], zero all
+TEST_CONSTEXPR((match_m128(_mm_insert_ps(((__m128)(__v4sf){1.0f, 2.0f, 3.0f, 4.0f}), ((__m128)(__v4sf){10.0f, 20.0f, 30.0f, 40.0f}), 0xCF), 0.0f, 0.0f, 0.0f, 0.0f))); // Insert Y[3] into X[0], zero all
+
 __m128i test_mm_max_epi8(__m128i x, __m128i y) {
   // CHECK-LABEL: test_mm_max_epi8
   // CHECK: call <16 x i8> @llvm.smax.v16i8(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})

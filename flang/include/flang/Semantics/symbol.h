@@ -830,6 +830,8 @@ public:
       OmpUseDevicePtr, OmpUseDeviceAddr, OmpIsDevicePtr, OmpHasDeviceAddr,
       // OpenMP data-copying attribute
       OmpCopyIn, OmpCopyPrivate,
+      // OpenMP special variables
+      OmpInVar, OmpOrigVar, OmpOutVar, OmpPrivVar,
       // OpenMP miscellaneous flags
       OmpCommonBlock, OmpReduction, OmpInReduction, OmpAligned, OmpNontemporal,
       OmpAllocate, OmpDeclarativeAllocateDirective,

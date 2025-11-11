@@ -130,6 +130,11 @@
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
 // RUN:     -fuse-ld=ld \
 // RUN:     | FileCheck %s -check-prefix=CHECK-SAFESTACK
+// RUN: %clang -### %s --target=x86_64-unknown-fuchsia -m32 \
+// RUN:     -fsanitize=safe-stack 2>&1 \
+// RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
+// RUN:     -fuse-ld=ld \
+// RUN:     | FileCheck %s -check-prefix=CHECK-SAFESTACK
 // CHECK-SAFESTACK: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
 // CHECK-SAFESTACK: "-fsanitize=safe-stack"
 // CHECK-SAFESTACK-NOT: "[[RESOURCE_DIR]]{{/|\\\\}}lib{{/|\\\\}}x86_64-unknown-fuchsia{{/|\\\\}}libclang_rt.safestack.a"
