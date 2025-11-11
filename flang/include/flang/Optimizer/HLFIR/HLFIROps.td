@@ -103,8 +103,7 @@ def hlfir_DeclareOp
       Builtin_StringAttr:$uniq_name,
       OptionalAttr<fir_FortranVariableFlagsAttr>:$fortran_attrs,
       OptionalAttr<cuf_DataAttributeAttr>:$data_attr,
-      OptionalAttr<UnitAttr>:$skip_rebox,
-      OptionalAttr<UI32Attr>:$dummy_arg_no);
+      OptionalAttr<UnitAttr>:$skip_rebox, OptionalAttr<UI32Attr>:$dummy_arg_no);
 
   let results = (outs AnyFortranVariable, AnyRefOrBoxLike);
 

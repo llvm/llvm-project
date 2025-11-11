@@ -1419,7 +1419,8 @@ private:
   /// definitive mapping. The specification expression have not been lowered
   /// yet. The final mapping will be done using this pre-mapping in
   /// Fortran::lower::mapSymbolAttributes.
-  /// \param argNo The 1-based source position of this argument (0 if unknown/result)
+  /// \param argNo The 1-based source position of this argument (0 if
+  /// unknown/result)
   bool mapBlockArgToDummyOrResult(const Fortran::semantics::SymbolRef sym,
                                   mlir::Value val, bool isResult,
                                   unsigned argNo = 0) {
@@ -6854,7 +6855,8 @@ private:
 
   /// Record the given symbol as a dummy argument of this function.
   /// \param symRef The symbol representing the dummy argument
-  /// \param argNo The 1-based position of this argument in the source (0 = unknown)
+  /// \param argNo The 1-based position of this argument in the source (0 =
+  /// unknown)
   void registerDummySymbol(Fortran::semantics::SymbolRef symRef,
                            unsigned argNo = 0) {
     auto *sym = &*symRef;

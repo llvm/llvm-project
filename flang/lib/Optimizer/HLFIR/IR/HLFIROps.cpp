@@ -261,15 +261,12 @@ updateDeclaredInputTypeWithVolatility(mlir::Type inputType, mlir::Value memref,
   return std::make_pair(inputType, memref);
 }
 
-void hlfir::DeclareOp::build(mlir::OpBuilder &builder,
-                             mlir::OperationState &result, mlir::Value memref,
-                             llvm::StringRef uniq_name, mlir::Value shape,
-                             mlir::ValueRange typeparams,
-                             mlir::Value dummy_scope, mlir::Value storage,
-                             std::uint64_t storage_offset,
-                             fir::FortranVariableFlagsAttr fortran_attrs,
-                             cuf::DataAttributeAttr data_attr,
-                             unsigned dummy_arg_no) {
+void hlfir::DeclareOp::build(
+    mlir::OpBuilder &builder, mlir::OperationState &result, mlir::Value memref,
+    llvm::StringRef uniq_name, mlir::Value shape, mlir::ValueRange typeparams,
+    mlir::Value dummy_scope, mlir::Value storage, std::uint64_t storage_offset,
+    fir::FortranVariableFlagsAttr fortran_attrs,
+    cuf::DataAttributeAttr data_attr, unsigned dummy_arg_no) {
   auto nameAttr = builder.getStringAttr(uniq_name);
   mlir::Type inputType = memref.getType();
   bool hasExplicitLbs = hasExplicitLowerBounds(shape);
