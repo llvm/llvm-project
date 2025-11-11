@@ -73,35 +73,45 @@ export float TestLoadWithStatus() {
 }
 
 // CHECK: define {{.*}} float @TestLoadWithStatus()()
-// CHECK: call {{.*}} float @hlsl::RasterizerOrderedStructuredBuffer<float>::Load(unsigned int, unsigned int&)(ptr {{.*}} @ROSB1, i32 noundef 10, ptr noundef nonnull align 4 dereferenceable(4) %status)
-// CHECK: call {{.*}} <2 x i32> @hlsl::RasterizerOrderedStructuredBuffer<int vector[2]>::Load(unsigned int, unsigned int&)(ptr {{.*}} @ROSB2, i32 noundef 20, ptr noundef nonnull align 4 dereferenceable(4) %status2)
+// CHECK: call {{.*}} float @hlsl::RasterizerOrderedStructuredBuffer<float>::Load(unsigned int, unsigned int&)(ptr {{.*}} @ROSB1, i32 noundef 10, ptr noalias noundef nonnull align 4 dereferenceable(4) %tmp)
+// CHECK: call {{.*}} <2 x i32> @hlsl::RasterizerOrderedStructuredBuffer<int vector[2]>::Load(unsigned int, unsigned int&)(ptr {{.*}} @ROSB2, i32 noundef 20, ptr noalias noundef nonnull align 4 dereferenceable(4) %tmp2)
 // CHECK: ret
 
-// CHECK: define {{.*}} float @hlsl::RasterizerOrderedStructuredBuffer<float>::Load(unsigned int, unsigned int&)(ptr {{.*}} %Index, ptr noundef nonnull align 4 dereferenceable(4) %Status)
+// CHECK: define {{.*}} float @hlsl::RasterizerOrderedStructuredBuffer<float>::Load(unsigned int, unsigned int&)(ptr {{.*}} %this, i32 noundef %Index, ptr noalias noundef nonnull align 4 dereferenceable(4) %Status)
 // CHECK: %__handle = getelementptr inbounds nuw %"class.hlsl::RasterizerOrderedStructuredBuffer", ptr {{.*}}, i32 0, i32 0
 // CHECK-NEXT: %[[HANDLE:.*]] = load target("dx.RawBuffer", float, 1, 1), ptr %__handle
 // CHECK-NEXT: %[[INDEX:.*]] = load i32, ptr %Index.addr
-// CHECK-NEXT: %[[STATUS:.*]] = load ptr, ptr %Status.addr,
-// DXIL-NEXT: %[[STRUCT:.*]] = call { ptr, i1 } @llvm.dx.resource.load.rawbuffer.p0.tdx.RawBuffer_f32_1_1t(target("dx.RawBuffer", float, 1, 1) %[[HANDLE]], i32 %[[INDEX]], i32 0)
-// CHECK-NEXT: %[[VALUE:.*]] = extractvalue { ptr, i1 } %[[STRUCT]], 0
-// CHECK-NEXT: %[[STATUS_TEMP:.*]] = extractvalue { ptr, i1 } %[[STRUCT]], 1
+// DXIL-NEXT: %[[STRUCT:.*]] = call { float, i1 } @llvm.dx.resource.load.rawbuffer.f32.tdx.RawBuffer_f32_1_1t(target("dx.RawBuffer", float, 1, 1) %[[HANDLE]], i32 %[[INDEX]], i32 0)
+// CHECK-NEXT: %[[VALUE:.*]] = extractvalue { float, i1 } %[[STRUCT]], 0
+// CHECK-NEXT: %[[STATUS_TEMP:.*]] = extractvalue { float, i1 } %[[STRUCT]], 1
 // CHECK-NEXT: %[[STATUS_EXT:.*]] = zext i1 %[[STATUS_TEMP]] to i32
-// CHECK-NEXT: store i32 %[[STATUS_EXT]], ptr %2, align 4
-// CHECK-NEXT: %[[RETVAL:.*]] = load float, ptr %[[VALUE]]
-// CHECK-NEXT: ret float %[[RETVAL]]
+// CHECK-NEXT: store i32 %[[STATUS_EXT]], ptr %StatusBool, align 4
+// CHECK-NEXT: store float %ld.value, ptr %Result, align 4
+// CHECK-NEXT: %[[STATUS_INT:.*]] = load i32, ptr %StatusBool, align 4
+// CHECK-NEXT: %[[LOADED_VALUE:.*]] = trunc i32 %[[STATUS_INT]] to i1
+// CHECK-NEXT: %[[ZEXT_VALUE:.*]] = zext i1 %[[LOADED_VALUE]] to i32
+// CHECK-NEXT: %[[LOADED_STATUS_ADDR:.*]] = load ptr, ptr %Status.addr, align 4
+// CHECK-NEXT: store i32 %[[ZEXT_VALUE]], ptr %[[LOADED_STATUS_ADDR]], align 4
+// CHECK-NEXT: %[[RETURN_VALUE:.*]] = load float, ptr %Result, align 4
+// CHECK-NEXT: ret float %[[RETURN_VALUE]]
 
-// CHECK: define {{.*}} <2 x i32> @hlsl::RasterizerOrderedStructuredBuffer<int vector[2]>::Load(unsigned int, unsigned int&)(ptr {{.*}} %Index, ptr noundef nonnull align 4 dereferenceable(4) %Status)
+// CHECK: define {{.*}} <2 x i32> @hlsl::RasterizerOrderedStructuredBuffer<int vector[2]>::Load(unsigned int, unsigned int&)(ptr {{.*}} %this, i32 noundef %Index, ptr noalias noundef nonnull align 4 dereferenceable(4) %Status)
 // CHECK: %__handle = getelementptr inbounds nuw %"class.hlsl::RasterizerOrderedStructuredBuffer.0", ptr {{.*}}, i32 0, i32 0
 // CHECK-NEXT: %[[HANDLE:.*]] = load target("dx.RawBuffer", <2 x i32>, 1, 1), ptr %__handle
 // CHECK-NEXT: %[[INDEX:.*]] = load i32, ptr %Index.addr
-// CHECK-NEXT: %[[STATUS_HANDLE:.*]] = load ptr, ptr %Status.addr, align 4, !nonnull !3, !align !4
-// DXIL-NEXT: %[[STRUCT:.*]] = call { ptr, i1 } @llvm.dx.resource.load.rawbuffer.p0.tdx.RawBuffer_v2i32_1_1t(target("dx.RawBuffer", <2 x i32>, 1, 1) %0, i32 %1, i32 0)
-// CHECK-NEXT: %[[VALUE:.*]] = extractvalue { ptr, i1 } %[[STRUCT]], 0
-// CHECK-NEXT: %[[STATUS:.*]] = extractvalue { ptr, i1 } %[[STRUCT]], 1
-// CHECK-NEXT: %[[STATUS_EXT:.*]] = zext i1 %[[STATUS]] to i32
-// CHECK-NEXT: store i32 %[[STATUS_EXT]], ptr %2, align 4
-// CHECK-NEXT: %[[RETVAL:.*]] = load <2 x i32>, ptr %[[VALUE]]
-// CHECK-NEXT: ret <2 x i32> %[[RETVAL]]
+// DXIL-NEXT: %[[STRUCT:.*]] = call { <2 x i32>, i1 } @llvm.dx.resource.load.rawbuffer.v2i32.tdx.RawBuffer_v2i32_1_1t(target("dx.RawBuffer", <2 x i32>, 1, 1) %[[HANDLE]], i32 %[[INDEX]], i32 0)
+// CHECK-NEXT: %[[VALUE:.*]] = extractvalue { <2 x i32>, i1 } %[[STRUCT]], 0
+// CHECK-NEXT: %[[STATUS_TEMP:.*]] = extractvalue { <2 x i32>, i1 } %[[STRUCT]], 1
+// CHECK-NEXT: %[[STATUS_EXT:.*]] = zext i1 %[[STATUS_TEMP]] to i32
+// CHECK-NEXT: store i32 %[[STATUS_EXT]], ptr %StatusBool, align 4
+// CHECK-NEXT: store <2 x i32> %ld.value, ptr %Result, align 8
+// CHECK-NEXT: %[[STATUS_INT:.*]] = load i32, ptr %StatusBool, align 4
+// CHECK-NEXT: %[[LOADED_VALUE:.*]] = trunc i32 %[[STATUS_INT]] to i1
+// CHECK-NEXT: %[[ZEXT_VALUE:.*]] = zext i1 %[[LOADED_VALUE]] to i32
+// CHECK-NEXT: %[[LOADED_STATUS_ADDR:.*]] = load ptr, ptr %Status.addr, align 4
+// CHECK-NEXT: store i32 %[[ZEXT_VALUE]], ptr %[[LOADED_STATUS_ADDR]], align 4
+// CHECK-NEXT: %[[RETURN_VALUE:.*]] = load <2 x i32>, ptr %Result, align 8
+// CHECK-NEXT: ret <2 x i32> %[[RETURN_VALUE]]
 
 
 export uint TestGetDimensions() {

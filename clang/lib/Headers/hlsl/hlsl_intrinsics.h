@@ -605,7 +605,9 @@ smoothstep(__detail::HLSL_FIXED_VECTOR<float, N> Min,
   return __detail::smoothstep_vec_impl(Min, Max, X);
 }
 
-bool CheckAccessFullyMapped(uint Status) { return static_cast<bool>(Status); }
+inline bool CheckAccessFullyMapped(uint Status) {
+  return static_cast<bool>(Status);
+}
 
 } // namespace hlsl
 #endif //_HLSL_HLSL_INTRINSICS_H_

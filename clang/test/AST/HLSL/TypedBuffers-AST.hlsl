@@ -215,23 +215,32 @@ RESOURCE<float> Buffer;
 // CHECK-NEXT: AlwaysInlineAttr {{.*}} Implicit always_inline
 
 // Load with status method
-// CHECK-NEXT: CXXMethodDecl {{.*}} Load 'element_type (unsigned int, unsigned int &)'
+// CHECK: CXXMethodDecl {{.*}} Load 'element_type (unsigned int, out unsigned int)'
 // CHECK-NEXT: ParmVarDecl {{.*}} Index 'unsigned int'
-// CHECK-NEXT: ParmVarDecl {{.*}} Status 'unsigned int &'
+// CHECK-NEXT: ParmVarDecl {{.*}} Status 'unsigned int &__restrict'
+// CHECK-NEXT: HLSLParamModifierAttr {{.*}} out
 // CHECK-NEXT: CompoundStmt
-// CHECK-NEXT: ReturnStmt
-// CHECK-NEXT: UnaryOperator {{.*}} 'hlsl_device element_type' prefix '*' cannot overflow
-// CHECK-NEXT: CallExpr {{.*}} 'hlsl_device element_type *'
+// CHECK-NEXT: DeclStmt
+// CHECK-NEXT: VarDecl {{.*}} Result 'element_type'
+// CHECK-NEXT: DeclStmt
+// CHECK-NEXT: VarDecl {{.*}} StatusBool 'bool'
+// CHECK-NEXT: BinaryOperator {{.*}} 'element_type' '='
+// CHECK-NEXT: DeclRefExpr {{.*}} 'element_type' lvalue Var {{.*}} 'Result' 'element_type'
+// CHECK-NEXT: CallExpr {{.*}} 'element_type'
 // CHECK-NEXT: ImplicitCastExpr {{.*}} <BuiltinFnToFnPtr>
 // CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_load_with_status' 'void (...) noexcept'
 // CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
 // CHECK-UAV-SAME{LITERAL}: [[hlsl::resource_class(UAV)]]
 // CHECK-SRV-SAME{LITERAL}: [[hlsl::resource_class(SRV)]]
 // CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
-// CHECK-SAME: lvalue .__handle {{.*}}
 // CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[RESOURCE]]<element_type>' lvalue implicit this
 // CHECK-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'Index' 'unsigned int'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'Status' 'unsigned int &'
+// CHECK-NEXT: DeclRefExpr {{.*}} 'bool' lvalue Var {{.*}} 'StatusBool' 'bool'
+// CHECK-NEXT: BinaryOperator {{.*}} 'unsigned int' '='
+// CHECK-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'Status' 'unsigned int &__restrict'
+// CHECK-NEXT: DeclRefExpr {{.*}} 'bool' lvalue Var {{.*}} 'StatusBool' 'bool'
+// CHECK-NEXT: ReturnStmt
+// CHECK-NEXT: DeclRefExpr {{.*}} 'element_type' lvalue Var {{.*}} 'Result' 'element_type'
 // CHECK-NEXT: AlwaysInlineAttr {{.*}} Implicit always_inline
 
 // GetDimensions method

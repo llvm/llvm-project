@@ -328,23 +328,32 @@ RESOURCE<float> Buffer;
 
 // Load with status method
 
-// CHECK-LOAD: CXXMethodDecl {{.*}} Load 'element_type (unsigned int, unsigned int &)'
+// CHECK-LOAD: CXXMethodDecl {{.*}} Load 'element_type (unsigned int, out unsigned int)'
 // CHECK-LOAD-NEXT: ParmVarDecl {{.*}} Index 'unsigned int'
-// CHECK-LOAD-NEXT: ParmVarDecl {{.*}} Status 'unsigned int &'
+// CHECK-LOAD-NEXT: ParmVarDecl {{.*}} Status 'unsigned int &__restrict'
+// CHECK-LOAD-NEXT: HLSLParamModifierAttr {{.*}} out
 // CHECK-LOAD-NEXT: CompoundStmt
-// CHECK-LOAD-NEXT: ReturnStmt
-// CHECK-LOAD-NEXT: UnaryOperator {{.*}} 'hlsl_device element_type' prefix '*' cannot overflow
-// CHECK-LOAD-NEXT: CallExpr {{.*}} 'hlsl_device element_type *'
+// CHECK-LOAD-NEXT: DeclStmt
+// CHECK-LOAD-NEXT: VarDecl {{.*}} Result 'element_type'
+// CHECK-LOAD-NEXT: DeclStmt
+// CHECK-LOAD-NEXT: VarDecl {{.*}} StatusBool 'bool'
+// CHECK-LOAD-NEXT: BinaryOperator {{.*}} 'element_type' '='
+// CHECK-LOAD-NEXT: DeclRefExpr {{.*}} 'element_type' lvalue Var {{.*}} 'Result' 'element_type'
+// CHECK-LOAD-NEXT: CallExpr {{.*}} 'element_type'
 // CHECK-LOAD-NEXT: ImplicitCastExpr {{.*}} <BuiltinFnToFnPtr>
 // CHECK-LOAD-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_load_with_status' 'void (...) noexcept'
 // CHECK-LOAD-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
 // CHECK-LOAD-UAV-SAME{LITERAL}: [[hlsl::resource_class(UAV)]]
 // CHECK-LOAD-SRV-SAME{LITERAL}: [[hlsl::resource_class(SRV)]]
 // CHECK-LOAD-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
-// CHECK-LOAD-SAME: lvalue .__handle {{.*}}
 // CHECK-LOAD-NEXT: CXXThisExpr {{.*}} 'hlsl::[[RESOURCE]]<element_type>' lvalue implicit this
 // CHECK-LOAD-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'Index' 'unsigned int'
-// CHECK-LOAD-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'Status' 'unsigned int &'
+// CHECK-LOAD-NEXT: DeclRefExpr {{.*}} 'bool' lvalue Var {{.*}} 'StatusBool' 'bool'
+// CHECK-LOAD-NEXT: BinaryOperator {{.*}} 'unsigned int' '='
+// CHECK-LOAD-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'Status' 'unsigned int &__restrict'
+// CHECK-LOAD-NEXT: DeclRefExpr {{.*}} 'bool' lvalue Var {{.*}} 'StatusBool' 'bool'
+// CHECK-LOAD-NEXT: ReturnStmt
+// CHECK-LOAD-NEXT: DeclRefExpr {{.*}} 'element_type' lvalue Var {{.*}} 'Result' 'element_type'
 // CHECK-LOAD-NEXT: AlwaysInlineAttr {{.*}} Implicit always_inline
 
 // IncrementCounter method
