@@ -1815,6 +1815,12 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
         setOperationPromotedToType(Opcode, MVT::nxv4bf16, MVT::nxv4f32);
         setOperationPromotedToType(Opcode, MVT::nxv8bf16, MVT::nxv8f32);
       }
+
+      if (Subtarget->hasBF16() &&
+          (Subtarget->hasSVE() || Subtarget->hasSME())) {
+        for (auto VT : {MVT::nxv2bf16, MVT::nxv4bf16, MVT::nxv8bf16})
+          setOperationAction(ISD::FMUL, VT, Custom);
+      }
     }
 
     setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::i8, Custom);
@@ -7641,6 +7647,43 @@ SDValue AArch64TargetLowering::LowerINIT_TRAMPOLINE(SDValue Op,
                      EndOfTrmp);
 }
 
+SDValue AArch64TargetLowering::LowerFMUL(SDValue Op, SelectionDAG &DAG) const {
+  EVT VT = Op.getValueType();
+  auto &Subtarget = DAG.getSubtarget<AArch64Subtarget>();
+  if (VT.getScalarType() != MVT::bf16 ||
+      !(Subtarget.hasBF16() && (Subtarget.hasSVE() || Subtarget.hasSME())))
+    return LowerToPredicatedOp(Op, DAG, AArch64ISD::FMUL_PRED);
+
+  SDLoc DL(Op);
+  SDValue Zero = DAG.getConstantFP(0.0, DL, MVT::nxv4f32);
+  SDValue LHS = Op.getOperand(0);
+  SDValue RHS = Op.getOperand(1);
+
+  auto GetIntrinsic = [&](Intrinsic::ID IID, EVT VT, auto... Ops) {
+    return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, VT,
+                       DAG.getConstant(IID, DL, MVT::i32), Ops...);
+  };
+
+  SDValue Pg =
+      getPTrue(DAG, DL, VT == MVT::nxv2bf16 ? MVT::nxv2i1 : MVT::nxv4i1,
+               AArch64SVEPredPattern::all);
+  // Lower bf16 FMUL as a pair (VT == nxv8bf16) of BFMLAL top/bottom
+  // instructions. These result in two f32 vectors, which can be converted back
+  // to bf16 with FCVT and FCVNT.
+  SDValue BottomF32 = GetIntrinsic(Intrinsic::aarch64_sve_bfmlalb, MVT::nxv4f32,
+                                   Zero, LHS, RHS);
+  SDValue BottomBF16 = GetIntrinsic(Intrinsic::aarch64_sve_fcvt_bf16f32_v2, VT,
+                                    DAG.getPOISON(VT), Pg, BottomF32);
+  if (VT == MVT::nxv8bf16) {
+    // Note: nxv2bf16 and nxv4bf16 only use even lanes.
+    SDValue TopF32 = GetIntrinsic(Intrinsic::aarch64_sve_bfmlalt, MVT::nxv4f32,
+                                  Zero, LHS, RHS);
+    return GetIntrinsic(Intrinsic::aarch64_sve_fcvtnt_bf16f32_v2, VT,
+                        BottomBF16, Pg, TopF32);
+  }
+  return BottomBF16;
+}
+
 SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
                                               SelectionDAG &DAG) const {
   LLVM_DEBUG(dbgs() << "Custom lowering: ");
@@ -7715,7 +7758,7 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
   case ISD::FSUB:
     return LowerToPredicatedOp(Op, DAG, AArch64ISD::FSUB_PRED);
   case ISD::FMUL:
-    return LowerToPredicatedOp(Op, DAG, AArch64ISD::FMUL_PRED);
+    return LowerFMUL(Op, DAG);
   case ISD::FMA:
     return LowerToPredicatedOp(Op, DAG, AArch64ISD::FMA_PRED);
   case ISD::FDIV:
