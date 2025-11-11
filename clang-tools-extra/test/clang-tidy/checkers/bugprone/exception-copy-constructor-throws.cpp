@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++11,c++14 %s cert-err60-cpp %t -- -- -fcxx-exceptions
+// RUN: %check_clang_tidy -std=c++11,c++14 %s bugprone-exception-copy-constructor-throws %t -- -- -fcxx-exceptions
 // FIXME: Split off parts of this test that rely on dynamic exception
 // specifications, and run this test in all language modes.
 // FIXME: Fix the checker to work in C++17 or later mode.
@@ -92,7 +92,7 @@ void f() {
   throw U(); // ok
   throw V(); // ok
   throw W(); // match, noexcept(false)
-  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: thrown exception type is not nothrow copy constructible [cert-err60-cpp]
+  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: thrown exception type is not nothrow copy constructible [bugprone-exception-copy-constructor-throws]
   throw X(); // match, no noexcept clause, nontrivial
   // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: thrown exception type is not nothrow copy constructible
   throw Y(); // ok

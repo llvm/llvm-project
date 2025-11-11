@@ -18,6 +18,5 @@ static_library("cert") {
     "CERTTidyModule.cpp",
     "LimitedRandomnessCheck.cpp",
     "ProperlySeededRandomGeneratorCheck.cpp",
-    "ThrownExceptionTypeCheck.cpp",
   ]
 }
