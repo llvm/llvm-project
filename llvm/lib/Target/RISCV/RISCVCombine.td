@@ -34,5 +34,5 @@ def RISCVPostLegalizerCombiner
                  [sub_to_add, combines_for_extload, redundant_and,
                   identity_combines, shift_immed_chain,
                   commute_constant_to_rhs, simplify_neg_minmax,
-                  fold_fp_zero_store]> {
+                  fold_fp_zero_store, fold_add_sub_mask]> {
 }
