@@ -19449,7 +19449,7 @@ within a map that has been added by the same *vendor-name*.
      =========================== ============== ========= ===============================================================
      ".entry_point"              string                   The ELF symbol pointing to this pipeline's stage entry point.
      ".scratch_memory_size"      integer                  Scratch memory size in bytes.
-     ".lds_size"                 integer                  Local Data Share size in bytes.
+     ".lds_size"                 integer                  Local Data Store size in bytes.
      ".perf_data_buffer_size"    integer                  Performance data buffer size in bytes.
      ".vgpr_count"               integer                  Number of VGPRs used.
      ".agpr_count"               integer                  Number of AGPRs used.
