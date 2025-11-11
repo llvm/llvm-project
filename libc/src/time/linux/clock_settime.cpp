@@ -1,4 +1,4 @@
-//===---------- Linux implementation of the POSIX clock_gettime function --===//
+//===---------- Linux implementation of the POSIX clock_settime function --===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,17 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/time/clock_gettime.h"
+#include "src/time/clock_settime.h"
 #include "src/__support/common.h"
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
-#include "src/__support/time/clock_gettime.h"
+#include "src/__support/time/clock_settime.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
-// TODO(michaelrj): Move this into time/linux with the other syscalls.
-LLVM_LIBC_FUNCTION(int, clock_gettime, (clockid_t clockid, timespec *ts)) {
-  auto result = internal::clock_gettime(clockid, ts);
+LLVM_LIBC_FUNCTION(int, clock_settime,
+                   (clockid_t clockid, const timespec *ts)) {
+  auto result = internal::clock_settime(clockid, ts);
 
   // A negative return value indicates an error with the magnitude of the
   // value being the error code.
