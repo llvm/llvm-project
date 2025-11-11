@@ -51,4 +51,4 @@ jobs:
       - name: Assert That Contents are the Same
         run: |
           cat comment
-          cat workflow-args
+          [[ "$(cat comment)" == "test" ]]
