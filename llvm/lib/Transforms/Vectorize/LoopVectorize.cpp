@@ -8125,6 +8125,9 @@ bool VPRecipeBuilder::getScaledReductions(
     return false;
   unsigned TargetScaleFactor = PHISize.getKnownScalarFactor(ASize);
 
+  if (CM.blockNeedsPredicationForAnyReason(Update->getParent()))
+    return false;
+
   if (LoopVectorizationPlanner::getDecisionAndClampRange(
           [&](ElementCount VF) {
             InstructionCost Cost = TTI->getPartialReductionCost(
@@ -8257,11 +8260,11 @@ VPRecipeBuilder::tryToCreatePartialReduction(VPInstruction *Reduction,
     ReductionOpcode = Instruction::Add;
   }
 
-  VPValue *Cond = nullptr;
-  if (CM.blockNeedsPredicationForAnyReason(ReductionI->getParent()))
-    Cond = getBlockInMask(Builder.getInsertBlock());
-  return new VPPartialReductionRecipe(ReductionOpcode, Accumulator, BinOp, Cond,
-                                      ScaleFactor, ReductionI);
+  assert(!CM.blockNeedsPredicationForAnyReason(ReductionI->getParent()) &&
+         "Should not create partial reductions for predicated blocks");
+  return new VPPartialReductionRecipe(ReductionOpcode, Accumulator, BinOp,
+                                      /*Cond=*/nullptr, ScaleFactor,
+                                      ReductionI);
 }
 
 void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
