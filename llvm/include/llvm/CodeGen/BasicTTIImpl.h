@@ -334,7 +334,12 @@ private:
 
       break;
     case Intrinsic::sincos:
-      LC = RTLIB::getSINCOS(ScalarVT);
+      LC = RTLIB::getSINCOS(VT);
+      if (LC == RTLIB::UNKNOWN_LIBCALL)
+        LC = RTLIB::getSINCOS(ScalarVT);
+      else if (VT.isVector())
+        IsVectorCall = true;
+
       break;
     default:
       return std::nullopt;
