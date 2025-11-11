@@ -9,15 +9,14 @@ define void @widget(i1 %arg) {
 ; CHECK-LABEL: @widget(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[TMP:%.*]] = trunc i64 5 to i32
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 0 to i32
 ; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[BB1:%.*]], label [[BB4:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 0 to i32
 ; CHECK-NEXT:    [[TMP3:%.*]] = trunc i64 0 to i32
 ; CHECK-NEXT:    call void (...) @llvm.experimental.deoptimize.isVoid(i32 13) #[[ATTR0:[0-9]+]] [ "deopt"() ]
 ; CHECK-NEXT:    ret void
 ; CHECK:       bb4:
 ; CHECK-NEXT:    [[TMP6:%.*]] = trunc i64 1 to i32
-; CHECK-NEXT:    [[TMP7:%.*]] = trunc i64 0 to i32
 ; CHECK-NEXT:    call void (...) @llvm.experimental.deoptimize.isVoid(i32 13) #[[ATTR0]] [ "deopt"() ]
 ; CHECK-NEXT:    ret void
 ;

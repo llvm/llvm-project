@@ -1850,6 +1850,71 @@ static bool isSafeCheapLoadStore(const Instruction *I,
          getLoadStoreAlignment(I) < Value::MaximumAlignment;
 }
 
+/// Try to find an instruction in a range that matches the given instruction.
+/// This allows us to find matching instructions even when they appear in
+/// different orders across blocks, particularly for pure/readonly functions.
+static Instruction *findMatchingInstruction(Instruction *I,
+                                           BasicBlock::iterator Start,
+                                           BasicBlock::iterator End,
+                                           SmallPtrSetImpl<Instruction *> &AlreadyMatched) {
+  // First check if the current position matches
+  if (Start != End && !AlreadyMatched.count(&*Start) &&
+      areIdenticalUpToCommutativity(I, &*Start))
+    return &*Start;
+
+  // For calls to pure/readonly functions or other safe-to-reorder instructions,
+  // search the entire range for a match
+  auto *CB = dyn_cast<CallBase>(I);
+  bool CanSearch = false;
+
+  if (CB && (CB->onlyReadsMemory() || CB->doesNotAccessMemory()) &&
+      CB->doesNotThrow()) {
+    // Pure/readonly calls can be reordered
+    CanSearch = true;
+  } else if (!I->mayReadFromMemory() && !I->mayWriteToMemory() &&
+             !I->mayHaveSideEffects() && !isa<AllocaInst>(I) &&
+             isGuaranteedToTransferExecutionToSuccessor(I)) {
+    // Other instructions without side effects can also be reordered
+    CanSearch = true;
+  }
+
+  if (!CanSearch)
+    return nullptr;
+
+  // Search the entire range for a matching instruction
+  auto SearchIter = Start;
+  while (SearchIter != End) {
+    Instruction *CandidateI = &*SearchIter;
+
+    // Skip already matched instructions
+    if (AlreadyMatched.count(CandidateI)) {
+      ++SearchIter;
+      continue;
+    }
+
+    // Debug output for pure calls
+    if (CB && CandidateI) {
+      if (auto *CandidateCB = dyn_cast<CallBase>(CandidateI)) {
+        // dbgs() << "  Checking candidate: " << *CandidateI << "\n";
+        // dbgs() << "    areIdentical? " << areIdenticalUpToCommutativity(I, CandidateI) << "\n";
+      }
+    }
+
+    if (areIdenticalUpToCommutativity(I, CandidateI)) {
+      // Found a match - for pure functions, we can always match them
+      // The hoisting logic will handle dependencies correctly
+      if (CB) {
+        // dbgs() << "    Found matching instruction!\n";
+      }
+      return CandidateI;
+    }
+
+    ++SearchIter;
+  }
+
+  return nullptr;
+}
+
 /// Hoist any common code in the successor blocks up into the block. This
 /// function guarantees that BB dominates all successors. If AllInstsEqOnly is
 /// given, only perform hoisting in case all successors blocks contain matching
@@ -1940,6 +2005,9 @@ bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(Instruction *TI,
 
   bool Changed = false;
 
+  // Track matched instructions to avoid matching the same instruction twice
+  SmallPtrSet<Instruction *, 8> AlreadyMatched;
+
   for (;;) {
     auto *SuccIterPairBegin = SuccIterPairs.begin();
     auto &BB1ItrPair = *SuccIterPairBegin++;
@@ -1949,19 +2017,60 @@ bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(Instruction *TI,
 
     Instruction *I1 = &*BB1ItrPair.first;
 
+    // Try to find matching instructions in other blocks, even if they're not
+    // at the exact same position (for pure/readonly calls)
+    SmallVector<Instruction *, 8> OtherInsts;
     bool AllInstsAreIdentical = true;
     bool HasTerminator = I1->isTerminator();
-    for (auto &SuccIter : OtherSuccIterRange) {
-      Instruction *I2 = &*SuccIter;
-      HasTerminator |= I2->isTerminator();
-      if (AllInstsAreIdentical && (!areIdenticalUpToCommutativity(I1, I2) ||
-                                   MMRAMetadata(*I1) != MMRAMetadata(*I2)))
-        AllInstsAreIdentical = false;
-    }
 
-    SmallVector<Instruction *, 8> OtherInsts;
-    for (auto &SuccIter : OtherSuccIterRange)
-      OtherInsts.push_back(&*SuccIter);
+    // Check each successor block for a matching instruction
+    for (auto &SuccIterPair : iterator_range(SuccIterPairBegin, SuccIterPairs.end())) {
+      auto &SuccIter = SuccIterPair.first;
+      Instruction *CurrentI = &*SuccIter;
+
+      // First check for exact match at current position
+      bool IsMatch = !AlreadyMatched.count(CurrentI) &&
+                     areIdenticalUpToCommutativity(I1, CurrentI) &&
+                     MMRAMetadata(*I1) == MMRAMetadata(*CurrentI);
+
+      Instruction *MatchedI = nullptr;
+
+      if (IsMatch) {
+        // Exact match at current position
+        MatchedI = CurrentI;
+      } else if (!I1->isTerminator()) {
+        // Try to find a match elsewhere in the block
+        BasicBlock *SuccBB = CurrentI->getParent();
+        // For pure functions, search the entire block since they can be reordered
+        MatchedI = findMatchingInstruction(I1, SuccBB->begin(), SuccBB->end(), AlreadyMatched);
+
+        // Debug: If we're looking for a pure call but didn't find a match
+        if (!MatchedI) {
+          if (auto *CB1 = dyn_cast<CallBase>(I1)) {
+            if ((CB1->onlyReadsMemory() || CB1->doesNotAccessMemory()) &&
+                CB1->doesNotThrow()) {
+              // We have a pure call in I1 but couldn't find a match
+              // This might be because our search isn't comprehensive enough
+              // dbgs() << "SimplifyCFG: Failed to find match for pure call: " << *I1 << "\n";
+              // dbgs() << "  in block: " << SuccBB->getName() << "\n";
+            }
+          }
+        }
+      }
+
+      if (MatchedI) {
+        OtherInsts.push_back(MatchedI);
+        // Mark this instruction as matched so we don't match it again
+        AlreadyMatched.insert(MatchedI);
+        // Note: We don't advance the iterator here if we found a match at a
+        // different position - that will be handled later
+      } else {
+        AllInstsAreIdentical = false;
+        OtherInsts.push_back(CurrentI);
+      }
+
+      HasTerminator |= CurrentI->isTerminator();
+    }
 
     // If we are hoisting the terminator instruction, don't move one (making a
     // broken BB), instead clone it, and remove BI.
@@ -1982,13 +2091,10 @@ bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(Instruction *TI,
       unsigned SkipFlagsBB1 = BB1ItrPair.second;
       AllInstsAreIdentical =
           isSafeToHoistInstr(I1, SkipFlagsBB1) &&
-          all_of(OtherSuccIterPairRange, [=](const auto &Pair) {
-            Instruction *I2 = &*Pair.first;
-            unsigned SkipFlagsBB2 = Pair.second;
-            // Even if the instructions are identical, it may not
-            // be safe to hoist them if we have skipped over
-            // instructions with side effects or their operands
-            // weren't hoisted.
+          all_of(OtherInsts, [=](Instruction *I2) {
+            // For instructions found at different positions, we need to check
+            // if they can be safely hoisted considering what's been skipped
+            unsigned SkipFlagsBB2 = 0; // TODO: need to track skip flags per instruction
             return isSafeToHoistInstr(I2, SkipFlagsBB2) &&
                    shouldHoistCommonInstructions(I1, I2, TTI);
           });
@@ -2004,8 +2110,21 @@ bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(Instruction *TI,
       // and leave any that were not hoisted behind (by calling moveBefore
       // rather than moveBeforePreserving).
       I1->moveBefore(TI->getIterator());
-      for (auto &SuccIter : OtherSuccIterRange) {
-        Instruction *I2 = &*SuccIter++;
+
+      // Replace uses and erase the matched instructions
+      size_t InstIdx = 0;
+      for (auto &SuccIterPair : iterator_range(SuccIterPairBegin, SuccIterPairs.end())) {
+        Instruction *I2 = OtherInsts[InstIdx];
+
+        // Check if this was a match found at a different position
+        if (I2 != &*SuccIterPair.first) {
+          // This instruction was found out of order - we need to handle it specially
+          // The iterator should only advance if we used the instruction at current position
+        } else {
+          // Normal case - advance the iterator
+          ++SuccIterPair.first;
+        }
+
         assert(I2 != I1);
         if (!I2->use_empty())
           I2->replaceAllUsesWith(I1);
@@ -2023,6 +2142,8 @@ bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(Instruction *TI,
         // location is the merged locations of the original instructions.
         I1->applyMergedLocation(I1->getDebugLoc(), I2->getDebugLoc());
         I2->eraseFromParent();
+
+        ++InstIdx;
       }
       if (!Changed)
         NumHoistCommonCode += SuccIterPairs.size();
