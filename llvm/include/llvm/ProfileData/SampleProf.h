@@ -1410,8 +1410,8 @@ public:
   }
 
   bool hasNonLBRSamples() const {
-    // currently just a stub - should be implemented when
-    // first non-LBR profile is encountered
+    // Currently just a stub - should be implemented when
+    // first non-LBR profile is encountered.
     return false;
   }
 
