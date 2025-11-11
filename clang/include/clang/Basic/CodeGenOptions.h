@@ -194,14 +194,15 @@ public:
     SoftCallWithTrapString, ///< Emit a non-fatal call. The call
                             ///< is passed a string description of the failed
                             ///< bounds check.
-    SoftCallWithTrapCode,   ///< Emit a non-fatal call. The call
-                            ///< is passed an integer describing the failed
-                            ///< bounds check.
+    SoftCallMinimal,        ///< Emit a non-fatal call. The call
+                            ///< has no arguments. The reason for trapping is
+                            ///< intended to be inferred from the trap reason
+                            ///< being embedded in the debug info.
   };
 
   /// The name of the function to call for BoundsSafety soft traps. This is used
   /// with `BoundsSafetyTrapModeKind::SoftCallWithTrapString` and
-  // `BoundsSafetyTrapModeKind::SoftCallWithTrapCode`.
+  // `BoundsSafetyTrapModeKind::SoftCallMinimal`.
   std::string BoundsSafetySoftTrapFuncName;
 
   /* TO_UPSTREAM(BoundsSafety) OFF*/

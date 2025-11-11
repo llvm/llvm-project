@@ -1,7 +1,7 @@
 # UNSUPPORTED: system-windows
-# RUN: %clang_host -fbounds-safety -fbounds-safety-soft-traps=call-with-code -g -O0 %S/Inputs/boundsSafetySoftTraps.c -o %t.out
+# RUN: %clang_host -fbounds-safety -fbounds-safety-soft-traps=call-minimal -g -O0 %S/Inputs/boundsSafetySoftTraps.c -o %t.out
 # RUN: %lldb -b -s %s %t.out | FileCheck %s
-b __bounds_safety_soft_trap_c
+b __bounds_safety_soft_trap
 run
 
 # TODO: We should probably teach LLDB to recognize soft traps, set the stop
@@ -10,13 +10,13 @@ run
 
 # Check that reason for bounds check failing can be seen in the stacktrace
 bt
-# CHECK: * frame #{{.*}}`__bounds_safety_soft_trap_c(reason_code=0)
+# CHECK: * frame #{{.*}}`__bounds_safety_soft_trap{{[ ]+}}
 # CHECK-NEXT: frame #{{.*}}`__clang_trap_msg$Bounds check failed$indexing above upper bound in 'array[index]'
 # CHECK-NEXT: frame #2{{.*}}`bad_read(index=10) at boundsSafetySoftTraps.c:18
 
 # Resume execution
 c
-# CHECK: BoundsSafety check FAILED: code:0
+# CHECK: BoundsSafety check FAILED
 # CHECK-NEXT: Execution continued
 # CHECK: Process {{[0-9]+}} exited with status = 0
 q

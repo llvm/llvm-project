@@ -12,6 +12,7 @@
 
 // We should get error diagnostics if there's a function signature mismatch
 // between the header and the declarations below.
+__CLANG_BOUNDS_SAFETY_SOFT_TRAP_FN_ATTRS
 #ifndef MISMATCH
 void __bounds_safety_soft_trap_s(const char *reason)
 #else
@@ -22,11 +23,12 @@ void __bounds_safety_soft_trap_s(const char **reason)
 
 }
 
+__CLANG_BOUNDS_SAFETY_SOFT_TRAP_FN_ATTRS
 #ifndef MISMATCH
-void __bounds_safety_soft_trap_c(uint16_t reason_code)
+void __bounds_safety_soft_trap(void)
 #else
-// mismatch-error@+1{{conflicting types for '__bounds_safety_soft_trap_c'}}
-void __bounds_safety_soft_trap_c(uint32_t reason_code)
+// mismatch-error@+1{{conflicting types for '__bounds_safety_soft_trap'}}
+void __bounds_safety_soft_trap(uint32_t reason_code)
 #endif
 {
     

@@ -2566,8 +2566,8 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
     case CodeGenOptions::BoundsSafetyTrapModeKind::SoftCallWithTrapString:
       Opts.BoundsSafetySoftTrapFuncName = "__bounds_safety_soft_trap_s";
       break;
-    case CodeGenOptions::BoundsSafetyTrapModeKind::SoftCallWithTrapCode:
-      Opts.BoundsSafetySoftTrapFuncName = "__bounds_safety_soft_trap_c";
+    case CodeGenOptions::BoundsSafetyTrapModeKind::SoftCallMinimal:
+      Opts.BoundsSafetySoftTrapFuncName = "__bounds_safety_soft_trap";
       break;
     case CodeGenOptions::BoundsSafetyTrapModeKind::Hard:
       break;

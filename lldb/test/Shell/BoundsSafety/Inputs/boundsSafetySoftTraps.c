@@ -9,8 +9,8 @@ void __bounds_safety_soft_trap_s(const char *reason) {
     printf("BoundsSafety check FAILED: message:\"%s\"\n", reason? reason: "");
 }
 
-void __bounds_safety_soft_trap_c(uint16_t reason_code) {
-    printf("BoundsSafety check FAILED: code:%d\n", reason_code);
+void __bounds_safety_soft_trap(void) {
+    printf("BoundsSafety check FAILED\n");
 }
 
 int bad_read(int index) {

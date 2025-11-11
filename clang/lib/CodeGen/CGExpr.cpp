@@ -66,6 +66,14 @@ llvm::cl::opt<bool> ClSanitizeGuardChecks(
     "ubsan-guard-checks", llvm::cl::Optional,
     llvm::cl::desc("Guard UBSAN checks with `llvm.allow.ubsan.check()`."));
 
+// TO_UPSTREAM(BoundsSafety) ON
+llvm::cl::opt<bool> ClBoundsSafetySoftTrapPreserveAllCC(
+    "bounds-safety-soft-trap-preserve-all-cc", llvm::cl::init(true),
+    llvm::cl::Optional,
+    llvm::cl::desc("Use preserve_all calling convention for -fbounds-safety "
+                   "soft trap function calls on x86_64 and arm64"));
+// TO_UPSTREAM(BoundsSafety) OFF
+
 } // namespace clang
 
 //===--------------------------------------------------------------------===//
@@ -4714,35 +4722,59 @@ void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
       // `__CLANG_BOUNDS_SAFETY_SOFT_TRAP_API_VERSION` and adjust the interface
       // in `bounds_safety_soft_traps.h` if the API is changed.
       llvm::FunctionType *FnType = nullptr;
-      llvm::Constant *SoftTrapCallArg = nullptr;
+      llvm::SmallVector<llvm::Value *, 1> RuntimeCallArgs;
       // Emit calls to one of the interfaces defined in
       // `bounds_safety_soft_traps.h`
       switch (CGM.getCodeGenOpts().getBoundsSafetyTrapMode()) {
-      case CodeGenOptions::BoundsSafetyTrapModeKind::SoftCallWithTrapCode: {
-        // void __bounds_safety_soft_trap_c(uint16_t);
-        // TODO: Set correct value from the `TrapReason` object
-        // (rdar://162824128).
-        SoftTrapCallArg = llvm::ConstantInt::get(CGM.Int16Ty, 0);
+      case CodeGenOptions::BoundsSafetyTrapModeKind::SoftCallMinimal: {
+        // void __bounds_safety_soft_trap();
+        FnType = llvm::FunctionType::get(CGM.VoidTy, {}, false);
+        assert(RuntimeCallArgs.empty());
         break;
       }
       case CodeGenOptions::BoundsSafetyTrapModeKind::SoftCallWithTrapString: {
         // void __bounds_safety_soft_trap_s(const char*);
-        if (!TrapMessage.empty()) {
-          SoftTrapCallArg =
-              CGM.GetOrCreateGlobalStr(TrapMessage, Builder, "trap.reason");
-        } else {
-          SoftTrapCallArg = llvm::Constant::getNullValue(CGM.Int8PtrTy);
-        }
+        FnType = llvm::FunctionType::get(CGM.VoidTy, {CGM.Int8PtrTy}, false);
+        if (!TrapMessage.empty())
+          RuntimeCallArgs.push_back(
+              CGM.GetOrCreateGlobalStr(TrapMessage, Builder, "trap.reason"));
+        else
+          RuntimeCallArgs.push_back(
+              llvm::Constant::getNullValue(CGM.Int8PtrTy));
         break;
       }
       default:
         llvm_unreachable("Unhandled BoundsSafetyTrapMode");
       }
-      FnType = llvm::FunctionType::get(CGM.VoidTy, {SoftTrapCallArg->getType()},
-                                       false);
       auto TrapFunc = CGM.CreateRuntimeFunction(
           FnType, CGM.getCodeGenOpts().BoundsSafetySoftTrapFuncName);
-      TrapCall = EmitNounwindRuntimeCall(TrapFunc, {SoftTrapCallArg});
+
+      // Change calling convention if necessary. This needs to be kept in sync
+      // with `bounds_safety_soft_traps.h`.
+      std::optional<llvm::CallingConv::ID> SoftTrapCC;
+      if (ClBoundsSafetySoftTrapPreserveAllCC &&
+          (CGM.getTarget().getTriple().isAArch64() ||
+           CGM.getTarget().getTriple().getArch() == llvm::Triple::x86_64)) {
+        auto *Fn = cast<llvm::Function>(TrapFunc.getCallee());
+        // This calling convention is used to reduce the codesize at the
+        // callsite. It makes more registers be callee saved which means if
+        // those registers are being used in the caller they no longer need to
+        // be spilled. Unfortunately despite the name this calling convention
+        // doesn't preserve all registers. We should add a new calling
+        // convention that actually preserves almost all the general purposes
+        // registers (rdar://164341162).
+        SoftTrapCC = llvm::CallingConv::PreserveAll;
+        Fn->setCallingConv(SoftTrapCC.value());
+      }
+
+      TrapCall = EmitNounwindRuntimeCall(TrapFunc, RuntimeCallArgs);
+      if (SoftTrapCC.has_value()) {
+        // Marking the called function as having a particular calling convention
+        // (above) does not trigger different codegen at callsites. The call
+        // itself needs to be marked as using the same calling convention too to
+        // get different codegen at callsites.
+        TrapCall->setCallingConv(SoftTrapCC.value());
+      }
       Builder.CreateBr(Cont);
     } else if (CGM.getCodeGenOpts().TrapFuncReturns) {
       auto *TrapID = llvm::ConstantInt::get(CGM.Int8Ty, CheckHandlerID);

@@ -22,24 +22,31 @@ extern "C" {
 /// compile time to know which interface version the compiler uses.
 #define __CLANG_BOUNDS_SAFETY_SOFT_TRAP_API_VERSION 0
 
+// `__CLANG_BOUNDS_SAFETY_SOFT_TRAP_FN_ATTRS` is guarded because `preserve_all`
+// is only implemented for x86_64 and arm64. For other targets we get a
+// `'preserve_all' calling convention is not supported for this target` warning.
+#if defined(__aarch64__) || defined(__x86_64__)
+// This attribute is used to try to reduce the codesize impact of making calls
+// to the soft trap runtime function(s).
+#define __CLANG_BOUNDS_SAFETY_SOFT_TRAP_FN_ATTRS __attribute__((preserve_all))
+#else
+#define __CLANG_BOUNDS_SAFETY_SOFT_TRAP_FN_ATTRS
+#endif
+
 /// Called when a `-fbounds-safety` bounds check fails when building with
 /// `-fbounds-safety-soft-traps=call-with-str`. This function is allowed to
 /// to return.
 ///
 /// \param reason A string constant describing the reason for trapping or
 ///        NULL.
+__CLANG_BOUNDS_SAFETY_SOFT_TRAP_FN_ATTRS
 void __bounds_safety_soft_trap_s(const char *reason);
-
-// TODO(dliew): Document the `reason_code` values (rdar://162824128)
 
 /// Called when a `-fbounds-safety` bounds check fails when building with
 /// `-fbounds-safety-soft-traps=call-with-code`. This function is allowed to
-/// to return.
-///
-/// \param reason_code. An integer the represents the reason for trapping.
-///        The values are currently not documented but will be in the future.
-///
-void __bounds_safety_soft_trap_c(uint16_t reason_code);
+/// to return. This function takes no arguments.
+__CLANG_BOUNDS_SAFETY_SOFT_TRAP_FN_ATTRS
+void __bounds_safety_soft_trap(void);
 
 #ifdef __cplusplus
 }
