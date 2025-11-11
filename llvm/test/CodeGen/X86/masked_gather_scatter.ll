@@ -265,9 +265,9 @@ define <8 x i32> @test7(ptr %base, <8 x i32> %ind, i8 %mask) {
 ; X64-KNL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; X64-KNL-NEXT:    kmovw %k1, %k2
 ; X64-KNL-NEXT:    vpgatherdd (%rdi,%zmm0,4), %zmm1 {%k2}
-; X64-KNL-NEXT:    vmovdqa64 %zmm1, %zmm2
-; X64-KNL-NEXT:    vpgatherdd (%rdi,%zmm0,4), %zmm2 {%k1}
-; X64-KNL-NEXT:    vpaddd %ymm2, %ymm1, %ymm0
+; X64-KNL-NEXT:    vmovdqa %ymm1, %ymm2
+; X64-KNL-NEXT:    vpgatherdd (%rdi,%zmm0,4), %zmm1 {%k1}
+; X64-KNL-NEXT:    vpaddd %ymm1, %ymm2, %ymm0
 ; X64-KNL-NEXT:    retq
 ;
 ; X86-KNL-LABEL: test7:
@@ -281,9 +281,9 @@ define <8 x i32> @test7(ptr %base, <8 x i32> %ind, i8 %mask) {
 ; X86-KNL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; X86-KNL-NEXT:    kmovw %k1, %k2
 ; X86-KNL-NEXT:    vpgatherdd (%eax,%zmm0,4), %zmm1 {%k2}
-; X86-KNL-NEXT:    vmovdqa64 %zmm1, %zmm2
-; X86-KNL-NEXT:    vpgatherdd (%eax,%zmm0,4), %zmm2 {%k1}
-; X86-KNL-NEXT:    vpaddd %ymm2, %ymm1, %ymm0
+; X86-KNL-NEXT:    vmovdqa %ymm1, %ymm2
+; X86-KNL-NEXT:    vpgatherdd (%eax,%zmm0,4), %zmm1 {%k1}
+; X86-KNL-NEXT:    vpaddd %ymm1, %ymm2, %ymm0
 ; X86-KNL-NEXT:    retl
 ;
 ; X64-SKX-LABEL: test7:

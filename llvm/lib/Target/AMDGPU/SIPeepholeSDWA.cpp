@@ -1346,7 +1346,7 @@ void SIPeepholeSDWA::legalizeScalarOperands(MachineInstr &MI,
       continue;
 
     unsigned I = Op.getOperandNo();
-    const TargetRegisterClass *OpRC = TII->getRegClass(Desc, I, TRI);
+    const TargetRegisterClass *OpRC = TII->getRegClass(Desc, I);
     if (!OpRC || !TRI->isVSSuperClass(OpRC))
       continue;
 
