@@ -9069,6 +9069,7 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
       OPT_v,
       OPT_cuda_path_EQ,
       OPT_rocm_path_EQ,
+      OPT_hip_path_EQ,
       OPT_O_Group,
       OPT_g_Group,
       OPT_g_flags_Group,
@@ -9198,18 +9199,21 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
   Linker->ConstructJob(C, JA, Output, Inputs, Args, LinkingOutput);
   const auto &LinkCommand = C.getJobs().getJobs().back();
 
-  // Forward -Xoffload-linker<-triple> arguments to the device link job.
-  for (Arg *A : Args.filtered(options::OPT_Xoffload_linker)) {
+  for (Arg *A :
+       Args.filtered(options::OPT_Xoffload_compiler, OPT_Xoffload_linker)) {
     StringRef Val = A->getValue(0);
+    bool IsLinkJob = A->getOption().getID() == OPT_Xoffload_linker;
+    auto WrapperOption =
+        IsLinkJob ? Twine("--device-linker=") : Twine("--device-compiler=");
     if (Val.empty())
-      CmdArgs.push_back(
-          Args.MakeArgString(Twine("--device-linker=") + A->getValue(1)));
+      CmdArgs.push_back(Args.MakeArgString(WrapperOption + A->getValue(1)));
     else
       CmdArgs.push_back(Args.MakeArgString(
-          "--device-linker=" +
+          WrapperOption +
           ToolChain::getOpenMPTriple(Val.drop_front()).getTriple() + "=" +
           A->getValue(1)));
   }
+  Args.ClaimAllArgs(options::OPT_Xoffload_compiler);
   Args.ClaimAllArgs(options::OPT_Xoffload_linker);
 
   // Embed bitcode instead of an object in JIT mode.
