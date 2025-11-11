@@ -1116,10 +1116,8 @@ TEST(AddressSanitizer, StressStackReuseTest) {
 }
 
 // On some platform (ex: AIX), the default thread stack size (~96 KB) is
-// insufficient for this test and can lead to stack overflows. The test
-// has been updated to accomodate platforms with smaller default thread
-// stack sizes.
-#define MIN_STACK_SIZE (128 * 1024)  //  Minimum stack size to use: 128 KB
+// insufficient for this test and can lead to stack overflows.
+#define MIN_STACK_SIZE (128 * 1024)  // 128 KB
 TEST(AddressSanitizer, ThreadedStressStackReuseTest) {
   const int kNumThreads = 20;
   pthread_t t[kNumThreads];
