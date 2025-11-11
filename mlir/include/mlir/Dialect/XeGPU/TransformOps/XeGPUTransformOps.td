@@ -209,9 +209,10 @@ def InsertPrefetchOp : Op<Transform_Dialect, "xegpu.insert_prefetch", [
   let description = [{
     Given a target value (e.g., `vector`) residing in a `scf.for` loop, this
     transform finds the corresponding `xegpu.load_nd` op and inserts
-    `xegpu.prefetch` operations for the tile. The load op must reside within the
-    `scf.for` loop. Number of prefetch steps is set by the `nb_prefetch`
-    argument. Returns a handle to the created `xegpu.create_nd_desc` op.
+    `xegpu.prefetch_nd` operations for the tile. The load op must reside within
+    the `scf.for` loop. Number of prefetch steps is set by the `nb_prefetch`
+    argument (default value is 1). Returns a handle to the created
+    `xegpu.create_nd_desc` op.
   }];
 
   let arguments = (ins TransformValueHandleTypeInterface:$target,
