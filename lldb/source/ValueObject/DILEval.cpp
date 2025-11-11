@@ -43,14 +43,13 @@ static CompilerType GetBasicType(lldb::TypeSystemSP type_system,
 }
 
 static lldb::ValueObjectSP
-ArrayToPointerConversion(ValueObject &valobj,
-                         std::shared_ptr<ExecutionContextScope> ctx) {
+ArrayToPointerConversion(ValueObject &valobj, ExecutionContextScope &ctx) {
   uint64_t addr = valobj.GetLoadAddress();
   ExecutionContext exe_ctx;
-  ctx->CalculateExecutionContext(exe_ctx);
+  ctx.CalculateExecutionContext(exe_ctx);
   return ValueObject::CreateValueObjectFromAddress(
       "result", addr, exe_ctx,
-      valobj.GetCompilerType().GetArrayElementType(ctx.get()).GetPointerType(),
+      valobj.GetCompilerType().GetArrayElementType(&ctx).GetPointerType(),
       /* do_deref */ false);
 }
 
@@ -100,7 +99,7 @@ Interpreter::UnaryConversion(lldb::ValueObjectSP valobj) {
   }
 
   if (in_type.IsArrayType())
-    valobj = ArrayToPointerConversion(*valobj, m_exe_ctx_scope);
+    valobj = ArrayToPointerConversion(*valobj, *m_exe_ctx_scope);
 
   if (valobj->GetCompilerType().IsInteger() ||
       valobj->GetCompilerType().IsUnscopedEnumerationType()) {
