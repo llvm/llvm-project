@@ -270,11 +270,10 @@ define i32 @select_C1_C2(i1 %cond) {
 ;
 ; CHECK-GI-LABEL: select_C1_C2:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    and w8, w0, #0x1
-; CHECK-GI-NEXT:    mov w9, #42 // =0x2a
-; CHECK-GI-NEXT:    mov w10, #421 // =0x1a5
-; CHECK-GI-NEXT:    tst w8, #0x1
-; CHECK-GI-NEXT:    csel w0, w10, w9, ne
+; CHECK-GI-NEXT:    mov w8, #42 // =0x2a
+; CHECK-GI-NEXT:    mov w9, #421 // =0x1a5
+; CHECK-GI-NEXT:    tst w0, #0x1
+; CHECK-GI-NEXT:    csel w0, w9, w8, ne
 ; CHECK-GI-NEXT:    ret
   %sel = select i1 %cond, i32 421, i32 42
   ret i32 %sel
@@ -311,11 +310,10 @@ define i32 @select_C1_C2_signext(i1 signext %cond) {
 ;
 ; CHECK-GI-LABEL: select_C1_C2_signext:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    and w8, w0, #0x1
-; CHECK-GI-NEXT:    mov w9, #42 // =0x2a
-; CHECK-GI-NEXT:    mov w10, #421 // =0x1a5
-; CHECK-GI-NEXT:    tst w8, #0x1
-; CHECK-GI-NEXT:    csel w0, w10, w9, ne
+; CHECK-GI-NEXT:    mov w8, #42 // =0x2a
+; CHECK-GI-NEXT:    mov w9, #421 // =0x1a5
+; CHECK-GI-NEXT:    tst w0, #0x1
+; CHECK-GI-NEXT:    csel w0, w9, w8, ne
 ; CHECK-GI-NEXT:    ret
   %sel = select i1 %cond, i32 421, i32 42
   ret i32 %sel
@@ -324,20 +322,12 @@ define i32 @select_C1_C2_signext(i1 signext %cond) {
 ; A binary operator with constant after the select should always get folded into the select.
 
 define i8 @sel_constants_add_constant(i1 %cond) {
-; CHECK-SD-LABEL: sel_constants_add_constant:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    mov w8, #28 // =0x1c
-; CHECK-SD-NEXT:    tst w0, #0x1
-; CHECK-SD-NEXT:    csinc w0, w8, wzr, eq
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: sel_constants_add_constant:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    and w9, w0, #0x1
-; CHECK-GI-NEXT:    mov w8, #28 // =0x1c
-; CHECK-GI-NEXT:    tst w9, #0x1
-; CHECK-GI-NEXT:    csinc w0, w8, wzr, eq
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: sel_constants_add_constant:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #28 // =0x1c
+; CHECK-NEXT:    tst w0, #0x1
+; CHECK-NEXT:    csinc w0, w8, wzr, eq
+; CHECK-NEXT:    ret
   %sel = select i1 %cond, i8 -4, i8 23
   %bo = add i8 %sel, 5
   ret i8 %bo
@@ -354,11 +344,10 @@ define i8 @sel_constants_sub_constant(i1 %cond) {
 ;
 ; CHECK-GI-LABEL: sel_constants_sub_constant:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    and w8, w0, #0x1
-; CHECK-GI-NEXT:    mov w9, #-9 // =0xfffffff7
-; CHECK-GI-NEXT:    mov w10, #18 // =0x12
-; CHECK-GI-NEXT:    tst w8, #0x1
-; CHECK-GI-NEXT:    csel w0, w9, w10, ne
+; CHECK-GI-NEXT:    mov w8, #-9 // =0xfffffff7
+; CHECK-GI-NEXT:    mov w9, #18 // =0x12
+; CHECK-GI-NEXT:    tst w0, #0x1
+; CHECK-GI-NEXT:    csel w0, w8, w9, ne
 ; CHECK-GI-NEXT:    ret
   %sel = select i1 %cond, i8 -4, i8 23
   %bo = sub i8 %sel, 5
@@ -376,11 +365,10 @@ define i8 @sel_constants_sub_constant_sel_constants(i1 %cond) {
 ;
 ; CHECK-GI-LABEL: sel_constants_sub_constant_sel_constants:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    and w8, w0, #0x1
-; CHECK-GI-NEXT:    mov w9, #9 // =0x9
-; CHECK-GI-NEXT:    mov w10, #2 // =0x2
-; CHECK-GI-NEXT:    tst w8, #0x1
-; CHECK-GI-NEXT:    csel w0, w9, w10, ne
+; CHECK-GI-NEXT:    mov w8, #9 // =0x9
+; CHECK-GI-NEXT:    mov w9, #2 // =0x2
+; CHECK-GI-NEXT:    tst w0, #0x1
+; CHECK-GI-NEXT:    csel w0, w8, w9, ne
 ; CHECK-GI-NEXT:    ret
   %sel = select i1 %cond, i8 -4, i8 3
   %bo = sub i8 5, %sel
@@ -398,11 +386,10 @@ define i8 @sel_constants_mul_constant(i1 %cond) {
 ;
 ; CHECK-GI-LABEL: sel_constants_mul_constant:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    and w8, w0, #0x1
-; CHECK-GI-NEXT:    mov w9, #-4 // =0xfffffffc
-; CHECK-GI-NEXT:    mov w10, #23 // =0x17
-; CHECK-GI-NEXT:    tst w8, #0x1
-; CHECK-GI-NEXT:    csel w8, w9, w10, ne
+; CHECK-GI-NEXT:    mov w8, #-4 // =0xfffffffc
+; CHECK-GI-NEXT:    mov w9, #23 // =0x17
+; CHECK-GI-NEXT:    tst w0, #0x1
+; CHECK-GI-NEXT:    csel w8, w8, w9, ne
 ; CHECK-GI-NEXT:    add w0, w8, w8, lsl #2
 ; CHECK-GI-NEXT:    ret
   %sel = select i1 %cond, i8 -4, i8 23
@@ -430,20 +417,12 @@ define i8 @sel_constants_sdiv_constant(i1 %cond) {
 }
 
 define i8 @sdiv_constant_sel_constants(i1 %cond) {
-; CHECK-SD-LABEL: sdiv_constant_sel_constants:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    mov w8, #5 // =0x5
-; CHECK-SD-NEXT:    tst w0, #0x1
-; CHECK-SD-NEXT:    csel w0, wzr, w8, ne
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: sdiv_constant_sel_constants:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    and w9, w0, #0x1
-; CHECK-GI-NEXT:    mov w8, #5 // =0x5
-; CHECK-GI-NEXT:    tst w9, #0x1
-; CHECK-GI-NEXT:    csel w0, wzr, w8, ne
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: sdiv_constant_sel_constants:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #5 // =0x5
+; CHECK-NEXT:    tst w0, #0x1
+; CHECK-NEXT:    csel w0, wzr, w8, ne
+; CHECK-NEXT:    ret
   %sel = select i1 %cond, i8 121, i8 23
   %bo = sdiv i8 120, %sel
   ret i8 %bo
@@ -460,11 +439,10 @@ define i8 @sel_constants_udiv_constant(i1 %cond) {
 ;
 ; CHECK-GI-LABEL: sel_constants_udiv_constant:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    and w8, w0, #0x1
-; CHECK-GI-NEXT:    mov w9, #50 // =0x32
-; CHECK-GI-NEXT:    mov w10, #4 // =0x4
-; CHECK-GI-NEXT:    tst w8, #0x1
-; CHECK-GI-NEXT:    csel w0, w9, w10, ne
+; CHECK-GI-NEXT:    mov w8, #50 // =0x32
+; CHECK-GI-NEXT:    mov w9, #4 // =0x4
+; CHECK-GI-NEXT:    tst w0, #0x1
+; CHECK-GI-NEXT:    csel w0, w8, w9, ne
 ; CHECK-GI-NEXT:    ret
   %sel = select i1 %cond, i8 -4, i8 23
   %bo = udiv i8 %sel, 5
@@ -472,20 +450,12 @@ define i8 @sel_constants_udiv_constant(i1 %cond) {
 }
 
 define i8 @udiv_constant_sel_constants(i1 %cond) {
-; CHECK-SD-LABEL: udiv_constant_sel_constants:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    mov w8, #5 // =0x5
-; CHECK-SD-NEXT:    tst w0, #0x1
-; CHECK-SD-NEXT:    csel w0, wzr, w8, ne
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: udiv_constant_sel_constants:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    and w9, w0, #0x1
-; CHECK-GI-NEXT:    mov w8, #5 // =0x5
-; CHECK-GI-NEXT:    tst w9, #0x1
-; CHECK-GI-NEXT:    csel w0, wzr, w8, ne
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: udiv_constant_sel_constants:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #5 // =0x5
+; CHECK-NEXT:    tst w0, #0x1
+; CHECK-NEXT:    csel w0, wzr, w8, ne
+; CHECK-NEXT:    ret
   %sel = select i1 %cond, i8 -4, i8 23
   %bo = udiv i8 120, %sel
   ret i8 %bo
@@ -501,11 +471,10 @@ define i8 @sel_constants_srem_constant(i1 %cond) {
 ;
 ; CHECK-GI-LABEL: sel_constants_srem_constant:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    and w8, w0, #0x1
-; CHECK-GI-NEXT:    mov w9, #-4 // =0xfffffffc
-; CHECK-GI-NEXT:    mov w10, #3 // =0x3
-; CHECK-GI-NEXT:    tst w8, #0x1
-; CHECK-GI-NEXT:    csel w0, w9, w10, ne
+; CHECK-GI-NEXT:    mov w8, #-4 // =0xfffffffc
+; CHECK-GI-NEXT:    mov w9, #3 // =0x3
+; CHECK-GI-NEXT:    tst w0, #0x1
+; CHECK-GI-NEXT:    csel w0, w8, w9, ne
 ; CHECK-GI-NEXT:    ret
   %sel = select i1 %cond, i8 -4, i8 23
   %bo = srem i8 %sel, 5
@@ -523,11 +492,10 @@ define i8 @srem_constant_sel_constants(i1 %cond) {
 ;
 ; CHECK-GI-LABEL: srem_constant_sel_constants:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    and w8, w0, #0x1
-; CHECK-GI-NEXT:    mov w9, #120 // =0x78
-; CHECK-GI-NEXT:    mov w10, #5 // =0x5
-; CHECK-GI-NEXT:    tst w8, #0x1
-; CHECK-GI-NEXT:    csel w0, w9, w10, ne
+; CHECK-GI-NEXT:    mov w8, #120 // =0x78
+; CHECK-GI-NEXT:    mov w9, #5 // =0x5
+; CHECK-GI-NEXT:    tst w0, #0x1
+; CHECK-GI-NEXT:    csel w0, w8, w9, ne
 ; CHECK-GI-NEXT:    ret
   %sel = select i1 %cond, i8 121, i8 23
   %bo = srem i8 120, %sel
@@ -563,11 +531,10 @@ define i8 @urem_constant_sel_constants(i1 %cond) {
 ;
 ; CHECK-GI-LABEL: urem_constant_sel_constants:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    and w8, w0, #0x1
-; CHECK-GI-NEXT:    mov w9, #120 // =0x78
-; CHECK-GI-NEXT:    mov w10, #5 // =0x5
-; CHECK-GI-NEXT:    tst w8, #0x1
-; CHECK-GI-NEXT:    csel w0, w9, w10, ne
+; CHECK-GI-NEXT:    mov w8, #120 // =0x78
+; CHECK-GI-NEXT:    mov w9, #5 // =0x5
+; CHECK-GI-NEXT:    tst w0, #0x1
+; CHECK-GI-NEXT:    csel w0, w8, w9, ne
 ; CHECK-GI-NEXT:    ret
   %sel = select i1 %cond, i8 -4, i8 23
   %bo = urem i8 120, %sel
@@ -603,11 +570,10 @@ define i8 @sel_constants_or_constant(i1 %cond) {
 ;
 ; CHECK-GI-LABEL: sel_constants_or_constant:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    and w8, w0, #0x1
-; CHECK-GI-NEXT:    mov w9, #-3 // =0xfffffffd
-; CHECK-GI-NEXT:    mov w10, #23 // =0x17
-; CHECK-GI-NEXT:    tst w8, #0x1
-; CHECK-GI-NEXT:    csel w0, w9, w10, ne
+; CHECK-GI-NEXT:    mov w8, #-3 // =0xfffffffd
+; CHECK-GI-NEXT:    mov w9, #23 // =0x17
+; CHECK-GI-NEXT:    tst w0, #0x1
+; CHECK-GI-NEXT:    csel w0, w8, w9, ne
 ; CHECK-GI-NEXT:    ret
   %sel = select i1 %cond, i8 -4, i8 23
   %bo = or i8 %sel, 5
@@ -625,11 +591,10 @@ define i8 @sel_constants_xor_constant(i1 %cond) {
 ;
 ; CHECK-GI-LABEL: sel_constants_xor_constant:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    and w8, w0, #0x1
-; CHECK-GI-NEXT:    mov w9, #-7 // =0xfffffff9
-; CHECK-GI-NEXT:    mov w10, #18 // =0x12
-; CHECK-GI-NEXT:    tst w8, #0x1
-; CHECK-GI-NEXT:    csel w0, w9, w10, ne
+; CHECK-GI-NEXT:    mov w8, #-7 // =0xfffffff9
+; CHECK-GI-NEXT:    mov w9, #18 // =0x12
+; CHECK-GI-NEXT:    tst w0, #0x1
+; CHECK-GI-NEXT:    csel w0, w8, w9, ne
 ; CHECK-GI-NEXT:    ret
   %sel = select i1 %cond, i8 -4, i8 23
   %bo = xor i8 %sel, 5
@@ -647,11 +612,10 @@ define i8 @sel_constants_shl_constant(i1 %cond) {
 ;
 ; CHECK-GI-LABEL: sel_constants_shl_constant:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    and w8, w0, #0x1
-; CHECK-GI-NEXT:    mov w9, #-128 // =0xffffff80
-; CHECK-GI-NEXT:    mov w10, #-32 // =0xffffffe0
-; CHECK-GI-NEXT:    tst w8, #0x1
-; CHECK-GI-NEXT:    csel w0, w9, w10, ne
+; CHECK-GI-NEXT:    mov w8, #-128 // =0xffffff80
+; CHECK-GI-NEXT:    mov w9, #-32 // =0xffffffe0
+; CHECK-GI-NEXT:    tst w0, #0x1
+; CHECK-GI-NEXT:    csel w0, w8, w9, ne
 ; CHECK-GI-NEXT:    ret
   %sel = select i1 %cond, i8 -4, i8 23
   %bo = shl i8 %sel, 5
@@ -681,20 +645,12 @@ define i8 @shl_constant_sel_constants(i1 %cond) {
 }
 
 define i8 @sel_constants_lshr_constant(i1 %cond) {
-; CHECK-SD-LABEL: sel_constants_lshr_constant:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    mov w8, #7 // =0x7
-; CHECK-SD-NEXT:    tst w0, #0x1
-; CHECK-SD-NEXT:    csel w0, w8, wzr, ne
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: sel_constants_lshr_constant:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    and w9, w0, #0x1
-; CHECK-GI-NEXT:    mov w8, #7 // =0x7
-; CHECK-GI-NEXT:    tst w9, #0x1
-; CHECK-GI-NEXT:    csel w0, w8, wzr, ne
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: sel_constants_lshr_constant:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #7 // =0x7
+; CHECK-NEXT:    tst w0, #0x1
+; CHECK-NEXT:    csel w0, w8, wzr, ne
+; CHECK-NEXT:    ret
   %sel = select i1 %cond, i8 -4, i8 23
   %bo = lshr i8 %sel, 5
   ret i8 %bo
@@ -756,112 +712,64 @@ define i8 @ashr_constant_sel_constants(i1 %cond) {
 }
 
 define double @sel_constants_fadd_constant(i1 %cond) {
-; CHECK-SD-LABEL: sel_constants_fadd_constant:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    mov x9, #7378697629483820646 // =0x6666666666666666
-; CHECK-SD-NEXT:    adrp x8, .LCPI42_0
-; CHECK-SD-NEXT:    tst w0, #0x1
-; CHECK-SD-NEXT:    movk x9, #16444, lsl #48
-; CHECK-SD-NEXT:    ldr d0, [x8, :lo12:.LCPI42_0]
-; CHECK-SD-NEXT:    fmov d1, x9
-; CHECK-SD-NEXT:    fcsel d0, d0, d1, ne
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: sel_constants_fadd_constant:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov x9, #7378697629483820646 // =0x6666666666666666
-; CHECK-GI-NEXT:    adrp x8, .LCPI42_0
-; CHECK-GI-NEXT:    movk x9, #16444, lsl #48
-; CHECK-GI-NEXT:    ldr d0, [x8, :lo12:.LCPI42_0]
-; CHECK-GI-NEXT:    and w8, w0, #0x1
-; CHECK-GI-NEXT:    fmov d1, x9
-; CHECK-GI-NEXT:    tst w8, #0x1
-; CHECK-GI-NEXT:    fcsel d0, d0, d1, ne
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: sel_constants_fadd_constant:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov x9, #7378697629483820646 // =0x6666666666666666
+; CHECK-NEXT:    adrp x8, .LCPI42_0
+; CHECK-NEXT:    tst w0, #0x1
+; CHECK-NEXT:    movk x9, #16444, lsl #48
+; CHECK-NEXT:    ldr d0, [x8, :lo12:.LCPI42_0]
+; CHECK-NEXT:    fmov d1, x9
+; CHECK-NEXT:    fcsel d0, d0, d1, ne
+; CHECK-NEXT:    ret
   %sel = select i1 %cond, double -4.0, double 23.3
   %bo = fadd double %sel, 5.1
   ret double %bo
 }
 
 define double @sel_constants_fsub_constant(i1 %cond) {
-; CHECK-SD-LABEL: sel_constants_fsub_constant:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    adrp x8, .LCPI43_0
-; CHECK-SD-NEXT:    tst w0, #0x1
-; CHECK-SD-NEXT:    ldr d0, [x8, :lo12:.LCPI43_0]
-; CHECK-SD-NEXT:    mov x8, #3689348814741910323 // =0x3333333333333333
-; CHECK-SD-NEXT:    movk x8, #49186, lsl #48
-; CHECK-SD-NEXT:    fmov d1, x8
-; CHECK-SD-NEXT:    fcsel d0, d1, d0, ne
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: sel_constants_fsub_constant:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI43_0
-; CHECK-GI-NEXT:    and w9, w0, #0x1
-; CHECK-GI-NEXT:    ldr d0, [x8, :lo12:.LCPI43_0]
-; CHECK-GI-NEXT:    mov x8, #3689348814741910323 // =0x3333333333333333
-; CHECK-GI-NEXT:    tst w9, #0x1
-; CHECK-GI-NEXT:    movk x8, #49186, lsl #48
-; CHECK-GI-NEXT:    fmov d1, x8
-; CHECK-GI-NEXT:    fcsel d0, d1, d0, ne
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: sel_constants_fsub_constant:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    adrp x8, .LCPI43_0
+; CHECK-NEXT:    tst w0, #0x1
+; CHECK-NEXT:    ldr d0, [x8, :lo12:.LCPI43_0]
+; CHECK-NEXT:    mov x8, #3689348814741910323 // =0x3333333333333333
+; CHECK-NEXT:    movk x8, #49186, lsl #48
+; CHECK-NEXT:    fmov d1, x8
+; CHECK-NEXT:    fcsel d0, d1, d0, ne
+; CHECK-NEXT:    ret
   %sel = select i1 %cond, double -4.0, double 23.3
   %bo = fsub double %sel, 5.1
   ret double %bo
 }
 
 define double @fsub_constant_sel_constants(i1 %cond) {
-; CHECK-SD-LABEL: fsub_constant_sel_constants:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    adrp x8, .LCPI44_0
-; CHECK-SD-NEXT:    tst w0, #0x1
-; CHECK-SD-NEXT:    ldr d0, [x8, :lo12:.LCPI44_0]
-; CHECK-SD-NEXT:    mov x8, #3689348814741910323 // =0x3333333333333333
-; CHECK-SD-NEXT:    movk x8, #16418, lsl #48
-; CHECK-SD-NEXT:    fmov d1, x8
-; CHECK-SD-NEXT:    fcsel d0, d1, d0, ne
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: fsub_constant_sel_constants:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI44_0
-; CHECK-GI-NEXT:    and w9, w0, #0x1
-; CHECK-GI-NEXT:    ldr d0, [x8, :lo12:.LCPI44_0]
-; CHECK-GI-NEXT:    mov x8, #3689348814741910323 // =0x3333333333333333
-; CHECK-GI-NEXT:    tst w9, #0x1
-; CHECK-GI-NEXT:    movk x8, #16418, lsl #48
-; CHECK-GI-NEXT:    fmov d1, x8
-; CHECK-GI-NEXT:    fcsel d0, d1, d0, ne
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: fsub_constant_sel_constants:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    adrp x8, .LCPI44_0
+; CHECK-NEXT:    tst w0, #0x1
+; CHECK-NEXT:    ldr d0, [x8, :lo12:.LCPI44_0]
+; CHECK-NEXT:    mov x8, #3689348814741910323 // =0x3333333333333333
+; CHECK-NEXT:    movk x8, #16418, lsl #48
+; CHECK-NEXT:    fmov d1, x8
+; CHECK-NEXT:    fcsel d0, d1, d0, ne
+; CHECK-NEXT:    ret
   %sel = select i1 %cond, double -4.0, double 23.3
   %bo = fsub double 5.1, %sel
   ret double %bo
 }
 
 define double @sel_constants_fmul_constant(i1 %cond) {
-; CHECK-SD-LABEL: sel_constants_fmul_constant:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    adrp x8, .LCPI45_0
-; CHECK-SD-NEXT:    tst w0, #0x1
-; CHECK-SD-NEXT:    ldr d0, [x8, :lo12:.LCPI45_0]
-; CHECK-SD-NEXT:    mov x8, #7378697629483820646 // =0x6666666666666666
-; CHECK-SD-NEXT:    movk x8, #49204, lsl #48
-; CHECK-SD-NEXT:    fmov d1, x8
-; CHECK-SD-NEXT:    fcsel d0, d1, d0, ne
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: sel_constants_fmul_constant:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI45_0
-; CHECK-GI-NEXT:    and w9, w0, #0x1
-; CHECK-GI-NEXT:    ldr d0, [x8, :lo12:.LCPI45_0]
-; CHECK-GI-NEXT:    mov x8, #7378697629483820646 // =0x6666666666666666
-; CHECK-GI-NEXT:    tst w9, #0x1
-; CHECK-GI-NEXT:    movk x8, #49204, lsl #48
-; CHECK-GI-NEXT:    fmov d1, x8
-; CHECK-GI-NEXT:    fcsel d0, d1, d0, ne
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: sel_constants_fmul_constant:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    adrp x8, .LCPI45_0
+; CHECK-NEXT:    tst w0, #0x1
+; CHECK-NEXT:    ldr d0, [x8, :lo12:.LCPI45_0]
+; CHECK-NEXT:    mov x8, #7378697629483820646 // =0x6666666666666666
+; CHECK-NEXT:    movk x8, #49204, lsl #48
+; CHECK-NEXT:    fmov d1, x8
+; CHECK-NEXT:    fcsel d0, d1, d0, ne
+; CHECK-NEXT:    ret
   %sel = select i1 %cond, double -4.0, double 23.3
   %bo = fmul double %sel, 5.1
   ret double %bo
@@ -882,10 +790,9 @@ define double @sel_constants_fdiv_constant(i1 %cond) {
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    adrp x8, .LCPI46_1
 ; CHECK-GI-NEXT:    adrp x9, .LCPI46_0
+; CHECK-GI-NEXT:    tst w0, #0x1
 ; CHECK-GI-NEXT:    ldr d0, [x8, :lo12:.LCPI46_1]
 ; CHECK-GI-NEXT:    ldr d1, [x9, :lo12:.LCPI46_0]
-; CHECK-GI-NEXT:    and w8, w0, #0x1
-; CHECK-GI-NEXT:    tst w8, #0x1
 ; CHECK-GI-NEXT:    fcsel d0, d1, d0, ne
 ; CHECK-GI-NEXT:    ret
   %sel = select i1 %cond, double -4.0, double 23.3
@@ -894,52 +801,30 @@ define double @sel_constants_fdiv_constant(i1 %cond) {
 }
 
 define double @fdiv_constant_sel_constants(i1 %cond) {
-; CHECK-SD-LABEL: fdiv_constant_sel_constants:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    adrp x8, .LCPI47_0
-; CHECK-SD-NEXT:    tst w0, #0x1
-; CHECK-SD-NEXT:    ldr d0, [x8, :lo12:.LCPI47_0]
-; CHECK-SD-NEXT:    mov x8, #7378697629483820646 // =0x6666666666666666
-; CHECK-SD-NEXT:    movk x8, #49140, lsl #48
-; CHECK-SD-NEXT:    fmov d1, x8
-; CHECK-SD-NEXT:    fcsel d0, d1, d0, ne
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: fdiv_constant_sel_constants:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI47_0
-; CHECK-GI-NEXT:    and w9, w0, #0x1
-; CHECK-GI-NEXT:    ldr d0, [x8, :lo12:.LCPI47_0]
-; CHECK-GI-NEXT:    mov x8, #7378697629483820646 // =0x6666666666666666
-; CHECK-GI-NEXT:    tst w9, #0x1
-; CHECK-GI-NEXT:    movk x8, #49140, lsl #48
-; CHECK-GI-NEXT:    fmov d1, x8
-; CHECK-GI-NEXT:    fcsel d0, d1, d0, ne
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: fdiv_constant_sel_constants:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    adrp x8, .LCPI47_0
+; CHECK-NEXT:    tst w0, #0x1
+; CHECK-NEXT:    ldr d0, [x8, :lo12:.LCPI47_0]
+; CHECK-NEXT:    mov x8, #7378697629483820646 // =0x6666666666666666
+; CHECK-NEXT:    movk x8, #49140, lsl #48
+; CHECK-NEXT:    fmov d1, x8
+; CHECK-NEXT:    fcsel d0, d1, d0, ne
+; CHECK-NEXT:    ret
   %sel = select i1 %cond, double -4.0, double 23.3
   %bo = fdiv double 5.1, %sel
   ret double %bo
 }
 
 define double @sel_constants_frem_constant(i1 %cond) {
-; CHECK-SD-LABEL: sel_constants_frem_constant:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    adrp x8, .LCPI48_0
-; CHECK-SD-NEXT:    fmov d0, #-4.00000000
-; CHECK-SD-NEXT:    tst w0, #0x1
-; CHECK-SD-NEXT:    ldr d1, [x8, :lo12:.LCPI48_0]
-; CHECK-SD-NEXT:    fcsel d0, d0, d1, ne
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: sel_constants_frem_constant:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI48_0
-; CHECK-GI-NEXT:    fmov d0, #-4.00000000
-; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI48_0]
-; CHECK-GI-NEXT:    and w8, w0, #0x1
-; CHECK-GI-NEXT:    tst w8, #0x1
-; CHECK-GI-NEXT:    fcsel d0, d0, d1, ne
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: sel_constants_frem_constant:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    adrp x8, .LCPI48_0
+; CHECK-NEXT:    fmov d0, #-4.00000000
+; CHECK-NEXT:    tst w0, #0x1
+; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI48_0]
+; CHECK-NEXT:    fcsel d0, d0, d1, ne
+; CHECK-NEXT:    ret
   %sel = select i1 %cond, double -4.0, double 23.3
   %bo = frem double %sel, 5.1
   ret double %bo
@@ -960,10 +845,9 @@ define double @frem_constant_sel_constants(i1 %cond) {
 ; CHECK-GI-LABEL: frem_constant_sel_constants:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    adrp x8, .LCPI49_0
-; CHECK-GI-NEXT:    and w9, w0, #0x1
+; CHECK-GI-NEXT:    tst w0, #0x1
 ; CHECK-GI-NEXT:    ldr d0, [x8, :lo12:.LCPI49_0]
 ; CHECK-GI-NEXT:    mov x8, #7378697629483820646 // =0x6666666666666666
-; CHECK-GI-NEXT:    tst w9, #0x1
 ; CHECK-GI-NEXT:    movk x8, #16404, lsl #48
 ; CHECK-GI-NEXT:    fmov d1, x8
 ; CHECK-GI-NEXT:    fcsel d0, d0, d1, ne

@@ -1592,13 +1592,12 @@ bool AArch64InstrInfo::analyzeCompare(const MachineInstr &MI, Register &SrcReg,
   case AArch64::ANDSWri:
   case AArch64::ANDSXri:
     // ANDS does not use the same encoding scheme as the others xxxS
-    // instructions.
+    // instructions. CmpMask holds the encoded logical immediate (operand 2),
+    // not decodeLogicalImmediate; CmpValue is 0 (TST-style).
     SrcReg = MI.getOperand(1).getReg();
     SrcReg2 = 0;
-    CmpMask = ~0;
-    CmpValue = AArch64_AM::decodeLogicalImmediate(
-                   MI.getOperand(2).getImm(),
-                   MI.getOpcode() == AArch64::ANDSWri ? 32 : 64);
+    CmpMask = MI.getOperand(2).getImm();
+    CmpValue = 0;
     return true;
   }
 
@@ -1917,6 +1916,94 @@ bool AArch64InstrInfo::optimizePTestInstr(
   return true;
 }
 
+/// \p EncodedLogicalImm is the immediate operand as stored on the MI (same
+/// encoding as analyzeCompare places in CmpMask for ANDSWri / ANDSXri).
+static bool isSuitableForLogicalImmAND(MachineInstr *MI, Register SrcReg,
+                                       int64_t EncodedLogicalImm,
+                                       unsigned BitSize, bool CommonUse) {
+  if (!MI)
+    return false;
+  assert(BitSize == 32 || BitSize == 64);
+  const unsigned Opc = MI->getOpcode();
+  if (Opc != (BitSize == 32 ? AArch64::ANDWri : AArch64::ANDXri))
+    return false;
+  if (!MI->getOperand(2).isImm())
+    return false;
+  if (MI->getOperand(2).getImm() != EncodedLogicalImm)
+    return false;
+  const unsigned RegOp = CommonUse ? 1 : 0;
+  if (!MI->getOperand(RegOp).isReg() || MI->getOperand(RegOp).getSubReg())
+    return false;
+  return MI->getOperand(RegOp).getReg() == SrcReg;
+}
+
+/// If CmpInstr is ANDSWri / ANDSXri whose GPR result is unused, and an earlier
+/// ANDWri / ANDXri in the same block applies the same logical immediate to the
+/// same source register, promote that AND to ANDS and erase CmpInstr.
+static bool tryFuseLogicalImmANDSWithPriorAND(MachineInstr &CmpInstr,
+                                              Register SrcReg,
+                                              int64_t EncodedLogicalImm,
+                                              const MachineRegisterInfo *MRI,
+                                              const AArch64InstrInfo &TII) {
+  const unsigned CmpOpc = CmpInstr.getOpcode();
+  if (CmpOpc != AArch64::ANDSWri && CmpOpc != AArch64::ANDSXri)
+    return false;
+  const unsigned BitSize = CmpOpc == AArch64::ANDSWri ? 32 : 64;
+  if (!CmpInstr.getOperand(2).isImm() ||
+      CmpInstr.getOperand(2).getImm() != EncodedLogicalImm)
+    return false;
+
+  MachineInstr *MI = MRI->getUniqueVRegDef(SrcReg);
+  if (!MI ||
+      !isSuitableForLogicalImmAND(MI, SrcReg, EncodedLogicalImm, BitSize,
+                                  false) ||
+      TII.isPredicated(*MI)) {
+    MI = nullptr;
+    for (MachineRegisterInfo::use_instr_iterator
+             UI = MRI->use_instr_begin(SrcReg),
+             UE = MRI->use_instr_end();
+         UI != UE; ++UI) {
+      if (UI->getParent() != CmpInstr.getParent())
+        continue;
+      MachineInstr *PotentialAND = &*UI;
+      if (!isSuitableForLogicalImmAND(PotentialAND, SrcReg, EncodedLogicalImm,
+                                      BitSize, true) ||
+          TII.isPredicated(*PotentialAND))
+        continue;
+      MI = PotentialAND;
+      break;
+    }
+    if (!MI)
+      return false;
+  }
+
+  MachineBasicBlock *MBB = CmpInstr.getParent();
+  if (MI->getParent() != MBB)
+    return false;
+  bool MIIsBeforeCmp = false;
+  for (auto It = std::next(MI->getIterator()); It != MBB->end(); ++It) {
+    if (&*It == &CmpInstr) {
+      MIIsBeforeCmp = true;
+      break;
+    }
+  }
+  if (!MIIsBeforeCmp)
+    return false;
+
+  const TargetRegisterInfo &TRI = TII.getRegisterInfo();
+  if (areCFlagsAccessedBetweenInstrs(MI, &CmpInstr, &TRI, AK_All))
+    return false;
+
+  const unsigned NewOpc = BitSize == 32 ? AArch64::ANDSWri : AArch64::ANDSXri;
+  MI->setDesc(TII.get(NewOpc));
+  CmpInstr.eraseFromParent();
+  bool succeeded = UpdateOperandRegClass(*MI);
+  (void)succeeded;
+  assert(succeeded && "Some operands reg class are incompatible!");
+  MI->addRegisterDefined(AArch64::NZCV, &TRI);
+  return true;
+}
+
 /// Try to optimize a compare instruction. A compare instruction is an
 /// instruction which produces AArch64::NZCV. It can be truly compare
 /// instruction
@@ -1967,6 +2054,10 @@ bool AArch64InstrInfo::optimizeCompareInstr(
   // CmpInstr is a Compare instruction if destination register is not used.
   if (!MRI->use_nodbg_empty(CmpInstr.getOperand(0).getReg()))
     return false;
+
+  if (CmpValue == 0 &&
+      tryFuseLogicalImmANDSWithPriorAND(CmpInstr, SrcReg, CmpMask, MRI, *this))
+    return true;
 
   if (CmpValue == 0 && substituteCmpToZero(CmpInstr, SrcReg, *MRI))
     return true;
