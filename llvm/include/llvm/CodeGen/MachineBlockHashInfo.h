@@ -80,8 +80,6 @@ public:
     return Dist;
   }
 
-  uint16_t getOpcodeHash() const { return OpcodeHash; }
-
 private:
   /// The offset of the basic block from the function start.
   uint16_t Offset{0};
