@@ -68,7 +68,41 @@ entry:
   ret i32 %call
 }
 
+define i32 @strlen_test_fp_strict(ptr noundef %str) nounwind {
+; CHECK-AIX-32-P9-LABEL: strlen_test_fp_strict:
+; CHECK-AIX-32-P9:       # %bb.0: # %entry
+; CHECK-AIX-32-P9-NEXT:    mflr r0
+; CHECK-AIX-32-P9-NEXT:    stwu r1, -64(r1)
+; CHECK-AIX-32-P9-NEXT:    stw r0, 72(r1)
+; CHECK-AIX-32-P9-NEXT:    stw r3, 60(r1)
+; CHECK-AIX-32-P9-NEXT:    bl .___strlen[PR]
+; CHECK-AIX-32-P9-NEXT:    nop
+; CHECK-AIX-32-P9-NEXT:    addi r1, r1, 64
+; CHECK-AIX-32-P9-NEXT:    lwz r0, 8(r1)
+; CHECK-AIX-32-P9-NEXT:    mtlr r0
+; CHECK-AIX-32-P9-NEXT:    blr
+;
+; CHECK-LINUX32-P9-LABEL: strlen_test_fp_strict:
+; CHECK-LINUX32-P9:       # %bb.0: # %entry
+; CHECK-LINUX32-P9-NEXT:    mflr r0
+; CHECK-LINUX32-P9-NEXT:    stwu r1, -16(r1)
+; CHECK-LINUX32-P9-NEXT:    stw r0, 20(r1)
+; CHECK-LINUX32-P9-NEXT:    stw r3, 12(r1)
+; CHECK-LINUX32-P9-NEXT:    bl strlen
+; CHECK-LINUX32-P9-NEXT:    lwz r0, 20(r1)
+; CHECK-LINUX32-P9-NEXT:    addi r1, r1, 16
+; CHECK-LINUX32-P9-NEXT:    mtlr r0
+; CHECK-LINUX32-P9-NEXT:    blr
+entry:
+  %str.addr = alloca ptr, align 4
+  store ptr %str, ptr %str.addr, align 4
+  %0 = load ptr, ptr %str.addr, align 4
+  %call = call i32 @strlen(ptr noundef %0) #0
+  ret i32 %call
+}
+
 declare i32 @strlen(ptr noundef) nounwind
+attributes #0 = { strictfp }
 
 define ptr @test_memmove(ptr noundef %destination, ptr noundef %source, i32 noundef %num) #0 {
 ; CHECK-AIX-32-P9-LABEL: test_memmove:

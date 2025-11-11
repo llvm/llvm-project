@@ -117,6 +117,11 @@ Stmt *AnalysisDeclContext::getBody(bool &IsAutosynthesized) const {
     return BD->getBody();
   else if (const auto *FunTmpl = dyn_cast_or_null<FunctionTemplateDecl>(D))
     return FunTmpl->getTemplatedDecl()->getBody();
+  else if (const auto *VD = dyn_cast_or_null<VarDecl>(D)) {
+    if (VD->isFileVarDecl()) {
+      return const_cast<Stmt *>(dyn_cast_or_null<Stmt>(VD->getInit()));
+    }
+  }
 
   llvm_unreachable("unknown code decl");
 }

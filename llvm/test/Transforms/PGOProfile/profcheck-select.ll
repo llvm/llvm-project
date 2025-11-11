@@ -1,3 +1,7 @@
+; This test fails under the profcheck configuration due to profcheck creating
+; metadata.
+; UNSUPPORTED: profcheck
+
 ; RUN: split-file %s %t
 
 ; RUN: opt -passes=prof-inject %t/inject.ll -S -o - | FileCheck %t/inject.ll

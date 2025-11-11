@@ -67,6 +67,13 @@ functions:
     arguments:
       - type: clockid_t
       - type: struct timespec *
+  - name: clock_settime
+    standard:
+      - POSIX
+    return_type: int
+    arguments:
+      - type: clockid_t
+      - type: const struct timespec *
   - name: difftime
     standard:
       - stdc

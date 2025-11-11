@@ -52,6 +52,7 @@ static_library("clangd") {
     "//clang/lib/Frontend",
     "//clang/lib/Index",
     "//clang/lib/Lex",
+    "//clang/lib/Options",
     "//clang/lib/Sema",
     "//clang/lib/Serialization",
     "//clang/lib/Tooling",

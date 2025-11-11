@@ -86,10 +86,6 @@ public:
   uint64_t getEdgeCount(StringRef FuncName, const UniqueBBID &SrcBBID,
                         const UniqueBBID &SinkBBID) const;
 
-  // Return the complete function path and cluster info for the given function.
-  std::pair<bool, FunctionPathAndClusterInfo>
-  getFunctionPathAndClusterInfo(StringRef FuncName) const;
-
 private:
   StringRef getAliasName(StringRef FuncName) const {
     auto R = FuncAliasMap.find(FuncName);
@@ -198,9 +194,6 @@ public:
 
   uint64_t getEdgeCount(StringRef FuncName, const UniqueBBID &SrcBBID,
                         const UniqueBBID &DestBBID) const;
-
-  std::pair<bool, FunctionPathAndClusterInfo>
-  getFunctionPathAndClusterInfo(StringRef FuncName) const;
 
   // Initializes the FunctionNameToDIFilename map for the current module and
   // then reads the profile for the matching functions.
