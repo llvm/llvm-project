@@ -1173,17 +1173,12 @@ bool AArch64RegisterInfo::getRegAllocationHints(
       for (MCPhysReg R : Order) {
         auto AddHintIfSuitable = [&](MCPhysReg R,
                                      const MachineOperand &MO) -> bool {
-          // R is a suitable register hint if:
-          // * R is one of the source operands.
-          // * The register allocator has not suggested any hints and one of the
-          //   instruction's source operands does not yet have a register
-          //   allocated for it.
-          if (VRM->getPhys(MO.getReg()) == R ||
-              (!VRM->hasPhys(MO.getReg()) && Hints.empty())) {
-            Hints.push_back(R);
-            return true;
-          }
-          return false;
+          // R is a suitable register hint if R can reuse one of the other
+          // source operands.
+          if (VRM->getPhys(MO.getReg()) != R)
+            return false;
+          Hints.push_back(R);
+          return true;
         };
 
         switch (InstFlags & AArch64::DestructiveInstTypeMask) {
