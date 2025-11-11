@@ -1032,7 +1032,7 @@ std::optional<LValue> CGHLSLRuntime::emitResourceArraySubscriptExpr(
           ArraySubsExpr->getType()->isHLSLResourceRecordArray()) &&
          "expected resource array subscript expression");
 
-  // Let Clang codegen handle local and static resource array subscripts,
+  // Let clang codegen handle local and static resource array subscripts,
   // or when the subscript references on opaque expression (as part of
   // ArrayInitLoopExpr AST node).
   const VarDecl *ArrayDecl =
