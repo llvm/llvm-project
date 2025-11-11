@@ -41,7 +41,7 @@ namespace {
 using Match = std::pair<StringRef, unsigned>;
 static constexpr Match NotMatched = {"", 0};
 
-// Legacy v1 matcher.
+// Lagacy v1 matcher.
 class RegexMatcher {
 public:
   Error insert(StringRef Pattern, unsigned LineNumber);
