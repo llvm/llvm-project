@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_UNISTD_FCHOWN_H_
-#define LLVM_LIBC_SRC_UNISTD_FCHOWN_H_
+#ifndef LLVM_LIBC_SRC_UNISTD_FCHOWN_H
+#define LLVM_LIBC_SRC_UNISTD_FCHOWN_H
 
 #include "hdr/types/gid_t.h"
 #include "hdr/types/uid_t.h"
@@ -19,4 +19,4 @@ int fchown(int fildes, uid_t owner, gid_t group);
 
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC_UNISTD_FCHOWN_H_
+#endif // LLVM_LIBC_SRC_UNISTD_FCHOWN_H

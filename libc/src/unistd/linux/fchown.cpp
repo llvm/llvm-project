@@ -11,6 +11,8 @@
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
 
+#include "hdr/types/gid_t.h"
+#include "hdr/types/uid_t.h"
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
 #include <sys/syscall.h> // For syscall numbers.

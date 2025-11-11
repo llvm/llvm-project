@@ -44,7 +44,7 @@ TEST_F(LlvmLibcFchownTest, FchownSuccess) {
   ASSERT_THAT(LIBC_NAMESPACE::unlink(TEST_FILE), Succeeds(0));
 }
 
-TEST_F(LlvmLibcFchownTest, ChownInvalidFileDescriptor) {
+TEST_F(LlvmLibcFchownTest, FchownInvalidFileDescriptor) {
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
   ASSERT_THAT(LIBC_NAMESPACE::fchown(-1, 1000, 1000), Fails(EBADF));
 }
