@@ -479,20 +479,13 @@ VariableList *StackFrame::GetVariableList(bool get_file_globals,
 }
 
 // BEGIN SWIFT
-// Implement LanguageCPlusPlus::GetParentNameIfClosure and upstream this.
-// rdar://152321823
-
-/// If `sc` represents a "closure-like" function according to `lang`, and
-/// `missing_var_name` can be found in a parent context, create a diagnostic
-/// explaining that this variable is available but not captured by the closure.
-static std::string
-GetVariableNotCapturedDiagnostic(SymbolContext &sc, SourceLanguage lang,
-                                 ConstString missing_var_name) {
-  Language *lang_plugin = Language::FindPlugin(lang.AsLanguageType());
+std::string
+StackFrame::GetVariableNotCapturedDiagnostic(llvm::StringRef missing_var_name) {
+  Language *lang_plugin = Language::FindPlugin(GetLanguage().AsLanguageType());
   if (lang_plugin == nullptr)
     return "";
   Function *parent_func =
-      lang_plugin->FindParentOfClosureWithVariable(missing_var_name, sc);
+      lang_plugin->FindParentOfClosureWithVariable(missing_var_name, m_sc);
   if (!parent_func)
     return "";
   return llvm::formatv("A variable named '{0}' existed in function '{1}', but "
@@ -708,8 +701,8 @@ ValueObjectSP StackFrame::LegacyGetValueForVariableExpressionPath(
     // BEGIN SWIFT
     // Implement LanguageCPlusPlus::GetParentNameIfClosure and upstream this.
     // rdar://152321823
-    if (std::string message = GetVariableNotCapturedDiagnostic(
-            m_sc, GetLanguage(), name_const_string);
+    if (std::string message =
+            GetVariableNotCapturedDiagnostic(name_const_string);
         !message.empty())
       error = Status::FromErrorString(message.c_str());
     else
