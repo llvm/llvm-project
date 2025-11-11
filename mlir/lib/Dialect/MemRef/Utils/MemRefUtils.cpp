@@ -140,6 +140,9 @@ static bool resultIsNotRead(Operation *op, std::vector<Operation *> &uses) {
   std::vector<Operation *> opUses;
   for (OpOperand &use : op->getUses()) {
     Operation *useOp = use.getOwner();
+    // Use escaped the scope
+    if (useOp->mightHaveTrait<OpTrait::IsTerminator>())
+      return false;
     if (isa<memref::DeallocOp>(useOp) ||
         (useOp->getNumResults() == 0 && useOp->getNumRegions() == 0 &&
          !mlir::hasEffect<MemoryEffects::Read>(useOp)) ||
