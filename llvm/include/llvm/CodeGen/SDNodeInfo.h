@@ -55,8 +55,8 @@ struct VTByHwModePair {
 
 struct SDTypeConstraint {
   SDTC Kind;
-  uint8_t OpNo;
-  uint8_t OtherOpNo;
+  uint8_t ConstrainedValIdx;
+  uint8_t ConstrainingValIdx;
   /// For Kind == SDTCisVT or SDTCVecEltisVT:
   /// - if not using HwMode, NumHwModes == 0 and VT is MVT::SimpleValueType;
   /// - otherwise, VT is offset into VTByHwModeTable and NumHwModes specifies

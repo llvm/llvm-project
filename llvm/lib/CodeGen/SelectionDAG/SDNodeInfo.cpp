@@ -45,21 +45,27 @@ static void checkOperandType(const SelectionDAG &DAG, const SDNode *N,
 
 namespace {
 
-struct ConstraintOp {
+/// Similar to SDValue, but also records whether it is a result or an operand
+/// of a node so we can provide more precise diagnostics.
+class SDNodeValue {
   const SDNode *N;
   unsigned Idx;
   bool IsRes;
+
+public:
+  SDNodeValue(const SDNode *N, unsigned Idx, bool IsRes)
+      : N(N), Idx(Idx), IsRes(IsRes) {}
 
   SDValue getValue() const {
     return IsRes ? SDValue(const_cast<SDNode *>(N), Idx) : N->getOperand(Idx);
   }
 
   EVT getValueType() const { return getValue().getValueType(); }
-};
 
-raw_ostream &operator<<(raw_ostream &OS, const ConstraintOp &Op) {
-  return OS << (Op.IsRes ? "result" : "operand") << " #" << Op.Idx;
-}
+  friend raw_ostream &operator<<(raw_ostream &OS, const SDNodeValue &Op) {
+    return OS << (Op.IsRes ? "result" : "operand") << " #" << Op.Idx;
+  }
+};
 
 } // namespace
 
@@ -152,10 +158,15 @@ void SDNodeInfo::verifyNode(const SelectionDAG &DAG, const SDNode *N) const {
   unsigned VTHwMode =
       DAG.getSubtarget().getHwMode(MCSubtargetInfo::HwMode_ValueType);
 
-  auto GetConstraintOp = [&](unsigned Idx) {
-    if (Idx < Desc.NumResults)
-      return ConstraintOp{N, Idx, /*IsRes=*/true};
-    return ConstraintOp{N, HasChain + (Idx - Desc.NumResults), /*IsRes=*/false};
+  // Returns a constrained or constraining value (result or operand) of a node.
+  // ValIdx is the index of a node's value, as defined by SDTypeConstraint;
+  // that is, it indexes a node's operands after its results and ignores
+  // chain/glue values.
+  auto GetConstraintValue = [&](unsigned ValIdx) {
+    if (ValIdx < Desc.NumResults)
+      return SDNodeValue(N, ValIdx, /*IsRes=*/true);
+    return SDNodeValue(N, HasChain + (ValIdx - Desc.NumResults),
+                       /*IsRes=*/false);
   };
 
   auto GetConstraintVT = [&](const SDTypeConstraint &C) {
@@ -171,8 +182,8 @@ void SDNodeInfo::verifyNode(const SelectionDAG &DAG, const SDNode *N) const {
   raw_svector_ostream SS(ES);
 
   for (const SDTypeConstraint &C : getConstraints(N->getOpcode())) {
-    ConstraintOp Op = GetConstraintOp(C.OpNo);
-    EVT OpVT = Op.getValueType();
+    SDNodeValue Val = GetConstraintValue(C.ConstrainedValIdx);
+    EVT VT = Val.getValueType();
 
     switch (C.Kind) {
     case SDTCisVT: {
@@ -183,11 +194,11 @@ void SDNodeInfo::verifyNode(const SelectionDAG &DAG, const SDNode *N) const {
         ExpectedVT =
             DAG.getTargetLoweringInfo().getPointerTy(DAG.getDataLayout());
 
-      if (OpVT != ExpectedVT) {
-        SS << Op << " must have type " << ExpectedVT;
+      if (VT != ExpectedVT) {
+        SS << Val << " must have type " << ExpectedVT;
         if (IsPtr)
           SS << " (iPTR)";
-        SS << ", but has type " << OpVT;
+        SS << ", but has type " << VT;
         reportNodeError(DAG, N, SS.str());
       }
       break;
@@ -213,13 +224,13 @@ void SDNodeInfo::verifyNode(const SelectionDAG &DAG, const SDNode *N) const {
     case SDTCVecEltisVT: {
       EVT ExpectedVT = GetConstraintVT(C);
 
-      if (!OpVT.isVector()) {
-        SS << Op << " must have vector type";
+      if (!VT.isVector()) {
+        SS << Val << " must have vector type";
         reportNodeError(DAG, N, SS.str());
       }
-      if (OpVT.getVectorElementType() != ExpectedVT) {
-        SS << Op << " must have " << ExpectedVT << " element type, but has "
-           << OpVT.getVectorElementType() << " element type";
+      if (VT.getVectorElementType() != ExpectedVT) {
+        SS << Val << " must have " << ExpectedVT << " element type, but has "
+           << VT.getVectorElementType() << " element type";
         reportNodeError(DAG, N, SS.str());
       }
       break;
