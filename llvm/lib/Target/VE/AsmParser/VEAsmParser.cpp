@@ -178,7 +178,7 @@ private:
 
   struct MemOp {
     MCRegister Base;
-    unsigned IndexReg;
+    MCRegister IndexReg;
     const MCExpr *Index;
     const MCExpr *Offset;
   };
