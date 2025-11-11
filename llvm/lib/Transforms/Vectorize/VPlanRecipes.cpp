@@ -3717,7 +3717,6 @@ void VPWidenLoadEVLRecipe::print(raw_ostream &O, const Twine &Indent,
 void VPWidenStridedLoadRecipe::execute(VPTransformState &State) {
   Type *ScalarDataTy = getLoadStoreType(&Ingredient);
   auto *DataTy = VectorType::get(ScalarDataTy, State.VF);
-  const Align Alignment = getLoadStoreAlignment(&Ingredient);
 
   auto &Builder = State.Builder;
   Value *Addr = State.get(getAddr(), /*IsScalar*/ true);
@@ -3746,7 +3745,6 @@ VPWidenStridedLoadRecipe::computeCost(ElementCount VF,
                                       VPCostContext &Ctx) const {
   Type *Ty = toVectorTy(getLoadStoreType(&Ingredient), VF);
   const Value *Ptr = getLoadStorePointerOperand(&Ingredient);
-  const Align Alignment = getLoadStoreAlignment(&Ingredient);
   return Ctx.TTI.getStridedMemoryOpCost(Instruction::Load, Ty, Ptr, IsMasked,
                                         Alignment, Ctx.CostKind, &Ingredient);
 }
