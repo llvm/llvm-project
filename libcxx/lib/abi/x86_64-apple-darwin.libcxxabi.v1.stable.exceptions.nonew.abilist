@@ -857,8 +857,8 @@
 {'is_defined': True, 'name': '__ZNSt13bad_exceptionD0Ev', 'type': 'I'}
 {'is_defined': True, 'name': '__ZNSt13bad_exceptionD1Ev', 'type': 'I'}
 {'is_defined': True, 'name': '__ZNSt13bad_exceptionD2Ev', 'type': 'I'}
-{'is_defined': True, 'name': '__ZNSt13exception_ptr23__decrement_refcountEPv', 'type': 'FUNC'}
-{'is_defined': True, 'name': '__ZNSt13exception_ptr23__increment_refcountEPv', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNSt13exception_ptr20__decrement_refcountEPv', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNSt13exception_ptr20__increment_refcountEPv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt13exception_ptr31__from_native_exception_pointerEPv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt13exception_ptrC1ERKS_', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt13exception_ptrC2ERKS_', 'type': 'FUNC'}
