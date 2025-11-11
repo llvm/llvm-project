@@ -1314,3 +1314,20 @@ define i32 @pr80911_vector_load_multiuse(ptr %ptr, ptr %clobber) nounwind {
   %res = or i32 %e1.ext.shift, %e0.ext
   ret i32 %res
 }
+
+define i64 @test_load_bswap_to_rotate(ptr %p) {
+; CHECK64-LABEL: test_load_bswap_to_rotate:
+; CHECK64:  # %bb.0:
+; CHECK64-NEXT:    movq (%rdi), %rax
+; CHECK64-NEXT:    rorq $32, %rax
+; CHECK64-NEXT:    retq
+
+  %p.hi = getelementptr inbounds nuw i8, ptr %p, i64 4
+  %lo = load i32, ptr %p
+  %hi = load i32, ptr %p.hi
+  %conv = zext i32 %lo to i64
+  %shl = shl nuw i64 %conv, 32
+  %conv2 = zext i32 %hi to i64
+  %or = or disjoint i64 %shl, %conv2
+  ret i64 %or
+}
