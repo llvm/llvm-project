@@ -98,6 +98,8 @@ jobs:
       run: |
         echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
         echo "build-install-dir=${{ github.workspace }}/install" >> "$GITHUB_OUTPUT"
+        echo "build-baremetal-output-dir=${{ github.workspace }}/build_baremetal" >> "$GITHUB_OUTPUT"
+        echo "build-baremetal-install-dir=${{ github.workspace }}/install_baremetal" >> "$GITHUB_OUTPUT"
     
     # Configure libc fullbuild with scudo.
     # Use MinSizeRel to reduce the size of the build.
@@ -112,18 +114,6 @@ jobs:
             -DCOMPILER_RT_BUILD_SCUDO_STANDALONE_WITH_LLVM_LIBC=ON
             -DCOMPILER_RT_BUILD_GWP_ASAN=OFF
             -DCOMPILER_RT_SCUDO_STANDALONE_BUILD_SHARED=OFF"
-        fi
-
-        if [[ ${{ matrix.enable_baremetal_build}} == "ON" ]]; then
-            export RUNTIMES="$RUNTIMES;libc"
-            export CMAKE_FLAGS="
-              -DCMAKE_BUILD_TYPE=Release
-              -DLLVM_LIBC_FULL_BUILD=ON
-              -DCMAKE_C_COMPILER_TARGET=armv6m-none-abi
-              -DCMAKE_CXX_COMPILER_TARGET=armv6m-none-abi
-              -DCMAKE_ASM_COMPILER_TARGET=armv6m-none-abi
-              -DCMAKE_C_FLAGS=-mfloat-abi=soft
-              -DCMAKE_CXX_FLAGS=-mfloat-abi=soft"
         fi
 
         cmake -B ${{ steps.strings.outputs.build-output-dir }} \
@@ -155,3 +145,35 @@ jobs:
         --build ${{ steps.strings.outputs.build-output-dir }} 
         --parallel
         --target check-libc
+
+    - name: Configure CMake for baremetal
+      run: |
+        export RUNTIMES="libc"
+        if [[ ${{ matrix.enable_baremetal_build}} == "ON" ]]; then
+          cmake -B ${{ steps.strings.outputs.build-baremetal-output-dir }} \
+          -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }} \
+          -DCMAKE_C_COMPILER=${{ matrix.c_compiler }} \
+          -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+          -DCMAKE_C_COMPILER_LAUNCHER=sccache \
+          -DCMAKE_CXX_COMPILER_LAUNCHER=sccache \
+          -DCMAKE_INSTALL_PREFIX=${{ steps.strings.outputs.build-baremetal-install-dir }} \
+          -DLLVM_RUNTIME_TARGETS=${{ matrix.target }} \
+          -DLLVM_ENABLE_RUNTIMES="$RUNTIMES" \
+          -DLLVM_LIBC_FULL_BUILD=ON \
+          -G Ninja \
+          -S ${{ github.workspace }}/runtimes \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DLLVM_LIBC_FULL_BUILD=ON \
+          -DCMAKE_C_COMPILER_TARGET=armv6m-none-abi \
+          -DCMAKE_CXX_COMPILER_TARGET=armv6m-none-abi \
+          -DCMAKE_ASM_COMPILER_TARGET=armv6m-none-abi \
+          -DCMAKE_C_FLAGS=-mfloat-abi=soft \
+          -DCMAKE_CXX_FLAGS=-mfloat-abi=soft \
+        fi
+
+    - name: Build Baremtal
+      run: >
+        cmake
+        --build ${{ steps.strings.outputs.build-baremetal-output-dir }}
+        --parallel
+        --target install
