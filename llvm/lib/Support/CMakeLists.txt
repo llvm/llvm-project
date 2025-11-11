@@ -125,6 +125,10 @@ if(LLVM_INTEGRATED_CRT_ALLOC)
   endif()
 endif()
 
+#if (CMAKE_SYSTEM_NAME MATCHES "OS390")
+  set(ZOSLIB_FILES "zOSLibFunctions.cpp")
+#endif()
+
 # FIXME: We are currently guarding AIX headers with _XOPEN_SOURCE=700.
 # See llvm/CMakeLists.txt. However, we need _SC_NPROCESSORS_ONLN in
 # unistd.h and it is guarded by _ALL_SOURCE, so we remove the _XOPEN_SOURCE
@@ -293,6 +297,8 @@ add_llvm_component_library(LLVMSupport
   regstrlcpy.c
   xxhash.cpp
   Z3Solver.cpp
+
+  ${ZOSLIB_FILES}
 
   ${ALLOCATOR_FILES}
   $<TARGET_OBJECTS:LLVMSupportBlake3>
