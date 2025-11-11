@@ -23,7 +23,7 @@ main:
 
         .globl test_plt32_foo
 # jitlink-check: *{4}test_plt32_foo = \
-# jitlink-check:  stub_addr(elf_reloc.o, foo) - test_plt32_foo
+# jitlink-check:  (stub_addr(elf_reloc.o, foo) - test_plt32_foo) & 0xffffffff
 test_plt32_foo:
         .reloc ., R_390_PLT32, foo
         .space 4
@@ -31,7 +31,7 @@ test_plt32_foo:
 
         .globl test_plt32_bar
 # jitlink-check: *{4}test_plt32_bar = \
-# jitlink-check:  stub_addr(elf_reloc.o, bar) - test_plt32_bar
+# jitlink-check:  (stub_addr(elf_reloc.o, bar) - test_plt32_bar) & 0xffffffff
 test_plt32_bar:
         .reloc ., R_390_PLT32, bar
         .space 4

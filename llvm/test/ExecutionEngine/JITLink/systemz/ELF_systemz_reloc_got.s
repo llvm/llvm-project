@@ -213,14 +213,16 @@ test_gotplt64_bar:
         .size test_gotplt64_bar, .-test_gotplt64_bar
 
         .globl test_gotpc_foo
-# jitlink-check: *{4}test_gotpc_foo = _GLOBAL_OFFSET_TABLE_ - test_gotpc_foo
+# jitlink-check: *{4}test_gotpc_foo = (_GLOBAL_OFFSET_TABLE_ - test_gotpc_foo) \
+# jitlink-check:    & 0xffffffff
 test_gotpc_foo:
         .reloc ., R_390_GOTPC, foo
         .space 4 
         .size test_gotpc_foo, .-test_gotpc_foo
 
         .globl test_gotpc_bar
-# jitlink-check: *{4}test_gotpc_bar = _GLOBAL_OFFSET_TABLE_ - test_gotpc_bar
+# jitlink-check: *{4}test_gotpc_bar = (_GLOBAL_OFFSET_TABLE_ - test_gotpc_bar) \
+# jitlink-check:    & 0xffffffff
 test_gotpc_bar:
         .reloc ., R_390_GOTPC, bar 
         .space 4
