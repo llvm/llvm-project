@@ -442,6 +442,20 @@ static bool verifyConvIndexingMapSizes(ArrayAttr indexingMaps,
 // Matchers for specific convolution operation.
 // ---------------------------------------------
 
+/// Returns true if the given indexing maps matches with the expected indexing
+/// maps.
+static bool convLayoutMatches(ArrayRef<ArrayRef<AffineExpr>> mapListExpected,
+                              ArrayAttr indexingMaps, MLIRContext *context) {
+  SmallVector<AffineMap, 4> expectedIndexingMaps =
+      AffineMap::inferFromExprList(mapListExpected, context);
+  return indexingMaps ==
+         ArrayAttr::get(
+             context, llvm::to_vector<4>(llvm::map_range(
+                          expectedIndexingMaps, [&](AffineMap m) -> Attribute {
+                            return AffineMapAttr::get(m);
+                          })));
+}
+
 // #inputMap = affine_map<(N, W, C, w) -> (N, W + w, C)>
 // #filterMap = affine_map<(N, W, C, w) -> (w, C)>
 // #outputMap = affine_map<(N, W, C, w) -> (N, W, C)>
@@ -459,24 +473,24 @@ bool isaConvolutionOpOfType<linalg::DepthwiseConv1DNwcWcOp>(
   if (!verifyConvIndexingMapSizes(indexingMaps, {3, 2, 3}))
     return false;
 
-  unsigned inputMapIdx = 0, filterMapIdx = 1, outputMapIdx = 2;
-
   *dilations = SmallVector<int64_t>(1, 1);
   *strides = SmallVector<int64_t>(1, 1);
-  // Match: N
-  if (getAffineMapDim(indexingMaps, inputMapIdx, 0) !=
-      getAffineMapDim(indexingMaps, outputMapIdx, 0))
-    return false;
-  // Match: C
-  if (getAffineMapDim(indexingMaps, inputMapIdx, 2) !=
-      getAffineMapDim(indexingMaps, filterMapIdx, 1))
-    return false;
-  if (getAffineMapDim(indexingMaps, inputMapIdx, 2) !=
-      getAffineMapDim(indexingMaps, outputMapIdx, 2))
-    return false;
-  // Match: W + w
+  MLIRContext *context = op->getContext();
+  AffineExpr N = getAffineDimExpr(0, context);
+  AffineExpr W = getAffineDimExpr(1, context);
+  AffineExpr C = getAffineDimExpr(2, context);
+  AffineExpr w = getAffineDimExpr(3, context);
+  // First fetch dilations/strides :-
+  // Match: W * stride + w * dilation
   if (!matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0,
                                   /*oDim=*/1, (*dilations)[0], (*strides)[0]))
+    return false;
+  // Match expected indexing maps
+  if (!convLayoutMatches(
+          {/*inputMap=*/{N, W * (*strides)[0] + w * (*dilations)[0], C},
+           /*filterMap=*/{w, C},
+           /*outputMap=*/{N, W, C}},
+          indexingMaps, context))
     return false;
   // Match body
   Block *body = op.getBlock();
@@ -504,28 +518,31 @@ bool isaConvolutionOpOfType<linalg::DepthwiseConv2DNchwChwOp>(
   if (!verifyConvIndexingMapSizes(indexingMaps, {4, 3, 4}))
     return false;
 
-  unsigned inputMapIdx = 0, filterMapIdx = 1, outputMapIdx = 2;
-
   *dilations = SmallVector<int64_t>(2, 1);
   *strides = SmallVector<int64_t>(2, 1);
-  // Match: N
-  if (getAffineMapDim(indexingMaps, inputMapIdx, 0) !=
-      getAffineMapDim(indexingMaps, outputMapIdx, 0))
-    return false;
-  // Match: C
-  if (getAffineMapDim(indexingMaps, inputMapIdx, 1) !=
-      getAffineMapDim(indexingMaps, filterMapIdx, 0))
-    return false;
-  if (getAffineMapDim(indexingMaps, inputMapIdx, 1) !=
-      getAffineMapDim(indexingMaps, outputMapIdx, 1))
-    return false;
-  // Match: H + h
+  MLIRContext *context = op->getContext();
+  AffineExpr N = getAffineDimExpr(0, context);
+  AffineExpr H = getAffineDimExpr(1, context);
+  AffineExpr W = getAffineDimExpr(2, context);
+  AffineExpr C = getAffineDimExpr(3, context);
+  AffineExpr h = getAffineDimExpr(4, context);
+  AffineExpr w = getAffineDimExpr(5, context);
+  // First fetch dilations/strides :-
+  // Match: H * stride + h * dilation
   if (!matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/1,
                                   /*oDim=*/2, (*dilations)[0], (*strides)[0]))
     return false;
-  // Match: W + w
+  // Match: W * stride + w * dilation
   if (!matchConvDimAddExprPattern(indexingMaps, /*iDim=*/3, /*fDim=*/2,
                                   /*oDim=*/3, (*dilations)[1], (*strides)[1]))
+    return false;
+  // Match expected indexing maps
+  if (!convLayoutMatches(
+          {/*inputMap=*/{N, C, H * (*strides)[0] + h * (*dilations)[0],
+                         W * (*strides)[1] + w * (*dilations)[1]},
+           /*filterMap=*/{C, h, w},
+           /*outputMap=*/{N, C, H, W}},
+          indexingMaps, context))
     return false;
   // Match body
   Block *body = op.getBlock();
@@ -556,36 +573,39 @@ bool isaConvolutionOpOfType<linalg::DepthwiseConv3DNdhwcDhwcmOp>(
   if (!verifyConvIndexingMapSizes(indexingMaps, {5, 5, 6}))
     return false;
 
-  unsigned inputMapIdx = 0, filterMapIdx = 1, outputMapIdx = 2;
-
   *dilations = SmallVector<int64_t>(3, 1);
   *strides = SmallVector<int64_t>(3, 1);
-  // Match: N
-  if (getAffineMapDim(indexingMaps, inputMapIdx, 0) !=
-      getAffineMapDim(indexingMaps, outputMapIdx, 0))
-    return false;
-  // Match: D + d
+  MLIRContext *context = op->getContext();
+  AffineExpr N = getAffineDimExpr(0, context);
+  AffineExpr D = getAffineDimExpr(1, context);
+  AffineExpr H = getAffineDimExpr(2, context);
+  AffineExpr W = getAffineDimExpr(3, context);
+  AffineExpr CM = getAffineDimExpr(4, context);
+  AffineExpr d = getAffineDimExpr(5, context);
+  AffineExpr h = getAffineDimExpr(6, context);
+  AffineExpr w = getAffineDimExpr(7, context);
+  AffineExpr C = getAffineDimExpr(8, context);
+  // First fetch dilations/strides :-
+  // Match: D * stride + d * dilation
   if (!matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0,
                                   /*oDim=*/1, (*dilations)[0], (*strides)[0]))
     return false;
-  // Match: H + h
+  // Match: H * stride + h * dilation
   if (!matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/1,
                                   /*oDim=*/2, (*dilations)[1], (*strides)[1]))
     return false;
-  // Match: W + w
+  // Match: W * stride + w * dilation
   if (!matchConvDimAddExprPattern(indexingMaps, /*iDim=*/3, /*fDim=*/2,
                                   /*oDim=*/3, (*dilations)[2], (*strides)[2]))
     return false;
-  // Match: C
-  if (getAffineMapDim(indexingMaps, inputMapIdx, 4) !=
-      getAffineMapDim(indexingMaps, filterMapIdx, 3))
-    return false;
-  if (getAffineMapDim(indexingMaps, inputMapIdx, 4) !=
-      getAffineMapDim(indexingMaps, outputMapIdx, 4))
-    return false;
-  // Match: CM
-  if (getAffineMapDim(indexingMaps, filterMapIdx, 4) !=
-      getAffineMapDim(indexingMaps, outputMapIdx, 5))
+  // Match expected indexing maps
+  if (!convLayoutMatches(
+          {/*inputMap=*/{N, D * (*strides)[0] + d * (*dilations)[0],
+                         H * (*strides)[1] + h * (*dilations)[1],
+                         W * (*strides)[2] + w * (*dilations)[2], C},
+           /*filterMap=*/{d, h, w, C, CM},
+           /*outputMap=*/{N, D, H, W, C, CM}},
+          indexingMaps, context))
     return false;
   // Match body
   Block *body = op.getBlock();
@@ -613,25 +633,31 @@ bool isaConvolutionOpOfType<linalg::PoolingNhwcMaxOp>(
   if (!verifyConvIndexingMapSizes(indexingMaps, {4, 2, 4}))
     return false;
 
-  unsigned inputMapIdx = 0, outputMapIdx = 2;
-
   *dilations = SmallVector<int64_t>(2, 1);
   *strides = SmallVector<int64_t>(2, 1);
-  // Match: N
-  if (getAffineMapDim(indexingMaps, inputMapIdx, 0) !=
-      getAffineMapDim(indexingMaps, outputMapIdx, 0))
-    return false;
-  // Match: H + h
+  MLIRContext *context = op->getContext();
+  AffineExpr N = getAffineDimExpr(0, context);
+  AffineExpr H = getAffineDimExpr(1, context);
+  AffineExpr W = getAffineDimExpr(2, context);
+  AffineExpr C = getAffineDimExpr(3, context);
+  AffineExpr h = getAffineDimExpr(4, context);
+  AffineExpr w = getAffineDimExpr(5, context);
+  // First fetch dilations/strides :-
+  // Match: H * stride + h * dilation
   if (!matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0,
                                   /*oDim=*/1, (*dilations)[0], (*strides)[0]))
     return false;
-  // Match: W + w
+  // Match: W * stride + w * dilation
   if (!matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/1,
                                   /*oDim=*/2, (*dilations)[1], (*strides)[1]))
     return false;
-  // Match: C
-  if (getAffineMapDim(indexingMaps, inputMapIdx, 3) !=
-      getAffineMapDim(indexingMaps, outputMapIdx, 3))
+  // Match expected indexing maps
+  if (!convLayoutMatches(
+          {/*inputMap=*/{N, H * (*strides)[0] + h * (*dilations)[0],
+                         W * (*strides)[1] + w * (*dilations)[1], C},
+           /*filterMap=*/{h, w},
+           /*outputMap=*/{N, H, W, C}},
+          indexingMaps, context))
     return false;
   // Match body
   Block *body = op.getBlock();
@@ -659,25 +685,31 @@ bool isaConvolutionOpOfType<linalg::PoolingNhwcMinOp>(
   if (!verifyConvIndexingMapSizes(indexingMaps, {4, 2, 4}))
     return false;
 
-  unsigned inputMapIdx = 0, outputMapIdx = 2;
-
   *dilations = SmallVector<int64_t>(2, 1);
   *strides = SmallVector<int64_t>(2, 1);
-  // Match: N
-  if (getAffineMapDim(indexingMaps, inputMapIdx, 0) !=
-      getAffineMapDim(indexingMaps, outputMapIdx, 0))
-    return false;
-  // Match: H + h
+  MLIRContext *context = op->getContext();
+  AffineExpr N = getAffineDimExpr(0, context);
+  AffineExpr H = getAffineDimExpr(1, context);
+  AffineExpr W = getAffineDimExpr(2, context);
+  AffineExpr C = getAffineDimExpr(3, context);
+  AffineExpr h = getAffineDimExpr(4, context);
+  AffineExpr w = getAffineDimExpr(5, context);
+  // First fetch dilations/strides :-
+  // Match: H * stride + h * dilation
   if (!matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0,
                                   /*oDim=*/1, (*dilations)[0], (*strides)[0]))
     return false;
-  // Match: W + w
+  // Match: W * stride + w * dilation
   if (!matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/1,
                                   /*oDim=*/2, (*dilations)[1], (*strides)[1]))
     return false;
-  // Match: C
-  if (getAffineMapDim(indexingMaps, inputMapIdx, 3) !=
-      getAffineMapDim(indexingMaps, outputMapIdx, 3))
+  // Match expected indexing maps
+  if (!convLayoutMatches(
+          {/*inputMap=*/{N, H * (*strides)[0] + h * (*dilations)[0],
+                         W * (*strides)[1] + w * (*dilations)[1], C},
+           /*filterMap=*/{h, w},
+           /*outputMap=*/{N, H, W, C}},
+          indexingMaps, context))
     return false;
   // Match body
   Block *body = op.getBlock();
@@ -705,25 +737,31 @@ bool isaConvolutionOpOfType<linalg::PoolingNhwcSumOp>(
   if (!verifyConvIndexingMapSizes(indexingMaps, {4, 2, 4}))
     return false;
 
-  unsigned inputMapIdx = 0, outputMapIdx = 2;
-
   *dilations = SmallVector<int64_t>(2, 1);
   *strides = SmallVector<int64_t>(2, 1);
-  // Match: N
-  if (getAffineMapDim(indexingMaps, inputMapIdx, 0) !=
-      getAffineMapDim(indexingMaps, outputMapIdx, 0))
-    return false;
-  // Match: H + h
+  MLIRContext *context = op->getContext();
+  AffineExpr N = getAffineDimExpr(0, context);
+  AffineExpr H = getAffineDimExpr(1, context);
+  AffineExpr W = getAffineDimExpr(2, context);
+  AffineExpr C = getAffineDimExpr(3, context);
+  AffineExpr h = getAffineDimExpr(4, context);
+  AffineExpr w = getAffineDimExpr(5, context);
+  // First fetch dilations/strides :-
+  // Match: H * stride + h * dilation
   if (!matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0,
                                   /*oDim=*/1, (*dilations)[0], (*strides)[0]))
     return false;
-  // Match: W + w
+  // Match: W * stride + w * dilation
   if (!matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/1,
                                   /*oDim=*/2, (*dilations)[1], (*strides)[1]))
     return false;
-  // Match: C
-  if (getAffineMapDim(indexingMaps, inputMapIdx, 3) !=
-      getAffineMapDim(indexingMaps, outputMapIdx, 3))
+  // Match expected indexing maps
+  if (!convLayoutMatches(
+          {/*inputMap=*/{N, H * (*strides)[0] + h * (*dilations)[0],
+                         W * (*strides)[1] + w * (*dilations)[1], C},
+           /*filterMap=*/{h, w},
+           /*outputMap=*/{N, H, W, C}},
+          indexingMaps, context))
     return false;
   // Match body
   Block *body = op.getBlock();
@@ -751,25 +789,31 @@ bool isaConvolutionOpOfType<linalg::PoolingNhwcMaxUnsignedOp>(
   if (!verifyConvIndexingMapSizes(indexingMaps, {4, 2, 4}))
     return false;
 
-  unsigned inputMapIdx = 0, outputMapIdx = 2;
-
   *dilations = SmallVector<int64_t>(2, 1);
   *strides = SmallVector<int64_t>(2, 1);
-  // Match: N
-  if (getAffineMapDim(indexingMaps, inputMapIdx, 0) !=
-      getAffineMapDim(indexingMaps, outputMapIdx, 0))
-    return false;
-  // Match: H + h
+  MLIRContext *context = op->getContext();
+  AffineExpr N = getAffineDimExpr(0, context);
+  AffineExpr H = getAffineDimExpr(1, context);
+  AffineExpr W = getAffineDimExpr(2, context);
+  AffineExpr C = getAffineDimExpr(3, context);
+  AffineExpr h = getAffineDimExpr(4, context);
+  AffineExpr w = getAffineDimExpr(5, context);
+  // First fetch dilations/strides :-
+  // Match: H * stride + h * dilation
   if (!matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0,
                                   /*oDim=*/1, (*dilations)[0], (*strides)[0]))
     return false;
-  // Match: W + w
+  // Match: W * stride + w * dilation
   if (!matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/1,
                                   /*oDim=*/2, (*dilations)[1], (*strides)[1]))
     return false;
-  // Match: C
-  if (getAffineMapDim(indexingMaps, inputMapIdx, 3) !=
-      getAffineMapDim(indexingMaps, outputMapIdx, 3))
+  // Match expected indexing maps
+  if (!convLayoutMatches(
+          {/*inputMap=*/{N, H * (*strides)[0] + h * (*dilations)[0],
+                         W * (*strides)[1] + w * (*dilations)[1], C},
+           /*filterMap=*/{h, w},
+           /*outputMap=*/{N, H, W, C}},
+          indexingMaps, context))
     return false;
   // Match body
   Block *body = op.getBlock();
@@ -797,25 +841,31 @@ bool isaConvolutionOpOfType<linalg::PoolingNhwcMinUnsignedOp>(
   if (!verifyConvIndexingMapSizes(indexingMaps, {4, 2, 4}))
     return false;
 
-  unsigned inputMapIdx = 0, outputMapIdx = 2;
-
   *dilations = SmallVector<int64_t>(2, 1);
   *strides = SmallVector<int64_t>(2, 1);
-  // Match: N
-  if (getAffineMapDim(indexingMaps, inputMapIdx, 0) !=
-      getAffineMapDim(indexingMaps, outputMapIdx, 0))
-    return false;
-  // Match: H + h
+  MLIRContext *context = op->getContext();
+  AffineExpr N = getAffineDimExpr(0, context);
+  AffineExpr H = getAffineDimExpr(1, context);
+  AffineExpr W = getAffineDimExpr(2, context);
+  AffineExpr C = getAffineDimExpr(3, context);
+  AffineExpr h = getAffineDimExpr(4, context);
+  AffineExpr w = getAffineDimExpr(5, context);
+  // First fetch dilations/strides :-
+  // Match: H * stride + h * dilation
   if (!matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0,
                                   /*oDim=*/1, (*dilations)[0], (*strides)[0]))
     return false;
-  // Match: W + w
+  // Match: W * stride + w * dilation
   if (!matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/1,
                                   /*oDim=*/2, (*dilations)[1], (*strides)[1]))
     return false;
-  // Match: C
-  if (getAffineMapDim(indexingMaps, inputMapIdx, 3) !=
-      getAffineMapDim(indexingMaps, outputMapIdx, 3))
+  // Match expected indexing maps
+  if (!convLayoutMatches(
+          {/*inputMap=*/{N, H * (*strides)[0] + h * (*dilations)[0],
+                         W * (*strides)[1] + w * (*dilations)[1], C},
+           /*filterMap=*/{h, w},
+           /*outputMap=*/{N, H, W, C}},
+          indexingMaps, context))
     return false;
   // Match body
   Block *body = op.getBlock();
