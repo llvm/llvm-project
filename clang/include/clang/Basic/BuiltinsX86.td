@@ -4124,7 +4124,7 @@ let Features = "avx512bf16", Attributes = [NoThrow, Const, RequiredVectorWidth<1
   def selectsbf_128 : X86Builtin<"_Vector<8, __bf16>(unsigned char, _Vector<8, __bf16>, _Vector<8, __bf16>)">;
 }
 
-let Features = "avx512f", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<128>] in {
+let Features = "avx512f", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
   def selectss_128 : X86Builtin<"_Vector<4, float>(unsigned char, _Vector<4, float>, _Vector<4, float>)">;
   def selectsd_128 : X86Builtin<"_Vector<2, double>(unsigned char, _Vector<2, double>, _Vector<2, double>)">;
 }

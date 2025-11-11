@@ -4463,8 +4463,6 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_selectpbf_128:
   case X86::BI__builtin_ia32_selectpbf_256:
   case X86::BI__builtin_ia32_selectpbf_512:
-  case X86::BI__builtin_ia32_selectss_128:
-  case X86::BI__builtin_ia32_selectsd_128:
   case X86::BI__builtin_ia32_selectps_128:
   case X86::BI__builtin_ia32_selectps_256:
   case X86::BI__builtin_ia32_selectps_512:
