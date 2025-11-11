@@ -145,94 +145,18 @@ void DepscanPrefixMapping::remapInvocationPaths(CompilerInvocation &Invocation,
     FrontendOpts.PathPrefixMappings.emplace_back(Map.Old, Map.New);
   }
 
-  auto mapInPlaceAll = [&](std::vector<std::string> &Vector) {
-    for (auto &Path : Vector)
-      Mapper.mapInPlace(Path);
-  };
-
-  auto &FileSystemOpts = Invocation.getFileSystemOpts();
-  Mapper.mapInPlace(FileSystemOpts.CASFileSystemWorkingDirectory);
-
-  // Remap header search.
-  auto &HeaderSearchOpts = Invocation.getHeaderSearchOpts();
-  Mapper.mapInPlace(HeaderSearchOpts.Sysroot);
-  for (auto &Entry : HeaderSearchOpts.UserEntries)
-    if (Entry.IgnoreSysRoot)
-      Mapper.mapInPlace(Entry.Path);
-
-  for (auto &Prefix : HeaderSearchOpts.SystemHeaderPrefixes)
-    Mapper.mapInPlace(Prefix.Prefix);
-  Mapper.mapInPlace(HeaderSearchOpts.ResourceDir);
-  Mapper.mapInPlace(HeaderSearchOpts.ModuleCachePath);
-  Mapper.mapInPlace(HeaderSearchOpts.ModuleUserBuildPath);
-  for (auto I = HeaderSearchOpts.PrebuiltModuleFiles.begin(),
-            E = HeaderSearchOpts.PrebuiltModuleFiles.end();
-       I != E;) {
-    auto Current = I++;
-    Mapper.mapInPlace(Current->second);
-  }
-  mapInPlaceAll(HeaderSearchOpts.PrebuiltModulePaths);
-  mapInPlaceAll(HeaderSearchOpts.VFSOverlayFiles);
-
-  // Preprocessor options.
-  auto &PPOpts = Invocation.getPreprocessorOpts();
-  mapInPlaceAll(PPOpts.MacroIncludes);
-  mapInPlaceAll(PPOpts.Includes);
-  Mapper.mapInPlace(PPOpts.ImplicitPCHInclude);
-
-  // Frontend options.
-  for (FrontendInputFile &Input : FrontendOpts.Inputs) {
-    if (Input.isBuffer())
-      continue; // FIXME: Can this happen when parsing command-line?
-
-    SmallString<256> RemappedFile;
-    Mapper.map(Input.getFile(), RemappedFile);
-    if (RemappedFile != Input.getFile())
-      Input =
-          FrontendInputFile(RemappedFile, Input.getKind(), Input.isSystem());
-  }
-
-  // Skip the output file. That's not the input CAS filesystem.
-  //   Mapper.mapInPlace(OutputFile); <-- this doesn't make sense.
-
-  Mapper.mapInPlace(FrontendOpts.CodeCompletionAt.FileName);
-
-  // Don't remap plugins (for now), since we don't know how to remap their
-  // arguments. Maybe they should be loaded outside of the CAS filesystem?
+  // Note: We don't remap plugins for now, since we don't know how to remap
+  // their arguments. Maybe they should be loaded outside of the CAS filesystem?
   // Maybe we should error?
   //
-  //  Mapper.mapInPlaceOrFilterOut(FrontendOpts.Plugins);
-
-  mapInPlaceAll(FrontendOpts.ModuleMapFiles);
-  mapInPlaceAll(FrontendOpts.ModuleFiles);
-  mapInPlaceAll(FrontendOpts.ModulesEmbedFiles);
-  mapInPlaceAll(FrontendOpts.ASTMergeFiles);
-  Mapper.mapInPlace(FrontendOpts.OverrideRecordLayoutsFile);
-  Mapper.mapInPlace(FrontendOpts.StatsFile);
-
-  // Filesystem options.
-  Mapper.mapInPlace(FileSystemOpts.WorkingDir);
-
-  // Code generation options.
-  auto &CodeGenOpts = Invocation.getCodeGenOpts();
-  Mapper.mapInPlace(CodeGenOpts.DebugCompilationDir);
-  Mapper.mapInPlace(CodeGenOpts.CoverageCompilationDir);
-
-  // Sanitizer options.
-  mapInPlaceAll(Invocation.getLangOpts().NoSanitizeFiles);
-
-  // Handle coverage mappings.
-  Mapper.mapInPlace(CodeGenOpts.ProfileInstrumentUsePath);
-  Mapper.mapInPlace(CodeGenOpts.SampleProfileFile);
-  Mapper.mapInPlace(CodeGenOpts.ProfileRemappingFile);
-
-  // Dependency output options.
-  // Note: these are not in the cache key, but they are in the module context
-  // hash, which indirectly impacts the cache key when importing a module.
-  // In the future we may change how -fmodule-file-cache-key works when
-  // remapping to avoid needing this.
-  for (auto &ExtraDep : Invocation.getDependencyOutputOpts().ExtraDeps)
-    Mapper.mapInPlace(ExtraDep.first);
+  // Note: DependencyOutputOptions::ExtraDeps are not in the cache key, but they
+  // are in the module context hash, which indirectly impacts the cache key when
+  // importing a module. In the future we may change how -fmodule-file-cache-key
+  // works when remapping to avoid needing this.
+  Invocation.visitPaths([&Mapper](std::string &Path) {
+    Mapper.mapInPlace(Path);
+    return false;
+  });
 }
 
 void DepscanPrefixMapping::configurePrefixMapper(const CompilerInvocation &CI,
