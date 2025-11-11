@@ -85,7 +85,9 @@ def cuf_FreeOp : cuf_Op<"free", [MemoryEffects<[MemFree]>]> {
   let hasVerifier = 1;
 }
 
-def cuf_AllocateOp : cuf_Op<"allocate", [AttrSizedOperandSegments]> {
+def cuf_AllocateOp
+    : cuf_Op<"allocate", [AttrSizedOperandSegments,
+                          MemoryEffects<[MemAlloc<DefaultResource>]>]> {
   let summary = "Perform the device allocation of data of an allocatable";
 
   let description = [{
@@ -94,15 +96,12 @@ def cuf_AllocateOp : cuf_Op<"allocate", [AttrSizedOperandSegments]> {
     is initialized before with the standard flang runtime calls.
   }];
 
-  // Value-scoped Allocate on the descriptor being allocated
-  let arguments =
-      (ins Arg<fir_ReferenceType,
-               "", [MemAlloc<DefaultResource>, MemRead, MemWrite]>:$box,
-          Arg<Optional<AnyRefOrBoxType>, "", [MemWrite]>:$errmsg,
-          Optional<fir_ReferenceType>:$stream,
-          Arg<Optional<AnyRefOrBoxType>, "", [MemWrite]>:$pinned,
-          Arg<Optional<AnyRefOrBoxType>, "", [MemRead]>:$source,
-          cuf_DataAttributeAttr:$data_attr, UnitAttr:$hasStat);
+  let arguments = (ins Arg<fir_ReferenceType, "", [MemRead, MemWrite]>:$box,
+      Arg<Optional<AnyRefOrBoxType>, "", [MemWrite]>:$errmsg,
+      Optional<fir_ReferenceType>:$stream,
+      Arg<Optional<AnyRefOrBoxType>, "", [MemWrite]>:$pinned,
+      Arg<Optional<AnyRefOrBoxType>, "", [MemRead]>:$source,
+      cuf_DataAttributeAttr:$data_attr, UnitAttr:$hasStat);
 
   let results = (outs AnyIntegerType:$stat);
 
