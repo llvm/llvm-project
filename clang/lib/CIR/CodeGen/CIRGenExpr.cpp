@@ -627,8 +627,49 @@ RValue CIRGenFunction::emitLoadOfLValue(LValue lv, SourceLocation loc) {
                                                  lv.getVectorIdx()));
   }
 
+  if (lv.isExtVectorElt()) {
+    return emitLoadOfExtVectorElementLValue(lv);
+  }
+
   cgm.errorNYI(loc, "emitLoadOfLValue");
   return RValue::get(nullptr);
+}
+
+int64_t CIRGenFunction::getAccessedFieldNo(unsigned int idx,
+                                           const mlir::ArrayAttr elts) {
+  auto elt = mlir::dyn_cast<mlir::IntegerAttr>(elts[idx]);
+  assert(elt && "The indices should be integer attributes");
+  return elt.getInt();
+}
+
+// If this is a reference to a subset of the elements of a vector, create an
+// appropriate shufflevector.
+RValue CIRGenFunction::emitLoadOfExtVectorElementLValue(LValue lv) {
+  mlir::Location loc = lv.getExtVectorPointer().getLoc();
+  mlir::Value vec = builder.createLoad(loc, lv.getExtVectorAddress());
+
+  // HLSL allows treating scalars as one-element vectors. Converting the scalar
+  // IR value to a vector here allows the rest of codegen to behave as normal.
+  if (getLangOpts().HLSL && !mlir::isa<cir::VectorType>(vec.getType())) {
+    cgm.errorNYI(loc, "emitLoadOfExtVectorElementLValue: HLSL");
+    return {};
+  }
+
+  const mlir::ArrayAttr elts = lv.getExtVectorElts();
+
+  // If the result of the expression is a non-vector type, we must be extracting
+  // a single element. Just codegen as an extractelement.
+  const auto *exprVecTy = lv.getType()->getAs<clang::VectorType>();
+  if (!exprVecTy) {
+    int64_t indexValue = getAccessedFieldNo(0, elts);
+    cir::ConstantOp index =
+        builder.getConstInt(loc, builder.getSInt64Ty(), indexValue);
+    return RValue::get(cir::VecExtractOp::create(builder, loc, vec, index));
+  }
+
+  cgm.errorNYI(
+      loc, "emitLoadOfExtVectorElementLValue: Result of expr is vector type");
+  return {};
 }
 
 static cir::FuncOp emitFunctionDeclPointer(CIRGenModule &cgm, GlobalDecl gd) {
@@ -1114,6 +1155,50 @@ CIRGenFunction::emitArraySubscriptExpr(const clang::ArraySubscriptExpr *e) {
   }
 
   return lv;
+}
+
+LValue CIRGenFunction::emitExtVectorElementExpr(const ExtVectorElementExpr *e) {
+  // Emit the base vector as an l-value.
+  LValue base;
+
+  // ExtVectorElementExpr's base can either be a vector or pointer to vector.
+  if (e->isArrow()) {
+    cgm.errorNYI(e->getSourceRange(),
+                 "emitExtVectorElementExpr: pointer to vector");
+    return {};
+  } else if (e->getBase()->isGLValue()) {
+    // Otherwise, if the base is an lvalue ( as in the case of foo.x.x),
+    // emit the base as an lvalue.
+    assert(e->getBase()->getType()->isVectorType());
+    base = emitLValue(e->getBase());
+  } else {
+    // Otherwise, the base is a normal rvalue (as in (V+V).x), emit it as such.
+    cgm.errorNYI(e->getSourceRange(),
+                 "emitExtVectorElementExpr: base is a normal rvalue");
+    return {};
+  }
+
+  QualType type =
+      e->getType().withCVRQualifiers(base.getQuals().getCVRQualifiers());
+
+  // Encode the element access list into a vector of unsigned indices.
+  SmallVector<uint32_t, 4> indices;
+  e->getEncodedElementAccess(indices);
+
+  if (base.isSimple()) {
+    SmallVector<int64_t> attrElts;
+    for (uint32_t i : indices) {
+      attrElts.push_back(static_cast<int64_t>(i));
+    }
+
+    mlir::ArrayAttr elts = builder.getI64ArrayAttr(attrElts);
+    return LValue::makeExtVectorElt(base.getAddress(), elts, type,
+                                    base.getBaseInfo());
+  }
+
+  cgm.errorNYI(e->getSourceRange(),
+               "emitExtVectorElementExpr: isSimple is false");
+  return {};
 }
 
 LValue CIRGenFunction::emitStringLiteralLValue(const StringLiteral *e,
