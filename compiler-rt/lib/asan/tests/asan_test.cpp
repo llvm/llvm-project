@@ -1135,7 +1135,7 @@ TEST(AddressSanitizer, ThreadedStressStackReuseTest) {
 #endif
   for (int i = 0; i < kNumThreads; i++) {
 #ifdef _WIN32
-    PTHREAD_CREATE(&t[i], 0, (void* (*)(void *x))LotsOfStackReuse, 0);
+    PTHREAD_CREATE(&t[i], 0, (void* (*)(void* x))LotsOfStackReuse, 0);
 #else
     PTHREAD_CREATE(&t[i], &attr, (void* (*)(void* x))LotsOfStackReuse, 0);
 #endif
