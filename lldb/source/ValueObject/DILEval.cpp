@@ -55,8 +55,6 @@ ArrayToPointerConversion(ValueObject &valobj, ExecutionContextScope &ctx) {
 
 llvm::Expected<lldb::ValueObjectSP>
 Interpreter::UnaryConversion(lldb::ValueObjectSP valobj) {
-  // Perform usual conversions for unary operators. At the moment this includes
-  // array-to-pointer and the integral promotion for eligible types.
   llvm::Expected<lldb::TypeSystemSP> type_system =
       GetTypeSystemFromCU(m_exe_ctx_scope);
   if (!type_system)

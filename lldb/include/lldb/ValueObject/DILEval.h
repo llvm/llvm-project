@@ -61,6 +61,8 @@ private:
   llvm::Expected<lldb::ValueObjectSP>
   Visit(const BooleanLiteralNode *node) override;
 
+  /// Perform usual unary conversions on a value. At the moment this
+  /// includes array-to-pointer and integral promotion for eligible types.
   llvm::Expected<lldb::ValueObjectSP>
   UnaryConversion(lldb::ValueObjectSP valobj);
   llvm::Expected<CompilerType>
