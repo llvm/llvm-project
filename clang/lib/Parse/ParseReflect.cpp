@@ -21,8 +21,7 @@ ExprResult Parser::ParseCXXReflectExpression() {
   EnterExpressionEvaluationContext Unevaluated(
       Actions, Sema::ExpressionEvaluationContext::Unevaluated);
   assert(Tok.is(tok::caretcaret) && "expecting reflection operator ^^");
-  SourceLocation DoubleCaretLoc = Tok.getLocation();
-  ConsumeToken();
+  SourceLocation DoubleCaretLoc = ConsumeToken();
 
   CXXScopeSpec SS;
   if (ParseOptionalCXXScopeSpecifier(SS, /*ObjectType=*/nullptr,
