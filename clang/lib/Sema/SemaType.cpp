@@ -5421,6 +5421,31 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
     processTypeAttrs(state, T, TAL_DeclChunk, DeclType.getAttrs(),
                      S.CUDA().IdentifyTarget(D.getAttributes()));
 
+    // Handle attributes on the declaration specifier that were deferred up
+    // until now when we have the full type of the declarator.
+    if (D.getContext() == DeclaratorContext::AliasDecl) {
+      CUDAFunctionTarget CFT =
+          S.CUDA().IdentifyTarget(D.getDeclSpec().getAttributes());
+      for (ParsedAttr &attr : D.getDeclSpec().getAttributes()) {
+        if (!(attr.isStandardAttributeSyntax() ||
+              attr.isRegularKeywordAttribute()) ||
+            !attr.isTypeAttr() || !attr.isUsedAsTypeAttr())
+          continue;
+
+        switch (attr.getKind()) {
+        FUNCTION_TYPE_ATTRS_CASELIST: {
+          if (!handleFunctionTypeAttr(state, attr, T, CFT)) {
+            diagnoseBadTypeAttribute(state.getSema(), attr, T);
+            attr.setInvalid();
+          }
+          break;
+        }
+        default:
+          break;
+        }
+      }
+    }
+
     if (DeclType.Kind != DeclaratorChunk::Paren) {
       if (ExpectNoDerefChunk && !IsNoDerefableChunk(DeclType))
         S.Diag(DeclType.Loc, diag::warn_noderef_on_non_pointer_or_array);
@@ -9078,7 +9103,14 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
       // appertain to and hence should not use the "distribution" logic below.
       if (attr.isStandardAttributeSyntax() ||
           attr.isRegularKeywordAttribute()) {
-        if (!handleFunctionTypeAttr(state, attr, type, CFT)) {
+        // If we are in a C++ type alias via `using` where the attribute is
+        // placed after the alias name but before the `=`, the type here may
+        // refer to just the return type of a function rather than the function
+        // as a whole. In this specific case, defer handling the function type
+        // attribute until we have the full type of the declarator.
+        bool InAliasDecl =
+            state.getDeclarator().getContext() == DeclaratorContext::AliasDecl;
+        if (!handleFunctionTypeAttr(state, attr, type, CFT) && !InAliasDecl) {
           diagnoseBadTypeAttribute(state.getSema(), attr, type);
           attr.setInvalid();
         }
