@@ -32,13 +32,13 @@ class DWPStringPool {
 
   MCStreamer &Out;
   MCSection *Sec;
-  DenseMap<const char *, uint32_t, CStrDenseMapInfo> Pool;
-  uint32_t Offset = 0;
+  DenseMap<const char *, uint64_t, CStrDenseMapInfo> Pool;
+  uint64_t Offset = 0;
 
 public:
   DWPStringPool(MCStreamer &Out, MCSection *Sec) : Out(Out), Sec(Sec) {}
 
-  uint32_t getOffset(const char *Str, unsigned Length) {
+  uint64_t getOffset(const char *Str, unsigned Length) {
     assert(strlen(Str) + 1 == Length && "Ensure length hint is correct");
 
     auto Pair = Pool.insert(std::make_pair(Str, Offset));
