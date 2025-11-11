@@ -693,8 +693,6 @@ static llvm::Expected<bool>
 parseModulePipeline(StringRef Name, llvm::ModulePassManager &MPM,
                     PassInstrumentationCallbacks *PIC,
                     ArrayRef<PassBuilder::PipelineElement> Pipeline) {
-  assert(Pipeline.empty());
-
 #define MODULE_PASS(NAME, CREATE_PASS, PARSER)                                 \
   if (PassBuilder::checkParametrizedPassName(Name, NAME)) {                    \
     auto ExpectedOpts = PassBuilder::parsePassParameters(PARSER, Name, NAME);  \
