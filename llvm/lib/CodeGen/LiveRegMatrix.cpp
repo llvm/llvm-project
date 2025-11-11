@@ -89,7 +89,7 @@ static bool foreachUnit(const TargetRegisterInfo *TRI,
                         Callable Func) {
   if (VRegInterval.hasSubRanges()) {
     for (MCRegUnitMaskIterator Units(PhysReg, TRI); Units.isValid(); ++Units) {
-      unsigned Unit = (*Units).first;
+      MCRegUnit Unit = (*Units).first;
       LaneBitmask Mask = (*Units).second;
       for (const LiveInterval::SubRange &S : VRegInterval.subranges()) {
         if ((S.LaneMask & Mask).any()) {
@@ -115,7 +115,7 @@ void LiveRegMatrix::assign(const LiveInterval &VirtReg, MCRegister PhysReg) {
   VRM->assignVirt2Phys(VirtReg.reg(), PhysReg);
 
   foreachUnit(
-      TRI, VirtReg, PhysReg, [&](unsigned Unit, const LiveRange &Range) {
+      TRI, VirtReg, PhysReg, [&](MCRegUnit Unit, const LiveRange &Range) {
         LLVM_DEBUG(dbgs() << ' ' << printRegUnit(Unit, TRI) << ' ' << Range);
         Matrix[Unit].unify(VirtReg, Range);
         return false;
@@ -132,7 +132,7 @@ void LiveRegMatrix::unassign(const LiveInterval &VirtReg) {
   VRM->clearVirt(VirtReg.reg());
 
   foreachUnit(TRI, VirtReg, PhysReg,
-              [&](unsigned Unit, const LiveRange &Range) {
+              [&](MCRegUnit Unit, const LiveRange &Range) {
                 LLVM_DEBUG(dbgs() << ' ' << printRegUnit(Unit, TRI));
                 Matrix[Unit].extract(VirtReg, Range);
                 return false;
@@ -175,11 +175,11 @@ bool LiveRegMatrix::checkRegUnitInterference(const LiveInterval &VirtReg,
     return false;
   CoalescerPair CP(VirtReg.reg(), PhysReg, *TRI);
 
-  bool Result = foreachUnit(TRI, VirtReg, PhysReg, [&](unsigned Unit,
-                                                       const LiveRange &Range) {
-    const LiveRange &UnitRange = LIS->getRegUnit(Unit);
-    return Range.overlaps(UnitRange, CP, *LIS->getSlotIndexes());
-  });
+  bool Result = foreachUnit(
+      TRI, VirtReg, PhysReg, [&](MCRegUnit Unit, const LiveRange &Range) {
+        const LiveRange &UnitRange = LIS->getRegUnit(Unit);
+        return Range.overlaps(UnitRange, CP, *LIS->getSlotIndexes());
+      });
   return Result;
 }
 

@@ -133,7 +133,7 @@ Printable llvm::printReg(Register Reg, const TargetRegisterInfo *TRI,
   });
 }
 
-Printable llvm::printRegUnit(unsigned Unit, const TargetRegisterInfo *TRI) {
+Printable llvm::printRegUnit(MCRegUnit Unit, const TargetRegisterInfo *TRI) {
   return Printable([Unit, TRI](raw_ostream &OS) {
     // Generic printout when TRI is missing.
     if (!TRI) {

@@ -8228,9 +8228,7 @@ VPRecipeBuilder::tryToCreatePartialReduction(VPInstruction *Reduction,
 
   VPValue *BinOp = Reduction->getOperand(0);
   VPValue *Accumulator = Reduction->getOperand(1);
-  VPRecipeBase *BinOpRecipe = BinOp->getDefiningRecipe();
-  if (isa<VPReductionPHIRecipe>(BinOpRecipe) ||
-      isa<VPPartialReductionRecipe>(BinOpRecipe))
+  if (isa<VPReductionPHIRecipe>(BinOp) || isa<VPPartialReductionRecipe>(BinOp))
     std::swap(BinOp, Accumulator);
 
   assert(ScaleFactor ==
@@ -8798,7 +8796,7 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
     // with fewer lanes than the VF. So the operands of the select would have
     // different numbers of lanes. Partial reductions mask the input instead.
     if (!PhiR->isInLoop() && CM.foldTailByMasking() &&
-        !isa<VPPartialReductionRecipe>(OrigExitingVPV->getDefiningRecipe())) {
+        !isa<VPPartialReductionRecipe>(OrigExitingVPV)) {
       VPValue *Cond = RecipeBuilder.getBlockInMask(PhiR->getParent());
       std::optional<FastMathFlags> FMFs =
           PhiTy->isFloatingPointTy()
