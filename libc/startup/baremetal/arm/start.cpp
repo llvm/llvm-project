@@ -138,10 +138,18 @@ namespace LIBC_NAMESPACE_DECL {
   // Based on
   // https://developer.arm.com/documentation/dui0646/c/Cortex-M7-Peripherals/Floating-Point-Unit/Enabling-the-FPU
   // Set CPACR cp10 and cp11.
-  auto cpacr = (volatile uint32_t *const)0xE000ED88;
+  auto cpacr = reinterpret_cast<volatile uint32_t *const>(0xE000ED88);
   *cpacr |= (0xF << 20);
   __dsb(0xF);
   __isb(0xF);
+#if defined(__ARM_FEATURE_MVE)
+  // Set FPSCR's LTPSIZE field to 4 to disable low-overhead-loop tail
+  // predication.
+  uint32_t fpscr;
+  __asm__ __volatile__("vmrs %0, FPSCR" : "=r"(fpscr) : :);
+  fpscr |= (0x4 << 16);
+  __asm__ __volatile__("vmsr FPSCR, %0" : : "r"(fpscr) :);
+#endif
 #elif (__ARM_ARCH_PROFILE == 'A' || __ARM_ARCH_PROFILE == 'R') &&              \
     defined(__ARM_FP)
   // Enable FPU.
@@ -155,7 +163,7 @@ namespace LIBC_NAMESPACE_DECL {
   // Set FPEXC.EN
   uint32_t fpexc;
   __asm__ __volatile__("vmrs %0, FPEXC" : "=r"(fpexc) : :);
-  fpexc |= (1 << 30);
+  fpexc |= (0x1 << 30);
   __asm__ __volatile__("vmsr FPEXC, %0" : : "r"(fpexc) :);
 #endif
 
