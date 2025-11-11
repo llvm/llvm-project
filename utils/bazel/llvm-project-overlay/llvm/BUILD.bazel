@@ -577,6 +577,7 @@ cc_library(
     deps = [
         ":BinaryFormat",
         ":DebugInfoCodeView",
+        ":DebugInfoDWARFLowLevel",
         ":Support",
         ":TargetParser",
         ":config",
@@ -692,6 +693,8 @@ cc_binary(
         "utils/TableGen/Basic/DirectiveEmitter.cpp",
         "utils/TableGen/Basic/IntrinsicEmitter.cpp",
         "utils/TableGen/Basic/RISCVTargetDefEmitter.cpp",
+        "utils/TableGen/Basic/RuntimeLibcalls.cpp",
+        "utils/TableGen/Basic/RuntimeLibcalls.h",
         "utils/TableGen/Basic/RuntimeLibcallsEmitter.cpp",
         "utils/TableGen/Basic/SDNodeProperties.cpp",
         "utils/TableGen/Basic/SDNodeProperties.h",
@@ -1726,6 +1729,7 @@ cc_library(
     copts = llvm_copts,
     deps = [
         ":Analysis",
+        ":Core",
         ":ProfileData",
         ":Support",
         ":TargetParser",
@@ -2314,6 +2318,7 @@ llvm_target_lib_list = [lib for lib in [
             "lib/Target/BPF/BPFGenInstrInfo.inc": ["-gen-instr-info"],
             "lib/Target/BPF/BPFGenRegisterInfo.inc": ["-gen-register-info"],
             "lib/Target/BPF/BPFGenSubtargetInfo.inc": ["-gen-subtarget"],
+            "lib/Target/BPF/BPFGenSDNodeInfo.inc": ["-gen-sd-node-info"],
         },
     },
     {
@@ -2550,6 +2555,7 @@ llvm_target_lib_list = [lib for lib in [
             "lib/Target/WebAssembly/WebAssemblyGenRegisterInfo.inc": ["-gen-register-info"],
             "lib/Target/WebAssembly/WebAssemblyGenSubtargetInfo.inc": ["-gen-subtarget"],
             "lib/Target/WebAssembly/WebAssemblyGenAsmMatcher.inc": ["-gen-asm-matcher"],
+            "lib/Target/WebAssembly/WebAssemblyGenSDNodeInfo.inc": ["-gen-sd-node-info"],
         },
     },
     {
@@ -5697,10 +5703,17 @@ cc_binary(
     copts = llvm_copts,
     stamp = 0,
     deps = [
+        ":AllTargetsAsmParsers",
+        ":AllTargetsCodeGens",
+        ":AllTargetsMCAs",
         ":Analysis",
+        ":CodeGen",
         ":Core",
         ":IRReader",
+        ":MC",
         ":Support",
+        ":Target",
+        ":TargetParser",
         ":config",
     ],
 )

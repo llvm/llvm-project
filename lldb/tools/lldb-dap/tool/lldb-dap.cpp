@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "ClientLauncher.h"
 #include "DAP.h"
 #include "DAPLog.h"
 #include "EventHelper.h"
@@ -141,6 +142,12 @@ EXAMPLES:
   debugger to attach to the process.
 
     lldb-dap -g
+
+  You can also use lldb-dap to launch a supported client, for example the
+  LLDB-DAP Visual Studio Code extension.
+
+    lldb-dap --client vscode -- /path/to/binary <args>
+
 )___";
 }
 
@@ -148,6 +155,29 @@ static void PrintVersion() {
   llvm::outs() << "lldb-dap: ";
   llvm::cl::PrintVersionMessage();
   llvm::outs() << "liblldb: " << lldb::SBDebugger::GetVersionString() << '\n';
+}
+
+static llvm::Error LaunchClient(const llvm::opt::InputArgList &args) {
+  auto *client_arg = args.getLastArg(OPT_client);
+  assert(client_arg && "must have client arg");
+
+  std::optional<ClientLauncher::Client> client =
+      ClientLauncher::GetClientFrom(client_arg->getValue());
+  if (!client)
+    return llvm::createStringError(
+        llvm::formatv("unsupported client: {0}", client_arg->getValue()));
+
+  std::vector<llvm::StringRef> launch_args;
+  if (auto *arg = args.getLastArgNoClaim(OPT_REM)) {
+    for (auto *value : arg->getValues()) {
+      launch_args.push_back(value);
+    }
+  }
+
+  if (launch_args.empty())
+    return llvm::createStringError("no launch arguments provided");
+
+  return ClientLauncher::GetLauncher(*client)->Launch(launch_args);
 }
 
 #if not defined(_WIN32)
@@ -538,6 +568,14 @@ int main(int argc, char *argv[]) {
 
   if (input_args.hasArg(OPT_version)) {
     PrintVersion();
+    return EXIT_SUCCESS;
+  }
+
+  if (input_args.hasArg(OPT_client)) {
+    if (llvm::Error error = LaunchClient(input_args)) {
+      llvm::WithColor::error() << llvm::toString(std::move(error)) << '\n';
+      return EXIT_FAILURE;
+    }
     return EXIT_SUCCESS;
   }
 

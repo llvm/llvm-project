@@ -32,6 +32,7 @@ class VPRecipeBuilder;
 struct VFRange;
 
 extern cl::opt<bool> VerifyEachVPlan;
+extern cl::opt<bool> EnableWideActiveLaneMask;
 
 struct VPlanTransforms {
   /// Helper to run a VPlan transform \p Transform on \p VPlan, forwarding extra
@@ -341,20 +342,14 @@ struct VPlanTransforms {
   static DenseMap<const SCEV *, Value *> expandSCEVs(VPlan &Plan,
                                                      ScalarEvolution &SE);
 
-  /// Try to find a single VF among \p Plan's VFs for which all interleave
-  /// groups (with known minimum VF elements) can be replaced by wide loads and
-  /// stores processing VF elements, if all transformed interleave groups access
-  /// the full vector width (checked via the maximum vector register width). If
-  /// the transformation can be applied, the original \p Plan will be split in
-  /// 2:
-  ///  1. The original Plan with the single VF containing the optimized recipes
-  ///  using wide loads instead of interleave groups.
-  ///  2. A new clone which contains all VFs of Plan except the optimized VF.
-  ///
-  /// This effectively is a very simple form of loop-aware SLP, where we use
-  /// interleave groups to identify candidates.
-  static std::unique_ptr<VPlan>
-  narrowInterleaveGroups(VPlan &Plan, const TargetTransformInfo &TTI);
+  /// Try to convert a plan with interleave groups with VF elements to a plan
+  /// with the interleave groups replaced by wide loads and stores processing VF
+  /// elements, if all transformed interleave groups access the full vector
+  /// width (checked via \o VectorRegWidth). This effectively is a very simple
+  /// form of loop-aware SLP, where we use interleave groups to identify
+  /// candidates.
+  static void narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
+                                     unsigned VectorRegWidth);
 
   /// Predicate and linearize the control-flow in the only loop region of
   /// \p Plan. If \p FoldTail is true, create a mask guarding the loop

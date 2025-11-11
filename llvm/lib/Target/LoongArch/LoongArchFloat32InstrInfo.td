@@ -365,6 +365,7 @@ def : Pat<(f32 (uint_to_fp (i64 (sexti32 (i64 GPR:$src))))),
 // FP Rounding
 let Predicates = [HasBasicF, IsLA64] in {
 def : PatFpr<frint, FRINT_S, FPR32>;
+def : PatFpr<flog2, FLOGB_S, FPR32>;
 } // Predicates = [HasBasicF, IsLA64]
 
 let Predicates = [HasBasicF, IsLA32] in {

@@ -129,7 +129,6 @@ integer function test_stmt_character_with_different_length_2(c, n)
   character(n) :: argc
   character(*) :: c
   ! CHECK: %[[unboxed:.*]]:2 = fir.unboxchar %[[arg0]] :
-  ! CHECK: fir.load %[[arg1]] : !fir.ref<i32>
   ! CHECK: %[[n:.*]] = fir.load %[[arg1]] : !fir.ref<i32>
   ! CHECK: %[[n_is_positive:.*]] = arith.cmpi sgt, %[[n]], %c0{{.*}} : i32
   ! CHECK: %[[len:.*]] = arith.select %[[n_is_positive]], %[[n]], %c0{{.*}} : i32

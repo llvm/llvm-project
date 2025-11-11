@@ -18,12 +18,12 @@ using namespace llvm::VPlanPatternMatch;
 
 bool vputils::onlyFirstLaneUsed(const VPValue *Def) {
   return all_of(Def->users(),
-                [Def](const VPUser *U) { return U->onlyFirstLaneUsed(Def); });
+                [Def](const VPUser *U) { return U->usesFirstLaneOnly(Def); });
 }
 
 bool vputils::onlyFirstPartUsed(const VPValue *Def) {
   return all_of(Def->users(),
-                [Def](const VPUser *U) { return U->onlyFirstPartUsed(Def); });
+                [Def](const VPUser *U) { return U->usesFirstPartOnly(Def); });
 }
 
 bool vputils::onlyScalarValuesUsed(const VPValue *Def) {
@@ -32,25 +32,17 @@ bool vputils::onlyScalarValuesUsed(const VPValue *Def) {
 }
 
 VPValue *vputils::getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr) {
-  if (auto *Expanded = Plan.getSCEVExpansion(Expr))
-    return Expanded;
-  VPValue *Expanded = nullptr;
   if (auto *E = dyn_cast<SCEVConstant>(Expr))
-    Expanded = Plan.getOrAddLiveIn(E->getValue());
-  else {
-    auto *U = dyn_cast<SCEVUnknown>(Expr);
-    // Skip SCEV expansion if Expr is a SCEVUnknown wrapping a non-instruction
-    // value. Otherwise the value may be defined in a loop and using it directly
-    // will break LCSSA form. The SCEV expansion takes care of preserving LCSSA
-    // form.
-    if (U && !isa<Instruction>(U->getValue())) {
-      Expanded = Plan.getOrAddLiveIn(U->getValue());
-    } else {
-      Expanded = new VPExpandSCEVRecipe(Expr);
-      Plan.getEntry()->appendRecipe(Expanded->getDefiningRecipe());
-    }
-  }
-  Plan.addSCEVExpansion(Expr, Expanded);
+    return Plan.getOrAddLiveIn(E->getValue());
+  // Skip SCEV expansion if Expr is a SCEVUnknown wrapping a non-instruction
+  // value. Otherwise the value may be defined in a loop and using it directly
+  // will break LCSSA form. The SCEV expansion takes care of preserving LCSSA
+  // form.
+  auto *U = dyn_cast<SCEVUnknown>(Expr);
+  if (U && !isa<Instruction>(U->getValue()))
+    return Plan.getOrAddLiveIn(U->getValue());
+  auto *Expanded = new VPExpandSCEVRecipe(Expr);
+  Plan.getEntry()->appendRecipe(Expanded);
   return Expanded;
 }
 
@@ -78,7 +70,8 @@ bool vputils::isHeaderMask(const VPValue *V, const VPlan &Plan) {
          B == Plan.getBackedgeTakenCount();
 }
 
-const SCEV *vputils::getSCEVExprForVPValue(VPValue *V, ScalarEvolution &SE) {
+const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
+                                           ScalarEvolution &SE, const Loop *L) {
   if (V->isLiveIn()) {
     if (Value *LiveIn = V->getLiveInIRValue())
       return SE.getSCEV(LiveIn);
@@ -89,7 +82,108 @@ const SCEV *vputils::getSCEVExprForVPValue(VPValue *V, ScalarEvolution &SE) {
   return TypeSwitch<const VPRecipeBase *, const SCEV *>(V->getDefiningRecipe())
       .Case<VPExpandSCEVRecipe>(
           [](const VPExpandSCEVRecipe *R) { return R->getSCEV(); })
+      .Case<VPCanonicalIVPHIRecipe>([&SE, L](const VPCanonicalIVPHIRecipe *R) {
+        if (!L)
+          return SE.getCouldNotCompute();
+        const SCEV *Start = getSCEVExprForVPValue(R->getOperand(0), SE, L);
+        return SE.getAddRecExpr(Start, SE.getOne(Start->getType()), L,
+                                SCEV::FlagAnyWrap);
+      })
+      .Case<VPDerivedIVRecipe>([&SE, L](const VPDerivedIVRecipe *R) {
+        const SCEV *Start = getSCEVExprForVPValue(R->getOperand(0), SE, L);
+        const SCEV *IV = getSCEVExprForVPValue(R->getOperand(1), SE, L);
+        const SCEV *Scale = getSCEVExprForVPValue(R->getOperand(2), SE, L);
+        if (any_of(ArrayRef({Start, IV, Scale}), IsaPred<SCEVCouldNotCompute>))
+          return SE.getCouldNotCompute();
+
+        return SE.getAddExpr(SE.getTruncateOrSignExtend(Start, IV->getType()),
+                             SE.getMulExpr(IV, SE.getTruncateOrSignExtend(
+                                                   Scale, IV->getType())));
+      })
+      .Case<VPScalarIVStepsRecipe>([&SE, L](const VPScalarIVStepsRecipe *R) {
+        const SCEV *IV = getSCEVExprForVPValue(R->getOperand(0), SE, L);
+        const SCEV *Step = getSCEVExprForVPValue(R->getOperand(1), SE, L);
+        if (isa<SCEVCouldNotCompute>(IV) || isa<SCEVCouldNotCompute>(Step) ||
+            !Step->isOne())
+          return SE.getCouldNotCompute();
+        return SE.getMulExpr(SE.getTruncateOrSignExtend(IV, Step->getType()),
+                             Step);
+      })
+      .Case<VPReplicateRecipe>([&SE, L](const VPReplicateRecipe *R) {
+        if (R->getOpcode() != Instruction::GetElementPtr)
+          return SE.getCouldNotCompute();
+
+        const SCEV *Base = getSCEVExprForVPValue(R->getOperand(0), SE, L);
+        if (isa<SCEVCouldNotCompute>(Base))
+          return SE.getCouldNotCompute();
+
+        SmallVector<const SCEV *> IndexExprs;
+        for (VPValue *Index : drop_begin(R->operands())) {
+          const SCEV *IndexExpr = getSCEVExprForVPValue(Index, SE, L);
+          if (isa<SCEVCouldNotCompute>(IndexExpr))
+            return SE.getCouldNotCompute();
+          IndexExprs.push_back(IndexExpr);
+        }
+
+        Type *SrcElementTy = cast<GetElementPtrInst>(R->getUnderlyingInstr())
+                                 ->getSourceElementType();
+        return SE.getGEPExpr(Base, IndexExprs, SrcElementTy);
+      })
       .Default([&SE](const VPRecipeBase *) { return SE.getCouldNotCompute(); });
+}
+
+bool vputils::isSingleScalar(const VPValue *VPV) {
+  auto PreservesUniformity = [](unsigned Opcode) -> bool {
+    if (Instruction::isBinaryOp(Opcode) || Instruction::isCast(Opcode))
+      return true;
+    switch (Opcode) {
+    case Instruction::GetElementPtr:
+    case Instruction::ICmp:
+    case Instruction::FCmp:
+    case Instruction::Select:
+    case VPInstruction::Not:
+    case VPInstruction::Broadcast:
+    case VPInstruction::PtrAdd:
+      return true;
+    default:
+      return false;
+    }
+  };
+
+  // A live-in must be uniform across the scope of VPlan.
+  if (VPV->isLiveIn())
+    return true;
+
+  if (auto *Rep = dyn_cast<VPReplicateRecipe>(VPV)) {
+    const VPRegionBlock *RegionOfR = Rep->getRegion();
+    // Don't consider recipes in replicate regions as uniform yet; their first
+    // lane cannot be accessed when executing the replicate region for other
+    // lanes.
+    if (RegionOfR && RegionOfR->isReplicator())
+      return false;
+    return Rep->isSingleScalar() || (PreservesUniformity(Rep->getOpcode()) &&
+                                     all_of(Rep->operands(), isSingleScalar));
+  }
+  if (isa<VPWidenGEPRecipe, VPDerivedIVRecipe, VPBlendRecipe,
+          VPWidenSelectRecipe>(VPV))
+    return all_of(VPV->getDefiningRecipe()->operands(), isSingleScalar);
+  if (auto *WidenR = dyn_cast<VPWidenRecipe>(VPV)) {
+    return PreservesUniformity(WidenR->getOpcode()) &&
+           all_of(WidenR->operands(), isSingleScalar);
+  }
+  if (auto *VPI = dyn_cast<VPInstruction>(VPV))
+    return VPI->isSingleScalar() || VPI->isVectorToScalar() ||
+           (PreservesUniformity(VPI->getOpcode()) &&
+            all_of(VPI->operands(), isSingleScalar));
+  if (isa<VPPartialReductionRecipe>(VPV))
+    return false;
+  if (isa<VPReductionRecipe>(VPV))
+    return true;
+  if (auto *Expr = dyn_cast<VPExpressionRecipe>(VPV))
+    return Expr->isSingleScalar();
+
+  // VPExpandSCEVRecipes must be placed in the entry and are always uniform.
+  return isa<VPExpandSCEVRecipe>(VPV);
 }
 
 bool vputils::isUniformAcrossVFsAndUFs(VPValue *V) {
@@ -151,6 +245,8 @@ unsigned vputils::getVFScaleFactor(VPRecipeBase *R) {
     return RR->getVFScaleFactor();
   if (auto *RR = dyn_cast<VPPartialReductionRecipe>(R))
     return RR->getVFScaleFactor();
+  if (auto *ER = dyn_cast<VPExpressionRecipe>(R))
+    return ER->getVFScaleFactor();
   assert(
       (!isa<VPInstruction>(R) || cast<VPInstruction>(R)->getOpcode() !=
                                      VPInstruction::ReductionStartVector) &&

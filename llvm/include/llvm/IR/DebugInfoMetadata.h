@@ -891,95 +891,113 @@ class DIBasicType : public DIType {
   friend class MDNode;
 
   unsigned Encoding;
+  /// Describes the number of bits used by the value of the object. Non-zero
+  /// when the value of an object does not fully occupy the storage size
+  /// specified by SizeInBits.
+  uint32_t DataSizeInBits;
 
 protected:
   DIBasicType(LLVMContext &C, StorageType Storage, unsigned Tag,
               uint32_t AlignInBits, unsigned Encoding,
-              uint32_t NumExtraInhabitants, DIFlags Flags,
-              ArrayRef<Metadata *> Ops)
+              uint32_t NumExtraInhabitants, uint32_t DataSizeInBits,
+              DIFlags Flags, ArrayRef<Metadata *> Ops)
       : DIType(C, DIBasicTypeKind, Storage, Tag, 0, AlignInBits,
                NumExtraInhabitants, Flags, Ops),
-        Encoding(Encoding) {}
+        Encoding(Encoding), DataSizeInBits(DataSizeInBits) {}
   DIBasicType(LLVMContext &C, unsigned ID, StorageType Storage, unsigned Tag,
               uint32_t AlignInBits, unsigned Encoding,
-              uint32_t NumExtraInhabitants, DIFlags Flags,
-              ArrayRef<Metadata *> Ops)
+              uint32_t NumExtraInhabitants, uint32_t DataSizeInBits,
+              DIFlags Flags, ArrayRef<Metadata *> Ops)
       : DIType(C, ID, Storage, Tag, 0, AlignInBits, NumExtraInhabitants, Flags,
                Ops),
-        Encoding(Encoding) {}
+        Encoding(Encoding), DataSizeInBits(DataSizeInBits) {}
   ~DIBasicType() = default;
 
   static DIBasicType *getImpl(LLVMContext &Context, unsigned Tag,
                               StringRef Name, uint64_t SizeInBits,
                               uint32_t AlignInBits, unsigned Encoding,
-                              uint32_t NumExtraInhabitants, DIFlags Flags,
+                              uint32_t NumExtraInhabitants,
+                              uint32_t DataSizeInBits, DIFlags Flags,
                               StorageType Storage, bool ShouldCreate = true) {
     return getImpl(Context, Tag, getCanonicalMDString(Context, Name),
                    SizeInBits, AlignInBits, Encoding, NumExtraInhabitants,
-                   Flags, Storage, ShouldCreate);
+                   DataSizeInBits, Flags, Storage, ShouldCreate);
   }
   static DIBasicType *getImpl(LLVMContext &Context, unsigned Tag,
                               MDString *Name, uint64_t SizeInBits,
                               uint32_t AlignInBits, unsigned Encoding,
-                              uint32_t NumExtraInhabitants, DIFlags Flags,
+                              uint32_t NumExtraInhabitants,
+                              uint32_t DataSizeInBits, DIFlags Flags,
                               StorageType Storage, bool ShouldCreate = true) {
     auto *SizeInBitsNode = ConstantAsMetadata::get(
         ConstantInt::get(Type::getInt64Ty(Context), SizeInBits));
     return getImpl(Context, Tag, Name, SizeInBitsNode, AlignInBits, Encoding,
-                   NumExtraInhabitants, Flags, Storage, ShouldCreate);
+                   NumExtraInhabitants, DataSizeInBits, Flags, Storage,
+                   ShouldCreate);
   }
-  LLVM_ABI static DIBasicType *getImpl(LLVMContext &Context, unsigned Tag,
-                                       MDString *Name, Metadata *SizeInBits,
-                                       uint32_t AlignInBits, unsigned Encoding,
-                                       uint32_t NumExtraInhabitants,
-                                       DIFlags Flags, StorageType Storage,
-                                       bool ShouldCreate = true);
+  LLVM_ABI static DIBasicType *
+  getImpl(LLVMContext &Context, unsigned Tag, MDString *Name,
+          Metadata *SizeInBits, uint32_t AlignInBits, unsigned Encoding,
+          uint32_t NumExtraInhabitants, uint32_t DataSizeInBits, DIFlags Flags,
+          StorageType Storage, bool ShouldCreate = true);
 
   TempDIBasicType cloneImpl() const {
     return getTemporary(getContext(), getTag(), getRawName(),
                         getRawSizeInBits(), getAlignInBits(), getEncoding(),
-                        getNumExtraInhabitants(), getFlags());
+                        getNumExtraInhabitants(), getDataSizeInBits(),
+                        getFlags());
   }
 
 public:
   DEFINE_MDNODE_GET(DIBasicType, (unsigned Tag, StringRef Name),
-                    (Tag, Name, 0, 0, 0, 0, FlagZero))
+                    (Tag, Name, 0, 0, 0, 0, 0, FlagZero))
   DEFINE_MDNODE_GET(DIBasicType,
                     (unsigned Tag, StringRef Name, uint64_t SizeInBits),
-                    (Tag, Name, SizeInBits, 0, 0, 0, FlagZero))
+                    (Tag, Name, SizeInBits, 0, 0, 0, 0, FlagZero))
   DEFINE_MDNODE_GET(DIBasicType,
                     (unsigned Tag, MDString *Name, uint64_t SizeInBits),
-                    (Tag, Name, SizeInBits, 0, 0, 0, FlagZero))
+                    (Tag, Name, SizeInBits, 0, 0, 0, 0, FlagZero))
   DEFINE_MDNODE_GET(DIBasicType,
                     (unsigned Tag, StringRef Name, uint64_t SizeInBits,
                      uint32_t AlignInBits, unsigned Encoding, DIFlags Flags),
-                    (Tag, Name, SizeInBits, AlignInBits, Encoding, 0, Flags))
+                    (Tag, Name, SizeInBits, AlignInBits, Encoding, 0, 0, Flags))
   DEFINE_MDNODE_GET(DIBasicType,
                     (unsigned Tag, MDString *Name, uint64_t SizeInBits,
                      uint32_t AlignInBits, unsigned Encoding, DIFlags Flags),
-                    (Tag, Name, SizeInBits, AlignInBits, Encoding, 0, Flags))
+                    (Tag, Name, SizeInBits, AlignInBits, Encoding, 0, 0, Flags))
   DEFINE_MDNODE_GET(DIBasicType,
                     (unsigned Tag, StringRef Name, uint64_t SizeInBits,
                      uint32_t AlignInBits, unsigned Encoding,
                      uint32_t NumExtraInhabitants, DIFlags Flags),
                     (Tag, Name, SizeInBits, AlignInBits, Encoding,
-                     NumExtraInhabitants, Flags))
+                     NumExtraInhabitants, 0, Flags))
+  DEFINE_MDNODE_GET(DIBasicType,
+                    (unsigned Tag, StringRef Name, uint64_t SizeInBits,
+                     uint32_t AlignInBits, unsigned Encoding,
+                     uint32_t NumExtraInhabitants, uint32_t DataSizeInBits,
+                     DIFlags Flags),
+                    (Tag, Name, SizeInBits, AlignInBits, Encoding,
+                     NumExtraInhabitants, DataSizeInBits, Flags))
   DEFINE_MDNODE_GET(DIBasicType,
                     (unsigned Tag, MDString *Name, uint64_t SizeInBits,
                      uint32_t AlignInBits, unsigned Encoding,
-                     uint32_t NumExtraInhabitants, DIFlags Flags),
+                     uint32_t NumExtraInhabitants, uint32_t DataSizeInBits,
+                     DIFlags Flags),
                     (Tag, Name, SizeInBits, AlignInBits, Encoding,
-                     NumExtraInhabitants, Flags))
+                     NumExtraInhabitants, DataSizeInBits, Flags))
   DEFINE_MDNODE_GET(DIBasicType,
                     (unsigned Tag, MDString *Name, Metadata *SizeInBits,
                      uint32_t AlignInBits, unsigned Encoding,
-                     uint32_t NumExtraInhabitants, DIFlags Flags),
+                     uint32_t NumExtraInhabitants, uint32_t DataSizeInBits,
+                     DIFlags Flags),
                     (Tag, Name, SizeInBits, AlignInBits, Encoding,
-                     NumExtraInhabitants, Flags))
+                     NumExtraInhabitants, DataSizeInBits, Flags))
 
   TempDIBasicType clone() const { return cloneImpl(); }
 
   unsigned getEncoding() const { return Encoding; }
+
+  uint32_t getDataSizeInBits() const { return DataSizeInBits; }
 
   enum class Signedness { Signed, Unsigned };
 
@@ -1010,7 +1028,7 @@ class DIFixedPointType : public DIBasicType {
                    uint32_t AlignInBits, unsigned Encoding, DIFlags Flags,
                    unsigned Kind, int Factor, ArrayRef<Metadata *> Ops)
       : DIBasicType(C, DIFixedPointTypeKind, Storage, Tag, AlignInBits,
-                    Encoding, 0, Flags, Ops),
+                    Encoding, 0, 0, Flags, Ops),
         Kind(Kind), Factor(Factor) {
     assert(Kind == FixedPointBinary || Kind == FixedPointDecimal);
   }
@@ -1019,7 +1037,7 @@ class DIFixedPointType : public DIBasicType {
                    unsigned Kind, APInt Numerator, APInt Denominator,
                    ArrayRef<Metadata *> Ops)
       : DIBasicType(C, DIFixedPointTypeKind, Storage, Tag, AlignInBits,
-                    Encoding, 0, Flags, Ops),
+                    Encoding, 0, 0, Flags, Ops),
         Kind(Kind), Factor(0), Numerator(Numerator), Denominator(Denominator) {
     assert(Kind == FixedPointRational);
   }
@@ -1028,7 +1046,7 @@ class DIFixedPointType : public DIBasicType {
                    unsigned Kind, int Factor, APInt Numerator,
                    APInt Denominator, ArrayRef<Metadata *> Ops)
       : DIBasicType(C, DIFixedPointTypeKind, Storage, Tag, AlignInBits,
-                    Encoding, 0, Flags, Ops),
+                    Encoding, 0, 0, Flags, Ops),
         Kind(Kind), Factor(Factor), Numerator(Numerator),
         Denominator(Denominator) {}
   ~DIFixedPointType() = default;
@@ -2534,6 +2552,39 @@ public:
   }
   void replaceRetainedNodes(DINodeArray N) {
     replaceOperandWith(7, N.get());
+  }
+
+  /// For the given retained node of DISubprogram, applies one of the
+  /// given functions depending on the type of the node.
+  template <typename T, typename FuncLVT, typename FuncLabelT,
+            typename FuncImportedEntityT, typename FuncUnknownT>
+  static T
+  visitRetainedNode(const Metadata *N, FuncLVT &&FuncLV, FuncLabelT &&FuncLabel,
+                    FuncImportedEntityT &&FuncIE, FuncUnknownT &&FuncUnknown) {
+    if (const auto *LV = dyn_cast<DILocalVariable>(N))
+      return FuncLV(LV);
+    if (const auto *L = dyn_cast<DILabel>(N))
+      return FuncLabel(L);
+    if (const auto *IE = dyn_cast<DIImportedEntity>(N))
+      return FuncIE(IE);
+    return FuncUnknown(N);
+  }
+
+  /// Returns the scope of subprogram's retainedNodes.
+  static const DILocalScope *getRetainedNodeScope(const MDNode *N);
+  // For use in Verifier.
+  static const DIScope *getRawRetainedNodeScope(const MDNode *N);
+
+  /// For each retained node, applies one of the given functions depending
+  /// on the type of a node.
+  template <typename FuncLVT, typename FuncLabelT, typename FuncImportedEntityT>
+  void forEachRetainedNode(FuncLVT &&FuncLV, FuncLabelT &&FuncLabel,
+                           FuncImportedEntityT &&FuncIE) const {
+    for (MDNode *N : getRetainedNodes())
+      visitRetainedNode<void>(N, FuncLV, FuncLabel, FuncIE,
+                              [](const Metadata *N) {
+                                llvm_unreachable("Unexpected retained node!");
+                              });
   }
 
   /// Check if this subprogram describes the given function.
