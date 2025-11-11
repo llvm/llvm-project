@@ -513,8 +513,7 @@ optMain(int argc, char **argv,
   }
   LLVMRemarkFileHandle RemarksFile = std::move(*RemarksFileOrErr);
 
-  if (int RetVal = codegen::MaybeEnableStatistics())
-    return RetVal;
+  codegen::MaybeEnableStatistics();
 
   // Load the input module...
   auto SetDataLayout = [&](StringRef IRTriple,

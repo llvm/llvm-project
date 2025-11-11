@@ -441,8 +441,7 @@ int main(int argc, char **argv) {
     reportError(std::move(E), RemarksFilename);
   LLVMRemarkFileHandle RemarksFile = std::move(*RemarksFileOrErr);
 
-  if (int RetVal = codegen::MaybeEnableStatistics())
-    return RetVal;
+  codegen::MaybeEnableStatistics();
   std::string OutputFilename;
 
   if (InputLanguage != "" && InputLanguage != "ir" && InputLanguage != "mir")

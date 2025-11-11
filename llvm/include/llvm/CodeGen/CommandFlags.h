@@ -214,13 +214,13 @@ LLVM_ABI Expected<std::unique_ptr<TargetMachine>> createTargetMachineForTriple(
     CodeGenOptLevel OptLevel = CodeGenOptLevel::Default);
 
 /// Conditionally enables the collection of LLVM statistics during the tool run,
-/// based on the value of the flag. Must be call before the tool run to actually
-/// collect data.
-LLVM_ABI int MaybeEnableStatistics();
+/// based on the value of the flag. Must be called before the tool run to
+/// actually collect data.
+LLVM_ABI void MaybeEnableStatistics();
 
-/// Conditionally saves the collected LLVM statistics to the recevied output
-/// file, based on the value of the flag. Shuould be called after the tool run,
-/// and must follow a call to `MaybeEnableStats()` to actually have data to
+/// Conditionally saves the collected LLVM statistics to the received output
+/// file, based on the value of the flag. Should be called after the tool run,
+/// and must follow a call to `MaybeEnableStatistics()` to actually have data to
 /// write.
 LLVM_ABI int MaybeSaveStatistics(StringRef OutputFilename, StringRef ToolName);
 

@@ -789,12 +789,11 @@ codegen::createTargetMachineForTriple(StringRef TargetTriple,
   return std::unique_ptr<TargetMachine>(Target);
 }
 
-int codegen::MaybeEnableStatistics() {
+void codegen::MaybeEnableStatistics() {
   if (getSaveStats() == SaveStatsMode::None)
-    return 0;
+    return;
 
   llvm::EnableStatistics(false);
-  return 0;
 }
 
 int codegen::MaybeSaveStatistics(StringRef OutputFilename, StringRef ToolName) {
