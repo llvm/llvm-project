@@ -113,3 +113,18 @@ def setOpLayoutAttrResult():
     # CHECK: sg_layout = [6, 4]
     # CHECK: sg_data = [32, 16]
     # CHECK: inst_data = [8, 16]
+
+
+@run
+def setGPULaunchThreadsOp():
+    sequence = transform.SequenceOp(
+        transform.FailurePropagationMode.Propagate,
+        [],
+        transform.OperationType.get("gpu.launch"),
+    )
+    with InsertionPoint(sequence.body):
+        xegpu.set_gpu_launch_threads(sequence.bodyTarget, threads=[8, 4, 1])
+        transform.YieldOp()
+    # CHECK-LABEL: TEST: setGPULaunchThreadsOp
+    # CHECK: transform.xegpu.set_gpu_launch_threads
+    # CHECK: threads = [8, 4, 1]
