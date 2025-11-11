@@ -1289,31 +1289,17 @@ using namespace clang;
 
 class ASTImporter::FunctionReturnTypeDeclCycleDetector {
 public:
-  class DeclCycleMapInserter {
-  public:
-    // Do not track cycles on D == nullptr.
-    DeclCycleMapInserter(FunctionReturnTypeDeclCycleDetector &owner,
-                         const FunctionDecl *D)
-        : CycleDetector(owner), D(D) {
-      if (D)
-        CycleDetector.FunctionReturnTypeDeclCycles.insert(D);
+  auto makeScopedCycleDetection(const FunctionDecl *D) {
+    const FunctionDecl *LambdaD = nullptr;
+    if (!isCycle(D) && D) {
+      FunctionReturnTypeDeclCycles.insert(D);
+      LambdaD = D;
     }
-    ~DeclCycleMapInserter() {
-      if (D)
-        CycleDetector.FunctionReturnTypeDeclCycles.erase(D);
-    }
-    DeclCycleMapInserter(const DeclCycleMapInserter &) = delete;
-    DeclCycleMapInserter &operator=(const DeclCycleMapInserter &) = delete;
-
-  private:
-    FunctionReturnTypeDeclCycleDetector &CycleDetector;
-    const FunctionDecl *D;
-  };
-
-  DeclCycleMapInserter detectImportCycle(const FunctionDecl *D) {
-    if (!isCycle(D))
-      return DeclCycleMapInserter(*this, D);
-    return DeclCycleMapInserter(*this, nullptr);
+    return llvm::make_scope_exit([this, LambdaD]() {
+      if (LambdaD) {
+        FunctionReturnTypeDeclCycles.erase(LambdaD);
+      }
+    });
   }
 
   bool isCycle(const FunctionDecl *D) const {
@@ -4099,7 +4085,7 @@ ExpectedDecl ASTNodeImporter::VisitFunctionDecl(FunctionDecl *D) {
 
   Error Err = Error::success();
   auto ScopedReturnTypeDeclCycleDetector =
-      Importer.FunctionReturnTypeCycleDetector->detectImportCycle(D);
+      Importer.FunctionReturnTypeCycleDetector->makeScopedCycleDetection(D);
   auto T = importChecked(Err, FromTy);
   auto TInfo = importChecked(Err, FromTSI);
   auto ToInnerLocStart = importChecked(Err, D->getInnerLocStart());
