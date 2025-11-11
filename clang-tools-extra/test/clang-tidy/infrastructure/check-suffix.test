@@ -1,0 +1,1 @@
+// RUN: %python %S/../../clang-tidy/check_suffix.py
