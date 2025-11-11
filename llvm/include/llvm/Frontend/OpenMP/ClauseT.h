@@ -1201,7 +1201,7 @@ struct ToT {
 // V6.0: [17.9.6] `transparent` clause
 template <typename T, typename I, typename E> //
 struct TransparentT {
-  ENUM(TransparentPolicy, Omp_NotImpex, Omp_Import, Omp_Export, Omp_Impex);
+  ENUM(TransparentPolicy, Omp_Not_Impex, Omp_Import, Omp_Export, Omp_Impex);
   using WrapperTrait = std::true_type;
   TransparentPolicy v;
 };

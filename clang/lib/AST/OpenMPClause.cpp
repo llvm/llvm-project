@@ -2049,7 +2049,7 @@ void OMPClausePrinter::VisitOMPThreadsetClause(OMPThreadsetClause *Node) {
 void OMPClausePrinter::VisitOMPTransparentClause(OMPTransparentClause *Node) {
   OS << "transparent("
      << getOpenMPSimpleClauseTypeName(OMPC_transparent,
-                                      unsigned(Node->getTransparentKind()))
+                                      Node->getTransparentKind())
      << ")";
 }
 

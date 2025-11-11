@@ -1506,7 +1506,7 @@ Transparent make(const parser::OmpClause::Transparent &inp,
   CLAUSET_ENUM_CONVERT( //
       convert, wrapped::TransparentPolicy, Transparent::TransparentPolicy,
       // clang-format off
-      MS(Omp_NotImpex, Omp_NotImpex)
+      MS(Omp_Not_Impex, Omp_Not_Impex)
       MS(Omp_Import, Omp_Import)
       MS(Omp_Export, Omp_Export)
       MS(Omp_Impex, Omp_Impex)

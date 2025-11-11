@@ -11682,8 +11682,7 @@ void OMPClauseReader::VisitOMPTransparentClause(OMPTransparentClause *C) {
   C->setLParenLoc(Record.readSourceLocation());
   SourceLocation TransparentKindLoc = Record.readSourceLocation();
   C->setTransparentKindLoc(TransparentKindLoc);
-  OpenMPTransparentKind TKind =
-      static_cast<OpenMPTransparentKind>(Record.readInt());
+  OpenMPTransparentKind TKind = Record.readEnum<OpenMPTransparentKind>();
   C->setTransparentKind(TKind);
 }
 
