@@ -3147,7 +3147,7 @@ bool SPIRVInstructionSelector::selectDpdCoarse(Register ResVReg,
                                                MachineInstr &I,
                                                const unsigned DPdOpCode) const {
   // TODO: This should check specifically for Fragment Execution Model, but STI
-  // doesn't provide that information yet.
+  // doesn't provide that information yet. See #167562
   if (!STI.isShader()) {
     std::string DiagMsg;
     raw_string_ostream OS(DiagMsg);
