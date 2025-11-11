@@ -21,10 +21,6 @@ static_library("Driver") {
     "//llvm/lib/TargetParser",
     "//llvm/lib/WindowsDriver",
   ]
-  public_deps = [
-    # public_dep because public header Options.h includes generated Options.inc.
-    "//clang/include/clang/Driver:Options",
-  ]
   if (host_os == "win") {
     # MSVCToolChain.cpp uses version.dll.
     libs = [ "version.lib" ]
@@ -34,12 +30,10 @@ static_library("Driver") {
     "Compilation.cpp",
     "Distro.cpp",
     "Driver.cpp",
-    "DriverOptions.cpp",
     "Job.cpp",
     "Multilib.cpp",
     "MultilibBuilder.cpp",
     "OffloadBundler.cpp",
-    "OptionUtils.cpp",
     "Phases.cpp",
     "SanitizerArgs.cpp",
     "Tool.cpp",
