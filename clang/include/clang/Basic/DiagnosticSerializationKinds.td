@@ -71,6 +71,9 @@ def err_ast_file_not_found : Error<
 def err_ast_file_out_of_date : Error<
   "%select{PCH|module|precompiled}0 file '%1' is out of date and "
   "needs to be rebuilt%select{|: %3}2">, DefaultFatal;
+def err_ast_file_dependency_out_of_date : Error<
+  "%select{PCH|module|AST}0 file '%1' is out of date because "
+  "dependency '%2' has changed%select{|: %4}3">, DefaultFatal;
 def err_ast_file_invalid : Error<
   "file '%1' is not a valid %select{PCH|module|precompiled}0 file: %2">, DefaultFatal;
 def note_module_file_imported_by : Note<
