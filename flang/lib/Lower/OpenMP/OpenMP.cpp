@@ -1769,14 +1769,18 @@ static void genTaskloopClauses(lower::AbstractConverter &converter,
                                mlir::omp::TaskloopOperands &clauseOps) {
 
   ClauseProcessor cp(converter, semaCtx, clauses);
+  cp.processAllocate(clauseOps);
+  cp.processFinal(stmtCtx, clauseOps);
   cp.processGrainsize(stmtCtx, clauseOps);
+  cp.processIf(llvm::omp::Directive::OMPD_taskloop, clauseOps);
+  cp.processMergeable(clauseOps);
   cp.processNumTasks(stmtCtx, clauseOps);
+  cp.processPriority(stmtCtx, clauseOps);
+  cp.processUntied(clauseOps);
 
-  cp.processTODO<clause::Allocate, clause::Collapse, clause::Default,
-                 clause::Final, clause::If, clause::InReduction,
-                 clause::Lastprivate, clause::Mergeable, clause::Nogroup,
-                 clause::Priority, clause::Reduction, clause::Shared,
-                 clause::Untied>(loc, llvm::omp::Directive::OMPD_taskloop);
+  cp.processTODO<clause::Collapse, clause::InReduction, clause::Lastprivate,
+                 clause::Nogroup, clause::Reduction>(
+      loc, llvm::omp::Directive::OMPD_taskloop);
 }
 
 static void genTaskwaitClauses(lower::AbstractConverter &converter,
