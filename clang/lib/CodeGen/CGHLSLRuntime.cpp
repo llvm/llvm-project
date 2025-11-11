@@ -21,6 +21,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attrs.inc"
 #include "clang/AST/Decl.h"
+#include "clang/AST/Expr.h"
 #include "clang/AST/HLSLResource.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Type.h"
@@ -91,6 +92,14 @@ void addRootSignatureMD(llvm::dxbc::RootSignatureVersion RootSigVer,
   RootSignatureValMD->addOperand(MDVals);
 }
 
+// Find array variable declaration from DeclRef expression
+static const ValueDecl *getArrayDecl(const Expr *E) {
+  if (const DeclRefExpr *DRE =
+          dyn_cast_or_null<DeclRefExpr>(E->IgnoreImpCasts()))
+    return DRE->getDecl();
+  return nullptr;
+}
+
 // Find array variable declaration from nested array subscript AST nodes
 static const ValueDecl *getArrayDecl(const ArraySubscriptExpr *ASE) {
   const Expr *E = nullptr;
@@ -100,9 +109,7 @@ static const ValueDecl *getArrayDecl(const ArraySubscriptExpr *ASE) {
       return nullptr;
     ASE = dyn_cast<ArraySubscriptExpr>(E);
   }
-  if (const DeclRefExpr *DRE = dyn_cast_or_null<DeclRefExpr>(E))
-    return DRE->getDecl();
-  return nullptr;
+  return getArrayDecl(E);
 }
 
 // Get the total size of the array, or -1 if the array is unbounded.
@@ -1115,4 +1122,47 @@ std::optional<LValue> CGHLSLRuntime::emitResourceArraySubscriptExpr(
       return std::nullopt;
   }
   return CGF.MakeAddrLValue(TmpVar, ResultTy, AlignmentSource::Decl);
+}
+
+// If RHSExpr is a global resource array, initialize all of its resources and
+// set them into LHS. Returns false if no copy has been performed and the
+// array copy should be handled by Clang codegen.
+bool CGHLSLRuntime::emitResourceArrayCopy(LValue &LHS, Expr *RHSExpr,
+                                          CodeGenFunction &CGF) {
+  QualType ResultTy = RHSExpr->getType();
+  assert((ResultTy->isHLSLResourceRecordArray()) && "expected resource array");
+
+  // Let Clang codegen handle local and static resource array copies.
+  const VarDecl *ArrayDecl = dyn_cast_or_null<VarDecl>(getArrayDecl(RHSExpr));
+  if (!ArrayDecl || !ArrayDecl->hasGlobalStorage() ||
+      ArrayDecl->getStorageClass() == SC_Static)
+    return false;
+
+  // Find binding info for the resource array. For implicit binding
+  // the HLSLResourceBindingAttr should have been added by SemaHLSL.
+  ResourceBindingAttrs Binding(ArrayDecl);
+  assert((Binding.hasBinding()) &&
+         "resource array must have a binding attribute");
+
+  // Find the individual resource type.
+  ASTContext &AST = ArrayDecl->getASTContext();
+  QualType ResTy = AST.getBaseElementType(ResultTy);
+  const auto *ResArrayTy = cast<ConstantArrayType>(ResultTy.getTypePtr());
+
+  // Use the provided LHS for the result.
+  AggValueSlot ValueSlot = AggValueSlot::forAddr(
+      LHS.getAddress(), Qualifiers(), AggValueSlot::IsDestructed_t(true),
+      AggValueSlot::DoesNotNeedGCBarriers, AggValueSlot::IsAliased_t(false),
+      AggValueSlot::DoesNotOverlap);
+
+  // Create Value for index and total array size (= range size).
+  int Size = getTotalArraySize(AST, ResArrayTy);
+  llvm::Value *Zero = llvm::ConstantInt::get(CGM.IntTy, 0);
+  llvm::Value *Range = llvm::ConstantInt::get(CGM.IntTy, Size);
+
+  // Initialize individual resources in the array into LHS.
+  std::optional<llvm::Value *> EndIndex = initializeLocalResourceArray(
+      CGF, ResTy->getAsCXXRecordDecl(), ResArrayTy, ValueSlot, Range, Zero,
+      ArrayDecl->getName(), Binding, {Zero}, RHSExpr->getExprLoc());
+  return EndIndex.has_value();
 }

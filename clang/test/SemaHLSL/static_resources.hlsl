@@ -5,7 +5,7 @@
 // CHECK-NOT: private unnamed_addr constant [{{[0-9]+}} x i8] c"Static
 
 RWBuffer<float> One : register(u1, space5);
-RWBuffer<float> Array[4][2] : register(u10, space6);
+RWBuffer<float> Array[2] : register(u10, space6);
 
 // Check that the non-static resource One is initialized from binding on
 // startup (register 1, space 5).
@@ -51,20 +51,31 @@ void main() {
 // CHECK-NEXT: %[[TMP0:.*]] = alloca %"class.hlsl::RWBuffer"
 
   static RWBuffer<float> StaticLocal;
-// Check that StaticLocal is initialized to by default constructor to poison and not from binding
+// Check that StaticLocal is initialized by default constructor (handle set to poison)
+// and not from binding.
 // call void @hlsl::RWBuffer<float>::RWBuffer()(ptr {{.*}} @main()::StaticLocal)
 
-  StaticLocal = Array[2][0];
-// A[2][0] is accessed here, so it should be initialized from binding (register 10, space 6, index 4),
+  StaticLocal = Array[1];
+// A[2][0] is accessed here, so it should be initialized from binding (register 10, space 6, index 1),
 // and then assigned to StaticLocal using = operator.
 // CHECK: call void @hlsl::RWBuffer<float>::__createFromBinding(unsigned int, unsigned int, int, unsigned int, char const*)
-// CHECK-SAME: (ptr {{.*}} %[[TMP0]], i32 noundef 10, i32 noundef 6, i32 noundef 8, i32 noundef 4, ptr noundef [[ARRAY_STR]])
+// CHECK-SAME: (ptr {{.*}} %[[TMP0]], i32 noundef 10, i32 noundef 6, i32 noundef 2, i32 noundef 1, ptr noundef [[ARRAY_STR]])
 // CHECK-NEXT: call {{.*}} ptr @hlsl::RWBuffer<float>::operator=({{.*}})(ptr {{.*}} @main()::StaticLocal, ptr {{.*}} %[[TMP0]])
 
   StaticOne = One;
+// Operator = call to assign non-static One handle to static StaticOne.
 // CHECK-NEXT: call {{.*}} ptr @hlsl::RWBuffer<float>::operator=({{.*}})(ptr {{.*}} @StaticOne, ptr {{.*}} @One)
 
+  StaticArray = Array;
+// Check that each elements of StaticArray is initialized from binding (register 10, space 6, indices 0 and 1).
+// CHECK: call void @hlsl::RWBuffer<float>::__createFromBinding(unsigned int, unsigned int, int, unsigned int, char const*)
+// CHECK-SAME: (ptr {{.*}} sret(%"class.hlsl::RWBuffer") align 4 @StaticArray, i32 noundef 10, i32 noundef 6, i32 noundef 2, i32 noundef 0, ptr noundef [[ARRAY_STR]])
+// CHECK-NEXT: call void @hlsl::RWBuffer<float>::__createFromBinding(unsigned int, unsigned int, int, unsigned int, char const*)
+// CHECK-SAME: (ptr {{.*}} sret(%"class.hlsl::RWBuffer") align 4 getelementptr ([2 x %"class.hlsl::RWBuffer"], ptr @StaticArray, i32 0, i32 1),
+// CHECK-SAME: i32 noundef 10, i32 noundef 6, i32 noundef 2, i32 noundef 1, ptr noundef [[ARRAY_STR]]
+
   StaticArray[1] = One;
+// Operator = call to assign non-static One handle to StaticArray element.
 // CHECK-NEXT: call {{.*}} ptr @hlsl::RWBuffer<float>::operator=(hlsl::RWBuffer<float> const&)
 // CHECK-SAME: (ptr {{.*}} getelementptr inbounds ([2 x %"class.hlsl::RWBuffer"], ptr @StaticArray, i32 0, i32 1), ptr {{.*}} @One)
 
