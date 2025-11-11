@@ -1721,7 +1721,6 @@ LogicalResult ScaledExtPacked816OpLowering::matchAndRewrite(
   } else {
     llvm_unreachable("invalid element type for scaled ext");
   }
-  // Ok, so we need to construct ops depending on the sourceType and targetType.
   // smallT = [Fp4, Fp8, Bf8]
   //           Bf8 = E5M2
   //           Fp8 = E4M3
@@ -1760,11 +1759,10 @@ LogicalResult ScaledExtPacked816OpLowering::matchAndRewrite(
         op, op.getResult().getType(), castedSource, castedScale, scaleSel);
   }
   // smallT = [Fp6, Bf6]
+  //           Fp6 = Float6E2M3FN
+  //           Bf6 = Float6E3M2FN
   // largeT = [F16, Bf16, F32]
   //
-  // Fp6 = Float6E2M3FN
-  // Bf6 = Float6E3M2FN
-
   // CvtPkScalePk16${largeT}${smallT}
   else if (isa<Float6E2M3FNType>(srcElemType) and destElemType.isF16()) {
     rewriter.replaceOpWithNewOp<ROCDL::CvtPkScalePk16F16Fp6Op>(
