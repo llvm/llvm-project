@@ -1194,8 +1194,6 @@ def _alloca : RuntimeLibcallImpl<STACK_PROBE>;
 
 def __chkstk : RuntimeLibcallImpl<STACK_PROBE>;
 def ___chkstk_ms : RuntimeLibcallImpl<STACK_PROBE>;
-
-def __chkstk_ms : RuntimeLibcallImpl<STACK_PROBE>;
 def __chkstk_arm64ec : RuntimeLibcallImpl<STACK_PROBE, "#__chkstk_arm64ec">;
 
 def __security_check_cookie : RuntimeLibcallImpl<SECURITY_CHECK_COOKIE>;
