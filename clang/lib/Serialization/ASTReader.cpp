@@ -5128,7 +5128,7 @@ ASTReader::ReadASTCore(StringRef FileName,
         << ErrorStr;
     return Failure;
 
-  case ModuleManager::OutOfDate:
+  case ModuleManager::ImporteeOutOfDate:
     // We couldn't load the module file because it is out-of-date. If the
     // client can handle out-of-date, return it.
     if (ClientLoadCapabilities & ARR_OutOfDate)
@@ -5138,6 +5138,20 @@ ASTReader::ReadASTCore(StringRef FileName,
     Diag(diag::err_ast_file_out_of_date)
         << moduleKindForDiagnostic(Type) << FileName << !ErrorStr.empty()
         << ErrorStr;
+    return Failure;
+
+  case ModuleManager::ImporterOutOfDate:
+    // We couldn't load the module file because it is out-of-date. If the
+    // client can handle out-of-date, return it.
+    if (ClientLoadCapabilities & ARR_OutOfDate)
+      return OutOfDate;
+
+    // Otherwise, report that the importer is out of date because the dependency
+    // changed.
+    if (ImportedBy)
+      Diag(diag::err_ast_file_dependency_out_of_date)
+          << moduleKindForDiagnostic(ImportedBy->Kind) << ImportedBy->FileName
+          << FileName << !ErrorStr.empty() << StringRef(ErrorStr);
     return Failure;
   }
 

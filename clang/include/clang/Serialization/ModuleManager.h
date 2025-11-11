@@ -198,8 +198,11 @@ public:
     /// The module file is missing.
     Missing,
 
-    /// The module file is out-of-date.
-    OutOfDate
+    /// The importee module file is out-of-date.
+    ImporteeOutOfDate,
+
+    /// The importer file is out-of-date
+    ImporterOutOfDate
   };
 
   using ASTFileSignatureReader = ASTFileSignature (*)(StringRef);

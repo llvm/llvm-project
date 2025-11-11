@@ -125,7 +125,7 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
     ErrorStr = IgnoreModTime ? "module file has a different size than expected"
                              : "module file has a different size or "
                                "modification time than expected";
-    return OutOfDate;
+    return ImporterOutOfDate;
   }
 
   if (!Entry) {
@@ -159,7 +159,7 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
     if (implicitModuleNamesMatch(Type, ModuleEntry, *Entry)) {
       // Check the stored signature.
       if (checkSignature(ModuleEntry->Signature, ExpectedSignature, ErrorStr))
-        return OutOfDate;
+        return ImporterOutOfDate;
 
       Module = ModuleEntry;
       updateModuleImports(*ModuleEntry, ImportedBy, ImportLoc);
@@ -198,7 +198,7 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
     // Report that the module is out of date, since we tried (and failed) to
     // import it earlier.
     Entry->closeFile();
-    return OutOfDate;
+    return ImporteeOutOfDate;
   } else {
     // Get a buffer of the file and close the file descriptor when done.
     // The file is volatile because in a parallel build we expect multiple
@@ -226,7 +226,7 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
   // ReadSignature unless there's something to check though.
   if (ExpectedSignature && checkSignature(ReadSignature(NewModule->Data),
                                           ExpectedSignature, ErrorStr))
-    return OutOfDate;
+    return ImporterOutOfDate;
 
   // We're keeping this module.  Store it everywhere.
   Module = Modules[*Entry] = NewModule.get();
