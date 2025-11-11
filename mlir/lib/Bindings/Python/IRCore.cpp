@@ -204,8 +204,8 @@ namespace {
 
 class PyRegionIterator {
 public:
-  PyRegionIterator(PyOperationRef operation)
-      : operation(std::move(operation)) {}
+  PyRegionIterator(PyOperationRef operation, int nextIndex)
+      : operation(std::move(operation)), nextIndex(nextIndex) {}
 
   PyRegionIterator &dunderIter() { return *this; }
 
@@ -228,7 +228,7 @@ public:
 
 private:
   PyOperationRef operation;
-  int nextIndex = 0;
+  intptr_t nextIndex = 0;
 };
 
 /// Regions of an op are fixed length and indexed numerically so are represented
@@ -247,7 +247,7 @@ public:
 
   PyRegionIterator dunderIter() {
     operation->checkValid();
-    return PyRegionIterator(operation);
+    return PyRegionIterator(operation, startIndex);
   }
 
   static void bindDerived(ClassTy &c) {
