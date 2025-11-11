@@ -925,25 +925,47 @@ void SampleProfileWriterBinary::writeLBRProfile(const FunctionSamples &S) {
   }
 }
 
-void SampleProfileWriterBinary::writeTypifiedProfile(const FunctionSamples &S) {
-  // Currently only LBR profile is supported as typified profile.
+std::pair<uint64_t, uint64_t>
+SampleProfileWriterBinary::startProfileType(ProfTypes Type) {
   auto &OS = *OutputStream;
-  // write the number of profile types for function
-  encodeULEB128(1, OS);
-  // Start first profile writing: write profile type
-  encodeULEB128(ProfTypeLBR, OS);
-  // create placeholder for profile size
+  encodeULEB128(Type, OS);
+  // Create placeholder for profile size.
   uint64_t SizeOffset = OS.tell();
   support::endian::Writer PlaceWriter(OS, llvm::endianness::little);
   PlaceWriter.write(static_cast<uint64_t>(-1));
-  // write the profile itself
-  uint64_t BodyStart = OS.tell();
-  writeLBRProfile(S);
-  uint64_t BodySize = OS.tell() - BodyStart;
-  // write profile size
+  uint64_t BodyOffset = OS.tell();
+  return {SizeOffset, BodyOffset};
+}
+
+void SampleProfileWriterBinary::finishProfileType(uint64_t SizeOffset,
+                                                  uint64_t BodyOffset) {
+  auto &OS = *OutputStream;
+  uint64_t BodySize = OS.tell() - BodyOffset;
+  // Write profile size.
   support::endian::SeekableWriter PWriter(static_cast<raw_pwrite_stream &>(OS),
                                           llvm::endianness::little);
   PWriter.pwrite(BodySize, SizeOffset);
+}
+
+void SampleProfileWriterBinary::writeTypifiedLBRProfile(
+    const FunctionSamples &S) {
+  auto [SizeOffset, BodyOffset] = startProfileType(ProfTypeLBR);
+  writeLBRProfile(S);
+  finishProfileType(SizeOffset, BodyOffset);
+}
+
+void SampleProfileWriterBinary::writeTypifiedProfile(const FunctionSamples &S) {
+  auto &OS = *OutputStream;
+  bool WriteLBRProf = !S.getBodySamples().empty();
+  // Other profile types should be added here.
+  uint32_t TypesNum = WriteLBRProf;
+  assert(TypesNum && "Empty function samples");
+
+  // Write the number of profile types for function.
+  encodeULEB128(TypesNum, OS);
+
+  if (WriteLBRProf)
+    writeTypifiedLBRProfile(S);
 }
 
 std::error_code SampleProfileWriterBinary::writeBody(const FunctionSamples &S) {

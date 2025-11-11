@@ -766,7 +766,7 @@ SampleProfileReaderBinary::readLBRProfile(FunctionSamples &FProfile) {
 
 std::error_code
 SampleProfileReaderBinary::readTypifiedProfile(FunctionSamples &FProfile) {
-  // read the number of profile types
+  // Read the number of profile types.
   auto ProfNum = readNumber<uint64_t>();
   if (std::error_code EC = ProfNum.getError())
     return EC;

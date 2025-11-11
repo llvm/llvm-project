@@ -216,8 +216,12 @@ protected:
   std::error_code writeNameIdx(FunctionId FName);
   std::error_code writeBody(const FunctionSamples &S);
   void writeLBRProfile(const FunctionSamples &S);
-  /// Writes typified profile for function
+
+  /// Interfaces for typified profile writing.
   void writeTypifiedProfile(const FunctionSamples &S);
+  std::pair<uint64_t, uint64_t> startProfileType(ProfTypes Type);
+  void finishProfileType(uint64_t SizeOffset, uint64_t BodyOffset);
+  void writeTypifiedLBRProfile(const FunctionSamples &S);
 
   inline void stablizeNameTable(MapVector<FunctionId, uint32_t> &NameTable,
                                 std::set<FunctionId> &V);
@@ -432,7 +436,7 @@ private:
 
   std::error_code writeSections(const SampleProfileMap &ProfileMap) override;
 
-  // Configure whether to use typified profile sections
+  // Configure whether to use typified profile sections.
   void configureTypifiedProfile(const SampleProfileMap &ProfileMap);
 
   std::error_code writeCustomSection(SecType Type) override {
