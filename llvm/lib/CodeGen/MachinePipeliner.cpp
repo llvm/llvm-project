@@ -491,9 +491,7 @@ bool hasPHICycle(const MachineBasicBlock *LoopHeader,
   SmallSet<unsigned, 8> PhiRegs;
 
   // Collect PHI nodes and their dependencies
-  for (const MachineInstr &MI : *LoopHeader) {
-    if (!MI.isPHI())
-      continue;
+  for (const MachineInstr &MI : LoopHeader->phis()) {
 
     unsigned DefReg = MI.getOperand(0).getReg();
     PhiRegs.insert(DefReg);
