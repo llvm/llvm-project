@@ -211,6 +211,28 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     assert(!cir::MissingFeatures::fastMathFlags());
     return emitUnaryMaybeConstrainedFPBuiltin<cir::CosOp>(*this, *e);
 
+  case Builtin::BIceil:
+  case Builtin::BIceilf:
+  case Builtin::BIceill:
+  case Builtin::BI__builtin_ceil:
+  case Builtin::BI__builtin_ceilf:
+  case Builtin::BI__builtin_ceilf16:
+  case Builtin::BI__builtin_ceill:
+  case Builtin::BI__builtin_ceilf128:
+    assert(!cir::MissingFeatures::fastMathFlags());
+    return emitUnaryMaybeConstrainedFPBuiltin<cir::CeilOp>(*this, *e);
+
+  case Builtin::BIexp:
+  case Builtin::BIexpf:
+  case Builtin::BIexpl:
+  case Builtin::BI__builtin_exp:
+  case Builtin::BI__builtin_expf:
+  case Builtin::BI__builtin_expf16:
+  case Builtin::BI__builtin_expl:
+  case Builtin::BI__builtin_expf128:
+    assert(!cir::MissingFeatures::fastMathFlags());
+    return emitUnaryMaybeConstrainedFPBuiltin<cir::ExpOp>(*this, *e);
+
   case Builtin::BIfabs:
   case Builtin::BIfabsf:
   case Builtin::BIfabsl:
@@ -449,11 +471,29 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   }
   case Builtin::BI__builtin_coro_free:
   case Builtin::BI__builtin_coro_size: {
-    cgm.errorNYI(e->getSourceRange(),
-                 "BI__builtin_coro_free, BI__builtin_coro_size NYI");
-    assert(!cir::MissingFeatures::coroSizeBuiltinCall());
-    return getUndefRValue(e->getType());
+    GlobalDecl gd{fd};
+    mlir::Type ty = cgm.getTypes().getFunctionType(
+        cgm.getTypes().arrangeGlobalDeclaration(gd));
+    const auto *nd = cast<NamedDecl>(gd.getDecl());
+    cir::FuncOp fnOp =
+        cgm.getOrCreateCIRFunction(nd->getName(), ty, gd, /*ForVTable=*/false);
+    fnOp.setBuiltin(true);
+    return emitCall(e->getCallee()->getType(), CIRGenCallee::forDirect(fnOp), e,
+                    returnValue);
   }
+  case Builtin::BI__builtin_dynamic_object_size:
+  case Builtin::BI__builtin_object_size: {
+    unsigned type =
+        e->getArg(1)->EvaluateKnownConstInt(getContext()).getZExtValue();
+    auto resType = mlir::cast<cir::IntType>(convertType(e->getType()));
+
+    // We pass this builtin onto the optimizer so that it can figure out the
+    // object size in more complex cases.
+    bool isDynamic = builtinID == Builtin::BI__builtin_dynamic_object_size;
+    return RValue::get(emitBuiltinObjectSize(e->getArg(0), type, resType,
+                                             /*EmittedE=*/nullptr, isDynamic));
+  }
+
   case Builtin::BI__builtin_prefetch: {
     auto evaluateOperandAsInt = [&](const Expr *arg) {
       Expr::EvalResult res;
@@ -635,4 +675,43 @@ mlir::Value CIRGenFunction::emitVAArg(VAArgExpr *ve) {
   mlir::Type type = convertType(ve->getType());
   mlir::Value vaList = emitVAListRef(ve->getSubExpr()).getPointer();
   return cir::VAArgOp::create(builder, loc, type, vaList);
+}
+
+mlir::Value CIRGenFunction::emitBuiltinObjectSize(const Expr *e, unsigned type,
+                                                  cir::IntType resType,
+                                                  mlir::Value emittedE,
+                                                  bool isDynamic) {
+  assert(!cir::MissingFeatures::opCallImplicitObjectSizeArgs());
+
+  // LLVM can't handle type=3 appropriately, and __builtin_object_size shouldn't
+  // evaluate e for side-effects. In either case, just like original LLVM
+  // lowering, we shouldn't lower to `cir.objsize` but to a constant instead.
+  if (type == 3 || (!emittedE && e->HasSideEffects(getContext())))
+    return builder.getConstInt(getLoc(e->getSourceRange()), resType,
+                               (type & 2) ? 0 : -1);
+
+  mlir::Value ptr = emittedE ? emittedE : emitScalarExpr(e);
+  assert(mlir::isa<cir::PointerType>(ptr.getType()) &&
+         "Non-pointer passed to __builtin_object_size?");
+
+  assert(!cir::MissingFeatures::countedBySize());
+
+  // Extract the min/max mode from type. CIR only supports type 0
+  // (max, whole object) and type 2 (min, whole object), not type 1 or 3
+  // (closest subobject variants).
+  const bool min = ((type & 2) != 0);
+  // For GCC compatibility, __builtin_object_size treats NULL as unknown size.
+  auto op =
+      cir::ObjSizeOp::create(builder, getLoc(e->getSourceRange()), resType, ptr,
+                             min, /*nullUnknown=*/true, isDynamic);
+  return op.getResult();
+}
+
+mlir::Value CIRGenFunction::evaluateOrEmitBuiltinObjectSize(
+    const Expr *e, unsigned type, cir::IntType resType, mlir::Value emittedE,
+    bool isDynamic) {
+  uint64_t objectSize;
+  if (!e->tryEvaluateObjectSize(objectSize, getContext(), type))
+    return emitBuiltinObjectSize(e, type, resType, emittedE, isDynamic);
+  return builder.getConstInt(getLoc(e->getSourceRange()), resType, objectSize);
 }

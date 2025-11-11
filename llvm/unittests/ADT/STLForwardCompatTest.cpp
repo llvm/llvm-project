@@ -11,7 +11,6 @@
 #include "gtest/gtest.h"
 
 #include <optional>
-#include <tuple>
 #include <type_traits>
 #include <utility>
 
@@ -185,7 +184,7 @@ TEST(TransformTest, ToUnderlying) {
 }
 
 TEST(STLForwardCompatTest, IdentityCxx20) {
-  llvm::identity_cxx20 identity;
+  llvm::identity identity;
 
   // Test with an lvalue.
   int X = 42;

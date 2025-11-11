@@ -1242,7 +1242,7 @@ public:
     return std::nullopt;
   }
 
-  virtual ~InlineCostCallAnalyzer() = default;
+  ~InlineCostCallAnalyzer() override = default;
   int getThreshold() const { return Threshold; }
   int getCost() const { return Cost; }
   int getStaticBonusApplied() const { return StaticBonusApplied; }

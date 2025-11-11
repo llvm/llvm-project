@@ -290,6 +290,7 @@ protected:
   bool Has45BitNumRecordsBufferResource = false;
 
   bool HasClusters = false;
+  bool RequiresWaitsBeforeSystemScopeStores = false;
 
   // Dummy feature to use for assembler in tablegen.
   bool FeatureDisable = false;
@@ -1038,6 +1039,8 @@ public:
   bool enableMachineScheduler() const override {
     return true;
   }
+
+  bool enableTerminalRule() const override { return true; }
 
   bool useAA() const override;
 
@@ -1860,6 +1863,10 @@ public:
   /// num_records.
   bool has45BitNumRecordsBufferResource() const {
     return Has45BitNumRecordsBufferResource;
+  }
+
+  bool requiresWaitsBeforeSystemScopeStores() const {
+    return RequiresWaitsBeforeSystemScopeStores;
   }
 };
 

@@ -285,7 +285,8 @@ define void @predicated_udiv(ptr noalias nocapture %a, i64 %v, i64 %n) {
 ; CHECK-NEXT:    [[TMP16:%.*]] = select <vscale x 2 x i1> [[TMP15]], <vscale x 2 x i1> [[TMP6]], <vscale x 2 x i1> zeroinitializer
 ; CHECK-NEXT:    [[TMP10:%.*]] = select <vscale x 2 x i1> [[TMP16]], <vscale x 2 x i64> [[BROADCAST_SPLAT]], <vscale x 2 x i64> splat (i64 1)
 ; CHECK-NEXT:    [[TMP11:%.*]] = udiv <vscale x 2 x i64> [[WIDE_LOAD]], [[TMP10]]
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select <vscale x 2 x i1> [[TMP6]], <vscale x 2 x i64> [[TMP11]], <vscale x 2 x i64> [[WIDE_LOAD]]
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <vscale x 2 x i1> [[TMP6]], i32 0
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select i1 [[TMP9]], <vscale x 2 x i64> [[TMP11]], <vscale x 2 x i64> [[WIDE_LOAD]]
 ; CHECK-NEXT:    call void @llvm.vp.store.nxv2i64.p0(<vscale x 2 x i64> [[PREDPHI]], ptr align 8 [[TMP8]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP12]])
 ; CHECK-NEXT:    [[TMP13:%.*]] = zext i32 [[TMP12]] to i64
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP13]], [[INDEX]]
@@ -304,14 +305,16 @@ define void @predicated_udiv(ptr noalias nocapture %a, i64 %v, i64 %n) {
 ; FIXED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[V:%.*]], i64 0
 ; FIXED-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
 ; FIXED-NEXT:    [[TMP0:%.*]] = icmp ne <4 x i64> [[BROADCAST_SPLAT]], zeroinitializer
-; FIXED-NEXT:    [[TMP5:%.*]] = select <4 x i1> [[TMP0]], <4 x i64> [[BROADCAST_SPLAT]], <4 x i64> splat (i64 1)
+; FIXED-NEXT:    [[TMP1:%.*]] = extractelement <4 x i1> [[TMP0]], i32 0
+; FIXED-NEXT:    [[TMP5:%.*]] = select i1 [[TMP1]], <4 x i64> [[BROADCAST_SPLAT]], <4 x i64> splat (i64 1)
 ; FIXED-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; FIXED:       vector.body:
 ; FIXED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; FIXED-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[INDEX]]
 ; FIXED-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i64>, ptr [[TMP2]], align 8
 ; FIXED-NEXT:    [[TMP8:%.*]] = udiv <4 x i64> [[WIDE_LOAD1]], [[TMP5]]
-; FIXED-NEXT:    [[PREDPHI2:%.*]] = select <4 x i1> [[TMP0]], <4 x i64> [[TMP8]], <4 x i64> [[WIDE_LOAD1]]
+; FIXED-NEXT:    [[TMP6:%.*]] = extractelement <4 x i1> [[TMP0]], i32 0
+; FIXED-NEXT:    [[PREDPHI2:%.*]] = select i1 [[TMP6]], <4 x i64> [[TMP8]], <4 x i64> [[WIDE_LOAD1]]
 ; FIXED-NEXT:    store <4 x i64> [[PREDPHI2]], ptr [[TMP2]], align 8
 ; FIXED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; FIXED-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
@@ -366,7 +369,8 @@ define void @predicated_sdiv(ptr noalias nocapture %a, i64 %v, i64 %n) {
 ; CHECK-NEXT:    [[TMP16:%.*]] = select <vscale x 2 x i1> [[TMP15]], <vscale x 2 x i1> [[TMP6]], <vscale x 2 x i1> zeroinitializer
 ; CHECK-NEXT:    [[TMP10:%.*]] = select <vscale x 2 x i1> [[TMP16]], <vscale x 2 x i64> [[BROADCAST_SPLAT]], <vscale x 2 x i64> splat (i64 1)
 ; CHECK-NEXT:    [[TMP11:%.*]] = sdiv <vscale x 2 x i64> [[WIDE_LOAD]], [[TMP10]]
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select <vscale x 2 x i1> [[TMP6]], <vscale x 2 x i64> [[TMP11]], <vscale x 2 x i64> [[WIDE_LOAD]]
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <vscale x 2 x i1> [[TMP6]], i32 0
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select i1 [[TMP9]], <vscale x 2 x i64> [[TMP11]], <vscale x 2 x i64> [[WIDE_LOAD]]
 ; CHECK-NEXT:    call void @llvm.vp.store.nxv2i64.p0(<vscale x 2 x i64> [[PREDPHI]], ptr align 8 [[TMP8]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP12]])
 ; CHECK-NEXT:    [[TMP13:%.*]] = zext i32 [[TMP12]] to i64
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP13]], [[INDEX]]
@@ -385,14 +389,16 @@ define void @predicated_sdiv(ptr noalias nocapture %a, i64 %v, i64 %n) {
 ; FIXED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[V:%.*]], i64 0
 ; FIXED-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
 ; FIXED-NEXT:    [[TMP0:%.*]] = icmp ne <4 x i64> [[BROADCAST_SPLAT]], zeroinitializer
-; FIXED-NEXT:    [[TMP5:%.*]] = select <4 x i1> [[TMP0]], <4 x i64> [[BROADCAST_SPLAT]], <4 x i64> splat (i64 1)
+; FIXED-NEXT:    [[TMP1:%.*]] = extractelement <4 x i1> [[TMP0]], i32 0
+; FIXED-NEXT:    [[TMP5:%.*]] = select i1 [[TMP1]], <4 x i64> [[BROADCAST_SPLAT]], <4 x i64> splat (i64 1)
 ; FIXED-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; FIXED:       vector.body:
 ; FIXED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; FIXED-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[INDEX]]
 ; FIXED-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i64>, ptr [[TMP2]], align 8
 ; FIXED-NEXT:    [[TMP8:%.*]] = sdiv <4 x i64> [[WIDE_LOAD1]], [[TMP5]]
-; FIXED-NEXT:    [[PREDPHI2:%.*]] = select <4 x i1> [[TMP0]], <4 x i64> [[TMP8]], <4 x i64> [[WIDE_LOAD1]]
+; FIXED-NEXT:    [[TMP6:%.*]] = extractelement <4 x i1> [[TMP0]], i32 0
+; FIXED-NEXT:    [[PREDPHI2:%.*]] = select i1 [[TMP6]], <4 x i64> [[TMP8]], <4 x i64> [[WIDE_LOAD1]]
 ; FIXED-NEXT:    store <4 x i64> [[PREDPHI2]], ptr [[TMP2]], align 8
 ; FIXED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; FIXED-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
@@ -650,40 +656,39 @@ define i32 @udiv_sdiv_with_invariant_divisors(i8 %x, i16 %y, i1 %c) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 8 x i1> poison, i1 [[C:%.*]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 8 x i1> [[BROADCAST_SPLATINSERT]], <vscale x 8 x i1> poison, <vscale x 8 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP0:%.*]] = xor <vscale x 8 x i1> [[BROADCAST_SPLAT]], splat (i1 true)
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 8 x i8> poison, i8 [[X:%.*]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <vscale x 8 x i8> [[BROADCAST_SPLATINSERT1]], <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <vscale x 8 x i16> poison, i16 [[Y:%.*]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <vscale x 8 x i16> [[BROADCAST_SPLATINSERT3]], <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i8> @llvm.stepvector.nxv8i8()
-; CHECK-NEXT:    [[TMP2:%.*]] = mul <vscale x 8 x i8> [[TMP1]], splat (i8 1)
-; CHECK-NEXT:    [[INDUCTION:%.*]] = add <vscale x 8 x i8> splat (i8 -12), [[TMP2]]
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vscale.i32()
+; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i32 [[TMP2]], 2
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 12, [[TMP3]]
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 12, [[N_MOD_VF]]
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i16> poison, i16 [[Y:%.*]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x i16> [[BROADCAST_SPLATINSERT]], <vscale x 2 x i16> poison, <vscale x 2 x i32> zeroinitializer
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 2 x i8> poison, i8 [[X:%.*]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <vscale x 2 x i8> [[BROADCAST_SPLATINSERT1]], <vscale x 2 x i8> poison, <vscale x 2 x i32> zeroinitializer
+; CHECK-NEXT:    [[DOTCAST:%.*]] = trunc i32 [[N_VEC]] to i16
+; CHECK-NEXT:    [[TMP4:%.*]] = add i16 -12, [[DOTCAST]]
+; CHECK-NEXT:    [[DOTCAST5:%.*]] = trunc i32 [[N_VEC]] to i8
+; CHECK-NEXT:    [[TMP5:%.*]] = add i8 -12, [[DOTCAST5]]
+; CHECK-NEXT:    [[TMP6:%.*]] = select i1 [[C:%.*]], <vscale x 2 x i8> splat (i8 1), <vscale x 2 x i8> [[BROADCAST_SPLAT2]]
+; CHECK-NEXT:    [[TMP7:%.*]] = select i1 [[C]], <vscale x 2 x i16> splat (i16 1), <vscale x 2 x i16> [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[TMP8:%.*]] = call <vscale x 2 x i8> @llvm.stepvector.nxv2i8()
+; CHECK-NEXT:    [[TMP9:%.*]] = mul <vscale x 2 x i8> [[TMP8]], splat (i8 1)
+; CHECK-NEXT:    [[INDUCTION:%.*]] = add <vscale x 2 x i8> splat (i8 -12), [[TMP9]]
+; CHECK-NEXT:    [[TMP10:%.*]] = trunc i32 [[TMP3]] to i8
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT6:%.*]] = insertelement <vscale x 2 x i8> poison, i8 [[TMP10]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT7:%.*]] = shufflevector <vscale x 2 x i8> [[BROADCAST_SPLATINSERT6]], <vscale x 2 x i8> poison, <vscale x 2 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
-; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 8 x i8> [ [[INDUCTION]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[AVL:%.*]] = phi i32 [ 12, [[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.experimental.get.vector.length.i32(i32 [[AVL]], i32 8, i1 true)
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT7:%.*]] = insertelement <vscale x 8 x i32> poison, i32 [[TMP3]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT8:%.*]] = shufflevector <vscale x 8 x i32> [[BROADCAST_SPLATINSERT7]], <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP4:%.*]] = trunc i32 [[TMP3]] to i8
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT5:%.*]] = insertelement <vscale x 8 x i8> poison, i8 [[TMP4]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT6:%.*]] = shufflevector <vscale x 8 x i8> [[BROADCAST_SPLATINSERT5]], <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP5:%.*]] = call <vscale x 8 x i32> @llvm.stepvector.nxv8i32()
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp ult <vscale x 8 x i32> [[TMP5]], [[BROADCAST_SPLAT8]]
-; CHECK-NEXT:    [[TMP7:%.*]] = select <vscale x 8 x i1> [[TMP6]], <vscale x 8 x i1> [[TMP0]], <vscale x 8 x i1> zeroinitializer
-; CHECK-NEXT:    [[TMP8:%.*]] = select <vscale x 8 x i1> [[TMP7]], <vscale x 8 x i8> [[BROADCAST_SPLAT2]], <vscale x 8 x i8> splat (i8 1)
-; CHECK-NEXT:    [[TMP9:%.*]] = udiv <vscale x 8 x i8> [[VEC_IND]], [[TMP8]]
-; CHECK-NEXT:    [[TMP10:%.*]] = zext <vscale x 8 x i8> [[TMP9]] to <vscale x 8 x i16>
-; CHECK-NEXT:    [[TMP11:%.*]] = select <vscale x 8 x i1> [[TMP7]], <vscale x 8 x i16> [[BROADCAST_SPLAT4]], <vscale x 8 x i16> splat (i16 1)
-; CHECK-NEXT:    [[TMP12:%.*]] = sdiv <vscale x 8 x i16> [[TMP10]], [[TMP11]]
-; CHECK-NEXT:    [[TMP13:%.*]] = sext <vscale x 8 x i16> [[TMP12]] to <vscale x 8 x i32>
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select <vscale x 8 x i1> [[BROADCAST_SPLAT]], <vscale x 8 x i32> zeroinitializer, <vscale x 8 x i32> [[TMP13]]
-; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i32 [[AVL]], [[TMP3]]
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 8 x i8> [[VEC_IND]], [[BROADCAST_SPLAT6]]
-; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i32 [[AVL_NEXT]], 0
-; CHECK-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 2 x i8> [ [[INDUCTION]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP11:%.*]] = udiv <vscale x 2 x i8> [[VEC_IND]], [[TMP6]]
+; CHECK-NEXT:    [[TMP12:%.*]] = zext <vscale x 2 x i8> [[TMP11]] to <vscale x 2 x i16>
+; CHECK-NEXT:    [[TMP13:%.*]] = sdiv <vscale x 2 x i16> [[TMP12]], [[TMP7]]
+; CHECK-NEXT:    [[TMP14:%.*]] = sext <vscale x 2 x i16> [[TMP13]] to <vscale x 2 x i32>
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select i1 [[C]], <vscale x 2 x i32> zeroinitializer, <vscale x 2 x i32> [[TMP14]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], [[TMP3]]
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 2 x i8> [[VEC_IND]], [[BROADCAST_SPLAT7]]
+; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP15]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[TMP15:%.*]] = xor <vscale x 8 x i1> [[TMP6]], splat (i1 true)
 ; CHECK-NEXT:    [[TMP16:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.nxv8i1(<vscale x 8 x i1> [[TMP15]], i1 true)
@@ -704,10 +709,8 @@ define i32 @udiv_sdiv_with_invariant_divisors(i8 %x, i16 %y, i1 %c) {
 ; FIXED-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i16> [[BROADCAST_SPLATINSERT]], <4 x i16> poison, <4 x i32> zeroinitializer
 ; FIXED-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <4 x i8> poison, i8 [[X:%.*]], i64 0
 ; FIXED-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <4 x i8> [[BROADCAST_SPLATINSERT1]], <4 x i8> poison, <4 x i32> zeroinitializer
-; FIXED-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <4 x i1> poison, i1 [[C:%.*]], i64 0
-; FIXED-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <4 x i1> [[BROADCAST_SPLATINSERT3]], <4 x i1> poison, <4 x i32> zeroinitializer
-; FIXED-NEXT:    [[TMP0:%.*]] = select <4 x i1> [[BROADCAST_SPLAT4]], <4 x i8> splat (i8 1), <4 x i8> [[BROADCAST_SPLAT2]]
-; FIXED-NEXT:    [[TMP1:%.*]] = select <4 x i1> [[BROADCAST_SPLAT4]], <4 x i16> splat (i16 1), <4 x i16> [[BROADCAST_SPLAT]]
+; FIXED-NEXT:    [[TMP0:%.*]] = select i1 [[C:%.*]], <4 x i8> splat (i8 1), <4 x i8> [[BROADCAST_SPLAT2]]
+; FIXED-NEXT:    [[TMP1:%.*]] = select i1 [[C]], <4 x i16> splat (i16 1), <4 x i16> [[BROADCAST_SPLAT]]
 ; FIXED-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; FIXED:       vector.body:
 ; FIXED-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -716,7 +719,7 @@ define i32 @udiv_sdiv_with_invariant_divisors(i8 %x, i16 %y, i1 %c) {
 ; FIXED-NEXT:    [[TMP3:%.*]] = zext <4 x i8> [[TMP2]] to <4 x i16>
 ; FIXED-NEXT:    [[TMP4:%.*]] = sdiv <4 x i16> [[TMP3]], [[TMP1]]
 ; FIXED-NEXT:    [[TMP5:%.*]] = sext <4 x i16> [[TMP4]] to <4 x i32>
-; FIXED-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[BROADCAST_SPLAT4]], <4 x i32> zeroinitializer, <4 x i32> [[TMP5]]
+; FIXED-NEXT:    [[PREDPHI:%.*]] = select i1 [[C]], <4 x i32> zeroinitializer, <4 x i32> [[TMP5]]
 ; FIXED-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; FIXED-NEXT:    [[VEC_IND_NEXT]] = add <4 x i8> [[VEC_IND]], splat (i8 4)
 ; FIXED-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[INDEX_NEXT]], 12

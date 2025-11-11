@@ -295,7 +295,6 @@ cl::bits<GadgetScannerKind> GadgetScannersToRun(
 } // namespace opts
 
 // FIXME: implement a better way to mark sections for replacement.
-constexpr const char *RewriteInstance::SectionsToOverwrite[];
 std::vector<std::string> RewriteInstance::DebugSectionsToOverwrite = {
     ".debug_abbrev", ".debug_aranges",  ".debug_line",   ".debug_line_str",
     ".debug_loc",    ".debug_loclists", ".debug_ranges", ".debug_rnglists",
@@ -2949,16 +2948,16 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
           ReferencedSymbol =
               ReferencedBF->addEntryPointAtOffset(RefFunctionOffset);
         } else {
-          ReferencedSymbol =
-              ReferencedBF->getOrCreateLocalLabel(Address,
-                                                  /*CreatePastEnd =*/true);
+          ReferencedSymbol = ReferencedBF->getOrCreateLocalLabel(Address);
 
           // If ContainingBF != nullptr, it equals ReferencedBF (see
           // if-condition above) so we're handling a relocation from a function
           // to itself. RISC-V uses such relocations for branches, for example.
           // These should not be registered as externally references offsets.
-          if (!ContainingBF)
-            ReferencedBF->registerReferencedOffset(RefFunctionOffset);
+          if (!ContainingBF && !ReferencedBF->isInConstantIsland(Address)) {
+            ReferencedBF->registerInternalRefDataRelocation(RefFunctionOffset,
+                                                            Rel.getOffset());
+          }
         }
         if (opts::Verbosity > 1 &&
             BinarySection(*BC, RelocatedSection).isWritable())
@@ -3346,6 +3345,8 @@ void RewriteInstance::initializeMetadataManager() {
   MetadataManager.registerRewriter(createBuildIDRewriter(*BC));
 
   MetadataManager.registerRewriter(createPseudoProbeRewriter(*BC));
+
+  MetadataManager.registerRewriter(createRSeqRewriter(*BC));
 
   MetadataManager.registerRewriter(createSDTRewriter(*BC));
 

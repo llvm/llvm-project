@@ -1768,7 +1768,7 @@ private:
   // FIXME: We should be able to derive FailedSymsForQuery from each query once
   //        we fix how the detach operation works.
   struct EmitQueries {
-    JITDylib::AsynchronousSymbolQuerySet Updated;
+    JITDylib::AsynchronousSymbolQuerySet Completed;
     JITDylib::AsynchronousSymbolQuerySet Failed;
     DenseMap<AsynchronousSymbolQuery *, std::shared_ptr<SymbolDependenceMap>>
         FailedSymsForQuery;

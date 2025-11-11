@@ -74,6 +74,9 @@ public:
                           QualType thisTy) override;
   void registerGlobalDtor(const VarDecl *vd, cir::FuncOp dtor,
                           mlir::Value addr) override;
+  void emitVirtualObjectDelete(CIRGenFunction &cgf, const CXXDeleteExpr *de,
+                               Address ptr, QualType elementType,
+                               const CXXDestructorDecl *dtor) override;
 
   void emitRethrow(CIRGenFunction &cgf, bool isNoReturn) override;
   void emitThrow(CIRGenFunction &cgf, const CXXThrowExpr *e) override;
@@ -1843,13 +1846,13 @@ mlir::Value CIRGenItaniumCXXABI::getVirtualBaseClassOffset(
     const CXXRecordDecl *classDecl, const CXXRecordDecl *baseClassDecl) {
   CIRGenBuilderTy &builder = cgf.getBuilder();
   mlir::Value vtablePtr = cgf.getVTablePtr(loc, thisAddr, classDecl);
-  mlir::Value vtableBytePtr = builder.createBitcast(vtablePtr, cgm.UInt8PtrTy);
+  mlir::Value vtableBytePtr = builder.createBitcast(vtablePtr, cgm.uInt8PtrTy);
   CharUnits vbaseOffsetOffset =
       cgm.getItaniumVTableContext().getVirtualBaseOffsetOffset(classDecl,
                                                                baseClassDecl);
   mlir::Value offsetVal =
       builder.getSInt64(vbaseOffsetOffset.getQuantity(), loc);
-  auto vbaseOffsetPtr = cir::PtrStrideOp::create(builder, loc, cgm.UInt8PtrTy,
+  auto vbaseOffsetPtr = cir::PtrStrideOp::create(builder, loc, cgm.uInt8PtrTy,
                                                  vtableBytePtr, offsetVal);
 
   mlir::Value vbaseOffset;
@@ -1858,9 +1861,9 @@ mlir::Value CIRGenItaniumCXXABI::getVirtualBaseClassOffset(
     cgm.errorNYI(loc, "getVirtualBaseClassOffset: relative layout");
   } else {
     mlir::Value offsetPtr = builder.createBitcast(
-        vbaseOffsetPtr, builder.getPointerTo(cgm.PtrDiffTy));
+        vbaseOffsetPtr, builder.getPointerTo(cgm.ptrDiffTy));
     vbaseOffset = builder.createLoad(
-        loc, Address(offsetPtr, cgm.PtrDiffTy, cgf.getPointerAlign()));
+        loc, Address(offsetPtr, cgm.ptrDiffTy, cgf.getPointerAlign()));
   }
   return vbaseOffset;
 }
@@ -2175,6 +2178,21 @@ mlir::Value CIRGenItaniumCXXABI::emitDynamicCast(CIRGenFunction &cgf,
                                         isRefCast, castInfo);
 }
 
+/// The Itanium ABI always places an offset to the complete object
+/// at entry -2 in the vtable.
+void CIRGenItaniumCXXABI::emitVirtualObjectDelete(
+    CIRGenFunction &cgf, const CXXDeleteExpr *delExpr, Address ptr,
+    QualType elementType, const CXXDestructorDecl *dtor) {
+  bool useGlobalDelete = delExpr->isGlobalDelete();
+  if (useGlobalDelete) {
+    cgf.cgm.errorNYI(delExpr->getSourceRange(),
+                     "emitVirtualObjectDelete: global delete");
+  }
+
+  CXXDtorType dtorType = useGlobalDelete ? Dtor_Complete : Dtor_Deleting;
+  emitVirtualDestructorCall(cgf, dtor, dtorType, ptr, delExpr);
+}
+
 /************************** Array allocation cookies **************************/
 
 CharUnits CIRGenItaniumCXXABI::getArrayCookieSizeImpl(QualType elementType) {
@@ -2226,7 +2244,7 @@ Address CIRGenItaniumCXXABI::initializeArrayCookie(CIRGenFunction &cgf,
 
   // Write the number of elements into the appropriate slot.
   Address numElementsPtr =
-      cookiePtr.withElementType(cgf.getBuilder(), cgf.SizeTy);
+      cookiePtr.withElementType(cgf.getBuilder(), cgf.sizeTy);
   cgf.getBuilder().createStore(loc, numElements, numElementsPtr);
 
   // Finally, compute a pointer to the actual data buffer by skipping
