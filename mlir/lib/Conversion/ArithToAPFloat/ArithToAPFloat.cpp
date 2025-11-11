@@ -15,9 +15,6 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/Transforms/WalkPatternRewriteDriver.h"
-#include "llvm/Support/Debug.h"
-
-#define DEBUG_TYPE "arith-to-apfloat"
 
 namespace mlir {
 #define GEN_PASS_DEF_ARITHTOAPFLOATCONVERSIONPASS
@@ -59,7 +56,7 @@ lookupOrCreateBinaryFn(OpBuilder &b, SymbolOpInterface symTable, StringRef name,
   auto i32Type = IntegerType::get(symTable->getContext(), 32);
   auto i64Type = IntegerType::get(symTable->getContext(), 64);
 
-  std::string funcName = (llvm::Twine("__mlir_apfloat_") + name).str();
+  std::string funcName = (llvm::Twine("_mlir_apfloat_") + name).str();
   FunctionType funcT =
       FunctionType::get(b.getContext(), {i32Type, i64Type, i64Type}, {i64Type});
   FailureOr<FuncOp> func =
