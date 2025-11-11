@@ -12,7 +12,10 @@
 # RUN: sed -i '' -e 's/module bar/module qux/' %t/sources/module.modulemap
 #
 # RUN: %lldb -x -o "settings set interpreter.stop-command-source-on-error false" \
-# RUN:       -s %t/sources/commands.input %t.out -o exit 2>&1 | FileCheck %s
+# RUN:       -s %t/sources/commands.input %t.out -o exit 2>&1 | FileCheck %s --check-prefix=NO_LOG
+#
+# RUN: %lldb -x -o "settings set interpreter.stop-command-source-on-error false" \
+# RUN:       -s %t/sources/commands-with-log.input %t.out -o exit 2>&1 | FileCheck %s --check-prefix=LOG
 
 #--- main.m
 @import foo;
@@ -42,6 +45,14 @@ run
 ## Make sure expression fails so the 'note' diagnostics get printed.
 expr blah
 
-# CHECK: note: header search couldn't locate module 'foo'
-## FIXME: We never attempted to load bar.
-# CHECK-NOT: bar
+# NO_LOG-NOT: header search couldn't locate module 'foo'
+# NO_LOG-NOT: header search couldn't locate module 'bar'
+
+#--- commands-with-log.input
+log enable lldb expr
+run
+## Make sure expression fails so the 'note' diagnostics get printed.
+expr blah
+
+# LOG: header search couldn't locate module 'foo'
+# LOG: header search couldn't locate module 'bar'

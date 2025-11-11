@@ -9,10 +9,14 @@
 # RUN:             -fmodules-cache-path=%t/ModuleCache -o %t.out
 #
 # RUN: cp %t/sources/commands.input %t/commands.input
+# RUN: cp %t/sources/commands-with-log.input %t/commands-with-log.input
 # RUN: rm -r %t/sources
 #
 # RUN: %lldb -x -o "settings set interpreter.stop-command-source-on-error false" \
-# RUN:       -s %t/commands.input %t.out -o exit 2>&1 | FileCheck %s
+# RUN:       -s %t/commands.input %t.out -o exit 2>&1 | FileCheck %s --check-prefix=NO_LOG
+#
+# RUN: %lldb -x -o "settings set interpreter.stop-command-source-on-error false" \
+# RUN:       -s %t/commands-with-log.input %t.out -o exit 2>&1 | FileCheck %s --check-prefix=LOG
 
 #--- main.m
 @import foo;
@@ -42,6 +46,14 @@ run
 ## Make sure expression fails so the 'note' diagnostics get printed.
 expr blah
 
-# CHECK: note: couldn't find module search path directory {{.*}}sources
-## FIXME: We never attempted to load bar.
-# CHECK-NOT: couldn't find module search path
+# NO_LOG-NOT: couldn't find module search path directory {{.*}}sources
+# NO_LOG-NOT: couldn't find module search path directory {{.*}}sources
+
+#--- commands-with-log.input
+log enable lldb expr
+run
+## Make sure expression fails so the 'note' diagnostics get printed.
+expr blah
+
+# LOG: couldn't find module search path directory {{.*}}sources
+# LOG: couldn't find module search path directory {{.*}}sources

@@ -19,12 +19,10 @@ add_clang_library(clangDriver
   Compilation.cpp
   Distro.cpp
   Driver.cpp
-  DriverOptions.cpp
   Job.cpp
   Multilib.cpp
   MultilibBuilder.cpp
   OffloadBundler.cpp
-  OptionUtils.cpp
   Phases.cpp
   SanitizerArgs.cpp
   Tool.cpp
@@ -100,5 +98,6 @@ add_clang_library(clangDriver
   LINK_LIBS
   clangBasic
   clangLex
+  clangOptions
   ${system_libs}
   )

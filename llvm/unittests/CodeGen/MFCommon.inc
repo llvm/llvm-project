@@ -76,8 +76,10 @@ public:
 };
 
 class BogusTargetInstrInfo : public TargetInstrInfo {
+  BogusRegisterInfo RegInfo;
+
 public:
-  BogusTargetInstrInfo() : TargetInstrInfo() {}
+  BogusTargetInstrInfo() : TargetInstrInfo(RegInfo) {}
 };
 
 class BogusSubtarget : public TargetSubtargetInfo {
