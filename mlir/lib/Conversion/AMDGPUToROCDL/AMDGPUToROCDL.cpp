@@ -1713,6 +1713,8 @@ LogicalResult ScaledExtPacked816OpLowering::matchAndRewrite(
   // largeT = [F16, Bf16, F32]
   // CvtPkScalePk{8}${largeT}${smallT}
   if (isa<Float4E2M1FNType>(srcElemType) and isa<Float16Type>(tgtElemType)) {
+    // CvtPkScalePk8F16Fp4Op
+    // i32
     Value castedSource =
         LLVM::BitcastOp::create(rewriter, loc, i32, adaptor.getSource());
     auto newOp = ROCDL::CvtPkScalePk8F16Fp4Op::create(
@@ -1722,6 +1724,7 @@ LogicalResult ScaledExtPacked816OpLowering::matchAndRewrite(
     return success();
   }
   if (isa<Float8E4M3FNType>(srcElemType) and isa<Float16Type>(tgtElemType)) {
+    // CvtPkScalePk8F16Fp8Op
     // vector<8xf8E4M3FN>
     Value source = adaptor.getSource();
 
@@ -1736,6 +1739,7 @@ LogicalResult ScaledExtPacked816OpLowering::matchAndRewrite(
     return success();
   }
   if (isa<Float8E5M2Type>(srcElemType) and isa<Float16Type>(tgtElemType)) {
+    // CvtPkScalePk8F16Bf8Op
     // vector<8xf8E5M2>
     Value source = adaptor.getSource();
 
@@ -1749,11 +1753,19 @@ LogicalResult ScaledExtPacked816OpLowering::matchAndRewrite(
     rewriter.replaceOp(op, newOp);
     return success();
   }
+  if (isa<Float4E2M1FNType>(srcElemType) and isa<BFloat16Type>(tgtElemType)) {
+    // CvtPkScalePk8Bf16Fp4Op
+    // i32
+    Value castedSource =
+        LLVM::BitcastOp::create(rewriter, loc, i32, adaptor.getSource());
+    auto newOp = ROCDL::CvtPkScalePk8Bf16Fp4Op::create(
+        rewriter, loc, op.getResult().getType(), castedSource, castedScale,
+        scaleSel);
+    rewriter.replaceOp(op, newOp);
+    return success();
+  }
   /*
-  CvtPkScalePk8F16Fp8Op
-  CvtPkScalePk8F16Bf8Op
 
-  CvtPkScalePk8Bf16Fp4Op
   CvtPkScalePk8Bf16Fp8Op
   CvtPkScalePk8Bf16Bf8Op
 
