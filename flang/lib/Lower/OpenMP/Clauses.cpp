@@ -249,8 +249,10 @@ MAKE_EMPTY_CLASS(Groupprivate, Groupprivate);
 
 MAKE_INCOMPLETE_CLASS(AdjustArgs, AdjustArgs);
 MAKE_INCOMPLETE_CLASS(AppendArgs, AppendArgs);
+MAKE_INCOMPLETE_CLASS(Collector, Collector);
 MAKE_INCOMPLETE_CLASS(GraphId, GraphId);
 MAKE_INCOMPLETE_CLASS(GraphReset, GraphReset);
+MAKE_INCOMPLETE_CLASS(Inductor, Inductor);
 MAKE_INCOMPLETE_CLASS(Replayable, Replayable);
 MAKE_INCOMPLETE_CLASS(Transparent, Transparent);
 
@@ -394,8 +396,6 @@ makePrescriptiveness(parser::OmpPrescriptiveness::Value v) {
   switch (v) {
   case parser::OmpPrescriptiveness::Value::Strict:
     return clause::Prescriptiveness::Strict;
-  case parser::OmpPrescriptiveness::Value::Fallback:
-    return clause::Prescriptiveness::Fallback;
   }
   llvm_unreachable("Unexpected prescriptiveness");
 }
@@ -820,7 +820,7 @@ DynGroupprivate make(const parser::OmpClause::DynGroupprivate &inp,
   auto &size = std::get<parser::ScalarIntExpr>(inp.v.t);
 
   return DynGroupprivate{{/*AccessGroup=*/maybeApplyToV(makeAccessGroup, m0),
-                          /*Prescriptiveness=*/maybeApplyToV(makeFallback, m1),
+                          /*Fallback=*/maybeApplyToV(makeFallback, m1),
                           /*Size=*/makeExpr(size, semaCtx)}};
 }
 

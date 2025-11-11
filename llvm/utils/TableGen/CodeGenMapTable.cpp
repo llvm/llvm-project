@@ -84,9 +84,9 @@
 #include "llvm/TableGen/Record.h"
 
 using namespace llvm;
-typedef std::map<std::string, std::vector<const Record *>> InstrRelMapTy;
-typedef std::map<std::vector<const Init *>, std::vector<const Record *>>
-    RowInstrMapTy;
+using InstrRelMapTy = std::map<std::string, std::vector<const Record *>>;
+using RowInstrMapTy =
+    std::map<std::vector<const Init *>, std::vector<const Record *>>;
 
 namespace {
 

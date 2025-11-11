@@ -863,8 +863,7 @@ TYPE_PARSER(construct<OmpOrderingModifier>(
     "SIMD" >> pure(OmpOrderingModifier::Value::Simd)))
 
 TYPE_PARSER(construct<OmpPrescriptiveness>(
-    "STRICT" >> pure(OmpPrescriptiveness::Value::Strict) ||
-    "FALLBACK" >> pure(OmpPrescriptiveness::Value::Fallback)))
+    "STRICT" >> pure(OmpPrescriptiveness::Value::Strict)))
 
 TYPE_PARSER(construct<OmpPresentModifier>( //
     "PRESENT" >> pure(OmpPresentModifier::Value::Present)))

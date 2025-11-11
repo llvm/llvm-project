@@ -1684,13 +1684,15 @@ using Cosubscript = ScalarIntExpr;
 WRAPPER_CLASS(TeamValue, Scalar<common::Indirection<Expr>>);
 
 // R926 image-selector-spec ->
+//        NOTIFY = notify-variable |
 //        STAT = stat-variable | TEAM = team-value |
 //        TEAM_NUMBER = scalar-int-expr
 struct ImageSelectorSpec {
   WRAPPER_CLASS(Stat, Scalar<Integer<common::Indirection<Variable>>>);
   WRAPPER_CLASS(Team_Number, ScalarIntExpr);
+  WRAPPER_CLASS(Notify, Scalar<common::Indirection<Variable>>);
   UNION_CLASS_BOILERPLATE(ImageSelectorSpec);
-  std::variant<Stat, TeamValue, Team_Number> u;
+  std::variant<Notify, Stat, TeamValue, Team_Number> u;
 };
 
 // R924 image-selector ->
@@ -3358,6 +3360,7 @@ struct StmtFunctionStmt {
 // !DIR$ NOVECTOR
 // !DIR$ NOUNROLL
 // !DIR$ NOUNROLL_AND_JAM
+// !DIR$ PREFETCH designator[, designator]...
 // !DIR$ FORCEINLINE
 // !DIR$ INLINE
 // !DIR$ NOINLINE
@@ -3386,6 +3389,10 @@ struct CompilerDirective {
   struct UnrollAndJam {
     WRAPPER_CLASS_BOILERPLATE(UnrollAndJam, std::optional<std::uint64_t>);
   };
+  struct Prefetch {
+    WRAPPER_CLASS_BOILERPLATE(
+        Prefetch, std::list<common::Indirection<Designator>>);
+  };
   EMPTY_CLASS(NoVector);
   EMPTY_CLASS(NoUnroll);
   EMPTY_CLASS(NoUnrollAndJam);
@@ -3396,7 +3403,8 @@ struct CompilerDirective {
   CharBlock source;
   std::variant<std::list<IgnoreTKR>, LoopCount, std::list<AssumeAligned>,
       VectorAlways, std::list<NameValue>, Unroll, UnrollAndJam, Unrecognized,
-      NoVector, NoUnroll, NoUnrollAndJam, ForceInline, Inline, NoInline>
+      NoVector, NoUnroll, NoUnrollAndJam, ForceInline, Inline, NoInline,
+      Prefetch>
       u;
 };
 
@@ -4132,9 +4140,8 @@ struct OmpOrderModifier {
 //
 // prescriptiveness ->
 //    STRICT                                        // since 5.1
-//    FALLBACK                                      // since 6.1
 struct OmpPrescriptiveness {
-  ENUM_CLASS(Value, Strict, Fallback)
+  ENUM_CLASS(Value, Strict)
   WRAPPER_CLASS_BOILERPLATE(OmpPrescriptiveness, Value);
 };
 
