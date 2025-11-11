@@ -1344,7 +1344,8 @@ NamedDecl *Sema::lookupExternCName(IdentifierInfo *IdentId,
   return nullptr;
 }
 
-void Sema::ActOnPragmaExport(IdentifierInfo *IdentId, SourceLocation NameLoc, Scope *curScope) {
+void Sema::ActOnPragmaExport(IdentifierInfo *IdentId, SourceLocation NameLoc,
+                             Scope *curScope) {
   SymbolLabel Label;
   Label.NameLoc = NameLoc;
   Label.Used = false;
