@@ -16706,6 +16706,52 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
 
     return Success(APValue(RetMask), E);
   }
+  case X86::BI__builtin_ia32_vpshufbitqmb128_mask:
+  case X86::BI__builtin_ia32_vpshufbitqmb256_mask:
+  case X86::BI__builtin_ia32_vpshufbitqmb512_mask: {
+    assert(E->getNumArgs() == 3);
+
+    APValue Source, ShuffleMask;
+    APSInt ZeroMask;
+    if (!EvaluateVector(E->getArg(0), Source, Info) ||
+        !EvaluateVector(E->getArg(1), ShuffleMask, Info) ||
+        !EvaluateInteger(E->getArg(2), ZeroMask, Info))
+      return false;
+
+    assert(Source.getVectorLength() == ShuffleMask.getVectorLength());
+    assert(ZeroMask.getBitWidth() == Source.getVectorLength());
+
+    unsigned NumBytesInQWord = 8;
+    unsigned NumBitsInByte = 8;
+    unsigned NumBytes = Source.getVectorLength();
+    unsigned NumQWords = NumBytes / NumBytesInQWord;
+    unsigned RetWidth = ZeroMask.getBitWidth();
+    APSInt RetMask(llvm::APInt(RetWidth, 0), /*isUnsigned=*/true);
+
+    for (unsigned QWordId = 0; QWordId != NumQWords; ++QWordId) {
+
+      APInt SourceQWord(64, 0);
+      for (unsigned ByteInQWord = 0; ByteInQWord != NumBytesInQWord;
+           ++ByteInQWord) {
+        uint64_t Byte =
+            Source.getVectorElt(QWordId * NumBytesInQWord + ByteInQWord)
+                .getInt()
+                .getZExtValue();
+        SourceQWord |= (Byte & 0xFF) << (ByteInQWord * NumBitsInByte);
+      }
+
+      for (unsigned ByteInQWord = 0; ByteInQWord != NumBytesInQWord;
+           ++ByteInQWord) {
+        unsigned ByteIdx = QWordId * NumBytesInQWord + ByteInQWord;
+        unsigned M =
+            ShuffleMask.getVectorElt(ByteIdx).getInt().getZExtValue() & 0x3F;
+        if (ZeroMask[ByteIdx]) {
+          RetMask.setBitVal(ByteIdx, SourceQWord[M]);
+        }
+      }
+    }
+    return Success(APValue(RetMask), E);
+  }
   }
 }
 
