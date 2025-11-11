@@ -1213,7 +1213,7 @@ def testIndexSwitch():
             def index_switch(index):
                 c1 = arith.constant(i32, 1)
                 switch_op = scf.IndexSwitchOp(
-                    results_=[i32], arg=index, cases=range(3), num_caseRegions=3
+                    results_=[i32], arg=index, cases=range(3)
                 )
 
                 assert len(switch_op.regions) == 4
