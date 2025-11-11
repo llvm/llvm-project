@@ -123,7 +123,7 @@ def setGPULaunchThreadsOp():
         transform.OperationType.get("gpu.launch"),
     )
     with InsertionPoint(sequence.body):
-        xegpu.SetGPULaunchThreadsOp(sequence.bodyTarget, threads=[8, 4, 1])
+        xegpu.set_gpu_launch_threads(sequence.bodyTarget, threads=[8, 4, 1])
         transform.YieldOp()
     # CHECK-LABEL: TEST: setGPULaunchThreadsOp
     # CHECK: transform.xegpu.set_gpu_launch_threads

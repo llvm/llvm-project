@@ -158,3 +158,13 @@ class SetGPULaunchThreadsOp(SetGPULaunchThreadsOp):
             loc=loc,
             ip=ip,
         )
+
+
+def set_gpu_launch_threads(
+    launch_op: Union[Operation, Value],
+    threads: MixedValues,
+    *,
+    loc=None,
+    ip=None,
+):
+    return SetGPULaunchThreadsOp(launch_op, threads, loc=loc, ip=ip)
