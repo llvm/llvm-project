@@ -452,8 +452,11 @@ set(thumb1_base_SOURCES
   arm/udivsi3.S
   arm/comparesf2.S
   arm/addsf3.S
+  arm/fnan2.c
   ${GENERIC_SOURCES}
 )
+# arm/addsf3.S implements both addition and subtraction via cross-branching
+set_property(SOURCE arm/addsf3.S PROPERTY crt_supersedes subsf3.c)
 
 set(arm_EABI_RT_SOURCES
   arm/aeabi_cdcmp.S
