@@ -84,11 +84,11 @@ public:
   exception_ptr& operator=(const exception_ptr&) _NOEXCEPT;
   ~exception_ptr() _NOEXCEPT;
 #  else  // _LIBCPP_BUILDING_LIBRARY
-  _LIBCPP_HIDE_FROM_ABI exception_ptr(const exception_ptr&) _NOEXCEPT : __ptr_(__other.__ptr_) {
+  _LIBCPP_HIDE_FROM_ABI exception_ptr(const exception_ptr& __other) _NOEXCEPT : __ptr_(__other.__ptr_) {
     if (__ptr_)
       __increment_refcount(__ptr_);
   }
-  _LIBCPP_HIDE_FROM_ABI exception_ptr& operator=(const exception_ptr&) _NOEXCEPT {
+  _LIBCPP_HIDE_FROM_ABI exception_ptr& operator=(const exception_ptr& __other) _NOEXCEPT {
     if (__ptr_ == __other.__ptr_)
       return *this;
     if (__other.__ptr_)
