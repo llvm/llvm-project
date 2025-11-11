@@ -58,9 +58,8 @@ static cl::opt<unsigned int> MaxAccumulatorWidth(
 
 TargetInstrInfo::~TargetInstrInfo() = default;
 
-const TargetRegisterClass *
-TargetInstrInfo::getRegClass(const MCInstrDesc &MCID, unsigned OpNum,
-                             const TargetRegisterInfo * /*RemoveMe*/) const {
+const TargetRegisterClass *TargetInstrInfo::getRegClass(const MCInstrDesc &MCID,
+                                                        unsigned OpNum) const {
   if (OpNum >= MCID.getNumOperands())
     return nullptr;
 
@@ -448,10 +447,10 @@ bool TargetInstrInfo::getStackSlotRange(const TargetRegisterClass *RC,
   return true;
 }
 
-void TargetInstrInfo::reMaterialize(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator I, Register DestReg,
-    unsigned SubIdx, const MachineInstr &Orig,
-    const TargetRegisterInfo & /*Remove me*/) const {
+void TargetInstrInfo::reMaterialize(MachineBasicBlock &MBB,
+                                    MachineBasicBlock::iterator I,
+                                    Register DestReg, unsigned SubIdx,
+                                    const MachineInstr &Orig) const {
   MachineInstr *MI = MBB.getParent()->CloneMachineInstr(&Orig);
   MI->substituteRegister(MI->getOperand(0).getReg(), DestReg, SubIdx, TRI);
   MBB.insert(I, MI);
@@ -795,11 +794,11 @@ MachineInstr *TargetInstrInfo::foldMemoryOperand(MachineInstr &MI,
       // code.
       BuildMI(*MBB, Pos, MI.getDebugLoc(), get(TargetOpcode::KILL)).add(MO);
     } else {
-      storeRegToStackSlot(*MBB, Pos, MO.getReg(), MO.isKill(), FI, RC, &TRI,
+      storeRegToStackSlot(*MBB, Pos, MO.getReg(), MO.isKill(), FI, RC,
                           Register());
     }
   } else
-    loadRegFromStackSlot(*MBB, Pos, MO.getReg(), FI, RC, &TRI, Register());
+    loadRegFromStackSlot(*MBB, Pos, MO.getReg(), FI, RC, Register());
 
   return &*--Pos;
 }
