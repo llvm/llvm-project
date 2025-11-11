@@ -41,7 +41,7 @@ jobs:
         sudo systemctl restart docker
 
     - name: Build the base image
-      run: docker compose --file libcxx/utils/ci/docker/docker-compose.yml build libcxx-builder-base
+      run: docker compose --file libcxx/utils/ci/docker/docker-compose.yml build libcxx-linux-builder-base
       env:
         TAG: ${{ github.sha }}
 
@@ -51,7 +51,7 @@ jobs:
         TAG: ${{ github.sha }}
 
     - name: Build the Android builder image
-      run: docker compose --file libcxx/utils/ci/docker/docker-compose.yml build android-buildkite-builder
+      run: docker compose --file libcxx/utils/ci/docker/docker-compose.yml build libcxx-android-builder
       env:
         TAG: ${{ github.sha }}
 
@@ -64,4 +64,4 @@ jobs:
 
     - name: Push the images
       if: github.event_name == 'push'
-      run: docker compose push libcxx-builder-base libcxx-linux-builder android-buildkite-builder
+      run: docker compose push libcxx-linux-builder-base libcxx-linux-builder libcxx-android-builder
