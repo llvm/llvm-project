@@ -100,7 +100,6 @@ private:
   // The following objects can use the TargetTriple, so they must be
   // declared after it.
   HexagonInstrInfo InstrInfo;
-  HexagonRegisterInfo RegInfo;
   HexagonTargetLowering TLInfo;
   HexagonSelectionDAGInfo TSInfo;
   HexagonFrameLowering FrameLowering;
@@ -122,7 +121,7 @@ public:
   }
   const HexagonInstrInfo *getInstrInfo() const override { return &InstrInfo; }
   const HexagonRegisterInfo *getRegisterInfo() const override {
-    return &RegInfo;
+    return &InstrInfo.getRegisterInfo();
   }
   const HexagonTargetLowering *getTargetLowering() const override {
     return &TLInfo;
@@ -294,6 +293,8 @@ public:
 
   bool useBSBScheduling() const { return UseBSBScheduling; }
   bool enableMachineScheduler() const override;
+
+  bool enableTerminalRule() const override { return true; }
 
   // Always use the TargetLowering default scheduler.
   // FIXME: This will use the vliw scheduler which is probably just hurting

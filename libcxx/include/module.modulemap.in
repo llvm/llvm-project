@@ -6,6 +6,8 @@ module std_config [system] {
   textual header "__configuration/abi.h"
   textual header "__configuration/availability.h"
   textual header "__configuration/compiler.h"
+  textual header "__configuration/experimental.h"
+  textual header "__configuration/hardening.h"
   textual header "__configuration/language.h"
   textual header "__configuration/platform.h"
   textual header "version"
@@ -134,7 +136,6 @@ module std_core [system] {
     module tuple_like               { header "__tuple/tuple_like.h" }
     module tuple_like_no_subrange   { header "__tuple/tuple_like_no_subrange.h" }
     module tuple_size               { header "__tuple/tuple_size.h" }
-    module tuple_types              { header "__tuple/tuple_types.h" }
   }
 
   module type_traits {
@@ -345,10 +346,6 @@ module std_core [system] {
     }
     module is_referenceable {
       header "__type_traits/is_referenceable.h"
-      export std_core.type_traits.integral_constant
-    }
-    module is_replaceable {
-      header "__type_traits/is_replaceable.h"
       export std_core.type_traits.integral_constant
     }
     module is_same {
@@ -1051,6 +1048,10 @@ module std [system] {
     module high_resolution_clock {
       header "__chrono/high_resolution_clock.h"
       export *
+    }
+    module is_clock {
+      header "__chrono/is_clock.h"
+      export std_core.type_traits.integral_constant
     }
     module leap_second {
       header "__chrono/leap_second.h"
