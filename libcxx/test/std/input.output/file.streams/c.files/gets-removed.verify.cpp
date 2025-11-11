@@ -12,6 +12,6 @@
 
 #include <cstdio>
 
-void f() {
-  (void)std::gets((char*)NULL); // expected-error {{no member named 'gets' in namespace 'std'}}
+void f(char const* str) {
+  (void)std::gets(str); // expected-error {{no member named 'gets' in namespace 'std'}}
 }
