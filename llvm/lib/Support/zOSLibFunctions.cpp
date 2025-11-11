@@ -19,7 +19,7 @@
 #include <sys/wait.h>
 
 
-char *signalName[] = {
+const char *signalName[] = {
   /*  0 */ nullptr,
   /*  1 */ "Hangup", // SIGHUP - Posix
   /*  2 */ "Interrupt", // SIGINT
@@ -65,8 +65,8 @@ char *signalName[] = {
 // z/OS Unix System Services does not have strsignal() support, so the
 // strsignal() function is implemented here.
 char *strsignal(int sig) {
-  if (sig < sizeof(signalName)/sizeof(signalName[0]) && signalName[sig])
-    return signalName[sig];
+  if (static_cast<size_t>(sig) < sizeof(signalName)/sizeof(signalName[0]) && signalName[sig])
+    return const_cast<char *>(signalName[sig]);
   static char msg[256];
   sprintf(msg, "Unknown signal %d", sig);
   return msg;
