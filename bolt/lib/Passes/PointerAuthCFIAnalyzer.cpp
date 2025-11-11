@@ -147,6 +147,16 @@ Error PointerAuthCFIAnalyzer::runOnFunctions(BinaryContext &BC) {
             << format("(%.2lf%%)", IgnoredPercent)
             << " because of CFI inconsistencies\n";
 
+  // Errors in the input are expected from two sources:
+  // - compilers emitting incorrect CFIs. This happens more frequently with
+  // older compiler versions, but it should not account for a large percentage.
+  // - input binary is using synchronous unwind tables. This means that after
+  // call sites, the unwind CFIs are dropped: the pass sees missing
+  // .cfi_negate_ra_state from autiasp instructions. If this is the case, a
+  // larger percentage of functions will be ignored.
+  //
+  // This is why the 10% threshold was chosen: we should not warn about
+  // synchronous unwind tables if only a few % is ignored.
   if (IgnoredPercent >= 10.0)
     BC.outs() << "BOLT-WARNING: PointerAuthCFIAnalyzer only supports "
                  "asynchronous unwind tables. For C compilers, see "
