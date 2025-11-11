@@ -39,6 +39,17 @@ define double @nextafter_can_constant_fold_with_nan_arg() {
   %next = call double @nextafter(double 1.0, double %arg)
   ret double %next
 }
+define double @nextafter_constant_fold_propagates_nan_payload() {
+; CHECK-LABEL: define double @nextafter_constant_fold_propagates_nan_payload() {
+; CHECK-NEXT:    ret double 0x7FF8000000000001
+;
+  %nan = load double, double* @dbl_nan
+  %tmp1 = bitcast double %nan to i64
+  %tmp2 = or i64 %tmp1, 1
+  %nan_with_payload = bitcast i64 %tmp2 to double
+  %next = call double @nextafter(double %nan_with_payload, double 1.0)
+  ret double %next
+}
 define double @nextafter_not_marked_dead_on_pos_overflow () {
 ; CHECK-LABEL: define double @nextafter_not_marked_dead_on_pos_overflow() {
 ; CHECK-NEXT:    [[NEXT:%.*]] = call double @nextafter(double 0x7FEFFFFFFFFFFFFF, double 0x7FF0000000000000)
@@ -119,6 +130,17 @@ define float @nextafterf_can_constant_fold_with_nan_arg() {
 ;
   %arg = load float, float* @flt_nan
   %next = call float @nextafterf(float 1.0, float %arg)
+  ret float %next
+}
+define float @nextafterf_constant_fold_propagates_nan_payload() {
+; CHECK-LABEL: define float @nextafterf_constant_fold_propagates_nan_payload() {
+; CHECK-NEXT:    ret float 0x7FF8000020000000
+;
+  %nan = load float, float* @flt_nan
+  %tmp1 = bitcast float %nan to i32
+  %tmp2 = or i32 %tmp1, 1
+  %nan_with_payload = bitcast i32 %tmp2 to float
+  %next = call float @nextafterf(float %nan_with_payload, float 1.0)
   ret float %next
 }
 define float @nextafterf_not_marked_dead_on_pos_overflow() {

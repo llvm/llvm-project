@@ -3228,11 +3228,22 @@ static Constant *ConstantFoldLibCall2(StringRef Name, Type *Ty,
   case LibFunc_nexttoward:
   case LibFunc_nexttowardf:
     if (TLI->has(Func)) {
-      if (Op1V.isNaN() || Op2V.isNaN()) {
-        return ConstantFP::get(Ty->getContext(),
-                               APFloat::getNaN(Ty->getFltSemantics()));
+      // Make sure to propagate NaN payloads.
+      if (Op1V.isNaN()) {
+        return ConstantFP::get(Ty->getContext(), Op1V);
+      }
+      if (Op2V.isNaN()) {
+        // Payload propagation might not make sense if the second argument's
+        // type is wider than the return value. We'll give up in the latter
+        // case.
+        bool SemEqual = &Op2V.getSemantics() == &Ty->getFltSemantics();
+        APFloat Ret = SemEqual ? Op2V : APFloat::getNaN(Ty->getFltSemantics());
+        return ConstantFP::get(Ty->getContext(), Ret);
       }
 
+      // The two arguments of nexttoward can have differing semantics.
+      // We need to convert both arguments to the same semantics so
+      // we can do comparisons.
       APFloat PromotedOp1V = Op1V.getPromoted(APFloat::IEEEquad());
       APFloat PromotedOp2V = Op2V.getPromoted(APFloat::IEEEquad());
       if (PromotedOp1V == PromotedOp2V) {
@@ -4683,6 +4694,9 @@ bool llvm::isMathLibCallNoop(const CallBase *Call,
       case LibFunc_nexttoward:
       case LibFunc_nexttowardf:
       case LibFunc_nexttowardl: {
+        // The two arguments of nexttoward can have differing semantics.
+        // We need to convert both arguments to the same semantics so
+        // we can do comparisons.
         APFloat PromotedOp0 = Op0.getPromoted(APFloat::IEEEquad());
         APFloat PromotedOp1 = Op1.getPromoted(APFloat::IEEEquad());
         if (PromotedOp0 == PromotedOp1)

@@ -43,6 +43,18 @@ define double @nexttoward_can_constant_fold_with_nan_arg() {
   %next = call double @nexttoward(double 1.0, ppc_fp128 %arg)
   ret double %next
 }
+define double @nexttoward_constant_fold_propagates_nan_payload() {
+; CHECK-LABEL: define double @nexttoward_constant_fold_propagates_nan_payload() {
+; CHECK-NEXT:    ret double 0x7FF8000000000001
+;
+  %nan = load double, double* @dbl_nan
+  %tmp1 = bitcast double %nan to i64
+  %tmp2 = or i64 %tmp1, 1
+  %nan_with_payload = bitcast i64 %tmp2 to double
+  %dummy_arg = fpext double 1.0 to ppc_fp128
+  %next = call double @nexttoward(double %nan_with_payload, ppc_fp128 %dummy_arg)
+  ret double %next
+}
 define double @nexttoward_not_marked_dead_on_pos_overflow() {
 ; CHECK-LABEL: define double @nexttoward_not_marked_dead_on_pos_overflow() {
 ; CHECK-NEXT:    [[NEXT:%.*]] = call double @nexttoward(double 0x7FEFFFFFFFFFFFFF, ppc_fp128 0xM7FF00000000000000000000000000000)
@@ -131,6 +143,18 @@ define float @nexttowardf_can_constant_fold_with_nan_arg() {
   %nan = load float, float* @flt_nan
   %ext_nan = fpext float %nan to ppc_fp128
   %next = call float @nexttowardf(float 1.0, ppc_fp128 %ext_nan)
+  ret float %next
+}
+define float @nexttowardf_constant_fold_propagates_nan_payload() {
+; CHECK-LABEL: define float @nexttowardf_constant_fold_propagates_nan_payload() {
+; CHECK-NEXT:    ret float 0x7FF8000020000000
+;
+  %nan = load float, float* @flt_nan
+  %tmp1 = bitcast float %nan to i32
+  %tmp2 = or i32 %tmp1, 1
+  %nan_with_payload = bitcast i32 %tmp2 to float
+  %dummy_arg = fpext float 1.0 to ppc_fp128
+  %next = call float @nexttowardf(float %nan_with_payload, ppc_fp128 %dummy_arg)
   ret float %next
 }
 define float @nexttowardf_not_marked_dead_on_pos_overflow () {
