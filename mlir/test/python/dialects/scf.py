@@ -436,7 +436,7 @@ def testIndexSwitchWithBodyBuilders():
             scf.yield_([arith.constant(i32, case_value)])
 
         result = scf.index_switch(
-            results_=[i32],
+            results=[i32],
             arg=index,
             cases=range(3),
             case_body_builder=case_body_builder,
