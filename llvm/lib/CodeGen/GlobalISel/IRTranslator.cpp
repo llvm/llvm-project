@@ -2686,6 +2686,13 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
   case Intrinsic::experimental_convergence_entry:
   case Intrinsic::experimental_convergence_loop:
     return translateConvergenceControlIntrinsic(CI, ID, MIRBuilder);
+  case Intrinsic::reloc_none: {
+    Metadata *MD = cast<MetadataAsValue>(CI.getArgOperand(0))->getMetadata();
+    StringRef SymbolName = cast<MDString>(MD)->getString();
+    MIRBuilder.buildInstr(TargetOpcode::RELOC_NONE)
+        .addExternalSymbol(SymbolName.data());
+    return true;
+  }
   }
   return false;
 }
@@ -3475,7 +3482,7 @@ bool IRTranslator::translateAtomicCmpXchg(const User &U,
 
 bool IRTranslator::translateAtomicRMW(const User &U,
                                       MachineIRBuilder &MIRBuilder) {
-  if (containsBF16Type(U))
+  if (!MF->getTarget().getTargetTriple().isSPIRV() && containsBF16Type(U))
     return false;
 
   const AtomicRMWInst &I = cast<AtomicRMWInst>(U);

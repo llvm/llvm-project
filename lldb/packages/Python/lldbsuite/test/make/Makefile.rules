@@ -294,6 +294,11 @@ ifeq "$(MAKE_DEBUG_NAMES)" "YES"
 	CFLAGS += -gpubnames
 endif
 
+# Enable GNU POSIX extensions (e.g. kill(), usleep(), getpgid(), ...)
+ifeq "$(OS)" "Linux"
+	CFLAGS += -D_DEFAULT_SOURCE
+endif
+
 ifeq "$(USE_PRIVATE_MODULE_CACHE)" "YES"
 THE_CLANG_MODULE_CACHE_DIR := $(BUILDDIR)/private-module-cache
 else

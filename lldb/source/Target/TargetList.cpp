@@ -304,13 +304,9 @@ Status TargetList::CreateTargetInternal(Debugger &debugger,
 
     ModuleSP exe_module_sp;
     if (platform_sp) {
-      FileSpecList executable_search_paths(
-          Target::GetDefaultExecutableSearchPaths());
       ModuleSpec module_spec(file, arch);
-      error = platform_sp->ResolveExecutable(module_spec, exe_module_sp,
-                                             executable_search_paths.GetSize()
-                                                 ? &executable_search_paths
-                                                 : nullptr);
+      module_spec.SetTarget(target_sp);
+      error = platform_sp->ResolveExecutable(module_spec, exe_module_sp);
     }
 
     if (error.Success() && exe_module_sp) {

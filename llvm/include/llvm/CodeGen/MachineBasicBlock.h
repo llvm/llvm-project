@@ -129,7 +129,7 @@ public:
     MCRegister PhysReg;
     LaneBitmask LaneMask;
 
-    RegisterMaskPair(MCPhysReg PhysReg, LaneBitmask LaneMask)
+    RegisterMaskPair(MCRegister PhysReg, LaneBitmask LaneMask)
         : PhysReg(PhysReg), LaneMask(LaneMask) {}
 
     bool operator==(const RegisterMaskPair &other) const {
