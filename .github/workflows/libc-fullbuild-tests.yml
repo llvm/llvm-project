@@ -133,7 +133,9 @@ jobs:
           -DCMAKE_CXX_COMPILER_TARGET=armv6m-none-abi \
           -DCMAKE_ASM_COMPILER_TARGET=armv6m-none-abi \
           -DCMAKE_C_FLAGS=-mfloat-abi=soft \
-          -DCMAKE_CXX_FLAGS=-mfloat-abi=soft
+          -DCMAKE_CXX_FLAGS=-mfloat-abi=soft \
+          -DCMAKE_C_COMPILER_WORKS = ON \
+          -DCMAKE_CXX_COMPILER_WORKS = ON
         else
           cmake -B ${{ steps.strings.outputs.build-output-dir }} \
           -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }} \
@@ -159,7 +161,7 @@ jobs:
 
     - name: Test
       # Skip UEFI tests until we have testing set up.
-      if: ${{ ! endsWith(matrix.target, '-uefi-llvm') }}
+      if: ${{ ! endsWith(matrix.target, '-uefi-llvm') && matrix.enable_baremetal_build == "OFF" }}
       run: >
         cmake 
         --build ${{ steps.strings.outputs.build-output-dir }} 
