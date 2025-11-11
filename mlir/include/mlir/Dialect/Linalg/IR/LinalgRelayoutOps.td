@@ -109,7 +109,7 @@ def Linalg_PackOp : Linalg_RelayoutOp<"pack", [
     within [0, n).
      - The tiled dimensions (of size `inner_tiles`) are added to the end of the
      result tensor in the order in which they appear, i.e.
-     `shape(result)[rank(result) + i] = inner_tiles[i]` for `0 <= i < k`.
+     `shape(result)[rank(source) + i] = inner_tiles[i]` for `0 <= i < k`.
      - The following relationship for the tiled dimensions holds:
      `shape(result)[inner_dims_pos[i]] = shape(source)[inner_dims_pos[i]] / inner_tiles[i]`,
      where (⌈/⌉ indicates CeilDiv).

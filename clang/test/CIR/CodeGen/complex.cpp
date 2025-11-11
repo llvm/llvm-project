@@ -1496,7 +1496,7 @@ void calling_function_that_return_complex() {
 // OGCG: store float %[[RESULT_REAL]], ptr %[[A_REAL_PTR]], align 4
 // OGCG: store float %[[RESULT_IMAG]], ptr %[[A_IMAG_PTR]], align 4
 
-void imag_literal_with_gun_extension() {
+void imag_literal_gnu_extension() {
   float _Complex a = 3.0fi;
   double _Complex b = 3.0i;
   int _Complex c = 3i;
