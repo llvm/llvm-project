@@ -9,15 +9,40 @@
 #define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_AARCH64_INLINE_MEMCPY_H
 
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
+#include "src/__support/macros/properties/cpu_features.h"
 #include "src/string/memory_utils/op_builtin.h"
 #include "src/string/memory_utils/utils.h"
 
 #include <stddef.h> // size_t
 
+#if defined(LIBC_TARGET_CPU_HAS_SVE)
+#include <arm_sve.h>
+#endif
 namespace LIBC_NAMESPACE_DECL {
-
+#if defined(LIBC_TARGET_CPU_HAS_SVE)
+[[maybe_unused, gnu::always_inline]] LIBC_INLINE void
+inline_memcpy_aarch64_sve_32_bytes(Ptr __restrict dst, CPtr __restrict src,
+                                   size_t count) {
+  auto src_ptr = reinterpret_cast<const uint8_t *>(src);
+  auto dst_ptr = reinterpret_cast<uint8_t *>(dst);
+  const size_t vlen = svcntb();
+  svbool_t less_than_count_fst = svwhilelt_b8_u64(0, count);
+  svbool_t less_than_count_snd = svwhilelt_b8_u64(vlen, count);
+  svuint8_t fst = svld1_u8(less_than_count_fst, &src_ptr[0]);
+  svuint8_t snd = svld1_u8(less_than_count_snd, &src_ptr[vlen]);
+  svst1_u8(less_than_count_fst, &dst_ptr[0], fst);
+  svst1_u8(less_than_count_snd, &dst_ptr[vlen], snd);
+}
+#endif
 [[maybe_unused]] LIBC_INLINE void
 inline_memcpy_aarch64(Ptr __restrict dst, CPtr __restrict src, size_t count) {
+#if defined(LIBC_TARGET_CPU_HAS_SVE)
+  // SVE register is at least 16 bytes, we can use it to avoid branching in
+  // small cases. Here we use 2 SVE registers to always cover cases where count
+  // <= 32.
+  if (count <= 32)
+    return inline_memcpy_aarch64_sve_32_bytes(dst, src, count);
+#else
   if (count == 0)
     return;
   if (count == 1)
@@ -34,6 +59,7 @@ inline_memcpy_aarch64(Ptr __restrict dst, CPtr __restrict src, size_t count) {
     return builtin::Memcpy<8>::head_tail(dst, src, count);
   if (count < 32)
     return builtin::Memcpy<16>::head_tail(dst, src, count);
+#endif
   if (count < 64)
     return builtin::Memcpy<32>::head_tail(dst, src, count);
   if (count < 128)
