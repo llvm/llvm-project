@@ -26,42 +26,31 @@ static int64_t getIntValueFromConstOp(mlir::Value val) {
   return val.getDefiningOp<cir::ConstantOp>().getIntValue().getSExtValue();
 }
 
-static mlir::Value emitClFlush(CIRGenFunction& cgf,
-                               const CallExpr* e,
-                               mlir::Value& op) {
-    mlir::Type voidTy = cir::VoidType::get(&cgf.getMLIRContext());
-    mlir::Location location = cgf.getLoc(e->getExprLoc());
-    return cir::LLVMIntrinsicCallOp::create(
-          cgf.getBuilder(), location, 
-          cgf.getBuilder().getStringAttr("x86.sse2.clflush"), voidTy, op)
+static mlir::Value emitClFlush(CIRGenFunction &cgf, const CallExpr *e,
+                               mlir::Value &op) {
+  mlir::Type voidTy = cir::VoidType::get(&cgf.getMLIRContext());
+  mlir::Location location = cgf.getLoc(e->getExprLoc());
+  return cir::LLVMIntrinsicCallOp::create(
+             cgf.getBuilder(), location,
+             cgf.getBuilder().getStringAttr("x86.sse2.clflush"), voidTy, op)
       .getResult();
 }
 
-static mlir::Value emitPrefetch(CIRGenFunction& cgf,
-                                const CallExpr* e,
-                                mlir::Value& addr,
-                                int64_t hint) {
-  CIRGenBuilderTy& builder = cgf.getBuilder();
-  mlir::Type voidTy = cir::VoidType::get(&cgf.getMLIRContext());
-  mlir::Type sInt32Ty = cir::IntType::get(&cgf.getMLIRContext(), 32, true);
-  mlir::Value address = builder.createPtrBitcast(addr, voidTy);
+static mlir::Value emitPrefetch(CIRGenFunction &cgf, const CallExpr *e,
+                                mlir::Value &addr, int64_t hint) {
+  CIRGenBuilderTy &builder = cgf.getBuilder();
   mlir::Location location = cgf.getLoc(e->getExprLoc());
-  mlir::Value rw =
-      cir::ConstantOp::create(builder, location,
-                              cir::IntAttr::get(sInt32Ty, (hint >> 2) & 0x1));
-  mlir::Value locality =
-      cir::ConstantOp::create(builder, location,
-                              cir::IntAttr::get(sInt32Ty, hint & 0x3));
-  mlir::Value data = cir::ConstantOp::create(builder, location,
-                                             cir::IntAttr::get(sInt32Ty, 1));
+  mlir::Type voidTy = builder.getVoidTy();
+  mlir::Value address = builder.createPtrBitcast(addr, voidTy);
+  mlir::Value rw = builder.getSignedInt(location, (hint >> 2) & 0x1, 32);
+  mlir::Value locality = builder.getSignedInt(location, hint & 0x3, 32);
+  mlir::Value data = builder.getSignedInt(location, 1, 32);
 
   return cir::LLVMIntrinsicCallOp::create(
-             builder, location,
-             builder.getStringAttr("prefetch"), voidTy,
+             builder, location, builder.getStringAttr("prefetch"), voidTy,
              mlir::ValueRange{address, rw, locality, data})
       .getResult();
 }
-
 
 mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
                                                const CallExpr *e) {
@@ -90,14 +79,14 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
 
   // `ICEArguments` is a bitmap indicating whether the argument at the i-th bit
   // is required to be a constant integer expression.
-  unsigned ICEArguments = 0;
+  unsigned iceArguments = 0;
   ASTContext::GetBuiltinTypeError error;
-  getContext().GetBuiltinType(builtinID, error, &ICEArguments);
+  getContext().GetBuiltinType(builtinID, error, &iceArguments);
   assert(error == ASTContext::GE_None && "Error while getting builtin type.");
 
   const unsigned numArgs = e->getNumArgs();
   for (unsigned i = 0; i != numArgs; i++) {
-    ops.push_back(emitScalarOrConstFoldImmArg(ICEArguments, i, e));
+    ops.push_back(emitScalarOrConstFoldImmArg(iceArguments, i, e));
   }
 
   switch (builtinID) {

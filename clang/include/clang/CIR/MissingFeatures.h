@@ -271,6 +271,7 @@ struct MissingFeatures {
   static bool insertBuiltinUnpredictable() { return false; }
   static bool instrumentation() { return false; }
   static bool intrinsics() { return false; }
+  static bool intrinsicElementTypeSupport() {return false; }
   static bool isMemcpyEquivalentSpecialMember() { return false; }
   static bool isTrivialCtorOrDtor() { return false; }
   static bool lambdaCaptures() { return false; }
