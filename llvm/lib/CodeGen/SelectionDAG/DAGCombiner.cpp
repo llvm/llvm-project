@@ -2508,6 +2508,15 @@ static SDValue foldSelectWithIdentityConstant(SDNode *N, SelectionDAG &DAG,
                                                FVal)) {
     SDValue F0 = DAG.getFreeze(N0);
     SDValue NewBO = DAG.getNode(Opcode, SDLoc(N), VT, F0, FVal, N->getFlags());
+    // For RISCV prefer to N0 == FVal
+    if (Cond.getOpcode() == ISD::SETCC) {
+      EVT CVT = Cond->getValueType(0);
+      ISD::CondCode NotCC = ISD::getSetCCInverse(
+          cast<CondCodeSDNode>(Cond.getOperand(2))->get(), CVT);
+      SDValue NCond = DAG.getSetCC(SDLoc(N), CVT, Cond.getOperand(0),
+                                   Cond.getOperand(1), NotCC);
+      return DAG.getSelect(SDLoc(N), VT, NCond, NewBO, F0);
+    }
     return DAG.getSelect(SDLoc(N), VT, Cond, F0, NewBO);
   }
   // binop N0, (vselect Cond, TVal, IDC) --> vselect Cond, (binop N0, TVal), N0
