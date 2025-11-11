@@ -29,11 +29,16 @@ class InitializerListTestCase(TestBase):
         )
 
         self.expect(
-            "frame variable ili", substrs=["ili = size=5", "[1] = 2", "[4] = 5"]
+            "frame variable ili",
+            substrs=["ili = size=5", "[0] = 1", "[1] = 2", "[4] = 5"],
         )
         self.expect(
             "frame variable ils",
-            substrs=["ils = size=5","[0] = 1", '[4] = "surprise it is a long string!! yay!!"'],
+            substrs=[
+                "ils = size=5",
+                '[0] = "1"',
+                '[4] = "surprise it is a long string!! yay!!"',
+            ],
         )
 
     @add_test_categories(["libc++"])
