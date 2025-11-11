@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "CGOpenMPRuntime.h"
-#include "ABIInfoImpl.h"
 #include "CGCXXABI.h"
 #include "CGCleanup.h"
 #include "CGDebugInfo.h"
@@ -8465,15 +8464,12 @@ private:
     for (const auto &I : RD->bases()) {
       if (I.isVirtual())
         continue;
-
-      QualType BaseTy = I.getType();
-      const auto *Base = BaseTy->getAsCXXRecordDecl();
+      const auto *Base = I.getType()->getAsCXXRecordDecl();
       // Ignore empty bases.
-      if (isEmptyRecordForLayout(CGF.getContext(), BaseTy) ||
-          CGF.getContext()
-              .getASTRecordLayout(Base)
-              .getNonVirtualSize()
-              .isZero())
+      if (Base->isEmpty() || CGF.getContext()
+                                 .getASTRecordLayout(Base)
+                                 .getNonVirtualSize()
+                                 .isZero())
         continue;
 
       unsigned FieldIndex = RL.getNonVirtualBaseLLVMFieldNo(Base);
@@ -8481,12 +8477,10 @@ private:
     }
     // Fill in virtual bases.
     for (const auto &I : RD->vbases()) {
-      QualType BaseTy = I.getType();
+      const auto *Base = I.getType()->getAsCXXRecordDecl();
       // Ignore empty bases.
-      if (isEmptyRecordForLayout(CGF.getContext(), BaseTy))
+      if (Base->isEmpty())
         continue;
-
-      const auto *Base = BaseTy->getAsCXXRecordDecl();
       unsigned FieldIndex = RL.getVirtualBaseIndex(Base);
       if (RecordLayout[FieldIndex])
         continue;
@@ -8497,8 +8491,7 @@ private:
     for (const auto *Field : RD->fields()) {
       // Fill in non-bitfields. (Bitfields always use a zero pattern, which we
       // will fill in later.)
-      if (!Field->isBitField() &&
-          !isEmptyFieldForLayout(CGF.getContext(), Field)) {
+      if (!Field->isBitField() && !Field->isZeroSize(CGF.getContext())) {
         unsigned FieldIndex = RL.getLLVMFieldNo(Field);
         RecordLayout[FieldIndex] = Field;
       }
