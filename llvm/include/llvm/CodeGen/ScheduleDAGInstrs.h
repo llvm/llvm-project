@@ -77,9 +77,9 @@ namespace llvm {
   struct PhysRegSUOper {
     SUnit *SU;
     int OpIdx;
-    unsigned RegUnit;
+    MCRegUnit RegUnit;
 
-    PhysRegSUOper(SUnit *su, int op, unsigned R)
+    PhysRegSUOper(SUnit *su, int op, MCRegUnit R)
         : SU(su), OpIdx(op), RegUnit(R) {}
 
     unsigned getSparseSetIndex() const { return RegUnit; }
