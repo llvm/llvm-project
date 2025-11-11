@@ -850,8 +850,11 @@ void ToolChain::addFortranRuntimeLibs(const ArgList &Args,
                    options::OPT_fno_openmp, false)) {
     Driver::OpenMPRuntimeKind OMPRuntime = getDriver().getOpenMPRuntime(Args);
     ToolChain::RuntimeLibType RuntimeLib = GetRuntimeLibType(Args);
-    if (OMPRuntime == Driver::OMPRT_OMP && RuntimeLib == ToolChain::RLT_Libgcc)
+    if ((OMPRuntime == Driver::OMPRT_OMP &&
+         RuntimeLib == ToolChain::RLT_Libgcc) &&
+        !getTriple().isKnownWindowsMSVCEnvironment()) {
       CmdArgs.push_back("-latomic");
+    }
   }
 }
 

@@ -1608,18 +1608,8 @@ void DwarfDebug::ensureAbstractEntityIsCreatedIfScoped(DwarfCompileUnit &CU,
 }
 
 static const DILocalScope *getRetainedNodeScope(const MDNode *N) {
-  const DIScope *S;
-  if (const auto *LV = dyn_cast<DILocalVariable>(N))
-    S = LV->getScope();
-  else if (const auto *L = dyn_cast<DILabel>(N))
-    S = L->getScope();
-  else if (const auto *IE = dyn_cast<DIImportedEntity>(N))
-    S = IE->getScope();
-  else
-    llvm_unreachable("Unexpected retained node!");
-
   // Ensure the scope is not a DILexicalBlockFile.
-  return cast<DILocalScope>(S)->getNonLexicalBlockFileScope();
+  return DISubprogram::getRetainedNodeScope(N)->getNonLexicalBlockFileScope();
 }
 
 // Collect variable information from side table maintained by MF.

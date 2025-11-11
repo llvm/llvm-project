@@ -1575,11 +1575,27 @@ void Verifier::visitDISubprogram(const DISubprogram &N) {
     auto *Node = dyn_cast<MDTuple>(RawNode);
     CheckDI(Node, "invalid retained nodes list", &N, RawNode);
     for (Metadata *Op : Node->operands()) {
-      CheckDI(Op && (isa<DILocalVariable>(Op) || isa<DILabel>(Op) ||
-                     isa<DIImportedEntity>(Op)),
+      CheckDI(Op, "nullptr in retained nodes", &N, Node);
+
+      auto True = [](const Metadata *) { return true; };
+      auto False = [](const Metadata *) { return false; };
+      bool IsTypeCorrect =
+          DISubprogram::visitRetainedNode<bool>(Op, True, True, True, False);
+      CheckDI(IsTypeCorrect,
               "invalid retained nodes, expected DILocalVariable, DILabel or "
               "DIImportedEntity",
               &N, Node, Op);
+
+      auto *RetainedNode = cast<DINode>(Op);
+      auto *RetainedNodeScope = dyn_cast_or_null<DILocalScope>(
+          DISubprogram::getRawRetainedNodeScope(RetainedNode));
+      CheckDI(RetainedNodeScope,
+              "invalid retained nodes, retained node is not local", &N, Node,
+              RetainedNode);
+      CheckDI(
+          RetainedNodeScope->getSubprogram() == &N,
+          "invalid retained nodes, retained node does not belong to subprogram",
+          &N, Node, RetainedNode, RetainedNodeScope);
     }
   }
   CheckDI(!hasConflictingReferenceFlags(N.getFlags()),
