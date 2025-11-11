@@ -23,16 +23,16 @@
 #include "test_macros.h"
 #include "../types.h"
 
-template <bool NoThrow>
+template <typename T, bool NoThrow>
 struct ThowingIter {
   using iterator_concept  = std::forward_iterator_tag;
   using iterator_category = std::forward_iterator_tag;
   using difference_type   = std::ptrdiff_t;
-  using value_type        = int;
+  using value_type        = T;
 
-  int* p = nullptr;
+  T* p = nullptr;
 
-  constexpr int& operator*() const noexcept { return *p; }
+  constexpr T& operator*() const noexcept { return *p; }
   constexpr ThowingIter& operator++() noexcept {
     ++p;
     return *this;
@@ -44,7 +44,7 @@ struct ThowingIter {
   }
   friend constexpr bool operator==(ThowingIter, ThowingIter) = default;
 
-  friend constexpr int&& iter_move(const ThowingIter& it) noexcept(NoThrow) { return std::move(*it.p); }
+  friend constexpr T&& iter_move(const ThowingIter& it) noexcept(NoThrow) { return std::move(*it.p); }
 };
 
 struct Range : std::ranges::view_base {
@@ -59,49 +59,14 @@ private:
   int* end_;
 };
 
-struct ThrowingValue {
-  int v{};
-  ThrowingValue() = default;
-  explicit ThrowingValue(int x) noexcept(false) : v(x) {}
-  ThrowingValue(const ThrowingValue&) noexcept(false) = default;
-  ThrowingValue(ThrowingValue&&) noexcept(false)      = default;
-};
-
-template <bool DerefNoThrow>
-struct PValIter {
-  using iterator_concept  = std::input_iterator_tag;
-  using iterator_category = std::input_iterator_tag;
-  using difference_type   = std::ptrdiff_t;
-  using value_type        = std::conditional_t<DerefNoThrow, int, ThrowingValue>;
-
-  int* p = nullptr;
-
-  decltype(auto) operator*() const noexcept(DerefNoThrow) {
-    if constexpr (DerefNoThrow)
-      return *p; // int (noexcept)
-    else
-      return ThrowingValue{*p}; // not noexcept
-  }
-  PValIter& operator++() noexcept {
-    ++p;
-    return *this;
-  }
-  void operator++(int) noexcept { ++p; }
-  friend bool operator==(PValIter, PValIter) = default;
-};
-
-static_assert(std::input_iterator<LRefIter<true>>);
-static_assert(std::input_iterator<LRefIter<false>>);
-static_assert(std::input_iterator<PValIter<true>>);
-static_assert(std::input_iterator<PValIter<false>>);
-
-template <class Iter>
+template <class Iter, class Sentinel>
 struct MiniView : std::ranges::view_base {
-  Iter b{}, e{};
+  Iter b{};
+  Sentinel e{};
   constexpr MiniView() = default;
-  constexpr MiniView(Iter first, Iter last) : b(first), e(last) {}
+  constexpr MiniView(Iter first, Sentinel last) : b(first), e(last) {}
   constexpr Iter begin() const noexcept { return b; }
-  constexpr Iter end() const noexcept { return e; }
+  constexpr Sentinel end() const noexcept { return e; }
 };
 
 constexpr bool test() {
@@ -109,11 +74,11 @@ constexpr bool test() {
   int buf2[] = {5, 6, 7};
   {
     // All underlying iter_move are noexcept -> concat iterator's iter_move is noexcept
-    using I1 = ThowingIter<true>;
-    using S1 = sentinel_wrapper<I1>;
-    using V1 = MiniView<I1>;
-    V1 v1(I1(buf1), I1(buf1 + 4));
-    V1 v2(I1(buf2), I1(buf2 + 3));
+    using Iter_NoThrow     = ThowingIter<int, true>;
+    using Sentinel_NoThrow = sentinel_wrapper<Iter_NoThrow>;
+    using View_NoThrow     = MiniView<Iter_NoThrow, Sentinel_NoThrow>;
+    View_NoThrow v1(Iter_NoThrow(buf1), Sentinel_NoThrow(Iter_NoThrow(buf1 + 4)));
+    View_NoThrow v2(Iter_NoThrow(buf2), Sentinel_NoThrow(Iter_NoThrow(buf2 + 3)));
 
     auto cv     = std::views::concat(v1, v2);
     using Iter  = decltype(cv.begin());
@@ -124,6 +89,25 @@ constexpr bool test() {
 
     auto it = cv.begin();
     (void)std::ranges::iter_move(it);
+  }
+
+  {
+    // One underlying may throw -> concat iter_move is NOT noexcept
+    using Iter_NoThrow     = ThowingIter<int, true>;
+    using Iter_Throw       = ThowingIter<int, false>;
+    using Sentinel_NoThrow = sentinel_wrapper<Iter_NoThrow>;
+    using Sentinel_Throw   = sentinel_wrapper<Iter_Throw>;
+    using View_NoThrow     = MiniView<Iter_NoThrow, Sentinel_NoThrow>;
+    using View_Throw       = MiniView<Iter_Throw, Sentinel_Throw>;
+
+    auto cv = std::views::concat(View_NoThrow{Iter_NoThrow{buf1}, Sentinel_NoThrow{Iter_NoThrow{buf1 + 4}}},
+                                 View_Throw{Iter_Throw{buf2}, Sentinel_Throw{Iter_Throw{buf2 + 3}}});
+
+    using Iter  = decltype(cv.begin());
+    using CIter = decltype(std::as_const(cv).begin());
+
+    static_assert(!noexcept(std::ranges::iter_move(std::declval<Iter&>())));
+    static_assert(!noexcept(std::ranges::iter_move(std::declval<CIter&>())));
   }
 
   return true;
