@@ -6,8 +6,6 @@
 // MACHOERROR-NEXT: error: Invalid section index!
 // MACHOERROR-NEXT: error: Invalid section index!
 
-
-	.build_version macos, 11, 0
 	.section	__TEXT,__text,regular,pure_instructions
 	.globl	_main                           ; -- Begin function main
 	.p2align	2
