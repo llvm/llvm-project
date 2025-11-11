@@ -230,6 +230,7 @@ module attributes {transform.with_named_sequence} {
     transform.yield
   }
 }
+
 // -----
 
 // CHECK-LABEL: @set_op_layout_attr_operand1
@@ -249,6 +250,61 @@ module attributes {transform.with_named_sequence} {
     %0 = transform.structured.match ops{["arith.addf"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     // CHECK: transform.xegpu.set_op_layout_attr %{{.*}}
     transform.xegpu.set_op_layout_attr %0 index = 1 sg_layout = [8, 4] sg_data = [32, 64] inst_data = [8, 16] : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// CHECK-LABEL: @set_gpu_launch_threads
+func.func @set_gpu_launch_threads(%arg0: memref<4096x4096xf16>) {
+  // CHECK: %[[C1:.+]] = arith.constant 1 : index
+  %c1 = arith.constant 1 : index
+  // CHECK: %[[C16:.+]] = arith.constant 16 : index
+  %c16 = arith.constant 16 : index
+  // CHECK: %[[C8:.+]] = arith.constant 8 : index
+  // CHECK: %[[C4:.+]] = arith.constant 4 : index
+  // CHECK: %[[C1_0:.+]] = arith.constant 1 : index
+  // CHECK: gpu.launch blocks(%{{.*}}, %{{.*}}, %{{.*}}) in (%{{.*}} = %[[C16]], %{{.*}} = %[[C16]], %{{.*}} = %[[C1]])
+  // CHECK-SAME: threads(%{{.*}}, %{{.*}}, %{{.*}}) in (%{{.*}} = %[[C8]], %{{.*}} = %[[C4]], %{{.*}} = %[[C1_0]])
+  gpu.launch blocks(%arg3, %arg4, %arg5) in (%arg9 = %c16, %arg10 = %c16, %arg11 = %c1) threads(%arg6, %arg7, %arg8) in (%arg12 = %c1, %arg13 = %c1, %arg14 = %c1) {
+    gpu.terminator
+  }
+  return
+}
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["gpu.launch"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    // CHECK: transform.xegpu.set_gpu_launch_threads %{{.*}}
+    transform.xegpu.set_gpu_launch_threads %0 threads = [8, 4, 1] : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// CHECK-LABEL: @set_gpu_launch_threads_param
+func.func @set_gpu_launch_threads_param(%arg0: memref<4096x4096xf16>) {
+  // CHECK: %[[C1:.+]] = arith.constant 1 : index
+  %c1 = arith.constant 1 : index
+  // CHECK: %[[C16:.+]] = arith.constant 16 : index
+  %c16 = arith.constant 16 : index
+  // CHECK: %[[C8:.+]] = arith.constant 8 : index
+  // CHECK: %[[C4:.+]] = arith.constant 4 : index
+  // CHECK: %[[C1_0:.+]] = arith.constant 1 : index
+  // CHECK: gpu.launch blocks(%{{.*}}, %{{.*}}, %{{.*}}) in (%{{.*}} = %[[C16]], %{{.*}} = %[[C16]], %{{.*}} = %[[C1]])
+  // CHECK-SAME: threads(%{{.*}}, %{{.*}}, %{{.*}}) in (%{{.*}} = %[[C8]], %{{.*}} = %[[C4]], %{{.*}} = %[[C1_0]])
+  gpu.launch blocks(%arg3, %arg4, %arg5) in (%arg9 = %c16, %arg10 = %c16, %arg11 = %c1) threads(%arg6, %arg7, %arg8) in (%arg12 = %c1, %arg13 = %c1, %arg14 = %c1) {
+    gpu.terminator
+  }
+  return
+}
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["gpu.launch"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    // CHECK: transform.xegpu.set_gpu_launch_threads %{{.*}}
+    %th1 = transform.param.constant 4 : i64 -> !transform.param<i64>
+    transform.xegpu.set_gpu_launch_threads %0 threads = [8, %th1, 1] : !transform.any_op, !transform.param<i64>
     transform.yield
   }
 }
