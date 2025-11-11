@@ -1584,6 +1584,117 @@ AAAMDGPUClusterDims::createForPosition(const IRPosition &IRP, Attributor &A) {
   llvm_unreachable("AAAMDGPUClusterDims is only valid for function position");
 }
 
+struct AAAMDGPUMakeBufferRsrcAlign
+    : public IRAttribute<
+          Attribute::Alignment,
+          StateWrapper<IncIntegerState<uint64_t, Value::MaximumAlignment, 1>,
+                       AbstractAttribute>,
+          AAAMDGPUMakeBufferRsrcAlign> {
+  using Base = IRAttribute<
+      Attribute::Alignment,
+      StateWrapper<IncIntegerState<uint64_t, Value::MaximumAlignment, 1>,
+                   AbstractAttribute>,
+      AAAMDGPUMakeBufferRsrcAlign>;
+
+  AAAMDGPUMakeBufferRsrcAlign(const IRPosition &IRP, Attributor &A)
+      : Base(IRP) {}
+
+  void initialize(Attributor &A) override {}
+
+  ChangeStatus updateImpl(Attributor &A) override {
+    Instruction *I = getIRPosition().getCtxI();
+    const auto *AlignAA = A.getAAFor<AAAlign>(
+        *this, IRPosition::value(*(I->getOperand(0))), DepClassTy::REQUIRED);
+    if (AlignAA)
+      return clampStateAndIndicateChange<StateType>(
+          this->getState(), AlignAA->getAssumedAlign().value());
+
+    return indicatePessimisticFixpoint();
+  }
+
+  /// Create an abstract attribute view for the position \p IRP.
+  static AAAMDGPUMakeBufferRsrcAlign &createForPosition(const IRPosition &IRP,
+                                                        Attributor &A) {
+    if (IRP.getPositionKind() == IRPosition::IRP_CALL_SITE_RETURNED)
+      if (Instruction *I = dyn_cast<Instruction>(&IRP.getAssociatedValue()))
+        if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(I))
+          if (II->getIntrinsicID() == Intrinsic::amdgcn_make_buffer_rsrc)
+            return *new (A.Allocator) AAAMDGPUMakeBufferRsrcAlign(IRP, A);
+    llvm_unreachable("AAAMDGPUMakeBufferRsrcAlign is only valid for call site "
+                     "return position on make.buffer.rsrc intrinsic");
+  }
+
+  // Manifest users
+  ChangeStatus manifest(Attributor &A) override {
+    ChangeStatus Changed = ChangeStatus::UNCHANGED;
+
+    // Check for users that allow alignment annotations.
+    Value &AssociatedValue = getAssociatedValue();
+    if (isa<ConstantData>(AssociatedValue))
+      return ChangeStatus::UNCHANGED;
+
+    for (const Use &U : AssociatedValue.uses()) {
+      if (auto *SI = dyn_cast<StoreInst>(U.getUser())) {
+        if (SI->getPointerOperand() == &AssociatedValue) {
+          if (SI->getAlign() > getAssumedAlign()) {
+            SI->setAlignment(getAssumedAlign());
+            Changed = ChangeStatus::CHANGED;
+          }
+        }
+      } else if (auto *LI = dyn_cast<LoadInst>(U.getUser())) {
+        if (LI->getPointerOperand() == &AssociatedValue) {
+          if (LI->getAlign() > getAssumedAlign()) {
+            LI->setAlignment(getAssumedAlign());
+            Changed = ChangeStatus::CHANGED;
+          }
+        }
+      } else if (auto *RMW = dyn_cast<AtomicRMWInst>(U.getUser())) {
+        if (RMW->getAlign() > getAssumedAlign()) {
+          RMW->setAlignment(getAssumedAlign());
+          Changed = ChangeStatus::CHANGED;
+        }
+      } else if (auto *CAS = dyn_cast<AtomicCmpXchgInst>(U.getUser())) {
+        if (CAS->getAlign() > getAssumedAlign()) {
+          CAS->setAlignment(getAssumedAlign());
+          Changed = ChangeStatus::CHANGED;
+        }
+      }
+    }
+
+    // Manifest intrinsic it self
+    Changed |= Base::manifest(A);
+
+    return Changed;
+  }
+
+  StringRef getName() const override { return "AAAMDGPUMakeBufferRsrcAlign"; }
+
+  const std::string getAsStr(Attributor *) const override {
+    std::string Buffer = "AAAMDGPUMakeBufferRsrcAlign[";
+    raw_string_ostream OS(Buffer);
+    OS << getState().getKnown() << ',' << getState().getAssumed() << ']';
+    return OS.str();
+  }
+
+  const char *getIdAddr() const override { return &ID; }
+
+  void trackStatistics() const override {}
+
+  Align getAssumedAlign() const { return Align(getAssumed()); }
+
+  void getDeducedAttributes(Attributor &A, LLVMContext &Ctx,
+                            SmallVectorImpl<Attribute> &Attrs) const override {
+    if (getAssumedAlign() > 1)
+      Attrs.emplace_back(
+          Attribute::getWithAlignment(Ctx, Align(getAssumedAlign())));
+  }
+
+  /// Unique ID (due to the unique address)
+  static const char ID;
+};
+
+const char AAAMDGPUMakeBufferRsrcAlign::ID = 0;
+
 static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM,
                     AMDGPUAttributorOptions Options,
                     ThinOrFullLTOPhase LTOPhase) {
@@ -1603,7 +1714,8 @@ static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM,
        &AAAMDGPUMinAGPRAlloc::ID, &AACallEdges::ID, &AAPointerInfo::ID,
        &AAPotentialConstantValues::ID, &AAUnderlyingObjects::ID,
        &AANoAliasAddrSpace::ID, &AAAddressSpace::ID, &AAIndirectCallInfo::ID,
-       &AAAMDGPUClusterDims::ID, &AAAlign::ID});
+       &AAAMDGPUClusterDims::ID, &AAAlign::ID,
+       &AAAMDGPUMakeBufferRsrcAlign::ID});
 
   AttributorConfig AC(CGUpdater);
   AC.IsClosedWorldModule = Options.IsClosedWorld;
@@ -1659,7 +1771,8 @@ static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM,
         Ptr = CmpX->getPointerOperand();
       else if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(&I))
         if (II->getIntrinsicID() == Intrinsic::amdgcn_make_buffer_rsrc)
-          A.getOrCreateAAFor<AAAlign>(IRPosition::value(*II));
+          A.getOrCreateAAFor<AAAMDGPUMakeBufferRsrcAlign>(
+              IRPosition::value(*II));
 
       if (Ptr) {
         A.getOrCreateAAFor<AAAddressSpace>(IRPosition::value(*Ptr));
