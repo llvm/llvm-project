@@ -44,7 +44,8 @@ enum TSFlagsConstants {
 void ARCInstrInfo::anchor() {}
 
 ARCInstrInfo::ARCInstrInfo(const ARCSubtarget &ST)
-    : ARCGenInstrInfo(ST, ARC::ADJCALLSTACKDOWN, ARC::ADJCALLSTACKUP), RI(ST) {}
+    : ARCGenInstrInfo(ST, RI, ARC::ADJCALLSTACKDOWN, ARC::ADJCALLSTACKUP),
+      RI(ST) {}
 
 static bool isZeroImm(const MachineOperand &Op) {
   return Op.isImm() && Op.getImm() == 0;
