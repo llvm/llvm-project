@@ -180,7 +180,6 @@ public:
   /// Sanitizers enabled for this function.
   clang::SanitizerSet sanOpts;
 
-
   /// The symbol table maps a variable name to a value in the current scope.
   /// Entering a function creates a new scope, and the function arguments are
   /// added to the mapping. When the processing of a function is terminated,
