@@ -542,7 +542,7 @@ __lldb_apple_objc_v2_get_shared_cache_class_info (void *objc_opt_ro_ptr,
 
             for (uint32_t i=0; i<duplicate_count; ++i)
             {
-                const uint64_t objectCacheOffset = classOffsets[i].objectCacheOffset;
+                const uint64_t objectCacheOffset = duplicateClassOffsets[i].objectCacheOffset;
                 DEBUG_PRINTF("objectCacheOffset[%u] = %u\n", i, objectCacheOffset);
 
                 if (classOffsets[i].isDuplicate) {
@@ -581,6 +581,7 @@ __lldb_apple_objc_v2_get_shared_cache_class_info (void *objc_opt_ro_ptr,
                     }
                     class_infos[idx].hash = h;
                 }
+                ++idx;
             }
         }
         else if (objc_opt->version >= 12 && objc_opt->version <= 15)
