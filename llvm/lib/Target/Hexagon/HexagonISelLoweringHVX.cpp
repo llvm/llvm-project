@@ -117,8 +117,10 @@ HexagonTargetLowering::initializeHVXLowering() {
   setOperationAction(ISD::VECTOR_SHUFFLE,          ByteW, Legal);
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::Other, Custom);
 
-  if (Subtarget.useHVX128BOps())
+  if (Subtarget.useHVX128BOps()) {
     setOperationAction(ISD::BITCAST, MVT::v32i1, Custom);
+    setOperationAction(ISD::BITCAST, MVT::v64i1, Custom);
+  }
   if (Subtarget.useHVX128BOps() && Subtarget.useHVXV68Ops() &&
       Subtarget.useHVXFloatingPoint()) {
 
@@ -1059,8 +1061,11 @@ HexagonTargetLowering::createHvxPrefixPred(SDValue PredV, const SDLoc &dl,
   SDValue W0 = isUndef(PredV)
                   ? DAG.getUNDEF(MVT::i64)
                   : DAG.getNode(HexagonISD::P2D, dl, MVT::i64, PredV);
-  Words[IdxW].push_back(HiHalf(W0, DAG));
-  Words[IdxW].push_back(LoHalf(W0, DAG));
+  if (Bytes < BitBytes) {
+    Words[IdxW].push_back(HiHalf(W0, DAG));
+    Words[IdxW].push_back(LoHalf(W0, DAG));
+  } else
+    Words[IdxW].push_back(W0);
 
   while (Bytes < BitBytes) {
     IdxW ^= 1;
@@ -1081,7 +1086,26 @@ HexagonTargetLowering::createHvxPrefixPred(SDValue PredV, const SDLoc &dl,
     Bytes *= 2;
   }
 
+  while (Bytes > BitBytes) {
+    IdxW ^= 1;
+    Words[IdxW].clear();
+
+    if (Bytes <= 4) {
+      for (const SDValue &W : Words[IdxW ^ 1]) {
+        SDValue T = contractPredicate(W, dl, DAG);
+        Words[IdxW].push_back(T);
+      }
+    } else {
+      for (const SDValue &W : Words[IdxW ^ 1]) {
+        Words[IdxW].push_back(W);
+      }
+    }
+    Bytes /= 2;
+  }
+
   assert(Bytes == BitBytes);
+  if (BitBytes == 1 && PredTy == MVT::v2i1)
+    ByteTy = MVT::getVectorVT(MVT::i16, HwLen);
 
   SDValue Vec = ZeroFill ? getZero(dl, ByteTy, DAG) : DAG.getUNDEF(ByteTy);
   SDValue S4 = DAG.getConstant(HwLen-4, dl, MVT::i32);
@@ -2024,13 +2048,9 @@ HexagonTargetLowering::LowerHvxBitcast(SDValue Op, SelectionDAG &DAG) const {
   // Handle bitcast from i32, v2i16, and v4i8 to v32i1.
   // Splat the input into a 32-element i32 vector, then AND each element
   // with a unique bitmask to isolate individual bits.
-  if (ResTy == MVT::v32i1 &&
-      (ValTy == MVT::i32 || ValTy == MVT::v2i16 || ValTy == MVT::v4i8) &&
-      Subtarget.useHVX128BOps()) {
-    SDValue Val32 = Val;
-    if (ValTy == MVT::v2i16 || ValTy == MVT::v4i8)
-      Val32 = DAG.getNode(ISD::BITCAST, dl, MVT::i32, Val);
-
+  auto bitcastI32ToV32I1 = [&](SDValue Val32) {
+    assert(Val32.getValueType().getSizeInBits() == 32 &&
+           "Input must be 32 bits");
     MVT VecTy = MVT::getVectorVT(MVT::i32, 32);
     SDValue Splat = DAG.getNode(ISD::SPLAT_VECTOR, dl, VecTy, Val32);
     SmallVector<SDValue, 32> Mask;
@@ -2039,7 +2059,31 @@ HexagonTargetLowering::LowerHvxBitcast(SDValue Op, SelectionDAG &DAG) const {
 
     SDValue MaskVec = DAG.getBuildVector(VecTy, dl, Mask);
     SDValue Anded = DAG.getNode(ISD::AND, dl, VecTy, Splat, MaskVec);
-    return DAG.getNode(HexagonISD::V2Q, dl, ResTy, Anded);
+    return DAG.getNode(HexagonISD::V2Q, dl, MVT::v32i1, Anded);
+  };
+  // === Case: v32i1 ===
+  if (ResTy == MVT::v32i1 &&
+      (ValTy == MVT::i32 || ValTy == MVT::v2i16 || ValTy == MVT::v4i8) &&
+      Subtarget.useHVX128BOps()) {
+    SDValue Val32 = Val;
+    if (ValTy == MVT::v2i16 || ValTy == MVT::v4i8)
+      Val32 = DAG.getNode(ISD::BITCAST, dl, MVT::i32, Val);
+    return bitcastI32ToV32I1(Val32);
+  }
+  // === Case: v64i1 ===
+  if (ResTy == MVT::v64i1 && ValTy == MVT::i64 && Subtarget.useHVX128BOps()) {
+    // Split i64 into lo/hi 32-bit halves.
+    SDValue Lo = DAG.getNode(ISD::TRUNCATE, dl, MVT::i32, Val);
+    SDValue HiShifted = DAG.getNode(ISD::SRL, dl, MVT::i64, Val,
+                                    DAG.getConstant(32, dl, MVT::i64));
+    SDValue Hi = DAG.getNode(ISD::TRUNCATE, dl, MVT::i32, HiShifted);
+
+    // Reuse the same 32-bit logic twice.
+    SDValue LoRes = bitcastI32ToV32I1(Lo);
+    SDValue HiRes = bitcastI32ToV32I1(Hi);
+
+    // Concatenate into a v64i1 predicate.
+    return DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v64i1, LoRes, HiRes);
   }
 
   if (isHvxBoolTy(ResTy) && ValTy.isScalarInteger()) {
@@ -3134,6 +3178,9 @@ HexagonTargetLowering::SplitVectorOp(SDValue Op, SelectionDAG &DAG) const {
 SDValue
 HexagonTargetLowering::SplitHvxMemOp(SDValue Op, SelectionDAG &DAG) const {
   auto *MemN = cast<MemSDNode>(Op.getNode());
+
+  if (!MemN->getMemoryVT().isSimple())
+    return Op;
 
   MVT MemTy = MemN->getMemoryVT().getSimpleVT();
   if (!isHvxPairTy(MemTy))

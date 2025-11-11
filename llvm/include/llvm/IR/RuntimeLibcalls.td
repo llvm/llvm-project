@@ -32,6 +32,15 @@ def isWindowsMSVCEnvironment : RuntimeLibcallPredicate<
 def isNotOSLinuxAndNotOSOpenBSD : RuntimeLibcallPredicate<
   [{!TT.isOSLinux() && !TT.isOSOpenBSD()}]>;
 
+def isNotOSAIXAndNotOSOpenBSD : RuntimeLibcallPredicate<
+  [{!TT.isOSAIX() && !TT.isOSOpenBSD()}]>;
+
+// OpenBSD uses __guard_local. AIX uses __ssp_canary_word, MSVC/Windows
+// Itanium uses __security_cookie
+def hasStackChkFail : RuntimeLibcallPredicate<
+  [{ !TT.isOSOpenBSD() && !TT.isWindowsMSVCEnvironment() &&
+     !TT.isWindowsItaniumEnvironment()}]>;
+
 def isWindowsMSVCOrItaniumEnvironment : RuntimeLibcallPredicate<
   [{TT.isWindowsMSVCEnvironment() || TT.isWindowsItaniumEnvironment()}]>;
 
@@ -48,6 +57,11 @@ def hasSinCos_f32_f64 : RuntimeLibcallPredicate<"hasSinCos_f32_f64(TT)">;
 
 def ExceptionModelIsNotNone : RuntimeLibcallPredicate<
   [{ExceptionModel != ExceptionHandling::None}]
+>;
+
+def ExceptionModelHasUnwindResume : RuntimeLibcallPredicate<
+  [{ExceptionModel != ExceptionHandling::None &&
+    ExceptionModel != ExceptionHandling::SjLj}]
 >;
 
 def ExceptionModelIsSjLj : RuntimeLibcallPredicate<
@@ -1144,8 +1158,10 @@ def __ssp_canary_word : RuntimeLibcallImpl<STACK_CHECK_GUARD>;
 //===----------------------------------------------------------------------===//
 
 defvar ExceptionModelCalls = (add
-  LibcallImpls<(add DefaultExceptionHandlingLibcalls),
+  LibcallImpls<(add __cxa_end_cleanup),
                ExceptionModelIsNotNone>,
+  LibcallImpls<(add _Unwind_Resume),
+               ExceptionModelHasUnwindResume>,
   LibcallImpls<(add SjLjExceptionHandlingLibcalls),
                ExceptionModelIsSjLj>
 );
@@ -1241,9 +1257,9 @@ defvar LibmHasLdexpF80 = LibcallImpls<(add ldexpl_f80), isNotOSWindowsOrIsCygwin
 defvar LibmHasFrexpF128 = LibcallImpls<(add frexpl_f128), isNotOSWindowsOrIsCygwinMinGW>;
 defvar LibmHasLdexpF128 = LibcallImpls<(add ldexpl_f128), isNotOSWindowsOrIsCygwinMinGW>;
 
-defvar has__stack_chk_fail = LibcallImpls<(add __stack_chk_fail), isNotOSOpenBSD>;
+defvar has__stack_chk_fail = LibcallImpls<(add __stack_chk_fail), hasStackChkFail>;
 defvar has__stack_chk_guard =
-    LibcallImpls<(add __stack_chk_guard), isNotOSOpenBSD>;
+    LibcallImpls<(add __stack_chk_guard), hasStackChkFail>;
 defvar has__stack_smash_handler = LibcallImpls<(add __stack_smash_handler), isOSOpenBSD>;
 defvar has___guard_local = LibcallImpls<(add __guard_local), isOSOpenBSD>;
 
@@ -1387,8 +1403,10 @@ defset list<RuntimeLibcallImpl> WinArm64ECSjLjExceptionHandlingLibcalls = {
 }
 
 defvar ExceptionModelCallsArm64EC = (add
-  LibcallImpls<(add WinArm64ECDefaultExceptionHandlingLibcalls),
+  LibcallImpls<(add arm64ec___cxa_end_cleanup),
                ExceptionModelIsNotNone>,
+  LibcallImpls<(add arm64ec__Unwind_Resume),
+               ExceptionModelHasUnwindResume>,
   LibcallImpls<(add WinArm64ECSjLjExceptionHandlingLibcalls),
                ExceptionModelIsSjLj>
 );
@@ -1396,8 +1414,8 @@ defvar ExceptionModelCallsArm64EC = (add
 def WindowsARM64ECSystemLibrary
     : SystemRuntimeLibrary<isWindowsArm64EC,
                            (add WinArm64ECDefaultRuntimeLibcallImpls,
-                                arm64ec___stack_chk_fail,
-                                __stack_chk_guard,
+                                AvailableIf<arm64ec___stack_chk_fail, hasStackChkFail>,
+                                AvailableIf<__stack_chk_guard, hasStackChkFail>,
                                 LibcallImpls<(add __security_check_cookie_arm64ec,
                                                   __security_cookie),
                                               isWindowsMSVCEnvironment>,
@@ -1490,6 +1508,41 @@ def __aeabi_ddiv : RuntimeLibcallImpl<DIV_F64>; // CallingConv::ARM_AAPCS
 def __aeabi_dmul : RuntimeLibcallImpl<MUL_F64>; // CallingConv::ARM_AAPCS
 def __aeabi_dsub : RuntimeLibcallImpl<SUB_F64>; // CallingConv::ARM_AAPCS
 
+defvar AEABIOverrides = [
+  __eqsf2, __eqdf2,
+  __nesf2, __nedf2,
+  __ltsf2, __ltdf2,
+  __lesf2, __ledf2,
+  __gesf2, __gedf2,
+  __gtsf2, __gtdf2,
+  __unordsf2, __unorddf2,
+
+  __addsf3, __adddf3,
+  __divsf3, __divdf3,
+  __mulsf3, __muldf3,
+  __subsf3, __subdf3,
+
+  __fixdfsi, __fixunsdfsi,
+  __fixdfdi, __fixunsdfdi,
+  __fixsfsi, __fixunssfsi,
+  __fixsfdi, __fixunssfdi,
+
+  __floatsidf, __floatunsidf,
+  __floatdidf, __floatundidf,
+  __floatsisf, __floatunsisf,
+  __floatdisf, __floatundisf,
+
+  __muldi3, __ashldi3,
+  __lshrdi3, __ashrdi3,
+
+  __divsi3, __udivsi3
+
+  // Half conversion cases are a mess and handled separately.
+  //  __truncdfsf2, __truncdfhf2,
+  //  __extendsfdf2,
+  //  __truncsfhf2, __extendhfsf2
+];
+
 // Double-precision floating-point comparison helper functions
 // RTABI chapter 4.1.2, Table 3
 def __aeabi_dcmpeq__oeq : RuntimeLibcallImpl<OEQ_F64, "__aeabi_dcmpeq">; // CallingConv::ARM_AAPCS, CmpInst::ICMP_NE
@@ -1532,7 +1585,7 @@ def __aeabi_f2ulz : RuntimeLibcallImpl<FPTOUINT_F32_I64>; // CallingConv::ARM_AA
 // RTABI chapter 4.1.2, Table 7
 def __aeabi_d2f : RuntimeLibcallImpl<FPROUND_F64_F32>; // CallingConv::ARM_AAPCS
 def __aeabi_d2h : RuntimeLibcallImpl<FPROUND_F64_F16>; // CallingConv::ARM_AAPCS
-def  __aeabi_f2d : RuntimeLibcallImpl<FPEXT_F32_F64>; // CallingConv::ARM_AAPCS
+def __aeabi_f2d : RuntimeLibcallImpl<FPEXT_F32_F64>; // CallingConv::ARM_AAPCS
 
 // Integer to floating-point conversions.
 // RTABI chapter 4.1.2, Table 8
@@ -1775,7 +1828,8 @@ def ARMSystemLibrary
     : SystemRuntimeLibrary<isARMOrThumb,
       (add (sub WinDefaultLibcallImpls, ARMLibgccHalfConvertCalls,
                                         GNUEABIHalfConvertCalls,
-                                        ARMDoubleToHalfCalls),
+                                        ARMDoubleToHalfCalls,
+                                        AEABIOverrides),
            LibcallImpls<(add __powisf2, __powidf2), isNotOSMSVCRT>,
            LibmHasFrexpF32, LibmHasLdexpF32,
            LibmHasFrexpF128, LibmHasLdexpF128,
@@ -1794,6 +1848,11 @@ def ARMSystemLibrary
            GNUEABIHalfConvertCalls,
            ARMDoubleToHalfCalls,
 
+           LibcallImpls<(add AEABIOverrides),
+             RuntimeLibcallPredicate<[{
+               (!hasAEABILibcalls(TT) || !isAAPCS_ABI(TT, ABIName)) &&
+               !TT.isOSWindows()
+            }]>>,
            // Use divmod compiler-rt calls for iOS 5.0 and later.
            LibcallImpls<(add __divmodsi4, __udivmodsi4),
                         RuntimeLibcallPredicate<[{TT.isOSBinFormatMachO() &&
@@ -2117,7 +2176,9 @@ defvar MSP430DefaultOptOut = [
   __fixdfdi, __fixunsdfsi, __modsi3, __floatunsisf,
   __fixunsdfdi, __ltsf2, __floatdisf, __floatdidf,
   __lshrsi3, __subsf3, __umodhi3, __floatunsidf,
-  __floatundidf
+  __floatundidf, __gtdf2, __eqdf2, __gedf2, __ltdf2, __ledf2,
+  __adddf3, __divdf3, __divdi3, __moddi3,
+  __muldf3, __subdf3, __udivdi3, __umoddi3
 ];
 
 // EABI Libcalls - EABI Section 6.2
@@ -2316,11 +2377,11 @@ def PPCSystemLibrary
            LibmHasSinCosPPCF128,
            AvailableIf<memcpy, isNotAIX>,
            LibcallImpls<(add Int128RTLibcalls), isPPC64>,
-           has__stack_chk_fail,
            has__stack_smash_handler,
            has___guard_local,
            AvailableIf<__ssp_canary_word, isAIX>,
-           AvailableIf<__stack_chk_guard, isNotAIX>)>;
+           AvailableIf<__stack_chk_fail, isNotOSOpenBSD>,
+           AvailableIf<__stack_chk_guard, isNotOSAIXAndNotOSOpenBSD>)>;
 
 //===----------------------------------------------------------------------===//
 // RISCV Runtime Libcalls
@@ -2432,6 +2493,11 @@ def _aullrem : RuntimeLibcallImpl<UREM_I64>;
 def _allmul : RuntimeLibcallImpl<MUL_I64>;
 }
 
+// FIXME: Should have utility function to filter by known provider.
+defvar WindowsDivRemMulLibcallOverrides = [
+  __divdi3, __udivdi3, __moddi3, __umoddi3, __muldi3
+];
+
 //===----------------------------------------------------------------------===//
 // X86 Runtime Libcalls
 //===----------------------------------------------------------------------===//
@@ -2453,7 +2519,7 @@ defvar X86_F128_Libcalls = LibcallImpls<(add LibmF128Libcalls, LibmF128FiniteLib
 defvar SinCosF32F64Libcalls = LibcallImpls<(add sincosf, sincos), hasSinCos_f32_f64>;
 
 defvar X86CommonLibcalls =
-  (add WinDefaultLibcallImpls,
+  (add (sub WinDefaultLibcallImpls, WindowsDivRemMulLibcallOverrides),
        DarwinSinCosStret, DarwinExp10,
        X86_F128_Libcalls,
        LibmHasSinCosF80, // FIXME: Depends on long double
@@ -2476,10 +2542,15 @@ defvar Windows32DivRemMulCalls =
   LibcallsWithCC<(add WindowsDivRemMulLibcalls), X86_STDCALL,
   RuntimeLibcallPredicate<"TT.isWindowsMSVCEnvironment() || TT.isWindowsItaniumEnvironment()">>;
 
+defvar NotWindows32DivRemMulCalls =
+  LibcallImpls<(add WindowsDivRemMulLibcallOverrides),
+    RuntimeLibcallPredicate<"!TT.isWindowsMSVCEnvironment() && !TT.isWindowsItaniumEnvironment()">>;
+
 def X86_32SystemLibrary
     : SystemRuntimeLibrary<isX86_32,
       (add X86CommonLibcalls,
-           Windows32DivRemMulCalls)>;
+             NotWindows32DivRemMulCalls,
+             Windows32DivRemMulCalls)>;
 
 def X86_64SystemLibrary
     : SystemRuntimeLibrary<isX86_64,

@@ -1039,12 +1039,17 @@ void DwarfDebug::finishUnitAttributes(const DICompileUnit *DIUnit,
   } else
     NewCU.addString(Die, dwarf::DW_AT_producer, Producer);
 
-  if (auto Lang = DIUnit->getSourceLanguage(); Lang.hasVersionedName())
+  if (auto Lang = DIUnit->getSourceLanguage(); Lang.hasVersionedName()) {
     NewCU.addUInt(Die, dwarf::DW_AT_language_name, dwarf::DW_FORM_data2,
                   Lang.getName());
-  else
+
+    if (uint32_t LangVersion = Lang.getVersion(); LangVersion != 0)
+      NewCU.addUInt(Die, dwarf::DW_AT_language_version, /*Form=*/std::nullopt,
+                    LangVersion);
+  } else {
     NewCU.addUInt(Die, dwarf::DW_AT_language, dwarf::DW_FORM_data2,
                   Lang.getName());
+  }
 
   NewCU.addString(Die, dwarf::DW_AT_name, FN);
   StringRef SysRoot = DIUnit->getSysRoot();

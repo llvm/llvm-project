@@ -370,3 +370,20 @@ namespace GH150709 {
   static_assert((e2[0].*mp)() == 1, ""); // ref-error {{constant expression}}
   static_assert((g.*mp)() == 1, ""); // ref-error {{constant expression}}
 }
+
+namespace DiscardedAddrLabel {
+  void foo(void) {
+  L:
+    *&&L; // both-error {{indirection not permitted on operand of type 'void *'}} \
+          // both-warning {{expression result unused}}
+  }
+}
+
+struct Counter {
+  int copies;
+  constexpr Counter(int copies) : copies(copies) {}
+  constexpr Counter(const Counter& other) : copies(other.copies + 1) {}
+};
+// Passing an lvalue by value makes a non-elidable copy.
+constexpr int PassByValue(Counter c) { return c.copies; }
+static_assert(PassByValue(Counter(0)) == 0, "expect no copies");

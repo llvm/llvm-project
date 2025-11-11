@@ -52,10 +52,6 @@
 using namespace llvm;
 using namespace llvm::VPlanPatternMatch;
 
-namespace llvm {
-extern cl::opt<bool> EnableVPlanNativePath;
-}
-
 /// @{
 /// Metadata attribute names
 const char LLVMLoopVectorizeFollowupAll[] = "llvm.loop.vectorize.followup_all";
@@ -217,32 +213,6 @@ VPBlockBase *VPBlockBase::getEnclosingBlockWithPredecessors() {
   return Parent->getEnclosingBlockWithPredecessors();
 }
 
-bool VPBlockUtils::isHeader(const VPBlockBase *VPB,
-                            const VPDominatorTree &VPDT) {
-  auto *VPBB = dyn_cast<VPBasicBlock>(VPB);
-  if (!VPBB)
-    return false;
-
-  // If VPBB is in a region R, VPBB is a loop header if R is a loop region with
-  // VPBB as its entry, i.e., free of predecessors.
-  if (auto *R = VPBB->getParent())
-    return !R->isReplicator() && !VPBB->hasPredecessors();
-
-  // A header dominates its second predecessor (the latch), with the other
-  // predecessor being the preheader
-  return VPB->getPredecessors().size() == 2 &&
-         VPDT.dominates(VPB, VPB->getPredecessors()[1]);
-}
-
-bool VPBlockUtils::isLatch(const VPBlockBase *VPB,
-                           const VPDominatorTree &VPDT) {
-  // A latch has a header as its second successor, with its other successor
-  // leaving the loop. A preheader OTOH has a header as its first (and only)
-  // successor.
-  return VPB->getNumSuccessors() == 2 &&
-         VPBlockUtils::isHeader(VPB->getSuccessors()[1], VPDT);
-}
-
 VPBasicBlock::iterator VPBasicBlock::getFirstNonPhi() {
   iterator It = begin();
   while (It != end() && It->isPhi())
@@ -330,18 +300,7 @@ Value *VPTransformState::get(const VPValue *Def, bool NeedsScalar) {
   }
 
   bool IsSingleScalar = vputils::isSingleScalar(Def);
-
   VPLane LastLane(IsSingleScalar ? 0 : VF.getFixedValue() - 1);
-  // Check if there is a scalar value for the selected lane.
-  if (!hasScalarValue(Def, LastLane)) {
-    // At the moment, VPWidenIntOrFpInductionRecipes, VPScalarIVStepsRecipes and
-    // VPExpandSCEVRecipes can also be a single scalar.
-    assert((isa<VPWidenIntOrFpInductionRecipe, VPScalarIVStepsRecipe,
-                VPExpandSCEVRecipe>(Def->getDefiningRecipe())) &&
-           "unexpected recipe found to be invariant");
-    IsSingleScalar = true;
-    LastLane = 0;
-  }
 
   // We need to construct the vector value for a single-scalar value by
   // broadcasting the scalar to all lanes.
@@ -768,8 +727,12 @@ static std::pair<VPBlockBase *, VPBlockBase *> cloneFrom(VPBlockBase *Entry) {
 
 VPRegionBlock *VPRegionBlock::clone() {
   const auto &[NewEntry, NewExiting] = cloneFrom(getEntry());
-  auto *NewRegion = getPlan()->createVPRegionBlock(NewEntry, NewExiting,
-                                                   getName(), isReplicator());
+  VPlan &Plan = *getPlan();
+  VPRegionBlock *NewRegion =
+      isReplicator()
+          ? Plan.createReplicateRegion(NewEntry, NewExiting, getName())
+          : Plan.createLoopRegion(getName(), NewEntry, NewExiting);
+
   for (VPBlockBase *Block : vp_depth_first_shallow(NewEntry))
     Block->setParent(NewRegion);
   return NewRegion;

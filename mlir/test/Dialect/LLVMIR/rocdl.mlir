@@ -664,6 +664,49 @@ llvm.func @rocdl.global.load.lds(%src : !llvm.ptr<1>, %dst: !llvm.ptr<3>) {
   llvm.return
 }
 
+llvm.func @rocdl.global.load.async.to.lds(%src : !llvm.ptr<1>, %dst: !llvm.ptr<3>) {
+  // CHECK-LABEL @rocdl.global.load.async.to.lds
+  // CHECK: rocdl.global.load.async.to.lds.b8 %{{.*}}, %{{.*}}, 0, 0
+  // CHECK: rocdl.global.load.async.to.lds.b32 %{{.*}}, %{{.*}}, 0, 0
+  // CHECK: rocdl.global.load.async.to.lds.b64 %{{.*}}, %{{.*}}, 0, 0
+  // CHECK: rocdl.global.load.async.to.lds.b128 %{{.*}}, %{{.*}}, 0, 0
+  rocdl.global.load.async.to.lds.b8 %src, %dst, 0, 0 : <1>, <3>
+  rocdl.global.load.async.to.lds.b32 %src, %dst, 0, 0 : <1>, <3>
+  rocdl.global.load.async.to.lds.b64 %src, %dst, 0, 0 : <1>, <3>
+  rocdl.global.load.async.to.lds.b128 %src, %dst, 0, 0 : <1>, <3>
+  llvm.return
+}
+
+// CHECK-LABEL @rocdl.tensor.load.to.lds
+llvm.func @rocdl.tensor.load.to.lds(%dgroup0 : vector<4xi32>, %dgroup1 : vector<8xi32>,
+                                    %dgroup2 : vector<4xi32>, %dgroup3 : vector<4xi32>) {
+  // CHECK: rocdl.tensor.load.to.lds %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} cachepolicy 0 : vector<4xi32>, vector<8xi32>
+  rocdl.tensor.load.to.lds %dgroup0, %dgroup1, %dgroup2, %dgroup3 cachepolicy 0 : vector<4xi32>, vector<8xi32>
+  llvm.return
+}
+
+// CHECK-LABEL @rocdl.tensor.store.from.lds
+llvm.func @rocdl.tensor.store.from.lds(%dgroup0 : vector<4xi32>, %dgroup1 : vector<8xi32>,
+                                       %dgroup2 : vector<4xi32>, %dgroup3 : vector<4xi32>) {
+  // CHECK: rocdl.tensor.store.from.lds %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} cachepolicy 0 : vector<4xi32>, vector<8xi32>
+  rocdl.tensor.store.from.lds %dgroup0, %dgroup1, %dgroup2, %dgroup3 cachepolicy 0 : vector<4xi32>, vector<8xi32>
+  llvm.return
+}
+
+// CHECK-LABEL @rocdl.tensor.load.to.lds.d2
+llvm.func @rocdl.tensor.load.to.lds.d2(%dgroup0 : vector<4xi32>, %dgroup1 : vector<8xi32>) {
+  // CHECK: rocdl.tensor.load.to.lds.d2 %{{.*}}, %{{.*}} cachepolicy 0 : vector<4xi32>, vector<8xi32>
+  rocdl.tensor.load.to.lds.d2 %dgroup0, %dgroup1 cachepolicy 0 : vector<4xi32>, vector<8xi32>
+  llvm.return
+}
+
+// CHECK-LABEL @rocdl.tensor.store.from.lds.d2
+llvm.func @rocdl.tensor.store.from.lds.d2(%dgroup0 : vector<4xi32>, %dgroup1 : vector<8xi32>) {
+  // CHECK: rocdl.tensor.store.from.lds.d2 %{{.*}}, %{{.*}} cachepolicy 0 : vector<4xi32>, vector<8xi32>
+  rocdl.tensor.store.from.lds.d2 %dgroup0, %dgroup1 cachepolicy 0 : vector<4xi32>, vector<8xi32>
+  llvm.return
+}
+
 llvm.func @rocdl.make.buffer.rsrc(%ptr : !llvm.ptr,
                                   %stride : i16,
                                   %numRecords : i64,
@@ -1205,6 +1248,57 @@ llvm.func @rocdl.cvt.scale.pk16(%v3xi32: vector<3xi32>, %scale:i32) {
   %4 =      rocdl.cvt.scale.pk16.bf16.bf6 %v3xi32, %scale[0] : vector<16xbf16>
   // CHECK: rocdl.cvt.scale.pk16.f32.bf6
   %5 =      rocdl.cvt.scale.pk16.f32.bf6 %v3xi32, %scale[0] : vector<16xf32>
+
+  llvm.return
+}
+
+// -----
+
+// CHECK-LABEL: rocdl.cvt.scalef32.pk16
+llvm.func @rocdl.cvt.scalef32.pk16(%v16xf32: vector<16xf32>,
+                                  %v16xf16: vector<16xf16>,
+                                  %v16xbf16: vector<16xbf16>,
+                                  %scale: f32) {
+
+  // CHECK: rocdl.cvt.scalef32.pk16.fp6.f16
+  %0 =      rocdl.cvt.scalef32.pk16.fp6.f16 %v16xf16, %scale : vector<3xi32>
+  // CHECK: rocdl.cvt.scalef32.pk16.fp6.bf16
+  %1 =      rocdl.cvt.scalef32.pk16.fp6.bf16 %v16xbf16, %scale : vector<3xi32>
+  // CHECK: rocdl.cvt.scalef32.pk16.fp6.f32
+  %2 =      rocdl.cvt.scalef32.pk16.fp6.f32 %v16xf32, %scale : vector<3xi32>
+
+  // CHECK: rocdl.cvt.scalef32.pk16.bf6.f16
+  %3 =      rocdl.cvt.scalef32.pk16.bf6.f16 %v16xf16, %scale : vector<3xi32>
+  // CHECK: rocdl.cvt.scalef32.pk16.bf6.bf16
+  %4 =      rocdl.cvt.scalef32.pk16.bf6.bf16 %v16xbf16, %scale : vector<3xi32>
+  // CHECK: rocdl.cvt.scalef32.pk16.bf6.f32
+  %5 =      rocdl.cvt.scalef32.pk16.bf6.f32 %v16xf32, %scale : vector<3xi32>
+
+  llvm.return
+}
+
+// -----
+
+// CHECK-LABEL: rocdl.cvt.scalef32.sr.pk16
+llvm.func @rocdl.cvt.scalef32.sr.pk16(%v16xf32: vector<16xf32>,
+                                     %v16xf16: vector<16xf16>,
+                                     %v16xbf16: vector<16xbf16>,
+                                     %seed: i32,
+                                     %scale: f32) {
+
+  // CHECK: rocdl.cvt.scalef32.sr.pk16.fp6.f16
+  %0 =      rocdl.cvt.scalef32.sr.pk16.fp6.f16 %v16xf16, %seed, %scale : vector<3xi32>
+  // CHECK: rocdl.cvt.scalef32.sr.pk16.fp6.bf16
+  %1 =      rocdl.cvt.scalef32.sr.pk16.fp6.bf16 %v16xbf16, %seed, %scale : vector<3xi32>
+  // CHECK: rocdl.cvt.scalef32.sr.pk16.fp6.f32
+  %2 =      rocdl.cvt.scalef32.sr.pk16.fp6.f32 %v16xf32, %seed, %scale : vector<3xi32>
+
+  // CHECK: rocdl.cvt.scalef32.sr.pk16.bf6.f16
+  %3 =      rocdl.cvt.scalef32.sr.pk16.bf6.f16 %v16xf16, %seed, %scale : vector<3xi32>
+  // CHECK: rocdl.cvt.scalef32.sr.pk16.bf6.bf16
+  %4 =      rocdl.cvt.scalef32.sr.pk16.bf6.bf16 %v16xbf16, %seed, %scale : vector<3xi32>
+  // CHECK: rocdl.cvt.scalef32.sr.pk16.bf6.f32
+  %5 =      rocdl.cvt.scalef32.sr.pk16.bf6.f32 %v16xf32, %seed, %scale : vector<3xi32>
 
   llvm.return
 }

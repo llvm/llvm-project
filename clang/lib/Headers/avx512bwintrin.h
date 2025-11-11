@@ -92,69 +92,65 @@ _kxor_mask64(__mmask64 __A, __mmask64 __B) {
   return (__mmask64)__builtin_ia32_kxordi((__mmask64)__A, (__mmask64)__B);
 }
 
-static __inline__ unsigned char __DEFAULT_FN_ATTRS
-_kortestc_mask32_u8(__mmask32 __A, __mmask32 __B)
-{
+static __inline__ unsigned char __DEFAULT_FN_ATTRS_CONSTEXPR
+_kortestc_mask32_u8(__mmask32 __A, __mmask32 __B) {
   return (unsigned char)__builtin_ia32_kortestcsi(__A, __B);
 }
 
-static __inline__ unsigned char __DEFAULT_FN_ATTRS
-_kortestz_mask32_u8(__mmask32 __A, __mmask32 __B)
-{
+static __inline__ unsigned char __DEFAULT_FN_ATTRS_CONSTEXPR
+_kortestz_mask32_u8(__mmask32 __A, __mmask32 __B) {
   return (unsigned char)__builtin_ia32_kortestzsi(__A, __B);
 }
 
-static __inline__ unsigned char __DEFAULT_FN_ATTRS
+static __inline__ unsigned char __DEFAULT_FN_ATTRS_CONSTEXPR
 _kortest_mask32_u8(__mmask32 __A, __mmask32 __B, unsigned char *__C) {
   *__C = (unsigned char)__builtin_ia32_kortestcsi(__A, __B);
   return (unsigned char)__builtin_ia32_kortestzsi(__A, __B);
 }
 
-static __inline__ unsigned char __DEFAULT_FN_ATTRS
+static __inline__ unsigned char __DEFAULT_FN_ATTRS_CONSTEXPR
 _kortestc_mask64_u8(__mmask64 __A, __mmask64 __B) {
   return (unsigned char)__builtin_ia32_kortestcdi(__A, __B);
 }
 
-static __inline__ unsigned char __DEFAULT_FN_ATTRS
+static __inline__ unsigned char __DEFAULT_FN_ATTRS_CONSTEXPR
 _kortestz_mask64_u8(__mmask64 __A, __mmask64 __B) {
   return (unsigned char)__builtin_ia32_kortestzdi(__A, __B);
 }
 
-static __inline__ unsigned char __DEFAULT_FN_ATTRS
+static __inline__ unsigned char __DEFAULT_FN_ATTRS_CONSTEXPR
 _kortest_mask64_u8(__mmask64 __A, __mmask64 __B, unsigned char *__C) {
   *__C = (unsigned char)__builtin_ia32_kortestcdi(__A, __B);
   return (unsigned char)__builtin_ia32_kortestzdi(__A, __B);
 }
 
-static __inline__ unsigned char __DEFAULT_FN_ATTRS
-_ktestc_mask32_u8(__mmask32 __A, __mmask32 __B)
-{
+static __inline__ unsigned char __DEFAULT_FN_ATTRS_CONSTEXPR
+_ktestc_mask32_u8(__mmask32 __A, __mmask32 __B) {
   return (unsigned char)__builtin_ia32_ktestcsi(__A, __B);
 }
 
-static __inline__ unsigned char __DEFAULT_FN_ATTRS
-_ktestz_mask32_u8(__mmask32 __A, __mmask32 __B)
-{
+static __inline__ unsigned char __DEFAULT_FN_ATTRS_CONSTEXPR
+_ktestz_mask32_u8(__mmask32 __A, __mmask32 __B) {
   return (unsigned char)__builtin_ia32_ktestzsi(__A, __B);
 }
 
-static __inline__ unsigned char __DEFAULT_FN_ATTRS
+static __inline__ unsigned char __DEFAULT_FN_ATTRS_CONSTEXPR
 _ktest_mask32_u8(__mmask32 __A, __mmask32 __B, unsigned char *__C) {
   *__C = (unsigned char)__builtin_ia32_ktestcsi(__A, __B);
   return (unsigned char)__builtin_ia32_ktestzsi(__A, __B);
 }
 
-static __inline__ unsigned char __DEFAULT_FN_ATTRS
+static __inline__ unsigned char __DEFAULT_FN_ATTRS_CONSTEXPR
 _ktestc_mask64_u8(__mmask64 __A, __mmask64 __B) {
   return (unsigned char)__builtin_ia32_ktestcdi(__A, __B);
 }
 
-static __inline__ unsigned char __DEFAULT_FN_ATTRS
+static __inline__ unsigned char __DEFAULT_FN_ATTRS_CONSTEXPR
 _ktestz_mask64_u8(__mmask64 __A, __mmask64 __B) {
   return (unsigned char)__builtin_ia32_ktestzdi(__A, __B);
 }
 
-static __inline__ unsigned char __DEFAULT_FN_ATTRS
+static __inline__ unsigned char __DEFAULT_FN_ATTRS_CONSTEXPR
 _ktest_mask64_u8(__mmask64 __A, __mmask64 __B, unsigned char *__C) {
   *__C = (unsigned char)__builtin_ia32_ktestcdi(__A, __B);
   return (unsigned char)__builtin_ia32_ktestzdi(__A, __B);
@@ -969,57 +965,50 @@ _mm512_maskz_subs_epu16 (__mmask32 __U, __m512i __A, __m512i __B)
                                         (__v32hi)_mm512_setzero_si512());
 }
 
-static __inline__ __m512i __DEFAULT_FN_ATTRS512
-_mm512_permutex2var_epi16(__m512i __A, __m512i __I, __m512i __B)
-{
+static __inline__ __m512i __DEFAULT_FN_ATTRS512_CONSTEXPR
+_mm512_permutex2var_epi16(__m512i __A, __m512i __I, __m512i __B) {
   return (__m512i)__builtin_ia32_vpermi2varhi512((__v32hi)__A, (__v32hi)__I,
                                                  (__v32hi)__B);
 }
 
-static __inline__ __m512i __DEFAULT_FN_ATTRS512
+static __inline__ __m512i __DEFAULT_FN_ATTRS512_CONSTEXPR
 _mm512_mask_permutex2var_epi16(__m512i __A, __mmask32 __U, __m512i __I,
-                               __m512i __B)
-{
+                               __m512i __B) {
   return (__m512i)__builtin_ia32_selectw_512(__U,
                               (__v32hi)_mm512_permutex2var_epi16(__A, __I, __B),
                               (__v32hi)__A);
 }
 
-static __inline__ __m512i __DEFAULT_FN_ATTRS512
+static __inline__ __m512i __DEFAULT_FN_ATTRS512_CONSTEXPR
 _mm512_mask2_permutex2var_epi16(__m512i __A, __m512i __I, __mmask32 __U,
-                                __m512i __B)
-{
+                                __m512i __B) {
   return (__m512i)__builtin_ia32_selectw_512(__U,
                               (__v32hi)_mm512_permutex2var_epi16(__A, __I, __B),
                               (__v32hi)__I);
 }
 
-static __inline__ __m512i __DEFAULT_FN_ATTRS512
+static __inline__ __m512i __DEFAULT_FN_ATTRS512_CONSTEXPR
 _mm512_maskz_permutex2var_epi16(__mmask32 __U, __m512i __A, __m512i __I,
-                                __m512i __B)
-{
+                                __m512i __B) {
   return (__m512i)__builtin_ia32_selectw_512(__U,
                               (__v32hi)_mm512_permutex2var_epi16(__A, __I, __B),
                               (__v32hi)_mm512_setzero_si512());
 }
 
-static __inline__ __m512i __DEFAULT_FN_ATTRS512
-_mm512_mulhrs_epi16(__m512i __A, __m512i __B)
-{
+static __inline__ __m512i __DEFAULT_FN_ATTRS512_CONSTEXPR
+_mm512_mulhrs_epi16(__m512i __A, __m512i __B) {
   return (__m512i)__builtin_ia32_pmulhrsw512((__v32hi)__A, (__v32hi)__B);
 }
 
-static __inline__ __m512i __DEFAULT_FN_ATTRS512
-_mm512_mask_mulhrs_epi16(__m512i __W, __mmask32 __U, __m512i __A, __m512i __B)
-{
+static __inline__ __m512i __DEFAULT_FN_ATTRS512_CONSTEXPR
+_mm512_mask_mulhrs_epi16(__m512i __W, __mmask32 __U, __m512i __A, __m512i __B) {
   return (__m512i)__builtin_ia32_selectw_512((__mmask32)__U,
                                          (__v32hi)_mm512_mulhrs_epi16(__A, __B),
                                          (__v32hi)__W);
 }
 
-static __inline__ __m512i __DEFAULT_FN_ATTRS512
-_mm512_maskz_mulhrs_epi16(__mmask32 __U, __m512i __A, __m512i __B)
-{
+static __inline__ __m512i __DEFAULT_FN_ATTRS512_CONSTEXPR
+_mm512_maskz_mulhrs_epi16(__mmask32 __U, __m512i __A, __m512i __B) {
   return (__m512i)__builtin_ia32_selectw_512((__mmask32)__U,
                                          (__v32hi)_mm512_mulhrs_epi16(__A, __B),
                                          (__v32hi)_mm512_setzero_si512());

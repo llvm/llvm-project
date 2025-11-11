@@ -142,6 +142,7 @@ static InstructionListType createIncMemory(MCPhysReg RegTo, MCPhysReg RegTmp) {
   atomicAdd(Insts.back(), RegTo, RegTmp);
   return Insts;
 }
+
 class AArch64MCPlusBuilder : public MCPlusBuilder {
 public:
   using MCPlusBuilder::MCPlusBuilder;
@@ -156,6 +157,10 @@ public:
 
   MCPhysReg getStackPointer() const override { return AArch64::SP; }
   MCPhysReg getFramePointer() const override { return AArch64::FP; }
+
+  bool isBreakpoint(const MCInst &Inst) const override {
+    return Inst.getOpcode() == AArch64::BRK;
+  }
 
   bool isPush(const MCInst &Inst) const override {
     return isStoreToStack(Inst);
@@ -579,6 +584,14 @@ public:
     return Inst.getOpcode() == AArch64::ADDXri;
   }
 
+  bool isLDRWl(const MCInst &Inst) const override {
+    return Inst.getOpcode() == AArch64::LDRWl;
+  }
+
+  bool isLDRXl(const MCInst &Inst) const override {
+    return Inst.getOpcode() == AArch64::LDRXl;
+  }
+
   MCPhysReg getADRReg(const MCInst &Inst) const {
     assert((isADR(Inst) || isADRP(Inst)) && "Not an ADR instruction");
     assert(MCPlus::getNumPrimeOperands(Inst) != 0 &&
@@ -596,6 +609,40 @@ public:
     const MCSymbol *Target = getTargetSymbol(ADRInst);
     const uint64_t Addend = getTargetAddend(ADRInst);
     return materializeAddress(Target, Ctx, Reg, Addend);
+  }
+
+  InstructionListType createAdrpLdr(const MCInst &LDRInst,
+                                    MCContext *Ctx) const override {
+    assert((isLDRXl(LDRInst) || isLDRWl(LDRInst)) &&
+           "LDR (literal, 32 or 64-bit integer load) instruction expected");
+    assert(LDRInst.getOperand(0).isReg() &&
+           "unexpected operand in LDR instruction");
+    const MCPhysReg DataReg = LDRInst.getOperand(0).getReg();
+    const MCPhysReg AddrReg =
+        isLDRXl(LDRInst) ? DataReg
+                         : (MCPhysReg)RegInfo->getMatchingSuperReg(
+                               DataReg, AArch64::sub_32,
+                               &RegInfo->getRegClass(AArch64::GPR64RegClassID));
+    const MCSymbol *Target = getTargetSymbol(LDRInst, 1);
+    assert(Target && "missing target symbol in LDR instruction");
+
+    InstructionListType Insts(2);
+    Insts[0].setOpcode(AArch64::ADRP);
+    Insts[0].clear();
+    Insts[0].addOperand(MCOperand::createReg(AddrReg));
+    Insts[0].addOperand(MCOperand::createImm(0));
+    setOperandToSymbolRef(Insts[0], /* OpNum */ 1, Target, 0, Ctx,
+                          ELF::R_AARCH64_NONE);
+    Insts[1].setOpcode(isLDRXl(LDRInst) ? AArch64::LDRXui : AArch64::LDRWui);
+    Insts[1].clear();
+    Insts[1].addOperand(MCOperand::createReg(DataReg));
+    Insts[1].addOperand(MCOperand::createReg(AddrReg));
+    Insts[1].addOperand(MCOperand::createImm(0));
+    Insts[1].addOperand(MCOperand::createImm(0));
+    setOperandToSymbolRef(Insts[1], /* OpNum */ 2, Target, 0, Ctx,
+                          isLDRXl(LDRInst) ? ELF::R_AARCH64_LDST64_ABS_LO12_NC
+                                           : ELF::R_AARCH64_LDST32_ABS_LO12_NC);
+    return Insts;
   }
 
   bool isTB(const MCInst &Inst) const {
@@ -2153,7 +2200,7 @@ public:
 
     --I;
     Address -= 4;
-    if (I->getOpcode() != AArch64::ADRP ||
+    if (I != Begin || I->getOpcode() != AArch64::ADRP ||
         MCPlus::getNumPrimeOperands(*I) < 2 || !I->getOperand(0).isReg() ||
         !I->getOperand(1).isImm() || I->getOperand(0).getReg() != AArch64::X16)
       return 0;
@@ -2758,7 +2805,7 @@ public:
     BitVector WrittenRegs(RegInfo->getNumRegs());
     const BitVector &SizeRegAliases = getAliases(SizeReg);
 
-    for (auto InstIt = BB.begin(); InstIt != CallInst; ++InstIt) {
+    for (auto InstIt = CallInst; InstIt != BB.begin(); --InstIt) {
       const MCInst &Inst = *InstIt;
       WrittenRegs.reset();
       getWrittenRegs(Inst, WrittenRegs);

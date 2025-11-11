@@ -78,7 +78,7 @@ class BasicBlock : public Value {
   }
 
 public:
-  ~BasicBlock() = default;
+  ~BasicBlock() override = default;
   /// For isa/dyn_cast.
   static bool classof(const Value *From) {
     return From->getSubclassID() == Value::ClassID::Block;

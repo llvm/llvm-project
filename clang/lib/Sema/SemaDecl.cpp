@@ -7640,6 +7640,58 @@ static bool isMainVar(DeclarationName Name, VarDecl *VD) {
           VD->isExternC());
 }
 
+void Sema::CheckAsmLabel(Scope *S, Expr *E, StorageClass SC,
+                         TypeSourceInfo *TInfo, VarDecl *NewVD) {
+
+  // Quickly return if the function does not have an `asm` attribute.
+  if (E == nullptr)
+    return;
+
+  // The parser guarantees this is a string.
+  StringLiteral *SE = cast<StringLiteral>(E);
+  StringRef Label = SE->getString();
+  QualType R = TInfo->getType();
+  if (S->getFnParent() != nullptr) {
+    switch (SC) {
+    case SC_None:
+    case SC_Auto:
+      Diag(E->getExprLoc(), diag::warn_asm_label_on_auto_decl) << Label;
+      break;
+    case SC_Register:
+      // Local Named register
+      if (!Context.getTargetInfo().isValidGCCRegisterName(Label) &&
+          DeclAttrsMatchCUDAMode(getLangOpts(), getCurFunctionDecl()))
+        Diag(E->getExprLoc(), diag::err_asm_unknown_register_name) << Label;
+      break;
+    case SC_Static:
+    case SC_Extern:
+    case SC_PrivateExtern:
+      break;
+    }
+  } else if (SC == SC_Register) {
+    // Global Named register
+    if (DeclAttrsMatchCUDAMode(getLangOpts(), NewVD)) {
+      const auto &TI = Context.getTargetInfo();
+      bool HasSizeMismatch;
+
+      if (!TI.isValidGCCRegisterName(Label))
+        Diag(E->getExprLoc(), diag::err_asm_unknown_register_name) << Label;
+      else if (!TI.validateGlobalRegisterVariable(Label, Context.getTypeSize(R),
+                                                  HasSizeMismatch))
+        Diag(E->getExprLoc(), diag::err_asm_invalid_global_var_reg) << Label;
+      else if (HasSizeMismatch)
+        Diag(E->getExprLoc(), diag::err_asm_register_size_mismatch) << Label;
+    }
+
+    if (!R->isIntegralType(Context) && !R->isPointerType()) {
+      Diag(TInfo->getTypeLoc().getBeginLoc(),
+           diag::err_asm_unsupported_register_type)
+          << TInfo->getTypeLoc().getSourceRange();
+      NewVD->setInvalidDecl(true);
+    }
+  }
+}
+
 NamedDecl *Sema::ActOnVariableDeclarator(
     Scope *S, Declarator &D, DeclContext *DC, TypeSourceInfo *TInfo,
     LookupResult &Previous, MultiTemplateParamsArg TemplateParamLists,
@@ -8124,6 +8176,26 @@ NamedDecl *Sema::ActOnVariableDeclarator(
     }
   }
 
+  if (Expr *E = D.getAsmLabel()) {
+    // The parser guarantees this is a string.
+    StringLiteral *SE = cast<StringLiteral>(E);
+    StringRef Label = SE->getString();
+
+    // Insert the asm attribute.
+    NewVD->addAttr(AsmLabelAttr::Create(Context, Label, SE->getStrTokenLoc(0)));
+  } else if (!ExtnameUndeclaredIdentifiers.empty()) {
+    llvm::DenseMap<IdentifierInfo *, AsmLabelAttr *>::iterator I =
+        ExtnameUndeclaredIdentifiers.find(NewVD->getIdentifier());
+    if (I != ExtnameUndeclaredIdentifiers.end()) {
+      if (isDeclExternC(NewVD)) {
+        NewVD->addAttr(I->second);
+        ExtnameUndeclaredIdentifiers.erase(I);
+      } else
+        Diag(NewVD->getLocation(), diag::warn_redefine_extname_not_applied)
+            << /*Variable*/ 1 << NewVD;
+    }
+  }
+
   // Handle attributes prior to checking for duplicates in MergeVarDecl
   ProcessDeclAttributes(S, NewVD, D);
 
@@ -8174,65 +8246,11 @@ NamedDecl *Sema::ActOnVariableDeclarator(
   if (getLangOpts().ObjCAutoRefCount && ObjC().inferObjCARCLifetime(NewVD))
     NewVD->setInvalidDecl();
 
-  // Handle GNU asm-label extension (encoded as an attribute).
-  if (Expr *E = D.getAsmLabel()) {
-    // The parser guarantees this is a string.
-    StringLiteral *SE = cast<StringLiteral>(E);
-    StringRef Label = SE->getString();
-    if (S->getFnParent() != nullptr) {
-      switch (SC) {
-      case SC_None:
-      case SC_Auto:
-        Diag(E->getExprLoc(), diag::warn_asm_label_on_auto_decl) << Label;
-        break;
-      case SC_Register:
-        // Local Named register
-        if (!Context.getTargetInfo().isValidGCCRegisterName(Label) &&
-            DeclAttrsMatchCUDAMode(getLangOpts(), getCurFunctionDecl()))
-          Diag(E->getExprLoc(), diag::err_asm_unknown_register_name) << Label;
-        break;
-      case SC_Static:
-      case SC_Extern:
-      case SC_PrivateExtern:
-        break;
-      }
-    } else if (SC == SC_Register) {
-      // Global Named register
-      if (DeclAttrsMatchCUDAMode(getLangOpts(), NewVD)) {
-        const auto &TI = Context.getTargetInfo();
-        bool HasSizeMismatch;
-
-        if (!TI.isValidGCCRegisterName(Label))
-          Diag(E->getExprLoc(), diag::err_asm_unknown_register_name) << Label;
-        else if (!TI.validateGlobalRegisterVariable(Label,
-                                                    Context.getTypeSize(R),
-                                                    HasSizeMismatch))
-          Diag(E->getExprLoc(), diag::err_asm_invalid_global_var_reg) << Label;
-        else if (HasSizeMismatch)
-          Diag(E->getExprLoc(), diag::err_asm_register_size_mismatch) << Label;
-      }
-
-      if (!R->isIntegralType(Context) && !R->isPointerType()) {
-        Diag(TInfo->getTypeLoc().getBeginLoc(),
-             diag::err_asm_unsupported_register_type)
-            << TInfo->getTypeLoc().getSourceRange();
-        NewVD->setInvalidDecl(true);
-      }
-    }
-
-    NewVD->addAttr(AsmLabelAttr::Create(Context, Label, SE->getStrTokenLoc(0)));
-  } else if (!ExtnameUndeclaredIdentifiers.empty()) {
-    llvm::DenseMap<IdentifierInfo*,AsmLabelAttr*>::iterator I =
-      ExtnameUndeclaredIdentifiers.find(NewVD->getIdentifier());
-    if (I != ExtnameUndeclaredIdentifiers.end()) {
-      if (isDeclExternC(NewVD)) {
-        NewVD->addAttr(I->second);
-        ExtnameUndeclaredIdentifiers.erase(I);
-      } else
-        Diag(NewVD->getLocation(), diag::warn_redefine_extname_not_applied)
-            << /*Variable*/1 << NewVD;
-    }
-  }
+  // Check the ASM label here, as we need to know all other attributes of the
+  // Decl first.  Otherwise, we can't know if the asm label refers to the
+  // host or device in a CUDA context. The device has other registers than
+  // host and we must know where the function will be placed.
+  CheckAsmLabel(S, D.getAsmLabel(), SC, TInfo, NewVD);
 
   // Find the shadowed declaration before filtering for scope.
   NamedDecl *ShadowedDecl = D.getCXXScopeSpec().isEmpty()
@@ -8474,12 +8492,11 @@ void Sema::CheckShadow(NamedDecl *D, NamedDecl *ShadowedDecl,
   DeclContext *NewDC = D->getDeclContext();
 
   if (FieldDecl *FD = dyn_cast<FieldDecl>(ShadowedDecl)) {
-    if (CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(NewDC)) {
-      // Fields are not shadowed by variables in C++ static methods.
-      if (MD->isStatic())
-        return;
-
-      if (!MD->getParent()->isLambda() && MD->isExplicitObjectMemberFunction())
+    if (const auto *MD =
+            dyn_cast<CXXMethodDecl>(getFunctionLevelDeclContext())) {
+      // Fields aren't shadowed in C++ static members or in member functions
+      // with an explicit object parameter.
+      if (MD->isStatic() || MD->isExplicitObjectMemberFunction())
         return;
     }
     // Fields shadowed by constructor parameters are a special case. Usually

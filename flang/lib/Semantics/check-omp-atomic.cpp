@@ -286,7 +286,7 @@ static std::optional<AnalyzedCondStmt> AnalyzeConditionalStmt(
   // Extract the evaluate::Expr from ScalarLogicalExpr.
   auto getFromLogical{[](const parser::ScalarLogicalExpr &logical) {
     // ScalarLogicalExpr is Scalar<Logical<common::Indirection<Expr>>>
-    const parser::Expr &expr{logical.thing.thing.value()};
+    auto &expr{parser::UnwrapRef<parser::Expr>(logical)};
     return GetEvaluateExpr(expr);
   }};
 
