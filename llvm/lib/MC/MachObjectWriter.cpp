@@ -587,7 +587,8 @@ void MachObjectWriter::computeSymbolTable(
   for (MCSection &Sec : Asm) {
     SectionIndexMap[&Sec] = Index++;
   }
-  if(Index > 256)
+  // Section indices begin from 1 in MachO.
+  if (Index > 255)
     getContext().reportError(SMLoc(), "Too many sections!");
 
   // Build the string table.
@@ -626,7 +627,7 @@ void MachObjectWriter::computeSymbolTable(
     } else {
       MSD.SectionIndex = SectionIndexMap.lookup(&Symbol.getSection());
       if(!MSD.SectionIndex)
-        Asm.getContext().reportError(SMLoc(), "Invalid section index!");
+        getContext().reportError(SMLoc(), "Invalid section index!");
       ExternalSymbolData.push_back(MSD);
     }
   }
