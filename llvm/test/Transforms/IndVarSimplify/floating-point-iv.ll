@@ -418,16 +418,15 @@ exit:
   ret void
 }
 
-; FIXME: These are miscompilation issues.
 define void @test_fp_to_int_irrealizable_initval() {
 ; CHECK-LABEL: @test_fp_to_int_irrealizable_initval(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV_INT:%.*]] = phi i32 [ 100000000, [[ENTRY:%.*]] ], [ [[IV_NEXT_INT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi float [ 1.000000e+08, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    call void @opaque()
-; CHECK-NEXT:    [[IV_NEXT_INT]] = add nsw i32 [[IV_INT]], -17
-; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ult i32 [[IV_NEXT_INT]], 25
+; CHECK-NEXT:    [[IV_NEXT]] = fadd float [[IV]], -1.700000e+01
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ult float [[IV_NEXT]], 2.500000e+01
 ; CHECK-NEXT:    br i1 [[CMP]], label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -451,10 +450,10 @@ define void @test_fp_to_int_irrealizable_exitval() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV_INT:%.*]] = phi i32 [ 25, [[ENTRY:%.*]] ], [ [[IV_NEXT_INT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi float [ 2.500000e+01, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    call void @opaque()
-; CHECK-NEXT:    [[IV_NEXT_INT]] = add nuw nsw i32 [[IV_INT]], 17
-; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ugt i32 [[IV_NEXT_INT]], 100000000
+; CHECK-NEXT:    [[IV_NEXT]] = fadd float [[IV]], 1.700000e+01
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ugt float [[IV_NEXT]], 1.000000e+08
 ; CHECK-NEXT:    br i1 [[CMP]], label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -478,10 +477,10 @@ define void @test_fp_to_int_irrealizable_negative_exitval() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV_INT:%.*]] = phi i32 [ -25, [[ENTRY:%.*]] ], [ [[IV_NEXT_INT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi float [ -2.500000e+01, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    call void @opaque()
-; CHECK-NEXT:    [[IV_NEXT_INT]] = add nsw i32 [[IV_INT]], -17
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[IV_NEXT_INT]], -100000000
+; CHECK-NEXT:    [[IV_NEXT]] = fadd float [[IV]], -1.700000e+01
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ult float [[IV_NEXT]], -1.000000e+08
 ; CHECK-NEXT:    br i1 [[CMP]], label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -505,10 +504,10 @@ define void @test_fp_to_int_irrealizable_exitval_pow_2_24() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV_INT:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT_INT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi float [ 0.000000e+00, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    call void @opaque()
-; CHECK-NEXT:    [[IV_NEXT_INT]] = add nuw nsw i32 [[IV_INT]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ugt i32 [[IV_NEXT_INT]], 16777216
+; CHECK-NEXT:    [[IV_NEXT]] = fadd float [[IV]], 1.000000e+00
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ugt float [[IV_NEXT]], 0x4170000000000000
 ; CHECK-NEXT:    br i1 [[CMP]], label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
