@@ -298,7 +298,7 @@ class IndexSwitchOp(IndexSwitchOp):
 
     @builtins.property
     def case_regions(self) -> Sequence[Region]:
-        return [self.regions[1 + i] for i in range(len(self.cases))]
+        return self.regions[1:]
 
     def case_region(self, i: int) -> Region:
         return self.case_regions[i]
