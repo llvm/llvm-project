@@ -3820,9 +3820,9 @@ bool IRTranslator::mayTranslateUserTypes(const User &U) const {
   // SPIRV target is exception.
   return TM.getTargetTriple().isSPIRV() ||
          (!U.getType()->getScalarType()->isBFloatTy() &&
-         !any_of(U.operands(), [](Value *V) {
-           return V->getType()->getScalarType()->isBFloatTy();
-         }));
+          !any_of(U.operands(), [](Value *V) {
+            return V->getType()->getScalarType()->isBFloatTy();
+          }));
 }
 
 bool IRTranslator::finalizeBasicBlock(const BasicBlock &BB,
