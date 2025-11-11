@@ -79,11 +79,11 @@ public:
   _LIBCPP_HIDE_FROM_ABI exception_ptr(nullptr_t) _NOEXCEPT : __ptr_() {}
 
 // These symbols are still exported from the library to prevent ABI breakage.
-#  ifdef _LIBCPP_BUILDING_LIBRARY
+#  if defined(_LIBCPP_BUILDING_LIBRARY) || !_LIBCPP_AVAILABILITY_HAS_INCREMENT_DECREMENT_REFCOUNT_EXCEPTION_PTR
   exception_ptr(const exception_ptr&) _NOEXCEPT;
   exception_ptr& operator=(const exception_ptr&) _NOEXCEPT;
   ~exception_ptr() _NOEXCEPT;
-#  else  // _LIBCPP_BUILDING_LIBRARY
+#  else  // defined(_LIBCPP_BUILDING_LIBRARY) || !_LIBCPP_AVAILABILITY_HAS_INCREMENT_DECREMENT_REFCOUNT_EXCEPTION_PTR
   _LIBCPP_HIDE_FROM_ABI exception_ptr(const exception_ptr& __other) _NOEXCEPT : __ptr_(__other.__ptr_) {
     if (__ptr_)
       __increment_refcount(__ptr_);
@@ -102,7 +102,7 @@ public:
     if (__ptr_)
       __decrement_refcount(__ptr_);
   }
-#  endif // _LIBCPP_BUILDING_LIBRARY
+#  endif // defined(_LIBCPP_BUILDING_LIBRARY) || !_LIBCPP_AVAILABILITY_HAS_INCREMENT_DECREMENT_REFCOUNT_EXCEPTION_PTR
 
   _LIBCPP_HIDE_FROM_ABI exception_ptr(exception_ptr&& __other) _NOEXCEPT : __ptr_(__other.__ptr_) {
     __other.__ptr_ = nullptr;
