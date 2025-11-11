@@ -1346,9 +1346,9 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
 
     // Fold ballot intrinsic based on llvm.assume hint about the result.
     //
-    // assume(ballot(x) == ballot(i1 true)) -> x = true
-    // assume(ballot(x) == -1)              -> x = true
-    // assume(ballot(x) == 0)               -> x = false
+    // assume(ballot(x) == ballot(true)) -> x = true
+    // assume(ballot(x) == -1)           -> x = true
+    // assume(ballot(x) == 0)            -> x = false
     if (Arg->getType()->isIntegerTy(1)) {
       for (auto &AssumeVH : IC.getAssumptionCache().assumptionsFor(&II)) {
         if (!AssumeVH)
@@ -1369,29 +1369,42 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
           continue;
 
         // Determine the constant value of the ballot's condition argument.
-        std::optional<bool> PropagatedBool;
-        if (match(CompareValue, m_AllOnes()) ||
-            match(CompareValue,
-                  m_Intrinsic<Intrinsic::amdgcn_ballot>(m_One()))) {
-          // ballot(x) == -1 or ballot(x) == ballot(true) means x is true.
-          PropagatedBool = true;
-        } else if (match(CompareValue, m_Zero())) {
-          // ballot(x) == 0 means x is false.
-          PropagatedBool = false;
+        std::optional<bool> InferredCondValue;
+        if (auto *CI = dyn_cast<ConstantInt>(CompareValue)) {
+          // ballot(x) == -1 means all lanes have x = true.
+          if (CI->isMinusOne())
+            InferredCondValue = true;
+          // ballot(x) == 0 means all lanes have x = false.
+          else if (CI->isZero())
+            InferredCondValue = false;
+        } else if (match(CompareValue,
+                         m_Intrinsic<Intrinsic::amdgcn_ballot>(m_One()))) {
+          // ballot(x) == ballot(true) means x = true.
+          InferredCondValue = true;
+        } else if (match(CompareValue,
+                         m_Intrinsic<Intrinsic::amdgcn_ballot>(m_Zero()))) {
+          // ballot(x) == ballot(false) means x = false.
+          InferredCondValue = false;
         }
 
-        if (!PropagatedBool)
+        if (!InferredCondValue)
           continue;
 
-        Constant *PropagatedValue =
-            ConstantInt::getBool(Arg->getContext(), *PropagatedBool);
+        Constant *ReplacementValue =
+            ConstantInt::getBool(Arg->getContext(), *InferredCondValue);
 
-        // Replace dominated uses of the ballot's condition argument with the
-        // propagated value.
-        Arg->replaceUsesWithIf(PropagatedValue, [&](Use &U) {
+        // Replace dominated uses of the condition argument.
+        bool Changed = false;
+        Arg->replaceUsesWithIf(ReplacementValue, [&](Use &U) {
           Instruction *UserInst = dyn_cast<Instruction>(U.getUser());
-          return UserInst && IC.getDominatorTree().dominates(Assume, U);
+          bool Dominates =
+              UserInst && IC.getDominatorTree().dominates(Assume, U);
+          Changed |= Dominates;
+          return Dominates;
         });
+
+        if (Changed)
+          return nullptr;
       }
     }
 
