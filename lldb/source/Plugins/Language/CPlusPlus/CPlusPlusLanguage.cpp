@@ -16,6 +16,7 @@
 #include <mutex>
 #include <set>
 
+#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Demangle/ItaniumDemangle.h"
 
@@ -34,6 +35,7 @@
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/NameMatches.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/ValueObject/ValueObjectVariable.h"
 
@@ -538,15 +540,154 @@ void CPlusPlusLanguage::CxxMethodName::Parse() {
   }
 }
 
-llvm::StringRef
-CPlusPlusLanguage::CxxMethodName::GetBasenameNoTemplateParameters() {
-  llvm::StringRef basename = GetBasename();
-  size_t arg_start, arg_end;
-  llvm::StringRef parens("<>", 2);
-  if (ReverseFindMatchingChars(basename, parens, arg_start, arg_end))
-    return basename.substr(0, arg_start);
+bool CPlusPlusLanguage::CxxMethodName::NameMatches(llvm::StringRef full_name,
+                                                   llvm::StringRef pattern,
+                                                   MatchOptions options) {
+  constexpr llvm::StringRef abi_prefix = "[abi:";
+  constexpr char abi_end = ']';
+  constexpr char open_angle = '<';
+  constexpr char close_angle = '>';
+  size_t f_idx = 0;
+  size_t p_idx = 0;
 
-  return basename;
+  while (f_idx < full_name.size()) {
+    const char in_char = full_name[f_idx];
+    // input may have extra abi_tag / template so we still loop
+    const bool match_empty = p_idx >= pattern.size();
+    const char ma_char = match_empty ? '\0' : pattern[p_idx];
+
+    // skip abi_tags.
+    if (options.skip_tags && in_char == '[' &&
+        full_name.substr(f_idx).starts_with(abi_prefix)) {
+
+      const size_t tag_end = full_name.find(abi_end, f_idx);
+      if (tag_end != llvm::StringRef::npos) {
+        const size_t in_tag_len = tag_end - f_idx + 1;
+
+        if (!match_empty && pattern.substr(p_idx).starts_with(abi_prefix)) {
+          const size_t match_tag_end = pattern.find(abi_end, p_idx);
+          if (match_tag_end != llvm::StringRef::npos) {
+            const size_t ma_tag_len = match_tag_end - p_idx + 1;
+
+            // match may only have only one of the input's abi_tags.
+            // we only skip if the abi_tag matches.
+            if ((in_tag_len == ma_tag_len) &&
+                full_name.substr(f_idx, in_tag_len) ==
+                    pattern.substr(p_idx, ma_tag_len)) {
+              p_idx += ma_tag_len;
+            }
+          }
+        }
+
+        f_idx += in_tag_len;
+        continue;
+      }
+    }
+
+    // skip template_tags.
+    if (options.skip_templates && in_char == open_angle &&
+        ma_char != open_angle) {
+      size_t depth = 1;
+      size_t tmp_idx = f_idx + 1;
+      bool found_end = false;
+      for (; tmp_idx < full_name.size(); ++tmp_idx) {
+        const char cur = full_name[tmp_idx];
+        if (cur == open_angle)
+          depth++;
+        else if (cur == close_angle) {
+          depth--;
+
+          if (depth == 0) {
+            found_end = true;
+            break;
+          }
+        }
+      }
+
+      if (found_end) {
+        f_idx = tmp_idx + 1;
+        continue;
+      }
+    }
+
+    // input contains characters that are not in match.
+    if (match_empty || in_char != ma_char)
+      return false;
+
+    f_idx++;
+    p_idx++;
+  }
+
+  // Ensure we fully consumed the match string.
+  return p_idx == pattern.size();
+}
+
+static llvm::StringRef NextContext(llvm::StringRef context, size_t &end_pos) {
+  if (end_pos == llvm::StringRef::npos)
+    return {};
+
+  const int start = 0;
+  const int end = static_cast<int>(end_pos) - 1;
+  int depth = 0;
+
+  if (end >= static_cast<int>(context.size())) {
+    end_pos = llvm::StringRef::npos;
+    return {};
+  }
+
+  for (int idx = end; idx >= start; --idx) {
+    const char val = context[idx];
+
+    if (depth == 0 && val == ':' && (idx != 0) && (idx - 1 >= 0) &&
+        context[idx - 1] == ':') {
+      end_pos = idx - 1;
+      return context.substr(idx + 1, end_pos - idx);
+    }
+
+    if (val == '<' || val == '(' || val == '[')
+      depth++;
+    else if (val == '>' || val == ')' || val == ']')
+      depth--;
+  }
+
+  end_pos = llvm::StringRef::npos;
+  return context.substr(start, end_pos - start);
+}
+
+bool CPlusPlusLanguage::CxxMethodName::ContainsContext(
+    llvm::StringRef full_name, llvm::StringRef pattern, MatchOptions options) {
+  size_t full_pos = full_name.size();
+  size_t pat_pos = pattern.size();
+
+  // We loop as long as there are contexts left in the identifier.
+  while (full_pos != llvm::StringRef::npos) {
+    size_t next_full_pos = full_pos;
+    const llvm::StringRef full_ctx = NextContext(full_name, next_full_pos);
+
+    size_t next_pat_pos = pat_pos;
+    const llvm::StringRef pat_ctx = NextContext(pattern, next_pat_pos);
+
+    if (NameMatches(full_ctx, pat_ctx, options)) {
+      // we matched all characters in part_str.
+      if (next_pat_pos == llvm::StringRef::npos)
+        return true;
+
+      // context matches: advance both cursors.
+      full_pos = next_full_pos;
+      pat_pos = next_pat_pos;
+      continue;
+    }
+
+    if (next_pat_pos == llvm::StringRef::npos)
+      return false;
+
+    // context does not match. advance the identifier cursor (consume the
+    // current identifier context) and resest the path cursor to the beginning.
+    full_pos = next_full_pos;
+    pat_pos = 0;
+  }
+
+  return false;
 }
 
 bool CPlusPlusLanguage::CxxMethodName::ContainsPath(llvm::StringRef path) {
@@ -564,21 +705,9 @@ bool CPlusPlusLanguage::CxxMethodName::ContainsPath(llvm::StringRef path) {
   if (!success)
     return m_full.GetStringRef().contains(path);
 
-  // Basename may include template arguments.
-  // E.g.,
-  // GetBaseName(): func<int>
-  // identifier   : func
-  //
-  // ...but we still want to account for identifiers with template parameter
-  // lists, e.g., when users set breakpoints on template specializations.
-  //
-  // E.g.,
-  // GetBaseName(): func<uint32_t>
-  // identifier   : func<int32_t*>
-  //
-  // Try to match the basename with or without template parameters.
-  if (GetBasename() != identifier &&
-      GetBasenameNoTemplateParameters() != identifier)
+  const MatchOptions options{/*skip_templates*/ true, /*skip_tags*/ true};
+  const llvm::StringRef basename = GetBasename();
+  if (!NameMatches(basename, identifier, options))
     return false;
 
   // Incoming path only had an identifier, so we match.
@@ -588,13 +717,7 @@ bool CPlusPlusLanguage::CxxMethodName::ContainsPath(llvm::StringRef path) {
   if (m_context.empty())
     return false;
 
-  llvm::StringRef haystack = m_context;
-  if (!haystack.consume_back(context))
-    return false;
-  if (haystack.empty() || !isalnum(haystack.back()))
-    return true;
-
-  return false;
+  return ContainsContext(m_context, context, options);
 }
 
 bool CPlusPlusLanguage::DemangledNameContainsPath(llvm::StringRef path,

@@ -32,19 +32,43 @@ public:
     bool ContainsPath(llvm::StringRef path);
 
   private:
-    /// Returns the Basename of this method without a template parameter
-    /// list, if any.
+    struct MatchOptions {
+      bool skip_templates;
+      bool skip_tags;
+    };
+
+    /// Compare method name with the pattern with the option to skip over ABI
+    /// tags and template parameters in the full_name when they don't appear in
+    /// pattern.
     ///
-    // Examples:
-    //
-    //   +--------------------------------+---------+
-    //   | MethodName                     | Returns |
-    //   +--------------------------------+---------+
-    //   | void func()                    | func    |
-    //   | void func<int>()               | func    |
-    //   | void func<std::vector<int>>()  | func    |
-    //   +--------------------------------+---------+
-    llvm::StringRef GetBasenameNoTemplateParameters();
+    /// \param full_name The complete method name that may contain ABI tags and
+    /// templates
+    /// \param pattern The name pattern to match against
+    /// \param options Configuration for what to skip during matching
+    /// \return true if the names match (ignoring skipped parts), false
+    /// otherwise
+    ///
+    /// Examples:
+    // | MethodName           | Pattern     | Option                | Returns |
+    // |----------------------|-------------|-----------------------|---------|
+    // | vector<int>()        | vector      | skip_template         | true    |
+    // | foo[abi:aTag]<int>() | foo         | skip_template_and_tag | true    |
+    // | MyClass::foo()       | OClass::foo |                       | false   |
+    // | bar::foo<int>        | foo         | no_skip_template      | false   |
+    ///
+    bool NameMatches(llvm::StringRef full_name, llvm::StringRef pattern,
+                     MatchOptions options);
+
+    /// Checks if a pattern appears as a suffix of contexts within a full C++
+    /// name, uses the same \a MatchOption as \a NameMatches.
+    ///
+    /// \param full_name The fully qualified C++ name to search within
+    /// \param pattern The pattern to search for (can be partial scope path)
+    /// \param options Configuration for name matching (passed to NameMatches)
+    /// \return true if the pattern is found as a suffix context or the whole
+    /// context, false otherwise
+    bool ContainsContext(llvm::StringRef full_name, llvm::StringRef pattern,
+                         MatchOptions options);
 
   protected:
     void Parse() override;
