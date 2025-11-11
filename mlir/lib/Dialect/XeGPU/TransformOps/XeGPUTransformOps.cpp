@@ -120,6 +120,33 @@ static std::optional<T> findProducerOfType(Value val) {
   return findProducerOfType<T>(producerOp->getOperand(0));
 }
 
+/// Find layout attribute in producer chain.
+/// Traces producer ops until a layout attribute is found. Only traces through
+/// ops with a single operand, in other cases the op's result layout attribute
+/// must be set. Returns std::nullopt if no layout attribute is found.
+xegpu::LayoutAttr findProducerLayout(Value val) {
+  // Get layout attr from value or producer's attribute or operand.
+  if (auto layoutAttr = dyn_cast_if_present<xegpu::LayoutAttr>(
+          xegpu::getDistributeLayoutAttr(val)))
+    return layoutAttr;
+
+  // Recurse up the producer chain.
+  Operation *producerOp = val.getDefiningOp();
+  if (!producerOp) {
+    LDBG() << "Failed to find producer op.";
+    return nullptr;
+  }
+  if (producerOp->getNumOperands() == 0) {
+    LDBG() << "Producer has no operands.";
+    return nullptr;
+  }
+  if (producerOp->getNumOperands() > 1) {
+    LDBG() << "Producer has multiple operands.";
+    return nullptr;
+  }
+  return findProducerLayout(producerOp->getOperand(0));
+}
+
 /// Create a layout attribute from the given parameters.
 static xegpu::LayoutAttr
 createLayoutAttr(MLIRContext *ctx, ArrayRef<int32_t> sgLayout,
@@ -568,34 +595,33 @@ transform::ConvertLayoutOp::apply(transform::TransformRewriter &rewriter,
            << llvm::range_size(targetValues) << ")";
   auto value = *targetValues.begin();
 
-  xegpu::LayoutAttr layoutAttr = nullptr;
+  xegpu::LayoutAttr targetLayoutAttr = nullptr;
   auto status = getLayoutAttrFromOperands(getContext(), state, (*this),
                                           getMixedSgLayout(), getMixedSgData(),
-                                          getMixedInstData(), layoutAttr);
+                                          getMixedInstData(), targetLayoutAttr);
   if (!status.succeeded())
     return status;
 
-  // Get load op.
-  auto maybeLoadOp = findProducerOfType<xegpu::LoadNdOp>(value);
-  if (!maybeLoadOp)
-    return emitSilenceableFailure(getLoc()) << "Could not find load op.";
-  auto loadOp = *maybeLoadOp;
-  // Get load op operand value layout
-  auto producerLayoutAttr =
-      xegpu::getDistributeLayoutAttr(loadOp.getOperand(0));
+  // Find source layout attribute from the producer chain.
+  auto producerLayoutAttr = findProducerLayout(value);
   if (!producerLayoutAttr)
     return emitSilenceableFailure(getLoc())
-           << "Operand producer op does not have a layout attr.";
+           << "Could not find a layout attribute in the producer chain.";
 
-  if (producerLayoutAttr != layoutAttr) {
-    rewriter.setInsertionPointAfter(loadOp.getOperation());
-    auto source = loadOp.getResult();
+  // Find first user op to define insertion point for layout conversion.
+  if (value.use_empty())
+    return emitSilenceableFailure(getLoc())
+           << "Value has no users to insert layout conversion.";
+  Operation *userOp = *value.getUsers().begin();
+
+  if (producerLayoutAttr != targetLayoutAttr) {
+    rewriter.setInsertionPoint(userOp);
     auto convLayoutOp = xegpu::ConvertLayoutOp::create(
-        rewriter, loadOp.getLoc(), source.getType(), source, producerLayoutAttr,
-        layoutAttr);
+        rewriter, value.getLoc(), value.getType(), value, producerLayoutAttr,
+        targetLayoutAttr);
     // Replace load op result with the converted layout.
     rewriter.replaceUsesWithIf(
-        source, convLayoutOp.getResult(), [&](OpOperand &use) {
+        value, convLayoutOp.getResult(), [&](OpOperand &use) {
           return use.getOwner() != convLayoutOp.getOperation();
         });
   }
