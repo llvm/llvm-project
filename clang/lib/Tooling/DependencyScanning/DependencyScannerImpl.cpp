@@ -1,4 +1,4 @@
-//===- DependencyScanner.cpp - Performs module dependency scanning --------===//
+//===- DependencyScannerImpl.cpp - Implements module dependency scanning --===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -12,6 +12,7 @@
 #include "clang/Driver/Driver.h"
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Tooling/DependencyScanning/DependencyScanningWorker.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/TargetParser/Host.h"
 
 using namespace clang;
@@ -456,7 +457,8 @@ initVFSForTUBuferScanning(IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
   return std::make_pair(ModifiedFS, ModifiedCommandLine);
 }
 
-std::pair<IntrusiveRefCntPtr<llvm::vfs::FileSystem>, std::vector<std::string>>
+std::pair<IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem>,
+          std::vector<std::string>>
 initVFSForByNameScanning(IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
                          ArrayRef<std::string> CommandLine,
                          StringRef WorkingDirectory, StringRef ModuleName) {
@@ -588,7 +590,7 @@ computePrebuiltModulesASTMap(CompilerInstance &ScanInstance,
 }
 
 std::unique_ptr<DependencyOutputOptions>
-takeDependencyOutputOptionsFrom(CompilerInstance &ScanInstance) {
+takeAndUpdateDependencyOutputOptionsFrom(CompilerInstance &ScanInstance) {
   // This function moves the existing dependency output options from the
   // invocation to the collector. The options in the invocation are reset,
   // which ensures that the compiler won't create new dependency collectors,
@@ -675,7 +677,7 @@ bool DependencyScanningAction::runInvocation(
   if (!MaybePrebuiltModulesASTMap)
     return false;
 
-  auto DepOutputOpts = takeDependencyOutputOptionsFrom(ScanInstance);
+  auto DepOutputOpts = takeAndUpdateDependencyOutputOptionsFrom(ScanInstance);
 
   MDC = initializeScanInstanceDependencyCollector(
       ScanInstance, std::move(DepOutputOpts), WorkingDirectory, Consumer,
@@ -686,8 +688,6 @@ bool DependencyScanningAction::runInvocation(
 
   if (Service.getFormat() == ScanningOutputFormat::P1689)
     Action = std::make_unique<PreprocessOnlyAction>();
-  else if (ModuleName)
-    Action = std::make_unique<GetDependenciesByModuleNameAction>(*ModuleName);
   else
     Action = std::make_unique<ReadPCHAndPreprocessAction>();
 
@@ -703,4 +703,176 @@ bool DependencyScanningAction::runInvocation(
     setLastCC1Arguments(std::move(OriginalInvocation));
 
   return Result;
+}
+
+bool CompilerInstanceWithContext::initialize(DiagnosticConsumer *DC) {
+  if (DC) {
+    DiagConsumer = DC;
+  } else {
+    DiagPrinterWithOS =
+        std::make_unique<TextDiagnosticsPrinterWithOutput>(CommandLine);
+    DiagConsumer = &DiagPrinterWithOS->DiagPrinter;
+  }
+
+  std::tie(OverlayFS, CommandLine) = initVFSForByNameScanning(
+      Worker.BaseFS, CommandLine, CWD, "ScanningByName");
+
+  DiagEngineWithCmdAndOpts = std::make_unique<DignosticsEngineWithDiagOpts>(
+      CommandLine, OverlayFS, *DiagConsumer);
+
+  std::tie(Driver, Compilation) = buildCompilation(
+      CommandLine, *DiagEngineWithCmdAndOpts->DiagEngine, OverlayFS, Alloc);
+
+  if (!Compilation)
+    return false;
+
+  assert(Compilation->getJobs().size() &&
+         "Must have a job list of non-zero size");
+  const driver::Command &Command = *(Compilation->getJobs().begin());
+  const auto &CommandArgs = Command.getArguments();
+  assert(!CommandArgs.empty() && "Cannot have a command with 0 args");
+  assert(StringRef(CommandArgs[0]) == "-cc1" && "Requires a cc1 job.");
+  OriginalInvocation = std::make_unique<CompilerInvocation>();
+
+  if (!CompilerInvocation::CreateFromArgs(*OriginalInvocation, CommandArgs,
+                                          *DiagEngineWithCmdAndOpts->DiagEngine,
+                                          Command.getExecutable())) {
+    DiagEngineWithCmdAndOpts->DiagEngine->Report(
+        diag::err_fe_expected_compiler_job)
+        << llvm::join(CommandLine, " ");
+    return false;
+  }
+
+  if (any(Worker.Service.getOptimizeArgs() & ScanningOptimizations::Macros))
+    canonicalizeDefines(OriginalInvocation->getPreprocessorOpts());
+
+  // Create the CompilerInstance.
+  IntrusiveRefCntPtr<ModuleCache> ModCache =
+      makeInProcessModuleCache(Worker.Service.getModuleCacheEntries());
+  CIPtr = std::make_unique<CompilerInstance>(
+      std::make_shared<CompilerInvocation>(*OriginalInvocation),
+      Worker.PCHContainerOps, ModCache.get());
+  auto &CI = *CIPtr;
+
+  if (!initializeScanCompilerInstance(
+          CI, OverlayFS, DiagEngineWithCmdAndOpts->DiagEngine->getClient(),
+          Worker.Service, Worker.DepFS))
+    return false;
+
+  StableDirs = getInitialStableDirs(CI);
+  auto MaybePrebuiltModulesASTMap =
+      computePrebuiltModulesASTMap(CI, StableDirs);
+  if (!MaybePrebuiltModulesASTMap)
+    return false;
+
+  PrebuiltModuleASTMap = std::move(*MaybePrebuiltModulesASTMap);
+  OutputOpts = takeAndUpdateDependencyOutputOptionsFrom(CI);
+
+  // We do not create the target in initializeScanCompilerInstance because
+  // setting it here is unique for by-name lookups. We create the target only
+  // once here, and the information is reused for all computeDependencies calls.
+  // We do not need to call createTarget explicitly if we go through
+  // CompilerInstance::ExecuteAction to perform scanning.
+  CI.createTarget();
+
+  return true;
+}
+
+bool CompilerInstanceWithContext::computeDependencies(
+    StringRef ModuleName, DependencyConsumer &Consumer,
+    DependencyActionController &Controller) {
+  assert(CIPtr && "CIPtr must be initialized before calling this method");
+  auto &CI = *CIPtr;
+
+  // We create this cleanup object because computeDependencies may exit
+  // early with errors.
+  auto CleanUp = llvm::make_scope_exit([&]() {
+    CI.clearDependencyCollectors();
+    // The preprocessor may not be created at the entry of this method,
+    // but it must have been created when this method returns, whether
+    // there are errors during scanning or not.
+    CI.getPreprocessor().removePPCallbacks();
+  });
+
+  auto MDC = initializeScanInstanceDependencyCollector(
+      CI, std::make_unique<DependencyOutputOptions>(*OutputOpts), CWD, Consumer,
+      Worker.Service,
+      /* The MDC's constructor makes a copy of the OriginalInvocation, so
+      we can pass it in without worrying that it might be changed across
+      invocations of computeDependencies. */
+      *OriginalInvocation, Controller, PrebuiltModuleASTMap, StableDirs);
+
+  if (!SrcLocOffset) {
+    // When SrcLocOffset is zero, we are at the beginning of the fake source
+    // file. In this case, we call BeginSourceFile to initialize.
+    std::unique_ptr<FrontendAction> Action =
+        std::make_unique<PreprocessOnlyAction>();
+    auto InputFile = CI.getFrontendOpts().Inputs.begin();
+    bool ActionBeginSucceeded = Action->BeginSourceFile(CI, *InputFile);
+    assert(ActionBeginSucceeded && "Action BeginSourceFile must succeed");
+    (void)ActionBeginSucceeded;
+  }
+
+  Preprocessor &PP = CI.getPreprocessor();
+  SourceManager &SM = PP.getSourceManager();
+  FileID MainFileID = SM.getMainFileID();
+  SourceLocation FileStart = SM.getLocForStartOfFile(MainFileID);
+  SourceLocation IDLocation = FileStart.getLocWithOffset(SrcLocOffset);
+  PPCallbacks *CB = nullptr;
+  if (!SrcLocOffset) {
+    // We need to call EnterSourceFile when SrcLocOffset is zero to initialize
+    // the preprocessor.
+    bool PPFailed = PP.EnterSourceFile(MainFileID, nullptr, SourceLocation());
+    assert(!PPFailed && "Preprocess must be able to enter the main file.");
+    (void)PPFailed;
+    CB = MDC->getPPCallbacks();
+  } else {
+    // When SrcLocOffset is non-zero, the preprocessor has already been
+    // initialized through a previous call of computeDependencies. We want to
+    // preserve the PP's state, hence we do not call EnterSourceFile again.
+    MDC->attachToPreprocessor(PP);
+    CB = MDC->getPPCallbacks();
+
+    FileID PrevFID;
+    SrcMgr::CharacteristicKind FileType = SM.getFileCharacteristic(IDLocation);
+    CB->LexedFileChanged(MainFileID,
+                         PPChainedCallbacks::LexedFileChangeReason::EnterFile,
+                         FileType, PrevFID, IDLocation);
+  }
+
+  SrcLocOffset++;
+  SmallVector<IdentifierLoc, 2> Path;
+  IdentifierInfo *ModuleID = PP.getIdentifierInfo(ModuleName);
+  Path.emplace_back(IDLocation, ModuleID);
+  auto ModResult = CI.loadModule(IDLocation, Path, Module::Hidden, false);
+
+  assert(CB && "Must have PPCallbacks after module loading");
+  CB->moduleImport(SourceLocation(), Path, ModResult);
+  // Note that we are calling the CB's EndOfMainFile function, which
+  // forwards the results to the dependency consumer.
+  // It does not indicate the end of processing the fake file.
+  CB->EndOfMainFile();
+
+  if (!ModResult)
+    return false;
+
+  CompilerInvocation ModuleInvocation(*OriginalInvocation);
+  MDC->applyDiscoveredDependencies(ModuleInvocation);
+  Consumer.handleBuildCommand(
+      {CommandLine[0], ModuleInvocation.getCC1CommandLine()});
+
+  return true;
+}
+
+bool CompilerInstanceWithContext::finalize() {
+  DiagConsumer->finish();
+  return true;
+}
+
+llvm::Error CompilerInstanceWithContext::handleReturnStatus(bool Success) {
+  assert(DiagPrinterWithOS && "Must use the default DiagnosticConsumer.");
+  return Success ? llvm::Error::success()
+                 : llvm::make_error<llvm::StringError>(
+                       DiagPrinterWithOS->DiagnosticsOS.str(),
+                       llvm::inconvertibleErrorCode());
 }

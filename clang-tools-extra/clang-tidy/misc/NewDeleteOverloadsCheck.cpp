@@ -51,7 +51,7 @@ AST_MATCHER(FunctionDecl, isPlacementOverload) {
     return true;
 
   const auto *FPT = Node.getType()->castAs<FunctionProtoType>();
-  ASTContext &Ctx = Node.getASTContext();
+  const ASTContext &Ctx = Node.getASTContext();
   if (Ctx.getLangOpts().SizedDeallocation &&
       ASTContext::hasSameType(FPT->getParamType(1), Ctx.getSizeType()))
     return false;

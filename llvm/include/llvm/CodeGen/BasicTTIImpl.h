@@ -316,12 +316,22 @@ private:
     EVT ScalarVT = VT.getScalarType();
     RTLIB::Libcall LC = RTLIB::UNKNOWN_LIBCALL;
 
+    /// Migration flag. IsVectorCall cases directly know about the vector
+    /// libcall in RuntimeLibcallsInfo and shouldn't try to use
+    /// LibInfo->getVectorMappingInfo.
+    bool IsVectorCall = false;
+
     switch (ICA.getID()) {
     case Intrinsic::modf:
       LC = RTLIB::getMODF(ScalarVT);
       break;
     case Intrinsic::sincospi:
-      LC = RTLIB::getSINCOSPI(ScalarVT);
+      LC = RTLIB::getSINCOSPI(VT);
+      if (LC == RTLIB::UNKNOWN_LIBCALL)
+        LC = RTLIB::getSINCOSPI(ScalarVT);
+      else if (VT.isVector())
+        IsVectorCall = true;
+
       break;
     case Intrinsic::sincos:
       LC = RTLIB::getSINCOS(ScalarVT);
@@ -345,17 +355,23 @@ private:
     LLVMContext &Ctx = RetTy->getContext();
     ElementCount VF = getVectorizedTypeVF(RetTy);
     VecDesc const *VD = nullptr;
-    for (bool Masked : {false, true}) {
-      if ((VD = LibInfo->getVectorMappingInfo(LCName, VF, Masked)))
-        break;
+
+    if (!IsVectorCall) {
+      for (bool Masked : {false, true}) {
+        if ((VD = LibInfo->getVectorMappingInfo(LCName, VF, Masked)))
+          break;
+      }
+      if (!VD)
+        return std::nullopt;
     }
-    if (!VD)
-      return std::nullopt;
 
     // Cost the call + mask.
     auto Cost =
         thisT()->getCallInstrCost(nullptr, RetTy, ICA.getArgTypes(), CostKind);
-    if (VD->isMasked()) {
+
+    if ((VD && VD->isMasked()) ||
+        (IsVectorCall &&
+         RTLIB::RuntimeLibcallsInfo::hasVectorMaskArgument(LibcallImpl))) {
       auto VecTy = VectorType::get(IntegerType::getInt1Ty(Ctx), VF);
       Cost += thisT()->getShuffleCost(TargetTransformInfo::SK_Broadcast, VecTy,
                                       VecTy, {}, CostKind, 0, nullptr, {});
@@ -1331,8 +1347,8 @@ public:
       bool SplitDst =
           TLI->getTypeAction(Dst->getContext(), TLI->getValueType(DL, Dst)) ==
           TargetLowering::TypeSplitVector;
-      if ((SplitSrc || SplitDst) && SrcVTy->getElementCount().isVector() &&
-          DstVTy->getElementCount().isVector()) {
+      if ((SplitSrc || SplitDst) && SrcVTy->getElementCount().isKnownEven() &&
+          DstVTy->getElementCount().isKnownEven()) {
         Type *SplitDstTy = VectorType::getHalfElementsVectorType(DstVTy);
         Type *SplitSrcTy = VectorType::getHalfElementsVectorType(SrcVTy);
         const T *TTI = thisT();

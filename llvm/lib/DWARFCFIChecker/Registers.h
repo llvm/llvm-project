@@ -17,7 +17,6 @@
 
 #include "llvm/MC/MCRegister.h"
 #include "llvm/MC/MCRegisterInfo.h"
-#include <iterator>
 
 namespace llvm {
 

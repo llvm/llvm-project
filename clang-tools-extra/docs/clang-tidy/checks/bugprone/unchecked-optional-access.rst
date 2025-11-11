@@ -308,3 +308,22 @@ advantages:
   * Performance. A single check can cover many or even all accesses within
     scope. This gives the user the best of both worlds -- the safety of a
     dynamic check, but without incurring redundant costs.
+
+Options
+-------
+
+.. option:: IgnoreSmartPointerDereference
+
+   If set to `true`, the check ignores optionals that
+   are reached through overloaded smart-pointer-like dereference (``operator*``,
+   ``operator->``) on classes other than the optional type itself. This helps
+   avoid false positives where the analysis cannot equate results across such
+   calls. This does not cover access through ``operator[]``. Default is `false`.
+
+.. option:: IgnoreValueCalls
+
+   If set to `true`, the check does not diagnose calls
+   to ``optional::value()``. Diagnostics for ``operator*()`` and
+   ``operator->()`` remain enabled. This is useful for codebases that
+   intentionally rely on ``value()`` for defined, guarded access while still
+   flagging UB-prone operator dereferences. Default is `false`.
