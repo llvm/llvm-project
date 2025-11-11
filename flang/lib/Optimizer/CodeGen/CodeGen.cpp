@@ -3353,7 +3353,6 @@ struct PrefetchOpConversion : public fir::FIROpConversion<fir::PrefetchOp> {
   llvm::LogicalResult
   matchAndRewrite(fir::PrefetchOp prefetch, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
-    llvm::errs() << "prefetch\n";
     mlir::IntegerAttr rw = prefetch.getRwAttr();
     mlir::IntegerAttr localityHint = prefetch.getLocalityHintAttr();
     mlir::IntegerAttr cacheType = prefetch.getCacheTypeAttr();
