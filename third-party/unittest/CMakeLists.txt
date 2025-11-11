@@ -128,6 +128,9 @@ add_llvm_library("${gtest_name}_main"
   LINK_LIBS
   "${gtest_name}"
 
+  LINK_COMPONENTS
+  ${GTEST_LLVM_COMPONENTS}
+
   ${BUILDTREE_ONLY}
 )
 
