@@ -114,7 +114,7 @@ MaxSamples("max-samples",
   cl::cat(AggregatorCategory));
 
 extern cl::opt<opts::ProfileFormatKind> ProfileFormat;
-extern cl::opt<bool> ProfileWritePseudoProbes;
+extern cl::opt<ProbesWriteMode> ProfileWritePseudoProbes;
 extern cl::opt<std::string> SaveProfile;
 
 cl::opt<bool> ReadPreAggregated(
@@ -2388,9 +2388,8 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
         DenseMap<const MCDecodedPseudoProbeInlineTree *, uint32_t>
             InlineTreeNodeId;
         if (BF->getGUID()) {
-          std::tie(YamlBF.InlineTree, InlineTreeNodeId) =
-              YAMLProfileWriter::convertBFInlineTree(*PseudoProbeDecoder,
-                                                     InlineTree, BF->getGUID());
+          InlineTreeNodeId = YAMLProfileWriter::convertBFInlineTree(
+              *PseudoProbeDecoder, InlineTree, *BF, YamlBF);
         }
         // Fetch probes belonging to all fragments
         const AddressProbesMap &ProbeMap =

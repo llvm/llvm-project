@@ -1555,25 +1555,14 @@ Error PrintProgramStats::runOnFunctions(BinaryContext &BC) {
         100.0 * BC.Stats.ExactMatchedSampleCount / BC.Stats.StaleSampleCount,
         BC.Stats.ExactMatchedSampleCount, BC.Stats.StaleSampleCount);
     BC.outs() << format(
-        "BOLT-INFO: inference found an exact pseudo probe match for %.2f%% of "
+        "BOLT-INFO: inference found pseudo probe match for %.2f%% of "
         "basic blocks (%zu out of %zu stale) responsible for %.2f%% samples"
         " (%zu out of %zu stale)\n",
-        100.0 * BC.Stats.NumPseudoProbeExactMatchedBlocks /
-            BC.Stats.NumStaleBlocks,
-        BC.Stats.NumPseudoProbeExactMatchedBlocks, BC.Stats.NumStaleBlocks,
-        100.0 * BC.Stats.PseudoProbeExactMatchedSampleCount /
+        100.0 * BC.Stats.NumPseudoProbeMatchedBlocks / BC.Stats.NumStaleBlocks,
+        BC.Stats.NumPseudoProbeMatchedBlocks, BC.Stats.NumStaleBlocks,
+        100.0 * BC.Stats.PseudoProbeMatchedSampleCount /
             BC.Stats.StaleSampleCount,
-        BC.Stats.PseudoProbeExactMatchedSampleCount, BC.Stats.StaleSampleCount);
-    BC.outs() << format(
-        "BOLT-INFO: inference found a loose pseudo probe match for %.2f%% of "
-        "basic blocks (%zu out of %zu stale) responsible for %.2f%% samples"
-        " (%zu out of %zu stale)\n",
-        100.0 * BC.Stats.NumPseudoProbeLooseMatchedBlocks /
-            BC.Stats.NumStaleBlocks,
-        BC.Stats.NumPseudoProbeLooseMatchedBlocks, BC.Stats.NumStaleBlocks,
-        100.0 * BC.Stats.PseudoProbeLooseMatchedSampleCount /
-            BC.Stats.StaleSampleCount,
-        BC.Stats.PseudoProbeLooseMatchedSampleCount, BC.Stats.StaleSampleCount);
+        BC.Stats.PseudoProbeMatchedSampleCount, BC.Stats.StaleSampleCount);
     BC.outs() << format(
         "BOLT-INFO: inference found a call match for %.2f%% of basic "
         "blocks"
