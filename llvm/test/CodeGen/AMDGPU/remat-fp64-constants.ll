@@ -1,7 +1,7 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 --stress-regalloc=10 < %s | FileCheck -check-prefix=GCN %s
 ; RUN: llc -global-isel -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 --stress-regalloc=10 < %s | FileCheck -check-prefix=GCN %s
 
-; Rematerializatinon test for fp64 constants (w/ intentionally high register pressure).
+; Rematerialization test for fp64 constants (w/ intentionally high register pressure).
 ; Check to make sure we have at least six constant MOVs, not necessarily consecutive, inside the loop.
 
 ; GCN-LABEL: {{^}}test_remat_sgpr:
