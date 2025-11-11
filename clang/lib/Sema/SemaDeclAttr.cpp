@@ -1840,8 +1840,8 @@ static void handleRestrictAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 }
 
 static bool isSpanLikeType(const QualType &Ty) {
-  // Check that the type is a plain record with the first field being a pointer
-  // type and the second field being an integer. This matches the common
+  // Check that the type is a plain record with one field being a pointer
+  // type and the other field being an integer. This matches the common
   // implementation of std::span or sized_allocation_t in P0901R11.
   // Note that there may also be numerous cases of pointer+integer structures
   // not actually exhibiting a span-like semantics, so sometimes
@@ -1855,10 +1855,13 @@ static bool isSpanLikeType(const QualType &Ty) {
   auto FieldsBegin = Def->field_begin();
   if (std::distance(FieldsBegin, Def->field_end()) != 2)
     return false;
-  const FieldDecl *FirstField = *FieldsBegin;
-  const FieldDecl *SecondField = *std::next(FieldsBegin);
-  return FirstField->getType()->isAnyPointerType() &&
-         SecondField->getType()->isIntegerType();
+  const QualType FirstFieldType = FieldsBegin->getType();
+  const QualType SecondFieldType = std::next(FieldsBegin)->getType();
+  // Verify two possible orderings.
+  return (FirstFieldType->isAnyPointerType() &&
+          SecondFieldType->isIntegerType()) ||
+         (FirstFieldType->isIntegerType() &&
+          SecondFieldType->isAnyPointerType());
 }
 
 static void handleMallocSpanAttr(Sema &S, Decl *D, const ParsedAttr &AL) {

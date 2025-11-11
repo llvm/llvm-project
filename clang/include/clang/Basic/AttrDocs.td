@@ -5256,9 +5256,9 @@ like a system memory allocation function and returns a span-like structure,
 where the returned memory range does not alias storage from any other object
 accessible to the caller.
 
-In this context, a span-like structure is assumed to have a pointer to the
-allocated memory as its first field and any integer type containing the size
-of the actually allocated memory as the second field.
+In this context, a span-like structure is assumed to have two fields, one of
+which is a pointer to the allocated memory and another one is an integer type
+containing the size of the actually allocated memory.
   }];
 }
 
