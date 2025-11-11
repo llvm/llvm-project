@@ -21,7 +21,7 @@ define void @check_widen_intrinsic_with_nnan(ptr noalias %dst.0, ptr noalias %ds
 ; CHECK-NEXT:    [[TMP5:%.*]] = xor <4 x i1> [[TMP4]], splat (i1 true)
 ; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[INDEX]], -1
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr double, ptr [[DST_0]], i64 [[TMP6]]
-; CHECK-NEXT:    call void @llvm.masked.store.v4f64.p0(<4 x double> zeroinitializer, ptr [[TMP7]], i32 8, <4 x i1> [[TMP5]])
+; CHECK-NEXT:    call void @llvm.masked.store.v4f64.p0(<4 x double> zeroinitializer, ptr align 8 [[TMP7]], <4 x i1> [[TMP5]])
 ; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x i1> [[TMP4]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP9]], label %[[PRED_LOAD_IF:.*]], label %[[PRED_LOAD_CONTINUE:.*]]
 ; CHECK:       [[PRED_LOAD_IF]]:
@@ -54,47 +54,17 @@ define void @check_widen_intrinsic_with_nnan(ptr noalias %dst.0, ptr noalias %ds
 ; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE6]]
 ; CHECK:       [[PRED_LOAD_CONTINUE6]]:
 ; CHECK-NEXT:    [[TMP24:%.*]] = phi <4 x double> [ [[TMP20]], %[[PRED_LOAD_CONTINUE4]] ], [ [[TMP23]], %[[PRED_LOAD_IF5]] ]
-; CHECK-NEXT:    call void @llvm.masked.store.v4f64.p0(<4 x double> zeroinitializer, ptr [[TMP7]], i32 8, <4 x i1> [[TMP4]])
+; CHECK-NEXT:    call void @llvm.masked.store.v4f64.p0(<4 x double> zeroinitializer, ptr align 8 [[TMP7]], <4 x i1> [[TMP4]])
 ; CHECK-NEXT:    [[TMP28:%.*]] = fcmp oeq <4 x double> [[TMP24]], zeroinitializer
 ; CHECK-NEXT:    [[TMP29:%.*]] = select <4 x i1> [[TMP4]], <4 x i1> [[TMP28]], <4 x i1> zeroinitializer
 ; CHECK-NEXT:    [[TMP30:%.*]] = or <4 x i1> [[TMP5]], [[TMP29]]
 ; CHECK-NEXT:    [[TMP32:%.*]] = getelementptr i32, ptr [[DST_1]], i64 [[TMP6]]
-; CHECK-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> splat (i32 10), ptr [[TMP32]], i32 4, <4 x i1> [[TMP30]])
+; CHECK-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> splat (i32 10), ptr align 4 [[TMP32]], <4 x i1> [[TMP30]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP34:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[TMP34]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
-; CHECK:       [[SCALAR_PH:.*]]:
-; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
-; CHECK:       [[LOOP_HEADER]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
-; CHECK-NEXT:    [[GEP_SRC_1:%.*]] = getelementptr inbounds double, ptr [[SRC_1]], i64 [[IV]]
-; CHECK-NEXT:    [[L_1:%.*]] = load double, ptr [[GEP_SRC_1]], align 8
-; CHECK-NEXT:    [[ABS:%.*]] = tail call nnan double @llvm.fabs.f64(double [[L_1]])
-; CHECK-NEXT:    [[C_0:%.*]] = fcmp olt double [[ABS]], 1.000000e+00
-; CHECK-NEXT:    br i1 [[C_0]], label %[[THEN:.*]], label %[[ELSE:.*]]
-; CHECK:       [[THEN]]:
-; CHECK-NEXT:    [[L_2:%.*]] = load double, ptr [[SRC_2]], align 8
-; CHECK-NEXT:    [[IV_SUB_1:%.*]] = add nsw i64 [[IV]], -1
-; CHECK-NEXT:    [[GEP_IV_SUB_1:%.*]] = getelementptr double, ptr [[DST_0]], i64 [[IV_SUB_1]]
-; CHECK-NEXT:    store double 0.000000e+00, ptr [[GEP_IV_SUB_1]], align 8
-; CHECK-NEXT:    [[C_1:%.*]] = fcmp oeq double [[L_2]], 0.000000e+00
-; CHECK-NEXT:    br i1 [[C_1]], label %[[MERGE:.*]], label %[[LOOP_LATCH]]
-; CHECK:       [[ELSE]]:
-; CHECK-NEXT:    [[IV_SUB_2:%.*]] = add nsw i64 [[IV]], -1
-; CHECK-NEXT:    [[GEP_IV_SUB_2:%.*]] = getelementptr double, ptr [[DST_0]], i64 [[IV_SUB_2]]
-; CHECK-NEXT:    store double 0.000000e+00, ptr [[GEP_IV_SUB_2]], align 8
-; CHECK-NEXT:    br label %[[MERGE]]
-; CHECK:       [[MERGE]]:
-; CHECK-NEXT:    [[MERGE_IV:%.*]] = phi i64 [ [[IV_SUB_2]], %[[ELSE]] ], [ [[IV_SUB_1]], %[[THEN]] ]
-; CHECK-NEXT:    [[GEP_DST_1:%.*]] = getelementptr inbounds i32, ptr [[DST_1]], i64 [[MERGE_IV]]
-; CHECK-NEXT:    store i32 10, ptr [[GEP_DST_1]], align 4
-; CHECK-NEXT:    br label %[[LOOP_LATCH]]
-; CHECK:       [[LOOP_LATCH]]:
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], 1000
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[LOOP_HEADER]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;

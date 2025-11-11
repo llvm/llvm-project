@@ -466,15 +466,12 @@ define <8 x i16> @freeze_urhadd(<8 x i16> %a0, <8 x i16> %a1) {
   ret <8 x i16> %masked
 }
 
-; TODO: Unnecessary sext_inreg
 define <8 x i16> @freeze_shadd(<8 x i8> %a0, <8 x i16> %a1) {
 ; CHECK-LABEL: freeze_shadd:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sshll v0.8h, v0.8b, #0
 ; CHECK-NEXT:    sshr v1.8h, v1.8h, #8
 ; CHECK-NEXT:    shadd v0.8h, v0.8h, v1.8h
-; CHECK-NEXT:    shl v0.8h, v0.8h, #8
-; CHECK-NEXT:    sshr v0.8h, v0.8h, #8
 ; CHECK-NEXT:    ret
   %x0 = sext <8 x i8> %a0 to <8 x i16>
   %x1 = ashr <8 x i16> %a1, splat (i16 8)
@@ -485,15 +482,12 @@ define <8 x i16> @freeze_shadd(<8 x i8> %a0, <8 x i16> %a1) {
   ret <8 x i16> %sext
 }
 
-; TODO: Unnecessary sext_inreg
 define <8 x i16> @freeze_srhadd(<8 x i8> %a0, <8 x i16> %a1) {
 ; CHECK-LABEL: freeze_srhadd:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sshll v0.8h, v0.8b, #0
 ; CHECK-NEXT:    sshr v1.8h, v1.8h, #8
 ; CHECK-NEXT:    srhadd v0.8h, v0.8h, v1.8h
-; CHECK-NEXT:    shl v0.8h, v0.8h, #8
-; CHECK-NEXT:    sshr v0.8h, v0.8h, #8
 ; CHECK-NEXT:    ret
   %x0 = sext <8 x i8> %a0 to <8 x i16>
   %x1 = ashr <8 x i16> %a1, splat (i16 8)

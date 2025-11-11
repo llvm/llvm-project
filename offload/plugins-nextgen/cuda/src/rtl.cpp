@@ -25,6 +25,7 @@
 #include "PluginInterface.h"
 #include "Utils/ELF.h"
 
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/Frontend/OpenMP/OMPGridValues.h"
@@ -160,15 +161,15 @@ struct CUDAKernelTy : public GenericKernelTy {
   /// Return maximum block size for maximum occupancy
   Expected<uint64_t> maxGroupSize(GenericDeviceTy &,
                                   uint64_t DynamicMemSize) const override {
-    int minGridSize;
-    int maxBlockSize;
+    int MinGridSize;
+    int MaxBlockSize;
     auto Res = cuOccupancyMaxPotentialBlockSize(
-        &minGridSize, &maxBlockSize, Func, NULL, DynamicMemSize, INT_MAX);
+        &MinGridSize, &MaxBlockSize, Func, NULL, DynamicMemSize, INT_MAX);
     if (auto Err = Plugin::check(
             Res, "error in cuOccupancyMaxPotentialBlockSize: %s")) {
       return Err;
     }
-    return maxBlockSize;
+    return MaxBlockSize;
   }
 
 private:
@@ -292,6 +293,12 @@ struct CUDADeviceTy : public GenericDeviceTy {
     CUresult Res = cuDeviceGet(&Device, DeviceId);
     if (auto Err = Plugin::check(Res, "error in cuDeviceGet: %s"))
       return Err;
+
+    CUuuid UUID = {0};
+    Res = cuDeviceGetUuid(&UUID, Device);
+    if (auto Err = Plugin::check(Res, "error in cuDeviceGetUuid: %s"))
+      return Err;
+    setDeviceUidFromVendorUid(toHex(UUID.bytes, true));
 
     // Query the current flags of the primary context and set its flags if
     // it is inactive.
@@ -561,14 +568,12 @@ struct CUDADeviceTy : public GenericDeviceTy {
   }
 
   /// Allocate memory on the device or related to the device.
-  void *allocate(size_t Size, void *, TargetAllocTy Kind) override {
+  Expected<void *> allocate(size_t Size, void *, TargetAllocTy Kind) override {
     if (Size == 0)
       return nullptr;
 
-    if (auto Err = setContext()) {
-      REPORT("Failure to alloc memory: %s\n", toString(std::move(Err)).data());
-      return nullptr;
-    }
+    if (auto Err = setContext())
+      return std::move(Err);
 
     void *MemAlloc = nullptr;
     CUdeviceptr DevicePtr;
@@ -587,35 +592,20 @@ struct CUDADeviceTy : public GenericDeviceTy {
       Res = cuMemAllocManaged(&DevicePtr, Size, CU_MEM_ATTACH_GLOBAL);
       MemAlloc = (void *)DevicePtr;
       break;
-    case TARGET_ALLOC_DEVICE_NON_BLOCKING: {
-      CUstream Stream;
-      if ((Res = cuStreamCreate(&Stream, CU_STREAM_NON_BLOCKING)))
-        break;
-      if ((Res = cuMemAllocAsync(&DevicePtr, Size, Stream)))
-        break;
-      cuStreamSynchronize(Stream);
-      Res = cuStreamDestroy(Stream);
-      MemAlloc = (void *)DevicePtr;
-    }
     }
 
-    if (auto Err =
-            Plugin::check(Res, "error in cuMemAlloc[Host|Managed]: %s")) {
-      REPORT("Failure to alloc memory: %s\n", toString(std::move(Err)).data());
-      return nullptr;
-    }
+    if (auto Err = Plugin::check(Res, "error in cuMemAlloc[Host|Managed]: %s"))
+      return std::move(Err);
     return MemAlloc;
   }
 
   /// Deallocate memory on the device or related to the device.
-  int free(void *TgtPtr, TargetAllocTy Kind) override {
+  Error free(void *TgtPtr, TargetAllocTy Kind) override {
     if (TgtPtr == nullptr)
-      return OFFLOAD_SUCCESS;
+      return Plugin::success();
 
-    if (auto Err = setContext()) {
-      REPORT("Failure to free memory: %s\n", toString(std::move(Err)).data());
-      return OFFLOAD_FAIL;
-    }
+    if (auto Err = setContext())
+      return Err;
 
     CUresult Res;
     switch (Kind) {
@@ -627,22 +617,9 @@ struct CUDADeviceTy : public GenericDeviceTy {
     case TARGET_ALLOC_HOST:
       Res = cuMemFreeHost(TgtPtr);
       break;
-    case TARGET_ALLOC_DEVICE_NON_BLOCKING: {
-      CUstream Stream;
-      if ((Res = cuStreamCreate(&Stream, CU_STREAM_NON_BLOCKING)))
-        break;
-      cuMemFreeAsync(reinterpret_cast<CUdeviceptr>(TgtPtr), Stream);
-      cuStreamSynchronize(Stream);
-      if ((Res = cuStreamDestroy(Stream)))
-        break;
-    }
     }
 
-    if (auto Err = Plugin::check(Res, "error in cuMemFree[Host]: %s")) {
-      REPORT("Failure to free memory: %s\n", toString(std::move(Err)).data());
-      return OFFLOAD_FAIL;
-    }
-    return OFFLOAD_SUCCESS;
+    return Plugin::check(Res, "error in cuMemFree[Host]: %s");
   }
 
   /// Synchronize current thread with the pending operations on the async info.
@@ -930,20 +907,47 @@ struct CUDADeviceTy : public GenericDeviceTy {
     return Plugin::success();
   }
 
-  /// Initialize the device info for interoperability purposes.
-  Error initDeviceInfoImpl(__tgt_device_info *DeviceInfo) override {
-    assert(Context && "Context is null");
-    assert(Device != CU_DEVICE_INVALID && "Invalid CUDA device");
+  interop_spec_t selectInteropPreference(int32_t InteropType,
+                                         int32_t NumPrefers,
+                                         interop_spec_t *Prefers) override {
+    return interop_spec_t{tgt_fr_cuda, {true, 0}, 0};
+  }
 
-    if (auto Err = setContext())
-      return Err;
+  Expected<omp_interop_val_t *>
+  createInterop(int32_t InteropType, interop_spec_t &InteropSpec) override {
+    auto *Ret = new omp_interop_val_t(
+        DeviceId, static_cast<kmp_interop_type_t>(InteropType));
+    Ret->fr_id = tgt_fr_cuda;
+    Ret->vendor_id = omp_vendor_nvidia;
 
-    if (!DeviceInfo->Context)
-      DeviceInfo->Context = Context;
+    if (InteropType == kmp_interop_type_target ||
+        InteropType == kmp_interop_type_targetsync) {
+      Ret->device_info.Platform = nullptr;
+      Ret->device_info.Device = reinterpret_cast<void *>(Device);
+      Ret->device_info.Context = Context;
+    }
 
-    if (!DeviceInfo->Device)
-      DeviceInfo->Device = reinterpret_cast<void *>(Device);
+    if (InteropType == kmp_interop_type_targetsync) {
+      Ret->async_info = new __tgt_async_info();
+      if (auto Err = setContext())
+        return Err;
+      CUstream Stream;
+      if (auto Err = CUDAStreamManager.getResource(Stream))
+        return Err;
 
+      Ret->async_info->Queue = Stream;
+    }
+    return Ret;
+  }
+
+  Error releaseInterop(omp_interop_val_t *Interop) override {
+    if (!Interop)
+      return Plugin::success();
+
+    if (Interop->async_info)
+      delete Interop->async_info;
+
+    delete Interop;
     return Plugin::success();
   }
 
@@ -1231,11 +1235,6 @@ struct CUDADeviceTy : public GenericDeviceTy {
     return Info;
   }
 
-  virtual bool shouldSetupDeviceMemoryPool() const override {
-    /// We use the CUDA malloc for now.
-    return false;
-  }
-
   /// Getters and setters for stack and heap sizes.
   Error getDeviceStackSize(uint64_t &Value) override {
     return getCtxLimit(CU_LIMIT_STACK_SIZE, Value);
@@ -1243,6 +1242,7 @@ struct CUDADeviceTy : public GenericDeviceTy {
   Error setDeviceStackSize(uint64_t Value) override {
     return setCtxLimit(CU_LIMIT_STACK_SIZE, Value);
   }
+  bool hasDeviceHeapSize() override { return true; }
   Error getDeviceHeapSize(uint64_t &Value) override {
     return getCtxLimit(CU_LIMIT_MALLOC_HEAP_SIZE, Value);
   }
@@ -1329,8 +1329,12 @@ private:
 
     // Allocate a buffer to store all of the known constructor / destructor
     // functions in so we can iterate them on the device.
-    void *Buffer =
+    auto BufferOrErr =
         allocate(Funcs.size() * sizeof(void *), nullptr, TARGET_ALLOC_DEVICE);
+    if (!BufferOrErr)
+      return BufferOrErr.takeError();
+
+    void *Buffer = *BufferOrErr;
     if (!Buffer)
       return Plugin::error(ErrorCode::OUT_OF_RESOURCES,
                            "failed to allocate memory for global buffer");
@@ -1379,12 +1383,10 @@ private:
 
     Error Err = Plugin::success();
     AsyncInfoWrapper.finalize(Err);
+    if (Err)
+      return Err;
 
-    if (free(Buffer, TARGET_ALLOC_DEVICE) != OFFLOAD_SUCCESS)
-      return Plugin::error(ErrorCode::UNKNOWN,
-                           "failed to free memory for global buffer");
-
-    return Err;
+    return free(Buffer, TARGET_ALLOC_DEVICE);
   }
 
   /// Stream manager for CUDA streams.

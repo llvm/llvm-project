@@ -110,19 +110,21 @@ Pointer &Pointer::operator=(const Pointer &P) {
   StorageKind = P.StorageKind;
   Offset = P.Offset;
 
-  if (P.isBlockPointer()) {
+  switch (StorageKind) {
+  case Storage::Int:
+    Int = P.Int;
+    break;
+  case Storage::Block:
     BS = P.BS;
 
     if (BS.Pointee)
       BS.Pointee->addPointer(this);
-  } else if (P.isIntegralPointer()) {
-    Int = P.Int;
-  } else if (P.isFunctionPointer()) {
+    break;
+  case Storage::Fn:
     Fn = P.Fn;
-  } else if (P.isTypeidPointer()) {
+    break;
+  case Storage::Typeid:
     Typeid = P.Typeid;
-  } else {
-    assert(false && "Unhandled storage kind");
   }
   return *this;
 }
@@ -147,19 +149,21 @@ Pointer &Pointer::operator=(Pointer &&P) {
   StorageKind = P.StorageKind;
   Offset = P.Offset;
 
-  if (P.isBlockPointer()) {
+  switch (StorageKind) {
+  case Storage::Int:
+    Int = P.Int;
+    break;
+  case Storage::Block:
     BS = P.BS;
 
     if (BS.Pointee)
       BS.Pointee->addPointer(this);
-  } else if (P.isIntegralPointer()) {
-    Int = P.Int;
-  } else if (P.isFunctionPointer()) {
+    break;
+  case Storage::Fn:
     Fn = P.Fn;
-  } else if (P.isTypeidPointer()) {
+    break;
+  case Storage::Typeid:
     Typeid = P.Typeid;
-  } else {
-    assert(false && "Unhandled storage kind");
   }
   return *this;
 }
@@ -358,13 +362,17 @@ void Pointer::print(llvm::raw_ostream &OS) const {
 }
 
 size_t Pointer::computeOffsetForComparison() const {
-  if (isIntegralPointer())
-    return asIntPointer().Value + Offset;
-  if (isTypeidPointer())
+  switch (StorageKind) {
+  case Storage::Int:
+    return Int.Value + Offset;
+  case Storage::Block:
+    // See below.
+    break;
+  case Storage::Fn:
+    return Fn.getIntegerRepresentation() + Offset;
+  case Storage::Typeid:
     return reinterpret_cast<uintptr_t>(asTypeidPointer().TypePtr) + Offset;
-
-  if (!isBlockPointer())
-    return Offset;
+  }
 
   size_t Result = 0;
   Pointer P = *this;
@@ -743,7 +751,7 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx,
       assert(Record && "Missing record descriptor");
 
       bool Ok = true;
-      if (RT->getOriginalDecl()->isUnion()) {
+      if (RT->getDecl()->isUnion()) {
         const FieldDecl *ActiveField = nullptr;
         APValue Value;
         for (const auto &F : Record->fields()) {

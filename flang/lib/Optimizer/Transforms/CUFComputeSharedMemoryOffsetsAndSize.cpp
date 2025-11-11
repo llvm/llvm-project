@@ -41,8 +41,7 @@ namespace {
 static bool isAssumedSize(mlir::ValueRange shape) {
   if (shape.size() != 1)
     return false;
-  std::optional<std::int64_t> val = fir::getIntIfConstant(shape[0]);
-  if (val && *val == -1)
+  if (llvm::isa_and_nonnull<fir::AssumedSizeExtentOp>(shape[0].getDefiningOp()))
     return true;
   return false;
 }
@@ -143,7 +142,11 @@ struct CUFComputeSharedMemoryOffsetsAndSize
       auto sharedMemType = fir::SequenceType::get(sharedMemSize, i8Ty);
       std::string sharedMemGlobalName =
           (funcOp.getName() + llvm::Twine(cudaSharedMemSuffix)).str();
-      mlir::StringAttr linkage = builder.createInternalLinkage();
+      // Dynamic shared memory needs an external linkage while static shared
+      // memory needs an internal linkage.
+      mlir::StringAttr linkage = nbDynamicSharedVariables > 0
+                                     ? builder.createExternalLinkage()
+                                     : builder.createInternalLinkage();
       builder.setInsertionPointToEnd(gpuMod.getBody());
       llvm::SmallVector<mlir::NamedAttribute> attrs;
       auto globalOpName = mlir::OperationName(fir::GlobalOp::getOperationName(),

@@ -349,32 +349,30 @@ public:
   bool isImm() const override {
     return Kind == Immediate || Kind == Expression;
   }
-  bool isU1Imm() const { return Kind == Immediate && isUInt<1>(getImm()); }
-  bool isU2Imm() const { return Kind == Immediate && isUInt<2>(getImm()); }
-  bool isU3Imm() const { return Kind == Immediate && isUInt<3>(getImm()); }
-  bool isU4Imm() const { return Kind == Immediate && isUInt<4>(getImm()); }
-  bool isU5Imm() const { return Kind == Immediate && isUInt<5>(getImm()); }
-  bool isS5Imm() const { return Kind == Immediate && isInt<5>(getImm()); }
-  bool isU6Imm() const { return Kind == Immediate && isUInt<6>(getImm()); }
-  bool isU6ImmX2() const { return Kind == Immediate &&
-                                  isUInt<6>(getImm()) &&
-                                  (getImm() & 1) == 0; }
-  bool isU7Imm() const { return Kind == Immediate && isUInt<7>(getImm()); }
-  bool isU7ImmX4() const { return Kind == Immediate &&
-                                  isUInt<7>(getImm()) &&
-                                  (getImm() & 3) == 0; }
-  bool isU8Imm() const { return Kind == Immediate && isUInt<8>(getImm()); }
-  bool isU8ImmX8() const { return Kind == Immediate &&
-                                  isUInt<8>(getImm()) &&
-                                  (getImm() & 7) == 0; }
 
-  bool isU10Imm() const { return Kind == Immediate && isUInt<10>(getImm()); }
-  bool isU12Imm() const { return Kind == Immediate && isUInt<12>(getImm()); }
+  template <uint64_t N> bool isUImm() const {
+    return Kind == Immediate && isUInt<N>(getImm());
+  }
+  template <uint64_t N> bool isSImm() const {
+    return Kind == Immediate && isInt<N>(getImm());
+  }
+  bool isU6ImmX2() const { return isUImm<6>() && (getImm() & 1) == 0; }
+  bool isU7ImmX4() const { return isUImm<7>() && (getImm() & 3) == 0; }
+  bool isU8ImmX8() const { return isUImm<8>() && (getImm() & 7) == 0; }
+
   bool isU16Imm() const { return isExtImm<16>(/*Signed*/ false, 1); }
   bool isS16Imm() const { return isExtImm<16>(/*Signed*/ true, 1); }
   bool isS16ImmX4() const { return isExtImm<16>(/*Signed*/ true, 4); }
   bool isS16ImmX16() const { return isExtImm<16>(/*Signed*/ true, 16); }
   bool isS17Imm() const { return isExtImm<17>(/*Signed*/ true, 1); }
+  bool isS34Imm() const {
+    // Once the PC-Rel ABI is finalized, evaluate whether a 34-bit
+    // ContextImmediate is needed.
+    return Kind == Expression || isSImm<34>();
+  }
+  bool isS34ImmX16() const {
+    return Kind == Expression || (isSImm<34>() && (getImm() & 15) == 0);
+  }
 
   bool isHashImmX8() const {
     // The Hash Imm form is used for instructions that check or store a hash.
@@ -382,16 +380,6 @@ public:
     // -8 and -512.
     return (Kind == Immediate && getImm() <= -8 && getImm() >= -512 &&
             (getImm() & 7) == 0);
-  }
-
-  bool isS34ImmX16() const {
-    return Kind == Expression ||
-           (Kind == Immediate && isInt<34>(getImm()) && (getImm() & 15) == 0);
-  }
-  bool isS34Imm() const {
-    // Once the PC-Rel ABI is finalized, evaluate whether a 34-bit
-    // ContextImmediate is needed.
-    return Kind == Expression || (Kind == Immediate && isInt<34>(getImm()));
   }
 
   bool isTLSReg() const { return Kind == TLSRegister; }
@@ -1637,7 +1625,7 @@ bool PPCAsmParser::parseInstruction(ParseInstructionInfo &Info, StringRef Name,
     if (Operands.size() != 5)
       return false;
     PPCOperand &EHOp = (PPCOperand &)*Operands[4];
-    if (EHOp.isU1Imm() && EHOp.getImm() == 0)
+    if (EHOp.isUImm<1>() && EHOp.getImm() == 0)
       Operands.pop_back();
   }
 
@@ -1817,7 +1805,7 @@ unsigned PPCAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
   }
 
   PPCOperand &Op = static_cast<PPCOperand &>(AsmOp);
-  if (Op.isU3Imm() && Op.getImm() == ImmVal)
+  if (Op.isUImm<3>() && Op.getImm() == ImmVal)
     return Match_Success;
 
   return Match_InvalidOperand;

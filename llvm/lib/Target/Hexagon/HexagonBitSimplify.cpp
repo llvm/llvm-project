@@ -174,8 +174,8 @@ namespace {
     const TargetRegisterInfo *TRI;
   };
 
-  raw_ostream &operator<< (raw_ostream &OS, const PrintRegSet &P)
-    LLVM_ATTRIBUTE_UNUSED;
+  [[maybe_unused]] raw_ostream &operator<<(raw_ostream &OS,
+                                           const PrintRegSet &P);
   raw_ostream &operator<< (raw_ostream &OS, const PrintRegSet &P) {
     OS << '{';
     for (unsigned R = P.RS.find_first(); R; R = P.RS.find_next(R))
@@ -1886,7 +1886,7 @@ bool BitSimplification::matchHalf(unsigned SelfR,
 
 bool BitSimplification::validateReg(BitTracker::RegisterRef R, unsigned Opc,
       unsigned OpNum) {
-  auto *OpRC = HII.getRegClass(HII.get(Opc), OpNum, &HRI);
+  auto *OpRC = HII.getRegClass(HII.get(Opc), OpNum);
   auto *RRC = HBS::getFinalVRegClass(R, MRI);
   return OpRC->hasSubClassEq(RRC);
 }

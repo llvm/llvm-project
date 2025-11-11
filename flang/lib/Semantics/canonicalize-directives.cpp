@@ -60,7 +60,11 @@ static bool IsExecutionDirective(const parser::CompilerDirective &dir) {
       std::holds_alternative<parser::CompilerDirective::UnrollAndJam>(dir.u) ||
       std::holds_alternative<parser::CompilerDirective::NoVector>(dir.u) ||
       std::holds_alternative<parser::CompilerDirective::NoUnroll>(dir.u) ||
-      std::holds_alternative<parser::CompilerDirective::NoUnrollAndJam>(dir.u);
+      std::holds_alternative<parser::CompilerDirective::NoUnrollAndJam>(
+          dir.u) ||
+      std::holds_alternative<parser::CompilerDirective::ForceInline>(dir.u) ||
+      std::holds_alternative<parser::CompilerDirective::Inline>(dir.u) ||
+      std::holds_alternative<parser::CompilerDirective::NoInline>(dir.u);
 }
 
 void CanonicalizationOfDirectives::Post(parser::SpecificationPart &spec) {

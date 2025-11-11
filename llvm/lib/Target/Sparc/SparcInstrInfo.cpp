@@ -38,8 +38,8 @@ static cl::opt<unsigned>
 void SparcInstrInfo::anchor() {}
 
 SparcInstrInfo::SparcInstrInfo(const SparcSubtarget &ST)
-    : SparcGenInstrInfo(ST, SP::ADJCALLSTACKDOWN, SP::ADJCALLSTACKUP), RI(ST),
-      Subtarget(ST) {}
+    : SparcGenInstrInfo(ST, RI, SP::ADJCALLSTACKDOWN, SP::ADJCALLSTACKUP),
+      RI(ST), Subtarget(ST) {}
 
 /// isLoadFromStackSlot - If the specified machine instruction is a direct
 /// load from a stack slot, return the virtual or physical register number of
@@ -527,7 +527,6 @@ void SparcInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
                                          MachineBasicBlock::iterator I,
                                          Register SrcReg, bool isKill, int FI,
                                          const TargetRegisterClass *RC,
-                                         const TargetRegisterInfo *TRI,
                                          Register VReg,
                                          MachineInstr::MIFlag Flags) const {
   DebugLoc DL;
@@ -564,10 +563,12 @@ void SparcInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
     llvm_unreachable("Can't store this register to stack slot");
 }
 
-void SparcInstrInfo::loadRegFromStackSlot(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator I, Register DestReg,
-    int FI, const TargetRegisterClass *RC, const TargetRegisterInfo *TRI,
-    Register VReg, MachineInstr::MIFlag Flags) const {
+void SparcInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
+                                          MachineBasicBlock::iterator I,
+                                          Register DestReg, int FI,
+                                          const TargetRegisterClass *RC,
+                                          Register VReg,
+                                          MachineInstr::MIFlag Flags) const {
   DebugLoc DL;
   if (I != MBB.end()) DL = I->getDebugLoc();
 
@@ -651,6 +652,23 @@ bool SparcInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     MachineInstrBuilder(*MI.getParent()->getParent(), MI)
         .addReg(SP::G7)
         .addImm(Offset);
+    return true;
+  }
+  case SP::V8BAR: {
+    assert(!Subtarget.isV9() &&
+           "V8BAR should not be emitted on V9 processors!");
+
+    // Emit stbar; ldstub [%sp-1], %g0
+    // The sequence acts as a full barrier on V8 systems.
+    MachineBasicBlock &MBB = *MI.getParent();
+    MachineInstr &InstSTBAR =
+        *BuildMI(MBB, MI, MI.getDebugLoc(), get(SP::STBAR));
+    MachineInstr &InstLDSTUB =
+        *BuildMI(MBB, MI, MI.getDebugLoc(), get(SP::LDSTUBri), SP::G0)
+             .addReg(SP::O6)
+             .addImm(-1);
+    MIBundleBuilder(MBB, InstSTBAR, InstLDSTUB);
+    MBB.erase(MI);
     return true;
   }
   }

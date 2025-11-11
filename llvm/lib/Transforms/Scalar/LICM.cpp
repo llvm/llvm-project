@@ -169,7 +169,9 @@ cl::opt<unsigned> llvm::SetLicmMssaNoAccForPromotionCap(
              "number of accesses allowed to be present in a loop in order to "
              "enable memory promotion."));
 
+namespace llvm {
 extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+} // end namespace llvm
 
 static bool inSubLoop(BasicBlock *BB, Loop *CurLoop, LoopInfo *LI);
 static bool isNotUsedOrFoldableInLoop(const Instruction &I, const Loop *CurLoop,
@@ -209,9 +211,15 @@ static Instruction *cloneInstructionInExitBlock(
 static void eraseInstruction(Instruction &I, ICFLoopSafetyInfo &SafetyInfo,
                              MemorySSAUpdater &MSSAU);
 
-static void moveInstructionBefore(Instruction &I, BasicBlock::iterator Dest,
-                                  ICFLoopSafetyInfo &SafetyInfo,
-                                  MemorySSAUpdater &MSSAU, ScalarEvolution *SE);
+static void moveInstructionBefore(
+    Instruction &I, BasicBlock::iterator Dest, ICFLoopSafetyInfo &SafetyInfo,
+    MemorySSAUpdater &MSSAU, ScalarEvolution *SE,
+    MemorySSA::InsertionPlace Point = MemorySSA::BeforeTerminator);
+
+static bool sinkUnusedInvariantsFromPreheaderToExit(
+    Loop *L, AAResults *AA, ICFLoopSafetyInfo *SafetyInfo,
+    MemorySSAUpdater &MSSAU, ScalarEvolution *SE, DominatorTree *DT,
+    SinkAndHoistLICMFlags &SinkFlags, OptimizationRemarkEmitter *ORE);
 
 static void foreachMemoryAccess(MemorySSA *MSSA, Loop *L,
                                 function_ref<void(Instruction *)> Fn);
@@ -469,6 +477,12 @@ bool LoopInvariantCodeMotion::runOnLoop(Loop *L, AAResults *AA, LoopInfo *LI,
                                     TLI, TTI, L, MSSAU, &SafetyInfo, Flags, ORE)
             : sinkRegion(DT->getNode(L->getHeader()), AA, LI, DT, TLI, TTI, L,
                          MSSAU, &SafetyInfo, Flags, ORE);
+
+  // sink pre-header defs that are unused in-loop into the unique exit to reduce
+  // pressure.
+  Changed |= sinkUnusedInvariantsFromPreheaderToExit(L, AA, &SafetyInfo, MSSAU,
+                                                     SE, DT, Flags, ORE);
+
   Flags.setIsSink(false);
   if (Preheader)
     Changed |= hoistRegion(DT->getNode(L->getHeader()), AA, LI, DT, AC, TLI, L,
@@ -1116,11 +1130,10 @@ static bool isLoadInvariantInLoop(LoadInst *LI, DominatorTree *DT,
   return false;
 }
 
-namespace {
 /// Return true if-and-only-if we know how to (mechanically) both hoist and
 /// sink a given instruction out of a loop.  Does not address legality
 /// concerns such as aliasing or speculation safety.
-bool isHoistableAndSinkableInst(Instruction &I) {
+static bool isHoistableAndSinkableInst(Instruction &I) {
   // Only these instructions are hoistable/sinkable.
   return (isa<LoadInst>(I) || isa<StoreInst>(I) || isa<CallInst>(I) ||
           isa<FenceInst>(I) || isa<CastInst>(I) || isa<UnaryOperator>(I) ||
@@ -1132,8 +1145,8 @@ bool isHoistableAndSinkableInst(Instruction &I) {
 }
 
 /// Return true if I is the only Instruction with a MemoryAccess in L.
-bool isOnlyMemoryAccess(const Instruction *I, const Loop *L,
-                        const MemorySSAUpdater &MSSAU) {
+static bool isOnlyMemoryAccess(const Instruction *I, const Loop *L,
+                               const MemorySSAUpdater &MSSAU) {
   for (auto *BB : L->getBlocks())
     if (auto *Accs = MSSAU.getMemorySSA()->getBlockAccesses(BB)) {
       int NotAPhi = 0;
@@ -1146,7 +1159,6 @@ bool isOnlyMemoryAccess(const Instruction *I, const Loop *L,
       }
     }
   return true;
-}
 }
 
 static MemoryAccess *getClobberingMemoryAccess(MemorySSA &MSSA,
@@ -1456,17 +1468,78 @@ static void eraseInstruction(Instruction &I, ICFLoopSafetyInfo &SafetyInfo,
 
 static void moveInstructionBefore(Instruction &I, BasicBlock::iterator Dest,
                                   ICFLoopSafetyInfo &SafetyInfo,
-                                  MemorySSAUpdater &MSSAU,
-                                  ScalarEvolution *SE) {
+                                  MemorySSAUpdater &MSSAU, ScalarEvolution *SE,
+                                  MemorySSA::InsertionPlace Point) {
   SafetyInfo.removeInstruction(&I);
   SafetyInfo.insertInstructionTo(&I, Dest->getParent());
   I.moveBefore(*Dest->getParent(), Dest);
   if (MemoryUseOrDef *OldMemAcc = cast_or_null<MemoryUseOrDef>(
           MSSAU.getMemorySSA()->getMemoryAccess(&I)))
-    MSSAU.moveToPlace(OldMemAcc, Dest->getParent(),
-                      MemorySSA::BeforeTerminator);
+    MSSAU.moveToPlace(OldMemAcc, Dest->getParent(), Point);
   if (SE)
     SE->forgetBlockAndLoopDispositions(&I);
+}
+
+// If there's a single exit block, sink any loop-invariant values that were
+// defined in the preheader but not used inside the loop into the exit block
+// to reduce register pressure in the loop.
+static bool sinkUnusedInvariantsFromPreheaderToExit(
+    Loop *L, AAResults *AA, ICFLoopSafetyInfo *SafetyInfo,
+    MemorySSAUpdater &MSSAU, ScalarEvolution *SE, DominatorTree *DT,
+    SinkAndHoistLICMFlags &SinkFlags, OptimizationRemarkEmitter *ORE) {
+  BasicBlock *ExitBlock = L->getExitBlock();
+  if (!ExitBlock)
+    return false;
+
+  BasicBlock *Preheader = L->getLoopPreheader();
+  if (!Preheader)
+    return false;
+
+  bool MadeAnyChanges = false;
+
+  for (Instruction &I : llvm::make_early_inc_range(llvm::reverse(*Preheader))) {
+
+    // Skip terminator.
+    if (Preheader->getTerminator() == &I)
+      continue;
+
+    // New instructions were inserted at the end of the preheader.
+    if (isa<PHINode>(I))
+      break;
+
+    // Don't move instructions which might have side effects, since the side
+    // effects need to complete before instructions inside the loop. Note that
+    // it's okay if the instruction might have undefined behavior: LoopSimplify
+    // guarantees that the preheader dominates the exit block.
+    if (I.mayHaveSideEffects())
+      continue;
+
+    if (!canSinkOrHoistInst(I, AA, DT, L, MSSAU, true, SinkFlags, nullptr))
+      continue;
+
+    // Determine if there is a use in or before the loop (direct or
+    // otherwise).
+    bool UsedInLoopOrPreheader = false;
+    for (Use &U : I.uses()) {
+      auto *UserI = cast<Instruction>(U.getUser());
+      BasicBlock *UseBB = UserI->getParent();
+      if (auto *PN = dyn_cast<PHINode>(UserI)) {
+        UseBB = PN->getIncomingBlock(U);
+      }
+      if (UseBB == Preheader || L->contains(UseBB)) {
+        UsedInLoopOrPreheader = true;
+        break;
+      }
+    }
+    if (UsedInLoopOrPreheader)
+      continue;
+
+    moveInstructionBefore(I, ExitBlock->getFirstInsertionPt(), *SafetyInfo,
+                          MSSAU, SE, MemorySSA::Beginning);
+    MadeAnyChanges = true;
+  }
+
+  return MadeAnyChanges;
 }
 
 static Instruction *sinkThroughTriviallyReplaceablePHI(

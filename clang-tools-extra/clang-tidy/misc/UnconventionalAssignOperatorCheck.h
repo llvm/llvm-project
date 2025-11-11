@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_ASSIGNOPERATORSIGNATURECHECK_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_ASSIGNOPERATORSIGNATURECHECK_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_UNCONVENTIONALASSIGNOPERATORCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_UNCONVENTIONALASSIGNOPERATORCHECK_H
 
 #include "../ClangTidyCheck.h"
 
@@ -23,7 +23,7 @@ namespace clang::tidy::misc {
 ///   * The operator must always return ``*this``.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/misc/unconventional-assign-operator.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/misc/unconventional-assign-operator.html
 class UnconventionalAssignOperatorCheck : public ClangTidyCheck {
 public:
   UnconventionalAssignOperatorCheck(StringRef Name, ClangTidyContext *Context)
@@ -37,4 +37,4 @@ public:
 
 } // namespace clang::tidy::misc
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_ASSIGNOPERATORSIGNATURECHECK_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_UNCONVENTIONALASSIGNOPERATORCHECK_H

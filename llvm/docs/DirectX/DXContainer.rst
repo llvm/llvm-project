@@ -530,7 +530,7 @@ but adds a 32-bit access flag.
 .. code-block:: c
 
    struct DescriptorRange_V1_0 {
-      uint32_t RangeType;
+      dxil::ResourceClass RangeType;
       uint32_t NumDescriptors;
       uint32_t BaseShaderRegister;
       uint32_t RegisterSpace;
@@ -538,12 +538,12 @@ but adds a 32-bit access flag.
    };
 
    struct DescriptorRange_V1_1 {
-      dxbc::DescriptorRangeType RangeType;
+      dxil::ResourceClass RangeType;
       uint32_t NumDescriptors;
       uint32_t BaseShaderRegister;
       uint32_t RegisterSpace;
-      uint32_t OffsetInDescriptorsFromTableStart;      
       uint32_t Flags;
+      uint32_t OffsetInDescriptorsFromTableStart;      
    };
 
 Static Samplers
@@ -556,22 +556,26 @@ This section also has a variable size, since it can contain multiple static
 samplers definitions. However, the definition is a fixed sized struct, 
 containing 13 32-byte fields of various enum, float, and integer values. 
 
+In version 1.2, the static sampler is 17 bytes. It matches the 1.0 static sampler
+but adds a 32-bit access flag. In Version 1.1, it matches static sampler 
+version 1.0.
+
 .. code-block:: c
 
    struct StaticSamplerDesc {
-      FilterMode Filter; 
-      TextureAddressMode AddressU;
-      TextureAddressMode AddressV;
-      TextureAddressMode AddressW;
+      dxbc::FilterMode Filter; 
+      dxbc::TextureAddressMode AddressU;
+      dxbc::TextureAddressMode AddressV;
+      dxbc::TextureAddressMode AddressW;
       float MipLODBias;
       uint32_t MaxAnisotropy;
-      ComparisonFunc ComparisonFunc; 
-      StaticBorderColor BorderColor;
+      dxbc::ComparisonFunc ComparisonFunc; 
+      dxbc::StaticBorderColor BorderColor;
       float MinLOD;
       float MaxLOD;
       uint32_t ShaderRegister;
       uint32_t RegisterSpace;
-      ShaderVisibility ShaderVisibility;
+      dxbc::ShaderVisibility ShaderVisibility;
    };
 
 SFI0 Part

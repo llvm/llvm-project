@@ -1256,6 +1256,18 @@ def MaskedCompressStore : Builtin {
   let Prototype = "void(...)";
 }
 
+def MaskedGather : Builtin {
+  let Spellings = ["__builtin_masked_gather"];
+  let Attributes = [NoThrow, Pure, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def MaskedScatter : Builtin {
+  let Spellings = ["__builtin_masked_scatter"];
+  let Attributes = [NoThrow, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
 def AllocaUninitialized : Builtin {
   let Spellings = ["__builtin_alloca_uninitialized"];
   let Attributes = [FunctionWithBuiltinPrefix, NoThrow];
@@ -1402,6 +1414,12 @@ def ElementwiseExp2 : Builtin {
 
 def ElementwiseExp10 : Builtin {
   let Spellings = ["__builtin_elementwise_exp10"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def ElementwiseLdexp : Builtin {
+  let Spellings = ["__builtin_elementwise_ldexp"];
   let Attributes = [NoThrow, Const, CustomTypeChecking];
   let Prototype = "void(...)";
 }
@@ -4715,6 +4733,13 @@ def PtrauthStringDiscriminator : Builtin {
   let Prototype = "size_t(char const*)";
 }
 
+// AllocToken builtins.
+def InferAllocToken : Builtin {
+  let Spellings = ["__builtin_infer_alloc_token"];
+  let Attributes = [NoThrow, Const, Pure, CustomTypeChecking, Constexpr, UnevaluatedArguments];
+  let Prototype = "size_t(...)";
+}
+
 // OpenCL v2.0 s6.13.16, s9.17.3.5 - Pipe functions.
 // We need the generic prototype, since the packet type could be anything.
 def ReadPipe : OCLPipeLangBuiltin {
@@ -4933,6 +4958,30 @@ def HLSLResourceHandleFromImplicitBinding : LangBuiltin<"HLSL_LANG"> {
   let Prototype = "void(...)";
 }
 
+def HLSLResourceCounterHandleFromImplicitBinding : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_resource_counterhandlefromimplicitbinding"];
+  let Attributes = [NoThrow, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def HLSLResourceNonUniformIndex : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_resource_nonuniformindex"];
+  let Attributes = [NoThrow];
+  let Prototype = "uint32_t(uint32_t)";
+}
+
+def HLSLResourceGetDimensionsX : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_resource_getdimensions_x"];
+  let Attributes = [NoThrow];
+  let Prototype = "void(...)";
+}
+
+def HLSLResourceGetStride : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_resource_getstride"];
+  let Attributes = [NoThrow];
+  let Prototype = "void(...)";
+}
+
 def HLSLAll : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_all"];
   let Attributes = [NoThrow, Const];
@@ -4983,6 +5032,12 @@ def HLSLWaveActiveCountBits : LangBuiltin<"HLSL_LANG"> {
 
 def HLSLWaveActiveMax : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_wave_active_max"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void (...)";
+}
+
+def HLSLWaveActiveMin : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_wave_active_min"];
   let Attributes = [NoThrow, Const];
   let Prototype = "void (...)";
 }
@@ -5083,6 +5138,12 @@ def HLSLIsinf : LangBuiltin<"HLSL_LANG"> {
   let Prototype = "void(...)";
 }
 
+def HLSLIsnan : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_elementwise_isnan"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
+}
+
 def HLSLLerp : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_lerp"];
   let Attributes = [NoThrow, Const, CustomTypeChecking];
@@ -5178,6 +5239,12 @@ def HLSLGetSpirvSpecConstant : LangBuiltin<"HLSL_LANG">, HLSLScalarTemplate {
   let Spellings = ["__builtin_get_spirv_spec_constant"];
   let Attributes = [NoThrow, Const, Pure];
   let Prototype = "T(unsigned int, T)";
+}
+
+def HLSLF16ToF32 : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_elementwise_f16tof32"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
 }
 
 // Builtins for XRay.

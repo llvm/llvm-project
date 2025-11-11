@@ -181,7 +181,7 @@ EOF
 #                       Android Builder Base Image
 # ===----------------------------------------------------------------------===##
 
-FROM ubuntu:jammy AS android-builder-base
+FROM docker.io/library/ubuntu:jammy AS android-builder-base
 
 ARG ANDROID_CLANG_VERSION
 ARG ANDROID_CLANG_PREBUILTS_COMMIT

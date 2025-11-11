@@ -65,9 +65,9 @@ static cl::opt<bool> UseMIPSLoadStorePairsOpt(
     cl::desc("Enable the load/store pair optimization pass"), cl::init(false),
     cl::Hidden);
 
-static cl::opt<bool> UseCCMovInsn("use-riscv-ccmov",
-                                  cl::desc("Use 'mips.ccmov' instruction"),
-                                  cl::init(true), cl::Hidden);
+static cl::opt<bool> UseMIPSCCMovInsn("use-riscv-mips-ccmov",
+                                      cl::desc("Use 'mips.ccmov' instruction"),
+                                      cl::init(true), cl::Hidden);
 
 void RISCVSubtarget::anchor() {}
 
@@ -104,7 +104,7 @@ RISCVSubtarget::RISCVSubtarget(const Triple &TT, StringRef CPU,
       RVVVectorBitsMin(RVVVectorBitsMin), RVVVectorBitsMax(RVVVectorBitsMax),
       FrameLowering(
           initializeSubtargetDependencies(TT, CPU, TuneCPU, FS, ABIName)),
-      InstrInfo(*this), RegInfo(getHwMode()), TLInfo(TM, *this) {
+      InstrInfo(*this), TLInfo(TM, *this) {
   TSInfo = std::make_unique<RISCVSelectionDAGInfo>();
 }
 
@@ -246,10 +246,10 @@ void RISCVSubtarget::overridePostRASchedPolicy(
   }
 }
 
-bool RISCVSubtarget::useLoadStorePairs() const {
+bool RISCVSubtarget::useMIPSLoadStorePairs() const {
   return UseMIPSLoadStorePairsOpt && HasVendorXMIPSLSP;
 }
 
-bool RISCVSubtarget::useCCMovInsn() const {
-  return UseCCMovInsn && HasVendorXMIPSCMov;
+bool RISCVSubtarget::useMIPSCCMovInsn() const {
+  return UseMIPSCCMovInsn && HasVendorXMIPSCMov;
 }

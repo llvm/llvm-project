@@ -29,28 +29,7 @@ define void @single_incoming_phi_no_blend_mask(i64 %a, i64 %b) {
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 32
 ; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[EXIT:%.*]]
-; CHECK:       scalar.ph:
-; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
-; CHECK:       loop.header:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
-; CHECK-NEXT:    [[IV_TRUNC:%.*]] = trunc i64 [[IV]] to i16
-; CHECK-NEXT:    br label [[LOOP_COND:%.*]]
-; CHECK:       loop.cond:
-; CHECK-NEXT:    [[BLEND:%.*]] = phi i16 [ [[IV_TRUNC]], [[LOOP_HEADER]] ]
-; CHECK-NEXT:    [[SRC_PTR:%.*]] = getelementptr inbounds [32 x i16], ptr @src, i16 0, i16 [[BLEND]]
-; CHECK-NEXT:    [[LV:%.*]] = load i16, ptr [[SRC_PTR]], align 1
-; CHECK-NEXT:    [[CMP_B:%.*]] = icmp sgt i64 [[IV]], [[A]]
-; CHECK-NEXT:    br i1 [[CMP_B]], label [[LOOP_NEXT:%.*]], label [[LOOP_LATCH]]
-; CHECK:       loop.next:
-; CHECK-NEXT:    br label [[LOOP_LATCH]]
-; CHECK:       loop.latch:
-; CHECK-NEXT:    [[RES:%.*]] = phi i16 [ [[LV]], [[LOOP_COND]] ], [ 1, [[LOOP_NEXT]] ]
-; CHECK-NEXT:    [[DST_PTR:%.*]] = getelementptr inbounds [32 x i16], ptr @dst, i16 0, i64 [[IV]]
-; CHECK-NEXT:    store i16 [[RES]], ptr [[DST_PTR]], align 2
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; CHECK-NEXT:    [[CMP439:%.*]] = icmp ult i64 [[IV]], 31
-; CHECK-NEXT:    br i1 [[CMP439]], label [[LOOP_HEADER]], label [[EXIT]]
+; CHECK-NEXT:    br label [[LOOP_LATCH:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -112,29 +91,7 @@ define void @single_incoming_phi_with_blend_mask(i64 %a, i64 %b) {
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], 32
 ; CHECK-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[EXIT:%.*]]
-; CHECK:       scalar.ph:
-; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
-; CHECK:       loop.header:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
-; CHECK-NEXT:    [[IV_TRUNC:%.*]] = trunc i64 [[IV]] to i16
-; CHECK-NEXT:    [[CMP_A:%.*]] = icmp ugt i64 [[IV]], [[A]]
-; CHECK-NEXT:    br i1 [[CMP_A]], label [[LOOP_COND:%.*]], label [[LOOP_LATCH]]
-; CHECK:       loop.cond:
-; CHECK-NEXT:    [[BLEND:%.*]] = phi i16 [ [[IV_TRUNC]], [[LOOP_HEADER]] ]
-; CHECK-NEXT:    [[SRC_PTR:%.*]] = getelementptr inbounds [32 x i16], ptr @src, i16 0, i16 [[BLEND]]
-; CHECK-NEXT:    [[LV:%.*]] = load i16, ptr [[SRC_PTR]], align 1
-; CHECK-NEXT:    [[CMP_B:%.*]] = icmp sgt i64 [[IV]], [[A]]
-; CHECK-NEXT:    br i1 [[CMP_B]], label [[LOOP_NEXT:%.*]], label [[LOOP_LATCH]]
-; CHECK:       loop.next:
-; CHECK-NEXT:    br label [[LOOP_LATCH]]
-; CHECK:       loop.latch:
-; CHECK-NEXT:    [[RES:%.*]] = phi i16 [ 0, [[LOOP_HEADER]] ], [ [[LV]], [[LOOP_COND]] ], [ 1, [[LOOP_NEXT]] ]
-; CHECK-NEXT:    [[DST_PTR:%.*]] = getelementptr inbounds [32 x i16], ptr @dst, i16 0, i64 [[IV]]
-; CHECK-NEXT:    store i16 [[RES]], ptr [[DST_PTR]], align 2
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; CHECK-NEXT:    [[CMP439:%.*]] = icmp ult i64 [[IV]], 31
-; CHECK-NEXT:    br i1 [[CMP439]], label [[LOOP_HEADER]], label [[EXIT]]
+; CHECK-NEXT:    br label [[LOOP_LATCH:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -185,8 +142,8 @@ define void @multiple_incoming_phi_with_blend_mask(i64 %a, ptr noalias %dst) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt <2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP1]], <2 x i16> [[VEC_IND3]], <2 x i16> [[VEC_IND1]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i16> [[PREDPHI]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [32 x i16], ptr @src, i16 0, i16 [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i16> [[PREDPHI]], i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [32 x i16], ptr @src, i16 0, i16 [[TMP2]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [32 x i16], ptr @src, i16 0, i16 [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = load i16, ptr [[TMP3]], align 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = load i16, ptr [[TMP5]], align 1
@@ -201,26 +158,7 @@ define void @multiple_incoming_phi_with_blend_mask(i64 %a, ptr noalias %dst) {
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], 32
 ; CHECK-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[EXIT:%.*]]
-; CHECK:       scalar.ph:
-; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
-; CHECK:       loop.header:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
-; CHECK-NEXT:    [[IV_TRUNC:%.*]] = trunc i64 [[IV]] to i16
-; CHECK-NEXT:    [[IV_TRUNC_2:%.*]] = trunc i64 [[IV]] to i16
-; CHECK-NEXT:    [[CMP_A:%.*]] = icmp ugt i64 [[IV]], [[A]]
-; CHECK-NEXT:    br i1 [[CMP_A]], label [[LOOP_NEXT:%.*]], label [[LOOP_LATCH]]
-; CHECK:       loop.next:
-; CHECK-NEXT:    br label [[LOOP_LATCH]]
-; CHECK:       loop.latch:
-; CHECK-NEXT:    [[BLEND:%.*]] = phi i16 [ [[IV_TRUNC]], [[LOOP_HEADER]] ], [ [[IV_TRUNC_2]], [[LOOP_NEXT]] ]
-; CHECK-NEXT:    [[SRC_PTR:%.*]] = getelementptr inbounds [32 x i16], ptr @src, i16 0, i16 [[BLEND]]
-; CHECK-NEXT:    [[LV:%.*]] = load i16, ptr [[SRC_PTR]], align 1
-; CHECK-NEXT:    [[DST_PTR:%.*]] = getelementptr inbounds i16, ptr [[DST]], i64 [[IV]]
-; CHECK-NEXT:    store i16 [[LV]], ptr [[DST_PTR]], align 2
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; CHECK-NEXT:    [[CMP439:%.*]] = icmp ult i64 [[IV]], 31
-; CHECK-NEXT:    br i1 [[CMP439]], label [[LOOP_HEADER]], label [[EXIT]]
+; CHECK-NEXT:    br label [[LOOP_LATCH:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -297,29 +235,7 @@ define void @single_incoming_needs_predication(i64 %a, i64 %b) {
 ; CHECK-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT]], 64
 ; CHECK-NEXT:    br i1 [[TMP20]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[EXIT:%.*]]
-; CHECK:       scalar.ph:
-; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
-; CHECK:       loop.header:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
-; CHECK-NEXT:    [[IV_TRUNC:%.*]] = trunc i64 [[IV]] to i16
-; CHECK-NEXT:    [[CMP_A:%.*]] = icmp ugt i64 [[IV]], [[A]]
-; CHECK-NEXT:    br i1 [[CMP_A]], label [[LOOP_COND:%.*]], label [[LOOP_LATCH]]
-; CHECK:       loop.cond:
-; CHECK-NEXT:    [[BLEND:%.*]] = phi i16 [ [[IV_TRUNC]], [[LOOP_HEADER]] ]
-; CHECK-NEXT:    [[SRC_PTR:%.*]] = getelementptr inbounds [32 x i16], ptr @src, i16 0, i16 [[BLEND]]
-; CHECK-NEXT:    [[LV:%.*]] = load i16, ptr [[SRC_PTR]], align 1
-; CHECK-NEXT:    [[CMP_B:%.*]] = icmp sgt i64 [[IV]], [[A]]
-; CHECK-NEXT:    br i1 [[CMP_B]], label [[LOOP_NEXT:%.*]], label [[LOOP_LATCH]]
-; CHECK:       loop.next:
-; CHECK-NEXT:    br label [[LOOP_LATCH]]
-; CHECK:       loop.latch:
-; CHECK-NEXT:    [[RES:%.*]] = phi i16 [ 0, [[LOOP_HEADER]] ], [ [[LV]], [[LOOP_COND]] ], [ 1, [[LOOP_NEXT]] ]
-; CHECK-NEXT:    [[DST_PTR:%.*]] = getelementptr inbounds [32 x i16], ptr @dst, i16 0, i64 [[IV]]
-; CHECK-NEXT:    store i16 [[RES]], ptr [[DST_PTR]], align 2
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; CHECK-NEXT:    [[CMP439:%.*]] = icmp ult i64 [[IV]], 63
-; CHECK-NEXT:    br i1 [[CMP439]], label [[LOOP_HEADER]], label [[EXIT]]
+; CHECK-NEXT:    br label [[LOOP_LATCH:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -371,20 +287,7 @@ define void @duplicated_incoming_blocks_blend(i32 %x, ptr %ptr) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[EXIT:%.*]]
-; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
-; CHECK:       loop.header:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[SCALAR_PH:%.*]] ], [ [[ADD_I:%.*]], [[LOOP_LATCH:%.*]] ]
-; CHECK-NEXT:    [[C_0:%.*]] = icmp ugt i32 [[IV]], [[X:%.*]]
-; CHECK-NEXT:    br i1 [[C_0]], label [[LOOP_LATCH]], label [[LOOP_LATCH]]
-; CHECK:       loop.latch:
-; CHECK-NEXT:    [[P:%.*]] = phi i32 [ [[IV]], [[LOOP_HEADER]] ], [ [[IV]], [[LOOP_HEADER]] ]
-; CHECK-NEXT:    [[GEP_PTR:%.*]] = getelementptr i32, ptr [[PTR]], i32 [[P]]
-; CHECK-NEXT:    store i32 [[P]], ptr [[GEP_PTR]], align 4
-; CHECK-NEXT:    [[ADD_I]] = add nsw i32 [[P]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[ADD_I]], 1000
-; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP_HEADER]], label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;

@@ -14,7 +14,7 @@
 namespace clang::tidy::bugprone {
 
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/multiple-new-in-one-expression.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/multiple-new-in-one-expression.html
 class MultipleNewInOneExpressionCheck : public ClangTidyCheck {
 public:
   MultipleNewInOneExpressionCheck(StringRef Name, ClangTidyContext *Context)

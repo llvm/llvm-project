@@ -110,3 +110,43 @@ main_body:
   call void @llvm.amdgcn.raw.ptr.buffer.load.lds(ptr addrspace(8) %rsrc, ptr addrspace(3) %lds, i32 1, i32 0, i32 0, i32 2048, i32 0)
   ret void
 }
+
+define amdgpu_ps float @buffer_load_lds_dword_volatile(ptr addrspace(8) inreg %rsrc, ptr addrspace(3) inreg %lds) {
+; GCN-LABEL: buffer_load_lds_dword_volatile:
+; GCN:       ; %bb.0: ; %main_body
+; GCN-NEXT:    s_mov_b32 m0, s4
+; GCN-NEXT:    s_nop 0
+; GCN-NEXT:    buffer_load_dword off, s[0:3], 0 glc lds
+; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    buffer_load_dword off, s[0:3], 0 offset:256 lds
+; GCN-NEXT:    buffer_load_dword off, s[0:3], 0 offset:512 lds
+; GCN-NEXT:    v_mov_b32_e32 v0, s4
+; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    ds_read_b32 v0, v0
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    ; return to shader part epilog
+main_body:
+  call void @llvm.amdgcn.raw.ptr.buffer.load.lds(ptr addrspace(8) %rsrc, ptr addrspace(3) %lds, i32 4, i32 0, i32 0, i32 0, i32 2147483648)
+  call void @llvm.amdgcn.raw.ptr.buffer.load.lds(ptr addrspace(8) %rsrc, ptr addrspace(3) %lds, i32 4, i32 0, i32 0, i32 256, i32 0)
+  call void @llvm.amdgcn.raw.ptr.buffer.load.lds(ptr addrspace(8) %rsrc, ptr addrspace(3) %lds, i32 4, i32 0, i32 0, i32 512, i32 0)
+  %res = load float, ptr addrspace(3) %lds
+  ret float %res
+}
+
+define amdgpu_ps float @buffer_load_lds_dword_nontemporal(ptr addrspace(8) inreg %rsrc, ptr addrspace(3) inreg %lds) {
+; GCN-LABEL: buffer_load_lds_dword_nontemporal:
+; GCN:       ; %bb.0: ; %main_body
+; GCN-NEXT:    s_mov_b32 m0, s4
+; GCN-NEXT:    v_mov_b32_e32 v0, s4
+; GCN-NEXT:    buffer_load_dword off, s[0:3], 0 glc slc lds
+; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    ds_read_b32 v0, v0
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    ; return to shader part epilog
+main_body:
+  call void @llvm.amdgcn.raw.ptr.buffer.load.lds(ptr addrspace(8) %rsrc, ptr addrspace(3) %lds, i32 4, i32 0, i32 0, i32 0, i32 0), !nontemporal !0
+  %res = load float, ptr addrspace(3) %lds
+  ret float %res
+}
+
+!0 = !{i32 1}

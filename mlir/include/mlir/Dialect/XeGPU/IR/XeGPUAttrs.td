@@ -223,18 +223,66 @@ def DistributeLayoutAttr: AttrInterface<"DistributeLayoutAttr"> {
     InterfaceMethod<"Derive a new layout by dropping InstData",
                     "xegpu::DistributeLayoutAttr",
                     "dropInstData">,
-    InterfaceMethod<[{Delinearizes a linear subgroup ID into its multidimensional
-                      indices based on the effective subgroup layout.}],
+    InterfaceMethod<[{Delinearizes a linear ID into its multidimensional
+                      indices based on the effective layout level.}],
                     "FailureOr<SmallVector<Value>>",
-                    "delinearizeSubgroupId",
+                    "delinearizeId",
                     (ins "OpBuilder &": $builder, "Location":$loc, "Value":$linearId)>,
-    InterfaceMethod<[{Generates instructions to compute multidimensional offsets for blocks
-                      assigned to a subgroup identified by linearId. The shape parameter
-                      represents the workgroup-level problem size. Each subgroup may access
+    InterfaceMethod<[{Generates instructions to compute multidimensional coordinates for dist units
+                      assigned to a level identified by linearId. The shape parameter
+                      represents the higher-level problem size. Each level may access
                       multiple blocks according to round-robin distribution rules.}],
                     "FailureOr<SmallVector<SmallVector<Value>>>",
-                    "getOffsets",
+                    "computeDistributedCoords",
                     (ins "OpBuilder &": $builder, "Location":$loc, "Value":$linearId, "ArrayRef<int64_t>":$shape)>,
+    InterfaceMethod</*desc=*/[{Check if this layout can be achieved by applying a transpose
+                     to some other layout according to given permutation of (0...n-1).}],
+                    /*retTy=*/"bool",
+                    /*methodName=*/"isTransposeOf",
+                    /*args=*/(ins "const xegpu::DistributeLayoutAttr&": $other, "ArrayRef<int64_t>": $perm),
+                    /*methodBody=*/[{
+                      if (!other)
+                        return false;
+                      if ($_self.getRank() != other.getRank() || perm.size() != static_cast<size_t>($_self.getRank()))
+                        return false;
+                      // Check if the permutation is valid
+                      if (!isPermutationVector(perm))
+                        return false;
+                      auto checkTranspose = [](ArrayRef<int64_t> dst, ArrayRef<int64_t> src, ArrayRef<int64_t> perm) {
+                        // If both `dst` and `src` are empty, conservatively return true
+                        // here because some layout fields can be empty.
+                        if (dst.empty() && src.empty())
+                          return true;
+                        for (const auto &ta : llvm::enumerate(perm)) {
+                          if (src[ta.index()] != dst[ta.value()])
+                            return false;
+                        }
+                        return true;
+                      };
+                      // Check sgLayout
+                      if (!checkTranspose($_self.getEffectiveSgLayoutAsInt(), other.getEffectiveSgLayoutAsInt(), perm))
+                        return false;
+                      // Check sgData
+                      if (!checkTranspose($_self.getEffectiveSgDataAsInt(), other.getEffectiveSgDataAsInt(), perm))
+                        return false;
+                      // Check instData
+                      if (!checkTranspose($_self.getEffectiveInstDataAsInt(), other.getEffectiveInstDataAsInt(), perm))
+                        return false;
+                      // Check laneLayout
+                      if (!checkTranspose($_self.getEffectiveLaneLayoutAsInt(), other.getEffectiveLaneLayoutAsInt(), perm))
+                        return false;
+                      // Check laneData
+                      if (!checkTranspose($_self.getEffectiveLaneDataAsInt(), other.getEffectiveLaneDataAsInt(), perm))
+                        return false;
+                      // Check order if both sides have order field.
+                      if ($_self.getOrder() && other.getOrder()) {
+                        auto thisOrderAsInt = llvm::to_vector_of<int64_t>($_self.getOrder().asArrayRef());
+                        auto otherOrderAsInt = llvm::to_vector_of<int64_t>(other.getOrder().asArrayRef());
+                        if (!checkTranspose(thisOrderAsInt, otherOrderAsInt, perm))
+                          return false;
+                      }
+                      return true;
+                    }]>,
     InterfaceMethod</*desc=*/[{Check if this layout is a slice of some other layout.}],
                     /*retTy=*/"bool",
                     /*methodName=*/"isSliceOf",
@@ -331,6 +379,29 @@ def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout", [DistributeLayoutAttr]> {
   );
 
   let builders = [
+    AttrBuilder<(ins "llvm::ArrayRef<int32_t>": $inst_data),
+      [{
+        auto sg_layout = DenseI32ArrayAttr();
+        auto sg_data = DenseI32ArrayAttr();
+        auto order = DenseI32ArrayAttr();
+        auto lane_layout = DenseI32ArrayAttr();
+        auto lane_data = DenseI32ArrayAttr();
+        return $_get($_ctxt, sg_layout, sg_data,
+                     DenseI32ArrayAttr::get($_ctxt, inst_data),
+                     lane_layout, lane_data, order);
+      }]>,
+    AttrBuilder<(ins "llvm::ArrayRef<int32_t>": $inst_data,
+                      "llvm::ArrayRef<int32_t>": $lane_layout,
+                     "llvm::ArrayRef<int32_t>": $lane_data),
+      [{
+        auto sg_layout = DenseI32ArrayAttr();
+        auto sg_data = DenseI32ArrayAttr();
+        auto order = DenseI32ArrayAttr();
+        return $_get($_ctxt, sg_layout, sg_data,
+                     DenseI32ArrayAttr::get($_ctxt, inst_data),
+                     DenseI32ArrayAttr::get($_ctxt, lane_layout),
+                     DenseI32ArrayAttr::get($_ctxt, lane_data), order);
+      }]>,
     AttrBuilder<(ins "llvm::ArrayRef<int32_t>": $lane_layout,
                      "llvm::ArrayRef<int32_t>": $lane_data),
       [{
@@ -341,18 +412,6 @@ def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout", [DistributeLayoutAttr]> {
         return $_get($_ctxt, sg_layout, sg_data, inst_data,
                      DenseI32ArrayAttr::get($_ctxt, lane_layout),
                      DenseI32ArrayAttr::get($_ctxt, lane_data), order);
-      }]>,
-    AttrBuilder<(ins "llvm::ArrayRef<int32_t>": $lane_layout,
-                     "llvm::ArrayRef<int32_t>": $lane_data,
-                     "llvm::ArrayRef<int32_t>": $order),
-      [{
-        return $_get($_ctxt,
-                     /*sg_layout =*/ nullptr,
-                     /*sg_data   =*/ nullptr,
-                     /*inst_data =*/ nullptr,
-                     DenseI32ArrayAttr::get($_ctxt, lane_layout),
-                     DenseI32ArrayAttr::get($_ctxt, lane_data),
-                     DenseI32ArrayAttr::get($_ctxt, order));
       }]>,
     AttrBuilder<(ins "DenseI32ArrayAttr": $lane_layout,
                      "DenseI32ArrayAttr": $lane_data,
@@ -428,17 +487,17 @@ def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout", [DistributeLayoutAttr]> {
       return {};
     }
 
-    /// Delinearizes a linear subgroup ID into its multidimensional indices
-    /// based on the effective subgroup layout.
+    /// Delinearizes a linear ID into its multidimensional indices
+    /// based on the effective level of the layout.
     FailureOr<SmallVector<Value>>
-    delinearizeSubgroupId(OpBuilder &builder, Location loc, Value linearId);
+    delinearizeId(OpBuilder &builder, Location loc, Value linearId);
 
-    /// Generates instructions to compute multidimensional offsets for blocks
-    /// assigned to a subgroup identified by linearId. The shape parameter
-    /// represents the workgroup-level problem size. Each subgroup may access
+    /// Generates instructions to compute multidimensional coordinates for dist units
+    /// assigned to a level identified by linearId. The shape parameter
+    /// represents the higher-level problem size. Each `level` may access
     /// multiple blocks according to round-robin distribution rules.
     FailureOr<SmallVector<SmallVector<Value>>>
-    getOffsets(OpBuilder &builder, Location loc, Value linearId, ArrayRef<int64_t> shape);
+    computeDistributedCoords(OpBuilder &builder, Location loc, Value linearId, ArrayRef<int64_t> shape);
 
     /// Check if this is slice of some other layout.
     bool isSliceOf(const xegpu::DistributeLayoutAttr &other) { return false; }
@@ -595,14 +654,15 @@ def XeGPU_SliceAttr : XeGPUAttr<"Slice", "slice", [DistributeLayoutAttr]> {
     /// Delinearizes a linear subgroup ID into its multidimensional indices
     /// based on the effective subgroup layout.
     FailureOr<SmallVector<Value>>
-    delinearizeSubgroupId(OpBuilder &builder, Location loc, Value linearId);
+    delinearizeId(OpBuilder &builder, Location loc, Value linearId);
 
-    /// Generates instructions to compute multidimensional offsets for blocks
+    /// Generates instructions to compute multidimensional coordinates for blocks
     /// assigned to a subgroup identified by linearId. The shape parameter
     /// represents the workgroup-level problem size. Each subgroup may access
     /// multiple blocks according to round-robin distribution rules.
+
     FailureOr<SmallVector<SmallVector<Value>>>
-    getOffsets(OpBuilder &builder, Location loc, Value linearId, ArrayRef<int64_t> shape);
+    computeDistributedCoords(OpBuilder &builder, Location loc, Value linearId, ArrayRef<int64_t> shape);
 
     /// Check if this is slice of some other layout.
     bool isSliceOf(const xegpu::DistributeLayoutAttr &other);
@@ -664,8 +724,12 @@ def XeGPU_MemLayoutAttr : XeGPUAttr<"MemLayout", "mem_layout"> {
       return getAttrs().contains(name);
     }
 
-    ArrayAttr getStrides() {
+    ArrayAttr getStrideAttr() {
       return getAttrs().getAs<ArrayAttr>("stride");
+    }
+
+    ArrayAttr getBlockAttr() {
+      return getAttrs().getAs<ArrayAttr>("block");
     }
 
   }];
