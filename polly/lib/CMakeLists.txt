@@ -60,9 +60,6 @@ add_llvm_pass_plugin(Polly
   CodeGen/RuntimeDebugBuilder.cpp
   CodeGen/PerfMonitor.cpp
   Exchange/JSONExporter.cpp
-  Pass/PhaseManager.cpp
-  Pass/PollyFunctionPass.cpp
-  Pass/PollyModulePass.cpp
   Support/GICHelper.cpp
   Support/PollyDebug.cpp
   Support/SCEVAffinator.cpp

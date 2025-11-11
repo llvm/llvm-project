@@ -1,4 +1,6 @@
-; RUN: opt %loadNPMPolly '-passes=polly-custom<import-jscop;codegen>' -S < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly-import-jscop,polly-codegen' \
+; RUN: \
+; RUN: -S < %s | FileCheck %s
 ;
 ;    void foo(float A[], float B[]) {
 ;      for (long i = 0; i < 100; i++)

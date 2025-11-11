@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly '-passes=polly<no-default-opts>' < %s
+; RUN: opt %loadNPMPolly -passes=polly-codegen < %s
 ;
 ; Regression test for a bug in the runtime check generation.
 

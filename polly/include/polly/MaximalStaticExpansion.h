@@ -14,7 +14,6 @@
 #ifndef POLLY_MAXIMALSTATICEXPANSION_H
 #define POLLY_MAXIMALSTATICEXPANSION_H
 
-#include "polly/DependenceInfo.h"
 #include "polly/ScopPass.h"
 #include "llvm/IR/PassManager.h"
 
@@ -38,7 +37,6 @@ private:
   llvm::raw_ostream &OS;
 };
 
-void runMaximalStaticExpansion(Scop &S, DependenceAnalysis::Result &DI);
 } // namespace polly
 
 #endif /* POLLY_MAXIMALSTATICEXPANSION_H */

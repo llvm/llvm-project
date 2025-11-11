@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "polly/Simplify.h"
-#include "polly/Options.h"
 #include "polly/ScopInfo.h"
 #include "polly/ScopPass.h"
 #include "polly/Support/GICHelper.h"
@@ -19,6 +18,7 @@
 #include "polly/Support/ISLTools.h"
 #include "polly/Support/VirtualInstruction.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/Support/Debug.h"
 #include <optional>
 
@@ -29,11 +29,6 @@ using namespace llvm;
 using namespace polly;
 
 namespace {
-
-static cl::opt<bool>
-    PollyPrintSimplify("polly-print-simplify",
-                       cl::desc("Polly - Print Simplify actions"),
-                       cl::cat(PollyCategory));
 
 #define TWO_STATISTICS(VARNAME, DESC)                                          \
   static llvm::Statistic VARNAME[2] = {                                        \
@@ -761,6 +756,39 @@ void SimplifyImpl::printScop(raw_ostream &OS, Scop &S) const {
   printAccesses(OS);
 }
 
+class SimplifyWrapperPass final : public ScopPass {
+public:
+  static char ID;
+  int CallNo;
+  std::optional<SimplifyImpl> Impl;
+
+  explicit SimplifyWrapperPass(int CallNo = 0) : ScopPass(ID), CallNo(CallNo) {}
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequiredTransitive<ScopInfoRegionPass>();
+    AU.addRequired<LoopInfoWrapperPass>();
+    AU.setPreservesAll();
+  }
+
+  bool runOnScop(Scop &S) override {
+    LoopInfo *LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+
+    Impl.emplace(CallNo);
+    Impl->run(S, LI);
+
+    return false;
+  }
+
+  void printScop(raw_ostream &OS, Scop &S) const override {
+    if (Impl)
+      Impl->printScop(OS, S);
+  }
+
+  void releaseMemory() override { Impl.reset(); }
+};
+
+char SimplifyWrapperPass::ID;
+
 static llvm::PreservedAnalyses
 runSimplifyUsingNPM(Scop &S, ScopAnalysisManager &SAM,
                     ScopStandardAnalysisResults &SAR, SPMUpdater &U, int CallNo,
@@ -815,15 +843,58 @@ SmallVector<MemoryAccess *, 32> polly::getAccessesInOrder(ScopStmt &Stmt) {
   return Accesses;
 }
 
-bool polly::runSimplify(Scop &S, int CallNo) {
-  SimplifyImpl Impl(CallNo);
-  Impl.run(S, S.getLI());
-  if (PollyPrintSimplify) {
-    outs() << "Printing analysis 'Polly - Simplify' for region: '"
-           << S.getName() << "' in function '" << S.getFunction().getName()
-           << "':\n";
-    Impl.printScop(outs(), S);
+Pass *polly::createSimplifyWrapperPass(int CallNo) {
+  return new SimplifyWrapperPass(CallNo);
+}
+
+INITIALIZE_PASS_BEGIN(SimplifyWrapperPass, "polly-simplify", "Polly - Simplify",
+                      false, false)
+INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
+INITIALIZE_PASS_END(SimplifyWrapperPass, "polly-simplify", "Polly - Simplify",
+                    false, false)
+
+//===----------------------------------------------------------------------===//
+
+namespace {
+/// Print result from SimplifyWrapperPass.
+class SimplifyPrinterLegacyPass final : public ScopPass {
+public:
+  static char ID;
+
+  SimplifyPrinterLegacyPass() : SimplifyPrinterLegacyPass(outs()) {}
+  explicit SimplifyPrinterLegacyPass(llvm::raw_ostream &OS)
+      : ScopPass(ID), OS(OS) {}
+
+  bool runOnScop(Scop &S) override {
+    SimplifyWrapperPass &P = getAnalysis<SimplifyWrapperPass>();
+
+    OS << "Printing analysis '" << P.getPassName() << "' for region: '"
+       << S.getRegion().getNameStr() << "' in function '"
+       << S.getFunction().getName() << "':\n";
+    P.printScop(OS, S);
+
+    return false;
   }
 
-  return Impl.isModified();
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    ScopPass::getAnalysisUsage(AU);
+    AU.addRequired<SimplifyWrapperPass>();
+    AU.setPreservesAll();
+  }
+
+private:
+  llvm::raw_ostream &OS;
+};
+
+char SimplifyPrinterLegacyPass::ID = 0;
+} // namespace
+
+Pass *polly::createSimplifyPrinterLegacyPass(raw_ostream &OS) {
+  return new SimplifyPrinterLegacyPass(OS);
 }
+
+INITIALIZE_PASS_BEGIN(SimplifyPrinterLegacyPass, "polly-print-simplify",
+                      "Polly - Print Simplify actions", false, false)
+INITIALIZE_PASS_DEPENDENCY(SimplifyWrapperPass)
+INITIALIZE_PASS_END(SimplifyPrinterLegacyPass, "polly-print-simplify",
+                    "Polly - Print Simplify actions", false, false)

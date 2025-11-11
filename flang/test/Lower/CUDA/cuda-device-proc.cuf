@@ -22,9 +22,6 @@ attributes(global) subroutine devsub()
 
   call syncthreads()
   call syncwarp(1)
-  call threadfence()
-  call threadfence_block()
-  call threadfence_system()
   ret = syncthreads_and(1)
   res = syncthreads_and(tid > offset)
   ret = syncthreads_count(1)
@@ -105,10 +102,7 @@ end
 
 ! CHECK-LABEL: func.func @_QPdevsub() attributes {cuf.proc_attr = #cuf.cuda_proc<global>}
 ! CHECK: nvvm.barrier0
-! CHECK: fir.call @llvm.nvvm.bar.warp.sync(%c1{{.*}}) fastmath<contract> : (i32) -> ()
-! CHECK: fir.call @llvm.nvvm.membar.gl() fastmath<contract> : () -> ()
-! CHECK: fir.call @llvm.nvvm.membar.cta() fastmath<contract> : () -> ()
-! CHECK: fir.call @llvm.nvvm.membar.sys() fastmath<contract> : () -> ()
+! CHECK: nvvm.bar.warp.sync %c1{{.*}} : i32 
 ! CHECK: %{{.*}} = fir.call @llvm.nvvm.barrier0.and(%c1{{.*}}) fastmath<contract> : (i32) -> i32
 ! CHECK: %[[A:.*]] = fir.load %{{.*}} : !fir.ref<i32>
 ! CHECK: %[[B:.*]] = fir.load %{{.*}} : !fir.ref<i32>
@@ -219,7 +213,7 @@ end
 ! CHECK-LABEL: func.func @_QPhost1()
 ! CHECK: cuf.kernel
 ! CHECK: nvvm.barrier0
-! CHECK: fir.call @llvm.nvvm.bar.warp.sync(%c1{{.*}}) fastmath<contract> : (i32) -> ()
+! CHECK: nvvm.bar.warp.sync %c1{{.*}} : i32 
 ! CHECK: fir.call @llvm.nvvm.barrier0.and(%c1{{.*}}) fastmath<contract> : (i32) -> i32
 ! CHECK: fir.call @llvm.nvvm.barrier0.popc(%c1{{.*}}) fastmath<contract> : (i32) -> i32
 ! CHECK: fir.call @llvm.nvvm.barrier0.or(%c1{{.*}}) fastmath<contract> : (i32) -> i32
@@ -440,11 +434,11 @@ end subroutine
 
 ! CHECK: %[[LLVM_PTR:.*]] = fir.convert %[[DECL_SHARED]]#0 : (!fir.ref<i64>) -> !llvm.ptr
 ! CHECK: %[[SHARED_PTR:.*]] = llvm.addrspacecast %[[LLVM_PTR]] : !llvm.ptr to !llvm.ptr<3>
-! CHECK: %{{.*}} = nvvm.mbarrier.arrive.shared %[[SHARED_PTR]] : !llvm.ptr<3> -> i64
+! CHECK: %{{.*}} = nvvm.mbarrier.arrive %[[SHARED_PTR]] : !llvm.ptr<3> -> i64
 
 ! CHECK: %[[LLVM_PTR:.*]] = fir.convert %[[DECL_SHARED]]#0 : (!fir.ref<i64>) -> !llvm.ptr
 ! CHECK: %[[SHARED_PTR:.*]] = llvm.addrspacecast %[[LLVM_PTR]] : !llvm.ptr to !llvm.ptr<3>
-! CHECK: nvvm.mbarrier.arrive.expect_tx %[[SHARED_PTR]], %{{.*}} : !llvm.ptr<3>, i32
+! CHECK: %{{.*}} = nvvm.inline_ptx "mbarrier.arrive.expect_tx.release.cta.shared::cta.b64 %{{.*}}, [%{{.*}}], %{{.*}};" ro(%{{.*}}, %{{.*}} : !llvm.ptr<3>, i32) -> i64
 
 
 attributes(global) subroutine test_fence()
@@ -494,7 +488,7 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_bulk_s2g
 ! CHECL: nvvm.cp.async.bulk.global.shared.cta %{{.*}}, %{{.*}}, %{{.*}} : <1>, <3>
-! CHECK: nvvm.inline_ptx "cp.async.bulk.commit_group"
+! CHECK: nvvm.inline_ptx "cp.async.bulk.commit_group;"
 ! CHECK: nvvm.cp.async.bulk.wait_group 0
 
 attributes(device) subroutine testAtomicCasLoop(aa, n)
@@ -675,7 +669,7 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_tma_bulk_store_c4
 ! CHECK: nvvm.cp.async.bulk.global.shared.cta %{{.*}}, %{{.*}}, %{{.*}} : <1>, <3>
-! CHECK: nvvm.inline_ptx "cp.async.bulk.commit_group"
+! CHECK: nvvm.inline_ptx "cp.async.bulk.commit_group;"
 ! CHECK: nvvm.cp.async.bulk.wait_group 0
 
 attributes(global) subroutine test_tma_bulk_store_c8(c, n)
@@ -688,7 +682,7 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_tma_bulk_store_c8
 ! CHECK: nvvm.cp.async.bulk.global.shared.cta %{{.*}}, %{{.*}}, %{{.*}} : <1>, <3>
-! CHECK: nvvm.inline_ptx "cp.async.bulk.commit_group"
+! CHECK: nvvm.inline_ptx "cp.async.bulk.commit_group;"
 ! CHECK: nvvm.cp.async.bulk.wait_group 0
 
 attributes(global) subroutine test_tma_bulk_store_i4(c, n)
@@ -701,7 +695,7 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_tma_bulk_store_i4
 ! CHECK: nvvm.cp.async.bulk.global.shared.cta %{{.*}}, %{{.*}}, %{{.*}} : <1>, <3>
-! CHECK: nvvm.inline_ptx "cp.async.bulk.commit_group"
+! CHECK: nvvm.inline_ptx "cp.async.bulk.commit_group;"
 ! CHECK: nvvm.cp.async.bulk.wait_group 0
 
 attributes(global) subroutine test_tma_bulk_store_i8(c, n)
@@ -714,7 +708,7 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_tma_bulk_store_i8
 ! CHECK: nvvm.cp.async.bulk.global.shared.cta %{{.*}}, %{{.*}}, %{{.*}} : <1>, <3>
-! CHECK: nvvm.inline_ptx "cp.async.bulk.commit_group"
+! CHECK: nvvm.inline_ptx "cp.async.bulk.commit_group;"
 ! CHECK: nvvm.cp.async.bulk.wait_group 0
 
 
@@ -728,7 +722,7 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_tma_bulk_store_r2
 ! CHECK: nvvm.cp.async.bulk.global.shared.cta %{{.*}}, %{{.*}}, %{{.*}} : <1>, <3>
-! CHECK: nvvm.inline_ptx "cp.async.bulk.commit_group"
+! CHECK: nvvm.inline_ptx "cp.async.bulk.commit_group;"
 ! CHECK: nvvm.cp.async.bulk.wait_group 0
 
 attributes(global) subroutine test_tma_bulk_store_r4(c, n)
@@ -741,7 +735,7 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_tma_bulk_store_r4
 ! CHECK: nvvm.cp.async.bulk.global.shared.cta %{{.*}}, %{{.*}}, %{{.*}} : <1>, <3>
-! CHECK: nvvm.inline_ptx "cp.async.bulk.commit_group"
+! CHECK: nvvm.inline_ptx "cp.async.bulk.commit_group;"
 ! CHECK: nvvm.cp.async.bulk.wait_group 0
 
 attributes(global) subroutine test_tma_bulk_store_r8(c, n)
@@ -754,5 +748,5 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_tma_bulk_store_r8
 ! CHECK: nvvm.cp.async.bulk.global.shared.cta %{{.*}}, %{{.*}}, %{{.*}} : <1>, <3>
-! CHECK: nvvm.inline_ptx "cp.async.bulk.commit_group"
+! CHECK: nvvm.inline_ptx "cp.async.bulk.commit_group;"
 ! CHECK: nvvm.cp.async.bulk.wait_group 0

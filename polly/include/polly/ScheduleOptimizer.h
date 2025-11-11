@@ -9,10 +9,16 @@
 #ifndef POLLY_SCHEDULEOPTIMIZER_H
 #define POLLY_SCHEDULEOPTIMIZER_H
 
-#include "polly/DependenceInfo.h"
 #include "polly/ScopPass.h"
 
+namespace llvm {
+class Pass;
+class PassRegistry;
+} // namespace llvm
+
 namespace polly {
+llvm::Pass *createIslScheduleOptimizerWrapperPass();
+llvm::Pass *createIslScheduleOptimizerPrinterLegacyPass(llvm::raw_ostream &OS);
 
 struct IslScheduleOptimizerPass final
     : llvm::PassInfoMixin<IslScheduleOptimizerPass> {
@@ -32,9 +38,11 @@ struct IslScheduleOptimizerPrinterPass final
 private:
   llvm::raw_ostream &OS;
 };
-
-void runIslScheduleOptimizer(Scop &S, llvm::TargetTransformInfo *TTI,
-                             DependenceAnalysis::Result &Deps);
 } // namespace polly
+
+namespace llvm {
+void initializeIslScheduleOptimizerWrapperPassPass(llvm::PassRegistry &);
+void initializeIslScheduleOptimizerPrinterLegacyPassPass(llvm::PassRegistry &);
+} // namespace llvm
 
 #endif // POLLY_SCHEDULEOPTIMIZER_H

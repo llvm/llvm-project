@@ -11,6 +11,12 @@
 
 #include "llvm/Passes/PassBuilder.h"
 
+namespace llvm {
+namespace legacy {
+class PassManagerBase;
+}
+} // namespace llvm
+
 namespace polly {
 
 /// Schedule a set of canonicalization passes to prepare for Polly.
@@ -20,6 +26,8 @@ namespace polly {
 /// into a canonical form that simplifies the analysis and optimization passes
 /// of Polly. The set of optimization passes scheduled here is probably not yet
 /// optimal. TODO: Optimize the set of canonicalization passes.
+void registerCanonicalicationPasses(llvm::legacy::PassManagerBase &PM);
+
 llvm::FunctionPassManager
 buildCanonicalicationPassesForNPM(llvm::ModulePassManager &MPM,
                                   llvm::OptimizationLevel Level);
