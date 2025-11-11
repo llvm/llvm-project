@@ -4292,7 +4292,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
     llvm::RoundingMode RM = getRoundingMode(FPO);
     const auto *VT = Call->getArg(0)->getType()->castAs<VectorType>();
     unsigned NumElts = VT->getNumElements();
-    
+
     using T = PrimConv<PT_Float>::T;
     for (unsigned I = 0; I < NumElts; ++I) {
       APFloat LElem = LHS.elem<T>(I).getAPFloat();

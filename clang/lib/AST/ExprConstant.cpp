@@ -13397,7 +13397,7 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     SmallVector<APValue, 8> ResultElements;
     ResultElements.reserve(NumElts);
     llvm::RoundingMode RM = getActiveRoundingMode(getEvalInfo(), E);
-    
+
     for (unsigned I = 0; I < NumElts; ++I) {
       APFloat LHS = SourceLHS.getVectorElt(I).getFloat();
       APFloat RHS = SourceRHS.getVectorElt(I).getFloat();

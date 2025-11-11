@@ -92,8 +92,8 @@ let Attributes = [Const, NoThrow, RequiredVectorWidth<128>] in {
     def cmpsd : X86Builtin<"_Vector<2, double>(_Vector<2, double>, _Vector<2, double>, _Constant char)">;
   }
 
-
-  let Features = "sse3", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<128>] in {
+  let Features = "sse3",
+      Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<128>] in {
     foreach Op = ["addsub"] in {
       def Op#ps : X86Builtin<"_Vector<4, float>(_Vector<4, float>, _Vector<4, float>)">;
       def Op#pd : X86Builtin<"_Vector<2, double>(_Vector<2, double>, _Vector<2, double>)">;
@@ -121,7 +121,8 @@ let Attributes = [Const, NoThrow, RequiredVectorWidth<128>] in {
 }
 
 // AVX
-let Attributes = [Const, NoThrow, Constexpr, RequiredVectorWidth<256>], Features = "avx" in {
+let Attributes = [Const, NoThrow, Constexpr, RequiredVectorWidth<256>],
+    Features = "avx" in {
   foreach Op = ["addsub", "max", "min"] in {
     def Op#pd256 : X86Builtin<"_Vector<4, double>(_Vector<4, double>, _Vector<4, double>)">;
     def Op#ps256 : X86Builtin<"_Vector<8, float>(_Vector<8, float>, _Vector<8, float>)">;
