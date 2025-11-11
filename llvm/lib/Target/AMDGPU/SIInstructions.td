@@ -3862,7 +3862,7 @@ class PackB32Pat<Instruction inst> : GCNPat <
   (inst $src0_mods, VGPR_32:$src0, $src1_mods, VGPR_32:$src1)
 >;
 }
-let SubtargetPredicate = isGFX9Plus in {  
+let SubtargetPredicate = isGFX9Plus in {
 let True16Predicate = NotHasTrue16BitInsts in
   def : PackB32Pat<V_PACK_B32_F16_e64>;
 
