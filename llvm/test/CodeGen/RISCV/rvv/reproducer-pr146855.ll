@@ -58,10 +58,8 @@ middle.block:                                     ; preds = %vector.body
 }
 
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: read)
-declare <vscale x 4 x i32> @llvm.masked.load.nxv4i32.p0(ptr captures(none), i32 immarg, <vscale x 4 x i1>, <vscale x 4 x i32>) #1
 
 ; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
-declare i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32>) #2
 
 ; uselistorder directives
 uselistorder ptr @llvm.masked.load.nxv4i32.p0, { 1, 0 }

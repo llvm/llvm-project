@@ -15,4 +15,3 @@ entry:
 }
 
 ; Function Attrs: nocallback nofree nosync nounwind willreturn
-declare void @llvm.riscv.sf.vtzero.t.i64(i64 immarg, i64, i64, i64 immarg, i64 immarg) #0
