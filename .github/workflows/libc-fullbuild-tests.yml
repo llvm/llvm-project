@@ -170,4 +170,10 @@ jobs:
         -DCMAKE_ASM_COMPILER_TARGET=armv6m-none-abi \
         -DCMAKE_C_FLAGS=-mfloat-abi=soft \
         -DCMAKE_CXX_FLAGS=-mfloat-abi=soft
-        ninja libc
+    - name: Build baremetal
+      if: ${{ matrix.enable_baremetal_build == "ON" }}
+      run: >
+        cmake
+        --build ${{ steps.strings.outputs.build-baremetal-output-dir }}
+        --parallel
+        --target install
