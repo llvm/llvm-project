@@ -171,7 +171,8 @@ public:
       Primary.Options.set(OptionBit::DeallocTypeMismatch);
     if (getFlags()->delete_size_mismatch)
       Primary.Options.set(OptionBit::DeleteSizeMismatch);
-    if (systemSupportsMemoryTagging())
+    if (allocatorSupportsMemoryTagging<AllocatorConfig>() &&
+        systemSupportsMemoryTagging())
       Primary.Options.set(OptionBit::UseMemoryTagging);
 
     QuarantineMaxChunkSize =

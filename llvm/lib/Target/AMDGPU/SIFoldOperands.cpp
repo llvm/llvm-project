@@ -713,7 +713,7 @@ bool SIFoldOperandsImpl::updateOperand(FoldCandidate &Fold) const {
 
   // Verify the register is compatible with the operand.
   if (const TargetRegisterClass *OpRC =
-          TII->getRegClass(MI->getDesc(), Fold.UseOpNo, TRI)) {
+          TII->getRegClass(MI->getDesc(), Fold.UseOpNo)) {
     const TargetRegisterClass *NewRC =
         TRI->getRegClassForReg(*MRI, New->getReg());
 
@@ -2393,7 +2393,7 @@ bool SIFoldOperandsImpl::tryFoldRegSequence(MachineInstr &MI) {
 
   unsigned OpIdx = Op - &UseMI->getOperand(0);
   const MCInstrDesc &InstDesc = UseMI->getDesc();
-  const TargetRegisterClass *OpRC = TII->getRegClass(InstDesc, OpIdx, TRI);
+  const TargetRegisterClass *OpRC = TII->getRegClass(InstDesc, OpIdx);
   if (!OpRC || !TRI->isVectorSuperClass(OpRC))
     return false;
 

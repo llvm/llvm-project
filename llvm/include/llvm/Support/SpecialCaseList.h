@@ -12,19 +12,11 @@
 #ifndef LLVM_SUPPORT_SPECIALCASELIST_H
 #define LLVM_SUPPORT_SPECIALCASELIST_H
 
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/RadixTree.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringMap.h"
-#include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Allocator.h"
-#include "llvm/Support/Compiler.h"
-#include "llvm/Support/GlobPattern.h"
-#include "llvm/Support/Regex.h"
+#include "llvm/Support/Error.h"
 #include <memory>
 #include <string>
 #include <utility>
-#include <variant>
 #include <vector>
 
 namespace llvm {
@@ -125,91 +117,19 @@ protected:
   SpecialCaseList(SpecialCaseList const &) = delete;
   SpecialCaseList &operator=(SpecialCaseList const &) = delete;
 
-private:
-  using Match = std::pair<StringRef, unsigned>;
-  static constexpr Match NotMatched = {"", 0};
-
-  // Lagacy v1 matcher.
-  class RegexMatcher {
-  public:
-    LLVM_ABI Error insert(StringRef Pattern, unsigned LineNumber);
-    LLVM_ABI void preprocess(bool BySize);
-
-    LLVM_ABI Match match(StringRef Query) const;
-
-    struct Reg {
-      Reg(StringRef Name, unsigned LineNo, Regex &&Rg)
-          : Name(Name), LineNo(LineNo), Rg(std::move(Rg)) {}
-      StringRef Name;
-      unsigned LineNo;
-      Regex Rg;
-    };
-
-    std::vector<Reg> RegExes;
-  };
-
-  class GlobMatcher {
-  public:
-    LLVM_ABI Error insert(StringRef Pattern, unsigned LineNumber);
-    LLVM_ABI void preprocess(bool BySize);
-
-    LLVM_ABI Match match(StringRef Query) const;
-
-    struct Glob {
-      Glob(StringRef Name, unsigned LineNo, GlobPattern &&Pattern)
-          : Name(Name), LineNo(LineNo), Pattern(std::move(Pattern)) {}
-      StringRef Name;
-      unsigned LineNo;
-      GlobPattern Pattern;
-    };
-
-    std::vector<GlobMatcher::Glob> Globs;
-
-    RadixTree<iterator_range<StringRef::const_iterator>,
-              RadixTree<iterator_range<StringRef::const_reverse_iterator>,
-                        SmallVector<int, 1>>>
-        PrefixSuffixToGlob;
-
-    RadixTree<iterator_range<StringRef::const_iterator>, SmallVector<int, 1>>
-        SubstrToGlob;
-  };
-
-  /// Represents a set of patterns and their line numbers
-  class Matcher {
-  public:
-    LLVM_ABI Matcher(bool UseGlobs, bool RemoveDotSlash);
-
-    LLVM_ABI Error insert(StringRef Pattern, unsigned LineNumber);
-    LLVM_ABI void preprocess(bool BySize);
-
-    LLVM_ABI Match match(StringRef Query) const;
-
-    LLVM_ABI bool matchAny(StringRef Query) const {
-      return match(Query) != NotMatched;
-    }
-
-    std::variant<RegexMatcher, GlobMatcher> M;
-    bool RemoveDotSlash;
-  };
-
-  using SectionEntries = StringMap<StringMap<Matcher>>;
-
-protected:
   class Section {
   public:
-    Section(StringRef Str, unsigned FileIdx, bool UseGlobs)
-        : SectionMatcher(UseGlobs, /*RemoveDotSlash=*/false), SectionStr(Str),
-          FileIdx(FileIdx) {}
+    LLVM_ABI Section(StringRef Name, unsigned FileIdx, bool UseGlobs);
+    LLVM_ABI Section(Section &&);
+    LLVM_ABI ~Section();
 
-    Section(Section &&) = default;
-
-    // Return name of the section, its entire string in [].
-    StringRef name() const { return SectionStr; }
+    // Returns name of the section, its entire string in [].
+    StringRef name() const { return Name; }
 
     // Returns true if string 'Name' matches section name interpreted as a glob.
     LLVM_ABI bool matchName(StringRef Name) const;
 
-    // Return sequence number of the file where this section is defined.
+    // Returns sequence number of the file where this section is defined.
     unsigned fileIndex() const { return FileIdx; }
 
     // Helper method to search by Prefix, Query, and Category. Returns
@@ -227,14 +147,11 @@ protected:
 
   private:
     friend class SpecialCaseList;
-    LLVM_ABI void preprocess(bool OrderBySize);
-    LLVM_ABI const SpecialCaseList::Matcher *
-    findMatcher(StringRef Prefix, StringRef Category) const;
+    class SectionImpl;
 
-    Matcher SectionMatcher;
-    std::string SectionStr;
-    SectionEntries Entries;
+    StringRef Name;
     unsigned FileIdx;
+    std::unique_ptr<SectionImpl> Impl;
   };
 
   ArrayRef<const Section> sections() const { return Sections; }

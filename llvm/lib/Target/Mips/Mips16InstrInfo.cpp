@@ -101,7 +101,6 @@ void Mips16InstrInfo::storeRegToStack(MachineBasicBlock &MBB,
                                       MachineBasicBlock::iterator I,
                                       Register SrcReg, bool isKill, int FI,
                                       const TargetRegisterClass *RC,
-                                      const TargetRegisterInfo *TRI,
                                       int64_t Offset,
                                       MachineInstr::MIFlag Flags) const {
   DebugLoc DL;
@@ -116,10 +115,12 @@ void Mips16InstrInfo::storeRegToStack(MachineBasicBlock &MBB,
       .addMemOperand(MMO);
 }
 
-void Mips16InstrInfo::loadRegFromStack(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator I, Register DestReg,
-    int FI, const TargetRegisterClass *RC, const TargetRegisterInfo *TRI,
-    int64_t Offset, MachineInstr::MIFlag Flags) const {
+void Mips16InstrInfo::loadRegFromStack(MachineBasicBlock &MBB,
+                                       MachineBasicBlock::iterator I,
+                                       Register DestReg, int FI,
+                                       const TargetRegisterClass *RC,
+                                       int64_t Offset,
+                                       MachineInstr::MIFlag Flags) const {
   DebugLoc DL;
   if (I != MBB.end()) DL = I->getDebugLoc();
   MachineMemOperand *MMO = GetMemOperand(MBB, FI, MachineMemOperand::MOLoad);
