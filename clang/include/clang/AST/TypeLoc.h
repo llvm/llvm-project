@@ -43,6 +43,7 @@ class ObjCInterfaceDecl;
 class ObjCProtocolDecl;
 class ObjCTypeParamDecl;
 class ParmVarDecl;
+class Sema;
 class TemplateTypeParmDecl;
 class UnqualTypeLoc;
 class UnresolvedUsingTypenameDecl;
@@ -1304,7 +1305,6 @@ public:
   }
 };
 
-class Sema;
 struct BoundsAttributedLocInfo {
   SourceRange Range;
 };
