@@ -691,7 +691,7 @@ public:
     return Reg.Reg;
   }
 
-  unsigned getMatrixReg() const {
+  MCRegister getMatrixReg() const {
     assert(Kind == k_MatrixRegister && "Invalid access!");
     return MatrixReg.Reg;
   }
@@ -716,7 +716,7 @@ public:
     return Reg.EqualityTy;
   }
 
-  unsigned getVectorListStart() const {
+  MCRegister getVectorListStart() const {
     assert(Kind == k_VectorList && "Invalid access!");
     return VectorList.Reg;
   }
@@ -2657,9 +2657,9 @@ void AArch64Operand::print(raw_ostream &OS, const MCAsmInfo &MAI) const {
     break;
   case k_VectorList: {
     OS << "<vectorlist ";
-    unsigned Reg = getVectorListStart();
+    MCRegister Reg = getVectorListStart();
     for (unsigned i = 0, e = getVectorListCount(); i != e; ++i)
-      OS << Reg + i * getVectorListStride() << " ";
+      OS << Reg.id() + i * getVectorListStride() << " ";
     OS << ">";
     break;
   }
@@ -2696,7 +2696,7 @@ void AArch64Operand::print(raw_ostream &OS, const MCAsmInfo &MAI) const {
     OS << getCMHPriorityHintName();
     break;
   case k_MatrixRegister:
-    OS << "<matrix " << getMatrixReg() << ">";
+    OS << "<matrix " << getMatrixReg().id() << ">";
     break;
   case k_MatrixTileList: {
     OS << "<matrixlist ";
