@@ -20,9 +20,14 @@
 using namespace mlir;
 using namespace cir;
 
+namespace mlir {
+#define GEN_PASS_DEF_HOISTALLOCAS
+#include "clang/CIR/Dialect/Passes.h.inc"
+} // namespace mlir
+
 namespace {
 
-struct HoistAllocasPass : public HoistAllocasBase<HoistAllocasPass> {
+struct HoistAllocasPass : public impl::HoistAllocasBase<HoistAllocasPass> {
 
   HoistAllocasPass() = default;
   void runOnOperation() override;

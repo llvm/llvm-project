@@ -53412,7 +53412,7 @@ static SDValue narrowBitOpRMW(StoreSDNode *St, const SDLoc &DL,
     return SDValue();
 
   // SrcVal must be a matching normal load further up the chain.
-  auto *Ld = dyn_cast<LoadSDNode>(SrcVal);
+  auto *Ld = dyn_cast<LoadSDNode>(peekThroughBitcasts(SrcVal));
   if (!Ld || !ISD::isNormalLoad(Ld) || !Ld->isSimple() ||
       Ld->getBasePtr() != St->getBasePtr() ||
       Ld->getOffset() != St->getOffset() ||
