@@ -10,7 +10,6 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cctype>
-#include <optional>
 #include <sstream>
 
 #define DEBUG_TYPE "mustache"
@@ -34,6 +33,31 @@ static bool isContextFalsey(const json::Value *V) {
   return isFalsey(*V);
 }
 
+static void splitAndTrim(StringRef Str, SmallVectorImpl<StringRef> &Tokens) {
+  size_t CurrentPos = 0;
+  while (CurrentPos < Str.size()) {
+    // Find the next delimiter.
+    size_t DelimiterPos = Str.find('.', CurrentPos);
+
+    // If no delimiter is found, process the rest of the string.
+    if (DelimiterPos == StringRef::npos)
+      DelimiterPos = Str.size();
+
+    // Get the current part, which may have whitespace.
+    StringRef Part = Str.slice(CurrentPos, DelimiterPos);
+
+    // Manually trim the part without creating a new string object.
+    size_t Start = Part.find_first_not_of(" \t\r\n");
+    if (Start != StringRef::npos) {
+      size_t End = Part.find_last_not_of(" \t\r\n");
+      Tokens.push_back(Part.slice(Start, End + 1));
+    }
+
+    // Move past the delimiter for the next iteration.
+    CurrentPos = DelimiterPos + 1;
+  }
+}
+
 static Accessor splitMustacheString(StringRef Str, MustacheContext &Ctx) {
   // We split the mustache string into an accessor.
   // For example:
@@ -46,13 +70,7 @@ static Accessor splitMustacheString(StringRef Str, MustacheContext &Ctx) {
     // It's a literal, so it doesn't need to be saved.
     Tokens.push_back(".");
   } else {
-    while (!Str.empty()) {
-      StringRef Part;
-      std::tie(Part, Str) = Str.split('.');
-      // Each part of the accessor needs to be saved to the arena
-      // to ensure it has a stable address.
-      Tokens.push_back(Ctx.Saver.save(Part.trim()));
-    }
+    splitAndTrim(Str, Tokens);
   }
   // Now, allocate memory for the array of StringRefs in the arena.
   StringRef *ArenaTokens = Ctx.Allocator.Allocate<StringRef>(Tokens.size());
@@ -580,9 +598,16 @@ void Parser::parseSection(ASTNode *Parent, ASTNode::Type Ty,
   size_t Start = CurrentPtr;
   parseMustache(CurrentNode);
   const size_t End = CurrentPtr - 1;
+
+  size_t RawBodySize = 0;
+  for (size_t I = Start; I < End; ++I)
+    RawBodySize += Tokens[I].RawBody.size();
+
   SmallString<128> RawBody;
-  for (std::size_t I = Start; I < End; I++)
+  RawBody.reserve(RawBodySize);
+  for (std::size_t I = Start; I < End; ++I)
     RawBody += Tokens[I].RawBody;
+
   CurrentNode->setRawBody(Ctx.Saver.save(StringRef(RawBody)));
   Parent->addChild(CurrentNode);
 }
