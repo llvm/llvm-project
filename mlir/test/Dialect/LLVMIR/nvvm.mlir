@@ -36,20 +36,6 @@ func.func @nvvm_rcp(%arg0: f32) -> f32 {
   llvm.return %0 : f32
 }
 
-// CHECK-LABEL: @nvvm_lg2_approx_f
-func.func @nvvm_lg2_approx_f(%arg0: f32) -> f32 {
-  // CHECK: nvvm.lg2.approx.f %arg0 : f32
-  %0 = nvvm.lg2.approx.f %arg0 : f32
-  llvm.return %0 : f32
-}
-
-// CHECK-LABEL: @nvvm_lg2_approx_ftz_f
-func.func @nvvm_lg2_approx_ftz_f(%arg0: f32) -> f32 {
-  // CHECK: nvvm.lg2.approx.f %arg0 {ftz = true} : f32
-  %0 = nvvm.lg2.approx.f %arg0 {ftz = true} : f32
-  llvm.return %0 : f32
-}
-
 // CHECK-LABEL: @llvm_nvvm_barrier0
 func.func @llvm_nvvm_barrier0() {
   // CHECK: nvvm.barrier0

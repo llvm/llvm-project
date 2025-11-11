@@ -453,30 +453,33 @@ def NVVM_RcpApproxFtzF32Op : NVVM_IntrOp<"rcp.approx.ftz.f", [Pure], 1> {
 // NVVM lg2 approximate op
 //===----------------------------------------------------------------------===//
 
-def NVVM_Lg2ApproxF32Op : NVVM_Op<"lg2.approx.f", [Pure]> {
+def NVVM_Log2ApproxF32Op : NVVM_Op<"log2.approx.f", [Pure]> {
 
   let summary = "Compute approximate base-2 log (lg2.approx.f32)";
 
   let description = [{
     Compute the approximate base-2 logarithm of the input value.
     If 'ftz' is true, subnormal numbers are flushed to zero.
+    
+    [PTX ISA Reference for log2.approx]
+    (https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#floating-point-instructions-lg2)
+
   }];
 
   let arguments = (ins 
-    F32:$arg,
-    OptionalAttr<BoolAttr>:$ftz);
+    F32:$input,
+    DefaultValuedAttr<BoolAttr, "false">:$ftz);
   
   let results = (outs F32:$res);
 
-  let assemblyFormat = "$arg attr-dict `:` type($res)";
+  let assemblyFormat = "$input attr-dict `:` type($res)";
 
   string llvmBuilder = [{
-    bool ftz = $ftz && *$ftz;
     llvm::Intrinsic::ID intrinsicID = 
-      ftz ? llvm::Intrinsic::nvvm_lg2_approx_ftz_f
+      $ftz ? llvm::Intrinsic::nvvm_lg2_approx_ftz_f
           : llvm::Intrinsic::nvvm_lg2_approx_f;
     
-    $res = createIntrinsicCall(builder, intrinsicID, {$arg});
+    $res = createIntrinsicCall(builder, intrinsicID, {$input});
   }];
 }
 
