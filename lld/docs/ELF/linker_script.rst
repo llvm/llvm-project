@@ -17,6 +17,25 @@ possible. We reserve the right to make different implementation choices where
 it is appropriate for LLD. Intentional deviations will be documented in this
 file.
 
+Linker Script Specification
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+There are two lld options related to setting the linker script,
+`--script=<file>` and `--default-script=<file>`. The usage are illustrated below.
+
+::
+
+  # This sets `--script=<file>` option under the hood.
+  lld -T linker_script.lds
+
+  # This sets `--default-script=<file>` option under the hood.
+  lld -dT linker_script.lds
+
+When both options are given, `--script=<file>` takes precedence.
+The intended use case of `--default-script` is to be used by toolchain
+configurations, and users can override the script by specifying `--script` if
+needed.
+
 Symbol assignment
 ~~~~~~~~~~~~~~~~~
 
