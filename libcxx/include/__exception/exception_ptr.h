@@ -96,13 +96,13 @@ public:
       __increment_refcount(__ptr_);
   }
   _LIBCPP_HIDE_FROM_ABI exception_ptr& operator=(const exception_ptr&) _NOEXCEPT {
-    if (__ptr_ != __other.__ptr_) {
-      if (__other.__ptr_)
-        __increment_refcount(__other.__ptr_);
-      if (__ptr_)
-        __decrement_refcount(__ptr_);
-      __ptr_ = __other.__ptr_;
-    }
+    if (__ptr_ == __other.__ptr_)
+      return *this;
+    if (__other.__ptr_)
+      __increment_refcount(__other.__ptr_);
+    if (__ptr_)
+      __decrement_refcount(__ptr_);
+    __ptr_ = __other.__ptr_;
     return *this;
   }
   _LIBCPP_HIDE_FROM_ABI ~exception_ptr() _NOEXCEPT {
