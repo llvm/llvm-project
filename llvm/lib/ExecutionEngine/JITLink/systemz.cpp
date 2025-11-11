@@ -21,7 +21,7 @@ namespace systemz {
 const char NullPointerContent[8] = {0x00, 0x00, 0x00, 0x00,
                                     0x00, 0x00, 0x00, 0x00};
 
-const char Pointer64JumpStubContent[14] = {
+const char Pointer64JumpStubContent[8] = {
     static_cast<char>(0xC4u),
     0x18,
     0x00,

@@ -761,7 +761,7 @@ inline ArrayRef<char> getGOTEntryBlockContent(LinkGraph &G) {
 /// pointer:
 ///   lgrl %r1, ptr
 ///   j    %r1
-constexpr size_t StubEntrySize = 14;
+constexpr size_t StubEntrySize = 8;
 extern const char Pointer64JumpStubContent[StubEntrySize];
 inline ArrayRef<char> getStubBlockContent(LinkGraph &G) {
   auto StubContent = Pointer64JumpStubContent;
