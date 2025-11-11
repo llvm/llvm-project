@@ -584,10 +584,12 @@ void MachObjectWriter::computeSymbolTable(
   // Build section lookup table.
   DenseMap<const MCSection*, uint8_t> SectionIndexMap;
   unsigned Index = 1;
-  for (MCSection &Sec : Asm) {
+  for (MCSection &Sec : Asm)
     SectionIndexMap[&Sec] = Index++;
-  }
-  // Section indices begin from 1 in MachO.
+
+  // Section indices begin from 1 in MachO. Only sections 1-255 can be indexed
+  // into section symbols. Referencing a section with index larger than 255 will
+  // not set n_sect for these symbols.
   if (Index > 255)
     getContext().reportError(SMLoc(), "Too many sections!");
 
