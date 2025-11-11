@@ -36,7 +36,7 @@ Options
   Semicolon-separated list of regular expressions matching names of declarations
   to ignore when the parentheses are around. Declarations can include variables
   or functions. The default is an `std::max;std::min`.
-  
+
   Some STL library functions may have the same name as widely used function-like
   macro. For example, ``std::max`` and ``max`` macro. A workaround to distinguish
   them is adding parentheses around functions to prevent function-like macro.

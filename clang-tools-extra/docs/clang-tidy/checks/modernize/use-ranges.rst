@@ -114,7 +114,7 @@ If calls are made using reverse iterators on containers, The code will be
 fixed using the ``std::views::reverse`` adaptor.
 
 .. code-block:: c++
-  
+
   auto AreSame = std::equal(Items1.rbegin(), Items1.rend(),
                             std::crbegin(Items2), std::crend(Items2));
 

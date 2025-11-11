@@ -56,7 +56,7 @@ using namespace lldb;
 using namespace lldb_private;
 
 #define OPTTABLE_STR_TABLE_CODE
-#include "clang/Driver/Options.inc"
+#include "clang/Options/Options.inc"
 #undef OPTTABLE_STR_TABLE_CODE
 
 static Status ExceptionMaskValidator(const char *string, void *unused) {
@@ -1124,7 +1124,7 @@ void PlatformDarwin::AddClangModuleCompilationOptionsForSDKType(
 #define OPTION(PREFIX_OFFSET, NAME_OFFSET, VAR, ...)                           \
   llvm::StringRef opt_##VAR = OptionStrTable[NAME_OFFSET];                     \
   (void)opt_##VAR;
-#include "clang/Driver/Options.inc"
+#include "clang/Options/Options.inc"
 #undef OPTION
     minimum_version_option << '-';
     switch (sdk_type) {

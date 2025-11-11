@@ -354,9 +354,6 @@ public:
   /// Newly created segments.
   std::vector<SegmentInfo> NewSegments;
 
-  /// Symbols that are expected to be undefined in MCContext during emission.
-  std::unordered_set<MCSymbol *> UndefinedSymbols;
-
   /// [name] -> [BinaryData*] map used for global symbol resolution.
   using SymbolMapType = StringMap<BinaryData *>;
   SymbolMapType GlobalSymbols;
@@ -500,7 +497,7 @@ public:
   ///
   /// As we fold identical functions, multiple symbols can point
   /// to the same BinaryFunction.
-  std::unordered_map<const MCSymbol *, BinaryFunction *> SymbolToFunctionMap;
+  DenseMap<const MCSymbol *, BinaryFunction *> SymbolToFunctionMap;
 
   /// A mutex that is used to control parallel accesses to SymbolToFunctionMap
   mutable llvm::sys::RWMutex SymbolToFunctionMapMutex;

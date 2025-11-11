@@ -390,7 +390,7 @@ static void printStats(const ClangTidyStats &Stats) {
 static std::unique_ptr<ClangTidyOptionsProvider>
 createOptionsProvider(llvm::IntrusiveRefCntPtr<vfs::FileSystem> FS) {
   ClangTidyGlobalOptions GlobalOptions;
-  if (std::error_code Err = parseLineFilter(LineFilter, GlobalOptions)) {
+  if (const std::error_code Err = parseLineFilter(LineFilter, GlobalOptions)) {
     llvm::errs() << "Invalid LineFilter: " << Err.message() << "\n\nUsage:\n";
     llvm::cl::PrintHelpMessage(/*Hidden=*/false, /*Categorized=*/true);
     return nullptr;
@@ -448,7 +448,7 @@ createOptionsProvider(llvm::IntrusiveRefCntPtr<vfs::FileSystem> FS) {
 
     llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> Text =
         llvm::MemoryBuffer::getFile(ConfigFile);
-    if (std::error_code EC = Text.getError()) {
+    if (const std::error_code EC = Text.getError()) {
       llvm::errs() << "Error: can't read config-file '" << ConfigFile
                    << "': " << EC.message() << "\n";
       return nullptr;
@@ -466,10 +466,9 @@ createOptionsProvider(llvm::IntrusiveRefCntPtr<vfs::FileSystem> FS) {
 }
 
 static llvm::IntrusiveRefCntPtr<vfs::FileSystem>
-getVfsFromFile(const std::string &OverlayFile,
-               llvm::IntrusiveRefCntPtr<vfs::FileSystem> BaseFS) {
+getVfsFromFile(const std::string &OverlayFile, vfs::FileSystem &BaseFS) {
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> Buffer =
-      BaseFS->getBufferForFile(OverlayFile);
+      BaseFS.getBufferForFile(OverlayFile);
   if (!Buffer) {
     llvm::errs() << "Can't load virtual filesystem overlay file '"
                  << OverlayFile << "': " << Buffer.getError().message()
@@ -491,7 +490,7 @@ static StringRef closest(StringRef Value, const StringSet<> &Allowed) {
   unsigned MaxEdit = 5U;
   StringRef Closest;
   for (auto Item : Allowed.keys()) {
-    unsigned Cur = Value.edit_distance_insensitive(Item, true, MaxEdit);
+    const unsigned Cur = Value.edit_distance_insensitive(Item, true, MaxEdit);
     if (Cur < MaxEdit) {
       Closest = Item;
       MaxEdit = Cur;
@@ -504,7 +503,7 @@ static constexpr StringLiteral VerifyConfigWarningEnd = " [-verify-config]\n";
 
 static bool verifyChecks(const StringSet<> &AllChecks, StringRef CheckGlob,
                          StringRef Source) {
-  GlobList Globs(CheckGlob);
+  const GlobList Globs(CheckGlob);
   bool AnyInvalid = false;
   for (const auto &Item : Globs.getItems()) {
     if (Item.Text.starts_with("clang-diagnostic"))
@@ -520,7 +519,7 @@ static bool verifyChecks(const StringSet<> &AllChecks, StringRef CheckGlob,
         llvm::raw_ostream &Output =
             llvm::WithColor::warning(llvm::errs(), Source)
             << "unknown check '" << Item.Text << '\'';
-        llvm::StringRef Closest = closest(Item.Text, AllChecks);
+        const llvm::StringRef Closest = closest(Item.Text, AllChecks);
         if (!Closest.empty())
           Output << "; did you mean '" << Closest << '\'';
         Output << VerifyConfigWarningEnd;
@@ -560,7 +559,7 @@ static bool verifyOptions(const llvm::StringSet<> &ValidOptions,
     AnyInvalid = true;
     auto &Output = llvm::WithColor::warning(llvm::errs(), Source)
                    << "unknown check option '" << Key << '\'';
-    llvm::StringRef Closest = closest(Key, ValidOptions);
+    const llvm::StringRef Closest = closest(Key, ValidOptions);
     if (!Closest.empty())
       Output << "; did you mean '" << Closest << '\'';
     Output << VerifyConfigWarningEnd;
@@ -572,7 +571,7 @@ static SmallString<256> makeAbsolute(llvm::StringRef Input) {
   if (Input.empty())
     return {};
   SmallString<256> AbsolutePath(Input);
-  if (std::error_code EC = llvm::sys::fs::make_absolute(AbsolutePath)) {
+  if (const std::error_code EC = llvm::sys::fs::make_absolute(AbsolutePath)) {
     llvm::errs() << "Can't make absolute path from " << Input << ": "
                  << EC.message() << "\n";
   }
@@ -585,7 +584,7 @@ static llvm::IntrusiveRefCntPtr<vfs::OverlayFileSystem> createBaseFS() {
 
   if (!VfsOverlay.empty()) {
     IntrusiveRefCntPtr<vfs::FileSystem> VfsFromFile =
-        getVfsFromFile(VfsOverlay, BaseFS);
+        getVfsFromFile(VfsOverlay, *BaseFS);
     if (!VfsFromFile)
       return nullptr;
     BaseFS->pushOverlay(std::move(VfsFromFile));
@@ -594,7 +593,7 @@ static llvm::IntrusiveRefCntPtr<vfs::OverlayFileSystem> createBaseFS() {
 }
 
 int clangTidyMain(int argc, const char **argv) {
-  llvm::InitLLVM X(argc, argv);
+  const llvm::InitLLVM X(argc, argv);
   SmallVector<const char *> Args{argv, argv + argc};
 
   // expand parameters file to argc and argv.
@@ -623,7 +622,8 @@ int clangTidyMain(int argc, const char **argv) {
     return 1;
   }
 
-  llvm::IntrusiveRefCntPtr<vfs::OverlayFileSystem> BaseFS = createBaseFS();
+  const llvm::IntrusiveRefCntPtr<vfs::OverlayFileSystem> BaseFS =
+      createBaseFS();
   if (!BaseFS)
     return 1;
 
@@ -632,7 +632,7 @@ int clangTidyMain(int argc, const char **argv) {
   if (!OptionsProvider)
     return 1;
 
-  SmallString<256> ProfilePrefix = makeAbsolute(StoreCheckProfile);
+  const SmallString<256> ProfilePrefix = makeAbsolute(StoreCheckProfile);
 
   StringRef FileName("dummy");
   auto PathList = OptionsParser->getSourcePathList();
@@ -640,10 +640,10 @@ int clangTidyMain(int argc, const char **argv) {
     FileName = PathList.front();
   }
 
-  SmallString<256> FilePath = makeAbsolute(FileName);
+  const SmallString<256> FilePath = makeAbsolute(FileName);
   ClangTidyOptions EffectiveOptions = OptionsProvider->getOptions(FilePath);
 
-  std::vector<std::string> EnabledChecks =
+  const std::vector<std::string> EnabledChecks =
       getCheckNames(EffectiveOptions, AllowEnablingAnalyzerAlphaCheckers,
                     ExperimentalCustomChecks);
 
@@ -687,9 +687,9 @@ int clangTidyMain(int argc, const char **argv) {
   }
 
   if (VerifyConfig) {
-    std::vector<ClangTidyOptionsProvider::OptionsSource> RawOptions =
+    const std::vector<ClangTidyOptionsProvider::OptionsSource> RawOptions =
         OptionsProvider->getRawOptions(FileName);
-    ChecksAndOptions Valid = getAllChecksAndOptions(
+    const ChecksAndOptions Valid = getAllChecksAndOptions(
         AllowEnablingAnalyzerAlphaCheckers, ExperimentalCustomChecks);
     bool AnyInvalid = false;
     for (const auto &[Opts, Source] : RawOptions) {
@@ -733,14 +733,14 @@ int clangTidyMain(int argc, const char **argv) {
   std::vector<ClangTidyError> Errors =
       runClangTidy(Context, OptionsParser->getCompilations(), PathList, BaseFS,
                    FixNotes, EnableCheckProfile, ProfilePrefix, Quiet);
-  bool FoundErrors = llvm::any_of(Errors, [](const ClangTidyError &E) {
+  const bool FoundErrors = llvm::any_of(Errors, [](const ClangTidyError &E) {
     return E.DiagLevel == ClangTidyError::Error;
   });
 
   // --fix-errors and --fix-notes imply --fix.
-  FixBehaviour Behaviour = FixNotes             ? FB_FixNotes
-                           : (Fix || FixErrors) ? FB_Fix
-                                                : FB_NoFix;
+  const FixBehaviour Behaviour = FixNotes             ? FB_FixNotes
+                                 : (Fix || FixErrors) ? FB_Fix
+                                                      : FB_NoFix;
 
   const bool DisableFixes = FoundErrors && !FixErrors;
 
@@ -769,7 +769,7 @@ int clangTidyMain(int argc, const char **argv) {
 
   if (WErrorCount) {
     if (!Quiet) {
-      StringRef Plural = WErrorCount == 1 ? "" : "s";
+      const StringRef Plural = WErrorCount == 1 ? "" : "s";
       llvm::errs() << WErrorCount << " warning" << Plural << " treated as error"
                    << Plural << "\n";
     }

@@ -10,13 +10,13 @@ on:
       - 'release/**'
     paths:
       - 'llvm/**'
-      - '.github/workflows/llvm-tests.yml'
+      - '.github/workflows/llvm-abi-tests.yml'
   pull_request:
     branches:
       - 'release/**'
     paths:
       - 'llvm/**'
-      - '.github/workflows/llvm-tests.yml'
+      - '.github/workflows/llvm-abi-tests.yml'
 
 concurrency:
   # Skip intermediate builds: always.

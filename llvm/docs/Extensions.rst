@@ -792,7 +792,7 @@ emission of Variable Length Arrays (VLAs).
 The Windows ARM Itanium ABI extends the base ABI by adding support for emitting
 a dynamic stack allocation.  When emitting a variable stack allocation, a call
 to ``__chkstk`` is emitted unconditionally to ensure that guard pages are setup
-properly.  The emission of this stack probe emission is handled similar to the
+properly.  The emission of this stack probe emission is handled similarly to the
 standard stack probe emission.
 
 The MSVC environment does not emit code for VLAs currently.
@@ -813,7 +813,7 @@ in the following fashion:
   sub sp, sp, x15, lsl #4
 
 However, this has the limitation of 256 MiB (±128MiB).  In order to accommodate
-larger binaries, LLVM supports the use of ``-mcmodel=large`` to allow a 8GiB
+larger binaries, LLVM supports the use of ``-mcmodel=large`` to allow an 8GiB
 (±4GiB) range via a slight deviation.  It will generate an indirect jump as
 follows:
 

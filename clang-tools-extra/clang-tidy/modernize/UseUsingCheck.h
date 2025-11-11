@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_USE_USING_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_USE_USING_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_USEUSINGCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_USEUSINGCHECK_H
 
 #include "../ClangTidyCheck.h"
 
@@ -40,4 +40,4 @@ public:
 
 } // namespace clang::tidy::modernize
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_USE_USING_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_USEUSINGCHECK_H

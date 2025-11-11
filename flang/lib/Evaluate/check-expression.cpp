@@ -379,8 +379,11 @@ bool IsInitialProcedureTarget(const semantics::Symbol &symbol) {
       common::visitors{
           [&](const semantics::SubprogramDetails &subp) {
             return !subp.isDummy() && !subp.stmtFunction() &&
-                symbol.owner().kind() != semantics::Scope::Kind::MainProgram &&
-                symbol.owner().kind() != semantics::Scope::Kind::Subprogram;
+                ((symbol.owner().kind() !=
+                         semantics::Scope::Kind::MainProgram &&
+                     symbol.owner().kind() !=
+                         semantics::Scope::Kind::Subprogram) ||
+                    ultimate.attrs().test(semantics::Attr::EXTERNAL));
           },
           [](const semantics::SubprogramNameDetails &x) {
             return x.kind() != semantics::SubprogramKind::Internal;

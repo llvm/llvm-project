@@ -22,8 +22,8 @@ namespace clang::tidy::readability {
 namespace {
 
 AST_MATCHER(Stmt, isMacroExpansion) {
-  SourceManager &SM = Finder->getASTContext().getSourceManager();
-  SourceLocation Loc = Node.getBeginLoc();
+  const SourceManager &SM = Finder->getASTContext().getSourceManager();
+  const SourceLocation Loc = Node.getBeginLoc();
   return SM.isMacroBodyExpansion(Loc) || SM.isMacroArgExpansion(Loc);
 }
 
@@ -32,9 +32,9 @@ AST_MATCHER(Stmt, isC23) { return Finder->getASTContext().getLangOpts().C23; }
 // Preserve same name as AST_MATCHER(isNULLMacroExpansion)
 // NOLINTNEXTLINE(llvm-prefer-static-over-anonymous-namespace)
 bool isNULLMacroExpansion(const Stmt *Statement, ASTContext &Context) {
-  SourceManager &SM = Context.getSourceManager();
+  const SourceManager &SM = Context.getSourceManager();
   const LangOptions &LO = Context.getLangOpts();
-  SourceLocation Loc = Statement->getBeginLoc();
+  const SourceLocation Loc = Statement->getBeginLoc();
   return SM.isMacroBodyExpansion(Loc) &&
          Lexer::getImmediateMacroName(Loc, SM, LO) == "NULL";
 }
@@ -77,11 +77,11 @@ static void fixGenericExprCastToBool(DiagnosticBuilder &Diag,
                                      bool UseUpperCaseLiteralSuffix) {
   // In case of expressions like (! integer), we should remove the redundant not
   // operator and use inverted comparison (integer == 0).
-  bool InvertComparison =
+  const bool InvertComparison =
       Parent != nullptr && isUnaryLogicalNotOperator(Parent);
   if (InvertComparison) {
-    SourceLocation ParentStartLoc = Parent->getBeginLoc();
-    SourceLocation ParentEndLoc =
+    const SourceLocation ParentStartLoc = Parent->getBeginLoc();
+    const SourceLocation ParentEndLoc =
         cast<UnaryOperator>(Parent)->getSubExpr()->getBeginLoc();
     Diag << FixItHint::CreateRemoval(
         CharSourceRange::getCharRange(ParentStartLoc, ParentEndLoc));
@@ -91,9 +91,9 @@ static void fixGenericExprCastToBool(DiagnosticBuilder &Diag,
 
   const Expr *SubExpr = Cast->getSubExpr();
 
-  bool NeedInnerParens =
+  const bool NeedInnerParens =
       utils::fixit::areParensNeededForStatement(*SubExpr->IgnoreImpCasts());
-  bool NeedOuterParens =
+  const bool NeedOuterParens =
       Parent != nullptr && utils::fixit::areParensNeededForStatement(*Parent);
 
   std::string StartLocInsertion;
@@ -133,7 +133,7 @@ static void fixGenericExprCastToBool(DiagnosticBuilder &Diag,
     EndLocInsertion += ")";
   }
 
-  SourceLocation EndLoc = Lexer::getLocForEndOfToken(
+  const SourceLocation EndLoc = Lexer::getLocForEndOfToken(
       Cast->getEndLoc(), 0, Context.getSourceManager(), Context.getLangOpts());
   Diag << FixItHint::CreateInsertion(EndLoc, EndLocInsertion);
 }
@@ -167,8 +167,8 @@ static StringRef getEquivalentBoolLiteralForExpr(const Expr *Expression,
 }
 
 static bool needsSpacePrefix(SourceLocation Loc, ASTContext &Context) {
-  SourceRange PrefixRange(Loc.getLocWithOffset(-1), Loc);
-  StringRef SpaceBeforeStmtStr = Lexer::getSourceText(
+  const SourceRange PrefixRange(Loc.getLocWithOffset(-1), Loc);
+  const StringRef SpaceBeforeStmtStr = Lexer::getSourceText(
       CharSourceRange::getCharRange(PrefixRange), Context.getSourceManager(),
       Context.getLangOpts(), nullptr);
   if (SpaceBeforeStmtStr.empty())
@@ -198,7 +198,7 @@ static void fixGenericExprCastFromBool(DiagnosticBuilder &Diag,
                                .str());
 
   if (NeedParens) {
-    SourceLocation EndLoc = Lexer::getLocForEndOfToken(
+    const SourceLocation EndLoc = Lexer::getLocForEndOfToken(
         Cast->getEndLoc(), 0, Context.getSourceManager(),
         Context.getLangOpts());
 
@@ -234,7 +234,7 @@ static bool isCastAllowedInCondition(const ImplicitCastExpr *Cast,
   std::queue<const Stmt *> Q;
   Q.push(Cast);
 
-  TraversalKindScope RAII(Context, TK_AsIs);
+  const TraversalKindScope RAII(Context, TK_AsIs);
 
   while (!Q.empty()) {
     for (const auto &N : Context.getParents(*Q.front())) {
@@ -396,7 +396,7 @@ void ImplicitBoolConversionCheck::handleCastToBool(const ImplicitCastExpr *Cast,
   auto Diag = diag(Cast->getBeginLoc(), "implicit conversion %0 -> 'bool'")
               << Cast->getSubExpr()->getType();
 
-  StringRef EquivalentLiteral =
+  const StringRef EquivalentLiteral =
       getEquivalentBoolLiteralForExpr(Cast->getSubExpr(), Context);
   if (!EquivalentLiteral.empty()) {
     Diag << tooling::fixit::createReplacement(*Cast, EquivalentLiteral);
@@ -409,7 +409,7 @@ void ImplicitBoolConversionCheck::handleCastToBool(const ImplicitCastExpr *Cast,
 void ImplicitBoolConversionCheck::handleCastFromBool(
     const ImplicitCastExpr *Cast, const ImplicitCastExpr *NextImplicitCast,
     ASTContext &Context) {
-  QualType DestType =
+  const QualType DestType =
       NextImplicitCast ? NextImplicitCast->getType() : Cast->getType();
   auto Diag = diag(Cast->getBeginLoc(), "implicit conversion 'bool' -> %0")
               << DestType;

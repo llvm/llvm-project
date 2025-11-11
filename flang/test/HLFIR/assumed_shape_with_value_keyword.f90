@@ -31,7 +31,7 @@ end
 ! CHECK:          return
 ! CHECK:        }
 
-subroutine test_real_value1(x) 
+subroutine test_real_value1(x)
   real, value :: x(:)
   call internal_call3(x)
 end
@@ -45,7 +45,7 @@ end
 ! CHECK:          return
 ! CHECK:        }
 
-subroutine test_real_value2(x) 
+subroutine test_real_value2(x)
   real, value :: x(:,:)
   call internal_call4(x)
 end

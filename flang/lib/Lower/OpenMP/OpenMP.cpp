@@ -1008,9 +1008,7 @@ getImplicitMapTypeAndKind(fir::FirOpBuilder &firOpBuilder,
                           mlir::omp::VariableCaptureKind::ByRef);
     break;
   case DefMap::ImplicitBehavior::Firstprivate:
-  case DefMap::ImplicitBehavior::None:
-    TODO(loc, "Firstprivate and None are currently unsupported defaultmap "
-              "behaviour");
+    TODO(loc, "Firstprivate is currently unsupported defaultmap behaviour");
     break;
   case DefMap::ImplicitBehavior::From:
     return std::make_pair(mapFlag |= mlir::omp::ClauseMapFlags::from,
@@ -1032,8 +1030,9 @@ getImplicitMapTypeAndKind(fir::FirOpBuilder &firOpBuilder,
                           mlir::omp::VariableCaptureKind::ByRef);
     break;
   case DefMap::ImplicitBehavior::Default:
+  case DefMap::ImplicitBehavior::None:
     llvm_unreachable(
-        "Implicit None Behaviour Should Have Been Handled Earlier");
+        "Implicit None and Default behaviour should have been handled earlier");
     break;
   }
 

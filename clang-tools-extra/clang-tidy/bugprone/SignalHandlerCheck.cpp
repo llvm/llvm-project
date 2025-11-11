@@ -283,7 +283,7 @@ static bool isStandardFunction(const FunctionDecl *FD) {
 /// This includes all statements that have a class name with "CXX" prefix
 /// and every other statement that is declared in file ExprCXX.h.
 static bool isCXXOnlyStmt(const Stmt *S) {
-  StringRef Name = S->getStmtClassName();
+  const StringRef Name = S->getStmtClassName();
   if (Name.starts_with("CXX"))
     return true;
   // Check for all other class names in ExprCXX.h that have no 'CXX' prefix.
@@ -317,7 +317,7 @@ static SourceRange getSourceRangeOfStmt(const Stmt *S, ASTContext &Ctx) {
   ParentMapContext &PM = Ctx.getParentMapContext();
   DynTypedNode P = DynTypedNode::create(*S);
   while (P.getSourceRange().isInvalid()) {
-    DynTypedNodeList PL = PM.getParents(P);
+    const DynTypedNodeList PL = PM.getParents(P);
     if (PL.size() != 1)
       return {};
     P = PL[0];
@@ -401,14 +401,15 @@ void SignalHandlerCheck::check(const MatchFinder::MatchResult &Result) {
   }
 
   // FIXME: Update CallGraph::getNode to use canonical decl?
-  CallGraphNode *HandlerNode = CG.getNode(HandlerDecl->getCanonicalDecl());
+  const CallGraphNode *HandlerNode =
+      CG.getNode(HandlerDecl->getCanonicalDecl());
   assert(HandlerNode &&
          "Handler with body should be present in the call graph.");
   // Start from signal handler and visit every function call.
   auto Itr = llvm::df_begin(HandlerNode), ItrE = llvm::df_end(HandlerNode);
   while (Itr != ItrE) {
     const auto *CallF = dyn_cast<FunctionDecl>((*Itr)->getDecl());
-    unsigned int PathL = Itr.getPathLength();
+    const unsigned int PathL = Itr.getPathLength();
     if (CallF) {
       // A signal handler or a function transitively reachable from the signal
       // handler was found to be unsafe.
@@ -434,8 +435,8 @@ void SignalHandlerCheck::check(const MatchFinder::MatchResult &Result) {
 
 bool SignalHandlerCheck::checkFunction(
     const FunctionDecl *FD, const Expr *CallOrRef,
-    std::function<void(bool)> ChainReporter) {
-  bool FunctionIsCalled = isa<CallExpr>(CallOrRef);
+    llvm::function_ref<void(bool)> ChainReporter) {
+  const bool FunctionIsCalled = isa<CallExpr>(CallOrRef);
 
   if (isStandardFunction(FD)) {
     if (!isStandardFunctionAsyncSafe(FD)) {
@@ -470,7 +471,7 @@ bool SignalHandlerCheck::checkFunction(
 
 bool SignalHandlerCheck::checkFunctionCPP14(
     const FunctionDecl *FD, const Expr *CallOrRef,
-    std::function<void(bool)> ChainReporter) {
+    llvm::function_ref<void(bool)> ChainReporter) {
   if (!FD->isExternC()) {
     diag(CallOrRef->getBeginLoc(),
          "functions without C linkage are not allowed as signal "
@@ -492,7 +493,7 @@ bool SignalHandlerCheck::checkFunctionCPP14(
   for (const auto &Match : Matches) {
     const auto *FoundS = Match.getNodeAs<Stmt>("stmt");
     if (isCXXOnlyStmt(FoundS)) {
-      SourceRange R = getSourceRangeOfStmt(FoundS, Ctx);
+      const SourceRange R = getSourceRangeOfStmt(FoundS, Ctx);
       if (R.isInvalid())
         continue;
       diag(R.getBegin(),
@@ -531,7 +532,7 @@ bool SignalHandlerCheck::isStandardFunctionAsyncSafe(
 }
 
 void SignalHandlerCheck::reportHandlerChain(
-    const llvm::df_iterator<clang::CallGraphNode *> &Itr,
+    const llvm::df_iterator<const clang::CallGraphNode *> &Itr,
     const DeclRefExpr *HandlerRef, bool SkipPathEnd) {
   int CallLevel = Itr.getPathLength() - 2;
   assert(CallLevel >= -1 && "Empty iterator?");

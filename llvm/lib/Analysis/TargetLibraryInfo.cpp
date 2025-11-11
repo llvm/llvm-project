@@ -15,32 +15,10 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/SystemLibraries.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/TargetParser/Triple.h"
 using namespace llvm;
-
-static cl::opt<TargetLibraryInfoImpl::VectorLibrary> ClVectorLibrary(
-    "vector-library", cl::Hidden, cl::desc("Vector functions library"),
-    cl::init(TargetLibraryInfoImpl::NoLibrary),
-    cl::values(clEnumValN(TargetLibraryInfoImpl::NoLibrary, "none",
-                          "No vector functions library"),
-               clEnumValN(TargetLibraryInfoImpl::Accelerate, "Accelerate",
-                          "Accelerate framework"),
-               clEnumValN(TargetLibraryInfoImpl::DarwinLibSystemM,
-                          "Darwin_libsystem_m", "Darwin libsystem_m"),
-               clEnumValN(TargetLibraryInfoImpl::LIBMVEC, "LIBMVEC",
-                          "GLIBC Vector Math library"),
-               clEnumValN(TargetLibraryInfoImpl::MASSV, "MASSV",
-                          "IBM MASS vector library"),
-               clEnumValN(TargetLibraryInfoImpl::SVML, "SVML",
-                          "Intel SVML library"),
-               clEnumValN(TargetLibraryInfoImpl::SLEEFGNUABI, "sleefgnuabi",
-                          "SIMD Library for Evaluating Elementary Functions"),
-               clEnumValN(TargetLibraryInfoImpl::ArmPL, "ArmPL",
-                          "Arm Performance Libraries"),
-               clEnumValN(TargetLibraryInfoImpl::AMDLIBM, "AMDLIBM",
-                          "AMD vector math library")));
 
 StringLiteral const TargetLibraryInfoImpl::StandardNames[LibFunc::NumLibFuncs] =
     {
@@ -1392,15 +1370,15 @@ const VecDesc VecFuncs_AMDLIBM[] = {
 void TargetLibraryInfoImpl::addVectorizableFunctionsFromVecLib(
     enum VectorLibrary VecLib, const llvm::Triple &TargetTriple) {
   switch (VecLib) {
-  case Accelerate: {
+  case VectorLibrary::Accelerate: {
     addVectorizableFunctions(VecFuncs_Accelerate);
     break;
   }
-  case DarwinLibSystemM: {
+  case VectorLibrary::DarwinLibSystemM: {
     addVectorizableFunctions(VecFuncs_DarwinLibSystemM);
     break;
   }
-  case LIBMVEC: {
+  case VectorLibrary::LIBMVEC: {
     switch (TargetTriple.getArch()) {
     default:
       break;
@@ -1415,15 +1393,15 @@ void TargetLibraryInfoImpl::addVectorizableFunctionsFromVecLib(
     }
     break;
   }
-  case MASSV: {
+  case VectorLibrary::MASSV: {
     addVectorizableFunctions(VecFuncs_MASSV);
     break;
   }
-  case SVML: {
+  case VectorLibrary::SVML: {
     addVectorizableFunctions(VecFuncs_SVML);
     break;
   }
-  case SLEEFGNUABI: {
+  case VectorLibrary::SLEEFGNUABI: {
     switch (TargetTriple.getArch()) {
     default:
       break;
@@ -1439,7 +1417,7 @@ void TargetLibraryInfoImpl::addVectorizableFunctionsFromVecLib(
     }
     break;
   }
-  case ArmPL: {
+  case VectorLibrary::ArmPL: {
     switch (TargetTriple.getArch()) {
     default:
       break;
@@ -1450,11 +1428,11 @@ void TargetLibraryInfoImpl::addVectorizableFunctionsFromVecLib(
     }
     break;
   }
-  case AMDLIBM: {
+  case VectorLibrary::AMDLIBM: {
     addVectorizableFunctions(VecFuncs_AMDLIBM);
     break;
   }
-  case NoLibrary:
+  case VectorLibrary::NoLibrary:
     break;
   }
 }

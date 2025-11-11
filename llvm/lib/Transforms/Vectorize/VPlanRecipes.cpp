@@ -3349,7 +3349,7 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
     // Scale the cost by the probability of executing the predicated blocks.
     // This assumes the predicated block for each vector lane is equally
     // likely.
-    ScalarCost /= getPredBlockCostDivisor(Ctx.CostKind);
+    ScalarCost /= Ctx.getPredBlockCostDivisor(UI->getParent());
     return ScalarCost;
   }
   case Instruction::Load:

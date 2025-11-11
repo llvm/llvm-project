@@ -16244,6 +16244,54 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     return Success(Val, E);
   }
 
+  case clang::X86::BI__builtin_ia32_ktestcqi:
+  case clang::X86::BI__builtin_ia32_ktestchi:
+  case clang::X86::BI__builtin_ia32_ktestcsi:
+  case clang::X86::BI__builtin_ia32_ktestcdi: {
+    APSInt A, B;
+    if (!EvaluateInteger(E->getArg(0), A, Info) ||
+        !EvaluateInteger(E->getArg(1), B, Info))
+      return false;
+
+    return Success((~A & B) == 0, E);
+  }
+
+  case clang::X86::BI__builtin_ia32_ktestzqi:
+  case clang::X86::BI__builtin_ia32_ktestzhi:
+  case clang::X86::BI__builtin_ia32_ktestzsi:
+  case clang::X86::BI__builtin_ia32_ktestzdi: {
+    APSInt A, B;
+    if (!EvaluateInteger(E->getArg(0), A, Info) ||
+        !EvaluateInteger(E->getArg(1), B, Info))
+      return false;
+
+    return Success((A & B) == 0, E);
+  }
+
+  case clang::X86::BI__builtin_ia32_kortestcqi:
+  case clang::X86::BI__builtin_ia32_kortestchi:
+  case clang::X86::BI__builtin_ia32_kortestcsi:
+  case clang::X86::BI__builtin_ia32_kortestcdi: {
+    APSInt A, B;
+    if (!EvaluateInteger(E->getArg(0), A, Info) ||
+        !EvaluateInteger(E->getArg(1), B, Info))
+      return false;
+
+    return Success(~(A | B) == 0, E);
+  }
+
+  case clang::X86::BI__builtin_ia32_kortestzqi:
+  case clang::X86::BI__builtin_ia32_kortestzhi:
+  case clang::X86::BI__builtin_ia32_kortestzsi:
+  case clang::X86::BI__builtin_ia32_kortestzdi: {
+    APSInt A, B;
+    if (!EvaluateInteger(E->getArg(0), A, Info) ||
+        !EvaluateInteger(E->getArg(1), B, Info))
+      return false;
+
+    return Success((A | B) == 0, E);
+  }
+
   case clang::X86::BI__builtin_ia32_lzcnt_u16:
   case clang::X86::BI__builtin_ia32_lzcnt_u32:
   case clang::X86::BI__builtin_ia32_lzcnt_u64: {

@@ -13292,18 +13292,24 @@ multiclass AtomicFPStore<bit R, bits<3> op0, string asm> {
   def H : BaseAtomicFPStore<FPR16, 0b01, R, op0, asm>;
 }
 
-class BaseSIMDThreeSameVectorFP8MatrixMul<string asm, bits<2> size, string kind>
+class BaseSIMDThreeSameVectorFP8MatrixMul<string asm, bits<2> size, string kind, list<dag> pattern>
   : BaseSIMDThreeSameVectorTied<1, 1, {size, 0}, 0b11101,
-                                V128, asm, ".16b", []> {
+                                V128, asm, ".16b", pattern> {
   let AsmString = !strconcat(asm, "{\t$Rd", kind, ", $Rn.16b, $Rm.16b",
                                    "|", kind, "\t$Rd, $Rn, $Rm}");
 }
 
-multiclass SIMDThreeSameVectorFP8MatrixMul<string asm>{
-    def v8f16: BaseSIMDThreeSameVectorFP8MatrixMul<asm, 0b00, ".8h">{
+multiclass SIMDThreeSameVectorFP8MatrixMul<string asm, SDPatternOperator OpNode>{
+    def v8f16: BaseSIMDThreeSameVectorFP8MatrixMul<asm, 0b00, ".8h",
+              [(set (v8f16 V128:$dst), (OpNode (v8f16 V128:$Rd),
+                                               (v16i8 V128:$Rn),
+                                               (v16i8 V128:$Rm)))]> {
       let Predicates = [HasNEON, HasF8F16MM];
     }
-    def v4f32: BaseSIMDThreeSameVectorFP8MatrixMul<asm, 0b10, ".4s">{
+    def v4f32: BaseSIMDThreeSameVectorFP8MatrixMul<asm, 0b10, ".4s",
+              [(set (v4f32 V128:$dst), (OpNode (v4f32 V128:$Rd),
+                                               (v16i8 V128:$Rn),
+                                               (v16i8 V128:$Rm)))]> {
       let Predicates = [HasNEON, HasF8F32MM];
     }
 }

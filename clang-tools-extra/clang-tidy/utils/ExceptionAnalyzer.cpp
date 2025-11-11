@@ -192,7 +192,7 @@ static bool isFunctionPointerConvertible(QualType From, QualType To) {
 //
 // The function should only be called in C++ mode.
 static bool isQualificationConvertiblePointer(QualType From, QualType To,
-                                              LangOptions LangOpts) {
+                                              const LangOptions &LangOpts) {
 
   // [N4659 7.5 (1)]
   // A cv-decomposition of a type T is a sequence of cv_i and P_i such that T is
@@ -360,8 +360,9 @@ ExceptionAnalyzer::ExceptionInfo::filterByCatch(const Type *HandlerTy,
   llvm::SmallVector<const Type *, 8> TypesToDelete;
   for (const auto &ThrownException : ThrownExceptions) {
     const Type *ExceptionTy = ThrownException.getFirst();
-    CanQualType ExceptionCanTy = ExceptionTy->getCanonicalTypeUnqualified();
-    CanQualType HandlerCanTy = HandlerTy->getCanonicalTypeUnqualified();
+    const CanQualType ExceptionCanTy =
+        ExceptionTy->getCanonicalTypeUnqualified();
+    const CanQualType HandlerCanTy = HandlerTy->getCanonicalTypeUnqualified();
 
     // The handler is of type cv T or cv T& and E and T are the same type
     // (ignoring the top-level cv-qualifiers) ...
@@ -476,7 +477,7 @@ ExceptionAnalyzer::ExceptionInfo ExceptionAnalyzer::throwsException(
     // For a constructor, we also have to check the initializers.
     if (const auto *Ctor = dyn_cast<CXXConstructorDecl>(Func)) {
       for (const CXXCtorInitializer *Init : Ctor->inits()) {
-        ExceptionInfo Excs =
+        const ExceptionInfo Excs =
             throwsException(Init->getInit(), Caught, CallStack);
         Result.merge(Excs);
       }
@@ -533,7 +534,7 @@ ExceptionAnalyzer::throwsException(const Stmt *St,
 
       // Everything is caught through 'catch(...)'.
       if (!Catch->getExceptionDecl()) {
-        ExceptionInfo Rethrown = throwsException(
+        const ExceptionInfo Rethrown = throwsException(
             Catch->getHandlerBlock(), Uncaught.getExceptions(), CallStack);
         Results.merge(Rethrown);
         Uncaught.clear();
@@ -554,53 +555,59 @@ ExceptionAnalyzer::throwsException(const Stmt *St,
             Uncaught.filterByCatch(CaughtType,
                                    Catch->getExceptionDecl()->getASTContext());
         if (!FilteredExceptions.empty()) {
-          ExceptionInfo Rethrown = throwsException(
+          const ExceptionInfo Rethrown = throwsException(
               Catch->getHandlerBlock(), FilteredExceptions, CallStack);
           Results.merge(Rethrown);
         }
       }
     }
     Results.merge(Uncaught);
-  } else if (const auto *Call = dyn_cast<CallExpr>(St)) {
-    if (const FunctionDecl *Func = Call->getDirectCallee()) {
-      ExceptionInfo Excs =
-          throwsException(Func, Caught, CallStack, Call->getBeginLoc());
-      Results.merge(Excs);
-    }
-  } else if (const auto *Construct = dyn_cast<CXXConstructExpr>(St)) {
-    ExceptionInfo Excs = throwsException(Construct->getConstructor(), Caught,
-                                         CallStack, Construct->getBeginLoc());
-    Results.merge(Excs);
   } else if (const auto *DefaultInit = dyn_cast<CXXDefaultInitExpr>(St)) {
-    ExceptionInfo Excs =
+    const ExceptionInfo Excs =
         throwsException(DefaultInit->getExpr(), Caught, CallStack);
     Results.merge(Excs);
   } else if (const auto *Coro = dyn_cast<CoroutineBodyStmt>(St)) {
     for (const Stmt *Child : Coro->childrenExclBody()) {
       if (Child != Coro->getExceptionHandler()) {
-        ExceptionInfo Excs = throwsException(Child, Caught, CallStack);
+        const ExceptionInfo Excs = throwsException(Child, Caught, CallStack);
         Results.merge(Excs);
       }
     }
-    ExceptionInfo Excs = throwsException(Coro->getBody(), Caught, CallStack);
+    const ExceptionInfo Excs =
+        throwsException(Coro->getBody(), Caught, CallStack);
     Results.merge(throwsException(Coro->getExceptionHandler(),
                                   Excs.getExceptions(), CallStack));
     for (const auto &Exception : Excs.getExceptions()) {
       const Type *ExcType = Exception.getFirst();
       if (const CXXRecordDecl *ThrowableRec = ExcType->getAsCXXRecordDecl()) {
-        ExceptionInfo DestructorExcs = throwsException(
+        const ExceptionInfo DestructorExcs = throwsException(
             ThrowableRec->getDestructor(), Caught, CallStack, SourceLocation{});
         Results.merge(DestructorExcs);
       }
     }
   } else if (const auto *Lambda = dyn_cast<LambdaExpr>(St)) {
     for (const Stmt *Init : Lambda->capture_inits()) {
-      ExceptionInfo Excs = throwsException(Init, Caught, CallStack);
+      const ExceptionInfo Excs = throwsException(Init, Caught, CallStack);
       Results.merge(Excs);
     }
   } else {
+    // Check whether any of this node's subexpressions throws.
     for (const Stmt *Child : St->children()) {
-      ExceptionInfo Excs = throwsException(Child, Caught, CallStack);
+      const ExceptionInfo Excs = throwsException(Child, Caught, CallStack);
+      Results.merge(Excs);
+    }
+
+    // If this node is a call to a function or constructor, also check
+    // whether the call itself throws.
+    if (const auto *Call = dyn_cast<CallExpr>(St)) {
+      if (const FunctionDecl *Func = Call->getDirectCallee()) {
+        ExceptionInfo Excs =
+            throwsException(Func, Caught, CallStack, Call->getBeginLoc());
+        Results.merge(Excs);
+      }
+    } else if (const auto *Construct = dyn_cast<CXXConstructExpr>(St)) {
+      ExceptionInfo Excs = throwsException(Construct->getConstructor(), Caught,
+                                           CallStack, Construct->getBeginLoc());
       Results.merge(Excs);
     }
   }

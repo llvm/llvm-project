@@ -105,6 +105,8 @@ const OMPClauseWithPreInit *OMPClauseWithPreInit::get(const OMPClause *C) {
     return static_cast<const OMPFilterClause *>(C);
   case OMPC_ompx_dyn_cgroup_mem:
     return static_cast<const OMPXDynCGroupMemClause *>(C);
+  case OMPC_dyn_groupprivate:
+    return static_cast<const OMPDynGroupprivateClause *>(C);
   case OMPC_message:
     return static_cast<const OMPMessageClause *>(C);
   case OMPC_default:
@@ -2855,6 +2857,24 @@ void OMPClausePrinter::VisitOMPXDynCGroupMemClause(
   OS << "ompx_dyn_cgroup_mem(";
   Node->getSize()->printPretty(OS, nullptr, Policy, 0);
   OS << ")";
+}
+
+void OMPClausePrinter::VisitOMPDynGroupprivateClause(
+    OMPDynGroupprivateClause *Node) {
+  OS << "dyn_groupprivate(";
+  if (Node->getDynGroupprivateModifier() != OMPC_DYN_GROUPPRIVATE_unknown) {
+    OS << getOpenMPSimpleClauseTypeName(OMPC_dyn_groupprivate,
+                                        Node->getDynGroupprivateModifier());
+    if (Node->getDynGroupprivateFallbackModifier() !=
+        OMPC_DYN_GROUPPRIVATE_FALLBACK_unknown) {
+      OS << ", ";
+      OS << getOpenMPSimpleClauseTypeName(
+          OMPC_dyn_groupprivate, Node->getDynGroupprivateFallbackModifier());
+    }
+    OS << ": ";
+  }
+  Node->getSize()->printPretty(OS, nullptr, Policy, 0);
+  OS << ')';
 }
 
 void OMPClausePrinter::VisitOMPDoacrossClause(OMPDoacrossClause *Node) {

@@ -242,7 +242,7 @@ ARM EABI
 Compiler-Wide Topics
 --------------------
 The following people are responsible for functionality that does not fit into
-a single part of the compiler, but instead span multiple components within the
+a single part of the compiler, but instead spans multiple components within the
 compiler.
 
 Attributes

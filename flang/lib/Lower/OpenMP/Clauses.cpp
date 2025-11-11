@@ -249,8 +249,10 @@ MAKE_EMPTY_CLASS(Groupprivate, Groupprivate);
 
 MAKE_INCOMPLETE_CLASS(AdjustArgs, AdjustArgs);
 MAKE_INCOMPLETE_CLASS(AppendArgs, AppendArgs);
+MAKE_INCOMPLETE_CLASS(Collector, Collector);
 MAKE_INCOMPLETE_CLASS(GraphId, GraphId);
 MAKE_INCOMPLETE_CLASS(GraphReset, GraphReset);
+MAKE_INCOMPLETE_CLASS(Inductor, Inductor);
 MAKE_INCOMPLETE_CLASS(Replayable, Replayable);
 MAKE_INCOMPLETE_CLASS(Transparent, Transparent);
 

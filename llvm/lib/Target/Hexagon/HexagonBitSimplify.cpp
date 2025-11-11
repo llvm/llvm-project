@@ -1886,7 +1886,7 @@ bool BitSimplification::matchHalf(unsigned SelfR,
 
 bool BitSimplification::validateReg(BitTracker::RegisterRef R, unsigned Opc,
       unsigned OpNum) {
-  auto *OpRC = HII.getRegClass(HII.get(Opc), OpNum, &HRI);
+  auto *OpRC = HII.getRegClass(HII.get(Opc), OpNum);
   auto *RRC = HBS::getFinalVRegClass(R, MRI);
   return OpRC->hasSubClassEq(RRC);
 }

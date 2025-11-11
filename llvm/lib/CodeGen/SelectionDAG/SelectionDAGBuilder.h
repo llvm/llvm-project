@@ -429,6 +429,10 @@ public:
   SDValue lowerRangeToAssertZExt(SelectionDAG &DAG, const Instruction &I,
                                  SDValue Op);
 
+  // Lower nofpclass attributes to AssertNoFPClass
+  SDValue lowerNoFPClassToAssertNoFPClass(SelectionDAG &DAG,
+                                          const Instruction &I, SDValue Op);
+
   void populateCallLoweringInfo(TargetLowering::CallLoweringInfo &CLI,
                                 const CallBase *Call, unsigned ArgIdx,
                                 unsigned NumArgs, SDValue Callee,

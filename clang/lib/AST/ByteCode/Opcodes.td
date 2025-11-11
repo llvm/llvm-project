@@ -53,6 +53,7 @@ def ArgBool : ArgType { let Name = "bool"; }
 def ArgFixedPoint : ArgType { let Name = "FixedPoint"; let AsRef = true; }
 
 def ArgFunction : ArgType { let Name = "const Function *"; }
+def ArgFunctionDecl : ArgType { let Name = "const FunctionDecl *"; }
 def ArgRecordDecl : ArgType { let Name = "const RecordDecl *"; }
 def ArgRecordField : ArgType { let Name = "const Record::Field *"; }
 def ArgFltSemantics : ArgType { let Name = "const llvm::fltSemantics *"; }
@@ -421,6 +422,8 @@ def CheckLiteralType : Opcode {
 }
 
 def CheckArraySize : Opcode { let Args = [ArgUint64]; }
+def CheckFunctionDecl : Opcode { let Args = [ArgFunctionDecl]; }
+def CheckBitCast : Opcode { let Args = [ArgTypePtr, ArgBool]; }
 
 // [] -> [Value]
 def GetGlobal : AccessOpcode;

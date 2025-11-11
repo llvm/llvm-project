@@ -52,6 +52,9 @@ A list of non-standard directives supported by Flang
   integer that specifying the unrolling factor. When `N` is `0` or `1`, the loop
   should not be unrolled at all. If `N` is omitted the optimizer will
   selects the number of times to unroll the loop.
+* `!dir$ prefetch designator[, designator]...`, where the designator list can be
+  a variable or an array reference. This directive is used to insert a hint to
+  the code generator to prefetch instructions for memory references.
 * `!dir$ novector` disabling vectorization on the following loop.
 * `!dir$ nounroll` disabling unrolling on the following loop.
 * `!dir$ nounroll_and_jam` disabling unrolling and jamming on the following loop.
