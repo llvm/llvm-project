@@ -897,7 +897,7 @@ unsigned ComponentInfo::getIndexInParsedOperands(unsigned CompOprIdx) const {
 }
 
 std::optional<unsigned> InstInfo::getInvalidCompOperandIndex(
-    std::function<unsigned(unsigned, unsigned)> GetRegIdx,
+    std::function<MCRegister(unsigned, unsigned)> GetRegIdx,
     const MCRegisterInfo &MRI, bool SkipSrc, bool AllowSameVGPR,
     bool VOPD3) const {
 
@@ -914,12 +914,13 @@ std::optional<unsigned> InstInfo::getInvalidCompOperandIndex(
       BaseX = X;
     if (!BaseY)
       BaseY = Y;
-    if ((BaseX & BanksMask) == (BaseY & BanksMask))
+    if ((BaseX.id() & BanksMask) == (BaseY.id() & BanksMask))
       return true;
     if (BaseX != X /* This is 64-bit register */ &&
-        ((BaseX + 1) & BanksMask) == (BaseY & BanksMask))
+        ((BaseX.id() + 1) & BanksMask) == (BaseY.id() & BanksMask))
       return true;
-    if (BaseY != Y && (BaseX & BanksMask) == ((BaseY + 1) & BanksMask))
+    if (BaseY != Y &&
+        (BaseX.id() & BanksMask) == ((BaseY.id() + 1) & BanksMask))
       return true;
 
     // If both are 64-bit bank conflict will be detected yet while checking
@@ -968,7 +969,7 @@ std::optional<unsigned> InstInfo::getInvalidCompOperandIndex(
 // if the operand is not a register or not a VGPR.
 InstInfo::RegIndices
 InstInfo::getRegIndices(unsigned CompIdx,
-                        std::function<unsigned(unsigned, unsigned)> GetRegIdx,
+                        std::function<MCRegister(unsigned, unsigned)> GetRegIdx,
                         bool VOPD3) const {
   assert(CompIdx < COMPONENTS_NUM);
 
@@ -983,7 +984,7 @@ InstInfo::getRegIndices(unsigned CompIdx,
         Comp.hasRegSrcOperand(CompSrcIdx)
             ? GetRegIdx(CompIdx,
                         Comp.getIndexOfSrcInMCOperands(CompSrcIdx, VOPD3))
-            : 0;
+            : MCRegister();
   }
   return RegIndices;
 }
@@ -1353,11 +1354,6 @@ unsigned getVGPRAllocGranule(const MCSubtargetInfo *STI,
   if (DynamicVGPRBlockSize != 0)
     return DynamicVGPRBlockSize;
 
-  // Temporarily check the subtarget feature, until we fully switch to using
-  // attributes.
-  if (STI->getFeatureBits().test(FeatureDynamicVGPR))
-    return STI->getFeatureBits().test(FeatureDynamicVGPRBlockSize32) ? 32 : 16;
-
   bool IsWave32 = EnableWavefrontSize32
                       ? *EnableWavefrontSize32
                       : STI->getFeatureBits().test(FeatureWavefrontSize32);
@@ -1412,10 +1408,7 @@ unsigned getAddressableNumVGPRs(const MCSubtargetInfo *STI,
   if (Features.test(FeatureGFX90AInsts))
     return 512;
 
-  // Temporarily check the subtarget feature, until we fully switch to using
-  // attributes.
-  if (DynamicVGPRBlockSize != 0 ||
-      STI->getFeatureBits().test(FeatureDynamicVGPR))
+  if (DynamicVGPRBlockSize != 0)
     // On GFX12 we can allocate at most 8 blocks of VGPRs.
     return 8 * getVGPRAllocGranule(STI, DynamicVGPRBlockSize);
   return getAddressableNumArchVGPRs(STI);
@@ -1577,12 +1570,7 @@ static bool isValidRegPrefix(char C) {
   return C == 'v' || C == 's' || C == 'a';
 }
 
-std::tuple<char, unsigned, unsigned>
-parseAsmConstraintPhysReg(StringRef Constraint) {
-  StringRef RegName = Constraint;
-  if (!RegName.consume_front("{") || !RegName.consume_back("}"))
-    return {};
-
+std::tuple<char, unsigned, unsigned> parseAsmPhysRegName(StringRef RegName) {
   char Kind = RegName.front();
   if (!isValidRegPrefix(Kind))
     return {};
@@ -1607,6 +1595,14 @@ parseAsmConstraintPhysReg(StringRef Constraint) {
   }
 
   return {};
+}
+
+std::tuple<char, unsigned, unsigned>
+parseAsmConstraintPhysReg(StringRef Constraint) {
+  StringRef RegName = Constraint;
+  if (!RegName.consume_front("{") || !RegName.consume_back("}"))
+    return {};
+  return parseAsmPhysRegName(RegName);
 }
 
 std::pair<unsigned, unsigned>
@@ -2702,8 +2698,8 @@ MCRegister getMCReg(MCRegister Reg, const MCSubtargetInfo &STI) {
 
 MCRegister mc2PseudoReg(MCRegister Reg) { MAP_REG2REG }
 
-bool isInlineValue(unsigned Reg) {
-  switch (Reg) {
+bool isInlineValue(MCRegister Reg) {
+  switch (Reg.id()) {
   case AMDGPU::SRC_SHARED_BASE_LO:
   case AMDGPU::SRC_SHARED_BASE:
   case AMDGPU::SRC_SHARED_LIMIT_LO:
@@ -2935,13 +2931,6 @@ unsigned getRegBitWidth(const MCRegisterClass &RC) {
   return getRegBitWidth(RC.getID());
 }
 
-unsigned getRegOperandSize(const MCRegisterInfo *MRI, const MCInstrDesc &Desc,
-                           unsigned OpNo) {
-  assert(OpNo < Desc.NumOperands);
-  unsigned RCID = Desc.operands()[OpNo].RegClass;
-  return getRegBitWidth(RCID) / 8;
-}
-
 bool isInlinableLiteral64(int64_t Literal, bool HasInv2Pi) {
   if (isInlinableIntLiteral(Literal))
     return true;
@@ -3157,7 +3146,7 @@ bool isValid32BitLiteral(uint64_t Val, bool IsFP64) {
   return isUInt<32>(Val) || isInt<32>(Val);
 }
 
-int64_t encode32BitLiteral(int64_t Imm, OperandType Type) {
+int64_t encode32BitLiteral(int64_t Imm, OperandType Type, bool IsLit) {
   switch (Type) {
   default:
     break;
@@ -3180,7 +3169,7 @@ int64_t encode32BitLiteral(int64_t Imm, OperandType Type) {
   case OPERAND_REG_INLINE_C_INT32:
     return Lo_32(Imm);
   case OPERAND_REG_IMM_FP64:
-    return Hi_32(Imm);
+    return IsLit ? Imm : Hi_32(Imm);
   }
   return Imm;
 }
@@ -3373,7 +3362,7 @@ const GcnBufferFormatInfo *getGcnBufferFormatInfo(uint8_t Format,
                           : getGfx9BufferFormatInfo(Format);
 }
 
-const MCRegisterClass *getVGPRPhysRegClass(MCPhysReg Reg,
+const MCRegisterClass *getVGPRPhysRegClass(MCRegister Reg,
                                            const MCRegisterInfo &MRI) {
   const unsigned VGPRClasses[] = {
       AMDGPU::VGPR_16RegClassID,  AMDGPU::VGPR_32RegClassID,
@@ -3394,23 +3383,32 @@ const MCRegisterClass *getVGPRPhysRegClass(MCPhysReg Reg,
   return nullptr;
 }
 
-unsigned getVGPREncodingMSBs(MCPhysReg Reg, const MCRegisterInfo &MRI) {
+unsigned getVGPREncodingMSBs(MCRegister Reg, const MCRegisterInfo &MRI) {
   unsigned Enc = MRI.getEncodingValue(Reg);
   unsigned Idx = Enc & AMDGPU::HWEncoding::REG_IDX_MASK;
   return Idx >> 8;
 }
 
-MCPhysReg getVGPRWithMSBs(MCPhysReg Reg, unsigned MSBs,
-                          const MCRegisterInfo &MRI) {
+MCRegister getVGPRWithMSBs(MCRegister Reg, unsigned MSBs,
+                           const MCRegisterInfo &MRI) {
   unsigned Enc = MRI.getEncodingValue(Reg);
   unsigned Idx = Enc & AMDGPU::HWEncoding::REG_IDX_MASK;
   if (Idx >= 0x100)
-    return AMDGPU::NoRegister;
+    return MCRegister();
 
   const MCRegisterClass *RC = getVGPRPhysRegClass(Reg, MRI);
   if (!RC)
-    return AMDGPU::NoRegister;
-  return RC->getRegister(Idx | (MSBs << 8));
+    return MCRegister();
+
+  Idx |= MSBs << 8;
+  if (RC->getID() == AMDGPU::VGPR_16RegClassID) {
+    // This class has 2048 registers with interleaved lo16 and hi16.
+    Idx *= 2;
+    if (Enc & AMDGPU::HWEncoding::IS_HI16)
+      ++Idx;
+  }
+
+  return RC->getRegister(Idx);
 }
 
 std::pair<const AMDGPU::OpName *, const AMDGPU::OpName *>
@@ -3498,14 +3496,18 @@ bool supportsScaleOffset(const MCInstrInfo &MII, unsigned Opcode) {
   return false;
 }
 
-bool hasAny64BitVGPROperands(const MCInstrDesc &OpDesc) {
+bool hasAny64BitVGPROperands(const MCInstrDesc &OpDesc, const MCInstrInfo &MII,
+                             const MCSubtargetInfo &ST) {
   for (auto OpName : {OpName::vdst, OpName::src0, OpName::src1, OpName::src2}) {
     int Idx = getNamedOperandIdx(OpDesc.getOpcode(), OpName);
     if (Idx == -1)
       continue;
 
-    if (OpDesc.operands()[Idx].RegClass == AMDGPU::VReg_64RegClassID ||
-        OpDesc.operands()[Idx].RegClass == AMDGPU::VReg_64_Align2RegClassID)
+    const MCOperandInfo &OpInfo = OpDesc.operands()[Idx];
+    int16_t RegClass = MII.getOpRegClassID(
+        OpInfo, ST.getHwMode(MCSubtargetInfo::HwMode_RegInfo));
+    if (RegClass == AMDGPU::VReg_64RegClassID ||
+        RegClass == AMDGPU::VReg_64_Align2RegClassID)
       return true;
   }
 
@@ -3532,14 +3534,15 @@ bool isDPALU_DPP32BitOpc(unsigned Opc) {
   }
 }
 
-bool isDPALU_DPP(const MCInstrDesc &OpDesc, const MCSubtargetInfo &ST) {
+bool isDPALU_DPP(const MCInstrDesc &OpDesc, const MCInstrInfo &MII,
+                 const MCSubtargetInfo &ST) {
   if (!ST.hasFeature(AMDGPU::FeatureDPALU_DPP))
     return false;
 
   if (isDPALU_DPP32BitOpc(OpDesc.getOpcode()))
     return ST.hasFeature(AMDGPU::FeatureGFX1250Insts);
 
-  return hasAny64BitVGPROperands(OpDesc);
+  return hasAny64BitVGPROperands(OpDesc, MII, ST);
 }
 
 unsigned getLdsDwGranularity(const MCSubtargetInfo &ST) {

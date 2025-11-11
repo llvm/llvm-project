@@ -171,29 +171,24 @@ computePackUnPackPerm(int64_t rank, ArrayRef<int64_t> &innerDimsPos,
 namespace mlir {
 namespace linalg {
 
-SmallVector<int64_t> getPackInverseDestPerm(PackOp packOp) {
+SmallVector<int64_t> getPackInverseDestPerm(PackOp packOp,
+                                            PackingMetadata &metadata) {
 
-  PackingMetadata pMetadata;
   int64_t packedRank = packOp.getDestType().getRank();
   ArrayRef<int64_t> innerDimPos = packOp.getInnerDimsPos();
   ArrayRef<int64_t> outerPerm = packOp.getOuterDimsPerm();
   SmallVector<int64_t> packInvDestPerm =
-      computePackUnPackPerm(packedRank, innerDimPos, outerPerm, pMetadata);
+      computePackUnPackPerm(packedRank, innerDimPos, outerPerm, metadata);
   return packInvDestPerm;
-}
-
-SmallVector<int64_t> getUnPackInverseSrcPerm(UnPackOp unpackOp) {
-  PackingMetadata metadata;
-  return getUnPackInverseSrcPerm(unpackOp, metadata);
 }
 
 SmallVector<int64_t> getUnPackInverseSrcPerm(UnPackOp unpackOp,
                                              PackingMetadata &metadata) {
-  int64_t unpackRank = unpackOp.getSourceType().getRank();
+  int64_t packedRank = unpackOp.getSourceType().getRank();
   ArrayRef<int64_t> innerDimPos = unpackOp.getInnerDimsPos();
   ArrayRef<int64_t> outerPerm = unpackOp.getOuterDimsPerm();
   SmallVector<int64_t> unpackInvSrcPerm =
-      computePackUnPackPerm(unpackRank, innerDimPos, outerPerm, metadata);
+      computePackUnPackPerm(packedRank, innerDimPos, outerPerm, metadata);
   return unpackInvSrcPerm;
 }
 
@@ -604,9 +599,7 @@ static Operation *materializeTiledShape(OpBuilder &builder, Location loc,
                             builder, loc, valueToTile, sliceParams.offsets,
                             sliceParams.sizes, sliceParams.strides);
                       })
-                      .Default([](ShapedType) -> Operation * {
-                        llvm_unreachable("Unexpected shaped type");
-                      });
+                      .DefaultUnreachable("Unexpected shaped type");
   return sliceOp;
 }
 

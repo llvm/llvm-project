@@ -1,4 +1,4 @@
-// RUN: mlir-opt -convert-scf-to-spirv %s -o - | FileCheck %s
+// RUN: mlir-opt --convert-scf-to-spirv %s | FileCheck %s
 
 // `scf.parallel` conversion is not supported yet.
 // Make sure that we do not accidentally invalidate this function by removing

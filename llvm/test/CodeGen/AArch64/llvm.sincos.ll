@@ -215,6 +215,133 @@ define { <2 x half>, <2 x half> } @test_sincos_v2f16(<2 x half> %a) nounwind {
   ret { <2 x half>, <2 x half> } %result
 }
 
+define { <3 x half>, <3 x half> } @test_sincos_v3f16(<3 x half> %a) nounwind {
+; CHECK-LABEL: test_sincos_v3f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sub sp, sp, #64
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    mov h1, v0.h[1]
+; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
+; CHECK-NEXT:    add x0, sp, #36
+; CHECK-NEXT:    add x1, sp, #32
+; CHECK-NEXT:    str x30, [sp, #48] // 8-byte Folded Spill
+; CHECK-NEXT:    fcvt s0, h1
+; CHECK-NEXT:    bl sincosf
+; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    add x0, sp, #28
+; CHECK-NEXT:    add x1, sp, #24
+; CHECK-NEXT:    fcvt s0, h0
+; CHECK-NEXT:    bl sincosf
+; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    add x0, sp, #44
+; CHECK-NEXT:    add x1, sp, #40
+; CHECK-NEXT:    mov h0, v0.h[2]
+; CHECK-NEXT:    fcvt s0, h0
+; CHECK-NEXT:    bl sincosf
+; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    add x0, sp, #60
+; CHECK-NEXT:    add x1, sp, #56
+; CHECK-NEXT:    mov h0, v0.h[3]
+; CHECK-NEXT:    fcvt s0, h0
+; CHECK-NEXT:    bl sincosf
+; CHECK-NEXT:    ldp s2, s0, [sp, #32]
+; CHECK-NEXT:    ldr x30, [sp, #48] // 8-byte Folded Reload
+; CHECK-NEXT:    ldp s3, s1, [sp, #24]
+; CHECK-NEXT:    fcvt h4, s0
+; CHECK-NEXT:    fcvt h2, s2
+; CHECK-NEXT:    fcvt h0, s1
+; CHECK-NEXT:    fcvt h1, s3
+; CHECK-NEXT:    ldp s5, s3, [sp, #40]
+; CHECK-NEXT:    fcvt h3, s3
+; CHECK-NEXT:    mov v0.h[1], v4.h[0]
+; CHECK-NEXT:    fcvt h4, s5
+; CHECK-NEXT:    mov v1.h[1], v2.h[0]
+; CHECK-NEXT:    ldp s5, s2, [sp, #56]
+; CHECK-NEXT:    mov v0.h[2], v3.h[0]
+; CHECK-NEXT:    fcvt h2, s2
+; CHECK-NEXT:    fcvt h3, s5
+; CHECK-NEXT:    mov v1.h[2], v4.h[0]
+; CHECK-NEXT:    mov v0.h[3], v2.h[0]
+; CHECK-NEXT:    mov v1.h[3], v3.h[0]
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    // kill: def $d1 killed $d1 killed $q1
+; CHECK-NEXT:    add sp, sp, #64
+; CHECK-NEXT:    ret
+;
+; NO-LIBCALL-LABEL: test_sincos_v3f16:
+; NO-LIBCALL:       // %bb.0:
+; NO-LIBCALL-NEXT:    sub sp, sp, #80
+; NO-LIBCALL-NEXT:    // kill: def $d0 killed $d0 def $q0
+; NO-LIBCALL-NEXT:    mov h1, v0.h[1]
+; NO-LIBCALL-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
+; NO-LIBCALL-NEXT:    str q0, [sp] // 16-byte Folded Spill
+; NO-LIBCALL-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
+; NO-LIBCALL-NEXT:    str x30, [sp, #64] // 8-byte Folded Spill
+; NO-LIBCALL-NEXT:    fcvt s8, h1
+; NO-LIBCALL-NEXT:    fmov s0, s8
+; NO-LIBCALL-NEXT:    bl sinf
+; NO-LIBCALL-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; NO-LIBCALL-NEXT:    fcvt h0, s0
+; NO-LIBCALL-NEXT:    fcvt s9, h1
+; NO-LIBCALL-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
+; NO-LIBCALL-NEXT:    fmov s0, s9
+; NO-LIBCALL-NEXT:    bl sinf
+; NO-LIBCALL-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; NO-LIBCALL-NEXT:    fcvt h0, s0
+; NO-LIBCALL-NEXT:    mov h1, v1.h[2]
+; NO-LIBCALL-NEXT:    fcvt s10, h1
+; NO-LIBCALL-NEXT:    ldr q1, [sp, #16] // 16-byte Folded Reload
+; NO-LIBCALL-NEXT:    mov v0.h[1], v1.h[0]
+; NO-LIBCALL-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
+; NO-LIBCALL-NEXT:    fmov s0, s10
+; NO-LIBCALL-NEXT:    bl sinf
+; NO-LIBCALL-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; NO-LIBCALL-NEXT:    fcvt h0, s0
+; NO-LIBCALL-NEXT:    mov h1, v1.h[3]
+; NO-LIBCALL-NEXT:    fcvt s11, h1
+; NO-LIBCALL-NEXT:    ldr q1, [sp, #16] // 16-byte Folded Reload
+; NO-LIBCALL-NEXT:    mov v1.h[2], v0.h[0]
+; NO-LIBCALL-NEXT:    fmov s0, s11
+; NO-LIBCALL-NEXT:    str q1, [sp, #16] // 16-byte Folded Spill
+; NO-LIBCALL-NEXT:    bl sinf
+; NO-LIBCALL-NEXT:    fcvt h0, s0
+; NO-LIBCALL-NEXT:    ldr q1, [sp, #16] // 16-byte Folded Reload
+; NO-LIBCALL-NEXT:    mov v1.h[3], v0.h[0]
+; NO-LIBCALL-NEXT:    fmov s0, s8
+; NO-LIBCALL-NEXT:    str q1, [sp, #16] // 16-byte Folded Spill
+; NO-LIBCALL-NEXT:    bl cosf
+; NO-LIBCALL-NEXT:    fcvt h0, s0
+; NO-LIBCALL-NEXT:    str q0, [sp] // 16-byte Folded Spill
+; NO-LIBCALL-NEXT:    fmov s0, s9
+; NO-LIBCALL-NEXT:    bl cosf
+; NO-LIBCALL-NEXT:    fcvt h0, s0
+; NO-LIBCALL-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; NO-LIBCALL-NEXT:    mov v0.h[1], v1.h[0]
+; NO-LIBCALL-NEXT:    str q0, [sp] // 16-byte Folded Spill
+; NO-LIBCALL-NEXT:    fmov s0, s10
+; NO-LIBCALL-NEXT:    bl cosf
+; NO-LIBCALL-NEXT:    fcvt h0, s0
+; NO-LIBCALL-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; NO-LIBCALL-NEXT:    mov v1.h[2], v0.h[0]
+; NO-LIBCALL-NEXT:    fmov s0, s11
+; NO-LIBCALL-NEXT:    str q1, [sp] // 16-byte Folded Spill
+; NO-LIBCALL-NEXT:    bl cosf
+; NO-LIBCALL-NEXT:    fmov s1, s0
+; NO-LIBCALL-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
+; NO-LIBCALL-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
+; NO-LIBCALL-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
+; NO-LIBCALL-NEXT:    ldr x30, [sp, #64] // 8-byte Folded Reload
+; NO-LIBCALL-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; NO-LIBCALL-NEXT:    fcvt h2, s1
+; NO-LIBCALL-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; NO-LIBCALL-NEXT:    mov v1.h[3], v2.h[0]
+; NO-LIBCALL-NEXT:    // kill: def $d1 killed $d1 killed $q1
+; NO-LIBCALL-NEXT:    add sp, sp, #80
+; NO-LIBCALL-NEXT:    ret
+  %result = call { <3 x half>, <3 x half> } @llvm.sincos.v3f16(<3 x half> %a)
+  ret { <3 x half>, <3 x half> } %result
+}
+
 define { float, float } @test_sincos_f32(float %a) nounwind {
 ; CHECK-LABEL: test_sincos_f32:
 ; CHECK:       // %bb.0:
@@ -492,4 +619,72 @@ define { <2 x double>, <2 x double> } @test_sincos_v2f64(<2 x double> %a) nounwi
 ; NO-LIBCALL-NEXT:    ret
   %result = call { <2 x double>, <2 x double> } @llvm.sincos.v2f64(<2 x double> %a)
   ret { <2 x double>, <2 x double> } %result
+}
+
+define { <3 x double>, <3 x double> } @test_sincos_v3f64(<3 x double> %a) nounwind {
+; CHECK-LABEL: test_sincos_v3f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sub sp, sp, #80
+; CHECK-NEXT:    add x0, sp, #16
+; CHECK-NEXT:    add x1, sp, #8
+; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #64] // 8-byte Folded Spill
+; CHECK-NEXT:    fmov d8, d2
+; CHECK-NEXT:    fmov d9, d1
+; CHECK-NEXT:    bl sincos
+; CHECK-NEXT:    fmov d0, d9
+; CHECK-NEXT:    add x0, sp, #32
+; CHECK-NEXT:    add x1, sp, #24
+; CHECK-NEXT:    bl sincos
+; CHECK-NEXT:    fmov d0, d8
+; CHECK-NEXT:    add x0, sp, #72
+; CHECK-NEXT:    add x1, sp, #40
+; CHECK-NEXT:    bl sincos
+; CHECK-NEXT:    ldp d3, d0, [sp, #8]
+; CHECK-NEXT:    ldr d2, [sp, #72]
+; CHECK-NEXT:    ldp d4, d1, [sp, #24]
+; CHECK-NEXT:    ldr d5, [sp, #40]
+; CHECK-NEXT:    ldr x30, [sp, #64] // 8-byte Folded Reload
+; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
+; CHECK-NEXT:    add sp, sp, #80
+; CHECK-NEXT:    ret
+;
+; NO-LIBCALL-LABEL: test_sincos_v3f64:
+; NO-LIBCALL:       // %bb.0:
+; NO-LIBCALL-NEXT:    stp d13, d12, [sp, #-64]! // 16-byte Folded Spill
+; NO-LIBCALL-NEXT:    stp d11, d10, [sp, #16] // 16-byte Folded Spill
+; NO-LIBCALL-NEXT:    fmov d10, d0
+; NO-LIBCALL-NEXT:    stp d9, d8, [sp, #32] // 16-byte Folded Spill
+; NO-LIBCALL-NEXT:    fmov d8, d2
+; NO-LIBCALL-NEXT:    fmov d9, d1
+; NO-LIBCALL-NEXT:    str x30, [sp, #48] // 8-byte Folded Spill
+; NO-LIBCALL-NEXT:    bl sin
+; NO-LIBCALL-NEXT:    fmov d11, d0
+; NO-LIBCALL-NEXT:    fmov d0, d9
+; NO-LIBCALL-NEXT:    bl sin
+; NO-LIBCALL-NEXT:    fmov d12, d0
+; NO-LIBCALL-NEXT:    fmov d0, d8
+; NO-LIBCALL-NEXT:    bl sin
+; NO-LIBCALL-NEXT:    fmov d13, d0
+; NO-LIBCALL-NEXT:    fmov d0, d10
+; NO-LIBCALL-NEXT:    bl cos
+; NO-LIBCALL-NEXT:    fmov d10, d0
+; NO-LIBCALL-NEXT:    fmov d0, d9
+; NO-LIBCALL-NEXT:    bl cos
+; NO-LIBCALL-NEXT:    fmov d9, d0
+; NO-LIBCALL-NEXT:    fmov d0, d8
+; NO-LIBCALL-NEXT:    bl cos
+; NO-LIBCALL-NEXT:    fmov d5, d0
+; NO-LIBCALL-NEXT:    fmov d0, d11
+; NO-LIBCALL-NEXT:    ldr x30, [sp, #48] // 8-byte Folded Reload
+; NO-LIBCALL-NEXT:    fmov d3, d10
+; NO-LIBCALL-NEXT:    fmov d4, d9
+; NO-LIBCALL-NEXT:    fmov d1, d12
+; NO-LIBCALL-NEXT:    ldp d9, d8, [sp, #32] // 16-byte Folded Reload
+; NO-LIBCALL-NEXT:    fmov d2, d13
+; NO-LIBCALL-NEXT:    ldp d11, d10, [sp, #16] // 16-byte Folded Reload
+; NO-LIBCALL-NEXT:    ldp d13, d12, [sp], #64 // 16-byte Folded Reload
+; NO-LIBCALL-NEXT:    ret
+  %result = call { <3 x double>, <3 x double> } @llvm.sincos.v3f64(<3 x double> %a)
+  ret { <3 x double>, <3 x double> } %result
 }

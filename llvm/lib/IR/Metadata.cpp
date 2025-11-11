@@ -48,6 +48,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/ModRef.h"
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -987,9 +988,10 @@ static T *uniquifyImpl(T *N, DenseSet<T *, InfoT> &Store) {
 
 template <class NodeTy> struct MDNode::HasCachedHash {
   template <class U>
-  using check = decltype(static_cast<void (U::*)(unsigned)>(&U::setHash));
+  static std::true_type check(SameType<void (U::*)(unsigned), &U::setHash> *);
+  template <class U> static std::false_type check(...);
 
-  static constexpr bool value = is_detected<check, NodeTy>::value;
+  static constexpr bool value = decltype(check<NodeTy>(nullptr))::value;
 };
 
 MDNode *MDNode::uniquify() {
@@ -1002,8 +1004,7 @@ MDNode *MDNode::uniquify() {
 #define HANDLE_MDNODE_LEAF_UNIQUABLE(CLASS)                                    \
   case CLASS##Kind: {                                                          \
     CLASS *SubclassThis = cast<CLASS>(this);                                   \
-    std::bool_constant<HasCachedHash<CLASS>::value> ShouldRecalculateHash;     \
-    dispatchRecalculateHash(SubclassThis, ShouldRecalculateHash);              \
+    dispatchRecalculateHash(SubclassThis);                                     \
     return uniquifyImpl(SubclassThis, getContext().pImpl->CLASS##s);           \
   }
 #include "llvm/IR/Metadata.def"
@@ -1059,8 +1060,7 @@ void MDNode::storeDistinctInContext() {
     llvm_unreachable("Invalid subclass of MDNode");
 #define HANDLE_MDNODE_LEAF(CLASS)                                              \
   case CLASS##Kind: {                                                          \
-    std::bool_constant<HasCachedHash<CLASS>::value> ShouldResetHash;           \
-    dispatchResetHash(cast<CLASS>(this), ShouldResetHash);                     \
+    dispatchResetHash(cast<CLASS>(this));                                      \
     break;                                                                     \
   }
 #include "llvm/IR/Metadata.def"
@@ -1434,6 +1434,40 @@ MDNode *MDNode::getMostGenericAlignmentOrDereferenceable(MDNode *A, MDNode *B) {
   if (AVal->getZExtValue() < BVal->getZExtValue())
     return A;
   return B;
+}
+
+CaptureComponents MDNode::toCaptureComponents(const MDNode *MD) {
+  if (!MD)
+    return CaptureComponents::All;
+
+  CaptureComponents CC = CaptureComponents::None;
+  for (Metadata *Op : MD->operands()) {
+    CaptureComponents Component =
+        StringSwitch<CaptureComponents>(cast<MDString>(Op)->getString())
+            .Case("address", CaptureComponents::Address)
+            .Case("address_is_null", CaptureComponents::AddressIsNull)
+            .Case("provenance", CaptureComponents::Provenance)
+            .Case("read_provenance", CaptureComponents::ReadProvenance);
+    CC |= Component;
+  }
+  return CC;
+}
+
+MDNode *MDNode::fromCaptureComponents(LLVMContext &Ctx, CaptureComponents CC) {
+  assert(!capturesNothing(CC) && "Can't encode captures(none)");
+  if (capturesAll(CC))
+    return nullptr;
+
+  SmallVector<Metadata *> Components;
+  if (capturesAddressIsNullOnly(CC))
+    Components.push_back(MDString::get(Ctx, "address_is_null"));
+  else if (capturesAddress(CC))
+    Components.push_back(MDString::get(Ctx, "address"));
+  if (capturesReadProvenanceOnly(CC))
+    Components.push_back(MDString::get(Ctx, "read_provenance"));
+  else if (capturesFullProvenance(CC))
+    Components.push_back(MDString::get(Ctx, "provenance"));
+  return MDNode::get(Ctx, Components);
 }
 
 //===----------------------------------------------------------------------===//

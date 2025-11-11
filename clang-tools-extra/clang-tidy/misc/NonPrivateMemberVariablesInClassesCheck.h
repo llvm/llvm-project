@@ -23,7 +23,7 @@ namespace clang::tidy::misc {
 /// ignored and optionally all `public` member variables could be ignored.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/misc/non-private-member-variables-in-classes.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/misc/non-private-member-variables-in-classes.html
 class NonPrivateMemberVariablesInClassesCheck : public ClangTidyCheck {
 public:
   NonPrivateMemberVariablesInClassesCheck(StringRef Name,

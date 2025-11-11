@@ -74,7 +74,7 @@ TEST(ValueMapperTest, mapMDNodeDuplicatedCycle) {
 
   // Create a cycle that references G0.
   MDNode *N0; // !0 = !{!1}
-  MDNode *N1; // !1 = !{!0, i8* @G0}
+  MDNode *N1; // !1 = !{!0, ptr @G0}
   {
     auto T0 = MDTuple::getTemporary(Context, nullptr);
     Metadata *Ops1[] = {T0.get(), ConstantAsMetadata::get(G0.get())};
@@ -401,7 +401,8 @@ TEST(ValueMapperTest, mapValueLocalAsMetadataToConstant) {
 class TestTypeRemapper : public ValueMapTypeRemapper {
 public:
   TestTypeRemapper(Type *Ty) : DstTy(Ty) { }
-  Type *remapType(Type *srcTy) { return DstTy; }
+  Type *remapType(Type *srcTy) override { return DstTy; }
+
 private:
   Type *DstTy;
 };

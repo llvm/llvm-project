@@ -937,16 +937,6 @@ void MachineCopyPropagation::ForwardCopyPropagateBlock(MachineBasicBlock &MBB) {
     if (CopyOperands) {
       Register RegSrc = CopyOperands->Source->getReg();
       Register RegDef = CopyOperands->Destination->getReg();
-      // It's possible that the previous transformations have resulted in a
-      // no-op register move (i.e. one where source and destination registers
-      // are the same and are not referring to a reserved register). If so,
-      // delete it.
-      if (RegSrc == RegDef && !MRI->isReserved(RegSrc)) {
-        MI.eraseFromParent();
-        NumDeletes++;
-        Changed = true;
-        continue;
-      }
 
       if (!TRI->regsOverlap(RegDef, RegSrc)) {
         // Copy is now a candidate for deletion.
@@ -1257,7 +1247,7 @@ void MachineCopyPropagation::BackwardCopyPropagateBlock(
   Tracker.clear();
 }
 
-static void LLVM_ATTRIBUTE_UNUSED printSpillReloadChain(
+[[maybe_unused]] static void printSpillReloadChain(
     DenseMap<MachineInstr *, SmallVector<MachineInstr *>> &SpillChain,
     DenseMap<MachineInstr *, SmallVector<MachineInstr *>> &ReloadChain,
     MachineInstr *Leader) {

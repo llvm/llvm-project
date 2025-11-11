@@ -41,10 +41,6 @@
 using namespace mlir;
 using namespace mlir::tensor;
 
-using llvm::divideCeilSigned;
-using llvm::divideFloorSigned;
-using llvm::mod;
-
 /// Materialize a single constant operation from a given attribute value with
 /// the desired resultant type.
 Operation *TensorDialect::materializeConstant(OpBuilder &builder,
@@ -2310,6 +2306,7 @@ RankedTensorType ExtractSliceOp::inferResultType(
                                sourceTensorType.getEncoding());
 }
 
+// TODO: This uses neither offsets nor strides!
 RankedTensorType ExtractSliceOp::inferResultType(
     RankedTensorType sourceTensorType, ArrayRef<OpFoldResult> offsets,
     ArrayRef<OpFoldResult> sizes, ArrayRef<OpFoldResult> strides) {

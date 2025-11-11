@@ -417,6 +417,8 @@ static FailureOr<SmallVector<LoopLikeOpInterface>> generateLoopNestUsingForOp(
     rewriter.setInsertionPointToEnd(loop.getBody());
     innerDestinationTensors = loop.getRegionIterArgs();
   }
+  if (loops.empty())
+    return success();
 
   // Compute the `offsets` and `sizes` to use for tiling.
   SmallVector<OpFoldResult> offsets, sizes;
@@ -465,7 +467,7 @@ static FailureOr<SmallVector<LoopLikeOpInterface>> generateLoopNestUsingForOp(
 /// Compute the `OpFoldResult`s that represents the multi-dimensional
 /// `offset`s and `size`s of the tile of the iteration space that the
 /// innermost loop body of the generated tiled loops corresponds to
-/// when tiling using `forall` op. This is handle separately dut to
+/// when tiling using `forall` op. This is handle separately due to
 /// the special case handling needed for when the tiling is done by
 /// specifying number of threads.
 static std::tuple<SmallVector<OpFoldResult>, SmallVector<OpFoldResult>>
@@ -663,8 +665,8 @@ generateLoopNestUsingCustomOp(
     return failure();
   }
 
-  if (failed(generateLoopTerminatorFn(rewriter, loc, tiledResults,
-                                      resultOffsets, resultSizes,
+  if (failed(generateLoopTerminatorFn(rewriter, loc, loopHeaderInfo->loops,
+                                      tiledResults, resultOffsets, resultSizes,
                                       loopHeaderInfo->destinationTensors))) {
     return failure();
   }
@@ -2175,10 +2177,9 @@ cloneAsInsertSlices(RewriterBase &rewriter,
               auto clonedOp = cloneAsInsertSlice(rewriter, op);
               clonedSlices.push_back(clonedOp);
             })
-        .Default([&](Operation *op) {
-          // Assert here assuming this has already been checked.
-          assert(0 && "unexpected slice type while cloning as insert slice");
-        });
+        // Assert here assuming this has already been checked.
+        .DefaultUnreachable(
+            "unexpected slice type while cloning as insert slice");
   }
   return clonedSlices;
 }

@@ -17,8 +17,8 @@ void foo2() {
 // CIR: %[[TMP_A:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
 // CIR: %[[A_REAL:.*]] = cir.complex.real %[[TMP_A]] : !cir.complex<!cir.float> -> !cir.float
 // CIR: %[[A_IMAG:.*]] = cir.complex.imag %[[TMP_A]] : !cir.complex<!cir.float> -> !cir.float
-// CIR: %[[A_REAL_BOOL:.*]] = cir.cast(float_to_bool, %[[A_REAL]] : !cir.float), !cir.bool
-// CIR: %[[A_IMAG_BOOL:.*]] = cir.cast(float_to_bool, %[[A_IMAG]] : !cir.float), !cir.bool
+// CIR: %[[A_REAL_BOOL:.*]] = cir.cast float_to_bool %[[A_REAL]] : !cir.float -> !cir.bool
+// CIR: %[[A_IMAG_BOOL:.*]] = cir.cast float_to_bool %[[A_IMAG]] : !cir.float -> !cir.bool
 // CIR: %[[CONST_TRUE:.*]] = cir.const #true
 // CIR: %[[COND:.*]] = cir.select if %[[A_REAL_BOOL]] then %[[CONST_TRUE]] else %[[A_IMAG_BOOL]] : (!cir.bool, !cir.bool, !cir.bool) -> !cir.bool
 // CIR: %[[RESULT:.*]] = cir.ternary(%[[COND]], true {

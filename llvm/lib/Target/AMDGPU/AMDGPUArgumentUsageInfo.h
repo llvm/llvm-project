@@ -52,7 +52,7 @@ public:
   }
 
   static ArgDescriptor createArg(const ArgDescriptor &Arg, unsigned Mask) {
-    return ArgDescriptor(Arg.Reg, Mask, Arg.IsStack, Arg.IsSet);
+    return ArgDescriptor(Arg.Reg.id(), Mask, Arg.IsStack, Arg.IsSet);
   }
 
   bool isSet() const {
@@ -96,7 +96,7 @@ inline raw_ostream &operator<<(raw_ostream &OS, const ArgDescriptor &Arg) {
 }
 
 struct KernArgPreloadDescriptor : public ArgDescriptor {
-  KernArgPreloadDescriptor() {}
+  KernArgPreloadDescriptor() = default;
   SmallVector<MCRegister> Regs;
 };
 

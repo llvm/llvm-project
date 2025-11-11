@@ -20,7 +20,7 @@ void func(char const * const str, int i) {
 
 // CIR: cir.func{{.*}} @printf(!cir.ptr<!s8i>, ...) -> !s32i
 
-// CIR: cir.func{{.*}} @_Z4funcPKci(%[[arg0:.+]]: !cir.ptr<!s8i>{{.*}}, %[[arg1:.+]]: !s32i{{.*}}) {
+// CIR: cir.func{{.*}} @_Z4funcPKci(%[[arg0:.+]]: !cir.ptr<!s8i>{{.*}}, %[[arg1:.+]]: !s32i
 // CIR:   %[[str_ptr:.+]] = cir.alloca !cir.ptr<!s8i>, !cir.ptr<!cir.ptr<!s8i>>, ["str", init, const]
 // CIR:   %[[i_ptr:.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["i", init]
 // CIR:   cir.store %[[arg0]], %[[str_ptr]] : !cir.ptr<!s8i>, !cir.ptr<!cir.ptr<!s8i>>
@@ -28,11 +28,11 @@ void func(char const * const str, int i) {
 // CIR:   %[[null_ptr:.+]] = cir.const #cir.ptr<null> : !cir.ptr<!s8i>
 // CIR:   %[[printf_result1:.+]] = cir.call @printf(%[[null_ptr]]) nothrow : (!cir.ptr<!s8i>) -> !s32i
 // CIR:   %[[str_fmt_global:.+]] = cir.get_global @".str" : !cir.ptr<!cir.array<!s8i x 3>>
-// CIR:   %[[str_fmt_ptr:.+]] = cir.cast(array_to_ptrdecay, %[[str_fmt_global]] : !cir.ptr<!cir.array<!s8i x 3>>), !cir.ptr<!s8i>
+// CIR:   %[[str_fmt_ptr:.+]] = cir.cast array_to_ptrdecay %[[str_fmt_global]] : !cir.ptr<!cir.array<!s8i x 3>> -> !cir.ptr<!s8i>
 // CIR:   %[[str_val:.+]] = cir.load{{.*}} %[[str_ptr]] : !cir.ptr<!cir.ptr<!s8i>>, !cir.ptr<!s8i>
 // CIR:   %[[printf_result2:.+]] = cir.call @printf(%[[str_fmt_ptr]], %[[str_val]]) nothrow : (!cir.ptr<!s8i>, !cir.ptr<!s8i>) -> !s32i
 // CIR:   %[[full_fmt_global:.+]] = cir.get_global @".str.1" : !cir.ptr<!cir.array<!s8i x 7>>
-// CIR:   %[[full_fmt_ptr:.+]] = cir.cast(array_to_ptrdecay, %[[full_fmt_global]] : !cir.ptr<!cir.array<!s8i x 7>>), !cir.ptr<!s8i>
+// CIR:   %[[full_fmt_ptr:.+]] = cir.cast array_to_ptrdecay %[[full_fmt_global]] : !cir.ptr<!cir.array<!s8i x 7>> -> !cir.ptr<!s8i>
 // CIR:   %[[str_val2:.+]] = cir.load{{.*}} %[[str_ptr]] : !cir.ptr<!cir.ptr<!s8i>>, !cir.ptr<!s8i>
 // CIR:   %[[i_val:.+]] = cir.load{{.*}} %[[i_ptr]] : !cir.ptr<!s32i>, !s32i
 // CIR:   %[[printf_result3:.+]] = cir.call @printf(%[[full_fmt_ptr]], %[[str_val2]], %[[i_val]]) nothrow : (!cir.ptr<!s8i>, !cir.ptr<!s8i>, !s32i) -> !s32i

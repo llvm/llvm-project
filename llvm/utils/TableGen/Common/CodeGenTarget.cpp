@@ -23,7 +23,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
-#include <iterator>
 #include <tuple>
 using namespace llvm;
 
@@ -80,7 +79,7 @@ CodeGenTarget::CodeGenTarget(const RecordKeeper &records)
   MacroFusions = Records.getAllDerivedDefinitions("Fusion");
 }
 
-CodeGenTarget::~CodeGenTarget() {}
+CodeGenTarget::~CodeGenTarget() = default;
 
 StringRef CodeGenTarget::getName() const { return TargetRec->getName(); }
 
@@ -195,6 +194,38 @@ void CodeGenTarget::ReadLegalValueTypes() const {
   // Remove duplicates.
   llvm::sort(LegalValueTypes);
   LegalValueTypes.erase(llvm::unique(LegalValueTypes), LegalValueTypes.end());
+}
+
+const Record *CodeGenTarget::getInitValueAsRegClass(
+    const Init *V, bool AssumeRegClassByHwModeIsDefault) const {
+  const Record *RegClassLike = getInitValueAsRegClassLike(V);
+  if (!RegClassLike || RegClassLike->isSubClassOf("RegisterClass"))
+    return RegClassLike;
+
+  // FIXME: We should figure out the hwmode and dispatch. But this interface
+  // is broken, we should be returning a register class. The expected uses
+  // will use the same RegBanks in all modes.
+  if (AssumeRegClassByHwModeIsDefault &&
+      RegClassLike->isSubClassOf("RegClassByHwMode")) {
+    const HwModeSelect &ModeSelect = getHwModes().getHwModeSelect(RegClassLike);
+    if (ModeSelect.Items.empty())
+      return nullptr;
+    return ModeSelect.Items.front().second;
+  }
+
+  return nullptr;
+}
+
+const Record *CodeGenTarget::getInitValueAsRegClassLike(const Init *V) const {
+  const DefInit *VDefInit = dyn_cast<DefInit>(V);
+  if (!VDefInit)
+    return nullptr;
+
+  const Record *RegClass = VDefInit->getDef();
+  if (RegClass->isSubClassOf("RegisterOperand"))
+    return RegClass->getValueAsDef("RegClass");
+
+  return RegClass->isSubClassOf("RegisterClassLike") ? RegClass : nullptr;
 }
 
 CodeGenSchedModels &CodeGenTarget::getSchedModels() const {

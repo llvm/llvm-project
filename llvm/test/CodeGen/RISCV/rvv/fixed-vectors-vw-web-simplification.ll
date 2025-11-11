@@ -75,3 +75,26 @@ define <2 x i16> @vwmul_v2i16_multiple_users(ptr %x, ptr %y, ptr %z) {
   %i = or <2 x i16> %h, %g
   ret <2 x i16> %i
 }
+
+; Make sure we have a vsext.vl and a vwaddu.vx.
+define <4 x i32> @pr159152(<4 x i8> %x) {
+; NO_FOLDING-LABEL: pr159152:
+; NO_FOLDING:       # %bb.0:
+; NO_FOLDING-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; NO_FOLDING-NEXT:    vsext.vf2 v9, v8
+; NO_FOLDING-NEXT:    li a0, 9
+; NO_FOLDING-NEXT:    vwaddu.vx v8, v9, a0
+; NO_FOLDING-NEXT:    ret
+;
+; FOLDING-LABEL: pr159152:
+; FOLDING:       # %bb.0:
+; FOLDING-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; FOLDING-NEXT:    vsext.vf2 v9, v8
+; FOLDING-NEXT:    li a0, 9
+; FOLDING-NEXT:    vwaddu.vx v8, v9, a0
+; FOLDING-NEXT:    ret
+  %a = sext <4 x i8> %x to <4 x i16>
+  %b = zext <4 x i16> %a to <4 x i32>
+  %c = add <4 x i32> %b, <i32 9, i32 9, i32 9, i32 9>
+  ret <4 x i32> %c
+}

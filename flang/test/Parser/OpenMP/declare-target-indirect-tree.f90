@@ -1,5 +1,3 @@
-! REQUIRES: openmp_runtime
-
 ! RUN: %flang_fc1 %openmp_flags -fopenmp-version=52 -fdebug-dump-parse-tree %s | FileCheck %s
 ! RUN: %flang_fc1 %openmp_flags -fdebug-unparse -fopenmp-version=52 %s | FileCheck %s --check-prefix="UNPARSE"
 
@@ -15,11 +13,14 @@ module functions
 contains
   function func1() result(i)
     !$omp declare target enter(func1) indirect(.true.)
-    !CHECK: | | | | | OmpDeclareTargetSpecifier -> OmpDeclareTargetWithClause -> OmpClauseList -> OmpClause -> Enter -> OmpEnterClause
-    !CHECK-NEXT: | | | | | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'func1'
-    !CHECK-NEXT: | | | | | OmpClause -> Indirect -> OmpIndirectClause -> Scalar -> Logical -> Expr = '.true._4'
-    !CHECK-NEXT: | | | | | | LiteralConstant -> LogicalLiteralConstant
-    !CHECK-NEXT: | | | | | | | bool = 'true'
+    !CHECK:      OpenMPDeclarativeConstruct -> OpenMPDeclareTargetConstruct -> OmpDirectiveSpecification
+    !CHECK-NEXT: | OmpDirectiveName -> llvm::omp::Directive = declare target
+    !CHECK-NEXT: | OmpClauseList -> OmpClause -> Enter -> OmpEnterClause
+    !CHECK-NEXT: | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'func1'
+    !CHECK-NEXT: | OmpClause -> Indirect -> OmpIndirectClause -> Scalar -> Logical -> Expr = '.true._4'
+    !CHECK-NEXT: | | LiteralConstant -> LogicalLiteralConstant
+    !CHECK-NEXT: | | | bool = 'true'
+    !CHECK-NEXT: | Flags = None
     character(1) :: i
     i = 'a'
     return
@@ -27,9 +28,12 @@ contains
 
   function func2() result(i)
     !$omp declare target enter(func2) indirect
-    !CHECK: | | | | | OmpDeclareTargetSpecifier -> OmpDeclareTargetWithClause -> OmpClauseList -> OmpClause -> Enter -> OmpEnterClause
-    !CHECK-NEXT: | | | | | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'func2'
-    !CHECK-NEXT: | | | | | OmpClause -> Indirect -> OmpIndirectClause ->
+    !CHECK:      OpenMPDeclarativeConstruct -> OpenMPDeclareTargetConstruct -> OmpDirectiveSpecification
+    !CHECK-NEXT: | OmpDirectiveName -> llvm::omp::Directive = declare target
+    !CHECK-NEXT: | OmpClauseList -> OmpClause -> Enter -> OmpEnterClause
+    !CHECK-NEXT: | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'func2'
+    !CHECK-NEXT: | OmpClause -> Indirect -> OmpIndirectClause ->
+    !CHECK-NEXT: | Flags = None
     character(1) :: i
     i = 'b'
     return
@@ -51,5 +55,5 @@ program main
 
 end program
 
-!UNPARSE: !$OMP DECLARE TARGET  ENTER(func1) INDIRECT(.true._4)
-!UNPARSE: !$OMP DECLARE TARGET  ENTER(func2) INDIRECT()
+!UNPARSE: !$OMP DECLARE TARGET ENTER(func1) INDIRECT(.true._4)
+!UNPARSE: !$OMP DECLARE TARGET ENTER(func2) INDIRECT()
