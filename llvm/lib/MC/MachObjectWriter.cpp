@@ -628,7 +628,7 @@ void MachObjectWriter::computeSymbolTable(
       ExternalSymbolData.push_back(MSD);
     } else {
       MSD.SectionIndex = SectionIndexMap.lookup(&Symbol.getSection());
-      if(!MSD.SectionIndex)
+      if (!MSD.SectionIndex)
         getContext().reportError(SMLoc(), "Invalid section index!");
       ExternalSymbolData.push_back(MSD);
     }
@@ -653,7 +653,7 @@ void MachObjectWriter::computeSymbolTable(
       LocalSymbolData.push_back(MSD);
     } else {
       MSD.SectionIndex = SectionIndexMap.lookup(&Symbol.getSection());
-      if(!MSD.SectionIndex)
+      if (!MSD.SectionIndex)
         getContext().reportError(SMLoc(), "Invalid section index!");
       LocalSymbolData.push_back(MSD);
     }
