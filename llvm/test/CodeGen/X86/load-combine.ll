@@ -1316,8 +1316,15 @@ define i32 @pr80911_vector_load_multiuse(ptr %ptr, ptr %clobber) nounwind {
 }
 
 define i64 @test_load_bswap_to_rotate(ptr %p) {
+; CHECK-LABEL: test_load_bswap_to_rotate:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    movl (%eax), %edx
+; CHECK-NEXT:    movl 4(%eax), %eax
+; CHECK-NEXT:    retl
+;
 ; CHECK64-LABEL: test_load_bswap_to_rotate:
-; CHECK64:  # %bb.0:
+; CHECK64:       # %bb.0:
 ; CHECK64-NEXT:    movq (%rdi), %rax
 ; CHECK64-NEXT:    rorq $32, %rax
 ; CHECK64-NEXT:    retq
@@ -1333,10 +1340,18 @@ define i64 @test_load_bswap_to_rotate(ptr %p) {
 }
 
 define i64 @test_load_rotate_zext(ptr %p) {
+; CHECK-LABEL: test_load_rotate_zext:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    movl (%eax), %eax
+; CHECK-NEXT:    rorl $8, %eax
+; CHECK-NEXT:    xorl %edx, %edx
+; CHECK-NEXT:    retl
+;
 ; CHECK64-LABEL: test_load_rotate_zext:
-; CHECK64:  # %bb.0:
-; CHECK64-NEXT:    movl	(%rdi), %eax
-; CHECK64-NEXT:    rorl	$8, %eax
+; CHECK64:       # %bb.0:
+; CHECK64-NEXT:    movl (%rdi), %eax
+; CHECK64-NEXT:    rorl $8, %eax
 ; CHECK64-NEXT:    retq
   %p1 = getelementptr inbounds i8, ptr %p, i64 1
   %l1 = load i8, ptr %p1, align 1
