@@ -137,6 +137,9 @@ Error PointerAuthCFIAnalyzer::runOnFunctions(BinaryContext &BC) {
     return P.second.containedNegateRAState() && !P.second.isIgnored();
   });
 
+  if (Total == 0)
+    return Error::success();
+
   ParallelUtilities::runOnEachFunction(
       BC, ParallelUtilities::SchedulingPolicy::SP_INST_LINEAR, WorkFun,
       SkipPredicate, "PointerAuthCFIAnalyzer");
