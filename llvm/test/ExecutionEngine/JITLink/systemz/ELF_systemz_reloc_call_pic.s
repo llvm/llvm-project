@@ -58,6 +58,19 @@ test_call_extern_plt:
 
         .size   test_call_extern_plt, .-test_call_extern_plt
 
+# Check PLT stub relocation for lgrl(Delta32dbl). 
+#
+# jitlink-check: *{4}(stub_addr(elf_pic_reloc.o, extern_out_of_range32) + 2) = \
+# jitlink-check: (got_addr(elf_pic_reloc.o, extern_out_of_range32) - \
+# jitlink-check:   stub_addr(elf_pic_reloc.o, extern_out_of_range32)) >> 1
+        .globl  test_call_extern_plt_stub
+        .p2align       4
+        .type   test_call_extern_plt_stub,@function
+test_call_extern_plt_stub:
+        brasl   %r14, extern_out_of_range32@plt
+
+        .size   test_call_extern_plt_stub, .-test_call_extern_plt_stub
+
 # Check R_390_PLT32(DeltaPLT32dbl) handling with a call to an external. 
 # This produces a Delta32dbl edge, because externals are not defined 
 # locally. During resolution, the target turns out to be in-range from the 
