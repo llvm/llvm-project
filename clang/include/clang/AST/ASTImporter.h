@@ -190,7 +190,7 @@ class TypeSourceInfo;
       llvm::SmallDenseMap<Decl *, int, 32> Aux;
     };
 
-    class FunctionReturnTypeDeclCycleDetector;
+    class FunctionDeclImportCycleDetector;
 
   private:
     std::shared_ptr<ASTImporterSharedState> SharedState = nullptr;
@@ -261,8 +261,8 @@ class TypeSourceInfo;
     /// can come for example from auto return type or when template parameters
     /// are used in the return type or parameters. This member is used to detect
     /// cyclic import of FunctionDecl objects to avoid infinite recursion.
-    std::unique_ptr<FunctionReturnTypeDeclCycleDetector>
-        FunctionReturnTypeCycleDetector;
+    std::unique_ptr<FunctionDeclImportCycleDetector>
+        FindFunctionDeclImportCycle;
 
     using FoundDeclsTy = SmallVector<NamedDecl *, 2>;
     FoundDeclsTy findDeclsInToCtx(DeclContext *DC, DeclarationName Name);
