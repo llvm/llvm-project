@@ -2657,8 +2657,7 @@ MachineVerifier::visitMachineOperand(const MachineOperand *MO, unsigned MONum) {
         return;
       }
       if (MONum < MCID.getNumOperands()) {
-        if (const TargetRegisterClass *DRC =
-                TII->getRegClass(MCID, MONum, TRI)) {
+        if (const TargetRegisterClass *DRC = TII->getRegClass(MCID, MONum)) {
           if (!DRC->contains(Reg)) {
             report("Illegal physical register for instruction", MO, MONum);
             OS << printReg(Reg, TRI) << " is not a "
@@ -2742,12 +2741,11 @@ MachineVerifier::visitMachineOperand(const MachineOperand *MO, unsigned MONum) {
         // has register class constraint, the virtual register must
         // comply to it.
         if (!isPreISelGenericOpcode(MCID.getOpcode()) &&
-            MONum < MCID.getNumOperands() &&
-            TII->getRegClass(MCID, MONum, TRI)) {
+            MONum < MCID.getNumOperands() && TII->getRegClass(MCID, MONum)) {
           report("Virtual register does not match instruction constraint", MO,
                  MONum);
           OS << "Expect register class "
-             << TRI->getRegClassName(TII->getRegClass(MCID, MONum, TRI))
+             << TRI->getRegClassName(TII->getRegClass(MCID, MONum))
              << " but got nothing\n";
           return;
         }
@@ -2773,8 +2771,7 @@ MachineVerifier::visitMachineOperand(const MachineOperand *MO, unsigned MONum) {
         }
       }
       if (MONum < MCID.getNumOperands()) {
-        if (const TargetRegisterClass *DRC =
-                TII->getRegClass(MCID, MONum, TRI)) {
+        if (const TargetRegisterClass *DRC = TII->getRegClass(MCID, MONum)) {
           if (SubIdx) {
             const TargetRegisterClass *SuperRC =
                 TRI->getLargestLegalSuperClass(RC, *MF);

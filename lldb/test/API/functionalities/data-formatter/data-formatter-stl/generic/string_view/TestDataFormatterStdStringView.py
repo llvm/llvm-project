@@ -11,6 +11,8 @@ from lldbsuite.test import lldbutil
 
 
 class StdStringViewDataFormatterTestCase(TestBase):
+    TEST_WITH_PDB_DEBUG_INFO = True
+
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
@@ -19,6 +21,12 @@ class StdStringViewDataFormatterTestCase(TestBase):
         self.line2 = line_number(
             "main.cpp", "// Break here to look at bad string view."
         )
+
+    def _makeStringName(self, typedef: str, char_type: str):
+        if self.getDebugInfo() == "pdb":
+            return f"std::basic_string_view<{char_type}, std::char_traits<{char_type}>>"
+
+        return typedef
 
     def do_test(self):
         """Test that that file and class static variables display correctly."""
@@ -51,39 +59,47 @@ class StdStringViewDataFormatterTestCase(TestBase):
         # Execute the cleanup function during test case tear down.
         self.addTearDownHook(cleanup)
 
-        self.expect_var_path("wempty", type="std::wstring_view", summary='L""')
-        self.expect_var_path(
-            "s", type="std::wstring_view", summary='L"hello world! מזל טוב!"'
+        string_view_name = self._makeStringName("std::string_view", "char")
+        wstring_view_name = self._makeStringName("std::wstring_view", "wchar_t")
+        u16string_view_name = self._makeStringName("std::u16string_view", "char16_t")
+        u32string_view_name = self._makeStringName("std::u32string_view", "char32_t")
+        string_name = (
+            "std::basic_string<char, std::char_traits<char>, std::allocator<char>>"
+            if self.getDebugInfo() == "pdb"
+            else "std::string"
         )
-        self.expect_var_path("S", type="std::wstring_view", summary='L"!!!!"')
-        self.expect_var_path("empty", type="std::string_view", summary='""')
-        self.expect_var_path("q_source", type="std::string", summary='"hello world"')
-        self.expect_var_path("q", type="std::string_view", summary='"hello world"')
+
+        self.expect_var_path("wempty", type=wstring_view_name, summary='L""')
+        self.expect_var_path(
+            "s", type=wstring_view_name, summary='L"hello world! מזל טוב!"'
+        )
+        self.expect_var_path("S", type=wstring_view_name, summary='L"!!!!"')
+        self.expect_var_path("empty", type=string_view_name, summary='""')
+        self.expect_var_path("q_source", type=string_name, summary='"hello world"')
+        self.expect_var_path("q", type=string_view_name, summary='"hello world"')
         self.expect_var_path(
             "Q",
-            type="std::string_view",
+            type=string_view_name,
             summary='"quite a long std::strin with lots of info inside it"',
         )
         self.expect_var_path(
-            "IHaveEmbeddedZeros", type="std::string_view", summary='"a\\0b\\0c\\0d"'
+            "IHaveEmbeddedZeros", type=string_view_name, summary='"a\\0b\\0c\\0d"'
         )
         self.expect_var_path(
             "IHaveEmbeddedZerosToo",
-            type="std::wstring_view",
+            type=wstring_view_name,
             summary='L"hello world!\\0てざ ル゜䋨ミ㠧槊 きゅへ狦穤襩 じゃ馩リョ 䤦監"',
         )
-        self.expect_var_path("u16_string", type="std::u16string_view", summary='u"ß水氶"')
-        self.expect_var_path("u16_empty", type="std::u16string_view", summary='u""')
-        self.expect_var_path(
-            "u32_string", type="std::u32string_view", summary='U"🍄🍅🍆🍌"'
-        )
-        self.expect_var_path("u32_empty", type="std::u32string_view", summary='U""')
+        self.expect_var_path("u16_string", type=u16string_view_name, summary='u"ß水氶"')
+        self.expect_var_path("u16_empty", type=u16string_view_name, summary='u""')
+        self.expect_var_path("u32_string", type=u32string_view_name, summary='U"🍄🍅🍆🍌"')
+        self.expect_var_path("u32_empty", type=u32string_view_name, summary='U""')
 
         # GetSummary returns None so can't be checked by expect_var_path, so we
         # use the str representation instead
         null_obj = self.frame().GetValueForVariablePath("null_str")
         self.assertEqual(null_obj.GetSummary(), "Summary Unavailable")
-        self.assertEqual(str(null_obj), "(std::string_view *) null_str = nullptr")
+        self.assertEqual(str(null_obj), f"({string_view_name} *) null_str = nullptr")
 
         self.runCmd("n")
 
@@ -108,37 +124,35 @@ class StdStringViewDataFormatterTestCase(TestBase):
 
         self.expect_expr(
             "s",
-            result_type="std::wstring_view",
+            result_type=wstring_view_name,
             result_summary='L"hello world! מזל טוב!"',
         )
 
-        self.expect_var_path("wempty", type="std::wstring_view", summary='L""')
+        self.expect_var_path("wempty", type=wstring_view_name, summary='L""')
         self.expect_var_path(
-            "s", type="std::wstring_view", summary='L"hello world! מזל טוב!"'
+            "s", type=wstring_view_name, summary='L"hello world! מזל טוב!"'
         )
-        self.expect_var_path("S", type="std::wstring_view", summary='L"!!!!"')
-        self.expect_var_path("empty", type="std::string_view", summary='""')
-        self.expect_var_path("q_source", type="std::string", summary='"Hello world"')
-        self.expect_var_path("q", type="std::string_view", summary='"Hello world"')
+        self.expect_var_path("S", type=wstring_view_name, summary='L"!!!!"')
+        self.expect_var_path("empty", type=string_view_name, summary='""')
+        self.expect_var_path("q_source", type=string_name, summary='"Hello world"')
+        self.expect_var_path("q", type=string_view_name, summary='"Hello world"')
         self.expect_var_path(
             "Q",
-            type="std::string_view",
+            type=string_view_name,
             summary='"quite a long std::strin with lots of info inside it"',
         )
         self.expect_var_path(
-            "IHaveEmbeddedZeros", type="std::string_view", summary='"a\\0b\\0c\\0d"'
+            "IHaveEmbeddedZeros", type=string_view_name, summary='"a\\0b\\0c\\0d"'
         )
         self.expect_var_path(
             "IHaveEmbeddedZerosToo",
-            type="std::wstring_view",
+            type=wstring_view_name,
             summary='L"hello world!\\0てざ ル゜䋨ミ㠧槊 きゅへ狦穤襩 じゃ馩リョ 䤦監"',
         )
-        self.expect_var_path("u16_string", type="std::u16string_view", summary='u"ß水氶"')
-        self.expect_var_path("u16_empty", type="std::u16string_view", summary='u""')
-        self.expect_var_path(
-            "u32_string", type="std::u32string_view", summary='U"🍄🍅🍆🍌"'
-        )
-        self.expect_var_path("u32_empty", type="std::u32string_view", summary='U""')
+        self.expect_var_path("u16_string", type=u16string_view_name, summary='u"ß水氶"')
+        self.expect_var_path("u16_empty", type=u16string_view_name, summary='u""')
+        self.expect_var_path("u32_string", type=u32string_view_name, summary='U"🍄🍅🍆🍌"')
+        self.expect_var_path("u32_empty", type=u32string_view_name, summary='U""')
 
         self.runCmd("cont")
         self.expect(

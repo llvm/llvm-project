@@ -150,7 +150,7 @@ passed to the plugin can.
             -fplugin-arg-call_super_plugin-help \
             test.cpp
 
-If your plugin name contains dashes, either rename the plugin or used the
+If your plugin name contains dashes, either rename the plugin or use the
 cc1 command line options listed below.
 
 

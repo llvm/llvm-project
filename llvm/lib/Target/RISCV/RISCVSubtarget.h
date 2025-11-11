@@ -112,7 +112,6 @@ private:
 
   RISCVFrameLowering FrameLowering;
   RISCVInstrInfo InstrInfo;
-  RISCVRegisterInfo RegInfo;
   RISCVTargetLowering TLInfo;
 
   /// Initializes using the passed in CPU and feature strings so that we can
@@ -140,13 +139,14 @@ public:
   }
   const RISCVInstrInfo *getInstrInfo() const override { return &InstrInfo; }
   const RISCVRegisterInfo *getRegisterInfo() const override {
-    return &RegInfo;
+    return &InstrInfo.getRegisterInfo();
   }
   const RISCVTargetLowering *getTargetLowering() const override {
     return &TLInfo;
   }
 
   bool enableMachineScheduler() const override { return true; }
+  bool enableTerminalRule() const override { return true; }
 
   bool enablePostRAScheduler() const override { return UsePostRAScheduler; }
 
@@ -321,6 +321,8 @@ public:
       llvm_unreachable("Unexpected NF");
     }
   }
+
+  bool enablePExtCodeGen() const;
 
   // Returns VLEN divided by DLEN. Where DLEN is the datapath width of the
   // vector hardware implementation which may be less than VLEN.

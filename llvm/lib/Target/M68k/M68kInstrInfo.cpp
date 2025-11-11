@@ -43,7 +43,7 @@ using namespace llvm;
 void M68kInstrInfo::anchor() {}
 
 M68kInstrInfo::M68kInstrInfo(const M68kSubtarget &STI)
-    : M68kGenInstrInfo(STI, M68k::ADJCALLSTACKDOWN, M68k::ADJCALLSTACKUP, 0,
+    : M68kGenInstrInfo(STI, RI, M68k::ADJCALLSTACKDOWN, M68k::ADJCALLSTACKUP, 0,
                        M68k::RET),
       Subtarget(STI), RI(STI) {}
 
@@ -838,15 +838,14 @@ bool M68kInstrInfo::getStackSlotRange(const TargetRegisterClass *RC,
 
 void M68kInstrInfo::storeRegToStackSlot(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register SrcReg,
-    bool IsKill, int FrameIndex, const TargetRegisterClass *RC,
-    const TargetRegisterInfo *TRI, Register VReg,
+    bool IsKill, int FrameIndex, const TargetRegisterClass *RC, Register VReg,
     MachineInstr::MIFlag Flags) const {
   const MachineFrameInfo &MFI = MBB.getParent()->getFrameInfo();
-  assert(MFI.getObjectSize(FrameIndex) >= TRI->getSpillSize(*RC) &&
+  assert(MFI.getObjectSize(FrameIndex) >= TRI.getSpillSize(*RC) &&
          "Stack slot is too small to store");
   (void)MFI;
 
-  unsigned Opc = getStoreRegOpcode(SrcReg, RC, TRI, Subtarget);
+  unsigned Opc = getStoreRegOpcode(SrcReg, RC, &TRI, Subtarget);
   DebugLoc DL = MBB.findDebugLoc(MI);
   // (0,FrameIndex) <- $reg
   M68k::addFrameReference(BuildMI(MBB, MI, DL, get(Opc)), FrameIndex)
@@ -857,15 +856,14 @@ void M68kInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
                                          MachineBasicBlock::iterator MI,
                                          Register DstReg, int FrameIndex,
                                          const TargetRegisterClass *RC,
-                                         const TargetRegisterInfo *TRI,
                                          Register VReg,
                                          MachineInstr::MIFlag Flags) const {
   const MachineFrameInfo &MFI = MBB.getParent()->getFrameInfo();
-  assert(MFI.getObjectSize(FrameIndex) >= TRI->getSpillSize(*RC) &&
+  assert(MFI.getObjectSize(FrameIndex) >= TRI.getSpillSize(*RC) &&
          "Stack slot is too small to load");
   (void)MFI;
 
-  unsigned Opc = getLoadRegOpcode(DstReg, RC, TRI, Subtarget);
+  unsigned Opc = getLoadRegOpcode(DstReg, RC, &TRI, Subtarget);
   DebugLoc DL = MBB.findDebugLoc(MI);
   M68k::addFrameReference(BuildMI(MBB, MI, DL, get(Opc), DstReg), FrameIndex);
 }

@@ -10,14 +10,14 @@ on:
     paths:
       - .github/workflows/build-ci-container.yml
       - '.github/workflows/containers/github-action-ci/**'
-      - '.github/workflows/build-container/**'
-      - '.github/workflows/push-container/**'
+      - '.github/actions/build-container/**'
+      - '.github/actions/push-container/**'
   pull_request:
     paths:
       - .github/workflows/build-ci-container.yml
       - '.github/workflows/containers/github-action-ci/**'
-      - '.github/workflows/build-container/**'
-      - '.github/workflows/push-container/**'
+      - '.github/actions/build-container/**'
+      - '.github/actions/push-container/**'
 
 jobs:
   build-ci-container:
@@ -40,10 +40,10 @@ jobs:
         with:
           sparse-checkout: |
             .github/workflows/containers/github-action-ci/
-            .github/workflows/build-container
+            .github/actions/build-container
 
       - name: Build Container
-        uses: ./.github/workflows/build-container
+        uses: ./.github/actions/build-container
         with:
           container-name: ci-ubuntu-24.04${{ matrix.container-name && format('-{0}', matrix.container-name)}}
           context: .github/workflows/containers/github-action-ci/
@@ -65,8 +65,8 @@ jobs:
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           sparse-checkout: |
-            .github/workflows/push-container
+            .github/actions/push-container
 
-      - uses: ./.github/workflows/push-container
+      - uses: ./.github/actions/push-container
         with:
           token: ${{ secrets.GITHUB_TOKEN }}

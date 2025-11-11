@@ -66,7 +66,7 @@ in a fast, command line interface. It can also accept flags to re-display the
 diagnostics in different formats with different flags, suitable for use driving
 an IDE or editor. Furthermore, it can be used in fixit-mode to directly apply
 fixit-hints offered by clang. See :doc:`HowToSetupToolingForLLVM` for
-instructions on how to setup and used `clang-check`.
+instructions on how to setup and use `clang-check`.
 
 ``clang-format``
 ----------------

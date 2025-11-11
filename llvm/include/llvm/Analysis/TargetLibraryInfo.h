@@ -23,6 +23,7 @@
 namespace llvm {
 
 template <typename T> class ArrayRef;
+enum class VectorLibrary;
 
 /// Provides info so a possible vectorization of a function can be
 /// computed. Function 'VectorFnName' is equivalent to 'ScalarFnName'
@@ -117,25 +118,6 @@ class TargetLibraryInfoImpl {
                                        const Module &M) const;
 
 public:
-  /// List of known vector-functions libraries.
-  ///
-  /// The vector-functions library defines, which functions are vectorizable
-  /// and with which factor. The library can be specified by either frontend,
-  /// or a commandline option, and then used by
-  /// addVectorizableFunctionsFromVecLib for filling up the tables of
-  /// vectorizable functions.
-  enum VectorLibrary {
-    NoLibrary,        // Don't use any vector library.
-    Accelerate,       // Use Accelerate framework.
-    DarwinLibSystemM, // Use Darwin's libsystem_m.
-    LIBMVEC,          // GLIBC Vector Math library.
-    MASSV,            // IBM MASS vector library.
-    SVML,             // Intel short vector math library.
-    SLEEFGNUABI, // SLEEF - SIMD Library for Evaluating Elementary Functions.
-    ArmPL,       // Arm Performance Libraries.
-    AMDLIBM      // AMD Math Vector library.
-  };
-
   TargetLibraryInfoImpl() = delete;
   LLVM_ABI explicit TargetLibraryInfoImpl(const Triple &T);
 

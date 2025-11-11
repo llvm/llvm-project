@@ -407,9 +407,10 @@ static void dumpExampleDependence(raw_ostream &OS, DependenceInfo *DA,
         continue;
       Value *Ptr = getLoadStorePointerOperand(&Inst);
       const Loop *L = LI.getLoopFor(Inst.getParent());
+      const Loop *OutermostLoop = L ? L->getOutermostLoop() : nullptr;
       const SCEV *PtrSCEV = SE.getSCEVAtScope(Ptr, L);
       const SCEV *AccessFn = SE.removePointerBase(PtrSCEV);
-      SCEVMonotonicity Mon = Checker.checkMonotonicity(AccessFn, L);
+      SCEVMonotonicity Mon = Checker.checkMonotonicity(AccessFn, OutermostLoop);
       OS.indent(2) << "Inst: " << Inst << "\n";
       OS.indent(4) << "Expr: " << *AccessFn << "\n";
       Mon.print(OS, 4);
@@ -945,6 +946,8 @@ SCEVMonotonicity SCEVMonotonicityChecker::invariantOrUnknown(const SCEV *Expr) {
 SCEVMonotonicity
 SCEVMonotonicityChecker::checkMonotonicity(const SCEV *Expr,
                                            const Loop *OutermostLoop) {
+  assert((!OutermostLoop || OutermostLoop->isOutermost()) &&
+         "OutermostLoop must be outermost");
   assert(Expr->getType()->isIntegerTy() && "Expr must be integer type");
   this->OutermostLoop = OutermostLoop;
   return visit(Expr);

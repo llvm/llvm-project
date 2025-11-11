@@ -11,6 +11,9 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_BRACESAROUNDSTATEMENT_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_BRACESAROUNDSTATEMENT_H
+
 #include "clang/AST/Stmt.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/SourceLocation.h"
@@ -36,7 +39,7 @@ struct BraceInsertionHints {
   /// Constructor for a hint offering fix-its for brace insertion. Both
   /// positions must be valid.
   BraceInsertionHints(SourceLocation OpeningBracePos,
-                      SourceLocation ClosingBracePos, std::string ClosingBrace)
+                      SourceLocation ClosingBracePos, StringRef ClosingBrace)
       : DiagnosticPos(OpeningBracePos), OpeningBracePos(OpeningBracePos),
         ClosingBracePos(ClosingBracePos), ClosingBrace(ClosingBrace) {
     assert(offersFixIts());
@@ -61,7 +64,7 @@ struct BraceInsertionHints {
 private:
   SourceLocation OpeningBracePos;
   SourceLocation ClosingBracePos;
-  std::string ClosingBrace;
+  StringRef ClosingBrace;
 };
 
 /// Create fix-it hints for braces that wrap the given statement when applied.
@@ -73,3 +76,5 @@ getBraceInsertionsHints(const Stmt *S, const LangOptions &LangOpts,
                         SourceLocation EndLocHint = SourceLocation());
 
 } // namespace clang::tidy::utils
+
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_BRACESAROUNDSTATEMENT_H

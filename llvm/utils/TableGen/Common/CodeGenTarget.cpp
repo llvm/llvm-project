@@ -23,7 +23,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
-#include <iterator>
 #include <tuple>
 using namespace llvm;
 

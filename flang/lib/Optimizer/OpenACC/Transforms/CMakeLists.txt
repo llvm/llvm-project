@@ -6,6 +6,7 @@ add_flang_library(FIROpenACCTransforms
   FIROpenACCPassesIncGen
 
   LINK_LIBS
+  FIRAnalysis
   FIRDialect
   FIROpenACCAnalysis
   HLFIRDialect

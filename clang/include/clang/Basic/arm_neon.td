@@ -1466,26 +1466,51 @@ def SCALAR_UCVTFD : SInst<"vcvt_f64", "(1F)(1!)", "SUl">;
 ////////////////////////////////////////////////////////////////////////////////
 // Scalar Floating-point Converts
 def SCALAR_FCVTXN  : IInst<"vcvtx_f32", "(1F<)(1!)", "Sd">;
-def SCALAR_FCVTNSS : SInst<"vcvtn_s32", "(1S)1", "Sf">;
-def SCALAR_FCVTNUS : SInst<"vcvtn_u32", "(1U)1", "Sf">;
-def SCALAR_FCVTNSD : SInst<"vcvtn_s64", "(1S)1", "Sd">;
-def SCALAR_FCVTNUD : SInst<"vcvtn_u64", "(1U)1", "Sd">;
-def SCALAR_FCVTMSS : SInst<"vcvtm_s32", "(1S)1", "Sf">;
-def SCALAR_FCVTMUS : SInst<"vcvtm_u32", "(1U)1", "Sf">;
-def SCALAR_FCVTMSD : SInst<"vcvtm_s64", "(1S)1", "Sd">;
-def SCALAR_FCVTMUD : SInst<"vcvtm_u64", "(1U)1", "Sd">;
-def SCALAR_FCVTASS : SInst<"vcvta_s32", "(1S)1", "Sf">;
-def SCALAR_FCVTAUS : SInst<"vcvta_u32", "(1U)1", "Sf">;
-def SCALAR_FCVTASD : SInst<"vcvta_s64", "(1S)1", "Sd">;
-def SCALAR_FCVTAUD : SInst<"vcvta_u64", "(1U)1", "Sd">;
-def SCALAR_FCVTPSS : SInst<"vcvtp_s32", "(1S)1", "Sf">;
-def SCALAR_FCVTPUS : SInst<"vcvtp_u32", "(1U)1", "Sf">;
-def SCALAR_FCVTPSD : SInst<"vcvtp_s64", "(1S)1", "Sd">;
-def SCALAR_FCVTPUD : SInst<"vcvtp_u64", "(1U)1", "Sd">;
-def SCALAR_FCVTZSS : SInst<"vcvt_s32", "(1S)1", "Sf">;
-def SCALAR_FCVTZUS : SInst<"vcvt_u32", "(1U)1", "Sf">;
-def SCALAR_FCVTZSD : SInst<"vcvt_s64", "(1S)1", "Sd">;
-def SCALAR_FCVTZUD : SInst<"vcvt_u64", "(1U)1", "Sd">;
+
+def SCALAR_FCVTN_F32toSS  : SInst<"vcvtn_s32", "(1S)1", "Sf">;
+def SCALAR_FCVTN_F32toUS  : SInst<"vcvtn_u32", "(1U)1", "Sf">;
+def SCALAR_FCVTN_F64toSS  : SInst<"vcvtn_s32", "(1S<)1", "Sd">;
+def SCALAR_FCVTN_F64toUS  : SInst<"vcvtn_u32", "(1U<)1", "Sd">;
+def SCALAR_FCVTN_F32toSD  : SInst<"vcvtn_s64", "(1S>)1", "Sf">;
+def SCALAR_FCVTN_F32toUD  : SInst<"vcvtn_u64", "(1U>)1", "Sf">;
+def SCALAR_FCVTN_F64toSD  : SInst<"vcvtn_s64", "(1S)1", "Sd">;
+def SCALAR_FCVTN_F64toUD  : SInst<"vcvtn_u64", "(1U)1", "Sd">;
+
+def SCALAR_FCVTM_F32toSS  : SInst<"vcvtm_s32", "(1S)1", "Sf">;
+def SCALAR_FCVTM_F32toUS  : SInst<"vcvtm_u32", "(1U)1", "Sf">;
+def SCALAR_FCVTM_F64toSS  : SInst<"vcvtm_s32", "(1S<)1", "Sd">;
+def SCALAR_FCVTM_F64toUS  : SInst<"vcvtm_u32", "(1U<)1", "Sd">;
+def SCALAR_FCVTM_F32toSD  : SInst<"vcvtm_s64", "(1S>)1", "Sf">;
+def SCALAR_FCVTM_F32toUD  : SInst<"vcvtm_u64", "(1U>)1", "Sf">;
+def SCALAR_FCVTM_F64toSD  : SInst<"vcvtm_s64", "(1S)1", "Sd">;
+def SCALAR_FCVTM_F64toUD  : SInst<"vcvtm_u64", "(1U)1", "Sd">;
+
+def SCALAR_FCVTA_F32toSS  : SInst<"vcvta_s32", "(1S)1", "Sf">;
+def SCALAR_FCVTA_F32toUS  : SInst<"vcvta_u32", "(1U)1", "Sf">;
+def SCALAR_FCVTA_F64toSS  : SInst<"vcvta_s32", "(1S<)1", "Sd">;
+def SCALAR_FCVTA_F64toUS  : SInst<"vcvta_u32", "(1U<)1", "Sd">;
+def SCALAR_FCVTA_F32toSD  : SInst<"vcvta_s64", "(1S>)1", "Sf">;
+def SCALAR_FCVTA_F32toUD  : SInst<"vcvta_u64", "(1U>)1", "Sf">;
+def SCALAR_FCVTA_F64toSD  : SInst<"vcvta_s64", "(1S)1", "Sd">;
+def SCALAR_FCVTA_F64toUD  : SInst<"vcvta_u64", "(1U)1", "Sd">;
+
+def SCALAR_FCVTP_F32toSS  : SInst<"vcvtp_s32", "(1S)1", "Sf">;
+def SCALAR_FCVTP_F32toUS  : SInst<"vcvtp_u32", "(1U)1", "Sf">;
+def SCALAR_FCVTP_F64toSS  : SInst<"vcvtp_s32", "(1S<)1", "Sd">;
+def SCALAR_FCVTP_F64toUS  : SInst<"vcvtp_u32", "(1U<)1", "Sd">;
+def SCALAR_FCVTP_F32toSD  : SInst<"vcvtp_s64", "(1S>)1", "Sf">;
+def SCALAR_FCVTP_F32toUD  : SInst<"vcvtp_u64", "(1U>)1", "Sf">;
+def SCALAR_FCVTP_F64toSD  : SInst<"vcvtp_s64", "(1S)1", "Sd">;
+def SCALAR_FCVTP_F64toUD  : SInst<"vcvtp_u64", "(1U)1", "Sd">;
+
+def SCALAR_FCVTZ_F32toSS  : SInst<"vcvt_s32", "(1S)1", "Sf">;
+def SCALAR_FCVTZ_F32toUS  : SInst<"vcvt_u32", "(1U)1", "Sf">;
+def SCALAR_FCVTZ_F64toSS  : SInst<"vcvt_s32", "(1S<)1", "Sd">;
+def SCALAR_FCVTZ_F64toUS  : SInst<"vcvt_u32", "(1U<)1", "Sd">;
+def SCALAR_FCVTZ_F32toSD  : SInst<"vcvt_s64", "(1S>)1", "Sf">;
+def SCALAR_FCVTZ_F32toUD  : SInst<"vcvt_u64", "(1U>)1", "Sf">;
+def SCALAR_FCVTZ_F64toSD  : SInst<"vcvt_s64", "(1S)1", "Sd">;
+def SCALAR_FCVTZ_F64toUD  : SInst<"vcvt_u64", "(1U)1", "Sd">;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Scalar Floating-point Reciprocal Estimate
@@ -1894,6 +1919,14 @@ let ArchGuard = "defined(__aarch64__) || defined(__arm64ec__)", TargetGuard = "f
   def VFMLSL_LANEQ_LOW  : SOpInst<"vfmlsl_laneq_low",  "(F>)(F>)F(FQ)I", "hQh", OP_FMLSL_LN>;
   def VFMLAL_LANEQ_HIGH : SOpInst<"vfmlal_laneq_high", "(F>)(F>)F(FQ)I", "hQh", OP_FMLAL_LN_Hi>;
   def VFMLSL_LANEQ_HIGH : SOpInst<"vfmlsl_laneq_high", "(F>)(F>)F(FQ)I", "hQh", OP_FMLSL_LN_Hi>;
+}
+
+let ArchGuard = "defined(__aarch64__)", TargetGuard = "f8f16mm,neon" in {
+  def VMMLA_F16_MF8 : VInst<"vmmla_f16_mf8_fpm", "(>F)(>F)..V", "Qm">;
+}
+
+let ArchGuard = "defined(__aarch64__)", TargetGuard = "f8f32mm,neon" in {
+  def VMMLA_F32_MF8 : VInst<"vmmla_f32_mf8_fpm", "(>>F)(>>F)..V", "Qm">;
 }
 
 let TargetGuard = "i8mm,neon" in {

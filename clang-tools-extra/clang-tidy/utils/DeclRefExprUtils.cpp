@@ -63,7 +63,7 @@ static bool hasSameParameterTypes(const CXXMethodDecl &D,
 static const CXXMethodDecl *findConstOverload(const CXXMethodDecl &D) {
   assert(!D.isConst());
 
-  DeclContext::lookup_result LookupResult =
+  const DeclContext::lookup_result LookupResult =
       D.getParent()->lookup(D.getNameInfo().getName());
   if (LookupResult.isSingleResult()) {
     // No overload.

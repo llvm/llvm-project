@@ -33,7 +33,6 @@
 #include <cassert>
 #include <cstdint>
 #include <string>
-#include <utility>
 #include <vector>
 
 using namespace llvm;

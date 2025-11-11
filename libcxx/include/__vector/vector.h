@@ -54,7 +54,6 @@
 #include <__type_traits/is_nothrow_assignable.h>
 #include <__type_traits/is_nothrow_constructible.h>
 #include <__type_traits/is_pointer.h>
-#include <__type_traits/is_replaceable.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/is_trivially_relocatable.h>
 #include <__type_traits/type_identity.h>
@@ -123,10 +122,6 @@ public:
       __libcpp_is_trivially_relocatable<pointer>::value && __libcpp_is_trivially_relocatable<allocator_type>::value,
       vector,
       void>;
-  using __replaceable _LIBCPP_NODEBUG =
-      __conditional_t<__is_replaceable_v<pointer> && __container_allocator_is_replaceable<__alloc_traits>::value,
-                      vector,
-                      void>;
 
   static_assert(__check_valid_allocator<allocator_type>::value, "");
   static_assert(is_same<typename allocator_type::value_type, value_type>::value,
@@ -664,9 +659,6 @@ private:
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
   __construct_at_end(_InputIterator __first, _Sentinel __last, size_type __n);
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __append(size_type __n);
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __append(size_type __n, const_reference __x);
-
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI iterator __make_iter(pointer __p) _NOEXCEPT {
 #ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_VECTOR
     // Bound the iterator according to the capacity, rather than the size.
@@ -969,36 +961,6 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void
 vector<_Tp, _Allocator>::__construct_at_end(_InputIterator __first, _Sentinel __last, size_type __n) {
   _ConstructTransaction __tx(*this, __n);
   __tx.__pos_ = std::__uninitialized_allocator_copy(this->__alloc_, std::move(__first), std::move(__last), __tx.__pos_);
-}
-
-//  Default constructs __n objects starting at __end_
-//  throws if construction throws
-//  Postcondition:  size() == size() + __n
-//  Exception safety: strong.
-template <class _Tp, class _Allocator>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<_Tp, _Allocator>::__append(size_type __n) {
-  if (static_cast<size_type>(this->__cap_ - this->__end_) >= __n)
-    this->__construct_at_end(__n);
-  else {
-    __split_buffer<value_type, allocator_type&> __v(__recommend(size() + __n), size(), this->__alloc_);
-    __v.__construct_at_end(__n);
-    __swap_out_circular_buffer(__v);
-  }
-}
-
-//  Default constructs __n objects starting at __end_
-//  throws if construction throws
-//  Postcondition:  size() == size() + __n
-//  Exception safety: strong.
-template <class _Tp, class _Allocator>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<_Tp, _Allocator>::__append(size_type __n, const_reference __x) {
-  if (static_cast<size_type>(this->__cap_ - this->__end_) >= __n)
-    this->__construct_at_end(__n, __x);
-  else {
-    __split_buffer<value_type, allocator_type&> __v(__recommend(size() + __n), size(), this->__alloc_);
-    __v.__construct_at_end(__n, __x);
-    __swap_out_circular_buffer(__v);
-  }
 }
 
 template <class _Tp, class _Allocator>
@@ -1402,21 +1364,35 @@ vector<_Tp, _Allocator>::__insert_with_size(
 }
 
 template <class _Tp, class _Allocator>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<_Tp, _Allocator>::resize(size_type __sz) {
-  size_type __cs = size();
-  if (__cs < __sz)
-    this->__append(__sz - __cs);
-  else if (__cs > __sz)
-    this->__destruct_at_end(this->__begin_ + __sz);
+_LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<_Tp, _Allocator>::resize(size_type __new_size) {
+  size_type __current_size = size();
+  if (__current_size < __new_size) {
+    if (__new_size <= capacity()) {
+      __construct_at_end(__new_size - __current_size);
+    } else {
+      __split_buffer<value_type, allocator_type&> __v(__recommend(__new_size), __current_size, __alloc_);
+      __v.__construct_at_end(__new_size - __current_size);
+      __swap_out_circular_buffer(__v);
+    }
+  } else if (__current_size > __new_size) {
+    this->__destruct_at_end(this->__begin_ + __new_size);
+  }
 }
 
 template <class _Tp, class _Allocator>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<_Tp, _Allocator>::resize(size_type __sz, const_reference __x) {
-  size_type __cs = size();
-  if (__cs < __sz)
-    this->__append(__sz - __cs, __x);
-  else if (__cs > __sz)
-    this->__destruct_at_end(this->__begin_ + __sz);
+_LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<_Tp, _Allocator>::resize(size_type __new_size, const_reference __x) {
+  size_type __current_size = size();
+  if (__current_size < __new_size) {
+    if (__new_size <= capacity())
+      __construct_at_end(__new_size - __current_size, __x);
+    else {
+      __split_buffer<value_type, allocator_type&> __v(__recommend(__new_size), __current_size, __alloc_);
+      __v.__construct_at_end(__new_size - __current_size, __x);
+      __swap_out_circular_buffer(__v);
+    }
+  } else if (__current_size > __new_size) {
+    this->__destruct_at_end(this->__begin_ + __new_size);
+  }
 }
 
 template <class _Tp, class _Allocator>

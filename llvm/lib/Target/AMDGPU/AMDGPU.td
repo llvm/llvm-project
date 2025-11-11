@@ -2069,6 +2069,7 @@ def FeatureISAVersion12 : FeatureSet<
    FeatureMemoryAtomicFAddF32DenormalSupport,
    FeatureBVHDualAndBVH8Insts,
    FeatureWaitsBeforeSystemScopeStores,
+   FeatureD16Writes32BitVgpr
    ]>;
 
 def FeatureISAVersion12_50 : FeatureSet<
@@ -2143,6 +2144,7 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureSupportsXNACK,
    FeatureXNACK,
    FeatureClusters,
+   FeatureD16Writes32BitVgpr,
 ]>;
 
 def FeatureISAVersion12_51 : FeatureSet<

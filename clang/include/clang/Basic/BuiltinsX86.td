@@ -93,22 +93,6 @@ let Attributes = [Const, NoThrow, RequiredVectorWidth<128>] in {
   }
 
 
-  let Features = "sse2", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<128>] in {
-    def pavgb128 : X86Builtin<"_Vector<16, unsigned char>(_Vector<16, unsigned char>, _Vector<16, unsigned char>)">;
-    def pavgw128 : X86Builtin<"_Vector<8, unsigned short>(_Vector<8, unsigned short>, _Vector<8, unsigned short>)">;
-    def pmulhw128 : X86Builtin<"_Vector<8, short>(_Vector<8, short>, _Vector<8, short>)">;
-    def pmulhuw128 : X86Builtin<"_Vector<8, unsigned short>(_Vector<8, unsigned short>, _Vector<8, unsigned short>)">;
-    def packsswb128 : X86Builtin<"_Vector<16, char>(_Vector<8, short>, _Vector<8, short>)">;
-    def packssdw128 : X86Builtin<"_Vector<8, short>(_Vector<4, int>, _Vector<4, int>)">;
-    def packuswb128 : X86Builtin<"_Vector<16, char>(_Vector<8, short>, _Vector<8, short>)">;
-
-    def vec_ext_v2di : X86Builtin<"long long int(_Vector<2, long long int>, _Constant int)">;
-    def vec_ext_v4si : X86Builtin<"int(_Vector<4, int>, _Constant int)">;
-    def vec_ext_v4sf : X86Builtin<"float(_Vector<4, float>, _Constant int)">;
-    def vec_ext_v8hi : X86Builtin<"short(_Vector<8, short>, _Constant int)">;
-    def vec_set_v8hi : X86Builtin<"_Vector<8, short>(_Vector<8, short>, short, _Constant int)">;
-  }
-
   let Features = "sse3" in {
     foreach Op = ["addsub"] in {
       def Op#ps : X86Builtin<"_Vector<4, float>(_Vector<4, float>, _Vector<4, float>)">;
@@ -219,15 +203,6 @@ let Features = "sse2", Attributes = [NoThrow] in {
   def movnti : X86Builtin<"void(int *, int)">;
 }
 
-let Features = "sse2", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<128>] in {
-  def pshuflw : X86Builtin<"_Vector<8, short>(_Vector<8, short>, _Constant int)">;
-  def pshufd : X86Builtin<"_Vector<4, int>(_Vector<4, int>, _Constant int)">;
-  def pshufhw : X86Builtin<"_Vector<8, short>(_Vector<8, short>, _Constant int)">;
-  def movmskpd : X86Builtin<"int(_Vector<2, double>)">;
-  def pmovmskb128 : X86Builtin<"int(_Vector<16, char>)">;
-  def shufpd : X86Builtin<"_Vector<2, double>(_Vector<2, double>, _Vector<2, double>, _Constant int)">;
-}
-
 let Features = "sse2", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
   def psadbw128 : X86Builtin<"_Vector<2, long long int>(_Vector<16, char>, _Vector<16, char>)">;
   def sqrtpd : X86Builtin<"_Vector<2, double>(_Vector<2, double>)">;
@@ -285,11 +260,26 @@ let Features = "sse2", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] i
   def psllq128 : X86Builtin<"_Vector<2, long long int>(_Vector<2, long long int>, _Vector<2, long long int>)">;
 }
 
-let Features = "sse2",
-    Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<128>] in {
+let Features = "sse2", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<128>] in {
+  def movmskpd : X86Builtin<"int(_Vector<2, double>)">;
+  def pmovmskb128 : X86Builtin<"int(_Vector<16, char>)">;
+
+  def pavgb128 : X86Builtin<"_Vector<16, unsigned char>(_Vector<16, unsigned char>, _Vector<16, unsigned char>)">;
+  def pavgw128 : X86Builtin<"_Vector<8, unsigned short>(_Vector<8, unsigned short>, _Vector<8, unsigned short>)">;
+
   def pmaddwd128 : X86Builtin<"_Vector<4, int>(_Vector<8, short>, _Vector<8, short>)">;
-  
+  def pmulhw128 : X86Builtin<"_Vector<8, short>(_Vector<8, short>, _Vector<8, short>)">;
+  def pmulhuw128 : X86Builtin<"_Vector<8, unsigned short>(_Vector<8, unsigned short>, _Vector<8, unsigned short>)">;
   def pmuludq128 : X86Builtin<"_Vector<2, long long int>(_Vector<4, int>, _Vector<4, int>)">;
+
+  def packsswb128 : X86Builtin<"_Vector<16, char>(_Vector<8, short>, _Vector<8, short>)">;
+  def packssdw128 : X86Builtin<"_Vector<8, short>(_Vector<4, int>, _Vector<4, int>)">;
+  def packuswb128 : X86Builtin<"_Vector<16, char>(_Vector<8, short>, _Vector<8, short>)">;
+
+  def pshuflw : X86Builtin<"_Vector<8, short>(_Vector<8, short>, _Constant int)">;
+  def pshufd : X86Builtin<"_Vector<4, int>(_Vector<4, int>, _Constant int)">;
+  def pshufhw : X86Builtin<"_Vector<8, short>(_Vector<8, short>, _Constant int)">;
+  def shufpd : X86Builtin<"_Vector<2, double>(_Vector<2, double>, _Vector<2, double>, _Constant int)">;
 
   def psllwi128 : X86Builtin<"_Vector<8, short>(_Vector<8, short>, int)">;
   def pslldi128 : X86Builtin<"_Vector<4, int>(_Vector<4, int>, int)">;
@@ -304,6 +294,12 @@ let Features = "sse2",
 
   def pslldqi128_byteshift : X86Builtin<"_Vector<16, char>(_Vector<16, char>, _Constant int)">;
   def psrldqi128_byteshift : X86Builtin<"_Vector<16, char>(_Vector<16, char>, _Constant int)">;
+
+  def vec_ext_v2di : X86Builtin<"long long int(_Vector<2, long long int>, _Constant int)">;
+  def vec_ext_v4si : X86Builtin<"int(_Vector<4, int>, _Constant int)">;
+  def vec_ext_v4sf : X86Builtin<"float(_Vector<4, float>, _Constant int)">;
+  def vec_ext_v8hi : X86Builtin<"short(_Vector<8, short>, _Constant int)">;
+  def vec_set_v8hi : X86Builtin<"_Vector<8, short>(_Vector<8, short>, short, _Constant int)">;
 }
 
 let Features = "sse3", Attributes = [NoThrow] in {
@@ -315,7 +311,7 @@ let Features = "sse3", Attributes = [NoThrow, RequiredVectorWidth<128>] in {
   def lddqu : X86Builtin<"_Vector<16, char>(char const *)">;
 }
 
-let Features = "ssse3", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
+let Features = "ssse3", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<128>] in {
   def palignr128 : X86Builtin<"_Vector<16, char>(_Vector<16, char>, _Vector<16, char>, _Constant int)">;
 }
 
@@ -609,8 +605,7 @@ let Features = "avx", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWid
 
 let Features = "avx2", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in {
   def mpsadbw256 : X86Builtin<"_Vector<32, char>(_Vector<32, char>, _Vector<32, char>, _Constant char)">;
-  def palignr256 : X86Builtin<"_Vector<32, char>(_Vector<32, char>, "
-                              "_Vector<32, char>, _Constant int)">;
+
   def psadbw256
       : X86Builtin<
             "_Vector<4, long long int>(_Vector<32, char>, _Vector<32, char>)">;
@@ -634,6 +629,7 @@ let Features = "avx2", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWi
   def pmovmskb256 : X86Builtin<"int(_Vector<32, char>)">;
   def pavgb256 : X86Builtin<"_Vector<32, unsigned char>(_Vector<32, unsigned char>, _Vector<32, unsigned char>)">;
   def pavgw256 : X86Builtin<"_Vector<16, unsigned short>(_Vector<16, unsigned short>, _Vector<16, unsigned short>)">;
+  def palignr256 : X86Builtin<"_Vector<32, char>(_Vector<32, char>, _Vector<32, char>, _Constant int)">;
 
   def pblendd128 : X86Builtin<"_Vector<4, int>(_Vector<4, int>, _Vector<4, int>, _Constant int)">;
   def pblendd256 : X86Builtin<"_Vector<8, int>(_Vector<8, int>, _Vector<8, int>, _Constant int)">;
@@ -3167,31 +3163,31 @@ let Features = "avx512bw", Attributes = [NoThrow, Const, Constexpr] in {
   def kordi : X86Builtin<"unsigned long long int(unsigned long long int, unsigned long long int)">;
 }
 
-let Features = "avx512dq", Attributes = [NoThrow, Const] in {
+let Features = "avx512dq", Attributes = [NoThrow, Const, Constexpr] in {
   def kortestcqi : X86Builtin<"int(unsigned char, unsigned char)">;
   def kortestzqi : X86Builtin<"int(unsigned char, unsigned char)">;
 }
 
-let Features = "avx512f", Attributes = [NoThrow, Const] in {
+let Features = "avx512f", Attributes = [NoThrow, Const, Constexpr] in {
   def kortestchi : X86Builtin<"int(unsigned short, unsigned short)">;
   def kortestzhi : X86Builtin<"int(unsigned short, unsigned short)">;
 }
 
-let Features = "avx512bw", Attributes = [NoThrow, Const] in {
+let Features = "avx512bw", Attributes = [NoThrow, Const, Constexpr] in {
   def kortestcsi : X86Builtin<"int(unsigned int, unsigned int)">;
   def kortestzsi : X86Builtin<"int(unsigned int, unsigned int)">;
   def kortestcdi : X86Builtin<"int(unsigned long long int, unsigned long long int)">;
   def kortestzdi : X86Builtin<"int(unsigned long long int, unsigned long long int)">;
 }
 
-let Features = "avx512dq", Attributes = [NoThrow, Const] in {
+let Features = "avx512dq", Attributes = [NoThrow, Const, Constexpr] in {
   def ktestcqi : X86Builtin<"int(unsigned char, unsigned char)">;
   def ktestzqi : X86Builtin<"int(unsigned char, unsigned char)">;
   def ktestchi : X86Builtin<"int(unsigned short, unsigned short)">;
   def ktestzhi : X86Builtin<"int(unsigned short, unsigned short)">;
 }
 
-let Features = "avx512bw", Attributes = [NoThrow, Const] in {
+let Features = "avx512bw", Attributes = [NoThrow, Const, Constexpr] in {
   def ktestcsi : X86Builtin<"int(unsigned int, unsigned int)">;
   def ktestzsi : X86Builtin<"int(unsigned int, unsigned int)">;
   def ktestcdi : X86Builtin<"int(unsigned long long int, unsigned long long int)">;
@@ -3267,7 +3263,7 @@ let Features = "avx512bw", Attributes = [NoThrow, Const] in {
   def kmovq : X86Builtin<"unsigned long long int(unsigned long long int)">;
 }
 
-let Features = "avx512bw", Attributes = [NoThrow, Const, RequiredVectorWidth<512>] in {
+let Features = "avx512bw", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<512>] in {
   def palignr512 : X86Builtin<"_Vector<64, char>(_Vector<64, char>, _Vector<64, char>, _Constant int)">;
 }
 

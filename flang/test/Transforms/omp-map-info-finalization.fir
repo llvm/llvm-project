@@ -381,11 +381,10 @@ func.func @_QPrealtest(%arg0: !fir.boxchar<1>) {
 // CHECK:           %[[VAL_8:.*]]:2 = fir.unboxchar %[[VAL_4]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
 // CHECK:           %[[VAL_9:.*]] = arith.subi %[[VAL_8]]#1, %[[VAL_7]] : index
 // CHECK:           %[[VAL_10:.*]] = omp.map.bounds lower_bound(%[[VAL_6]] : index) upper_bound(%[[VAL_9]] : index) extent(%[[VAL_8]]#1 : index) stride(%[[VAL_7]] : index) start_idx(%[[VAL_6]] : index) {stride_in_bytes = true}
-// CHECK:           %[[VAL_11:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.boxchar<1>>
 // CHECK:           %[[VAL_12:.*]] = fir.box_offset %[[VAL_0]] base_addr : (!fir.ref<!fir.boxchar<1>>) -> !fir.llvm_ptr<!fir.ref<!fir.char<1,?>>>
-// CHECK:           %[[VAL_13:.*]] = omp.map.info var_ptr(%[[VAL_0]] : !fir.ref<!fir.boxchar<1>>, !fir.char<1,?>) map_clauses(implicit, to) capture(ByRef) var_ptr_ptr(%[[VAL_12]] : !fir.llvm_ptr<!fir.ref<!fir.char<1,?>>>) bounds(%[[VAL_10]]) -> !fir.ref<!fir.boxchar<1>>
-// CHECK:           %[[VAL_14:.*]] = omp.map.info var_ptr(%[[VAL_0]] : !fir.ref<!fir.boxchar<1>>, !fir.boxchar<1>) map_clauses(to) capture(ByRef) members(%[[VAL_13]] : [0] : !fir.ref<!fir.boxchar<1>>) -> !fir.ref<!fir.boxchar<1>>
-// CHECK:           omp.target map_entries(%[[VAL_14]] -> %[[VAL_15:.*]], %[[VAL_13]] -> %[[VAL_16:.*]] : !fir.ref<!fir.boxchar<1>>, !fir.ref<!fir.boxchar<1>>) private(@boxchar.privatizer %[[VAL_3]]#0 -> %[[VAL_17:.*]] [map_idx=0] : !fir.boxchar<1>) {
+// CHECK:           %[[VAL_13:.*]] = omp.map.info var_ptr(%[[VAL_0]] : !fir.ref<!fir.boxchar<1>>, !fir.char<1,?>) map_clauses(to) capture(ByRef) var_ptr_ptr(%[[VAL_12]] : !fir.llvm_ptr<!fir.ref<!fir.char<1,?>>>) bounds(%[[VAL_10]]) -> !fir.llvm_ptr<!fir.ref<!fir.char<1,?>>>
+// CHECK:           %[[VAL_14:.*]] = omp.map.info var_ptr(%[[VAL_0]] : !fir.ref<!fir.boxchar<1>>, !fir.boxchar<1>) map_clauses(to) capture(ByRef) members(%[[VAL_13]] : [0] : !fir.llvm_ptr<!fir.ref<!fir.char<1,?>>>) -> !fir.ref<!fir.boxchar<1>>
+// CHECK:           omp.target map_entries(%[[VAL_14]] -> %[[VAL_15:.*]], %[[VAL_13]] -> %[[VAL_16:.*]] : !fir.ref<!fir.boxchar<1>>, !fir.llvm_ptr<!fir.ref<!fir.char<1,?>>>) private(@boxchar.privatizer %[[VAL_3]]#0 -> %[[VAL_17:.*]] [map_idx=0] : !fir.boxchar<1>) {
 // CHECK:             %[[VAL_18:.*]]:2 = fir.unboxchar %[[VAL_17]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
 // CHECK:             %[[VAL_19:.*]]:2 = hlfir.declare %[[VAL_18]]#0 typeparams %[[VAL_18]]#1 {uniq_name = "tgt_a0"} : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
 // CHECK:             omp.terminator

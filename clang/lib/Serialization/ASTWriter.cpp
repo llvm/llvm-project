@@ -8651,6 +8651,17 @@ void OMPClauseWriter::VisitOMPXDynCGroupMemClause(OMPXDynCGroupMemClause *C) {
   Record.AddSourceLocation(C->getLParenLoc());
 }
 
+void OMPClauseWriter::VisitOMPDynGroupprivateClause(
+    OMPDynGroupprivateClause *C) {
+  VisitOMPClauseWithPreInit(C);
+  Record.push_back(C->getDynGroupprivateModifier());
+  Record.push_back(C->getDynGroupprivateFallbackModifier());
+  Record.AddStmt(C->getSize());
+  Record.AddSourceLocation(C->getLParenLoc());
+  Record.AddSourceLocation(C->getDynGroupprivateModifierLoc());
+  Record.AddSourceLocation(C->getDynGroupprivateFallbackModifierLoc());
+}
+
 void OMPClauseWriter::VisitOMPDoacrossClause(OMPDoacrossClause *C) {
   Record.push_back(C->varlist_size());
   Record.push_back(C->getNumLoops());

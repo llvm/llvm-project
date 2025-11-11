@@ -26,7 +26,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cstdint>
-#include <utility>
 
 using namespace llvm;
 using namespace rdf;

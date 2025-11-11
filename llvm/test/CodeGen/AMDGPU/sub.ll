@@ -11,14 +11,13 @@ define amdgpu_kernel void @s_sub_i32(ptr addrspace(1) %out, i32 %a, i32 %b) {
 ; GFX6-LABEL: s_sub_i32:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
-; GFX6-NEXT:    s_mov_b32 s7, 0xf000
-; GFX6-NEXT:    s_mov_b32 s6, -1
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX6-NEXT:    s_mov_b32 s4, s0
-; GFX6-NEXT:    s_sub_i32 s0, s2, s3
-; GFX6-NEXT:    s_mov_b32 s5, s1
-; GFX6-NEXT:    v_mov_b32_e32 v0, s0
-; GFX6-NEXT:    buffer_store_dword v0, off, s[4:7], 0
+; GFX6-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; GFX6-NEXT:    s_sub_i32 s4, s4, s5
+; GFX6-NEXT:    s_mov_b32 s3, 0xf000
+; GFX6-NEXT:    s_mov_b32 s2, -1
+; GFX6-NEXT:    v_mov_b32_e32 v0, s4
+; GFX6-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GFX6-NEXT:    s_endpgm
 ;
 ; GFX8-LABEL: s_sub_i32:

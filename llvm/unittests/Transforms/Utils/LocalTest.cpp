@@ -183,7 +183,7 @@ TEST(Local, MergeBasicBlockIntoOnlyPred) {
   auto resetIR = [&]() {
     M = parseIR(C,
                 R"(
-      define i32 @f(i8* %str) {
+      define i32 @f(ptr %str) {
       entry:
         br label %bb2.i
       bb2.i:                                            ; preds = %bb4.i, %entry
@@ -411,7 +411,7 @@ TEST(Local, ConstantFoldTerminator) {
 
       define void @indirectbr() {
       entry:
-        indirectbr i8* blockaddress(@indirectbr, %bb0), [label %bb0, label %bb1]
+        indirectbr ptr blockaddress(@indirectbr, %bb0), [label %bb0, label %bb1]
       bb0:
         ret void
       bb1:
@@ -420,14 +420,14 @@ TEST(Local, ConstantFoldTerminator) {
 
       define void @indirectbr_repeated() {
       entry:
-        indirectbr i8* blockaddress(@indirectbr_repeated, %bb0), [label %bb0, label %bb0]
+        indirectbr ptr blockaddress(@indirectbr_repeated, %bb0), [label %bb0, label %bb0]
       bb0:
         ret void
       }
 
       define void @indirectbr_unreachable() {
       entry:
-        indirectbr i8* blockaddress(@indirectbr_unreachable, %bb0), [label %bb1]
+        indirectbr ptr blockaddress(@indirectbr_unreachable, %bb0), [label %bb1]
       bb0:
         ret void
       bb1:
@@ -925,7 +925,7 @@ TEST(Local, RemoveUnreachableBlocks) {
 
       declare i32 @__gxx_personality_v0(...)
 
-      define void @invoke_terminator() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+      define void @invoke_terminator() personality ptr @__gxx_personality_v0 {
       entry:
         br i1 undef, label %invoke.block, label %exit
 
@@ -943,8 +943,8 @@ TEST(Local, RemoveUnreachableBlocks) {
         unreachable
 
       lpad.block:
-        %lp = landingpad { i8*, i32 }
-                catch i8* null
+        %lp = landingpad { ptr, i32 }
+                catch ptr null
         br label %exit
 
       exit:

@@ -42,11 +42,11 @@ Options
     Semicolon-separated list of regular expressions matching class names that
     overwrites the default exclusion list. The default is:
     `::std::map;::std::unordered_map;::std::flat_map`.
-    
+
 .. option:: FixMode
 
-    Determines what fixes are suggested. Either `none`, `at` (use 
-    ``a.at(index)`` if a fitting function exists) or `function` (use a 
+    Determines what fixes are suggested. Either `none`, `at` (use
+    ``a.at(index)`` if a fitting function exists) or `function` (use a
     function ``f(a, index)``). The default is `none`.
 
 .. option:: FixFunction
@@ -54,7 +54,7 @@ Options
     The function to use in the `function` mode. For C++23 and beyond, the
     passed function must support the empty subscript operator, i.e., the case
     where ``a[]`` becomes ``f(a)``. :option:`FixFunctionEmptyArgs` can be
-    used to override the suggested function in that case. The default is `gsl::at`. 
+    used to override the suggested function in that case. The default is `gsl::at`.
 
 .. option:: FixFunctionEmptyArgs
 

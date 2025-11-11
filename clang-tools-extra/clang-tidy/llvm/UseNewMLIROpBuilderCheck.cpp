@@ -36,7 +36,7 @@ static EditGenerator rewrite(RangeSelector Call, RangeSelector Builder) {
     SourceLocation Begin = CallRange->getBegin();
 
     // This will result in just a warning and no edit.
-    bool InMacro = CallRange->getBegin().isMacroID();
+    const bool InMacro = CallRange->getBegin().isMacroID();
     if (InMacro) {
       while (SM.isMacroArgExpansion(Begin))
         Begin = SM.getImmediateExpansionRange(Begin).getBegin();
@@ -119,11 +119,11 @@ static EditGenerator rewrite(RangeSelector Call, RangeSelector Builder) {
 }
 
 static RewriteRuleWith<std::string> useNewMlirOpBuilderCheckRule() {
-  Stencil Message = cat("use 'OpType::create(builder, ...)' instead of "
-                        "'builder.create<OpType>(...)'");
+  const Stencil Message = cat("use 'OpType::create(builder, ...)' instead of "
+                              "'builder.create<OpType>(...)'");
   // Match a create call on an OpBuilder.
   auto BuilderType = cxxRecordDecl(isSameOrDerivedFrom("::mlir::OpBuilder"));
-  ast_matchers::internal::Matcher<Stmt> Base =
+  const ast_matchers::internal::Matcher<Stmt> Base =
       cxxMemberCallExpr(
           on(expr(anyOf(hasType(BuilderType), hasType(pointsTo(BuilderType))))
                  .bind("builder")),

@@ -41,21 +41,21 @@ negative_addend:
 //  COMMON-NEXT:        Mutable:         true
 //  COMMON-NEXT:        InitExpr:
 //  COMMON-NEXT:          Opcode:          I32_CONST
-//  COMMON-NEXT:          Value:           66576
+//  COMMON-NEXT:          Value:           65536
 //  COMMON-NEXT:      - Index:           1
 //  COMMON-NEXT:        Type:            I32
 //  COMMON-NEXT:        Mutable:         false
 //  COMMON-NEXT:        InitExpr:
 //  COMMON-NEXT:          Opcode:          I32_CONST
-//   MERGE-NEXT:          Value:           1024
-// NOMERGE-NEXT:          Value:           1028
+//   MERGE-NEXT:          Value:           65536
+// NOMERGE-NEXT:          Value:           65540
 //  COMMON-NEXT:      - Index:           2
 //  COMMON-NEXT:        Type:            I32
 //  COMMON-NEXT:        Mutable:         false
 //  COMMON-NEXT:        InitExpr:
 //  COMMON-NEXT:          Opcode:          I32_CONST
-//   MERGE-NEXT:          Value:           1025
-// NOMERGE-NEXT:          Value:           1029
+//   MERGE-NEXT:          Value:           65537
+// NOMERGE-NEXT:          Value:           65541
 //  COMMON-NEXT:  - Type:            EXPORT
 //  COMMON-NEXT:    Exports:
 //  COMMON-NEXT:      - Name:            memory
@@ -71,11 +71,11 @@ negative_addend:
 //
 //       COMMON:  - Type:            DATA
 //  COMMON-NEXT:    Segments:
-//  COMMON-NEXT:      - SectionOffset:   7
+//  COMMON-NEXT:      - SectionOffset:   8
 //  COMMON-NEXT:        InitFlags:       0
 //  COMMON-NEXT:        Offset:
 //  COMMON-NEXT:          Opcode:          I32_CONST
-//  COMMON-NEXT:          Value:           1024
+//  COMMON-NEXT:          Value:           65536
 //   MERGE-NEXT:          Content:         '61626300'
 // NOMERGE-NEXT:          Content:         '6162630061626300626300'
 

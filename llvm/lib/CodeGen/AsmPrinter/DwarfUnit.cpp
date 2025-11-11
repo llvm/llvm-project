@@ -32,7 +32,6 @@
 #include <cstdint>
 #include <limits>
 #include <string>
-#include <utility>
 
 using namespace llvm;
 

@@ -872,6 +872,9 @@ inline bind_and_match_ty<const Value, MatchTy> m_Value(const Value *&V,
 
 /// Match an instruction, capturing it if we match.
 inline bind_ty<Instruction> m_Instruction(Instruction *&I) { return I; }
+inline bind_ty<const Instruction> m_Instruction(const Instruction *&I) {
+  return I;
+}
 
 /// Match against the nested pattern, and capture the instruction if we match.
 template <typename MatchTy>
@@ -879,11 +882,22 @@ inline bind_and_match_ty<Instruction, MatchTy>
 m_Instruction(Instruction *&I, const MatchTy &Match) {
   return {I, Match};
 }
+template <typename MatchTy>
+inline bind_and_match_ty<const Instruction, MatchTy>
+m_Instruction(const Instruction *&I, const MatchTy &Match) {
+  return {I, Match};
+}
 
 /// Match a unary operator, capturing it if we match.
 inline bind_ty<UnaryOperator> m_UnOp(UnaryOperator *&I) { return I; }
+inline bind_ty<const UnaryOperator> m_UnOp(const UnaryOperator *&I) {
+  return I;
+}
 /// Match a binary operator, capturing it if we match.
 inline bind_ty<BinaryOperator> m_BinOp(BinaryOperator *&I) { return I; }
+inline bind_ty<const BinaryOperator> m_BinOp(const BinaryOperator *&I) {
+  return I;
+}
 /// Match a with overflow intrinsic, capturing it if we match.
 inline bind_ty<WithOverflowInst> m_WithOverflowInst(WithOverflowInst *&I) {
   return I;

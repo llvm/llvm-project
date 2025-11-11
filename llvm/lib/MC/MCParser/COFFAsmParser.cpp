@@ -21,7 +21,6 @@
 #include <cassert>
 #include <cstdint>
 #include <limits>
-#include <utility>
 
 using namespace llvm;
 

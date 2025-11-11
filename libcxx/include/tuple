@@ -235,7 +235,6 @@ template <class... Types>
 #  include <__tuple/tuple_element.h>
 #  include <__tuple/tuple_like.h>
 #  include <__tuple/tuple_size.h>
-#  include <__tuple/tuple_types.h>
 #  include <__type_traits/common_reference.h>
 #  include <__type_traits/common_type.h>
 #  include <__type_traits/conditional.h>
@@ -253,7 +252,6 @@ template <class... Types>
 #  include <__type_traits/is_nothrow_assignable.h>
 #  include <__type_traits/is_nothrow_constructible.h>
 #  include <__type_traits/is_reference.h>
-#  include <__type_traits/is_replaceable.h>
 #  include <__type_traits/is_same.h>
 #  include <__type_traits/is_swappable.h>
 #  include <__type_traits/is_trivially_relocatable.h>
@@ -265,6 +263,7 @@ template <class... Types>
 #  include <__type_traits/remove_cv.h>
 #  include <__type_traits/remove_cvref.h>
 #  include <__type_traits/remove_reference.h>
+#  include <__type_traits/type_list.h>
 #  include <__type_traits/unwrap_ref.h>
 #  include <__utility/declval.h>
 #  include <__utility/forward.h>
@@ -347,7 +346,7 @@ using __tuple_common_comparison_category _LIBCPP_NODEBUG =
 
 // __tuple_leaf
 
-template <size_t _Ip, class _Hp, bool = is_empty<_Hp>::value && !__libcpp_is_final<_Hp>::value >
+template <size_t _Ip, class _Hp, bool = is_empty<_Hp>::value && !__is_final_v<_Hp> >
 class __tuple_leaf;
 
 template <size_t _Ip, class _Hp, bool _Ep>
@@ -571,7 +570,7 @@ __memberwise_copy_assign(_Dest& __dest, _Source const& __source, __index_sequenc
 
 template <class _Dest, class _Source, class... _Up, size_t... _Np>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void
-__memberwise_forward_assign(_Dest& __dest, _Source&& __source, __tuple_types<_Up...>, __index_sequence<_Np...>) {
+__memberwise_forward_assign(_Dest& __dest, _Source&& __source, __type_list<_Up...>, __index_sequence<_Np...>) {
   std::__swallow(((std::get<_Np>(__dest) = std::forward<_Up>(std::get<_Np>(__source))), void(), 0)...);
 }
 
@@ -596,7 +595,6 @@ class _LIBCPP_NO_SPECIALIZATIONS tuple {
 public:
   using __trivially_relocatable _LIBCPP_NODEBUG =
       __conditional_t<_And<__libcpp_is_trivially_relocatable<_Tp>...>::value, tuple, void>;
-  using __replaceable _LIBCPP_NODEBUG = __conditional_t<_And<__is_replaceable<_Tp>...>::value, tuple, void>;
 
   // [tuple.cnstr]
 
@@ -876,7 +874,7 @@ public:
     requires(_And<is_assignable<const _Tp&, _Tp>...>::value)
   {
     std::__memberwise_forward_assign(
-        *this, std::move(__tuple), __tuple_types<_Tp...>(), __make_index_sequence<sizeof...(_Tp)>());
+        *this, std::move(__tuple), __type_list<_Tp...>(), __make_index_sequence<sizeof...(_Tp)>());
     return *this;
   }
 #    endif // _LIBCPP_STD_VER >= 23
@@ -885,7 +883,7 @@ public:
   operator=(_If<_And<is_move_assignable<_Tp>...>::value, tuple, __nat>&& __tuple) noexcept(
       _And<is_nothrow_move_assignable<_Tp>...>::value) {
     std::__memberwise_forward_assign(
-        *this, std::move(__tuple), __tuple_types<_Tp...>(), __make_index_sequence<sizeof...(_Tp)>());
+        *this, std::move(__tuple), __type_list<_Tp...>(), __make_index_sequence<sizeof...(_Tp)>());
     return *this;
   }
 
@@ -905,7 +903,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 tuple&
   operator=(tuple<_Up...>&& __tuple) noexcept(_And<is_nothrow_assignable<_Tp&, _Up>...>::value) {
     std::__memberwise_forward_assign(
-        *this, std::move(__tuple), __tuple_types<_Up...>(), __make_index_sequence<sizeof...(_Tp)>());
+        *this, std::move(__tuple), __type_list<_Up...>(), __make_index_sequence<sizeof...(_Tp)>());
     return *this;
   }
 
@@ -922,7 +920,7 @@ public:
             enable_if_t< _And<_BoolConstant<sizeof...(_Tp) == sizeof...(_UTypes)>,
                               is_assignable<const _Tp&, _UTypes>...>::value>* = nullptr>
   _LIBCPP_HIDE_FROM_ABI constexpr const tuple& operator=(tuple<_UTypes...>&& __u) const {
-    std::__memberwise_forward_assign(*this, __u, __tuple_types<_UTypes...>(), __make_index_sequence<sizeof...(_Tp)>());
+    std::__memberwise_forward_assign(*this, __u, __type_list<_UTypes...>(), __make_index_sequence<sizeof...(_Tp)>());
     return *this;
   }
 #    endif // _LIBCPP_STD_VER >= 23
@@ -1000,7 +998,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 tuple&
   operator=(array<_Up, _Np>&& __array) noexcept(_And<is_nothrow_assignable<_Tp&, _Up>...>::value) {
     std::__memberwise_forward_assign(
-        *this, std::move(__array), __tuple_types<_If<true, _Up, _Tp>...>(), __make_index_sequence<sizeof...(_Tp)>());
+        *this, std::move(__array), __type_list<_If<true, _Up, _Tp>...>(), __make_index_sequence<sizeof...(_Tp)>());
     return *this;
   }
 

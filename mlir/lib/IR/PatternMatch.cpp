@@ -80,10 +80,10 @@ Pattern::Pattern(const void *rootValue, RootKind rootKind,
   if (generatedNames.empty())
     return;
   generatedOps.reserve(generatedNames.size());
-  std::transform(generatedNames.begin(), generatedNames.end(),
-                 std::back_inserter(generatedOps), [context](StringRef name) {
-                   return OperationName(name, context);
-                 });
+  llvm::append_range(generatedOps,
+                     llvm::map_range(generatedNames, [context](StringRef name) {
+                       return OperationName(name, context);
+                     }));
 }
 
 //===----------------------------------------------------------------------===//
