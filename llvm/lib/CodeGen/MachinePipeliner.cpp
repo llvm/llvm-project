@@ -485,7 +485,7 @@ void MachinePipeliner::setPragmaPipelineOptions(MachineLoop &L) {
   }
 }
 
-bool hasPHICycle(const MachineBasicBlock *LoopHeader,
+static bool hasPHICycle(const MachineBasicBlock *LoopHeader,
                  const MachineRegisterInfo &MRI) {
   DenseMap<unsigned, SmallVector<unsigned, 2>> PhiDeps;
   SmallSet<unsigned, 8> PhiRegs;
