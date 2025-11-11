@@ -169,7 +169,7 @@ private:
   };
 
   struct RegOp {
-    MCRegister RegNum;
+    MCRegister Reg;
   };
 
   struct ImmOp {
@@ -342,7 +342,7 @@ public:
 
   MCRegister getReg() const override {
     assert((Kind == k_Register) && "Invalid access!");
-    return Reg.RegNum;
+    return Reg.Reg;
   }
 
   const MCExpr *getImm() const {
@@ -607,10 +607,10 @@ public:
     return Op;
   }
 
-  static std::unique_ptr<VEOperand> CreateReg(MCRegister RegNum, SMLoc S,
+  static std::unique_ptr<VEOperand> CreateReg(MCRegister Reg, SMLoc S,
                                               SMLoc E) {
     auto Op = std::make_unique<VEOperand>(k_Register);
-    Op->Reg.RegNum = RegNum;
+    Op->Reg.Reg = Reg;
     Op->StartLoc = S;
     Op->EndLoc = E;
     return Op;
@@ -658,7 +658,7 @@ public:
     unsigned regIdx = Reg - VE::SX0;
     if (regIdx > 63)
       return false;
-    Op.Reg.RegNum = I32Regs[regIdx];
+    Op.Reg.Reg = I32Regs[regIdx];
     return true;
   }
 
@@ -667,7 +667,7 @@ public:
     unsigned regIdx = Reg - VE::SX0;
     if (regIdx > 63)
       return false;
-    Op.Reg.RegNum = F32Regs[regIdx];
+    Op.Reg.Reg = F32Regs[regIdx];
     return true;
   }
 
@@ -676,7 +676,7 @@ public:
     unsigned regIdx = Reg - VE::SX0;
     if (regIdx % 2 || regIdx > 63)
       return false;
-    Op.Reg.RegNum = F128Regs[regIdx / 2];
+    Op.Reg.Reg = F128Regs[regIdx / 2];
     return true;
   }
 
@@ -685,7 +685,7 @@ public:
     unsigned regIdx = Reg - VE::VM0;
     if (regIdx % 2 || regIdx > 15)
       return false;
-    Op.Reg.RegNum = VM512Regs[regIdx / 2];
+    Op.Reg.Reg = VM512Regs[regIdx / 2];
     return true;
   }
 
@@ -697,7 +697,7 @@ public:
     if (regIdx > 31 || MISCRegs[regIdx] == VE::NoRegister)
       return false;
     Op.Kind = k_Register;
-    Op.Reg.RegNum = MISCRegs[regIdx];
+    Op.Reg.Reg = MISCRegs[regIdx];
     return true;
   }
 
