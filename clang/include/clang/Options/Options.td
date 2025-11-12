@@ -2784,6 +2784,9 @@ def fno_unsafe_math_optimizations : Flag<["-"], "fno-unsafe-math-optimizations">
   Group<f_Group>;
 def fassociative_math : Flag<["-"], "fassociative-math">, Visibility<[ClangOption, FlangOption]>, Group<f_Group>;
 def fno_associative_math : Flag<["-"], "fno-associative-math">, Visibility<[ClangOption, FlangOption]>, Group<f_Group>;
+def ffast_real_mod : Flag<["-"], "ffast-real-mod">,
+  Group<f_Group>, Visibility<[FlangOption, FC1Option]>,
+  HelpText<"Enable optimization of MOD for REAL types">;
 def fno_fast_real_mod : Flag<["-"], "fno-fast-real-mod">,
   Group<f_Group>, Visibility<[FlangOption, FC1Option]>,
   HelpText<"Disable optimization of MOD for REAL types in presence of -ffast-math">;
