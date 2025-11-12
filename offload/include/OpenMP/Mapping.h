@@ -504,9 +504,9 @@ struct StateInfoTy {
   /// during targetDataEnd. Used to avoid duplicate transfers.
   llvm::SmallSet<void *, 32> TransferredFromPtrs;
 
-  /// Host pointers for which a DELETE entry was encountered, causing their
-  /// ref-count to have gone down to zero.
-  llvm::SmallSet<void *, 32> MarkedForDeletionPtrs;
+  /// Starting host address and size of the DELETE entries previouly processed
+  /// for the current region. Key: host pointer, Value: allocated size.
+  llvm::DenseMap<void *, int64_t> DeleteEntries;
 
   StateInfoTy() = default;
 

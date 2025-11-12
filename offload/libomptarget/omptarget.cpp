@@ -1128,8 +1128,17 @@ int targetDataEnd(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
 
     // Track force-deleted pointers so we can use this information if we
     // encounter FROM entries for the same pointer later on.
-    if (ForceDelete && TPR.Flags.IsLast)
-      StateInfo->MarkedForDeletionPtrs.insert(HstPtrBegin);
+    if (ForceDelete && TPR.Flags.IsLast) {
+      // For assumed-size arrays like map(delete: p[:]), the compiler provides
+      // no size information, so we need to get the actual allocated extent from
+      // the HDTT entry.
+      int64_t AllocatedSize =
+          TPR.getEntry()->HstPtrEnd - TPR.getEntry()->HstPtrBegin;
+      DP("Marking HstPtr=" DPxMOD " for deletion with allocated size=%" PRId64
+         "\n",
+         DPxPTR(HstPtrBegin), AllocatedSize);
+      StateInfo->DeleteEntries[HstPtrBegin] = AllocatedSize;
+    }
 
     // Move data back to the host
     const bool HasAlways = ArgTypes[I] & OMP_TGT_MAPTYPE_ALWAYS;
@@ -1137,19 +1146,38 @@ int targetDataEnd(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
     const bool IsMemberOf = ArgTypes[I] & OMP_TGT_MAPTYPE_MEMBER_OF;
     int64_t TransferSize = DataSize; // Size for FROM data-transfer.
 
-    // Lambda to check if there was a previously skipped FROM for this pointer
-    // due to its ref-count not being zero. Updates TransferSize if found.
-    auto HasSkippedMapFrom = [&]() -> bool {
-      auto It = StateInfo->SkippedFromEntries.find(HstPtrBegin);
-      if (It == StateInfo->SkippedFromEntries.end())
-        return false;
-      DP("Found previously skipped FROM transfer for HstPtr=" DPxMOD
-         ", with size "
-         "%" PRId64 "\n",
-         DPxPTR(HstPtrBegin), It->second);
-      TransferSize = It->second;
-      StateInfo->SkippedFromEntries.erase(It);
-      return true;
+    // Lambda to perform the actual FROM data retrieval from device to host
+    auto PerformFromRetrieval = [&](void *HstPtr, void *TgtPtr, int64_t Size,
+                                    HostDataToTargetTy *Entry) -> int {
+      DP("Moving %" PRId64 " bytes (tgt:" DPxMOD ") -> (hst:" DPxMOD ")\n",
+         Size, DPxPTR(TgtPtr), DPxPTR(HstPtr));
+      TIMESCOPE_WITH_DETAILS_AND_IDENT(
+          "DevToHost", "Size=" + std::to_string(Size) + "B", Loc);
+      // Wait for any previous transfer if an event is present.
+      if (void *Event = Entry->getEvent()) {
+        if (Device.waitEvent(Event, AsyncInfo) != OFFLOAD_SUCCESS) {
+          REPORT("Failed to wait for event " DPxMOD ".\n", DPxPTR(Event));
+          return OFFLOAD_FAIL;
+        }
+      }
+
+      int Ret = Device.retrieveData(HstPtr, TgtPtr, Size, AsyncInfo, Entry);
+      if (Ret != OFFLOAD_SUCCESS) {
+        REPORT("Copying data from device failed.\n");
+        return OFFLOAD_FAIL;
+      }
+
+      // As we are expecting to delete the entry the d2h copy might race
+      // with another one that also tries to delete the entry. This happens
+      // as the entry can be reused and the reuse might happen after the
+      // copy-back was issued but before it completed. Since the reuse might
+      // also copy-back a value we would race.
+      if (TPR.Flags.IsLast) {
+        if (Entry->addEventIfNecessary(Device, AsyncInfo) != OFFLOAD_SUCCESS)
+          return OFFLOAD_FAIL;
+      }
+
+      return OFFLOAD_SUCCESS;
     };
 
     // Lambda to check if this pointer was previously marked for deletion.
@@ -1162,11 +1190,21 @@ int targetDataEnd(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
     // The ref-count becomes zero before encountering the FROM entry, but we
     // still need to do a transfer, if it went from non-zero to zero.
     auto WasPreviouslyMarkedForDeletion = [&]() -> bool {
-      if (!StateInfo->MarkedForDeletionPtrs.contains(HstPtrBegin))
-        return false;
-      DP("Pointer HstPtr=" DPxMOD " was previously marked for deletion\n",
-         DPxPTR(HstPtrBegin));
-      return true;
+      // Check if this pointer falls within the range of any deleted entry
+      for (const auto &DeleteEntry : StateInfo->DeleteEntries) {
+        void *DeletePtr = DeleteEntry.first;
+        int64_t DeleteSize = DeleteEntry.second;
+        if (HstPtrBegin >= DeletePtr &&
+            HstPtrBegin < (void *)((char *)DeletePtr + DeleteSize)) {
+          DP("Pointer HstPtr=" DPxMOD
+             " falls within a range previously marked for deletion [" DPxMOD
+             ", " DPxMOD ") with size=%" PRId64 "\n",
+             DPxPTR(HstPtrBegin), DPxPTR(DeletePtr),
+             DPxPTR((char *)DeletePtr + DeleteSize), DeleteSize);
+          return true;
+        }
+      }
+      return false;
     };
 
     bool FromCopyBackAlreadyDone =
@@ -1177,13 +1215,8 @@ int targetDataEnd(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
       return TPR.Flags.IsLast || HasAlways || WasPreviouslyMarkedForDeletion();
     };
 
-    if (!FromCopyBackAlreadyDone &&
-        ((IsMapFromOnNonHostNonZeroData &&
-          IsLastOrHasAlwaysOrWasForceDeleted()) ||
-         // Even if we're not looking at an entry with FROM map-type, if there
-         // were any previously skipped FROM transfers for this pointer, we
-         // should do them when the ref-count goes down to zero.
-         (TPR.Flags.IsLast && HasSkippedMapFrom()))) {
+    if (!FromCopyBackAlreadyDone && (IsMapFromOnNonHostNonZeroData &&
+                                     IsLastOrHasAlwaysOrWasForceDeleted())) {
       // Track that we're doing a FROM transfer for this pointer
       // NOTE: If we don't care about the case of multiple different maps with
       // from, always, or multiple map(from)s seen after a map(delete), e.g.
@@ -1192,35 +1225,10 @@ int targetDataEnd(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
       // Then we can forego tacking TransferredFromPtrs.
       StateInfo->TransferredFromPtrs.insert(HstPtrBegin);
 
-      DP("Moving %" PRId64 " bytes (tgt:" DPxMOD ") -> (hst:" DPxMOD ")\n",
-         TransferSize, DPxPTR(TgtPtrBegin), DPxPTR(HstPtrBegin));
-      TIMESCOPE_WITH_DETAILS_AND_IDENT(
-          "DevToHost", "Size=" + std::to_string(TransferSize) + "B", Loc);
-      // Wait for any previous transfer if an event is present.
-      if (void *Event = TPR.getEntry()->getEvent()) {
-        if (Device.waitEvent(Event, AsyncInfo) != OFFLOAD_SUCCESS) {
-          REPORT("Failed to wait for event " DPxMOD ".\n", DPxPTR(Event));
-          return OFFLOAD_FAIL;
-        }
-      }
-
-      Ret = Device.retrieveData(HstPtrBegin, TgtPtrBegin, TransferSize,
-                                AsyncInfo, TPR.getEntry());
-      if (Ret != OFFLOAD_SUCCESS) {
-        REPORT("Copying data from device failed.\n");
+      Ret = PerformFromRetrieval(HstPtrBegin, TgtPtrBegin, TransferSize,
+                                 TPR.getEntry());
+      if (Ret != OFFLOAD_SUCCESS)
         return OFFLOAD_FAIL;
-      }
-
-      // As we are expecting to delete the entry the d2h copy might race
-      // with another one that also tries to delete the entry. This happens
-      // as the entry can be reused and the reuse might happen after the
-      // copy-back was issued but before it completed. Since the reuse might
-      // also copy-back a value we would race.
-      if (TPR.Flags.IsLast) {
-        if (TPR.getEntry()->addEventIfNecessary(Device, AsyncInfo) !=
-            OFFLOAD_SUCCESS)
-          return OFFLOAD_FAIL;
-      }
     } else if (!FromCopyBackAlreadyDone && IsMapFromOnNonHostNonZeroData &&
                !IsLastOrHasAlwaysOrWasForceDeleted() && !IsMemberOf) {
       // We can have cases like the following:
@@ -1239,6 +1247,45 @@ int targetDataEnd(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
       StateInfo->SkippedFromEntries[HstPtrBegin] = DataSize;
       DP("Skipping FROM map transfer for HstPtr=" DPxMOD ", Size=%" PRId64 "\n",
          DPxPTR(HstPtrBegin), DataSize);
+    } else if (!FromCopyBackAlreadyDone && TPR.Flags.IsLast) {
+      // Even if this is not a FROM or DELETE entry, if the ref-count went to
+      // zero (IsLast=true), we should perform any previously skipped FROM
+      // transfers that fall within this entry's range.
+      SmallVector<void *, 32> ToRemove;
+
+      for (auto &SkippedEntry : StateInfo->SkippedFromEntries) {
+        void *SkippedPtr = SkippedEntry.first;
+        int64_t SkippedSize = SkippedEntry.second;
+        uintptr_t SkippedBegin = (uintptr_t)SkippedPtr;
+
+        uintptr_t EntryBegin = TPR.getEntry()->HstPtrBegin;
+        uintptr_t EntryEnd = TPR.getEntry()->HstPtrEnd;
+
+        // Check if skipped entry overlaps or is contained within current entry
+        if (SkippedBegin >= EntryBegin && SkippedBegin < EntryEnd) {
+          DP("Found skipped FROM within deleted region: HstPtr=" DPxMOD
+             " size=%" PRId64 " within [" DPxMOD ", " DPxMOD ")\n",
+             DPxPTR(SkippedPtr), SkippedSize, DPxPTR(EntryBegin),
+             DPxPTR(EntryEnd));
+
+          // Calculate offset within the target pointer
+          int64_t Offset = SkippedBegin - EntryBegin;
+          void *SkippedTgtPtr = (void *)((char *)TgtPtrBegin + Offset);
+
+          // Perform the retrieval for this skipped entry
+          int Ret = PerformFromRetrieval((void *)SkippedBegin, SkippedTgtPtr,
+                                         SkippedSize, TPR.getEntry());
+          if (Ret != OFFLOAD_SUCCESS)
+            return OFFLOAD_FAIL;
+
+          StateInfo->TransferredFromPtrs.insert(SkippedPtr);
+          ToRemove.push_back(SkippedPtr);
+        }
+      }
+
+      // Remove processed entries
+      for (void *Ptr : ToRemove)
+        StateInfo->SkippedFromEntries.erase(Ptr);
     }
 
     // Add pointer to the buffer for post-synchronize processing.
