@@ -72,31 +72,19 @@ if ((NOT LIBOMPTEST_BUILD_STANDALONE) OR LIBOMPTEST_BUILD_UNITTESTS)
                         "Make sure LLVM_THIRD_PARTY_DIR is set properly.")
   endif()
 
-  # Build GTest as OBJECT library, so we can merge it into omptest.
-  add_library(omptest_gtest OBJECT "${OMPTEST_GTEST_PATH}/src/gtest-all.cc")
-
-  # Ensure PIC for inclusion into a shared library on ELF platforms.
-  set_target_properties(omptest_gtest PROPERTIES POSITION_INDEPENDENT_CODE ON)
-
-  # Set GTest include directories for omptest_gtest
-  target_include_directories(omptest_gtest PRIVATE
-    "${OMPTEST_GTEST_PATH}"
-    "${OMPTEST_GTEST_PATH}/include"
-  )
-
   # Set GTest include directories for omptest
   target_include_directories(omptest PUBLIC
     $<BUILD_INTERFACE:${OMPTEST_GTEST_PATH}>
     $<BUILD_INTERFACE:${OMPTEST_GTEST_PATH}/include>
   )
 
-  # Avoid using LLVM-specific ostream helpers inside GoogleTest.
-  target_compile_definitions(omptest_gtest PRIVATE GTEST_NO_LLVM_SUPPORT=1)
+  # Make the targets default_gtest and default_gtest_main available.
+  build_gtest()
 
   # Add GoogleTest-based header and merge GTest into the shared lib.
   target_sources(omptest PRIVATE
     ./include/OmptTesterGoogleTest.h
-    $<TARGET_OBJECTS:omptest_gtest>
+    $<TARGET_OBJECTS:default_gtest>
   )
 
   # Link against LLVMSupport and Threads (recommended for GTest).
