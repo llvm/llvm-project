@@ -11,7 +11,6 @@
 
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FormatVariadic.h"
-#include <memory>
 #include <mutex>
 
 namespace llvm {
