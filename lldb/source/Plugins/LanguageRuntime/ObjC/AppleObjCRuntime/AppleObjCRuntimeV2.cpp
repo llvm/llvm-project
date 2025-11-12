@@ -2509,8 +2509,8 @@ AppleObjCRuntimeV2::SharedCacheClassInfoExtractor::UpdateISAToDescriptorMap() {
       }
     } while (num_class_infos_read == max_num_classes_in_buffer);
   } else if (log) {
-      LLDB_LOGF(log, "Error writing function arguments.");
-      diagnostics.Dump(log);
+    LLDB_LOGF(log, "Error writing function arguments.");
+    diagnostics.Dump(log);
   }
 
   LLDB_LOG(log, "Processed {0} Objective-C classes total from the shared cache",
