@@ -283,6 +283,16 @@ New check aliases
   <clang-tidy/checks/bugprone/default-operator-new-on-overaligned-type>`
   keeping initial check as an alias to the new one.
 
+- Renamed :doc:`cert-msc32-c <clang-tidy/checks/cert/msc32-c>` to
+  :doc:`bugprone-random-generator-seed
+  <clang-tidy/checks/bugprone/random-generator-seed>`
+  keeping initial check as an alias to the new one.
+
+- Renamed :doc:`cert-msc51-cpp <clang-tidy/checks/cert/msc51-cpp>` to
+  :doc:`bugprone-random-generator-seed
+  <clang-tidy/checks/bugprone/random-generator-seed>`
+  keeping initial check as an alias to the new one.
+
 - Renamed :doc:`cert-oop57-cpp <clang-tidy/checks/cert/oop57-cpp>` to
   :doc:`bugprone-raw-memory-call-on-non-trivial-type
   <clang-tidy/checks/bugprone/raw-memory-call-on-non-trivial-type>`
@@ -357,7 +367,11 @@ Changes in existing checks
 - Improved :doc:`bugprone-unchecked-optional-access
   <clang-tidy/checks/bugprone/unchecked-optional-access>` check by supporting
   ``NullableValue::makeValue`` and ``NullableValue::makeValueInplace`` to
-  prevent false-positives for ``BloombergLP::bdlb::NullableValue`` type.
+  prevent false-positives for ``BloombergLP::bdlb::NullableValue`` type, and by
+  adding the `IgnoreValueCalls` option to suppress diagnostics for
+  ``optional::value()`` and the `IgnoreSmartPointerDereference` option to
+  ignore optionals reached via smart-pointer-like dereference, while still
+  diagnosing UB-prone dereferences via ``operator*`` and ``operator->``.
 
 - Improved :doc:`bugprone-unhandled-self-assignment
   <clang-tidy/checks/bugprone/unhandled-self-assignment>` check by adding
@@ -387,6 +401,10 @@ Changes in existing checks
   <clang-tidy/checks/cppcoreguidelines/pro-bounds-pointer-arithmetic>` check
   adding an option to allow pointer arithmetic via prefix/postfix increment or
   decrement operators.
+
+- Improved :doc:`google-readability-casting
+  <clang-tidy/checks/google/readability-casting>` check by adding fix-it
+  notes for downcasts.
 
 - Improved :doc:`llvm-prefer-isa-or-dyn-cast-in-conditionals
   <clang-tidy/checks/llvm/prefer-isa-or-dyn-cast-in-conditionals>` check:

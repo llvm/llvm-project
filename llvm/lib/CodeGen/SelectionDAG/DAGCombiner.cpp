@@ -6219,6 +6219,25 @@ SDValue DAGCombiner::visitIMINMAX(SDNode *N) {
                                         SDLoc(N), VT, N0, N1))
     return SD;
 
+  if (TLI.isOperationLegalOrCustom(ISD::USUBO, VT) &&
+      !TLI.isOperationLegalOrCustom(ISD::UMIN, VT)) {
+    SDValue B;
+
+    // (umin (sub a, b), a) -> (usubo a, b); (select usubo.1, a, usubo.0)
+    if (sd_match(N0, m_Sub(m_Specific(N1), m_Value(B)))) {
+      SDVTList VTs = DAG.getVTList(VT, getSetCCResultType(VT));
+      SDValue USO = DAG.getNode(ISD::USUBO, DL, VTs, N1, B);
+      return DAG.getSelect(DL, VT, USO.getValue(1), N1, USO.getValue(0));
+    }
+
+    // (umin a, (sub a, b)) -> (usubo a, b); (select usubo.1, a, usubo.0)
+    if (sd_match(N1, m_Sub(m_Specific(N0), m_Value(B)))) {
+      SDVTList VTs = DAG.getVTList(VT, getSetCCResultType(VT));
+      SDValue USO = DAG.getNode(ISD::USUBO, DL, VTs, N0, B);
+      return DAG.getSelect(DL, VT, USO.getValue(1), N0, USO.getValue(0));
+    }
+  }
+
   // Simplify the operands using demanded-bits information.
   if (SimplifyDemandedBits(SDValue(N, 0)))
     return SDValue(N, 0);
@@ -10986,6 +11005,22 @@ SDValue DAGCombiner::visitSRA(SDNode *N) {
         ShiftValue = ShiftValues[0];
       return DAG.getNode(ISD::SRA, DL, VT, N0.getOperand(0), ShiftValue);
     }
+  }
+
+  // fold (sra (xor (sra x, c1), -1), c2) -> (xor (sra x, c3), -1)
+  // This allows merging two arithmetic shifts even when there's a NOT in
+  // between.
+  SDValue X;
+  APInt C1;
+  if (N1C && sd_match(N0, m_OneUse(m_Not(
+                              m_OneUse(m_Sra(m_Value(X), m_ConstInt(C1))))))) {
+    APInt C2 = N1C->getAPIntValue();
+    zeroExtendToMatch(C1, C2, 1 /* Overflow Bit */);
+    APInt Sum = C1 + C2;
+    unsigned ShiftSum = Sum.getLimitedValue(OpSizeInBits - 1);
+    SDValue NewShift = DAG.getNode(
+        ISD::SRA, DL, VT, X, DAG.getShiftAmountConstant(ShiftSum, VT, DL));
+    return DAG.getNOT(DL, NewShift, VT);
   }
 
   // fold (sra (shl X, m), (sub result_size, n))
@@ -18862,6 +18897,26 @@ SDValue DAGCombiner::visitFCOPYSIGN(SDNode *N) {
 
   if (SimplifyDemandedBits(SDValue(N, 0)))
     return SDValue(N, 0);
+
+  if (VT != N1.getValueType())
+    return SDValue();
+
+  // If this is equivalent to a disjoint or, replace it with one. This can
+  // happen if the sign operand is a sign mask (i.e., x << sign_bit_position).
+  if (DAG.SignBitIsZeroFP(N0) &&
+      DAG.computeKnownBits(N1).Zero.isMaxSignedValue()) {
+    // TODO: Just directly match the shift pattern. computeKnownBits is heavy
+    // for a such a narrowly targeted case.
+    EVT IntVT = VT.changeTypeToInteger();
+    // TODO: It appears to be profitable in some situations to unconditionally
+    // emit a fabs(n0) to perform this combine.
+    SDValue CastSrc0 = DAG.getNode(ISD::BITCAST, DL, IntVT, N0);
+    SDValue CastSrc1 = DAG.getNode(ISD::BITCAST, DL, IntVT, N1);
+
+    SDValue SignOr = DAG.getNode(ISD::OR, DL, IntVT, CastSrc0, CastSrc1,
+                                 SDNodeFlags::Disjoint);
+    return DAG.getNode(ISD::BITCAST, DL, VT, SignOr);
+  }
 
   return SDValue();
 }

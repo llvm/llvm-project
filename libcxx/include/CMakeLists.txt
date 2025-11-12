@@ -328,6 +328,8 @@ set(files
   __configuration/abi.h
   __configuration/availability.h
   __configuration/compiler.h
+  __configuration/experimental.h
+  __configuration/hardening.h
   __configuration/language.h
   __configuration/platform.h
   __coroutine/coroutine_handle.h
@@ -857,7 +859,6 @@ set(files
   __type_traits/is_reference.h
   __type_traits/is_reference_wrapper.h
   __type_traits/is_referenceable.h
-  __type_traits/is_replaceable.h
   __type_traits/is_same.h
   __type_traits/is_scalar.h
   __type_traits/is_signed.h
@@ -1065,7 +1066,6 @@ set(files
   sstream
   stack
   stdatomic.h
-  stdbool.h
   stddef.h
   stdexcept
   stdio.h
