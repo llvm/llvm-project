@@ -1369,7 +1369,9 @@ bool SIPeepholeSDWA::strengthReduceCSelect64(MachineFunction &MF) {
 
   for (MachineBasicBlock &MBB : MF)
     for (MachineInstr &MI : make_early_inc_range(MBB)) {
-      if (MI.getOpcode() != AMDGPU::S_CSELECT_B64)
+      if (MI.getOpcode() != AMDGPU::S_CSELECT_B64 ||
+          !MI.getOperand(1).isImm() || !MI.getOperand(2).isImm() ||
+          (MI.getOperand(1).getImm() != 0 && MI.getOperand(2).getImm() != 0))
         continue;
 
       Register Reg = MI.getOperand(0).getReg();
@@ -1386,10 +1388,13 @@ bool SIPeepholeSDWA::strengthReduceCSelect64(MachineFunction &MF) {
           MustBeVREADFIRSTLANE->getOpcode() != AMDGPU::V_READFIRSTLANE_B32)
         continue;
 
+      unsigned CSelectZeroOpIdx = MI.getOperand(1).getImm() ? 2 : 1;
+
       BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(AMDGPU::S_CSELECT_B32),
               MustBeVREADFIRSTLANE->getOperand(0).getReg())
-          .addImm(MI.getOperand(1).getImm())
-          .addImm(MI.getOperand(2).getImm())
+          .addImm(MustBeVCNDMASK->getOperand(CSelectZeroOpIdx == 1 ? 2 : 1)
+                      .getImm())
+          .addImm(MustBeVCNDMASK->getOperand(CSelectZeroOpIdx).getImm())
           .addReg(AMDGPU::SCC, RegState::Implicit);
 
       MustBeVREADFIRSTLANE->eraseFromParent();
