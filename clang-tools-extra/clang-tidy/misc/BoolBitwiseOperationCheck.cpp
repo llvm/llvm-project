@@ -123,8 +123,8 @@ static const Expr *getAcceptableCompoundsLHS(const BinaryOperator *BinOp) {
   if (const auto *DeclRefLHS =
           dyn_cast<DeclRefExpr>(BinOp->getLHS()->IgnoreImpCasts()))
     return DeclRefLHS;
-  else if (const auto *MemberLHS =
-               dyn_cast<MemberExpr>(BinOp->getLHS()->IgnoreImpCasts()))
+  if (const auto *MemberLHS =
+          dyn_cast<MemberExpr>(BinOp->getLHS()->IgnoreImpCasts()))
     return MemberLHS;
 
   return nullptr;
@@ -168,50 +168,68 @@ void BoolBitwiseOperationCheck::emitWarningAndChangeOperatorsIfPossible(
             .getDesugaredType(Ctx)
             .isVolatileQualified();
       });
-  if (HasVolatileOperand)
-    return static_cast<void>(DiagEmitter());
+  if (HasVolatileOperand) {
+    DiagEmitter();
+    return;
+  }
 
   const bool HasSideEffects = BinOp->getRHS()->HasSideEffects(
       Ctx, /*IncludePossibleEffects=*/!StrictMode);
-  if (HasSideEffects)
-    return static_cast<void>(DiagEmitter());
+  if (HasSideEffects) {
+    DiagEmitter();
+    return;
+  }
 
   SourceLocation Loc = BinOp->getOperatorLoc();
 
-  if (Loc.isInvalid() || Loc.isMacroID())
-    return static_cast<void>(IgnoreMacros || DiagEmitter());
+  if (Loc.isInvalid() || Loc.isMacroID()) {
+    IgnoreMacros || DiagEmitter();
+    return;
+  }
 
   Loc = SM.getSpellingLoc(Loc);
-  if (Loc.isInvalid() || Loc.isMacroID())
-    return static_cast<void>(IgnoreMacros || DiagEmitter());
+  if (Loc.isInvalid() || Loc.isMacroID()) {
+    IgnoreMacros || DiagEmitter();
+    return;
+  }
 
   const CharSourceRange TokenRange = CharSourceRange::getTokenRange(Loc);
-  if (TokenRange.isInvalid())
-    return static_cast<void>(IgnoreMacros || DiagEmitter());
+  if (TokenRange.isInvalid()) {
+    IgnoreMacros || DiagEmitter();
+    return;
+  }
 
   const StringRef FixSpelling =
       translate(Lexer::getSourceText(TokenRange, SM, Ctx.getLangOpts()));
 
-  if (FixSpelling.empty())
-    return static_cast<void>(DiagEmitter());
+  if (FixSpelling.empty()) {
+    DiagEmitter();
+    return;
+  }
 
   FixItHint InsertEqual;
   if (BinOp->isCompoundAssignmentOp()) {
     const auto *LHS = getAcceptableCompoundsLHS(BinOp);
-    if (!LHS)
-      return static_cast<void>(DiagEmitter());
+    if (!LHS) {
+      DiagEmitter();
+      return;
+    }
     const SourceLocation LocLHS = LHS->getEndLoc();
-    if (LocLHS.isInvalid() || LocLHS.isMacroID())
-      return static_cast<void>(IgnoreMacros || DiagEmitter());
+    if (LocLHS.isInvalid() || LocLHS.isMacroID()) {
+      IgnoreMacros || DiagEmitter();
+      return;
+    }
     const SourceLocation InsertLoc =
         clang::Lexer::getLocForEndOfToken(LocLHS, 0, SM, Ctx.getLangOpts());
-    if (InsertLoc.isInvalid() || InsertLoc.isMacroID())
-      return static_cast<void>(IgnoreMacros || DiagEmitter());
+    if (InsertLoc.isInvalid() || InsertLoc.isMacroID()) {
+      IgnoreMacros || DiagEmitter();
+      return;
+    }
     auto SourceText = static_cast<std::string>(Lexer::getSourceText(
         CharSourceRange::getTokenRange(LHS->getSourceRange()), SM,
         Ctx.getLangOpts()));
     llvm::erase_if(SourceText,
-                   [](unsigned char ch) { return std::isspace(ch); });
+                   [](unsigned char Ch) { return std::isspace(Ch); });
     InsertEqual = FixItHint::CreateInsertion(InsertLoc, " = " + SourceText);
   }
 
@@ -238,7 +256,7 @@ void BoolBitwiseOperationCheck::emitWarningAndChangeOperatorsIfPossible(
   } else if (BinOp->getOpcode() == BO_AndAssign && RHSOpcode == BO_LOr)
     SurroundedExpr = RHS;
 
-  if (SurroundedExpr && isa<ParenExpr>(SurroundedExpr))
+  if (isa_and_nonnull<ParenExpr>(SurroundedExpr))
     SurroundedExpr = nullptr;
 
   FixItHint InsertBrace1;
@@ -248,8 +266,10 @@ void BoolBitwiseOperationCheck::emitWarningAndChangeOperatorsIfPossible(
     const SourceLocation InsertSecondLoc = clang::Lexer::getLocForEndOfToken(
         SurroundedExpr->getEndLoc(), 0, SM, Ctx.getLangOpts());
     if (InsertFirstLoc.isInvalid() || InsertFirstLoc.isMacroID() ||
-        InsertSecondLoc.isInvalid() || InsertSecondLoc.isMacroID())
-      return static_cast<void>(IgnoreMacros || DiagEmitter());
+        InsertSecondLoc.isInvalid() || InsertSecondLoc.isMacroID()) {
+      IgnoreMacros || DiagEmitter();
+      return;
+    }
     InsertBrace1 = FixItHint::CreateInsertion(InsertFirstLoc, "(");
     InsertBrace2 = FixItHint::CreateInsertion(InsertSecondLoc, ")");
   }
@@ -277,11 +297,11 @@ void BoolBitwiseOperationCheck::visitBinaryTreesNode(
 }
 
 void BoolBitwiseOperationCheck::check(const MatchFinder::MatchResult &Result) {
-  const auto *binOpRoot = Result.Nodes.getNodeAs<BinaryOperator>("binOpRoot");
+  const auto *BinOpRoot = Result.Nodes.getNodeAs<BinaryOperator>("binOpRoot");
   const SourceManager &SM = *Result.SourceManager;
   ASTContext &Ctx = *Result.Context;
   std::optional<bool> RootAssignsToBoolean = std::nullopt;
-  visitBinaryTreesNode(binOpRoot, nullptr, SM, Ctx, RootAssignsToBoolean);
+  visitBinaryTreesNode(BinOpRoot, nullptr, SM, Ctx, RootAssignsToBoolean);
 }
 
 } // namespace clang::tidy::misc

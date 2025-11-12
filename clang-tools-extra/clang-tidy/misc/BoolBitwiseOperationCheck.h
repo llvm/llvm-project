@@ -22,7 +22,7 @@ namespace clang::tidy::misc {
 class BoolBitwiseOperationCheck : public ClangTidyCheck {
 public:
   BoolBitwiseOperationCheck(StringRef Name, ClangTidyContext *Context);
-  void storeOptions(ClangTidyOptions::OptionMap &Options) override;
+  void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
@@ -40,9 +40,8 @@ private:
                             const BinaryOperator *ParentBinOp,
                             const clang::SourceManager &SM,
                             clang::ASTContext &Ctx,
-                            std::optional<bool> &rootAssignsToBoolean);
+                            std::optional<bool> &RootAssignsToBoolean);
 
-private:
   bool StrictMode;
   bool IgnoreMacros;
 };
