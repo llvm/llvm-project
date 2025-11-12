@@ -1233,43 +1233,34 @@ void ClauseProcessor::processMapObjects(
     return nullptr;
   };
 
-  auto addImplicitmapper = [&](const omp::Object &object,
+  auto addImplicitMapper = [&](const omp::Object &object,
                                std::string &mapperIdName,
                                bool allowGenerate) -> mlir::FlatSymbolRefAttr {
     if (mapperIdName.empty())
       return mlir::FlatSymbolRefAttr();
 
-    bool symbolExists = converter.getModuleOp().lookupSymbol(mapperIdName);
-    if (!symbolExists && !allowGenerate)
+    if (converter.getModuleOp().lookupSymbol(mapperIdName))
+      return mlir::FlatSymbolRefAttr::get(&converter.getMLIRContext(),
+                                          mapperIdName);
+
+    if (!allowGenerate)
       return mlir::FlatSymbolRefAttr();
 
-    auto getOrCreateMapperAttr = [&]() -> mlir::FlatSymbolRefAttr {
-      if (symbolExists)
-        return mlir::FlatSymbolRefAttr::get(&converter.getMLIRContext(),
-                                            mapperIdName);
+    const semantics::DerivedTypeSpec *typeSpec =
+        getSymbolDerivedType(*object.sym());
+    if (!typeSpec && object.sym()->owner().IsDerivedType())
+      typeSpec = object.sym()->owner().derivedTypeSpec();
 
-      const semantics::DerivedTypeSpec *typeSpec =
-          getSymbolDerivedType(*object.sym());
-      if (!typeSpec && object.sym()->owner().IsDerivedType())
-        typeSpec = object.sym()->owner().derivedTypeSpec();
-
-      if (!typeSpec)
-        return mlir::FlatSymbolRefAttr();
-
-      mlir::Type type = converter.genType(*typeSpec);
-      auto recordType = mlir::dyn_cast<fir::RecordType>(type);
-      if (!recordType)
-        return mlir::FlatSymbolRefAttr();
-
-      return getOrGenImplicitDefaultDeclareMapper(converter, clauseLocation,
-                                                  recordType, mapperIdName);
-    };
-
-    mlir::FlatSymbolRefAttr mapperAttr = getOrCreateMapperAttr();
-    if (!mapperAttr)
+    if (!typeSpec)
       return mlir::FlatSymbolRefAttr();
 
-    return mapperAttr;
+    mlir::Type type = converter.genType(*typeSpec);
+    auto recordType = mlir::dyn_cast<fir::RecordType>(type);
+    if (!recordType)
+      return mlir::FlatSymbolRefAttr();
+
+    return getOrGenImplicitDefaultDeclareMapper(converter, clauseLocation,
+                                                recordType, mapperIdName);
   };
 
   auto getDefaultMapperID = [&](const semantics::DerivedTypeSpec *typeSpec,
@@ -1364,13 +1355,9 @@ void ClauseProcessor::processMapObjects(
             semantics::IsAllocatableOrObjectPointer(object.sym());
         bool containsDelete = (mapTypeBits & mlir::omp::ClauseMapFlags::del) !=
                               mlir::omp::ClauseMapFlags::none;
-        bool mapperExists = !mapperIdName.empty() &&
-                            converter.getModuleOp().lookupSymbol(mapperIdName);
-        if ((needsDefaultMapper || mapperExists) && !mapperIdName.empty() &&
-            !containsDelete)
-          mapperId = addImplicitmapper(object, mapperIdName,
-                                       /*allowGenerate=*/needsDefaultMapper &&
-                                           !mapperExists);
+        if (!mapperIdName.empty() && !containsDelete)
+          mapperId = addImplicitMapper(object, mapperIdName,
+                                       /*allowGenerate=*/needsDefaultMapper);
         else
           mapperId = mlir::FlatSymbolRefAttr();
       }

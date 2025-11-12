@@ -2617,18 +2617,16 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
 
           std::string mapperIdName = getDefaultMapperName();
           if (!mapperIdName.empty()) {
-            bool mapperExists =
-                converter.getModuleOp().lookupSymbol(mapperIdName);
             bool allowImplicitMapper =
                 semantics::IsAllocatableOrObjectPointer(&sym);
-            if (mapperExists || allowImplicitMapper) {
-              if (!mapperExists) {
-                auto recordType = mlir::dyn_cast_or_null<fir::RecordType>(
-                    converter.genType(*typeSpec));
-                if (recordType)
-                  mapperId = getOrGenImplicitDefaultDeclareMapper(
-                      converter, loc, recordType, mapperIdName);
-              } else {
+            bool hasDefaultMapper =
+                converter.getModuleOp().lookupSymbol(mapperIdName);
+            if (hasDefaultMapper || allowImplicitMapper) {
+              if (auto recordType = mlir::dyn_cast_or_null<fir::RecordType>(
+                      converter.genType(*typeSpec))) {
+                mapperId = getOrGenImplicitDefaultDeclareMapper(
+                    converter, loc, recordType, mapperIdName);
+              } else if (hasDefaultMapper) {
                 mapperId = mlir::FlatSymbolRefAttr::get(
                     &converter.getMLIRContext(), mapperIdName);
               }

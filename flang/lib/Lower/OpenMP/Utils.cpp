@@ -14,6 +14,7 @@
 
 #include "ClauseFinder.h"
 #include "flang/Evaluate/fold.h"
+#include "flang/Evaluate/tools.h"
 #include <flang/Lower/AbstractConverter.h>
 #include <flang/Lower/ConvertType.h>
 #include <flang/Lower/DirectivesCommon.h>
@@ -170,10 +171,7 @@ mlir::FlatSymbolRefAttr getOrGenImplicitDefaultDeclareMapper(
 
 bool requiresImplicitDefaultDeclareMapper(
     const semantics::DerivedTypeSpec &typeSpec) {
-  std::string rawName = typeSpec.name().ToString();
-  std::string loweredName = llvm::StringRef(rawName).lower();
-  llvm::StringRef typeNameRef(loweredName);
-  if (typeNameRef.contains("c_ptr") || typeNameRef.contains("c_funptr"))
+  if (semantics::IsIsoCType(&typeSpec))
     return true;
 
   llvm::SmallPtrSet<const semantics::DerivedTypeSpec *, 8> visited;
