@@ -1509,9 +1509,10 @@ private:
 
   void dumpPSet(Register Reg) const {
     dbgs() << "Reg=" << printReg(Reg, TRI, 0, &MRI) << " PSet=";
-    // FIXME: The static cast is a bug compensating bugs in the callers.
+    // FIXME: The static_cast is a bug compensating bugs in the callers.
     VirtRegOrUnit VRegOrUnit =
-        Reg.isVirtual() ? VirtRegOrUnit(Reg) : VirtRegOrUnit(Reg.id());
+        Reg.isVirtual() ? VirtRegOrUnit(Reg)
+                        : VirtRegOrUnit(static_cast<MCRegUnit>(Reg.id()));
     for (auto PSetIter = MRI.getPressureSets(VRegOrUnit); PSetIter.isValid();
          ++PSetIter) {
       dbgs() << *PSetIter << ' ';
@@ -1521,9 +1522,10 @@ private:
 
   void increaseRegisterPressure(std::vector<unsigned> &Pressure,
                                 Register Reg) const {
-    // FIXME: The static cast is a bug compensating bugs in the callers.
+    // FIXME: The static_cast is a bug compensating bugs in the callers.
     VirtRegOrUnit VRegOrUnit =
-        Reg.isVirtual() ? VirtRegOrUnit(Reg) : VirtRegOrUnit(Reg.id());
+        Reg.isVirtual() ? VirtRegOrUnit(Reg)
+                        : VirtRegOrUnit(static_cast<MCRegUnit>(Reg.id()));
     auto PSetIter = MRI.getPressureSets(VRegOrUnit);
     unsigned Weight = PSetIter.getWeight();
     for (; PSetIter.isValid(); ++PSetIter)
@@ -1569,7 +1571,7 @@ private:
         Register Reg =
             Use.VRegOrUnit.isVirtualReg()
                 ? Use.VRegOrUnit.asVirtualReg()
-                : static_cast<Register>(Use.VRegOrUnit.asMCRegUnit());
+                : Register(static_cast<unsigned>(Use.VRegOrUnit.asMCRegUnit()));
         // Ignore the variable that appears only on one side of phi instruction
         // because it's used only at the first iteration.
         if (MI.isPHI() && Reg != getLoopPhiReg(MI, OrigMBB))
@@ -1621,10 +1623,10 @@ private:
       } else {
         for (auto &Use : ROMap.find(MI)->getSecond().Uses) {
           // FIXME: The static_cast is a bug.
-          Register Reg =
-              Use.VRegOrUnit.isVirtualReg()
-                  ? Use.VRegOrUnit.asVirtualReg()
-                  : static_cast<Register>(Use.VRegOrUnit.asMCRegUnit());
+          Register Reg = Use.VRegOrUnit.isVirtualReg()
+                             ? Use.VRegOrUnit.asVirtualReg()
+                             : Register(static_cast<unsigned>(
+                                   Use.VRegOrUnit.asMCRegUnit()));
           UpdateTargetRegs(Reg);
         }
       }
@@ -1641,7 +1643,7 @@ private:
         Register Reg =
             Use.VRegOrUnit.isVirtualReg()
                 ? Use.VRegOrUnit.asVirtualReg()
-                : static_cast<Register>(Use.VRegOrUnit.asMCRegUnit());
+                : Register(static_cast<unsigned>(Use.VRegOrUnit.asMCRegUnit()));
         if (!TargetRegs.contains(Reg))
           continue;
         auto [Ite, Inserted] = LastUseMI.try_emplace(Reg, MI);
@@ -1697,9 +1699,10 @@ private:
     const auto InsertReg = [this, &CurSetPressure](RegSetTy &RegSet,
                                                    VirtRegOrUnit VRegOrUnit) {
       // FIXME: The static_cast is a bug.
-      Register Reg = VRegOrUnit.isVirtualReg()
-                         ? VRegOrUnit.asVirtualReg()
-                         : static_cast<Register>(VRegOrUnit.asMCRegUnit());
+      Register Reg =
+          VRegOrUnit.isVirtualReg()
+              ? VRegOrUnit.asVirtualReg()
+              : Register(static_cast<unsigned>(VRegOrUnit.asMCRegUnit()));
       if (!Reg.isValid() || isReservedRegister(Reg))
         return;
 

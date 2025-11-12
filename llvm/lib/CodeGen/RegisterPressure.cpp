@@ -1217,9 +1217,10 @@ static LaneBitmask findUseBetween(VirtRegOrUnit VRegOrUnit,
                                   const LiveIntervals *LIS) {
   const TargetRegisterInfo &TRI = *MRI.getTargetRegisterInfo();
   // FIXME: The static_cast is a bug.
-  Register Reg = VRegOrUnit.isVirtualReg()
-                     ? VRegOrUnit.asVirtualReg()
-                     : static_cast<Register>(VRegOrUnit.asMCRegUnit());
+  Register Reg =
+      VRegOrUnit.isVirtualReg()
+          ? VRegOrUnit.asVirtualReg()
+          : Register(static_cast<unsigned>(VRegOrUnit.asMCRegUnit()));
   for (const MachineOperand &MO : MRI.use_nodbg_operands(Reg)) {
     if (MO.isUndef())
       continue;
