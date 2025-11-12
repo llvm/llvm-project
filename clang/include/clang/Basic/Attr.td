@@ -5011,6 +5011,8 @@ class HLSLSemanticBaseAttr : HLSLAnnotationAttr {
   let Spellings = [];
   let Subjects = SubjectList<[ParmVar, Field, Function]>;
   let LangOpts = [HLSL];
+
+  let Args = [StringArgument<"SemanticName">, IntArgument<"SemanticIndex">];
 }
 
 def HLSLParsedSemantic : HLSLSemanticBaseAttr {
@@ -5018,8 +5020,6 @@ def HLSLParsedSemantic : HLSLSemanticBaseAttr {
   let Subjects = SubjectList<[ParmVar, Field, Function]>;
   let LangOpts = [HLSL];
   let Documentation = [InternalOnly];
-
-  let Args = [StringArgument<"SemanticName">, IntArgument<"SemanticIndex">];
 }
 
 def HLSLAppliedSemantic : HLSLSemanticBaseAttr {
@@ -5027,8 +5027,6 @@ def HLSLAppliedSemantic : HLSLSemanticBaseAttr {
   let Subjects = SubjectList<[ParmVar, Field, Function]>;
   let LangOpts = [HLSL];
   let Documentation = [InternalOnly];
-
-  let Args = [StringArgument<"SemanticName">, IntArgument<"SemanticIndex">];
 }
 
 def HLSLPackOffset: HLSLAnnotationAttr {

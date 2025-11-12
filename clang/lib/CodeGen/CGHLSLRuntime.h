@@ -146,7 +146,7 @@ protected:
 
   llvm::Value *emitSystemSemanticLoad(llvm::IRBuilder<> &B, llvm::Type *Type,
                                       const clang::DeclaratorDecl *Decl,
-                                      HLSLSemanticBaseAttr *Semantic,
+                                      HLSLAppliedSemanticAttr *Semantic,
                                       std::optional<unsigned> Index);
 
   llvm::Value *handleScalarSemanticLoad(llvm::IRBuilder<> &B,
@@ -155,16 +155,17 @@ protected:
                                         const clang::DeclaratorDecl *Decl,
                                         HLSLAppliedSemanticAttr *Semantic);
 
-  llvm::Value *handleStructSemanticLoad(
+  std::pair<llvm::Value *, specific_attr_iterator<HLSLAppliedSemanticAttr>>
+  handleStructSemanticLoad(
       llvm::IRBuilder<> &B, const FunctionDecl *FD, llvm::Type *Type,
       const clang::DeclaratorDecl *Decl,
-      specific_attr_iterator<HLSLAppliedSemanticAttr> &begin,
+      specific_attr_iterator<HLSLAppliedSemanticAttr> begin,
       specific_attr_iterator<HLSLAppliedSemanticAttr> end);
 
-  llvm::Value *
+  std::pair<llvm::Value *, specific_attr_iterator<HLSLAppliedSemanticAttr>>
   handleSemanticLoad(llvm::IRBuilder<> &B, const FunctionDecl *FD,
                      llvm::Type *Type, const clang::DeclaratorDecl *Decl,
-                     specific_attr_iterator<HLSLAppliedSemanticAttr> &begin,
+                     specific_attr_iterator<HLSLAppliedSemanticAttr> begin,
                      specific_attr_iterator<HLSLAppliedSemanticAttr> end);
 
 public:

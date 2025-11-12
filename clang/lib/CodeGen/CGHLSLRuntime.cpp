@@ -637,7 +637,7 @@ llvm::Value *CGHLSLRuntime::emitUserSemanticLoad(
 
 llvm::Value *CGHLSLRuntime::emitSystemSemanticLoad(
     IRBuilder<> &B, llvm::Type *Type, const clang::DeclaratorDecl *Decl,
-    HLSLSemanticBaseAttr *Semantic, std::optional<unsigned> Index) {
+    HLSLAppliedSemanticAttr *Semantic, std::optional<unsigned> Index) {
 
   std::string SemanticName = Semantic->getAttrName()->getName().upper();
   if (SemanticName == "SV_GROUPINDEX") {
@@ -693,11 +693,12 @@ llvm::Value *CGHLSLRuntime::handleScalarSemanticLoad(
   return emitUserSemanticLoad(B, Type, Decl, Semantic, Index);
 }
 
-llvm::Value *CGHLSLRuntime::handleStructSemanticLoad(
+std::pair<llvm::Value *, specific_attr_iterator<HLSLAppliedSemanticAttr>>
+CGHLSLRuntime::handleStructSemanticLoad(
     IRBuilder<> &B, const FunctionDecl *FD, llvm::Type *Type,
     const clang::DeclaratorDecl *Decl,
-    specific_attr_iterator<HLSLAppliedSemanticAttr> &begin,
-    specific_attr_iterator<HLSLAppliedSemanticAttr> end) {
+    specific_attr_iterator<HLSLAppliedSemanticAttr> AttrBegin,
+    specific_attr_iterator<HLSLAppliedSemanticAttr> AttrEnd) {
   const llvm::StructType *ST = cast<StructType>(Type);
   const clang::RecordDecl *RD = Decl->getType()->getAsRecordDecl();
 
@@ -707,28 +708,31 @@ llvm::Value *CGHLSLRuntime::handleStructSemanticLoad(
   llvm::Value *Aggregate = llvm::PoisonValue::get(Type);
   auto FieldDecl = RD->field_begin();
   for (unsigned I = 0; I < ST->getNumElements(); ++I) {
-    llvm::Value *ChildValue = handleSemanticLoad(B, FD, ST->getElementType(I),
-                                                 *FieldDecl, begin, end);
+    auto [ChildValue, NextAttr] = handleSemanticLoad(
+        B, FD, ST->getElementType(I), *FieldDecl, AttrBegin, AttrEnd);
+    AttrBegin = NextAttr;
     assert(ChildValue);
     Aggregate = B.CreateInsertValue(Aggregate, ChildValue, I);
     ++FieldDecl;
   }
 
-  return Aggregate;
+  return std::make_pair(Aggregate, AttrBegin);
 }
 
-llvm::Value *CGHLSLRuntime::handleSemanticLoad(
+std::pair<llvm::Value *, specific_attr_iterator<HLSLAppliedSemanticAttr>>
+CGHLSLRuntime::handleSemanticLoad(
     IRBuilder<> &B, const FunctionDecl *FD, llvm::Type *Type,
     const clang::DeclaratorDecl *Decl,
-    specific_attr_iterator<HLSLAppliedSemanticAttr> &begin,
-    specific_attr_iterator<HLSLAppliedSemanticAttr> end) {
-  assert(end != begin);
+    specific_attr_iterator<HLSLAppliedSemanticAttr> AttrBegin,
+    specific_attr_iterator<HLSLAppliedSemanticAttr> AttrEnd) {
+  assert(AttrBegin != AttrEnd);
   if (Type->isStructTy())
-    return handleStructSemanticLoad(B, FD, Type, Decl, begin, end);
+    return handleStructSemanticLoad(B, FD, Type, Decl, AttrBegin, AttrEnd);
 
-  HLSLAppliedSemanticAttr *Attr = *begin;
-  ++begin;
-  return handleScalarSemanticLoad(B, FD, Type, Decl, Attr);
+  HLSLAppliedSemanticAttr *Attr = *AttrBegin;
+  ++AttrBegin;
+  return std::make_pair(handleScalarSemanticLoad(B, FD, Type, Decl, Attr),
+                        AttrBegin);
 }
 
 void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
@@ -775,8 +779,6 @@ void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
     }
 
     const ParmVarDecl *PD = FD->getParamDecl(Param.getArgNo() - SRetOffset);
-    auto AttrBegin = PD->specific_attr_begin<HLSLAppliedSemanticAttr>();
-    auto AttrEnd = PD->specific_attr_end<HLSLAppliedSemanticAttr>();
     llvm::Value *SemanticValue = nullptr;
     if ([[maybe_unused]] HLSLParamModifierAttr *MA =
             PD->getAttr<HLSLParamModifierAttr>()) {
@@ -784,8 +786,11 @@ void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
     } else {
       llvm::Type *ParamType =
           Param.hasByValAttr() ? Param.getParamByValType() : Param.getType();
-      SemanticValue =
+      auto AttrBegin = PD->specific_attr_begin<HLSLAppliedSemanticAttr>();
+      auto AttrEnd = PD->specific_attr_end<HLSLAppliedSemanticAttr>();
+      auto Result =
           handleSemanticLoad(B, FD, ParamType, PD, AttrBegin, AttrEnd);
+      SemanticValue = Result.first;
       if (!SemanticValue)
         return;
       if (Param.hasByValAttr()) {
