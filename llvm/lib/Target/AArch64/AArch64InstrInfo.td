@@ -405,6 +405,8 @@ def HasMTETC         : Predicate<"Subtarget->hasMTETC()">,
                                  AssemblerPredicateWithAll<(all_of FeatureMTETC), "mtetc">;
 def HasGCIE          : Predicate<"Subtarget->hasGCIE()">,
                                  AssemblerPredicateWithAll<(all_of FeatureGCIE), "gcie">;
+def HasMOPS_GO       : Predicate<"Subtarget->hasMOPS_GO()">,
+                                 AssemblerPredicateWithAll<(all_of FeatureMOPS_GO), "mops-go">;
 def IsLE             : Predicate<"Subtarget->isLittleEndian()">;
 def IsBE             : Predicate<"!Subtarget->isLittleEndian()">;
 def IsWindows        : Predicate<"Subtarget->isTargetWindows()">;
@@ -4444,6 +4446,11 @@ defm PRFUM : PrefetchUnscaled<0b11, 0, 0b10, "prfum",
                   [(AArch64Prefetch timm:$Rt,
                                   (am_unscaled64 GPR64sp:$Rn, simm9:$offset))]>;
 
+// PRFM falls back to PRFUM for negative or unaligned offsets (not a multiple
+// of 8).
+def : InstAlias<"prfm $Rt, [$Rn, $offset]",
+                (PRFUMi prfop:$Rt, GPR64sp:$Rn, simm9_offset_fb64:$offset), 0>;
+
 //---
 // (unscaled immediate, unprivileged)
 defm LDTRX : LoadUnprivileged<0b11, 0, 0b01, GPR64, "ldtr">;
@@ -5666,6 +5673,8 @@ let isPseudo = 1 in {
   def SEH_EpilogStart : Pseudo<(outs), (ins), []>, Sched<[]>;
   def SEH_EpilogEnd : Pseudo<(outs), (ins), []>, Sched<[]>;
   def SEH_PACSignLR : Pseudo<(outs), (ins), []>, Sched<[]>;
+  def SEH_SaveAnyRegI : Pseudo<(outs), (ins i32imm:$reg0, i32imm:$offs), []>, Sched<[]>;
+  def SEH_SaveAnyRegIP : Pseudo<(outs), (ins i32imm:$reg0, i32imm:$reg1, i32imm:$offs), []>, Sched<[]>;
   def SEH_SaveAnyRegQP : Pseudo<(outs), (ins i32imm:$reg0, i32imm:$reg1, i32imm:$offs), []>, Sched<[]>;
   def SEH_SaveAnyRegQPX : Pseudo<(outs), (ins i32imm:$reg0, i32imm:$reg1, i32imm:$offs), []>, Sched<[]>;
   def SEH_AllocZ : Pseudo<(outs), (ins i32imm:$offs), []>, Sched<[]>;
@@ -10861,6 +10870,15 @@ let Predicates = [HasMOPS, HasMTE], Defs = [NZCV], Size = 12, mayLoad = 0, maySt
 }
 
 //-----------------------------------------------------------------------------
+// MOPS Granule Only Protection (FEAT_MOPS_GO)
+
+let Predicates = [HasMOPS_GO, HasMTE] in {
+    defm SETGOP : MOPSGoMemorySetTaggingInsns<0b00, "setgop">;
+    defm SETGOM : MOPSGoMemorySetTaggingInsns<0b01, "setgom">;
+    defm SETGOE : MOPSGoMemorySetTaggingInsns<0b10, "setgoe">;
+}
+
+//-----------------------------------------------------------------------------
 // v8.3 Pointer Authentication late patterns
 
 def : Pat<(int_ptrauth_blend GPR64:$Rd, imm64_0_65535:$imm),
@@ -11415,7 +11433,7 @@ let Predicates = [HasF16F32MM] in
   defm FMMLA : SIMDThreeSameVectorFMLAWiden<"fmmla">;
 
 let Uses = [FPMR, FPCR] in
-  defm FMMLA : SIMDThreeSameVectorFP8MatrixMul<"fmmla">;
+  defm FMMLA : SIMDThreeSameVectorFP8MatrixMul<"fmmla", int_aarch64_neon_fmmla>;
 
 //===----------------------------------------------------------------------===//
 // Contention Management Hints (FEAT_CMH)

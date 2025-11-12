@@ -959,6 +959,11 @@ public:
 
   /// Add metadata with kind \p Kind and \p Node.
   void addMetadata(unsigned Kind, MDNode *Node) {
+    assert(none_of(Metadata,
+                   [Kind](const std::pair<unsigned, MDNode *> &P) {
+                     return P.first == Kind;
+                   }) &&
+           "Kind must appear at most once in Metadata");
     Metadata.emplace_back(Kind, Node);
   }
 
@@ -1042,6 +1047,13 @@ public:
     // It produces the lane index across all unrolled iterations. Unrolling will
     // add all copies of its original operand as additional operands.
     FirstActiveLane,
+    // Calculates the last active lane index of the vector predicate operands.
+    // The predicates must be prefix-masks (all 1s before all 0s). Used when
+    // tail-folding to extract the correct live-out value from the last active
+    // iteration. It produces the lane index across all unrolled iterations.
+    // Unrolling will add all copies of its original operand as additional
+    // operands.
+    LastActiveLane,
 
     // The opcodes below are used for VPInstructionWithType.
     //
@@ -1762,15 +1774,11 @@ struct LLVM_ABI_FOR_TEST VPWidenSelectRecipe : public VPRecipeWithIRFlags,
     return getOperand(0);
   }
 
-  bool isInvariantCond() const {
-    return getCond()->isDefinedOutsideLoopRegions();
-  }
-
   /// Returns true if the recipe only uses the first lane of operand \p Op.
   bool usesFirstLaneOnly(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
-    return Op == getCond() && isInvariantCond();
+    return Op == getCond() && Op->isDefinedOutsideLoopRegions();
   }
 };
 

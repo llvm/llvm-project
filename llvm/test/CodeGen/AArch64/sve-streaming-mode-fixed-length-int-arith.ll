@@ -975,9 +975,8 @@ define void @mul_v32i8(ptr %a, ptr %b) {
 ; SVE-NEXT:    ptrue p0.b, vl16
 ; SVE-NEXT:    ldp q1, q2, [x0]
 ; SVE-NEXT:    mul z0.b, p0/m, z0.b, z1.b
-; SVE-NEXT:    movprfx z1, z2
-; SVE-NEXT:    mul z1.b, p0/m, z1.b, z3.b
-; SVE-NEXT:    stp q0, q1, [x0]
+; SVE-NEXT:    mul z2.b, p0/m, z2.b, z3.b
+; SVE-NEXT:    stp q0, q2, [x0]
 ; SVE-NEXT:    ret
 ;
 ; SVE2-LABEL: mul_v32i8:
@@ -1286,9 +1285,8 @@ define void @mul_v16i16(ptr %a, ptr %b) {
 ; SVE-NEXT:    ptrue p0.h, vl8
 ; SVE-NEXT:    ldp q1, q2, [x0]
 ; SVE-NEXT:    mul z0.h, p0/m, z0.h, z1.h
-; SVE-NEXT:    movprfx z1, z2
-; SVE-NEXT:    mul z1.h, p0/m, z1.h, z3.h
-; SVE-NEXT:    stp q0, q1, [x0]
+; SVE-NEXT:    mul z2.h, p0/m, z2.h, z3.h
+; SVE-NEXT:    stp q0, q2, [x0]
 ; SVE-NEXT:    ret
 ;
 ; SVE2-LABEL: mul_v16i16:
@@ -1467,9 +1465,8 @@ define void @mul_v8i32(ptr %a, ptr %b) {
 ; SVE-NEXT:    ptrue p0.s, vl4
 ; SVE-NEXT:    ldp q1, q2, [x0]
 ; SVE-NEXT:    mul z0.s, p0/m, z0.s, z1.s
-; SVE-NEXT:    movprfx z1, z2
-; SVE-NEXT:    mul z1.s, p0/m, z1.s, z3.s
-; SVE-NEXT:    stp q0, q1, [x0]
+; SVE-NEXT:    mul z2.s, p0/m, z2.s, z3.s
+; SVE-NEXT:    stp q0, q2, [x0]
 ; SVE-NEXT:    ret
 ;
 ; SVE2-LABEL: mul_v8i32:
@@ -1599,9 +1596,8 @@ define void @mul_v4i64(ptr %a, ptr %b) {
 ; SVE-NEXT:    ptrue p0.d, vl2
 ; SVE-NEXT:    ldp q1, q2, [x0]
 ; SVE-NEXT:    mul z0.d, p0/m, z0.d, z1.d
-; SVE-NEXT:    movprfx z1, z2
-; SVE-NEXT:    mul z1.d, p0/m, z1.d, z3.d
-; SVE-NEXT:    stp q0, q1, [x0]
+; SVE-NEXT:    mul z2.d, p0/m, z2.d, z3.d
+; SVE-NEXT:    stp q0, q2, [x0]
 ; SVE-NEXT:    ret
 ;
 ; SVE2-LABEL: mul_v4i64:

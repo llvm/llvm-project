@@ -30,6 +30,7 @@ llvm_canonicalize_cmake_booleans(
   LLVM_INCLUDE_SPIRV_TOOLS_TESTS
   LLVM_APPEND_VC_REV
   LLVM_HAS_LOGF128
+  LLVM_ENABLE_ONDISK_CAS
   )
 
 configure_lit_site_cfg(
@@ -81,6 +82,7 @@ set(LLVM_TEST_DEPENDS
   llvm-bcanalyzer
   llvm-bitcode-strip
   llvm-c-test
+  llvm-cas
   llvm-cat
   llvm-cfi-verify
   llvm-cgdata

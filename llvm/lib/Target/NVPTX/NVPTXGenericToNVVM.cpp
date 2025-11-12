@@ -28,10 +28,6 @@
 
 using namespace llvm;
 
-namespace llvm {
-void initializeGenericToNVVMLegacyPassPass(PassRegistry &);
-}
-
 namespace {
 class GenericToNVVM {
 public:

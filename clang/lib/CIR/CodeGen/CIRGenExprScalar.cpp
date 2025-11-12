@@ -438,6 +438,10 @@ public:
     return cgf.emitVAArg(ve);
   }
 
+  mlir::Value VisitCXXRewrittenBinaryOperator(CXXRewrittenBinaryOperator *e) {
+    return Visit(e->getSemanticForm());
+  }
+
   mlir::Value VisitUnaryExprOrTypeTraitExpr(const UnaryExprOrTypeTraitExpr *e);
   mlir::Value
   VisitAbstractConditionalOperator(const AbstractConditionalOperator *e);
@@ -1927,6 +1931,14 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
     }
 
     return builder.createIntToPtr(middleVal, destCIRTy);
+  }
+
+  case CK_UncheckedDerivedToBase:
+  case CK_DerivedToBase: {
+    // The EmitPointerWithAlignment path does this fine; just discard
+    // the alignment.
+    return cgf.getAsNaturalPointerTo(cgf.emitPointerWithAlignment(ce),
+                                     ce->getType()->getPointeeType());
   }
 
   case CK_Dynamic: {
