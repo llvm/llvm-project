@@ -99,6 +99,25 @@ define double @nextafter_not_marked_dead_on_subnormal() {
   ret double %next
 }
 
+define double @nextafter_not_marked_dead_on_poison() {
+; CHECK-LABEL: define double @nextafter_not_marked_dead_on_poison() {
+; CHECK-NEXT:    [[NEXT:%.*]] = call double @nextafter(double poison, double 1.000000e+00)
+; CHECK-NEXT:    ret double [[NEXT]]
+;
+  %next = call double @nextafter(double poison, double 1.0)
+  ret double %next
+}
+
+define double @nextafter_marked_dead_when_readnone() {
+; CHECK-LABEL: define double @nextafter_marked_dead_when_readnone() {
+; CHECK-NEXT:    [[NEXT:%.*]] = call double @nextafter(double 4.940660e-324, double 1.000000e+00) #[[ATTR1:[0-9]+]]
+; CHECK-NEXT:    ret double 9.881310e-324
+;
+  %subnormal = load double, double* @dbl_pos_min_subnormal
+  %next = call double @nextafter(double %subnormal, double 1.0) readnone
+  ret double %next
+}
+
 ; ==================
 ; nextafterf tests
 ; ==================
