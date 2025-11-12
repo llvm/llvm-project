@@ -84,6 +84,15 @@ class AscalonGetCyclesVRGatherVV<string mx> {
   );
 }
 
+class AscalonGetCyclesStridedSegmented<string mx, int sew> {
+  int c = !cond(
+    !eq(sew, 8) : AscalonGetCyclesLMULFractional<mx, 4>.c,
+    !eq(sew, 16) : AscalonGetCyclesLMULFractional<mx, 2>.c,
+    !eq(sew, 32) : AscalonGetCyclesLMULFractional<mx, 1>.c,
+    !eq(sew, 64) : AscalonGetCyclesLMULFractional<mx, 1>.c
+  );
+}
+
 //===----------------------------------------------------------------------===//
 
 def TTAscalonD8Model : SchedMachineModel {
@@ -402,6 +411,7 @@ def : ReadAdvance<ReadSingleBitImm, 0>;
 
 //===----------------------------------------------------------------------===//
 // Vector
+def : WriteRes<WriteRdVLENB, [AscalonFXA]>;
 
 // Configuration-Setting Instructions
 let Latency = 1 in {
@@ -411,6 +421,203 @@ def : WriteRes<WriteVSETIVLI, [AscalonV]>;
 let Latency = 2 in {
 def : WriteRes<WriteVSETVL, [AscalonV]>;
 }
+
+// Vector Loads and Stores
+foreach mx = SchedMxList in {
+  defvar Cycles = AscalonGetCyclesDefault<mx>.c;
+  defvar IsWorstCase = AscalonIsWorstCaseMX<mx, SchedMxList>.c;
+  let Latency = Cycles, ReleaseAtCycles = [Cycles] in {
+    defm "" : LMULWriteResMX<"WriteVLDE",    [AscalonLS], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVLDFF",   [AscalonLS], mx, IsWorstCase>;
+  }
+  let Latency = 1, AcquireAtCycles = [1], ReleaseAtCycles = [!add(1, Cycles)] in
+  defm "" : LMULWriteResMX<"WriteVSTE",    [AscalonLS], mx, IsWorstCase>;
+}
+
+foreach mx = SchedMxList in {
+  defvar IsWorstCase = AscalonIsWorstCaseMX<mx, SchedMxList>.c;
+  let Latency = 1, ReleaseAtCycles = [1] in
+  defm "" : LMULWriteResMX<"WriteVLDM",    [AscalonLS], mx, IsWorstCase>;
+  let Latency = 1, ReleaseAtCycles = [1] in
+  defm "" : LMULWriteResMX<"WriteVSTM",    [AscalonLS], mx, IsWorstCase>;
+}
+
+foreach mx = SchedMxList in {
+  defvar Cycles = AscalonGetCyclesLMUL<mx, 2>.c;
+  defvar IsWorstCase = AscalonIsWorstCaseMX<mx, SchedMxList>.c;
+  let Latency = !add(3, Cycles), AcquireAtCycles = [1], ReleaseAtCycles = [!add(1, Cycles)] in {
+    defm "" : LMULWriteResMX<"WriteVLDS8", [AscalonLS], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVLDUX8", [AscalonLS], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVLDOX8", [AscalonLS], mx, IsWorstCase>;
+  }
+  let Latency = 1, AcquireAtCycles = [1], ReleaseAtCycles = [!add(1, Cycles)] in {
+    defm "" : LMULWriteResMX<"WriteVSTS8",  [AscalonLS], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVSTUX8", [AscalonLS], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVSTOX8", [AscalonLS], mx, IsWorstCase>;
+  }
+}
+foreach mx = ["MF4", "MF2", "M1", "M2", "M4", "M8"] in {
+  defvar Cycles = AscalonGetCyclesLMUL<mx, 2>.c;
+  defvar IsWorstCase = AscalonIsWorstCaseMX<mx, SchedMxList>.c;
+  let Latency = !add(3, Cycles), AcquireAtCycles = [1], ReleaseAtCycles = [!add(1, Cycles)] in {
+    defm "" : LMULWriteResMX<"WriteVLDS16", [AscalonLS], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVLDUX16", [AscalonLS], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVLDOX16", [AscalonLS], mx, IsWorstCase>;
+  }
+  let Latency = 1, AcquireAtCycles = [1], ReleaseAtCycles = [!add(1, Cycles)] in {
+    defm "" : LMULWriteResMX<"WriteVSTS16",  [AscalonLS], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVSTUX16", [AscalonLS], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVSTOX16", [AscalonLS], mx, IsWorstCase>;
+  }
+}
+foreach mx = ["MF2", "M1", "M2", "M4", "M8"] in {
+  defvar Cycles = AscalonGetCyclesLMUL<mx, 2>.c;
+  defvar IsWorstCase = AscalonIsWorstCaseMX<mx, SchedMxList>.c;
+  let Latency = !add(3, Cycles), AcquireAtCycles = [1], ReleaseAtCycles = [!add(1, Cycles)] in {
+    defm "" : LMULWriteResMX<"WriteVLDS32", [AscalonLS], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVLDUX32", [AscalonLS], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVLDOX32", [AscalonLS], mx, IsWorstCase>;
+  }
+  let Latency = 1, AcquireAtCycles = [1], ReleaseAtCycles = [!add(1, Cycles)] in {
+    defm "" : LMULWriteResMX<"WriteVSTS32",  [AscalonLS], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVSTUX32", [AscalonLS], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVSTOX32", [AscalonLS], mx, IsWorstCase>;
+  }
+}
+foreach mx = ["M1", "M2", "M4", "M8"] in {
+  defvar Cycles = AscalonGetCyclesLMUL<mx, 2>.c;
+  defvar IsWorstCase = AscalonIsWorstCaseMX<mx, SchedMxList>.c;
+  let Latency = !add(3, Cycles), AcquireAtCycles = [1], ReleaseAtCycles = [!add(1, Cycles)] in {
+    defm "" : LMULWriteResMX<"WriteVLDS64", [AscalonLS], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVLDUX64", [AscalonLS], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVLDOX64", [AscalonLS], mx, IsWorstCase>;
+  }
+  let Latency = 1, AcquireAtCycles = [1], ReleaseAtCycles = [!add(1, Cycles)] in {
+    defm "" : LMULWriteResMX<"WriteVSTS64",  [AscalonLS], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVSTUX64", [AscalonLS], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVSTOX64", [AscalonLS], mx, IsWorstCase>;
+  }
+}
+
+let Latency = 1 in {
+  // VLD*R is LMUL aware
+  def : WriteRes<WriteVLD1R,  [AscalonLS]>;
+  def : WriteRes<WriteVLD2R,  [AscalonLS]>;
+  def : WriteRes<WriteVLD4R,  [AscalonLS]>;
+  def : WriteRes<WriteVLD8R,  [AscalonLS]>;
+  // VST*R is LMUL aware
+  def : WriteRes<WriteVST1R,   [AscalonLS]>;
+  def : WriteRes<WriteVST2R,   [AscalonLS]>;
+  def : WriteRes<WriteVST4R,   [AscalonLS]>;
+  def : WriteRes<WriteVST8R,   [AscalonLS]>;
+}
+
+// Segmented Loads and Stores
+foreach mx = SchedMxList in {
+  foreach eew = [8, 16, 32, 64] in {
+    foreach nf=2-8 in {
+      defvar Cycles = AscalonGetCyclesDefault<mx>.c;
+      defvar IsWorstCase = AscalonIsWorstCaseMX<mx, SchedMxList>.c;
+      // Does not chain so set latency high
+      let Latency = !add(3, Cycles), AcquireAtCycles = [1], ReleaseAtCycles = [!add(1, Cycles)] in {
+        defm "" : LMULWriteResMX<"WriteVLSEG" # nf # "e" # eew,   [AscalonLS], mx, IsWorstCase>;
+        defm "" : LMULWriteResMX<"WriteVLSEGFF" # nf # "e" # eew, [AscalonLS], mx, IsWorstCase>;
+      }
+      let Latency = 1, AcquireAtCycles = [1], ReleaseAtCycles = [!add(1, Cycles)] in
+      defm "" : LMULWriteResMX<"WriteVSSEG" # nf # "e" # eew,   [AscalonLS], mx, IsWorstCase>;
+    }
+  }
+}
+foreach mx = SchedMxList in {
+  foreach nf=2-8 in {
+    foreach eew = [8, 16, 32, 64] in {
+      defvar Cycles = AscalonGetCyclesStridedSegmented<mx, eew>.c;
+      defvar IsWorstCase = AscalonIsWorstCaseMX<mx, SchedMxList>.c;
+      // Does not chain so set latency high
+      let Latency = !add(3, Cycles), AcquireAtCycles = [1], ReleaseAtCycles = [!add(1, Cycles)] in {
+        defm "" : LMULWriteResMX<"WriteVLSSEG" # nf # "e" # eew,  [AscalonLS], mx, IsWorstCase>;
+        defm "" : LMULWriteResMX<"WriteVLUXSEG" # nf # "e" # eew, [AscalonLS], mx, IsWorstCase>;
+        defm "" : LMULWriteResMX<"WriteVLOXSEG" # nf # "e" # eew, [AscalonLS], mx, IsWorstCase>;
+      }
+      let Latency = 1, AcquireAtCycles = [1], ReleaseAtCycles = [!add(1, Cycles)] in {
+        defm "" : LMULWriteResMX<"WriteVSSSEG" # nf # "e" # eew,  [AscalonLS], mx, IsWorstCase>;
+        defm "" : LMULWriteResMX<"WriteVSUXSEG" # nf # "e" # eew, [AscalonLS], mx, IsWorstCase>;
+        defm "" : LMULWriteResMX<"WriteVSOXSEG" # nf # "e" # eew, [AscalonLS], mx, IsWorstCase>;
+      }
+    }
+  }
+}
+
+// Vector Fixed-Point Arithmetic Instructions
+foreach mx = SchedMxList in {
+  defvar Cycles = AscalonGetCyclesDefault<mx>.c;
+  defvar IsWorstCase = AscalonIsWorstCaseMX<mx, SchedMxList>.c;
+  let Latency = 8, AcquireAtCycles = [0, 1], ReleaseAtCycles = [1, !add(1, Cycles)] in {
+    // FIXME what pipe does this occupy aside from vec
+    defm "" : LMULWriteResMX<"WriteVSALUV",   [AscalonFX, AscalonV], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVSALUX",   [AscalonFX, AscalonV], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVSALUI",   [AscalonFX, AscalonV], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVAALUV",   [AscalonFX, AscalonV], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVAALUX",   [AscalonFX, AscalonV], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVSMulV",   [AscalonFXA, AscalonV], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVSMulX",   [AscalonFXA, AscalonV], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVSShiftV", [AscalonFX, AscalonV], mx, IsWorstCase>; // TODO correct?
+    defm "" : LMULWriteResMX<"WriteVSShiftX", [AscalonFX, AscalonV], mx, IsWorstCase>; // TODO correct?
+    defm "" : LMULWriteResMX<"WriteVSShiftI", [AscalonFX, AscalonV], mx, IsWorstCase>; // TODO correct?
+  }
+}
+// Narrowing
+foreach mx = SchedMxListW in {
+  defvar Cycles = AscalonGetCyclesNarrowing<mx>.c;
+  defvar IsWorstCase = AscalonIsWorstCaseMX<mx, SchedMxListW>.c;
+  let Latency = 8, AcquireAtCycles = [0, 1], ReleaseAtCycles = [1, !add(1, Cycles)] in {
+    // TODO verify
+    defm "" : LMULWriteResMX<"WriteVNClipV",  [AscalonFX, AscalonV], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVNClipX",  [AscalonFX, AscalonV], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVNClipI",  [AscalonFX, AscalonV], mx, IsWorstCase>;
+  }
+}
+
+// Configuration-Setting Instructions
+def : ReadAdvance<ReadVSETVLI, 1>;
+def : ReadAdvance<ReadVSETVL, 1>;
+
+// Vector Loads and Stores
+def : ReadAdvance<ReadVLDX, 0>;
+def : ReadAdvance<ReadVSTX, 0>;
+defm "" : LMULReadAdvance<"ReadVSTEV", 0>;
+defm "" : LMULReadAdvance<"ReadVSTM", 0>;
+def : ReadAdvance<ReadVLDSX, 0>;
+def : ReadAdvance<ReadVSTSX, 0>;
+defm "" : LMULReadAdvance<"ReadVSTS8V", 0>;
+defm "" : LMULReadAdvance<"ReadVSTS16V", 0>;
+defm "" : LMULReadAdvance<"ReadVSTS32V", 0>;
+defm "" : LMULReadAdvance<"ReadVSTS64V", 0>;
+defm "" : LMULReadAdvance<"ReadVLDUXV", 0>;
+defm "" : LMULReadAdvance<"ReadVLDOXV", 0>;
+defm "" : LMULReadAdvance<"ReadVSTUX8", 0>;
+defm "" : LMULReadAdvance<"ReadVSTUX16", 0>;
+defm "" : LMULReadAdvance<"ReadVSTUX32", 0>;
+defm "" : LMULReadAdvance<"ReadVSTUX64", 0>;
+defm "" : LMULReadAdvance<"ReadVSTUXV", 0>;
+defm "" : LMULReadAdvance<"ReadVSTUX8V", 0>;
+defm "" : LMULReadAdvance<"ReadVSTUX16V", 0>;
+defm "" : LMULReadAdvance<"ReadVSTUX32V", 0>;
+defm "" : LMULReadAdvance<"ReadVSTUX64V", 0>;
+defm "" : LMULReadAdvance<"ReadVSTOX8", 0>;
+defm "" : LMULReadAdvance<"ReadVSTOX16", 0>;
+defm "" : LMULReadAdvance<"ReadVSTOX32", 0>;
+defm "" : LMULReadAdvance<"ReadVSTOX64", 0>;
+defm "" : LMULReadAdvance<"ReadVSTOXV", 0>;
+defm "" : LMULReadAdvance<"ReadVSTOX8V", 0>;
+defm "" : LMULReadAdvance<"ReadVSTOX16V", 0>;
+defm "" : LMULReadAdvance<"ReadVSTOX32V", 0>;
+defm "" : LMULReadAdvance<"ReadVSTOX64V", 0>;
+// LMUL Aware
+def : ReadAdvance<ReadVST1R, 0>;
+def : ReadAdvance<ReadVST2R, 0>;
+def : ReadAdvance<ReadVST4R, 0>;
+def : ReadAdvance<ReadVST8R, 0>;
 
 // Vector Integer Arithmetic Instructions
 foreach mx = SchedMxList in {
