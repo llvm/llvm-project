@@ -26,6 +26,9 @@
 enum {
   k_num_gpr_registers = gpr_last_riscv - gpr_first_riscv + 1,
   k_num_fpr_registers = fpr_last_riscv - fpr_first_riscv + 1,
+  k_num_vcsr_registers = vcsr_last_riscv - vcsr_first_riscv + 1,
+  k_num_vpr_registers = vpr_last_riscv - vpr_first_riscv + 1,
+  k_num_vector_registers = k_num_vcsr_registers + k_num_vpr_registers,
   k_num_register_sets_default = 1
 };
 
@@ -52,9 +55,12 @@ static const lldb_private::RegisterSet g_reg_set_gpr_riscv64 = {
     g_gpr_regnums_riscv64};
 static const lldb_private::RegisterSet g_reg_set_fpr_riscv64 = {
     "Floating Point Registers", "fpr", k_num_fpr_registers, nullptr};
+static const lldb_private::RegisterSet g_reg_set_vpr_riscv64 = {
+    "Vector Purpose Registers", "vpr", k_num_vector_registers, nullptr};
 
 RegisterInfoPOSIX_riscv64::RegisterInfoPOSIX_riscv64(
-    const lldb_private::ArchSpec &target_arch, lldb_private::Flags opt_regsets)
+    const lldb_private::ArchSpec &target_arch, lldb_private::Flags opt_regsets,
+    uint64_t vlenb)
     : lldb_private::RegisterInfoAndSetInterface(target_arch),
       m_opt_regsets(opt_regsets) {
   switch (target_arch.GetMachine()) {
@@ -65,6 +71,11 @@ RegisterInfoPOSIX_riscv64::RegisterInfoPOSIX_riscv64(
 
     if (m_opt_regsets.AnySet(eRegsetMaskFP))
       AddRegSetFP();
+
+    if (vlenb > 0) {
+      m_opt_regsets.Set(eRegsetMaskVP);
+      AddRegSetVPR(vlenb);
+    }
 
     break;
   }
@@ -107,6 +118,37 @@ void RegisterInfoPOSIX_riscv64::AddRegSetFP() {
       std::make_pair(register_info_count, m_register_infos.size());
 }
 
+void RegisterInfoPOSIX_riscv64::AddRegSetVPR(uint64_t vlenb) {
+  assert(vlenb && "Target doesn't support V extension");
+
+  const uint32_t register_info_count = m_register_infos.size();
+  const uint32_t register_set_count = m_register_sets.size();
+
+  m_register_infos.resize(register_info_count + k_num_vector_registers);
+  memcpy(&m_register_infos[register_info_count], g_register_infos_riscv64_vpr,
+         sizeof(g_register_infos_riscv64_vpr));
+
+  for (uint32_t i = 0; i < k_num_vcsr_registers; i++)
+    m_vp_regnum_collection.push_back(register_info_count + i);
+
+  // Now we know appropriate vlenb, so update byte offsets and sizes for vector
+  // registers here
+  constexpr size_t vcsr_size = sizeof(uint64_t);
+  for (uint32_t i = 0; i < k_num_vpr_registers; i++) {
+    uint32_t vpr_info_count = register_info_count + k_num_vcsr_registers + i;
+    m_register_infos[vpr_info_count].byte_size = vlenb;
+    m_register_infos[vpr_info_count].byte_offset =
+        (k_num_vcsr_registers * vcsr_size) + (i * vlenb);
+    m_vp_regnum_collection.push_back(vpr_info_count);
+  }
+
+  m_register_sets.push_back(g_reg_set_vpr_riscv64);
+  m_register_sets.back().registers = m_vp_regnum_collection.data();
+
+  m_per_regset_regnum_range[register_set_count] =
+      std::make_pair(register_info_count, m_register_infos.size());
+}
+
 uint32_t RegisterInfoPOSIX_riscv64::GetRegisterCount() const {
   return m_register_infos.size();
 }
@@ -140,6 +182,10 @@ size_t RegisterInfoPOSIX_riscv64::GetRegisterSetFromRegisterIndex(
 
 bool RegisterInfoPOSIX_riscv64::IsFPReg(unsigned reg) const {
   return llvm::is_contained(m_fp_regnum_collection, reg);
+}
+
+bool RegisterInfoPOSIX_riscv64::IsVPReg(unsigned reg) const {
+  return llvm::is_contained(m_vp_regnum_collection, reg);
 }
 
 const lldb_private::RegisterSet *
