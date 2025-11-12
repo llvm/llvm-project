@@ -16,7 +16,6 @@
 #include "mlir/Target/LLVMIR/Import.h"
 
 #include "AttrKindDetail.h"
-#include "DataLayoutImporter.h"
 #include "DebugImporter.h"
 #include "LoopAnnotationImporter.h"
 
@@ -25,11 +24,13 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
+#include "mlir/Target/LLVMIR/DataLayoutImporter.h"
 #include "mlir/Tools/mlir-translate/Translation.h"
 
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/IR/Comdat.h"
 #include "llvm/IR/Constants.h"
@@ -446,7 +447,7 @@ ModuleImport::processAliasScopeMetadata(const llvm::MDNode *node) {
     if (verifySelfRef(node))
       return DistinctAttr::create(builder.getUnitAttr());
 
-    auto name = cast<llvm::MDString>(node->getOperand(0));
+    auto *name = cast<llvm::MDString>(node->getOperand(0));
     return builder.getStringAttr(name->getString());
   };
 
@@ -1044,8 +1045,9 @@ LogicalResult ModuleImport::convertIFuncs() {
 
 LogicalResult ModuleImport::convertDataLayout() {
   Location loc = mlirModule.getLoc();
-  DataLayoutImporter dataLayoutImporter(context, llvmModule->getDataLayout());
-  if (!dataLayoutImporter.getDataLayout())
+  DataLayoutImporter dataLayoutImporter(
+      context, llvmModule->getDataLayout().getStringRepresentation());
+  if (!dataLayoutImporter.getDataLayoutSpec())
     return emitError(loc, "cannot translate data layout: ")
            << dataLayoutImporter.getLastToken();
 
@@ -1053,7 +1055,7 @@ LogicalResult ModuleImport::convertDataLayout() {
     emitWarning(loc, "unhandled data layout token: ") << token;
 
   mlirModule->setAttr(DLTIDialect::kDataLayoutAttrName,
-                      dataLayoutImporter.getDataLayout());
+                      dataLayoutImporter.getDataLayoutSpec());
   return success();
 }
 
@@ -1061,6 +1063,18 @@ void ModuleImport::convertTargetTriple() {
   mlirModule->setAttr(
       LLVM::LLVMDialect::getTargetTripleAttrName(),
       builder.getStringAttr(llvmModule->getTargetTriple().str()));
+}
+
+void ModuleImport::convertModuleLevelAsm() {
+  llvm::StringRef asmStr = llvmModule->getModuleInlineAsm();
+  llvm::SmallVector<mlir::Attribute> asmArrayAttr;
+
+  for (llvm::StringRef line : llvm::split(asmStr, '\n'))
+    if (!line.empty())
+      asmArrayAttr.push_back(builder.getStringAttr(line));
+
+  mlirModule->setAttr(LLVM::LLVMDialect::getModuleLevelAsmAttrName(),
+                      builder.getArrayAttr(asmArrayAttr));
 }
 
 LogicalResult ModuleImport::convertFunctions() {
@@ -1109,7 +1123,7 @@ void ModuleImport::setExactFlag(llvm::Instruction *inst, Operation *op) const {
 void ModuleImport::setDisjointFlag(llvm::Instruction *inst,
                                    Operation *op) const {
   auto iface = cast<DisjointFlagInterface>(op);
-  auto instDisjoint = cast<llvm::PossiblyDisjointInst>(inst);
+  auto *instDisjoint = cast<llvm::PossiblyDisjointInst>(inst);
 
   iface.setIsDisjoint(instDisjoint->isDisjoint());
 }
@@ -1360,7 +1374,7 @@ LogicalResult ModuleImport::convertAlias(llvm::GlobalAlias *alias) {
   AliasOp aliasOp = AliasOp::create(builder, mlirModule.getLoc(), type,
                                     convertLinkageFromLLVM(alias->getLinkage()),
                                     alias->getName(),
-                                    /*dso_local=*/alias->isDSOLocal(),
+                                    /*dsoLocal=*/alias->isDSOLocal(),
                                     /*thread_local=*/alias->isThreadLocal(),
                                     /*attrs=*/ArrayRef<NamedAttribute>());
   globalInsertionOp = aliasOp;
@@ -1393,6 +1407,67 @@ LogicalResult ModuleImport::convertIFunc(llvm::GlobalIFunc *ifunc) {
                   convertUnnamedAddrFromLLVM(ifunc->getUnnamedAddr()),
                   convertVisibilityFromLLVM(ifunc->getVisibility()));
   return success();
+}
+
+/// Converts LLVM string, integer, and enum attributes into MLIR attributes,
+/// skipping those in `attributesToSkip` and emitting a warning at `loc` for
+/// any other unsupported attributes.
+static ArrayAttr
+convertLLVMAttributesToMLIR(Location loc, MLIRContext *context,
+                            llvm::AttributeSet attributes,
+                            ArrayRef<StringLiteral> attributesToSkip = {}) {
+  SmallVector<Attribute> mlirAttributes;
+  for (llvm::Attribute attr : attributes) {
+    StringRef attrName;
+    if (attr.isStringAttribute())
+      attrName = attr.getKindAsString();
+    else
+      attrName = llvm::Attribute::getNameFromAttrKind(attr.getKindAsEnum());
+    if (llvm::is_contained(attributesToSkip, attrName))
+      continue;
+
+    auto keyAttr = StringAttr::get(context, attrName);
+    if (attr.isStringAttribute()) {
+      StringRef val = attr.getValueAsString();
+      if (val.empty()) {
+        // For string attributes without values, add only the attribute name.
+        mlirAttributes.push_back(keyAttr);
+        continue;
+      }
+      // For string attributes with a value, create a [name, value] pair.
+      mlirAttributes.push_back(
+          ArrayAttr::get(context, {keyAttr, StringAttr::get(context, val)}));
+      continue;
+    }
+    if (attr.isIntAttribute()) {
+      // For integer attributes, convert the value to a string and create a
+      // [name, value] pair.
+      auto val = std::to_string(attr.getValueAsInt());
+      mlirAttributes.push_back(
+          ArrayAttr::get(context, {keyAttr, StringAttr::get(context, val)}));
+      continue;
+    }
+    if (attr.isEnumAttribute()) {
+      // For enum attributes, add only the attribute name.
+      mlirAttributes.push_back(keyAttr);
+      continue;
+    }
+
+    emitWarning(loc)
+        << "'" << attrName
+        << "' attribute is invalid on current operation, skipping it";
+  }
+  return ArrayAttr::get(context, mlirAttributes);
+}
+
+/// Converts LLVM attributes from `globalVar` into MLIR attributes and adds them
+/// to `globalOp` as target-specific attributes.
+static void processTargetSpecificAttrs(llvm::GlobalVariable *globalVar,
+                                       GlobalOp globalOp) {
+  ArrayAttr targetSpecificAttrs = convertLLVMAttributesToMLIR(
+      globalOp.getLoc(), globalOp.getContext(), globalVar->getAttributes());
+  if (!targetSpecificAttrs.empty())
+    globalOp.setTargetSpecificAttrsAttr(targetSpecificAttrs);
 }
 
 LogicalResult ModuleImport::convertGlobal(llvm::GlobalVariable *globalVar) {
@@ -1432,8 +1507,8 @@ LogicalResult ModuleImport::convertGlobal(llvm::GlobalVariable *globalVar) {
   GlobalOp globalOp = GlobalOp::create(
       builder, mlirModule.getLoc(), type, globalVar->isConstant(),
       convertLinkageFromLLVM(globalVar->getLinkage()), StringRef(globalName),
-      valueAttr, alignment, /*addr_space=*/globalVar->getAddressSpace(),
-      /*dso_local=*/globalVar->isDSOLocal(),
+      valueAttr, alignment, /*addrSpace=*/globalVar->getAddressSpace(),
+      /*dsoLocal=*/globalVar->isDSOLocal(),
       /*thread_local=*/globalVar->isThreadLocal(), /*comdat=*/SymbolRefAttr(),
       /*attrs=*/ArrayRef<NamedAttribute>(), /*dbgExprs=*/globalExpressionAttrs);
   globalInsertionOp = globalOp;
@@ -1459,6 +1534,8 @@ LogicalResult ModuleImport::convertGlobal(llvm::GlobalVariable *globalVar) {
 
   if (globalVar->hasComdat())
     globalOp.setComdatAttr(comdatMapping.lookup(globalVar->getComdat()));
+
+  processTargetSpecificAttrs(globalVar, globalOp);
 
   return success();
 }
@@ -2267,7 +2344,7 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
       // Handle parameter and result attributes unless it's an incompatible
       // call.
       if (!isIncompatibleCall)
-        convertParameterAttributes(callInst, callOp, builder);
+        convertArgAndResultAttrs(callInst, callOp);
       return callOp.getOperation();
     }();
 
@@ -2364,7 +2441,7 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
     // Handle parameter and result attributes unless it's an incompatible
     // invoke.
     if (!isIncompatibleInvoke)
-      convertParameterAttributes(invokeInst, invokeOp, builder);
+      convertArgAndResultAttrs(invokeInst, invokeOp);
 
     if (!invokeInst->getType()->isVoidTy())
       mapValue(inst, invokeOp.getResults().front());
@@ -2512,7 +2589,7 @@ static void processMemoryEffects(llvm::Function *func, LLVMFuncOp funcOp) {
 
 // List of LLVM IR attributes that map to an explicit attribute on the MLIR
 // LLVMFuncOp.
-static constexpr std::array kExplicitAttributes{
+static constexpr std::array kExplicitLLVMFuncOpAttributes{
     StringLiteral("aarch64_in_za"),
     StringLiteral("aarch64_inout_za"),
     StringLiteral("aarch64_new_za"),
@@ -2522,14 +2599,15 @@ static constexpr std::array kExplicitAttributes{
     StringLiteral("aarch64_pstate_sm_compatible"),
     StringLiteral("aarch64_pstate_sm_enabled"),
     StringLiteral("alwaysinline"),
-    StringLiteral("approx-func-fp-math"),
     StringLiteral("convergent"),
     StringLiteral("denormal-fp-math"),
     StringLiteral("denormal-fp-math-f32"),
     StringLiteral("fp-contract"),
     StringLiteral("frame-pointer"),
+    StringLiteral("inlinehint"),
     StringLiteral("instrument-function-entry"),
     StringLiteral("instrument-function-exit"),
+    StringLiteral("memory"),
     StringLiteral("no-infs-fp-math"),
     StringLiteral("no-nans-fp-math"),
     StringLiteral("no-signed-zeros-fp-math"),
@@ -2538,67 +2616,22 @@ static constexpr std::array kExplicitAttributes{
     StringLiteral("optnone"),
     StringLiteral("target-features"),
     StringLiteral("tune-cpu"),
-    StringLiteral("unsafe-fp-math"),
     StringLiteral("uwtable"),
     StringLiteral("vscale_range"),
     StringLiteral("willreturn"),
 };
 
+/// Converts LLVM attributes from `func` into MLIR attributes and adds them
+/// to `funcOp` as passthrough attributes, skipping those listed in
+/// `kExplicitLLVMFuncAttributes`.
 static void processPassthroughAttrs(llvm::Function *func, LLVMFuncOp funcOp) {
-  MLIRContext *context = funcOp.getContext();
-  SmallVector<Attribute> passthroughs;
   llvm::AttributeSet funcAttrs = func->getAttributes().getAttributes(
       llvm::AttributeList::AttrIndex::FunctionIndex);
-  for (llvm::Attribute attr : funcAttrs) {
-    // Skip the memory attribute since the LLVMFuncOp has an explicit memory
-    // attribute.
-    if (attr.hasAttribute(llvm::Attribute::Memory))
-      continue;
-
-    // Skip invalid type attributes.
-    if (attr.isTypeAttribute()) {
-      emitWarning(funcOp.getLoc(),
-                  "type attributes on a function are invalid, skipping it");
-      continue;
-    }
-
-    StringRef attrName;
-    if (attr.isStringAttribute())
-      attrName = attr.getKindAsString();
-    else
-      attrName = llvm::Attribute::getNameFromAttrKind(attr.getKindAsEnum());
-    auto keyAttr = StringAttr::get(context, attrName);
-
-    // Skip attributes that map to an explicit attribute on the LLVMFuncOp.
-    if (llvm::is_contained(kExplicitAttributes, attrName))
-      continue;
-
-    if (attr.isStringAttribute()) {
-      StringRef val = attr.getValueAsString();
-      if (val.empty()) {
-        passthroughs.push_back(keyAttr);
-        continue;
-      }
-      passthroughs.push_back(
-          ArrayAttr::get(context, {keyAttr, StringAttr::get(context, val)}));
-      continue;
-    }
-    if (attr.isIntAttribute()) {
-      auto val = std::to_string(attr.getValueAsInt());
-      passthroughs.push_back(
-          ArrayAttr::get(context, {keyAttr, StringAttr::get(context, val)}));
-      continue;
-    }
-    if (attr.isEnumAttribute()) {
-      passthroughs.push_back(keyAttr);
-      continue;
-    }
-
-    llvm_unreachable("unexpected attribute kind");
-  }
-
-  if (!passthroughs.empty())
-    funcOp.setPassthroughAttr(ArrayAttr::get(context, passthroughs));
+  ArrayAttr passthroughAttr =
+      convertLLVMAttributesToMLIR(funcOp.getLoc(), funcOp.getContext(),
+                                  funcAttrs, kExplicitLLVMFuncOpAttributes);
+  if (!passthroughAttr.empty())
+    funcOp.setPassthroughAttr(passthroughAttr);
 }
 
 void ModuleImport::processFunctionAttributes(llvm::Function *func,
@@ -2610,6 +2643,8 @@ void ModuleImport::processFunctionAttributes(llvm::Function *func,
     funcOp.setNoInline(true);
   if (func->hasFnAttribute(llvm::Attribute::AlwaysInline))
     funcOp.setAlwaysInline(true);
+  if (func->hasFnAttribute(llvm::Attribute::InlineHint))
+    funcOp.setInlineHint(true);
   if (func->hasFnAttribute(llvm::Attribute::OptimizeNone))
     funcOp.setOptimizeNone(true);
   if (func->hasFnAttribute(llvm::Attribute::Convergent))
@@ -2678,10 +2713,6 @@ void ModuleImport::processFunctionAttributes(llvm::Function *func,
       attr.isStringAttribute())
     funcOp.setPreferVectorWidth(attr.getValueAsString());
 
-  if (llvm::Attribute attr = func->getFnAttribute("unsafe-fp-math");
-      attr.isStringAttribute())
-    funcOp.setUnsafeFpMath(attr.getValueAsBool());
-
   if (llvm::Attribute attr = func->getFnAttribute("no-infs-fp-math");
       attr.isStringAttribute())
     funcOp.setNoInfsFpMath(attr.getValueAsBool());
@@ -2689,10 +2720,6 @@ void ModuleImport::processFunctionAttributes(llvm::Function *func,
   if (llvm::Attribute attr = func->getFnAttribute("no-nans-fp-math");
       attr.isStringAttribute())
     funcOp.setNoNansFpMath(attr.getValueAsBool());
-
-  if (llvm::Attribute attr = func->getFnAttribute("approx-func-fp-math");
-      attr.isStringAttribute())
-    funcOp.setApproxFuncFpMath(attr.getValueAsBool());
 
   if (llvm::Attribute attr = func->getFnAttribute("instrument-function-entry");
       attr.isStringAttribute())
@@ -2730,11 +2757,10 @@ void ModuleImport::processFunctionAttributes(llvm::Function *func,
 }
 
 DictionaryAttr
-ModuleImport::convertParameterAttribute(llvm::AttributeSet llvmParamAttrs,
-                                        OpBuilder &builder) {
+ModuleImport::convertArgOrResultAttrSet(llvm::AttributeSet llvmAttrSet) {
   SmallVector<NamedAttribute> paramAttrs;
   for (auto [llvmKind, mlirName] : getAttrKindToNameMapping()) {
-    auto llvmAttr = llvmParamAttrs.getAttribute(llvmKind);
+    auto llvmAttr = llvmAttrSet.getAttribute(llvmKind);
     // Skip attributes that are not attached.
     if (!llvmAttr.isValid())
       continue;
@@ -2769,13 +2795,12 @@ ModuleImport::convertParameterAttribute(llvm::AttributeSet llvmParamAttrs,
   return builder.getDictionaryAttr(paramAttrs);
 }
 
-void ModuleImport::convertParameterAttributes(llvm::Function *func,
-                                              LLVMFuncOp funcOp,
-                                              OpBuilder &builder) {
+void ModuleImport::convertArgAndResultAttrs(llvm::Function *func,
+                                            LLVMFuncOp funcOp) {
   auto llvmAttrs = func->getAttributes();
   for (size_t i = 0, e = funcOp.getNumArguments(); i < e; ++i) {
     llvm::AttributeSet llvmArgAttrs = llvmAttrs.getParamAttrs(i);
-    funcOp.setArgAttrs(i, convertParameterAttribute(llvmArgAttrs, builder));
+    funcOp.setArgAttrs(i, convertArgOrResultAttrSet(llvmArgAttrs));
   }
   // Convert the result attributes and attach them wrapped in an ArrayAttribute
   // to the funcOp.
@@ -2783,17 +2808,23 @@ void ModuleImport::convertParameterAttributes(llvm::Function *func,
   if (!llvmResAttr.hasAttributes())
     return;
   funcOp.setResAttrsAttr(
-      builder.getArrayAttr(convertParameterAttribute(llvmResAttr, builder)));
+      builder.getArrayAttr({convertArgOrResultAttrSet(llvmResAttr)}));
 }
 
-void ModuleImport::convertParameterAttributes(llvm::CallBase *call,
-                                              ArrayAttr &argsAttr,
-                                              ArrayAttr &resAttr,
-                                              OpBuilder &builder) {
+void ModuleImport::convertArgAndResultAttrs(
+    llvm::CallBase *call, ArgAndResultAttrsOpInterface attrsOp,
+    ArrayRef<unsigned> immArgPositions) {
+  // Compute the set of immediate argument positions.
+  llvm::SmallDenseSet<unsigned> immArgPositionsSet(immArgPositions.begin(),
+                                                   immArgPositions.end());
+  // Convert the argument attributes and filter out immediate arguments.
   llvm::AttributeList llvmAttrs = call->getAttributes();
   SmallVector<llvm::AttributeSet> llvmArgAttrsSet;
   bool anyArgAttrs = false;
   for (size_t i = 0, e = call->arg_size(); i < e; ++i) {
+    // Skip immediate arguments.
+    if (immArgPositionsSet.contains(i))
+      continue;
     llvmArgAttrsSet.emplace_back(llvmAttrs.getParamAttrs(i));
     if (llvmArgAttrsSet.back().hasAttributes())
       anyArgAttrs = true;
@@ -2807,24 +2838,16 @@ void ModuleImport::convertParameterAttributes(llvm::CallBase *call,
   if (anyArgAttrs) {
     SmallVector<DictionaryAttr> argAttrs;
     for (auto &llvmArgAttrs : llvmArgAttrsSet)
-      argAttrs.emplace_back(convertParameterAttribute(llvmArgAttrs, builder));
-    argsAttr = getArrayAttr(argAttrs);
+      argAttrs.emplace_back(convertArgOrResultAttrSet(llvmArgAttrs));
+    attrsOp.setArgAttrsAttr(getArrayAttr(argAttrs));
   }
 
+  // Convert the result attributes.
   llvm::AttributeSet llvmResAttr = llvmAttrs.getRetAttrs();
   if (!llvmResAttr.hasAttributes())
     return;
-  DictionaryAttr resAttrs = convertParameterAttribute(llvmResAttr, builder);
-  resAttr = getArrayAttr({resAttrs});
-}
-
-void ModuleImport::convertParameterAttributes(llvm::CallBase *call,
-                                              CallOpInterface callOp,
-                                              OpBuilder &builder) {
-  ArrayAttr argsAttr, resAttr;
-  convertParameterAttributes(call, argsAttr, resAttr, builder);
-  callOp.setArgAttrsAttr(argsAttr);
-  callOp.setResAttrsAttr(resAttr);
+  DictionaryAttr resAttrs = convertArgOrResultAttrSet(llvmResAttr);
+  attrsOp.setResAttrsAttr(getArrayAttr({resAttrs}));
 }
 
 template <typename Op>
@@ -2892,7 +2915,7 @@ LogicalResult ModuleImport::processFunction(llvm::Function *func) {
       builder, loc, func->getName(), functionType,
       convertLinkageFromLLVM(func->getLinkage()), dsoLocal, cconv);
 
-  convertParameterAttributes(func, funcOp, builder);
+  convertArgAndResultAttrs(func, funcOp);
 
   if (FlatSymbolRefAttr personality = getPersonalityAsAttr(func))
     funcOp.setPersonalityAttr(personality);
@@ -3199,5 +3222,6 @@ OwningOpRef<ModuleOp> mlir::translateLLVMIRToModule(
   if (failed(moduleImport.convertIFuncs()))
     return {};
   moduleImport.convertTargetTriple();
+  moduleImport.convertModuleLevelAsm();
   return module;
 }

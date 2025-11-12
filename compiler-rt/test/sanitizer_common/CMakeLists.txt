@@ -89,9 +89,10 @@ foreach(tool ${SUPPORTED_TOOLS})
       ${CMAKE_CURRENT_BINARY_DIR}/${CONFIG_NAME}/lit.site.cfg.py)
     # FIXME(dliew): LSan i386 on Darwin is completely broken right now.
     # so don't run the tests by default.
+    # Tests fail on arm64, see https://github.com/llvm/llvm-project/issues/131678
     if (NOT (CMAKE_SYSTEM_NAME MATCHES "Darwin" AND
              ${tool} STREQUAL "lsan" AND
-             ${arch} STREQUAL "i386"))
+             (${arch} STREQUAL "i386" OR ${arch} MATCHES "arm64")))
       list(APPEND SANITIZER_COMMON_TESTSUITES
            ${CMAKE_CURRENT_BINARY_DIR}/${CONFIG_NAME})
     endif()

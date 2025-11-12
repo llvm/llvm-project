@@ -98,8 +98,16 @@ static std::vector<std::string> getSearchPaths() {
 // Custom comparison function for dll name
 static bool compareVersions(StringRef A, StringRef B) {
   auto ParseVersion = [](StringRef S) -> VersionTuple {
-    size_t Pos = S.find_last_of('_');
-    StringRef VerStr = (Pos == StringRef::npos) ? S : S.substr(Pos + 1);
+    StringRef Filename = sys::path::filename(S);
+    size_t Pos = Filename.find_last_of('_');
+    if (Pos == StringRef::npos)
+      return VersionTuple();
+
+    StringRef VerStr = Filename.substr(Pos + 1);
+    size_t DotPos = VerStr.find('.');
+    if (DotPos != StringRef::npos)
+      VerStr = VerStr.substr(0, DotPos);
+
     VersionTuple Vt;
     (void)Vt.tryParse(VerStr);
     return Vt;
@@ -135,8 +143,6 @@ static std::pair<std::string, bool> findNewestHIPDLL() {
           Filename.ends_with(HipDLLSuffix))
         DLLNames.push_back(sys::path::convert_to_slash(DirIt->path()));
     }
-    if (!DLLNames.empty())
-      break;
   }
 
   if (DLLNames.empty())
@@ -165,8 +171,9 @@ int printGPUsByHIP() {
       llvm::sys::DynamicLibrary::getPermanentLibrary(DynamicHIPPath.c_str(),
                                                      &ErrMsg));
   if (!DynlibHandle->isValid()) {
-    llvm::errs() << "Failed to load " << DynamicHIPPath << ": " << ErrMsg
-                 << '\n';
+    if (Verbose)
+      llvm::errs() << "Failed to load " << DynamicHIPPath << ": " << ErrMsg
+                   << '\n';
     return 1;
   }
 

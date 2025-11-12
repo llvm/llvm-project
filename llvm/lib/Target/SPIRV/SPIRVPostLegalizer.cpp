@@ -147,7 +147,7 @@ void visit(MachineFunction &MF, MachineBasicBlock &Start,
 // Do a preorder traversal of the CFG starting from the given function's entry
 // point. Calls |op| on each basic block encountered during the traversal.
 void visit(MachineFunction &MF, std::function<void(MachineBasicBlock *)> op) {
-  visit(MF, *MF.begin(), op);
+  visit(MF, *MF.begin(), std::move(op));
 }
 
 bool SPIRVPostLegalizer::runOnMachineFunction(MachineFunction &MF) {

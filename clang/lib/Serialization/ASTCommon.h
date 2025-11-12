@@ -41,7 +41,8 @@ enum class DeclUpdateKind {
   DeclMarkedOpenMPAllocate,
   DeclMarkedOpenMPDeclareTarget,
   DeclExported,
-  AddedAttrToRecord
+  AddedAttrToRecord,
+  CXXResolvedDtorGlobDelete
 };
 
 TypeIdx TypeIdxFromBuiltin(const BuiltinType *BT);

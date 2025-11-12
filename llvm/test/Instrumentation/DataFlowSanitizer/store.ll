@@ -16,7 +16,7 @@ define void @store0({} %v, ptr %p) {
 define void @store8(i8 %v, ptr %p) {
   ; CHECK-LABEL:       @store8.dfsan
   ; NO_COMBINE_PTR_LABEL: load i8, ptr @__dfsan_arg_tls
-  ; COMBINE_PTR_LABEL:    load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 2) to ptr), align 2
+  ; COMBINE_PTR_LABEL:    load i8, ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 2), align 2
 
   ; COMBINE_PTR_LABEL: load i8, ptr @__dfsan_arg_tls
   ; COMBINE_PTR_LABEL: or i8
@@ -35,7 +35,7 @@ define void @store8(i8 %v, ptr %p) {
 define void @store16(i16 %v, ptr %p) {
   ; CHECK-LABEL:       @store16.dfsan
   ; NO_COMBINE_PTR_LABEL: load i8, ptr @__dfsan_arg_tls
-  ; COMBINE_PTR_LABEL:    load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 2) to ptr), align 2
+  ; COMBINE_PTR_LABEL:    load i8, ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 2), align 2
   ; COMBINE_PTR_LABEL: load i8, ptr @__dfsan_arg_tls
   ; COMBINE_PTR_LABEL: or i8
   ; CHECK:             ptrtoint ptr {{.*}} i64
@@ -55,7 +55,7 @@ define void @store16(i16 %v, ptr %p) {
 define void @store32(i32 %v, ptr %p) {
   ; CHECK-LABEL:       @store32.dfsan
   ; NO_COMBINE_PTR_LABEL: load i8, ptr @__dfsan_arg_tls
-  ; COMBINE_PTR_LABEL:    load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 2) to ptr), align 2
+  ; COMBINE_PTR_LABEL:    load i8, ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 2), align 2
   ; COMBINE_PTR_LABEL: load i8, ptr @__dfsan_arg_tls
   ; COMBINE_PTR_LABEL: or i8
   ; CHECK:             ptrtoint ptr {{.*}} i64
@@ -79,7 +79,7 @@ define void @store32(i32 %v, ptr %p) {
 define void @store64(i64 %v, ptr %p) {
   ; CHECK-LABEL:       @store64.dfsan
   ; NO_COMBINE_PTR_LABEL: load i8, ptr @__dfsan_arg_tls
-  ; COMBINE_PTR_LABEL:    load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 2) to ptr), align 2
+  ; COMBINE_PTR_LABEL:    load i8, ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 2), align 2
   ; COMBINE_PTR_LABEL: load i8, ptr @__dfsan_arg_tls
   ; COMBINE_PTR_LABEL: or i8
   ; CHECK:             ptrtoint ptr {{.*}} i64

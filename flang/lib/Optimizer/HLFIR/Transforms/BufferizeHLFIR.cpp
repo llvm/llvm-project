@@ -118,7 +118,8 @@ createArrayTemp(mlir::Location loc, fir::FirOpBuilder &builder,
          fir::FortranVariableFlagsAttr attrs) -> mlir::Value {
     auto declareOp =
         hlfir::DeclareOp::create(builder, loc, memref, name, shape, typeParams,
-                                 /*dummy_scope=*/nullptr, attrs);
+                                 /*dummy_scope=*/nullptr, /*storage=*/nullptr,
+                                 /*storage_offset=*/0, attrs);
     return declareOp.getBase();
   };
 
@@ -135,12 +136,12 @@ createArrayTemp(mlir::Location loc, fir::FirOpBuilder &builder,
 static mlir::Value copyInTempAndPackage(mlir::Location loc,
                                         fir::FirOpBuilder &builder,
                                         hlfir::Entity source) {
-  auto [temp, cleanup] = hlfir::createTempFromMold(loc, builder, source);
+  auto [temp, mustFree] = hlfir::createTempFromMold(loc, builder, source);
   assert(!temp.isAllocatable() && "expect temp to already be allocated");
   hlfir::AssignOp::create(builder, loc, source, temp, /*realloc=*/false,
                           /*keep_lhs_length_if_realloc=*/false,
                           /*temporary_lhs=*/true);
-  return packageBufferizedExpr(loc, builder, temp, cleanup);
+  return packageBufferizedExpr(loc, builder, temp, mustFree);
 }
 
 struct AsExprOpConversion : public mlir::OpConversionPattern<hlfir::AsExprOp> {
@@ -298,8 +299,7 @@ struct SetLengthOpConversion
     auto alloca = builder.createTemporary(loc, charType, tmpName,
                                           /*shape=*/{}, lenParams);
     auto declareOp = hlfir::DeclareOp::create(
-        builder, loc, alloca, tmpName, /*shape=*/mlir::Value{}, lenParams,
-        /*dummy_scope=*/nullptr, fir::FortranVariableFlagsAttr{});
+        builder, loc, alloca, tmpName, /*shape=*/mlir::Value{}, lenParams);
     hlfir::Entity temp{declareOp.getBase()};
     // Assign string value to the created temp.
     hlfir::AssignOp::create(builder, loc, string, temp,
@@ -455,12 +455,8 @@ struct AssociateOpConversion
 
       mlir::Type associateHlfirVarType = associate.getResultTypes()[0];
       hlfirVar = adjustVar(hlfirVar, associateHlfirVarType);
-      associate.getResult(0).replaceAllUsesWith(hlfirVar);
-
       mlir::Type associateFirVarType = associate.getResultTypes()[1];
       firVar = adjustVar(firVar, associateFirVarType);
-      associate.getResult(1).replaceAllUsesWith(firVar);
-      associate.getResult(2).replaceAllUsesWith(flag);
       // FIXME: note that the AssociateOp that is being erased
       // here will continue to be a user of the original Source
       // operand (e.g. a result of hlfir.elemental), because
@@ -472,7 +468,7 @@ struct AssociateOpConversion
       // the conversions, so that we can analyze HLFIR in its
       // original form and decide which of the AssociateOp
       // users of hlfir.expr can reuse the buffer (if it can).
-      rewriter.eraseOp(associate);
+      rewriter.replaceOp(associate, {hlfirVar, firVar, flag});
     };
 
     // If this is the last use of the expression value and this is an hlfir.expr

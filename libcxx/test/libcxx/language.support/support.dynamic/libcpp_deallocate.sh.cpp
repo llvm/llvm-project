@@ -21,8 +21,6 @@
 // GCC doesn't support the aligned-allocation flags.
 // XFAIL: gcc
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
-
 // RUN: %{build} -faligned-allocation -fsized-deallocation
 // RUN: %{run}
 // RUN: %{build} -faligned-allocation -fno-sized-deallocation -DNO_SIZE

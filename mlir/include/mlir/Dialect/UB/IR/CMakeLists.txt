@@ -5,11 +5,11 @@ mlir_tablegen(UBOpsDialect.h.inc -gen-dialect-decls)
 mlir_tablegen(UBOpsDialect.cpp.inc -gen-dialect-defs)
 mlir_tablegen(UBOpsAttributes.h.inc -gen-attrdef-decls -attrdefs-dialect=ub)
 mlir_tablegen(UBOpsAttributes.cpp.inc -gen-attrdef-defs -attrdefs-dialect=ub)
-add_public_tablegen_target(MLIRUBOpsIncGen)
+add_mlir_dialect_tablegen_target(MLIRUBOpsIncGen)
 
 add_mlir_doc(UBOps UBOps Dialects/ -gen-dialect-doc)
 
 set(LLVM_TARGET_DEFINITIONS UBOpsInterfaces.td)
 mlir_tablegen(UBOpsInterfaces.h.inc -gen-attr-interface-decls)
 mlir_tablegen(UBOpsInterfaces.cpp.inc -gen-attr-interface-defs)
-add_public_tablegen_target(MLIRUBOpsInterfacesIncGen)
+add_mlir_dialect_tablegen_target(MLIRUBOpsInterfacesIncGen)

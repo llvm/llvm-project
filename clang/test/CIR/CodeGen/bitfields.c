@@ -71,12 +71,23 @@ typedef struct {
 // LLVM-DAG: %struct.U = type <{ i8, i8, i8, i8, i64 }>
 // OGCG-DAG: %struct.U = type <{ i8, i8, i8, i8, i64 }>
 
+typedef struct{
+    int a : 24;
+    char b;
+    int c: 30;
+} Clip;
+
+// CIR-DAG: !rec_Clip = !cir.record<struct "Clip" {!cir.array<!u8i x 3>, !s8i, !u32i}>
+// LLVM-DAG: %struct.Clip = type { [3 x i8], i8, i32 }
+// OGCG-DAG: %struct.Clip = type { [3 x i8], i8, i32 }
+
 void def() {
   A a;
   D d;
   S s;
   T t;
   U u;
+  Clip c;
 }
 
 int load_field(S* s) {

@@ -84,6 +84,10 @@ public:
     return true;
   }
 
+  void HandleCXXStaticMemberVarInstantiation(clang::VarDecl *VD) override {
+    Gen->HandleCXXStaticMemberVarInstantiation(VD);
+  }
+
   void HandleInlineFunctionDefinition(FunctionDecl *D) override {
     Gen->HandleInlineFunctionDefinition(D);
   }
@@ -147,9 +151,15 @@ public:
     Gen->HandleTagDeclDefinition(D);
   }
 
+  void HandleTagDeclRequiredDefinition(const TagDecl *D) override {
+    Gen->HandleTagDeclRequiredDefinition(D);
+  }
+
   void CompleteTentativeDefinition(VarDecl *D) override {
     Gen->CompleteTentativeDefinition(D);
   }
+
+  void HandleVTable(CXXRecordDecl *RD) override { Gen->HandleVTable(RD); }
 };
 } // namespace cir
 

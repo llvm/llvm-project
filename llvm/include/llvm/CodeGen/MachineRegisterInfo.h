@@ -579,6 +579,10 @@ public:
   /// multiple uses.
   LLVM_ABI bool hasOneNonDBGUser(Register RegNo) const;
 
+  /// If the register has a single non-Debug use, returns it; otherwise returns
+  /// nullptr.
+  LLVM_ABI MachineOperand *getOneNonDBGUse(Register RegNo) const;
+
   /// If the register has a single non-Debug instruction using the specified
   /// register, returns it; otherwise returns nullptr.
   LLVM_ABI MachineInstr *getOneNonDBGUser(Register RegNo) const;
@@ -978,7 +982,7 @@ public:
   /// root registers, the root register and all super registers are reserved.
   /// This currently iterates the register hierarchy and may be slower than
   /// expected.
-  LLVM_ABI bool isReservedRegUnit(unsigned Unit) const;
+  LLVM_ABI bool isReservedRegUnit(MCRegUnit Unit) const;
 
   /// isAllocatable - Returns true when PhysReg belongs to an allocatable
   /// register class and it hasn't been reserved.

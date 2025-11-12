@@ -26,7 +26,9 @@ end subroutine
 ! CHECK:           %[[VAL_13:.*]] = fir.convert %[[VAL_5]] : (i64) -> index
 ! CHECK:           %[[VAL_14:.*]] = arith.subi %[[VAL_13]], %[[VAL_12]] : index
 ! CHECK:           %[[VAL_15:.*]] = arith.addi %[[VAL_14]], %[[VAL_11]] : index
+! CHECK:           %[[cmp0:.*]] = arith.cmpi sgt, %[[VAL_15]], %c0{{.*}} : index
+! CHECK:           %[[ext0:.*]] = arith.select %[[cmp0]], %[[VAL_15]], %c0{{.*}} : index
 ! CHECK:           %[[VAL_16:.*]] = fir.convert %[[VAL_10]] : (!fir.ref<!fir.array<10x10xf32>>) -> !fir.ref<!fir.array<?xf32>>
-! CHECK:           %[[VAL_17:.*]] = fir.shape_shift %[[VAL_4]], %[[VAL_15]] : (i64, index) -> !fir.shapeshift<1>
+! CHECK:           %[[VAL_17:.*]] = fir.shape_shift %[[VAL_4]], %[[ext0]] : (i64, index) -> !fir.shapeshift<1>
 ! CHECK:           %[[VAL_18:.*]] = fir.embox %[[VAL_16]](%[[VAL_17]]) : (!fir.ref<!fir.array<?xf32>>, !fir.shapeshift<1>) -> !fir.box<!fir.ptr<!fir.array<?xf32>>>
 ! CHECK:           fir.store %[[VAL_18]] to %[[VAL_2]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>

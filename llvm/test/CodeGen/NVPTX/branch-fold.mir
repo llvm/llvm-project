@@ -57,7 +57,7 @@ body:             |
   ; CHECK-NEXT: bb.2.bb1:
   ; CHECK-NEXT:   successors: %bb.2(0x7c000000), %bb.3(0x04000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[ADDi64ri:%[0-9]+]]:b64 = ADDi64ri [[ADDi64ri]], 1
+  ; CHECK-NEXT:   [[ADDi64ri:%[0-9]+]]:b64 = ADD64ri [[ADDi64ri]], 1
   ; CHECK-NEXT:   [[SETP_s64ri:%[0-9]+]]:b1 = SETP_i64ri [[ADDi64ri]], 1, 2
   ; CHECK-NEXT:   CBranch [[SETP_s64ri]], %bb.2
   ; CHECK-NEXT: {{  $}}
@@ -76,7 +76,7 @@ body:             |
   bb.2.bb1:
     successors: %bb.2(0x7c000000), %bb.3(0x04000000)
 
-    %5:b64 = ADDi64ri %5, 1
+    %5:b64 = ADD64ri %5, 1
     %4:b1 = SETP_i64ri %5, 1, 2
     CBranch %4, %bb.2
 

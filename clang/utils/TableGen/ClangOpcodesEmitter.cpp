@@ -200,7 +200,7 @@ void ClangOpcodesEmitter::EmitEmitter(raw_ostream &OS, StringRef N,
       OS << (AsRef ? "const " : " ") << Name << " " << (AsRef ? "&" : "") << "A"
          << I << ", ";
     }
-    OS << "const SourceInfo &L) {\n";
+    OS << "SourceInfo L) {\n";
 
     // Emit a call to write the opcodes.
     OS << "  return emitOp<";
@@ -231,7 +231,7 @@ void ClangOpcodesEmitter::EmitProto(raw_ostream &OS, StringRef N,
       OS << (AsRef ? "const " : " ") << Name << " " << (AsRef ? "&" : "")
          << ", ";
     }
-    OS << "const SourceInfo &);\n";
+    OS << "SourceInfo);\n";
   });
 
   // Emit a template method for custom emitters to have less to implement.
@@ -248,7 +248,7 @@ void ClangOpcodesEmitter::EmitProto(raw_ostream &OS, StringRef N,
     OS << "bool emit" << N << "(";
     for (const auto *Arg : Args)
       OS << Arg->getValueAsString("Name") << ", ";
-    OS << "const SourceInfo &);\n";
+    OS << "SourceInfo);\n";
     OS << "#endif\n";
   }
 
@@ -272,7 +272,7 @@ void ClangOpcodesEmitter::EmitGroup(raw_ostream &OS, StringRef N,
     OS << "PrimType, ";
   for (auto *Arg : Args)
     OS << Arg->getValueAsString("Name") << ", ";
-  OS << "const SourceInfo &I);\n";
+  OS << "SourceInfo I);\n";
   OS << "#endif\n";
 
   // Emit the dispatch implementation in the source.
@@ -294,7 +294,7 @@ void ClangOpcodesEmitter::EmitGroup(raw_ostream &OS, StringRef N,
     OS << (AsRef ? "const " : " ") << Name << " " << (AsRef ? "&" : "") << "A"
        << I << ", ";
   }
-  OS << "const SourceInfo &I) {\n";
+  OS << "SourceInfo I) {\n";
 
   std::function<void(size_t, const Twine &)> Rec;
   SmallVector<const Record *, 2> TS;
@@ -368,7 +368,7 @@ void ClangOpcodesEmitter::EmitEval(raw_ostream &OS, StringRef N,
                 OS << (AsRef ? "const " : " ") << Name << " "
                    << (AsRef ? "&" : "") << "A" << I << ", ";
               }
-              OS << "const SourceInfo &L) {\n";
+              OS << "SourceInfo L) {\n";
               OS << "  if (!isActive()) return true;\n";
               OS << "  CurrentSource = L;\n";
 

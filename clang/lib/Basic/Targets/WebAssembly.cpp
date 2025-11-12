@@ -59,12 +59,12 @@ bool WebAssemblyTargetInfo::hasFeature(StringRef Feature) const {
       .Case("exception-handling", HasExceptionHandling)
       .Case("extended-const", HasExtendedConst)
       .Case("fp16", HasFP16)
+      .Case("gc", HasGC)
       .Case("multimemory", HasMultiMemory)
       .Case("multivalue", HasMultivalue)
       .Case("mutable-globals", HasMutableGlobals)
       .Case("nontrapping-fptoint", HasNontrappingFPToInt)
       .Case("reference-types", HasReferenceTypes)
-      .Case("gc", HasGC)
       .Case("relaxed-simd", SIMDLevel >= RelaxedSIMD)
       .Case("sign-ext", HasSignExt)
       .Case("simd128", SIMDLevel >= SIMD128)
@@ -99,6 +99,8 @@ void WebAssemblyTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__wasm_multimemory__");
   if (HasFP16)
     Builder.defineMacro("__wasm_fp16__");
+  if (HasGC)
+    Builder.defineMacro("__wasm_gc__");
   if (HasMultivalue)
     Builder.defineMacro("__wasm_multivalue__");
   if (HasMutableGlobals)
@@ -107,8 +109,6 @@ void WebAssemblyTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__wasm_nontrapping_fptoint__");
   if (HasReferenceTypes)
     Builder.defineMacro("__wasm_reference_types__");
-  if (HasGC)
-    Builder.defineMacro("__wasm_gc__");
   if (SIMDLevel >= RelaxedSIMD)
     Builder.defineMacro("__wasm_relaxed_simd__");
   if (HasSignExt)
@@ -194,6 +194,7 @@ bool WebAssemblyTargetInfo::initFeatureMap(
     Features["exception-handling"] = true;
     Features["extended-const"] = true;
     Features["fp16"] = true;
+    Features["gc"] = true;
     Features["multimemory"] = true;
     Features["tail-call"] = true;
     Features["wide-arithmetic"] = true;
@@ -212,6 +213,7 @@ bool WebAssemblyTargetInfo::initFeatureMap(
 
 bool WebAssemblyTargetInfo::handleTargetFeatures(
     std::vector<std::string> &Features, DiagnosticsEngine &Diags) {
+  HasMustTail = false;
   for (const auto &Feature : Features) {
     if (Feature == "+atomics") {
       HasAtomics = true;
@@ -270,6 +272,14 @@ bool WebAssemblyTargetInfo::handleTargetFeatures(
       HasFP16 = false;
       continue;
     }
+    if (Feature == "+gc") {
+      HasGC = true;
+      continue;
+    }
+    if (Feature == "-gc") {
+      HasGC = false;
+      continue;
+    }
     if (Feature == "+multimemory") {
       HasMultiMemory = true;
       continue;
@@ -310,14 +320,6 @@ bool WebAssemblyTargetInfo::handleTargetFeatures(
       HasReferenceTypes = false;
       continue;
     }
-    if (Feature == "+gc") {
-      HasGC = true;
-      continue;
-    }
-    if (Feature == "-gc") {
-      HasGC = false;
-      continue;
-    }
     if (Feature == "+relaxed-simd") {
       SIMDLevel = std::max(SIMDLevel, RelaxedSIMD);
       continue;
@@ -344,10 +346,12 @@ bool WebAssemblyTargetInfo::handleTargetFeatures(
     }
     if (Feature == "+tail-call") {
       HasTailCall = true;
+      HasMustTail = true;
       continue;
     }
     if (Feature == "-tail-call") {
       HasTailCall = false;
+      HasMustTail = false;
       continue;
     }
     if (Feature == "+wide-arithmetic") {

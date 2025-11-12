@@ -26,14 +26,14 @@ end
 !UNPARSE: !$OMP END TARGET
 !UNPARSE: END SUBROUTINE
 
-!PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPBlockConstruct
-!PARSE-TREE: | OmpBeginBlockDirective
-!PARSE-TREE: | | OmpBlockDirective -> llvm::omp::Directive = target
+!PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OmpBlockConstruct
+!PARSE-TREE: | OmpBeginDirective
+!PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = target
 !PARSE-TREE: | | OmpClauseList ->
 !PARSE-TREE: | Block
-!PARSE-TREE: | | ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPBlockConstruct
-!PARSE-TREE: | | | OmpBeginBlockDirective
-!PARSE-TREE: | | | | OmpBlockDirective -> llvm::omp::Directive = target data
+!PARSE-TREE: | | ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OmpBlockConstruct
+!PARSE-TREE: | | | OmpBeginDirective
+!PARSE-TREE: | | | | OmpDirectiveName -> llvm::omp::Directive = target data
 !PARSE-TREE: | | | | OmpClauseList -> OmpClause -> Map -> OmpMapClause
 !PARSE-TREE: | | | | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'x'
 !PARSE-TREE: | | | | | bool = 'true'
@@ -43,11 +43,11 @@ end
 !PARSE-TREE: | | | | | Expr -> Add
 !PARSE-TREE: | | | | | | Expr -> Designator -> DataRef -> Name = 'x'
 !PARSE-TREE: | | | | | | Expr -> LiteralConstant -> IntLiteralConstant = '1'
-!PARSE-TREE: | | | OmpEndBlockDirective
-!PARSE-TREE: | | | | OmpBlockDirective -> llvm::omp::Directive = target data
+!PARSE-TREE: | | | OmpEndDirective
+!PARSE-TREE: | | | | OmpDirectiveName -> llvm::omp::Directive = target data
 !PARSE-TREE: | | | | OmpClauseList ->
-!PARSE-TREE: | OmpEndBlockDirective
-!PARSE-TREE: | | OmpBlockDirective -> llvm::omp::Directive = target
+!PARSE-TREE: | OmpEndDirective
+!PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = target
 !PARSE-TREE: | | OmpClauseList ->
 
 
@@ -69,9 +69,9 @@ end
 !UNPARSE: !$OMP END TARGET
 !UNPARSE: END SUBROUTINE
 
-!PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPBlockConstruct
-!PARSE-TREE: | OmpBeginBlockDirective
-!PARSE-TREE: | | OmpBlockDirective -> llvm::omp::Directive = target
+!PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OmpBlockConstruct
+!PARSE-TREE: | OmpBeginDirective
+!PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = target
 !PARSE-TREE: | | OmpClauseList ->
 !PARSE-TREE: | Block
 !PARSE-TREE: | | ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPStandaloneConstruct -> OpenMPSimpleStandaloneConstruct -> OmpDirectiveSpecification
@@ -85,8 +85,8 @@ end
 !PARSE-TREE: | | | Expr -> Add
 !PARSE-TREE: | | | | Expr -> Designator -> DataRef -> Name = 'x'
 !PARSE-TREE: | | | | Expr -> LiteralConstant -> IntLiteralConstant = '1'
-!PARSE-TREE: | OmpEndBlockDirective
-!PARSE-TREE: | | OmpBlockDirective -> llvm::omp::Directive = target
+!PARSE-TREE: | OmpEndDirective
+!PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = target
 !PARSE-TREE: | | OmpClauseList ->
 
 
@@ -108,9 +108,9 @@ end
 !UNPARSE: !$OMP END TARGET
 !UNPARSE: END SUBROUTINE
 
-!PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPBlockConstruct
-!PARSE-TREE: | OmpBeginBlockDirective
-!PARSE-TREE: | | OmpBlockDirective -> llvm::omp::Directive = target
+!PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OmpBlockConstruct
+!PARSE-TREE: | OmpBeginDirective
+!PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = target
 !PARSE-TREE: | | OmpClauseList ->
 !PARSE-TREE: | Block
 !PARSE-TREE: | | ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPStandaloneConstruct -> OpenMPSimpleStandaloneConstruct -> OmpDirectiveSpecification
@@ -124,8 +124,8 @@ end
 !PARSE-TREE: | | | Expr -> Add
 !PARSE-TREE: | | | | Expr -> Designator -> DataRef -> Name = 'x'
 !PARSE-TREE: | | | | Expr -> LiteralConstant -> IntLiteralConstant = '1'
-!PARSE-TREE: | OmpEndBlockDirective
-!PARSE-TREE: | | OmpBlockDirective -> llvm::omp::Directive = target
+!PARSE-TREE: | OmpEndDirective
+!PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = target
 !PARSE-TREE: | | OmpClauseList ->
 
 
@@ -147,9 +147,9 @@ end
 !UNPARSE: !$OMP END TARGET
 !UNPARSE: END SUBROUTINE
 
-!PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPBlockConstruct
-!PARSE-TREE: | OmpBeginBlockDirective
-!PARSE-TREE: | | OmpBlockDirective -> llvm::omp::Directive = target
+!PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OmpBlockConstruct
+!PARSE-TREE: | OmpBeginDirective
+!PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = target
 !PARSE-TREE: | | OmpClauseList ->
 !PARSE-TREE: | Block
 !PARSE-TREE: | | ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPStandaloneConstruct -> OpenMPSimpleStandaloneConstruct -> OmpDirectiveSpecification
@@ -163,6 +163,6 @@ end
 !PARSE-TREE: | | | Expr -> Add
 !PARSE-TREE: | | | | Expr -> Designator -> DataRef -> Name = 'x'
 !PARSE-TREE: | | | | Expr -> LiteralConstant -> IntLiteralConstant = '1'
-!PARSE-TREE: | OmpEndBlockDirective
-!PARSE-TREE: | | OmpBlockDirective -> llvm::omp::Directive = target
+!PARSE-TREE: | OmpEndDirective
+!PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = target
 !PARSE-TREE: | | OmpClauseList ->

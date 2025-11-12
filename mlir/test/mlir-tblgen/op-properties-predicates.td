@@ -70,6 +70,12 @@ def OpWithPredicates : NS_Op<"op_with_predicates"> {
 // CHECK-NEXT: if (!(((!prop.has_value())) || ((::llvm::all_of((*(prop)), [](const int64_t& baseStore) -> bool { return [](int64_t baseIface) -> bool { return ((baseIface >= 0)); }(baseStore); })) && (!(((*(prop)).empty()))))))
 // CHECK: failed to satisfy constraint: optional non-empty array of non-negative int64_
 
+// CHECK-LABEL: ::llvm::LogicalResult OpWithPredicatesAdaptor::verify
+// Note: comprehensive emission of verifiers is tested in verifyINvariantsImpl() below
+// CHECK: int64_t tblgen_scalar = this->getScalar();
+// CHECK: if (!((tblgen_scalar >= 0)))
+// CHECK: return emitError(loc, "'test.op_with_predicates' op property 'scalar' failed to satisfy constraint: non-negative int64_t");
+
 // CHECK-LABEL: OpWithPredicates::verifyInvariantsImpl()
 // Note: for test readability, we capture [[maybe_unused]] into the variable maybe_unused
 // CHECK: [[maybe_unused:\[\[maybe_unused\]\]]] int64_t tblgen_scalar = this->getScalar();

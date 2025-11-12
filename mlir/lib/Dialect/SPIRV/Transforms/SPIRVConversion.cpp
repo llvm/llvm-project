@@ -182,6 +182,14 @@ getTypeNumBytes(const SPIRVConversionOptions &options, Type type) {
     return bitWidth / 8;
   }
 
+  // Handle 8-bit floats.
+  if (options.emulateUnsupportedFloatTypes && isa<FloatType>(type)) {
+    auto bitWidth = type.getIntOrFloatBitWidth();
+    if (bitWidth == 8)
+      return bitWidth / 8;
+    return std::nullopt;
+  }
+
   if (auto complexType = dyn_cast<ComplexType>(type)) {
     auto elementSize = getTypeNumBytes(options, complexType.getElementType());
     if (!elementSize)
@@ -318,6 +326,44 @@ static Type convertSubByteIntegerType(const SPIRVConversionOptions &options,
                           type.getSignedness());
 }
 
+/// Converts 8-bit float types to integer types with the same bit width.
+/// Returns a nullptr for unsupported 8-bit float types.
+static Type convert8BitFloatType(const SPIRVConversionOptions &options,
+                                 FloatType type) {
+  if (!options.emulateUnsupportedFloatTypes)
+    return nullptr;
+  // F8 types are converted to integer types with the same bit width.
+  if (isa<Float8E5M2Type, Float8E4M3Type, Float8E4M3FNType, Float8E5M2FNUZType,
+          Float8E4M3FNUZType, Float8E4M3B11FNUZType, Float8E3M4Type,
+          Float8E8M0FNUType>(type))
+    return IntegerType::get(type.getContext(), type.getWidth());
+  LLVM_DEBUG(llvm::dbgs() << "unsupported 8-bit float type: " << type << "\n");
+  return nullptr;
+}
+
+/// Returns a type with the same shape but with any 8-bit float element type
+/// converted to the same bit width integer type. This is a noop when the
+/// element type is not the 8-bit float type or emulation flag is set to false.
+static ShapedType
+convertShaped8BitFloatType(ShapedType type,
+                           const SPIRVConversionOptions &options) {
+  if (!options.emulateUnsupportedFloatTypes)
+    return type;
+  Type srcElementType = type.getElementType();
+  Type convertedElementType = nullptr;
+  // F8 types are converted to integer types with the same bit width.
+  if (isa<Float8E5M2Type, Float8E4M3Type, Float8E4M3FNType, Float8E5M2FNUZType,
+          Float8E4M3FNUZType, Float8E4M3B11FNUZType, Float8E3M4Type,
+          Float8E8M0FNUType>(srcElementType))
+    convertedElementType = IntegerType::get(
+        type.getContext(), srcElementType.getIntOrFloatBitWidth());
+
+  if (!convertedElementType)
+    return type;
+
+  return type.clone(convertedElementType);
+}
+
 /// Returns a type with the same shape but with any index element type converted
 /// to the matching integer type. This is a noop when the element type is not
 /// the index type.
@@ -337,6 +383,7 @@ convertVectorType(const spirv::TargetEnv &targetEnv,
                   const SPIRVConversionOptions &options, VectorType type,
                   std::optional<spirv::StorageClass> storageClass = {}) {
   type = cast<VectorType>(convertIndexElementType(type, options));
+  type = cast<VectorType>(convertShaped8BitFloatType(type, options));
   auto scalarType = dyn_cast_or_null<spirv::ScalarType>(type.getElementType());
   if (!scalarType) {
     // If this is not a spec allowed scalar type, try to handle sub-byte integer
@@ -433,6 +480,7 @@ static Type convertTensorType(const spirv::TargetEnv &targetEnv,
   }
 
   type = cast<TensorType>(convertIndexElementType(type, options));
+  type = cast<TensorType>(convertShaped8BitFloatType(type, options));
   auto scalarType = dyn_cast_or_null<spirv::ScalarType>(type.getElementType());
   if (!scalarType) {
     LLVM_DEBUG(llvm::dbgs()
@@ -560,6 +608,41 @@ static Type convertSubByteMemrefType(const spirv::TargetEnv &targetEnv,
   return wrapInStructAndGetPointer(arrayType, storageClass);
 }
 
+static spirv::Dim convertRank(int64_t rank) {
+  switch (rank) {
+  case 1:
+    return spirv::Dim::Dim1D;
+  case 2:
+    return spirv::Dim::Dim2D;
+  case 3:
+    return spirv::Dim::Dim3D;
+  default:
+    llvm_unreachable("Invalid memref rank!");
+  }
+}
+
+static spirv::ImageFormat getImageFormat(Type elementType) {
+  return TypeSwitch<Type, spirv::ImageFormat>(elementType)
+      .Case<Float16Type>([](Float16Type) { return spirv::ImageFormat::R16f; })
+      .Case<Float32Type>([](Float32Type) { return spirv::ImageFormat::R32f; })
+      .Case<IntegerType>([](IntegerType intType) {
+        auto const isSigned = intType.isSigned() || intType.isSignless();
+#define BIT_WIDTH_CASE(BIT_WIDTH)                                              \
+  case BIT_WIDTH:                                                              \
+    return isSigned ? spirv::ImageFormat::R##BIT_WIDTH##i                      \
+                    : spirv::ImageFormat::R##BIT_WIDTH##ui
+
+        switch (intType.getWidth()) {
+          BIT_WIDTH_CASE(16);
+          BIT_WIDTH_CASE(32);
+        default:
+          llvm_unreachable("Unhandled integer type!");
+        }
+      })
+      .DefaultUnreachable("Unhandled element type!");
+#undef BIT_WIDTH_CASE
+}
+
 static Type convertMemrefType(const spirv::TargetEnv &targetEnv,
                               const SPIRVConversionOptions &options,
                               MemRefType type) {
@@ -574,6 +657,41 @@ static Type convertMemrefType(const spirv::TargetEnv &targetEnv,
     return nullptr;
   }
   spirv::StorageClass storageClass = attr.getValue();
+
+  // Images are a special case since they are an opaque type from which elements
+  // may be accessed via image specific ops or directly through a texture
+  // pointer.
+  if (storageClass == spirv::StorageClass::Image) {
+    const int64_t rank = type.getRank();
+    if (rank < 1 || rank > 3) {
+      LLVM_DEBUG(llvm::dbgs()
+                 << type << " illegal: cannot lower memref of rank " << rank
+                 << " to a SPIR-V Image\n");
+      return nullptr;
+    }
+
+    // Note that we currently only support lowering to single element texels
+    // e.g. R32f.
+    auto elementType = type.getElementType();
+    if (!isa<spirv::ScalarType>(elementType)) {
+      LLVM_DEBUG(llvm::dbgs() << type << " illegal: cannot lower memref of "
+                              << elementType << " to a  SPIR-V Image\n");
+      return nullptr;
+    }
+
+    // Currently every memref in the image storage class is converted to a
+    // sampled image so we can hardcode the NeedSampler field. Future work
+    // will generalize this to support regular non-sampled images.
+    auto spvImageType = spirv::ImageType::get(
+        elementType, convertRank(rank), spirv::ImageDepthInfo::DepthUnknown,
+        spirv::ImageArrayedInfo::NonArrayed,
+        spirv::ImageSamplingInfo::SingleSampled,
+        spirv::ImageSamplerUseInfo::NeedSampler, getImageFormat(elementType));
+    auto spvSampledImageType = spirv::SampledImageType::get(spvImageType);
+    auto imagePtrType = spirv::PointerType::get(
+        spvSampledImageType, spirv::StorageClass::UniformConstant);
+    return imagePtrType;
+  }
 
   if (isa<IntegerType>(type.getElementType())) {
     if (type.getElementTypeBitWidth() == 1)
@@ -595,6 +713,10 @@ static Type convertMemrefType(const spirv::TargetEnv &targetEnv,
         convertScalarType(targetEnv, options, scalarType, storageClass);
   } else if (auto indexType = dyn_cast<IndexType>(elementType)) {
     type = cast<MemRefType>(convertIndexElementType(type, options));
+    arrayElemType = type.getElementType();
+  } else if (auto floatType = dyn_cast<FloatType>(elementType)) {
+    // Hnadle 8 bit float types.
+    type = cast<MemRefType>(convertShaped8BitFloatType(type, options));
     arrayElemType = type.getElementType();
   } else {
     LLVM_DEBUG(
@@ -858,7 +980,7 @@ getOrInsertPushConstantVariable(Location loc, Block &block,
 /// A pattern for rewriting function signature to convert arguments of functions
 /// to be of valid SPIR-V types.
 struct FuncOpConversion final : OpConversionPattern<func::FuncOp> {
-  using OpConversionPattern<func::FuncOp>::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(func::FuncOp funcOp, OpAdaptor adaptor,
@@ -910,7 +1032,7 @@ struct FuncOpConversion final : OpConversionPattern<func::FuncOp> {
 /// A pattern for rewriting function signature to convert vector arguments of
 /// functions to be of valid types
 struct FuncOpVectorUnroll final : OpRewritePattern<func::FuncOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(func::FuncOp funcOp,
                                 PatternRewriter &rewriter) const override {
@@ -1066,7 +1188,7 @@ struct FuncOpVectorUnroll final : OpRewritePattern<func::FuncOp> {
 /// A pattern for rewriting function signature and the return op to convert
 /// vectors to be of valid types.
 struct ReturnOpVectorUnroll final : OpRewritePattern<func::ReturnOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(func::ReturnOp returnOp,
                                 PatternRewriter &rewriter) const override {
@@ -1345,7 +1467,7 @@ mlir::spirv::getNativeVectorShape(Operation *op) {
   return TypeSwitch<Operation *, std::optional<SmallVector<int64_t>>>(op)
       .Case<vector::ReductionOp, vector::TransposeOp>(
           [](auto typedOp) { return getNativeVectorShapeImpl(typedOp); })
-      .Default([](Operation *) { return std::nullopt; });
+      .Default(std::nullopt);
 }
 
 LogicalResult mlir::spirv::unrollVectorsInSignatures(Operation *op) {
@@ -1444,6 +1566,8 @@ SPIRVTypeConverter::SPIRVTypeConverter(spirv::TargetEnvAttr targetAttr,
   addConversion([this](FloatType floatType) -> std::optional<Type> {
     if (auto scalarType = dyn_cast<spirv::ScalarType>(floatType))
       return convertScalarType(this->targetEnv, this->options, scalarType);
+    if (floatType.getWidth() == 8)
+      return convert8BitFloatType(this->options, floatType);
     return Type();
   });
 

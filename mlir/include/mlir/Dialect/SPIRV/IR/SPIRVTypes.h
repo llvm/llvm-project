@@ -88,13 +88,6 @@ public:
   static bool isValid(FloatType);
   /// Returns true if the given float type is valid for the SPIR-V dialect.
   static bool isValid(IntegerType);
-
-  void getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
-                     std::optional<StorageClass> storage = std::nullopt);
-  void getCapabilities(SPIRVType::CapabilityArrayRefVector &capabilities,
-                       std::optional<StorageClass> storage = std::nullopt);
-
-  std::optional<int64_t> getSizeInBytes();
 };
 
 // SPIR-V composite type: VectorType, SPIR-V ArrayType, SPIR-V
@@ -117,13 +110,6 @@ public:
   /// Return true if the number of elements is known at compile time and is not
   /// implementation dependent.
   bool hasCompileTimeKnownNumElements() const;
-
-  void getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
-                     std::optional<StorageClass> storage = std::nullopt);
-  void getCapabilities(SPIRVType::CapabilityArrayRefVector &capabilities,
-                       std::optional<StorageClass> storage = std::nullopt);
-
-  std::optional<int64_t> getSizeInBytes();
 };
 
 // SPIR-V array type
@@ -147,15 +133,6 @@ public:
   /// Returns the array stride in bytes. 0 means no stride decorated on this
   /// type.
   unsigned getArrayStride() const;
-
-  void getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
-                     std::optional<StorageClass> storage = std::nullopt);
-  void getCapabilities(SPIRVType::CapabilityArrayRefVector &capabilities,
-                       std::optional<StorageClass> storage = std::nullopt);
-
-  /// Returns the array size in bytes. Since array type may have an explicit
-  /// stride declaration (in bytes), we also include it in the calculation.
-  std::optional<int64_t> getSizeInBytes();
 };
 
 // SPIR-V image type
@@ -192,11 +169,6 @@ public:
   ImageSamplerUseInfo getSamplerUseInfo() const;
   ImageFormat getImageFormat() const;
   // TODO: Add support for Access qualifier
-
-  void getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
-                     std::optional<StorageClass> storage = std::nullopt);
-  void getCapabilities(SPIRVType::CapabilityArrayRefVector &capabilities,
-                       std::optional<StorageClass> storage = std::nullopt);
 };
 
 // SPIR-V pointer type
@@ -212,11 +184,6 @@ public:
   Type getPointeeType() const;
 
   StorageClass getStorageClass() const;
-
-  void getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
-                     std::optional<StorageClass> storage = std::nullopt);
-  void getCapabilities(SPIRVType::CapabilityArrayRefVector &capabilities,
-                       std::optional<StorageClass> storage = std::nullopt);
 };
 
 // SPIR-V run-time array type
@@ -238,11 +205,6 @@ public:
   /// Returns the array stride in bytes. 0 means no stride decorated on this
   /// type.
   unsigned getArrayStride() const;
-
-  void getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
-                     std::optional<StorageClass> storage = std::nullopt);
-  void getCapabilities(SPIRVType::CapabilityArrayRefVector &capabilities,
-                       std::optional<StorageClass> storage = std::nullopt);
 };
 
 // SPIR-V sampled image type
@@ -264,12 +226,6 @@ public:
                    Type imageType);
 
   Type getImageType() const;
-
-  void getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
-                     std::optional<spirv::StorageClass> storage = std::nullopt);
-  void
-  getCapabilities(SPIRVType::CapabilityArrayRefVector &capabilities,
-                  std::optional<spirv::StorageClass> storage = std::nullopt);
 };
 
 /// SPIR-V struct type. Two kinds of struct types are supported:
@@ -330,10 +286,34 @@ public:
     bool hasValue() const { return !isa<UnitAttr>(decorationValue); }
   };
 
+  // Type for specifying the decoration(s) on the struct itself.
+  struct StructDecorationInfo {
+    Decoration decoration;
+    Attribute decorationValue;
+
+    StructDecorationInfo(Decoration decoration, Attribute decorationValue)
+        : decoration(decoration), decorationValue(decorationValue) {}
+
+    friend bool operator==(const StructDecorationInfo &lhs,
+                           const StructDecorationInfo &rhs) {
+      return lhs.decoration == rhs.decoration &&
+             lhs.decorationValue == rhs.decorationValue;
+    }
+
+    friend bool operator<(const StructDecorationInfo &lhs,
+                          const StructDecorationInfo &rhs) {
+      return llvm::to_underlying(lhs.decoration) <
+             llvm::to_underlying(rhs.decoration);
+    }
+
+    bool hasValue() const { return !isa<UnitAttr>(decorationValue); }
+  };
+
   /// Construct a literal StructType with at least one member.
   static StructType get(ArrayRef<Type> memberTypes,
                         ArrayRef<OffsetInfo> offsetInfo = {},
-                        ArrayRef<MemberDecorationInfo> memberDecorations = {});
+                        ArrayRef<MemberDecorationInfo> memberDecorations = {},
+                        ArrayRef<StructDecorationInfo> structDecorations = {});
 
   /// Construct an identified StructType. This creates a StructType whose body
   /// (member types, offset info, and decorations) is not set yet. A call to
@@ -367,6 +347,9 @@ public:
 
   bool hasOffset() const;
 
+  /// Returns true if the struct has a specified decoration.
+  bool hasDecoration(spirv::Decoration decoration) const;
+
   uint64_t getMemberOffset(unsigned) const;
 
   // Returns in `memberDecorations` the Decorations (apart from Offset)
@@ -380,21 +363,25 @@ public:
       unsigned i,
       SmallVectorImpl<StructType::MemberDecorationInfo> &decorationsInfo) const;
 
+  // Returns in `structDecorations` the Decorations associated with the
+  // StructType.
+  void getStructDecorations(SmallVectorImpl<StructType::StructDecorationInfo>
+                                &structDecorations) const;
+
   /// Sets the contents of an incomplete identified StructType. This method must
   /// be called only for identified StructTypes and it must be called only once
   /// per instance. Otherwise, failure() is returned.
   LogicalResult
   trySetBody(ArrayRef<Type> memberTypes, ArrayRef<OffsetInfo> offsetInfo = {},
-             ArrayRef<MemberDecorationInfo> memberDecorations = {});
-
-  void getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
-                     std::optional<StorageClass> storage = std::nullopt);
-  void getCapabilities(SPIRVType::CapabilityArrayRefVector &capabilities,
-                       std::optional<StorageClass> storage = std::nullopt);
+             ArrayRef<MemberDecorationInfo> memberDecorations = {},
+             ArrayRef<StructDecorationInfo> structDecorations = {});
 };
 
 llvm::hash_code
 hash_value(const StructType::MemberDecorationInfo &memberDecorationInfo);
+
+llvm::hash_code
+hash_value(const StructType::StructDecorationInfo &structDecorationInfo);
 
 // SPIR-V KHR cooperative matrix type
 class CooperativeMatrixType
@@ -419,11 +406,6 @@ public:
   uint32_t getColumns() const;
   /// Returns the use parameter of the cooperative matrix.
   CooperativeMatrixUseKHR getUse() const;
-
-  void getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
-                     std::optional<StorageClass> storage = std::nullopt);
-  void getCapabilities(SPIRVType::CapabilityArrayRefVector &capabilities,
-                       std::optional<StorageClass> storage = std::nullopt);
 
   operator ShapedType() const { return llvm::cast<ShapedType>(*this); }
 
@@ -475,11 +457,6 @@ public:
 
   /// Returns the elements' type (i.e, single element type).
   Type getElementType() const;
-
-  void getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
-                     std::optional<StorageClass> storage = std::nullopt);
-  void getCapabilities(SPIRVType::CapabilityArrayRefVector &capabilities,
-                       std::optional<StorageClass> storage = std::nullopt);
 };
 
 /// SPIR-V TensorARM Type
@@ -515,11 +492,6 @@ public:
   ArrayRef<int64_t> getShape() const;
   bool hasRank() const { return !getShape().empty(); }
   operator ShapedType() const { return llvm::cast<ShapedType>(*this); }
-
-  void getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
-                     std::optional<StorageClass> storage = std::nullopt);
-  void getCapabilities(SPIRVType::CapabilityArrayRefVector &capabilities,
-                       std::optional<StorageClass> storage = std::nullopt);
 };
 
 } // namespace spirv

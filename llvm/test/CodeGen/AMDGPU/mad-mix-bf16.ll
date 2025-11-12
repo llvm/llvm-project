@@ -199,7 +199,6 @@ define float @v_mad_mix_f32_bf16lo_bf16lo_negabsf32(bfloat %src0, bfloat %src1, 
   ret float %result
 }
 
-
 define float @v_mad_mix_f32_bf16lo_bf16lo_f32imm1(bfloat %src0, bfloat %src1) #0 {
 ; GFX1250-LABEL: v_mad_mix_f32_bf16lo_bf16lo_f32imm1:
 ; GFX1250:       ; %bb.0:
@@ -230,7 +229,6 @@ define float @v_mad_mix_f32_bf16lo_bf16lo_f32imminv2pi(bfloat %src0, bfloat %src
   ret float %result
 }
 
-
 define float @v_mad_mix_f32_bf16lo_bf16lo_cvtbf16imminv2pi(bfloat %src0, bfloat %src1) #0 {
 ; GFX1250-LABEL: v_mad_mix_f32_bf16lo_bf16lo_cvtbf16imminv2pi:
 ; GFX1250:       ; %bb.0:
@@ -246,7 +244,6 @@ define float @v_mad_mix_f32_bf16lo_bf16lo_cvtbf16imminv2pi(bfloat %src0, bfloat 
   %result = tail call float @llvm.fmuladd.f32(float %src0.ext, float %src1.ext, float %src2)
   ret float %result
 }
-
 
 define float @v_mad_mix_f32_bf16lo_bf16lo_cvtbf16imm63(bfloat %src0, bfloat %src1) #0 {
 ; GFX1250-LABEL: v_mad_mix_f32_bf16lo_bf16lo_cvtbf16imm63:
@@ -360,7 +357,6 @@ define float @no_mix_simple_fabs(float %src0, float %src1, float %src2) #0 {
   ret float %result
 }
 
-
 define float @v_mad_mix_f32_bf16lo_bf16lo_bf16lo_f32_denormals(bfloat %src0, bfloat %src1, bfloat %src2) #1 {
 ; GFX1250-LABEL: v_mad_mix_f32_bf16lo_bf16lo_bf16lo_f32_denormals:
 ; GFX1250:       ; %bb.0:
@@ -468,7 +464,6 @@ define float @v_mad_mix_f32_negprecvtbf16lo_bf16lo_bf16lo(i32 %src0.arg, bfloat 
   %result = tail call float @llvm.fmuladd.f32(float %src0.ext, float %src1.ext, float %src2.ext)
   ret float %result
 }
-
 
 define float @v_mad_mix_f32_precvtnegbf16hi_abs_bf16lo_bf16lo(i32 %src0.arg, bfloat %src1, bfloat %src2) #0 {
 ; GFX1250-LABEL: v_mad_mix_f32_precvtnegbf16hi_abs_bf16lo_bf16lo:

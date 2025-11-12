@@ -8,8 +8,6 @@
 
 // UNSUPPORTED: no-threads
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
-
 // <mutex>
 
 // struct once_flag;

@@ -21,7 +21,13 @@
 
 namespace llvm {
 
-enum class RunOutliner { TargetDefault, AlwaysOutline, NeverOutline };
+enum class RunOutliner {
+  TargetDefault,
+  AlwaysOutline,
+  OptimisticPGO,
+  ConservativePGO,
+  NeverOutline
+};
 enum class RegAllocType { Unset, Default, Basic, Fast, Greedy, PBQP };
 
 class RegAllocTypeParser : public cl::parser<RegAllocType> {
@@ -52,6 +58,8 @@ struct CGPassBuilderOption {
   bool EnableMachineFunctionSplitter = false;
   bool EnableSinkAndFold = false;
   bool EnableTailMerge = true;
+  /// Enable LoopTermFold immediately after LSR.
+  bool EnableLoopTermFold = false;
   bool MISchedPostRA = false;
   bool EarlyLiveIntervals = false;
   bool GCEmptyBlocks = false;

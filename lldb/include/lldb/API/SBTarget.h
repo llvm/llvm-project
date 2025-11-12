@@ -19,6 +19,7 @@
 #include "lldb/API/SBLaunchInfo.h"
 #include "lldb/API/SBStatisticsOptions.h"
 #include "lldb/API/SBSymbolContextList.h"
+#include "lldb/API/SBThreadCollection.h"
 #include "lldb/API/SBType.h"
 #include "lldb/API/SBValue.h"
 #include "lldb/API/SBWatchpoint.h"
@@ -324,6 +325,16 @@ public:
 
   lldb::SBModule FindModule(const lldb::SBFileSpec &file_spec);
 
+  /// Find a module with the given module specification.
+  ///
+  /// \param[in] module_spec
+  ///     A lldb::SBModuleSpec object that contains module specification.
+  ///
+  /// \return
+  ///     A lldb::SBModule object that represents the found module, or an
+  ///     invalid SBModule object if no module was found.
+  lldb::SBModule FindModule(const lldb::SBModuleSpec &module_spec);
+
   /// Find compile units related to *this target and passed source
   /// file.
   ///
@@ -346,6 +357,14 @@ public:
   const char *GetABIName();
 
   const char *GetLabel() const;
+
+  /// Get the globally unique ID for this target. This ID is unique
+  /// across all debugger instances within the same lldb process.
+  ///
+  /// \return
+  ///     The globally unique ID for this target, or
+  ///     LLDB_INVALID_GLOBALLY_UNIQUE_TARGET_ID if the target is invalid.
+  lldb::user_id_t GetGloballyUniqueID() const;
 
   SBError SetLabel(const char *label);
 
@@ -658,6 +677,14 @@ public:
       lldb::LanguageType symbol_language,
       const SBFileSpecList &module_list, const SBFileSpecList &comp_unit_list);
 
+  lldb::SBBreakpoint BreakpointCreateByName(
+      const char *symbol_name,
+      uint32_t
+          name_type_mask, // Logical OR one or more FunctionNameType enum bits
+      lldb::LanguageType symbol_language, lldb::addr_t offset,
+      bool offset_is_insn_count, const SBFileSpecList &module_list,
+      const SBFileSpecList &comp_unit_list);
+
 #ifdef SWIG
   lldb::SBBreakpoint BreakpointCreateByNames(
       const char **symbol_name, uint32_t num_names,
@@ -960,6 +987,35 @@ public:
 
   lldb::SBMutex GetAPIMutex() const;
 
+  /// Register a scripted frame provider for this target.
+  /// If a scripted frame provider with the same name and same argument
+  /// dictionary is already registered on this target, it will be overwritten.
+  ///
+  /// \param[in] class_name
+  ///     The name of the Python class that implements the frame provider.
+  ///
+  /// \param[in] args_dict
+  ///     A dictionary of arguments to pass to the frame provider class.
+  ///
+  /// \param[out] error
+  ///     An error object indicating success or failure.
+  ///
+  /// \return
+  ///     A unique identifier for the frame provider descriptor that was
+  ///     registered. 0 if the registration failed.
+  uint32_t RegisterScriptedFrameProvider(const char *class_name,
+                                         lldb::SBStructuredData args_dict,
+                                         lldb::SBError &error);
+
+  /// Remove a scripted frame provider from this target by name.
+  ///
+  /// \param[in] provider_id
+  ///     The id of the frame provider class to remove.
+  ///
+  /// \return
+  ///     An error object indicating success or failure.
+  lldb::SBError RemoveScriptedFrameProvider(uint32_t provider_id);
+
 protected:
   friend class SBAddress;
   friend class SBAddressRange;
@@ -973,6 +1029,7 @@ protected:
   friend class SBFunction;
   friend class SBInstruction;
   friend class SBModule;
+  friend class SBModuleSpec;
   friend class SBPlatform;
   friend class SBProcess;
   friend class SBSection;

@@ -29,7 +29,7 @@ TEST(BuildCompilerInvocationTest, RecoverMultipleJobs) {
   clang::DiagnosticOptions DiagOpts;
   CreateInvocationOptions Opts;
   Opts.RecoverOnError = true;
-  Opts.VFS = new llvm::vfs::InMemoryFileSystem();
+  Opts.VFS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
   Opts.Diags = clang::CompilerInstance::createDiagnostics(*Opts.VFS, DiagOpts,
                                                           &D, false);
   std::unique_ptr<CompilerInvocation> CI = createInvocation(Args, Opts);

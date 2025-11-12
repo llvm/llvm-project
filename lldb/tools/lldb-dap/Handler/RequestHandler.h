@@ -243,14 +243,17 @@ public:
                                  uint32_t end_line) const;
 };
 
-class CompletionsRequestHandler : public LegacyRequestHandler {
+class CompletionsRequestHandler
+    : public RequestHandler<protocol::CompletionsArguments,
+                            llvm::Expected<protocol::CompletionsResponseBody>> {
 public:
-  using LegacyRequestHandler::LegacyRequestHandler;
+  using RequestHandler::RequestHandler;
   static llvm::StringLiteral GetCommand() { return "completions"; }
   FeatureSet GetSupportedFeatures() const override {
     return {protocol::eAdapterFeatureCompletionsRequest};
   }
-  void operator()(const llvm::json::Object &request) const override;
+  llvm::Expected<protocol::CompletionsResponseBody>
+  Run(const protocol::CompletionsArguments &args) const override;
 };
 
 class ContinueRequestHandler
@@ -299,14 +302,18 @@ public:
   }
 };
 
-class ExceptionInfoRequestHandler : public LegacyRequestHandler {
+class ExceptionInfoRequestHandler final
+    : public RequestHandler<
+          protocol::ExceptionInfoArguments,
+          llvm::Expected<protocol::ExceptionInfoResponseBody>> {
 public:
-  using LegacyRequestHandler::LegacyRequestHandler;
+  using RequestHandler::RequestHandler;
   static llvm::StringLiteral GetCommand() { return "exceptionInfo"; }
   FeatureSet GetSupportedFeatures() const override {
     return {protocol::eAdapterFeatureExceptionInfoRequest};
   }
-  void operator()(const llvm::json::Object &request) const override;
+  llvm::Expected<protocol::ExceptionInfoResponseBody>
+  Run(const protocol::ExceptionInfoArguments &args) const override;
 };
 
 class InitializeRequestHandler
@@ -592,6 +599,20 @@ public:
     return {protocol::eAdapterFeatureCancelRequest};
   }
   llvm::Error Run(const protocol::CancelArguments &args) const override;
+};
+
+class ModuleSymbolsRequestHandler
+    : public RequestHandler<
+          protocol::ModuleSymbolsArguments,
+          llvm::Expected<protocol::ModuleSymbolsResponseBody>> {
+public:
+  using RequestHandler::RequestHandler;
+  static llvm::StringLiteral GetCommand() { return "__lldb_moduleSymbols"; }
+  FeatureSet GetSupportedFeatures() const override {
+    return {protocol::eAdapterFeatureSupportsModuleSymbolsRequest};
+  }
+  llvm::Expected<protocol::ModuleSymbolsResponseBody>
+  Run(const protocol::ModuleSymbolsArguments &args) const override;
 };
 
 /// A request used in testing to get the details on all breakpoints that are

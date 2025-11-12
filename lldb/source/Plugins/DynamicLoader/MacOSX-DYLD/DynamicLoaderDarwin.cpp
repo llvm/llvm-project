@@ -1159,9 +1159,8 @@ DynamicLoaderDarwin::GetThreadLocalData(const lldb::ModuleSP module_sp,
   //  size_t offset;
   // }
   //
-  // The strategy is to take get_addr, call it with the address of the
-  // containing TLS_Thunk structure, and add the offset to the resulting
-  // pointer to get the data block.
+  // The strategy is to take get_addr and call it with the address of the
+  // containing TLS_Thunk structure.
   //
   // On older apple platforms, the key is treated as a pthread_key_t and passed
   // to pthread_getspecific. The pointer returned from that call is added to
@@ -1190,7 +1189,7 @@ DynamicLoaderDarwin::GetThreadLocalData(const lldb::ModuleSP module_sp,
       const addr_t tls_data = evaluate_tls_address(
           thunk_load_addr, llvm::ArrayRef<addr_t>(tls_load_addr));
       if (tls_data != LLDB_INVALID_ADDRESS)
-        return tls_data + tls_offset;
+        return tls_data;
     }
   }
 

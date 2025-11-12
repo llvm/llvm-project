@@ -614,7 +614,7 @@ public:
     if (!IsThumb)
       return Val;
 
-    unsigned Type = cast<MCSymbolELF>(Symbol)->getType();
+    unsigned Type = static_cast<MCSymbolELF *>(Symbol)->getType();
     if ((Type == ELF::STT_FUNC || Type == ELF::STT_GNU_IFUNC) &&
         Symbol->isDefined())
       getAssembler().setIsThumbFunc(Symbol);
@@ -679,7 +679,8 @@ private:
   }
 
   void EmitMappingSymbol(StringRef Name) {
-    auto *Symbol = cast<MCSymbolELF>(getContext().createLocalSymbol(Name));
+    auto *Symbol =
+        static_cast<MCSymbolELF *>(getContext().createLocalSymbol(Name));
     emitLabel(Symbol);
 
     Symbol->setType(ELF::STT_NOTYPE);
@@ -687,7 +688,8 @@ private:
   }
 
   void emitMappingSymbol(StringRef Name, MCFragment &F, uint64_t Offset) {
-    auto *Symbol = cast<MCSymbolELF>(getContext().createLocalSymbol(Name));
+    auto *Symbol =
+        static_cast<MCSymbolELF *>(getContext().createLocalSymbol(Name));
     emitLabelAtPos(Symbol, SMLoc(), F, Offset);
     Symbol->setType(ELF::STT_NOTYPE);
     Symbol->setBinding(ELF::STB_LOCAL);
@@ -893,6 +895,7 @@ void ARMTargetELFStreamer::emitArchDefaultAttributes() {
   case ARM::ArchKind::ARMV9_4A:
   case ARM::ArchKind::ARMV9_5A:
   case ARM::ArchKind::ARMV9_6A:
+  case ARM::ArchKind::ARMV9_7A:
     S.setAttributeItem(CPU_arch_profile, ApplicationProfile, false);
     S.setAttributeItem(ARM_ISA_use, Allowed, false);
     S.setAttributeItem(THUMB_ISA_use, AllowThumb32, false);
@@ -1088,7 +1091,7 @@ void ARMTargetELFStreamer::emitLabel(MCSymbol *Symbol) {
     return;
 
   Streamer.getAssembler().registerSymbol(*Symbol);
-  unsigned Type = cast<MCSymbolELF>(Symbol)->getType();
+  unsigned Type = static_cast<MCSymbolELF *>(Symbol)->getType();
   if (Type == ELF::STT_FUNC || Type == ELF::STT_GNU_IFUNC)
     emitThumbFunc(Symbol);
 }
@@ -1284,14 +1287,11 @@ void ARMELFStreamer::emitCantUnwind() { CantUnwind = true; }
 // Add the R_ARM_NONE fixup at the same position
 void ARMELFStreamer::EmitPersonalityFixup(StringRef Name) {
   const MCSymbol *PersonalitySym = getContext().getOrCreateSymbol(Name);
+  visitUsedSymbol(*PersonalitySym);
 
   const MCSymbolRefExpr *PersonalityRef =
       MCSymbolRefExpr::create(PersonalitySym, ARM::S_ARM_NONE, getContext());
-
-  visitUsedExpr(*PersonalityRef);
-  MCFragment *DF = getCurrentFragment();
-  DF->addFixup(
-      MCFixup::create(DF->getContents().size(), PersonalityRef, FK_Data_4));
+  addFixup(PersonalityRef, FK_Data_4);
 }
 
 void ARMELFStreamer::FlushPendingOffset() {

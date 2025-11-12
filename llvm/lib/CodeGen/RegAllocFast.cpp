@@ -206,12 +206,12 @@ private:
     bool Error = false;              ///< Could not allocate.
 
     explicit LiveReg(Register VirtReg) : VirtReg(VirtReg) {}
-    explicit LiveReg() {}
+    explicit LiveReg() = default;
 
     unsigned getSparseSetIndex() const { return VirtReg.virtRegIndex(); }
   };
 
-  using LiveRegMap = SparseSet<LiveReg, identity<unsigned>, uint16_t>;
+  using LiveRegMap = SparseSet<LiveReg, unsigned, identity, uint16_t>;
   /// This map contains entries for each virtual register that is currently
   /// available in a physical register.
   LiveRegMap LiveVirtRegs;
@@ -474,6 +474,13 @@ int RegAllocFastImpl::getStackSpaceFor(Register VirtReg) {
   const TargetRegisterClass &RC = *MRI->getRegClass(VirtReg);
   unsigned Size = TRI->getSpillSize(RC);
   Align Alignment = TRI->getSpillAlign(RC);
+
+  const MachineFunction &MF = MRI->getMF();
+  auto &ST = MF.getSubtarget();
+  Align CurrentAlign = ST.getFrameLowering()->getStackAlign();
+  if (Alignment > CurrentAlign && !TRI->canRealignStack(MF))
+    Alignment = CurrentAlign;
+
   int FrameIdx = MFI->CreateSpillStackObject(Size, Alignment);
 
   // Assign the slot.
@@ -587,8 +594,7 @@ void RegAllocFastImpl::spill(MachineBasicBlock::iterator Before,
   LLVM_DEBUG(dbgs() << " to stack slot #" << FI << '\n');
 
   const TargetRegisterClass &RC = *MRI->getRegClass(VirtReg);
-  TII->storeRegToStackSlot(*MBB, Before, AssignedReg, Kill, FI, &RC, TRI,
-                           VirtReg);
+  TII->storeRegToStackSlot(*MBB, Before, AssignedReg, Kill, FI, &RC, VirtReg);
   ++NumStores;
 
   MachineBasicBlock::iterator FirstTerm = MBB->getFirstTerminator();
@@ -645,7 +651,7 @@ void RegAllocFastImpl::reload(MachineBasicBlock::iterator Before,
                     << printReg(PhysReg, TRI) << '\n');
   int FI = getStackSpaceFor(VirtReg);
   const TargetRegisterClass &RC = *MRI->getRegClass(VirtReg);
-  TII->loadRegFromStackSlot(*MBB, Before, PhysReg, FI, &RC, TRI, VirtReg);
+  TII->loadRegFromStackSlot(*MBB, Before, PhysReg, FI, &RC, VirtReg);
   ++NumLoads;
 }
 
@@ -1116,7 +1122,7 @@ bool RegAllocFastImpl::defineVirtReg(MachineInstr &MI, unsigned OpNum,
           if (MO.isMBB()) {
             MachineBasicBlock *Succ = MO.getMBB();
             TII->storeRegToStackSlot(*Succ, Succ->begin(), PhysReg, Kill, FI,
-                                     &RC, TRI, VirtReg);
+                                     &RC, VirtReg);
             ++NumStores;
             Succ->addLiveIn(PhysReg);
           }

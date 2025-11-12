@@ -52,8 +52,9 @@ Note that there is the check
 :doc:`cppcoreguidelines-avoid-non-const-global-variables <../cppcoreguidelines/avoid-non-const-global-variables>`
 to enforce ``const`` correctness on all globals.
 
-Known Limitations
------------------
+
+Limitations
+-----------
 
 The check does not run on `C` code.
 
@@ -98,7 +99,7 @@ Options
 .. option:: AnalyzePointers
 
   Enable or disable the analysis of pointers variables, like
-  ``int *ptr = &i;``. For specific checks, see 
+  ``int *ptr = &i;``. For specific checks, see
   :option:`WarnPointersAsValues` and :option:`WarnPointersAsPointers`.
   Default is `true`.
 

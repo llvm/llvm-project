@@ -30,7 +30,7 @@ namespace {
 #ifdef __clang__
 #pragma clang diagnostic ignored "-Wunknown-pragmas"
 #pragma clang diagnostic ignored "-Winaccessible-base"
-#elif ((__GNUC__ * 100) + __GNUC_MINOR__) >= 402
+#elif defined(__GNUC__)
 // Pragma based warning suppression was introduced in GGC 4.2.  Additionally
 // this warning is "enabled by default".  The warning still appears if -Wall is
 // suppressed.  Apparently GCC suppresses it when -w is specifed, which is odd.
@@ -79,14 +79,14 @@ struct V8 : V5, virtual V6, V7 { double zz;
 
 double S6::f() { return 0.0; }
 float D2::g() { return 0.0f; }
-V1::~V1() {}
-V2::~V2() {}
-V3::~V3() {}
-V4::~V4() {}
-V5::~V5() {}
-V6::~V6() {}
-V7::~V7() {}
-V8::~V8() {}
+V1::~V1() = default;
+V2::~V2() = default;
+V3::~V3() = default;
+V4::~V4() = default;
+V5::~V5() = default;
+V6::~V6() = default;
+V7::~V7() = default;
+V8::~V8() = default;
 
 template <typename M> struct T { M m; };
 

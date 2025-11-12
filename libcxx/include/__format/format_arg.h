@@ -283,7 +283,7 @@ _LIBCPP_HIDE_FROM_ABI decltype(auto) __visit_format_arg(_Visitor&& __vis, basic_
   __libcpp_unreachable();
 }
 
-#  if _LIBCPP_STD_VER >= 26 && _LIBCPP_HAS_EXPLICIT_THIS_PARAMETER
+#  if _LIBCPP_STD_VER >= 26
 
 template <class _Rp, class _Visitor, class _Context>
 _LIBCPP_HIDE_FROM_ABI _Rp __visit_format_arg(_Visitor&& __vis, basic_format_arg<_Context> __arg) {
@@ -340,7 +340,7 @@ _LIBCPP_HIDE_FROM_ABI _Rp __visit_format_arg(_Visitor&& __vis, basic_format_arg<
   __libcpp_unreachable();
 }
 
-#  endif // _LIBCPP_STD_VER >= 26 && _LIBCPP_HAS_EXPLICIT_THIS_PARAMETER
+#  endif // _LIBCPP_STD_VER >= 26
 
 template <class _Context>
 class _LIBCPP_NO_SPECIALIZATIONS basic_format_arg {
@@ -351,7 +351,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI explicit operator bool() const noexcept { return __type_ != __format::__arg_t::__none; }
 
-#  if _LIBCPP_STD_VER >= 26 && _LIBCPP_HAS_EXPLICIT_THIS_PARAMETER
+#  if _LIBCPP_STD_VER >= 26
 
   // This function is user facing, so it must wrap the non-standard types of
   // the "variant" in a handle to stay conforming. See __arg_t for more details.
@@ -367,7 +367,7 @@ public:
     return std::__visit_format_arg<_Rp>(std::forward<_Visitor>(__vis), __arg);
   }
 
-#  endif // _LIBCPP_STD_VER >= 26 && _LIBCPP_HAS_EXPLICIT_THIS_PARAMETER
+#  endif // _LIBCPP_STD_VER >= 26
 
 private:
   using char_type = typename _Context::char_type;
@@ -409,10 +409,7 @@ private:
 // This function is user facing, so it must wrap the non-standard types of
 // the "variant" in a handle to stay conforming. See __arg_t for more details.
 template <class _Visitor, class _Context>
-#  if _LIBCPP_STD_VER >= 26 && _LIBCPP_HAS_EXPLICIT_THIS_PARAMETER
-_LIBCPP_DEPRECATED_IN_CXX26
-#  endif
-    _LIBCPP_HIDE_FROM_ABI decltype(auto)
+_LIBCPP_DEPRECATED_IN_CXX26 _LIBCPP_HIDE_FROM_ABI decltype(auto)
     visit_format_arg(_Visitor&& __vis, basic_format_arg<_Context> __arg) {
   return std::__visit_format_arg(std::forward<_Visitor>(__vis), __arg);
 }

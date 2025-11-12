@@ -28,8 +28,7 @@ func.func @printmem16(%A: memref<?xf32>) {
   %mem = scf.for %i = %c0 to %c16 step %c1
     iter_args(%m_iter = %m) -> (vector<16xf32>) {
     %c = memref.load %A[%i] : memref<?xf32>
-    %i32 = arith.index_cast %i : index to i32
-    %m_new = vector.insertelement %c, %m_iter[%i32 : i32] : vector<16xf32>
+    %m_new = vector.insert %c, %m_iter[%i] : f32 into vector<16xf32>
     scf.yield %m_new : vector<16xf32>
   }
   vector.print %mem : vector<16xf32>
@@ -49,7 +48,7 @@ func.func @entry() {
     memref.store %z, %A[%i] : memref<?xf32>
     %i32 = arith.index_cast %i : index to i32
     %fi = arith.sitofp %i32 : i32 to f32
-    %v_new = vector.insertelement %fi, %v_iter[%i32 : i32] : vector<16xf32>
+    %v_new = vector.insert %fi, %v_iter[%i] : f32 into vector<16xf32>
     scf.yield %v_new : vector<16xf32>
   }
 

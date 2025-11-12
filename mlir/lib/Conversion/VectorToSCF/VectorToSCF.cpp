@@ -26,6 +26,7 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "llvm/ADT/STLExtras.h"
 
 namespace mlir {
 #define GEN_PASS_DEF_CONVERTVECTORTOSCF
@@ -690,7 +691,7 @@ struct PrepareTransferWriteConversion
 /// %lastIndex = arith.subi %length, %c1 : index
 /// vector.print punctuation <open>
 /// scf.for %i = %c0 to %length step %c1 {
-///   %el = vector.extractelement %v[%i : index] : vector<[4]xi32>
+///   %el = vector.extract %v[%i] : i32 from vector<[4]xi32>
 ///   vector.print %el : i32 punctuation <no_punctuation>
 ///   %notLastIndex = arith.cmpi ult, %i, %lastIndex : index
 ///   scf.if %notLastIndex {
@@ -760,8 +761,7 @@ struct DecomposePrintOpConversion : public VectorToSCFPattern<vector::PrintOp> {
     if (vectorType.getRank() != 1) {
       // Flatten n-D vectors to 1D. This is done to allow indexing with a
       // non-constant value.
-      auto flatLength = std::accumulate(shape.begin(), shape.end(), 1,
-                                        std::multiplies<int64_t>());
+      int64_t flatLength = llvm::product_of(shape);
       auto flatVectorType =
           VectorType::get({flatLength}, vectorType.getElementType());
       value = vector::ShapeCastOp::create(rewriter, loc, flatVectorType, value);
@@ -1414,7 +1414,7 @@ struct UnrollTransferWriteConversion
   /// Return the vector from which newly generated ExtracOps will extract.
   Value getDataVector(TransferWriteOp xferOp) const {
     if (auto extractOp = getExtractOp(xferOp))
-      return extractOp.getVector();
+      return extractOp.getSource();
     return xferOp.getVector();
   }
 
@@ -1643,7 +1643,7 @@ struct Strategy1d<TransferWriteOp> {
 /// Is rewritten to approximately the following pseudo-IR:
 /// ```
 /// for i = 0 to 9 {
-///   %t = vector.extractelement %vec[i] : vector<9xf32>
+///   %t = vector.extract %vec[i] : f32 from vector<9xf32>
 ///   memref.store %t, %arg0[%a + i, %b] : memref<?x?xf32>
 /// }
 /// ```

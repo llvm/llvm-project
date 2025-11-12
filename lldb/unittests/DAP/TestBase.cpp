@@ -7,17 +7,19 @@
 //===----------------------------------------------------------------------===//
 
 #include "TestBase.h"
-#include "Protocol/ProtocolBase.h"
+#include "DAPLog.h"
 #include "TestingSupport/TestUtilities.h"
 #include "lldb/API/SBDefines.h"
 #include "lldb/API/SBStructuredData.h"
-#include "lldb/Host/File.h"
+#include "lldb/Host/MainLoop.h"
 #include "lldb/Host/Pipe.h"
-#include "lldb/lldb-forward.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
+#include <cstdio>
 #include <memory>
+#include <system_error>
 
 using namespace llvm;
 using namespace lldb;
@@ -25,45 +27,47 @@ using namespace lldb_dap;
 using namespace lldb_dap::protocol;
 using namespace lldb_dap_tests;
 using lldb_private::File;
-using lldb_private::NativeFile;
+using lldb_private::FileSpec;
+using lldb_private::FileSystem;
+using lldb_private::MainLoop;
 using lldb_private::Pipe;
 
 void TransportBase::SetUp() {
-  PipePairTest::SetUp();
-  to_dap = std::make_unique<Transport>(
-      "to_dap", nullptr,
-      std::make_shared<NativeFile>(input.GetReadFileDescriptor(),
-                                   File::eOpenOptionReadOnly,
-                                   NativeFile::Unowned),
-      std::make_shared<NativeFile>(output.GetWriteFileDescriptor(),
-                                   File::eOpenOptionWriteOnly,
-                                   NativeFile::Unowned));
-  from_dap = std::make_unique<Transport>(
-      "from_dap", nullptr,
-      std::make_shared<NativeFile>(output.GetReadFileDescriptor(),
-                                   File::eOpenOptionReadOnly,
-                                   NativeFile::Unowned),
-      std::make_shared<NativeFile>(input.GetWriteFileDescriptor(),
-                                   File::eOpenOptionWriteOnly,
-                                   NativeFile::Unowned));
-}
+  std::tie(to_client, to_server) = TestDAPTransport::createPair();
 
-void DAPTestBase::SetUp() {
-  TransportBase::SetUp();
+  std::error_code EC;
+  log = std::make_unique<Log>("-", EC);
   dap = std::make_unique<DAP>(
-      /*log=*/nullptr,
+      /*log=*/log.get(),
       /*default_repl_mode=*/ReplMode::Auto,
       /*pre_init_commands=*/std::vector<std::string>(),
-      /*transport=*/*to_dap);
+      /*no_lldbinit=*/false,
+      /*client_name=*/"test_client",
+      /*transport=*/*to_client, /*loop=*/loop);
+
+  auto server_handle = to_server->RegisterMessageHandler(loop, *dap);
+  EXPECT_THAT_EXPECTED(server_handle, Succeeded());
+  handles[0] = std::move(*server_handle);
+
+  auto client_handle = to_client->RegisterMessageHandler(loop, client);
+  EXPECT_THAT_EXPECTED(client_handle, Succeeded());
+  handles[1] = std::move(*client_handle);
 }
 
+void TransportBase::Run() {
+  bool addition_succeeded = loop.AddPendingCallback(
+      [](lldb_private::MainLoopBase &loop) { loop.RequestTermination(); });
+  EXPECT_TRUE(addition_succeeded);
+  EXPECT_THAT_ERROR(loop.Run().takeError(), llvm::Succeeded());
+}
+
+void DAPTestBase::SetUp() { TransportBase::SetUp(); }
+
 void DAPTestBase::TearDown() {
-  if (core) {
+  if (core)
     ASSERT_THAT_ERROR(core->discard(), Succeeded());
-  }
-  if (binary) {
+  if (binary)
     ASSERT_THAT_ERROR(binary->discard(), Succeeded());
-  }
 }
 
 void DAPTestBase::SetUpTestSuite() {
@@ -72,7 +76,7 @@ void DAPTestBase::SetUpTestSuite() {
 }
 void DAPTestBase::TeatUpTestSuite() { SBDebugger::Terminate(); }
 
-bool DAPTestBase::GetDebuggerSupportsTarget(llvm::StringRef platform) {
+bool DAPTestBase::GetDebuggerSupportsTarget(StringRef platform) {
   EXPECT_TRUE(dap->debugger);
 
   lldb::SBStructuredData data = dap->debugger.GetBuildConfiguration()
@@ -81,7 +85,7 @@ bool DAPTestBase::GetDebuggerSupportsTarget(llvm::StringRef platform) {
   for (size_t i = 0; i < data.GetSize(); i++) {
     char buf[100] = {0};
     size_t size = data.GetItemAtIndex(i).GetStringValue(buf, sizeof(buf));
-    if (llvm::StringRef(buf, size) == platform)
+    if (StringRef(buf, size) == platform)
       return true;
   }
 
@@ -91,6 +95,24 @@ bool DAPTestBase::GetDebuggerSupportsTarget(llvm::StringRef platform) {
 void DAPTestBase::CreateDebugger() {
   dap->debugger = lldb::SBDebugger::Create();
   ASSERT_TRUE(dap->debugger);
+  dap->target = dap->debugger.GetDummyTarget();
+
+  Expected<lldb::FileUP> dev_null = FileSystem::Instance().Open(
+      FileSpec(FileSystem::DEV_NULL), File::eOpenOptionReadWrite);
+  ASSERT_THAT_EXPECTED(dev_null, Succeeded());
+  lldb::FileSP dev_null_sp = std::move(*dev_null);
+
+  std::FILE *dev_null_stream = dev_null_sp->GetStream();
+  ASSERT_THAT_ERROR(dap->ConfigureIO(dev_null_stream, dev_null_stream),
+                    Succeeded());
+
+  dap->debugger.SetInputFile(dap->in);
+  auto out_fd = dap->out.GetWriteFileDescriptor();
+  ASSERT_THAT_EXPECTED(out_fd, Succeeded());
+  dap->debugger.SetOutputFile(lldb::SBFile(*out_fd, "w", false));
+  auto err_fd = dap->out.GetWriteFileDescriptor();
+  ASSERT_THAT_EXPECTED(err_fd, Succeeded());
+  dap->debugger.SetErrorFile(lldb::SBFile(*err_fd, "w", false));
 }
 
 void DAPTestBase::LoadCore() {
@@ -113,19 +135,4 @@ void DAPTestBase::LoadCore() {
   this->core = std::move(*core_file);
   SBProcess process = dap->target.LoadCore(this->core->TmpName.data());
   ASSERT_TRUE(process);
-}
-
-std::vector<Message> DAPTestBase::DrainOutput() {
-  std::vector<Message> msgs;
-  output.CloseWriteFileDescriptor();
-  while (true) {
-    Expected<Message> next =
-        from_dap->Read<protocol::Message>(std::chrono::milliseconds(1));
-    if (!next) {
-      consumeError(next.takeError());
-      break;
-    }
-    msgs.push_back(*next);
-  }
-  return msgs;
 }

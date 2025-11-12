@@ -1,4 +1,4 @@
-//===--- ExceptionEscapeCheck.cpp - clang-tidy ----------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -36,15 +36,24 @@ ExceptionEscapeCheck::ExceptionEscapeCheck(StringRef Name,
                                            ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context), RawFunctionsThatShouldNotThrow(Options.get(
                                          "FunctionsThatShouldNotThrow", "")),
-      RawIgnoredExceptions(Options.get("IgnoredExceptions", "")) {
+      RawIgnoredExceptions(Options.get("IgnoredExceptions", "")),
+      RawCheckedSwapFunctions(
+          Options.get("CheckedSwapFunctions", "swap,iter_swap,iter_move")),
+      CheckDestructors(Options.get("CheckDestructors", true)),
+      CheckMoveMemberFunctions(Options.get("CheckMoveMemberFunctions", true)),
+      CheckMain(Options.get("CheckMain", true)),
+      CheckNothrowFunctions(Options.get("CheckNothrowFunctions", true)) {
   llvm::SmallVector<StringRef, 8> FunctionsThatShouldNotThrowVec,
-      IgnoredExceptionsVec;
-  StringRef(RawFunctionsThatShouldNotThrow)
-      .split(FunctionsThatShouldNotThrowVec, ",", -1, false);
+      IgnoredExceptionsVec, CheckedSwapFunctionsVec;
+  RawFunctionsThatShouldNotThrow.split(FunctionsThatShouldNotThrowVec, ",", -1,
+                                       false);
   FunctionsThatShouldNotThrow.insert_range(FunctionsThatShouldNotThrowVec);
 
+  RawCheckedSwapFunctions.split(CheckedSwapFunctionsVec, ",", -1, false);
+  CheckedSwapFunctions.insert_range(CheckedSwapFunctionsVec);
+
   llvm::StringSet<> IgnoredExceptions;
-  StringRef(RawIgnoredExceptions).split(IgnoredExceptionsVec, ",", -1, false);
+  RawIgnoredExceptions.split(IgnoredExceptionsVec, ",", -1, false);
   IgnoredExceptions.insert_range(IgnoredExceptionsVec);
   Tracer.ignoreExceptions(std::move(IgnoredExceptions));
   Tracer.ignoreBadAlloc(true);
@@ -54,20 +63,33 @@ void ExceptionEscapeCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "FunctionsThatShouldNotThrow",
                 RawFunctionsThatShouldNotThrow);
   Options.store(Opts, "IgnoredExceptions", RawIgnoredExceptions);
+  Options.store(Opts, "CheckedSwapFunctions", RawCheckedSwapFunctions);
+  Options.store(Opts, "CheckDestructors", CheckDestructors);
+  Options.store(Opts, "CheckMoveMemberFunctions", CheckMoveMemberFunctions);
+  Options.store(Opts, "CheckMain", CheckMain);
+  Options.store(Opts, "CheckNothrowFunctions", CheckNothrowFunctions);
 }
 
 void ExceptionEscapeCheck::registerMatchers(MatchFinder *Finder) {
+  auto MatchIf = [](bool Enabled, const auto &Matcher) {
+    ast_matchers::internal::Matcher<FunctionDecl> Nothing = unless(anything());
+    return Enabled ? Matcher : Nothing;
+  };
   Finder->addMatcher(
       functionDecl(
           isDefinition(),
-          anyOf(isNoThrow(),
-                allOf(anyOf(cxxDestructorDecl(),
-                            cxxConstructorDecl(isMoveConstructor()),
-                            cxxMethodDecl(isMoveAssignmentOperator()), isMain(),
-                            allOf(hasAnyName("swap", "iter_swap", "iter_move"),
-                                  hasAtLeastOneParameter())),
-                      unless(isExplicitThrow())),
-                isEnabled(FunctionsThatShouldNotThrow)))
+          anyOf(
+              MatchIf(CheckNothrowFunctions, isNoThrow()),
+              allOf(anyOf(MatchIf(CheckDestructors, cxxDestructorDecl()),
+                          MatchIf(
+                              CheckMoveMemberFunctions,
+                              anyOf(cxxConstructorDecl(isMoveConstructor()),
+                                    cxxMethodDecl(isMoveAssignmentOperator()))),
+                          MatchIf(CheckMain, isMain()),
+                          allOf(isEnabled(CheckedSwapFunctions),
+                                hasAtLeastOneParameter())),
+                    unless(isExplicitThrow())),
+              isEnabled(FunctionsThatShouldNotThrow)))
           .bind("thrower"),
       this);
 }

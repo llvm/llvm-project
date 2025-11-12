@@ -126,17 +126,17 @@ __inline void FreeIDListArray(LPITEMIDLIST *ppidls) {
 typedef struct in_addr {
 public:
   in_addr(in_addr &a) {} // precxx17-note {{candidate constructor not viable: expects an lvalue for 1st argument}}
-  in_addr(in_addr *a) {} // precxx17-note {{candidate constructor not viable: no known conversion from 'IN_ADDR' (aka 'in_addr') to 'in_addr *' for 1st argument}}
+  in_addr(in_addr *a) {} // precxx17-note {{candidate constructor not viable: no known conversion from 'IN_ADDR' (aka 'struct in_addr') to 'in_addr *' for 1st argument}}
 } IN_ADDR;
 
 void f(IN_ADDR __unaligned *a) {
   IN_ADDR local_addr = *a;
   // FIXME: MSVC accepts the following; not sure why clang tries to
   // copy-construct an in_addr.
-  IN_ADDR local_addr2 = a; // precxx17-error {{no viable constructor copying variable of type 'IN_ADDR' (aka 'in_addr')}}
-  // expected-warning@-1 {{implicit cast from type '__unaligned IN_ADDR *' (aka '__unaligned in_addr *') to type 'in_addr *' drops __unaligned qualifier}}
+  IN_ADDR local_addr2 = a; // precxx17-error {{no viable constructor copying variable of type 'IN_ADDR' (aka 'struct in_addr')}}
+  // expected-warning@-1 {{implicit cast from type '__unaligned IN_ADDR *' (aka '__unaligned struct in_addr *') to type 'in_addr *' drops __unaligned qualifier}}
   IN_ADDR local_addr3(a);
-  // expected-warning@-1 {{implicit cast from type '__unaligned IN_ADDR *' (aka '__unaligned in_addr *') to type 'in_addr *' drops __unaligned qualifier}}
+  // expected-warning@-1 {{implicit cast from type '__unaligned IN_ADDR *' (aka '__unaligned struct in_addr *') to type 'in_addr *' drops __unaligned qualifier}}
 }
 
 template<typename T> void h1(T (__stdcall M::* const )()) { }

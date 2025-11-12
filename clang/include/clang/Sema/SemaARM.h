@@ -44,8 +44,8 @@ public:
 
   bool CheckImmediateArg(CallExpr *TheCall, unsigned CheckTy, unsigned ArgIdx,
                          unsigned EltBitWidth, unsigned VecBitWidth);
-  bool CheckARMBuiltinExclusiveCall(unsigned BuiltinID, CallExpr *TheCall,
-                                    unsigned MaxWidth);
+  bool CheckARMBuiltinExclusiveCall(const TargetInfo &TI, unsigned BuiltinID,
+                                    CallExpr *TheCall);
   bool CheckNeonBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
                                     CallExpr *TheCall);
   bool PerformNeonImmChecks(

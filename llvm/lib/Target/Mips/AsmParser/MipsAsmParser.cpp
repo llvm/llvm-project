@@ -524,8 +524,8 @@ public:
   MipsAsmParser(const MCSubtargetInfo &sti, MCAsmParser &parser,
                 const MCInstrInfo &MII, const MCTargetOptions &Options)
       : MCTargetAsmParser(Options, sti, MII),
-        ABI(MipsABIInfo::computeTargetABI(sti.getTargetTriple(), sti.getCPU(),
-                                          Options)) {
+        ABI(MipsABIInfo::computeTargetABI(sti.getTargetTriple(),
+                                          Options.getABIName())) {
     MCAsmParserExtension::Initialize(parser);
 
     parser.addAliasForDirective(".asciiz", ".asciz");
@@ -2948,8 +2948,9 @@ bool MipsAsmParser::loadAndAddSymbolAddress(const MCExpr *SymExpr,
     bool IsPtr64 = ABI.ArePtrs64bit();
     bool IsLocalSym =
         Res.getAddSym()->isInSection() || Res.getAddSym()->isTemporary() ||
-        (Res.getAddSym()->isELF() &&
-         cast<MCSymbolELF>(Res.getAddSym())->getBinding() == ELF::STB_LOCAL);
+        (getContext().isELF() &&
+         static_cast<const MCSymbolELF *>(Res.getAddSym())->getBinding() ==
+             ELF::STB_LOCAL);
     // For O32, "$"-prefixed symbols are recognized as temporary while
     // .L-prefixed symbols are not (PrivateGlobalPrefix is "$"). Recognize ".L"
     // manually.
@@ -3676,7 +3677,7 @@ bool MipsAsmParser::expandBranchImm(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
                       Out, STI))
       return true;
 
-    if (IsLikely) {
+    if (IsLikely && MemOffsetOp.isExpr()) {
       TOut.emitRRX(OpCode, DstRegOp.getReg(), ATReg,
               MCOperand::createExpr(MemOffsetOp.getExpr()), IDLoc, STI);
       TOut.emitRRI(Mips::SLL, Mips::ZERO, Mips::ZERO, 0, IDLoc, STI);
@@ -3705,7 +3706,9 @@ void MipsAsmParser::expandMem16Inst(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
   MCRegister TmpReg = DstReg;
 
   const MCInstrDesc &Desc = MII.get(OpCode);
-  int16_t DstRegClass = Desc.operands()[StartOp].RegClass;
+  int16_t DstRegClass =
+      MII.getOpRegClassID(Desc.operands()[StartOp],
+                          STI->getHwMode(MCSubtargetInfo::HwMode_RegInfo));
   unsigned DstRegClassID =
       getContext().getRegisterInfo()->getRegClass(DstRegClass).getID();
   bool IsGPR = (DstRegClassID == Mips::GPR32RegClassID) ||
@@ -3833,7 +3836,10 @@ void MipsAsmParser::expandMem9Inst(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
   MCRegister TmpReg = DstReg;
 
   const MCInstrDesc &Desc = MII.get(OpCode);
-  int16_t DstRegClass = Desc.operands()[StartOp].RegClass;
+  int16_t DstRegClass =
+      MII.getOpRegClassID(Desc.operands()[StartOp],
+                          STI->getHwMode(MCSubtargetInfo::HwMode_RegInfo));
+
   unsigned DstRegClassID =
       getContext().getRegisterInfo()->getRegClass(DstRegClass).getID();
   bool IsGPR = (DstRegClassID == Mips::GPR32RegClassID) ||
@@ -6170,7 +6176,7 @@ int MipsAsmParser::matchCPURegisterName(StringRef Name) {
 
   CC = StringSwitch<unsigned>(Name)
            .Case("zero", 0)
-           .Cases("at", "AT", 1)
+           .Cases({"at", "AT"}, 1)
            .Case("a0", 4)
            .Case("a1", 5)
            .Case("a2", 6)
@@ -6653,7 +6659,7 @@ bool MipsAsmParser::searchSymbolAlias(OperandVector &Operands) {
           llvm_unreachable("Should never fail");
       }
     }
-  } else if (Sym->isUnset()) {
+  } else if (Sym->isUndefined()) {
     // If symbol is unset, it might be created in the `parseSetAssignment`
     // routine as an alias for a numeric register name.
     // Lookup in the aliases list.

@@ -177,8 +177,8 @@ struct StrtoTest : public LIBC_NAMESPACE::testing::ErrnoCheckingTest {
     char small_string[4] = {'\0', '\0', '\0', '\0'};
     for (int base = 2; base <= 36; ++base) {
       for (int first_digit = 0; first_digit <= 36; ++first_digit) {
-        small_string[0] = static_cast<char>(
-            LIBC_NAMESPACE::internal::int_to_b36_char(first_digit));
+        small_string[0] =
+            LIBC_NAMESPACE::internal::int_to_b36_char(first_digit);
         if (first_digit < base) {
           ASSERT_EQ(func(small_string, nullptr, base),
                     static_cast<ReturnT>(first_digit));
@@ -192,11 +192,11 @@ struct StrtoTest : public LIBC_NAMESPACE::testing::ErrnoCheckingTest {
 
     for (int base = 2; base <= 36; ++base) {
       for (int first_digit = 0; first_digit <= 36; ++first_digit) {
-        small_string[0] = static_cast<char>(
-            LIBC_NAMESPACE::internal::int_to_b36_char(first_digit));
+        small_string[0] =
+            LIBC_NAMESPACE::internal::int_to_b36_char(first_digit);
         for (int second_digit = 0; second_digit <= 36; ++second_digit) {
-          small_string[1] = static_cast<char>(
-              LIBC_NAMESPACE::internal::int_to_b36_char(second_digit));
+          small_string[1] =
+              LIBC_NAMESPACE::internal::int_to_b36_char(second_digit);
           if (first_digit < base && second_digit < base) {
             ASSERT_EQ(
                 func(small_string, nullptr, base),
@@ -216,14 +216,14 @@ struct StrtoTest : public LIBC_NAMESPACE::testing::ErrnoCheckingTest {
 
     for (int base = 2; base <= 36; ++base) {
       for (int first_digit = 0; first_digit <= 36; ++first_digit) {
-        small_string[0] = static_cast<char>(
-            LIBC_NAMESPACE::internal::int_to_b36_char(first_digit));
+        small_string[0] =
+            LIBC_NAMESPACE::internal::int_to_b36_char(first_digit);
         for (int second_digit = 0; second_digit <= 36; ++second_digit) {
-          small_string[1] = static_cast<char>(
-              LIBC_NAMESPACE::internal::int_to_b36_char(second_digit));
+          small_string[1] =
+              LIBC_NAMESPACE::internal::int_to_b36_char(second_digit);
           for (int third_digit = 0; third_digit <= limit; ++third_digit) {
-            small_string[2] = static_cast<char>(
-                LIBC_NAMESPACE::internal::int_to_b36_char(third_digit));
+            small_string[2] =
+                LIBC_NAMESPACE::internal::int_to_b36_char(third_digit);
 
             if (first_digit < base && second_digit < base &&
                 third_digit < base) {

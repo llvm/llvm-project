@@ -8,6 +8,8 @@
 
 #include "llvm/Linker/IRMover.h"
 #include "LinkDiagnosticInfo.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/IR/AutoUpgrade.h"
@@ -290,6 +292,9 @@ class IRLinker {
   Module &DstM;
   std::unique_ptr<Module> SrcM;
 
+  // Lookup table to optimize IRMover::linkNamedMDNodes().
+  IRMover::NamedMDNodesT &NamedMDNodes;
+
   /// See IRMover::move().
   IRMover::LazyCallback AddLazyFor;
 
@@ -435,10 +440,12 @@ public:
   IRLinker(Module &DstM, MDMapT &SharedMDs,
            IRMover::IdentifiedStructTypeSet &Set, std::unique_ptr<Module> SrcM,
            ArrayRef<GlobalValue *> ValuesToLink,
-           IRMover::LazyCallback AddLazyFor, bool IsPerformingImport)
-      : DstM(DstM), SrcM(std::move(SrcM)), AddLazyFor(std::move(AddLazyFor)),
-        TypeMap(Set), GValMaterializer(*this), LValMaterializer(*this),
-        SharedMDs(SharedMDs), IsPerformingImport(IsPerformingImport),
+           IRMover::LazyCallback AddLazyFor, bool IsPerformingImport,
+           IRMover::NamedMDNodesT &NamedMDNodes)
+      : DstM(DstM), SrcM(std::move(SrcM)), NamedMDNodes(NamedMDNodes),
+        AddLazyFor(std::move(AddLazyFor)), TypeMap(Set),
+        GValMaterializer(*this), LValMaterializer(*this), SharedMDs(SharedMDs),
+        IsPerformingImport(IsPerformingImport),
         Mapper(ValueMap, RF_ReuseAndMutateDistinctMDs | RF_IgnoreMissingLocals,
                &TypeMap, &GValMaterializer),
         IndirectSymbolMCID(Mapper.registerAlternateMappingContext(
@@ -875,10 +882,7 @@ IRLinker::linkAppendingVarProto(GlobalVariable *DstGV,
   NG->copyAttributesFrom(SrcGV);
   forceRenaming(NG, SrcGV->getName());
 
-  Mapper.scheduleMapAppendingVariable(
-      *NG,
-      (DstGV && !DstGV->isDeclaration()) ? DstGV->getInitializer() : nullptr,
-      IsOldStructor, SrcElements);
+  Mapper.scheduleMapAppendingVariable(*NG, DstGV, IsOldStructor, SrcElements);
 
   // Replace any uses of the two global variables with uses of the new
   // global.
@@ -1132,9 +1136,19 @@ void IRLinker::linkNamedMDNodes() {
       continue;
 
     NamedMDNode *DestNMD = DstM.getOrInsertNamedMetadata(NMD.getName());
+
+    auto &Inserted = NamedMDNodes[DestNMD];
+    if (Inserted.empty()) {
+      // Must be the first module, copy everything from DestNMD.
+      Inserted.insert(DestNMD->operands().begin(), DestNMD->operands().end());
+    }
+
     // Add Src elements into Dest node.
-    for (const MDNode *Op : NMD.operands())
-      DestNMD->addOperand(Mapper.mapMDNode(*Op));
+    for (const MDNode *Op : NMD.operands()) {
+      MDNode *MD = Mapper.mapMDNode(*Op);
+      if (Inserted.insert(MD).second)
+        DestNMD->addOperand(MD);
+    }
   }
 }
 
@@ -1495,6 +1509,11 @@ Error IRLinker::run() {
   // Loop over all of the linked values to compute type mappings.
   computeTypeMapping();
 
+  // Convert module level attributes to function level attributes because
+  // after merging modules the attributes might change and would have different
+  // effect on the functions as the original module would have.
+  copyModuleAttrToFunctions(*SrcM);
+
   std::reverse(Worklist.begin(), Worklist.end());
   while (!Worklist.empty()) {
     GlobalValue *GV = Worklist.back();
@@ -1660,6 +1679,11 @@ IRMover::IRMover(Module &M) : Composite(M) {
   for (const auto *MD : StructTypes.getVisitedMetadata()) {
     SharedMDs[MD].reset(const_cast<MDNode *>(MD));
   }
+
+  // Convert module level attributes to function level attributes because
+  // after merging modules the attributes might change and would have different
+  // effect on the functions as the original module would have.
+  copyModuleAttrToFunctions(M);
 }
 
 Error IRMover::move(std::unique_ptr<Module> Src,
@@ -1667,6 +1691,6 @@ Error IRMover::move(std::unique_ptr<Module> Src,
                     LazyCallback AddLazyFor, bool IsPerformingImport) {
   IRLinker TheIRLinker(Composite, SharedMDs, IdentifiedStructTypes,
                        std::move(Src), ValuesToLink, std::move(AddLazyFor),
-                       IsPerformingImport);
+                       IsPerformingImport, NamedMDNodes);
   return TheIRLinker.run();
 }

@@ -245,6 +245,7 @@ class ScriptedThread(metaclass=ABCMeta):
                 key/value pairs used by the scripted thread.
         """
         self.target = None
+        self.arch = None
         self.originating_process = None
         self.process = None
         self.args = None
@@ -266,6 +267,9 @@ class ScriptedThread(metaclass=ABCMeta):
             and process.IsValid()
         ):
             self.target = process.target
+            triple = self.target.triple
+            if triple:
+                self.arch = triple.split("-")[0]
             self.originating_process = process
             self.process = self.target.GetProcess()
             self.get_register_info()
@@ -352,17 +356,14 @@ class ScriptedThread(metaclass=ABCMeta):
     def get_register_info(self):
         if self.register_info is None:
             self.register_info = dict()
-            if "x86_64" in self.originating_process.arch:
+            if "x86_64" in self.arch:
                 self.register_info["sets"] = ["General Purpose Registers"]
                 self.register_info["registers"] = INTEL64_GPR
-            elif (
-                "arm64" in self.originating_process.arch
-                or self.originating_process.arch == "aarch64"
-            ):
+            elif "arm64" in self.arch or self.arch == "aarch64":
                 self.register_info["sets"] = ["General Purpose Registers"]
                 self.register_info["registers"] = ARM64_GPR
             else:
-                raise ValueError("Unknown architecture", self.originating_process.arch)
+                raise ValueError("Unknown architecture", self.arch)
         return self.register_info
 
     @abstractmethod
@@ -383,6 +384,156 @@ class ScriptedThread(metaclass=ABCMeta):
         """
         return self.extended_info
 
+    def get_scripted_frame_plugin(self):
+        """Get scripted frame plugin name.
+
+        Returns:
+            str: Name of the scripted frame plugin.
+        """
+        return None
+
+
+class ScriptedFrame(metaclass=ABCMeta):
+    """
+    The base class for a scripted frame.
+
+    Most of the base class methods are `@abstractmethod` that need to be
+    overwritten by the inheriting class.
+    """
+
+    @abstractmethod
+    def __init__(self, thread, args):
+        """Construct a scripted frame.
+
+        Args:
+            thread (ScriptedThread/lldb.SBThread): The thread owning this frame.
+            args (lldb.SBStructuredData): A Dictionary holding arbitrary
+                key/value pairs used by the scripted frame.
+        """
+        self.target = None
+        self.arch = None
+        self.originating_thread = None
+        self.thread = None
+        self.args = None
+        self.id = None
+        self.name = None
+        self.register_info = None
+        self.register_ctx = {}
+        self.variables = []
+
+        if isinstance(thread, ScriptedThread) or (
+            isinstance(thread, lldb.SBThread) and thread.IsValid()
+        ):
+            self.process = thread.process
+            self.target = self.process.target
+            triple = self.target.triple
+            if triple:
+                self.arch = triple.split("-")[0]
+            tid = thread.tid if isinstance(thread, ScriptedThread) else thread.id
+            self.originating_thread = thread
+            self.thread = self.process.GetThreadByIndexID(tid)
+            self.get_register_info()
+
+    @abstractmethod
+    def get_id(self):
+        """Get the scripted frame identifier.
+
+        Returns:
+            int: The identifier of the scripted frame in the scripted thread.
+        """
+        pass
+
+    def get_pc(self):
+        """Get the scripted frame address.
+
+        Returns:
+            int: The optional address of the scripted frame in the scripted thread.
+        """
+        return None
+
+    def get_symbol_context(self):
+        """Get the scripted frame symbol context.
+
+        Returns:
+            lldb.SBSymbolContext: The symbol context of the scripted frame in the scripted thread.
+        """
+        return None
+
+    def is_inlined(self):
+        """Check if the scripted frame is inlined.
+
+        Returns:
+            bool: True if scripted frame is inlined. False otherwise.
+        """
+        return False
+
+    def is_artificial(self):
+        """Check if the scripted frame is artificial.
+
+        Returns:
+            bool: True if scripted frame is artificial. False otherwise.
+        """
+        return True
+
+    def is_hidden(self):
+        """Check if the scripted frame is hidden.
+
+        Returns:
+            bool: True if scripted frame is hidden. False otherwise.
+        """
+        return False
+
+    def get_function_name(self):
+        """Get the scripted frame function name.
+
+        Returns:
+            str: The function name of the scripted frame.
+        """
+        return self.name
+
+    def get_display_function_name(self):
+        """Get the scripted frame display function name.
+
+        Returns:
+            str: The display function name of the scripted frame.
+        """
+        return self.get_function_name()
+
+    def get_variables(self, filters):
+        """Get the scripted thread state type.
+
+        Args:
+            filter (lldb.SBVariablesOptions): The filter used to resolve the variables
+        Returns:
+            lldb.SBValueList: The SBValueList containing the SBValue for each resolved variable.
+                              Returns None by default.
+        """
+        return None
+
+    def get_register_info(self):
+        if self.register_info is None:
+            if isinstance(self.originating_thread, ScriptedThread):
+                self.register_info = self.originating_thread.get_register_info()
+            elif isinstance(self.originating_thread, lldb.SBThread):
+                self.register_info = dict()
+                if "x86_64" in self.arch:
+                    self.register_info["sets"] = ["General Purpose Registers"]
+                    self.register_info["registers"] = INTEL64_GPR
+                elif "arm64" in self.arch or self.arch == "aarch64":
+                    self.register_info["sets"] = ["General Purpose Registers"]
+                    self.register_info["registers"] = ARM64_GPR
+                else:
+                    raise ValueError("Unknown architecture", self.arch)
+        return self.register_info
+
+    @abstractmethod
+    def get_register_context(self):
+        """Get the scripted thread register context
+
+        Returns:
+            str: A byte representing all register's value.
+        """
+        pass
 
 class PassthroughScriptedProcess(ScriptedProcess):
     driving_target = None
@@ -506,12 +657,12 @@ class PassthroughScriptedThread(ScriptedThread):
 
             # TODO: Passthrough stop reason from driving process
             if self.driving_thread.GetStopReason() != lldb.eStopReasonNone:
-                if "arm64" in self.originating_process.arch:
+                if "arm64" in self.arch:
                     stop_reason["type"] = lldb.eStopReasonException
                     stop_reason["data"]["desc"] = (
                         self.driving_thread.GetStopDescription(100)
                     )
-                elif self.originating_process.arch == "x86_64":
+                elif self.arch == "x86_64":
                     stop_reason["type"] = lldb.eStopReasonSignal
                     stop_reason["data"]["signal"] = signal.SIGTRAP
                 else:

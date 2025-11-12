@@ -222,6 +222,12 @@ def XLenFVT : ValueTypeByHwMode<[RV64],
                                 [f64]>;
 def XLenPairFVT : ValueTypeByHwMode<[RV32],
                                     [f64]>;
+
+// P extension
+def XLenVecI8VT : ValueTypeByHwMode<[RV32, RV64],
+                                    [v4i8, v8i8]>;
+def XLenVecI16VT : ValueTypeByHwMode<[RV32,  RV64],
+                                     [v2i16, v4i16]>;
 def XLenRI : RegInfoByHwMode<
       [RV32,              RV64],
       [RegInfo<32,32,32>, RegInfo<64,64,64>]>;
@@ -238,7 +244,9 @@ class RISCVRegisterClass<list<ValueType> regTypes, int align, dag regList>
 }
 
 class GPRRegisterClass<dag regList>
-    : RISCVRegisterClass<[XLenVT, XLenFVT, i32, i16], 32, regList> {
+    : RISCVRegisterClass<[XLenVT, XLenFVT,
+                          // P extension packed vector types:
+                          XLenVecI8VT, XLenVecI16VT, v2i32], 32, regList> {
   let RegInfos = XLenRI;
 }
 
@@ -358,8 +366,7 @@ let RegAltNameIndices = [ABIRegAltName] in {
   }
 }
 
-let RegInfos = XLenPairRI, CopyCost = 2,
-    DecoderMethod = "DecodeGPRPairRegisterClass" in {
+let RegInfos = XLenPairRI, CopyCost = 2 in {
 def GPRPair : RISCVRegisterClass<[XLenPairVT, XLenPairFVT], 64, (add
     X10_X11, X12_X13, X14_X15, X16_X17,
     X6_X7,
@@ -370,12 +377,11 @@ def GPRPair : RISCVRegisterClass<[XLenPairVT, XLenPairFVT], 64, (add
 )>;
 
 def GPRPairNoX0 : RISCVRegisterClass<[XLenPairVT, XLenPairFVT], 64, (sub GPRPair, X0_Pair)>;
-} // let RegInfos = XLenPairRI, DecoderMethod = "DecodeGPRPairRegisterClass"
 
-let RegInfos = XLenPairRI, CopyCost = 2 in
 def GPRPairC : RISCVRegisterClass<[XLenPairVT, XLenPairFVT], 64, (add
   X10_X11, X12_X13, X14_X15, X8_X9
 )>;
+} // let RegInfos = XLenPairRI, CopyCost = 2
 
 //===----------------------------------------------------------------------===//
 // Floating Point registers

@@ -133,6 +133,28 @@
 // tune: "-target-cpu" "sandybridge"
 // tune-SAME: "-tune-cpu" "haswell"
 
+// RUN: %clang_cl -m64 -arch:AVX512 -vlen=512 --target=x86_64-pc-windows -### -- 2>&1 %s | FileCheck -check-prefix=vlen512 %s
+// vlen512: "-mprefer-vector-width=512"
+
+// RUN: %clang_cl -m64 -arch:AVX512 -vlen=256 --target=x86_64-pc-windows -### -- 2>&1 %s | FileCheck -check-prefix=vlen256 %s
+// vlen256: "-mprefer-vector-width=256"
+
+// RUN: %clang_cl -m64 -arch:AVX512 -vlen=512 -vlen --target=x86_64-pc-windows -### -- 2>&1 %s | FileCheck -check-prefix=novlen %s
+// novlen-NOT: -mprefer-vector-width
+
+// RUN: %clang_cl -m64 -arch:AVX2 -vlen=512 --target=x86_64-pc-windows -### -- 2>&1 %s | FileCheck -check-prefix=avx2vlen512 %s
+// avx2vlen512: invalid argument '/vlen=512' not allowed with '/arch:AVX2'
+
+// RUN: %clang_cl -m64 -arch:AVX2 -vlen=256 --target=x86_64-pc-windows -### -- 2>&1 %s | FileCheck -check-prefix=avx2vlen256 %s
+// avx2vlen256-NOT: invalid argument
+
+// RUN: %clang_cl -m32 -arch:SSE2 -vlen=256 --target=i386-pc-windows -### -- 2>&1 %s | FileCheck -check-prefix=sse2vlen256 %s
+// RUN: %clang_cl -m64 -vlen=256 --target=x86_64-pc-windows -### -- 2>&1 %s | FileCheck -check-prefix=sse2vlen256 %s
+// sse2vlen256: invalid argument '/vlen=256' not allowed with '/arch:SSE2'
+
+// RUN: %clang_cl -m32 -vlen=256 --target=i386-pc-windows -### -- 2>&1 %s | FileCheck -check-prefix=ia32vlen256 %s
+// ia32vlen256: invalid argument '/vlen=256' not allowed with '/arch:IA32'
+
 void f(void) {
 }
 
@@ -145,6 +167,7 @@ void f(void) {
 
 // RUN: %clang_cl --target=x86_64-pc-windows -mapxf -### -- 2>&1 %s | FileCheck -check-prefix=APXF %s
 // RUN: %clang_cl --target=x86_64-pc-windows -mapxf -mno-apxf -### -- 2>&1 %s | FileCheck -check-prefix=NO-APXF %s
-// RUN: %clang_cl --target=x86_64-pc-windows -mapx-features=egpr,push2pop2,ppx,ndd,ccmp,nf,cf,zu -### -- 2>&1 %s | FileCheck -check-prefix=APXF %s
-// APXF: "-target-feature" "+egpr" "-target-feature" "+push2pop2" "-target-feature" "+ppx" "-target-feature" "+ndd" "-target-feature" "+ccmp" "-target-feature" "+nf" "-target-feature" "+cf" "-target-feature" "+zu"
-// NO-APXF: "-target-feature" "-egpr" "-target-feature" "-push2pop2" "-target-feature" "-ppx" "-target-feature" "-ndd" "-target-feature" "-ccmp" "-target-feature" "-nf" "-target-feature" "-cf" "-target-feature" "-zu"
+// RUN: %clang_cl --target=x86_64-pc-windows -mapx-features=egpr,push2pop2,ppx,ndd,ccmp,nf,cf,zu -### -- 2>&1 %s | FileCheck -check-prefix=APXALL %s
+// APXF: "-target-feature" "+egpr" "-target-feature" "+push2pop2" "-target-feature" "+ppx" "-target-feature" "+ndd" "-target-feature" "+ccmp" "-target-feature" "+nf" "-target-feature" "+zu"
+// NO-APXF: "-target-feature" "-egpr" "-target-feature" "-push2pop2" "-target-feature" "-ppx" "-target-feature" "-ndd" "-target-feature" "-ccmp" "-target-feature" "-nf" "-target-feature" "-zu"
+// APXALL: "-target-feature" "+egpr" "-target-feature" "+push2pop2" "-target-feature" "+ppx" "-target-feature" "+ndd" "-target-feature" "+ccmp" "-target-feature" "+nf" "-target-feature" "+cf" "-target-feature" "+zu"

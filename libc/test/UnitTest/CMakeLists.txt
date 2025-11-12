@@ -76,6 +76,7 @@ add_unittest_framework_library(
     libc.src.__support.CPP.string_view
     libc.src.__support.CPP.type_traits
     libc.src.__support.fixed_point.fx_rep
+    libc.src.__support.macros.properties.compiler
     libc.src.__support.macros.properties.types
     libc.src.__support.OSUtil.osutil
     libc.src.__support.uint128
@@ -125,6 +126,7 @@ add_unittest_framework_library(
     RoundingModeUtils.h
   DEPENDS
     LibcTest
+    libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.string_utils
     libc.src.__support.CPP.array
     libc.src.__support.FPUtil.fp_bits
@@ -202,5 +204,6 @@ add_header_library(
     ErrnoCheckingTest.h
   DEPENDS
     libc.src.__support.common
+    libc.src.__support.macros.properties.architectures
     libc.src.errno.errno
 )

@@ -11,7 +11,7 @@
 
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Driver/CommonArgs.h"
-#include "clang/Driver/Options.h"
+#include "clang/Options/Options.h"
 #include "llvm/Frontend/Debug/Options.h"
 #include "llvm/Support/Path.h"
 #include "llvm/TargetParser/Host.h"
@@ -120,7 +120,11 @@ static bool shouldLoopVersion(const ArgList &Args) {
   return false;
 }
 
-void Flang::addOtherOptions(const ArgList &Args, ArgStringList &CmdArgs) const {
+void Flang::addDebugOptions(const llvm::opt::ArgList &Args, const JobAction &JA,
+                            const InputInfo &Output, const InputInfo &Input,
+                            llvm::opt::ArgStringList &CmdArgs) const {
+  const auto &TC = getToolChain();
+  const Driver &D = TC.getDriver();
   Args.addAllArgs(CmdArgs,
                   {options::OPT_module_dir, options::OPT_fdebug_module_writer,
                    options::OPT_fintrinsic_modules_path, options::OPT_pedantic,
@@ -131,15 +135,60 @@ void Flang::addOtherOptions(const ArgList &Args, ArgStringList &CmdArgs) const {
                    options::OPT_finstrument_functions});
 
   llvm::codegenoptions::DebugInfoKind DebugInfoKind;
+  bool hasDwarfNArg = getDwarfNArg(Args) != nullptr;
   if (Args.hasArg(options::OPT_gN_Group)) {
     Arg *gNArg = Args.getLastArg(options::OPT_gN_Group);
     DebugInfoKind = debugLevelToInfoKind(*gNArg);
-  } else if (Args.hasArg(options::OPT_g_Flag)) {
+  } else if (Args.hasArg(options::OPT_g_Flag) || hasDwarfNArg) {
     DebugInfoKind = llvm::codegenoptions::FullDebugInfo;
   } else {
     DebugInfoKind = llvm::codegenoptions::NoDebugInfo;
   }
   addDebugInfoKind(CmdArgs, DebugInfoKind);
+  if (hasDwarfNArg) {
+    const unsigned DwarfVersion = getDwarfVersion(getToolChain(), Args);
+    CmdArgs.push_back(
+        Args.MakeArgString("-dwarf-version=" + Twine(DwarfVersion)));
+  }
+  if (Args.hasArg(options::OPT_gsplit_dwarf) ||
+      Args.hasArg(options::OPT_gsplit_dwarf_EQ)) {
+    // FIXME: -gsplit-dwarf on AIX is currently unimplemented.
+    if (TC.getTriple().isOSAIX()) {
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+          << Args.getLastArg(options::OPT_gsplit_dwarf)->getSpelling()
+          << TC.getTriple().str();
+      return;
+    }
+    if (DebugInfoKind == llvm::codegenoptions::NoDebugInfo)
+      return;
+
+    Arg *SplitDWARFArg;
+    DwarfFissionKind DwarfFission = getDebugFissionKind(D, Args, SplitDWARFArg);
+
+    if (DwarfFission == DwarfFissionKind::None ||
+        !checkDebugInfoOption(SplitDWARFArg, Args, D, TC))
+      return;
+
+    if (!TC.getTriple().isOSBinFormatELF() &&
+        !TC.getTriple().isOSBinFormatWasm() &&
+        !TC.getTriple().isOSBinFormatCOFF()) {
+      D.Diag(diag::warn_drv_unsupported_debug_info_opt_for_target)
+          << SplitDWARFArg->getSpelling() << TC.getTriple().str();
+      return;
+    }
+
+    if (!isa<AssembleJobAction>(JA) && !isa<CompileJobAction>(JA) &&
+        isa<BackendJobAction>(JA))
+      return;
+
+    const char *SplitDWARFOut = SplitDebugName(JA, Args, Input, Output);
+    CmdArgs.push_back("-split-dwarf-file");
+    CmdArgs.push_back(SplitDWARFOut);
+    if (DwarfFission == DwarfFissionKind::Split) {
+      CmdArgs.push_back("-split-dwarf-output");
+      CmdArgs.push_back(SplitDWARFOut);
+    }
+  }
 }
 
 void Flang::addCodegenOptions(const ArgList &Args,
@@ -150,6 +199,9 @@ void Flang::addCodegenOptions(const ArgList &Args,
   if (stackArrays &&
       !stackArrays->getOption().matches(options::OPT_fno_stack_arrays))
     CmdArgs.push_back("-fstack-arrays");
+
+  Args.addOptInFlag(CmdArgs, options::OPT_fexperimental_loop_fusion,
+                    options::OPT_fno_experimental_loop_fusion);
 
   handleInterchangeLoopsArgs(Args, CmdArgs);
   handleVectorizeLoopsArgs(Args, CmdArgs);
@@ -178,6 +230,27 @@ void Flang::addCodegenOptions(const ArgList &Args,
        options::OPT_fstack_repack_arrays, options::OPT_fno_stack_repack_arrays,
        options::OPT_ftime_report, options::OPT_ftime_report_EQ,
        options::OPT_funroll_loops, options::OPT_fno_unroll_loops});
+  if (Args.hasArg(options::OPT_fcoarray))
+    CmdArgs.push_back("-fcoarray");
+}
+
+void Flang::addLTOOptions(const ArgList &Args, ArgStringList &CmdArgs) const {
+  const ToolChain &TC = getToolChain();
+  const Driver &D = TC.getDriver();
+  DiagnosticsEngine &Diags = D.getDiags();
+  LTOKind LTOMode = D.getLTOMode();
+  // LTO mode is parsed by the Clang driver library.
+  assert(LTOMode != LTOK_Unknown && "Unknown LTO mode.");
+  if (LTOMode == LTOK_Full)
+    CmdArgs.push_back("-flto=full");
+  else if (LTOMode == LTOK_Thin) {
+    Diags.Report(
+        Diags.getCustomDiagID(DiagnosticsEngine::Warning,
+                              "the option '-flto=thin' is a work in progress"));
+    CmdArgs.push_back("-flto=thin");
+  }
+  Args.addAllArgs(CmdArgs, {options::OPT_ffat_lto_objects,
+                            options::OPT_fno_fat_lto_objects});
 }
 
 void Flang::addPicOptions(const ArgList &Args, ArgStringList &CmdArgs) const {
@@ -532,7 +605,14 @@ void Flang::addTargetOptions(const ArgList &Args,
   }
 
   Args.addAllArgs(CmdArgs,
-                  {options::OPT_fverbose_asm, options::OPT_fno_verbose_asm});
+                  {options::OPT_fverbose_asm, options::OPT_fno_verbose_asm,
+                   options::OPT_fatomic_ignore_denormal_mode,
+                   options::OPT_fno_atomic_ignore_denormal_mode,
+                   options::OPT_fatomic_fine_grained_memory,
+                   options::OPT_fno_atomic_fine_grained_memory,
+                   options::OPT_fatomic_remote_memory,
+                   options::OPT_fno_atomic_remote_memory,
+                   options::OPT_munsafe_fp_atomics});
 }
 
 void Flang::addOffloadOptions(Compilation &C, const InputInfoList &Inputs,
@@ -613,6 +693,7 @@ static void addFloatingPointOptions(const Driver &D, const ArgList &Args,
   bool AssociativeMath = false;
   bool ReciprocalMath = false;
 
+  StringRef LastComplexRangeOption;
   LangOptions::ComplexRangeKind Range = LangOptions::ComplexRangeKind::CX_None;
 
   if (const Arg *A = Args.getLastArg(options::OPT_ffp_contract)) {
@@ -640,17 +721,22 @@ static void addFloatingPointOptions(const Driver &D, const ArgList &Args,
       continue;
 
     case options::OPT_fcomplex_arithmetic_EQ: {
+      LangOptions::ComplexRangeKind NewRange;
       StringRef Val = A->getValue();
       if (Val == "full")
-        Range = LangOptions::ComplexRangeKind::CX_Full;
+        NewRange = LangOptions::ComplexRangeKind::CX_Full;
       else if (Val == "improved")
-        Range = LangOptions::ComplexRangeKind::CX_Improved;
+        NewRange = LangOptions::ComplexRangeKind::CX_Improved;
       else if (Val == "basic")
-        Range = LangOptions::ComplexRangeKind::CX_Basic;
+        NewRange = LangOptions::ComplexRangeKind::CX_Basic;
       else {
         D.Diag(diag::err_drv_unsupported_option_argument)
             << A->getSpelling() << Val;
+        break;
       }
+
+      setComplexRange(D, Args.MakeArgString(A->getSpelling() + Val), NewRange,
+                      LastComplexRangeOption, Range);
       break;
     }
     case options::OPT_fhonor_infinities:
@@ -699,6 +785,9 @@ static void addFloatingPointOptions(const Driver &D, const ArgList &Args,
       ApproxFunc = true;
       SignedZeros = false;
       FPContract = "fast";
+      setComplexRange(D, A->getSpelling(),
+                      LangOptions::ComplexRangeKind::CX_Basic,
+                      LastComplexRangeOption, Range);
       break;
     case options::OPT_fno_fast_math:
       HonorINFs = true;
@@ -712,6 +801,9 @@ static void addFloatingPointOptions(const Driver &D, const ArgList &Args,
       // --ffp-contract=off -fno-fast-math --> -ffp-contract=off
       if (FPContract == "fast")
         FPContract = "";
+      setComplexRange(D, A->getSpelling(),
+                      LangOptions::ComplexRangeKind::CX_None,
+                      LastComplexRangeOption, Range);
       break;
     }
 
@@ -729,6 +821,9 @@ static void addFloatingPointOptions(const Driver &D, const ArgList &Args,
     CmdArgs.push_back(Args.MakeArgString("-fcomplex-arithmetic=" +
                                          complexRangeKindToStr(Range)));
   }
+
+  if (Args.hasArg(options::OPT_fno_fast_real_mod))
+    CmdArgs.push_back("-fno-fast-real-mod");
 
   if (!HonorINFs && !HonorNaNs && AssociativeMath && ReciprocalMath &&
       ApproxFunc && !SignedZeros &&
@@ -812,7 +907,6 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
 
   const Driver &D = TC.getDriver();
   ArgStringList CmdArgs;
-  DiagnosticsEngine &Diags = D.getDiags();
 
   // Invoke ourselves in -fc1 mode.
   CmdArgs.push_back("-fc1");
@@ -851,6 +945,13 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
     assert(false && "Unexpected action class for Flang tool.");
   }
 
+  // We support some options that are invalid for Fortran and have no effect.
+  // These are solely for compatibility with other compilers. Emit a warning if
+  // any such options are provided, then proceed normally.
+  for (options::ID Opt : {options::OPT_fbuiltin, options::OPT_fno_builtin})
+    if (const Arg *A = Args.getLastArg(Opt))
+      D.Diag(diag::warn_drv_invalid_argument_for_flang) << A->getSpelling();
+
   const InputInfo &Input = Inputs[0];
   types::ID InputType = Input.getType();
 
@@ -875,17 +976,7 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
 
   handleColorDiagnosticsArgs(D, Args, CmdArgs);
 
-  // LTO mode is parsed by the Clang driver library.
-  LTOKind LTOMode = D.getLTOMode();
-  assert(LTOMode != LTOK_Unknown && "Unknown LTO mode.");
-  if (LTOMode == LTOK_Full)
-    CmdArgs.push_back("-flto=full");
-  else if (LTOMode == LTOK_Thin) {
-    Diags.Report(
-        Diags.getCustomDiagID(DiagnosticsEngine::Warning,
-                              "the option '-flto=thin' is a work in progress"));
-    CmdArgs.push_back("-flto=thin");
-  }
+  addLTOOptions(Args, CmdArgs);
 
   // -fPIC and related options.
   addPicOptions(Args, CmdArgs);
@@ -911,8 +1002,8 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
   if (willEmitRemarks(Args))
     renderRemarksOptions(Args, CmdArgs, Input);
 
-  // Add other compile options
-  addOtherOptions(Args, CmdArgs);
+  // Add debug compile options
+  addDebugOptions(Args, JA, Output, Input, CmdArgs);
 
   // Disable all warnings
   // TODO: Handle interactions between -w, -pedantic, -Wall, -WOption
@@ -937,6 +1028,8 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
 
       if (Args.hasArg(options::OPT_fopenmp_force_usm))
         CmdArgs.push_back("-fopenmp-force-usm");
+      Args.AddLastArg(CmdArgs, options::OPT_fopenmp_simd,
+                      options::OPT_fno_openmp_simd);
 
       // FIXME: Clang supports a whole bunch more flags here.
       break;
@@ -952,6 +1045,9 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
           << A->getSpelling() << A->getValue();
       break;
     }
+  } else {
+    Args.AddLastArg(CmdArgs, options::OPT_fopenmp_simd,
+                    options::OPT_fno_openmp_simd);
   }
 
   // Pass the path to compiler resource files.
@@ -974,6 +1070,9 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
     break;
   case CodeGenOptions::FramePointerKind::Reserved:
     FPKeepKindStr = "-mframe-pointer=reserved";
+    break;
+  case CodeGenOptions::FramePointerKind::NonLeafNoReserve:
+    FPKeepKindStr = "-mframe-pointer=non-leaf-no-reserve";
     break;
   case CodeGenOptions::FramePointerKind::NonLeaf:
     FPKeepKindStr = "-mframe-pointer=non-leaf";

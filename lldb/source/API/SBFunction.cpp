@@ -79,6 +79,15 @@ const char *SBFunction::GetMangledName() const {
   return nullptr;
 }
 
+const char *SBFunction::GetBaseName() const {
+  LLDB_INSTRUMENT_VA(this);
+
+  if (!m_opaque_ptr)
+    return nullptr;
+
+  return m_opaque_ptr->GetMangled().GetBaseName().AsCString();
+}
+
 bool SBFunction::operator==(const SBFunction &rhs) const {
   LLDB_INSTRUMENT_VA(this, rhs);
 

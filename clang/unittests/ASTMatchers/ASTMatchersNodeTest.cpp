@@ -1179,8 +1179,47 @@ TEST_P(ASTMatchersTest, PredefinedExpr) {
                                      has(stringLiteral()))));
 }
 
+TEST_P(ASTMatchersTest, FileScopeAsmDecl) {
+  EXPECT_TRUE(matches("__asm(\"nop\");", fileScopeAsmDecl()));
+  EXPECT_TRUE(
+      notMatches("void f() { __asm(\"mov al, 2\"); }", fileScopeAsmDecl()));
+}
+
 TEST_P(ASTMatchersTest, AsmStatement) {
   EXPECT_TRUE(matches("void foo() { __asm(\"mov al, 2\"); }", asmStmt()));
+}
+
+TEST_P(ASTMatchersTest, HasConditionVariableStatement) {
+  if (!GetParam().isCXX()) {
+    // FIXME: Add a test for `hasConditionVariableStatement()` that does not
+    // depend on C++.
+    return;
+  }
+
+  StatementMatcher IfCondition =
+      ifStmt(hasConditionVariableStatement(declStmt()));
+
+  EXPECT_TRUE(matches("void x() { if (int* a = 0) {} }", IfCondition));
+  EXPECT_TRUE(notMatches("void x() { if (true) {} }", IfCondition));
+  EXPECT_TRUE(notMatches("void x() { int x; if ((x = 42)) {} }", IfCondition));
+
+  StatementMatcher SwitchCondition =
+      switchStmt(hasConditionVariableStatement(declStmt()));
+
+  EXPECT_TRUE(matches("void x() { switch (int a = 0) {} }", SwitchCondition));
+  if (GetParam().isCXX17OrLater()) {
+    EXPECT_TRUE(
+        notMatches("void x() { switch (int a = 0; a) {} }", SwitchCondition));
+  }
+
+  StatementMatcher ForCondition =
+      forStmt(hasConditionVariableStatement(declStmt()));
+
+  EXPECT_TRUE(matches("void x() { for (; int a = 0; ) {} }", ForCondition));
+  EXPECT_TRUE(notMatches("void x() { for (int a = 0; ; ) {} }", ForCondition));
+
+  EXPECT_TRUE(matches("void x() { while (int a = 0) {} }",
+                      whileStmt(hasConditionVariableStatement(declStmt()))));
 }
 
 TEST_P(ASTMatchersTest, HasCondition) {
@@ -1938,8 +1977,7 @@ TEST_P(ASTMatchersTest, PointerType_MatchesPointersToConstTypes) {
 
 TEST_P(ASTMatchersTest, TypedefType) {
   EXPECT_TRUE(matches("typedef int X; X a;",
-                      varDecl(hasName("a"), hasType(elaboratedType(
-                                                namesType(typedefType()))))));
+                      varDecl(hasName("a"), hasType(typedefType()))));
 }
 
 TEST_P(ASTMatchersTest, MacroQualifiedType) {
@@ -1999,7 +2037,7 @@ TEST_P(ASTMatchersTest, DependentTemplateSpecializationType) {
           typename A<T>::template B<T> a;
         };
       )",
-      dependentTemplateSpecializationType()));
+      templateSpecializationType()));
 }
 
 TEST_P(ASTMatchersTest, RecordType) {
@@ -2016,22 +2054,6 @@ TEST_P(ASTMatchersTest, RecordType_CXX) {
   EXPECT_TRUE(matches("class C {}; C c;", recordType()));
   EXPECT_TRUE(matches("struct S {}; S s;",
                       recordType(hasDeclaration(recordDecl(hasName("S"))))));
-}
-
-TEST_P(ASTMatchersTest, ElaboratedType) {
-  if (!GetParam().isCXX()) {
-    // FIXME: Add a test for `elaboratedType()` that does not depend on C++.
-    return;
-  }
-  EXPECT_TRUE(matches("namespace N {"
-                      "  namespace M {"
-                      "    class D {};"
-                      "  }"
-                      "}"
-                      "N::M::D d;",
-                      elaboratedType()));
-  EXPECT_TRUE(matches("class C {} c;", elaboratedType()));
-  EXPECT_TRUE(matches("class C {}; C c;", elaboratedType()));
 }
 
 TEST_P(ASTMatchersTest, SubstTemplateTypeParmType) {
@@ -2133,16 +2155,16 @@ TEST_P(ASTMatchersTest,
   if (!GetParam().isCXX()) {
     return;
   }
-  EXPECT_TRUE(matches(
-      "struct A { struct B { struct C {}; }; }; A::B::C c;",
-      nestedNameSpecifier(hasPrefix(specifiesType(asString("struct A"))))));
+  EXPECT_TRUE(
+      matches("struct A { struct B { struct C {}; }; }; A::B::C c;",
+              nestedNameSpecifier(hasPrefix(specifiesType(asString("A"))))));
   EXPECT_TRUE(matches("struct A { struct B { struct C {}; }; }; A::B::C c;",
-                      nestedNameSpecifierLoc(hasPrefix(specifiesTypeLoc(
-                          loc(qualType(asString("struct A"))))))));
+                      nestedNameSpecifierLoc(hasPrefix(
+                          specifiesTypeLoc(loc(qualType(asString("A"))))))));
   EXPECT_TRUE(matches(
       "namespace N { struct A { struct B { struct C {}; }; }; } N::A::B::C c;",
-      nestedNameSpecifierLoc(hasPrefix(
-          specifiesTypeLoc(loc(qualType(asString("struct N::A"))))))));
+      nestedNameSpecifierLoc(
+          hasPrefix(specifiesTypeLoc(loc(qualType(asString("N::A"))))))));
 }
 
 template <typename T>
@@ -2338,8 +2360,7 @@ TEST_P(ASTMatchersTest,
   }
   EXPECT_TRUE(matches(
       "template <typename T> class C {}; C<char> var;",
-      varDecl(hasName("var"), hasTypeLoc(elaboratedTypeLoc(hasNamedTypeLoc(
-                                  templateSpecializationTypeLoc()))))));
+      varDecl(hasName("var"), hasTypeLoc(templateSpecializationTypeLoc()))));
 }
 
 TEST_P(
@@ -2351,58 +2372,6 @@ TEST_P(
   EXPECT_TRUE(notMatches(
       "class C {}; C var;",
       varDecl(hasName("var"), hasTypeLoc(templateSpecializationTypeLoc()))));
-}
-
-TEST_P(ASTMatchersTest,
-       ElaboratedTypeLocTest_BindsToElaboratedObjectDeclaration) {
-  if (!GetParam().isCXX()) {
-    return;
-  }
-  EXPECT_TRUE(matches("class C {}; class C c;",
-                      varDecl(hasName("c"), hasTypeLoc(elaboratedTypeLoc()))));
-}
-
-TEST_P(ASTMatchersTest,
-       ElaboratedTypeLocTest_BindsToNamespaceElaboratedObjectDeclaration) {
-  if (!GetParam().isCXX()) {
-    return;
-  }
-  EXPECT_TRUE(matches("namespace N { class D {}; } N::D d;",
-                      varDecl(hasName("d"), hasTypeLoc(elaboratedTypeLoc()))));
-}
-
-TEST_P(ASTMatchersTest,
-       ElaboratedTypeLocTest_BindsToElaboratedStructDeclaration) {
-  EXPECT_TRUE(matches("struct s {}; struct s ss;",
-                      varDecl(hasName("ss"), hasTypeLoc(elaboratedTypeLoc()))));
-}
-
-TEST_P(ASTMatchersTest,
-       ElaboratedTypeLocTest_BindsToBareElaboratedObjectDeclaration) {
-  if (!GetParam().isCXX()) {
-    return;
-  }
-  EXPECT_TRUE(matches("class C {}; C c;",
-                      varDecl(hasName("c"), hasTypeLoc(elaboratedTypeLoc()))));
-}
-
-TEST_P(
-    ASTMatchersTest,
-    ElaboratedTypeLocTest_DoesNotBindToNamespaceNonElaboratedObjectDeclaration) {
-  if (!GetParam().isCXX()) {
-    return;
-  }
-  EXPECT_TRUE(matches("namespace N { class D {}; } using N::D; D d;",
-                      varDecl(hasName("d"), hasTypeLoc(elaboratedTypeLoc()))));
-}
-
-TEST_P(ASTMatchersTest,
-       ElaboratedTypeLocTest_BindsToBareElaboratedStructDeclaration) {
-  if (!GetParam().isCXX()) {
-    return;
-  }
-  EXPECT_TRUE(matches("struct s {}; s ss;",
-                      varDecl(hasName("ss"), hasTypeLoc(elaboratedTypeLoc()))));
 }
 
 TEST_P(ASTMatchersTest, LambdaCaptureTest) {
@@ -2479,7 +2448,8 @@ TEST_P(ASTMatchersTest, LambdaCaptureTest_BindsToCaptureOfReferenceType) {
                       "int main() {"
                       "  int a;"
                       "  f(a);"
-                      "}", matcher));
+                      "}",
+                      matcher));
   EXPECT_FALSE(matches("template <class ...T> void f(T &...args) {"
                        "  [...args = args] () mutable {"
                        "  }();"
@@ -2487,7 +2457,8 @@ TEST_P(ASTMatchersTest, LambdaCaptureTest_BindsToCaptureOfReferenceType) {
                        "int main() {"
                        "  int a;"
                        "  f(a);"
-                       "}", matcher));
+                       "}",
+                       matcher));
 }
 
 TEST_P(ASTMatchersTest, IsDerivedFromRecursion) {
@@ -2665,7 +2636,7 @@ TEST(ASTMatchersTestObjC, ObjCStringLiteral) {
                           "    [Test someFunction:@\"Ola!\"]; "
                           "}\n"
                           "@end ";
-    EXPECT_TRUE(matchesObjC(Objc1String, objcStringLiteral()));
+  EXPECT_TRUE(matchesObjC(Objc1String, objcStringLiteral()));
 }
 
 TEST(ASTMatchersTestObjC, ObjCDecls) {

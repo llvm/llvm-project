@@ -18,13 +18,12 @@ template struct C<cval>;
 
 /// FIXME: This example does not get properly diagnosed in the new interpreter.
 extern const int recurse1;
-const int recurse2 = recurse1; // both-note {{declared here}}
+const int recurse2 = recurse1; // ref-note {{declared here}}
 const int recurse1 = 1;
 int array1[recurse1];
 int array2[recurse2]; // ref-warning 2{{variable length array}} \
-                      // both-note {{initializer of 'recurse2' is not a constant expression}} \
-                      // expected-warning {{variable length array}} \
-                      // expected-error {{variable length array}}
+                      // ref-note {{initializer of 'recurse2' is not a constant expression}} \
+                      // expected-warning 2{{variable length array}}
 
 int NCI; // both-note {{declared here}}
 int NCIA[NCI]; // both-warning {{variable length array}} \
@@ -64,3 +63,20 @@ const int b = 1 / 0; // both-warning {{division by zero is undefined}} \
                      // both-note {{declared here}}
 _Static_assert(b, ""); // both-error {{not an integral constant expression}} \
                        // both-note {{initializer of 'b' is not a constant expression}}
+
+#ifdef __SIZEOF_INT128__
+/// The if statement tries an ltor conversion on an inactive union member.
+union InactiveReadUnion{
+  int a;
+  __uint128_t n;
+};
+
+int inactiveRead(void) {
+  const InactiveReadUnion U = {1};
+
+  if (U.n)
+    return 1;
+
+  return 0;
+}
+#endif

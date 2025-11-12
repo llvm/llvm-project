@@ -24,10 +24,11 @@
 #include <map>
 #include <string>
 #include <tuple>
-#include <utility>
 
 namespace llvm {
 
+class CodeGenRegBank;
+class CodeGenRegisterClass;
 class Record;
 class raw_ostream;
 
@@ -85,10 +86,10 @@ void union_modes(const InfoByHwMode<InfoT> &A, const InfoByHwMode<InfoT> &B,
 }
 
 template <typename InfoT> struct InfoByHwMode {
-  typedef std::map<unsigned, InfoT> MapType;
-  typedef typename MapType::value_type PairType;
-  typedef typename MapType::iterator iterator;
-  typedef typename MapType::const_iterator const_iterator;
+  using MapType = std::map<unsigned, InfoT>;
+  using PairType = typename MapType::value_type;
+  using iterator = typename MapType::iterator;
+  using const_iterator = typename MapType::const_iterator;
 
   InfoByHwMode() = default;
   InfoByHwMode(const MapType &M) : Map(M) {}
@@ -242,6 +243,13 @@ struct SubRegRangeByHwMode : public InfoByHwMode<SubRegRange> {
 struct EncodingInfoByHwMode : public InfoByHwMode<const Record *> {
   EncodingInfoByHwMode(const Record *R, const CodeGenHwModes &CGH);
   EncodingInfoByHwMode() = default;
+};
+
+struct RegClassByHwMode : public InfoByHwMode<const CodeGenRegisterClass *> {
+public:
+  RegClassByHwMode(const Record *R, const CodeGenHwModes &CGH,
+                   const CodeGenRegBank &RegBank);
+  RegClassByHwMode() = default;
 };
 
 } // namespace llvm

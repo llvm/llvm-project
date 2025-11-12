@@ -537,7 +537,7 @@ __lldb_apple_objc_v2_get_shared_cache_class_info (void *objc_opt_ro_ptr,
 
             for (uint32_t i=0; i<duplicate_count; ++i)
             {
-                const uint64_t objectCacheOffset = classOffsets[i].objectCacheOffset;
+                const uint64_t objectCacheOffset = duplicateClassOffsets[i].objectCacheOffset;
                 DEBUG_PRINTF("objectCacheOffset[%u] = %u\n", i, objectCacheOffset);
 
                 if (classOffsets[i].isDuplicate) {
@@ -576,6 +576,7 @@ __lldb_apple_objc_v2_get_shared_cache_class_info (void *objc_opt_ro_ptr,
                     }
                     class_infos[idx].hash = h;
                 }
+                ++idx;
             }
         }
         else if (objc_opt->version >= 12 && objc_opt->version <= 15)
@@ -1163,7 +1164,7 @@ AppleObjCRuntimeV2::CreateExceptionResolver(const BreakpointSP &bkpt,
     resolver_sp = std::make_shared<BreakpointResolverName>(
         bkpt, std::get<1>(GetExceptionThrowLocation()).AsCString(),
         eFunctionNameTypeBase, eLanguageTypeUnknown, Breakpoint::Exact, 0,
-        eLazyBoolNo);
+        /*offset_is_insn_count = */ false, eLazyBoolNo);
   // FIXME: We don't do catch breakpoints for ObjC yet.
   // Should there be some way for the runtime to specify what it can do in this
   // regard?

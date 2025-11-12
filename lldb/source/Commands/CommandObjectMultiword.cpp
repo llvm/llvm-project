@@ -159,7 +159,7 @@ void CommandObjectMultiword::Execute(const char *args_string,
 
   auto sub_command = args[0].ref();
   if (sub_command.empty()) {
-    result.AppendError("Need to specify a non-empty subcommand.");
+    result.AppendError("need to specify a non-empty subcommand");
     return;
   }
 

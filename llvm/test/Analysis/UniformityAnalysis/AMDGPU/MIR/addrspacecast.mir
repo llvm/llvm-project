@@ -1,0 +1,35 @@
+# NOTE: This file is Generic MIR translation of llvm/test/Analysis/UniformityAnalysis/AMDGPU/addrspacecast.ll test file
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -run-pass=print-machine-uniformity -filetype=null %s 2>&1 | FileCheck %s --check-prefix=UNI
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 -run-pass=print-machine-uniformity -filetype=null %s 2>&1 | FileCheck %s --check-prefix=DIV
+
+# UNI: ALL VALUES UNIFORM
+# DIV: DIVERGENT: %3: %3:_(p0) = G_ADDRSPACE_CAST %2:_(p5)
+# DIV: DIVERGENT: %4: %4:_(p0) = G_INTRINSIC intrinsic(@llvm.amdgcn.addrspacecast.nonnull), %2:_(p5)
+
+--- |
+  define void @foo() {
+    %alloca = alloca i32, align 4, addrspace(5)
+    %cast = addrspacecast ptr addrspace(5) %alloca to ptr
+    store i32 1, ptr %cast, align 4
+    %cast.1 = call ptr @llvm.amdgcn.addrspacecast.nonnull.p0.p5(ptr addrspace(5) %alloca)
+    store i32 2, ptr %cast.1, align 4
+    ret void
+  }
+...
+---
+name:            foo
+stack:
+  - { id: 0, name: alloca, type: default, offset: 0, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+body:             |
+  bb.1 (%ir-block.0):
+    %10:_(s32) = G_CONSTANT i32 1
+    %12:_(s32) = G_CONSTANT i32 2
+    %8:_(p5) = G_FRAME_INDEX %stack.0.alloca
+    %9:_(p0) = G_ADDRSPACE_CAST %8(p5)
+    G_STORE %10(s32), %9(p0) :: (store (s32) into %ir.cast)
+    %11:_(p0) = G_INTRINSIC intrinsic(@llvm.amdgcn.addrspacecast.nonnull), %8(p5)
+    G_STORE %12(s32), %11(p0) :: (store (s32) into %ir.cast.1)
+    SI_RETURN
+...

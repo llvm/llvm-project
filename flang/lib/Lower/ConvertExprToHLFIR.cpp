@@ -26,7 +26,6 @@
 #include "flang/Optimizer/Builder/Complex.h"
 #include "flang/Optimizer/Builder/IntrinsicCall.h"
 #include "flang/Optimizer/Builder/MutableBox.h"
-#include "flang/Optimizer/Builder/Runtime/Character.h"
 #include "flang/Optimizer/Builder/Runtime/Derived.h"
 #include "flang/Optimizer/Builder/Runtime/Pointer.h"
 #include "flang/Optimizer/Builder/Todo.h"
@@ -911,7 +910,7 @@ private:
     setVectorSubscriptElementAddrOp(std::nullopt);
     fir::FirOpBuilder *bldr = &builder;
     getStmtCtx().attachCleanup(
-        [=]() { bldr->create<hlfir::DestroyOp>(loc, elemental); });
+        [=]() { hlfir::DestroyOp::create(*bldr, loc, elemental); });
     return hlfir::EntityWithAttributes{elemental};
   }
 
@@ -1286,16 +1285,8 @@ struct BinaryOp<Fortran::evaluate::Relational<
                                          fir::FirOpBuilder &builder,
                                          const Op &op, hlfir::Entity lhs,
                                          hlfir::Entity rhs) {
-    auto [lhsExv, lhsCleanUp] =
-        hlfir::translateToExtendedValue(loc, builder, lhs);
-    auto [rhsExv, rhsCleanUp] =
-        hlfir::translateToExtendedValue(loc, builder, rhs);
-    auto cmp = fir::runtime::genCharCompare(
-        builder, loc, translateSignedRelational(op.opr), lhsExv, rhsExv);
-    if (lhsCleanUp)
-      (*lhsCleanUp)();
-    if (rhsCleanUp)
-      (*rhsCleanUp)();
+    auto cmp = hlfir::CmpCharOp::create(
+        builder, loc, translateSignedRelational(op.opr), lhs, rhs);
     return hlfir::EntityWithAttributes{cmp};
   }
 };
@@ -1579,7 +1570,7 @@ private:
   }
 
   hlfir::EntityWithAttributes gen(const Fortran::evaluate::NullPointer &expr) {
-    auto nullop = getBuilder().create<hlfir::NullOp>(getLoc());
+    auto nullop = hlfir::NullOp::create(getBuilder(), getLoc());
     return mlir::cast<fir::FortranVariableOpInterface>(nullop.getOperation());
   }
 
@@ -1685,7 +1676,7 @@ private:
         /*isUnordered=*/true, left.isPolymorphic() ? left : mlir::Value{});
     fir::FirOpBuilder *bldr = &builder;
     getStmtCtx().attachCleanup(
-        [=]() { bldr->create<hlfir::DestroyOp>(loc, elemental); });
+        [=]() { hlfir::DestroyOp::create(*bldr, loc, elemental); });
     return hlfir::EntityWithAttributes{elemental};
   }
 
@@ -1736,7 +1727,7 @@ private:
     builder.setIntegerOverflowFlags(iofBackup);
     fir::FirOpBuilder *bldr = &builder;
     getStmtCtx().attachCleanup(
-        [=]() { bldr->create<hlfir::DestroyOp>(loc, elemental); });
+        [=]() { hlfir::DestroyOp::create(*bldr, loc, elemental); });
     return hlfir::EntityWithAttributes{elemental};
   }
 
@@ -1822,10 +1813,8 @@ private:
     // Allocate scalar temporary that will be initialized
     // with the values specified by the constructor.
     mlir::Value storagePtr = builder.createTemporary(loc, recTy);
-    auto varOp = hlfir::EntityWithAttributes{hlfir::DeclareOp::create(
-        builder, loc, storagePtr, "ctor.temp", /*shape=*/nullptr,
-        /*typeparams=*/mlir::ValueRange{}, /*dummy_scope=*/nullptr,
-        fir::FortranVariableFlagsAttr{})};
+    auto varOp = hlfir::EntityWithAttributes{
+        hlfir::DeclareOp::create(builder, loc, storagePtr, "ctor.temp")};
 
     // Initialize any components that need initialization.
     mlir::Value box = builder.createBox(loc, fir::ExtendedValue{varOp});
@@ -1848,8 +1837,15 @@ private:
       for (Fortran::lower::ComponentReverseIterator compIterator(
                ctor.result().derivedTypeSpec());
            !compIterator.lookup(compSym.name());) {
-        const auto &parentType = compIterator.advanceToParentType();
-        llvm::StringRef parentName = toStringRef(parentType.name());
+        // Private parent components have mangled names. Get the name from the
+        // parent symbol.
+        const Fortran::semantics::Symbol *parentCompSym =
+            compIterator.getParentComponent();
+        assert(parentCompSym && "failed to get parent component symbol");
+        std::string parentName =
+            converter.getRecordTypeFieldName(*parentCompSym);
+        // Advance the iterator, but don't use its return value.
+        compIterator.advanceToParentType();
         auto baseRecTy = mlir::cast<fir::RecordType>(
             hlfir::getFortranElementType(currentParent.getType()));
         auto parentCompType = baseRecTy.getType(parentName);

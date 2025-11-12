@@ -65,7 +65,6 @@
 #include "lldb/Target/ThreadPlanCallFunction.h"
 #include "lldb/Target/ThreadPlanStack.h"
 #include "lldb/Target/UnixSignals.h"
-#include "lldb/Target/VerboseTrapFrameRecognizer.h"
 #include "lldb/Utility/AddressableBits.h"
 #include "lldb/Utility/Event.h"
 #include "lldb/Utility/LLDBLog.h"
@@ -166,6 +165,9 @@ ProcessProperties::ProcessProperties(lldb_private::Process *process)
     m_collection_sp->SetValueChangedCallback(
         ePropertyPythonOSPluginPath,
         [this] { m_process->LoadOperatingSystemPlugin(true); });
+    m_collection_sp->SetValueChangedCallback(
+        ePropertyDisableLangRuntimeUnwindPlans,
+        [this] { DisableLanguageRuntimeUnwindPlansCallback(); });
   }
 
   m_experimental_properties_up =
@@ -278,6 +280,15 @@ void ProcessProperties::SetDisableLangRuntimeUnwindPlans(bool disable) {
   const uint32_t idx = ePropertyDisableLangRuntimeUnwindPlans;
   SetPropertyAtIndex(idx, disable);
   m_process->Flush();
+}
+
+void ProcessProperties::DisableLanguageRuntimeUnwindPlansCallback() {
+  if (!m_process)
+    return;
+  for (auto thread_sp : m_process->Threads()) {
+    thread_sp->ClearStackFrames();
+    thread_sp->DiscardThreadPlans(/*force*/ true);
+  }
 }
 
 bool ProcessProperties::GetDetachKeepsStopped() const {
@@ -501,7 +512,6 @@ Process::Process(lldb::TargetSP target_sp, ListenerSP listener_sp,
   // We should have a plugin do the registration instead, for example, a
   // common C LanguageRuntime plugin.
   RegisterAssertFrameRecognizer(this);
-  RegisterVerboseTrapFrameRecognizer(*this);
 }
 
 Process::~Process() {
@@ -1959,6 +1969,49 @@ size_t Process::ReadMemory(addr_t addr, void *buf, size_t size, Status &error) {
   }
 }
 
+llvm::SmallVector<llvm::MutableArrayRef<uint8_t>>
+Process::ReadMemoryRanges(llvm::ArrayRef<Range<lldb::addr_t, size_t>> ranges,
+                          llvm::MutableArrayRef<uint8_t> buffer) {
+  auto total_ranges_len = llvm::sum_of(
+      llvm::map_range(ranges, [](auto range) { return range.size; }));
+  // If the buffer is not large enough, this is a programmer error.
+  // In production builds, gracefully fail by returning a length of 0 for all
+  // ranges.
+  assert(buffer.size() >= total_ranges_len && "provided buffer is too short");
+  if (buffer.size() < total_ranges_len) {
+    llvm::MutableArrayRef<uint8_t> empty;
+    return {ranges.size(), empty};
+  }
+
+  llvm::SmallVector<llvm::MutableArrayRef<uint8_t>> results;
+
+  // While `buffer` has space, take the next requested range and read
+  // memory into a `buffer` piece, then slice it to remove the used memory.
+  for (auto [addr, range_len] : ranges) {
+    Status status;
+    size_t num_bytes_read =
+        ReadMemoryFromInferior(addr, buffer.data(), range_len, status);
+    // FIXME: ReadMemoryFromInferior promises to return 0 in case of errors, but
+    // it doesn't; it never checks for errors.
+    if (status.Fail())
+      num_bytes_read = 0;
+
+    assert(num_bytes_read <= range_len && "read more than requested bytes");
+    if (num_bytes_read > range_len) {
+      // In production builds, gracefully fail by returning length zero for this
+      // range.
+      results.emplace_back();
+      continue;
+    }
+
+    results.push_back(buffer.take_front(num_bytes_read));
+    // Slice buffer to remove the used memory.
+    buffer = buffer.drop_front(num_bytes_read);
+  }
+
+  return results;
+}
+
 void Process::DoFindInMemory(lldb::addr_t start_addr, lldb::addr_t end_addr,
                              const uint8_t *buf, size_t size,
                              AddressRanges &matches, size_t alignment,
@@ -3203,6 +3256,7 @@ Status Process::ConnectRemote(llvm::StringRef remote_url) {
       if (state == eStateStopped || state == eStateCrashed) {
         // If we attached and actually have a process on the other end, then
         // this ended up being the equivalent of an attach.
+        SetShouldDetach(true);
         CompleteAttach();
 
         // This delays passing the stopped event to listeners till
@@ -4256,6 +4310,14 @@ bool Process::ProcessEventData::ShouldStop(Event *event_ptr,
         // will know to wait for the running event and reflect that state
         // appropriately. We also need to stop processing actions, since they
         // aren't expecting the target to be running.
+
+        // Clear the selected frame which may have been set as part of utility
+        // expressions that have been run as part of this stop. If we didn't
+        // clear this, then StopInfo::GetSuggestedStackFrameIndex would not
+        // take affect when we next called SelectMostRelevantFrame.
+        // PerformAction should not be the one setting a selected frame, instead
+        // this should be done via GetSuggestedStackFrameIndex.
+        thread_sp->ClearSelectedFrameIndex();
 
         // FIXME: we might have run.
         if (stop_info_sp->HasTargetRunSinceMe()) {

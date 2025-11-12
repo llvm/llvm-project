@@ -93,19 +93,22 @@ class ROCDL_IntrPure1Op<string mnemonic> :
 
 class ROCDL_IntrOp<string mnemonic, list<int> overloadedResults,
   list<int> overloadedOperands, list<Trait> traits, int numResults,
-  int requiresAccessGroup = 0, int requiresAliasAnalysis = 0, list<int> immArgPositions = [],
+  int requiresAccessGroup = 0, int requiresAliasAnalysis = 0,
+  int requiresArgAndResultAttrs = 0,
+  list<int> immArgPositions = [],
   list<string> immArgAttrNames = []> :
   LLVM_IntrOpBase<ROCDL_Dialect,  mnemonic,
     "amdgcn_" # !subst(".", "_", mnemonic), overloadedResults,
     overloadedOperands, traits, numResults, requiresAccessGroup,
-    requiresAliasAnalysis, 0, 0, immArgPositions, immArgAttrNames>;
+    requiresAliasAnalysis, 0, requiresArgAndResultAttrs, 0,
+    immArgPositions, immArgAttrNames>;
 
 // Subclass to save typing and ease readibility when there aren't overloaded
 // operands or memory accesses.
 class ROCDL_ConcreteNonMemIntrOp<string mnemonic, list<Trait> traits,
     int numResults, list<int> immArgPositions = [],
     list<string> immArgNames = []>
-  : ROCDL_IntrOp<mnemonic, [], [], traits, numResults, 0, 0,
+  : ROCDL_IntrOp<mnemonic, [], [], traits, numResults, 0, 0, 0,
       immArgPositions, immArgNames>;
 //===----------------------------------------------------------------------===//
 // ROCDL special register op definitions
@@ -144,12 +147,44 @@ class ROCDL_DimGetterFunctionOp<string mnemonic, string device_function,
 }
 
 //===----------------------------------------------------------------------===//
+// ROCDL vector types definitions
+//===----------------------------------------------------------------------===//
+
+class ROCDL_ConcreteVector<Type elem, int length> :
+  FixedVectorOfLengthAndType<[length], [elem]>,
+  BuildableType<
+    "::mlir::VectorType::get({" # length # "} ,"
+      # elem.builderCall # ")">;
+
+def ROCDL_V2I16Type : ROCDL_ConcreteVector<I16, 2>;
+def ROCDL_V2F16Type : ROCDL_ConcreteVector<F16, 2>;
+def ROCDL_V2I32Type : ROCDL_ConcreteVector<I32, 2>;
+def ROCDL_V2BF16Type : ROCDL_ConcreteVector<BF16, 2>;
+def ROCDL_V2F32Type : ROCDL_ConcreteVector<F32, 2>;
+def ROCDL_V3I32Type : ROCDL_ConcreteVector<I32, 3>;
+def ROCDL_V4I32Type : ROCDL_ConcreteVector<I32, 4>;
+def ROCDL_V6I32Type : ROCDL_ConcreteVector<I32, 6>;
+def ROCDL_V8I32Type : ROCDL_ConcreteVector<I32, 8>;
+def ROCDL_V8BF16Type : ROCDL_ConcreteVector<BF16, 8>;
+def ROCDL_V8F16Type : ROCDL_ConcreteVector<F16, 8>;
+def ROCDL_V8F32Type : ROCDL_ConcreteVector<F32, 8>;
+def ROCDL_V16BF16Type : ROCDL_ConcreteVector<BF16, 16>;
+def ROCDL_V16F16Type : ROCDL_ConcreteVector<F16, 16>;
+def ROCDL_V16F32Type : ROCDL_ConcreteVector<F32, 16>;
+def ROCDL_V32F16Type : ROCDL_ConcreteVector<F16, 32>;
+def ROCDL_V32BF16Type : ROCDL_ConcreteVector<BF16, 32>;
+def ROCDL_V32F32Type : ROCDL_ConcreteVector<F32, 32>;
+
+//===----------------------------------------------------------------------===//
 // Wave-level primitives
 //===----------------------------------------------------------------------===//
 
 class ROCDL_MbcntOp<string mnemonic> :
-    ROCDL_IntrPure1Op<"mbcnt." # mnemonic>,
-  Arguments<(ins I32:$in0, I32:$in1)> {
+    ROCDL_IntrOp<"mbcnt." # mnemonic, [], [], [Pure], 1,
+    0, 0, /*requiresArgAndResultAttrs=*/1> {
+  dag args = (ins I32:$in0, I32:$in1);
+  let arguments = !con(args, baseArgs);
+  let results = (outs I32:$res);
   let assemblyFormat = [{
     $in0 `,` $in1  attr-dict `:` `(` type($in0) `,` type($in1) `)` `->` type($res)
    }];
@@ -189,6 +224,20 @@ def ROCDL_BallotOp :
   let assemblyFormat = "$pred attr-dict `:` type($res)";
 }
 
+def ROCDL_ReadfirstlaneOp : ROCDL_IntrOp<"readfirstlane", [], [0], [AllTypesMatch<["res", "src"]>], 1>,
+  Arguments<(ins LLVM_Type:$src)> {
+  let results = (outs LLVM_Type:$res);
+  let summary = "Get the value in first active lane.";
+
+  let description = [{
+    Returns the value in the lowest active lane of the input operand.
+  }];
+
+  let assemblyFormat = [{
+    $src attr-dict `:` type($res)
+  }];
+}
+
 def ROCDL_ReadlaneOp : ROCDL_IntrOp<"readlane", [], [0], [AllTypesMatch<["res", "src0"]>], 1>,
   Arguments<(ins LLVM_Type:$src0,
                  I32:$src1)> {
@@ -201,7 +250,7 @@ def ROCDL_ReadlaneOp : ROCDL_IntrOp<"readlane", [], [0], [AllTypesMatch<["res", 
 
   let assemblyFormat = [{
     $src0 `,` $src1  attr-dict `:` `(` type($src0) `,` type($src1) `)` `->` type($res)
-   }];
+  }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -272,8 +321,47 @@ def ROCDL_BarrierOp : ROCDL_Op<"barrier"> {
   let assemblyFormat = "attr-dict";
 }
 
+def ROCDLGlobalBuffer : LLVM_PointerInAddressSpace<1>;
+def ROCDLBufferLDS : LLVM_PointerInAddressSpace<3>;
+
+def ROCDL_BarrierInitOp : ROCDL_IntrOp<"s.barrier.init", [], [], [], 0, 0, 0, 0, [1], ["id"]>,
+  Arguments<(ins Arg<ROCDLBufferLDS, "", []>:$ptr, I32Attr:$id)> {
+  let description = [{
+    Available on gfx1250+.
+  }];
+  let results = (outs);
+  let assemblyFormat = "$ptr `,` $id attr-dict";
+}
+
 def ROCDL_BarrierSignalOp : ROCDL_ConcreteNonMemIntrOp<"s.barrier.signal", [], 0, [0], ["id"]>,
   Arguments<(ins I32Attr:$id)> {
+  let results = (outs);
+  let assemblyFormat = "$id attr-dict";
+}
+
+def ROCDL_BarrierSignalVarOp : ROCDL_IntrOp<"s.barrier.signal.var", [], [], [], 0, 0, 0, 0, [1], ["id"]>,
+  Arguments<(ins Arg<ROCDLBufferLDS, "", []>:$ptr, I32Attr:$id)> {
+  let description = [{
+    Available on gfx1250+.
+  }];
+  let results = (outs);
+  let assemblyFormat = "$ptr `,` $id attr-dict";
+}
+
+def ROCDL_BarrierJoinOp : ROCDL_IntrOp<"s.barrier.join", [], [], [], 0>,
+  Arguments<(ins Arg<ROCDLBufferLDS, "", []>:$ptr)> {
+  let description = [{
+    Available on gfx1250+.
+  }];
+  let results = (outs);
+  let assemblyFormat = "$ptr attr-dict";
+}
+
+def ROCDL_BarrierLeaveOp : ROCDL_ConcreteNonMemIntrOp<"s.barrier.leave", [], 0, [0], ["id"]>,
+  Arguments<(ins I16Attr:$id)> {
+  let description = [{
+    Available on gfx1250+.
+  }];
   let results = (outs);
   let assemblyFormat = "$id attr-dict";
 }
@@ -282,6 +370,24 @@ def ROCDL_BarrierWaitOp : ROCDL_ConcreteNonMemIntrOp<"s.barrier.wait", [], 0, [0
   Arguments<(ins I16Attr:$id)> {
   let results = (outs);
   let assemblyFormat = "$id attr-dict";
+}
+
+def ROCDL_BarrierSignalIsfirstOp : ROCDL_ConcreteNonMemIntrOp<"s.barrier.signal.isfirst", [], 1, [0], ["id"]>,
+  Arguments<(ins I32Attr:$id)> {
+  let description = [{
+    Available on gfx1250+.
+  }];
+  let results = (outs I1:$res);
+  let assemblyFormat = "$id attr-dict `:` type($res)";
+}
+
+def ROCDL_GetBarrierStateOp : ROCDL_ConcreteNonMemIntrOp<"s.get.barrier.state", [], 1, [0], ["id"]>,
+  Arguments<(ins I32Attr:$id)> {
+  let description = [{
+    Available on gfx1250+.
+  }];
+  let results = (outs I32:$res);
+  let assemblyFormat = "$id attr-dict `:` type($res)";
 }
 
 def ROCDL_WaitDscntOp: ROCDL_ConcreteNonMemIntrOp<"s.wait.dscnt", [], 0, [0], ["count"]>,
@@ -331,6 +437,32 @@ def ROCDL_WaitExpcntOp: ROCDL_ConcreteNonMemIntrOp<"s.wait.expcnt", [], 0, [0], 
       before continuing.
 
       Available on gfx12+.
+  }];
+  let results = (outs);
+  let assemblyFormat = "$count attr-dict";
+}
+
+def ROCDL_WaitAsynccntOp: ROCDL_ConcreteNonMemIntrOp<"s.wait.asynccnt", [], 0, [0], ["count"]>,
+  Arguments<(ins I16Attr:$count)> {
+  let summary = "Wait until ASYNCCNT is less than or equal to `count`";
+  let description = [{
+      Wait for the counter specified to be less-than or equal-to the `count`
+      before continuing.
+
+      Available on gfx1250+.
+  }];
+  let results = (outs);
+  let assemblyFormat = "$count attr-dict";
+}
+
+def ROCDL_WaitTensorcntOp: ROCDL_ConcreteNonMemIntrOp<"s.wait.tensorcnt", [], 0, [0], ["count"]>,
+  Arguments<(ins I16Attr:$count)> {
+  let summary = "Wait until TENSORCNT is less than or equal to `count`";
+  let description = [{
+      Wait for the counter specified to be less-than or equal-to the `count`
+      before continuing.
+
+      Available on gfx1250+.
   }];
   let results = (outs);
   let assemblyFormat = "$count attr-dict";
@@ -472,17 +604,38 @@ def ROCDL_wmma_f32_16x16x16_fp8_bf8 : ROCDL_Wmma_IntrOp<"wmma.f32.16x16x16.fp8_b
 def ROCDL_wmma_f32_16x16x16_bf8_bf8 : ROCDL_Wmma_IntrOp<"wmma.f32.16x16x16.bf8_bf8", [1]>;
 def ROCDL_wmma_f32_16x16x16_bf8_fp8 : ROCDL_Wmma_IntrOp<"wmma.f32.16x16x16.bf8_fp8", [1]>;
 def ROCDL_wmma_i32_16x16x32_iu4 : ROCDL_Wmma_IntrOp<"wmma.i32.16x16x32.iu4", [1]>;
+// Available from gfx1250
+def ROCDL_wmma_f32_16x16x4_f32 : ROCDL_Wmma_IntrOp<"wmma.f32.16x16x4.f32", [1]>;
+def ROCDL_wmma_f32_16x16x32_bf16 : ROCDL_Wmma_IntrOp<"wmma.f32.16x16x32.bf16", [1]>;
+def ROCDL_wmma_f32_16x16x32_f16 : ROCDL_Wmma_IntrOp<"wmma.f32.16x16x32.f16", [1]>;
+def ROCDL_wmma_f16_16x16x32_f16 : ROCDL_Wmma_IntrOp<"wmma.f16.16x16x32.f16", [1]>;
+def ROCDL_wmma_bf16_16x16x32_bf16 : ROCDL_Wmma_IntrOp<"wmma.bf16.16x16x32.bf16", [1]>;
+def ROCDL_wmma_bf16f32_16x16x32_bf16 : ROCDL_Wmma_IntrOp<"wmma.bf16f32.16x16x32.bf16", [1,5]>;
+def ROCDL_wmma_f32_16x16x64_fp8_fp8 : ROCDL_Wmma_IntrOp<"wmma.f32.16x16x64.fp8_fp8", [0]>;
+def ROCDL_wmma_f32_16x16x64_fp8_bf8 : ROCDL_Wmma_IntrOp<"wmma.f32.16x16x64.fp8_bf8", [0]>;
+def ROCDL_wmma_f32_16x16x64_bf8_fp8 : ROCDL_Wmma_IntrOp<"wmma.f32.16x16x64.bf8_fp8", [0]>;
+def ROCDL_wmma_f32_16x16x64_bf8_bf8 : ROCDL_Wmma_IntrOp<"wmma.f32.16x16x64.bf8_bf8", [0]>;
+def ROCDL_wmma_f16_16x16x64_fp8_fp8 : ROCDL_Wmma_IntrOp<"wmma.f16.16x16x64.fp8_fp8", [0]>;
+def ROCDL_wmma_f16_16x16x64_fp8_bf8 : ROCDL_Wmma_IntrOp<"wmma.f16.16x16x64.fp8_bf8", [0]>;
+def ROCDL_wmma_f16_16x16x64_bf8_fp8 : ROCDL_Wmma_IntrOp<"wmma.f16.16x16x64.bf8_fp8", [0]>;
+def ROCDL_wmma_f16_16x16x64_bf8_bf8 : ROCDL_Wmma_IntrOp<"wmma.f16.16x16x64.bf8_bf8", [0]>;
+def ROCDL_wmma_f32_16x16x128_fp8_fp8 : ROCDL_Wmma_IntrOp<"wmma.f32.16x16x128.fp8_fp8", [0]>;
+def ROCDL_wmma_f32_16x16x128_fp8_bf8 : ROCDL_Wmma_IntrOp<"wmma.f32.16x16x128.fp8_bf8", [0]>;
+def ROCDL_wmma_f32_16x16x128_bf8_fp8 : ROCDL_Wmma_IntrOp<"wmma.f32.16x16x128.bf8_fp8", [0]>;
+def ROCDL_wmma_f32_16x16x128_bf8_bf8 : ROCDL_Wmma_IntrOp<"wmma.f32.16x16x128.bf8_bf8", [0]>;
+def ROCDL_wmma_f16_16x16x128_fp8_fp8 : ROCDL_Wmma_IntrOp<"wmma.f16.16x16x128.fp8_fp8", [0]>;
+def ROCDL_wmma_f16_16x16x128_fp8_bf8 : ROCDL_Wmma_IntrOp<"wmma.f16.16x16x128.fp8_bf8", [0]>;
+def ROCDL_wmma_f16_16x16x128_bf8_fp8 : ROCDL_Wmma_IntrOp<"wmma.f16.16x16x128.bf8_fp8", [0]>;
+def ROCDL_wmma_f16_16x16x128_bf8_bf8 : ROCDL_Wmma_IntrOp<"wmma.f16.16x16x128.bf8_bf8", [0]>;
+def ROCDL_wmma_i32_16x16x64_iu8 : ROCDL_Wmma_IntrOp<"wmma.i32.16x16x64.iu8", [1]>;
 
 //===---------------------------------------------------------------------===//
 // LDS transpose intrinsics (available in GFX950)
 
-def ROCDLGlobalBuffer : LLVM_PointerInAddressSpace<1>;
-def ROCDLBufferLDS : LLVM_PointerInAddressSpace<3>;
-
 class ROCDL_LDS_Read_Tr_IntrOp<string mnemonic> :
   ROCDL_IntrOp<mnemonic, [1], [], [], 1, 0, 1> {
   dag args = (ins Arg<ROCDLBufferLDS, "", [MemRead]>:$ptr);
-  let arguments = !con(args, aliasAttrs);
+  let arguments = !con(args, baseArgs);
   let assemblyFormat = "$ptr attr-dict `:` type($ptr) `->` type($res)";
   let extraClassDefinition = [{
     ::llvm::SmallVector<::mlir::Value> $cppClass::getAccessedOperands() {
@@ -496,18 +649,70 @@ def ROCDL_ds_read_tr8_b64 : ROCDL_LDS_Read_Tr_IntrOp<"ds.read.tr8.b64">;
 def ROCDL_ds_read_tr6_b96 : ROCDL_LDS_Read_Tr_IntrOp<"ds.read.tr6.b96">;
 def ROCDL_ds_read_tr16_b64 : ROCDL_LDS_Read_Tr_IntrOp<"ds.read.tr16.b64">;
 
+
+
+//===---------------------------------------------------------------------===//
+// Glb/DS load-transpose intrinsics (available in GFX1250+)
+
+class AddrKind<string n, int s> {
+  string name = n;
+  int space = s;
+}
+def GlobalAddrKind : AddrKind<"global", 1>;
+def DSAddrKind : AddrKind<"ds", 3>;
+
+class ROCDL_TrLoadOpMeta<AddrKind kind, int inElemBits, int outElemBits> {
+  AddrKind addrKind = kind;
+  string inBits = !cast<string>(inElemBits);
+  string outBits = !cast<string>(outElemBits);
+  string inBitsEnc = !if(!eq(addrKind.space, 1),
+                     !if(!or(!eq(inElemBits, 8), !eq(inElemBits, 16)), "", inBits), inBits);
+  string mnemonic = addrKind.name # ".load.tr" # inBitsEnc # ".b" # outBits;
+}
+
+class ROCDL_TrLoadOp<ROCDL_TrLoadOpMeta meta> :
+  ROCDL_IntrOp<meta.mnemonic, [1], [], [], 1, 0, 1> {
+
+  dag args = (ins Arg<LLVM_PointerInAddressSpace<meta.addrKind.space>, "", [MemRead]>:$ptr);
+  let arguments = !con(args, baseArgs);
+  let summary = "Loads and transposes a matrix from " # meta.addrKind.name # " memory to registers (available in gfx1250+).";
+  let description = [{
+    Load a matrix of }] # meta.inBits # [{-bit data from the }] # meta.addrKind.name # [{ memory,
+    transpose data between row-major and column-major order,
+    and store the result into a }] # meta.outBits # [{-bit vector register.
+
+    Available in gfx1250+.
+  }];
+  let assemblyFormat = "$ptr attr-dict `:` qualified(type($ptr)) `->` type($res)";
+  let extraClassDefinition = [{
+    ::llvm::SmallVector<::mlir::Value> $cppClass::getAccessedOperands() {
+      return {getPtr()};
+    }
+  }];
+}
+
+def ROCDL_GlobalLoadTr4_B64 : ROCDL_TrLoadOp<ROCDL_TrLoadOpMeta<GlobalAddrKind, 4, 64>>;
+def ROCDL_GlobalLoadTr8_B64 : ROCDL_TrLoadOp<ROCDL_TrLoadOpMeta<GlobalAddrKind, 8, 64>>;
+def ROCDL_GlobalLoadTr6_B96 : ROCDL_TrLoadOp<ROCDL_TrLoadOpMeta<GlobalAddrKind, 6, 96>>;
+def ROCDL_GlobalLoadTr8_B128 : ROCDL_TrLoadOp<ROCDL_TrLoadOpMeta<GlobalAddrKind, 16, 128>>;
+
+def ROCDL_DsLoadTr4_B64 : ROCDL_TrLoadOp<ROCDL_TrLoadOpMeta<DSAddrKind, 4, 64>>;
+def ROCDL_DsLoadTr8_B64 : ROCDL_TrLoadOp<ROCDL_TrLoadOpMeta<DSAddrKind, 8, 64>>;
+def ROCDL_DsLoadTr6_B96 : ROCDL_TrLoadOp<ROCDL_TrLoadOpMeta<DSAddrKind, 6, 96>>;
+def ROCDL_DsLoadTr16_B128 : ROCDL_TrLoadOp<ROCDL_TrLoadOpMeta<DSAddrKind, 16, 128>>;
+
 //===---------------------------------------------------------------------===//
 // Load to LDS intrinsic (available in GFX9 and GFX10)
 //===---------------------------------------------------------------------===//
 
 def ROCDL_LoadToLDSOp :
-  ROCDL_IntrOp<"load.to.lds", [], [0], [], 0, 0, 1, [2, 3, 4], ["size", "offset", "aux"]> {
+  ROCDL_IntrOp<"load.to.lds", [], [0], [], 0, 0, 1, 0, [2, 3, 4], ["size", "offset", "aux"]> {
   dag args = (ins Arg<LLVM_AnyPointer, "", [MemRead]>:$globalPtr,
                  Arg<ROCDLBufferLDS, "", [MemWrite]>:$ldsPtr,
                  I32Attr:$size,
                  I32Attr:$offset,
                  I32Attr:$aux);
-  let arguments = !con(args, aliasAttrs);
+  let arguments = !con(args, baseArgs);
   let assemblyFormat = [{
     $globalPtr `,`  $ldsPtr `,` $size `,` $offset `,` $aux
     attr-dict `:` type($globalPtr)
@@ -520,13 +725,13 @@ def ROCDL_LoadToLDSOp :
 }
 
 def ROCDL_GlobalLoadLDSOp :
-  ROCDL_IntrOp<"global.load.lds", [], [], [], 0, 0, 1, [2, 3, 4], ["size", "offset", "aux"]> {
+  ROCDL_IntrOp<"global.load.lds", [], [], [], 0, 0, 1, 0, [2, 3, 4], ["size", "offset", "aux"]> {
   dag args = (ins Arg<ROCDLGlobalBuffer, "", [MemRead]>:$globalPtr,
                  Arg<ROCDLBufferLDS, "", [MemWrite]>:$ldsPtr,
                  I32Attr:$size,
                  I32Attr:$offset,
                  I32Attr:$aux);
-  let arguments = !con(args, aliasAttrs);
+  let arguments = !con(args, baseArgs);
   let assemblyFormat = [{
     $globalPtr `,`  $ldsPtr `,` $size `,` $offset `,` $aux
     attr-dict
@@ -539,6 +744,100 @@ def ROCDL_GlobalLoadLDSOp :
 }
 
 //===---------------------------------------------------------------------===//
+// Async load to LDS intrinsic (available in GFX1250)
+//===---------------------------------------------------------------------===//
+
+foreach bitsVal = [8, 32, 64, 128] in {
+  defvar bitsStr = "b" # !cast<string>(bitsVal);
+  def ROCDL_GlobalLoadAsyncToLDS # !toupper(bitsStr) # Op :
+    ROCDL_IntrOp<"global.load.async.to.lds." # bitsStr, [], [], [], 0, 0, 1, 0, [2, 3], ["offset", "aux"]> {
+    dag args = (ins Arg<ROCDLGlobalBuffer, "", [MemRead]>:$globalPtr,
+                   Arg<ROCDLBufferLDS, "", [MemWrite]>:$ldsPtr,
+                   I32Attr:$offset,
+                   I32Attr:$aux);
+    let arguments = !con(args, baseArgs);
+    let assemblyFormat = [{
+      $globalPtr `,`  $ldsPtr `,` $offset `,` $aux
+      attr-dict `:` type($globalPtr) `,` type($ldsPtr)
+    }];
+    let description = [{
+      Asynchronously loads }] # !cast<string>(bitsVal) # [{ bits of data from a global memory pointer
+      to a Local Data Share (LDS) pointer.
+
+      Available on gfx1250+.
+    }];
+
+    let extraClassDefinition = [{
+      ::llvm::SmallVector<::mlir::Value> $cppClass::getAccessedOperands() {
+        return {getGlobalPtr(), getLdsPtr()};
+      }
+    }];
+  }
+}
+
+//===---------------------------------------------------------------------===//
+// Tensor load/store intrinsics (available in GFX1250)
+//===---------------------------------------------------------------------===//
+
+// Base class for tensor load/store operations with 4 descriptor groups.
+class ROCDL_TensorLDSIntrOp<string mnemonic> :
+  ROCDL_IntrOp<mnemonic, [], [], [], 0, 0, 1, 0, [4], ["cachePolicy"]> {
+  dag args = (ins ROCDL_V4I32Type:$dgroup0, ROCDL_V8I32Type:$dgroup1,
+                  ROCDL_V4I32Type:$dgroup2, ROCDL_V4I32Type:$dgroup3,
+                  I32Attr:$cachePolicy);
+  let arguments = !con(args, baseArgs);
+  let summary = "Base class for ROCDL tensor load/store to/from LDS.";
+  let description = [{
+    Moves tiles of tensor data between global memory and LDS. The tile is
+    described by the $dgroup descriptors. 4 $dgroup descriptors allows for
+    movement of up to 5D tensors. $cachePolicy describes the memory scope and an
+    indicator of expected data re-use.
+
+    This op is for gfx1250+ architectures.
+  }];
+  let assemblyFormat = [{
+    attr-dict operands `cachepolicy` $cachePolicy `:` type($dgroup0) `,` type($dgroup1)
+  }];
+  let extraClassDefinition = [{
+    SmallVector<Value> $cppClass::getAccessedOperands() {
+      return {getDgroup0(), getDgroup1(), getDgroup2(), getDgroup3()};
+    }
+  }];
+}
+
+// Base class for tensor load/store operations with 2 descriptor groups
+// (D2 variant).
+class ROCDL_TensorLDSIntrD2Op<string mnemonic> :
+  ROCDL_IntrOp<mnemonic, [], [], [], 0, 0, 1, 0, [2], ["cachePolicy"]> {
+  dag args = (ins ROCDL_V4I32Type:$dgroup0, ROCDL_V8I32Type:$dgroup1,
+                  I32Attr:$cachePolicy);
+  let arguments = !con(args, baseArgs);
+  let summary = "Base class for ROCDL tensor load/store to/from LDS (D2 variant).";
+  let description = [{
+    Moves tiles of tensor data between global memory and LDS. The tile is
+    described by the $dgroup descriptors. 2 $dgroup descriptors allows for
+    movement of up to 2D tensors. $cachePolicy describes the memory scope and an
+    indicator of expected data re-use.
+
+    This op is for gfx1250+ architectures.
+  }];
+  let assemblyFormat = [{
+    attr-dict operands `cachepolicy` $cachePolicy `:` type($dgroup0) `,` type($dgroup1)
+  }];
+  let extraClassDefinition = [{
+    SmallVector<Value> $cppClass::getAccessedOperands() {
+      return {getDgroup0(), getDgroup1()};
+    }
+  }];
+}
+
+// Tensor load and store operations
+def ROCDL_TensorLoadToLDSOp : ROCDL_TensorLDSIntrOp<"tensor.load.to.lds">;
+def ROCDL_TensorStoreFromLDSOp : ROCDL_TensorLDSIntrOp<"tensor.store.from.lds">;
+def ROCDL_TensorLoadToLDSD2Op : ROCDL_TensorLDSIntrD2Op<"tensor.load.to.lds.d2">;
+def ROCDL_TensorStoreFromLDSD2Op : ROCDL_TensorLDSIntrD2Op<"tensor.store.from.lds.d2">;
+
+//===---------------------------------------------------------------------===//
 // Operations on raw buffer resources (stride of 0, bounds checks either off or in
 // raw buffer mode).
 //===---------------------------------------------------------------------===//
@@ -549,7 +848,7 @@ def ROCDL_MakeBufferRsrcOp :
   ROCDL_IntrOp<"make.buffer.rsrc", [0], [0], [Pure], 1>,
   Arguments<(ins LLVM_AnyPointer:$base,
                  I16:$stride,
-                 I32:$numRecords,
+                 I64:$numRecords,
                  I32:$flags)> {
   let results = (outs LLVM_AnyPointer:$res);
   let assemblyFormat = "operands attr-dict `:` type($base) `to` type($res)";
@@ -561,7 +860,7 @@ def ROCDL_RawPtrBufferLoadOp :
                   I32:$offset,
                   I32:$soffset,
                   I32:$aux);
-  let arguments = !con(args, aliasAttrs);
+  let arguments = !con(args, baseArgs);
   let assemblyFormat = "operands attr-dict `:` type($res)";
   let extraClassDefinition = [{
     ::llvm::SmallVector<::mlir::Value> $cppClass::getAccessedOperands() {
@@ -579,7 +878,7 @@ def ROCDL_RawPtrBufferLoadLdsOp :
                   I32:$soffset,
                   I32:$offset,
                   I32:$aux);
-  let arguments = !con(args, aliasAttrs);
+  let arguments = !con(args, baseArgs);
   let assemblyFormat = "operands attr-dict";
   let extraClassDefinition = [{
     ::llvm::SmallVector<::mlir::Value> $cppClass::getAccessedOperands() {
@@ -595,7 +894,7 @@ def ROCDL_RawPtrBufferStoreOp :
                   I32:$offset,
                   I32:$soffset,
                   I32:$aux);
-  let arguments = !con(args, aliasAttrs);
+  let arguments = !con(args, baseArgs);
   let assemblyFormat = "operands attr-dict `:` type($vdata)";
   let extraClassDefinition = [{
     ::llvm::SmallVector<::mlir::Value> $cppClass::getAccessedOperands() {
@@ -614,7 +913,7 @@ def ROCDL_RawPtrBufferAtomicCmpSwap :
                   I32:$offset,
                   I32:$soffset,
                   I32:$aux);
-  let arguments = !con(args, aliasAttrs);
+  let arguments = !con(args, baseArgs);
   let assemblyFormat = "operands attr-dict `:` type($res)";
   let extraClassDefinition = [{
     ::llvm::SmallVector<::mlir::Value> $cppClass::getAccessedOperands() {
@@ -630,7 +929,7 @@ class ROCDL_RawPtrBufferAtomicNoRet<string op> :
                   I32:$offset,
                   I32:$soffset,
                   I32:$aux);
-  let arguments = !con(args, aliasAttrs);
+  let arguments = !con(args, baseArgs);
   let assemblyFormat = "operands attr-dict `:` type($vdata)";
   let extraClassDefinition = [{
     ::llvm::SmallVector<::mlir::Value> $cppClass::getAccessedOperands() {
@@ -734,7 +1033,7 @@ def ROCDL_RawBufferAtomicUMinOp :
 
 // DPP Update intrinsic
 def ROCDL_DPPUpdateOp : ROCDL_IntrOp<"update.dpp", [], [0],
-    [AllTypesMatch<["res", "src", "old"]>], 1, 0, 0,
+    [AllTypesMatch<["res", "src", "old"]>], 1, 0, 0, 0,
       [2, 3, 4, 5], ["dppCtrl", "rowMask", "bankMask", "boundCtrl"]>,
   Arguments<(ins LLVM_Type:$old, LLVM_Type:$src, I32Attr:$dppCtrl, I32Attr:$rowMask,
       I32Attr:$bankMask, I1Attr:$boundCtrl)> {
@@ -746,7 +1045,7 @@ def ROCDL_DPPUpdateOp : ROCDL_IntrOp<"update.dpp", [], [0],
 
 // PermLaneX16 intrinsic operation
 def ROCDL_PermlaneX16Op : ROCDL_IntrOp<"permlanex16", [], [0],
-    [AllTypesMatch<["res", "old", "src0"]>, AllTypesMatch<["src1", "src2"]>], 1, 0, 0,
+    [AllTypesMatch<["res", "old", "src0"]>, AllTypesMatch<["src1", "src2"]>], 1, 0, 0, 0,
     [4, 5], ["fi", "boundControl"]>,
   Arguments<(ins LLVM_Type:$old, LLVM_Type:$src0, LLVM_Type:$src1, LLVM_Type:$src2,
              I1Attr:$fi, I1Attr:$boundControl)> {
@@ -760,22 +1059,52 @@ def ROCDL_PermlaneX16Op : ROCDL_IntrOp<"permlanex16", [], [0],
   }];
 }
 
-class ROCDL_ConcreteVector<Type elem, int length> :
-  FixedVectorOfLengthAndType<[length], [elem]>,
-  BuildableType<
-    "::mlir::VectorType::get({" # length # "} ,"
-      # elem.builderCall # ")">;
+class ROCDL_ConcretePair<Type elem0, Type elem1> :
+  Type<And<[
+    LLVM_AnyStruct.predicate,
+    SubstLeaves<
+         "$_self",
+         "::llvm::cast<::mlir::LLVM::LLVMStructType>($_self).getBody()[0]",
+         elem0.predicate>,
+      SubstLeaves<
+         "$_self",
+         "::llvm::cast<::mlir::LLVM::LLVMStructType>($_self).getBody()[1]",
+         elem1.predicate>
+  ]>,
+  "LLVM dialect-compatible struct of " # elem0.summary # "and" # elem1.summary,
+  "::mlir::LLVM::LLVMStructType">,
+  BuildableType<"::mlir::LLVM::LLVMStructType::getLiteral($_builder.getContext(), "
+  "{" # elem0.builderCall # ", " # elem1.builderCall # "})">;
 
-def ROCDL_V2I16Type : ROCDL_ConcreteVector<I16, 2>;
-def ROCDL_V2F16Type : ROCDL_ConcreteVector<F16, 2>;
-def ROCDL_V2BF16Type : ROCDL_ConcreteVector<BF16, 2>;
-def ROCDL_V2F32Type : ROCDL_ConcreteVector<F32, 2>;
-def ROCDL_V6I32Type : ROCDL_ConcreteVector<I32, 6>;
-def ROCDL_V8I32Type : ROCDL_ConcreteVector<I32, 8>;
-def ROCDL_V16F32Type : ROCDL_ConcreteVector<F32, 16>;
-def ROCDL_V32F16Type : ROCDL_ConcreteVector<F16, 32>;
-def ROCDL_V32BF16Type : ROCDL_ConcreteVector<BF16, 32>;
-def ROCDL_V32F32Type : ROCDL_ConcreteVector<F32, 32>;
+// Permlane16 swap intrinsic operation
+def ROCDL_Permlane16SwapOp : ROCDL_IntrOp<"permlane16.swap", [], [],
+    [], 1, 0, 0, 0,
+    [2, 3], ["fi", "boundControl"]>,
+  Arguments<(ins I32:$old, I32:$src, I1Attr:$fi, I1Attr:$boundControl)> {
+  let results = (outs ROCDL_ConcretePair<I32, I32>:$res);
+  let assemblyFormat = [{
+    attr-dict $old `,` $src `,` $fi `,` $boundControl `:` `(` type($old) `,` type($src) `)` `->` type($res)
+  }];
+  let description = [{
+    Performs a `permlane16.swap` operation with the given operands, applying the
+    permutation specified by $fi to the provided inputs.
+  }];
+}
+
+// Permlane32 swap intrinsic operation
+def ROCDL_Permlane32SwapOp : ROCDL_IntrOp<"permlane32.swap", [], [],
+    [], 1, 0, 0, 0,
+    [2, 3], ["fi", "boundControl"]>,
+  Arguments<(ins I32:$old, I32:$src, I1Attr:$fi, I1Attr:$boundControl)> {
+  let results = (outs ROCDL_ConcretePair<I32, I32>:$res);
+  let assemblyFormat = [{
+    attr-dict $old `,` $src `,` $fi `,` $boundControl `:` `(` type($old) `,` type($src) `)` `->` type($res)
+  }];
+  let description = [{
+    Performs a `permlane32.swap` operation with the given operands, applying the
+    permutation specified by $fi to the provided inputs.
+  }];
+}
 
 //===---------------------------------------------------------------------===//
 // 16-bit float intrinsics
@@ -907,6 +1236,141 @@ class ScaleArgInfo<TypeConstraint argTyVal, string typeName> {
   string name = !tolower(typeName);
   string nameForOp = typeName;
 }
+
+//===---------------------------------------------------------------------===//
+// Scaled {fp4,bf8,fp8} to {bf16,f16,f32} conversion intrinsics
+//===---------------------------------------------------------------------===//
+foreach smallT = [
+  ScaleArgInfo<I32, "Fp4">,
+  ScaleArgInfo<ROCDL_V2I32Type, "Fp8">,
+  ScaleArgInfo<ROCDL_V2I32Type, "Bf8">
+] in {
+  foreach largeT = [
+    ScaleArgInfo<ROCDL_V8F16Type, "F16">,
+    ScaleArgInfo<ROCDL_V8BF16Type, "Bf16">,
+    ScaleArgInfo<ROCDL_V8F32Type, "F32">,
+  ] in {
+
+    // Up-scaling
+    def ROCDL_CvtPkScalePk8 # largeT.nameForOp # smallT.nameForOp # Op :
+          ROCDL_ConcreteNonMemIntrOp<"cvt.scale.pk8." # largeT.name # "." # smallT.name,
+          [Pure], 1, [2], ["scaleSel"]>,
+        Arguments<(ins smallT.type:$src, I32:$scale, I32Attr:$scaleSel)> {
+
+      let summary = "Scales 8 " # smallT.name # " and converts them to 8 " # largeT.name # ".";
+      let description = [{
+        Available on gfx1250+.
+      }];
+      let results = (outs largeT.type:$res);
+      let assemblyFormat = [{
+        attr-dict $src `,` $scale `[` $scaleSel `]` `:` type($res)
+      }];
+    }
+
+    // Down-scaling
+    def ROCDL_CvtScaleF32Pk8 # smallT.nameForOp # largeT.nameForOp # Op :
+        ROCDL_ConcreteNonMemIntrOp<"cvt.scalef32.pk8." # smallT.name # "." # largeT.name,
+          [Pure], 1>,
+        Arguments<(ins largeT.type:$src, F32:$scale)> {
+      let results = (outs smallT.type:$res);
+      let summary = "Scale and convert packed "
+        # largeT.name # " to packed " # smallT.name ;
+     let description = [{
+        Convert 8 packed }] # largeT.name # [{ values to packed }]
+        # smallT.name # [{, multiplying by the exponent part of `scale`
+        before doing so. This op is for gfx1250+ arch.
+      }];
+      let assemblyFormat = [{
+        attr-dict $src `,` $scale `:` type($res)
+      }];
+    }
+
+
+    def ROCDL_CvtScaleF32SrPk8 # smallT.nameForOp # largeT.nameForOp # Op :
+        ROCDL_ConcreteNonMemIntrOp<"cvt.scalef32.sr.pk8." # smallT.name # "." # largeT.name,
+          [Pure], 1>,
+        Arguments<(ins largeT.type:$src, I32:$seed, F32:$scale)> {
+      let results = (outs smallT.type:$res);
+      let summary = "Scale and convert packed "
+        # largeT.name # " to packed " # smallT.name # " with stochastic rounding";
+     let description = [{
+        Convert 8 packed }] # largeT.name # [{ values to packed }]
+        # smallT.name # [{, multiplying by the exponent part of `scale`
+        before doing so and apply stochastic rounding. This op is for gfx1250+ arch.
+      }];
+      let assemblyFormat = [{
+        attr-dict $src `,` $seed `,` $scale `:` type($res)
+      }];
+    }
+  } // foreach largeT
+} // foreach smallTOp
+
+//===---------------------------------------------------------------------===//
+// Scaled {bf6,fp6} to {bf16,f16,f32} conversion intrinsics
+//===---------------------------------------------------------------------===//
+foreach smallT = [
+  ScaleArgInfo<ROCDL_V3I32Type, "Fp6">,
+  ScaleArgInfo<ROCDL_V3I32Type, "Bf6">
+] in {
+  foreach largeT = [
+    ScaleArgInfo<ROCDL_V16F16Type, "F16">,
+    ScaleArgInfo<ROCDL_V16BF16Type, "Bf16">,
+    ScaleArgInfo<ROCDL_V16F32Type, "F32">,
+  ] in {
+    // Up-scaling
+    def ROCDL_CvtPkScalePk16 # largeT.nameForOp # smallT.nameForOp # Op :
+          ROCDL_ConcreteNonMemIntrOp<"cvt.scale.pk16." # largeT.name # "." # smallT.name,
+          [Pure], 1, [2], ["scaleSel"]>,
+        Arguments<(ins smallT.type:$src, I32:$scale, I32Attr:$scaleSel)> {
+
+      let summary = "Scales 16 " # smallT.name # " and converts them to 16 " # largeT.name # ".";
+      let description = [{
+        Available on gfx1250+.
+      }];
+      let results = (outs largeT.type:$res);
+      let assemblyFormat = [{
+        attr-dict $src `,` $scale `[` $scaleSel `]` `:` type($res)
+      }];
+
+    }
+
+    // Down-scaling
+    def ROCDL_CvtScaleF32Pk16 # smallT.nameForOp # largeT.nameForOp # Op :
+        ROCDL_ConcreteNonMemIntrOp<"cvt.scalef32.pk16." # smallT.name # "." # largeT.name,
+          [Pure], 1>,
+        Arguments<(ins largeT.type:$src, F32:$scale)> {
+      let results = (outs smallT.type:$res);
+      let summary = "Scale and convert packed "
+        # largeT.name # " to packed " # smallT.name ;
+     let description = [{
+        Convert 8 packed }] # largeT.name # [{ values to packed }]
+        # smallT.name # [{, multiplying by the exponent part of `scale`
+        before doing so. This op is for gfx1250+ arch.
+      }];
+      let assemblyFormat = [{
+        attr-dict $src `,` $scale `:` type($res)
+      }];
+    }
+
+    def ROCDL_CvtScaleF32SrPk16 # smallT.nameForOp # largeT.nameForOp # Op :
+        ROCDL_ConcreteNonMemIntrOp<"cvt.scalef32.sr.pk16." # smallT.name # "." # largeT.name,
+          [Pure], 1>,
+        Arguments<(ins largeT.type:$src, I32:$seed, F32:$scale)> {
+      let results = (outs smallT.type:$res);
+      let summary = "Scale and convert packed "
+        # largeT.name # " to packed " # smallT.name # " with stochastic rounding";
+     let description = [{
+        Convert 8 packed }] # largeT.name # [{ values to packed }]
+        # smallT.name # [{, multiplying by the exponent part of `scale`
+        before doing so and apply stochastic rounding. This op is for gfx1250+ arch.
+      }];
+      let assemblyFormat = [{
+        attr-dict $src `,` $seed `,` $scale `:` type($res)
+      }];
+    }
+
+  } // foreach largeT
+} // foreach smallTOp
 
 //===---------------------------------------------------------------------===//
 // Scaled 32x6-bit float float conversion intrinsics
@@ -1221,6 +1685,37 @@ def ROCDL_CvtScaleF32PkFp4F32Op :
   }];
  let assemblyFormat = [{
     attr-dict $src0 `,` $src1 `,` $scale `->` $oldVdst `[` $dstSelIndex `]` `:` type($res)
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// FMED3 operations
+//===----------------------------------------------------------------------===//
+
+def ROCDL_FMed3Op : ROCDL_IntrOp<"fmed3", [0], [], [Pure, AllTypesMatch<["res", "src0", "src1", "src2"]>], 1>,
+  Arguments<(ins LLVM_ScalarOrVectorOf<LLVM_AnyFloat>:$src0,
+                 LLVM_ScalarOrVectorOf<LLVM_AnyFloat>:$src1,
+                 LLVM_ScalarOrVectorOf<LLVM_AnyFloat>:$src2)> {
+  let results = (outs LLVM_ScalarOrVectorOf<LLVM_AnyFloat>:$res);
+  let summary = "Median of three float/half values";
+  let description = [{
+    Computes the median of three floating-point values using the AMDGPU fmed3 intrinsic.
+    This operation is equivalent to `max(min(a, b), min(max(a, b), c))` but uses the
+    hardware-accelerated V_MED3_F16/V_MED3_F32 instruction for better performance.
+    
+    The operation supports both scalar and vector floating-point types (f16, f32).
+    
+    Example:
+    ```mlir
+    // Scalar f32 median
+    %result = rocdl.fmed3 %a, %b, %c : f32
+    
+    // Vector f16 median
+    %result = rocdl.fmed3 %va, %vb, %vc : vector<4xf16>
+    ```
+  }];
+  let assemblyFormat = [{
+    $src0 `,` $src1 `,` $src2 attr-dict `:` type($res)
   }];
 }
 

@@ -59,13 +59,13 @@ int test4(void) {
   my_free1(data);
   data = (int *)my_malloc2(1, 4);
   my_free1(data);
-  return *data; // expected-warning {{Use of memory after it is freed}}
+  return *data; // expected-warning {{Use of memory after it is released}}
 }
 
 void test6(void) {
   int *data = (int *)my_malloc2(1, 4);
   my_free1((int*)data);
-  my_free1((int*)data); // expected-warning{{Use of memory after it is freed}}
+  my_free1((int*)data); // expected-warning{{Use of memory after it is released}}
 }
 
 // TODO: We should warn here.
@@ -96,5 +96,5 @@ int uafAndCallsFooWithEmptyReturn(void) {
   int *x = (int*)malloc(12);
   free(x);
   fooWithEmptyReturn(12);
-  return *x; // expected-warning {{Use of memory after it is freed}}
+  return *x; // expected-warning {{Use of memory after it is released}}
 }

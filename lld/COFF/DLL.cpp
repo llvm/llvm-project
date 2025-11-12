@@ -244,40 +244,36 @@ static const uint8_t thunkX64[] = {
 };
 
 static const uint8_t tailMergeX64[] = {
-    0x51,                               // push    rcx
-    0x52,                               // push    rdx
-    0x41, 0x50,                         // push    r8
-    0x41, 0x51,                         // push    r9
-    0x48, 0x83, 0xEC, 0x48,             // sub     rsp, 48h
-    0x66, 0x0F, 0x7F, 0x04, 0x24,       // movdqa  xmmword ptr [rsp], xmm0
-    0x66, 0x0F, 0x7F, 0x4C, 0x24, 0x10, // movdqa  xmmword ptr [rsp+10h], xmm1
-    0x66, 0x0F, 0x7F, 0x54, 0x24, 0x20, // movdqa  xmmword ptr [rsp+20h], xmm2
-    0x66, 0x0F, 0x7F, 0x5C, 0x24, 0x30, // movdqa  xmmword ptr [rsp+30h], xmm3
-    0x48, 0x8B, 0xD0,                   // mov     rdx, rax
-    0x48, 0x8D, 0x0D, 0, 0, 0, 0,       // lea     rcx, [___DELAY_IMPORT_...]
-    0xE8, 0, 0, 0, 0,                   // call    __delayLoadHelper2
-    0x66, 0x0F, 0x6F, 0x04, 0x24,       // movdqa  xmm0, xmmword ptr [rsp]
-    0x66, 0x0F, 0x6F, 0x4C, 0x24, 0x10, // movdqa  xmm1, xmmword ptr [rsp+10h]
-    0x66, 0x0F, 0x6F, 0x54, 0x24, 0x20, // movdqa  xmm2, xmmword ptr [rsp+20h]
-    0x66, 0x0F, 0x6F, 0x5C, 0x24, 0x30, // movdqa  xmm3, xmmword ptr [rsp+30h]
-    0x48, 0x83, 0xC4, 0x48,             // add     rsp, 48h
-    0x41, 0x59,                         // pop     r9
-    0x41, 0x58,                         // pop     r8
-    0x5A,                               // pop     rdx
-    0x59,                               // pop     rcx
-    0xFF, 0xE0,                         // jmp     rax
+    0x48, 0x89, 0x4C, 0x24, 0x08,          // mov    qword ptr [rsp+8], rcx
+    0x48, 0x89, 0x54, 0x24, 0x10,          // mov    qword ptr [rsp+10h], rdx
+    0x4C, 0x89, 0x44, 0x24, 0x18,          // mov    qword ptr [rsp+18h], r8
+    0x4C, 0x89, 0x4C, 0x24, 0x20,          // mov    qword ptr [rsp+20h], r9
+    0x48, 0x83, 0xEC, 0x68,                // sub    rsp, 68h
+    0x66, 0x0F, 0x7F, 0x44, 0x24, 0x20,    // movdqa xmmword ptr [rsp+20h], xmm0
+    0x66, 0x0F, 0x7F, 0x4C, 0x24, 0x30,    // movdqa xmmword ptr [rsp+30h], xmm1
+    0x66, 0x0F, 0x7F, 0x54, 0x24, 0x40,    // movdqa xmmword ptr [rsp+40h], xmm2
+    0x66, 0x0F, 0x7F, 0x5C, 0x24, 0x50,    // movdqa xmmword ptr [rsp+50h], xmm3
+    0x48, 0x8B, 0xD0,                      // mov    rdx, rax
+    0x48, 0x8D, 0x0D, 0, 0, 0, 0,          // lea    rcx, [___DELAY_IMPORT_...]
+    0xE8, 0, 0, 0, 0,                      // call   __delayLoadHelper2
+    0x66, 0x0F, 0x6F, 0x44, 0x24, 0x20,    // movdqa xmm0, xmmword ptr [rsp+20h]
+    0x66, 0x0F, 0x6F, 0x4C, 0x24, 0x30,    // movdqa xmm1, xmmword ptr [rsp+30h]
+    0x66, 0x0F, 0x6F, 0x54, 0x24, 0x40,    // movdqa xmm2, xmmword ptr [rsp+40h]
+    0x66, 0x0F, 0x6F, 0x5C, 0x24, 0x50,    // movdqa xmm3, xmmword ptr [rsp+50h]
+    0x48, 0x8B, 0x4C, 0x24, 0x70,          // mov    rcx, qword ptr [rsp+70h]
+    0x48, 0x8B, 0x54, 0x24, 0x78,          // mov    rdx, qword ptr [rsp+78h]
+    0x4C, 0x8B, 0x84, 0x24, 0x80, 0, 0, 0, // mov    r8, qword ptr [rsp+80h]
+    0x4C, 0x8B, 0x8C, 0x24, 0x88, 0, 0, 0, // mov    r9, qword ptr [rsp+88h]
+    0x48, 0x83, 0xC4, 0x68,                // add    rsp, 68h
+    0xFF, 0xE0,                            // jmp    rax
 };
 
 static const uint8_t tailMergeUnwindInfoX64[] = {
     0x01,       // Version=1, Flags=UNW_FLAG_NHANDLER
-    0x0a,       // Size of prolog
-    0x05,       // Count of unwind codes
+    0x18,       // Size of prolog
+    0x01,       // Count of unwind codes
     0x00,       // No frame register
-    0x0a, 0x82, // Offset 0xa: UWOP_ALLOC_SMALL(0x48)
-    0x06, 0x02, // Offset 6: UWOP_ALLOC_SMALL(8)
-    0x04, 0x02, // Offset 4: UWOP_ALLOC_SMALL(8)
-    0x02, 0x02, // Offset 2: UWOP_ALLOC_SMALL(8)
-    0x01, 0x02, // Offset 1: UWOP_ALLOC_SMALL(8)
+    0x18, 0xC2, // Offset 0x18: UWOP_ALLOC_SMALL(0x68)
     0x00, 0x00  // Padding to align on 32-bits
 };
 
@@ -324,30 +320,34 @@ static const uint8_t thunkARM64[] = {
 };
 
 static const uint8_t tailMergeARM64[] = {
-    0xfd, 0x7b, 0xb3, 0xa9, // stp     x29, x30, [sp, #-208]!
+    0xfd, 0x7b, 0xb2, 0xa9, // stp     x29, x30, [sp, #-224]!
     0xfd, 0x03, 0x00, 0x91, // mov     x29, sp
     0xe0, 0x07, 0x01, 0xa9, // stp     x0, x1, [sp, #16]
     0xe2, 0x0f, 0x02, 0xa9, // stp     x2, x3, [sp, #32]
     0xe4, 0x17, 0x03, 0xa9, // stp     x4, x5, [sp, #48]
     0xe6, 0x1f, 0x04, 0xa9, // stp     x6, x7, [sp, #64]
-    0xe0, 0x87, 0x02, 0xad, // stp     q0, q1, [sp, #80]
-    0xe2, 0x8f, 0x03, 0xad, // stp     q2, q3, [sp, #112]
-    0xe4, 0x97, 0x04, 0xad, // stp     q4, q5, [sp, #144]
-    0xe6, 0x9f, 0x05, 0xad, // stp     q6, q7, [sp, #176]
+    0xe8, 0x2b, 0x00, 0xf9, // str     x8,     [sp, #80]
+    0xe0, 0x07, 0x03, 0xad, // stp     q0, q1, [sp, #96]
+    0xe2, 0x0f, 0x04, 0xad, // stp     q2, q3, [sp, #128]
+    0xe4, 0x17, 0x05, 0xad, // stp     q4, q5, [sp, #160]
+    0xe6, 0x1f, 0x06, 0xad, // stp     q6, q7, [sp, #192]
     0xe1, 0x03, 0x11, 0xaa, // mov     x1, x17
     0x00, 0x00, 0x00, 0x90, // adrp    x0, #0     DELAY_IMPORT_DESCRIPTOR
     0x00, 0x00, 0x00, 0x91, // add     x0, x0, #0 :lo12:DELAY_IMPORT_DESCRIPTOR
-    0x00, 0x00, 0x00, 0x94, // bl      #0 __delayLoadHelper2
+    0x02, 0x00, 0x00, 0x90, // adrp    x2, #0     __delayLoadHelper2
+    0x42, 0x00, 0x00, 0x91, // add     x2, x2, #0 :lo12:__delayLoadHelper2
+    0x40, 0x00, 0x3f, 0xd6, // blr     x2
     0xf0, 0x03, 0x00, 0xaa, // mov     x16, x0
-    0xe6, 0x9f, 0x45, 0xad, // ldp     q6, q7, [sp, #176]
-    0xe4, 0x97, 0x44, 0xad, // ldp     q4, q5, [sp, #144]
-    0xe2, 0x8f, 0x43, 0xad, // ldp     q2, q3, [sp, #112]
-    0xe0, 0x87, 0x42, 0xad, // ldp     q0, q1, [sp, #80]
+    0xe6, 0x1f, 0x46, 0xad, // ldp     q6, q7, [sp, #192]
+    0xe4, 0x17, 0x45, 0xad, // ldp     q4, q5, [sp, #160]
+    0xe2, 0x0f, 0x44, 0xad, // ldp     q2, q3, [sp, #128]
+    0xe0, 0x07, 0x43, 0xad, // ldp     q0, q1, [sp, #96]
+    0xe8, 0x2b, 0x40, 0xf9, // ldr     x8,     [sp, #80]
     0xe6, 0x1f, 0x44, 0xa9, // ldp     x6, x7, [sp, #64]
     0xe4, 0x17, 0x43, 0xa9, // ldp     x4, x5, [sp, #48]
     0xe2, 0x0f, 0x42, 0xa9, // ldp     x2, x3, [sp, #32]
     0xe0, 0x07, 0x41, 0xa9, // ldp     x0, x1, [sp, #16]
-    0xfd, 0x7b, 0xcd, 0xa8, // ldp     x29, x30, [sp], #208
+    0xfd, 0x7b, 0xce, 0xa8, // ldp     x29, x30, [sp], #224
     0x00, 0x02, 0x1f, 0xd6, // br      x16
 };
 
@@ -378,8 +378,8 @@ public:
 
   void writeTo(uint8_t *buf) const override {
     memcpy(buf, tailMergeX64, sizeof(tailMergeX64));
-    write32le(buf + 39, desc->getRVA() - rva - 43);
-    write32le(buf + 44, helper->getRVA() - rva - 48);
+    write32le(buf + 54, desc->getRVA() - rva - 58);
+    write32le(buf + 59, helper->getRVA() - rva - 63);
   }
 
   Chunk *desc = nullptr;
@@ -558,10 +558,12 @@ public:
 
   void writeTo(uint8_t *buf) const override {
     memcpy(buf, tailMergeARM64, sizeof(tailMergeARM64));
-    applyArm64Addr(buf + 44, desc->getRVA(), rva + 44, 12);
-    applyArm64Imm(buf + 48, desc->getRVA() & 0xfff, 0);
-    if (helper)
-      applyArm64Branch26(buf + 52, helper->getRVA() - rva - 52);
+    applyArm64Addr(buf + 48, desc->getRVA(), rva + 48, 12);
+    applyArm64Imm(buf + 52, desc->getRVA() & 0xfff, 0);
+    if (helper) {
+      applyArm64Addr(buf + 56, helper->getRVA(), rva + 56, 12);
+      applyArm64Imm(buf + 60, helper->getRVA() & 0xfff, 0);
+    }
   }
 
   Chunk *desc = nullptr;

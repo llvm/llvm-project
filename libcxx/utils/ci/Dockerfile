@@ -38,6 +38,7 @@
 # If you're only looking to run the Docker image locally for debugging a
 # build bot, see the `run-buildbot-container` script located in this directory.
 
+ARG ACTIONS_BASE_IMAGE
 
 # HACK: We set the base image in the docker-compose file depending on the final target (buildkite vs github actions).
 # This means we have a much slower container build, but we can use the same Dockerfile for both targets.
@@ -75,6 +76,9 @@ RUN sudo apt-get update \
     && sudo apt-get install -y \
         tzdata
 
+# Install various tools used by the build or the test suite
+# TODO add ninja-build once 1.11 is available in Ubuntu, also remove the manual
+# installation below.
 RUN sudo apt-get update \
     && sudo apt-get install -y \
         bash \
@@ -107,9 +111,6 @@ RUN sudo apt-get update \
         xz-utils \
     && sudo rm -rf /var/lib/apt/lists/*
 
-# Install various tools used by the build or the test suite
-#RUN apt-get update && apt-get install -y ninja-build python3 python3-distutils python3-psutil git gdb ccache
-# TODO add ninja-build once 1.11 is available in Ubuntu, also remove the manual installation.
 RUN <<EOF
   set -e
   wget -qO /tmp/ninja.gz https://github.com/ninja-build/ninja/releases/latest/download/ninja-linux.zip
@@ -180,7 +181,7 @@ EOF
 #                       Android Builder Base Image
 # ===----------------------------------------------------------------------===##
 
-FROM ubuntu:jammy AS android-builder-base
+FROM docker.io/library/ubuntu:jammy AS android-builder-base
 
 ARG ANDROID_CLANG_VERSION
 ARG ANDROID_CLANG_PREBUILTS_COMMIT
@@ -309,7 +310,20 @@ CMD /opt/android/container-setup.sh && buildkite-agent start
 #
 # IMAGE: ghcr.io/libcxx/actions-builder.
 #
-FROM builder-base AS actions-builder
+FROM $ACTIONS_BASE_IMAGE AS actions-builder
 
-WORKDIR /home/runner
-USER runner
+ARG GITHUB_RUNNER_VERSION
+
+RUN useradd gha -u 1001 -m -s /bin/bash
+RUN adduser gha sudo
+RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
+WORKDIR /home/gha
+USER gha
+
+ENV RUNNER_MANUALLY_TRAP_SIG=1
+ENV ACTIONS_RUNNER_PRINT_LOG_TO_STDOUT=1
+RUN mkdir actions-runner && \
+    cd actions-runner && \
+    curl -O -L https://github.com/actions/runner/releases/download/v$GITHUB_RUNNER_VERSION/actions-runner-linux-x64-$GITHUB_RUNNER_VERSION.tar.gz && \
+    tar xzf ./actions-runner-linux-x64-$GITHUB_RUNNER_VERSION.tar.gz && \
+    rm ./actions-runner-linux-x64-$GITHUB_RUNNER_VERSION.tar.gz

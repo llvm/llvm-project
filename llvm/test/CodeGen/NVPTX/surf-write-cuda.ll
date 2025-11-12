@@ -34,7 +34,6 @@ define ptx_kernel void @bar(i32 %val, i32 %idx) {
 ; CHECK-LABEL: bar(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<3>;
-; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [bar_param_0];

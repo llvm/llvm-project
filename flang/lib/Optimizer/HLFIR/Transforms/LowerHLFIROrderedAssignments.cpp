@@ -96,7 +96,7 @@ struct MaskedArrayExpr {
   /// hlfir.elemental_addr that form the elemental tree producing
   /// the expression value. hlfir.elemental that produce values
   /// used inside transformational operations are not part of this set.
-  llvm::SmallSet<mlir::Operation *, 4> elementalParts{};
+  llvm::SmallPtrSet<mlir::Operation *, 4> elementalParts{};
   /// Was generateNoneElementalPart called?
   bool noneElementalPartWasGenerated = false;
   /// Is this expression the mask expression of the outer where statement?
@@ -438,7 +438,7 @@ convertToMoldType(mlir::Location loc, fir::FirOpBuilder &builder,
     mlir::Value asExpr = hlfir::AsExprOp::create(builder, loc, input);
     if (asExpr.getType() != mold.getType())
       TODO(loc, "hlfir.expr conversion");
-    cleanups.emplace_back([=]() { b->create<hlfir::DestroyOp>(loc, asExpr); });
+    cleanups.emplace_back([=]() { hlfir::DestroyOp::create(*b, loc, asExpr); });
     return hlfir::Entity{asExpr};
   }
   if (input.isValue() && mold.isVariable()) {
@@ -446,7 +446,7 @@ convertToMoldType(mlir::Location loc, fir::FirOpBuilder &builder,
     hlfir::AssociateOp associate = hlfir::genAssociateExpr(
         loc, builder, input, mold.getFortranElementType(), ".tmp.val2ref");
     cleanups.emplace_back(
-        [=]() { b->create<hlfir::EndAssociateOp>(loc, associate); });
+        [=]() { hlfir::EndAssociateOp::create(*b, loc, associate); });
     return hlfir::Entity{associate.getBase()};
   }
   // Variable to Variable mismatch (e.g., fir.heap<T> vs fir.ref<T>), or value
