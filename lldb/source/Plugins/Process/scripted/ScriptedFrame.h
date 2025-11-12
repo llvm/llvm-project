@@ -10,19 +10,21 @@
 #define LLDB_SOURCE_PLUGINS_SCRIPTED_FRAME_H
 
 #include "ScriptedThread.h"
+#include "lldb/Interpreter/ScriptInterpreter.h"
 #include "lldb/Target/DynamicRegisterInfo.h"
 #include "lldb/Target/StackFrame.h"
-#include "lldb/lldb-forward.h"
-#include "llvm/Support/Error.h"
-#include <memory>
 #include <string>
+
+namespace lldb_private {
+class ScriptedThread;
+}
 
 namespace lldb_private {
 
 class ScriptedFrame : public lldb_private::StackFrame {
 
 public:
-  ScriptedFrame(lldb::ThreadSP thread_sp,
+  ScriptedFrame(ScriptedThread &thread,
                 lldb::ScriptedFrameInterfaceSP interface_sp,
                 lldb::user_id_t frame_idx, lldb::addr_t pc,
                 SymbolContext &sym_ctx, lldb::RegisterContextSP reg_ctx_sp,
@@ -31,29 +33,8 @@ public:
 
   ~ScriptedFrame() override;
 
-  /// Create a ScriptedFrame from a object instanciated in the script
-  /// interpreter.
-  ///
-  /// \param[in] thread_sp
-  ///     The thread this frame belongs to.
-  ///
-  /// \param[in] scripted_thread_interface_sp
-  ///     The scripted thread interface (needed for ScriptedThread
-  ///     compatibility). Can be nullptr for frames on real threads.
-  ///
-  /// \param[in] args_sp
-  ///     Arguments to pass to the frame creation.
-  ///
-  /// \param[in] script_object
-  ///     The optional script object representing this frame.
-  ///
-  /// \return
-  ///     An Expected containing the ScriptedFrame shared pointer if successful,
-  ///     otherwise an error.
   static llvm::Expected<std::shared_ptr<ScriptedFrame>>
-  Create(lldb::ThreadSP thread_sp,
-         lldb::ScriptedThreadInterfaceSP scripted_thread_interface_sp,
-         StructuredData::DictionarySP args_sp,
+  Create(ScriptedThread &thread, StructuredData::DictionarySP args_sp,
          StructuredData::Generic *script_object = nullptr);
 
   bool IsInlined() override;
