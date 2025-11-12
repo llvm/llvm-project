@@ -381,7 +381,7 @@ bool VPBlockUtils::isLatch(const VPBlockBase *VPB,
 std::optional<MemoryLocation>
 vputils::getMemoryLocation(const VPRecipeBase &R) {
   return TypeSwitch<const VPRecipeBase *, std::optional<MemoryLocation>>(&R)
-      .Case<VPWidenStoreRecipe, VPInterleaveBase, VPReplicateRecipe>(
+      .Case<VPWidenMemoryRecipe, VPInterleaveBase, VPReplicateRecipe>(
           [](auto *S) {
             MemoryLocation Loc;
             // Populate noalias metadata from VPIRMetadata.

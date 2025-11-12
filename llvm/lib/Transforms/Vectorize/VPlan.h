@@ -974,8 +974,8 @@ public:
 
   /// Get metadata of kind \p Kind. Returns nullptr if not found.
   MDNode *getMetadata(unsigned Kind) const {
-    auto It = llvm::find_if(Metadata,
-                            [Kind](const auto &P) { return P.first == Kind; });
+    auto It =
+        find_if(Metadata, [Kind](const auto &P) { return P.first == Kind; });
     return It != Metadata.end() ? It->second : nullptr;
   }
 };
