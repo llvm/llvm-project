@@ -1835,10 +1835,10 @@ static bool simplifyKnownEVL(VPlan &Plan, ElementCount VF,
         continue;
 
       VPBuilder Builder(&R);
-      VPValue *AVLZExt = Builder.createScalarZExtOrTrunc(
+      VPValue *Trunc = Builder.createScalarZExtOrTrunc(
           AVL, Type::getInt32Ty(Plan.getContext()), AVLSCEV->getType(),
           R.getDebugLoc());
-      R.getVPSingleValue()->replaceAllUsesWith(AVLZExt);
+      R.getVPSingleValue()->replaceAllUsesWith(Trunc);
       return true;
     }
   }
