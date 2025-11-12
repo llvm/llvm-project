@@ -17788,8 +17788,8 @@ ExprResult Sema::ActOnCXXReflectExpr(SourceLocation OpLoc,
 }
 
 ExprResult Sema::ActOnCXXReflectExpr(SourceLocation OpLoc,
-                                     SourceLocation ArgLoc, Decl *D) {
-  return BuildCXXReflectExpr(OpLoc, ArgLoc, D);
+                                     SourceLocation OperandLoc, Decl *D) {
+  return BuildCXXReflectExpr(OpLoc, OperandLoc, D);
 }
 
 ExprResult Sema::BuildCXXReflectExpr(SourceLocation OperatorLoc,
