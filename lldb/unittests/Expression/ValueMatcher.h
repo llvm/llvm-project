@@ -9,6 +9,9 @@
 /// This file contains the definition of the ValueMatcher class which is a used
 /// to match lldb_private::Value in gtest assert/expect macros. It also contains
 /// several helper functions to create matchers for common Value types.
+///
+/// The ValueMatcher class was created using the gtest guide found here:
+//  https://google.github.io/googletest/gmock_cook_book.html#writing-new-monomorphic-matchers
 //===----------------------------------------------------------------------===//
 
 #ifndef LLDB_UNITTESTS_EXPRESSION_VALUEMATCHER_H
