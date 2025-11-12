@@ -824,7 +824,7 @@ void AggExprEmitter::visitCXXParenListOrInitListExpr(
       CXXRecordDecl *baseRD = base.getType()->getAsCXXRecordDecl();
       Address address = cgf.getAddressOfDirectBaseInCompleteClass(
           loc, dest.getAddress(), cxxrd, baseRD,
-          /*isBaseVirtual*/ false);
+          /*baseIsVirtual=*/false);
       assert(!cir::MissingFeatures::aggValueSlotGC());
       AggValueSlot aggSlot = AggValueSlot::forAddr(
           address, Qualifiers(), AggValueSlot::IsDestructed,
