@@ -2478,9 +2478,10 @@ getProducingInsertSliceLikeOp(OpResult result,
   // tiling and retrieve the `tensor.insert_slice` operation used to construct
   // the result.
   while (loops.size() != 1) {
-    if (result.getOwner() != loops.front())
+    LoopLikeOpInterface loop = loops.front();
+    if (result.getOwner() != loop)
       return std::nullopt;
-    auto forOp = dyn_cast<scf::ForOp>(loops.front());
+    auto forOp = dyn_cast<scf::ForOp>(loop.getOperation());
     if (!forOp)
       return std::nullopt;
     auto yieldOp = cast<scf::YieldOp>(forOp.getBody()->getTerminator());
@@ -2491,9 +2492,10 @@ getProducingInsertSliceLikeOp(OpResult result,
     result = innerForResult;
     loops = loops.drop_front();
   }
-  if (result.getOwner() != loops.front())
+  LoopLikeOpInterface loop = loops.front();
+  if (result.getOwner() != loop)
     return std::nullopt;
-  auto forOp = dyn_cast<scf::ForOp>(loops.front());
+  auto forOp = dyn_cast<scf::ForOp>(loop.getOperation());
   if (!forOp)
     return std::nullopt;
   auto yieldOp = cast<scf::YieldOp>(forOp.getBody()->getTerminator());
