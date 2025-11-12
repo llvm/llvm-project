@@ -124,38 +124,44 @@ void ValueMatcher::DescribeNegationTo(std::ostream *os) const {
   *os << "value does not match";
 }
 
-testing::Matcher<Value> lldb_private::MatchScalarValue(Value::ValueType value_type,
-                                         const Scalar &expected_scalar,
-                                         Value::ContextType context_type) {
+testing::Matcher<Value>
+lldb_private::MatchScalarValue(Value::ValueType value_type,
+                               const Scalar &expected_scalar,
+                               Value::ContextType context_type) {
   return ValueMatcher(value_type, expected_scalar, context_type);
 }
 
-testing::Matcher<Value> lldb_private::MatchHostValue(Value::ValueType value_type,
-                                       const std::vector<uint8_t> &expected_bytes,
-                                       Value::ContextType context_type) {
+testing::Matcher<Value>
+lldb_private::MatchHostValue(Value::ValueType value_type,
+                             const std::vector<uint8_t> &expected_bytes,
+                             Value::ContextType context_type) {
   return ValueMatcher(value_type, expected_bytes, context_type);
 }
 
-testing::Matcher<Value> lldb_private::IsScalar(const Scalar &expected_scalar,
-                                 Value::ContextType context_type) {
+testing::Matcher<Value>
+lldb_private::IsScalar(const Scalar &expected_scalar,
+                       Value::ContextType context_type) {
   return MatchScalarValue(Value::ValueType::Scalar, expected_scalar,
                           context_type);
 }
 
-testing::Matcher<Value> lldb_private::IsLoadAddress(const Scalar &expected_address,
-                                      Value::ContextType context_type) {
+testing::Matcher<Value>
+lldb_private::IsLoadAddress(const Scalar &expected_address,
+                            Value::ContextType context_type) {
   return MatchScalarValue(Value::ValueType::LoadAddress, expected_address,
                           context_type);
 }
 
-testing::Matcher<Value> lldb_private::IsFileAddress(const Scalar &expected_address,
-                                      Value::ContextType context_type) {
+testing::Matcher<Value>
+lldb_private::IsFileAddress(const Scalar &expected_address,
+                            Value::ContextType context_type) {
   return MatchScalarValue(Value::ValueType::FileAddress, expected_address,
                           context_type);
 }
 
-testing::Matcher<Value> lldb_private::IsHostValue(const std::vector<uint8_t> &expected_bytes,
-                                    Value::ContextType context_type) {
+testing::Matcher<Value>
+lldb_private::IsHostValue(const std::vector<uint8_t> &expected_bytes,
+                          Value::ContextType context_type) {
   return MatchHostValue(Value::ValueType::HostAddress, expected_bytes,
                         context_type);
 }
@@ -167,30 +173,31 @@ Scalar lldb_private::GetScalar(unsigned bits, uint64_t value, bool sign) {
 }
 
 llvm::detail::ValueMatchesPoly<testing::Matcher<Value>>
-lldb_private::ExpectScalar(const Scalar &expected_scalar, Value::ContextType context_type) {
+lldb_private::ExpectScalar(const Scalar &expected_scalar,
+                           Value::ContextType context_type) {
   return llvm::HasValue(IsScalar(expected_scalar, context_type));
 }
 
 llvm::detail::ValueMatchesPoly<testing::Matcher<Value>>
 lldb_private::ExpectScalar(unsigned bits, uint64_t value, bool sign,
-             Value::ContextType context_type) {
+                           Value::ContextType context_type) {
   return ExpectScalar(GetScalar(bits, value, sign), context_type);
 }
 
 llvm::detail::ValueMatchesPoly<testing::Matcher<Value>>
 lldb_private::ExpectLoadAddress(const Scalar &expected_address,
-                  Value::ContextType context_type) {
+                                Value::ContextType context_type) {
   return llvm::HasValue(IsLoadAddress(expected_address, context_type));
 }
 
 llvm::detail::ValueMatchesPoly<testing::Matcher<Value>>
 lldb_private::ExpectFileAddress(const Scalar &expected_address,
-                  Value::ContextType context_type) {
+                                Value::ContextType context_type) {
   return llvm::HasValue(IsFileAddress(expected_address, context_type));
 }
 
 llvm::detail::ValueMatchesPoly<testing::Matcher<Value>>
 lldb_private::ExpectHostAddress(const std::vector<uint8_t> &expected_bytes,
-                  Value::ContextType context_type) {
+                                Value::ContextType context_type) {
   return llvm::HasValue(IsHostValue(expected_bytes, context_type));
 }
