@@ -992,7 +992,7 @@ MaterializeVariable(SwiftASTManipulatorBase::VariableInfo &variable,
                                        "transformed type is empty");
 
       actual_type =
-          ToCompilerType(transformed_type->mapTypeOutOfContext().getPointer());
+          ToCompilerType(transformed_type->mapTypeOutOfEnvironment().getPointer());
       auto swift_ast_ctx =
           actual_type.GetTypeSystem().dyn_cast_or_null<SwiftASTContext>();
       if (!swift_ast_ctx)

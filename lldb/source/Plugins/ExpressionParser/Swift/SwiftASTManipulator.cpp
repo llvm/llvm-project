@@ -530,8 +530,7 @@ void SwiftASTManipulator::FindVariableDeclarations(
 
     size_t persistent_info_location = m_variables.size();
 
-    auto type = var_decl->getDeclContext()->mapTypeIntoContext(
-        var_decl->getInterfaceType());
+    auto type = var_decl->getTypeInContext();
     m_variables.emplace_back(ToCompilerType({type.getPointer()}), name,
                              var_decl);
     found_declarations.push_back(persistent_info_location);
@@ -859,8 +858,7 @@ GetPatternBindingForVarDecl(swift::VarDecl *var_decl,
       }
     }
   }
-  swift::Type type = containing_context->mapTypeIntoContext(
-      var_decl->getInterfaceType());
+  swift::Type type = var_decl->getTypeInContext();
   swift::TypedPattern *typed_pattern =
     swift::TypedPattern::createImplicit(ast_context, named_pattern, type);
 
@@ -947,7 +945,7 @@ llvm::Expected<swift::Type> SwiftASTManipulator::GetSwiftTypeForVariable(
   }
 
   if (swift_type->hasArchetype())
-    swift_type = swift_type->mapTypeOutOfContext();
+    swift_type = swift_type->mapTypeOutOfEnvironment();
 
   return {swift_type};
 }
