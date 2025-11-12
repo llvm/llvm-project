@@ -2076,7 +2076,7 @@ bool VPlanTransforms::adjustFixedOrderRecurrences(VPlan &Plan,
           B.createNaryOp(VPInstruction::ExtractLane,
                          {PenultimateIndex, FOR->getBackedgeValue()});
       VPValue *LastPrevIter =
-          B.createNaryOp(VPInstruction::ExtractLastElement, {FOR});
+          B.createNaryOp(VPInstruction::ExtractLastElement, FOR);
       VPValue *Cmp = B.createICmp(CmpInst::ICMP_EQ, LastActiveLane, Zero);
       VPValue *Sel = B.createSelect(Cmp, LastPrevIter, PenultimateLastIter);
       cast<VPInstruction>(U)->replaceAllUsesWith(Sel);

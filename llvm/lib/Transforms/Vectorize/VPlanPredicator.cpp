@@ -313,7 +313,6 @@ VPlanTransforms::introduceMasksAndLinearize(VPlan &Plan, bool FoldTail) {
     assert(EB->getSinglePredecessor() == Plan.getMiddleBlock() &&
            "the exit block must have middle block as single predecessor");
 
-    VPValue *LastActiveLane = nullptr;
     VPBuilder B(Plan.getMiddleBlock()->getTerminator());
     for (auto &P : EB->phis()) {
       auto *ExitIRI = cast<VPIRPhi>(&P);
@@ -322,13 +321,10 @@ VPlanTransforms::introduceMasksAndLinearize(VPlan &Plan, bool FoldTail) {
       if (!match(Inc, m_ExtractLastElement(m_VPValue(Op))))
         continue;
 
-      if (!LastActiveLane) {
-        // Compute the index of the last active lane.
-        VPValue *HeaderMask = Predicator.getBlockInMask(
-            Plan.getVectorLoopRegion()->getEntryBasicBlock());
-        LastActiveLane =
-            B.createNaryOp(VPInstruction::LastActiveLane, {HeaderMask});
-      }
+      // Compute the index of the last active lane.
+      VPValue *HeaderMask = Predicator.getBlockInMask(Header);
+      VPValue *LastActiveLane =
+          B.createNaryOp(VPInstruction::LastActiveLane, HeaderMask);
       auto *Ext =
           B.createNaryOp(VPInstruction::ExtractLane, {LastActiveLane, Op});
       Inc->replaceAllUsesWith(Ext);

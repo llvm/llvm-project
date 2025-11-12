@@ -238,7 +238,7 @@ bool VPlanVerifier::verifyLastActiveLaneRecipe(
   const VPlan &Plan = *LastActiveLane.getParent()->getPlan();
   // All operands must be prefix-mask. Currently we check for header masks or
   // EVL-derived masks, as those are currently the only operands in practice,
-  // but this may need updating in the future..
+  // but this may need updating in the future.
   for (VPValue *Op : LastActiveLane.operands()) {
     if (vputils::isHeaderMask(Op, Plan))
       continue;
