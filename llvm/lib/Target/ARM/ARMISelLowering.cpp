@@ -20142,7 +20142,7 @@ bool ARMTargetLowering::targetShrinkDemandedConstant(
   assert(VT == MVT::i32 && "Unexpected integer type");
 
   // Exit early if we demand all bits.
-  if (DemandedBits.popcount() == 32)
+  if (DemandedBits.isAllOnes())
     return false;
 
   // Only optimize AND for now.
