@@ -84,7 +84,8 @@ FunctionPass *createX86AvoidStoreForwardingBlocks();
 FunctionPass *createX86FlagsCopyLoweringPass();
 
 /// Return a pass that expands DynAlloca pseudo-instructions.
-class X86DynAllocaExpanderPass : public PassInfoMixin<X86DynAllocaExpanderPass> {
+class X86DynAllocaExpanderPass
+    : public PassInfoMixin<X86DynAllocaExpanderPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
