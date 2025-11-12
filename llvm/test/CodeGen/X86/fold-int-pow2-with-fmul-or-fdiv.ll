@@ -125,7 +125,7 @@ define <4 x float> @fmul_pow2_ldexp_4xfloat(<4 x i32> %i) {
 ; CHECK-SKX:       # %bb.0:
 ; CHECK-SKX-NEXT:    vcvtdq2ps %xmm0, %xmm0
 ; CHECK-SKX-NEXT:    vbroadcastss {{.*#+}} xmm1 = [9.0E+0,9.0E+0,9.0E+0,9.0E+0]
-; CHECK-SKX-NEXT:    vscalefps %xmm0, %xmm1, %xmm0
+; CHECK-SKX-NEXT:    vscalefss %xmm0, %xmm1, %xmm0
 ; CHECK-SKX-NEXT:    retq
   %r = call <4 x float> @llvm.ldexp.v4f32.v4i32(<4 x float> <float 9.000000e+00, float 9.000000e+00, float 9.000000e+00, float 9.000000e+00>, <4 x i32> %i)
   ret <4 x float> %r
@@ -576,109 +576,15 @@ define <8 x half> @fmul_pow2_ldexp_8xhalf(<8 x i16> %i) {
 ; CHECK-AVX2-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-AVX2-NEXT:    retq
 ;
-; CHECK-ONLY-AVX512F-LABEL: fmul_pow2_ldexp_8xhalf:
-; CHECK-ONLY-AVX512F:       # %bb.0:
-; CHECK-ONLY-AVX512F-NEXT:    vpextrw $7, %xmm0, %eax
-; CHECK-ONLY-AVX512F-NEXT:    cwtl
-; CHECK-ONLY-AVX512F-NEXT:    vcvtsi2ss %eax, %xmm15, %xmm2
-; CHECK-ONLY-AVX512F-NEXT:    vmovss {{.*#+}} xmm1 = [8.192E+3,0.0E+0,0.0E+0,0.0E+0]
-; CHECK-ONLY-AVX512F-NEXT:    vscalefss %xmm2, %xmm1, %xmm2
-; CHECK-ONLY-AVX512F-NEXT:    vcvtps2ph $4, %xmm2, %xmm2
-; CHECK-ONLY-AVX512F-NEXT:    vpextrw $6, %xmm0, %eax
-; CHECK-ONLY-AVX512F-NEXT:    cwtl
-; CHECK-ONLY-AVX512F-NEXT:    vcvtsi2ss %eax, %xmm15, %xmm3
-; CHECK-ONLY-AVX512F-NEXT:    vscalefss %xmm3, %xmm1, %xmm3
-; CHECK-ONLY-AVX512F-NEXT:    vcvtps2ph $4, %xmm3, %xmm3
-; CHECK-ONLY-AVX512F-NEXT:    vpunpcklwd {{.*#+}} xmm2 = xmm3[0],xmm2[0],xmm3[1],xmm2[1],xmm3[2],xmm2[2],xmm3[3],xmm2[3]
-; CHECK-ONLY-AVX512F-NEXT:    vpextrw $5, %xmm0, %eax
-; CHECK-ONLY-AVX512F-NEXT:    cwtl
-; CHECK-ONLY-AVX512F-NEXT:    vcvtsi2ss %eax, %xmm15, %xmm3
-; CHECK-ONLY-AVX512F-NEXT:    vscalefss %xmm3, %xmm1, %xmm3
-; CHECK-ONLY-AVX512F-NEXT:    vcvtps2ph $4, %xmm3, %xmm3
-; CHECK-ONLY-AVX512F-NEXT:    vpextrw $4, %xmm0, %eax
-; CHECK-ONLY-AVX512F-NEXT:    cwtl
-; CHECK-ONLY-AVX512F-NEXT:    vcvtsi2ss %eax, %xmm15, %xmm4
-; CHECK-ONLY-AVX512F-NEXT:    vscalefss %xmm4, %xmm1, %xmm4
-; CHECK-ONLY-AVX512F-NEXT:    vcvtps2ph $4, %xmm4, %xmm4
-; CHECK-ONLY-AVX512F-NEXT:    vpunpcklwd {{.*#+}} xmm3 = xmm4[0],xmm3[0],xmm4[1],xmm3[1],xmm4[2],xmm3[2],xmm4[3],xmm3[3]
-; CHECK-ONLY-AVX512F-NEXT:    vpunpckldq {{.*#+}} xmm2 = xmm3[0],xmm2[0],xmm3[1],xmm2[1]
-; CHECK-ONLY-AVX512F-NEXT:    vpextrw $3, %xmm0, %eax
-; CHECK-ONLY-AVX512F-NEXT:    cwtl
-; CHECK-ONLY-AVX512F-NEXT:    vcvtsi2ss %eax, %xmm15, %xmm3
-; CHECK-ONLY-AVX512F-NEXT:    vscalefss %xmm3, %xmm1, %xmm3
-; CHECK-ONLY-AVX512F-NEXT:    vcvtps2ph $4, %xmm3, %xmm3
-; CHECK-ONLY-AVX512F-NEXT:    vpextrw $2, %xmm0, %eax
-; CHECK-ONLY-AVX512F-NEXT:    cwtl
-; CHECK-ONLY-AVX512F-NEXT:    vcvtsi2ss %eax, %xmm15, %xmm4
-; CHECK-ONLY-AVX512F-NEXT:    vscalefss %xmm4, %xmm1, %xmm4
-; CHECK-ONLY-AVX512F-NEXT:    vcvtps2ph $4, %xmm4, %xmm4
-; CHECK-ONLY-AVX512F-NEXT:    vpunpcklwd {{.*#+}} xmm3 = xmm4[0],xmm3[0],xmm4[1],xmm3[1],xmm4[2],xmm3[2],xmm4[3],xmm3[3]
-; CHECK-ONLY-AVX512F-NEXT:    vpextrw $1, %xmm0, %eax
-; CHECK-ONLY-AVX512F-NEXT:    cwtl
-; CHECK-ONLY-AVX512F-NEXT:    vcvtsi2ss %eax, %xmm15, %xmm4
-; CHECK-ONLY-AVX512F-NEXT:    vscalefss %xmm4, %xmm1, %xmm4
-; CHECK-ONLY-AVX512F-NEXT:    vcvtps2ph $4, %xmm4, %xmm4
-; CHECK-ONLY-AVX512F-NEXT:    vmovd %xmm0, %eax
-; CHECK-ONLY-AVX512F-NEXT:    cwtl
-; CHECK-ONLY-AVX512F-NEXT:    vcvtsi2ss %eax, %xmm15, %xmm0
-; CHECK-ONLY-AVX512F-NEXT:    vscalefss %xmm0, %xmm1, %xmm0
-; CHECK-ONLY-AVX512F-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; CHECK-ONLY-AVX512F-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm0[0],xmm4[0],xmm0[1],xmm4[1],xmm0[2],xmm4[2],xmm0[3],xmm4[3]
-; CHECK-ONLY-AVX512F-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm3[0],xmm0[1],xmm3[1]
-; CHECK-ONLY-AVX512F-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm2[0]
-; CHECK-ONLY-AVX512F-NEXT:    retq
-;
-; CHECK-SKX-LABEL: fmul_pow2_ldexp_8xhalf:
-; CHECK-SKX:       # %bb.0:
-; CHECK-SKX-NEXT:    vpextrw $7, %xmm0, %eax
-; CHECK-SKX-NEXT:    cwtl
-; CHECK-SKX-NEXT:    vcvtsi2ss %eax, %xmm15, %xmm1
-; CHECK-SKX-NEXT:    vmovss {{.*#+}} xmm2 = [8.192E+3,0.0E+0,0.0E+0,0.0E+0]
-; CHECK-SKX-NEXT:    vscalefss %xmm1, %xmm2, %xmm1
-; CHECK-SKX-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
-; CHECK-SKX-NEXT:    vpextrw $6, %xmm0, %eax
-; CHECK-SKX-NEXT:    cwtl
-; CHECK-SKX-NEXT:    vcvtsi2ss %eax, %xmm15, %xmm3
-; CHECK-SKX-NEXT:    vscalefss %xmm3, %xmm2, %xmm3
-; CHECK-SKX-NEXT:    vcvtps2ph $4, %xmm3, %xmm3
-; CHECK-SKX-NEXT:    vpunpcklwd {{.*#+}} xmm1 = xmm3[0],xmm1[0],xmm3[1],xmm1[1],xmm3[2],xmm1[2],xmm3[3],xmm1[3]
-; CHECK-SKX-NEXT:    vpextrw $5, %xmm0, %eax
-; CHECK-SKX-NEXT:    cwtl
-; CHECK-SKX-NEXT:    vcvtsi2ss %eax, %xmm15, %xmm3
-; CHECK-SKX-NEXT:    vscalefss %xmm3, %xmm2, %xmm3
-; CHECK-SKX-NEXT:    vcvtps2ph $4, %xmm3, %xmm3
-; CHECK-SKX-NEXT:    vpextrw $4, %xmm0, %eax
-; CHECK-SKX-NEXT:    cwtl
-; CHECK-SKX-NEXT:    vcvtsi2ss %eax, %xmm15, %xmm4
-; CHECK-SKX-NEXT:    vscalefss %xmm4, %xmm2, %xmm4
-; CHECK-SKX-NEXT:    vcvtps2ph $4, %xmm4, %xmm4
-; CHECK-SKX-NEXT:    vpunpcklwd {{.*#+}} xmm3 = xmm4[0],xmm3[0],xmm4[1],xmm3[1],xmm4[2],xmm3[2],xmm4[3],xmm3[3]
-; CHECK-SKX-NEXT:    vpunpckldq {{.*#+}} xmm1 = xmm3[0],xmm1[0],xmm3[1],xmm1[1]
-; CHECK-SKX-NEXT:    vpextrw $3, %xmm0, %eax
-; CHECK-SKX-NEXT:    cwtl
-; CHECK-SKX-NEXT:    vcvtsi2ss %eax, %xmm15, %xmm3
-; CHECK-SKX-NEXT:    vscalefss %xmm3, %xmm2, %xmm3
-; CHECK-SKX-NEXT:    vcvtps2ph $4, %xmm3, %xmm3
-; CHECK-SKX-NEXT:    vpextrw $2, %xmm0, %eax
-; CHECK-SKX-NEXT:    cwtl
-; CHECK-SKX-NEXT:    vcvtsi2ss %eax, %xmm15, %xmm4
-; CHECK-SKX-NEXT:    vscalefss %xmm4, %xmm2, %xmm4
-; CHECK-SKX-NEXT:    vcvtps2ph $4, %xmm4, %xmm4
-; CHECK-SKX-NEXT:    vpunpcklwd {{.*#+}} xmm3 = xmm4[0],xmm3[0],xmm4[1],xmm3[1],xmm4[2],xmm3[2],xmm4[3],xmm3[3]
-; CHECK-SKX-NEXT:    vpextrw $1, %xmm0, %eax
-; CHECK-SKX-NEXT:    cwtl
-; CHECK-SKX-NEXT:    vcvtsi2ss %eax, %xmm15, %xmm4
-; CHECK-SKX-NEXT:    vscalefss %xmm4, %xmm2, %xmm4
-; CHECK-SKX-NEXT:    vcvtps2ph $4, %xmm4, %xmm4
-; CHECK-SKX-NEXT:    vmovd %xmm0, %eax
-; CHECK-SKX-NEXT:    cwtl
-; CHECK-SKX-NEXT:    vcvtsi2ss %eax, %xmm15, %xmm0
-; CHECK-SKX-NEXT:    vscalefss %xmm0, %xmm2, %xmm0
-; CHECK-SKX-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; CHECK-SKX-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm0[0],xmm4[0],xmm0[1],xmm4[1],xmm0[2],xmm4[2],xmm0[3],xmm4[3]
-; CHECK-SKX-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm3[0],xmm0[1],xmm3[1]
-; CHECK-SKX-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; CHECK-SKX-NEXT:    retq
+; CHECK-AVX512F-LABEL: fmul_pow2_ldexp_8xhalf:
+; CHECK-AVX512F:       # %bb.0:
+; CHECK-AVX512F-NEXT:    vbroadcastss {{.*#+}} ymm1 = [8.192E+3,8.192E+3,8.192E+3,8.192E+3,8.192E+3,8.192E+3,8.192E+3,8.192E+3]
+; CHECK-AVX512F-NEXT:    vpmovsxwd %xmm0, %ymm0
+; CHECK-AVX512F-NEXT:    vcvtdq2ps %zmm0, %zmm0
+; CHECK-AVX512F-NEXT:    vscalefps %zmm0, %zmm1, %zmm0
+; CHECK-AVX512F-NEXT:    vcvtps2ph $4, %ymm0, %xmm0
+; CHECK-AVX512F-NEXT:    vzeroupper
+; CHECK-AVX512F-NEXT:    retq
   %r = call <8 x half> @llvm.ldexp.v8f16.v8i16(<8 x half> <half 0xH7000, half 0xH7000, half 0xH7000, half 0xH7000, half 0xH7000, half 0xH7000, half 0xH7000, half 0xH7000>, <8 x i16> %i)
   ret <8 x half> %r
 }
@@ -1812,5 +1718,3 @@ define x86_fp80 @pr128528(i1 %cond) {
   %mul = fmul x86_fp80 %conv, 0xK4007D055555555555800
   ret x86_fp80 %mul
 }
-;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; CHECK-AVX512F: {{.*}}
