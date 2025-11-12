@@ -1392,9 +1392,10 @@ bool SIPeepholeSDWA::strengthReduceCSelect64(MachineFunction &MF) {
 
       BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(AMDGPU::S_CSELECT_B32),
               MustBeVREADFIRSTLANE->getOperand(0).getReg())
-          .addImm(MustBeVCNDMASK->getOperand(CSelectZeroOpIdx == 1 ? 2 : 1)
-                      .getImm())
-          .addImm(MustBeVCNDMASK->getOperand(CSelectZeroOpIdx).getImm())
+          .addImm(
+              MustBeVCNDMASK->getOperand((CSelectZeroOpIdx == 1 ? 2 : 1) + 2)
+                  .getImm())
+          .addImm(MustBeVCNDMASK->getOperand(CSelectZeroOpIdx + 2).getImm())
           .addReg(AMDGPU::SCC, RegState::Implicit);
 
       MustBeVREADFIRSTLANE->eraseFromParent();
