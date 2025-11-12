@@ -282,22 +282,32 @@ static FastMathFlags collectMinMaxFMF(Value *V) {
 static std::optional<FastMathFlags>
 hasRequiredFastMathFlags(FPMathOperator *FPOp, RecurKind &RK,
                          FastMathFlags FuncFMF) {
-  bool HasRequiredFMF =
-      (FuncFMF.noNaNs() && FuncFMF.noSignedZeros()) ||
-      (FPOp && FPOp->hasNoNaNs() && FPOp->hasNoSignedZeros()) ||
-      RK == RecurKind::FMinimum || RK == RecurKind::FMaximum ||
-      RK == RecurKind::FMinimumNum || RK == RecurKind::FMaximumNum;
-  if (!HasRequiredFMF) {
-    if (RK == RecurKind::FMax &&
-        match(FPOp, m_Intrinsic<Intrinsic::maxnum>(m_Value(), m_Value())))
-      RK = RecurKind::FMaxNum;
-    else if (RK == RecurKind::FMin &&
-             match(FPOp, m_Intrinsic<Intrinsic::minnum>(m_Value(), m_Value())))
-      RK = RecurKind::FMinNum;
-    else
+  bool HasRequiredFMF = (FuncFMF.noNaNs() && FuncFMF.noSignedZeros()) ||
+                        (FPOp && FPOp->hasNoNaNs() && FPOp->hasNoSignedZeros());
+  if (HasRequiredFMF)
+    return collectMinMaxFMF(FPOp);
+
+  switch (RK) {
+  case RecurKind::FMinimum:
+  case RecurKind::FMaximum:
+  case RecurKind::FMinimumNum:
+  case RecurKind::FMaximumNum:
+    break;
+
+  case RecurKind::FMax:
+    if (!match(FPOp, m_Intrinsic<Intrinsic::maxnum>(m_Value(), m_Value())))
       return std::nullopt;
+    RK = RecurKind::FMaxNum;
+    break;
+  case RecurKind::FMin:
+    if (!match(FPOp, m_Intrinsic<Intrinsic::minnum>(m_Value(), m_Value())))
+      return std::nullopt;
+    RK = RecurKind::FMinNum;
+    break;
+  default:
+    return std::nullopt;
   }
-  return {collectMinMaxFMF(FPOp)};
+  return collectMinMaxFMF(FPOp);
 }
 
 static RecurrenceDescriptor getMinMaxRecurrence(PHINode *Phi, Loop *TheLoop,
@@ -312,7 +322,7 @@ static RecurrenceDescriptor getMinMaxRecurrence(PHINode *Phi, Loop *TheLoop,
   if ((!Ty->isIntegerTy() && !Ty->isFloatingPointTy()) || !Latch)
     return {};
 
-  auto Matches = [](Value *V, Value *&A, Value *&B) -> RecurKind {
+  auto GetMinMaxRK = [](Value *V, Value *&A, Value *&B) -> RecurKind {
     if (match(V, m_UMin(m_Value(A), m_Value(B))))
       return RecurKind::UMin;
     if (match(V, m_UMax(m_Value(A), m_Value(B))))
@@ -343,8 +353,8 @@ static RecurrenceDescriptor getMinMaxRecurrence(PHINode *Phi, Loop *TheLoop,
   RecurKind RK = RecurKind::None;
   // Identify min/max recurrences by walking the def-use chains upwards,
   // starting at RdxNext.
-  SmallVector<Value *> WorkList = {RdxNext};
-  SmallPtrSet<Value *, 8> Chain = {Phi};
+  SmallVector<Value *> WorkList({RdxNext});
+  SmallPtrSet<Value *, 8> Chain({Phi});
   while (!WorkList.empty()) {
     Value *Cur = WorkList.pop_back_val();
     if (!Chain.insert(Cur).second)
@@ -358,7 +368,7 @@ static RecurrenceDescriptor getMinMaxRecurrence(PHINode *Phi, Loop *TheLoop,
       continue;
     }
     Value *A, *B;
-    RecurKind CurRK = Matches(Cur, A, B);
+    RecurKind CurRK = GetMinMaxRK(Cur, A, B);
     if (CurRK == RecurKind::None || (RK != RecurKind::None && CurRK != RK))
       return {};
 
@@ -366,11 +376,11 @@ static RecurrenceDescriptor getMinMaxRecurrence(PHINode *Phi, Loop *TheLoop,
     // For floating point recurrences, check we have the required fast-math
     // flags.
     if (RecurrenceDescriptor::isFPMinMaxRecurrenceKind(CurRK)) {
-      if (auto CurFMF =
-              hasRequiredFastMathFlags(cast<FPMathOperator>(Cur), RK, FuncFMF))
-        FMF &= *CurFMF;
-      else
+      auto CurFMF =
+          hasRequiredFastMathFlags(cast<FPMathOperator>(Cur), RK, FuncFMF);
+      if (!CurFMF)
         return {};
+      FMF &= *CurFMF;
     }
 
     Chain.insert(I);
@@ -385,8 +395,8 @@ static RecurrenceDescriptor getMinMaxRecurrence(PHINode *Phi, Loop *TheLoop,
     Value *X, *Y;
     auto *IA = dyn_cast<Instruction>(A);
     auto *IB = dyn_cast<Instruction>(B);
-    bool AMatches = IA && TheLoop->contains(IA) && Matches(A, X, Y) == RK;
-    bool BMatches = IB && TheLoop->contains(IB) && Matches(B, X, Y) == RK;
+    bool AMatches = IA && TheLoop->contains(IA) && GetMinMaxRK(A, X, Y) == RK;
+    bool BMatches = IB && TheLoop->contains(IB) && GetMinMaxRK(B, X, Y) == RK;
     if (AMatches == BMatches) // Both or neither match
       return {};
     WorkList.push_back(AMatches ? A : B);
