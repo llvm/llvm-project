@@ -12,7 +12,7 @@
 
 // class multimap
 
-// multimap(multimap&& m);
+// multimap(multimap&& m); // constexpr since C++26
 
 #include <map>
 #include <cassert>
@@ -22,7 +22,8 @@
 #include "test_allocator.h"
 #include "min_allocator.h"
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26
+bool test() {
   typedef std::pair<const int, double> V;
   {
     typedef test_less<int> C;
@@ -127,5 +128,12 @@ int main(int, char**) {
     assert(std::distance(mo.begin(), mo.end()) == 0);
   }
 
-  return 0;
+  return true;
+}
+int main(int, char**) {
+  test();
+
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 }

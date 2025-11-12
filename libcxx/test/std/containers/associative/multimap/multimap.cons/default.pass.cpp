@@ -10,7 +10,7 @@
 
 // class multimap
 
-// multimap();
+// multimap(); // constexpr since C++26
 
 #include <map>
 #include <cassert>
@@ -18,7 +18,8 @@
 #include "test_macros.h"
 #include "min_allocator.h"
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26
+bool test() {
   {
     std::multimap<int, double> m;
     assert(m.empty());
@@ -51,5 +52,12 @@ int main(int, char**) {
   }
 #endif
 
-  return 0;
+  return true;
+}
+int main(int, char**) {
+  test();
+
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 }

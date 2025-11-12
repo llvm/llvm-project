@@ -39,7 +39,8 @@ using P   = std::pair<int, long>;
 using PC  = std::pair<const int, long>;
 using PCC = std::pair<const int, const long>;
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26
+bool test() {
   {
     const PCC arr[] = {{1, 1L}, {2, 2L}, {1, 1L}, {INT_MAX, 1L}, {3, 1L}};
     std::multimap m(std::begin(arr), std::end(arr));
@@ -103,5 +104,12 @@ int main(int, char**) {
     assert(m.get_allocator().get_id() == 45);
   }
 
-  return 0;
+  return true;
+}
+int main(int, char**) {
+  test();
+
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 }

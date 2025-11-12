@@ -10,7 +10,7 @@
 
 // class multimap
 
-// size_type max_size() const;
+// size_type max_size() const; // constexpr since C++26
 
 #include <cassert>
 #include <limits>
@@ -20,7 +20,8 @@
 #include "test_allocator.h"
 #include "test_macros.h"
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26
+bool test() {
   typedef std::pair<const int, int> KV;
   {
     typedef limited_allocator<KV, 10> A;
@@ -45,5 +46,13 @@ int main(int, char**) {
     assert(c.max_size() <= alloc_max_size(c.get_allocator()));
   }
 
+  return true;
+}
+int main(int, char**) {
+  test();
+
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
   return 0;
 }

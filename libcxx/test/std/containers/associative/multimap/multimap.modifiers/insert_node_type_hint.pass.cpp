@@ -12,26 +12,26 @@
 
 // class multimap
 
-// iterator insert(const_iterator hint, node_type&&);
+// iterator insert(const_iterator hint, node_type&&); // constexpr since C++26
 
 #include <map>
 #include "test_macros.h"
 #include "min_allocator.h"
 
 template <class Container>
-typename Container::node_type
-node_factory(typename Container::key_type const& key, typename Container::mapped_type const& mapped) {
-  static Container c;
+TEST_CONSTEXPR_CXX26 typename Container::node_type
+node_factory(Container& c, typename Container::key_type const& key, typename Container::mapped_type const& mapped) {
   auto it = c.insert({key, mapped});
   return c.extract(it);
 }
 
 template <class Container>
-void test(Container& c) {
+TEST_CONSTEXPR_CXX26 void test(Container& c) {
   auto* nf = &node_factory<Container>;
+  Container c2;
 
   for (int i = 0; i != 10; ++i) {
-    typename Container::node_type node = nf(i, i + 1);
+    auto node = nf(c2, i, i + 1);
     assert(!node.empty());
     std::size_t prev = c.size();
     auto it          = c.insert(c.end(), std::move(node));
@@ -50,11 +50,20 @@ void test(Container& c) {
   }
 }
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26
+bool test() {
   std::multimap<int, int> m;
   test(m);
   std::multimap<int, int, std::less<int>, min_allocator<std::pair<const int, int>>> m2;
   test(m2);
 
+  return true;
+}
+int main(int, char**) {
+  test();
+
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
   return 0;
 }

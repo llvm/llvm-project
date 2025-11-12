@@ -23,6 +23,11 @@
 
 int main(int, char**) {
   assert(test_ordered_map_container_spaceship<std::map>());
-  // `std::map` is not constexpr, so no `static_assert` test here.
+  // `std::map` is not constexpr before C++26
+
+#if TEST_STD_VER >= 26
+  static_assert(test_ordered_map_container_spaceship<std::map>());
+#endif
+
   return 0;
 }
