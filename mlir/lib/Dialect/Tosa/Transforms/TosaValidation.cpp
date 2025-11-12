@@ -655,6 +655,7 @@ LogicalResult TosaValidation::levelCheckRanksAndSizes(Operation *op) {
   CHECK_RANKS_AND_SIZES(VariableRead);
   // Shape Operators
   CHECK_RANKS_AND_SIZES(AddShape);
+  CHECK_RANKS_AND_SIZES(Dim);
   CHECK_RANKS_AND_SIZES(DivCeilShape);
   CHECK_RANKS_AND_SIZES(DivFloorShape);
   CHECK_RANKS_AND_SIZES(MulShape);
