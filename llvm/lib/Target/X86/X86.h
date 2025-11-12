@@ -108,7 +108,6 @@ FunctionPass *createX86LowerTileCopyPass();
 class X86AvoidTrailingCallPass
     : public PassInfoMixin<X86AvoidTrailingCallPass> {
 public:
-  X86AvoidTrailingCallPass() = default;
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
   static bool isRequired() { return true; }
