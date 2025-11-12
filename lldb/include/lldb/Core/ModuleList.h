@@ -512,7 +512,10 @@ public:
   void Swap(ModuleList &other);
 
   /// For each module in this ModuleList, preload its symbols.
-  void PreloadSymbols() const;
+  ///
+  /// \param[in] parallelize
+  ///     If true, all modules will be preloaded in parallel.
+  void PreloadSymbols(bool parallelize) const;
 
 protected:
   // Class typedefs.

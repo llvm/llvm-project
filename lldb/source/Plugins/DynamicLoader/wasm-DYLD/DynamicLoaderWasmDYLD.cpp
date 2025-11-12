@@ -67,12 +67,13 @@ ThreadPlanSP DynamicLoaderWasmDYLD::GetStepThroughTrampolinePlan(Thread &thread,
 
 lldb::ModuleSP DynamicLoaderWasmDYLD::LoadModuleAtAddress(
     const lldb_private::FileSpec &file, lldb::addr_t link_map_addr,
-    lldb::addr_t base_addr, bool base_addr_is_offset,
-    bool defer_module_preload) {
+    lldb::addr_t base_addr, bool base_addr_is_offset) {
   if (ModuleSP module_sp = DynamicLoader::LoadModuleAtAddress(
-          file, link_map_addr, base_addr, base_addr_is_offset,
-          defer_module_preload))
+          file, link_map_addr, base_addr, base_addr_is_offset)) {
+    if (m_process->GetTarget().GetPreloadSymbols())
+      module_sp->PreloadSymbols();
     return module_sp;
+  }
 
   if (ModuleSP module_sp = m_process->ReadModuleFromMemory(file, base_addr)) {
     UpdateLoadedSections(module_sp, link_map_addr, base_addr, false);

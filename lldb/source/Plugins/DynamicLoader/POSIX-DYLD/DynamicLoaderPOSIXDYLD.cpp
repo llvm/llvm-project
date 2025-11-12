@@ -453,8 +453,7 @@ void DynamicLoaderPOSIXDYLD::RefreshModules() {
     // exists for the duration of this call in `m_rendezvous`.
     auto load_module_fn =
         [this, &loaded_modules, &new_modules,
-         &interpreter_module_mutex](const DYLDRendezvous::SOEntry &so_entry,
-                                    bool defer_module_preload) {
+         &interpreter_module_mutex](const DYLDRendezvous::SOEntry &so_entry) {
           // Don't load a duplicate copy of ld.so if we have already loaded it
           // earlier in LoadInterpreterModule. If we instead loaded then
           // unloaded it later, the section information for ld.so would be
@@ -471,7 +470,7 @@ void DynamicLoaderPOSIXDYLD::RefreshModules() {
 
           ModuleSP module_sp = LoadModuleAtAddress(
               so_entry.file_spec, so_entry.link_addr, so_entry.base_addr,
-              true /* base_addr_is_offset */, defer_module_preload);
+              true /* base_addr_is_offset */);
           if (!module_sp.get())
             return;
 
@@ -505,15 +504,16 @@ void DynamicLoaderPOSIXDYLD::RefreshModules() {
     if (m_process->GetTarget().GetParallelModuleLoad()) {
       llvm::ThreadPoolTaskGroup task_group(Debugger::GetThreadPool());
       for (; I != E; ++I)
-        task_group.async(load_module_fn, *I, true /* defer_module_preload */);
+        task_group.async(load_module_fn, *I);
       task_group.wait();
-
-      if (m_process->GetTarget().GetPreloadSymbols())
-        new_modules.PreloadSymbols();
     } else {
       for (; I != E; ++I)
-        load_module_fn(*I, false /* defer_module_preload */);
+        load_module_fn(*I);
     }
+
+    if (m_process->GetTarget().GetPreloadSymbols())
+      new_modules.PreloadSymbols(
+          m_process->GetTarget().GetParallelModuleLoad());
 
     m_process->GetTarget().ModulesDidLoad(new_modules);
   }
@@ -649,12 +649,12 @@ ModuleSP DynamicLoaderPOSIXDYLD::LoadInterpreterModule() {
   return nullptr;
 }
 
-ModuleSP DynamicLoaderPOSIXDYLD::LoadModuleAtAddress(
-    const FileSpec &file, addr_t link_map_addr, addr_t base_addr,
-    bool base_addr_is_offset, bool defer_module_preload) {
+ModuleSP DynamicLoaderPOSIXDYLD::LoadModuleAtAddress(const FileSpec &file,
+                                                     addr_t link_map_addr,
+                                                     addr_t base_addr,
+                                                     bool base_addr_is_offset) {
   if (ModuleSP module_sp = DynamicLoader::LoadModuleAtAddress(
-          file, link_map_addr, base_addr, base_addr_is_offset,
-          defer_module_preload))
+          file, link_map_addr, base_addr, base_addr_is_offset))
     return module_sp;
 
   // This works around an dynamic linker "bug" on android <= 23, where the
@@ -673,7 +673,7 @@ ModuleSP DynamicLoaderPOSIXDYLD::LoadModuleAtAddress(
         !(memory_info.GetName().IsEmpty())) {
       if (ModuleSP module_sp = DynamicLoader::LoadModuleAtAddress(
               FileSpec(memory_info.GetName().GetStringRef()), link_map_addr,
-              base_addr, base_addr_is_offset, defer_module_preload))
+              base_addr, base_addr_is_offset))
         return module_sp;
     }
   }
@@ -709,11 +709,9 @@ void DynamicLoaderPOSIXDYLD::LoadAllCurrentModules() {
       module_names, m_process->GetTarget().GetArchitecture().GetTriple());
 
   auto load_module_fn = [this, &module_list,
-                         &log](const DYLDRendezvous::SOEntry &so_entry,
-                               bool defer_module_preload) {
-    ModuleSP module_sp =
-        LoadModuleAtAddress(so_entry.file_spec, so_entry.link_addr,
-                            so_entry.base_addr, true, defer_module_preload);
+                         &log](const DYLDRendezvous::SOEntry &so_entry) {
+    ModuleSP module_sp = LoadModuleAtAddress(
+        so_entry.file_spec, so_entry.link_addr, so_entry.base_addr, true);
     if (module_sp.get()) {
       LLDB_LOG(log, "LoadAllCurrentModules loading module: {0}",
                so_entry.file_spec.GetFilename());
@@ -730,16 +728,14 @@ void DynamicLoaderPOSIXDYLD::LoadAllCurrentModules() {
   if (m_process->GetTarget().GetParallelModuleLoad()) {
     llvm::ThreadPoolTaskGroup task_group(Debugger::GetThreadPool());
     for (I = m_rendezvous.begin(), E = m_rendezvous.end(); I != E; ++I)
-      task_group.async(load_module_fn, *I, true /* defer_module_preload */);
+      task_group.async(load_module_fn, *I);
     task_group.wait();
+  } else
+    for (I = m_rendezvous.begin(), E = m_rendezvous.end(); I != E; ++I)
+      load_module_fn(*I);
 
-    if (m_process->GetTarget().GetPreloadSymbols())
-      module_list.PreloadSymbols();
-  } else {
-    for (I = m_rendezvous.begin(), E = m_rendezvous.end(); I != E; ++I) {
-      load_module_fn(*I, false /* defer_module_preload */);
-    }
-  }
+  if (m_process->GetTarget().GetPreloadSymbols())
+    module_list.PreloadSymbols(m_process->GetTarget().GetParallelModuleLoad());
 
   m_process->GetTarget().ModulesDidLoad(module_list);
   m_initial_modules_added = true;

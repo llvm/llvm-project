@@ -1384,8 +1384,16 @@ void ModuleList::Swap(ModuleList &other) {
   m_modules.swap(other.m_modules);
 }
 
-void ModuleList::PreloadSymbols() const {
+void ModuleList::PreloadSymbols(bool parallelize) const {
   std::lock_guard<std::recursive_mutex> guard(m_modules_mutex);
+
+  if (!parallelize) {
+    for (const ModuleSP &module_sp : m_modules)
+      module_sp->PreloadSymbols();
+    return;
+  }
+
+  // parallelize
   llvm::ThreadPoolTaskGroup task_group(Debugger::GetThreadPool());
   for (const ModuleSP &module_sp : m_modules)
     task_group.async([module_sp] {

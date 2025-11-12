@@ -649,20 +649,12 @@ public:
   ///     will handle / summarize the failures in a custom way and
   ///     don't use these messages.
   ///
-  /// \param[in] defer_preload
-  ///     If true, the module will not be preloaded even if
-  ///     Target::GetPreloadSymbols() is true. This is useful when the caller
-  ///     wishes to preload loaded modules in parallel after calling this
-  ///     function for better performance. This is because it's currently not
-  ///     thread-safe to do so during the execution of this function.
-  ///
   /// \return
   ///     An empty ModuleSP will be returned if no matching file
   ///     was found.  If error_ptr was non-nullptr, an error message
   ///     will likely be provided.
   lldb::ModuleSP GetOrCreateModule(const ModuleSpec &module_spec, bool notify,
-                                   Status *error_ptr = nullptr,
-                                   bool defer_preload = false);
+                                   Status *error_ptr = nullptr);
 
   // Settings accessors
 

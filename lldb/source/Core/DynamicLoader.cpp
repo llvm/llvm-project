@@ -154,8 +154,7 @@ DynamicLoader::GetSectionListFromModule(const ModuleSP module) const {
   return sections;
 }
 
-ModuleSP DynamicLoader::FindModuleViaTarget(const FileSpec &file,
-                                            bool defer_module_preload) {
+ModuleSP DynamicLoader::FindModuleViaTarget(const FileSpec &file) {
   Target &target = m_process->GetTarget();
   ModuleSpec module_spec(file, target.GetArchitecture());
   if (UUID uuid = m_process->FindModuleUUID(file.GetPath())) {
@@ -167,8 +166,7 @@ ModuleSP DynamicLoader::FindModuleViaTarget(const FileSpec &file,
     return module_sp;
 
   if (ModuleSP module_sp = target.GetOrCreateModule(
-          module_spec, false /* notify */, nullptr /* error_ptr */,
-          defer_module_preload))
+          module_spec, false /* notify */, nullptr /* error_ptr */))
     return module_sp;
 
   return nullptr;
@@ -177,9 +175,8 @@ ModuleSP DynamicLoader::FindModuleViaTarget(const FileSpec &file,
 ModuleSP DynamicLoader::LoadModuleAtAddress(const FileSpec &file,
                                             addr_t link_map_addr,
                                             addr_t base_addr,
-                                            bool base_addr_is_offset,
-                                            bool defer_module_preload) {
-  if (ModuleSP module_sp = FindModuleViaTarget(file, defer_module_preload)) {
+                                            bool base_addr_is_offset) {
+  if (ModuleSP module_sp = FindModuleViaTarget(file)) {
     UpdateLoadedSections(module_sp, link_map_addr, base_addr,
                          base_addr_is_offset);
     return module_sp;

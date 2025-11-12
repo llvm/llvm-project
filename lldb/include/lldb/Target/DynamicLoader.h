@@ -208,16 +208,10 @@ public:
   /// Note that this calls Target::GetOrCreateModule with notify being false,
   /// so it is necessary to call Target::ModulesDidLoad afterwards.
   ///
-  /// \param[in] defer_module_preload
-  ///     If the module needs to be loaded, prevent the module from being
-  ///     preloaded even if the user sets the preload symbols option. This is
-  ///     used as a performance optimization should the caller preload the
-  ///     modules in parallel after calling this function.
   virtual lldb::ModuleSP LoadModuleAtAddress(const lldb_private::FileSpec &file,
                                              lldb::addr_t link_map_addr,
                                              lldb::addr_t base_addr,
-                                             bool base_addr_is_offset,
-                                             bool defer_module_preload = false);
+                                             bool base_addr_is_offset);
 
   /// Find/load a binary into lldb given a UUID and the address where it is
   /// loaded in memory, or a slide to be applied to the file address.
@@ -360,12 +354,7 @@ protected:
   // Utility methods for derived classes
 
   /// Find a module in the target that matches the given file.
-  ///
-  /// \param[in] defer_module_preload
-  ///     If the module needs to be loaded, prevent the module from being
-  ///     preloaded even if the user sets the preload symbols option.
-  lldb::ModuleSP FindModuleViaTarget(const FileSpec &file,
-                                     bool defer_module_preload = false);
+  lldb::ModuleSP FindModuleViaTarget(const FileSpec &file);
 
   /// Checks to see if the target module has changed, updates the target
   /// accordingly and returns the target executable module.
