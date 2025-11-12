@@ -77,14 +77,14 @@ mlirLinalgInferContractionDimensions(MlirOperation op) {
 
 MLIR_CAPI_EXPORTED MlirLinalgContractionDimensions
 mlirLinalgInferContractionDimensionsFromMaps(const MlirAffineMap *indexingMaps,
-                                             intptr_t numMaps) {
+                                             size_t numMaps) {
   MlirLinalgContractionDimensions result{};
-  if (!indexingMaps || numMaps <= 0)
+  if (!indexingMaps || numMaps == 0)
     return result;
 
-  SmallVector<AffineMap> maps;
+  SmallVector<AffineMap, 3> maps;
   maps.reserve(numMaps);
-  for (intptr_t i = 0; i < numMaps; ++i) {
+  for (size_t i = 0; i < numMaps; ++i) {
     maps.push_back(unwrap(indexingMaps[i]));
   }
 

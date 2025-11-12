@@ -237,7 +237,6 @@ def test_infer_contraction_dimensions_from_maps():
             assert invalid_dims is None
 
             # === Test element-wise operation ===
-            # All dimensions appear in all operands, so they're batch dimensions.
             dim_i = AffineDimExpr.get(0)
             dim_j = AffineDimExpr.get(1)
             elementwise_map = AffineMap.get(2, 0, [dim_i, dim_j])
@@ -245,7 +244,7 @@ def test_infer_contraction_dimensions_from_maps():
                 [elementwise_map, elementwise_map, elementwise_map]
             )
             assert elementwise_dims is not None
-            assert list(elementwise_dims.m) == []
-            assert list(elementwise_dims.n) == []
-            assert list(elementwise_dims.k) == []
+            assert len(elementwise_dims.m) == 0
+            assert len(elementwise_dims.n) == 0
+            assert len(elementwise_dims.k) == 0
             assert list(elementwise_dims.batch) == [0, 1]
