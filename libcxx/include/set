@@ -671,12 +671,10 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI explicit set(const allocator_type& __a) : __tree_(__a) {}
 
-  _LIBCPP_HIDE_FROM_ABI set(const set& __s, const allocator_type& __a) : __tree_(__s.__tree_.value_comp(), __a) {
-    insert(__s.begin(), __s.end());
-  }
+  _LIBCPP_HIDE_FROM_ABI set(const set& __s, const allocator_type& __alloc) : __tree_(__s.__tree_, __alloc) {}
 
 #  ifndef _LIBCPP_CXX03_LANG
-  _LIBCPP_HIDE_FROM_ABI set(set&& __s, const allocator_type& __a);
+  _LIBCPP_HIDE_FROM_ABI set(set&& __s, const allocator_type& __alloc) : __tree_(std::move(__s.__tree_), __alloc) {}
 
   _LIBCPP_HIDE_FROM_ABI set(initializer_list<value_type> __il, const value_compare& __comp = value_compare())
       : __tree_(__comp) {
@@ -946,19 +944,6 @@ template <class _Key, class _Allocator, class = enable_if_t<__is_allocator_v<_Al
 set(initializer_list<_Key>, _Allocator) -> set<_Key, less<_Key>, _Allocator>;
 #  endif
 
-#  ifndef _LIBCPP_CXX03_LANG
-
-template <class _Key, class _Compare, class _Allocator>
-set<_Key, _Compare, _Allocator>::set(set&& __s, const allocator_type& __a) : __tree_(std::move(__s.__tree_), __a) {
-  if (__a != __s.get_allocator()) {
-    const_iterator __e = cend();
-    while (!__s.empty())
-      insert(__e, std::move(__s.__tree_.remove(__s.begin())->__get_value()));
-  }
-}
-
-#  endif // _LIBCPP_CXX03_LANG
-
 template <class _Key, class _Compare, class _Allocator>
 inline _LIBCPP_HIDE_FROM_ABI bool
 operator==(const set<_Key, _Compare, _Allocator>& __x, const set<_Key, _Compare, _Allocator>& __y) {
@@ -1128,13 +1113,10 @@ public:
 #  ifndef _LIBCPP_CXX03_LANG
   _LIBCPP_HIDE_FROM_ABI multiset(multiset&& __s) = default;
 
-  _LIBCPP_HIDE_FROM_ABI multiset(multiset&& __s, const allocator_type& __a);
+  _LIBCPP_HIDE_FROM_ABI multiset(multiset&& __s, const allocator_type& __a) : __tree_(std::move(__s.__tree_), __a) {}
 #  endif // _LIBCPP_CXX03_LANG
   _LIBCPP_HIDE_FROM_ABI explicit multiset(const allocator_type& __a) : __tree_(__a) {}
-  _LIBCPP_HIDE_FROM_ABI multiset(const multiset& __s, const allocator_type& __a)
-      : __tree_(__s.__tree_.value_comp(), __a) {
-    insert(__s.begin(), __s.end());
-  }
+  _LIBCPP_HIDE_FROM_ABI multiset(const multiset& __s, const allocator_type& __a) : __tree_(__s.__tree_, __a) {}
 
 #  ifndef _LIBCPP_CXX03_LANG
   _LIBCPP_HIDE_FROM_ABI multiset(initializer_list<value_type> __il, const value_compare& __comp = value_compare())
@@ -1406,20 +1388,6 @@ multiset(from_range_t, _Range&&, _Allocator)
 template <class _Key, class _Allocator, class = enable_if_t<__is_allocator_v<_Allocator>>>
 multiset(initializer_list<_Key>, _Allocator) -> multiset<_Key, less<_Key>, _Allocator>;
 #  endif
-
-#  ifndef _LIBCPP_CXX03_LANG
-
-template <class _Key, class _Compare, class _Allocator>
-multiset<_Key, _Compare, _Allocator>::multiset(multiset&& __s, const allocator_type& __a)
-    : __tree_(std::move(__s.__tree_), __a) {
-  if (__a != __s.get_allocator()) {
-    const_iterator __e = cend();
-    while (!__s.empty())
-      insert(__e, std::move(__s.__tree_.remove(__s.begin())->__get_value()));
-  }
-}
-
-#  endif // _LIBCPP_CXX03_LANG
 
 template <class _Key, class _Compare, class _Allocator>
 inline _LIBCPP_HIDE_FROM_ABI bool

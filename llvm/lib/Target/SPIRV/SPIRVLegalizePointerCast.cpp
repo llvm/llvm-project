@@ -116,6 +116,81 @@ class SPIRVLegalizePointerCast : public FunctionPass {
     return LI;
   }
 
+  // Loads elements from an array and constructs a vector.
+  Value *loadVectorFromArray(IRBuilder<> &B, FixedVectorType *TargetType,
+                             Value *Source) {
+    // Load each element of the array.
+    SmallVector<Value *, 4> LoadedElements;
+    for (unsigned i = 0; i < TargetType->getNumElements(); ++i) {
+      // Create a GEP to access the i-th element of the array.
+      SmallVector<Type *, 2> Types = {Source->getType(), Source->getType()};
+      SmallVector<Value *, 4> Args;
+      Args.push_back(B.getInt1(false));
+      Args.push_back(Source);
+      Args.push_back(B.getInt32(0));
+      Args.push_back(ConstantInt::get(B.getInt32Ty(), i));
+      auto *ElementPtr = B.CreateIntrinsic(Intrinsic::spv_gep, {Types}, {Args});
+      GR->buildAssignPtr(B, TargetType->getElementType(), ElementPtr);
+
+      // Load the value from the element pointer.
+      Value *Load = B.CreateLoad(TargetType->getElementType(), ElementPtr);
+      buildAssignType(B, TargetType->getElementType(), Load);
+      LoadedElements.push_back(Load);
+    }
+
+    // Build the vector from the loaded elements.
+    Value *NewVector = PoisonValue::get(TargetType);
+    buildAssignType(B, TargetType, NewVector);
+
+    for (unsigned i = 0; i < TargetType->getNumElements(); ++i) {
+      Value *Index = B.getInt32(i);
+      SmallVector<Type *, 4> Types = {TargetType, TargetType,
+                                      TargetType->getElementType(),
+                                      Index->getType()};
+      SmallVector<Value *> Args = {NewVector, LoadedElements[i], Index};
+      NewVector = B.CreateIntrinsic(Intrinsic::spv_insertelt, {Types}, {Args});
+      buildAssignType(B, TargetType, NewVector);
+    }
+    return NewVector;
+  }
+
+  // Stores elements from a vector into an array.
+  void storeArrayFromVector(IRBuilder<> &B, Value *SrcVector,
+                            Value *DstArrayPtr, ArrayType *ArrTy,
+                            Align Alignment) {
+    auto *VecTy = cast<FixedVectorType>(SrcVector->getType());
+
+    // Ensure the element types of the array and vector are the same.
+    assert(VecTy->getElementType() == ArrTy->getElementType() &&
+           "Element types of array and vector must be the same.");
+
+    for (unsigned i = 0; i < VecTy->getNumElements(); ++i) {
+      // Create a GEP to access the i-th element of the array.
+      SmallVector<Type *, 2> Types = {DstArrayPtr->getType(),
+                                      DstArrayPtr->getType()};
+      SmallVector<Value *, 4> Args;
+      Args.push_back(B.getInt1(false));
+      Args.push_back(DstArrayPtr);
+      Args.push_back(B.getInt32(0));
+      Args.push_back(ConstantInt::get(B.getInt32Ty(), i));
+      auto *ElementPtr = B.CreateIntrinsic(Intrinsic::spv_gep, {Types}, {Args});
+      GR->buildAssignPtr(B, ArrTy->getElementType(), ElementPtr);
+
+      // Extract the element from the vector and store it.
+      Value *Index = B.getInt32(i);
+      SmallVector<Type *, 3> EltTypes = {VecTy->getElementType(), VecTy,
+                                         Index->getType()};
+      SmallVector<Value *, 2> EltArgs = {SrcVector, Index};
+      Value *Element =
+          B.CreateIntrinsic(Intrinsic::spv_extractelt, {EltTypes}, {EltArgs});
+      buildAssignType(B, VecTy->getElementType(), Element);
+
+      Types = {Element->getType(), ElementPtr->getType()};
+      Args = {Element, ElementPtr, B.getInt16(2), B.getInt8(Alignment.value())};
+      B.CreateIntrinsic(Intrinsic::spv_store, {Types}, {Args});
+    }
+  }
+
   // Replaces the load instruction to get rid of the ptrcast used as source
   // operand.
   void transformLoad(IRBuilder<> &B, LoadInst *LI, Value *CastedOperand,
@@ -154,6 +229,8 @@ class SPIRVLegalizePointerCast : public FunctionPass {
     // - float v = s.m;
     else if (SST && SST->getTypeAtIndex(0u) == ToTy)
       Output = loadFirstValueFromAggregate(B, ToTy, OriginalOperand, LI);
+    else if (SAT && DVT && SAT->getElementType() == DVT->getElementType())
+      Output = loadVectorFromArray(B, DVT, OriginalOperand);
     else
       llvm_unreachable("Unimplemented implicit down-cast from load.");
 
@@ -288,6 +365,7 @@ class SPIRVLegalizePointerCast : public FunctionPass {
     auto *S_VT = dyn_cast<FixedVectorType>(FromTy);
     auto *D_ST = dyn_cast<StructType>(ToTy);
     auto *D_VT = dyn_cast<FixedVectorType>(ToTy);
+    auto *D_AT = dyn_cast<ArrayType>(ToTy);
 
     B.SetInsertPoint(BadStore);
     if (D_ST && isTypeFirstElementAggregate(FromTy, D_ST))
@@ -296,6 +374,8 @@ class SPIRVLegalizePointerCast : public FunctionPass {
       storeVectorFromVector(B, Src, Dst, Alignment);
     else if (D_VT && !S_VT && FromTy == D_VT->getElementType())
       storeToFirstValueAggregate(B, Src, Dst, D_VT, Alignment);
+    else if (D_AT && S_VT && S_VT->getElementType() == D_AT->getElementType())
+      storeArrayFromVector(B, Src, Dst, D_AT, Alignment);
     else
       llvm_unreachable("Unsupported ptrcast use in store. Please fix.");
 

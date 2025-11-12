@@ -454,7 +454,11 @@ private:
   /// Event threads.
   /// @{
   void EventThread();
+  void HandleProcessEvent(const lldb::SBEvent &event, bool &process_exited);
+  void HandleTargetEvent(const lldb::SBEvent &event);
+  void HandleBreakpointEvent(const lldb::SBEvent &event);
   void HandleThreadEvent(const lldb::SBEvent &event);
+  void HandleDiagnosticEvent(const lldb::SBEvent &event);
   void ProgressEventThread();
 
   std::thread event_thread;

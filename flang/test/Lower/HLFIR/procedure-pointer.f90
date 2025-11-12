@@ -11,7 +11,7 @@ module m
       real :: x
     end function
     character(:) function char_func(x)
-      pointer :: char_func 
+      pointer :: char_func
       integer :: x
     end function
     subroutine sub(x)
@@ -148,7 +148,7 @@ subroutine  sub5()
 use m
   procedure(real), pointer :: p3
 
-  p3 => real_func 
+  p3 => real_func
 ! CHECK: %[[VAL_0:.*]] = fir.alloca !fir.boxproc<() -> f32> {bindc_name = "p3", uniq_name = "_QFsub5Ep3"}
 ! CHECK: %[[VAL_1:.*]] = fir.zero_bits () -> f32
 ! CHECK: %[[VAL_2:.*]] = fir.emboxproc %[[VAL_1]] : (() -> f32) -> !fir.boxproc<() -> f32>
@@ -165,7 +165,7 @@ use m
   procedure(), pointer :: p4
   real :: r
 
-  p4 => sub 
+  p4 => sub
 ! CHECK: %[[VAL_0:.*]] = fir.alloca !fir.boxproc<() -> ()> {bindc_name = "p4", uniq_name = "_QFsub6Ep4"}
 ! CHECK: %[[VAL_1:.*]] = fir.zero_bits () -> ()
 ! CHECK: %[[VAL_2:.*]] = fir.emboxproc %[[VAL_1]] : (() -> ()) -> !fir.boxproc<() -> ()>
@@ -197,7 +197,7 @@ use m
 
   call foo2(p2)
 ! CHECK: fir.call @_QPfoo2(%[[VAL_1]]#0) fastmath<contract> : (!fir.ref<!fir.boxproc<() -> ()>>) -> ()
-end 
+end
 
 subroutine sub8()
 use m
@@ -338,7 +338,7 @@ use m
 ! CHECK: %[[VAL_16:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = ".tmp.intrinsic_result"} : (!fir.ref<!fir.boxproc<(!fir.ref<i32>) -> !fir.box<!fir.ptr<!fir.char<1,?>>>>>) -> (!fir.ref<!fir.boxproc<(!fir.ref<i32>) -> !fir.box<!fir.ptr<!fir.char<1,?>>>>>, !fir.ref<!fir.boxproc<(!fir.ref<i32>) -> !fir.box<!fir.ptr<!fir.char<1,?>>>>>)
 ! CHECK: %[[VAL_17:.*]] = fir.convert %[[VAL_16]]#0 : (!fir.ref<!fir.boxproc<(!fir.ref<i32>) -> !fir.box<!fir.ptr<!fir.char<1,?>>>>>) -> !fir.ref<!fir.boxproc<() -> ()>>
 ! CHECK: fir.call @_QPfoo2(%[[VAL_17]]) fastmath<contract> : (!fir.ref<!fir.boxproc<() -> ()>>) -> ()
-end 
+end
 
 subroutine test_opt_pointer()
   interface

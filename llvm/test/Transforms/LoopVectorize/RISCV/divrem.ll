@@ -639,73 +639,50 @@ for.end:
 define i32 @udiv_sdiv_with_invariant_divisors(i8 %x, i16 %y, i1 %c) {
 ; CHECK-LABEL: @udiv_sdiv_with_invariant_divisors(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i32 [[TMP0]], 1
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 12, [[TMP1]]
-; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i32 [[TMP2]], 2
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 12, [[TMP3]]
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 12, [[N_MOD_VF]]
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i16> poison, i16 [[Y:%.*]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x i16> [[BROADCAST_SPLATINSERT]], <vscale x 2 x i16> poison, <vscale x 2 x i32> zeroinitializer
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 2 x i8> poison, i8 [[X:%.*]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <vscale x 2 x i8> [[BROADCAST_SPLATINSERT1]], <vscale x 2 x i8> poison, <vscale x 2 x i32> zeroinitializer
-; CHECK-NEXT:    [[DOTCAST:%.*]] = trunc i32 [[N_VEC]] to i16
-; CHECK-NEXT:    [[TMP4:%.*]] = add i16 -12, [[DOTCAST]]
-; CHECK-NEXT:    [[DOTCAST5:%.*]] = trunc i32 [[N_VEC]] to i8
-; CHECK-NEXT:    [[TMP5:%.*]] = add i8 -12, [[DOTCAST5]]
-; CHECK-NEXT:    [[TMP6:%.*]] = select i1 [[C:%.*]], <vscale x 2 x i8> splat (i8 1), <vscale x 2 x i8> [[BROADCAST_SPLAT2]]
-; CHECK-NEXT:    [[TMP7:%.*]] = select i1 [[C]], <vscale x 2 x i16> splat (i16 1), <vscale x 2 x i16> [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP8:%.*]] = call <vscale x 2 x i8> @llvm.stepvector.nxv2i8()
-; CHECK-NEXT:    [[TMP9:%.*]] = mul <vscale x 2 x i8> [[TMP8]], splat (i8 1)
-; CHECK-NEXT:    [[INDUCTION:%.*]] = add <vscale x 2 x i8> splat (i8 -12), [[TMP9]]
-; CHECK-NEXT:    [[TMP10:%.*]] = trunc i32 [[TMP3]] to i8
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT6:%.*]] = insertelement <vscale x 2 x i8> poison, i8 [[TMP10]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT7:%.*]] = shufflevector <vscale x 2 x i8> [[BROADCAST_SPLATINSERT6]], <vscale x 2 x i8> poison, <vscale x 2 x i32> zeroinitializer
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 8 x i1> poison, i1 [[C:%.*]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 8 x i1> [[BROADCAST_SPLATINSERT]], <vscale x 8 x i1> poison, <vscale x 8 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP0:%.*]] = xor <vscale x 8 x i1> [[BROADCAST_SPLAT]], splat (i1 true)
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 8 x i8> poison, i8 [[X:%.*]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <vscale x 8 x i8> [[BROADCAST_SPLATINSERT1]], <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <vscale x 8 x i16> poison, i16 [[Y:%.*]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <vscale x 8 x i16> [[BROADCAST_SPLATINSERT3]], <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i8> @llvm.stepvector.nxv8i8()
+; CHECK-NEXT:    [[TMP2:%.*]] = mul <vscale x 8 x i8> [[TMP1]], splat (i8 1)
+; CHECK-NEXT:    [[INDUCTION:%.*]] = add <vscale x 8 x i8> splat (i8 -12), [[TMP2]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 2 x i8> [ [[INDUCTION]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP11:%.*]] = udiv <vscale x 2 x i8> [[VEC_IND]], [[TMP6]]
-; CHECK-NEXT:    [[TMP12:%.*]] = zext <vscale x 2 x i8> [[TMP11]] to <vscale x 2 x i16>
-; CHECK-NEXT:    [[TMP13:%.*]] = sdiv <vscale x 2 x i16> [[TMP12]], [[TMP7]]
-; CHECK-NEXT:    [[TMP14:%.*]] = sext <vscale x 2 x i16> [[TMP13]] to <vscale x 2 x i32>
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select i1 [[C]], <vscale x 2 x i32> zeroinitializer, <vscale x 2 x i32> [[TMP14]]
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], [[TMP3]]
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 2 x i8> [[VEC_IND]], [[BROADCAST_SPLAT7]]
-; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP15]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 8 x i8> [ [[INDUCTION]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[AVL:%.*]] = phi i32 [ 12, [[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.experimental.get.vector.length.i32(i32 [[AVL]], i32 8, i1 true)
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT7:%.*]] = insertelement <vscale x 8 x i32> poison, i32 [[TMP3]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT8:%.*]] = shufflevector <vscale x 8 x i32> [[BROADCAST_SPLATINSERT7]], <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = trunc i32 [[TMP3]] to i8
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT5:%.*]] = insertelement <vscale x 8 x i8> poison, i8 [[TMP4]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT6:%.*]] = shufflevector <vscale x 8 x i8> [[BROADCAST_SPLATINSERT5]], <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = call <vscale x 8 x i32> @llvm.stepvector.nxv8i32()
+; CHECK-NEXT:    [[TMP15:%.*]] = icmp uge <vscale x 8 x i32> [[TMP5]], [[BROADCAST_SPLAT8]]
+; CHECK-NEXT:    [[TMP8:%.*]] = call <vscale x 8 x i8> @llvm.vp.merge.nxv8i8(<vscale x 8 x i1> [[TMP0]], <vscale x 8 x i8> [[BROADCAST_SPLAT2]], <vscale x 8 x i8> splat (i8 1), i32 [[TMP3]])
+; CHECK-NEXT:    [[TMP9:%.*]] = udiv <vscale x 8 x i8> [[VEC_IND]], [[TMP8]]
+; CHECK-NEXT:    [[TMP10:%.*]] = zext <vscale x 8 x i8> [[TMP9]] to <vscale x 8 x i16>
+; CHECK-NEXT:    [[TMP11:%.*]] = call <vscale x 8 x i16> @llvm.vp.merge.nxv8i16(<vscale x 8 x i1> [[TMP0]], <vscale x 8 x i16> [[BROADCAST_SPLAT4]], <vscale x 8 x i16> splat (i16 1), i32 [[TMP3]])
+; CHECK-NEXT:    [[TMP12:%.*]] = sdiv <vscale x 8 x i16> [[TMP10]], [[TMP11]]
+; CHECK-NEXT:    [[TMP13:%.*]] = sext <vscale x 8 x i16> [[TMP12]] to <vscale x 8 x i32>
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select i1 [[C]], <vscale x 8 x i32> zeroinitializer, <vscale x 8 x i32> [[TMP13]]
+; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i32 [[AVL]], [[TMP3]]
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 8 x i8> [[VEC_IND]], [[BROADCAST_SPLAT6]]
+; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i32 [[AVL_NEXT]], 0
+; CHECK-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[TMP16:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-NEXT:    [[TMP17:%.*]] = mul nuw i32 [[TMP16]], 2
-; CHECK-NEXT:    [[TMP18:%.*]] = sub i32 [[TMP17]], 1
-; CHECK-NEXT:    [[TMP19:%.*]] = extractelement <vscale x 2 x i32> [[PREDPHI]], i32 [[TMP18]]
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 12, [[N_VEC]]
-; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
-; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i16 [ [[TMP4]], [[MIDDLE_BLOCK]] ], [ -12, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL8:%.*]] = phi i8 [ [[TMP5]], [[MIDDLE_BLOCK]] ], [ -12, [[ENTRY]] ]
-; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
-; CHECK:       loop.header:
-; CHECK-NEXT:    [[IV:%.*]] = phi i16 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
-; CHECK-NEXT:    [[NARROW_IV:%.*]] = phi i8 [ [[BC_RESUME_VAL8]], [[SCALAR_PH]] ], [ [[IV_NEXT_TRUNC:%.*]], [[LOOP_LATCH]] ]
-; CHECK-NEXT:    br i1 [[C]], label [[LOOP_LATCH]], label [[THEN:%.*]]
-; CHECK:       then:
-; CHECK-NEXT:    [[UD:%.*]] = udiv i8 [[NARROW_IV]], [[X]]
-; CHECK-NEXT:    [[UD_EXT:%.*]] = zext i8 [[UD]] to i16
-; CHECK-NEXT:    [[SD:%.*]] = sdiv i16 [[UD_EXT]], [[Y]]
-; CHECK-NEXT:    [[SD_EXT:%.*]] = sext i16 [[SD]] to i32
-; CHECK-NEXT:    br label [[LOOP_LATCH]]
-; CHECK:       loop.latch:
-; CHECK-NEXT:    [[MERGE:%.*]] = phi i32 [ 0, [[LOOP_HEADER]] ], [ [[SD_EXT]], [[THEN]] ]
-; CHECK-NEXT:    [[IV_NEXT]] = add nsw i16 [[IV]], 1
-; CHECK-NEXT:    [[EC:%.*]] = icmp eq i16 [[IV_NEXT]], 0
-; CHECK-NEXT:    [[IV_NEXT_TRUNC]] = trunc i16 [[IV_NEXT]] to i8
-; CHECK-NEXT:    br i1 [[EC]], label [[EXIT]], label [[LOOP_HEADER]], !llvm.loop [[LOOP12:![0-9]+]]
+; CHECK-NEXT:    [[TMP16:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.nxv8i1(<vscale x 8 x i1> [[TMP15]], i1 true)
+; CHECK-NEXT:    [[TMP17:%.*]] = sub i64 [[TMP16]], 1
+; CHECK-NEXT:    [[TMP18:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP19:%.*]] = mul nuw i64 [[TMP18]], 8
+; CHECK-NEXT:    [[TMP20:%.*]] = mul i64 [[TMP19]], 0
+; CHECK-NEXT:    [[MERGE_LCSSA:%.*]] = extractelement <vscale x 8 x i32> [[PREDPHI]], i64 [[TMP17]]
+; CHECK-NEXT:    br label [[LOOP_LATCH:%.*]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[MERGE_LCSSA:%.*]] = phi i32 [ [[MERGE]], [[LOOP_LATCH]] ], [ [[TMP19]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    ret i32 [[MERGE_LCSSA]]
 ;
 ; FIXED-LABEL: @udiv_sdiv_with_invariant_divisors(
