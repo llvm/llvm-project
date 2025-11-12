@@ -4638,6 +4638,12 @@ static std::optional<ConstantRange> getRange(const Instruction &I) {
   return std::nullopt;
 }
 
+static FPClassTest getNoFPClass(const Instruction &I) {
+  if (const auto *CB = dyn_cast<CallBase>(&I))
+    return CB->getRetNoFPClass();
+  return fcNone;
+}
+
 void SelectionDAGBuilder::visitLoad(const LoadInst &I) {
   if (I.isAtomic())
     return visitAtomicLoad(I);
@@ -9125,6 +9131,7 @@ void SelectionDAGBuilder::LowerCallTo(const CallBase &CB, SDValue Callee,
 
   if (Result.first.getNode()) {
     Result.first = lowerRangeToAssertZExt(DAG, CB, Result.first);
+    Result.first = lowerNoFPClassToAssertNoFPClass(DAG, CB, Result.first);
     setValue(&CB, Result.first);
   }
 
@@ -10709,6 +10716,16 @@ SDValue SelectionDAGBuilder::lowerRangeToAssertZExt(SelectionDAG &DAG,
     Ops.push_back(Op.getValue(I));
 
   return DAG.getMergeValues(Ops, SL);
+}
+
+SDValue SelectionDAGBuilder::lowerNoFPClassToAssertNoFPClass(
+    SelectionDAG &DAG, const Instruction &I, SDValue Op) {
+  FPClassTest Classes = getNoFPClass(I);
+  if (Classes == fcNone)
+    return Op;
+
+  return DAG.getNode(ISD::AssertNoFPClass, SDLoc(Op), Op.getValueType(), Op,
+                     DAG.getTargetConstant(Classes, SDLoc(), MVT::i32));
 }
 
 /// Populate a CallLowerinInfo (into \p CLI) based on the properties of

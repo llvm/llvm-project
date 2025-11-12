@@ -168,7 +168,7 @@ attributes #0 = { "frame-pointer"="all" }
 !26 = !DILocalVariable(name: "ptr_as5", scope: !24, file: !1, line: 1, type: !14)
 !27 = !DILocation(line: 1, column: 1, scope: !24)
 !28 = !DILocation(line: 2, column: 1, scope: !24)
-!29 = distinct !DISubprogram(name: "test_divergent", linkageName: "test_divergent", scope: !1, file: !1, line: 1, type: !10, scopeLine: 1, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !0, retainedNodes: !19)
+!29 = distinct !DISubprogram(name: "test_divergent", linkageName: "test_divergent", scope: !1, file: !1, line: 1, type: !10, scopeLine: 1, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !0, retainedNodes: !43)
 !30 = !DILocation(line: 1, column: 1, scope: !29)
 !31 = !DILocalVariable(name: "ptr_div_as5", scope: !29, file: !1, line: 1, type: !14)
 !32 = !DILocalVariable(name: "ptr_div_as3", scope: !29, file: !1, line: 1, type: !14)
@@ -182,3 +182,4 @@ attributes #0 = { "frame-pointer"="all" }
 !40 = distinct !DIGlobalVariable(name: "GlobMutable", linkageName: "GlobMutable", scope: !0, file: !1, line: 1, type: !15, isLocal: false, isDefinition: true, memorySpace: DW_MSPACE_LLVM_global)
 !41 = !DIGlobalVariableExpression(var: !42, expr: !DIExpression(DIOpArg(0, ptr addrspace(4)), DIOpDeref(i32)))
 !42 = distinct !DIGlobalVariable(name: "GlobConst", linkageName: "GlobConst", scope: !0, file: !1, line: 1, type: !15, isLocal: true, isDefinition: true, memorySpace: DW_MSPACE_LLVM_constant)
+!43 = !{!31, !32}
