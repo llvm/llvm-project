@@ -70,6 +70,9 @@ namespace omp {
 mlir::FlatSymbolRefAttr getOrGenImplicitDefaultDeclareMapper(
     lower::AbstractConverter &converter, mlir::Location loc,
     fir::RecordType recordType, llvm::StringRef mapperNameStr) {
+  if (mapperNameStr.empty())
+    return {};
+
   if (converter.getModuleOp().lookupSymbol(mapperNameStr))
     return mlir::FlatSymbolRefAttr::get(&converter.getMLIRContext(),
                                         mapperNameStr);
@@ -111,7 +114,7 @@ mlir::FlatSymbolRefAttr getOrGenImplicitDefaultDeclareMapper(
         firOpBuilder, loc, firOpBuilder.getRefType(fieldTy), rec, field);
   };
 
-  mlir::omp::DeclareMapperInfoOperands clauseOps;
+  llvm::SmallVector<mlir::Value> clauseMapVars;
   llvm::SmallVector<llvm::SmallVector<int64_t>> memberPlacementIndices;
   llvm::SmallVector<mlir::Value> memberMapOps;
 
@@ -131,8 +134,9 @@ mlir::FlatSymbolRefAttr getOrGenImplicitDefaultDeclareMapper(
           recType.getName().str() + llvm::omp::OmpDefaultMapperName;
       if (auto *sym = converter.getCurrentScope().FindSymbol(mapperIdName))
         mapperIdName = converter.mangleName(mapperIdName, sym->owner());
-      else if (auto *sym = converter.getCurrentScope().FindSymbol(memberName))
-        mapperIdName = converter.mangleName(mapperIdName, sym->owner());
+      else if (auto *memberSym =
+                   converter.getCurrentScope().FindSymbol(memberName))
+        mapperIdName = converter.mangleName(mapperIdName, memberSym->owner());
 
       mapperId = getOrGenImplicitDefaultDeclareMapper(converter, loc, recType,
                                                       mapperIdName);
@@ -155,7 +159,9 @@ mlir::FlatSymbolRefAttr getOrGenImplicitDefaultDeclareMapper(
 
   llvm::SmallVector<mlir::Value> bounds;
   genBoundsOps(declareOp.getOriginalBase(), bounds);
-  mlir::omp::ClauseMapFlags parentMapFlag = mlir::omp::ClauseMapFlags::implicit;
+  mlir::omp::ClauseMapFlags parentMapFlag = mlir::omp::ClauseMapFlags::to;
+  parentMapFlag |= mlir::omp::ClauseMapFlags::from;
+  parentMapFlag |= mlir::omp::ClauseMapFlags::implicit;
   mlir::omp::MapInfoOp mapOp = Fortran::utils::openmp::createMapInfoOp(
       firOpBuilder, loc, declareOp.getOriginalBase(),
       /*varPtrPtr=*/mlir::Value(), /*name=*/"", bounds, memberMapOps,
@@ -163,14 +169,16 @@ mlir::FlatSymbolRefAttr getOrGenImplicitDefaultDeclareMapper(
       captureKind, declareOp.getType(0),
       /*partialMap=*/true);
 
-  clauseOps.mapVars.emplace_back(mapOp);
-  mlir::omp::DeclareMapperInfoOp::create(firOpBuilder, loc, clauseOps.mapVars);
+  clauseMapVars.emplace_back(mapOp);
+  mlir::omp::DeclareMapperInfoOp::create(firOpBuilder, loc, clauseMapVars);
   return mlir::FlatSymbolRefAttr::get(&converter.getMLIRContext(),
                                       mapperNameStr);
 }
 
 bool requiresImplicitDefaultDeclareMapper(
     const semantics::DerivedTypeSpec &typeSpec) {
+  // ISO C interoperable types (e.g., c_ptr, c_funptr) must always have implicit
+  // default mappers available so that OpenMP offloading can correctly map them.
   if (semantics::IsIsoCType(&typeSpec))
     return true;
 

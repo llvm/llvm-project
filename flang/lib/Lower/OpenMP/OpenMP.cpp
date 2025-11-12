@@ -2602,31 +2602,28 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
         const semantics::DerivedTypeSpec *typeSpec =
             sym.GetType() ? sym.GetType()->AsDerived() : nullptr;
         if (typeSpec) {
-          auto getDefaultMapperName = [&]() -> std::string {
-            std::string mapperIdName =
-                typeSpec->name().ToString() + llvm::omp::OmpDefaultMapperName;
-            if (auto *mapperSym =
-                    converter.getCurrentScope().FindSymbol(mapperIdName))
-              mapperIdName =
-                  converter.mangleName(mapperIdName, mapperSym->owner());
-            else
-              mapperIdName =
-                  converter.mangleName(mapperIdName, *typeSpec->GetScope());
-            return mapperIdName;
-          };
+          std::string mapperIdName =
+              typeSpec->name().ToString() + llvm::omp::OmpDefaultMapperName;
+          if (auto *mapperSym =
+                  converter.getCurrentScope().FindSymbol(mapperIdName))
+            mapperIdName =
+                converter.mangleName(mapperIdName, mapperSym->owner());
+          else
+            mapperIdName =
+                converter.mangleName(mapperIdName, *typeSpec->GetScope());
 
-          std::string mapperIdName = getDefaultMapperName();
           if (!mapperIdName.empty()) {
             bool allowImplicitMapper =
                 semantics::IsAllocatableOrObjectPointer(&sym);
             bool hasDefaultMapper =
                 converter.getModuleOp().lookupSymbol(mapperIdName);
             if (hasDefaultMapper || allowImplicitMapper) {
-              if (auto recordType = mlir::dyn_cast_or_null<fir::RecordType>(
-                      converter.genType(*typeSpec))) {
-                mapperId = getOrGenImplicitDefaultDeclareMapper(
-                    converter, loc, recordType, mapperIdName);
-              } else if (hasDefaultMapper) {
+              if (!hasDefaultMapper) {
+                if (auto recordType = mlir::dyn_cast_or_null<fir::RecordType>(
+                        converter.genType(*typeSpec)))
+                  mapperId = getOrGenImplicitDefaultDeclareMapper(
+                      converter, loc, recordType, mapperIdName);
+              } else {
                 mapperId = mlir::FlatSymbolRefAttr::get(
                     &converter.getMLIRContext(), mapperIdName);
               }

@@ -1263,29 +1263,27 @@ void ClauseProcessor::processMapObjects(
                                                 recordType, mapperIdName);
   };
 
-  auto getDefaultMapperID = [&](const semantics::DerivedTypeSpec *typeSpec,
-                                std::string &mapperIdName) {
-    mapperIdName.clear();
-    if (!mlir::isa<mlir::omp::DeclareMapperOp>(
-            firOpBuilder.getRegion().getParentOp()) &&
-        typeSpec) {
-      mapperIdName =
-          typeSpec->name().ToString() + llvm::omp::OmpDefaultMapperName;
-      if (auto *sym = converter.getCurrentScope().FindSymbol(mapperIdName)) {
-        mapperIdName = converter.mangleName(mapperIdName, sym->owner());
-      } else {
-        mapperIdName =
-            converter.mangleName(mapperIdName, *typeSpec->GetScope());
-      }
+  auto getDefaultMapperID =
+      [&](const semantics::DerivedTypeSpec *typeSpec) -> std::string {
+    if (mlir::isa<mlir::omp::DeclareMapperOp>(
+            firOpBuilder.getRegion().getParentOp()) ||
+        !typeSpec)
+      return {};
+
+    std::string mapperIdName =
+        typeSpec->name().ToString() + llvm::omp::OmpDefaultMapperName;
+    if (auto *sym = converter.getCurrentScope().FindSymbol(mapperIdName)) {
+      mapperIdName = converter.mangleName(mapperIdName, sym->owner());
+    } else {
+      mapperIdName = converter.mangleName(mapperIdName, *typeSpec->GetScope());
     }
 
     // Make sure we don't return a mapper to self.
-    llvm::StringRef parentOpName;
     if (auto declMapOp = mlir::dyn_cast<mlir::omp::DeclareMapperOp>(
             firOpBuilder.getRegion().getParentOp()))
-      parentOpName = declMapOp.getSymName();
-    if (mapperIdName == parentOpName)
-      mapperIdName.clear();
+      if (mapperIdName == declMapOp.getSymName())
+        return {};
+    return mapperIdName;
   };
 
   // Create the mapper symbol from its name, if specified.
@@ -1299,7 +1297,7 @@ void ClauseProcessor::processMapObjects(
           getSymbolDerivedType(*object.sym());
       if (!typeSpec && object.sym()->owner().IsDerivedType())
         typeSpec = object.sym()->owner().derivedTypeSpec();
-      getDefaultMapperID(typeSpec, mapperIdName);
+      mapperIdName = getDefaultMapperID(typeSpec);
     }
     assert(converter.getModuleOp().lookupSymbol(mapperIdName) &&
            "mapper not found");
@@ -1340,19 +1338,16 @@ void ClauseProcessor::processMapObjects(
 
     const semantics::DerivedTypeSpec *objectTypeSpec =
         getSymbolDerivedType(*object.sym());
-    if (!objectTypeSpec && object.sym()->owner().IsDerivedType())
-      objectTypeSpec = object.sym()->owner().derivedTypeSpec();
 
     if (mapperIdNameRef == "__implicit_mapper") {
       if (parentObj.has_value()) {
         mapperId = mlir::FlatSymbolRefAttr();
-      } else {
-        std::string mapperIdName;
-        getDefaultMapperID(objectTypeSpec, mapperIdName);
+      } else if (objectTypeSpec) {
+        std::string mapperIdName = getDefaultMapperID(objectTypeSpec);
         bool needsDefaultMapper =
+            semantics::IsAllocatableOrObjectPointer(object.sym()) ||
             (objectTypeSpec &&
-             requiresImplicitDefaultDeclareMapper(*objectTypeSpec)) ||
-            semantics::IsAllocatableOrObjectPointer(object.sym());
+             requiresImplicitDefaultDeclareMapper(*objectTypeSpec));
         bool containsDelete = (mapTypeBits & mlir::omp::ClauseMapFlags::del) !=
                               mlir::omp::ClauseMapFlags::none;
         if (!mapperIdName.empty() && !containsDelete)
@@ -1360,6 +1355,8 @@ void ClauseProcessor::processMapObjects(
                                        /*allowGenerate=*/needsDefaultMapper);
         else
           mapperId = mlir::FlatSymbolRefAttr();
+      } else {
+        mapperId = mlir::FlatSymbolRefAttr();
       }
     }
 
