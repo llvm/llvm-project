@@ -183,6 +183,8 @@ foreach FPTy = ["F32", "F64", "F80", "F128", "PPCF128"] in {
 }
 
 foreach VecTy = ["V4F32", "V2F64", "NXV4F32", "NXV2F64"] in {
+  def MODF_#VecTy : RuntimeLibcall;
+  def SINCOS_#VecTy : RuntimeLibcall;
   def SINCOSPI_#VecTy : RuntimeLibcall;
 }
 
@@ -1092,6 +1094,16 @@ def __security_check_cookie_arm64ec : RuntimeLibcallImpl<SECURITY_CHECK_COOKIE,
 //===----------------------------------------------------------------------===//
 
 defset list<RuntimeLibcallImpl> SleefLibcalls = {
+  def _ZGVnN2vl8_modf : RuntimeLibcallImpl<MODF_V2F64>;
+  def _ZGVnN4vl4_modff : RuntimeLibcallImpl<MODF_V4F32>;
+  def _ZGVsNxvl8_modf : RuntimeLibcallImpl<MODF_NXV2F64>;
+  def _ZGVsNxvl4_modff : RuntimeLibcallImpl<MODF_NXV4F32>;
+
+  def _ZGVnN2vl8l8_sincos : RuntimeLibcallImpl<SINCOS_V2F64>;
+  def _ZGVnN4vl4l4_sincosf : RuntimeLibcallImpl<SINCOS_V4F32>;
+  def _ZGVsNxvl8l8_sincos : RuntimeLibcallImpl<SINCOS_NXV2F64>;
+  def _ZGVsNxvl4l4_sincosf : RuntimeLibcallImpl<SINCOS_NXV4F32>;
+
   def _ZGVnN4vl4l4_sincospif : RuntimeLibcallImpl<SINCOSPI_V4F32>;
   def _ZGVnN2vl8l8_sincospi : RuntimeLibcallImpl<SINCOSPI_V2F64>;
   def _ZGVsNxvl4l4_sincospif : RuntimeLibcallImpl<SINCOSPI_NXV4F32>;
@@ -1103,6 +1115,18 @@ defset list<RuntimeLibcallImpl> SleefLibcalls = {
 //===----------------------------------------------------------------------===//
 
 defset list<RuntimeLibcallImpl> ARMPLLibcalls = {
+  def armpl_vmodfq_f64 : RuntimeLibcallImpl<MODF_V2F64>; // CallingConv::AArch64_VectorCall
+  def armpl_vmodfq_f32 : RuntimeLibcallImpl<MODF_V4F32>; // CallingConv::AArch64_VectorCall
+  def armpl_svmodf_f64_x : RuntimeLibcallImpl<MODF_NXV2F64>;
+  def armpl_svmodf_f32_x : RuntimeLibcallImpl<MODF_NXV4F32>;
+
+  def armpl_vsincosq_f64
+      : RuntimeLibcallImpl<SINCOS_V2F64>; // CallingConv::AArch64_VectorCall
+  def armpl_vsincosq_f32
+      : RuntimeLibcallImpl<SINCOS_V4F32>; // CallingConv::AArch64_VectorCall
+  def armpl_svsincos_f64_x : RuntimeLibcallImpl<SINCOS_NXV2F64>;
+  def armpl_svsincos_f32_x : RuntimeLibcallImpl<SINCOS_NXV4F32>;
+
   def armpl_vsincospiq_f32 : RuntimeLibcallImpl<SINCOSPI_V4F32>;
   def armpl_vsincospiq_f64 : RuntimeLibcallImpl<SINCOSPI_V2F64>;
   def armpl_svsincospi_f32_x : RuntimeLibcallImpl<SINCOSPI_NXV4F32>;

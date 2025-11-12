@@ -11,6 +11,7 @@ try:
     from .._ods_common import _cext as _ods_cext
     from .._ods_common import (
         MixedValues,
+        MixedInt,
         get_op_result_or_value as _get_op_result_or_value,
         _dispatch_dynamic_index_list,
     )
@@ -132,3 +133,81 @@ class SetOpLayoutAttrOp(SetOpLayoutAttrOp):
             loc=loc,
             ip=ip,
         )
+
+
+@_ods_cext.register_operation(_Dialect, replace=True)
+class SetGPULaunchThreadsOp(SetGPULaunchThreadsOp):
+    """Specialization for SetGPULaunchThreadsOp class."""
+
+    def __init__(
+        self,
+        launch_op: Union[Operation, Value],
+        threads: MixedValues,
+        *,
+        loc=None,
+        ip=None,
+    ):
+        (
+            dynamic_threads,
+            static_threads,
+            _,
+        ) = _dispatch_dynamic_index_list(threads)
+
+        super().__init__(
+            _get_op_result_or_value(launch_op),
+            dynamic_threads,
+            static_threads=static_threads,
+            loc=loc,
+            ip=ip,
+        )
+
+
+def set_gpu_launch_threads(
+    launch_op: Union[Operation, Value],
+    threads: MixedValues,
+    *,
+    loc=None,
+    ip=None,
+) -> SetGPULaunchThreadsOp:
+    return SetGPULaunchThreadsOp(launch_op, threads, loc=loc, ip=ip)
+
+
+@_ods_cext.register_operation(_Dialect, replace=True)
+class InsertPrefetchOp(InsertPrefetchOp):
+    """Specialization for InsertPrefetchOp class."""
+
+    def __init__(
+        self,
+        target: Value,
+        *,
+        nb_prefetch: Optional[MixedInt] = 1,
+        loc=None,
+        ip=None,
+    ):
+        static_nb_prefetch = 1
+        dynamic_nb_prefetch = None
+        if isinstance(nb_prefetch, int):
+            static_nb_prefetch = nb_prefetch
+        elif isinstance(nb_prefetch, IntegerAttr):
+            static_nb_prefetch = nb_prefetch.value  # pytype: disable=attribute-error
+        elif isinstance(nb_prefetch, (Operation, Value, OpView)):
+            dynamic_nb_prefetch = nb_prefetch
+
+        super().__init__(
+            transform.AnyOpType.get(),
+            target,
+            dynamic_nb_prefetch=dynamic_nb_prefetch,
+            static_nb_prefetch=static_nb_prefetch,
+            loc=loc,
+            ip=ip,
+        )
+
+
+def insert_prefetch(
+    target: Value,
+    *,
+    nb_prefetch: Optional[MixedInt] = 1,
+    loc=None,
+    ip=None,
+) -> OpResult:
+    return InsertPrefetchOp(target, nb_prefetch=nb_prefetch, loc=loc, ip=ip).result

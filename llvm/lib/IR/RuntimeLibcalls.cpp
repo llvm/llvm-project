@@ -43,17 +43,30 @@ RuntimeLibcallsInfo::RuntimeLibcallsInfo(const Triple &TT,
   switch (ClVectorLibrary) {
   case VectorLibrary::SLEEFGNUABI:
     for (RTLIB::LibcallImpl Impl :
-         {RTLIB::impl__ZGVnN4vl4l4_sincospif, RTLIB::impl__ZGVnN2vl8l8_sincospi,
+         {RTLIB::impl__ZGVnN2vl8_modf, RTLIB::impl__ZGVnN4vl4_modff,
+          RTLIB::impl__ZGVsNxvl8_modf, RTLIB::impl__ZGVsNxvl4_modff,
+          RTLIB::impl__ZGVnN2vl8l8_sincos, RTLIB::impl__ZGVnN4vl4l4_sincosf,
+          RTLIB::impl__ZGVsNxvl8l8_sincos, RTLIB::impl__ZGVsNxvl4l4_sincosf,
+          RTLIB::impl__ZGVnN4vl4l4_sincospif, RTLIB::impl__ZGVnN2vl8l8_sincospi,
           RTLIB::impl__ZGVsNxvl4l4_sincospif,
           RTLIB::impl__ZGVsNxvl8l8_sincospi})
       setAvailable(Impl);
     break;
   case VectorLibrary::ArmPL:
     for (RTLIB::LibcallImpl Impl :
-         {RTLIB::impl_armpl_vsincospiq_f32, RTLIB::impl_armpl_vsincospiq_f64,
+         {RTLIB::impl_armpl_vmodfq_f64, RTLIB::impl_armpl_vmodfq_f32,
+          RTLIB::impl_armpl_svmodf_f64_x, RTLIB::impl_armpl_svmodf_f32_x,
+          RTLIB::impl_armpl_vsincosq_f64, RTLIB::impl_armpl_vsincosq_f32,
+          RTLIB::impl_armpl_svsincos_f64_x, RTLIB::impl_armpl_svsincos_f32_x,
+          RTLIB::impl_armpl_vsincospiq_f32, RTLIB::impl_armpl_vsincospiq_f64,
           RTLIB::impl_armpl_svsincospi_f32_x,
           RTLIB::impl_armpl_svsincospi_f64_x})
       setAvailable(Impl);
+
+    for (RTLIB::LibcallImpl Impl :
+         {RTLIB::impl_armpl_vsincosq_f64, RTLIB::impl_armpl_vsincosq_f32})
+      setLibcallImplCallingConv(Impl, CallingConv::AArch64_VectorCall);
+
     break;
   default:
     break;
@@ -188,6 +201,60 @@ RuntimeLibcallsInfo::getFunctionTy(LLVMContext &Ctx, const Triple &TT,
                                                   fcNegNormal));
     return {FuncTy, Attrs};
   }
+  case RTLIB::impl__ZGVnN2vl8_modf:
+  case RTLIB::impl__ZGVnN4vl4_modff:
+  case RTLIB::impl__ZGVsNxvl8_modf:
+  case RTLIB::impl__ZGVsNxvl4_modff:
+  case RTLIB::impl_armpl_vmodfq_f64:
+  case RTLIB::impl_armpl_vmodfq_f32:
+  case RTLIB::impl_armpl_svmodf_f64_x:
+  case RTLIB::impl_armpl_svmodf_f32_x: {
+    AttrBuilder FuncAttrBuilder(Ctx);
+
+    bool IsF32 = LibcallImpl == RTLIB::impl__ZGVnN4vl4_modff ||
+                 LibcallImpl == RTLIB::impl__ZGVsNxvl4_modff ||
+                 LibcallImpl == RTLIB::impl_armpl_vmodfq_f32 ||
+                 LibcallImpl == RTLIB::impl_armpl_svmodf_f32_x;
+
+    bool IsScalable = LibcallImpl == RTLIB::impl__ZGVsNxvl8_modf ||
+                      LibcallImpl == RTLIB::impl__ZGVsNxvl4_modff ||
+                      LibcallImpl == RTLIB::impl_armpl_svmodf_f64_x ||
+                      LibcallImpl == RTLIB::impl_armpl_svmodf_f32_x;
+
+    Type *ScalarTy = IsF32 ? Type::getFloatTy(Ctx) : Type::getDoubleTy(Ctx);
+    unsigned EC = IsF32 ? 4 : 2;
+    VectorType *VecTy = VectorType::get(ScalarTy, EC, IsScalable);
+
+    for (Attribute::AttrKind Attr : CommonFnAttrs)
+      FuncAttrBuilder.addAttribute(Attr);
+    FuncAttrBuilder.addMemoryAttr(MemoryEffects::argMemOnly(ModRefInfo::Mod));
+
+    AttributeList Attrs;
+    Attrs = Attrs.addFnAttributes(Ctx, FuncAttrBuilder);
+
+    {
+      AttrBuilder ArgAttrBuilder(Ctx);
+      for (Attribute::AttrKind AK : CommonPtrArgAttrs)
+        ArgAttrBuilder.addAttribute(AK);
+      ArgAttrBuilder.addAlignmentAttr(DL.getABITypeAlign(VecTy));
+      Attrs = Attrs.addParamAttributes(Ctx, 1, ArgAttrBuilder);
+    }
+
+    PointerType *PtrTy = PointerType::get(Ctx, 0);
+    SmallVector<Type *, 4> ArgTys = {VecTy, PtrTy};
+    if (hasVectorMaskArgument(LibcallImpl))
+      ArgTys.push_back(VectorType::get(Type::getInt1Ty(Ctx), EC, IsScalable));
+
+    return {FunctionType::get(VecTy, ArgTys, false), Attrs};
+  }
+  case RTLIB::impl__ZGVnN2vl8l8_sincos:
+  case RTLIB::impl__ZGVnN4vl4l4_sincosf:
+  case RTLIB::impl__ZGVsNxvl8l8_sincos:
+  case RTLIB::impl__ZGVsNxvl4l4_sincosf:
+  case RTLIB::impl_armpl_vsincosq_f64:
+  case RTLIB::impl_armpl_vsincosq_f32:
+  case RTLIB::impl_armpl_svsincos_f64_x:
+  case RTLIB::impl_armpl_svsincos_f32_x:
   case RTLIB::impl__ZGVnN4vl4l4_sincospif:
   case RTLIB::impl__ZGVnN2vl8l8_sincospi:
   case RTLIB::impl__ZGVsNxvl4l4_sincospif:
@@ -201,11 +268,20 @@ RuntimeLibcallsInfo::getFunctionTy(LLVMContext &Ctx, const Triple &TT,
     bool IsF32 = LibcallImpl == RTLIB::impl__ZGVnN4vl4l4_sincospif ||
                  LibcallImpl == RTLIB::impl__ZGVsNxvl4l4_sincospif ||
                  LibcallImpl == RTLIB::impl_armpl_vsincospiq_f32 ||
-                 LibcallImpl == RTLIB::impl_armpl_svsincospi_f32_x;
+                 LibcallImpl == RTLIB::impl_armpl_svsincospi_f32_x ||
+                 LibcallImpl == RTLIB::impl__ZGVnN4vl4l4_sincosf ||
+                 LibcallImpl == RTLIB::impl__ZGVsNxvl4l4_sincosf ||
+                 LibcallImpl == RTLIB::impl_armpl_vsincosq_f32 ||
+                 LibcallImpl == RTLIB::impl_armpl_svsincos_f32_x;
+
     Type *ScalarTy = IsF32 ? Type::getFloatTy(Ctx) : Type::getDoubleTy(Ctx);
     unsigned EC = IsF32 ? 4 : 2;
 
-    bool IsScalable = LibcallImpl == RTLIB::impl__ZGVsNxvl4l4_sincospif ||
+    bool IsScalable = LibcallImpl == RTLIB::impl__ZGVsNxvl8l8_sincos ||
+                      LibcallImpl == RTLIB::impl__ZGVsNxvl4l4_sincosf ||
+                      LibcallImpl == RTLIB::impl_armpl_svsincos_f32_x ||
+                      LibcallImpl == RTLIB::impl_armpl_svsincos_f64_x ||
+                      LibcallImpl == RTLIB::impl__ZGVsNxvl4l4_sincospif ||
                       LibcallImpl == RTLIB::impl__ZGVsNxvl8l8_sincospi ||
                       LibcallImpl == RTLIB::impl_armpl_svsincospi_f32_x ||
                       LibcallImpl == RTLIB::impl_armpl_svsincospi_f64_x;
@@ -245,6 +321,10 @@ bool RuntimeLibcallsInfo::hasVectorMaskArgument(RTLIB::LibcallImpl Impl) {
   /// FIXME: This should be generated by tablegen and support the argument at an
   /// arbitrary position
   switch (Impl) {
+  case RTLIB::impl_armpl_svmodf_f64_x:
+  case RTLIB::impl_armpl_svmodf_f32_x:
+  case RTLIB::impl_armpl_svsincos_f32_x:
+  case RTLIB::impl_armpl_svsincos_f64_x:
   case RTLIB::impl_armpl_svsincospi_f32_x:
   case RTLIB::impl_armpl_svsincospi_f64_x:
     return true;
