@@ -940,9 +940,32 @@ static void printMIOperand(raw_ostream &OS, MFPrintState &State,
     if (MI.isOperandSubregIdx(OpIdx)) {
       MachineOperand::printTargetFlags(OS, Op);
       MachineOperand::printSubRegIdx(OS, Op.getImm(), TRI);
-      break;
+      return;
     }
-    [[fallthrough]];
+    break;
+  case MachineOperand::MO_Metadata: {
+    const MDNode *MD = Op.getMetadata();
+    if (MD->getNumOperands() == 1) {
+      if (const auto *C = dyn_cast<ConstantAsMetadata>(MD->getOperand(0))) {
+        C->getValue()->printAsOperand(OS, /*PrintType=*/true, State.MST);
+        OS << formatOperandComment(MOComment);
+        return;
+      }
+    }
+    break;
+  }
+  case MachineOperand::MO_FrameIndex:
+    printStackObjectReference(OS, State, Op.getIndex());
+    return;
+  case MachineOperand::MO_RegisterMask: {
+    const auto &RegisterMaskIds = State.RegisterMaskIds;
+    auto RegMaskInfo = RegisterMaskIds.find(Op.getRegMask());
+    if (RegMaskInfo != RegisterMaskIds.end())
+      OS << StringRef(TRI->getRegMaskNames()[RegMaskInfo->second]).lower();
+    else
+      printCustomRegMask(Op.getRegMask(), OS, TRI);
+    return;
+  }
   case MachineOperand::MO_Register:
   case MachineOperand::MO_CImmediate:
   case MachineOperand::MO_FPImmediate:
@@ -953,36 +976,24 @@ static void printMIOperand(raw_ostream &OS, MFPrintState &State,
   case MachineOperand::MO_ExternalSymbol:
   case MachineOperand::MO_GlobalAddress:
   case MachineOperand::MO_RegisterLiveOut:
-  case MachineOperand::MO_Metadata:
   case MachineOperand::MO_MCSymbol:
   case MachineOperand::MO_CFIIndex:
   case MachineOperand::MO_IntrinsicID:
   case MachineOperand::MO_Predicate:
   case MachineOperand::MO_BlockAddress:
   case MachineOperand::MO_DbgInstrRef:
-  case MachineOperand::MO_ShuffleMask: {
-    unsigned TiedOperandIdx = 0;
-    if (ShouldPrintRegisterTies && Op.isReg() && Op.isTied() && !Op.isDef())
-      TiedOperandIdx = Op.getParent()->findTiedOperandIdx(OpIdx);
-    Op.print(OS, State.MST, TypeToPrint, OpIdx, PrintDef,
-             /*IsStandalone=*/false, ShouldPrintRegisterTies, TiedOperandIdx,
-             TRI);
-    OS << formatOperandComment(MOComment);
+  case MachineOperand::MO_ShuffleMask:
     break;
   }
-  case MachineOperand::MO_FrameIndex:
-    printStackObjectReference(OS, State, Op.getIndex());
-    break;
-  case MachineOperand::MO_RegisterMask: {
-    const auto &RegisterMaskIds = State.RegisterMaskIds;
-    auto RegMaskInfo = RegisterMaskIds.find(Op.getRegMask());
-    if (RegMaskInfo != RegisterMaskIds.end())
-      OS << StringRef(TRI->getRegMaskNames()[RegMaskInfo->second]).lower();
-    else
-      printCustomRegMask(Op.getRegMask(), OS, TRI);
-    break;
-  }
-  }
+
+  unsigned TiedOperandIdx = 0;
+  if (ShouldPrintRegisterTies && Op.isReg() && Op.isTied() && !Op.isDef())
+    TiedOperandIdx = Op.getParent()->findTiedOperandIdx(OpIdx);
+
+  Op.print(OS, State.MST, TypeToPrint, OpIdx, PrintDef,
+           /*IsStandalone=*/false, ShouldPrintRegisterTies, TiedOperandIdx,
+           TRI);
+  OS << formatOperandComment(MOComment);
 }
 
 void MIRFormatter::printIRValue(raw_ostream &OS, const Value &V,

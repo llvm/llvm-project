@@ -6,7 +6,7 @@ define i32 @reloc_constant() {
   ; CHECK-LABEL: name: reloc_constant
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[INT:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.reloc.constant), !0
-  ; CHECK-NEXT:   [[INT1:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.reloc.constant), 4
+  ; CHECK-NEXT:   [[INT1:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.reloc.constant), i32 4
   ; CHECK-NEXT:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[INT]], [[INT1]]
   ; CHECK-NEXT:   $vgpr0 = COPY [[ADD]](s32)
   ; CHECK-NEXT:   SI_RETURN implicit $vgpr0
