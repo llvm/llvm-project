@@ -897,7 +897,7 @@ public:
 /// following expansion statement
 ///
 /// \verbatim
-///   int a[3]{1, 2, 3};
+///   std::tuple<int, int, int> a{1, 2, 3};
 ///   template for (auto x : a) {
 ///     // ...
 ///   }
