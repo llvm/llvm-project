@@ -36,7 +36,7 @@ int i = A();      // OK since `A` resolved to the single UIE in the previous lin
 using NS1::B UIE; // OK since this declaration shouldn't exist since `B` is not in `NS1`
 using NS2::B UIE; // OK since this declaration shouldn't exist since `B` is not in `NS2 
 using NS3::B UIE; // OK since prior UIEs of `B` shouldn't have declare anything since they don't exist
-B myB;            // OK since `B` resolved to the single UIE in the previous lin
+B myB;            // OK since `B` resolved to the single UIE in the previous line
 
 using NS3::C UIE;
 using NS2::C UIE; // OK since NS2::C doesn't exist
