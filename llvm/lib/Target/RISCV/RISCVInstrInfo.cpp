@@ -1705,8 +1705,8 @@ unsigned getPredicatedOpcode(unsigned Opcode) {
   case RISCV::MINU:  return RISCV::PseudoCCMINU;
   case RISCV::MUL:   return RISCV::PseudoCCMUL;
   case RISCV::LUI:   return RISCV::PseudoCCLUI;
-  case RISCV::QC_LI:   return RISCV::PseudoCCQCLI;
-  case RISCV::QC_E_LI:   return RISCV::PseudoCCQCELI;
+  case RISCV::QC_LI:   return RISCV::PseudoCCQC_LI;
+  case RISCV::QC_E_LI:   return RISCV::PseudoCCQC_E_LI;
 
   case RISCV::ADDI:  return RISCV::PseudoCCADDI;
   case RISCV::SLLI:  return RISCV::PseudoCCSLLI;
