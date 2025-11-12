@@ -35,16 +35,7 @@ static bool assignsToBoolean(const BinaryOperator *BinOp, ASTContext *AC) {
   auto Parents = AC->getParents(*BinOp);
 
   for (const auto &Parent : Parents) {
-    const auto *ParentNoParen = ignoreParensTowardsTheRoot(&Parent, AC);
-    // Special handling for `template<bool bb=true|1>` cases
-    if (const auto *D = ParentNoParen->get<Decl>()) {
-      if (const auto *NTTPD = dyn_cast<NonTypeTemplateParmDecl>(D)) {
-        if (NTTPD->getType().getDesugaredType(*AC)->isBooleanType())
-          return true;
-      }
-    }
-
-    if (const auto *S = ParentNoParen->get<Stmt>()) {
+    if (const auto *S = ignoreParensTowardsTheRoot(&Parent, AC)->get<Stmt>()) {
       if (const auto *ICE = dyn_cast<ImplicitCastExpr>(S)) {
         if (ICE->getType().getDesugaredType(*AC)->isBooleanType())
           return true;
