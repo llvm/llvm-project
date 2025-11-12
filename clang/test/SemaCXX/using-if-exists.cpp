@@ -22,28 +22,28 @@ using NS::x UIE;
 namespace NS1 {}
 namespace NS2 {}
 namespace NS3 {
-int A();     // expected-note{{target of using declaration}}
-struct B {}; // expected-note{{target of using declaration}}
-int C();     // expected-note{{conflicting declaration}}
-struct D {}; // expected-note{{conflicting declaration}}
+int A();
+struct B {};
+int C();
+struct D {};
 } // namespace NS3
 
-using NS1::A UIE;
-using NS2::A UIE; // expected-note{{using declaration annotated with 'using_if_exists' here}} expected-note{{conflicting declaration}}
-using NS3::A UIE; // expected-error{{target of using declaration conflicts with declaration already in scope}}
-int i = A();      // expected-error{{reference to unresolved using declaration}}
+using NS1::A UIE; // OK since this declaration shouldn't exist since `A` is not in `NS1` 
+using NS2::A UIE; // OK since this declaration shouldn't exist since `A` is not in `NS2` 
+using NS3::A UIE; // OK since prior UIEs of `A` shouldn't have declare anything since they don't exist
+int i = A();      // OK since `A` resolved to the single UIE in the previous line
 
-using NS1::B UIE;
-using NS2::B UIE; // expected-note{{conflicting declaration}} expected-note{{using declaration annotated with 'using_if_exists' here}}
-using NS3::B UIE; // expected-error{{target of using declaration conflicts with declaration already in scope}}
-B myB;            // expected-error{{reference to unresolved using declaration}}
+using NS1::B UIE; // OK since this declaration shouldn't exist since `B` is not in `NS1`
+using NS2::B UIE; // OK since this declaration shouldn't exist since `B` is not in `NS2 
+using NS3::B UIE; // OK since prior UIEs of `B` shouldn't have declare anything since they don't exist
+B myB;            // OK since `B` resolved to the single UIE in the previous lin
 
 using NS3::C UIE;
-using NS2::C UIE; // expected-error{{target of using declaration conflicts with declaration already in scope}} expected-note{{target of using declaration}}
+using NS2::C UIE; // OK since NS2::C doesn't exist
 int j = C();
 
 using NS3::D UIE;
-using NS2::D UIE; // expected-error{{target of using declaration conflicts with declaration already in scope}} expected-note{{target of using declaration}}
+using NS2::D UIE; // OK since NS2::D doesn't exist
 D myD;
 } // namespace test_redecl
 
@@ -113,7 +113,12 @@ struct NonDep : BaseEmpty {
 namespace test_using_pack {
 template <class... Ts>
 struct S : Ts... {
-  using typename Ts::x... UIE; // expected-error 2 {{target of using declaration conflicts with declaration already in scope}} expected-note{{conflicting declaration}} expected-note{{target of using declaration}}
+  // We don't expect any errors with conflicting targets for variables `a`, `b`, `c`,
+  // and `d` below this. For `a`, `x` will not be declared because neither E1 nor E2
+  // defines it. For `b`, `x` is the same type so there won't be any conflicts. For
+  // `c` and `d`, only one of the template parameters has a class that defines it,
+  // so there's no conflict.
+  using typename Ts::x... UIE;
 };
 
 struct E1 {};
@@ -121,21 +126,23 @@ struct E2 {};
 S<E1, E2> a;
 
 struct F1 {
-  typedef int x; // expected-note 2 {{conflicting declaration}}
+  typedef int x;
 };
 struct F2 {
-  typedef int x; // expected-note 2 {{target of using declaration}}
+  typedef int x;
 };
 S<F1, F2> b;
 
-S<E1, F2> c; // expected-note{{in instantiation of template class}}
-S<F1, E2> d; // expected-note{{in instantiation of template class}}
+S<E1, F2> c;
+S<F1, E2> d;
 
 template <class... Ts>
 struct S2 : Ts... {
-  using typename Ts::x... UIE; // expected-error 2 {{target of using declaration conflicts with declaration already in scope}} expected-note 3 {{using declaration annotated with 'using_if_exists' here}} expected-note{{conflicting declaration}} expected-note{{target of using declaration}}
+  // OK for the same reasons listed in `struct S` above. We don't expect any conflicts w.r.t
+  // redefinitions of `x` but we still expect errors when using `x` for cases it's not available.
+  using typename Ts::x... UIE; // expected-note 4 {{using declaration annotated with 'using_if_exists' here}}
 
-  x mem(); // expected-error 3 {{reference to unresolved using declaration}}
+  x mem(); // expected-error 4 {{reference to unresolved using declaration}}
 };
 
 S2<E1, E2> e; // expected-note{{in instantiation of template class}}
@@ -145,14 +152,15 @@ S2<F1, E2> h; // expected-note{{in instantiation of template class}}
 
 template <class... Ts>
 struct S3 : protected Ts... {
-  using Ts::m... UIE; // expected-error{{target of using declaration conflicts with declaration already in scope}} expected-note{{target of using declaration}}
+  // No errors for conflicting declarations because only one of the parent classes declares `m`.
+  using Ts::m... UIE;
 };
 struct B1 {
-  enum { m }; // expected-note{{conflicting declaration}}
+  enum { m };
 };
 struct B2 {};
 
-S3<B1, B2> i; // expected-note{{in instantiation of template}}
+S3<B1, B2> i;
 S<B2, B1> j;
 
 } // namespace test_using_pack
@@ -170,9 +178,9 @@ NS2::x y; // expected-error {{reference to unresolved using declaration}}
 } // namespace test_nested
 
 namespace test_scope {
-int x; // expected-note{{conflicting declaration}}
+int x;
 void f() {
-  int x; // expected-note{{conflicting declaration}}
+  int x;
   {
     using ::x UIE; // expected-note {{using declaration annotated with 'using_if_exists' here}}
     (void)x;       // expected-error {{reference to unresolved using declaration}}
@@ -180,13 +188,13 @@ void f() {
 
   {
     using test_scope::x;
-    using ::x UIE; // expected-error{{target of using declaration conflicts with declaration already in scope}} expected-note{{target of using declaration}}
+    using ::x UIE; // OK since there's no `x` in the global namespace, so this wouldn't be any declaration
     (void)x;
   }
 
   (void)x;
 
-  using ::x UIE; // expected-error{{target of using declaration conflicts with declaration already in scope}} expected-note{{target of using declaration}}
+  using ::x UIE; // OK since there's no `x` in the global namespace, so this wouldn't be any declaration
   (void)x;
 }
 } // namespace test_scope
@@ -224,3 +232,20 @@ int main() {
   size = fake_printf();
   size = std::fake_printf();
 }
+
+// Regression test for https://github.com/llvm/llvm-project/issues/85335.
+// No errors should be reported here.
+namespace PR85335 {
+void foo();
+
+namespace N {
+  void bar();
+
+  using ::foo __attribute__((__using_if_exists__));
+  using ::bar __attribute__((__using_if_exists__));
+}
+
+void baz() {
+  N::bar();
+}
+}  // namespace PR85335
