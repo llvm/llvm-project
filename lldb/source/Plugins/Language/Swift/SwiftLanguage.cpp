@@ -107,7 +107,7 @@ void SwiftLanguage::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
 
-bool SwiftLanguage::SymbolNameFitsToLanguage(Mangled mangled) const {
+bool SwiftLanguage::SymbolNameFitsToLanguage(const Mangled &mangled) const {
   return SwiftLanguageRuntime::IsSwiftMangledName(
       mangled.GetMangledName().GetStringRef());
 }
