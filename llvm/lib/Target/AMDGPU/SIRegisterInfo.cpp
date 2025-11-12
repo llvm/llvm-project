@@ -3046,7 +3046,7 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
     if (!IsMUBUF && !MFI->isBottomOfStack()) {
       // Convert to a swizzled stack address by scaling by the wave size.
       // In an entry function/kernel the offset is already swizzled.
-      bool IsSALU = isSGPRClass(TII->getOpRegClass(*MI, FIOperandNum));
+      bool IsSALU = isSGPRClass(TII->getRegClass(MI->getDesc(), FIOperandNum));
       bool LiveSCC = RS->isRegUsed(AMDGPU::SCC) &&
                      !MI->definesRegister(AMDGPU::SCC, /*TRI=*/nullptr);
       const TargetRegisterClass *RC = IsSALU && !LiveSCC
@@ -3741,18 +3741,11 @@ bool SIRegisterInfo::shouldCoalesce(MachineInstr *MI,
                                     unsigned DstSubReg,
                                     const TargetRegisterClass *NewRC,
                                     LiveIntervals &LIS) const {
-  unsigned SrcSize = getRegSizeInBits(*SrcRC);
-  unsigned DstSize = getRegSizeInBits(*DstRC);
+  // TODO: This should be more aggressive, but be more cautious with very wide
+  // tuples.
   unsigned NewSize = getRegSizeInBits(*NewRC);
-
-  // Do not increase size of registers beyond dword, we would need to allocate
-  // adjacent registers and constraint regalloc more than needed.
-
-  // Always allow dword coalescing.
-  if (SrcSize <= 32 || DstSize <= 32)
-    return true;
-
-  return NewSize <= DstSize || NewSize <= SrcSize;
+  return NewSize <= 128 || NewSize <= getRegSizeInBits(*SrcRC) ||
+         NewSize <= getRegSizeInBits(*DstRC);
 }
 
 unsigned SIRegisterInfo::getRegPressureLimit(const TargetRegisterClass *RC,
@@ -3913,20 +3906,6 @@ const TargetRegisterClass *SIRegisterInfo::getVGPR64Class() const {
   // VGPR tuples have an alignment requirement on gfx90a variants.
   return ST.needsAlignedVGPRs() ? &AMDGPU::VReg_64_Align2RegClass
                                 : &AMDGPU::VReg_64RegClass;
-}
-
-const TargetRegisterClass *
-SIRegisterInfo::getRegClass(unsigned RCID) const {
-  switch ((int)RCID) {
-  case AMDGPU::SReg_1RegClassID:
-    return getBoolRC();
-  case AMDGPU::SReg_1_XEXECRegClassID:
-    return getWaveMaskRegClass();
-  case -1:
-    return nullptr;
-  default:
-    return AMDGPUGenRegisterInfo::getRegClass(RCID);
-  }
 }
 
 // Find reaching register definition

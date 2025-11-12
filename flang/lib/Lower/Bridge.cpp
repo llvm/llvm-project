@@ -15,7 +15,6 @@
 #include "flang/Lower/Allocatable.h"
 #include "flang/Lower/CUDA.h"
 #include "flang/Lower/CallInterface.h"
-#include "flang/Lower/Coarray.h"
 #include "flang/Lower/ConvertCall.h"
 #include "flang/Lower/ConvertExpr.h"
 #include "flang/Lower/ConvertExprToHLFIR.h"
@@ -26,6 +25,7 @@
 #include "flang/Lower/IO.h"
 #include "flang/Lower/IterationSpace.h"
 #include "flang/Lower/Mangler.h"
+#include "flang/Lower/MultiImageFortran.h"
 #include "flang/Lower/OpenACC.h"
 #include "flang/Lower/OpenMP.h"
 #include "flang/Lower/PFTBuilder.h"
@@ -1109,6 +1109,34 @@ public:
         activeConstructStack.back().eval.isA<Fortran::parser::BlockConstruct>())
       return activeConstructStack.back().stmtCtx;
     return bridge.fctCtx();
+  }
+
+  /// Initializes values for STAT and ERRMSG
+  std::pair<mlir::Value, mlir::Value>
+  genStatAndErrmsg(mlir::Location loc,
+                   const std::list<Fortran::parser::StatOrErrmsg>
+                       &statOrErrList) override final {
+    Fortran::lower::StatementContext stmtCtx;
+
+    mlir::Value errMsgExpr, statExpr;
+    for (const Fortran::parser::StatOrErrmsg &statOrErr : statOrErrList) {
+      std::visit(Fortran::common::visitors{
+                     [&](const Fortran::parser::StatVariable &statVar) {
+                       const Fortran::semantics::SomeExpr *expr =
+                           Fortran::semantics::GetExpr(statVar);
+                       statExpr =
+                           fir::getBase(genExprAddr(*expr, stmtCtx, &loc));
+                     },
+                     [&](const Fortran::parser::MsgVariable &errMsgVar) {
+                       const Fortran::semantics::SomeExpr *expr =
+                           Fortran::semantics::GetExpr(errMsgVar);
+                       errMsgExpr =
+                           fir::getBase(genExprBox(loc, *expr, stmtCtx));
+                     }},
+                 statOrErr.u);
+    }
+
+    return {statExpr, errMsgExpr};
   }
 
   mlir::Value hostAssocTupleValue() override final { return hostAssocTuple; }
@@ -3275,6 +3303,9 @@ private:
             [&](const Fortran::parser::CompilerDirective::NoInline &) {
               attachInliningDirectiveToStmt(dir, &eval);
             },
+            [&](const Fortran::parser::CompilerDirective::Prefetch &prefetch) {
+              TODO(getCurrentLocation(), "!$dir prefetch");
+            },
             [&](const auto &) {}},
         dir.u);
   }
@@ -3950,13 +3981,30 @@ private:
   }
 
   void genFIR(const Fortran::parser::ChangeTeamConstruct &construct) {
-    TODO(toLocation(), "coarray: ChangeTeamConstruct");
+    Fortran::lower::StatementContext stmtCtx;
+    pushActiveConstruct(getEval(), stmtCtx);
+
+    for (Fortran::lower::pft::Evaluation &e :
+         getEval().getNestedEvaluations()) {
+      if (e.getIf<Fortran::parser::ChangeTeamStmt>()) {
+        maybeStartBlock(e.block);
+        setCurrentPosition(e.position);
+        genFIR(e);
+      } else if (e.getIf<Fortran::parser::EndChangeTeamStmt>()) {
+        maybeStartBlock(e.block);
+        setCurrentPosition(e.position);
+        genFIR(e);
+      } else {
+        genFIR(e);
+      }
+    }
+    popActiveConstruct();
   }
   void genFIR(const Fortran::parser::ChangeTeamStmt &stmt) {
-    TODO(toLocation(), "coarray: ChangeTeamStmt");
+    genChangeTeamStmt(*this, getEval(), stmt);
   }
   void genFIR(const Fortran::parser::EndChangeTeamStmt &stmt) {
-    TODO(toLocation(), "coarray: EndChangeTeamStmt");
+    genEndChangeTeamStmt(*this, getEval(), stmt);
   }
 
   void genFIR(const Fortran::parser::CriticalConstruct &criticalConstruct) {

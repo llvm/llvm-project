@@ -3881,6 +3881,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":DialectUtils",
+        ":GPUDialect",
         ":IR",
         ":SCFDialect",
         ":TransformDialect",
@@ -3888,6 +3889,7 @@ cc_library(
         ":XeGPUDialect",
         ":XeGPUTransformOpsIncGen",
         ":XeGPUUtils",
+        "//llvm:Support",
     ],
 )
 
