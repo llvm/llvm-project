@@ -309,8 +309,10 @@ void aix::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       AddRunTimeLibs(ToolChain, D, CmdArgs, Args);
 
       // Add OpenMP runtime if -fopenmp is specified.
-      if (Args.hasFlag(options::OPT_fopenmp, options::OPT_fopenmp_EQ,
-                       options::OPT_fno_openmp, false)) {
+      const bool hasFOpenMP =
+          Args.hasFlag(options::OPT_fopenmp, options::OPT_fopenmp_EQ,
+                       options::OPT_fno_openmp, false);
+      if (hasFOpenMP) {
         switch (ToolChain.getDriver().getOpenMPRuntime(Args)) {
         case Driver::OMPRT_OMP:
           CmdArgs.push_back("-lomp");
@@ -325,10 +327,13 @@ void aix::Linker::ConstructJob(Compilation &C, const JobAction &JA,
           // Already diagnosed.
           break;
         }
+
+        CmdArgs.push_back("-lperfstat");
       }
 
       // Support POSIX threads if "-pthreads" or "-pthread" is present.
-      if (Args.hasArg(options::OPT_pthreads, options::OPT_pthread))
+      if (hasFOpenMP ||
+          Args.hasArg(options::OPT_pthreads, options::OPT_pthread))
         CmdArgs.push_back("-lpthreads");
 
       if (D.CCCIsCXX())
