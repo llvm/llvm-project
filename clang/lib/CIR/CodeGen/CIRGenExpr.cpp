@@ -311,7 +311,8 @@ static LValue emitGlobalVarDeclLValue(CIRGenFunction &cgf, const Expr *e,
 
 void CIRGenFunction::emitStoreOfScalar(mlir::Value value, Address addr,
                                        bool isVolatile, QualType ty,
-                                       bool isInit, bool isNontemporal) {
+                                       LValueBaseInfo baseInfo, bool isInit,
+                                       bool isNontemporal) {
   assert(!cir::MissingFeatures::opLoadStoreThreadLocal());
 
   if (const auto *clangVecTy = ty->getAs<clang::VectorType>()) {
@@ -333,7 +334,13 @@ void CIRGenFunction::emitStoreOfScalar(mlir::Value value, Address addr,
 
   value = emitToMemory(value, ty);
 
-  assert(!cir::MissingFeatures::opLoadStoreAtomic());
+  assert(!cir::MissingFeatures::opLoadStoreTbaa());
+  LValue atomicLValue = LValue::makeAddr(addr, ty, baseInfo);
+  if (ty->isAtomicType() ||
+      (!isInit && isLValueSuitableForInlineAtomic(atomicLValue))) {
+    emitAtomicStore(RValue::get(value), atomicLValue, isInit);
+    return;
+  }
 
   // Update the alloca with more info on initialization.
   assert(addr.getPointer() && "expected pointer to exist");
@@ -550,7 +557,8 @@ void CIRGenFunction::emitStoreOfScalar(mlir::Value value, LValue lvalue,
   }
 
   emitStoreOfScalar(value, lvalue.getAddress(), lvalue.isVolatile(),
-                    lvalue.getType(), isInit, /*isNontemporal=*/false);
+                    lvalue.getType(), lvalue.getBaseInfo(), isInit,
+                    /*isNontemporal=*/false);
 }
 
 mlir::Value CIRGenFunction::emitLoadOfScalar(Address addr, bool isVolatile,
@@ -1630,7 +1638,7 @@ RValue CIRGenFunction::emitAnyExpr(const Expr *e, AggValueSlot aggSlot,
                                    bool ignoreResult) {
   switch (CIRGenFunction::getEvaluationKind(e->getType())) {
   case cir::TEK_Scalar:
-    return RValue::get(emitScalarExpr(e));
+    return RValue::get(emitScalarExpr(e, ignoreResult));
   case cir::TEK_Complex:
     return RValue::getComplex(emitComplexExpr(e));
   case cir::TEK_Aggregate: {
@@ -2124,79 +2132,6 @@ RValue CIRGenFunction::emitCXXMemberCallExpr(const CXXMemberCallExpr *ce,
 
   return emitCXXMemberOrOperatorMemberCallExpr(
       ce, md, returnValue, hasQualifier, qualifier, isArrow, base);
-}
-
-void CIRGenFunction::emitCXXConstructExpr(const CXXConstructExpr *e,
-                                          AggValueSlot dest) {
-  assert(!dest.isIgnored() && "Must have a destination!");
-  const CXXConstructorDecl *cd = e->getConstructor();
-
-  // If we require zero initialization before (or instead of) calling the
-  // constructor, as can be the case with a non-user-provided default
-  // constructor, emit the zero initialization now, unless destination is
-  // already zeroed.
-  if (e->requiresZeroInitialization() && !dest.isZeroed()) {
-    switch (e->getConstructionKind()) {
-    case CXXConstructionKind::Delegating:
-    case CXXConstructionKind::Complete:
-      emitNullInitialization(getLoc(e->getSourceRange()), dest.getAddress(),
-                             e->getType());
-      break;
-    case CXXConstructionKind::VirtualBase:
-    case CXXConstructionKind::NonVirtualBase:
-      cgm.errorNYI(e->getSourceRange(),
-                   "emitCXXConstructExpr: base requires initialization");
-      break;
-    }
-  }
-
-  // If this is a call to a trivial default constructor, do nothing.
-  if (cd->isTrivial() && cd->isDefaultConstructor())
-    return;
-
-  // Elide the constructor if we're constructing from a temporary
-  if (getLangOpts().ElideConstructors && e->isElidable()) {
-    // FIXME: This only handles the simplest case, where the source object is
-    //        passed directly as the first argument to the constructor. This
-    //        should also handle stepping through implicit casts and conversion
-    //        sequences which involve two steps, with a conversion operator
-    //        follwed by a converting constructor.
-    const Expr *srcObj = e->getArg(0);
-    assert(srcObj->isTemporaryObject(getContext(), cd->getParent()));
-    assert(
-        getContext().hasSameUnqualifiedType(e->getType(), srcObj->getType()));
-    emitAggExpr(srcObj, dest);
-    return;
-  }
-
-  if (const ArrayType *arrayType = getContext().getAsArrayType(e->getType())) {
-    assert(!cir::MissingFeatures::sanitizers());
-    emitCXXAggrConstructorCall(cd, arrayType, dest.getAddress(), e, false);
-  } else {
-
-    clang::CXXCtorType type = Ctor_Complete;
-    bool forVirtualBase = false;
-    bool delegating = false;
-
-    switch (e->getConstructionKind()) {
-    case CXXConstructionKind::Complete:
-      type = Ctor_Complete;
-      break;
-    case CXXConstructionKind::Delegating:
-      // We should be emitting a constructor; GlobalDecl will assert this
-      type = curGD.getCtorType();
-      delegating = true;
-      break;
-    case CXXConstructionKind::VirtualBase:
-      forVirtualBase = true;
-      [[fallthrough]];
-    case CXXConstructionKind::NonVirtualBase:
-      type = Ctor_Base;
-      break;
-    }
-
-    emitCXXConstructorCall(cd, type, forVirtualBase, delegating, dest, e);
-  }
 }
 
 RValue CIRGenFunction::emitReferenceBindingToExpr(const Expr *e) {

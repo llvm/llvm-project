@@ -150,6 +150,13 @@ public:
 
   bool hasOneUse() const { return getNumUsers() == 1; }
 
+  /// Return the single user of this value, or nullptr if there is not exactly
+  /// one user.
+  VPUser *getSingleUser() { return hasOneUse() ? *user_begin() : nullptr; }
+  const VPUser *getSingleUser() const {
+    return hasOneUse() ? *user_begin() : nullptr;
+  }
+
   void replaceAllUsesWith(VPValue *New);
 
   /// Go through the uses list for this VPValue and make each use point to \p
@@ -274,12 +281,12 @@ public:
   virtual bool usesScalars(const VPValue *Op) const {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
-    return onlyFirstLaneUsed(Op);
+    return usesFirstLaneOnly(Op);
   }
 
   /// Returns true if the VPUser only uses the first lane of operand \p Op.
   /// Conservatively returns false.
-  virtual bool onlyFirstLaneUsed(const VPValue *Op) const {
+  virtual bool usesFirstLaneOnly(const VPValue *Op) const {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
     return false;
@@ -287,7 +294,7 @@ public:
 
   /// Returns true if the VPUser only uses the first part of operand \p Op.
   /// Conservatively returns false.
-  virtual bool onlyFirstPartUsed(const VPValue *Op) const {
+  virtual bool usesFirstPartOnly(const VPValue *Op) const {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
     return false;

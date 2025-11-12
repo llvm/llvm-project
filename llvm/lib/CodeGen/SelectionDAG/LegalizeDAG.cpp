@@ -163,6 +163,8 @@ private:
                                    RTLIB::Libcall CallI128);
   void ExpandDivRemLibCall(SDNode *Node, SmallVectorImpl<SDValue> &Results);
 
+  SDValue ExpandSincosStretLibCall(SDNode *Node) const;
+
   SDValue EmitStackConvert(SDValue SrcOp, EVT SlotVT, EVT DestVT,
                            const SDLoc &dl);
   SDValue EmitStackConvert(SDValue SrcOp, EVT SlotVT, EVT DestVT,
@@ -2421,6 +2423,101 @@ static bool useSinCos(SDNode *Node) {
       return true;
   }
   return false;
+}
+
+SDValue SelectionDAGLegalize::ExpandSincosStretLibCall(SDNode *Node) const {
+  // For iOS, we want to call an alternative entry point: __sincos_stret,
+  // which returns the values in two S / D registers.
+  SDLoc dl(Node);
+  SDValue Arg = Node->getOperand(0);
+  EVT ArgVT = Arg.getValueType();
+  RTLIB::Libcall LC = RTLIB::getSINCOS_STRET(ArgVT);
+  RTLIB::LibcallImpl SincosStret = TLI.getLibcallImpl(LC);
+  if (SincosStret == RTLIB::Unsupported)
+    return SDValue();
+
+  /// There are 3 different ABI cases to handle:
+  /// - Direct return of separate fields in registers
+  /// - Single return as vector elements
+  /// - sret struct
+
+  const RTLIB::RuntimeLibcallsInfo &CallsInfo = TLI.getRuntimeLibcallsInfo();
+
+  const DataLayout &DL = DAG.getDataLayout();
+
+  auto [FuncTy, FuncAttrs] = CallsInfo.getFunctionTy(
+      *DAG.getContext(), TM.getTargetTriple(), DL, SincosStret);
+
+  Type *SincosStretRetTy = FuncTy->getReturnType();
+  CallingConv::ID CallConv = CallsInfo.getLibcallImplCallingConv(SincosStret);
+  StringRef LibcallImplName = CallsInfo.getLibcallImplName(SincosStret);
+
+  SDValue Callee = DAG.getExternalSymbol(LibcallImplName.data(),
+                                         TLI.getProgramPointerTy(DL));
+
+  TargetLowering::ArgListTy Args;
+  SDValue SRet;
+
+  int FrameIdx;
+  if (FuncTy->getParamType(0)->isPointerTy()) {
+    // Uses sret
+    MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
+
+    AttributeSet PtrAttrs = FuncAttrs.getParamAttrs(0);
+    Type *StructTy = PtrAttrs.getStructRetType();
+    const uint64_t ByteSize = DL.getTypeAllocSize(StructTy);
+    const Align StackAlign = DL.getPrefTypeAlign(StructTy);
+
+    FrameIdx = MFI.CreateStackObject(ByteSize, StackAlign, false);
+    SRet = DAG.getFrameIndex(FrameIdx, TLI.getFrameIndexTy(DL));
+
+    TargetLowering::ArgListEntry Entry(SRet, FuncTy->getParamType(0));
+    Entry.IsSRet = true;
+    Entry.IndirectType = StructTy;
+    Entry.Alignment = StackAlign;
+
+    Args.push_back(Entry);
+    Args.emplace_back(Arg, FuncTy->getParamType(1));
+  } else {
+    Args.emplace_back(Arg, FuncTy->getParamType(0));
+  }
+
+  TargetLowering::CallLoweringInfo CLI(DAG);
+  CLI.setDebugLoc(dl)
+      .setChain(DAG.getEntryNode())
+      .setLibCallee(CallConv, SincosStretRetTy, Callee, std::move(Args))
+      .setIsPostTypeLegalization();
+
+  std::pair<SDValue, SDValue> CallResult = TLI.LowerCallTo(CLI);
+
+  if (SRet) {
+    MachinePointerInfo PtrInfo =
+        MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), FrameIdx);
+    SDValue LoadSin = DAG.getLoad(ArgVT, dl, CallResult.second, SRet, PtrInfo);
+
+    TypeSize StoreSize = ArgVT.getStoreSize();
+
+    // Address of cos field.
+    SDValue Add = DAG.getObjectPtrOffset(dl, SRet, StoreSize);
+    SDValue LoadCos = DAG.getLoad(ArgVT, dl, LoadSin.getValue(1), Add,
+                                  PtrInfo.getWithOffset(StoreSize));
+
+    SDVTList Tys = DAG.getVTList(ArgVT, ArgVT);
+    return DAG.getNode(ISD::MERGE_VALUES, dl, Tys, LoadSin.getValue(0),
+                       LoadCos.getValue(0));
+  }
+
+  if (!CallResult.first.getValueType().isVector())
+    return CallResult.first;
+
+  SDValue SinVal =
+      DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, ArgVT, CallResult.first,
+                  DAG.getVectorIdxConstant(0, dl));
+  SDValue CosVal =
+      DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, ArgVT, CallResult.first,
+                  DAG.getVectorIdxConstant(1, dl));
+  SDVTList Tys = DAG.getVTList(ArgVT, ArgVT);
+  return DAG.getNode(ISD::MERGE_VALUES, dl, Tys, SinVal, CosVal);
 }
 
 SDValue SelectionDAGLegalize::expandLdexp(SDNode *Node) const {
@@ -4730,12 +4827,30 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
   case ISD::FSINCOS:
   case ISD::FSINCOSPI: {
     EVT VT = Node->getValueType(0);
+
+    if (Node->getOpcode() == ISD::FSINCOS) {
+      RTLIB::Libcall SincosStret = RTLIB::getSINCOS_STRET(VT);
+      if (SincosStret != RTLIB::UNKNOWN_LIBCALL) {
+        if (SDValue Expanded = ExpandSincosStretLibCall(Node)) {
+          Results.push_back(Expanded);
+          Results.push_back(Expanded.getValue(1));
+          break;
+        }
+      }
+    }
+
     RTLIB::Libcall LC = Node->getOpcode() == ISD::FSINCOS
                             ? RTLIB::getSINCOS(VT)
                             : RTLIB::getSINCOSPI(VT);
-    bool Expanded = DAG.expandMultipleResultFPLibCall(LC, Node, Results);
-    if (!Expanded)
-      llvm_unreachable("Expected scalar FSINCOS[PI] to expand to libcall!");
+    bool Expanded = TLI.expandMultipleResultFPLibCall(DAG, LC, Node, Results);
+    if (!Expanded) {
+      DAG.getContext()->emitError(Twine("no libcall available for ") +
+                                  Node->getOperationName(&DAG));
+      SDValue Poison = DAG.getPOISON(VT);
+      Results.push_back(Poison);
+      Results.push_back(Poison);
+    }
+
     break;
   }
   case ISD::FLOG:
@@ -4825,7 +4940,7 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
     EVT VT = Node->getValueType(0);
     RTLIB::Libcall LC = Node->getOpcode() == ISD::FMODF ? RTLIB::getMODF(VT)
                                                         : RTLIB::getFREXP(VT);
-    bool Expanded = DAG.expandMultipleResultFPLibCall(LC, Node, Results,
+    bool Expanded = TLI.expandMultipleResultFPLibCall(DAG, LC, Node, Results,
                                                       /*CallRetResNo=*/0);
     if (!Expanded)
       llvm_unreachable("Expected scalar FFREXP/FMODF to expand to libcall!");
