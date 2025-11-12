@@ -410,7 +410,7 @@ private:
 // the "variant" in a handle to stay conforming. See __arg_t for more details.
 template <class _Visitor, class _Context>
 _LIBCPP_DEPRECATED_IN_CXX26 _LIBCPP_HIDE_FROM_ABI decltype(auto)
-    visit_format_arg(_Visitor&& __vis, basic_format_arg<_Context> __arg) {
+visit_format_arg(_Visitor&& __vis, basic_format_arg<_Context> __arg) {
   return std::__visit_format_arg(std::forward<_Visitor>(__vis), __arg);
 }
 
