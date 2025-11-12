@@ -4956,18 +4956,15 @@ void VPlanTransforms::convertFindLastRecurrences(
     SR->replaceAllUsesWith(DataSelect);
     SR->eraseFromParent();
 
-    // Find final reduction and replace it with an
+    // Find final reduction computation and replace it with an
     // extract.last.active intrinsic.
-    VPInstruction *RdxResult = nullptr;
-    for (VPUser *U : DataSelect->users()) {
+    VPUser **ComputeRdx = find_if(DataSelect->users(), [](VPUser *U) {
       VPInstruction *I = dyn_cast<VPInstruction>(U);
-      if (I && I->getOpcode() == VPInstruction::ComputeReductionResult) {
-        RdxResult = I;
-        break;
-      }
-    }
-
-    assert(RdxResult);
+      return I && I->getOpcode() == VPInstruction::ComputeReductionResult;
+    });
+    assert(ComputeRdx != DataSelect->user_end() &&
+           "Unable to find Reduction Result Recipe");
+    VPInstruction *RdxResult = cast<VPInstruction>(*ComputeRdx);
     Builder.setInsertPoint(RdxResult);
     auto *ExtractLastActive =
         Builder.createNaryOp(VPInstruction::ExtractLastActive,
