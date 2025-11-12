@@ -1437,6 +1437,7 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
               // we checked the RepOrWidenR operand against
               // vputils::isSingleScalar.
               assert(RepOrWidenR == Store->getAddr() ||
+                     RepOrWidenR == Store->getMask() ||
                      vputils::isSingleScalar(Store->getStoredValue()));
               return true;
             }
