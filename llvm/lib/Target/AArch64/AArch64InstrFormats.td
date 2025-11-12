@@ -12588,12 +12588,10 @@ class MOPSMemoryCopy<bits<2> opcode, bits<2> op1, bits<2> op2, string asm>
 class MOPSMemoryMove<bits<2> opcode, bits<2> op1, bits<2> op2, string asm>
   : MOPSMemoryCopyMoveBase<1, opcode, op1, op2, asm>;
 
-class MOPSMemorySetBase<bit isTagging, bits<2> opcode, bit op1, bit op2,
-                        string asm>
-  : I<(outs GPR64common:$Rd_wb, GPR64:$Rn_wb),
-      (ins GPR64common:$Rd, GPR64:$Rn, GPR64:$Rm),
-      asm, "\t[$Rd]!, $Rn!, $Rm",
-      "$Rd = $Rd_wb,$Rn = $Rn_wb", []>,
+class MOPSMemorySetBase<dag ins, string operands, bit isTagging, bits<2> opcode,
+                        bit op1, bit op2, bit op3, string asm>
+  : I<(outs GPR64common:$Rd_wb, GPR64:$Rn_wb), ins,
+      asm, operands, "$Rd = $Rd_wb,$Rn = $Rn_wb", []>,
     Sched<[]> {
   bits<5> Rd;
   bits<5> Rn;
@@ -12605,20 +12603,34 @@ class MOPSMemorySetBase<bit isTagging, bits<2> opcode, bit op1, bit op2,
   let Inst{15-14} = opcode;
   let Inst{13} = op2;
   let Inst{12} = op1;
-  let Inst{11-10} = 0b01;
+  let Inst{11} = 0b0;
+  let Inst{10} = op3;
   let Inst{9-5} = Rn;
   let Inst{4-0} = Rd;
 
-  let DecoderMethod = "DecodeSETMemOpInstruction";
   let mayLoad = 0;
   let mayStore = 1;
 }
 
-class MOPSMemorySet<bits<2> opcode, bit op1, bit op2, string asm>
-  : MOPSMemorySetBase<0, opcode, op1, op2, asm>;
+class MOPSMemorySet<bits<2> opcode, bit op1, bit op2, bit op3, string asm>
+  : MOPSMemorySetBase<(ins GPR64common:$Rd, GPR64:$Rn, GPR64:$Rm),
+                       "\t[$Rd]!, $Rn!, $Rm", 0, opcode, op1, op2, op3, asm> {
+  let DecoderMethod = "DecodeSETMemOpInstruction";
+}
 
-class MOPSMemorySetTagging<bits<2> opcode, bit op1, bit op2, string asm>
-  : MOPSMemorySetBase<1, opcode, op1, op2, asm>;
+class MOPSMemorySetTagging<bits<2> opcode, bit op1, bit op2, bit op3, string asm>
+  : MOPSMemorySetBase<(ins GPR64common:$Rd, GPR64:$Rn, GPR64:$Rm),
+                       "\t[$Rd]!, $Rn!, $Rm", 1, opcode, op1, op2, op3, asm> {
+  let DecoderMethod = "DecodeSETMemOpInstruction";
+}
+
+class MOPSGoMemorySetTagging<bits<2> opcode, bit op1, bit op2, bit op3, string asm>
+  : MOPSMemorySetBase<(ins GPR64common:$Rd, GPR64:$Rn),
+                       "\t[$Rd]!, $Rn!", 1, opcode, op1, op2, op3, asm> {
+  // No `Rm` operand, as all bits must be set to 1
+  let Inst{20-16} = 0b11111;
+  let DecoderMethod = "DecodeSETMemGoOpInstruction";
+}
 
 multiclass MOPSMemoryCopyInsns<bits<2> opcode, string asm> {
   def ""   : MOPSMemoryCopy<opcode, 0b00, 0b00, asm>;
@@ -12659,17 +12671,27 @@ multiclass MOPSMemoryMoveInsns<bits<2> opcode, string asm> {
 }
 
 multiclass MOPSMemorySetInsns<bits<2> opcode, string asm> {
-  def "" : MOPSMemorySet<opcode, 0, 0, asm>;
-  def T  : MOPSMemorySet<opcode, 1, 0, asm # "t">;
-  def N  : MOPSMemorySet<opcode, 0, 1, asm # "n">;
-  def TN : MOPSMemorySet<opcode, 1, 1, asm # "tn">;
+  def "" : MOPSMemorySet<opcode, 0, 0, 1, asm>;
+  def T  : MOPSMemorySet<opcode, 1, 0, 1, asm # "t">;
+  def N  : MOPSMemorySet<opcode, 0, 1, 1, asm # "n">;
+  def TN : MOPSMemorySet<opcode, 1, 1, 1, asm # "tn">;
 }
 
 multiclass MOPSMemorySetTaggingInsns<bits<2> opcode, string asm> {
-  def "" : MOPSMemorySetTagging<opcode, 0, 0, asm>;
-  def T  : MOPSMemorySetTagging<opcode, 1, 0, asm # "t">;
-  def N  : MOPSMemorySetTagging<opcode, 0, 1, asm # "n">;
-  def TN : MOPSMemorySetTagging<opcode, 1, 1, asm # "tn">;
+  def "" : MOPSMemorySetTagging<opcode, 0, 0, 1, asm>;
+  def T  : MOPSMemorySetTagging<opcode, 1, 0, 1, asm # "t">;
+  def N  : MOPSMemorySetTagging<opcode, 0, 1, 1, asm # "n">;
+  def TN : MOPSMemorySetTagging<opcode, 1, 1, 1, asm # "tn">;
+}
+
+//----------------------------------------------------------------------------
+// MOPS Granule Only - FEAT_MOPS_GO
+//----------------------------------------------------------------------------
+multiclass MOPSGoMemorySetTaggingInsns<bits<2> opcode, string asm> {
+  def "" : MOPSGoMemorySetTagging<opcode, 0, 0, 0, asm>;
+  def T  : MOPSGoMemorySetTagging<opcode, 1, 0, 0, asm # "t">;
+  def N  : MOPSGoMemorySetTagging<opcode, 0, 1, 0, asm # "n">;
+  def TN : MOPSGoMemorySetTagging<opcode, 1, 1, 0, asm # "tn">;
 }
 
 //----------------------------------------------------------------------------

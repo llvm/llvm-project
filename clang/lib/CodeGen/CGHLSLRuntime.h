@@ -173,27 +173,22 @@ protected:
 
   llvm::Value *emitSystemSemanticLoad(llvm::IRBuilder<> &B, llvm::Type *Type,
                                       const clang::DeclaratorDecl *Decl,
-                                      HLSLAppliedSemanticAttr *Semantic,
+                                      Attr *Semantic,
                                       std::optional<unsigned> Index);
 
   llvm::Value *handleScalarSemanticLoad(llvm::IRBuilder<> &B,
                                         const FunctionDecl *FD,
                                         llvm::Type *Type,
-                                        const clang::DeclaratorDecl *Decl,
-                                        HLSLAppliedSemanticAttr *Semantic);
+                                        const clang::DeclaratorDecl *Decl);
 
-  std::pair<llvm::Value *, specific_attr_iterator<HLSLAppliedSemanticAttr>>
-  handleStructSemanticLoad(
-      llvm::IRBuilder<> &B, const FunctionDecl *FD, llvm::Type *Type,
-      const clang::DeclaratorDecl *Decl,
-      specific_attr_iterator<HLSLAppliedSemanticAttr> begin,
-      specific_attr_iterator<HLSLAppliedSemanticAttr> end);
+  llvm::Value *handleStructSemanticLoad(llvm::IRBuilder<> &B,
+                                        const FunctionDecl *FD,
+                                        llvm::Type *Type,
+                                        const clang::DeclaratorDecl *Decl);
 
-  std::pair<llvm::Value *, specific_attr_iterator<HLSLAppliedSemanticAttr>>
-  handleSemanticLoad(llvm::IRBuilder<> &B, const FunctionDecl *FD,
-                     llvm::Type *Type, const clang::DeclaratorDecl *Decl,
-                     specific_attr_iterator<HLSLAppliedSemanticAttr> begin,
-                     specific_attr_iterator<HLSLAppliedSemanticAttr> end);
+  llvm::Value *handleSemanticLoad(llvm::IRBuilder<> &B, const FunctionDecl *FD,
+                                  llvm::Type *Type,
+                                  const clang::DeclaratorDecl *Decl);
 
 public:
   CGHLSLRuntime(CodeGenModule &CGM) : CGM(CGM) {}
@@ -239,14 +234,14 @@ private:
                                    HLSLResourceBindingAttr *RBA);
 
   llvm::Value *emitSPIRVUserSemanticLoad(llvm::IRBuilder<> &B, llvm::Type *Type,
-                                         HLSLAppliedSemanticAttr *Semantic,
+                                         HLSLSemanticAttr *Semantic,
                                          std::optional<unsigned> Index);
   llvm::Value *emitDXILUserSemanticLoad(llvm::IRBuilder<> &B, llvm::Type *Type,
-                                        HLSLAppliedSemanticAttr *Semantic,
+                                        HLSLSemanticAttr *Semantic,
                                         std::optional<unsigned> Index);
   llvm::Value *emitUserSemanticLoad(llvm::IRBuilder<> &B, llvm::Type *Type,
                                     const clang::DeclaratorDecl *Decl,
-                                    HLSLAppliedSemanticAttr *Semantic,
+                                    HLSLSemanticAttr *Semantic,
                                     std::optional<unsigned> Index);
 
   llvm::Triple::ArchType getArch();

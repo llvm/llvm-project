@@ -104,6 +104,9 @@ Changes to the AArch64 Backend
 * Assembler/disassembler support has been added for Armv9.7-A (2025)
   architecture extensions.
 
+* Assembler/disassembler support has been added for 'Virtual Tagging
+  Extension (vMTE)' Future Architecture Technologies extension.
+
 Changes to the AMDGPU Backend
 -----------------------------
 

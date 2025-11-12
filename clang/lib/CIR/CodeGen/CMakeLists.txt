@@ -35,6 +35,7 @@ add_clang_library(clangCIR
   CIRGenOpenACC.cpp
   CIRGenOpenACCClause.cpp
   CIRGenOpenACCRecipe.cpp
+  CIRGenPointerAuth.cpp
   CIRGenRecordLayoutBuilder.cpp
   CIRGenStmt.cpp
   CIRGenStmtOpenACC.cpp

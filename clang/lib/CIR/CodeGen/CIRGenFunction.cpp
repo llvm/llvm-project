@@ -632,6 +632,10 @@ cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
 
     startFunction(gd, retTy, fn, funcType, args, loc, bodyRange.getBegin());
 
+    // Save parameters for coroutine function.
+    if (body && isa_and_nonnull<CoroutineBodyStmt>(body))
+      llvm::append_range(fnArgs, funcDecl->parameters());
+
     if (isa<CXXDestructorDecl>(funcDecl)) {
       emitDestructorBody(args);
     } else if (isa<CXXConstructorDecl>(funcDecl)) {
