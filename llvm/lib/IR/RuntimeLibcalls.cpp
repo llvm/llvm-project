@@ -223,10 +223,7 @@ RuntimeLibcallsInfo::getFunctionTy(LLVMContext &Ctx, const Triple &TT,
 
     Type *ScalarTy = IsF32 ? Type::getFloatTy(Ctx) : Type::getDoubleTy(Ctx);
     unsigned EC = IsF32 ? 4 : 2;
-
-    Type *VecTy =
-        IsScalable ? static_cast<Type *>(ScalableVectorType::get(ScalarTy, EC))
-                   : static_cast<Type *>(FixedVectorType::get(ScalarTy, EC));
+    VectorType *VecTy = VectorType::get(ScalarTy, EC, IsScalable);
 
     for (Attribute::AttrKind Attr : CommonFnAttrs)
       FuncAttrBuilder.addAttribute(Attr);
@@ -245,8 +242,8 @@ RuntimeLibcallsInfo::getFunctionTy(LLVMContext &Ctx, const Triple &TT,
 
     PointerType *PtrTy = PointerType::get(Ctx, 0);
     SmallVector<Type *, 4> ArgTys = {VecTy, PtrTy};
-    if (IsScalable && hasVectorMaskArgument(LibcallImpl))
-      ArgTys.push_back(ScalableVectorType::get(Type::getInt1Ty(Ctx), EC));
+    if (hasVectorMaskArgument(LibcallImpl))
+      ArgTys.push_back(VectorType::get(Type::getInt1Ty(Ctx), EC, IsScalable));
 
     return {FunctionType::get(VecTy, ArgTys, false), Attrs};
   }
