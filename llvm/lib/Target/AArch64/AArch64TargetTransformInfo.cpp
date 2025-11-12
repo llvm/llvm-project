@@ -4163,11 +4163,14 @@ InstructionCost AArch64TTIImpl::getScalarizationOverhead(
 
 std::optional<InstructionCost> AArch64TTIImpl::getFP16BF16PromoteCost(
     Type *Ty, TTI::TargetCostKind CostKind, TTI::OperandValueInfo Op1Info,
-    TTI::OperandValueInfo Op2Info, bool IncludeTrunc,
+    TTI::OperandValueInfo Op2Info, bool IncludeTrunc, bool CanUseSVE,
     std::function<InstructionCost(Type *)> InstCost) const {
   if (!Ty->getScalarType()->isHalfTy() && !Ty->getScalarType()->isBFloatTy())
     return std::nullopt;
   if (Ty->getScalarType()->isHalfTy() && ST->hasFullFP16())
+    return std::nullopt;
+  if (CanUseSVE && Ty->isScalableTy() && ST->hasSVEB16B16() &&
+      ST->isNonStreamingSVEorSME2Available())
     return std::nullopt;
 
   Type *PromotedTy = Ty->getWithNewType(Type::getFloatTy(Ty->getContext()));
@@ -4210,6 +4213,8 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
       ISD == ISD::FDIV || ISD == ISD::FREM)
     if (auto PromotedCost = getFP16BF16PromoteCost(
             Ty, CostKind, Op1Info, Op2Info, /*IncludeTrunc=*/true,
+            // There is not native support for fdiv/frem even with +sve-b16b16.
+            /*CanUseSVE=*/ISD != ISD::FDIV && ISD != ISD::FREM,
             [&](Type *PromotedTy) {
               return getArithmeticInstrCost(Opcode, PromotedTy, CostKind,
                                             Op1Info, Op2Info);
@@ -4624,7 +4629,8 @@ InstructionCost AArch64TTIImpl::getCmpSelInstrCost(
   if (Opcode == Instruction::FCmp) {
     if (auto PromotedCost = getFP16BF16PromoteCost(
             ValTy, CostKind, Op1Info, Op2Info, /*IncludeTrunc=*/false,
-            [&](Type *PromotedTy) {
+            // TODO: Consider costing SVE FCMPs.
+            /*CanUseSVE=*/false, [&](Type *PromotedTy) {
               InstructionCost Cost =
                   getCmpSelInstrCost(Opcode, PromotedTy, CondTy, VecPred,
                                      CostKind, Op1Info, Op2Info);
