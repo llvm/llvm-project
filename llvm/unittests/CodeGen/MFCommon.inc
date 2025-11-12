@@ -45,7 +45,7 @@ public:
     static RegClassWeight Bogus{1, 16};
     return Bogus;
   }
-  unsigned getRegUnitWeight(unsigned RegUnit) const override { return 1; }
+  unsigned getRegUnitWeight(MCRegUnit RegUnit) const override { return 1; }
   unsigned getNumRegPressureSets() const override { return 0; }
   const char *getRegPressureSetName(unsigned Idx) const override {
     return "bogus";
@@ -59,7 +59,7 @@ public:
     static const int Bogus[] = {0, -1};
     return &Bogus[0];
   }
-  const int *getRegUnitPressureSets(unsigned RegUnit) const override {
+  const int *getRegUnitPressureSets(MCRegUnit RegUnit) const override {
     static const int Bogus[] = {0, -1};
     return &Bogus[0];
   }

@@ -208,3 +208,43 @@ def test_get_indexing_maps_attr():
                 assert maps[0] == a_map
                 assert maps[1] == b_map
                 assert maps[2] == c_map
+
+
+@run
+def test_infer_contraction_dimensions_from_maps():
+    with Context(), Location.unknown():
+        module = Module.create()
+        with InsertionPoint(module.body):
+            # === Test valid contraction (matmul) ===
+            dim_m = AffineDimExpr.get(0)
+            dim_n = AffineDimExpr.get(1)
+            dim_k = AffineDimExpr.get(2)
+            a_map = AffineMap.get(3, 0, [dim_m, dim_k])
+            b_map = AffineMap.get(3, 0, [dim_k, dim_n])
+            c_map = AffineMap.get(3, 0, [dim_m, dim_n])
+
+            dims = linalg.infer_contraction_dimensions_from_maps([a_map, b_map, c_map])
+            assert dims is not None
+
+            # Expect m=[0], n=[1], k=[2] as per standard matmul.
+            assert list(dims.m) == [0], f"Expected m=[0], got {list(dims.m)}"
+            assert list(dims.n) == [1], f"Expected n=[1], got {list(dims.n)}"
+            assert list(dims.k) == [2], f"Expected k=[2], got {list(dims.k)}"
+            assert list(dims.batch) == [], f"Expected batch=[], got {list(dims.batch)}"
+
+            # === Test invalid input (wrong number of maps) ===
+            invalid_dims = linalg.infer_contraction_dimensions_from_maps([a_map, b_map])
+            assert invalid_dims is None
+
+            # === Test element-wise operation ===
+            dim_i = AffineDimExpr.get(0)
+            dim_j = AffineDimExpr.get(1)
+            elementwise_map = AffineMap.get(2, 0, [dim_i, dim_j])
+            elementwise_dims = linalg.infer_contraction_dimensions_from_maps(
+                [elementwise_map, elementwise_map, elementwise_map]
+            )
+            assert elementwise_dims is not None
+            assert len(elementwise_dims.m) == 0
+            assert len(elementwise_dims.n) == 0
+            assert len(elementwise_dims.k) == 0
+            assert list(elementwise_dims.batch) == [0, 1]

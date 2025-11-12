@@ -10734,8 +10734,22 @@ SDValue SelectionDAGBuilder::lowerNoFPClassToAssertNoFPClass(
   if (Classes == fcNone)
     return Op;
 
-  return DAG.getNode(ISD::AssertNoFPClass, SDLoc(Op), Op.getValueType(), Op,
-                     DAG.getTargetConstant(Classes, SDLoc(), MVT::i32));
+  SDLoc SL = getCurSDLoc();
+  SDValue TestConst = DAG.getTargetConstant(Classes, SDLoc(), MVT::i32);
+
+  if (Op.getOpcode() != ISD::MERGE_VALUES) {
+    return DAG.getNode(ISD::AssertNoFPClass, SL, Op.getValueType(), Op,
+                       TestConst);
+  }
+
+  SmallVector<SDValue, 8> Ops(Op.getNumOperands());
+  for (unsigned I = 0, E = Ops.size(); I != E; ++I) {
+    SDValue MergeOp = Op.getOperand(I);
+    Ops[I] = DAG.getNode(ISD::AssertNoFPClass, SL, MergeOp.getValueType(),
+                         MergeOp, TestConst);
+  }
+
+  return DAG.getMergeValues(Ops, SL);
 }
 
 /// Populate a CallLowerinInfo (into \p CLI) based on the properties of

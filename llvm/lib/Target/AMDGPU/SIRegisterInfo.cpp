@@ -3781,7 +3781,7 @@ unsigned SIRegisterInfo::getRegPressureSetLimit(const MachineFunction &MF,
   llvm_unreachable("Unexpected register pressure set!");
 }
 
-const int *SIRegisterInfo::getRegUnitPressureSets(unsigned RegUnit) const {
+const int *SIRegisterInfo::getRegUnitPressureSets(MCRegUnit RegUnit) const {
   static const int Empty[] = { -1 };
 
   if (RegPressureIgnoredUnits[RegUnit])

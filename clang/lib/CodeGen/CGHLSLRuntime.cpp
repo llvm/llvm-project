@@ -573,7 +573,7 @@ static llvm::Value *createSPIRVLocationLoad(IRBuilder<> &B, llvm::Module &M,
 
 llvm::Value *
 CGHLSLRuntime::emitSPIRVUserSemanticLoad(llvm::IRBuilder<> &B, llvm::Type *Type,
-                                         HLSLSemanticAttr *Semantic,
+                                         HLSLAppliedSemanticAttr *Semantic,
                                          std::optional<unsigned> Index) {
   Twine BaseName = Twine(Semantic->getAttrName()->getName());
   Twine VariableName = BaseName.concat(Twine(Index.value_or(0)));
@@ -591,7 +591,7 @@ CGHLSLRuntime::emitSPIRVUserSemanticLoad(llvm::IRBuilder<> &B, llvm::Type *Type,
 
 llvm::Value *
 CGHLSLRuntime::emitDXILUserSemanticLoad(llvm::IRBuilder<> &B, llvm::Type *Type,
-                                        HLSLSemanticAttr *Semantic,
+                                        HLSLAppliedSemanticAttr *Semantic,
                                         std::optional<unsigned> Index) {
   Twine BaseName = Twine(Semantic->getAttrName()->getName());
   Twine VariableName = BaseName.concat(Twine(Index.value_or(0)));
@@ -611,7 +611,7 @@ CGHLSLRuntime::emitDXILUserSemanticLoad(llvm::IRBuilder<> &B, llvm::Type *Type,
 
 llvm::Value *CGHLSLRuntime::emitUserSemanticLoad(
     IRBuilder<> &B, llvm::Type *Type, const clang::DeclaratorDecl *Decl,
-    HLSLSemanticAttr *Semantic, std::optional<unsigned> Index) {
+    HLSLAppliedSemanticAttr *Semantic, std::optional<unsigned> Index) {
   if (CGM.getTarget().getTriple().isSPIRV())
     return emitSPIRVUserSemanticLoad(B, Type, Semantic, Index);
 
@@ -623,14 +623,16 @@ llvm::Value *CGHLSLRuntime::emitUserSemanticLoad(
 
 llvm::Value *CGHLSLRuntime::emitSystemSemanticLoad(
     IRBuilder<> &B, llvm::Type *Type, const clang::DeclaratorDecl *Decl,
-    Attr *Semantic, std::optional<unsigned> Index) {
-  if (isa<HLSLSV_GroupIndexAttr>(Semantic)) {
+    HLSLAppliedSemanticAttr *Semantic, std::optional<unsigned> Index) {
+
+  std::string SemanticName = Semantic->getAttrName()->getName().upper();
+  if (SemanticName == "SV_GROUPINDEX") {
     llvm::Function *GroupIndex =
         CGM.getIntrinsic(getFlattenedThreadIdInGroupIntrinsic());
     return B.CreateCall(FunctionCallee(GroupIndex));
   }
 
-  if (isa<HLSLSV_DispatchThreadIDAttr>(Semantic)) {
+  if (SemanticName == "SV_DISPATCHTHREADID") {
     llvm::Intrinsic::ID IntrinID = getThreadIdIntrinsic();
     llvm::Function *ThreadIDIntrinsic =
         llvm::Intrinsic::isOverloaded(IntrinID)
@@ -639,7 +641,7 @@ llvm::Value *CGHLSLRuntime::emitSystemSemanticLoad(
     return buildVectorInput(B, ThreadIDIntrinsic, Type);
   }
 
-  if (isa<HLSLSV_GroupThreadIDAttr>(Semantic)) {
+  if (SemanticName == "SV_GROUPTHREADID") {
     llvm::Intrinsic::ID IntrinID = getGroupThreadIdIntrinsic();
     llvm::Function *GroupThreadIDIntrinsic =
         llvm::Intrinsic::isOverloaded(IntrinID)
@@ -648,7 +650,7 @@ llvm::Value *CGHLSLRuntime::emitSystemSemanticLoad(
     return buildVectorInput(B, GroupThreadIDIntrinsic, Type);
   }
 
-  if (isa<HLSLSV_GroupIDAttr>(Semantic)) {
+  if (SemanticName == "SV_GROUPID") {
     llvm::Intrinsic::ID IntrinID = getGroupIdIntrinsic();
     llvm::Function *GroupIDIntrinsic =
         llvm::Intrinsic::isOverloaded(IntrinID)
@@ -657,44 +659,32 @@ llvm::Value *CGHLSLRuntime::emitSystemSemanticLoad(
     return buildVectorInput(B, GroupIDIntrinsic, Type);
   }
 
-  if (HLSLSV_PositionAttr *S = dyn_cast<HLSLSV_PositionAttr>(Semantic)) {
+  if (SemanticName == "SV_POSITION") {
     if (CGM.getTriple().getEnvironment() == Triple::EnvironmentType::Pixel)
       return createSPIRVBuiltinLoad(B, CGM.getModule(), Type,
-                                    S->getAttrName()->getName(),
+                                    Semantic->getAttrName()->getName(),
                                     /* BuiltIn::FragCoord */ 15);
   }
 
   llvm_unreachable("non-handled system semantic. FIXME.");
 }
 
-llvm::Value *
-CGHLSLRuntime::handleScalarSemanticLoad(IRBuilder<> &B, const FunctionDecl *FD,
-                                        llvm::Type *Type,
-                                        const clang::DeclaratorDecl *Decl) {
+llvm::Value *CGHLSLRuntime::handleScalarSemanticLoad(
+    IRBuilder<> &B, const FunctionDecl *FD, llvm::Type *Type,
+    const clang::DeclaratorDecl *Decl, HLSLAppliedSemanticAttr *Semantic) {
 
-  HLSLSemanticAttr *Semantic = nullptr;
-  for (HLSLSemanticAttr *Item : FD->specific_attrs<HLSLSemanticAttr>()) {
-    if (Item->getTargetDecl() == Decl) {
-      Semantic = Item;
-      break;
-    }
-  }
-  // Sema must create one attribute per scalar field.
-  assert(Semantic);
-
-  std::optional<unsigned> Index = std::nullopt;
-  if (Semantic->isSemanticIndexExplicit())
-    Index = Semantic->getSemanticIndex();
-
-  if (isa<HLSLUserSemanticAttr>(Semantic))
-    return emitUserSemanticLoad(B, Type, Decl, Semantic, Index);
-  return emitSystemSemanticLoad(B, Type, Decl, Semantic, Index);
+  std::optional<unsigned> Index = Semantic->getSemanticIndex();
+  if (Semantic->getAttrName()->getName().starts_with_insensitive("SV_"))
+    return emitSystemSemanticLoad(B, Type, Decl, Semantic, Index);
+  return emitUserSemanticLoad(B, Type, Decl, Semantic, Index);
 }
 
-llvm::Value *
-CGHLSLRuntime::handleStructSemanticLoad(IRBuilder<> &B, const FunctionDecl *FD,
-                                        llvm::Type *Type,
-                                        const clang::DeclaratorDecl *Decl) {
+std::pair<llvm::Value *, specific_attr_iterator<HLSLAppliedSemanticAttr>>
+CGHLSLRuntime::handleStructSemanticLoad(
+    IRBuilder<> &B, const FunctionDecl *FD, llvm::Type *Type,
+    const clang::DeclaratorDecl *Decl,
+    specific_attr_iterator<HLSLAppliedSemanticAttr> AttrBegin,
+    specific_attr_iterator<HLSLAppliedSemanticAttr> AttrEnd) {
   const llvm::StructType *ST = cast<StructType>(Type);
   const clang::RecordDecl *RD = Decl->getType()->getAsRecordDecl();
 
@@ -704,23 +694,31 @@ CGHLSLRuntime::handleStructSemanticLoad(IRBuilder<> &B, const FunctionDecl *FD,
   llvm::Value *Aggregate = llvm::PoisonValue::get(Type);
   auto FieldDecl = RD->field_begin();
   for (unsigned I = 0; I < ST->getNumElements(); ++I) {
-    llvm::Value *ChildValue =
-        handleSemanticLoad(B, FD, ST->getElementType(I), *FieldDecl);
+    auto [ChildValue, NextAttr] = handleSemanticLoad(
+        B, FD, ST->getElementType(I), *FieldDecl, AttrBegin, AttrEnd);
+    AttrBegin = NextAttr;
     assert(ChildValue);
     Aggregate = B.CreateInsertValue(Aggregate, ChildValue, I);
     ++FieldDecl;
   }
 
-  return Aggregate;
+  return std::make_pair(Aggregate, AttrBegin);
 }
 
-llvm::Value *
-CGHLSLRuntime::handleSemanticLoad(IRBuilder<> &B, const FunctionDecl *FD,
-                                  llvm::Type *Type,
-                                  const clang::DeclaratorDecl *Decl) {
+std::pair<llvm::Value *, specific_attr_iterator<HLSLAppliedSemanticAttr>>
+CGHLSLRuntime::handleSemanticLoad(
+    IRBuilder<> &B, const FunctionDecl *FD, llvm::Type *Type,
+    const clang::DeclaratorDecl *Decl,
+    specific_attr_iterator<HLSLAppliedSemanticAttr> AttrBegin,
+    specific_attr_iterator<HLSLAppliedSemanticAttr> AttrEnd) {
+  assert(AttrBegin != AttrEnd);
   if (Type->isStructTy())
-    return handleStructSemanticLoad(B, FD, Type, Decl);
-  return handleScalarSemanticLoad(B, FD, Type, Decl);
+    return handleStructSemanticLoad(B, FD, Type, Decl, AttrBegin, AttrEnd);
+
+  HLSLAppliedSemanticAttr *Attr = *AttrBegin;
+  ++AttrBegin;
+  return std::make_pair(handleScalarSemanticLoad(B, FD, Type, Decl, Attr),
+                        AttrBegin);
 }
 
 void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
@@ -774,7 +772,11 @@ void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
     } else {
       llvm::Type *ParamType =
           Param.hasByValAttr() ? Param.getParamByValType() : Param.getType();
-      SemanticValue = handleSemanticLoad(B, FD, ParamType, PD);
+      auto AttrBegin = PD->specific_attr_begin<HLSLAppliedSemanticAttr>();
+      auto AttrEnd = PD->specific_attr_end<HLSLAppliedSemanticAttr>();
+      auto Result =
+          handleSemanticLoad(B, FD, ParamType, PD, AttrBegin, AttrEnd);
+      SemanticValue = Result.first;
       if (!SemanticValue)
         return;
       if (Param.hasByValAttr()) {
