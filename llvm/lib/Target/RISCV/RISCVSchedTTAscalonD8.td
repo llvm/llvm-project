@@ -621,6 +621,67 @@ foreach mx = SchedMxListFWRed in {
   }
 }
 
+// Vector Mask Instructions
+foreach mx = SchedMxList in {
+  defvar IsWorstCase = AscalonIsWorstCaseMX<mx, SchedMxList>.c;
+  let Latency = 1 in {
+    defm "" : LMULWriteResMX<"WriteVMALUV", [AscalonV], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVMSFSV", [AscalonV], mx, IsWorstCase>;
+  }
+  let Latency = 2, ReleaseAtCycles = [1, 2] in {
+    defm "" : LMULWriteResMX<"WriteVMPopV", [AscalonFX, AscalonV], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVMFFSV", [AscalonFX, AscalonV], mx, IsWorstCase>;
+  }
+}
+foreach mx = SchedMxList in {
+  defvar Cycles = AscalonGetCyclesDefault<mx>.c;
+  defvar IsWorstCase = AscalonIsWorstCaseMX<mx, SchedMxList>.c;
+  let Latency = Cycles, ReleaseAtCycles = [1, !sub(Cycles, 1)] in {
+    defm "" : LMULWriteResMX<"WriteVIotaV", [AscalonFX, AscalonV], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVIdxV", [AscalonFX, AscalonV], mx, IsWorstCase>;
+  }
+}
+
+// Vector Permutation Instructions
+let Latency = 2, ReleaseAtCycles = [1, 2] in {
+  def : WriteRes<WriteVMovSX, [AscalonFX, AscalonV]>;
+  def : WriteRes<WriteVMovXS, [AscalonFX, AscalonV]>;
+  def : WriteRes<WriteVMovSF, [AscalonFX, AscalonV]>;
+  def : WriteRes<WriteVMovFS, [AscalonFX, AscalonV]>;
+}
+foreach mx = SchedMxList in {
+  defvar Cycles = AscalonGetCyclesDefault<mx>.c;
+  defvar IsWorstCase = AscalonIsWorstCaseMX<mx, SchedMxList>.c;
+  let Latency = !mul(Cycles, 2), ReleaseAtCycles = [Cycles, !mul(Cycles, 2)] in {
+    defm "" : LMULWriteResMX<"WriteVRGatherVX",    [AscalonFX, AscalonV], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVRGatherVI",    [AscalonFX, AscalonV], mx, IsWorstCase>;
+  }
+}
+
+foreach mx = SchedMxList in {
+  foreach sew = SchedSEWSet<mx>.val in {
+    defvar Cycles = AscalonGetCyclesVRGatherVV<mx>.c;
+    defvar IsWorstCase = AscalonIsWorstCaseMXSEW<mx, sew, SchedMxList>.c;
+    let Latency = !add(Cycles, 3), ReleaseAtCycles = [1, !add(1, Cycles)] in {
+      defm "" : LMULSEWWriteResMXSEW<"WriteVRGatherVV", [AscalonFX, AscalonV], mx, sew, IsWorstCase>;
+      defm "" : LMULSEWWriteResMXSEW<"WriteVRGatherEI16VV", [AscalonFX, AscalonV], mx, sew, IsWorstCase>;
+      defm "" : LMULSEWWriteResMXSEW<"WriteVCompressV", [AscalonFX, AscalonV], mx, sew, IsWorstCase>;
+    }
+  }
+}
+
+foreach mx = SchedMxList in {
+  defvar Cycles = AscalonGetCyclesDefault<mx>.c;
+  defvar IsWorstCase = AscalonIsWorstCaseMX<mx, SchedMxList>.c;
+  let Latency = 4, AcquireAtCycles = [0, 1], ReleaseAtCycles = [1, !add(1, Cycles)] in {
+    defm "" : LMULWriteResMX<"WriteVSlideUpX",   [AscalonFX, AscalonV], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVSlideDownX", [AscalonFX, AscalonV], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVSlideI",     [AscalonFX, AscalonV], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVISlide1X",   [AscalonFX, AscalonV], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVFSlide1F",   [AscalonFX, AscalonV], mx, IsWorstCase>;
+  }
+}
+
 //===----------------------------------------------------------------------===//
 // Unsupported extensions
 defm : UnsupportedSchedQ;
