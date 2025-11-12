@@ -5,7 +5,7 @@
 llvm.func @distribute_dist_schedule_chunk_size(%lb : i32, %ub : i32, %step : i32, %x : i32) {
   // CHECK: call void @[[RUNTIME_FUNC:.*]](ptr @1, i32 %omp_global_thread_num, i32 91, ptr %p.lastiter, ptr %p.lowerbound, ptr %p.upperbound, ptr %p.stride, i32 1, i32 1024)
   // We want to make sure that the next call is not another init builder.
-  // CHECK-NEXT-NOT: call void @[[RUNTIME_FUNC]]
+  // CHECK-NOT: call void @[[RUNTIME_FUNC]]
   %1 = llvm.mlir.constant(1024: i32) : i32
   omp.distribute dist_schedule_static dist_schedule_chunk_size(%1 : i32) {
     omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
@@ -24,7 +24,7 @@ llvm.func @distribute_dist_schedule_chunk_size(%lb : i32, %ub : i32, %step : i32
 llvm.func @distribute_dist_schedule(%lb : i32, %ub : i32, %step : i32, %x : i32) {
   // CHECK: call void @[[RUNTIME_FUNC:.*]](ptr @1, i32 %omp_global_thread_num, i32 92, ptr %p.lastiter, ptr %p.lowerbound, ptr %p.upperbound, ptr %p.stride, i32 1, i32 0)
   // We want to make sure that the next call is not another init builder.
-  // CHECK-NEXT-NOT: call void @[[RUNTIME_FUNC]]
+  // CHECK-NOT: call void @[[RUNTIME_FUNC]]
   omp.distribute dist_schedule_static {
     omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
       omp.yield
