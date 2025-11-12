@@ -5501,8 +5501,9 @@ public:
   }
 };
 
-/// Represents an expansion-init-list to be expanded over by an expansion
-/// statement.
+/// Represents an expansion-init-list of an enumerating expansion statement.
+///
+/// \see CXXEnumeratingExpansionStmt
 class CXXExpansionInitListExpr final
     : public Expr,
       llvm::TrailingObjects<CXXExpansionInitListExpr, Expr *> {
@@ -5562,6 +5563,8 @@ private:
 
 /// Helper that selects an expression from an expansion init list depending
 /// on the current expansion index.
+///
+/// \see CXXEnumeratingExpansionStmt
 class CXXExpansionInitListSelectExpr : public Expr {
   friend class ASTStmtReader;
 
@@ -5606,6 +5609,12 @@ public:
   }
 };
 
+/// This class serves the same purpose as CXXExpansionInitListSelectExpr, but
+/// for destructuring expansion statements; that is, instead of selecting among
+/// a list of expressions, it selects from a list of 'BindingDecl's.
+///
+/// \see CXXEnumeratingExpansionStmt
+/// \see CXXDestructuringExpansionStmt
 class CXXDestructuringExpansionSelectExpr : public Expr {
   friend class ASTStmtReader;
 

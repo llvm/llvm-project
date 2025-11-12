@@ -526,6 +526,17 @@ public:
 };
 
 /// CXXExpansionStmt - Base class for an unexpanded C++ expansion statement.
+///
+/// The main purpose for this class is to store the AST nodes common to all
+/// variants of expansion statements; it also provides storage for additional
+/// subexpressions required by its derived classes. This is to simplify the
+/// implementation of 'children()' and friends.
+///
+/// \see ExpansionStmtDecl
+/// \see CXXEnumeratingExpansionStmt
+/// \see CXXIteratingExpansionStmt
+/// \see CXXDestructuringExpansionStmt
+/// \see CXXDependentExpansionStmt
 class CXXExpansionStmt : public Stmt {
   friend class ASTStmtReader;
 
@@ -622,7 +633,35 @@ public:
 
 /// Represents an unexpanded enumerating expansion statement.
 ///
-/// The expansion initializer of this is always a CXXExpansionInitListExpr.
+/// An 'enumerating' expansion statement is one whose expansion-initializer
+/// is a brace-enclosed expression-list; this list is syntactically similar to
+/// an initializer list, but it isn't actually an expression in and of itself
+/// (in that it is never evaluated or emitted) and instead is just treated as
+/// a group of expressions. The expansion initializer of this is always a
+/// 'CXXExpansionInitListExpr'.
+///
+/// Example:
+/// \verbatim
+///   template for (auto x : { 1, 2, 3 }) {
+///     // ...
+///   }
+/// \endverbatim
+///
+/// Note that the expression-list may also contain pack expansions, e.g.
+/// '{ 1, xs... }', in which case the expansion size is dependent.
+///
+/// Here, the '{ 1, 2, 3 }' is parsed as a 'CXXExpansionInitListExpr'. This node
+/// handles storing (and pack-expanding) the individual expressions.
+///
+/// Sema then wraps this with a 'CXXExpansionInitListSelectExpr', which also
+/// contains a reference to an integral NTTP that is used as the expansion
+/// index; this index is either dependent (if the expansion-size is dependent),
+/// or set to a value of I in the I-th expansion during the expansion process.
+///
+/// The actual expansion is done by 'BuildCXXExpansionInitListSelectExpr()': for
+/// example, during the 2nd expansion of '{ a, b, c }', I is equal to 1, and
+/// BuildCXXExpansionInitListSelectExpr(), when called via TreeTransform,
+/// 'instantiates' the expression '{ a, b, c }' to just 'b'.
 class CXXEnumeratingExpansionStmt : public CXXExpansionStmt {
   friend class ASTStmtReader;
 
@@ -638,7 +677,24 @@ public:
   }
 };
 
-/// Represents an expansion statement whose expansion-initializer is dependent.
+/// Represents an expansion statement whose expansion-initializer is
+/// type-dependent.
+///
+/// This will be instantiated as either a 'CXXIteratingExpansionStmt' or a
+/// 'CXXDestructuringExpansionStmt'. Dependent expansion statements can never
+/// be enumerating; those are always stored as a 'CXXEnumeratingExpansionStmt',
+/// even if the expansion size is dependent because the expression-list contains
+/// a pack.
+///
+/// Example:
+/// \verbatim
+///   template <typename T>
+///   void f() {
+///     template for (auto x : T()) {
+///       // ...
+///     }
+///   }
+/// \endverbatim
 class CXXDependentExpansionStmt : public CXXExpansionStmt {
   friend class ASTStmtReader;
 
@@ -673,8 +729,20 @@ public:
 
 /// Represents an unexpanded iterating expansion statement.
 ///
-/// The expression used to compute the size of the expansion is not stored in
-/// this as it is only created at the moment of expansion.
+/// An 'iterating' expansion statement is one whose expansion-initializer is a
+/// a range (i.e. it has a corresponding 'begin()'/'end()' pair that is
+/// determined based on a number of conditions as stated in [stmt.expand] and
+/// [stmt.ranged]).
+///
+/// The expression used to compute the size of the expansion is not stored and
+/// is only created at the moment of expansion.
+///
+/// \verbatim
+///   static constexpr std::string_view foo = "1234";
+///   template for (auto x : foo) {
+///     // ...
+///   }
+/// \endverbatim
 class CXXIteratingExpansionStmt : public CXXExpansionStmt {
   friend class ASTStmtReader;
 
@@ -742,7 +810,29 @@ public:
   }
 };
 
-/// Represents an expansion statement whose expansion-initializer is dependent.
+/// Represents an unexpanded destructuring expansion statement.
+///
+/// A 'destructuring' expansion statement is any expansion statement that is
+/// not enumerating or iterating (i.e. destructuring is the last thing we try,
+/// and if it doesn't work, the program is ill-formed).
+///
+/// This essentially involves treating the expansion-initializer as the
+/// initializer of a structured-binding declarations, with the number of
+/// bindings and expansion size determined by the usual means (array size,
+/// std::tuple_size, etc.).
+///
+/// Example:
+/// \verbatim
+///   std::array<int, 3> a {1, 2, 3};
+///   template for (auto x : a) {
+///     // ...
+///   }
+/// \endverbatim
+///
+/// Sema wraps the initializer with a CXXDestructuringExpansionSelectExpr, which
+/// selects a binding based on the current expansion index; this is analogous to
+/// how 'CXXExpansionInitListSelectExpr' is used; see the documentation of
+/// 'CXXEnumeratingExpansionStmt' for more details on this.
 class CXXDestructuringExpansionStmt : public CXXExpansionStmt {
   friend class ASTStmtReader;
 
@@ -780,7 +870,7 @@ public:
   }
 };
 
-/// Represents the code generated for an instantiated expansion statement.
+/// Represents the code generated for an expanded expansion statement.
 ///
 /// This holds 'shared statements' and 'instantiations'; these encode the
 /// general underlying pattern that all expansion statements desugar to:
@@ -794,6 +884,40 @@ public:
 ///   ...
 ///   {
 ///     <n-th instantiation>
+///   }
+/// }
+/// \endverbatim
+///
+/// Here, the only thing that is stored in the AST are the 'shared statements'
+/// and the 'CompoundStmt's that wrap the 'instantiations'. The outer braces
+/// shown above are implicit.
+///
+/// For example, the CXXExpansionInstantiationStmt that corresponds to the
+/// following expansion statement
+///
+/// \verbatim
+///   std::array<int, 3> a {1, 2, 3};
+///   template for (auto x : a) {
+///     // ...
+///   }
+/// \endverbatim
+///
+/// would be
+///
+/// \verbatim
+/// {
+///   auto [__u0, __u1, __u2] = a;
+///   {
+///     auto x = __u0;
+///     // ...
+///   }
+///   {
+///     auto x = __u1;
+///     // ...
+///   }
+///   {
+///     auto x = __u2;
+///     // ...
 ///   }
 /// }
 /// \endverbatim

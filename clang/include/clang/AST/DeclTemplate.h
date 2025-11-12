@@ -3346,12 +3346,71 @@ public:
 /// Represents a C++26 expansion statement declaration.
 ///
 /// This is a bit of a hack, since expansion statements shouldn't really be
-/// "declarations" per se (they don't declare anything). Nevertheless, we *do*
+/// 'declarations' per se (they don't declare anything). Nevertheless, we *do*
 /// need them to be declaration *contexts*, because the DeclContext is used to
-/// compute the "template depth" of entities enclosed therein. In particular,
-/// the "template depth" is used to find instantiations of parameter variables,
+/// compute the 'template depth' of entities enclosed therein. In particular,
+/// the 'template depth' is used to find instantiations of parameter variables,
 /// and a lambda enclosed within an expansion statement cannot compute its
 /// template depth without a pointer to the enclosing expansion statement.
+///
+/// For the remainder of this comment, let 'expanding' an expansion statement
+/// refer to the process of performing template substitution on its body N
+/// times, where N is the expansion size (how this size is determined depends on
+/// the kind of expansion statement); by contrast we may sometimes 'instantiate'
+/// an expansion statement (because it happens to be in a template). This is
+/// just regular template instantiation.
+///
+/// Apart from a template parameter list that contains a template parameter used
+/// as the expansion index, this node contains a 'CXXExpansionStmt' as well as a
+/// 'CXXExpansionInstantiationStmt'. These two members correspond to distinct
+/// representations of the expansion statement: the former is used prior to
+/// expansion and contains all the parts needed to perform expansion; the latter
+/// holds the expanded/desugared AST nodes that result from the expansion.
+///
+/// After expansion, the 'CXXExpansionStmt' is no longer updated and left as-is;
+/// this also means that, if an already-expanded expansion statement is inside a
+/// template, and that template is then instantiated, the 'CXXExpansionStmt' is
+/// *not* instantiated; only the 'CXXExpansionInstantiationStmt' is. The latter
+/// is also what's used for codegen and constant evaluation.
+///
+/// For example, if the user writes the following expansion statement:
+/// \verbatim
+///   std::array<int, 3> a {1, 2, 3};
+///   template for (auto x : a) {
+///     // ...
+///   }
+/// \endverbatim
+///
+/// The 'CXXExpansionStmt' of this particular 'ExpansionStmtDecl' is a
+/// 'CXXDestructuringExpansionStmt', which stores, amongst other things, the
+/// declaration of the variable 'x' as well as the expansion-initializer 'a'.
+///
+/// After expansion, we end up with a 'CXXExpansionInstantiationStmt' that
+/// contains a DecompositionDecl and 3 CompoundStmts, one for each expansion:
+///
+/// \verbatim
+/// {
+///   auto [__u0, __u1, __u2] = a;
+///   {
+///     auto x = __u0;
+///     // ...
+///   }
+///   {
+///     auto x = __u1;
+///     // ...
+///   }
+///   {
+///     auto x = __u2;
+///     // ...
+///   }
+/// }
+/// \endverbatim
+///
+/// The outer braces shown above are implicit; we don't actually create another
+/// CompoundStmt wrapping everything.
+///
+/// \see CXXExpansionStmt
+/// \see CXXExpansionInstantiationStmt
 class ExpansionStmtDecl : public Decl, public DeclContext {
   CXXExpansionStmt *Expansion = nullptr;
   TemplateParameterList *TParams;
