@@ -1386,6 +1386,14 @@ let TargetPrefix = "nvvm" in {
       PureIntrinsic<[llvm_double_ty],
         [llvm_double_ty, llvm_double_ty, llvm_double_ty]>;
   }
+  
+  foreach rnd = ["_rn", "_rz", "_rm", "_rp"] in {
+    foreach sat = ["", "_sat"] in {
+      def int_nvvm_fma_mixed # rnd # sat # _f32 :
+        PureIntrinsic<[llvm_float_ty], 
+          [llvm_anyfloat_ty, LLVMMatchType<0>, llvm_float_ty]>;
+    }
+  }
 
   //
   // Rcp
@@ -1450,6 +1458,23 @@ let TargetPrefix = "nvvm" in {
 
       def int_nvvm_add_ # rnd # _d : NVVMBuiltin,
           DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty, llvm_double_ty]>;
+    }
+  }
+
+  foreach rnd = ["", "_rn", "_rz", "_rm", "_rp"] in {
+    foreach sat = ["", "_sat"] in {
+      def int_nvvm_add_mixed # rnd # sat # _f32 :
+        PureIntrinsic<[llvm_float_ty], [llvm_anyfloat_ty, llvm_float_ty]>;
+    }
+  }
+  
+  //
+  // Sub
+  //
+  foreach rnd = ["", "_rn", "_rz", "_rm", "_rp"] in {
+    foreach sat = ["", "_sat"] in {
+      def int_nvvm_sub_mixed # rnd # sat # _f32 :
+        PureIntrinsic<[llvm_float_ty], [llvm_anyfloat_ty, llvm_float_ty]>;
     }
   }
 
