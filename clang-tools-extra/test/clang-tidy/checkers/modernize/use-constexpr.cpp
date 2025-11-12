@@ -319,6 +319,16 @@ namespace variable {
         // CHECK-FIXES-11: static constexpr int D1 = f1();
         static const int E1 = g1();
 
+        static const int F1[] = {0,1,2,3,4};
+        // CHECK-MESSAGES-11: :[[@LINE-1]]:26: warning: declare variable 'F1' as 'constexpr'
+        // CHECK-FIXES-11: static constexpr int F1[] = {0,1,2,3,4};
+
+        static const int G1[] = {0,1,2,f1(),4};
+        // CHECK-MESSAGES-11: :[[@LINE-1]]:26: warning: declare variable 'G1' as 'constexpr'
+        // CHECK-FIXES-11: static constexpr int G1[] = {0,1,2,f1(),4};
+
+        static const int H1[] = {0,1,2,g1(),4};
+
         template <typename T>
         const T TemplatedVar1 = T{};
         // CHECK-MESSAGES-11: :[[@LINE-1]]:17: warning: declare variable 'TemplatedVar1' as 'constexpr'
