@@ -1391,7 +1391,7 @@ public:
           return CU::UNWIND_MODE_DWARF;
 
         MCRegister Reg = *MRI.getLLVMRegNum(Inst.getRegister(), true);
-        SavedRegs[SavedRegIdx++] = Reg;
+        SavedRegs[SavedRegIdx++] = Reg.id();
         StackAdjust += OffsetSize;
         MinAbsOffset = std::min(MinAbsOffset, std::abs(Inst.getOffset()));
         InstrOffset += PushInstrSize(Reg);

@@ -414,3 +414,20 @@ void test_use_lifetimebound_call() {
 // CHECK:   Expire ([[L_Y]] (Path: y))
 // CHECK:   Expire ([[L_X]] (Path: x))
 }
+// CHECK-LABEL: Function: test_conditional_operator
+void test_conditional_operator(bool cond) {
+  MyObj x, y;
+  MyObj *p = cond ? &x : &y;
+// CHECK: Block B{{[0-9]+}}:
+// CHECK:   Issue ([[L_X:[0-9]+]] (Path: x), ToOrigin: [[O_DRE_X:[0-9]+]] (Expr: DeclRefExpr))
+// CHECK:   OriginFlow (Dest: [[O_ADDR_X:[0-9]+]] (Expr: UnaryOperator), Src: [[O_DRE_X]] (Expr: DeclRefExpr))
+// CHECK: Block B{{[0-9]+}}:
+// CHECK:   Issue ([[L_Y:[0-9]+]] (Path: y), ToOrigin: [[O_DRE_Y:[0-9]+]] (Expr: DeclRefExpr))
+// CHECK:   OriginFlow (Dest: [[O_ADDR_Y:[0-9]+]] (Expr: UnaryOperator), Src: [[O_DRE_Y]] (Expr: DeclRefExpr))
+// CHECK: Block B{{[0-9]+}}:
+// CHECK:   OriginFlow (Dest: [[O_COND_OP:[0-9]+]] (Expr: ConditionalOperator), Src: [[O_ADDR_X]] (Expr: UnaryOperator))
+// CHECK:   OriginFlow (Dest: [[O_COND_OP]] (Expr: ConditionalOperator), Src: [[O_ADDR_Y]] (Expr: UnaryOperator), Merge)
+// CHECK:   OriginFlow (Dest: [[O_P:[0-9]+]] (Decl: p), Src: [[O_COND_OP]] (Expr: ConditionalOperator))
+// CHECK:   Expire ([[L_Y]] (Path: y))
+// CHECK:   Expire ([[L_X]] (Path: x))
+}
