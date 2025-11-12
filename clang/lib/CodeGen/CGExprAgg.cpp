@@ -1478,10 +1478,9 @@ void AggExprEmitter::VisitOpaqueValueExpr(OpaqueValueExpr *e) {
 
 void
 AggExprEmitter::VisitCompoundLiteralExpr(CompoundLiteralExpr *E) {
-  if (Dest.isPotentiallyAliased() &&
-      E->getType().isPODType(CGF.getContext())) {
-    // For a POD type, just emit a load of the lvalue + a copy, because our
-    // compound literal might alias the destination.
+  if (Dest.isPotentiallyAliased()) {
+    // Just emit a load of the lvalue + a copy, because our compound literal
+    // might alias the destination.
     EmitAggLoadOfLValue(E);
     return;
   }
