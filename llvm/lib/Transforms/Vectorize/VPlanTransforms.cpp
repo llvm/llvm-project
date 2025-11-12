@@ -1835,8 +1835,7 @@ static bool simplifyKnownEVL(VPlan &Plan, ElementCount VF,
       if (!SE.isKnownPredicate(CmpInst::ICMP_ULE, AVLSCEV, VFSCEV))
         continue;
 
-      VPBuilder Builder(&R);
-      VPValue *Trunc = Builder.createScalarZExtOrTrunc(
+      VPValue *Trunc = VPBuilder(&R).createScalarZExtOrTrunc(
           AVL, Type::getInt32Ty(Plan.getContext()), AVLSCEV->getType(),
           R.getDebugLoc());
       R.getVPSingleValue()->replaceAllUsesWith(Trunc);
