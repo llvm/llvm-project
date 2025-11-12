@@ -877,6 +877,8 @@ static void yamlToPdb(StringRef Path) {
     DbiBuilder.createSectionMap(Sections);
     ExitOnErr(DbiBuilder.addDbgStream(
         pdb::DbgHeaderType::SectionHdr,
+        // FIXME: Downcasting to an ArrayRef<uint8_t> should use a helper
+        // function in LLVM
         ArrayRef<uint8_t>{(const uint8_t *)Sections.data(),
                           Sections.size() * sizeof(object::coff_section)}));
   }
