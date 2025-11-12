@@ -385,21 +385,14 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
       Args.push_back(Offset);
     }
 
-    // Call the intrinsic (returns a struct),
-    // Extract the loaded value and status bit (elements within the struct)
-    // Extend the status bit to a 32-bit integer
-    // Store the extended status into the user's reference variable
-    // Return the loaded value
+    // The load intrinsics give us a (T value, i1 status) pair -
+    // shepherd these into the return value and out reference respectively.
     Value *ResRet =
         Builder.CreateIntrinsic(RetTy, IntrID, Args, {}, "ld.struct");
-
     Value *LoadedValue = Builder.CreateExtractValue(ResRet, {0}, "ld.value");
-
     Value *StatusBit = Builder.CreateExtractValue(ResRet, {1}, "ld.status");
-
     Value *ExtendedStatus =
         Builder.CreateZExt(StatusBit, Builder.getInt32Ty(), "ld.status.ext");
-
     Builder.CreateStore(ExtendedStatus, StatusAddr);
 
     return LoadedValue;

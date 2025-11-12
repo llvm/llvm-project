@@ -104,13 +104,15 @@ static bool checkWaveOps(Intrinsic::ID IID) {
 // instruction is ever extracted.
 // This is our proof that the module requires TiledResources
 // to be set, as if check access fully mapped was used.
-bool checkIfStatusIsExtracted(const Instruction &I) {
-  auto *II = dyn_cast<IntrinsicInst>(&I);
-  assert(II);
+bool checkIfStatusIsExtracted(const Instruction *I) {
+  auto *II = dyn_cast<IntrinsicInst>(I);
+  assert(II && "intrinsic instruction expected in checkIfStatusIsExtracted");
   auto IID = II->getIntrinsicID();
   assert(IID == Intrinsic::dx_resource_load_typedbuffer ||
-         IID == Intrinsic::dx_resource_load_rawbuffer);
-  for (const User *U : I.users()) {
+         IID == Intrinsic::dx_resource_load_rawbuffer &&
+             "unexpected intrinsic ID, only dx_resource_load_typedbuffer and "
+             "dx_resource_load_rawbuffer are expected");
+  for (const User *U : I->users()) {
     if (const ExtractValueInst *EVI = dyn_cast<ExtractValueInst>(U)) {
       // Resource load operations return a {result, status} pair
       // check if we extract the status
@@ -214,12 +216,12 @@ void ModuleShaderFlags::updateFunctionFlags(ComputedShaderFlags &CSF,
           DRTM[cast<TargetExtType>(II->getArgOperand(0)->getType())];
       if (RTI.isTyped())
         CSF.TypedUAVLoadAdditionalFormats |= RTI.getTyped().ElementCount > 1;
-      if (!CSF.TiledResources && checkIfStatusIsExtracted(I))
+      if (!CSF.TiledResources && checkIfStatusIsExtracted(&I))
         CSF.TiledResources = true;
       break;
     }
     case Intrinsic::dx_resource_load_rawbuffer: {
-      if (!CSF.TiledResources && checkIfStatusIsExtracted(I))
+      if (!CSF.TiledResources && checkIfStatusIsExtracted(&I))
         CSF.TiledResources = true;
       break;
     }
