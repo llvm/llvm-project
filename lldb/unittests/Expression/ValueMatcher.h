@@ -27,45 +27,8 @@
 
 namespace lldb_private {
 
-/// Helper function to format Value details to an ostream.
-///
-/// This is used for format the details coming from either a Value directly
-/// or the parts stored in the ValueMatcher object.
-inline void FormatValueDetails(llvm::raw_ostream &os,
-                               Value::ValueType value_type,
-                               Value::ContextType context_type,
-                               const Scalar &scalar,
-                               llvm::ArrayRef<uint8_t> buffer_data) {
-  os << "Value(";
-  os << "value_type=" << Value::GetValueTypeAsCString(value_type);
-  os << ", context_type=" << Value::GetContextTypeAsCString(context_type);
-
-  if (value_type == Value::ValueType::HostAddress) {
-    os << ", buffer=[";
-    for (size_t i = 0; i < std::min(buffer_data.size(), size_t(16)); ++i) {
-      if (i > 0)
-        os << " ";
-      os << llvm::format("%02x", static_cast<unsigned>(buffer_data[i]));
-    }
-    if (buffer_data.size() > 16) {
-      os << " ...";
-    }
-    os << "] (" << buffer_data.size() << " bytes)";
-  } else {
-    os << ", value=" << scalar;
-  }
-  os << ")";
-}
-
 /// Custom printer for Value objects to make test failures more readable.
-inline void PrintTo(const Value &val, std::ostream *os) {
-  if (!os)
-    return;
-
-  llvm::raw_os_ostream raw_os(*os);
-  FormatValueDetails(raw_os, val.GetValueType(), val.GetContextType(),
-                     val.GetScalar(), val.GetBuffer().GetData());
-}
+void PrintTo(const Value &val, std::ostream *os);
 
 /// Custom matcher for Value.
 ///
@@ -96,72 +59,11 @@ public:
   using is_gtest_matcher = void;
 
   bool MatchAndExplain(const Value &val,
-                       testing::MatchResultListener *listener) const {
-    if (val.GetValueType() != m_value_type) {
-      *listener << "value_type mismatch: expected "
-                << Value::GetValueTypeAsCString(m_value_type) << ", got "
-                << Value::GetValueTypeAsCString(val.GetValueType()) << " ";
-      return false;
-    }
+                       testing::MatchResultListener *listener) const;
 
-    if (val.GetContextType() != m_context_type) {
-      *listener << "context_type mismatch: expected "
-                << Value::GetContextTypeAsCString(m_context_type) << ", got "
-                << Value::GetContextTypeAsCString(val.GetContextType()) << " ";
-      return false;
-    }
+  void DescribeTo(std::ostream *os) const;
 
-    if (m_value_type == Value::ValueType::HostAddress) {
-      const DataBufferHeap &buffer = val.GetBuffer();
-      const size_t buffer_size = buffer.GetByteSize();
-      if (buffer_size != m_expected_bytes.size()) {
-        *listener << "buffer size mismatch: expected "
-                  << m_expected_bytes.size() << ", got " << buffer_size << " ";
-        return false;
-      }
-
-      const uint8_t *data = buffer.GetBytes();
-      for (size_t i = 0; i < buffer_size; ++i) {
-        if (data[i] != m_expected_bytes[i]) {
-          *listener << "byte mismatch at index " << i << ": expected "
-                    << "0x" << std::hex << std::setw(2) << std::setfill('0')
-                    << static_cast<int>(m_expected_bytes[i]) << ", got "
-                    << "0x" << std::hex << std::setw(2) << std::setfill('0')
-                    << static_cast<int>(data[i]) << " ";
-          return false;
-        }
-      }
-    } else {
-      // For Scalar, FileAddress, and LoadAddress - compare m_value
-      const Scalar &actual_scalar = val.GetScalar();
-      if (actual_scalar != m_expected_scalar) {
-        std::string expected_str, actual_str;
-        llvm::raw_string_ostream expected_os(expected_str);
-        llvm::raw_string_ostream actual_os(actual_str);
-        expected_os << m_expected_scalar;
-        actual_os << actual_scalar;
-        *listener << "scalar value mismatch: expected " << expected_os.str()
-                  << ", got " << actual_os.str() << " ";
-        return false;
-      }
-    }
-
-    return true;
-  }
-
-  void DescribeTo(std::ostream *os) const {
-    if (!os)
-      return;
-    llvm::raw_os_ostream raw_os(*os);
-    FormatValueDetails(raw_os, m_value_type, m_context_type, m_expected_scalar,
-                       m_expected_bytes);
-  }
-
-  void DescribeNegationTo(std::ostream *os) const {
-    if (!os)
-      return;
-    *os << "value does not match";
-  }
+  void DescribeNegationTo(std::ostream *os) const;
 
 private:
   Value::ValueType m_value_type = Value::ValueType::Invalid;
@@ -173,110 +75,79 @@ private:
 /// Matcher for Value with Scalar, FileAddress, or LoadAddress types.
 /// Use with llvm::HasValue() to match Expected<Value>:
 /// EXPECT_THAT_EXPECTED(result, llvm::HasValue(MatchScalarValue(...)));
-inline testing::Matcher<Value>
-MatchScalarValue(Value::ValueType value_type, const Scalar &expected_scalar,
-                 Value::ContextType context_type) {
-  return ValueMatcher(value_type, expected_scalar, context_type);
-}
+testing::Matcher<Value> MatchScalarValue(Value::ValueType value_type,
+                                         const Scalar &expected_scalar,
+                                         Value::ContextType context_type);
 
 /// Matcher for Value with HostAddress type.
 /// Use with llvm::HasValue() to match Expected<Value>:
 /// EXPECT_THAT_EXPECTED(result, llvm::HasValue(MatchHostValue(...)));
-inline testing::Matcher<Value>
+testing::Matcher<Value>
 MatchHostValue(Value::ValueType value_type,
                const std::vector<uint8_t> &expected_bytes,
-               Value::ContextType context_type) {
-  return ValueMatcher(value_type, expected_bytes, context_type);
-}
+               Value::ContextType context_type);
 
 /// Helper to match a Scalar value and context type.
 /// Use with llvm::HasValue() to match Expected<Value>:
 /// EXPECT_THAT_EXPECTED(result, llvm::HasValue(IsScalar(42)));
-inline testing::Matcher<Value> IsScalar(const Scalar &expected_scalar,
-                                        Value::ContextType context_type) {
-  return MatchScalarValue(Value::ValueType::Scalar, expected_scalar,
-                          context_type);
-}
+testing::Matcher<Value> IsScalar(const Scalar &expected_scalar,
+                                 Value::ContextType context_type);
 
 /// Helper to match a LoadAddress value and context type.
 /// Use with llvm::HasValue() to match Expected<Value>:
 /// EXPECT_THAT_EXPECTED(result, llvm::HasValue(IsLoadAddress(0x1000)));
-inline testing::Matcher<Value> IsLoadAddress(const Scalar &expected_address,
-                                             Value::ContextType context_type) {
-  return MatchScalarValue(Value::ValueType::LoadAddress, expected_address,
-                          context_type);
-}
+testing::Matcher<Value> IsLoadAddress(const Scalar &expected_address,
+                                      Value::ContextType context_type);
 
 /// Helper to match a FileAddress value and context type.
 /// Use with llvm::HasValue() to match Expected<Value>:
 /// EXPECT_THAT_EXPECTED(result, llvm::HasValue(IsFileAddress(Scalar(0x1000))));
-inline testing::Matcher<Value> IsFileAddress(const Scalar &expected_address,
-                                             Value::ContextType context_type) {
-  return MatchScalarValue(Value::ValueType::FileAddress, expected_address,
-                          context_type);
-}
+testing::Matcher<Value> IsFileAddress(const Scalar &expected_address,
+                                      Value::ContextType context_type);
 
 /// Helper to match a HostAddress value and context type.
 /// Use with llvm::HasValue() to match Expected<Value>:
 /// EXPECT_THAT_EXPECTED(result, llvm::HasValue(IsHostValue({0x11, 0x22})));
-inline testing::Matcher<Value>
-IsHostValue(const std::vector<uint8_t> &expected_bytes,
-            Value::ContextType context_type) {
-  return MatchHostValue(Value::ValueType::HostAddress, expected_bytes,
-                        context_type);
-}
+testing::Matcher<Value> IsHostValue(const std::vector<uint8_t> &expected_bytes,
+                                    Value::ContextType context_type);
 
 /// Helper to create a scalar because Scalar's operator==() is really picky.
-inline Scalar GetScalar(unsigned bits, uint64_t value, bool sign) {
-  Scalar scalar(value);
-  scalar.TruncOrExtendTo(bits, sign);
-  return scalar;
-}
+Scalar GetScalar(unsigned bits, uint64_t value, bool sign);
 
 /// Helper that combines IsScalar with llvm::HasValue for Expected<Value>.
 /// Use it on an Expected<Value> like this:
 /// EXPECT_THAT_EXPECTED(result, ExpectScalar(42));
-inline auto
+llvm::detail::ValueMatchesPoly<testing::Matcher<Value>>
 ExpectScalar(const Scalar &expected_scalar,
-             Value::ContextType context_type = Value::ContextType::Invalid) {
-  return llvm::HasValue(IsScalar(expected_scalar, context_type));
-}
+             Value::ContextType context_type = Value::ContextType::Invalid);
 
 /// Helper that combines GetScalar with ExpectScalar to get a precise scalar.
 /// Use it on an Expected<Value> like this:
 /// EXPECT_THAT_EXPECTED(result, ExpectScalar(8, 42, true));
-inline auto
+llvm::detail::ValueMatchesPoly<testing::Matcher<Value>>
 ExpectScalar(unsigned bits, uint64_t value, bool sign,
-             Value::ContextType context_type = Value::ContextType::Invalid) {
-  return ExpectScalar(GetScalar(bits, value, sign), context_type);
-}
+             Value::ContextType context_type = Value::ContextType::Invalid);
 
 /// Helper that combines IsLoadAddress with llvm::HasValue for Expected<Value>.
 /// Use it on an Expected<Value> like this:
 /// EXPECT_THAT_EXPECTED(result, ExpectLoadAddress(0x1000));
-inline auto ExpectLoadAddress(
+llvm::detail::ValueMatchesPoly<testing::Matcher<Value>> ExpectLoadAddress(
     const Scalar &expected_address,
-    Value::ContextType context_type = Value::ContextType::Invalid) {
-  return llvm::HasValue(IsLoadAddress(expected_address, context_type));
-}
+    Value::ContextType context_type = Value::ContextType::Invalid);
 
 /// Helper that combines IsFileAddress with llvm::HasValue for Expected<Value>.
 /// Use it on an Expected<Value> like this:
 /// EXPECT_THAT_EXPECTED(result, ExpectFileAddress(Scalar(0x2000)));
-inline auto ExpectFileAddress(
+llvm::detail::ValueMatchesPoly<testing::Matcher<Value>> ExpectFileAddress(
     const Scalar &expected_address,
-    Value::ContextType context_type = Value::ContextType::Invalid) {
-  return llvm::HasValue(IsFileAddress(expected_address, context_type));
-}
+    Value::ContextType context_type = Value::ContextType::Invalid);
 
 /// Helper that combines IsHostValue with llvm::HasValue for Expected<Value>.
 /// Use it on an Expected<Value> like this:
 /// EXPECT_THAT_EXPECTED(result, ExpectHostAddress({0x11, 0x22}));
-inline auto ExpectHostAddress(
+llvm::detail::ValueMatchesPoly<testing::Matcher<Value>> ExpectHostAddress(
     const std::vector<uint8_t> &expected_bytes,
-    Value::ContextType context_type = Value::ContextType::Invalid) {
-  return llvm::HasValue(IsHostValue(expected_bytes, context_type));
-}
+    Value::ContextType context_type = Value::ContextType::Invalid);
 
 } // namespace lldb_private
 
