@@ -6,7 +6,12 @@ module attributes {omp.is_target_device = false} {
     // extract box address, see if it is null, etc
     omp.yield(%arg1: !fir.ref<!fir.box<!fir.heap<i32>>>)
   }
-
+  omp.private {type = firstprivate} @_QFtarget_simpleEfp_int_firstprivate_i32 : i32 copy {
+  ^bb0(%arg0: !fir.ref<i32>, %arg1: !fir.ref<i32>):
+    %0 = fir.load %arg0 : !fir.ref<i32>
+    hlfir.assign %0 to %arg1 : i32, !fir.ref<i32>
+    omp.yield(%arg1 : !fir.ref<i32>)
+  }
   func.func @_QPtarget_simple() {
     %0 = fir.alloca i32 {bindc_name = "a", uniq_name = "_QFtarget_simpleEa"}
     %1:2 = hlfir.declare %0 {uniq_name = "_QFtarget_simpleEa"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
@@ -15,34 +20,18 @@ module attributes {omp.is_target_device = false} {
     %4 = fir.embox %3 : (!fir.heap<i32>) -> !fir.box<!fir.heap<i32>>
     fir.store %4 to %2 : !fir.ref<!fir.box<!fir.heap<i32>>>
     %5:2 = hlfir.declare %2 {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFtarget_simpleEsimple_var"} : (!fir.ref<!fir.box<!fir.heap<i32>>>) -> (!fir.ref<!fir.box<!fir.heap<i32>>>, !fir.ref<!fir.box<!fir.heap<i32>>>)
+    %6 = fir.alloca i32 {bindc_name = "fp_int", uniq_name = "_QFtarget_simpleEfp_int"}
+    %7:2 = hlfir.declare %6 {uniq_name = "_QFtarget_simpleEfp_int"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
     %c2_i32 = arith.constant 2 : i32
     hlfir.assign %c2_i32 to %1#0 : i32, !fir.ref<i32>
-    %6 = omp.map.info var_ptr(%1#1 : !fir.ref<i32>, i32) map_clauses(to) capture(ByRef) -> !fir.ref<i32> {name = "a"}
-    omp.target map_entries(%6 -> %arg0 : !fir.ref<i32>) private(@_QFtarget_simpleEsimple_var_private_ref_box_heap_i32 %5#0 -> %arg1 : !fir.ref<!fir.box<!fir.heap<i32>>>) {
-      %11:2 = hlfir.declare %arg0 {uniq_name = "_QFtarget_simpleEa"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-      %12:2 = hlfir.declare %arg1 {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFtarget_simpleEsimple_var"} : (!fir.ref<!fir.box<!fir.heap<i32>>>) -> (!fir.ref<!fir.box<!fir.heap<i32>>>, !fir.ref<!fir.box<!fir.heap<i32>>>)
-      %c10_i32 = arith.constant 10 : i32
-      %13 = fir.load %11#0 : !fir.ref<i32>
-      %14 = arith.addi %c10_i32, %13 : i32
-      hlfir.assign %14 to %12#0 realloc : i32, !fir.ref<!fir.box<!fir.heap<i32>>>
+    %8 = omp.map.info var_ptr(%1#1 : !fir.ref<i32>, i32) map_clauses(to) capture(ByRef) -> !fir.ref<i32> {name = "a"}
+    omp.target map_entries(%8 -> %arg0 : !fir.ref<i32>) private(@_QFtarget_simpleEsimple_var_private_ref_box_heap_i32 %5#0 -> %arg1, @_QFtarget_simpleEfp_int_firstprivate_i32 %7#0 -> %arg2  : !fir.ref<!fir.box<!fir.heap<i32>>>, !fir.ref<i32>) {
       omp.terminator
-    }
-    %7 = fir.load %5#1 : !fir.ref<!fir.box<!fir.heap<i32>>>
-    %8 = fir.box_addr %7 : (!fir.box<!fir.heap<i32>>) -> !fir.heap<i32>
-    %9 = fir.convert %8 : (!fir.heap<i32>) -> i64
-    %c0_i64 = arith.constant 0 : i64
-    %10 = arith.cmpi ne, %9, %c0_i64 : i64
-    fir.if %10 {
-      %11 = fir.load %5#1 : !fir.ref<!fir.box<!fir.heap<i32>>>
-      %12 = fir.box_addr %11 : (!fir.box<!fir.heap<i32>>) -> !fir.heap<i32>
-      fir.freemem %12 : !fir.heap<i32>
-      %13 = fir.zero_bits !fir.heap<i32>
-      %14 = fir.embox %13 : (!fir.heap<i32>) -> !fir.box<!fir.heap<i32>>
-      fir.store %14 to %5#1 : !fir.ref<!fir.box<!fir.heap<i32>>>
     }
     return
   }
 }
 // CHECK: %[[MAP0:.*]] = omp.map.info var_ptr({{.*}} : !fir.ref<i32>, i32) map_clauses(to) capture(ByRef) -> !fir.ref<i32> {name = "a"}
-// CHECK: %[[MAP1:.*]] =  omp.map.info var_ptr({{.*}} : !fir.ref<!fir.box<!fir.heap<i32>>>, !fir.box<!fir.heap<i32>>) map_clauses(to) capture(ByRef) -> !fir.ref<!fir.box<!fir.heap<i32>>>    
-// CHECK: omp.target map_entries(%[[MAP0]] -> %arg0, %[[MAP1]] -> %arg1 : !fir.ref<i32>, !fir.ref<!fir.box<!fir.heap<i32>>>)
+// CHECK: %[[MAP1:.*]] =  omp.map.info var_ptr({{.*}} : !fir.ref<!fir.box<!fir.heap<i32>>>, !fir.box<!fir.heap<i32>>) map_clauses(tofrom) capture(ByRef) -> !fir.ref<!fir.box<!fir.heap<i32>>>
+// CHECK: %[[MAP2:.*]] = omp.map.info var_ptr({{.*}} : !fir.ref<i32>, i32) map_clauses(to) capture(ByCopy) -> !fir.ref<i32>
+// CHECK:  omp.target map_entries(%[[MAP0]] -> %arg0, %[[MAP1]] -> %arg1, %[[MAP2]] -> %arg2 : !fir.ref<i32>, !fir.ref<!fir.box<!fir.heap<i32>>>, !fir.ref<i32>)

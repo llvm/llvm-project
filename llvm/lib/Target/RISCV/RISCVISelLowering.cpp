@@ -16878,12 +16878,23 @@ static SDValue expandMulToShlAddShlAdd(SDNode *N, SelectionDAG &DAG,
     break;
   }
 
-  // 2/4/8 * 3/5/9 + 1 -> (shXadd (shYadd X, X), X)
   int ShX;
   if (int ShY = isShifted359(MulAmt - 1, ShX)) {
     assert(ShX != 0 && "MulAmt=4,6,10 handled before");
+    // 2/4/8 * 3/5/9 + 1 -> (shXadd (shYadd X, X), X)
     if (ShX <= 3)
       return getShlAddShlAdd(N, DAG, ShX, ShY, /*AddX=*/true, Shift);
+    // 2^N * 3/5/9 + 1 -> (add (shYadd (shl X, N), (shl X, N)), X)
+    if (Shift == 0) {
+      SDLoc DL(N);
+      EVT VT = N->getValueType(0);
+      SDValue X = N->getOperand(0);
+      SDValue Shl =
+          DAG.getNode(ISD::SHL, DL, VT, X, DAG.getConstant(ShX, DL, VT));
+      SDValue ShlAdd = DAG.getNode(RISCVISD::SHL_ADD, DL, VT, Shl,
+                                   DAG.getTargetConstant(ShY, DL, VT), Shl);
+      return DAG.getNode(ISD::ADD, DL, VT, ShlAdd, X);
+    }
   }
   return SDValue();
 }
@@ -16944,7 +16955,7 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
                          DAG.getTargetConstant(Shift, DL, VT), Shift1);
     }
 
-    // TODO: 2^(C1>3) * 3,5,9 +/- 1
+    // TODO: 2^(C1>3) * 3/5/9 - 1
 
     // 2^n + 2/4/8 + 1 -> (add (shl X, C1), (shXadd X, X))
     if (MulAmt > 2 && isPowerOf2_64((MulAmt - 1) & (MulAmt - 2))) {

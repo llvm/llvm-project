@@ -387,6 +387,12 @@ class PowerPC_VSX_Sca_DDD_Intrinsic<string GCCIntSuffix>
                           [llvm_double_ty], [llvm_double_ty, llvm_double_ty],
                           [IntrNoMem]>;
 
+/// PowerPC_VSX_WWW_Intrinsic - A PowerPC intrinsic that takes two v4i32
+/// vectors and returns one.  These intrinsics have no side effects.
+class PowerPC_VSX_WWW_Intrinsic<string GCCIntSuffix>
+  : PowerPC_VSX_Intrinsic<GCCIntSuffix,
+                          [llvm_v4i32_ty], [llvm_v4i32_ty, llvm_v4i32_ty],
+                          [IntrNoMem]>;
 //===----------------------------------------------------------------------===//
 // PowerPC Altivec Intrinsic Definitions.
 
@@ -1214,6 +1220,7 @@ def int_ppc_altivec_vsraw : PowerPC_Vec_WWW_Intrinsic<"vsraw">;
 def int_ppc_altivec_vrlb  : PowerPC_Vec_BBB_Intrinsic<"vrlb">;
 def int_ppc_altivec_vrlh  : PowerPC_Vec_HHH_Intrinsic<"vrlh">;
 def int_ppc_altivec_vrlw  : PowerPC_Vec_WWW_Intrinsic<"vrlw">;
+def int_ppc_vsx_xvrlw     : PowerPC_VSX_WWW_Intrinsic<"xvrlw">;
 def int_ppc_altivec_vrld  : PowerPC_Vec_DDD_Intrinsic<"vrld">;
 
 let TargetPrefix = "ppc" in {  // All PPC intrinsics start with "llvm.ppc.".

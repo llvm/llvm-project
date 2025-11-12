@@ -24,7 +24,6 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/GenericDomTree.h"
 #include <cassert>
-#include <memory>
 #include <optional>
 
 namespace llvm {

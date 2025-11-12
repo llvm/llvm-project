@@ -67,7 +67,6 @@
 #define LLVM_SUPPORT_JOBSERVER_H
 
 #include "llvm/ADT/StringRef.h"
-#include <memory>
 
 namespace llvm {
 
