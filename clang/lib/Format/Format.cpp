@@ -876,27 +876,28 @@ template <> struct MappingTraits<FormatStyle::TrailingCommentsAlignmentStyle> {
                         FormatStyle::TrailingCommentsAlignmentStyle &Value) {
     IO.enumCase(Value, "Leave",
                 FormatStyle::TrailingCommentsAlignmentStyle(
-                    {FormatStyle::TCAS_Leave, 0}));
+                    {FormatStyle::TCAS_Leave, 0, true}));
 
     IO.enumCase(Value, "Always",
                 FormatStyle::TrailingCommentsAlignmentStyle(
-                    {FormatStyle::TCAS_Always, 0}));
+                    {FormatStyle::TCAS_Always, 0, true}));
 
     IO.enumCase(Value, "Never",
                 FormatStyle::TrailingCommentsAlignmentStyle(
-                    {FormatStyle::TCAS_Never, 0}));
+                    {FormatStyle::TCAS_Never, 0, true}));
 
     // For backwards compatibility
     IO.enumCase(Value, "true",
                 FormatStyle::TrailingCommentsAlignmentStyle(
-                    {FormatStyle::TCAS_Always, 0}));
+                    {FormatStyle::TCAS_Always, 0, true}));
     IO.enumCase(Value, "false",
                 FormatStyle::TrailingCommentsAlignmentStyle(
-                    {FormatStyle::TCAS_Never, 0}));
+                    {FormatStyle::TCAS_Never, 0, true}));
   }
 
   static void mapping(IO &IO,
                       FormatStyle::TrailingCommentsAlignmentStyle &Value) {
+    IO.mapOptional("AlignPPAndNotPP", Value.AlignPPAndNotPP);
     IO.mapOptional("Kind", Value.Kind);
     IO.mapOptional("OverEmptyLines", Value.OverEmptyLines);
   }
@@ -1651,6 +1652,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.AlignTrailingComments = {};
   LLVMStyle.AlignTrailingComments.Kind = FormatStyle::TCAS_Always;
   LLVMStyle.AlignTrailingComments.OverEmptyLines = 0;
+  LLVMStyle.AlignTrailingComments.AlignPPAndNotPP = true;
   LLVMStyle.AllowAllArgumentsOnNextLine = true;
   LLVMStyle.AllowAllParametersOfDeclarationOnNextLine = true;
   LLVMStyle.AllowBreakBeforeNoexceptSpecifier = FormatStyle::BBNSS_Never;

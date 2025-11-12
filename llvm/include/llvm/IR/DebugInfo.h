@@ -108,7 +108,7 @@ public:
   LLVM_ABI void processInstruction(const Module &M, const Instruction &I);
 
   /// Process a DILocalVariable.
-  LLVM_ABI void processVariable(DILocalVariable *DVI);
+  LLVM_ABI void processVariable(const DILocalVariable *DVI);
   /// Process debug info location.
   LLVM_ABI void processLocation(const Module &M, const DILocation *Loc);
   /// Process a DbgRecord.
@@ -124,7 +124,7 @@ private:
   void processCompileUnit(DICompileUnit *CU);
   void processScope(DIScope *Scope);
   void processType(DIType *DT);
-  void processImportedEntity(DIImportedEntity *Import);
+  void processImportedEntity(const DIImportedEntity *Import);
   bool addCompileUnit(DICompileUnit *CU);
   bool addGlobalVariable(DIGlobalVariableExpression *DIG);
   bool addScope(DIScope *Scope);
