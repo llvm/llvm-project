@@ -105,7 +105,7 @@ extern "C" LLVM_C_ABI void LLVMInitializeX86Target() {
   initializeX86AsmPrinterPass(PR);
   initializeX86FixupInstTuningPassPass(PR);
   initializeX86FixupVectorConstantsPassPass(PR);
-  initializeX86DynAllocaExpanderPass(PR);
+  initializeX86DynAllocaExpanderLegacyPass(PR);
   initializeX86SuppressAPXForRelocationPassPass(PR);
   initializeX86WinEHUnwindV2Pass(PR);
 }
@@ -517,7 +517,7 @@ void X86PassConfig::addPreRegAlloc() {
 
   addPass(createX86SpeculativeLoadHardeningPass());
   addPass(createX86FlagsCopyLoweringPass());
-  addPass(createX86DynAllocaExpander());
+  addPass(createX86DynAllocaExpanderLegacyPass());
 
   if (getOptLevel() != CodeGenOptLevel::None)
     addPass(createX86PreTileConfigPass());
