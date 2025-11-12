@@ -1939,7 +1939,8 @@ TypeTraitExpr *TypeTraitExpr::CreateDeserialized(const ASTContext &C,
   return new (Mem) TypeTraitExpr(EmptyShell(), IsStoredAsBool);
 }
 
-CXXReflectExpr::CXXReflectExpr(const ASTContext &C, QualType T, QualType Ty)
+CXXReflectExpr::CXXReflectExpr(const ASTContext &C, QualType T,
+                               QualType Operand)
     : Expr(CXXReflectExprClass, T, VK_PRValue, OK_Ordinary) {}
 
 CXXReflectExpr::CXXReflectExpr(const ASTContext &C, QualType T, Decl *Arg)
