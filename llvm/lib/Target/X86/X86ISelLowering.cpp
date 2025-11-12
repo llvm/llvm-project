@@ -28582,7 +28582,7 @@ static SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, const X86Subtarget &Subtarget,
 
       MVT MaskVT = MVT::getVectorVT(MVT::i1, MemVT.getVectorNumElements());
       SDValue VMask = getMaskNode(Mask, MaskVT, Subtarget, DAG, dl);
-      SDValue Offset = DAG.getUNDEF(VMask.getValueType());
+      SDValue Offset = DAG.getPOISON(VMask.getValueType());
 
       return DAG.getMaskedStore(Chain, dl, DataToTruncate, Addr, Offset, VMask,
                                 MemVT, MemIntr->getMemOperand(), ISD::UNINDEXED,
