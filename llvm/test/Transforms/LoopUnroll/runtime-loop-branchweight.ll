@@ -74,6 +74,8 @@ for.end:
 ; 1073706403 / (1073706403 + 1073777245).
 ; CHECK: ![[#PROF_RM_LATCH]] = !{!"branch_weights", i32 1073706403, i32 1073777245}
 
-; 10000%4 = 0
+; 10000%4 = 0, so the probability of reaching the remainder loop header is low.
+; If it is reached, at least one iteration will execute.  The minimum valid
+; estimated trip count is 1.
 ; CHECK: ![[#LOOP_RM_LATCH]] = distinct !{![[#LOOP_RM_LATCH]], ![[#LOOP_RM_TC:]], ![[#DISABLE:]]}
-; CHECK: ![[#LOOP_RM_TC]] = !{!"llvm.loop.estimated_trip_count", i32 0}
+; CHECK: ![[#LOOP_RM_TC]] = !{!"llvm.loop.estimated_trip_count", i32 1}

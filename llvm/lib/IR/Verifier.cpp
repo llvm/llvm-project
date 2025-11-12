@@ -1094,9 +1094,10 @@ void Verifier::visitMDNode(const MDNode &MD, AreDebugLocsAllowed AllowLocs) {
     Check(MD.getNumOperands() == 2, "Expected two operands", &MD);
     auto *Count = dyn_cast_or_null<ConstantAsMetadata>(MD.getOperand(1));
     Check(Count && Count->getType()->isIntegerTy() &&
-              cast<IntegerType>(Count->getType())->getBitWidth() <= 32,
-          "Expected second operand to be an integer constant of type i32 or "
-          "smaller",
+              cast<IntegerType>(Count->getType())->getBitWidth() <= 32 &&
+              !cast<ConstantInt>(Count->getValue())->isZero(),
+          "Expected second operand to be a positive integer constant of type "
+          "i32 or smaller",
           &MD);
   }
 

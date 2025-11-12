@@ -43,7 +43,7 @@ define void @f0(i8 %n, i32 %len, ptr %p) !prof !0 {
 ; MAINVF4IC1_EPI4:    br label %[[LOOP:.*]]
 ; MAINVF4IC1_EPI4:  [[LOOP]]:
 ; MAINVF4IC1_EPI4:    [[CMP_LOOP:%.*]] = icmp ult i32 [[I32:%.*]], [[LEN]]
-; MAINVF4IC1_EPI4:    br i1 [[CMP_LOOP]], label %[[LOOP]], label %[[EXIT_LOOPEXIT]], !prof [[PROF13:![0-9]+]], !llvm.loop [[LOOP14:![0-9]+]]
+; MAINVF4IC1_EPI4:    br i1 [[CMP_LOOP]], label %[[LOOP]], label %[[EXIT_LOOPEXIT]], !prof [[PROF12:![0-9]+]], !llvm.loop [[LOOP13:![0-9]+]]
 ; MAINVF4IC1_EPI4:  [[EXIT_LOOPEXIT]]:
 ; MAINVF4IC1_EPI4:    br label %[[EXIT]]
 ; MAINVF4IC1_EPI4:  [[EXIT]]:
@@ -81,12 +81,12 @@ define void @f0(i8 %n, i32 %len, ptr %p) !prof !0 {
 ; MAINVF4IC2_EPI4:    br i1 [[TMP13]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !prof [[PROF10:![0-9]+]], !llvm.loop [[LOOP11:![0-9]+]]
 ; MAINVF4IC2_EPI4:  [[VEC_EPILOG_MIDDLE_BLOCK]]:
 ; MAINVF4IC2_EPI4:    [[CMP_N8:%.*]] = icmp eq i32 [[TMP0]], [[N_VEC3]]
-; MAINVF4IC2_EPI4:    br i1 [[CMP_N8]], label %[[EXIT_LOOPEXIT]], label %[[VEC_EPILOG_SCALAR_PH]], !prof [[PROF13:![0-9]+]]
+; MAINVF4IC2_EPI4:    br i1 [[CMP_N8]], label %[[EXIT_LOOPEXIT]], label %[[VEC_EPILOG_SCALAR_PH]], !prof [[PROF12:![0-9]+]]
 ; MAINVF4IC2_EPI4:  [[VEC_EPILOG_SCALAR_PH]]:
 ; MAINVF4IC2_EPI4:    br label %[[LOOP:.*]]
 ; MAINVF4IC2_EPI4:  [[LOOP]]:
 ; MAINVF4IC2_EPI4:    [[CMP_LOOP:%.*]] = icmp ult i32 [[I32:%.*]], [[LEN]]
-; MAINVF4IC2_EPI4:    br i1 [[CMP_LOOP]], label %[[LOOP]], label %[[EXIT_LOOPEXIT]], !prof [[PROF14:![0-9]+]], !llvm.loop [[LOOP15:![0-9]+]]
+; MAINVF4IC2_EPI4:    br i1 [[CMP_LOOP]], label %[[LOOP]], label %[[EXIT_LOOPEXIT]], !prof [[PROF13:![0-9]+]], !llvm.loop [[LOOP14:![0-9]+]]
 ; MAINVF4IC2_EPI4:  [[EXIT_LOOPEXIT]]:
 ; MAINVF4IC2_EPI4:    br label %[[EXIT]]
 ; MAINVF4IC2_EPI4:  [[EXIT]]:
@@ -127,11 +127,10 @@ exit:
 ; MAINVF4IC1_EPI4: [[PROF8]] = !{!"branch_weights", i32 1, i32 3}
 ; MAINVF4IC1_EPI4: [[PROF9]] = !{!"branch_weights", i32 4, i32 0}
 ; MAINVF4IC1_EPI4: [[PROF10]] = !{!"branch_weights", i32 0, i32 0}
-; MAINVF4IC1_EPI4: [[LOOP11]] = distinct !{[[LOOP11]], [[META5]], [[META6]], [[META12:![0-9]+]]}
-; MAINVF4IC1_EPI4: [[META12]] = !{!"llvm.loop.estimated_trip_count", i32 0}
-; MAINVF4IC1_EPI4: [[PROF13]] = !{!"branch_weights", i32 2, i32 1}
-; MAINVF4IC1_EPI4: [[LOOP14]] = distinct !{[[LOOP14]], [[META5]], [[META15:![0-9]+]]}
-; MAINVF4IC1_EPI4: [[META15]] = !{!"llvm.loop.estimated_trip_count", i32 3}
+; MAINVF4IC1_EPI4: [[LOOP11]] = distinct !{[[LOOP11]], [[META5]], [[META6]]}
+; MAINVF4IC1_EPI4: [[PROF12]] = !{!"branch_weights", i32 2, i32 1}
+; MAINVF4IC1_EPI4: [[LOOP13]] = distinct !{[[LOOP13]], [[META5]], [[META14:![0-9]+]]}
+; MAINVF4IC1_EPI4: [[META14]] = !{!"llvm.loop.estimated_trip_count", i32 3}
 ;.
 ; MAINVF4IC2_EPI4: [[PROF0]] = !{!"function_entry_count", i64 13}
 ; MAINVF4IC2_EPI4: [[PROF1]] = !{!"branch_weights", i32 12, i32 1}
@@ -144,10 +143,9 @@ exit:
 ; MAINVF4IC2_EPI4: [[PROF8]] = !{!"branch_weights", i32 1, i32 7}
 ; MAINVF4IC2_EPI4: [[PROF9]] = !{!"branch_weights", i32 4, i32 4}
 ; MAINVF4IC2_EPI4: [[PROF10]] = !{!"branch_weights", i32 0, i32 0}
-; MAINVF4IC2_EPI4: [[LOOP11]] = distinct !{[[LOOP11]], [[META5]], [[META6]], [[META12:![0-9]+]]}
-; MAINVF4IC2_EPI4: [[META12]] = !{!"llvm.loop.estimated_trip_count", i32 0}
-; MAINVF4IC2_EPI4: [[PROF13]] = !{!"branch_weights", i32 1, i32 3}
-; MAINVF4IC2_EPI4: [[PROF14]] = !{!"branch_weights", i32 2, i32 1}
-; MAINVF4IC2_EPI4: [[LOOP15]] = distinct !{[[LOOP15]], [[META5]], [[META16:![0-9]+]]}
-; MAINVF4IC2_EPI4: [[META16]] = !{!"llvm.loop.estimated_trip_count", i32 3}
+; MAINVF4IC2_EPI4: [[LOOP11]] = distinct !{[[LOOP11]], [[META5]], [[META6]]}
+; MAINVF4IC2_EPI4: [[PROF12]] = !{!"branch_weights", i32 1, i32 3}
+; MAINVF4IC2_EPI4: [[PROF13]] = !{!"branch_weights", i32 2, i32 1}
+; MAINVF4IC2_EPI4: [[LOOP14]] = distinct !{[[LOOP14]], [[META5]], [[META15:![0-9]+]]}
+; MAINVF4IC2_EPI4: [[META15]] = !{!"llvm.loop.estimated_trip_count", i32 3}
 ;.
