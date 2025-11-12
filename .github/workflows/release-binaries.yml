@@ -202,9 +202,18 @@ jobs:
         fi
         echo "build-prefix=$build_prefix" >> $GITHUB_OUTPUT
 
+    - name: Download optimized compiler
+      shell: bash
+      run: |
+        curl -O -L https://github.com/llvm/llvm-project/releases/download/llvmorg-20.1.8/LLVM-20.1.8-macOS-ARM64.tar.xz
+        tar -xJf LLVM-20.1.8-macOS-ARM64.tar.xz
+
     - name: Configure
       id: build
       shell: bash
+      env:
+        CC: ${{ github.workspace }}/llvm-project/LLVM-20.1.8-macOS-ARM64/bin/clang
+        CXX: ${{ github.workspace }}/llvm-project/LLVM-20.1.8-macOS-ARM64/bin/clang++
       run: |
         # There were some issues on the ARM64 MacOS runners with trying to build x86 object,
         # so we need to set some extra cmake flags to disable this.
