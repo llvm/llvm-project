@@ -174,7 +174,12 @@ if(LLVM_ENABLE_PIC)
 
     EXCLUDE_FROM_LIBMLIR
     )
-  set_property(TARGET mlir_apfloat_wrappers PROPERTY CXX_STANDARD 17)
+  set_target_properties(
+    mlir_apfloat_wrappers
+    PROPERTIES CXX_STANDARD 17
+               CXX_VISIBILITY_PRESET hidden
+               VISIBILITY_INLINES_HIDDEN ON
+  )
   target_compile_definitions(mlir_apfloat_wrappers PRIVATE mlir_apfloat_wrappers_EXPORTS)
 
   add_subdirectory(SparseTensor)
