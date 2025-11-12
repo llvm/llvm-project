@@ -68,17 +68,16 @@ find_unique(Container &&container, Predicate &&pred) {
 
 namespace tomp {
 
-// ClauseType - Either instance of ClauseT, or a type derived from ClauseT.
+// ClauseType: Either an instance of ClauseT, or a type derived from ClauseT.
+//   This is the clause representation in the code using this infrastructure.
 //
-// This is the clause representation in the code using this infrastructure.
-//
-// HelperType - A class that implements two member functions:
-//
+// HelperType: A class that implements two member functions:
 //   // Return the base object of the given object, if any.
 //   std::optional<Object> getBaseObject(const Object &object) const
 //   // Return the iteration variable of the outermost loop associated
 //   // with the construct being worked on, if any.
 //   std::optional<Object> getLoopIterVar() const
+
 template <typename ClauseType, typename HelperType>
 struct ConstructDecompositionT {
   using ClauseTy = ClauseType;
@@ -181,27 +180,32 @@ private:
   std::enable_if_t<llvm::remove_cvref_t<U>::UnionTrait::value, void>
   addClauseSymsToMap(U &&item, const ClauseTy *);
 
-  // Apply a clause to the only directive that allows it. If there are no
+  // Apply the clause to the only directive that allows it. If there are no
   // directives that allow it, or if there is more that one, do not apply
   // anything and return false, otherwise return true.
   bool applyToUnique(const ClauseTy *node);
 
-  // Apply a clause to the first directive in given range that allows it.
+  // Apply the clause to the first directive in given range that allows it.
   // If such a directive does not exist, return false, otherwise return true.
   template <typename Iterator>
   bool applyToFirst(const ClauseTy *node, llvm::iterator_range<Iterator> range);
 
-  // Apply a clause to the innermost directive that allows it. If such a
+  // Apply the clause to the innermost directive that allows it. If such a
   // directive does not exist, return false, otherwise return true.
   bool applyToInnermost(const ClauseTy *node);
 
-  // Apply a clause to the outermost directive that allows it. If such a
+  // Apply the clause to the outermost directive that allows it. If such a
   // directive does not exist, return false, otherwise return true.
   bool applyToOutermost(const ClauseTy *node);
 
+  // Apply the clause to all directives that allow it, and which satisfy
+  // the predicate: bool shouldApply(LeafReprInternal). If no such
+  // directives exist, return false, otherwise return true.
   template <typename Predicate>
   bool applyIf(const ClauseTy *node, Predicate shouldApply);
 
+  // Apply the clause to all directives that allow it. If no such directives
+  // exist, return false, otherwise return true.
   bool applyToAll(const ClauseTy *node);
 
   template <typename Clause>
@@ -497,18 +501,7 @@ template <typename C, typename H>
 bool ConstructDecompositionT<C, H>::applyClause(
     const tomp::clause::CollapseT<TypeTy, IdTy, ExprTy> &clause,
     const ClauseTy *node) {
-  // Apply "collapse" to the innermost directive. If it's not one that
-  // allows it flag an error.
-  if (!leafs.empty()) {
-    auto &last = leafs.back();
-
-    if (llvm::omp::isAllowedClauseForDirective(last.id, node->id, version)) {
-      last.clauses.push_back(node);
-      return true;
-    }
-  }
-
-  return false;
+  return applyToInnermost(node);
 }
 
 // DEFAULT
@@ -983,7 +976,7 @@ bool ConstructDecompositionT<C, H>::applyClause(
       return dir == llvm::omp::Directive::OMPD_simd ||
              llvm::is_contained(getWorksharingLoop(), dir);
     case ReductionModifier::Task:
-      if (alreadyApplied)
+      if (alreadyApplied) // Not an error
         return false;
       // According to [5.2:135:16-18], "task" only applies to "parallel" and
       // worksharing constructs.
