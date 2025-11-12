@@ -4046,10 +4046,29 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
                                                  LiveVariables *LV,
                                                  LiveIntervals *LIS) const {
   MachineBasicBlock &MBB = *MI.getParent();
-  ThreeAddressUpdates U;
-  MachineInstr *NewMI = convertToThreeAddressImpl(MI, U);
+  MachineInstr *CandidateMI = &MI;
 
-  if (NewMI) {
+  if (MI.isBundle()) {
+    // This is a temporary placeholder for bundle handling that enables us to
+    // exercise the relevant code paths in the two-address instruction pass.
+    if (MI.getBundleSize() != 1)
+      return nullptr;
+    CandidateMI = MI.getNextNode();
+  }
+
+  ThreeAddressUpdates U;
+  MachineInstr *NewMI = convertToThreeAddressImpl(*CandidateMI, U);
+  if (!NewMI)
+    return nullptr;
+
+  if (MI.isBundle()) {
+    CandidateMI->eraseFromBundle();
+
+    for (MachineOperand &MO : MI.all_defs()) {
+      if (MO.isTied())
+        MI.untieRegOperand(MO.getOperandNo());
+    }
+  } else {
     updateLiveVariables(LV, MI, *NewMI);
     if (LIS) {
       LIS->ReplaceMachineInstrInMaps(MI, *NewMI);
@@ -4090,7 +4109,22 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
         LV->getVarInfo(DefReg).AliveBlocks.clear();
     }
 
-    if (LIS) {
+    if (MI.isBundle()) {
+      VirtRegInfo VRI = AnalyzeVirtRegInBundle(MI, DefReg);
+      if (!VRI.Reads && !VRI.Writes) {
+        for (MachineOperand &MO : MI.all_uses()) {
+          if (MO.isReg() && MO.getReg() == DefReg) {
+            assert(MO.getSubReg() == 0 &&
+                   "tied sub-registers in bundles currently not supported");
+            MI.removeOperand(MO.getOperandNo());
+            break;
+          }
+        }
+
+        if (LIS)
+          LIS->shrinkToUses(&LIS->getInterval(DefReg));
+      }
+    } else if (LIS) {
       LiveInterval &DefLI = LIS->getInterval(DefReg);
 
       // We cannot delete the original instruction here, so hack out the use
@@ -4105,11 +4139,26 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
         }
       }
 
+      if (MI.isBundle()) {
+        VirtRegInfo VRI = AnalyzeVirtRegInBundle(MI, DefReg);
+        if (!VRI.Reads && !VRI.Writes) {
+          for (MachineOperand &MIOp : MI.uses()) {
+            if (MIOp.isReg() && MIOp.getReg() == DefReg) {
+              MIOp.setIsUndef(true);
+              MIOp.setReg(DummyReg);
+            }
+          }
+        }
+
+        MI.addOperand(MachineOperand::CreateReg(DummyReg, false, false, false,
+                                                false, /*isUndef=*/true));
+      }
+
       LIS->shrinkToUses(&DefLI);
     }
   }
 
-  return NewMI;
+  return MI.isBundle() ? &MI : NewMI;
 }
 
 MachineInstr *
