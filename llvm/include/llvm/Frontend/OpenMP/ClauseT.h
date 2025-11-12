@@ -1339,7 +1339,7 @@ using IncompleteClausesT =
     std::variant<AdjustArgsT<T, I, E>, AppendArgsT<T, I, E>,
                  CollectorT<T, I, E>, GraphIdT<T, I, E>, GraphResetT<T, I, E>,
                  InductorT<T, I, E>, MatchT<T, I, E>, OtherwiseT<T, I, E>,
-                 ReplayableT<T, I, E>, TransparentT<T, I, E>, WhenT<T, I, E>>;
+                 ReplayableT<T, I, E>, WhenT<T, I, E>>;
 
 template <typename T, typename I, typename E>
 using TupleClausesT =
