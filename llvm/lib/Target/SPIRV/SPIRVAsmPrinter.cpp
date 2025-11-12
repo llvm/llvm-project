@@ -85,15 +85,20 @@ public:
   void outputModuleSections();
   void outputFPFastMathDefaultInfo();
   bool isHidden() {
-    return MF->getFunction()
-        .getFnAttribute(SPIRV_BACKEND_SERVICE_FUN_NAME)
-        .isValid();
+    const Function &F = MF->getFunction();
+    if (F.getFnAttribute(SPIRV_BACKEND_SERVICE_FUN_NAME).isValid())
+      return true;
+
+    if (F.getName() == "__spirv_globals_entry")
+      return true;
+      
+    return false;
   }
 
   void emitInstruction(const MachineInstr *MI) override;
   void emitFunctionEntryLabel() override {}
   void emitFunctionHeader() override;
-  void emitFunctionBodyStart() override {}
+  void emitFunctionBodyStart() override {};
   void emitFunctionBodyEnd() override;
   void emitBasicBlockStart(const MachineBasicBlock &MBB) override;
   void emitBasicBlockEnd(const MachineBasicBlock &MBB) override {}
@@ -109,6 +114,11 @@ protected:
   void cleanUp(Module &M);
 };
 } // namespace
+
+// Add this helper method to check if function should be deleted
+static bool shouldDeleteFunction(const Function &F) {
+  return F.getName() == "__spirv_globals_entry";
+}
 
 void SPIRVAsmPrinter::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<SPIRVModuleAnalysis>();
@@ -149,14 +159,15 @@ void SPIRVAsmPrinter::cleanUp(Module &M) {
 }
 
 void SPIRVAsmPrinter::emitFunctionHeader() {
+  const Function &F = MF->getFunction();
   if (ModuleSectionsEmitted == false) {
     outputModuleSections();
     ModuleSectionsEmitted = true;
   }
+
   // Get the subtarget from the current MachineFunction.
   ST = &MF->getSubtarget<SPIRVSubtarget>();
   TII = ST->getInstrInfo();
-  const Function &F = MF->getFunction();
 
   if (isVerbose() && !isHidden()) {
     OutStreamer->getCommentOS()
@@ -173,6 +184,7 @@ void SPIRVAsmPrinter::outputOpFunctionEnd() {
   FunctionEndInst.setOpcode(SPIRV::OpFunctionEnd);
   outputMCInst(FunctionEndInst);
 }
+
 
 void SPIRVAsmPrinter::emitFunctionBodyEnd() {
   if (!isHidden())
@@ -278,6 +290,10 @@ void SPIRVAsmPrinter::outputInstruction(const MachineInstr *MI) {
 }
 
 void SPIRVAsmPrinter::emitInstruction(const MachineInstr *MI) {
+  const Function &F = MF->getFunction();
+  if (F.getName() == "__spirv_globals_entry") {
+    return;
+  }
   SPIRV_MC::verifyInstructionPredicates(MI->getOpcode(),
                                         getSubtargetInfo().getFeatureBits());
 
@@ -295,8 +311,14 @@ void SPIRVAsmPrinter::emitInstruction(const MachineInstr *MI) {
 }
 
 void SPIRVAsmPrinter::outputModuleSection(SPIRV::ModuleSectionType MSType) {
-  for (const MachineInstr *MI : MAI->getMSInstrs(MSType))
-    outputInstruction(MI);
+  const Function &F = MF->getFunction();
+  for (const MachineInstr *MI : MAI->getMSInstrs(MSType)) {
+    if (F.getName() != "__spirv_globals_entry" || ((MI->getOpcode() != SPIRV::OpName) 
+                                    && (MI->getOpcode() != SPIRV::OpTypeVoid)
+                                    && (MI->getOpcode() != SPIRV::OpTypeFunction))) { 
+      outputInstruction(MI);
+    }
+  }
 }
 
 void SPIRVAsmPrinter::outputDebugSourceAndStrings(const Module &M) {
