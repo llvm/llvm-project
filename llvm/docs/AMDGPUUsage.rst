@@ -1021,9 +1021,9 @@ supported for the ``amdgcn`` target.
   both have the offset be a multiple of 4 and to have a base pointer with an
   alignment of 4.
 
-  (This componentwise definition of alignment is needed to allow for promotion of
+  This componentwise definition of alignment is needed to allow for promotion of
   aligned loads to ``s_buffer_load``, which requires that both the base pointer and
-  offset be appropriately aligned.)
+  offset be appropriately aligned.
 
 **Buffer Resource**
   The buffer resource pointer, in address space 8, is the newer form
@@ -1053,7 +1053,7 @@ supported for the ``amdgcn`` target.
   ``llvm.amdgcn.struct.ptr.buffer.store``, the ``align`` attribute on the
   pointer is assumed to apply to both the offset and the base pointer value.
   That is, ``align 8`` means that both the base address within the ``ptr
-  addrspace(8)`` and the ``offset`` argument have their three lowesst bits set
+  addrspace(8)`` and the ``offset`` argument have their three lowest bits set
   to 0. If the stride of the resource is nonzero, the stride must be a multiple
   of the given alignment.
 
@@ -1064,7 +1064,8 @@ supported for the ``amdgcn`` target.
   address ``0xfffe`` and is accessed with a ``raw.ptr.buffer.load`` with an offset
   of ``2``, the load must **not** be marked ``align 4`` (even though the
   effective adddress ``0x10000`` is so aligned) as this would permit the compiler
-  to make incorrect transformations (such as promition to )
+  to make incorrect transformations (such as promotion to ``s_buffer_load``,
+  which requires such componentwise alignment).
 
 **Buffer Strided Pointer**
   The buffer index pointer is an experimental address space. It represents
