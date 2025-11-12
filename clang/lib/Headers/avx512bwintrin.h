@@ -1613,8 +1613,7 @@ _mm512_kunpackd(__mmask64 __A, __mmask64 __B) {
 }
 
 static __inline__ __mmask32 __DEFAULT_FN_ATTRS_CONSTEXPR
-_mm512_kunpackw (__mmask32 __A, __mmask32 __B)
-{
+_mm512_kunpackw(__mmask32 __A, __mmask32 __B) {
   return (__mmask32) __builtin_ia32_kunpcksi ((__mmask32) __A,
                 (__mmask32) __B);
 }

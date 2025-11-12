@@ -16457,7 +16457,7 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
       unsigned HalfBits = LHS.getBitWidth() / 2;
       APSInt Mask = APSInt::getMaxValue(LHS.getBitWidth(), LHS.isUnsigned());
       Mask = Mask.trunc(HalfBits).zext(LHS.getBitWidth());
-      
+
       APSInt LowerLHS = LHS & Mask;
       APSInt LowerRHS = RHS & Mask;
       return LowerRHS | (LowerLHS << HalfBits);

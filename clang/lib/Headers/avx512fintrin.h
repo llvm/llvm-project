@@ -8097,8 +8097,7 @@ _kortest_mask16_u8(__mmask16 __A, __mmask16 __B, unsigned char *__C) {
 }
 
 static __inline__ __mmask16 __DEFAULT_FN_ATTRS_CONSTEXPR
-_mm512_kunpackb (__mmask16 __A, __mmask16 __B)
-{
+_mm512_kunpackb(__mmask16 __A, __mmask16 __B) {
   return (__mmask16) __builtin_ia32_kunpckhi ((__mmask16) __A, (__mmask16) __B);
 }
 
