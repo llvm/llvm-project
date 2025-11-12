@@ -214,14 +214,14 @@ protected:
   std::error_code writeSummary();
   virtual std::error_code writeContextIdx(const SampleContext &Context);
   std::error_code writeNameIdx(FunctionId FName);
-  std::error_code writeBody(const FunctionSamples &S);
-  void writeLBRProfile(const FunctionSamples &S);
+  std::error_code writeBody(const FunctionSamples &S, bool IsNested);
+  void writeLBRProfile(const FunctionSamples &S, bool IsNested);
 
   /// Interfaces for typified profile writing.
-  void writeTypifiedProfile(const FunctionSamples &S);
+  void writeTypifiedProfile(const FunctionSamples &S, bool IsNested);
   std::pair<uint64_t, uint64_t> startProfileType(ProfTypes Type);
   void finishProfileType(uint64_t SizeOffset, uint64_t BodyOffset);
-  void writeTypifiedLBRProfile(const FunctionSamples &S);
+  void writeTypifiedLBRProfile(const FunctionSamples &S, bool IsNested);
 
   inline void stablizeNameTable(MapVector<FunctionId, uint32_t> &NameTable,
                                 std::set<FunctionId> &V);

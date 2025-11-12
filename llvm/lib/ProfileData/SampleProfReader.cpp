@@ -710,7 +710,14 @@ SampleProfileReaderBinary::readCallsiteVTableProf(FunctionSamples &FProfile) {
 }
 
 std::error_code
-SampleProfileReaderBinary::readLBRProfile(FunctionSamples &FProfile) {
+SampleProfileReaderBinary::readLBRProfile(FunctionSamples &FProfile,
+                                          bool IsNested) {
+  if (IsProfileTypified && !IsNested) {
+    auto NumHeadSamples = readNumber<uint64_t>();
+    if (std::error_code EC = NumHeadSamples.getError())
+      return EC;
+    FProfile.addHeadSamples(*NumHeadSamples);
+  }
   auto NumSamples = readNumber<uint64_t>();
   if (std::error_code EC = NumSamples.getError())
     return EC;
@@ -765,7 +772,8 @@ SampleProfileReaderBinary::readLBRProfile(FunctionSamples &FProfile) {
 }
 
 std::error_code
-SampleProfileReaderBinary::readTypifiedProfile(FunctionSamples &FProfile) {
+SampleProfileReaderBinary::readTypifiedProfile(FunctionSamples &FProfile,
+                                               bool IsNested) {
   // Read the number of profile types.
   auto ProfNum = readNumber<uint64_t>();
   if (std::error_code EC = ProfNum.getError())
@@ -782,7 +790,7 @@ SampleProfileReaderBinary::readTypifiedProfile(FunctionSamples &FProfile) {
 
     switch (*Type) {
     case ProfTypeLBR:
-      if (std::error_code EC = readLBRProfile(FProfile))
+      if (std::error_code EC = readLBRProfile(FProfile, IsNested))
         return EC;
       break;
     default:
@@ -798,12 +806,13 @@ SampleProfileReaderBinary::readTypifiedProfile(FunctionSamples &FProfile) {
 }
 
 std::error_code
-SampleProfileReaderBinary::readProfile(FunctionSamples &FProfile) {
+SampleProfileReaderBinary::readProfile(FunctionSamples &FProfile,
+                                       bool IsNested) {
   if (IsProfileTypified) {
-    if (std::error_code EC = readTypifiedProfile(FProfile))
+    if (std::error_code EC = readTypifiedProfile(FProfile, IsNested))
       return EC;
   } else {
-    if (std::error_code EC = readLBRProfile(FProfile))
+    if (std::error_code EC = readLBRProfile(FProfile, IsNested))
       return EC;
   }
 
@@ -831,7 +840,7 @@ SampleProfileReaderBinary::readProfile(FunctionSamples &FProfile) {
     FunctionSamples &CalleeProfile = FProfile.functionSamplesAt(
         LineLocation(*LineOffset, DiscriminatorVal))[*FName];
     CalleeProfile.setFunction(*FName);
-    if (std::error_code EC = readProfile(CalleeProfile))
+    if (std::error_code EC = readProfile(CalleeProfile, true))
       return EC;
   }
 
@@ -845,10 +854,12 @@ std::error_code
 SampleProfileReaderBinary::readFuncProfile(const uint8_t *Start,
                                            SampleProfileMap &Profiles) {
   Data = Start;
-  auto NumHeadSamples = readNumber<uint64_t>();
-  if (std::error_code EC = NumHeadSamples.getError())
-    return EC;
-
+  ErrorOr<uint64_t> NumHeadSamples = 0;
+  if (!IsProfileTypified) {
+    NumHeadSamples = readNumber<uint64_t>();
+    if (std::error_code EC = NumHeadSamples.getError())
+      return EC;
+  }
   auto FContextHash(readSampleContextFromTable());
   if (std::error_code EC = FContextHash.getError())
     return EC;
@@ -858,12 +869,13 @@ SampleProfileReaderBinary::readFuncProfile(const uint8_t *Start,
   auto Res = Profiles.try_emplace(Hash, FContext, FunctionSamples());
   FunctionSamples &FProfile = Res.first->second;
   FProfile.setContext(FContext);
-  FProfile.addHeadSamples(*NumHeadSamples);
+  if (!IsProfileTypified)
+    FProfile.addHeadSamples(*NumHeadSamples);
 
   if (FContext.hasContext())
     CSProfileCount++;
 
-  if (std::error_code EC = readProfile(FProfile))
+  if (std::error_code EC = readProfile(FProfile, false))
     return EC;
   return sampleprof_error::success;
 }

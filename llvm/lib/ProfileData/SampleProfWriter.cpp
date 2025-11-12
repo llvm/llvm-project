@@ -264,8 +264,9 @@ SampleProfileWriterExtBinaryBase::writeSample(const FunctionSamples &S) {
   uint64_t Offset = OutputStream->tell();
   auto &Context = S.getContext();
   FuncOffsetTable[Context] = Offset - SecLBRProfileStart;
-  encodeULEB128(S.getHeadSamples(), *OutputStream);
-  return writeBody(S);
+  if (!WriteTypifiedProf)
+    encodeULEB128(S.getHeadSamples(), *OutputStream);
+  return writeBody(S, false);
 }
 
 std::error_code SampleProfileWriterExtBinaryBase::writeFuncOffsetTable() {
@@ -913,8 +914,11 @@ std::error_code SampleProfileWriterBinary::writeSummary() {
   return sampleprof_error::success;
 }
 
-void SampleProfileWriterBinary::writeLBRProfile(const FunctionSamples &S) {
+void SampleProfileWriterBinary::writeLBRProfile(const FunctionSamples &S,
+                                                bool IsNested) {
   auto &OS = *OutputStream;
+  if (WriteTypifiedProf && !IsNested)
+    encodeULEB128(S.getHeadSamples(), OS);
   encodeULEB128(S.getTotalSamples(), OS);
   encodeULEB128(S.getBodySamples().size(), OS);
   for (const auto &I : S.getBodySamples()) {
@@ -948,13 +952,14 @@ void SampleProfileWriterBinary::finishProfileType(uint64_t SizeOffset,
 }
 
 void SampleProfileWriterBinary::writeTypifiedLBRProfile(
-    const FunctionSamples &S) {
+    const FunctionSamples &S, bool IsNested) {
   auto [SizeOffset, BodyOffset] = startProfileType(ProfTypeLBR);
-  writeLBRProfile(S);
+  writeLBRProfile(S, IsNested);
   finishProfileType(SizeOffset, BodyOffset);
 }
 
-void SampleProfileWriterBinary::writeTypifiedProfile(const FunctionSamples &S) {
+void SampleProfileWriterBinary::writeTypifiedProfile(const FunctionSamples &S,
+                                                     bool IsNested) {
   auto &OS = *OutputStream;
   bool WriteLBRProf = !S.getBodySamples().empty();
   // Other profile types should be added here.
@@ -964,19 +969,20 @@ void SampleProfileWriterBinary::writeTypifiedProfile(const FunctionSamples &S) {
   encodeULEB128(TypesNum, OS);
 
   if (WriteLBRProf)
-    writeTypifiedLBRProfile(S);
+    writeTypifiedLBRProfile(S, IsNested);
 }
 
-std::error_code SampleProfileWriterBinary::writeBody(const FunctionSamples &S) {
+std::error_code SampleProfileWriterBinary::writeBody(const FunctionSamples &S,
+                                                     bool IsNested) {
   auto &OS = *OutputStream;
   if (std::error_code EC = writeContextIdx(S.getContext()))
     return EC;
 
   // Emit all the body samples.
   if (WriteTypifiedProf)
-    writeTypifiedProfile(S);
+    writeTypifiedProfile(S, IsNested);
   else
-    writeLBRProfile(S);
+    writeLBRProfile(S, IsNested);
 
   // Recursively emit all the callsite samples.
   uint64_t NumCallsites = 0;
@@ -986,7 +992,7 @@ std::error_code SampleProfileWriterBinary::writeBody(const FunctionSamples &S) {
   for (const auto &J : S.getCallsiteSamples())
     for (const auto &FS : J.second) {
       J.first.serialize(OS);
-      if (std::error_code EC = writeBody(FS.second))
+      if (std::error_code EC = writeBody(FS.second, true))
         return EC;
     }
 
@@ -1002,7 +1008,7 @@ std::error_code SampleProfileWriterBinary::writeBody(const FunctionSamples &S) {
 std::error_code
 SampleProfileWriterBinary::writeSample(const FunctionSamples &S) {
   encodeULEB128(S.getHeadSamples(), *OutputStream);
-  return writeBody(S);
+  return writeBody(S, false);
 }
 
 /// Create a sample profile file writer based on the specified format.
