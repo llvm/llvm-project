@@ -548,8 +548,13 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
     actualLastSymbol = &ResolveAssociations(*actualLastSymbol);
   }
   int actualRank{actualType.Rank()};
-  if (dummy.type.attrs().test(
-          characteristics::TypeAndShape::Attr::AssumedShape)) {
+  if (dummyIsValue && dummyRank == 0 &&
+      dummy.ignoreTKR.test(common::IgnoreTKR::Rank) && actualRank > 0) {
+    messages.Say(
+        "Array actual argument may not be associated with IGNORE_TKR(R) scalar %s with VALUE attribute"_err_en_US,
+        dummyName);
+  } else if (dummy.type.attrs().test(
+                 characteristics::TypeAndShape::Attr::AssumedShape)) {
     // 15.5.2.4(16)
     if (actualIsAssumedRank) {
       messages.Say(

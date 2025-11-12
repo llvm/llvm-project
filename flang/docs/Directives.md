@@ -32,6 +32,22 @@ A list of non-standard directives supported by Flang
     end
   end interface
 ```
+  Note that it's not allowed to pass array actual argument to `ignore_trk(R)`
+  dummy argument that is a scalar with `VALUE` attribute, for example:
+```
+  interface
+    subroutine s(b)
+      !dir$ ignore_tkr(r) b
+      integer, value :: b
+    end
+  end interface
+  integer :: a(5)
+  call s(a)
+```
+  The reason for this limitation is that scalars with `VALUE` attribute can
+  be passed in registers, so it's not clear how lowering should handle this
+  case. (Passing scalar actual argument to `ignore_tkr(R)` dummy argument
+  that is a scalar with `VALUE` attribute is allowed.)
 * `!dir$ assume_aligned desginator:alignment`, where designator is a variable,
   maybe with array indices, and alignment is what the compiler should assume the
   alignment to be. E.g A:64 or B(1,1,1):128. The alignment should be a power of 2,

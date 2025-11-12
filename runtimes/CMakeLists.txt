@@ -256,6 +256,20 @@ endif()
 # This can be used to detect whether we're in the runtimes build.
 set(LLVM_RUNTIMES_BUILD ON)
 
+# Make GTest available to all runtimes
+# The runtime must call make_gtest_target() for it to become available. This is
+# to avoid build failures when gtest is not actually needed. In particular,
+# mingw-incomplete-sysroot is missing C++ header files that GTest needs to
+# compile.
+function(build_gtest)
+  if(TARGET default_gtest)
+    # Already available
+    return()
+  endif()
+
+  add_subdirectory("${LLVM_THIRD_PARTY_DIR}/unittest" "${CMAKE_BINARY_DIR}/third-party/runtimes_gtest")
+endfunction()
+
 foreach(entry ${runtimes})
   get_filename_component(projName ${entry} NAME)
 

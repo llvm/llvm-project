@@ -839,11 +839,10 @@ define aarch64_sve_vector_pcs void @only_ppr_csr_vla(i64 %n) {
 define aarch64_sve_vector_pcs void @only_zpr_csr_vla(i64 %n) {
 ; CHECK-LABEL: only_zpr_csr_vla:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #1056
-; CHECK-NEXT:    str x29, [sp, #1024] // 8-byte Folded Spill
-; CHECK-NEXT:    add x29, sp, #1024
-; CHECK-NEXT:    str x30, [sp, #1032] // 8-byte Folded Spill
-; CHECK-NEXT:    str x19, [sp, #1040] // 8-byte Folded Spill
+; CHECK-NEXT:    stp x29, x30, [sp, #-32]! // 16-byte Folded Spill
+; CHECK-NEXT:    str x19, [sp, #16] // 8-byte Folded Spill
+; CHECK-NEXT:    mov x29, sp
+; CHECK-NEXT:    sub sp, sp, #1024
 ; CHECK-NEXT:    addvl sp, sp, #-3
 ; CHECK-NEXT:    str z10, [sp] // 16-byte Folded Spill
 ; CHECK-NEXT:    str z9, [sp, #1, mul vl] // 16-byte Folded Spill
@@ -870,11 +869,9 @@ define aarch64_sve_vector_pcs void @only_zpr_csr_vla(i64 %n) {
 ; CHECK-NEXT:    ldr z10, [sp] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z9, [sp, #1, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z8, [sp, #2, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    sub sp, x29, #1024
-; CHECK-NEXT:    ldr x19, [sp, #1040] // 8-byte Folded Reload
-; CHECK-NEXT:    ldr x30, [sp, #1032] // 8-byte Folded Reload
-; CHECK-NEXT:    ldr x29, [sp, #1024] // 8-byte Folded Reload
-; CHECK-NEXT:    add sp, sp, #1056
+; CHECK-NEXT:    mov sp, x29
+; CHECK-NEXT:    ldr x19, [sp, #16] // 8-byte Folded Reload
+; CHECK-NEXT:    ldp x29, x30, [sp], #32 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
   %alloc = alloca i8, i64 %n, align 1
   call void (...) @llvm.fake.use(ptr %alloc)

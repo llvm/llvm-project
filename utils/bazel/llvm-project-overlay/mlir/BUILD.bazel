@@ -3884,6 +3884,7 @@ cc_library(
         ":GPUDialect",
         ":IR",
         ":SCFDialect",
+        ":SCFUtils",
         ":TransformDialect",
         ":TransformDialectInterfaces",
         ":XeGPUDialect",
