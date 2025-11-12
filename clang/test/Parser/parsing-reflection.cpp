@@ -19,7 +19,7 @@ struct Z{
 
 }
 
-int main()
+consteval void test()
 {
     (void)^^::;
     (void)(^^void);
@@ -36,22 +36,28 @@ int main()
     (void)(^^long long);
     (void)(^^float);
     (void)(^^double);
+    (void)(^^const void);
+    (void)(^^decltype(nullptr));
 
     // Not supported yet.
     (void)^^a; // expected-error {{expected reflectable entity}}
-    (void)^^a::; // expected-error {{expected reflectable entity}}
-    (void)^^a::b::X; // expected-error {{expected reflectable entity}}
-    (void)^^a::X::; // expected-error {{expected reflectable entity}}
+    (void)^^a::X; // expected-error {{expected reflectable entity}}
     (void)(^^a::b); // expected-error {{expected reflectable entity}}
-    (void)^^a::b::; // expected-error {{expected reflectable entity}}
     (void)^^a::b::Y; // expected-error {{expected reflectable entity}}
     (void)^^a::b::x; // expected-error {{expected reflectable entity}}
-    (void)^^a::b::Y::; // expected-error {{expected reflectable entity}}
-    (void)(^^::a::); // expected-error {{expected reflectable entity}}
     (void)(^^::a::X::operator==); // expected-error {{expected reflectable entity}}
-    (void)(^^::a::X::~X()); // expected-error {{expected reflectable entity}}
+    (void)(^^::a::X::~X); // expected-error {{expected reflectable entity}}
     (void)(^^::a::Z<int>); // expected-error {{expected reflectable entity}}
     (void)(^^::a::Z<int>::template type<int>); // expected-error {{expected reflectable entity}}
     namespace c = a::b;
     (void)(^^c); // expected-error {{expected reflectable entity}}
+
+
+    // ill-formed
+    (void)^^a::; // expected-error {{expected reflectable entity}}
+    (void)^^a::X::; // expected-error {{expected reflectable entity}}
+    (void)^^a::b::; // expected-error {{expected reflectable entity}}
+    (void)(^^::a::); // expected-error {{expected reflectable entity}}
+    (void)^^a::b::Y::; // expected-error {{expected reflectable entity}}
+
 }

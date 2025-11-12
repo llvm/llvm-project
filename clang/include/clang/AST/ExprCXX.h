@@ -5540,10 +5540,12 @@ public:
   void setOperandRange(SourceRange R) { OperandRange = R; }
 
   child_range children() {
+    // TODO(Reflection)
     return child_range(child_iterator(), child_iterator());
   }
 
   const_child_range children() const {
+    // TODO(Reflection)
     return const_child_range(const_child_iterator(), const_child_iterator());
   }
 
