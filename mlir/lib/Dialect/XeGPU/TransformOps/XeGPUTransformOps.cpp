@@ -120,33 +120,6 @@ static std::optional<T> findProducerOfType(Value val) {
   return findProducerOfType<T>(producerOp->getOperand(0));
 }
 
-/// Find layout attribute in producer chain.
-/// Traces producer ops until a layout attribute is found. Only traces through
-/// ops with a single operand, in other cases the op's result layout attribute
-/// must be set. Returns std::nullopt if no layout attribute is found.
-xegpu::LayoutAttr findProducerLayout(Value val) {
-  // Get layout attr from value or producer's attribute or operand.
-  if (auto layoutAttr = dyn_cast_if_present<xegpu::LayoutAttr>(
-          xegpu::getDistributeLayoutAttr(val)))
-    return layoutAttr;
-
-  // Recurse up the producer chain.
-  Operation *producerOp = val.getDefiningOp();
-  if (!producerOp) {
-    LDBG() << "Failed to find producer op.";
-    return nullptr;
-  }
-  if (producerOp->getNumOperands() == 0) {
-    LDBG() << "Producer has no operands.";
-    return nullptr;
-  }
-  if (producerOp->getNumOperands() > 1) {
-    LDBG() << "Producer has multiple operands.";
-    return nullptr;
-  }
-  return findProducerLayout(producerOp->getOperand(0));
-}
-
 /// Create a layout attribute from the given parameters.
 static xegpu::LayoutAttr
 createLayoutAttr(MLIRContext *ctx, ArrayRef<int32_t> sgLayout,
@@ -564,24 +537,48 @@ void transform::InsertPrefetchOp::getEffects(
   modifiesPayload(effects);
 }
 
-void transform::ConvertLayoutOp::build(OpBuilder &builder,
-                                       OperationState &ostate, Value target,
-                                       ArrayRef<OpFoldResult> mixedSgLayout,
-                                       ArrayRef<OpFoldResult> mixedSgData,
-                                       ArrayRef<OpFoldResult> mixedInstData) {
-  SmallVector<int64_t> staticSgLayout, staticSgData, staticInstData;
-  SmallVector<Value> dynamicSgLayout, dynamicSgData, dynamicInstData;
-  dispatchIndexOpFoldResults(mixedSgLayout, dynamicSgLayout, staticSgLayout);
-  dispatchIndexOpFoldResults(mixedSgData, dynamicSgData, staticSgData);
-  dispatchIndexOpFoldResults(mixedInstData, dynamicInstData, staticInstData);
+void transform::ConvertLayoutOp::build(
+    OpBuilder &builder, OperationState &ostate, Value target,
+    ArrayRef<OpFoldResult> mixedInputSgLayout,
+    ArrayRef<OpFoldResult> mixedInputSgData,
+    ArrayRef<OpFoldResult> mixedInputInstData,
+    ArrayRef<OpFoldResult> mixedTargetSgLayout,
+    ArrayRef<OpFoldResult> mixedTargetSgData,
+    ArrayRef<OpFoldResult> mixedTargetInstData) {
+  SmallVector<int64_t> staticInputSgLayout, staticInputSgData,
+      staticInputInstData;
+  SmallVector<Value> dynamicInputSgLayout, dynamicInputSgData,
+      dynamicInputInstData;
+  dispatchIndexOpFoldResults(mixedInputSgLayout, dynamicInputSgLayout,
+                             staticInputSgLayout);
+  dispatchIndexOpFoldResults(mixedInputSgData, dynamicInputSgData,
+                             staticInputSgData);
+  dispatchIndexOpFoldResults(mixedInputInstData, dynamicInputInstData,
+                             staticInputInstData);
+  SmallVector<int64_t> staticTargetSgLayout, staticTargetSgData,
+      staticTargetInstData;
+  SmallVector<Value> dynamicTargetSgLayout, dynamicTargetSgData,
+      dynamicTargetInstData;
+  dispatchIndexOpFoldResults(mixedTargetSgLayout, dynamicTargetSgLayout,
+                             staticTargetSgLayout);
+  dispatchIndexOpFoldResults(mixedTargetSgData, dynamicTargetSgData,
+                             staticTargetSgData);
+  dispatchIndexOpFoldResults(mixedTargetInstData, dynamicTargetInstData,
+                             staticTargetInstData);
   build(builder, ostate, target.getType(),
         /*target=*/target,
-        /*sg_layout=*/dynamicSgLayout,
-        /*sg_data=*/dynamicSgData,
-        /*inst_data=*/dynamicInstData,
-        /*static_sg_layout=*/staticSgLayout,
-        /*static_sg_data=*/staticSgData,
-        /*static_inst_data=*/staticInstData);
+        /*input_sg_layout=*/dynamicInputSgLayout,
+        /*input_sg_data=*/dynamicInputSgData,
+        /*input_inst_data=*/dynamicInputInstData,
+        /*target_sg_layout=*/dynamicTargetSgLayout,
+        /*target_sg_data=*/dynamicTargetSgData,
+        /*target_inst_data=*/dynamicTargetInstData,
+        /*static_input_sg_layout=*/staticInputSgLayout,
+        /*static_input_sg_data=*/staticInputSgData,
+        /*static_input_inst_data=*/staticInputInstData,
+        /*static_target_sg_layout=*/staticTargetSgLayout,
+        /*static_target_sg_data=*/staticTargetSgData,
+        /*static_target_inst_data=*/staticTargetInstData);
 }
 
 DiagnosedSilenceableFailure
@@ -595,18 +592,20 @@ transform::ConvertLayoutOp::apply(transform::TransformRewriter &rewriter,
            << llvm::range_size(targetValues) << ")";
   auto value = *targetValues.begin();
 
-  xegpu::LayoutAttr targetLayoutAttr = nullptr;
-  auto status = getLayoutAttrFromOperands(getContext(), state, (*this),
-                                          getMixedSgLayout(), getMixedSgData(),
-                                          getMixedInstData(), targetLayoutAttr);
+  // Construct layout attributes.
+  xegpu::LayoutAttr inputLayoutAttr = nullptr;
+  auto status = getLayoutAttrFromOperands(
+      getContext(), state, (*this), getMixedInputSgLayout(),
+      getMixedInputSgData(), getMixedInputInstData(), inputLayoutAttr);
   if (!status.succeeded())
     return status;
 
-  // Find source layout attribute from the producer chain.
-  auto producerLayoutAttr = findProducerLayout(value);
-  if (!producerLayoutAttr)
-    return emitSilenceableFailure(getLoc())
-           << "Could not find a layout attribute in the producer chain.";
+  xegpu::LayoutAttr targetLayoutAttr = nullptr;
+  status = getLayoutAttrFromOperands(
+      getContext(), state, (*this), getMixedTargetSgLayout(),
+      getMixedTargetSgData(), getMixedTargetInstData(), targetLayoutAttr);
+  if (!status.succeeded())
+    return status;
 
   // Find first user op to define insertion point for layout conversion.
   if (value.use_empty())
@@ -616,9 +615,9 @@ transform::ConvertLayoutOp::apply(transform::TransformRewriter &rewriter,
 
   // Emit convert_layout op.
   rewriter.setInsertionPoint(userOp);
-  auto convLayoutOp = xegpu::ConvertLayoutOp::create(
-      rewriter, value.getLoc(), value.getType(), value, producerLayoutAttr,
-      targetLayoutAttr);
+  auto convLayoutOp =
+      xegpu::ConvertLayoutOp::create(rewriter, value.getLoc(), value.getType(),
+                                     value, inputLayoutAttr, targetLayoutAttr);
   // Replace load op result with the converted layout.
   rewriter.replaceUsesWithIf(
       value, convLayoutOp.getResult(), [&](OpOperand &use) {
@@ -632,9 +631,12 @@ transform::ConvertLayoutOp::apply(transform::TransformRewriter &rewriter,
 void transform::ConvertLayoutOp::getEffects(
     ::llvm::SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
   onlyReadsHandle(getTargetMutable(), effects);
-  onlyReadsHandle(getSgLayoutMutable(), effects);
-  onlyReadsHandle(getSgDataMutable(), effects);
-  onlyReadsHandle(getInstDataMutable(), effects);
+  onlyReadsHandle(getInputSgLayoutMutable(), effects);
+  onlyReadsHandle(getInputSgDataMutable(), effects);
+  onlyReadsHandle(getInputInstDataMutable(), effects);
+  onlyReadsHandle(getTargetSgLayoutMutable(), effects);
+  onlyReadsHandle(getTargetSgDataMutable(), effects);
+  onlyReadsHandle(getTargetInstDataMutable(), effects);
   producesHandle(getOperation()->getOpResults(), effects);
   modifiesPayload(effects);
 }

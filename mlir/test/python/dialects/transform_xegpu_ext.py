@@ -206,14 +206,18 @@ def ConvertLayoutMinimal():
         operand = transform.GetOperandOp(AnyValueType.get(), sequence.bodyTarget, [0])
         xegpu.convert_layout(
             operand,
-            sg_layout=[6, 4],
-            sg_data=[32, 16],
+            input_sg_layout=[6, 4],
+            input_sg_data=[32, 16],
+            target_sg_layout=[6, 4],
+            target_sg_data=[8, 16],
         )
         transform.YieldOp()
     # CHECK-LABEL: TEST: ConvertLayoutMinimal
     # CHECK: transform.xegpu.convert_layout %
-    # CHECK: sg_layout = [6, 4]
-    # CHECK: sg_data = [32, 16]
+    # CHECK: input_sg_layout = [6, 4]
+    # CHECK: input_sg_data = [32, 16]
+    # CHECK: target_sg_layout = [6, 4]
+    # CHECK: target_sg_data = [8, 16]
 
 
 @run
@@ -227,13 +231,19 @@ def ConvertLayout():
         operand = transform.GetOperandOp(AnyValueType.get(), sequence.bodyTarget, [1])
         xegpu.convert_layout(
             operand,
-            sg_layout=[6, 4],
-            sg_data=[32, 16],
-            inst_data=[8, 16],
+            input_sg_layout=[6, 4],
+            input_sg_data=[32, 32],
+            input_inst_data=[32, 16],
+            target_sg_layout=[6, 4],
+            target_sg_data=[32, 32],
+            target_inst_data=[8, 16],
         )
         transform.YieldOp()
     # CHECK-LABEL: TEST: ConvertLayout
     # CHECK: transform.xegpu.convert_layout %
-    # CHECK: sg_layout = [6, 4]
-    # CHECK: sg_data = [32, 16]
-    # CHECK: inst_data = [8, 16]
+    # CHECK: input_sg_layout = [6, 4]
+    # CHECK: input_sg_data = [32, 32]
+    # CHECK: input_inst_data = [32, 16]
+    # CHECK: target_sg_layout = [6, 4]
+    # CHECK: target_sg_data = [32, 32]
+    # CHECK: target_inst_data = [8, 16]

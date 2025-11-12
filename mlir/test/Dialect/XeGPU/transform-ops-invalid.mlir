@@ -155,24 +155,3 @@ module attributes {transform.with_named_sequence} {
     transform.yield
   }
 }
-
-// -----
-
-// CHECK-LABEL: @convert_layout_no_producer_attr
-func.func @convert_layout_no_producer_attr(%arg0: vector<32x32xf16>, %arg1: vector<32x32xf16>) {
-  %c0 = arith.constant 0 : index
-  %0 = arith.addf %arg0, %arg1 : vector<32x32xf16>
-  %1 = arith.extf %0 : vector<32x32xf16> to vector<32x32xf32>
-  %2 = arith.truncf %1 : vector<32x32xf32> to vector<32x32xf16>
-  return
-}
-
-module attributes {transform.with_named_sequence} {
-  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
-    %0 = transform.structured.match ops{["arith.truncf"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %1 = transform.get_operand %0[0] : (!transform.any_op) -> !transform.any_value
-    // expected-error@below {{Could not find a layout attribute in the producer chain.}}
-    transform.xegpu.convert_layout %1 sg_layout = [8, 4] sg_data = [32, 32] inst_data = [8, 16] : (!transform.any_value) -> !transform.any_op
-    transform.yield
-  }
-}
