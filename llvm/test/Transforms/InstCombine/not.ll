@@ -1064,10 +1064,9 @@ if.else:
 
 define i8 @invert_bitcasted_icmp(<8 x i32> %a, <8 x i32> %b) {
 ; CHECK-LABEL: @invert_bitcasted_icmp(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sle <8 x i32> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <8 x i32> [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[MASK_AS_INT:%.*]] = bitcast <8 x i1> [[CMP]] to i8
-; CHECK-NEXT:    [[NOT:%.*]] = xor i8 [[MASK_AS_INT]], -1
-; CHECK-NEXT:    ret i8 [[NOT]]
+; CHECK-NEXT:    ret i8 [[MASK_AS_INT]]
 ;
   %cmp = icmp sle <8 x i32> %a, %b
   %mask.as.int = bitcast <8 x i1> %cmp to i8
@@ -1077,10 +1076,9 @@ define i8 @invert_bitcasted_icmp(<8 x i32> %a, <8 x i32> %b) {
 
 define i8 @invert_bitcasted_icmp_samesign(<8 x i32> %a, <8 x i32> %b) {
 ; CHECK-LABEL: @invert_bitcasted_icmp_samesign(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign sle <8 x i32> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign sgt <8 x i32> [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[MASK_AS_INT:%.*]] = bitcast <8 x i1> [[CMP]] to i8
-; CHECK-NEXT:    [[NOT:%.*]] = xor i8 [[MASK_AS_INT]], -1
-; CHECK-NEXT:    ret i8 [[NOT]]
+; CHECK-NEXT:    ret i8 [[MASK_AS_INT]]
 ;
   %cmp = icmp samesign sle <8 x i32> %a, %b
   %mask.as.int = bitcast <8 x i1> %cmp to i8
@@ -1120,10 +1118,9 @@ define i8 @invert_bitcasted_icmp_multi_use_2(<8 x i32> %a, <8 x i32> %b) {
 
 define i8 @invert_bitcasted_fcmp(<8 x float> %a, <8 x float> %b) {
 ; CHECK-LABEL: @invert_bitcasted_fcmp(
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt <8 x float> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp uge <8 x float> [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[MASK_AS_INT:%.*]] = bitcast <8 x i1> [[CMP]] to i8
-; CHECK-NEXT:    [[NOT:%.*]] = xor i8 [[MASK_AS_INT]], -1
-; CHECK-NEXT:    ret i8 [[NOT]]
+; CHECK-NEXT:    ret i8 [[MASK_AS_INT]]
 ;
   %cmp = fcmp olt <8 x float> %a, %b
   %mask.as.int = bitcast <8 x i1> %cmp to i8
@@ -1133,10 +1130,9 @@ define i8 @invert_bitcasted_fcmp(<8 x float> %a, <8 x float> %b) {
 
 define i8 @invert_bitcasted_fcmp_fast(<8 x float> %a, <8 x float> %b) {
 ; CHECK-LABEL: @invert_bitcasted_fcmp_fast(
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp fast olt <8 x float> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp fast uge <8 x float> [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[MASK_AS_INT:%.*]] = bitcast <8 x i1> [[CMP]] to i8
-; CHECK-NEXT:    [[NOT:%.*]] = xor i8 [[MASK_AS_INT]], -1
-; CHECK-NEXT:    ret i8 [[NOT]]
+; CHECK-NEXT:    ret i8 [[MASK_AS_INT]]
 ;
   %cmp = fcmp fast olt <8 x float> %a, %b
   %mask.as.int = bitcast <8 x i1> %cmp to i8
