@@ -673,15 +673,13 @@ bool fromJSON(const llvm::json::Value &Params, EvaluateArguments &Args,
 }
 
 llvm::json::Value toJSON(const EvaluateResponseBody &Body) {
-  json::Object result{{"result", Body.result}};
+  json::Object result{{"result", Body.result},
+                      {"variablesReference", Body.variablesReference}};
 
   if (!Body.type.empty())
     result.insert({"type", Body.type});
   if (Body.presentationHint)
     result.insert({"presentationHint", Body.presentationHint});
-  if (Body.variablesReference != 0 &&
-      Body.variablesReference != LLDB_DAP_INVALID_VARRERF)
-    result.insert({"variablesReference", Body.variablesReference});
   if (Body.namedVariables)
     result.insert({"namedVariables", Body.namedVariables});
   if (Body.indexedVariables)

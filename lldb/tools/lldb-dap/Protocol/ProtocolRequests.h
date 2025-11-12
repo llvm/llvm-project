@@ -1145,7 +1145,7 @@ struct EvaluateResponseBody {
   /// children can be retrieved by passing `variablesReference` to the
   /// `variables` request as long as execution remains suspended. See 'Lifetime
   /// of Object References' in the Overview section for details.
-  int64_t variablesReference = LLDB_DAP_INVALID_VARRERF;
+  int64_t variablesReference = 0;
 
   /// The number of named child variables.
   /// The client can use this information to present the variables in a paged
@@ -1174,7 +1174,7 @@ struct EvaluateResponseBody {
   ///
   /// This reference shares the same lifetime as the `variablesReference`. See
   /// 'Lifetime of Object References' in the Overview section for details.
-  uint32_t valueLocationReference = LLDB_DAP_INVALID_VALUE_LOC;
+  uint64_t valueLocationReference = LLDB_DAP_INVALID_VALUE_LOC;
 };
 llvm::json::Value toJSON(const EvaluateResponseBody &);
 

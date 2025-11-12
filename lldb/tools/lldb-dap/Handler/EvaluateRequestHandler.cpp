@@ -99,17 +99,20 @@ EvaluateRequestHandler::Run(const EvaluateArguments &arguments) const {
 
   VariableDescription desc(value,
                            dap.configuration.enableAutoVariableSummaries);
+
   body.result = desc.GetResult(arguments.context);
   body.type = desc.display_type_name;
+
   if (value.MightHaveChildren() || ValuePointsToCode(value))
     body.variablesReference = dap.variables.InsertVariable(
         value, /*is_permanent=*/arguments.context == eEvaluateContextRepl);
+
   if (lldb::addr_t addr = value.GetLoadAddress(); addr != LLDB_INVALID_ADDRESS)
     body.memoryReference = EncodeMemoryReference(addr);
 
   if (ValuePointsToCode(value) &&
       body.variablesReference != LLDB_DAP_INVALID_VARRERF)
-    body.valueLocationReference = body.variablesReference;
+    body.valueLocationReference = PackLocation(body.variablesReference, true);
 
   return body;
 }
