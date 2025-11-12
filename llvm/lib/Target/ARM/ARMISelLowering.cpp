@@ -143,12 +143,6 @@ static cl::opt<unsigned> ConstpoolPromotionMaxTotal(
     cl::desc("Maximum size of ALL constants to promote into a constant pool"),
     cl::init(128));
 
-static cl::opt<bool>
-    EnableOptimizeLogicalImm("arm-enable-logical-imm", cl::Hidden,
-                             cl::desc("Enable ARM logical imm instruction "
-                                      "optimization"),
-                             cl::init(true));
-
 cl::opt<unsigned>
 MVEMaxSupportedInterleaveFactor("mve-max-interleave-factor", cl::Hidden,
   cl::desc("Maximum interleave factor for MVE VLDn to generate."),
@@ -20128,9 +20122,6 @@ bool ARMTargetLowering::targetShrinkDemandedConstant(
   // Delay optimization, so we don't have to deal with illegal types, or block
   // optimizations.
   if (!TLO.LegalOps)
-    return false;
-
-  if (!EnableOptimizeLogicalImm)
     return false;
 
   EVT VT = Op.getValueType();
