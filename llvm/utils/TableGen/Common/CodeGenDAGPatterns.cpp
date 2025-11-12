@@ -3681,6 +3681,7 @@ public:
   bool isBitcast = false;
   bool isVariadic = false;
   bool hasChain = false;
+  bool mayHaveChain = false;
 
   InstAnalyzer(const CodeGenDAGPatterns &cdp) : CDP(cdp) {}
 
@@ -3744,6 +3745,8 @@ public:
       isVariadic = true;
     if (N.NodeHasProperty(SDNPHasChain, CDP))
       hasChain = true;
+    if (N.NodeHasProperty(SDNPOptChain, CDP))
+      mayHaveChain = true;
 
     if (const CodeGenIntrinsic *IntInfo = N.getIntrinsicInfo(CDP)) {
       ModRefInfo MR = IntInfo->ME.getModRef();

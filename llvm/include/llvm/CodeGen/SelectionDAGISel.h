@@ -152,6 +152,7 @@ public:
     OPC_RecordChild6,
     OPC_RecordChild7,
     OPC_RecordMemRef,
+    OPC_RecordOptionalChain,
     OPC_CaptureGlueInput,
     OPC_MoveChild,
     OPC_MoveChild0,
@@ -495,7 +496,8 @@ private:
 private:
   void DoInstructionSelection();
   SDNode *MorphNode(SDNode *Node, unsigned TargetOpc, SDVTList VTList,
-                    ArrayRef<SDValue> Ops, unsigned EmitNodeInfo);
+                    ArrayRef<SDValue> Ops, unsigned EmitNodeInfo,
+                    bool OptionalChain);
 
   /// Prepares the landing pad to take incoming values or do other EH
   /// personality specific tasks. Returns true if the block should be

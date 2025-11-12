@@ -29,3 +29,4 @@ def SDNPMayLoad     : SDNodeProperty;   // May read memory, sets 'mayLoad'.
 def SDNPSideEffect  : SDNodeProperty;   // Sets 'HasUnmodelledSideEffects'.
 def SDNPMemOperand  : SDNodeProperty;   // Touches memory, has assoc MemOperand
 def SDNPVariadic    : SDNodeProperty;   // Node has variable arguments.
+def SDNPOptChain    : SDNodeProperty;   // Optionally has chain operand/result.
