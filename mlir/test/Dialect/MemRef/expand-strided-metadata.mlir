@@ -1462,13 +1462,13 @@ func.func @negative_memref_view_extract_aligned_pointer(%arg0: memref<?xi8>) -> 
   // `extract_aligned_pointer_as_index` must not be folded as `memref.view` can change the base pointer
   // CHECK-LABEL: func @negative_memref_view_extract_aligned_pointer
   // CHECK-SAME: (%[[ARG0:.*]]: memref<?xi8>)
-  // CHECK: %[[C0:.*]] = arith.constant 0 : index
-  // CHECK: %[[VIEW:.*]] = memref.view %[[ARG0]][%[[C0]]][] : memref<?xi8> to memref<f32>
+  // CHECK: %[[C10:.*]] = arith.constant 10 : index
+  // CHECK: %[[VIEW:.*]] = memref.view %[[ARG0]][%[[C10]]][] : memref<?xi8> to memref<f32>
   // CHECK: %[[PTR:.*]] = memref.extract_aligned_pointer_as_index %[[VIEW]] : memref<f32> -> index
   // CHECK: return %[[PTR]] : index
 
-  %c0 = arith.constant 0 : index
-  %0 = memref.view %arg0[%c0][] : memref<?xi8> to memref<f32>
+  %c10 = arith.constant 10 : index
+  %0 = memref.view %arg0[%c10][] : memref<?xi8> to memref<f32>
   %1 = memref.extract_aligned_pointer_as_index %0: memref<f32> -> index
   return %1 : index
 }
