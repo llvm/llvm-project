@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_SUPPORT_ZOSWRAPPER_STRING_H
-#define LLVM_SUPPORT_ZOSWRAPPER_STRING_H
+#ifndef LLVM_SUPPORT_ZOSWRAPPERS_STRING_H
+#define LLVM_SUPPORT_ZOSWRAPPERS_STRING_H
 
 #include_next <string.h>
 
