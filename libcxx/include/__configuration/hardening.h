@@ -7,32 +7,32 @@
 //===----------------------------------------------------------------------===//
 
 #ifndef _LIBCPP___CONFIGURATION_HARDENING_H
-#define _LIBCPP___CONFIGURATION_HARDENING_H
+#  define _LIBCPP___CONFIGURATION_HARDENING_H
 
-#include <__config_site>
-#include <__configuration/experimental.h>
-#include <__configuration/language.h>
+#  include <__config_site>
+#  include <__configuration/experimental.h>
+#  include <__configuration/language.h>
 
-#ifndef _LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER
-#  pragma GCC system_header
-#endif
+#  ifndef _LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER
+#    pragma GCC system_header
+#  endif
 
 // TODO(LLVM 23): Remove this. We're making these an error to catch folks who might not have migrated.
 //       Since hardening went through several changes (many of which impacted user-facing macros),
 //       we're keeping these checks around for a bit longer than usual. Failure to properly configure
 //       hardening results in checks being dropped silently, which is a pretty big deal.
-#if defined(_LIBCPP_ENABLE_ASSERTIONS)
-#  error "_LIBCPP_ENABLE_ASSERTIONS has been removed, please use _LIBCPP_HARDENING_MODE=<mode> instead (see docs)"
-#endif
-#if defined(_LIBCPP_ENABLE_HARDENED_MODE)
-#  error "_LIBCPP_ENABLE_HARDENED_MODE has been removed, please use _LIBCPP_HARDENING_MODE=<mode> instead (see docs)"
-#endif
-#if defined(_LIBCPP_ENABLE_SAFE_MODE)
-#  error "_LIBCPP_ENABLE_SAFE_MODE has been removed, please use _LIBCPP_HARDENING_MODE=<mode> instead (see docs)"
-#endif
-#if defined(_LIBCPP_ENABLE_DEBUG_MODE)
-#  error "_LIBCPP_ENABLE_DEBUG_MODE has been removed, please use _LIBCPP_HARDENING_MODE=<mode> instead (see docs)"
-#endif
+#  if defined(_LIBCPP_ENABLE_ASSERTIONS)
+#    error "_LIBCPP_ENABLE_ASSERTIONS has been removed, please use _LIBCPP_HARDENING_MODE=<mode> instead (see docs)"
+#  endif
+#  if defined(_LIBCPP_ENABLE_HARDENED_MODE)
+#    error "_LIBCPP_ENABLE_HARDENED_MODE has been removed, please use _LIBCPP_HARDENING_MODE=<mode> instead (see docs)"
+#  endif
+#  if defined(_LIBCPP_ENABLE_SAFE_MODE)
+#    error "_LIBCPP_ENABLE_SAFE_MODE has been removed, please use _LIBCPP_HARDENING_MODE=<mode> instead (see docs)"
+#  endif
+#  if defined(_LIBCPP_ENABLE_DEBUG_MODE)
+#    error "_LIBCPP_ENABLE_DEBUG_MODE has been removed, please use _LIBCPP_HARDENING_MODE=<mode> instead (see docs)"
+#  endif
 
 // The library provides the macro `_LIBCPP_HARDENING_MODE` which can be set to one of the following values:
 //
@@ -115,25 +115,26 @@
 #  define _LIBCPP_HARDENING_MODE_DEBUG     (1 << 3)
 // clang-format on
 
-#ifndef _LIBCPP_HARDENING_MODE
+#  ifndef _LIBCPP_HARDENING_MODE
 
-#  ifndef _LIBCPP_HARDENING_MODE_DEFAULT
-#    error _LIBCPP_HARDENING_MODE_DEFAULT is not defined. This definition should be set at configuration time in the \
+#    ifndef _LIBCPP_HARDENING_MODE_DEFAULT
+#      error _LIBCPP_HARDENING_MODE_DEFAULT is not defined. This definition should be set at configuration time in the \
 `__config_site` header, please make sure your installation of libc++ is not broken.
+#    endif
+
+#    define _LIBCPP_HARDENING_MODE _LIBCPP_HARDENING_MODE_DEFAULT
 #  endif
 
-#  define _LIBCPP_HARDENING_MODE _LIBCPP_HARDENING_MODE_DEFAULT
-#endif
-
-#if _LIBCPP_HARDENING_MODE != _LIBCPP_HARDENING_MODE_NONE && _LIBCPP_HARDENING_MODE != _LIBCPP_HARDENING_MODE_FAST &&  \
-    _LIBCPP_HARDENING_MODE != _LIBCPP_HARDENING_MODE_EXTENSIVE &&                                                      \
-    _LIBCPP_HARDENING_MODE != _LIBCPP_HARDENING_MODE_DEBUG
-#  error _LIBCPP_HARDENING_MODE must be set to one of the following values: \
+#  if _LIBCPP_HARDENING_MODE != _LIBCPP_HARDENING_MODE_NONE &&                                                         \
+      _LIBCPP_HARDENING_MODE != _LIBCPP_HARDENING_MODE_FAST &&                                                         \
+      _LIBCPP_HARDENING_MODE != _LIBCPP_HARDENING_MODE_EXTENSIVE &&                                                    \
+      _LIBCPP_HARDENING_MODE != _LIBCPP_HARDENING_MODE_DEBUG
+#    error _LIBCPP_HARDENING_MODE must be set to one of the following values: \
 _LIBCPP_HARDENING_MODE_NONE, \
 _LIBCPP_HARDENING_MODE_FAST, \
 _LIBCPP_HARDENING_MODE_EXTENSIVE, \
 _LIBCPP_HARDENING_MODE_DEBUG
-#endif
+#  endif
 
 // Hardening assertion semantics generally mirror the evaluation semantics of C++26 Contracts:
 // - `ignore` evaluates the assertion but doesn't do anything if it fails (note that it differs from the Contracts
@@ -156,26 +157,47 @@ _LIBCPP_HARDENING_MODE_DEBUG
 #  define _LIBCPP_ASSERTION_SEMANTIC_ENFORCE       (1 << 4)
 // clang-format on
 
-// Allow users to define an arbitrary assertion semantic; otherwise, use the default mapping from modes to semantics.
-// The default is for production-capable modes to use `quick-enforce` (i.e., trap) and for the `debug` mode to use
-// `enforce` (i.e., log and abort).
-#ifndef _LIBCPP_ASSERTION_SEMANTIC
+// If the user or the vendor attempt to configure the assertion semantic, check that it is allowed in the current
+// environment.
+#  if defined(_LIBCPP_ASSERTION_SEMANTIC) || defined(_LIBCPP_ASSERTION_SEMANTIC_DEFAULT)
+#    if !_LIBCPP_HAS_EXPERIMENTAL_LIBRARY
+#      error "Assertion semantics are an experimental feature."
+#    endif
+#    if defined(_LIBCPP_CXX03_LANG)
+#      error "Assertion semantics are not available in the C++03 mode."
+#    endif
+#  endif // defined(_LIBCPP_ASSERTION_SEMANTIC) || defined(_LIBCPP_ASSERTION_SEMANTIC_DEFAULT)
 
-#  if _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_DEBUG
-#    define _LIBCPP_ASSERTION_SEMANTIC _LIBCPP_ASSERTION_SEMANTIC_ENFORCE
-#  else
-#    define _LIBCPP_ASSERTION_SEMANTIC _LIBCPP_ASSERTION_SEMANTIC_QUICK_ENFORCE
-#  endif
+// There are 2 ways to configure the assertion semantic, listed in order of precedence:
+// 1. The `_LIBCPP_ASSERTION_SEMANTIC` macro, defined directly by the user.
+// 2. The `LIBCXX_ASSERTION_SEMANTIC` CMake variable, set by the vendor.
+// If neither `_LIBCPP_ASSERTION_SEMANTIC` nor `LIBCXX_ASSERTION_SEMANTIC` are defined, the default mapping is used
+// which determines the semantic based on the hardening mode in effect: production-capable modes map to `quick-enforce`
+// (i.e., trap) and the `debug` mode maps to `enforce` (i.e., log and abort).
+#  ifndef _LIBCPP_ASSERTION_SEMANTIC // User-provided semantic takes top priority -- don't override if set.
 
-#else
+#    ifdef _LIBCPP_ASSERTION_SEMANTIC_DEFAULT // Vendor-provided semantic takes second priority.
+#      define _LIBCPP_ASSERTION_SEMANTIC _LIBCPP_ASSERTION_SEMANTIC_DEFAULT
+#    else // Fallback: use the default mapping.
+#      if _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_DEBUG
+#        define _LIBCPP_ASSERTION_SEMANTIC _LIBCPP_ASSERTION_SEMANTIC_ENFORCE
+#      else
+#        define _LIBCPP_ASSERTION_SEMANTIC _LIBCPP_ASSERTION_SEMANTIC_QUICK_ENFORCE
+#      endif
+#endif //    ifdef _LIBCPP_ASSERTION_SEMANTIC_DEFAULT
 
-#  if !_LIBCPP_HAS_EXPERIMENTAL_LIBRARY
-#    error "Assertion semantics are an experimental feature."
-#  endif
-#  if defined(_LIBCPP_CXX03_LANG)
-#    error "Assertion semantics are not available in the C++03 mode."
-#  endif
+#    endif // _LIBCPP_ASSERTION_SEMANTIC
 
-#endif // _LIBCPP_ASSERTION_SEMANTIC
+// Finally, validate the selected semantic (in case the user tries setting it to an incorrect value):
+#    if _LIBCPP_ASSERTION_SEMANTIC != _LIBCPP_ASSERTION_SEMANTIC_IGNORE &&                                             \
+        _LIBCPP_ASSERTION_SEMANTIC != _LIBCPP_ASSERTION_SEMANTIC_OBSERVE &&                                            \
+        _LIBCPP_ASSERTION_SEMANTIC != _LIBCPP_ASSERTION_SEMANTIC_QUICK_ENFORCE &&                                      \
+        _LIBCPP_ASSERTION_SEMANTIC != _LIBCPP_ASSERTION_SEMANTIC_ENFORCE
+#      error _LIBCPP_ASSERTION_SEMANTIC must be set to one of the following values: \
+_LIBCPP_ASSERTION_SEMANTIC_IGNORE, \
+_LIBCPP_ASSERTION_SEMANTIC_OBSERVE, \
+_LIBCPP_ASSERTION_SEMANTIC_QUICK_ENFORCE, \
+_LIBCPP_ASSERTION_SEMANTIC_ENFORCE
+#    endif
 
-#endif // _LIBCPP___CONFIGURATION_HARDENING_H
+#  endif // _LIBCPP___CONFIGURATION_HARDENING_H

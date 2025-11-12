@@ -66,6 +66,18 @@ if (NOT "${LIBCXX_HARDENING_MODE}" IN_LIST LIBCXX_SUPPORTED_HARDENING_MODES)
   message(FATAL_ERROR
     "Unsupported hardening mode: '${LIBCXX_HARDENING_MODE}'. Supported values are ${LIBCXX_SUPPORTED_HARDENING_MODES}.")
 endif()
+set(LIBCXX_SUPPORTED_ASSERTION_SEMANTICS ignore observe quick_enforce enforce)
+set(LIBCXX_ASSERTION_SEMANTIC "" CACHE STRING
+  "Specify the default assertion semantic to use. This semantic will be used
+  inside the compiled library and will be the default when compiling user code.
+  If not defined, the library will select the assertion semantic based on the hardening
+  mode in effect. Note that users can override this setting in their own code.
+  This does not affect the ABI. Supported values are
+  ${LIBCXX_SUPPORTED_ASSERTION_SEMANTICS}.")
+if ("${LIBCXX_ASSERTION_SEMANTIC}" AND NOT "${LIBCXX_ASSERTION_SEMANTIC}" IN_LIST LIBCXX_SUPPORTED_ASSERTION_SEMANTICS)
+  message(FATAL_ERROR
+    "Unsupported assertion semantic: '${LIBCXX_ASSERTION_SEMANTIC}'. Supported values are ${LIBCXX_SUPPORTED_ASSERTION_SEMANTICS}.")
+endif()
 set(LIBCXX_ASSERTION_HANDLER_FILE
   "vendor/llvm/default_assertion_handler.in"
   CACHE STRING
@@ -762,6 +774,15 @@ elseif (LIBCXX_HARDENING_MODE STREQUAL "extensive")
   config_define(16 _LIBCPP_HARDENING_MODE_DEFAULT)
 elseif (LIBCXX_HARDENING_MODE STREQUAL "debug")
   config_define(8 _LIBCPP_HARDENING_MODE_DEFAULT)
+endif()
+if (LIBCXX_ASSERTION_SEMANTIC STREQUAL "ignore")
+  config_define(2 _LIBCPP_ASSERTION_SEMANTIC_DEFAULT)
+elseif (LIBCXX_ASSERTION_SEMANTIC STREQUAL "observe")
+  config_define(4 _LIBCPP_ASSERTION_SEMANTIC_DEFAULT)
+elseif (LIBCXX_ASSERTION_SEMANTIC STREQUAL "quick_enforce")
+  config_define(8 _LIBCPP_ASSERTION_SEMANTIC_DEFAULT)
+elseif (LIBCXX_ASSERTION_SEMANTIC STREQUAL "enforce")
+  config_define(16 _LIBCPP_ASSERTION_SEMANTIC_DEFAULT)
 endif()
 
 if (LIBCXX_PSTL_BACKEND STREQUAL "serial")
