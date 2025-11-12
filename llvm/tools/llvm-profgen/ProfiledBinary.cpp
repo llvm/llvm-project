@@ -854,11 +854,12 @@ void ProfiledBinary::loadSymbolsFromSymtab(const ObjectFile *Obj) {
     if (Size == 0 || Type != SymbolRef::ST_Function)
       continue;
 
+    const uint64_t EndAddr = StartAddr + Size;
     const StringRef SymName =
         FunctionSamples::getCanonicalFnName(Name, Suffixes);
 
     auto Range = findFuncRange(StartAddr);
-    if (!Range || Range->StartAddress != StartAddr) {
+    if (!Range) {
       // Function from symbol table not found previously in DWARF, store ranges.
       auto Ret = BinaryFunctions.emplace(SymName, BinaryFunction());
       auto &Func = Ret.first->second;
@@ -868,23 +869,67 @@ void ProfiledBinary::loadSymbolsFromSymtab(const ObjectFile *Obj) {
       }
 
       Func.FromSymtab = true;
-      Func.Ranges.emplace_back(StartAddr, StartAddr + Size);
+      Func.Ranges.emplace_back(StartAddr, EndAddr);
 
       auto R = StartAddrToFuncRangeMap.emplace(StartAddr, FuncRange());
       FuncRange &FRange = R.first->second;
 
       FRange.Func = &Func;
       FRange.StartAddress = StartAddr;
-      FRange.EndAddress = StartAddr + Size;
+      FRange.EndAddress = EndAddr;
 
-    } else if (SymName != Range->getFuncName() && ShowDetailedWarning) {
-      // Function already found from DWARF, check consistency between symbol
-      // table and DWARF.
-      WithColor::warning() << "Conflicting name for symbol" << Name
-                           << " at address " << format("%8" PRIx64, StartAddr)
+    } else if (SymName != Range->getFuncName()) {
+      // Function range already found from DWARF, but the symbol name from
+      // symbol table is inconsistent with debug info.
+      if (ShowDetailedWarning)
+        WithColor::warning()
+            << "Conflicting name for symbol " << Name << " with range ("
+            << format("%8" PRIx64, StartAddr) << ", "
+            << format("%8" PRIx64, EndAddr) << ")"
+            << ", but the DWARF symbol " << Range->getFuncName()
+            << " indicates an overlapping range ("
+            << format("%8" PRIx64, Range->StartAddress) << ", "
+            << format("%8" PRIx64, Range->EndAddress) << ")\n";
+
+      assert(StartAddr == Range->StartAddress && EndAddr == Range->EndAddress &&
+             "Mismatched function range");
+
+      auto ErrSym = BinaryFunctions.find(Range->getFuncName().str());
+      auto Ret = BinaryFunctions.emplace(SymName, BinaryFunction());
+      auto &Func = Ret.first->second;
+
+      // Symbol table may contain multiple symbol names of the same starting
+      // address. Only need to pick one from these.
+      if (!Ret.second)
+        continue;
+
+      Func.FuncName = Ret.first->first;
+      Func.Ranges = ErrSym->second.Ranges;
+      Func.FromSymtab = true;
+
+      HashBinaryFunctions.erase(MD5Hash(Range->getFuncName()));
+      BinaryFunctions.erase(ErrSym);
+
+      HashBinaryFunctions[MD5Hash(StringRef(SymName))] = &Func;
+      Range->Func = &Func;
+      for (auto [RangeStart, _] : Func.Ranges) {
+        if (auto FRange = findFuncRangeForStartAddr(RangeStart)) {
+          assert(FRange && "Cannot find function range");
+          FRange->Func = &Func;
+        }
+      }
+    } else if (StartAddr != Range->StartAddress &&
+               EndAddr != Range->EndAddress) {
+      // Function already found in DWARF, but the address range from symbol
+      // table conflicts/overlaps with the debug info.
+      WithColor::warning() << "Conflicting range for symbol " << Name
+                           << " with range (" << format("%8" PRIx64, StartAddr)
+                           << ", " << format("%8" PRIx64, EndAddr) << ")"
                            << ", but the DWARF symbol " << Range->getFuncName()
-                           << " indicates a starting address at "
-                           << format("%8" PRIx64, Range->StartAddress) << "\n";
+                           << " indicates another range ("
+                           << format("%8" PRIx64, Range->StartAddress) << ", "
+                           << format("%8" PRIx64, Range->EndAddress) << ")\n";
+      llvm_unreachable("invalid function range");
     }
   }
 }
