@@ -65,8 +65,8 @@ public:
 private:
   Value::ValueType m_value_type = Value::ValueType::Invalid;
   Value::ContextType m_context_type = Value::ContextType::Invalid;
-  Scalar m_expected_scalar{};
-  std::vector<uint8_t> m_expected_bytes{};
+  Scalar m_expected_scalar;
+  std::vector<uint8_t> m_expected_bytes;
 
   bool MatchAndExplainImpl(const Value &val, llvm::raw_ostream &os) const;
 };
