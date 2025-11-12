@@ -485,6 +485,7 @@ void AsmPrinter::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
   if (EmitBBHash)
     AU.addRequired<MachineBlockHashInfo>();
+  AU.addUsedIfAvailable<BasicBlockSectionsProfileReaderWrapperPass>();
 }
 
 bool AsmPrinter::doInitialization(Module &M) {
@@ -1987,7 +1988,16 @@ void AsmPrinter::emitFunctionBody() {
 
   FunctionCallGraphInfo FuncCGInfo;
   const auto &CallSitesInfoMap = MF->getCallSitesInfo();
-  for (auto &MBB : *MF) {
+  DenseMap<UniqueBBID, SmallVector<unsigned>> FunctionPrefetchTargets;
+  if (auto *BBSPRPass =
+          getAnalysisIfAvailable<BasicBlockSectionsProfileReaderWrapperPass>()) {
+    FunctionPrefetchTargets = BBSPRPass->getBBSPR().getPrefetchTargetsForFunction(MF->getName());
+}
+
+   for (auto &MBB : *MF) {
+
+    SmallVector<unsigned> BBPrefetchTargets;
+    = FunctionPrefetchTargets.lookup(MBB.g);
     int NextPrefetchTargetIndex = MBB.getPrefetchTargets().empty() ? -1 : 0;
     // Print a label for the basic block.
     emitBasicBlockStart(MBB);

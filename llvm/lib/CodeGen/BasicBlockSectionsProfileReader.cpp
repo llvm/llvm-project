@@ -99,7 +99,7 @@ BasicBlockSectionsProfileReader::getPrefetchHintsForFunction(
   return ProgramPathAndClusterInfo.lookup(getAliasName(FuncName)).PrefetchHints;
 }
 
-DenseSet<BBPosition>
+SmallVector<BBPosition>
 BasicBlockSectionsProfileReader::getPrefetchTargetsForFunction(
     StringRef FuncName) const {
   return ProgramPathAndClusterInfo.lookup(getAliasName(FuncName))
@@ -333,11 +333,11 @@ Error BasicBlockSectionsProfileReader::ReadV1Profile() {
       auto TargetBBID = parseUniqueBBID(PrefetchTargetStr[0]);
       if (!TargetBBID)
         return TargetBBID.takeError();
-      unsigned long long TargetBBOffset;
-      if (getAsUnsignedInteger(PrefetchTargetStr[1], 10, TargetBBOffset))
+      unsigned long long TargetCallsiteIndex;
+      if (getAsUnsignedInteger(PrefetchTargetStr[1], 10, TargetCallsiteIndex))
         return createProfileParseError(Twine("unsigned integer expected: '") +
                                        PrefetchTargetStr[1]);
-      FI->second.PrefetchTargets.insert(BBPosition{*TargetBBID, static_cast<unsigned>(TargetBBOffset)});
+      FI->second.PrefetchTargets.push_back(BBPosition{*TargetBBID, static_cast<unsigned>(TargetCallsiteIndex)});
       continue;
     }
     default:
@@ -552,7 +552,7 @@ BasicBlockSectionsProfileReaderWrapperPass::getPrefetchHintsForFunction(
   return BBSPR.getPrefetchHintsForFunction(FuncName);
 }
 
-DenseSet<BBPosition>
+SmallVector<BBPosition>
 BasicBlockSectionsProfileReaderWrapperPass::getPrefetchTargetsForFunction(
     StringRef FuncName) const {
   return BBSPR.getPrefetchTargetsForFunction(FuncName);

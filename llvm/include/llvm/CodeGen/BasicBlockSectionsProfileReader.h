@@ -44,7 +44,7 @@ struct BBClusterInfo {
 
 struct BBPosition {
   UniqueBBID BBID;
-  unsigned BBOffset;
+  unsigned CallsiteIndex;
 };
 
 struct PrefetchHint {
@@ -62,7 +62,7 @@ struct FunctionPathAndClusterInfo {
   // determines the `UniqueBBID::CloneID` of the cloned blocks in that path.
   SmallVector<SmallVector<unsigned>> ClonePaths;
   SmallVector<PrefetchHint> PrefetchHints;
-  DenseSet<BBPosition> PrefetchTargets;
+  SmallVector<BBPosition> PrefetchTargets;
   // Node counts for each basic block.
   DenseMap<UniqueBBID, uint64_t> NodeCounts;
   // Edge counts for each edge.
@@ -71,27 +71,6 @@ struct FunctionPathAndClusterInfo {
   // (not cloned blocks), hence the map key being unsigned instead of
   // UniqueBBID.
   DenseMap<unsigned, uint64_t> BBHashes;
-};
-
-// Provides DenseMapInfo BBPosition.
-template <> struct DenseMapInfo<BBPosition> {
-  static inline BBPosition getEmptyKey() {
-    return {DenseMapInfo<UniqueBBID>::getEmptyKey(),
-            DenseMapInfo<unsigned>::getEmptyKey()};
-  }
-  static inline BBPosition getTombstoneKey() {
-    return BBPosition{DenseMapInfo<UniqueBBID>::getTombstoneKey(),
-                      DenseMapInfo<unsigned>::getTombstoneKey()};
-  }
-  static unsigned getHashValue(const BBPosition &Val) {
-    std::pair<unsigned, unsigned> PairVal = std::make_pair(
-        DenseMapInfo<UniqueBBID>::getHashValue(Val.BBID), Val.BBOffset);
-    return DenseMapInfo<std::pair<unsigned, unsigned>>::getHashValue(PairVal);
-  }
-  static bool isEqual(const BBPosition &LHS, const BBPosition &RHS) {
-    return DenseMapInfo<UniqueBBID>::isEqual(LHS.BBID, RHS.BBID) &&
-           DenseMapInfo<unsigned>::isEqual(LHS.BBOffset, RHS.BBOffset);
-  }
 };
 
 class BasicBlockSectionsProfileReader {
@@ -123,7 +102,7 @@ public:
   SmallVector<PrefetchHint>
   getPrefetchHintsForFunction(StringRef FuncName) const;
 
-  DenseSet<BBPosition> getPrefetchTargetsForFunction(StringRef FuncName) const;
+  DenseMap<UniqueBBID, SmallVector<unsigned>> getPrefetchTargetsForFunction(StringRef FuncName) const;
 
 private:
   StringRef getAliasName(StringRef FuncName) const {
@@ -236,7 +215,7 @@ public:
   SmallVector<PrefetchHint>
   getPrefetchHintsForFunction(StringRef FuncName) const;
 
-  DenseSet<BBPosition> getPrefetchTargetsForFunction(StringRef FuncName) const;
+  DenseMap<UniqueBBID, SmallVector<unsigned>> getPrefetchTargetsForFunction(StringRef FuncName) const;
 
   // Initializes the FunctionNameToDIFilename map for the current module and
   // then reads the profile for the matching functions.
