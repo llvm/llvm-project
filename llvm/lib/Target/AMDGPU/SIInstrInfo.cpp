@@ -6023,18 +6023,6 @@ SIInstrInfo::getWholeWaveFunctionSetup(MachineFunction &MF) const {
   llvm_unreachable("Couldn't find SI_SETUP_WHOLE_WAVE_FUNC instruction");
 }
 
-// FIXME: This should not be an overridable function. All subtarget dependent
-// operand modifications should go through isLookupRegClassByHwMode in the
-// generic handling.
-const TargetRegisterClass *SIInstrInfo::getRegClass(const MCInstrDesc &TID,
-                                                    unsigned OpNum) const {
-  if (OpNum >= TID.getNumOperands())
-    return nullptr;
-  const MCOperandInfo &OpInfo = TID.operands()[OpNum];
-  int16_t RegClass = getOpRegClassID(OpInfo);
-  return RegClass < 0 ? nullptr : RI.getRegClass(RegClass);
-}
-
 const TargetRegisterClass *SIInstrInfo::getOpRegClass(const MachineInstr &MI,
                                                       unsigned OpNo) const {
   const MCInstrDesc &Desc = get(MI.getOpcode());
