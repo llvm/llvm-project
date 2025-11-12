@@ -5513,8 +5513,8 @@ class CXXReflectExpr : public Expr {
   SourceLocation OperatorLoc;
   SourceRange OperandRange;
 
-  CXXReflectExpr(const ASTContext &C, QualType T, QualType Ty);
-  CXXReflectExpr(const ASTContext &C, QualType T, Decl *Arg);
+  CXXReflectExpr(const ASTContext &C, QualType T, QualType Operand);
+  CXXReflectExpr(const ASTContext &C, QualType T, Decl *Operand);
   CXXReflectExpr(EmptyShell Empty);
 
 public:
