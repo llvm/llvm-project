@@ -65,10 +65,22 @@ class AscalonGetCyclesNarrowing<string mx> {
 
 class AscalonGetCyclesDivOrSqrt<string mx, int sew> {
   int c = !cond(
-    !eq(sew, 8) : AscalonGetCyclesLMUL<mx, 7>.c, // TODO not valid for fp
+    !eq(sew, 8) : AscalonGetCyclesLMUL<mx, 7>.c,
     !eq(sew, 16) : AscalonGetCyclesLMUL<mx, 6>.c,
     !eq(sew, 32) : AscalonGetCyclesLMUL<mx, 5>.c,
     !eq(sew, 64) : AscalonGetCyclesLMUL<mx, 8>.c
+  );
+}
+
+class AscalonGetCyclesVRGatherVV<string mx> {
+  int c = !cond(
+    !eq(mx, "M1")  : 2,
+    !eq(mx, "M2")  : 4,
+    !eq(mx, "M4")  : 12,
+    !eq(mx, "M8")  : 48,
+    !eq(mx, "MF2") : 2,
+    !eq(mx, "MF4") : 2,
+    !eq(mx, "MF8") : 2
   );
 }
 
@@ -435,6 +447,13 @@ foreach mx = SchedMxList in {
   }
 }
 foreach mx = SchedMxList in {
+  defvar Cycles = AscalonGetCyclesDefault<mx>.c;
+  defvar IsWorstCase = AscalonIsWorstCaseMX<mx, SchedMxList>.c;
+  let Latency = Cycles, ReleaseAtCycles = [1, !sub(Cycles, 1)] in {
+    defm "" : LMULWriteResMX<"WriteVExtV",      [AscalonFX, AscalonV], mx, IsWorstCase>;
+  }
+}
+foreach mx = SchedMxList in {
   foreach sew = SchedSEWSet<mx>.val in {
     defvar Cycles = AscalonGetCyclesDivOrSqrt<mx, sew>.c;
     defvar IsWorstCase = AscalonIsWorstCaseMXSEW<mx, sew, SchedMxList>.c;
@@ -680,6 +699,150 @@ foreach mx = SchedMxList in {
     defm "" : LMULWriteResMX<"WriteVISlide1X",   [AscalonFX, AscalonV], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVFSlide1F",   [AscalonFX, AscalonV], mx, IsWorstCase>;
   }
+}
+
+// Whole vector register move, vmv<N>.v, LMUL aware
+let Latency = 1, ReleaseAtCycles = [1] in
+  def : WriteRes<WriteVMov1V,     [AscalonV]>;
+let Latency = 2, ReleaseAtCycles = [2] in
+  def : WriteRes<WriteVMov2V,     [AscalonV]>;
+let Latency = 4, ReleaseAtCycles = [4] in
+  def : WriteRes<WriteVMov4V,     [AscalonV]>;
+let Latency = 8, ReleaseAtCycles = [8] in
+  def : WriteRes<WriteVMov8V,     [AscalonV]>;
+
+// Vector Integer Arithmetic Instructions
+defm : LMULReadAdvance<"ReadVIALUV", 0>;
+defm : LMULReadAdvance<"ReadVIALUX", 0>;
+defm : LMULReadAdvanceW<"ReadVIWALUV", 0>;
+defm : LMULReadAdvanceW<"ReadVIWALUX", 0>;
+defm : LMULReadAdvance<"ReadVExtV", 0>;
+defm : LMULReadAdvance<"ReadVICALUV", 0>;
+defm : LMULReadAdvance<"ReadVICALUX", 0>;
+defm : LMULReadAdvance<"ReadVShiftV", 0>;
+defm : LMULReadAdvance<"ReadVShiftX", 0>;
+defm : LMULReadAdvanceW<"ReadVNShiftV", 0>;
+defm : LMULReadAdvanceW<"ReadVNShiftX", 0>;
+defm : LMULReadAdvance<"ReadVICmpV", 0>;
+defm : LMULReadAdvance<"ReadVICmpX", 0>;
+defm : LMULReadAdvance<"ReadVIMinMaxV", 0>;
+defm : LMULReadAdvance<"ReadVIMinMaxX", 0>;
+defm : LMULReadAdvance<"ReadVIMulV", 0>;
+defm : LMULReadAdvance<"ReadVIMulX", 0>;
+defm : LMULSEWReadAdvance<"ReadVIDivV", 0>;
+defm : LMULSEWReadAdvance<"ReadVIDivX", 0>;
+defm : LMULReadAdvanceW<"ReadVIWMulV", 0>;
+defm : LMULReadAdvanceW<"ReadVIWMulX", 0>;
+defm : LMULReadAdvance<"ReadVIMulAddV", 0>;
+defm : LMULReadAdvance<"ReadVIMulAddX", 0>;
+defm : LMULReadAdvanceW<"ReadVIWMulAddV", 0>;
+defm : LMULReadAdvanceW<"ReadVIWMulAddX", 0>;
+defm : LMULReadAdvance<"ReadVIMergeV", 0>;
+defm : LMULReadAdvance<"ReadVIMergeX", 0>;
+defm : LMULReadAdvance<"ReadVIMovV", 0>;
+defm : LMULReadAdvance<"ReadVIMovX", 0>;
+
+// Vector Fixed-Point Arithmetic Instructions
+defm "" : LMULReadAdvance<"ReadVSALUV", 0>;
+defm "" : LMULReadAdvance<"ReadVSALUX", 0>;
+defm "" : LMULReadAdvance<"ReadVAALUV", 0>;
+defm "" : LMULReadAdvance<"ReadVAALUX", 0>;
+defm "" : LMULReadAdvance<"ReadVSMulV", 0>;
+defm "" : LMULReadAdvance<"ReadVSMulX", 0>;
+defm "" : LMULReadAdvance<"ReadVSShiftV", 0>;
+defm "" : LMULReadAdvance<"ReadVSShiftX", 0>;
+defm "" : LMULReadAdvanceW<"ReadVNClipV", 0>;
+defm "" : LMULReadAdvanceW<"ReadVNClipX", 0>;
+
+// Vector Floating-Point Instructions
+defm "" : LMULSEWReadAdvanceF<"ReadVFALUV", 0>;
+defm "" : LMULSEWReadAdvanceF<"ReadVFALUF", 0>;
+defm "" : LMULSEWReadAdvanceFW<"ReadVFWALUV", 0>;
+defm "" : LMULSEWReadAdvanceFW<"ReadVFWALUF", 0>;
+defm "" : LMULSEWReadAdvanceF<"ReadVFMulV", 0>;
+defm "" : LMULSEWReadAdvanceF<"ReadVFMulF", 0>;
+defm "" : LMULSEWReadAdvanceF<"ReadVFDivV", 0>;
+defm "" : LMULSEWReadAdvanceF<"ReadVFDivF", 0>;
+defm "" : LMULSEWReadAdvanceFW<"ReadVFWMulV", 0>;
+defm "" : LMULSEWReadAdvanceFW<"ReadVFWMulF", 0>;
+defm "" : LMULSEWReadAdvanceF<"ReadVFMulAddV", 0>;
+defm "" : LMULSEWReadAdvanceF<"ReadVFMulAddF", 0>;
+defm "" : LMULSEWReadAdvanceFW<"ReadVFWMulAddV", 0>;
+defm "" : LMULSEWReadAdvanceFW<"ReadVFWMulAddF", 0>;
+defm "" : LMULSEWReadAdvanceF<"ReadVFSqrtV", 0>;
+defm "" : LMULSEWReadAdvanceF<"ReadVFRecpV", 0>;
+defm "" : LMULSEWReadAdvanceF<"ReadVFMinMaxV", 0>;
+defm "" : LMULSEWReadAdvanceF<"ReadVFMinMaxF", 0>;
+defm "" : LMULSEWReadAdvanceF<"ReadVFSgnjV", 0>;
+defm "" : LMULSEWReadAdvanceF<"ReadVFSgnjF", 0>;
+defm "" : LMULReadAdvance<"ReadVFCmpV", 0>;
+defm "" : LMULReadAdvance<"ReadVFCmpF", 0>;
+defm "" : LMULReadAdvance<"ReadVFClassV", 0>;
+defm "" : LMULReadAdvance<"ReadVFMergeV", 0>;
+defm "" : LMULReadAdvance<"ReadVFMergeF", 0>;
+defm "" : LMULReadAdvance<"ReadVFMovF", 0>;
+defm "" : LMULSEWReadAdvanceF<"ReadVFCvtIToFV", 0>;
+defm "" : LMULReadAdvance<"ReadVFCvtFToIV", 0>;
+defm "" : LMULSEWReadAdvanceW<"ReadVFWCvtIToFV", 0>;
+defm "" : LMULReadAdvanceFW<"ReadVFWCvtFToIV", 0>;
+defm "" : LMULSEWReadAdvanceFW<"ReadVFWCvtFToFV", 0>;
+defm "" : LMULSEWReadAdvanceFW<"ReadVFNCvtIToFV", 0>;
+defm "" : LMULReadAdvanceW<"ReadVFNCvtFToIV", 0>;
+defm "" : LMULSEWReadAdvanceFW<"ReadVFNCvtFToFV", 0>;
+
+// Vector Reduction Instructions
+def : ReadAdvance<ReadVIRedV, 0>;
+def : ReadAdvance<ReadVIRedV0, 0>;
+def : ReadAdvance<ReadVIWRedV, 0>;
+def : ReadAdvance<ReadVIWRedV0, 0>;
+def : ReadAdvance<ReadVFRedV, 0>;
+def : ReadAdvance<ReadVFRedV0, 0>;
+def : ReadAdvance<ReadVFRedOV, 0>;
+def : ReadAdvance<ReadVFRedOV0, 0>;
+def : ReadAdvance<ReadVFWRedV, 0>;
+def : ReadAdvance<ReadVFWRedV0, 0>;
+def : ReadAdvance<ReadVFWRedOV, 0>;
+def : ReadAdvance<ReadVFWRedOV0, 0>;
+
+// Vector Mask Instructions
+defm "" : LMULReadAdvance<"ReadVMALUV", 0>;
+defm "" : LMULReadAdvance<"ReadVMPopV", 0>;
+defm "" : LMULReadAdvance<"ReadVMFFSV", 0>;
+defm "" : LMULReadAdvance<"ReadVMSFSV", 0>;
+defm "" : LMULReadAdvance<"ReadVIotaV", 0>;
+
+// Vector Permutation Instructions
+def : ReadAdvance<ReadVMovXS, 0>;
+def : ReadAdvance<ReadVMovSX_V, 0>;
+def : ReadAdvance<ReadVMovSX_X, 0>;
+def : ReadAdvance<ReadVMovFS, 0>;
+def : ReadAdvance<ReadVMovSF_V, 0>;
+def : ReadAdvance<ReadVMovSF_F, 0>;
+defm "" : LMULReadAdvance<"ReadVISlideV", 0>;
+defm "" : LMULReadAdvance<"ReadVISlideX", 0>;
+defm "" : LMULReadAdvance<"ReadVFSlideV", 0>;
+defm "" : LMULReadAdvance<"ReadVFSlideF", 0>;
+defm "" : LMULSEWReadAdvance<"ReadVRGatherVV_data", 0>;
+defm "" : LMULSEWReadAdvance<"ReadVRGatherVV_index", 0>;
+defm "" : LMULSEWReadAdvance<"ReadVRGatherEI16VV_data", 0>;
+defm "" : LMULSEWReadAdvance<"ReadVRGatherEI16VV_index", 0>;
+defm "" : LMULReadAdvance<"ReadVRGatherVX_data", 0>;
+defm "" : LMULReadAdvance<"ReadVRGatherVX_index", 0>;
+defm "" : LMULReadAdvance<"ReadVRGatherVI_data", 0>;
+defm "" : LMULSEWReadAdvance<"ReadVCompressV", 0>;
+// LMUL Aware
+def : ReadAdvance<ReadVMov1V, 0>;
+def : ReadAdvance<ReadVMov2V, 0>;
+def : ReadAdvance<ReadVMov4V, 0>;
+def : ReadAdvance<ReadVMov8V, 0>;
+
+// Others
+def : ReadAdvance<ReadVMask, 0>;
+def : ReadAdvance<ReadVPassthru_WorstCase, 0>;
+foreach mx = SchedMxList in {
+  def : ReadAdvance<!cast<SchedRead>("ReadVPassthru_" # mx), 0>;
+  foreach sew = SchedSEWSet<mx>.val in
+    def : ReadAdvance<!cast<SchedRead>("ReadVPassthru_" # mx  # "_E" # sew), 0>;
 }
 
 //===----------------------------------------------------------------------===//
