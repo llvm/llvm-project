@@ -5,5 +5,7 @@ add_libc_test(
   SRCS
     mutex_test.cpp
   DEPENDS
-    libc.src.__support.threads.darwin.mutex
+    libc.src.__support.threads.mutex
+    libc.src.__support.threads.darwin.futex_utils
+    libc.src.__support.time.darwin.clock_gettime
 )
