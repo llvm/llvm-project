@@ -5703,6 +5703,17 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-fenable-matrix");
     CmdArgs.push_back("-mllvm");
     CmdArgs.push_back("-enable-matrix");
+    // Only handle default layout if matrix is enabled
+    if (const Arg *A =
+            Args.getLastArg(options::OPT_fmatrix_default_layout_EQ)) {
+      StringRef Val = A->getValue();
+      if (Val == "row-major" || Val == "column-major") {
+        CmdArgs.push_back("-mllvm");
+        CmdArgs.push_back(Args.MakeArgString("-matrix-default-layout=" + Val));
+      } else {
+        D.Diag(diag::err_drv_invalid_value) << A->getAsString(Args) << Val;
+      }
+    }
   }
 
   CodeGenOptions::FramePointerKind FPKeepKind =
