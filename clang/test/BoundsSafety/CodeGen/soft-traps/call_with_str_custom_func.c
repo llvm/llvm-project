@@ -98,10 +98,10 @@ int read(int* __bidi_indexable ptr, int idx) {
 //.
 // UNOPT: attributes #[[ATTR0]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 // UNOPT: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
-// UNOPT: attributes #[[ATTR2]] = { nounwind }
+// UNOPT: attributes #[[ATTR2]] = { nomerge nounwind }
 //.
 // OPT: attributes #[[ATTR0]] = { nounwind "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
-// OPT: attributes #[[ATTR1]] = { nounwind }
+// OPT: attributes #[[ATTR1]] = { nomerge nounwind }
 //.
 // UNOPT: [[META0:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
 // UNOPT: [[META1:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}

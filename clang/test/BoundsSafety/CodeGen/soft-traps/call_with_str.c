@@ -396,7 +396,7 @@ void receive_cb(int*__counted_by(count) ptr, int count);
 // OPT-NEXT:    tail call preserve_allcc void @__bounds_safety_soft_trap_s(ptr null) #[[ATTR2]], !annotation [[META12]]
 // OPT-NEXT:    br label %[[CONT]], !annotation [[META12]]
 // OPT:       [[CONT]]:
-// OPT-NEXT:    tail call void @receive_cb(ptr noundef [[PTR]], i32 noundef [[COUNT]]) #[[ATTR2]]
+// OPT-NEXT:    tail call void @receive_cb(ptr noundef [[PTR]], i32 noundef [[COUNT]]) #[[ATTR3:[0-9]+]]
 // OPT-NEXT:    ret i32 0
 //
 int read_cb(int*__counted_by(count) ptr, int count) {
@@ -407,17 +407,18 @@ int read_cb(int*__counted_by(count) ptr, int count) {
 // UNOPT: attributes #[[ATTR0]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 // UNOPT: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
 // UNOPT: attributes #[[ATTR2:[0-9]+]] = { "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
-// UNOPT: attributes #[[ATTR3]] = { nounwind }
+// UNOPT: attributes #[[ATTR3]] = { nomerge nounwind }
 //.
 // UNOPT-TF: attributes #[[ATTR0]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 // UNOPT-TF: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
 // UNOPT-TF: attributes #[[ATTR2:[0-9]+]] = { "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
-// UNOPT-TF: attributes #[[ATTR3]] = { nounwind }
+// UNOPT-TF: attributes #[[ATTR3]] = { nomerge nounwind }
 // UNOPT-TF: attributes #[[ATTR4]] = { "trap-func-name"="not_used" }
 //.
 // OPT: attributes #[[ATTR0]] = { nounwind "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 // OPT: attributes #[[ATTR1:[0-9]+]] = { "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
-// OPT: attributes #[[ATTR2]] = { nounwind }
+// OPT: attributes #[[ATTR2]] = { nomerge nounwind }
+// OPT: attributes #[[ATTR3]] = { nounwind }
 //.
 // UNOPT: [[META0:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
 // UNOPT: [[META1:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}

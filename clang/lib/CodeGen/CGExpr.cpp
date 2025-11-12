@@ -4775,6 +4775,7 @@ void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
         // get different codegen at callsites.
         TrapCall->setCallingConv(SoftTrapCC.value());
       }
+      TrapCall->addFnAttr(llvm::Attribute::NoMerge);
       Builder.CreateBr(Cont);
     } else if (CGM.getCodeGenOpts().TrapFuncReturns) {
       auto *TrapID = llvm::ConstantInt::get(CGM.Int8Ty, CheckHandlerID);
