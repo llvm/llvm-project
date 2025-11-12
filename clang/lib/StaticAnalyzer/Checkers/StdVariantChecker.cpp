@@ -90,6 +90,9 @@ bool isStdVariant(const Type *Type) {
 static std::optional<ArrayRef<TemplateArgument>>
 getTemplateArgsFromVariant(const Type *VariantType) {
   const auto *TempSpecType = VariantType->getAs<TemplateSpecializationType>();
+  while (TempSpecType && TempSpecType->isTypeAlias())
+    TempSpecType =
+        TempSpecType->getAliasedType()->getAs<TemplateSpecializationType>();
   if (!TempSpecType)
     return {};
 
