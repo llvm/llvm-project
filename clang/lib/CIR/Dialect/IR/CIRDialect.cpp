@@ -1658,6 +1658,7 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
   mlir::StringAttr visNameAttr = getSymVisibilityAttrName(state.name);
   mlir::StringAttr visibilityNameAttr = getGlobalVisibilityAttrName(state.name);
   mlir::StringAttr dsoLocalNameAttr = getDsoLocalAttrName(state.name);
+  mlir::StringAttr specialMemberAttr = getCxxSpecialMemberAttrName(state.name);
 
   if (::mlir::succeeded(parser.parseOptionalKeyword(builtinNameAttr.strref())))
     state.addAttribute(builtinNameAttr, parser.getBuilder().getUnitAttr());
@@ -1756,6 +1757,20 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
     return success();
   };
 
+  // Parse CXXSpecialMember attribute
+  if (parser.parseOptionalKeyword("special_member").succeeded()) {
+    cir::CXXCtorAttr ctorAttr;
+    cir::CXXDtorAttr dtorAttr;
+    if (parser.parseLess().failed())
+      return failure();
+    if (parser.parseOptionalAttribute(ctorAttr).has_value())
+      state.addAttribute(specialMemberAttr, ctorAttr);
+    else if (parser.parseOptionalAttribute(dtorAttr).has_value())
+      state.addAttribute(specialMemberAttr, dtorAttr);
+    if (parser.parseGreater().failed())
+      return failure();
+  }
+
   if (parseGlobalDtorCtor("global_ctor", [&](std::optional<int> priority) {
         mlir::IntegerAttr globalCtorPriorityAttr =
             builder.getI32IntegerAttr(priority.value_or(65535));
@@ -1833,6 +1848,43 @@ bool cir::FuncOp::isDeclaration() {
   return false;
 }
 
+bool cir::FuncOp::isCXXSpecialMemberFunction() {
+  return getCxxSpecialMemberAttr() != nullptr;
+}
+
+bool cir::FuncOp::isCxxConstructor() {
+  auto attr = getCxxSpecialMemberAttr();
+  return attr && dyn_cast<CXXCtorAttr>(attr);
+}
+
+bool cir::FuncOp::isCxxDestructor() {
+  auto attr = getCxxSpecialMemberAttr();
+  return attr && dyn_cast<CXXDtorAttr>(attr);
+}
+
+bool cir::FuncOp::isCxxSpecialAssignment() {
+  auto attr = getCxxSpecialMemberAttr();
+  return attr && dyn_cast<CXXAssignAttr>(attr);
+}
+
+std::optional<CtorKind> cir::FuncOp::getCxxConstructorKind() {
+  auto attr = getCxxSpecialMemberAttr();
+  if (attr) {
+    if (auto ctor = dyn_cast<CXXCtorAttr>(attr))
+      return ctor.getCtorKind();
+  }
+  return std::nullopt;
+}
+
+std::optional<AssignKind> cir::FuncOp::getCxxSpecialAssignKind() {
+  auto attr = getCxxSpecialMemberAttr();
+  if (attr) {
+    if (auto assign = dyn_cast<CXXAssignAttr>(attr))
+      return assign.getAssignKind();
+  }
+  return std::nullopt;
+}
+
 mlir::Region *cir::FuncOp::getCallableRegion() {
   // TODO(CIR): This function will have special handling for aliases and a
   // check for an external function, once those features have been upstreamed.
@@ -1881,6 +1933,12 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
     p << " alias(";
     p.printSymbolName(*aliaseeName);
     p << ")";
+  }
+
+  if (auto specialMemberAttr = getCxxSpecialMember()) {
+    p << " special_member<";
+    p.printAttribute(*specialMemberAttr);
+    p << '>';
   }
 
   if (auto globalCtorPriority = getGlobalCtorPriority()) {

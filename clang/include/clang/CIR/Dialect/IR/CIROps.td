@@ -2533,7 +2533,9 @@ def CIR_FuncOp : CIR_Op<"func", [
                        OptionalAttr<DictArrayAttr>:$res_attrs,
                        OptionalAttr<FlatSymbolRefAttr>:$aliasee,
                        CIR_OptionalPriorityAttr:$global_ctor_priority,
-                       CIR_OptionalPriorityAttr:$global_dtor_priority);
+                       CIR_OptionalPriorityAttr:$global_dtor_priority,
+                       OptionalAttr<CIR_CXXSpecialMemberAttr>:$cxx_special_member
+   );
 
   let regions = (region AnyRegion:$body);
 
@@ -2572,7 +2574,28 @@ def CIR_FuncOp : CIR_Op<"func", [
     //===------------------------------------------------------------------===//
 
     bool isDeclaration();
-  }];
+
+    //===------------------------------------------------------------------===//
+    // C++ Special Member Functions
+    //===------------------------------------------------------------------===//
+
+    /// Returns true if this function is a C++ special member function.
+    bool isCXXSpecialMemberFunction();
+
+    bool isCxxConstructor();
+
+    bool isCxxDestructor();
+
+    /// Returns true if this function is a copy or move assignment operator.
+    bool isCxxSpecialAssignment();
+
+    /// Returns the kind of constructor this function represents, if any.
+    std::optional<CtorKind> getCxxConstructorKind();
+
+    /// Returns the kind of assignment operator (move, copy) this function
+    /// represents, if any.
+    std::optional<AssignKind> getCxxSpecialAssignKind();
+}];
 
   let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
