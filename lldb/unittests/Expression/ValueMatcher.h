@@ -18,11 +18,11 @@
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Scalar.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 #include <cstdint>
-#include <iomanip>
 #include <vector>
 
 namespace lldb_private {
@@ -31,7 +31,8 @@ namespace lldb_private {
 ///
 /// This is used for format the details coming from either a Value directly
 /// or the parts stored in the ValueMatcher object.
-inline void FormatValueDetails(std::ostream &os, Value::ValueType value_type,
+inline void FormatValueDetails(llvm::raw_ostream &os,
+                               Value::ValueType value_type,
                                Value::ContextType context_type,
                                const Scalar &scalar,
                                llvm::ArrayRef<uint8_t> buffer_data) {
@@ -44,18 +45,14 @@ inline void FormatValueDetails(std::ostream &os, Value::ValueType value_type,
     for (size_t i = 0; i < std::min(buffer_data.size(), size_t(16)); ++i) {
       if (i > 0)
         os << " ";
-      os << std::hex << std::setw(2) << std::setfill('0')
-         << static_cast<int>(buffer_data[i]);
+      os << llvm::format("%02x", static_cast<unsigned>(buffer_data[i]));
     }
     if (buffer_data.size() > 16) {
       os << " ...";
     }
-    os << std::dec << "] (" << buffer_data.size() << " bytes)";
+    os << "] (" << buffer_data.size() << " bytes)";
   } else {
-    std::string scalar_str;
-    llvm::raw_string_ostream scalar_os(scalar_str);
-    scalar_os << scalar;
-    os << ", value=" << scalar_os.str();
+    os << ", value=" << scalar;
   }
   os << ")";
 }
@@ -65,7 +62,8 @@ inline void PrintTo(const Value &val, std::ostream *os) {
   if (!os)
     return;
 
-  FormatValueDetails(*os, val.GetValueType(), val.GetContextType(),
+  llvm::raw_os_ostream raw_os(*os);
+  FormatValueDetails(raw_os, val.GetValueType(), val.GetContextType(),
                      val.GetScalar(), val.GetBuffer().GetData());
 }
 
@@ -154,7 +152,8 @@ public:
   void DescribeTo(std::ostream *os) const {
     if (!os)
       return;
-    FormatValueDetails(*os, m_value_type, m_context_type, m_expected_scalar,
+    llvm::raw_os_ostream raw_os(*os);
+    FormatValueDetails(raw_os, m_value_type, m_context_type, m_expected_scalar,
                        m_expected_bytes);
   }
 
