@@ -361,13 +361,6 @@ template <> struct hash<llvm::rdf::RegisterAggr> {
   }
 };
 
-template <> struct equal_to<llvm::rdf::RegisterAggr> {
-  bool operator()(const llvm::rdf::RegisterAggr &A,
-                  const llvm::rdf::RegisterAggr &B) const {
-    return A == B;
-  }
-};
-
 } // namespace std
 
 namespace llvm::rdf {

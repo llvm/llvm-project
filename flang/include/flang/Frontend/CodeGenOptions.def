@@ -54,7 +54,7 @@ CODEGENOPT(Underscoring, 1, 1)
 ENUM_CODEGENOPT(RelocationModel, llvm::Reloc::Model, 3, llvm::Reloc::PIC_) ///< Name of the relocation model to use.
 ENUM_CODEGENOPT(DebugInfo,  llvm::codegenoptions::DebugInfoKind, 4,  llvm::codegenoptions::NoDebugInfo) ///< Level of debug info to generate
 ENUM_CODEGENOPT(VecLib, llvm::driver::VectorLibrary, 4, llvm::driver::VectorLibrary::NoLibrary) ///< Vector functions library to use
-ENUM_CODEGENOPT(FramePointer, llvm::FramePointerKind, 2, llvm::FramePointerKind::None) ///< Enable the usage of frame pointers
+ENUM_CODEGENOPT(FramePointer, llvm::FramePointerKind, 3, llvm::FramePointerKind::None) ///< Enable the usage of frame pointers
 ENUM_CODEGENOPT(ComplexRange, ComplexRangeKind, 3, ComplexRangeKind::CX_Full) ///< Method for calculating complex number division
 
 ENUM_CODEGENOPT(DoConcurrentMapping, DoConcurrentMappingKind, 2, DoConcurrentMappingKind::DCMK_None) ///< Map `do concurrent` to OpenMP

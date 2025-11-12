@@ -113,15 +113,18 @@ struct ExtAddrMode {
 ///
 class LLVM_ABI TargetInstrInfo : public MCInstrInfo {
 protected:
+  const TargetRegisterInfo &TRI;
+
   /// Subtarget specific sub-array of MCInstrInfo's RegClassByHwModeTables
   /// (i.e. the table for the active HwMode). This should be indexed by
   /// MCOperandInfo's RegClass field for LookupRegClassByHwMode operands.
   const int16_t *const RegClassByHwMode;
 
-  TargetInstrInfo(unsigned CFSetupOpcode = ~0u, unsigned CFDestroyOpcode = ~0u,
-                  unsigned CatchRetOpcode = ~0u, unsigned ReturnOpcode = ~0u,
+  TargetInstrInfo(const TargetRegisterInfo &TRI, unsigned CFSetupOpcode = ~0u,
+                  unsigned CFDestroyOpcode = ~0u, unsigned CatchRetOpcode = ~0u,
+                  unsigned ReturnOpcode = ~0u,
                   const int16_t *const RegClassByHwModeTable = nullptr)
-      : RegClassByHwMode(RegClassByHwModeTable),
+      : TRI(TRI), RegClassByHwMode(RegClassByHwModeTable),
         CallFrameSetupOpcode(CFSetupOpcode),
         CallFrameDestroyOpcode(CFDestroyOpcode), CatchRetOpcode(CatchRetOpcode),
         ReturnOpcode(ReturnOpcode) {}
@@ -130,6 +133,8 @@ public:
   TargetInstrInfo(const TargetInstrInfo &) = delete;
   TargetInstrInfo &operator=(const TargetInstrInfo &) = delete;
   virtual ~TargetInstrInfo();
+
+  const TargetRegisterInfo &getRegisterInfo() const { return TRI; }
 
   static bool isGenericOpcode(unsigned Opc) {
     return Opc <= TargetOpcode::GENERIC_OP_END;
@@ -154,9 +159,8 @@ public:
 
   /// Given a machine instruction descriptor, returns the register
   /// class constraint for OpNum, or NULL.
-  virtual const TargetRegisterClass *
-  getRegClass(const MCInstrDesc &MCID, unsigned OpNum,
-              const TargetRegisterInfo *TRI) const;
+  virtual const TargetRegisterClass *getRegClass(const MCInstrDesc &MCID,
+                                                 unsigned OpNum) const;
 
   /// Returns true if MI is an instruction we are unable to reason about
   /// (like a call or something with unmodeled side effects).
@@ -436,7 +440,10 @@ public:
   /// MachineSink determines on its own whether the instruction is safe to sink;
   /// this gives the target a hook to override the default behavior with regards
   /// to which instructions should be sunk.
+  ///
+  /// shouldPostRASink() is used by PostRAMachineSink.
   virtual bool shouldSink(const MachineInstr &MI) const { return true; }
+  virtual bool shouldPostRASink(const MachineInstr &MI) const { return true; }
 
   /// Return false if the instruction should not be hoisted by MachineLICM.
   ///
@@ -456,8 +463,7 @@ public:
   /// SubIdx.
   virtual void reMaterialize(MachineBasicBlock &MBB,
                              MachineBasicBlock::iterator MI, Register DestReg,
-                             unsigned SubIdx, const MachineInstr &Orig,
-                             const TargetRegisterInfo &TRI) const;
+                             unsigned SubIdx, const MachineInstr &Orig) const;
 
   /// Clones instruction or the whole instruction bundle \p Orig and
   /// insert into \p MBB before \p InsertBefore. The target may update operands
@@ -1190,8 +1196,7 @@ public:
   /// register spill instruction, part of prologue, during the frame lowering.
   virtual void storeRegToStackSlot(
       MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register SrcReg,
-      bool isKill, int FrameIndex, const TargetRegisterClass *RC,
-      const TargetRegisterInfo *TRI, Register VReg,
+      bool isKill, int FrameIndex, const TargetRegisterClass *RC, Register VReg,
       MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const {
     llvm_unreachable("Target didn't implement "
                      "TargetInstrInfo::storeRegToStackSlot!");
@@ -1209,8 +1214,7 @@ public:
   /// register reload instruction, part of epilogue, during the frame lowering.
   virtual void loadRegFromStackSlot(
       MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register DestReg,
-      int FrameIndex, const TargetRegisterClass *RC,
-      const TargetRegisterInfo *TRI, Register VReg,
+      int FrameIndex, const TargetRegisterClass *RC, Register VReg,
       MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const {
     llvm_unreachable("Target didn't implement "
                      "TargetInstrInfo::loadRegFromStackSlot!");
@@ -1758,6 +1762,17 @@ public:
   /// Return true if it's safe to move a machine
   /// instruction that defines the specified register class.
   virtual bool isSafeToMoveRegClassDefs(const TargetRegisterClass *RC) const {
+    return true;
+  }
+
+  /// Return true if it's safe to move a machine instruction.
+  /// This allows the backend to prevent certain special instruction
+  /// sequences from being broken by instruction motion in optimization
+  /// passes.
+  /// By default, this returns true for every instruction.
+  virtual bool isSafeToMove(const MachineInstr &MI,
+                            const MachineBasicBlock *MBB,
+                            const MachineFunction &MF) const {
     return true;
   }
 
