@@ -300,7 +300,7 @@ SwiftLanguageRuntime::BindGenericTypeParametersRemoteAST(
         llvm::expectedToStdOptional(swift_ast_ctx->GetSwiftType(base_type))
             .value_or(swift::Type()));
     if (target_swift_type->hasArchetype())
-      target_swift_type = target_swift_type->mapTypeOutOfContext().getPointer();
+      target_swift_type = target_swift_type->mapTypeOutOfEnvironment().getPointer();
 
     ThreadSafeASTContext ast_ctx = swift_ast_ctx->GetASTContext();
     if (!ast_ctx)
