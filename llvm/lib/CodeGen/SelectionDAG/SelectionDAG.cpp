@@ -2515,31 +2515,16 @@ static bool canFoldStoreIntoLibCallOutputPointers(StoreSDNode *StoreNode,
 bool SelectionDAG::expandMultipleResultFPLibCall(
     RTLIB::Libcall LC, SDNode *Node, SmallVectorImpl<SDValue> &Results,
     std::optional<unsigned> CallRetResNo) {
-  LLVMContext &Ctx = *getContext();
-  EVT VT = Node->getValueType(0);
-  unsigned NumResults = Node->getNumValues();
-
   if (LC == RTLIB::UNKNOWN_LIBCALL)
     return false;
 
-  const char *LCName = TLI->getLibcallName(LC);
-  if (!LCName)
+  RTLIB::LibcallImpl LibcallImpl = TLI->getLibcallImpl(LC);
+  if (LibcallImpl == RTLIB::Unsupported)
     return false;
 
-  auto getVecDesc = [&]() -> VecDesc const * {
-    for (bool Masked : {false, true}) {
-      if (VecDesc const *VD = getLibInfo().getVectorMappingInfo(
-              LCName, VT.getVectorElementCount(), Masked)) {
-        return VD;
-      }
-    }
-    return nullptr;
-  };
-
-  // For vector types, we must find a vector mapping for the libcall.
-  VecDesc const *VD = nullptr;
-  if (VT.isVector() && !(VD = getVecDesc()))
-    return false;
+  LLVMContext &Ctx = *getContext();
+  EVT VT = Node->getValueType(0);
+  unsigned NumResults = Node->getNumValues();
 
   // Find users of the node that store the results (and share input chains). The
   // destination pointers can be used instead of creating stack allocations.
@@ -2597,8 +2582,8 @@ bool SelectionDAG::expandMultipleResultFPLibCall(
 
   SDLoc DL(Node);
 
-  // Pass the vector mask (if required).
-  if (VD && VD->isMasked()) {
+  if (RTLIB::RuntimeLibcallsInfo::hasVectorMaskArgument(LibcallImpl)) {
+    // Pass the vector mask (if required).
     EVT MaskVT = TLI->getSetCCResultType(getDataLayout(), Ctx, VT);
     SDValue Mask = getBoolConstant(true, DL, MaskVT, VT);
     Args.emplace_back(Mask, MaskVT.getTypeForEVT(Ctx));
@@ -2608,11 +2593,13 @@ bool SelectionDAG::expandMultipleResultFPLibCall(
                       ? Node->getValueType(*CallRetResNo).getTypeForEVT(Ctx)
                       : Type::getVoidTy(Ctx);
   SDValue InChain = StoresInChain ? StoresInChain : getEntryNode();
-  SDValue Callee = getExternalSymbol(VD ? VD->getVectorFnName().data() : LCName,
-                                     TLI->getPointerTy(getDataLayout()));
+  SDValue Callee =
+      getExternalSymbol(TLI->getLibcallImplName(LibcallImpl).data(),
+                        TLI->getPointerTy(getDataLayout()));
   TargetLowering::CallLoweringInfo CLI(*this);
   CLI.setDebugLoc(DL).setChain(InChain).setLibCallee(
-      TLI->getLibcallCallingConv(LC), RetType, Callee, std::move(Args));
+      TLI->getLibcallImplCallingConv(LibcallImpl), RetType, Callee,
+      std::move(Args));
 
   auto [Call, CallChain] = TLI->LowerCallTo(CLI);
 
@@ -2918,6 +2905,34 @@ SDValue SelectionDAG::FoldSetCC(EVT VT, SDValue N1, SDValue N2,
 bool SelectionDAG::SignBitIsZero(SDValue Op, unsigned Depth) const {
   unsigned BitWidth = Op.getScalarValueSizeInBits();
   return MaskedValueIsZero(Op, APInt::getSignMask(BitWidth), Depth);
+}
+
+bool SelectionDAG::SignBitIsZeroFP(SDValue Op, unsigned Depth) const {
+  if (Depth >= MaxRecursionDepth)
+    return false; // Limit search depth.
+
+  unsigned Opc = Op.getOpcode();
+  switch (Opc) {
+  case ISD::FABS:
+    return true;
+  case ISD::AssertNoFPClass: {
+    FPClassTest NoFPClass =
+        static_cast<FPClassTest>(Op.getConstantOperandVal(1));
+
+    const FPClassTest TestMask = fcNan | fcNegative;
+    return (NoFPClass & TestMask) == TestMask;
+  }
+  case ISD::ARITH_FENCE:
+    return SignBitIsZeroFP(Op, Depth + 1);
+  case ISD::FEXP:
+  case ISD::FEXP2:
+  case ISD::FEXP10:
+    return Op->getFlags().hasNoNaNs();
+  default:
+    return false;
+  }
+
+  llvm_unreachable("covered opcode switch");
 }
 
 /// MaskedValueIsZero - Return true if 'V & Mask' is known to be zero.  We use
@@ -4119,6 +4134,25 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     // well as clearing one bits.
     Known.Zero.setLowBits(LogOfAlign);
     Known.One.clearLowBits(LogOfAlign);
+    break;
+  }
+  case ISD::AssertNoFPClass: {
+    Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
+
+    FPClassTest NoFPClass =
+        static_cast<FPClassTest>(Op.getConstantOperandVal(1));
+    const FPClassTest NegativeTestMask = fcNan | fcNegative;
+    if ((NoFPClass & NegativeTestMask) == NegativeTestMask) {
+      // Cannot be negative.
+      Known.makeNonNegative();
+    }
+
+    const FPClassTest PositiveTestMask = fcNan | fcPositive;
+    if ((NoFPClass & PositiveTestMask) == PositiveTestMask) {
+      // Cannot be positive.
+      Known.makeNegative();
+    }
+
     break;
   }
   case ISD::FGETSIGN:

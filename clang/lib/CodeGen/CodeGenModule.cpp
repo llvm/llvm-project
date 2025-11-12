@@ -1512,6 +1512,9 @@ void CodeGenModule::Release() {
   case CodeGenOptions::FramePointerKind::Reserved:
     getModule().setFramePointer(llvm::FramePointerKind::Reserved);
     break;
+  case CodeGenOptions::FramePointerKind::NonLeafNoReserve:
+    getModule().setFramePointer(llvm::FramePointerKind::NonLeafNoReserve);
+    break;
   case CodeGenOptions::FramePointerKind::NonLeaf:
     getModule().setFramePointer(llvm::FramePointerKind::NonLeaf);
     break;
