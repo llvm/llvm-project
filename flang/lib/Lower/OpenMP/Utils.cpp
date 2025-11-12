@@ -273,7 +273,7 @@ mlir::Value createParentSymAndGenIntermediateMaps(
     semantics::SemanticsContext &semaCtx, lower::StatementContext &stmtCtx,
     omp::ObjectList &objectList, llvm::SmallVectorImpl<int64_t> &indices,
     OmpMapParentAndMemberData &parentMemberIndices, llvm::StringRef asFortran,
-    llvm::omp::OpenMPOffloadMappingFlags mapTypeBits) {
+    mlir::omp::ClauseMapFlags mapTypeBits) {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
 
   /// Checks if an omp::Object is an array expression with a subscript, e.g.
@@ -414,11 +414,10 @@ mlir::Value createParentSymAndGenIntermediateMaps(
         // be safer to just pass OMP_MAP_NONE as the map type, but we may still
         // need some of the other map types the mapped member utilises, so for
         // now it's good to keep an eye on this.
-        llvm::omp::OpenMPOffloadMappingFlags interimMapType = mapTypeBits;
-        interimMapType &= ~llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO;
-        interimMapType &= ~llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM;
-        interimMapType &=
-            ~llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_RETURN_PARAM;
+        mlir::omp::ClauseMapFlags interimMapType = mapTypeBits;
+        interimMapType &= ~mlir::omp::ClauseMapFlags::to;
+        interimMapType &= ~mlir::omp::ClauseMapFlags::from;
+        interimMapType &= ~mlir::omp::ClauseMapFlags::return_param;
 
         // Create a map for the intermediate member and insert it and it's
         // indices into the parentMemberIndices list to track it.
@@ -427,10 +426,7 @@ mlir::Value createParentSymAndGenIntermediateMaps(
             /*varPtrPtr=*/mlir::Value{}, asFortran,
             /*bounds=*/interimBounds,
             /*members=*/{},
-            /*membersIndex=*/mlir::ArrayAttr{},
-            static_cast<
-                std::underlying_type_t<llvm::omp::OpenMPOffloadMappingFlags>>(
-                interimMapType),
+            /*membersIndex=*/mlir::ArrayAttr{}, interimMapType,
             mlir::omp::VariableCaptureKind::ByRef, curValue.getType());
 
         parentMemberIndices.memberPlacementIndices.push_back(interimIndices);
@@ -563,7 +559,8 @@ void insertChildMapInfoIntoParent(
       // it allows this to work with enter and exit without causing MLIR
       // verification issues. The more appropriate thing may be to take
       // the "main" map type clause from the directive being used.
-      uint64_t mapType = indices.second.memberMap[0].getMapType();
+      mlir::omp::ClauseMapFlags mapType =
+          indices.second.memberMap[0].getMapType();
 
       llvm::SmallVector<mlir::Value> members;
       members.reserve(indices.second.memberMap.size());

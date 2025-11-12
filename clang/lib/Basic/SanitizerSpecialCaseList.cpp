@@ -38,11 +38,11 @@ SanitizerSpecialCaseList::createOrDie(const std::vector<std::string> &Paths,
 }
 
 void SanitizerSpecialCaseList::createSanitizerSections() {
-  for (const auto &S : Sections) {
+  for (const auto &S : sections()) {
     SanitizerMask Mask;
 
 #define SANITIZER(NAME, ID)                                                    \
-  if (S.SectionMatcher.matchAny(NAME))                                         \
+  if (S.matchName(NAME))                                                       \
     Mask |= SanitizerKind::ID;
 #define SANITIZER_GROUP(NAME, ID, ALIAS) SANITIZER(NAME, ID)
 
@@ -68,7 +68,7 @@ SanitizerSpecialCaseList::inSectionBlame(SanitizerMask Mask, StringRef Prefix,
     if (S.Mask & Mask) {
       unsigned LineNum = S.S.getLastMatch(Prefix, Query, Category);
       if (LineNum > 0)
-        return {S.S.FileIdx, LineNum};
+        return {S.S.fileIndex(), LineNum};
     }
   }
   return NotFound;

@@ -79,30 +79,33 @@ end
 !UNPARSE:  TYPE :: t
 !UNPARSE:   INTEGER :: x
 !UNPARSE:  END TYPE
-!UNPARSE: !$OMP DECLARE_REDUCTION(+:t: omp_out%x = omp_out%x+omp_in%x)
+!UNPARSE: !$OMP DECLARE_REDUCTION(+:t: omp_out%x = omp_out%x + omp_in%x)
 !UNPARSE: END SUBROUTINE
 
 !PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OpenMPDeclareReductionConstruct -> OmpDirectiveSpecification
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = declare reduction
 !PARSE-TREE: | OmpArgumentList -> OmpArgument -> OmpReductionSpecifier
 !PARSE-TREE: | | OmpReductionIdentifier -> DefinedOperator -> IntrinsicOperator = Add
-!PARSE-TREE: | | OmpTypeNameList -> OmpTypeSpecifier -> TypeSpec -> DerivedTypeSpec
+!PARSE-TREE: | | OmpTypeNameList -> OmpTypeName -> TypeSpec -> DerivedTypeSpec
 !PARSE-TREE: | | | Name = 't'
-!PARSE-TREE: | | OmpReductionCombiner -> AssignmentStmt = 'omp_out%x=omp_out%x+omp_in%x'
-!PARSE-TREE: | | | Variable = 'omp_out%x'
-!PARSE-TREE: | | | | Designator -> DataRef -> StructureComponent
-!PARSE-TREE: | | | | | DataRef -> Name = 'omp_out'
-!PARSE-TREE: | | | | | Name = 'x'
-!PARSE-TREE: | | | Expr = 'omp_out%x+omp_in%x'
-!PARSE-TREE: | | | | Add
-!PARSE-TREE: | | | | | Expr = 'omp_out%x'
-!PARSE-TREE: | | | | | | Designator -> DataRef -> StructureComponent
-!PARSE-TREE: | | | | | | | DataRef -> Name = 'omp_out'
-!PARSE-TREE: | | | | | | | Name = 'x'
-!PARSE-TREE: | | | | | Expr = 'omp_in%x'
-!PARSE-TREE: | | | | | | Designator -> DataRef -> StructureComponent
-!PARSE-TREE: | | | | | | | DataRef -> Name = 'omp_in'
-!PARSE-TREE: | | | | | | | Name = 'x'
+!PARSE-TREE: | | OmpCombinerExpression -> OmpStylizedInstance
+!PARSE-TREE: | | | OmpStylizedDeclaration
+!PARSE-TREE: | | | OmpStylizedDeclaration
+!PARSE-TREE: | | | Instance -> AssignmentStmt = 'omp_out%x=omp_out%x+omp_in%x'
+!PARSE-TREE: | | | | Variable = 'omp_out%x'
+!PARSE-TREE: | | | | | Designator -> DataRef -> StructureComponent
+!PARSE-TREE: | | | | | | DataRef -> Name = 'omp_out'
+!PARSE-TREE: | | | | | | Name = 'x'
+!PARSE-TREE: | | | | Expr = 'omp_out%x+omp_in%x'
+!PARSE-TREE: | | | | | Add
+!PARSE-TREE: | | | | | | Expr = 'omp_out%x'
+!PARSE-TREE: | | | | | | | Designator -> DataRef -> StructureComponent
+!PARSE-TREE: | | | | | | | | DataRef -> Name = 'omp_out'
+!PARSE-TREE: | | | | | | | | Name = 'x'
+!PARSE-TREE: | | | | | | Expr = 'omp_in%x'
+!PARSE-TREE: | | | | | | | Designator -> DataRef -> StructureComponent
+!PARSE-TREE: | | | | | | | | DataRef -> Name = 'omp_in'
+!PARSE-TREE: | | | | | | | | Name = 'x'
 !PARSE-TREE: | OmpClauseList ->
 !PARSE-TREE: | Flags = None
 

@@ -357,11 +357,6 @@ static bool shouldBeInlined(ExpressionOp expressionOp) {
   if (expressionOp.getDoNotInline())
     return false;
 
-  // Do not inline expressions with side effects to prevent side-effect
-  // reordering.
-  if (expressionOp.hasSideEffects())
-    return false;
-
   // Do not inline expressions with multiple uses.
   Value result = expressionOp.getResult();
   if (!result.hasOneUse())
@@ -377,7 +372,85 @@ static bool shouldBeInlined(ExpressionOp expressionOp) {
   // Do not inline expressions used by other expressions or by ops with the
   // CExpressionInterface. If this was intended, the user could have been merged
   // into the expression op.
-  return !isa<emitc::ExpressionOp, emitc::CExpressionInterface>(*user);
+  if (isa<emitc::ExpressionOp, emitc::CExpressionInterface>(*user))
+    return false;
+
+  // Expressions with no side-effects can safely be inlined.
+  if (!expressionOp.hasSideEffects())
+    return true;
+
+  // Expressions with side-effects can be only inlined if side-effect ordering
+  // in the program is provably retained.
+
+  // Require the user to immediately follow the expression.
+  if (++Block::iterator(expressionOp) != Block::iterator(user))
+    return false;
+
+  // These single-operand ops are safe.
+  if (isa<emitc::IfOp, emitc::SwitchOp, emitc::ReturnOp>(user))
+    return true;
+
+  // For assignment look for specific cases to inline as evaluation order of
+  // its lvalue and rvalue is undefined in C.
+  if (auto assignOp = dyn_cast<emitc::AssignOp>(user)) {
+    // Inline if this assignment is of the form `<var> = <expression>`.
+    if (expressionOp.getResult() == assignOp.getValue() &&
+        isa_and_present<VariableOp>(assignOp.getVar().getDefiningOp()))
+      return true;
+  }
+
+  return false;
+}
+
+static LogicalResult printOperation(CppEmitter &emitter,
+                                    emitc::GetFieldOp getFieldOp) {
+  emitter.cacheDeferredOpResult(getFieldOp.getResult(),
+                                getFieldOp.getFieldName());
+  return success();
+}
+
+static LogicalResult printOperation(CppEmitter &emitter,
+                                    emitc::GetGlobalOp getGlobalOp) {
+  emitter.cacheDeferredOpResult(getGlobalOp.getResult(), getGlobalOp.getName());
+  return success();
+}
+
+static LogicalResult printOperation(CppEmitter &emitter,
+                                    emitc::LiteralOp literalOp) {
+  emitter.cacheDeferredOpResult(literalOp.getResult(), literalOp.getValue());
+  return success();
+}
+
+static LogicalResult printOperation(CppEmitter &emitter,
+                                    emitc::MemberOp memberOp) {
+  std::string out;
+  llvm::raw_string_ostream ss(out);
+  ss << emitter.getOrCreateName(memberOp.getOperand());
+  ss << "." << memberOp.getMember();
+  emitter.cacheDeferredOpResult(memberOp.getResult(), out);
+  return success();
+}
+
+static LogicalResult printOperation(CppEmitter &emitter,
+                                    emitc::MemberOfPtrOp memberOfPtrOp) {
+  std::string out;
+  llvm::raw_string_ostream ss(out);
+  ss << emitter.getOrCreateName(memberOfPtrOp.getOperand());
+  ss << "->" << memberOfPtrOp.getMember();
+  emitter.cacheDeferredOpResult(memberOfPtrOp.getResult(), out);
+  return success();
+}
+
+static LogicalResult printOperation(CppEmitter &emitter,
+                                    emitc::SubscriptOp subscriptOp) {
+  std::string out;
+  llvm::raw_string_ostream ss(out);
+  ss << emitter.getOrCreateName(subscriptOp.getValue());
+  for (auto index : subscriptOp.getIndices()) {
+    ss << "[" << emitter.getOrCreateName(index) << "]";
+  }
+  emitter.cacheDeferredOpResult(subscriptOp.getResult(), out);
+  return success();
 }
 
 static LogicalResult printConstantOp(CppEmitter &emitter, Operation *operation,
@@ -1739,41 +1812,19 @@ LogicalResult CppEmitter::emitOperation(Operation &op, bool trailingSemicolon) {
                 emitc::CmpOp, emitc::ConditionalOp, emitc::ConstantOp,
                 emitc::DeclareFuncOp, emitc::DivOp, emitc::DoOp,
                 emitc::ExpressionOp, emitc::FieldOp, emitc::FileOp,
-                emitc::ForOp, emitc::FuncOp, emitc::GlobalOp, emitc::IfOp,
-                emitc::IncludeOp, emitc::LoadOp, emitc::LogicalAndOp,
-                emitc::LogicalNotOp, emitc::LogicalOrOp, emitc::MulOp,
-                emitc::RemOp, emitc::ReturnOp, emitc::SubOp, emitc::SwitchOp,
-                emitc::UnaryMinusOp, emitc::UnaryPlusOp, emitc::VariableOp,
-                emitc::VerbatimOp>(
+                emitc::ForOp, emitc::FuncOp, emitc::GetFieldOp,
+                emitc::GetGlobalOp, emitc::GlobalOp, emitc::IfOp,
+                emitc::IncludeOp, emitc::LiteralOp, emitc::LoadOp,
+                emitc::LogicalAndOp, emitc::LogicalNotOp, emitc::LogicalOrOp,
+                emitc::MemberOfPtrOp, emitc::MemberOp, emitc::MulOp,
+                emitc::RemOp, emitc::ReturnOp, emitc::SubscriptOp, emitc::SubOp,
+                emitc::SwitchOp, emitc::UnaryMinusOp, emitc::UnaryPlusOp,
+                emitc::VariableOp, emitc::VerbatimOp>(
 
               [&](auto op) { return printOperation(*this, op); })
           // Func ops.
           .Case<func::CallOp, func::FuncOp, func::ReturnOp>(
               [&](auto op) { return printOperation(*this, op); })
-          .Case<emitc::GetGlobalOp>([&](auto op) {
-            cacheDeferredOpResult(op.getResult(), op.getName());
-            return success();
-          })
-          .Case<emitc::GetFieldOp>([&](auto op) {
-            cacheDeferredOpResult(op.getResult(), op.getFieldName());
-            return success();
-          })
-          .Case<emitc::LiteralOp>([&](auto op) {
-            cacheDeferredOpResult(op.getResult(), op.getValue());
-            return success();
-          })
-          .Case<emitc::MemberOp>([&](auto op) {
-            cacheDeferredOpResult(op.getResult(), createMemberAccess(op));
-            return success();
-          })
-          .Case<emitc::MemberOfPtrOp>([&](auto op) {
-            cacheDeferredOpResult(op.getResult(), createMemberAccess(op));
-            return success();
-          })
-          .Case<emitc::SubscriptOp>([&](auto op) {
-            cacheDeferredOpResult(op.getResult(), getSubscriptName(op));
-            return success();
-          })
           .Default([&](Operation *) {
             return op.emitOpError("unable to find printer for op");
           });

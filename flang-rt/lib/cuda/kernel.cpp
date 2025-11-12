@@ -76,8 +76,8 @@ void RTDEF(CUFLaunchKernel)(const void *kernel, intptr_t gridX, intptr_t gridY,
     terminator.Crash("Too many invalid grid dimensions");
   }
   cudaStream_t defaultStream = 0;
-  CUDA_REPORT_IF_ERROR(cudaLaunchKernel(kernel, gridDim, blockDim, params, smem,
-      stream != nullptr ? (cudaStream_t)(*stream) : defaultStream));
+  cudaLaunchKernel(kernel, gridDim, blockDim, params, smem,
+      stream != nullptr ? (cudaStream_t)(*stream) : defaultStream);
 }
 
 void RTDEF(CUFLaunchClusterKernel)(const void *kernel, intptr_t clusterX,
@@ -153,7 +153,7 @@ void RTDEF(CUFLaunchClusterKernel)(const void *kernel, intptr_t clusterX,
   launchAttr[0].val.clusterDim.z = clusterZ;
   config.numAttrs = 1;
   config.attrs = launchAttr;
-  CUDA_REPORT_IF_ERROR(cudaLaunchKernelExC(&config, kernel, params));
+  cudaLaunchKernelExC(&config, kernel, params);
 }
 
 void RTDEF(CUFLaunchCooperativeKernel)(const void *kernel, intptr_t gridX,
@@ -218,8 +218,8 @@ void RTDEF(CUFLaunchCooperativeKernel)(const void *kernel, intptr_t gridX,
     terminator.Crash("Too many invalid grid dimensions");
   }
   cudaStream_t defaultStream = 0;
-  CUDA_REPORT_IF_ERROR(cudaLaunchCooperativeKernel(kernel, gridDim, blockDim,
-      params, smem, stream != nullptr ? (cudaStream_t)*stream : defaultStream));
+  cudaLaunchCooperativeKernel(kernel, gridDim, blockDim, params, smem,
+      stream != nullptr ? (cudaStream_t)*stream : defaultStream);
 }
 
 } // extern "C"
