@@ -235,7 +235,7 @@ ObjCLanguage::GetFunctionNameInfo(ConstString name) const {
   return {func_name_type, std::nullopt};
 }
 
-bool ObjCLanguage::SymbolNameFitsToLanguage(Mangled mangled) const {
+bool ObjCLanguage::SymbolNameFitsToLanguage(const Mangled &mangled) const {
   ConstString demangled_name = mangled.GetDemangledName();
   if (!demangled_name)
     return false;
