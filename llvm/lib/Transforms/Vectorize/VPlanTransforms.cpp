@@ -4177,8 +4177,9 @@ static bool canNarrowLoad(VPWidenRecipe *WideMember0, unsigned OpIdx,
 /// members both equal to \p VF. The interleave group must also access the full
 /// vector width \p VectorRegWidth.
 static bool isConsecutiveInterleaveGroup(VPInterleaveRecipe *InterleaveR,
-                                         unsigned VF, VPTypeAnalysis &TypeInfo,
-                                         unsigned VectorRegWidth) {
+                                         ElementCount VF,
+                                         VPTypeAnalysis &TypeInfo,
+                                         TypeSize VectorRegWidth) {
   if (!InterleaveR || InterleaveR->getMask())
     return false;
 
@@ -4200,9 +4201,11 @@ static bool isConsecutiveInterleaveGroup(VPInterleaveRecipe *InterleaveR,
       return false;
   }
 
-  unsigned GroupSize = GroupElementTy->getScalarSizeInBits() * VF;
-  auto IG = InterleaveR->getInterleaveGroup();
-  return IG->getFactor() == VF && IG->getNumMembers() == VF &&
+  unsigned VFMin = VF.getKnownMinValue();
+  TypeSize GroupSize = TypeSize::get(
+      GroupElementTy->getScalarSizeInBits() * VFMin, VF.isScalable());
+  const auto *IG = InterleaveR->getInterleaveGroup();
+  return IG->getFactor() == VFMin && IG->getNumMembers() == VFMin &&
          GroupSize == VectorRegWidth;
 }
 
@@ -4268,14 +4271,13 @@ narrowInterleaveGroupOp(VPValue *V, SmallPtrSetImpl<VPValue *> &NarrowedOps) {
 }
 
 void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
-                                             unsigned VectorRegWidth) {
+                                             TypeSize VectorRegWidth) {
   VPRegionBlock *VectorLoop = Plan.getVectorLoopRegion();
   if (!VectorLoop || VectorLoop->getEntry()->getNumSuccessors() != 0)
     return;
 
   VPTypeAnalysis TypeInfo(Plan);
 
-  unsigned VFMinVal = VF.getKnownMinValue();
   SmallVector<VPInterleaveRecipe *> StoreGroups;
   for (auto &R : *VectorLoop->getEntryBasicBlock()) {
     if (isa<VPCanonicalIVPHIRecipe>(&R))
@@ -4310,7 +4312,7 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
       continue;
 
     // Bail out on non-consecutive interleave groups.
-    if (!isConsecutiveInterleaveGroup(InterleaveR, VFMinVal, TypeInfo,
+    if (!isConsecutiveInterleaveGroup(InterleaveR, VF, TypeInfo,
                                       VectorRegWidth))
       return;
 
