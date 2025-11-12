@@ -31,6 +31,7 @@ FunctionPass *createSPIRVPreLegalizerCombiner();
 FunctionPass *createSPIRVPreLegalizerPass();
 FunctionPass *createSPIRVPostLegalizerPass();
 ModulePass *createSPIRVEmitIntrinsicsPass(SPIRVTargetMachine *TM);
+ModulePass *createSPIRVPrepareGlobalsPass();
 MachineFunctionPass *createSPIRVEmitNonSemanticDIPass(SPIRVTargetMachine *TM);
 InstructionSelector *
 createSPIRVInstructionSelector(const SPIRVTargetMachine &TM,
@@ -51,6 +52,7 @@ void initializeSPIRVLegalizePointerCastPass(PassRegistry &);
 void initializeSPIRVRegularizerPass(PassRegistry &);
 void initializeSPIRVMergeRegionExitTargetsPass(PassRegistry &);
 void initializeSPIRVPrepareFunctionsPass(PassRegistry &);
+void initializeSPIRVPrepareGlobalsPass(PassRegistry &);
 void initializeSPIRVStripConvergentIntrinsicsPass(PassRegistry &);
 void initializeSPIRVLegalizeImplicitBindingPass(PassRegistry &);
 } // namespace llvm
