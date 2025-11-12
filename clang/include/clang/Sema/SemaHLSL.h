@@ -178,11 +178,18 @@ public:
   bool handleResourceTypeAttr(QualType T, const ParsedAttr &AL);
 
   template <typename T>
-  T *createSemanticAttr(const AttributeCommonInfo &ACI,
+  T *createSemanticAttr(const AttributeCommonInfo &ACI, NamedDecl *TargetDecl,
                         std::optional<unsigned> Location) {
-    return ::new (getASTContext())
-        T(getASTContext(), ACI, ACI.getAttrName()->getName(),
-          Location.value_or(0));
+    T *Attr =
+        ::new (getASTContext()) T(getASTContext(), ACI, TargetDecl,
+                                  Location.value_or(0), Location.has_value());
+
+    if (!Attr->isSemanticIndexable() && Location.has_value()) {
+      Diag(Attr->getLocation(), diag::err_hlsl_semantic_indexing_not_supported)
+          << Attr->getAttrName()->getName();
+      return nullptr;
+    }
+    return Attr;
   }
 
   void diagnoseSystemSemanticAttr(Decl *D, const ParsedAttr &AL,
@@ -240,7 +247,7 @@ private:
   IdentifierInfo *RootSigOverrideIdent = nullptr;
 
   struct SemanticInfo {
-    HLSLParsedSemanticAttr *Semantic;
+    HLSLSemanticAttr *Semantic;
     std::optional<uint32_t> Index;
   };
 
@@ -250,14 +257,14 @@ private:
                                                const RecordType *RT);
 
   void checkSemanticAnnotation(FunctionDecl *EntryPoint, const Decl *Param,
-                               const HLSLAppliedSemanticAttr *SemanticAttr);
-  bool determineActiveSemanticOnScalar(FunctionDecl *FD,
-                                       DeclaratorDecl *OutputDecl,
-                                       DeclaratorDecl *D,
+                               const HLSLSemanticAttr *SemanticAttr);
+  HLSLSemanticAttr *createSemantic(const SemanticInfo &Semantic,
+                                   DeclaratorDecl *TargetDecl);
+  bool determineActiveSemanticOnScalar(FunctionDecl *FD, DeclaratorDecl *D,
                                        SemanticInfo &ActiveSemantic,
                                        llvm::StringSet<> &ActiveInputSemantics);
-  bool determineActiveSemantic(FunctionDecl *FD, DeclaratorDecl *OutputDecl,
-                               DeclaratorDecl *D, SemanticInfo &ActiveSemantic,
+  bool determineActiveSemantic(FunctionDecl *FD, DeclaratorDecl *D,
+                               SemanticInfo &ActiveSemantic,
                                llvm::StringSet<> &ActiveInputSemantics);
 
   void processExplicitBindingsOnDecl(VarDecl *D);
