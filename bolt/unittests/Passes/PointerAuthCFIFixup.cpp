@@ -17,6 +17,7 @@
 #include "bolt/Passes/PointerAuthCFIFixup.h"
 #include "bolt/Rewrite/BinaryPassManager.h"
 #include "bolt/Rewrite/RewriteInstance.h"
+#include "bolt/Utils/CommandLineOpts.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCInstBuilder.h"
@@ -27,6 +28,10 @@ using namespace llvm;
 using namespace llvm::object;
 using namespace llvm::ELF;
 using namespace bolt;
+
+namespace opts {
+extern cl::opt<bool> PrintPAuthCFIAnalyzer;
+} // namespace opts
 
 namespace {
 struct PassTester : public testing::TestWithParam<Triple::ArchType> {
@@ -83,7 +88,8 @@ protected:
                             BC->MRI.get(), BC->STI.get())));
 
     PassManager = std::make_unique<BinaryFunctionPassManager>(*BC);
-    PassManager->registerPass(std::make_unique<PointerAuthCFIFixup>());
+    PassManager->registerPass(
+        std::make_unique<PointerAuthCFIFixup>(opts::PrintPAuthCFIAnalyzer));
 
     TextSection = &BC->registerOrUpdateSection(
         ".text", ELF::SHT_PROGBITS, ELF::SHF_ALLOC | ELF::SHF_EXECINSTR,

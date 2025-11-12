@@ -134,6 +134,15 @@ static cl::opt<bool> PrintAArch64Relaxation(
     cl::desc("print functions after ADR/LDR Relaxation pass"), cl::Hidden,
     cl::cat(BoltOptCategory));
 
+cl::opt<bool> PrintPAuthCFIAnalyzer(
+    "print-pointer-auth-cfi-analyzer",
+    cl::desc("print functions after PointerAuthCFIAnalyzer pass"), cl::Hidden,
+    cl::cat(BoltOptCategory));
+static cl::opt<bool> PrintPAuthCFIFixup(
+    "print-pointer-auth-cfi-fixup",
+    cl::desc("print functions after PointerAuthCFIFixup pass"), cl::Hidden,
+    cl::cat(BoltOptCategory));
+
 static cl::opt<bool>
     PrintLongJmp("print-longjmp",
                  cl::desc("print functions after longjmp pass"), cl::Hidden,
@@ -362,7 +371,8 @@ Error BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
   BinaryFunctionPassManager Manager(BC);
 
   if (BC.isAArch64())
-    Manager.registerPass(std::make_unique<PointerAuthCFIAnalyzer>());
+    Manager.registerPass(
+        std::make_unique<PointerAuthCFIAnalyzer>(PrintPAuthCFIAnalyzer));
 
   Manager.registerPass(
       std::make_unique<EstimateEdgeCounts>(PrintEstimateEdgeCounts));
@@ -524,7 +534,8 @@ Error BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
     // relocations out of range and crash during linking.
     Manager.registerPass(std::make_unique<LongJmpPass>(PrintLongJmp));
 
-    Manager.registerPass(std::make_unique<PointerAuthCFIFixup>());
+    Manager.registerPass(
+        std::make_unique<PointerAuthCFIFixup>(PrintPAuthCFIFixup));
   }
 
   // This pass should always run last.*

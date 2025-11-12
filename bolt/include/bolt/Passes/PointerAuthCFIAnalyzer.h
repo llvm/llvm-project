@@ -24,7 +24,8 @@ class PointerAuthCFIAnalyzer : public BinaryFunctionPass {
   std::mutex IgnoreMutex;
 
 public:
-  explicit PointerAuthCFIAnalyzer() : BinaryFunctionPass(false) {}
+  explicit PointerAuthCFIAnalyzer(const cl::opt<bool> &PrintPass)
+      : BinaryFunctionPass(PrintPass) {}
 
   const char *getName() const override { return "pointer-auth-cfi-analyzer"; }
 
