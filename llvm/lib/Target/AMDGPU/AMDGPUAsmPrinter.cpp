@@ -1161,12 +1161,9 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
   ProgInfo.DX10Clamp = Mode.DX10Clamp;
 
   unsigned LDSAlignShift;
-  if (STM.getFeatureBits().test(FeatureAddressableLocalMemorySize327680)) {
-    // LDS is allocated in 256 dword blocks.
-    LDSAlignShift = 10;
-  } else if (STM.getFeatureBits().test(
-                 FeatureAddressableLocalMemorySize163840)) {
-    // LDS is allocated in 320 dword blocks.
+  if (STM.getFeatureBits().test(FeatureAddressableLocalMemorySize327680) ||
+      STM.getFeatureBits().test(FeatureAddressableLocalMemorySize163840)) {
+    // LDS is allocated in 512 or 320 dword blocks.
     LDSAlignShift = 11;
   } else if (STM.getFeatureBits().test(
                  FeatureAddressableLocalMemorySize65536)) {
