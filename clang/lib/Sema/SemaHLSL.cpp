@@ -771,6 +771,22 @@ void SemaHLSL::ActOnTopLevelFunction(FunctionDecl *FD) {
   }
 }
 
+static bool isPipelineBuiltin(const ASTContext &AstContext, FunctionDecl *FD,
+                              HLSLAppliedSemanticAttr *Semantic) {
+  if (AstContext.getTargetInfo().getTriple().getOS() != llvm::Triple::Vulkan)
+    return false;
+
+  const auto *ShaderAttr = FD->getAttr<HLSLShaderAttr>();
+  assert(ShaderAttr && "Entry point has no shader attribute");
+  llvm::Triple::EnvironmentType ST = ShaderAttr->getType();
+  auto SemanticName = Semantic->getSemanticName().upper();
+
+  if (ST == llvm::Triple::Pixel && SemanticName == "SV_POSITION")
+    return true;
+
+  return false;
+}
+
 bool SemaHLSL::determineActiveSemanticOnScalar(FunctionDecl *FD,
                                                DeclaratorDecl *OutputDecl,
                                                DeclaratorDecl *D,
@@ -799,6 +815,22 @@ bool SemaHLSL::determineActiveSemanticOnScalar(FunctionDecl *FD,
   OutputDecl->addAttr(A);
 
   unsigned Location = ActiveSemantic.Index.value_or(0);
+
+  if (!isPipelineBuiltin(getASTContext(), FD, A)) {
+    bool HasVkLocation = false;
+    if (auto *A = D->getAttr<HLSLVkLocationAttr>()) {
+      HasVkLocation = true;
+      Location = A->getLocation();
+    }
+
+    auto &UsesExplicitVkLocations =
+        IsInput ? InputUsesExplicitVkLocations : OutputUsesExplicitVkLocations;
+    if (UsesExplicitVkLocations.value_or(HasVkLocation) != HasVkLocation) {
+      Diag(D->getLocation(), diag::err_hlsl_semantic_partial_explicit_indexing);
+      return false;
+    }
+    UsesExplicitVkLocations = HasVkLocation;
+  }
 
   const ConstantArrayType *AT = dyn_cast<ConstantArrayType>(D->getType());
   unsigned ElementCount = AT ? AT->getZExtSize() : 1;
@@ -1755,6 +1787,15 @@ void SemaHLSL::handleVkBindingAttr(Decl *D, const ParsedAttr &AL) {
 
   D->addAttr(::new (getASTContext())
                  HLSLVkBindingAttr(getASTContext(), AL, Binding, Set));
+}
+
+void SemaHLSL::handleVkLocationAttr(Decl *D, const ParsedAttr &AL) {
+  uint32_t Location;
+  if (!SemaRef.checkUInt32Argument(AL, AL.getArgAsExpr(0), Location))
+    return;
+
+  D->addAttr(::new (getASTContext())
+                 HLSLVkLocationAttr(getASTContext(), AL, Location));
 }
 
 bool SemaHLSL::diagnoseInputIDType(QualType T, const ParsedAttr &AL) {
