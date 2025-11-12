@@ -1510,6 +1510,8 @@ void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
     // Clear non-distinct debug info that was possibly attached to the function
     // due to an earlier declaration without the nodebug attribute
     Fn->setSubprogram(nullptr);
+    if (CGDebugInfo *DI = getDebugInfo())
+      DI->removeCallTarget(Fn);
     // Disable debug info indefinitely for this function
     DebugInfo = nullptr;
   }

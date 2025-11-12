@@ -682,6 +682,15 @@ public:
   /// that it is supported and enabled.
   llvm::DINode::DIFlags getCallSiteRelatedAttrs() const;
 
+  /// Add call target information.
+  void addCallTarget(StringRef Name, llvm::MDNode *MD, llvm::CallBase *CI);
+  void addCallTarget(llvm::Function *F, const FunctionDecl *FD,
+                     llvm::CallBase *CI);
+
+  /// Remove a call target entry for the given name or function.
+  void removeCallTarget(StringRef Name);
+  void removeCallTarget(llvm::Function *F);
+
 private:
   /// Amend \p I's DebugLoc with \p Group (its source atom group) and \p
   /// Rank (lower nonzero rank is higher precedence). Does nothing if \p I
@@ -903,6 +912,25 @@ private:
   /// If one exists, returns the linkage name of the specified \
   /// (non-null) \c Method. Returns empty string otherwise.
   llvm::StringRef GetMethodLinkageName(const CXXMethodDecl *Method) const;
+
+  /// For each 'DISuprogram' we store a list of call instructions 'CallBase'
+  /// that indirectly call  such 'DISuprogram'. We use its linkage name to
+  /// update such list.
+  /// The 'CallTargetCache' is updated in the following scenarios:
+  /// - Both 'CallBase' and 'MDNode' are ready available.
+  /// - If only the 'CallBase' or 'MDNode' are are available, the partial
+  ///   information is added and later is completed when the missing item
+  ///   ('CallBase' or 'MDNode') is available.
+  using InstrList = llvm::SmallVector<llvm::WeakVH, 2>;
+  using CallTargetEntry = std::pair<llvm::TrackingMDNodeRef, InstrList>;
+  llvm::SmallDenseMap<StringRef, CallTargetEntry> CallTargetCache;
+
+  /// Generate call target information only for SIE debugger.
+  bool generateCallSiteForPS() const;
+
+  /// Add 'call_target' metadata to the 'call' instruction.
+  void addCallTargetMetadata(llvm::MDNode *MD, llvm::CallBase *CI);
+  void finalizeCallTarget();
 };
 
 /// A scoped helper to set the current debug location to the specified

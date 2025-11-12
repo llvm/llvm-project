@@ -916,6 +916,28 @@ void DwarfDebug::constructCallSiteEntryDIEs(const DISubprogram &SP,
     return true;
   };
 
+  // Create call-target connections for indirect calls.
+  auto addCallSiteTargetForIndirectCalls = [&](const MachineInstr *MI,
+                                               DIE &CallSiteDIE) {
+    const MachineFunction *MF = MI->getMF();
+    const auto &CalleesMap = MF->getCallSitesInfo();
+    auto CSInfo = CalleesMap.find(MI);
+    // Get the information for the call instruction.
+    if (CSInfo == CalleesMap.end() || !CSInfo->second.MD)
+      return;
+
+    MDNode *MD = CSInfo->second.MD;
+    // Add DW_AT_call_origin with the 'call_target' metadata.
+    assert(!CallSiteDIE.findAttribute(dwarf::DW_AT_call_origin) &&
+           "DW_AT_call_origin already exists");
+    DIE *CalleeDIE = CU.getOrCreateSubprogramDIE(
+        dyn_cast<DISubprogram>(MD), nullptr);
+    assert(CalleeDIE && "Could not create DIE for call site entry origin");
+    CU.addDIEEntry(CallSiteDIE,
+                   CU.getDwarf5OrGNUAttr(dwarf::DW_AT_call_origin),
+                   *CalleeDIE);
+  };
+
   // Emit call site entries for each call or tail call in the function.
   for (const MachineBasicBlock &MBB : MF) {
     for (const MachineInstr &MI : MBB.instrs()) {
@@ -1007,6 +1029,9 @@ void DwarfDebug::constructCallSiteEntryDIEs(const DISubprogram &SP,
       DIE &CallSiteDIE =
           CU.constructCallSiteEntryDIE(ScopeDIE, CalleeSP, CalleeDecl, IsTail,
                                        PCAddr, CallAddr, CallReg, AllocSiteTy);
+
+      if (CallReg)
+        addCallSiteTargetForIndirectCalls(TopLevelCallMI, CallSiteDIE);
 
       // Optionally emit call-site-param debug info.
       if (emitDebugEntryValues()) {
@@ -1415,7 +1440,7 @@ void DwarfDebug::finalizeModuleInfo() {
                             TLOF.getDwarfMacinfoSection()->getBeginSymbol());
       }
     }
-    }
+  }
 
   // Emit all frontend-produced Skeleton CUs, i.e., Clang modules.
   for (auto *CUNode : MMI->getModule()->debug_compile_units())

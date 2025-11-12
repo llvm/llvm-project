@@ -2430,6 +2430,9 @@ llvm::DISubprogram *CGDebugInfo::CreateCXXMemberFunction(
 
   SPCache[Method->getCanonicalDecl()].reset(SP);
 
+  // Add the method declaration as a call target.
+  addCallTarget(MethodLinkageName, SP, /*CI=*/nullptr);
+
   return SP;
 }
 
@@ -4955,6 +4958,99 @@ void CGDebugInfo::EmitFunctionDecl(GlobalDecl GD, SourceLocation Loc,
     Fn->setSubprogram(SP);
 }
 
+bool CGDebugInfo::generateCallSiteForPS() const {
+  // The added call target will be available only for SCE targets.
+  if (CGM.getCodeGenOpts().getDebuggerTuning() != llvm::DebuggerKind::SCE)
+    return false;
+
+  // Check general conditions for call site generation.
+  return (getCallSiteRelatedAttrs() != llvm::DINode::FlagZero);
+}
+
+// Set the 'call_target' metadata in the call instruction.
+void CGDebugInfo::addCallTargetMetadata(llvm::MDNode *MD, llvm::CallBase *CI) {
+  if (!MD || !CI)
+    return;
+  CI->setMetadata(llvm::LLVMContext::MD_call_target, MD);
+}
+
+// Finalize call_target generation.
+void CGDebugInfo::finalizeCallTarget() {
+  if (!generateCallSiteForPS())
+    return;
+
+  for (auto &E : CallTargetCache) {
+    for (const auto &WH : E.second.second) {
+      llvm::CallBase *CI = dyn_cast_or_null<llvm::CallBase>(WH);
+      addCallTargetMetadata(E.second.first, CI);
+    }
+  }
+}
+
+void CGDebugInfo::addCallTarget(StringRef Name, llvm::MDNode *MD,
+                                llvm::CallBase *CI) {
+  if (!generateCallSiteForPS())
+    return;
+
+  // Record only indirect calls.
+  if (CI && !CI->isIndirectCall())
+    return;
+
+  // Nothing to do.
+  if (Name.empty())
+    return;
+
+  auto It = CallTargetCache.find(Name);
+  if (It == CallTargetCache.end()) {
+    // First time we see 'Name'. Insert record for later finalize.
+    InstrList List;
+    if (CI)
+      List.push_back(CI);
+    CallTargetCache.try_emplace(Name, MD, std::move(List));
+  } else {
+    if (MD)
+      It->second.first.reset(MD);
+    if (CI) {
+      InstrList &List = It->second.second;
+      List.push_back(CI);
+    }
+  }
+}
+
+void CGDebugInfo::addCallTarget(llvm::Function *F, const FunctionDecl *FD,
+                                llvm::CallBase *CI) {
+  if (!generateCallSiteForPS())
+    return;
+
+  if (!F && !FD)
+    return;
+
+  // Ignore method types that never can be indirect calls.
+  if (!F && (isa<CXXConstructorDecl>(FD) || isa<CXXDestructorDecl>(FD) ||
+             FD->hasAttr<CUDAGlobalAttr>()))
+    return;
+
+  StringRef Name = (F && F->hasName()) ? F->getName() : CGM.getMangledName(FD);
+  addCallTarget(Name, /*MD=*/nullptr, CI);
+}
+
+void CGDebugInfo::removeCallTarget(StringRef Name) {
+  if (!generateCallSiteForPS())
+    return;
+
+  auto It = CallTargetCache.find(Name);
+  if (It != CallTargetCache.end())
+    CallTargetCache.erase(It);
+}
+
+void CGDebugInfo::removeCallTarget(llvm::Function *F) {
+  if (!generateCallSiteForPS())
+    return;
+
+  if (F && F->hasName())
+    removeCallTarget(F->getName());
+}
+
 void CGDebugInfo::EmitFuncDeclForCallSite(llvm::CallBase *CallOrInvoke,
                                           QualType CalleeType,
                                           GlobalDecl CalleeGlobalDecl) {
@@ -4978,9 +5074,15 @@ void CGDebugInfo::EmitFuncDeclForCallSite(llvm::CallBase *CallOrInvoke,
   // If there is no DISubprogram attached to the function being called,
   // create the one describing the function in order to have complete
   // call site debug info.
-  if (!CalleeDecl->isStatic() && !CalleeDecl->isInlined())
+  if (!CalleeDecl->isStatic() && !CalleeDecl->isInlined()) {
     EmitFunctionDecl(CalleeGlobalDecl, CalleeDecl->getLocation(), CalleeType,
                      Func);
+    if (Func->getSubprogram()) {
+      // For each call instruction emitted, add the call site target metadata.
+      llvm::DISubprogram *SP = Func->getSubprogram();
+      addCallTarget(SP->getLinkageName(), SP, /*CI=*/nullptr);
+    }
+  }
 }
 
 void CGDebugInfo::EmitInlineFunctionStart(CGBuilderTy &Builder, GlobalDecl GD) {
@@ -5082,8 +5184,13 @@ void CGDebugInfo::EmitFunctionEnd(CGBuilderTy &Builder, llvm::Function *Fn) {
   }
   FnBeginRegionCount.pop_back();
 
-  if (Fn && Fn->getSubprogram())
+  if (Fn && Fn->getSubprogram()) {
+    // For each call instruction emitted, add the call site target metadata.
+    llvm::DISubprogram *SP = Fn->getSubprogram();
+    addCallTarget(SP->getLinkageName(), SP, /*CI=*/nullptr);
+
     DBuilder.finalizeSubprogram(Fn->getSubprogram());
+  }
 }
 
 CGDebugInfo::BlockByRefType
@@ -6497,6 +6604,9 @@ void CGDebugInfo::finalize() {
   for (auto &RT : RetainedTypes)
     if (auto MD = TypeCache[RT])
       DBuilder.retainType(cast<llvm::DIType>(MD));
+
+  // Generate call_target information.
+  finalizeCallTarget();
 
   DBuilder.finalize();
 }
