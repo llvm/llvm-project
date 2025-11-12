@@ -271,10 +271,6 @@ module std_core [system] {
       header "__type_traits/is_referenceable.h"
       export std_core.type_traits.integral_constant
     }
-    module is_replaceable {
-      header "__type_traits/is_replaceable.h"
-      export std_core.type_traits.integral_constant
-    }
     module is_same {
       header "__type_traits/is_same.h"
       export std_core.type_traits.integral_constant
@@ -2440,10 +2436,6 @@ module std_math_h [system] {
 module std_stdatomic_h [system] {
   header "stdatomic.h"
   export *
-}
-module std_stdbool_h [system] {
-  // <stdbool.h>'s __bool_true_false_are_defined macro requires textual inclusion.
-  textual header "stdbool.h"
 }
 module std_stddef_h [system] {
   // <stddef.h> supports being included multiple times with different pre-defined macros
