@@ -1304,7 +1304,7 @@ def XeGPU_CreateMemDescOp: XeGPU_Op<"create_mem_desc", [Pure,
     as the underlying shared local memory.
 
     Arguments:
-     - `source` : a 1D statically shaped memref with element type i8, representing the raw SLM buffer.
+     - `source` : 1D or 2D statically shape memref, representing the raw SLM buffer. When the source is provided as 1D memref, its type must be i8. 
     Results:
      - `mem_desc` : the memory descriptor.
   }];
