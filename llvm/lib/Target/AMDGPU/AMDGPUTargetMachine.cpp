@@ -465,10 +465,10 @@ static cl::opt<bool> EnableScalarIRPasses(
   cl::init(true),
   cl::Hidden);
 
-static cl::opt<bool>
-    EnableLowerExecSync("amdgpu-enable-lower-exec-sync",
-                        cl::desc("Enable lowering of exec sync pass."),
-                        cl::init(true), cl::Hidden);
+static cl::opt<bool> EnableLowerExecSync(
+    "amdgpu-enable-lower-exec-sync",
+    cl::desc("Enable lowering of execution synchronization primitives."),
+    cl::init(true), cl::Hidden);
 
 static cl::opt<bool>
     EnableSwLowerLDS("amdgpu-enable-sw-lower-lds",
