@@ -863,14 +863,13 @@ LIBC_INLINE FloatConvertReturn<T> binary_exp_to_float(ExpandedFloat<T> init_num,
 // Checks if the first characters of the string pointer are the start of a
 // hexadecimal floating point number. Does not advance the string pointer.
 template <typename CharType>
-LIBC_INLINE static bool is_float_hex_start(const CharType *__restrict src,
-                                           CharType decimal_point) {
+LIBC_INLINE static bool is_float_hex_start(const CharType *__restrict src) {
   if (!is_char_or_wchar(src[0], '0', L'0') ||
       !is_char_or_wchar(tolower(src[1]), 'x', L'x')) {
     return false;
   }
   size_t first_digit = 2;
-  if (src[2] == decimal_point) {
+  if (src[2] == constants<CharType>::DECIMAL_POINT) {
     ++first_digit;
   }
   return isalnum(src[first_digit]) && b36_char_to_int(src[first_digit]) < 16;
@@ -1140,7 +1139,7 @@ strtofloatingpoint(const CharType *__restrict src) {
   if (isdigit(src[index]) ||
       src[index] == constants<CharType>::DECIMAL_POINT) { // regular number
     int base = 10;
-    if (is_float_hex_start(src + index, constants<CharType>::DECIMAL_POINT)) {
+    if (is_float_hex_start(src + index)) {
       base = 16;
       index += 2;
       seen_digit = true;
