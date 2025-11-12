@@ -24,7 +24,7 @@ struct Z{
 
 int main()
 {
-    (void)(^^::);
+    (void)^^::;
     (void)(^^void);
     (void)(^^bool);
     (void)(^^char);
