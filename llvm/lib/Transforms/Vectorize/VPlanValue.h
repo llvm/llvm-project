@@ -366,6 +366,7 @@ public:
     VPWidenSelectSC,
     VPBlendSC,
     VPHistogramSC,
+    VPScalarIVPromotionRecipeSC,
     // START: Phi-like recipes. Need to be kept together.
     VPWidenPHISC,
     VPPredInstPHISC,

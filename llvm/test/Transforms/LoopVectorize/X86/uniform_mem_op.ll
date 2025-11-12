@@ -238,9 +238,24 @@ loopexit:
 define void @uniform_rw(ptr align(4) %addr) {
 ; CHECK-LABEL: @uniform_rw(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ADDR:%.*]], align 4
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       vector.ph:
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[FOR_BODY]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = phi i32 [ [[TMP0]], [[FOR_BODY]] ], [ [[TMP2:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP2]] = add i32 [[TMP1]], 16
+; CHECK-NEXT:    store i32 [[TMP2]], ptr [[ADDR]], align 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], 4096
+; CHECK-NEXT:    br i1 [[TMP3]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]]
+; CHECK:       middle.block:
+; CHECK-NEXT:    br label [[SCALAR_PH:%.*]]
+; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], [[FOR_BODY]] ], [ 4096, [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr [[ADDR:%.*]], align 4
 ; CHECK-NEXT:    [[INC:%.*]] = add i32 [[LOAD]], 1
 ; CHECK-NEXT:    store i32 [[INC]], ptr [[ADDR]], align 4

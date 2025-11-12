@@ -7,65 +7,20 @@ target triple = "x86_64-apple-macosx13.0.0"
 define void @test_pr59090(ptr %l_out, ptr noalias %b) #0 {
 ; CHECK-LABEL: @test_pr59090(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[B:%.*]], align 1, !llvm.access.group [[ACC_GRP0:![0-9]+]]
 ; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE14:%.*]] ]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP3:%.*]] = phi i8 [ [[TMP0]], [[VECTOR_PH]] ], [ [[TMP4:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i64> poison, i64 [[INDEX]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i64> [[BROADCAST_SPLATINSERT]], <8 x i64> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    [[VEC_IV:%.*]] = add <8 x i64> [[BROADCAST_SPLAT]], <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7>
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule <8 x i64> [[VEC_IV]], splat (i64 10000)
 ; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw i64 [[INDEX]], 6
-; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr [[B:%.*]], align 1, !llvm.access.group [[ACC_GRP0:![0-9]+]]
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <8 x i1> [[TMP1]], i32 0
-; CHECK-NEXT:    br i1 [[TMP4]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
-; CHECK:       pred.store.if:
-; CHECK-NEXT:    store i8 [[TMP3]], ptr [[B]], align 1, !llvm.access.group [[ACC_GRP0]]
-; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE]]
-; CHECK:       pred.store.continue:
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <8 x i1> [[TMP1]], i32 1
-; CHECK-NEXT:    br i1 [[TMP5]], label [[PRED_STORE_IF1:%.*]], label [[PRED_STORE_CONTINUE2:%.*]]
-; CHECK:       pred.store.if1:
-; CHECK-NEXT:    store i8 [[TMP3]], ptr [[B]], align 1, !llvm.access.group [[ACC_GRP0]]
-; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE2]]
-; CHECK:       pred.store.continue2:
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <8 x i1> [[TMP1]], i32 2
-; CHECK-NEXT:    br i1 [[TMP6]], label [[PRED_STORE_IF3:%.*]], label [[PRED_STORE_CONTINUE4:%.*]]
-; CHECK:       pred.store.if3:
-; CHECK-NEXT:    store i8 [[TMP3]], ptr [[B]], align 1, !llvm.access.group [[ACC_GRP0]]
-; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE4]]
-; CHECK:       pred.store.continue4:
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <8 x i1> [[TMP1]], i32 3
-; CHECK-NEXT:    br i1 [[TMP7]], label [[PRED_STORE_IF5:%.*]], label [[PRED_STORE_CONTINUE6:%.*]]
-; CHECK:       pred.store.if5:
-; CHECK-NEXT:    store i8 [[TMP3]], ptr [[B]], align 1, !llvm.access.group [[ACC_GRP0]]
-; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE6]]
-; CHECK:       pred.store.continue6:
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <8 x i1> [[TMP1]], i32 4
-; CHECK-NEXT:    br i1 [[TMP8]], label [[PRED_STORE_IF7:%.*]], label [[PRED_STORE_CONTINUE8:%.*]]
-; CHECK:       pred.store.if7:
-; CHECK-NEXT:    store i8 [[TMP3]], ptr [[B]], align 1, !llvm.access.group [[ACC_GRP0]]
-; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE8]]
-; CHECK:       pred.store.continue8:
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <8 x i1> [[TMP1]], i32 5
-; CHECK-NEXT:    br i1 [[TMP9]], label [[PRED_STORE_IF9:%.*]], label [[PRED_STORE_CONTINUE10:%.*]]
-; CHECK:       pred.store.if9:
-; CHECK-NEXT:    store i8 [[TMP3]], ptr [[B]], align 1, !llvm.access.group [[ACC_GRP0]]
-; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE10]]
-; CHECK:       pred.store.continue10:
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <8 x i1> [[TMP1]], i32 6
-; CHECK-NEXT:    br i1 [[TMP10]], label [[PRED_STORE_IF11:%.*]], label [[PRED_STORE_CONTINUE12:%.*]]
-; CHECK:       pred.store.if11:
-; CHECK-NEXT:    store i8 [[TMP3]], ptr [[B]], align 1, !llvm.access.group [[ACC_GRP0]]
-; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE12]]
-; CHECK:       pred.store.continue12:
-; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <8 x i1> [[TMP1]], i32 7
-; CHECK-NEXT:    br i1 [[TMP11]], label [[PRED_STORE_IF13:%.*]], label [[PRED_STORE_CONTINUE14]]
-; CHECK:       pred.store.if13:
-; CHECK-NEXT:    store i8 [[TMP3]], ptr [[B]], align 1, !llvm.access.group [[ACC_GRP0]]
-; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE14]]
-; CHECK:       pred.store.continue14:
+; CHECK-NEXT:    [[TMP4]] = add i8 [[TMP3]], 0
+; CHECK-NEXT:    store i8 [[TMP4]], ptr [[B]], align 1
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[L_OUT:%.*]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[INTERLEAVED_MASK:%.*]] = shufflevector <8 x i1> [[TMP1]], <8 x i1> poison, <48 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>
 ; CHECK-NEXT:    [[TMP15:%.*]] = and <48 x i1> [[INTERLEAVED_MASK]], <i1 true, i1 false, i1 true, i1 false, i1 false, i1 false, i1 true, i1 false, i1 true, i1 false, i1 false, i1 false, i1 true, i1 false, i1 true, i1 false, i1 false, i1 false, i1 true, i1 false, i1 true, i1 false, i1 false, i1 false, i1 true, i1 false, i1 true, i1 false, i1 false, i1 false, i1 true, i1 false, i1 true, i1 false, i1 false, i1 false, i1 true, i1 false, i1 true, i1 false, i1 false, i1 false, i1 true, i1 false, i1 true, i1 false, i1 false, i1 false>

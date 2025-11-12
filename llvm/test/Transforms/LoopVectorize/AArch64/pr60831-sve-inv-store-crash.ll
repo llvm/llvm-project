@@ -113,9 +113,9 @@ exit:
 define void @test_invar_gep_var_start(i64 %start, ptr %dst) #0 {
 ; CHECK-LABEL: @test_invar_gep_var_start(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 100, [[START:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw nsw i64 [[TMP1]], 2
+; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 100, [[START:%.*]]
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], [[TMP2]]
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
@@ -162,9 +162,9 @@ define void @test_invar_gep_var_start(i64 %start, ptr %dst) #0 {
 ;
 ; IC2-LABEL: @test_invar_gep_var_start(
 ; IC2-NEXT:  entry:
-; IC2-NEXT:    [[TMP0:%.*]] = sub i64 100, [[START:%.*]]
 ; IC2-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
 ; IC2-NEXT:    [[TMP2:%.*]] = shl nuw nsw i64 [[TMP1]], 3
+; IC2-NEXT:    [[TMP0:%.*]] = sub i64 100, [[START:%.*]]
 ; IC2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], [[TMP2]]
 ; IC2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; IC2:       vector.ph:
@@ -229,11 +229,11 @@ exit:
 define void @test_invar_gep_var_start_step_2(i64 %start, ptr %dst) #0 {
 ; CHECK-LABEL: @test_invar_gep_var_start_step_2(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP4:%.*]] = shl nuw nsw i64 [[TMP3]], 2
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 98, [[START:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr i64 [[TMP0]], 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nuw i64 [[TMP1]], 1
-; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP4:%.*]] = shl nuw nsw i64 [[TMP3]], 2
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP2]], [[TMP4]]
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
@@ -282,11 +282,11 @@ define void @test_invar_gep_var_start_step_2(i64 %start, ptr %dst) #0 {
 ;
 ; IC2-LABEL: @test_invar_gep_var_start_step_2(
 ; IC2-NEXT:  entry:
+; IC2-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
+; IC2-NEXT:    [[TMP4:%.*]] = shl nuw nsw i64 [[TMP3]], 3
 ; IC2-NEXT:    [[TMP0:%.*]] = sub i64 98, [[START:%.*]]
 ; IC2-NEXT:    [[TMP1:%.*]] = lshr i64 [[TMP0]], 1
 ; IC2-NEXT:    [[TMP2:%.*]] = add nuw i64 [[TMP1]], 1
-; IC2-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
-; IC2-NEXT:    [[TMP4:%.*]] = shl nuw nsw i64 [[TMP3]], 3
 ; IC2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP2]], [[TMP4]]
 ; IC2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; IC2:       vector.ph:

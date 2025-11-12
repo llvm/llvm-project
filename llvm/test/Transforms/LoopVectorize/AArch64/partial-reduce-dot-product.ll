@@ -2165,9 +2165,9 @@ define dso_local i32 @not_dotp_vscale1(ptr %a, ptr %b, i32 %n, i64 %cost) #0 {
 ; CHECK-INTERLEAVE1-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[N]], 0
 ; CHECK-INTERLEAVE1-NEXT:    br i1 [[CMP]], label [[FOR_BODY_PREHEADER:%.*]], label [[EXIT:%.*]]
 ; CHECK-INTERLEAVE1:       for.body.preheader:
-; CHECK-INTERLEAVE1-NEXT:    [[TMP0:%.*]] = zext i32 [[N]] to i64
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP2:%.*]] = shl nuw nsw i64 [[TMP1]], 4
+; CHECK-INTERLEAVE1-NEXT:    [[TMP0:%.*]] = zext i32 [[N]] to i64
 ; CHECK-INTERLEAVE1-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], [[TMP2]]
 ; CHECK-INTERLEAVE1-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK-INTERLEAVE1:       vector.ph:
@@ -2206,9 +2206,9 @@ define dso_local i32 @not_dotp_vscale1(ptr %a, ptr %b, i32 %n, i64 %cost) #0 {
 ; CHECK-INTERLEAVED-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[N]], 0
 ; CHECK-INTERLEAVED-NEXT:    br i1 [[CMP]], label [[FOR_BODY_PREHEADER:%.*]], label [[EXIT:%.*]]
 ; CHECK-INTERLEAVED:       for.body.preheader:
-; CHECK-INTERLEAVED-NEXT:    [[TMP0:%.*]] = zext i32 [[N]] to i64
 ; CHECK-INTERLEAVED-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-INTERLEAVED-NEXT:    [[TMP2:%.*]] = shl nuw nsw i64 [[TMP1]], 5
+; CHECK-INTERLEAVED-NEXT:    [[TMP0:%.*]] = zext i32 [[N]] to i64
 ; CHECK-INTERLEAVED-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], [[TMP2]]
 ; CHECK-INTERLEAVED-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK-INTERLEAVED:       vector.ph:
@@ -2261,9 +2261,9 @@ define dso_local i32 @not_dotp_vscale1(ptr %a, ptr %b, i32 %n, i64 %cost) #0 {
 ; CHECK-MAXBW-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[N]], 0
 ; CHECK-MAXBW-NEXT:    br i1 [[CMP]], label [[FOR_BODY_PREHEADER:%.*]], label [[EXIT:%.*]]
 ; CHECK-MAXBW:       for.body.preheader:
-; CHECK-MAXBW-NEXT:    [[TMP0:%.*]] = zext i32 [[N]] to i64
 ; CHECK-MAXBW-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-MAXBW-NEXT:    [[TMP2:%.*]] = shl nuw nsw i64 [[TMP1]], 4
+; CHECK-MAXBW-NEXT:    [[TMP0:%.*]] = zext i32 [[N]] to i64
 ; CHECK-MAXBW-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], [[TMP2]]
 ; CHECK-MAXBW-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK-MAXBW:       vector.ph:

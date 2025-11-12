@@ -25,7 +25,7 @@ loop:
   store i32 %l, ptr %gep
   %iv.next = add i32 %iv, 1
   %ec = icmp eq i32 %iv.next, 100
-  br i1 %ec, label %exit, label %loop
+  br i1 %ec, label %exit, label %loop, !llvm.loop !0
 
 exit:
   ret void
@@ -55,7 +55,7 @@ loop:
   store i32 %l, ptr %a
   %iv.next = add i32 %iv, 1
   %ec = icmp eq i32 %iv.next, 100
-  br i1 %ec, label %exit, label %loop
+  br i1 %ec, label %exit, label %loop, !llvm.loop !0
 
 exit:
   ret void
@@ -90,7 +90,7 @@ loop:
   store i32 %l, ptr %gep
   %iv.next = add i32 %iv, 1
   %ec = icmp eq i32 %iv.next, 100
-  br i1 %ec, label %exit, label %loop
+  br i1 %ec, label %exit, label %loop, !llvm.loop !0
 
 exit:
   ret void
@@ -125,7 +125,7 @@ loop:
   store i32 %l, ptr %a
   %iv.next = add i32 %iv, 1
   %ec = icmp eq i32 %iv.next, 100
-  br i1 %ec, label %exit, label %loop
+  br i1 %ec, label %exit, label %loop, !llvm.loop !0
 
 exit:
   ret void
@@ -156,7 +156,7 @@ loop:
   store i8 %t, ptr %gep
   %iv.next = add i32 %iv, 1
   %ec = icmp eq i32 %iv.next, 100
-  br i1 %ec, label %exit, label %loop
+  br i1 %ec, label %exit, label %loop, !llvm.loop !0
 
 exit:
   ret void
@@ -192,7 +192,7 @@ loop:
   store i32 %t, ptr %gep
   %iv.next = add i32 %iv, 1
   %ec = icmp eq i32 %iv.next, 100
-  br i1 %ec, label %exit, label %loop
+  br i1 %ec, label %exit, label %loop, !llvm.loop !0
 
 exit:
   ret void
@@ -222,7 +222,7 @@ loop:
   store i32 %l, ptr %gep
   %iv.next = sub i32 %iv, 1
   %ec = icmp eq i32 %iv.next, -100
-  br i1 %ec, label %exit, label %loop
+  br i1 %ec, label %exit, label %loop, !llvm.loop !0
 
 exit:
   ret void
@@ -252,7 +252,7 @@ loop:
   store i32 %l, ptr %a
   %iv.next = sub i32 %iv, 1
   %ec = icmp eq i32 %iv.next, -100
-  br i1 %ec, label %exit, label %loop
+  br i1 %ec, label %exit, label %loop, !llvm.loop !0
 
 exit:
   ret void
@@ -288,7 +288,7 @@ loop:
   store i32 %l, ptr %gep
   %iv.next = sub i32 %iv, 1
   %ec = icmp eq i32 %iv.next, -100
-  br i1 %ec, label %exit, label %loop
+  br i1 %ec, label %exit, label %loop, !llvm.loop !0
 
 exit:
   ret void
@@ -323,7 +323,7 @@ loop:
   store i32 %l, ptr %a
   %iv.next = sub i32 %iv, 1
   %ec = icmp eq i32 %iv.next, -100
-  br i1 %ec, label %exit, label %loop
+  br i1 %ec, label %exit, label %loop, !llvm.loop !0
 
 exit:
   ret void
@@ -352,7 +352,7 @@ loop:
   store i32 %l, ptr %gep.off
   %iv.next = add i32 %iv, 1
   %ec = icmp eq i32 %iv.next, 100
-  br i1 %ec, label %exit, label %loop
+  br i1 %ec, label %exit, label %loop, !llvm.loop !0
 
 exit:
   ret void
@@ -381,7 +381,7 @@ loop:
   store i32 %l, ptr %a
   %iv.next = add i32 %iv, 1
   %ec = icmp eq i32 %iv.next, 100
-  br i1 %ec, label %exit, label %loop
+  br i1 %ec, label %exit, label %loop, !llvm.loop !0
 
 exit:
   ret void
@@ -415,7 +415,7 @@ loop:
   store i32 %l, ptr %gep.off
   %iv.next = add i32 %iv, 1
   %ec = icmp eq i32 %iv.next, 100
-  br i1 %ec, label %exit, label %loop
+  br i1 %ec, label %exit, label %loop, !llvm.loop !0
 
 exit:
   ret void
@@ -449,7 +449,7 @@ loop:
   store i32 %l, ptr %a
   %iv.next = add i32 %iv, 1
   %ec = icmp eq i32 %iv.next, 100
-  br i1 %ec, label %exit, label %loop
+  br i1 %ec, label %exit, label %loop, !llvm.loop !0
 
 exit:
   ret void
@@ -485,7 +485,7 @@ loop:
   store i32 %l, ptr %gep
   %iv.next = add i32 %iv, 1
   %ec = icmp eq i32 %iv.next, 100
-  br i1 %ec, label %exit, label %loop
+  br i1 %ec, label %exit, label %loop, !llvm.loop !0
 
 exit:
   ret void
@@ -521,7 +521,7 @@ loop:
   store i32 %l, ptr %a
   %iv.next = add i32 %iv, 1
   %ec = icmp eq i32 %iv.next, 100
-  br i1 %ec, label %exit, label %loop
+  br i1 %ec, label %exit, label %loop, !llvm.loop !0
 
 exit:
   ret void
@@ -556,7 +556,7 @@ loop:
   store i32 %l, ptr %gep
   %iv.next = add i32 %iv, 1
   %ec = icmp eq i32 %iv.next, 100
-  br i1 %ec, label %exit, label %loop
+  br i1 %ec, label %exit, label %loop, !llvm.loop !0
 
 exit:
   ret void
@@ -592,7 +592,7 @@ loop:
   store i32 %l, ptr %a
   %iv.next = add i32 %iv, 1
   %ec = icmp eq i32 %iv.next, 100
-  br i1 %ec, label %exit, label %loop
+  br i1 %ec, label %exit, label %loop, !llvm.loop !0
 
 exit:
   ret void
@@ -623,7 +623,7 @@ loop:
   store i32 %l, ptr %a
   %iv.next = add i32 %iv, %off
   %ec = icmp eq i32 %iv.next, 100
-  br i1 %ec, label %exit, label %loop
+  br i1 %ec, label %exit, label %loop, !llvm.loop !0
 
 exit:
   ret void
@@ -654,7 +654,7 @@ loop:
   store i32 %l, ptr %gep
   %iv.next = add i32 %iv, %off
   %ec = icmp eq i32 %iv.next, 100
-  br i1 %ec, label %exit, label %loop
+  br i1 %ec, label %exit, label %loop, !llvm.loop !0
 
 exit:
   ret void
@@ -684,7 +684,7 @@ loop:
   store i32 %l, ptr %gep
   %iv.next = add i32 %iv, %off
   %ec = icmp eq i32 %iv.next, 100
-  br i1 %ec, label %exit, label %loop
+  br i1 %ec, label %exit, label %loop, !llvm.loop !0
 
 exit:
   ret void
@@ -714,7 +714,7 @@ loop:
   store i32 %l, ptr %a
   %iv.next = add i32 %iv, %off
   %ec = icmp eq i32 %iv.next, 100
-  br i1 %ec, label %exit, label %loop
+  br i1 %ec, label %exit, label %loop, !llvm.loop !0
 
 exit:
   ret void
@@ -744,7 +744,7 @@ loop:
   store i32 0, ptr %gep
   %iv.next = add i32 %iv, 1
   %ec = icmp eq i32 %iv.next, 100
-  br i1 %ec, label %exit, label %loop
+  br i1 %ec, label %exit, label %loop, !llvm.loop !0
 
 exit:
   ret void
@@ -779,7 +779,7 @@ loop:
   store i32 0, ptr %gep
   %iv.next = add i32 %iv, 1
   %ec = icmp eq i32 %iv.next, 100
-  br i1 %ec, label %exit, label %loop
+  br i1 %ec, label %exit, label %loop, !llvm.loop !0
 
 exit:
   ret void
@@ -814,8 +814,11 @@ loop:
   %iv.2.next = add i32 %iv.2, 1
   %iv.3.next = add i32 %iv.3, 1
   %ec = icmp eq i32 %iv.3, 200
-  br i1 %ec, label %exit, label %loop
+  br i1 %ec, label %exit, label %loop, !llvm.loop !0
 
 exit:
   ret void
 }
+
+!0 = distinct !{!0, !4}
+!4 = !{!"llvm.loop.vectorize.enable", i1 true}

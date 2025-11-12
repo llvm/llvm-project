@@ -2329,6 +2329,19 @@ MemoryDepChecker::getDependenceDistanceStrideAndSize(
   int64_t StrideBPtrInt = *StrideBPtr;
   LLVM_DEBUG(dbgs() << "LAA:  Src induction step: " << StrideAPtrInt
                     << " Sink induction step: " << StrideBPtrInt << "\n");
+
+  if (!StrideAPtrInt && !StrideBPtrInt && !(AIsWrite && BIsWrite) &&
+      (AIsWrite || BIsWrite) && !isa<UndefValue>(APtr) &&
+      InnermostLoop->isLoopInvariant(APtr) &&
+      InnermostLoop->isLoopInvariant(BPtr)) {
+    LoadInst *L = dyn_cast<LoadInst>(AIsWrite ? BInst : AInst);
+    if (InnermostLoop->isLoopInvariant(L->getPointerOperand()))
+      if (L && isInvariantLoadHoistable(L, SE, nullptr, nullptr, nullptr))
+        ShouldRetryWithRuntimeChecks = true;
+
+    return MemoryDepChecker::Dependence::Unknown;
+  }
+
   // At least Src or Sink are loop invariant and the other is strided or
   // invariant. We can generate a runtime check to disambiguate the accesses.
   if (!StrideAPtrInt || !StrideBPtrInt)
@@ -2942,9 +2955,15 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
     // See if there is an unsafe dependency between a load to a uniform address and
     // store to the same uniform address.
     if (UniformStores.contains(Ptr)) {
-      LLVM_DEBUG(dbgs() << "LAA: Found an unsafe dependency between a uniform "
-                           "load and uniform store to the same address!\n");
-      HasLoadStoreDependenceInvolvingLoopInvariantAddress = true;
+      auto &SE = *PSE->getSE();
+      if (TheLoop->isLoopInvariant(LD->getPointerOperand()) &&
+          !getDepChecker().isInvariantLoadHoistable(LD, SE, nullptr, nullptr,
+                                                    nullptr)) {
+        LLVM_DEBUG(
+            dbgs() << "LAA: Found an unsafe dependency between a uniform "
+                      "load and uniform store to the same address!\n");
+        HasLoadStoreDependenceInvolvingLoopInvariantAddress = true;
+      }
     }
 
     MemoryLocation Loc = MemoryLocation::get(LD);

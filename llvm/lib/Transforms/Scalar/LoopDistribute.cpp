@@ -680,12 +680,14 @@ public:
 
     // Currently, we only distribute to isolate the part of the loop with
     // dependence cycles to enable partial vectorization.
-    if (LAI->canVectorizeMemory())
+    if (!LAI->hasLoadStoreDependenceInvolvingLoopInvariantAddress() &&
+        LAI->canVectorizeMemory())
       return fail("MemOpsCanBeVectorized",
                   "memory operations are safe for vectorization");
 
     auto *Dependences = LAI->getDepChecker().getDependences();
-    if (!Dependences || Dependences->empty())
+    if (!LAI->hasLoadStoreDependenceInvolvingLoopInvariantAddress() &&
+        (!Dependences || Dependences->empty()))
       return fail("NoUnsafeDeps", "no unsafe dependences to isolate");
 
     LLVM_DEBUG(dbgs() << "LDist: Found a candidate loop: "

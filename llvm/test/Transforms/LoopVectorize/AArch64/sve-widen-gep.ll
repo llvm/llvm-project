@@ -98,9 +98,9 @@ exit:                            ; preds = %loop.body
 define void @pointer_induction(ptr noalias %start, i64 %N) {
 ; CHECK-LABEL: @pointer_induction(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[N:%.*]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP1]], 1
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[N:%.*]], 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], [[TMP2]]
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
