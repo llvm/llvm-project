@@ -3,8 +3,8 @@
 cert-err60-cpp
 ==============
 
-This check flags all throw expressions where the exception object is not nothrow
-copy constructible.
+This check flags all throw expressions where the exception object is not
+nothrow copy constructible.
 
 This check corresponds to the CERT C++ Coding Standard rule
 `ERR60-CPP. Exception objects must be nothrow copy constructible

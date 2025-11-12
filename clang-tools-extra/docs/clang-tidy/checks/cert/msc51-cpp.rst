@@ -4,10 +4,11 @@ cert-msc51-cpp
 ==============
 
 This check flags all pseudo-random number engines, engine adaptor
-instantiations and ``srand()`` when initialized or seeded with default argument,
-constant expression or any user-configurable type. Pseudo-random number
-engines seeded with a predictable value may cause vulnerabilities e.g. in
-security protocols.
+instantiations and ``srand()`` when initialized or seeded with default
+argument, constant expression or any user-configurable type.
+Pseudo-random number engines seeded with a predictable value may cause
+vulnerabilities e.g. in security protocols.
+
 This is a CERT security rule, see
 `MSC51-CPP. Ensure your random number generator is properly seeded
 <https://wiki.sei.cmu.edu/confluence/display/cplusplus/MSC51-CPP.+Ensure+your+random+number+generator+is+properly+seeded>`_ and
