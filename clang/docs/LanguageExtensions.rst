@@ -1073,6 +1073,11 @@ The matrix type extension supports explicit casts. Implicit type conversion betw
     i = static_cast<matrix_5_5<int>>(d);
   }
 
+The matrix type extension will support column and row major layouts. The flag
+to change this behavior is `-fmatrix-default-layout` used like so
+`-fmatrix-default-layout=column-major` for column major and like so
+`-fmatrix-default-layout=row-major` for row major.
+
 Half-Precision Floating Point
 =============================
 
