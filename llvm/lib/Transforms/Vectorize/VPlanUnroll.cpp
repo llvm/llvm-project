@@ -344,7 +344,8 @@ void UnrollState::unrollBlock(VPBlockBase *VPB) {
   auto *VPBB = cast<VPBasicBlock>(VPB);
   auto InsertPtForPhi = VPBB->getFirstNonPhi();
   for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
-    if (ToSkip.contains(&R) || isa<VPIRInstruction>(&R))
+    if (ToSkip.contains(&R) || isa<VPIRInstruction>(&R) ||
+        isa<VPScalarIVPromotionRecipe>(&R))
       continue;
 
     // Add all VPValues for all parts to AnyOf, FirstActiveLaneMask and

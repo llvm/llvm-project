@@ -7,62 +7,28 @@
 
 target datalayout = "e-m:e-p:64:64-i64:64-i128:128-n32:64-S128"
 
-; This test introduces a case where a memory induction variable
-; stops vectorization. This test will be updated when hoisting loads
-; for this memory induction variable and vectorization is possible.
 define void @test_copy_loop(ptr %theFirst, ptr %theLast, ptr %dest_base, ptr %m_size_ptr) {
 ; AARCH64-LABEL: define void @test_copy_loop(
 ; AARCH64-SAME: ptr [[THEFIRST:%.*]], ptr [[THELAST:%.*]], ptr [[DEST_BASE:%.*]], ptr [[M_SIZE_PTR:%.*]]) {
-; AARCH64-NEXT:  [[ENTRY:.*:]]
-; AARCH64-NEXT:    [[TMP0:%.*]] = load i64, ptr [[M_SIZE_PTR]], align 8
-; AARCH64-NEXT:    [[ADD_PTR_I:%.*]] = getelementptr inbounds nuw i16, ptr [[DEST_BASE]], i64 [[TMP0]]
-; AARCH64-NEXT:    [[CMP_NOT:%.*]] = icmp eq ptr [[THEFIRST]], [[THELAST]]
-; AARCH64-NEXT:    br i1 [[CMP_NOT]], label %[[CLEANUP:.*]], label %[[WHILE_BODY_PREHEADER:.*]]
-; AARCH64:       [[WHILE_BODY_PREHEADER]]:
-; AARCH64-NEXT:    br label %[[WHILE_BODY:.*]]
-; AARCH64:       [[WHILE_BODY]]:
-; AARCH64-NEXT:    [[THEFIRST_ADDR_0112:%.*]] = phi ptr [ [[INCDEC_PTR9:%.*]], %[[WHILE_BODY]] ], [ [[THEFIRST]], %[[WHILE_BODY_PREHEADER]] ]
-; AARCH64-NEXT:    [[THEPOINTER_0111:%.*]] = phi ptr [ [[INCDEC_PTR:%.*]], %[[WHILE_BODY]] ], [ [[ADD_PTR_I]], %[[WHILE_BODY_PREHEADER]] ]
-; AARCH64-NEXT:    [[TMP1:%.*]] = load i16, ptr [[THEFIRST_ADDR_0112]], align 2
-; AARCH64-NEXT:    store i16 [[TMP1]], ptr [[THEPOINTER_0111]], align 2
-; AARCH64-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds nuw i8, ptr [[THEPOINTER_0111]], i64 2
-; AARCH64-NEXT:    [[TMP2:%.*]] = load i64, ptr [[M_SIZE_PTR]], align 8
-; AARCH64-NEXT:    [[INC:%.*]] = add i64 [[TMP2]], 1
-; AARCH64-NEXT:    store i64 [[INC]], ptr [[M_SIZE_PTR]], align 8
-; AARCH64-NEXT:    [[INCDEC_PTR9]] = getelementptr inbounds nuw i8, ptr [[THEFIRST_ADDR_0112]], i64 2
-; AARCH64-NEXT:    [[CMP7_NOT:%.*]] = icmp eq ptr [[INCDEC_PTR9]], [[THELAST]]
-; AARCH64-NEXT:    br i1 [[CMP7_NOT]], label %[[CLEANUP_LOOPEXIT:.*]], label %[[WHILE_BODY]]
-; AARCH64:       [[CLEANUP_LOOPEXIT]]:
-; AARCH64-NEXT:    br label %[[CLEANUP]]
-; AARCH64:       [[CLEANUP]]:
-; AARCH64-NEXT:    ret void
+; AARCH64:       vector.body:
+; AARCH64:         [[INDEX:%.*]] = phi i64 [ 0, %vector.ph ], [ [[INDEX_NEXT:%.*]], %vector.body ]
+; AARCH64:         [[WIDE_LOAD0:%.*]] = load <8 x i16>, ptr
+; AARCH64:         [[WIDE_LOAD1:%.*]] = load <8 x i16>, ptr
+; AARCH64:         store <8 x i16> [[WIDE_LOAD0]], ptr
+; AARCH64:         store <8 x i16> [[WIDE_LOAD1]], ptr
+; AARCH64:         [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
+; AARCH64:         br i1 {{.*}}, label %middle.block, label %vector.body
 ;
 ; X86_64-LABEL: define void @test_copy_loop(
 ; X86_64-SAME: ptr [[THEFIRST:%.*]], ptr [[THELAST:%.*]], ptr [[DEST_BASE:%.*]], ptr [[M_SIZE_PTR:%.*]]) {
-; X86_64-NEXT:  [[ENTRY:.*:]]
-; X86_64-NEXT:    [[TMP0:%.*]] = load i64, ptr [[M_SIZE_PTR]], align 8
-; X86_64-NEXT:    [[ADD_PTR_I:%.*]] = getelementptr inbounds nuw i16, ptr [[DEST_BASE]], i64 [[TMP0]]
-; X86_64-NEXT:    [[CMP_NOT:%.*]] = icmp eq ptr [[THEFIRST]], [[THELAST]]
-; X86_64-NEXT:    br i1 [[CMP_NOT]], label %[[CLEANUP:.*]], label %[[WHILE_BODY_PREHEADER:.*]]
-; X86_64:       [[WHILE_BODY_PREHEADER]]:
-; X86_64-NEXT:    br label %[[WHILE_BODY:.*]]
-; X86_64:       [[WHILE_BODY]]:
-; X86_64-NEXT:    [[THEFIRST_ADDR_0112:%.*]] = phi ptr [ [[INCDEC_PTR9:%.*]], %[[WHILE_BODY]] ], [ [[THEFIRST]], %[[WHILE_BODY_PREHEADER]] ]
-; X86_64-NEXT:    [[THEPOINTER_0111:%.*]] = phi ptr [ [[INCDEC_PTR:%.*]], %[[WHILE_BODY]] ], [ [[ADD_PTR_I]], %[[WHILE_BODY_PREHEADER]] ]
-; X86_64-NEXT:    [[TMP1:%.*]] = load i16, ptr [[THEFIRST_ADDR_0112]], align 2
-; X86_64-NEXT:    store i16 [[TMP1]], ptr [[THEPOINTER_0111]], align 2
-; X86_64-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds nuw i8, ptr [[THEPOINTER_0111]], i64 2
-; X86_64-NEXT:    [[TMP2:%.*]] = load i64, ptr [[M_SIZE_PTR]], align 8
-; X86_64-NEXT:    [[INC:%.*]] = add i64 [[TMP2]], 1
-; X86_64-NEXT:    store i64 [[INC]], ptr [[M_SIZE_PTR]], align 8
-; X86_64-NEXT:    [[INCDEC_PTR9]] = getelementptr inbounds nuw i8, ptr [[THEFIRST_ADDR_0112]], i64 2
-; X86_64-NEXT:    [[CMP7_NOT:%.*]] = icmp eq ptr [[INCDEC_PTR9]], [[THELAST]]
-; X86_64-NEXT:    br i1 [[CMP7_NOT]], label %[[CLEANUP_LOOPEXIT:.*]], label %[[WHILE_BODY]]
-; X86_64:       [[CLEANUP_LOOPEXIT]]:
-; X86_64-NEXT:    br label %[[CLEANUP]]
-; X86_64:       [[CLEANUP]]:
-; X86_64-NEXT:    ret void
-;
+; X86_64:       vector.body:
+; X86_64:         [[INDEX:%.*]] = phi i64 [ 0, %vector.ph ], [ [[INDEX_NEXT:%.*]], %vector.body ]
+; X86_64:         [[WIDE_LOAD0:%.*]] = load <2 x i16>, ptr
+; X86_64:         [[WIDE_LOAD1:%.*]] = load <2 x i16>, ptr
+; X86_64:         store <2 x i16> [[WIDE_LOAD0]], ptr
+; X86_64:         store <2 x i16> [[WIDE_LOAD1]], ptr
+; X86_64:         [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; X86_64:         br i1 {{.*}}, label %middle.block, label %vector.body
 
 entry:
   %0 = load i64, ptr %m_size_ptr, align 8

@@ -2714,14 +2714,16 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
                   return match(U,
                                m_c_Add(m_Specific(LoopRegion->getCanonicalIV()),
                                        m_Specific(&Plan.getVFxUF()))) ||
-                         isa<VPWidenPointerInductionRecipe>(U);
+                         isa<VPWidenPointerInductionRecipe>(U) ||
+                         isa<VPScalarIVPromotionRecipe>(U);
                 }) &&
          "Only users of VFxUF should be VPWidenPointerInductionRecipe and the "
          "increment of the canonical induction.");
   Plan.getVFxUF().replaceUsesWithIf(&EVL, [](VPUser &U, unsigned Idx) {
     // Only replace uses in VPWidenPointerInductionRecipe; The increment of the
     // canonical induction must not be updated.
-    return isa<VPWidenPointerInductionRecipe>(U);
+    return isa<VPWidenPointerInductionRecipe>(U) ||
+           isa<VPScalarIVPromotionRecipe>(U);
   });
 
   // Defer erasing recipes till the end so that we don't invalidate the
@@ -2946,9 +2948,10 @@ void VPlanTransforms::canonicalizeEVLLoops(VPlan &Plan) {
   VPBasicBlock *HeaderVPBB = EVLPhi->getParent();
   VPValue *EVLIncrement = EVLPhi->getBackedgeValue();
   VPValue *AVL;
+  VPValue *EVL;
   [[maybe_unused]] bool FoundAVL =
-      match(EVLIncrement,
-            m_c_Add(m_ZExtOrSelf(m_EVL(m_VPValue(AVL))), m_Specific(EVLPhi)));
+      match(EVLIncrement, m_c_Add(m_ZExtOrSelf(m_EVL(m_VPValue(AVL)).bind(EVL)),
+                                  m_Specific(EVLPhi)));
   assert(FoundAVL && "Didn't find AVL?");
 
   // The AVL may be capped to a safe distance.
@@ -3004,6 +3007,40 @@ void VPlanTransforms::canonicalizeEVLLoops(VPlan &Plan) {
                                     Plan.getConstantInt(AVLTy, 0));
   Builder.createNaryOp(VPInstruction::BranchOnCond, Cmp);
   LatchExitingBr->eraseFromParent();
+
+  SmallVector<VPRecipeBase *> RecipesToErase;
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_shallow(Plan.getEntry()))) {
+    for (VPRecipeBase &R : *VPBB)
+      if (auto *ScalarIV = dyn_cast<VPScalarIVPromotionRecipe>(&R)) {
+        auto ScalarTy =
+            VPTypeAnalysis(Plan).inferScalarType(ScalarIV->getOperand(1));
+        auto EVLTy = VPTypeAnalysis(Plan).inferScalarType(EVL);
+        auto CompEVL = VPBuilder(ScalarIV).createScalarZExtOrTrunc(
+            EVL, ScalarTy, EVLTy, ScalarIV->getDebugLoc());
+
+        auto Phi = VPBuilder(VPBB, VPBB->getFirstNonPhi())
+                       .createScalarPhi({ScalarIV->getOperand(0)},
+                                        ScalarIV->getDebugLoc());
+
+        auto Mul = VPBuilder(ScalarIV).createNaryOp(
+            Instruction::Mul, {ScalarIV->getOperand(1), CompEVL});
+        auto Add =
+            VPBuilder(ScalarIV).createNaryOp(Instruction::Add, {Phi, Mul});
+
+        VPBuilder(ScalarIV).createNaryOp(Instruction::Store,
+                                         {Add, ScalarIV->getOperand(2)});
+
+        Phi->addOperand(Add);
+
+        ScalarIV->replaceAllUsesWith(Add);
+        RecipesToErase.push_back(ScalarIV);
+      }
+  }
+
+  for (auto &Recipe : RecipesToErase) {
+    Recipe->eraseFromParent();
+  }
 }
 
 void VPlanTransforms::replaceSymbolicStrides(
