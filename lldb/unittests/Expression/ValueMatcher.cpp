@@ -8,6 +8,8 @@
 
 #include "ValueMatcher.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/raw_os_ostream.h"
+#include "llvm/Support/raw_ostream.h"
 #include <iomanip>
 
 using namespace lldb_private;
@@ -47,17 +49,28 @@ void lldb_private::PrintTo(const Value &val, std::ostream *os) {
 
 bool ValueMatcher::MatchAndExplain(
     const Value &val, testing::MatchResultListener *listener) const {
+  if (listener && listener->stream()) {
+    llvm::raw_os_ostream os(*listener->stream());
+    return MatchAndExplainImpl(val, os);
+  }
+
+  llvm::raw_null_ostream os;
+  return MatchAndExplainImpl(val, os);
+}
+
+bool ValueMatcher::MatchAndExplainImpl(const Value &val,
+                                       llvm::raw_ostream &os) const {
   if (val.GetValueType() != m_value_type) {
-    *listener << "value_type mismatch: expected "
-              << Value::GetValueTypeAsCString(m_value_type) << ", got "
-              << Value::GetValueTypeAsCString(val.GetValueType()) << " ";
+    os << "value_type mismatch: expected "
+       << Value::GetValueTypeAsCString(m_value_type) << ", got "
+       << Value::GetValueTypeAsCString(val.GetValueType()) << " ";
     return false;
   }
 
   if (val.GetContextType() != m_context_type) {
-    *listener << "context_type mismatch: expected "
-              << Value::GetContextTypeAsCString(m_context_type) << ", got "
-              << Value::GetContextTypeAsCString(val.GetContextType()) << " ";
+    os << "context_type mismatch: expected "
+       << Value::GetContextTypeAsCString(m_context_type) << ", got "
+       << Value::GetContextTypeAsCString(val.GetContextType()) << " ";
     return false;
   }
 
@@ -65,19 +78,18 @@ bool ValueMatcher::MatchAndExplain(
     const DataBufferHeap &buffer = val.GetBuffer();
     const size_t buffer_size = buffer.GetByteSize();
     if (buffer_size != m_expected_bytes.size()) {
-      *listener << "buffer size mismatch: expected " << m_expected_bytes.size()
-                << ", got " << buffer_size << " ";
+      os << "buffer size mismatch: expected " << m_expected_bytes.size()
+         << ", got " << buffer_size << " ";
       return false;
     }
 
     const uint8_t *data = buffer.GetBytes();
     for (size_t i = 0; i < buffer_size; ++i) {
       if (data[i] != m_expected_bytes[i]) {
-        *listener << "byte mismatch at index " << i << ": expected " << "0x"
-                  << std::hex << std::setw(2) << std::setfill('0')
-                  << static_cast<int>(m_expected_bytes[i]) << ", got " << "0x"
-                  << std::hex << std::setw(2) << std::setfill('0')
-                  << static_cast<int>(data[i]) << " ";
+        os << "byte mismatch at index " << i << ": expected "
+           << llvm::format("0x%02x", static_cast<unsigned>(m_expected_bytes[i]))
+           << ", got " << llvm::format("0x%02x", static_cast<unsigned>(data[i]))
+           << " ";
         return false;
       }
     }
@@ -85,13 +97,8 @@ bool ValueMatcher::MatchAndExplain(
     // For Scalar, FileAddress, and LoadAddress - compare m_value
     const Scalar &actual_scalar = val.GetScalar();
     if (actual_scalar != m_expected_scalar) {
-      std::string expected_str, actual_str;
-      llvm::raw_string_ostream expected_os(expected_str);
-      llvm::raw_string_ostream actual_os(actual_str);
-      expected_os << m_expected_scalar;
-      actual_os << actual_scalar;
-      *listener << "scalar value mismatch: expected " << expected_os.str()
-                << ", got " << actual_os.str() << " ";
+      os << "scalar value mismatch: expected " << m_expected_scalar << ", got "
+         << actual_scalar;
       return false;
     }
   }
