@@ -737,6 +737,7 @@ public:
 /// The expression used to compute the size of the expansion is not stored and
 /// is only created at the moment of expansion.
 ///
+/// Example:
 /// \verbatim
 ///   static constexpr std::string_view foo = "1234";
 ///   template for (auto x : foo) {
