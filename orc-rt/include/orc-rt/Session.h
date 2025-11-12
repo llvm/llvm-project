@@ -42,6 +42,8 @@ public:
   // Sessions are not copyable or moveable.
   Session(const Session &) = delete;
   Session &operator=(const Session &) = delete;
+  Session(Session &&) = delete;
+  Session &operator=(Session &&) = delete;
 
   ~Session();
 
