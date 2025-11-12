@@ -3247,7 +3247,7 @@ void ASTWriter::WriteSubmodules(Module *WritingModule, ASTContext *Context) {
 
     // Emit the reachable initializers.
     // The initializer may only be unreachable in reduced BMI.
-    if (Context) {
+    if (Context && !GeneratingReducedBMI) {
       RecordData Inits;
       for (Decl *D : Context->getModuleInitializers(Mod))
         if (wasDeclEmitted(D))
@@ -5827,17 +5827,19 @@ void ASTWriter::WriteSpecialDeclRecords(Sema &SemaRef) {
     Stream.EmitRecord(UNUSED_LOCAL_TYPEDEF_NAME_CANDIDATES,
                       UnusedLocalTypedefNameCandidates);
 
-  // Write the record containing pending implicit instantiations.
-  RecordData PendingInstantiations;
-  for (const auto &I : SemaRef.PendingInstantiations) {
-    if (!wasDeclEmitted(I.first))
-      continue;
+  if (!GeneratingReducedBMI) {
+    // Write the record containing pending implicit instantiations.
+    RecordData PendingInstantiations;
+    for (const auto &I : SemaRef.PendingInstantiations) {
+      if (!wasDeclEmitted(I.first))
+        continue;
 
-    AddDeclRef(I.first, PendingInstantiations);
-    AddSourceLocation(I.second, PendingInstantiations);
+      AddDeclRef(I.first, PendingInstantiations);
+      AddSourceLocation(I.second, PendingInstantiations);
+    }
+    if (!PendingInstantiations.empty())
+      Stream.EmitRecord(PENDING_IMPLICIT_INSTANTIATIONS, PendingInstantiations);
   }
-  if (!PendingInstantiations.empty())
-    Stream.EmitRecord(PENDING_IMPLICIT_INSTANTIATIONS, PendingInstantiations);
 
   // Write the record containing declaration references of Sema.
   RecordData SemaDeclRefs;
