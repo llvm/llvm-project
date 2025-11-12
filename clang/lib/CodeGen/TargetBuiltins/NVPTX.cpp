@@ -415,6 +415,17 @@ static Value *MakeHalfType(unsigned IntrinsicID, unsigned BuiltinID,
   return MakeHalfType(CGF.CGM.getIntrinsic(IntrinsicID), BuiltinID, E, CGF);
 }
 
+static Value *MakeMixedPrecisionFPArithmetic(unsigned IntrinsicID,
+                                             const CallExpr *E,
+                                             CodeGenFunction &CGF) {
+  SmallVector<llvm::Value *, 3> Args;
+  for (unsigned i = 0; i < E->getNumArgs(); ++i) {
+    Args.push_back(CGF.EmitScalarExpr(E->getArg(i)));
+  }
+  return CGF.Builder.CreateCall(
+      CGF.CGM.getIntrinsic(IntrinsicID, {Args[0]->getType()}), Args);
+}
+
 } // namespace
 
 Value *CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID,
@@ -1197,6 +1208,118 @@ Value *CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID,
     return Builder.CreateCall(
         CGM.getIntrinsic(Intrinsic::nvvm_barrier_cta_sync_count),
         {EmitScalarExpr(E->getArg(0)), EmitScalarExpr(E->getArg(1))});
+  case NVPTX::BI__nvvm_add_mixed_f16_f32:
+  case NVPTX::BI__nvvm_add_mixed_bf16_f32:
+    return MakeMixedPrecisionFPArithmetic(Intrinsic::nvvm_add_mixed_f32, E,
+                                          *this);
+  case NVPTX::BI__nvvm_add_mixed_rn_f16_f32:
+  case NVPTX::BI__nvvm_add_mixed_rn_bf16_f32:
+    return MakeMixedPrecisionFPArithmetic(Intrinsic::nvvm_add_mixed_rn_f32, E,
+                                          *this);
+  case NVPTX::BI__nvvm_add_mixed_rz_f16_f32:
+  case NVPTX::BI__nvvm_add_mixed_rz_bf16_f32:
+    return MakeMixedPrecisionFPArithmetic(Intrinsic::nvvm_add_mixed_rz_f32, E,
+                                          *this);
+  case NVPTX::BI__nvvm_add_mixed_rm_f16_f32:
+  case NVPTX::BI__nvvm_add_mixed_rm_bf16_f32:
+    return MakeMixedPrecisionFPArithmetic(Intrinsic::nvvm_add_mixed_rm_f32, E,
+                                          *this);
+  case NVPTX::BI__nvvm_add_mixed_rp_f16_f32:
+  case NVPTX::BI__nvvm_add_mixed_rp_bf16_f32:
+    return MakeMixedPrecisionFPArithmetic(Intrinsic::nvvm_add_mixed_rp_f32, E,
+                                          *this);
+  case NVPTX::BI__nvvm_add_mixed_sat_f16_f32:
+  case NVPTX::BI__nvvm_add_mixed_sat_bf16_f32:
+    return MakeMixedPrecisionFPArithmetic(Intrinsic::nvvm_add_mixed_sat_f32, E,
+                                          *this);
+  case NVPTX::BI__nvvm_add_mixed_rn_sat_f16_f32:
+  case NVPTX::BI__nvvm_add_mixed_rn_sat_bf16_f32:
+    return MakeMixedPrecisionFPArithmetic(Intrinsic::nvvm_add_mixed_rn_sat_f32,
+                                          E, *this);
+  case NVPTX::BI__nvvm_add_mixed_rz_sat_f16_f32:
+  case NVPTX::BI__nvvm_add_mixed_rz_sat_bf16_f32:
+    return MakeMixedPrecisionFPArithmetic(Intrinsic::nvvm_add_mixed_rz_sat_f32,
+                                          E, *this);
+  case NVPTX::BI__nvvm_add_mixed_rm_sat_f16_f32:
+  case NVPTX::BI__nvvm_add_mixed_rm_sat_bf16_f32:
+    return MakeMixedPrecisionFPArithmetic(Intrinsic::nvvm_add_mixed_rm_sat_f32,
+                                          E, *this);
+  case NVPTX::BI__nvvm_add_mixed_rp_sat_f16_f32:
+  case NVPTX::BI__nvvm_add_mixed_rp_sat_bf16_f32:
+    return MakeMixedPrecisionFPArithmetic(Intrinsic::nvvm_add_mixed_rp_sat_f32,
+                                          E, *this);
+  case NVPTX::BI__nvvm_sub_mixed_f16_f32:
+  case NVPTX::BI__nvvm_sub_mixed_bf16_f32:
+    return MakeMixedPrecisionFPArithmetic(Intrinsic::nvvm_sub_mixed_f32, E,
+                                          *this);
+  case NVPTX::BI__nvvm_sub_mixed_rn_f16_f32:
+  case NVPTX::BI__nvvm_sub_mixed_rn_bf16_f32:
+    return MakeMixedPrecisionFPArithmetic(Intrinsic::nvvm_sub_mixed_rn_f32, E,
+                                          *this);
+  case NVPTX::BI__nvvm_sub_mixed_rz_f16_f32:
+  case NVPTX::BI__nvvm_sub_mixed_rz_bf16_f32:
+    return MakeMixedPrecisionFPArithmetic(Intrinsic::nvvm_sub_mixed_rz_f32, E,
+                                          *this);
+  case NVPTX::BI__nvvm_sub_mixed_rm_f16_f32:
+  case NVPTX::BI__nvvm_sub_mixed_rm_bf16_f32:
+    return MakeMixedPrecisionFPArithmetic(Intrinsic::nvvm_sub_mixed_rm_f32, E,
+                                          *this);
+  case NVPTX::BI__nvvm_sub_mixed_rp_f16_f32:
+  case NVPTX::BI__nvvm_sub_mixed_rp_bf16_f32:
+    return MakeMixedPrecisionFPArithmetic(Intrinsic::nvvm_sub_mixed_rp_f32, E,
+                                          *this);
+  case NVPTX::BI__nvvm_sub_mixed_sat_f16_f32:
+  case NVPTX::BI__nvvm_sub_mixed_sat_bf16_f32:
+    return MakeMixedPrecisionFPArithmetic(Intrinsic::nvvm_sub_mixed_sat_f32, E,
+                                          *this);
+  case NVPTX::BI__nvvm_sub_mixed_rn_sat_f16_f32:
+  case NVPTX::BI__nvvm_sub_mixed_rn_sat_bf16_f32:
+    return MakeMixedPrecisionFPArithmetic(Intrinsic::nvvm_sub_mixed_rn_sat_f32,
+                                          E, *this);
+  case NVPTX::BI__nvvm_sub_mixed_rz_sat_f16_f32:
+  case NVPTX::BI__nvvm_sub_mixed_rz_sat_bf16_f32:
+    return MakeMixedPrecisionFPArithmetic(Intrinsic::nvvm_sub_mixed_rz_sat_f32,
+                                          E, *this);
+  case NVPTX::BI__nvvm_sub_mixed_rm_sat_f16_f32:
+  case NVPTX::BI__nvvm_sub_mixed_rm_sat_bf16_f32:
+    return MakeMixedPrecisionFPArithmetic(Intrinsic::nvvm_sub_mixed_rm_sat_f32,
+                                          E, *this);
+  case NVPTX::BI__nvvm_sub_mixed_rp_sat_f16_f32:
+  case NVPTX::BI__nvvm_sub_mixed_rp_sat_bf16_f32:
+    return MakeMixedPrecisionFPArithmetic(Intrinsic::nvvm_sub_mixed_rp_sat_f32,
+                                          E, *this);
+  case NVPTX::BI__nvvm_fma_mixed_rn_f16_f32:
+  case NVPTX::BI__nvvm_fma_mixed_rn_bf16_f32:
+    return MakeMixedPrecisionFPArithmetic(Intrinsic::nvvm_fma_mixed_rn_f32, E,
+                                          *this);
+  case NVPTX::BI__nvvm_fma_mixed_rz_f16_f32:
+  case NVPTX::BI__nvvm_fma_mixed_rz_bf16_f32:
+    return MakeMixedPrecisionFPArithmetic(Intrinsic::nvvm_fma_mixed_rz_f32, E,
+                                          *this);
+  case NVPTX::BI__nvvm_fma_mixed_rm_f16_f32:
+  case NVPTX::BI__nvvm_fma_mixed_rm_bf16_f32:
+    return MakeMixedPrecisionFPArithmetic(Intrinsic::nvvm_fma_mixed_rm_f32, E,
+                                          *this);
+  case NVPTX::BI__nvvm_fma_mixed_rp_f16_f32:
+  case NVPTX::BI__nvvm_fma_mixed_rp_bf16_f32:
+    return MakeMixedPrecisionFPArithmetic(Intrinsic::nvvm_fma_mixed_rp_f32, E,
+                                          *this);
+  case NVPTX::BI__nvvm_fma_mixed_rn_sat_f16_f32:
+  case NVPTX::BI__nvvm_fma_mixed_rn_sat_bf16_f32:
+    return MakeMixedPrecisionFPArithmetic(Intrinsic::nvvm_fma_mixed_rn_sat_f32,
+                                          E, *this);
+  case NVPTX::BI__nvvm_fma_mixed_rz_sat_f16_f32:
+  case NVPTX::BI__nvvm_fma_mixed_rz_sat_bf16_f32:
+    return MakeMixedPrecisionFPArithmetic(Intrinsic::nvvm_fma_mixed_rz_sat_f32,
+                                          E, *this);
+  case NVPTX::BI__nvvm_fma_mixed_rm_sat_f16_f32:
+  case NVPTX::BI__nvvm_fma_mixed_rm_sat_bf16_f32:
+    return MakeMixedPrecisionFPArithmetic(Intrinsic::nvvm_fma_mixed_rm_sat_f32,
+                                          E, *this);
+  case NVPTX::BI__nvvm_fma_mixed_rp_sat_f16_f32:
+  case NVPTX::BI__nvvm_fma_mixed_rp_sat_bf16_f32:
+    return MakeMixedPrecisionFPArithmetic(Intrinsic::nvvm_fma_mixed_rp_sat_f32,
+                                          E, *this);
   default:
     return nullptr;
   }

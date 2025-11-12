@@ -1729,6 +1729,20 @@ multiclass FMA_INST {
 
 defm INT_NVVM_FMA : FMA_INST;
 
+foreach rnd = ["_RN", "_RZ", "_RM", "_RP"] in {
+  foreach sat = ["", "_SAT"] in {
+    foreach type = ["F16", "BF16"] in {
+      def INT_NVVM_FMA # rnd # sat # _F32_ # type : 
+        BasicNVPTXInst<(outs B32:$dst), (ins B16:$a, B16:$b, B32:$c),
+          !tolower(!subst("_", ".", "fma" # rnd # sat # "_f32_" # type)),
+          [(set f32:$dst, 
+           (!cast<Intrinsic>(!tolower("int_nvvm_fma_mixed" # rnd # sat # "_f32")) 
+             !cast<ValueType>(!tolower(type)):$a, !cast<ValueType>(!tolower(type)):$b, f32:$c))]>,
+        Requires<[hasSM<100>, hasPTX<86>]>;
+    }
+  }
+}
+
 //
 // Rcp
 //
@@ -1841,6 +1855,36 @@ def INT_NVVM_ADD_RZ_D : F_MATH_2<"add.rz.f64", B64, B64, B64, int_nvvm_add_rz_d>
 def INT_NVVM_ADD_RM_D : F_MATH_2<"add.rm.f64", B64, B64, B64, int_nvvm_add_rm_d>;
 def INT_NVVM_ADD_RP_D : F_MATH_2<"add.rp.f64", B64, B64, B64, int_nvvm_add_rp_d>;
 
+foreach rnd = ["", "_RN", "_RZ", "_RM", "_RP"] in {
+  foreach sat = ["", "_SAT"] in {
+    foreach type = ["F16", "BF16"] in {
+      def INT_NVVM_ADD # rnd # sat # _F32_ # type : 
+        BasicNVPTXInst<(outs B32:$dst), (ins B16:$a, B32:$b),
+          !tolower(!subst("_", ".", "add" # rnd # sat # "_f32_" # type)),
+          [(set f32:$dst, 
+           (!cast<Intrinsic>(!tolower("int_nvvm_add_mixed" # rnd # sat # "_f32")) 
+             !cast<ValueType>(!tolower(type)):$a, f32:$b))]>,
+        Requires<[hasSM<100>, hasPTX<86>]>;
+    }
+  }
+}
+//
+// Sub
+//
+
+foreach rnd = ["", "_RN", "_RZ", "_RM", "_RP"] in {
+  foreach sat = ["", "_SAT"] in {
+    foreach type = ["F16", "BF16"] in {
+      def INT_NVVM_SUB # rnd # sat # _F32_ # type : 
+        BasicNVPTXInst<(outs B32:$dst), (ins B16:$a, B32:$b),
+          !tolower(!subst("_", ".", "sub" # rnd # sat # "_f32_" # type)),
+          [(set f32:$dst, 
+           (!cast<Intrinsic>(!tolower("int_nvvm_sub_mixed" # rnd # sat # "_f32")) 
+             !cast<ValueType>(!tolower(type)):$a, f32:$b))]>,
+        Requires<[hasSM<100>, hasPTX<86>]>;
+    }
+  }
+}
 //
 // BFIND
 //
