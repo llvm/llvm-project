@@ -105,7 +105,7 @@ static bool checkWaveOps(Intrinsic::ID IID) {
 // This is our proof that the module requires TiledResources
 // to be set, as if check access fully mapped was used.
 bool checkIfStatusIsExtracted(const IntrinsicInst &II) {
-  auto IID = II.getIntrinsicID();
+  [[maybe_unused]] Intrinsic::ID IID = II.getIntrinsicID();
   assert(IID == Intrinsic::dx_resource_load_typedbuffer ||
          IID == Intrinsic::dx_resource_load_rawbuffer &&
              "unexpected intrinsic ID, only dx_resource_load_typedbuffer and "
