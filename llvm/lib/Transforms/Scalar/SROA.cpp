@@ -5213,8 +5213,8 @@ AllocaInst *SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS,
       SliceTy = TypePartitionTy;
 
   // If still not, can we use the largest bitwidth integer type used?
-  // If SliceTy is a non-promotable aggregate, prefer to represent as an integer type
-  // because it's more likely to be promotable.
+  // If SliceTy is a non-promotable aggregate, prefer to represent as an integer
+  // type because it's more likely to be promotable.
   if ((!SliceTy || !SliceTy->isSingleValueType()) && CommonUseTy.second)
     if (DL.getTypeAllocSize(CommonUseTy.second).getFixedValue() >= P.size()) {
       SliceTy = CommonUseTy.second;
