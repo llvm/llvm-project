@@ -10,7 +10,6 @@
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_os_ostream.h"
 #include "llvm/Support/raw_ostream.h"
-#include <iomanip>
 
 using namespace lldb_private;
 

@@ -15,10 +15,7 @@
 #define LLDB_UNITTESTS_EXPRESSION_VALUEMATCHER_H
 
 #include "lldb/Core/Value.h"
-#include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Scalar.h"
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
