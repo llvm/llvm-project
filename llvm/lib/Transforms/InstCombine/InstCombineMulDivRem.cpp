@@ -795,7 +795,8 @@ Instruction *InstCombinerImpl::foldFMulReassoc(BinaryOperator &I) {
         return BinaryOperator::CreateFDivFMF(CC1, X, FMF);
     }
     if (match(Op0, m_FDiv(m_Value(X), m_Constant(C1)))) {
-      // FIXME: This seems like it should also be checking for arcp
+      // Constant folding is not affected by allowReciprocal,
+      // since constants are calculated at compile time.
       // (X / C1) * C --> X * (C / C1)
       Constant *CDivC1 =
           ConstantFoldBinaryOpOperands(Instruction::FDiv, C, C1, DL);
@@ -837,6 +838,12 @@ Instruction *InstCombinerImpl::foldFMulReassoc(BinaryOperator &I) {
                      m_Value(Z)))) {
     BinaryOperator *DivOp = cast<BinaryOperator>(((Z == Op0) ? Op1 : Op0));
     FastMathFlags FMF = I.getFastMathFlags() & DivOp->getFastMathFlags();
+    // Preserve (X / Y) * Z when reciprocal math is enabled to allow backend
+    // rcp instruction emission. Sinking to (X * Z) / Y would prevent this
+    // optimization, alter computation order and potentially affecting
+    // precision.
+    if (FMF.allowReciprocal())
+      return nullptr;
     if (FMF.allowReassoc()) {
       // Sink division: (X / Y) * Z --> (X * Z) / Y
       auto *NewFMul = Builder.CreateFMulFMF(X, Z, FMF);
