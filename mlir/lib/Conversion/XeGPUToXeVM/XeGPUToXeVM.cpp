@@ -590,20 +590,10 @@ public:
   matchAndRewrite(xegpu::CreateMemDescOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
 
-//    auto resTy = op.getMemDesc();
-
-    // Create the result MemRefType with the same shape, element type, and
-    // memory space
-//    auto newResTy = getTypeConverter()->convertType<MemRefType>(resTy);
-
-//    Value zero = arith::ConstantIndexOp::create(rewriter, op.getLoc(), 0);
-//    auto viewOp = memref::ViewOp::create(rewriter, op.getLoc(), newResTy,
-//                                         op.getSource(), zero, ValueRange());
-
     Value baseAddr = memref::ExtractAlignedPointerAsIndexOp::create(
-                      rewriter, op.getLoc(), op.getSource());
-    auto  baseAddr32 = arith::IndexCastUIOp::create(
-                      rewriter, op.getLoc(), rewriter.getI32Type(), baseAddr);
+        rewriter, op.getLoc(), op.getSource());
+    auto baseAddr32 = arith::IndexCastUIOp::create(
+        rewriter, op.getLoc(), rewriter.getI32Type(), baseAddr);
 
     rewriter.replaceOp(op, baseAddr32);
     return success();
@@ -653,18 +643,11 @@ class LoadStoreMatrixToXeVMPattern : public OpConversionPattern<OpType> {
 
     auto mdescTy = cast<xegpu::MemDescType>(mdescVal.getType());
 
-    // Value basePtrLLVM = memref::ExtractAlignedPointerAsIndexOp::create(
-    //    rewriter, loc, basePtrStruct);
-
-    // Convert base pointer (ptr) to i32
-    //Value basePtrI32 = arith::IndexCastUIOp::create(
-    //    rewriter, loc, rewriter.getI32Type(), baseAddr);
-
     Value linearOffset = mdescTy.getLinearOffsets(rewriter, loc, offsets);
     linearOffset = arith::IndexCastUIOp::create(
         rewriter, loc, rewriter.getI32Type(), linearOffset);
-    Value basePtrI32 = addOffsetToBaseAddr(rewriter, loc, baseAddr32, linearOffset,
-                                     elemByteSize);
+    Value basePtrI32 = addOffsetToBaseAddr(rewriter, loc, baseAddr32,
+                                           linearOffset, elemByteSize);
 
     // convert base pointer (i32) to LLVM pointer type
     Value basePtrLLVM =
@@ -1012,12 +995,9 @@ struct ConvertXeGPUToXeVMPass
       return VectorType::get(8, i32Type);
     });
     // Convert MemDescType into i32 for SLM
-     typeConverter.addConversion([&](xegpu::MemDescType type) -> Type {
-    //  Type elemTy = type.getElementType();
-    //  int numElems = type.getNumElements();
-    //  return MemRefType::get(numElems, elemTy, AffineMap(), 3);
-        return IntegerType::get(&getContext(), 32);
-     });
+    typeConverter.addConversion([&](xegpu::MemDescType type) -> Type {
+      return IntegerType::get(&getContext(), 32);
+    });
 
     typeConverter.addConversion([&](MemRefType type) -> Type {
       // Convert MemRefType to i64 type.
