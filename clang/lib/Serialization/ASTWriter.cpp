@@ -4473,8 +4473,7 @@ private:
     // parent of parent. We DON'T remove the enum constant from its parent. So
     // we don't need to care about merging problems here.
     if (auto *ECD = dyn_cast<EnumConstantDecl>(D);
-        ECD && DC.isFileContext() && ECD->getOwningModule() &&
-        ECD->getTopLevelOwningNamedModule()->isNamedModule()) {
+        ECD && DC.isFileContext() && ECD->getTopLevelOwningNamedModule()) {
       if (llvm::all_of(
               DC.noload_lookup(
                   cast<EnumDecl>(ECD->getDeclContext())->getDeclName()),
