@@ -1,4 +1,4 @@
-//===-- ValueMatcher.cpp --------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -97,7 +97,7 @@ bool ValueMatcher::MatchAndExplainImpl(const Value &val,
       }
     }
   } else {
-    // For Scalar, FileAddress, and LoadAddress - compare m_value
+    // For Scalar, FileAddress, and LoadAddress compare m_value.
     const Scalar &actual_scalar = val.GetScalar();
     if (actual_scalar != m_expected_scalar) {
       os << "scalar value mismatch: expected " << m_expected_scalar << ", got "
