@@ -73,11 +73,14 @@ lookupOrCreateBinaryFn(OpBuilder &b, SymbolOpInterface symTable, StringRef name,
 }
 
 /// Rewrite a binary arithmetic operation to an APFloat function call.
-template <typename OpTy, const char *APFloatName>
+template <typename OpTy>
 struct BinaryArithOpToAPFloatConversion final : OpRewritePattern<OpTy> {
-  BinaryArithOpToAPFloatConversion(MLIRContext *context, PatternBenefit benefit,
-                                   SymbolOpInterface symTable)
-      : OpRewritePattern<OpTy>(context, benefit), symTable(symTable) {};
+  BinaryArithOpToAPFloatConversion(MLIRContext *context,
+                                   const char *APFloatName,
+                                   SymbolOpInterface symTable,
+                                   PatternBenefit benefit = 1)
+      : OpRewritePattern<OpTy>(context, benefit), symTable(symTable),
+        APFloatName(APFloatName) {};
 
   LogicalResult matchAndRewrite(OpTy op,
                                 PatternRewriter &rewriter) const override {
@@ -120,6 +123,7 @@ struct BinaryArithOpToAPFloatConversion final : OpRewritePattern<OpTy> {
   }
 
   SymbolOpInterface symTable;
+  const char *APFloatName;
 };
 
 namespace {
@@ -133,17 +137,16 @@ struct ArithToAPFloatConversionPass final
 void ArithToAPFloatConversionPass::runOnOperation() {
   MLIRContext *context = &getContext();
   RewritePatternSet patterns(context);
-  static const char add[] = "add";
-  static const char subtract[] = "subtract";
-  static const char multiply[] = "multiply";
-  static const char divide[] = "divide";
-  static const char remainder[] = "remainder";
-  patterns.add<BinaryArithOpToAPFloatConversion<arith::AddFOp, add>,
-               BinaryArithOpToAPFloatConversion<arith::SubFOp, subtract>,
-               BinaryArithOpToAPFloatConversion<arith::MulFOp, multiply>,
-               BinaryArithOpToAPFloatConversion<arith::DivFOp, divide>,
-               BinaryArithOpToAPFloatConversion<arith::RemFOp, remainder>>(
-      context, 1, getOperation());
+  patterns.add<BinaryArithOpToAPFloatConversion<arith::AddFOp>>(context, "add",
+                                                                getOperation());
+  patterns.add<BinaryArithOpToAPFloatConversion<arith::SubFOp>>(
+      context, "subtract", getOperation());
+  patterns.add<BinaryArithOpToAPFloatConversion<arith::MulFOp>>(
+      context, "multiply", getOperation());
+  patterns.add<BinaryArithOpToAPFloatConversion<arith::DivFOp>>(
+      context, "divide", getOperation());
+  patterns.add<BinaryArithOpToAPFloatConversion<arith::RemFOp>>(
+      context, "remainder", getOperation());
   LogicalResult result = success();
   ScopedDiagnosticHandler scopedHandler(context, [&result](Diagnostic &diag) {
     if (diag.getSeverity() == DiagnosticSeverity::Error) {
