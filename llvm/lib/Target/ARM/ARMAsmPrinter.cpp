@@ -886,8 +886,8 @@ MCSymbol *ARMAsmPrinter::GetARMGVSymbol(const GlobalValue *GV,
                                         unsigned char TargetFlags) {
   const Triple &TT = TM.getTargetTriple();
   if (TT.isOSBinFormatMachO()) {
-    bool IsIndirect = (TargetFlags & ARMII::MO_NONLAZY) &&
-                      ARMSubtarget::isGVIndirectSymbol(TM, GV);
+    bool IsIndirect =
+        (TargetFlags & ARMII::MO_NONLAZY) && getTM().isGVIndirectSymbol(GV);
 
     if (!IsIndirect)
       return getSymbol(GV);
