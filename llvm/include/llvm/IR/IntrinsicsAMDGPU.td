@@ -2482,7 +2482,7 @@ class AMDGPUWaveReduce<LLVMType data_ty = llvm_any_ty> : Intrinsic<
 
 multiclass AMDGPUWaveReduceOps {
   foreach Op =
-      ["umin", "min", "umax", "max", "add", "sub", "and", "or", "xor"] in {
+      ["umin", "fmin", "min", "umax", "fmax", "max", "add", "sub", "and", "or", "xor"] in {
     def Op : AMDGPUWaveReduce;
   }
 }
