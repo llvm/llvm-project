@@ -4087,10 +4087,14 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
             std::errc::illegal_byte_sequence,
             "Invalid PENDING_IMPLICIT_INSTANTIATIONS block");
 
-      for (unsigned I = 0, N = Record.size(); I != N; /* in loop */) {
-        PendingInstantiations.push_back(
-            {ReadDeclID(F, Record, I),
-             ReadSourceLocation(F, Record, I).getRawEncoding()});
+      // For standard C++20 module, we will only reads the instantiations
+      // if it is the main file.
+      if (!F.StandardCXXModule || F.Kind == MK_MainFile) {
+        for (unsigned I = 0, N = Record.size(); I != N; /* in loop */) {
+          PendingInstantiations.push_back(
+              {ReadDeclID(F, Record, I),
+               ReadSourceLocation(F, Record, I).getRawEncoding()});
+        }
       }
       break;
 
@@ -6438,10 +6442,13 @@ llvm::Error ASTReader::ReadSubmoduleBlock(ModuleFile &F,
     case SUBMODULE_INITIALIZERS: {
       if (!ContextObj)
         break;
-      SmallVector<GlobalDeclID, 16> Inits;
-      for (unsigned I = 0; I < Record.size(); /*in loop*/)
-        Inits.push_back(ReadDeclID(F, Record, I));
-      ContextObj->addLazyModuleInitializers(CurrentModule, Inits);
+      // Standard C++ module has its own way to initialize variables.
+      if (!F.StandardCXXModule || F.Kind == MK_MainFile) {
+        SmallVector<GlobalDeclID, 16> Inits;
+        for (unsigned I = 0; I < Record.size(); /*in loop*/)
+          Inits.push_back(ReadDeclID(F, Record, I));
+        ContextObj->addLazyModuleInitializers(CurrentModule, Inits);
+      }
       break;
     }
 
