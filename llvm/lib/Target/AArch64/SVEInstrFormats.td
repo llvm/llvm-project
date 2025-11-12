@@ -11143,6 +11143,12 @@ class sve2_fp8_mmla<bit opc, ZPRRegOp dst_ty, string mnemonic>
   let Uses = [FPMR, FPCR];
 }
 
+multiclass sve2_fp8_fmmla<bits<1> opc, ZPRRegOp zprty, string mnemonic, ValueType ResVT> {
+  def NAME : sve2_fp8_mmla<opc, zprty, mnemonic>;
+  def : Pat<(ResVT (int_aarch64_sve_fmmla ResVT:$acc, nxv16i8:$zn, nxv16i8:$zm)),
+            (!cast<Instruction>(NAME) $acc, $zn, $zm)>;
+}
+
 class sve_fp8_dot_indexed<bits<4> opc, ZPRRegOp dst_ty, Operand iop_ty, string mnemonic>
 : I<(outs dst_ty:$Zda), (ins dst_ty:$_Zda, ZPR8:$Zn, ZPR3b8:$Zm, iop_ty:$iop),
     mnemonic, "\t$Zda, $Zn, $Zm$iop", "", []>, Sched<[]> {

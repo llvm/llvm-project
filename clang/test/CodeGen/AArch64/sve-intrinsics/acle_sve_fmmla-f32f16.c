@@ -10,24 +10,24 @@
 #include <arm_sve.h>
 
 #ifdef SVE_OVERLOADED_FORMS
-// A simple used,unused... macro, long enough to represent any SVE builtin.
-#define SVE_ACLE_FUNC(A1, A2_UNUSED, A3, A4_UNUSED) A1##A3
+#define SVE_ACLE_FUNC(A1, A3) A1##A3
 #else
-#define SVE_ACLE_FUNC(A1, A2, A3, A4) A1##A2##A3##A4
+#define SVE_ACLE_FUNC(A1, A2) A1##A2
 #endif
+
 
 // CHECK-LABEL: define dso_local <vscale x 4 x float> @test_f32f16(
 // CHECK-SAME: <vscale x 4 x float> [[ACC:%.*]], <vscale x 8 x half> [[A:%.*]], <vscale x 8 x half> [[B:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x float> @llvm.aarch64.sve.fmmla.f16f32(<vscale x 4 x float> [[ACC]], <vscale x 8 x half> [[A]], <vscale x 8 x half> [[B]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x float> @llvm.aarch64.sve.fmmla.nxv4f32.nxv8f16(<vscale x 4 x float> [[ACC]], <vscale x 8 x half> [[A]], <vscale x 8 x half> [[B]])
 // CHECK-NEXT:    ret <vscale x 4 x float> [[TMP0]]
 //
 // CPP-CHECK-LABEL: define dso_local <vscale x 4 x float> @_Z11test_f32f16u13__SVFloat32_tu13__SVFloat16_tS0_(
 // CPP-CHECK-SAME: <vscale x 4 x float> [[ACC:%.*]], <vscale x 8 x half> [[A:%.*]], <vscale x 8 x half> [[B:%.*]]) #[[ATTR0:[0-9]+]] {
 // CPP-CHECK-NEXT:  [[ENTRY:.*:]]
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x float> @llvm.aarch64.sve.fmmla.f16f32(<vscale x 4 x float> [[ACC]], <vscale x 8 x half> [[A]], <vscale x 8 x half> [[B]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x float> @llvm.aarch64.sve.fmmla.nxv4f32.nxv8f16(<vscale x 4 x float> [[ACC]], <vscale x 8 x half> [[A]], <vscale x 8 x half> [[B]])
 // CPP-CHECK-NEXT:    ret <vscale x 4 x float> [[TMP0]]
 //
 svfloat32_t test_f32f16(svfloat32_t acc, svfloat16_t a, svfloat16_t b) {
-  return SVE_ACLE_FUNC(svmmla, _f32_f16, , )(acc, a, b);
+  return SVE_ACLE_FUNC(svmmla, _f32_f16)(acc, a, b);
 }
