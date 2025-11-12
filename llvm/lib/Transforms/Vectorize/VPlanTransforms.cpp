@@ -4168,7 +4168,7 @@ static bool canNarrowLoad(VPWidenRecipe *WideMember0, unsigned OpIdx,
 static bool isConsecutiveInterleaveGroup(VPInterleaveRecipe *InterleaveR,
                                          unsigned VF, VPTypeAnalysis &TypeInfo,
                                          unsigned VectorRegWidth) {
-  if (!InterleaveR || InterleaveR->getMask())
+  if (!InterleaveR)
     return false;
 
   Type *GroupElementTy = nullptr;
@@ -4364,7 +4364,8 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
     auto *SI =
         cast<StoreInst>(StoreGroup->getInterleaveGroup()->getInsertPos());
     auto *S = new VPWidenStoreRecipe(
-        *SI, StoreGroup->getAddr(), Res, nullptr, /*Consecutive=*/true,
+        *SI, StoreGroup->getAddr(), Res, StoreGroup->getMask(),
+        /*Consecutive=*/true,
         /*Reverse=*/false, {}, StoreGroup->getDebugLoc());
     S->insertBefore(StoreGroup);
     StoreGroup->eraseFromParent();
