@@ -2,6 +2,7 @@
 
 #include <ptrcheck.h>
 #include <stddef.h>
+#include <stdint.h>
 
 namespace std {
 template <typename T> struct span {
@@ -24,6 +25,10 @@ struct cb_multi {
   int *__counted_by(m * n) p;
   size_t m;
   size_t n;
+};
+
+struct cb_nested {
+  cb nested;
 };
 
 // Simple pointer and count
@@ -118,6 +123,16 @@ void good_null_loop_if(int *__counted_by(count) p, int count) {
   }
 }
 
+void good_size_bytes_char(char *__counted_by(count) p, size_t count, std::span<char> sp) {
+  p = sp.data();
+  count = sp.size_bytes();
+}
+
+void good_size_bytes_void(void *__sized_by(size) p, size_t size, std::span<uint8_t> sp) {
+  p = sp.data();
+  size = sp.size_bytes();
+}
+
 // Simple pointer and count in struct
 
 void good_struct_self(cb *c) {
@@ -166,6 +181,54 @@ void good_struct_self_loop(cb *c) {
     c->count = c->count;
   }
 }
+
+void good_struct_nested_span(cb_nested *n, std::span<int> sp) {
+  n->nested.p = sp.data();
+  n->nested.count = sp.size();
+}
+
+void bad_struct_nested_span(cb_nested *n, std::span<int> sp, size_t unrelated_size) {
+  n->nested.p = sp.data(); // expected-warning{{unsafe assignment to count-attributed pointer}}
+  n->nested.count = unrelated_size;
+}
+
+class struct_test {
+  int *__counted_by(count_) data_;
+  size_t count_;
+  cb cb_;
+  cb_nested nested_;
+  cb *p_cb_;
+
+  void set_data(std::span<int> sp) {
+    data_ = sp.data();
+    count_ = sp.size();
+  }
+
+  void bad_set_data(std::span<int> sp) {
+    data_ = sp.data(); // expected-warning{{unsafe assignment to count-attributed pointer}}
+    count_ = 42;
+  }
+
+  void set_cb(std::span<int> sp) {
+    cb_.p = sp.data();
+    cb_.count = sp.size();
+  }
+
+  void bad_set_cb(std::span<int> sp) {
+    cb_.p = sp.data(); // expected-warning{{unsafe assignment to count-attributed pointer}}
+    cb_.count = 42;
+  }
+
+  void set_nested(std::span<int> sp) {
+    nested_.nested.p = sp.data();
+    nested_.nested.count = sp.size();
+  }
+
+  void set_p_cb(std::span<int> sp) {
+    p_cb_->p = sp.data();
+    p_cb_->count = sp.size();
+  }
+};
 
 // Pointer with multiple counts
 
@@ -248,6 +311,16 @@ bool good_multicount_struct_realistic(cb_multi *cbm, std::span<int> sp, size_t s
   cbm->n = stride;
   return true;
 }
+
+struct multicount_struct_test {
+  cb_multi multi_;
+
+  void set_multi(std::span<int> sp, size_t a, size_t b) {
+    multi_.p = sp.first(a * b).data();
+    multi_.m = a;
+    multi_.n = b;
+  }
+};
 
 // Multiple pointers
 
@@ -551,6 +624,37 @@ void missing_struct_unrelated(cb *c, cb *d) {
   c->p = nullptr; // expected-warning{{bounds-attributed group requires assigning 'count, p', assignments to 'count' missing}}
   d->count = 0;   // expected-warning{{bounds-attributed group requires assigning 'count, p', assignments to 'p' missing}}
 }
+
+void missing_struct_nested_ptr(cb_nested *c) {
+  c->nested.count = 0; // expected-warning{{bounds-attributed group requires assigning 'count, p', assignments to 'p' missing}}
+}
+
+void missing_struct_nested_unrelated(cb_nested *c, cb_nested *d) {
+  c->nested.p = nullptr; // expected-warning{{bounds-attributed group requires assigning 'count, p', assignments to 'count' missing}}
+  d->nested.count = 0;   // expected-warning{{bounds-attributed group requires assigning 'count, p', assignments to 'p' missing}}
+}
+
+struct missing_struct_test {
+  cb cb_;
+  cb_nested nested_;
+
+  void set_cb_missing_ptr(std::span<int> sp) {
+    cb_.count = sp.size(); // expected-warning{{bounds-attributed group requires assigning 'count, p', assignments to 'p' missing}}
+  }
+
+  void set_cb_missing_count(std::span<int> sp) {
+    cb_.p = sp.data(); // expected-warning{{bounds-attributed group requires assigning 'count, p', assignments to 'count' missing}}
+  }
+
+  void set_nested_missing_ptr(std::span<int> sp) {
+    nested_.nested.count = sp.size(); // expected-warning{{bounds-attributed group requires assigning 'count, p', assignments to 'p' missing}}
+  }
+
+  void set_missing_unrelated(std::span<int> sp) {
+    cb_.p = sp.data();                // expected-warning{{bounds-attributed group requires assigning 'count, p', assignments to 'count' missing}}
+    nested_.nested.count = sp.size(); // expected-warning{{bounds-attributed group requires assigning 'count, p', assignments to 'p' missing}}
+  }
+};
 
 // Duplicated assignments
 

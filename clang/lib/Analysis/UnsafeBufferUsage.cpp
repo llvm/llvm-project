@@ -5385,8 +5385,10 @@ static bool isSameMemberBase(const Expr *Self, const Expr *Other) {
 
     const auto *SelfICE = dyn_cast<ImplicitCastExpr>(Self);
     const auto *OtherICE = dyn_cast<ImplicitCastExpr>(Other);
-    if (SelfICE && OtherICE && SelfICE->getCastKind() == CK_LValueToRValue &&
-        OtherICE->getCastKind() == CK_LValueToRValue) {
+    if (SelfICE && OtherICE &&
+        SelfICE->getCastKind() == OtherICE->getCastKind() &&
+        (SelfICE->getCastKind() == CK_LValueToRValue ||
+         SelfICE->getCastKind() == CK_UncheckedDerivedToBase)) {
       Self = SelfICE->getSubExpr();
       Other = OtherICE->getSubExpr();
     }
@@ -5395,6 +5397,12 @@ static bool isSameMemberBase(const Expr *Self, const Expr *Other) {
     const auto *OtherDRE = dyn_cast<DeclRefExpr>(Other);
     if (SelfDRE && OtherDRE)
       return SelfDRE->getDecl() == OtherDRE->getDecl();
+
+    if (isa<CXXThisExpr>(Self) && isa<CXXThisExpr>(Other)) {
+      // `Self` and `Other` should be evaluated at the same state so `this` must
+      // mean the same thing for both:
+      return true;
+    }
 
     const auto *SelfME = dyn_cast<MemberExpr>(Self);
     const auto *OtherME = dyn_cast<MemberExpr>(Other);
