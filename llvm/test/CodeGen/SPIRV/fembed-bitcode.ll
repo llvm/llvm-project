@@ -3,7 +3,7 @@
 ; RUN: llc -verify-machineinstrs -mtriple=spirv64-amd-amdhsa %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc -mtriple=spirv64-amd-amdhsa %s -o - -filetype=obj | spirv-val %}
 ;
-; Verify that we can lower the embeded module and cmdline
+; Verify that we can lower the embedded module and cmdline.
 
 @llvm.embedded.module = private addrspace(1) constant [4 x i8] c"BC\C0\DE", section ".llvmbc", align 1
 @llvm.cmdline = private addrspace(1) constant [5 x i8] c"-cc1\00", section ".llvmcmd", align 1
