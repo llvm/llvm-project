@@ -859,11 +859,13 @@ def testElementwiseOp():
 
         print(module)
 
+
 @run
 def testReduceOp():
     with Context(), Location.unknown():
         f32 = T.f32()
         tensor_type = T.tensor(10, f32)
+
         @builtin.module
         def module():
             @func.func(tensor_type)
@@ -886,6 +888,7 @@ def testReduceOp():
 
         print(module)
 
+
 # CHECK-LABEL:   func.func @reduce_op(
 # CHECK-SAME:      %[[ARG0:.*]]: tensor<10xf32>) -> f32 {
 # CHECK:           %[[CONSTANT_0:.*]] = arith.constant 1.000000e+00 : f32
@@ -895,16 +898,19 @@ def testReduceOp():
 # CHECK:           return %[[EXTRACT_0]] : f32
 # CHECK:         }
 
+
 @run
 def testMapOp():
     with Context(), Location.unknown():
         f32 = T.f32()
         tensor_type = T.tensor(10, f32)
+
         @builtin.module
         def module():
             @func.func(tensor_type)
             def map_op(input):
                 empty = tensor.empty(tensor_type.shape, f32)
+
                 @linalg.map(
                     result=[tensor_type],
                     inputs=[input, input],
@@ -917,6 +923,7 @@ def testMapOp():
 
         module.verify()
         print(module)
+
 
 # CHECK-LABEL:   func.func @map_op(
 # CHECK-SAME:                      %[[ARG0:.*]]: tensor<10xf32>) -> tensor<10xf32> {
