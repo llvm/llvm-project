@@ -64,7 +64,6 @@ CGOPT_EXP(uint64_t, LargeDataThreshold)
 CGOPT(ExceptionHandling, ExceptionModel)
 CGOPT_EXP(CodeGenFileType, FileType)
 CGOPT(FramePointerKind, FramePointerUsage)
-CGOPT(bool, EnableUnsafeFPMath)
 CGOPT(bool, EnableNoInfsFPMath)
 CGOPT(bool, EnableNoNaNsFPMath)
 CGOPT(bool, EnableNoSignedZerosFPMath)
@@ -211,6 +210,9 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
           clEnumValN(FramePointerKind::All, "all",
                      "Disable frame pointer elimination"),
           clEnumValN(FramePointerKind::NonLeaf, "non-leaf",
+                     "Disable frame pointer elimination for non-leaf frame but "
+                     "reserve the register in leaf functions"),
+          clEnumValN(FramePointerKind::NonLeafNoReserve, "non-leaf-no-reserve",
                      "Disable frame pointer elimination for non-leaf frame"),
           clEnumValN(FramePointerKind::Reserved, "reserved",
                      "Enable frame pointer elimination, but reserve the frame "
@@ -218,12 +220,6 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
           clEnumValN(FramePointerKind::None, "none",
                      "Enable frame pointer elimination")));
   CGBINDOPT(FramePointerUsage);
-
-  static cl::opt<bool> EnableUnsafeFPMath(
-      "enable-unsafe-fp-math",
-      cl::desc("Enable optimizations that may decrease FP precision"),
-      cl::init(false));
-  CGBINDOPT(EnableUnsafeFPMath);
 
   static cl::opt<bool> EnableNoInfsFPMath(
       "enable-no-infs-fp-math",
@@ -552,7 +548,6 @@ TargetOptions
 codegen::InitTargetOptionsFromCodeGenFlags(const Triple &TheTriple) {
   TargetOptions Options;
   Options.AllowFPOpFusion = getFuseFPOps();
-  Options.UnsafeFPMath = getEnableUnsafeFPMath();
   Options.NoInfsFPMath = getEnableNoInfsFPMath();
   Options.NoNaNsFPMath = getEnableNoNaNsFPMath();
   Options.NoSignedZerosFPMath = getEnableNoSignedZerosFPMath();
@@ -695,6 +690,8 @@ void codegen::setFunctionAttributes(StringRef CPU, StringRef Features,
       NewAttrs.addAttribute("frame-pointer", "all");
     else if (getFramePointerUsage() == FramePointerKind::NonLeaf)
       NewAttrs.addAttribute("frame-pointer", "non-leaf");
+    else if (getFramePointerUsage() == FramePointerKind::NonLeafNoReserve)
+      NewAttrs.addAttribute("frame-pointer", "non-leaf-no-reserve");
     else if (getFramePointerUsage() == FramePointerKind::Reserved)
       NewAttrs.addAttribute("frame-pointer", "reserved");
     else if (getFramePointerUsage() == FramePointerKind::None)
@@ -706,7 +703,6 @@ void codegen::setFunctionAttributes(StringRef CPU, StringRef Features,
   if (getStackRealign())
     NewAttrs.addAttribute("stackrealign");
 
-  HANDLE_BOOL_ATTR(EnableUnsafeFPMathView, "unsafe-fp-math");
   HANDLE_BOOL_ATTR(EnableNoInfsFPMathView, "no-infs-fp-math");
   HANDLE_BOOL_ATTR(EnableNoNaNsFPMathView, "no-nans-fp-math");
   HANDLE_BOOL_ATTR(EnableNoSignedZerosFPMathView, "no-signed-zeros-fp-math");

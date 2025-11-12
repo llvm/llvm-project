@@ -159,6 +159,13 @@ public:
                                       bool isConstant = false,
                                       mlir::Operation *insertPoint = nullptr);
 
+  /// Add a global constructor or destructor to the module.
+  /// The priority is optional, if not specified, the default priority is used.
+  void addGlobalCtor(cir::FuncOp ctor,
+                     std::optional<int> priority = std::nullopt);
+  void addGlobalDtor(cir::FuncOp dtor,
+                     std::optional<int> priority = std::nullopt);
+
   bool shouldZeroInitPadding() const {
     // In C23 (N3096) $6.7.10:
     // """
@@ -273,6 +280,8 @@ public:
     }
     llvm_unreachable("unknown visibility!");
   }
+
+  llvm::DenseMap<mlir::Attribute, cir::GlobalOp> constantStringMap;
 
   /// Return a constant array for the given string.
   mlir::Attribute getConstantArrayFromStringLiteral(const StringLiteral *e);
@@ -420,6 +429,10 @@ public:
   void setFunctionAttributes(GlobalDecl gd, cir::FuncOp f,
                              bool isIncompleteFunction, bool isThunk);
 
+  /// Set extra attributes (inline, etc.) for a function.
+  void setCIRFunctionAttributesForDefinition(const clang::FunctionDecl *fd,
+                                             cir::FuncOp f);
+
   void emitGlobalDefinition(clang::GlobalDecl gd,
                             mlir::Operation *op = nullptr);
   void emitGlobalFunctionDefinition(clang::GlobalDecl gd, mlir::Operation *op);
@@ -472,6 +485,19 @@ public:
   cir::FuncOp createCIRFunction(mlir::Location loc, llvm::StringRef name,
                                 cir::FuncType funcType,
                                 const clang::FunctionDecl *funcDecl);
+
+  /// Create a CIR function with builtin attribute set.
+  cir::FuncOp createCIRBuiltinFunction(mlir::Location loc, llvm::StringRef name,
+                                       cir::FuncType ty,
+                                       const clang::FunctionDecl *fd);
+
+  cir::FuncOp createRuntimeFunction(cir::FuncType ty, llvm::StringRef name,
+                                    mlir::ArrayAttr = {}, bool isLocal = false,
+                                    bool assumeConvergent = false);
+
+  static constexpr const char *builtinCoroId = "__builtin_coro_id";
+  static constexpr const char *builtinCoroAlloc = "__builtin_coro_alloc";
+  static constexpr const char *builtinCoroBegin = "__builtin_coro_begin";
 
   /// Given a builtin id for a function like "__builtin_fabsf", return a
   /// Function* for "fabsf".

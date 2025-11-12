@@ -76,8 +76,10 @@ public:
 };
 
 class BogusTargetInstrInfo : public TargetInstrInfo {
+  BogusRegisterInfo RegInfo;
+
 public:
-  BogusTargetInstrInfo() : TargetInstrInfo() {}
+  BogusTargetInstrInfo() : TargetInstrInfo(RegInfo) {}
 };
 
 class BogusSubtarget : public TargetSubtargetInfo {
@@ -86,7 +88,7 @@ public:
       : TargetSubtargetInfo(Triple(""), "", "", "", {}, {}, {}, nullptr,
                             nullptr, nullptr, nullptr, nullptr, nullptr),
         FL(), TL(TM) {}
-  ~BogusSubtarget() override {}
+  ~BogusSubtarget() override = default;
 
   const TargetFrameLowering *getFrameLowering() const override { return &FL; }
 
@@ -117,7 +119,7 @@ public:
             Reloc::Static, CodeModel::Small, CodeGenOptLevel::Default),
         ST(*this) {}
 
-  ~BogusTargetMachine() override {}
+  ~BogusTargetMachine() override = default;
 
   const TargetSubtargetInfo *getSubtargetImpl(const Function &) const override {
     return &ST;

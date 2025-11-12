@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -finclude-default-header -x hlsl -triple dxil-pc-shadermodel6.3-library %s -fnative-half-type -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -finclude-default-header -x hlsl -triple dxil-pc-shadermodel6.3-library %s -fnative-half-type -fnative-int16-type -emit-llvm -o - | FileCheck %s
 
 // CHECK-LABEL: test_lit_half
 // CHECK: %cmp.i = fcmp reassoc nnan ninf nsz arcp afn olt half %{{.*}}, 0xH0000

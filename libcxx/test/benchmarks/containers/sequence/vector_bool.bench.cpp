@@ -9,6 +9,17 @@
 #include <benchmark/benchmark.h>
 #include <vector>
 
+static void BM_vector_bool_copy_ctor(benchmark::State& state) {
+  std::vector<bool> vec(100, true);
+
+  for (auto _ : state) {
+    benchmark::DoNotOptimize(vec);
+    std::vector<bool> vec2(vec);
+    benchmark::DoNotOptimize(vec2);
+  }
+}
+BENCHMARK(BM_vector_bool_copy_ctor);
+
 static void BM_vector_bool_size_ctor(benchmark::State& state) {
   for (auto _ : state) {
     std::vector<bool> vec(100, true);

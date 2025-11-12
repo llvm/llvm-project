@@ -728,7 +728,7 @@ func.func @tensor.concat_dynamic_nonconcat_dim(%f: tensor<?x?xf32>, %g: tensor<?
 // CHECK-DAG:     %[[ALLOC:.*]] = memref.alloc(%[[M]], %[[N]]) {{.*}} : memref<?x3x?xf32>
 // CHECK:         %[[ALLOC_T:.*]] = bufferization.to_tensor %[[ALLOC]]
 // CHECK:         %[[MAPPED:.*]] = linalg.map outs(%[[ALLOC_T]] : tensor<?x3x?xf32>)
-// CHECK:         () {
+// CHECK:         (%[[INIT:.*]]: f32) {
 // CHECK:           linalg.yield %[[F]] : f32
 // CHECK:         }
 // CHECK:         return %[[MAPPED]] : tensor<?x3x?xf32>

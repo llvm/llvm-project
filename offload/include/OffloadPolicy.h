@@ -22,8 +22,6 @@ enum kmp_target_offload_kind_t {
   tgt_mandatory = 2
 };
 
-extern "C" int __kmpc_get_target_offload(void) __attribute__((weak));
-
 class OffloadPolicy {
 
   OffloadPolicy(PluginManager &PM) {

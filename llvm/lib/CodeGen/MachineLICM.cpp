@@ -932,12 +932,11 @@ void MachineLICMImpl::InitRegPressure(MachineBasicBlock *BB) {
 void MachineLICMImpl::UpdateRegPressure(const MachineInstr *MI,
                                         bool ConsiderUnseenAsDef) {
   auto Cost = calcRegisterCost(MI, /*ConsiderSeen=*/true, ConsiderUnseenAsDef);
-  for (const auto &RPIdAndCost : Cost) {
-    unsigned Class = RPIdAndCost.first;
-    if (static_cast<int>(RegPressure[Class]) < -RPIdAndCost.second)
+  for (const auto &[Class, Weight] : Cost) {
+    if (static_cast<int>(RegPressure[Class]) < -Weight)
       RegPressure[Class] = 0;
     else
-      RegPressure[Class] += RPIdAndCost.second;
+      RegPressure[Class] += Weight;
   }
 }
 
@@ -1215,11 +1214,10 @@ bool MachineLICMImpl::IsCheapInstruction(MachineInstr &MI) const {
 /// given cost matrix can cause high register pressure.
 bool MachineLICMImpl::CanCauseHighRegPressure(
     const SmallDenseMap<unsigned, int> &Cost, bool CheapInstr) {
-  for (const auto &RPIdAndCost : Cost) {
-    if (RPIdAndCost.second <= 0)
+  for (const auto &[Class, Weight] : Cost) {
+    if (Weight <= 0)
       continue;
 
-    unsigned Class = RPIdAndCost.first;
     int Limit = RegLimit[Class];
 
     // Don't hoist cheap instructions if they would increase register pressure,
@@ -1228,7 +1226,7 @@ bool MachineLICMImpl::CanCauseHighRegPressure(
       return true;
 
     for (const auto &RP : BackTrace)
-      if (static_cast<int>(RP[Class]) + RPIdAndCost.second >= Limit)
+      if (static_cast<int>(RP[Class]) + Weight >= Limit)
         return true;
   }
 
@@ -1246,8 +1244,8 @@ void MachineLICMImpl::UpdateBackTraceRegPressure(const MachineInstr *MI) {
 
   // Update register pressure of blocks from loop header to current block.
   for (auto &RP : BackTrace)
-    for (const auto &RPIdAndCost : Cost)
-      RP[RPIdAndCost.first] += RPIdAndCost.second;
+    for (const auto &[Class, Weight] : Cost)
+      RP[Class] += Weight;
 }
 
 /// Return true if it is potentially profitable to hoist the given loop
@@ -1401,7 +1399,7 @@ MachineInstr *MachineLICMImpl::ExtractHoistableLoad(MachineInstr *MI,
   if (NewOpc == 0) return nullptr;
   const MCInstrDesc &MID = TII->get(NewOpc);
   MachineFunction &MF = *MI->getMF();
-  const TargetRegisterClass *RC = TII->getRegClass(MID, LoadRegIndex, TRI);
+  const TargetRegisterClass *RC = TII->getRegClass(MID, LoadRegIndex);
   // Ok, we're unfolding. Create a temporary register and do the unfold.
   Register Reg = MRI->createVirtualRegister(RC);
 

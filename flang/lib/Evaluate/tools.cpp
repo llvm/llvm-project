@@ -1153,6 +1153,18 @@ bool HasCUDAImplicitTransfer(const Expr<SomeType> &expr) {
   return (hasConstant || (hostSymbols.size() > 0)) && deviceSymbols.size() > 0;
 }
 
+bool IsCUDADeviceSymbol(const Symbol &sym) {
+  if (const auto *details =
+          sym.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()) {
+    return details->cudaDataAttr() &&
+        *details->cudaDataAttr() != common::CUDADataAttr::Pinned;
+  } else if (const auto *details =
+                 sym.GetUltimate().detailsIf<semantics::AssocEntityDetails>()) {
+    return GetNbOfCUDADeviceSymbols(details->expr()) > 0;
+  }
+  return false;
+}
+
 // HasVectorSubscript()
 struct HasVectorSubscriptHelper
     : public AnyTraverse<HasVectorSubscriptHelper, bool,
@@ -1198,6 +1210,20 @@ bool HasConstant(const Expr<SomeType> &expr) {
   return HasConstantHelper{}(expr);
 }
 
+// HasStructureComponent()
+struct HasStructureComponentHelper
+    : public AnyTraverse<HasStructureComponentHelper, bool, false> {
+  using Base = AnyTraverse<HasStructureComponentHelper, bool, false>;
+  HasStructureComponentHelper() : Base(*this) {}
+  using Base::operator();
+
+  bool operator()(const Component &) const { return true; }
+};
+
+bool HasStructureComponent(const Expr<SomeType> &expr) {
+  return HasStructureComponentHelper{}(expr);
+}
+
 parser::Message *AttachDeclaration(
     parser::Message &message, const Symbol &symbol) {
   const Symbol *unhosted{&symbol};
@@ -1209,6 +1235,15 @@ parser::Message *AttachDeclaration(
     message.Attach(use->location(),
         "'%s' is USE-associated with '%s' in module '%s'"_en_US, symbol.name(),
         unhosted->name(), GetUsedModule(*use).name());
+  } else if (const auto *common{
+                 unhosted->detailsIf<semantics::CommonBlockDetails>()}) {
+    parser::CharBlock at{unhosted->name()};
+    if (at.empty()) { // blank COMMON, with or without //
+      at = common->sourceLocation();
+    }
+    if (!at.empty()) {
+      message.Attach(at, "Declaration of /%s/"_en_US, unhosted->name());
+    }
   } else {
     message.Attach(
         unhosted->name(), "Declaration of '%s'"_en_US, unhosted->name());
