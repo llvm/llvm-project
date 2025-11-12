@@ -5500,8 +5500,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy
 OpenMPIRBuilder::applyDynamicWorkshareLoop(DebugLoc DL, CanonicalLoopInfo *CLI,
                                            InsertPointTy AllocaIP,
                                            OMPScheduleType SchedType,
-                                           bool NeedsBarrier, Value *Chunk,
-                                           Value *DistScheduleChunk) {
+                                           bool NeedsBarrier, Value *Chunk) {
   assert(CLI->isValid() && "Requires a valid canonical loop");
   assert(!isConflictIP(AllocaIP, CLI->getPreheaderIP()) &&
          "Require dedicated allocate IP");

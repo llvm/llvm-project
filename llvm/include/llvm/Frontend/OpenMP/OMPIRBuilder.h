@@ -1174,15 +1174,14 @@ private:
   ///                     the loop.
   /// \param Chunk    The size of loop chunk considered as a unit when
   ///                 scheduling. If \p nullptr, defaults to 1.
-  /// \param DistScheduleChunk    The size of dist_shcedule chunk considered as
-  /// a unit when
-  ///                 scheduling. If \p nullptr, defaults to 1.
   ///
   /// \returns Point where to insert code after the workshare construct.
-  InsertPointOrErrorTy applyDynamicWorkshareLoop(
-      DebugLoc DL, CanonicalLoopInfo *CLI, InsertPointTy AllocaIP,
-      omp::OMPScheduleType SchedType, bool NeedsBarrier, Value *Chunk = nullptr,
-      Value *DistScheduleChunk = nullptr);
+  InsertPointOrErrorTy applyDynamicWorkshareLoop(DebugLoc DL,
+                                                 CanonicalLoopInfo *CLI,
+                                                 InsertPointTy AllocaIP,
+                                                 omp::OMPScheduleType SchedType,
+                                                 bool NeedsBarrier,
+                                                 Value *Chunk = nullptr);
 
   /// Create alternative version of the loop to support if clause
   ///
