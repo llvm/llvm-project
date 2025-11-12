@@ -3546,7 +3546,7 @@ bool isDPALU_DPP(const MCInstrDesc &OpDesc, const MCInstrInfo &MII,
 }
 
 unsigned getLdsDwGranularity(const MCSubtargetInfo &ST) {
-  return ST.hasFeature(AMDGPU::FeatureAddressableLocalMemorySize327680) ? 256
+  return ST.hasFeature(AMDGPU::FeatureAddressableLocalMemorySize327680) ? 512
                                                                         : 128;
 }
 
