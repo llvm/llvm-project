@@ -1916,6 +1916,40 @@ def integer_reassoc_combines: GICombineGroup<[
   AMinusC1PlusC2
 ]>;
 
+// fold (A+shl(0-B, C)) -> (A-shl(B, C))
+def APlusShl0MinusBC: GICombineRule<
+   (defs root:$root, build_fn_matchinfo:$matchinfo),
+   // my goal: root = G_ADD x, (G_SHL (G_SUB 0, y), n)
+   (match 
+    (G_ADD $root, $x, $lhs):$root, // bc the root we want to rewrite.
+      (G_SHL $lhs, $neg, $n),
+      (G_SUB $neg, $zero, $y),
+      (G_CONSTANT $zero, $zero_imm),
+   [{ return Helper.matchAPlusShl0MinusBC(*${root}, ${matchinfo}); }]),
+   (apply [{ Helper.applyAPlusShl0MinusBC(*${root}, ${matchinfo}); }])>;
+
+// Instead on minus also match on G_NEG
+def APlusShl0NegBC :
+  GICombineRule<
+    (defs root:$root, build_fn_matchinfo:$$matchinfo),
+    (match
+      (G_ADD $root, $x, $lhs):$root,
+      (G_SHL $lhs, $neg, $n),
+      (G_NEG $neg, $y),
+      [{
+        return Helper.matchAPlusShl0NegBC(*${root}, ${$matchinfo});
+      }]
+    ),
+    (apply [{
+      Helper.applyAPlusShl0NegBC(*${root}, ${$matchinfo});
+    }])
+  >;
+
+def fold_add_sub_mask: GICombineGroup<[
+  APlusShl0MinusBC,
+  APlusShl0NegBC
+]>;
+
 def freeze_of_non_undef_non_poison : GICombineRule<
    (defs root:$root),
    (match (G_FREEZE $root, $src),
