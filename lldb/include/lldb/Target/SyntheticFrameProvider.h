@@ -24,37 +24,28 @@ namespace lldb_private {
 
 /// This struct contains the metadata needed to instantiate a frame provider
 /// and optional filters to control which threads it applies to.
-struct ScriptedFrameProviderDescriptor {
+struct SyntheticFrameProviderDescriptor {
   /// Metadata for instantiating the provider (e.g. script class name and args).
   lldb::ScriptedMetadataSP scripted_metadata_sp;
-
-  /// Interface for calling static methods on the provider class.
-  lldb::ScriptedFrameProviderInterfaceSP interface_sp;
 
   /// Optional list of thread specifications to which this provider applies.
   /// If empty, the provider applies to all threads. A thread matches if it
   /// satisfies ANY of the specs in this vector (OR logic).
   std::vector<ThreadSpec> thread_specs;
 
-  ScriptedFrameProviderDescriptor() = default;
+  SyntheticFrameProviderDescriptor() = default;
 
-  ScriptedFrameProviderDescriptor(lldb::ScriptedMetadataSP metadata_sp)
+  SyntheticFrameProviderDescriptor(lldb::ScriptedMetadataSP metadata_sp)
       : scripted_metadata_sp(metadata_sp) {}
 
-  ScriptedFrameProviderDescriptor(lldb::ScriptedMetadataSP metadata_sp,
-                                  const std::vector<ThreadSpec> &specs)
+  SyntheticFrameProviderDescriptor(lldb::ScriptedMetadataSP metadata_sp,
+                                   const std::vector<ThreadSpec> &specs)
       : scripted_metadata_sp(metadata_sp), thread_specs(specs) {}
 
   /// Get the name of this descriptor (the scripted class name).
   llvm::StringRef GetName() const {
     return scripted_metadata_sp ? scripted_metadata_sp->GetClassName() : "";
   }
-
-  /// Get the description of this frame provider.
-  ///
-  /// \return A string describing what this frame provider does, or an
-  ///         empty string if no description is available.
-  std::string GetDescription() const;
 
   /// Check if this descriptor applies to the given thread.
   bool AppliesToThread(Thread &thread) const {
@@ -73,13 +64,6 @@ struct ScriptedFrameProviderDescriptor {
   /// Check if this descriptor has valid metadata for script-based providers.
   bool IsValid() const { return scripted_metadata_sp != nullptr; }
 
-  /// Get a unique identifier for this descriptor based on its contents.
-  /// The ID is computed from the class name and arguments dictionary,
-  /// not from the pointer address, so two descriptors with the same
-  /// contents will have the same ID.
-  uint32_t GetID() const;
-
-  /// Dump a description of this descriptor to the given stream.
   void Dump(Stream *s) const;
 };
 
@@ -111,7 +95,7 @@ public:
   ///     otherwise an \a llvm::Error.
   static llvm::Expected<lldb::SyntheticFrameProviderSP>
   CreateInstance(lldb::StackFrameListSP input_frames,
-                 const ScriptedFrameProviderDescriptor &descriptor);
+                 const SyntheticFrameProviderDescriptor &descriptor);
 
   /// Try to create a SyntheticFrameProvider instance for the given input
   /// frames using a specific C++ plugin.
@@ -140,8 +124,6 @@ public:
                  const std::vector<ThreadSpec> &thread_specs = {});
 
   ~SyntheticFrameProvider() override;
-
-  virtual std::string GetDescription() const = 0;
 
   /// Get a single stack frame at the specified index.
   ///

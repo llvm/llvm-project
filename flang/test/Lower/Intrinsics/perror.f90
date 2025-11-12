@@ -43,7 +43,7 @@ subroutine test_perror_unknown_length(str)
   call perror(str)
   ! CHECK: %[[VAL_0:.*]] = fir.dummy_scope : !fir.dscope
   ! CHECK: %[[VAL_1:.*]]:2 = fir.unboxchar %[[ARG0]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-  ! CHECK: %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_1]]#0 typeparams %[[VAL_1]]#1 dummy_scope %[[VAL_0]] {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QFtest_perror_unknown_lengthEstr"} : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+  ! CHECK: %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_1]]#0 typeparams %[[VAL_1]]#1 dummy_scope %[[VAL_0]] arg {{[0-9]+}} {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QFtest_perror_unknown_lengthEstr"} : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
   ! CHECK: %[[VAL_3:.*]] = fir.embox %[[VAL_2]]#1 typeparams %[[VAL_1]]#1 : (!fir.ref<!fir.char<1,?>>, index) -> !fir.box<!fir.char<1,?>>
   ! CHECK: %[[VAL_4:.*]] = fir.box_addr %[[VAL_3]] : (!fir.box<!fir.char<1,?>>) -> !fir.ref<!fir.char<1,?>>
   ! CHECK: %[[VAL_5:.*]] = fir.convert %[[VAL_4]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>

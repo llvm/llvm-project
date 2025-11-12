@@ -6,7 +6,7 @@ subroutine path_only(path)
     CHARACTER(len=*) :: path
     !CHECK-DAG:    %[[scope:.*]] = fir.dummy_scope : !fir.dscope
     !CHECK-DAG:    %[[unbox_path:.*]]:2 = fir.unboxchar %[[dummyPath]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-    !CHECK-DAG:    %[[path_decl:.*]]:2 = hlfir.declare %[[unbox_path]]#0 typeparams %[[unbox_path]]#1 dummy_scope %[[scope]] {uniq_name = "_QFpath_onlyEpath"} : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+    !CHECK-DAG:    %[[path_decl:.*]]:2 = hlfir.declare %[[unbox_path]]#0 typeparams %[[unbox_path]]#1 dummy_scope %[[scope]] arg {{[0-9]+}} {uniq_name = "_QFpath_onlyEpath"} : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
     !CHECK-DAG:    %[[src_path_addr:.*]] = fir.address_of(@_{{.*}}) : !fir.ref<!fir.char<1,{{.*}}>>
     !CHECK-DAG:    %[[line_value:.*]] = arith.constant {{.*}} : i64
     !CHECK-DAG:    %[[path:.*]] = fir.convert %[[path_decl]]#1 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
@@ -30,8 +30,8 @@ subroutine all_arguments(path, status)
     INTEGER :: status
     !CHECK-DAG:    %[[scope:.*]] = fir.dummy_scope : !fir.dscope
     !CHECK-DAG:    %[[unbox_path:.*]]:2 = fir.unboxchar %[[dummyPath]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-    !CHECK-DAG:    %[[path_decl:.*]]:2 = hlfir.declare %[[unbox_path]]#0 typeparams %[[unbox_path]]#1 dummy_scope %[[scope]] {uniq_name = "_QFall_argumentsEpath"} : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
-    !CHECK-DAG:    %[[status_decl:.*]]:2 = hlfir.declare %[[dummyStat]] dummy_scope %[[scope]] {uniq_name = "_QFall_argumentsEstatus"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+    !CHECK-DAG:    %[[path_decl:.*]]:2 = hlfir.declare %[[unbox_path]]#0 typeparams %[[unbox_path]]#1 dummy_scope %[[scope]] arg {{[0-9]+}} {uniq_name = "_QFall_argumentsEpath"} : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+    !CHECK-DAG:    %[[status_decl:.*]]:2 = hlfir.declare %[[dummyStat]] dummy_scope %[[scope]] arg {{[0-9]+}} {uniq_name = "_QFall_argumentsEstatus"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
     !CHECK-DAG:    %[[src_path_addr:.*]] = fir.address_of(@_{{.*}}) : !fir.ref<!fir.char<1,{{.*}}>>
     !CHECK-DAG:    %[[line_value:.*]] = arith.constant {{.*}} : i64
     !CHECK-DAG:    %[[path:.*]] = fir.convert %[[path_decl]]#1 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>

@@ -13,12 +13,9 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/StructuredDataImpl.h"
 #include "lldb/Host/Host.h"
-#include "lldb/Interpreter/Interfaces/ScriptedFrameInterface.h"
-#include "lldb/Interpreter/Interfaces/ScriptedFrameProviderInterface.h"
 #include "lldb/Interpreter/OptionValueFileSpecList.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Interpreter/Property.h"
-#include "lldb/Interpreter/ScriptInterpreter.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Target/ABI.h"
 #include "lldb/Target/DynamicLoader.h"
@@ -29,7 +26,6 @@
 #include "lldb/Target/ScriptedThreadPlan.h"
 #include "lldb/Target/StackFrameRecognizer.h"
 #include "lldb/Target/StopInfo.h"
-#include "lldb/Target/SyntheticFrameProvider.h"
 #include "lldb/Target/SystemRuntime.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/ThreadPlan.h"
@@ -49,7 +45,6 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegularExpression.h"
-#include "lldb/Utility/ScriptedMetadata.h"
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StreamString.h"
@@ -262,7 +257,6 @@ void Thread::DestroyThread() {
   std::lock_guard<std::recursive_mutex> guard(m_frame_mutex);
   m_curr_frames_sp.reset();
   m_prev_frames_sp.reset();
-  m_frame_provider_sp.reset();
   m_prev_framezero_pc.reset();
 }
 
@@ -1445,74 +1439,11 @@ void Thread::CalculateExecutionContext(ExecutionContext &exe_ctx) {
 StackFrameListSP Thread::GetStackFrameList() {
   std::lock_guard<std::recursive_mutex> guard(m_frame_mutex);
 
-  if (m_curr_frames_sp)
-    return m_curr_frames_sp;
-
-  // First, try to load a frame provider if we don't have one yet.
-  if (!m_frame_provider_sp) {
-    ProcessSP process_sp = GetProcess();
-    if (process_sp) {
-      Target &target = process_sp->GetTarget();
-      const auto &descriptors = target.GetScriptedFrameProviderDescriptors();
-
-      // Find first descriptor that applies to this thread.
-      for (const auto &entry : descriptors) {
-        const ScriptedFrameProviderDescriptor &descriptor = entry.second;
-        if (descriptor.IsValid() && descriptor.AppliesToThread(*this)) {
-          if (llvm::Error error = LoadScriptedFrameProvider(descriptor)) {
-            LLDB_LOG_ERROR(GetLog(LLDBLog::Thread), std::move(error),
-                           "Failed to load scripted frame provider: {0}");
-          }
-          break; // Use first matching descriptor (success or failure).
-        }
-      }
-    }
-  }
-
-  // Create the frame list based on whether we have a provider.
-  if (m_frame_provider_sp) {
-    // We have a provider - create synthetic frame list.
-    StackFrameListSP input_frames = m_frame_provider_sp->GetInputFrames();
-    m_curr_frames_sp = std::make_shared<SyntheticStackFrameList>(
-        *this, input_frames, m_prev_frames_sp, true);
-  } else {
-    // No provider - use normal unwinder frames.
+  if (!m_curr_frames_sp)
     m_curr_frames_sp =
         std::make_shared<StackFrameList>(*this, m_prev_frames_sp, true);
-  }
 
   return m_curr_frames_sp;
-}
-
-llvm::Error Thread::LoadScriptedFrameProvider(
-    const ScriptedFrameProviderDescriptor &descriptor) {
-  std::lock_guard<std::recursive_mutex> guard(m_frame_mutex);
-
-  // Note: We don't create input_frames here - it will be created lazily
-  // by SyntheticStackFrameList when frames are first fetched.
-  // Creating them too early can cause crashes during thread initialization.
-
-  // Create a temporary StackFrameList just to get the thread reference for the
-  // provider. The provider won't actually use this - it will get real input
-  // frames from SyntheticStackFrameList later.
-  StackFrameListSP temp_frames =
-      std::make_shared<StackFrameList>(*this, m_prev_frames_sp, true);
-
-  auto provider_or_err =
-      SyntheticFrameProvider::CreateInstance(temp_frames, descriptor);
-  if (!provider_or_err)
-    return provider_or_err.takeError();
-
-  ClearScriptedFrameProvider();
-  m_frame_provider_sp = *provider_or_err;
-  return llvm::Error::success();
-}
-
-void Thread::ClearScriptedFrameProvider() {
-  std::lock_guard<std::recursive_mutex> guard(m_frame_mutex);
-  m_frame_provider_sp.reset();
-  m_curr_frames_sp.reset();
-  m_prev_frames_sp.reset();
 }
 
 std::optional<addr_t> Thread::GetPreviousFrameZeroPC() {
@@ -1535,7 +1466,6 @@ void Thread::ClearStackFrames() {
     m_prev_frames_sp.swap(m_curr_frames_sp);
   m_curr_frames_sp.reset();
 
-  m_frame_provider_sp.reset();
   m_extended_info.reset();
   m_extended_info_fetched = false;
 }

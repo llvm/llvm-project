@@ -10,9 +10,7 @@
 #define LLDB_INTERPRETER_SCRIPTEDMETADATA_H
 
 #include "lldb/Utility/ProcessInfo.h"
-#include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/StructuredData.h"
-#include "llvm/ADT/Hashing.h"
 
 namespace lldb_private {
 class ScriptedMetadata {
@@ -29,35 +27,10 @@ public:
     }
   }
 
-  ScriptedMetadata(const ScriptedMetadata &other)
-      : m_class_name(other.m_class_name), m_args_sp(other.m_args_sp) {}
-
   explicit operator bool() const { return !m_class_name.empty(); }
 
   llvm::StringRef GetClassName() const { return m_class_name; }
   StructuredData::DictionarySP GetArgsSP() const { return m_args_sp; }
-
-  /// Get a unique identifier for this metadata based on its contents.
-  /// The ID is computed from the class name and arguments dictionary,
-  /// not from the pointer address, so two metadata objects with the same
-  /// contents will have the same ID.
-  uint32_t GetID() const {
-    if (m_class_name.empty())
-      return 0;
-
-    // Hash the class name.
-    llvm::hash_code hash = llvm::hash_value(m_class_name);
-
-    // Hash the arguments dictionary if present.
-    if (m_args_sp) {
-      StreamString ss;
-      m_args_sp->GetDescription(ss);
-      hash = llvm::hash_combine(hash, llvm::hash_value(ss.GetData()));
-    }
-
-    // Return the lower 32 bits of the hash.
-    return static_cast<uint32_t>(hash);
-  }
 
 private:
   std::string m_class_name;

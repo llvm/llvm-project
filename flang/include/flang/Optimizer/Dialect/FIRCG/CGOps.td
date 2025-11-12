@@ -229,12 +229,13 @@ def fircg_XDeclareOp : fircg_Op<"ext_declare", [AttrSizedOperandSegments]> {
 
   let arguments = (ins AnyRefOrBox:$memref, Variadic<AnyIntegerType>:$shape,
       Variadic<AnyIntegerType>:$shift, Variadic<AnyIntegerType>:$typeparams,
-      Optional<fir_DummyScopeType>:$dummy_scope, Builtin_StringAttr:$uniq_name);
+      Optional<fir_DummyScopeType>:$dummy_scope, Builtin_StringAttr:$uniq_name,
+      OptionalAttr<UI32Attr>:$dummy_arg_no);
   let results = (outs AnyRefOrBox);
 
   let assemblyFormat = [{
     $memref (`(` $shape^ `)`)? (`origin` $shift^)? (`typeparams` $typeparams^)?
-    (`dummy_scope` $dummy_scope^)?
+    (`dummy_scope` $dummy_scope^ (`arg` $dummy_arg_no^)?)?
     attr-dict `:` functional-type(operands, results)
   }];
 

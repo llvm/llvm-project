@@ -31,54 +31,7 @@ class ScriptedFrameProvider(metaclass=ABCMeta):
         )
     """
 
-    @staticmethod
-    def applies_to_thread(thread):
-        """Determine if this frame provider should be used for a given thread.
-
-        This static method is called before creating an instance of the frame
-        provider to determine if it should be applied to a specific thread.
-        Override this method to provide custom filtering logic.
-
-        Args:
-            thread (lldb.SBThread): The thread to check.
-
-        Returns:
-            bool: True if this frame provider should be used for the thread,
-                False otherwise. The default implementation returns True for
-                all threads.
-
-        Example:
-
-        .. code-block:: python
-
-            @staticmethod
-            def applies_to_thread(thread):
-                # Only apply to thread 1
-                return thread.GetIndexID() == 1
-        """
-        return True
-
-    @staticmethod
     @abstractmethod
-    def get_description():
-        """Get a description of this frame provider.
-
-        This method should return a human-readable string describing what
-        this frame provider does. The description is used for debugging
-        and display purposes.
-
-        Returns:
-            str: A description of the frame provider.
-
-        Example:
-
-        .. code-block:: python
-
-            def get_description(self):
-                return "Crash log frame provider for thread 1"
-        """
-        pass
-
     def __init__(self, input_frames, args):
         """Construct a scripted frame provider.
 

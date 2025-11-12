@@ -817,6 +817,28 @@ class QCIRVInst48EJ<bits<2> func2, string opcodestr>
   let Inst{6-0} = 0b0011111;
 }
 
+class SFBQC_LI
+    : Pseudo<(outs GPR:$dst),
+             (ins GPR:$lhs, GPR:$rhs, cond_code:$cc, GPR:$falsev,
+                  simm20_li:$imm), []> {
+  let hasSideEffects = 0;
+  let mayLoad = 0;
+  let mayStore = 0;
+  let Size = 8;
+  let Constraints = "$dst = $falsev";
+}
+
+class SFBQC_E_LI
+    : Pseudo<(outs GPR:$dst),
+             (ins GPR:$lhs, GPR:$rhs, cond_code:$cc, GPR:$falsev,
+                  bare_simm32:$imm), []> {
+  let hasSideEffects = 0;
+  let mayLoad = 0;
+  let mayStore = 0;
+  let Size = 10;
+  let Constraints = "$dst = $falsev";
+}
+
 //===----------------------------------------------------------------------===//
 // Instructions
 //===----------------------------------------------------------------------===//
@@ -1307,6 +1329,11 @@ def PseudoQC_E_SB : PseudoStore<"qc.e.sb">;
 def PseudoQC_E_SH : PseudoStore<"qc.e.sh">;
 def PseudoQC_E_SW : PseudoStore<"qc.e.sw">;
 } // Predicates = [HasVendorXqcilo, IsRV32]
+
+let Predicates = [HasShortForwardBranchOpt] in {
+def PseudoCCQC_LI : SFBQC_LI;
+def PseudoCCQC_E_LI : SFBQC_E_LI;
+}
 
 //===----------------------------------------------------------------------===//
 // Code Gen Patterns

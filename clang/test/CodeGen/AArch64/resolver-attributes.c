@@ -46,17 +46,20 @@ __attribute__((ifunc("ifunc_resolver"))) int ifunc(void);
 // BTI: define internal ptr @static_target_clones.resolver()  #[[ATTR_RESOLVER]]
 // BTI: define internal ptr @static_target_version.resolver() #[[ATTR_RESOLVER]]
 
-// In NOBTI case, no attribute groups are assigned to the resolver functions:
-// NOBTI: define weak_odr ptr @global_target_clones.resolver(){{( comdat)?}} {
-// NOBTI: define weak_odr ptr @global_target_version.resolver(){{( comdat)?}} {
-// NOBTI: define internal ptr @static_target_clones.resolver() {
-// NOBTI: define internal ptr @static_target_version.resolver() {
+// In NOBTI case, only "no_sanitizer_instrumentation" attributes are added to the resolver
 
-// HIDDEN: define weak_odr hidden ptr @global_target_clones.resolver(){{( comdat)?}} {
-// HIDDEN: define weak_odr hidden ptr @global_target_version.resolver(){{( comdat)?}} {
-// HIDDEN: define internal ptr @static_target_clones.resolver() {
-// HIDDEN: define internal ptr @static_target_version.resolver() {
+// NOBTI: define weak_odr ptr @global_target_clones.resolver() [[ATTR_RESOLVER:(#[0-9]+)?]]{{( comdat)?}}
+// NOBTI: define weak_odr ptr @global_target_version.resolver() [[ATTR_RESOLVER]]{{( comdat)?}}
+// NOBTI: define internal ptr @static_target_clones.resolver() [[ATTR_RESOLVER]]
+// NOBTI: define internal ptr @static_target_version.resolver() [[ATTR_RESOLVER]]
+
+// HIDDEN: define weak_odr hidden ptr @global_target_clones.resolver() [[ATTR_RESOLVER:(#[0-9]+)?]]{{( comdat)?}}
+// HIDDEN: define weak_odr hidden ptr @global_target_version.resolver() [[ATTR_RESOLVER]]{{( comdat)?}}
+// HIDDEN: define internal ptr @static_target_clones.resolver() [[ATTR_RESOLVER]] 
+// HIDDEN: define internal ptr @static_target_version.resolver() [[ATTR_RESOLVER]] 
 
 // ELF:       attributes #[[ATTR_IFUNC_RESOLVER]] = { {{.*}}"branch-target-enforcement"{{.*}} }
 
 // BTI:       attributes #[[ATTR_RESOLVER]] = { {{.*}}"branch-target-enforcement"{{.*}} }
+//
+// NOBTI:        attributes [[ATTR_RESOLVER]] = { disable_sanitizer_instrumentation }

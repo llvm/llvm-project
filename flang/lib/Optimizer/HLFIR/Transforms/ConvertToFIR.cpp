@@ -308,7 +308,8 @@ public:
         declareOp.getTypeparams(), declareOp.getDummyScope(),
         /*storage=*/declareOp.getStorage(),
         /*storage_offset=*/declareOp.getStorageOffset(),
-        declareOp.getUniqName(), fortranAttrs, dataAttr);
+        declareOp.getUniqName(), fortranAttrs, dataAttr,
+        declareOp.getDummyArgNoAttr());
 
     // Propagate other attributes from hlfir.declare to fir.declare.
     // OpenACC's acc.declare is one example. Right now, the propagation

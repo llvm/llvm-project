@@ -20,13 +20,13 @@ namespace lldb_private {
 
 class ScriptedThread;
 
-class StackFrameList : public std::enable_shared_from_this<StackFrameList> {
+class StackFrameList {
 public:
   // Constructors and Destructors
   StackFrameList(Thread &thread, const lldb::StackFrameListSP &prev_frames_sp,
                  bool show_inline_frames);
 
-  virtual ~StackFrameList();
+  ~StackFrameList();
 
   /// Get the number of visible frames. Frames may be created if \p can_create
   /// is true. Synthetic (inline) frames expanded from the concrete frame #0
@@ -106,7 +106,6 @@ public:
 
 protected:
   friend class Thread;
-  friend class ScriptedFrameProvider;
   friend class ScriptedThread;
 
   /// Use this API to build a stack frame list (used for scripted threads, for
@@ -212,49 +211,24 @@ protected:
   /// Whether or not to show synthetic (inline) frames. Immutable.
   const bool m_show_inlined_frames;
 
-  /// Returns true if fetching frames was interrupted, false otherwise.
-  virtual bool FetchFramesUpTo(uint32_t end_idx,
-                               InterruptionControl allow_interrupt);
-
 private:
   uint32_t SetSelectedFrameNoLock(lldb_private::StackFrame *frame);
   lldb::StackFrameSP
   GetFrameAtIndexNoLock(uint32_t idx,
                         std::shared_lock<std::shared_mutex> &guard);
 
-  /// @{
   /// These two Fetch frames APIs and SynthesizeTailCallFrames are called in
   /// GetFramesUpTo, they are the ones that actually add frames.  They must be
   /// called with the writer end of the list mutex held.
-  ///
+
+  /// Returns true if fetching frames was interrupted, false otherwise.
+  bool FetchFramesUpTo(uint32_t end_idx, InterruptionControl allow_interrupt);
   /// Not currently interruptible so returns void.
-  /// }@
   void FetchOnlyConcreteFramesUpTo(uint32_t end_idx);
   void SynthesizeTailCallFrames(StackFrame &next_frame);
 
   StackFrameList(const StackFrameList &) = delete;
   const StackFrameList &operator=(const StackFrameList &) = delete;
-};
-
-/// A StackFrameList that wraps another StackFrameList and uses a
-/// SyntheticFrameProvider to lazily provide frames from either the provider
-/// or the underlying real stack frame list.
-class SyntheticStackFrameList : public StackFrameList {
-public:
-  SyntheticStackFrameList(Thread &thread, lldb::StackFrameListSP input_frames,
-                          const lldb::StackFrameListSP &prev_frames_sp,
-                          bool show_inline_frames);
-
-protected:
-  /// Override FetchFramesUpTo to lazily return frames from the provider
-  /// or from the actual stack frame list.
-  bool FetchFramesUpTo(uint32_t end_idx,
-                       InterruptionControl allow_interrupt) override;
-
-private:
-  /// The input stack frame list that the provider transforms.
-  /// This could be a real StackFrameList or another SyntheticStackFrameList.
-  lldb::StackFrameListSP m_input_frames;
 };
 
 } // namespace lldb_private

@@ -14,21 +14,16 @@
 #if LLDB_ENABLE_PYTHON
 
 #include "ScriptedPythonInterface.h"
-#include "lldb/Core/PluginInterface.h"
 #include "lldb/Interpreter/Interfaces/ScriptedFrameProviderInterface.h"
 #include <optional>
 
 namespace lldb_private {
 class ScriptedFrameProviderPythonInterface
     : public ScriptedFrameProviderInterface,
-      public ScriptedPythonInterface,
-      public PluginInterface {
+      public ScriptedPythonInterface {
 public:
   ScriptedFrameProviderPythonInterface(
       ScriptInterpreterPythonImpl &interpreter);
-
-  bool AppliesToThread(llvm::StringRef class_name,
-                       lldb::ThreadSP thread_sp) override;
 
   llvm::Expected<StructuredData::GenericSP>
   CreatePluginObject(llvm::StringRef class_name,
@@ -38,24 +33,10 @@ public:
   llvm::SmallVector<AbstractMethodRequirement>
   GetAbstractMethodRequirements() const override {
     return llvm::SmallVector<AbstractMethodRequirement>(
-        {{"get_description"}, {"get_frame_at_index"}});
+        {{"get_frame_at_index"}});
   }
-
-  std::string GetDescription(llvm::StringRef class_name) override;
 
   StructuredData::ObjectSP GetFrameAtIndex(uint32_t index) override;
-
-  static void Initialize();
-  static void Terminate();
-
-  static bool CreateInstance(lldb::ScriptLanguage language,
-                             ScriptedInterfaceUsages usages);
-
-  static llvm::StringRef GetPluginNameStatic() {
-    return "ScriptedFrameProviderPythonInterface";
-  }
-
-  llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 };
 } // namespace lldb_private
 

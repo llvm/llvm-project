@@ -15,12 +15,12 @@ end subroutine
 ! CHECK:           %[[VAL_5:.*]] = arith.constant 4 : index
 ! CHECK:           %[[VAL_6:.*]] = arith.constant 3 : index
 ! CHECK:           %[[VAL_7:.*]] = fir.shape %[[VAL_6]] : (index) -> !fir.shape<1>
-! CHECK:           %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_4]](%[[VAL_7]]) typeparams %[[VAL_5]] dummy_scope %[[VAL_2]] {uniq_name = "_QFissueEc1"} : (!fir.ref<!fir.array<3x!fir.char<1,4>>>, !fir.shape<1>, index, !fir.dscope) -> (!fir.ref<!fir.array<3x!fir.char<1,4>>>, !fir.ref<!fir.array<3x!fir.char<1,4>>>)
+! CHECK:           %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_4]](%[[VAL_7]]) typeparams %[[VAL_5]] dummy_scope %[[VAL_2]] arg {{[0-9]+}} {uniq_name = "_QFissueEc1"} : (!fir.ref<!fir.array<3x!fir.char<1,4>>>, !fir.shape<1>, index, !fir.dscope) -> (!fir.ref<!fir.array<3x!fir.char<1,4>>>, !fir.ref<!fir.array<3x!fir.char<1,4>>>)
 ! CHECK:           %[[VAL_9:.*]]:2 = fir.unboxchar %[[VAL_1]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
 ! CHECK:           %[[VAL_10:.*]] = fir.convert %[[VAL_9]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<3x!fir.char<1,?>>>
 ! CHECK:           %[[VAL_11:.*]] = arith.constant 3 : index
 ! CHECK:           %[[VAL_12:.*]] = fir.shape %[[VAL_11]] : (index) -> !fir.shape<1>
-! CHECK:           %[[VAL_13:.*]]:2 = hlfir.declare %[[VAL_10]](%[[VAL_12]]) typeparams %[[VAL_9]]#1 dummy_scope %[[VAL_2]] {uniq_name = "_QFissueEc2"} : (!fir.ref<!fir.array<3x!fir.char<1,?>>>, !fir.shape<1>, index, !fir.dscope) -> (!fir.box<!fir.array<3x!fir.char<1,?>>>, !fir.ref<!fir.array<3x!fir.char<1,?>>>)
+! CHECK:           %[[VAL_13:.*]]:2 = hlfir.declare %[[VAL_10]](%[[VAL_12]]) typeparams %[[VAL_9]]#1 dummy_scope %[[VAL_2]] arg {{[0-9]+}} {uniq_name = "_QFissueEc2"} : (!fir.ref<!fir.array<3x!fir.char<1,?>>>, !fir.shape<1>, index, !fir.dscope) -> (!fir.box<!fir.array<3x!fir.char<1,?>>>, !fir.ref<!fir.array<3x!fir.char<1,?>>>)
 ! CHECK:           hlfir.assign %[[VAL_13]]#0 to %[[VAL_8]]#0 : !fir.box<!fir.array<3x!fir.char<1,?>>>, !fir.ref<!fir.array<3x!fir.char<1,4>>>
 
 program p

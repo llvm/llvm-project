@@ -256,7 +256,6 @@ private:
   friend class SBThreadPlan;
   friend class SBTrace;
 
-  friend class lldb_private::ScriptInterpreter;
   friend class lldb_private::python::SWIGBridge;
 
   SBThread(const lldb::ThreadSP &lldb_object_sp);

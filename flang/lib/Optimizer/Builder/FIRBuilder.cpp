@@ -427,7 +427,8 @@ mlir::Value fir::FirOpBuilder::genTempDeclareOp(
       builder, loc, memref.getType(), memref, shape, typeParams,
       /*dummy_scope=*/nullptr,
       /*storage=*/nullptr,
-      /*storage_offset=*/0, nameAttr, fortranAttrs, cuf::DataAttributeAttr{});
+      /*storage_offset=*/0, nameAttr, fortranAttrs, cuf::DataAttributeAttr{},
+      /*dummy_arg_no=*/mlir::IntegerAttr{});
 }
 
 mlir::Value fir::FirOpBuilder::genStackSave(mlir::Location loc) {

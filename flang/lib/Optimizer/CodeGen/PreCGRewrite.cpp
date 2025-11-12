@@ -302,11 +302,15 @@ public:
       else
         return mlir::failure();
     }
+    // Extract dummy_arg_no attribute if present
+    mlir::IntegerAttr dummyArgNoAttr;
+    if (auto attr = declareOp->getAttrOfType<mlir::IntegerAttr>("dummy_arg_no"))
+      dummyArgNoAttr = attr;
     // FIXME: Add FortranAttrs and CudaAttrs
     auto xDeclOp = fir::cg::XDeclareOp::create(
         rewriter, loc, declareOp.getType(), declareOp.getMemref(), shapeOpers,
         shiftOpers, declareOp.getTypeparams(), declareOp.getDummyScope(),
-        declareOp.getUniqName());
+        declareOp.getUniqName(), dummyArgNoAttr);
     LLVM_DEBUG(llvm::dbgs()
                << "rewriting " << declareOp << " to " << xDeclOp << '\n');
     rewriter.replaceOp(declareOp, xDeclOp.getOperation()->getResults());

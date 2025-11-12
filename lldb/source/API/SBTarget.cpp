@@ -23,7 +23,6 @@
 #include "lldb/API/SBStringList.h"
 #include "lldb/API/SBStructuredData.h"
 #include "lldb/API/SBSymbolContextList.h"
-#include "lldb/API/SBThreadCollection.h"
 #include "lldb/API/SBTrace.h"
 #include "lldb/Breakpoint/BreakpointID.h"
 #include "lldb/Breakpoint/BreakpointIDList.h"
@@ -40,7 +39,6 @@
 #include "lldb/Core/Section.h"
 #include "lldb/Core/StructuredDataImpl.h"
 #include "lldb/Host/Host.h"
-#include "lldb/Interpreter/Interfaces/ScriptedFrameProviderInterface.h"
 #include "lldb/Symbol/DeclVendor.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SymbolFile.h"
@@ -52,7 +50,6 @@
 #include "lldb/Target/LanguageRuntime.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/StackFrame.h"
-#include "lldb/Target/SyntheticFrameProvider.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/TargetList.h"
 #include "lldb/Utility/ArchSpec.h"
@@ -62,7 +59,6 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/ProcessInfo.h"
 #include "lldb/Utility/RegularExpression.h"
-#include "lldb/Utility/ScriptedMetadata.h"
 #include "lldb/ValueObject/ValueObjectConstResult.h"
 #include "lldb/ValueObject/ValueObjectList.h"
 #include "lldb/ValueObject/ValueObjectVariable.h"
@@ -2411,82 +2407,4 @@ lldb::SBMutex SBTarget::GetAPIMutex() const {
   if (TargetSP target_sp = GetSP())
     return lldb::SBMutex(target_sp);
   return lldb::SBMutex();
-}
-
-uint32_t
-SBTarget::RegisterScriptedFrameProvider(const char *class_name,
-                                        lldb::SBStructuredData args_dict,
-                                        lldb::SBError &error) {
-  LLDB_INSTRUMENT_VA(this, class_name, args_dict, error);
-
-  TargetSP target_sp = GetSP();
-  if (!target_sp) {
-    error.SetErrorString("invalid target");
-    return 0;
-  }
-
-  if (!class_name || !class_name[0]) {
-    error.SetErrorString("invalid class name");
-    return 0;
-  }
-
-  // Extract the dictionary from SBStructuredData.
-  StructuredData::DictionarySP dict_sp;
-  if (args_dict.IsValid() && args_dict.m_impl_up) {
-    StructuredData::ObjectSP obj_sp = args_dict.m_impl_up->GetObjectSP();
-    if (obj_sp && obj_sp->GetType() != lldb::eStructuredDataTypeDictionary) {
-      error.SetErrorString("SBStructuredData argument isn't a dictionary");
-      return 0;
-    }
-    dict_sp = std::make_shared<StructuredData::Dictionary>(obj_sp);
-  }
-
-  // Create the ScriptedMetadata.
-  ScriptedMetadataSP metadata_sp =
-      std::make_shared<ScriptedMetadata>(class_name, dict_sp);
-
-  // Create the interface for calling static methods.
-  ScriptedFrameProviderInterfaceSP interface_sp =
-      target_sp->GetDebugger()
-          .GetScriptInterpreter()
-          ->CreateScriptedFrameProviderInterface();
-
-  // Create a descriptor (applies to all threads by default).
-  ScriptedFrameProviderDescriptor descriptor(metadata_sp);
-  descriptor.interface_sp = interface_sp;
-
-  llvm::Expected<uint32_t> descriptor_id_or_err =
-      target_sp->AddScriptedFrameProviderDescriptor(descriptor);
-  if (!descriptor_id_or_err) {
-    error.SetErrorString(
-        llvm::toString(descriptor_id_or_err.takeError()).c_str());
-    return 0;
-  }
-
-  // Register the descriptor with the target.
-  return *descriptor_id_or_err;
-}
-
-lldb::SBError SBTarget::RemoveScriptedFrameProvider(uint32_t provider_id) {
-  LLDB_INSTRUMENT_VA(this, provider_id);
-
-  SBError error;
-  TargetSP target_sp = GetSP();
-  if (!target_sp) {
-    error.SetErrorString("invalid target");
-    return error;
-  }
-
-  if (!provider_id) {
-    error.SetErrorString("invalid provider id");
-    return error;
-  }
-
-  if (!target_sp->RemoveScriptedFrameProviderDescriptor(provider_id)) {
-    error.SetErrorStringWithFormat("no frame provider named '%u' found",
-                                   provider_id);
-    return error;
-  }
-
-  return {};
 }
