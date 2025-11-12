@@ -352,3 +352,6 @@ def unpack(
             ip=ip,
         )
     )
+
+reduce = region_op(ReduceOp, terminator=YieldOp)
+map = region_op(MapOp, terminator=YieldOp)
