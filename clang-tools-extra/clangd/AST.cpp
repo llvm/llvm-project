@@ -261,6 +261,16 @@ bool isVirtual(const Decl *D) {
   return false;
 }
 
+bool isFinal(const Decl *D) {
+  if (const auto *CRD = dyn_cast<CXXMethodDecl>(D))
+    return CRD->hasAttr<FinalAttr>();
+
+  if (const auto *CRD = dyn_cast<CXXRecordDecl>(D))
+    return CRD->hasAttr<FinalAttr>();
+
+  return false;
+}
+
 bool isUniqueDefinition(const NamedDecl *Decl) {
   if (auto *Func = dyn_cast<FunctionDecl>(Decl))
     return Func->isThisDeclarationADefinition();

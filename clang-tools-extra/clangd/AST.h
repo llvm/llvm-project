@@ -184,6 +184,7 @@ bool isConst(const Decl *D);
 bool isStatic(const Decl *D);
 bool isAbstract(const Decl *D);
 bool isVirtual(const Decl *D);
+bool isFinal(const Decl *D);
 bool isUniqueDefinition(const NamedDecl *Decl);
 /// Returns a nested name specifier loc of \p ND if it was present in the
 /// source, e.g.

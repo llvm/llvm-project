@@ -190,16 +190,24 @@ std::string getSymbolName(ASTContext &Ctx, const NamedDecl &ND) {
 
 std::vector<SymbolTag> getSymbolTags(const NamedDecl &ND) {
   std::vector<SymbolTag> Tags;
+
   if (ND.isDeprecated())
     Tags.push_back(SymbolTag::Deprecated);
+
   if (isConst(&ND))
     Tags.push_back(SymbolTag::ReadOnly);
+
   if (isStatic(&ND))
     Tags.push_back(SymbolTag::Static);
+
   if (isVirtual(&ND))
     Tags.push_back(SymbolTag::Virtual);
+
   if (isAbstract(&ND))
     Tags.push_back(SymbolTag::Abstract);
+
+  if (isFinal(&ND))
+    Tags.push_back(SymbolTag::Final);
 
   if (isUniqueDefinition(&ND))
     Tags.push_back(SymbolTag::Definition);
