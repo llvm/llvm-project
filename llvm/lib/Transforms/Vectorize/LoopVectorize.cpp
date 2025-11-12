@@ -1240,9 +1240,10 @@ public:
   getDivRemSpeculationCost(Instruction *I,
                            ElementCount VF) const;
 
-  /// Returns true if \p I is a memory instruction with consecutive memory
-  /// access that can be widened.
-  bool memoryInstructionCanBeWidened(Instruction *I, ElementCount VF);
+  /// Returns widening decision (CM_Widen or CM_Widen_Reverse) if \p I is a
+  /// memory instruction with consecutive access that can be widened, or
+  /// CM_Unknown otherwise.
+  InstWidening memoryInstructionCanBeWidened(Instruction *I, ElementCount VF);
 
   /// Returns true if \p I is a memory instruction in an interleaved-group
   /// of memory accesses that can be vectorized with wide vector loads/stores
@@ -1509,7 +1510,8 @@ private:
 
   /// The cost computation for widening instruction \p I with consecutive
   /// memory access.
-  InstructionCost getConsecutiveMemOpCost(Instruction *I, ElementCount VF);
+  InstructionCost getConsecutiveMemOpCost(Instruction *I, ElementCount VF,
+                                          InstWidening Decision);
 
   /// The cost calculation for Load/Store instruction \p I with uniform pointer -
   /// Load: scalar load + broadcast.
@@ -2988,8 +2990,9 @@ bool LoopVectorizationCostModel::interleavedAccessCanBeWidened(
                           : TTI.isLegalMaskedStore(Ty, Alignment, AS);
 }
 
-bool LoopVectorizationCostModel::memoryInstructionCanBeWidened(
-    Instruction *I, ElementCount VF) {
+LoopVectorizationCostModel::InstWidening
+LoopVectorizationCostModel::memoryInstructionCanBeWidened(Instruction *I,
+                                                          ElementCount VF) {
   // Get and ensure we have a valid memory instruction.
   assert((isa<LoadInst, StoreInst>(I)) && "Invalid memory instruction");
 
@@ -2997,21 +3000,23 @@ bool LoopVectorizationCostModel::memoryInstructionCanBeWidened(
   auto *ScalarTy = getLoadStoreType(I);
 
   // In order to be widened, the pointer should be consecutive, first of all.
-  if (!Legal->isConsecutivePtr(ScalarTy, Ptr))
-    return false;
+  auto Stride = Legal->isConsecutivePtr(ScalarTy, Ptr);
+  if (!Stride)
+    return CM_Unknown;
+  assert((Stride == 1 || Stride == -1) && "Expected consecutive stride.");
 
   // If the instruction is a store located in a predicated block, it will be
   // scalarized.
   if (isScalarWithPredication(I, VF))
-    return false;
+    return CM_Unknown;
 
   // If the instruction's allocated size doesn't equal it's type size, it
   // requires padding and will be scalarized.
   auto &DL = I->getDataLayout();
   if (hasIrregularType(ScalarTy, DL))
-    return false;
+    return CM_Unknown;
 
-  return true;
+  return Stride == 1 ? CM_Widen : CM_Widen_Reverse;
 }
 
 void LoopVectorizationCostModel::collectLoopUniforms(ElementCount VF) {
@@ -5183,17 +5188,14 @@ LoopVectorizationCostModel::getMemInstScalarizationCost(Instruction *I,
   return Cost;
 }
 
-InstructionCost
-LoopVectorizationCostModel::getConsecutiveMemOpCost(Instruction *I,
-                                                    ElementCount VF) {
+InstructionCost LoopVectorizationCostModel::getConsecutiveMemOpCost(
+    Instruction *I, ElementCount VF, InstWidening Decision) {
   Type *ValTy = getLoadStoreType(I);
   auto *VectorTy = cast<VectorType>(toVectorTy(ValTy, VF));
-  Value *Ptr = getLoadStorePointerOperand(I);
   unsigned AS = getLoadStoreAddressSpace(I);
-  int ConsecutiveStride = Legal->isConsecutivePtr(ValTy, Ptr);
 
-  assert((ConsecutiveStride == 1 || ConsecutiveStride == -1) &&
-         "Stride should be 1 or -1 for consecutive memory access");
+  assert((Decision == CM_Widen || Decision == CM_Widen_Reverse) &&
+         "Expected widen decision.");
   const Align Alignment = getLoadStoreAlignment(I);
   InstructionCost Cost = 0;
   if (Legal->isMaskRequired(I)) {
@@ -5205,8 +5207,7 @@ LoopVectorizationCostModel::getConsecutiveMemOpCost(Instruction *I,
                                 CostKind, OpInfo, I);
   }
 
-  bool Reverse = ConsecutiveStride < 0;
-  if (Reverse)
+  if (Decision == CM_Widen_Reverse)
     Cost += TTI.getShuffleCost(TargetTransformInfo::SK_Reverse, VectorTy,
                                VectorTy, {}, CostKind, 0);
   return Cost;
@@ -5617,14 +5618,9 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
       }
 
       // We assume that widening is the best solution when possible.
-      if (memoryInstructionCanBeWidened(&I, VF)) {
-        InstructionCost Cost = getConsecutiveMemOpCost(&I, VF);
-        int ConsecutiveStride = Legal->isConsecutivePtr(
-            getLoadStoreType(&I), getLoadStorePointerOperand(&I));
-        assert((ConsecutiveStride == 1 || ConsecutiveStride == -1) &&
-               "Expected consecutive stride.");
-        InstWidening Decision =
-            ConsecutiveStride == 1 ? CM_Widen : CM_Widen_Reverse;
+      if (auto Decision = memoryInstructionCanBeWidened(&I, VF);
+          Decision != CM_Unknown) {
+        InstructionCost Cost = getConsecutiveMemOpCost(&I, VF, Decision);
         setWideningDecision(&I, VF, Decision, Cost);
         continue;
       }
