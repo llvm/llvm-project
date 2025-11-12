@@ -10194,8 +10194,7 @@ TEST(APFloatTest, getPromoted) {
   EXPECT_EQ(&DoubleVal.getSemantics(), &APFloat::IEEEdouble());
   EXPECT_EQ(1.0, DoubleVal.convertToDouble());
 
-#ifdef GTEST_HAS_DEATH_TEST
-#ifndef NDEBUG
+#if defined(GTEST_HAS_DEATH_TEST) && !defined(NDEBUG)
   // All invalid promotions are swiftly killed.
   APFloat InvalidPromotionTest =
       ValidPromotionTest.getPromoted(APFloat::IEEEquad());
@@ -10206,7 +10205,6 @@ TEST(APFloatTest, getPromoted) {
   EXPECT_DEATH(
       InvalidPromotionTest.getPromoted(APFloat::PPCDoubleDoubleLegacy()),
       "Target semantics will lose information");
-#endif
 #endif
 }
 

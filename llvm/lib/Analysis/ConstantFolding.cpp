@@ -3228,27 +3228,25 @@ static Constant *ConstantFoldLibCall2(StringRef Name, Type *Ty,
   case LibFunc_nexttoward:
   case LibFunc_nexttowardf:
     if (TLI->has(Func)) {
-      // Make sure to propagate NaN payloads.
-      if (Op1V.isNaN()) {
+      if (Op1V.isNaN())
         return ConstantFP::get(Ty->getContext(), Op1V);
-      }
       if (Op2V.isNaN()) {
-        // Payload propagation might not make sense if the second argument's
-        // type is wider than the return value. We'll give up in the latter
-        // case.
-        bool SemEqual = &Op2V.getSemantics() == &Ty->getFltSemantics();
-        APFloat Ret = SemEqual ? Op2V : APFloat::getNaN(Ty->getFltSemantics());
+        // IEEE 754, 6.5.4 recommends the inclusion of diagnostic
+        // information if the NaN payload can't be preserved. Should
+        // we do something special here?
+        const bool SemEqual = &Op2V.getSemantics() == &Ty->getFltSemantics();
+        const APFloat Ret =
+            SemEqual ? Op2V : APFloat::getNaN(Ty->getFltSemantics());
         return ConstantFP::get(Ty->getContext(), Ret);
       }
 
       // The two arguments of nexttoward can have differing semantics.
       // We need to convert both arguments to the same semantics so
       // we can do comparisons.
-      APFloat PromotedOp1V = Op1V.getPromoted(APFloat::IEEEquad());
-      APFloat PromotedOp2V = Op2V.getPromoted(APFloat::IEEEquad());
-      if (PromotedOp1V == PromotedOp2V) {
+      const APFloat PromotedOp1V = Op1V.getPromoted(APFloat::IEEEquad());
+      const APFloat PromotedOp2V = Op2V.getPromoted(APFloat::IEEEquad());
+      if (PromotedOp1V == PromotedOp2V)
         return ConstantFP::get(Ty->getContext(), Op1V);
-      }
 
       APFloat Next(Op1V);
       Next.next(/*nextDown=*/PromotedOp1V > PromotedOp2V);
@@ -4697,14 +4695,14 @@ bool llvm::isMathLibCallNoop(const CallBase *Call,
         // The two arguments of nexttoward can have differing semantics.
         // We need to convert both arguments to the same semantics so
         // we can do comparisons.
-        APFloat PromotedOp0 = Op0.getPromoted(APFloat::IEEEquad());
-        APFloat PromotedOp1 = Op1.getPromoted(APFloat::IEEEquad());
+        const APFloat PromotedOp0 = Op0.getPromoted(APFloat::IEEEquad());
+        const APFloat PromotedOp1 = Op1.getPromoted(APFloat::IEEEquad());
         if (PromotedOp0 == PromotedOp1)
           return true;
 
         APFloat Next(Op0);
         Next.next(/*nextDown=*/PromotedOp0 > PromotedOp1);
-        bool DidOverflow = Op0.isLargest() && Next.isInfinity();
+        const bool DidOverflow = Op0.isLargest() && Next.isInfinity();
         return !Next.isZero() && !Next.isDenormal() && !DidOverflow;
       }
       default:
