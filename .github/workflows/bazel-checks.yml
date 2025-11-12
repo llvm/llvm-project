@@ -44,7 +44,7 @@ jobs:
       - name: Setup System Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libmpfr-dev libpfm4-dev
+          sudo apt-get install -y libmpfr-dev libpfm4-dev m4
           sudo curl -L https://github.com/bazelbuild/bazelisk/releases/download/v1.27.0/bazelisk-amd64.deb > /tmp/bazelisk.deb
           sudo apt-get install -y /tmp/bazelisk.deb
           rm /tmp/bazelisk.deb
