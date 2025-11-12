@@ -102,9 +102,11 @@ void f(int a, double b, const char *cpc, const void *cpv, X *pX) {
   // CHECK-FIXES: b1 = static_cast<int>(b);
 
   Y *pB = (Y*)pX;
-  // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: {{.*}}; use static_cast/const_cast/reinterpret_cast [
+  // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: {{.*}}; use static_cast {{.*}}
+  // CHECK-FIXES: Y *pB = static_cast<Y*>(pX);
   Y &rB = (Y&)*pX;
-  // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: {{.*}}; use static_cast/const_cast/reinterpret_cast [
+  // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: {{.*}}; use static_cast {{.*}}
+  // CHECK-FIXES: Y &rB = static_cast<Y&>(*pX);
 
   const char *pc3 = (const char*)cpv;
   // CHECK-MESSAGES: :[[@LINE-1]]:21: warning: {{.*}}; use static_cast [
