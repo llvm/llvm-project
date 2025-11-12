@@ -1576,13 +1576,21 @@ void foo(int arg) {
 // RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=51 -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY19 %s
 // SIMD-ONLY19-NOT: {{__kmpc|__tgt}}
 #ifdef CK26
-// CK26: [[IDENT_T:%.+]] = type { i32, i32, i32, i32, ptr }
-// CK26: @[[ITER:[a-zA-Z0-9_]+]] = internal global i32 0, align 4
-void foo(){
+void foo() {
 int a[10];
 #pragma omp target update to(iterator(int it = 0:10) : a[it])
 // CK26-LABEL: define {{.+}}foo
-// CK26:     %[[LOAD2:.*]] = load i32, ptr @[[ITER]], align 4
+// CK26: %[[ITER:[a-zA-Z0-9_]+]] = alloca i32, align 4
+// CK26: %[[LOAD2:.*]] = load i32, ptr %[[ITER]], align 4
 }
+
+void foo1() {
+int a[10];
+#pragma omp target update from(iterator(int it = 0:10) : a[it])
+// CK26-LABEL: define {{.+}}foo1
+// CK26: %[[ITER:[a-zA-Z0-9_]+]] = alloca i32, align 4
+// CK26: %[[LOAD2:.*]] = load i32, ptr %[[ITER]], align 4
+}
+
 #endif
 #endif
