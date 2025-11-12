@@ -55198,9 +55198,13 @@ static SDValue combineCTZ(SDNode *N, SelectionDAG &DAG,
       Offsets.push_back(DAG.getConstant(I * 64, DL, MVT::i64));
     }
 
-    // CTLZ - reverse the elements as we want the top non-zero element.
-    if (Opc == ISD::CTLZ)
+    // CTLZ - reverse the elements as we want the top non-zero element at the
+    // bottom for compression.
+    unsigned VecOpc = ISD::CTTZ;
+    if (Opc == ISD::CTLZ || Opc == ISD::CTLZ_ZERO_UNDEF) {
+      VecOpc = ISD::CTLZ;
       Vec = DAG.getVectorShuffle(VecVT, DL, Vec, Vec, RevMask);
+    }
 
     SDValue PassThrough = DAG.getUNDEF(VecVT);
     if (Opc == ISD::CTLZ || Opc == ISD::CTTZ)
@@ -55208,7 +55212,7 @@ static SDValue combineCTZ(SDNode *N, SelectionDAG &DAG,
 
     SDValue IsNonZero = DAG.getSetCC(DL, BoolVT, Vec,
                                      DAG.getConstant(0, DL, VecVT), ISD::SETNE);
-    SDValue Cnt = DAG.getNode(Opc, DL, VecVT, Vec);
+    SDValue Cnt = DAG.getNode(VecOpc, DL, VecVT, Vec);
     Cnt = DAG.getNode(ISD::ADD, DL, VecVT, Cnt,
                       DAG.getBuildVector(VecVT, DL, Offsets));
     Cnt = DAG.getNode(ISD::VECTOR_COMPRESS, DL, VecVT, Cnt, IsNonZero,
