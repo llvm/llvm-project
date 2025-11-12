@@ -1284,10 +1284,11 @@ void SIFoldOperandsImpl::foldOperand(
         continue;
 
       const int SrcIdx = MovOp == AMDGPU::V_MOV_B16_t16_e64 ? 2 : 1;
-      const TargetRegisterClass *MovSrcRC =
-          TRI->getRegClass(TII->getOpRegClassID(MovDesc.operands()[SrcIdx]));
 
-      if (MovSrcRC) {
+      int16_t RegClassID = TII->getOpRegClassID(MovDesc.operands()[SrcIdx]);
+      if (RegClassID != -1) {
+        const TargetRegisterClass *MovSrcRC = TRI->getRegClass(RegClassID);
+
         if (UseSubReg)
           MovSrcRC = TRI->getMatchingSuperRegClass(SrcRC, MovSrcRC, UseSubReg);
 

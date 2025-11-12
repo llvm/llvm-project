@@ -287,9 +287,6 @@ unsigned AMDGPURegisterBankInfo::getBreakDownCost(
 const RegisterBank &
 AMDGPURegisterBankInfo::getRegBankFromRegClass(const TargetRegisterClass &RC,
                                                LLT Ty) const {
-  if (&RC == &AMDGPU::SReg_1RegClass)
-    return AMDGPU::VCCRegBank;
-
   // We promote real scalar booleans to SReg_32. Any SGPR using s1 is really a
   // VCC-like use.
   if (TRI->isSGPRClass(&RC)) {

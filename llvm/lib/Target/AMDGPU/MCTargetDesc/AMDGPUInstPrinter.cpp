@@ -795,14 +795,24 @@ void AMDGPUInstPrinter::printRegularOperand(const MCInst *MI, unsigned OpNo,
     // Intention: print disassembler message when invalid code is decoded,
     // for example sgpr register used in VReg or VISrc(VReg or imm) operand.
     const MCOperandInfo &OpInfo = Desc.operands()[OpNo];
-    int16_t RCID = MII.getOpRegClassID(
-        OpInfo, STI.getHwMode(MCSubtargetInfo::HwMode_RegInfo));
-    if (RCID != -1) {
+    if (OpInfo.RegClass != -1) {
+      int16_t RCID = MII.getOpRegClassID(
+          OpInfo, STI.getHwMode(MCSubtargetInfo::HwMode_RegInfo));
       const MCRegisterClass &RC = MRI.getRegClass(RCID);
       auto Reg = mc2PseudoReg(Op.getReg());
       if (!RC.contains(Reg) && !isInlineValue(Reg)) {
-        O << "/*Invalid register, operand has \'" << MRI.getRegClassName(&RC)
-          << "\' register class*/";
+        bool IsWaveSizeOp = OpInfo.isLookupRegClassByHwMode() &&
+                            (OpInfo.RegClass == AMDGPU::SReg_1 ||
+                             OpInfo.RegClass == AMDGPU::SReg_1_XEXEC);
+        // Suppress this comment for a mismatched wavesize. Some users expect to
+        // be able to assemble and disassemble modules with mixed wavesizes, but
+        // we do not know the subtarget in different functions in MC.
+        //
+        // TODO: Should probably print it anyway, maybe a more specific version.
+        if (!IsWaveSizeOp) {
+          O << "/*Invalid register, operand has \'" << MRI.getRegClassName(&RC)
+            << "\' register class*/";
+        }
       }
     }
   } else if (Op.isImm()) {

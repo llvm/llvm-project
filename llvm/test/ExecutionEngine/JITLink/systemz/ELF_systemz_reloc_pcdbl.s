@@ -1,33 +1,34 @@
 # REQUIRES: system-linux
 # RUN: llvm-mc -triple=systemz-unknown-linux -mcpu=z16 -position-independent \
 # RUN:         -defsym OFF12=0xffe -defsym OFF16=4 -defsym OFF24=6 \
-# RUN:         -defsym OFF32=6 -filetype=obj -o %t.o %s
+# RUN:         -filetype=obj -o %t.o %s
 #
 # RUN: llvm-jitlink -noexec -abs OFF12=0xffe -abs OFF16=4 -abs OFF24=6 \
-# RUN:                      -abs OFF32=6 -check=%s %t.o
+# RUN:                      -check=%s %t.o
 #
 # RUN: llvm-mc -triple=systemz-unknown-linux -mcpu=z16 -position-independent \
 # RUN:         -defsym OFF12=6 -defsym OFF16=0xfffe -defsym OFF24=6 \
-# RUN:         -defsym OFF32=6 -filetype=obj -o %t.o %s
+# RUN:         -filetype=obj -o %t.o %s
 #
 # RUN: llvm-jitlink -noexec -abs OFF12=6 -abs OFF16=0xfffe -abs OFF24=6 \
-# RUN:                      -abs OFF32=6 -check=%s %t.o
+# RUN:                      -check=%s %t.o
 #
 # RUN: llvm-mc -triple=systemz-unknown-linux -mcpu=z16 -position-independent \
 # RUN:         -defsym OFF12=6 -defsym OFF16=4 -defsym OFF24=0xfffffe \
-# RUN:         -defsym OFF32=6 -filetype=obj -o %t.o %s
+# RUN:         -filetype=obj -o %t.o %s
 #
 # RUN: llvm-jitlink -noexec -abs OFF12=6 -abs OFF16=4 -abs OFF24=0xfffffe \
-# RUN:                      -abs OFF32=6 -check=%s %t.o
+# RUN:                      -check=%s %t.o
 #
 # RUN: llvm-mc -triple=systemz-unknown-linux -mcpu=z16 -position-independent \
 # RUN:         -defsym OFF12=6 -defsym OFF16=4 -defsym OFF24=6 \
-# RUN:         -defsym OFF32=0xffffffc8 -filetype=obj -o %t.o %s
+# RUN:         -filetype=obj -o %t.o %s
 #
 # RUN: llvm-jitlink -noexec -abs OFF12=6 -abs OFF16=4 -abs OFF24=6 \
-# RUN:                      -abs OFF32=0xffffffc8 -check=%s %t.o
+# RUN:                      -check=%s %t.o
 
-# Check R_390_PC*dbl relocations.
+# Check R_390_PC*dbl relocations.  R_390_PC32_DBL test is in 
+# ELF_systemz_reloc_abs32.s because of large offset. 
 
         .text
         .section        .text.main
@@ -48,17 +49,6 @@ test_pc16dbl:
 .Lpc16dbl:
         jne  test_pc16dbl 
         .size test_pc16dbl,.-test_pc16dbl
-
-# R_390_PC32DBL
-# jitlink-check: *{4}(test_pc32dbl + 2) = (OFF32 >> 1)
-        .globl  test_pc32dbl
-        .p2align 3 
-test_pc32dbl:
-        jge   .Lpc32dbl
-	.space OFF32 - 6 
-.Lpc32dbl:
-        jgne  test_pc32dbl
-        .size test_pc32dbl,.-test_pc32dbl
 
 # R_390_PC12DBL
 # jitlink-check: ((*{2} (test_pc12dbl + 1)) & 0x0fff) = (OFF12 >> 1)

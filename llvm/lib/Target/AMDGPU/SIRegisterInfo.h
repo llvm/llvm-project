@@ -391,8 +391,6 @@ public:
 
   MCRegister getExec() const;
 
-  const TargetRegisterClass *getRegClass(unsigned RCID) const;
-
   // Find reaching register definition
   MachineInstr *findReachingDef(Register Reg, unsigned SubReg,
                                 MachineInstr &Use,

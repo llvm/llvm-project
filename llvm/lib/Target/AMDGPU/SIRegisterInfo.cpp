@@ -3908,20 +3908,6 @@ const TargetRegisterClass *SIRegisterInfo::getVGPR64Class() const {
                                 : &AMDGPU::VReg_64RegClass;
 }
 
-const TargetRegisterClass *
-SIRegisterInfo::getRegClass(unsigned RCID) const {
-  switch ((int)RCID) {
-  case AMDGPU::SReg_1RegClassID:
-    return getBoolRC();
-  case AMDGPU::SReg_1_XEXECRegClassID:
-    return getWaveMaskRegClass();
-  case -1:
-    return nullptr;
-  default:
-    return AMDGPUGenRegisterInfo::getRegClass(RCID);
-  }
-}
-
 // Find reaching register definition
 MachineInstr *SIRegisterInfo::findReachingDef(Register Reg, unsigned SubReg,
                                               MachineInstr &Use,
