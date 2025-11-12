@@ -1283,9 +1283,10 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
     break;
   }
   case ISD::FMODF: {
-    EVT VT = Node->getValueType(0).getVectorElementType();
+    EVT VT = Node->getValueType(0);
     RTLIB::Libcall LC = RTLIB::getMODF(VT);
-    if (DAG.expandMultipleResultFPLibCall(LC, Node, Results, VT,
+    if (LC != RTLIB::UNKNOWN_LIBCALL &&
+        DAG.expandMultipleResultFPLibCall(LC, Node, Results, VT,
                                           /*CallRetResNo=*/0))
       return;
     break;
