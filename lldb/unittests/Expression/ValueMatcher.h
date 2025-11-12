@@ -58,8 +58,7 @@ public:
   // Typedef to hook into the gtest matcher machinery.
   using is_gtest_matcher = void;
 
-  bool MatchAndExplain(const Value &val,
-                       testing::MatchResultListener *listener) const;
+  bool MatchAndExplain(const Value &val, std::ostream *os) const;
 
   void DescribeTo(std::ostream *os) const;
 

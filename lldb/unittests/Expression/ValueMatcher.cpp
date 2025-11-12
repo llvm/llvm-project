@@ -50,10 +50,10 @@ void lldb_private::PrintTo(const Value &val, std::ostream *os) {
                      val.GetScalar(), val.GetBuffer().GetData());
 }
 
-bool ValueMatcher::MatchAndExplain(
-    const Value &val, testing::MatchResultListener *listener) const {
-  if (listener && listener->stream()) {
-    llvm::raw_os_ostream os(*listener->stream());
+bool ValueMatcher::MatchAndExplain(const Value &val,
+                                   std::ostream *stream) const {
+  if (stream) {
+    llvm::raw_os_ostream os(*stream);
     return MatchAndExplainImpl(val, os);
   }
 
@@ -61,6 +61,9 @@ bool ValueMatcher::MatchAndExplain(
   return MatchAndExplainImpl(val, os);
 }
 
+// Match the provided value and explain any mismatches using
+// the raw_ostream. We use the llvm::raw_ostream here to simplify the formatting
+// of Scalar values which already know how to print themselves to that stream.
 bool ValueMatcher::MatchAndExplainImpl(const Value &val,
                                        llvm::raw_ostream &os) const {
   if (val.GetValueType() != m_value_type) {
