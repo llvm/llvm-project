@@ -635,6 +635,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FROUNDEVEN, VT, Action);
     setOperationAction(ISD::FTRUNC, VT, Action);
     setOperationAction(ISD::FLDEXP, VT, Action);
+    setOperationAction(ISD::FSINCOSPI, VT, Action);
   };
 
   if (!Subtarget.useSoftFloat() && Subtarget.hasSSE2()) {
@@ -53411,7 +53412,7 @@ static SDValue narrowBitOpRMW(StoreSDNode *St, const SDLoc &DL,
     return SDValue();
 
   // SrcVal must be a matching normal load further up the chain.
-  auto *Ld = dyn_cast<LoadSDNode>(SrcVal);
+  auto *Ld = dyn_cast<LoadSDNode>(peekThroughBitcasts(SrcVal));
   if (!Ld || !ISD::isNormalLoad(Ld) || !Ld->isSimple() ||
       Ld->getBasePtr() != St->getBasePtr() ||
       Ld->getOffset() != St->getOffset() ||
