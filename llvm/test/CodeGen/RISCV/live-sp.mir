@@ -19,7 +19,6 @@
 
   ; Function Attrs: nofree nosync nounwind readnone willreturn
 
-  attributes #0 = { nofree nosync nounwind readnone willreturn }
 
 ...
 ---

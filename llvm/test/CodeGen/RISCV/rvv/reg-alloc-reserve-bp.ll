@@ -73,4 +73,3 @@ entry:
 
 declare void @bar(i32 noundef signext, i32 noundef signext, i32 noundef signext, i32 noundef signext, i32 noundef signext, i32 noundef signext, i32 noundef signext, i32 noundef signext, ptr noundef)
 
-attributes #1 = { argmemonly mustprogress nofree nosync nounwind willreturn }

@@ -22,7 +22,6 @@
   ; Function Attrs: argmemonly nofree nosync nounwind readonly willreturn
 
   attributes #0 = { nounwind "target-features"="+v" }
-  attributes #1 = { argmemonly nofree nosync nounwind readonly willreturn "target-features"="+v" }
 
 ...
 ---

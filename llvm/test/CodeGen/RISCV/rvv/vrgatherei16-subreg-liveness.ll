@@ -66,5 +66,3 @@ loopIR3.i.i:                                      ; preds = %loopIR3.i.i, %loopI
 
 ; Function Attrs: nounwind readnone
 
-attributes #0 = { nocallback nofree nosync nounwind readnone willreturn }
-attributes #1 = { nounwind readnone }

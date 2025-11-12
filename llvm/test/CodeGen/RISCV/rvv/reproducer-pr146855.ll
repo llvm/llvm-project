@@ -66,5 +66,3 @@ uselistorder ptr @llvm.masked.load.nxv4i32.p0, { 1, 0 }
 uselistorder ptr @llvm.vector.reduce.add.nxv4i32, { 1, 0 }
 
 attributes #0 = { "target-features"="+v" }
-attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: read) }
-attributes #2 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }

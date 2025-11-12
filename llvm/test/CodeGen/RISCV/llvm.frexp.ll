@@ -1933,4 +1933,3 @@ define i32 @test_frexp_f128_i32_only_use_exp(fp128 %a) nounwind {
   ret i32 %result.0
 }
 
-attributes #0 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }

@@ -14,7 +14,6 @@
   }
 
   attributes #0 = { "target-features"="+v" }
-  attributes #1 = { nocallback nofree nosync nounwind willreturn memory(none) "target-features"="+v" }
 
 ...
 ---

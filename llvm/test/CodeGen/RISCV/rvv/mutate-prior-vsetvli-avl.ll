@@ -36,7 +36,3 @@ entry:
   ret void
 }
 
-attributes #1 = { nofree nounwind memory(read) }
-attributes #2 = { nofree nosync nounwind memory(none) }
-attributes #3 = { nounwind }
-attributes #4 = { nounwind memory(write) }

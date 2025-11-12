@@ -120,5 +120,4 @@ start:
 ; Function Attrs: nounwind readnone speculatable
 
 attributes #0 = { nounwind readnone }
-attributes #1 = { nounwind readnone speculatable }
 attributes #2 = { nounwind }

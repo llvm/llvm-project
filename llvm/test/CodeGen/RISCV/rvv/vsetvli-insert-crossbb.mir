@@ -143,10 +143,6 @@
   }
 
   attributes #0 = { "target-features"="+v" }
-  attributes #1 = { nounwind readnone }
-  attributes #2 = { nounwind }
-  attributes #3 = { nounwind readonly }
-  attributes #4 = { nounwind writeonly }
 
 ...
 ---

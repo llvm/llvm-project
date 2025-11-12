@@ -27,4 +27,3 @@ entry:
 
 ; Function Attrs: argmemonly mustprogress nofree nounwind willreturn
 
-attributes #1 = { argmemonly mustprogress nofree nounwind willreturn }

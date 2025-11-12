@@ -173,5 +173,3 @@ sw.bb85:                                          ; preds = %if.end48
   br label %common.ret
 }
 
-attributes #0 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
-attributes #1 = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: write) }
