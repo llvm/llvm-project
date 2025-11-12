@@ -1141,8 +1141,8 @@ define <2 x half> @fmul_pow_shl_cnt_vec_fail_to_large(<2 x i16> %cnt) nounwind {
 ; CHECK-AVX2-LABEL: fmul_pow_shl_cnt_vec_fail_to_large:
 ; CHECK-AVX2:       # %bb.0:
 ; CHECK-AVX2-NEXT:    subq $56, %rsp
+; CHECK-AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [2,2,2,2]
 ; CHECK-AVX2-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
-; CHECK-AVX2-NEXT:    vpmovsxbd {{.*#+}} ymm1 = [2,2,0,0,0,0,0,0]
 ; CHECK-AVX2-NEXT:    vpsllvd %ymm0, %ymm1, %ymm0
 ; CHECK-AVX2-NEXT:    vmovdqu %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; CHECK-AVX2-NEXT:    vpextrw $2, %xmm0, %eax
@@ -1171,8 +1171,8 @@ define <2 x half> @fmul_pow_shl_cnt_vec_fail_to_large(<2 x i16> %cnt) nounwind {
 ;
 ; CHECK-ONLY-AVX512F-LABEL: fmul_pow_shl_cnt_vec_fail_to_large:
 ; CHECK-ONLY-AVX512F:       # %bb.0:
+; CHECK-ONLY-AVX512F-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [2,2,2,2]
 ; CHECK-ONLY-AVX512F-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
-; CHECK-ONLY-AVX512F-NEXT:    vpmovsxbd {{.*#+}} ymm1 = [2,2,0,0,0,0,0,0]
 ; CHECK-ONLY-AVX512F-NEXT:    vpsllvd %ymm0, %ymm1, %ymm0
 ; CHECK-ONLY-AVX512F-NEXT:    vpmovdw %zmm0, %ymm0
 ; CHECK-ONLY-AVX512F-NEXT:    vpmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero

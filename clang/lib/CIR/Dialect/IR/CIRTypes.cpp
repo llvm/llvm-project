@@ -341,7 +341,7 @@ RecordType::getTypeSizeInBits(const mlir::DataLayout &dataLayout,
   if (isUnion())
     return dataLayout.getTypeSize(getLargestMember(dataLayout));
 
-  unsigned recordSize = computeStructSize(dataLayout);
+  auto recordSize = static_cast<uint64_t>(computeStructSize(dataLayout));
   return llvm::TypeSize::getFixed(recordSize * 8);
 }
 

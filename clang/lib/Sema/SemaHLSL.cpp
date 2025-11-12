@@ -940,8 +940,7 @@ void SemaHLSL::checkSemanticAnnotation(
       DiagnoseAttrStageMismatch(SemanticAttr, ST, {llvm::Triple::Compute});
 
     if (SemanticAttr->getSemanticIndex() != 0) {
-      Twine PrettyName =
-          std::string("'") + SemanticAttr->getSemanticName() + "'";
+      Twine PrettyName = "'" + SemanticAttr->getSemanticName() + "'";
       Diag(SemanticAttr->getLoc(),
            diag::err_hlsl_semantic_indexing_not_supported)
           << PrettyName.str();
