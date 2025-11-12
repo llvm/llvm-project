@@ -233,19 +233,44 @@ public:
   }
 };
 
-class HLSLSemanticBaseAttr : public HLSLAnnotationAttr {
+class HLSLSemanticAttr : public HLSLAnnotationAttr {
+  unsigned SemanticIndex = 0;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned SemanticIndexable : 1;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned SemanticExplicitIndex : 1;
+
+  Decl *TargetDecl = nullptr;
+
 protected:
-  HLSLSemanticBaseAttr(ASTContext &Context,
-                       const AttributeCommonInfo &CommonInfo, attr::Kind AK,
-                       bool IsLateParsed, bool InheritEvenIfAlreadyPresent)
+  HLSLSemanticAttr(ASTContext &Context, const AttributeCommonInfo &CommonInfo,
+                   attr::Kind AK, bool IsLateParsed,
+                   bool InheritEvenIfAlreadyPresent, bool SemanticIndexable)
       : HLSLAnnotationAttr(Context, CommonInfo, AK, IsLateParsed,
-                           InheritEvenIfAlreadyPresent) {}
+                           InheritEvenIfAlreadyPresent) {
+    this->SemanticIndexable = SemanticIndexable;
+    this->SemanticExplicitIndex = false;
+  }
 
 public:
+  bool isSemanticIndexable() const { return SemanticIndexable; }
+
+  void setSemanticIndex(unsigned SemanticIndex) {
+    this->SemanticIndex = SemanticIndex;
+    this->SemanticExplicitIndex = true;
+  }
+
+  unsigned getSemanticIndex() const { return SemanticIndex; }
+
+  bool isSemanticIndexExplicit() const { return SemanticExplicitIndex; }
+
+  void setTargetDecl(Decl *D) { TargetDecl = D; }
+  Decl *getTargetDecl() const { return TargetDecl; }
+
   // Implement isa/cast/dyncast/etc.
   static bool classof(const Attr *A) {
-    return A->getKind() >= attr::FirstHLSLSemanticBaseAttr &&
-           A->getKind() <= attr::LastHLSLSemanticBaseAttr;
+    return A->getKind() >= attr::FirstHLSLSemanticAttr &&
+           A->getKind() <= attr::LastHLSLSemanticAttr;
   }
 };
 

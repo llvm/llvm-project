@@ -4,6 +4,7 @@
 float4 main(float4 a : SV_Position2) {
 // CHECK: FunctionDecl 0x{{[0-9a-fA-F]+}} <{{.*}}> line:[[@LINE-1]]:8 main 'float4 (float4)'
 // CHECK-NEXT: ParmVarDecl 0x{{[0-9a-fA-F]+}} <{{.*}}> col:20 a 'float4':'vector<float, 4>'
-// CHECK-NEXT:  HLSLParsedSemanticAttr 0x{{[0-9a-f]+}} <col:24> "SV_Position" 2
-// CHECK-NEXT:  HLSLAppliedSemanticAttr 0x{{[0-9a-f]+}} <col:24> "SV_Position" 2
+// CHECK-NEXT: HLSLSV_PositionAttr 0x{{[0-9a-fA-F]+}} <{{.*}}>
+
+// CHECK: HLSLSV_PositionAttr 0x{{[0-9a-fA-F]+}} <{{.*}}> ParmVar 0x{{[0-9a-fA-F]+}} 'a' 'float4':'vector<float, 4>' 2 SemanticExplicitIndex
 }
