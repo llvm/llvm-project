@@ -3375,7 +3375,7 @@ public:
 ///
 /// For example, if the user writes the following expansion statement:
 /// \verbatim
-///   std::array<int, 3> a {1, 2, 3};
+///   int a[3]{1, 2, 3};
 ///   template for (auto x : a) {
 ///     // ...
 ///   }
