@@ -409,6 +409,41 @@ void __unw_remove_dynamic_eh_frame_section(unw_word_t eh_frame_start) {
 }
 
 #endif // defined(_LIBUNWIND_SUPPORT_DWARF_UNWIND)
+
+/// Maps the UNW_* error code to a textual representation
+_LIBUNWIND_HIDDEN const char *__unw_strerror(int error_code) {
+  switch (error_code) {
+  case UNW_ESUCCESS:
+    return "no error";
+  case UNW_EUNSPEC:
+    return "unspecified (general) error";
+  case UNW_ENOMEM:
+    return "out of memory";
+  case UNW_EBADREG:
+    return "bad register number";
+  case UNW_EREADONLYREG:
+    return "attempt to write read-only register";
+  case UNW_ESTOPUNWIND:
+    return "stop unwinding";
+  case UNW_EINVALIDIP:
+    return "invalid IP";
+  case UNW_EBADFRAME:
+    return "bad frame";
+  case UNW_EINVAL:
+    return "unsupported operation or bad value";
+  case UNW_EBADVERSION:
+    return "unwind info has unsupported version";
+  case UNW_ENOINFO:
+    return "no unwind info found";
+#if defined(_LIBUNWIND_TARGET_AARCH64) && !defined(_LIBUNWIND_IS_NATIVE_ONLY)
+  case UNW_ECROSSRASIGNING:
+    return "cross unwind with return address signing";
+#endif
+  }
+  return "invalid error code";
+}
+_LIBUNWIND_WEAK_ALIAS(__unw_strerror, unw_strerror)
+
 #endif // !defined(__USING_SJLJ_EXCEPTIONS__) && !defined(__wasm__)
 
 #ifdef __APPLE__

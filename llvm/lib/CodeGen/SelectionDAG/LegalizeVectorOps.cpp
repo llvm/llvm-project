@@ -1275,7 +1275,7 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
                             ? RTLIB::getSINCOS(VT)
                             : RTLIB::getSINCOSPI(VT);
     if (LC != RTLIB::UNKNOWN_LIBCALL &&
-        DAG.expandMultipleResultFPLibCall(LC, Node, Results))
+        TLI.expandMultipleResultFPLibCall(DAG, LC, Node, Results))
       return;
 
     // TODO: Try to see if there's a narrower call available to use before
@@ -1286,7 +1286,7 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
     EVT VT = Node->getValueType(0);
     RTLIB::Libcall LC = RTLIB::getMODF(VT);
     if (LC != RTLIB::UNKNOWN_LIBCALL &&
-        DAG.expandMultipleResultFPLibCall(LC, Node, Results,
+        TLI.expandMultipleResultFPLibCall(DAG, LC, Node, Results,
                                           /*CallRetResNo=*/0))
       return;
     break;
