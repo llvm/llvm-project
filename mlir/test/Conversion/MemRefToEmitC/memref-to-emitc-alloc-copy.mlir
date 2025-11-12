@@ -23,28 +23,18 @@ func.func @alloc_copy(%arg0: memref<999xi32>) {
 // CHECK-NEXT:  "emitc.constant"() <{value = 999 : index}> : () -> index 
 // CHECK-NEXT:  emitc.mul %1, %2 : (!emitc.size_t, index) -> !emitc.size_t 
 // CHECK-NEXT:  emitc.call_opaque "malloc"(%3) : (!emitc.size_t) -> !emitc.ptr<!emitc.opaque<"void">> 
-// CHECK-NEXT:  emitc.cast %4 : !emitc.ptr<!emitc.opaque<"void">> to !emitc.ptr<i32> 
-// CHECK-NEXT:  builtin.unrealized_conversion_cast %5 : !emitc.ptr<i32> to !emitc.array<999xi32> 
-// CHECK-NEXT:  "emitc.constant"() <{value = 0 : index}> : () -> index 
-// CHECK-NEXT:  emitc.subscript %0[%7] : (!emitc.array<999xi32>, index) -> !emitc.lvalue<i32> 
-// CHECK-NEXT:  emitc.apply "&"(%8) : (!emitc.lvalue<i32>) -> !emitc.ptr<i32> 
+// CHECK-NEXT:  emitc.cast %4 : !emitc.ptr<!emitc.opaque<"void">> to !emitc.ptr<!emitc.array<999xi32>>  
 // CHECK-NEXT:  emitc.call_opaque "sizeof"() {args = [i32]} : () -> !emitc.size_t
 // CHECK-NEXT:  "emitc.constant"() <{value = 999 : index}> : () -> index
-// CHECK-NEXT:  emitc.mul %12, %13 : (!emitc.size_t, index) -> !emitc.size_t
-// CHECK-NEXT:  emitc.call_opaque "memcpy"(%11, %9, %14) : (!emitc.ptr<i32>, !emitc.ptr<i32>, !emitc.size_t) -> ()
+// CHECK-NEXT:  emitc.mul %6, %7 : (!emitc.size_t, index) -> !emitc.size_t
+// CHECK-NEXT:  emitc.call_opaque "memcpy"(%5, %0, %8) : (!emitc.ptr<i32>, !emitc.ptr<i32>, !emitc.size_t) -> ()
 // CHECK-NEXT:  emitc.call_opaque "sizeof"() {args = [i32]} : () -> !emitc.size_t
 // CHECK-NEXT:  "emitc.constant"() <{value = 999 : index}> : () -> index
-// CHECK-NEXT:  emitc.mul %15, %16 : (!emitc.size_t, index) -> !emitc.size_t
-// CHECK-NEXT:  emitc.call_opaque "malloc"(%17) : (!emitc.size_t) -> !emitc.ptr<!emitc.opaque<"void">>
-// CHECK-NEXT:  emitc.cast %18 : !emitc.ptr<!emitc.opaque<"void">> to !emitc.ptr<i32>
-// CHECK-NEXT:  builtin.unrealized_conversion_cast %19 : !emitc.ptr<i32> to !emitc.array<999xi32>
-// CHECK-NEXT:  "emitc.constant"() <{value = 0 : index}> : () -> index
-// CHECK-NEXT:  emitc.subscript %0[%21] : (!emitc.array<999xi32>, index) -> !emitc.lvalue<i32>
-// CHECK-NEXT:  emitc.apply "&"(%22) : (!emitc.lvalue<i32>) -> !emitc.ptr<i32>
-// CHECK-NEXT:  emitc.subscript %20[%21] : (!emitc.array<999xi32>, index) -> !emitc.lvalue<i32>
-// CHECK-NEXT:  emitc.apply "&"(%24) : (!emitc.lvalue<i32>) -> !emitc.ptr<i32>
+// CHECK-NEXT:  emitc.mul %9, %10 : (!emitc.size_t, index) -> !emitc.size_t
+// CHECK-NEXT:  emitc.call_opaque "malloc"(%11) : (!emitc.size_t) -> !emitc.ptr<!emitc.opaque<"void">>
+// CHECK-NEXT:  emitc.cast %12 : !emitc.ptr<!emitc.opaque<"void">> to !emitc.ptr<!emitc.array<999xi32>>
 // CHECK-NEXT:  emitc.call_opaque "sizeof"() {args = [i32]} : () -> !emitc.size_t
 // CHECK-NEXT:  "emitc.constant"() <{value = 999 : index}> : () -> index
-// CHECK-NEXT:  emitc.mul %26, %27 : (!emitc.size_t, index) -> !emitc.size_t
-// CHECK-NEXT:  emitc.call_opaque "memcpy"(%25, %23, %28) : (!emitc.ptr<i32>, !emitc.ptr<i32>, !emitc.size_t) -> ()
+// CHECK-NEXT:  emitc.mul %14, %15 : (!emitc.size_t, index) -> !emitc.size_t
+// CHECK-NEXT:  emitc.call_opaque "memcpy"(%13, %0, %16) : (!emitc.ptr<i32>, !emitc.ptr<i32>, !emitc.size_t) -> ()
 // CHECK-NEXT:    return
