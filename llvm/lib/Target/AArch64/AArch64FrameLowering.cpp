@@ -2415,8 +2415,6 @@ void AArch64FrameLowering::determineStackHazardSlot(
   if (!AFI->hasStackHazardSlotIndex())
     return;
 
-  // Determine if we should use SplitSVEObjects. This should only be used if
-  // there's a possibility of a stack hazard between PPRs and ZPRs or FPRs.
   if (SplitSVEObjects) {
     CallingConv::ID CC = MF.getFunction().getCallingConv();
     if (AFI->isSVECC() || CC == CallingConv::AArch64_SVE_VectorCall) {
@@ -2425,6 +2423,8 @@ void AArch64FrameLowering::determineStackHazardSlot(
       return;
     }
 
+    // We only use SplitSVEObjects in non-SVE CC functions if there's a
+    // possibility of a stack hazard between PPRs and ZPRs/FPRs.
     LLVM_DEBUG(dbgs() << "Determining if SplitSVEObjects should be used in "
                          "non-SVE CC function...\n");
 
