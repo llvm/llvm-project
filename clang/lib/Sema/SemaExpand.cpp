@@ -102,24 +102,25 @@ TryBuildIterableExpansionStmtInitializer(Sema &S, Expr *ExpansionInitializer,
   }
 
   // Try ADL.
-  if (!FoundBeginEnd) {
+  //
+  // If overload resolution for 'begin()' *and* 'end()' succeeds (irrespective
+  // of whether it results in a usable candidate), then assume this is an
+  // iterating expansion statement.
+  auto HasADLCandidate = [&](DeclarationName Name) {
     OverloadCandidateSet Candidates(ColonLoc, OverloadCandidateSet::CSK_Normal);
+    OverloadCandidateSet::iterator Best;
 
-    S.AddArgumentDependentLookupCandidates(
-        BeginName.getName(), ColonLoc, ExpansionInitializer,
-        /*ExplicitTemplateArgs=*/nullptr, Candidates);
+    S.AddArgumentDependentLookupCandidates(Name, ColonLoc, ExpansionInitializer,
+                                           /*ExplicitTemplateArgs=*/nullptr,
+                                           Candidates);
 
-    if (Candidates.empty())
-      return Data;
+    return Candidates.BestViableFunction(S, ColonLoc, Best) !=
+           OR_No_Viable_Function;
+  };
 
-    Candidates.clear(OverloadCandidateSet::CSK_Normal);
-    S.AddArgumentDependentLookupCandidates(
-        EndName.getName(), ColonLoc, ExpansionInitializer,
-        /*ExplicitTemplateArgs=*/nullptr, Candidates);
-
-    if (Candidates.empty())
-      return Data;
-  }
+  if (!FoundBeginEnd && (!HasADLCandidate(BeginName.getName()) ||
+                         !HasADLCandidate(EndName.getName())))
+    return Data;
 
   auto Ctx = Sema::ExpressionEvaluationContext::PotentiallyEvaluated;
   if (VarIsConstexpr)

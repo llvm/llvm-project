@@ -320,15 +320,15 @@ constexpr const int* end(const ADL&) { return integers.end(); }
 
 namespace adl_error {
 struct ADLError1 {
-  constexpr const int* begin() const { return integers.begin(); } // expected-note {{member is not a candidate because range type 'const adl_error::ADLError1' has no 'end' member}}
+  constexpr const int* begin() const { return integers.begin(); }
 };
 
 struct ADLError2 {
-  constexpr const int* end() const { return integers.end(); } // expected-note {{member is not a candidate because range type 'const adl_error::ADLError2' has no 'begin' member}}
+  constexpr const int* end() const { return integers.end(); }
 };
 
-constexpr const int* begin(const ADLError2&) { return integers.begin(); } // expected-note {{candidate function not viable: no known conversion from 'const adl_error::ADLError1' to 'const ADLError2' for 1st argument}}
-constexpr const int* end(const ADLError1&) { return integers.end(); } // expected-note {{candidate function not viable: no known conversion from 'const adl_error::ADLError2' to 'const ADLError1' for 1st argument}}
+constexpr const int* begin(const ADLError2&) { return integers.begin(); }
+constexpr const int* end(const ADLError1&) { return integers.end(); }
 }
 
 namespace adl_both {
@@ -354,11 +354,14 @@ constexpr int adl_begin_end() {
 
 static_assert(adl_begin_end() == 12);
 
-void adl_mixed_error() {
+void adl_mixed() {
   static constexpr adl_error::ADLError1 a1;
   static constexpr adl_error::ADLError2 a2;
-  template for (auto x : a1) g(x); // expected-error {{invalid range expression of type 'const adl_error::ADLError1'; no viable 'begin' function available}}
-  template for (auto x : a2) g(x); // expected-error {{invalid range expression of type 'const adl_error::ADLError2'; no viable 'end' function available}}
+
+  // These are actually destructuring because there is no
+  // valid begin/end pair.
+  template for (auto x : a1) g(x);
+  template for (auto x : a2) g(x);
 }
 
 constexpr int adl_both_test() {
@@ -550,23 +553,100 @@ struct EndOnly {
 constexpr const int* end(const EndOnly&) { return nullptr; }
 }
 
-constexpr int unpaired_begin_end() {
-  static constexpr BeginOnly b1;
-  static constexpr EndOnly e1;
-  static constexpr adl1::BeginOnly b2;
-  static constexpr adl2::EndOnly e2;
-  int sum = 0;
-
-  template for (auto x : b1) sum += x;
-  template for (auto x : e1) sum += x;
-
-  template for (auto x : b2) sum += x;
-  template for (auto x : e2) sum += x;
-
-  return sum;
+namespace adl3 {
+struct BeginOnlyDeleted {
+  int x{4};
+};
+constexpr const int* begin(const BeginOnlyDeleted&) = delete;
 }
 
-static_assert(unpaired_begin_end() == 10);
+namespace adl4 {
+struct EndOnlyDeleted {
+  int x{4};
+};
+constexpr const int* end(const EndOnlyDeleted&) = delete;
+}
+
+namespace adl5 {
+struct BothDeleted {
+  int x{4};
+};
+constexpr const int* begin(const BothDeleted&) = delete; // expected-note {{candidate function has been explicitly deleted}}
+constexpr const int* end(const BothDeleted&) = delete;
+}
+
+namespace adl6 {
+struct BeginNotViable {
+  int x{4};
+};
+constexpr const int* begin(int) { return nullptr; }
+}
+
+namespace adl7 {
+struct EndNotViable {
+  int x{4};
+};
+constexpr const int* end(int) { return nullptr; }
+}
+
+namespace adl8 {
+struct BothNotViable {
+  int x{4};
+};
+constexpr const int* begin(int) { return nullptr; }
+constexpr const int* end(int) { return nullptr; }
+}
+
+namespace adl9 {
+struct BeginDeleted {
+  int x{4};
+};
+constexpr const int* begin(const BeginDeleted&) = delete; // expected-note {{candidate function has been explicitly deleted}}
+constexpr const int* end(const BeginDeleted&) { return nullptr; }
+}
+
+namespace adl10 {
+struct EndDeleted {
+  int x{4};
+};
+constexpr const int* begin(const EndDeleted&) { return nullptr; }
+constexpr const int* end(const EndDeleted&) = delete; // expected-note {{candidate function has been explicitly deleted}}
+}
+
+void unpaired_begin_end() {
+  static constexpr adl1::BeginOnly begin_only;
+  static constexpr adl2::EndOnly end_only;
+  static constexpr adl3::BeginOnlyDeleted begin_only_deleted;
+  static constexpr adl4::EndOnlyDeleted end_only_deleted;
+  static constexpr adl5::BothDeleted both_deleted;
+  static constexpr adl6::BeginNotViable begin_not_viable;
+  static constexpr adl7::EndNotViable end_not_viable;
+  static constexpr adl8::BothNotViable both_not_viable;
+  static constexpr adl9::BeginDeleted begin_deleted;
+  static constexpr adl10::EndDeleted end_deleted;
+
+  // Ok, these are destructuring because there is no valid pair.
+  template for (auto x : begin_only) {}
+  template for (auto x : begin_only_deleted) {}
+  template for (auto x : begin_not_viable) {}
+  template for (auto x : end_only) {}
+  template for (auto x : end_only_deleted) {}
+  template for (auto x : end_not_viable) {}
+
+  // This is also ok because overload resolution fails.
+  template for (auto x : both_not_viable) {}
+
+  // These are invalid because overload resolution succeeds (even though
+  // there is no usable begin() and/or end()).
+  template for (auto x : both_deleted) {} // expected-error {{call to deleted function 'begin'}} \
+                                             expected-note {{when looking up 'begin' function for range expression of type 'const adl5::BothDeleted'}}~
+
+  template for (auto x : begin_deleted) {} // expected-error {{call to deleted function 'begin'}} \
+                                              expected-note {{when looking up 'begin' function for range expression of type 'const adl9::BeginDeleted'}}
+
+  template for (auto x : end_deleted) {} // expected-error {{call to deleted function 'end'}} \
+                                            expected-note {{when looking up 'end' function for range expression of type 'const adl10::EndDeleted'}}
+}
 
 // Examples taken from [stmt.expand].
 namespace stmt_expand_examples {
