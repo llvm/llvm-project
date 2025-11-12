@@ -1817,8 +1817,6 @@ mlir::NVVM::IDArgPair NVVM::BarrierOp::getIntrinsicIDAndArgs(
     case NVVM::BarrierReduction::POPC:
       id = llvm::Intrinsic::nvvm_barrier0_popc;
       break;
-    default:
-      llvm_unreachable("Unknown reduction operation for barrier");
     }
     args.push_back(mt.lookupValue(thisOp.getReductionPredicate()));
   } else {
