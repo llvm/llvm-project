@@ -66,3 +66,7 @@ plbi vmalle1nxs, x0
 // CHECK-ERROR: error: specified plbi op does not use a register
 // CHECK-NO-REGISTER: error: specified plbi op does not use a register
 
+plbi alle3, x0
+// CHECK-ERROR: error: specified plbi op does not use a register
+// CHECK-NO-REGISTER: error: specified plbi op does not use a register
+

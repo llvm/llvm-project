@@ -1,5 +1,4 @@
 // RUN: llvm-mc -triple aarch64-none-linux-gnu -show-encoding -mattr=+btie < %s | FileCheck %s
-// RUN: llvm-mc -triple aarch64-none-linux-gnu -show-encoding -mattr=+poe2 < %s | FileCheck %s
 // RUN: llvm-mc -triple aarch64-none-linux-gnu -show-encoding -mattr=+bti  < %s | FileCheck %s --check-prefix=NOBTIE
 // RUN: llvm-mc -triple aarch64-none-linux-gnu -show-encoding              < %s | FileCheck %s --check-prefix=HINT
 

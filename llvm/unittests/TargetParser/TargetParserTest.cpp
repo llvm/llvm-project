@@ -2213,10 +2213,6 @@ AArch64ExtensionDependenciesBaseArchTestParams
          {},
          {"predres", "specres2"}},
 
-        // poe2 -> btie
-        {AArch64::ARMV9_6A, {"nobtie", "poe2"}, {"btie", "poe2"}, {}},
-        {AArch64::ARMV9_6A, {"poe2", "nobtie"}, {}, {"btie", "poe2"}},
-
         // ras -> ras2
         {AArch64::ARMV8A, {"noras", "rasv2"}, {"ras", "rasv2"}, {}},
         {AArch64::ARMV8A, {"rasv2", "noras"}, {}, {"ras", "rasv2"}},
