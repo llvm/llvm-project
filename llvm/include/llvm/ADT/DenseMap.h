@@ -360,6 +360,12 @@ public:
     return getBuckets();
   }
 
+  void swap(DerivedT &RHS) {
+    this->incrementEpoch();
+    RHS.incrementEpoch();
+    derived().swapImpl(RHS);
+  }
+
 protected:
   DenseMapBase() = default;
 
@@ -736,7 +742,7 @@ public:
 
   DenseMap(DenseMap &&other) : BaseT() {
     init(0);
-    swap(other);
+    this->swap(other);
   }
 
   template <typename InputIt> DenseMap(const InputIt &I, const InputIt &E) {
@@ -756,15 +762,15 @@ public:
     deallocateBuckets();
   }
 
-  void swap(DenseMap &RHS) {
-    this->incrementEpoch();
-    RHS.incrementEpoch();
+private:
+  void swapImpl(DenseMap &RHS) {
     std::swap(Buckets, RHS.Buckets);
     std::swap(NumEntries, RHS.NumEntries);
     std::swap(NumTombstones, RHS.NumTombstones);
     std::swap(NumBuckets, RHS.NumBuckets);
   }
 
+public:
   DenseMap &operator=(const DenseMap &other) {
     if (&other != this)
       this->copyFrom(other);
@@ -775,7 +781,7 @@ public:
     this->destroyAll();
     deallocateBuckets();
     init(0);
-    swap(other);
+    this->swap(other);
     return *this;
   }
 
@@ -895,7 +901,7 @@ public:
 
   SmallDenseMap(SmallDenseMap &&other) : BaseT() {
     init(0);
-    swap(other);
+    this->swap(other);
   }
 
   template <typename InputIt>
@@ -916,7 +922,8 @@ public:
     deallocateBuckets();
   }
 
-  void swap(SmallDenseMap &RHS) {
+private:
+  void swapImpl(SmallDenseMap &RHS) {
     unsigned TmpNumEntries = RHS.NumEntries;
     RHS.NumEntries = NumEntries;
     NumEntries = TmpNumEntries;
@@ -987,6 +994,7 @@ public:
     new (SmallSide.getLargeRep()) LargeRep(std::move(TmpRep));
   }
 
+public:
   SmallDenseMap &operator=(const SmallDenseMap &other) {
     if (&other != this)
       this->copyFrom(other);
@@ -997,7 +1005,7 @@ public:
     this->destroyAll();
     deallocateBuckets();
     init(0);
-    swap(other);
+    this->swap(other);
     return *this;
   }
 
