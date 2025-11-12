@@ -8,25 +8,30 @@
 
 #include "ValueMatcher.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/InterleavedRange.h"
 #include "llvm/Support/raw_os_ostream.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace lldb_private;
 
-static void FormatValueDetails(llvm::raw_ostream &os, Value::ValueType value_type,
-                        Value::ContextType context_type, const Scalar &scalar,
-                        llvm::ArrayRef<uint8_t> buffer_data) {
+static void FormatValueDetails(llvm::raw_ostream &os,
+                               Value::ValueType value_type,
+                               Value::ContextType context_type,
+                               const Scalar &scalar,
+                               llvm::ArrayRef<uint8_t> buffer_data) {
   os << "Value(";
   os << "value_type=" << Value::GetValueTypeAsCString(value_type);
   os << ", context_type=" << Value::GetContextTypeAsCString(context_type);
 
   if (value_type == Value::ValueType::HostAddress) {
+    auto bytes_to_print = buffer_data.take_front(16);
     os << ", buffer=[";
-    for (size_t i = 0; i < std::min(buffer_data.size(), size_t(16)); ++i) {
-      if (i > 0)
-        os << " ";
-      os << llvm::format("%02x", static_cast<unsigned>(buffer_data[i]));
-    }
+    llvm::interleave(
+        bytes_to_print,
+        [&](uint8_t byte) {
+          os << llvm::format("%02x", static_cast<unsigned>(byte));
+        },
+        [&]() { os << " "; });
     if (buffer_data.size() > 16) {
       os << " ...";
     }
