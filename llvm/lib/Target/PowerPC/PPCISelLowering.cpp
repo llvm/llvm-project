@@ -15590,20 +15590,17 @@ SDValue PPCTargetLowering::DAGCombineExtBoolTrunc(SDNode *N,
 // The function check a i128 load can convert to 16i8 load for Vcmpequb.
 static bool canConvertToVcmpequb(SDValue &LHS, SDValue &RHS) {
 
-  auto isValidForConvert = [](SDValue &Oprand) {
-    if (Oprand.getOpcode() == ISD::Constant)
+  auto isValidForConvert = [](SDValue &Operand) {
+    if (!Operand.hasOneUse())
+      return false;
+
+    if (Operand.getValueType() != MVT::i128)
+      return false;
+
+    if (Operand.getOpcode() == ISD::Constant)
       return true;
 
-    if (Oprand.getOpcode() != ISD::LOAD)
-      return false;
-
-    if (!Oprand.hasOneUse())
-      return false;
-
-    if (Oprand.getValueType() != MVT::i128)
-      return false;
-
-    auto *LoadNode = dyn_cast<LoadSDNode>(Oprand);
+    auto *LoadNode = dyn_cast<LoadSDNode>(Operand);
     if (!LoadNode)
       return false;
 
@@ -15645,13 +15642,13 @@ SDValue convertTwoLoadsAndCmpToVCMPEQUB(SelectionDAG &DAG, SDNode *N,
   assert(CC == ISD::SETNE ||
          CC == ISD::SETEQ && "CC mus be ISD::SETNE or ISD::SETEQ");
 
-  auto getV16i8Load = [&](const SDValue &Oprand) {
-    if (Oprand.getOpcode() == ISD::Constant)
-      return DAG.getBitcast(MVT::v16i8, Oprand);
+  auto getV16i8Load = [&](const SDValue &Operand) {
+    if (Operand.getOpcode() == ISD::Constant)
+      return DAG.getBitcast(MVT::v16i8, Operand);
 
-    assert(Oprand.getOpcode() == ISD::LOAD && "Must be LoadSDNode here.");
+    assert(Operand.getOpcode() == ISD::LOAD && "Must be LoadSDNode here.");
 
-    auto *LoadNode = dyn_cast<LoadSDNode>(Oprand);
+    auto *LoadNode = cast<LoadSDNode>(Operand);
     return DAG.getLoad(MVT::v16i8, DL, LoadNode->getChain(),
                        LoadNode->getBasePtr(), LoadNode->getMemOperand());
   };
