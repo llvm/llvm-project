@@ -103,7 +103,7 @@ CPlusPlusLanguage::GetFunctionNameInfo(ConstString name) const {
     return {func_name_type, ConstString(basename)};
 }
 
-bool CPlusPlusLanguage::SymbolNameFitsToLanguage(Mangled mangled) const {
+bool CPlusPlusLanguage::SymbolNameFitsToLanguage(const Mangled &mangled) const {
   auto mangling_scheme =
       Mangled::GetManglingScheme(mangled.GetMangledName().GetStringRef());
   return mangling_scheme == Mangled::eManglingSchemeItanium ||
