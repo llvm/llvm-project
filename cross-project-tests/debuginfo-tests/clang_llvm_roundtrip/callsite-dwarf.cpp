@@ -10,8 +10,7 @@ struct CDerivedOne : CBaseOne {
   void foo(int &);
 };
 
-void CDerivedOne::foo(int &) {
-}
+void CDerivedOne::foo(int &) {}
 
 struct CBaseTwo {
   CDerivedOne *DerivedOne;
@@ -21,9 +20,7 @@ struct CDerivedTwo : CBaseTwo {
   void bar(int &);
 };
 
-void CDerivedTwo::bar(int &j) {
-  DerivedOne->foo(j);
-}
+void CDerivedTwo::bar(int &j) { DerivedOne->foo(j); }
 
 // The IR generated looks like:
 //
