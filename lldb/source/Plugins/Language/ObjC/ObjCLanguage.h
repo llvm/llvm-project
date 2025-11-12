@@ -145,7 +145,7 @@ public:
   std::pair<lldb::FunctionNameType, std::optional<ConstString>>
   GetFunctionNameInfo(ConstString name) const override;
 
-  bool SymbolNameFitsToLanguage(Mangled mangled) const override;
+  bool SymbolNameFitsToLanguage(const Mangled &mangled) const override;
 
   lldb::TypeCategoryImplSP GetFormatters() override;
 
