@@ -207,7 +207,8 @@ transform::TestFuseConsumerOp::apply(TransformRewriter &rewriter,
   Operation *consumer = *state.getPayloadOps(getConsumer()).begin();
 
   SmallVector<LoopLikeOpInterface> loops;
-  // Since the matcher works inside-out, we need to iterate the loops in reverse.
+  // Since the matcher works inside-out, we need to iterate the loops in
+  // reverse.
   for (auto loop : llvm::reverse(getLoops())) {
     auto loopLikeOp =
         dyn_cast<LoopLikeOpInterface>(*state.getPayloadOps(loop).begin());
