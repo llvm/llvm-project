@@ -98,7 +98,7 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
     return inferScalarType(R->getOperand(0));
   }
   case VPInstruction::ComputeMonotonicResult: {
-    auto *PhiR = cast<VPMonotonicPHIRecipe>(R->getOperand(0));
+    auto *PhiR = cast<VPPhi>(R->getOperand(0));
     auto *OrigPhi = cast<PHINode>(PhiR->getUnderlyingValue());
     return OrigPhi->getType();
   }
@@ -281,14 +281,14 @@ Type *VPTypeAnalysis::inferScalarType(const VPValue *V) {
       TypeSwitch<const VPRecipeBase *, Type *>(V->getDefiningRecipe())
           .Case<VPActiveLaneMaskPHIRecipe, VPCanonicalIVPHIRecipe,
                 VPFirstOrderRecurrencePHIRecipe, VPReductionPHIRecipe,
-                VPMonotonicPHIRecipe, VPWidenPointerInductionRecipe,
-                VPEVLBasedIVPHIRecipe>([this](const auto *R) {
-            // Handle header phi recipes, except VPWidenIntOrFpInduction
-            // which needs special handling due it being possibly truncated.
-            // TODO: consider inferring/caching type of siblings, e.g.,
-            // backedge value, here and in cases below.
-            return inferScalarType(R->getStartValue());
-          })
+                VPWidenPointerInductionRecipe, VPEVLBasedIVPHIRecipe>(
+              [this](const auto *R) {
+                // Handle header phi recipes, except VPWidenIntOrFpInduction
+                // which needs special handling due it being possibly truncated.
+                // TODO: consider inferring/caching type of siblings, e.g.,
+                // backedge value, here and in cases below.
+                return inferScalarType(R->getStartValue());
+              })
           .Case<VPWidenIntOrFpInductionRecipe, VPDerivedIVRecipe>(
               [](const auto *R) { return R->getScalarType(); })
           .Case<VPReductionRecipe, VPPredInstPHIRecipe, VPWidenPHIRecipe,

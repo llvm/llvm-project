@@ -4084,7 +4084,6 @@ static bool willGenerateVectors(VPlan &Plan, ElementCount VF,
       case VPDef::VPEVLBasedIVPHISC:
       case VPDef::VPPredInstPHISC:
       case VPDef::VPBranchOnMaskSC:
-      case VPDef::VPMonotonicPHISC:
         continue;
       case VPDef::VPReductionSC:
       case VPDef::VPActiveLaneMaskPHISC:
@@ -8115,7 +8114,7 @@ VPRecipeBase *VPRecipeBuilder::tryToCreateWidenRecipe(VPSingleDefRecipe *R,
     if ((Recipe = tryToOptimizeInductionPHI(Phi, Operands, Range)))
       return Recipe;
 
-    VPHeaderPHIRecipe *PhiRecipe = nullptr;
+    VPSingleDefRecipe *PhiRecipe = nullptr;
     assert((Legal->isMonotonicPHI(Phi) || Legal->isReductionVariable(Phi) ||
             Legal->isFixedOrderRecurrence(Phi)) &&
            "can only widen monotonic phis, reductions and fixed-order "
@@ -8124,10 +8123,9 @@ VPRecipeBase *VPRecipeBuilder::tryToCreateWidenRecipe(VPSingleDefRecipe *R,
     Value *IncomingVal =
         Phi->getIncomingValueForBlock(OrigLoop->getLoopPreheader());
     if (Legal->isMonotonicPHI(Phi)) {
-      const MonotonicDescriptor &Desc =
-          Legal->getMonotonicPHIs().find(Phi)->second;
-      assert(Desc.getExpr()->getStart() == PSE.getSCEV(IncomingVal));
-      PhiRecipe = new VPMonotonicPHIRecipe(Phi, Desc, StartV);
+      PhiRecipe = new VPPhi({StartV}, Phi->getDebugLoc(),
+                            Phi->getName() + ".monotonic");
+      PhiRecipe->setUnderlyingValue(Phi);
     } else if (Legal->isReductionVariable(Phi)) {
       const RecurrenceDescriptor &RdxDesc = Legal->getRecurrenceDescriptor(Phi);
       assert(RdxDesc.getRecurrenceStartValue() ==
@@ -8480,10 +8478,19 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
   // ---------------------------------------------------------------------------
 
   // Adjust the recipes for any monotonic phis.
+  auto &MonotonicPHIs = Legal->getMonotonicPHIs();
   for (VPRecipeBase &R : HeaderVPBB->phis()) {
-    auto *MonotonicPhi = dyn_cast<VPMonotonicPHIRecipe>(&R);
+    auto *MonotonicPhi = dyn_cast<VPPhi>(&R);
     if (!MonotonicPhi)
       continue;
+    assert(MonotonicPhi->getNumIncoming() == 2 &&
+           MonotonicPhi->getIncomingBlock(0) == Plan->getVectorPreheader());
+
+    auto It =
+        MonotonicPHIs.find(cast<PHINode>(MonotonicPhi->getUnderlyingValue()));
+    if (It == MonotonicPHIs.end())
+      continue;
+    auto &Desc = It->second;
 
     // Prohibit scalarization of monotonic phis.
     if (!all_of(Range, [&](ElementCount VF) {
@@ -8494,7 +8501,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
 
     // Obtain mask value for the predicate edge from the last VPBlendRecipe in
     // chain.
-    VPValue *Chain = MonotonicPhi->getBackedgeValue();
+    VPValue *Chain = MonotonicPhi->getIncomingValue(1);
     VPValue *Mask = nullptr;
     while (auto *BlendR = dyn_cast<VPBlendRecipe>(Chain))
       for (unsigned I = 0, E = BlendR->getNumIncomingValues(); I != E; ++I)
@@ -8506,7 +8513,6 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
         }
     assert(Mask);
 
-    auto &Desc = MonotonicPhi->getDescriptor();
     auto &SE = *PSE.getSE();
     auto *Step = vputils::getOrCreateVPValueForSCEVExpr(
         *Plan, Desc.getExpr()->getStepRecurrence(SE));
@@ -8514,9 +8520,10 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
     auto *MonotonicI =
         new VPInstruction(VPInstruction::ComputeMonotonicResult,
                           {MonotonicPhi, Mask, Step}, *Desc.getStepInst());
-    auto *InsertBlock = MonotonicPhi->getBackedgeRecipe().getParent();
+    auto *BackedgeVal = MonotonicPhi->getIncomingValue(1);
+    auto *InsertBlock = BackedgeVal->getDefiningRecipe()->getParent();
     InsertBlock->insert(MonotonicI, InsertBlock->getFirstNonPhi());
-    MonotonicPhi->getBackedgeValue()->replaceAllUsesWith(MonotonicI);
+    BackedgeVal->replaceAllUsesWith(MonotonicI);
   }
 
   // Adjust the recipes for any inloop reductions.

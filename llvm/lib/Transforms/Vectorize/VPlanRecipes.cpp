@@ -1217,8 +1217,8 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
   default:
     // TODO: Compute cost other VPInstructions once the legacy cost model has
     // been retired.
-    assert(!getUnderlyingValue() &&
-           "unexpected VPInstruction witht underlying value");
+    assert((getOpcode() == Instruction::PHI || !getUnderlyingValue()) &&
+           "unexpected VPInstruction with underlying value");
     return 0;
   }
 }
@@ -4492,29 +4492,6 @@ void VPReductionPHIRecipe::print(raw_ostream &O, const Twine &Indent,
   printOperands(O, SlotTracker);
   if (VFScaleFactor != 1)
     O << " (VF scaled by 1/" << VFScaleFactor << ")";
-}
-#endif
-
-void VPMonotonicPHIRecipe::execute(VPTransformState &State) {
-  assert(getParent()->getPlan()->getUF() == 1 && "Expected unroll factor 1.");
-  Value *Start = getStartValue()->getLiveInIRValue();
-  BasicBlock *VectorPH =
-      State.CFG.VPBB2IRBB.at(getParent()->getCFGPredecessor(0));
-  PHINode *MonotonicPHI =
-      State.Builder.CreatePHI(Start->getType(), 2, "monotonic.iv");
-  MonotonicPHI->addIncoming(Start, VectorPH);
-  MonotonicPHI->setDebugLoc(getDebugLoc());
-  State.set(this, MonotonicPHI, /*IsScalar=*/true);
-}
-
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-void VPMonotonicPHIRecipe::print(raw_ostream &O, const Twine &Indent,
-                                 VPSlotTracker &SlotTracker) const {
-  O << Indent << "MONOTONIC-PHI ";
-
-  printAsOperand(O, SlotTracker);
-  O << " = phi ";
-  printOperands(O, SlotTracker);
 }
 #endif
 
