@@ -1936,14 +1936,8 @@ def APlusShl0NegBC :
       (G_ADD $root, $x, $lhs):$root,
       (G_SHL $lhs, $neg, $n),
       (G_NEG $neg, $y),
-      [{
-        return Helper.matchAPlusShl0NegBC(*${root}, ${$matchinfo});
-      }]
-    ),
-    (apply [{
-      Helper.applyAPlusShl0NegBC(*${root}, ${$matchinfo});
-    }])
-  >;
+    [{return Helper.matchAPlusShl0NegBC(*${root}, ${$matchinfo});}]),
+    (apply [{ Helper.applyAPlusShl0NegBC(*${root}, ${$matchinfo});}])>;
 
 def fold_add_sub_mask: GICombineGroup<[
   APlusShl0MinusBC,
