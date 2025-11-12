@@ -48,6 +48,19 @@ using namespace NVVM;
 static constexpr unsigned notIntrinsic = llvm::Intrinsic::not_intrinsic;
 
 //===----------------------------------------------------------------------===//
+// Helper/Utility methods
+//===----------------------------------------------------------------------===//
+
+static bool isPtrInAddrSpace(mlir::Value ptr, NVVMMemorySpace targetAS) {
+  auto ptrTy = llvm::cast<LLVM::LLVMPointerType>(ptr.getType());
+  return ptrTy.getAddressSpace() == static_cast<unsigned>(targetAS);
+}
+
+static bool isPtrInSharedCTASpace(mlir::Value ptr) {
+  return isPtrInAddrSpace(ptr, NVVMMemorySpace::Shared);
+}
+
+//===----------------------------------------------------------------------===//
 // Verifier methods
 //===----------------------------------------------------------------------===//
 
@@ -1741,25 +1754,36 @@ void Tcgen05MmaSmemDescOp::createSmemDescriptor(Operation &op,
 //===----------------------------------------------------------------------===//
 
 std::string NVVM::MBarrierInitOp::getPtx() {
-  unsigned addressSpace =
-      llvm::cast<LLVM::LLVMPointerType>(getAddr().getType()).getAddressSpace();
-  return (addressSpace == NVVMMemorySpace::Shared)
-             ? std::string("mbarrier.init.shared.b64 [%0], %1;")
-             : std::string("mbarrier.init.b64 [%0], %1;");
+  bool isShared = isPtrInSharedCTASpace(getAddr());
+  return isShared ? std::string("mbarrier.init.shared.b64 [%0], %1;")
+                  : std::string("mbarrier.init.b64 [%0], %1;");
+}
+
+std::string NVVM::MBarrierArriveExpectTxOp::getPtx() {
+  bool isShared = isPtrInSharedCTASpace(getAddr());
+  return isShared
+             ? std::string("mbarrier.arrive.expect_tx.shared.b64 _, [%0], %1;")
+             : std::string("mbarrier.arrive.expect_tx.b64 _, [%0], %1;");
+}
+
+std::string NVVM::MBarrierTryWaitParityOp::getPtx() {
+  bool isShared = isPtrInSharedCTASpace(getAddr());
+  llvm::StringRef space = isShared ? ".shared" : "";
+
+  return llvm::formatv("{\n\t"
+                       ".reg .pred       P1; \n\t"
+                       "LAB_WAIT: \n\t"
+                       "mbarrier.try_wait.parity{0}.b64 P1, [%0], %1, %2; \n\t"
+                       "@P1 bra.uni DONE; \n\t"
+                       "bra.uni     LAB_WAIT; \n\t"
+                       "DONE: \n\t"
+                       "}",
+                       space);
 }
 
 //===----------------------------------------------------------------------===//
 // getIntrinsicID/getIntrinsicIDAndArgs methods
 //===----------------------------------------------------------------------===//
-
-static bool isPtrInAddrSpace(mlir::Value ptr, NVVMMemorySpace targetAS) {
-  auto ptrTy = llvm::cast<LLVM::LLVMPointerType>(ptr.getType());
-  return ptrTy.getAddressSpace() == static_cast<unsigned>(targetAS);
-}
-
-static bool isPtrInSharedCTASpace(mlir::Value ptr) {
-  return isPtrInAddrSpace(ptr, NVVMMemorySpace::Shared);
-}
 
 mlir::NVVM::IDArgPair MBarrierInitOp::getIntrinsicIDAndArgs(
     Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {

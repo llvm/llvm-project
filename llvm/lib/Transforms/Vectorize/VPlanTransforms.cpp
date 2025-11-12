@@ -1220,6 +1220,17 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
     }
   }
 
+  // Fold (fcmp uno %X, %X) or (fcmp uno %Y, %Y) -> fcmp uno %X, %Y
+  // This is useful for fmax/fmin without fast-math flags, where we need to
+  // check if any operand is NaN.
+  if (match(Def, m_BinaryOr(m_SpecificCmp(CmpInst::FCMP_UNO, m_VPValue(X),
+                                          m_Deferred(X)),
+                            m_SpecificCmp(CmpInst::FCMP_UNO, m_VPValue(Y),
+                                          m_Deferred(Y))))) {
+    VPValue *NewCmp = Builder.createFCmp(CmpInst::FCMP_UNO, X, Y);
+    return Def->replaceAllUsesWith(NewCmp);
+  }
+
   // Remove redundant DerviedIVs, that is 0 + A * 1 -> A and 0 + 0 * x -> 0.
   if ((match(Def, m_DerivedIV(m_ZeroInt(), m_VPValue(A), m_One())) ||
        match(Def, m_DerivedIV(m_ZeroInt(), m_ZeroInt(), m_VPValue()))) &&
@@ -2633,6 +2644,12 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
             m_Select(m_Specific(HeaderMask), m_VPValue(LHS), m_VPValue(RHS))))
     return new VPWidenIntrinsicRecipe(
         Intrinsic::vp_merge, {Plan->getTrue(), LHS, RHS, &EVL},
+        TypeInfo.inferScalarType(LHS), CurRecipe.getDebugLoc());
+
+  if (match(&CurRecipe, m_Select(m_RemoveMask(HeaderMask, Mask), m_VPValue(LHS),
+                                 m_VPValue(RHS))))
+    return new VPWidenIntrinsicRecipe(
+        Intrinsic::vp_merge, {Mask, LHS, RHS, &EVL},
         TypeInfo.inferScalarType(LHS), CurRecipe.getDebugLoc());
 
   return nullptr;
@@ -4160,8 +4177,9 @@ static bool canNarrowLoad(VPWidenRecipe *WideMember0, unsigned OpIdx,
 /// members both equal to \p VF. The interleave group must also access the full
 /// vector width \p VectorRegWidth.
 static bool isConsecutiveInterleaveGroup(VPInterleaveRecipe *InterleaveR,
-                                         unsigned VF, VPTypeAnalysis &TypeInfo,
-                                         unsigned VectorRegWidth) {
+                                         ElementCount VF,
+                                         VPTypeAnalysis &TypeInfo,
+                                         TypeSize VectorRegWidth) {
   if (!InterleaveR || InterleaveR->getMask())
     return false;
 
@@ -4183,9 +4201,11 @@ static bool isConsecutiveInterleaveGroup(VPInterleaveRecipe *InterleaveR,
       return false;
   }
 
-  unsigned GroupSize = GroupElementTy->getScalarSizeInBits() * VF;
-  auto IG = InterleaveR->getInterleaveGroup();
-  return IG->getFactor() == VF && IG->getNumMembers() == VF &&
+  unsigned VFMin = VF.getKnownMinValue();
+  TypeSize GroupSize = TypeSize::get(
+      GroupElementTy->getScalarSizeInBits() * VFMin, VF.isScalable());
+  const auto *IG = InterleaveR->getInterleaveGroup();
+  return IG->getFactor() == VFMin && IG->getNumMembers() == VFMin &&
          GroupSize == VectorRegWidth;
 }
 
@@ -4251,14 +4271,13 @@ narrowInterleaveGroupOp(VPValue *V, SmallPtrSetImpl<VPValue *> &NarrowedOps) {
 }
 
 void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
-                                             unsigned VectorRegWidth) {
+                                             TypeSize VectorRegWidth) {
   VPRegionBlock *VectorLoop = Plan.getVectorLoopRegion();
   if (!VectorLoop || VectorLoop->getEntry()->getNumSuccessors() != 0)
     return;
 
   VPTypeAnalysis TypeInfo(Plan);
 
-  unsigned VFMinVal = VF.getKnownMinValue();
   SmallVector<VPInterleaveRecipe *> StoreGroups;
   for (auto &R : *VectorLoop->getEntryBasicBlock()) {
     if (isa<VPCanonicalIVPHIRecipe>(&R))
@@ -4293,7 +4312,7 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
       continue;
 
     // Bail out on non-consecutive interleave groups.
-    if (!isConsecutiveInterleaveGroup(InterleaveR, VFMinVal, TypeInfo,
+    if (!isConsecutiveInterleaveGroup(InterleaveR, VF, TypeInfo,
                                       VectorRegWidth))
       return;
 
