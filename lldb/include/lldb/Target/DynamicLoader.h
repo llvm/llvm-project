@@ -207,7 +207,6 @@ public:
   /// resulting module at the virtual base address \p base_addr.
   /// Note that this calls Target::GetOrCreateModule with notify being false,
   /// so it is necessary to call Target::ModulesDidLoad afterwards.
-  ///
   virtual lldb::ModuleSP LoadModuleAtAddress(const lldb_private::FileSpec &file,
                                              lldb::addr_t link_map_addr,
                                              lldb::addr_t base_addr,

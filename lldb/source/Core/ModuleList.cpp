@@ -1393,12 +1393,11 @@ void ModuleList::PreloadSymbols(bool parallelize) const {
     return;
   }
 
-  // parallelize
   llvm::ThreadPoolTaskGroup task_group(Debugger::GetThreadPool());
   for (const ModuleSP &module_sp : m_modules)
     task_group.async([module_sp] {
       if (module_sp)
         module_sp->PreloadSymbols();
     });
-  // task group destructor waits for all tasks to complete
+  // Task group destructor waits for all tasks to complete.
 }
