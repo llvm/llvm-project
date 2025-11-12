@@ -17,6 +17,8 @@
 
 #undef __CLC_PTR_CASTTYPE
 #define __CLC_PTR_CASTTYPE __CLC_BIT_INTN
+#undef __CLC_AS_INTTYPE
+#define __CLC_AS_INTTYPE __CLC_AS_S_GENTYPE
 
 #define __CLC_BODY <clc_atomic_def.inc>
 #include <clc/math/gentype.inc>

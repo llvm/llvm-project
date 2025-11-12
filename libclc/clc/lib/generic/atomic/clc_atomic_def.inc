@@ -29,6 +29,10 @@
 #define __CLC_AS_RETTYPE(x) x
 #endif
 
+#ifndef __CLC_AS_INTTYPE
+#define __CLC_AS_INTTYPE(x) x
+#endif
+
 #ifdef __CLC_NO_VALUE_ARG
 #define __CLC_DEFINE_ATOMIC(ADDRSPACE)                                         \
   _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __CLC_FUNCTION(                         \
@@ -51,8 +55,8 @@
   _CLC_OVERLOAD _CLC_DEF void __CLC_FUNCTION(                                  \
       volatile ADDRSPACE __CLC_GENTYPE *Ptr, __CLC_GENTYPE Value,              \
       int MemoryOrder, int MemoryScope) {                                      \
-    __CLC_IMPL_FUNCTION((ADDRSPACE __CLC_PTR_CASTTYPE *)Ptr, Value,            \
-                        MemoryOrder, MemoryScope);                             \
+    __CLC_IMPL_FUNCTION((ADDRSPACE __CLC_PTR_CASTTYPE *)Ptr,                   \
+                        __CLC_AS_INTTYPE(Value), MemoryOrder, MemoryScope);    \
   }
 #else
 #define __CLC_DEFINE_ATOMIC(ADDRSPACE)                                         \
