@@ -655,3 +655,34 @@ void conditional_operator_lifetimebound_nested_deep(bool cond) {
   }  // expected-note 4 {{destroyed here}}
   (void)*p;  // expected-note 4 {{later used here}}
 }
+
+void parentheses(bool cond) {
+  MyObj* p;
+  {
+    MyObj a;
+    p = &((((a))));  // expected-warning {{object whose reference is captured does not live long enough}}
+  }                  // expected-note {{destroyed here}}
+  (void)*p;          // expected-note {{later used here}}
+
+  {
+    MyObj a;
+    p = ((GetPointer((a))));  // expected-warning {{object whose reference is captured does not live long enough}}
+  }                           // expected-note {{destroyed here}}
+  (void)*p;                   // expected-note {{later used here}}
+
+  {
+    MyObj a, b, c, d;
+    p = &(cond ? (cond ? a     // expected-warning {{object whose reference is captured does not live long enough}}.
+                       : b)    // expected-warning {{object whose reference is captured does not live long enough}}.
+               : (cond ? c     // expected-warning {{object whose reference is captured does not live long enough}}.
+                       : d));  // expected-warning {{object whose reference is captured does not live long enough}}.
+  }  // expected-note 4 {{destroyed here}}
+  (void)*p;  // expected-note 4 {{later used here}}
+
+  {
+    MyObj a, b, c, d;
+    p = ((cond ? (((cond ? &a : &b)))   // expected-warning 2 {{object whose reference is captured does not live long enough}}.
+              : &(((cond ? c : d)))));  // expected-warning 2 {{object whose reference is captured does not live long enough}}.
+  }  // expected-note 4 {{destroyed here}}
+  (void)*p;  // expected-note 4 {{later used here}}
+}
