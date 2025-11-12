@@ -114,14 +114,14 @@ jobs:
             -DCOMPILER_RT_SCUDO_STANDALONE_BUILD_SHARED=OFF"
         fi
 
-        if [[ ${{ contains(matrix.target, '-none-') }} ]]; then
-          cmake -B ${{ steps.strings.outputs.build-output-dir }} \
+        if [[ ${{ endsWith(matrix.target, '-none-eabi') }} ]]; then
+          cmake -B ${{ steps.strings.outputs.build-baremetal-output-dir }} \
           -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }} \
           -DCMAKE_C_COMPILER=${{ matrix.c_compiler }} \
           -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
           -DCMAKE_C_COMPILER_LAUNCHER=sccache \
           -DCMAKE_CXX_COMPILER_LAUNCHER=sccache \
-          -DCMAKE_INSTALL_PREFIX=${{ steps.strings.outputs.build-install-dir }} \
+          -DCMAKE_INSTALL_PREFIX=${{ steps.strings.outputs.build-baremetal-install-dir }} \
           -DLLVM_RUNTIME_TARGETS=${{ matrix.target }} \
           -DCMAKE_C_COMPILER_TARGET=${{ matrix.target }} \
           -DCMAKE_CXX_COMPILER_TARGET=${{ matrix.target }} \
@@ -154,7 +154,7 @@ jobs:
 
     - name: Test
       # Skip UEFI tests until we have testing set up.
-      if: ${{ ! endsWith(matrix.target, '-uefi-llvm') }} && ${{ ! contains(matrix.target, '-none-') }}
+      if: ${{ ! endsWith(matrix.target, '-uefi-llvm') }} && ${{ ! endsWith(matrix.target, '-none-eabi') }}
       run: >
         cmake 
         --build ${{ steps.strings.outputs.build-output-dir }} 
