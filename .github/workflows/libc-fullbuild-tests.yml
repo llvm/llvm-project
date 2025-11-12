@@ -24,49 +24,42 @@ jobs:
             cpp_compiler: clang++-22
             target: x86_64-unknown-linux-llvm
             include_scudo: ON
-            enable_baremetal_build: OFF
           - os: ubuntu-24.04
             build_type: Release
             c_compiler: clang-22
             cpp_compiler: clang++-22
             target: x86_64-unknown-linux-llvm
             include_scudo: ON
-            enable_baremetal_build: OFF
           - os: ubuntu-24.04
             build_type: MinSizeRel
             c_compiler: clang-22
             cpp_compiler: clang++-22
             target: x86_64-unknown-linux-llvm
             include_scudo: ON
-            enable_baremetal_build: OFF
           - os: ubuntu-24.04-arm
             build_type: Debug
             c_compiler: clang-22
             cpp_compiler: clang++-22
             target: aarch64-unknown-linux-llvm
             include_scudo: ON
-            enable_baremetal_build: OFF
           - os: ubuntu-24.04
             build_type: Debug
             c_compiler: clang-22
             cpp_compiler: clang++-22
             target: x86_64-unknown-uefi-llvm
             include_scudo: OFF
-            enable_baremetal_build: OFF
           - os: ubuntu-24.04
             build__type: Release
             c_compiler: clang-22
             cpp_compiler: clang++-22
             target: armv6m-none-eabi
             include_scudo: OFF
-            enable_baremetal_build: ON
           - os: ubuntu-24.04
             build__type: Release
             c_compiler: clang-22
             cpp_compiler: clang++-22
             target: armv7m-none-eabi
             include_scudo: OFF
-            enable_baremetal_build: ON
           # TODO: add back gcc build when it is fixed
           # - c_compiler: gcc
           #   cpp_compiler: g++
@@ -121,7 +114,7 @@ jobs:
             -DCOMPILER_RT_SCUDO_STANDALONE_BUILD_SHARED=OFF"
         fi
 
-        if [[ ${{ matrix.enable_baremetal_build}} == "ON" ]]; then
+        if [[ ${{ contains(matrix.target, '-none-') }} ]]; then
           cmake -B ${{ steps.strings.outputs.build-output-dir }} \
           -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }} \
           -DCMAKE_C_COMPILER=${{ matrix.c_compiler }} \
@@ -130,19 +123,12 @@ jobs:
           -DCMAKE_CXX_COMPILER_LAUNCHER=sccache \
           -DCMAKE_INSTALL_PREFIX=${{ steps.strings.outputs.build-install-dir }} \
           -DLLVM_RUNTIME_TARGETS=${{ matrix.target }} \
-          -DLLVM_ENABLE_RUNTIMES="$RUNTIMES" \
-          -DLLVM_LIBC_FULL_BUILD=ON \
-          -G Ninja \
-          -S ${{ github.workspace }}/runtimes \
-          -DCMAKE_BUILD_TYPE=Release \
-          -DLLVM_LIBC_FULL_BUILD=ON \
           -DCMAKE_C_COMPILER_TARGET=${{ matrix.target }} \
           -DCMAKE_CXX_COMPILER_TARGET=${{ matrix.target }} \
           -DCMAKE_ASM_COMPILER_TARGET=${{ matrix.target }} \
-          -DCMAKE_C_FLAGS=-mfloat-abi=soft \
-          -DCMAKE_CXX_FLAGS=-mfloat-abi=soft \
-          -DCMAKE_C_COMPILER_WORKS=ON \
-          -DCMAKE_CXX_COMPILER_WORKS=ON
+          -G Ninja \
+          -S ${{ github.workspace }}/runtimes \
+          -C ${{ github.workspace }}/clang/cmake/caches/Standalone_libc_baremetal.cache
         else
           cmake -B ${{ steps.strings.outputs.build-output-dir }} \
           -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }} \
@@ -168,7 +154,7 @@ jobs:
 
     - name: Test
       # Skip UEFI tests until we have testing set up.
-      if: ${{ ! endsWith(matrix.target, '-uefi-llvm') }} && ${{ matrix.enable_baremetal_build }} == "OFF"
+      if: ${{ ! endsWith(matrix.target, '-uefi-llvm') }} && ${{ ! contains(matrix.target, '-none-') }}
       run: >
         cmake 
         --build ${{ steps.strings.outputs.build-output-dir }} 
