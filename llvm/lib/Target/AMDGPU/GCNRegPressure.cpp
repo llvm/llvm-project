@@ -97,6 +97,45 @@ void GCNRegPressure::inc(unsigned Reg,
   Value[RegKind] += Sign;
 }
 
+struct RegExcess {
+  unsigned SGPR = 0;
+  unsigned VGPR = 0;
+  unsigned ArchVGPR = 0;
+  unsigned AGPR = 0;
+
+  bool anyExcess() const { return SGPR || VGPR || ArchVGPR || AGPR; }
+
+  RegExcess(const MachineFunction &MF, const GCNRegPressure &RP,
+            unsigned MaxSGPRs, unsigned MaxVGPRs) {
+    const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+    SGPR = std::max(static_cast<int>(RP.getSGPRNum() - MaxSGPRs), 0);
+
+    // The number of virtual VGPRs required to handle excess SGPR
+    auto WaveSize = ST.getWavefrontSize();
+    unsigned VGPRForSGPRSpills = divideCeil(SGPR, WaveSize);
+
+    unsigned MaxArchVGPRs = ST.getAddressableNumArchVGPRs();
+
+    // Unified excess pressure conditions, accounting for VGPRs used for SGPR
+    // spills
+    VGPR = std::max(static_cast<int>(RP.getVGPRNum(ST.hasGFX90AInsts()) +
+                                     VGPRForSGPRSpills - MaxVGPRs),
+                    0);
+
+    // Arch VGPR excess pressure conditions, accounting for VGPRs used for SGPR
+    // spills
+    ArchVGPR = std::max(static_cast<int>(RP.getVGPRNum(false) +
+                                         VGPRForSGPRSpills - MaxArchVGPRs),
+                        0);
+
+    // AGPR excess pressure conditions
+    AGPR = std::max(static_cast<int>(ST.hasGFX90AInsts()
+                                         ? (RP.getAGPRNum() - MaxArchVGPRs)
+                                         : (RP.getAGPRNum() - MaxVGPRs)),
+                    0);
+  }
+};
+
 bool GCNRegPressure::less(const MachineFunction &MF, const GCNRegPressure &O,
                           unsigned MaxOccupancy) const {
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
@@ -125,61 +164,24 @@ bool GCNRegPressure::less(const MachineFunction &MF, const GCNRegPressure &O,
   unsigned MaxVGPRs = ST.getMaxNumVGPRs(MF);
   unsigned MaxSGPRs = ST.getMaxNumSGPRs(MF);
 
-  // SGPR excess pressure conditions
-  unsigned ExcessSGPR = std::max(static_cast<int>(getSGPRNum() - MaxSGPRs), 0);
-  unsigned OtherExcessSGPR =
-      std::max(static_cast<int>(O.getSGPRNum() - MaxSGPRs), 0);
-
-  auto WaveSize = ST.getWavefrontSize();
-  // The number of virtual VGPRs required to handle excess SGPR
-  unsigned VGPRForSGPRSpills = (ExcessSGPR + (WaveSize - 1)) / WaveSize;
-  unsigned OtherVGPRForSGPRSpills =
-      (OtherExcessSGPR + (WaveSize - 1)) / WaveSize;
+  RegExcess Excess(MF, *this, MaxSGPRs, MaxVGPRs);
+  RegExcess OtherExcess(MF, O, MaxSGPRs, MaxVGPRs);
 
   unsigned MaxArchVGPRs = ST.getAddressableNumArchVGPRs();
 
-  // Unified excess pressure conditions, accounting for VGPRs used for SGPR
-  // spills
-  unsigned ExcessVGPR =
-      std::max(static_cast<int>(getVGPRNum(ST.hasGFX90AInsts()) +
-                                VGPRForSGPRSpills - MaxVGPRs),
-               0);
-  unsigned OtherExcessVGPR =
-      std::max(static_cast<int>(O.getVGPRNum(ST.hasGFX90AInsts()) +
-                                OtherVGPRForSGPRSpills - MaxVGPRs),
-               0);
-  // Arch VGPR excess pressure conditions, accounting for VGPRs used for SGPR
-  // spills
-  unsigned ExcessArchVGPR = std::max(
-      static_cast<int>(getVGPRNum(false) + VGPRForSGPRSpills - MaxArchVGPRs),
-      0);
-  unsigned OtherExcessArchVGPR =
-      std::max(static_cast<int>(O.getVGPRNum(false) + OtherVGPRForSGPRSpills -
-                                MaxArchVGPRs),
-               0);
-  // AGPR excess pressure conditions
-  unsigned ExcessAGPR = std::max(
-      static_cast<int>(ST.hasGFX90AInsts() ? (getAGPRNum() - MaxArchVGPRs)
-                                           : (getAGPRNum() - MaxVGPRs)),
-      0);
-  unsigned OtherExcessAGPR = std::max(
-      static_cast<int>(ST.hasGFX90AInsts() ? (O.getAGPRNum() - MaxArchVGPRs)
-                                           : (O.getAGPRNum() - MaxVGPRs)),
-      0);
-
-  bool ExcessRP = ExcessSGPR || ExcessVGPR || ExcessArchVGPR || ExcessAGPR;
-  bool OtherExcessRP = OtherExcessSGPR || OtherExcessVGPR ||
-                       OtherExcessArchVGPR || OtherExcessAGPR;
+  bool ExcessRP = Excess.anyExcess();
+  bool OtherExcessRP = OtherExcess.anyExcess();
 
   // Give second precedence to the reduced number of spills to hold the register
   // pressure.
   if (ExcessRP || OtherExcessRP) {
     // The difference in excess VGPR pressure, after including VGPRs used for
     // SGPR spills
-    int VGPRDiff = ((OtherExcessVGPR + OtherExcessArchVGPR + OtherExcessAGPR) -
-                    (ExcessVGPR + ExcessArchVGPR + ExcessAGPR));
+    int VGPRDiff =
+        ((OtherExcess.VGPR + OtherExcess.ArchVGPR + OtherExcess.AGPR) -
+         (Excess.VGPR + Excess.ArchVGPR + Excess.AGPR));
 
-    int SGPRDiff = OtherExcessSGPR - ExcessSGPR;
+    int SGPRDiff = OtherExcess.SGPR - Excess.SGPR;
 
     if (VGPRDiff != 0)
       return VGPRDiff > 0;
