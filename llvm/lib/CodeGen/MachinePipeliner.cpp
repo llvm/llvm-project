@@ -485,14 +485,11 @@ void MachinePipeliner::setPragmaPipelineOptions(MachineLoop &L) {
   }
 }
 
-
 /// Depth-first search to detect cycles among PHI dependencies.
 /// Returns true if a cycle is detected within the PHI-only subgraph.
 static bool hasPHICycleDFS(
-    unsigned Reg,
-    const DenseMap<unsigned, SmallVector<unsigned, 2>> &PhiDeps,
-    SmallSet<unsigned, 8> &Visited,
-    SmallSet<unsigned, 8> &RecStack) {
+    unsigned Reg, const DenseMap<unsigned, SmallVector<unsigned, 2>> &PhiDeps,
+    SmallSet<unsigned, 8> &Visited, SmallSet<unsigned, 8> &RecStack) {
 
   // If Reg is not a PHI-def it cannot contribute to a PHI cycle.
   auto It = PhiDeps.find(Reg);
@@ -515,7 +512,6 @@ static bool hasPHICycleDFS(
   RecStack.erase(Reg);
   return false;
 }
-
 
 static bool hasPHICycle(const MachineBasicBlock *LoopHeader,
                         const MachineRegisterInfo &MRI) {
