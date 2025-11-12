@@ -1005,67 +1005,57 @@ private:
 
 static bool isContiguousExtract(ArrayRef<int64_t> targetShape,
                                 ArrayRef<int64_t> resultShape) {
-  if (targetShape.size() > resultShape.size()) {
+  if (targetShape.size() > resultShape.size())
     return false;
-  }
 
   size_t rankDiff = resultShape.size() - targetShape.size();
   // Inner dimensions must match exactly & total resultElements should be
   // evenly divisible by targetElements.
-  for (size_t i = 1; i < targetShape.size(); ++i) {
-    if (targetShape[i] != resultShape[rankDiff + i]) {
-      return false;
-    }
-  }
+  if (!llvm::equal(targetShape.drop_front(),
+                   resultShape.drop_front(rankDiff + 1)))
+    return false;
 
   int64_t targetElements = ShapedType::getNumElements(targetShape);
   int64_t resultElements = ShapedType::getNumElements(resultShape);
-  if (resultElements % targetElements != 0) {
-    return false;
-  }
-  return true;
+  return resultElements % targetElements == 0;
 }
 
-// Calculate the shape to extract from source
+// Calculate the shape to extract from source.
 static std::optional<SmallVector<int64_t>>
 calculateSourceExtractShape(ArrayRef<int64_t> sourceShape,
                             int64_t targetElements) {
   SmallVector<int64_t> extractShape;
   int64_t remainingElements = targetElements;
 
-  // Build extract shape from innermost dimension outward to ensure contiguity
+  // Build extract shape from innermost dimension outward to ensure contiguity.
   for (int i = sourceShape.size() - 1; i >= 0 && remainingElements > 1; --i) {
     int64_t takeFromDim = std::min(remainingElements, sourceShape[i]);
     extractShape.insert(extractShape.begin(), takeFromDim);
 
-    if (remainingElements % takeFromDim != 0) {
-      return std::nullopt; // Not evenly divisible
-    }
+    if (remainingElements % takeFromDim != 0)
+      return std::nullopt; // Not evenly divisible.
     remainingElements /= takeFromDim;
   }
 
-  // Fill remaining dimensions with 1
-  while (extractShape.size() < sourceShape.size()) {
+  // Fill remaining dimensions with 1.
+  while (extractShape.size() < sourceShape.size())
     extractShape.insert(extractShape.begin(), 1);
-  }
 
-  if (ShapedType::getNumElements(extractShape) != targetElements) {
+  if (ShapedType::getNumElements(extractShape) != targetElements)
     return std::nullopt;
-  }
 
   return extractShape;
 }
 
-// Convert result offsets to source offsets via linear position
+// Convert result offsets to source offsets via linear position.
 static SmallVector<int64_t>
 calculateSourceOffsets(ArrayRef<int64_t> resultOffsets,
                        ArrayRef<int64_t> sourceStrides,
                        ArrayRef<int64_t> resultStrides) {
-  // Convert result offsets to linear position
+  // Convert result offsets to linear position.
   int64_t linearIndex = linearize(resultOffsets, resultStrides);
-  // Convert linear position to source offsets
-  SmallVector<int64_t> sourceOffsets = delinearize(linearIndex, sourceStrides);
-  return sourceOffsets;
+  // Convert linear position to source offsets.
+  return delinearize(linearIndex, sourceStrides);
 }
 
 /// This pattern unrolls `vector.shape_cast` operations according to the
@@ -1079,7 +1069,7 @@ calculateSourceOffsets(ArrayRef<int64_t> resultOffsets,
 /// remains a valid vector (and not decompose to scalars). In these cases, the
 /// unrolling proceeds as:
 /// vector.extract_strided_slice -> vector.shape_cast (on the slice) ->
-/// vector.insert_strided_slice
+/// vector.insert_strided_slice.
 ///
 /// Example:
 ///   Given a shape cast operation:
@@ -1108,7 +1098,8 @@ struct UnrollShapeCastPattern : public OpRewritePattern<vector::ShapeCastOp> {
 
   LogicalResult matchAndRewrite(vector::ShapeCastOp shapeCastOp,
                                 PatternRewriter &rewriter) const override {
-    auto targetShape = getTargetShape(options, shapeCastOp);
+    std::optional<SmallVector<int64_t>> targetShape =
+        getTargetShape(options, shapeCastOp);
     if (!targetShape)
       return failure();
 
@@ -1117,26 +1108,24 @@ struct UnrollShapeCastPattern : public OpRewritePattern<vector::ShapeCastOp> {
     ArrayRef<int64_t> sourceShape = sourceType.getShape();
     ArrayRef<int64_t> resultShape = resultType.getShape();
 
-    if (!isContiguousExtract(*targetShape, resultShape)) {
+    if (!isContiguousExtract(*targetShape, resultShape))
       return rewriter.notifyMatchFailure(shapeCastOp,
                                          "Only supports cases where contiguous "
                                          "extraction is possible");
-    }
 
     int64_t targetElements = ShapedType::getNumElements(*targetShape);
 
-    // Calculate the shape to extract from source
-    auto extractShape =
+    // Calculate the shape to extract from source.
+    std::optional<SmallVector<int64_t>> extractShape =
         calculateSourceExtractShape(sourceShape, targetElements);
-    if (!extractShape) {
+    if (!extractShape)
       return rewriter.notifyMatchFailure(
           shapeCastOp,
           "cannot extract target number of elements contiguously from source");
-    }
 
     Location loc = shapeCastOp.getLoc();
 
-    // Create result vector initialized to zero
+    // Create result vector initialized to zero.
     Value result = arith::ConstantOp::create(rewriter, loc, resultType,
                                              rewriter.getZeroAttr(resultType));
 
