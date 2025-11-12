@@ -1,4 +1,5 @@
 /// Test that when there are more than 255 sections, error is shown specifying too many sections.
+// REQUIRES: stability
 
 // RUN: not llvm-mc -filetype=obj -triple arm64-apple-macos %s -o - 2>&1 | FileCheck %s --check-prefix=MACHOERROR
 
