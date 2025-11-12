@@ -2561,7 +2561,6 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
       FuncAttrs.addAttribute("aarch64_pstate_sm_body");
 
     if (auto *ModularFormat = TargetDecl->getAttr<ModularFormatAttr>()) {
-      // TODO: Error checking
       FormatAttr *Format = TargetDecl->getAttr<FormatAttr>();
       StringRef Type = Format->getType()->getName();
       std::string FormatIdx = std::to_string(Format->getFormatIdx());
