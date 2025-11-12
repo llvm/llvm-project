@@ -47,8 +47,7 @@
       volatile ADDRSPACE __CLC_GENTYPE *Ptr, int MemoryOrder,                  \
       int MemoryScope) {                                                       \
     return __CLC_AS_RETTYPE(                                                   \
-        __CLC_IMPL_FUNCTION((ADDRSPACE __CLC_PTR_CASTTYPE *)Ptr,               \
-                            (__CLC_GENTYPE)1, MemoryOrder, MemoryScope));      \
+        __CLC_IMPL_FUNCTION(Ptr, (__CLC_GENTYPE)1, MemoryOrder, MemoryScope)); \
   }
 #elif defined(__CLC_RETURN_VOID)
 #define __CLC_DEFINE_ATOMIC(ADDRSPACE)                                         \
@@ -63,9 +62,9 @@
   _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __CLC_FUNCTION(                         \
       volatile ADDRSPACE __CLC_GENTYPE *Ptr, __CLC_GENTYPE Value,              \
       int MemoryOrder, int MemoryScope) {                                      \
-    return __CLC_AS_RETTYPE(                                                   \
-        __CLC_IMPL_FUNCTION((ADDRSPACE __CLC_PTR_CASTTYPE *)Ptr, Value,        \
-                            MemoryOrder, MemoryScope));                        \
+    return __CLC_AS_RETTYPE(__CLC_IMPL_FUNCTION(                               \
+        (ADDRSPACE __CLC_PTR_CASTTYPE *)Ptr, __CLC_AS_INTTYPE(Value),          \
+        MemoryOrder, MemoryScope));                                            \
   }
 #endif
 
