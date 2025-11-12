@@ -287,6 +287,11 @@ part of the draft specification.
 The elements of a  value of a matrix type are laid out in column-major order
 without padding.
 
+To change the default order to row major use the `-fmatrix-default-layout` flag.
+This flag supports two flag argument values either `column-major` or `row-major`
+used like so `-fmatrix-default-layout=column-major`.` This flag controls the 
+memory layout of matrix types.
+
 We propose to provide a Clang option to override this behavior and allow
 contraction of those operations (e.g. *-ffp-contract=matrix*).
 
