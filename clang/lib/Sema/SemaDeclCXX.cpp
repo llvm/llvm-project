@@ -12834,7 +12834,7 @@ bool Sema::CheckUsingShadowDecl(BaseUsingDecl *BUD, NamedDecl *Orig,
     if (!NonTag && !Tag)
       return false;
 
-    // Only check report the error if this using_if_exists decl can be a
+    // Only report the error if this using_if_exists decl can be a
     // substitute for the original decl. LookupResult will find things with
     // the same name but we also want to take into account namespaces and
     // other scopes. GlobalDecl helps take care of that.
