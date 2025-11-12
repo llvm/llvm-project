@@ -78,70 +78,70 @@ void test_ref(InitArgs&&... args)
         assert(&(*lhs) == &(*rhs));
 }
 
-void test_reference_extension()
-{
-#if defined(_LIBCPP_VERSION) && 0 // FIXME these extensions are currently disabled.
-    using T = TestTypes::TestType;
-    T::reset();
-    {
-        T t;
-        T::reset_constructors();
-        test_ref<T&>();
-        test_ref<T&>(t);
-        assert(T::alive == 1);
-        assert(T::constructed == 0);
-        assert(T::assigned == 0);
-        assert(T::destroyed == 0);
-    }
-    assert(T::destroyed == 1);
-    assert(T::alive == 0);
-    {
-        T t;
-        const T& ct = t;
-        T::reset_constructors();
-        test_ref<T const&>();
-        test_ref<T const&>(t);
-        test_ref<T const&>(ct);
-        assert(T::alive == 1);
-        assert(T::constructed == 0);
-        assert(T::assigned == 0);
-        assert(T::destroyed == 0);
-    }
-    assert(T::alive == 0);
-    assert(T::destroyed == 1);
-    {
-        T t;
-        T::reset_constructors();
-        test_ref<T&&>();
-        test_ref<T&&>(std::move(t));
-        assert(T::alive == 1);
-        assert(T::constructed == 0);
-        assert(T::assigned == 0);
-        assert(T::destroyed == 0);
-    }
-    assert(T::alive == 0);
-    assert(T::destroyed == 1);
-    {
-        T t;
-        const T& ct = t;
-        T::reset_constructors();
-        test_ref<T const&&>();
-        test_ref<T const&&>(std::move(t));
-        test_ref<T const&&>(std::move(ct));
-        assert(T::alive == 1);
-        assert(T::constructed == 0);
-        assert(T::assigned == 0);
-        assert(T::destroyed == 0);
-    }
-    assert(T::alive == 0);
-    assert(T::destroyed == 1);
-    {
-        static_assert(!std::is_copy_constructible<std::optional<T&&>>::value, "");
-        static_assert(!std::is_copy_constructible<std::optional<T const&&>>::value, "");
-    }
+void test_reference_extension() {
+#if TEST_STD_VER >= 26
+  using T = TestTypes::TestType;
+  T::reset();
+  {
+    T t;
+    T::reset_constructors();
+    test_ref<T&>();
+    test_ref<T&>(t);
+    assert(T::alive == 1);
+    assert(T::constructed == 0);
+    assert(T::assigned == 0);
+    assert(T::destroyed == 0);
+  }
+  assert(T::destroyed == 1);
+  assert(T::alive == 0);
+  {
+    T t;
+    const T& ct = t;
+    T::reset_constructors();
+    test_ref<T const&>();
+    test_ref<T const&>(t);
+    test_ref<T const&>(ct);
+    assert(T::alive == 1);
+    assert(T::constructed == 0);
+    assert(T::assigned == 0);
+    assert(T::destroyed == 0);
+  }
+  assert(T::alive == 0);
+  assert(T::destroyed == 1);
+#  if 0 // FIXME: optional<T&&> is not allowed.
+  {
+    T t;
+    T::reset_constructors();
+    test_ref<T&&>();
+    test_ref<T&&>(std::move(t));
+    assert(T::alive == 1);
+    assert(T::constructed == 0);
+    assert(T::assigned == 0);
+    assert(T::destroyed == 0);
+  }
+  assert(T::alive == 0);
+  assert(T::destroyed == 1);
+  {
+    T t;
+    const T& ct = t;
+    T::reset_constructors();
+    test_ref<T const&&>();
+    test_ref<T const&&>(std::move(t));
+    test_ref<T const&&>(std::move(ct));
+    assert(T::alive == 1);
+    assert(T::constructed == 0);
+    assert(T::assigned == 0);
+    assert(T::destroyed == 0);
+  }
+  assert(T::alive == 0);
+  assert(T::destroyed == 1);
+  {
+    static_assert(!std::is_copy_constructible_v<std::optional<T&&>>);
+    static_assert(!std::is_copy_constructible_v<std::optional<T const&&>>);
+  }
+#  endif
 #endif
 }
-
 
 int main(int, char**)
 {

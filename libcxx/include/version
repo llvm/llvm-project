@@ -187,7 +187,8 @@ __cpp_lib_nonmember_container_access                    201411L <array> <deque> 
 __cpp_lib_not_fn                                        202306L <functional>
                                                         201603L // C++17
 __cpp_lib_null_iterators                                201304L <iterator>
-__cpp_lib_optional                                      202110L <optional>
+__cpp_lib_optional                                      202506L <optional>
+                                                        202110L // C++23
                                                         202106L // C++20
                                                         201606L // C++17
 __cpp_lib_optional_range_support                        202406L <optional>
@@ -594,6 +595,8 @@ __cpp_lib_void_t                                        201411L <type_traits>
 # define __cpp_lib_mdspan                               202406L
 # undef  __cpp_lib_not_fn
 # define __cpp_lib_not_fn                               202306L
+# undef  __cpp_lib_optional
+# define __cpp_lib_optional                             202506L
 # define __cpp_lib_optional_range_support               202406L
 # undef  __cpp_lib_out_ptr
 # define __cpp_lib_out_ptr                              202311L
