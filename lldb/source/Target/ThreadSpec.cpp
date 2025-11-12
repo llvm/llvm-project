@@ -19,10 +19,6 @@ const char *ThreadSpec::g_option_names[static_cast<uint32_t>(
 
 ThreadSpec::ThreadSpec() : m_name(), m_queue_name() {}
 
-ThreadSpec::ThreadSpec(Thread &thread)
-    : m_index(thread.GetIndexID()), m_tid(thread.GetID()),
-      m_name(thread.GetName()), m_queue_name(thread.GetQueueName()) {}
-
 std::unique_ptr<ThreadSpec> ThreadSpec::CreateFromStructuredData(
     const StructuredData::Dictionary &spec_dict, Status &error) {
   uint32_t index = UINT32_MAX;
