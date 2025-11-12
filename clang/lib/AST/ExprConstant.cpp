@@ -16287,6 +16287,42 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     return Success((A | B) == 0, E);
   }
 
+  case clang::X86::BI__builtin_ia32_kunpckhi: {
+    APSInt A, B;
+    if (!EvaluateInteger(E->getArg(0), A, Info) ||
+        !EvaluateInteger(E->getArg(1), B, Info))
+      return false;
+
+    // Extract lower 8 bits of each operand and concatenate
+    // Result = (A[7:0] << 8) | B[7:0]
+    APSInt Result = ((A & 0xFF) << 8) | (B & 0xFF);
+    return Success(Result, E);
+  }
+
+  case clang::X86::BI__builtin_ia32_kunpckdi: {
+    APSInt A, B;
+    if (!EvaluateInteger(E->getArg(0), A, Info) ||
+        !EvaluateInteger(E->getArg(1), B, Info))
+      return false;
+
+    // Extract lower 32 bits of each operand and concatenate
+    // Result = (A[31:0] << 32) | B[31:0]
+    APSInt Result = ((A & 0xFFFFFFFFULL) << 32) | (B & 0xFFFFFFFFULL);
+    return Success(Result, E);
+  }
+
+  case clang::X86::BI__builtin_ia32_kunpcksi: {
+    APSInt A, B;
+    if (!EvaluateInteger(E->getArg(0), A, Info) ||
+        !EvaluateInteger(E->getArg(1), B, Info))
+      return false;
+
+    // Extract lower 16 bits of each operand and concatenate
+    // Result = (A[15:0] << 16) | B[15:0]
+    APSInt Result = ((A & 0xFFFF) << 16) | (B & 0xFFFF);
+    return Success(Result, E);
+  }
+
   case clang::X86::BI__builtin_ia32_lzcnt_u16:
   case clang::X86::BI__builtin_ia32_lzcnt_u32:
   case clang::X86::BI__builtin_ia32_lzcnt_u64: {
@@ -16411,6 +16447,21 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
       return false;
     APSInt Result = ~Val;
     return Success(APValue(Result), E);
+  }
+
+  case X86::BI__builtin_ia32_kunpckhi:
+  case X86::BI__builtin_ia32_kunpcksi:
+  case X86::BI__builtin_ia32_kunpckdi: {
+    return HandleMaskBinOp([](const APSInt &LHS, const APSInt &RHS) {
+      // Unpack: concatenate lower half of RHS with lower half of LHS
+      unsigned HalfBits = LHS.getBitWidth() / 2;
+      APSInt Mask = APSInt::getMaxValue(LHS.getBitWidth(), LHS.isUnsigned());
+      Mask = Mask.trunc(HalfBits).zext(LHS.getBitWidth());
+      
+      APSInt LowerLHS = LHS & Mask;
+      APSInt LowerRHS = RHS & Mask;
+      return LowerRHS | (LowerLHS << HalfBits);
+    });
   }
 
   case X86::BI__builtin_ia32_kaddqi:
