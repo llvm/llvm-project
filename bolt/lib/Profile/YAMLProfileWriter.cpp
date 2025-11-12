@@ -240,10 +240,9 @@ YAMLProfileWriter::convert(const BinaryFunction &BF, bool UseDFS,
   YamlBF.ExecCount = BF.getKnownExecutionCount();
   YamlBF.ExternEntryCount = BF.getExternEntryCount();
   DenseMap<const MCDecodedPseudoProbeInlineTree *, uint32_t> InlineTreeNodeId;
-  if (PseudoProbeDecoder && BF.getGUID()) {
+  if (PseudoProbeDecoder)
     std::tie(YamlBF.InlineTree, InlineTreeNodeId) =
         convertBFInlineTree(*PseudoProbeDecoder, InlineTree, BF);
-  }
 
   BinaryFunction::BasicBlockOrderType Order;
   llvm::copy(UseDFS ? BF.dfs() : BF.getLayout().blocks(),
@@ -395,7 +394,7 @@ std::error_code YAMLProfileWriter::writeProfile(const RewriteInstance &RI) {
   StringSet<> EventNames = RI.getProfileReader()->getEventNames();
   if (!EventNames.empty()) {
     std::string Sep;
-    for (const StringMapEntry<std::nullopt_t> &EventEntry : EventNames) {
+    for (const StringMapEntry<EmptyStringSetTag> &EventEntry : EventNames) {
       BP.Header.EventNames += Sep + EventEntry.first().str();
       Sep = ",";
     }

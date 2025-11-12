@@ -441,7 +441,9 @@ void WebAssemblyAsmPrinter::EmitProducerInfo(Module &M) {
     llvm::SmallSet<StringRef, 4> SeenLanguages;
     for (size_t I = 0, E = Debug->getNumOperands(); I < E; ++I) {
       const auto *CU = cast<DICompileUnit>(Debug->getOperand(I));
-      StringRef Language = dwarf::LanguageString(CU->getSourceLanguage());
+      StringRef Language =
+          dwarf::LanguageString(CU->getSourceLanguage().getUnversionedName());
+
       Language.consume_front("DW_LANG_");
       if (SeenLanguages.insert(Language).second)
         Languages.emplace_back(Language.str(), "");

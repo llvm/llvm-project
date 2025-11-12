@@ -770,7 +770,7 @@ public:
       // it will not be in the parent context:
       if (auto *TT = D->getFriendType()->getType()->getAs<TagType>())
         if (TT->isTagOwned())
-          Visit(TT->getOriginalDecl());
+          Visit(TT->getDecl());
     } else {
       Visit(D->getFriendDecl());
     }

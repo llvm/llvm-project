@@ -582,6 +582,18 @@ bool IsOrContainsEventOrLockComponent(const Symbol &original) {
   return false;
 }
 
+bool IsOrContainsNotifyComponent(const Symbol &original) {
+  const Symbol &symbol{ResolveAssociations(original, /*stopAtTypeGuard=*/true)};
+  if (evaluate::IsVariable(symbol)) {
+    if (const DeclTypeSpec *type{symbol.GetType()}) {
+      if (const DerivedTypeSpec *derived{type->AsDerived()}) {
+        return IsNotifyType(derived) || FindNotifyPotentialComponent(*derived);
+      }
+    }
+  }
+  return false;
+}
+
 // Check this symbol suitable as a type-bound procedure - C769
 bool CanBeTypeBoundProc(const Symbol &symbol) {
   if (IsDummy(symbol) || IsProcedurePointer(symbol)) {
@@ -1489,6 +1501,32 @@ PotentialComponentIterator::const_iterator FindEventOrLockPotentialComponent(
   return iter;
 }
 
+PotentialComponentIterator::const_iterator FindNotifyPotentialComponent(
+    const DerivedTypeSpec &derived, bool ignoreCoarrays) {
+  PotentialComponentIterator potentials{derived};
+  auto iter{potentials.begin()};
+  for (auto end{potentials.end()}; iter != end; ++iter) {
+    const Symbol &component{*iter};
+    if (const auto *object{component.detailsIf<ObjectEntityDetails>()}) {
+      if (const DeclTypeSpec *type{object->type()}) {
+        if (IsNotifyType(type->AsDerived())) {
+          if (!ignoreCoarrays) {
+            break; // found one
+          }
+          auto path{iter.GetComponentPath()};
+          path.pop_back();
+          if (std::find_if(path.begin(), path.end(), [](const Symbol &sym) {
+                return evaluate::IsCoarray(sym);
+              }) == path.end()) {
+            break; // found one not in a coarray
+          }
+        }
+      }
+    }
+  }
+  return iter;
+}
+
 UltimateComponentIterator::const_iterator FindAllocatableUltimateComponent(
     const DerivedTypeSpec &derived) {
   UltimateComponentIterator ultimates{derived};
@@ -1870,4 +1908,9 @@ bool HadUseError(
   }
 }
 
+bool AreSameModuleSymbol(const Symbol &symbol, const Symbol &other) {
+  return symbol.name() == other.name() && symbol.owner().IsModule() &&
+      other.owner().IsModule() && symbol.owner().GetName() &&
+      symbol.owner().GetName() == other.owner().GetName();
+}
 } // namespace Fortran::semantics

@@ -2957,9 +2957,7 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
     AtomicOrdering Order = LdSt.getMMO().getSuccessOrdering();
 
     // Need special instructions for atomics that affect ordering.
-    if (Order != AtomicOrdering::NotAtomic &&
-        Order != AtomicOrdering::Unordered &&
-        Order != AtomicOrdering::Monotonic) {
+    if (isStrongerThanMonotonic(Order)) {
       assert(!isa<GZExtLoad>(LdSt));
       assert(MemSizeInBytes <= 8 &&
              "128-bit atomics should already be custom-legalized");
@@ -5128,22 +5126,12 @@ bool AArch64InstructionSelector::selectShuffleVector(
     MachineInstr &I, MachineRegisterInfo &MRI) {
   const LLT DstTy = MRI.getType(I.getOperand(0).getReg());
   Register Src1Reg = I.getOperand(1).getReg();
-  const LLT Src1Ty = MRI.getType(Src1Reg);
   Register Src2Reg = I.getOperand(2).getReg();
-  const LLT Src2Ty = MRI.getType(Src2Reg);
   ArrayRef<int> Mask = I.getOperand(3).getShuffleMask();
 
   MachineBasicBlock &MBB = *I.getParent();
   MachineFunction &MF = *MBB.getParent();
   LLVMContext &Ctx = MF.getFunction().getContext();
-
-  // G_SHUFFLE_VECTOR is weird in that the source operands can be scalars, if
-  // it's originated from a <1 x T> type. Those should have been lowered into
-  // G_BUILD_VECTOR earlier.
-  if (!Src1Ty.isVector() || !Src2Ty.isVector()) {
-    LLVM_DEBUG(dbgs() << "Could not select a \"scalar\" G_SHUFFLE_VECTOR\n");
-    return false;
-  }
 
   unsigned BytesPerElt = DstTy.getElementType().getSizeInBits() / 8;
 
@@ -5678,6 +5666,9 @@ AArch64InstructionSelector::emitConstantVector(Register Dst, Constant *CV,
                                                MachineRegisterInfo &MRI) {
   LLT DstTy = MRI.getType(Dst);
   unsigned DstSize = DstTy.getSizeInBits();
+  assert((DstSize == 64 || DstSize == 128) &&
+         "Unexpected vector constant size");
+
   if (CV->isNullValue()) {
     if (DstSize == 128) {
       auto Mov =
@@ -5747,17 +5738,24 @@ AArch64InstructionSelector::emitConstantVector(Register Dst, Constant *CV,
       // Try to create the new constants with MOVI, and if so generate a fneg
       // for it.
       if (auto *NewOp = TryMOVIWithBits(NegBits)) {
-        Register NewDst = MRI.createVirtualRegister(&AArch64::FPR128RegClass);
+        Register NewDst = MRI.createVirtualRegister(
+            DstSize == 64 ? &AArch64::FPR64RegClass : &AArch64::FPR128RegClass);
         NewOp->getOperand(0).setReg(NewDst);
         return MIRBuilder.buildInstr(NegOpc, {Dst}, {NewDst});
       }
       return nullptr;
     };
     MachineInstr *R;
-    if ((R = TryWithFNeg(DefBits, 32, AArch64::FNEGv4f32)) ||
-        (R = TryWithFNeg(DefBits, 64, AArch64::FNEGv2f64)) ||
+    if ((R = TryWithFNeg(DefBits, 32,
+                         DstSize == 64 ? AArch64::FNEGv2f32
+                                       : AArch64::FNEGv4f32)) ||
+        (R = TryWithFNeg(DefBits, 64,
+                         DstSize == 64 ? AArch64::FNEGDr
+                                       : AArch64::FNEGv2f64)) ||
         (STI.hasFullFP16() &&
-         (R = TryWithFNeg(DefBits, 16, AArch64::FNEGv8f16))))
+         (R = TryWithFNeg(DefBits, 16,
+                          DstSize == 64 ? AArch64::FNEGv4f16
+                                        : AArch64::FNEGv8f16))))
       return R;
   }
 

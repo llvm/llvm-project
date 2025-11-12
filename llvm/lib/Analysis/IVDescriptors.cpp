@@ -849,17 +849,12 @@ RecurrenceDescriptor::isMinMaxPattern(Instruction *I, RecurKind Kind,
 /// %sum.2 = select %cmp, %add, %sum.1
 RecurrenceDescriptor::InstDesc
 RecurrenceDescriptor::isConditionalRdxPattern(Instruction *I) {
-  SelectInst *SI = dyn_cast<SelectInst>(I);
-  if (!SI)
-    return InstDesc(false, I);
-
-  CmpInst *CI = dyn_cast<CmpInst>(SI->getCondition());
+  Value *TrueVal, *FalseVal;
   // Only handle single use cases for now.
-  if (!CI || !CI->hasOneUse())
+  if (!match(I,
+             m_Select(m_OneUse(m_Cmp()), m_Value(TrueVal), m_Value(FalseVal))))
     return InstDesc(false, I);
 
-  Value *TrueVal = SI->getTrueValue();
-  Value *FalseVal = SI->getFalseValue();
   // Handle only when either of operands of select instruction is a PHI
   // node for now.
   if ((isa<PHINode>(TrueVal) && isa<PHINode>(FalseVal)) ||
@@ -886,7 +881,7 @@ RecurrenceDescriptor::isConditionalRdxPattern(Instruction *I) {
   if (!IPhi || IPhi != FalseVal)
     return InstDesc(false, I);
 
-  return InstDesc(true, SI);
+  return InstDesc(true, I);
 }
 
 RecurrenceDescriptor::InstDesc RecurrenceDescriptor::isRecurrenceInstr(

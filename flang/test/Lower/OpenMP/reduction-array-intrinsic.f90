@@ -21,7 +21,6 @@ end subroutine
 ! CHECK:           %[[VAL_6:.*]] = fir.shape %[[VAL_5]]#1 : (index) -> !fir.shape<1>
 ! CHECK:           %[[VAL_7:.*]] = fir.allocmem !fir.array<?xi32>, %[[VAL_5]]#1 {bindc_name = ".tmp", uniq_name = ""}
 ! CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_7]](%[[VAL_6]]) {uniq_name = ".tmp"} : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.heap<!fir.array<?xi32>>)
-! CHECK:           %[[VAL_8:.*]] = arith.constant true
 ! CHECK:           %[[VAL_10:.*]] = arith.constant 0 : index
 ! CHECK:           %[[VAL_11:.*]]:3 = fir.box_dims %[[VAL_2]], %[[VAL_10]] : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
 ! CHECK:           %[[VAL_12:.*]] = fir.shape_shift %[[VAL_11]]#0, %[[VAL_11]]#1 : (index, index) -> !fir.shapeshift<1>

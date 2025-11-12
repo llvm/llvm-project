@@ -126,7 +126,7 @@ def G_FRAME_INDEX : GenericInstruction {
 }
 
 def G_GLOBAL_VALUE : GenericInstruction {
-  let OutOperandList = (outs type0:$dst);
+  let OutOperandList = (outs ptype0:$dst);
   let InOperandList = (ins unknown:$src);
   let hasSideEffects = false;
 }

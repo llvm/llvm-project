@@ -681,6 +681,10 @@ bool SIFoldOperandsImpl::updateOperand(FoldCandidate &Fold) const {
         return false;
       MI->setDesc(TII->get(NewMFMAOpc));
       MI->untieRegOperand(0);
+      const MCInstrDesc &MCID = MI->getDesc();
+      for (unsigned I = 0; I < MI->getNumDefs(); ++I)
+        if (MCID.getOperandConstraint(I, MCOI::EARLY_CLOBBER) != -1)
+          MI->getOperand(I).setIsEarlyClobber(true);
     }
 
     // TODO: Should we try to avoid adding this to the candidate list?
@@ -709,7 +713,7 @@ bool SIFoldOperandsImpl::updateOperand(FoldCandidate &Fold) const {
 
   // Verify the register is compatible with the operand.
   if (const TargetRegisterClass *OpRC =
-          TII->getRegClass(MI->getDesc(), Fold.UseOpNo, TRI)) {
+          TII->getRegClass(MI->getDesc(), Fold.UseOpNo)) {
     const TargetRegisterClass *NewRC =
         TRI->getRegClassForReg(*MRI, New->getReg());
 
@@ -722,7 +726,8 @@ bool SIFoldOperandsImpl::updateOperand(FoldCandidate &Fold) const {
         return false;
     }
 
-    if (!MRI->constrainRegClass(New->getReg(), ConstrainRC)) {
+    if (New->getReg().isVirtual() &&
+        !MRI->constrainRegClass(New->getReg(), ConstrainRC)) {
       LLVM_DEBUG(dbgs() << "Cannot constrain " << printReg(New->getReg(), TRI)
                         << TRI->getRegClassName(ConstrainRC) << '\n');
       return false;
@@ -931,7 +936,9 @@ static MachineOperand *lookUpCopyChain(const SIInstrInfo &TII,
   for (MachineInstr *SubDef = MRI.getVRegDef(SrcReg);
        SubDef && TII.isFoldableCopy(*SubDef);
        SubDef = MRI.getVRegDef(Sub->getReg())) {
-    MachineOperand &SrcOp = SubDef->getOperand(1);
+    unsigned SrcIdx = TII.getFoldableCopySrcIdx(*SubDef);
+    MachineOperand &SrcOp = SubDef->getOperand(SrcIdx);
+
     if (SrcOp.isImm())
       return &SrcOp;
     if (!SrcOp.isReg() || SrcOp.getReg().isPhysical())
@@ -1074,7 +1081,7 @@ bool SIFoldOperandsImpl::tryFoldRegSeqSplat(
   if (!AMDGPU::isSISrcOperand(Desc, UseOpIdx))
     return false;
 
-  int16_t RCID = Desc.operands()[UseOpIdx].RegClass;
+  int16_t RCID = TII->getOpRegClassID(Desc.operands()[UseOpIdx]);
   if (RCID == -1)
     return false;
 
@@ -1126,38 +1133,9 @@ bool SIFoldOperandsImpl::tryToFoldACImm(
   if (!AMDGPU::isSISrcOperand(Desc, UseOpIdx))
     return false;
 
-  MachineOperand &UseOp = UseMI->getOperand(UseOpIdx);
   if (OpToFold.isImm() && OpToFold.isOperandLegal(*TII, *UseMI, UseOpIdx)) {
     appendFoldCandidate(FoldList, UseMI, UseOpIdx, OpToFold);
     return true;
-  }
-
-  // TODO: Verify the following code handles subregisters correctly.
-  // TODO: Handle extract of global reference
-  if (UseOp.getSubReg())
-    return false;
-
-  if (!OpToFold.isReg())
-    return false;
-
-  Register UseReg = OpToFold.getReg();
-  if (!UseReg.isVirtual())
-    return false;
-
-  // Maybe it is just a COPY of an immediate itself.
-
-  // FIXME: Remove this handling. There is already special case folding of
-  // immediate into copy in foldOperand. This is looking for the def of the
-  // value the folding started from in the first place.
-  MachineInstr *Def = MRI->getVRegDef(UseReg);
-  if (Def && TII->isFoldableCopy(*Def)) {
-    MachineOperand &DefOp = Def->getOperand(1);
-    if (DefOp.isImm() && TII->isOperandLegal(*UseMI, UseOpIdx, &DefOp)) {
-      FoldableDef FoldableImm(DefOp.getImm(), OpToFold.DefRC,
-                              OpToFold.DefSubReg);
-      appendFoldCandidate(FoldList, UseMI, UseOpIdx, FoldableImm);
-      return true;
-    }
   }
 
   return false;
@@ -1296,10 +1274,8 @@ void SIFoldOperandsImpl::foldOperand(
           AMDGPU::V_ACCVGPR_WRITE_B32_e64, AMDGPU::AV_MOV_B32_IMM_PSEUDO,
           AMDGPU::AV_MOV_B64_IMM_PSEUDO}) {
       const MCInstrDesc &MovDesc = TII->get(MovOp);
-      assert(MovDesc.getNumDefs() > 0 && MovDesc.operands()[0].RegClass != -1);
-
       const TargetRegisterClass *MovDstRC =
-          TRI->getRegClass(MovDesc.operands()[0].RegClass);
+          TRI->getRegClass(TII->getOpRegClassID(MovDesc.operands()[0]));
 
       // Fold if the destination register class of the MOV instruction (ResRC)
       // is a superclass of (or equal to) the destination register class of the
@@ -1309,7 +1285,8 @@ void SIFoldOperandsImpl::foldOperand(
 
       const int SrcIdx = MovOp == AMDGPU::V_MOV_B16_t16_e64 ? 2 : 1;
       const TargetRegisterClass *MovSrcRC =
-          TRI->getRegClass(MovDesc.operands()[SrcIdx].RegClass);
+          TRI->getRegClass(TII->getOpRegClassID(MovDesc.operands()[SrcIdx]));
+
       if (MovSrcRC) {
         if (UseSubReg)
           MovSrcRC = TRI->getMatchingSuperRegClass(SrcRC, MovSrcRC, UseSubReg);
@@ -2417,7 +2394,7 @@ bool SIFoldOperandsImpl::tryFoldRegSequence(MachineInstr &MI) {
 
   unsigned OpIdx = Op - &UseMI->getOperand(0);
   const MCInstrDesc &InstDesc = UseMI->getDesc();
-  const TargetRegisterClass *OpRC = TII->getRegClass(InstDesc, OpIdx, TRI);
+  const TargetRegisterClass *OpRC = TII->getRegClass(InstDesc, OpIdx);
   if (!OpRC || !TRI->isVectorSuperClass(OpRC))
     return false;
 
