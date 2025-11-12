@@ -30,9 +30,6 @@ class CIRGenBuilderTy : public cir::CIRBaseBuilderTy {
   const CIRGenTypeCache &typeCache;
   llvm::StringMap<unsigned> recordNames;
   llvm::StringMap<unsigned> globalsVersioning;
-  bool isFpConstrained = false;
-  cir::fp::ExceptionBehavior defaultConstrainedExcept = cir::fp::ebStrict;
-  llvm::RoundingMode defaultConstrainedRounding = llvm::RoundingMode::Dynamic;
 
 public:
   CIRGenBuilderTy(mlir::MLIRContext &mlirContext, const CIRGenTypeCache &tc)
