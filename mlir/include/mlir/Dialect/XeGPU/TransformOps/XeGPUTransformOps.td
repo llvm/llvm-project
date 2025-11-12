@@ -161,4 +161,87 @@ def SetOpLayoutAttrOp : Op<Transform_Dialect, "xegpu.set_op_layout_attr", [
   }];
 }
 
+def SetGPULaunchThreadsOp
+    : Op<Transform_Dialect, "xegpu.set_gpu_launch_threads", [
+      DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+      TransformOpInterface
+    ]> {
+
+  let summary = "Set number of threads for a given gpu.launch operation";
+  let description = [{
+    Overrides the x,y,z threads operands of a given `gpu.launch` operation in-place.
+  }];
+
+  let arguments = (ins TransformHandleTypeInterface:$target,
+                   Variadic<TransformAnyParamTypeOrAnyHandle>:$threads,
+                   DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_threads
+                   );
+  let results = (outs);
+  let builders = [
+    OpBuilder<(ins "Value":$target, "ArrayRef<OpFoldResult>":$mixedThreads)>,
+  ];
+
+  let assemblyFormat = [{
+    $target
+    `threads` `=` custom<DynamicIndexList>($threads, $static_threads)
+    attr-dict `:` qualified(type(operands))
+  }];
+
+  let extraClassDeclaration = [{
+    ::mlir::DiagnosedSilenceableFailure apply(
+        ::mlir::transform::TransformRewriter &rewriter,
+        ::mlir::transform::TransformResults &transformResults,
+        ::mlir::transform::TransformState &state);
+
+    ::llvm::SmallVector<::mlir::OpFoldResult> getMixedThreads() {
+      Builder b(getContext());
+      return getMixedValues(getStaticThreads(), getThreads(), b);
+    }
+  }];
+}
+
+def InsertPrefetchOp : Op<Transform_Dialect, "xegpu.insert_prefetch", [
+  DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+  TransformOpInterface
+]> {
+
+  let summary = "Adds xegpu prefetch ops to matmul operand tiles.";
+  let description = [{
+    Given a target value (e.g., `vector`) residing in a `scf.for` loop, this
+    transform finds the corresponding `xegpu.load_nd` op and inserts
+    `xegpu.prefetch_nd` operations for the tile. The load op must reside within
+    the `scf.for` loop. Number of prefetch steps is set by the `nb_prefetch`
+    argument (default value is 1). Returns a handle to the created
+    `xegpu.create_nd_desc` op.
+  }];
+
+  let arguments = (ins TransformValueHandleTypeInterface:$target,
+                   Optional<TransformAnyParamTypeOrAnyHandle>:$dynamic_nb_prefetch,
+                   DefaultValuedOptionalAttr<I64Attr, "1">:$static_nb_prefetch
+                   );
+
+  let results = (outs TransformHandleTypeInterface:$desc_op);
+
+  let assemblyFormat = [{
+    $target
+    `nb_prefetch` `=` ($dynamic_nb_prefetch^):($static_nb_prefetch)?
+    attr-dict `:` functional-type(operands, results)
+  }];
+
+  let extraClassDeclaration = [{
+    ::mlir::DiagnosedSilenceableFailure apply(
+        ::mlir::transform::TransformRewriter &rewriter,
+        ::mlir::transform::TransformResults &transformResults,
+        ::mlir::transform::TransformState &state);
+
+    OpFoldResult getNbPrefetch() {
+      auto cxt = getContext();
+      if (getDynamicNbPrefetch())
+        return OpFoldResult(getDynamicNbPrefetch());
+      return OpFoldResult(IntegerAttr::get(
+                          IntegerType::get(cxt, 64), getStaticNbPrefetch()));
+    }
+  }];
+}
+
 #endif // XEGPU_TRANSFORM_OPS
