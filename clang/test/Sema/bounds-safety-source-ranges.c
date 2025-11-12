@@ -1,5 +1,5 @@
-// RUN: not %clang_cc1 -fsyntax-only -fdiagnostics-print-source-range-info -fdiagnostics-parseable-fixits %s 2>%t.txt
-// RUN: FileCheck %s --implicit-check-not error --implicit-check-not note --implicit-check-not fix --implicit-check-not warning < %t.txt
+// RUN: not %clang_cc1 -fsyntax-only -fdiagnostics-print-source-range-info -fdiagnostics-parseable-fixits %s 2>&1 | \
+// RUN:   FileCheck %s --implicit-check-not error --implicit-check-not note --implicit-check-not fix --implicit-check-not warning
 
 #define __counted_by(f)  __attribute__((counted_by(f)))
 
