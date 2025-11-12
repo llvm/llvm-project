@@ -91,14 +91,10 @@ define float @frem2_exp(float %x) #0 {
 ; CHECK-SD-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-SD-NEXT:    bl expf
 ; CHECK-SD-NEXT:    fmov s1, #0.50000000
-; CHECK-SD-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-SD-NEXT:    fmov s2, #-2.00000000
 ; CHECK-SD-NEXT:    fmul s1, s0, s1
 ; CHECK-SD-NEXT:    frintz s1, s1
-; CHECK-SD-NEXT:    fmadd s1, s1, s2, s0
-; CHECK-SD-NEXT:    mvni v2.4s, #128, lsl #24
-; CHECK-SD-NEXT:    bit v0.16b, v1.16b, v2.16b
-; CHECK-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
+; CHECK-SD-NEXT:    fmadd s0, s1, s2, s0
 ; CHECK-SD-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-SD-NEXT:    ret
 ;
@@ -121,14 +117,10 @@ define float @frem2_exp2(float %x) #0 {
 ; CHECK-SD-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-SD-NEXT:    bl exp2f
 ; CHECK-SD-NEXT:    fmov s1, #0.50000000
-; CHECK-SD-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-SD-NEXT:    fmov s2, #-2.00000000
 ; CHECK-SD-NEXT:    fmul s1, s0, s1
 ; CHECK-SD-NEXT:    frintz s1, s1
-; CHECK-SD-NEXT:    fmadd s1, s1, s2, s0
-; CHECK-SD-NEXT:    mvni v2.4s, #128, lsl #24
-; CHECK-SD-NEXT:    bit v0.16b, v1.16b, v2.16b
-; CHECK-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
+; CHECK-SD-NEXT:    fmadd s0, s1, s2, s0
 ; CHECK-SD-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-SD-NEXT:    ret
 ;
@@ -151,14 +143,10 @@ define float @frem2_exp10(float %x) #0 {
 ; CHECK-SD-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-SD-NEXT:    bl exp10f
 ; CHECK-SD-NEXT:    fmov s1, #0.50000000
-; CHECK-SD-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-SD-NEXT:    fmov s2, #-2.00000000
 ; CHECK-SD-NEXT:    fmul s1, s0, s1
 ; CHECK-SD-NEXT:    frintz s1, s1
-; CHECK-SD-NEXT:    fmadd s1, s1, s2, s0
-; CHECK-SD-NEXT:    mvni v2.4s, #128, lsl #24
-; CHECK-SD-NEXT:    bit v0.16b, v1.16b, v2.16b
-; CHECK-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
+; CHECK-SD-NEXT:    fmadd s0, s1, s2, s0
 ; CHECK-SD-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-SD-NEXT:    ret
 ;
