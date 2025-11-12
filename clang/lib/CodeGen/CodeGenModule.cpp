@@ -4945,6 +4945,11 @@ void CodeGenModule::setMultiVersionResolverAttributes(llvm::Function *Resolver,
 
   setDSOLocal(Resolver);
 
+  // The resolver must be exempt from sanitizer instrumentation, as it can run
+  // before the sanitizer is initialized.
+  // (https://github.com/llvm/llvm-project/issues/163369)
+  Resolver->addFnAttr(llvm::Attribute::DisableSanitizerInstrumentation);
+
   // Set the default target-specific attributes, such as PAC and BTI ones on
   // AArch64. Not passing Decl to prevent setting unrelated attributes,
   // as Resolver can be shared by multiple declarations.
