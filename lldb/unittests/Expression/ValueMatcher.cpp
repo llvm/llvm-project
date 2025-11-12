@@ -32,9 +32,8 @@ static void FormatValueDetails(llvm::raw_ostream &os,
           os << llvm::format("%02x", static_cast<unsigned>(byte));
         },
         [&]() { os << " "; });
-    if (buffer_data.size() > 16) {
+    if (buffer_data.size() > 16)
       os << " ...";
-    }
     os << "] (" << buffer_data.size() << " bytes)";
   } else {
     os << ", value=" << scalar;
