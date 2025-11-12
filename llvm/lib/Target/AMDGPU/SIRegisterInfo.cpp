@@ -3943,18 +3943,11 @@ bool SIRegisterInfo::shouldCoalesce(MachineInstr *MI,
                                     unsigned DstSubReg,
                                     const TargetRegisterClass *NewRC,
                                     LiveIntervals &LIS) const {
-  unsigned SrcSize = getRegSizeInBits(*SrcRC);
-  unsigned DstSize = getRegSizeInBits(*DstRC);
+  // TODO: This should be more aggressive, but be more cautious with very wide
+  // tuples.
   unsigned NewSize = getRegSizeInBits(*NewRC);
-
-  // Do not increase size of registers beyond dword, we would need to allocate
-  // adjacent registers and constraint regalloc more than needed.
-
-  // Always allow dword coalescing.
-  if (SrcSize <= 32 || DstSize <= 32)
-    return true;
-
-  return NewSize <= DstSize || NewSize <= SrcSize;
+  return NewSize <= 128 || NewSize <= getRegSizeInBits(*SrcRC) ||
+         NewSize <= getRegSizeInBits(*DstRC);
 }
 
 unsigned SIRegisterInfo::getRegPressureLimit(const TargetRegisterClass *RC,
@@ -4117,13 +4110,10 @@ const TargetRegisterClass *SIRegisterInfo::getVGPR64Class() const {
                                 : &AMDGPU::VReg_64RegClass;
 }
 
+// FIXME: This should be deleted
 const TargetRegisterClass *
 SIRegisterInfo::getRegClass(unsigned RCID) const {
   switch ((int)RCID) {
-  case AMDGPU::SReg_1RegClassID:
-    return getBoolRC();
-  case AMDGPU::SReg_1_XEXECRegClassID:
-    return getWaveMaskRegClass();
   case -1:
     return nullptr;
   default:
