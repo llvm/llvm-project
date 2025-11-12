@@ -203,9 +203,8 @@ void LspServer::handleRequestGetCFG(const lsp::GetCfgParams &Params,
 
   Function *F = nullptr;
   BasicBlock *BB = nullptr;
-  if (Instruction *MaybeI =
-          OpenDocuments[Filepath]->getInstructionAtLocation(Line, Character)) {
-    BB = MaybeI->getParent();
+  if (BasicBlock *MaybeBB = Doc.getBlockAtLocation(Line, Character)) {
+    BB = MaybeBB;
     F = BB->getParent();
   } else {
     F = Doc.getFirstFunction();
