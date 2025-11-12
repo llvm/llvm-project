@@ -168,6 +168,7 @@ public:
   void handleWaveSizeAttr(Decl *D, const ParsedAttr &AL);
   void handleVkConstantIdAttr(Decl *D, const ParsedAttr &AL);
   void handleVkBindingAttr(Decl *D, const ParsedAttr &AL);
+  void handleVkLocationAttr(Decl *D, const ParsedAttr &AL);
   void handlePackOffsetAttr(Decl *D, const ParsedAttr &AL);
   void handleShaderAttr(Decl *D, const ParsedAttr &AL);
   void handleResourceBindingAttr(Decl *D, const ParsedAttr &AL);
@@ -240,6 +241,8 @@ private:
     HLSLParsedSemanticAttr *Semantic;
     std::optional<uint32_t> Index;
   };
+  std::optional<bool> InputUsesExplicitVkLocations = std::nullopt;
+  std::optional<bool> OutputUsesExplicitVkLocations = std::nullopt;
 
   enum IOType {
     In = 0b01,
