@@ -7,13 +7,36 @@ AnalysisKey PointerTypeInFunctionPass::Key;
 PointerTypeInFunctionPass::Result PointerTypeInFunctionPass::run(Function &F,
                                       FunctionAnalysisManager &AM) {
   if (F.getName() == "main") {
-    // 暂且先多遍历几遍
-    for (unsigned int i = 0; i < 10; i++) {
+    // 每次遍历找到一些信息，直到达到一个不变点
+    int cnt = 0;
+    visit(F);
+    while (!checkFixedPoint()) {
+      errs() << "Found " << ++cnt << " times.\n";
+      testPrint(F);   
+      recordPtmForNext();
       visit(F);
     }
-    //testPrint(F);
   }
   return result;
+}
+
+void PointerTypeInFunctionPass::recordPtmForNext() {
+  for (auto &entry : result.pointerTypeMap) {
+    ptmLastTurn[entry.first] = entry.second->to_string();  
+  }
+}
+
+bool PointerTypeInFunctionPass::checkFixedPoint() {
+  for (auto &entry : result.pointerTypeMap) {
+    if (ptmLastTurn.contains(entry.first)) {
+      if (ptmLastTurn[entry.first] != entry.second->to_string()) {
+        return false;
+      }
+    } else {
+      return false;
+    }
+  }
+  return true;
 }
 
 void PointerTypeInFunctionPass::visitAllocaInst(AllocaInst& AI) {
@@ -68,6 +91,9 @@ PointerTypeInFunctionPass::view_gep_index(Value *val, Type* ty, int now, int cnt
       return std::make_shared<MyArrayTy>(
           view_gep_index(val, nxTy->getElementType(), now + 1, cnt),
           nxTy->getNumElements());
+    } else {
+      // 结构体
+      return 0;
     }
   }
 }

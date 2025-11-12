@@ -22,6 +22,9 @@ namespace llvm {
     
     private:
       Result result;
+      DenseMap<Value *, std::string> ptmLastTurn;
+      void recordPtmForNext();
+      bool checkFixedPoint();
       void addPointerTypeMap(Value *opr, Type *type);
       void addPointerTypeMap(Value *opr, Value *val);
       void testPrint(Function &F);
