@@ -1433,8 +1433,8 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
             if (auto *Store = dyn_cast<VPWidenStoreRecipe>(U)) {
               // VPWidenStore doesn't have users, and stores are always
               // profitable to widen: hence, permitting single-scalar stored
-              // values is an important leaf condition. The assert must hold as
-              // we checked the RepOrWidenR operand against
+              // values and mask operands is an important leaf condition. The
+              // assert must hold as we checked the RepOrWidenR operand against
               // vputils::isSingleScalar.
               assert(RepOrWidenR == Store->getAddr() ||
                      RepOrWidenR == Store->getMask() ||
