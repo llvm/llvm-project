@@ -1,6 +1,5 @@
 // REQUIRES: x86-registered-target
 // REQUIRES: amdgpu-registered-target
-// UNSUPPORTED: system-windows
 
 // Check no temporary files or directores are left after compilation.
 // RUN: rm -rf %t/mytmp
