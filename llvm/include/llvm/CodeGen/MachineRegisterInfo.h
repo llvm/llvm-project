@@ -634,9 +634,8 @@ public:
   /// function. Writing to a constant register has no effect.
   LLVM_ABI bool isConstantPhysReg(MCRegister PhysReg) const;
 
-  /// Get an iterator over the pressure sets affected by the given physical or
-  /// virtual register. If RegUnit is physical, it must be a register unit (from
-  /// MCRegUnitIterator).
+  /// Get an iterator over the pressure sets affected by the virtual register
+  /// or register unit.
   PSetIterator getPressureSets(VirtRegOrUnit VRegOrUnit) const;
 
   //===--------------------------------------------------------------------===//
