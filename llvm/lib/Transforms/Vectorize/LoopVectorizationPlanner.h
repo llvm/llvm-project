@@ -630,6 +630,8 @@ private:
                                   VPRecipeBuilder &RecipeBuilder,
                                   ElementCount MinVF);
 
+  void adjustScalarIVPromotions(VPlanPtr &Plan);
+
   /// Attach the runtime checks of \p RTChecks to \p Plan.
   void attachRuntimeChecks(VPlan &Plan, GeneratedRTChecks &RTChecks,
                            bool HasBranchWeights) const;

@@ -554,6 +554,7 @@ public:
     case VPRecipeBase::VPWidenPointerInductionSC:
     case VPRecipeBase::VPReductionPHISC:
     case VPRecipeBase::VPPartialReductionSC:
+    case VPRecipeBase::VPScalarIVPromotionRecipeSC:
       return true;
     case VPRecipeBase::VPBranchOnMaskSC:
     case VPRecipeBase::VPInterleaveEVLSC:
@@ -580,10 +581,12 @@ public:
 
   /// Returns the underlying instruction.
   Instruction *getUnderlyingInstr() {
-    return cast<Instruction>(getUnderlyingValue());
+    return getUnderlyingValue() ? dyn_cast<Instruction>(getUnderlyingValue())
+                                : nullptr;
   }
   const Instruction *getUnderlyingInstr() const {
-    return cast<Instruction>(getUnderlyingValue());
+    return getUnderlyingValue() ? dyn_cast<Instruction>(getUnderlyingValue())
+                                : nullptr;
   }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -2312,7 +2315,8 @@ struct VPFirstOrderRecurrencePHIRecipe : public VPHeaderPHIRecipe {
 
   VPFirstOrderRecurrencePHIRecipe *clone() override {
     return new VPFirstOrderRecurrencePHIRecipe(
-        cast<PHINode>(getUnderlyingInstr()), *getOperand(0));
+        getUnderlyingInstr() ? cast<PHINode>(getUnderlyingInstr()) : nullptr,
+        *getOperand(0));
   }
 
   void execute(VPTransformState &State) override;
@@ -3473,6 +3477,54 @@ public:
 #endif
 
   const SCEV *getSCEV() const { return Expr; }
+};
+
+struct LLVM_ABI_FOR_TEST VPScalarIVPromotionRecipe : public VPSingleDefRecipe {
+  VPScalarIVPromotionRecipe(std::initializer_list<VPValue *> Operands,
+                            DebugLoc DL = DebugLoc::getUnknown())
+      : VPSingleDefRecipe(VPDef::VPScalarIVPromotionRecipeSC, Operands, DL) {}
+
+  VP_CLASSOF_IMPL(VPDef::VPScalarIVPromotionRecipeSC)
+
+  bool isSingleScalar() const { return true; }
+
+  VPScalarIVPromotionRecipe *clone() override {
+    assert(getNumOperands() == 3 || getNumOperands() == 4);
+    if (getNumOperands() == 3)
+      return new VPScalarIVPromotionRecipe(
+          {getOperand(0), getOperand(1), getOperand(2)}, getDebugLoc());
+    return new VPScalarIVPromotionRecipe(
+        {getOperand(0), getOperand(1), getOperand(2), getOperand(3)},
+        getDebugLoc());
+  }
+
+  VPValue *getVFxUF() { return getOperand(3); }
+  void setVFxUF(VPValue *V) {
+    if (getNumOperands() == 3) {
+      addOperand(V);
+    } else {
+      setOperand(3, V);
+    }
+  }
+
+  void execute(VPTransformState &State) override;
+
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override {
+    return 0;
+  }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void print(raw_ostream &O, const Twine &Indent,
+             VPSlotTracker &SlotTracker) const override;
+#endif
+
+  bool usesScalars(const VPValue *Op) const override {
+    assert(is_contained(operands(), Op) &&
+           "Op must be an operand of the recipe");
+    return true;
+  }
 };
 
 /// Canonical scalar induction phi of the vector loop. Starting at the specified

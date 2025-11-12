@@ -940,9 +940,9 @@ define i32 @add_of_zext_outside_loop(i32 %a, ptr noalias %b, i8 %c, i32 %d) #0 {
 ; CHECK-MAXBW-SAME: i32 [[A:%.*]], ptr noalias [[B:%.*]], i8 [[C:%.*]], i32 [[D:%.*]]) #[[ATTR0]] {
 ; CHECK-MAXBW-NEXT:  entry:
 ; CHECK-MAXBW-NEXT:    [[CONV1:%.*]] = zext i8 [[C]] to i32
-; CHECK-MAXBW-NEXT:    [[TMP0:%.*]] = sub i32 1024, [[D]]
 ; CHECK-MAXBW-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vscale.i32()
 ; CHECK-MAXBW-NEXT:    [[TMP2:%.*]] = shl nuw nsw i32 [[TMP1]], 4
+; CHECK-MAXBW-NEXT:    [[TMP0:%.*]] = sub i32 1024, [[D]]
 ; CHECK-MAXBW-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP0]], [[TMP2]]
 ; CHECK-MAXBW-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK-MAXBW:       vector.ph:
@@ -1061,9 +1061,9 @@ define i32 @add_of_loop_invariant_zext(i32 %a, ptr %b, i8 %c, i32 %d) #0 {
 ; CHECK-MAXBW-LABEL: define i32 @add_of_loop_invariant_zext(
 ; CHECK-MAXBW-SAME: i32 [[A:%.*]], ptr [[B:%.*]], i8 [[C:%.*]], i32 [[D:%.*]]) #[[ATTR0]] {
 ; CHECK-MAXBW-NEXT:  entry:
-; CHECK-MAXBW-NEXT:    [[TMP0:%.*]] = sub i32 1024, [[D]]
 ; CHECK-MAXBW-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vscale.i32()
 ; CHECK-MAXBW-NEXT:    [[TMP2:%.*]] = shl nuw nsw i32 [[TMP1]], 4
+; CHECK-MAXBW-NEXT:    [[TMP0:%.*]] = sub i32 1024, [[D]]
 ; CHECK-MAXBW-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP0]], [[TMP2]]
 ; CHECK-MAXBW-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK-MAXBW:       vector.ph:
