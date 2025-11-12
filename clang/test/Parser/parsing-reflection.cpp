@@ -3,10 +3,7 @@
 namespace a {
 struct X {
     int y;
-    bool operator==(const X& other)
-    {
-        return y == other.y;
-    }
+    bool operator==(const X&);
 };
 
 namespace b {
