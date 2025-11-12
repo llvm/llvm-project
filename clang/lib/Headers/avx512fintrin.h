@@ -40,6 +40,8 @@ typedef long long __m512i_u __attribute__((__vector_size__(64), __aligned__(1)))
 
 typedef unsigned char __mmask8;
 typedef unsigned short __mmask16;
+typedef unsigned int __mmask32;
+typedef unsigned long long __mmask64;
 
 /* Rounding mode macros.  */
 #define _MM_FROUND_TO_NEAREST_INT   0x00
@@ -8098,6 +8100,18 @@ static __inline__ __mmask16 __DEFAULT_FN_ATTRS
 _mm512_kunpackb (__mmask16 __A, __mmask16 __B)
 {
   return (__mmask16) __builtin_ia32_kunpckhi ((__mmask16) __A, (__mmask16) __B);
+}
+
+static __inline__ __mmask64 __DEFAULT_FN_ATTRS
+_mm512_kunpackd (__mmask64 __A, __mmask64 __B)
+{
+  return (__mmask64) __builtin_ia32_kunpckdi ((__mmask64) __A, (__mmask64) __B);
+}
+
+static __inline__ __mmask32 __DEFAULT_FN_ATTRS
+_mm512_kunpackw (__mmask32 __A, __mmask32 __B)
+{
+  return (__mmask32) __builtin_ia32_kunpcksi ((__mmask32) __A, (__mmask32) __B);
 }
 
 static __inline__ __mmask16 __DEFAULT_FN_ATTRS_CONSTEXPR
