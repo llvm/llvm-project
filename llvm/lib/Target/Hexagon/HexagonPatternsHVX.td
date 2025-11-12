@@ -261,6 +261,16 @@ let Predicates = [UseHVX] in {
   defm: NopCast_pat<VecPI16, VecPI32, HvxWR>;
 }
 
+let Predicates = [UseHVXV68] in {
+  defm: NopCast_pat<VecI8,   VecF16,  HvxVR>;
+  defm: NopCast_pat<VecI16,  VecF16,  HvxVR>;
+  defm: NopCast_pat<VecI32,  VecF16,  HvxVR>;
+  defm: NopCast_pat<VecF32,  VecF16,  HvxVR>;
+  defm: NopCast_pat<VecPI8,  VecPF32,  HvxWR>;
+  defm: NopCast_pat<VecPI16,  VecPF32,  HvxWR>;
+  defm: NopCast_pat<VecPI32,  VecPF32,  HvxWR>;
+}
+
 let Predicates = [UseHVX, UseHVXFloatingPoint] in {
   defm: NopCast_pat<VecI8,   VecF16,  HvxVR>;
   defm: NopCast_pat<VecI8,   VecBF16, HvxVR>;
@@ -306,6 +316,8 @@ let Predicates = [UseHVX] in {
   def: Pat<(VecPI16 (concat_vectors HVI16:$Vs, HVI16:$Vt)),
            (Combinev HvxVR:$Vt, HvxVR:$Vs)>;
   def: Pat<(VecPI32 (concat_vectors HVI32:$Vs, HVI32:$Vt)),
+           (Combinev HvxVR:$Vt, HvxVR:$Vs)>;
+  def: Pat<(VecPF32 (concat_vectors HVF32:$Vs, HVF32:$Vt)),
            (Combinev HvxVR:$Vt, HvxVR:$Vs)>;
 
   def: Pat<(VecQ8  (qcat HQ16:$Qs, HQ16:$Qt)), (Combineq $Qt, $Qs)>;
