@@ -10,14 +10,7 @@ define <8 x i16> @test_extadd_pairwise_i8x16_s(<16 x i8> %v) {
 ; CHECK:         .functype test_extadd_pairwise_i8x16_s (v128) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i8x16.shuffle 0, 2, 4, 6, 8, 10, 12, 14, 0, 0, 0, 0, 0, 0, 0, 0
-; CHECK-NEXT:    i16x8.extend_low_i8x16_s
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i8x16.shuffle 1, 3, 5, 7, 9, 11, 13, 15, 0, 0, 0, 0, 0, 0, 0, 0
-; CHECK-NEXT:    i16x8.extend_low_i8x16_s
-; CHECK-NEXT:    i16x8.add
+; CHECK-NEXT:    i16x8.extadd_pairwise_i8x16_s
 ; CHECK-NEXT:    # fallthrough-return
   %even = shufflevector <16 x i8> %v, <16 x i8> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
   %odd = shufflevector <16 x i8> %v, <16 x i8> poison, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
@@ -32,14 +25,7 @@ define <8 x i16> @test_extadd_pairwise_i8x16_u(<16 x i8> %v) {
 ; CHECK:         .functype test_extadd_pairwise_i8x16_u (v128) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i8x16.shuffle 0, 2, 4, 6, 8, 10, 12, 14, 0, 0, 0, 0, 0, 0, 0, 0
-; CHECK-NEXT:    i16x8.extend_low_i8x16_u
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i8x16.shuffle 1, 3, 5, 7, 9, 11, 13, 15, 0, 0, 0, 0, 0, 0, 0, 0
-; CHECK-NEXT:    i16x8.extend_low_i8x16_u
-; CHECK-NEXT:    i16x8.add
+; CHECK-NEXT:    i16x8.extadd_pairwise_i8x16_u
 ; CHECK-NEXT:    # fallthrough-return
   %even = shufflevector <16 x i8> %v, <16 x i8> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
   %odd = shufflevector <16 x i8> %v, <16 x i8> poison, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
@@ -54,14 +40,7 @@ define <4 x i32> @test_extadd_pairwise_i16x8_s(<8 x i16> %v) {
 ; CHECK:         .functype test_extadd_pairwise_i16x8_s (v128) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i8x16.shuffle 0, 1, 4, 5, 8, 9, 12, 13, 0, 1, 0, 1, 0, 1, 0, 1
-; CHECK-NEXT:    i32x4.extend_low_i16x8_s
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i8x16.shuffle 2, 3, 6, 7, 10, 11, 14, 15, 0, 1, 0, 1, 0, 1, 0, 1
-; CHECK-NEXT:    i32x4.extend_low_i16x8_s
-; CHECK-NEXT:    i32x4.add
+; CHECK-NEXT:    i32x4.extadd_pairwise_i16x8_s
 ; CHECK-NEXT:    # fallthrough-return
   %even = shufflevector <8 x i16> %v, <8 x i16> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
   %odd = shufflevector <8 x i16> %v, <8 x i16> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
@@ -76,14 +55,7 @@ define <4 x i32> @test_extadd_pairwise_i16x8_u(<8 x i16> %v) {
 ; CHECK:         .functype test_extadd_pairwise_i16x8_u (v128) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i8x16.shuffle 0, 1, 4, 5, 8, 9, 12, 13, 0, 1, 0, 1, 0, 1, 0, 1
-; CHECK-NEXT:    i32x4.extend_low_i16x8_u
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i8x16.shuffle 2, 3, 6, 7, 10, 11, 14, 15, 0, 1, 0, 1, 0, 1, 0, 1
-; CHECK-NEXT:    i32x4.extend_low_i16x8_u
-; CHECK-NEXT:    i32x4.add
+; CHECK-NEXT:    i32x4.extadd_pairwise_i16x8_u
 ; CHECK-NEXT:    # fallthrough-return
   %even = shufflevector <8 x i16> %v, <8 x i16> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
   %odd = shufflevector <8 x i16> %v, <8 x i16> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
