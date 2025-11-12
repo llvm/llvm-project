@@ -4,6 +4,8 @@
 #if __x86_64__
 __attribute__((target_clones("avx,default")))
 #endif
-static int has_target_clones(void) { return 0; }
+static int has_target_clones(void) {
+  return 0;
+}
 
 int main(void) { has_target_clones(); }
