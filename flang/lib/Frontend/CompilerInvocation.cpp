@@ -1429,9 +1429,9 @@ static bool parseFloatingPointArgs(CompilerInvocation &invoc,
     opts.setFPContractMode(Fortran::common::LangOptions::FPM_Fast);
   }
 
-  if (args.hasArg(clang::driver::options::OPT_ffast_real_mod))
+  if (args.hasArg(clang::options::OPT_ffast_real_mod))
     opts.FastRealMod = true;
-  if (args.hasArg(clang::driver::options::OPT_fno_fast_real_mod))
+  if (args.hasArg(clang::options::OPT_fno_fast_real_mod))
     opts.FastRealMod = false;
 
   return true;
