@@ -57,10 +57,10 @@ are responsible for facilitating project decision making. In cases where there
 isn't obvious agreement, area teams should step in to restate their perceived
 consensus. In cases of deeper disagreement, area teams should try to identify
 the next steps for the proposal, such as gathering more data, changing the
-proposal, or rejecting it outright. They can also act as moderators by
-scheduling calls for participants to speak directly to resolve disagreements,
-subject to normal :ref:`Code of Conduct <LLVM Community Code of Conduct>`
-guidelines.
+proposal, or rejecting it in the absence of major changes in the design or
+context. They can also act as moderators by scheduling calls for participants
+to speak directly to resolve disagreements, subject to normal
+:ref:`Code of Conduct <LLVM Community Code of Conduct>` guidelines.
 
 Once the design of the new feature is finalized, the work itself should be done
 as a series of :ref:`incremental changes <incremental-changes>`, not as a long-term development branch.
