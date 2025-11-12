@@ -1964,7 +1964,6 @@ CXXReflectExpr *CXXReflectExpr::Create(ASTContext &C,
                                        SourceLocation OperandLoc,
                                        Decl *Operand) {
   CXXReflectExpr *E = new (C) CXXReflectExpr(C, C.VoidTy, Operand);
-
   E->setOperatorLoc(OperatorLoc);
   E->setOperandRange(OperandLoc);
   return E;
