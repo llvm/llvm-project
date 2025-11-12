@@ -188,12 +188,13 @@ public:
   /// This is a (less-efficient) wrapper over generateCC1CommandLine().
   std::vector<std::string> getCC1CommandLine() const;
 
-private:
+protected:
   /// Visits paths stored in the invocation. This is generally unsafe to call
   /// directly, and each sub-class need to ensure calling this doesn't violate
   /// its invariants.
   void visitPathsImpl(llvm::function_ref<bool(std::string &)> Predicate);
 
+private:
   /// Generate command line options from DiagnosticOptions.
   static void GenerateDiagnosticArgs(const DiagnosticOptions &Opts,
                                      ArgumentConsumer Consumer,
