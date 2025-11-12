@@ -277,8 +277,8 @@ static StringRef getProbeFNameForGUID(const GUIDProbeFunctionMap &GUID2FuncMAP,
 }
 
 void MCPseudoProbeFuncDesc::print(raw_ostream &OS) {
-  OS << "GUID: " << Twine::utohexstr(FuncGUID) << " Name: " << FuncName << "\n";
-  OS << "Hash: " << Twine::utohexstr(FuncHash) << "\n";
+  OS << "GUID: " << FuncGUID << " Name: " << FuncName << "\n";
+  OS << "Hash: " << FuncHash << "\n";
 }
 
 void MCDecodedPseudoProbe::getInlineContext(
@@ -681,7 +681,7 @@ void MCPseudoProbeDecoder::printProbesForAllAddresses(raw_ostream &OS) {
     uint64_t Address = Probe.getAddress();
     if (Address != PrevAddress) {
       PrevAddress = Address;
-      OS << "Address:\t" << Twine::utohexstr(Address) << '\n';
+      OS << "Address:\t" << Address << '\n';
     }
     OS << " [Probe]:\t";
     Probe.print(OS, GUID2FuncDescMap, true);
