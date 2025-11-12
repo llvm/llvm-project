@@ -85,9 +85,8 @@ def cuf_FreeOp : cuf_Op<"free", [MemoryEffects<[MemFree]>]> {
   let hasVerifier = 1;
 }
 
-def cuf_AllocateOp
-    : cuf_Op<"allocate", [AttrSizedOperandSegments,
-                          MemoryEffects<[MemAlloc<DefaultResource>]>]> {
+def cuf_AllocateOp : cuf_Op<"allocate", [AttrSizedOperandSegments,
+    MemoryEffects<[MemAlloc<DefaultResource>]>]> {
   let summary = "Perform the device allocation of data of an allocatable";
 
   let description = [{
