@@ -117,7 +117,7 @@ public:
   }
 
   cir::TargetAddressSpaceAttr getAddressSpace() const {
-    auto ptrTy = llvm::dyn_cast<cir::PointerType>(getType());
+    auto ptrTy = mlir::dyn_cast<cir::PointerType>(getType());
     return ptrTy.getAddrSpace();
   }
 

@@ -173,6 +173,9 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
 
     // Initialize the allocated buffer if required.
     if (builtinID != Builtin::BI__builtin_alloca_uninitialized) {
+      // Initialize the alloca with the given size and alignment according to
+      // the lang opts. Only the trivial non-initialization is supported for
+      // now.
 
       switch (getLangOpts().getTrivialAutoVarInit()) {
       case LangOptions::TrivialAutoVarInitKind::Uninitialized:
