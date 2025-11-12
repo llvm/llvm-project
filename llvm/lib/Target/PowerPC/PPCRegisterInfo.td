@@ -501,7 +501,7 @@ def CARRYRC : RegisterClass<"PPC", [i32], 32, (add CARRY, XER)> {
 // Similarly, we have an AltOrder for 64-bit ELF ABI which r2 is allocated
 // at last.
 def G8pRC :
-  RegisterClass<"PPC", [i128], 128,
+  RegisterClass<"PPC", [untyped], 128,
                 (add (sequence "G8p%u", 1, 5),
                      (sequence "G8p%u", 14, 7),
                      G8p15, G8p6, G8p0)> {

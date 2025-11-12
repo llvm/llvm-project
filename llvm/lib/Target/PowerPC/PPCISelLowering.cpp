@@ -677,6 +677,7 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
 
   // To handle counter-based loop conditions.
   setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::i1, Custom);
+  setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::Other, Custom);
 
   setOperationAction(ISD::INTRINSIC_VOID, MVT::i8, Custom);
   setOperationAction(ISD::INTRINSIC_VOID, MVT::i16, Custom);
@@ -11633,6 +11634,29 @@ SDValue PPCTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   return Flags;
 }
 
+SDValue PPCTargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
+                                                  SelectionDAG &DAG) const {
+  unsigned IntrinsicID = Op.getConstantOperandVal(1);
+
+  SDLoc dl(Op);
+  switch (IntrinsicID) {
+  case Intrinsic::ppc_amo_lwat:
+  case Intrinsic::ppc_amo_ldat:
+    SDValue Ptr = Op.getOperand(2);
+    SDValue Val1 = Op.getOperand(3);
+    SDValue FC = Op.getOperand(4);
+    SDValue Ops[] = {Ptr, Val1, FC};
+    bool IsLwat = IntrinsicID == Intrinsic::ppc_amo_lwat;
+    unsigned Opcode = IsLwat ? PPC::LWAT_PSEUDO : PPC::LDAT_PSEUDO;
+    MachineSDNode *MNode = DAG.getMachineNode(
+        Opcode, dl, {IsLwat ? MVT::i32 : MVT::i64, MVT::Other}, Ops);
+    SDValue Result = SDValue(MNode, 0);
+    SDValue OutChain = SDValue(MNode, 1);
+    return DAG.getMergeValues({Result, OutChain}, dl);
+  }
+  return SDValue();
+}
+
 SDValue PPCTargetLowering::LowerINTRINSIC_VOID(SDValue Op,
                                                SelectionDAG &DAG) const {
   // SelectionDAGBuilder::visitTargetIntrinsic may insert one extra chain to
@@ -12803,8 +12827,9 @@ SDValue PPCTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerFP_ROUND(Op, DAG);
   case ISD::ROTL:               return LowerROTL(Op, DAG);
 
-  // For counter-based loop handling.
-  case ISD::INTRINSIC_W_CHAIN:  return SDValue();
+  // For counter-based loop handling, and amo load.
+  case ISD::INTRINSIC_W_CHAIN:
+    return LowerINTRINSIC_W_CHAIN(Op, DAG);
 
   case ISD::BITCAST:            return LowerBITCAST(Op, DAG);
 
@@ -14715,6 +14740,43 @@ PPCTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
         .addReg(Val, MI.getOpcode() == PPC::LQX_PSEUDO ? RegState::Define : 0)
         .addImm(0)
         .addReg(Ptr);
+  } else if (MI.getOpcode() == PPC::LWAT_PSEUDO ||
+             MI.getOpcode() == PPC::LDAT_PSEUDO) {
+    DebugLoc DL = MI.getDebugLoc();
+    Register DstReg = MI.getOperand(0).getReg();
+    Register PtrReg = MI.getOperand(1).getReg();
+    Register ValReg = MI.getOperand(2).getReg();
+    unsigned FC = MI.getOperand(3).getImm();
+    bool IsLwat = MI.getOpcode() == PPC::LWAT_PSEUDO;
+    Register Val64 = MRI.createVirtualRegister(&PPC::G8RCRegClass);
+    if (IsLwat)
+      BuildMI(*BB, MI, DL, TII->get(TargetOpcode::SUBREG_TO_REG), Val64)
+          .addImm(0)
+          .addReg(ValReg)
+          .addImm(PPC::sub_32);
+    else
+      Val64 = ValReg;
+    Register Pair = MRI.createVirtualRegister(&PPC::G8pRCRegClass);
+    BuildMI(*BB, MI, DL, TII->get(TargetOpcode::IMPLICIT_DEF), Pair);
+    Register PairWithVal = MRI.createVirtualRegister(&PPC::G8pRCRegClass);
+    BuildMI(*BB, MI, DL, TII->get(TargetOpcode::INSERT_SUBREG), PairWithVal)
+        .addReg(Pair)
+        .addReg(Val64)
+        .addImm(PPC::sub_gp8_x1);
+    Register PairResult = MRI.createVirtualRegister(&PPC::G8pRCRegClass);
+    BuildMI(*BB, MI, DL, TII->get(IsLwat ? PPC::LWAT : PPC::LDAT), PairResult)
+        .addReg(PairWithVal)
+        .addReg(PtrReg)
+        .addImm(FC);
+    Register Result64 = MRI.createVirtualRegister(&PPC::G8RCRegClass);
+    BuildMI(*BB, MI, DL, TII->get(TargetOpcode::COPY), Result64)
+        .addReg(PairResult, 0, PPC::sub_gp8_x0);
+    if (IsLwat)
+      BuildMI(*BB, MI, DL, TII->get(TargetOpcode::COPY), DstReg)
+          .addReg(Result64, 0, PPC::sub_32);
+    else
+      BuildMI(*BB, MI, DL, TII->get(TargetOpcode::COPY), DstReg)
+          .addReg(Result64);
   } else {
     llvm_unreachable("Unexpected instr type to insert");
   }
