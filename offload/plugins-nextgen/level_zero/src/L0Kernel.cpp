@@ -434,10 +434,7 @@ Error L0KernelTy::launchImpl(GenericDeviceTy &GenericDevice,
   }
   auto *AsyncQueue =
       IsAsync ? static_cast<AsyncQueueTy *>(AsyncInfo->Queue) : NULL;
-
-  // We need to get a non-const version of the Properties structure in order to
-  // use its lock and be able to cache the group params and indirect flags
-  auto &KernelPR = const_cast<KernelPropertiesTy &>(getProperties());
+  auto &KernelPR = getProperties();
 
   L0LaunchEnvTy KEnv(IsAsync, AsyncQueue, KernelPR);
 

@@ -66,7 +66,6 @@ struct KernelPropertiesTy {
   ze_kernel_indirect_access_flags_t IndirectAccessFlags = UINT32_MAX;
   uint32_t GroupSizes[3] = {0, 0, 0};
   ze_group_count_t GroupCounts{0, 0, 0};
-  bool AllowCooperative = false;
 
   std::mutex Mtx;
 
@@ -96,8 +95,7 @@ class L0KernelTy : public GenericKernelTy {
   // L0 Kernel Handle
   ze_kernel_handle_t zeKernel;
   // Kernel Properties
-  KernelPropertiesTy Properties;
-  KernelPropertiesTy &getProperties() { return Properties; }
+  mutable KernelPropertiesTy Properties;
 
   void decideKernelGroupArguments(L0DeviceTy &Device, uint32_t NumTeams,
                                   uint32_t ThreadLimit, uint32_t *GroupSizes,
@@ -119,7 +117,7 @@ public:
   L0KernelTy &operator=(const L0KernelTy &) = delete;
   L0KernelTy &operator=(const L0KernelTy &&) = delete;
 
-  const KernelPropertiesTy &getProperties() const { return Properties; }
+  KernelPropertiesTy &getProperties() const { return Properties; }
 
   /// Initialize the L0 kernel.
   Error initImpl(GenericDeviceTy &GenericDevice, DeviceImageTy &Image) override;
