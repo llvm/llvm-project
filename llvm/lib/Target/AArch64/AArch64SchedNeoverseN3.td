@@ -1926,7 +1926,6 @@ def : InstRW<[N3Write_2c_1V], (instregex "^FAB[SD]_ZPmZ_[HSD]",
 // Floating point arithmetic
 def : InstRW<[N3Write_2c_1V], (instregex "^F(ADD|SUB)_(ZPm[IZ]|ZZZ)_[HSD]",
                                          "^F(ADD|SUB)_ZPZ[IZ]_[HSD]",
-                                         "^FADDP_ZPmZZ_[HSD]",
                                          "^FNEG_ZPmZ_[HSD]",
                                          "^FSUBR_ZPm[IZ]_[HSD]",
                                          "^FSUBR_(ZPZI|ZPZZ)_[HSD]")>;
@@ -2001,7 +2000,8 @@ def : InstRW<[N3Write_10c_4V0], (instregex "^FDIVR?_(ZPmZ|ZPZZ)_S")>;
 def : InstRW<[N3Write_13c_2V0], (instregex "^FDIVR?_(ZPmZ|ZPZZ)_D")>;
 
 // Floating point arith, min/max pairwise
-def : InstRW<[N3Write_3c_1V], (instregex "^F(MAX|MIN)(NM)?P_ZPmZZ_[HSD]")>;
+def : InstRW<[N3Write_3c_1V], (instregex "FADDP_ZPmZZ_[HSD]",
+                                         "^F(MAX|MIN)(NM)?P_ZPmZZ_[HSD]")>;
 
 // Floating point min/max
 def : InstRW<[N3Write_2c_1V], (instregex "^F(MAX|MIN)(NM)?_ZPm[IZ]_[HSD]",
