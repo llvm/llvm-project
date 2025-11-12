@@ -1943,7 +1943,7 @@ CXXReflectExpr::CXXReflectExpr(const ASTContext &C, QualType T,
                                QualType Operand)
     : Expr(CXXReflectExprClass, T, VK_PRValue, OK_Ordinary) {}
 
-CXXReflectExpr::CXXReflectExpr(const ASTContext &C, QualType T, Decl *Arg)
+CXXReflectExpr::CXXReflectExpr(const ASTContext &C, QualType T, Decl *Operand)
     : Expr(CXXReflectExprClass, T, VK_PRValue, OK_Ordinary) {}
 
 CXXReflectExpr::CXXReflectExpr(EmptyShell Empty)
