@@ -15,12 +15,11 @@
 
 static void BM_align(benchmark::State& state) {
   char buffer[1024];
-  char* data = buffer + 123;
-  std::size_t sz{1024 - 123};
-  void* p;
+  void* data = buffer + 123;
+  std::size_t sz{sizeof(buffer) - 123};
 
   for (auto _ : state) {
-    benchmark::DoNotOptimize(std::align(state.range(), state.range(), p, sz))
+    benchmark::DoNotOptimize(std::align(state.range(), state.range(), data, sz));
   }
 }
 BENCHMARK(BM_align)->Range(1, 256);
