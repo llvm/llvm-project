@@ -1827,11 +1827,12 @@ static bool simplifyKnownEVL(VPlan &Plan, ElementCount VF,
       if (!match(&R, m_EVL(m_VPValue(AVL))))
         continue;
 
-      const SCEV *AVLSCEV = vputils::getSCEVExprForVPValue(AVL, *PSE.getSE());
+      ScalarEvolution &SE = *PSE.getSE();
+      const SCEV *AVLSCEV = vputils::getSCEVExprForVPValue(AVL, SE);
       if (isa<SCEVCouldNotCompute>(AVLSCEV))
         continue;
-      const SCEV *VFSCEV = PSE.getSE()->getElementCount(AVLSCEV->getType(), VF);
-      if (!PSE.getSE()->isKnownPredicate(CmpInst::ICMP_ULE, AVLSCEV, VFSCEV))
+      const SCEV *VFSCEV = SE.getElementCount(AVLSCEV->getType(), VF);
+      if (!SE.isKnownPredicate(CmpInst::ICMP_ULE, AVLSCEV, VFSCEV))
         continue;
 
       VPBuilder Builder(&R);
