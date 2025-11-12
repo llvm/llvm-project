@@ -173,8 +173,8 @@ void LiveIntervals::analyze(MachineFunction &fn) {
   if (EnablePrecomputePhysRegs) {
     // For stress testing, precompute live ranges of all physical register
     // units, including reserved registers.
-    for (unsigned i = 0, e = TRI->getNumRegUnits(); i != e; ++i)
-      getRegUnit(i);
+    for (MCRegUnit Unit : TRI->regunits())
+      getRegUnit(Unit);
   }
 }
 
@@ -182,7 +182,8 @@ void LiveIntervals::print(raw_ostream &OS) const {
   OS << "********** INTERVALS **********\n";
 
   // Dump the regunits.
-  for (unsigned Unit = 0, UnitE = RegUnitRanges.size(); Unit != UnitE; ++Unit)
+  assert(RegUnitRanges.size() == TRI->getNumRegUnits());
+  for (MCRegUnit Unit : TRI->regunits())
     if (LiveRange *LR = RegUnitRanges[Unit])
       OS << printRegUnit(Unit, TRI) << ' ' << *LR << '\n';
 
