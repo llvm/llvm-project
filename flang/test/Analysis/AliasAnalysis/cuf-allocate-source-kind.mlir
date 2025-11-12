@@ -2,7 +2,7 @@
 // RUN: fir-opt %s -pass-pipeline='builtin.module(func.func(test-fir-alias-analysis))' -debug-only=fir-alias-analysis --mlir-disable-threading 2>&1 | FileCheck %s
 
 // Verify that CUF allocation via cuf.allocate is recognized as
-// SourceKind::Allocate by fir::AliasAnalysis::getSource on the box value.
+// SourceKind::Allocate by fir::AliasAnalysis::getSource on the box cuf.alloc allocated
 
 module {
   func.func @_QQmain() attributes {fir.bindc_name = "TEST"} {
