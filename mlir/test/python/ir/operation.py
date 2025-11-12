@@ -1212,9 +1212,7 @@ def testIndexSwitch():
             @func.FuncOp.from_py_func(T.index())
             def index_switch(index):
                 c1 = arith.constant(i32, 1)
-                switch_op = scf.IndexSwitchOp(
-                    results_=[i32], arg=index, cases=range(3), num_caseRegions=3
-                )
+                switch_op = scf.IndexSwitchOp(results=[i32], arg=index, cases=range(3))
 
                 assert len(switch_op.regions) == 4
                 assert len(switch_op.regions[2:]) == 2

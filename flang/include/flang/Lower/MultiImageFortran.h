@@ -1,4 +1,4 @@
-//===-- Lower/Coarray.h -- image related lowering ---------------*- C++ -*-===//
+//===-- Lower/MultiImageFortran.h -- image related lowering -----*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef FORTRAN_LOWER_COARRAY_H
-#define FORTRAN_LOWER_COARRAY_H
+#ifndef FORTRAN_LOWER_MULTIIMAGEFORTRAN_H
+#define FORTRAN_LOWER_MULTIIMAGEFORTRAN_H
 
 #include "flang/Lower/AbstractConverter.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
@@ -32,6 +32,18 @@ class SymMap;
 namespace pft {
 struct Evaluation;
 } // namespace pft
+
+//===----------------------------------------------------------------------===//
+// Synchronization statements
+//===----------------------------------------------------------------------===//
+
+void genSyncAllStatement(AbstractConverter &, const parser::SyncAllStmt &);
+
+void genSyncImagesStatement(AbstractConverter &,
+                            const parser::SyncImagesStmt &);
+void genSyncMemoryStatement(AbstractConverter &,
+                            const parser::SyncMemoryStmt &);
+void genSyncTeamStatement(AbstractConverter &, const parser::SyncTeamStmt &);
 
 //===----------------------------------------------------------------------===//
 // TEAM constructs
@@ -75,4 +87,4 @@ private:
 } // namespace lower
 } // namespace Fortran
 
-#endif // FORTRAN_LOWER_COARRAY_H
+#endif // FORTRAN_LOWER_MULTIIMAGEFORTRAN_H
