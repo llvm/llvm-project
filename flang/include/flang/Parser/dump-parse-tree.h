@@ -588,6 +588,8 @@ public:
   NODE(parser, OmpExpectation)
   NODE_ENUM(OmpExpectation, Value)
   NODE(parser, OmpFailClause)
+  NODE(parser, OmpFallbackModifier)
+  NODE_ENUM(OmpFallbackModifier, Value)
   NODE(parser, OmpFromClause)
   NODE(OmpFromClause, Modifier)
   NODE(parser, OmpGrainsizeClause)
