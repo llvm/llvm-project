@@ -269,6 +269,10 @@ New check aliases
   <clang-tidy/checks/bugprone/throwing-static-initialization>`
   keeping initial check as an alias to the new one.
 
+- Renamed :doc:`cert-err60-cpp <clang-tidy/checks/cert/err60-cpp>` to
+  :doc:`bugprone-exception-copy-constructor-throws
+  <clang-tidy/checks/bugprone/exception-copy-constructor-throws>`
+
 - Renamed :doc:`cert-flp30-c <clang-tidy/checks/cert/flp30-c>` to
   :doc:`bugprone-float-loop-counter
   <clang-tidy/checks/bugprone/float-loop-counter>`
@@ -277,6 +281,16 @@ New check aliases
 - Renamed :doc:`cert-mem57-cpp <clang-tidy/checks/cert/mem57-cpp>` to
   :doc:`bugprone-default-operator-new-on-overaligned-type
   <clang-tidy/checks/bugprone/default-operator-new-on-overaligned-type>`
+  keeping initial check as an alias to the new one.
+
+- Renamed :doc:`cert-msc32-c <clang-tidy/checks/cert/msc32-c>` to
+  :doc:`bugprone-random-generator-seed
+  <clang-tidy/checks/bugprone/random-generator-seed>`
+  keeping initial check as an alias to the new one.
+
+- Renamed :doc:`cert-msc51-cpp <clang-tidy/checks/cert/msc51-cpp>` to
+  :doc:`bugprone-random-generator-seed
+  <clang-tidy/checks/bugprone/random-generator-seed>`
   keeping initial check as an alias to the new one.
 
 - Renamed :doc:`cert-oop57-cpp <clang-tidy/checks/cert/oop57-cpp>` to
@@ -302,7 +316,9 @@ Changes in existing checks
   exceptions from captures are now diagnosed, exceptions in the bodies of
   lambdas that aren't actually invoked are not. Additionally, fixed an issue
   where the check wouldn't diagnose throws in arguments to functions or
-  constructors.
+  constructors. Added fine-grained configuration via options 
+  `CheckDestructors`, `CheckMoveMemberFunctions`, `CheckMain`,
+  `CheckedSwapFunctions`, and `CheckNothrowFunctions`.
 
 - Improved :doc:`bugprone-infinite-loop
   <clang-tidy/checks/bugprone/infinite-loop>` check by adding detection for
@@ -351,7 +367,11 @@ Changes in existing checks
 - Improved :doc:`bugprone-unchecked-optional-access
   <clang-tidy/checks/bugprone/unchecked-optional-access>` check by supporting
   ``NullableValue::makeValue`` and ``NullableValue::makeValueInplace`` to
-  prevent false-positives for ``BloombergLP::bdlb::NullableValue`` type.
+  prevent false-positives for ``BloombergLP::bdlb::NullableValue`` type, and by
+  adding the `IgnoreValueCalls` option to suppress diagnostics for
+  ``optional::value()`` and the `IgnoreSmartPointerDereference` option to
+  ignore optionals reached via smart-pointer-like dereference, while still
+  diagnosing UB-prone dereferences via ``operator*`` and ``operator->``.
 
 - Improved :doc:`bugprone-unhandled-self-assignment
   <clang-tidy/checks/bugprone/unhandled-self-assignment>` check by adding
@@ -381,6 +401,10 @@ Changes in existing checks
   <clang-tidy/checks/cppcoreguidelines/pro-bounds-pointer-arithmetic>` check
   adding an option to allow pointer arithmetic via prefix/postfix increment or
   decrement operators.
+
+- Improved :doc:`google-readability-casting
+  <clang-tidy/checks/google/readability-casting>` check by adding fix-it
+  notes for downcasts.
 
 - Improved :doc:`llvm-prefer-isa-or-dyn-cast-in-conditionals
   <clang-tidy/checks/llvm/prefer-isa-or-dyn-cast-in-conditionals>` check:
