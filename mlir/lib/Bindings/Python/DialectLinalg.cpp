@@ -91,8 +91,7 @@ static void populateDialectLinalgSubmodule(nb::module_ m) {
             mlirLinalgInferContractionDimensionsFromMaps(indexingMaps.data(),
                                                          indexingMaps.size());
 
-        // Detect "empty" result. This occurs when the input is invalid
-        // or when `linalg::inferContractionDims` fails.
+        // Detect "empty" result from invalid input or failed inference.
         if (mlirAttributeIsNull(dims.batch) && mlirAttributeIsNull(dims.m) &&
             mlirAttributeIsNull(dims.n) && mlirAttributeIsNull(dims.k)) {
           return std::nullopt;

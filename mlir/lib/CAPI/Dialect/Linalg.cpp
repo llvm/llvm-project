@@ -63,9 +63,8 @@ mlirLinalgInferContractionDimensions(MlirOperation op) {
   const linalg::ContractionDimensions &contractionDims = *maybeDims;
   MLIRContext *ctx = linalgOp.getContext();
 
-  auto toAttr = [&ctx](const SmallVector<unsigned, 2> &vals) -> MlirAttribute {
-    return wrap(
-        DenseI32ArrayAttr::get(ctx, llvm::to_vector_of<int32_t, 2>(vals)));
+  auto toAttr = [ctx](ArrayRef<unsigned> vals) -> MlirAttribute {
+    return wrap(DenseI32ArrayAttr::get(ctx, llvm::to_vector_of<int32_t>(vals)));
   };
 
   result.batch = toAttr(contractionDims.batch);
@@ -96,9 +95,8 @@ mlirLinalgInferContractionDimensionsFromMaps(const MlirAffineMap *indexingMaps,
 
   MLIRContext *ctx = maps[0].getContext();
 
-  auto toAttr = [&ctx](const SmallVector<unsigned, 2> &vals) -> MlirAttribute {
-    return wrap(
-        DenseI32ArrayAttr::get(ctx, llvm::to_vector_of<int32_t, 2>(vals)));
+  auto toAttr = [ctx](ArrayRef<unsigned> vals) -> MlirAttribute {
+    return wrap(DenseI32ArrayAttr::get(ctx, llvm::to_vector_of<int32_t>(vals)));
   };
 
   result.batch = toAttr(maybeDims->batch);
