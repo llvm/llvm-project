@@ -143,8 +143,7 @@ namespace LIBC_NAMESPACE_DECL {
   __dsb(0xF);
   __isb(0xF);
 #if defined(__ARM_FEATURE_MVE)
-  // Set FPSCR's LTPSIZE field to 4 to disable low-overhead-loop tail
-  // predication.
+  // Initialize low-overhead-loop tail predication to its neutral state
   uint32_t fpscr;
   __asm__ __volatile__("vmrs %0, FPSCR" : "=r"(fpscr) : :);
   fpscr |= (0x4 << 16);
