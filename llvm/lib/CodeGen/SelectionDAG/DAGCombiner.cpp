@@ -18661,15 +18661,13 @@ SDValue DAGCombiner::visitFDIV(SDNode *N) {
     // into a target-specific square root estimate instruction.
     // X / sqrt(Y) -> X * rsqrt(Y)
     bool N1AllowReciprocal = FlagsN1.hasAllowReciprocal();
-    bool N1Op0AllowsReciprocal =
-        N1.getNumOperands() > 0 &&
-        N1.getOperand(0)->getFlags().hasAllowReciprocal();
     if (N1.getOpcode() == ISD::FSQRT && N1AllowReciprocal) {
       if (SDValue RV = buildRsqrtEstimate(N1.getOperand(0)))
         return DAG.getNode(ISD::FMUL, DL, VT, N0, RV);
     } else if (N1.getOpcode() == ISD::FP_EXTEND &&
                N1.getOperand(0).getOpcode() == ISD::FSQRT &&
-               N1Op0AllowsReciprocal && N1AllowReciprocal) {
+               N1.getOperand(0)->getFlags().hasAllowReciprocal() &&
+               N1AllowReciprocal) {
       if (SDValue RV = buildRsqrtEstimate(N1.getOperand(0).getOperand(0))) {
         RV = DAG.getNode(ISD::FP_EXTEND, SDLoc(N1), VT, RV);
         AddToWorklist(RV.getNode());
@@ -18677,7 +18675,8 @@ SDValue DAGCombiner::visitFDIV(SDNode *N) {
       }
     } else if (N1.getOpcode() == ISD::FP_ROUND &&
                N1.getOperand(0).getOpcode() == ISD::FSQRT &&
-               N1Op0AllowsReciprocal && N1AllowReciprocal) {
+               N1.getOperand(0)->getFlags().hasAllowReciprocal() &&
+               N1AllowReciprocal) {
       if (SDValue RV = buildRsqrtEstimate(N1.getOperand(0).getOperand(0))) {
         RV = DAG.getNode(ISD::FP_ROUND, SDLoc(N1), VT, RV, N1.getOperand(1));
         AddToWorklist(RV.getNode());
