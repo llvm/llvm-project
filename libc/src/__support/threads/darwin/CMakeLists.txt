@@ -3,9 +3,14 @@ if(NOT TARGET libc.src.__support.OSUtil.osutil)
 endif()
 
 add_header_library(
-  mutex
+  futex_utils
   HDRS
-    mutex.h
+    futex_utils.h
   DEPENDS
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.CPP.atomic
+    libc.src.__support.CPP.limits
+    libc.src.__support.CPP.optional
     libc.src.__support.threads.mutex_common
 )
