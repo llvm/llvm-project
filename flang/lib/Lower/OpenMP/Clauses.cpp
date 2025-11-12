@@ -10,7 +10,6 @@
 
 #include "flang/Common/idioms.h"
 #include "flang/Evaluate/expression.h"
-#include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/expression.h"
 #include "flang/Semantics/openmp-modifiers.h"

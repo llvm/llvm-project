@@ -6057,11 +6057,11 @@ SDValue DAGTypeLegalizer::WidenVecRes_LOOP_DEPENDENCE_MASK(SDNode *N) {
 
 SDValue DAGTypeLegalizer::WidenVecRes_BUILD_VECTOR(SDNode *N) {
   SDLoc dl(N);
-  // Build a vector with undefined for the new nodes.
+  // Build a vector with poison for the new nodes.
   EVT VT = N->getValueType(0);
 
   // Integer BUILD_VECTOR operands may be larger than the node's vector element
-  // type. The UNDEFs need to have the same type as the existing operands.
+  // type. The POISONs need to have the same type as the existing operands.
   EVT EltVT = N->getOperand(0).getValueType();
   unsigned NumElts = VT.getVectorNumElements();
 
@@ -6070,7 +6070,7 @@ SDValue DAGTypeLegalizer::WidenVecRes_BUILD_VECTOR(SDNode *N) {
 
   SmallVector<SDValue, 16> NewOps(N->ops());
   assert(WidenNumElts >= NumElts && "Shrinking vector instead of widening!");
-  NewOps.append(WidenNumElts - NumElts, DAG.getUNDEF(EltVT));
+  NewOps.append(WidenNumElts - NumElts, DAG.getPOISON(EltVT));
 
   return DAG.getBuildVector(WidenVT, dl, NewOps);
 }

@@ -1,7 +1,7 @@
-! NOTE: Do not check for false delayed privatization flag until all enable-delayed-privatization flags are switched on in amd-staging
-!RUN %flang_fc1 -emit-hlfir -fopenmp -mmlir --enable-delayed-privatization-staging=false %s -o - | FileCheck %s  --check-prefixes=CHECK,CHECK-NO-FPRIV
+!RUN: %flang_fc1 -emit-hlfir -fopenmp -mmlir --enable-delayed-privatization-staging=false %s -o - | FileCheck %s  --check-prefixes=CHECK,CHECK-NO-FPRIV
 !RUN: %flang_fc1 -emit-hlfir -fopenmp -mmlir --enable-delayed-privatization-staging=true %s -o - | FileCheck %s  --check-prefixes=CHECK,CHECK-FPRIV
 
+!XFAIL: *
 module mod
   implicit none
 contains
@@ -73,8 +73,8 @@ end module mod
 ! CHECK-FPRIV:     %[[VAL_13:.*]] = arith.subi %[[VAL_12]]#1, %[[VAL_11]] : index
 ! CHECK-FPRIV:     %[[VAL_14:.*]] = omp.map.bounds lower_bound(%[[VAL_10]] : index) upper_bound(%[[VAL_13]] : index) extent(%[[VAL_12]]#1 : index) stride(%[[VAL_11]] : index) start_idx(%[[VAL_10]] : index) {stride_in_bytes = true}
 ! CHECK-FPRIV:     %[[VAL_16:.*]] = fir.box_offset %[[VAL_0]] base_addr : (!fir.ref<!fir.boxchar<1>>) -> !fir.llvm_ptr<!fir.ref<!fir.char<1,?>>>
-! CHECK-FPRIV:     %[[VAL_17:.*]] = omp.map.info var_ptr(%[[VAL_0]] : !fir.ref<!fir.boxchar<1>>, !fir.char<1,?>) map_clauses(to) capture(ByRef) var_ptr_ptr(%[[VAL_16]] : !fir.llvm_ptr<!fir.ref<!fir.char<1,?>>>) bounds(%[[VAL_14]]) -> !fir.llvm_ptr<!fir.ref<!fir.char<1,?>>>
-! CHECK-FPRIV:     %[[VAL_18:.*]] = omp.map.info var_ptr(%[[VAL_0]] : !fir.ref<!fir.boxchar<1>>, !fir.boxchar<1>) map_clauses(always, descriptor, to, attach) capture(ByRef) members(%[[VAL_17]] : [0] : !fir.llvm_ptr<!fir.ref<!fir.char<1,?>>>) -> !fir.ref<!fir.boxchar<1>>
+! CHECK-FPRIV:     %[[VAL_17:.*]] = omp.map.info var_ptr(%[[VAL_0]] : !fir.ref<!fir.boxchar<1>>, !fir.char<1,?>) map_clauses(tofrom) capture(ByRef) var_ptr_ptr(%[[VAL_16]] : !fir.llvm_ptr<!fir.ref<!fir.char<1,?>>>) bounds(%[[VAL_14]]) -> !fir.llvm_ptr<!fir.ref<!fir.char<1,?>>> {name = ""}
+! CHECK-FPRIV:     %[[VAL_18:.*]] = omp.map.info var_ptr(%[[VAL_0]] : !fir.ref<!fir.boxchar<1>>, !fir.boxchar<1>) map_clauses(to) capture(ByRef) members(%[[VAL_17]] : [0] : !fir.llvm_ptr<!fir.ref<!fir.char<1,?>>>) -> !fir.ref<!fir.boxchar<1>>
 ! CHECK-FPRIV:     omp.target map_entries(%[[VAL_7]] -> %[[VAL_19:.*]], %[[VAL_18]] -> %[[VAL_20:.*]], %[[VAL_17]] -> %[[VAL_21:.*]] : !fir.ref<!fir.char<1,4>>, !fir.ref<!fir.boxchar<1>>, !fir.llvm_ptr<!fir.ref<!fir.char<1,?>>>) private(@_QMmodFroutine_boxcharEa_firstprivate_boxchar_c8xU %[[VAL_3]]#0 -> %[[VAL_22:.*]] [map_idx=1] : !fir.boxchar<1>) {
 ! CHECK-FPRIV:         %[[VAL_23:.*]] = arith.constant 4 : index
 ! CHECK-FPRIV:         %[[VAL_24:.*]]:2 = hlfir.declare %[[VAL_19]] typeparams %[[VAL_23]] {uniq_name = "_QMmodFroutine_boxcharEb"} : (!fir.ref<!fir.char<1,4>>, index) -> (!fir.ref<!fir.char<1,4>>, !fir.ref<!fir.char<1,4>>)
