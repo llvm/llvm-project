@@ -23,13 +23,36 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
   add_subdirectory(${LIBC_TARGET_OS})
 endif()
 
-if(TARGET libc.src.__support.threads.${LIBC_TARGET_OS}.mutex)
+if(TARGET libc.src.__support.threads.${LIBC_TARGET_OS}.futex_utils)
   add_header_library(
     mutex
     HDRS
-      mutex.h
+    mutex.h
     DEPENDS
-      .${LIBC_TARGET_OS}.mutex
+    .unix_mutex
+  )
+  add_header_library(
+    unix_mutex
+    HDRS
+      unix_mutex.h
+    DEPENDS
+      .raw_mutex
+  )
+
+  add_header_library(
+    raw_mutex
+    HDRS
+      raw_mutex.h
+    DEPENDS
+    .${LIBC_TARGET_OS}.futex_utils
+    libc.src.__support.threads.sleep
+    libc.src.__support.time.abs_timeout
+    libc.src.__support.time.monotonicity
+    libc.src.__support.CPP.optional
+    libc.hdr.types.pid_t
+  COMPILE_OPTIONS
+    -DLIBC_COPT_RAW_MUTEX_DEFAULT_SPIN_COUNT=${LIBC_CONF_RAW_MUTEX_DEFAULT_SPIN_COUNT}
+    ${monotonicity_flags}
   )
 
   add_object_library(
