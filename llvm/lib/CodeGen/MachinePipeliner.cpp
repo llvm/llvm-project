@@ -485,48 +485,59 @@ void MachinePipeliner::setPragmaPipelineOptions(MachineLoop &L) {
   }
 }
 
-static bool hasPHICycle(const MachineBasicBlock *LoopHeader,
-                 const MachineRegisterInfo &MRI) {
-  DenseMap<unsigned, SmallVector<unsigned, 2>> PhiDeps;
-  SmallSet<unsigned, 8> PhiRegs;
 
-  // Collect PHI nodes and their dependencies
-  for (const MachineInstr &MI : LoopHeader->phis()) {
+/// Depth-first search to detect cycles among PHI dependencies.
+/// Returns true if a cycle is detected within the PHI-only subgraph.
+static bool hasPHICycleDFS(
+    unsigned Reg,
+    const DenseMap<unsigned, SmallVector<unsigned, 2>> &PhiDeps,
+    SmallSet<unsigned, 8> &Visited,
+    SmallSet<unsigned, 8> &RecStack) {
 
-    unsigned DefReg = MI.getOperand(0).getReg();
-    PhiRegs.insert(DefReg);
+  // If Reg is not a PHI-def it cannot contribute to a PHI cycle.
+  auto It = PhiDeps.find(Reg);
+  if (It == PhiDeps.end())
+    return false;
 
-    for (unsigned i = 1; i < MI.getNumOperands(); i += 2) {
-      unsigned SrcReg = MI.getOperand(i).getReg();
-      PhiDeps[DefReg].push_back(SrcReg);
-    }
+  if (RecStack.count(Reg))
+    return true; // backedge.
+  if (Visited.count(Reg))
+    return false;
+
+  Visited.insert(Reg);
+  RecStack.insert(Reg);
+
+  for (unsigned Dep : It->second) {
+    if (hasPHICycleDFS(Dep, PhiDeps, Visited, RecStack))
+      return true;
   }
 
-  // DFS to detect cycles
+  RecStack.erase(Reg);
+  return false;
+}
+
+
+static bool hasPHICycle(const MachineBasicBlock *LoopHeader,
+                        const MachineRegisterInfo &MRI) {
+  DenseMap<unsigned, SmallVector<unsigned, 2>> PhiDeps;
+
+  // Collect PHI nodes and their dependencies.
+  for (const MachineInstr &MI : LoopHeader->phis()) {
+    unsigned DefReg = MI.getOperand(0).getReg();
+    auto Ins = PhiDeps.try_emplace(DefReg).first;
+
+    // PHI operands are (Reg, MBB) pairs starting at index 1.
+    for (unsigned i = 1; i < MI.getNumOperands(); i += 2)
+      Ins->second.push_back(MI.getOperand(i).getReg());
+  }
+
+  // DFS to detect cycles among PHI nodes.
   SmallSet<unsigned, 8> Visited, RecStack;
 
-  std::function<bool(unsigned)> DFS = [&](unsigned Reg) -> bool {
-    if (!PhiRegs.count(Reg))
-      return false;
-    if (RecStack.count(Reg))
-      return true;
-    if (Visited.count(Reg))
-      return false;
-
-    Visited.insert(Reg);
-    RecStack.insert(Reg);
-
-    for (unsigned Dep : PhiDeps[Reg]) {
-      if (DFS(Dep))
-        return true;
-    }
-
-    RecStack.erase(Reg);
-    return false;
-  };
-
-  for (unsigned Reg : PhiRegs) {
-    if (DFS(Reg))
+  // Start DFS from each PHI-def.
+  for (const auto &KV : PhiDeps) {
+    unsigned Reg = KV.first;
+    if (hasPHICycleDFS(Reg, PhiDeps, Visited, RecStack))
       return true;
   }
 
