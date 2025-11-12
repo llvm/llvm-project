@@ -1350,6 +1350,10 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     // assume(ballot(x) == -1)           -> x = true
     // assume(ballot(x) == 0)            -> x = false
     //
+    // Skip if Arg is not an instruction (e.g., constant, argument).
+    if (!isa<Instruction>(Arg))
+      break;
+
     // Skip if ballot width < wave size (e.g., ballot.i32 on wave64).
     if (ST->isWave64() && II.getType()->getIntegerBitWidth() == 32)
       break; // ballot.i32 on wave64 captures only lanes [0:31]
