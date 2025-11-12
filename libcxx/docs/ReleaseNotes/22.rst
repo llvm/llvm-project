@@ -82,6 +82,8 @@ Improvements and New Features
   iterators, resulting in a performance improvement for ``std::deque<short>`` and
   ``std::join_view<vector<vector<short>>>`` iterators.
 
+- The performance of ``align`` has been improved about 3x by making it an inline function.
+
 Deprecations and Removals
 -------------------------
 
@@ -98,6 +100,8 @@ Potentially breaking changes
   ``_LIBCPP_ABI_NO_ITERATOR_BASES``. If you are using this flag and care about ABI stability, you should set
   ``_LIBCPP_ABI_NO_REVERSE_ITERATOR_SECOND_MEMBER`` as well.
 
+- ``align`` has been removed from libc++ dynamic library in ABI v2. You could use the ABI flag ``_LIBCPP_DEPRECATED_ABI_LEGACY_LIBRARY_DEFINITIONS_FOR_INLINE_FUNCTIONS`` to reserve it.
+
 Announcements About Future Releases
 -----------------------------------
 
@@ -112,6 +116,8 @@ ABI Affecting Changes
   ``__hash_map_hasher`` and ``__hash_map_equal`` have been refactored to use ``_LIBCPP_COMPRESSED_ELEMENT`` instead of
   potentially inheriting from the types they wrap. At this point in time we are not aware of any ABI changes caused by
   this.
+
+- ``align`` has been removed from libc++ dynamic library in ABI v2. You could use the ABI flag ``_LIBCPP_DEPRECATED_ABI_LEGACY_LIBRARY_DEFINITIONS_FOR_INLINE_FUNCTIONS`` to reserve it.
 
 Build System Changes
 --------------------

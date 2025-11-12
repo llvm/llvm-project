@@ -8,6 +8,7 @@
 
 #include <__config>
 #ifdef _LIBCPP_DEPRECATED_ABI_LEGACY_LIBRARY_DEFINITIONS_FOR_INLINE_FUNCTIONS
+#  define _LIBCPP_ALIGN_DEFINE_LEGACY_INLINE_FUNCTIONS
 #  define _LIBCPP_SHARED_PTR_DEFINE_LEGACY_INLINE_FUNCTIONS
 #endif
 
@@ -132,8 +133,8 @@ __sp_mut& __get_sp_mut(const void* p) {
 
 #endif // _LIBCPP_HAS_THREADS
 
-// Remove std::align from >=v2 dylib ABI, make it an inline function.
-#if _LIBCPP_ABI_VERSION == 1
+#if defined(_LIBCPP_ALIGN_DEFINE_LEGACY_INLINE_FUNCTIONS)
+
 void* align(size_t alignment, size_t size, void*& ptr, size_t& space) {
   void* r = nullptr;
   if (size <= space) {
@@ -148,6 +149,6 @@ void* align(size_t alignment, size_t size, void*& ptr, size_t& space) {
   }
   return r;
 }
-#endif
+#endif // _LIBCPP_ALIGN_DEFINE_LEGACY_INLINE_FUNCTIONS
 
 _LIBCPP_END_NAMESPACE_STD

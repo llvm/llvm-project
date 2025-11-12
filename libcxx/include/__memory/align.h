@@ -19,8 +19,12 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-// From >=v2 ABI, std::align is an inline function.
-#if _LIBCPP_ABI_VERSION >= 2
+#ifdef _LIBCPP_ALIGN_DEFINE_LEGACY_INLINE_FUNCTIONS
+
+_LIBCPP_EXPORTED_FROM_ABI void* align(size_t __align, size_t __sz, void*& __ptr, size_t& __space);
+
+#else
+
 inline _LIBCPP_HIDE_FROM_ABI void* align(size_t __align, size_t __sz, void*& __ptr, size_t& __space) {
   void* __r = nullptr;
   if (__sz <= __space) {
@@ -35,9 +39,8 @@ inline _LIBCPP_HIDE_FROM_ABI void* align(size_t __align, size_t __sz, void*& __p
   }
   return __r;
 }
-#else
-_LIBCPP_EXPORTED_FROM_ABI void* align(size_t __align, size_t __sz, void*& __ptr, size_t& __space);
-#endif
+
+#endif // _LIBCPP_ALIGN_DEFINE_LEGACY_INLINE_FUNCTIONS
 
 _LIBCPP_END_NAMESPACE_STD
 
