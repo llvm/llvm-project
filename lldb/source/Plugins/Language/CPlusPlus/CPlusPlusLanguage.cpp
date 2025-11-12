@@ -1752,7 +1752,7 @@ static void LoadCommonStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
                   true);
 
   AddCXXSummary(cpp_category_sp, ContainerSizeSummaryProvider,
-                "libc++/libstdc++ std::initializer_list summary provider",
+                "std::initializer_list summary provider",
                 "^std::initializer_list<.+>$", stl_summary_flags, true);
   AddCXXSummary(cpp_category_sp, GenericSmartPointerSummaryProvider,
                 "MSVC STL/libstdc++ std::shared_ptr summary provider",
