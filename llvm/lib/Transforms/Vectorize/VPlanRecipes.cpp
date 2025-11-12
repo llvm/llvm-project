@@ -550,6 +550,7 @@ unsigned VPInstruction::getNumOperandsForOpcode(unsigned Opcode) {
   case VPInstruction::ActiveLaneMask:
   case VPInstruction::ComputeAnyOfResult:
   case VPInstruction::ReductionStartVector:
+  case VPInstruction::ComputeMonotonicResult:
     return 3;
   case VPInstruction::ComputeFindIVResult:
     return 4;
@@ -900,6 +901,34 @@ Value *VPInstruction::generate(VPTransformState &State) {
 
     return ReducedPartRdx;
   }
+  case VPInstruction::ComputeMonotonicResult: {
+    assert(getParent()->getPlan()->getUF() == 1 &&
+           "Expected unroll factor of 1.");
+
+    auto *Phi = State.get(getOperand(0), /*IsScalar*/ true);
+    auto *PhiTy = Phi->getType();
+    Value *Mask = State.get(getOperand(1), 0);
+    auto *MaskTy = Mask->getType();
+    assert(isa<VectorType>(MaskTy) &&
+           cast<VectorType>(MaskTy)->getElementType()->isIntegerTy(1) &&
+           "Mask type should be <N x i1>");
+
+    const auto &DL = State.CFG.PrevBB->getDataLayout();
+    auto *IntTy = PhiTy->isIntegerTy() ? PhiTy : DL.getIndexType(PhiTy);
+
+    auto *Step = State.get(getOperand(2), /*IsScalar*/ true);
+
+    auto &Builder = State.Builder;
+    auto *NumElems = Builder.CreateAddReduce(
+        Builder.CreateZExt(Mask, MaskTy->getWithNewType(IntTy)));
+    auto *Offset = Builder.CreateMul(NumElems, Step);
+
+    return PhiTy->isPointerTy()
+               ? Builder.CreatePtrAdd(Phi, Offset, "monotonic.add",
+                                      getGEPNoWrapFlags())
+               : Builder.CreateAdd(Phi, Offset, "monotonic.add",
+                                   hasNoUnsignedWrap(), hasNoSignedWrap());
+  }
   case VPInstruction::ExtractLastLanePerPart:
   case VPInstruction::ExtractLastElement:
   case VPInstruction::ExtractPenultimateElement: {
@@ -1169,6 +1198,12 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
                                   I32Ty, {Arg0Ty, I32Ty, I1Ty});
     return Ctx.TTI.getIntrinsicInstrCost(Attrs, Ctx.CostKind);
   }
+  case VPInstruction::ComputeMonotonicResult: {
+    Type *ElementTy = Ctx.Types.inferScalarType(getOperand(0));
+    auto *VectorTy = cast<VectorType>(toVectorTy(ElementTy, VF));
+    return Ctx.TTI.getArithmeticReductionCost(Instruction::Add, VectorTy,
+                                              std::nullopt, Ctx.CostKind);
+  }
   case VPInstruction::ExtractLastElement: {
     // Add on the cost of extracting the element.
     auto *VecTy = toVectorTy(Ctx.Types.inferScalarType(getOperand(0)), VF);
@@ -1182,8 +1217,8 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
   default:
     // TODO: Compute cost other VPInstructions once the legacy cost model has
     // been retired.
-    assert(!getUnderlyingValue() &&
-           "unexpected VPInstruction witht underlying value");
+    assert((getOpcode() == Instruction::PHI || !getUnderlyingValue()) &&
+           "unexpected VPInstruction with underlying value");
     return 0;
   }
 }
@@ -1198,6 +1233,7 @@ bool VPInstruction::isVectorToScalar() const {
          getOpcode() == VPInstruction::ComputeAnyOfResult ||
          getOpcode() == VPInstruction::ComputeFindIVResult ||
          getOpcode() == VPInstruction::ComputeReductionResult ||
+         getOpcode() == VPInstruction::ComputeMonotonicResult ||
          getOpcode() == VPInstruction::AnyOf;
 }
 
@@ -1420,6 +1456,9 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
     break;
   case VPInstruction::ComputeReductionResult:
     O << "compute-reduction-result";
+    break;
+  case VPInstruction::ComputeMonotonicResult:
+    O << "compute-monotonic-result";
     break;
   case VPInstruction::LogicalAnd:
     O << "logical-and";
@@ -2043,7 +2082,9 @@ bool VPIRFlags::flagsValidForOpcode(unsigned Opcode) const {
   case OperationType::OverflowingBinOp:
     return Opcode == Instruction::Add || Opcode == Instruction::Sub ||
            Opcode == Instruction::Mul ||
-           Opcode == VPInstruction::VPInstruction::CanonicalIVIncrementForPart;
+           Opcode ==
+               VPInstruction::VPInstruction::CanonicalIVIncrementForPart ||
+           Opcode == VPInstruction::ComputeMonotonicResult;
   case OperationType::Trunc:
     return Opcode == Instruction::Trunc;
   case OperationType::DisjointOp:
@@ -2053,7 +2094,8 @@ bool VPIRFlags::flagsValidForOpcode(unsigned Opcode) const {
   case OperationType::GEPOp:
     return Opcode == Instruction::GetElementPtr ||
            Opcode == VPInstruction::PtrAdd ||
-           Opcode == VPInstruction::WidePtrAdd;
+           Opcode == VPInstruction::WidePtrAdd ||
+           Opcode == VPInstruction::ComputeMonotonicResult;
   case OperationType::FPMathOp:
     return Opcode == Instruction::FAdd || Opcode == Instruction::FMul ||
            Opcode == Instruction::FSub || Opcode == Instruction::FNeg ||

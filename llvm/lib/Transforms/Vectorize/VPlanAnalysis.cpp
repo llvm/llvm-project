@@ -97,6 +97,11 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
   case VPInstruction::ComputeReductionResult: {
     return inferScalarType(R->getOperand(0));
   }
+  case VPInstruction::ComputeMonotonicResult: {
+    auto *PhiR = cast<VPPhi>(R->getOperand(0));
+    auto *OrigPhi = cast<PHINode>(PhiR->getUnderlyingValue());
+    return OrigPhi->getType();
+  }
   case VPInstruction::ExplicitVectorLength:
     return Type::getIntNTy(Ctx, 32);
   case Instruction::PHI:

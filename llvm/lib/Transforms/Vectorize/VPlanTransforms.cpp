@@ -4448,8 +4448,7 @@ void VPlanTransforms::addScalarResumePhis(
 
     // TODO: Extract final value from induction recipe initially, optimize to
     // pre-computed end value together in optimizeInductionExitUsers.
-    auto *VectorPhiR =
-        cast<VPHeaderPHIRecipe>(Builder.getRecipe(&ScalarPhiIRI->getIRPhi()));
+    VPRecipeBase *VectorPhiR = Builder.getRecipe(&ScalarPhiIRI->getIRPhi());
     if (auto *WideIVR = dyn_cast<VPWidenInductionRecipe>(VectorPhiR)) {
       if (VPInstruction *ResumePhi = addResumePhiRecipeForInduction(
               WideIVR, VectorPHBuilder, ScalarPHBuilder, TypeInfo,
@@ -4471,7 +4470,8 @@ void VPlanTransforms::addScalarResumePhis(
     // which for FORs is a vector whose last element needs to be extracted. The
     // start value provides the value if the loop is bypassed.
     bool IsFOR = isa<VPFirstOrderRecurrencePHIRecipe>(VectorPhiR);
-    auto *ResumeFromVectorLoop = VectorPhiR->getBackedgeValue();
+    auto *PhiAccessor = cast<VPPhiAccessors>(VectorPhiR);
+    auto *ResumeFromVectorLoop = PhiAccessor->getIncomingValue(1);
     assert(VectorRegion->getSingleSuccessor() == Plan.getMiddleBlock() &&
            "Cannot handle loops with uncountable early exits");
     if (IsFOR)
@@ -4480,7 +4480,7 @@ void VPlanTransforms::addScalarResumePhis(
           "vector.recur.extract");
     StringRef Name = IsFOR ? "scalar.recur.init" : "bc.merge.rdx";
     auto *ResumePhiR = ScalarPHBuilder.createScalarPhi(
-        {ResumeFromVectorLoop, VectorPhiR->getStartValue()}, {}, Name);
+        {ResumeFromVectorLoop, PhiAccessor->getIncomingValue(0)}, {}, Name);
     ScalarPhiIRI->addOperand(ResumePhiR);
   }
 }
