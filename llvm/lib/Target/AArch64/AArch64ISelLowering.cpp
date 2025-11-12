@@ -22790,6 +22790,62 @@ static SDValue combineSVEBitSel(unsigned IID, SDNode *N, SelectionDAG &DAG) {
   }
 }
 
+/// Optimize patterns where we insert zeros into vector lanes before faddv.
+static SDValue tryCombineFADDVWithZero(SDNode *N, SelectionDAG &DAG) {
+  assert(getIntrinsicID(N) == Intrinsic::aarch64_neon_faddv &&
+         "Expected NEON faddv intrinsic");
+  SDLoc DL(N);
+  SDValue Vec = N->getOperand(1);
+  EVT VT = Vec.getValueType();
+  EVT EltVT = VT.getVectorElementType();
+  unsigned NumElts = VT.getVectorNumElements();
+  APInt DemandedElts = APInt::getAllOnes(NumElts);
+  APInt KnownZeroElts = DAG.computeVectorKnownZeroElements(Vec, DemandedElts);
+  unsigned NumZeroElts = KnownZeroElts.popcount();
+  // No element is known to be +0.0, fallback to the TableGen pattern.
+  if (NumZeroElts == 0)
+    return SDValue();
+  // All elements are +0.0, just return zero.
+  if (NumZeroElts == NumElts)
+    return DAG.getConstantFP(0.0, DL, EltVT);
+
+  // At least one element is +0.0, so it is worth to decompose the reduction
+  // into fadd's. FADDV is a pairwise reduction, so we need to respect the
+  // order of the elements in the vector.
+
+  // Check if we can output a signed zero.
+  // This avoid the scenario where all the added values are -0.0 except the +0.0
+  // element we chose to ignore.
+  SDNodeFlags Flags = N->getFlags();
+  bool IsSignedZeroSafe = Flags.hasNoSignedZeros() ||
+                          DAG.allUsesSignedZeroInsensitive(SDValue(N, 0));
+  if (!IsSignedZeroSafe)
+    return SDValue();
+
+  // Extract all elements.
+  SmallVector<SDValue, 4> Elts;
+  for (unsigned I = 0; I < NumElts; I++) {
+    Elts.push_back(DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, EltVT, Vec,
+                               DAG.getConstant(I, DL, MVT::i64)));
+  }
+  // Perform pairwise reduction.
+  while (Elts.size() > 1) {
+    SmallVector<SDValue, 2> NewElts;
+    for (unsigned I = 0; I < Elts.size(); I += 2) {
+      if (!KnownZeroElts[I] && !KnownZeroElts[I + 1]) {
+        NewElts.push_back(
+            DAG.getNode(ISD::FADD, DL, EltVT, Elts[I], Elts[I + 1]));
+      } else if (KnownZeroElts[I]) {
+        NewElts.push_back(Elts[I + 1]);
+      } else if (KnownZeroElts[I + 1]) {
+        NewElts.push_back(Elts[I]);
+      }
+    }
+    Elts = std::move(NewElts);
+  }
+  return Elts[0];
+}
+
 static SDValue performIntrinsicCombine(SDNode *N,
                                        TargetLowering::DAGCombinerInfo &DCI,
                                        const AArch64Subtarget *Subtarget) {
@@ -22813,6 +22869,8 @@ static SDValue performIntrinsicCombine(SDNode *N,
     return combineAcrossLanesIntrinsic(AArch64ISD::SMAXV, N, DAG);
   case Intrinsic::aarch64_neon_umaxv:
     return combineAcrossLanesIntrinsic(AArch64ISD::UMAXV, N, DAG);
+  case Intrinsic::aarch64_neon_faddv:
+    return tryCombineFADDVWithZero(N, DAG);
   case Intrinsic::aarch64_neon_fmax:
     return DAG.getNode(ISD::FMAXIMUM, SDLoc(N), N->getValueType(0),
                        N->getOperand(1), N->getOperand(2));
