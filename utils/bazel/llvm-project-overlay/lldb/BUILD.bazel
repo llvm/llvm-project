@@ -591,6 +591,7 @@ cc_library(
         ],
         "//conditions:default": [],
     }),
+    features = ["-layering_check"], # histedit.h breaks this.
 )
 
 cc_headers_only(
