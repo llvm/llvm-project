@@ -1,4 +1,4 @@
-//===-- AMDGPULowerExecSync.cpp -----------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// AMDGPU Lower Execution Synchronization pass performs lowering of
+// Lower Execution Synchronization pass performs lowering of
 // LDS global variables with target extension type "amdgpu.named.barrier"
 // that require specialized address assignment. It assigns a unique
 // barrier identifier to each named-barrier LDS variable and encodes
@@ -219,12 +219,12 @@ char AMDGPULowerExecSyncLegacy::ID = 0;
 char &llvm::AMDGPULowerExecSyncLegacyPassID = AMDGPULowerExecSyncLegacy::ID;
 
 INITIALIZE_PASS_BEGIN(AMDGPULowerExecSyncLegacy, DEBUG_TYPE,
-                      "AMDGPU lowering of execution synchronization primitives",
-                      false, false)
+                      "AMDGPU lowering of execution synchronization", false,
+                      false)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
 INITIALIZE_PASS_END(AMDGPULowerExecSyncLegacy, DEBUG_TYPE,
-                    "AMDGPU lowering of execution synchronization primitives",
-                    false, false)
+                    "AMDGPU lowering of execution synchronization", false,
+                    false)
 
 bool AMDGPULowerExecSyncLegacy::runOnModule(Module &M) {
   return runLowerExecSyncGlobals(M);
