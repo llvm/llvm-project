@@ -1,5 +1,5 @@
 """
-Test lldb-dap completions request
+Test lldb-dap evaluate request
 """
 
 import re
@@ -245,4 +245,6 @@ class TestDAP_evaluate(lldbdap_testcase.DAPTestCaseBase):
     @skipIfWindows
     def test_variable_evaluate_expressions(self):
         # Tests expression evaluations that are triggered in the variable explorer
-        self.run_test_evaluate_expressions("variable", enableAutoVariableSummaries=True)
+        self.run_test_evaluate_expressions(
+            "variables", enableAutoVariableSummaries=True
+        )
