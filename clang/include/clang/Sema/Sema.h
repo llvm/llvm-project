@@ -14738,8 +14738,8 @@ public:
 
 public:
   ExprResult ActOnCXXReflectExpr(SourceLocation OpLoc, TypeSourceInfo *T);
-  ExprResult ActOnCXXReflectExpr(SourceLocation OpLoc, SourceLocation ArgLoc,
-                                 Decl *D);
+  ExprResult ActOnCXXReflectExpr(SourceLocation OpLoc,
+                                 SourceLocation OperandLoc, Decl *D);
 
   ExprResult BuildCXXReflectExpr(SourceLocation OperatorLoc,
                                  SourceLocation OperandLoc, QualType T);
