@@ -1432,24 +1432,24 @@ mlir::Value CIRGenFunction::emitPromotedScalarExpr(const Expr *e,
 
 mlir::Value CIRGenFunction::emitScalarOrConstFoldImmArg(unsigned iceArguments,
                                                         unsigned index,
-                                                        const CallExpr *e) {
-  mlir::Value arg{};
+                                                        const Expr *arg) {
+  mlir::Value result{};
 
   // The bit at the specified index indicates whether the argument is required
   // to be a constant integer expression.
   bool isArgRequiredToBeConstant = (iceArguments & (1 << index));
 
   if (!isArgRequiredToBeConstant) {
-    arg = emitScalarExpr(e->getArg(index));
+    result = emitScalarExpr(arg);
   } else {
     // If this is required to be a constant, constant fold it so that we
     // know that the generated intrinsic gets a ConstantInt.
-    std::optional<llvm::APSInt> result =
-        e->getArg(index)->getIntegerConstantExpr(getContext());
-    assert(result && "Expected argument to be a constant");
-    arg = builder.getConstInt(getLoc(e->getSourceRange()), *result);
+    std::optional<llvm::APSInt> iceOpt =
+        arg->getIntegerConstantExpr(getContext());
+    assert(iceOpt && "Expected argument to be a constant");
+    result = builder.getConstInt(getLoc(arg->getSourceRange()), *iceOpt);
   }
-  return arg;
+  return result;
 }
 
 [[maybe_unused]] static bool mustVisitNullValue(const Expr *e) {

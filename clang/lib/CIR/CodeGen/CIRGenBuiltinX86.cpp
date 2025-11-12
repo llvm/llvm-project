@@ -21,10 +21,6 @@
 using namespace clang;
 using namespace clang::CIRGen;
 
-/// Get integer from a mlir::Value that is an int constant or a constant op.
-static int64_t getIntValueFromConstOp(mlir::Value val) {
-  return val.getDefiningOp<cir::ConstantOp>().getIntValue().getSExtValue();
-}
 
 template <typename... Operands>
 static mlir::Value emitIntrinsicCallOp(CIRGenFunction &cgf, const CallExpr *e,
@@ -37,20 +33,6 @@ static mlir::Value emitIntrinsicCallOp(CIRGenFunction &cgf, const CallExpr *e,
                                           builder.getStringAttr(str), resTy,
                                           std::forward<Operands>(op)...)
       .getResult();
-}
-
-static mlir::Value emitPrefetch(CIRGenFunction &cgf, const CallExpr *e,
-                                mlir::Value &addr, int64_t hint) {
-  CIRGenBuilderTy &builder = cgf.getBuilder();
-  mlir::Location location = cgf.getLoc(e->getExprLoc());
-  mlir::Type voidTy = builder.getVoidTy();
-  mlir::Value address = builder.createPtrBitcast(addr, voidTy);
-  mlir::Value rw = builder.getSignedInt(location, (hint >> 2) & 0x1, 32);
-  mlir::Value locality = builder.getSignedInt(location, hint & 0x3, 32);
-  mlir::Value data = builder.getSignedInt(location, 1, 32);
-
-  return emitIntrinsicCallOp(cgf, e, "prefetch", voidTy,
-                             mlir::ValueRange{address, rw, locality, data});
 }
 
 mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
@@ -76,7 +58,7 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   assert(!cir::MissingFeatures::handleBuiltinICEArguments());
 
   // The operands of the builtin call
-  llvm::SmallVector<mlir::Value, 4> ops;
+  llvm::SmallVector<mlir::Value> ops;
 
   // `ICEArguments` is a bitmap indicating whether the argument at the i-th bit
   // is required to be a constant integer expression.
@@ -85,9 +67,8 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   getContext().GetBuiltinType(builtinID, error, &iceArguments);
   assert(error == ASTContext::GE_None && "Error while getting builtin type.");
 
-  const unsigned numArgs = e->getNumArgs();
-  for (unsigned i = 0; i != numArgs; i++) {
-    ops.push_back(emitScalarOrConstFoldImmArg(iceArguments, i, e));
+  for (auto [idx, arg] : llvm::enumerate(e->arguments())) {
+    ops.push_back(emitScalarOrConstFoldImmArg(iceArguments, idx, arg));
   }
 
   CIRGenBuilderTy &builder = getBuilder();
@@ -96,8 +77,6 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   switch (builtinID) {
   default:
     return {};
-  case X86::BI_mm_prefetch:
-    return emitPrefetch(*this, e, ops[0], getIntValueFromConstOp(ops[1]));
   case X86::BI_mm_clflush:
     return emitIntrinsicCallOp(*this, e, "x86.sse2.clflush", voidTy, ops[0]);
   case X86::BI_mm_lfence:
@@ -108,6 +87,7 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
     return emitIntrinsicCallOp(*this, e, "x86.sse2.mfence", voidTy);
   case X86::BI_mm_sfence:
     return emitIntrinsicCallOp(*this, e, "x86.sse.sfence", voidTy);
+  case X86::BI_mm_prefetch:
   case X86::BI__rdtsc:
   case X86::BI__builtin_ia32_rdtscp:
   case X86::BI__builtin_ia32_lzcnt_u16:
