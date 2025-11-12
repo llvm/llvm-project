@@ -153,6 +153,7 @@ struct MissingFeatures {
   static bool coroEndBuiltinCall() { return false; }
   static bool coroutineFrame() { return false; }
   static bool emitBodyAndFallthrough() { return false; }
+  static bool coroOutsideFrameMD() { return false; }
 
   // Various handling of deferred processing in CIRGenModule.
   static bool cgmRelease() { return false; }
