@@ -24,42 +24,49 @@ jobs:
             cpp_compiler: clang++-22
             target: x86_64-unknown-linux-llvm
             include_scudo: ON
+            enable_baremetal_build: OFF
           - os: ubuntu-24.04
             build_type: Release
             c_compiler: clang-22
             cpp_compiler: clang++-22
             target: x86_64-unknown-linux-llvm
             include_scudo: ON
+            enable_baremetal_build: OFF
           - os: ubuntu-24.04
             build_type: MinSizeRel
             c_compiler: clang-22
             cpp_compiler: clang++-22
             target: x86_64-unknown-linux-llvm
             include_scudo: ON
+            enable_baremetal_build: OFF
           - os: ubuntu-24.04-arm
             build_type: Debug
             c_compiler: clang-22
             cpp_compiler: clang++-22
             target: aarch64-unknown-linux-llvm
             include_scudo: ON
+            enable_baremetal_build: OFF
           - os: ubuntu-24.04
             build_type: Debug
             c_compiler: clang-22
             cpp_compiler: clang++-22
             target: x86_64-unknown-uefi-llvm
             include_scudo: OFF
+            enable_baremetal_build: OFF
           - os: ubuntu-24.04
-            build__type: Release
+            build__type: MinSizeRel
             c_compiler: clang-22
             cpp_compiler: clang++-22
             target: armv6m-none-eabi
             include_scudo: OFF
+            enable_baremetal_build: ON
           - os: ubuntu-24.04
-            build__type: Release
+            build__type: MinSizeRel
             c_compiler: clang-22
             cpp_compiler: clang++-22
             target: armv7m-none-eabi
             include_scudo: OFF
+            enable_baremetal_build: ON
           # TODO: add back gcc build when it is fixed
           # - c_compiler: gcc
           #   cpp_compiler: g++
@@ -114,8 +121,8 @@ jobs:
             -DCOMPILER_RT_SCUDO_STANDALONE_BUILD_SHARED=OFF"
         fi
 
-        if [[ ${{ endsWith(matrix.target, '-none-eabi') }} ]]; then
-          cmake -B ${{ steps.strings.outputs.build-baremetal-output-dir }} \
+        if [[ ${{ matrix.enable_baremetal_build}} == "ON" ]]; then
+          cmake -B ${{ steps.strings.outputs.build-output-dir }} \
           -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }} \
           -DCMAKE_C_COMPILER=${{ matrix.c_compiler }} \
           -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
@@ -154,7 +161,7 @@ jobs:
 
     - name: Test
       # Skip UEFI tests until we have testing set up.
-      if: ${{ ! endsWith(matrix.target, '-uefi-llvm') }} && ${{ ! endsWith(matrix.target, '-none-eabi') }}
+      if: ${{ ! endsWith(matrix.target, '-uefi-llvm') }} && ${{ matrix.enable_baremetal_build }} == "OFF"
       run: >
         cmake 
         --build ${{ steps.strings.outputs.build-output-dir }} 
