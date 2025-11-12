@@ -1442,6 +1442,7 @@ public:
     Normal,        ///< The cast is used with a normal load/store.
     Masked,        ///< The cast is used with a masked load/store.
     GatherScatter, ///< The cast is used with a gather/scatter.
+    Compressed,    ///< The cast is used with an expand load/compress store.
     Interleave,    ///< The cast is used with an interleaved load/store.
     Reversed,      ///< The cast is used with a reversed load/store.
   };
