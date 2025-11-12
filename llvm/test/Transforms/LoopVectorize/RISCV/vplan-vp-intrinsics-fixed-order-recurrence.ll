@@ -29,15 +29,12 @@ define void @first_order_recurrence(ptr noalias %A, ptr noalias %B, i64 %TC) {
 ; IF-EVL-NEXT:     EMIT-SCALAR vp<[[AVL:%.+]]> = phi [ ir<%TC>, vector.ph ], [ vp<[[AVL_NEXT:%.+]]>, vector.body ]
 ; IF-EVL-NEXT:     EMIT-SCALAR vp<[[PREV_EVL:%.+]]> = phi [ vp<[[VF32]]>, vector.ph ], [ vp<[[EVL:%.+]]>, vector.body ]
 ; IF-EVL-NEXT:     EMIT-SCALAR vp<[[EVL]]> = EXPLICIT-VECTOR-LENGTH vp<[[AVL]]>
-; IF-EVL-NEXT:     vp<[[ST:%[0-9]+]]> = SCALAR-STEPS vp<[[EVL_PHI]]>, ir<1>
-; IF-EVL-NEXT:     CLONE ir<[[GEP1:%.+]]> = getelementptr inbounds nuw ir<%A>, vp<[[ST]]
-; IF-EVL-NEXT:     vp<[[PTR1:%[0-9]+]]> = vector-pointer ir<[[GEP1]]>
-; IF-EVL-NEXT:     WIDEN ir<[[LD]]> = vp.load vp<[[PTR1]]>, vp<[[EVL]]>
+; IF-EVL-NEXT:     CLONE ir<[[GEP1:%.+]]> = getelementptr inbounds nuw ir<%A>, vp<[[EVL_PHI]]>
+; IF-EVL-NEXT:     WIDEN ir<[[LD]]> = vp.load ir<[[GEP1]]>, vp<[[EVL]]>
 ; IF-EVL-NEXT:     WIDEN-INTRINSIC vp<[[SPLICE:%[0-9]+]]> = call llvm.experimental.vp.splice(ir<[[FOR_PHI]]>, ir<[[LD]]>, ir<-1>, ir<true>, vp<[[PREV_EVL]]>, vp<[[EVL]]>)
 ; IF-EVL-NEXT:     WIDEN ir<[[ADD:%.+]]> = add nsw vp<[[SPLICE]]>, ir<[[LD]]>
-; IF-EVL-NEXT:     CLONE ir<[[GEP2:%.+]]> = getelementptr inbounds nuw ir<%B>, vp<[[ST]]>
-; IF-EVL-NEXT:     vp<[[PTR2:%[0-9]+]]> = vector-pointer ir<[[GEP2]]>
-; IF-EVL-NEXT:     WIDEN vp.store vp<[[PTR2]]>, ir<[[ADD]]>, vp<[[EVL]]>
+; IF-EVL-NEXT:     CLONE ir<[[GEP2:%.+]]> = getelementptr inbounds nuw ir<%B>, vp<[[EVL_PHI]]>
+; IF-EVL-NEXT:     WIDEN vp.store ir<[[GEP2]]>, ir<[[ADD]]>, vp<[[EVL]]>
 ; IF-EVL-NEXT:     EMIT-SCALAR vp<[[CAST:%[0-9]+]]> = zext vp<[[EVL]]> to i64
 ; IF-EVL-NEXT:     EMIT vp<[[IV_NEXT]]> = add vp<[[CAST]]>, vp<[[EVL_PHI]]>
 ; IF-EVL-NEXT:     EMIT vp<[[AVL_NEXT]]> = sub nuw vp<[[AVL]]>, vp<[[CAST]]>

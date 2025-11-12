@@ -378,6 +378,17 @@ struct VPlanTransforms {
   /// users in the original exit block using the VPIRInstruction wrapping to the
   /// LCSSA phi.
   static void addExitUsersForFirstOrderRecurrences(VPlan &Plan, VFRange &Range);
+
+  /// If the loop is EVL tail folded, try and optimize any recipes that use a
+  /// EVL based header mask to a VP intrinsic, e.g:
+  ///
+  /// %mask = icmp step-vector, EVL
+  /// %load = load %ptr, %mask
+  ///
+  /// ->
+  ///
+  /// %load = vp.load %ptr, EVL
+  static void optimizeMasksToEVL(VPlan &Plan);
 };
 
 } // namespace llvm
