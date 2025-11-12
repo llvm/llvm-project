@@ -111,6 +111,12 @@ Changes to the AArch64 Backend
 * `FEAT_TME` support has been removed, as it has been withdrawn from
    all future versions of the A-profile architecture.
 
+* A bug was fixed that caused LLVM IR inline assembly clobbers of the x29 and
+  x30 registers to be ignored when they were written using their xN names
+  instead of the ABI names FP and LR. Note that LLVM IR produced by Clang
+  always uses the ABI names, but other frontends may not.
+  ([#167783](https://github.com/llvm/llvm-project/pull/167783))
+
 Changes to the AMDGPU Backend
 -----------------------------
 
