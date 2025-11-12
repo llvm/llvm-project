@@ -5519,7 +5519,7 @@ class CXXReflectExpr : public Expr {
 
 public:
   static CXXReflectExpr *Create(ASTContext &C, SourceLocation OperatorLoc,
-                                SourceLocation ArgLoc, QualType Operand);
+                                SourceLocation OperandLoc, QualType Operand);
 
   static CXXReflectExpr *Create(ASTContext &C, SourceLocation OperatorLoc,
                                 SourceLocation OperandLoc, Decl *Operand);
