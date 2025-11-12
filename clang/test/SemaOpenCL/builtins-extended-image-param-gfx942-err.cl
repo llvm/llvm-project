@@ -5,7 +5,7 @@
 
 typedef int int4 __attribute__((ext_vector_type(4)));
 typedef float float4 __attribute__((ext_vector_type(4)));
-typedef half half4 __attribute__((ext_vector_type(4)));
+typedef _Float16 half4 __attribute__((ext_vector_type(4)));
 
 float4 test_amdgcn_image_gather4_lz_2d_v4f32_f32_r(float4 v4f32, float f32, int i32, __amdgpu_texture_t tex, int4 vec4i32) {
 
