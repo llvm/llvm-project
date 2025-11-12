@@ -127,32 +127,34 @@ struct ArithToAPFloatConversionPass final
     : impl::ArithToAPFloatConversionPassBase<ArithToAPFloatConversionPass> {
   using Base::Base;
 
-  void runOnOperation() override {
-    MLIRContext *context = &getContext();
-    RewritePatternSet patterns(context);
-    static const char add[] = "add";
-    static const char subtract[] = "subtract";
-    static const char multiply[] = "multiply";
-    static const char divide[] = "divide";
-    static const char remainder[] = "remainder";
-    patterns.add<BinaryArithOpToAPFloatConversion<arith::AddFOp, add>,
-                 BinaryArithOpToAPFloatConversion<arith::SubFOp, subtract>,
-                 BinaryArithOpToAPFloatConversion<arith::MulFOp, multiply>,
-                 BinaryArithOpToAPFloatConversion<arith::DivFOp, divide>,
-                 BinaryArithOpToAPFloatConversion<arith::RemFOp, remainder>>(
-        context, 1, getOperation());
-    LogicalResult result = success();
-    ScopedDiagnosticHandler scopedHandler(context, [&result](Diagnostic &diag) {
-      if (diag.getSeverity() == DiagnosticSeverity::Error) {
-        result = failure();
-      }
-      // NB: if you don't return failure, no other diag handlers will fire (see
-      // mlir/lib/IR/Diagnostics.cpp:DiagnosticEngineImpl::emit).
-      return failure();
-    });
-    walkAndApplyPatterns(getOperation(), std::move(patterns));
-    if (failed(result))
-      return signalPassFailure();
-  }
+  void runOnOperation() override;
 };
+
+void ArithToAPFloatConversionPass::runOnOperation() {
+  MLIRContext *context = &getContext();
+  RewritePatternSet patterns(context);
+  static const char add[] = "add";
+  static const char subtract[] = "subtract";
+  static const char multiply[] = "multiply";
+  static const char divide[] = "divide";
+  static const char remainder[] = "remainder";
+  patterns.add<BinaryArithOpToAPFloatConversion<arith::AddFOp, add>,
+               BinaryArithOpToAPFloatConversion<arith::SubFOp, subtract>,
+               BinaryArithOpToAPFloatConversion<arith::MulFOp, multiply>,
+               BinaryArithOpToAPFloatConversion<arith::DivFOp, divide>,
+               BinaryArithOpToAPFloatConversion<arith::RemFOp, remainder>>(
+      context, 1, getOperation());
+  LogicalResult result = success();
+  ScopedDiagnosticHandler scopedHandler(context, [&result](Diagnostic &diag) {
+    if (diag.getSeverity() == DiagnosticSeverity::Error) {
+      result = failure();
+    }
+    // NB: if you don't return failure, no other diag handlers will fire (see
+    // mlir/lib/IR/Diagnostics.cpp:DiagnosticEngineImpl::emit).
+    return failure();
+  });
+  walkAndApplyPatterns(getOperation(), std::move(patterns));
+  if (failed(result))
+    return signalPassFailure();
+}
 } // namespace
