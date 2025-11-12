@@ -29309,11 +29309,16 @@ AArch64TargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
       //   http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2020/p0493r1.pdf
       // (2) low level libgcc and compiler-rt support implemented by:
       //   min/max outline atomics helpers
-      if (AI->getOperation() != AtomicRMWInst::Min &&
-          AI->getOperation() != AtomicRMWInst::Max &&
-          AI->getOperation() != AtomicRMWInst::UMin &&
-          AI->getOperation() != AtomicRMWInst::UMax) {
+      switch (AI->getOperation()) {
+      case AtomicRMWInst::Xchg:
+      case AtomicRMWInst::Add:
+      case AtomicRMWInst::Sub:
+      case AtomicRMWInst::And:
+      case AtomicRMWInst::Or:
+      case AtomicRMWInst::Xor:
         return AtomicExpansionKind::None;
+      default:
+        break;
       }
     }
   }
