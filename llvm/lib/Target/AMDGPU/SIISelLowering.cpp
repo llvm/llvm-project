@@ -5488,10 +5488,8 @@ static uint32_t getIdentityValueFor32BitWaveReduction(unsigned Opc) {
   case AMDGPU::S_AND_B32:
     return std::numeric_limits<uint32_t>::max();
   case AMDGPU::V_MIN_F32_e64:
-  case AMDGPU::V_MAX_F32_e64: {
-    return __builtin_bit_cast(uint32_t,
-                              std::numeric_limits<float>::quiet_NaN());
-  }
+  case AMDGPU::V_MAX_F32_e64:
+    return 0x7fc00000; // qNAN
   default:
     llvm_unreachable(
         "Unexpected opcode in getIdentityValueFor32BitWaveReduction");
