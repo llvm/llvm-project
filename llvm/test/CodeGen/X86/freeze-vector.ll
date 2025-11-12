@@ -311,8 +311,8 @@ define void @freeze_buildvector_single_repeated_maybe_poison_operand(ptr %origin
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl (%ecx), %ecx
 ; X86-NEXT:    andl $15, %ecx
-; X86-NEXT:    vbroadcastss {{.*#+}} xmm0 = [42,42,42,42]
-; X86-NEXT:    vpinsrd $0, %ecx, %xmm0, %xmm0
+; X86-NEXT:    vmovd %ecx, %xmm0
+; X86-NEXT:    vpinsrd $1, {{\.?LCPI[0-9]+_[0-9]+}}+4, %xmm0, %xmm0
 ; X86-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; X86-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-NEXT:    vmovdqa %xmm0, (%eax)
@@ -320,8 +320,8 @@ define void @freeze_buildvector_single_repeated_maybe_poison_operand(ptr %origin
 ;
 ; X64-LABEL: freeze_buildvector_single_repeated_maybe_poison_operand:
 ; X64:       # %bb.0:
-; X64-NEXT:    vpbroadcastd {{.*#+}} xmm0 = [42,42,42,42]
-; X64-NEXT:    vpinsrd $0, (%rdi), %xmm0, %xmm0
+; X64-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X64-NEXT:    vpinsrd $1, {{\.?LCPI[0-9]+_[0-9]+}}+4(%rip), %xmm0, %xmm0
 ; X64-NEXT:    vpbroadcastq %xmm0, %xmm0
 ; X64-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [7,7,7,7]
 ; X64-NEXT:    vpand %xmm1, %xmm0, %xmm0

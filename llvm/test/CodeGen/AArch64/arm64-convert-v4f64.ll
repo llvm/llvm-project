@@ -57,11 +57,11 @@ define <4 x bfloat> @uitofp_v4i64_to_v4bf16(ptr %ptr) {
 ; CHECK-NEXT:    movi v2.4s, #127, msl #8
 ; CHECK-NEXT:    ucvtf s0, x9
 ; CHECK-NEXT:    ucvtf s1, x8
-; CHECK-NEXT:    ldp x8, x9, [x0, #16]
+; CHECK-NEXT:    ldp x9, x8, [x0, #16]
 ; CHECK-NEXT:    mov v1.s[1], v0.s[0]
-; CHECK-NEXT:    ucvtf s0, x8
-; CHECK-NEXT:    mov v1.s[2], v0.s[0]
 ; CHECK-NEXT:    ucvtf s0, x9
+; CHECK-NEXT:    mov v1.s[2], v0.s[0]
+; CHECK-NEXT:    ucvtf s0, x8
 ; CHECK-NEXT:    mov v1.s[3], v0.s[0]
 ; CHECK-NEXT:    movi v0.4s, #1
 ; CHECK-NEXT:    ushr v3.4s, v1.4s, #16

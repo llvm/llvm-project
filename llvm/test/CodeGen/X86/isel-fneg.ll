@@ -26,7 +26,8 @@ define double @fneg_f64(double %x) nounwind {
 ;
 ; SDAG-SSE-X64-LABEL: fneg_f64:
 ; SDAG-SSE-X64:       # %bb.0:
-; SDAG-SSE-X64-NEXT:    xorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SDAG-SSE-X64-NEXT:    movsd {{.*#+}} xmm1 = [-0.0E+0,0.0E+0]
+; SDAG-SSE-X64-NEXT:    xorps %xmm1, %xmm0
 ; SDAG-SSE-X64-NEXT:    retq
 ;
 ; GISEL-SSE-X64-LABEL: fneg_f64:
@@ -72,7 +73,8 @@ define float @fneg_f32(float %x) nounwind {
 ;
 ; SDAG-SSE-X64-LABEL: fneg_f32:
 ; SDAG-SSE-X64:       # %bb.0:
-; SDAG-SSE-X64-NEXT:    xorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SDAG-SSE-X64-NEXT:    movss {{.*#+}} xmm1 = [-0.0E+0,0.0E+0,0.0E+0,0.0E+0]
+; SDAG-SSE-X64-NEXT:    xorps %xmm1, %xmm0
 ; SDAG-SSE-X64-NEXT:    retq
 ;
 ; GISEL-SSE-X64-LABEL: fneg_f32:

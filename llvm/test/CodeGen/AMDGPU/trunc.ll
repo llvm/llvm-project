@@ -374,7 +374,7 @@ define amdgpu_kernel void @sgpr_trunc_i32_to_i1(ptr addrspace(1) %out, i32 %a) {
 define amdgpu_kernel void @s_trunc_i64_to_i1(ptr addrspace(1) %out, [8 x i32], i64 %x) {
 ; SI-LABEL: s_trunc_i64_to_i1:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x13
+; SI-NEXT:    s_load_dword s6, s[4:5], 0x13
 ; SI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
@@ -387,14 +387,14 @@ define amdgpu_kernel void @s_trunc_i64_to_i1(ptr addrspace(1) %out, [8 x i32], i
 ;
 ; VI-LABEL: s_trunc_i64_to_i1:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x4c
-; VI-NEXT:    s_load_dwordx2 s[2:3], s[4:5], 0x24
+; VI-NEXT:    s_load_dword s2, s[4:5], 0x4c
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    s_bitcmp1_b32 s0, 0
-; VI-NEXT:    s_cselect_b32 s0, 63, -12
-; VI-NEXT:    v_mov_b32_e32 v0, s2
-; VI-NEXT:    v_mov_b32_e32 v1, s3
-; VI-NEXT:    v_mov_b32_e32 v2, s0
+; VI-NEXT:    s_bitcmp1_b32 s2, 0
+; VI-NEXT:    s_cselect_b32 s2, 63, -12
+; VI-NEXT:    v_mov_b32_e32 v0, s0
+; VI-NEXT:    v_mov_b32_e32 v1, s1
+; VI-NEXT:    v_mov_b32_e32 v2, s2
 ; VI-NEXT:    flat_store_dword v[0:1], v2
 ; VI-NEXT:    s_endpgm
 ;

@@ -211,13 +211,11 @@ define <4 x float> @load_float4_float3_trunc_0123(ptr nocapture readonly derefer
 ; SSE2-LABEL: load_float4_float3_trunc_0123:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movaps (%rdi), %xmm0
-; SSE2-NEXT:    movhps {{.*#+}} xmm0 = xmm0[0,1],mem[0,1]
 ; SSE2-NEXT:    retq
 ;
 ; SSSE3-LABEL: load_float4_float3_trunc_0123:
 ; SSSE3:       # %bb.0:
 ; SSSE3-NEXT:    movaps (%rdi), %xmm0
-; SSSE3-NEXT:    movhps {{.*#+}} xmm0 = xmm0[0,1],mem[0,1]
 ; SSSE3-NEXT:    retq
 ;
 ; SSE41-LABEL: load_float4_float3_trunc_0123:
@@ -257,13 +255,11 @@ define <4 x float> @load_float4_float3_trunc_0123_unaligned(ptr nocapture readon
 ; SSE2-LABEL: load_float4_float3_trunc_0123_unaligned:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movups (%rdi), %xmm0
-; SSE2-NEXT:    movhps {{.*#+}} xmm0 = xmm0[0,1],mem[0,1]
 ; SSE2-NEXT:    retq
 ;
 ; SSSE3-LABEL: load_float4_float3_trunc_0123_unaligned:
 ; SSSE3:       # %bb.0:
 ; SSSE3-NEXT:    movups (%rdi), %xmm0
-; SSSE3-NEXT:    movhps {{.*#+}} xmm0 = xmm0[0,1],mem[0,1]
 ; SSSE3-NEXT:    retq
 ;
 ; SSE41-LABEL: load_float4_float3_trunc_0123_unaligned:

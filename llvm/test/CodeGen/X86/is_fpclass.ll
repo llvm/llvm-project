@@ -2595,8 +2595,9 @@ define i1 @issubnormal_or_zero_or_nan_f(float %x) {
 ;
 ; X64-LABEL: issubnormal_or_zero_or_nan_f:
 ; X64:       # %bb.0:
-; X64-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; X64-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-NEXT:    movss {{.*#+}} xmm1 = [NaN,0.0E+0,0.0E+0,0.0E+0]
+; X64-NEXT:    andps %xmm0, %xmm1
+; X64-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; X64-NEXT:    setb %al
 ; X64-NEXT:    retq
   %class = tail call i1 @llvm.is.fpclass.f32(float %x, i32 243)  ; 0xf0|0x3 = "subnormal|zero|nan"
@@ -2764,8 +2765,9 @@ define i1 @not_issubnormal_or_zero_or_nan_f(float %x) {
 ;
 ; X64-LABEL: not_issubnormal_or_zero_or_nan_f:
 ; X64:       # %bb.0:
-; X64-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; X64-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-NEXT:    movss {{.*#+}} xmm1 = [NaN,0.0E+0,0.0E+0,0.0E+0]
+; X64-NEXT:    andps %xmm0, %xmm1
+; X64-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; X64-NEXT:    setae %al
 ; X64-NEXT:    retq
   %class = tail call i1 @llvm.is.fpclass.f32(float %x, i32 780)  ; ~(0xf0|0x3) = ~"subnormal|zero|nan"

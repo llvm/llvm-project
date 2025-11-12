@@ -29,21 +29,20 @@ define void @main(i1 %arg) #0 {
 ; CHECK-NEXT:    v_writelane_b32 v6, s67, 17
 ; CHECK-NEXT:    v_writelane_b32 v6, s68, 18
 ; CHECK-NEXT:    s_getpc_b64 s[4:5]
-; CHECK-NEXT:    s_mov_b64 s[8:9], 0
 ; CHECK-NEXT:    v_writelane_b32 v6, s69, 19
-; CHECK-NEXT:    s_mov_b32 s68, 0
 ; CHECK-NEXT:    s_mov_b32 s69, s4
-; CHECK-NEXT:    s_load_dwordx4 s[4:7], s[8:9], 0x0
+; CHECK-NEXT:    s_mov_b64 s[4:5], 0
+; CHECK-NEXT:    s_mov_b32 s68, 0
+; CHECK-NEXT:    s_load_dword s6, s[4:5], 0x0
 ; CHECK-NEXT:    s_load_dwordx8 s[24:31], s[68:69], 0x30
 ; CHECK-NEXT:    s_load_dwordx16 s[52:67], s[68:69], 0xf0
-; CHECK-NEXT:    ; kill: killed $sgpr8_sgpr9
-; CHECK-NEXT:    s_nop 0
+; CHECK-NEXT:    ; kill: killed $sgpr4_sgpr5
 ; CHECK-NEXT:    s_load_dwordx16 s[8:23], s[68:69], 0x130
 ; CHECK-NEXT:    ; implicit-def: $vgpr7 : SGPR spill to VGPR lane
 ; CHECK-NEXT:    v_writelane_b32 v6, s70, 20
 ; CHECK-NEXT:    v_writelane_b32 v6, s71, 21
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    v_mov_b32_e32 v1, s4
+; CHECK-NEXT:    v_mov_b32_e32 v1, s6
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 0
 ; CHECK-NEXT:    v_writelane_b32 v7, s8, 0
 ; CHECK-NEXT:    v_writelane_b32 v7, s9, 1

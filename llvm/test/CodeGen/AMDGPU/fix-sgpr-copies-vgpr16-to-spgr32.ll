@@ -8,7 +8,7 @@ define amdgpu_gs i32 @vgpr16_copyto_sgpr() {
 ; CHECK-LABEL: vgpr16_copyto_sgpr:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    v_mov_b32_e32 v0, lds@abs32@lo
-; CHECK-NEXT:    ds_load_2addr_b32 v[0:1], v0 offset1:1
+; CHECK-NEXT:    ds_load_b32 v0, v0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    v_cvt_f16_f32_e32 v0.l, v0
 ; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)

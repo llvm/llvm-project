@@ -405,8 +405,11 @@ define i32 @PR17487(i1 %tobool) {
 ; X64-LIN:       # %bb.0:
 ; X64-LIN-NEXT:    movd %edi, %xmm0
 ; X64-LIN-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
-; X64-LIN-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; X64-LIN-NEXT:    pextrw $4, %xmm0, %eax
+; X64-LIN-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
+; X64-LIN-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,1,0,1]
+; X64-LIN-NEXT:    pand %xmm0, %xmm1
+; X64-LIN-NEXT:    pextrw $4, %xmm1, %eax
+; X64-LIN-NEXT:    movzbl %al, %eax
 ; X64-LIN-NEXT:    retq
 ;
 ; X64-WIN-LABEL: PR17487:
@@ -414,8 +417,11 @@ define i32 @PR17487(i1 %tobool) {
 ; X64-WIN-NEXT:    movzbl %cl, %eax
 ; X64-WIN-NEXT:    movd %eax, %xmm0
 ; X64-WIN-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
-; X64-WIN-NEXT:    pand __xmm@00000000000000010000000000000001(%rip), %xmm0
-; X64-WIN-NEXT:    pextrw $4, %xmm0, %eax
+; X64-WIN-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
+; X64-WIN-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,1,0,1]
+; X64-WIN-NEXT:    pand %xmm0, %xmm1
+; X64-WIN-NEXT:    pextrw $4, %xmm1, %eax
+; X64-WIN-NEXT:    movzbl %al, %eax
 ; X64-WIN-NEXT:    retq
   %tmp = insertelement <2 x i1> undef, i1 %tobool, i32 1
   %tmp1 = zext <2 x i1> %tmp to <2 x i64>

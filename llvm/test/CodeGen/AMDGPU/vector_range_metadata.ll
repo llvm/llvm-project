@@ -71,12 +71,12 @@ define <3 x i32> @test_add3x32(ptr %a_ptr, ptr %b_ptr) {
 ; CHECK-LABEL: test_add3x32:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    flat_load_dword v4, v[2:3]
-; CHECK-NEXT:    flat_load_dword v5, v[0:1]
+; CHECK-NEXT:    flat_load_dword v4, v[0:1]
+; CHECK-NEXT:    flat_load_dword v5, v[2:3]
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 48
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 48
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_or_b32_e32 v0, v5, v4
+; CHECK-NEXT:    v_or_b32_e32 v0, v4, v5
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %a = load <3 x i32>, ptr %a_ptr, !range !2, !noundef !{}
   %b = load <3 x i32>, ptr %b_ptr, !range !3, !noundef !{}

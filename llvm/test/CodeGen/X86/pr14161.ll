@@ -24,7 +24,8 @@ entry:
 define <2 x i16> @bad(ptr, ptr) {
 ; CHECK-LABEL: bad:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = mem[1,1,1,1]
+; CHECK-NEXT:    pinsrd $1, 4(%rdi), %xmm0
+; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; CHECK-NEXT:    pminud {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
 entry:
