@@ -472,9 +472,7 @@ public:
   virtual void getInfo(unw_proc_info_t *) {
     _LIBUNWIND_ABORT("getInfo not implemented");
   }
-  _LIBUNWIND_TRACE_NO_INLINE virtual void jumpto() {
-    _LIBUNWIND_ABORT("jumpto not implemented");
-  }
+  virtual void jumpto() { _LIBUNWIND_ABORT("jumpto not implemented"); }
   virtual bool isSignalFrame() {
     _LIBUNWIND_ABORT("isSignalFrame not implemented");
   }
@@ -489,12 +487,6 @@ public:
   }
 #ifdef __arm__
   virtual void saveVFPAsX() { _LIBUNWIND_ABORT("saveVFPAsX not implemented"); }
-#endif
-
-#ifdef _LIBUNWIND_TRACE_RET_INJECT
-  virtual void setWalkedFrames(unsigned) {
-    _LIBUNWIND_ABORT("setWalkedFrames not implemented");
-  }
 #endif
 
 #ifdef _AIX
@@ -973,18 +965,13 @@ public:
   virtual void        setFloatReg(int, unw_fpreg_t);
   virtual int         step(bool stage2 = false);
   virtual void        getInfo(unw_proc_info_t *);
-  _LIBUNWIND_TRACE_NO_INLINE
-    virtual void      jumpto();
+  virtual void        jumpto();
   virtual bool        isSignalFrame();
   virtual bool        getFunctionName(char *buf, size_t len, unw_word_t *off);
   virtual void        setInfoBasedOnIPRegister(bool isReturnAddress = false);
   virtual const char *getRegisterName(int num);
 #ifdef __arm__
   virtual void        saveVFPAsX();
-#endif
-
-#ifdef _LIBUNWIND_TRACE_RET_INJECT
-  virtual void setWalkedFrames(unsigned);
 #endif
 
 #ifdef _AIX
@@ -1369,9 +1356,6 @@ private:
     defined(_LIBUNWIND_TARGET_HAIKU)
   bool             _isSigReturn = false;
 #endif
-#ifdef _LIBUNWIND_TRACE_RET_INJECT
-  uint32_t _walkedFrames;
-#endif
 };
 
 
@@ -1426,58 +1410,12 @@ void UnwindCursor<A, R>::setFloatReg(int regNum, unw_fpreg_t value) {
 }
 
 template <typename A, typename R> void UnwindCursor<A, R>::jumpto() {
-#ifdef _LIBUNWIND_TRACE_RET_INJECT
-  /*
-
-  The value of `_walkedFrames` is computed in `unwind_phase2` and represents the
-  number of frames walked starting `unwind_phase2` to get to the landing pad.
-
-  ```
-    // uc is initialized by __unw_getcontext in the parent frame.
-    // The first stack frame walked is unwind_phase2.
-    unsigned framesWalked = 1;
-  ```
-
-  To that, we need to add the number of function calls in libunwind between
-  `unwind_phase2` & `__libunwind_Registers_arm64_jumpto` which performs the long
-  jump, to rebalance the execution flow.
-
-  ```
-      frame #0: libunwind.1.dylib`__libunwind_Registers_arm64_jumpto at UnwindRegistersRestore.S:646
-      frame #1: libunwind.1.dylib`libunwind::Registers_arm64::returnto at Registers.hpp:2291:3
-      frame #2: libunwind.1.dylib`libunwind::UnwindCursor<libunwind::LocalAddressSpace, libunwind::Registers_arm64>::jumpto at UnwindCursor.hpp:1474:14
-      frame #3: libunwind.1.dylib`__unw_resume at libunwind.cpp:375:7
-      frame #4: libunwind.1.dylib`__unw_resume_with_frames_walked at libunwind.cpp:363:10
-      frame #5: libunwind.1.dylib`unwind_phase2 at UnwindLevel1.c:328:9
-      frame #6: libunwind.1.dylib`_Unwind_RaiseException at UnwindLevel1.c:480:10
-      frame #7: libc++abi.dylib`__cxa_throw at cxa_exception.cpp:295:5
-      ...
-  ```
-
-  If we look at the backtrace from `__libunwind_Registers_arm64_jumpto`, we see
-  there are 5 frames on the stack to reach `unwind_phase2`. However, only 4 of
-  them will never return, since `__libunwind_Registers_arm64_jumpto` returns
-  back to the landing pad, so we need to subtract 1 to the number of
-  `_EXTRA_LIBUNWIND_FRAMES_WALKED`.
-  */
-
-  static constexpr size_t _EXTRA_LIBUNWIND_FRAMES_WALKED = 5 - 1;
-  _registers.returnto(_walkedFrames + _EXTRA_LIBUNWIND_FRAMES_WALKED);
-#else
   _registers.jumpto();
-#endif
 }
 
 #ifdef __arm__
 template <typename A, typename R> void UnwindCursor<A, R>::saveVFPAsX() {
   _registers.saveVFPAsX();
-}
-#endif
-
-#ifdef _LIBUNWIND_TRACE_RET_INJECT
-template <typename A, typename R>
-void UnwindCursor<A, R>::setWalkedFrames(unsigned walkedFrames) {
-  _walkedFrames = walkedFrames;
 }
 #endif
 
