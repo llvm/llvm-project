@@ -1268,30 +1268,25 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
       return;
 
     break;
-
+  case ISD::FSINCOS:
   case ISD::FSINCOSPI: {
     EVT VT = Node->getValueType(0);
-    RTLIB::Libcall LC = RTLIB::getSINCOSPI(VT);
+    RTLIB::Libcall LC = Node->getOpcode() == ISD::FSINCOS
+                            ? RTLIB::getSINCOS(VT)
+                            : RTLIB::getSINCOSPI(VT);
     if (LC != RTLIB::UNKNOWN_LIBCALL &&
-        DAG.expandMultipleResultFPLibCall(LC, Node, Results, VT))
+        TLI.expandMultipleResultFPLibCall(DAG, LC, Node, Results))
       return;
 
     // TODO: Try to see if there's a narrower call available to use before
     // scalarizing.
     break;
   }
-  case ISD::FSINCOS: {
-    // FIXME: Try to directly match vector case like fsincospi
-    EVT VT = Node->getValueType(0).getVectorElementType();
-    RTLIB::Libcall LC = RTLIB::getSINCOS(VT);
-    if (DAG.expandMultipleResultFPLibCall(LC, Node, Results, VT))
-      return;
-    break;
-  }
   case ISD::FMODF: {
-    EVT VT = Node->getValueType(0).getVectorElementType();
+    EVT VT = Node->getValueType(0);
     RTLIB::Libcall LC = RTLIB::getMODF(VT);
-    if (DAG.expandMultipleResultFPLibCall(LC, Node, Results, VT,
+    if (LC != RTLIB::UNKNOWN_LIBCALL &&
+        TLI.expandMultipleResultFPLibCall(DAG, LC, Node, Results,
                                           /*CallRetResNo=*/0))
       return;
     break;
