@@ -1712,7 +1712,6 @@ if (current_toolchain == default_toolchain) {
       "sstream",
       "stack",
       "stdatomic.h",
-      "stdbool.h",
       "stddef.h",
       "stdexcept",
       "stdio.h",
