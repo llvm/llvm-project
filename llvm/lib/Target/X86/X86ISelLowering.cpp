@@ -8863,6 +8863,58 @@ static SDValue lowerBuildVectorAsBlend(BuildVectorSDNode *BVOp, SDLoc const &DL,
   return SDValue();
 }
 
+/// Widen a BUILD_VECTOR if the scalar operands are freely mergeable.
+static SDValue widenBuildVector(BuildVectorSDNode *BVOp, SDLoc const &DL,
+                                X86Subtarget const &Subtarget,
+                                SelectionDAG &DAG) {
+  using namespace SDPatternMatch;
+  MVT VT = BVOp->getSimpleValueType(0);
+  MVT SVT = VT.getScalarType();
+  unsigned NumElts = VT.getVectorNumElements();
+  unsigned EltBits = SVT.getSizeInBits();
+
+  if (SVT != MVT::i8 && SVT != MVT::i16 && SVT != MVT::i32)
+    return SDValue();
+
+  unsigned WideBits = 2 * EltBits;
+  MVT WideSVT = MVT::getIntegerVT(WideBits);
+  MVT WideVT = MVT::getVectorVT(WideSVT, NumElts / 2);
+  if (!DAG.getTargetLoweringInfo().isTypeLegal(WideSVT))
+    return SDValue();
+
+  SmallVector<SDValue, 8> WideOps;
+  for (unsigned I = 0; I != NumElts; I += 2) {
+    SDValue Op0 = BVOp->getOperand(I + 0);
+    SDValue Op1 = BVOp->getOperand(I + 1);
+
+    if (Op0.isUndef() && Op1.isUndef()) {
+      WideOps.push_back(DAG.getUNDEF(WideSVT));
+      continue;
+    }
+
+    // TODO: Constant repacking?
+
+    // Merge scalars that have been split from the same source.
+    SDValue X, Y;
+    if (sd_match(Op0, m_Trunc(m_Value(X))) &&
+        sd_match(Op1, m_Trunc(m_Srl(m_Value(Y), m_SpecificInt(EltBits)))) &&
+        peekThroughTruncates(X) == peekThroughTruncates(Y) &&
+        X.getValueType().bitsGE(WideSVT)) {
+      if (X.getValueType().bitsGT(WideSVT))
+        X = DAG.getNode(ISD::TRUNCATE, DL, WideSVT, X);
+      WideOps.push_back(X);
+      continue;
+    }
+
+    break;
+  }
+
+  if (WideOps.size() == (NumElts / 2))
+    return DAG.getBitcast(VT, DAG.getBuildVector(WideVT, DL, WideOps));
+
+  return SDValue();
+}
+
 /// Create a vector constant without a load. SSE/AVX provide the bare minimum
 /// functionality to do this, so it's all zeros, all ones, or some derivation
 /// that is cheap to calculate.
@@ -9333,6 +9385,8 @@ X86TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
     return BitOp;
   if (SDValue Blend = lowerBuildVectorAsBlend(BV, dl, Subtarget, DAG))
     return Blend;
+  if (SDValue WideBV = widenBuildVector(BV, dl, Subtarget, DAG))
+    return WideBV;
 
   unsigned NumZero = ZeroMask.popcount();
   unsigned NumNonZero = NonZeroMask.popcount();
