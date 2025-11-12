@@ -18348,7 +18348,13 @@ bool AArch64TargetLowering::lowerInterleavedStoreWithShuffle(
     return false;
 
   std::deque<Value *> Shuffles;
-  Shuffles.push_back(SVI);
+  // If Only one operand is there in root shuffle.
+  if (isa<PoisonValue>(SVI->getOperand(1)) &&
+      SVI->getType() == SVI->getOperand(0)->getType()) {
+    Value *Op0 = SVI->getOperand(0);
+    Shuffles.push_back(dyn_cast<Value>(Op0));
+  } else
+    Shuffles.push_back(SVI);
   unsigned ConcatLevel = Factor;
   unsigned ConcatElt = Factor * LaneLen;
   // Getting all the interleaved operands.
@@ -18370,7 +18376,10 @@ bool AArch64TargetLowering::lowerInterleavedStoreWithShuffle(
         Shuffles.push_back(SplitValue);
         continue;
       }
-
+      if (V->getType() == SubVecTy) {
+        Shuffles.push_back(V);
+        continue;
+      }
       ShuffleVectorInst *SFL = dyn_cast<ShuffleVectorInst>(V);
       if (!SFL)
         return false;

@@ -753,3 +753,95 @@ define <4 x i1> @load_large_vector(ptr %p) {
   %ret = icmp ne <4 x ptr> %s1, %s2
   ret <4 x i1> %ret
 }
+
+define void @store_factor8_with_undef(ptr %ptr, <4 x i32> %a0, <4 x i32> %a1, <4 x i32> %a2, <4 x i32> %a3){
+; NEON-LABEL: define void @store_factor8_with_undef(
+; NEON:    [[TMP1:%.*]] = shufflevector <4 x i32> [[A0:%.*]], <4 x i32> poison, <4 x i32> <i32 0, i32 4, i32 1, i32 5>
+; NEON-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[A0]], <4 x i32> poison, <4 x i32> <i32 2, i32 6, i32 3, i32 7>
+; NEON-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> [[A1:%.*]], <4 x i32> poison, <4 x i32> <i32 0, i32 4, i32 1, i32 5>
+; NEON-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i32> [[A1]], <4 x i32> poison, <4 x i32> <i32 2, i32 6, i32 3, i32 7>
+; NEON-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i32> [[A2:%.*]], <4 x i32> poison, <4 x i32> <i32 0, i32 4, i32 1, i32 5>
+; NEON-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i32> [[A2]], <4 x i32> poison, <4 x i32> <i32 2, i32 6, i32 3, i32 7>
+; NEON-NEXT:    [[TMP7:%.*]] = shufflevector <4 x i32> [[A3:%.*]], <4 x i32> poison, <4 x i32> <i32 0, i32 4, i32 1, i32 5>
+; NEON-NEXT:    [[TMP8:%.*]] = shufflevector <4 x i32> [[A3]], <4 x i32> poison, <4 x i32> <i32 2, i32 6, i32 3, i32 7>
+; NEON-NEXT:    call void @llvm.aarch64.neon.st4.v4i32.p0(<4 x i32> [[TMP1]], <4 x i32> [[TMP3]], <4 x i32> [[TMP5]], <4 x i32> [[TMP7]], ptr [[PTR]])
+; NEON-NEXT:    [[TMP9:%.*]] = getelementptr i32, ptr [[PTR]], i32 16
+; NEON-NEXT:    call void @llvm.aarch64.neon.st4.v4i32.p0(<4 x i32> [[TMP2]], <4 x i32> [[TMP4]], <4 x i32> [[TMP6]], <4 x i32> [[TMP8]], ptr [[TMP9]])
+; NEON-NEXT:    ret void
+; NO_NEON-LABEL: @store_factor8_with_undef(
+; NO_NEON-NOT:     @llvm.aarch64.neon
+; NO_NEON:         ret void
+;
+  %v0 = shufflevector <4 x i32> %a0, <4 x i32> %a1, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %v1 = shufflevector <4 x i32> %a2, <4 x i32> %a3, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %s0 = shufflevector <8 x i32> %v0, <8 x i32> %v1, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %interleaved.vec = shufflevector <16 x i32> %s0, <16 x i32> poison, <32 x i32> <i32 0, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24, i32 28, i32 1, i32 5, i32 9, i32 13, i32 17, i32 21, i32 25, i32 29, i32 2, i32 6, i32 10, i32 14, i32 18, i32 22, i32 26, i32 30, i32 3, i32 7, i32 11, i32 15, i32 19, i32 23, i32 27, i32 poison>
+  store <32 x i32> %interleaved.vec, ptr %ptr, align 4
+  ret void
+}
+
+define void @store_general_mask_factor8_undef_fail(ptr %ptr, <4 x i32> %a0, <4 x i32> %a1, <4 x i32> %a2, <4 x i32> %a3,
+                                              <4 x i32> %a4, <4 x i32> %a5, <4 x i32> %a6, <4 x i32> %a7){
+; NEON-LABEL:    @store_general_mask_factor8_undef_fail(
+; NEON-NOT:        @llvm.aarch64.neon
+; NEON:            ret void
+; NO_NEON-LABEL: @store_general_mask_factor8_undef_fail(
+; NO_NEON-NOT:     @llvm.aarch64.neon
+; NO_NEON:         ret void
+;
+  %v0 = shufflevector <4 x i32> %a0, <4 x i32> %a1, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %v1 = shufflevector <4 x i32> %a2, <4 x i32> %a3, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %v2 = shufflevector <4 x i32> %a4, <4 x i32> %a5, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %v3 = shufflevector <4 x i32> %a6, <4 x i32> %a7, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+
+  %s0 = shufflevector <8 x i32> %v0, <8 x i32> %v1, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %s1 = shufflevector <8 x i32> %v2, <8 x i32> %v3, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+
+  %interleaved.vec = shufflevector <16 x i32> %s0, <16 x i32> %s1, <32 x i32> <i32 0, i32 4, i32 8, i32 9, i32 16, i32 20, i32 24, i32 10, i32 1, i32 5, i32 9, i32 13, i32 17, i32 21, i32 25, i32 29, i32 2, i32 6, i32 10, i32 14, i32 18, i32 22, i32 26, i32 30, i32 3, i32 7, i32 11, i32 15, i32 19, i32 23, i32 27, i32 poison>
+  store <32 x i32> %interleaved.vec, ptr %ptr, align 4
+  ret void
+}
+
+define void @store_general_invalid_concat_mask(ptr %ptr, <4 x i32> %a0, <4 x i32> %a1, <4 x i32> %a2, <4 x i32> %a3,
+                                              <4 x i32> %a4, <4 x i32> %a5, <4 x i32> %a6, <4 x i32> %a7){
+; NEON-LABEL:    @store_general_invalid_concat_mask(
+; NEON-NOT:        @llvm.aarch64.neon
+; NEON:            ret void
+; NO_NEON-LABEL: @store_general_invalid_concat_mask(
+; NO_NEON-NOT:     @llvm.aarch64.neon
+; NO_NEON:         ret void
+;
+  %v0 = shufflevector <4 x i32> %a0, <4 x i32> %a1, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 0>
+  %v1 = shufflevector <4 x i32> %a2, <4 x i32> %a3, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %v2 = shufflevector <4 x i32> %a4, <4 x i32> %a5, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %v3 = shufflevector <4 x i32> %a6, <4 x i32> %a7, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+
+  %s0 = shufflevector <8 x i32> %v0, <8 x i32> %v1, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %s1 = shufflevector <8 x i32> %v2, <8 x i32> %v3, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+
+  %interleaved.vec = shufflevector <16 x i32> %s0, <16 x i32> %s1, <32 x i32> <i32 0, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24, i32 28, i32 1, i32 5, i32 9, i32 13, i32 17, i32 21, i32 25, i32 29, i32 2, i32 6, i32 10, i32 14, i32 18, i32 22, i32 26, i32 30, i32 3, i32 7, i32 11, i32 15, i32 19, i32 23, i32 27, i32 31>
+  store <32 x i32> %interleaved.vec, ptr %ptr, align 4
+  ret void
+}
+
+define void @store_no_interleave_factor8(ptr %ptr, <4 x i32> %a0, <4 x i32> %a1, <4 x i32> %a2, <4 x i32> %a3,
+                                             <4 x i32> %a4, <4 x i32> %a5, <4 x i32> %a6, <4 x i32> %a7){
+; NEON-LABEL:    @store_no_interleave_factor8(
+; NEON-NOT:        @llvm.aarch64.neon
+; NEON:            ret void
+; NO_NEON-LABEL: @store_no_interleave_factor8(
+; NO_NEON-NOT:     @llvm.aarch64.neon
+; NO_NEON:         ret void
+;
+  %v0 = shufflevector <4 x i32> %a0, <4 x i32> %a1, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %v1 = shufflevector <4 x i32> %a2, <4 x i32> %a3, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %v2 = shufflevector <4 x i32> %a4, <4 x i32> %a5, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %v3 = shufflevector <4 x i32> %a6, <4 x i32> %a7, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+
+  %s0 = shufflevector <8 x i32> %v0, <8 x i32> %v1, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %s1 = shufflevector <8 x i32> %v2, <8 x i32> %v3, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+
+  %interleaved.vec = shufflevector <16 x i32> %s0, <16 x i32> %s1, <16 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
+  store <16 x i32> %interleaved.vec, ptr %ptr, align 4
+  ret void
+}

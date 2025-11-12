@@ -761,12 +761,53 @@ define void @store_factor8(ptr %ptr, <4 x i32> %a0, <4 x i32> %a1, <4 x i32> %a2
   ret void
 }
 
+define dso_local void @store_factor8_1(ptr %dst, ptr %temp1, i64 %offset.idx, <8 x i16> %x, <8 x i16> %y,  <8 x i16> %z) {
+; CHECK-LABEL: store_factor8_1:
+; CHECK:       .Lfunc_begin18:
+; CHECK-NEXT:    .cfi_startproc
+; CHECK-NEXT:  // %bb.0: // %entry
+; CHECK-NEXT:    ld1r { v3.8h }, [x1]
+; CHECK-NEXT:    movi v4.8h, #1
+; CHECK-NEXT:    movi v19.2d, #0000000000000000
+; CHECK-NEXT:    add x8, x0, x2, lsl #1
+; CHECK-NEXT:    orr v3.8h, #1
+; CHECK-NEXT:    add v3.8h, v3.8h, v4.8h
+; CHECK-NEXT:    zip1 v16.8h, v19.8h, v3.8h
+; CHECK-NEXT:    zip1 v17.8h, v0.8h, v19.8h
+; CHECK-NEXT:    zip1 v18.8h, v1.8h, v2.8h
+; CHECK-NEXT:    zip2 v3.8h, v19.8h, v3.8h
+; CHECK-NEXT:    zip2 v4.8h, v0.8h, v19.8h
+; CHECK-NEXT:    zip2 v5.8h, v1.8h, v2.8h
+; CHECK-NEXT:    mov v6.16b, v19.16b
+; CHECK-NEXT:    st4 { v16.8h, v17.8h, v18.8h, v19.8h }, [x8], #64
+; CHECK-NEXT:    st4 { v3.8h, v4.8h, v5.8h, v6.8h }, [x8]
+; CHECK-NEXT:    ret
+entry:
+  %0 = load i32, ptr %temp1, align 4
+  %broadcast.splatinsert1 = insertelement <8 x i32> poison, i32 %0, i64 0
+  %broadcast.splat2 = shufflevector <8 x i32> %broadcast.splatinsert1, <8 x i32> poison, <8 x i32> zeroinitializer
+  %1 = getelementptr i16, ptr %dst, i64 %offset.idx
+  %2 = trunc <8 x i32> %broadcast.splat2 to <8 x i16>
+  %3 = or <8 x i16> %2, splat (i16 1)
+  %4 = add <8 x i16> %3, splat (i16 1)
+  %5 = shufflevector <8 x i16> zeroinitializer, <8 x i16> %x, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %6 = shufflevector <8 x i16> %y, <8 x i16> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %7 = shufflevector <8 x i16> %4, <8 x i16> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %8 = shufflevector <8 x i16> %z, <8 x i16> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %9 = shufflevector <16 x i16> %5, <16 x i16> %6, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+  %10 = shufflevector <16 x i16> %7, <16 x i16> %8, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+  %11 = shufflevector <32 x i16> %9, <32 x i16> %10, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
+  %interleaved.vec = shufflevector <64 x i16> %11, <64 x i16> poison, <64 x i32> <i32 0, i32 8, i32 16, i32 24, i32 32, i32 40, i32 48, i32 56, i32 1, i32 9, i32 17, i32 25, i32 33, i32 41, i32 49, i32 57, i32 2, i32 10, i32 18, i32 26, i32 34, i32 42, i32 50, i32 58, i32 3, i32 11, i32 19, i32 27, i32 35, i32 43, i32 51, i32 59, i32 4, i32 12, i32 20, i32 28, i32 36, i32 44, i32 52, i32 60, i32 5, i32 13, i32 21, i32 29, i32 37, i32 45, i32 53, i32 61, i32 6, i32 14, i32 22, i32 30, i32 38, i32 46, i32 54, i32 62, i32 7, i32 15, i32 23, i32 31, i32 39, i32 47, i32 55, i32 63>
+  store <64 x i16> %interleaved.vec, ptr %1, align 2
+  ret void
+}
+
 define void @store_factor16(ptr %ptr, <4 x i32> %a0,  <4 x i32> %a1,  <4 x i32> %a2,  <4 x i32> %a3,
                                       <4 x i32> %a4,  <4 x i32> %a5,  <4 x i32> %a6,  <4 x i32> %a7,
                                       <4 x i32> %a8,  <4 x i32> %a9,  <4 x i32> %a10, <4 x i32> %a11,
                                       <4 x i32> %a12, <4 x i32> %a13, <4 x i32> %a14, <4 x i32> %a15) {
 ; CHECK-LABEL: store_factor16:
-; CHECK:       .Lfunc_begin18:
+; CHECK:       .Lfunc_begin19:
 ; CHECK-NEXT:    .cfi_startproc
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK:      	zip1	[[V05:.*s]], [[I05:.*s]], [[I13:.*s]]
@@ -837,16 +878,16 @@ define void @store_factor16(ptr %ptr, <4 x i32> %a0,  <4 x i32> %a1,  <4 x i32> 
 
 define dso_local void @store_no_interleave(ptr noalias noundef readonly captures(none) %a, ptr noalias noundef readonly captures(none) %b, i8 noundef %c) {
 ; CHECK-LABEL: store_no_interleave:
-; CHECK:       .Lfunc_begin19:
+; CHECK:       .Lfunc_begin20:
 ; CHECK-NEXT:    .cfi_startproc
 ; CHECK-NEXT:  // %bb.0: // %entry
 ; CHECK-NEXT:    movi v0.4h, #1
 ; CHECK-NEXT:    fmov s1, w2
 ; CHECK-NEXT:    ldrb w8, [x0]
-; CHECK-NEXT:    adrp x9, .LCPI19_3
-; CHECK-NEXT:    ldr q3, [x9, :lo12:.LCPI19_3]
-; CHECK-NEXT:    adrp x9, .LCPI19_1
-; CHECK-NEXT:    ldr q5, [x9, :lo12:.LCPI19_1]
+; CHECK-NEXT:    adrp x9, .LCPI20_3
+; CHECK-NEXT:    ldr q3, [x9, :lo12:.LCPI20_3]
+; CHECK-NEXT:    adrp x9, .LCPI20_1
+; CHECK-NEXT:    ldr q5, [x9, :lo12:.LCPI20_1]
 ; CHECK-NEXT:    and v0.8b, v1.8b, v0.8b
 ; CHECK-NEXT:    dup v0.16b, v0.b[0]
 ; CHECK-NEXT:    dup v1.16b, w2
@@ -855,10 +896,10 @@ define dso_local void @store_no_interleave(ptr noalias noundef readonly captures
 ; CHECK-NEXT:    tbl v5.16b, { v0.16b, v1.16b }, v5.16b
 ; CHECK-NEXT:    mov v2.b[2], w8
 ; CHECK-NEXT:    mov v2.b[10], w8
-; CHECK-NEXT:    adrp x8, .LCPI19_2
-; CHECK-NEXT:    ldr q4, [x8, :lo12:.LCPI19_2]
-; CHECK-NEXT:    adrp x8, .LCPI19_0
-; CHECK-NEXT:    ldr q6, [x8, :lo12:.LCPI19_0]
+; CHECK-NEXT:    adrp x8, .LCPI20_2
+; CHECK-NEXT:    ldr q4, [x8, :lo12:.LCPI20_2]
+; CHECK-NEXT:    adrp x8, .LCPI20_0
+; CHECK-NEXT:    ldr q6, [x8, :lo12:.LCPI20_0]
 ; CHECK-NEXT:    ldrsw x8, [x1]
 ; CHECK-NEXT:    tbl v4.16b, { v0.16b, v1.16b }, v4.16b
 ; CHECK-NEXT:    rev64 v2.4s, v2.4s
@@ -902,7 +943,7 @@ entry:
 
 define dso_local void @store_no_interleave1(ptr %a, ptr %b, ptr %c, ptr %d, ptr %e, ptr %f, ptr %g, ptr %h, ptr %i,
 ; CHECK-LABEL: store_no_interleave1:
-; CHECK:       .Lfunc_begin20:
+; CHECK:       .Lfunc_begin21:
 ; CHECK-NEXT:    .cfi_startproc
 ; CHECK-NEXT:  // %bb.0: // %entry
 ; CHECK-NEXT:    ldr x8, [sp]
