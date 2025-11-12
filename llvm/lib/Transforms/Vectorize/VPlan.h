@@ -2336,8 +2336,9 @@ public:
   }
 
   VPWidenPHIRecipe *clone() override {
-    auto *C = new VPWidenPHIRecipe(cast<PHINode>(getUnderlyingValue()),
-                                   getOperand(0), getDebugLoc(), Name);
+    auto *C =
+        new VPWidenPHIRecipe(cast_if_present<PHINode>(getUnderlyingValue()),
+                             getOperand(0), getDebugLoc(), Name);
     for (VPValue *Op : llvm::drop_begin(operands()))
       C->addOperand(Op);
     return C;
@@ -2349,6 +2350,10 @@ public:
 
   /// Generate the phi/select nodes.
   void execute(VPTransformState &State) override;
+
+  /// Return the cost of this VPWidenPHIRecipe.
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override;
 
 protected:
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -3639,40 +3644,6 @@ protected:
   /// Print the recipe.
   void printRecipe(raw_ostream &O, const Twine &Indent,
                    VPSlotTracker &SlotTracker) const override;
-#endif
-};
-
-// TODO: Can we unify the PHI recipe hierarchy a bit? VPPredInstPHISC is close
-//       to this (just a PHI of a predicate), but isn't a header phi so can't
-//       be used for the mask of FindLastActive reductions.
-//
-// This is basically a clone of VPActiveLaneMaskPHIRecipe, but won't run into
-// problems with transforms that expect there to only be a single ALM PHI, and
-// can be ignored by other code looking for a (non-existent) underlying value.
-class VPLastActiveMaskPHIRecipe : public VPHeaderPHIRecipe {
-public:
-  VPLastActiveMaskPHIRecipe(VPValue *StartMask, DebugLoc DL)
-      : VPHeaderPHIRecipe(VPDef::VPLastActiveMaskPHISC, nullptr, StartMask,
-                          DL) {}
-
-  ~VPLastActiveMaskPHIRecipe() override = default;
-
-  VPLastActiveMaskPHIRecipe *clone() override {
-    auto *R = new VPLastActiveMaskPHIRecipe(getOperand(0), getDebugLoc());
-    if (getNumOperands() == 2)
-      R->addOperand(getOperand(1));
-    return R;
-  }
-
-  VP_CLASSOF_IMPL(VPDef::VPLastActiveMaskPHISC);
-
-  /// Generate the mask phi
-  void execute(VPTransformState &State) override;
-
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  /// Print the recipe
-  void print(raw_ostream &O, const Twine &Indent,
-             VPSlotTracker &SlotTracker) const override;
 #endif
 };
 

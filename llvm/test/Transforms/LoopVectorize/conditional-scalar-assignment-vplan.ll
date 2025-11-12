@@ -48,7 +48,7 @@ exit:
 ; CHECK-NEXT:   vector.body:
 ; CHECK-NEXT:     EMIT vp<%3> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
 ; CHECK-NEXT:     WIDEN-REDUCTION-PHI ir<%data.phi> = phi ir<-1>, vp<%9>
-; CHECK-NEXT:     LAST-ACTIVE-MASK-PHI vp<%4> = phi ir<false>, vp<%8>
+; CHECK-NEXT:     WIDEN-PHI vp<%4> = phi [ ir<false>, vector.ph ], [ vp<%8>, vector.body ]
 ; CHECK-NEXT:     vp<%5> = SCALAR-STEPS vp<%3>, ir<1>, vp<%0>
 ; CHECK-NEXT:     CLONE ir<%ld.addr> = getelementptr inbounds ir<%data>, vp<%5>
 ; CHECK-NEXT:     vp<%6> = vector-pointer ir<%ld.addr>
@@ -95,7 +95,7 @@ exit:
 ; CHECK-NEXT: Cost of 1 for VF vscale x 1: exit condition instruction   %exit.cmp = icmp eq i64 %iv.next, %N
 ; CHECK-NEXT: Cost of 0 for VF vscale x 1: EMIT vp<%3> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
 ; CHECK-NEXT: Cost of 1 for VF vscale x 1: WIDEN-REDUCTION-PHI ir<%data.phi> = phi ir<-1>, vp<%9>
-; CHECK-NEXT: Cost of 1 for VF vscale x 1: LAST-ACTIVE-MASK-PHI vp<%4> = phi ir<false>, vp<%8>
+; CHECK-NEXT: Cost of 1 for VF vscale x 1: WIDEN-PHI vp<%4> = phi [ ir<false>, vector.ph ], [ vp<%8>, vector.body ]
 ; CHECK-NEXT: Cost of 0 for VF vscale x 1: vp<%5> = SCALAR-STEPS vp<%3>, ir<1>, vp<%0>
 ; CHECK-NEXT: Cost of 0 for VF vscale x 1: CLONE ir<%ld.addr> = getelementptr inbounds ir<%data>, vp<%5>
 ; CHECK-NEXT: Cost of 0 for VF vscale x 1: vp<%6> = vector-pointer ir<%ld.addr>

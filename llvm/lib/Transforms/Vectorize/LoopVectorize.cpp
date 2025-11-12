@@ -9406,7 +9406,7 @@ static void preparePlanForMainVectorLoop(VPlan &MainPlan, VPlan &EpiPlan) {
   SmallPtrSet<PHINode *, 2> EpiWidenedPhis;
   for (VPRecipeBase &R :
        EpiPlan.getVectorLoopRegion()->getEntryBasicBlock()->phis()) {
-    if (isa<VPCanonicalIVPHIRecipe, VPLastActiveMaskPHIRecipe>(&R))
+    if (isa<VPCanonicalIVPHIRecipe>(&R))
       continue;
     EpiWidenedPhis.insert(
         cast<PHINode>(R.getVPSingleValue()->getUnderlyingValue()));

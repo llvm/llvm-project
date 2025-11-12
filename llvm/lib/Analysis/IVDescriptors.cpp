@@ -728,14 +728,6 @@ RecurrenceDescriptor::isFindPattern(RecurKind Kind, Loop *TheLoop,
 
     // FIXME: Support more complex patterns, including multiple selects.
     // The Select must be used only outside the loop and by the PHI.
-    for (User *U : I->users()) {
-      if (U == OrigPhi)
-        continue;
-      if (auto *UI = dyn_cast<Instruction>(U); UI && !TheLoop->contains(UI))
-        continue;
-      return InstDesc(false, I);
-    }
-
     return InstDesc(I, RecurKind::FindLast);
   }
 

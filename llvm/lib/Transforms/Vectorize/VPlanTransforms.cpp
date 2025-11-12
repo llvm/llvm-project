@@ -4941,7 +4941,7 @@ void VPlanTransforms::convertFindLastRecurrences(
     VPBuilder Builder = VPBuilder::getToInsertAfter(PhiR);
     VPValue *False = Plan.getOrAddLiveIn(
         ConstantInt::getFalse(PhiR->getUnderlyingValue()->getContext()));
-    auto *MaskPHI = new VPLastActiveMaskPHIRecipe(False, DebugLoc());
+    auto *MaskPHI = new VPWidenPHIRecipe(nullptr, False, DebugLoc());
     Builder.insert(MaskPHI);
 
     // Add select for mask

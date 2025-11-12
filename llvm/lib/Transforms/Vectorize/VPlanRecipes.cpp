@@ -4493,6 +4493,11 @@ void VPWidenPHIRecipe::execute(VPTransformState &State) {
   State.set(this, VecPhi);
 }
 
+InstructionCost VPWidenPHIRecipe::computeCost(ElementCount VF,
+                                              VPCostContext &Ctx) const {
+  return Ctx.TTI.getCFInstrCost(Instruction::PHI, Ctx.CostKind);
+}
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPWidenPHIRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
                                    VPSlotTracker &SlotTracker) const {
@@ -4520,27 +4525,6 @@ void VPActiveLaneMaskPHIRecipe::execute(VPTransformState &State) {
 void VPActiveLaneMaskPHIRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
                                             VPSlotTracker &SlotTracker) const {
   O << Indent << "ACTIVE-LANE-MASK-PHI ";
-
-  printAsOperand(O, SlotTracker);
-  O << " = phi ";
-  printOperands(O, SlotTracker);
-}
-#endif
-
-void VPLastActiveMaskPHIRecipe::execute(VPTransformState &State) {
-  BasicBlock *VectorPH =
-      State.CFG.VPBB2IRBB.at(getParent()->getCFGPredecessor(0));
-  Value *StartMask = State.get(getOperand(0));
-  PHINode *Phi =
-      State.Builder.CreatePHI(StartMask->getType(), 2, "last.active.mask");
-  Phi->addIncoming(StartMask, VectorPH);
-  State.set(this, Phi);
-}
-
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-void VPLastActiveMaskPHIRecipe::print(raw_ostream &O, const Twine &Indent,
-                                      VPSlotTracker &SlotTracker) const {
-  O << Indent << "LAST-ACTIVE-MASK-PHI ";
 
   printAsOperand(O, SlotTracker);
   O << " = phi ";
