@@ -42,7 +42,7 @@ private:
                             clang::ASTContext &Ctx,
                             std::optional<bool> &RootAssignsToBoolean);
 
-  bool StrictMode;
+  bool UnsafeMode;
   bool IgnoreMacros;
 };
 

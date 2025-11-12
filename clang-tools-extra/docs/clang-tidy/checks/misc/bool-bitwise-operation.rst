@@ -14,8 +14,17 @@ to implicit integer conversions and missed short-circuit evaluation.
 
   bool invalid = false;
   invalid |= x > limit.x; // warning: use logical operator '||' for boolean semantics instead of bitwise operator '|='
+                          //   400 |     invalid |= x > limit.x;
+                          //       |             ^~
+                          //       |             = invalid ||
   invalid |= y > limit.y; // warning: use logical operator '||' for boolean semantics instead of bitwise operator '|='
+                          //   401 |     invalid |= y > limit.y;
+                          //       |             ^~
+                          //       |             = invalid ||
   invalid |= z > limit.z; // warning: use logical operator '||' for boolean semantics instead of bitwise operator '|='
+                          //   402 |     invalid |= z > limit.z;
+                          //       |             ^~
+                          //       |             = invalid ||
   if (invalid) {
     // error handling
   }
@@ -33,24 +42,30 @@ instead of using the ``|=`` operator:
     // error handling
   }
 
+It is not always a safe transformation though. The following case will warn
+without fix-it to preserve the semantics.
+
+.. code-block:: c++
+
+  volatile bool invalid = false;
+  invalid |= x > limit.x; // warning: use logical operator '||' for boolean semantics instead of bitwise operator '|='
+
 Limitations
 -----------
 
-* Bitwise operators inside templates aren't matched.
+* Bitwise operators inside templates aren't guaranteed to match.
 
 .. code-block:: c++
 
      template <typename X>
      void f(X a, X b) {
-         a | b;
+         a | b; // the warning may not be emited
      }
-
-     // even 'f(true, false)' (or similar) won't trigger the warning.
 
 Options
 -------
 
-.. option:: StrictMode
+.. option:: UnsafeMode
 
     Enabling this option promotes more fix-it hints even when they might
     change evaluation order or skip side effects. Default value is `false`.

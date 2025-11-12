@@ -133,12 +133,12 @@ static const Expr *getAcceptableCompoundsLHS(const BinaryOperator *BinOp) {
 BoolBitwiseOperationCheck::BoolBitwiseOperationCheck(StringRef Name,
                                                      ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      StrictMode(Options.get("StrictMode", false)),
+      UnsafeMode(Options.get("UnsafeMode", false)),
       IgnoreMacros(Options.get("IgnoreMacros", false)) {}
 
 void BoolBitwiseOperationCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
-  Options.store(Opts, "StrictMode", StrictMode);
+  Options.store(Opts, "UnsafeMode", UnsafeMode);
   Options.store(Opts, "IgnoreMacros", IgnoreMacros);
 }
 
@@ -174,7 +174,7 @@ void BoolBitwiseOperationCheck::emitWarningAndChangeOperatorsIfPossible(
   }
 
   const bool HasSideEffects = BinOp->getRHS()->HasSideEffects(
-      Ctx, /*IncludePossibleEffects=*/!StrictMode);
+      Ctx, /*IncludePossibleEffects=*/!UnsafeMode);
   if (HasSideEffects) {
     DiagEmitter();
     return;
