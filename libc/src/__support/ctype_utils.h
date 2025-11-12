@@ -580,8 +580,8 @@ LIBC_INLINE static constexpr bool isgraph(char ch) {
 
 // An overload which provides a way to compare input with specific character
 // values, when input can be of a regular or a wide character type.
-LIBC_INLINE static constexpr bool is_one_of(char ch, char c_value,
-                                            [[maybe_unused]] wchar_t) {
+LIBC_INLINE static constexpr bool is_char_or_wchar(char ch, char c_value,
+                                                   [[maybe_unused]] wchar_t) {
   return (ch == c_value);
 }
 

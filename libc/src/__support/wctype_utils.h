@@ -579,8 +579,8 @@ LIBC_INLINE static constexpr bool isspace(wchar_t wch) {
 
 // An overload which provides a way to compare input with specific character
 // values, when input can be of a regular or a wide character type.
-LIBC_INLINE static constexpr bool is_one_of(wchar_t ch, [[maybe_unused]] char,
-                                            wchar_t wc_value) {
+LIBC_INLINE static constexpr bool
+is_char_or_wchar(wchar_t ch, [[maybe_unused]] char, wchar_t wc_value) {
   return (ch == wc_value);
 }
 
