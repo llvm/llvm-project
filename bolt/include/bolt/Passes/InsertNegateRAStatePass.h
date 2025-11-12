@@ -30,6 +30,8 @@ public:
 private:
   /// Because states are tracked as MCAnnotations on individual instructions,
   /// newly inserted instructions do not have a state associated with them.
+  /// Uses fillUnknownStateInBB, fillUnknownBlocksInCFG and fillUnknownStubs in
+  /// this order of priority.
   void inferUnknownStates(BinaryFunction &BF);
 
   /// Simple case: copy RAStates to unknown insts from previous inst.

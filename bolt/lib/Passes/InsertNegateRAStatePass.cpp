@@ -157,9 +157,10 @@ void InsertNegateRAState::fillUnknownStateInBB(BinaryContext &BC,
     if (BC.MIB->isCFI(Inst))
       continue;
 
+    // No need to check for nullopt: we only entered this loop after the first
+    // instruction had its RAState set, and RAState is always set for the
+    // previous instruction in the previous iteration of the loop.
     auto PrevRAState = BC.MIB->getRAState(Prev);
-    if (!PrevRAState)
-      llvm_unreachable("Previous Instruction has no RAState.");
 
     auto RAState = BC.MIB->getRAState(Inst);
     if (!RAState) {
@@ -195,6 +196,47 @@ void InsertNegateRAState::markUnknownBlock(BinaryContext &BC,
     if (BC.MIB->isCFI(Inst))
       continue;
     BC.MIB->setRAState(Inst, State);
+  }
+}
+
+void InsertNegateRAState::fillUnknownStubs(BinaryFunction &BF) {
+  BinaryContext &BC = BF.getBinaryContext();
+  bool FirstIter = true;
+  MCInst PrevInst;
+  for (FunctionFragment &FF : BF.getLayout().fragments()) {
+    for (BinaryBasicBlock *BB : FF) {
+      if (!FirstIter && isUnknownBlock(BC, *BB)) {
+        // If we have no predecessors or successors, current BB is a Stub called
+        // from another BinaryFunction. As of #160989, we have to copy the
+        // PrevInst's RAState, because CFIs are already incorrect here.
+        if (BB->pred_size() == 0 && BB->succ_size() == 0) {
+          auto PrevRAState = BC.MIB->getRAState(PrevInst);
+          if (!PrevRAState) {
+            llvm_unreachable(
+                "Previous Instruction has no RAState in fillUnknownStubs.");
+            continue;
+          }
+
+          if (BC.MIB->isPSignOnLR(PrevInst)) {
+            PrevRAState = true;
+          } else if (BC.MIB->isPAuthOnLR(PrevInst)) {
+            PrevRAState = false;
+          }
+          markUnknownBlock(BC, *BB, *PrevRAState);
+        }
+      }
+      if (FirstIter) {
+        FirstIter = false;
+        if (isUnknownBlock(BC, *BB))
+          // Set block to unsigned, because this is the first block of the
+          // function, and all instruction in it are new instructions generated
+          // by BOLT optimizations.
+          markUnknownBlock(BC, *BB, false);
+      }
+      auto Last = BB->getLastNonPseudo();
+      if (Last != BB->rend())
+        PrevInst = *Last;
+    }
   }
 }
 
@@ -244,43 +286,6 @@ std::optional<bool> InsertNegateRAState::getRAStateByCFG(BinaryBasicBlock &BB,
   return NeighborRAState;
 }
 
-void InsertNegateRAState::fillUnknownStubs(BinaryFunction &BF) {
-  BinaryContext &BC = BF.getBinaryContext();
-  bool FirstIter = true;
-  MCInst PrevInst;
-  for (FunctionFragment &FF : BF.getLayout().fragments()) {
-    for (BinaryBasicBlock *BB : FF) {
-      if (!FirstIter && isUnknownBlock(BC, *BB)) {
-        // If we have no predecessors or successors, current BB is a Stub called
-        // from another BinaryFunction. As of #160989, we have to copy the
-        // PrevInst's RAState, because CFIs are already incorrect here.
-        if (BB->pred_size() == 0 && BB->succ_size() == 0) {
-          auto PrevRAState = BC.MIB->getRAState(PrevInst);
-          if (!PrevRAState) {
-            llvm_unreachable(
-                "Previous Instruction has no RAState in fillUnknownStubs.");
-            continue;
-          }
-
-          if (BC.MIB->isPSignOnLR(PrevInst)) {
-            PrevRAState = true;
-          } else if (BC.MIB->isPAuthOnLR(PrevInst)) {
-            PrevRAState = false;
-          }
-          markUnknownBlock(BC, *BB, *PrevRAState);
-        }
-      }
-      if (FirstIter) {
-        FirstIter = false;
-        if (isUnknownBlock(BC, *BB))
-          markUnknownBlock(BC, *BB, false);
-      }
-      auto Last = BB->getLastNonPseudo();
-      if (Last != BB->rend())
-        PrevInst = *Last;
-    }
-  }
-}
 void InsertNegateRAState::fillUnknownBlocksInCFG(BinaryFunction &BF) {
   BinaryContext &BC = BF.getBinaryContext();
 
