@@ -328,7 +328,7 @@ mlir::LogicalResult CIRToLLVMLLVMIntrinsicCallOpLowering::matchAndRewrite(
   if (!llvmResTy)
     return op.emitError("expected LLVM result type");
   StringRef name = op.getIntrinsicName();
-  
+
   // Some LLVM intrinsics require ElementType attribute to be attached to
   // the argument of pointer type. That prevents us from generating LLVM IR
   // because from LLVM dialect, we have LLVM IR like the below which fails

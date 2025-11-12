@@ -21,7 +21,6 @@
 using namespace clang;
 using namespace clang::CIRGen;
 
-
 template <typename... Operands>
 static mlir::Value emitIntrinsicCallOp(CIRGenFunction &cgf, const CallExpr *e,
                                        const std::string &str,
