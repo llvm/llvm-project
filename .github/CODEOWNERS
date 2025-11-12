@@ -64,6 +64,8 @@
 /mlir/include/mlir/Dialect/XeGPU @charithaintc @Jianhui-Li
 /mlir/lib/Dialect/XeGPU @charithaintc @Jianhui-Li
 /mlir/lib/Conversion/*XeGPU* @charithaintc @Jianhui-Li
+/mlir/include/mlir/Dialect/XeGPU/Transforms @charithaintc @Jianhui-Li @tkarna
+/mlir/lib/Dialect/XeGPU/Transforms @charithaintc @Jianhui-Li @tkarna
 /mlir/include/mlir/Dialect/LLVMIR/XeVM* @silee2
 /mlir/lib/Dialect/LLVMIR/IR/XeVM @silee2
 /mlir/lib/Conversion/*XeVM* @silee2
