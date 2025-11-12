@@ -36,7 +36,7 @@
 
 /// -fthinlto-index= warning suppression.
 // RUN: touch %t_dummy.o
-// RUN: env SCE_ORBIS_SDK_DIR=.. %clang @%t.rsp %t_dummy.o -fthinlto-index=ignored 2>&1 | FileCheck -check-prefixes=NO-WARN %s
+// RUN: env SCE_ORBIS_SDK_DIR=.. %clang @%t.rsp %t_dummy.o -fthinlto-index=ignored -c 2>&1 | FileCheck -check-prefixes=NO-WARN %s
 
 /// If `-c`, `-S`, `-E` or `-emit-ast` is supplied, the existence check for SDK
 /// libraries is skipped because no linking will be performed. We only expect
