@@ -427,6 +427,8 @@ Improvements to Clang's diagnostics
 - Clang now emits a diagnostic in case `vector_size` or `ext_vector_type`
   attributes are used with a negative size (#GH165463).
 
+- Clang now diagnoses ``-Wunused-member-function`` with a specific message for constructors.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
