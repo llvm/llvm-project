@@ -278,6 +278,9 @@ public:
 
   void ConfigureModuleValidation(std::vector<std::string> &extra_args);
 
+  /// Check whether a module with key \c key is available in CAS.
+  bool IsModuleAvailableInCAS(const std::string &key);
+
   /// Add a list of Clang arguments to the ClangImporter options and
   /// apply the working directory to any relative paths.
   void AddExtraClangArgs(
@@ -972,6 +975,7 @@ protected:
   /// Owned by the AST.
   swift::MemoryBufferSerializedModuleLoader *m_memory_buffer_module_loader =
       nullptr;
+  swift::ModuleLoader *m_explicit_swift_module_loader = nullptr;
   swift::ClangImporter *m_clangimporter = nullptr;
   /// Wraps the clang::ASTContext owned by ClangImporter.
   std::shared_ptr<TypeSystemClang> m_clangimporter_typesystem;
