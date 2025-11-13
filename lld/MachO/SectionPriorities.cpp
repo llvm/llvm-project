@@ -357,8 +357,11 @@ void macho::PriorityBuilder::parseOrderFile(StringRef path) {
       uint32_t hash = 0;
       if (to_integer(line, hash))
         cStringPriorities[hash].setPriority(prio, objectFile);
-    } else
-      priorities[utils::getRootSymbol(line)].setPriority(prio, objectFile);
+    } else {
+      StringRef symbol = utils::getRootSymbol(line);
+      if (!symbol.empty())
+        priorities[symbol].setPriority(prio, objectFile);
+    }
 
     ++prio;
   }

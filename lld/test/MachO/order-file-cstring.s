@@ -30,7 +30,7 @@
 # RUN: llvm-readobj --string-dump=__cstring %t/test-4 | FileCheck %s --check-prefix=FOUR_SEC_ESCAPE
 
 # We expect:
-# 1) Covered cstring symbols are reordered
+# 1) Covered cstring symbols to be reordered
 # 2) the rest of the cstring symbols remain in the original relative order within the cstring section
 
 # ORIGIN_SYM: _local_foo1
@@ -51,27 +51,27 @@
 
 # original order, but only parital covered
 #--- ord-1
-#bar2
-CSTR;1496286555
 #foo2
 CSTR;1433942677
-#foo3
-CSTR;1343999025
 #bar
 CSTR;540201826
+#bar2
+CSTR;1496286555
+#foo3
+CSTR;1343999025
 
-# ONE_SYM: _bar2
 # ONE_SYM-DAG: _globl_foo2
 # ONE_SYM-DAG: _local_foo2
-# ONE_SYM: _globl_foo3
 # ONE_SYM: _bar
+# ONE_SYM: _bar2
+# ONE_SYM: _globl_foo3
 # ONE_SYM: _baz
 # ONE_SYM: _baz_dup
 
-# ONE_SEC: bar2
 # ONE_SEC: foo2
-# ONE_SEC: foo3
 # ONE_SEC: bar
+# ONE_SEC: bar2
+# ONE_SEC: foo3
 # ONE_SEC: baz
 
 

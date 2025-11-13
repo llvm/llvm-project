@@ -94,7 +94,7 @@ private:
   std::optional<int> getCStringPriority(uint32_t hash,
                                         const InputFile *f) const;
   llvm::DenseMap<llvm::StringRef, SymbolPriorityEntry> priorities;
-  llvm::DenseMap<int32_t, SymbolPriorityEntry> cStringPriorities;
+  llvm::DenseMap<uint32_t, SymbolPriorityEntry> cStringPriorities;
   llvm::MapVector<SectionPair, uint64_t> callGraphProfile;
 };
 
