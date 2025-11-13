@@ -83,6 +83,8 @@ struct LiveRegUnit {
   LiveRegUnit(unsigned RU) : RegUnit(RU) {}
 };
 
+using LiveRegUnitSet = SparseSet<LiveRegUnit>;
+
 /// Strategies for selecting traces.
 enum class MachineTraceStrategy {
   /// Select the trace through a block that has the fewest instructions.
@@ -381,15 +383,14 @@ public:
 
     /// Updates the depth of an machine instruction, given RegUnits.
     void updateDepth(TraceBlockInfo &TBI, const MachineInstr&,
-                     SparseSet<LiveRegUnit> &RegUnits);
+                     LiveRegUnitSet &RegUnits);
     void updateDepth(const MachineBasicBlock *, const MachineInstr&,
-                     SparseSet<LiveRegUnit> &RegUnits);
+                     LiveRegUnitSet &RegUnits);
 
     /// Updates the depth of the instructions from Start to End.
     void updateDepths(MachineBasicBlock::iterator Start,
                       MachineBasicBlock::iterator End,
-                      SparseSet<LiveRegUnit> &RegUnits);
-
+                      LiveRegUnitSet &RegUnits);
   };
 
   /// Get the trace ensemble representing the given trace selection strategy.
