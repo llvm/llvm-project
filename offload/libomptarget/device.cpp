@@ -373,9 +373,9 @@ bool DeviceTy::isAccessiblePtr(const void *Ptr, size_t Size) {
 }
 
 uint64_t DeviceTy::getMaxSharedTeamMemory() {
-  InfoTreeNode Info = RTL->query_device_info(RTLDeviceID);
+  InfoTreeNode Info = RTL->obtain_device_info(RTLDeviceID);
 
-  auto EntryOpt = Info.get(DeviceInfo::WORK_GROUP_SHARED_MEM_SIZE);
+  auto EntryOpt = Info.get(DeviceInfo::WORK_GROUP_LOCAL_MEM_SIZE);
   if (!EntryOpt)
     return 0;
 

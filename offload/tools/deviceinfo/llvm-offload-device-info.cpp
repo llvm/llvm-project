@@ -205,8 +205,6 @@ ol_result_t printDevice(std::ostream &S, ol_device_handle_t D) {
       S, D, OL_DEVICE_INFO_MAX_MEM_ALLOC_SIZE, "Max Mem Allocation Size", "B"));
   OFFLOAD_ERR(printDeviceValue<uint64_t>(S, D, OL_DEVICE_INFO_GLOBAL_MEM_SIZE,
                                          "Global Mem Size", "B"));
-  OFFLOAD_ERR(printDeviceValue<uint64_t>(S, D, OL_DEVICE_INFO_WORK_GROUP_SHARED_MEM_SIZE,
-                                         "Work Group Shared Mem Size", "B"));
   OFFLOAD_ERR(
       printDeviceValue<uint64_t>(S, D, OL_DEVICE_INFO_WORK_GROUP_LOCAL_MEM_SIZE,
                                  "Work Group Shared Mem Size", "B"));

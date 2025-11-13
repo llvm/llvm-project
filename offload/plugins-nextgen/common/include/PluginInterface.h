@@ -299,6 +299,18 @@ private:
   }
 };
 
+/// Configuration of dynamic block memory needed for launching a kernel.
+struct DynBlockMemConfTy {
+  /// The size of the dynamic block memory buffer.
+  uint32_t Size = 0;
+  /// The size of dynamic shared memory natively provided by the device.
+  uint32_t NativeSize = 0;
+  /// The fallback that was triggered (if any).
+  DynCGroupMemFallbackType Fallback = DynCGroupMemFallbackType::None;
+  /// The fallback pointer if global memory was used as alternative.
+  void *FallbackPtr = nullptr;
+};
+
 /// Class wrapping a __tgt_device_image and its offload entry table on a
 /// specific device. This class is responsible for storing and managing
 /// the offload entries for an image on a device.
@@ -386,10 +398,11 @@ struct GenericKernelTy {
   }
 
   /// Return a device pointer to a new kernel launch environment.
-  Expected<KernelLaunchEnvironmentTy *> getKernelLaunchEnvironment(
-      GenericDeviceTy &GenericDevice, const KernelArgsTy &KernelArgs,
-      uint32_t BlockMemSize, DynCGroupMemFallbackType DynBlockMemFb,
-      void *DynBlockMemFbPtr, AsyncInfoWrapperTy &AsyncInfoWrapper) const;
+  Expected<KernelLaunchEnvironmentTy *>
+  getKernelLaunchEnvironment(GenericDeviceTy &GenericDevice,
+                             const KernelArgsTy &KernelArgs,
+                             const DynBlockMemConfTy &DynBlockMemConf,
+                             AsyncInfoWrapperTy &AsyncInfoWrapper) const;
 
   /// Indicate whether an execution mode is valid.
   static bool isValidExecutionMode(OMPTgtExecModeFlags ExecutionMode) {
@@ -435,19 +448,11 @@ protected:
                                        uint32_t NumBlocks[3]) const;
 
 private:
-  /// Information about the dynamic block memory needed for launching a kernel.
-  struct DynBlockMemInfoTy {
-    /// The size of the dynamic block memory buffer.
-    uint32_t Size = 0;
-    /// The size of dynamic shared memory natively provided by the device.
-    uint32_t NativeSize = 0;
-    /// The fallback that was triggered (if any).
-    DynCGroupMemFallbackType DynBlockMemFb = DynCGroupMemFallbackType::None;
-    /// The fallback pointer if global memory was used as alternative.
-    void *FallbackPtr = nullptr;
-  };
-
-  Expected<DynBlockMemInfoTy> prepareBlockMemory(GenericDeviceTy &GenericDevice, KernelArgsTy &KernelArgs);
+  /// Prepare the block memory buffer requested for the kernel and execute the
+  /// specified fallback if necessary.
+  Expected<DynBlockMemConfTy> prepareBlockMemory(GenericDeviceTy &GenericDevice,
+                                                 KernelArgsTy &KernelArgs,
+                                                 uint32_t NumBlocks) const;
 
   /// Prepare the arguments before launching the kernel.
   KernelLaunchParamsTy

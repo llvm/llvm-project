@@ -437,8 +437,8 @@ Error GenericKernelTy::init(GenericDeviceTy &GenericDevice,
 Expected<KernelLaunchEnvironmentTy *>
 GenericKernelTy::getKernelLaunchEnvironment(
     GenericDeviceTy &GenericDevice, const KernelArgsTy &KernelArgs,
-    uint32_t BlockMemSize, DynCGroupMemFallbackType DynBlockMemFb,
-    void *DynBlockMemFbPtr, AsyncInfoWrapperTy &AsyncInfoWrapper) const {
+    const DynBlockMemConfTy &DynBlockMemConf,
+    AsyncInfoWrapperTy &AsyncInfoWrapper) const {
   // Ctor/Dtor have no arguments, replaying uses the original kernel launch
   // environment. Older versions of the compiler do not generate a kernel
   // launch environment.
@@ -480,9 +480,9 @@ GenericKernelTy::getKernelLaunchEnvironment(
     LocalKLE.ReductionBuffer = nullptr;
   }
 
-  LocalKLE.DynCGroupMemSize = BlockMemSize;
-  LocalKLE.DynCGroupMemFbPtr = DynBlockMemFbPtr;
-  LocalKLE.DynCGroupMemFb = DynBlockMemFb;
+  LocalKLE.DynCGroupMemSize = DynBlockMemConf.Size;
+  LocalKLE.DynCGroupMemFbPtr = DynBlockMemConf.FallbackPtr;
+  LocalKLE.DynCGroupMemFb = DynBlockMemConf.Fallback;
 
   INFO(OMP_INFOTYPE_DATA_TRANSFER, GenericDevice.getDeviceId(),
        "Copying data from host to device, HstPtr=" DPxMOD ", TgtPtr=" DPxMOD
@@ -518,47 +518,51 @@ Error GenericKernelTy::printLaunchInfoDetails(GenericDeviceTy &GenericDevice,
   return Plugin::success();
 }
 
-Expected<DynBlockMemInfoTy> prepareBlockMemory(GenericDeviceTy &GenericDevice, KernelArgsTy &KernelArgs) {
-  uint32_t MaxSize = GenericDevice.getMaxBlockSharedMemSize();
-  uint32_t DynSize = KernelArgs.DynCGroupMem;
-  uint32_t TotalSize = StaticSize + DynSize;
-  uint32_t DynNativeSize = DynSize;
+Expected<DynBlockMemConfTy>
+GenericKernelTy::prepareBlockMemory(GenericDeviceTy &GenericDevice,
+                                    KernelArgsTy &KernelArgs,
+                                    uint32_t NumBlocks) const {
+  uint32_t MaxBlockMemSize = GenericDevice.getMaxBlockSharedMemSize();
+  uint32_t DynBlockMemSize = KernelArgs.DynCGroupMem;
+  uint32_t TotalBlockMemSize = StaticBlockMemSize + DynBlockMemSize;
+  uint32_t DynNativeBlockMemSize = DynBlockMemSize;
   void *DynFallbackPtr = nullptr;
 
   // No enough block memory to cover the static one. Cannot run the kernel.
-  if (StaticSize > MaxSize)
+  if (StaticBlockMemSize > MaxBlockMemSize)
     return Plugin::error(ErrorCode::INVALID_ARGUMENT,
                          "Static block memory size exceeds maximum");
   // No enough block memory to cover dynamic one, and the fallback is aborting.
   else if (static_cast<DynCGroupMemFallbackType>(
                KernelArgs.Flags.DynCGroupMemFallback) ==
                DynCGroupMemFallbackType::Abort &&
-           TotalSize > MaxSize)
+           TotalBlockMemSize > MaxBlockMemSize)
     return Plugin::error(
         ErrorCode::INVALID_ARGUMENT,
         "Static and dynamic block memory size exceeds maximum");
 
   DynCGroupMemFallbackType DynFallback = DynCGroupMemFallbackType::None;
-  if (DynSize && (!GenericDevice.hasNativeBlockSharedMem() ||
-                          TotalSize > MaxSize)) {
+  if (DynBlockMemSize && (!GenericDevice.hasNativeBlockSharedMem() ||
+                          TotalBlockMemSize > MaxBlockMemSize)) {
     // Launch without native dynamic block memory.
-    DynNativeSize = 0;
+    DynNativeBlockMemSize = 0;
     DynFallback = static_cast<DynCGroupMemFallbackType>(
         KernelArgs.Flags.DynCGroupMemFallback);
     if (DynFallback == DynCGroupMemFallbackType::DefaultMem) {
       // Get global memory as fallback.
       auto AllocOrErr = GenericDevice.dataAlloc(
-          NumBlocks[0] * DynSize,
+          NumBlocks * DynBlockMemSize,
           /*HostPtr=*/nullptr, TargetAllocTy::TARGET_ALLOC_DEVICE);
       if (!AllocOrErr)
         return AllocOrErr.takeError();
       DynFallbackPtr = *AllocOrErr;
     } else {
       // Do not provide any memory as fallback.
-      DynSize = 0;
+      DynBlockMemSize = 0;
     }
   }
-  return { DynSize, DynNativeSize, DynFallback, DynFallbackPtr };
+  return DynBlockMemConfTy{DynBlockMemSize, DynNativeBlockMemSize, DynFallback,
+                           DynFallbackPtr};
 }
 
 Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
@@ -578,17 +582,18 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
                                 NumThreads[0], KernelArgs.ThreadLimit[0] > 0);
   }
 
-  auto DynBlockMemInfoOrErr = prepareBlockMemory(GenericDevice, KernelArgs);
-  if (!DynBlockMemInfoOrErr)
-    return DynBlockMemInfoOrErr.takeError();
+  auto DynBlockMemConfOrErr =
+      prepareBlockMemory(GenericDevice, KernelArgs, NumBlocks[0]);
+  if (!DynBlockMemConfOrErr)
+    return DynBlockMemConfOrErr.takeError();
 
-  DynBlockMemInfoTy &DynBlockMemInfo = *DynBlockMemInfoOrErr;
-  if (DynBlockMemInfo.FallbackPtr)
-    AsyncInfoWrapper.freeAllocationAfterSynchronization(DynBlockMemInfo.FallbackPtr);
+  DynBlockMemConfTy &DynBlockMemConf = *DynBlockMemConfOrErr;
+  if (DynBlockMemConf.FallbackPtr)
+    AsyncInfoWrapper.freeAllocationAfterSynchronization(
+        DynBlockMemConf.FallbackPtr);
 
   auto KernelLaunchEnvOrErr = getKernelLaunchEnvironment(
-      GenericDevice, KernelArgs, DynBlockMemInfo.Size, DynBlockMemInfo.Fallback,
-      DynBlockMemInfo.FallbackPtr, AsyncInfoWrapper);
+      GenericDevice, KernelArgs, DynBlockMemConf, AsyncInfoWrapper);
   if (!KernelLaunchEnvOrErr)
     return KernelLaunchEnvOrErr.takeError();
 
@@ -619,8 +624,9 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
           printLaunchInfo(GenericDevice, KernelArgs, NumThreads, NumBlocks))
     return Err;
 
-  return launchImpl(GenericDevice, NumThreads, NumBlocks, DynBlockMemInfo.NativeSize,
-                    KernelArgs, LaunchParams, AsyncInfoWrapper);
+  return launchImpl(GenericDevice, NumThreads, NumBlocks,
+                    DynBlockMemConf.NativeSize, KernelArgs, LaunchParams,
+                    AsyncInfoWrapper);
 }
 
 KernelLaunchParamsTy GenericKernelTy::prepareArgs(
@@ -2044,7 +2050,7 @@ InfoTreeNode GenericPluginTy::obtain_device_info(int32_t DeviceId) {
            toString(std::move(Err)).data());
     return InfoTreeNode{};
   }
-  return *InfoOrErr;
+  return std::move(*InfoOrErr);
 }
 
 void GenericPluginTy::print_device_info(int32_t DeviceId) {
