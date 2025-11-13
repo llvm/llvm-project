@@ -66,6 +66,13 @@ bool vputils::isHeaderMask(const VPValue *V, const VPlan &Plan) {
                       m_One(), m_Specific(&Plan.getVF()))) ||
             IsWideCanonicalIV(A));
 
+  if (match(V,
+            m_ICmp(m_ScalarIVSteps(
+                       m_Specific(Plan.getVectorLoopRegion()->getCanonicalIV()),
+                       m_One(), m_Specific(&Plan.getVF())),
+                   m_Specific(Plan.getBackedgeTakenCount()))))
+    return true;
+
   return match(V, m_ICmp(m_VPValue(A), m_VPValue(B))) && IsWideCanonicalIV(A) &&
          B == Plan.getBackedgeTakenCount();
 }
