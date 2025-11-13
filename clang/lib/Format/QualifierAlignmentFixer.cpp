@@ -177,7 +177,7 @@ static bool isQualifier(const FormatToken *const Tok) {
 
 const FormatToken *LeftRightQualifierAlignmentFixer::analyzeRight(
     const SourceManager &SourceMgr, const AdditionalKeywords &Keywords,
-    tooling::Replacements &Fixes, const FormatToken *Tok,
+    tooling::Replacements &Fixes, const FormatToken *const Tok,
     const std::string &Qualifier, tok::TokenKind QualifierType) {
   // We only need to think about streams that begin with a qualifier.
   if (Tok->isNot(QualifierType))
