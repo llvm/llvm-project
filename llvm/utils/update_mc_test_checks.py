@@ -130,9 +130,6 @@ def update_test(ti: common.TestInfo):
         mc_mode = "asm"
     elif ti.path.endswith(".txt"):
         mc_mode = "dasm"
-
-        if ti.args.sort:
-            raise Exception("sorting with dasm(.txt) file is not supported!")
     else:
         common.warn("Expected .s and .txt, Skipping file : ", ti.path)
         return
@@ -249,6 +246,7 @@ def update_test(ti: common.TestInfo):
 
     output_lines = []
     generated_prefixes = {}
+    sort_keys = {}
     used_prefixes = set()
     prefix_set = set([prefix for p in run_list for prefix in p[0]])
     common.debug("Rewriting FileCheck prefixes:", str(prefix_set))
@@ -293,6 +291,17 @@ def update_test(ti: common.TestInfo):
                 selected_prefixes.add(prefix)
 
             used_run_ids.update(run_ids)
+
+        # Use smallest outputs across RUN lines as sorting keys for
+        # disassembler tests. Sort by instruction codes if no RUN line
+        # produced a disassembled instruction.
+        if mc_mode == "dasm":
+            instr_outs = [
+                o
+                for prefix, (o, run_ids) in p_dict_sorted
+                if o is not None and "encoding:" in o
+            ]
+            sort_keys[input_line] = min(instr_outs) if instr_outs else input_line
 
         # Generate check lines in alphabetical order.
         check_lines = []
@@ -367,7 +376,7 @@ def update_test(ti: common.TestInfo):
                     line = l.split("\n")[0]
 
                 # runline placed on the top
-                return (not isRunLine(line), line)
+                return (not isRunLine(line), sort_keys.get(line, line))
 
             test_units = sorted(test_units, key=getkey)
 
