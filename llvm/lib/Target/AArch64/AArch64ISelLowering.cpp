@@ -445,6 +445,9 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     addRegisterClass(MVT::nxv8i1, &AArch64::PPRRegClass);
     addRegisterClass(MVT::nxv16i1, &AArch64::PPRRegClass);
 
+    // Add sve predicate as counter type
+    addRegisterClass(MVT::aarch64svcount, &AArch64::PPRRegClass);
+
     // Add legal sve data types
     addRegisterClass(MVT::nxv16i8, &AArch64::ZPRRegClass);
     addRegisterClass(MVT::nxv8i16, &AArch64::ZPRRegClass);
@@ -461,8 +464,6 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     addRegisterClass(MVT::nxv2bf16, &AArch64::ZPRRegClass);
     addRegisterClass(MVT::nxv4bf16, &AArch64::ZPRRegClass);
     addRegisterClass(MVT::nxv8bf16, &AArch64::ZPRRegClass);
-
-    addRegisterClass(MVT::aarch64svcount, &AArch64::PPRRegClass);
 
     if (Subtarget->useSVEForFixedLengthVectors()) {
       for (MVT VT : MVT::integer_fixedlen_vector_valuetypes())
