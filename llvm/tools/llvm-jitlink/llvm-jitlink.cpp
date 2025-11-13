@@ -1297,10 +1297,13 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
       ObjLayer.addPlugin(ExitOnErr(EHFrameRegistrationPlugin::Create(ES)));
     if (DebuggerSupport) {
       Error TargetSymErr = Error::success();
-      ObjLayer.addPlugin(std::make_unique<DebugObjectManagerPlugin>(
-          ES, true, true, TargetSymErr));
-      logAllUnhandledErrors(std::move(TargetSymErr), errs(),
-                            "Debugger support not available: ");
+      auto Plugin = std::make_unique<DebugObjectManagerPlugin>(ES, true, true,
+                                                               TargetSymErr);
+      if (!TargetSymErr)
+        ObjLayer.addPlugin(std::move(Plugin));
+      else
+        logAllUnhandledErrors(std::move(TargetSymErr), errs(),
+                              "Debugger support not available: ");
     }
   }
 
