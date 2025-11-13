@@ -3450,8 +3450,9 @@ def warn_attribute_return_pointers_only : Warning<
   "%0 attribute only applies to return values that are pointers">,
   InGroup<IgnoredAttributes>;
 def warn_attribute_return_span_only
-    : Warning<"%0 attribute only applies to return values that are span-like "
-              "structures">,
+    : Warning<"%0 attribute only applies to functions that return span-like structures: "
+    "one field is a pointer to the allocated memory and another field is an integer with "
+    "the size of the allocated memory">,
       InGroup<IgnoredAttributes>;
 def warn_attribute_return_pointers_refs_only : Warning<
   "%0 attribute only applies to return values that are pointers or references">,
