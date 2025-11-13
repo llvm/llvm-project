@@ -135,12 +135,24 @@ _LIBCPP_HARDENING_MODE_EXTENSIVE, \
 _LIBCPP_HARDENING_MODE_DEBUG
 #endif
 
-// Hardening assertion semantics generally mirror the evaluation semantics of C++26 Contracts:
+// The library provides the macro `_LIBCPP_ASSERTION_SEMANTIC` for configuring the assertion semantic used by hardening;
+// it can be set to one of the following values:
+//
+// - `_LIBCPP_ASSERTION_SEMANTIC_IGNORE`;
+// - `_LIBCPP_ASSERTION_SEMANTIC_OBSERVE`;
+// - `_LIBCPP_ASSERTION_SEMANTIC_QUICK_ENFORCE`;
+// - `_LIBCPP_ASSERTION_SEMANTIC_ENFORCE`.
+//
+// libc++ assertion semantics generally mirror the evaluation semantics of C++26 Contracts:
 // - `ignore` evaluates the assertion but doesn't do anything if it fails (note that it differs from the Contracts
 //   `ignore` semantic which wouldn't evaluate the assertion at all);
 // - `observe` logs an error (indicating, if possible, that the error is fatal) and continues execution;
 // - `quick-enforce` terminates the program as fast as possible (via trapping);
 // - `enforce` logs an error and then terminates the program.
+//
+// Additionally, a special `hardening-dependent` value selects the assertion semantic based on the hardening mode in
+// effect: the production-capable modes (`fast` and `extensive`) map to `quick_enforce` and the `debug` mode maps to
+// `enforce`.
 //
 // Notes:
 // - Continuing execution after a hardening check fails results in undefined behavior; the `observe` semantic is meant
@@ -150,42 +162,42 @@ _LIBCPP_HARDENING_MODE_DEBUG
 //   hardened preconditions, however, be aware that using `ignore` does not produce a conforming "Hardened"
 //   implementation, unlike the other semantics above.
 // clang-format off
-#  define _LIBCPP_ASSERTION_SEMANTIC_IGNORE        (1 << 1)
-#  define _LIBCPP_ASSERTION_SEMANTIC_OBSERVE       (1 << 2)
-#  define _LIBCPP_ASSERTION_SEMANTIC_QUICK_ENFORCE (1 << 3)
-#  define _LIBCPP_ASSERTION_SEMANTIC_ENFORCE       (1 << 4)
+#  define _LIBCPP_ASSERTION_SEMANTIC_HARDENING_DEPENDENT (1 << 1)
+#  define _LIBCPP_ASSERTION_SEMANTIC_IGNORE              (1 << 2)
+#  define _LIBCPP_ASSERTION_SEMANTIC_OBSERVE             (1 << 3)
+#  define _LIBCPP_ASSERTION_SEMANTIC_QUICK_ENFORCE       (1 << 4)
+#  define _LIBCPP_ASSERTION_SEMANTIC_ENFORCE             (1 << 5)
 // clang-format on
 
-// If the user or the vendor attempt to configure the assertion semantic, check that it is allowed in the current
-// environment.
-#if defined(_LIBCPP_ASSERTION_SEMANTIC) || defined(_LIBCPP_ASSERTION_SEMANTIC_DEFAULT)
+// If the user attempts to configure the assertion semantic, check that it is allowed in the current environment.
+#if defined(_LIBCPP_ASSERTION_SEMANTIC)
 #  if !_LIBCPP_HAS_EXPERIMENTAL_LIBRARY
 #    error "Assertion semantics are an experimental feature."
 #  endif
 #  if defined(_LIBCPP_CXX03_LANG)
 #    error "Assertion semantics are not available in the C++03 mode."
 #  endif
-#endif // defined(_LIBCPP_ASSERTION_SEMANTIC) || defined(_LIBCPP_ASSERTION_SEMANTIC_DEFAULT)
+#endif // defined(_LIBCPP_ASSERTION_SEMANTIC)
 
-// There are 2 ways to configure the assertion semantic, listed in order of precedence:
-// 1. The `_LIBCPP_ASSERTION_SEMANTIC` macro, defined directly by the user.
-// 2. The `LIBCXX_ASSERTION_SEMANTIC` CMake variable, set by the vendor.
-// If neither `_LIBCPP_ASSERTION_SEMANTIC` nor `LIBCXX_ASSERTION_SEMANTIC` are defined, the default mapping is used
-// which determines the semantic based on the hardening mode in effect: production-capable modes map to `quick-enforce`
-// (i.e., trap) and the `debug` mode maps to `enforce` (i.e., log and abort).
-#ifndef _LIBCPP_ASSERTION_SEMANTIC // User-provided semantic takes top priority -- don't override if set.
+// User-provided semantic takes top priority -- don't override if set.
+#ifndef _LIBCPP_ASSERTION_SEMANTIC
 
-#  ifdef _LIBCPP_ASSERTION_SEMANTIC_DEFAULT // Vendor-provided semantic takes second priority.
+#  ifndef _LIBCPP_ASSERTION_SEMANTIC_DEFAULT
+#    error _LIBCPP_ASSERTION_SEMANTIC_DEFAULT is not defined. This definition should be set at configuration time in \
+the `__config_site` header, please make sure your installation of libc++ is not broken.
+#  endif
+
+#  if _LIBCPP_ASSERTION_SEMANTIC_DEFAULT != _LIBCPP_ASSERTION_SEMANTIC_HARDENING_DEPENDENT
 #    define _LIBCPP_ASSERTION_SEMANTIC _LIBCPP_ASSERTION_SEMANTIC_DEFAULT
-#  else // Fallback: use the default mapping.
+#  else
 #    if _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_DEBUG
 #      define _LIBCPP_ASSERTION_SEMANTIC _LIBCPP_ASSERTION_SEMANTIC_ENFORCE
 #    else
 #      define _LIBCPP_ASSERTION_SEMANTIC _LIBCPP_ASSERTION_SEMANTIC_QUICK_ENFORCE
 #    endif
-#  endif //    ifdef _LIBCPP_ASSERTION_SEMANTIC_DEFAULT
+#  endif // _LIBCPP_ASSERTION_SEMANTIC_DEFAULT != _LIBCPP_ASSERTION_SEMANTIC_HARDENING_DEPENDENT
 
-#endif // _LIBCPP_ASSERTION_SEMANTIC
+#endif // #ifndef _LIBCPP_ASSERTION_SEMANTIC
 
 // Finally, validate the selected semantic (in case the user tries setting it to an incorrect value):
 #if _LIBCPP_ASSERTION_SEMANTIC != _LIBCPP_ASSERTION_SEMANTIC_IGNORE &&                                                 \
