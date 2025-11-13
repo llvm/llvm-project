@@ -406,16 +406,14 @@ struct FusionCandidateCompare {
 
     // Do this compare first so if LHS == RHS, function returns false.
     if (DT->dominates(RHSEntryBlock, LHSEntryBlock)) {
-      // RHS dominates LHS
-      // Verify LHS post-dominates RHS
-      assert(LHS.PDT->dominates(LHSEntryBlock, RHSEntryBlock));
-      return false;
+      // RHS dominates LHS.
+      // Check if LHS post-dominates RHS.
+      return !LHS.PDT->dominates(LHSEntryBlock, RHSEntryBlock);
     }
 
     if (DT->dominates(LHSEntryBlock, RHSEntryBlock)) {
-      // Verify RHS Postdominates LHS
-      assert(LHS.PDT->dominates(RHSEntryBlock, LHSEntryBlock));
-      return true;
+      // Check if RHS postdominates LHS.
+      return LHS.PDT->dominates(RHSEntryBlock, LHSEntryBlock);
     }
 
     // If two FusionCandidates are in the same level of dominator tree,

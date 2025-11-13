@@ -390,3 +390,142 @@ for.2:                                       ; preds = %for.cond13, %for.body6, 
 exit:                                          ; preds = %for.cond13
   ret void
 }
+
+define void @foo(ptr noalias %A, ptr noalias %B, i64 %N) {
+; CHECK-LABEL: @foo(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP4:%.*]] = icmp slt i64 0, [[N:%.*]]
+; CHECK-NEXT:    br i1 [[CMP4]], label [[BB3:%.*]], label [[BB14:%.*]]
+; CHECK:       bb3:
+; CHECK-NEXT:    br label [[BB5:%.*]]
+; CHECK:       bb5:
+; CHECK-NEXT:    [[I_05:%.*]] = phi i64 [ [[INC:%.*]], [[BB5]] ], [ 0, [[BB3]] ]
+; CHECK-NEXT:    [[I_0510:%.*]] = phi i64 [ [[INC10:%.*]], [[BB5]] ], [ 0, [[BB3]] ]
+; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i64 [[I_05]], 3
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i64 [[I_05]], 3
+; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i64 [[SUB]], [[ADD]]
+; CHECK-NEXT:    [[REM:%.*]] = srem i64 [[MUL]], [[I_05]]
+; CHECK-NEXT:    [[CONV:%.*]] = trunc i64 [[REM]] to i32
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[I_05]]
+; CHECK-NEXT:    store i32 [[CONV]], ptr [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[INC]] = add nsw i64 [[I_05]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[INC]], [[N]]
+; CHECK-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], i64 [[I_0510]]
+; CHECK-NEXT:    [[LOAD_B:%.*]] = load i32, ptr [[ARRAYIDX10]], align 4
+; CHECK-NEXT:    [[ARRAYIDX11:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I_0510]]
+; CHECK-NEXT:    store i32 0, ptr [[ARRAYIDX11]], align 4
+; CHECK-NEXT:    [[INC10]] = add nsw i64 [[I_0510]], 1
+; CHECK-NEXT:    [[CMP10:%.*]] = icmp slt i64 [[INC10]], [[N]]
+; CHECK-NEXT:    br i1 [[CMP10]], label [[BB5]], label [[BB1010:%.*]]
+; CHECK:       bb1010:
+; CHECK-NEXT:    br label [[BB14]]
+; CHECK:       bb14:
+; CHECK-NEXT:    br i1 [[CMP4]], label [[BB8:%.*]], label [[BB12:%.*]]
+; CHECK:       bb8:
+; CHECK-NEXT:    br label [[BB9:%.*]]
+; CHECK:       bb9:
+; CHECK-NEXT:    [[I1_02:%.*]] = phi i64 [ [[INC14:%.*]], [[BB9]] ], [ 0, [[BB8]] ]
+; CHECK-NEXT:    [[SUB7:%.*]] = sub nsw i64 [[I1_02]], 3
+; CHECK-NEXT:    [[ADD8:%.*]] = add nsw i64 [[I1_02]], 3
+; CHECK-NEXT:    [[MUL9:%.*]] = mul nsw i64 [[SUB7]], [[ADD8]]
+; CHECK-NEXT:    [[REM10:%.*]] = srem i64 [[MUL9]], [[I1_02]]
+; CHECK-NEXT:    [[CONV11:%.*]] = trunc i64 [[REM10]] to i32
+; CHECK-NEXT:    [[ARRAYIDX12:%.*]] = getelementptr inbounds [1024 x i32], ptr @B, i64 0, i64 [[I1_02]]
+; CHECK-NEXT:    store i32 [[CONV11]], ptr [[ARRAYIDX12]], align 4
+; CHECK-NEXT:    [[INC14]] = add nsw i64 [[I1_02]], 1
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp slt i64 [[INC14]], [[N]]
+; CHECK-NEXT:    br i1 [[CMP3]], label [[BB9]], label [[BB15:%.*]]
+; CHECK:       bb15:
+; CHECK-NEXT:    br label [[BB80:%.*]]
+; CHECK:       bb80:
+; CHECK-NEXT:    br label [[BB90:%.*]]
+; CHECK:       bb90:
+; CHECK-NEXT:    [[I1_0210:%.*]] = phi i64 [ [[INC1410:%.*]], [[BB90]] ], [ 0, [[BB80]] ]
+; CHECK-NEXT:    [[CONV12:%.*]] = trunc i64 [[I1_0210]] to i32
+; CHECK-NEXT:    [[ARRAYIDX1210:%.*]] = getelementptr inbounds [1024 x i32], ptr @B, i64 0, i64 [[I1_0210]]
+; CHECK-NEXT:    store i32 [[CONV12]], ptr [[ARRAYIDX1210]], align 4
+; CHECK-NEXT:    [[INC1410]] = add nsw i64 [[I1_0210]], 1
+; CHECK-NEXT:    [[CMP310:%.*]] = icmp slt i64 [[INC1410]], [[N]]
+; CHECK-NEXT:    br i1 [[CMP310]], label [[BB90]], label [[BB150:%.*]]
+; CHECK:       bb150:
+; CHECK-NEXT:    br label [[BB12]]
+; CHECK:       bb12:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %cmp4 = icmp slt i64 0, %N
+  br i1 %cmp4, label %bb3, label %bb14
+
+bb3:                               ; preds = %entry
+  br label %bb5
+
+bb5:                                         ; preds = %bb3, %bb5
+  %i.05 = phi i64 [ %inc, %bb5 ], [ 0, %bb3 ]
+  %sub = sub nsw i64 %i.05, 3
+  %add = add nsw i64 %i.05, 3
+  %mul = mul nsw i64 %sub, %add
+  %rem = srem i64 %mul, %i.05
+  %conv = trunc i64 %rem to i32
+  %arrayidx = getelementptr inbounds i32, ptr %A, i64 %i.05
+  store i32 %conv, ptr %arrayidx, align 4
+  %inc = add nsw i64 %i.05, 1
+  %cmp = icmp slt i64 %inc, %N
+  br i1 %cmp, label %bb5, label %bb103
+
+bb103:                               ; preds = %bb103
+  br label %bb105
+
+bb105:                                         ; preds = %bb103, %bb105
+  %i.0510 = phi i64 [ %inc10, %bb105 ], [ 0, %bb103 ]
+  %arrayidx10 = getelementptr inbounds i32, ptr %B, i64 %i.0510
+  %load.b = load i32, ptr %arrayidx10, align 4
+  %arrayidx11 = getelementptr inbounds i32, ptr %A, i64 %i.0510
+  store i32 0, ptr %arrayidx11, align 4
+  %inc10 = add nsw i64 %i.0510, 1
+  %cmp10 = icmp slt i64 %inc10, %N
+  br i1 %cmp10, label %bb105, label %bb1010
+
+bb1010:                                 ; preds = %bb105
+  br label %bb14
+
+bb14:                                          ; preds = %bb1010, %entry
+  br i1 %cmp4, label %bb8, label %bb12
+
+bb8:                              ; preds = %bb14
+  br label %bb9
+
+bb9:                                        ; preds = %bb8, %bb9
+  %i1.02 = phi i64 [ %inc14, %bb9 ], [ 0, %bb8 ]
+  %sub7 = sub nsw i64 %i1.02, 3
+  %add8 = add nsw i64 %i1.02, 3
+  %mul9 = mul nsw i64 %sub7, %add8
+  %rem10 = srem i64 %mul9, %i1.02
+  %conv11 = trunc i64 %rem10 to i32
+  %arrayidx12 = getelementptr inbounds [1024 x i32], ptr @B, i64 0, i64 %i1.02
+  store i32 %conv11, ptr %arrayidx12, align 4
+  %inc14 = add nsw i64 %i1.02, 1
+  %cmp3 = icmp slt i64 %inc14, %N
+  br i1 %cmp3, label %bb9, label %bb15
+
+bb15:                               ; preds = %bb9
+  br label %bb80
+
+bb80:                              ; preds = %bb15
+  br label %bb90
+
+bb90:                                        ; preds = %bb80, %bb90
+  %i1.0210 = phi i64 [ %inc1410, %bb90 ], [ 0, %bb80 ]
+  %conv12 = trunc i64 %i1.0210 to i32
+  %arrayidx1210 = getelementptr inbounds [1024 x i32], ptr @B, i64 0, i64 %i1.0210
+  store i32 %conv12, ptr %arrayidx1210, align 4
+  %inc1410 = add nsw i64 %i1.0210, 1
+  %cmp310 = icmp slt i64 %inc1410, %N
+  br i1 %cmp310, label %bb90, label %bb150
+
+bb150:                               ; preds = %bb90
+  br label %bb12
+
+
+bb12:                                        ; preds = %bb15, %bb14
+  ret void
+}
