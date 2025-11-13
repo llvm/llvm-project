@@ -47,9 +47,9 @@
 # SUCCINCT:      -- Testing: 5 tests, 1 workers --
 # SUCCINCT-NEXT: Testing:
 # SUCCINCT-NEXT: FAIL: verbosity :: fail.txt (1 of 5)
-# SUCCINCT-NEXT: Testing:  0.. 10..
+# SUCCINCT-NEXT: Testing:
 # SUCCINCT-NEXT: XPASS: verbosity :: xpass.txt (5 of 5)
-# SUCCINCT-NEXT: Testing:  0.. 10.. 20.. 30.. 40.. 50.. 60.. 70.. 80.. 90..
+# SUCCINCT-NEXT: Testing:
 # SUCCINCT-NEXT: ********************
 # SUCCINCT-NEXT: Failed Tests (1):
 # SUCCINCT-NEXT:   verbosity :: fail.txt
@@ -561,15 +561,15 @@
 # PROGRESS:      -- Testing: 5 tests, 1 workers --
 # PROGRESS-NEXT: Testing:
 # PROGRESS-NEXT: FAIL: verbosity :: fail.txt (1 of 5)
-# PROGRESS-NEXT: Testing:  0..
+# PROGRESS-NEXT: Testing:
 # PROGRESS-NEXT: PASS: verbosity :: pass.txt (2 of 5)
-# PROGRESS-NEXT: Testing:  0.. 10..
+# PROGRESS-NEXT: Testing:
 # PROGRESS-NEXT: {{UN}}SUPPORTED: verbosity :: unsupported.txt (3 of 5)
-# PROGRESS-NEXT: Testing:  0.. 10.. 20..
+# PROGRESS-NEXT: Testing:
 # PROGRESS-NEXT: {{X}}FAIL: verbosity :: xfail.txt (4 of 5)
-# PROGRESS-NEXT: Testing:  0.. 10.. 20.. 30..
+# PROGRESS-NEXT: Testing:
 # PROGRESS-NEXT: XPASS: verbosity :: xpass.txt (5 of 5)
-# PROGRESS-NEXT: Testing:  0.. 10.. 20.. 30.. 40.. 50.. 60.. 70.. 80.. 90..
+# PROGRESS-NEXT: Testing:
 # PROGRESS-NEXT: ********************
 # PROGRESS-NEXT: Failed Tests (1):
 # PROGRESS-NEXT:   verbosity :: fail.txt
@@ -643,7 +643,7 @@
 # AS-NEXT: --
 # AS-EMPTY:
 # AS-NEXT: ********************
-# AS-NEXT: Testing:  0.. 10..
+# AS-NEXT: Testing:
 # AS-NEXT: XPASS: verbosity :: xpass.txt (5 of 5)
 # AS-NEXT: ******************** TEST 'verbosity :: xpass.txt' FAILED ********************
 # AS-NEXT: Exit Code: 0
@@ -660,7 +660,7 @@
 # AS-NEXT: --
 # AS-EMPTY:
 # AS-NEXT: ********************
-# AS-NEXT: Testing:  0.. 10.. 20.. 30.. 40.. 50.. 60.. 70.. 80.. 90..
+# AS-NEXT: Testing:
 # AS-NEXT: ********************
 # AS-NEXT: Failed Tests (1):
 # AS-NEXT:   verbosity :: fail.txt
@@ -709,7 +709,7 @@
 # SA-NEXT: --
 # SA-EMPTY:
 # SA-NEXT: ********************
-# SA-NEXT: Testing:  0.. 10..
+# SA-NEXT: Testing:
 # SA-NEXT: PASS: verbosity :: pass.txt (2 of 5)
 # SA-NEXT: Exit Code: 0
 # SA-EMPTY:
@@ -725,11 +725,11 @@
 # SA-NEXT: --
 # SA-EMPTY:
 # SA-NEXT: ********************
-# SA-NEXT: Testing:  0.. 10.. 20..
+# SA-NEXT: Testing:
 # SA-NEXT: {{UN}}SUPPORTED: verbosity :: unsupported.txt (3 of 5)
 # SA-NEXT: Test requires the following unavailable features: asdf
 # SA-NEXT: ********************
-# SA-NEXT: Testing:  0.. 10.. 20.. 30..
+# SA-NEXT: Testing:
 # SA-NEXT: {{X}}FAIL: verbosity :: xfail.txt (4 of 5)
 # SA-NEXT: Exit Code: 1
 # SA-EMPTY:
@@ -746,7 +746,7 @@
 # SA-NEXT: --
 # SA-EMPTY:
 # SA-NEXT: ********************
-# SA-NEXT: Testing:  0.. 10.. 20.. 30.. 40..
+# SA-NEXT: Testing:
 # SA-NEXT: XPASS: verbosity :: xpass.txt (5 of 5)
 # SA-NEXT: ******************** TEST 'verbosity :: xpass.txt' FAILED ********************
 # SA-NEXT: Exit Code: 0
@@ -763,7 +763,7 @@
 # SA-NEXT: --
 # SA-EMPTY:
 # SA-NEXT: ********************
-# SA-NEXT: Testing:  0.. 10.. 20.. 30.. 40.. 50.. 60.. 70.. 80.. 90..
+# SA-NEXT: Testing:
 # SA-NEXT: ********************
 # SA-NEXT: Failed Tests (1):
 # SA-NEXT:   verbosity :: fail.txt
@@ -907,13 +907,13 @@
 # SQAV-NEXT: --
 # SQAV-EMPTY:
 # SQAV-NEXT: ********************
-# SQAV-NEXT: Testing:  0.. 10..
+# SQAV-NEXT: Testing:
 # SQAV-NEXT: PASS: verbosity :: pass.txt (2 of 5)
-# SQAV-NEXT: Testing:  0.. 10.. 20..
+# SQAV-NEXT: Testing:
 # SQAV-NEXT: {{UN}}SUPPORTED: verbosity :: unsupported.txt (3 of 5)
-# SQAV-NEXT: Testing:  0.. 10.. 20.. 30..
+# SQAV-NEXT: Testing:
 # SQAV-NEXT: {{X}}FAIL: verbosity :: xfail.txt (4 of 5)
-# SQAV-NEXT: Testing:  0.. 10.. 20.. 30.. 40..
+# SQAV-NEXT: Testing:
 # SQAV-NEXT: XPASS: verbosity :: xpass.txt (5 of 5)
 # SQAV-NEXT: ******************** TEST 'verbosity :: xpass.txt' FAILED ********************
 # SQAV-NEXT: Exit Code: 0
@@ -930,7 +930,7 @@
 # SQAV-NEXT: --
 # SQAV-EMPTY:
 # SQAV-NEXT: ********************
-# SQAV-NEXT: Testing:  0.. 10.. 20.. 30.. 40.. 50.. 60.. 70.. 80.. 90..
+# SQAV-NEXT: Testing:
 # SQAV-NEXT: ********************
 # SQAV-NEXT: Failed Tests (1):
 # SQAV-NEXT:   verbosity :: fail.txt
@@ -980,9 +980,9 @@
 # QUIET-W-PROGRESS: -- Testing: 5 tests, 1 workers --
 # QUIET-W-PROGRESS-NEXT: Testing:
 # QUIET-W-PROGRESS-NEXT: FAIL: verbosity :: fail.txt (1 of 5)
-# QUIET-W-PROGRESS-NEXT: Testing:  0.. 10..
+# QUIET-W-PROGRESS-NEXT: Testing:
 # QUIET-W-PROGRESS-NEXT: XPASS: verbosity :: xpass.txt (5 of 5)
-# QUIET-W-PROGRESS-NEXT: Testing:  0.. 10.. 20.. 30.. 40.. 50.. 60.. 70.. 80.. 90..
+# QUIET-W-PROGRESS-NEXT: Testing:
 # QUIET-W-PROGRESS-NEXT: ********************
 # QUIET-W-PROGRESS-NEXT: Failed Tests (1):
 # QUIET-W-PROGRESS-NEXT:   verbosity :: fail.txt
@@ -1102,15 +1102,15 @@
 # SUCCINCT-RESULT-ALL:      -- Testing: 5 tests, 1 workers --
 # SUCCINCT-RESULT-ALL-NEXT: Testing:
 # SUCCINCT-RESULT-ALL-NEXT: FAIL: verbosity :: fail.txt (1 of 5)
-# SUCCINCT-RESULT-ALL-NEXT: Testing:  0.. 10.
+# SUCCINCT-RESULT-ALL-NEXT: Testing:
 # SUCCINCT-RESULT-ALL-NEXT: PASS: verbosity :: pass.txt (2 of 5)
-# SUCCINCT-RESULT-ALL-NEXT: Testing:  0.. 10.. 20..
+# SUCCINCT-RESULT-ALL-NEXT: Testing:
 # SUCCINCT-RESULT-ALL-NEXT: {{UN}}SUPPORTED: verbosity :: unsupported.txt (3 of 5)
-# SUCCINCT-RESULT-ALL-NEXT: Testing:  0.. 10.. 20.. 30..
+# SUCCINCT-RESULT-ALL-NEXT: Testing:
 # SUCCINCT-RESULT-ALL-NEXT: {{X}}FAIL: verbosity :: xfail.txt (4 of 5)
-# SUCCINCT-RESULT-ALL-NEXT: Testing:  0.. 10.. 20.. 30.. 40..
+# SUCCINCT-RESULT-ALL-NEXT: Testing:
 # SUCCINCT-RESULT-ALL-NEXT: XPASS: verbosity :: xpass.txt (5 of 5)
-# SUCCINCT-RESULT-ALL-NEXT: Testing:  0.. 10.. 20.. 30.. 40.. 50.. 60.. 70.. 80.. 90..
+# SUCCINCT-RESULT-ALL-NEXT: Testing:
 # SUCCINCT-RESULT-ALL-NEXT: ********************
 # SUCCINCT-RESULT-ALL-NEXT: Failed Tests (1):
 # SUCCINCT-RESULT-ALL-NEXT:   verbosity :: fail.txt
