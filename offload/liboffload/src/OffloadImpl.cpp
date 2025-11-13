@@ -496,7 +496,6 @@ Error olGetDeviceInfoImplDetail(ol_device_handle_t Device,
   }
 
   case OL_DEVICE_INFO_WORK_GROUP_SHARED_MEM_SIZE: {
-    // Uint64 values
     if (!std::holds_alternative<uint64_t>(Entry->Value))
       return makeError(ErrorCode::BACKEND_FAILURE,
                        "plugin returned incorrect type");
