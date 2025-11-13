@@ -59,7 +59,7 @@ Limitations
 
      template <typename X>
      void f(X a, X b) {
-         a | b; // the warning may not be emited
+         a | b; // the warning may not be emitted
      }
 
 Options
@@ -67,11 +67,10 @@ Options
 
 .. option:: UnsafeMode
 
-    Enabling this option promotes more fix-it hints even when they might
-    change evaluation order or skip side effects. Default value is `false`.
+    Promotes more fix-it hints even when they might change evaluation order or
+    skip side effects. Default value is `false`.
 
 .. option:: IgnoreMacros
 
-    This option disables the warning if a macro inside the expression body 
-    prevents replacing a bitwise operator with a logical one. Default value 
-    is `false`.
+    Don't warn if a macro inside the expression body prevents replacing a
+    bitwise operator with a logical one. Default value is `false`.

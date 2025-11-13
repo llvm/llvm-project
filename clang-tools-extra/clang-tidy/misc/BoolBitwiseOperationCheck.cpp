@@ -22,9 +22,9 @@ static const DynTypedNode *ignoreParensTowardsTheRoot(const DynTypedNode *N,
   if (const auto *S = N->get<Stmt>()) {
     if (isa<ParenExpr>(S)) {
       auto Parents = AC->getParents(*S);
-      for (const auto &Parent : Parents) {
-        return ignoreParensTowardsTheRoot(&Parent, AC);
-      }
+      // FIXME: do we need to consider all `Parents` ?
+      if (!Parents.empty())
+        return ignoreParensTowardsTheRoot(&Parents[0], AC);
     }
   }
   return N;
@@ -46,7 +46,7 @@ static bool assignsToBoolean(const BinaryOperator *BinOp, ASTContext *AC) {
   return false;
 }
 
-constexpr std::array<std::pair<llvm::StringRef, llvm::StringRef>, 8U>
+static constexpr std::array<std::pair<StringRef, StringRef>, 8U>
     OperatorsTransformation{{{"|", "||"},
                              {"|=", "||"},
                              {"&", "&&"},
@@ -56,7 +56,7 @@ constexpr std::array<std::pair<llvm::StringRef, llvm::StringRef>, 8U>
                              {"bitor", "or"},
                              {"or_eq", "or"}}};
 
-static llvm::StringRef translate(llvm::StringRef Value) {
+static StringRef translate(StringRef Value) {
   for (const auto &[Bitwise, Logical] : OperatorsTransformation) {
     if (Value == Bitwise)
       return Logical;

@@ -394,7 +394,7 @@ int bad_in_template(T a, T b) {
 }
 
 template<typename T>
-int bad_in_template_lamnda_captured(T a, T b) {
+int bad_in_template_lambda_captured(T a, T b) {
     [=] mutable {
         bool c = false;
         // FIXME: at least warning should be provided in these cases
@@ -406,4 +406,4 @@ int bad_in_template_lamnda_captured(T a, T b) {
     return 0;
 }
 
-int dummy = bad_in_template(true, false) + bad_in_template_lamnda_captured(false, true);
+int dummy = bad_in_template(true, false) + bad_in_template_lambda_captured(false, true);
