@@ -108,8 +108,10 @@ public:
   /// loop and scan loop.
   SmallVector<llvm::CanonicalLoopInfo *> loopInfos;
   llvm::ScanInfo *scanInfo;
-  llvm::DenseMap<llvm::Value *, llvm::Type *> *reductionVarToType =
-      new llvm::DenseMap<llvm::Value *, llvm::Type *>();
+  /// Map reduction variables to their LLVM types.
+  std::unique_ptr<llvm::DenseMap<llvm::Value *, llvm::Type *>>
+      reductionVarToType =
+          std::make_unique<llvm::DenseMap<llvm::Value *, llvm::Type *>>();
 };
 
 /// Custom error class to signal translation errors that don't need reporting,
@@ -604,7 +606,7 @@ findReductionVarTypes(LLVM::ModuleTranslation &moduleTranslation) {
   llvm::DenseMap<llvm::Value *, llvm::Type *> *reductionVarToType = nullptr;
   moduleTranslation.stackWalk<OpenMPLoopInfoStackFrame>(
       [&](OpenMPLoopInfoStackFrame &frame) {
-        reductionVarToType = frame.reductionVarToType;
+        reductionVarToType = frame.reductionVarToType.get();
         return WalkResult::interrupt();
       });
   return reductionVarToType;
