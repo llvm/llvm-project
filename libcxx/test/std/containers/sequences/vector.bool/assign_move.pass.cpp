@@ -14,6 +14,7 @@
 // vector& operator=(vector&& c);
 
 #include <cassert>
+#include <utility>
 #include <vector>
 
 #include "min_allocator.h"

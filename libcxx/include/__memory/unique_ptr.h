@@ -32,7 +32,6 @@
 #include <__type_traits/integral_constant.h>
 #include <__type_traits/is_array.h>
 #include <__type_traits/is_assignable.h>
-#include <__type_traits/is_bounded_array.h>
 #include <__type_traits/is_constant_evaluated.h>
 #include <__type_traits/is_constructible.h>
 #include <__type_traits/is_convertible.h>
@@ -42,7 +41,6 @@
 #include <__type_traits/is_same.h>
 #include <__type_traits/is_swappable.h>
 #include <__type_traits/is_trivially_relocatable.h>
-#include <__type_traits/is_unbounded_array.h>
 #include <__type_traits/is_void.h>
 #include <__type_traits/remove_extent.h>
 #include <__type_traits/type_identity.h>
