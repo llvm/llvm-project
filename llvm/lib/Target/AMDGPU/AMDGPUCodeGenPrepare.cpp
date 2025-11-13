@@ -238,6 +238,11 @@ public:
   Value *emitSqrtIEEE2ULP(IRBuilder<> &Builder, Value *Src,
                           FastMathFlags FMF) const;
 
+  CallInst *createWorkitemIdX(IRBuilder<> &B) const;
+  void replaceWithWorkitemIdX(Instruction &I) const;
+  void replaceWithMaskedWorkitemIdX(Instruction &I, unsigned WaveSize) const;
+  bool tryReplaceWithWorkitemId(Instruction &I, unsigned Wave) const;
+
   bool tryNarrowMathIfNoOverflow(Instruction *I);
 
 public:
@@ -2079,6 +2084,58 @@ INITIALIZE_PASS_DEPENDENCY(UniformityInfoWrapperPass)
 INITIALIZE_PASS_END(AMDGPUCodeGenPrepare, DEBUG_TYPE, "AMDGPU IR optimizations",
                     false, false)
 
+/// Create a workitem.id.x intrinsic call with range metadata.
+CallInst *AMDGPUCodeGenPrepareImpl::createWorkitemIdX(IRBuilder<> &B) const {
+  CallInst *Tid = B.CreateIntrinsic(Intrinsic::amdgcn_workitem_id_x, {});
+  ST.makeLIDRangeMetadata(Tid);
+  return Tid;
+}
+
+/// Replace the instruction with a direct workitem.id.x call.
+void AMDGPUCodeGenPrepareImpl::replaceWithWorkitemIdX(Instruction &I) const {
+  IRBuilder<> B(&I);
+  CallInst *Tid = createWorkitemIdX(B);
+  BasicBlock::iterator BI(&I);
+  ReplaceInstWithValue(BI, Tid);
+}
+
+/// Replace the instruction with (workitem.id.x & mask).
+void AMDGPUCodeGenPrepareImpl::replaceWithMaskedWorkitemIdX(
+    Instruction &I, unsigned WaveSize) const {
+  IRBuilder<> B(&I);
+  CallInst *Tid = createWorkitemIdX(B);
+  Constant *Mask = ConstantInt::get(Tid->getType(), WaveSize - 1);
+  Value *AndInst = B.CreateAnd(Tid, Mask);
+  BasicBlock::iterator BI(&I);
+  ReplaceInstWithValue(BI, AndInst);
+}
+
+/// Try to optimize mbcnt instruction by replacing with workitem.id.x when
+/// work group size allows direct computation of lane ID.
+/// Returns true if optimization was applied, false otherwise.
+bool AMDGPUCodeGenPrepareImpl::tryReplaceWithWorkitemId(Instruction &I,
+                                                        unsigned Wave) const {
+  std::optional<unsigned> MaybeX = ST.getReqdWorkGroupSize(F, 0);
+  if (!MaybeX)
+    return false;
+
+  // When work group size == wave_size, each work group contains exactly one
+  // wave, so the instruction can be replaced with workitem.id.x directly.
+  if (*MaybeX == Wave) {
+    replaceWithWorkitemIdX(I);
+    return true;
+  }
+
+  // When work group evenly splits into waves, compute lane ID within wave
+  // using bit masking: lane_id = workitem.id.x & (wave_size - 1).
+  if (ST.hasWavefrontsEvenlySplittingXDim(F, /*RequiresUniformYZ=*/true)) {
+    replaceWithMaskedWorkitemIdX(I, Wave);
+    return true;
+  }
+
+  return false;
+}
+
 /// Optimize mbcnt.lo calls on wave32 architectures for lane ID computation.
 bool AMDGPUCodeGenPrepareImpl::visitMbcntLo(IntrinsicInst &I) const {
   // This optimization only applies to wave32 targets where mbcnt.lo operates on
@@ -2092,37 +2149,7 @@ bool AMDGPUCodeGenPrepareImpl::visitMbcntLo(IntrinsicInst &I) const {
              m_Intrinsic<Intrinsic::amdgcn_mbcnt_lo>(m_AllOnes(), m_Zero())))
     return false;
 
-  unsigned Wave = ST.getWavefrontSize();
-
-  if (auto MaybeX = ST.getReqdWorkGroupSize(F, 0)) {
-    unsigned XLen = *MaybeX;
-
-    // When XLen == wave_size, each work group contains exactly one wave, so
-    // mbcnt.lo(~0, 0) directly equals the workitem ID within the group.
-    if (XLen == Wave) {
-      IRBuilder<> B(&I);
-      CallInst *Tid = B.CreateIntrinsic(Intrinsic::amdgcn_workitem_id_x, {});
-      ST.makeLIDRangeMetadata(Tid);
-      BasicBlock::iterator BI(&I);
-      ReplaceInstWithValue(BI, Tid);
-      return true;
-    }
-    // When work group evenly splits into waves, we can compute lane ID within
-    // wave using bit masking: lane_id = workitem.id.x & (wave_size - 1).
-    if (ST.hasWavefrontsEvenlySplittingXDim(F, /*RequiresUniformYZ=*/true)) {
-      // Construct optimized sequence: workitem.id.x & (wave_size - 1)
-      IRBuilder<> B(&I);
-      CallInst *Tid = B.CreateIntrinsic(Intrinsic::amdgcn_workitem_id_x, {});
-      ST.makeLIDRangeMetadata(Tid);
-      Constant *Mask = ConstantInt::get(Tid->getType(), Wave - 1);
-      Value *AndInst = B.CreateAnd(Tid, Mask);
-      BasicBlock::iterator BI(&I);
-      ReplaceInstWithValue(BI, AndInst);
-      return true;
-    }
-  }
-
-  return false;
+  return tryReplaceWithWorkitemId(I, ST.getWavefrontSize());
 }
 
 /// Optimize mbcnt.hi calls for lane ID computation.
@@ -2131,18 +2158,15 @@ bool AMDGPUCodeGenPrepareImpl::visitMbcntHi(IntrinsicInst &I) const {
   if (!ST.isWaveSizeKnown())
     return false;
 
-  // Calculate wave size
   unsigned Wave = ST.getWavefrontSize();
 
   // On wave32, the upper 32 bits of execution mask are always 0, so
   // mbcnt.hi(mask, val) always returns val unchanged.
   if (ST.isWave32()) {
     if (auto MaybeX = ST.getReqdWorkGroupSize(F, 0)) {
-      unsigned XLen = *MaybeX;
-
       // Replace mbcnt.hi(mask, val) with val only when work group size matches
       // wave size (single wave per work group).
-      if (XLen == Wave) {
+      if (*MaybeX == Wave) {
         BasicBlock::iterator BI(&I);
         ReplaceInstWithValue(BI, I.getArgOperand(1));
         return true;
@@ -2161,35 +2185,7 @@ bool AMDGPUCodeGenPrepareImpl::visitMbcntHi(IntrinsicInst &I) const {
                                       m_AllOnes(), m_Zero()))))
     return false;
 
-  if (auto MaybeX = ST.getReqdWorkGroupSize(F, 0)) {
-    unsigned XLen = *MaybeX;
-
-    // When XLen == wave_size, each work group contains exactly one wave, so
-    // lane_id = workitem.id.x.
-    if (XLen == Wave) {
-      IRBuilder<> B(&I);
-      CallInst *Tid = B.CreateIntrinsic(Intrinsic::amdgcn_workitem_id_x, {});
-      ST.makeLIDRangeMetadata(Tid);
-      BasicBlock::iterator BI(&I);
-      ReplaceInstWithValue(BI, Tid);
-      return true;
-    }
-    // When work group evenly splits into waves, we can compute lane ID within
-    // wave using bit masking: lane_id = workitem.id.x & (wave_size - 1).
-    if (ST.hasWavefrontsEvenlySplittingXDim(F, /*RequiresUniformYZ=*/true)) {
-      // Construct optimized sequence: workitem.id.x & (wave_size - 1)
-      IRBuilder<> B(&I);
-      CallInst *Tid = B.CreateIntrinsic(Intrinsic::amdgcn_workitem_id_x, {});
-      ST.makeLIDRangeMetadata(Tid);
-      Constant *Mask = ConstantInt::get(Tid->getType(), Wave - 1);
-      Value *AndInst = B.CreateAnd(Tid, Mask);
-      BasicBlock::iterator BI(&I);
-      ReplaceInstWithValue(BI, AndInst);
-      return true;
-    }
-  }
-
-  return false;
+  return tryReplaceWithWorkitemId(I, Wave);
 }
 
 char AMDGPUCodeGenPrepare::ID = 0;
