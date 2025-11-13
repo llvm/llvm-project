@@ -1,31 +1,38 @@
 #!/usr/bin/env python3
 
-import binascii
-import json
 import argparse
+import binascii
+import copy
+import dataclasses
+import enum
+import json
+import logging
 import os
+import pathlib
 import pprint
+import re
+import signal
 import socket
 import string
 import subprocess
-import signal
 import sys
-import pathlib
 import threading
-import warnings
 import time
+import warnings
 from typing import (
     Any,
-    Optional,
-    Dict,
-    cast,
-    List,
-    Callable,
-    Union,
     BinaryIO,
-    TypedDict,
+    Callable,
+    cast,
+    Dict,
+    List,
     Literal,
+    Optional,
+    Tuple,
+    TypedDict,
+    Union,
 )
+
 
 # set timeout based on whether ASAN was enabled or not. Increase
 # timeout by a factor of 10 if ASAN is enabled.
@@ -160,7 +167,62 @@ class NotSupportedError(KeyError):
     """Raised if a feature is not supported due to its capabilities."""
 
 
+class ReplayMods(TypedDict, total=False):
+    """Fields that can be overwritten in requests during a replay."""
+
+    frameId: Optional[int]
+    threadId: Optional[int]
+
+
+@dataclasses.dataclass
+class Log:
+    class Dir(enum.Enum):
+        SENT = 1
+        RECV = 2
+
+    @property
+    def requests(self) -> List[Tuple[Dir, Request]]:
+        """All requests in the log, in order."""
+        return [m for m in self.messages if m[1]["type"] == "request"]
+
+    @property
+    def events(self) -> List[Tuple[Dir, Event]]:
+        """All events in the log, in order."""
+        return [m for m in self.messages if m[1]["type"] == "event"]
+
+    @property
+    def responses(self) -> List[Tuple[Dir, Response]]:
+        """All responses in the log, in order."""
+        return [m for m in self.messages if m[1]["type"] == "response"]
+
+    messages: List[Tuple[Dir, ProtocolMessage]] = dataclasses.field(
+        default_factory=list
+    )
+
+    @classmethod
+    def load(cls, file: pathlib.Path) -> "Log":
+        """Load the file and parse any log messages. Returns (sent, recv)."""
+        sent_pattern = re.compile(r"\d+\.\d+ \(.+\) --> ")
+        recv_pattern = re.compile(r"\d+\.\d+ \(.+\) <-- ")
+
+        log = Log()
+        with open(file, "r") as f:
+            for line in f:
+                if sent_pattern.match(line):
+                    packet = line.split("--> ", maxsplit=1)[1]
+                    log.messages.append((Log.Dir.SENT, json.loads(packet)))
+                elif recv_pattern.match(line):
+                    packet = line.split("<-- ", maxsplit=1)[1]
+                    log.messages.append((Log.Dir.RECV, json.loads(packet)))
+        return log
+
+
 class DebugCommunication(object):
+    @property
+    def is_stopped(self):
+        """Returns True if the debuggee is in a stopped state, otherwise False."""
+        return len(self.thread_stop_reasons) > 0 or self.exit_status is not None
+
     def __init__(
         self,
         recv: BinaryIO,
@@ -169,6 +231,7 @@ class DebugCommunication(object):
         log_file: Optional[str] = None,
         spawn_helper: Optional[SpawnHelperCallback] = None,
     ):
+        self._log = Log()
         self.log_file = log_file
         self.send = send
         self.recv = recv
@@ -203,10 +266,15 @@ class DebugCommunication(object):
 
         # debuggee state
         self.threads: Optional[dict] = None
+        self.stopped_thread: Optional[dict] = None
+        self.thread_stacks: Optional[Dict[int, List[dict]]]
         self.thread_stop_reasons: Dict[str, Any] = {}
         self.frame_scopes: Dict[str, Any] = {}
         # keyed by breakpoint id
         self.resolved_breakpoints: dict[str, Breakpoint] = {}
+
+        # Modifiers used when replaying a log file.
+        self._mod = ReplayMods()
 
         # trigger enqueue thread
         self._recv_thread.start()
@@ -251,16 +319,13 @@ class DebugCommunication(object):
         raise Exception("unexpected malformed message from lldb-dap: " + line)
 
     def _read_packet_thread(self):
-        try:
-            while True:
-                packet = self._read_packet()
-                # `packet` will be `None` on EOF. We want to pass it down to
-                # handle_recv_packet anyway so the main thread can handle unexpected
-                # termination of lldb-dap and stop waiting for new packets.
-                if not self._handle_recv_packet(packet):
-                    break
-        finally:
-            dump_dap_log(self.log_file)
+        while True:
+            packet = self._read_packet()
+            # `packet` will be `None` on EOF. We want to pass it down to
+            # handle_recv_packet anyway so the main thread can handle unexpected
+            # termination of lldb-dap and stop waiting for new packets.
+            if not self._handle_recv_packet(packet):
+                break
 
     def get_modules(
         self, start_module: Optional[int] = None, module_count: Optional[int] = None
@@ -381,6 +446,8 @@ class DebugCommunication(object):
                     warnings.warn(
                         f"received a malformed packet, expected 'seq != 0' for {packet!r}"
                     )
+                if packet:
+                    self._log.messages.append((Log.Dir.RECV, packet))
                 # Handle events that may modify any stateful properties of
                 # the DAP session.
                 if packet and packet["type"] == "event":
@@ -518,6 +585,8 @@ class DebugCommunication(object):
             # Send the encoded JSON packet and flush the 'send' file
             self.send.write(self.encode_content(json_str))
             self.send.flush()
+
+        self._log.messages.append((Log.Dir.SENT, packet))
 
         return packet["seq"]
 
@@ -724,32 +793,69 @@ class DebugCommunication(object):
                 return child
         return None
 
-    def replay_packets(self, file: pathlib.Path, verbosity: int) -> None:
-        inflight: Dict[int, dict] = {}  # requests, keyed by seq
-        with open(file, "r") as f:
-            for line in f:
-                if "-->" in line:
-                    packet = line.split("--> ", maxsplit=1)[1]
-                    command_dict = json.loads(packet)
-                    if verbosity > 0:
-                        print("Sending:")
-                        pprint.PrettyPrinter(indent=2).pprint(command_dict)
-                    seq = self.send_packet(command_dict)
-                    if command_dict["type"] == "request":
-                        inflight[seq] = command_dict
-                elif "<--" in line:
-                    packet = line.split("<-- ", maxsplit=1)[1]
-                    replay_response = json.loads(packet)
-                    print("Replay response:")
-                    pprint.PrettyPrinter(indent=2).pprint(replay_response)
-                    actual_response = self._recv_packet(
-                        predicate=lambda packet: replay_response == packet
-                    )
-                    print("Actual response:")
-                    pprint.PrettyPrinter(indent=2).pprint(actual_response)
-                    if actual_response and actual_response["type"] == "response":
-                        command_dict = inflight[actual_response["request_seq"]]
-                        self.validate_response(command_dict, actual_response)
+    def _preconditions(self, req: Request) -> None:
+        """Validate any preconditions for the given command, potentially waiting
+        for the debuggee to be in a specific state.
+        """
+        if req["command"] == "threads":
+            logging.debug("Waiting on precondition: stopped")
+            self._recv_packet(predicate=lambda _: self.is_stopped)
+
+        # Apply any modifications to arguments.
+        args = req["arguments"]
+        if "threadId" in args and "threadId" in self._mod:
+            args["threadId"] = self._mod["threadId"]
+        if "frameId" in args and "frameId" in self._mod:
+            args["frameId"] = self._mod["frameId"]
+
+    def _postconditions(self, resp: Response) -> None:
+        """Validate any postconditions for the given response, potentially
+        waiting for the debuggee to be in a specific state.
+        """
+        if resp["command"] == "launch":
+            logging.debug("Waiting on postcondition: initialized")
+            self._recv_packet(predicate=lambda _: self.initialized)
+        elif resp["command"] == "configurationDone":
+            logging.debug("Waiting on postcondition: process")
+            self._recv_packet(predicate=lambda _: self.process_event_body is not None)
+
+        # Store some modifications related to replayed requests.
+        if resp["command"] == "threads":
+            self._mod["threadId"] = resp["body"]["threads"][0]["id"]
+        if resp["command"] in ["continue", "next", "stepIn", "stepOut", "pause"]:
+            self._mod.clear()
+            self._recv_packet(predicate=lambda _: self.is_stopped)
+        if resp["command"] == "stackTrace" and not self._mod.get("frameId", None):
+            self._mod["frameId"] = next(
+                (frame["id"] for frame in resp["body"]["stackFrames"]), None
+            )
+
+    def replay(self, file: pathlib.Path) -> None:
+        """Replay a log file."""
+        log = Log.load(file)
+        responses = {
+            r["request_seq"]: r for (dir, r) in log.responses if dir == Log.Dir.RECV
+        }
+        for dir, packet in log.messages:
+            if dir != Log.Dir.SENT or packet["type"] != "request":
+                continue
+            req = packet
+            want = responses[req["seq"]]
+
+            self._preconditions(req)
+
+            logging.info("Sending req %r", req)
+            got = self._send_recv(req)
+            logging.info("Received resp %r", got)
+
+            assert (
+                got["command"] == want["command"] == req["command"]
+            ), f"got {got} want {want} for req {req}"
+            assert (
+                got["success"] == want["success"]
+            ), f"got {got} want {want} for req {req}"
+
+            self._postconditions(got)
 
     def request_attach(
         self,
@@ -1447,6 +1553,8 @@ class DebugCommunication(object):
         self.send.close()
         if self._recv_thread.is_alive():
             self._recv_thread.join()
+        if self.log_file:
+            dump_dap_log(self.log_file)
 
     def request_setInstructionBreakpoints(self, memory_reference=[]):
         breakpoints = []
@@ -1640,7 +1748,7 @@ def run_adapter(dbg: DebugCommunication, opts: argparse.Namespace) -> None:
     source_to_lines: Dict[str, List[int]] = {}
     for sbp in cast(List[str], opts.source_bp):
         if ":" not in sbp:
-            print('error: invalid source with line "%s"' % (sbp))
+            print(f"error: invalid source with line {sbp!r}", file=sys.stderr)
             continue
         path, line = sbp.split(":")
         if path in source_to_lines:
@@ -1684,8 +1792,7 @@ def run_adapter(dbg: DebugCommunication, opts: argparse.Namespace) -> None:
     if response["success"]:
         dbg.wait_for_stopped()
     else:
-        if "message" in response:
-            print(response["message"])
+        print("failed to launch/attach: ", response)
     dbg.request_disconnect(terminateDebuggee=True)
 
 
@@ -1901,11 +2008,23 @@ def main():
 
     opts = parser.parse_args()
 
+    logging.basicConfig(
+        format="%(asctime)s - %(levelname)s - %(message)s",
+        level=(
+            logging.DEBUG
+            if opts.verbose > 1
+            else logging.INFO
+            if opts.verbose > 0
+            else logging.WARNING
+        ),
+    )
+
     if opts.adapter is None and opts.connection is None:
         print(
             "error: must either specify a path to a Debug Protocol Adapter "
             "executable using the --adapter option, or using the --connection "
-            "option"
+            "option",
+            file=sys.stderr,
         )
         return
     dbg = DebugAdapterServer(
@@ -1914,12 +2033,14 @@ def main():
         additional_args=opts.adapter_arg,
     )
     if opts.debug:
-        input('Waiting for debugger to attach pid "%i"' % (dbg.get_pid()))
-    if opts.replay:
-        dbg.replay_packets(opts.replay)
-    else:
-        run_adapter(dbg, opts)
-    dbg.terminate()
+        input(f"Waiting for debugger to attach pid '{dbg.get_pid()}'")
+    try:
+        if opts.replay:
+            dbg.replay(opts.replay)
+        else:
+            run_adapter(dbg, opts)
+    finally:
+        dbg.terminate()
 
 
 if __name__ == "__main__":
