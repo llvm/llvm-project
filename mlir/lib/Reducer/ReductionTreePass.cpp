@@ -175,9 +175,12 @@ public:
   using Base::Base;
 
   // Collect the reduce patterns defined by each dialect.
-  void populateReductionPatterns(RewritePatternSet &pattern) const {
-    for (const DialectReductionPatternInterface &interface : *this)
+  void populateReductionPatterns(RewritePatternSet &pattern,
+                                 Tester &tester) const {
+    for (const DialectReductionPatternInterface &interface : *this) {
       interface.populateReductionPatterns(pattern);
+      interface.populateReductionPatternsWithTester(pattern, tester);
+    }
   }
 };
 
@@ -201,15 +204,21 @@ public:
 private:
   LogicalResult reduceOp(ModuleOp module, Region &region);
 
+  Tester tester;
   FrozenRewritePatternSet reducerPatterns;
 };
 
 } // namespace
 
 LogicalResult ReductionTreePass::initialize(MLIRContext *context) {
+  tester.setTestScript(testerName);
+  tester.setTestScriptArgs(testerArgs);
+
   RewritePatternSet patterns(context);
+
   ReductionPatternInterfaceCollection reducePatternCollection(context);
-  reducePatternCollection.populateReductionPatterns(patterns);
+  reducePatternCollection.populateReductionPatterns(patterns, tester);
+
   reducerPatterns = std::move(patterns);
   return success();
 }
@@ -244,11 +253,10 @@ void ReductionTreePass::runOnOperation() {
 }
 
 LogicalResult ReductionTreePass::reduceOp(ModuleOp module, Region &region) {
-  Tester test(testerName, testerArgs);
   switch (traversalModeId) {
   case TraversalMode::SinglePath:
     return findOptimal<ReductionNode::iterator<TraversalMode::SinglePath>>(
-        module, region, reducerPatterns, test);
+        module, region, reducerPatterns, tester);
   default:
     return module.emitError() << "unsupported traversal mode detected";
   }
