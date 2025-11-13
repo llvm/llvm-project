@@ -7,6 +7,6 @@ define dso_local <vscale x 4 x float> @fmmla_f32mf8(<vscale x 4 x float> %acc, <
 ; CHECK-NEXT:    fmmla z0.s, z1.b, z2.b
 ; CHECK-NEXT:    ret
 entry:
-  %out = call <vscale x 4 x float> @llvm.aarch64.sve.fmmla.mf8f32(<vscale x 4 x float> %acc, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
+  %out = call <vscale x 4 x float> @llvm.aarch64.sve.fp8.fmmla.nxv4f32.nxv16i82(<vscale x 4 x float> %acc, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
   ret <vscale x 4 x float> %out
 }

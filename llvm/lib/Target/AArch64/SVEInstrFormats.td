@@ -11145,7 +11145,7 @@ class sve2_fp8_mmla<bit opc, ZPRRegOp dst_ty, string mnemonic>
 
 multiclass sve2_fp8_fmmla<bits<1> opc, ZPRRegOp zprty, string mnemonic, ValueType ResVT> {
   def NAME : sve2_fp8_mmla<opc, zprty, mnemonic>;
-  def : Pat<(ResVT (int_aarch64_sve_fmmla ResVT:$acc, nxv16i8:$zn, nxv16i8:$zm)),
+  def : Pat<(ResVT (int_aarch64_sve_fp8_fmmla ResVT:$acc, nxv16i8:$zn, nxv16i8:$zm)),
             (!cast<Instruction>(NAME) $acc, $zn, $zm)>;
 }
 

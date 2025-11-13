@@ -2807,9 +2807,14 @@ def int_aarch64_sve_sudot_lane : AdvSIMD_SVE_DOT_Indexed_Intrinsic;
 //
 
 def int_aarch64_sve_fmmla
-  : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
-                          [ LLVMMatchType<0>, llvm_anyvector_ty, LLVMMatchType<1> ],
-                          [ IntrNoMem ]>;
+  : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                          [LLVMMatchType<0>, llvm_anyvector_ty, LLVMMatchType<1>],
+                          [IntrNoMem]>;
+
+def int_aarch64_sve_fp8_fmmla
+  : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                          [LLVMMatchType<0>, llvm_anyvector_ty, LLVMMatchType<1>],
+                          [IntrReadMem, IntrInaccessibleMemOnly]>;
 
 //
 // SVE ACLE: 7.2. BFloat16 extensions

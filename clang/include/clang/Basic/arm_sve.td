@@ -1201,11 +1201,11 @@ let SVETargetGuard = "sve-f16f32mm", SMETargetGuard = InvalidMode in {
 }
 
 let SVETargetGuard = "sve2,f8f32mm", SMETargetGuard = InvalidMode in {
-  def SVMLLA_F32_MF8 : SInst<"svmmla[_f32_mf8]", "dd~~>", "f", MergeNone, "aarch64_sve_fmmla", [IsOverloadCvt]>;
+  def SVMLLA_F32_MF8 : SInst<"svmmla[_f32_mf8]", "dd~~>", "f", MergeNone, "aarch64_sve_fp8_fmmla", [IsOverloadCvt]>;
 }
 
 let SVETargetGuard = "sve2,f8f16mm", SMETargetGuard = InvalidMode in {
-  def SVMLLA_F16_MF8 : SInst<"svmmla[_f16_mf8]", "dd~~>", "h", MergeNone, "aarch64_sve_fmmla", [IsOverloadCvt]>;
+  def SVMLLA_F16_MF8 : SInst<"svmmla[_f16_mf8]", "dd~~>", "h", MergeNone, "aarch64_sve_fp8_fmmla", [IsOverloadCvt]>;
 }
 
 def SVTRN1Q : SInst<"svtrn1q[_{d}]", "ddd", "csilUcUsUiUlhfdb", MergeNone, "aarch64_sve_trn1q">;

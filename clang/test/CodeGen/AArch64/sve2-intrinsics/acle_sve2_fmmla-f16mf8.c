@@ -20,14 +20,14 @@
 // CHECK-SAME: <vscale x 8 x half> [[ACC:%.*]], <vscale x 16 x i8> [[A:%.*]], <vscale x 16 x i8> [[B:%.*]], i64 noundef [[FPMR:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    tail call void @llvm.aarch64.set.fpmr(i64 [[FPMR]])
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x half> @llvm.aarch64.sve.fmmla.nxv8f16.nxv16i8(<vscale x 8 x half> [[ACC]], <vscale x 16 x i8> [[A]], <vscale x 16 x i8> [[B]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x half> @llvm.aarch64.sve.fp8.fmmla.nxv8f16.nxv16i8(<vscale x 8 x half> [[ACC]], <vscale x 16 x i8> [[A]], <vscale x 16 x i8> [[B]])
 // CHECK-NEXT:    ret <vscale x 8 x half> [[TMP0]]
 //
 // CPP-CHECK-LABEL: define dso_local <vscale x 8 x half> @_Z11test_f16mf8u13__SVFloat16_tu13__SVMfloat8_tS0_m(
 // CPP-CHECK-SAME: <vscale x 8 x half> [[ACC:%.*]], <vscale x 16 x i8> [[A:%.*]], <vscale x 16 x i8> [[B:%.*]], i64 noundef [[FPMR:%.*]]) #[[ATTR0:[0-9]+]] {
 // CPP-CHECK-NEXT:  [[ENTRY:.*:]]
 // CPP-CHECK-NEXT:    tail call void @llvm.aarch64.set.fpmr(i64 [[FPMR]])
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x half> @llvm.aarch64.sve.fmmla.nxv8f16.nxv16i8(<vscale x 8 x half> [[ACC]], <vscale x 16 x i8> [[A]], <vscale x 16 x i8> [[B]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x half> @llvm.aarch64.sve.fp8.fmmla.nxv8f16.nxv16i8(<vscale x 8 x half> [[ACC]], <vscale x 16 x i8> [[A]], <vscale x 16 x i8> [[B]])
 // CPP-CHECK-NEXT:    ret <vscale x 8 x half> [[TMP0]]
 //
 svfloat16_t test_f16mf8(svfloat16_t acc, svmfloat8_t a, svmfloat8_t b, fpm_t fpmr) {

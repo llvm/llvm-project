@@ -7,6 +7,6 @@ define <vscale x 8 x half> @fmmla_f16mf8(<vscale x 8 x half> %acc, <vscale x 16 
 ; CHECK-NEXT:    fmmla z0.h, z1.b, z2.b
 ; CHECK-NEXT:    ret
 entry:
-  %out = call <vscale x 8 x half> @llvm.aarch64.sve.fmmla.mf8f16(<vscale x 8 x half> %acc, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
+  %out = call <vscale x 8 x half> @llvm.aarch64.sve.fp8.fmmla.nxv8f16.nxv16i8(<vscale x 8 x half> %acc, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
   ret <vscale x 8 x half> %out
 }
