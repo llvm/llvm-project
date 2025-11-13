@@ -6,8 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Lower Execution Synchronization pass performs lowering of
-// LDS global variables with target extension type "amdgpu.named.barrier"
+// Lower LDS global variables with target extension type "amdgpu.named.barrier"
 // that require specialized address assignment. It assigns a unique
 // barrier identifier to each named-barrier LDS variable and encodes
 // this identifier within the !absolute_symbol metadata of that global.
