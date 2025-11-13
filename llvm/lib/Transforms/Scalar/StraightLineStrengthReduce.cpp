@@ -580,8 +580,7 @@ inline raw_ostream &operator<<(raw_ostream &OS,
   return OS;
 }
 
-LLVM_DUMP_METHOD
-inline raw_ostream &
+[[maybe_unused]] LLVM_DUMP_METHOD inline raw_ostream &
 operator<<(raw_ostream &OS, const StraightLineStrengthReduce::DeltaInfo &DI) {
   OS << "Cand: " << *DI.Cand << "\n";
   OS << "Delta Kind: ";
