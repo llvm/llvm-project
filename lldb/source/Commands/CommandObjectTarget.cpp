@@ -5419,8 +5419,6 @@ public:
     m_all_options.Append(&m_class_options, LLDB_OPT_SET_1 | LLDB_OPT_SET_2,
                          LLDB_OPT_SET_ALL);
     m_all_options.Finalize();
-
-    AddSimpleArgumentList(eArgTypeRunArgs, eArgRepeatOptional);
   }
 
   ~CommandObjectTargetFrameProviderRegister() override = default;
@@ -5433,7 +5431,7 @@ public:
   }
 
 protected:
-  void DoExecute(Args &launch_args, CommandReturnObject &result) override {
+  void DoExecute(Args &command, CommandReturnObject &result) override {
     ScriptedMetadataSP metadata_sp = std::make_shared<ScriptedMetadata>(
         m_class_options.GetName(), m_class_options.GetStructuredData());
 
