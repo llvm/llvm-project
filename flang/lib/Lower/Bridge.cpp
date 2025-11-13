@@ -448,13 +448,6 @@ public:
       }
     });
 
-    // Ensure imported OpenMP declare mappers are materialized at module
-    // scope before lowering any constructs that may reference them.
-    createBuilderOutsideOfFuncOpAndDo([&]() {
-      Fortran::lower::materializeOpenMPDeclareMappers(
-          *this, bridge.getSemanticsContext());
-    });
-
     // Create definitions of intrinsic module constants.
     createBuilderOutsideOfFuncOpAndDo(
         [&]() { createIntrinsicModuleDefinitions(pft); });

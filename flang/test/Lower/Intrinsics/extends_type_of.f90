@@ -9,7 +9,7 @@ module extends_type_of_mod
   type, extends(p1) :: p2
     integer :: b
   end type
- 
+
   type k1(a)
     integer, kind :: a
   end type
