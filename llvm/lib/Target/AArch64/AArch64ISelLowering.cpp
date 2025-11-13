@@ -445,6 +445,9 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     addRegisterClass(MVT::nxv8i1, &AArch64::PPRRegClass);
     addRegisterClass(MVT::nxv16i1, &AArch64::PPRRegClass);
 
+    // Add sve predicate as counter type
+    addRegisterClass(MVT::aarch64svcount, &AArch64::PPRRegClass);
+
     // Add legal sve data types
     addRegisterClass(MVT::nxv16i8, &AArch64::ZPRRegClass);
     addRegisterClass(MVT::nxv8i16, &AArch64::ZPRRegClass);
@@ -471,15 +474,6 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
         if (useSVEForFixedLengthVectorVT(VT))
           addRegisterClass(VT, &AArch64::ZPRRegClass);
     }
-  }
-
-  if (Subtarget->hasSVE2p1() || Subtarget->hasSME2()) {
-    addRegisterClass(MVT::aarch64svcount, &AArch64::PPRRegClass);
-    setOperationPromotedToType(ISD::LOAD, MVT::aarch64svcount, MVT::nxv16i1);
-    setOperationPromotedToType(ISD::STORE, MVT::aarch64svcount, MVT::nxv16i1);
-
-    setOperationAction(ISD::SELECT, MVT::aarch64svcount, Custom);
-    setOperationAction(ISD::SELECT_CC, MVT::aarch64svcount, Expand);
   }
 
   // Compute derived properties from the register classes
@@ -1608,6 +1602,14 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
          { MVT::nxv2i8, MVT::nxv2i16, MVT::nxv2i32, MVT::nxv2i64, MVT::nxv4i8,
            MVT::nxv4i16, MVT::nxv4i32, MVT::nxv8i8, MVT::nxv8i16 })
       setOperationAction(ISD::SIGN_EXTEND_INREG, VT, Legal);
+
+    // Promote predicate as counter load/stores to standard predicates.
+    setOperationPromotedToType(ISD::LOAD, MVT::aarch64svcount, MVT::nxv16i1);
+    setOperationPromotedToType(ISD::STORE, MVT::aarch64svcount, MVT::nxv16i1);
+
+    // Predicate as counter legalization actions.
+    setOperationAction(ISD::SELECT, MVT::aarch64svcount, Custom);
+    setOperationAction(ISD::SELECT_CC, MVT::aarch64svcount, Expand);
 
     for (auto VT :
          {MVT::nxv16i1, MVT::nxv8i1, MVT::nxv4i1, MVT::nxv2i1, MVT::nxv1i1}) {
@@ -29338,11 +29340,16 @@ AArch64TargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
       //   http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2020/p0493r1.pdf
       // (2) low level libgcc and compiler-rt support implemented by:
       //   min/max outline atomics helpers
-      if (AI->getOperation() != AtomicRMWInst::Min &&
-          AI->getOperation() != AtomicRMWInst::Max &&
-          AI->getOperation() != AtomicRMWInst::UMin &&
-          AI->getOperation() != AtomicRMWInst::UMax) {
+      switch (AI->getOperation()) {
+      case AtomicRMWInst::Xchg:
+      case AtomicRMWInst::Add:
+      case AtomicRMWInst::Sub:
+      case AtomicRMWInst::And:
+      case AtomicRMWInst::Or:
+      case AtomicRMWInst::Xor:
         return AtomicExpansionKind::None;
+      default:
+        break;
       }
     }
   }
