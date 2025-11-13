@@ -1857,11 +1857,15 @@ static bool checkSpanLikeType(const QualType &Ty) {
     return false;
   const QualType FirstFieldType = FieldsBegin->getType();
   const QualType SecondFieldType = std::next(FieldsBegin)->getType();
+  auto validatePointerType = [](const QualType &T) {
+    // It must not point to functions.
+    return T->isPointerType() && !T->isFunctionPointerType();
+  };
   // Verify two possible orderings.
-  return (FirstFieldType->isAnyPointerType() &&
+  return (validatePointerType(FirstFieldType) &&
           SecondFieldType->isIntegerType()) ||
          (FirstFieldType->isIntegerType() &&
-          SecondFieldType->isAnyPointerType());
+          validatePointerType(SecondFieldType));
 }
 
 static void handleMallocSpanAttr(Sema &S, Decl *D, const ParsedAttr &AL) {

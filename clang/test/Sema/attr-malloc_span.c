@@ -29,3 +29,10 @@ typedef struct {
   size_t n2;
 } invalid_span2;
 invalid_span2  returns_non_std_span2  (void) __attribute((malloc_span)); // expected-warning {{attribute only applies to functions that return span-like structures}}
+
+// Function pointers are not allowed.
+typedef struct {
+  int (*func_ptr)(void);
+  size_t n;
+} func_span;
+func_span  returns_func_span  (void) __attribute((malloc_span)); // expected-warning {{attribute only applies to functions that return span-like structures}}
