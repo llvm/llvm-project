@@ -439,6 +439,20 @@ protected:
                                        uint32_t NumBlocks[3]) const;
 
 private:
+  /// Information about the dynamic block memory needed for launching a kernel.
+  struct DynBlockMemInfoTy {
+    /// The size of the dynamic block memory buffer.
+    uint32_t Size = 0;
+    /// The size of dynamic shared memory natively provided by the device.
+    uint32_t NativeSize = 0;
+    /// The fallback that was triggered (if any).
+    DynCGroupMemFallbackType DynBlockMemFb = DynCGroupMemFallbackType::None;
+    /// The fallback pointer if global memory was used as alternative.
+    void *FallbackPtr = nullptr;
+  };
+
+  Expected<DynBlockMemInfoTy> prepareBlockMemory(GenericDeviceTy &GenericDevice, KernelArgsTy &KernelArgs);
+
   /// Prepare the arguments before launching the kernel.
   KernelLaunchParamsTy
   prepareArgs(GenericDeviceTy &GenericDevice, void **ArgPtrs,
