@@ -84,17 +84,19 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
   const LLT p6 = LLT::pointer(6, PSize); // SPV_INTEL_usm_storage_classes (Host)
   const LLT p7 = LLT::pointer(7, PSize); // Input
   const LLT p8 = LLT::pointer(8, PSize); // Output
+  const LLT p9 =
+      LLT::pointer(9, PSize); // CodeSectionINTEL, SPV_INTEL_function_pointers
   const LLT p10 = LLT::pointer(10, PSize); // Private
   const LLT p11 = LLT::pointer(11, PSize); // StorageBuffer
   const LLT p12 = LLT::pointer(12, PSize); // Uniform
 
   // TODO: remove copy-pasting here by using concatenation in some way.
   auto allPtrsScalarsAndVectors = {
-      p0,    p1,    p2,    p3,     p4,     p5,    p6,    p7,    p8,
-      p10,   p11,   p12,   s1,     s8,     s16,   s32,   s64,   v2s1,
-      v2s8,  v2s16, v2s32, v2s64,  v3s1,   v3s8,  v3s16, v3s32, v3s64,
-      v4s1,  v4s8,  v4s16, v4s32,  v4s64,  v8s1,  v8s8,  v8s16, v8s32,
-      v8s64, v16s1, v16s8, v16s16, v16s32, v16s64};
+      p0,    p1,    p2,    p3,    p4,     p5,     p6,    p7,    p8,
+      p9,    p10,   p11,   p12,   s1,     s8,     s16,   s32,   s64,
+      v2s1,  v2s8,  v2s16, v2s32, v2s64,  v3s1,   v3s8,  v3s16, v3s32,
+      v3s64, v4s1,  v4s8,  v4s16, v4s32,  v4s64,  v8s1,  v8s8,  v8s16,
+      v8s32, v8s64, v16s1, v16s8, v16s16, v16s32, v16s64};
 
   auto allVectors = {v2s1,  v2s8,   v2s16,  v2s32, v2s64, v3s1,  v3s8,
                      v3s16, v3s32,  v3s64,  v4s1,  v4s8,  v4s16, v4s32,
@@ -121,10 +123,10 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
       s16,   s32,   s64,   v2s16, v2s32, v2s64, v3s16,  v3s32,  v3s64,
       v4s16, v4s32, v4s64, v8s16, v8s32, v8s64, v16s16, v16s32, v16s64};
 
-  auto allFloatAndIntScalarsAndPtrs = {s8, s16, s32, s64, p0, p1,  p2,  p3,
-                                       p4, p5,  p6,  p7,  p8, p10, p11, p12};
+  auto allFloatAndIntScalarsAndPtrs = {s8, s16, s32, s64, p0, p1,  p2,  p3, p4,
+                                       p5, p6,  p7,  p8,  p9, p10, p11, p12};
 
-  auto allPtrs = {p0, p1, p2, p3, p4, p5, p6, p7, p8, p10, p11, p12};
+  auto allPtrs = {p0, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12};
 
   bool IsExtendedInts =
       ST.canUseExtension(
@@ -177,15 +179,22 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
   getActionDefinitionsBuilder(G_UNMERGE_VALUES).alwaysLegal();
 
   getActionDefinitionsBuilder({G_MEMCPY, G_MEMMOVE})
+      .unsupportedIf(LegalityPredicates::any(typeIs(0, p9), typeIs(1, p9)))
       .legalIf(all(typeInSet(0, allPtrs), typeInSet(1, allPtrs)));
 
-  getActionDefinitionsBuilder(G_MEMSET).legalIf(
-      all(typeInSet(0, allPtrs), typeInSet(1, allIntScalars)));
+  getActionDefinitionsBuilder(G_MEMSET)
+      .unsupportedIf(typeIs(0, p9))
+      .legalIf(all(typeInSet(0, allPtrs), typeInSet(1, allIntScalars)));
 
   getActionDefinitionsBuilder(G_ADDRSPACE_CAST)
+      .unsupportedIf(
+          LegalityPredicates::any(all(typeIs(0, p9), typeIsNot(1, p9)),
+                                  all(typeIsNot(0, p9), typeIs(1, p9))))
       .legalForCartesianProduct(allPtrs, allPtrs);
 
-  getActionDefinitionsBuilder({G_LOAD, G_STORE}).legalIf(typeInSet(1, allPtrs));
+  getActionDefinitionsBuilder({G_LOAD, G_STORE})
+      .unsupportedIf(typeIs(1, p9))
+      .legalIf(typeInSet(1, allPtrs));
 
   getActionDefinitionsBuilder({G_SMIN, G_SMAX, G_UMIN, G_UMAX, G_ABS,
                                G_BITREVERSE, G_SADDSAT, G_UADDSAT, G_SSUBSAT,
@@ -247,9 +256,12 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
 
   // ST.canDirectlyComparePointers() for pointer args is supported in
   // legalizeCustom().
-  getActionDefinitionsBuilder(G_ICMP).customIf(
-      all(typeInSet(0, allBoolScalarsAndVectors),
-          typeInSet(1, allPtrsScalarsAndVectors)));
+  getActionDefinitionsBuilder(G_ICMP)
+      .unsupportedIf(LegalityPredicates::any(
+          all(typeIs(0, p9), typeInSet(1, allPtrs), typeIsNot(1, p9)),
+          all(typeInSet(0, allPtrs), typeIsNot(0, p9), typeIs(1, p9))))
+      .customIf(all(typeInSet(0, allBoolScalarsAndVectors),
+                    typeInSet(1, allPtrsScalarsAndVectors)));
 
   getActionDefinitionsBuilder(G_FCMP).legalIf(
       all(typeInSet(0, allBoolScalarsAndVectors),
