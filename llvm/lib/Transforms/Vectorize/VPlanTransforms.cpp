@@ -547,7 +547,9 @@ static void removeRedundantCanonicalIVs(VPlan &Plan) {
     // only.
     if (!vputils::onlyScalarValuesUsed(WidenOriginalIV) ||
         vputils::onlyFirstLaneUsed(WidenNewIV)) {
-      // Drop poison-generating flags when performing replacement.
+      // We are replacing a wide canonical iv with a suitable wide induction.
+      // This is used to compute header mask, and may sign-wrap, and not
+      // unsigned-wrap, so drop no-wrap flags before performing a replacement.
       WidenOriginalIV->dropPoisonGeneratingFlags();
       WidenNewIV->replaceAllUsesWith(WidenOriginalIV);
       WidenNewIV->eraseFromParent();
