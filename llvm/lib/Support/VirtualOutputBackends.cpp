@@ -255,15 +255,15 @@ static Error createDirectoriesOnDemand(StringRef OutputPath,
 }
 
 static sys::fs::OpenFlags generateFlagsFromConfig(OutputConfig Config) {
- sys::fs::OpenFlags OF = sys::fs::OF_None;
- if (Config.getTextWithCRLF())
-         OF |= sys::fs::OF_TextWithCRLF;
- else if (Config.getText())
-         OF |= sys::fs::OF_Text;
- if (Config.getAppend())
-         OF |= sys::fs::OF_Append;
-
- return OF;
+  sys::fs::OpenFlags OF = sys::fs::OF_None;
+  if (Config.getTextWithCRLF())
+    OF |= sys::fs::OF_TextWithCRLF;
+  else if (Config.getText())
+    OF |= sys::fs::OF_Text;
+  if (Config.getAppend())
+    OF |= sys::fs::OF_Append;
+ 
+  return OF;
 }
 
 Error OnDiskOutputFile::tryToCreateTemporary(std::optional<int> &FD) {
