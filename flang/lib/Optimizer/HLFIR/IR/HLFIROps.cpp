@@ -592,6 +592,12 @@ llvm::LogicalResult hlfir::DesignateOp::verify() {
   return mlir::success();
 }
 
+std::optional<std::int64_t> hlfir::DesignateOp::getViewOffset(mlir::OpResult) {
+  // TODO: we can compute the constant offset
+  // based on the component/indices/etc.
+  return std::nullopt;
+}
+
 //===----------------------------------------------------------------------===//
 // ParentComponentOp
 //===----------------------------------------------------------------------===//
