@@ -127,6 +127,9 @@ static void resolveTopLevelMetadata(llvm::Function *Fn,
   auto *NewDIS = llvm::MDNode::replaceWithDistinct(DIS->clone());
   // As DISubprogram remapping is avoided, clear retained nodes list of
   // cloned DISubprogram from retained nodes local to original DISubprogram.
+  // FIXME: Information about optimized-out variables, labels,
+  // and local entities may be lost here, as retained nodes are not
+  // remapped.
   NewDIS->replaceRetainedNodes(llvm::MDTuple::get(Fn->getContext(), {}));
   VMap.MD()[DIS].reset(NewDIS);
 
