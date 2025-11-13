@@ -201,6 +201,8 @@ struct CppEmitter {
   /// Return the existing or a new label of a Block.
   StringRef getOrCreateName(Block &block);
 
+  LogicalResult emitInlinedExpression(Value value);
+
   /// Whether to map an mlir integer to a unsigned integer in C++.
   bool shouldMapToUnsigned(IntegerType::SignednessSemantics val);
 
@@ -355,11 +357,6 @@ static bool shouldBeInlined(ExpressionOp expressionOp) {
   if (expressionOp.getDoNotInline())
     return false;
 
-  // Do not inline expressions with side effects to prevent side-effect
-  // reordering.
-  if (expressionOp.hasSideEffects())
-    return false;
-
   // Do not inline expressions with multiple uses.
   Value result = expressionOp.getResult();
   if (!result.hasOneUse())
@@ -375,7 +372,85 @@ static bool shouldBeInlined(ExpressionOp expressionOp) {
   // Do not inline expressions used by other expressions or by ops with the
   // CExpressionInterface. If this was intended, the user could have been merged
   // into the expression op.
-  return !isa<emitc::ExpressionOp, emitc::CExpressionInterface>(*user);
+  if (isa<emitc::ExpressionOp, emitc::CExpressionInterface>(*user))
+    return false;
+
+  // Expressions with no side-effects can safely be inlined.
+  if (!expressionOp.hasSideEffects())
+    return true;
+
+  // Expressions with side-effects can be only inlined if side-effect ordering
+  // in the program is provably retained.
+
+  // Require the user to immediately follow the expression.
+  if (++Block::iterator(expressionOp) != Block::iterator(user))
+    return false;
+
+  // These single-operand ops are safe.
+  if (isa<emitc::IfOp, emitc::SwitchOp, emitc::ReturnOp>(user))
+    return true;
+
+  // For assignment look for specific cases to inline as evaluation order of
+  // its lvalue and rvalue is undefined in C.
+  if (auto assignOp = dyn_cast<emitc::AssignOp>(user)) {
+    // Inline if this assignment is of the form `<var> = <expression>`.
+    if (expressionOp.getResult() == assignOp.getValue() &&
+        isa_and_present<VariableOp>(assignOp.getVar().getDefiningOp()))
+      return true;
+  }
+
+  return false;
+}
+
+static LogicalResult printOperation(CppEmitter &emitter,
+                                    emitc::GetFieldOp getFieldOp) {
+  emitter.cacheDeferredOpResult(getFieldOp.getResult(),
+                                getFieldOp.getFieldName());
+  return success();
+}
+
+static LogicalResult printOperation(CppEmitter &emitter,
+                                    emitc::GetGlobalOp getGlobalOp) {
+  emitter.cacheDeferredOpResult(getGlobalOp.getResult(), getGlobalOp.getName());
+  return success();
+}
+
+static LogicalResult printOperation(CppEmitter &emitter,
+                                    emitc::LiteralOp literalOp) {
+  emitter.cacheDeferredOpResult(literalOp.getResult(), literalOp.getValue());
+  return success();
+}
+
+static LogicalResult printOperation(CppEmitter &emitter,
+                                    emitc::MemberOp memberOp) {
+  std::string out;
+  llvm::raw_string_ostream ss(out);
+  ss << emitter.getOrCreateName(memberOp.getOperand());
+  ss << "." << memberOp.getMember();
+  emitter.cacheDeferredOpResult(memberOp.getResult(), out);
+  return success();
+}
+
+static LogicalResult printOperation(CppEmitter &emitter,
+                                    emitc::MemberOfPtrOp memberOfPtrOp) {
+  std::string out;
+  llvm::raw_string_ostream ss(out);
+  ss << emitter.getOrCreateName(memberOfPtrOp.getOperand());
+  ss << "->" << memberOfPtrOp.getMember();
+  emitter.cacheDeferredOpResult(memberOfPtrOp.getResult(), out);
+  return success();
+}
+
+static LogicalResult printOperation(CppEmitter &emitter,
+                                    emitc::SubscriptOp subscriptOp) {
+  std::string out;
+  llvm::raw_string_ostream ss(out);
+  ss << emitter.getOrCreateName(subscriptOp.getValue());
+  for (auto index : subscriptOp.getIndices()) {
+    ss << "[" << emitter.getOrCreateName(index) << "]";
+  }
+  emitter.cacheDeferredOpResult(subscriptOp.getResult(), out);
+  return success();
 }
 
 static LogicalResult printConstantOp(CppEmitter &emitter, Operation *operation,
@@ -554,6 +629,30 @@ static LogicalResult printOperation(CppEmitter &emitter,
     return failure();
 
   os.unindent() << "}\n}";
+  return success();
+}
+
+static LogicalResult printOperation(CppEmitter &emitter, emitc::DoOp doOp) {
+  raw_indented_ostream &os = emitter.ostream();
+
+  os << "do {\n";
+  os.indent();
+
+  Block &bodyBlock = doOp.getBodyRegion().front();
+  for (Operation &op : bodyBlock) {
+    if (failed(emitter.emitOperation(op, /*trailingSemicolon=*/true)))
+      return failure();
+  }
+
+  os.unindent() << "} while (";
+
+  Block &condBlock = doOp.getConditionRegion().front();
+  auto condYield = cast<emitc::YieldOp>(condBlock.back());
+  if (failed(emitter.emitExpression(
+          cast<emitc::ExpressionOp>(condYield.getOperand(0).getDefiningOp()))))
+    return failure();
+
+  os << ");";
   return success();
 }
 
@@ -1711,11 +1810,14 @@ LogicalResult CppEmitter::emitOperation(Operation &op, bool trailingSemicolon) {
                 emitc::BitwiseRightShiftOp, emitc::BitwiseXorOp, emitc::CallOp,
                 emitc::CallOpaqueOp, emitc::CastOp, emitc::ClassOp,
                 emitc::CmpOp, emitc::ConditionalOp, emitc::ConstantOp,
-                emitc::DeclareFuncOp, emitc::DivOp, emitc::ExpressionOp,
-                emitc::FieldOp, emitc::FileOp, emitc::ForOp, emitc::FuncOp,
-                emitc::GlobalOp, emitc::IfOp, emitc::IncludeOp, emitc::LoadOp,
+                emitc::DeclareFuncOp, emitc::DivOp, emitc::DoOp,
+                emitc::ExpressionOp, emitc::FieldOp, emitc::FileOp,
+                emitc::ForOp, emitc::FuncOp, emitc::GetFieldOp,
+                emitc::GetGlobalOp, emitc::GlobalOp, emitc::IfOp,
+                emitc::IncludeOp, emitc::LiteralOp, emitc::LoadOp,
                 emitc::LogicalAndOp, emitc::LogicalNotOp, emitc::LogicalOrOp,
-                emitc::MulOp, emitc::RemOp, emitc::ReturnOp, emitc::SubOp,
+                emitc::MemberOfPtrOp, emitc::MemberOp, emitc::MulOp,
+                emitc::RemOp, emitc::ReturnOp, emitc::SubscriptOp, emitc::SubOp,
                 emitc::SwitchOp, emitc::UnaryMinusOp, emitc::UnaryPlusOp,
                 emitc::VariableOp, emitc::VerbatimOp>(
 
@@ -1723,30 +1825,6 @@ LogicalResult CppEmitter::emitOperation(Operation &op, bool trailingSemicolon) {
           // Func ops.
           .Case<func::CallOp, func::FuncOp, func::ReturnOp>(
               [&](auto op) { return printOperation(*this, op); })
-          .Case<emitc::GetGlobalOp>([&](auto op) {
-            cacheDeferredOpResult(op.getResult(), op.getName());
-            return success();
-          })
-          .Case<emitc::GetFieldOp>([&](auto op) {
-            cacheDeferredOpResult(op.getResult(), op.getFieldName());
-            return success();
-          })
-          .Case<emitc::LiteralOp>([&](auto op) {
-            cacheDeferredOpResult(op.getResult(), op.getValue());
-            return success();
-          })
-          .Case<emitc::MemberOp>([&](auto op) {
-            cacheDeferredOpResult(op.getResult(), createMemberAccess(op));
-            return success();
-          })
-          .Case<emitc::MemberOfPtrOp>([&](auto op) {
-            cacheDeferredOpResult(op.getResult(), createMemberAccess(op));
-            return success();
-          })
-          .Case<emitc::SubscriptOp>([&](auto op) {
-            cacheDeferredOpResult(op.getResult(), getSubscriptName(op));
-            return success();
-          })
           .Default([&](Operation *) {
             return op.emitOpError("unable to find printer for op");
           });
@@ -1765,9 +1843,9 @@ LogicalResult CppEmitter::emitOperation(Operation &op, bool trailingSemicolon) {
   // Never emit a semicolon for some operations, especially if endening with
   // `}`.
   trailingSemicolon &=
-      !isa<cf::CondBranchOp, emitc::DeclareFuncOp, emitc::FileOp, emitc::ForOp,
-           emitc::IfOp, emitc::IncludeOp, emitc::SwitchOp, emitc::VerbatimOp>(
-          op);
+      !isa<cf::CondBranchOp, emitc::DeclareFuncOp, emitc::DoOp, emitc::FileOp,
+           emitc::ForOp, emitc::IfOp, emitc::IncludeOp, emitc::SwitchOp,
+           emitc::VerbatimOp>(op);
 
   os << (trailingSemicolon ? ";\n" : "\n");
 

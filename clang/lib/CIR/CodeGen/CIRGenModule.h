@@ -159,6 +159,13 @@ public:
                                       bool isConstant = false,
                                       mlir::Operation *insertPoint = nullptr);
 
+  /// Add a global constructor or destructor to the module.
+  /// The priority is optional, if not specified, the default priority is used.
+  void addGlobalCtor(cir::FuncOp ctor,
+                     std::optional<int> priority = std::nullopt);
+  void addGlobalDtor(cir::FuncOp dtor,
+                     std::optional<int> priority = std::nullopt);
+
   bool shouldZeroInitPadding() const {
     // In C23 (N3096) $6.7.10:
     // """
@@ -289,6 +296,12 @@ public:
   cir::GlobalViewAttr
   getAddrOfConstantStringFromLiteral(const StringLiteral *s,
                                      llvm::StringRef name = ".str");
+
+  /// Returns the address space for temporary allocations in the language. This
+  /// ensures that the allocated variable's address space matches the
+  /// expectations of the AST, rather than using the target's allocation address
+  /// space, which may lead to type mismatches in other parts of the IR.
+  LangAS getLangTempAllocaAddressSpace() const;
 
   /// Set attributes which are common to any form of a global definition (alias,
   /// Objective-C method, function, global variable).
@@ -422,6 +435,10 @@ public:
   void setFunctionAttributes(GlobalDecl gd, cir::FuncOp f,
                              bool isIncompleteFunction, bool isThunk);
 
+  /// Set extra attributes (inline, etc.) for a function.
+  void setCIRFunctionAttributesForDefinition(const clang::FunctionDecl *fd,
+                                             cir::FuncOp f);
+
   void emitGlobalDefinition(clang::GlobalDecl gd,
                             mlir::Operation *op = nullptr);
   void emitGlobalFunctionDefinition(clang::GlobalDecl gd, mlir::Operation *op);
@@ -480,7 +497,13 @@ public:
                                        cir::FuncType ty,
                                        const clang::FunctionDecl *fd);
 
+  cir::FuncOp createRuntimeFunction(cir::FuncType ty, llvm::StringRef name,
+                                    mlir::ArrayAttr = {}, bool isLocal = false,
+                                    bool assumeConvergent = false);
+
   static constexpr const char *builtinCoroId = "__builtin_coro_id";
+  static constexpr const char *builtinCoroAlloc = "__builtin_coro_alloc";
+  static constexpr const char *builtinCoroBegin = "__builtin_coro_begin";
 
   /// Given a builtin id for a function like "__builtin_fabsf", return a
   /// Function* for "fabsf".

@@ -790,8 +790,7 @@ bool ValueObject::SetData(DataExtractor &data, Status &error) {
     return false;
   }
 
-  uint64_t count = 0;
-  const Encoding encoding = GetCompilerType().GetEncoding(count);
+  const Encoding encoding = GetCompilerType().GetEncoding();
 
   const size_t byte_size = llvm::expectedToOptional(GetByteSize()).value_or(0);
 
@@ -1669,8 +1668,7 @@ bool ValueObject::SetValueFromCString(const char *value_str, Status &error) {
     return false;
   }
 
-  uint64_t count = 0;
-  const Encoding encoding = GetCompilerType().GetEncoding(count);
+  const Encoding encoding = GetCompilerType().GetEncoding();
 
   const size_t byte_size = llvm::expectedToOptional(GetByteSize()).value_or(0);
 

@@ -36,10 +36,12 @@ add_llvm_target(SPIRVCodeGen
   SPIRVMetadata.cpp
   SPIRVModuleAnalysis.cpp
   SPIRVStructurizer.cpp
+  SPIRVCombinerHelper.cpp
   SPIRVPreLegalizer.cpp
   SPIRVPreLegalizerCombiner.cpp
   SPIRVPostLegalizer.cpp
   SPIRVPrepareFunctions.cpp
+  SPIRVPrepareGlobals.cpp
   SPIRVRegisterBankInfo.cpp
   SPIRVRegisterInfo.cpp
   SPIRVRegularizer.cpp

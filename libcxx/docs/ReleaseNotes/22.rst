@@ -40,8 +40,14 @@ Implemented Papers
 
 - P2321R2: ``zip`` (`Github <https://llvm.org/PR105169>`__) (The paper is partially implemented. ``zip_transform_view``
   is implemented in this release)
+- P2988R12: ``std::optional<T&>`` (`Github <https://llvm.org/PR148131>`__)
 - P3044R2: sub-``string_view`` from ``string`` (`Github <https://llvm.org/PR148140>`__)
 - P3223R2: Making ``std::istream::ignore`` less surprising (`Github <https://llvm.org/PR148178>`__)
+- P3060R3: Add ``std::views::indices(n)`` (`Github <https://llvm.org/PR148175>`__)
+- P2641R4: Checking if a ``union`` alternative is active (``std::is_within_lifetime``)
+  (`Github <https://llvm.org/PR105381>`__)
+- P2835R7: Expose ``std::atomic_ref``'s object address (`Github <https://llvm.org/PR118377>`__)
+- P2944R3: Comparisons for ``reference_wrapper`` (`Github <https://llvm.org/PR105424>`__)
 - P3168R2: Give ``std::optional`` Range Support (`Github <https://llvm.org/PR105430>`__)
 
 Improvements and New Features
@@ -59,13 +65,23 @@ Improvements and New Features
   has been improved by up to 3x
 - The performance of ``insert(iterator, iterator)`` of ``map``, ``set``, ``multimap`` and ``multiset`` has been improved
   by up to 2.5x
+- The performance of ``erase(iterator, iterator)`` in the unordered containers has been improved by up to 1.9x
 - The performance of ``map::insert_or_assign`` has been improved by up to 2x
-- ``ofstream::write`` has been optimized to pass through large strings to system calls directly instead of copying them
-  in chunks into a buffer.
+- ``ofstream::write`` and ``ifstream::read`` have been optimized to pass through large reads and writes to system calls
+  directly instead of copying them in chunks.
 - Multiple internal types have been refactored to use ``[[no_unique_address]]``, resulting in faster compile times and
   reduced debug information.
 
 - The performance of ``std::find`` has been improved by up to 2x for integral types
+- The ``std::distance`` and ``std::ranges::distance`` algorithms have been optimized for segmented iterators (e.g.,
+  ``std::join_view`` iterators), reducing the complexity from ``O(n)`` to ``O(n / segment_size)``. Benchmarks show
+  performance improvements of over 1600x in favorable cases with large segment sizes (e.g., 1024).
+- The ``std::{fill, fill_n}`` and ``std::ranges::{fill, fill_n}`` algorithms have been optimized for segmented iterators,
+  resulting in a performance improvement of at least 10x for ``std::deque<int>`` iterators and
+  ``std::join_view<std::vector<std::vector<int>>>`` iterators.
+- The ``std::{generate, generate_n}`` and ``std::ranges::generate_n`` algorithms have been optimized for segmented
+  iterators, resulting in a performance improvement for ``std::deque<short>`` and
+  ``std::join_view<vector<vector<short>>>`` iterators.
 
 Deprecations and Removals
 -------------------------

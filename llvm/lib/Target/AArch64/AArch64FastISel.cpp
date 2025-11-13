@@ -81,10 +81,7 @@ namespace {
 class AArch64FastISel final : public FastISel {
   class Address {
   public:
-    using BaseKind = enum {
-      RegBase,
-      FrameIndexBase
-    };
+    enum BaseKind { RegBase, FrameIndexBase };
 
   private:
     BaseKind Kind = RegBase;

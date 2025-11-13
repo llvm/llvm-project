@@ -32,6 +32,7 @@ class VPRecipeBuilder;
 struct VFRange;
 
 extern cl::opt<bool> VerifyEachVPlan;
+extern cl::opt<bool> EnableWideActiveLaneMask;
 
 struct VPlanTransforms {
   /// Helper to run a VPlan transform \p Transform on \p VPlan, forwarding extra
@@ -325,9 +326,10 @@ struct VPlanTransforms {
   static void materializeBackedgeTakenCount(VPlan &Plan,
                                             VPBasicBlock *VectorPH);
 
-  /// Add explicit Build[Struct]Vector recipes that combine multiple scalar
-  /// values into single vectors.
-  static void materializeBuildVectors(VPlan &Plan);
+  /// Add explicit Build[Struct]Vector recipes to Pack multiple scalar values
+  /// into vectors and Unpack recipes to extract scalars from vectors as
+  /// needed.
+  static void materializePacksAndUnpacks(VPlan &Plan);
 
   /// Materialize VF and VFxUF to be computed explicitly using VPInstructions.
   static void materializeVFAndVFxUF(VPlan &Plan, VPBasicBlock *VectorPH,
@@ -347,7 +349,7 @@ struct VPlanTransforms {
   /// form of loop-aware SLP, where we use interleave groups to identify
   /// candidates.
   static void narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
-                                     unsigned VectorRegWidth);
+                                     TypeSize VectorRegWidth);
 
   /// Predicate and linearize the control-flow in the only loop region of
   /// \p Plan. If \p FoldTail is true, create a mask guarding the loop
@@ -363,6 +365,19 @@ struct VPlanTransforms {
   static void
   addBranchWeightToMiddleTerminator(VPlan &Plan, ElementCount VF,
                                     std::optional<unsigned> VScaleForTuning);
+
+  /// Create resume phis in the scalar preheader for first-order recurrences,
+  /// reductions and inductions, and update the VPIRInstructions wrapping the
+  /// original phis in the scalar header. End values for inductions are added to
+  /// \p IVEndValues.
+  static void addScalarResumePhis(VPlan &Plan, VPRecipeBuilder &Builder,
+                                  DenseMap<VPValue *, VPValue *> &IVEndValues);
+
+  /// Handle users in the exit block for first order reductions in the original
+  /// exit block. The penultimate value of recurrences is fed to their LCSSA phi
+  /// users in the original exit block using the VPIRInstruction wrapping to the
+  /// LCSSA phi.
+  static void addExitUsersForFirstOrderRecurrences(VPlan &Plan, VFRange &Range);
 };
 
 } // namespace llvm

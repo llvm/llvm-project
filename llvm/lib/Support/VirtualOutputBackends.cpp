@@ -498,7 +498,7 @@ Error OnDiskOutputFile::keep() {
       // Someone else owns the lock on this file, wait.
       switch (Lock.waitForUnlockFor(std::chrono::seconds(256))) {
       case WaitForUnlockResult::Success:
-        LLVM_FALLTHROUGH;
+        [[fallthrough]];
       case WaitForUnlockResult::OwnerDied: {
         continue; // try again to get the lock.
       }

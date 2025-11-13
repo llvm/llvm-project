@@ -265,7 +265,8 @@ void func_multiple_addr2(void) {
   __attribute__((opencl_private)) private_int_t var5;  // expected-warning {{multiple identical address spaces specified for type}}
   __attribute__((opencl_private)) private_int_t *var6; // expected-warning {{multiple identical address spaces specified for type}}
 #if __OPENCL_CPP_VERSION__
-  __global int [[clang::opencl_private]] var7;         // expected-error {{multiple address spaces specified for type}}
+  __global int [[clang::opencl_private]] var7;         // expected-error {{multiple address spaces specified for type}} \
+                                                       // expected-error {{function scope variable cannot be declared in global address space}}
   __global int [[clang::opencl_private]] *var8;        // expected-error {{multiple address spaces specified for type}}
   private_int_t [[clang::opencl_private]] var9;        // expected-warning {{multiple identical address spaces specified for type}}
   private_int_t [[clang::opencl_private]] *var10;      // expected-warning {{multiple identical address spaces specified for type}}

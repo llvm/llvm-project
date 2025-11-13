@@ -1248,7 +1248,8 @@ void AMDGPUTargetLowering::analyzeFormalArgumentsCompute(
 
     SmallVector<EVT, 16> ValueVTs;
     SmallVector<uint64_t, 16> Offsets;
-    ComputeValueVTs(*this, DL, BaseArgTy, ValueVTs, &Offsets, ArgOffset);
+    ComputeValueVTs(*this, DL, BaseArgTy, ValueVTs, /*MemVTs=*/nullptr,
+                    &Offsets, ArgOffset);
 
     for (unsigned Value = 0, NumValues = ValueVTs.size();
          Value != NumValues; ++Value) {
@@ -2833,8 +2834,8 @@ SDValue AMDGPUTargetLowering::LowerFLOGCommon(SDValue Op,
     R = getMad(DAG, DL, VT, YH, CH, Mad1);
   }
 
-  const bool IsFiniteOnly = (Flags.hasNoNaNs() || Options.NoNaNsFPMath) &&
-                            (Flags.hasNoInfs() || Options.NoInfsFPMath);
+  const bool IsFiniteOnly =
+      (Flags.hasNoNaNs() || Options.NoNaNsFPMath) && Flags.hasNoInfs();
 
   // TODO: Check if known finite from source value.
   if (!IsFiniteOnly) {
@@ -3161,9 +3162,8 @@ SDValue AMDGPUTargetLowering::lowerFEXP(SDValue Op, SelectionDAG &DAG) const {
       DAG.getSetCC(SL, SetCCVT, X, UnderflowCheckConst, ISD::SETOLT);
 
   R = DAG.getNode(ISD::SELECT, SL, VT, Underflow, Zero, R);
-  const auto &Options = getTargetMachine().Options;
 
-  if (!Flags.hasNoInfs() && !Options.NoInfsFPMath) {
+  if (!Flags.hasNoInfs()) {
     SDValue OverflowCheckConst =
         DAG.getConstantFP(IsExp10 ? 0x1.344136p+5f : 0x1.62e430p+6f, SL, VT);
     SDValue Overflow =

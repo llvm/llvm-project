@@ -70,6 +70,20 @@ class MCPlusBuilder {
 public:
   using AllocatorIdTy = uint16_t;
 
+  std::optional<int64_t> getAnnotationAtOpIndex(const MCInst &Inst,
+                                                unsigned OpIndex) const {
+    std::optional<unsigned> FirstAnnotationOp = getFirstAnnotationOpIndex(Inst);
+    if (!FirstAnnotationOp)
+      return std::nullopt;
+
+    if (*FirstAnnotationOp > OpIndex || Inst.getNumOperands() < OpIndex)
+      return std::nullopt;
+
+    const auto *Op = Inst.begin() + OpIndex;
+    const int64_t ImmValue = Op->getImm();
+    return extractAnnotationIndex(ImmValue);
+  }
+
 private:
   /// A struct that represents a single annotation allocator
   struct AnnotationAllocator {
@@ -418,7 +432,7 @@ public:
     return Analysis->isConditionalBranch(Inst);
   }
 
-  /// Returns true if Inst is a condtional move instruction
+  /// Returns true if Inst is a conditional move instruction
   virtual bool isConditionalMove(const MCInst &Inst) const {
     llvm_unreachable("not implemented");
     return false;
@@ -603,6 +617,21 @@ public:
     return std::nullopt;
   }
 
+  virtual bool isPSignOnLR(const MCInst &Inst) const {
+    llvm_unreachable("not implemented");
+    return false;
+  }
+
+  virtual bool isPAuthOnLR(const MCInst &Inst) const {
+    llvm_unreachable("not implemented");
+    return false;
+  }
+
+  virtual bool isPAuthAndRet(const MCInst &Inst) const {
+    llvm_unreachable("not implemented");
+    return false;
+  }
+
   /// Returns the register used as a return address. Returns std::nullopt if
   /// not applicable, such as reading the return address from a system register
   /// or from the stack.
@@ -755,6 +784,11 @@ public:
 
   virtual bool isPop(const MCInst &Inst) const { return false; }
 
+  /// Determine if a basic block looks like an epilogue. For now it is only
+  /// called at the final stage of building CFG to check basic block ending
+  /// with an indirect call that has unknown control flow attribute.
+  virtual bool isEpilogue(const BinaryBasicBlock &BB) const { return false; }
+
   /// Return true if the instruction is used to terminate an indirect branch.
   virtual bool isTerminateBranch(const MCInst &Inst) const {
     llvm_unreachable("not implemented");
@@ -807,6 +841,16 @@ public:
   }
 
   virtual bool isAddXri(const MCInst &Inst) const {
+    llvm_unreachable("not implemented");
+    return false;
+  }
+
+  virtual bool isLDRWl(const MCInst &Inst) const {
+    llvm_unreachable("not implemented");
+    return false;
+  }
+
+  virtual bool isLDRXl(const MCInst &Inst) const {
     llvm_unreachable("not implemented");
     return false;
   }
@@ -1314,6 +1358,32 @@ public:
   /// Return true if the instruction is a tail call.
   bool isTailCall(const MCInst &Inst) const;
 
+  /// Stores NegateRAState annotation on \p Inst.
+  void setNegateRAState(MCInst &Inst) const;
+
+  /// Return true if \p Inst has NegateRAState annotation.
+  bool hasNegateRAState(const MCInst &Inst) const;
+
+  /// Sets RememberState annotation on \p Inst.
+  void setRememberState(MCInst &Inst) const;
+
+  /// Return true if \p Inst has RememberState annotation.
+  bool hasRememberState(const MCInst &Inst) const;
+
+  /// Stores RestoreState annotation on \p Inst.
+  void setRestoreState(MCInst &Inst) const;
+
+  /// Return true if \p Inst has RestoreState annotation.
+  bool hasRestoreState(const MCInst &Inst) const;
+
+  /// Sets kRASigned or kRAUnsigned annotation on \p Inst.
+  /// Fails if \p Inst has either annotation already set.
+  void setRAState(MCInst &Inst, bool State) const;
+
+  /// Return true if \p Inst has kRASigned annotation, false if it has
+  /// kRAUnsigned annotation, and std::nullopt if neither annotation is set.
+  std::optional<bool> getRAState(const MCInst &Inst) const;
+
   /// Return true if the instruction is a call with an exception handling info.
   virtual bool isInvoke(const MCInst &Inst) const {
     return isCall(Inst) && getEHInfo(Inst);
@@ -1502,7 +1572,7 @@ public:
   }
 
   /// Get the default def_in and live_out registers for the function
-  /// Currently only used for the Stoke optimzation
+  /// Currently only used for the Stoke optimization
   virtual void getDefaultDefIn(BitVector &Regs) const {
     llvm_unreachable("not implemented");
   }
@@ -1724,6 +1794,19 @@ public:
   /// ADRP+ADD instruction sequence.
   virtual InstructionListType undoAdrpAddRelaxation(const MCInst &ADRInst,
                                                     MCContext *Ctx) const {
+    llvm_unreachable("not implemented");
+  }
+
+  /// Take \p LDRInst and return ADRP+LDR instruction sequence - for
+  ///
+  ///     ldr  x0, [label]
+  ///
+  /// the following sequence will be generated:
+  ///
+  ///     adrp x0, PageBase(label)
+  ///     ldr  x0, [x0, PageOffset(label)]
+  virtual InstructionListType createAdrpLdr(const MCInst &LDRInst,
+                                            MCContext *Ctx) const {
     llvm_unreachable("not implemented");
   }
 
