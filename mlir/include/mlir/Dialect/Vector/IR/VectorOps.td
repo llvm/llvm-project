@@ -2234,11 +2234,11 @@ def Vector_ScatterOp
   let hasCanonicalizer = 1;
   let hasVerifier = 1;
 
-  let builders =
-      [OpBuilder<(ins "Type":$resultType, "Value":$base, "ValueRange":$indices,
-                     "Value":$index_vec, "Value":$mask, "Value":$valueToStore,
-                     CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment),
-                 [{
+  let builders = [OpBuilder<
+      (ins "Type":$resultType, "Value":$base, "ValueRange":$indices,
+          "Value":$index_vec, "Value":$mask, "Value":$valueToStore,
+          CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment),
+      [{
       return build($_builder, $_state, resultType, base, indices, index_vec, mask, valueToStore,
                    alignment.has_value() ? $_builder.getI64IntegerAttr(alignment->value()) :
                                     nullptr);
