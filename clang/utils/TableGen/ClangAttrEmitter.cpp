@@ -5052,6 +5052,8 @@ void EmitClangAttrIsTypeDependent(const RecordKeeper &Records,
 
   OS << "void checkAttrIsTypeDependent(Decl *D, const Attr *A) {\n";
   OS << "  switch (A->getKind()) {\n";
+  OS << "  default:\n";
+  OS << "    break;\n";
   for (const auto *A : Records.getAllDerivedDefinitions("Attr")) {
     if (A->getValueAsBit("IsTypeDependent")) {
       OS << "  case attr::" << A->getName() << ":\n";
@@ -5059,8 +5061,6 @@ void EmitClangAttrIsTypeDependent(const RecordKeeper &Records,
       OS << "    break;\n";
     }
   }
-  OS << "  default:\n";
-  OS << "    break;\n";
   OS << "  }\n";
   OS << "}\n";
 }

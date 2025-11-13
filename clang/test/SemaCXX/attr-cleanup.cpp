@@ -43,11 +43,12 @@ namespace F {
 
   template <typename Ty>
   void test3() {
-    Ty fd [[gnu::cleanup(close)]] = open(); // expected-error {{'cleanup' function 'close' parameter has type 'decltype(open()) *' (aka 'int *') which is incompatible with type 'float *'}}
+    Ty fd [[gnu::cleanup(close)]] = open(); // #TEST3_CLEANUP
   }
 
   int main() {
     test2<int>();
-    test3<float>(); // expected-note {{in instantiation of function template specialization 'F::test3<float>' requested here}}
+    test3<float>(); // expected-error@#TEST3_CLEANUP {{'cleanup' function 'close' parameter has type 'decltype(open()) *' (aka 'int *') which is incompatible with type 'float *'}} \
+                       expected-note {{in instantiation of function template specialization 'F::test3<float>' requested here}}
   }
 }

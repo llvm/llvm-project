@@ -3356,12 +3356,8 @@ void Sema::mergeDeclAttributes(NamedDecl *New, Decl *Old,
 }
 
 void Sema::CheckAttributesOnDeducedType(Decl *D) {
-  if (!D->hasAttrs())
-    return;
-
-  for (const Attr *A : D->getAttrs()) {
+  for (const Attr *A : D->attrs())
     checkAttrIsTypeDependent(D, A);
-  }
 }
 
 // Returns the number of added attributes.
