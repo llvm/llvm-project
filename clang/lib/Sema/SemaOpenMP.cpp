@@ -1373,6 +1373,10 @@ DSAStackTy::DSAVarData DSAStackTy::getDSA(const_iterator &Iter,
     if (!D->getType()->isAggregateType())
       IterDA = DSA_none;
     break;
+  case DSA_VC_allocatable:
+    // TBD: DSA_VC_allocatable
+    IterDA = DSA_none;
+    break;
   case DSA_VC_pointer:
     if (!D->getType()->isPointerType())
       IterDA = DSA_none;
