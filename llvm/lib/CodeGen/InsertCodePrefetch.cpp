@@ -1,4 +1,4 @@
-//===-- InsertCodePrefetch.cpp ---=========-----------------------------===//
+//===-- InsertCodePrefetch.cpp ---=========--------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,9 +7,14 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// Prefetch insertion pass implementation.
+/// Code Prefetch Insertion Pass.
 //===----------------------------------------------------------------------===//
-/// Prefetch insertion pass.
+/// This pass inserts code prefetch instructions according to the prefetch
+/// directives in the basic block section profile. The target of a prefetch can
+/// be the beginning of any dynamic basic block, that is the beginning of a
+/// machine basic block, or immediately after a callsite. A global symbol will
+/// be emitted at the position of the target so it can be addressed from the
+/// prefetch instruction.
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/SmallVector.h"
@@ -20,15 +25,11 @@
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
-#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/Passes.h"
-#include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/MC/MCContext.h"
-#include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
-#define DEBUG_TYPE "prefetchinsertion"
+#define DEBUG_TYPE "insert-code-prefetch"
 
 namespace {
 class InsertCodePrefetch : public MachineFunctionPass {
@@ -40,13 +41,12 @@ public:
   }
 
   StringRef getPassName() const override {
-    return "X86 Cide Prefetch Inserter Pass";
+    return "Code Prefetch Inserter Pass";
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 
-  /// Identify basic blocks that need separate sections and prepare to emit them
-  /// accordingly.
+  // Sets prefetch targets based on the bb section profile.
   bool runOnMachineFunction(MachineFunction &MF) override;
 };
 
@@ -57,10 +57,10 @@ public:
 //===----------------------------------------------------------------------===//
 
 char InsertCodePrefetch::ID = 0;
-INITIALIZE_PASS_BEGIN(InsertCodePrefetch, DEBUG_TYPE, "Reads prefetch", true,
+INITIALIZE_PASS_BEGIN(InsertCodePrefetch, DEBUG_TYPE, "Code prefetch insertion", true,
                       false)
 INITIALIZE_PASS_DEPENDENCY(BasicBlockSectionsProfileReaderWrapperPass)
-INITIALIZE_PASS_END(InsertCodePrefetch, DEBUG_TYPE, "Reads prefetch", true,
+INITIALIZE_PASS_END(InsertCodePrefetch, DEBUG_TYPE, "Code prefetch insertion", true,
                     false)
 
 bool InsertCodePrefetch::runOnMachineFunction(MachineFunction &MF) {
