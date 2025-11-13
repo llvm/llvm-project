@@ -1804,6 +1804,44 @@ public:
   CreateLoop(BasicBlock &BB, ConvergenceControlInst *Parent);
 };
 
+class StructuredGEPInst : public IntrinsicInst {
+public:
+  static bool classof(const IntrinsicInst *I) {
+    return I->getIntrinsicID() == Intrinsic::structured_gep;
+  }
+
+  static bool classof(const Value *V) {
+    return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
+  }
+
+  Value *getPointerOperand() const { return getOperand(1); }
+
+  Type *getBaseType() const { return getOperand(0)->getType(); }
+
+  unsigned getIndicesCount() const { return getNumOperands() - 3; }
+
+  Type *getResultElementType() const {
+    Type *CurrentType = getBaseType();
+    for (unsigned I = 0; I < getIndicesCount(); I++) {
+      Value *V = getOperand(I + 2);
+      ConstantInt *CI = dyn_cast<ConstantInt>(V);
+      if (!CI)
+        return nullptr;
+
+      if (ArrayType *AT = dyn_cast<ArrayType>(CurrentType)) {
+        CurrentType = AT->getElementType();
+      } else if (StructType *ST = dyn_cast<StructType>(CurrentType)) {
+        CurrentType = ST->getElementType(CI->getZExtValue());
+      } else {
+        // FIXME?
+        assert(0);
+      }
+    }
+
+    return CurrentType;
+  }
+};
+
 } // end namespace llvm
 
 #endif // LLVM_IR_INTRINSICINST_H
