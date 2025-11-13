@@ -130,6 +130,19 @@ struct __common_ref {};
 
 // Note C: For the common_reference trait applied to a parameter pack [...]
 
+template <class...>
+struct _LIBCPP_NO_SPECIALIZATIONS common_reference;
+
+template <class... _Types>
+using common_reference_t = typename common_reference<_Types...>::type;
+
+template <class, class, template <class> class, template <class> class>
+struct basic_common_reference {};
+
+_LIBCPP_DIAGNOSTIC_PUSH
+#  if __has_warning("-Winvalid-specialization")
+_LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Winvalid-specialization")
+#  endif
 // bullet 1 - sizeof...(T) == 0
 template <>
 struct common_reference<> {};
