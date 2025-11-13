@@ -1,4 +1,4 @@
-//===--- BoolBitwiseOperationCheck.h - clang-tidy ---------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -18,7 +18,7 @@ namespace clang::tidy::misc {
 /// ``&&`` and ``||`` would be more appropriate.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/misc/bool-bitwise-operation.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/misc/bool-bitwise-operation.html
 class BoolBitwiseOperationCheck : public ClangTidyCheck {
 public:
   BoolBitwiseOperationCheck(StringRef Name, ClangTidyContext *Context);
