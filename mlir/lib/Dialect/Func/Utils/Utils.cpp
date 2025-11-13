@@ -254,3 +254,28 @@ func::deduplicateArgsOfFuncOp(RewriterBase &rewriter, func::FuncOp funcOp,
 
   return std::make_pair(*newFuncOpOrFailure, newCallOp);
 }
+
+FailureOr<func::FuncOp>
+func::lookupFnDecl(SymbolOpInterface symTable, StringRef name,
+                   FunctionType funcT, SymbolTableCollection *symbolTables) {
+  FuncOp func;
+  if (symbolTables) {
+    func = symbolTables->lookupSymbolIn<FuncOp>(
+        symTable, StringAttr::get(symTable->getContext(), name));
+  } else {
+    func = llvm::dyn_cast_or_null<FuncOp>(
+        SymbolTable::lookupSymbolIn(symTable, name));
+  }
+
+  if (!func)
+    return func;
+
+  mlir::FunctionType foundFuncT = func.getFunctionType();
+  // Assert the signature of the found function is same as expected
+  if (funcT != foundFuncT) {
+    return func.emitError("matched function '")
+           << name << "' but with different type: " << foundFuncT
+           << " (expected " << funcT << ")";
+  }
+  return func;
+}
