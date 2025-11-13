@@ -278,7 +278,7 @@ Error OnDiskOutputFile::tryToCreateTemporary(std::optional<int> &FD) {
       OF |= sys::fs::OF_Append;
     if (std::error_code EC =
             sys::fs::createUniqueFile(ModelPath, NewFD, UniquePath, OF))
-    return make_error<TempFileOutputError>(ModelPath, OutputPath, EC);
+      return make_error<TempFileOutputError>(ModelPath, OutputPath, EC);
 
     if (Config.getDiscardOnSignal())
       sys::RemoveFileOnSignal(UniquePath);
