@@ -78,7 +78,7 @@ release_links = (
         ),
         (
             "MACOS_X86",
-            "* [macOS Intel]({0}) (x86-64) ([signature]({1})])",
+            "* [macOS Intel]({0}) (x86-64) ([signature]({1}))",
             "LLVM-{release}-macOS-X64.tar.xz",
             "LLVM-{release}-macOS-X64.tar.xz.jsonl",
         ),
