@@ -101,7 +101,6 @@ define amdgpu_kernel void @is_local_vgpr(ptr addrspace(1) %ptr.ptr) {
 ; GFX1250-NEXT:    global_load_b64 v[0:1], v0, s[2:3] scale_offset scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    v_cmp_eq_u32_e32 vcc_lo, s1, v1
-; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; GFX1250-NEXT:    global_store_b32 v[0:1], v0, off
 ; GFX1250-NEXT:    s_endpgm

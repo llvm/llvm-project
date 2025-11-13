@@ -27,7 +27,6 @@ define amdgpu_kernel void @test_move_load_address_to_vgpr(ptr addrspace(1) nocap
 ; GCN-NEXT:    s_wait_dscnt 0x0
 ; GCN-NEXT:    flat_load_b32 v3, v[0:1] scope:SCOPE_SYS
 ; GCN-NEXT:    s_wait_loadcnt 0x0
-; GCN-NEXT:    s_wait_xcnt 0x0
 ; GCN-NEXT:    v_add_nc_u64_e32 v[0:1], 4, v[0:1]
 ; GCN-NEXT:    v_add_co_u32 v2, s0, v2, 1
 ; GCN-NEXT:    s_and_b32 vcc_lo, exec_lo, s0

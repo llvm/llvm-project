@@ -152,7 +152,6 @@ define amdgpu_kernel void @min_long_forward_vbranch(ptr addrspace(1) %arg) #0 {
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    global_load_b32 v2, v0, s[0:1] scale_offset scope:SCOPE_SYS
 ; GCN-NEXT:    s_wait_loadcnt 0x0
-; GCN-NEXT:    s_wait_xcnt 0x0
 ; GCN-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GCN-NEXT:    v_add_nc_u64_e32 v[0:1], s[0:1], v[0:1]
