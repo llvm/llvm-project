@@ -2304,31 +2304,28 @@ private:
   // Add AccessGroups attribute on operations in fir::DoLoopOp if this
   // operation has the parallelAccesses attribute.
   void attachAccessGroupAttrToDoLoopOperations(fir::DoLoopOp &doLoop) {
-    if (!doLoop.getOperation())
-      return;
     if (auto loopAnnotAttr = doLoop.getLoopAnnotationAttr()) {
       if (loopAnnotAttr.getParallelAccesses().size()) {
-        mlir::LLVM::AccessGroupAttr accessGroupAttr =
-            loopAnnotAttr.getParallelAccesses().front();
-        for (mlir::Block &block : doLoop.getRegion()) {
-          mlir::ArrayAttr attrs =
-              mlir::ArrayAttr::get(builder->getContext(), {accessGroupAttr});
-          for (mlir::Operation &op : block.getOperations()) {
-            if (fir::StoreOp storeOp = mlir::dyn_cast<fir::StoreOp>(op)) {
-              storeOp.setAccessGroupsAttr(attrs);
-            } else if (fir::LoadOp loadOp = mlir::dyn_cast<fir::LoadOp>(op)) {
-              loadOp.setAccessGroupsAttr(attrs);
-            } else if (hlfir::AssignOp assignOp =
-                           mlir::dyn_cast<hlfir::AssignOp>(op)) {
-              // In some loops, the HLFIR AssignOp operation can be translated
-              // into FIR operation(s) containing StoreOp. It is therefore
-              // necessary to forward the AccessGroups attribute.
-              assignOp.getOperation()->setAttr("access_groups", attrs);
-            } else if (fir::CallOp callOp = mlir::dyn_cast<fir::CallOp>(op)) {
-              callOp.setAccessGroupsAttr(attrs);
-            }
+        llvm::SmallVector<mlir::Attribute> accessGroupAttrs(
+            loopAnnotAttr.getParallelAccesses().begin(),
+            loopAnnotAttr.getParallelAccesses().end());
+        mlir::ArrayAttr attrs =
+            mlir::ArrayAttr::get(builder->getContext(), accessGroupAttrs);
+        doLoop.walk([&](mlir::Operation *op) {
+          if (fir::StoreOp storeOp = mlir::dyn_cast<fir::StoreOp>(op)) {
+            storeOp.setAccessGroupsAttr(attrs);
+          } else if (fir::LoadOp loadOp = mlir::dyn_cast<fir::LoadOp>(op)) {
+            loadOp.setAccessGroupsAttr(attrs);
+          } else if (hlfir::AssignOp assignOp =
+                         mlir::dyn_cast<hlfir::AssignOp>(op)) {
+            // In some loops, the HLFIR AssignOp operation can be translated
+            // into FIR operation(s) containing StoreOp. It is therefore
+            // necessary to forward the AccessGroups attribute.
+            assignOp.getOperation()->setAttr("access_groups", attrs);
+          } else if (fir::CallOp callOp = mlir::dyn_cast<fir::CallOp>(op)) {
+            callOp.setAccessGroupsAttr(attrs);
           }
-        }
+        });
       }
     }
   }
