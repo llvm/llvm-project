@@ -72,7 +72,7 @@ OL_DEVICE_INFO_SIZE_TEST_EQ(MaxMemAllocSize, uint64_t,
 OL_DEVICE_INFO_SIZE_TEST_EQ(GlobalMemSize, uint64_t,
                             OL_DEVICE_INFO_GLOBAL_MEM_SIZE);
 OL_DEVICE_INFO_SIZE_TEST_EQ(SharedMemSize, uint64_t,
-                            OL_DEVICE_INFO_WORK_GROUP_SHARED_MEM_SIZE);
+                            OL_DEVICE_INFO_WORK_GROUP_LOCAL_MEM_SIZE);
 
 TEST_P(olGetDeviceInfoSizeTest, SuccessMaxWorkGroupSizePerDimension) {
   size_t Size = 0;

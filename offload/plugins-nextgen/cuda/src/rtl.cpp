@@ -1096,7 +1096,7 @@ struct CUDADeviceTy : public GenericDeviceTy {
       Info.add("Total Constant Memory", TmpInt, "bytes");
 
     Info.add("Max Shared Memory per Block", MaxBlockSharedMemSize, "bytes",
-             DeviceInfo::WORK_GROUP_SHARED_MEM_SIZE);
+             DeviceInfo::WORK_GROUP_LOCAL_MEM_SIZE);
 
     Res = getDeviceAttrRaw(CU_DEVICE_ATTRIBUTE_MAX_REGISTERS_PER_BLOCK, TmpInt);
     if (Res == CUDA_SUCCESS)
