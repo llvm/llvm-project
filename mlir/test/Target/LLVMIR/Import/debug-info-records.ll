@@ -18,22 +18,16 @@ define void @func_no_debug() {
 ; CHECK: llvm.func @func_with_debug(%[[ARG0:.*]]: i64
 define void @func_with_debug(i64 %0) !dbg !3 {
 
-  ; CHECK: llvm.intr.dbg.value #di_local_variable = %[[ARG0]] : i64
-  ; CHECK: llvm.intr.dbg.value #di_local_variable1 #llvm.di_expression<[DW_OP_LLVM_fragment(0, 1)]> = %[[ARG0]] : i64
+  ; CHECK: llvm.intr.dbg.value #di_local_variable{{.*}} = %[[ARG0]] : i64
+  ; CHECK: llvm.intr.dbg.value #di_local_variable{{.*}} #llvm.di_expression<[DW_OP_LLVM_fragment(0, 1)]> = %[[ARG0]] : i64
   ; CHECK: %[[CST:.*]] = llvm.mlir.constant(1 : i32) : i32
   ; CHECK: %[[ADDR:.*]] = llvm.alloca %[[CST]] x i64
-  ; CHECK: llvm.intr.dbg.declare #di_local_variable2 #llvm.di_expression<[DW_OP_deref, DW_OP_LLVM_convert(4, DW_ATE_signed)]> = %[[ADDR]] : !llvm.ptr
+  ; CHECK: llvm.intr.dbg.declare #di_local_variable{{.*}} #llvm.di_expression<[DW_OP_deref, DW_OP_LLVM_convert(4, DW_ATE_signed)]> = %[[ADDR]] : !llvm.ptr
   %2 = alloca i64, align 8, !dbg !19
     #dbg_value(i64 %0, !20, !DIExpression(DW_OP_LLVM_fragment, 0, 1), !22)
     #dbg_declare(ptr %2, !23, !DIExpression(DW_OP_deref, DW_OP_LLVM_convert, 4, DW_ATE_signed), !25)
     #dbg_value(i64 %0, !26, !DIExpression(), !27)
   call void @func_no_debug(), !dbg !28
-  call void @func_no_debug(), !dbg !28
-  call void @func_no_debug(), !dbg !29
-  call void @func_no_debug(), !dbg !30
-  call void @func_no_debug(), !dbg !30
-  call void @func_no_debug(), !dbg !31
-  call void @func_no_debug(), !dbg !32
   %3 = add i64 %0, %0, !dbg !32
   ret void, !dbg !37
 }
@@ -74,9 +68,6 @@ define void @empty_types() !dbg !38 {
 !26 = !DILocalVariable(scope: !24)
 !27 = !DILocation(line: 109, column: 3, scope: !3)
 !28 = !DILocation(line: 1, column: 2, scope: !3)
-!29 = !DILocation(line: 10, column: 10, scope: !3)
-!30 = !DILocation(line: 5, column: 6, scope: !3)
-!31 = !DILocation(line: 1, column: 1, scope: !3)
 !32 = !DILocation(line: 2, column: 4, scope: !33, inlinedAt: !36)
 !33 = distinct !DISubprogram(name: "callee", scope: !13, file: !1, type: !34, spFlags: DISPFlagDefinition, unit: !0)
 !34 = !DISubroutineType(types: !35)

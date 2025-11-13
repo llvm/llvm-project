@@ -283,7 +283,7 @@ public:
   void addDebugIntrinsic(llvm::CallInst *intrinsic);
 
   /// Similar to `addDebugIntrinsic`, but for debug records.
-  void addDebugRecord(llvm::DbgRecord *dr);
+  void addDebugRecord(llvm::DbgRecord *debugRecord);
 
   /// Converts the LLVM values for an intrinsic to mixed MLIR values and
   /// attributes for LLVM_IntrOpBase. Attributes correspond to LLVM immargs. The
@@ -350,15 +350,15 @@ private:
   LogicalResult processDebugIntrinsic(llvm::DbgVariableIntrinsic *dbgIntr,
                                       DominanceInfo &domInfo);
   /// Converts a single debug record.
-  LogicalResult processDebugRecord(llvm::DbgRecord &dr, DominanceInfo &domInfo);
+  LogicalResult processDebugRecord(llvm::DbgRecord &debugRecord,
+                                   DominanceInfo &domInfo);
   /// Process arguments for declare/value operation insertion. `localVarAttr`
   /// and `localExprAttr` are the attained attributes after importing the debug
   /// variable and expressions. This also sets the builder insertion point to be
   /// used by these operations.
-  void processDebugOpArgumentsAndInsertionPt(
-      Location loc, DILocalVariableAttr &localVarAttr,
-      DIExpressionAttr &localExprAttr, Value &locVal, bool hasArgList,
-      bool isKillLocation,
+  std::tuple<DILocalVariableAttr, DIExpressionAttr, Value>
+  processDebugOpArgumentsAndInsertionPt(
+      Location loc, bool hasArgList, bool isKillLocation,
       llvm::function_ref<FailureOr<Value>()> convertArgOperandToValue,
       llvm::Value *address,
       llvm::PointerUnion<llvm::Value *, llvm::DILocalVariable *> variable,
