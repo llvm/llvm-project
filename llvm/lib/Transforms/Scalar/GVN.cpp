@@ -3337,12 +3337,10 @@ void GVNPass::assignValNumForDeadCode() {
   }
 }
 
-bool GVNPass::transformMinFindingSelectPattern(Loop *L, Type *LoadType, BasicBlock *Preheader,
-                                               BasicBlock *BB, Value *LHS,
-                                               Value *RHS, CmpInst *Comparison,
-                                               SelectInst *Select,
-                                               Value *BasePtr, Value *IndexVal,
-                                               Value *OffsetVal) {
+bool GVNPass::transformMinFindingSelectPattern(
+    Loop *L, Type *LoadType, BasicBlock *Preheader, BasicBlock *BB, Value *LHS,
+    Value *RHS, CmpInst *Comparison, SelectInst *Select, Value *BasePtr,
+    Value *IndexVal, Value *OffsetVal) {
   // Hoist the chain of operations for the second load to preheader.
   // %min.idx.ext = sext i32 %min.idx to i64
   // %ptr.float.min = getelementptr float, ptr %0, i64 %min.idx.ext
@@ -3360,8 +3358,7 @@ bool GVNPass::transformMinFindingSelectPattern(Loop *L, Type *LoadType, BasicBlo
 
   // Insert PHI node at the top of this block.
   // This PHI node will be used to memoize the current minimum value so far.
-  PHINode *KnownMinPhi =
-      PHINode::Create(LoadType, 2, "known_min", BB->begin());
+  PHINode *KnownMinPhi = PHINode::Create(LoadType, 2, "known_min", BB->begin());
 
   // Hoist the load and build the necessary operations.
   // 1. hoist_0 = sext i32 to i64
@@ -3369,16 +3366,15 @@ bool GVNPass::transformMinFindingSelectPattern(Loop *L, Type *LoadType, BasicBlo
       Builder.CreateSExt(InitialMinIndex, Builder.getInt64Ty(), "hoist_sext");
 
   // 2. hoist_gep1 = getelementptr float, ptr BasePtr, i64 HoistedSExt
-  Value *HoistedGEP1 = Builder.CreateGEP(LoadType, BasePtr,
-                                         HoistedSExt, "hoist_gep1");
+  Value *HoistedGEP1 =
+      Builder.CreateGEP(LoadType, BasePtr, HoistedSExt, "hoist_gep1");
 
   // 3. hoist_gep2 = getelementptr i8, ptr HoistedGEP1, i64 OffsetVal
   Value *HoistedGEP2 = Builder.CreateGEP(Builder.getInt8Ty(), HoistedGEP1,
                                          OffsetVal, "hoist_gep2");
 
   // 4. hoisted_load = load float, ptr HoistedGEP2
-  LoadInst *NewLoad =
-      Builder.CreateLoad(LoadType, HoistedGEP2, "hoisted_load");
+  LoadInst *NewLoad = Builder.CreateLoad(LoadType, HoistedGEP2, "hoisted_load");
 
   // Let the new load now take the place of the old load.
   RHS->replaceAllUsesWith(NewLoad);
@@ -3458,7 +3454,7 @@ bool GVNPass::recognizeMinFindingSelectPattern(SelectInst *Select) {
   // Get type of load.
   Type *LoadType = dyn_cast<LoadInst>(LHS)->getType();
   LLVM_DEBUG(dbgs() << "GVN: Transforming minimum finding pattern.\n");
-  return transformMinFindingSelectPattern(L, LoadType,Preheader, BB, LHS, RHS,
+  return transformMinFindingSelectPattern(L, LoadType, Preheader, BB, LHS, RHS,
                                           Comparison, Select, BasePtr, IndexVal,
                                           OffsetVal);
 }
