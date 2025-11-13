@@ -21,18 +21,37 @@
 
 namespace llvm {
 
-// Simple RAII helper for emitting ifdef-undef-endif scope.
+// Simple RAII helper for emitting ifdef-undef-endif scope. `LateUndef` controls
+// whether the undef is emitted at the start of the scope (false) or at the end
+// of the scope (true).
 class IfDefEmitter {
 public:
-  IfDefEmitter(raw_ostream &OS, StringRef Name) : Name(Name.str()), OS(OS) {
-    OS << "#ifdef " << Name << "\n"
-       << "#undef " << Name << "\n\n";
+  IfDefEmitter(raw_ostream &OS, StringRef Name, bool LateUndef = false)
+      : Name(Name.str()), OS(OS), LateUndef(LateUndef) {
+    OS << "#ifdef " << Name << "\n";
+    if (!LateUndef)
+      OS << "#undef " << Name << "\n";
+    OS << "\n";
   }
-  ~IfDefEmitter() { OS << "\n#endif // " << Name << "\n\n"; }
+  ~IfDefEmitter() { close(); }
+
+  // Explicit function to close the ifdef scopes.
+  void close() {
+    if (Closed)
+      return;
+
+    OS << "\n";
+    if (LateUndef)
+      OS << "#undef " << Name << "\n";
+    OS << "#endif // " << Name << "\n\n";
+    Closed = true;
+  }
 
 private:
   std::string Name;
   raw_ostream &OS;
+  bool LateUndef;
+  bool Closed = false;
 };
 
 // Simple RAII helper for emitting header include guard (ifndef-define-endif).
@@ -43,11 +62,20 @@ public:
     OS << "#ifndef " << Name << "\n"
        << "#define " << Name << "\n\n";
   }
-  ~IncludeGuardEmitter() { OS << "\n#endif // " << Name << "\n"; }
+  ~IncludeGuardEmitter() { close(); }
+
+  // Explicit function to close the ifdef scopes.
+  void close() {
+    if (Closed)
+      return;
+    OS << "\n#endif // " << Name << "\n\n";
+    Closed = true;
+  }
 
 private:
   std::string Name;
   raw_ostream &OS;
+  bool Closed = false;
 };
 
 // Simple RAII helper for emitting namespace scope. Name can be a single
@@ -65,7 +93,9 @@ public:
 
   // Explicit function to close the namespace scopes.
   void close() {
-    if (!Closed && !Name.empty())
+    if (Closed)
+      return;
+    if (!Name.empty())
       OS << "\n} // namespace " << Name << "\n";
     Closed = true;
   }
