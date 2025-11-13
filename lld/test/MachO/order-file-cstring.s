@@ -65,6 +65,7 @@ CSTR;1343999025
 # ONE_SYM: _bar
 # ONE_SYM: _bar2
 # ONE_SYM: _globl_foo3
+# ONE_SYM: _local_foo1
 # ONE_SYM: _baz
 # ONE_SYM: _baz_dup
 
@@ -72,6 +73,7 @@ CSTR;1343999025
 # ONE_SEC: bar
 # ONE_SEC: bar2
 # ONE_SEC: foo3
+# ONE_SEC: foo1
 # ONE_SEC: baz
 
 
