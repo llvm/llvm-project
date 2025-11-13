@@ -102,9 +102,8 @@ static void EmitEntryPointFunc(const FunctionRec &F, raw_ostream &OS) {
   // Emit post-call prints
   OS << TAB_1 "if (llvm::offload::isTracingEnabled()) {\n";
   // postponed pre-call print for olInit
-  if (F.getName() == "olInit") {
+  if (F.getName() == "olInit")
     OS << formatv(TAB_2 "llvm::errs() << \"---> {0}\";\n", F.getName());
-  }
 
   if (F.getParams().size() > 0) {
     OS << formatv(TAB_2 "{0} Params = {{", F.getParamStructName());
