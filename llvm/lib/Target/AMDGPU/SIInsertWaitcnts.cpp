@@ -531,6 +531,7 @@ public:
   // instruction.
   WaitEventType getVmemWaitEventType(const MachineInstr &Inst) const {
     switch (Inst.getOpcode()) {
+    // FIXME: GLOBAL_INV needs to be tracked with xcnt too.
     case AMDGPU::GLOBAL_INV:
       return VMEM_READ_ACCESS; // tracked using loadcnt
     case AMDGPU::GLOBAL_WB:
@@ -1310,6 +1311,7 @@ void WaitcntBrackets::simplifyXcnt(AMDGPU::Waitcnt &CheckWait,
   // optimizations. On entry to a block with multiple predescessors, there may
   // be pending SMEM and VMEM events active at the same time.
   // In such cases, only clear one active event at a time.
+  // TODO: Revisit xcnt optimizations for gfx1250.
   if (hasRedundantXCntWithKmCnt(CheckWait)) {
     if (!hasMixedPendingEvents(X_CNT)) {
       applyWaitcnt(X_CNT, 0);
