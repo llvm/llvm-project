@@ -554,7 +554,7 @@ def testOptionalOperandOp():
             )
             assert (
                 typing.get_type_hints(test.OptionalOperandOp.result.fget)["return"]
-                is OpResult
+                == OpResult[IntegerType]
             )
             assert type(op1.result) is OpResult
 
@@ -660,6 +660,13 @@ def testCustomType():
             pass
         else:
             raise
+
+
+@run
+# CHECK-LABEL: TEST: testValue
+def testValue():
+    # Check that Value is a generic class at runtime.
+    assert hasattr(Value, "__class_getitem__")
 
 
 @run
