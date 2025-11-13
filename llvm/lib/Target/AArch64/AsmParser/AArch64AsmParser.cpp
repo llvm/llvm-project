@@ -5929,7 +5929,7 @@ bool AArch64AsmParser::validateInstruction(MCInst &Inst, SMLoc &IDLoc,
     MCRegister Xn = Inst.getOperand(5).getReg();
 
     assert(Xd == Inst.getOperand(0).getReg() && "Xd_wb and Xd do not match");
-    assert(Xs == Inst.getOperand(1).getReg() && "Xn_wb and Xn do not match");
+    assert(Xs == Inst.getOperand(1).getReg() && "Xs_wb and Xs do not match");
     assert(Xn == Inst.getOperand(2).getReg() && "Xn_wb and Xn do not match");
 
     if (Xd == Xs)
