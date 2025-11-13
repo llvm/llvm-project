@@ -507,7 +507,7 @@ public:
   static bool HasFatalErrors(swift::ASTContext *ast_context);
   bool HasFatalErrors() const {
     return m_logged_fatal_error || m_fatal_errors.Fail() ||
-           HasFatalErrors(m_ast_context_ap.get());
+           HasFatalErrors(m_ast_context_up.get());
   }
 
   /// Return only fatal errors.
@@ -951,24 +951,24 @@ protected:
   /// Data members.
   /// @{
   std::weak_ptr<TypeSystemSwiftTypeRef> m_typeref_typesystem;
-  std::unique_ptr<swift::CompilerInvocation> m_compiler_invocation_ap;
+  std::unique_ptr<swift::CompilerInvocation> m_compiler_invocation_up;
   std::unique_ptr<swift::SourceManager> m_source_manager_up;
-  std::unique_ptr<swift::DiagnosticEngine> m_diagnostic_engine_ap;
+  std::unique_ptr<swift::DiagnosticEngine> m_diagnostic_engine_up;
   // CompilerInvocation, SourceMgr, and DiagEngine must come before
   // the ASTContext, so they get deallocated *after* the ASTContext.
-  std::unique_ptr<swift::ASTContext> m_ast_context_ap;
+  std::unique_ptr<swift::ASTContext> m_ast_context_up;
   std::recursive_mutex m_ast_context_mutex;
-  std::unique_ptr<llvm::TargetOptions> m_target_options_ap;
-  std::unique_ptr<swift::irgen::IRGenerator> m_ir_generator_ap;
-  std::unique_ptr<swift::irgen::IRGenModule> m_ir_gen_module_ap;
+  std::unique_ptr<llvm::TargetOptions> m_target_options_up;
+  std::unique_ptr<swift::irgen::IRGenerator> m_ir_generator_up;
+  std::unique_ptr<swift::irgen::IRGenModule> m_ir_gen_module_up;
   llvm::once_flag m_ir_gen_module_once;
   mutable std::once_flag m_swift_import_warning;
   mutable std::once_flag m_swift_warning_streamed;
-  std::unique_ptr<swift::DiagnosticConsumer> m_diagnostic_consumer_ap;
+  std::unique_ptr<swift::DiagnosticConsumer> m_diagnostic_consumer_up;
   std::unique_ptr<swift::DependencyTracker> m_dependency_tracker;
   swift::ModuleDecl *m_scratch_module = nullptr;
-  std::unique_ptr<swift::Lowering::TypeConverter> m_sil_types_ap;
-  std::unique_ptr<swift::SILModule> m_sil_module_ap;
+  std::unique_ptr<swift::Lowering::TypeConverter> m_sil_types_up;
+  std::unique_ptr<swift::SILModule> m_sil_module_up;
   /// Owned by the AST.
   swift::MemoryBufferSerializedModuleLoader *m_memory_buffer_module_loader =
       nullptr;
