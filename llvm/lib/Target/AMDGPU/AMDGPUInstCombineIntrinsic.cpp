@@ -1355,8 +1355,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       break;
 
     // Skip if ballot width doesn't match wave size.
-    unsigned WavefrontSize = ST->getWavefrontSize();
-    if (WavefrontSize != II.getType()->getIntegerBitWidth())
+    if (ST->getWavefrontSize() != II.getType()->getIntegerBitWidth())
       break;
 
     for (auto &AssumeVH : IC.getAssumptionCache().assumptionsFor(&II)) {
