@@ -20,18 +20,17 @@ int main() {
 #pragma omp target data map(alloc : x)
   {
 #pragma omp target enter data map(alloc : x) map(to : x)
-    {
 #pragma omp target map(present, alloc : x)
-      {
-        printf("In tgt: %d\n", x[0]); // CHECK-NOT: In tgt: 111
-        x[0] = 222;
-      }
+    {
+      printf("In tgt: %d\n", x[1]); // CHECK-NOT: In tgt: 111
+      x[1] = 222;
     }
-// DEBUG: omptarget --> Found previously skipped FROM transfer
-// DEBUG-SAME:          for HstPtr=0x[[#%x,HOST_ADDR:]], with size [[#%u,SIZE:]]
+// DEBUG: omptarget --> Found skipped FROM entry
+// DEBUG-SAME:          HstPtr=0x[[#%x,HOST_ADDR:]] size=[[#%u,SIZE:]]
+// DEBUG-SAME:          within region being deleted
 // DEBUG: omptarget --> Moving [[#SIZE]] bytes
 // DEBUG-SAME:          (tgt:0x{{.*}}) -> (hst:0x{{0*}}[[#HOST_ADDR]])
-#pragma omp target exit data map(delete : p1x[ : ]) map(from : p2x[0])
-    printf("%d\n", x[0]); // CHECK: 222
+#pragma omp target exit data map(delete : p1x[ : ]) map(from : p2x[1])
+    printf("%d\n", x[1]); // CHECK: 222
   }
 }

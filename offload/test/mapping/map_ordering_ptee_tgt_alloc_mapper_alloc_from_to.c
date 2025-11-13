@@ -7,10 +7,6 @@
 // construct, even if the ref-count of the pointee x has not gone down to 0
 // when "from" is encountered.
 
-// This currently fails, but should start passing once ATTACH-style maps are
-// enabled for mappers (#166874).
-// XFAIL: *
-
 #include <stdio.h>
 
 typedef struct {

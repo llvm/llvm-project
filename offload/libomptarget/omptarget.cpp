@@ -1133,8 +1133,6 @@ int targetDataEnd(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
     // Move data back to the host
     const bool HasAlways = ArgTypes[I] & OMP_TGT_MAPTYPE_ALWAYS;
     const bool HasFrom = ArgTypes[I] & OMP_TGT_MAPTYPE_FROM;
-    const bool IsMemberOf = ArgTypes[I] & OMP_TGT_MAPTYPE_MEMBER_OF;
-    int64_t TransferSize = DataSize; // Size for FROM data-transfer.
 
     // Lambda to perform the actual FROM data retrieval from device to host
     auto PerformFromRetrieval = [&](void *HstPtr, void *TgtPtr, int64_t Size,
@@ -1179,6 +1177,12 @@ int targetDataEnd(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
     //   ... map(delete: p1[:]) map(from: p2[0:1])
     // The ref-count becomes zero before encountering the FROM entry, but we
     // still need to do a transfer, if it went from non-zero to zero.
+    //
+    // OpenMP 6.0, sec. 7.9.6 "map Clause", p. 284 L24-26:
+    // If the reference count of the corresponding list item is one or if
+    // the always-modifier or delete-modifier is specified, and if the map
+    // type is from, the original list item is updated as if the list item
+    // appeared in a from clause on a target_update directive.
     auto WasPreviouslyMarkedForDeletion = [&]() -> bool {
       // Check if this pointer falls within the range of any deleted entry
       for (const auto &DeleteEntry : StateInfo->DeleteEntries) {
@@ -1215,61 +1219,72 @@ int targetDataEnd(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
       // Then we can forego tacking TransferredFromPtrs.
       StateInfo->TransferredFromPtrs.insert(HstPtrBegin);
 
-      Ret = PerformFromRetrieval(HstPtrBegin, TgtPtrBegin, TransferSize,
+      Ret = PerformFromRetrieval(HstPtrBegin, TgtPtrBegin, DataSize,
                                  TPR.getEntry());
       if (Ret != OFFLOAD_SUCCESS)
         return OFFLOAD_FAIL;
     } else if (!FromCopyBackAlreadyDone && IsMapFromOnNonHostNonZeroData &&
-               !IsLastOrHasAlwaysOrWasForceDeleted() && !IsMemberOf) {
+               !IsLastOrHasAlwaysOrWasForceDeleted()) {
       // We can have cases like the following:
-      //  ... map(storage: p1[0:1]) map(from: p1[0:1])
+      //   int *xp = &x[0];
+      //  ... map(storage: x[:]) map(from: xp[1:1])
       //
       // where it's possible that when the FROM entry is processed, the
       // ref count is not zero, so no data transfer happens for it. But
-      // the ref-count can go down to zero by the end of the directive
+      // the ref-count can go down to zero once all maps have been processed
       // in which case a transfer should happen.
       //
       // So, we keep track of any skipped FROM data-transfers, in case
       // the ref-count goes down to zero later on.
       //
-      // This should be limited to non-member-of entries because for member-of,
-      // their ref-count should go down only once as part of the parent.
+      // This cannot be handled in the compiler for all cases because the
+      // list-items may look very different, as shown in the example above,
+      // which is allowed with OpenMP 6.0:
+      //
+      // OpenMP 6.0, sec. 7.9.6 "map Clause", p. 286 L18-21:
+      // Two list items of the map clauses on the same construct must not share
+      // original storage unless one of the following is true: they are the same
+      // list item, one is the containing structure of the other, at least one
+      // is an assumed-size array, or at least one is implicitly mapped due to
+      // the list item also appearing in a use_device_addr clause.
       StateInfo->SkippedFromEntries[HstPtrBegin] = DataSize;
       DP("Skipping FROM map transfer for HstPtr=" DPxMOD ", Size=%" PRId64 "\n",
          DPxPTR(HstPtrBegin), DataSize);
     } else if (!FromCopyBackAlreadyDone && TPR.Flags.IsLast) {
-      // Even if this is not a FROM or DELETE entry, if the ref-count went to
+      // Even if this is not a FROM entry, if the ref-count went to
       // zero (IsLast=true), we should perform any previously skipped FROM
       // transfers that fall within this entry's range.
       SmallVector<void *, 32> ToRemove;
 
-      for (auto &SkippedEntry : StateInfo->SkippedFromEntries) {
-        void *SkippedPtr = SkippedEntry.first;
-        int64_t SkippedSize = SkippedEntry.second;
-        uintptr_t SkippedBegin = (uintptr_t)SkippedPtr;
+      for (auto &SkippedFromEntry : StateInfo->SkippedFromEntries) {
+        void *FromBeginPtr = SkippedFromEntry.first;
+        int64_t FromDataSize = SkippedFromEntry.second;
+        uintptr_t FromBeginPtrInt = (uintptr_t)FromBeginPtr;
 
-        uintptr_t EntryBegin = TPR.getEntry()->HstPtrBegin;
-        uintptr_t EntryEnd = TPR.getEntry()->HstPtrEnd;
+        uintptr_t DeleteBeginPtrInt = TPR.getEntry()->HstPtrBegin;
+        uintptr_t DeleteEndPtrInt = TPR.getEntry()->HstPtrEnd;
 
         // Check if skipped entry overlaps or is contained within current entry
-        if (SkippedBegin >= EntryBegin && SkippedBegin < EntryEnd) {
-          DP("Found skipped FROM within deleted region: HstPtr=" DPxMOD
-             " size=%" PRId64 " within [" DPxMOD ", " DPxMOD ")\n",
-             DPxPTR(SkippedPtr), SkippedSize, DPxPTR(EntryBegin),
-             DPxPTR(EntryEnd));
+        if (FromBeginPtrInt >= DeleteBeginPtrInt &&
+            FromBeginPtrInt < DeleteEndPtrInt) {
+          DP("Found skipped FROM entry: HstPtr=" DPxMOD " size=%" PRId64
+             " within region being deleted [" DPxMOD ", " DPxMOD ")\n",
+             DPxPTR(FromBeginPtr), FromDataSize, DPxPTR(DeleteBeginPtrInt),
+             DPxPTR(DeleteEndPtrInt));
 
           // Calculate offset within the target pointer
-          int64_t Offset = SkippedBegin - EntryBegin;
-          void *SkippedTgtPtr = (void *)((char *)TgtPtrBegin + Offset);
+          int64_t Offset = FromBeginPtrInt - DeleteBeginPtrInt;
+          void *FromTgtBeginPtr = (void *)((char *)TgtPtrBegin + Offset);
 
           // Perform the retrieval for this skipped entry
-          int Ret = PerformFromRetrieval((void *)SkippedBegin, SkippedTgtPtr,
-                                         SkippedSize, TPR.getEntry());
+          int Ret =
+              PerformFromRetrieval((void *)FromBeginPtrInt, FromTgtBeginPtr,
+                                   FromDataSize, TPR.getEntry());
           if (Ret != OFFLOAD_SUCCESS)
             return OFFLOAD_FAIL;
 
-          StateInfo->TransferredFromPtrs.insert(SkippedPtr);
-          ToRemove.push_back(SkippedPtr);
+          StateInfo->TransferredFromPtrs.insert(FromBeginPtr);
+          ToRemove.push_back(FromBeginPtr);
         }
       }
 

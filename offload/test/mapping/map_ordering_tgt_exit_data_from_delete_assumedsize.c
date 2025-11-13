@@ -16,23 +16,22 @@
 int main() {
   int x[10];
   int *p1x, *p2x;
-  p1x = p2x = &x[0];
+  p1x = p2x = &x[1];
+  x[1] = 111;
 
 #pragma omp target data map(alloc : x)
   {
 #pragma omp target enter data map(alloc : x) map(to : x)
-    {
 #pragma omp target map(present, alloc : x)
-      {
-        printf("In tgt: %d\n", x[0]); // CHECK-NOT: In tgt: 111
-        x[0] = 222;
-      }
+    {
+      fprintf(stderr, "In tgt: %d\n", x[1]); // CHECK-NOT: In tgt: 111
+      x[1] = 222;
     }
-    // DEBUG: omptarget --> Pointer HstPtr=0x[[#%x,HOST_ADDR:]]
-    // DEBUG-SAME:          was previously marked for deletion
+    // DEBUG: omptarget --> Pointer HstPtr=0x[[#%x,HOST_ADDR:]] falls within a
+    // DEBUG-SAME:          range previously marked for deletion
     // DEBUG: omptarget --> Moving {{.*}} bytes
     // DEBUG-SAME:          (tgt:0x{{.*}}) -> (hst:0x{{0*}}[[#HOST_ADDR]])
 #pragma omp target exit data map(from : p2x[0]) map(delete : p1x[ : ])
-    printf("%d\n", x[0]); // CHECK: 222
+    fprintf(stderr, "%d\n", x[1]); // CHECK: 222
   }
 }

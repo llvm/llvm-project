@@ -13,12 +13,10 @@ int main() {
 #pragma omp target data map(alloc : x)
   {
 #pragma omp target enter data map(alloc : x) map(to : x)
-    {
 #pragma omp target map(present, alloc : x)
-      {
-        printf("In tgt: %d\n", x); // CHECK-NOT: In tgt: 111
-        x = 222;
-      }
+    {
+      printf("In tgt: %d\n", x); // CHECK-NOT: In tgt: 111
+      x = 222;
     }
 #pragma omp target exit data map(always, from : x) map(always, from : x)
     // DEBUG: omptarget --> Moving 4 bytes (tgt:0x{{.*}}) -> (hst:0x{{.*}})
