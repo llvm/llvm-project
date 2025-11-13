@@ -426,31 +426,29 @@ def : WriteRes<WriteVSETVL, [AscalonV]>;
 foreach mx = SchedMxList in {
   defvar Cycles = AscalonGetCyclesDefault<mx>.c;
   defvar IsWorstCase = AscalonIsWorstCaseMX<mx, SchedMxList>.c;
-  let Latency = Cycles, ReleaseAtCycles = [Cycles] in {
+  let Latency = Cycles in {
     defm "" : LMULWriteResMX<"WriteVLDE",    [AscalonLS], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVLDFF",   [AscalonLS], mx, IsWorstCase>;
   }
-  let Latency = 1, AcquireAtCycles = [1], ReleaseAtCycles = [!add(1, Cycles)] in
+  let Latency = 1 in
   defm "" : LMULWriteResMX<"WriteVSTE",    [AscalonLS], mx, IsWorstCase>;
 }
 
 foreach mx = SchedMxList in {
   defvar IsWorstCase = AscalonIsWorstCaseMX<mx, SchedMxList>.c;
-  let Latency = 1, ReleaseAtCycles = [1] in
+  let Latency = 1 in
   defm "" : LMULWriteResMX<"WriteVLDM",    [AscalonLS], mx, IsWorstCase>;
-  let Latency = 1, ReleaseAtCycles = [1] in
+  let Latency = 1 in
   defm "" : LMULWriteResMX<"WriteVSTM",    [AscalonLS], mx, IsWorstCase>;
 }
 
 foreach mx = SchedMxList in {
   defvar Cycles = AscalonGetCyclesLMUL<mx, 2>.c;
   defvar IsWorstCase = AscalonIsWorstCaseMX<mx, SchedMxList>.c;
-  let Latency = !add(3, Cycles), AcquireAtCycles = [1], ReleaseAtCycles = [!add(1, Cycles)] in {
+  let Latency = Cycles in {
     defm "" : LMULWriteResMX<"WriteVLDS8", [AscalonLS], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVLDUX8", [AscalonLS], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVLDOX8", [AscalonLS], mx, IsWorstCase>;
-  }
-  let Latency = 1, AcquireAtCycles = [1], ReleaseAtCycles = [!add(1, Cycles)] in {
     defm "" : LMULWriteResMX<"WriteVSTS8",  [AscalonLS], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVSTUX8", [AscalonLS], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVSTOX8", [AscalonLS], mx, IsWorstCase>;
@@ -459,12 +457,10 @@ foreach mx = SchedMxList in {
 foreach mx = ["MF4", "MF2", "M1", "M2", "M4", "M8"] in {
   defvar Cycles = AscalonGetCyclesLMUL<mx, 2>.c;
   defvar IsWorstCase = AscalonIsWorstCaseMX<mx, SchedMxList>.c;
-  let Latency = !add(3, Cycles), AcquireAtCycles = [1], ReleaseAtCycles = [!add(1, Cycles)] in {
+  let Latency = Cycles in {
     defm "" : LMULWriteResMX<"WriteVLDS16", [AscalonLS], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVLDUX16", [AscalonLS], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVLDOX16", [AscalonLS], mx, IsWorstCase>;
-  }
-  let Latency = 1, AcquireAtCycles = [1], ReleaseAtCycles = [!add(1, Cycles)] in {
     defm "" : LMULWriteResMX<"WriteVSTS16",  [AscalonLS], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVSTUX16", [AscalonLS], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVSTOX16", [AscalonLS], mx, IsWorstCase>;
@@ -473,12 +469,10 @@ foreach mx = ["MF4", "MF2", "M1", "M2", "M4", "M8"] in {
 foreach mx = ["MF2", "M1", "M2", "M4", "M8"] in {
   defvar Cycles = AscalonGetCyclesLMUL<mx, 2>.c;
   defvar IsWorstCase = AscalonIsWorstCaseMX<mx, SchedMxList>.c;
-  let Latency = !add(3, Cycles), AcquireAtCycles = [1], ReleaseAtCycles = [!add(1, Cycles)] in {
+  let Latency = Cycles in {
     defm "" : LMULWriteResMX<"WriteVLDS32", [AscalonLS], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVLDUX32", [AscalonLS], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVLDOX32", [AscalonLS], mx, IsWorstCase>;
-  }
-  let Latency = 1, AcquireAtCycles = [1], ReleaseAtCycles = [!add(1, Cycles)] in {
     defm "" : LMULWriteResMX<"WriteVSTS32",  [AscalonLS], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVSTUX32", [AscalonLS], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVSTOX32", [AscalonLS], mx, IsWorstCase>;
@@ -487,12 +481,10 @@ foreach mx = ["MF2", "M1", "M2", "M4", "M8"] in {
 foreach mx = ["M1", "M2", "M4", "M8"] in {
   defvar Cycles = AscalonGetCyclesLMUL<mx, 2>.c;
   defvar IsWorstCase = AscalonIsWorstCaseMX<mx, SchedMxList>.c;
-  let Latency = !add(3, Cycles), AcquireAtCycles = [1], ReleaseAtCycles = [!add(1, Cycles)] in {
+  let Latency = Cycles in {
     defm "" : LMULWriteResMX<"WriteVLDS64", [AscalonLS], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVLDUX64", [AscalonLS], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVLDOX64", [AscalonLS], mx, IsWorstCase>;
-  }
-  let Latency = 1, AcquireAtCycles = [1], ReleaseAtCycles = [!add(1, Cycles)] in {
     defm "" : LMULWriteResMX<"WriteVSTS64",  [AscalonLS], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVSTUX64", [AscalonLS], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVSTOX64", [AscalonLS], mx, IsWorstCase>;
@@ -518,8 +510,7 @@ foreach mx = SchedMxList in {
     foreach nf=2-8 in {
       defvar Cycles = AscalonGetCyclesDefault<mx>.c;
       defvar IsWorstCase = AscalonIsWorstCaseMX<mx, SchedMxList>.c;
-      // Does not chain so set latency high
-      let Latency = !add(3, Cycles), AcquireAtCycles = [1], ReleaseAtCycles = [!add(1, Cycles)] in {
+      let Latency = Cycles in {
         defm "" : LMULWriteResMX<"WriteVLSEG" # nf # "e" # eew,   [AscalonLS], mx, IsWorstCase>;
         defm "" : LMULWriteResMX<"WriteVLSEGFF" # nf # "e" # eew, [AscalonLS], mx, IsWorstCase>;
       }
@@ -533,13 +524,10 @@ foreach mx = SchedMxList in {
     foreach eew = [8, 16, 32, 64] in {
       defvar Cycles = AscalonGetCyclesStridedSegmented<mx, eew>.c;
       defvar IsWorstCase = AscalonIsWorstCaseMX<mx, SchedMxList>.c;
-      // Does not chain so set latency high
-      let Latency = !add(3, Cycles), AcquireAtCycles = [1], ReleaseAtCycles = [!add(1, Cycles)] in {
+      let Latency = Cycles in {
         defm "" : LMULWriteResMX<"WriteVLSSEG" # nf # "e" # eew,  [AscalonLS], mx, IsWorstCase>;
         defm "" : LMULWriteResMX<"WriteVLUXSEG" # nf # "e" # eew, [AscalonLS], mx, IsWorstCase>;
         defm "" : LMULWriteResMX<"WriteVLOXSEG" # nf # "e" # eew, [AscalonLS], mx, IsWorstCase>;
-      }
-      let Latency = 1, AcquireAtCycles = [1], ReleaseAtCycles = [!add(1, Cycles)] in {
         defm "" : LMULWriteResMX<"WriteVSSSEG" # nf # "e" # eew,  [AscalonLS], mx, IsWorstCase>;
         defm "" : LMULWriteResMX<"WriteVSUXSEG" # nf # "e" # eew, [AscalonLS], mx, IsWorstCase>;
         defm "" : LMULWriteResMX<"WriteVSOXSEG" # nf # "e" # eew, [AscalonLS], mx, IsWorstCase>;
@@ -553,7 +541,6 @@ foreach mx = SchedMxList in {
   defvar Cycles = AscalonGetCyclesDefault<mx>.c;
   defvar IsWorstCase = AscalonIsWorstCaseMX<mx, SchedMxList>.c;
   let Latency = 8, AcquireAtCycles = [0, 1], ReleaseAtCycles = [1, !add(1, Cycles)] in {
-    // FIXME what pipe does this occupy aside from vec
     defm "" : LMULWriteResMX<"WriteVSALUV",   [AscalonFX, AscalonV], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVSALUX",   [AscalonFX, AscalonV], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVSALUI",   [AscalonFX, AscalonV], mx, IsWorstCase>;
@@ -561,9 +548,9 @@ foreach mx = SchedMxList in {
     defm "" : LMULWriteResMX<"WriteVAALUX",   [AscalonFX, AscalonV], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVSMulV",   [AscalonFXA, AscalonV], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVSMulX",   [AscalonFXA, AscalonV], mx, IsWorstCase>;
-    defm "" : LMULWriteResMX<"WriteVSShiftV", [AscalonFX, AscalonV], mx, IsWorstCase>; // TODO correct?
-    defm "" : LMULWriteResMX<"WriteVSShiftX", [AscalonFX, AscalonV], mx, IsWorstCase>; // TODO correct?
-    defm "" : LMULWriteResMX<"WriteVSShiftI", [AscalonFX, AscalonV], mx, IsWorstCase>; // TODO correct?
+    defm "" : LMULWriteResMX<"WriteVSShiftV", [AscalonFX, AscalonV], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVSShiftX", [AscalonFX, AscalonV], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVSShiftI", [AscalonFX, AscalonV], mx, IsWorstCase>;
   }
 }
 // Narrowing
@@ -571,7 +558,6 @@ foreach mx = SchedMxListW in {
   defvar Cycles = AscalonGetCyclesNarrowing<mx>.c;
   defvar IsWorstCase = AscalonIsWorstCaseMX<mx, SchedMxListW>.c;
   let Latency = 8, AcquireAtCycles = [0, 1], ReleaseAtCycles = [1, !add(1, Cycles)] in {
-    // TODO verify
     defm "" : LMULWriteResMX<"WriteVNClipV",  [AscalonFX, AscalonV], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVNClipX",  [AscalonFX, AscalonV], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVNClipI",  [AscalonFX, AscalonV], mx, IsWorstCase>;
