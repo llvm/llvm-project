@@ -3564,9 +3564,9 @@ void MachineVerifier::verifyLiveIntervals() {
   }
 
   // Verify all the cached regunit intervals.
-  for (unsigned i = 0, e = TRI->getNumRegUnits(); i != e; ++i)
-    if (const LiveRange *LR = LiveInts->getCachedRegUnit(i))
-      verifyLiveRange(*LR, VirtRegOrUnit(i));
+  for (MCRegUnit Unit : TRI->regunits())
+    if (const LiveRange *LR = LiveInts->getCachedRegUnit(Unit))
+      verifyLiveRange(*LR, VirtRegOrUnit(Unit));
 }
 
 void MachineVerifier::verifyLiveRangeValue(const LiveRange &LR,
