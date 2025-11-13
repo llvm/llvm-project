@@ -313,11 +313,11 @@ collectVirtualRegUses(SmallVectorImpl<VRegMaskOrUnit> &VRegMaskOrUnits,
 /// Mostly copy/paste from CodeGen/RegisterPressure.cpp
 static LaneBitmask getLanesWithProperty(
     const LiveIntervals &LIS, const MachineRegisterInfo &MRI,
-    bool TrackLaneMasks, Register RegUnit, SlotIndex Pos,
+    bool TrackLaneMasks, VirtRegOrUnit VRegOrUnit, SlotIndex Pos,
     LaneBitmask SafeDefault,
     function_ref<bool(const LiveRange &LR, SlotIndex Pos)> Property) {
-  if (RegUnit.isVirtual()) {
-    const LiveInterval &LI = LIS.getInterval(RegUnit);
+  if (VRegOrUnit.isVirtualReg()) {
+    const LiveInterval &LI = LIS.getInterval(VRegOrUnit.asVirtualReg());
     LaneBitmask Result;
     if (TrackLaneMasks && LI.hasSubRanges()) {
       for (const LiveInterval::SubRange &SR : LI.subranges()) {
@@ -325,14 +325,15 @@ static LaneBitmask getLanesWithProperty(
           Result |= SR.LaneMask;
       }
     } else if (Property(LI, Pos)) {
-      Result = TrackLaneMasks ? MRI.getMaxLaneMaskForVReg(RegUnit)
-                              : LaneBitmask::getAll();
+      Result = TrackLaneMasks
+                   ? MRI.getMaxLaneMaskForVReg(VRegOrUnit.asVirtualReg())
+                   : LaneBitmask::getAll();
     }
 
     return Result;
   }
 
-  const LiveRange *LR = LIS.getCachedRegUnit(RegUnit);
+  const LiveRange *LR = LIS.getCachedRegUnit(VRegOrUnit.asMCRegUnit());
   if (LR == nullptr)
     return SafeDefault;
   return Property(*LR, Pos) ? LaneBitmask::getAll() : LaneBitmask::getNone();
@@ -503,10 +504,10 @@ void GCNRPTracker::reset(const MachineRegisterInfo &MRI_,
 }
 
 /// Mostly copy/paste from CodeGen/RegisterPressure.cpp
-LaneBitmask GCNRPTracker::getLastUsedLanes(Register RegUnit,
+LaneBitmask GCNRPTracker::getLastUsedLanes(VirtRegOrUnit VRegOrUnit,
                                            SlotIndex Pos) const {
   return getLanesWithProperty(
-      LIS, *MRI, true, RegUnit, Pos.getBaseIndex(), LaneBitmask::getNone(),
+      LIS, *MRI, true, VRegOrUnit, Pos.getBaseIndex(), LaneBitmask::getNone(),
       [](const LiveRange &LR, SlotIndex Pos) {
         const LiveRange::Segment *S = LR.getSegmentContaining(Pos);
         return S != nullptr && S->end == Pos.getRegSlot();
@@ -752,7 +753,7 @@ GCNDownwardRPTracker::bumpDownwardPressure(const MachineInstr *MI,
     if (!Use.VRegOrUnit.isVirtualReg())
       continue;
     Register Reg = Use.VRegOrUnit.asVirtualReg();
-    LaneBitmask LastUseMask = getLastUsedLanes(Reg, SlotIdx);
+    LaneBitmask LastUseMask = getLastUsedLanes(Use.VRegOrUnit, SlotIdx);
     if (LastUseMask.none())
       continue;
     // The LastUseMask is queried from the liveness information of instruction
