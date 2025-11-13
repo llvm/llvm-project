@@ -1300,7 +1300,7 @@ struct WMMAOpLowering : public ConvertOpToLLVMPattern<WMMAOp> {
     if (chipset.majorVersion != 11 && chipset.majorVersion != 12)
       return op->emitOpError("WMMA only supported on gfx11 and gfx12");
 
-    bool isGFX1250 = chipset == Chipset(12, 5, 0);
+    bool isGFX1250 = chipset >= Chipset(12, 5, 0);
 
     // The WMMA operations represent vectors of bf16s as vectors of i16s
     // (except on gfx1250), so we need to bitcast bfloats to i16 and then
