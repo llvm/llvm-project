@@ -498,33 +498,25 @@ define signext i32 @bcmp_size_16(ptr %s1, ptr %s2) nounwind optsize {
 ;
 ; LA32-UAL-V-LABEL: bcmp_size_16:
 ; LA32-UAL-V:       # %bb.0: # %entry
-; LA32-UAL-V-NEXT:    ld.w $a2, $a0, 0
-; LA32-UAL-V-NEXT:    ld.w $a3, $a1, 0
-; LA32-UAL-V-NEXT:    ld.w $a4, $a0, 4
-; LA32-UAL-V-NEXT:    ld.w $a5, $a1, 4
-; LA32-UAL-V-NEXT:    ld.w $a6, $a0, 8
-; LA32-UAL-V-NEXT:    ld.w $a7, $a1, 8
-; LA32-UAL-V-NEXT:    ld.w $a0, $a0, 12
-; LA32-UAL-V-NEXT:    ld.w $a1, $a1, 12
-; LA32-UAL-V-NEXT:    xor $a2, $a2, $a3
-; LA32-UAL-V-NEXT:    xor $a3, $a4, $a5
-; LA32-UAL-V-NEXT:    xor $a4, $a6, $a7
-; LA32-UAL-V-NEXT:    xor $a0, $a0, $a1
-; LA32-UAL-V-NEXT:    or $a1, $a2, $a3
-; LA32-UAL-V-NEXT:    or $a0, $a4, $a0
-; LA32-UAL-V-NEXT:    or $a0, $a1, $a0
+; LA32-UAL-V-NEXT:    vld $vr0, $a0, 0
+; LA32-UAL-V-NEXT:    vld $vr1, $a1, 0
+; LA32-UAL-V-NEXT:    vxor.v $vr0, $vr0, $vr1
+; LA32-UAL-V-NEXT:    vbsrl.v $vr1, $vr0, 8
+; LA32-UAL-V-NEXT:    vor.v $vr0, $vr1, $vr0
+; LA32-UAL-V-NEXT:    vbsrl.v $vr1, $vr0, 4
+; LA32-UAL-V-NEXT:    vor.v $vr0, $vr1, $vr0
+; LA32-UAL-V-NEXT:    vpickve2gr.w $a0, $vr0, 0
 ; LA32-UAL-V-NEXT:    sltu $a0, $zero, $a0
 ; LA32-UAL-V-NEXT:    ret
 ;
 ; LA64-UAL-V-LABEL: bcmp_size_16:
 ; LA64-UAL-V:       # %bb.0: # %entry
-; LA64-UAL-V-NEXT:    ld.d $a2, $a0, 0
-; LA64-UAL-V-NEXT:    ld.d $a3, $a1, 0
-; LA64-UAL-V-NEXT:    ld.d $a0, $a0, 8
-; LA64-UAL-V-NEXT:    ld.d $a1, $a1, 8
-; LA64-UAL-V-NEXT:    xor $a2, $a2, $a3
-; LA64-UAL-V-NEXT:    xor $a0, $a0, $a1
-; LA64-UAL-V-NEXT:    or $a0, $a2, $a0
+; LA64-UAL-V-NEXT:    vld $vr0, $a0, 0
+; LA64-UAL-V-NEXT:    vld $vr1, $a1, 0
+; LA64-UAL-V-NEXT:    vxor.v $vr0, $vr0, $vr1
+; LA64-UAL-V-NEXT:    vbsrl.v $vr1, $vr0, 8
+; LA64-UAL-V-NEXT:    vor.v $vr0, $vr1, $vr0
+; LA64-UAL-V-NEXT:    vpickve2gr.d $a0, $vr0, 0
 ; LA64-UAL-V-NEXT:    sltu $a0, $zero, $a0
 ; LA64-UAL-V-NEXT:    ret
 ;
@@ -554,15 +546,15 @@ entry:
 }
 
 define signext i32 @bcmp_size_31(ptr %s1, ptr %s2) nounwind optsize {
-; LA32-LABEL: bcmp_size_31:
-; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    addi.w $sp, $sp, -16
-; LA32-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
-; LA32-NEXT:    ori $a2, $zero, 31
-; LA32-NEXT:    bl bcmp
-; LA32-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
-; LA32-NEXT:    addi.w $sp, $sp, 16
-; LA32-NEXT:    ret
+; LA32-UAL-LABEL: bcmp_size_31:
+; LA32-UAL:       # %bb.0: # %entry
+; LA32-UAL-NEXT:    addi.w $sp, $sp, -16
+; LA32-UAL-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
+; LA32-UAL-NEXT:    ori $a2, $zero, 31
+; LA32-UAL-NEXT:    bl bcmp
+; LA32-UAL-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
+; LA32-UAL-NEXT:    addi.w $sp, $sp, 16
+; LA32-UAL-NEXT:    ret
 ;
 ; LA64-UAL-LABEL: bcmp_size_31:
 ; LA64-UAL:       # %bb.0: # %entry
@@ -584,25 +576,47 @@ define signext i32 @bcmp_size_31(ptr %s1, ptr %s2) nounwind optsize {
 ; LA64-UAL-NEXT:    sltu $a0, $zero, $a0
 ; LA64-UAL-NEXT:    ret
 ;
+; LA32-UAL-V-LABEL: bcmp_size_31:
+; LA32-UAL-V:       # %bb.0: # %entry
+; LA32-UAL-V-NEXT:    vld $vr0, $a0, 0
+; LA32-UAL-V-NEXT:    vld $vr1, $a0, 15
+; LA32-UAL-V-NEXT:    vld $vr2, $a1, 15
+; LA32-UAL-V-NEXT:    vld $vr3, $a1, 0
+; LA32-UAL-V-NEXT:    vxor.v $vr1, $vr1, $vr2
+; LA32-UAL-V-NEXT:    vxor.v $vr0, $vr0, $vr3
+; LA32-UAL-V-NEXT:    vor.v $vr0, $vr0, $vr1
+; LA32-UAL-V-NEXT:    vbsrl.v $vr1, $vr0, 8
+; LA32-UAL-V-NEXT:    vor.v $vr0, $vr1, $vr0
+; LA32-UAL-V-NEXT:    vbsrl.v $vr1, $vr0, 4
+; LA32-UAL-V-NEXT:    vor.v $vr0, $vr1, $vr0
+; LA32-UAL-V-NEXT:    vpickve2gr.w $a0, $vr0, 0
+; LA32-UAL-V-NEXT:    sltu $a0, $zero, $a0
+; LA32-UAL-V-NEXT:    ret
+;
 ; LA64-UAL-V-LABEL: bcmp_size_31:
 ; LA64-UAL-V:       # %bb.0: # %entry
-; LA64-UAL-V-NEXT:    ld.d $a2, $a0, 0
-; LA64-UAL-V-NEXT:    ld.d $a3, $a1, 0
-; LA64-UAL-V-NEXT:    ld.d $a4, $a0, 8
-; LA64-UAL-V-NEXT:    ld.d $a5, $a1, 8
-; LA64-UAL-V-NEXT:    ld.d $a6, $a0, 16
-; LA64-UAL-V-NEXT:    ld.d $a7, $a1, 16
-; LA64-UAL-V-NEXT:    ld.d $a0, $a0, 23
-; LA64-UAL-V-NEXT:    ld.d $a1, $a1, 23
-; LA64-UAL-V-NEXT:    xor $a2, $a2, $a3
-; LA64-UAL-V-NEXT:    xor $a3, $a4, $a5
-; LA64-UAL-V-NEXT:    xor $a4, $a6, $a7
-; LA64-UAL-V-NEXT:    xor $a0, $a0, $a1
-; LA64-UAL-V-NEXT:    or $a1, $a2, $a3
-; LA64-UAL-V-NEXT:    or $a0, $a4, $a0
-; LA64-UAL-V-NEXT:    or $a0, $a1, $a0
+; LA64-UAL-V-NEXT:    vld $vr0, $a0, 0
+; LA64-UAL-V-NEXT:    vld $vr1, $a0, 15
+; LA64-UAL-V-NEXT:    vld $vr2, $a1, 15
+; LA64-UAL-V-NEXT:    vld $vr3, $a1, 0
+; LA64-UAL-V-NEXT:    vxor.v $vr1, $vr1, $vr2
+; LA64-UAL-V-NEXT:    vxor.v $vr0, $vr0, $vr3
+; LA64-UAL-V-NEXT:    vor.v $vr0, $vr0, $vr1
+; LA64-UAL-V-NEXT:    vbsrl.v $vr1, $vr0, 8
+; LA64-UAL-V-NEXT:    vor.v $vr0, $vr1, $vr0
+; LA64-UAL-V-NEXT:    vpickve2gr.d $a0, $vr0, 0
 ; LA64-UAL-V-NEXT:    sltu $a0, $zero, $a0
 ; LA64-UAL-V-NEXT:    ret
+;
+; LA32-NUAL-LABEL: bcmp_size_31:
+; LA32-NUAL:       # %bb.0: # %entry
+; LA32-NUAL-NEXT:    addi.w $sp, $sp, -16
+; LA32-NUAL-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
+; LA32-NUAL-NEXT:    ori $a2, $zero, 31
+; LA32-NUAL-NEXT:    bl bcmp
+; LA32-NUAL-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
+; LA32-NUAL-NEXT:    addi.w $sp, $sp, 16
+; LA32-NUAL-NEXT:    ret
 ;
 ; LA64-NUAL-LABEL: bcmp_size_31:
 ; LA64-NUAL:       # %bb.0: # %entry
@@ -620,15 +634,15 @@ entry:
 }
 
 define signext i32 @bcmp_size_32(ptr %s1, ptr %s2) nounwind optsize {
-; LA32-LABEL: bcmp_size_32:
-; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    addi.w $sp, $sp, -16
-; LA32-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
-; LA32-NEXT:    ori $a2, $zero, 32
-; LA32-NEXT:    bl bcmp
-; LA32-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
-; LA32-NEXT:    addi.w $sp, $sp, 16
-; LA32-NEXT:    ret
+; LA32-UAL-LABEL: bcmp_size_32:
+; LA32-UAL:       # %bb.0: # %entry
+; LA32-UAL-NEXT:    addi.w $sp, $sp, -16
+; LA32-UAL-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
+; LA32-UAL-NEXT:    ori $a2, $zero, 32
+; LA32-UAL-NEXT:    bl bcmp
+; LA32-UAL-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
+; LA32-UAL-NEXT:    addi.w $sp, $sp, 16
+; LA32-UAL-NEXT:    ret
 ;
 ; LA64-UAL-LABEL: bcmp_size_32:
 ; LA64-UAL:       # %bb.0: # %entry
@@ -650,25 +664,75 @@ define signext i32 @bcmp_size_32(ptr %s1, ptr %s2) nounwind optsize {
 ; LA64-UAL-NEXT:    sltu $a0, $zero, $a0
 ; LA64-UAL-NEXT:    ret
 ;
-; LA64-UAL-V-LABEL: bcmp_size_32:
-; LA64-UAL-V:       # %bb.0: # %entry
-; LA64-UAL-V-NEXT:    ld.d $a2, $a0, 0
-; LA64-UAL-V-NEXT:    ld.d $a3, $a1, 0
-; LA64-UAL-V-NEXT:    ld.d $a4, $a0, 8
-; LA64-UAL-V-NEXT:    ld.d $a5, $a1, 8
-; LA64-UAL-V-NEXT:    ld.d $a6, $a0, 16
-; LA64-UAL-V-NEXT:    ld.d $a7, $a1, 16
-; LA64-UAL-V-NEXT:    ld.d $a0, $a0, 24
-; LA64-UAL-V-NEXT:    ld.d $a1, $a1, 24
-; LA64-UAL-V-NEXT:    xor $a2, $a2, $a3
-; LA64-UAL-V-NEXT:    xor $a3, $a4, $a5
-; LA64-UAL-V-NEXT:    xor $a4, $a6, $a7
-; LA64-UAL-V-NEXT:    xor $a0, $a0, $a1
-; LA64-UAL-V-NEXT:    or $a1, $a2, $a3
-; LA64-UAL-V-NEXT:    or $a0, $a4, $a0
-; LA64-UAL-V-NEXT:    or $a0, $a1, $a0
-; LA64-UAL-V-NEXT:    sltu $a0, $zero, $a0
-; LA64-UAL-V-NEXT:    ret
+; LA32-UAL-LSX-LABEL: bcmp_size_32:
+; LA32-UAL-LSX:       # %bb.0: # %entry
+; LA32-UAL-LSX-NEXT:    vld $vr0, $a0, 0
+; LA32-UAL-LSX-NEXT:    vld $vr1, $a0, 16
+; LA32-UAL-LSX-NEXT:    vld $vr2, $a1, 16
+; LA32-UAL-LSX-NEXT:    vld $vr3, $a1, 0
+; LA32-UAL-LSX-NEXT:    vxor.v $vr1, $vr1, $vr2
+; LA32-UAL-LSX-NEXT:    vxor.v $vr0, $vr0, $vr3
+; LA32-UAL-LSX-NEXT:    vor.v $vr0, $vr0, $vr1
+; LA32-UAL-LSX-NEXT:    vbsrl.v $vr1, $vr0, 8
+; LA32-UAL-LSX-NEXT:    vor.v $vr0, $vr1, $vr0
+; LA32-UAL-LSX-NEXT:    vbsrl.v $vr1, $vr0, 4
+; LA32-UAL-LSX-NEXT:    vor.v $vr0, $vr1, $vr0
+; LA32-UAL-LSX-NEXT:    vpickve2gr.w $a0, $vr0, 0
+; LA32-UAL-LSX-NEXT:    sltu $a0, $zero, $a0
+; LA32-UAL-LSX-NEXT:    ret
+;
+; LA64-UAL-LSX-LABEL: bcmp_size_32:
+; LA64-UAL-LSX:       # %bb.0: # %entry
+; LA64-UAL-LSX-NEXT:    vld $vr0, $a0, 0
+; LA64-UAL-LSX-NEXT:    vld $vr1, $a0, 16
+; LA64-UAL-LSX-NEXT:    vld $vr2, $a1, 16
+; LA64-UAL-LSX-NEXT:    vld $vr3, $a1, 0
+; LA64-UAL-LSX-NEXT:    vxor.v $vr1, $vr1, $vr2
+; LA64-UAL-LSX-NEXT:    vxor.v $vr0, $vr0, $vr3
+; LA64-UAL-LSX-NEXT:    vor.v $vr0, $vr0, $vr1
+; LA64-UAL-LSX-NEXT:    vbsrl.v $vr1, $vr0, 8
+; LA64-UAL-LSX-NEXT:    vor.v $vr0, $vr1, $vr0
+; LA64-UAL-LSX-NEXT:    vpickve2gr.d $a0, $vr0, 0
+; LA64-UAL-LSX-NEXT:    sltu $a0, $zero, $a0
+; LA64-UAL-LSX-NEXT:    ret
+;
+; LA32-UAL-LASX-LABEL: bcmp_size_32:
+; LA32-UAL-LASX:       # %bb.0: # %entry
+; LA32-UAL-LASX-NEXT:    xvld $xr0, $a0, 0
+; LA32-UAL-LASX-NEXT:    xvld $xr1, $a1, 0
+; LA32-UAL-LASX-NEXT:    xvxor.v $xr0, $xr0, $xr1
+; LA32-UAL-LASX-NEXT:    xvpermi.q $xr1, $xr0, 1
+; LA32-UAL-LASX-NEXT:    vor.v $vr0, $vr0, $vr1
+; LA32-UAL-LASX-NEXT:    vbsrl.v $vr1, $vr0, 8
+; LA32-UAL-LASX-NEXT:    vor.v $vr0, $vr1, $vr0
+; LA32-UAL-LASX-NEXT:    vbsrl.v $vr1, $vr0, 4
+; LA32-UAL-LASX-NEXT:    vor.v $vr0, $vr1, $vr0
+; LA32-UAL-LASX-NEXT:    vpickve2gr.w $a0, $vr0, 0
+; LA32-UAL-LASX-NEXT:    sltu $a0, $zero, $a0
+; LA32-UAL-LASX-NEXT:    ret
+;
+; LA64-UAL-LASX-LABEL: bcmp_size_32:
+; LA64-UAL-LASX:       # %bb.0: # %entry
+; LA64-UAL-LASX-NEXT:    xvld $xr0, $a0, 0
+; LA64-UAL-LASX-NEXT:    xvld $xr1, $a1, 0
+; LA64-UAL-LASX-NEXT:    xvxor.v $xr0, $xr0, $xr1
+; LA64-UAL-LASX-NEXT:    xvpermi.q $xr1, $xr0, 1
+; LA64-UAL-LASX-NEXT:    vor.v $vr0, $vr0, $vr1
+; LA64-UAL-LASX-NEXT:    vbsrl.v $vr1, $vr0, 8
+; LA64-UAL-LASX-NEXT:    vor.v $vr0, $vr1, $vr0
+; LA64-UAL-LASX-NEXT:    vpickve2gr.d $a0, $vr0, 0
+; LA64-UAL-LASX-NEXT:    sltu $a0, $zero, $a0
+; LA64-UAL-LASX-NEXT:    ret
+;
+; LA32-NUAL-LABEL: bcmp_size_32:
+; LA32-NUAL:       # %bb.0: # %entry
+; LA32-NUAL-NEXT:    addi.w $sp, $sp, -16
+; LA32-NUAL-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
+; LA32-NUAL-NEXT:    ori $a2, $zero, 32
+; LA32-NUAL-NEXT:    bl bcmp
+; LA32-NUAL-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
+; LA32-NUAL-NEXT:    addi.w $sp, $sp, 16
+; LA32-NUAL-NEXT:    ret
 ;
 ; LA64-NUAL-LABEL: bcmp_size_32:
 ; LA64-NUAL:       # %bb.0: # %entry
@@ -686,104 +750,502 @@ entry:
 }
 
 define signext i32 @bcmp_size_63(ptr %s1, ptr %s2) nounwind optsize {
-; LA32-LABEL: bcmp_size_63:
-; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    addi.w $sp, $sp, -16
-; LA32-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
-; LA32-NEXT:    ori $a2, $zero, 63
-; LA32-NEXT:    bl bcmp
-; LA32-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
-; LA32-NEXT:    addi.w $sp, $sp, 16
-; LA32-NEXT:    ret
+; LA32-UAL-LABEL: bcmp_size_63:
+; LA32-UAL:       # %bb.0: # %entry
+; LA32-UAL-NEXT:    addi.w $sp, $sp, -16
+; LA32-UAL-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
+; LA32-UAL-NEXT:    ori $a2, $zero, 63
+; LA32-UAL-NEXT:    bl bcmp
+; LA32-UAL-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
+; LA32-UAL-NEXT:    addi.w $sp, $sp, 16
+; LA32-UAL-NEXT:    ret
 ;
-; LA64-LABEL: bcmp_size_63:
-; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    addi.d $sp, $sp, -16
-; LA64-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
-; LA64-NEXT:    ori $a2, $zero, 63
-; LA64-NEXT:    pcaddu18i $ra, %call36(bcmp)
-; LA64-NEXT:    jirl $ra, $ra, 0
-; LA64-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
-; LA64-NEXT:    addi.d $sp, $sp, 16
-; LA64-NEXT:    ret
+; LA64-UAL-LABEL: bcmp_size_63:
+; LA64-UAL:       # %bb.0: # %entry
+; LA64-UAL-NEXT:    addi.d $sp, $sp, -16
+; LA64-UAL-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
+; LA64-UAL-NEXT:    ori $a2, $zero, 63
+; LA64-UAL-NEXT:    pcaddu18i $ra, %call36(bcmp)
+; LA64-UAL-NEXT:    jirl $ra, $ra, 0
+; LA64-UAL-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
+; LA64-UAL-NEXT:    addi.d $sp, $sp, 16
+; LA64-UAL-NEXT:    ret
+;
+; LA32-UAL-LSX-LABEL: bcmp_size_63:
+; LA32-UAL-LSX:       # %bb.0: # %entry
+; LA32-UAL-LSX-NEXT:    vld $vr0, $a0, 0
+; LA32-UAL-LSX-NEXT:    vld $vr1, $a1, 0
+; LA32-UAL-LSX-NEXT:    vld $vr2, $a0, 32
+; LA32-UAL-LSX-NEXT:    vld $vr3, $a0, 47
+; LA32-UAL-LSX-NEXT:    vld $vr4, $a1, 47
+; LA32-UAL-LSX-NEXT:    vld $vr5, $a1, 32
+; LA32-UAL-LSX-NEXT:    vld $vr6, $a0, 16
+; LA32-UAL-LSX-NEXT:    vld $vr7, $a1, 16
+; LA32-UAL-LSX-NEXT:    vxor.v $vr3, $vr3, $vr4
+; LA32-UAL-LSX-NEXT:    vxor.v $vr2, $vr2, $vr5
+; LA32-UAL-LSX-NEXT:    vor.v $vr2, $vr2, $vr3
+; LA32-UAL-LSX-NEXT:    vxor.v $vr3, $vr6, $vr7
+; LA32-UAL-LSX-NEXT:    vxor.v $vr0, $vr0, $vr1
+; LA32-UAL-LSX-NEXT:    vor.v $vr0, $vr0, $vr3
+; LA32-UAL-LSX-NEXT:    vor.v $vr0, $vr0, $vr2
+; LA32-UAL-LSX-NEXT:    vbsrl.v $vr1, $vr0, 8
+; LA32-UAL-LSX-NEXT:    vor.v $vr0, $vr1, $vr0
+; LA32-UAL-LSX-NEXT:    vbsrl.v $vr1, $vr0, 4
+; LA32-UAL-LSX-NEXT:    vor.v $vr0, $vr1, $vr0
+; LA32-UAL-LSX-NEXT:    vpickve2gr.w $a0, $vr0, 0
+; LA32-UAL-LSX-NEXT:    sltu $a0, $zero, $a0
+; LA32-UAL-LSX-NEXT:    ret
+;
+; LA64-UAL-LSX-LABEL: bcmp_size_63:
+; LA64-UAL-LSX:       # %bb.0: # %entry
+; LA64-UAL-LSX-NEXT:    vld $vr0, $a0, 0
+; LA64-UAL-LSX-NEXT:    vld $vr1, $a1, 0
+; LA64-UAL-LSX-NEXT:    vld $vr2, $a0, 32
+; LA64-UAL-LSX-NEXT:    vld $vr3, $a0, 47
+; LA64-UAL-LSX-NEXT:    vld $vr4, $a1, 47
+; LA64-UAL-LSX-NEXT:    vld $vr5, $a1, 32
+; LA64-UAL-LSX-NEXT:    vld $vr6, $a0, 16
+; LA64-UAL-LSX-NEXT:    vld $vr7, $a1, 16
+; LA64-UAL-LSX-NEXT:    vxor.v $vr3, $vr3, $vr4
+; LA64-UAL-LSX-NEXT:    vxor.v $vr2, $vr2, $vr5
+; LA64-UAL-LSX-NEXT:    vor.v $vr2, $vr2, $vr3
+; LA64-UAL-LSX-NEXT:    vxor.v $vr3, $vr6, $vr7
+; LA64-UAL-LSX-NEXT:    vxor.v $vr0, $vr0, $vr1
+; LA64-UAL-LSX-NEXT:    vor.v $vr0, $vr0, $vr3
+; LA64-UAL-LSX-NEXT:    vor.v $vr0, $vr0, $vr2
+; LA64-UAL-LSX-NEXT:    vbsrl.v $vr1, $vr0, 8
+; LA64-UAL-LSX-NEXT:    vor.v $vr0, $vr1, $vr0
+; LA64-UAL-LSX-NEXT:    vpickve2gr.d $a0, $vr0, 0
+; LA64-UAL-LSX-NEXT:    sltu $a0, $zero, $a0
+; LA64-UAL-LSX-NEXT:    ret
+;
+; LA32-UAL-LASX-LABEL: bcmp_size_63:
+; LA32-UAL-LASX:       # %bb.0: # %entry
+; LA32-UAL-LASX-NEXT:    xvld $xr0, $a0, 0
+; LA32-UAL-LASX-NEXT:    xvld $xr1, $a0, 31
+; LA32-UAL-LASX-NEXT:    xvld $xr2, $a1, 31
+; LA32-UAL-LASX-NEXT:    xvld $xr3, $a1, 0
+; LA32-UAL-LASX-NEXT:    xvxor.v $xr1, $xr1, $xr2
+; LA32-UAL-LASX-NEXT:    xvxor.v $xr0, $xr0, $xr3
+; LA32-UAL-LASX-NEXT:    xvor.v $xr0, $xr0, $xr1
+; LA32-UAL-LASX-NEXT:    xvpermi.q $xr1, $xr0, 1
+; LA32-UAL-LASX-NEXT:    vor.v $vr0, $vr0, $vr1
+; LA32-UAL-LASX-NEXT:    vbsrl.v $vr1, $vr0, 8
+; LA32-UAL-LASX-NEXT:    vor.v $vr0, $vr1, $vr0
+; LA32-UAL-LASX-NEXT:    vbsrl.v $vr1, $vr0, 4
+; LA32-UAL-LASX-NEXT:    vor.v $vr0, $vr1, $vr0
+; LA32-UAL-LASX-NEXT:    vpickve2gr.w $a0, $vr0, 0
+; LA32-UAL-LASX-NEXT:    sltu $a0, $zero, $a0
+; LA32-UAL-LASX-NEXT:    ret
+;
+; LA64-UAL-LASX-LABEL: bcmp_size_63:
+; LA64-UAL-LASX:       # %bb.0: # %entry
+; LA64-UAL-LASX-NEXT:    xvld $xr0, $a0, 0
+; LA64-UAL-LASX-NEXT:    xvld $xr1, $a0, 31
+; LA64-UAL-LASX-NEXT:    xvld $xr2, $a1, 31
+; LA64-UAL-LASX-NEXT:    xvld $xr3, $a1, 0
+; LA64-UAL-LASX-NEXT:    xvxor.v $xr1, $xr1, $xr2
+; LA64-UAL-LASX-NEXT:    xvxor.v $xr0, $xr0, $xr3
+; LA64-UAL-LASX-NEXT:    xvor.v $xr0, $xr0, $xr1
+; LA64-UAL-LASX-NEXT:    xvpermi.q $xr1, $xr0, 1
+; LA64-UAL-LASX-NEXT:    vor.v $vr0, $vr0, $vr1
+; LA64-UAL-LASX-NEXT:    vbsrl.v $vr1, $vr0, 8
+; LA64-UAL-LASX-NEXT:    vor.v $vr0, $vr1, $vr0
+; LA64-UAL-LASX-NEXT:    vpickve2gr.d $a0, $vr0, 0
+; LA64-UAL-LASX-NEXT:    sltu $a0, $zero, $a0
+; LA64-UAL-LASX-NEXT:    ret
+;
+; LA32-NUAL-LABEL: bcmp_size_63:
+; LA32-NUAL:       # %bb.0: # %entry
+; LA32-NUAL-NEXT:    addi.w $sp, $sp, -16
+; LA32-NUAL-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
+; LA32-NUAL-NEXT:    ori $a2, $zero, 63
+; LA32-NUAL-NEXT:    bl bcmp
+; LA32-NUAL-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
+; LA32-NUAL-NEXT:    addi.w $sp, $sp, 16
+; LA32-NUAL-NEXT:    ret
+;
+; LA64-NUAL-LABEL: bcmp_size_63:
+; LA64-NUAL:       # %bb.0: # %entry
+; LA64-NUAL-NEXT:    addi.d $sp, $sp, -16
+; LA64-NUAL-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
+; LA64-NUAL-NEXT:    ori $a2, $zero, 63
+; LA64-NUAL-NEXT:    pcaddu18i $ra, %call36(bcmp)
+; LA64-NUAL-NEXT:    jirl $ra, $ra, 0
+; LA64-NUAL-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
+; LA64-NUAL-NEXT:    addi.d $sp, $sp, 16
+; LA64-NUAL-NEXT:    ret
 entry:
   %bcmp = call signext i32 @bcmp(ptr %s1, ptr %s2, iGRLen 63)
   ret i32 %bcmp
 }
 
 define signext i32 @bcmp_size_64(ptr %s1, ptr %s2) nounwind optsize {
-; LA32-LABEL: bcmp_size_64:
-; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    addi.w $sp, $sp, -16
-; LA32-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
-; LA32-NEXT:    ori $a2, $zero, 64
-; LA32-NEXT:    bl bcmp
-; LA32-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
-; LA32-NEXT:    addi.w $sp, $sp, 16
-; LA32-NEXT:    ret
+; LA32-UAL-LABEL: bcmp_size_64:
+; LA32-UAL:       # %bb.0: # %entry
+; LA32-UAL-NEXT:    addi.w $sp, $sp, -16
+; LA32-UAL-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
+; LA32-UAL-NEXT:    ori $a2, $zero, 64
+; LA32-UAL-NEXT:    bl bcmp
+; LA32-UAL-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
+; LA32-UAL-NEXT:    addi.w $sp, $sp, 16
+; LA32-UAL-NEXT:    ret
 ;
-; LA64-LABEL: bcmp_size_64:
-; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    addi.d $sp, $sp, -16
-; LA64-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
-; LA64-NEXT:    ori $a2, $zero, 64
-; LA64-NEXT:    pcaddu18i $ra, %call36(bcmp)
-; LA64-NEXT:    jirl $ra, $ra, 0
-; LA64-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
-; LA64-NEXT:    addi.d $sp, $sp, 16
-; LA64-NEXT:    ret
+; LA64-UAL-LABEL: bcmp_size_64:
+; LA64-UAL:       # %bb.0: # %entry
+; LA64-UAL-NEXT:    addi.d $sp, $sp, -16
+; LA64-UAL-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
+; LA64-UAL-NEXT:    ori $a2, $zero, 64
+; LA64-UAL-NEXT:    pcaddu18i $ra, %call36(bcmp)
+; LA64-UAL-NEXT:    jirl $ra, $ra, 0
+; LA64-UAL-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
+; LA64-UAL-NEXT:    addi.d $sp, $sp, 16
+; LA64-UAL-NEXT:    ret
+;
+; LA32-UAL-LSX-LABEL: bcmp_size_64:
+; LA32-UAL-LSX:       # %bb.0: # %entry
+; LA32-UAL-LSX-NEXT:    vld $vr0, $a0, 0
+; LA32-UAL-LSX-NEXT:    vld $vr1, $a1, 0
+; LA32-UAL-LSX-NEXT:    vld $vr2, $a0, 32
+; LA32-UAL-LSX-NEXT:    vld $vr3, $a0, 48
+; LA32-UAL-LSX-NEXT:    vld $vr4, $a1, 48
+; LA32-UAL-LSX-NEXT:    vld $vr5, $a1, 32
+; LA32-UAL-LSX-NEXT:    vld $vr6, $a0, 16
+; LA32-UAL-LSX-NEXT:    vld $vr7, $a1, 16
+; LA32-UAL-LSX-NEXT:    vxor.v $vr3, $vr3, $vr4
+; LA32-UAL-LSX-NEXT:    vxor.v $vr2, $vr2, $vr5
+; LA32-UAL-LSX-NEXT:    vor.v $vr2, $vr2, $vr3
+; LA32-UAL-LSX-NEXT:    vxor.v $vr3, $vr6, $vr7
+; LA32-UAL-LSX-NEXT:    vxor.v $vr0, $vr0, $vr1
+; LA32-UAL-LSX-NEXT:    vor.v $vr0, $vr0, $vr3
+; LA32-UAL-LSX-NEXT:    vor.v $vr0, $vr0, $vr2
+; LA32-UAL-LSX-NEXT:    vbsrl.v $vr1, $vr0, 8
+; LA32-UAL-LSX-NEXT:    vor.v $vr0, $vr1, $vr0
+; LA32-UAL-LSX-NEXT:    vbsrl.v $vr1, $vr0, 4
+; LA32-UAL-LSX-NEXT:    vor.v $vr0, $vr1, $vr0
+; LA32-UAL-LSX-NEXT:    vpickve2gr.w $a0, $vr0, 0
+; LA32-UAL-LSX-NEXT:    sltu $a0, $zero, $a0
+; LA32-UAL-LSX-NEXT:    ret
+;
+; LA64-UAL-LSX-LABEL: bcmp_size_64:
+; LA64-UAL-LSX:       # %bb.0: # %entry
+; LA64-UAL-LSX-NEXT:    vld $vr0, $a0, 0
+; LA64-UAL-LSX-NEXT:    vld $vr1, $a1, 0
+; LA64-UAL-LSX-NEXT:    vld $vr2, $a0, 32
+; LA64-UAL-LSX-NEXT:    vld $vr3, $a0, 48
+; LA64-UAL-LSX-NEXT:    vld $vr4, $a1, 48
+; LA64-UAL-LSX-NEXT:    vld $vr5, $a1, 32
+; LA64-UAL-LSX-NEXT:    vld $vr6, $a0, 16
+; LA64-UAL-LSX-NEXT:    vld $vr7, $a1, 16
+; LA64-UAL-LSX-NEXT:    vxor.v $vr3, $vr3, $vr4
+; LA64-UAL-LSX-NEXT:    vxor.v $vr2, $vr2, $vr5
+; LA64-UAL-LSX-NEXT:    vor.v $vr2, $vr2, $vr3
+; LA64-UAL-LSX-NEXT:    vxor.v $vr3, $vr6, $vr7
+; LA64-UAL-LSX-NEXT:    vxor.v $vr0, $vr0, $vr1
+; LA64-UAL-LSX-NEXT:    vor.v $vr0, $vr0, $vr3
+; LA64-UAL-LSX-NEXT:    vor.v $vr0, $vr0, $vr2
+; LA64-UAL-LSX-NEXT:    vbsrl.v $vr1, $vr0, 8
+; LA64-UAL-LSX-NEXT:    vor.v $vr0, $vr1, $vr0
+; LA64-UAL-LSX-NEXT:    vpickve2gr.d $a0, $vr0, 0
+; LA64-UAL-LSX-NEXT:    sltu $a0, $zero, $a0
+; LA64-UAL-LSX-NEXT:    ret
+;
+; LA32-UAL-LASX-LABEL: bcmp_size_64:
+; LA32-UAL-LASX:       # %bb.0: # %entry
+; LA32-UAL-LASX-NEXT:    xvld $xr0, $a0, 0
+; LA32-UAL-LASX-NEXT:    xvld $xr1, $a0, 32
+; LA32-UAL-LASX-NEXT:    xvld $xr2, $a1, 32
+; LA32-UAL-LASX-NEXT:    xvld $xr3, $a1, 0
+; LA32-UAL-LASX-NEXT:    xvxor.v $xr1, $xr1, $xr2
+; LA32-UAL-LASX-NEXT:    xvxor.v $xr0, $xr0, $xr3
+; LA32-UAL-LASX-NEXT:    xvor.v $xr0, $xr0, $xr1
+; LA32-UAL-LASX-NEXT:    xvpermi.q $xr1, $xr0, 1
+; LA32-UAL-LASX-NEXT:    vor.v $vr0, $vr0, $vr1
+; LA32-UAL-LASX-NEXT:    vbsrl.v $vr1, $vr0, 8
+; LA32-UAL-LASX-NEXT:    vor.v $vr0, $vr1, $vr0
+; LA32-UAL-LASX-NEXT:    vbsrl.v $vr1, $vr0, 4
+; LA32-UAL-LASX-NEXT:    vor.v $vr0, $vr1, $vr0
+; LA32-UAL-LASX-NEXT:    vpickve2gr.w $a0, $vr0, 0
+; LA32-UAL-LASX-NEXT:    sltu $a0, $zero, $a0
+; LA32-UAL-LASX-NEXT:    ret
+;
+; LA64-UAL-LASX-LABEL: bcmp_size_64:
+; LA64-UAL-LASX:       # %bb.0: # %entry
+; LA64-UAL-LASX-NEXT:    xvld $xr0, $a0, 0
+; LA64-UAL-LASX-NEXT:    xvld $xr1, $a0, 32
+; LA64-UAL-LASX-NEXT:    xvld $xr2, $a1, 32
+; LA64-UAL-LASX-NEXT:    xvld $xr3, $a1, 0
+; LA64-UAL-LASX-NEXT:    xvxor.v $xr1, $xr1, $xr2
+; LA64-UAL-LASX-NEXT:    xvxor.v $xr0, $xr0, $xr3
+; LA64-UAL-LASX-NEXT:    xvor.v $xr0, $xr0, $xr1
+; LA64-UAL-LASX-NEXT:    xvpermi.q $xr1, $xr0, 1
+; LA64-UAL-LASX-NEXT:    vor.v $vr0, $vr0, $vr1
+; LA64-UAL-LASX-NEXT:    vbsrl.v $vr1, $vr0, 8
+; LA64-UAL-LASX-NEXT:    vor.v $vr0, $vr1, $vr0
+; LA64-UAL-LASX-NEXT:    vpickve2gr.d $a0, $vr0, 0
+; LA64-UAL-LASX-NEXT:    sltu $a0, $zero, $a0
+; LA64-UAL-LASX-NEXT:    ret
+;
+; LA32-NUAL-LABEL: bcmp_size_64:
+; LA32-NUAL:       # %bb.0: # %entry
+; LA32-NUAL-NEXT:    addi.w $sp, $sp, -16
+; LA32-NUAL-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
+; LA32-NUAL-NEXT:    ori $a2, $zero, 64
+; LA32-NUAL-NEXT:    bl bcmp
+; LA32-NUAL-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
+; LA32-NUAL-NEXT:    addi.w $sp, $sp, 16
+; LA32-NUAL-NEXT:    ret
+;
+; LA64-NUAL-LABEL: bcmp_size_64:
+; LA64-NUAL:       # %bb.0: # %entry
+; LA64-NUAL-NEXT:    addi.d $sp, $sp, -16
+; LA64-NUAL-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
+; LA64-NUAL-NEXT:    ori $a2, $zero, 64
+; LA64-NUAL-NEXT:    pcaddu18i $ra, %call36(bcmp)
+; LA64-NUAL-NEXT:    jirl $ra, $ra, 0
+; LA64-NUAL-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
+; LA64-NUAL-NEXT:    addi.d $sp, $sp, 16
+; LA64-NUAL-NEXT:    ret
 entry:
   %bcmp = call signext i32 @bcmp(ptr %s1, ptr %s2, iGRLen 64)
   ret i32 %bcmp
 }
 
 define signext i32 @bcmp_size_127(ptr %s1, ptr %s2) nounwind optsize {
-; LA32-LABEL: bcmp_size_127:
-; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    addi.w $sp, $sp, -16
-; LA32-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
-; LA32-NEXT:    ori $a2, $zero, 127
-; LA32-NEXT:    bl bcmp
-; LA32-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
-; LA32-NEXT:    addi.w $sp, $sp, 16
-; LA32-NEXT:    ret
+; LA32-UAL-LABEL: bcmp_size_127:
+; LA32-UAL:       # %bb.0: # %entry
+; LA32-UAL-NEXT:    addi.w $sp, $sp, -16
+; LA32-UAL-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
+; LA32-UAL-NEXT:    ori $a2, $zero, 127
+; LA32-UAL-NEXT:    bl bcmp
+; LA32-UAL-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
+; LA32-UAL-NEXT:    addi.w $sp, $sp, 16
+; LA32-UAL-NEXT:    ret
 ;
-; LA64-LABEL: bcmp_size_127:
-; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    addi.d $sp, $sp, -16
-; LA64-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
-; LA64-NEXT:    ori $a2, $zero, 127
-; LA64-NEXT:    pcaddu18i $ra, %call36(bcmp)
-; LA64-NEXT:    jirl $ra, $ra, 0
-; LA64-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
-; LA64-NEXT:    addi.d $sp, $sp, 16
-; LA64-NEXT:    ret
+; LA64-UAL-LABEL: bcmp_size_127:
+; LA64-UAL:       # %bb.0: # %entry
+; LA64-UAL-NEXT:    addi.d $sp, $sp, -16
+; LA64-UAL-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
+; LA64-UAL-NEXT:    ori $a2, $zero, 127
+; LA64-UAL-NEXT:    pcaddu18i $ra, %call36(bcmp)
+; LA64-UAL-NEXT:    jirl $ra, $ra, 0
+; LA64-UAL-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
+; LA64-UAL-NEXT:    addi.d $sp, $sp, 16
+; LA64-UAL-NEXT:    ret
+;
+; LA32-UAL-LSX-LABEL: bcmp_size_127:
+; LA32-UAL-LSX:       # %bb.0: # %entry
+; LA32-UAL-LSX-NEXT:    addi.w $sp, $sp, -16
+; LA32-UAL-LSX-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
+; LA32-UAL-LSX-NEXT:    ori $a2, $zero, 127
+; LA32-UAL-LSX-NEXT:    bl bcmp
+; LA32-UAL-LSX-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
+; LA32-UAL-LSX-NEXT:    addi.w $sp, $sp, 16
+; LA32-UAL-LSX-NEXT:    ret
+;
+; LA64-UAL-LSX-LABEL: bcmp_size_127:
+; LA64-UAL-LSX:       # %bb.0: # %entry
+; LA64-UAL-LSX-NEXT:    addi.d $sp, $sp, -16
+; LA64-UAL-LSX-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
+; LA64-UAL-LSX-NEXT:    ori $a2, $zero, 127
+; LA64-UAL-LSX-NEXT:    pcaddu18i $ra, %call36(bcmp)
+; LA64-UAL-LSX-NEXT:    jirl $ra, $ra, 0
+; LA64-UAL-LSX-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
+; LA64-UAL-LSX-NEXT:    addi.d $sp, $sp, 16
+; LA64-UAL-LSX-NEXT:    ret
+;
+; LA32-UAL-LASX-LABEL: bcmp_size_127:
+; LA32-UAL-LASX:       # %bb.0: # %entry
+; LA32-UAL-LASX-NEXT:    xvld $xr0, $a0, 0
+; LA32-UAL-LASX-NEXT:    xvld $xr1, $a1, 0
+; LA32-UAL-LASX-NEXT:    xvld $xr2, $a0, 64
+; LA32-UAL-LASX-NEXT:    xvld $xr3, $a0, 95
+; LA32-UAL-LASX-NEXT:    xvld $xr4, $a1, 95
+; LA32-UAL-LASX-NEXT:    xvld $xr5, $a1, 64
+; LA32-UAL-LASX-NEXT:    xvld $xr6, $a0, 32
+; LA32-UAL-LASX-NEXT:    xvld $xr7, $a1, 32
+; LA32-UAL-LASX-NEXT:    xvxor.v $xr3, $xr3, $xr4
+; LA32-UAL-LASX-NEXT:    xvxor.v $xr2, $xr2, $xr5
+; LA32-UAL-LASX-NEXT:    xvor.v $xr2, $xr2, $xr3
+; LA32-UAL-LASX-NEXT:    xvxor.v $xr3, $xr6, $xr7
+; LA32-UAL-LASX-NEXT:    xvxor.v $xr0, $xr0, $xr1
+; LA32-UAL-LASX-NEXT:    xvor.v $xr0, $xr0, $xr3
+; LA32-UAL-LASX-NEXT:    xvor.v $xr0, $xr0, $xr2
+; LA32-UAL-LASX-NEXT:    xvpermi.q $xr1, $xr0, 1
+; LA32-UAL-LASX-NEXT:    vor.v $vr0, $vr0, $vr1
+; LA32-UAL-LASX-NEXT:    vbsrl.v $vr1, $vr0, 8
+; LA32-UAL-LASX-NEXT:    vor.v $vr0, $vr1, $vr0
+; LA32-UAL-LASX-NEXT:    vbsrl.v $vr1, $vr0, 4
+; LA32-UAL-LASX-NEXT:    vor.v $vr0, $vr1, $vr0
+; LA32-UAL-LASX-NEXT:    vpickve2gr.w $a0, $vr0, 0
+; LA32-UAL-LASX-NEXT:    sltu $a0, $zero, $a0
+; LA32-UAL-LASX-NEXT:    ret
+;
+; LA64-UAL-LASX-LABEL: bcmp_size_127:
+; LA64-UAL-LASX:       # %bb.0: # %entry
+; LA64-UAL-LASX-NEXT:    xvld $xr0, $a0, 0
+; LA64-UAL-LASX-NEXT:    xvld $xr1, $a1, 0
+; LA64-UAL-LASX-NEXT:    xvld $xr2, $a0, 64
+; LA64-UAL-LASX-NEXT:    xvld $xr3, $a0, 95
+; LA64-UAL-LASX-NEXT:    xvld $xr4, $a1, 95
+; LA64-UAL-LASX-NEXT:    xvld $xr5, $a1, 64
+; LA64-UAL-LASX-NEXT:    xvld $xr6, $a0, 32
+; LA64-UAL-LASX-NEXT:    xvld $xr7, $a1, 32
+; LA64-UAL-LASX-NEXT:    xvxor.v $xr3, $xr3, $xr4
+; LA64-UAL-LASX-NEXT:    xvxor.v $xr2, $xr2, $xr5
+; LA64-UAL-LASX-NEXT:    xvor.v $xr2, $xr2, $xr3
+; LA64-UAL-LASX-NEXT:    xvxor.v $xr3, $xr6, $xr7
+; LA64-UAL-LASX-NEXT:    xvxor.v $xr0, $xr0, $xr1
+; LA64-UAL-LASX-NEXT:    xvor.v $xr0, $xr0, $xr3
+; LA64-UAL-LASX-NEXT:    xvor.v $xr0, $xr0, $xr2
+; LA64-UAL-LASX-NEXT:    xvpermi.q $xr1, $xr0, 1
+; LA64-UAL-LASX-NEXT:    vor.v $vr0, $vr0, $vr1
+; LA64-UAL-LASX-NEXT:    vbsrl.v $vr1, $vr0, 8
+; LA64-UAL-LASX-NEXT:    vor.v $vr0, $vr1, $vr0
+; LA64-UAL-LASX-NEXT:    vpickve2gr.d $a0, $vr0, 0
+; LA64-UAL-LASX-NEXT:    sltu $a0, $zero, $a0
+; LA64-UAL-LASX-NEXT:    ret
+;
+; LA32-NUAL-LABEL: bcmp_size_127:
+; LA32-NUAL:       # %bb.0: # %entry
+; LA32-NUAL-NEXT:    addi.w $sp, $sp, -16
+; LA32-NUAL-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
+; LA32-NUAL-NEXT:    ori $a2, $zero, 127
+; LA32-NUAL-NEXT:    bl bcmp
+; LA32-NUAL-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
+; LA32-NUAL-NEXT:    addi.w $sp, $sp, 16
+; LA32-NUAL-NEXT:    ret
+;
+; LA64-NUAL-LABEL: bcmp_size_127:
+; LA64-NUAL:       # %bb.0: # %entry
+; LA64-NUAL-NEXT:    addi.d $sp, $sp, -16
+; LA64-NUAL-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
+; LA64-NUAL-NEXT:    ori $a2, $zero, 127
+; LA64-NUAL-NEXT:    pcaddu18i $ra, %call36(bcmp)
+; LA64-NUAL-NEXT:    jirl $ra, $ra, 0
+; LA64-NUAL-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
+; LA64-NUAL-NEXT:    addi.d $sp, $sp, 16
+; LA64-NUAL-NEXT:    ret
 entry:
   %bcmp = call signext i32 @bcmp(ptr %s1, ptr %s2, iGRLen 127)
   ret i32 %bcmp
 }
 
 define signext i32 @bcmp_size_128(ptr %s1, ptr %s2) nounwind optsize {
-; LA32-LABEL: bcmp_size_128:
-; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    addi.w $sp, $sp, -16
-; LA32-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
-; LA32-NEXT:    ori $a2, $zero, 128
-; LA32-NEXT:    bl bcmp
-; LA32-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
-; LA32-NEXT:    addi.w $sp, $sp, 16
-; LA32-NEXT:    ret
+; LA32-UAL-LABEL: bcmp_size_128:
+; LA32-UAL:       # %bb.0: # %entry
+; LA32-UAL-NEXT:    addi.w $sp, $sp, -16
+; LA32-UAL-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
+; LA32-UAL-NEXT:    ori $a2, $zero, 128
+; LA32-UAL-NEXT:    bl bcmp
+; LA32-UAL-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
+; LA32-UAL-NEXT:    addi.w $sp, $sp, 16
+; LA32-UAL-NEXT:    ret
 ;
-; LA64-LABEL: bcmp_size_128:
-; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    addi.d $sp, $sp, -16
-; LA64-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
-; LA64-NEXT:    ori $a2, $zero, 128
-; LA64-NEXT:    pcaddu18i $ra, %call36(bcmp)
-; LA64-NEXT:    jirl $ra, $ra, 0
-; LA64-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
-; LA64-NEXT:    addi.d $sp, $sp, 16
-; LA64-NEXT:    ret
+; LA64-UAL-LABEL: bcmp_size_128:
+; LA64-UAL:       # %bb.0: # %entry
+; LA64-UAL-NEXT:    addi.d $sp, $sp, -16
+; LA64-UAL-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
+; LA64-UAL-NEXT:    ori $a2, $zero, 128
+; LA64-UAL-NEXT:    pcaddu18i $ra, %call36(bcmp)
+; LA64-UAL-NEXT:    jirl $ra, $ra, 0
+; LA64-UAL-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
+; LA64-UAL-NEXT:    addi.d $sp, $sp, 16
+; LA64-UAL-NEXT:    ret
+;
+; LA32-UAL-LSX-LABEL: bcmp_size_128:
+; LA32-UAL-LSX:       # %bb.0: # %entry
+; LA32-UAL-LSX-NEXT:    addi.w $sp, $sp, -16
+; LA32-UAL-LSX-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
+; LA32-UAL-LSX-NEXT:    ori $a2, $zero, 128
+; LA32-UAL-LSX-NEXT:    bl bcmp
+; LA32-UAL-LSX-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
+; LA32-UAL-LSX-NEXT:    addi.w $sp, $sp, 16
+; LA32-UAL-LSX-NEXT:    ret
+;
+; LA64-UAL-LSX-LABEL: bcmp_size_128:
+; LA64-UAL-LSX:       # %bb.0: # %entry
+; LA64-UAL-LSX-NEXT:    addi.d $sp, $sp, -16
+; LA64-UAL-LSX-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
+; LA64-UAL-LSX-NEXT:    ori $a2, $zero, 128
+; LA64-UAL-LSX-NEXT:    pcaddu18i $ra, %call36(bcmp)
+; LA64-UAL-LSX-NEXT:    jirl $ra, $ra, 0
+; LA64-UAL-LSX-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
+; LA64-UAL-LSX-NEXT:    addi.d $sp, $sp, 16
+; LA64-UAL-LSX-NEXT:    ret
+;
+; LA32-UAL-LASX-LABEL: bcmp_size_128:
+; LA32-UAL-LASX:       # %bb.0: # %entry
+; LA32-UAL-LASX-NEXT:    xvld $xr0, $a0, 0
+; LA32-UAL-LASX-NEXT:    xvld $xr1, $a1, 0
+; LA32-UAL-LASX-NEXT:    xvld $xr2, $a0, 64
+; LA32-UAL-LASX-NEXT:    xvld $xr3, $a0, 96
+; LA32-UAL-LASX-NEXT:    xvld $xr4, $a1, 96
+; LA32-UAL-LASX-NEXT:    xvld $xr5, $a1, 64
+; LA32-UAL-LASX-NEXT:    xvld $xr6, $a0, 32
+; LA32-UAL-LASX-NEXT:    xvld $xr7, $a1, 32
+; LA32-UAL-LASX-NEXT:    xvxor.v $xr3, $xr3, $xr4
+; LA32-UAL-LASX-NEXT:    xvxor.v $xr2, $xr2, $xr5
+; LA32-UAL-LASX-NEXT:    xvor.v $xr2, $xr2, $xr3
+; LA32-UAL-LASX-NEXT:    xvxor.v $xr3, $xr6, $xr7
+; LA32-UAL-LASX-NEXT:    xvxor.v $xr0, $xr0, $xr1
+; LA32-UAL-LASX-NEXT:    xvor.v $xr0, $xr0, $xr3
+; LA32-UAL-LASX-NEXT:    xvor.v $xr0, $xr0, $xr2
+; LA32-UAL-LASX-NEXT:    xvpermi.q $xr1, $xr0, 1
+; LA32-UAL-LASX-NEXT:    vor.v $vr0, $vr0, $vr1
+; LA32-UAL-LASX-NEXT:    vbsrl.v $vr1, $vr0, 8
+; LA32-UAL-LASX-NEXT:    vor.v $vr0, $vr1, $vr0
+; LA32-UAL-LASX-NEXT:    vbsrl.v $vr1, $vr0, 4
+; LA32-UAL-LASX-NEXT:    vor.v $vr0, $vr1, $vr0
+; LA32-UAL-LASX-NEXT:    vpickve2gr.w $a0, $vr0, 0
+; LA32-UAL-LASX-NEXT:    sltu $a0, $zero, $a0
+; LA32-UAL-LASX-NEXT:    ret
+;
+; LA64-UAL-LASX-LABEL: bcmp_size_128:
+; LA64-UAL-LASX:       # %bb.0: # %entry
+; LA64-UAL-LASX-NEXT:    xvld $xr0, $a0, 0
+; LA64-UAL-LASX-NEXT:    xvld $xr1, $a1, 0
+; LA64-UAL-LASX-NEXT:    xvld $xr2, $a0, 64
+; LA64-UAL-LASX-NEXT:    xvld $xr3, $a0, 96
+; LA64-UAL-LASX-NEXT:    xvld $xr4, $a1, 96
+; LA64-UAL-LASX-NEXT:    xvld $xr5, $a1, 64
+; LA64-UAL-LASX-NEXT:    xvld $xr6, $a0, 32
+; LA64-UAL-LASX-NEXT:    xvld $xr7, $a1, 32
+; LA64-UAL-LASX-NEXT:    xvxor.v $xr3, $xr3, $xr4
+; LA64-UAL-LASX-NEXT:    xvxor.v $xr2, $xr2, $xr5
+; LA64-UAL-LASX-NEXT:    xvor.v $xr2, $xr2, $xr3
+; LA64-UAL-LASX-NEXT:    xvxor.v $xr3, $xr6, $xr7
+; LA64-UAL-LASX-NEXT:    xvxor.v $xr0, $xr0, $xr1
+; LA64-UAL-LASX-NEXT:    xvor.v $xr0, $xr0, $xr3
+; LA64-UAL-LASX-NEXT:    xvor.v $xr0, $xr0, $xr2
+; LA64-UAL-LASX-NEXT:    xvpermi.q $xr1, $xr0, 1
+; LA64-UAL-LASX-NEXT:    vor.v $vr0, $vr0, $vr1
+; LA64-UAL-LASX-NEXT:    vbsrl.v $vr1, $vr0, 8
+; LA64-UAL-LASX-NEXT:    vor.v $vr0, $vr1, $vr0
+; LA64-UAL-LASX-NEXT:    vpickve2gr.d $a0, $vr0, 0
+; LA64-UAL-LASX-NEXT:    sltu $a0, $zero, $a0
+; LA64-UAL-LASX-NEXT:    ret
+;
+; LA32-NUAL-LABEL: bcmp_size_128:
+; LA32-NUAL:       # %bb.0: # %entry
+; LA32-NUAL-NEXT:    addi.w $sp, $sp, -16
+; LA32-NUAL-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
+; LA32-NUAL-NEXT:    ori $a2, $zero, 128
+; LA32-NUAL-NEXT:    bl bcmp
+; LA32-NUAL-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
+; LA32-NUAL-NEXT:    addi.w $sp, $sp, 16
+; LA32-NUAL-NEXT:    ret
+;
+; LA64-NUAL-LABEL: bcmp_size_128:
+; LA64-NUAL:       # %bb.0: # %entry
+; LA64-NUAL-NEXT:    addi.d $sp, $sp, -16
+; LA64-NUAL-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
+; LA64-NUAL-NEXT:    ori $a2, $zero, 128
+; LA64-NUAL-NEXT:    pcaddu18i $ra, %call36(bcmp)
+; LA64-NUAL-NEXT:    jirl $ra, $ra, 0
+; LA64-NUAL-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
+; LA64-NUAL-NEXT:    addi.d $sp, $sp, 16
+; LA64-NUAL-NEXT:    ret
 entry:
   %bcmp = call signext i32 @bcmp(ptr %s1, ptr %s2, iGRLen 128)
   ret i32 %bcmp
@@ -3058,8 +3520,3 @@ entry:
   %ret = icmp sgt i32 %memcmp, 0
   ret i1 %ret
 }
-;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; LA32-UAL-LASX: {{.*}}
-; LA32-UAL-LSX: {{.*}}
-; LA64-UAL-LASX: {{.*}}
-; LA64-UAL-LSX: {{.*}}
