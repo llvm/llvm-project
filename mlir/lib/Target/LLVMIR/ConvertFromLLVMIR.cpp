@@ -77,7 +77,8 @@ void registerFromLLVMIRTranslation() {
         if (llvm::verifyModule(*llvmModule, &llvm::errs()))
           return nullptr;
 
-        // Debug records are WIP in the LLVM IR translator.
+        // Now that the translation supports importing debug records directly,
+        // make it the default, but allow the user to override to old behavior.
         if (!convertDebugRecToIntrinsics)
           llvmModule->convertFromNewDbgValues();
 
