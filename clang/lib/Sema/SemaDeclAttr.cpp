@@ -8308,10 +8308,13 @@ void Sema::ActOnCleanupAttr(Decl *D, const Attr *A) {
   CleanupAttr *Attr = D->getAttr<CleanupAttr>();
   FunctionDecl *FD = Attr->getFunctionDecl();
   DeclarationNameInfo NI = FD->getNameInfo();
+  VarDecl *VD = cast<VarDecl>(D);
+  if (VD->getType()->isDependentType())
+    return;
 
   // We're currently more strict than GCC about what function types we accept.
   // If this ever proves to be a problem it should be easy to fix.
-  QualType Ty = this->Context.getPointerType(cast<VarDecl>(D)->getType());
+  QualType Ty = this->Context.getPointerType(VD->getType());
   QualType ParamTy = FD->getParamDecl(0)->getType();
   if (!this->IsAssignConvertCompatible(this->CheckAssignmentConstraints(
           FD->getParamDecl(0)->getLocation(), ParamTy, Ty))) {

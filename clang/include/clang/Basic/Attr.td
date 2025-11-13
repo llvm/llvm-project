@@ -1411,7 +1411,7 @@ def Cleanup : InheritableAttr {
   let Args = [DeclArgument<Function, "FunctionDecl">];
   let Subjects = SubjectList<[LocalVar]>;
   let Documentation = [CleanupDocs];
-  bit IsTypeDependent = 1;
+  let IsTypeDependent = 1;
   // FIXME: DeclArgument should be reworked to also store the
   // Expr instead of adding attr specific hacks like the following.
   // See the discussion in https://github.com/llvm/llvm-project/pull/14023.
