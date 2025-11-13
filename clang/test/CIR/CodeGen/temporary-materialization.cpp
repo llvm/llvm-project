@@ -15,22 +15,16 @@ int test() {
 //      CIR: cir.func {{.*}} @_Z4testv()
 //      CIR:   %[[TEMP_SLOT:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["ref.tmp0", init]
 // CIR-NEXT:   %[[X:.*]] = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["x", init, const]
-// CIR-NEXT:   cir.scope {
-// CIR-NEXT:     %[[TEMP_VALUE:.*]] = cir.call @_Z8make_intv() : () -> !s32i
-// CIR-NEXT:     cir.store{{.*}} %[[TEMP_VALUE]], %[[TEMP_SLOT]]
-// CIR-NEXT:   }
+// CIR-NEXT:   %[[TEMP_VALUE:.*]] = cir.call @_Z8make_intv() : () -> !s32i
+// CIR-NEXT:   cir.store{{.*}} %[[TEMP_VALUE]], %[[TEMP_SLOT]]
 // CIR-NEXT:   cir.store{{.*}} %[[TEMP_SLOT]], %[[X]]
 
 // LLVM: define {{.*}} i32 @_Z4testv()
 // LLVM:   %[[RETVAL:.*]] = alloca i32
 // LLVM:   %[[TEMP_SLOT:.*]] = alloca i32
 // LLVM:   %[[X:.*]] = alloca ptr
-// LLVM:   br label %[[SCOPE_LABEL:.*]]
-// LLVM: [[SCOPE_LABEL]]:
 // LLVM:   %[[TEMP_VALUE:.*]] = call i32 @_Z8make_intv()
 // LLVM:   store i32 %[[TEMP_VALUE]], ptr %[[TEMP_SLOT]]
-// LLVM:   br label %[[SCOPE_END_LABEL:.*]]
-// LLVM: [[SCOPE_END_LABEL]]:
 // LLVM:   store ptr %[[TEMP_SLOT]], ptr %[[X]]
 
 // OGCG: define {{.*}} i32 @_Z4testv()
@@ -54,10 +48,8 @@ int test_scoped() {
 //      CIR:   cir.scope {
 // CIR-NEXT:     %[[TEMP_SLOT:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["ref.tmp0", init]
 // CIR-NEXT:     %[[Y_ADDR:.*]] = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["y", init, const]
-// CIR-NEXT:     cir.scope {
-// CIR-NEXT:       %[[TEMP_VALUE:.*]] = cir.call @_Z8make_intv() : () -> !s32i
-// CIR-NEXT:       cir.store{{.*}} %[[TEMP_VALUE]], %[[TEMP_SLOT]] : !s32i, !cir.ptr<!s32i>
-// CIR-NEXT:     }
+// CIR-NEXT:     %[[TEMP_VALUE:.*]] = cir.call @_Z8make_intv() : () -> !s32i
+// CIR-NEXT:     cir.store{{.*}} %[[TEMP_VALUE]], %[[TEMP_SLOT]] : !s32i, !cir.ptr<!s32i>
 // CIR-NEXT:     cir.store{{.*}} %[[TEMP_SLOT]], %[[Y_ADDR]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
 // CIR-NEXT:     %[[Y_REF:.*]] = cir.load %[[Y_ADDR]] : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
 // CIR-NEXT:     %[[Y_VALUE:.*]] = cir.load{{.*}} %[[Y_REF]] : !cir.ptr<!s32i>, !s32i
@@ -73,12 +65,8 @@ int test_scoped() {
 // LLVM:   store i32 %[[TEMP_VALUE1]], ptr %[[X]]
 // LLVM:   br label %[[SCOPE_LABEL:.*]]
 // LLVM: [[SCOPE_LABEL]]:
-// LLVM:   br label %[[INNER_SCOPE_LABEL:.*]]
-// LLVM: [[INNER_SCOPE_LABEL]]:
 // LLVM:   %[[TEMP_VALUE2:.*]] = call i32 @_Z8make_intv()
 // LLVM:   store i32 %[[TEMP_VALUE2]], ptr %[[TEMP_SLOT]]
-// LLVM:   br label %[[INNER_SCOPE_END_LABEL:.*]]
-// LLVM: [[INNER_SCOPE_END_LABEL]]:
 // LLVM:   store ptr %[[TEMP_SLOT]], ptr %[[Y_ADDR]]
 // LLVM:   %[[Y_REF:.*]] = load ptr, ptr %[[Y_ADDR]]
 // LLVM:   %[[Y_VALUE:.*]] = load i32, ptr %[[Y_REF]]

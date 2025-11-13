@@ -923,31 +923,9 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
     return emitCallExprLValue(cast<CallExpr>(e));
   case Expr::ExprWithCleanupsClass: {
     const auto *cleanups = cast<ExprWithCleanups>(e);
-    LValue lv;
-
-    mlir::Location scopeLoc = getLoc(e->getSourceRange());
-    [[maybe_unused]] auto scope = cir::ScopeOp::create(
-        builder, scopeLoc, /*scopeBuilder=*/
-        [&](mlir::OpBuilder &b, mlir::Location loc) {
-          CIRGenFunction::LexicalScope lexScope{*this, loc,
-                                                builder.getInsertionBlock()};
-
-          lv = emitLValue(cleanups->getSubExpr());
-          if (lv.isSimple()) {
-            // Defend against branches out of gnu statement expressions
-            // surrounded by cleanups.
-            Address addr = lv.getAddress();
-            mlir::Value v = addr.getPointer();
-            assert(!cir::MissingFeatures::addressIsKnownNonNull());
-            assert(!cir::MissingFeatures::opTBAA());
-            assert(!cir::MissingFeatures::objCGC());
-            lv = LValue::makeAddr(addr.withPointer(v), lv.getType(),
-                                  lv.getBaseInfo());
-          }
-        });
-
-    // FIXME: Is it possible to create an ExprWithCleanups that produces a
-    // bitfield lvalue or some other non-simple lvalue?
+    RunCleanupsScope scope(*this);
+    LValue lv = emitLValue(cleanups->getSubExpr());
+    assert(!cir::MissingFeatures::cleanupWithPreservedValues());
     return lv;
   }
   case Expr::ParenExprClass:

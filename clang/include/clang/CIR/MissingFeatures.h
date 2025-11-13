@@ -226,6 +226,7 @@ struct MissingFeatures {
   static bool cleanupAppendInsts() { return false; }
   static bool cleanupBranchThrough() { return false; }
   static bool cleanupIndexAndBIAdjustment() { return false; }
+  static bool cleanupWithPreservedValues() { return false; }
   static bool cleanupsToDeactivate() { return false; }
   static bool constEmitterAggILE() { return false; }
   static bool constEmitterArrayILE() { return false; }
