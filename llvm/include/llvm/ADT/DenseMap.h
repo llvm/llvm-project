@@ -1077,6 +1077,9 @@ private:
   }
 
   void deallocateBuckets() {
+    // Fast path to deallocateBuckets in case getLargeRep()->NumBuckets == 0,
+    // just like destroyAll.  This path is used to destruct zombie instances
+    // after moves.
     if (Small || getLargeRep()->NumBuckets == 0)
       return;
 
