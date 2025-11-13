@@ -179,11 +179,6 @@ static cl::opt<bool> EmitJumpTableSizesSection(
     cl::desc("Emit a section containing jump table addresses and sizes"),
     cl::Hidden, cl::init(false));
 
-static cl::opt<bool> InsertNoopsForPrefetch(
-    "insert-noops-for-prefetch",
-    cl::desc("Whether to insert noops instead of prefetches."), cl::init(false),
-    cl::Hidden);
-
 // This isn't turned on by default, since several of the scheduling models are
 // not completely accurate, and we don't want to be misleading.
 static cl::opt<bool> PrintLatency(
@@ -485,7 +480,6 @@ void AsmPrinter::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
   if (EmitBBHash)
     AU.addRequired<MachineBlockHashInfo>();
-  AU.addUsedIfAvailable<BasicBlockSectionsProfileReaderWrapperPass>();
 }
 
 bool AsmPrinter::doInitialization(Module &M) {
@@ -1988,44 +1982,29 @@ void AsmPrinter::emitFunctionBody() {
 
   FunctionCallGraphInfo FuncCGInfo;
   const auto &CallSitesInfoMap = MF->getCallSitesInfo();
-  DenseMap<UniqueBBID, SmallVector<unsigned>> FunctionPrefetchTargets;
-  if (auto *BBSPRPass =
-          getAnalysisIfAvailable<BasicBlockSectionsProfileReaderWrapperPass>()) {
-    FunctionPrefetchTargets = BBSPRPass->getBBSPR().getPrefetchTargetsForFunction(MF->getName());
-}
 
    for (auto &MBB : *MF) {
-
-    SmallVector<unsigned> BBPrefetchTargets;
-    = FunctionPrefetchTargets.lookup(MBB.g);
-    int NextPrefetchTargetIndex = MBB.getPrefetchTargets().empty() ? -1 : 0;
     // Print a label for the basic block.
     emitBasicBlockStart(MBB);
     DenseMap<StringRef, unsigned> MnemonicCounts;
-    unsigned NumCallsInBlock = 0;
-    for (auto &MI : MBB) {
-      if (NextPrefetchTargetIndex != -1 &&
-          NumCallsInBlock >=  MBB.getPrefetchTargets()[NextPrefetchTargetIndex]) {
 
-        MCSymbol *PrefetchTargetSymbol = OutContext.getOrCreateSymbol(
+    SmallVector<unsigned> PrefetchTargets = MBB.getPrefetchTargetIndexes();
+    auto PrefetchTargetIt = PrefetchTargets.begin();
+    unsigned NumCalls = 0;
+    auto EmitPrefetchTargetSymbolIfNeeded = [&]() {
+      if (PrefetchTargetIt == PrefetchTargets.end() || NumCalls < *PrefetchTargetIt)
+        return;
+      MCSymbol *PrefetchTargetSymbol = OutContext.getOrCreateSymbol(
             Twine("__llvm_prefetch_target_") + MF->getName() + Twine("_") + utostr(MBB.getBBID()->BaseID) +
             Twine("_") +
-            utostr(MBB.getPrefetchTargets()[NextPrefetchTargetIndex]));
-        if (MF->getFunction().isWeakForLinker()) {
-          OutStreamer->emitSymbolAttribute(PrefetchTargetSymbol, MCSA_Weak);
-          errs() << "Emitting weak symbol: " << PrefetchTargetSymbol->getName() << "\n";
-        } else {
-          OutStreamer->emitSymbolAttribute(PrefetchTargetSymbol, MCSA_Global);
-          errs() << "Emitting global symbol: " << PrefetchTargetSymbol->getName() << "\n";
-        }
-        // OutStreamer->emitSymbolAttribute(PrefetchTargetSymbol, MCSA_Extern);
-       // errs() << "Emitting symbol: " << PrefetchTargetSymbol->getName() << "\n";
+            utostr(*PrefetchTargetIt));
+          OutStreamer->emitSymbolAttribute(PrefetchTargetSymbol, MF->getFunction().isWeakForLinker() ? MCSA_Weak : MCSA_Global);
         OutStreamer->emitLabel(PrefetchTargetSymbol);
-        ++NextPrefetchTargetIndex;
-        if (NextPrefetchTargetIndex >=
-            static_cast<int>(MBB.getPrefetchTargets().size()))
-          NextPrefetchTargetIndex = -1;
-      }
+        ++PrefetchTargetIt;
+    };
+
+    for (auto &MI : MBB) {
+      EmitPrefetchTargetSymbolIfNeeded();
       // Print the assembly for the instruction.
       if (!MI.isPosition() && !MI.isImplicitDef() && !MI.isKill() &&
           !MI.isDebugInstr()) {
@@ -2163,8 +2142,11 @@ void AsmPrinter::emitFunctionBody() {
         break;
       }
 
-      if (MI.isCall() && MF->getTarget().Options.BBAddrMap)
+      if (MI.isCall()) {
+        if (MF->getTarget().Options.BBAddrMap)
         OutStreamer->emitLabel(createCallsiteEndSymbol(MBB));
+        ++NumCalls;
+      }
 
       if (TM.Options.EmitCallGraphSection && MI.isCall())
         handleCallsiteForCallgraph(FuncCGInfo, CallSitesInfoMap, MI);
@@ -2176,24 +2158,7 @@ void AsmPrinter::emitFunctionBody() {
       for (auto &Handler : Handlers)
         Handler->endInstruction();
     }
-   while (NextPrefetchTargetIndex != -1) {
-        MCSymbol *PrefetchTargetSymbol = OutContext.getOrCreateSymbol(
-            Twine("__llvm_prefetch_target_") + MF->getName() + Twine("_") + utostr(MBB.getBBID()->BaseID) +
-            Twine("_") +
-            utostr(MBB.getPrefetchTargets()[NextPrefetchTargetIndex]));
-        if (MF->getFunction().hasWeakLinkage()) {
-          OutStreamer->emitSymbolAttribute(PrefetchTargetSymbol, MCSA_WeakDefinition);
-        } else {
-          OutStreamer->emitSymbolAttribute(PrefetchTargetSymbol, MCSA_Global);
-        }
-        OutStreamer->emitSymbolAttribute(PrefetchTargetSymbol, MCSA_Extern);
-        OutStreamer->emitLabel(PrefetchTargetSymbol);
-        ++NextPrefetchTargetIndex;
-        if (NextPrefetchTargetIndex >=
-            static_cast<int>(MBB.getPrefetchTargets().size()))
-          NextPrefetchTargetIndex = -1;
-      }
-
+    EmitPrefetchTargetSymbolIfNeeded();
 
     // We must emit temporary symbol for the end of this basic block, if either
     // we have BBLabels enabled or if this basic blocks marks the end of a

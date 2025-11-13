@@ -102,7 +102,7 @@ public:
   SmallVector<PrefetchHint>
   getPrefetchHintsForFunction(StringRef FuncName) const;
 
-  DenseMap<UniqueBBID, SmallVector<unsigned>> getPrefetchTargetsForFunction(StringRef FuncName) const;
+  SmallVector<BBPosition> getPrefetchTargetsForFunction(StringRef FuncName) const;
 
 private:
   StringRef getAliasName(StringRef FuncName) const {
@@ -215,7 +215,7 @@ public:
   SmallVector<PrefetchHint>
   getPrefetchHintsForFunction(StringRef FuncName) const;
 
-  DenseMap<UniqueBBID, SmallVector<unsigned>> getPrefetchTargetsForFunction(StringRef FuncName) const;
+  SmallVector<BBPosition> getPrefetchTargetsForFunction(StringRef FuncName) const;
 
   // Initializes the FunctionNameToDIFilename map for the current module and
   // then reads the profile for the matching functions.
