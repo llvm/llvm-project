@@ -30,6 +30,11 @@ void registerFromLLVMIRTranslation() {
       llvm::cl::desc("Emit expensive warnings during LLVM IR import "
                      "(discouraged: testing only!)"),
       llvm::cl::init(false));
+  static llvm::cl::opt<bool> disableNewDbgConversion(
+      "disable-newdbg-conversion",
+      llvm::cl::desc("Disable conversion from new debug info format during "
+                     "LLVM IR import (discouraged: WIP!)"),
+      llvm::cl::init(false));
   static llvm::cl::opt<bool> dropDICompositeTypeElements(
       "drop-di-composite-type-elements",
       llvm::cl::desc(
@@ -69,8 +74,9 @@ void registerFromLLVMIRTranslation() {
         if (llvm::verifyModule(*llvmModule, &llvm::errs()))
           return nullptr;
 
-        // Debug records are not currently supported in the LLVM IR translator.
-        llvmModule->convertFromNewDbgValues();
+        // Debug records are WIP in the LLVM IR translator.
+        if (!disableNewDbgConversion)
+          llvmModule->convertFromNewDbgValues();
 
         return translateLLVMIRToModule(
             std::move(llvmModule), context, emitExpensiveWarnings,
