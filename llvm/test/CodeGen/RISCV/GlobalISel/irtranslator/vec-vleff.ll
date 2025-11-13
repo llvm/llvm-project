@@ -1,5 +1,4 @@
-; RUN: not --crash llc -mtriple=riscv64 -mattr=+v -global-isel -stop-after=irtranslator \
-; RUN:   -verify-machineinstrs < %s 2>&1 | FileCheck %s
+; RUN: not --crash llc -global-isel -mtriple=riscv64 -mattr=+v -filetype=null %s 2>&1 | FileCheck %s
 
 ; Intrinsics returning structs and extractvalue of scalable vector are not
 ; supported yet.
