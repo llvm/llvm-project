@@ -457,6 +457,8 @@ void omp_free(void *ptr, omp_allocator_handle_t allocator) {
 void *omp_get_dyn_groupprivate_ptr(size_t offset, int *is_fallback,
                                    omp_access_t access_group) {
   i;
+  if (is_fallback)
+    is_fallback = 0;
   return NULL;
 }
 

@@ -393,9 +393,6 @@ struct CUDADeviceTy : public GenericDeviceTy {
       return Err;
     MaxBlockSharedMemSize = MaxSharedMem;
 
-    // Supports block shared memory natively.
-    HasNativeBlockSharedMem = true;
-
     return Plugin::success();
   }
 

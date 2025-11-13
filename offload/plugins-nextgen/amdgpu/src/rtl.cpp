@@ -2198,9 +2198,6 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
       }
     }
 
-    // Supports block shared memory natively.
-    HasNativeBlockSharedMem = true;
-
     return Plugin::success();
   }
 

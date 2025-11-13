@@ -808,8 +808,8 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   /// Get the total shared memory per block that can be used in any kernel.
   uint32_t getMaxBlockSharedMemSize() const { return MaxBlockSharedMemSize; }
 
-  /// Indicate whether the device has native block shared memory.
-  bool hasNativeBlockSharedMem() const { return HasNativeBlockSharedMem; }
+  /// Indicate whether the device supports block shared memory natively.
+  bool hasNativeBlockSharedMem() const { return MaxBlockSharedMemSize > 0; }
 
   /// Set the context of the device if needed, before calling device-specific
   /// functions. Plugins may implement this function as a no-op if not needed.
@@ -1269,11 +1269,8 @@ protected:
   std::atomic<bool> OmptInitialized;
 #endif
 
-  /// The total per-block shared memory that a kernel may use.
+  /// The total per-block native shared memory that a kernel may use.
   uint32_t MaxBlockSharedMemSize = 0;
-
-  /// Whether the device has native block shared memory.
-  bool HasNativeBlockSharedMem = false;
 };
 
 /// Class implementing common functionalities of offload plugins. Each plugin

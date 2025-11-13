@@ -83,6 +83,9 @@ EXTERN size_t omp_get_groupprivate_limit(int DeviceNum,
   if (DeviceNum == omp_get_initial_device())
     return 0;
 
+  if (AccessGroup != omp_access_cgroup)
+    return 0;
+
   auto DeviceOrErr = PM->getDevice(DeviceNum);
   if (!DeviceOrErr)
     FATAL_MESSAGE(DeviceNum, "%s", toString(DeviceOrErr.takeError()).c_str());

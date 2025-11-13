@@ -382,6 +382,7 @@
 
     typedef enum {
         omp_access_cgroup = 0,
+        omp_access_pteam = 1
     } omp_access_t;
 
 #   if defined(_WIN32)
