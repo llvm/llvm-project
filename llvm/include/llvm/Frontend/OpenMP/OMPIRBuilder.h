@@ -2446,20 +2446,24 @@ public:
     /// The number of threads.
     ArrayRef<Value *> NumThreads;
     /// The size of the dynamic shared memory.
-    Value *DynCGGroupMem = nullptr;
+    Value *DynCGroupMem = nullptr;
     /// True if the kernel has 'no wait' clause.
     bool HasNoWait = false;
+    /// The fallback mechanism for the shared memory.
+    omp::OMPDynGroupprivateFallbackType DynCGroupMemFallback =
+        omp::OMPDynGroupprivateFallbackType::Abort;
 
     // Constructors for TargetKernelArgs.
     TargetKernelArgs() = default;
     TargetKernelArgs(unsigned NumTargetItems, TargetDataRTArgs RTArgs,
                      Value *NumIterations, ArrayRef<Value *> NumTeams,
-                     ArrayRef<Value *> NumThreads, Value *DynCGGroupMem,
-                     bool HasNoWait)
+                     ArrayRef<Value *> NumThreads, Value *DynCGroupMem,
+                     bool HasNoWait,
+                     omp::OMPDynGroupprivateFallbackType DynCGroupMemFallback)
         : NumTargetItems(NumTargetItems), RTArgs(RTArgs),
           NumIterations(NumIterations), NumTeams(NumTeams),
-          NumThreads(NumThreads), DynCGGroupMem(DynCGGroupMem),
-          HasNoWait(HasNoWait) {}
+          NumThreads(NumThreads), DynCGroupMem(DynCGroupMem),
+          HasNoWait(HasNoWait), DynCGroupMemFallback(DynCGroupMemFallback) {}
   };
 
   /// Create the kernel args vector used by emitTargetKernel. This function
@@ -3244,6 +3248,10 @@ public:
   ///        dependency information as passed in the depend clause
   /// \param HasNowait Whether the target construct has a `nowait` clause or
   ///        not.
+  /// \param DynCGroupMem The size of the dynamic groupprivate memory for each
+  /// cgroup.
+  /// \param DynCGroupMem The fallback mechanism to execute if the requested
+  /// cgroup memory cannot be provided.
   LLVM_ABI InsertPointOrErrorTy createTarget(
       const LocationDescription &Loc, bool IsOffloadEntry,
       OpenMPIRBuilder::InsertPointTy AllocaIP,
@@ -3255,7 +3263,10 @@ public:
       TargetBodyGenCallbackTy BodyGenCB,
       TargetGenArgAccessorsCallbackTy ArgAccessorFuncCB,
       CustomMapperCallbackTy CustomMapperCB,
-      const SmallVector<DependData> &Dependencies, bool HasNowait = false);
+      const SmallVector<DependData> &Dependencies, bool HasNowait = false,
+      Value *DynCGroupMem = nullptr,
+      omp::OMPDynGroupprivateFallbackType DynCGroupMemFallback =
+          omp::OMPDynGroupprivateFallbackType::Abort);
 
   /// Returns __kmpc_for_static_init_* runtime function for the specified
   /// size \a IVSize and sign \a IVSigned. Will create a distribute call
@@ -3654,7 +3665,7 @@ public:
   /// \param Name Name of the variable.
   LLVM_ABI GlobalVariable *
   getOrCreateInternalVariable(Type *Ty, const StringRef &Name,
-                              unsigned AddressSpace = 0);
+                              std::optional<unsigned> AddressSpace = {});
 };
 
 /// Class to represented the control flow structure of an OpenMP canonical loop.

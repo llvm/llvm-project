@@ -2747,6 +2747,27 @@ For example:
     all arguments are not undef and not poison. Otherwise, it is undefined
     behavior.
 
+``"modular-format"="<type>,<string_idx>,<first_arg_idx>,<modular_impl_fn>,<impl_name>,<aspects...>"``
+    This attribute indicates that the implementation is modular on a particular
+    format string argument. If the compiler can determine that not all aspects
+    of the implementation are needed, it can report which aspects were needed
+    and redirect the call to a modular implementation function instead.
+
+    The compiler reports that an implementation aspect is needed by issuing a
+    relocation for the symbol `<impl_name>_<aspect>``. This arranges for code
+    and data needed to support the aspect of the implementation to be brought
+    into the link to satisfy weak references in the modular implemenation
+    function.
+
+    The first three arguments have the same semantics as the arguments to the C
+    ``format`` attribute.
+
+    The following aspects are currently supported:
+
+    - ``float``: The call has a floating point argument
+
+
+
 Call Site Attributes
 ----------------------
 
@@ -20368,6 +20389,77 @@ Arguments:
 """"""""""
 The argument to this intrinsic must be a vector of floating-point values.
 
+Vector Partial Reduction Intrinsics
+-----------------------------------
+
+Partial reductions of vectors can be expressed using the intrinsics described in
+this section. Each one reduces the concatenation of the two vector arguments
+down to the number of elements of the result vector type.
+
+Other than the reduction operator (e.g. add, fadd), the way in which the
+concatenated arguments is reduced is entirely unspecified. By their nature these
+intrinsics are not expected to be useful in isolation but can instead be used to
+implement the first phase of an overall reduction operation.
+
+The typical use case is loop vectorization where reductions are split into an
+in-loop phase, where maintaining an unordered vector result is important for
+performance, and an out-of-loop phase is required to calculate the final scalar
+result.
+
+By avoiding the introduction of new ordering constraints, these intrinsics
+enhance the ability to leverage a target's accumulation instructions.
+
+'``llvm.vector.partial.reduce.add.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic.
+
+::
+
+      declare <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v4i32.v8i32(<4 x i32> %a, <8 x i32> %b)
+      declare <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v4i32.v16i32(<4 x i32> %a, <16 x i32> %b)
+      declare <vscale x 4 x i32> @llvm.vector.partial.reduce.add.nxv4i32.nxv4i32.nxv8i32(<vscale x 4 x i32> %a, <vscale x 8 x i32> %b)
+      declare <vscale x 4 x i32> @llvm.vector.partial.reduce.add.nxv4i32.nxv4i32.nxv16i32(<vscale x 4 x i32> %a, <vscale x 16 x i32> %b)
+
+Arguments:
+""""""""""
+
+The first argument is an integer vector with the same type as the result.
+
+The second argument is a vector with a length that is a known integer multiple
+of the result's type, while maintaining the same element type.
+
+'``llvm.vector.partial.reduce.fadd.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic.
+
+::
+
+      declare <4 x f32> @llvm.vector.partial.reduce.fadd.v4f32.v8f32(<4 x f32> %a, <8 x f32> %b)
+      declare <vscale x 4 x f32> @llvm.vector.partial.reduce.fadd.nxv4f32.nxv8f32(<vscale x 4 x f32> %a, <vscale x 8 x f32> %b)
+
+Arguments:
+""""""""""
+
+The first argument is a floating-point vector with the same type as the result.
+
+The second argument is a vector with a length that is a known integer multiple
+of the result's type, while maintaining the same element type.
+
+Semantics:
+""""""""""
+
+As the way in which the arguments to this floating-point intrinsic are reduced
+is unspecified, this intrinsic will assume floating-point reassociation and
+contraction can be leveraged to implement the reduction, which may result in
+variations to the results due to reordering or by lowering to different
+instructions (including combining multiple instructions into a single one).
+
 '``llvm.vector.insert``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -20740,50 +20832,6 @@ Note that it has the following implications:
    ``ceil(%C / %max_lanes)`` where ``%C`` is the initial ``%cnt`` value.
 -  If ``%cnt`` is non-zero, the return value is non-zero as well.
 -  If ``%cnt`` is less than or equal to ``%max_lanes``, the return value is equal to ``%cnt``.
-
-'``llvm.vector.partial.reduce.add.*``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-This is an overloaded intrinsic.
-
-::
-
-      declare <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v4i32.v8i32(<4 x i32> %a, <8 x i32> %b)
-      declare <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v4i32.v16i32(<4 x i32> %a, <16 x i32> %b)
-      declare <vscale x 4 x i32> @llvm.vector.partial.reduce.add.nxv4i32.nxv4i32.nxv8i32(<vscale x 4 x i32> %a, <vscale x 8 x i32> %b)
-      declare <vscale x 4 x i32> @llvm.vector.partial.reduce.add.nxv4i32.nxv4i32.nxv16i32(<vscale x 4 x i32> %a, <vscale x 16 x i32> %b)
-
-Overview:
-"""""""""
-
-The '``llvm.vector.partial.reduce.add.*``' intrinsics reduce the
-concatenation of the two vector arguments down to the number of elements of the
-result vector type.
-
-Arguments:
-""""""""""
-
-The first argument is an integer vector with the same type as the result.
-
-The second argument is a vector with a length that is a known integer multiple
-of the result's type, while maintaining the same element type.
-
-Semantics:
-""""""""""
-
-Other than the reduction operator (e.g., add) the way in which the concatenated
-arguments is reduced is entirely unspecified. By their nature these intrinsics
-are not expected to be useful in isolation but instead implement the first phase
-of an overall reduction operation.
-
-The typical use case is loop vectorization where reductions are split into an
-in-loop phase, where maintaining an unordered vector result is important for
-performance, and an out-of-loop phase to calculate the final scalar result.
-
-By avoiding the introduction of new ordering constraints, these intrinsics
-enhance the ability to leverage a target's accumulation instructions.
 
 '``llvm.experimental.vector.histogram.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -24629,7 +24677,7 @@ Examples:
 
 .. _int_vp_load_ff:
 
-'``llvm.vp.load_ff``' Intrinsic
+'``llvm.vp.load.ff``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
