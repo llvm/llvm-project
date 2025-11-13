@@ -10334,6 +10334,9 @@ __m256d test_mm256_permutexvar_pd(__m256i __X, __m256d __Y) {
   return _mm256_permutexvar_pd(__X, __Y);
 }
 
+TEST_CONSTEXPR(match_m256d(_mm256_permutexvar_pd((__m256i)(__v4di){3, 2, 1, 0}, (__m256d){0.0, 1.0, 2.0, 3.0}), 3.0, 2.0, 1.0, 0.0));
+TEST_CONSTEXPR(match_m256d(_mm256_permutexvar_pd((__m256i)(__v4di){0, 0, 0, 0}, (__m256d){1.0, 2.0, 3.0, 4.0}), 1.0, 1.0, 1.0, 1.0));
+
 __m256d test_mm256_mask_permutexvar_pd(__m256d __W, __mmask8 __U, __m256i __X, __m256d __Y) {
   // CHECK-LABEL: test_mm256_mask_permutexvar_pd
   // CHECK: @llvm.x86.avx512.permvar.df.256
@@ -10348,6 +10351,11 @@ __m256d test_mm256_maskz_permutexvar_pd(__mmask8 __U, __m256i __X, __m256d __Y) 
   return _mm256_maskz_permutexvar_pd(__U, __X, __Y);
 }
 
+TEST_CONSTEXPR(match_m256d(_mm256_mask_permutexvar_pd((__m256d){9.0, 9.0, 9.0, 9.0}, 0xF, (__m256i)(__v4di){3, 2, 1, 0}, (__m256d){0.0, 1.0, 2.0, 3.0}), 3.0, 2.0, 1.0, 0.0));
+TEST_CONSTEXPR(match_m256d(_mm256_mask_permutexvar_pd((__m256d){9.0, 9.0, 9.0, 9.0}, 0xA, (__m256i)(__v4di){3, 2, 1, 0}, (__m256d){0.0, 1.0, 2.0, 3.0}), 9.0, 2.0, 9.0, 0.0));
+TEST_CONSTEXPR(match_m256d(_mm256_maskz_permutexvar_pd(0xF, (__m256i)(__v4di){3, 2, 1, 0}, (__m256d){0.0, 1.0, 2.0, 3.0}), 3.0, 2.0, 1.0, 0.0));
+TEST_CONSTEXPR(match_m256d(_mm256_maskz_permutexvar_pd(0xA, (__m256i)(__v4di){3, 2, 1, 0}, (__m256d){0.0, 1.0, 2.0, 3.0}), 0.0, 2.0, 0.0, 0.0));
+
 __m256i test_mm256_maskz_permutexvar_epi64(__mmask8 __M, __m256i __X, __m256i __Y) {
   // CHECK-LABEL: test_mm256_maskz_permutexvar_epi64
   // CHECK: @llvm.x86.avx512.permvar.di.256
@@ -10361,6 +10369,11 @@ __m256i test_mm256_mask_permutexvar_epi64(__m256i __W, __mmask8 __M, __m256i __X
   // CHECK: select <4 x i1> %{{.*}}, <4 x i64> %{{.*}}, <4 x i64> %{{.*}}
   return _mm256_mask_permutexvar_epi64(__W, __M, __X, __Y);
 }
+
+TEST_CONSTEXPR(match_v4di(_mm256_mask_permutexvar_epi64((__m256i)(__v4di){99, 99, 99, 99}, 0xF, (__m256i)(__v4di){3, 2, 1, 0}, (__m256i)(__v4di){10, 11, 12, 13}), 13, 12, 11, 10));
+TEST_CONSTEXPR(match_v4di(_mm256_mask_permutexvar_epi64((__m256i)(__v4di){99, 99, 99, 99}, 0xA, (__m256i)(__v4di){3, 2, 1, 0}, (__m256i)(__v4di){10, 11, 12, 13}), 99, 12, 99, 10));
+TEST_CONSTEXPR(match_v4di(_mm256_maskz_permutexvar_epi64(0xF, (__m256i)(__v4di){3, 2, 1, 0}, (__m256i)(__v4di){10, 11, 12, 13}), 13, 12, 11, 10));
+TEST_CONSTEXPR(match_v4di(_mm256_maskz_permutexvar_epi64(0xA, (__m256i)(__v4di){3, 2, 1, 0}, (__m256i)(__v4di){10, 11, 12, 13}), 0, 12, 0, 10));
 
 __m256 test_mm256_mask_permutexvar_ps(__m256 __W, __mmask8 __U, __m256i __X, __m256 __Y) {
   // CHECK-LABEL: test_mm256_mask_permutexvar_ps
@@ -10381,6 +10394,19 @@ __m256 test_mm256_permutexvar_ps(__m256i __X, __m256 __Y) {
   return _mm256_permutexvar_ps( __X, __Y);
 }
 
+TEST_CONSTEXPR(match_m256(_mm256_permutexvar_ps(((__m256i)(__v8si){7, 6, 5, 4, 3, 2, 1, 0}),
+                                                 ((__m256){0.0f, 1.0f, 2.0f, 3.0f,
+                                                           4.0f, 5.0f, 6.0f, 7.0f})),
+                               7.0f, 6.0f, 5.0f, 4.0f, 3.0f, 2.0f, 1.0f, 0.0f));
+TEST_CONSTEXPR(match_m256(_mm256_permutexvar_ps(((__m256i)(__v8si){0, 0, 0, 0, 0, 0, 0, 0}),
+                                                 ((__m256){1.0f, 2.0f, 3.0f, 4.0f,
+                                                           5.0f, 6.0f, 7.0f, 8.0f})),
+                               1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f));
+TEST_CONSTEXPR(match_m256(_mm256_mask_permutexvar_ps((__m256){99.0f, 99.0f, 99.0f, 99.0f, 99.0f, 99.0f, 99.0f, 99.0f}, 0xFF, (__m256i)(__v8si){7, 6, 5, 4, 3, 2, 1, 0}, (__m256){0.0f, 1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f}), 7.0f, 6.0f, 5.0f, 4.0f, 3.0f, 2.0f, 1.0f, 0.0f));
+TEST_CONSTEXPR(match_m256(_mm256_mask_permutexvar_ps((__m256){99.0f, 99.0f, 99.0f, 99.0f, 99.0f, 99.0f, 99.0f, 99.0f}, 0xAA, (__m256i)(__v8si){7, 6, 5, 4, 3, 2, 1, 0}, (__m256){0.0f, 1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f}), 99.0f, 6.0f, 99.0f, 4.0f, 99.0f, 2.0f, 99.0f, 0.0f));
+TEST_CONSTEXPR(match_m256(_mm256_maskz_permutexvar_ps(0xFF, (__m256i)(__v8si){7, 6, 5, 4, 3, 2, 1, 0}, (__m256){0.0f, 1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f}), 7.0f, 6.0f, 5.0f, 4.0f, 3.0f, 2.0f, 1.0f, 0.0f));
+TEST_CONSTEXPR(match_m256(_mm256_maskz_permutexvar_ps(0xAA, (__m256i)(__v8si){7, 6, 5, 4, 3, 2, 1, 0}, (__m256){0.0f, 1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f}), 0.0f, 6.0f, 0.0f, 4.0f, 0.0f, 2.0f, 0.0f, 0.0f));
+
 __m256i test_mm256_maskz_permutexvar_epi32(__mmask8 __M, __m256i __X, __m256i __Y) {
   // CHECK-LABEL: test_mm256_maskz_permutexvar_epi32
   // CHECK: @llvm.x86.avx2.permd
@@ -10400,6 +10426,17 @@ __m256i test_mm256_mask_permutexvar_epi32(__m256i __W, __mmask8 __M, __m256i __X
   // CHECK: select <8 x i1> %{{.*}}, <8 x i32> %{{.*}}, <8 x i32> %{{.*}}
   return _mm256_mask_permutexvar_epi32(__W, __M, __X, __Y);
 }
+
+TEST_CONSTEXPR(match_v8si(_mm256_permutexvar_epi32(((__m256i)(__v8si){7, 6, 5, 4, 3, 2, 1, 0}),
+                                                   ((__m256i)(__v8si){10, 11, 12, 13, 14, 15, 16, 17})),
+                              17, 16, 15, 14, 13, 12, 11, 10));
+TEST_CONSTEXPR(match_v8si(_mm256_permutexvar_epi32(((__m256i)(__v8si){0, 1, 2, 3, 4, 5, 6, 7}),
+                                                   ((__m256i)(__v8si){100, 101, 102, 103, 104, 105, 106, 107})),
+                              100, 101, 102, 103, 104, 105, 106, 107));
+TEST_CONSTEXPR(match_v8si(_mm256_mask_permutexvar_epi32((__m256i)(__v8si){99, 99, 99, 99, 99, 99, 99, 99}, 0xFF, (__m256i)(__v8si){7, 6, 5, 4, 3, 2, 1, 0}, (__m256i)(__v8si){10, 11, 12, 13, 14, 15, 16, 17}), 17, 16, 15, 14, 13, 12, 11, 10));
+TEST_CONSTEXPR(match_v8si(_mm256_mask_permutexvar_epi32((__m256i)(__v8si){99, 99, 99, 99, 99, 99, 99, 99}, 0xAA, (__m256i)(__v8si){7, 6, 5, 4, 3, 2, 1, 0}, (__m256i)(__v8si){10, 11, 12, 13, 14, 15, 16, 17}), 99, 16, 99, 14, 99, 12, 99, 10));
+TEST_CONSTEXPR(match_v8si(_mm256_maskz_permutexvar_epi32(0xFF, (__m256i)(__v8si){7, 6, 5, 4, 3, 2, 1, 0}, (__m256i)(__v8si){10, 11, 12, 13, 14, 15, 16, 17}), 17, 16, 15, 14, 13, 12, 11, 10));
+TEST_CONSTEXPR(match_v8si(_mm256_maskz_permutexvar_epi32(0xAA, (__m256i)(__v8si){7, 6, 5, 4, 3, 2, 1, 0}, (__m256i)(__v8si){10, 11, 12, 13, 14, 15, 16, 17}), 0, 16, 0, 14, 0, 12, 0, 10));
 
 __m128i test_mm_alignr_epi32(__m128i __A, __m128i __B) {
   // CHECK-LABEL: test_mm_alignr_epi32
