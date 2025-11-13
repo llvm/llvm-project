@@ -896,7 +896,7 @@ const struct InstructionSizeData {
     { 3, {0x0f, 0xb6, 0x11}, 0, "0f b6 11 : movzx edx, BYTE PTR [rcx]"},
     { 3, {0x0f, 0xb6, 0xc2}, 0, "0f b6 c2 : movzx eax, dl"},
     { 3, {0x0f, 0xb6, 0xd2}, 0, "0f b6 d2 : movzx edx, dl"},
-    { 3, (0x0f, 0xb7, 0x02), 0, "0f b7 02 : movzx eax, WORD PTR [rdx]"}.
+    { 3, {0x0f, 0xb7, 0x02}, 0, "0f b7 02 : movzx eax, WORD PTR [rdx]"},
     { 3, {0x0f, 0xb7, 0x10}, 0, "0f b7 10 : movzx edx, WORD PTR [rax]"},
     { 3, {0x0f, 0xbe, 0xd2}, 0, "0f be d2 : movsx edx, dl"},
     { 3, {0x41, 0x8b, 0xc0}, 0, "41 8b c0 : mov eax, r8d"},
@@ -908,7 +908,7 @@ const struct InstructionSizeData {
     { 3, {0x45, 0x31, 0xc9}, 0, "45 31 c9 : xor r9d,r9d"},
     { 3, {0x45, 0x33, 0xc0}, 0, "45 33 c0 : xor r8d, r8d"},
     { 3, {0x45, 0x33, 0xc9}, 0, "45 33 c9 : xor r9d, r9d"},
-    { 3, (0x45, 0x33, 0xd2), 0, "45 33 d2 : xor r10d, r10d"},
+    { 3, {0x45, 0x33, 0xd2}, 0, "45 33 d2 : xor r10d, r10d"},
     { 3, {0x45, 0x33, 0xdb}, 0, "45 33 db : xor r11d, r11d"},
     { 3, {0x45, 0x84, 0xc0}, 0, "45 84 c0 : test r8b,r8b"},
     { 3, {0x45, 0x84, 0xd2}, 0, "45 84 d2 : test r10b,r10b"},
