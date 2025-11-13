@@ -10,6 +10,7 @@
 #define LLVM_TRANSFORMS_VECTORIZE_VPLANUTILS_H
 
 #include "VPlan.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 class ScalarEvolution;
@@ -67,6 +68,7 @@ unsigned getVFScaleFactor(VPRecipeBase *R);
 /// generating the values for the comparison. The recipes are stored in
 /// \p Recipes, and recipes forming an address for a load are also added to
 /// \p GEPs.
+LLVM_ABI_FOR_TEST
 std::optional<VPValue *>
 getRecipesForUncountableExit(VPlan &Plan,
                              SmallVectorImpl<VPRecipeBase *> &Recipes,

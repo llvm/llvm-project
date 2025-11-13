@@ -18,6 +18,7 @@ class ObjectStore;
 
 /// Create on-disk \c ObjectStore and \c ActionCache instances based on
 /// \c ondisk::UnifiedOnDiskCache, with built-in hashing.
+LLVM_ABI
 Expected<std::pair<std::unique_ptr<ObjectStore>, std::unique_ptr<ActionCache>>>
 createOnDiskUnifiedCASDatabases(StringRef Path);
 

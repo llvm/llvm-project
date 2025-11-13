@@ -110,7 +110,7 @@ void SIPostRABundler::collectUsedRegUnits(const MachineInstr &MI,
            "subregister indexes should not be present after RA");
 
     for (MCRegUnit Unit : TRI->regunits(Reg))
-      UsedRegUnits.set(Unit);
+      UsedRegUnits.set(static_cast<unsigned>(Unit));
   }
 }
 

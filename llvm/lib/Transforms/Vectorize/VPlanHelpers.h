@@ -395,7 +395,7 @@ class VPSlotTracker {
   std::unique_ptr<ModuleSlotTracker> MST;
 
   void assignName(const VPValue *V);
-  void assignNames(const VPlan &Plan);
+  LLVM_ABI_FOR_TEST void assignNames(const VPlan &Plan);
   void assignNames(const VPBasicBlock *VPBB);
   std::string getName(const Value *V);
 

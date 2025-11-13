@@ -58,7 +58,7 @@ public:
   /// \param FaultInPolicy Controls how nodes are copied to primary store. This
   /// is recorded at creation time and subsequent opens need to pass the same
   /// policy otherwise the \p open will fail.
-  static Expected<std::unique_ptr<UnifiedOnDiskCache>>
+  LLVM_ABI_FOR_TEST static Expected<std::unique_ptr<UnifiedOnDiskCache>>
   open(StringRef Path, std::optional<uint64_t> SizeLimit, StringRef HashName,
        unsigned HashByteSize,
        OnDiskGraphDB::FaultInPolicy FaultInPolicy =
@@ -99,20 +99,20 @@ public:
   /// \param CheckSizeLimit if true it will check whether the primary store has
   /// exceeded its intended size limit. If false the check is skipped even if a
   /// \p SizeLimit was passed to the \p open call.
-  Error close(bool CheckSizeLimit = true);
+  LLVM_ABI_FOR_TEST Error close(bool CheckSizeLimit = true);
 
   /// Set the size for limiting growth. This has an effect for when the instance
   /// is closed.
-  void setSizeLimit(std::optional<uint64_t> SizeLimit);
+  LLVM_ABI_FOR_TEST void setSizeLimit(std::optional<uint64_t> SizeLimit);
 
   /// \returns the storage size of the cache data.
-  uint64_t getStorageSize() const;
+  LLVM_ABI_FOR_TEST uint64_t getStorageSize() const;
 
   /// \returns whether the primary store has exceeded the intended size limit.
   /// This can return false even if the overall size of the opened directory is
   /// over the \p SizeLimit passed to \p open. To know whether garbage
   /// collection needs to be triggered or not, call \p needsGarbaseCollection.
-  bool hasExceededSizeLimit() const;
+  LLVM_ABI_FOR_TEST bool hasExceededSizeLimit() const;
 
   /// \returns whether there are unused data that can be deleted using a
   /// \p collectGarbage call.
@@ -127,18 +127,18 @@ public:
   ///
   /// It is recommended that garbage-collection is triggered concurrently in the
   /// background, so that it has minimal effect on the workload of the process.
-  static Error collectGarbage(StringRef Path);
+  LLVM_ABI_FOR_TEST static Error collectGarbage(StringRef Path);
 
   /// Remove unused data from the current UnifiedOnDiskCache.
   Error collectGarbage();
 
   /// Helper function to convert the value stored in KeyValueDB and ObjectID.
-  static ObjectID getObjectIDFromValue(ArrayRef<char> Value);
+  LLVM_ABI_FOR_TEST static ObjectID getObjectIDFromValue(ArrayRef<char> Value);
 
   using ValueBytes = std::array<char, sizeof(uint64_t)>;
-  static ValueBytes getValueFromObjectID(ObjectID ID);
+  LLVM_ABI_FOR_TEST static ValueBytes getValueFromObjectID(ObjectID ID);
 
-  ~UnifiedOnDiskCache();
+  LLVM_ABI_FOR_TEST ~UnifiedOnDiskCache();
 
 private:
   friend class OnDiskGraphDB;

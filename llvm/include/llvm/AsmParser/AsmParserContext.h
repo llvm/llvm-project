@@ -34,9 +34,12 @@ class AsmParserContext {
   DenseMap<Instruction *, FileLocRange> Instructions;
 
 public:
-  std::optional<FileLocRange> getFunctionLocation(const Function *) const;
-  std::optional<FileLocRange> getBlockLocation(const BasicBlock *) const;
-  std::optional<FileLocRange> getInstructionLocation(const Instruction *) const;
+  LLVM_ABI std::optional<FileLocRange>
+  getFunctionLocation(const Function *) const;
+  LLVM_ABI std::optional<FileLocRange>
+  getBlockLocation(const BasicBlock *) const;
+  LLVM_ABI std::optional<FileLocRange>
+  getInstructionLocation(const Instruction *) const;
   /// Get the function at the requested location range.
   /// If no single function occupies the queried range, or the record is
   /// missing, a nullptr is returned.

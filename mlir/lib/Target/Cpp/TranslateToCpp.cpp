@@ -189,15 +189,6 @@ struct CppEmitter {
   /// emitc::ForOp.
   StringRef getOrCreateInductionVarName(Value val);
 
-  // Returns the textual representation of a subscript operation.
-  std::string getSubscriptName(emitc::SubscriptOp op);
-
-  // Returns the textual representation of a member (of object) operation.
-  std::string createMemberAccess(emitc::MemberOp op);
-
-  // Returns the textual representation of a member of pointer operation.
-  std::string createMemberAccess(emitc::MemberOfPtrOp op);
-
   /// Return the existing or a new label of a Block.
   StringRef getOrCreateName(Block &block);
 
@@ -1385,32 +1376,6 @@ CppEmitter::CppEmitter(raw_ostream &os, bool declareVariablesAtTop,
       fileId(fileId.str()), defaultValueMapperScope(valueMapper),
       defaultBlockMapperScope(blockMapper) {
   labelInScopeCount.push(0);
-}
-
-std::string CppEmitter::getSubscriptName(emitc::SubscriptOp op) {
-  std::string out;
-  llvm::raw_string_ostream ss(out);
-  ss << getOrCreateName(op.getValue());
-  for (auto index : op.getIndices()) {
-    ss << "[" << getOrCreateName(index) << "]";
-  }
-  return out;
-}
-
-std::string CppEmitter::createMemberAccess(emitc::MemberOp op) {
-  std::string out;
-  llvm::raw_string_ostream ss(out);
-  ss << getOrCreateName(op.getOperand());
-  ss << "." << op.getMember();
-  return out;
-}
-
-std::string CppEmitter::createMemberAccess(emitc::MemberOfPtrOp op) {
-  std::string out;
-  llvm::raw_string_ostream ss(out);
-  ss << getOrCreateName(op.getOperand());
-  ss << "->" << op.getMember();
-  return out;
 }
 
 void CppEmitter::cacheDeferredOpResult(Value value, StringRef str) {
