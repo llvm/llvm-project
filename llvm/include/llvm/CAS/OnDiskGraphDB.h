@@ -259,10 +259,11 @@ public:
   /// already a record for this object the operation is a no-op. \param ID the
   /// object ID to associate the data & references with. \param Refs references
   /// \param Data data buffer.
-  Error store(ObjectID ID, ArrayRef<ObjectID> Refs, ArrayRef<char> Data);
+  LLVM_ABI_FOR_TEST Error store(ObjectID ID, ArrayRef<ObjectID> Refs,
+                                ArrayRef<char> Data);
 
   /// \returns \p nullopt if the object associated with \p Ref does not exist.
-  Expected<std::optional<ObjectHandle>> load(ObjectID Ref);
+  LLVM_ABI_FOR_TEST Expected<std::optional<ObjectHandle>> load(ObjectID Ref);
 
   /// \returns the hash bytes digest for the object reference.
   ArrayRef<uint8_t> getDigest(ObjectID Ref) const {
@@ -271,12 +272,13 @@ public:
 
   /// Form a reference for the provided hash. The reference can be used as part
   /// of a CAS object even if it's not associated with an object yet.
-  Expected<ObjectID> getReference(ArrayRef<uint8_t> Hash);
+  LLVM_ABI_FOR_TEST Expected<ObjectID> getReference(ArrayRef<uint8_t> Hash);
 
   /// Get an existing reference to the object \p Digest.
   ///
   /// Returns \p nullopt if the object is not stored in this CAS.
-  std::optional<ObjectID> getExistingReference(ArrayRef<uint8_t> Digest);
+  LLVM_ABI_FOR_TEST std::optional<ObjectID>
+  getExistingReference(ArrayRef<uint8_t> Digest);
 
   /// Check whether the object associated with \p Ref is stored in the CAS.
   /// Note that this function will fault-in according to the policy.
@@ -289,7 +291,7 @@ public:
   }
 
   /// \returns the data part of the provided object handle.
-  ArrayRef<char> getObjectData(ObjectHandle Node) const;
+  LLVM_ABI_FOR_TEST ArrayRef<char> getObjectData(ObjectHandle Node) const;
 
   object_refs_range getObjectRefs(ObjectHandle Node) const {
     InternalRefArrayRef Refs = getInternalRefs(Node);
@@ -300,7 +302,7 @@ public:
   ///
   /// NOTE: There's a possibility that the returned size is not including a
   /// large object if the process crashed right at the point of inserting it.
-  size_t getStorageSize() const;
+  LLVM_ABI_FOR_TEST size_t getStorageSize() const;
 
   /// \returns The precentage of space utilization of hard space limits.
   ///
@@ -335,13 +337,13 @@ public:
   /// \param Policy If \p UpstreamDB is provided, controls how nodes are copied
   /// to primary store. This is recorded at creation time and subsequent opens
   /// need to pass the same policy otherwise the \p open will fail.
-  static Expected<std::unique_ptr<OnDiskGraphDB>>
+  LLVM_ABI_FOR_TEST static Expected<std::unique_ptr<OnDiskGraphDB>>
   open(StringRef Path, StringRef HashName, unsigned HashByteSize,
        std::unique_ptr<OnDiskGraphDB> UpstreamDB = nullptr,
        std::shared_ptr<OnDiskCASLogger> Logger = nullptr,
        FaultInPolicy Policy = FaultInPolicy::FullTree);
 
-  ~OnDiskGraphDB();
+  LLVM_ABI_FOR_TEST ~OnDiskGraphDB();
 
 private:
   struct IndexProxy;
@@ -354,7 +356,9 @@ private:
     OnlyInUpstreamDB,
   };
 
-  ObjectPresence getObjectPresence(ObjectID Ref, bool CheckUpstream) const;
+  /// Check if object exists and if it is on upstream only.
+  LLVM_ABI_FOR_TEST ObjectPresence
+  getObjectPresence(ObjectID Ref, bool CheckUpstream) const;
 
   bool containsObject(ObjectID Ref, bool CheckUpstream) const {
     switch (getObjectPresence(Ref, CheckUpstream)) {
@@ -393,7 +397,9 @@ private:
   void getStandalonePath(StringRef FileSuffix, const IndexProxy &I,
                          SmallVectorImpl<char> &Path) const;
 
-  ArrayRef<uint8_t> getDigest(InternalRef Ref) const;
+  LLVM_ABI_FOR_TEST ArrayRef<uint8_t>
+  getDigest(InternalRef Ref) const;
+
   ArrayRef<uint8_t> getDigest(const IndexProxy &I) const;
 
   IndexProxy getIndexProxyFromRef(InternalRef Ref) const;
@@ -403,7 +409,8 @@ private:
   IndexProxy
   getIndexProxyFromPointer(OnDiskHashMappedTrie::const_pointer P) const;
 
-  InternalRefArrayRef getInternalRefs(ObjectHandle Node) const;
+  LLVM_ABI_FOR_TEST InternalRefArrayRef
+  getInternalRefs(ObjectHandle Node) const;
 
   void recordStandaloneSizeIncrease(size_t SizeIncrease);
 

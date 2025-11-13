@@ -225,7 +225,8 @@ protected:
 
 public:
   /// Helper functions to store object and returns a ObjectProxy.
-  Expected<ObjectProxy> createProxy(ArrayRef<ObjectRef> Refs, StringRef Data);
+  LLVM_ABI_FOR_TEST Expected<ObjectProxy> createProxy(ArrayRef<ObjectRef> Refs,
+                                                      StringRef Data);
 
   /// Store object from StringRef.
   Expected<ObjectRef> storeFromString(ArrayRef<ObjectRef> Refs,
@@ -251,10 +252,10 @@ public:
   static Error createUnknownObjectError(const CASID &ID);
 
   /// Create ObjectProxy from CASID. If the object doesn't exist, get an error.
-  Expected<ObjectProxy> getProxy(const CASID &ID);
+  LLVM_ABI Expected<ObjectProxy> getProxy(const CASID &ID);
   /// Create ObjectProxy from ObjectRef. If the object can't be loaded, get an
   /// error.
-  Expected<ObjectProxy> getProxy(ObjectRef Ref);
+  LLVM_ABI Expected<ObjectProxy> getProxy(ObjectRef Ref);
 
   /// \returns \c std::nullopt if the object is missing from the CAS.
   Expected<std::optional<ObjectProxy>> getProxyIfExists(ObjectRef Ref);
@@ -394,7 +395,8 @@ private:
   ObjectHandle H;
 };
 
-std::unique_ptr<ObjectStore> createInMemoryCAS();
+/// Create an in memory CAS.
+LLVM_ABI std::unique_ptr<ObjectStore> createInMemoryCAS();
 
 /// \returns true if \c LLVM_ENABLE_ONDISK_CAS configuration was enabled.
 bool isOnDiskCASEnabled();
@@ -406,7 +408,8 @@ bool isOnDiskCASEnabled();
 ///
 /// FIXME: Remove the special behaviour for getDefaultOnDiskCASStableID(). The
 /// client should handle this logic, if/when desired.
-Expected<std::unique_ptr<ObjectStore>> createOnDiskCAS(const Twine &Path);
+LLVM_ABI Expected<std::unique_ptr<ObjectStore>>
+createOnDiskCAS(const Twine &Path);
 
 /// Set \p Path to a reasonable default on-disk path for a persistent CAS for
 /// the current user.

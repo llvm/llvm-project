@@ -17,25 +17,25 @@ namespace llvm {
 namespace vfs {
 
 /// Create a backend that ignores all output.
-IntrusiveRefCntPtr<OutputBackend> makeNullOutputBackend();
+LLVM_ABI IntrusiveRefCntPtr<OutputBackend> makeNullOutputBackend();
 
 /// Make a backend where \a OutputBackend::createFile() forwards to
 /// \p UnderlyingBackend when \p Filter is true, and otherwise returns a
 /// \a NullOutput.
-IntrusiveRefCntPtr<OutputBackend> makeFilteringOutputBackend(
+LLVM_ABI IntrusiveRefCntPtr<OutputBackend> makeFilteringOutputBackend(
     IntrusiveRefCntPtr<OutputBackend> UnderlyingBackend,
     std::function<bool(StringRef, std::optional<OutputConfig>)> Filter);
 
 /// Create a backend that forwards \a OutputBackend::createFile() to both \p
 /// Backend1 and \p Backend2 and sends content to both places.
-IntrusiveRefCntPtr<OutputBackend>
+LLVM_ABI IntrusiveRefCntPtr<OutputBackend>
 makeMirroringOutputBackend(IntrusiveRefCntPtr<OutputBackend> Backend1,
                            IntrusiveRefCntPtr<OutputBackend> Backend2);
 
 /// A helper class for proxying another backend, with the default
 /// implementation to forward to the underlying backend.
 class ProxyOutputBackend : public OutputBackend {
-  void anchor() override;
+  LLVM_ABI void anchor() override;
 
 protected:
   // Require subclass to implement cloneImpl().
