@@ -604,7 +604,8 @@ private:
   // Diagnostic optimization remarks file
   LLVMRemarkFileHandle DiagnosticOutputFile;
 
-  const SmallVector<const char *> *BitcodeLibFuncs;
+  const SmallVector<const char *> *BitcodeLibFuncs = &EmptyBitcodeLibFuncs;
+  SmallVector<const char *> EmptyBitcodeLibFuncs;
 };
 
 /// The resolution for a symbol. The linker must provide a SymbolResolution for
