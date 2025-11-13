@@ -107,8 +107,8 @@ func.func @dialect_location() {
 }
 
 // CHECK-LABEL: @location_attr
-// CHECK: test.op_with_loc_attr loc("cheetos":10:20)
+// CHECK: test.op_with_loc_attr loc("loc1":10:20) {foo.discardable_loc_attr = loc("loc2":20:30)} loc({{.*}}locations.mlir":[[# @LINE+2]]:3)
 func.func @location_attr() {
-  test.op_with_loc_attr loc("cheetos":10:20)
+  test.op_with_loc_attr loc("loc1":10:20) {foo.discardable_loc_attr = loc("loc2":20:30)}
   return
 }
