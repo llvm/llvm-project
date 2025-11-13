@@ -583,6 +583,12 @@ public:
                                QualType ElementType, llvm::Value *&NumElements,
                                llvm::Value *&AllocPtr, CharUnits &CookieSize);
 
+  /// Reads the array cookie associated with the given pointer,
+  /// that should have one.
+  void ReadArrayCookie(CodeGenFunction &CGF, Address Ptr, QualType ElementType,
+                       llvm::Value *&NumElements, llvm::Value *&AllocPtr,
+                       CharUnits &CookieSize);
+
   /// Return whether the given global decl needs a VTT parameter.
   virtual bool NeedsVTTParameter(GlobalDecl GD);
 
