@@ -3,10 +3,10 @@ REQUIRES: ondisk_cas
 RUN: rm -rf %t
 RUN: mkdir -p %t
 RUN: split-file %s %t
-RUN: dsymutil -f -oso-prepend-path=%S/Inputs/CAS \
+RUN: dsymutil -f -oso-prepend-path=%S/../Inputs/CAS \
 RUN:   -y %t/debug.map -o %t/a.dSYM 2>&1 | FileCheck %s --check-prefix=WARN
 
-RUN: dsymutil -cas %t/cas -f -oso-prepend-path=%S/Inputs/CAS \
+RUN: dsymutil -cas %t/cas -f -oso-prepend-path=%S/../Inputs/CAS \
 RUN:   -y %t/debug.map -o %t/a.dSYM 2>&1 | FileCheck %s --check-prefix=WARN --check-prefix=WARN-MISS
 
 WARN-MISS: warning:
@@ -14,9 +14,9 @@ WARN-MISS-SAME: failed to load CAS object: unknown object
 WARN: warning:
 WARN-SAME: No such file or directory
 
-RUN: llvm-cas --cas %t/cas --make-blob --data %S/Inputs/CAS/A.pcm
+RUN: llvm-cas --cas %t/cas --make-blob --data %S/../Inputs/CAS/A.pcm
 
-RUN: dsymutil -cas %t/cas -f -oso-prepend-path=%S/Inputs/CAS \
+RUN: dsymutil -cas %t/cas -f -oso-prepend-path=%S/../Inputs/CAS \
 RUN:   -y %t/debug.map -o - \
 RUN:     | llvm-dwarfdump -v --debug-info - | FileCheck %s
 
