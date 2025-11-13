@@ -81,3 +81,23 @@ Options
     Eg: `my::safe::awaitable;other::awaitable`
     Default is an empty string.
 
+.. option:: AllowedCallees
+
+    A semicolon-separated list of callee function names which can
+    be safely awaited while having hostile RAII objects in scope.
+    Example usage:
+
+    .. code-block:: c++
+
+      // Consider option AllowedCallees = "noop"
+      task noop() { co_return; }
+
+      task coro() {
+        // This persists across the co_await but is not flagged
+        // because the awaitable is considered safe to await on.
+        const std::lock_guard l(&mu_);
+        co_await noop();
+      }
+
+    Eg: `my::safe::await;other::await`
+    Default is an empty string.

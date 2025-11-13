@@ -16,9 +16,11 @@
 
 #include "mlir/IR/Value.h"
 #include "clang/AST/CharUnits.h"
+#include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "llvm/ADT/PointerIntPair.h"
+#include "llvm/Support/Casting.h"
 
 namespace clang::CIRGen {
 
@@ -112,6 +114,11 @@ public:
                pointerAndKnownNonNull.getPointer().getType())
                .getPointee() == elementType);
     return elementType;
+  }
+
+  cir::TargetAddressSpaceAttr getAddressSpace() const {
+    auto ptrTy = mlir::dyn_cast<cir::PointerType>(getType());
+    return ptrTy.getAddrSpace();
   }
 
   clang::CharUnits getAlignment() const { return alignment; }
