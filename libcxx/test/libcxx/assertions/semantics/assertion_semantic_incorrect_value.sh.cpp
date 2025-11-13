@@ -11,7 +11,7 @@
 
 // Modules build produces a different error ("Could not build module 'std'").
 // UNSUPPORTED: clang-modules-build
-// UNSUPPORTED: c++03
+// UNSUPPORTED: c++03, libcpp-has-no-experimental-hardening-observe-semantic
 // REQUIRES: verify-support
 
 // Note that GCC doesn't support `-Wno-macro-redefined`.

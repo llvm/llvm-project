@@ -11,7 +11,7 @@
 // `check_assertion.h` is only available starting from C++11 and requires Unix headers and regex support.
 // REQUIRES: has-unix-headers
 // UNSUPPORTED: c++03, no-localization
-// UNSUPPORTED: libcpp-hardening-mode=none
+// UNSUPPORTED: libcpp-hardening-mode=none, libcpp-has-no-experimental-hardening-observe-semantic
 // ADDITIONAL_COMPILE_FLAGS: -U_LIBCPP_ASSERTION_SEMANTIC -D_LIBCPP_ASSERTION_SEMANTIC=_LIBCPP_ASSERTION_SEMANTIC_OBSERVE
 
 #include <cassert>
