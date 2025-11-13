@@ -2186,6 +2186,17 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     if (auto Err = checkIfAPU())
       return Err;
 
+    // Retrieve the size of the group memory.
+    for (const auto *Pool : AllMemoryPools) {
+      if (Pool->isGroup()) {
+        size_t Size = 0;
+        if (auto Err = Pool->getAttr(HSA_AMD_MEMORY_POOL_INFO_SIZE, Size))
+          return Err;
+        MaxBlockSharedMemSize = Size;
+        break;
+      }
+    }
+
     return Plugin::success();
   }
 
@@ -2922,6 +2933,9 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     Status = getDeviceAttrRaw(HSA_AMD_AGENT_INFO_CACHELINE_SIZE, TmpUInt);
     if (Status == HSA_STATUS_SUCCESS)
       Info.add("Cacheline Size", TmpUInt);
+
+    Info.add("Max Shared Memory per Work Group", MaxBlockSharedMemSize, "bytes",
+             DeviceInfo::WORK_GROUP_SHARED_MEM_SIZE);
 
     Status = getDeviceAttrRaw(HSA_AMD_AGENT_INFO_MAX_CLOCK_FREQUENCY, TmpUInt);
     if (Status == HSA_STATUS_SUCCESS)
