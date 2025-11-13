@@ -244,4 +244,90 @@ def InsertPrefetchOp : Op<Transform_Dialect, "xegpu.insert_prefetch", [
   }];
 }
 
+def ConvertLayoutOp : Op<Transform_Dialect, "xegpu.convert_layout", [
+  AttrSizedOperandSegments,
+  DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+  TransformOpInterface
+]> {
+
+  let summary = "Convert xegpu.layout attribute for a value.";
+  let description = [{
+    Adds an `xegpu.convert_layout` op to convert the `xegpu.layout` attribute
+    of a value. The input and target layouts are defined by the `*sg_layout`,
+    `*sg_data` and optional `*inst_data` attributes. Returns a handle to the
+    emitted `xegpu.convert_layout` op.
+  }];
+
+  let arguments = (ins TransformValueHandleTypeInterface:$target,
+                   Variadic<TransformAnyParamTypeOrAnyHandle>:$input_sg_layout,
+                   Variadic<TransformAnyParamTypeOrAnyHandle>:$input_sg_data,
+                   Variadic<TransformAnyParamTypeOrAnyHandle>:$input_inst_data,
+                   Variadic<TransformAnyParamTypeOrAnyHandle>:$target_sg_layout,
+                   Variadic<TransformAnyParamTypeOrAnyHandle>:$target_sg_data,
+                   Variadic<TransformAnyParamTypeOrAnyHandle>:$target_inst_data,
+                   DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_input_sg_layout,
+                   DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_input_sg_data,
+                   DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_input_inst_data,
+                   DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_target_sg_layout,
+                   DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_target_sg_data,
+                   DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_target_inst_data
+                   );
+
+  let results = (outs TransformHandleTypeInterface:$newConvertOp);
+  let builders = [
+    OpBuilder<(ins "Value":$target,
+                   "ArrayRef<OpFoldResult>":$mixedInputSgLayout,
+                   "ArrayRef<OpFoldResult>":$mixedInputSgData,
+                   "ArrayRef<OpFoldResult>":$mixedInputInstData,
+                   "ArrayRef<OpFoldResult>":$mixedTargetSgLayout,
+                   "ArrayRef<OpFoldResult>":$mixedTargetSgData,
+                   "ArrayRef<OpFoldResult>":$mixedTargetInstData
+                   )>,
+  ];
+
+  let assemblyFormat = [{
+    $target
+    `input_sg_layout` `=` custom<DynamicIndexList>($input_sg_layout, $static_input_sg_layout)
+    `input_sg_data` `=` custom<DynamicIndexList>($input_sg_data, $static_input_sg_data)
+    (`input_inst_data` `=` custom<DynamicIndexList>($input_inst_data, $static_input_inst_data)^)?
+    `target_sg_layout` `=` custom<DynamicIndexList>($target_sg_layout, $static_target_sg_layout)
+    `target_sg_data` `=` custom<DynamicIndexList>($target_sg_data, $static_target_sg_data)
+    (`target_inst_data` `=` custom<DynamicIndexList>($target_inst_data, $static_target_inst_data)^)?
+    attr-dict `:` functional-type(operands, results)
+  }];
+
+  let extraClassDeclaration = [{
+    ::mlir::DiagnosedSilenceableFailure apply(
+        ::mlir::transform::TransformRewriter &rewriter,
+        ::mlir::transform::TransformResults &transformResults,
+        ::mlir::transform::TransformState &state);
+
+    ::llvm::SmallVector<::mlir::OpFoldResult> getMixedInputSgLayout() {
+      Builder b(getContext());
+      return getMixedValues(getStaticInputSgLayout(), getInputSgLayout(), b);
+    }
+    ::llvm::SmallVector<::mlir::OpFoldResult> getMixedInputSgData() {
+      Builder b(getContext());
+      return getMixedValues(getStaticInputSgData(), getInputSgData(), b);
+    }
+    ::llvm::SmallVector<::mlir::OpFoldResult> getMixedInputInstData() {
+      Builder b(getContext());
+      return getMixedValues(getStaticInputInstData(), getInputInstData(), b);
+    }
+
+    ::llvm::SmallVector<::mlir::OpFoldResult> getMixedTargetSgLayout() {
+      Builder b(getContext());
+      return getMixedValues(getStaticTargetSgLayout(), getTargetSgLayout(), b);
+    }
+    ::llvm::SmallVector<::mlir::OpFoldResult> getMixedTargetSgData() {
+      Builder b(getContext());
+      return getMixedValues(getStaticTargetSgData(), getTargetSgData(), b);
+    }
+    ::llvm::SmallVector<::mlir::OpFoldResult> getMixedTargetInstData() {
+      Builder b(getContext());
+      return getMixedValues(getStaticTargetInstData(), getTargetInstData(), b);
+    }
+  }];
+}
+
 #endif // XEGPU_TRANSFORM_OPS
