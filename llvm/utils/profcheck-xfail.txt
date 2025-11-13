@@ -608,15 +608,8 @@ Transforms/OpenMP/spmdization.ll
 Transforms/OpenMP/spmdization_no_guarding_two_reaching_kernels.ll
 Transforms/OpenMP/spmdization_remarks.ll
 Transforms/PartiallyInlineLibCalls/X86/good-prototype.ll
-Transforms/PGOProfile/chr-dead-pred.ll
-Transforms/PGOProfile/chr-dup-threshold.ll
-Transforms/PGOProfile/chr-lifetimes.ll
-Transforms/PGOProfile/chr-poison.ll
 Transforms/PGOProfile/comdat.ll
 Transforms/PGOProfile/memop_profile_funclet_wasm.ll
-Transforms/PGOProfile/profcheck-select.ll
-Transforms/PGOProfile/prof-verify.ll
-Transforms/PGOProfile/prof-verify-no-entrycount.ll
 Transforms/PGOProfile/X86/macho.ll
 Transforms/PhaseOrdering/AArch64/constraint-elimination-placement.ll
 Transforms/PhaseOrdering/AArch64/globals-aa-required-for-vectorization.ll

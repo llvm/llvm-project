@@ -1291,21 +1291,15 @@ void WaitcntBrackets::applyXcnt(const AMDGPU::Waitcnt &Wait) {
   // On entry to a block with multiple predescessors, there may
   // be pending SMEM and VMEM events active at the same time.
   // In such cases, only clear one active event at a time.
-  auto applyPendingXcntGroup = [this](unsigned E) {
-    unsigned LowerBound = getScoreLB(X_CNT);
-    applyWaitcnt(X_CNT, 0);
-    PendingEvents |= (1 << E);
-    setScoreLB(X_CNT, LowerBound);
-  };
 
   // Wait on XCNT is redundant if we are already waiting for a load to complete.
   // SMEM can return out of order, so only omit XCNT wait if we are waiting till
   // zero.
   if (Wait.KmCnt == 0 && hasPendingEvent(SMEM_GROUP)) {
-    if (hasPendingEvent(VMEM_GROUP))
-      applyPendingXcntGroup(VMEM_GROUP);
-    else
+    if (!hasMixedPendingEvents(X_CNT))
       applyWaitcnt(X_CNT, 0);
+    else
+      PendingEvents &= ~(1 << SMEM_GROUP);
     return;
   }
 
@@ -1314,10 +1308,10 @@ void WaitcntBrackets::applyXcnt(const AMDGPU::Waitcnt &Wait) {
   // decremented to the same number as LOADCnt.
   if (Wait.LoadCnt != ~0u && hasPendingEvent(VMEM_GROUP) &&
       !hasPendingEvent(STORE_CNT)) {
-    if (hasPendingEvent(SMEM_GROUP))
-      applyPendingXcntGroup(SMEM_GROUP);
-    else
+    if (!hasMixedPendingEvents(X_CNT))
       applyWaitcnt(X_CNT, std::min(Wait.XCnt, Wait.LoadCnt));
+    else if (Wait.LoadCnt == 0)
+      PendingEvents &= ~(1 << VMEM_GROUP);
     return;
   }
 
