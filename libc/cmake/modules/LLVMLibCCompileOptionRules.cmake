@@ -174,19 +174,6 @@ function(_get_common_compile_options output_var flags)
           list(APPEND compile_options "-idirafter${LIBC_KERNEL_HEADERS}")
         endif()
       endif()
-      if(LIBC_TARGET_OS_IS_DARWIN)
-        execute_process(
-          COMMAND xcrun --sdk macosx --show-sdk-path
-          OUTPUT_VARIABLE MACOSX_SDK_PATH
-          RESULT_VARIABLE MACOSX_SDK_PATH_RESULT
-          OUTPUT_STRIP_TRAILING_WHITESPACE
-        )
-        if(MACOSX_SDK_PATH_RESULT EQUAL 0)
-          list(APPEND compile_options "-I" "${MACOSX_SDK_PATH}/usr/include")
-        else()
-          message(WARNING "Could not find macOS SDK path. `xcrun --sdk macosx --show-sdk-path` failed.")
-        endif()
-      endif()
     endif()
 
     if(LIBC_COMPILER_HAS_FIXED_POINT)
