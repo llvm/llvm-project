@@ -1186,8 +1186,8 @@ void AArch64BtiPac::writePlt(uint8_t *buf, const Symbol &sym,
   // address may escape if referenced by a direct relocation. If relative
   // vtables are used then if the vtable is in a shared object the offsets will
   // be to the PLT entry. The condition is conservative.
-  bool hasBti = btiHeader &&
-                (sym.hasFlag(NEEDS_COPY) || sym.isInIplt || sym.thunkAccessed);
+  bool hasBti = btiHeader && (sym.hasFlag(NEEDS_COPY) || sym.isInIplt ||
+                              sym.thunkAccessed || ctx.arg.forceBtiPlt);
   if (hasBti) {
     memcpy(buf, btiData, sizeof(btiData));
     buf += sizeof(btiData);

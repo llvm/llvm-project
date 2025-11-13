@@ -262,6 +262,13 @@
 # REPORT-ERR: error: unknown -z bti-report= value: u{{$}}
 # REPORT-EMPTY:
 
+## Force all PLT entries to start with BTI with the force-bti-plt command line option.
+# RUN: ld.lld %t.o %t2.o -z force-bti --force-bti-plt %t.so -o %tforcebtiplt.exe
+# RUN: llvm-objdump --no-print-imm-hex -d --mattr=+bti --no-show-raw-insn %tforcebtiplt.exe | FileCheck --check-prefix=FORCE-BTI %s
+
+# FORCE-BTI: 00000000002103a0 <func2@plt>:
+# FORCE-BTI-NEXT:   2103a0: bti c
+
 .section ".note.gnu.property", "a"
 .long 4
 .long 0x10

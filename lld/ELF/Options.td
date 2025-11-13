@@ -212,6 +212,8 @@ defm eh_frame_hdr: B<"eh-frame-hdr",
 
 def emit_relocs: F<"emit-relocs">, HelpText<"Generate relocations in output">;
 
+def bti_plt: FF<"force-bti-plt">, HelpText<"Force all PLT entries to have BTI">;
+
 def enable_new_dtags: F<"enable-new-dtags">,
   HelpText<"Enable new dynamic tags (default)">;
 

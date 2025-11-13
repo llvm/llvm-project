@@ -330,6 +330,7 @@ struct Config {
   bool exportDynamic;
   bool fixCortexA53Errata843419;
   bool fixCortexA8;
+  bool forceBtiPlt = false;
   bool formatBinary = false;
   bool fortranCommon;
   bool gcSections;
