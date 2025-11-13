@@ -8437,9 +8437,7 @@ static bool isFMAddSubOrFMSubAdd(const X86Subtarget &Subtarget,
   // DAGCombiner::visitFADDForFMACombine. It would be good to have one
   // function that would answer if it is Ok to fuse MUL + ADD to FMADD
   // or MUL + ADDSUB to FMADDSUB.
-  const TargetOptions &Options = DAG.getTarget().Options;
   bool AllowFusion =
-      Options.AllowFPOpFusion == FPOpFusion::Fast ||
       (AllowSubAddOrAddSubContract && Opnd0->getFlags().hasAllowContract());
   if (!AllowFusion)
     return false;
@@ -54165,11 +54163,6 @@ static SDValue combineFMulcFCMulc(SDNode *N, SelectionDAG &DAG,
 //  FADD(A, FMA(B, C, 0)) and FADD(A, FMUL(B, C)) to FMA(B, C, A)
 static SDValue combineFaddCFmul(SDNode *N, SelectionDAG &DAG,
                                 const X86Subtarget &Subtarget) {
-  auto AllowContract = [&DAG](const SDNodeFlags &Flags) {
-    return DAG.getTarget().Options.AllowFPOpFusion == FPOpFusion::Fast ||
-           Flags.hasAllowContract();
-  };
-
   auto HasNoSignedZero = [&DAG](const SDNodeFlags &Flags) {
     return DAG.getTarget().Options.NoSignedZerosFPMath ||
            Flags.hasNoSignedZeros();
@@ -54182,7 +54175,7 @@ static SDValue combineFaddCFmul(SDNode *N, SelectionDAG &DAG,
   };
 
   if (N->getOpcode() != ISD::FADD || !Subtarget.hasFP16() ||
-      !AllowContract(N->getFlags()))
+      !N->getFlags().hasAllowContract())
     return SDValue();
 
   EVT VT = N->getValueType(0);
@@ -54193,14 +54186,13 @@ static SDValue combineFaddCFmul(SDNode *N, SelectionDAG &DAG,
   SDValue RHS = N->getOperand(1);
   bool IsConj;
   SDValue FAddOp1, MulOp0, MulOp1;
-  auto GetCFmulFrom = [&MulOp0, &MulOp1, &IsConj, &AllowContract,
-                       &IsVectorAllNegativeZero,
+  auto GetCFmulFrom = [&MulOp0, &MulOp1, &IsConj, &IsVectorAllNegativeZero,
                        &HasNoSignedZero](SDValue N) -> bool {
     if (!N.hasOneUse() || N.getOpcode() != ISD::BITCAST)
       return false;
     SDValue Op0 = N.getOperand(0);
     unsigned Opcode = Op0.getOpcode();
-    if (Op0.hasOneUse() && AllowContract(Op0->getFlags())) {
+    if (Op0.hasOneUse() && Op0->getFlags().hasAllowContract()) {
       if ((Opcode == X86ISD::VFMULC || Opcode == X86ISD::VFCMULC)) {
         MulOp0 = Op0.getOperand(0);
         MulOp1 = Op0.getOperand(1);
