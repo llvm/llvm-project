@@ -1354,9 +1354,10 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     if (!isa<Instruction>(Arg))
       break;
 
-    // Skip if ballot width < wave size (e.g., ballot.i32 on wave64).
-    if (ST->isWave64() && II.getType()->getIntegerBitWidth() == 32)
-      break; // ballot.i32 on wave64 captures only lanes [0:31]
+    // Skip if ballot width doesn't match wave size.
+    unsigned WavefrontSize = ST->getWavefrontSize();
+    if (WavefrontSize != II.getType()->getIntegerBitWidth())
+      break;
 
     for (auto &AssumeVH : IC.getAssumptionCache().assumptionsFor(&II)) {
       if (!AssumeVH)
@@ -1365,37 +1366,37 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       auto *Assume = cast<AssumeInst>(AssumeVH);
       Value *Cond = Assume->getArgOperand(0);
 
-      // Check if assume condition is an equality comparison.
-      auto *ICI = dyn_cast<ICmpInst>(Cond);
+      // Pattern match: assume(icmp eq ballot, CompareValue)
+      ICmpInst *ICI = dyn_cast<ICmpInst>(Cond);
       if (!ICI || ICI->getPredicate() != ICmpInst::ICMP_EQ)
         continue;
 
-      // Extract the ballot and the value being compared against it.
-      Value *LHS = ICI->getOperand(0), *RHS = ICI->getOperand(1);
-      Value *CompareValue = (LHS == &II) ? RHS : (RHS == &II) ? LHS : nullptr;
-      if (!CompareValue)
+      Value *CompareValue;
+      if (!match(ICI, m_c_ICmp(m_Specific(&II), m_Value(CompareValue))))
         continue;
 
-      // Determine the constant value of the ballot's condition argument.
-      std::optional<bool> InferredCondValue;
+      // Determine the inferred value of the ballot's condition argument.
+      bool InferredCondValue;
       if (auto *CI = dyn_cast<ConstantInt>(CompareValue)) {
-        // ballot(x) == -1 means all lanes have x = true.
-        if (CI->isMinusOne())
+        if (CI->isMinusOne()) {
+          // ballot(x) == -1 means all lanes have x = true.
           InferredCondValue = true;
-        // ballot(x) == 0 means all lanes have x = false.
-        else if (CI->isZero())
+        } else if (CI->isZero()) {
+          // ballot(x) == 0 means all lanes have x = false.
           InferredCondValue = false;
+        } else {
+          continue;
+        }
       } else if (match(CompareValue,
                        m_Intrinsic<Intrinsic::amdgcn_ballot>(m_One()))) {
         // ballot(x) == ballot(true) means x = true (EXEC mask comparison).
         InferredCondValue = true;
+      } else {
+        continue;
       }
 
-      if (!InferredCondValue)
-        continue;
-
       Constant *ReplacementValue =
-          ConstantInt::getBool(Arg->getContext(), *InferredCondValue);
+          ConstantInt::getBool(Arg->getContext(), InferredCondValue);
 
       // Replace uses of the condition argument dominated by the assume.
       bool Changed = false;
