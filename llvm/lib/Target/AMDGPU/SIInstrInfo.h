@@ -136,6 +136,8 @@ private:
 
   void lowerScalarAbs(SIInstrWorklist &Worklist, MachineInstr &Inst) const;
 
+  void lowerScalarAbsDiff(SIInstrWorklist &Worklist, MachineInstr &Inst) const;
+
   void lowerScalarXnor(SIInstrWorklist &Worklist, MachineInstr &Inst) const;
 
   void splitScalarNotBinop(SIInstrWorklist &Worklist, MachineInstr &Inst,
@@ -1618,9 +1620,6 @@ public:
   /// \brief Check if this instruction should only be used by assembler.
   /// Return true if this opcode should not be used by codegen.
   bool isAsmOnlyOpcode(int MCOp) const;
-
-  const TargetRegisterClass *getRegClass(const MCInstrDesc &TID,
-                                         unsigned OpNum) const override;
 
   void fixImplicitOperands(MachineInstr &MI) const;
 

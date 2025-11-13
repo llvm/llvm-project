@@ -152,6 +152,9 @@ public:
   /// global initializers.
   mlir::Operation *curFn = nullptr;
 
+  /// Save Parameter Decl for coroutine.
+  llvm::SmallVector<const ParmVarDecl *> fnArgs;
+
   using DeclMapTy = llvm::DenseMap<const clang::Decl *, Address>;
   /// This keeps track of the CIR allocas or globals for local C
   /// declarations.
@@ -218,6 +221,10 @@ public:
 
   const TargetInfo &getTarget() const { return cgm.getTarget(); }
   mlir::MLIRContext &getMLIRContext() { return cgm.getMLIRContext(); }
+
+  const TargetCIRGenInfo &getTargetHooks() const {
+    return cgm.getTargetCIRGenInfo();
+  }
 
   // ---------------------
   // Opaque value handling
@@ -496,6 +503,12 @@ public:
   /// the type has already been emitted with emitVariablyModifiedType.
   VlaSizePair getVLASize(const VariableArrayType *type);
   VlaSizePair getVLASize(QualType type);
+
+  Address getAsNaturalAddressOf(Address addr, QualType pointeeTy);
+
+  mlir::Value getAsNaturalPointerTo(Address addr, QualType pointeeType) {
+    return getAsNaturalAddressOf(addr, pointeeType).getBasePointer();
+  }
 
   void finishFunction(SourceLocation endLoc);
 

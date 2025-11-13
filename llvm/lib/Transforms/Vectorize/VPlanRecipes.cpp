@@ -356,7 +356,7 @@ VPPartialReductionRecipe::computeCost(ElementCount VF,
   // recipe.
   auto HandleWiden = [&](VPWidenRecipe *Widen) {
     if (match(Widen, m_Sub(m_ZeroInt(), m_VPValue(Op)))) {
-      Widen = dyn_cast<VPWidenRecipe>(Op->getDefiningRecipe());
+      Widen = dyn_cast<VPWidenRecipe>(Op);
     }
     Opcode = Widen->getOpcode();
     VPRecipeBase *ExtAR = Widen->getOperand(0)->getDefiningRecipe();
@@ -381,11 +381,10 @@ VPPartialReductionRecipe::computeCost(ElementCount VF,
     InputTypeA = Ctx.Types.inferScalarType(OpR->getOperand(0));
     ExtAType = GetExtendKind(OpR);
   } else if (isa<VPReductionPHIRecipe>(OpR)) {
-    auto RedPhiOp1R = getOperand(1)->getDefiningRecipe();
-    if (isa<VPWidenCastRecipe>(RedPhiOp1R)) {
+    if (auto RedPhiOp1R = dyn_cast_or_null<VPWidenCastRecipe>(getOperand(1))) {
       InputTypeA = Ctx.Types.inferScalarType(RedPhiOp1R->getOperand(0));
       ExtAType = GetExtendKind(RedPhiOp1R);
-    } else if (auto Widen = dyn_cast<VPWidenRecipe>(RedPhiOp1R))
+    } else if (auto Widen = dyn_cast_or_null<VPWidenRecipe>(getOperand(1)))
       HandleWiden(Widen);
   } else if (auto Widen = dyn_cast<VPWidenRecipe>(OpR)) {
     HandleWiden(Widen);
@@ -548,6 +547,7 @@ unsigned VPInstruction::getNumOperandsForOpcode(unsigned Opcode) {
   case VPInstruction::ExtractLastLanePerPart:
   case VPInstruction::ExtractPenultimateElement:
   case VPInstruction::FirstActiveLane:
+  case VPInstruction::LastActiveLane:
   case VPInstruction::Not:
   case VPInstruction::Unpack:
     return 1;
@@ -1157,6 +1157,29 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
                                   {PredTy, Type::getInt1Ty(Ctx.LLVMCtx)});
     return Ctx.TTI.getIntrinsicInstrCost(Attrs, Ctx.CostKind);
   }
+  case VPInstruction::LastActiveLane: {
+    Type *ScalarTy = Ctx.Types.inferScalarType(getOperand(0));
+    if (VF.isScalar())
+      return Ctx.TTI.getCmpSelInstrCost(Instruction::ICmp, ScalarTy,
+                                        CmpInst::makeCmpResultType(ScalarTy),
+                                        CmpInst::ICMP_EQ, Ctx.CostKind);
+    // Calculate the cost of determining the lane index: NOT + cttz_elts + SUB.
+    auto *PredTy = toVectorTy(ScalarTy, VF);
+    IntrinsicCostAttributes Attrs(Intrinsic::experimental_cttz_elts,
+                                  Type::getInt64Ty(Ctx.LLVMCtx),
+                                  {PredTy, Type::getInt1Ty(Ctx.LLVMCtx)});
+    InstructionCost Cost = Ctx.TTI.getIntrinsicInstrCost(Attrs, Ctx.CostKind);
+    // Add cost of NOT operation on the predicate.
+    Cost += Ctx.TTI.getArithmeticInstrCost(
+        Instruction::Xor, PredTy, Ctx.CostKind,
+        {TargetTransformInfo::OK_AnyValue, TargetTransformInfo::OP_None},
+        {TargetTransformInfo::OK_UniformConstantValue,
+         TargetTransformInfo::OP_None});
+    // Add cost of SUB operation on the index.
+    Cost += Ctx.TTI.getArithmeticInstrCost(
+        Instruction::Sub, Type::getInt64Ty(Ctx.LLVMCtx), Ctx.CostKind);
+    return Cost;
+  }
   case VPInstruction::FirstOrderRecurrenceSplice: {
     assert(VF.isVector() && "Scalar FirstOrderRecurrenceSplice?");
     SmallVector<int> Mask(VF.getKnownMinValue());
@@ -1211,6 +1234,7 @@ bool VPInstruction::isVectorToScalar() const {
          getOpcode() == Instruction::ExtractElement ||
          getOpcode() == VPInstruction::ExtractLane ||
          getOpcode() == VPInstruction::FirstActiveLane ||
+         getOpcode() == VPInstruction::LastActiveLane ||
          getOpcode() == VPInstruction::ComputeAnyOfResult ||
          getOpcode() == VPInstruction::ComputeFindIVResult ||
          getOpcode() == VPInstruction::ComputeReductionResult ||
@@ -1275,7 +1299,9 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   case VPInstruction::ExtractLastLanePerPart:
   case VPInstruction::ExtractPenultimateElement:
   case VPInstruction::ActiveLaneMask:
+  case VPInstruction::ExplicitVectorLength:
   case VPInstruction::FirstActiveLane:
+  case VPInstruction::LastActiveLane:
   case VPInstruction::FirstOrderRecurrenceSplice:
   case VPInstruction::LogicalAnd:
   case VPInstruction::Not:
@@ -1451,6 +1477,9 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
     break;
   case VPInstruction::FirstActiveLane:
     O << "first-active-lane";
+    break;
+  case VPInstruction::LastActiveLane:
+    O << "last-active-lane";
     break;
   case VPInstruction::ReductionStartVector:
     O << "reduction-start-vector";
@@ -3195,10 +3224,10 @@ bool VPReplicateRecipe::shouldPack() const {
 static const SCEV *getAddressAccessSCEV(const VPValue *Ptr, ScalarEvolution &SE,
                                         const Loop *L) {
   auto *PtrR = Ptr->getDefiningRecipe();
-  if (!PtrR || !((isa<VPReplicateRecipe>(PtrR) &&
-                  cast<VPReplicateRecipe>(PtrR)->getOpcode() ==
+  if (!PtrR || !((isa<VPReplicateRecipe>(Ptr) &&
+                  cast<VPReplicateRecipe>(Ptr)->getOpcode() ==
                       Instruction::GetElementPtr) ||
-                 isa<VPWidenGEPRecipe>(PtrR) ||
+                 isa<VPWidenGEPRecipe>(Ptr) ||
                  match(Ptr, m_GetElementPtr(m_VPValue(), m_VPValue()))))
     return nullptr;
 

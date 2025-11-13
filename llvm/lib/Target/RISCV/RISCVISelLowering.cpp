@@ -516,8 +516,6 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setTruncStoreAction(MVT::v8i16, MVT::v8i8, Expand);
       setTruncStoreAction(MVT::v2i32, MVT::v2i16, Expand);
       setTruncStoreAction(MVT::v4i16, MVT::v4i8, Expand);
-      setOperationAction(ISD::LOAD, MVT::v2i16, Custom);
-      setOperationAction(ISD::LOAD, MVT::v4i8, Custom);
     } else {
       VTs.append({MVT::v2i16, MVT::v4i8});
     }
@@ -1266,11 +1264,11 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                          Custom);
       setOperationAction(ISD::SELECT_CC, VT, Expand);
       setOperationAction({ISD::VP_SINT_TO_FP, ISD::VP_UINT_TO_FP}, VT, Custom);
-      setOperationAction({ISD::INSERT_VECTOR_ELT, ISD::CONCAT_VECTORS,
-                          ISD::INSERT_SUBVECTOR, ISD::EXTRACT_SUBVECTOR,
-                          ISD::VECTOR_DEINTERLEAVE, ISD::VECTOR_INTERLEAVE,
-                          ISD::VECTOR_REVERSE, ISD::VECTOR_SPLICE,
-                          ISD::VECTOR_COMPRESS},
+      setOperationAction({ISD::INSERT_VECTOR_ELT, ISD::EXTRACT_VECTOR_ELT,
+                          ISD::CONCAT_VECTORS, ISD::INSERT_SUBVECTOR,
+                          ISD::EXTRACT_SUBVECTOR, ISD::VECTOR_DEINTERLEAVE,
+                          ISD::VECTOR_INTERLEAVE, ISD::VECTOR_REVERSE,
+                          ISD::VECTOR_SPLICE, ISD::VECTOR_COMPRESS},
                          VT, Custom);
       setOperationAction(ISD::EXPERIMENTAL_VP_SPLICE, VT, Custom);
       setOperationAction(ISD::EXPERIMENTAL_VP_REVERSE, VT, Custom);
@@ -1280,9 +1278,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
       MVT EltVT = VT.getVectorElementType();
       if (isTypeLegal(EltVT))
-        setOperationAction({ISD::SPLAT_VECTOR, ISD::EXPERIMENTAL_VP_SPLAT,
-                            ISD::EXTRACT_VECTOR_ELT},
-                           VT, Custom);
+        setOperationAction({ISD::SPLAT_VECTOR, ISD::EXPERIMENTAL_VP_SPLAT}, VT,
+                           Custom);
       else
         setOperationAction({ISD::SPLAT_VECTOR, ISD::EXPERIMENTAL_VP_SPLAT},
                            EltVT, Custom);
@@ -10358,7 +10355,7 @@ SDValue RISCVTargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
   }
 
   if ((ValVT == MVT::f16 && !Subtarget.hasVInstructionsF16()) ||
-      ValVT == MVT::bf16) {
+      (ValVT == MVT::bf16 && !Subtarget.hasVInstructionsBF16())) {
     // If we don't have vfmv.s.f for f16/bf16, use fmv.x.h first.
     MVT IntVT = VecVT.changeTypeToInteger();
     SDValue IntInsert = DAG.getNode(
@@ -10595,7 +10592,7 @@ SDValue RISCVTargetLowering::lowerEXTRACT_VECTOR_ELT(SDValue Op,
   }
 
   if ((EltVT == MVT::f16 && !Subtarget.hasVInstructionsF16()) ||
-      EltVT == MVT::bf16) {
+      (EltVT == MVT::bf16 && !Subtarget.hasVInstructionsBF16())) {
     // If we don't have vfmv.f.s for f16/bf16, extract to a gpr then use fmv.h.x
     MVT IntVT = VecVT.changeTypeToInteger();
     SDValue IntVec = DAG.getBitcast(IntVT, Vec);
@@ -14757,21 +14754,6 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       return;
     }
 
-    if (Subtarget.is64Bit() && Subtarget.enablePExtCodeGen()) {
-      SDLoc DL(N);
-      SDValue ExtLoad =
-          DAG.getExtLoad(ISD::SEXTLOAD, DL, MVT::i64, Ld->getChain(),
-                         Ld->getBasePtr(), MVT::i32, Ld->getMemOperand());
-      if (N->getValueType(0) == MVT::v2i16) {
-        Results.push_back(DAG.getBitcast(MVT::v4i16, ExtLoad));
-        Results.push_back(ExtLoad.getValue(1));
-      } else if (N->getValueType(0) == MVT::v4i8) {
-        Results.push_back(DAG.getBitcast(MVT::v8i8, ExtLoad));
-        Results.push_back(ExtLoad.getValue(1));
-      }
-      return;
-    }
-
     assert(N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
            "Unexpected custom legalisation");
 
@@ -16878,12 +16860,23 @@ static SDValue expandMulToShlAddShlAdd(SDNode *N, SelectionDAG &DAG,
     break;
   }
 
-  // 2/4/8 * 3/5/9 + 1 -> (shXadd (shYadd X, X), X)
   int ShX;
   if (int ShY = isShifted359(MulAmt - 1, ShX)) {
     assert(ShX != 0 && "MulAmt=4,6,10 handled before");
+    // 2/4/8 * 3/5/9 + 1 -> (shXadd (shYadd X, X), X)
     if (ShX <= 3)
       return getShlAddShlAdd(N, DAG, ShX, ShY, /*AddX=*/true, Shift);
+    // 2^N * 3/5/9 + 1 -> (add (shYadd (shl X, N), (shl X, N)), X)
+    if (Shift == 0) {
+      SDLoc DL(N);
+      EVT VT = N->getValueType(0);
+      SDValue X = N->getOperand(0);
+      SDValue Shl =
+          DAG.getNode(ISD::SHL, DL, VT, X, DAG.getConstant(ShX, DL, VT));
+      SDValue ShlAdd = DAG.getNode(RISCVISD::SHL_ADD, DL, VT, Shl,
+                                   DAG.getTargetConstant(ShY, DL, VT), Shl);
+      return DAG.getNode(ISD::ADD, DL, VT, ShlAdd, X);
+    }
   }
   return SDValue();
 }
@@ -16944,7 +16937,7 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
                          DAG.getTargetConstant(Shift, DL, VT), Shift1);
     }
 
-    // TODO: 2^(C1>3) * 3,5,9 +/- 1
+    // TODO: 2^(C1>3) * 3/5/9 - 1
 
     // 2^n + 2/4/8 + 1 -> (add (shl X, C1), (shXadd X, X))
     if (MulAmt > 2 && isPowerOf2_64((MulAmt - 1) & (MulAmt - 2))) {
@@ -25407,8 +25400,10 @@ bool RISCVTargetLowering::fallBackToDAGISel(const Instruction &Inst) const {
   if (auto *II = dyn_cast<IntrinsicInst>(&Inst)) {
     // Mark RVV intrinsic as supported.
     if (RISCVVIntrinsicsTable::getRISCVVIntrinsicInfo(II->getIntrinsicID())) {
-      // GISel doesn't support tuple types yet.
-      if (Inst.getType()->isRISCVVectorTupleTy())
+      // GISel doesn't support tuple types yet. It also doesn't suport returning
+      // a struct containing a scalable vector like vleff.
+      if (Inst.getType()->isRISCVVectorTupleTy() ||
+          Inst.getType()->isStructTy())
         return true;
 
       for (unsigned i = 0; i < II->arg_size(); ++i)

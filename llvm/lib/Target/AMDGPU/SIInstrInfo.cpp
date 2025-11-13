@@ -4046,10 +4046,29 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
                                                  LiveVariables *LV,
                                                  LiveIntervals *LIS) const {
   MachineBasicBlock &MBB = *MI.getParent();
-  ThreeAddressUpdates U;
-  MachineInstr *NewMI = convertToThreeAddressImpl(MI, U);
+  MachineInstr *CandidateMI = &MI;
 
-  if (NewMI) {
+  if (MI.isBundle()) {
+    // This is a temporary placeholder for bundle handling that enables us to
+    // exercise the relevant code paths in the two-address instruction pass.
+    if (MI.getBundleSize() != 1)
+      return nullptr;
+    CandidateMI = MI.getNextNode();
+  }
+
+  ThreeAddressUpdates U;
+  MachineInstr *NewMI = convertToThreeAddressImpl(*CandidateMI, U);
+  if (!NewMI)
+    return nullptr;
+
+  if (MI.isBundle()) {
+    CandidateMI->eraseFromBundle();
+
+    for (MachineOperand &MO : MI.all_defs()) {
+      if (MO.isTied())
+        MI.untieRegOperand(MO.getOperandNo());
+    }
+  } else {
     updateLiveVariables(LV, MI, *NewMI);
     if (LIS) {
       LIS->ReplaceMachineInstrInMaps(MI, *NewMI);
@@ -4090,7 +4109,22 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
         LV->getVarInfo(DefReg).AliveBlocks.clear();
     }
 
-    if (LIS) {
+    if (MI.isBundle()) {
+      VirtRegInfo VRI = AnalyzeVirtRegInBundle(MI, DefReg);
+      if (!VRI.Reads && !VRI.Writes) {
+        for (MachineOperand &MO : MI.all_uses()) {
+          if (MO.isReg() && MO.getReg() == DefReg) {
+            assert(MO.getSubReg() == 0 &&
+                   "tied sub-registers in bundles currently not supported");
+            MI.removeOperand(MO.getOperandNo());
+            break;
+          }
+        }
+
+        if (LIS)
+          LIS->shrinkToUses(&LIS->getInterval(DefReg));
+      }
+    } else if (LIS) {
       LiveInterval &DefLI = LIS->getInterval(DefReg);
 
       // We cannot delete the original instruction here, so hack out the use
@@ -4105,11 +4139,26 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
         }
       }
 
+      if (MI.isBundle()) {
+        VirtRegInfo VRI = AnalyzeVirtRegInBundle(MI, DefReg);
+        if (!VRI.Reads && !VRI.Writes) {
+          for (MachineOperand &MIOp : MI.uses()) {
+            if (MIOp.isReg() && MIOp.getReg() == DefReg) {
+              MIOp.setIsUndef(true);
+              MIOp.setReg(DummyReg);
+            }
+          }
+        }
+
+        MI.addOperand(MachineOperand::CreateReg(DummyReg, false, false, false,
+                                                false, /*isUndef=*/true));
+      }
+
       LIS->shrinkToUses(&DefLI);
     }
   }
 
-  return NewMI;
+  return MI.isBundle() ? &MI : NewMI;
 }
 
 MachineInstr *
@@ -6023,18 +6072,6 @@ SIInstrInfo::getWholeWaveFunctionSetup(MachineFunction &MF) const {
   llvm_unreachable("Couldn't find SI_SETUP_WHOLE_WAVE_FUNC instruction");
 }
 
-// FIXME: This should not be an overridable function. All subtarget dependent
-// operand modifications should go through isLookupRegClassByHwMode in the
-// generic handling.
-const TargetRegisterClass *SIInstrInfo::getRegClass(const MCInstrDesc &TID,
-                                                    unsigned OpNum) const {
-  if (OpNum >= TID.getNumOperands())
-    return nullptr;
-  const MCOperandInfo &OpInfo = TID.operands()[OpNum];
-  int16_t RegClass = getOpRegClassID(OpInfo);
-  return RI.getRegClass(RegClass);
-}
-
 const TargetRegisterClass *SIInstrInfo::getOpRegClass(const MachineInstr &MI,
                                                       unsigned OpNo) const {
   const MCInstrDesc &Desc = get(MI.getOpcode());
@@ -6050,7 +6087,8 @@ const TargetRegisterClass *SIInstrInfo::getOpRegClass(const MachineInstr &MI,
     return RI.getPhysRegBaseClass(Reg);
   }
 
-  return RI.getRegClass(getOpRegClassID(Desc.operands()[OpNo]));
+  int16_t RegClass = getOpRegClassID(Desc.operands()[OpNo]);
+  return RegClass < 0 ? nullptr : RI.getRegClass(RegClass);
 }
 
 void SIInstrInfo::legalizeOpWithMove(MachineInstr &MI, unsigned OpIdx) const {
@@ -7786,6 +7824,11 @@ void SIInstrInfo::moveToVALUImpl(SIInstrWorklist &Worklist,
     Inst.eraseFromParent();
     return;
 
+  case AMDGPU::S_ABSDIFF_I32:
+    lowerScalarAbsDiff(Worklist, Inst);
+    Inst.eraseFromParent();
+    return;
+
   case AMDGPU::S_CBRANCH_SCC0:
   case AMDGPU::S_CBRANCH_SCC1: {
     // Clear unused bits of vcc
@@ -8430,6 +8473,37 @@ void SIInstrInfo::lowerScalarAbs(SIInstrWorklist &Worklist,
   BuildMI(MBB, MII, DL, get(AMDGPU::V_MAX_I32_e64), ResultReg)
     .addReg(Src.getReg())
     .addReg(TmpReg);
+
+  MRI.replaceRegWith(Dest.getReg(), ResultReg);
+  addUsersToMoveToVALUWorklist(ResultReg, MRI, Worklist);
+}
+
+void SIInstrInfo::lowerScalarAbsDiff(SIInstrWorklist &Worklist,
+                                     MachineInstr &Inst) const {
+  MachineBasicBlock &MBB = *Inst.getParent();
+  MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
+  MachineBasicBlock::iterator MII = Inst;
+  const DebugLoc &DL = Inst.getDebugLoc();
+
+  MachineOperand &Dest = Inst.getOperand(0);
+  MachineOperand &Src1 = Inst.getOperand(1);
+  MachineOperand &Src2 = Inst.getOperand(2);
+  Register SubResultReg = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+  Register TmpReg = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+  Register ResultReg = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+
+  unsigned SubOp =
+      ST.hasAddNoCarry() ? AMDGPU::V_SUB_U32_e32 : AMDGPU::V_SUB_CO_U32_e32;
+
+  BuildMI(MBB, MII, DL, get(SubOp), SubResultReg)
+      .addReg(Src1.getReg())
+      .addReg(Src2.getReg());
+
+  BuildMI(MBB, MII, DL, get(SubOp), TmpReg).addImm(0).addReg(SubResultReg);
+
+  BuildMI(MBB, MII, DL, get(AMDGPU::V_MAX_I32_e64), ResultReg)
+      .addReg(SubResultReg)
+      .addReg(TmpReg);
 
   MRI.replaceRegWith(Dest.getReg(), ResultReg);
   addUsersToMoveToVALUWorklist(ResultReg, MRI, Worklist);

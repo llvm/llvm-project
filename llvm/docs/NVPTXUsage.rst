@@ -1334,6 +1334,32 @@ copied and it must be a multiple of 16.
 For more information, refer PTX ISA
 `<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk>`_.
 
+'``llvm.nvvm.cp.async.bulk.global.to.shared.cta``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.cp.async.bulk.global.to.shared.cta(ptr addrspace(3) %dst, ptr addrspace(3) %mbar, ptr addrspace(1) %src, i32 %size, i64 %ch, i1 %flag_ch)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.cp.async.bulk.global.to.shared.cta``' intrinsic
+corresponds to the ``cp.async.bulk.shared::cta.global.*`` family
+of PTX instructions. These instructions initiate an asynchronous
+copy of bulk data from global memory to shared::cta memory.
+The 32-bit operand ``%size`` specifies the amount of memory to be
+copied and it must be a multiple of 16. The last argument
+(denoted by ``i1 %flag_ch``) is a compile-time constant. When set,
+it indicates a valid cache_hint (``i64 %ch``) and generates the
+``.L2::cache_hint`` variant of the PTX instruction.
+
+For more information, refer PTX ISA
+`<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk>`_.
+
 '``llvm.nvvm.cp.async.bulk.shared.cta.to.global``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
