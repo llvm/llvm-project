@@ -869,7 +869,7 @@ constexpr MCPhysReg kDefaultLoopCounterReg = X86::R8;
 
 void ExegesisX86Target::addTargetSpecificPasses(PassManagerBase &PM) const {
   // Lowers FP pseudo-instructions, e.g. ABS_Fp32 -> ABS_F.
-  PM.add(createX86FloatingPointStackifierPass());
+  PM.add(createX86FPStackifierLegacyPass());
 }
 
 MCRegister ExegesisX86Target::getScratchMemoryRegister(const Triple &TT) const {

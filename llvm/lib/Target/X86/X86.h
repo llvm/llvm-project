@@ -44,7 +44,13 @@ FunctionPass *createCleanupLocalDynamicTLSPass();
 /// This function returns a pass which converts floating-point register
 /// references and pseudo instructions into floating-point stack references and
 /// physical instructions.
-FunctionPass *createX86FloatingPointStackifierPass();
+class X86FPStackifierPass : public PassInfoMixin<X86FPStackifierPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createX86FPStackifierLegacyPass();
 
 /// This pass inserts AVX vzeroupper instructions before each call to avoid
 /// transition penalty between functions encoded with AVX and SSE.
@@ -229,7 +235,6 @@ FunctionPass *createX86ArgumentStackSlotPass();
 FunctionPass *createX86SuppressAPXForRelocationPass();
 
 void initializeCompressEVEXPassPass(PassRegistry &);
-void initializeFPSPass(PassRegistry &);
 void initializeFixupBWInstPassPass(PassRegistry &);
 void initializeFixupLEAPassPass(PassRegistry &);
 void initializeX86ArgumentStackSlotPassPass(PassRegistry &);
@@ -246,6 +251,7 @@ void initializeX86DomainReassignmentPass(PassRegistry &);
 void initializeX86DynAllocaExpanderLegacyPass(PassRegistry &);
 void initializeX86ExecutionDomainFixPass(PassRegistry &);
 void initializeX86ExpandPseudoPass(PassRegistry &);
+void initializeX86FPStackifierLegacyPass(PassRegistry &);
 void initializeX86FastPreTileConfigPass(PassRegistry &);
 void initializeX86FastTileConfigPass(PassRegistry &);
 void initializeX86FixupSetCCPassPass(PassRegistry &);
