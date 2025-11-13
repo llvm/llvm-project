@@ -62,7 +62,3 @@ loopIR3.i.i:                                      ; preds = %loopIR3.i.i, %loopI
   br label %loopIR3.i.i
 }
 
-; Function Attrs: nocallback nofree nosync nounwind readnone willreturn
-
-; Function Attrs: nounwind readnone
-

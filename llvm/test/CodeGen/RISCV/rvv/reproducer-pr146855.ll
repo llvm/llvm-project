@@ -57,10 +57,6 @@ middle.block:                                     ; preds = %vector.body
   ret i32 %13
 }
 
-; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: read)
-
-; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
-
 ; uselistorder directives
 uselistorder ptr @llvm.masked.load.nxv4i32.p0, { 1, 0 }
 uselistorder ptr @llvm.vector.reduce.add.nxv4i32, { 1, 0 }

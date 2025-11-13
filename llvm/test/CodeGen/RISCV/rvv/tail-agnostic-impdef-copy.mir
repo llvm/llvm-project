@@ -19,8 +19,6 @@
     ret <vscale x 8 x i64> %load
   }
 
-  ; Function Attrs: argmemonly nofree nosync nounwind readonly willreturn
-
   attributes #0 = { nounwind "target-features"="+v" }
 
 ...

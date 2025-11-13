@@ -324,8 +324,6 @@ entry:
   ret float %res
 }
 
-; Function Attrs: nofree nosync nounwind readnone willreturn
-
 define void @crash(<2 x i32> %0) {
 ; CHECK-LABEL: crash:
 ; CHECK:       # %bb.0: # %entry

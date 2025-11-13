@@ -25,5 +25,3 @@ entry:
   ret void
 }
 
-; Function Attrs: argmemonly mustprogress nofree nounwind willreturn
-

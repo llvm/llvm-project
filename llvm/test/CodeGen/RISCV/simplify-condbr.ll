@@ -2,10 +2,6 @@
 ; RUN: llc -mtriple=riscv64 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s
 
-; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
-
-; Function Attrs: nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: write)
-
 declare fastcc i1 @S_reginclass()
 
 declare fastcc ptr @Perl_av_store(i64)

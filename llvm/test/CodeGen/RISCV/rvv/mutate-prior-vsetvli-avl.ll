@@ -3,7 +3,6 @@
 @__const.test.var_45 = private unnamed_addr constant [2 x i8] c"\D1S", align 1
 @__const.test.var_101 = private unnamed_addr constant [2 x i8] c"\830", align 1
 
-; Function Attrs: nounwind vscale_range(2,1024)
 define dso_local void @test(ptr nocapture noundef %var_99) {
 ; CHECK-LABEL: test:
 ; CHECK:       # %bb.0: # %entry

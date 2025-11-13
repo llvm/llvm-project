@@ -57,8 +57,6 @@
     unreachable, !dbg !8
   }
 
-  ; Function Attrs: nounwind readnone speculatable willreturn
-
   !llvm.dbg.cu = !{!0}
   !llvm.debugify = !{!3, !3}
   !llvm.module.flags = !{!4}
