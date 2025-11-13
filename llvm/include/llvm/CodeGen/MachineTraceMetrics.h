@@ -382,9 +382,9 @@ public:
     Trace getTrace(const MachineBasicBlock *MBB);
 
     /// Updates the depth of an machine instruction, given RegUnits.
-    void updateDepth(TraceBlockInfo &TBI, const MachineInstr&,
+    void updateDepth(TraceBlockInfo &TBI, const MachineInstr &,
                      LiveRegUnitSet &RegUnits);
-    void updateDepth(const MachineBasicBlock *, const MachineInstr&,
+    void updateDepth(const MachineBasicBlock *, const MachineInstr &,
                      LiveRegUnitSet &RegUnits);
 
     /// Updates the depth of the instructions from Start to End.
