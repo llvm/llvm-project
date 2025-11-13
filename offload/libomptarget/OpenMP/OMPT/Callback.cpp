@@ -424,8 +424,9 @@ void Interface::beginTargetRegion() {
   // Set up target task and target state
   assert(ompt_get_task_info_target_fn &&
          "Calling a null target task info function");
-  if (ompt_task_info_t *TempTaskInfo = ompt_get_task_info_target_fn())
-    OmptTaskInfoPtr = TempTaskInfo;
+  // In case of deferred target tasks, use pointer from libomp
+  if (ompt_task_info_t *TempTaskInfoPtr = ompt_get_task_info_target_fn())
+    OmptTaskInfoPtr = TempTaskInfoPtr;
 }
 
 void Interface::endTargetRegion() {
