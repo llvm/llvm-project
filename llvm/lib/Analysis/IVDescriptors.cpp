@@ -414,6 +414,9 @@ static RecurrenceDescriptor getMinMaxRecurrence(PHINode *Phi, Loop *TheLoop,
         return {};
       IncOut++;
     } else if (auto *SI = dyn_cast<StoreInst>(User)) {
+      // This check matches LVerLegality::isInvariantAddressOfReduction and
+      // enables vectorizing reductions with stores to invariant addresses in
+      // the loop, by sinking them outside the loop.
       const SCEV *Ptr = SE->getSCEV(SI->getPointerOperand());
       if (U.getOperandNo() == SI->getPointerOperandIndex() ||
           !SE->isLoopInvariant(Ptr, TheLoop) ||
@@ -435,7 +438,6 @@ static RecurrenceDescriptor getMinMaxRecurrence(PHINode *Phi, Loop *TheLoop,
         any_of(Op->users(), [&Chain](User *U) { return !Chain.contains(U); }))
       return {};
 
-  SmallPtrSet<Instruction *, 4> Casts;
   return RecurrenceDescriptor(
       Phi->getIncomingValueForBlock(TheLoop->getLoopPreheader()),
       cast<Instruction>(RdxNext), IntermediateStore, RK, FMF, nullptr,
