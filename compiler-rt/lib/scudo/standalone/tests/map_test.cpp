@@ -102,9 +102,11 @@ TEST(ScudoMapTest, Zeroing) {
   ReservedMemory.create(/*Addr=*/0U, Size, MappingName);
   ASSERT_TRUE(ReservedMemory.isCreated());
 
-  scudo::MemMapT MemMap = ReservedMemory.dispatch(ReservedMemory.getBase(), ReservedMemory.getCapacity());
-  EXPECT_TRUE(MemMap.remap(MemMap.getBase(), MemMap.getCapacity(), MappingName));
-  unsigned char *Data = reinterpret_cast<unsigned char*>(MemMap.getBase());
+  scudo::MemMapT MemMap = ReservedMemory.dispatch(ReservedMemory.getBase(),
+                                                  ReservedMemory.getCapacity());
+  EXPECT_TRUE(
+      MemMap.remap(MemMap.getBase(), MemMap.getCapacity(), MappingName));
+  unsigned char *Data = reinterpret_cast<unsigned char *>(MemMap.getBase());
   memset(Data, 1U, MemMap.getCapacity());
   // Spot check some values.
   EXPECT_EQ(1U, Data[0]);
