@@ -307,12 +307,12 @@ _mm256_permutex2var_pbh(__m256bh __A, __m256i __I, __m256bh __B) {
                                                   (__v16hi)__B);
 }
 
-static __inline__ __m128bh __DEFAULT_FN_ATTRS128
+static __inline__ __m128bh __DEFAULT_FN_ATTRS128_CONSTEXPR
 _mm_permutexvar_pbh(__m128i __A, __m128bh __B) {
   return (__m128bh)__builtin_ia32_permvarhi128((__v8hi)__B, (__v8hi)__A);
 }
 
-static __inline__ __m256bh __DEFAULT_FN_ATTRS256
+static __inline__ __m256bh __DEFAULT_FN_ATTRS256_CONSTEXPR
 _mm256_permutexvar_pbh(__m256i __A, __m256bh __B) {
   return (__m256bh)__builtin_ia32_permvarhi256((__v16hi)__B, (__v16hi)__A);
 }

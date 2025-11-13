@@ -3,6 +3,43 @@
 
 target datalayout = "e-i64:64-v16:16-v32:32-n16:32:64-p:64:64:64-p1:32:32:32-p2:128:128:128:32"
 
+; Index Delta
+; Most of the original test cases in this file were optimized by Index-delta.
+; After adding Base-delta and Stride-delta, most of the GEP test cases
+; are optimized by Stride-delta now. The only case that GEP needs index-delta
+; SLSR is to reuse address computation from a GEP with different pointee type.
+; Once LLVM completely moves from typed GEP to PtrAdd, we can remove
+; index-delta for GEP/PtrAdd.
+
+define void @index_delta(ptr %input, i32 %c, i32 %b, i32 %n, float %r) {
+; CHECK-LABEL: define void @index_delta(
+; CHECK-SAME: ptr [[INPUT:%.*]], i32 [[C:%.*]], i32 [[B:%.*]], i32 [[N:%.*]], float [[R:%.*]]) {
+; CHECK-NEXT:    [[ADD0:%.*]] = add nsw i32 [[B]], 1
+; CHECK-NEXT:    [[MUL_1:%.*]] = mul nsw i32 [[ADD0]], [[N]]
+; CHECK-NEXT:    [[ADD1:%.*]] = add i32 [[MUL_1]], [[C]]
+; CHECK-NEXT:    [[OFFSET:%.*]] = sext i32 [[ADD1]] to i64
+; CHECK-NEXT:    [[GETELEM:%.*]] = getelementptr i8, ptr [[INPUT]], i64 [[OFFSET]]
+; CHECK-NEXT:    store float [[R]], ptr [[GETELEM]], align 4
+; CHECK-NEXT:    [[TMP:%.*]] = mul i64 [[OFFSET]], 3
+; CHECK-NEXT:    [[GETELEM_1:%.*]] = getelementptr inbounds i8, ptr [[GETELEM]], i64 [[TMP]]
+; CHECK-NEXT:    store float [[R]], ptr [[GETELEM_1]], align 4
+; CHECK-NEXT:    ret void
+;
+
+  %add0 = add nsw i32 %b, 1
+  %mul.1 = mul nsw i32 %add0, %n
+  %add.1 = add i32 %mul.1, %c
+  %offset = sext i32 %add.1 to i64
+  %getElem = getelementptr i8, ptr %input, i64 %offset
+  store float %r, ptr %getElem, align 4
+  %getElem.1 = getelementptr inbounds float, ptr %input, i64 %offset
+  store float %r, ptr %getElem.1, align 4
+
+  ret void
+}
+
+; Stride Delta
+
 ; foo(input[0]);
 ; foo(input[s]);
 ; foo(input[s * 2]);
@@ -263,3 +300,115 @@ declare void @foo(ptr)
 declare void @bar(ptr)
 declare void @baz(ptr addrspace(1))
 declare void @baz2(ptr addrspace(2))
+
+define void @stride_const(ptr %input, i32 %c, i32 %b, i32 %n, float %r) {
+; CHECK-LABEL: define void @stride_const(
+; CHECK-SAME: ptr [[INPUT:%.*]], i32 [[C:%.*]], i32 [[B:%.*]], i32 [[N:%.*]], float [[R:%.*]]) {
+; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[B]], [[N]]
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[MUL]], [[C]]
+; CHECK-NEXT:    [[ADD_1:%.*]] = add i32 [[ADD]], [[N]]
+; CHECK-NEXT:    [[ADD_2:%.*]] = add i32 [[ADD_1]], [[N]]
+; CHECK-NEXT:    [[OFFSET:%.*]] = sext i32 [[ADD_2]] to i64
+; CHECK-NEXT:    [[GETELEM_1:%.*]] = getelementptr float, ptr [[INPUT]], i64 [[OFFSET]]
+; CHECK-NEXT:    store float [[R]], ptr [[GETELEM_1]], align 4
+; CHECK-NEXT:    [[GETELEM_2:%.*]] = getelementptr i8, ptr [[GETELEM_1]], i64 16
+; CHECK-NEXT:    store float [[R]], ptr [[GETELEM_2]], align 4
+; CHECK-NEXT:    ret void
+;
+
+  %mul = mul nsw i32 %b, %n
+  %add = add i32 %mul, %c
+  %add.1 = add i32 %add, %n
+  %add.2 = add i32 %add.1, %n
+
+  %offset = sext i32 %add.2 to i64
+  %1 = getelementptr float, ptr %input, i64 %offset
+  store float %r, ptr %1, align 4
+
+  %offset3 = add i64 %offset, 4
+  %2 = getelementptr float, ptr %input, i64 %offset3
+  store float %r, ptr %2, align 4
+  ret void
+}
+
+
+define void @stride_var(ptr %input, i32 %c, i32 %b, i32 %n, float %r) {
+; CHECK-LABEL: define void @stride_var(
+; CHECK-SAME: ptr [[INPUT:%.*]], i32 [[C:%.*]], i32 [[B:%.*]], i32 [[N:%.*]], float [[R:%.*]]) {
+; CHECK-NEXT:    [[ADD0:%.*]] = add nsw i32 [[B]], 1
+; CHECK-NEXT:    [[MUL_1:%.*]] = mul nsw i32 [[ADD0]], [[N]]
+; CHECK-NEXT:    [[ADD1:%.*]] = add i32 [[MUL_1]], [[C]]
+; CHECK-NEXT:    [[I:%.*]] = sext i32 [[ADD1]] to i64
+; CHECK-NEXT:    [[GETELEM:%.*]] = getelementptr float, ptr [[INPUT]], i64 [[I]]
+; CHECK-NEXT:    store float [[R]], ptr [[GETELEM]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[N]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = shl i64 [[TMP1]], 2
+; CHECK-NEXT:    [[GETELEM_1:%.*]] = getelementptr inbounds i8, ptr [[GETELEM]], i64 [[TMP2]]
+; CHECK-NEXT:    store float [[R]], ptr [[GETELEM_1]], align 4
+; CHECK-NEXT:    ret void
+;
+; Reuse getElem to compute getElem.1 and getElem.2 with variable offset n extracted from Stride
+
+  %add0 = add nsw i32 %b, 1
+  %mul.1 = mul nsw i32 %add0, %n
+  %add.1 = add i32 %mul.1, %c
+  %offset = sext i32 %add.1 to i64
+  %getElem = getelementptr float, ptr %input, i64 %offset
+  store float %r, ptr %getElem, align 4
+
+  %mul = mul nsw i32 %b, %n
+  %add = add i32 %mul, %c
+  %add.11 = add i32 %add, %n
+  %add.2 = add i32 %add.11, %n
+  %offset1 = sext i32 %add.2 to i64
+  %getElem.1 = getelementptr inbounds float, ptr %input, i64 %offset1
+  store float %r, ptr %getElem.1, align 4
+
+  ret void
+}
+
+; Base Delta
+
+%struct.B = type { i16 }
+%struct.A = type { %struct.B, %struct.B }
+
+define void @base_const(i32 %a, ptr %base, i16 %r) {
+; Reuse getElem1 to compute getElem2
+; CHECK-LABEL: define void @base_const(
+; CHECK-SAME: i32 [[A:%.*]], ptr [[BASE:%.*]], i16 [[R:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[A]] to i64
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds [[STRUCT_A:%.*]], ptr [[BASE]], i64 [[TMP1]]
+; CHECK-NEXT:    store i16 [[R]], ptr [[GEP1]], align 2
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i8, ptr [[GEP1]], i64 2
+; CHECK-NEXT:    store i16 [[R]], ptr [[GEP2]], align 2
+; CHECK-NEXT:    ret void
+;
+
+  %1 = sext i32 %a to i64
+  %getElem1 = getelementptr inbounds %struct.A, ptr %base, i64 %1
+  store i16 %r, ptr %getElem1, align 2
+  %getElem2 = getelementptr inbounds %struct.A, ptr %base, i64 %1, i32 1
+  store i16 %r, ptr %getElem2, align 2
+  ret void
+}
+
+define void @base_var(i32 %a, ptr %base, i16 %r, i64 %n) {
+; Reuse getElem1 to compute getElem2
+; CHECK-LABEL: define void @base_var(
+; CHECK-SAME: i32 [[A:%.*]], ptr [[BASE:%.*]], i16 [[R:%.*]], i64 [[N:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[A]] to i64
+; CHECK-NEXT:    [[GETELEM1:%.*]] = getelementptr inbounds [[STRUCT_A:%.*]], ptr [[BASE]], i64 [[TMP1]]
+; CHECK-NEXT:    store i16 [[R]], ptr [[GETELEM1]], align 2
+; CHECK-NEXT:    [[GETELEM2:%.*]] = getelementptr inbounds i8, ptr [[GETELEM1]], i64 [[N]]
+; CHECK-NEXT:    store i16 [[R]], ptr [[GETELEM2]], align 2
+; CHECK-NEXT:    ret void
+;
+
+  %1 = sext i32 %a to i64
+  %base1 = getelementptr inbounds i8, ptr %base, i64 %n
+  %getElem1 = getelementptr inbounds %struct.A, ptr %base, i64 %1
+  store i16 %r, ptr %getElem1, align 2
+  %getElem2 = getelementptr inbounds %struct.A, ptr %base1, i64 %1
+  store i16 %r, ptr %getElem2, align 2
+  ret void
+}
