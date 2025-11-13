@@ -15,7 +15,11 @@ marked `explicit`. Other forms of casting checks are implemented in
 other places. The following checks can be used to check for more forms
 of casting:
 
-- :doc:`cppcoreguidelines-pro-type-static-cast-downcast <../cppcoreguidelines/pro-type-static-cast-downcast>`
-- :doc:`cppcoreguidelines-pro-type-reinterpret-cast <../cppcoreguidelines/pro-type-reinterpret-cast>`
-- :doc:`cppcoreguidelines-pro-type-const-cast <../cppcoreguidelines/pro-type-const-cast>`
-- :doc:`cppcoreguidelines-pro-type-cstyle-cast <../cppcoreguidelines/pro-type-cstyle-cast>`
+- :doc:`cppcoreguidelines-pro-type-static-cast-downcast
+  <../cppcoreguidelines/pro-type-static-cast-downcast>`
+- :doc:`cppcoreguidelines-pro-type-reinterpret-cast
+  <../cppcoreguidelines/pro-type-reinterpret-cast>`
+- :doc:`cppcoreguidelines-pro-type-const-cast
+  <../cppcoreguidelines/pro-type-const-cast>`
+- :doc:`cppcoreguidelines-pro-type-cstyle-cast
+  <../cppcoreguidelines/pro-type-cstyle-cast>`
