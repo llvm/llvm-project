@@ -105,7 +105,8 @@ public:
         IsSigned(Signed), IsOrdered(Ordered),
         PhiHasUsesOutsideReductionChain(PhiHasUsesOutsideReductionChain),
         MinWidthCastToRecurrenceType(MinWidthCastToRecurTy) {
-    CastInsts.insert_range(CI);
+    if (CI)
+      CastInsts.insert_range(*CI);
     assert(
         (!PhiHasUsesOutsideReductionChain || isMinMaxRecurrenceKind(K)) &&
         "Only min/max recurrences are allowed to have multiple uses currently");

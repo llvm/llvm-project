@@ -218,7 +218,6 @@ static bool checkOrderedReduction(RecurKind Kind, Instruction *ExactFPMathInst,
   return true;
 }
 
-<<<<<<< HEAD
 /// Returns true if \p Phi is a min/max reduction matching \p Kind where \p Phi
 /// is used outside the reduction chain. This is common for loops selecting the
 /// index of a minimum/maximum value (argmin/argmax).
@@ -440,7 +439,7 @@ static RecurrenceDescriptor getMinMaxRecurrence(PHINode *Phi, Loop *TheLoop,
   return RecurrenceDescriptor(
       Phi->getIncomingValueForBlock(TheLoop->getLoopPreheader()),
       cast<Instruction>(RdxNext), IntermediateStore, RK, FMF, nullptr,
-      Phi->getType(), false, false, Casts, -1U);
+      Phi->getType());
 }
 
 bool RecurrenceDescriptor::AddReductionVar(
@@ -813,6 +812,7 @@ bool RecurrenceDescriptor::AddReductionVar(
       RecurrenceDescriptor(RdxStart, ExitInstruction, IntermediateStore, Kind,
                            FMF, ExactFPMathInst, RecurrenceType, IsSigned,
                            IsOrdered, CastInsts, MinWidthCastToRecurrenceType);
+
   return true;
 }
 
@@ -1168,7 +1168,7 @@ bool RecurrenceDescriptor::isReductionPHI(PHINode *Phi, Loop *TheLoop,
   if (RD.getRecurrenceKind() != RecurKind::None) {
     assert(
         RecurrenceDescriptor::isMinMaxRecurrenceKind(RD.getRecurrenceKind()) &&
-        "must return a min/max recurrence kind");
+        "Expected a min/max recurrence kind");
     LLVM_DEBUG(dbgs() << "Found a min/max reduction PHI." << *Phi << "\n");
     RedDes = RD;
     return true;
