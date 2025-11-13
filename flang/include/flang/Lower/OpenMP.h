@@ -41,6 +41,7 @@ struct OmpClauseList;
 
 namespace semantics {
 class Symbol;
+class Scope;
 class SemanticsContext;
 } // namespace semantics
 
