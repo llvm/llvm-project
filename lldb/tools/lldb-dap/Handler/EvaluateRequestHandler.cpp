@@ -13,14 +13,9 @@
 #include "Protocol/ProtocolRequests.h"
 #include "Protocol/ProtocolTypes.h"
 #include "RequestHandler.h"
-#include "lldb/API/SBCommandInterpreter.h"
-#include "lldb/API/SBCommandReturnObject.h"
 #include "lldb/lldb-enumerations.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
-#include <future>
-#include <optional>
-#include <unistd.h>
 
 using namespace llvm;
 using namespace lldb_dap;
@@ -53,11 +48,9 @@ EvaluateRequestHandler::Run(const EvaluateArguments &arguments) const {
     }
 
     bool required_command_failed = false;
-    std::string result = RunLLDBCommands(
+    body.result = RunLLDBCommands(
         dap.debugger, llvm::StringRef(), {expression}, required_command_failed,
         /*parse_command_directives=*/false, /*echo_commands=*/false);
-
-    body.result = result;
     return body;
   }
 
@@ -88,14 +81,8 @@ EvaluateRequestHandler::Run(const EvaluateArguments &arguments) const {
   if (value.GetError().Fail() && arguments.context != eEvaluateContextHover)
     value = frame.EvaluateExpression(expression.data());
 
-  if (value.GetError().Fail()) {
-    // This error object must live until we're done with the pointer returned
-    // by GetCString().
-    lldb::SBError error = value.GetError();
-    const char *error_cstr = error.GetCString();
-    return make_error<DAPError>(
-        error_cstr && error_cstr[0] ? error_cstr : "evaluate failed");
-  }
+  if (value.GetError().Fail())
+    return ToError(value.GetError(), /*show_user=*/false);
 
   VariableDescription desc(value,
                            dap.configuration.enableAutoVariableSummaries);
