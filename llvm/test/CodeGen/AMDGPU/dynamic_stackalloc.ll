@@ -4,7 +4,7 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 < %s | FileCheck -check-prefix=GFX11-SDAG %s
 ; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 < %s | FileCheck -check-prefix=GFX11-GISEL %s
 
-define amdgpu_kernel void @test_dynamic_stackalloc_kernel_uniform(i32 %n) {
+define amdgpu_kernel void @test_dynamic_stackalloc_kernel_uniform(i32 %n) #0 {
 ; GFX9-SDAG-LABEL: test_dynamic_stackalloc_kernel_uniform:
 ; GFX9-SDAG:       ; %bb.0:
 ; GFX9-SDAG-NEXT:    s_load_dword s4, s[8:9], 0x0
@@ -82,7 +82,7 @@ define amdgpu_kernel void @test_dynamic_stackalloc_kernel_uniform(i32 %n) {
   ret void
 }
 
-define amdgpu_kernel void @test_dynamic_stackalloc_kernel_uniform_over_aligned(i32 %n) {
+define amdgpu_kernel void @test_dynamic_stackalloc_kernel_uniform_over_aligned(i32 %n) #0 {
 ; GFX9-SDAG-LABEL: test_dynamic_stackalloc_kernel_uniform_over_aligned:
 ; GFX9-SDAG:       ; %bb.0:
 ; GFX9-SDAG-NEXT:    s_load_dword s4, s[8:9], 0x0
@@ -165,7 +165,7 @@ define amdgpu_kernel void @test_dynamic_stackalloc_kernel_uniform_over_aligned(i
   ret void
 }
 
-define amdgpu_kernel void @test_dynamic_stackalloc_kernel_uniform_under_aligned(i32 %n) {
+define amdgpu_kernel void @test_dynamic_stackalloc_kernel_uniform_under_aligned(i32 %n) #0 {
 ; GFX9-SDAG-LABEL: test_dynamic_stackalloc_kernel_uniform_under_aligned:
 ; GFX9-SDAG:       ; %bb.0:
 ; GFX9-SDAG-NEXT:    s_load_dword s4, s[8:9], 0x0
@@ -243,7 +243,7 @@ define amdgpu_kernel void @test_dynamic_stackalloc_kernel_uniform_under_aligned(
   ret void
 }
 
-define amdgpu_kernel void @test_dynamic_stackalloc_kernel_divergent() {
+define amdgpu_kernel void @test_dynamic_stackalloc_kernel_divergent() #0 {
 ; GFX9-SDAG-LABEL: test_dynamic_stackalloc_kernel_divergent:
 ; GFX9-SDAG:       ; %bb.0:
 ; GFX9-SDAG-NEXT:    s_add_u32 s0, s0, s17
@@ -358,7 +358,7 @@ define amdgpu_kernel void @test_dynamic_stackalloc_kernel_divergent() {
   ret void
 }
 
-define amdgpu_kernel void @test_dynamic_stackalloc_kernel_divergent_over_aligned() {
+define amdgpu_kernel void @test_dynamic_stackalloc_kernel_divergent_over_aligned() #0 {
 ; GFX9-SDAG-LABEL: test_dynamic_stackalloc_kernel_divergent_over_aligned:
 ; GFX9-SDAG:       ; %bb.0:
 ; GFX9-SDAG-NEXT:    s_movk_i32 s32, 0x2000
@@ -478,7 +478,7 @@ define amdgpu_kernel void @test_dynamic_stackalloc_kernel_divergent_over_aligned
   ret void
 }
 
-define amdgpu_kernel void @test_dynamic_stackalloc_kernel_divergent_under_aligned() {
+define amdgpu_kernel void @test_dynamic_stackalloc_kernel_divergent_under_aligned() #0 {
 ; GFX9-SDAG-LABEL: test_dynamic_stackalloc_kernel_divergent_under_aligned:
 ; GFX9-SDAG:       ; %bb.0:
 ; GFX9-SDAG-NEXT:    s_add_u32 s0, s0, s17
@@ -590,7 +590,7 @@ define amdgpu_kernel void @test_dynamic_stackalloc_kernel_divergent_under_aligne
   ret void
 }
 
-define amdgpu_kernel void @test_dynamic_stackalloc_kernel_multiple_allocas(i32 %n, i32 %m) {
+define amdgpu_kernel void @test_dynamic_stackalloc_kernel_multiple_allocas(i32 %n, i32 %m) #0 {
 ; GFX9-SDAG-LABEL: test_dynamic_stackalloc_kernel_multiple_allocas:
 ; GFX9-SDAG:       ; %bb.0: ; %entry
 ; GFX9-SDAG-NEXT:    s_load_dwordx2 s[4:5], s[8:9], 0x0
@@ -820,7 +820,7 @@ bb.1:
   ret void
 }
 
-define amdgpu_kernel void @test_dynamic_stackalloc_kernel_control_flow(i32 %n, i32 %m) {
+define amdgpu_kernel void @test_dynamic_stackalloc_kernel_control_flow(i32 %n, i32 %m) #0 {
 ; GFX9-SDAG-LABEL: test_dynamic_stackalloc_kernel_control_flow:
 ; GFX9-SDAG:       ; %bb.0: ; %entry
 ; GFX9-SDAG-NEXT:    s_load_dwordx2 s[4:5], s[8:9], 0x0
@@ -1030,7 +1030,7 @@ bb.2:
   ret void
 }
 
-define void @test_dynamic_stackalloc_device_uniform(i32 %n) {
+define void @test_dynamic_stackalloc_device_uniform(i32 %n) #0 {
 ; GFX9-SDAG-LABEL: test_dynamic_stackalloc_device_uniform:
 ; GFX9-SDAG:       ; %bb.0:
 ; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1152,22 +1152,48 @@ define void @test_dynamic_stackalloc_device_uniform(i32 %n) {
   ret void
 }
 
-define void @test_dynamic_stackalloc_device_uniform_over_aligned(i32 %n) {
+define void @test_dynamic_stackalloc_device_uniform_over_aligned(i32 %n) #0 {
 ; GFX9-SDAG-LABEL: test_dynamic_stackalloc_device_uniform_over_aligned:
 ; GFX9-SDAG:       ; %bb.0:
 ; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+<<<<<<< HEAD
 ; GFX9-SDAG-NEXT:    s_mov_b32 s10, s33
+||||||| parent of e811d0543c02 (Use nounwind to avoid touching unrelated tests)
+; GFX9-SDAG-NEXT:    s_mov_b32 s9, s33
+=======
+; GFX9-SDAG-NEXT:    v_lshl_add_u32 v0, v0, 2, 15
+; GFX9-SDAG-NEXT:    s_mov_b32 s9, s33
+>>>>>>> e811d0543c02 (Use nounwind to avoid touching unrelated tests)
 ; GFX9-SDAG-NEXT:    s_add_i32 s33, s32, 0x1fc0
+<<<<<<< HEAD
 ; GFX9-SDAG-NEXT:    s_mov_b32 s11, s34
 ; GFX9-SDAG-NEXT:    s_mov_b32 s34, s32
 ; GFX9-SDAG-NEXT:    s_addk_i32 s32, 0x4000
 ; GFX9-SDAG-NEXT:    s_add_i32 s4, s32, 0x1fff
 ; GFX9-SDAG-NEXT:    v_lshl_add_u32 v0, v0, 2, 15
 ; GFX9-SDAG-NEXT:    s_and_b32 s6, s4, 0xffffe000
+||||||| parent of e811d0543c02 (Use nounwind to avoid touching unrelated tests)
+; GFX9-SDAG-NEXT:    s_mov_b32 s10, s34
+; GFX9-SDAG-NEXT:    s_and_b32 s33, s33, 0xffffe000
+; GFX9-SDAG-NEXT:    s_mov_b32 s34, s32
+; GFX9-SDAG-NEXT:    v_lshl_add_u32 v0, v0, 2, 15
+=======
+; GFX9-SDAG-NEXT:    s_mov_b32 s10, s34
+>>>>>>> e811d0543c02 (Use nounwind to avoid touching unrelated tests)
 ; GFX9-SDAG-NEXT:    v_and_b32_e32 v0, -16, v0
 ; GFX9-SDAG-NEXT:    s_mov_b64 s[4:5], exec
+<<<<<<< HEAD
 ; GFX9-SDAG-NEXT:    s_mov_b32 s7, 0
 ; GFX9-SDAG-NEXT:    s_and_b32 s33, s33, 0xffffe000
+||||||| parent of e811d0543c02 (Use nounwind to avoid touching unrelated tests)
+; GFX9-SDAG-NEXT:    s_mov_b32 s6, 0
+; GFX9-SDAG-NEXT:    s_addk_i32 s32, 0x4000
+=======
+; GFX9-SDAG-NEXT:    s_mov_b32 s6, 0
+; GFX9-SDAG-NEXT:    s_and_b32 s33, s33, 0xffffe000
+; GFX9-SDAG-NEXT:    s_mov_b32 s34, s32
+; GFX9-SDAG-NEXT:    s_addk_i32 s32, 0x4000
+>>>>>>> e811d0543c02 (Use nounwind to avoid touching unrelated tests)
 ; GFX9-SDAG-NEXT:  .LBB9_1: ; =>This Inner Loop Header: Depth=1
 ; GFX9-SDAG-NEXT:    s_ff1_i32_b64 s8, s[4:5]
 ; GFX9-SDAG-NEXT:    v_readlane_b32 s9, v0, s8
@@ -1224,36 +1250,100 @@ define void @test_dynamic_stackalloc_device_uniform_over_aligned(i32 %n) {
 ; GFX11-SDAG-LABEL: test_dynamic_stackalloc_device_uniform_over_aligned:
 ; GFX11-SDAG:       ; %bb.0:
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+<<<<<<< HEAD
 ; GFX11-SDAG-NEXT:    v_lshl_add_u32 v0, v0, 2, 15
 ; GFX11-SDAG-NEXT:    s_mov_b32 s5, s33
 ; GFX11-SDAG-NEXT:    s_add_i32 s33, s32, 0x7f
 ; GFX11-SDAG-NEXT:    s_mov_b32 s6, s34
 ; GFX11-SDAG-NEXT:    s_mov_b32 s34, s32
+||||||| parent of e811d0543c02 (Use nounwind to avoid touching unrelated tests)
+; GFX11-SDAG-NEXT:    s_mov_b32 s4, s33
+; GFX11-SDAG-NEXT:    s_add_i32 s33, s32, 0x7f
+; GFX11-SDAG-NEXT:    s_mov_b32 s5, s34
+; GFX11-SDAG-NEXT:    s_and_b32 s33, s33, 0xffffff80
+; GFX11-SDAG-NEXT:    s_mov_b32 s34, s32
+; GFX11-SDAG-NEXT:    v_lshl_add_u32 v0, v0, 2, 15
+; GFX11-SDAG-NEXT:    s_mov_b32 s1, exec_lo
+; GFX11-SDAG-NEXT:    s_mov_b32 s0, 0
+=======
+; GFX11-SDAG-NEXT:    v_lshl_add_u32 v0, v0, 2, 15
+; GFX11-SDAG-NEXT:    s_mov_b32 s4, s33
+; GFX11-SDAG-NEXT:    s_add_i32 s33, s32, 0x7f
+; GFX11-SDAG-NEXT:    s_mov_b32 s5, s34
+; GFX11-SDAG-NEXT:    s_mov_b32 s1, exec_lo
+; GFX11-SDAG-NEXT:    v_and_b32_e32 v0, -16, v0
+; GFX11-SDAG-NEXT:    s_mov_b32 s0, 0
+; GFX11-SDAG-NEXT:    s_and_b32 s33, s33, 0xffffff80
+; GFX11-SDAG-NEXT:    s_mov_b32 s34, s32
+>>>>>>> e811d0543c02 (Use nounwind to avoid touching unrelated tests)
 ; GFX11-SDAG-NEXT:    s_addk_i32 s32, 0x100
+<<<<<<< HEAD
 ; GFX11-SDAG-NEXT:    v_and_b32_e32 v0, -16, v0
 ; GFX11-SDAG-NEXT:    s_add_i32 s0, s32, 0xfff
 ; GFX11-SDAG-NEXT:    s_mov_b32 s2, exec_lo
 ; GFX11-SDAG-NEXT:    s_and_b32 s0, s0, 0xfffff000
 ; GFX11-SDAG-NEXT:    s_mov_b32 s1, 0
 ; GFX11-SDAG-NEXT:    s_and_b32 s33, s33, 0xffffff80
+||||||| parent of e811d0543c02 (Use nounwind to avoid touching unrelated tests)
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-SDAG-NEXT:    v_and_b32_e32 v0, -16, v0
+=======
+>>>>>>> e811d0543c02 (Use nounwind to avoid touching unrelated tests)
 ; GFX11-SDAG-NEXT:  .LBB9_1: ; =>This Inner Loop Header: Depth=1
+<<<<<<< HEAD
 ; GFX11-SDAG-NEXT:    s_ctz_i32_b32 s3, s2
 ; GFX11-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-SDAG-NEXT:    v_readlane_b32 s4, v0, s3
 ; GFX11-SDAG-NEXT:    s_bitset0_b32 s2, s3
 ; GFX11-SDAG-NEXT:    s_max_u32 s1, s1, s4
 ; GFX11-SDAG-NEXT:    s_cmp_lg_u32 s2, 0
+||||||| parent of e811d0543c02 (Use nounwind to avoid touching unrelated tests)
+; GFX11-SDAG-NEXT:    s_ctz_i32_b32 s2, s1
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
+; GFX11-SDAG-NEXT:    v_readlane_b32 s3, v0, s2
+; GFX11-SDAG-NEXT:    s_bitset0_b32 s1, s2
+; GFX11-SDAG-NEXT:    s_max_u32 s0, s0, s3
+; GFX11-SDAG-NEXT:    s_cmp_lg_u32 s1, 0
+=======
+; GFX11-SDAG-NEXT:    s_ctz_i32_b32 s2, s1
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-SDAG-NEXT:    v_readlane_b32 s3, v0, s2
+; GFX11-SDAG-NEXT:    s_bitset0_b32 s1, s2
+; GFX11-SDAG-NEXT:    s_max_u32 s0, s0, s3
+; GFX11-SDAG-NEXT:    s_cmp_lg_u32 s1, 0
+>>>>>>> e811d0543c02 (Use nounwind to avoid touching unrelated tests)
 ; GFX11-SDAG-NEXT:    s_cbranch_scc1 .LBB9_1
 ; GFX11-SDAG-NEXT:  ; %bb.2:
 ; GFX11-SDAG-NEXT:    v_lshl_add_u32 v0, s1, 5, s0
 ; GFX11-SDAG-NEXT:    v_mov_b32_e32 v1, 10
+<<<<<<< HEAD
 ; GFX11-SDAG-NEXT:    s_mov_b32 s33, s5
 ; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+||||||| parent of e811d0543c02 (Use nounwind to avoid touching unrelated tests)
+; GFX11-SDAG-NEXT:    s_and_b32 s1, s1, 0xfffff000
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-SDAG-NEXT:    v_lshl_add_u32 v0, s0, 5, s1
+; GFX11-SDAG-NEXT:    scratch_store_b32 off, v1, s1 dlc
+; GFX11-SDAG-NEXT:    s_waitcnt_vscnt null, 0x0
+=======
+; GFX11-SDAG-NEXT:    s_and_b32 s1, s1, 0xfffff000
+; GFX11-SDAG-NEXT:    s_mov_b32 s33, s4
+; GFX11-SDAG-NEXT:    v_lshl_add_u32 v0, s0, 5, s1
+; GFX11-SDAG-NEXT:    scratch_store_b32 off, v1, s1 dlc
+; GFX11-SDAG-NEXT:    s_waitcnt_vscnt null, 0x0
+>>>>>>> e811d0543c02 (Use nounwind to avoid touching unrelated tests)
 ; GFX11-SDAG-NEXT:    v_readfirstlane_b32 s32, v0
 ; GFX11-SDAG-NEXT:    scratch_store_b32 off, v1, s0 dlc
 ; GFX11-SDAG-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-SDAG-NEXT:    s_mov_b32 s32, s34
+<<<<<<< HEAD
 ; GFX11-SDAG-NEXT:    s_mov_b32 s34, s6
+||||||| parent of e811d0543c02 (Use nounwind to avoid touching unrelated tests)
+; GFX11-SDAG-NEXT:    s_mov_b32 s34, s5
+; GFX11-SDAG-NEXT:    s_mov_b32 s33, s4
+=======
+; GFX11-SDAG-NEXT:    s_mov_b32 s34, s5
+>>>>>>> e811d0543c02 (Use nounwind to avoid touching unrelated tests)
 ; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-GISEL-LABEL: test_dynamic_stackalloc_device_uniform_over_aligned:
@@ -1294,7 +1384,7 @@ define void @test_dynamic_stackalloc_device_uniform_over_aligned(i32 %n) {
   ret void
 }
 
-define void @test_dynamic_stackalloc_device_uniform_under_aligned(i32 %n) {
+define void @test_dynamic_stackalloc_device_uniform_under_aligned(i32 %n) #0 {
 ; GFX9-SDAG-LABEL: test_dynamic_stackalloc_device_uniform_under_aligned:
 ; GFX9-SDAG:       ; %bb.0:
 ; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1416,7 +1506,7 @@ define void @test_dynamic_stackalloc_device_uniform_under_aligned(i32 %n) {
   ret void
 }
 
-define void @test_dynamic_stackalloc_device_divergent() {
+define void @test_dynamic_stackalloc_device_divergent() #0 {
 ; GFX9-SDAG-LABEL: test_dynamic_stackalloc_device_divergent:
 ; GFX9-SDAG:       ; %bb.0:
 ; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1545,7 +1635,7 @@ define void @test_dynamic_stackalloc_device_divergent() {
   ret void
 }
 
-define void @test_dynamic_stackalloc_device_divergent_over_aligned() {
+define void @test_dynamic_stackalloc_device_divergent_over_aligned() #0 {
 ; GFX9-SDAG-LABEL: test_dynamic_stackalloc_device_divergent_over_aligned:
 ; GFX9-SDAG:       ; %bb.0:
 ; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1692,7 +1782,7 @@ define void @test_dynamic_stackalloc_device_divergent_over_aligned() {
   ret void
 }
 
-define void @test_dynamic_stackalloc_device_divergent_under_aligned() {
+define void @test_dynamic_stackalloc_device_divergent_under_aligned() #0 {
 ; GFX9-SDAG-LABEL: test_dynamic_stackalloc_device_divergent_under_aligned:
 ; GFX9-SDAG:       ; %bb.0:
 ; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1821,7 +1911,7 @@ define void @test_dynamic_stackalloc_device_divergent_under_aligned() {
   ret void
 }
 
-define void @test_dynamic_stackalloc_device_multiple_allocas(i32 %n, i32 %m) {
+define void @test_dynamic_stackalloc_device_multiple_allocas(i32 %n, i32 %m) #0 {
 ; GFX9-SDAG-LABEL: test_dynamic_stackalloc_device_multiple_allocas:
 ; GFX9-SDAG:       ; %bb.0: ; %entry
 ; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2169,13 +2259,21 @@ bb.1:
   ret void
 }
 
-define void @test_dynamic_stackalloc_device_control_flow(i32 %n, i32 %m) {
+define void @test_dynamic_stackalloc_device_control_flow(i32 %n, i32 %m) #0 {
 ; GFX9-SDAG-LABEL: test_dynamic_stackalloc_device_control_flow:
 ; GFX9-SDAG:       ; %bb.0: ; %entry
 ; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-SDAG-NEXT:    s_mov_b32 s12, s33
 ; GFX9-SDAG-NEXT:    s_add_i32 s33, s32, 0xfc0
+<<<<<<< HEAD
 ; GFX9-SDAG-NEXT:    s_mov_b32 s13, s34
+||||||| parent of e811d0543c02 (Use nounwind to avoid touching unrelated tests)
+; GFX9-SDAG-NEXT:    s_mov_b32 s12, s34
+; GFX9-SDAG-NEXT:    s_and_b32 s33, s33, 0xfffff000
+; GFX9-SDAG-NEXT:    s_mov_b32 s34, s32
+=======
+; GFX9-SDAG-NEXT:    s_mov_b32 s12, s34
+>>>>>>> e811d0543c02 (Use nounwind to avoid touching unrelated tests)
 ; GFX9-SDAG-NEXT:    s_mov_b32 s8, 0
 ; GFX9-SDAG-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
 ; GFX9-SDAG-NEXT:    s_and_b32 s33, s33, 0xfffff000
@@ -2307,7 +2405,15 @@ define void @test_dynamic_stackalloc_device_control_flow(i32 %n, i32 %m) {
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-NEXT:    s_mov_b32 s6, s33
 ; GFX11-SDAG-NEXT:    s_add_i32 s33, s32, 63
+<<<<<<< HEAD
 ; GFX11-SDAG-NEXT:    s_mov_b32 s7, s34
+||||||| parent of e811d0543c02 (Use nounwind to avoid touching unrelated tests)
+; GFX11-SDAG-NEXT:    s_mov_b32 s6, s34
+; GFX11-SDAG-NEXT:    s_and_not1_b32 s33, s33, 63
+; GFX11-SDAG-NEXT:    s_mov_b32 s34, s32
+=======
+; GFX11-SDAG-NEXT:    s_mov_b32 s6, s34
+>>>>>>> e811d0543c02 (Use nounwind to avoid touching unrelated tests)
 ; GFX11-SDAG-NEXT:    s_mov_b32 s1, 0
 ; GFX11-SDAG-NEXT:    s_mov_b32 s0, exec_lo
 ; GFX11-SDAG-NEXT:    s_and_not1_b32 s33, s33, 63
@@ -2456,7 +2562,7 @@ bb.2:
   ret void
 }
 
-define void @test_dynamic_stackalloc_device_divergent_non_standard_size_i16(i16 %n) {
+define void @test_dynamic_stackalloc_device_divergent_non_standard_size_i16(i16 %n) #0 {
 ; GFX9-SDAG-LABEL: test_dynamic_stackalloc_device_divergent_non_standard_size_i16:
 ; GFX9-SDAG:       ; %bb.0:
 ; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2585,7 +2691,7 @@ define void @test_dynamic_stackalloc_device_divergent_non_standard_size_i16(i16 
   ret void
 }
 
-define void @test_dynamic_stackalloc_device_divergent_non_standard_size_i64(i64 %n) {
+define void @test_dynamic_stackalloc_device_divergent_non_standard_size_i64(i64 %n) #0 {
 ; GFX9-SDAG-LABEL: test_dynamic_stackalloc_device_divergent_non_standard_size_i64:
 ; GFX9-SDAG:       ; %bb.0:
 ; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2706,3 +2812,5 @@ define void @test_dynamic_stackalloc_device_divergent_non_standard_size_i64(i64 
   store volatile i32 666, ptr addrspace(5) %alloca
   ret void
 }
+
+attributes #0 = { nounwind }

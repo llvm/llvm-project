@@ -116,7 +116,7 @@ bb.2:
 ; ASSUME1024: .amdhsa_private_segment_fixed_size 1040
 ; ASSUME1024: ; ScratchSize: 1040
 
-define amdgpu_kernel void @kernel_non_entry_block_static_alloca_uniformly_reached_align64(ptr addrspace(1) %out, i32 %arg.cond, i32 %in) {
+define amdgpu_kernel void @kernel_non_entry_block_static_alloca_uniformly_reached_align64(ptr addrspace(1) %out, i32 %arg.cond, i32 %in) #2 {
 ; MUBUF-LABEL: kernel_non_entry_block_static_alloca_uniformly_reached_align64:
 ; MUBUF:       ; %bb.0: ; %entry
 ; MUBUF-NEXT:    s_load_dwordx2 s[4:5], s[8:9], 0x8
@@ -210,13 +210,13 @@ bb.1:
 ; ASSUME1024: ; ScratchSize: 1088
 
 
-define void @func_non_entry_block_static_alloca_align4(ptr addrspace(1) %out, i32 %arg.cond0, i32 %arg.cond1, i32 %in) {
+define void @func_non_entry_block_static_alloca_align4(ptr addrspace(1) %out, i32 %arg.cond0, i32 %arg.cond1, i32 %in) #2 {
 ; MUBUF-LABEL: func_non_entry_block_static_alloca_align4:
 ; MUBUF:       ; %bb.0: ; %entry
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; MUBUF-NEXT:    s_mov_b32 s7, s33
-; MUBUF-NEXT:    s_mov_b32 s33, s32
 ; MUBUF-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v2
+; MUBUF-NEXT:    s_mov_b32 s33, s32
 ; MUBUF-NEXT:    s_addk_i32 s32, 0x400
 ; MUBUF-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; MUBUF-NEXT:    s_cbranch_execz .LBB2_3
@@ -250,8 +250,8 @@ define void @func_non_entry_block_static_alloca_align4(ptr addrspace(1) %out, i3
 ; FLATSCR:       ; %bb.0: ; %entry
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; FLATSCR-NEXT:    s_mov_b32 s3, s33
-; FLATSCR-NEXT:    s_mov_b32 s33, s32
 ; FLATSCR-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v2
+; FLATSCR-NEXT:    s_mov_b32 s33, s32
 ; FLATSCR-NEXT:    s_add_i32 s32, s32, 16
 ; FLATSCR-NEXT:    s_and_saveexec_b64 s[0:1], vcc
 ; FLATSCR-NEXT:    s_cbranch_execz .LBB2_3
@@ -306,16 +306,16 @@ bb.2:
   ret void
 }
 
-define void @func_non_entry_block_static_alloca_align64(ptr addrspace(1) %out, i32 %arg.cond, i32 %in) {
+define void @func_non_entry_block_static_alloca_align64(ptr addrspace(1) %out, i32 %arg.cond, i32 %in) #2 {
 ; MUBUF-LABEL: func_non_entry_block_static_alloca_align64:
 ; MUBUF:       ; %bb.0: ; %entry
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; MUBUF-NEXT:    s_mov_b32 s7, s33
 ; MUBUF-NEXT:    s_add_i32 s33, s32, 0xfc0
 ; MUBUF-NEXT:    s_mov_b32 s8, s34
+; MUBUF-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v2
 ; MUBUF-NEXT:    s_and_b32 s33, s33, 0xfffff000
 ; MUBUF-NEXT:    s_mov_b32 s34, s32
-; MUBUF-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v2
 ; MUBUF-NEXT:    s_addk_i32 s32, 0x2000
 ; MUBUF-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; MUBUF-NEXT:    s_cbranch_execz .LBB3_2
@@ -350,9 +350,9 @@ define void @func_non_entry_block_static_alloca_align64(ptr addrspace(1) %out, i
 ; FLATSCR-NEXT:    s_mov_b32 s3, s33
 ; FLATSCR-NEXT:    s_add_i32 s33, s32, 63
 ; FLATSCR-NEXT:    s_mov_b32 s4, s34
+; FLATSCR-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v2
 ; FLATSCR-NEXT:    s_andn2_b32 s33, s33, 63
 ; FLATSCR-NEXT:    s_mov_b32 s34, s32
-; FLATSCR-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v2
 ; FLATSCR-NEXT:    s_addk_i32 s32, 0x80
 ; FLATSCR-NEXT:    s_and_saveexec_b64 s[0:1], vcc
 ; FLATSCR-NEXT:    s_cbranch_execz .LBB3_2
@@ -403,6 +403,7 @@ declare i32 @llvm.amdgcn.workitem.id.x() #0
 
 attributes #0 = { nounwind readnone speculatable }
 attributes #1 = { nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-cluster-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-cluster-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-cluster-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "uniform-work-group-size"="false" }
+attributes #2 = { nounwind }
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"amdhsa_code_object_version", i32 CODE_OBJECT_VERSION}

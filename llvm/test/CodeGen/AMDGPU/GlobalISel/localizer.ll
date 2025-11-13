@@ -4,7 +4,7 @@
 ; Test the localizer did something and we don't materialize all
 ; constants in SGPRs in the entry block.
 
-define amdgpu_kernel void @localize_constants(i1 %cond) {
+define amdgpu_kernel void @localize_constants(i1 %cond) #0 {
 ; GFX9-LABEL: localize_constants:
 ; GFX9:       ; %bb.0: ; %entry
 ; GFX9-NEXT:    s_load_dword s1, s[8:9], 0x0
@@ -91,7 +91,7 @@ bb2:
 @gv2 = addrspace(1) global i32 poison, align 4
 @gv3 = addrspace(1) global i32 poison, align 4
 
-define amdgpu_kernel void @localize_globals(i1 %cond) {
+define amdgpu_kernel void @localize_globals(i1 %cond) #0 {
 ; GFX9-LABEL: localize_globals:
 ; GFX9:       ; %bb.0: ; %entry
 ; GFX9-NEXT:    s_load_dword s1, s[8:9], 0x0
@@ -162,7 +162,7 @@ bb2:
 @static.gv2 = internal addrspace(1) global i32 poison, align 4
 @static.gv3 = internal addrspace(1) global i32 poison, align 4
 
-define void @localize_internal_globals(i1 %cond) {
+define void @localize_internal_globals(i1 %cond) #0 {
 ; GFX9-LABEL: localize_internal_globals:
 ; GFX9:       ; %bb.0: ; %entry
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -226,7 +226,7 @@ bb2:
 }
 
 ; This would crash from using the wrong insert point
-define void @sink_null_insert_pt(ptr addrspace(4) %arg0) {
+define void @sink_null_insert_pt(ptr addrspace(4) %arg0) #0 {
 ; GFX9-LABEL: sink_null_insert_pt:
 ; GFX9:       ; %bb.0: ; %entry
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -235,11 +235,11 @@ define void @sink_null_insert_pt(ptr addrspace(4) %arg0) {
 ; GFX9-NEXT:    s_or_saveexec_b64 s[18:19], -1
 ; GFX9-NEXT:    buffer_store_dword v40, off, s[0:3], s33 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_mov_b64 exec, s[18:19]
-; GFX9-NEXT:    v_writelane_b32 v40, s16, 2
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX9-NEXT:    global_load_dword v0, v[0:1], off glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_writelane_b32 v40, s16, 2
 ; GFX9-NEXT:    v_writelane_b32 v40, s30, 0
 ; GFX9-NEXT:    s_addk_i32 s32, 0x400
 ; GFX9-NEXT:    v_writelane_b32 v40, s31, 1
@@ -262,3 +262,5 @@ bb1:
   call void null()
   ret void
 }
+
+attributes #0 = { nounwind }

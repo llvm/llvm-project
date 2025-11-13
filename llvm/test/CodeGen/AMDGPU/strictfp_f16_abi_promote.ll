@@ -184,8 +184,8 @@ define void @outgoing_f16_arg(ptr %ptr) #0 {
 ; GFX7-NEXT:    s_or_saveexec_b64 s[18:19], -1
 ; GFX7-NEXT:    buffer_store_dword v40, off, s[0:3], s33 ; 4-byte Folded Spill
 ; GFX7-NEXT:    s_mov_b64 exec, s[18:19]
-; GFX7-NEXT:    v_writelane_b32 v40, s16, 2
 ; GFX7-NEXT:    flat_load_ushort v0, v[0:1]
+; GFX7-NEXT:    v_writelane_b32 v40, s16, 2
 ; GFX7-NEXT:    v_writelane_b32 v40, s30, 0
 ; GFX7-NEXT:    s_mov_b32 s17, f16_user@abs32@hi
 ; GFX7-NEXT:    s_mov_b32 s16, f16_user@abs32@lo
@@ -218,8 +218,8 @@ define void @outgoing_v2f16_arg(ptr %ptr) #0 {
 ; GFX7-NEXT:    s_or_saveexec_b64 s[18:19], -1
 ; GFX7-NEXT:    buffer_store_dword v40, off, s[0:3], s33 ; 4-byte Folded Spill
 ; GFX7-NEXT:    s_mov_b64 exec, s[18:19]
-; GFX7-NEXT:    v_writelane_b32 v40, s16, 2
 ; GFX7-NEXT:    flat_load_dword v1, v[0:1]
+; GFX7-NEXT:    v_writelane_b32 v40, s16, 2
 ; GFX7-NEXT:    v_writelane_b32 v40, s30, 0
 ; GFX7-NEXT:    s_mov_b32 s17, v2f16_user@abs32@hi
 ; GFX7-NEXT:    s_mov_b32 s16, v2f16_user@abs32@lo
@@ -555,4 +555,4 @@ declare <2 x half> @llvm.experimental.constrained.fptrunc.v2f16.v2f32(<2 x float
 declare <3 x half> @llvm.experimental.constrained.fptrunc.v3f16.v3f32(<3 x float>, metadata, metadata) #0
 declare <4 x half> @llvm.experimental.constrained.fptrunc.v4f16.v4f32(<4 x float>, metadata, metadata) #0
 
-attributes #0 = { strictfp }
+attributes #0 = { strictfp nounwind }

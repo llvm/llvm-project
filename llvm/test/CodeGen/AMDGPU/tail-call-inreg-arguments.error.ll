@@ -8,7 +8,7 @@ declare hidden void @void_func_i32_inreg(i32 inreg)
 ; ERR: error: <unknown>:0:0: in function tail_call_i32_inreg_divergent void (i32): illegal VGPR to SGPR copy
 ; ERR: error: <unknown>:0:0: in function indirect_tail_call_i32_inreg_divergent void (i32): illegal VGPR to SGPR copy
 
-define void @tail_call_i32_inreg_divergent(i32 %vgpr) {
+define void @tail_call_i32_inreg_divergent(i32 %vgpr) #0 {
 ; CHECK-LABEL: tail_call_i32_inreg_divergent:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -42,7 +42,7 @@ define void @tail_call_i32_inreg_divergent(i32 %vgpr) {
 
 @constant = external hidden addrspace(4) constant ptr
 
-define void @indirect_tail_call_i32_inreg_divergent(i32 %vgpr) {
+define void @indirect_tail_call_i32_inreg_divergent(i32 %vgpr) #0 {
 ; CHECK-LABEL: indirect_tail_call_i32_inreg_divergent:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -51,8 +51,8 @@ define void @indirect_tail_call_i32_inreg_divergent(i32 %vgpr) {
 ; CHECK-NEXT:    s_or_saveexec_b64 s[18:19], -1
 ; CHECK-NEXT:    buffer_store_dword v40, off, s[0:3], s33 ; 4-byte Folded Spill
 ; CHECK-NEXT:    s_mov_b64 exec, s[18:19]
-; CHECK-NEXT:    v_writelane_b32 v40, s16, 2
 ; CHECK-NEXT:    s_addk_i32 s32, 0x400
+; CHECK-NEXT:    v_writelane_b32 v40, s16, 2
 ; CHECK-NEXT:    s_getpc_b64 s[16:17]
 ; CHECK-NEXT:    s_add_u32 s16, s16, constant@rel32@lo+4
 ; CHECK-NEXT:    s_addc_u32 s17, s17, constant@rel32@hi+12
@@ -76,3 +76,5 @@ define void @indirect_tail_call_i32_inreg_divergent(i32 %vgpr) {
   tail call void %fptr(i32 inreg %vgpr)
   ret void
 }
+
+attributes #0 = { nounwind }

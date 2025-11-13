@@ -4,7 +4,7 @@
 
 declare void @wobble()
 
-define internal fastcc void @widget() {
+define internal fastcc void @widget() #0 {
 ; GFX90A-LABEL: widget:
 ; GFX90A:       ; %bb.0: ; %bb
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -13,8 +13,8 @@ define internal fastcc void @widget() {
 ; GFX90A-NEXT:    s_or_saveexec_b64 s[18:19], -1
 ; GFX90A-NEXT:    buffer_store_dword v40, off, s[0:3], s33 ; 4-byte Folded Spill
 ; GFX90A-NEXT:    s_mov_b64 exec, s[18:19]
-; GFX90A-NEXT:    v_writelane_b32 v40, s16, 2
 ; GFX90A-NEXT:    s_addk_i32 s32, 0x400
+; GFX90A-NEXT:    v_writelane_b32 v40, s16, 2
 ; GFX90A-NEXT:    s_getpc_b64 s[16:17]
 ; GFX90A-NEXT:    s_add_u32 s16, s16, wobble@gotpcrel32@lo+4
 ; GFX90A-NEXT:    s_addc_u32 s17, s17, wobble@gotpcrel32@hi+12
@@ -28,7 +28,7 @@ bb:
   unreachable
 }
 
-define amdgpu_kernel void @kernel(ptr addrspace(1) %arg1.global, i1 %tmp3.i.i, i32 %tmp5.i.i, i32 %tmp427.i, i1 %tmp438.i, double %tmp27.i, i1 %tmp48.i) {
+define amdgpu_kernel void @kernel(ptr addrspace(1) %arg1.global, i1 %tmp3.i.i, i32 %tmp5.i.i, i32 %tmp427.i, i1 %tmp438.i, double %tmp27.i, i1 %tmp48.i) #0 {
 ; GLOBALNESS1-LABEL: kernel:
 ; GLOBALNESS1:       ; %bb.0: ; %bb
 ; GLOBALNESS1-NEXT:    s_mov_b64 s[36:37], s[6:7]
@@ -761,3 +761,4 @@ bb73.i:                                           ; preds = %bb70.i
   br label %bb5.backedge
 }
 
+attributes #0 = { nounwind }
