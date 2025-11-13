@@ -627,9 +627,8 @@ RValue CIRGenFunction::emitLoadOfLValue(LValue lv, SourceLocation loc) {
                                                  lv.getVectorIdx()));
   }
 
-  if (lv.isExtVectorElt()) {
+  if (lv.isExtVectorElt())
     return emitLoadOfExtVectorElementLValue(lv);
-  }
 
   cgm.errorNYI(loc, "emitLoadOfLValue");
   return RValue::get(nullptr);
@@ -637,8 +636,7 @@ RValue CIRGenFunction::emitLoadOfLValue(LValue lv, SourceLocation loc) {
 
 int64_t CIRGenFunction::getAccessedFieldNo(unsigned int idx,
                                            const mlir::ArrayAttr elts) {
-  auto elt = mlir::dyn_cast<mlir::IntegerAttr>(elts[idx]);
-  assert(elt && "The indices should be integer attributes");
+  auto elt = mlir::cast<mlir::IntegerAttr>(elts[idx]);
   return elt.getInt();
 }
 
@@ -1186,11 +1184,7 @@ LValue CIRGenFunction::emitExtVectorElementExpr(const ExtVectorElementExpr *e) {
   e->getEncodedElementAccess(indices);
 
   if (base.isSimple()) {
-    SmallVector<int64_t> attrElts;
-    for (uint32_t i : indices) {
-      attrElts.push_back(static_cast<int64_t>(i));
-    }
-
+    SmallVector<int64_t> attrElts(indices.begin(), indices.end());
     mlir::ArrayAttr elts = builder.getI64ArrayAttr(attrElts);
     return LValue::makeExtVectorElt(base.getAddress(), elts, type,
                                     base.getBaseInfo());
