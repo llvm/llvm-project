@@ -729,7 +729,8 @@ class DebugCommunication(object):
         with open(file, "r") as f:
             for line in f:
                 if "-->" in line:
-                    command_dict = json.loads(line.split("--> ")[1])
+                    packet = line.split("--> ", maxsplit=1)[1]
+                    command_dict = json.loads(packet)
                     if verbosity > 0:
                         print("Sending:")
                         pprint.PrettyPrinter(indent=2).pprint(command_dict)
@@ -737,7 +738,8 @@ class DebugCommunication(object):
                     if command_dict["type"] == "request":
                         inflight[seq] = command_dict
                 elif "<--" in line:
-                    replay_response = json.loads(line.split("<-- ")[1])
+                    packet = line.split("<-- ", maxsplit=1)[1]
+                    replay_response = json.loads(packet)
                     print("Replay response:")
                     pprint.PrettyPrinter(indent=2).pprint(replay_response)
                     actual_response = self._recv_packet(
