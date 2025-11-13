@@ -297,6 +297,7 @@ void aix::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   // Add directory to library search path.
+  bool hasFOpenMP = false;
   Args.AddAllArgs(CmdArgs, options::OPT_L);
   if (!Args.hasArg(options::OPT_r)) {
     ToolChain.AddFilePathLibArgs(Args, CmdArgs);
@@ -309,9 +310,8 @@ void aix::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       AddRunTimeLibs(ToolChain, D, CmdArgs, Args);
 
       // Add OpenMP runtime if -fopenmp is specified.
-      const bool hasFOpenMP =
-          Args.hasFlag(options::OPT_fopenmp, options::OPT_fopenmp_EQ,
-                       options::OPT_fno_openmp, false);
+      hasFOpenMP = Args.hasFlag(options::OPT_fopenmp, options::OPT_fopenmp_EQ,
+                                options::OPT_fno_openmp, false);
       if (hasFOpenMP) {
         switch (ToolChain.getDriver().getOpenMPRuntime(Args)) {
         case Driver::OMPRT_OMP:
@@ -355,7 +355,9 @@ void aix::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     ToolChain.addFortranRuntimeLibraryPath(Args, CmdArgs);
     ToolChain.addFortranRuntimeLibs(Args, CmdArgs);
     CmdArgs.push_back("-lm");
-    CmdArgs.push_back("-lpthread");
+    // If the -fopenmp option is specified, no need to add it again.
+    if (!hasFOpenMP)
+      CmdArgs.push_back("-lpthreads");
   }
   const char *Exec = Args.MakeArgString(ToolChain.GetLinkerPath());
   C.addCommand(std::make_unique<Command>(JA, *this, ResponseFileSupport::None(),
