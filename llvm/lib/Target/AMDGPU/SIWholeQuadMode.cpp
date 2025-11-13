@@ -188,8 +188,9 @@ private:
 
   void markInstruction(MachineInstr &MI, char Flag,
                        std::vector<WorkItem> &Worklist);
-  void markDefs(const MachineInstr &UseMI, LiveRange &LR, Register Reg,
-                unsigned SubReg, char Flag, std::vector<WorkItem> &Worklist);
+  void markDefs(const MachineInstr &UseMI, LiveRange &LR,
+                VirtRegOrUnit VRegOrUnit, unsigned SubReg, char Flag,
+                std::vector<WorkItem> &Worklist);
   void markOperand(const MachineInstr &MI, const MachineOperand &Op, char Flag,
                    std::vector<WorkItem> &Worklist);
   void markInstructionUses(const MachineInstr &MI, char Flag,
@@ -318,8 +319,8 @@ void SIWholeQuadMode::markInstruction(MachineInstr &MI, char Flag,
 
 /// Mark all relevant definitions of register \p Reg in usage \p UseMI.
 void SIWholeQuadMode::markDefs(const MachineInstr &UseMI, LiveRange &LR,
-                               Register Reg, unsigned SubReg, char Flag,
-                               std::vector<WorkItem> &Worklist) {
+                               VirtRegOrUnit VRegOrUnit, unsigned SubReg,
+                               char Flag, std::vector<WorkItem> &Worklist) {
   LLVM_DEBUG(dbgs() << "markDefs " << PrintState(Flag) << ": " << UseMI);
 
   LiveQueryResult UseLRQ = LR.Query(LIS->getInstructionIndex(UseMI));
@@ -331,8 +332,9 @@ void SIWholeQuadMode::markDefs(const MachineInstr &UseMI, LiveRange &LR,
   // cover registers.
   const LaneBitmask UseLanes =
       SubReg ? TRI->getSubRegIndexLaneMask(SubReg)
-             : (Reg.isVirtual() ? MRI->getMaxLaneMaskForVReg(Reg)
-                                : LaneBitmask::getNone());
+             : (VRegOrUnit.isVirtualReg()
+                    ? MRI->getMaxLaneMaskForVReg(VRegOrUnit.asVirtualReg())
+                    : LaneBitmask::getNone());
 
   // Perform a depth-first iteration of the LiveRange graph marking defs.
   // Stop processing of a given branch when all use lanes have been defined.
@@ -382,11 +384,11 @@ void SIWholeQuadMode::markDefs(const MachineInstr &UseMI, LiveRange &LR,
       MachineInstr *MI = LIS->getInstructionFromIndex(Value->def);
       assert(MI && "Def has no defining instruction");
 
-      if (Reg.isVirtual()) {
+      if (VRegOrUnit.isVirtualReg()) {
         // Iterate over all operands to find relevant definitions
         bool HasDef = false;
         for (const MachineOperand &Op : MI->all_defs()) {
-          if (Op.getReg() != Reg)
+          if (Op.getReg() != VRegOrUnit.asVirtualReg())
             continue;
 
           // Compute lanes defined and overlap with use
@@ -453,7 +455,7 @@ void SIWholeQuadMode::markOperand(const MachineInstr &MI,
                     << " for " << MI);
   if (Reg.isVirtual()) {
     LiveRange &LR = LIS->getInterval(Reg);
-    markDefs(MI, LR, Reg, Op.getSubReg(), Flag, Worklist);
+    markDefs(MI, LR, VirtRegOrUnit(Reg), Op.getSubReg(), Flag, Worklist);
   } else {
     // Handle physical registers that we need to track; this is mostly relevant
     // for VCC, which can appear as the (implicit) input of a uniform branch,
@@ -462,7 +464,8 @@ void SIWholeQuadMode::markOperand(const MachineInstr &MI,
       LiveRange &LR = LIS->getRegUnit(Unit);
       const VNInfo *Value = LR.Query(LIS->getInstructionIndex(MI)).valueIn();
       if (Value)
-        markDefs(MI, LR, Unit, AMDGPU::NoSubRegister, Flag, Worklist);
+        markDefs(MI, LR, VirtRegOrUnit(Unit), AMDGPU::NoSubRegister, Flag,
+                 Worklist);
     }
   }
 }
