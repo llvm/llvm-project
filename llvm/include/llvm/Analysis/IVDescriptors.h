@@ -93,14 +93,15 @@ public:
 
   RecurrenceDescriptor(Value *Start, Instruction *Exit, StoreInst *Store,
                        RecurKind K, FastMathFlags FMF, Instruction *ExactFP,
-                       Type *RT, bool Signed, bool Ordered,
-                       SmallPtrSetImpl<Instruction *> &CI,
-                       unsigned MinWidthCastToRecurTy)
+                       Type *RT, bool Signed = false, bool Ordered = false,
+                       const SmallPtrSetImpl<Instruction *> *CI = nullptr,
+                       unsigned MinWidthCastToRecurTy = -1U)
       : IntermediateStore(Store), StartValue(Start), LoopExitInstr(Exit),
         Kind(K), FMF(FMF), ExactFPMathInst(ExactFP), RecurrenceType(RT),
         IsSigned(Signed), IsOrdered(Ordered),
         MinWidthCastToRecurrenceType(MinWidthCastToRecurTy) {
-    CastInsts.insert_range(CI);
+    if (CI)
+      CastInsts.insert_range(*CI);
   }
 
   /// This POD struct holds information about a potential recurrence operation.
