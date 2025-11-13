@@ -749,6 +749,13 @@ void __num_put<_CharT>::__widen_and_group_int(
     __op = __ob + (__np - __nb);
 }
 
+_LIBCPP_HIDE_FROM_ABI inline bool __isdigit(char __c) { return __c >= '0' && __c <= '9'; }
+
+_LIBCPP_HIDE_FROM_ABI inline bool __isxdigit(char __c) {
+  auto __lower = __c | 0x20;
+  return std::__isdigit(__c) || (__lower >= 'a' && __lower <= 'f');
+}
+
 template <class _CharT>
 void __num_put<_CharT>::__widen_and_group_float(
     char* __nb, char* __np, char* __ne, _CharT* __ob, _CharT*& __op, _CharT*& __oe, const locale& __loc) {
@@ -764,11 +771,11 @@ void __num_put<_CharT>::__widen_and_group_float(
     *__oe++ = __ct.widen(*__nf++);
     *__oe++ = __ct.widen(*__nf++);
     for (__ns = __nf; __ns < __ne; ++__ns)
-      if (!__locale::__isxdigit(*__ns, _LIBCPP_GET_C_LOCALE))
+      if (!std::__isxdigit(*__ns))
         break;
   } else {
     for (__ns = __nf; __ns < __ne; ++__ns)
-      if (!__locale::__isdigit(*__ns, _LIBCPP_GET_C_LOCALE))
+      if (!std::__isdigit(*__ns))
         break;
   }
   if (__grouping.empty()) {
