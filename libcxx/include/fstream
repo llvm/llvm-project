@@ -315,8 +315,14 @@ protected:
         traits_type::copy(__str, this->gptr(), __n);
         this->__gbump_ptrdiff(__n);
       }
-      if (__len - __n >= this->egptr() - this->eback())
-        return std::fread(__str + __n, sizeof(char_type), __len - __n, __file_);
+      const streamsize __remainder    = __len - __n;
+      const streamsize __buffer_space = this->egptr() - this->eback();
+
+      if (__remainder >= __buffer_space)
+        return std::fread(__str + __n, sizeof(char_type), __remainder, __file_) + __n;
+      else if (__remainder > 0)
+        return basic_streambuf<_CharT, _Traits>::xsgetn(__str + __n, __remainder) + __n;
+      return __n;
     }
     return basic_streambuf<_CharT, _Traits>::xsgetn(__str, __len);
   }
