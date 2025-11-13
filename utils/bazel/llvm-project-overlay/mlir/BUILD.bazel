@@ -8417,7 +8417,7 @@ cc_library(
 )
 
 cc_library(
-  name = "ArithToAPFloat",
+    name = "ArithToAPFloat",
     srcs = glob(["lib/Conversion/ArithToAPFloat/*.cpp"]),
     hdrs = glob(["include/mlir/Conversion/ArithToAPFloat/*.h"]),
     includes = ["include"],
@@ -8427,9 +8427,9 @@ cc_library(
         ":ArithUtils",
         ":ConversionPassIncGen",
         ":DialectUtils",
-        ":IR",
         ":FuncDialect",
         ":FuncUtils",
+        ":IR",
         ":Pass",
         ":TransformUtils",
     ],
