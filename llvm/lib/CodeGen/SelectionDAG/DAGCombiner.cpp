@@ -6219,25 +6219,6 @@ SDValue DAGCombiner::visitIMINMAX(SDNode *N) {
                                         SDLoc(N), VT, N0, N1))
     return SD;
 
-  if (TLI.isOperationLegalOrCustom(ISD::USUBO, VT) &&
-      !TLI.isOperationLegalOrCustom(ISD::UMIN, VT)) {
-    SDValue B;
-
-    // (umin (sub a, b), a) -> (usubo a, b); (select usubo.1, a, usubo.0)
-    if (sd_match(N0, m_Sub(m_Specific(N1), m_Value(B)))) {
-      SDVTList VTs = DAG.getVTList(VT, getSetCCResultType(VT));
-      SDValue USO = DAG.getNode(ISD::USUBO, DL, VTs, N1, B);
-      return DAG.getSelect(DL, VT, USO.getValue(1), N1, USO.getValue(0));
-    }
-
-    // (umin a, (sub a, b)) -> (usubo a, b); (select usubo.1, a, usubo.0)
-    if (sd_match(N1, m_Sub(m_Specific(N0), m_Value(B)))) {
-      SDVTList VTs = DAG.getVTList(VT, getSetCCResultType(VT));
-      SDValue USO = DAG.getNode(ISD::USUBO, DL, VTs, N0, B);
-      return DAG.getSelect(DL, VT, USO.getValue(1), N0, USO.getValue(0));
-    }
-  }
-
   // Simplify the operands using demanded-bits information.
   if (SimplifyDemandedBits(SDValue(N, 0)))
     return SDValue(N, 0);
