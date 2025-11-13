@@ -547,4 +547,24 @@ gpu.module @test_distribution {
     %broadcast = vector.broadcast %arg0 {layout_result_0 = #xegpu.layout<sg_layout = [4, 8, 1], sg_data = [1, 1, 1]>} : index to vector<4x1x1xindex>
     gpu.return
   }
+
+  // CHECK-LABEL: vector_mask_1D
+  gpu.func @vector_mask_1D() {
+    %cst8 = arith.constant 8 : index
+    // CHECK: vector.create_mask {{.*}} : vector<16xi1>
+    %create_mask = vector.create_mask %cst8 {layout_result_0 = #xegpu.layout<sg_layout = [2], sg_data = [16]>} : vector<16xi1>
+    // CHECK: vector.constant_mask [8] : vector<16xi1>
+    %constant_mask = vector.constant_mask [8] {layout_result_0 = #xegpu.layout<sg_layout = [2], sg_data = [16]>} : vector<32xi1>
+    gpu.return
+  }
+
+  // CHECK-LABEL: vector_mask_2D
+  gpu.func @vector_mask_2D() {
+    %cst16 = arith.constant 16 : index
+    // CHECK: vector.create_mask {{.*}}, {{.*}} : vector<32x32xi1>
+    %create_mask = vector.create_mask %cst16, %cst16 {layout_result_0 = #xegpu.layout<sg_layout = [8, 4], sg_data = [32, 32]>} : vector<256x128xi1>
+    // CHECK: vector.constant_mask [16, 16] : vector<32x32xi1>
+    %constant_mask = vector.constant_mask [16, 16] {layout_result_0 = #xegpu.layout<sg_layout = [8, 4], sg_data = [32, 32]>} : vector<256x128xi1>
+    gpu.return
+  }
 }

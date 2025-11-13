@@ -1283,6 +1283,57 @@ struct WgToSgVectorTransposeOp
   }
 };
 
+/// Pattern for lowering vector.create_mask and vector.constant_mask ops to
+/// subgroup level.
+template <typename MaskOpType>
+struct WgToSgVectorMaskOp : public OpConversionPattern<MaskOpType> {
+  using OpConversionPattern<MaskOpType>::OpConversionPattern;
+
+  LogicalResult matchAndRewrite(
+      MaskOpType op,
+      typename OpConversionPattern<MaskOpType>::OneToNOpAdaptor adaptor,
+      ConversionPatternRewriter &rewriter) const override {
+    VectorType resultType = op.getResult().getType();
+    ArrayRef<int64_t> wgShape = resultType.getShape();
+
+    xegpu::DistributeLayoutAttr layout =
+        xegpu::getDistributeLayoutAttr(op.getResult());
+    if (!layout || !layout.isForWorkgroup())
+      return failure();
+
+    SmallVector<int64_t> sgShape;
+    int count;
+    std::tie(sgShape, count) = getSgShapeAndCount(wgShape, layout);
+    VectorType newResultType =
+        VectorType::get(sgShape, resultType.getElementType());
+
+    SmallVector<Value> newMaskOps;
+    for (int i = 0; i < count; ++i) {
+      Value newMaskOp;
+      if constexpr (std::is_same_v<MaskOpType, vector::CreateMaskOp>) {
+        newMaskOp = vector::CreateMaskOp::create(
+            rewriter, op.getLoc(), newResultType, op.getOperands());
+      } else if constexpr (std::is_same_v<MaskOpType, vector::ConstantMaskOp>) {
+        newMaskOp = vector::ConstantMaskOp::create(
+            rewriter, op.getLoc(), newResultType, op.getMaskDimSizes());
+      } else {
+        return rewriter.notifyMatchFailure(op,
+                                           "Unsupported mask operation type");
+      }
+      xegpu::setDistributeLayoutAttr(cast<OpResult>(newMaskOp),
+                                     layout.dropSgLayoutAndData());
+
+      newMaskOps.push_back(newMaskOp);
+    }
+
+    rewriter.replaceOpWithMultiple(op, {newMaskOps});
+    return success();
+  }
+};
+
+using WgToSgVectorCreateMaskOp = WgToSgVectorMaskOp<vector::CreateMaskOp>;
+using WgToSgVectorConstantMaskOp = WgToSgVectorMaskOp<vector::ConstantMaskOp>;
+
 } // namespace
 
 namespace mlir {
@@ -1297,7 +1348,8 @@ void populateXeGPUWgToSgDistributePatterns(RewritePatternSet &patterns) {
            WgToSgArithConstantOp, WgToSgLoadGatherOpWithOffset,
            WgToSgStoreScatterOpWithOffset, WgToSgLoadMatrixOp,
            WgToSgStoreMatrixOp, WgToSgVectorStepOp, WgToSgVectorShapeCastOp,
-           WgToSgMultiDimReductionOp, WgToSgVectorTransposeOp>(
+           WgToSgMultiDimReductionOp, WgToSgVectorTransposeOp,
+           WgToSgVectorConstantMaskOp, WgToSgVectorCreateMaskOp>(
           patterns.getContext());
 }
 } // namespace xegpu
@@ -1427,7 +1479,8 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
 
   target.addDynamicallyLegalOp<vector::ShapeCastOp, vector::StepOp,
                                vector::TransposeOp, vector::BroadcastOp,
-                               vector::MultiDimReductionOp>(
+                               vector::MultiDimReductionOp,
+                               vector::ConstantMaskOp, vector::CreateMaskOp>(
       [=](Operation *op) -> bool {
         // Check for either a SliceAttr or LayoutAttr on the result.
         auto layout = xegpu::getDistributeLayoutAttr(op->getResult(0));
