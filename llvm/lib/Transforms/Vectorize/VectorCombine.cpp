@@ -334,6 +334,7 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
   // We assume this operation has no cost in codegen if there was no offset.
   // Note that we could use freeze to avoid poison problems, but then we might
   // still need a shuffle to change the vector size.
+  auto *Ty = cast<FixedVectorType>(I.getType());
   SmallVector<int> Mask;
   assert(OffsetEltIndex + VectorRange < MinVecNumElts &&
          "Address offset too big");
@@ -341,18 +342,21 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
     Mask.assign(MinVecNumElts, PoisonMaskElem);
     std::iota(Mask.begin(), Mask.begin() + VectorRange, OffsetEltIndex);
   } else {
-    auto *Ty = cast<FixedVectorType>(I.getType());
     unsigned OutputNumElts = Ty->getNumElements();
     Mask.assign(OutputNumElts, PoisonMaskElem);
     Mask[0] = OffsetEltIndex;
   }
 
   if (OffsetEltIndex)
-    NewCost += TTI.getShuffleCost(TTI::SK_PermuteSingleSrc, Ty, MinVecTy, Mask,
-                                  CostKind);
+    if (NeedCast)
+      NewCost += TTI.getShuffleCost(TTI::SK_PermuteSingleSrc, MinVecTy,
+                                    MinVecTy, Mask, CostKind);
+    else
+      NewCost += TTI.getShuffleCost(TTI::SK_PermuteSingleSrc, Ty, MinVecTy,
+                                    Mask, CostKind);
 
   if (NeedCast)
-    NewCost += TTI.getCastInstrCost(Instruction::BitCast, I.getType(), MinVecTy,
+    NewCost += TTI.getCastInstrCost(Instruction::BitCast, Ty, MinVecTy,
                                     TargetTransformInfo::CastContextHint::None,
                                     CostKind);
 
