@@ -17,8 +17,8 @@ define dso_local void @alias_mask(ptr noalias %a, ptr %b, ptr %c, i64 %n) {
 ; CHECK-NEXT:    [[TMP19:%.*]] = mul nuw i64 [[TMP5]], 16
 ; CHECK-NEXT:    [[TMP22:%.*]] = sub i64 [[C1]], [[B2]]
 ; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP22]], [[TMP19]]
-; CHECK-NEXT:    [[TMP27:%.*]] = inttoptr i64 [[B2]] to ptr
 ; CHECK-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[C3]] to ptr
+; CHECK-NEXT:    [[TMP27:%.*]] = inttoptr i64 [[B2]] to ptr
 ; CHECK-NEXT:    [[ALIAS_LANE_MASK:%.*]] = call <vscale x 16 x i1> @llvm.loop.dependence.war.mask.nxv16i1(ptr [[TMP27]], ptr [[TMP4]], i64 1)
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext <vscale x 16 x i1> [[ALIAS_LANE_MASK]] to <vscale x 16 x i8>
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.vector.reduce.add.nxv16i8(<vscale x 16 x i8> [[TMP0]])
@@ -89,8 +89,8 @@ define i32 @alias_mask_read_after_write(ptr noalias %a, ptr %b, ptr %c, i64 %n) 
 ; CHECK-NEXT:    [[TMP22:%.*]] = mul i64 [[TMP20]], 4
 ; CHECK-NEXT:    [[TMP29:%.*]] = sub i64 [[B1]], [[C2]]
 ; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP29]], [[TMP22]]
-; CHECK-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[C2]] to ptr
 ; CHECK-NEXT:    [[TMP5:%.*]] = inttoptr i64 [[B3]] to ptr
+; CHECK-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[C2]] to ptr
 ; CHECK-NEXT:    [[ALIAS_LANE_MASK:%.*]] = call <vscale x 4 x i1> @llvm.loop.dependence.raw.mask.nxv4i1(ptr [[TMP4]], ptr [[TMP5]], i64 4)
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext <vscale x 4 x i1> [[ALIAS_LANE_MASK]] to <vscale x 4 x i8>
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.vector.reduce.add.nxv4i8(<vscale x 4 x i8> [[TMP0]])
@@ -171,11 +171,11 @@ define dso_local void @alias_mask_multiple(ptr %a, ptr %b, ptr %c, i64 %n) {
 ; CHECK-NEXT:    [[TMP34:%.*]] = sub i64 [[C1]], [[B3]]
 ; CHECK-NEXT:    [[DIFF_CHECK4:%.*]] = icmp ult i64 [[TMP34]], [[TMP32]]
 ; CHECK-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[DIFF_CHECK]], [[DIFF_CHECK4]]
-; CHECK-NEXT:    [[TMP35:%.*]] = inttoptr i64 [[A6]] to ptr
 ; CHECK-NEXT:    [[TMP5:%.*]] = inttoptr i64 [[C5]] to ptr
+; CHECK-NEXT:    [[TMP35:%.*]] = inttoptr i64 [[A6]] to ptr
 ; CHECK-NEXT:    [[ALIAS_LANE_MASK:%.*]] = call <vscale x 16 x i1> @llvm.loop.dependence.war.mask.nxv16i1(ptr [[TMP35]], ptr [[TMP5]], i64 1)
-; CHECK-NEXT:    [[TMP6:%.*]] = inttoptr i64 [[B3]] to ptr
 ; CHECK-NEXT:    [[TMP36:%.*]] = inttoptr i64 [[C5]] to ptr
+; CHECK-NEXT:    [[TMP6:%.*]] = inttoptr i64 [[B3]] to ptr
 ; CHECK-NEXT:    [[ALIAS_LANE_MASK4:%.*]] = call <vscale x 16 x i1> @llvm.loop.dependence.war.mask.nxv16i1(ptr [[TMP6]], ptr [[TMP36]], i64 1)
 ; CHECK-NEXT:    [[TMP0:%.*]] = and <vscale x 16 x i1> [[ALIAS_LANE_MASK]], [[ALIAS_LANE_MASK4]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext <vscale x 16 x i1> [[TMP0]] to <vscale x 16 x i8>
@@ -254,11 +254,11 @@ define i32 @alias_mask_multiple_read_after_write(ptr %a, ptr %b, ptr %c, i64 %n)
 ; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[B3]], [[C1]]
 ; CHECK-NEXT:    [[DIFF_CHECK4:%.*]] = icmp ult i64 [[TMP5]], [[TMP37]]
 ; CHECK-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[DIFF_CHECK]], [[DIFF_CHECK4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = inttoptr i64 [[A6]] to ptr
 ; CHECK-NEXT:    [[TMP38:%.*]] = inttoptr i64 [[C5]] to ptr
+; CHECK-NEXT:    [[TMP6:%.*]] = inttoptr i64 [[A6]] to ptr
 ; CHECK-NEXT:    [[ALIAS_LANE_MASK:%.*]] = call <vscale x 4 x i1> @llvm.loop.dependence.war.mask.nxv4i1(ptr [[TMP6]], ptr [[TMP38]], i64 4)
-; CHECK-NEXT:    [[TMP39:%.*]] = inttoptr i64 [[C5]] to ptr
 ; CHECK-NEXT:    [[TMP40:%.*]] = inttoptr i64 [[B7]] to ptr
+; CHECK-NEXT:    [[TMP39:%.*]] = inttoptr i64 [[C5]] to ptr
 ; CHECK-NEXT:    [[ALIAS_LANE_MASK4:%.*]] = call <vscale x 4 x i1> @llvm.loop.dependence.raw.mask.nxv4i1(ptr [[TMP39]], ptr [[TMP40]], i64 4)
 ; CHECK-NEXT:    [[TMP0:%.*]] = and <vscale x 4 x i1> [[ALIAS_LANE_MASK]], [[ALIAS_LANE_MASK4]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext <vscale x 4 x i1> [[TMP0]] to <vscale x 4 x i8>

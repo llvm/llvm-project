@@ -26,8 +26,8 @@ define void @multiple_exits_unique_exit_block(ptr %A, ptr %B, i32 %N) #0 {
 ; CHECK-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 8
 ; CHECK-NEXT:    [[TMP6:%.*]] = sub i64 [[A1]], [[B1]]
 ; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP6]], [[TMP5]]
-; CHECK-NEXT:    [[TMP14:%.*]] = inttoptr i64 [[B1]] to ptr
 ; CHECK-NEXT:    [[TMP15:%.*]] = inttoptr i64 [[A2]] to ptr
+; CHECK-NEXT:    [[TMP14:%.*]] = inttoptr i64 [[B1]] to ptr
 ; CHECK-NEXT:    [[ALIAS_LANE_MASK:%.*]] = call <vscale x 4 x i1> @llvm.loop.dependence.war.mask.nxv4i1(ptr [[TMP14]], ptr [[TMP15]], i64 4)
 ; CHECK-NEXT:    [[TMP16:%.*]] = zext <vscale x 4 x i1> [[ALIAS_LANE_MASK]] to <vscale x 4 x i8>
 ; CHECK-NEXT:    [[TMP17:%.*]] = call i8 @llvm.vector.reduce.add.nxv4i8(<vscale x 4 x i8> [[TMP16]])
@@ -105,8 +105,8 @@ define i32 @multiple_exits_multiple_exit_blocks(ptr %A, ptr %B, i32 %N) #0 {
 ; CHECK-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 8
 ; CHECK-NEXT:    [[TMP6:%.*]] = sub i64 [[A1]], [[B1]]
 ; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP6]], [[TMP5]]
-; CHECK-NEXT:    [[TMP14:%.*]] = inttoptr i64 [[B1]] to ptr
 ; CHECK-NEXT:    [[TMP15:%.*]] = inttoptr i64 [[A2]] to ptr
+; CHECK-NEXT:    [[TMP14:%.*]] = inttoptr i64 [[B1]] to ptr
 ; CHECK-NEXT:    [[ALIAS_LANE_MASK:%.*]] = call <vscale x 4 x i1> @llvm.loop.dependence.war.mask.nxv4i1(ptr [[TMP14]], ptr [[TMP15]], i64 4)
 ; CHECK-NEXT:    [[TMP16:%.*]] = zext <vscale x 4 x i1> [[ALIAS_LANE_MASK]] to <vscale x 4 x i8>
 ; CHECK-NEXT:    [[TMP17:%.*]] = call i8 @llvm.vector.reduce.add.nxv4i8(<vscale x 4 x i8> [[TMP16]])

@@ -2385,9 +2385,8 @@ void VPlanTransforms::optimize(VPlan &Plan) {
 //   %Negated = Not %ALM
 //   branch-on-cond %Negated
 //
-static VPValue *addVPLaneMaskPhiAndUpdateExitBranch(
-    VPlan &Plan, bool DataAndControlFlowWithoutRuntimeCheck,
-    PredicatedScalarEvolution &PSE, ArrayRef<PointerDiffInfo> RTChecks) {
+static VPSingleDefRecipe *addVPLaneMaskPhiAndUpdateExitBranch(
+    VPlan &Plan, bool DataAndControlFlowWithoutRuntimeCheck) {
   VPRegionBlock *TopRegion = Plan.getVectorLoopRegion();
   VPBasicBlock *EB = TopRegion->getExitingBasicBlock();
   auto *CanonicalIVPHI = TopRegion->getCanonicalIV();
@@ -2397,12 +2396,8 @@ static VPValue *addVPLaneMaskPhiAndUpdateExitBranch(
       cast<VPInstruction>(CanonicalIVPHI->getBackedgeValue());
   // TODO: Check if dropping the flags is needed if
   // !DataAndControlFlowWithoutRuntimeCheck.
-  VPValue *IncVal = CanonicalIVIncrement->getOperand(1);
-  assert(IncVal != CanonicalIVPHI && "Unexpected operand order");
-
   CanonicalIVIncrement->dropPoisonGeneratingFlags();
   DebugLoc DL = CanonicalIVIncrement->getDebugLoc();
-
   // We can't use StartV directly in the ActiveLaneMask VPInstruction, since
   // we have to take unrolling into account. Each part needs to start at
   //   Part * VF
@@ -2434,16 +2429,15 @@ static VPValue *addVPLaneMaskPhiAndUpdateExitBranch(
   // Create the active lane mask instruction in the VPlan preheader.
   VPValue *ALMMultiplier =
       Plan.getConstantInt(TopRegion->getCanonicalIVType(), 1);
-  auto *Mask = Builder.createNaryOp(VPInstruction::ActiveLaneMask,
-                                    {EntryIncrement, TC, ALMMultiplier}, DL,
-                                    "active.lane.mask.entry");
+  auto *EntryALM = Builder.createNaryOp(VPInstruction::ActiveLaneMask,
+                                        {EntryIncrement, TC, ALMMultiplier}, DL,
+                                        "active.lane.mask.entry");
 
   // Now create the ActiveLaneMaskPhi recipe in the main loop using the
   // preheader ActiveLaneMask instruction.
   auto *LaneMaskPhi =
-      new VPActiveLaneMaskPHIRecipe(Mask, DebugLoc::getUnknown());
+      new VPActiveLaneMaskPHIRecipe(EntryALM, DebugLoc::getUnknown());
   LaneMaskPhi->insertAfter(CanonicalIVPHI);
-  VPValue *LaneMask = LaneMaskPhi;
 
   // Create the active lane mask for the next iteration of the loop before the
   // original terminator.
@@ -2462,7 +2456,7 @@ static VPValue *addVPLaneMaskPhiAndUpdateExitBranch(
   auto *NotMask = Builder.createNot(ALM, DL);
   Builder.createNaryOp(VPInstruction::BranchOnCond, {NotMask}, DL);
   OriginalTerminator->eraseFromParent();
-  return LaneMask;
+  return LaneMaskPhi;
 }
 
 /// Collect the header mask with the pattern:
@@ -2513,8 +2507,7 @@ static VPSingleDefRecipe *findHeaderMask(VPlan &Plan) {
 
 void VPlanTransforms::addActiveLaneMask(
     VPlan &Plan, bool UseActiveLaneMaskForControlFlow,
-    bool DataAndControlFlowWithoutRuntimeCheck, PredicatedScalarEvolution &PSE,
-    ArrayRef<PointerDiffInfo> RTChecks) {
+    bool DataAndControlFlowWithoutRuntimeCheck) {
 
   assert((!DataAndControlFlowWithoutRuntimeCheck ||
           UseActiveLaneMaskForControlFlow) &&
@@ -2529,10 +2522,10 @@ void VPlanTransforms::addActiveLaneMask(
   VPSingleDefRecipe *HeaderMask = findHeaderMask(Plan);
   auto *WideCanonicalIV =
       cast<VPWidenCanonicalIVRecipe>(*FoundWidenCanonicalIVUser);
-  VPValue *LaneMask;
+  VPSingleDefRecipe *LaneMask;
   if (UseActiveLaneMaskForControlFlow) {
     LaneMask = addVPLaneMaskPhiAndUpdateExitBranch(
-        Plan, DataAndControlFlowWithoutRuntimeCheck, PSE, RTChecks);
+        Plan, DataAndControlFlowWithoutRuntimeCheck);
   } else {
     VPBuilder B = VPBuilder::getToInsertAfter(WideCanonicalIV);
     VPValue *ALMMultiplier = Plan.getOrAddLiveIn(

@@ -211,8 +211,8 @@ define void @interleave_single_load_store(ptr %src, ptr %dst, i64 %N, i8 %a, i8 
 ; INTERLEAVE-4-SVE:       vector.memcheck:
 ; INTERLEAVE-4-SVE-NEXT:    [[TMP0:%.*]] = sub i64 [[DST1]], [[SRC2]]
 ; INTERLEAVE-4-SVE-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP0]], 64
-; INTERLEAVE-4-SVE-NEXT:    [[TMP1:%.*]] = inttoptr i64 [[SRC2]] to ptr
 ; INTERLEAVE-4-SVE-NEXT:    [[TMP2:%.*]] = inttoptr i64 [[DST3]] to ptr
+; INTERLEAVE-4-SVE-NEXT:    [[TMP1:%.*]] = inttoptr i64 [[SRC2]] to ptr
 ; INTERLEAVE-4-SVE-NEXT:    [[ALIAS_LANE_MASK:%.*]] = call <16 x i1> @llvm.loop.dependence.war.mask.v16i1(ptr [[TMP1]], ptr [[TMP2]], i64 1)
 ; INTERLEAVE-4-SVE-NEXT:    [[TMP3:%.*]] = zext <16 x i1> [[ALIAS_LANE_MASK]] to <16 x i8>
 ; INTERLEAVE-4-SVE-NEXT:    [[TMP4:%.*]] = call i8 @llvm.vector.reduce.add.v16i8(<16 x i8> [[TMP3]])

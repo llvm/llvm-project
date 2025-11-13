@@ -1073,6 +1073,8 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
       return LegalCost;
     }
     break;
+  default:
+    break;
   }
   return BaseT::getIntrinsicInstrCost(ICA, CostKind);
 }

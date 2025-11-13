@@ -506,11 +506,7 @@ public:
   /// Build VPlans for the specified \p UserVF and \p UserIC if they are
   /// non-zero or all applicable candidate VFs otherwise. If vectorization and
   /// interleaving should be avoided up-front, no plans are generated.
-  /// DiffChecks is a list of pointer pairs that should be checked for aliasing,
-  /// combining the resulting predicate with an active lane mask if one is in
-  /// use.
-  void plan(ElementCount UserVF, unsigned UserIC,
-            std::optional<ArrayRef<PointerDiffInfo>> DiffChecks);
+  void plan(ElementCount UserVF, unsigned UserIC);
 
   /// Use the VPlan-native path to plan how to best vectorize, return the best
   /// VF and its cost.

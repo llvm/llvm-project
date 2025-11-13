@@ -18,10 +18,12 @@ define dso_local void @alias_mask(ptr noalias %a, ptr %b, ptr %c, i32 %n) {
 ; CHECK-NEXT: ir-bb<vector.memcheck>:
 ; CHECK-NEXT:   IR   %0 = sub i64 %c1, %b2
 ; CHECK-NEXT:   IR   %diff.check = icmp ult i64 %0, 4
-; CHECK-NEXT:   EMIT vp<[[ALIAS_MASK:%.+]]> = ALIAS-LANE-MASK ir<%b2>, ir<%c3> (write-after-read)
+; CHECK-NEXT:   EMIT-SCALAR vp<[[PTRC:%.+]]> = inttoptr ir<%c3> to ptr
+; CHECK-NEXT:   EMIT-SCALAR vp<[[PTRB:%.+]]> = inttoptr ir<%b2> to ptr
+; CHECK-NEXT:   WIDEN-INTRINSIC vp<[[ALIAS_MASK:%.+]]> = call llvm.loop.dependence.war.mask(vp<[[PTRB]]>, vp<[[PTRC]]>, ir<1>)
 ; CHECK-NEXT:   EMIT vp<[[POPCOUNT:%.+]]> = popcount vp<[[ALIAS_MASK]]>
-; CHECK-NEXT:   EMIT vp<%4> = icmp eq vp<[[POPCOUNT]]>, ir<0>
-; CHECK-NEXT:   EMIT branch-on-cond vp<%4>
+; CHECK-NEXT:   EMIT vp<[[COND:%.+]]> = icmp eq vp<[[POPCOUNT]]>, ir<0>
+; CHECK-NEXT:   EMIT branch-on-cond vp<[[COND]]>
 ; CHECK-NEXT: Successor(s): ir-bb<scalar.ph>, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
@@ -35,14 +37,14 @@ define dso_local void @alias_mask(ptr noalias %a, ptr %b, ptr %c, i32 %n) {
 ; CHECK-NEXT:   EMIT vp<[[MASK:%.+]]> = and vp<[[ACTIVE_LANE_MASK]]>, vp<[[ALIAS_MASK]]>
 ; CHECK-NEXT:   WIDEN ir<%1> = load ir<%arrayidx>, vp<[[MASK]]>
 ; CHECK-NEXT:   CLONE ir<%arrayidx2> = getelementptr inbounds ir<%b>, vp<%index>
-; CHECK-NEXT:   WIDEN ir<[[ALIAS_MASK]]> = load ir<%arrayidx2>, vp<[[MASK]]>
-; CHECK-NEXT:   WIDEN ir<%add> = add ir<[[ALIAS_MASK]]>, ir<%1>
+; CHECK-NEXT:   WIDEN ir<%2> = load ir<%arrayidx2>, vp<[[MASK]]>
+; CHECK-NEXT:   WIDEN ir<%add> = add ir<%2>, ir<%1>
 ; CHECK-NEXT:   CLONE ir<%arrayidx6> = getelementptr inbounds ir<%c>, vp<%index>
 ; CHECK-NEXT:   WIDEN store ir<%arrayidx6>, ir<%add>, vp<[[MASK]]>
 ; CHECK-NEXT:   EMIT vp<%index.next> = add vp<%index>, vp<[[POPCOUNT]]>
 ; CHECK-NEXT:   EMIT vp<%active.lane.mask.next> = active lane mask vp<%index.next>, ir<%wide.trip.count>, ir<1>
-; CHECK-NEXT:   EMIT vp<%8> = not vp<%active.lane.mask.next>
-; CHECK-NEXT:   EMIT branch-on-cond vp<%8>
+; CHECK-NEXT:   EMIT vp<%10> = not vp<%active.lane.mask.next>
+; CHECK-NEXT:   EMIT branch-on-cond vp<%10>
 ; CHECK-NEXT: Successor(s): middle.block, vector.body
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.block:

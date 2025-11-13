@@ -4345,49 +4345,6 @@ void VPWidenPointerInductionRecipe::print(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
-void VPAliasLaneMaskRecipe::execute(VPTransformState &State) {
-  IRBuilderBase Builder = State.Builder;
-  Value *SinkValue = State.get(getSinkValue(), true);
-  Value *SourceValue = State.get(getSourceValue(), true);
-
-  unsigned IntrinsicID = WriteAfterRead ? Intrinsic::loop_dependence_war_mask
-                                        : Intrinsic::loop_dependence_raw_mask;
-  Value *SourceAsPtr = Builder.CreateCast(Instruction::IntToPtr, SourceValue,
-                                          Builder.getPtrTy());
-  Value *SinkAsPtr =
-      Builder.CreateCast(Instruction::IntToPtr, SinkValue, Builder.getPtrTy());
-  Value *AliasMask = Builder.CreateIntrinsic(
-      IntrinsicID, {VectorType::get(Builder.getInt1Ty(), State.VF)},
-      {SourceAsPtr, SinkAsPtr, Builder.getInt64(getAccessedElementSize())},
-      nullptr, "alias.lane.mask");
-  State.set(this, AliasMask, /*IsScalar=*/false);
-}
-
-InstructionCost VPAliasLaneMaskRecipe::computeCost(ElementCount VF,
-                                                   VPCostContext &Ctx) const {
-  Type *ArgTy = Ctx.Types.inferScalarType(getOperand(0));
-  Type *RetTy = toVectorTy(Type::getInt1Ty(Ctx.LLVMCtx), VF);
-  IntrinsicCostAttributes Attrs(isWriteAfterRead()
-                                    ? Intrinsic::loop_dependence_war_mask
-                                    : Intrinsic::loop_dependence_raw_mask,
-                                RetTy, {ArgTy, ArgTy});
-  return Ctx.TTI.getIntrinsicInstrCost(Attrs, Ctx.CostKind);
-}
-
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-void VPAliasLaneMaskRecipe::print(raw_ostream &O, const Twine &Indent,
-                                  VPSlotTracker &SlotTracker) const {
-  O << Indent << "EMIT ";
-  getVPSingleValue()->printAsOperand(O, SlotTracker);
-  O << " = ALIAS-LANE-MASK ";
-  getSourceValue()->printAsOperand(O, SlotTracker);
-  O << ", ";
-  getSinkValue()->printAsOperand(O, SlotTracker);
-  O << " (" << (WriteAfterRead ? "write-after-read" : "read-after-write")
-    << ")";
-}
-#endif
-
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPExpandSCEVRecipe::print(raw_ostream &O, const Twine &Indent,
                                VPSlotTracker &SlotTracker) const {
