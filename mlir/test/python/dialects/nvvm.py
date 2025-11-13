@@ -92,6 +92,7 @@ def test_inline_ptx():
         arith.addi(c, d)
         arith.addf(wo0, wo1)
 
+
 @constructAndPrintInModule
 def test_barriers():
     i32 = T.i32()
