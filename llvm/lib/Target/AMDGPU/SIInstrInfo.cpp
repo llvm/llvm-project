@@ -10793,14 +10793,9 @@ bool SIInstrInfo::invertSCCUse(MachineInstr *SCCDef) const {
     }
   }
 
-  const MachineRegisterInfo &MRI = SCCDef->getMF()->getRegInfo();
   // If SCC is still live, verify that it is not live past the end of this
   // block.
-  if (!SCCIsDead && MRI.tracksLiveness())
-    SCCIsDead = MBB->computeRegisterLiveness(&RI, AMDGPU::SCC, MBB->end(), 0) ==
-                MachineBasicBlock::LQR_Dead;
-
-  if (!SCCIsDead)
+  if (!SCCIsDead && MBB->isLiveOut(AMDGPU::SCC))
     return false;
 
   // Invert uses
