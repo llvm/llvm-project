@@ -2168,6 +2168,14 @@ void AsmPrinter::emitFunctionBody() {
     // If the block ends with a call, we may need to emit a prefetch target
     // at the end.
     EmitPrefetchTargetSymbolIfNeeded();
+    if (PrefetchTargetIt != PrefetchTargets.end()) {
+      MachineOptimizationRemarkMissed R(
+          "insert-code-prefetch", "MissingPrefetchTarget",
+          MF->getFunction().getSubprogram(), &MBB);
+      R << "failed to map "
+        << ore::NV("NumMissedTargets", PrefetchTargets.end() - PrefetchTargetIt)
+        << " prefetch targets";
+    }
 
     // We must emit temporary symbol for the end of this basic block, if either
     // we have BBLabels enabled or if this basic blocks marks the end of a

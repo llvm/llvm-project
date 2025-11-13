@@ -93,7 +93,7 @@ uint64_t BasicBlockSectionsProfileReader::getEdgeCount(
   return EdgeIt->second;
 }
 
-SmallVector<BBPosition>
+SmallVector<SubblockID>
 BasicBlockSectionsProfileReader::getPrefetchTargetsForFunction(
     StringRef FuncName) const {
   return ProgramPathAndClusterInfo.lookup(getAliasName(FuncName))
@@ -332,7 +332,7 @@ Error BasicBlockSectionsProfileReader::ReadV1Profile() {
         return createProfileParseError(Twine("unsigned integer expected: '") +
                                        PrefetchTargetStr[1]);
       FI->second.PrefetchTargets.push_back(
-          BBPosition{*TargetBBID, static_cast<unsigned>(TargetCallsiteIndex)});
+          SubblockID{*TargetBBID, static_cast<unsigned>(TargetCallsiteIndex)});
       continue;
     }
     default:
@@ -541,7 +541,7 @@ uint64_t BasicBlockSectionsProfileReaderWrapperPass::getEdgeCount(
   return BBSPR.getEdgeCount(FuncName, SrcBBID, SinkBBID);
 }
 
-SmallVector<BBPosition>
+SmallVector<SubblockID>
 BasicBlockSectionsProfileReaderWrapperPass::getPrefetchTargetsForFunction(
     StringRef FuncName) const {
   return BBSPR.getPrefetchTargetsForFunction(FuncName);

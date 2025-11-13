@@ -70,12 +70,12 @@ bool InsertCodePrefetch::runOnMachineFunction(MachineFunction &MF) {
     return false;
   // Set each block's prefetch targets so AsmPrinter can emit a special symbol
   // there.
-  SmallVector<BBPosition> PrefetchTargets =
+  SmallVector<SubblockID> PrefetchTargets =
       getAnalysis<BasicBlockSectionsProfileReaderWrapperPass>()
           .getPrefetchTargetsForFunction(MF.getName());
   DenseMap<UniqueBBID, SmallVector<unsigned>> PrefetchTargetsByBBID;
   for (const auto &Target : PrefetchTargets)
-    PrefetchTargetsByBBID[Target.BBID].push_back(Target.CallsiteIndex);
+    PrefetchTargetsByBBID[Target.BBID].push_back(Target.SubblockIndex);
   for (auto &MBB : MF) {
     auto R = PrefetchTargetsByBBID.find(*MBB.getBBID());
     if (R == PrefetchTargetsByBBID.end())
