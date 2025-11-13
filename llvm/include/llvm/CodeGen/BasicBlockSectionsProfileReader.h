@@ -47,12 +47,6 @@ struct BBPosition {
   unsigned CallsiteIndex;
 };
 
-struct PrefetchHint {
-  BBPosition SitePosition;
-  StringRef TargetFunctionName;
-  BBPosition TargetPosition;
-};
-
 // This represents the raw input profile for one function.
 struct FunctionPathAndClusterInfo {
   // BB Cluster information specified by `UniqueBBID`s.
@@ -61,7 +55,6 @@ struct FunctionPathAndClusterInfo {
   // the edge a -> b (a is not cloned). The index of the path in this vector
   // determines the `UniqueBBID::CloneID` of the cloned blocks in that path.
   SmallVector<SmallVector<unsigned>> ClonePaths;
-  SmallVector<PrefetchHint> PrefetchHints;
   SmallVector<BBPosition> PrefetchTargets;
   // Node counts for each basic block.
   DenseMap<UniqueBBID, uint64_t> NodeCounts;
@@ -98,9 +91,6 @@ public:
   // function `FuncName` or zero if it does not exist.
   uint64_t getEdgeCount(StringRef FuncName, const UniqueBBID &SrcBBID,
                         const UniqueBBID &SinkBBID) const;
-
-  SmallVector<PrefetchHint>
-  getPrefetchHintsForFunction(StringRef FuncName) const;
 
   SmallVector<BBPosition>
   getPrefetchTargetsForFunction(StringRef FuncName) const;
@@ -213,8 +203,6 @@ public:
 
   uint64_t getEdgeCount(StringRef FuncName, const UniqueBBID &SrcBBID,
                         const UniqueBBID &DestBBID) const;
-  SmallVector<PrefetchHint>
-  getPrefetchHintsForFunction(StringRef FuncName) const;
 
   SmallVector<BBPosition>
   getPrefetchTargetsForFunction(StringRef FuncName) const;

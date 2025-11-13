@@ -93,12 +93,6 @@ uint64_t BasicBlockSectionsProfileReader::getEdgeCount(
   return EdgeIt->second;
 }
 
-SmallVector<PrefetchHint>
-BasicBlockSectionsProfileReader::getPrefetchHintsForFunction(
-    StringRef FuncName) const {
-  return ProgramPathAndClusterInfo.lookup(getAliasName(FuncName)).PrefetchHints;
-}
-
 SmallVector<BBPosition>
 BasicBlockSectionsProfileReader::getPrefetchTargetsForFunction(
     StringRef FuncName) const {
@@ -545,12 +539,6 @@ uint64_t BasicBlockSectionsProfileReaderWrapperPass::getEdgeCount(
     StringRef FuncName, const UniqueBBID &SrcBBID,
     const UniqueBBID &SinkBBID) const {
   return BBSPR.getEdgeCount(FuncName, SrcBBID, SinkBBID);
-}
-
-SmallVector<PrefetchHint>
-BasicBlockSectionsProfileReaderWrapperPass::getPrefetchHintsForFunction(
-    StringRef FuncName) const {
-  return BBSPR.getPrefetchHintsForFunction(FuncName);
 }
 
 SmallVector<BBPosition>
