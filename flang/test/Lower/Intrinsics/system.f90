@@ -1,8 +1,8 @@
 ! RUN: bbc -emit-hlfir %s -o - | FileCheck %s
 
 ! CHECK-LABEL: func.func @_QPall_args(
-! CHECK-SAME:    %[[commandArg:.*]]: !fir.boxchar<1> {fir.bindc_name = "command"}, 
-! CHECK-SAME:    %[[exitstatArg:.*]]: !fir.ref<i32> {fir.bindc_name = "exitstat"}) { 
+! CHECK-SAME:    %[[commandArg:.*]]: !fir.boxchar<1> {fir.bindc_name = "command"},
+! CHECK-SAME:    %[[exitstatArg:.*]]: !fir.ref<i32> {fir.bindc_name = "exitstat"}) {
 subroutine all_args(command, exitstat)
 CHARACTER(*) :: command
 INTEGER :: exitstat
