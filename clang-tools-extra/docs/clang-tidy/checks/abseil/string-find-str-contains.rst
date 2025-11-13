@@ -3,8 +3,8 @@
 abseil-string-find-str-contains
 ===============================
 
-Finds ``s.find(...) == string::npos`` comparisons (for various string-like types)
-and suggests replacing with ``absl::StrContains()``.
+Finds ``s.find(...) == string::npos`` comparisons (for various string-like
+types) and suggests replacing with ``absl::StrContains()``.
 
 This improves readability and reduces the likelihood of accidentally mixing
 ``find()`` and ``npos`` from different string-like types.

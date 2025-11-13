@@ -19,7 +19,8 @@ The check implements the following rules from the CERT C Coding Standard:
 Unsafe functions
 ----------------
 
-The following functions are reported if :option:`ReportDefaultFunctions` is enabled.
+The following functions are reported if :option:`ReportDefaultFunctions`
+is enabled.
 
 If *Annex K.* is available, a replacement from *Annex K.* is suggested for the
 following functions:
@@ -42,7 +43,8 @@ following functions from the previous list:
  - ``asctime``, ``asctime_r``, suggested replacement: ``strftime``
  - ``gets``, suggested replacement: ``fgets``
 
-The following functions are always checked, regardless of *Annex K* availability:
+The following functions are always checked, regardless of *Annex K*
+availability:
 
  - ``rewind``, suggested replacement: ``fseek``
  - ``setbuf``, suggested replacement: ``setvbuf``
@@ -80,8 +82,8 @@ including any system headers.
 Custom functions
 ----------------
 
-The option :option:`CustomFunctions` allows the user to define custom functions to be
-checked. The format is the following, without newlines:
+The option :option:`CustomFunctions` allows the user to define custom functions
+to be checked. The format is the following, without newlines:
 
 .. code::
 
@@ -94,8 +96,9 @@ checked. The format is the following, without newlines:
 The functions are matched using POSIX extended regular expressions.
 *(Note: The regular expressions do not support negative* ``(?!)`` *matches.)*
 
-The `reason` is optional and is used to provide additional information about the
-reasoning behind the replacement. The default reason is `is marked as unsafe`.
+The `reason` is optional and is used to provide additional information
+about the reasoning behind the replacement. The default reason is
+`is marked as unsafe`.
 
 If `replacement` is empty, the text `it should not be used` will be shown
 instead of the suggestion for a replacement.

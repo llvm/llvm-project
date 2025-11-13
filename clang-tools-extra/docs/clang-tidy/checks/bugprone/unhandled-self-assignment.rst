@@ -10,9 +10,10 @@ Finds user-defined copy assignment operators which do not protect the code
 against self-assignment either by checking self-assignment explicitly or
 using the copy-and-swap or the copy-and-move method.
 
-By default, this check searches only those classes which have any pointer or C array field
-to avoid false positives. In case of a pointer or a C array, it's likely that self-copy
-assignment breaks the object if the copy assignment operator was not written with care.
+By default, this check searches only those classes which have any pointer or C
+array field to avoid false positives. In case of a pointer or a C array, it's
+likely that self-copy assignment breaks the object if the copy assignment
+operator was not written with care.
 
 See also:
 `OOP54-CPP. Gracefully handle self-copy assignment
@@ -90,9 +91,9 @@ The second one is the copy-and-swap method when we create a temporary copy
     }
   };
 
-There is a third pattern which is less common. Let's call it the copy-and-move method
-when we create a temporary copy (using the copy constructor) and then move this
-temporary object into ``this`` (needs a move assignment operator):
+There is a third pattern which is less common. Let's call it the copy-and-move
+method when we create a temporary copy (using the copy constructor) and then move
+this temporary object into ``this`` (needs a move assignment operator):
 
 .. code-block:: c++
 

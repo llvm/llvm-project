@@ -5,8 +5,8 @@ bugprone-unchecked-string-to-number-conversion
 
 This check flags calls to string-to-number conversion functions that do not
 verify the validity of the conversion, such as ``atoi()`` or ``scanf()``. It
-does not flag calls to ``strtol()``, or other, related conversion functions that
-do perform better error checking.
+does not flag calls to ``strtol()``, or other, related conversion functions
+that do perform better error checking.
 
 .. code-block:: c
 

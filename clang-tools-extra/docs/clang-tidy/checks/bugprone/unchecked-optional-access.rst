@@ -15,9 +15,10 @@ types collectively as ``optional<T>``.
 
 An access to the value of an ``optional<T>`` occurs when one of its ``value``,
 ``operator*``, or ``operator->`` member functions is invoked.  To align with
-common misconceptions, the check considers these member functions as equivalent,
-even though there are subtle differences related to exceptions versus undefined
-behavior. See *Additional notes*, below, for more information on this topic.
+common misconceptions, the check considers these member functions as
+equivalent, even though there are subtle differences related to exceptions
+versus undefined behavior. See *Additional notes*, below, for more information
+on this topic.
 
 An access to the value of an ``optional<T>`` is considered safe if and only if
 code in the local scope (for example, a function body) ensures that the
@@ -208,8 +209,8 @@ local variable and use that variable to access the value. For example:
 Do not rely on uncommon-API invariants
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-When uncommon APIs guarantee that an optional has contents, do not rely on it --
-instead, check explicitly that the optional object has a value. For example:
+When uncommon APIs guarantee that an optional has contents, do not rely on it
+-- instead, check explicitly that the optional object has a value. For example:
 
 .. code-block:: c++
 
@@ -293,8 +294,8 @@ or terminating the program), why treat it the same as ``operator*()`` which
 causes undefined behavior (UB)? That is, why is it considered unsafe to access
 an optional with ``value()``, if it's not provably populated with a value?  For
 that matter, why is ``CHECK()`` followed by ``operator*()`` any better than
-``value()``, given that they are semantically equivalent (on configurations that
-disable exceptions)?
+``value()``, given that they are semantically equivalent (on configurations
+that disable exceptions)?
 
 The answer is that we assume most users do not realize the difference between
 ``value()`` and ``operator*()``. Shifting to ``operator*()`` and some form of

@@ -10,11 +10,12 @@ In order to be considered "shadowing", methods must have the same signature
 Only checks public, non-templated methods.
 
 The below example is bugprone because consumers of the ``Derived`` class will
-expect the ``reset`` method to do the work of ``Base::reset()`` in addition to extra
-work required to reset the ``Derived`` class.  Common fixes include:
+expect the ``reset`` method to do the work of ``Base::reset()`` in addition to
+extra work required to reset the ``Derived`` class.  Common fixes include:
 
 - Making the ``reset`` method polymorphic
-- Re-naming ``Derived::reset`` if it's not meant to intersect with ``Base::reset``
+- Re-naming ``Derived::reset`` if it's not meant to intersect with
+  ``Base::reset``
 - Using ``using Base::reset`` to change the access specifier
 
 This is also a violation of the Liskov Substitution Principle.

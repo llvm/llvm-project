@@ -6,13 +6,14 @@ bugprone-fold-init-type
 The check flags type mismatches in
 `folds <https://en.wikipedia.org/wiki/Fold_(higher-order_function)>`_
 like ``std::accumulate`` that might result in loss of precision.
-``std::accumulate`` folds an input range into an initial value using the type of
-the latter, with ``operator+`` by default. This can cause loss of precision
-through:
+``std::accumulate`` folds an input range into an initial value using
+the type of the latter, with ``operator+`` by default. This can cause
+loss of precision through:
 
 - Truncation: The following code uses a floating point range and an int
-  initial value, so truncation will happen at every application of ``operator+``
-  and the result will be `0`, which might not be what the user expected.
+  initial value, so truncation will happen at every application of
+  ``operator+``  and the result will be `0`, which might not be what the
+  user expected.
 
 .. code-block:: c++
 
