@@ -516,8 +516,6 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setTruncStoreAction(MVT::v8i16, MVT::v8i8, Expand);
       setTruncStoreAction(MVT::v2i32, MVT::v2i16, Expand);
       setTruncStoreAction(MVT::v4i16, MVT::v4i8, Expand);
-      setOperationAction(ISD::LOAD, MVT::v2i16, Custom);
-      setOperationAction(ISD::LOAD, MVT::v4i8, Custom);
     } else {
       VTs.append({MVT::v2i16, MVT::v4i8});
     }
@@ -14754,21 +14752,6 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       SDValue Hi = Result.getValue(1);
       SDValue Pair = DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i64, Lo, Hi);
       Results.append({Pair, Result.getValue(2)});
-      return;
-    }
-
-    if (Subtarget.is64Bit() && Subtarget.enablePExtCodeGen()) {
-      SDLoc DL(N);
-      SDValue ExtLoad =
-          DAG.getExtLoad(ISD::SEXTLOAD, DL, MVT::i64, Ld->getChain(),
-                         Ld->getBasePtr(), MVT::i32, Ld->getMemOperand());
-      if (N->getValueType(0) == MVT::v2i16) {
-        Results.push_back(DAG.getBitcast(MVT::v4i16, ExtLoad));
-        Results.push_back(ExtLoad.getValue(1));
-      } else if (N->getValueType(0) == MVT::v4i8) {
-        Results.push_back(DAG.getBitcast(MVT::v8i8, ExtLoad));
-        Results.push_back(ExtLoad.getValue(1));
-      }
       return;
     }
 

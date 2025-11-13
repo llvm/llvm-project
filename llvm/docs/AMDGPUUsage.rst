@@ -1017,6 +1017,15 @@ supported for the ``amdgcn`` target.
   `ptr addrspace(7)` directly, which produces a buffer fat pointer with an initial
   offset of 0 and prevents the address space cast from being rewritten away.
 
+  The ``align`` attribute on operations from buffer fat pointers is deemed to apply
+  to all componenents of the pointer - that is, an ``align 4`` load is expected to
+  both have the offset be a multiple of 4 and to have a base pointer with an
+  alignment of 4.
+
+  This componentwise definition of alignment is needed to allow for promotion of
+  aligned loads to ``s_buffer_load``, which requires that both the base pointer and
+  offset be appropriately aligned.
+
 **Buffer Resource**
   The buffer resource pointer, in address space 8, is the newer form
   for representing buffer descriptors in AMDGPU IR, replacing their
@@ -1040,6 +1049,25 @@ supported for the ``amdgcn`` target.
   (bits `127:96`). The specific interpretation of these fields varies by the
   target architecture and is detailed in the ISA descriptions.
 
+  When buffer resources are passed to buffer intrinsics such as
+  ``llvm.amdgcn.raw.ptr.buffer.load`` or
+  ``llvm.amdgcn.struct.ptr.buffer.store``, the ``align`` attribute on the
+  pointer is assumed to apply to both the offset and the base pointer value.
+  That is, ``align 8`` means that both the base address within the ``ptr
+  addrspace(8)`` and the ``offset`` argument have their three lowest bits set
+  to 0. If the stride of the resource is nonzero, the stride must be a multiple
+  of the given alignment.
+
+  In other words, the ``align`` attribute specifies the alignment of the effective
+  address being loaded from/stored to *and* acts as a guarantee that this is
+  not achieved from adding lower-alignment parts (as hardware may not always
+  allow for such an addition). For example, if a buffer resource has the base
+  address ``0xfffe`` and is accessed with a ``raw.ptr.buffer.load`` with an offset
+  of ``2``, the load must **not** be marked ``align 4`` (even though the
+  effective adddress ``0x10000`` is so aligned) as this would permit the compiler
+  to make incorrect transformations (such as promotion to ``s_buffer_load``,
+  which requires such componentwise alignment).
+
 **Buffer Strided Pointer**
   The buffer index pointer is an experimental address space. It represents
   a 128-bit buffer descriptor and a 32-bit offset, like the **Buffer Fat
@@ -1057,6 +1085,12 @@ supported for the ``amdgcn`` target.
   `ptr addrspace(9)` directly, which produces a buffer strided pointer whose initial
   index and offset values are both 0. This prevents the address space cast from
   being rewritten away.
+
+  As with buffer fat pointers, alignment of a buffer strided pointer applies to
+  both the base pointer address and the offset. In addition, the alignment also
+  constrains the stride of the pointer. That is, if you do an ``align 4`` load from
+  a buffer strided pointer, this means that the base pointer is ``align(4)``, that
+  the offset is a multiple of 4 bytes, and that the stride is a multiple of 4.
 
 **Streamout Registers**
   Dedicated registers used by the GS NGG Streamout Instructions. The register
