@@ -630,6 +630,8 @@ bool X86LegalizerInfo::legalizeCustom(LegalizerHelper &Helper, MachineInstr &MI,
     return legalizeGETROUNDING(MI, MRI, Helper);
   case TargetOpcode::G_SET_ROUNDING:
     return legalizeSETROUNDING(MI, MRI, Helper);
+  case TargetOpcode::G_FNEG:
+    return legalizeFNEG(MI, MRI, Helper);
   }
   llvm_unreachable("expected switch to return");
 }
@@ -1004,17 +1006,29 @@ bool X86LegalizerInfo::legalizeFNEG(MachineInstr &MI, MachineRegisterInfo &MRI,
                                     LegalizerHelper &Helper) const {
   bool UseX87 = !Subtarget.useSoftFloat() && Subtarget.hasX87();
   bool Is64Bit = Subtarget.is64Bit();
-  if (UseX87 && !Is64Bit &&
-      MI.getMF()->getFunction().getReturnType()->isFloatTy()) {
-    auto DstReg = MI.getOperand(0).getReg();
-    auto SrcReg = MI.getOperand(1).getReg();
-    auto ExtReg = MRI.createVirtualRegister(&X86::RFP80RegClass);
-    Helper.MIRBuilder.buildFPExt(ExtReg, SrcReg);
-    Helper.MIRBuilder.buildCopy(DstReg, ExtReg);
-    MI.eraseFromParent();
-    return true;
-  }
-  return false;
+
+  if (!(UseX87 && !Is64Bit))
+    return false;
+
+  Register DstReg = MI.getOperand(0).getReg();
+  Register SrcReg = MI.getOperand(1).getReg();
+
+  LLT S32 = LLT::scalar(32);
+  LLT S80 = LLT::scalar(80);
+
+  if (MRI.getType(SrcReg) != S32 || MRI.getType(DstReg) != S32)
+    return false;
+
+  Register ExtReg = MRI.createGenericVirtualRegister(S80);
+  Helper.MIRBuilder.buildFPExt(ExtReg, SrcReg);
+
+  Register NegReg = MRI.createGenericVirtualRegister(S80);
+  Helper.MIRBuilder.buildFNeg(NegReg, ExtReg);
+
+  Helper.MIRBuilder.buildFPTrunc(DstReg, NegReg);
+
+  MI.eraseFromParent();
+  return true;
 }
 
 bool X86LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
