@@ -402,6 +402,10 @@ Changes in existing checks
   adding an option to allow pointer arithmetic via prefix/postfix increment or
   decrement operators.
 
+- Improved :doc:`google-readability-casting
+  <clang-tidy/checks/google/readability-casting>` check by adding fix-it
+  notes for downcasts.
+
 - Improved :doc:`llvm-prefer-isa-or-dyn-cast-in-conditionals
   <clang-tidy/checks/llvm/prefer-isa-or-dyn-cast-in-conditionals>` check:
 
@@ -418,6 +422,11 @@ Changes in existing checks
   and avoid false positives of function pointer and fix false
   positives on return of non-const pointer and fix false positives on
   pointer-to-member operator.
+
+- Improved :doc:`misc-coroutine-hostile-raii
+  <clang-tidy/checks/misc/coroutine-hostile-raii>` check by adding the option
+  `AllowedCallees`, that allows exempting safely awaitable callees from the
+  check.
 
 - Improved :doc:`misc-header-include-cycle
   <clang-tidy/checks/misc/header-include-cycle>` check performance.

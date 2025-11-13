@@ -115,6 +115,7 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
   case VPInstruction::ExtractLane:
     return inferScalarType(R->getOperand(1));
   case VPInstruction::FirstActiveLane:
+  case VPInstruction::LastActiveLane:
     return Type::getIntNTy(Ctx, 64);
   case VPInstruction::ExtractLastElement:
   case VPInstruction::ExtractLastLanePerPart:
