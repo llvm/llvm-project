@@ -5368,7 +5368,6 @@ private:
           Lane = P.first->ReorderIndices[Lane];
         assert(Lane < static_cast<int>(P.first->Scalars.size()) &&
                "Couldn't find extract lane");
-        SmallVector<unsigned> OpIndices;
         for (unsigned OpIdx :
              seq<unsigned>(::getNumberOfPotentiallyCommutativeOps(
                  P.first->getMainOp()))) {
@@ -8815,7 +8814,6 @@ void BoUpSLP::buildExternalUses(
     const ExtraValueToDebugLocsMap &ExternallyUsedValues) {
   const size_t NumVectScalars = ScalarToTreeEntries.size() + 1;
   DenseMap<Value *, unsigned> ScalarToExtUses;
-  SmallPtrSet<Value *, 4> ExternalUsers;
   // Collect the values that we need to extract from the tree.
   for (auto &TEPtr : VectorizableTree) {
     TreeEntry *Entry = TEPtr.get();
@@ -16846,6 +16844,16 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
     }
     return false;
   };
+  auto CheckNonSchedulableOrdering = [&](const TreeEntry *E,
+                                         Instruction *InsertPt) {
+    return TEUseEI && TEUseEI.UserTE && TEUseEI.UserTE->hasCopyableElements() &&
+           !TEUseEI.UserTE->isCopyableElement(
+               const_cast<Instruction *>(TEInsertPt)) &&
+           isUsedOutsideBlock(const_cast<Instruction *>(TEInsertPt)) &&
+           InsertPt->getNextNode() == TEInsertPt &&
+           (!E->hasCopyableElements() || !E->isCopyableElement(InsertPt) ||
+            !isUsedOutsideBlock(InsertPt));
+  };
   for (Value *V : VL) {
     if (isConstant(V) || !VisitedValue.insert(V).second)
       continue;
@@ -16920,11 +16928,19 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
       // otherwise TEPtr depends on TE.
       if ((TEInsertBlock != InsertPt->getParent() ||
            TEUseEI.EdgeIdx < UseEI.EdgeIdx || TEUseEI.UserTE != UseEI.UserTE) &&
-          !CheckOrdering(InsertPt))
+          (!CheckOrdering(InsertPt) ||
+           (UseEI.UserTE->hasCopyableElements() &&
+            isUsedOutsideBlock(const_cast<Instruction *>(TEInsertPt)) &&
+            is_contained(UseEI.UserTE->Scalars, TEInsertPt))))
         continue;
       // The node is reused - exit.
       if (CheckAndUseSameNode(TEPtr))
         break;
+      // The parent node is copyable with last inst used outside? And the last
+      // inst is the next inst for the lastinst of TEPtr? Exit, if yes, to
+      // preserve def-use chain.
+      if (CheckNonSchedulableOrdering(UseEI.UserTE, InsertPt))
+        continue;
       VToTEs.insert(TEPtr);
     }
     if (ArrayRef<TreeEntry *> VTEs = getSplitTreeEntries(V); !VTEs.empty()) {
@@ -16960,7 +16976,8 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
       if (none_of(TE->CombinedEntriesWithIndices,
                   [&](const auto &P) { return P.first == VTE->Idx; })) {
         Instruction &LastBundleInst = getLastInstructionInBundle(VTE);
-        if (&LastBundleInst == TEInsertPt || !CheckOrdering(&LastBundleInst))
+        if (&LastBundleInst == TEInsertPt || !CheckOrdering(&LastBundleInst) ||
+            CheckNonSchedulableOrdering(VTE, &LastBundleInst))
           continue;
       }
       // The node is reused - exit.
@@ -20972,6 +20989,52 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
   if (isa<PHINode>(S.getMainOp()) ||
       isVectorLikeInstWithConstOps(S.getMainOp()))
     return nullptr;
+  // If the parent node is non-schedulable and the current node is copyable, and
+  // any of parent instructions are used outside several basic blocks or in
+  // bin-op node - cancel scheduling, it may cause wrong def-use deps in
+  // analysis, leading to a crash.
+  // Non-scheduled nodes may not have related ScheduleData model, which may lead
+  // to a skipped dep analysis.
+  if (S.areInstructionsWithCopyableElements() && EI && EI.UserTE->hasState() &&
+      EI.UserTE->doesNotNeedToSchedule() &&
+      EI.UserTE->getOpcode() != Instruction::PHI &&
+      any_of(EI.UserTE->Scalars, [](Value *V) {
+        auto *I = dyn_cast<Instruction>(V);
+        if (!I || I->hasOneUser())
+          return false;
+        for (User *U : I->users()) {
+          auto *UI = cast<Instruction>(U);
+          if (isa<BinaryOperator>(UI))
+            return true;
+        }
+        return false;
+      }))
+    return std::nullopt;
+  if (S.areInstructionsWithCopyableElements() && EI && EI.UserTE->hasState() &&
+      EI.UserTE->hasCopyableElements() &&
+      EI.UserTE->getMainOp()->getParent() == S.getMainOp()->getParent() &&
+      all_of(VL, [&](Value *V) {
+        if (S.isCopyableElement(V))
+          return true;
+        return isUsedOutsideBlock(V);
+      }))
+    return std::nullopt;
+  // If any instruction is used outside block only and its operand is placed
+  // immediately before it, do not schedule, it may cause wrong def-use chain.
+  if (S.areInstructionsWithCopyableElements() && any_of(VL, [&](Value *V) {
+        if (isa<PoisonValue>(V) || S.isCopyableElement(V))
+          return false;
+        if (isUsedOutsideBlock(V)) {
+          for (Value *Op : cast<Instruction>(V)->operands()) {
+            auto *I = dyn_cast<Instruction>(Op);
+            if (!I)
+              continue;
+            return SLP->isVectorized(I) && I->getNextNode() == V;
+          }
+        }
+        return false;
+      }))
+    return std::nullopt;
   bool HasCopyables = S.areInstructionsWithCopyableElements();
   if (((!HasCopyables && doesNotNeedToSchedule(VL)) ||
        all_of(VL, [&](Value *V) { return S.isNonSchedulable(V); }))) {
@@ -21191,7 +21254,6 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
     }
     ScheduledBundlesList.pop_back();
     SmallVector<ScheduleData *> ControlDependentMembers;
-    SmallPtrSet<Instruction *, 4> Visited;
     for (Value *V : VL) {
       if (S.isNonSchedulable(V))
         continue;
@@ -22130,6 +22192,27 @@ bool BoUpSLP::collectValuesToDemote(
         BitWidth,
         {VectorizableTree[E.CombinedEntriesWithIndices.front().first].get(),
          VectorizableTree[E.CombinedEntriesWithIndices.back().first].get()});
+
+  if (E.isAltShuffle()) {
+    // Combining these opcodes may lead to incorrect analysis, skip for now.
+    auto IsDangerousOpcode = [](unsigned Opcode) {
+      switch (Opcode) {
+      case Instruction::Shl:
+      case Instruction::AShr:
+      case Instruction::LShr:
+      case Instruction::UDiv:
+      case Instruction::SDiv:
+      case Instruction::URem:
+      case Instruction::SRem:
+        return true;
+      default:
+        break;
+      }
+      return false;
+    };
+    if (IsDangerousOpcode(E.getAltOpcode()))
+      return FinalAnalysis();
+  }
 
   switch (E.getOpcode()) {
 

@@ -1008,9 +1008,7 @@ getImplicitMapTypeAndKind(fir::FirOpBuilder &firOpBuilder,
                           mlir::omp::VariableCaptureKind::ByRef);
     break;
   case DefMap::ImplicitBehavior::Firstprivate:
-  case DefMap::ImplicitBehavior::None:
-    TODO(loc, "Firstprivate and None are currently unsupported defaultmap "
-              "behaviour");
+    TODO(loc, "Firstprivate is currently unsupported defaultmap behaviour");
     break;
   case DefMap::ImplicitBehavior::From:
     return std::make_pair(mapFlag |= mlir::omp::ClauseMapFlags::from,
@@ -1032,8 +1030,9 @@ getImplicitMapTypeAndKind(fir::FirOpBuilder &firOpBuilder,
                           mlir::omp::VariableCaptureKind::ByRef);
     break;
   case DefMap::ImplicitBehavior::Default:
+  case DefMap::ImplicitBehavior::None:
     llvm_unreachable(
-        "Implicit None Behaviour Should Have Been Handled Earlier");
+        "Implicit None and Default behaviour should have been handled earlier");
     break;
   }
 
@@ -1763,21 +1762,25 @@ static void genTaskgroupClauses(
   cp.processTaskReduction(loc, clauseOps, taskReductionSyms);
 }
 
-static void genTaskloopClauses(lower::AbstractConverter &converter,
-                               semantics::SemanticsContext &semaCtx,
-                               lower::StatementContext &stmtCtx,
-                               const List<Clause> &clauses, mlir::Location loc,
-                               mlir::omp::TaskloopOperands &clauseOps) {
+static void genTaskloopClauses(
+    lower::AbstractConverter &converter, semantics::SemanticsContext &semaCtx,
+    lower::StatementContext &stmtCtx, const List<Clause> &clauses,
+    mlir::Location loc, mlir::omp::TaskloopOperands &clauseOps,
+    llvm::SmallVectorImpl<const semantics::Symbol *> &reductionSyms,
+    llvm::SmallVectorImpl<const semantics::Symbol *> &inReductionSyms) {
 
   ClauseProcessor cp(converter, semaCtx, clauses);
+  cp.processAllocate(clauseOps);
+  cp.processFinal(stmtCtx, clauseOps);
   cp.processGrainsize(stmtCtx, clauseOps);
+  cp.processIf(llvm::omp::Directive::OMPD_taskloop, clauseOps);
+  cp.processInReduction(loc, clauseOps, inReductionSyms);
+  cp.processMergeable(clauseOps);
+  cp.processNogroup(clauseOps);
   cp.processNumTasks(stmtCtx, clauseOps);
-
-  cp.processTODO<clause::Allocate, clause::Collapse, clause::Default,
-                 clause::Final, clause::If, clause::InReduction,
-                 clause::Lastprivate, clause::Mergeable, clause::Nogroup,
-                 clause::Priority, clause::Reduction, clause::Shared,
-                 clause::Untied>(loc, llvm::omp::Directive::OMPD_taskloop);
+  cp.processPriority(stmtCtx, clauseOps);
+  cp.processReduction(loc, clauseOps, reductionSyms);
+  cp.processUntied(clauseOps);
 }
 
 static void genTaskwaitClauses(lower::AbstractConverter &converter,
@@ -2979,8 +2982,11 @@ static mlir::omp::TaskloopOp genStandaloneTaskloop(
     lower::pft::Evaluation &eval, mlir::Location loc,
     const ConstructQueue &queue, ConstructQueue::const_iterator item) {
   mlir::omp::TaskloopOperands taskloopClauseOps;
+  llvm::SmallVector<const semantics::Symbol *> reductionSyms;
+  llvm::SmallVector<const semantics::Symbol *> inReductionSyms;
+
   genTaskloopClauses(converter, semaCtx, stmtCtx, item->clauses, loc,
-                     taskloopClauseOps);
+                     taskloopClauseOps, reductionSyms, inReductionSyms);
   DataSharingProcessor dsp(converter, semaCtx, item->clauses, eval,
                            /*shouldCollectPreDeterminedSymbols=*/true,
                            enableDelayedPrivatization, symTable);
@@ -2994,6 +3000,10 @@ static mlir::omp::TaskloopOp genStandaloneTaskloop(
   EntryBlockArgs taskloopArgs;
   taskloopArgs.priv.syms = dsp.getDelayedPrivSymbols();
   taskloopArgs.priv.vars = taskloopClauseOps.privateVars;
+  taskloopArgs.reduction.syms = reductionSyms;
+  taskloopArgs.reduction.vars = taskloopClauseOps.reductionVars;
+  taskloopArgs.inReduction.syms = inReductionSyms;
+  taskloopArgs.inReduction.vars = taskloopClauseOps.inReductionVars;
 
   auto taskLoopOp = genWrapperOp<mlir::omp::TaskloopOp>(
       converter, loc, taskloopClauseOps, taskloopArgs);
@@ -3503,12 +3513,12 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    lower::pft::Evaluation &eval,
                    const parser::OpenMPUtilityConstruct &);
 
-static void
-genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
-       semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
-       const parser::OpenMPDeclarativeAllocate &declarativeAllocate) {
+static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
+                   semantics::SemanticsContext &semaCtx,
+                   lower::pft::Evaluation &eval,
+                   const parser::OmpAllocateDirective &allocate) {
   if (!semaCtx.langOptions().OpenMPSimd)
-    TODO(converter.getCurrentLocation(), "OpenMPDeclarativeAllocate");
+    TODO(converter.getCurrentLocation(), "OmpAllocateDirective");
 }
 
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
@@ -3897,14 +3907,6 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    const parser::OpenMPDispatchConstruct &) {
   if (!semaCtx.langOptions().OpenMPSimd)
     TODO(converter.getCurrentLocation(), "OpenMPDispatchConstruct");
-}
-
-static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
-                   semantics::SemanticsContext &semaCtx,
-                   lower::pft::Evaluation &eval,
-                   const parser::OpenMPExecutableAllocate &execAllocConstruct) {
-  if (!semaCtx.langOptions().OpenMPSimd)
-    TODO(converter.getCurrentLocation(), "OpenMPExecutableAllocate");
 }
 
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,

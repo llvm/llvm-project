@@ -1,4 +1,4 @@
-; RUN: not opt -S  -S -dxil-translate-metadata %s 2>&1 | FileCheck %s
+; RUN: not opt -S -dxil-translate-metadata %s 2>&1 | FileCheck %s
 target triple = "dxil-pc-shadermodel6.8-compute"
 
 ; CHECK: Non-library shader: One and only one entry expected

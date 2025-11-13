@@ -819,6 +819,7 @@ public:
       Word("TEAM=");
     }
   }
+  void Before(const ImageSelectorSpec::Notify &) { Word("NOTIFY="); }
   void Unparse(const AllocateStmt &x) { // R927
     Word("ALLOCATE(");
     Walk(std::get<std::optional<TypeSpec>>(x.t), "::");
@@ -1854,6 +1855,10 @@ public:
               Word("!DIR$ UNROLL");
               Walk(" ", unroll.v);
             },
+            [&](const CompilerDirective::Prefetch &prefetch) {
+              Word("!DIR$ PREFETCH");
+              Walk(" ", prefetch.v);
+            },
             [&](const CompilerDirective::UnrollAndJam &unrollAndJam) {
               Word("!DIR$ UNROLL_AND_JAM");
               Walk(" ", unrollAndJam.v);
@@ -2281,6 +2286,11 @@ public:
     Walk(std::get<OmpObjectList>(x.t));
     Walk(": ", std::get<std::optional<std::list<Modifier>>>(x.t));
   }
+  void Unparse(const OmpFallbackModifier &x) {
+    Word("FALLBACK(");
+    Walk(x.v);
+    Put(")");
+  }
   void Unparse(const OmpDynGroupprivateClause &x) {
     using Modifier = OmpDynGroupprivateClause::Modifier;
     Walk(std::get<std::optional<std::list<Modifier>>>(x.t), ": ");
@@ -2482,32 +2492,8 @@ public:
     Unparse(static_cast<const OmpBlockConstruct &>(x));
   }
 
-  void Unparse(const OpenMPExecutableAllocate &x) {
-    const auto &fields =
-        std::get<std::optional<std::list<parser::OpenMPDeclarativeAllocate>>>(
-            x.t);
-    if (fields) {
-      for (const auto &decl : *fields) {
-        Walk(decl);
-      }
-    }
-    BeginOpenMP();
-    Word("!$OMP ALLOCATE");
-    Walk(" (", std::get<std::optional<OmpObjectList>>(x.t), ")");
-    Walk(std::get<OmpClauseList>(x.t));
-    Put("\n");
-    EndOpenMP();
-    Walk(std::get<Statement<AllocateStmt>>(x.t));
-  }
-  void Unparse(const OpenMPDeclarativeAllocate &x) {
-    BeginOpenMP();
-    Word("!$OMP ALLOCATE");
-    Put(" (");
-    Walk(std::get<OmpObjectList>(x.t));
-    Put(")");
-    Walk(std::get<OmpClauseList>(x.t));
-    Put("\n");
-    EndOpenMP();
+  void Unparse(const OmpAllocateDirective &x) {
+    Unparse(static_cast<const OmpBlockConstruct &>(x));
   }
   void Unparse(const OpenMPAllocatorsConstruct &x) {
     Unparse(static_cast<const OmpBlockConstruct &>(x));
@@ -2814,6 +2800,7 @@ public:
       OmpDeviceTypeClause, DeviceTypeDescription) // OMP device_type
   WALK_NESTED_ENUM(OmpReductionModifier, Value) // OMP reduction-modifier
   WALK_NESTED_ENUM(OmpExpectation, Value) // OMP motion-expectation
+  WALK_NESTED_ENUM(OmpFallbackModifier, Value) // OMP fallback-modifier
   WALK_NESTED_ENUM(OmpInteropType, Value) // OMP InteropType
   WALK_NESTED_ENUM(OmpOrderClause, Ordering) // OMP ordering
   WALK_NESTED_ENUM(OmpOrderModifier, Value) // OMP order-modifier

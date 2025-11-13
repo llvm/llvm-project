@@ -1418,6 +1418,12 @@ def ElementwiseExp10 : Builtin {
   let Prototype = "void(...)";
 }
 
+def ElementwiseLdexp : Builtin {
+  let Spellings = ["__builtin_elementwise_ldexp"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
 def ElementwiseFloor : Builtin {
   let Spellings = ["__builtin_elementwise_floor"];
   let Attributes = [NoThrow, Const, CustomTypeChecking];
@@ -5233,6 +5239,12 @@ def HLSLGetSpirvSpecConstant : LangBuiltin<"HLSL_LANG">, HLSLScalarTemplate {
   let Spellings = ["__builtin_get_spirv_spec_constant"];
   let Attributes = [NoThrow, Const, Pure];
   let Prototype = "T(unsigned int, T)";
+}
+
+def HLSLF16ToF32 : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_elementwise_f16tof32"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
 }
 
 // Builtins for XRay.

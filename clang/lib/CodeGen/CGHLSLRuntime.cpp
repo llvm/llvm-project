@@ -261,12 +261,12 @@ static std::optional<llvm::Value *> initializeLocalResourceArray(
 
 llvm::Type *
 CGHLSLRuntime::convertHLSLSpecificType(const Type *T,
-                                       SmallVector<int32_t> *Packoffsets) {
+                                       const CGHLSLOffsetInfo &OffsetInfo) {
   assert(T->isHLSLSpecificType() && "Not an HLSL specific type!");
 
   // Check if the target has a specific translation for this type first.
   if (llvm::Type *TargetTy =
-          CGM.getTargetCodeGenInfo().getHLSLType(CGM, T, Packoffsets))
+          CGM.getTargetCodeGenInfo().getHLSLType(CGM, T, OffsetInfo))
     return TargetTy;
 
   llvm_unreachable("Generic handling of HLSL types is not supported.");
@@ -357,25 +357,14 @@ createBufferHandleType(const HLSLBufferDecl *BufDecl) {
   return cast<HLSLAttributedResourceType>(QT.getTypePtr());
 }
 
-// Iterates over all declarations in the HLSL buffer and based on the
-// packoffset or register(c#) annotations it fills outs the Layout
-// vector with the user-specified layout offsets.
-// The buffer offsets can be specified 2 ways:
-// 1. declarations in cbuffer {} block can have a packoffset annotation
-//    (translates to HLSLPackOffsetAttr)
-// 2. default constant buffer declarations at global scope can have
-//    register(c#) annotations (translates to HLSLResourceBindingAttr with
-//    RegisterType::C)
-// It is not guaranteed that all declarations in a buffer have an annotation.
-// For those where it is not specified a -1 value is added to the Layout
-// vector. In the final layout these declarations will be placed at the end
-// of the HLSL buffer after all of the elements with specified offset.
-static void fillPackoffsetLayout(const HLSLBufferDecl *BufDecl,
-                                 SmallVector<int32_t> &Layout) {
-  assert(Layout.empty() && "expected empty vector for layout");
-  assert(BufDecl->hasValidPackoffset());
+CGHLSLOffsetInfo CGHLSLOffsetInfo::fromDecl(const HLSLBufferDecl &BufDecl) {
+  CGHLSLOffsetInfo Result;
 
-  for (Decl *D : BufDecl->buffer_decls()) {
+  // If we don't have packoffset info, just return an empty result.
+  if (!BufDecl.hasValidPackoffset())
+    return Result;
+
+  for (Decl *D : BufDecl.buffer_decls()) {
     if (isa<CXXRecordDecl, EmptyDecl>(D) || isa<FunctionDecl>(D)) {
       continue;
     }
@@ -384,11 +373,11 @@ static void fillPackoffsetLayout(const HLSLBufferDecl *BufDecl,
       continue;
 
     if (!VD->hasAttrs()) {
-      Layout.push_back(-1);
+      Result.Offsets.push_back(Unspecified);
       continue;
     }
 
-    int32_t Offset = -1;
+    uint32_t Offset = Unspecified;
     for (auto *Attr : VD->getAttrs()) {
       if (auto *POA = dyn_cast<HLSLPackOffsetAttr>(Attr)) {
         Offset = POA->getOffsetInBytes();
@@ -401,8 +390,9 @@ static void fillPackoffsetLayout(const HLSLBufferDecl *BufDecl,
         break;
       }
     }
-    Layout.push_back(Offset);
+    Result.Offsets.push_back(Offset);
   }
+  return Result;
 }
 
 // Codegen for HLSLBufferDecl
@@ -419,13 +409,9 @@ void CGHLSLRuntime::addBuffer(const HLSLBufferDecl *BufDecl) {
     return;
 
   // create global variable for the constant buffer
-  SmallVector<int32_t> Layout;
-  if (BufDecl->hasValidPackoffset())
-    fillPackoffsetLayout(BufDecl, Layout);
-
-  llvm::TargetExtType *TargetTy =
-      cast<llvm::TargetExtType>(convertHLSLSpecificType(
-          ResHandleTy, BufDecl->hasValidPackoffset() ? &Layout : nullptr));
+  CGHLSLOffsetInfo OffsetInfo = CGHLSLOffsetInfo::fromDecl(*BufDecl);
+  llvm::TargetExtType *TargetTy = cast<llvm::TargetExtType>(
+      convertHLSLSpecificType(ResHandleTy, OffsetInfo));
   llvm::GlobalVariable *BufGV = new GlobalVariable(
       TargetTy, /*isConstant*/ false,
       GlobalValue::LinkageTypes::ExternalLinkage, PoisonValue::get(TargetTy),
@@ -549,6 +535,16 @@ static void addSPIRVBuiltinDecoration(llvm::GlobalVariable *GV,
   GV->addMetadata("spirv.Decorations", *Decoration);
 }
 
+static void addLocationDecoration(llvm::GlobalVariable *GV, unsigned Location) {
+  LLVMContext &Ctx = GV->getContext();
+  IRBuilder<> B(GV->getContext());
+  MDNode *Operands =
+      MDNode::get(Ctx, {ConstantAsMetadata::get(B.getInt32(/* Location */ 30)),
+                        ConstantAsMetadata::get(B.getInt32(Location))});
+  MDNode *Decoration = MDNode::get(Ctx, {Operands});
+  GV->addMetadata("spirv.Decorations", *Decoration);
+}
+
 static llvm::Value *createSPIRVBuiltinLoad(IRBuilder<> &B, llvm::Module &M,
                                            llvm::Type *Ty, const Twine &Name,
                                            unsigned BuiltInID) {
@@ -560,6 +556,69 @@ static llvm::Value *createSPIRVBuiltinLoad(IRBuilder<> &B, llvm::Module &M,
   addSPIRVBuiltinDecoration(GV, BuiltInID);
   GV->setVisibility(llvm::GlobalValue::HiddenVisibility);
   return B.CreateLoad(Ty, GV);
+}
+
+static llvm::Value *createSPIRVLocationLoad(IRBuilder<> &B, llvm::Module &M,
+                                            llvm::Type *Ty, unsigned Location,
+                                            StringRef Name) {
+  auto *GV = new llvm::GlobalVariable(
+      M, Ty, /* isConstant= */ true, llvm::GlobalValue::ExternalLinkage,
+      /* Initializer= */ nullptr, /* Name= */ Name, /* insertBefore= */ nullptr,
+      llvm::GlobalVariable::GeneralDynamicTLSModel,
+      /* AddressSpace */ 7, /* isExternallyInitialized= */ true);
+  GV->setVisibility(llvm::GlobalValue::HiddenVisibility);
+  addLocationDecoration(GV, Location);
+  return B.CreateLoad(Ty, GV);
+}
+
+llvm::Value *
+CGHLSLRuntime::emitSPIRVUserSemanticLoad(llvm::IRBuilder<> &B, llvm::Type *Type,
+                                         HLSLSemanticAttr *Semantic,
+                                         std::optional<unsigned> Index) {
+  Twine BaseName = Twine(Semantic->getAttrName()->getName());
+  Twine VariableName = BaseName.concat(Twine(Index.value_or(0)));
+
+  unsigned Location = SPIRVLastAssignedInputSemanticLocation;
+
+  // DXC completely ignores the semantic/index pair. Location are assigned from
+  // the first semantic to the last.
+  llvm::ArrayType *AT = dyn_cast<llvm::ArrayType>(Type);
+  unsigned ElementCount = AT ? AT->getNumElements() : 1;
+  SPIRVLastAssignedInputSemanticLocation += ElementCount;
+  return createSPIRVLocationLoad(B, CGM.getModule(), Type, Location,
+                                 VariableName.str());
+}
+
+llvm::Value *
+CGHLSLRuntime::emitDXILUserSemanticLoad(llvm::IRBuilder<> &B, llvm::Type *Type,
+                                        HLSLSemanticAttr *Semantic,
+                                        std::optional<unsigned> Index) {
+  Twine BaseName = Twine(Semantic->getAttrName()->getName());
+  Twine VariableName = BaseName.concat(Twine(Index.value_or(0)));
+
+  // DXIL packing rules etc shall be handled here.
+  // FIXME: generate proper sigpoint, index, col, row values.
+  // FIXME: also DXIL loads vectors element by element.
+  SmallVector<Value *> Args{B.getInt32(4), B.getInt32(0), B.getInt32(0),
+                            B.getInt8(0),
+                            llvm::PoisonValue::get(B.getInt32Ty())};
+
+  llvm::Intrinsic::ID IntrinsicID = llvm::Intrinsic::dx_load_input;
+  llvm::Value *Value = B.CreateIntrinsic(/*ReturnType=*/Type, IntrinsicID, Args,
+                                         nullptr, VariableName);
+  return Value;
+}
+
+llvm::Value *CGHLSLRuntime::emitUserSemanticLoad(
+    IRBuilder<> &B, llvm::Type *Type, const clang::DeclaratorDecl *Decl,
+    HLSLSemanticAttr *Semantic, std::optional<unsigned> Index) {
+  if (CGM.getTarget().getTriple().isSPIRV())
+    return emitSPIRVUserSemanticLoad(B, Type, Semantic, Index);
+
+  if (CGM.getTarget().getTriple().isDXIL())
+    return emitDXILUserSemanticLoad(B, Type, Semantic, Index);
+
+  llvm_unreachable("Unsupported target for user-semantic load.");
 }
 
 llvm::Value *CGHLSLRuntime::emitSystemSemanticLoad(
@@ -626,6 +685,9 @@ CGHLSLRuntime::handleScalarSemanticLoad(IRBuilder<> &B, const FunctionDecl *FD,
   std::optional<unsigned> Index = std::nullopt;
   if (Semantic->isSemanticIndexExplicit())
     Index = Semantic->getSemanticIndex();
+
+  if (isa<HLSLUserSemanticAttr>(Semantic))
+    return emitUserSemanticLoad(B, Type, Decl, Semantic, Index);
   return emitSystemSemanticLoad(B, Type, Decl, Semantic, Index);
 }
 
