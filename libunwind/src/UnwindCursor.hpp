@@ -1813,11 +1813,11 @@ bool UnwindCursor<A, R>::getInfoFromDwarfSection(
       // Add to cache (to make next lookup faster) if we had no hint
       // and there was no index.
       if (!foundInCache && (fdeSectionOffsetHint == 0)) {
-  #if defined(_LIBUNWIND_SUPPORT_DWARF_INDEX)
+#if defined(_LIBUNWIND_SUPPORT_DWARF_INDEX)
         if (sects.dwarf_index_section == 0)
-  #endif
-        DwarfFDECache<A>::add(sects.dso_base, fdeInfo.pcStart, fdeInfo.pcEnd,
-                              fdeInfo.fdeStart);
+#endif
+          DwarfFDECache<A>::add(sects.dso_base, fdeInfo.pcStart, fdeInfo.pcEnd,
+                                fdeInfo.fdeStart);
       }
       return true;
     }
