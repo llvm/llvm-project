@@ -166,6 +166,7 @@ jobs:
               -G Ninja \
               -S ${{ github.workspace }}/runtimes \
               $CMAKE_FLAGS
+            ;;
         esac
 
     - name: Build
