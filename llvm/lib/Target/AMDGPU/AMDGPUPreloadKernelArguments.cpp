@@ -196,7 +196,7 @@ public:
     SmallVector<std::pair<LoadInst *, unsigned>, 4> ImplicitArgLoads;
     for (auto *U : ImplicitArgPtr->users()) {
       Instruction *CI = dyn_cast<Instruction>(U);
-      if (!CI || CI->getParent()->getParent() != &F)
+      if (!CI || CI->getFunction() != &F)
         continue;
 
       for (auto *U : CI->users()) {
