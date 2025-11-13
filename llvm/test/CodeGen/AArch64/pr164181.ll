@@ -52,11 +52,11 @@ define void @f(i1 %var_0, i16 %var_1, i64 %var_2, i8 %var_3, i16 %var_4, i1 %var
 ; CHECK-NEXT:    mov x10, xzr
 ; CHECK-NEXT:    mov w23, wzr
 ; CHECK-NEXT:    mov w30, wzr
+; CHECK-NEXT:    ldrb w19, [sp, #240]
 ; CHECK-NEXT:    mov w25, wzr
 ; CHECK-NEXT:    mov x24, xzr
-; CHECK-NEXT:    mov x3, x26
 ; CHECK-NEXT:    str w8, [sp, #108] // 4-byte Folded Spill
-; CHECK-NEXT:    ldrb w19, [sp, #240]
+; CHECK-NEXT:    mov x3, x26
 ; CHECK-NEXT:    ldp x9, x8, [sp, #344]
 ; CHECK-NEXT:    str w12, [sp, #92] // 4-byte Folded Spill
 ; CHECK-NEXT:    mov w12, #1 // =0x1
@@ -123,8 +123,8 @@ define void @f(i1 %var_0, i16 %var_1, i64 %var_2, i8 %var_3, i16 %var_4, i1 %var
 ; CHECK-NEXT:    mov x12, #-30 // =0xffffffffffffffe2
 ; CHECK-NEXT:    add x19, x4, w8, sxtw #2
 ; CHECK-NEXT:    mov x9, xzr
-; CHECK-NEXT:    mov w4, w30
 ; CHECK-NEXT:    csel x12, x24, x12, lo
+; CHECK-NEXT:    mov w4, w30
 ; CHECK-NEXT:    str x12, [sp, #56] // 8-byte Folded Spill
 ; CHECK-NEXT:    b .LBB0_8
 ; CHECK-NEXT:    .p2align 5, , 16
@@ -341,8 +341,8 @@ define void @f(i1 %var_0, i16 %var_1, i64 %var_2, i8 %var_3, i16 %var_4, i1 %var
 ; CHECK-NEXT:    mov x24, x27
 ; CHECK-NEXT:    lsl x23, x14, #1
 ; CHECK-NEXT:    mov x27, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    mov w28, w30
 ; CHECK-NEXT:    madd x14, x14, x3, x11
+; CHECK-NEXT:    mov w28, w30
 ; CHECK-NEXT:    mov w3, #-7680 // =0xffffe200
 ; CHECK-NEXT:    b .LBB0_39
 ; CHECK-NEXT:    .p2align 5, , 16
