@@ -657,6 +657,9 @@ struct ScanServer {
   /// jobs to finish.
   void shutdown() {
     ShutDown.store(true);
+    // Unlock pidfile first so another daemon can spin up when it can't find
+    // the socket.
+    ::flock(PidFD, LOCK_UN);
     cc1depscand::unlinkBoundSocket(BasePath);
     // Clean up the pidfile when we're done.
     if (PidFD != -1)
