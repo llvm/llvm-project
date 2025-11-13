@@ -298,6 +298,7 @@ Changes to the LLVM tools
 * llvm-addr2line now supports a `+` prefix when specifying an address.
 * Support for `SHT_LLVM_BB_ADDR_MAP` versions 0 and 1 has been dropped.
 * Add `--save-stats` option to `llc` to save LLVM statistics to a file. Compatible with the Clang option.
+* Add `--save-stats` option to `opt` to save LLVM statistics to a file. Compatible with the Clang option.
 
 Changes to LLDB
 ---------------------------------
