@@ -355,7 +355,7 @@ Attribute Changes in Clang
 
 - New function attribute `malloc_span` is added. It has semantics similar to that of the `malloc`
   attribute, but `malloc_span` applies not to functions returning pointers, but to functions returning
-  span-like structures (i.e. those that contain a pointer field and a size integer field).
+  span-like structures (i.e. those that contain a pointer field and a size integer field or two pointers).
 
 Improvements to Clang's diagnostics
 -----------------------------------
