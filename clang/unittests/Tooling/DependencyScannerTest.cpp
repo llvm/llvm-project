@@ -228,8 +228,8 @@ TEST(DependencyScanner, ScanDepsWithFS) {
   VFS->addFile(TestPath, 0,
                llvm::MemoryBuffer::getMemBuffer("#include \"header.h\"\n"));
 
-  DependencyScanningService Service(ScanningMode::DependencyDirectivesScan,
-                                    ScanningOutputFormat::Make);
+  DependencyScanningService Service(
+      {ScanningMode::DependencyDirectivesScan, ScanningOutputFormat::Make});
   DependencyScanningTool ScanTool(Service, VFS);
 
   TextDiagnosticBuffer DiagConsumer;
@@ -285,8 +285,8 @@ TEST(DependencyScanner, ScanDepsWithModuleLookup) {
 
   auto InterceptFS = llvm::makeIntrusiveRefCnt<InterceptorFS>(VFS);
 
-  DependencyScanningService Service(ScanningMode::DependencyDirectivesScan,
-                                    ScanningOutputFormat::Make);
+  DependencyScanningService Service(
+      {ScanningMode::DependencyDirectivesScan, ScanningOutputFormat::Make});
   DependencyScanningTool ScanTool(Service, InterceptFS);
 
   // This will fail with "fatal error: module 'Foo' not found" but it doesn't

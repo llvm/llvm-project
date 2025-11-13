@@ -1136,8 +1136,11 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
     });
   };
 
-  DependencyScanningService Service(ScanMode, Format, OptimizeArgs,
-                                    EagerLoadModules, /*TraceVFS=*/Verbose);
+  DependencyScanningServiceOptions Options{ScanMode, Format};
+  Options.OptimizeArgs = OptimizeArgs;
+  Options.EagerLoadModules = EagerLoadModules;
+  Options.TraceVFS = Verbose;
+  DependencyScanningService Service(Options);
 
   llvm::Timer T;
   T.startTimer();

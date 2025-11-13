@@ -31,8 +31,8 @@ TEST(DependencyScanner, ScanDepsWithDiagConsumer) {
                llvm::MemoryBuffer::getMemBuffer("#include \"header.h\"\n"));
   VFS->addFile(AsmPath, 0, llvm::MemoryBuffer::getMemBuffer(""));
 
-  DependencyScanningService Service(ScanningMode::DependencyDirectivesScan,
-                                    ScanningOutputFormat::Make);
+  DependencyScanningService Service({ScanningMode::DependencyDirectivesScan,
+                                     ScanningOutputFormat::Make});
   DependencyScanningWorker Worker(Service, VFS);
 
   llvm::DenseSet<ModuleID> AlreadySeen;

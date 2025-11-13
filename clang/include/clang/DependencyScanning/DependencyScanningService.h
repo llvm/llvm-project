@@ -77,26 +77,38 @@ enum class ScanningOptimizations {
 
 #undef DSS_LAST_BITMASK_ENUM
 
+struct DependencyScanningServiceOptions {
+  DependencyScanningServiceOptions(ScanningMode Mode,
+                                   ScanningOutputFormat Format)
+      : Mode(Mode), Format(Format) {}
+
+  ScanningMode Mode;
+  ScanningOutputFormat Format;
+  /// How to optimize the modules' command-line arguments.
+  ScanningOptimizations OptimizeArgs = ScanningOptimizations::Default;
+  /// Whether to set up command-lines to load PCM files eagerly.
+  bool EagerLoadModules = false;
+  /// Whether to trace VFS accesses.
+  bool TraceVFS = false;
+  std::time_t BuildSessionTimestamp =
+      llvm::sys::toTimeT(std::chrono::system_clock::now());
+};
+
 /// The dependency scanning service contains shared configuration and state that
 /// is used by the individual dependency scanning workers.
 class DependencyScanningService {
 public:
-  DependencyScanningService(
-      ScanningMode Mode, ScanningOutputFormat Format,
-      ScanningOptimizations OptimizeArgs = ScanningOptimizations::Default,
-      bool EagerLoadModules = false, bool TraceVFS = false,
-      std::time_t BuildSessionTimestamp =
-          llvm::sys::toTimeT(std::chrono::system_clock::now()));
+  DependencyScanningService(const DependencyScanningServiceOptions &Options);
 
-  ScanningMode getMode() const { return Mode; }
+  ScanningMode getMode() const { return Options.Mode; }
 
-  ScanningOutputFormat getFormat() const { return Format; }
+  ScanningOutputFormat getFormat() const { return Options.Format; }
 
-  ScanningOptimizations getOptimizeArgs() const { return OptimizeArgs; }
+  ScanningOptimizations getOptimizeArgs() const { return Options.OptimizeArgs; }
 
-  bool shouldEagerLoadModules() const { return EagerLoadModules; }
+  bool shouldEagerLoadModules() const { return Options.EagerLoadModules; }
 
-  bool shouldTraceVFS() const { return TraceVFS; }
+  bool shouldTraceVFS() const { return Options.TraceVFS; }
 
   DependencyScanningFilesystemSharedCache &getSharedCache() {
     return SharedCache;
@@ -104,23 +116,17 @@ public:
 
   ModuleCacheEntries &getModuleCacheEntries() { return ModCacheEntries; }
 
-  std::time_t getBuildSessionTimestamp() const { return BuildSessionTimestamp; }
+  std::time_t getBuildSessionTimestamp() const {
+    return Options.BuildSessionTimestamp;
+  }
 
 private:
-  const ScanningMode Mode;
-  const ScanningOutputFormat Format;
-  /// Whether to optimize the modules' command-line arguments.
-  const ScanningOptimizations OptimizeArgs;
-  /// Whether to set up command-lines to load PCM files eagerly.
-  const bool EagerLoadModules;
-  /// Whether to trace VFS accesses.
-  const bool TraceVFS;
+  const DependencyScanningServiceOptions Options;
+
   /// The global file system cache.
   DependencyScanningFilesystemSharedCache SharedCache;
   /// The global module cache entries.
   ModuleCacheEntries ModCacheEntries;
-  /// The build session timestamp.
-  std::time_t BuildSessionTimestamp;
 };
 
 } // end namespace dependencies
