@@ -10,6 +10,7 @@ set_and_check( openmp_LIB_INSTALL_DIR "@PACKAGE_OPENMP_INSTALL_LIBDIR@" )
 set_and_check( openmp_INCLUDE_DIR "@PACKAGE_LIBOMP_HEADERS_INSTALL_PATH@" )
 set_and_check( openmp_INCLUDE_DIRS "${openmp_INCLUDE_DIR}" )
 
+set( libomp_install_rpath "@LIBOMP_INSTALL_RPATH@" )
 include( "${CMAKE_CURRENT_LIST_DIR}/openmpTargets.cmake" )
 
 set_property(TARGET OpenMP::omp APPEND PROPERTY
@@ -18,3 +19,9 @@ set_property(TARGET OpenMP::omp APPEND PROPERTY
 set_property(TARGET OpenMP::omp APPEND PROPERTY
     INTERFACE_LINK_OPTIONS "-fopenmp"
 )
+
+if(libomp_install_rpath)
+  set_property(TARGET OpenMP::omp APPEND PROPERTY
+      INTERFACE_LINK_OPTIONS "-fno-openmp-implicit-rpath"
+  )
+endif()
