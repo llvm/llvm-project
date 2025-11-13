@@ -14,8 +14,10 @@
 // UNSUPPORTED: c++03, libcpp-has-no-experimental-hardening-observe-semantic
 // REQUIRES: verify-support
 
-// Note that GCC doesn't support `-Wno-macro-redefined`.
 // RUN: %{verify} -U_LIBCPP_ASSERTION_SEMANTIC -D_LIBCPP_ASSERTION_SEMANTIC=42
+// `hardening-dependent` cannot be set as the semantic (it's only an indicator to use hardening-related logic to pick
+// the final semantic).
+// RUN: %{verify} -U_LIBCPP_ASSERTION_SEMANTIC -D_LIBCPP_ASSERTION_SEMANTIC=_LIBCPP_ASSERTION_SEMANTIC_HARDENING_DEPENDENT
 // Make sure that common cases of misuse produce readable errors. We deliberately disallow setting the assertion
 // semantic as if it were a boolean flag.
 // RUN: %{verify} -U_LIBCPP_ASSERTION_SEMANTIC -D_LIBCPP_ASSERTION_SEMANTIC=0

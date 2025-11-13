@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // This test ensures that we can override the assertion semantic used by any checked hardening mode with `quick-enforce`
-// (this is valid for the `fast` and `extensive` modes as well, though a no-op).
+// on a per-TU basis (this is valid for the `fast` and `extensive` modes as well, though a no-op).
 
 // `check_assertion.h` is only available starting from C++11 and requires Unix headers and regex support.
 // REQUIRES: has-unix-headers

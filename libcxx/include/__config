@@ -291,6 +291,16 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_HARDENING_SIG n // "none"
 #  endif
 
+#  if _LIBCPP_ASSERTION_SEMANTIC == _LIBCPP_ASSERTION_SEMANTIC_OBSERVE
+#    define _LIBCPP_ASSERTION_SEMANTIC_SIG o
+#  elif _LIBCPP_ASSERTION_SEMANTIC == _LIBCPP_ASSERTION_SEMANTIC_QUICK_ENFORCE
+#    define _LIBCPP_ASSERTION_SEMANTIC_SIG q
+#  elif _LIBCPP_ASSERTION_SEMANTIC == _LIBCPP_ASSERTION_SEMANTIC_ENFORCE
+#    define _LIBCPP_ASSERTION_SEMANTIC_SIG e
+#  else
+#    define _LIBCPP_ASSERTION_SEMANTIC_SIG i // `ignore`
+#  endif
+
 #  if !_LIBCPP_HAS_EXCEPTIONS
 #    define _LIBCPP_EXCEPTIONS_SIG n
 #  else
@@ -298,7 +308,9 @@ typedef __char32_t char32_t;
 #  endif
 
 #  define _LIBCPP_ODR_SIGNATURE                                                                                        \
-    _LIBCPP_CONCAT(_LIBCPP_CONCAT(_LIBCPP_HARDENING_SIG, _LIBCPP_EXCEPTIONS_SIG), _LIBCPP_VERSION)
+    _LIBCPP_CONCAT(                                                                                                    \
+        _LIBCPP_CONCAT(_LIBCPP_CONCAT(_LIBCPP_HARDENING_SIG, _LIBCPP_ASSERTION_SEMANTIC_SIG), _LIBCPP_EXCEPTIONS_SIG), \
+        _LIBCPP_VERSION)
 
 // This macro marks a symbol as being hidden from libc++'s ABI. This is achieved
 // on two levels:

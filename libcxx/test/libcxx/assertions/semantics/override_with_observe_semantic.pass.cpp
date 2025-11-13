@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-// This test ensures that we can override the assertion semantic used by any checked hardening mode with `observe`.
+// This test ensures that we can override the assertion semantic used by any checked hardening mode with `observe` on
+// a per-TU basis.
 
 // `check_assertion.h` is only available starting from C++11 and requires Unix headers and regex support.
 // REQUIRES: has-unix-headers

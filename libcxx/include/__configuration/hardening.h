@@ -152,7 +152,8 @@ _LIBCPP_HARDENING_MODE_DEBUG
 //
 // Additionally, a special `hardening-dependent` value selects the assertion semantic based on the hardening mode in
 // effect: the production-capable modes (`fast` and `extensive`) map to `quick_enforce` and the `debug` mode maps to
-// `enforce`.
+// `enforce`. The `hardening-dependent` semantic cannot be selected explicitly, it is only used when no assertion
+// semantic is provided by the user _and_ the library's default semantic is configured to be dependent on hardening.
 //
 // Notes:
 // - Continuing execution after a hardening check fails results in undefined behavior; the `observe` semantic is meant
