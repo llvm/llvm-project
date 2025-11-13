@@ -604,6 +604,12 @@ static int compileModule(char **argv, LLVMContext &Context,
                     InputFilename);
     }
 
+    if (TheTriple.isX86() &&
+        codegen::getFuseFPOps() != FPOpFusion::FPOpFusionMode::Standard)
+      WithColor::warning(errs(), argv[0])
+          << "X86 backend ignores --fp-contract setting; use IR fast-math "
+             "flags instead.";
+
     Options.BinutilsVersion =
         TargetMachine::parseBinutilsVersion(BinutilsVersion);
     Options.MCOptions.ShowMCEncoding = ShowMCEncoding;

@@ -1028,16 +1028,10 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_vcvtuqq2ph512_mask:
     return EmitX86ConvertIntToFp(*this, E, Ops, /*IsSigned*/ false);
 
-  case X86::BI__builtin_ia32_vfmaddss3:
-  case X86::BI__builtin_ia32_vfmaddsd3:
   case X86::BI__builtin_ia32_vfmaddsh3_mask:
   case X86::BI__builtin_ia32_vfmaddss3_mask:
   case X86::BI__builtin_ia32_vfmaddsd3_mask:
     return EmitScalarFMAExpr(*this, E, Ops, Ops[0]);
-  case X86::BI__builtin_ia32_vfmaddss:
-  case X86::BI__builtin_ia32_vfmaddsd:
-    return EmitScalarFMAExpr(*this, E, Ops,
-                             Constant::getNullValue(Ops[0]->getType()));
   case X86::BI__builtin_ia32_vfmaddsh3_maskz:
   case X86::BI__builtin_ia32_vfmaddss3_maskz:
   case X86::BI__builtin_ia32_vfmaddsd3_maskz:
