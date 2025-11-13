@@ -737,7 +737,7 @@ static void getPHIDeps(const MachineInstr &UseMI,
 // tracking set when scanning instructions downwards.
 static void updatePhysDepsDownwards(const MachineInstr *UseMI,
                                     SmallVectorImpl<DataDep> &Deps,
-                                    SparseSet<LiveRegUnit> &RegUnits,
+                                    LiveRegUnitSet &RegUnits,
                                     const TargetRegisterInfo *TRI) {
   SmallVector<MCRegister, 8> Kills;
   SmallVector<unsigned, 8> LiveDefOps;
@@ -758,7 +758,7 @@ static void updatePhysDepsDownwards(const MachineInstr *UseMI,
     if (!MO.readsReg())
       continue;
     for (MCRegUnit Unit : TRI->regunits(Reg)) {
-      SparseSet<LiveRegUnit>::iterator I = RegUnits.find(Unit);
+      LiveRegUnitSet::iterator I = RegUnits.find(Unit);
       if (I == RegUnits.end())
         continue;
       Deps.push_back(DataDep(I->MI, I->Op, MO.getOperandNo()));
@@ -813,9 +813,9 @@ computeCrossBlockCriticalPath(const TraceBlockInfo &TBI) {
   return MaxLen;
 }
 
-void MachineTraceMetrics::Ensemble::
-updateDepth(MachineTraceMetrics::TraceBlockInfo &TBI, const MachineInstr &UseMI,
-            SparseSet<LiveRegUnit> &RegUnits) {
+void MachineTraceMetrics::Ensemble::updateDepth(TraceBlockInfo &TBI,
+                                                const MachineInstr &UseMI,
+                                                LiveRegUnitSet &RegUnits) {
   SmallVector<DataDep, 8> Deps;
   // Collect all data dependencies.
   if (UseMI.isPHI())
@@ -852,18 +852,17 @@ updateDepth(MachineTraceMetrics::TraceBlockInfo &TBI, const MachineInstr &UseMI,
   }
 }
 
-void MachineTraceMetrics::Ensemble::
-updateDepth(const MachineBasicBlock *MBB, const MachineInstr &UseMI,
-            SparseSet<LiveRegUnit> &RegUnits) {
+void MachineTraceMetrics::Ensemble::updateDepth(const MachineBasicBlock *MBB,
+                                                const MachineInstr &UseMI,
+                                                LiveRegUnitSet &RegUnits) {
   updateDepth(BlockInfo[MBB->getNumber()], UseMI, RegUnits);
 }
 
-void MachineTraceMetrics::Ensemble::
-updateDepths(MachineBasicBlock::iterator Start,
-             MachineBasicBlock::iterator End,
-             SparseSet<LiveRegUnit> &RegUnits) {
-    for (; Start != End; Start++)
-      updateDepth(Start->getParent(), *Start, RegUnits);
+void MachineTraceMetrics::Ensemble::updateDepths(
+    MachineBasicBlock::iterator Start, MachineBasicBlock::iterator End,
+    LiveRegUnitSet &RegUnits) {
+  for (; Start != End; Start++)
+    updateDepth(Start->getParent(), *Start, RegUnits);
 }
 
 /// Compute instruction depths for all instructions above or in MBB in its
@@ -887,7 +886,7 @@ computeInstrDepths(const MachineBasicBlock *MBB) {
   // in the trace. We should track any live-out physregs that were defined in
   // the trace. This is quite rare in SSA form, typically created by CSE
   // hoisting a compare.
-  SparseSet<LiveRegUnit> RegUnits;
+  LiveRegUnitSet RegUnits;
   RegUnits.setUniverse(MTM.TRI->getNumRegUnits());
 
   // Go through trace blocks in top-down order, stopping after the center block.
@@ -925,7 +924,7 @@ computeInstrDepths(const MachineBasicBlock *MBB) {
 // Return the issue height of MI after considering any live regunits.
 // Height is the issue height computed from virtual register dependencies alone.
 static unsigned updatePhysDepsUpwards(const MachineInstr &MI, unsigned Height,
-                                      SparseSet<LiveRegUnit> &RegUnits,
+                                      LiveRegUnitSet &RegUnits,
                                       const TargetSchedModel &SchedModel,
                                       const TargetInstrInfo *TII,
                                       const TargetRegisterInfo *TRI) {
@@ -944,7 +943,7 @@ static unsigned updatePhysDepsUpwards(const MachineInstr &MI, unsigned Height,
     // This is a def of Reg. Remove corresponding entries from RegUnits, and
     // update MI Height to consider the physreg dependencies.
     for (MCRegUnit Unit : TRI->regunits(Reg.asMCReg())) {
-      SparseSet<LiveRegUnit>::iterator I = RegUnits.find(Unit);
+      LiveRegUnitSet::iterator I = RegUnits.find(Unit);
       if (I == RegUnits.end())
         continue;
       unsigned DepHeight = I->Cycle;
@@ -1048,7 +1047,7 @@ computeInstrHeights(const MachineBasicBlock *MBB) {
 
   // For physregs, the def isn't known when we see the use.
   // Instead, keep track of the highest use of each regunit.
-  SparseSet<LiveRegUnit> RegUnits;
+  LiveRegUnitSet RegUnits;
   RegUnits.setUniverse(MTM.TRI->getNumRegUnits());
 
   // If the bottom of the trace was already precomputed, initialize heights
