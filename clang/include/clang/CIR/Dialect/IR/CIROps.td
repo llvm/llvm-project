@@ -413,6 +413,12 @@ def CIR_ConstantOp : CIR_Op<"const", [
 
     template <typename T>
     T getValueAttr() { return mlir::dyn_cast<T>(getValue()); }
+
+    llvm::APInt getIntValue() {
+      if (const auto intAttr = getValueAttr<cir::IntAttr>())
+        return intAttr.getValue();
+      llvm_unreachable("Expected an IntAttr in ConstantOp");
+    }
   }];
 
   let hasFolder = 1;
