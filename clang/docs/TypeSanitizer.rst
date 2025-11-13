@@ -24,10 +24,6 @@ Typical memory overhead introduced by TypeSanitizer is about **8x**. Runtime slo
 depending on how often the instrumented code relies on type aliasing. In the best case slowdown is
 **2x-3x**.
 
-The compiler instrumentation also has an impact on code size and compilation overhead. There is an
-experimental :ref:`instrumentation outlining option<outlining_flag>` which can greatly reduce this
-but this may decrease runtime performance.
-
 The TypeSanitizer Algorithm
 ===========================
 For each TBAA type-access descriptor, encoded in LLVM IR using TBAA Metadata, the instrumentation 
@@ -132,17 +128,13 @@ references to LLVM IR specific terms.
 Sanitizer features
 ==================
 
-.. _outlining_flag:
-
-Instrumentation code outlining
+Instrumentation code inlining
 ------------------------------
 
-By default TypeSanitizer inlines the instrumentation code. This leads to increased
-binary size and compilation time. Using the clang flag
-``-fsanitize-type-outline-instrumentation`` (default: ``false``)
-forces all code instrumentation to be outlined. This reduces the size of the
-generated code and reduces compile-time overhead, but it also reduces runtime
-performance.
+By default TypeSanitizer inserts instrumentation through function calls. This may lead to a reduction in
+runtime performance. ``-fno-sanitize-type-outline-instrumentation`` (default: ``false``) forces all
+code instrumentation to be inlined. This will increase the size of the generated code and compiler
+overhead, but may improve the runtime performance of the resulting code.
 
 ``__has_feature(type_sanitizer)``
 ------------------------------------
