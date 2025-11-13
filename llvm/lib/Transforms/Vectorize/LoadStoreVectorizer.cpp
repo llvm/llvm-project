@@ -628,18 +628,15 @@ std::vector<Chain> Vectorizer::splitChainByContiguity(Chain &C) {
 
   unsigned ElemBytes = DL.getTypeStoreSize(getChainElemTy(C));
   APInt PrevReadEnd = C[0].OffsetFromLeader +
-                      DL.getTypeSizeInBits(getLoadStoreType(&*C[0].Inst)) / 8;
+                      DL.getTypeStoreSize(getLoadStoreType(&*C[0].Inst));
   for (auto It = std::next(C.begin()), End = C.end(); It != End; ++It) {
     // `prev` accesses offsets [PrevDistFromBase, PrevReadEnd).
     auto &CurChain = Ret.back();
-    unsigned SzBits = DL.getTypeSizeInBits(getLoadStoreType(&*It->Inst));
-    assert(SzBits % 8 == 0 && "Non-byte sizes should have been filtered out by "
-                              "collectEquivalenceClass");
+    unsigned SzBytes = DL.getTypeStoreSize(getLoadStoreType(&*It->Inst));
 
     // Add this instruction to the end of the current chain, or start a new one.
-    uint64_t SzBytes = SzBits / 8;
     assert(SzBytes % ElemBytes == 0);
-    APInt ReadEnd = It->OffsetFromLeader + SzBits / 8;
+    APInt ReadEnd = It->OffsetFromLeader + SzBytes;
     // Allow redundancy: partial or full overlap counts as contiguous.
     bool AreContiguous = false;
     if (It->OffsetFromLeader.sle(PrevReadEnd)) {
@@ -886,12 +883,12 @@ bool Vectorizer::vectorizeChain(Chain &C) {
   Type *VecElemTy = getChainElemTy(C);
   bool IsLoadChain = isa<LoadInst>(C[0].Inst);
   unsigned AS = getLoadStoreAddressSpace(C[0].Inst);
-  int BytesAdded = DL.getTypeSizeInBits(getLoadStoreType(&*C[0].Inst)) / 8;
+  unsigned BytesAdded = DL.getTypeStoreSize(getLoadStoreType(&*C[0].Inst));
   APInt PrevReadEnd = C[0].OffsetFromLeader + BytesAdded;
-  int ChainBytes = BytesAdded;
+  unsigned ChainBytes = BytesAdded;
   for (auto It = std::next(C.begin()), End = C.end(); It != End; ++It) {
-    unsigned SzBits = DL.getTypeSizeInBits(getLoadStoreType(&*It->Inst));
-    APInt ReadEnd = It->OffsetFromLeader + SzBits / 8;
+    unsigned SzBytes = DL.getTypeStoreSize(getLoadStoreType(&*It->Inst));
+    APInt ReadEnd = It->OffsetFromLeader + SzBytes;
     // Update ChainBytes considering possible overlap.
     BytesAdded =
         PrevReadEnd.sle(ReadEnd) ? (ReadEnd - PrevReadEnd).getSExtValue() : 0;
