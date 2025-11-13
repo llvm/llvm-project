@@ -123,6 +123,8 @@
 #    include <__locale_dir/support/fuchsia.h>
 #  elif defined(__linux__)
 #    include <__locale_dir/support/linux.h>
+#  elif _LIBCPP_HAS_NEWLIB_LIBC
+#    include <__locale_dir/support/newlib.h>
 #  else
 
 // TODO: This is a temporary definition to bridge between the old way we defined the locale base API

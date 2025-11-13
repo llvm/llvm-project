@@ -1591,6 +1591,7 @@ module std [system] {
       textual header "__locale_dir/support/fuchsia.h"
       textual header "__locale_dir/support/linux.h"
       textual header "__locale_dir/support/netbsd.h"
+      textual header "__locale_dir/support/newlib.h"
       textual header "__locale_dir/support/no_locale/characters.h"
       textual header "__locale_dir/support/no_locale/strtonum.h"
       textual header "__locale_dir/support/windows.h"

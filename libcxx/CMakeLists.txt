@@ -285,6 +285,7 @@ endif()
 
 # Feature options -------------------------------------------------------------
 option(LIBCXX_HAS_MUSL_LIBC "Build libc++ with support for the Musl C library" OFF)
+option(LIBCXX_HAS_NEWLIB_LIBC "Build libc++ with support for the Newlib C library" OFF)
 option(LIBCXX_HAS_PTHREAD_API "Ignore auto-detection and force use of pthread API" OFF)
 option(LIBCXX_HAS_WIN32_THREAD_API "Ignore auto-detection and force use of win32 thread API" OFF)
 option(LIBCXX_HAS_EXTERNAL_THREAD_API
@@ -741,6 +742,7 @@ config_define(${LIBCXX_HAS_PTHREAD_API} _LIBCPP_HAS_THREAD_API_PTHREAD)
 config_define(${LIBCXX_HAS_EXTERNAL_THREAD_API} _LIBCPP_HAS_THREAD_API_EXTERNAL)
 config_define(${LIBCXX_HAS_WIN32_THREAD_API} _LIBCPP_HAS_THREAD_API_WIN32)
 config_define(${LIBCXX_HAS_MUSL_LIBC} _LIBCPP_HAS_MUSL_LIBC)
+config_define(${LIBCXX_HAS_NEWLIB_LIBC} _LIBCPP_HAS_NEWLIB_LIBC)
 config_define_if(LIBCXX_NO_VCRUNTIME _LIBCPP_NO_VCRUNTIME)
 config_define(${LIBCXX_ENABLE_FILESYSTEM} _LIBCPP_HAS_FILESYSTEM)
 config_define(${LIBCXX_ENABLE_RANDOM_DEVICE} _LIBCPP_HAS_RANDOM_DEVICE)
