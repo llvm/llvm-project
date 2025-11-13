@@ -2748,7 +2748,7 @@ void SelectionDAGISel::UpdateChains(
 /// induce cycles in the DAG) and if so, creating a TokenFactor node. that will
 /// be used as the input node chain for the generated nodes.
 static SDValue
-HandleMergeInputChains(const SmallVectorImpl<SDNode*> &ChainNodesMatched,
+HandleMergeInputChains(const SmallVectorImpl<SDNode *> &ChainNodesMatched,
                        SelectionDAG *CurDAG) {
 
   SmallPtrSet<const SDNode *, 16> Visited;
