@@ -70,8 +70,6 @@ lldb::ModuleSP DynamicLoaderWasmDYLD::LoadModuleAtAddress(
     lldb::addr_t base_addr, bool base_addr_is_offset) {
   if (ModuleSP module_sp = DynamicLoader::LoadModuleAtAddress(
           file, link_map_addr, base_addr, base_addr_is_offset)) {
-    if (m_process->GetTarget().GetPreloadSymbols())
-      module_sp->PreloadSymbols();
     return module_sp;
   }
 

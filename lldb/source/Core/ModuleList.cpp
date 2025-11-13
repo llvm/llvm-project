@@ -1399,5 +1399,5 @@ void ModuleList::PreloadSymbols(bool parallelize) const {
       if (module_sp)
         module_sp->PreloadSymbols();
     });
-  // Task group destructor waits for all tasks to complete.
+  task_group.wait();
 }

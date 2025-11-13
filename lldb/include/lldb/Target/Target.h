@@ -629,6 +629,11 @@ public:
   /// or identify a matching Module already present in the Target,
   /// and return a shared pointer to it.
   ///
+  /// Note that this function previously also preloaded the module's symbols
+  /// depending on a setting. This function no longer does any module
+  /// preloading because that can potentially cause deadlocks when called in
+  /// parallel with this function.
+  ///
   /// \param[in] module_spec
   ///     The criteria that must be matched for the binary being loaded.
   ///     e.g. UUID, architecture, file path.
@@ -931,6 +936,13 @@ public:
   // the address of its previous instruction and return that address.
   lldb::addr_t GetBreakableLoadAddress(lldb::addr_t addr);
 
+  /// This call may preload module symbols, and may do so in parallel depending
+  /// on the following target settings:
+  ///   - TargetProperties::GetPreloadSymbols()
+  ///   - TargetProperties::GetParallelModuleLoad()
+  ///
+  /// Warning: if called in parallel with Target::GetOrCreateModule, this may
+  /// result in a ABBA deadlock situation.
   void ModulesDidLoad(ModuleList &module_list);
 
   void ModulesDidUnload(ModuleList &module_list, bool delete_locations);

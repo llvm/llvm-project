@@ -511,10 +511,6 @@ void DynamicLoaderPOSIXDYLD::RefreshModules() {
         load_module_fn(*I);
     }
 
-    if (m_process->GetTarget().GetPreloadSymbols())
-      new_modules.PreloadSymbols(
-          m_process->GetTarget().GetParallelModuleLoad());
-
     m_process->GetTarget().ModulesDidLoad(new_modules);
   }
 
@@ -734,9 +730,6 @@ void DynamicLoaderPOSIXDYLD::LoadAllCurrentModules() {
     for (I = m_rendezvous.begin(), E = m_rendezvous.end(); I != E; ++I)
       load_module_fn(*I);
   }
-
-  if (m_process->GetTarget().GetPreloadSymbols())
-    module_list.PreloadSymbols(m_process->GetTarget().GetParallelModuleLoad());
 
   m_process->GetTarget().ModulesDidLoad(module_list);
   m_initial_modules_added = true;

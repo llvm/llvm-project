@@ -1855,6 +1855,9 @@ void Target::NotifyModulesRemoved(lldb_private::ModuleList &module_list) {
 }
 
 void Target::ModulesDidLoad(ModuleList &module_list) {
+  if (GetPreloadSymbols())
+    module_list.PreloadSymbols(GetParallelModuleLoad());
+
   const size_t num_images = module_list.GetSize();
   if (m_valid && num_images) {
     for (size_t idx = 0; idx < num_images; ++idx) {
