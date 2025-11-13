@@ -337,7 +337,8 @@ Error BasicBlockSectionsProfileReader::ReadV1Profile() {
       if (getAsUnsignedInteger(PrefetchTargetStr[1], 10, TargetCallsiteIndex))
         return createProfileParseError(Twine("unsigned integer expected: '") +
                                        PrefetchTargetStr[1]);
-      FI->second.PrefetchTargets.push_back(BBPosition{*TargetBBID, static_cast<unsigned>(TargetCallsiteIndex)});
+      FI->second.PrefetchTargets.push_back(
+          BBPosition{*TargetBBID, static_cast<unsigned>(TargetCallsiteIndex)});
       continue;
     }
     default:

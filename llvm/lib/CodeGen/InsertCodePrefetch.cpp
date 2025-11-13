@@ -39,7 +39,9 @@ public:
     initializeInsertCodePrefetchPass(*PassRegistry::getPassRegistry());
   }
 
-  StringRef getPassName() const override { return "X86 Cide Prefetch Inserter Pass"; }
+  StringRef getPassName() const override {
+    return "X86 Cide Prefetch Inserter Pass";
+  }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 
@@ -55,15 +57,11 @@ public:
 //===----------------------------------------------------------------------===//
 
 char InsertCodePrefetch::ID = 0;
-INITIALIZE_PASS_BEGIN(
-    InsertCodePrefetch, DEBUG_TYPE,
-    "Reads prefetch", true,
-    false)
+INITIALIZE_PASS_BEGIN(InsertCodePrefetch, DEBUG_TYPE, "Reads prefetch", true,
+                      false)
 INITIALIZE_PASS_DEPENDENCY(BasicBlockSectionsProfileReaderWrapperPass)
-INITIALIZE_PASS_END(
-    InsertCodePrefetch, DEBUG_TYPE,
-    "Reads prefetch", true,
-    false)
+INITIALIZE_PASS_END(InsertCodePrefetch, DEBUG_TYPE, "Reads prefetch", true,
+                    false)
 
 bool InsertCodePrefetch::runOnMachineFunction(MachineFunction &MF) {
   assert(MF.getTarget().getBBSectionsType() == BasicBlockSection::List &&
@@ -74,11 +72,12 @@ bool InsertCodePrefetch::runOnMachineFunction(MachineFunction &MF) {
       getAnalysis<BasicBlockSectionsProfileReaderWrapperPass>()
           .getPrefetchTargetsForFunction(MF.getName());
   DenseMap<UniqueBBID, SmallVector<unsigned>> PrefetchTargetsByBBID;
-  for (const auto &Target: PrefetchTargets)
+  for (const auto &Target : PrefetchTargets)
     PrefetchTargetsByBBID[Target.BBID].push_back(Target.CallsiteIndex);
-  for (auto &MBB: MF) {
+  for (auto &MBB : MF) {
     auto R = PrefetchTargetsByBBID.find(*MBB.getBBID());
-    if (R == PrefetchTargetsByBBID.end()) continue;
+    if (R == PrefetchTargetsByBBID.end())
+      continue;
     MBB.setPrefetchTargetIndexes(R->second);
   }
 

@@ -18,7 +18,6 @@
 #include "WasmException.h"
 #include "WinCFGuard.h"
 #include "WinException.h"
-#include "llvm/Support/SMLoc.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/BitmaskEnum.h"
@@ -120,6 +119,7 @@
 #include "llvm/Support/Format.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/SMLoc.h"
 #include "llvm/Support/VCSRevision.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
@@ -1983,7 +1983,7 @@ void AsmPrinter::emitFunctionBody() {
   FunctionCallGraphInfo FuncCGInfo;
   const auto &CallSitesInfoMap = MF->getCallSitesInfo();
 
-   for (auto &MBB : *MF) {
+  for (auto &MBB : *MF) {
     // Print a label for the basic block.
     emitBasicBlockStart(MBB);
     DenseMap<StringRef, unsigned> MnemonicCounts;
@@ -1992,15 +1992,18 @@ void AsmPrinter::emitFunctionBody() {
     auto PrefetchTargetIt = PrefetchTargets.begin();
     unsigned NumCalls = 0;
     auto EmitPrefetchTargetSymbolIfNeeded = [&]() {
-      if (PrefetchTargetIt == PrefetchTargets.end() || NumCalls < *PrefetchTargetIt)
+      if (PrefetchTargetIt == PrefetchTargets.end() ||
+          NumCalls < *PrefetchTargetIt)
         return;
       MCSymbol *PrefetchTargetSymbol = OutContext.getOrCreateSymbol(
-            Twine("__llvm_prefetch_target_") + MF->getName() + Twine("_") + utostr(MBB.getBBID()->BaseID) +
-            Twine("_") +
-            utostr(*PrefetchTargetIt));
-          OutStreamer->emitSymbolAttribute(PrefetchTargetSymbol, MF->getFunction().isWeakForLinker() ? MCSA_Weak : MCSA_Global);
-        OutStreamer->emitLabel(PrefetchTargetSymbol);
-        ++PrefetchTargetIt;
+          Twine("__llvm_prefetch_target_") + MF->getName() + Twine("_") +
+          utostr(MBB.getBBID()->BaseID) + Twine("_") +
+          utostr(*PrefetchTargetIt));
+      OutStreamer->emitSymbolAttribute(
+          PrefetchTargetSymbol,
+          MF->getFunction().isWeakForLinker() ? MCSA_Weak : MCSA_Global);
+      OutStreamer->emitLabel(PrefetchTargetSymbol);
+      ++PrefetchTargetIt;
     };
 
     for (auto &MI : MBB) {
@@ -2118,7 +2121,7 @@ void AsmPrinter::emitFunctionBody() {
         break;
       }
       default:
-         emitInstruction(&MI);
+        emitInstruction(&MI);
 
         auto CountInstruction = [&](const MachineInstr &MI) {
           // Skip Meta instructions inside bundles.
@@ -2144,7 +2147,7 @@ void AsmPrinter::emitFunctionBody() {
 
       if (MI.isCall()) {
         if (MF->getTarget().Options.BBAddrMap)
-        OutStreamer->emitLabel(createCallsiteEndSymbol(MBB));
+          OutStreamer->emitLabel(createCallsiteEndSymbol(MBB));
         ++NumCalls;
       }
 
