@@ -3881,8 +3881,10 @@ cc_library(
     includes = ["include"],
     deps = [
         ":DialectUtils",
+        ":GPUDialect",
         ":IR",
         ":SCFDialect",
+        ":SCFUtils",
         ":TransformDialect",
         ":TransformDialectInterfaces",
         ":XeGPUDialect",

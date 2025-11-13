@@ -345,6 +345,9 @@ Improvements to Clang's diagnostics
 -----------------------------------
 - Diagnostics messages now refer to ``structured binding`` instead of ``decomposition``,
   to align with `P0615R0 <https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/p0615r0.html>`_ changing the term. (#GH157880)
+- Clang now suppresses runtime behavior warnings for unreachable code in file-scope
+  variable initializers, matching the behavior for functions. This prevents false
+  positives for operations in unreachable branches of constant expressions.
 - Added a separate diagnostic group ``-Wfunction-effect-redeclarations``, for the more pedantic
   diagnostics for function effects (``[[clang::nonblocking]]`` and ``[[clang::nonallocating]]``).
   Moved the warning for a missing (though implied) attribute on a redeclaration into this group.
@@ -598,6 +601,9 @@ RISC-V Support
 - Add `-march=unset` to clear any previous `-march=` value. This ISA string will
   be computed from `-mcpu` or the platform default.
 
+- `__GCC_CONSTRUCTIVE_SIZE` and `__GCC_DESTRUCTIVE_SIZE` are changed to 64. These values are
+  unstable according to `Clang's documentation <https://clang.llvm.org/docs/LanguageExtensions.html#gcc-destructive-size-and-gcc-constructive-size>`_.
+
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -719,6 +725,7 @@ OpenMP Support
 - Added support for 'omp fuse' directive.
 - Updated parsing and semantic analysis support for ``nowait`` clause to accept
   optional argument in OpenMP >= 60.
+- Added support for ``default`` clause on ``target`` directive.
 
 Improvements
 ^^^^^^^^^^^^
