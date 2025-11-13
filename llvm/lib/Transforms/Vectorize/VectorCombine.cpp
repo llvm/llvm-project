@@ -347,13 +347,14 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
     Mask[0] = OffsetEltIndex;
   }
 
-  if (OffsetEltIndex)
+  if (OffsetEltIndex) {
     if (NeedCast)
       NewCost += TTI.getShuffleCost(TTI::SK_PermuteSingleSrc, MinVecTy,
                                     MinVecTy, Mask, CostKind);
     else
       NewCost += TTI.getShuffleCost(TTI::SK_PermuteSingleSrc, Ty, MinVecTy,
                                     Mask, CostKind);
+  }
 
   if (NeedCast)
     NewCost += TTI.getCastInstrCost(Instruction::BitCast, Ty, MinVecTy,
