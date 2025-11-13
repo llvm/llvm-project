@@ -1295,9 +1295,13 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
   } else if (TT.isOSBinFormatELF()) {
     if (!NoExec)
       ObjLayer.addPlugin(ExitOnErr(EHFrameRegistrationPlugin::Create(ES)));
-    if (DebuggerSupport)
+    if (DebuggerSupport) {
+      Error TargetSymErr = Error::success();
       ObjLayer.addPlugin(std::make_unique<DebugObjectManagerPlugin>(
-          ES, ExitOnErr(createJITLoaderGDBRegistrar(this->ES)), true, true));
+          ES, true, true, TargetSymErr));
+      logAllUnhandledErrors(std::move(TargetSymErr), errs(),
+                            "Debugger support not available: ");
+    }
   }
 
   if (auto MainJDOrErr = ES.createJITDylib("main"))
