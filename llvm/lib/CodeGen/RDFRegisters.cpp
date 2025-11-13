@@ -46,7 +46,7 @@ PhysicalRegisterInfo::PhysicalRegisterInfo(const TargetRegisterInfo &tri,
 
   UnitInfos.resize(TRI.getNumRegUnits());
 
-  for (uint32_t U = 0, NU = TRI.getNumRegUnits(); U != NU; ++U) {
+  for (MCRegUnit U : TRI.regunits()) {
     if (UnitInfos[U].Reg != 0)
       continue;
     MCRegUnitRootIterator R(U, &TRI);
@@ -88,7 +88,7 @@ PhysicalRegisterInfo::PhysicalRegisterInfo(const TargetRegisterInfo &tri,
   }
 
   AliasInfos.resize(TRI.getNumRegUnits());
-  for (uint32_t U = 0, NU = TRI.getNumRegUnits(); U != NU; ++U) {
+  for (MCRegUnit U : TRI.regunits()) {
     BitVector AS(TRI.getNumRegs());
     for (MCRegUnitRootIterator R(U, &TRI); R.isValid(); ++R)
       for (MCPhysReg S : TRI.superregs_inclusive(*R))
