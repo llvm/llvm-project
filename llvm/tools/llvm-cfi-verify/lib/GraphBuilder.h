@@ -37,7 +37,6 @@
 #include "llvm/Support/raw_ostream.h"
 
 #include <functional>
-#include <set>
 
 using Instr = llvm::cfi_verify::FileAnalysis::Instr;
 

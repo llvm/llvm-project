@@ -20,7 +20,7 @@ subroutine modulo_testr(r, a, p)
   ! ALL: fir.store %[[res]] to %[[arg0]] : !fir.ref<f64>
   r = modulo(a, p)
 end subroutine
-  
+
 ! ALL-LABEL: func @_QPmodulo_testi(
 ! ALL-SAME: %[[arg0:.*]]: !fir.ref<i64>{{.*}}, %[[arg1:.*]]: !fir.ref<i64>{{.*}}, %[[arg2:.*]]: !fir.ref<i64>{{.*}}) {
 subroutine modulo_testi(r, a, p)
