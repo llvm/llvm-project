@@ -1,5 +1,16 @@
 # Expects target triple to be passed as `ARCH_TRIPLE`
-message(STATUS "--- Discovered target triple: ${ARCH_TRIPLE} ---")
+# A sample invocation:
+#
+# cmake -S . -B build \
+#   -DCMAKE_CXX_COMPILER=/usr/bin/clang \
+#   -DCMAKE_C_COMPILER=/usr/bin/clang++ \
+#   -DCMAKE_BUILD_TYPE=MinSizeRel \
+#   -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+#   -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+#   -DARCH_TRIPLE=riscv32-unknown-elf \
+#   -G Ninja \
+#   -S runtimes \
+#   -C clang/cmake/caches/Standalone_libc_baremetal.cache
 
 set(CMAKE_SYSTEM_NAME Generic CACHE STRING "")
 set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY CACHE STRING "")

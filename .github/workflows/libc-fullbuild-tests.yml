@@ -129,9 +129,20 @@ jobs:
       run: |
         export RUNTIMES="libc"
 
+        export CMAKE_FLAGS="
+          -G Ninja
+          -S ${{ github.workspace }}/runtimes
+          -B ${{ steps.strings.outputs.build-output-dir }}
+          -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }}
+          -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
+          -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+          -DCMAKE_C_COMPILER_LAUNCHER=sccache
+          -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
+          -DCMAKE_INSTALL_PREFIX=${{ steps.strings.outputs.build-install-dir }}"
+
         if [[ ${{ matrix.include_scudo}} == "ON" ]]; then
           export RUNTIMES="$RUNTIMES;compiler-rt"
-          export CMAKE_FLAGS="
+          export CMAKE_FLAGS="$CMAKE_FLAGS
             -DLLVM_LIBC_INCLUDE_SCUDO=ON
             -DCOMPILER_RT_BUILD_SCUDO_STANDALONE_WITH_LLVM_LIBC=ON
             -DCOMPILER_RT_BUILD_GWP_ASAN=OFF
@@ -140,31 +151,14 @@ jobs:
 
         case "${{ matrix.target }}" in
           *-none-eabi|riscv32-unknown-elf)
-            cmake -B ${{ steps.strings.outputs.build-output-dir }} \
-              -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }} \
-              -DCMAKE_C_COMPILER=${{ matrix.c_compiler }} \
-              -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
-              -DCMAKE_C_COMPILER_LAUNCHER=sccache \
-              -DCMAKE_CXX_COMPILER_LAUNCHER=sccache \
-              -DCMAKE_INSTALL_PREFIX=${{ steps.strings.outputs.build-install-dir }} \
-              -DARCH_TRIPLE="${{ matrix.target }}" \
-              -G Ninja \
-              -S ${{ github.workspace }}/runtimes \
+            cmake -DARCH_TRIPLE="${{ matrix.target }}" \
+              $CMAKE_FLAGS \
               -C ${{ github.workspace }}/clang/cmake/caches/Standalone_libc_baremetal.cache
             ;;
           *)
-            cmake -B ${{ steps.strings.outputs.build-output-dir }} \
-              -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }} \
-              -DCMAKE_C_COMPILER=${{ matrix.c_compiler }} \
-              -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
-              -DCMAKE_C_COMPILER_LAUNCHER=sccache \
-              -DCMAKE_CXX_COMPILER_LAUNCHER=sccache \
-              -DCMAKE_INSTALL_PREFIX=${{ steps.strings.outputs.build-install-dir }} \
-              -DLLVM_RUNTIME_TARGETS=${{ matrix.target }} \
+            cmake -DLLVM_RUNTIME_TARGETS=${{ matrix.target }} \
               -DLLVM_ENABLE_RUNTIMES="$RUNTIMES" \
               -DLLVM_LIBC_FULL_BUILD=ON \
-              -G Ninja \
-              -S ${{ github.workspace }}/runtimes \
               $CMAKE_FLAGS
             ;;
         esac
