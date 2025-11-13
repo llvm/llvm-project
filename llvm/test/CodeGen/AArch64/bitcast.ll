@@ -8,6 +8,7 @@ define <4 x i16> @foo1(<2 x i32> %a) {
 ; CHECK-SD-LABEL: foo1:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: foo1:
@@ -28,6 +29,7 @@ define <4 x i16> @foo2(<2 x i32> %a) {
 ; CHECK-SD-LABEL: foo2:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: foo2:

@@ -46,7 +46,8 @@ entry:
 ; SEC-NEXT:      Name: .text
 ; SEC-NEXT:      PhysicalAddress: 0x0
 ; SEC-NEXT:      VirtualAddress: 0x0
-; SEC-NEXT:      Size: 0x28
+; SEC32-NEXT:    Size: 0x24
+; SEC64-NEXT:    Size: 0x24
 ; SEC32-NEXT:    RawDataOffset: 0xDC
 ; SEC64-NEXT:    RawDataOffset: 0x180
 ; SEC-NEXT:      RelocationPointer: 0x0
@@ -58,14 +59,16 @@ entry:
 ; SEC-NEXT:    Section {
 ; SEC-NEXT:      Index: 2
 ; SEC-NEXT:      Name: .data
-; SEC-NEXT:      PhysicalAddress: 0x28
-; SEC-NEXT:      VirtualAddress: 0x28
+; SEC32-NEXT:    PhysicalAddress: 0x24
+; SEC64-NEXT:    PhysicalAddress: 0x28
+; SEC32-NEXT:    VirtualAddress: 0x24
+; SEC64-NEXT:    VirtualAddress: 0x28
 ; SEC32-NEXT:    Size: 0xC
-; SEC32-NEXT:    RawDataOffset: 0x104
+; SEC32-NEXT:    RawDataOffset: 0x100
 ; SEC32-NEXT:    RelocationPointer: 0x1F4
 ; SEC64-NEXT:    Size: 0x18
-; SEC64-NEXT:    RawDataOffset: 0x1A8
-; SEC64-NEXT:    RelocationPointer: 0x2C8
+; SEC64-NEXT:    RawDataOffset: 0x1A4
+; SEC64-NEXT:    RelocationPointer: 0x2C4
 ; SEC-NEXT:      LineNumberPointer: 0x0
 ; SEC-NEXT:      NumberOfRelocations: 2
 ; SEC-NEXT:      NumberOfLineNumbers: 0
@@ -78,7 +81,7 @@ entry:
 ; SEC-NEXT:      VirtualAddress: 0x0
 ; SEC-NEXT:      Size: 0x36
 ; SEC32-NEXT:    RawDataOffset: 0x11C
-; SEC64-NEXT:    RawDataOffset: 0x1C0
+; SEC64-NEXT:    RawDataOffset: 0x1BC
 ; SEC-NEXT:      RelocationPointer: 0x0
 ; SEC-NEXT:      LineNumberPointer: 0x0
 ; SEC-NEXT:      NumberOfRelocations: 0
@@ -95,8 +98,8 @@ entry:
 ; SEC32-NEXT:    RawDataOffset: 0x15C
 ; SEC32-NEXT:    RelocationPointer: 0x208
 ; SEC64-NEXT:    Size: 0x6F
-; SEC64-NEXT:    RawDataOffset: 0x200
-; SEC64-NEXT:    RelocationPointer: 0x2E4
+; SEC64-NEXT:    RawDataOffset: 0x1FC
+; SEC64-NEXT:    RelocationPointer: 0x2E0
 ; SEC-NEXT:      LineNumberPointer: 0x0
 ; SEC-NEXT:      NumberOfRelocations: 4
 ; SEC-NEXT:      NumberOfLineNumbers: 0
@@ -112,8 +115,8 @@ entry:
 ; SEC32-NEXT:    RawDataOffset: 0x1BC
 ; SEC32-NEXT:    RelocationPointer: 0x230
 ; SEC64-NEXT:    Size: 0x46
-; SEC64-NEXT:    RawDataOffset: 0x280
-; SEC64-NEXT:    RelocationPointer: 0x31C
+; SEC64-NEXT:    RawDataOffset: 0x27C
+; SEC64-NEXT:    RelocationPointer: 0x318
 ; SEC-NEXT:      LineNumberPointer: 0x0
 ; SEC-NEXT:      NumberOfRelocations: 1
 ; SEC-NEXT:      NumberOfLineNumbers: 0
@@ -125,12 +128,12 @@ entry:
 ; RELO:      RELOCATION RECORDS FOR [.dwinfo]:
 ; RELO-NEXT:  OFFSET   TYPE                     VALUE
 ; RELO-NEXT:  00000006 R_POS                    .dwabrev
-; RELO-NEXT:  00000027 R_POS                    .dwline
-; RELO-NEXT:  00000009 R_POS                    
+; RELO-NEXT:  00000003 R_POS                    .dwline
+; RELO-NEXT:  00000031 R_POS                    
 ; RELO-NEXT:  0000003a R_POS                    
 ; RELO:       RELOCATION RECORDS FOR [.dwline]:
 ; RELO-NEXT:  OFFSET   TYPE                     VALUE
-; RELO-NEXT:  00000000 R_POS                    
+; RELO-NEXT:  00000004 R_POS                    
 
 ; RELO64:      RELOCATION RECORDS FOR [.dwinfo]:
 ; RELO64-NEXT: OFFSET           TYPE                     VALUE

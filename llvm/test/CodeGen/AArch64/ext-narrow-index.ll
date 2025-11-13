@@ -251,6 +251,7 @@ define <8 x i8> @i8_zero_off22(<16 x i8> %arg1) {
 ; CHECK-SD-LABEL: i8_zero_off22:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GISEL-LABEL: i8_zero_off22:
@@ -302,6 +303,7 @@ define <4 x i16> @i16_zero_off8(<8 x i16> %arg1) {
 ; CHECK-LABEL: i16_zero_off8:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %shuffle = shufflevector <8 x i16> %arg1, <8 x i16> zeroinitializer, <4 x i32> <i32 8, i32 9, i32 10, i32 11>
@@ -346,6 +348,7 @@ define <2 x i32> @i32_zero_off4(<4 x i32> %arg1) {
 ; CHECK-LABEL: i32_zero_off4:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %shuffle = shufflevector <4 x i32> %arg1, <4 x i32> zeroinitializer, <2 x i32> <i32 4, i32 5>

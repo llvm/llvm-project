@@ -16,6 +16,7 @@ define <8 x i8> @movi8b_0() {
 ; CHECK-LABEL: movi8b_0:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
    ret <8 x i8> zeroinitializer
 }
@@ -48,6 +49,7 @@ define <2 x i32> @movi2s_0() {
 ; CHECK-LABEL: movi2s_0:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
    ret <2 x i32> zeroinitializer
 }
@@ -474,6 +476,7 @@ define <2 x float> @fmov2s_0() {
 ; CHECK-LABEL: fmov2s_0:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 	ret <2 x float> zeroinitializer
 }

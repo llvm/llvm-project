@@ -1,9 +1,9 @@
-; RUN: llc -mtriple=mips     -mcpu=mips32                 -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,32-CMOV
-; RUN: llc -mtriple=mips     -mcpu=mips32 -regalloc=basic -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,32-CMOV
-; RUN: llc -mtriple=mips     -mcpu=mips32r2               -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,32-CMOV
+; RUN: llc -mtriple=mips     -mcpu=mips32                 -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,32-CMOV1
+; RUN: llc -mtriple=mips     -mcpu=mips32 -regalloc=basic -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,32-CMOV2
+; RUN: llc -mtriple=mips     -mcpu=mips32r2               -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,32-CMOV3
 ; RUN: llc -mtriple=mips     -mcpu=mips32r6               -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,32-CMP
-; RUN: llc -mtriple=mips64el -mcpu=mips4                  -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,64-CMOV
-; RUN: llc -mtriple=mips64el -mcpu=mips64                 -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,64-CMOV
+; RUN: llc -mtriple=mips64el -mcpu=mips4                  -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,64-CMOV1
+; RUN: llc -mtriple=mips64el -mcpu=mips64                 -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,64-CMOV2
 ; RUN: llc -mtriple=mips64el -mcpu=mips64r6               -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,64-CMP
 
 @i1 = global [3 x i32] [i32 1, i32 2, i32 3], align 4
@@ -11,10 +11,20 @@
 
 ; ALL-LABEL: cmov1:
 
-; 32-CMOV-DAG:  lw $[[R0:[0-9]+]], %got(i3)
-; 32-CMOV-DAG:  addiu $[[R1:[0-9]+]], ${{[0-9]+}}, %got(i1)
-; 32-CMOV-DAG:  movn $[[R0]], $[[R1]], $4
-; 32-CMOV-DAG:  lw $2, 0($[[R0]])
+; 32-CMOV1-DAG:  lw $[[R0:[0-9]+]], %got(i3)
+; 32-CMOV1-DAG:  addiu $[[R1:[0-9]+]], ${{[0-9]+}}, %got(i1)
+; 32-CMOV1-DAG:  movn $[[R0]], $[[R1]], $4
+; 32-CMOV1-DAG:  lw $2, 0($[[R0]])
+
+; 32-CMOV2-DAG:  lw $[[R0:[0-9]+]], %got(i3)
+; 32-CMOV2-DAG:  addiu $[[R1:[0-9]+]], ${{[0-9]+}}, %got(i1)
+; 32-CMOV2-DAG:  movn $[[R0]], $[[R1]], $4
+; 32-CMOV2-DAG:  lw $2, 0($[[R0]])
+
+; 32-CMOV3-DAG:  lw $[[R0:[0-9]+]], %got(i3)
+; 32-CMOV3-DAG:  addiu $[[R1:[0-9]+]], ${{[0-9]+}}, %got(i1)
+; 32-CMOV3-DAG:  movn $[[R0]], $[[R1]], $4
+; 32-CMOV3-DAG:  lw $2, 0($[[R0]])
 
 ; 32-CMP-DAG:   lw $[[R0:[0-9]+]], %got(i3)
 ; 32-CMP-DAG:   addiu $[[R1:[0-9]+]], ${{[0-9]+}}, %got(i1)
@@ -23,9 +33,17 @@
 ; 32-CMP-DAG:   or $[[T2:[0-9]+]], $[[T0]], $[[T1]]
 ; 32-CMP-DAG:   lw $2, 0($[[T2]])
 
-; 64-CMOV-DAG:  ldr $[[R0:[0-9]+]]
-; 64-CMOV-DAG:  ld $[[R1:[0-9]+]], %got_disp(i1)
-; 64-CMOV-DAG:  movn $[[R0]], $[[R1]], $4
+; 64-CMOV1-DAG:  ldr $[[R0:[0-9]+]]
+; 64-CMOV1-DAG:  ld $[[R1:[0-9]+]], %got_disp(i1)
+; 64-CMOV1-DAG:  movn $[[R0]], $[[R1]], $4
+
+; 64-CMOV2-DAG:  ldr $[[R0:[0-9]+]]
+; 64-CMOV2-DAG:  ld $[[R1:[0-9]+]], %got_disp(i1)
+; 64-CMOV2-DAG:  movn $[[R0]], $[[R1]], $4
+
+; 64-CMOV3-DAG:  ldr $[[R0:[0-9]+]]
+; 64-CMOV3-DAG:  ld $[[R1:[0-9]+]], %got_disp(i1)
+; 64-CMOV3-DAG:  movn $[[R0]], $[[R1]], $4
 
 ; 64-CMP-DAG:   ld $[[R0:[0-9]+]], %got_disp(i3)(
 ; 64-CMP-DAG:   daddiu $[[R1:[0-9]+]], ${{[0-9]+}}, %got_disp(i1)
@@ -51,10 +69,20 @@ entry:
 
 ; ALL-LABEL: cmov2:
 
-; 32-CMOV-DAG:  addiu $[[R1:[0-9]+]], ${{[0-9]+}}, %got(d)
-; 32-CMOV-DAG:  addiu $[[R0:[0-9]+]], ${{[0-9]+}}, %got(c)
-; 32-CMOV-DAG:  movn  $[[R1]], $[[R0]], $4
-; 32-CMOV-DAG:  lw $2, 0($[[R0]])
+; 32-CMOV1-DAG:  addiu $[[R1:[0-9]+]], ${{[0-9]+}}, %got(d)
+; 32-CMOV1-DAG:  addiu $[[R0:[0-9]+]], ${{[0-9]+}}, %got(c)
+; 32-CMOV1-DAG:  movn  $[[R1]], $[[R0]], $4
+; 32-CMOV1-DAG:  lw $2, 0($[[R0]])
+
+; 32-CMOV2-DAG:  addiu $[[R1:[0-9]+]], ${{[0-9]+}}, %got(d)
+; 32-CMOV2-DAG:  addiu $[[R0:[0-9]+]], ${{[0-9]+}}, %got(c)
+; 32-CMOV2-DAG:  movn  $[[R1]], $[[R0]], $4
+; 32-CMOV2-DAG:  lw $2, 0($[[R0]])
+
+; 32-CMOV3-DAG:  addiu $[[R1:[0-9]+]], ${{[0-9]+}}, %got(d)
+; 32-CMOV3-DAG:  addiu $[[R0:[0-9]+]], ${{[0-9]+}}, %got(c)
+; 32-CMOV3-DAG:  movn  $[[R1]], $[[R0]], $4
+; 32-CMOV3-DAG:  lw $2, 0($[[R0]])
 
 ; 32-CMP-DAG:   addiu $[[R1:[0-9]+]], ${{[0-9]+}}, %got(d)
 ; 32-CMP-DAG:   addiu $[[R0:[0-9]+]], ${{[0-9]+}}, %got(c)
@@ -63,9 +91,13 @@ entry:
 ; 32-CMP-DAG:   or $[[T2:[0-9]+]], $[[T0]], $[[T1]]
 ; 32-CMP-DAG:   lw $2, 0($[[T2]])
 
-; 64-CMOV:      daddiu $[[R1:[0-9]+]], ${{[0-9]+}}, %got_disp(d)
-; 64-CMOV:      daddiu $[[R0:[0-9]+]], ${{[0-9]+}}, %got_disp(c)
-; 64-CMOV:      movn  $[[R1]], $[[R0]], $4
+; 64-CMOV1:      daddiu $[[R1:[0-9]+]], ${{[0-9]+}}, %got_disp(d)
+; 64-CMOV1:      daddiu $[[R0:[0-9]+]], ${{[0-9]+}}, %got_disp(c)
+; 64-CMOV1:      movn  $[[R1]], $[[R0]], $4
+
+; 64-CMOV2:      daddiu $[[R1:[0-9]+]], ${{[0-9]+}}, %got_disp(d)
+; 64-CMOV2:      daddiu $[[R0:[0-9]+]], ${{[0-9]+}}, %got_disp(c)
+; 64-CMOV2:      movn  $[[R1]], $[[R0]], $4
 
 ; 64-CMP-DAG:   daddiu $[[R1:[0-9]+]], ${{[0-9]+}}, %got_disp(d)
 ; 64-CMP-DAG:   daddiu $[[R0:[0-9]+]], ${{[0-9]+}}, %got_disp(c)
@@ -123,9 +155,17 @@ entry:
 ; check that.
 
 ; FIXME: Use xori instead of addiu+xor.
-; 32-CMOV:      addiu $[[R0:[0-9]+]], $zero, 234
-; 32-CMOV:      xor $[[R1:[0-9]+]], $4, $[[R0]]
-; 32-CMOV:      movn ${{[26]}}, $5, $[[R1]]
+; 32-CMOV1:      addiu $[[R0:[0-9]+]], $zero, 234
+; 32-CMOV1:      xor $[[R1:[0-9]+]], $4, $[[R0]]
+; 32-CMOV1:      movn ${{[26]}}, $5, $[[R1]]
+
+; 32-CMOV2:      addiu $[[R0:[0-9]+]], $zero, 234
+; 32-CMOV2:      xor $[[R1:[0-9]+]], $4, $[[R0]]
+; 32-CMOV2:      movn ${{[26]}}, $5, $[[R1]]
+
+; 32-CMOV3:      addiu $[[R0:[0-9]+]], $zero, 234
+; 32-CMOV3:      xor $[[R1:[0-9]+]], $4, $[[R0]]
+; 32-CMOV3:      movn ${{[26]}}, $5, $[[R1]]
 
 ; 32-CMP-DAG:   xori $[[CC:[0-9]+]], $4, 234
 ; 32-CMP-DAG:   selnez $[[T0:[0-9]+]], $5, $[[CC]]
@@ -133,9 +173,13 @@ entry:
 ; 32-CMP-DAG:   or $2, $[[T0]], $[[T1]]
 
 ; FIXME: Use xori instead of addiu+xor.
-; 64-CMOV:      addiu $[[R0:[0-9]+]], $zero, 234
-; 64-CMOV:      xor $[[R1:[0-9]+]], $4, $[[R0]]
-; 64-CMOV:      movn ${{[26]}}, $5, $[[R1]]
+; 64-CMOV1:      addiu $[[R0:[0-9]+]], $zero, 234
+; 64-CMOV1:      xor $[[R1:[0-9]+]], $4, $[[R0]]
+; 64-CMOV1:      movn ${{[26]}}, $5, $[[R1]]
+
+; 64-CMOV2:      addiu $[[R0:[0-9]+]], $zero, 234
+; 64-CMOV2:      xor $[[R1:[0-9]+]], $4, $[[R0]]
+; 64-CMOV2:      movn ${{[26]}}, $5, $[[R1]]
 
 ; 64-CMP-DAG:   xori $[[CC:[0-9]+]], $4, 234
 ; 64-CMP-DAG:   selnez $[[T0:[0-9]+]], $5, $[[CC]]
@@ -155,11 +199,23 @@ entry:
 ; or last. We do know it will be one of two registers so we can at least check
 ; that.
 
-; 32-CMOV-DAG: xori $[[R0:[0-9]+]], $4, 234
-; 32-CMOV-DAG: lw $[[R1:2]], 16($sp)
-; 32-CMOV-DAG: lw $[[R2:3]], 20($sp)
-; 32-CMOV-DAG: movz $[[R1]], $6, $[[R0]]
-; 32-CMOV-DAG: movz $[[R2]], $7, $[[R0]]
+; 32-CMOV1-DAG: xori $[[R0:[0-9]+]], $4, 234
+; 32-CMOV1-DAG: lw $[[R1:2]], 16($sp)
+; 32-CMOV1-DAG: lw $[[R2:3]], 20($sp)
+; 32-CMOV1-DAG: movz $[[R1]], $6, $[[R0]]
+; 32-CMOV1-DAG: movz $[[R2]], $7, $[[R0]]
+
+; 32-CMOV2-DAG: xori $[[R0:[0-9]+]], $4, 234
+; 32-CMOV2-DAG: lw $[[R1:2]], 16($sp)
+; 32-CMOV2-DAG: lw $[[R2:3]], 20($sp)
+; 32-CMOV2-DAG: movz $[[R1]], $6, $[[R0]]
+; 32-CMOV2-DAG: movz $[[R2]], $7, $[[R0]]
+
+; 32-CMOV3-DAG: xori $[[R0:[0-9]+]], $4, 234
+; 32-CMOV3-DAG: lw $[[R1:2]], 16($sp)
+; 32-CMOV3-DAG: lw $[[R2:3]], 20($sp)
+; 32-CMOV3-DAG: movz $[[R1]], $6, $[[R0]]
+; 32-CMOV3-DAG: movz $[[R2]], $7, $[[R0]]
 
 ; 32-CMP-DAG:  xori $[[R0:[0-9]+]], $4, 234
 ; 32-CMP-DAG:  lw $[[R1:[0-9]+]], 16($sp)
@@ -171,8 +227,11 @@ entry:
 ; 32-CMP-DAG:  or $2, $[[T0]], $[[T2]]
 ; 32-CMP-DAG:  or $3, $[[T1]], $[[T3]]
 
-; 64-CMOV: xori $[[R0:[0-9]+]], $4, 234
-; 64-CMOV: movz ${{[26]}}, $5, $[[R0]]
+; 64-CMOV1: xori $[[R0:[0-9]+]], $4, 234
+; 64-CMOV1: movz ${{[26]}}, $5, $[[R0]]
+
+; 64-CMOV2: xori $[[R0:[0-9]+]], $4, 234
+; 64-CMOV2: movz ${{[26]}}, $5, $[[R0]]
 
 ; 64-CMP-DAG:  xori $[[R0:[0-9]+]], $4, 234
 ; 64-CMP-DAG:  seleqz $[[T0:[0-9]+]], $5, $[[R0]]
@@ -193,12 +252,26 @@ entry:
 ; that.
 
 ; FIXME: Use xori instead of addiu+xor.
-; 32-CMOV-DAG: addiu $[[R0:[0-9]+]], $zero, 234
-; 32-CMOV-DAG: xor $[[R1:[0-9]+]], $4, $[[R0]]
-; 32-CMOV-DAG: lw $[[R2:2]], 16($sp)
-; 32-CMOV-DAG: lw $[[R3:3]], 20($sp)
-; 32-CMOV-DAG: movn $[[R2]], $6, $[[R1]]
-; 32-CMOV-DAG: movn $[[R3]], $7, $[[R1]]
+; 32-CMOV1-DAG: addiu $[[R0:[0-9]+]], $zero, 234
+; 32-CMOV1-DAG: xor $[[R1:[0-9]+]], $4, $[[R0]]
+; 32-CMOV1-DAG: lw $[[R2:2]], 16($sp)
+; 32-CMOV1-DAG: lw $[[R3:3]], 20($sp)
+; 32-CMOV1-DAG: movn $[[R2]], $6, $[[R1]]
+; 32-CMOV1-DAG: movn $[[R3]], $7, $[[R1]]
+
+; 32-CMOV2-DAG: addiu $[[R0:[0-9]+]], $zero, 234
+; 32-CMOV2-DAG: xor $[[R1:[0-9]+]], $4, $[[R0]]
+; 32-CMOV2-DAG: lw $[[R2:2]], 16($sp)
+; 32-CMOV2-DAG: lw $[[R3:3]], 20($sp)
+; 32-CMOV2-DAG: movn $[[R2]], $6, $[[R1]]
+; 32-CMOV2-DAG: movn $[[R3]], $7, $[[R1]]
+
+; 32-CMOV3-DAG: addiu $[[R0:[0-9]+]], $zero, 234
+; 32-CMOV3-DAG: xor $[[R1:[0-9]+]], $4, $[[R0]]
+; 32-CMOV3-DAG: lw $[[R2:2]], 16($sp)
+; 32-CMOV3-DAG: lw $[[R3:3]], 20($sp)
+; 32-CMOV3-DAG: movn $[[R2]], $6, $[[R1]]
+; 32-CMOV3-DAG: movn $[[R3]], $7, $[[R1]]
 
 ; 32-CMP-DAG:  xori $[[R0:[0-9]+]], $4, 234
 ; 32-CMP-DAG:  lw $[[R1:[0-9]+]], 16($sp)
@@ -211,9 +284,13 @@ entry:
 ; 32-CMP-DAG:  or $3, $[[T1]], $[[T3]]
 
 ; FIXME: Use xori instead of addiu+xor.
-; 64-CMOV: addiu $[[R0:[0-9]+]], $zero, 234
-; 64-CMOV: xor $[[R1:[0-9]+]], $4, $[[R0]]
-; 64-CMOV: movn ${{[26]}}, $5, $[[R1]]
+; 64-CMOV1: addiu $[[R0:[0-9]+]], $zero, 234
+; 64-CMOV1: xor $[[R1:[0-9]+]], $4, $[[R0]]
+; 64-CMOV1: movn ${{[26]}}, $5, $[[R1]]
+
+; 64-CMOV2: addiu $[[R0:[0-9]+]], $zero, 234
+; 64-CMOV2: xor $[[R1:[0-9]+]], $4, $[[R0]]
+; 64-CMOV2: movn ${{[26]}}, $5, $[[R1]]
 
 ; 64-CMP-DAG:  xori $[[R0:[0-9]+]], $4, 234
 ; 64-CMP-DAG:  selnez $[[T0:[0-9]+]], $5, $[[R0]]
@@ -237,10 +314,20 @@ entry:
 
 ; ALL-LABEL: slti0:
 
-; 32-CMOV-DAG: addiu $[[I3:[0-9]+]], $zero, 3
-; 32-CMOV-DAG: addiu $[[I5:2]], $zero, 5
-; 32-CMOV-DAG: slti $[[R0:[0-9]+]], $4, 32767
-; 32-CMOV-DAG: movz $[[I5]], $[[I3]], $[[R0]]
+; 32-CMOV1-DAG: addiu $[[I3:[0-9]+]], $zero, 3
+; 32-CMOV1-DAG: addiu $[[I5:2]], $zero, 5
+; 32-CMOV1-DAG: slti $[[R0:[0-9]+]], $4, 32767
+; 32-CMOV1-DAG: movz $[[I5]], $[[I3]], $[[R0]]
+
+; 32-CMOV2-DAG: addiu $[[I3:[0-9]+]], $zero, 3
+; 32-CMOV2-DAG: addiu $[[I5:2]], $zero, 5
+; 32-CMOV2-DAG: slti $[[R0:[0-9]+]], $4, 32767
+; 32-CMOV2-DAG: movz $[[I5]], $[[I3]], $[[R0]]
+
+; 32-CMOV3-DAG: addiu $[[I3:[0-9]+]], $zero, 3
+; 32-CMOV3-DAG: addiu $[[I5:2]], $zero, 5
+; 32-CMOV3-DAG: slti $[[R0:[0-9]+]], $4, 32767
+; 32-CMOV3-DAG: movz $[[I5]], $[[I3]], $[[R0]]
 
 ; 32-CMP-DAG:  addiu $[[I3:[0-9]+]], $zero, 3
 ; 32-CMP-DAG:  addiu $[[I5:[0-9]+]], $zero, 5
@@ -250,10 +337,15 @@ entry:
 ; 32-CMP-DAG:  selnez $[[T1:[0-9]+]], $[[I5]], $[[R0]]
 ; 32-CMP-DAG:  or $2, $[[T0]], $[[T1]]
 
-; 64-CMOV-DAG: addiu $[[I3:[0-9]+]], $zero, 3
-; 64-CMOV-DAG: addiu $[[I5:2]], $zero, 5
-; 64-CMOV-DAG: slti $[[R0:[0-9]+]], $4, 32767
-; 64-CMOV-DAG: movz $[[I5]], $[[I3]], $[[R0]]
+; 64-CMOV1-DAG: addiu $[[I3:[0-9]+]], $zero, 3
+; 64-CMOV1-DAG: addiu $[[I5:2]], $zero, 5
+; 64-CMOV1-DAG: slti $[[R0:[0-9]+]], $4, 32767
+; 64-CMOV1-DAG: movz $[[I5]], $[[I3]], $[[R0]]
+
+; 64-CMOV2-DAG: addiu $[[I3:[0-9]+]], $zero, 3
+; 64-CMOV2-DAG: addiu $[[I5:2]], $zero, 5
+; 64-CMOV2-DAG: slti $[[R0:[0-9]+]], $4, 32767
+; 64-CMOV2-DAG: movz $[[I5]], $[[I3]], $[[R0]]
 
 ; 64-CMP-DAG:  addiu $[[I3:[0-9]+]], $zero, 3
 ; 64-CMP-DAG:  addiu $[[I5:[0-9]+]], $zero, 5
@@ -272,11 +364,23 @@ entry:
 
 ; ALL-LABEL: slti1:
 
-; 32-CMOV-DAG: addiu $[[I7:[0-9]+]], $zero, 7
-; 32-CMOV-DAG: addiu $[[I5:2]], $zero, 5
-; 32-CMOV-DAG: addiu $[[R1:[0-9]+]], $zero, 32767
-; 32-CMOV-DAG: slt $[[R0:[0-9]+]], $[[R1]], $4
-; 32-CMOV-DAG: movn $[[I5]], $[[I7]], $[[R0]]
+; 32-CMOV1-DAG: addiu $[[I7:[0-9]+]], $zero, 7
+; 32-CMOV1-DAG: addiu $[[I5:2]], $zero, 5
+; 32-CMOV1-DAG: addiu $[[R1:[0-9]+]], $zero, 32767
+; 32-CMOV1-DAG: slt $[[R0:[0-9]+]], $[[R1]], $4
+; 32-CMOV1-DAG: movn $[[I5]], $[[I7]], $[[R0]]
+
+; 32-CMOV2-DAG: addiu $[[I7:[0-9]+]], $zero, 7
+; 32-CMOV2-DAG: addiu $[[I5:2]], $zero, 5
+; 32-CMOV2-DAG: addiu $[[R1:[0-9]+]], $zero, 32767
+; 32-CMOV2-DAG: slt $[[R0:[0-9]+]], $[[R1]], $4
+; 32-CMOV2-DAG: movn $[[I5]], $[[I7]], $[[R0]]
+
+; 32-CMOV3-DAG: addiu $[[I7:[0-9]+]], $zero, 7
+; 32-CMOV3-DAG: addiu $[[I5:2]], $zero, 5
+; 32-CMOV3-DAG: addiu $[[R1:[0-9]+]], $zero, 32767
+; 32-CMOV3-DAG: slt $[[R0:[0-9]+]], $[[R1]], $4
+; 32-CMOV3-DAG: movn $[[I5]], $[[I7]], $[[R0]]
 
 ; 32-CMP-DAG:  addiu $[[I7:[0-9]+]], $zero, 7
 ; 32-CMP-DAG:  addiu $[[I5:[0-9]+]], $zero, 5
@@ -287,11 +391,17 @@ entry:
 ; 32-CMP-DAG:  seleqz $[[T1:[0-9]+]], $[[I5]], $[[R0]]
 ; 32-CMP-DAG:  or $2, $[[T0]], $[[T1]]
 
-; 64-CMOV-DAG: addiu $[[I7:[0-9]+]], $zero, 7
-; 64-CMOV-DAG: addiu $[[I5:2]], $zero, 5
-; 64-CMOV-DAG: addiu $[[R1:[0-9]+]], $zero, 32767
-; 64-CMOV-DAG: slt $[[R0:[0-9]+]], $[[R1]], $4
-; 64-CMOV-DAG: movn $[[I5]], $[[I7]], $[[R0]]
+; 64-CMOV1-DAG: addiu $[[I7:[0-9]+]], $zero, 7
+; 64-CMOV1-DAG: addiu $[[I5:2]], $zero, 5
+; 64-CMOV1-DAG: addiu $[[R1:[0-9]+]], $zero, 32767
+; 64-CMOV1-DAG: slt $[[R0:[0-9]+]], $[[R1]], $4
+; 64-CMOV1-DAG: movn $[[I5]], $[[I7]], $[[R0]]
+
+; 64-CMOV2-DAG: addiu $[[I7:[0-9]+]], $zero, 7
+; 64-CMOV2-DAG: addiu $[[I5:2]], $zero, 5
+; 64-CMOV2-DAG: addiu $[[R1:[0-9]+]], $zero, 32767
+; 64-CMOV2-DAG: slt $[[R0:[0-9]+]], $[[R1]], $4
+; 64-CMOV2-DAG: movn $[[I5]], $[[I7]], $[[R0]]
 
 ; 64-CMP-DAG:  addiu $[[I7:[0-9]+]], $zero, 7
 ; 64-CMP-DAG:  addiu $[[I5:2]], $zero, 5
@@ -311,10 +421,20 @@ entry:
 
 ; ALL-LABEL: slti2:
 
-; 32-CMOV-DAG: addiu $[[I3:[0-9]+]], $zero, 3
-; 32-CMOV-DAG: addiu $[[I5:2]], $zero, 5
-; 32-CMOV-DAG: slti $[[R0:[0-9]+]], $4, -32768
-; 32-CMOV-DAG: movz $[[I5]], $[[I3]], $[[R0]]
+; 32-CMOV1-DAG: addiu $[[I3:[0-9]+]], $zero, 3
+; 32-CMOV1-DAG: addiu $[[I5:2]], $zero, 5
+; 32-CMOV1-DAG: slti $[[R0:[0-9]+]], $4, -32768
+; 32-CMOV1-DAG: movz $[[I5]], $[[I3]], $[[R0]]
+
+; 32-CMOV2-DAG: addiu $[[I3:[0-9]+]], $zero, 3
+; 32-CMOV2-DAG: addiu $[[I5:2]], $zero, 5
+; 32-CMOV2-DAG: slti $[[R0:[0-9]+]], $4, -32768
+; 32-CMOV2-DAG: movz $[[I5]], $[[I3]], $[[R0]]
+
+; 32-CMOV3-DAG: addiu $[[I3:[0-9]+]], $zero, 3
+; 32-CMOV3-DAG: addiu $[[I5:2]], $zero, 5
+; 32-CMOV3-DAG: slti $[[R0:[0-9]+]], $4, -32768
+; 32-CMOV3-DAG: movz $[[I5]], $[[I3]], $[[R0]]
 
 ; 32-CMP-DAG:  addiu $[[I3:[0-9]+]], $zero, 3
 ; 32-CMP-DAG:  addiu $[[I5:[0-9]+]], $zero, 5
@@ -324,10 +444,15 @@ entry:
 ; 32-CMP-DAG:  selnez $[[T1:[0-9]+]], $[[I5]], $[[R0]]
 ; 32-CMP-DAG:  or $2, $[[T0]], $[[T1]]
 
-; 64-CMOV-DAG: addiu $[[I3:[0-9]+]], $zero, 3
-; 64-CMOV-DAG: addiu $[[I5:2]], $zero, 5
-; 64-CMOV-DAG: slti $[[R0:[0-9]+]], $4, -32768
-; 64-CMOV-DAG: movz $[[I5]], $[[I3]], $[[R0]]
+; 64-CMOV1-DAG: addiu $[[I3:[0-9]+]], $zero, 3
+; 64-CMOV1-DAG: addiu $[[I5:2]], $zero, 5
+; 64-CMOV1-DAG: slti $[[R0:[0-9]+]], $4, -32768
+; 64-CMOV1-DAG: movz $[[I5]], $[[I3]], $[[R0]]
+
+; 64-CMOV2-DAG: addiu $[[I3:[0-9]+]], $zero, 3
+; 64-CMOV2-DAG: addiu $[[I5:2]], $zero, 5
+; 64-CMOV2-DAG: slti $[[R0:[0-9]+]], $4, -32768
+; 64-CMOV2-DAG: movz $[[I5]], $[[I3]], $[[R0]]
 
 ; 64-CMP-DAG:  addiu $[[I3:[0-9]+]], $zero, 3
 ; 64-CMP-DAG:  addiu $[[I5:[0-9]+]], $zero, 5
@@ -346,12 +471,26 @@ entry:
 
 ; ALL-LABEL: slti3:
 
-; 32-CMOV-DAG: addiu $[[I3:[0-9]+]], $zero, 3
-; 32-CMOV-DAG: addiu $[[I5:2]], $zero, 5
-; 32-CMOV-DAG: lui $[[R1:[0-9]+]], 65535
-; 32-CMOV-DAG: ori $[[R1]], $[[R1]], 32766
-; 32-CMOV-DAG: slt $[[R0:[0-9]+]], $[[R1]], $4
-; 32-CMOV-DAG: movn $[[I5]], $[[I3]], $[[R0]]
+; 32-CMOV1-DAG: addiu $[[I3:[0-9]+]], $zero, 3
+; 32-CMOV1-DAG: addiu $[[I5:2]], $zero, 5
+; 32-CMOV1-DAG: lui $[[R1:[0-9]+]], 65535
+; 32-CMOV1-DAG: ori $[[R1]], $[[R1]], 32766
+; 32-CMOV1-DAG: slt $[[R0:[0-9]+]], $[[R1]], $4
+; 32-CMOV1-DAG: movn $[[I5]], $[[I3]], $[[R0]]
+
+; 32-CMOV2-DAG: addiu $[[I3:[0-9]+]], $zero, 3
+; 32-CMOV2-DAG: addiu $[[I5:2]], $zero, 5
+; 32-CMOV2-DAG: lui $[[R1:[0-9]+]], 65535
+; 32-CMOV2-DAG: ori $[[R1]], $[[R1]], 32766
+; 32-CMOV2-DAG: slt $[[R0:[0-9]+]], $[[R1]], $4
+; 32-CMOV2-DAG: movn $[[I5]], $[[I3]], $[[R0]]
+
+; 32-CMOV3-DAG: addiu $[[I3:[0-9]+]], $zero, 3
+; 32-CMOV3-DAG: addiu $[[I5:2]], $zero, 5
+; 32-CMOV3-DAG: lui $[[R1:[0-9]+]], 65535
+; 32-CMOV3-DAG: ori $[[R1]], $[[R1]], 32766
+; 32-CMOV3-DAG: slt $[[R0:[0-9]+]], $[[R1]], $4
+; 32-CMOV3-DAG: movn $[[I5]], $[[I3]], $[[R0]]
 
 ; 32-CMP-DAG:  addiu $[[I3:[0-9]+]], $zero, 3
 ; 32-CMP-DAG:  addiu $[[I5:[0-9]+]], $zero, 5
@@ -363,12 +502,19 @@ entry:
 ; 32-CMP-DAG:  seleqz $[[T1:[0-9]+]], $[[I5]], $[[R0]]
 ; 32-CMP-DAG:  or $2, $[[T0]], $[[T1]]
 
-; 64-CMOV-DAG: addiu $[[I3:[0-9]+]], $zero, 3
-; 64-CMOV-DAG: addiu $[[I5:2]], $zero, 5
-; 64-CMOV-DAG: lui $[[R1:[0-9]+]], 65535
-; 64-CMOV-DAG: ori $[[R1]], $[[R1]], 32766
-; 64-CMOV-DAG: slt $[[R0:[0-9]+]], $[[R1]], $4
-; 64-CMOV-DAG: movn $[[I5]], $[[I3]], $[[R0]]
+; 64-CMOV1-DAG: addiu $[[I3:[0-9]+]], $zero, 3
+; 64-CMOV1-DAG: addiu $[[I5:2]], $zero, 5
+; 64-CMOV1-DAG: lui $[[R1:[0-9]+]], 65535
+; 64-CMOV1-DAG: ori $[[R1]], $[[R1]], 32766
+; 64-CMOV1-DAG: slt $[[R0:[0-9]+]], $[[R1]], $4
+; 64-CMOV1-DAG: movn $[[I5]], $[[I3]], $[[R0]]
+
+; 64-CMOV2-DAG: addiu $[[I3:[0-9]+]], $zero, 3
+; 64-CMOV2-DAG: addiu $[[I5:2]], $zero, 5
+; 64-CMOV2-DAG: lui $[[R1:[0-9]+]], 65535
+; 64-CMOV2-DAG: ori $[[R1]], $[[R1]], 32766
+; 64-CMOV2-DAG: slt $[[R0:[0-9]+]], $[[R1]], $4
+; 64-CMOV2-DAG: movn $[[I5]], $[[I3]], $[[R0]]
 
 ; 64-CMP-DAG:  addiu $[[I3:[0-9]+]], $zero, 3
 ; 64-CMP-DAG:  addiu $[[I5:2]], $zero, 5
@@ -391,32 +537,55 @@ entry:
 
 ; ALL-LABEL: slti64_0:
 
-; 32-CMOV-DAG:  slt $[[CC:[0-9]+]], $zero, $4
-; 32-CMOV-DAG:  addiu $[[I32766:[0-9]+]], $zero, 32766
-; 32-CMOV-DAG:  sltu $[[R1:[0-9]+]], $[[I32766]], $5
-; 32-CMOV-DAG:  movz $[[CC:[0-9]+]], $[[R1]], $4
-; 32-CMOV-DAG:  addiu $[[I5:[0-9]+]], $zero, 5
-; 32-CMOV-DAG:  addiu $[[I4:3]], $zero, 4
-; 32-CMOV-DAG:  movn $[[I4]], $[[I5]], $[[CC]]
-; 32-CMOV-DAG:  addiu $2, $zero, 0
+; 32-CMOV1-DAG:  addiu $[[I3:[0-9]+]], $zero, 0
+; 32-CMOV1-DAG:  slt $[[CC:[0-9]+]], $zero, $4
+; 32-CMOV1-DAG:  addiu $[[I32766:[0-9]+]], $zero, 32766
+; 32-CMOV1-DAG:  sltu $[[R1:[0-9]+]], $[[I32766]], $5
+; 32-CMOV1-DAG:  movz $[[CC:[0-9]+]], $[[R1]], $4
+; 32-CMOV1-DAG:  addiu $[[I4:3]], $zero, 4
+; 32-CMOV1-DAG:  addiu $[[I5:[0-9]+]], $zero, 5
+; 32-CMOV1-DAG:  movn $[[I4:[0-9]+]], $[[I5]], $[[CC]]
 
+; 32-CMOV2-DAG:  addiu $[[I3:[0-9]+]], $zero, 0
+; 32-CMOV2-DAG:  slt $[[CC:[0-9]+]], $zero, $4
+; 32-CMOV2-DAG:  addiu $[[I32766:[0-9]+]], $zero, 32766
+; 32-CMOV2-DAG:  sltu $[[R1:[0-9]+]], $[[I32766]], $5
+; 32-CMOV2-DAG:  movz $[[CC:[0-9]+]], $[[R1]], $4
+; 32-CMOV2-DAG:  addiu $[[I4:3]], $zero, 4
+; 32-CMOV2-DAG:  addiu $[[I5:[0-9]+]], $zero, 5
+; 32-CMOV2-DAG:  movn $[[I4:[0-9]+]], $[[I5]], $[[CC]]
+
+; 32-CMOV3-DAG:  addiu $[[I3:[0-9]+]], $zero, 0
+; 32-CMOV3-DAG:  slt $[[CC:[0-9]+]], $zero, $4
+; 32-CMOV3-DAG:  addiu $[[I32766:[0-9]+]], $zero, 32766
+; 32-CMOV3-DAG:  sltu $[[R1:[0-9]+]], $[[I32766]], $5
+; 32-CMOV3-DAG:  movz $[[CC:[0-9]+]], $[[R1]], $4
+; 32-CMOV3-DAG:  addiu $[[I4:3]], $zero, 4
+; 32-CMOV3-DAG:  addiu $[[I5:[0-9]+]], $zero, 5
+; 32-CMOV3-DAG:  movn $[[I4:[0-9]+]], $[[I5]], $[[CC]]
+
+; 32-CMP-DAG:   addiu $2, $zero, 0
 ; 32-CMP-DAG:   slt $[[CC0:[0-9]+]], $zero, $4
+; 32-CMP-DAG:   selnez $[[CC2:[0-9]+]], $[[CC0]], $4
 ; 32-CMP-DAG:   addiu $[[I32766:[0-9]+]], $zero, 32766
 ; 32-CMP-DAG:   sltu $[[CC1:[0-9]+]], $[[I32766]], $5
-; 32-CMP-DAG:   selnez $[[CC2:[0-9]+]], $[[CC0]], $4
 ; 32-CMP-DAG:   seleqz $[[CC3:[0-9]+]], $[[CC1]], $4
 ; 32-CMP:       or $[[CC:[0-9]+]], $[[CC3]], $[[CC2]]
-; 32-CMP-DAG:   addiu $[[I5:[0-9]+]], $zero, 5
 ; 32-CMP-DAG:   addiu $[[I4:[0-9]+]], $zero, 4
 ; 32-CMP-DAG:   seleqz $[[T0:[0-9]+]], $[[I4]], $[[CC]]
+; 32-CMP-DAG:   addiu $[[I5:[0-9]+]], $zero, 5
 ; 32-CMP-DAG:   selnez $[[T1:[0-9]+]], $[[I5]], $[[CC]]
 ; 32-CMP-DAG:   or $3, $[[T1]], $[[T0]]
-; 32-CMP-DAG:   addiu $2, $zero, 0
 
-; 64-CMOV-DAG:  addiu $[[I5:[0-9]+]], $zero, 5
-; 64-CMOV-DAG:  addiu $[[I4:2]], $zero, 4
-; 64-CMOV-DAG:  slti $[[R0:[0-9]+]], $4, 32767
-; 64-CMOV-DAG:  movz $[[I4]], $[[I5]], $[[R0]]
+; 64-CMOV1-DAG:  addiu $[[I5:[0-9]+]], $zero, 5
+; 64-CMOV1-DAG:  addiu $[[I4:2]], $zero, 4
+; 64-CMOV1-DAG:  slti $[[R0:[0-9]+]], $4, 32767
+; 64-CMOV1-DAG:  movz $[[I4]], $[[I5]], $[[R0]]
+
+; 64-CMOV2-DAG:  addiu $[[I5:[0-9]+]], $zero, 5
+; 64-CMOV2-DAG:  addiu $[[I4:2]], $zero, 4
+; 64-CMOV2-DAG:  slti $[[R0:[0-9]+]], $4, 32767
+; 64-CMOV2-DAG:  movz $[[I4]], $[[I5]], $[[R0]]
 
 ; 64-CMP-DAG:  addiu $[[I5:[0-9]+]], $zero, 5
 ; 64-CMP-DAG:  addiu $[[I4:[0-9]+]], $zero, 4
@@ -436,14 +605,32 @@ entry:
 
 ; ALL-LABEL: slti64_1:
 
-; 32-CMOV-DAG:  slt $[[CC:[0-9]+]], $zero, $4
-; 32-CMOV-DAG:  addiu $[[I32766:[0-9]+]], $zero, 32767
-; 32-CMOV-DAG:  sltu $[[R1:[0-9]+]], $[[I32766]], $5
-; 32-CMOV-DAG:  movz $[[CC:[0-9]+]], $[[R1]], $4
-; 32-CMOV-DAG:  addiu $[[I5:[0-9]+]], $zero, 5
-; 32-CMOV-DAG:  addiu $[[I4:3]], $zero, 4
-; 32-CMOV-DAG:  movn $[[I4]], $[[I5]], $[[CC]]
-; 32-CMOV-DAG:  addiu $2, $zero, 0
+; 32-CMOV1-DAG:  slt $[[CC:[0-9]+]], $zero, $4
+; 32-CMOV1-DAG:  addiu $[[I32766:[0-9]+]], $zero, 32767
+; 32-CMOV1-DAG:  sltu $[[R1:[0-9]+]], $[[I32766]], $5
+; 32-CMOV1-DAG:  movz $[[CC:[0-9]+]], $[[R1]], $4
+; 32-CMOV1-DAG:  addiu $[[I5:[0-9]+]], $zero, 5
+; 32-CMOV1-DAG:  addiu $[[I4:3]], $zero, 4
+; 32-CMOV1-DAG:  movn $[[I4]], $[[I5]], $[[CC]]
+; 32-CMOV1-DAG:  addiu $2, $zero, 0
+
+; 32-CMOV2-DAG:  addiu $6, $zero, 0
+; 32-CMOV2-DAG:  slt $[[CC:[0-9]+]], $zero, $4
+; 32-CMOV2-DAG:  addiu $[[I32766:[0-9]+]], $zero, 32767
+; 32-CMOV2-DAG:  sltu $[[R1:[0-9]+]], $[[I32766]], $5
+; 32-CMOV2-DAG:  movz $[[CC:[0-9]+]], $[[R1]], $4
+; 32-CMOV2-DAG:  addiu $[[I5:[0-9]+]], $zero, 5
+; 32-CMOV2-DAG:  addiu $[[I4:3]], $zero, 4
+; 32-CMOV2-DAG:  movn $[[I4]], $[[I5]], $[[CC]]
+
+; 32-CMOV3-DAG:  slt $[[CC:[0-9]+]], $zero, $4
+; 32-CMOV3-DAG:  addiu $[[I32766:[0-9]+]], $zero, 32767
+; 32-CMOV3-DAG:  sltu $[[R1:[0-9]+]], $[[I32766]], $5
+; 32-CMOV3-DAG:  movz $[[CC:[0-9]+]], $[[R1]], $4
+; 32-CMOV3-DAG:  addiu $[[I5:[0-9]+]], $zero, 5
+; 32-CMOV3-DAG:  addiu $[[I4:3]], $zero, 4
+; 32-CMOV3-DAG:  movn $[[I4]], $[[I5]], $[[CC]]
+; 32-CMOV3-DAG:  addiu $2, $zero, 0
 
 ; 32-CMP-DAG:   slt $[[CC0:[0-9]+]], $zero, $4
 ; 32-CMP-DAG:   addiu $[[I32766:[0-9]+]], $zero, 32767
@@ -456,13 +643,18 @@ entry:
 ; 32-CMP-DAG:   seleqz $[[T0:[0-9]+]], $[[I4]], $[[CC]]
 ; 32-CMP-DAG:   selnez $[[T1:[0-9]+]], $[[I5]], $[[CC]]
 ; 32-CMP-DAG:   or $3, $[[T1]], $[[T0]]
-; 32-CMP-DAG:   addiu $2, $zero, 0
 
-; 64-CMOV-DAG: daddiu $[[I5:[0-9]+]], $zero, 5
-; 64-CMOV-DAG: daddiu $[[I4:2]], $zero, 4
-; 64-CMOV-DAG: daddiu $[[R1:[0-9]+]], $zero, 32767
-; 64-CMOV-DAG: slt $[[R0:[0-9]+]], $[[R1]], $4
-; 64-CMOV-DAG: movn $[[I4]], $[[I5]], $[[R0]]
+; 64-CMOV1-DAG: daddiu $[[I5:[0-9]+]], $zero, 5
+; 64-CMOV1-DAG: daddiu $[[I4:2]], $zero, 4
+; 64-CMOV1-DAG: daddiu $[[R1:[0-9]+]], $zero, 32767
+; 64-CMOV1-DAG: slt $[[R0:[0-9]+]], $[[R1]], $4
+; 64-CMOV1-DAG: movn $[[I4]], $[[I5]], $[[R0]]
+
+; 64-CMOV2-DAG: daddiu $[[I5:[0-9]+]], $zero, 5
+; 64-CMOV2-DAG: daddiu $[[I4:2]], $zero, 4
+; 64-CMOV2-DAG: daddiu $[[R1:[0-9]+]], $zero, 32767
+; 64-CMOV2-DAG: slt $[[R0:[0-9]+]], $[[R1]], $4
+; 64-CMOV2-DAG: movn $[[I4]], $[[I5]], $[[R0]]
 
 ; 64-CMP-DAG:  daddiu $[[I5:[0-9]+]], $zero, 5
 ; 64-CMP-DAG:  daddiu $[[I4:2]], $zero, 4
@@ -487,10 +679,15 @@ entry:
 ;        such as:
 ;           (movz $a, $b, (neg $c)) -> (movn $a, $b, $c)
 
-; 64-CMOV-DAG:  addiu $[[I3:[0-9]+]], $zero, 3
-; 64-CMOV-DAG:  addiu $[[I4:2]], $zero, 4
-; 64-CMOV-DAG:  slti $[[R0:[0-9]+]], $4, -32768
-; 64-CMOV-DAG:  movz $[[I4]], $[[I3]], $[[R0]]
+; 64-CMOV1-DAG:  addiu $[[I3:[0-9]+]], $zero, 3
+; 64-CMOV1-DAG:  addiu $[[I4:2]], $zero, 4
+; 64-CMOV1-DAG:  slti $[[R0:[0-9]+]], $4, -32768
+; 64-CMOV1-DAG:  movz $[[I4]], $[[I3]], $[[R0]]
+
+; 64-CMOV2-DAG:  addiu $[[I3:[0-9]+]], $zero, 3
+; 64-CMOV2-DAG:  addiu $[[I4:2]], $zero, 4
+; 64-CMOV2-DAG:  slti $[[R0:[0-9]+]], $4, -32768
+; 64-CMOV2-DAG:  movz $[[I4]], $[[I3]], $[[R0]]
 
 ; 64-CMP-DAG:  addiu $[[I3:[0-9]+]], $zero, 3
 ; 64-CMP-DAG:  addiu $[[I4:[0-9]+]], $zero, 4
@@ -515,14 +712,22 @@ entry:
 ;        such as:
 ;           (movz $a, $b, (neg $c)) -> (movn $a, $b, $c)
 
-; 64-CMOV-DAG: daddiu $[[I5:[0-9]+]], $zero, 5
-; 64-CMOV-DAG: daddiu $[[I4:2]], $zero, 4
+; 64-CMOV1-DAG: daddiu $[[I5:[0-9]+]], $zero, 5
+; 64-CMOV1-DAG: daddiu $[[I4:2]], $zero, 4
+
+; 64-CMOV2-DAG: daddiu $[[I5:[0-9]+]], $zero, 5
+; 64-CMOV2-DAG: daddiu $[[I4:2]], $zero, 4
 
 
-; 64-CMOV-DAG: lui $[[R1:[0-9]+]], 65535
-; 64-CMOV-DAG: ori $[[R2:[0-9]+]], $[[R1]], 32766
-; 64-CMOV-DAG: slt $[[R3:[0-9]+]], $[[R2]], $4
-; 64-CMOV-DAG: movn $[[I4]], $[[I5]], $[[R3]]
+; 64-CMOV1-DAG: lui $[[R1:[0-9]+]], 65535
+; 64-CMOV1-DAG: ori $[[R2:[0-9]+]], $[[R1]], 32766
+; 64-CMOV1-DAG: slt $[[R3:[0-9]+]], $[[R2]], $4
+; 64-CMOV1-DAG: movn $[[I4]], $[[I5]], $[[R3]]
+
+; 64-CMOV2-DAG: lui $[[R1:[0-9]+]], 65535
+; 64-CMOV2-DAG: ori $[[R2:[0-9]+]], $[[R1]], 32766
+; 64-CMOV2-DAG: slt $[[R3:[0-9]+]], $[[R2]], $4
+; 64-CMOV2-DAG: movn $[[I4]], $[[I5]], $[[R3]]
 
 ; 64-CMP-DAG:  daddiu $[[I5:[0-9]+]], $zero, 5
 ; 64-CMP-DAG:  daddiu $[[I4:2]], $zero, 4
@@ -546,10 +751,20 @@ entry:
 
 ; ALL-LABEL: sltiu0:
 
-; 32-CMOV-DAG: addiu $[[I3:[0-9]+]], $zero, 3
-; 32-CMOV-DAG: addiu $[[I5:2]], $zero, 5
-; 32-CMOV-DAG: sltiu $[[R0:[0-9]+]], $4, 32767
-; 32-CMOV-DAG: movz $[[I5]], $[[I3]], $[[R0]]
+; 32-CMOV1-DAG: addiu $[[I3:[0-9]+]], $zero, 3
+; 32-CMOV1-DAG: addiu $[[I5:2]], $zero, 5
+; 32-CMOV1-DAG: sltiu $[[R0:[0-9]+]], $4, 32767
+; 32-CMOV1-DAG: movz $[[I5]], $[[I3]], $[[R0]]
+
+; 32-CMOV2-DAG: addiu $[[I3:[0-9]+]], $zero, 3
+; 32-CMOV2-DAG: addiu $[[I5:2]], $zero, 5
+; 32-CMOV2-DAG: sltiu $[[R0:[0-9]+]], $4, 32767
+; 32-CMOV2-DAG: movz $[[I5]], $[[I3]], $[[R0]]
+
+; 32-CMOV3-DAG: addiu $[[I3:[0-9]+]], $zero, 3
+; 32-CMOV3-DAG: addiu $[[I5:2]], $zero, 5
+; 32-CMOV3-DAG: sltiu $[[R0:[0-9]+]], $4, 32767
+; 32-CMOV3-DAG: movz $[[I5]], $[[I3]], $[[R0]]
 
 ; 32-CMP-DAG:  addiu $[[I3:[0-9]+]], $zero, 3
 ; 32-CMP-DAG:  addiu $[[I5:[0-9]+]], $zero, 5
@@ -559,10 +774,15 @@ entry:
 ; 32-CMP-DAG:  selnez $[[T1:[0-9]+]], $[[I5]], $[[R0]]
 ; 32-CMP-DAG:  or $2, $[[T0]], $[[T1]]
 
-; 64-CMOV-DAG: addiu $[[I3:[0-9]+]], $zero, 3
-; 64-CMOV-DAG: addiu $[[I5:2]], $zero, 5
-; 64-CMOV-DAG: sltiu $[[R0:[0-9]+]], $4, 32767
-; 64-CMOV-DAG: movz $[[I5]], $[[I3]], $[[R0]]
+; 64-CMOV1-DAG: addiu $[[I3:[0-9]+]], $zero, 3
+; 64-CMOV1-DAG: addiu $[[I5:2]], $zero, 5
+; 64-CMOV1-DAG: sltiu $[[R0:[0-9]+]], $4, 32767
+; 64-CMOV1-DAG: movz $[[I5]], $[[I3]], $[[R0]]
+
+; 64-CMOV2-DAG: addiu $[[I3:[0-9]+]], $zero, 3
+; 64-CMOV2-DAG: addiu $[[I5:2]], $zero, 5
+; 64-CMOV2-DAG: sltiu $[[R0:[0-9]+]], $4, 32767
+; 64-CMOV2-DAG: movz $[[I5]], $[[I3]], $[[R0]]
 
 ; 64-CMP-DAG:  addiu $[[I3:[0-9]+]], $zero, 3
 ; 64-CMP-DAG:  addiu $[[I5:[0-9]+]], $zero, 5
@@ -581,11 +801,23 @@ entry:
 
 ; ALL-LABEL: sltiu1:
 
-; 32-CMOV-DAG: addiu $[[I7:[0-9]+]], $zero, 7
-; 32-CMOV-DAG: addiu $[[I5:2]], $zero, 5
-; 32-CMOV-DAG: addiu $[[R1:[0-9]+]], $zero, 32767
-; 32-CMOV-DAG: sltu $[[R0:[0-9]+]], $[[R1]], $4
-; 32-CMOV-DAG: movn $[[I5]], $[[I7]], $[[R0]]
+; 32-CMOV1-DAG: addiu $[[I7:[0-9]+]], $zero, 7
+; 32-CMOV1-DAG: addiu $[[I5:2]], $zero, 5
+; 32-CMOV1-DAG: addiu $[[R1:[0-9]+]], $zero, 32767
+; 32-CMOV1-DAG: sltu $[[R0:[0-9]+]], $[[R1]], $4
+; 32-CMOV1-DAG: movn $[[I5]], $[[I7]], $[[R0]]
+
+; 32-CMOV2-DAG: addiu $[[I7:[0-9]+]], $zero, 7
+; 32-CMOV2-DAG: addiu $[[I5:2]], $zero, 5
+; 32-CMOV2-DAG: addiu $[[R1:[0-9]+]], $zero, 32767
+; 32-CMOV2-DAG: sltu $[[R0:[0-9]+]], $[[R1]], $4
+; 32-CMOV2-DAG: movn $[[I5]], $[[I7]], $[[R0]]
+
+; 32-CMOV3-DAG: addiu $[[I7:[0-9]+]], $zero, 7
+; 32-CMOV3-DAG: addiu $[[I5:2]], $zero, 5
+; 32-CMOV3-DAG: addiu $[[R1:[0-9]+]], $zero, 32767
+; 32-CMOV3-DAG: sltu $[[R0:[0-9]+]], $[[R1]], $4
+; 32-CMOV3-DAG: movn $[[I5]], $[[I7]], $[[R0]]
 
 ; 32-CMP-DAG:  addiu $[[I7:[0-9]+]], $zero, 7
 ; 32-CMP-DAG:  addiu $[[I5:[0-9]+]], $zero, 5
@@ -596,11 +828,17 @@ entry:
 ; 32-CMP-DAG:  seleqz $[[T1:[0-9]+]], $[[I5]], $[[R0]]
 ; 32-CMP-DAG:  or $2, $[[T0]], $[[T1]]
 
-; 64-CMOV-DAG: addiu $[[I7:[0-9]+]], $zero, 7
-; 64-CMOV-DAG: addiu $[[I5:2]], $zero, 5
-; 64-CMOV-DAG: addiu $[[R1:[0-9]+]], $zero, 32767
-; 64-CMOV-DAG: sltu $[[R0:[0-9]+]], $[[R1]], $4
-; 64-CMOV-DAG: movn $[[I5]], $[[I7]], $[[R0]]
+; 64-CMOV1-DAG: addiu $[[I7:[0-9]+]], $zero, 7
+; 64-CMOV1-DAG: addiu $[[I5:2]], $zero, 5
+; 64-CMOV1-DAG: addiu $[[R1:[0-9]+]], $zero, 32767
+; 64-CMOV1-DAG: sltu $[[R0:[0-9]+]], $[[R1]], $4
+; 64-CMOV1-DAG: movn $[[I5]], $[[I7]], $[[R0]]
+
+; 64-CMOV2-DAG: addiu $[[I7:[0-9]+]], $zero, 7
+; 64-CMOV2-DAG: addiu $[[I5:2]], $zero, 5
+; 64-CMOV2-DAG: addiu $[[R1:[0-9]+]], $zero, 32767
+; 64-CMOV2-DAG: sltu $[[R0:[0-9]+]], $[[R1]], $4
+; 64-CMOV2-DAG: movn $[[I5]], $[[I7]], $[[R0]]
 
 ; 64-CMP-DAG:  addiu $[[I7:[0-9]+]], $zero, 7
 ; 64-CMP-DAG:  addiu $[[I5:2]], $zero, 5
@@ -620,10 +858,20 @@ entry:
 
 ; ALL-LABEL: sltiu2:
 
-; 32-CMOV-DAG: addiu $[[I3:[0-9]+]], $zero, 3
-; 32-CMOV-DAG: addiu $[[I5:2]], $zero, 5
-; 32-CMOV-DAG: sltiu $[[R0:[0-9]+]], $4, -32768
-; 32-CMOV-DAG: movz $[[I5]], $[[I3]], $[[R0]]
+; 32-CMOV1-DAG: addiu $[[I3:[0-9]+]], $zero, 3
+; 32-CMOV1-DAG: addiu $[[I5:2]], $zero, 5
+; 32-CMOV1-DAG: sltiu $[[R0:[0-9]+]], $4, -32768
+; 32-CMOV1-DAG: movz $[[I5]], $[[I3]], $[[R0]]
+
+; 32-CMOV2-DAG: addiu $[[I3:[0-9]+]], $zero, 3
+; 32-CMOV2-DAG: addiu $[[I5:2]], $zero, 5
+; 32-CMOV2-DAG: sltiu $[[R0:[0-9]+]], $4, -32768
+; 32-CMOV2-DAG: movz $[[I5]], $[[I3]], $[[R0]]
+
+; 32-CMOV3-DAG: addiu $[[I3:[0-9]+]], $zero, 3
+; 32-CMOV3-DAG: addiu $[[I5:2]], $zero, 5
+; 32-CMOV3-DAG: sltiu $[[R0:[0-9]+]], $4, -32768
+; 32-CMOV3-DAG: movz $[[I5]], $[[I3]], $[[R0]]
 
 ; 32-CMP-DAG:  addiu $[[I3:[0-9]+]], $zero, 3
 ; 32-CMP-DAG:  addiu $[[I5:[0-9]+]], $zero, 5
@@ -633,10 +881,15 @@ entry:
 ; 32-CMP-DAG:  selnez $[[T1:[0-9]+]], $[[I5]], $[[R0]]
 ; 32-CMP-DAG:  or $2, $[[T0]], $[[T1]]
 
-; 64-CMOV-DAG: addiu $[[I3:[0-9]+]], $zero, 3
-; 64-CMOV-DAG: addiu $[[I5:2]], $zero, 5
-; 64-CMOV-DAG: sltiu $[[R0:[0-9]+]], $4, -32768
-; 64-CMOV-DAG: movz $[[I5]], $[[I3]], $[[R0]]
+; 64-CMOV1-DAG: addiu $[[I3:[0-9]+]], $zero, 3
+; 64-CMOV1-DAG: addiu $[[I5:2]], $zero, 5
+; 64-CMOV1-DAG: sltiu $[[R0:[0-9]+]], $4, -32768
+; 64-CMOV1-DAG: movz $[[I5]], $[[I3]], $[[R0]]
+
+; 64-CMOV2-DAG: addiu $[[I3:[0-9]+]], $zero, 3
+; 64-CMOV2-DAG: addiu $[[I5:2]], $zero, 5
+; 64-CMOV2-DAG: sltiu $[[R0:[0-9]+]], $4, -32768
+; 64-CMOV2-DAG: movz $[[I5]], $[[I3]], $[[R0]]
 
 ; 64-CMP-DAG:  addiu $[[I3:[0-9]+]], $zero, 3
 ; 64-CMP-DAG:  addiu $[[I5:[0-9]+]], $zero, 5
@@ -655,12 +908,26 @@ entry:
 
 ; ALL-LABEL: sltiu3:
 
-; 32-CMOV-DAG: addiu $[[I3:[0-9]+]], $zero, 3
-; 32-CMOV-DAG: addiu $[[I5:2]], $zero, 5
-; 32-CMOV-DAG: lui $[[R1:[0-9]+]], 65535
-; 32-CMOV-DAG: ori $[[R1]], $[[R1]], 32766
-; 32-CMOV-DAG: sltu $[[R0:[0-9]+]], $[[R1]], $4
-; 32-CMOV-DAG: movn $[[I5]], $[[I3]], $[[R0]]
+; 32-CMOV1-DAG: addiu $[[I3:[0-9]+]], $zero, 3
+; 32-CMOV1-DAG: addiu $[[I5:2]], $zero, 5
+; 32-CMOV1-DAG: lui $[[R1:[0-9]+]], 65535
+; 32-CMOV1-DAG: ori $[[R1]], $[[R1]], 32766
+; 32-CMOV1-DAG: sltu $[[R0:[0-9]+]], $[[R1]], $4
+; 32-CMOV1-DAG: movn $[[I5]], $[[I3]], $[[R0]]
+
+; 32-CMOV2-DAG: addiu $[[I3:[0-9]+]], $zero, 3
+; 32-CMOV2-DAG: addiu $[[I5:2]], $zero, 5
+; 32-CMOV2-DAG: lui $[[R1:[0-9]+]], 65535
+; 32-CMOV2-DAG: ori $[[R1]], $[[R1]], 32766
+; 32-CMOV2-DAG: sltu $[[R0:[0-9]+]], $[[R1]], $4
+; 32-CMOV2-DAG: movn $[[I5]], $[[I3]], $[[R0]]
+
+; 32-CMOV3-DAG: addiu $[[I3:[0-9]+]], $zero, 3
+; 32-CMOV3-DAG: addiu $[[I5:2]], $zero, 5
+; 32-CMOV3-DAG: lui $[[R1:[0-9]+]], 65535
+; 32-CMOV3-DAG: ori $[[R1]], $[[R1]], 32766
+; 32-CMOV3-DAG: sltu $[[R0:[0-9]+]], $[[R1]], $4
+; 32-CMOV3-DAG: movn $[[I5]], $[[I3]], $[[R0]]
 
 ; 32-CMP-DAG:  addiu $[[I3:[0-9]+]], $zero, 3
 ; 32-CMP-DAG:  addiu $[[I5:[0-9]+]], $zero, 5
@@ -672,12 +939,19 @@ entry:
 ; 32-CMP-DAG:  seleqz $[[T1:[0-9]+]], $[[I5]], $[[R0]]
 ; 32-CMP-DAG:  or $2, $[[T0]], $[[T1]]
 
-; 64-CMOV-DAG: addiu $[[I3:[0-9]+]], $zero, 3
-; 64-CMOV-DAG: addiu $[[I5:2]], $zero, 5
-; 64-CMOV-DAG: lui $[[R1:[0-9]+]], 65535
-; 64-CMOV-DAG: ori $[[R1]], $[[R1]], 32766
-; 64-CMOV-DAG: sltu $[[R0:[0-9]+]], $[[R1]], $4
-; 64-CMOV-DAG: movn $[[I5]], $[[I3]], $[[R0]]
+; 64-CMOV1-DAG: addiu $[[I3:[0-9]+]], $zero, 3
+; 64-CMOV1-DAG: addiu $[[I5:2]], $zero, 5
+; 64-CMOV1-DAG: lui $[[R1:[0-9]+]], 65535
+; 64-CMOV1-DAG: ori $[[R1]], $[[R1]], 32766
+; 64-CMOV1-DAG: sltu $[[R0:[0-9]+]], $[[R1]], $4
+; 64-CMOV1-DAG: movn $[[I5]], $[[I3]], $[[R0]]
+
+; 64-CMOV2-DAG: addiu $[[I3:[0-9]+]], $zero, 3
+; 64-CMOV2-DAG: addiu $[[I5:2]], $zero, 5
+; 64-CMOV2-DAG: lui $[[R1:[0-9]+]], 65535
+; 64-CMOV2-DAG: ori $[[R1]], $[[R1]], 32766
+; 64-CMOV2-DAG: sltu $[[R0:[0-9]+]], $[[R1]], $4
+; 64-CMOV2-DAG: movn $[[I5]], $[[I3]], $[[R0]]
 
 ; 64-CMP-DAG:  addiu $[[I3:[0-9]+]], $zero, 3
 ; 64-CMP-DAG:  addiu $[[I5:2]], $zero, 5
@@ -710,18 +984,30 @@ define i32 @slti4(i32 signext %a) nounwind readnone {
 
 ; ALL-LABEL: slti4:
 
-; 32-CMOV-DAG: slti [[R1:\$[0-9]+]], $4, 7
-; 32-CMOV-DAG: addiu $2, [[R1]], 3
-; 32-CMOV-NOT: movn
+; 32-CMOV1-DAG: slti [[R1:\$[0-9]+]], $4, 7
+; 32-CMOV1-DAG: addiu $2, [[R1]], 3
+; 32-CMOV1-NOT: movn
+
+; 32-CMOV2-DAG: slti [[R1:\$[0-9]+]], $4, 7
+; 32-CMOV2-DAG: addiu $2, [[R1]], 3
+; 32-CMOV2-NOT: movn
+
+; 32-CMOV3-DAG: slti [[R1:\$[0-9]+]], $4, 7
+; 32-CMOV3-DAG: addiu $2, [[R1]], 3
+; 32-CMOV3-NOT: movn
 
 ; 32-CMP-DAG:  slti [[R1:\$[0-9]+]], $4, 7
 ; 32-CMP-DAG:  addiu $2, [[R1]], 3
 ; 32-CMP-NOT:  seleqz
 ; 32-CMP-NOT:  selnez
 
-; 64-CMOV-DAG: slti [[R1:\$[0-9]+]], $4, 7
-; 64-CMOV-DAG: addiu $2, [[R1]], 3
-; 64-CMOV-NOT: movn
+; 64-CMOV1-DAG: slti [[R1:\$[0-9]+]], $4, 7
+; 64-CMOV1-DAG: addiu $2, [[R1]], 3
+; 64-CMOV1-NOT: movn
+
+; 64-CMOV2-DAG: slti [[R1:\$[0-9]+]], $4, 7
+; 64-CMOV2-DAG: addiu $2, [[R1]], 3
+; 64-CMOV2-NOT: movn
 
 ; 64-CMP-DAG:  slti [[R1:\$[0-9]+]], $4, 7
 ; 64-CMP-DAG:  addiu $2, [[R1]], 3
@@ -736,18 +1022,30 @@ define i32 @slti5(i32 signext %a) nounwind readnone {
 
 ; ALL-LABEL: slti5:
 
-; 32-CMOV-DAG: slti [[R1:\$[0-9]+]], $4, 7
-; 32-CMOV-DAG: addiu [[R3:\$[0-9]+]], [[R2:\$[a-z0-9]+]], -4
-; 32-CMOV-NOT: movn
+; 32-CMOV1-DAG: slti [[R1:\$[0-9]+]], $4, 7
+; 32-CMOV1-DAG: addiu [[R3:\$[0-9]+]], [[R2:\$[a-z0-9]+]], -4
+; 32-CMOV1-NOT: movn
+
+; 32-CMOV2-DAG: slti [[R1:\$[0-9]+]], $4, 7
+; 32-CMOV2-DAG: addiu [[R3:\$[0-9]+]], [[R2:\$[a-z0-9]+]], -4
+; 32-CMOV2-NOT: movn
+
+; 32-CMOV3-DAG: slti [[R1:\$[0-9]+]], $4, 7
+; 32-CMOV3-DAG: addiu [[R3:\$[0-9]+]], [[R2:\$[a-z0-9]+]], -4
+; 32-CMOV3-NOT: movn
 
 ; 32-CMP-DAG:  slti [[R1:\$[0-9]+]], $4, 7
 ; 32-CMP-DAG:  addiu [[R3:\$[0-9]+]], [[R2:\$[a-z0-9]+]], -4
 ; 32-CMP-NOT:  seleqz
 ; 32-CMP-NOT:  selnez
 
-; 64-CMOV-DAG: slti [[R1:\$[0-9]+]], $4, 7
-; 64-CMOV-DAG: addiu [[R3:\$[0-9]+]], [[R2:\$[a-z0-9]+]], -4
-; 64-CMOV-NOT: movn
+; 64-CMOV1-DAG: slti [[R1:\$[0-9]+]], $4, 7
+; 64-CMOV1-DAG: addiu [[R3:\$[0-9]+]], [[R2:\$[a-z0-9]+]], -4
+; 64-CMOV1-NOT: movn
+
+; 64-CMOV2-DAG: slti [[R1:\$[0-9]+]], $4, 7
+; 64-CMOV2-DAG: addiu [[R3:\$[0-9]+]], [[R2:\$[a-z0-9]+]], -4
+; 64-CMOV2-NOT: movn
 
 ; 64-CMP-DAG:  slti [[R1:\$[0-9]+]], $4, 7
 ; 64-CMP-DAG:  addiu [[R3:\$[0-9]+]], [[R2:\$[a-z0-9]+]], -4

@@ -12,41 +12,44 @@ define dso_local i32 @main() #0 {
 ; CHECK-LABEL: main:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    mflr 0
-; CHECK-NEXT:    stwu 1, -48(1)
-; CHECK-NEXT:    stw 31, 44(1)
-; CHECK-NEXT:    stw 0, 52(1)
-; CHECK-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-NEXT:    stwu 1, -64(1)
+; CHECK-NEXT:    stw 31, 60(1)
+; CHECK-NEXT:    stw 0, 68(1)
+; CHECK-NEXT:    .cfi_def_cfa_offset 64
 ; CHECK-NEXT:    .cfi_offset r31, -4
 ; CHECK-NEXT:    .cfi_offset lr, 4
 ; CHECK-NEXT:    mr 31, 1
 ; CHECK-NEXT:    .cfi_def_cfa_register r31
+; CHECK-NEXT:    .cfi_offset r30, -8
+; CHECK-NEXT:    stw 30, 56(31) # 4-byte Folded Spill
 ; CHECK-NEXT:    li 3, 10
-; CHECK-NEXT:    stw 3, 40(31)
-; CHECK-NEXT:    li 3, 0
-; CHECK-NEXT:    stw 3, 28(31)
-; CHECK-NEXT:    lis 4, 16404
-; CHECK-NEXT:    stw 4, 24(31)
-; CHECK-NEXT:    stw 3, 36(31)
-; CHECK-NEXT:    lis 3, 16420
+; CHECK-NEXT:    stw 3, 52(31)
+; CHECK-NEXT:    li 30, 0
+; CHECK-NEXT:    stw 30, 36(31)
+; CHECK-NEXT:    lis 3, 16404
 ; CHECK-NEXT:    stw 3, 32(31)
-; CHECK-NEXT:    lwz 3, 40(31)
+; CHECK-NEXT:    stw 30, 44(31)
+; CHECK-NEXT:    lis 3, 16420
+; CHECK-NEXT:    stw 3, 40(31)
+; CHECK-NEXT:    lwz 3, 52(31)
 ; CHECK-NEXT:    slwi 3, 3, 4
 ; CHECK-NEXT:    bl malloc
+; CHECK-NEXT:    stw 3, 28(31)
+; CHECK-NEXT:    addi 7, 31, 32
+; CHECK-NEXT:    stw 7, 24(31)
+; CHECK-NEXT:    lwz 3, 28(31)
 ; CHECK-NEXT:    stw 3, 20(31)
-; CHECK-NEXT:    addi 7, 31, 24
-; CHECK-NEXT:    stw 7, 16(31)
-; CHECK-NEXT:    lwz 3, 20(31)
-; CHECK-NEXT:    stw 3, 12(31)
-; CHECK-NEXT:    lwz 5, 16(31)
-; CHECK-NEXT:    lwz 6, 12(31)
+; CHECK-NEXT:    lwz 5, 24(31)
+; CHECK-NEXT:    lwz 6, 20(31)
 ; CHECK-NEXT:    li 3, 5
 ; CHECK-NEXT:    li 4, 1
 ; CHECK-NEXT:    li 8, 1
 ; CHECK-NEXT:    bl pass11
-; CHECK-NEXT:    li 3, 0
-; CHECK-NEXT:    lwz 0, 52(1)
-; CHECK-NEXT:    lwz 31, 44(1)
-; CHECK-NEXT:    addi 1, 1, 48
+; CHECK-NEXT:    mr 3, 30
+; CHECK-NEXT:    lwz 30, 56(31) # 4-byte Folded Reload
+; CHECK-NEXT:    lwz 0, 68(1)
+; CHECK-NEXT:    lwz 31, 60(1)
+; CHECK-NEXT:    addi 1, 1, 64
 ; CHECK-NEXT:    mtlr 0
 ; CHECK-NEXT:    blr
   %1 = alloca i32, align 4

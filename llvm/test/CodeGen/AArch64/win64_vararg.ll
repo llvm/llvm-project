@@ -32,9 +32,8 @@ define ptr @f9(i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i6
 ; CHECK-LABEL: f9:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sub sp, sp, #16
-; CHECK-NEXT:    add x8, sp, #24
 ; CHECK-NEXT:    add x0, sp, #24
-; CHECK-NEXT:    str x8, [sp, #8]
+; CHECK-NEXT:    str x0, [sp, #8]
 ; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
 entry:
@@ -48,9 +47,8 @@ define ptr @f8(i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i6
 ; CHECK-LABEL: f8:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sub sp, sp, #16
-; CHECK-NEXT:    add x8, sp, #16
 ; CHECK-NEXT:    add x0, sp, #16
-; CHECK-NEXT:    str x8, [sp, #8]
+; CHECK-NEXT:    str x0, [sp, #8]
 ; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
 entry:
@@ -64,10 +62,9 @@ define ptr @f7(i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, ..
 ; CHECK-LABEL: f7:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sub sp, sp, #32
-; CHECK-NEXT:    add x8, sp, #24
 ; CHECK-NEXT:    add x0, sp, #24
 ; CHECK-NEXT:    str x7, [sp, #24]
-; CHECK-NEXT:    str x8, [sp, #8]
+; CHECK-NEXT:    str x0, [sp, #8]
 ; CHECK-NEXT:    add sp, sp, #32
 ; CHECK-NEXT:    ret
 entry:

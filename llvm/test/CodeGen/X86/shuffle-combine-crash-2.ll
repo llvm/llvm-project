@@ -6,13 +6,13 @@ define <4 x i64> @fold_movsd_zero() {
 ; X86-LABEL: fold_movsd_zero:
 ; X86:       # %bb.0:
 ; X86-NEXT:    xorps %xmm0, %xmm0
-; X86-NEXT:    xorps %xmm1, %xmm1
+; X86-NEXT:    movaps %xmm0, %xmm1
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: fold_movsd_zero:
 ; X64:       # %bb.0:
 ; X64-NEXT:    xorps %xmm0, %xmm0
-; X64-NEXT:    xorps %xmm1, %xmm1
+; X64-NEXT:    movaps %xmm0, %xmm1
 ; X64-NEXT:    retq
   %insert = insertelement <4 x i64> zeroinitializer, i64 0, i32 0
   %shuffle = shufflevector <4 x i64> %insert, <4 x i64> zeroinitializer, <4 x i32> <i32 3, i32 5, i32 7, i32 1>
