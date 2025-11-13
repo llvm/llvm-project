@@ -99,7 +99,7 @@ int main(int, char**) {
     // Success -- assertion failure with a specific matcher.
     TEST_DEATH_TEST_MATCHES(Outcome::Success, assertion_death_cause, good_matcher, fail_assert());
 
-#if _LIBCPP_ASSERTION_SEMANTIC == _LIBCPP_ASSERTION_SEMANTIC_ENFORCE
+#  if _LIBCPP_ASSERTION_SEMANTIC == _LIBCPP_ASSERTION_SEMANTIC_ENFORCE
     // Failure -- error message doesn't match.
     TEST_DEATH_TEST_MATCHES(Outcome::UnexpectedErrorMessage, assertion_death_cause, bad_matcher, fail_assert());
 #  endif
