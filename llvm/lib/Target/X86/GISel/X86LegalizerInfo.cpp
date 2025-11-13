@@ -126,6 +126,13 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
                                G_FSINCOS, G_FCEIL,   G_FFLOOR})
       .libcall();
 
+  getActionDefinitionsBuilder(G_FNEG)
+      .legalFor(UseX87 && !HasSSE1, {s32})
+      .legalFor(UseX87 && !HasSSE2, {s64})
+      .legalFor(UseX87, {s80})
+      .customFor(UseX87 && !Is64Bit, {s32})
+      .lowerFor({s32, s64});
+
   getActionDefinitionsBuilder(G_FSQRT)
       .legalFor(HasSSE1 || UseX87, {s32})
       .legalFor(HasSSE2 || UseX87, {s64})
@@ -991,6 +998,22 @@ bool X86LegalizerInfo::legalizeSETROUNDING(MachineInstr &MI,
 
   MI.eraseFromParent();
   return true;
+}
+
+bool X86LegalizerInfo::legalizeFNEG(MachineInstr &MI, MachineRegisterInfo &MRI,
+                                    LegalizerHelper &Helper) const {
+  bool UseX87 = !Subtarget.useSoftFloat() && Subtarget.hasX87();
+  bool Is64Bit = Subtarget.is64Bit();
+  if (UseX87 && !Is64Bit && MI.getMF()->getFunction().getReturnType()->isFloatTy()) {
+    auto DstReg = MI.getOperand(0).getReg();
+    auto SrcReg = MI.getOperand(1).getReg();
+    auto ExtReg = MRI.createVirtualRegister(&X86::RFP80RegClass);
+    Helper.MIRBuilder.buildFPExt(ExtReg, SrcReg);
+    Helper.MIRBuilder.buildCopy(DstReg, ExtReg);
+    MI.eraseFromParent();
+    return true;
+  }
+  return false;
 }
 
 bool X86LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,

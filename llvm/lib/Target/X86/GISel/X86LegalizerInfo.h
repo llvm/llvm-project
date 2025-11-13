@@ -60,6 +60,9 @@ private:
 
   bool legalizeSETROUNDING(MachineInstr &MI, MachineRegisterInfo &MRI,
                            LegalizerHelper &Helper) const;
+
+  bool legalizeFNEG(MachineInstr &MI, MachineRegisterInfo &MRI,
+                           LegalizerHelper &Helper) const;
 };
 } // namespace llvm
 #endif
