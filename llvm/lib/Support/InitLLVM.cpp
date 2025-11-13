@@ -41,8 +41,7 @@ static void RaiseLimits() {
 
     // Increase the soft limit to the hard limit, if necessary and
     // possible.
-    if (r.rlim_cur != RLIM_INFINITY &&
-        r.rlim_cur != r.rlim_max) {
+    if (r.rlim_cur != RLIM_INFINITY && r.rlim_cur != r.rlim_max) {
       r.rlim_cur = r.rlim_max;
       setrlimit(resource, &r);
     }
