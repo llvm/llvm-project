@@ -3450,10 +3450,17 @@ def warn_attribute_return_pointers_only : Warning<
   "%0 attribute only applies to return values that are pointers">,
   InGroup<IgnoredAttributes>;
 def warn_attribute_return_span_only
-    : Warning<"%0 attribute only applies to functions that return span-like structures: "
-    "one field is a pointer to the allocated memory and another field is an integer with "
-    "the size of the allocated memory">,
+    : Warning<"%0 attribute only applies to functions that return span-like "
+              "structures">,
       InGroup<IgnoredAttributes>;
+def note_span_must_be_struct : Note<"span-like type must be a struct">;
+def note_span_must_be_complete : Note<"span-like type must be complete">;
+def note_wrong_span_field_count : Note<"span-like type must have 2 fields">;
+def note_wrong_span_field_types
+    : Note<"span-like type must have a pointer and an integer field or two "
+           "pointer fields">;
+def note_span_invalid_integer : Note<"the integer field must be an actual "
+                                     "integer that is at least as big as int">;
 def warn_attribute_return_pointers_refs_only : Warning<
   "%0 attribute only applies to return values that are pointers or references">,
   InGroup<IgnoredAttributes>;

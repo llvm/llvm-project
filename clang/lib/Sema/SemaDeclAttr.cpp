@@ -1839,43 +1839,72 @@ static void handleRestrictAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
                  RestrictAttr(S.Context, AL, DeallocE, DeallocPtrIdx));
 }
 
-static bool checkSpanLikeType(const QualType &Ty) {
+static bool checkSpanLikeType(Sema &S, const ParsedAttr &AL,
+                              const QualType &Ty) {
   // Check that the type is a plain record with one field being a pointer
   // type and the other field being an integer. This matches the common
   // implementation of std::span or sized_allocation_t in P0901R11.
-  // Note that there may also be numerous cases of pointer+integer structures
-  // not actually exhibiting a span-like semantics, so sometimes
-  // this heuristic expectedly leads to false positive results.
+  // Note that there may also be numerous cases of pointer + integer /
+  // pointer + pointer / integer + pointer structures not actually exhibiting
+  // a span-like semantics, so sometimes these heuristics expectedly
+  // lead to false positive results.
+  auto emitWarning = [&S, &AL](unsigned NoteDiagID) {
+    S.Diag(AL.getLoc(), diag::warn_attribute_return_span_only) << AL;
+    S.Diag(AL.getLoc(), NoteDiagID);
+  };
   const RecordDecl *RD = Ty->getAsRecordDecl();
-  if (!RD || RD->isUnion())
+  if (!RD || RD->isUnion()) {
+    emitWarning(diag::note_span_must_be_struct);
     return false;
+  }
   const RecordDecl *Def = RD->getDefinition();
-  if (!Def)
+  if (!Def) {
+    emitWarning(diag::note_span_must_be_complete);
     return false; // This is an incomplete type.
+  }
   auto FieldsBegin = Def->field_begin();
-  if (std::distance(FieldsBegin, Def->field_end()) != 2)
+  if (std::distance(FieldsBegin, Def->field_end()) != 2) {
+    emitWarning(diag::note_wrong_span_field_count);
     return false;
+  }
   const QualType FirstFieldType = FieldsBegin->getType();
   const QualType SecondFieldType = std::next(FieldsBegin)->getType();
   auto validatePointerType = [](const QualType &T) {
     // It must not point to functions.
     return T->isPointerType() && !T->isFunctionPointerType();
   };
-  // Verify two possible orderings.
-  return (validatePointerType(FirstFieldType) &&
-          SecondFieldType->isIntegerType()) ||
-         (FirstFieldType->isIntegerType() &&
-          validatePointerType(SecondFieldType));
+  auto checkIntegerType = [&S, emitWarning](const QualType &T) {
+    bool valid = false;
+    // Must be an actual integer and at least as bit as int.
+    if (const auto *BT = dyn_cast<BuiltinType>(T.getCanonicalType())) {
+      const auto IntSize = S.Context.getTypeSize(S.Context.IntTy);
+      valid = BT->isInteger() && S.Context.getTypeSize(BT) >= IntSize;
+    }
+    if (!valid) {
+      emitWarning(diag::note_span_invalid_integer);
+    }
+    return valid;
+  };
+  if (validatePointerType(FirstFieldType) &&
+      validatePointerType(SecondFieldType)) {
+    // Pointer + pointer.
+    return true;
+  } else if (validatePointerType(FirstFieldType)) {
+    // Pointer + integer?
+    return checkIntegerType(SecondFieldType);
+  } else if (validatePointerType(SecondFieldType)) {
+    // Integer + pointer?
+    return checkIntegerType(FirstFieldType);
+  }
+  emitWarning(diag::note_wrong_span_field_types);
+  return false;
 }
 
 static void handleMallocSpanAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   QualType ResultType = getFunctionOrMethodResultType(D);
-  if (!checkSpanLikeType(ResultType)) {
-    S.Diag(AL.getLoc(), diag::warn_attribute_return_span_only)
-        << AL << getFunctionOrMethodResultSourceRange(D);
-    return;
+  if (checkSpanLikeType(S, AL, ResultType)) {
+    D->addAttr(::new (S.Context) MallocSpanAttr(S.Context, AL));
   }
-  D->addAttr(::new (S.Context) MallocSpanAttr(S.Context, AL));
 }
 
 static void handleCPUSpecificAttr(Sema &S, Decl *D, const ParsedAttr &AL) {

@@ -11,7 +11,9 @@ struct DataMemberSpan {
   int n;
 };
 
-DataMemberSpan returns_data_member_span(void) __attribute((malloc_span)) { // expected-warning {{attribute only applies to functions that return span-like structures}}
+// expected-warning@+2 {{attribute only applies to functions that return span-like structures}}
+// expected-note@+1 {{span-like type must have a pointer and an integer field or two pointer fields}}
+DataMemberSpan returns_data_member_span(void) __attribute((malloc_span)) {
   return DataMemberSpan{};
 }
 
@@ -21,7 +23,9 @@ struct MemberFuncSpan {
   int n;
 };
 
-MemberFuncSpan returns_member_func_span(void) __attribute((malloc_span)) { // expected-warning {{attribute only applies to functions that return span-like structures}}
+// expected-warning@+2 {{attribute only applies to functions that return span-like structures}}
+// expected-note@+1 {{span-like type must have a pointer and an integer field or two pointer fields}}
+MemberFuncSpan returns_member_func_span(void) __attribute((malloc_span)) {
   return MemberFuncSpan{};
 }
 

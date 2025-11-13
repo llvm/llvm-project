@@ -16,23 +16,57 @@ typedef struct {
 } span2;
 span2  returns_span2  (void) __attribute((malloc_span)); // no-warning
 
-// Ensure that a warning is produced on malloc_span precondition violation.
 typedef struct {
   void *ptr;
   void *ptr2;
-} invalid_span1;
-invalid_span1  returns_non_std_span1  (void) __attribute((malloc_span)); // expected-warning {{attribute only applies to functions that return span-like structures}}
+} span3;
+span3  returns_span3  (void) __attribute((malloc_span)); // no-warning
+// expected-warning@+2 {{attribute only applies to functions that return span-like structures}}
+// expected-note@+1 {{span-like type must be a struct}}
+int *returns_int_ptr  (void) __attribute((malloc_span));
 
 typedef struct {
   void *ptr;
   size_t n;
   size_t n2;
-} invalid_span2;
-invalid_span2  returns_non_std_span2  (void) __attribute((malloc_span)); // expected-warning {{attribute only applies to functions that return span-like structures}}
+} too_long_span;
+// expected-warning@+2 {{attribute only applies to functions that return span-like structures}}
+// expected-note@+1 {{span-like type must have 2 fields}}
+too_long_span  returns_too_long_span  (void) __attribute((malloc_span));
 
 // Function pointers are not allowed.
 typedef struct {
   int (*func_ptr)(void);
   size_t n;
 } func_span;
-func_span  returns_func_span  (void) __attribute((malloc_span)); // expected-warning {{attribute only applies to functions that return span-like structures}}
+// expected-warning@+2 {{attribute only applies to functions that return span-like structures}}
+// expected-note@+1 {{span-like type must have a pointer and an integer field or two pointer fields}}
+func_span  returns_func_span  (void) __attribute((malloc_span));
+
+// Integer should not be an enum.
+enum some_enum { some_value, other_value };
+typedef struct {
+  void *ptr;
+  enum some_enum field;
+} enum_span;
+// expected-warning@+2 {{attribute only applies to functions that return span-like structures}}
+// expected-note@+1 {{the integer field must be an actual integer}}
+enum_span  returns_enum_span  (void) __attribute((malloc_span));
+
+// Bit integers are also not supported.
+typedef struct {
+  void *ptr;
+  _BitInt(16) n;
+} bit_span;
+// expected-warning@+2 {{attribute only applies to functions that return span-like structures}}
+// expected-note@+1 {{the integer field must be an actual integer}}
+bit_span  returns_bit_span  (void) __attribute((malloc_span));
+
+// Integer must be at least as big as int.
+typedef struct {
+  void *ptr;
+  short n;
+} short_span;
+// expected-warning@+2 {{attribute only applies to functions that return span-like structures}}
+// expected-note@+1 {{the integer field must be an actual integer}}
+short_span  returns_short_span  (void) __attribute((malloc_span));
