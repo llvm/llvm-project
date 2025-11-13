@@ -124,6 +124,8 @@ public:
   virtual void emitRethrow(CIRGenFunction &cgf, bool isNoReturn) = 0;
   virtual void emitThrow(CIRGenFunction &cgf, const CXXThrowExpr *e) = 0;
 
+  virtual void emitBadCastCall(CIRGenFunction &cgf, mlir::Location loc) = 0;
+
   virtual mlir::Attribute getAddrOfRTTIDescriptor(mlir::Location loc,
                                                   QualType ty) = 0;
 
@@ -184,6 +186,11 @@ public:
   /// \param addr - a pointer to pass to the destructor function.
   virtual void registerGlobalDtor(const VarDecl *vd, cir::FuncOp dtor,
                                   mlir::Value addr) = 0;
+
+  virtual void emitVirtualObjectDelete(CIRGenFunction &cgf,
+                                       const CXXDeleteExpr *de, Address ptr,
+                                       QualType elementType,
+                                       const CXXDestructorDecl *dtor) = 0;
 
   /// Checks if ABI requires extra virtual offset for vtable field.
   virtual bool

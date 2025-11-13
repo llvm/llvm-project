@@ -16,6 +16,7 @@
 #include "flang/Optimizer/Builder/IntrinsicCall.h"
 #include "flang/Common/static-multimap-view.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
+#include "flang/Optimizer/Builder/CUDAIntrinsicCall.h"
 #include "flang/Optimizer/Builder/CUFCommon.h"
 #include "flang/Optimizer/Builder/Character.h"
 #include "flang/Optimizer/Builder/Complex.h"
@@ -107,34 +108,6 @@ using I = IntrinsicLibrary;
 /// argument is an optional variable in the current scope).
 static constexpr bool handleDynamicOptional = true;
 
-/// TODO: Move all CUDA Fortran intrinsic handlers into its own file similar to
-/// PPC.
-static const char __ldca_i4x4[] = "__ldca_i4x4_";
-static const char __ldca_i8x2[] = "__ldca_i8x2_";
-static const char __ldca_r2x2[] = "__ldca_r2x2_";
-static const char __ldca_r4x4[] = "__ldca_r4x4_";
-static const char __ldca_r8x2[] = "__ldca_r8x2_";
-static const char __ldcg_i4x4[] = "__ldcg_i4x4_";
-static const char __ldcg_i8x2[] = "__ldcg_i8x2_";
-static const char __ldcg_r2x2[] = "__ldcg_r2x2_";
-static const char __ldcg_r4x4[] = "__ldcg_r4x4_";
-static const char __ldcg_r8x2[] = "__ldcg_r8x2_";
-static const char __ldcs_i4x4[] = "__ldcs_i4x4_";
-static const char __ldcs_i8x2[] = "__ldcs_i8x2_";
-static const char __ldcs_r2x2[] = "__ldcs_r2x2_";
-static const char __ldcs_r4x4[] = "__ldcs_r4x4_";
-static const char __ldcs_r8x2[] = "__ldcs_r8x2_";
-static const char __ldcv_i4x4[] = "__ldcv_i4x4_";
-static const char __ldcv_i8x2[] = "__ldcv_i8x2_";
-static const char __ldcv_r2x2[] = "__ldcv_r2x2_";
-static const char __ldcv_r4x4[] = "__ldcv_r4x4_";
-static const char __ldcv_r8x2[] = "__ldcv_r8x2_";
-static const char __ldlu_i4x4[] = "__ldlu_i4x4_";
-static const char __ldlu_i8x2[] = "__ldlu_i8x2_";
-static const char __ldlu_r2x2[] = "__ldlu_r2x2_";
-static const char __ldlu_r4x4[] = "__ldlu_r4x4_";
-static const char __ldlu_r8x2[] = "__ldlu_r8x2_";
-
 /// Table that drives the fir generation depending on the intrinsic or intrinsic
 /// module procedure one to one mapping with Fortran arguments. If no mapping is
 /// defined here for a generic intrinsic, genRuntimeCall will be called
@@ -143,106 +116,6 @@ static const char __ldlu_r8x2[] = "__ldlu_r8x2_";
 /// argument must not be lowered by value. In which case, the lowering rules
 /// should be provided for all the intrinsic arguments for completeness.
 static constexpr IntrinsicHandler handlers[]{
-    {"__ldca_i4x4",
-     &I::genCUDALDXXFunc<__ldca_i4x4, 4>,
-     {{{"a", asAddr}}},
-     /*isElemental=*/false},
-    {"__ldca_i8x2",
-     &I::genCUDALDXXFunc<__ldca_i8x2, 2>,
-     {{{"a", asAddr}}},
-     /*isElemental=*/false},
-    {"__ldca_r2x2",
-     &I::genCUDALDXXFunc<__ldca_r2x2, 2>,
-     {{{"a", asAddr}}},
-     /*isElemental=*/false},
-    {"__ldca_r4x4",
-     &I::genCUDALDXXFunc<__ldca_r4x4, 4>,
-     {{{"a", asAddr}}},
-     /*isElemental=*/false},
-    {"__ldca_r8x2",
-     &I::genCUDALDXXFunc<__ldca_r8x2, 2>,
-     {{{"a", asAddr}}},
-     /*isElemental=*/false},
-    {"__ldcg_i4x4",
-     &I::genCUDALDXXFunc<__ldcg_i4x4, 4>,
-     {{{"a", asAddr}}},
-     /*isElemental=*/false},
-    {"__ldcg_i8x2",
-     &I::genCUDALDXXFunc<__ldcg_i8x2, 2>,
-     {{{"a", asAddr}}},
-     /*isElemental=*/false},
-    {"__ldcg_r2x2",
-     &I::genCUDALDXXFunc<__ldcg_r2x2, 2>,
-     {{{"a", asAddr}}},
-     /*isElemental=*/false},
-    {"__ldcg_r4x4",
-     &I::genCUDALDXXFunc<__ldcg_r4x4, 4>,
-     {{{"a", asAddr}}},
-     /*isElemental=*/false},
-    {"__ldcg_r8x2",
-     &I::genCUDALDXXFunc<__ldcg_r8x2, 2>,
-     {{{"a", asAddr}}},
-     /*isElemental=*/false},
-    {"__ldcs_i4x4",
-     &I::genCUDALDXXFunc<__ldcs_i4x4, 4>,
-     {{{"a", asAddr}}},
-     /*isElemental=*/false},
-    {"__ldcs_i8x2",
-     &I::genCUDALDXXFunc<__ldcs_i8x2, 2>,
-     {{{"a", asAddr}}},
-     /*isElemental=*/false},
-    {"__ldcs_r2x2",
-     &I::genCUDALDXXFunc<__ldcs_r2x2, 2>,
-     {{{"a", asAddr}}},
-     /*isElemental=*/false},
-    {"__ldcs_r4x4",
-     &I::genCUDALDXXFunc<__ldcs_r4x4, 4>,
-     {{{"a", asAddr}}},
-     /*isElemental=*/false},
-    {"__ldcs_r8x2",
-     &I::genCUDALDXXFunc<__ldcs_r8x2, 2>,
-     {{{"a", asAddr}}},
-     /*isElemental=*/false},
-    {"__ldcv_i4x4",
-     &I::genCUDALDXXFunc<__ldcv_i4x4, 4>,
-     {{{"a", asAddr}}},
-     /*isElemental=*/false},
-    {"__ldcv_i8x2",
-     &I::genCUDALDXXFunc<__ldcv_i8x2, 2>,
-     {{{"a", asAddr}}},
-     /*isElemental=*/false},
-    {"__ldcv_r2x2",
-     &I::genCUDALDXXFunc<__ldcv_r2x2, 2>,
-     {{{"a", asAddr}}},
-     /*isElemental=*/false},
-    {"__ldcv_r4x4",
-     &I::genCUDALDXXFunc<__ldcv_r4x4, 4>,
-     {{{"a", asAddr}}},
-     /*isElemental=*/false},
-    {"__ldcv_r8x2",
-     &I::genCUDALDXXFunc<__ldcv_r8x2, 2>,
-     {{{"a", asAddr}}},
-     /*isElemental=*/false},
-    {"__ldlu_i4x4",
-     &I::genCUDALDXXFunc<__ldlu_i4x4, 4>,
-     {{{"a", asAddr}}},
-     /*isElemental=*/false},
-    {"__ldlu_i8x2",
-     &I::genCUDALDXXFunc<__ldlu_i8x2, 2>,
-     {{{"a", asAddr}}},
-     /*isElemental=*/false},
-    {"__ldlu_r2x2",
-     &I::genCUDALDXXFunc<__ldlu_r2x2, 2>,
-     {{{"a", asAddr}}},
-     /*isElemental=*/false},
-    {"__ldlu_r4x4",
-     &I::genCUDALDXXFunc<__ldlu_r4x4, 4>,
-     {{{"a", asAddr}}},
-     /*isElemental=*/false},
-    {"__ldlu_r8x2",
-     &I::genCUDALDXXFunc<__ldlu_r8x2, 2>,
-     {{{"a", asAddr}}},
-     /*isElemental=*/false},
     {"abort", &I::genAbort},
     {"abs", &I::genAbs},
     {"achar", &I::genChar},
@@ -262,10 +135,6 @@ static constexpr IntrinsicHandler handlers[]{
      &I::genAll,
      {{{"mask", asAddr}, {"dim", asValue}}},
      /*isElemental=*/false},
-    {"all_sync",
-     &I::genVoteSync<mlir::NVVM::VoteSyncKind::all>,
-     {{{"mask", asValue}, {"pred", asValue}}},
-     /*isElemental=*/false},
     {"allocated",
      &I::genAllocated,
      {{{"array", asInquired}, {"scalar", asInquired}}},
@@ -274,10 +143,6 @@ static constexpr IntrinsicHandler handlers[]{
     {"any",
      &I::genAny,
      {{{"mask", asAddr}, {"dim", asValue}}},
-     /*isElemental=*/false},
-    {"any_sync",
-     &I::genVoteSync<mlir::NVVM::VoteSyncKind::any>,
-     {{{"mask", asValue}, {"pred", asValue}}},
      /*isElemental=*/false},
     {"asind", &I::genAsind},
     {"asinpi", &I::genAsinpi},
@@ -289,75 +154,6 @@ static constexpr IntrinsicHandler handlers[]{
     {"atan2pi", &I::genAtanpi},
     {"atand", &I::genAtand},
     {"atanpi", &I::genAtanpi},
-    {"atomicaddd", &I::genAtomicAdd, {{{"a", asAddr}, {"v", asValue}}}, false},
-    {"atomicaddf", &I::genAtomicAdd, {{{"a", asAddr}, {"v", asValue}}}, false},
-    {"atomicaddi", &I::genAtomicAdd, {{{"a", asAddr}, {"v", asValue}}}, false},
-    {"atomicaddl", &I::genAtomicAdd, {{{"a", asAddr}, {"v", asValue}}}, false},
-    {"atomicandi", &I::genAtomicAnd, {{{"a", asAddr}, {"v", asValue}}}, false},
-    {"atomiccasd",
-     &I::genAtomicCas,
-     {{{"a", asAddr}, {"v1", asValue}, {"v2", asValue}}},
-     false},
-    {"atomiccasf",
-     &I::genAtomicCas,
-     {{{"a", asAddr}, {"v1", asValue}, {"v2", asValue}}},
-     false},
-    {"atomiccasi",
-     &I::genAtomicCas,
-     {{{"a", asAddr}, {"v1", asValue}, {"v2", asValue}}},
-     false},
-    {"atomiccasul",
-     &I::genAtomicCas,
-     {{{"a", asAddr}, {"v1", asValue}, {"v2", asValue}}},
-     false},
-    {"atomicdeci", &I::genAtomicDec, {{{"a", asAddr}, {"v", asValue}}}, false},
-    {"atomicexchd",
-     &I::genAtomicExch,
-     {{{"a", asAddr}, {"v", asValue}}},
-     false},
-    {"atomicexchf",
-     &I::genAtomicExch,
-     {{{"a", asAddr}, {"v", asValue}}},
-     false},
-    {"atomicexchi",
-     &I::genAtomicExch,
-     {{{"a", asAddr}, {"v", asValue}}},
-     false},
-    {"atomicexchul",
-     &I::genAtomicExch,
-     {{{"a", asAddr}, {"v", asValue}}},
-     false},
-    {"atomicinci", &I::genAtomicInc, {{{"a", asAddr}, {"v", asValue}}}, false},
-    {"atomicmaxd", &I::genAtomicMax, {{{"a", asAddr}, {"v", asValue}}}, false},
-    {"atomicmaxf", &I::genAtomicMax, {{{"a", asAddr}, {"v", asValue}}}, false},
-    {"atomicmaxi", &I::genAtomicMax, {{{"a", asAddr}, {"v", asValue}}}, false},
-    {"atomicmaxl", &I::genAtomicMax, {{{"a", asAddr}, {"v", asValue}}}, false},
-    {"atomicmind", &I::genAtomicMin, {{{"a", asAddr}, {"v", asValue}}}, false},
-    {"atomicminf", &I::genAtomicMin, {{{"a", asAddr}, {"v", asValue}}}, false},
-    {"atomicmini", &I::genAtomicMin, {{{"a", asAddr}, {"v", asValue}}}, false},
-    {"atomicminl", &I::genAtomicMin, {{{"a", asAddr}, {"v", asValue}}}, false},
-    {"atomicori", &I::genAtomicOr, {{{"a", asAddr}, {"v", asValue}}}, false},
-    {"atomicsubd", &I::genAtomicSub, {{{"a", asAddr}, {"v", asValue}}}, false},
-    {"atomicsubf", &I::genAtomicSub, {{{"a", asAddr}, {"v", asValue}}}, false},
-    {"atomicsubi", &I::genAtomicSub, {{{"a", asAddr}, {"v", asValue}}}, false},
-    {"atomicsubl", &I::genAtomicSub, {{{"a", asAddr}, {"v", asValue}}}, false},
-    {"atomicxori", &I::genAtomicXor, {{{"a", asAddr}, {"v", asValue}}}, false},
-    {"ballot_sync",
-     &I::genVoteSync<mlir::NVVM::VoteSyncKind::ballot>,
-     {{{"mask", asValue}, {"pred", asValue}}},
-     /*isElemental=*/false},
-    {"barrier_arrive",
-     &I::genBarrierArrive,
-     {{{"barrier", asAddr}}},
-     /*isElemental=*/false},
-    {"barrier_arrive_cnt",
-     &I::genBarrierArriveCnt,
-     {{{"barrier", asAddr}, {"count", asValue}}},
-     /*isElemental=*/false},
-    {"barrier_init",
-     &I::genBarrierInit,
-     {{{"barrier", asAddr}, {"count", asValue}}},
-     /*isElemental=*/false},
     {"bessel_jn",
      &I::genBesselJn,
      {{{"n1", asValue}, {"n2", asValue}, {"x", asValue}}},
@@ -400,11 +196,6 @@ static constexpr IntrinsicHandler handlers[]{
     {"chdir",
      &I::genChdir,
      {{{"name", asAddr}, {"status", asAddr, handleDynamicOptional}}},
-     /*isElemental=*/false},
-    {"clock", &I::genNVVMTime<mlir::NVVM::ClockOp>, {}, /*isElemental=*/false},
-    {"clock64",
-     &I::genNVVMTime<mlir::NVVM::Clock64Op>,
-     {},
      /*isElemental=*/false},
     {"cmplx",
      &I::genCmplx,
@@ -502,10 +293,6 @@ static constexpr IntrinsicHandler handlers[]{
      &I::genExtendsTypeOf,
      {{{"a", asBox}, {"mold", asBox}}},
      /*isElemental=*/false},
-    {"fence_proxy_async",
-     &I::genFenceProxyAsync,
-     {},
-     /*isElemental=*/false},
     {"findloc",
      &I::genFindloc,
      {{{"array", asBox},
@@ -553,6 +340,10 @@ static constexpr IntrinsicHandler handlers[]{
        {"trim_name", asAddr, handleDynamicOptional},
        {"errmsg", asBox, handleDynamicOptional}}},
      /*isElemental=*/false},
+    {"get_team",
+     &I::genGetTeam,
+     {{{"level", asValue, handleDynamicOptional}}},
+     /*isElemental=*/false},
     {"getcwd",
      &I::genGetCwd,
      {{{"c", asBox}, {"status", asAddr, handleDynamicOptional}}},
@@ -560,10 +351,6 @@ static constexpr IntrinsicHandler handlers[]{
     {"getgid", &I::genGetGID},
     {"getpid", &I::genGetPID},
     {"getuid", &I::genGetUID},
-    {"globaltimer",
-     &I::genNVVMTime<mlir::NVVM::GlobalTimerOp>,
-     {},
-     /*isElemental=*/false},
     {"hostnm",
      &I::genHostnm,
      {{{"c", asBox}, {"status", asAddr, handleDynamicOptional}}},
@@ -731,38 +518,6 @@ static constexpr IntrinsicHandler handlers[]{
     {"malloc", &I::genMalloc},
     {"maskl", &I::genMask<mlir::arith::ShLIOp>},
     {"maskr", &I::genMask<mlir::arith::ShRUIOp>},
-    {"match_all_syncjd",
-     &I::genMatchAllSync,
-     {{{"mask", asValue}, {"value", asValue}, {"pred", asAddr}}},
-     /*isElemental=*/false},
-    {"match_all_syncjf",
-     &I::genMatchAllSync,
-     {{{"mask", asValue}, {"value", asValue}, {"pred", asAddr}}},
-     /*isElemental=*/false},
-    {"match_all_syncjj",
-     &I::genMatchAllSync,
-     {{{"mask", asValue}, {"value", asValue}, {"pred", asAddr}}},
-     /*isElemental=*/false},
-    {"match_all_syncjx",
-     &I::genMatchAllSync,
-     {{{"mask", asValue}, {"value", asValue}, {"pred", asAddr}}},
-     /*isElemental=*/false},
-    {"match_any_syncjd",
-     &I::genMatchAnySync,
-     {{{"mask", asValue}, {"value", asValue}}},
-     /*isElemental=*/false},
-    {"match_any_syncjf",
-     &I::genMatchAnySync,
-     {{{"mask", asValue}, {"value", asValue}}},
-     /*isElemental=*/false},
-    {"match_any_syncjj",
-     &I::genMatchAnySync,
-     {{{"mask", asValue}, {"value", asValue}}},
-     /*isElemental=*/false},
-    {"match_any_syncjx",
-     &I::genMatchAnySync,
-     {{{"mask", asValue}, {"value", asValue}}},
-     /*isElemental=*/false},
     {"matmul",
      &I::genMatmul,
      {{{"matrix_a", asAddr}, {"matrix_b", asAddr}}},
@@ -988,11 +743,6 @@ static constexpr IntrinsicHandler handlers[]{
        {"dim", asValue},
        {"mask", asBox, handleDynamicOptional}}},
      /*isElemental=*/false},
-    {"syncthreads", &I::genSyncThreads, {}, /*isElemental=*/false},
-    {"syncthreads_and", &I::genSyncThreadsAnd, {}, /*isElemental=*/false},
-    {"syncthreads_count", &I::genSyncThreadsCount, {}, /*isElemental=*/false},
-    {"syncthreads_or", &I::genSyncThreadsOr, {}, /*isElemental=*/false},
-    {"syncwarp", &I::genSyncWarp, {}, /*isElemental=*/false},
     {"system",
      &I::genSystem,
      {{{"command", asBox}, {"exitstat", asBox, handleDynamicOptional}}},
@@ -1003,38 +753,17 @@ static constexpr IntrinsicHandler handlers[]{
      /*isElemental=*/false},
     {"tand", &I::genTand},
     {"tanpi", &I::genTanpi},
-    {"this_grid", &I::genThisGrid, {}, /*isElemental=*/false},
+    {"team_number",
+     &I::genTeamNumber,
+     {{{"team", asBox, handleDynamicOptional}}},
+     /*isElemental=*/false},
     {"this_image",
      &I::genThisImage,
      {{{"coarray", asBox},
        {"dim", asAddr},
        {"team", asBox, handleDynamicOptional}}},
      /*isElemental=*/false},
-    {"this_thread_block", &I::genThisThreadBlock, {}, /*isElemental=*/false},
-    {"this_warp", &I::genThisWarp, {}, /*isElemental=*/false},
-    {"threadfence", &I::genThreadFence, {}, /*isElemental=*/false},
-    {"threadfence_block", &I::genThreadFenceBlock, {}, /*isElemental=*/false},
-    {"threadfence_system", &I::genThreadFenceSystem, {}, /*isElemental=*/false},
     {"time", &I::genTime, {}, /*isElemental=*/false},
-    {"tma_bulk_commit_group",
-     &I::genTMABulkCommitGroup,
-     {{}},
-     /*isElemental=*/false},
-    {"tma_bulk_g2s",
-     &I::genTMABulkG2S,
-     {{{"barrier", asAddr},
-       {"src", asAddr},
-       {"dst", asAddr},
-       {"nbytes", asValue}}},
-     /*isElemental=*/false},
-    {"tma_bulk_s2g",
-     &I::genTMABulkS2G,
-     {{{"src", asAddr}, {"dst", asAddr}, {"nbytes", asValue}}},
-     /*isElemental=*/false},
-    {"tma_bulk_wait_group",
-     &I::genTMABulkWaitGroup,
-     {{}},
-     /*isElemental=*/false},
     {"trailz", &I::genTrailz},
     {"transfer",
      &I::genTransfer,
@@ -1758,8 +1487,10 @@ static constexpr MathOperation mathOperations[] = {
      genComplexMathOp<mlir::complex::SinOp>},
     {"sin", RTNAME_STRING(CSinF128), FuncTypeComplex16Complex16,
      genLibF128Call},
-    {"sinh", "sinhf", genFuncType<Ty::Real<4>, Ty::Real<4>>, genLibCall},
-    {"sinh", "sinh", genFuncType<Ty::Real<8>, Ty::Real<8>>, genLibCall},
+    {"sinh", "sinhf", genFuncType<Ty::Real<4>, Ty::Real<4>>,
+     genMathOp<mlir::math::SinhOp>},
+    {"sinh", "sinh", genFuncType<Ty::Real<8>, Ty::Real<8>>,
+     genMathOp<mlir::math::SinhOp>},
     {"sinh", RTNAME_STRING(SinhF128), FuncTypeReal16Real16, genLibF128Call},
     {"sinh", "csinhf", genFuncType<Ty::Complex<4>, Ty::Complex<4>>, genLibCall},
     {"sinh", "csinh", genFuncType<Ty::Complex<8>, Ty::Complex<8>>, genLibCall},
@@ -2124,6 +1855,9 @@ lookupIntrinsicHandler(fir::FirOpBuilder &builder,
   if (isPPCTarget)
     if (const IntrinsicHandler *ppcHandler = findPPCIntrinsicHandler(name))
       return std::make_optional<IntrinsicHandlerEntry>(ppcHandler);
+  // TODO: Look for CUDA intrinsic handlers only if CUDA is enabled.
+  if (const IntrinsicHandler *cudaHandler = findCUDAIntrinsicHandler(name))
+    return std::make_optional<IntrinsicHandlerEntry>(cudaHandler);
   // Subroutines should have a handler.
   if (!resultType)
     return std::nullopt;
@@ -3010,157 +2744,6 @@ mlir::Value IntrinsicLibrary::genAtanpi(mlir::Type resultType,
   return mlir::arith::MulFOp::create(builder, loc, atan, factor);
 }
 
-static mlir::Value genAtomBinOp(fir::FirOpBuilder &builder, mlir::Location &loc,
-                                mlir::LLVM::AtomicBinOp binOp, mlir::Value arg0,
-                                mlir::Value arg1) {
-  auto llvmPointerType = mlir::LLVM::LLVMPointerType::get(builder.getContext());
-  arg0 = builder.createConvert(loc, llvmPointerType, arg0);
-  return mlir::LLVM::AtomicRMWOp::create(builder, loc, binOp, arg0, arg1,
-                                         mlir::LLVM::AtomicOrdering::seq_cst);
-}
-
-mlir::Value IntrinsicLibrary::genAtomicAdd(mlir::Type resultType,
-                                           llvm::ArrayRef<mlir::Value> args) {
-  assert(args.size() == 2);
-
-  mlir::LLVM::AtomicBinOp binOp =
-      mlir::isa<mlir::IntegerType>(args[1].getType())
-          ? mlir::LLVM::AtomicBinOp::add
-          : mlir::LLVM::AtomicBinOp::fadd;
-  return genAtomBinOp(builder, loc, binOp, args[0], args[1]);
-}
-
-mlir::Value IntrinsicLibrary::genAtomicSub(mlir::Type resultType,
-                                           llvm::ArrayRef<mlir::Value> args) {
-  assert(args.size() == 2);
-
-  mlir::LLVM::AtomicBinOp binOp =
-      mlir::isa<mlir::IntegerType>(args[1].getType())
-          ? mlir::LLVM::AtomicBinOp::sub
-          : mlir::LLVM::AtomicBinOp::fsub;
-  return genAtomBinOp(builder, loc, binOp, args[0], args[1]);
-}
-
-mlir::Value IntrinsicLibrary::genAtomicAnd(mlir::Type resultType,
-                                           llvm::ArrayRef<mlir::Value> args) {
-  assert(args.size() == 2);
-  assert(mlir::isa<mlir::IntegerType>(args[1].getType()));
-
-  mlir::LLVM::AtomicBinOp binOp = mlir::LLVM::AtomicBinOp::_and;
-  return genAtomBinOp(builder, loc, binOp, args[0], args[1]);
-}
-
-mlir::Value IntrinsicLibrary::genAtomicOr(mlir::Type resultType,
-                                          llvm::ArrayRef<mlir::Value> args) {
-  assert(args.size() == 2);
-  assert(mlir::isa<mlir::IntegerType>(args[1].getType()));
-
-  mlir::LLVM::AtomicBinOp binOp = mlir::LLVM::AtomicBinOp::_or;
-  return genAtomBinOp(builder, loc, binOp, args[0], args[1]);
-}
-
-// ATOMICCAS
-fir::ExtendedValue
-IntrinsicLibrary::genAtomicCas(mlir::Type resultType,
-                               llvm::ArrayRef<fir::ExtendedValue> args) {
-  assert(args.size() == 3);
-  auto successOrdering = mlir::LLVM::AtomicOrdering::acq_rel;
-  auto failureOrdering = mlir::LLVM::AtomicOrdering::monotonic;
-  auto llvmPtrTy = mlir::LLVM::LLVMPointerType::get(resultType.getContext());
-
-  mlir::Value arg0 = fir::getBase(args[0]);
-  mlir::Value arg1 = fir::getBase(args[1]);
-  mlir::Value arg2 = fir::getBase(args[2]);
-
-  auto bitCastFloat = [&](mlir::Value arg) -> mlir::Value {
-    if (mlir::isa<mlir::Float32Type>(arg.getType()))
-      return mlir::LLVM::BitcastOp::create(builder, loc, builder.getI32Type(),
-                                           arg);
-    if (mlir::isa<mlir::Float64Type>(arg.getType()))
-      return mlir::LLVM::BitcastOp::create(builder, loc, builder.getI64Type(),
-                                           arg);
-    return arg;
-  };
-
-  arg1 = bitCastFloat(arg1);
-  arg2 = bitCastFloat(arg2);
-
-  if (arg1.getType() != arg2.getType()) {
-    // arg1 and arg2 need to have the same type in AtomicCmpXchgOp.
-    arg2 = builder.createConvert(loc, arg1.getType(), arg2);
-  }
-
-  auto address =
-      mlir::UnrealizedConversionCastOp::create(builder, loc, llvmPtrTy, arg0)
-          .getResult(0);
-  auto cmpxchg = mlir::LLVM::AtomicCmpXchgOp::create(
-      builder, loc, address, arg1, arg2, successOrdering, failureOrdering);
-  return mlir::LLVM::ExtractValueOp::create(builder, loc, cmpxchg, 1);
-}
-
-mlir::Value IntrinsicLibrary::genAtomicDec(mlir::Type resultType,
-                                           llvm::ArrayRef<mlir::Value> args) {
-  assert(args.size() == 2);
-  assert(mlir::isa<mlir::IntegerType>(args[1].getType()));
-
-  mlir::LLVM::AtomicBinOp binOp = mlir::LLVM::AtomicBinOp::udec_wrap;
-  return genAtomBinOp(builder, loc, binOp, args[0], args[1]);
-}
-
-// ATOMICEXCH
-fir::ExtendedValue
-IntrinsicLibrary::genAtomicExch(mlir::Type resultType,
-                                llvm::ArrayRef<fir::ExtendedValue> args) {
-  assert(args.size() == 2);
-  mlir::Value arg0 = fir::getBase(args[0]);
-  mlir::Value arg1 = fir::getBase(args[1]);
-  assert(arg1.getType().isIntOrFloat());
-
-  mlir::LLVM::AtomicBinOp binOp = mlir::LLVM::AtomicBinOp::xchg;
-  return genAtomBinOp(builder, loc, binOp, arg0, arg1);
-}
-
-mlir::Value IntrinsicLibrary::genAtomicInc(mlir::Type resultType,
-                                           llvm::ArrayRef<mlir::Value> args) {
-  assert(args.size() == 2);
-  assert(mlir::isa<mlir::IntegerType>(args[1].getType()));
-
-  mlir::LLVM::AtomicBinOp binOp = mlir::LLVM::AtomicBinOp::uinc_wrap;
-  return genAtomBinOp(builder, loc, binOp, args[0], args[1]);
-}
-
-mlir::Value IntrinsicLibrary::genAtomicMax(mlir::Type resultType,
-                                           llvm::ArrayRef<mlir::Value> args) {
-  assert(args.size() == 2);
-
-  mlir::LLVM::AtomicBinOp binOp =
-      mlir::isa<mlir::IntegerType>(args[1].getType())
-          ? mlir::LLVM::AtomicBinOp::max
-          : mlir::LLVM::AtomicBinOp::fmax;
-  return genAtomBinOp(builder, loc, binOp, args[0], args[1]);
-}
-
-mlir::Value IntrinsicLibrary::genAtomicMin(mlir::Type resultType,
-                                           llvm::ArrayRef<mlir::Value> args) {
-  assert(args.size() == 2);
-
-  mlir::LLVM::AtomicBinOp binOp =
-      mlir::isa<mlir::IntegerType>(args[1].getType())
-          ? mlir::LLVM::AtomicBinOp::min
-          : mlir::LLVM::AtomicBinOp::fmin;
-  return genAtomBinOp(builder, loc, binOp, args[0], args[1]);
-}
-
-// ATOMICXOR
-fir::ExtendedValue
-IntrinsicLibrary::genAtomicXor(mlir::Type resultType,
-                               llvm::ArrayRef<fir::ExtendedValue> args) {
-  assert(args.size() == 2);
-  mlir::Value arg0 = fir::getBase(args[0]);
-  mlir::Value arg1 = fir::getBase(args[1]);
-  return genAtomBinOp(builder, loc, mlir::LLVM::AtomicBinOp::_xor, arg0, arg1);
-}
-
 // ASSOCIATED
 fir::ExtendedValue
 IntrinsicLibrary::genAssociated(mlir::Type resultType,
@@ -3210,63 +2793,6 @@ IntrinsicLibrary::genAssociated(mlir::Type resultType,
       fir::factory::getMutableIRBox(builder, loc, *pointer);
   auto pointerBox = fir::LoadOp::create(builder, loc, pointerBoxRef);
   return fir::runtime::genAssociated(builder, loc, pointerBox, targetBox);
-}
-
-static mlir::Value convertPtrToNVVMSpace(fir::FirOpBuilder &builder,
-                                         mlir::Location loc,
-                                         mlir::Value barrier,
-                                         mlir::NVVM::NVVMMemorySpace space) {
-  mlir::Value llvmPtr = fir::ConvertOp::create(
-      builder, loc, mlir::LLVM::LLVMPointerType::get(builder.getContext()),
-      barrier);
-  mlir::Value addrCast = mlir::LLVM::AddrSpaceCastOp::create(
-      builder, loc,
-      mlir::LLVM::LLVMPointerType::get(builder.getContext(),
-                                       static_cast<unsigned>(space)),
-      llvmPtr);
-  return addrCast;
-}
-
-// BARRIER_ARRIVE (CUDA)
-mlir::Value
-IntrinsicLibrary::genBarrierArrive(mlir::Type resultType,
-                                   llvm::ArrayRef<mlir::Value> args) {
-  assert(args.size() == 1);
-  mlir::Value barrier = convertPtrToNVVMSpace(
-      builder, loc, args[0], mlir::NVVM::NVVMMemorySpace::Shared);
-  return mlir::NVVM::MBarrierArriveSharedOp::create(builder, loc, resultType,
-                                                    barrier)
-      .getResult();
-}
-
-// BARRIER_ARRIBVE_CNT (CUDA)
-mlir::Value
-IntrinsicLibrary::genBarrierArriveCnt(mlir::Type resultType,
-                                      llvm::ArrayRef<mlir::Value> args) {
-  assert(args.size() == 2);
-  mlir::Value barrier = convertPtrToNVVMSpace(
-      builder, loc, args[0], mlir::NVVM::NVVMMemorySpace::Shared);
-  mlir::Value token = fir::AllocaOp::create(builder, loc, resultType);
-  // TODO: the MBarrierArriveExpectTxOp is not taking the state argument and
-  // currently just the sink symbol `_`.
-  // https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-mbarrier-arrive
-  mlir::NVVM::MBarrierArriveExpectTxOp::create(builder, loc, barrier, args[1],
-                                               {});
-  return fir::LoadOp::create(builder, loc, token);
-}
-
-// BARRIER_INIT (CUDA)
-void IntrinsicLibrary::genBarrierInit(llvm::ArrayRef<fir::ExtendedValue> args) {
-  assert(args.size() == 2);
-  mlir::Value barrier = convertPtrToNVVMSpace(
-      builder, loc, fir::getBase(args[0]), mlir::NVVM::NVVMMemorySpace::Shared);
-  mlir::NVVM::MBarrierInitSharedOp::create(builder, loc, barrier,
-                                           fir::getBase(args[1]), {});
-  auto kind = mlir::NVVM::ProxyKindAttr::get(
-      builder.getContext(), mlir::NVVM::ProxyKind::async_shared);
-  auto space = mlir::NVVM::SharedSpaceAttr::get(
-      builder.getContext(), mlir::NVVM::SharedSpace::shared_cta);
-  mlir::NVVM::FenceProxyOp::create(builder, loc, kind, space);
 }
 
 // BESSEL_JN
@@ -4002,30 +3528,6 @@ IntrinsicLibrary::genCshift(mlir::Type resultType,
   return readAndAddCleanUp(resultMutableBox, resultType, "CSHIFT");
 }
 
-// __LDCA, __LDCS, __LDLU, __LDCV
-template <const char *fctName, int extent>
-fir::ExtendedValue
-IntrinsicLibrary::genCUDALDXXFunc(mlir::Type resultType,
-                                  llvm::ArrayRef<fir::ExtendedValue> args) {
-  assert(args.size() == 1);
-  mlir::Type resTy = fir::SequenceType::get(extent, resultType);
-  mlir::Value arg = fir::getBase(args[0]);
-  mlir::Value res = fir::AllocaOp::create(builder, loc, resTy);
-  if (mlir::isa<fir::BaseBoxType>(arg.getType()))
-    arg = fir::BoxAddrOp::create(builder, loc, arg);
-  mlir::Type refResTy = fir::ReferenceType::get(resTy);
-  mlir::FunctionType ftype =
-      mlir::FunctionType::get(arg.getContext(), {refResTy, refResTy}, {});
-  auto funcOp = builder.createFunction(loc, fctName, ftype);
-  llvm::SmallVector<mlir::Value> funcArgs;
-  funcArgs.push_back(res);
-  funcArgs.push_back(arg);
-  fir::CallOp::create(builder, loc, funcOp, funcArgs);
-  mlir::Value ext =
-      builder.createIntegerConstant(loc, builder.getIndexType(), extent);
-  return fir::ArrayBoxValue(res, {ext});
-}
-
 // DATE_AND_TIME
 void IntrinsicLibrary::genDateAndTime(llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 4 && "date_and_time has 4 args");
@@ -4358,17 +3860,6 @@ IntrinsicLibrary::genExtendsTypeOf(mlir::Type resultType,
                                      fir::getBase(args[1])));
 }
 
-// FENCE_PROXY_ASYNC (CUDA)
-void IntrinsicLibrary::genFenceProxyAsync(
-    llvm::ArrayRef<fir::ExtendedValue> args) {
-  assert(args.size() == 0);
-  auto kind = mlir::NVVM::ProxyKindAttr::get(
-      builder.getContext(), mlir::NVVM::ProxyKind::async_shared);
-  auto space = mlir::NVVM::SharedSpaceAttr::get(
-      builder.getContext(), mlir::NVVM::SharedSpace::shared_cta);
-  mlir::NVVM::FenceProxyOp::create(builder, loc, kind, space);
-}
-
 // FINDLOC
 fir::ExtendedValue
 IntrinsicLibrary::genFindloc(mlir::Type resultType,
@@ -4528,6 +4019,15 @@ IntrinsicLibrary::genFtell(std::optional<mlir::Type> resultType,
     }
     return {};
   }
+}
+
+// GET_TEAM
+mlir::Value IntrinsicLibrary::genGetTeam(mlir::Type resultType,
+                                         llvm::ArrayRef<mlir::Value> args) {
+  converter->checkCoarrayEnabled();
+  assert(args.size() == 1);
+  return mif::GetTeamOp::create(builder, loc, fir::BoxType::get(resultType),
+                                /*level*/ args[0]);
 }
 
 // GETCWD
@@ -6879,67 +6379,6 @@ mlir::Value IntrinsicLibrary::genMask(mlir::Type resultType,
   return result;
 }
 
-// MATCH_ALL_SYNC
-mlir::Value
-IntrinsicLibrary::genMatchAllSync(mlir::Type resultType,
-                                  llvm::ArrayRef<mlir::Value> args) {
-  assert(args.size() == 3);
-  bool is32 = args[1].getType().isInteger(32) || args[1].getType().isF32();
-
-  mlir::Type i1Ty = builder.getI1Type();
-  mlir::MLIRContext *context = builder.getContext();
-
-  mlir::Value arg1 = args[1];
-  if (arg1.getType().isF32() || arg1.getType().isF64())
-    arg1 = fir::ConvertOp::create(
-        builder, loc, is32 ? builder.getI32Type() : builder.getI64Type(), arg1);
-
-  mlir::Type retTy =
-      mlir::LLVM::LLVMStructType::getLiteral(context, {resultType, i1Ty});
-  auto match =
-      mlir::NVVM::MatchSyncOp::create(builder, loc, retTy, args[0], arg1,
-                                      mlir::NVVM::MatchSyncKind::all)
-          .getResult();
-  auto value = mlir::LLVM::ExtractValueOp::create(builder, loc, match, 0);
-  auto pred = mlir::LLVM::ExtractValueOp::create(builder, loc, match, 1);
-  auto conv = mlir::LLVM::ZExtOp::create(builder, loc, resultType, pred);
-  fir::StoreOp::create(builder, loc, conv, args[2]);
-  return value;
-}
-
-// ALL_SYNC, ANY_SYNC, BALLOT_SYNC
-template <mlir::NVVM::VoteSyncKind kind>
-mlir::Value IntrinsicLibrary::genVoteSync(mlir::Type resultType,
-                                          llvm::ArrayRef<mlir::Value> args) {
-  assert(args.size() == 2);
-  mlir::Value arg1 =
-      fir::ConvertOp::create(builder, loc, builder.getI1Type(), args[1]);
-  mlir::Type resTy = kind == mlir::NVVM::VoteSyncKind::ballot
-                         ? builder.getI32Type()
-                         : builder.getI1Type();
-  auto voteRes =
-      mlir::NVVM::VoteSyncOp::create(builder, loc, resTy, args[0], arg1, kind)
-          .getResult();
-  return fir::ConvertOp::create(builder, loc, resultType, voteRes);
-}
-
-// MATCH_ANY_SYNC
-mlir::Value
-IntrinsicLibrary::genMatchAnySync(mlir::Type resultType,
-                                  llvm::ArrayRef<mlir::Value> args) {
-  assert(args.size() == 2);
-  bool is32 = args[1].getType().isInteger(32) || args[1].getType().isF32();
-
-  mlir::Value arg1 = args[1];
-  if (arg1.getType().isF32() || arg1.getType().isF64())
-    arg1 = fir::ConvertOp::create(
-        builder, loc, is32 ? builder.getI32Type() : builder.getI64Type(), arg1);
-
-  return mlir::NVVM::MatchSyncOp::create(builder, loc, resultType, args[0],
-                                         arg1, mlir::NVVM::MatchSyncKind::any)
-      .getResult();
-}
-
 // MATMUL
 fir::ExtendedValue
 IntrinsicLibrary::genMatmul(mlir::Type resultType,
@@ -7555,14 +6994,6 @@ IntrinsicLibrary::genNumImages(mlir::Type resultType,
     return mif::NumImagesOp::create(builder, loc, fir::getBase(args[0]))
         .getResult();
   return mif::NumImagesOp::create(builder, loc).getResult();
-}
-
-// CLOCK, CLOCK64, GLOBALTIMER
-template <typename OpTy>
-mlir::Value IntrinsicLibrary::genNVVMTime(mlir::Type resultType,
-                                          llvm::ArrayRef<mlir::Value> args) {
-  assert(args.size() == 0 && "expect no arguments");
-  return OpTy::create(builder, loc, resultType).getResult();
 }
 
 // PACK
@@ -8539,90 +7970,14 @@ mlir::Value IntrinsicLibrary::genTanpi(mlir::Type resultType,
   return getRuntimeCallGenerator("tan", ftype)(builder, loc, {arg});
 }
 
-// THIS_GRID
-mlir::Value IntrinsicLibrary::genThisGrid(mlir::Type resultType,
-                                          llvm::ArrayRef<mlir::Value> args) {
-  assert(args.size() == 0);
-  auto recTy = mlir::cast<fir::RecordType>(resultType);
-  assert(recTy && "RecordType expepected");
-  mlir::Value res = fir::AllocaOp::create(builder, loc, resultType);
-  mlir::Type i32Ty = builder.getI32Type();
-
-  mlir::Value threadIdX = mlir::NVVM::ThreadIdXOp::create(builder, loc, i32Ty);
-  mlir::Value threadIdY = mlir::NVVM::ThreadIdYOp::create(builder, loc, i32Ty);
-  mlir::Value threadIdZ = mlir::NVVM::ThreadIdZOp::create(builder, loc, i32Ty);
-
-  mlir::Value blockIdX = mlir::NVVM::BlockIdXOp::create(builder, loc, i32Ty);
-  mlir::Value blockIdY = mlir::NVVM::BlockIdYOp::create(builder, loc, i32Ty);
-  mlir::Value blockIdZ = mlir::NVVM::BlockIdZOp::create(builder, loc, i32Ty);
-
-  mlir::Value blockDimX = mlir::NVVM::BlockDimXOp::create(builder, loc, i32Ty);
-  mlir::Value blockDimY = mlir::NVVM::BlockDimYOp::create(builder, loc, i32Ty);
-  mlir::Value blockDimZ = mlir::NVVM::BlockDimZOp::create(builder, loc, i32Ty);
-  mlir::Value gridDimX = mlir::NVVM::GridDimXOp::create(builder, loc, i32Ty);
-  mlir::Value gridDimY = mlir::NVVM::GridDimYOp::create(builder, loc, i32Ty);
-  mlir::Value gridDimZ = mlir::NVVM::GridDimZOp::create(builder, loc, i32Ty);
-
-  // this_grid.size = ((blockDim.z * gridDim.z) * (blockDim.y * gridDim.y)) *
-  // (blockDim.x * gridDim.x);
-  mlir::Value resZ =
-      mlir::arith::MulIOp::create(builder, loc, blockDimZ, gridDimZ);
-  mlir::Value resY =
-      mlir::arith::MulIOp::create(builder, loc, blockDimY, gridDimY);
-  mlir::Value resX =
-      mlir::arith::MulIOp::create(builder, loc, blockDimX, gridDimX);
-  mlir::Value resZY = mlir::arith::MulIOp::create(builder, loc, resZ, resY);
-  mlir::Value size = mlir::arith::MulIOp::create(builder, loc, resZY, resX);
-
-  // tmp = ((blockIdx.z * gridDim.y * gridDim.x) + (blockIdx.y * gridDim.x)) +
-  //   blockIdx.x;
-  // this_group.rank = tmp * ((blockDim.x * blockDim.y) * blockDim.z) +
-  //   ((threadIdx.z * blockDim.y) * blockDim.x) +
-  //   (threadIdx.y * blockDim.x) + threadIdx.x + 1;
-  mlir::Value r1 =
-      mlir::arith::MulIOp::create(builder, loc, blockIdZ, gridDimY);
-  mlir::Value r2 = mlir::arith::MulIOp::create(builder, loc, r1, gridDimX);
-  mlir::Value r3 =
-      mlir::arith::MulIOp::create(builder, loc, blockIdY, gridDimX);
-  mlir::Value r2r3 = mlir::arith::AddIOp::create(builder, loc, r2, r3);
-  mlir::Value tmp = mlir::arith::AddIOp::create(builder, loc, r2r3, blockIdX);
-
-  mlir::Value bXbY =
-      mlir::arith::MulIOp::create(builder, loc, blockDimX, blockDimY);
-  mlir::Value bXbYbZ =
-      mlir::arith::MulIOp::create(builder, loc, bXbY, blockDimZ);
-  mlir::Value tZbY =
-      mlir::arith::MulIOp::create(builder, loc, threadIdZ, blockDimY);
-  mlir::Value tZbYbX =
-      mlir::arith::MulIOp::create(builder, loc, tZbY, blockDimX);
-  mlir::Value tYbX =
-      mlir::arith::MulIOp::create(builder, loc, threadIdY, blockDimX);
-  mlir::Value rank = mlir::arith::MulIOp::create(builder, loc, tmp, bXbYbZ);
-  rank = mlir::arith::AddIOp::create(builder, loc, rank, tZbYbX);
-  rank = mlir::arith::AddIOp::create(builder, loc, rank, tYbX);
-  rank = mlir::arith::AddIOp::create(builder, loc, rank, threadIdX);
-  mlir::Value one = builder.createIntegerConstant(loc, i32Ty, 1);
-  rank = mlir::arith::AddIOp::create(builder, loc, rank, one);
-
-  auto sizeFieldName = recTy.getTypeList()[1].first;
-  mlir::Type sizeFieldTy = recTy.getTypeList()[1].second;
-  mlir::Type fieldIndexType = fir::FieldType::get(resultType.getContext());
-  mlir::Value sizeFieldIndex = fir::FieldIndexOp::create(
-      builder, loc, fieldIndexType, sizeFieldName, recTy,
-      /*typeParams=*/mlir::ValueRange{});
-  mlir::Value sizeCoord = fir::CoordinateOp::create(
-      builder, loc, builder.getRefType(sizeFieldTy), res, sizeFieldIndex);
-  fir::StoreOp::create(builder, loc, size, sizeCoord);
-
-  auto rankFieldName = recTy.getTypeList()[2].first;
-  mlir::Type rankFieldTy = recTy.getTypeList()[2].second;
-  mlir::Value rankFieldIndex = fir::FieldIndexOp::create(
-      builder, loc, fieldIndexType, rankFieldName, recTy,
-      /*typeParams=*/mlir::ValueRange{});
-  mlir::Value rankCoord = fir::CoordinateOp::create(
-      builder, loc, builder.getRefType(rankFieldTy), res, rankFieldIndex);
-  fir::StoreOp::create(builder, loc, rank, rankCoord);
-  return res;
+// TEAM_NUMBER
+fir::ExtendedValue
+IntrinsicLibrary::genTeamNumber(mlir::Type,
+                                llvm::ArrayRef<fir::ExtendedValue> args) {
+  converter->checkCoarrayEnabled();
+  assert(args.size() == 1);
+  return mif::TeamNumberOp::create(builder, loc,
+                                   /*team*/ fir::getBase(args[0]));
 }
 
 // THIS_IMAGE
@@ -8638,99 +7993,6 @@ IntrinsicLibrary::genThisImage(mlir::Type resultType,
     TODO(loc, "this_image with coarray argument.");
   mlir::Value res = mif::ThisImageOp::create(builder, loc, team);
   return builder.createConvert(loc, resultType, res);
-}
-
-// THIS_THREAD_BLOCK
-mlir::Value
-IntrinsicLibrary::genThisThreadBlock(mlir::Type resultType,
-                                     llvm::ArrayRef<mlir::Value> args) {
-  assert(args.size() == 0);
-  auto recTy = mlir::cast<fir::RecordType>(resultType);
-  assert(recTy && "RecordType expepected");
-  mlir::Value res = fir::AllocaOp::create(builder, loc, resultType);
-  mlir::Type i32Ty = builder.getI32Type();
-
-  // this_thread_block%size = blockDim.z * blockDim.y * blockDim.x;
-  mlir::Value blockDimX = mlir::NVVM::BlockDimXOp::create(builder, loc, i32Ty);
-  mlir::Value blockDimY = mlir::NVVM::BlockDimYOp::create(builder, loc, i32Ty);
-  mlir::Value blockDimZ = mlir::NVVM::BlockDimZOp::create(builder, loc, i32Ty);
-  mlir::Value size =
-      mlir::arith::MulIOp::create(builder, loc, blockDimZ, blockDimY);
-  size = mlir::arith::MulIOp::create(builder, loc, size, blockDimX);
-
-  // this_thread_block%rank = ((threadIdx.z * blockDim.y) * blockDim.x) +
-  //   (threadIdx.y * blockDim.x) + threadIdx.x + 1;
-  mlir::Value threadIdX = mlir::NVVM::ThreadIdXOp::create(builder, loc, i32Ty);
-  mlir::Value threadIdY = mlir::NVVM::ThreadIdYOp::create(builder, loc, i32Ty);
-  mlir::Value threadIdZ = mlir::NVVM::ThreadIdZOp::create(builder, loc, i32Ty);
-  mlir::Value r1 =
-      mlir::arith::MulIOp::create(builder, loc, threadIdZ, blockDimY);
-  mlir::Value r2 = mlir::arith::MulIOp::create(builder, loc, r1, blockDimX);
-  mlir::Value r3 =
-      mlir::arith::MulIOp::create(builder, loc, threadIdY, blockDimX);
-  mlir::Value r2r3 = mlir::arith::AddIOp::create(builder, loc, r2, r3);
-  mlir::Value rank = mlir::arith::AddIOp::create(builder, loc, r2r3, threadIdX);
-  mlir::Value one = builder.createIntegerConstant(loc, i32Ty, 1);
-  rank = mlir::arith::AddIOp::create(builder, loc, rank, one);
-
-  auto sizeFieldName = recTy.getTypeList()[1].first;
-  mlir::Type sizeFieldTy = recTy.getTypeList()[1].second;
-  mlir::Type fieldIndexType = fir::FieldType::get(resultType.getContext());
-  mlir::Value sizeFieldIndex = fir::FieldIndexOp::create(
-      builder, loc, fieldIndexType, sizeFieldName, recTy,
-      /*typeParams=*/mlir::ValueRange{});
-  mlir::Value sizeCoord = fir::CoordinateOp::create(
-      builder, loc, builder.getRefType(sizeFieldTy), res, sizeFieldIndex);
-  fir::StoreOp::create(builder, loc, size, sizeCoord);
-
-  auto rankFieldName = recTy.getTypeList()[2].first;
-  mlir::Type rankFieldTy = recTy.getTypeList()[2].second;
-  mlir::Value rankFieldIndex = fir::FieldIndexOp::create(
-      builder, loc, fieldIndexType, rankFieldName, recTy,
-      /*typeParams=*/mlir::ValueRange{});
-  mlir::Value rankCoord = fir::CoordinateOp::create(
-      builder, loc, builder.getRefType(rankFieldTy), res, rankFieldIndex);
-  fir::StoreOp::create(builder, loc, rank, rankCoord);
-  return res;
-}
-
-// THIS_WARP
-mlir::Value IntrinsicLibrary::genThisWarp(mlir::Type resultType,
-                                          llvm::ArrayRef<mlir::Value> args) {
-  assert(args.size() == 0);
-  auto recTy = mlir::cast<fir::RecordType>(resultType);
-  assert(recTy && "RecordType expepected");
-  mlir::Value res = fir::AllocaOp::create(builder, loc, resultType);
-  mlir::Type i32Ty = builder.getI32Type();
-
-  // coalesced_group%size = 32
-  mlir::Value size = builder.createIntegerConstant(loc, i32Ty, 32);
-  auto sizeFieldName = recTy.getTypeList()[1].first;
-  mlir::Type sizeFieldTy = recTy.getTypeList()[1].second;
-  mlir::Type fieldIndexType = fir::FieldType::get(resultType.getContext());
-  mlir::Value sizeFieldIndex = fir::FieldIndexOp::create(
-      builder, loc, fieldIndexType, sizeFieldName, recTy,
-      /*typeParams=*/mlir::ValueRange{});
-  mlir::Value sizeCoord = fir::CoordinateOp::create(
-      builder, loc, builder.getRefType(sizeFieldTy), res, sizeFieldIndex);
-  fir::StoreOp::create(builder, loc, size, sizeCoord);
-
-  // coalesced_group%rank = threadIdx.x & 31 + 1
-  mlir::Value threadIdX = mlir::NVVM::ThreadIdXOp::create(builder, loc, i32Ty);
-  mlir::Value mask = builder.createIntegerConstant(loc, i32Ty, 31);
-  mlir::Value one = builder.createIntegerConstant(loc, i32Ty, 1);
-  mlir::Value masked =
-      mlir::arith::AndIOp::create(builder, loc, threadIdX, mask);
-  mlir::Value rank = mlir::arith::AddIOp::create(builder, loc, masked, one);
-  auto rankFieldName = recTy.getTypeList()[2].first;
-  mlir::Type rankFieldTy = recTy.getTypeList()[2].second;
-  mlir::Value rankFieldIndex = fir::FieldIndexOp::create(
-      builder, loc, fieldIndexType, rankFieldName, recTy,
-      /*typeParams=*/mlir::ValueRange{});
-  mlir::Value rankCoord = fir::CoordinateOp::create(
-      builder, loc, builder.getRefType(rankFieldTy), res, rankFieldIndex);
-  fir::StoreOp::create(builder, loc, rank, rankCoord);
-  return res;
 }
 
 // TRAILZ
@@ -8954,59 +8216,6 @@ IntrinsicLibrary::genSum(mlir::Type resultType,
                       resultType, args);
 }
 
-// SYNCTHREADS
-void IntrinsicLibrary::genSyncThreads(llvm::ArrayRef<fir::ExtendedValue> args) {
-  mlir::NVVM::Barrier0Op::create(builder, loc);
-}
-
-// SYNCTHREADS_AND
-mlir::Value
-IntrinsicLibrary::genSyncThreadsAnd(mlir::Type resultType,
-                                    llvm::ArrayRef<mlir::Value> args) {
-  constexpr llvm::StringLiteral funcName = "llvm.nvvm.barrier0.and";
-  mlir::MLIRContext *context = builder.getContext();
-  mlir::FunctionType ftype =
-      mlir::FunctionType::get(context, {resultType}, {args[0].getType()});
-  auto funcOp = builder.createFunction(loc, funcName, ftype);
-  return fir::CallOp::create(builder, loc, funcOp, args).getResult(0);
-}
-
-// SYNCTHREADS_COUNT
-mlir::Value
-IntrinsicLibrary::genSyncThreadsCount(mlir::Type resultType,
-                                      llvm::ArrayRef<mlir::Value> args) {
-  constexpr llvm::StringLiteral funcName = "llvm.nvvm.barrier0.popc";
-  mlir::MLIRContext *context = builder.getContext();
-  mlir::FunctionType ftype =
-      mlir::FunctionType::get(context, {resultType}, {args[0].getType()});
-  auto funcOp = builder.createFunction(loc, funcName, ftype);
-  return fir::CallOp::create(builder, loc, funcOp, args).getResult(0);
-}
-
-// SYNCTHREADS_OR
-mlir::Value
-IntrinsicLibrary::genSyncThreadsOr(mlir::Type resultType,
-                                   llvm::ArrayRef<mlir::Value> args) {
-  constexpr llvm::StringLiteral funcName = "llvm.nvvm.barrier0.or";
-  mlir::MLIRContext *context = builder.getContext();
-  mlir::FunctionType ftype =
-      mlir::FunctionType::get(context, {resultType}, {args[0].getType()});
-  auto funcOp = builder.createFunction(loc, funcName, ftype);
-  return fir::CallOp::create(builder, loc, funcOp, args).getResult(0);
-}
-
-// SYNCWARP
-void IntrinsicLibrary::genSyncWarp(llvm::ArrayRef<fir::ExtendedValue> args) {
-  assert(args.size() == 1);
-  constexpr llvm::StringLiteral funcName = "llvm.nvvm.bar.warp.sync";
-  mlir::Value mask = fir::getBase(args[0]);
-  mlir::FunctionType funcType =
-      mlir::FunctionType::get(builder.getContext(), {mask.getType()}, {});
-  auto funcOp = builder.createFunction(loc, funcName, funcType);
-  llvm::SmallVector<mlir::Value> argsList{mask};
-  fir::CallOp::create(builder, loc, funcOp, argsList);
-}
-
 // SYSTEM
 fir::ExtendedValue
 IntrinsicLibrary::genSystem(std::optional<mlir::Type> resultType,
@@ -9138,84 +8347,12 @@ IntrinsicLibrary::genTranspose(mlir::Type resultType,
   return readAndAddCleanUp(resultMutableBox, resultType, "TRANSPOSE");
 }
 
-// THREADFENCE
-void IntrinsicLibrary::genThreadFence(llvm::ArrayRef<fir::ExtendedValue> args) {
-  constexpr llvm::StringLiteral funcName = "llvm.nvvm.membar.gl";
-  mlir::FunctionType funcType =
-      mlir::FunctionType::get(builder.getContext(), {}, {});
-  auto funcOp = builder.createFunction(loc, funcName, funcType);
-  llvm::SmallVector<mlir::Value> noArgs;
-  fir::CallOp::create(builder, loc, funcOp, noArgs);
-}
-
-// THREADFENCE_BLOCK
-void IntrinsicLibrary::genThreadFenceBlock(
-    llvm::ArrayRef<fir::ExtendedValue> args) {
-  constexpr llvm::StringLiteral funcName = "llvm.nvvm.membar.cta";
-  mlir::FunctionType funcType =
-      mlir::FunctionType::get(builder.getContext(), {}, {});
-  auto funcOp = builder.createFunction(loc, funcName, funcType);
-  llvm::SmallVector<mlir::Value> noArgs;
-  fir::CallOp::create(builder, loc, funcOp, noArgs);
-}
-
-// THREADFENCE_SYSTEM
-void IntrinsicLibrary::genThreadFenceSystem(
-    llvm::ArrayRef<fir::ExtendedValue> args) {
-  constexpr llvm::StringLiteral funcName = "llvm.nvvm.membar.sys";
-  mlir::FunctionType funcType =
-      mlir::FunctionType::get(builder.getContext(), {}, {});
-  auto funcOp = builder.createFunction(loc, funcName, funcType);
-  llvm::SmallVector<mlir::Value> noArgs;
-  fir::CallOp::create(builder, loc, funcOp, noArgs);
-}
-
 // TIME
 mlir::Value IntrinsicLibrary::genTime(mlir::Type resultType,
                                       llvm::ArrayRef<mlir::Value> args) {
   assert(args.size() == 0);
   return builder.createConvert(loc, resultType,
                                fir::runtime::genTime(builder, loc));
-}
-
-// TMA_BULK_COMMIT_GROUP (CUDA)
-void IntrinsicLibrary::genTMABulkCommitGroup(
-    llvm::ArrayRef<fir::ExtendedValue> args) {
-  assert(args.size() == 0);
-  mlir::NVVM::CpAsyncBulkCommitGroupOp::create(builder, loc);
-}
-
-// TMA_BULK_G2S (CUDA)
-void IntrinsicLibrary::genTMABulkG2S(llvm::ArrayRef<fir::ExtendedValue> args) {
-  assert(args.size() == 4);
-  mlir::Value barrier = convertPtrToNVVMSpace(
-      builder, loc, fir::getBase(args[0]), mlir::NVVM::NVVMMemorySpace::Shared);
-  mlir::Value dst =
-      convertPtrToNVVMSpace(builder, loc, fir::getBase(args[2]),
-                            mlir::NVVM::NVVMMemorySpace::SharedCluster);
-  mlir::Value src = convertPtrToNVVMSpace(builder, loc, fir::getBase(args[1]),
-                                          mlir::NVVM::NVVMMemorySpace::Global);
-  mlir::NVVM::CpAsyncBulkGlobalToSharedClusterOp::create(
-      builder, loc, dst, src, barrier, fir::getBase(args[3]), {}, {});
-}
-
-// TMA_BULK_S2G (CUDA)
-void IntrinsicLibrary::genTMABulkS2G(llvm::ArrayRef<fir::ExtendedValue> args) {
-  assert(args.size() == 3);
-  mlir::Value src = convertPtrToNVVMSpace(builder, loc, fir::getBase(args[0]),
-                                          mlir::NVVM::NVVMMemorySpace::Shared);
-  mlir::Value dst = convertPtrToNVVMSpace(builder, loc, fir::getBase(args[1]),
-                                          mlir::NVVM::NVVMMemorySpace::Global);
-  mlir::NVVM::CpAsyncBulkSharedCTAToGlobalOp::create(
-      builder, loc, dst, src, fir::getBase(args[2]), {}, {});
-}
-
-// TMA_BULK_WAIT_GROUP (CUDA)
-void IntrinsicLibrary::genTMABulkWaitGroup(
-    llvm::ArrayRef<fir::ExtendedValue> args) {
-  assert(args.size() == 0);
-  auto group = builder.getIntegerAttr(builder.getI32Type(), 0);
-  mlir::NVVM::CpAsyncBulkWaitGroupOp::create(builder, loc, group, {});
 }
 
 // TRIM
@@ -9632,6 +8769,9 @@ getIntrinsicArgumentLowering(llvm::StringRef specificName) {
   if (const IntrinsicHandler *ppcHandler = findPPCIntrinsicHandler(name))
     if (!ppcHandler->argLoweringRules.hasDefaultRules())
       return &ppcHandler->argLoweringRules;
+  if (const IntrinsicHandler *cudaHandler = findCUDAIntrinsicHandler(name))
+    if (!cudaHandler->argLoweringRules.hasDefaultRules())
+      return &cudaHandler->argLoweringRules;
   return nullptr;
 }
 

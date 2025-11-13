@@ -22,7 +22,11 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/Basic/AddressSpaces.h"
+#include "clang/Basic/TargetInfo.h"
+#include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
+#include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/MissingFeatures.h"
 #include <optional>
 
@@ -251,8 +255,8 @@ void CIRGenFunction::emitStoreThroughLValue(RValue src, LValue dst,
       const mlir::Location loc = dst.getVectorPointer().getLoc();
       const mlir::Value vector =
           builder.createLoad(loc, dst.getVectorAddress());
-      const mlir::Value newVector = builder.create<cir::VecInsertOp>(
-          loc, vector, src.getValue(), dst.getVectorIdx());
+      const mlir::Value newVector = cir::VecInsertOp::create(
+          builder, loc, vector, src.getValue(), dst.getVectorIdx());
       builder.createStore(loc, newVector, dst.getVectorAddress());
       return;
     }
@@ -311,7 +315,8 @@ static LValue emitGlobalVarDeclLValue(CIRGenFunction &cgf, const Expr *e,
 
 void CIRGenFunction::emitStoreOfScalar(mlir::Value value, Address addr,
                                        bool isVolatile, QualType ty,
-                                       bool isInit, bool isNontemporal) {
+                                       LValueBaseInfo baseInfo, bool isInit,
+                                       bool isNontemporal) {
   assert(!cir::MissingFeatures::opLoadStoreThreadLocal());
 
   if (const auto *clangVecTy = ty->getAs<clang::VectorType>()) {
@@ -333,7 +338,13 @@ void CIRGenFunction::emitStoreOfScalar(mlir::Value value, Address addr,
 
   value = emitToMemory(value, ty);
 
-  assert(!cir::MissingFeatures::opLoadStoreAtomic());
+  assert(!cir::MissingFeatures::opLoadStoreTbaa());
+  LValue atomicLValue = LValue::makeAddr(addr, ty, baseInfo);
+  if (ty->isAtomicType() ||
+      (!isInit && isLValueSuitableForInlineAtomic(atomicLValue))) {
+    emitAtomicStore(RValue::get(value), atomicLValue, isInit);
+    return;
+  }
 
   // Update the alloca with more info on initialization.
   assert(addr.getPointer() && "expected pointer to exist");
@@ -550,7 +561,8 @@ void CIRGenFunction::emitStoreOfScalar(mlir::Value value, LValue lvalue,
   }
 
   emitStoreOfScalar(value, lvalue.getAddress(), lvalue.isVolatile(),
-                    lvalue.getType(), isInit, /*isNontemporal=*/false);
+                    lvalue.getType(), lvalue.getBaseInfo(), isInit,
+                    /*isNontemporal=*/false);
 }
 
 mlir::Value CIRGenFunction::emitLoadOfScalar(Address addr, bool isVolatile,
@@ -615,8 +627,8 @@ RValue CIRGenFunction::emitLoadOfLValue(LValue lv, SourceLocation loc) {
   if (lv.isVectorElt()) {
     const mlir::Value load =
         builder.createLoad(getLoc(loc), lv.getVectorAddress());
-    return RValue::get(builder.create<cir::VecExtractOp>(getLoc(loc), load,
-                                                         lv.getVectorIdx()));
+    return RValue::get(cir::VecExtractOp::create(builder, getLoc(loc), load,
+                                                 lv.getVectorIdx()));
   }
 
   cgm.errorNYI(loc, "emitLoadOfLValue");
@@ -671,8 +683,8 @@ static LValue emitFunctionDeclLValue(CIRGenFunction &cgf, const Expr *e,
 
   mlir::Type fnTy = funcOp.getFunctionType();
   mlir::Type ptrTy = cir::PointerType::get(fnTy);
-  mlir::Value addr = cgf.getBuilder().create<cir::GetGlobalOp>(
-      loc, ptrTy, funcOp.getSymName());
+  mlir::Value addr = cir::GetGlobalOp::create(cgf.getBuilder(), loc, ptrTy,
+                                              funcOp.getSymName());
 
   if (funcOp.getFunctionType() != cgf.convertType(fd->getType())) {
     fnTy = cgf.convertType(fd->getType());
@@ -1197,7 +1209,6 @@ LValue CIRGenFunction::emitCastLValue(const CastExpr *e) {
   case CK_AtomicToNonAtomic:
   case CK_ToUnion:
   case CK_BaseToDerived:
-  case CK_AddressSpaceConversion:
   case CK_ObjCObjectLValueCast:
   case CK_VectorSplat:
   case CK_ConstructorConversion:
@@ -1211,7 +1222,27 @@ LValue CIRGenFunction::emitCastLValue(const CastExpr *e) {
 
     return {};
   }
+  case CK_AddressSpaceConversion: {
+    LValue lv = emitLValue(e->getSubExpr());
+    QualType destTy = getContext().getPointerType(e->getType());
 
+    clang::LangAS srcLangAS = e->getSubExpr()->getType().getAddressSpace();
+    cir::TargetAddressSpaceAttr srcAS;
+    if (clang::isTargetAddressSpace(srcLangAS))
+      srcAS = cir::toCIRTargetAddressSpace(getMLIRContext(), srcLangAS);
+    else
+      cgm.errorNYI(
+          e->getSourceRange(),
+          "emitCastLValue: address space conversion from unknown address "
+          "space");
+
+    mlir::Value v = getTargetHooks().performAddrSpaceCast(
+        *this, lv.getPointer(), srcAS, convertType(destTy));
+
+    return makeAddrLValue(Address(v, convertTypeForMem(e->getType()),
+                                  lv.getAddress().getAlignment()),
+                          e->getType(), lv.getBaseInfo());
+  }
   case CK_LValueBitCast: {
     // This must be a reinterpret_cast (or c-style equivalent).
     const auto *ce = cast<ExplicitCastExpr>(e);
@@ -1630,7 +1661,7 @@ RValue CIRGenFunction::emitAnyExpr(const Expr *e, AggValueSlot aggSlot,
                                    bool ignoreResult) {
   switch (CIRGenFunction::getEvaluationKind(e->getType())) {
   case cir::TEK_Scalar:
-    return RValue::get(emitScalarExpr(e));
+    return RValue::get(emitScalarExpr(e, ignoreResult));
   case cir::TEK_Complex:
     return RValue::getComplex(emitComplexExpr(e));
   case cir::TEK_Aggregate: {
@@ -1685,8 +1716,8 @@ CIRGenCallee CIRGenFunction::emitDirectCallee(const GlobalDecl &gd) {
         mlir::OpBuilder::InsertionGuard guard(builder);
         builder.setInsertionPointToStart(cgm.getModule().getBody());
 
-        clone = builder.create<cir::FuncOp>(calleeFunc.getLoc(), fdInlineName,
-                                            calleeFunc.getFunctionType());
+        clone = cir::FuncOp::create(builder, calleeFunc.getLoc(), fdInlineName,
+                                    calleeFunc.getFunctionType());
         clone.setLinkageAttr(cir::GlobalLinkageKindAttr::get(
             &cgm.getMLIRContext(), cir::GlobalLinkageKind::InternalLinkage));
         clone.setSymVisibility("private");
@@ -1778,8 +1809,8 @@ RValue CIRGenFunction::emitCall(clang::QualType calleeTy,
     mlir::Operation *fn = callee.getFunctionPointer();
     mlir::Value addr;
     if (auto funcOp = mlir::dyn_cast<cir::FuncOp>(fn)) {
-      addr = builder.create<cir::GetGlobalOp>(
-          getLoc(e->getSourceRange()),
+      addr = cir::GetGlobalOp::create(
+          builder, getLoc(e->getSourceRange()),
           cir::PointerType::get(funcOp.getFunctionType()), funcOp.getSymName());
     } else {
       addr = fn->getResult(0);
@@ -1820,10 +1851,12 @@ CIRGenCallee CIRGenFunction::emitCallee(const clang::Expr *e) {
     // Resolve direct calls.
     const auto *funcDecl = cast<FunctionDecl>(declRef->getDecl());
     return emitDirectCallee(funcDecl);
-  } else if (isa<MemberExpr>(e)) {
-    cgm.errorNYI(e->getSourceRange(),
-                 "emitCallee: call to member function is NYI");
-    return {};
+  } else if (auto me = dyn_cast<MemberExpr>(e)) {
+    if (const auto *fd = dyn_cast<FunctionDecl>(me->getMemberDecl())) {
+      emitIgnoredExpr(me->getBase());
+      return emitDirectCallee(fd);
+    }
+    // Else fall through to the indirect reference handling below.
   } else if (auto *pde = dyn_cast<CXXPseudoDestructorExpr>(e)) {
     return CIRGenCallee::forPseudoDestructor(pde);
   }
@@ -1996,9 +2029,9 @@ cir::IfOp CIRGenFunction::emitIfOnBoolExpr(
 
   // Emit the code with the fully general case.
   mlir::Value condV = emitOpOnBoolExpr(loc, cond);
-  return builder.create<cir::IfOp>(loc, condV, elseLoc.has_value(),
-                                   /*thenBuilder=*/thenBuilder,
-                                   /*elseBuilder=*/elseBuilder);
+  return cir::IfOp::create(builder, loc, condV, elseLoc.has_value(),
+                           /*thenBuilder=*/thenBuilder,
+                           /*elseBuilder=*/elseBuilder);
 }
 
 /// TODO(cir): see EmitBranchOnBoolExpr for extra ideas).
@@ -2020,18 +2053,17 @@ mlir::Value CIRGenFunction::emitOpOnBoolExpr(mlir::Location loc,
     mlir::Value condV = emitOpOnBoolExpr(loc, condOp->getCond());
 
     mlir::Value ternaryOpRes =
-        builder
-            .create<cir::TernaryOp>(
-                loc, condV, /*thenBuilder=*/
-                [this, trueExpr](mlir::OpBuilder &b, mlir::Location loc) {
-                  mlir::Value lhs = emitScalarExpr(trueExpr);
-                  b.create<cir::YieldOp>(loc, lhs);
-                },
-                /*elseBuilder=*/
-                [this, falseExpr](mlir::OpBuilder &b, mlir::Location loc) {
-                  mlir::Value rhs = emitScalarExpr(falseExpr);
-                  b.create<cir::YieldOp>(loc, rhs);
-                })
+        cir::TernaryOp::create(
+            builder, loc, condV, /*thenBuilder=*/
+            [this, trueExpr](mlir::OpBuilder &b, mlir::Location loc) {
+              mlir::Value lhs = emitScalarExpr(trueExpr);
+              cir::YieldOp::create(b, loc, lhs);
+            },
+            /*elseBuilder=*/
+            [this, falseExpr](mlir::OpBuilder &b, mlir::Location loc) {
+              mlir::Value rhs = emitScalarExpr(falseExpr);
+              cir::YieldOp::create(b, loc, rhs);
+            })
             .getResult();
 
     return emitScalarConversion(ternaryOpRes, condOp->getType(),
@@ -2064,7 +2096,11 @@ mlir::Value CIRGenFunction::emitAlloca(StringRef name, mlir::Type ty,
   // a surrounding cir.scope, make sure the alloca ends up in the surrounding
   // scope instead. This is necessary in order to guarantee all SSA values are
   // reachable during cleanups.
-  assert(!cir::MissingFeatures::tryOp());
+  if (auto tryOp =
+          llvm::dyn_cast_if_present<cir::TryOp>(entryBlock->getParentOp())) {
+    if (auto scopeOp = llvm::dyn_cast<cir::ScopeOp>(tryOp->getParentOp()))
+      entryBlock = &scopeOp.getScopeRegion().front();
+  }
 
   return emitAlloca(name, ty, loc, alignment,
                     builder.getBestAllocaInsertPoint(entryBlock), arraySize);
@@ -2121,79 +2157,6 @@ RValue CIRGenFunction::emitCXXMemberCallExpr(const CXXMemberCallExpr *ce,
       ce, md, returnValue, hasQualifier, qualifier, isArrow, base);
 }
 
-void CIRGenFunction::emitCXXConstructExpr(const CXXConstructExpr *e,
-                                          AggValueSlot dest) {
-  assert(!dest.isIgnored() && "Must have a destination!");
-  const CXXConstructorDecl *cd = e->getConstructor();
-
-  // If we require zero initialization before (or instead of) calling the
-  // constructor, as can be the case with a non-user-provided default
-  // constructor, emit the zero initialization now, unless destination is
-  // already zeroed.
-  if (e->requiresZeroInitialization() && !dest.isZeroed()) {
-    switch (e->getConstructionKind()) {
-    case CXXConstructionKind::Delegating:
-    case CXXConstructionKind::Complete:
-      emitNullInitialization(getLoc(e->getSourceRange()), dest.getAddress(),
-                             e->getType());
-      break;
-    case CXXConstructionKind::VirtualBase:
-    case CXXConstructionKind::NonVirtualBase:
-      cgm.errorNYI(e->getSourceRange(),
-                   "emitCXXConstructExpr: base requires initialization");
-      break;
-    }
-  }
-
-  // If this is a call to a trivial default constructor, do nothing.
-  if (cd->isTrivial() && cd->isDefaultConstructor())
-    return;
-
-  // Elide the constructor if we're constructing from a temporary
-  if (getLangOpts().ElideConstructors && e->isElidable()) {
-    // FIXME: This only handles the simplest case, where the source object is
-    //        passed directly as the first argument to the constructor. This
-    //        should also handle stepping through implicit casts and conversion
-    //        sequences which involve two steps, with a conversion operator
-    //        follwed by a converting constructor.
-    const Expr *srcObj = e->getArg(0);
-    assert(srcObj->isTemporaryObject(getContext(), cd->getParent()));
-    assert(
-        getContext().hasSameUnqualifiedType(e->getType(), srcObj->getType()));
-    emitAggExpr(srcObj, dest);
-    return;
-  }
-
-  if (const ArrayType *arrayType = getContext().getAsArrayType(e->getType())) {
-    assert(!cir::MissingFeatures::sanitizers());
-    emitCXXAggrConstructorCall(cd, arrayType, dest.getAddress(), e, false);
-  } else {
-
-    clang::CXXCtorType type = Ctor_Complete;
-    bool forVirtualBase = false;
-    bool delegating = false;
-
-    switch (e->getConstructionKind()) {
-    case CXXConstructionKind::Complete:
-      type = Ctor_Complete;
-      break;
-    case CXXConstructionKind::Delegating:
-      // We should be emitting a constructor; GlobalDecl will assert this
-      type = curGD.getCtorType();
-      delegating = true;
-      break;
-    case CXXConstructionKind::VirtualBase:
-      forVirtualBase = true;
-      [[fallthrough]];
-    case CXXConstructionKind::NonVirtualBase:
-      type = Ctor_Base;
-      break;
-    }
-
-    emitCXXConstructorCall(cd, type, forVirtualBase, delegating, dest, e);
-  }
-}
-
 RValue CIRGenFunction::emitReferenceBindingToExpr(const Expr *e) {
   // Emit the expression as an lvalue.
   LValue lv = emitLValue(e);
@@ -2211,8 +2174,8 @@ Address CIRGenFunction::emitLoadOfReference(LValue refLVal, mlir::Location loc,
     cgm.errorNYI(loc, "load of volatile reference");
 
   cir::LoadOp load =
-      builder.create<cir::LoadOp>(loc, refLVal.getAddress().getElementType(),
-                                  refLVal.getAddress().getPointer());
+      cir::LoadOp::create(builder, loc, refLVal.getAddress().getElementType(),
+                          refLVal.getAddress().getPointer());
 
   assert(!cir::MissingFeatures::opTBAA());
 
@@ -2293,6 +2256,8 @@ Address CIRGenFunction::createTempAllocaWithoutCast(
 
 /// This creates a alloca and inserts it into the entry block. The alloca is
 /// casted to default address space if necessary.
+// TODO(cir): Implement address space casting to match classic codegen's
+// CreateTempAlloca behavior with DestLangAS parameter
 Address CIRGenFunction::createTempAlloca(mlir::Type ty, CharUnits align,
                                          mlir::Location loc, const Twine &name,
                                          mlir::Value arraySize,
@@ -2307,7 +2272,21 @@ Address CIRGenFunction::createTempAlloca(mlir::Type ty, CharUnits align,
   // be different from the type defined by the language. For example,
   // in C++ the auto variables are in the default address space. Therefore
   // cast alloca to the default address space when necessary.
-  assert(!cir::MissingFeatures::addressSpace());
+
+  LangAS allocaAS = alloca.getAddressSpace()
+                        ? clang::getLangASFromTargetAS(
+                              alloca.getAddressSpace().getValue().getUInt())
+                        : clang::LangAS::Default;
+  LangAS dstTyAS = clang::LangAS::Default;
+  if (getCIRAllocaAddressSpace()) {
+    dstTyAS = clang::getLangASFromTargetAS(
+        getCIRAllocaAddressSpace().getValue().getUInt());
+  }
+
+  if (dstTyAS != allocaAS) {
+    getTargetHooks().performAddrSpaceCast(*this, v, getCIRAllocaAddressSpace(),
+                                          builder.getPointerTo(ty, dstTyAS));
+  }
   return Address(v, ty, align);
 }
 
@@ -2524,7 +2503,7 @@ CIRGenFunction::emitConditionalBlocks(const AbstractConditionalOperator *e,
 
   // If both arms are void, so be it.
   if (!yieldTy)
-    yieldTy = VoidTy;
+    yieldTy = voidTy;
 
   // Insert required yields.
   for (mlir::OpBuilder::InsertPoint &toInsert : insertPoints) {
