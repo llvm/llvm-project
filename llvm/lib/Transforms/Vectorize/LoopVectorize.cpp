@@ -8382,7 +8382,9 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
   // ---------------------------------------------------------------------------
   VPRecipeBuilder RecipeBuilder(*Plan, OrigLoop, TLI, &TTI, Legal, CM, PSE,
                                 Builder, BlockMaskCache, LVer);
-  RecipeBuilder.collectScaledReductions(Range);
+  // TODO: Handle partial reductions with EVL tail folding.
+  if (!CM.foldTailWithEVL())
+    RecipeBuilder.collectScaledReductions(Range);
 
   // Scan the body of the loop in a topological order to visit each basic block
   // after having visited its predecessor basic blocks.
