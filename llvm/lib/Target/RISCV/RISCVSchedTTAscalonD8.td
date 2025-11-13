@@ -123,7 +123,7 @@ let BufferSize = 16 in {
   def AscalonFXD : ProcResource<2>; // ALU
   def AscalonFX : ProcResGroup<[AscalonFXA, AscalonFXB, AscalonFXC, AscalonFXD]>;
   // FP
-  def AscalonFPA : ProcResource<1>; // Pipe A aslo handles FP/VEC -> INT
+  def AscalonFPA : ProcResource<1>; // Pipe A also handles FP/VEC -> INT
   def AscalonFPB : ProcResource<1>;
   def AscalonFP : ProcResGroup<[AscalonFPA, AscalonFPB]>;
   // Vector
