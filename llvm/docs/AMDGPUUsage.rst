@@ -1052,7 +1052,7 @@ supported for the ``amdgcn`` target.
   target architecture and is detailed in the ISA descriptions.
 
   On gfx1250, the base pointer is instead truncated to 57 bits and the NumRecords
-  field is 45 bits, which necessicated a change to ``make.buffer.rsrcs``'s arguments
+  field is 45 bits, which necessitated a change to ``make.buffer.rsrcs``'s arguments
   in order to make that field an ``i64``.
 
   When buffer resources are passed to buffer intrinsics such as
