@@ -6,12 +6,6 @@ AND call SWIG_fail at the same time, because it will result in a double free.
 
 */
 
-%inline %{
-
-#include "../bindings/python/python-typemaps.h"
-
-%}
-
 %typemap(in) char ** {
   /* Check if is a list  */
   if (PythonList::Check($input)) {
@@ -635,9 +629,21 @@ template <> bool SetNumberFromPyObject<double>(double &number, PyObject *obj) {
 }
 
 #if SWIG_VERSION < 0x040100
-// These two pybuffer macros are copied out of swig/Lib/python/pybuffer.i,
+// The two pybuffer macros below are copied out of swig/Lib/python/pybuffer.i,
 // and fixed so they will not crash if PyObject_GetBuffer fails.
 // https://github.com/swig/swig/issues/1640
+
+struct Py_buffer_RAII {
+  Py_buffer buffer = {};
+  Py_buffer_RAII(){};
+  Py_buffer &operator=(const Py_buffer_RAII &) = delete;
+  Py_buffer_RAII(const Py_buffer_RAII &) = delete;
+  ~Py_buffer_RAII() {
+    if (buffer.obj)
+      PyBuffer_Release(&buffer);
+  }
+};
+
 %define %pybuffer_mutable_binary(TYPEMAP, SIZE)
 %typemap(in) (TYPEMAP, SIZE) (Py_buffer_RAII view) {
   int res;
