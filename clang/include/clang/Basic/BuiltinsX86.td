@@ -866,16 +866,6 @@ let Features = "sha", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in
   def sha256msg2 : X86Builtin<"_Vector<4, int>(_Vector<4, int>, _Vector<4, int>)">;
 }
 
-let Features = "fma", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
-  def vfmaddss3 : X86Builtin<"_Vector<4, float>(_Vector<4, float>, _Vector<4, float>, _Vector<4, float>)">;
-  def vfmaddsd3 : X86Builtin<"_Vector<2, double>(_Vector<2, double>, _Vector<2, double>, _Vector<2, double>)">;
-}
-
-let Features = "fma4", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
-  def vfmaddss : X86Builtin<"_Vector<4, float>(_Vector<4, float>, _Vector<4, float>, _Vector<4, float>)">;
-  def vfmaddsd : X86Builtin<"_Vector<2, double>(_Vector<2, double>, _Vector<2, double>, _Vector<2, double>)">;
-}
-
 let Features = "fma|fma4", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
   def vfmaddsubps : X86Builtin<"_Vector<4, float>(_Vector<4, float>, _Vector<4, float>, _Vector<4, float>)">;
   def vfmaddsubpd : X86Builtin<"_Vector<2, double>(_Vector<2, double>, _Vector<2, double>, _Vector<2, double>)">;
