@@ -1667,7 +1667,7 @@ Warn on uses of the 'bzero' function.
 .. _security-insecureAPI-decodeValueOfObjCType:
 
 security.insecureAPI.decodeValueOfObjCType (C)
-"""""""""""""""""""""""""""""""""""""""
+""""""""""""""""""""""""""""""""""""""""""""""
 Warn on uses of the Objective-C method ``-decodeValueOfObjCType:at:``.
 
 .. code-block:: objc
