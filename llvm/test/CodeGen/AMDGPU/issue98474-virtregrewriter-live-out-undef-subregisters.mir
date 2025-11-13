@@ -6,16 +6,6 @@
 # the physical subregister. Without this, a verifier error would
 # appear after tail duplication.
 
---- |
-  define void @undef_subreg_def_live_out_tailduplicate_vreg64_undef_sub1() #0 { unreachable }
-  define void @undef_subreg_def_live_out_tailduplicate_vreg96_undef_sub1_sub2() #0 { unreachable }
-  define void @undef_subreg_def_live_out_tailduplicate_vreg96_undef_sub0_sub2() #0 { unreachable }
-  define void @undef_subreg_def_live_out_tailduplicate_vreg64_undef_sub1_undef_use_in_def_block() #0 { unreachable }
-  define void @undef_subreg_def_live_out_tailduplicate_vreg64_undef_sub1_no_phi_use() #0 { unreachable }
-  define void @assigned_physreg_subregister_interference() #0 { unreachable }
-  attributes #0 = { nounwind }
-...
----
 ---
 name:            undef_subreg_def_live_out_tailduplicate_vreg64_undef_sub1
 tracksRegLiveness: true
@@ -29,6 +19,8 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
   ; CHECK-NEXT:   liveins: $sgpr0
   ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $pc_reg
   ; CHECK-NEXT:   S_CMP_EQ_U32 $sgpr0, 0, implicit-def $scc
   ; CHECK-NEXT:   S_CBRANCH_SCC0 %bb.2, implicit killed $scc
   ; CHECK-NEXT: {{  $}}
@@ -77,6 +69,8 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
   ; CHECK-NEXT:   liveins: $sgpr0
   ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $pc_reg
   ; CHECK-NEXT:   S_CMP_EQ_U32 $sgpr0, 0, implicit-def $scc
   ; CHECK-NEXT:   S_CBRANCH_SCC0 %bb.2, implicit killed $scc
   ; CHECK-NEXT: {{  $}}
@@ -125,6 +119,8 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
   ; CHECK-NEXT:   liveins: $sgpr0
   ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $pc_reg
   ; CHECK-NEXT:   S_CMP_EQ_U32 $sgpr0, 0, implicit-def $scc
   ; CHECK-NEXT:   S_CBRANCH_SCC0 %bb.2, implicit killed $scc
   ; CHECK-NEXT: {{  $}}
@@ -174,6 +170,8 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
   ; CHECK-NEXT:   liveins: $sgpr0
   ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $pc_reg
   ; CHECK-NEXT:   S_CMP_EQ_U32 $sgpr0, 0, implicit-def $scc
   ; CHECK-NEXT:   S_CBRANCH_SCC0 %bb.2, implicit killed $scc
   ; CHECK-NEXT: {{  $}}
@@ -225,6 +223,8 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
   ; CHECK-NEXT:   liveins: $sgpr0
   ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $pc_reg
   ; CHECK-NEXT:   S_CMP_EQ_U32 $sgpr0, 0, implicit-def $scc
   ; CHECK-NEXT:   S_CBRANCH_SCC0 %bb.2, implicit killed $scc
   ; CHECK-NEXT: {{  $}}
