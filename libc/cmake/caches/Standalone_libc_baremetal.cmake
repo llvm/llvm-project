@@ -10,7 +10,7 @@
 #   -DARCH_TRIPLE=riscv32-unknown-elf \
 #   -G Ninja \
 #   -S runtimes \
-#   -C clang/cmake/caches/Standalone_libc_baremetal.cache
+#   -C libc/cmake/caches/Standalone_libc_baremetal.cmake
 
 set(CMAKE_SYSTEM_NAME Generic CACHE STRING "")
 set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY CACHE STRING "")
