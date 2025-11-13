@@ -16456,83 +16456,6 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
                           (BuiltinOp == X86::BI__builtin_ia32_cmpsd);
     const uint32_t imm = ImmVal.getZExtValue();
 
-    auto evalCmpImm = [](uint32_t imm,
-                         llvm::APFloatBase::cmpResult cmp) -> bool {
-      bool isUnordered = (cmp == llvm::APFloatBase::cmpUnordered);
-      bool isEq = (cmp == CmpResult::cmpEqual);
-      bool isGt = (cmp == CmpResult::cmpGreaterThan);
-      bool isLt = (cmp == CmpResult::cmpLessThan);
-      bool result = false;
-
-      switch (imm & 0x1F) {
-      case 0x00: /* _CMP_EQ_OQ */
-      case 0x10: /* _CMP_EQ_OS */
-        result = isEq && !isUnordered;
-        break;
-      case 0x01: /* _CMP_LT_OS */
-      case 0x11: /* _CMP_LT_OQ */
-        result = isLt && !isUnordered;
-        break;
-      case 0x02: /* _CMP_LE_OS */
-      case 0x12: /* _CMP_LE_OQ */
-        result = !isGt && !isUnordered;
-        break;
-      case 0x03: /* _CMP_UNORD_Q */
-      case 0x13: /* _CMP_UNORD_S */
-        result = isUnordered;
-        break;
-      case 0x04: /* _CMP_NEQ_UQ */
-      case 0x14: /* _CMP_NEQ_US */
-        result = !isEq || isUnordered;
-        break;
-      case 0x05: /* _CMP_NLT_US */
-      case 0x15: /* _CMP_NLT_UQ */
-        result = !isLt || isUnordered;
-        break;
-      case 0x06: /* _CMP_NLE_US */
-      case 0x16: /* _CMP_NLE_UQ */
-        result = isGt || isUnordered;
-        break;
-      case 0x07: /* _CMP_ORD_Q */
-      case 0x17: /* _CMP_ORD_S */
-        result = !isUnordered;
-        break;
-      case 0x08: /* _CMP_EQ_UQ */
-      case 0x18: /* _CMP_EQ_US */
-        result = isEq || isUnordered;
-        break;
-      case 0x09: /* _CMP_NGE_US */
-      case 0x19: /* _CMP_NGE_UQ */
-        result = isLt || isUnordered;
-        break;
-      case 0x0a: /* _CMP_NGT_US */
-      case 0x1a: /* _CMP_NGT_UQ */
-        result = !isGt || isUnordered;
-        break;
-      case 0x0b: /* _CMP_FALSE_OQ */
-      case 0x1b: /* _CMP_FALSE_OS */
-        result = false;
-        break;
-      case 0x0c: /* _CMP_NEQ_OQ */
-      case 0x1c: /* _CMP_NEQ_OS */
-        result = !isEq && !isUnordered;
-        break;
-      case 0x0d: /* _CMP_GE_OS */
-      case 0x1d: /* _CMP_GE_OQ */
-        result = !isLt && !isUnordered;
-        break;
-      case 0x0e: /* _CMP_GT_OS */
-      case 0x1e: /* _CMP_GT_OQ */
-        result = isGt && !isUnordered;
-        break;
-      case 0x0f: /* _CMP_TRUE_UQ */
-      case 0x1f: /* _CMP_TRUE_US */
-        result = true;
-        break;
-      }
-      return result;
-    };
-
     auto writeMaskFloat = [&](APValue &Dst, unsigned Lane, bool Bit,
                               bool IsF64Elt) {
       if (IsF64Elt) {
@@ -16553,7 +16476,12 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
         return false;
       llvm::APFloat A0 = AE.getFloat();
       llvm::APFloat B0 = BE.getFloat();
-      return evalCmpImm(imm, A0.compare(B0));
+      auto CR = A0.compare(B0);
+      FPCompareFlags F{/*IsUnordered=*/CR == llvm::APFloatBase::cmpUnordered,
+                       /*IsEq=*/CR == CmpResult::cmpEqual,
+                       /*IsGt=*/CR == CmpResult::cmpGreaterThan,
+                       /*IsLt=*/CR == CmpResult::cmpLessThan};
+      return EvaluateX86FPImmPredicate(imm, F);
     };
 
     APValue Res((const APValue *)nullptr, Lanes);
@@ -16590,82 +16518,13 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
       return false;
     const llvm::APFloat &A0 = A0V.getFloat();
     const llvm::APFloat &B0 = B0V.getFloat();
-    auto Cmp = A0.compare(B0);
-
-    const bool IsEq = (Cmp == llvm::APFloatBase::cmpEqual);
-    const bool IsLt = (Cmp == llvm::APFloatBase::cmpLessThan);
-    const bool IsGt = (Cmp == llvm::APFloatBase::cmpGreaterThan);
-    bool Result = false;
-
-    switch (P.getExtValue()) {
-    case 0x00: /* _CMP_EQ_OQ */
-    case 0x10: /* _CMP_EQ_OS */
-      Result = IsEq && !A0.isNaN() && !B0.isNaN();
-      break;
-    case 0x01: /* _CMP_LT_OS */
-    case 0x11: /* _CMP_LT_OQ */
-      Result = IsLt && !A0.isNaN() && !B0.isNaN();
-      break;
-    case 0x02: /* _CMP_LE_OS */
-    case 0x12: /* _CMP_LE_OQ */
-      Result = !IsGt && !A0.isNaN() && !B0.isNaN();
-      break;
-    case 0x03: /* _CMP_UNORD_Q */
-    case 0x13: /* _CMP_UNORD_S */
-      Result = A0.isNaN() || B0.isNaN();
-      break;
-    case 0x04: /* _CMP_NEQ_UQ */
-    case 0x14: /* _CMP_NEQ_US */
-      Result = !IsEq || A0.isNaN() || B0.isNaN();
-      break;
-    case 0x05: /* _CMP_NLT_US */
-    case 0x15: /* _CMP_NLT_UQ */
-      Result = !IsLt || A0.isNaN() || B0.isNaN();
-      break;
-    case 0x06: /* _CMP_NLE_US */
-    case 0x16: /* _CMP_NLE_UQ */
-      Result = IsGt || A0.isNaN() || B0.isNaN();
-      break;
-    case 0x07: /* _CMP_ORD_Q */
-    case 0x17: /* _CMP_ORD_S */
-      Result = !A0.isNaN() && !B0.isNaN();
-      break;
-    case 0x08: /* _CMP_EQ_UQ */
-    case 0x18: /* _CMP_EQ_US */
-      Result = IsEq || A0.isNaN() || B0.isNaN();
-      break;
-    case 0x09: /* _CMP_NGE_US */
-    case 0x19: /* _CMP_NGE_UQ */
-      Result = IsLt || A0.isNaN() || B0.isNaN();
-      break;
-    case 0x0a: /* _CMP_NGT_US */
-    case 0x1a: /* _CMP_NGT_UQ */
-      Result = !IsGt || A0.isNaN() || B0.isNaN();
-      break;
-    case 0x0b: /* _CMP_FALSE_OQ */
-    case 0x1b: /* _CMP_FALSE_OS */
-      Result = false;
-      break;
-    case 0x0c: /* _CMP_NEQ_OQ */
-    case 0x1c: /* _CMP_NEQ_OS */
-      Result = !IsEq && !A0.isNaN() && !B0.isNaN();
-      break;
-    case 0x0d: /* _CMP_GE_OS */
-    case 0x1d: /* _CMP_GE_OQ */
-      Result = !IsLt && !A0.isNaN() && !B0.isNaN();
-      break;
-    case 0x0e: /* _CMP_GT_OS */
-    case 0x1e: /* _CMP_GT_OQ */
-      Result = IsGt && !A0.isNaN() && !B0.isNaN();
-      break;
-    case 0x0f: /* _CMP_TRUE_UQ */
-    case 0x1f: /* _CMP_TRUE_US */
-      Result = true;
-      break;
-
-    default:
-      return false;
-    }
+    auto CR = A0.compare(B0);
+    FPCompareFlags F{/*IsUnordered=*/CR == llvm::APFloatBase::cmpUnordered,
+                     /*IsEq=*/CR == llvm::APFloatBase::cmpEqual,
+                     /*IsGt=*/CR == llvm::APFloatBase::cmpGreaterThan,
+                     /*IsLt=*/CR == llvm::APFloatBase::cmpLessThan};
+    bool Result =
+        EvaluateX86FPImmPredicate(static_cast<uint32_t>(P.getZExtValue()), F);
     return Success(Result ? 1 : 0, E);
   }
   case X86::BI__builtin_ia32_comieq:
@@ -16705,53 +16564,13 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
       return false;
     const llvm::APFloat &A0 = A0V.getFloat();
     const llvm::APFloat &B0 = B0V.getFloat();
-    auto Cmp = A0.compare(B0);
-
-    const bool IsEq = (Cmp == llvm::APFloatBase::cmpEqual);
-    const bool IsLt = (Cmp == llvm::APFloatBase::cmpLessThan);
-    const bool IsGt = (Cmp == llvm::APFloatBase::cmpGreaterThan);
-    bool Result = false;
-
-    switch (BuiltinOp) {
-    case X86::BI__builtin_ia32_comieq:
-    case X86::BI__builtin_ia32_ucomieq:
-    case X86::BI__builtin_ia32_comisdeq:
-    case X86::BI__builtin_ia32_ucomisdeq:
-      Result = IsEq && !A0.isNaN() && !B0.isNaN();
-      break;
-    case X86::BI__builtin_ia32_comineq:
-    case X86::BI__builtin_ia32_ucomineq:
-    case X86::BI__builtin_ia32_comisdneq:
-    case X86::BI__builtin_ia32_ucomisdneq:
-      Result = !IsEq || A0.isNaN() || B0.isNaN();
-      break;
-    case X86::BI__builtin_ia32_comige:
-    case X86::BI__builtin_ia32_ucomige:
-    case X86::BI__builtin_ia32_comisdge:
-    case X86::BI__builtin_ia32_ucomisdge:
-      Result = !IsLt && !A0.isNaN() && !B0.isNaN();
-      break;
-    case X86::BI__builtin_ia32_comilt:
-    case X86::BI__builtin_ia32_ucomilt:
-    case X86::BI__builtin_ia32_comisdlt:
-    case X86::BI__builtin_ia32_ucomisdlt:
-      Result = IsLt && !A0.isNaN() && !B0.isNaN();
-      break;
-    case X86::BI__builtin_ia32_comigt:
-    case X86::BI__builtin_ia32_ucomigt:
-    case X86::BI__builtin_ia32_comisdgt:
-    case X86::BI__builtin_ia32_ucomisdgt:
-      Result = IsGt && !A0.isNaN() && !B0.isNaN();
-      break;
-    case X86::BI__builtin_ia32_comile:
-    case X86::BI__builtin_ia32_ucomile:
-    case X86::BI__builtin_ia32_comisdle:
-    case X86::BI__builtin_ia32_ucomisdle:
-      Result = !IsGt && !A0.isNaN() && !B0.isNaN();
-      break;
-    default:
-      return false;
-    }
+    auto CR = A0.compare(B0);
+    FPCompareFlags F{/*IsUnordered=*/CR == llvm::APFloatBase::cmpUnordered,
+                     /*IsEq=*/CR == llvm::APFloatBase::cmpEqual,
+                     /*IsGt=*/CR == llvm::APFloatBase::cmpGreaterThan,
+                     /*IsLt=*/CR == llvm::APFloatBase::cmpLessThan};
+    bool Result = EvaluateX86ScalarComiPredicate(
+        DecodeX86ScalarComiBuiltin(BuiltinOp), F);
     return Success(Result ? 1 : 0, E);
   }
 
