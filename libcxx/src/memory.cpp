@@ -135,7 +135,7 @@ __sp_mut& __get_sp_mut(const void* p) {
 
 #if defined(_LIBCPP_ALIGN_DEFINE_LEGACY_INLINE_FUNCTIONS)
 
-void* align(size_t alignment, size_t size, void*& ptr, size_t& space) {
+_LIBCPP_EXPORTED_FROM_ABI void* align(size_t alignment, size_t size, void*& ptr, size_t& space) {
   return __align_impl(alignment, size, ptr, space);
 }
 #endif // _LIBCPP_ALIGN_DEFINE_LEGACY_INLINE_FUNCTIONS

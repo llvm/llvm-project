@@ -19,7 +19,8 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-__attribute__((always_inline)) inline void* __align_impl(size_t __align, size_t __sz, void*& __ptr, size_t& __space) {
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_ALWAYS_INLINE inline void*
+__align_impl(size_t __align, size_t __sz, void*& __ptr, size_t& __space) {
   void* __r = nullptr;
   if (__sz <= __space) {
     char* __p1 = static_cast<char*>(__ptr);
@@ -34,11 +35,7 @@ __attribute__((always_inline)) inline void* __align_impl(size_t __align, size_t 
   return __r;
 }
 
-#ifdef _LIBCPP_ALIGN_DEFINE_LEGACY_INLINE_FUNCTIONS
-
-_LIBCPP_EXPORTED_FROM_ABI void* align(size_t __align, size_t __sz, void*& __ptr, size_t& __space);
-
-#else
+#ifndef _LIBCPP_ALIGN_DEFINE_LEGACY_INLINE_FUNCTIONS
 
 inline _LIBCPP_HIDE_FROM_ABI void* align(size_t __align, size_t __sz, void*& __ptr, size_t& __space) {
   return __align_impl(__align, __sz, __ptr, __space);
