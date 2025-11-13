@@ -8,19 +8,11 @@
 
 #include "environ_internal.h"
 #include "config/app.h"
+#include "hdr/func/free.h"
+#include "hdr/func/malloc.h"
+#include "hdr/func/realloc.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/macros/config.h"
-#include "src/string/memcpy.h"
-
-// We use extern "C" declarations for malloc/free/realloc instead of including
-// src/stdlib/malloc.h, src/stdlib/free.h, and src/stdlib/realloc.h. This allows
-// the implementation to work with different allocator implementations,
-// particularly in integration tests which provide a simple bump allocator. The
-// extern "C" linkage ensures we use whatever allocator is linked with the test
-// or application.
-extern "C" void *malloc(size_t);
-extern "C" void free(void *);
-extern "C" void *realloc(void *, size_t);
 
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
