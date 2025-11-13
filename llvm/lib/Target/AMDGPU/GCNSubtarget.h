@@ -282,7 +282,7 @@ protected:
   bool HasPointSampleAccel = false;
   bool HasLdsBarrierArriveAtomic = false;
   bool HasSetPrioIncWgInst = false;
-
+  bool HasWriteCombiningMissesHazards = false;
   bool RequiresCOV6 = false;
   bool UseBlockVGPROpsForCSR = false;
   bool HasGloballyAddressableScratch = false;
@@ -1832,6 +1832,10 @@ public:
   // and surronded by S_WAIT_ALU(0xFFE3).
   bool hasDsAtomicAsyncBarrierArriveB64PipeBug() const {
     return getGeneration() == GFX12;
+  }
+
+  bool hasWriteCombiningMissesHazards() const {
+    return HasWriteCombiningMissesHazards;
   }
 
   // Requires s_wait_alu(0) after s102/s103 write and src_flat_scratch_base

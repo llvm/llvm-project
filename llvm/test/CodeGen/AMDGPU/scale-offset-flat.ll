@@ -311,6 +311,7 @@ define amdgpu_ps void @flat_atomicrmw_b32_idxprom(ptr align 4 inreg %p, i32 %idx
 ; GCN-LABEL: flat_atomicrmw_b32_idxprom:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    v_mov_b32_e32 v1, 1
+; GCN-NEXT:    s_wait_xcnt 0x0
 ; GCN-NEXT:    flat_atomic_add_u32 v0, v1, s[0:1] scale_offset scope:SCOPE_SYS
 ; GCN-NEXT:    s_endpgm
 entry:
@@ -342,6 +343,7 @@ define amdgpu_ps <2 x float> @flat_atomicrmw_b64_rtn_idxprom(ptr align 8 inreg %
 ; SDAG-NEXT:    s_branch .LBB21_5
 ; SDAG-NEXT:  .LBB21_3: ; %atomicrmw.global
 ; SDAG-NEXT:    v_mov_b64_e32 v[0:1], 1
+; SDAG-NEXT:    s_wait_xcnt 0x0
 ; SDAG-NEXT:    flat_atomic_add_u64 v[0:1], v[2:3], v[0:1] th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; SDAG-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; SDAG-NEXT:    s_wait_xcnt 0x0
@@ -386,6 +388,7 @@ define amdgpu_ps <2 x float> @flat_atomicrmw_b64_rtn_idxprom(ptr align 8 inreg %
 ; GISEL-NEXT:  .LBB21_3: ; %atomicrmw.global
 ; GISEL-NEXT:    v_mov_b64_e32 v[0:1], 1
 ; GISEL-NEXT:    ; implicit-def: $vgpr4_vgpr5
+; GISEL-NEXT:    s_wait_xcnt 0x0
 ; GISEL-NEXT:    flat_atomic_add_u64 v[0:1], v2, v[0:1], s[0:1] scale_offset th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GISEL-NEXT:    s_wait_xcnt 0x0
 ; GISEL-NEXT:    s_and_not1_saveexec_b32 s0, s2

@@ -2086,6 +2086,12 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
   // Verify that the wait is actually needed.
   ScoreBrackets.simplifyWaitcnt(Wait);
 
+  // An s_wait_xcnt(0) before every atomic store/RMW operation is required to
+  // work around the write combining misses hazard.
+  if (ST->hasWriteCombiningMissesHazards() && SIInstrInfo::isAtomic(MI) &&
+      SIInstrInfo::isVMEM(MI) && MI.mayStore())
+    Wait.XCnt = 0;
+
   // When forcing emit, we need to skip terminators because that would break the
   // terminators of the MBB if we emit a waitcnt between terminators.
   if (ForceEmitZeroFlag && !MI.isTerminator())

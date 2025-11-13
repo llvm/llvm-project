@@ -895,6 +895,12 @@ def FeatureCvtFP8VOP1Bug : SubtargetFeature<"cvt-fp8-vop1-bug",
   [FeatureFP8ConversionInsts]
 >;
 
+def FeatureWriteCombiningMissesHazards : SubtargetFeature<"write-combining-misses-hazards",
+  "HasWriteCombiningMissesHazards",
+  "true",
+  "Write combining misses hazards that require s_wait_xcnt(0) before every atomic operation"
+>;
+
 def FeaturePkFmacF16Inst : SubtargetFeature<"pk-fmac-f16-inst",
   "HasPkFmacF16Inst",
   "true",
@@ -2145,6 +2151,7 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureXNACK,
    FeatureClusters,
    FeatureD16Writes32BitVgpr,
+   FeatureWriteCombiningMissesHazards,
 ]>;
 
 def FeatureISAVersion12_51 : FeatureSet<
@@ -2944,6 +2951,8 @@ def HasGWS : Predicate<"Subtarget->hasGWS()">;
 
 def HasCvtFP8VOP1Bug : Predicate<"Subtarget->hasCvtFP8VOP1Bug()">;
 def HasNoCvtFP8VOP1Bug : Predicate<"!Subtarget->hasCvtFP8VOP1Bug()">;
+
+def HasWriteCombiningMissesHazards : Predicate<"Subtarget->hasWriteCombiningMissesHazards()">;
 
 def HasAtomicCSubNoRtnInsts : Predicate<"Subtarget->hasAtomicCSubNoRtnInsts()">;
 

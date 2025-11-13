@@ -123,6 +123,7 @@ define float @flat_atomic_fadd_f32_rtn_pat(ptr %ptr, float %data) {
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, 4.0
 ; GFX1250-NEXT:    global_wb scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_add_f32 v0, v[0:1], v2 th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    global_inv scope:SCOPE_SYS

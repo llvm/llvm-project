@@ -486,7 +486,6 @@ body: |
     ; GCN-NEXT: $vgpr2 = BUFFER_ATOMIC_ADD_ADDR64_RTN $vgpr2, $vgpr0_vgpr1, killed renamable $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 1, implicit $exec :: (load store (s32), addrspace 1)
     ; GCN-NEXT: GLOBAL_ATOMIC_ADD_F32 $vgpr4_vgpr5, killed renamable $vgpr3, 0, 0, implicit $exec :: (load store syncscope("agent-one-as") monotonic monotonic (s32), addrspace 1)
     ; GCN-NEXT: $vgpr6 = SCRATCH_LOAD_DWORD $vgpr0, 0, 0, implicit $exec, implicit $flat_scr
-    ; GCN-NEXT: S_WAIT_XCNT 2
     ; GCN-NEXT: $vgpr1 = V_MOV_B32_e32 0, implicit $exec
     ; GCN-NEXT: S_WAIT_XCNT 1
     ; GCN-NEXT: $vgpr3 = V_MOV_B32_e32 1, implicit $exec

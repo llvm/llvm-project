@@ -1764,6 +1764,7 @@ define double @global_atomic_fadd_f64_rtn_pat(ptr addrspace(1) %ptr, double %dat
 ; GFX1250-NEXT:    v_mov_b64_e32 v[2:3], 4.0
 ; GFX1250-NEXT:    global_wb scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    global_atomic_add_f64 v[0:1], v[0:1], v[2:3], off th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    global_inv scope:SCOPE_SYS
@@ -1802,6 +1803,7 @@ define double @global_atomic_fadd_f64_rtn_pat_agent(ptr addrspace(1) %ptr, doubl
 ; GFX1250-NEXT:    v_mov_b64_e32 v[2:3], 4.0
 ; GFX1250-NEXT:    global_wb scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    global_atomic_add_f64 v[0:1], v[0:1], v[2:3], off th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    global_inv scope:SCOPE_DEV
@@ -1842,6 +1844,7 @@ define double @global_atomic_fadd_f64_rtn_pat_system(ptr addrspace(1) %ptr, doub
 ; GFX1250-NEXT:    v_mov_b64_e32 v[2:3], 4.0
 ; GFX1250-NEXT:    global_wb scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    global_atomic_add_f64 v[0:1], v[0:1], v[2:3], off th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    global_inv scope:SCOPE_SYS
@@ -2088,6 +2091,7 @@ define double @flat_atomic_fadd_f64_rtn_pat(ptr %ptr) #1 {
 ; GFX1250-NEXT:    v_mov_b64_e32 v[2:3], 4.0
 ; GFX1250-NEXT:    global_wb scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_add_f64 v[0:1], v[0:1], v[2:3] th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    global_inv scope:SCOPE_SYS
@@ -2126,6 +2130,7 @@ define double @flat_atomic_fadd_f64_rtn_pat_agent(ptr %ptr) #1 {
 ; GFX1250-NEXT:    v_mov_b64_e32 v[2:3], 4.0
 ; GFX1250-NEXT:    global_wb scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_add_f64 v[0:1], v[0:1], v[2:3] th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    global_inv scope:SCOPE_DEV
@@ -2168,6 +2173,7 @@ define double @flat_atomic_fadd_f64_rtn_pat_system(ptr %ptr) #1 {
 ; GFX1250-NEXT:    v_mov_b64_e32 v[2:3], 4.0
 ; GFX1250-NEXT:    global_wb scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_add_f64 v[0:1], v[0:1], v[2:3] th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    global_inv scope:SCOPE_SYS

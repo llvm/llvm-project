@@ -68,6 +68,7 @@ define void @v_mov_b64_double(ptr addrspace(1) %ptr) {
 ; GCN-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    v_mov_b64_e32 v[2:3], 0x4063233333333333
+; GCN-NEXT:    s_wait_xcnt 0x0
 ; GCN-NEXT:    global_atomic_add_f64 v[0:1], v[2:3], off scope:SCOPE_SYS
 ; GCN-NEXT:    s_set_pc_i64 s[30:31]
   %result = atomicrmw fadd ptr addrspace(1) %ptr, double 153.1 monotonic
@@ -80,6 +81,7 @@ define void @v_mov_b64_int(ptr addrspace(1) %ptr) {
 ; GCN-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    v_mov_b64_e32 v[2:3], 0xf12345678
+; GCN-NEXT:    s_wait_xcnt 0x0
 ; GCN-NEXT:    global_atomic_add_u64 v[0:1], v[2:3], off scope:SCOPE_SYS
 ; GCN-NEXT:    s_set_pc_i64 s[30:31]
   %result = atomicrmw add ptr addrspace(1) %ptr, i64 64729929336 monotonic

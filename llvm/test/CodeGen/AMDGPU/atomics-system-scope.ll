@@ -6,6 +6,7 @@ define float @global_system_atomic_fadd_f32(ptr addrspace(1) %ptr, float %val) {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    global_atomic_add_f32 v0, v[0:1], v2, off th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
@@ -18,6 +19,7 @@ define float @global_one_as_atomic_fadd_f32(ptr addrspace(1) %ptr, float %val) {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    global_atomic_add_f32 v0, v[0:1], v2, off th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
@@ -30,6 +32,7 @@ define double @global_system_atomic_fadd_f64(ptr addrspace(1) %ptr, double %val)
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    global_atomic_add_f64 v[0:1], v[0:1], v[2:3], off th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
@@ -42,6 +45,7 @@ define double @global_one_as_atomic_fadd_f64(ptr addrspace(1) %ptr, double %val)
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    global_atomic_add_f64 v[0:1], v[0:1], v[2:3], off th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
@@ -54,6 +58,7 @@ define float @global_system_atomic_fmin_f32(ptr addrspace(1) %ptr, float %val) {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    global_atomic_min_num_f32 v0, v[0:1], v2, off th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
@@ -66,6 +71,7 @@ define float @global_one_as_atomic_fmin_f32(ptr addrspace(1) %ptr, float %val) {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    global_atomic_min_num_f32 v0, v[0:1], v2, off th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
@@ -78,6 +84,7 @@ define double @global_system_atomic_fmin_f64(ptr addrspace(1) %ptr, double %val)
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    global_atomic_min_num_f64 v[0:1], v[0:1], v[2:3], off th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
@@ -90,6 +97,7 @@ define double @global_one_as_atomic_fmin_f64(ptr addrspace(1) %ptr, double %val)
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    global_atomic_min_num_f64 v[0:1], v[0:1], v[2:3], off th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
@@ -102,6 +110,7 @@ define float @global_system_atomic_fmax_f32(ptr addrspace(1) %ptr, float %val) {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    global_atomic_max_num_f32 v0, v[0:1], v2, off th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
@@ -114,6 +123,7 @@ define float @global_one_as_atomic_fmax_f32(ptr addrspace(1) %ptr, float %val) {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    global_atomic_max_num_f32 v0, v[0:1], v2, off th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
@@ -126,6 +136,7 @@ define double @global_system_atomic_fmax_f64(ptr addrspace(1) %ptr, double %val)
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    global_atomic_max_num_f64 v[0:1], v[0:1], v[2:3], off th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
@@ -138,6 +149,7 @@ define double @global_one_as_atomic_fmax_f64(ptr addrspace(1) %ptr, double %val)
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    global_atomic_max_num_f64 v[0:1], v[0:1], v[2:3], off th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
@@ -150,6 +162,7 @@ define i32 @global_one_as_atomic_min_i32(ptr addrspace(1) %ptr, i32 %val) {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    global_atomic_min_i32 v0, v[0:1], v2, off th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
@@ -162,6 +175,7 @@ define i32 @global_system_atomic_min_i32(ptr addrspace(1) %ptr, i32 %val) {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    global_atomic_min_i32 v0, v[0:1], v2, off th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
@@ -174,6 +188,7 @@ define i32 @global_one_as_atomic_max_i32(ptr addrspace(1) %ptr, i32 %val) {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    global_atomic_max_i32 v0, v[0:1], v2, off th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
@@ -186,6 +201,7 @@ define i32 @global_system_atomic_max_i32(ptr addrspace(1) %ptr, i32 %val) {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    global_atomic_max_i32 v0, v[0:1], v2, off th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
@@ -198,6 +214,7 @@ define i32 @global_one_as_atomic_umin_i32(ptr addrspace(1) %ptr, i32 %val) {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    global_atomic_min_u32 v0, v[0:1], v2, off th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
@@ -210,6 +227,7 @@ define i32 @global_system_atomic_umin_i32(ptr addrspace(1) %ptr, i32 %val) {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    global_atomic_min_u32 v0, v[0:1], v2, off th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
@@ -222,6 +240,7 @@ define i32 @global_one_as_atomic_umax_i32(ptr addrspace(1) %ptr, i32 %val) {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    global_atomic_max_u32 v0, v[0:1], v2, off th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
@@ -234,6 +253,7 @@ define i32 @global_system_atomic_umax_i32(ptr addrspace(1) %ptr, i32 %val) {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    global_atomic_max_u32 v0, v[0:1], v2, off th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
@@ -246,6 +266,7 @@ define i64 @global_one_as_atomic_min_i64(ptr addrspace(1) %ptr, i64 %val) {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    global_atomic_min_i64 v[0:1], v[0:1], v[2:3], off th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
@@ -258,6 +279,7 @@ define i64 @global_system_atomic_min_i64(ptr addrspace(1) %ptr, i64 %val) {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    global_atomic_min_i64 v[0:1], v[0:1], v[2:3], off th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
@@ -270,6 +292,7 @@ define i64 @global_one_as_atomic_max_i64(ptr addrspace(1) %ptr, i64 %val) {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    global_atomic_max_i64 v[0:1], v[0:1], v[2:3], off th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
@@ -282,6 +305,7 @@ define i64 @global_system_atomic_max_i64(ptr addrspace(1) %ptr, i64 %val) {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    global_atomic_max_i64 v[0:1], v[0:1], v[2:3], off th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
@@ -294,6 +318,7 @@ define i64 @global_one_as_atomic_umin_i64(ptr addrspace(1) %ptr, i64 %val) {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    global_atomic_min_u64 v[0:1], v[0:1], v[2:3], off th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
@@ -306,6 +331,7 @@ define i64 @global_system_atomic_umin_i64(ptr addrspace(1) %ptr, i64 %val) {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    global_atomic_min_u64 v[0:1], v[0:1], v[2:3], off th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
@@ -318,6 +344,7 @@ define i64 @global_one_as_atomic_umax_i64(ptr addrspace(1) %ptr, i64 %val) {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    global_atomic_max_u64 v[0:1], v[0:1], v[2:3], off th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
@@ -330,6 +357,7 @@ define i64 @global_system_atomic_umax_i64(ptr addrspace(1) %ptr, i64 %val) {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    global_atomic_max_u64 v[0:1], v[0:1], v[2:3], off th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
@@ -514,6 +542,7 @@ define float @flat_system_atomic_fadd_f32(ptr %ptr, float %val) {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_add_f32 v0, v[0:1], v2 th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
@@ -526,6 +555,7 @@ define float @flat_one_as_atomic_fadd_f32(ptr %ptr, float %val) {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_add_f32 v0, v[0:1], v2 th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
@@ -562,6 +592,7 @@ define double @flat_system_atomic_fadd_f64(ptr %ptr, double %val) {
 ; GFX1250-NEXT:    s_xor_b32 s1, exec_lo, s1
 ; GFX1250-NEXT:    s_cbranch_execz .LBB34_5
 ; GFX1250-NEXT:  ; %bb.4: ; %atomicrmw.global
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    global_atomic_add_f64 v[0:1], v[4:5], v[2:3], off th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX1250-NEXT:    ; implicit-def: $vgpr4_vgpr5
 ; GFX1250-NEXT:    ; implicit-def: $vgpr2_vgpr3
@@ -627,6 +658,7 @@ define double @flat_one_as_atomic_fadd_f64(ptr %ptr, double %val) {
 ; GFX1250-NEXT:    s_xor_b32 s1, exec_lo, s1
 ; GFX1250-NEXT:    s_cbranch_execz .LBB35_5
 ; GFX1250-NEXT:  ; %bb.4: ; %atomicrmw.global
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    global_atomic_add_f64 v[0:1], v[4:5], v[2:3], off th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX1250-NEXT:    ; implicit-def: $vgpr4_vgpr5
 ; GFX1250-NEXT:    ; implicit-def: $vgpr2_vgpr3
@@ -668,6 +700,7 @@ define float @flat_system_atomic_fmin_f32(ptr %ptr, float %val) {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_min_num_f32 v0, v[0:1], v2 th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
@@ -680,6 +713,7 @@ define float @flat_one_as_atomic_fmin_f32(ptr %ptr, float %val) {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_min_num_f32 v0, v[0:1], v2 th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
@@ -709,6 +743,7 @@ define double @flat_system_atomic_fmin_f64(ptr %ptr, double %val) {
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
 ; GFX1250-NEXT:  .LBB38_3: ; %atomicrmw.global
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_min_num_f64 v[0:1], v[4:5], v[2:3] th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX1250-NEXT:    ; implicit-def: $vgpr4_vgpr5
 ; GFX1250-NEXT:    ; implicit-def: $vgpr2_vgpr3
@@ -755,6 +790,7 @@ define double @flat_one_as_atomic_fmin_f64(ptr %ptr, double %val) {
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
 ; GFX1250-NEXT:  .LBB39_3: ; %atomicrmw.global
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_min_num_f64 v[0:1], v[4:5], v[2:3] th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX1250-NEXT:    ; implicit-def: $vgpr4_vgpr5
 ; GFX1250-NEXT:    ; implicit-def: $vgpr2_vgpr3
@@ -784,6 +820,7 @@ define float @flat_system_atomic_fmax_f32(ptr %ptr, float %val) {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_max_num_f32 v0, v[0:1], v2 th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
@@ -796,6 +833,7 @@ define float @flat_one_as_atomic_fmax_f32(ptr %ptr, float %val) {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_max_num_f32 v0, v[0:1], v2 th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
@@ -825,6 +863,7 @@ define double @flat_system_atomic_fmax_f64(ptr %ptr, double %val) {
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
 ; GFX1250-NEXT:  .LBB42_3: ; %atomicrmw.global
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_max_num_f64 v[0:1], v[4:5], v[2:3] th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX1250-NEXT:    ; implicit-def: $vgpr4_vgpr5
 ; GFX1250-NEXT:    ; implicit-def: $vgpr2_vgpr3
@@ -871,6 +910,7 @@ define double @flat_one_as_atomic_fmax_f64(ptr %ptr, double %val) {
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
 ; GFX1250-NEXT:  .LBB43_3: ; %atomicrmw.global
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_max_num_f64 v[0:1], v[4:5], v[2:3] th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX1250-NEXT:    ; implicit-def: $vgpr4_vgpr5
 ; GFX1250-NEXT:    ; implicit-def: $vgpr2_vgpr3
@@ -900,6 +940,7 @@ define i32 @flat_one_as_atomic_min_i32(ptr %ptr, i32 %val) {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_min_i32 v0, v[0:1], v2 th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
@@ -912,6 +953,7 @@ define i32 @flat_system_atomic_min_i32(ptr %ptr, i32 %val) {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_min_i32 v0, v[0:1], v2 th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
@@ -924,6 +966,7 @@ define i32 @flat_one_as_atomic_max_i32(ptr %ptr, i32 %val) {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_max_i32 v0, v[0:1], v2 th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
@@ -936,6 +979,7 @@ define i32 @flat_system_atomic_max_i32(ptr %ptr, i32 %val) {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_max_i32 v0, v[0:1], v2 th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
@@ -948,6 +992,7 @@ define i32 @flat_one_as_atomic_umin_i32(ptr %ptr, i32 %val) {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_min_u32 v0, v[0:1], v2 th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
@@ -960,6 +1005,7 @@ define i32 @flat_system_atomic_umin_i32(ptr %ptr, i32 %val) {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_min_u32 v0, v[0:1], v2 th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
@@ -972,6 +1018,7 @@ define i32 @flat_one_as_atomic_umax_i32(ptr %ptr, i32 %val) {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_max_u32 v0, v[0:1], v2 th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
@@ -984,6 +1031,7 @@ define i32 @flat_system_atomic_umax_i32(ptr %ptr, i32 %val) {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_max_u32 v0, v[0:1], v2 th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
@@ -1004,6 +1052,7 @@ define i64 @flat_one_as_atomic_min_i64(ptr %ptr, i64 %val) {
 ; GFX1250-NEXT:    s_xor_b32 s0, exec_lo, s0
 ; GFX1250-NEXT:    s_cbranch_execz .LBB52_2
 ; GFX1250-NEXT:  ; %bb.1: ; %atomicrmw.global
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_min_i64 v[4:5], v[0:1], v[2:3] th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX1250-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GFX1250-NEXT:    ; implicit-def: $vgpr2_vgpr3
@@ -1044,6 +1093,7 @@ define i64 @flat_system_atomic_min_i64(ptr %ptr, i64 %val) {
 ; GFX1250-NEXT:    s_xor_b32 s0, exec_lo, s0
 ; GFX1250-NEXT:    s_cbranch_execz .LBB53_2
 ; GFX1250-NEXT:  ; %bb.1: ; %atomicrmw.global
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_min_i64 v[4:5], v[0:1], v[2:3] th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX1250-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GFX1250-NEXT:    ; implicit-def: $vgpr2_vgpr3
@@ -1084,6 +1134,7 @@ define i64 @flat_one_as_atomic_max_i64(ptr %ptr, i64 %val) {
 ; GFX1250-NEXT:    s_xor_b32 s0, exec_lo, s0
 ; GFX1250-NEXT:    s_cbranch_execz .LBB54_2
 ; GFX1250-NEXT:  ; %bb.1: ; %atomicrmw.global
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_max_i64 v[4:5], v[0:1], v[2:3] th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX1250-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GFX1250-NEXT:    ; implicit-def: $vgpr2_vgpr3
@@ -1124,6 +1175,7 @@ define i64 @flat_system_atomic_max_i64(ptr %ptr, i64 %val) {
 ; GFX1250-NEXT:    s_xor_b32 s0, exec_lo, s0
 ; GFX1250-NEXT:    s_cbranch_execz .LBB55_2
 ; GFX1250-NEXT:  ; %bb.1: ; %atomicrmw.global
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_max_i64 v[4:5], v[0:1], v[2:3] th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX1250-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GFX1250-NEXT:    ; implicit-def: $vgpr2_vgpr3
@@ -1164,6 +1216,7 @@ define i64 @flat_one_as_atomic_umin_i64(ptr %ptr, i64 %val) {
 ; GFX1250-NEXT:    s_xor_b32 s0, exec_lo, s0
 ; GFX1250-NEXT:    s_cbranch_execz .LBB56_2
 ; GFX1250-NEXT:  ; %bb.1: ; %atomicrmw.global
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_min_u64 v[4:5], v[0:1], v[2:3] th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX1250-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GFX1250-NEXT:    ; implicit-def: $vgpr2_vgpr3
@@ -1204,6 +1257,7 @@ define i64 @flat_system_atomic_umin_i64(ptr %ptr, i64 %val) {
 ; GFX1250-NEXT:    s_xor_b32 s0, exec_lo, s0
 ; GFX1250-NEXT:    s_cbranch_execz .LBB57_2
 ; GFX1250-NEXT:  ; %bb.1: ; %atomicrmw.global
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_min_u64 v[4:5], v[0:1], v[2:3] th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX1250-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GFX1250-NEXT:    ; implicit-def: $vgpr2_vgpr3
@@ -1244,6 +1298,7 @@ define i64 @flat_one_as_atomic_umax_i64(ptr %ptr, i64 %val) {
 ; GFX1250-NEXT:    s_xor_b32 s0, exec_lo, s0
 ; GFX1250-NEXT:    s_cbranch_execz .LBB58_2
 ; GFX1250-NEXT:  ; %bb.1: ; %atomicrmw.global
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_max_u64 v[4:5], v[0:1], v[2:3] th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX1250-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GFX1250-NEXT:    ; implicit-def: $vgpr2_vgpr3
@@ -1284,6 +1339,7 @@ define i64 @flat_system_atomic_umax_i64(ptr %ptr, i64 %val) {
 ; GFX1250-NEXT:    s_xor_b32 s0, exec_lo, s0
 ; GFX1250-NEXT:    s_cbranch_execz .LBB59_2
 ; GFX1250-NEXT:  ; %bb.1: ; %atomicrmw.global
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_max_u64 v[4:5], v[0:1], v[2:3] th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX1250-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GFX1250-NEXT:    ; implicit-def: $vgpr2_vgpr3

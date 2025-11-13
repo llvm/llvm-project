@@ -311,6 +311,7 @@ define amdgpu_ps void @global_atomicrmw_b32_idxprom(ptr addrspace(1) align 4 inr
 ; GCN-LABEL: global_atomicrmw_b32_idxprom:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    v_mov_b32_e32 v1, 1
+; GCN-NEXT:    s_wait_xcnt 0x0
 ; GCN-NEXT:    global_atomic_add_u32 v0, v1, s[0:1] scale_offset scope:SCOPE_SYS
 ; GCN-NEXT:    s_endpgm
 entry:
@@ -324,6 +325,7 @@ define amdgpu_ps <2 x float> @global_atomicrmw_b64_rtn_idxprom(ptr addrspace(1) 
 ; GCN-LABEL: global_atomicrmw_b64_rtn_idxprom:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    v_mov_b64_e32 v[2:3], 1
+; GCN-NEXT:    s_wait_xcnt 0x0
 ; GCN-NEXT:    global_atomic_add_u64 v[0:1], v0, v[2:3], s[0:1] scale_offset th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GCN-NEXT:    s_wait_loadcnt 0x0
 ; GCN-NEXT:    ; return to shader part epilog
