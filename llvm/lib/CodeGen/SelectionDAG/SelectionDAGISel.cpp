@@ -2782,7 +2782,7 @@ void SelectionDAGISel::UpdateChains(
 /// induce cycles in the DAG) and if so, creating a TokenFactor node. that will
 /// be used as the input node chain for the generated nodes.
 static SDValue
-HandleMergeInputChains(SmallVectorImpl<SDNode*> &ChainNodesMatched,
+HandleMergeInputChains(SmallVectorImpl<SDNode *> &ChainNodesMatched,
                        SDValue InputGlue, SelectionDAG *CurDAG) {
 
   SmallPtrSet<const SDNode *, 16> Visited;
@@ -2831,7 +2831,7 @@ HandleMergeInputChains(SmallVectorImpl<SDNode*> &ChainNodesMatched,
     // also be glued to the output, we cannot merge the chains. The TokenFactor
     // would prevent the glue from being honored.
     if (InputChains.size() != 1 &&
-        V->getValueType(V->getNumValues()-1) == MVT::Glue &&
+        V->getValueType(V->getNumValues() - 1) == MVT::Glue &&
         InputGlue.getNode() == V.getNode())
       return SDValue();
     Worklist.push_back(V.getNode());
