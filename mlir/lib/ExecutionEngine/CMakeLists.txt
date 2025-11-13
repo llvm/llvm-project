@@ -2,6 +2,7 @@
 # is a big dependency which most don't need.
 
 set(LLVM_OPTIONAL_SOURCES
+  APFloatWrappers.cpp
   ArmRunnerUtils.cpp
   ArmSMEStubs.cpp
   AsyncRuntime.cpp
@@ -166,6 +167,26 @@ if(LLVM_ENABLE_PIC)
     )
   set_property(TARGET mlir_float16_utils PROPERTY CXX_STANDARD 17)
   target_compile_definitions(mlir_float16_utils PRIVATE mlir_float16_utils_EXPORTS)
+
+  if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    # TODO: This support library is only used on Linux builds until we figure
+    # out how to hide LLVM symbols in a way that works for all platforms.
+    add_mlir_library(mlir_apfloat_wrappers
+      SHARED
+      APFloatWrappers.cpp
+
+      EXCLUDE_FROM_LIBMLIR
+      )
+    set_target_properties(
+      mlir_apfloat_wrappers
+      PROPERTIES CXX_STANDARD 17
+                CXX_VISIBILITY_PRESET hidden
+                VISIBILITY_INLINES_HIDDEN ON
+    )
+    target_compile_definitions(mlir_apfloat_wrappers PRIVATE mlir_apfloat_wrappers_EXPORTS)
+    # Hide LLVM symbols to avoid ODR violations.
+    target_link_options(mlir_apfloat_wrappers PRIVATE "-Wl,--exclude-libs,ALL")
+  endif()
 
   add_subdirectory(SparseTensor)
 
