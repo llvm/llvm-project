@@ -2536,7 +2536,7 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
   MachineRegisterInfo &MRI = MF.getRegInfo();
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
   (void)TRI;  // Silence unused warning in non-assert builds.
-  Register FramePtr = RegInfo->getFrameRegister(MF);
+  Register FramePtr = STI.getFramePointerReg();
   ARMSubtarget::PushPopSplitVariation PushPopSplit =
       STI.getPushPopSplitVariation(MF);
 
@@ -2783,7 +2783,11 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
       !CanEliminateFrame || RegInfo->cannotEliminateFrame(MF)) {
     AFI->setHasStackFrame(true);
 
-    if (HasFP) {
+    // Save the FP if:
+    // 1. We currently need it (HasFP), OR
+    // 2. We might need it later due to stack realignment from aligned DPRCS2
+    //    saves (which will make hasFP() become true in emitPrologue).
+    if (HasFP || (isFPReserved(MF) && AFI->getNumAlignedDPRCS2Regs() > 0)) {
       SavedRegs.set(FramePtr);
       // If the frame pointer is required by the ABI, also spill LR so that we
       // emit a complete frame record.
