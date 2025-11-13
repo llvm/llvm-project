@@ -8874,22 +8874,31 @@ __m512i test_mm512_maskz_permutex_epi64(__mmask8 __M, __m512i __X) {
 __m512d test_mm512_permutexvar_pd(__m512i __X, __m512d __Y) {
   // CHECK-LABEL: test_mm512_permutexvar_pd
   // CHECK: @llvm.x86.avx512.permvar.df.512
-  return _mm512_permutexvar_pd(__X, __Y); 
+  return _mm512_permutexvar_pd(__X, __Y);
 }
+
+TEST_CONSTEXPR(match_m512d(_mm512_permutexvar_pd((__m512i)(__v8di){7, 6, 5, 4, 3, 2, 1, 0}, (__m512d){0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0}), 7.0, 6.0, 5.0, 4.0, 3.0, 2.0, 1.0, 0.0));
+TEST_CONSTEXPR(match_m512d(_mm512_permutexvar_pd((__m512i)(__v8di){0, 0, 0, 0, 0, 0, 0, 0}, (__m512d){1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0}), 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0));
 
 __m512d test_mm512_mask_permutexvar_pd(__m512d __W, __mmask8 __U, __m512i __X, __m512d __Y) {
   // CHECK-LABEL: test_mm512_mask_permutexvar_pd
   // CHECK: @llvm.x86.avx512.permvar.df.512
   // CHECK: select <8 x i1> %{{.*}}, <8 x double> %{{.*}}, <8 x double> %{{.*}}
-  return _mm512_mask_permutexvar_pd(__W, __U, __X, __Y); 
+  return _mm512_mask_permutexvar_pd(__W, __U, __X, __Y);
 }
+
+TEST_CONSTEXPR(match_m512d(_mm512_mask_permutexvar_pd((__m512d){9.0, 9.0, 9.0, 9.0, 9.0, 9.0, 9.0, 9.0}, 0xFF, (__m512i)(__v8di){7, 6, 5, 4, 3, 2, 1, 0}, (__m512d){0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0}), 7.0, 6.0, 5.0, 4.0, 3.0, 2.0, 1.0, 0.0));
+TEST_CONSTEXPR(match_m512d(_mm512_mask_permutexvar_pd((__m512d){9.0, 9.0, 9.0, 9.0, 9.0, 9.0, 9.0, 9.0}, 0xAA, (__m512i)(__v8di){7, 6, 5, 4, 3, 2, 1, 0}, (__m512d){0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0}), 9.0, 6.0, 9.0, 4.0, 9.0, 2.0, 9.0, 0.0));
 
 __m512d test_mm512_maskz_permutexvar_pd(__mmask8 __U, __m512i __X, __m512d __Y) {
   // CHECK-LABEL: test_mm512_maskz_permutexvar_pd
   // CHECK: @llvm.x86.avx512.permvar.df.512
   // CHECK: select <8 x i1> %{{.*}}, <8 x double> %{{.*}}, <8 x double> %{{.*}}
-  return _mm512_maskz_permutexvar_pd(__U, __X, __Y); 
+  return _mm512_maskz_permutexvar_pd(__U, __X, __Y);
 }
+
+TEST_CONSTEXPR(match_m512d(_mm512_maskz_permutexvar_pd(0xFF, (__m512i)(__v8di){7, 6, 5, 4, 3, 2, 1, 0}, (__m512d){0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0}), 7.0, 6.0, 5.0, 4.0, 3.0, 2.0, 1.0, 0.0));
+TEST_CONSTEXPR(match_m512d(_mm512_maskz_permutexvar_pd(0xAA, (__m512i)(__v8di){7, 6, 5, 4, 3, 2, 1, 0}, (__m512d){0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0}), 0.0, 6.0, 0.0, 4.0, 0.0, 2.0, 0.0, 0.0));
 
 __m512i test_mm512_maskz_permutexvar_epi64(__mmask8 __M, __m512i __X, __m512i __Y) {
   // CHECK-LABEL: test_mm512_maskz_permutexvar_epi64
@@ -8901,35 +8910,53 @@ __m512i test_mm512_maskz_permutexvar_epi64(__mmask8 __M, __m512i __X, __m512i __
 __m512i test_mm512_permutexvar_epi64(__m512i __X, __m512i __Y) {
   // CHECK-LABEL: test_mm512_permutexvar_epi64
   // CHECK: @llvm.x86.avx512.permvar.di.512
-  return _mm512_permutexvar_epi64(__X, __Y); 
+  return _mm512_permutexvar_epi64(__X, __Y);
 }
+
+TEST_CONSTEXPR(match_v8di(_mm512_permutexvar_epi64((__m512i)(__v8di){7, 6, 5, 4, 3, 2, 1, 0}, (__m512i)(__v8di){10, 11, 12, 13, 14, 15, 16, 17}), 17, 16, 15, 14, 13, 12, 11, 10));
+TEST_CONSTEXPR(match_v8di(_mm512_permutexvar_epi64((__m512i)(__v8di){0, 1, 2, 3, 4, 5, 6, 7}, (__m512i)(__v8di){100, 101, 102, 103, 104, 105, 106, 107}), 100, 101, 102, 103, 104, 105, 106, 107));
 
 __m512i test_mm512_mask_permutexvar_epi64(__m512i __W, __mmask8 __M, __m512i __X, __m512i __Y) {
   // CHECK-LABEL: test_mm512_mask_permutexvar_epi64
   // CHECK: @llvm.x86.avx512.permvar.di.512
   // CHECK: select <8 x i1> %{{.*}}, <8 x i64> %{{.*}}, <8 x i64> %{{.*}}
-  return _mm512_mask_permutexvar_epi64(__W, __M, __X, __Y); 
+  return _mm512_mask_permutexvar_epi64(__W, __M, __X, __Y);
 }
+
+TEST_CONSTEXPR(match_v8di(_mm512_mask_permutexvar_epi64((__m512i)(__v8di){99, 99, 99, 99, 99, 99, 99, 99}, 0xFF, (__m512i)(__v8di){7, 6, 5, 4, 3, 2, 1, 0}, (__m512i)(__v8di){10, 11, 12, 13, 14, 15, 16, 17}), 17, 16, 15, 14, 13, 12, 11, 10));
+TEST_CONSTEXPR(match_v8di(_mm512_mask_permutexvar_epi64((__m512i)(__v8di){99, 99, 99, 99, 99, 99, 99, 99}, 0xAA, (__m512i)(__v8di){7, 6, 5, 4, 3, 2, 1, 0}, (__m512i)(__v8di){10, 11, 12, 13, 14, 15, 16, 17}), 99, 16, 99, 14, 99, 12, 99, 10));
+
+TEST_CONSTEXPR(match_v8di(_mm512_maskz_permutexvar_epi64(0xFF, (__m512i)(__v8di){7, 6, 5, 4, 3, 2, 1, 0}, (__m512i)(__v8di){10, 11, 12, 13, 14, 15, 16, 17}), 17, 16, 15, 14, 13, 12, 11, 10));
+TEST_CONSTEXPR(match_v8di(_mm512_maskz_permutexvar_epi64(0xAA, (__m512i)(__v8di){7, 6, 5, 4, 3, 2, 1, 0}, (__m512i)(__v8di){10, 11, 12, 13, 14, 15, 16, 17}), 0, 16, 0, 14, 0, 12, 0, 10));
 
 __m512 test_mm512_permutexvar_ps(__m512i __X, __m512 __Y) {
   // CHECK-LABEL: test_mm512_permutexvar_ps
   // CHECK: @llvm.x86.avx512.permvar.sf.512
-  return _mm512_permutexvar_ps(__X, __Y); 
+  return _mm512_permutexvar_ps(__X, __Y);
 }
+
+TEST_CONSTEXPR(match_m512(_mm512_permutexvar_ps((__m512i)(__v16si){15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0}, (__m512){0.0f, 1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 9.0f, 10.0f, 11.0f, 12.0f, 13.0f, 14.0f, 15.0f}), 15.0f, 14.0f, 13.0f, 12.0f, 11.0f, 10.0f, 9.0f, 8.0f, 7.0f, 6.0f, 5.0f, 4.0f, 3.0f, 2.0f, 1.0f, 0.0f));
+TEST_CONSTEXPR(match_m512(_mm512_permutexvar_ps((__m512i)(__v16si){0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, (__m512){1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 9.0f, 10.0f, 11.0f, 12.0f, 13.0f, 14.0f, 15.0f, 16.0f}), 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f));
 
 __m512 test_mm512_mask_permutexvar_ps(__m512 __W, __mmask16 __U, __m512i __X, __m512 __Y) {
   // CHECK-LABEL: test_mm512_mask_permutexvar_ps
   // CHECK: @llvm.x86.avx512.permvar.sf.512
   // CHECK: select <16 x i1> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}}
-  return _mm512_mask_permutexvar_ps(__W, __U, __X, __Y); 
+  return _mm512_mask_permutexvar_ps(__W, __U, __X, __Y);
 }
+
+TEST_CONSTEXPR(match_m512(_mm512_mask_permutexvar_ps((__m512){99.0f, 99.0f, 99.0f, 99.0f, 99.0f, 99.0f, 99.0f, 99.0f, 99.0f, 99.0f, 99.0f, 99.0f, 99.0f, 99.0f, 99.0f, 99.0f}, 0xFFFF, (__m512i)(__v16si){15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0}, (__m512){0.0f, 1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 9.0f, 10.0f, 11.0f, 12.0f, 13.0f, 14.0f, 15.0f}), 15.0f, 14.0f, 13.0f, 12.0f, 11.0f, 10.0f, 9.0f, 8.0f, 7.0f, 6.0f, 5.0f, 4.0f, 3.0f, 2.0f, 1.0f, 0.0f));
+TEST_CONSTEXPR(match_m512(_mm512_mask_permutexvar_ps((__m512){99.0f, 99.0f, 99.0f, 99.0f, 99.0f, 99.0f, 99.0f, 99.0f, 99.0f, 99.0f, 99.0f, 99.0f, 99.0f, 99.0f, 99.0f, 99.0f}, 0xAAAA, (__m512i)(__v16si){15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0}, (__m512){0.0f, 1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 9.0f, 10.0f, 11.0f, 12.0f, 13.0f, 14.0f, 15.0f}), 99.0f, 14.0f, 99.0f, 12.0f, 99.0f, 10.0f, 99.0f, 8.0f, 99.0f, 6.0f, 99.0f, 4.0f, 99.0f, 2.0f, 99.0f, 0.0f));
 
 __m512 test_mm512_maskz_permutexvar_ps(__mmask16 __U, __m512i __X, __m512 __Y) {
   // CHECK-LABEL: test_mm512_maskz_permutexvar_ps
   // CHECK: @llvm.x86.avx512.permvar.sf.512
   // CHECK: select <16 x i1> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}}
-  return _mm512_maskz_permutexvar_ps(__U, __X, __Y); 
+  return _mm512_maskz_permutexvar_ps(__U, __X, __Y);
 }
+
+TEST_CONSTEXPR(match_m512(_mm512_maskz_permutexvar_ps(0xFFFF, (__m512i)(__v16si){15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0}, (__m512){0.0f, 1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 9.0f, 10.0f, 11.0f, 12.0f, 13.0f, 14.0f, 15.0f}), 15.0f, 14.0f, 13.0f, 12.0f, 11.0f, 10.0f, 9.0f, 8.0f, 7.0f, 6.0f, 5.0f, 4.0f, 3.0f, 2.0f, 1.0f, 0.0f));
+TEST_CONSTEXPR(match_m512(_mm512_maskz_permutexvar_ps(0xAAAA, (__m512i)(__v16si){15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0}, (__m512){0.0f, 1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 9.0f, 10.0f, 11.0f, 12.0f, 13.0f, 14.0f, 15.0f}), 0.0f, 14.0f, 0.0f, 12.0f, 0.0f, 10.0f, 0.0f, 8.0f, 0.0f, 6.0f, 0.0f, 4.0f, 0.0f, 2.0f, 0.0f, 0.0f));
 
 __m512i test_mm512_maskz_permutexvar_epi32(__mmask16 __M, __m512i __X, __m512i __Y) {
   // CHECK-LABEL: test_mm512_maskz_permutexvar_epi32
@@ -8941,15 +8968,24 @@ __m512i test_mm512_maskz_permutexvar_epi32(__mmask16 __M, __m512i __X, __m512i _
 __m512i test_mm512_permutexvar_epi32(__m512i __X, __m512i __Y) {
   // CHECK-LABEL: test_mm512_permutexvar_epi32
   // CHECK: @llvm.x86.avx512.permvar.si.512
-  return _mm512_permutexvar_epi32(__X, __Y); 
+  return _mm512_permutexvar_epi32(__X, __Y);
 }
+
+TEST_CONSTEXPR(match_v16si(_mm512_permutexvar_epi32((__m512i)(__v16si){15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0}, (__m512i)(__v16si){10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25}), 25, 24, 23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, 12, 11, 10));
+TEST_CONSTEXPR(match_v16si(_mm512_permutexvar_epi32((__m512i)(__v16si){0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}, (__m512i)(__v16si){100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115}), 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115));
 
 __m512i test_mm512_mask_permutexvar_epi32(__m512i __W, __mmask16 __M, __m512i __X, __m512i __Y) {
   // CHECK-LABEL: test_mm512_mask_permutexvar_epi32
   // CHECK: @llvm.x86.avx512.permvar.si.512
   // CHECK: select <16 x i1> %{{.*}}, <16 x i32> %{{.*}}, <16 x i32> %{{.*}}
-  return _mm512_mask_permutexvar_epi32(__W, __M, __X, __Y); 
+  return _mm512_mask_permutexvar_epi32(__W, __M, __X, __Y);
 }
+
+TEST_CONSTEXPR(match_v16si(_mm512_mask_permutexvar_epi32((__m512i)(__v16si){99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99}, 0xFFFF, (__m512i)(__v16si){15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0}, (__m512i)(__v16si){10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25}), 25, 24, 23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, 12, 11, 10));
+TEST_CONSTEXPR(match_v16si(_mm512_mask_permutexvar_epi32((__m512i)(__v16si){99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99}, 0xAAAA, (__m512i)(__v16si){15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0}, (__m512i)(__v16si){10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25}), 99, 24, 99, 22, 99, 20, 99, 18, 99, 16, 99, 14, 99, 12, 99, 10));
+
+TEST_CONSTEXPR(match_v16si(_mm512_maskz_permutexvar_epi32(0xFFFF, (__m512i)(__v16si){15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0}, (__m512i)(__v16si){10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25}), 25, 24, 23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, 12, 11, 10));
+TEST_CONSTEXPR(match_v16si(_mm512_maskz_permutexvar_epi32(0xAAAA, (__m512i)(__v16si){15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0}, (__m512i)(__v16si){10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25}), 0, 24, 0, 22, 0, 20, 0, 18, 0, 16, 0, 14, 0, 12, 0, 10));
 
 __mmask16 test_mm512_kand(__m512i __A, __m512i __B, __m512i __C, __m512i __D, __m512i __E, __m512i __F) {
   // CHECK-LABEL: test_mm512_kand
