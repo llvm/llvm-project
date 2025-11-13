@@ -4958,11 +4958,7 @@ void CGDebugInfo::EmitFunctionDecl(GlobalDecl GD, SourceLocation Loc,
     Fn->setSubprogram(SP);
 }
 
-bool CGDebugInfo::generateCallSiteForPS() const {
-  // The added call target will be available only for SCE targets.
-  if (CGM.getCodeGenOpts().getDebuggerTuning() != llvm::DebuggerKind::SCE)
-    return false;
-
+bool CGDebugInfo::generateVirtualCallSite() const {
   // Check general conditions for call site generation.
   return (getCallSiteRelatedAttrs() != llvm::DINode::FlagZero);
 }
@@ -4976,7 +4972,7 @@ void CGDebugInfo::addCallTargetMetadata(llvm::MDNode *MD, llvm::CallBase *CI) {
 
 // Finalize call_target generation.
 void CGDebugInfo::finalizeCallTarget() {
-  if (!generateCallSiteForPS())
+  if (!generateVirtualCallSite())
     return;
 
   for (auto &E : CallTargetCache) {
@@ -4989,7 +4985,7 @@ void CGDebugInfo::finalizeCallTarget() {
 
 void CGDebugInfo::addCallTarget(StringRef Name, llvm::MDNode *MD,
                                 llvm::CallBase *CI) {
-  if (!generateCallSiteForPS())
+  if (!generateVirtualCallSite())
     return;
 
   // Record only indirect calls.
@@ -5019,7 +5015,7 @@ void CGDebugInfo::addCallTarget(StringRef Name, llvm::MDNode *MD,
 
 void CGDebugInfo::addCallTarget(llvm::Function *F, const FunctionDecl *FD,
                                 llvm::CallBase *CI) {
-  if (!generateCallSiteForPS())
+  if (!generateVirtualCallSite())
     return;
 
   if (!F && !FD)
@@ -5035,7 +5031,7 @@ void CGDebugInfo::addCallTarget(llvm::Function *F, const FunctionDecl *FD,
 }
 
 void CGDebugInfo::removeCallTarget(StringRef Name) {
-  if (!generateCallSiteForPS())
+  if (!generateVirtualCallSite())
     return;
 
   auto It = CallTargetCache.find(Name);
@@ -5044,7 +5040,7 @@ void CGDebugInfo::removeCallTarget(StringRef Name) {
 }
 
 void CGDebugInfo::removeCallTarget(llvm::Function *F) {
-  if (!generateCallSiteForPS())
+  if (!generateVirtualCallSite())
     return;
 
   if (F && F->hasName())

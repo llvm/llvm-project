@@ -42,7 +42,9 @@ void foo(CDerived *Derived) {
   Derived->one(true);
 }
 
-// RUN: %clang_cc1 -debugger-tuning=sce -triple=x86_64-linux -disable-llvm-passes -emit-llvm -debug-info-kind=constructor -dwarf-version=5 -O1 %s -o - | FileCheck %s -check-prefix CHECK-DERIVED
+// RUN: %clang_cc1 -triple=x86_64-linux -disable-llvm-passes -emit-llvm \
+// RUN:            -debug-info-kind=constructor -dwarf-version=5 -O1 %s \
+// RUN:            -o - | FileCheck %s -check-prefix CHECK-DERIVED
 
 // CHECK-DERIVED: define {{.*}} @_Z3fooP5CBase{{.*}} {
 // CHECK-DERIVED-DAG: call void @_ZN5CBase5threeEv{{.*}} !dbg {{![0-9]+}}
@@ -73,13 +75,3 @@ void foo(CDerived *Derived) {
 
 // CHECK-DERIVED-DAG: [[BASE_TWO]] = {{.*}}!DISubprogram(name: "two", linkageName: "_ZN5CBase3twoEic"
 // CHECK-DERIVED-DAG: [[DERIVED_ONE]] = {{.*}}!DISubprogram(name: "one", linkageName: "_ZN8CDerived3oneEb"
-
-// RUN: %clang_cc1 -triple=x86_64-linux -disable-llvm-passes -emit-llvm -debug-info-kind=constructor -dwarf-version=5 -O1 %s -o - | FileCheck %s -check-prefix CHECK-DERIVED-NON
-
-// CHECK-DERIVED-NON: define {{.*}} @_Z3barP5CBase{{.*}} {
-// CHECK-DERIVED-NON-DAG:  call void %1{{.*}} !dbg {{![0-9]+}}
-// CHECK-DERIVED-NON: }
-
-// CHECK-DERIVED-NON: define {{.*}} @_Z3fooP8CDerived{{.*}} {
-// CHECK-DERIVED-NON-DAG:  call void %1{{.*}} !dbg {{![0-9]+}}
-// CHECK-DERIVED-NON: }

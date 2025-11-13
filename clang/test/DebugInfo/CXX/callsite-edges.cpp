@@ -78,7 +78,9 @@ void edge_c(CDeep *Deep) {
   D3->d3(3);
 }
 
-// RUN: %clang -Xclang -debugger-tuning=sce --target=x86_64-linux -Xclang -disable-llvm-passes -fno-discard-value-names -emit-llvm -S -g -O1 %s -o - | FileCheck %s -check-prefix CHECK-EDGES
+// RUN: %clang_cc1 -triple=x86_64-linux -disable-llvm-passes -emit-llvm \
+// RUN:            -debug-info-kind=constructor -dwarf-version=5 -O1 %s \
+// RUN:            -o - | FileCheck %s -check-prefix CHECK-EDGES
 
 // CHECK-EDGES: define {{.*}} @_Z6edge_aP6CEmpty{{.*}} {
 // CHECK-EDGES-DAG:  call void %1{{.*}} !dbg {{![0-9]+}}
@@ -105,21 +107,3 @@ void edge_c(CDeep *Deep) {
 // CHECK-EDGES-DAG:  [[CDEEP_D1]] = {{.*}}!DISubprogram(name: "d1", linkageName: "_ZN5CDeep3CD12d1Ei"
 // CHECK-EDGES-DAG:  [[CDEEP_D2]] = {{.*}}!DISubprogram(name: "d2", linkageName: "_ZN5CDeep3CD13CD22d2Ei"
 // CHECK-EDGES-DAG:  [[CDEEP_D3]] = {{.*}}!DISubprogram(name: "d3", linkageName: "_ZN5CDeep3CD13CD23CD32d3Ei"
-
-// RUN: %clang --target=x86_64-linux -Xclang -disable-llvm-passes -fno-discard-value-names -emit-llvm -S -g -O1 %s -o - | FileCheck %s -check-prefix CHECK-EDGES-NON
-
-// CHECK-EDGES-NON: define {{.*}} @_Z6edge_aP6CEmpty{{.*}} {
-// CHECK-EDGES-NON-DAG:  call void %3{{.*}} !dbg {{![0-9]+}}
-// CHECK-EDGES-NON: }
-
-// CHECK-EDGES-NON: define {{.*}} @_Z6edge_bP5CBase{{.*}} {
-// CHECK-EDGES-NON-DAG:  call void %1{{.*}} !dbg {{![0-9]+}}
-// CHECK-EDGES-NON-DAG:  call void %3{{.*}} !dbg {{![0-9]+}}
-// CHECK-EDGES-NON: }
-
-// CHECK-EDGES-NON: define {{.*}} @_Z6edge_cP5CDeep{{.*}} {
-// CHECK-EDGES-NON-DAG:  call void %1{{.*}} !dbg {{![0-9]+}}
-// CHECK-EDGES-NON-DAG:  call void %4{{.*}} !dbg {{![0-9]+}}
-// CHECK-EDGES-NON-DAG:  call void %7{{.*}} !dbg {{![0-9]+}}
-// CHECK-EDGES-NON-DAG:  call void %10{{.*}} !dbg {{![0-9]+}}
-// CHECK-EDGES-NON: }

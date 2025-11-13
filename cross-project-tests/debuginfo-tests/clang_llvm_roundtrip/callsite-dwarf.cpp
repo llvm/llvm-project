@@ -38,8 +38,7 @@ void CDerivedTwo::bar(int &j) { DerivedOne->foo(j); }
 // !40 = !DISubprogram(name: "bar", linkageName: "_ZN11CDerivedTwo3barERi", ...)
 // !65 = !DILocation(line: 25, column: 15, scope: !40)
 
-// RUN: %clang --target=x86_64-unknown-linux -c -g -O1    \
-// RUN:        -Xclang -debugger-tuning=sce %s -o -     | \
+// RUN: %clang --target=x86_64-unknown-linux -c -g -O1 %s -o - | \
 // RUN: llvm-dwarfdump --debug-info - | FileCheck %s --check-prefix=CHECK
 
 // CHECK: DW_TAG_compile_unit
@@ -51,7 +50,7 @@ void CDerivedTwo::bar(int &j) { DerivedOne->foo(j); }
 // CHECK:     DW_AT_name	("CBaseOne")
 // CHECK: [[FOO_DEF:0x[a-f0-9]+]]:  DW_TAG_subprogram
 // CHECK:     DW_AT_call_all_calls	(true)
-// CHECK:     DW_AT_specification	([[FOO_DCL]] "foo")
+// CHECK:     DW_AT_specification	([[FOO_DCL]] "{{.*}}foo{{.*}}")
 // CHECK:   DW_TAG_structure_type
 // CHECK:     DW_AT_name	("CDerivedTwo")
 // CHECK:     DW_TAG_subprogram
@@ -60,9 +59,9 @@ void CDerivedTwo::bar(int &j) { DerivedOne->foo(j); }
 // CHECK:     DW_AT_name	("CBaseTwo")
 // CHECK:   DW_TAG_subprogram
 // CHECK:     DW_AT_call_all_calls	(true)
-// CHECK:     DW_AT_specification	(0x{{.*}} "bar")
+// CHECK:     DW_AT_specification	(0x{{.*}} "{{.*}}bar{{.*}}")
 // CHECK:     DW_TAG_call_site
 // CHECK:       DW_AT_call_target	(DW_OP_reg0 RAX)
 // CHECK:       DW_AT_call_tail_call	(true)
 // CHECK:       DW_AT_call_pc	(0x{{.*}})
-// CHECK:       DW_AT_call_origin	([[FOO_DEF]] "foo")
+// CHECK:       DW_AT_call_origin	([[FOO_DEF]] "{{.*}}foo{{.*}}")

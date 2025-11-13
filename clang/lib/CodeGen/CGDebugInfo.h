@@ -925,8 +925,8 @@ private:
   using CallTargetEntry = std::pair<llvm::TrackingMDNodeRef, InstrList>;
   llvm::SmallDenseMap<StringRef, CallTargetEntry> CallTargetCache;
 
-  /// Generate call target information only for SIE debugger.
-  bool generateCallSiteForPS() const;
+  /// Generate call target information.
+  bool generateVirtualCallSite() const;
 
   /// Add 'call_target' metadata to the 'call' instruction.
   void addCallTargetMetadata(llvm::MDNode *MD, llvm::CallBase *CI);
