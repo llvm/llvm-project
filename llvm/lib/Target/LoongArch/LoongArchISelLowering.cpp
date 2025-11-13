@@ -5733,11 +5733,8 @@ static bool checkValueWidth(SDValue V, ISD::LoadExtType &ExtType) {
 //                               +-------------+
 //                               |     CMP     |
 //                               +-------------+
-static SDValue performSETCCCombine(SDNode *N, SelectionDAG &DAG,
-                                   TargetLowering::DAGCombinerInfo &DCI,
-                                   const LoongArchSubtarget &Subtarget) {
-  ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
-
+static SDValue combineTruncZExtAndSetcc(SDNode *N, SelectionDAG &DAG, EVT VT,
+                                        ISD::CondCode CC, const SDLoc &DL) {
   SDNode *AndNode = N->getOperand(0).getNode();
   if (AndNode->getOpcode() != ISD::AND)
     return SDValue();
@@ -5793,12 +5790,121 @@ static SDValue performSETCCCombine(SDNode *N, SelectionDAG &DAG,
     return SDValue();
 
   // These truncation and zero-extension nodes are not necessary, remove them.
-  SDValue NewAnd = DAG.getNode(ISD::AND, SDLoc(N), AndNode->getValueType(0),
+  SDValue NewAnd = DAG.getNode(ISD::AND, DL, AndNode->getValueType(0),
                                TruncInputValue1, TruncInputValue2);
-  SDValue NewSetCC =
-      DAG.getSetCC(SDLoc(N), N->getValueType(0), NewAnd, TruncInputValue2, CC);
+  SDValue NewSetCC = DAG.getSetCC(DL, VT, NewAnd, TruncInputValue2, CC);
   DAG.ReplaceAllUsesWith(N, NewSetCC.getNode());
   return SDValue(N, 0);
+}
+
+/// Recursive helper for combineVectorSizedSetCCEquality() to see if we have a
+/// recognizable memcmp expansion.
+static bool isOrXorXorTree(SDValue X, bool Root = true) {
+  if (X.getOpcode() == ISD::OR)
+    return isOrXorXorTree(X.getOperand(0), false) &&
+           isOrXorXorTree(X.getOperand(1), false);
+  if (Root)
+    return false;
+  return X.getOpcode() == ISD::XOR;
+}
+
+/// Recursive helper for combineVectorSizedSetCCEquality() to emit the memcmp
+/// expansion.
+static SDValue emitOrXorXorTree(SDValue X, const SDLoc &DL, SelectionDAG &DAG,
+                                EVT VecVT) {
+  SDValue Op0 = X.getOperand(0);
+  SDValue Op1 = X.getOperand(1);
+  if (X.getOpcode() == ISD::OR) {
+    SDValue A = emitOrXorXorTree(Op0, DL, DAG, VecVT);
+    SDValue B = emitOrXorXorTree(Op1, DL, DAG, VecVT);
+    return DAG.getNode(ISD::OR, DL, VecVT, A, B);
+  }
+  if (X.getOpcode() == ISD::XOR) {
+    SDValue A = DAG.getBitcast(VecVT, Op0);
+    SDValue B = DAG.getBitcast(VecVT, Op1);
+    return DAG.getNode(ISD::XOR, DL, VecVT, A, B);
+  }
+  llvm_unreachable("Impossible");
+}
+
+/// Try to map a 128-bit or 256-bit integer comparison to vector instructions
+/// before type legalization splits it up into chunks.
+static SDValue
+combineVectorSizedSetCCEquality(EVT VT, SDValue X, SDValue Y, ISD::CondCode CC,
+                                const SDLoc &DL, SelectionDAG &DAG,
+                                const LoongArchSubtarget &Subtarget) {
+  assert(isIntEqualitySetCC(CC) && "Bad comparison predicate");
+
+  EVT OpVT = X.getValueType();
+  unsigned OpSize = OpVT.getSizeInBits();
+  MVT GRLenVT = Subtarget.getGRLenVT();
+
+  // We're looking for an oversized integer equality comparison.
+  if (!OpVT.isScalarInteger())
+    return SDValue();
+
+  if (!(OpSize == 128 && Subtarget.hasExtLSX()) &&
+      !(OpSize == 256 && Subtarget.hasExtLASX()))
+    return SDValue();
+
+  if (DAG.getMachineFunction().getFunction().hasFnAttribute(
+          Attribute::NoImplicitFloat))
+    return SDValue();
+
+  // Check if this is a bitwise-combined equality comparison of 2 pairs of
+  // vectors:
+  //   setcc i128 (or (xor A, B), (xor C, D)), 0, eq|ne
+  bool IsOrXorXorTreeCCZero = isNullConstant(Y) && isOrXorXorTree(X);
+
+  // Don't perform this combine if constructing the vector will be expensive.
+  auto IsVectorBitCastCheap = [](SDValue X) {
+    X = peekThroughBitcasts(X);
+    return isa<ConstantSDNode>(X) || X.getValueType().isVector() ||
+           X.getOpcode() == ISD::LOAD;
+  };
+
+  if ((!IsVectorBitCastCheap(X) || !IsVectorBitCastCheap(Y)) &&
+      !IsOrXorXorTreeCCZero)
+    return SDValue();
+
+  // Treat as v2i64/v4i64 on LA64 and v4i32/v8i32 on LA32.
+  unsigned VecSize = OpSize / (Subtarget.is64Bit() ? 64 : 32);
+  EVT VecVT =
+      MVT::getVectorVT(Subtarget.is64Bit() ? MVT::i64 : MVT::i32, VecSize);
+
+  SDValue Cmp;
+  if (IsOrXorXorTreeCCZero) {
+    Cmp = emitOrXorXorTree(X, DL, DAG, VecVT);
+  } else {
+    SDValue VecX = DAG.getBitcast(VecVT, X);
+    SDValue VecY = DAG.getBitcast(VecVT, Y);
+    Cmp = DAG.getNode(ISD::XOR, DL, VecVT, VecX, VecY);
+  }
+
+  return DAG.getSetCC(DL, VT, DAG.getNode(ISD::VECREDUCE_OR, DL, GRLenVT, Cmp),
+                      DAG.getConstant(0, DL, GRLenVT), CC);
+}
+
+static SDValue performSETCCCombine(SDNode *N, SelectionDAG &DAG,
+                                   TargetLowering::DAGCombinerInfo &DCI,
+                                   const LoongArchSubtarget &Subtarget) {
+  SDLoc DL(N);
+  EVT VT = N->getValueType(0);
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+  ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
+
+  if (SDValue V = combineTruncZExtAndSetcc(N, DAG, VT, CC, DL))
+    return V;
+
+  if (!isIntEqualitySetCC(CC))
+    return SDValue();
+
+  if (SDValue V =
+          combineVectorSizedSetCCEquality(VT, N0, N1, CC, DL, DAG, Subtarget))
+    return V;
+
+  return SDValue();
 }
 
 // Combine (loongarch_bitrev_w (loongarch_revb_2w X)) to loongarch_bitrev_4b.
