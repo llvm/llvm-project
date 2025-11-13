@@ -15,8 +15,9 @@ define i64 @live_out_scalar_vf(i64 %n) {
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VECTOR_RECUR:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[TMP2:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 1
+; CHECK-NEXT:    [[TMP2]] = add i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ugt i64 [[TMP1]], [[TRIP_COUNT_MINUS_1]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ugt i64 [[TMP2]], [[TRIP_COUNT_MINUS_1]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 2
@@ -33,23 +34,23 @@ define i64 @live_out_scalar_vf(i64 %n) {
 ; CHECK-NEXT:    [[TMP13:%.*]] = select i1 [[TMP12]], i64 [[TMP11]], i64 [[TMP8]]
 ; CHECK-NEXT:    [[LAST_ACTIVE_LANE:%.*]] = sub i64 [[TMP13]], 1
 ; CHECK-NEXT:    [[TMP14:%.*]] = sub i64 [[LAST_ACTIVE_LANE]], 1
-; CHECK-NEXT:    [[TMP15:%.*]] = icmp uge i64 [[LAST_ACTIVE_LANE]], 1
+; CHECK-NEXT:    [[TMP17:%.*]] = sub i64 [[TMP14]], 1
+; CHECK-NEXT:    [[TMP15:%.*]] = icmp uge i64 [[TMP14]], 1
 ; CHECK-NEXT:    [[TMP16:%.*]] = select i1 [[TMP15]], i64 [[TMP2]], i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[LAST_ACTIVE_LANE]], 0
+; CHECK-NEXT:    [[TMP19:%.*]] = select i1 [[TMP18]], i64 [[VECTOR_RECUR]], i64 [[TMP16]]
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    ret i64 [[TMP16]]
+; CHECK-NEXT:    ret i64 [[TMP19]]
 ;
 entry:
   br label %loop
 
 loop:
-  %iv = phi i64 [ 0, %entry ], [ %iv.next, %latch ]
-  br label %latch
-
-latch:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
   ; Need to use a phi otherwise the header mask will use a
   ; VPWidenCanonicalIVRecipe instead of a VPScalarIVStepsRecipe.
-  %exitval = phi i64 [ %iv, %loop ]
+  %exitval = phi i64 [ 0, %entry ], [ %iv, %loop ]
   %iv.next = add i64 %iv, 1
   %ec = icmp eq i64 %iv, %n
   br i1 %ec, label %exit, label %loop
