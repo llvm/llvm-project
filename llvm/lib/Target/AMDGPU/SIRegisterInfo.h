@@ -289,6 +289,10 @@ public:
   const TargetRegisterClass *
   getEquivalentAGPRClass(const TargetRegisterClass *SRC) const;
 
+  /// \returns An AGPR+VGPR super reg class with the same width as \p SRC
+  const TargetRegisterClass *
+  getEquivalentAVClass(const TargetRegisterClass *SRC) const;
+
   /// \returns A SGPR reg class with the same width as \p SRC
   const TargetRegisterClass *
   getEquivalentSGPRClass(const TargetRegisterClass *VRC) const;
