@@ -58,6 +58,8 @@ add_lldb_library(lldbCommands NO_PLUGIN_DEPENDENCIES
     lldbUtility
     lldbValueObject
     lldbVersion
+  CLANG_LIBS
+    clangFrontend
   )
 
 add_dependencies(lldbCommands LLDBOptionsGen)
