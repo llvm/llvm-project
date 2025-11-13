@@ -1021,7 +1021,7 @@ addLiveIns(const MachineInstr *DefMI, unsigned DefOp,
       return;
     TraceBlockInfo &TBI = BlockInfo[MBB->getNumber()];
     // Just add the register. The height will be updated later.
-    TBI.LiveIns.push_back(VirtRegOrUnit(Reg));
+    TBI.LiveIns.emplace_back(VirtRegOrUnit(Reg));
   }
 }
 
@@ -1170,7 +1170,7 @@ computeInstrHeights(const MachineBasicBlock *MBB) {
 
     // Transfer the live regunits to the live-in list.
     for (const LiveRegUnit &RU : RegUnits) {
-      TBI.LiveIns.push_back(LiveInReg(VirtRegOrUnit(RU.RegUnit), RU.Cycle));
+      TBI.LiveIns.emplace_back(VirtRegOrUnit(RU.RegUnit), RU.Cycle);
       LLVM_DEBUG(dbgs() << ' ' << printRegUnit(RU.RegUnit, MTM.TRI) << '@'
                         << RU.Cycle);
     }

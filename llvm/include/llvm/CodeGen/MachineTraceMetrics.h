@@ -162,7 +162,7 @@ public:
     /// For regunits: Height of the highest user in the trace.
     unsigned Height;
 
-    LiveInReg(VirtRegOrUnit VRegOrUnit, unsigned Height = 0)
+    explicit LiveInReg(VirtRegOrUnit VRegOrUnit, unsigned Height = 0)
         : VRegOrUnit(VRegOrUnit), Height(Height) {}
   };
 
