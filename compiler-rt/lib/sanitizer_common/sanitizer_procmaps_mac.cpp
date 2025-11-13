@@ -101,6 +101,8 @@ static bool VerifyMemoryMapping(MemoryMappingLayout* mapping) {
     }
   }
 
+  for (auto& m : modules) m.clear();
+
   mapping->Reset();
   return well_formed;
 }
@@ -331,6 +333,7 @@ static bool NextSegmentLoad(MemoryMappedSegment *segment,
       seg_data->base_virt_addr = base_virt_addr;
       internal_strncpy(seg_data->name, sc->segname,
                        ARRAY_SIZE(seg_data->name));
+      seg_data->name[ARRAY_SIZE(seg_data->name) - 1] = 0;
     }
 
     // Return the initial protection.
@@ -344,6 +347,7 @@ static bool NextSegmentLoad(MemoryMappedSegment *segment,
                             ? kDyldPath
                             : _dyld_get_image_name(layout_data->current_image);
       internal_strncpy(segment->filename, src, segment->filename_size);
+      segment->filename[segment->filename_size - 1] = 0;
     }
     segment->arch = layout_data->current_arch;
     internal_memcpy(segment->uuid, layout_data->current_uuid, kModuleUUIDSize);
