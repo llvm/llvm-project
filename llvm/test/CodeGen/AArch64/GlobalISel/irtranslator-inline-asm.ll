@@ -280,9 +280,13 @@ entry:
 define void @test_indirectify_i32_constant() {
   ; CHECK-LABEL: name: test_indirectify_i32_constant
   ; CHECK: bb.1.entry:
-  ; CHECK-NEXT:   [[CONSTANT_POOL:%[0-9]+]]:_(p0) = G_CONSTANT_POOL %const.0
-  ; CHECK-NEXT:   [[CONSTANT_POOL1:%[0-9]+]]:_(p0) = G_CONSTANT_POOL %const.1
-  ; CHECK-NEXT:   INLINEASM &"", 25 /* sideeffect mayload maystore attdialect */, {{[0-9]+}} /* mem:m */, [[CONSTANT_POOL]](p0), 262158 /* mem:m */, [[CONSTANT_POOL1]](p0)
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 42
+  ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+  ; CHECK-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
+  ; CHECK-NEXT:   G_STORE [[C]](s32), [[FRAME_INDEX]](p0) :: (store (s32) into %stack.0)
+  ; CHECK-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.1
+  ; CHECK-NEXT:   G_STORE [[C1]](s32), [[FRAME_INDEX1]](p0) :: (store (s32) into %stack.1)
+  ; CHECK-NEXT:   INLINEASM &"", 25 /* sideeffect mayload maystore attdialect */, {{[0-9]+}} /* mem:m */, [[FRAME_INDEX]](p0), 262158 /* mem:m */, [[FRAME_INDEX1]](p0)
   ; CHECK-NEXT:   RET_ReallyLR
 entry:
   tail call void asm sideeffect "", "imr,imr,~{memory}"(i32 42, i32 0)
@@ -308,8 +312,10 @@ entry:
 define void @test_indirectify_i16_constant() {
   ; CHECK-LABEL: name: test_indirectify_i16_constant
   ; CHECK: bb.1.entry:
-  ; CHECK-NEXT:   [[CONSTANT_POOL:%[0-9]+]]:_(p0) = G_CONSTANT_POOL %const.0
-  ; CHECK-NEXT:   INLINEASM &"", 25 /* sideeffect mayload maystore attdialect */, {{[0-9]+}} /* mem:m */, [[CONSTANT_POOL]](p0)
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s16) = G_CONSTANT i16 42
+  ; CHECK-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
+  ; CHECK-NEXT:   G_STORE [[C]](s16), [[FRAME_INDEX]](p0) :: (store (s16) into %stack.0)
+  ; CHECK-NEXT:   INLINEASM &"", 25 /* sideeffect mayload maystore attdialect */, {{[0-9]+}} /* mem:m */, [[FRAME_INDEX]](p0)
   ; CHECK-NEXT:   RET_ReallyLR
 entry:
   tail call void asm sideeffect "", "imr,~{memory}"(i16 42)
@@ -334,8 +340,10 @@ entry:
 define void @test_indirectify_i64_constant() {
   ; CHECK-LABEL: name: test_indirectify_i64_constant
   ; CHECK: bb.1.entry:
-  ; CHECK-NEXT:   [[CONSTANT_POOL:%[0-9]+]]:_(p0) = G_CONSTANT_POOL %const.0
-  ; CHECK-NEXT:   INLINEASM &"", 25 /* sideeffect mayload maystore attdialect */, {{[0-9]+}} /* mem:m */, [[CONSTANT_POOL]](p0)
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 42
+  ; CHECK-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
+  ; CHECK-NEXT:   G_STORE [[C]](s64), [[FRAME_INDEX]](p0) :: (store (s64) into %stack.0)
+  ; CHECK-NEXT:   INLINEASM &"", 25 /* sideeffect mayload maystore attdialect */, {{[0-9]+}} /* mem:m */, [[FRAME_INDEX]](p0)
   ; CHECK-NEXT:   RET_ReallyLR
 entry:
   tail call void asm sideeffect "", "imr,~{memory}"(i64 42)
