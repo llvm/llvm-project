@@ -1170,6 +1170,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setTargetDAGCombine(ISD::VECTOR_DEINTERLEAVE);
   setTargetDAGCombine(ISD::CTPOP);
 
+  setTargetDAGCombine(ISD::FMA);
+
   // In case of strict alignment, avoid an excessive number of byte wide stores.
   MaxStoresPerMemsetOptSize = 8;
   MaxStoresPerMemset =
@@ -20692,6 +20694,52 @@ static SDValue performFADDCombine(SDNode *N,
   return SDValue();
 }
 
+static SDValue performFMACombine(SDNode *N,
+                                 TargetLowering::DAGCombinerInfo &DCI,
+                                 const AArch64Subtarget *Subtarget) {
+  SelectionDAG &DAG = DCI.DAG;
+  SDValue Op1 = N->getOperand(0);
+  SDValue Op2 = N->getOperand(1);
+  SDValue Op3 = N->getOperand(2);
+  EVT VT = N->getValueType(0);
+  SDLoc DL(N);
+
+  // fma(a, b, neg(c)) -> fnmls(a, b, c)
+  // fma(neg(a), b, neg(c)) -> fnmla(a, b, c)
+  // fma(a, neg(b), neg(c)) -> fnmla(a, b, c)
+  if (VT.isVector() && DAG.getTargetLoweringInfo().isTypeLegal(VT) &&
+      (Subtarget->hasSVE() || Subtarget->hasSME())) {
+    if (Op3.getOpcode() == ISD::FNEG) {
+      unsigned int Opcode;
+      if (Op1.getOpcode() == ISD::FNEG) {
+        Op1 = Op1.getOperand(0);
+        Opcode = AArch64ISD::FNMLA_PRED;
+      } else if (Op2.getOpcode() == ISD::FNEG) {
+        Op2 = Op2.getOperand(0);
+        Opcode = AArch64ISD::FNMLA_PRED;
+      } else {
+        Opcode = AArch64ISD::FNMLS_PRED;
+      }
+      Op3 = Op3.getOperand(0);
+      auto Pg = getPredicateForVector(DAG, DL, VT);
+      if (VT.isFixedLengthVector()) {
+        assert(DAG.getTargetLoweringInfo().isTypeLegal(VT) &&
+               "Expected only legal fixed-width types");
+        EVT ContainerVT = getContainerForFixedLengthVector(DAG, VT);
+        Op1 = convertToScalableVector(DAG, ContainerVT, Op1);
+        Op2 = convertToScalableVector(DAG, ContainerVT, Op2);
+        Op3 = convertToScalableVector(DAG, ContainerVT, Op3);
+        auto ScalableRes =
+            DAG.getNode(Opcode, DL, ContainerVT, Pg, Op1, Op2, Op3);
+        return convertFromScalableVector(DAG, VT, ScalableRes);
+      }
+      return DAG.getNode(Opcode, DL, VT, Pg, Op1, Op2, Op3);
+    }
+  }
+
+  return SDValue();
+}
+
 static bool hasPairwiseAdd(unsigned Opcode, EVT VT, bool FullFP16) {
   switch (Opcode) {
   case ISD::STRICT_FADD:
@@ -28223,6 +28271,8 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
     return performANDCombine(N, DCI);
   case ISD::FADD:
     return performFADDCombine(N, DCI);
+  case ISD::FMA:
+    return performFMACombine(N, DCI, Subtarget);
   case ISD::INTRINSIC_WO_CHAIN:
     return performIntrinsicCombine(N, DCI, Subtarget);
   case ISD::ANY_EXTEND:
