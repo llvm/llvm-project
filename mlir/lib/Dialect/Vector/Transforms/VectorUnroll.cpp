@@ -1008,16 +1008,50 @@ static bool isContiguousExtract(ArrayRef<int64_t> targetShape,
   if (targetShape.size() > resultShape.size())
     return false;
 
-  size_t rankDiff = resultShape.size() - targetShape.size();
-  // Inner dimensions must match exactly & total resultElements should be
-  // evenly divisible by targetElements.
-  if (!llvm::equal(targetShape.drop_front(),
-                   resultShape.drop_front(rankDiff + 1)))
-    return false;
-
   int64_t targetElements = ShapedType::getNumElements(targetShape);
   int64_t resultElements = ShapedType::getNumElements(resultShape);
-  return resultElements % targetElements == 0;
+
+  // Result must be evenly divisible by target.
+  if (resultElements % targetElements != 0)
+    return false;
+
+  // For contiguous extraction, we need to be able to
+  // extract targetElements contiguously from the result shape.
+  // This means we can "consume" dimensions from the innermost outward
+  // until we have exactly targetElements.
+
+  int64_t remainingElements = targetElements;
+  int targetDimIdx = targetShape.size() - 1;
+
+  // Work backwards through result dimensions.
+  for (int resultDimIdx = resultShape.size() - 1;
+       resultDimIdx >= 0 && remainingElements > 1 && targetDimIdx >= 0;
+       --resultDimIdx) {
+
+    int64_t resultDimSize = resultShape[resultDimIdx];
+    int64_t targetDimSize = targetShape[targetDimIdx];
+
+    if (targetDimSize > resultDimSize)
+      return false;
+
+    if (targetDimSize == resultDimSize) {
+      if (remainingElements % targetDimSize != 0)
+        return false;
+      remainingElements /= targetDimSize;
+      --targetDimIdx;
+    } else {
+      if (remainingElements != targetDimSize)
+        return false;
+      remainingElements = 1;
+      --targetDimIdx;
+    }
+  }
+
+  // Check remaining target dimensions are all 1 and we consumed all elements
+  return remainingElements == 1 &&
+         (targetDimIdx < 0 || llvm::all_of(
+                                  targetShape.take_front(targetDimIdx + 1),
+                                  [](int64_t d) { return d == 1; }));
 }
 
 // Calculate the shape to extract from source.
