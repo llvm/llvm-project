@@ -28,6 +28,9 @@
 /llvm/lib/Transforms/Scalar/MemCpyOptimizer.cpp @nikic
 /llvm/lib/Transforms/InstCombine/ @nikic
 
+# AMDGPU buffer pointer lowerings
+/llvm/lib/Target/AMDGPU/AMDGPULowerBufferFatPointers.cpp @krzysz00
+
 /clang/test/CXX/drs/ @Endilll
 /clang/www/cxx_dr_status.html @Endilll
 /clang/www/make_cxx_dr_status @Endilll
