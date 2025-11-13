@@ -23,11 +23,11 @@ bitmask if the three conditions below are true at the same time:
 So whenever the non pow-of-2 element is used as a bitmask element we diagnose a
 misuse and give a warning.
 
-2. Investigating the right hand side of `+=` and `|=` operator.
-3. Check only the enum value side of a `|` and `+` operator if one of them is
-   not enum val.
-4. Check both side of `|` or `+` operator where the enum values are from the
-   same enum type.
+2. Investigating the right hand side of ``+=`` and ``|=`` operator.
+3. Check only the enum value side of a ``|`` and ``+`` operator if one of
+   them is not enum val.
+4. Check both side of ``|`` or ``+`` operator where the enum values are from
+   the same enum type.
 
 Examples:
 
