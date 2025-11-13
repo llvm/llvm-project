@@ -1346,11 +1346,8 @@ void ClauseProcessor::processMapObjects(
         std::string mapperIdName = getDefaultMapperID(objectTypeSpec);
         bool needsDefaultMapper =
             semantics::IsAllocatableOrObjectPointer(object.sym()) ||
-            (objectTypeSpec &&
-             requiresImplicitDefaultDeclareMapper(*objectTypeSpec));
-        bool containsDelete = (mapTypeBits & mlir::omp::ClauseMapFlags::del) !=
-                              mlir::omp::ClauseMapFlags::none;
-        if (!mapperIdName.empty() && !containsDelete)
+            requiresImplicitDefaultDeclareMapper(*objectTypeSpec);
+        if (!mapperIdName.empty())
           mapperId = addImplicitMapper(object, mapperIdName,
                                        /*allowGenerate=*/needsDefaultMapper);
         else

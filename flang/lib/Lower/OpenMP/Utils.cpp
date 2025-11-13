@@ -118,9 +118,9 @@ mlir::FlatSymbolRefAttr getOrGenImplicitDefaultDeclareMapper(
   llvm::SmallVector<llvm::SmallVector<int64_t>> memberPlacementIndices;
   llvm::SmallVector<mlir::Value> memberMapOps;
 
-  mlir::omp::ClauseMapFlags mapFlag = mlir::omp::ClauseMapFlags::to;
-  mapFlag |= mlir::omp::ClauseMapFlags::from;
-  mapFlag |= mlir::omp::ClauseMapFlags::implicit;
+  mlir::omp::ClauseMapFlags mapFlag = mlir::omp::ClauseMapFlags::to |
+                                      mlir::omp::ClauseMapFlags::from |
+                                      mlir::omp::ClauseMapFlags::implicit;
   mlir::omp::VariableCaptureKind captureKind =
       mlir::omp::VariableCaptureKind::ByRef;
 
@@ -159,9 +159,7 @@ mlir::FlatSymbolRefAttr getOrGenImplicitDefaultDeclareMapper(
 
   llvm::SmallVector<mlir::Value> bounds;
   genBoundsOps(declareOp.getOriginalBase(), bounds);
-  mlir::omp::ClauseMapFlags parentMapFlag = mlir::omp::ClauseMapFlags::to;
-  parentMapFlag |= mlir::omp::ClauseMapFlags::from;
-  parentMapFlag |= mlir::omp::ClauseMapFlags::implicit;
+  mlir::omp::ClauseMapFlags parentMapFlag = mlir::omp::ClauseMapFlags::implicit;
   mlir::omp::MapInfoOp mapOp = Fortran::utils::openmp::createMapInfoOp(
       firOpBuilder, loc, declareOp.getOriginalBase(),
       /*varPtrPtr=*/mlir::Value(), /*name=*/"", bounds, memberMapOps,

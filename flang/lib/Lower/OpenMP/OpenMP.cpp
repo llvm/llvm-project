@@ -2599,6 +2599,9 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
 
       mlir::FlatSymbolRefAttr mapperId;
       if (defaultMaps.empty()) {
+        // TODO: Honor user-provided defaultmap clauses (aggregates/pointers)
+        // instead of blanket-disabling implicit mapper generation whenever any
+        // explicit default map is present.
         const semantics::DerivedTypeSpec *typeSpec =
             sym.GetType() ? sym.GetType()->AsDerived() : nullptr;
         if (typeSpec) {
