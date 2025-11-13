@@ -13,6 +13,7 @@
 #ifndef LLVM_DEBUGINFO_SYMBOLIZE_SYMBOLIZE_H
 #define LLVM_DEBUGINFO_SYMBOLIZE_SYMBOLIZE_H
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/ilist_node.h"
 #include "llvm/ADT/simple_ilist.h"
@@ -25,8 +26,8 @@
 #include <cstdint>
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
-#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -224,9 +225,8 @@ private:
   /// Contains parsed binary for each path, or parsing error.
   std::map<std::string, CachedBinary, std::less<>> BinaryForPath;
 
-  /// Store the archive path for the object file
-  std::unordered_map<const object::ObjectFile *, std::string>
-      ObjectToArchivePath;
+  /// Store the archive path for the object file.
+  DenseMap<const object::ObjectFile *, std::string> ObjectToArchivePath;
 
   /// A list of cached binaries in LRU order.
   simple_ilist<CachedBinary> LRUBinaries;
@@ -245,16 +245,15 @@ private:
     }
   };
 
-  /// Parsed object file for path/object/architecture pair, where
-  /// "path" refers to Mach-O universal binary.
+  /// Parsed object file for each path/member/architecture triple.
+  /// Used to cache objects extracted from containers (Mach-O universal binaries,
+  /// archives).
   std::map<ContainerCacheKey, std::unique_ptr<ObjectFile>> ObjectFileCache;
 
-  /// Helper function to load binary.
   Expected<object::Binary *>
   loadOrGetBinary(const std::string &OpenPath,
-                  const std::string *FullPathKeyOpt = nullptr);
+                  std::optional<StringRef> FullPathKey = std::nullopt);
 
-  /// Helper function to find and get object.
   Expected<ObjectFile *> findOrCacheObject(
       const ContainerCacheKey &Key,
       llvm::function_ref<Expected<std::unique_ptr<ObjectFile>>()> Loader,

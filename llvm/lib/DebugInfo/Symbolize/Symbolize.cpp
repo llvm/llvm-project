@@ -565,7 +565,7 @@ LLVMSymbolizer::getOrCreateObjectPair(const std::string &Path,
   if (It != ObjectToArchivePath.end()) {
     StringRef ArchivePath = It->second;
     StringRef MemberName = sys::path::filename(DbgObj->getFileName());
-    FullDbgObjKey = (Twine(ArchivePath) + "(" + MemberName + ")").str();
+    FullDbgObjKey = (ArchivePath + "(" + MemberName + ")").str();
   } else {
     FullDbgObjKey = DbgObj->getFileName().str();
   }
@@ -577,19 +577,18 @@ LLVMSymbolizer::getOrCreateObjectPair(const std::string &Path,
 
 Expected<object::Binary *>
 LLVMSymbolizer::loadOrGetBinary(const std::string &OpenPath,
-                                const std::string *FullPathKeyOpt) {
-  // If no separate cache key is provided, use the open path itself.
-  const std::string &FullPathKey = FullPathKeyOpt ? *FullPathKeyOpt : OpenPath;
-  auto Pair = BinaryForPath.emplace(FullPathKey, OwningBinary<Binary>());
+                                std::optional<StringRef> FullPathKey) {
+  // If no separate cache key is provided, use the archive path itself.
+  std::string FullPathKeyStr = FullPathKey ? FullPathKey->str() : OpenPath;
+  auto Pair = BinaryForPath.emplace(FullPathKeyStr, OwningBinary<Binary>());
   if (!Pair.second) {
     recordAccess(Pair.first->second);
     return Pair.first->second->getBinary();
   }
 
   Expected<OwningBinary<Binary>> BinOrErr = createBinary(OpenPath);
-  if (!BinOrErr) {
+  if (!BinOrErr)
     return BinOrErr.takeError();
-  }
 
   CachedBinary &CachedBin = Pair.first->second;
   CachedBin = std::move(*BinOrErr);
@@ -625,9 +624,8 @@ Expected<ObjectFile *> LLVMSymbolizer::findOrCacheObject(
 Expected<ObjectFile *> LLVMSymbolizer::getOrCreateObjectFromArchive(
     StringRef ArchivePath, StringRef MemberName, StringRef ArchName,
     StringRef FullPath) {
-  std::string FullPathKeyStr = FullPath.str();
   Expected<object::Binary *> BinOrErr =
-      loadOrGetBinary(ArchivePath.str(), &FullPathKeyStr);
+      loadOrGetBinary(ArchivePath.str(), FullPath);
   if (!BinOrErr)
     return BinOrErr.takeError();
   object::Binary *Bin = *BinOrErr;
