@@ -21,6 +21,19 @@
 using namespace clang;
 using namespace clang::CIRGen;
 
+template <typename... Operands>
+static mlir::Value emitIntrinsicCallOp(CIRGenFunction &cgf, const CallExpr *e,
+                                       const std::string &str,
+                                       const mlir::Type &resTy,
+                                       Operands &&...op) {
+  CIRGenBuilderTy &builder = cgf.getBuilder();
+  mlir::Location location = cgf.getLoc(e->getExprLoc());
+  return cir::LLVMIntrinsicCallOp::create(builder, location,
+                                          builder.getStringAttr(str), resTy,
+                                          std::forward<Operands>(op)...)
+      .getResult();
+}
+
 mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
                                                const CallExpr *e) {
   if (builtinID == Builtin::BI__builtin_cpu_is) {
@@ -43,15 +56,37 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   // Find out if any arguments are required to be integer constant expressions.
   assert(!cir::MissingFeatures::handleBuiltinICEArguments());
 
+  // The operands of the builtin call
+  llvm::SmallVector<mlir::Value> ops;
+
+  // `ICEArguments` is a bitmap indicating whether the argument at the i-th bit
+  // is required to be a constant integer expression.
+  unsigned iceArguments = 0;
+  ASTContext::GetBuiltinTypeError error;
+  getContext().GetBuiltinType(builtinID, error, &iceArguments);
+  assert(error == ASTContext::GE_None && "Error while getting builtin type.");
+
+  for (auto [idx, arg] : llvm::enumerate(e->arguments())) {
+    ops.push_back(emitScalarOrConstFoldImmArg(iceArguments, idx, arg));
+  }
+
+  CIRGenBuilderTy &builder = getBuilder();
+  mlir::Type voidTy = builder.getVoidTy();
+
   switch (builtinID) {
   default:
     return {};
-  case X86::BI_mm_prefetch:
   case X86::BI_mm_clflush:
+    return emitIntrinsicCallOp(*this, e, "x86.sse2.clflush", voidTy, ops[0]);
   case X86::BI_mm_lfence:
+    return emitIntrinsicCallOp(*this, e, "x86.sse2.lfence", voidTy);
   case X86::BI_mm_pause:
+    return emitIntrinsicCallOp(*this, e, "x86.sse2.pause", voidTy);
   case X86::BI_mm_mfence:
+    return emitIntrinsicCallOp(*this, e, "x86.sse2.mfence", voidTy);
   case X86::BI_mm_sfence:
+    return emitIntrinsicCallOp(*this, e, "x86.sse.sfence", voidTy);
+  case X86::BI_mm_prefetch:
   case X86::BI__rdtsc:
   case X86::BI__builtin_ia32_rdtscp:
   case X86::BI__builtin_ia32_lzcnt_u16:
@@ -160,13 +195,9 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   case X86::BI__builtin_ia32_vcvtuw2ph512_mask:
   case X86::BI__builtin_ia32_vcvtudq2ph512_mask:
   case X86::BI__builtin_ia32_vcvtuqq2ph512_mask:
-  case X86::BI__builtin_ia32_vfmaddss3:
-  case X86::BI__builtin_ia32_vfmaddsd3:
   case X86::BI__builtin_ia32_vfmaddsh3_mask:
   case X86::BI__builtin_ia32_vfmaddss3_mask:
   case X86::BI__builtin_ia32_vfmaddsd3_mask:
-  case X86::BI__builtin_ia32_vfmaddss:
-  case X86::BI__builtin_ia32_vfmaddsd:
   case X86::BI__builtin_ia32_vfmaddsh3_maskz:
   case X86::BI__builtin_ia32_vfmaddss3_maskz:
   case X86::BI__builtin_ia32_vfmaddsd3_maskz:
@@ -771,14 +802,6 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   case X86::BI_WriteBarrier:
   case X86::BI_AddressOfReturnAddress:
   case X86::BI__stosb:
-  case X86::BI__builtin_ia32_t2rpntlvwz0_internal:
-  case X86::BI__builtin_ia32_t2rpntlvwz0rs_internal:
-  case X86::BI__builtin_ia32_t2rpntlvwz0t1_internal:
-  case X86::BI__builtin_ia32_t2rpntlvwz0rst1_internal:
-  case X86::BI__builtin_ia32_t2rpntlvwz1_internal:
-  case X86::BI__builtin_ia32_t2rpntlvwz1rs_internal:
-  case X86::BI__builtin_ia32_t2rpntlvwz1t1_internal:
-  case X86::BI__builtin_ia32_t2rpntlvwz1rst1_internal:
   case X86::BI__ud2:
   case X86::BI__int2c:
   case X86::BI__readfsbyte:

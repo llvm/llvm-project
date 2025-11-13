@@ -80,6 +80,7 @@
 #include <algorithm>
 #include <cassert>
 #include <climits>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <iterator>
@@ -301,7 +302,9 @@ class SimplifyCFGOpt {
 
   bool tryToSimplifyUncondBranchWithICmpInIt(ICmpInst *ICI,
                                              IRBuilder<> &Builder);
-
+  bool tryToSimplifyUncondBranchWithICmpSelectInIt(ICmpInst *ICI,
+                                                   SelectInst *Select,
+                                                   IRBuilder<> &Builder);
   bool hoistCommonCodeFromSuccessors(Instruction *TI, bool AllInstsEqOnly);
   bool hoistSuccIdenticalTerminatorToSwitchOrIf(
       Instruction *TI, Instruction *I1,
@@ -777,8 +780,10 @@ private:
       return false;
 
     // Add all values from the range to the set
-    for (APInt Tmp = Span.getLower(); Tmp != Span.getUpper(); ++Tmp)
+    APInt Tmp = Span.getLower();
+    do
       Vals.push_back(ConstantInt::get(I->getContext(), Tmp));
+    while (++Tmp != Span.getUpper());
 
     UsedICmps++;
     return true;
@@ -1866,10 +1871,19 @@ bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(Instruction *TI,
   // If either of the blocks has it's address taken, then we can't do this fold,
   // because the code we'd hoist would no longer run when we jump into the block
   // by it's address.
-  for (auto *Succ : successors(BB))
-    if (Succ->hasAddressTaken() || !Succ->getSinglePredecessor())
+  for (auto *Succ : successors(BB)) {
+    if (Succ->hasAddressTaken())
       return false;
-
+    if (Succ->getSinglePredecessor())
+      continue;
+    // If Succ has >1 predecessors, continue to check if the Succ contains only
+    // one `unreachable` inst. Since executing `unreachable` inst is an UB, we
+    // can relax the condition based on the assumptiom that the program would
+    // never enter Succ and trigger such an UB.
+    if (isa<UnreachableInst>(*Succ->begin()))
+      continue;
+    return false;
+  }
   // The second of pair is a SkipFlags bitmask.
   using SuccIterPair = std::pair<BasicBlock::iterator, unsigned>;
   SmallVector<SuccIterPair, 8> SuccIterPairs;
@@ -5011,15 +5025,64 @@ bool SimplifyCFGOpt::simplifyIndirectBrOnSelect(IndirectBrInst *IBI,
 /// the PHI, merging the third icmp into the switch.
 bool SimplifyCFGOpt::tryToSimplifyUncondBranchWithICmpInIt(
     ICmpInst *ICI, IRBuilder<> &Builder) {
+  // Select == nullptr means we assume that there is a hidden no-op select
+  // instruction of `_ = select %icmp, true, false` after `%icmp = icmp ...`
+  return tryToSimplifyUncondBranchWithICmpSelectInIt(ICI, nullptr, Builder);
+}
+
+/// Similar to tryToSimplifyUncondBranchWithICmpInIt, but handle a more generic
+/// case. This is called when we find an icmp instruction (a seteq/setne with a
+/// constant) and its following select instruction as the only TWO instructions
+/// in a block that ends with an uncond branch.  We are looking for a very
+/// specific pattern that occurs when "
+///    if (A == 1) return C1;
+///    if (A == 2) return C2;
+///    if (A < 3) return C3;
+///    return C4;
+/// " gets simplified.  In this case, we merge the first two "branches of icmp"
+/// into a switch, but then the default value goes to an uncond block with a lt
+/// icmp and select in it, as InstCombine can not simplify "A < 3" as "A == 2".
+/// After SimplifyCFG and other subsequent optimizations (e.g., SCCP), we might
+/// get something like:
+///
+/// case1:
+///   switch i8 %A, label %DEFAULT [ i8 0, label %end    i8 1, label %case2 ]
+/// case2:
+///   br label %end
+/// DEFAULT:
+///   %tmp = icmp eq i8 %A, 2
+///   %val = select i1 %tmp, i8 C3, i8 C4
+///   br label %end
+/// end:
+///   _ = phi i8 [ C1, %case1 ], [ C2, %case2 ], [ %val, %DEFAULT ]
+///
+/// We prefer to split the edge to 'end' so that there are TWO entries of V3/V4
+/// to the PHI, merging the icmp & select into the switch, as follows:
+///
+/// case1:
+///   switch i8 %A, label %DEFAULT [
+///     i8 0, label %end
+///     i8 1, label %case2
+///     i8 2, label %case3
+///   ]
+/// case2:
+///   br label %end
+/// case3:
+///   br label %end
+/// DEFAULT:
+///   br label %end
+/// end:
+///   _ = phi i8 [ C1, %case1 ], [ C2, %case2 ], [ C3, %case2 ], [ C4, %DEFAULT]
+bool SimplifyCFGOpt::tryToSimplifyUncondBranchWithICmpSelectInIt(
+    ICmpInst *ICI, SelectInst *Select, IRBuilder<> &Builder) {
   BasicBlock *BB = ICI->getParent();
 
-  // If the block has any PHIs in it or the icmp has multiple uses, it is too
-  // complex.
-  if (isa<PHINode>(BB->begin()) || !ICI->hasOneUse())
+  // If the block has any PHIs in it or the icmp/select has multiple uses, it is
+  // too complex.
+  /// TODO: support multi-phis in succ BB of select's BB.
+  if (isa<PHINode>(BB->begin()) || !ICI->hasOneUse() ||
+      (Select && !Select->hasOneUse()))
     return false;
-
-  Value *V = ICI->getOperand(0);
-  ConstantInt *Cst = cast<ConstantInt>(ICI->getOperand(1));
 
   // The pattern we're looking for is where our only predecessor is a switch on
   // 'V' and this block is the default case for the switch.  In this case we can
@@ -5028,8 +5091,36 @@ bool SimplifyCFGOpt::tryToSimplifyUncondBranchWithICmpInIt(
   if (!Pred || !isa<SwitchInst>(Pred->getTerminator()))
     return false;
 
+  Value *IcmpCond;
+  ConstantInt *NewCaseVal;
+  CmpPredicate Predicate;
+
+  // Match icmp X, C
+  if (!match(ICI,
+             m_ICmp(Predicate, m_Value(IcmpCond), m_ConstantInt(NewCaseVal))))
+    return false;
+
+  Value *SelectCond, *SelectTrueVal, *SelectFalseVal;
+  Instruction *User;
+  if (!Select) {
+    // If Select == nullptr, we can assume that there is a hidden no-op select
+    // just after icmp
+    SelectCond = ICI;
+    SelectTrueVal = Builder.getTrue();
+    SelectFalseVal = Builder.getFalse();
+    User = ICI->user_back();
+  } else {
+    SelectCond = Select->getCondition();
+    // Check if the select condition is the same as the icmp condition.
+    if (SelectCond != ICI)
+      return false;
+    SelectTrueVal = Select->getTrueValue();
+    SelectFalseVal = Select->getFalseValue();
+    User = Select->user_back();
+  }
+
   SwitchInst *SI = cast<SwitchInst>(Pred->getTerminator());
-  if (SI->getCondition() != V)
+  if (SI->getCondition() != IcmpCond)
     return false;
 
   // If BB is reachable on a non-default case, then we simply know the value of
@@ -5051,9 +5142,9 @@ bool SimplifyCFGOpt::tryToSimplifyUncondBranchWithICmpInIt(
   // Ok, the block is reachable from the default dest.  If the constant we're
   // comparing exists in one of the other edges, then we can constant fold ICI
   // and zap it.
-  if (SI->findCaseValue(Cst) != SI->case_default()) {
+  if (SI->findCaseValue(NewCaseVal) != SI->case_default()) {
     Value *V;
-    if (ICI->getPredicate() == ICmpInst::ICMP_EQ)
+    if (Predicate == ICmpInst::ICMP_EQ)
       V = ConstantInt::getFalse(BB->getContext());
     else
       V = ConstantInt::getTrue(BB->getContext());
@@ -5064,25 +5155,30 @@ bool SimplifyCFGOpt::tryToSimplifyUncondBranchWithICmpInIt(
     return requestResimplify();
   }
 
-  // The use of the icmp has to be in the 'end' block, by the only PHI node in
+  // The use of the select has to be in the 'end' block, by the only PHI node in
   // the block.
   BasicBlock *SuccBlock = BB->getTerminator()->getSuccessor(0);
-  PHINode *PHIUse = dyn_cast<PHINode>(ICI->user_back());
+  PHINode *PHIUse = dyn_cast<PHINode>(User);
   if (PHIUse == nullptr || PHIUse != &SuccBlock->front() ||
       isa<PHINode>(++BasicBlock::iterator(PHIUse)))
     return false;
 
-  // If the icmp is a SETEQ, then the default dest gets false, the new edge gets
-  // true in the PHI.
-  Constant *DefaultCst = ConstantInt::getTrue(BB->getContext());
-  Constant *NewCst = ConstantInt::getFalse(BB->getContext());
+  // If the icmp is a SETEQ, then the default dest gets SelectFalseVal, the new
+  // edge gets SelectTrueVal in the PHI.
+  Value *DefaultCst = SelectFalseVal;
+  Value *NewCst = SelectTrueVal;
 
-  if (ICI->getPredicate() == ICmpInst::ICMP_EQ)
+  if (ICI->getPredicate() == ICmpInst::ICMP_NE)
     std::swap(DefaultCst, NewCst);
 
-  // Replace ICI (which is used by the PHI for the default value) with true or
-  // false depending on if it is EQ or NE.
-  ICI->replaceAllUsesWith(DefaultCst);
+  // Replace Select (which is used by the PHI for the default value) with
+  // SelectFalseVal or SelectTrueVal depending on if ICI is EQ or NE.
+  if (Select) {
+    Select->replaceAllUsesWith(DefaultCst);
+    Select->eraseFromParent();
+  } else {
+    ICI->replaceAllUsesWith(DefaultCst);
+  }
   ICI->eraseFromParent();
 
   SmallVector<DominatorTree::UpdateType, 2> Updates;
@@ -5099,7 +5195,7 @@ bool SimplifyCFGOpt::tryToSimplifyUncondBranchWithICmpInIt(
       NewW = ((uint64_t(*W0) + 1) >> 1);
       SIW.setSuccessorWeight(0, *NewW);
     }
-    SIW.addCase(Cst, NewBB, NewW);
+    SIW.addCase(NewCaseVal, NewBB, NewW);
     if (DTU)
       Updates.push_back({DominatorTree::Insert, Pred, NewBB});
   }
@@ -5202,8 +5298,7 @@ bool SimplifyCFGOpt::simplifyBranchOnICmpChain(BranchInst *BI,
     // We don't have any info about this condition.
     auto *Br = TrueWhenEqual ? Builder.CreateCondBr(ExtraCase, EdgeBB, NewBB)
                              : Builder.CreateCondBr(ExtraCase, NewBB, EdgeBB);
-    setExplicitlyUnknownBranchWeightsIfProfiled(*Br, *NewBB->getParent(),
-                                                DEBUG_TYPE);
+    setExplicitlyUnknownBranchWeightsIfProfiled(*Br, DEBUG_TYPE);
 
     OldTI->eraseFromParent();
 
@@ -5946,7 +6041,7 @@ bool SimplifyCFGOpt::turnSwitchRangeIntoICmp(SwitchInst *SI,
   }
 
   // Update weight for the newly-created conditional branch.
-  if (hasBranchWeightMD(*SI)) {
+  if (hasBranchWeightMD(*SI) && NewBI->isConditional()) {
     SmallVector<uint64_t, 8> Weights;
     getBranchWeights(SI, Weights);
     if (Weights.size() == 1 + SI->getNumCases()) {
@@ -5968,14 +6063,14 @@ bool SimplifyCFGOpt::turnSwitchRangeIntoICmp(SwitchInst *SI,
   }
 
   // Prune obsolete incoming values off the successors' PHI nodes.
-  for (auto BBI = Dest->begin(); isa<PHINode>(BBI); ++BBI) {
+  for (auto &PHI : make_early_inc_range(Dest->phis())) {
     unsigned PreviousEdges = Cases->size();
     if (Dest == SI->getDefaultDest())
       ++PreviousEdges;
     for (unsigned I = 0, E = PreviousEdges - 1; I != E; ++I)
-      cast<PHINode>(BBI)->removeIncomingValue(SI->getParent());
+      PHI.removeIncomingValue(SI->getParent());
   }
-  for (auto BBI = OtherDest->begin(); isa<PHINode>(BBI); ++BBI) {
+  for (auto &PHI : make_early_inc_range(OtherDest->phis())) {
     unsigned PreviousEdges = OtherCases->size();
     if (OtherDest == SI->getDefaultDest())
       ++PreviousEdges;
@@ -5984,7 +6079,7 @@ bool SimplifyCFGOpt::turnSwitchRangeIntoICmp(SwitchInst *SI,
     if (NewBI->isUnconditional())
       ++E;
     for (unsigned I = 0; I != E; ++I)
-      cast<PHINode>(BBI)->removeIncomingValue(SI->getParent());
+      PHI.removeIncomingValue(SI->getParent());
   }
 
   // Clean up the default block - it may have phis or other instructions before
@@ -6010,6 +6105,8 @@ static bool eliminateDeadSwitchCases(SwitchInst *SI, DomTreeUpdater *DTU,
                                      const DataLayout &DL) {
   Value *Cond = SI->getCondition();
   KnownBits Known = computeKnownBits(Cond, DL, AC, SI);
+  SmallPtrSet<const Constant *, 4> KnownValues;
+  bool IsKnownValuesValid = collectPossibleValues(Cond, KnownValues, 4);
 
   // We can also eliminate cases by determining that their values are outside of
   // the limited range of the condition based on how many significant (non-sign)
@@ -6029,15 +6126,18 @@ static bool eliminateDeadSwitchCases(SwitchInst *SI, DomTreeUpdater *DTU,
         UniqueSuccessors.push_back(Successor);
       ++It->second;
     }
-    const APInt &CaseVal = Case.getCaseValue()->getValue();
+    ConstantInt *CaseC = Case.getCaseValue();
+    const APInt &CaseVal = CaseC->getValue();
     if (Known.Zero.intersects(CaseVal) || !Known.One.isSubsetOf(CaseVal) ||
-        (CaseVal.getSignificantBits() > MaxSignificantBitsInCond)) {
-      DeadCases.push_back(Case.getCaseValue());
+        (CaseVal.getSignificantBits() > MaxSignificantBitsInCond) ||
+        (IsKnownValuesValid && !KnownValues.contains(CaseC))) {
+      DeadCases.push_back(CaseC);
       if (DTU)
         --NumPerSuccessorCases[Successor];
       LLVM_DEBUG(dbgs() << "SimplifyCFG: switch case " << CaseVal
                         << " is dead.\n");
-    }
+    } else if (IsKnownValuesValid)
+      KnownValues.erase(CaseC);
   }
 
   // If we can prove that the cases must cover all possible values, the
@@ -6048,33 +6148,41 @@ static bool eliminateDeadSwitchCases(SwitchInst *SI, DomTreeUpdater *DTU,
   const unsigned NumUnknownBits =
       Known.getBitWidth() - (Known.Zero | Known.One).popcount();
   assert(NumUnknownBits <= Known.getBitWidth());
-  if (HasDefault && DeadCases.empty() &&
-      NumUnknownBits < 64 /* avoid overflow */) {
-    uint64_t AllNumCases = 1ULL << NumUnknownBits;
-    if (SI->getNumCases() == AllNumCases) {
+  if (HasDefault && DeadCases.empty()) {
+    if (IsKnownValuesValid && all_of(KnownValues, IsaPred<UndefValue>)) {
       createUnreachableSwitchDefault(SI, DTU);
       return true;
     }
-    // When only one case value is missing, replace default with that case.
-    // Eliminating the default branch will provide more opportunities for
-    // optimization, such as lookup tables.
-    if (SI->getNumCases() == AllNumCases - 1) {
-      assert(NumUnknownBits > 1 && "Should be canonicalized to a branch");
-      IntegerType *CondTy = cast<IntegerType>(Cond->getType());
-      if (CondTy->getIntegerBitWidth() > 64 ||
-          !DL.fitsInLegalInteger(CondTy->getIntegerBitWidth()))
-        return false;
 
-      uint64_t MissingCaseVal = 0;
-      for (const auto &Case : SI->cases())
-        MissingCaseVal ^= Case.getCaseValue()->getValue().getLimitedValue();
-      auto *MissingCase =
-          cast<ConstantInt>(ConstantInt::get(Cond->getType(), MissingCaseVal));
-      SwitchInstProfUpdateWrapper SIW(*SI);
-      SIW.addCase(MissingCase, SI->getDefaultDest(), SIW.getSuccessorWeight(0));
-      createUnreachableSwitchDefault(SI, DTU, /*RemoveOrigDefaultBlock*/ false);
-      SIW.setSuccessorWeight(0, 0);
-      return true;
+    if (NumUnknownBits < 64 /* avoid overflow */) {
+      uint64_t AllNumCases = 1ULL << NumUnknownBits;
+      if (SI->getNumCases() == AllNumCases) {
+        createUnreachableSwitchDefault(SI, DTU);
+        return true;
+      }
+      // When only one case value is missing, replace default with that case.
+      // Eliminating the default branch will provide more opportunities for
+      // optimization, such as lookup tables.
+      if (SI->getNumCases() == AllNumCases - 1) {
+        assert(NumUnknownBits > 1 && "Should be canonicalized to a branch");
+        IntegerType *CondTy = cast<IntegerType>(Cond->getType());
+        if (CondTy->getIntegerBitWidth() > 64 ||
+            !DL.fitsInLegalInteger(CondTy->getIntegerBitWidth()))
+          return false;
+
+        uint64_t MissingCaseVal = 0;
+        for (const auto &Case : SI->cases())
+          MissingCaseVal ^= Case.getCaseValue()->getValue().getLimitedValue();
+        auto *MissingCase = cast<ConstantInt>(
+            ConstantInt::get(Cond->getType(), MissingCaseVal));
+        SwitchInstProfUpdateWrapper SIW(*SI);
+        SIW.addCase(MissingCase, SI->getDefaultDest(),
+                    SIW.getSuccessorWeight(0));
+        createUnreachableSwitchDefault(SI, DTU,
+                                       /*RemoveOrigDefaultBlock*/ false);
+        SIW.setSuccessorWeight(0, 0);
+        return true;
+      }
     }
   }
 
@@ -7560,6 +7668,81 @@ static bool reduceSwitchRange(SwitchInst *SI, IRBuilder<> &Builder,
   return true;
 }
 
+/// Tries to transform the switch when the condition is umin with a constant.
+/// In that case, the default branch can be replaced by the constant's branch.
+/// This method also removes dead cases when the simplification cannot replace
+/// the default branch.
+///
+/// For example:
+/// switch(umin(a, 3)) {
+/// case 0:
+/// case 1:
+/// case 2:
+/// case 3:
+/// case 4:
+///   // ...
+/// default:
+///   unreachable
+/// }
+///
+/// Transforms into:
+///
+/// switch(a) {
+/// case 0:
+/// case 1:
+/// case 2:
+/// default:
+///   // This is case 3
+/// }
+static bool simplifySwitchWhenUMin(SwitchInst *SI, DomTreeUpdater *DTU) {
+  Value *A;
+  ConstantInt *Constant;
+
+  if (!match(SI->getCondition(), m_UMin(m_Value(A), m_ConstantInt(Constant))))
+    return false;
+
+  SmallVector<DominatorTree::UpdateType> Updates;
+  SwitchInstProfUpdateWrapper SIW(*SI);
+  BasicBlock *BB = SIW->getParent();
+
+  // Dead cases are removed even when the simplification fails.
+  // A case is dead when its value is higher than the Constant.
+  for (auto I = SI->case_begin(), E = SI->case_end(); I != E;) {
+    if (!I->getCaseValue()->getValue().ugt(Constant->getValue())) {
+      ++I;
+      continue;
+    }
+    BasicBlock *DeadCaseBB = I->getCaseSuccessor();
+    DeadCaseBB->removePredecessor(BB);
+    Updates.push_back({DominatorTree::Delete, BB, DeadCaseBB});
+    I = SIW->removeCase(I);
+    E = SIW->case_end();
+  }
+
+  auto Case = SI->findCaseValue(Constant);
+  // If the case value is not found, `findCaseValue` returns the default case.
+  // In this scenario, since there is no explicit `case 3:`, the simplification
+  // fails. The simplification also fails when the switch’s default destination
+  // is reachable.
+  if (!SI->defaultDestUnreachable() || Case == SI->case_default()) {
+    if (DTU)
+      DTU->applyUpdates(Updates);
+    return !Updates.empty();
+  }
+
+  BasicBlock *Unreachable = SI->getDefaultDest();
+  SIW.replaceDefaultDest(Case);
+  SIW.removeCase(Case);
+  SIW->setCondition(A);
+
+  Updates.push_back({DominatorTree::Delete, BB, Unreachable});
+
+  if (DTU)
+    DTU->applyUpdates(Updates);
+
+  return true;
+}
+
 /// Tries to transform switch of powers of two to reduce switch range.
 /// For example, switch like:
 /// switch (C) { case 1: case 2: case 64: case 128: }
@@ -7623,7 +7806,38 @@ static bool simplifySwitchOfPowersOfTwo(SwitchInst *SI, IRBuilder<> &Builder,
     auto *DefaultCaseBB = SI->getDefaultDest();
     BasicBlock *SplitBB = SplitBlock(OrigBB, SI, DTU);
     auto It = OrigBB->getTerminator()->getIterator();
+    SmallVector<uint32_t> Weights;
+    auto HasWeights =
+        !ProfcheckDisableMetadataFixes && extractBranchWeights(*SI, Weights);
     auto *BI = BranchInst::Create(SplitBB, DefaultCaseBB, IsPow2, It);
+    if (HasWeights && any_of(Weights, [](const auto &V) { return V != 0; })) {
+      // IsPow2 covers a subset of the cases in which we'd go to the default
+      // label. The other is those powers of 2 that don't appear in the case
+      // statement. We don't know the distribution of the values coming in, so
+      // the safest is to split 50-50 the original probability to `default`.
+      uint64_t OrigDenominator =
+          sum_of(map_range(Weights, StaticCastTo<uint64_t>));
+      SmallVector<uint64_t> NewWeights(2);
+      NewWeights[1] = Weights[0] / 2;
+      NewWeights[0] = OrigDenominator - NewWeights[1];
+      setFittedBranchWeights(*BI, NewWeights, /*IsExpected=*/false);
+      // The probability of executing the default block stays constant. It was
+      //  p_d = Weights[0] / OrigDenominator
+      //  we rewrite as W/D
+      // We want to find the probability of the default branch of the switch
+      // statement. Let's call it X. We have W/D = W/2D + X * (1-W/2D)
+      // i.e. the original probability is the probability we go to the default
+      // branch from the BI branch, or we take the default branch on the SI.
+      // Meaning X = W / (2D - W), or (W/2) / (D - W/2)
+      // This matches using W/2 for the default branch probability numerator and
+      // D-W/2 as the denominator.
+      Weights[0] = NewWeights[1];
+      uint64_t CasesDenominator = OrigDenominator - Weights[0];
+      for (auto &W : drop_begin(Weights))
+        W = NewWeights[0] * static_cast<double>(W) / CasesDenominator;
+
+      setBranchWeights(*SI, Weights, /*IsExpected=*/false);
+    }
     // BI is handling the default case for SI, and so should share its DebugLoc.
     BI->setDebugLoc(SI->getDebugLoc());
     It->eraseFromParent();
@@ -8001,6 +8215,9 @@ bool SimplifyCFGOpt::simplifySwitch(SwitchInst *SI, IRBuilder<> &Builder) {
   if (simplifyDuplicateSwitchArms(SI, DTU))
     return requestResimplify();
 
+  if (simplifySwitchWhenUMin(SI, DTU))
+    return requestResimplify();
+
   return false;
 }
 
@@ -8169,13 +8386,18 @@ bool SimplifyCFGOpt::simplifyUncondBranch(BranchInst *BI,
 
   // If the only instruction in the block is a seteq/setne comparison against a
   // constant, try to simplify the block.
-  if (ICmpInst *ICI = dyn_cast<ICmpInst>(I))
+  if (ICmpInst *ICI = dyn_cast<ICmpInst>(I)) {
     if (ICI->isEquality() && isa<ConstantInt>(ICI->getOperand(1))) {
       ++I;
       if (I->isTerminator() &&
           tryToSimplifyUncondBranchWithICmpInIt(ICI, Builder))
         return true;
+      if (isa<SelectInst>(I) && I->getNextNode()->isTerminator() &&
+          tryToSimplifyUncondBranchWithICmpSelectInIt(ICI, cast<SelectInst>(I),
+                                                      Builder))
+        return true;
     }
+  }
 
   // See if we can merge an empty landing pad block with another which is
   // equivalent.

@@ -23,10 +23,10 @@ LLVM_LIBC_FUNCTION(size_t, strftime,
       printf_core::WriteMode::FILL_BUFF_AND_DROP_OVERFLOW>::value>
       wb(buffer, (buffsz > 0 ? buffsz - 1 : 0));
   printf_core::Writer writer(wb);
-  int ret = strftime_core::strftime_main(&writer, format, timeptr);
+  auto ret = strftime_core::strftime_main(&writer, format, timeptr);
   if (buffsz > 0) // if the buffsz is 0 the buffer may be a null pointer.
     wb.buff[wb.buff_cur] = '\0';
-  return (ret < 0 || static_cast<size_t>(ret) > buffsz) ? 0 : ret;
+  return (!ret.has_value() || ret.value() >= buffsz) ? 0 : ret.value();
 }
 
 } // namespace LIBC_NAMESPACE_DECL

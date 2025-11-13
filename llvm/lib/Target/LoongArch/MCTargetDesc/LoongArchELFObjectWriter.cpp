@@ -39,7 +39,7 @@ LoongArchELFObjectWriter::LoongArchELFObjectWriter(uint8_t OSABI, bool Is64Bit)
     : MCELFObjectTargetWriter(Is64Bit, OSABI, ELF::EM_LOONGARCH,
                               /*HasRelocationAddend=*/true) {}
 
-LoongArchELFObjectWriter::~LoongArchELFObjectWriter() {}
+LoongArchELFObjectWriter::~LoongArchELFObjectWriter() = default;
 
 unsigned LoongArchELFObjectWriter::getRelocType(const MCFixup &Fixup,
                                                 const MCValue &Target,

@@ -58,6 +58,9 @@
 namespace mlir {
 namespace acc {
 
+// Forward declaration for RecipeKind enum
+enum class RecipeKind : uint32_t;
+
 namespace detail {
 /// This class contains internal trait classes used by OpenACCSupport.
 /// It follows the Concept-Model pattern used throughout MLIR (e.g., in
@@ -69,6 +72,13 @@ struct OpenACCSupportTraits {
 
     /// Get the variable name for a given MLIR value.
     virtual std::string getVariableName(Value v) = 0;
+
+    /// Get the recipe name for a given kind, type and value.
+    virtual std::string getRecipeName(RecipeKind kind, Type type,
+                                      Value var) = 0;
+
+    // Used to report a case that is not supported by the implementation.
+    virtual InFlightDiagnostic emitNYI(Location loc, const Twine &message) = 0;
   };
 
   /// This class wraps a concrete OpenACCSupport implementation and forwards
@@ -82,6 +92,14 @@ struct OpenACCSupportTraits {
 
     std::string getVariableName(Value v) final {
       return impl.getVariableName(v);
+    }
+
+    std::string getRecipeName(RecipeKind kind, Type type, Value var) final {
+      return impl.getRecipeName(kind, type, var);
+    }
+
+    InFlightDiagnostic emitNYI(Location loc, const Twine &message) final {
+      return impl.emitNYI(loc, message);
     }
 
   private:
@@ -117,6 +135,24 @@ public:
   /// \param v The MLIR value to get the variable name for.
   /// \return The variable name, or an empty string if unavailable.
   std::string getVariableName(Value v);
+
+  /// Get the recipe name for a given type and value.
+  ///
+  /// \param kind The kind of recipe to get the name for.
+  /// \param type The type to get the recipe name for. Can be null if the
+  ///        var is provided instead.
+  /// \param var The MLIR value to get the recipe name for. Can be null if
+  ///        the type is provided instead.
+  /// \return The recipe name, or an empty string if not available.
+  std::string getRecipeName(RecipeKind kind, Type type, Value var);
+
+  /// Report a case that is not yet supported by the implementation.
+  ///
+  /// \param loc The location to report the unsupported case at.
+  /// \param message The message to report.
+  /// \return An in-flight diagnostic object that can be used to report the
+  ///         unsupported case.
+  InFlightDiagnostic emitNYI(Location loc, const Twine &message);
 
   /// Signal that this analysis should always be preserved so that
   /// underlying implementation registration is not lost.
