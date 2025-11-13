@@ -1401,7 +1401,7 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
            vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry()))) {
     for (VPRecipeBase &R : make_early_inc_range(reverse(*VPBB))) {
       if (!isa<VPWidenRecipe, VPWidenSelectRecipe, VPReplicateRecipe,
-               VPWidenMemoryRecipe>(&R))
+               VPWidenStoreRecipe>(&R))
         continue;
       auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
       if (RepR && (RepR->isSingleScalar() || RepR->isPredicated()))
@@ -1409,12 +1409,11 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
 
       // Convert scatters with a uniform address that is unmasked into an
       // extract-last-element + scalar store.
-      //  TODO: Add a profitability check comparing the cost of a scatter vs.
-      //  extract + scalar store.
-      auto *WidenStoreR = dyn_cast<VPWidenMemoryRecipe>(&R);
+      // TODO: Add a profitability check comparing the cost of a scatter vs.
+      // extract + scalar store.
+      auto *WidenStoreR = dyn_cast<VPWidenStoreRecipe>(&R);
       if (WidenStoreR && vputils::isSingleScalar(WidenStoreR->getAddr()) &&
-          !WidenStoreR->isConsecutive() &&
-          isa<VPWidenStoreRecipe, VPWidenStoreEVLRecipe>(WidenStoreR)) {
+          !WidenStoreR->isConsecutive()) {
         assert(!WidenStoreR->isReverse() &&
                "Not consecutive memory recipes shouldn't be reversed");
         VPValue *Mask = WidenStoreR->getMask();
