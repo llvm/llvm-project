@@ -5,12 +5,8 @@
  * License. See LICENSE.TXT for details.
  *===------------------------------------------------------------------------*/
 
-#include "irif.h"
 #include "oclc.h"
 #include "ockl.h"
-
-#define AS_UINT2(X) __builtin_astype(X, uint2)
-#define AS_ULONG(X) __builtin_astype(X, ulong)
 
 #pragma OPENCL EXTENSION cl_khr_int64_base_atomics : enable
 #pragma OPENCL EXTENSION cl_khr_int64_extended_atomics : enable
@@ -45,9 +41,6 @@ typedef uint kind_t;
 
 // Type of variable used to hold a sdata index
 typedef uint sid_t;
-
-// Type of variable used to hold a group mask
-typedef ulong gmask_t;
 
 // Various info about a given kind of block
 struct kind_info_s {
@@ -187,6 +180,8 @@ typedef struct heap_s {
 #define AFO(P, V, O) __opencl_atomic_fetch_or (P, V, O, memory_scope_device)
 #define ACE(P, E, V, O) __opencl_atomic_compare_exchange_strong(P, E, V, O, O, memory_scope_device)
 
+#define NEED_RELEASE __oclc_ISA_version >= 9402 && __oclc_ISA_version < 10000
+
 // get the heap pointer
 static __global heap_t *
 get_heap_ptr(void) {
@@ -286,99 +281,31 @@ first(__global void * v)
     return __builtin_astype(w2, __global void *);
 }
 
-// Count the number of true arguments across the wave
+// Read val from one active lane whose predicate is one.
+// If no lanes have the predicate set, return none
+// This is like first, except that first may not have its predicate set
+static uint
+elect_uint(int pred, uint val, uint none)
+{
+  // Pretend wave32 doesn't exist. The wave64 ballot works, and the high half
+  // will fold out as 0.
+    uint ret = none;
+
+    ulong mask = __builtin_amdgcn_ballot_w64(pred != 0);
+    if (mask != 0UL) {
+        uint l = __ockl_ctz_u64(mask);
+        ret = __builtin_amdgcn_ds_bpermute(l << 2, val);
+    }
+
+    return ret;
+}
+
+// Count the number of nonzero arguments across the wave
 static uint
 votes(bool b)
 {
-    return __builtin_popcountl(__builtin_amdgcn_ballot_w64(b));
-}
-
-// Return mask of lanes with identical arguments
-static __attribute__((overloadable)) ulong
-match(__global void *p)
-{
-    ulong ret = 0;
-    int go = 1;
-    do {
-        if (go) {
-            __global void *fp = first(p);
-            if (p == fp) {
-                ret = __builtin_amdgcn_ballot_w64(1);
-                go = 0;
-            }
-        }
-    } while (__builtin_amdgcn_ballot_w64(go) != 0);
-
-    return ret;
-}
-
-static __attribute__((overloadable)) ulong
-match(kind_t k)
-{
-    ulong ret = 0;
-    int go = 1;
-    do {
-        if (go) {
-            kind_t fk = first(k);
-            if (k == fk) {
-                ret = __builtin_amdgcn_ballot_w64(1);
-                go = 0;
-            }
-        }
-    } while (__builtin_amdgcn_ballot_w64(go) != 0);
-
-    return ret;
-}
-
-// Broadcast the value in a lane to the group
-static __attribute__((overloadable)) __global void *
-gcast(__global void *p, uint l)
-{
-    uint2 p2 = AS_UINT2(p);
-    uint2 r;
-    r.x = __builtin_amdgcn_ds_bpermute(l << 2, p2.x);
-    r.y = __builtin_amdgcn_ds_bpermute(l << 2, p2.y);
-    return (__global void *)AS_ULONG(r);
-}
-
-static __attribute__((overloadable)) ulong
-gcast(ulong v, uint l)
-{
-    uint2 v2 = AS_UINT2(v);
-    uint2 r;
-    r.x = __builtin_amdgcn_ds_bpermute(l << 2, v2.x);
-    r.y = __builtin_amdgcn_ds_bpermute(l << 2, v2.y);
-    return AS_ULONG(r);
-}
-
-static __attribute__((overloadable)) uint
-gcast(uint v, uint l)
-{
-    return __builtin_amdgcn_ds_bpermute(l << 2, v);
-}
-
-static uint
-leader(gmask_t gm)
-{
-    return (uint)BUILTIN_CTZ_U64(gm);
-}
-
-static uint
-position(gmask_t gm)
-{
-  return __builtin_amdgcn_mbcnt_hi(gm >> 32, __builtin_amdgcn_mbcnt_lo((uint)gm, 0u));
-}
-
-static uint
-members(gmask_t gm)
-{
-    return __builtin_popcountl(gm);
-}
-
-static gmask_t
-before(gmask_t gm, uint l)
-{
-    return gm & ((1UL << l) - 1UL);
+    ulong mask = __builtin_amdgcn_ballot_w64(b);
+    return __builtin_popcountl(mask);
 }
 
 // The kind of the smallest block that can hold sz bytes
@@ -448,32 +375,46 @@ __ockl_dm_dealloc(ulong addr)
     if ((addr & 0xfffUL) == 0UL) {
         if (addr)
             non_slab_free(addr);
+
         return;
     }
 
-    __builtin_amdgcn_fence(__ATOMIC_RELEASE, "agent", "global");
+    if (NEED_RELEASE) {
+         __builtin_amdgcn_fence(__ATOMIC_RELEASE, "agent", "global");
+    }
  
-    __global heap_t *hp = get_heap_ptr();
-
+    // Find a slab block
     ulong saddr = addr & ~(ulong)0x1fffffUL;
     __global slab_t *sptr = (__global slab_t *)saddr;
+    kind_t my_k = sptr->k;
+    sid_t my_i = sptr->i;
 
-    kind_t k = sptr->k;
-    sid_t i = sptr->i;
+    __global heap_t *hp = get_heap_ptr();
+    int go = 1;
+    do {
+        if (go) {
+            kind_t first_k = first(my_k);
+            sid_t first_i = first(my_i);
+            if (my_k == first_k && my_i == first_i) {
+                uint aid = __ockl_activelane_u32();
+                uint nactive = active_lane_count();
 
-    gmask_t gm = match(sptr);
-    uint l = __ockl_lane_u32();
-    uint ll = leader(gm);
+                __global sdata_t *sdp = 0;
+                if (aid == 0)
+                    sdp = sdata_for(hp, first_k, first_i);
+                sdp = first(sdp);
 
-    __global sdata_t *sdp = 0;
-    if (l == ll)
-        sdp = sdata_for(hp, k, i);
-    sdp = gcast(sdp, ll);
+                uint b = (uint)(addr - (saddr + block_offset(first_k))) / kind_to_size(first_k);
+                uint mask = ~(1 << (b & 0x1f));
+                AFN(&sptr->in_use[b >> 5], mask, memory_order_relaxed);
 
-    uint b = (uint)(addr - (saddr + block_offset(k))) / kind_to_size(k);
-    AFN(&sptr->in_use[b >> 5], ~(1 << (b & 0x1f)), memory_order_relaxed);
-    if (l == ll)
-        AFS(&sdp->num_used_blocks, members(gm), memory_order_relaxed);
+                if (aid == 0)
+                    AFS(&sdp->num_used_blocks, nactive, memory_order_relaxed);
+
+                go = 0;
+            }
+        }
+    } while (__ockl_wfany_i32(go));
 }
 
 // The is the malloc implementation for sizes greater
@@ -500,11 +441,10 @@ non_slab_malloc(size_t sz)
 
 // Wait for a while to let a new slab of kind k to appear
 static void
-new_slab_wait(__global heap_t *hp, kind_t k, gmask_t gm)
+new_slab_wait(__global heap_t *hp, kind_t k)
 {
-    uint l = __ockl_lane_u32();
-    uint ll = leader(gm);
-    if (l == ll) {
+    uint aid = __ockl_activelane_u32();
+    if (aid == 0) {
         ulong expected = AL(&hp->salloc_time[k].value, memory_order_relaxed);
         ulong now = __ockl_steadyctr_u64();
         ulong dt = now - expected;
@@ -515,12 +455,10 @@ new_slab_wait(__global heap_t *hp, kind_t k, gmask_t gm)
 
 // Wait for a while to let the number of recordable slabs of kind k to grow
 static void
-grow_recordable_wait(__global heap_t *hp, kind_t k, gmask_t gm)
+grow_recordable_wait(__global heap_t *hp, kind_t k)
 {
-    uint l = __ockl_lane_u32();
-    uint ll = leader(gm);
-
-    if (l == ll) {
+    uint aid = __ockl_activelane_u32();
+    if (aid == 0) {
         ulong expected = AL(&hp->grow_time[k].value, memory_order_relaxed);
         ulong now = __ockl_steadyctr_u64();
         ulong dt = now - expected;
@@ -546,14 +484,13 @@ obtain_new_array(void)
 
 // Clear an array of sdata
 static void
-clear_array(ulong a, gmask_t gm)
+clear_array(ulong a)
 {
-    uint l = __ockl_lane_u32();
-    uint ll = leader(gm);
-    uint n = members(gm);
+    uint aid = __ockl_activelane_u32();
+    uint nactive = active_lane_count();
     __global ulong *p = (__global ulong *)a;
 
-    for (uint i = position(gm); i < NUM_SDATA*ULONG_PER_SDATA; i += n)
+    for (uint i = aid; i < NUM_SDATA*ULONG_PER_SDATA; i += nactive)
         p[i] = 0UL;
 }
 
@@ -568,55 +505,53 @@ release_array(ulong a)
 // Try to grow the number of recordable slabs
 // The arguments and result are uniform
 static uint
-try_grow_num_recordable_slabs(__global heap_t *hp, kind_t k, gmask_t gm)
+try_grow_num_recordable_slabs(__global heap_t *hp, kind_t k)
 {
-    uint l = __ockl_lane_u32();
-    uint ll = leader(gm);
-
+    uint aid = __ockl_activelane_u32();
     uint nrs = 0;
-    if (l == ll)
+    if (aid == 0)
         nrs = AL(&hp->num_recordable_slabs[k].value, memory_order_relaxed);
-    nrs = gcast(nrs, ll);
+    nrs = first(nrs);
 
     if (nrs == MAX_RECORDABLE_SLABS)
         return GROW_FAILURE;
 
     uint ret = GROW_BUSY;
-    if (l == ll) {
+    if (aid == 0) {
         ulong expected = AL(&hp->grow_time[k].value, memory_order_relaxed);
         ulong now = __ockl_steadyctr_u64();
         if (now - expected >= GROW_TICKS &&
             ACE(&hp->grow_time[k].value, &expected, now, memory_order_relaxed))
                 ret = GROW_FAILURE;
     }
-    ret = gcast(ret, ll);
+    ret = first(ret);
 
     if (ret == GROW_BUSY)
         return ret;
 
     ulong sa = 0;
-    if (l == ll)
+    if (aid == 0)
         sa = obtain_new_array();
-    sa = gcast(sa, ll);
+    sa = first(sa);
 
     if (!sa)
         return ret;
 
-    clear_array(sa, gm);
+    clear_array(sa);
 
 
     for (;;) {
-        if (l == ll)
+        if (aid == 0)
             nrs = AL(&hp->num_recordable_slabs[k].value, memory_order_relaxed);
-        nrs = gcast(nrs, ll);
+        nrs = first(nrs);
 
         if (nrs == MAX_RECORDABLE_SLABS) {
-            if (l == ll)
+            if (aid == 0)
                 release_array(sa);
             return ret;
         }
 
-        if (l == ll) {
+        if (aid == 0) {
             __global sdata_t *sdp = sdata_parent_for(hp, k, nrs);
 
             ulong expected = 0UL;
@@ -625,7 +560,7 @@ try_grow_num_recordable_slabs(__global heap_t *hp, kind_t k, gmask_t gm)
             if (done)
                 AFA(&hp->num_recordable_slabs[k].value, NUM_SDATA, memory_order_release);
         }
-        ret = gcast(ret, ll);
+        ret = first(ret);
 
         if (ret == GROW_SUCCESS)
             return ret;
@@ -653,35 +588,32 @@ obtain_new_slab(__global heap_t *hp)
 // Initialize a slab
 // Rely on the caller to release the changes
 static void
-initialize_slab(__global slab_t *s, kind_t k, gmask_t gm)
+initialize_slab(__global slab_t *s, kind_t k)
 {
-    uint l = __ockl_lane_u32();
-    uint ll = leader(gm);
-    uint j = position(gm);
-    uint di = members(gm);
-
+    uint aid = __ockl_activelane_u32();
+    uint nactive = active_lane_count();
     uint g = gap_unusable(k);
     uint m = num_blocks(k);
     uint n = (m + 31) >> 5;
 
     __global uint *p = (__global uint *)&s->in_use;
     if (g > 32) {
-        for (uint i = j; i < n; i += di)
+        for (uint i = aid; i < n; i += nactive)
             p[i] = 0;
 
-        di *= g;
-        for (uint i = first_unusable(k) + j*g; i < m; i += di)
+        uint di = g * nactive;
+        for (uint i = first_unusable(k) + aid*g; i < m; i += di)
             p[i >> 5] = 1 << (i & 0x1f);
     } else {
         uint v = pattern_unusable(k);
-        for (uint i = j; i < n; i += di)
+        for (uint i = aid; i < n; i += nactive)
             p[i] = v;
     }
 
-    if (l == ll) {
-        uint mm = m & 0x1f;
-        if (mm != 0)
-            p[n-1] |= ~0 << mm;
+    if (aid == 0) {
+        uint l = m & 0x1f;
+        if (l != 0)
+            p[n-1] |= ~0 << l;
 
         *((__global uint4 *)s) = (uint4)(k, 0, 0, 0);
     }
@@ -697,86 +629,88 @@ release_slab(ulong saddr)
 
 // Try to allocate a new slab of kind k
 static __global sdata_t *
-try_allocate_new_slab(__global heap_t *hp, kind_t k, gmask_t gm)
+try_allocate_new_slab(__global heap_t *hp, kind_t k)
 {
-    uint l = __ockl_lane_u32();
-    uint ll = leader(gm);
+    uint aid = __ockl_activelane_u32();
 
     for (;;) {
         uint nas = 0;
-        if (l == ll)
+        uint nrs = 0;;
+
+        if (aid == 0)
             nas = AL(&hp->num_allocated_slabs[k].value, memory_order_relaxed);
-        nas = gcast(nas, ll);
+        nas = first(nas);
 
         if (nas == MAX_RECORDABLE_SLABS)
             return (__global sdata_t *)0;
 
-        uint nrs = 0;
-        if (l == ll)
-            nrs = AL(&hp->num_recordable_slabs[k].value, memory_order_relaxed);
-        nrs = gcast(nrs, ll);
+        if (aid == 0) {
+            uint expected = 0;
+            bool s = ACE(&hp->num_recordable_slabs[k].value, &expected, NUM_SDATA, memory_order_relaxed);
+            nrs = s ? NUM_SDATA : expected;
+        }
+        nrs = first(nrs);
 
         if (nas == nrs) {
-            uint result = try_grow_num_recordable_slabs(hp, k, gm);
+            uint result = try_grow_num_recordable_slabs(hp, k);
             if (result != GROW_SUCCESS) {
-                grow_recordable_wait(hp, k, gm);
+                grow_recordable_wait(hp, k);
                 return result == GROW_FAILURE ? (__global sdata_t *)0 : SDATA_BUSY;
             }
         }
 
         __global sdata_t *ret = SDATA_BUSY;
-        if (l == ll) {
+
+        if (aid == 0) {
             ulong expected = AL(&hp->salloc_time[k].value, memory_order_relaxed);
             ulong now = __ockl_steadyctr_u64();
             if (now - expected >= SLAB_TICKS &&
                 ACE(&hp->salloc_time[k].value, &expected, now, memory_order_relaxed))
                 ret = (__global sdata_t *)0;
         }
-        ret = gcast(ret, ll);
+        ret = first(ret);
 
         if (ret)
             return ret;
 
         ulong saddr = 0;
-        if (l == ll)
+        if (aid == 0)
             saddr = obtain_new_slab(hp);
-        saddr = gcast(saddr, ll);
+        saddr = first(saddr);
 
         if (!saddr)
             return (__global sdata_t *)0;
 
-        initialize_slab((__global slab_t *)saddr, k, gm);
+        initialize_slab((__global slab_t *)saddr, k);
 
         for (;;) {
-            if (l == ll)
+            if (aid == 0)
                 nas = AL(&hp->num_allocated_slabs[k].value, memory_order_relaxed);
-            nas = gcast(nas, ll);
+            nas = first(nas);
 
             if (nas == MAX_RECORDABLE_SLABS)
                 return (__global sdata_t *)0;
 
-            if (l == ll)
+            if (aid == 0)
                 nrs = AL(&hp->num_recordable_slabs[k].value, memory_order_relaxed);
-            nrs = gcast(nrs, ll);
+            nrs = first(nrs);
 
             if (nas == nrs) {
-                if (l == ll)
+                if (aid == 0)
                     release_slab(saddr);
                 break;
             }
 
-            if (l == ll) {
+            if (aid == 0) {
                 ret = sdata_for(hp, k, nas);
-                AS(&ret->num_used_blocks, members(gm), memory_order_relaxed);
                 ((__global slab_t *)saddr)->i = nas;
-                __builtin_amdgcn_fence(__ATOMIC_RELEASE, "agent", "global");
                 ulong expected = 0;
                 bool done = ACE(&ret->saddr, &expected, saddr, memory_order_relaxed);
                 ret = done ? ret : (__global sdata_t *)0;
                 if (done)
                     AFA(&hp->num_allocated_slabs[k].value, 1, memory_order_release);
             }
-            ret = gcast(ret, ll);
+            ret = first(ret);
 
             if (ret)
                 return ret;
@@ -786,100 +720,83 @@ try_allocate_new_slab(__global heap_t *hp, kind_t k, gmask_t gm)
     }
 }
 
+// Find a slab of kind k that can be searched for blocks using
+// the "normal" approach.  The arguments and results are uniform
 static __global sdata_t *
-normal_slab_find(__global heap_t *hp, kind_t k, gmask_t gm, uint nas)
+normal_slab_find(__global heap_t *hp, kind_t k, uint nas)
 {
-    uint l = __ockl_lane_u32();
-    uint ll = leader(gm);
-    uint n = members(gm);
+    __global sdata_t *ret = (__global sdata_t *)0;
+    uint aid = __ockl_activelane_u32();
+    uint nactive = active_lane_count();
 
     for (;;) {
         if (nas > 0) {
-            int nleft = (int)nas;
+            int nleft = nas;
 
-            uint start = 0;
-            if (l == ll)
-                start = AL(&hp->start[k].value, memory_order_relaxed);
-            start = gcast(start, ll);
-            uint i = start;
+            uint i = 0;
+            if (aid == 0)
+                i = AL(&hp->start[k].value, memory_order_relaxed);
+            i = (first(i) + aid) % nas;
 
             do {
-                __global sdata_t *sdp = sdata_for(hp, k, (i + position(gm)) % nas);
+                __global sdata_t *sdp = sdata_for(hp, k, i);
                 uint nub = AL(&sdp->num_used_blocks, memory_order_relaxed);
-                ulong sm = __builtin_amdgcn_ballot_w64(nub < skip_threshold(k)) & gm;
-                if (sm) {
-                    if (l == ll) {
-                        uint j = (i +  members(before(gm, leader(sm)))) % nas;
-                        sdp =  sdata_for(hp, k, j);
-                        nub = AFA(&sdp->num_used_blocks, n, memory_order_relaxed);
-                        if (nub + n > num_usable_blocks(k)) {
-                            AFS(&sdp->num_used_blocks, n, memory_order_relaxed);
-                            sdp = (__global sdata_t *)0;
-                        }
-                        if (sdp && j != start)
-                             AS(&hp->start[k].value, j, memory_order_relaxed);
-                    }
-                    sdp = gcast(sdp, ll);
-                    if (sdp)
-                        return sdp;
-                    cas_wait();
-                } else {
-                    i += n;
-                    nleft -= (int)n;
-                }
+
+                uint besti = first(elect_uint(nub < skip_threshold(k), i, ~0));
+
+                if (besti != ~0)
+                    return sdata_for(hp, k, besti);
+
+                i = (i + nactive) % nas;
+                if (aid == 0)
+                    AS(&hp->start[k].value, i, memory_order_relaxed);
+                nleft -= nactive;
             } while (nleft > 0);
         }
 
-        __global sdata_t *sdp = try_allocate_new_slab(hp, k, gm);
+        __global sdata_t *sdp = try_allocate_new_slab(hp, k);
         if (sdp != SDATA_BUSY)
             return sdp;
 
-        new_slab_wait(hp, k, gm);
-        if (l == ll)
+        new_slab_wait(hp, k);
+        if (aid == 0)
             nas = AL(&hp->num_allocated_slabs[k].value, memory_order_relaxed);
-        nas = gcast(nas,ll);
+        nas = first(nas);
     }
 }
 
 // Find a slab of kind k that can be searched for blocks using
 // the "final" approach.  The arguments and results are uniform
 static __global sdata_t *
-final_slab_find(__global heap_t *hp, kind_t k0, gmask_t gm)
+final_slab_find(__global heap_t *hp, kind_t k0)
 {
-    uint l = __ockl_lane_u32();
-    uint ll = leader(gm);
-    int n = (int)members(gm);
+    __global sdata_t *ret = (__global sdata_t *)0;
+    uint aid = __ockl_activelane_u32();
+    uint nactive = active_lane_count();
 
     for (kind_t k = k0;;) {
+        __global sdata_t *sda = hp->sdata[k];
         int nleft = MAX_RECORDABLE_SLABS;
+
         uint i = 0;
-        if (l == ll)
+        if (aid == 0)
             i = AL(&hp->start[k].value, memory_order_relaxed);
-        i = gcast(i, ll);
+        i = (first(i) + aid) % MAX_RECORDABLE_SLABS;
+
         do {
-            __global sdata_t *sdp = sdata_for(hp, k, (i + position(gm)) % MAX_RECORDABLE_SLABS);
+            __global sdata_t *sdp = sdata_for(hp, k, i);
             uint nub = AL(&sdp->num_used_blocks, memory_order_relaxed);
-            ulong sm = __builtin_amdgcn_ballot_w64(nub < num_usable_blocks(k) - n) & gm;
-            if (sm) {
-                if (l == ll) {
-                    uint j = (i + leader(sm)) % MAX_RECORDABLE_SLABS;
-                    sdp =  sdata_for(hp, k, j);
-                    nub = AFA(&sdp->num_used_blocks, n, memory_order_relaxed);
-                    if (nub > num_usable_blocks(k)) {
-                        AFS(&sdp->num_used_blocks, n, memory_order_relaxed);
-                        sdp = (__global sdata_t *)0;
-                    }
-                    if (sdp)
-                         AS(&hp->start[k].value, j, memory_order_relaxed);
-                }
-                sdp = gcast(sdp, ll);
-                if (sdp)
-                    return sdp;
-                cas_wait();
-            } else {
-                i += n;
-                nleft -= n;
-            }
+
+            uint besti = first(elect_uint(nub < num_usable_blocks(k), i, ~0));
+
+            if (besti != ~0)
+                return sdata_for(hp, k, besti);
+
+            i = (i + nactive) % MAX_RECORDABLE_SLABS;
+            if (aid == 0)
+                AS(&hp->start[k].value, i, memory_order_relaxed);
+
+            nleft -= nactive;
         } while (nleft > 0);
 
         uint nextk = k + 2 - (k & 1);
@@ -888,12 +805,12 @@ final_slab_find(__global heap_t *hp, kind_t k0, gmask_t gm)
             return (__global sdata_t *)0;
 
         uint nas = 0;
-        if (l == ll)
+        if (aid == 0)
             nas = AL(&hp->num_allocated_slabs[nextk].value, memory_order_relaxed);
-        nas = gcast(nas, ll);
+        nas = first(nas);
 
         if (nas < MAX_RECORDABLE_SLABS)
-            return normal_slab_find(hp, nextk, gm, nas);
+            return normal_slab_find(hp, nextk, nas);
 
         k = nextk;
     }
@@ -902,67 +819,96 @@ final_slab_find(__global heap_t *hp, kind_t k0, gmask_t gm)
 // Find a slab of kind k that can be searched for blocks
 // The arguments and results are uniform
 static __global sdata_t *
-slab_find(__global heap_t *hp, kind_t k, gmask_t gm)
+slab_find(__global heap_t *hp, kind_t k)
 {
-    uint l = __ockl_lane_u32();
-    uint ll = leader(gm);
+    uint aid = __ockl_activelane_u32();
 
     uint nas = 0;
-    if (l == ll)
+    if (aid == 0)
         nas = AL(&hp->num_allocated_slabs[k].value, memory_order_relaxed);
-    nas = gcast(nas, ll);
+    nas = first(nas);
 
     if (nas < MAX_RECORDABLE_SLABS)
-        return normal_slab_find(hp, k, gm, nas);
+        return normal_slab_find(hp, k, nas);
     else
-        return final_slab_find(hp, k, gm);
+        return final_slab_find(hp, k);
 }
 
+// Find an empty block in a specific slab
+// The argument is uniform, the result is not
 static __global void *
-block_find(__global sdata_t *sdp, kind_t k, gmask_t gm)
+block_find(__global sdata_t *sdp)
 {
-    uint l = __ockl_lane_u32();
-    uint ll = leader(gm);
+    uint aid = __ockl_activelane_u32();
+    uint nactive = active_lane_count();
+    __global slab_t *sp = (__global slab_t *)AL(&sdp->saddr, memory_order_relaxed);
+    kind_t k = sp->k;
 
-    __global slab_t *sp = 0;
     uint i = 0;
-    if (l == ll) {
-        sp = (__global slab_t *)AL(&sdp->saddr, memory_order_relaxed);
-        i = AFA(&sp->start, members(gm), memory_order_relaxed);
-    }
-    sp = gcast(sp, ll);
-    i = gcast(i, ll);
-    i = (((i + position(gm)) << 5) % num_blocks(k)) >> 5;
+    if (aid == 0)
+        i = AFA(&sp->start, nactive, memory_order_relaxed);
+    i = (((first(i) + aid) << 5) % num_blocks(k)) >> 5;
 
     uint n = (num_blocks(k) + 31) >> 5;
-    for (;;) {
+
+    __global void *ret = (__global void *)0;
+
+    for (uint j=0; j<n; ++j) {
         __global atomic_uint *p = sp->in_use + i;
         uint m = AL(p, memory_order_relaxed);
         if (m != ~0) {
-            uint b = BUILTIN_CTZ_U32(~m);
+            uint b = __ockl_ctz_u32(~m);
             uint mm = AFO(p, 1 << b, memory_order_relaxed);
             if ((mm & (1 << b)) == 0) {
                 uint ii = (i << 5) + b;
-                return (__global void *)((__global char *)sp + block_offset(k) + kind_to_size(k)*ii);
+                ret = (__global void *)((__global char *)sp + block_offset(k) + kind_to_size(k)*ii);
+                break;
             }
         }
         i = (i + 1) % n;
     }
+
+    uint done = votes(ret != (__global void *)0);
+    if (aid == 0)
+        AFA(&sdp->num_used_blocks, done, memory_order_relaxed);
+
+    return ret;
 }
 
 // This is the malloc implementation for sizes that fit in some kind of block
 static __global void *
 slab_malloc(int sz)
 {
-    kind_t k = size_to_kind(sz);
+    kind_t my_k = size_to_kind(sz);
+    __global void *ret = (__global void *)0;
     __global heap_t *hp = get_heap_ptr();
-    gmask_t gm = match(k);
 
-    __global sdata_t *sdp = slab_find(hp, k, gm);
-    if (sdp != (__global sdata_t *)0)
-        return block_find(sdp, k, gm);
+    int k_go = 1;
+    do {
+        if (k_go) {
+            kind_t first_k = first(my_k);
+            if (first_k == my_k) {
+                int s_go = 1;
+                do {
+                    if (s_go) {
+                        __global sdata_t *sdp = first(slab_find(hp, first_k));
+                        if (sdp != (__global sdata_t *)0) {
+                            ret = block_find(sdp);
+                            if (ret != (__global void *)0) {
+                                k_go = 0;
+                                s_go = 0;
+                            }
+                        } else {
+                            k_go = 0;
+                            s_go = 0;
+                        }
+                    }
+                } while (__ockl_wfany_i32(s_go));
+            }
+        }
+    } while (__ockl_wfany_i32(k_go));
 
-    return (__global void *)0;
+    return ret;
 }
 
 // public alloc() entrypoint
@@ -999,12 +945,8 @@ __ockl_dm_init_v1(ulong hp, ulong sp, uint hb, uint nis)
     __builtin_amdgcn_fence(__ATOMIC_RELEASE, "agent", "global");
     __builtin_amdgcn_s_barrier();
 
-    __global heap_t *thp = (__global heap_t *)hp;
-
-    if (lid < NUM_KINDS)
-        AS(&thp->num_recordable_slabs[lid].value, NUM_SDATA, memory_order_relaxed);
-
     if (lid == 0) {
+        __global heap_t *thp = (__global heap_t *)hp;
         AS(&thp->initial_slabs, sp, memory_order_relaxed);
         thp->initial_slabs_end = sp + ((ulong)nis << 21);
         thp->initial_slabs_start = sp;
