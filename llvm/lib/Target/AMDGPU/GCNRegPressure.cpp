@@ -332,7 +332,8 @@ static LaneBitmask getLanesWithProperty(
     return Result;
   }
 
-  const LiveRange *LR = LIS.getCachedRegUnit(RegUnit);
+  const LiveRange *LR =
+      LIS.getCachedRegUnit(static_cast<MCRegUnit>(RegUnit.id()));
   if (LR == nullptr)
     return SafeDefault;
   return Property(*LR, Pos) ? LaneBitmask::getAll() : LaneBitmask::getNone();

@@ -153,8 +153,9 @@ struct PhysicalRegisterInfo {
   // Returns the set of aliased physical registers.
   std::set<RegisterId> getAliasSet(RegisterId Reg) const;
 
-  RegisterRef getRefForUnit(uint32_t U) const {
-    return RegisterRef(UnitInfos[U].Reg, UnitInfos[U].Mask);
+  RegisterRef getRefForUnit(MCRegUnit U) const {
+    return RegisterRef(UnitInfos[static_cast<unsigned>(U)].Reg,
+                       UnitInfos[static_cast<unsigned>(U)].Mask);
   }
 
   const BitVector &getMaskUnits(RegisterId MaskId) const {
@@ -163,8 +164,8 @@ struct PhysicalRegisterInfo {
 
   std::set<RegisterId> getUnits(RegisterRef RR) const;
 
-  const BitVector &getUnitAliases(uint32_t U) const {
-    return AliasInfos[U].Regs;
+  const BitVector &getUnitAliases(MCRegUnit U) const {
+    return AliasInfos[static_cast<unsigned>(U)].Regs;
   }
 
   RegisterRef mapTo(RegisterRef RR, unsigned R) const;
