@@ -637,12 +637,16 @@ std::vector<Chain> Vectorizer::splitChainByContiguity(Chain &C) {
                               "collectEquivalenceClass");
 
     // Add this instruction to the end of the current chain, or start a new one.
+    uint64_t SzBytes = SzBits / 8;
+    assert(SzBytes % ElemBytes == 0);
     APInt ReadEnd = It->OffsetFromLeader + SzBits / 8;
-    // Alllow redundancy: partial or full overlaping counts as contiguous.
-    int ExtraBytes =
-        PrevReadEnd.sle(ReadEnd) ? (ReadEnd - PrevReadEnd).getSExtValue() : 0;
-    bool AreContiguous = It->OffsetFromLeader.sle(PrevReadEnd) &&
-                         SzBits % ElemBytes == 0 && ExtraBytes % ElemBytes == 0;
+    // Allow redundancy: partial or full overlap counts as contiguous.
+    bool AreContiguous = false;
+    if (It->OffsetFromLeader.sle(PrevReadEnd)) {
+      uint64_t Overlap = (PrevReadEnd - It->OffsetFromLeader).getZExtValue();
+      if (Overlap % ElemBytes == 0)
+        AreContiguous = true;
+    }
 
     LLVM_DEBUG(dbgs() << "LSV: Instruction is "
                       << (AreContiguous ? "contiguous" : "chain-breaker")
