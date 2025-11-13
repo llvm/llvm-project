@@ -12687,20 +12687,19 @@ define float @flat_atomic_fmax_f32_saddr_rtn(ptr inreg %ptr, float %data) {
 ; GFX950-SDAG:       ; %bb.0:
 ; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX950-SDAG-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
-; GFX950-SDAG-NEXT:    v_mov_b32_e32 v1, v0
-; GFX950-SDAG-NEXT:    flat_load_dword v0, v[2:3] offset:40
+; GFX950-SDAG-NEXT:    flat_load_dword v1, v[2:3] offset:40
 ; GFX950-SDAG-NEXT:    s_mov_b64 s[2:3], 0
-; GFX950-SDAG-NEXT:    v_max_f32_e32 v1, v1, v1
+; GFX950-SDAG-NEXT:    v_max_f32_e32 v4, v0, v0
 ; GFX950-SDAG-NEXT:  .LBB118_1: ; %atomicrmw.start
 ; GFX950-SDAG-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX950-SDAG-NEXT:    v_mov_b32_e32 v5, v0
-; GFX950-SDAG-NEXT:    v_max_f32_e32 v0, v5, v5
-; GFX950-SDAG-NEXT:    v_max_f32_e32 v4, v0, v1
-; GFX950-SDAG-NEXT:    flat_atomic_cmpswap v0, v[2:3], v[4:5] offset:40 sc0
+; GFX950-SDAG-NEXT:    v_max_f32_e32 v0, v1, v1
+; GFX950-SDAG-NEXT:    v_max_f32_e32 v0, v0, v4
+; GFX950-SDAG-NEXT:    flat_atomic_cmpswap v0, v[2:3], v[0:1] offset:40 sc0
 ; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX950-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v5
+; GFX950-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v1
 ; GFX950-SDAG-NEXT:    s_or_b64 s[2:3], vcc, s[2:3]
+; GFX950-SDAG-NEXT:    v_mov_b32_e32 v1, v0
 ; GFX950-SDAG-NEXT:    s_andn2_b64 exec, exec, s[2:3]
 ; GFX950-SDAG-NEXT:    s_cbranch_execnz .LBB118_1
 ; GFX950-SDAG-NEXT:  ; %bb.2: ; %atomicrmw.end
@@ -12812,20 +12811,19 @@ define float @flat_atomic_fmin_f32_saddr_rtn(ptr inreg %ptr, float %data) {
 ; GFX950-SDAG:       ; %bb.0:
 ; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX950-SDAG-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
-; GFX950-SDAG-NEXT:    v_mov_b32_e32 v1, v0
-; GFX950-SDAG-NEXT:    flat_load_dword v0, v[2:3] offset:40
+; GFX950-SDAG-NEXT:    flat_load_dword v1, v[2:3] offset:40
 ; GFX950-SDAG-NEXT:    s_mov_b64 s[2:3], 0
-; GFX950-SDAG-NEXT:    v_max_f32_e32 v1, v1, v1
+; GFX950-SDAG-NEXT:    v_max_f32_e32 v4, v0, v0
 ; GFX950-SDAG-NEXT:  .LBB120_1: ; %atomicrmw.start
 ; GFX950-SDAG-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX950-SDAG-NEXT:    v_mov_b32_e32 v5, v0
-; GFX950-SDAG-NEXT:    v_max_f32_e32 v0, v5, v5
-; GFX950-SDAG-NEXT:    v_min_f32_e32 v4, v0, v1
-; GFX950-SDAG-NEXT:    flat_atomic_cmpswap v0, v[2:3], v[4:5] offset:40 sc0
+; GFX950-SDAG-NEXT:    v_max_f32_e32 v0, v1, v1
+; GFX950-SDAG-NEXT:    v_min_f32_e32 v0, v0, v4
+; GFX950-SDAG-NEXT:    flat_atomic_cmpswap v0, v[2:3], v[0:1] offset:40 sc0
 ; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX950-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v5
+; GFX950-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v1
 ; GFX950-SDAG-NEXT:    s_or_b64 s[2:3], vcc, s[2:3]
+; GFX950-SDAG-NEXT:    v_mov_b32_e32 v1, v0
 ; GFX950-SDAG-NEXT:    s_andn2_b64 exec, exec, s[2:3]
 ; GFX950-SDAG-NEXT:    s_cbranch_execnz .LBB120_1
 ; GFX950-SDAG-NEXT:  ; %bb.2: ; %atomicrmw.end
