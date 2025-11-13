@@ -30,7 +30,6 @@
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
-#include "llvm/CodeGenTypes/LowLevelType.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/InstrTypes.h"
@@ -3492,7 +3491,7 @@ bool CombinerHelper::matchCombineBuildUnmerge(MachineInstr &MI,
 
   // Check the first operand is an unmerge and has the correct number of
   // operands
-  if (!Unmerge || Unmerge->getNumOperands() != NumUnmerge + 1)
+  if (!Unmerge || Unmerge->getNumDefs() != NumUnmerge)
     return false;
 
   UnmergeSrc = Unmerge->getSourceReg();
