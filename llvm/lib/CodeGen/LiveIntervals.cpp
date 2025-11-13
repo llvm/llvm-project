@@ -173,8 +173,8 @@ void LiveIntervals::analyze(MachineFunction &fn) {
   if (EnablePrecomputePhysRegs) {
     // For stress testing, precompute live ranges of all physical register
     // units, including reserved registers.
-    for (unsigned i = 0, e = TRI->getNumRegUnits(); i != e; ++i)
-      getRegUnit(i);
+    for (MCRegUnit Unit : TRI->regunits())
+      getRegUnit(Unit);
   }
 }
 

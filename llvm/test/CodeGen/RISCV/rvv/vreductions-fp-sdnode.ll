@@ -943,8 +943,7 @@ define half @vreduce_ord_fadd_nxv12f16(<vscale x 12 x half> %v, half %s) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    srli a1, a0, 1
-; CHECK-NEXT:    slli a0, a0, 1
-; CHECK-NEXT:    sub a0, a0, a1
+; CHECK-NEXT:    add a0, a0, a1
 ; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
 ; CHECK-NEXT:    vfmv.s.f v12, fa0
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
@@ -1020,8 +1019,7 @@ define half @vreduce_fmax_nxv12f16(<vscale x 12 x half> %v) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    srli a1, a0, 1
-; CHECK-NEXT:    slli a0, a0, 1
-; CHECK-NEXT:    sub a0, a0, a1
+; CHECK-NEXT:    add a0, a0, a1
 ; CHECK-NEXT:    li a1, -512
 ; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
 ; CHECK-NEXT:    vmv.s.x v12, a1

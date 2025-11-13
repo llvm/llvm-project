@@ -16,6 +16,7 @@
 #define LLVM_MC_MCREGISTERINFO_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/MC/LaneBitmask.h"
@@ -258,6 +259,9 @@ public:
   detail::concat_range<const MCPhysReg, iterator_range<MCSubRegIterator>,
                        iterator_range<MCSuperRegIterator>>
   sub_and_superregs_inclusive(MCRegister Reg) const;
+
+  /// Returns an iterator range over all regunits.
+  iota_range<MCRegUnit> regunits() const;
 
   /// Returns an iterator range over all regunits for \p Reg.
   iterator_range<MCRegUnitIterator> regunits(MCRegister Reg) const;
@@ -796,6 +800,10 @@ inline detail::concat_range<const MCPhysReg, iterator_range<MCSubRegIterator>,
                             iterator_range<MCSuperRegIterator>>
 MCRegisterInfo::sub_and_superregs_inclusive(MCRegister Reg) const {
   return concat<const MCPhysReg>(subregs_inclusive(Reg), superregs(Reg));
+}
+
+inline iota_range<MCRegUnit> MCRegisterInfo::regunits() const {
+  return seq(getNumRegUnits());
 }
 
 inline iterator_range<MCRegUnitIterator>

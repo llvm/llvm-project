@@ -1291,8 +1291,7 @@ bool RegAllocFastImpl::setPhysReg(MachineInstr &MI, MachineOperand &MO,
 #ifndef NDEBUG
 
 void RegAllocFastImpl::dumpState() const {
-  for (unsigned Unit = 1, UnitE = TRI->getNumRegUnits(); Unit != UnitE;
-       ++Unit) {
+  for (MCRegUnit Unit : TRI->regunits()) {
     switch (unsigned VirtReg = RegUnitStates[Unit]) {
     case regFree:
       break;
