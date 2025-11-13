@@ -18673,11 +18673,12 @@ SDValue DAGCombiner::visitFDIV(SDNode *N) {
   if (Flags.hasAllowReciprocal()) {
     // If this FDIV is part of a reciprocal square root, it may be folded
     // into a target-specific square root estimate instruction.
+    bool N1AllowReciprocal = N1->getFlags().hasAllowReciprocal();
     if (N1.getOpcode() == ISD::FSQRT) {
       if (SDValue RV = buildRsqrtEstimate(N1.getOperand(0)))
         return DAG.getNode(ISD::FMUL, DL, VT, N0, RV);
     } else if (N1.getOpcode() == ISD::FP_EXTEND &&
-               N1.getOperand(0).getOpcode() == ISD::FSQRT) {
+               N1.getOperand(0).getOpcode() == ISD::FSQRT && N1AllowReciprocal) {
       if (SDValue RV = buildRsqrtEstimate(N1.getOperand(0).getOperand(0))) {
         RV = DAG.getNode(ISD::FP_EXTEND, SDLoc(N1), VT, RV);
         AddToWorklist(RV.getNode());
