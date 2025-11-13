@@ -974,7 +974,7 @@ def fir_ReboxAssumedRankOp : fir_Op<"rebox_assumed_rank",
     Example:
     ```
       fir.rebox_assumed_rank %1 lbs zeroes : (!fir.box<!fir.array<*:f32>>) -> !fir.box<!fir.array<*:f32>>
-    ```
+    ```    
   }];
 
   let arguments = (ins
