@@ -1,6 +1,6 @@
 ## Tests glob pattern handling in echo command.
 
-# RUN: not %{lit} -a -v %{inputs}/shtest-glob \
+# RUN: not %{lit} -v %{inputs}/shtest-glob \
 # RUN: | FileCheck -dump-input=fail -match-full-lines --implicit-check-not=Error: %s
 # END.
 

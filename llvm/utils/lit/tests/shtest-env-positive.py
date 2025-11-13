@@ -1,6 +1,6 @@
 ## Test the env command (passing tests).
 
-# RUN: %{lit} -a -v %{inputs}/shtest-env-positive \
+# RUN: %{lit} -a %{inputs}/shtest-env-positive \
 # RUN:   | FileCheck -match-full-lines %s
 #
 # END.

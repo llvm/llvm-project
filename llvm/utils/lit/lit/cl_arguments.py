@@ -15,6 +15,59 @@ class TestOrder(enum.Enum):
     SMART = "smart"
 
 
+@enum.unique
+class TestOutputLevel(enum.IntEnum):
+    OFF = 0
+    FAILED = 1
+    ALL = 2
+
+    @classmethod
+    def create(cls, value):
+        if value == "off":
+            return cls.OFF
+        if value == "failed":
+            return cls.FAILED
+        if value == "all":
+            return cls.ALL
+        raise ValueError(f"invalid output level {repr(value)} of type {type(value)}")
+
+
+class TestOutputAction(argparse.Action):
+    def __init__(self, option_strings, dest, **kwargs):
+        super().__init__(option_strings, dest, nargs=None, **kwargs)
+
+    def __call__(self, parser, namespace, value, option_string=None):
+        TestOutputAction.setOutputLevel(namespace, self.dest, value)
+
+    @classmethod
+    def setOutputLevel(cls, namespace, dest, value):
+        setattr(namespace, dest, value)
+        if dest == "test_output" and TestOutputLevel.create(
+            namespace.print_result_after
+        ) < TestOutputLevel.create(value):
+            setattr(namespace, "print_result_after", value)
+        elif dest == "print_result_after" and TestOutputLevel.create(
+            namespace.test_output
+        ) > TestOutputLevel.create(value):
+            setattr(namespace, "test_output", value)
+
+
+class AliasAction(argparse.Action):
+    def __init__(self, option_strings, dest, nargs=None, **kwargs):
+        self.expansion = kwargs.pop("alias", None)
+        if not self.expansion:
+            raise ValueError("no aliases expansion provided")
+        super().__init__(option_strings, dest, nargs=0, **kwargs)
+
+    def __call__(self, parser, namespace, value, option_string=None):
+        for e in self.expansion:
+            if callable(e):
+                e(namespace)
+            else:
+                dest, val = e
+                setattr(namespace, dest, val)
+
+
 def parse_args():
     parser = argparse.ArgumentParser(prog="lit", fromfile_prefix_chars="@")
     parser.add_argument(
@@ -55,41 +108,103 @@ def parse_args():
     )
 
     format_group = parser.add_argument_group("Output Format")
-    # FIXME: I find these names very confusing, although I like the
-    # functionality.
     format_group.add_argument(
-        "-q", "--quiet", help="Suppress no error output", action="store_true"
+        "--test-output",
+        help="Control whether the executed commands and their outputs are printed after each test has executed (default off). "
+        "If --print-result-after is set lower than the level given to --test-output, --print-result-after is raised to match.",
+        choices=["off", "failed", "all"],
+        default="off",
+        action=TestOutputAction,
+    )
+    format_group.add_argument(
+        "--print-result-after",
+        help="Control which the executed test names and results are printed after each test has executed (default all). "
+        "If --test-output is set higher than the level given to --print-result-after, --test-output is lowered to match.",
+        choices=["off", "failed", "all"],
+        default="all",
+        action=TestOutputAction,
+    )
+    format_group.add_argument(
+        "--diagnostic-level",
+        help="Control how verbose lit diagnostics should be (default note)",
+        choices=["error", "warning", "note"],
+        default="note",
+    )
+    format_group.add_argument(
+        "--terse-summary",
+        help="Print the elapsed time and the number of passed tests after all tests have finished (default on)",
+        action="store_true",
+        dest="terse_summary",
+    )
+    format_group.add_argument(
+        "--no-terse-summary",
+        help="Don't show the elapsed time after all tests have finished, and only show the number of failed tests.",
+        action="store_false",
+        dest="terse_summary",
+    )
+    parser.set_defaults(terse_summary=False)
+    format_group.add_argument(
+        "-q",
+        "--quiet",
+        help="Alias for '--diagnostic-level=error --test-output=off --terse-summary'",
+        action=AliasAction,
+        alias=[
+            lambda namespace: TestOutputAction.setOutputLevel(
+                namespace, "print_result_after", "failed"
+            ),
+            lambda namespace: TestOutputAction.setOutputLevel(
+                namespace, "test_output", "off"
+            ),
+            ("diagnostic_level", "error"),
+            ("terse_summary", True),
+        ],
     )
     format_group.add_argument(
         "-s",
         "--succinct",
-        help="Reduce amount of output."
-        " Additionally, show a progress bar,"
-        " unless --no-progress-bar is specified.",
-        action="store_true",
+        help="Alias for '--progress-bar --print-result-after=failed'",
+        action=AliasAction,
+        alias=[
+            ("useProgressBar", True),
+            lambda namespace: TestOutputAction.setOutputLevel(
+                namespace, "print_result_after", "failed"
+            ),
+        ],
     )
     format_group.add_argument(
         "-v",
         "--verbose",
-        dest="showOutput",
         help="For failed tests, show all output. For example, each command is"
         " printed before it is executed, so the last printed command is the one"
-        " that failed.",
-        action="store_true",
+        " that failed. Alias for '--test-output=failed'",
+        action=AliasAction,
+        alias=[
+            lambda namespace: TestOutputAction.setOutputLevel(
+                namespace, "test_output", "failed"
+            ),
+        ],
     )
     format_group.add_argument(
         "-vv",
         "--echo-all-commands",
-        dest="showOutput",
         help="Deprecated alias for -v.",
-        action="store_true",
+        action=AliasAction,
+        alias=[
+            lambda namespace: TestOutputAction.setOutputLevel(
+                namespace, "test_output", "failed"
+            ),
+        ],
     )
     format_group.add_argument(
         "-a",
         "--show-all",
-        dest="showAllOutput",
-        help="Enable -v, but for all tests not just failed tests.",
-        action="store_true",
+        help="Enable -v, but for all tests not just failed tests. Alias for '--test-output=all'",
+        action=AliasAction,
+        alias=[
+            lambda namespace: TestOutputAction.setOutputLevel(
+                namespace, "test_output", "all"
+            ),
+        ],
     )
     format_group.add_argument(
         "-r",
@@ -106,9 +221,15 @@ def parse_args():
         metavar="PATH",
     )
     format_group.add_argument(
+        "--progress-bar",
+        dest="useProgressBar",
+        help="Show curses based progress bar",
+        action="store_true",
+    )
+    format_group.add_argument(
         "--no-progress-bar",
         dest="useProgressBar",
-        help="Do not use curses based progress bar",
+        help="Do not use curses based progress bar (default)",
         action="store_false",
     )
 
