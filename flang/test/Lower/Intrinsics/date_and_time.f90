@@ -18,13 +18,13 @@ subroutine date_and_time_test(date, time, zone, values)
     ! CHECK: fir.call @_FortranADateAndTime(%[[dateBuffer]], %[[dateLen]], %[[timeBuffer]], %[[timeLen]], %[[zoneBuffer]], %[[zoneLen]], %{{.*}}, %{{.*}}, %[[valuesCast]]) {{.*}}: (!fir.ref<i8>, i64, !fir.ref<i8>, i64, !fir.ref<i8>, i64, !fir.ref<i8>, i32, !fir.box<none>) -> ()
     call date_and_time(date, time, zone, values)
   end subroutine
-  
+
   ! CHECK-LABEL: func @_QPdate_and_time_test2(
   ! CHECK-SAME: %[[date:.*]]: !fir.boxchar<1>{{.*}})
   subroutine date_and_time_test2(date)
     character(*) :: date
     ! CHECK: %[[dateUnbox:.*]]:2 = fir.unboxchar %[[date]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-    ! CHECK: %[[values:.*]] = fir.absent !fir.box<none> 
+    ! CHECK: %[[values:.*]] = fir.absent !fir.box<none>
     ! CHECK: %[[dateBuffer:.*]] = fir.convert %[[dateUnbox]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
     ! CHECK: %[[dateLen:.*]] = fir.convert %[[dateUnbox]]#1 : (index) -> i64
     ! CHECK: %[[timeBuffer:.*]] = fir.convert %c0{{.*}} : (index) -> !fir.ref<i8>
@@ -34,7 +34,7 @@ subroutine date_and_time_test(date, time, zone, values)
     ! CHECK: fir.call @_FortranADateAndTime(%[[dateBuffer]], %[[dateLen]], %[[timeBuffer]], %[[timeLen]], %[[zoneBuffer]], %[[zoneLen]], %{{.*}}, %{{.*}}, %[[values]]) {{.*}}: (!fir.ref<i8>, i64, !fir.ref<i8>, i64, !fir.ref<i8>, i64, !fir.ref<i8>, i32, !fir.box<none>) -> ()
     call date_and_time(date)
   end subroutine
-  
+
   ! CHECK-LABEL: func @_QPdate_and_time_dynamic_optional(
   ! CHECK-SAME:  %[[VAL_0:[^:]*]]: !fir.boxchar<1>
   ! CHECK-SAME:  %[[VAL_1:.*]]: !fir.ref<!fir.box<!fir.ptr<!fir.char<1,?>>>>
