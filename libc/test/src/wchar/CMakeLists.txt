@@ -528,3 +528,15 @@ add_libc_test(
     libc.src.wchar.wcstoull
     .wcstol_test_support
 )
+
+add_libc_test(
+  wcstof_test
+  SUITE
+    libc_wchar_unittests
+  SRCS
+    wcstof_test.cpp
+  DEPENDS
+    libc.src.wchar.wcstof
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.LibcFPTestHelpers
+)
