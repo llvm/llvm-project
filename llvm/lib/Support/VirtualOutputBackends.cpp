@@ -262,7 +262,7 @@ static sys::fs::OpenFlags generateFlagsFromConfig(OutputConfig Config) {
     OF |= sys::fs::OF_Text;
   if (Config.getAppend())
     OF |= sys::fs::OF_Append;
- 
+
   return OF;
 }
 
