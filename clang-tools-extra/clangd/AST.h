@@ -182,9 +182,13 @@ bool isConst(const Decl *D);
 // This is confusing, and maybe we should use another name, but because "static"
 // is a standard LSP modifier, having one with that name has advantages.
 bool isStatic(const Decl *D);
+// Indicates whether declaration D is abstract in cases where D is a struct or a class.
 bool isAbstract(const Decl *D);
+// Indicates whether declaration D is virtual in cases where D is a method.
 bool isVirtual(const Decl *D);
+// Indicates whether declaration D is final in cases where D is a struct, class or method.
 bool isFinal(const Decl *D);
+// Indicates whether declaration D is a unique definition (as opposed to a declaration).
 bool isUniqueDefinition(const NamedDecl *Decl);
 /// Returns a nested name specifier loc of \p ND if it was present in the
 /// source, e.g.
