@@ -3993,9 +3993,9 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  2      4     1.00                        fadda	d0, p7, d0, z31.d
 # CHECK-NEXT:  8      16    4.00                        fadda	h0, p7, h0, z31.h
 # CHECK-NEXT:  4      8     2.00                        fadda	s0, p7, s0, z31.s
-# CHECK-NEXT:  1      2     0.50                        faddp	z0.h, p0/m, z0.h, z1.h
-# CHECK-NEXT:  1      2     0.50                        faddp	z29.s, p3/m, z29.s, z30.s
-# CHECK-NEXT:  1      2     0.50                        faddp	z31.d, p7/m, z31.d, z30.d
+# CHECK-NEXT:  1      3     0.50                        faddp	z0.h, p0/m, z0.h, z1.h
+# CHECK-NEXT:  1      3     0.50                        faddp	z29.s, p3/m, z29.s, z30.s
+# CHECK-NEXT:  1      3     0.50                        faddp	z31.d, p7/m, z31.d, z30.d
 # CHECK-NEXT:  1      2     0.50                        faddv	d0, p7, z31.d
 # CHECK-NEXT:  3      6     1.50                        faddv	h0, p7, z31.h
 # CHECK-NEXT:  2      4     1.00                        faddv	s0, p7, z31.s
