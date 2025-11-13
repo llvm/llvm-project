@@ -12,6 +12,9 @@
 
 // inline constexpr unspecified indices = unspecified;
 
+// FIXME: This test shouldn't define TEST_HAS_NO_INT128
+// ADDITIONAL_COMPILE_FLAGS(clang-modules-build): -fno-modules
+
 #include <cassert>
 #include <cstddef>
 #include <ranges>
