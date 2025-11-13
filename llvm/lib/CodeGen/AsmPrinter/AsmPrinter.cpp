@@ -1986,14 +1986,17 @@ void AsmPrinter::emitFunctionBody() {
     emitBasicBlockStart(MBB);
     DenseMap<StringRef, unsigned> MnemonicCounts;
 
-    SmallVector<unsigned> PrefetchTargets = MBB.getPrefetchTargetSubblockIndexes();
+    SmallVector<unsigned> PrefetchTargets =
+        MBB.getPrefetchTargetSubblockIndexes();
     auto PrefetchTargetIt = PrefetchTargets.begin();
     unsigned NumCalls = 0;
     // Helper to emit a symbol for the prefetch target and proceed to the next
     // one.
     auto EmitPrefetchTargetSymbolIfNeeded = [&]() {
-      if (PrefetchTargetIt == PrefetchTargets.end()) return;
-      if (NumCalls < *PrefetchTargetIt) return;
+      if (PrefetchTargetIt == PrefetchTargets.end())
+        return;
+      if (NumCalls < *PrefetchTargetIt)
+        return;
       MCSymbol *PrefetchTargetSymbol = OutContext.getOrCreateSymbol(
           Twine("__llvm_prefetch_target_") + MF->getName() + Twine("_") +
           utostr(MBB.getBBID()->BaseID) + Twine("_") +

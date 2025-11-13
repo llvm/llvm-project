@@ -229,11 +229,11 @@ private:
   /// is only computed once and is cached.
   mutable MCSymbol *CachedMCSymbol = nullptr;
 
-  /// Contains the subblock indices in this block that are targets of code prefetching.
-  /// The subblock indexed `i` specifies that region after the `i`th call (or the
-  /// beginning of the block if `i==0`) to before the`i+1`th callsite (or the
-  /// end of the block). The prefetch target is always the beginning of the
-  /// subblock.
+  /// Contains the subblock indices in this block that are targets of code
+  /// prefetching. The subblock indexed `i` specifies that region after the
+  /// `i`th call (or the beginning of the block if `i==0`) to before the`i+1`th
+  /// callsite (or the end of the block). The prefetch target is always the
+  /// beginning of the subblock.
   SmallVector<unsigned> PrefetchTargetSubblockIndexes;
 
   /// Cached MCSymbol for this block (used if IsEHContTarget).
