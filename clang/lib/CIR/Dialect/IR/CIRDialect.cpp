@@ -383,6 +383,16 @@ LogicalResult cir::CastOp::verify() {
   mlir::Type resType = getType();
   mlir::Type srcType = getSrc().getType();
 
+  // Verify address space casts for pointer types. given that
+  // casts for within a different address space are illegal.
+  auto srcPtrTy = mlir::dyn_cast<cir::PointerType>(srcType);
+  auto resPtrTy = mlir::dyn_cast<cir::PointerType>(resType);
+  if (srcPtrTy && resPtrTy && (getKind() != cir::CastKind::address_space))
+    if (srcPtrTy.getAddrSpace() != resPtrTy.getAddrSpace()) {
+      return emitOpError() << "result type address space does not match the "
+                              "address space of the operand";
+    }
+
   if (mlir::isa<cir::VectorType>(srcType) &&
       mlir::isa<cir::VectorType>(resType)) {
     // Use the element type of the vector to verify the cast kind. (Except for

@@ -147,6 +147,13 @@ public:
   }
   /// @}
 
+  /// Visitation.
+  /// @{
+  /// Visits paths stored in the invocation. The callback may return true to
+  /// short-circuit the visitation, or return false to continue visiting.
+  void visitPaths(llvm::function_ref<bool(StringRef)> Callback) const;
+  /// @}
+
   /// Command line generation.
   /// @{
   using StringAllocator = llvm::function_ref<const char *(const Twine &)>;
@@ -180,6 +187,12 @@ public:
   ///
   /// This is a (less-efficient) wrapper over generateCC1CommandLine().
   std::vector<std::string> getCC1CommandLine() const;
+
+protected:
+  /// Visits paths stored in the invocation. This is generally unsafe to call
+  /// directly, and each sub-class need to ensure calling this doesn't violate
+  /// its invariants.
+  void visitPathsImpl(llvm::function_ref<bool(std::string &)> Predicate);
 
 private:
   /// Generate command line options from DiagnosticOptions.

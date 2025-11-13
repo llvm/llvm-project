@@ -52,7 +52,7 @@ public:
   }
 
   static ArgDescriptor createArg(const ArgDescriptor &Arg, unsigned Mask) {
-    return ArgDescriptor(Arg.Reg, Mask, Arg.IsStack, Arg.IsSet);
+    return ArgDescriptor(Arg.Reg.id(), Mask, Arg.IsStack, Arg.IsSet);
   }
 
   bool isSet() const {
