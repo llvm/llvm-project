@@ -34,8 +34,6 @@ static cl::opt<bool> ImportConstantsWithRefs(
     "import-constants-with-refs", cl::init(true), cl::Hidden,
     cl::desc("Import constant global variables with references"));
 
-constexpr uint32_t FunctionSummary::ParamAccess::RangeWidth;
-
 FunctionSummary FunctionSummary::ExternalNode =
     FunctionSummary::makeDummyFunctionSummary(
         SmallVector<FunctionSummary::EdgeTy, 0>());
@@ -87,8 +85,6 @@ std::pair<unsigned, unsigned> FunctionSummary::specialRefCounts() const {
     RORefCnt++;
   return {RORefCnt, WORefCnt};
 }
-
-constexpr uint64_t ModuleSummaryIndex::BitcodeSummaryVersion;
 
 uint64_t ModuleSummaryIndex::getFlags() const {
   uint64_t Flags = 0;

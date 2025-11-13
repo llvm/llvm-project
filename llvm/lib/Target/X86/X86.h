@@ -14,6 +14,7 @@
 #ifndef LLVM_LIB_TARGET_X86_X86_H
 #define LLVM_LIB_TARGET_X86_X86_H
 
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/IR/Analysis.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/CodeGen.h"
@@ -83,7 +84,14 @@ FunctionPass *createX86AvoidStoreForwardingBlocks();
 FunctionPass *createX86FlagsCopyLoweringPass();
 
 /// Return a pass that expands DynAlloca pseudo-instructions.
-FunctionPass *createX86DynAllocaExpander();
+class X86DynAllocaExpanderPass
+    : public PassInfoMixin<X86DynAllocaExpanderPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createX86DynAllocaExpanderLegacyPass();
 
 /// Return a pass that config the tile registers.
 FunctionPass *createX86TileConfigPass();
@@ -104,7 +112,15 @@ FunctionPass *createX86LowerTileCopyPass();
 /// CALL instruction. The pass does the same for each funclet as well. This
 /// ensures that the open interval of function start and end PCs contains all
 /// return addresses for the benefit of the Windows x64 unwinder.
-FunctionPass *createX86AvoidTrailingCallPass();
+class X86AvoidTrailingCallPass
+    : public PassInfoMixin<X86AvoidTrailingCallPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+  static bool isRequired() { return true; }
+};
+
+FunctionPass *createX86AvoidTrailingCallLegacyPass();
 
 /// Return a pass that optimizes the code-size of x86 call sequences. This is
 /// done by replacing esp-relative movs with pushes.
@@ -158,7 +174,16 @@ FunctionPass *createX86InsertX87waitPass();
 /// This pass optimizes arithmetic based on knowledge that is only used by
 /// a reduction sequence and is therefore safe to reassociate in interesting
 /// ways.
-FunctionPass *createX86PartialReductionPass();
+class X86PartialReductionPass : public PassInfoMixin<X86PartialReductionPass> {
+private:
+  const X86TargetMachine *TM;
+
+public:
+  X86PartialReductionPass(const X86TargetMachine *TM) : TM(TM) {}
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
+};
+
+FunctionPass *createX86PartialReductionLegacyPass();
 
 /// // Analyzes and emits pseudos to support Win x64 Unwind V2.
 FunctionPass *createX86WinEHUnwindV2Pass();
@@ -179,7 +204,18 @@ FunctionPass *createX86LowerAMXTypeLegacyPass();
 
 /// The pass transforms amx intrinsics to scalar operation if the function has
 /// optnone attribute or it is O0.
-FunctionPass *createX86LowerAMXIntrinsicsPass();
+class X86LowerAMXIntrinsicsPass
+    : public PassInfoMixin<X86LowerAMXIntrinsicsPass> {
+private:
+  const TargetMachine *TM;
+
+public:
+  X86LowerAMXIntrinsicsPass(const TargetMachine *TM) : TM(TM) {}
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
+  static bool isRequired() { return true; }
+};
+
+FunctionPass *createX86LowerAMXIntrinsicsLegacyPass();
 
 InstructionSelector *createX86InstructionSelector(const X86TargetMachine &TM,
                                                   const X86Subtarget &,
@@ -202,12 +238,12 @@ void initializeX86FixupInstTuningPassPass(PassRegistry &);
 void initializeX86FixupVectorConstantsPassPass(PassRegistry &);
 void initializeWinEHStatePassPass(PassRegistry &);
 void initializeX86AvoidSFBPassPass(PassRegistry &);
-void initializeX86AvoidTrailingCallPassPass(PassRegistry &);
+void initializeX86AvoidTrailingCallLegacyPassPass(PassRegistry &);
 void initializeX86CallFrameOptimizationPass(PassRegistry &);
 void initializeX86CmovConverterPassPass(PassRegistry &);
 void initializeX86DAGToDAGISelLegacyPass(PassRegistry &);
 void initializeX86DomainReassignmentPass(PassRegistry &);
-void initializeX86DynAllocaExpanderPass(PassRegistry &);
+void initializeX86DynAllocaExpanderLegacyPass(PassRegistry &);
 void initializeX86ExecutionDomainFixPass(PassRegistry &);
 void initializeX86ExpandPseudoPass(PassRegistry &);
 void initializeX86FastPreTileConfigPass(PassRegistry &);
@@ -220,7 +256,7 @@ void initializeX86LowerAMXIntrinsicsLegacyPassPass(PassRegistry &);
 void initializeX86LowerAMXTypeLegacyPassPass(PassRegistry &);
 void initializeX86LowerTileCopyPass(PassRegistry &);
 void initializeX86OptimizeLEAPassPass(PassRegistry &);
-void initializeX86PartialReductionPass(PassRegistry &);
+void initializeX86PartialReductionLegacyPass(PassRegistry &);
 void initializeX86PreTileConfigPass(PassRegistry &);
 void initializeX86ReturnThunksPass(PassRegistry &);
 void initializeX86SpeculativeExecutionSideEffectSuppressionPass(PassRegistry &);

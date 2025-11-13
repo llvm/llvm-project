@@ -7035,9 +7035,15 @@ static SDValue lowerBALLOTIntrinsic(const SITargetLowering &TLI, SDNode *N,
   SDLoc SL(N);
 
   if (Src.getOpcode() == ISD::SETCC) {
+    SDValue Op0 = Src.getOperand(0);
+    SDValue Op1 = Src.getOperand(1);
+    // Need to expand bfloat to float for comparison (setcc).
+    if (Op0.getValueType() == MVT::bf16) {
+      Op0 = DAG.getNode(ISD::FP_EXTEND, SL, MVT::f32, Op0);
+      Op1 = DAG.getNode(ISD::FP_EXTEND, SL, MVT::f32, Op1);
+    }
     // (ballot (ISD::SETCC ...)) -> (AMDGPUISD::SETCC ...)
-    return DAG.getNode(AMDGPUISD::SETCC, SL, VT, Src.getOperand(0),
-                       Src.getOperand(1), Src.getOperand(2));
+    return DAG.getNode(AMDGPUISD::SETCC, SL, VT, Op0, Op1, Src.getOperand(2));
   }
   if (const ConstantSDNode *Arg = dyn_cast<ConstantSDNode>(Src)) {
     // (ballot 0) -> 0
@@ -17361,12 +17367,14 @@ void SITargetLowering::AddMemOpInit(MachineInstr &MI) const {
     // Abandon attempt if the dst size isn't large enough
     // - this is in fact an error but this is picked up elsewhere and
     // reported correctly.
-    uint32_t DstSize =
-        TRI.getRegSizeInBits(*TII->getOpRegClass(MI, DstIdx)) / 32;
+    const TargetRegisterClass *DstRC = TII->getRegClass(MI.getDesc(), DstIdx);
+
+    uint32_t DstSize = TRI.getRegSizeInBits(*DstRC) / 32;
     if (DstSize < InitIdx)
       return;
   } else if (TII->isMUBUF(MI) && AMDGPU::getMUBUFTfe(MI.getOpcode())) {
-    InitIdx = TRI.getRegSizeInBits(*TII->getOpRegClass(MI, DstIdx)) / 32;
+    const TargetRegisterClass *DstRC = TII->getRegClass(MI.getDesc(), DstIdx);
+    InitIdx = TRI.getRegSizeInBits(*DstRC) / 32;
   } else {
     return;
   }

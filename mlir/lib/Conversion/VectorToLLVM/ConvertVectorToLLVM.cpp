@@ -716,7 +716,7 @@ lowerReductionWithStartValue(ConversionPatternRewriter &rewriter, Location loc,
   accumulator = getOrCreateAccumulator<ReductionNeutral>(rewriter, loc,
                                                          llvmType, accumulator);
   return LLVMRedIntrinOp::create(rewriter, loc, llvmType,
-                                 /*startValue=*/accumulator, vectorOperand,
+                                 /*start_value=*/accumulator, vectorOperand,
                                  fmf);
 }
 
@@ -743,7 +743,7 @@ static Value lowerPredicatedReductionWithStartValue(
   Value vectorLength =
       createVectorLengthValue(rewriter, loc, vectorOperand.getType());
   return LLVMVPRedIntrinOp::create(rewriter, loc, llvmType,
-                                   /*startValue=*/accumulator, vectorOperand,
+                                   /*satrt_value=*/accumulator, vectorOperand,
                                    mask, vectorLength);
 }
 
@@ -1654,6 +1654,20 @@ private:
           return failure();
         }
       }
+    } else if (auto floatTy = dyn_cast<FloatType>(printType)) {
+      // Print other floating-point types using the APFloat runtime library.
+      int32_t sem =
+          llvm::APFloatBase::SemanticsToEnum(floatTy.getFloatSemantics());
+      Value semValue = LLVM::ConstantOp::create(
+          rewriter, loc, rewriter.getI32Type(),
+          rewriter.getIntegerAttr(rewriter.getI32Type(), sem));
+      Value floatBits =
+          LLVM::ZExtOp::create(rewriter, loc, rewriter.getI64Type(), value);
+      printer =
+          LLVM::lookupOrCreateApFloatPrintFn(rewriter, parent, symbolTables);
+      emitCall(rewriter, loc, printer.value(),
+               ValueRange({semValue, floatBits}));
+      return success();
     } else {
       return failure();
     }
