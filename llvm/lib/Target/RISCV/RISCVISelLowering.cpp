@@ -1264,11 +1264,11 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                          Custom);
       setOperationAction(ISD::SELECT_CC, VT, Expand);
       setOperationAction({ISD::VP_SINT_TO_FP, ISD::VP_UINT_TO_FP}, VT, Custom);
-      setOperationAction({ISD::INSERT_VECTOR_ELT, ISD::CONCAT_VECTORS,
-                          ISD::INSERT_SUBVECTOR, ISD::EXTRACT_SUBVECTOR,
-                          ISD::VECTOR_DEINTERLEAVE, ISD::VECTOR_INTERLEAVE,
-                          ISD::VECTOR_REVERSE, ISD::VECTOR_SPLICE,
-                          ISD::VECTOR_COMPRESS},
+      setOperationAction({ISD::INSERT_VECTOR_ELT, ISD::EXTRACT_VECTOR_ELT,
+                          ISD::CONCAT_VECTORS, ISD::INSERT_SUBVECTOR,
+                          ISD::EXTRACT_SUBVECTOR, ISD::VECTOR_DEINTERLEAVE,
+                          ISD::VECTOR_INTERLEAVE, ISD::VECTOR_REVERSE,
+                          ISD::VECTOR_SPLICE, ISD::VECTOR_COMPRESS},
                          VT, Custom);
       setOperationAction(ISD::EXPERIMENTAL_VP_SPLICE, VT, Custom);
       setOperationAction(ISD::EXPERIMENTAL_VP_REVERSE, VT, Custom);
@@ -1278,9 +1278,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
       MVT EltVT = VT.getVectorElementType();
       if (isTypeLegal(EltVT))
-        setOperationAction({ISD::SPLAT_VECTOR, ISD::EXPERIMENTAL_VP_SPLAT,
-                            ISD::EXTRACT_VECTOR_ELT},
-                           VT, Custom);
+        setOperationAction({ISD::SPLAT_VECTOR, ISD::EXPERIMENTAL_VP_SPLAT}, VT,
+                           Custom);
       else
         setOperationAction({ISD::SPLAT_VECTOR, ISD::EXPERIMENTAL_VP_SPLAT},
                            EltVT, Custom);
@@ -10356,7 +10355,7 @@ SDValue RISCVTargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
   }
 
   if ((ValVT == MVT::f16 && !Subtarget.hasVInstructionsF16()) ||
-      ValVT == MVT::bf16) {
+      (ValVT == MVT::bf16 && !Subtarget.hasVInstructionsBF16())) {
     // If we don't have vfmv.s.f for f16/bf16, use fmv.x.h first.
     MVT IntVT = VecVT.changeTypeToInteger();
     SDValue IntInsert = DAG.getNode(
@@ -10593,7 +10592,7 @@ SDValue RISCVTargetLowering::lowerEXTRACT_VECTOR_ELT(SDValue Op,
   }
 
   if ((EltVT == MVT::f16 && !Subtarget.hasVInstructionsF16()) ||
-      EltVT == MVT::bf16) {
+      (EltVT == MVT::bf16 && !Subtarget.hasVInstructionsBF16())) {
     // If we don't have vfmv.f.s for f16/bf16, extract to a gpr then use fmv.h.x
     MVT IntVT = VecVT.changeTypeToInteger();
     SDValue IntVec = DAG.getBitcast(IntVT, Vec);
