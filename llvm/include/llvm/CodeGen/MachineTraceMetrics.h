@@ -73,14 +73,14 @@ class TargetRegisterInfo;
 // direction instructions are scanned, it could be the operand that defined the
 // regunit, or the highest operand to read the regunit.
 struct LiveRegUnit {
-  unsigned RegUnit;
+  MCRegUnit RegUnit;
   unsigned Cycle = 0;
   const MachineInstr *MI = nullptr;
   unsigned Op = 0;
 
   unsigned getSparseSetIndex() const { return RegUnit; }
 
-  LiveRegUnit(unsigned RU) : RegUnit(RU) {}
+  explicit LiveRegUnit(MCRegUnit RU) : RegUnit(RU) {}
 };
 
 /// Strategies for selecting traces.
@@ -156,13 +156,14 @@ public:
   /// successors.
   struct LiveInReg {
     /// The virtual register required, or a register unit.
-    Register Reg;
+    VirtRegOrUnit VRegOrUnit;
 
     /// For virtual registers: Minimum height of the defining instruction.
     /// For regunits: Height of the highest user in the trace.
     unsigned Height;
 
-    LiveInReg(Register Reg, unsigned Height = 0) : Reg(Reg), Height(Height) {}
+    LiveInReg(VirtRegOrUnit VRegOrUnit, unsigned Height = 0)
+        : VRegOrUnit(VRegOrUnit), Height(Height) {}
   };
 
   /// Per-basic block information that relates to a specific trace through the
