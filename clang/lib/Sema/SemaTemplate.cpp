@@ -3508,7 +3508,7 @@ static QualType builtinCommonReferenceImpl(Sema &S,
     // then the member typedef type denotes that type.
     {
       auto getXRef = [&](QualType T) {
-        static BuiltinTemplateDecl *Quals[12] = {
+        BuiltinTemplateDecl *Quals[12] = {
             S.Context.get__clang_internal_xref_Decl(),
             S.Context.get__clang_internal_xref_constDecl(),
             S.Context.get__clang_internal_xref_volatileDecl(),

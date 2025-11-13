@@ -30,7 +30,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class...>
-struct common_reference;
+struct _LIBCPP_NO_SPECIALIZATIONS common_reference;
 
 template <class... _Types>
 using common_reference_t = typename common_reference<_Types...>::type;
@@ -129,15 +129,6 @@ template <class _Ap, class _Bp, class _Xp, class _Yp>
 struct __common_ref {};
 
 // Note C: For the common_reference trait applied to a parameter pack [...]
-
-template <class...>
-struct _LIBCPP_NO_SPECIALIZATIONS common_reference;
-
-template <class... _Types>
-using common_reference_t = typename common_reference<_Types...>::type;
-
-template <class, class, template <class> class, template <class> class>
-struct basic_common_reference {};
 
 _LIBCPP_DIAGNOSTIC_PUSH
 #  if __has_warning("-Winvalid-specialization")
