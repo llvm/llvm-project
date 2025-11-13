@@ -1004,7 +1004,8 @@ bool X86LegalizerInfo::legalizeFNEG(MachineInstr &MI, MachineRegisterInfo &MRI,
                                     LegalizerHelper &Helper) const {
   bool UseX87 = !Subtarget.useSoftFloat() && Subtarget.hasX87();
   bool Is64Bit = Subtarget.is64Bit();
-  if (UseX87 && !Is64Bit && MI.getMF()->getFunction().getReturnType()->isFloatTy()) {
+  if (UseX87 && !Is64Bit &&
+      MI.getMF()->getFunction().getReturnType()->isFloatTy()) {
     auto DstReg = MI.getOperand(0).getReg();
     auto SrcReg = MI.getOperand(1).getReg();
     auto ExtReg = MRI.createVirtualRegister(&X86::RFP80RegClass);
