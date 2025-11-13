@@ -186,7 +186,7 @@ jobs:
 
     - name: Test
       # Skip UEFI tests until we have testing set up.
-      if: ${{ ! endsWith(matrix.target, '-uefi-llvm') }} && ${{ matrix.enable_baremetal_build }} == "OFF"
+      if: ${{ ! endsWith(matrix.target, '-uefi-llvm') && matrix.enable_baremetal_build }} == "OFF" }}
       run: >
         cmake 
         --build ${{ steps.strings.outputs.build-output-dir }} 
