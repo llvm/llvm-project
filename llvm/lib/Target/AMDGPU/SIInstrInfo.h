@@ -136,6 +136,8 @@ private:
 
   void lowerScalarAbs(SIInstrWorklist &Worklist, MachineInstr &Inst) const;
 
+  void lowerScalarAbsDiff(SIInstrWorklist &Worklist, MachineInstr &Inst) const;
+
   void lowerScalarXnor(SIInstrWorklist &Worklist, MachineInstr &Inst) const;
 
   void splitScalarNotBinop(SIInstrWorklist &Worklist, MachineInstr &Inst,

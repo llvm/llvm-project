@@ -248,6 +248,13 @@ llvm.func @rocdl.s.get.barrier.state() {
   llvm.return
 }
 
+llvm.func @rocdl.s.get.named.barrier.state(%ptr : !llvm.ptr<3>) {
+  // CHECK-LABEL: rocdl.s.get.named.barrier.state
+  // CHECK: %[[STATE:.+]] = call i32 @llvm.amdgcn.s.get.named.barrier.state(ptr addrspace(3) %[[PTR:.+]])
+  %0 = rocdl.s.get.named.barrier.state %ptr : i32
+  llvm.return
+}
+
 llvm.func @rocdl.s.wait.dscnt() {
   // CHECK-LABEL: rocdl.s.wait.dscnt
   // CHECK-NEXT: call void @llvm.amdgcn.s.wait.dscnt(i16 0)
