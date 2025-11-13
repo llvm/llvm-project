@@ -1032,9 +1032,10 @@ static int runOrcJIT(const char *ProgName) {
     break;
   case JITLinkerKind::RuntimeDyld:
     Builder.setObjectLinkingLayerCreator([&](orc::ExecutionSession &ES) {
-      return std::make_unique<orc::RTDyldObjectLinkingLayer>(ES, [](const MemoryBuffer &) {
-        return std::make_unique<SectionMemoryManager>();
-      });
+      return std::make_unique<orc::RTDyldObjectLinkingLayer>(
+          ES, [](const MemoryBuffer &) {
+            return std::make_unique<SectionMemoryManager>();
+          });
     });
     break;
   case JITLinkerKind::Default:
