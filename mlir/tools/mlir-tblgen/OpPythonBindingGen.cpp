@@ -437,7 +437,7 @@ static void emitElementAccessors(
           type = std::strcmp(kind, "operand") == 0 ? "_ods_ir.Value"
                                                    : "_ods_ir.OpResult";
         }
-        if (std::strcmp(kind, "operand") == 0) {
+        if (std::strcmp(type.c_str(), "_ods_ir.Value") == 0) {
           StringRef pythonType = getPythonType(element.constraint.getCppType());
           if (!pythonType.empty())
             type += "[" + pythonType.str() + "]";
@@ -473,7 +473,7 @@ static void emitElementAccessors(
       if (!element.isVariableLength() || element.isOptional()) {
         type = std::strcmp(kind, "operand") == 0 ? "_ods_ir.Value"
                                                  : "_ods_ir.OpResult";
-        if (std::strcmp(kind, "operand") == 0) {
+        if (std::strcmp(type.c_str(), "_ods_ir.Value") == 0) {
           StringRef pythonType = getPythonType(element.constraint.getCppType());
           if (!pythonType.empty())
             type += "[" + pythonType.str() + "]";
