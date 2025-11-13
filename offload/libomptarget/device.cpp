@@ -373,7 +373,14 @@ bool DeviceTy::isAccessiblePtr(const void *Ptr, size_t Size) {
 }
 
 uint64_t DeviceTy::getMaxSharedTeamMemory() {
-  using DeviceQueryKind = llvm::omp::target::plugin::DeviceQueryKind;
-  return RTL->query_device_info(
-      RTLDeviceID, DeviceQueryKind::DEVICE_QUERY_MAX_SHARED_TEAM_MEM);
+  InfoTreeNode Info = RTL->query_device_info(RTLDeviceID);
+
+  auto EntryOpt = Info.get(DeviceInfo::WORK_GROUP_SHARED_MEM_SIZE);
+  if (!EntryOpt)
+    return 0;
+
+  auto Entry = *EntryOpt;
+  if (!std::holds_alternative<uint64_t>(Entry->Value))
+    return 0;
+  return std::get<uint64_t>(Entry->Value);
 }

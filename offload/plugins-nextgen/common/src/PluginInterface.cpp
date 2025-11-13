@@ -2037,21 +2037,20 @@ int32_t GenericPluginTy::query_async(int32_t DeviceId,
   return OFFLOAD_SUCCESS;
 }
 
+InfoTreeNode GenericPluginTy::obtain_device_info(int32_t DeviceId) {
+  auto InfoOrErr = getDevice(DeviceId).obtainInfo();
+  if (auto Err = InfoOrErr.takeError()) {
+    REPORT("Failure to obtain device %d info: %s\n", DeviceId,
+           toString(std::move(Err)).data());
+    return InfoTreeNode{};
+  }
+  return *InfoOrErr;
+}
+
 void GenericPluginTy::print_device_info(int32_t DeviceId) {
   if (auto Err = getDevice(DeviceId).printInfo())
     REPORT("Failure to print device %d info: %s\n", DeviceId,
            toString(std::move(Err)).data());
-}
-
-int64_t GenericPluginTy::query_device_info(int32_t DeviceId,
-                                           DeviceQueryKind Query) {
-  const GenericDeviceTy &Device = getDevice(DeviceId);
-
-  switch (Query) {
-  case DeviceQueryKind::DEVICE_QUERY_MAX_SHARED_TEAM_MEM:
-    return Device.getMaxBlockSharedMemSize();
-  }
-  return 0;
 }
 
 int32_t GenericPluginTy::create_event(int32_t DeviceId, void **EventPtr) {

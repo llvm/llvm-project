@@ -299,10 +299,6 @@ private:
   }
 };
 
-enum class DeviceQueryKind {
-  DEVICE_QUERY_MAX_SHARED_TEAM_MEM = 0,
-};
-
 /// Class wrapping a __tgt_device_image and its offload entry table on a
 /// specific device. This class is responsible for storing and managing
 /// the offload entries for an image on a device.
@@ -1515,11 +1511,11 @@ public:
   /// Query the current state of an asynchronous queue.
   int32_t query_async(int32_t DeviceId, __tgt_async_info *AsyncInfoPtr);
 
+  /// Obtain information about the given device.
+  InfoTreeNode obtain_device_info(int32_t DeviceId);
+
   /// Prints information about the given devices supported by the plugin.
   void print_device_info(int32_t DeviceId);
-
-  /// Retrieve information about the given device.
-  int64_t query_device_info(int32_t DeviceId, DeviceQueryKind Query);
 
   /// Creates an event in the given plugin if supported.
   int32_t create_event(int32_t DeviceId, void **EventPtr);
