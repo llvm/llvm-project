@@ -1757,7 +1757,7 @@ bool RISCVInsertVSETVLI::canMutatePriorConfig(
     }
 
     // If we define VL and need to move the definition up, check we can extend
-    // the live interval upwards from PrevMI to MI.
+    // the live interval upwards from MI to PrevMI.
     Register VL = MI.getOperand(0).getReg();
     if (VL.isVirtual() && LIS &&
         LIS->getInterval(VL).overlaps(LIS->getInstructionIndex(PrevMI),
