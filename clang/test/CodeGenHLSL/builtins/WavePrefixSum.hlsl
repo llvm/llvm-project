@@ -21,12 +21,12 @@ int test_int(int expr) {
 // CHECK-LABEL: test_uint64_t
 uint64_t test_uint64_t(uint64_t expr) {
   // CHECK-SPIRV:  %[[RET:.*]] = call spir_func [[TY:.*]] @llvm.spv.wave.prefix.sum.i64([[TY]] %[[#]])
-  // CHECK-DXIL:  %[[RET:.*]] = call [[TY:.*]] @llvm.dx.wave.prefix.sum.i64([[TY]] %[[#]])
+  // CHECK-DXIL:  %[[RET:.*]] = call [[TY:.*]] @llvm.dx.wave.prefix.usum.i64([[TY]] %[[#]])
   // CHECK:  ret [[TY]] %[[RET]]
   return WavePrefixSum(expr);
 }
 
-// CHECK-DXIL: declare [[TY]] @llvm.dx.wave.prefix.sum.i64([[TY]]) #[[#attr:]]
+// CHECK-DXIL: declare [[TY]] @llvm.dx.wave.prefix.usum.i64([[TY]]) #[[#attr:]]
 // CHECK-SPIRV: declare [[TY]] @llvm.spv.wave.prefix.sum.i64([[TY]]) #[[#attr:]]
 
 // Test basic lowering to runtime function call with array and float value.

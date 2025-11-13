@@ -276,6 +276,29 @@ llvm::Triple::ArchType CGHLSLRuntime::getArch() {
   return CGM.getTarget().getTriple().getArch();
 }
 
+llvm::Intrinsic::ID
+CGHLSLRuntime::getUnsignedIntrinsicVariant(llvm::Intrinsic::ID IID) {
+  switch (IID) {
+    // DXIL intrinsics
+  case Intrinsic::dx_wave_reduce_sum:
+    return Intrinsic::dx_wave_reduce_usum;
+  case Intrinsic::dx_wave_reduce_max:
+    return Intrinsic::dx_wave_reduce_umax;
+  case Intrinsic::dx_wave_reduce_min:
+    return Intrinsic::dx_wave_reduce_umin;
+  case Intrinsic::dx_wave_prefix_sum:
+    return Intrinsic::dx_wave_prefix_usum;
+
+    // SPIR-V intrinsics
+  case Intrinsic::spv_wave_reduce_max:
+    return Intrinsic::spv_wave_reduce_umax;
+  case Intrinsic::spv_wave_reduce_min:
+    return Intrinsic::spv_wave_reduce_umin;
+  default:
+    return IID;
+  }
+}
+
 // Emits constant global variables for buffer constants declarations
 // and creates metadata linking the constant globals with the buffer global.
 void CGHLSLRuntime::emitBufferGlobalsAndMetadata(const HLSLBufferDecl *BufDecl,

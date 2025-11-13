@@ -49,6 +49,33 @@
     }                                                                          \
   }
 
+// A function generator macro for picking the right intrinsic for the target
+// backend given IsUnsigned boolean condition. If IsUnsigned == true, it calls
+// getUnsignedIntrinsicVariant(IID) to retrieve the unsigned variant of the
+// intrinsic else the regular intrinsic is returned. (NOTE:
+// getUnsignedIntrinsicVariant returns IID itself if there is no unsigned
+// variant).
+#define GENERATE_HLSL_INTRINSIC_FUNCTION_SELECT_UNSIGNED(FunctionName,         \
+                                                         IntrinsicPostfix)     \
+  llvm::Intrinsic::ID get##FunctionName##Intrinsic(bool IsUnsigned) {          \
+    llvm::Triple::ArchType Arch = getArch();                                   \
+    switch (Arch) {                                                            \
+    case llvm::Triple::dxil: {                                                 \
+      static constexpr llvm::Intrinsic::ID IID =                               \
+          llvm::Intrinsic::dx_##IntrinsicPostfix;                              \
+      return IsUnsigned ? getUnsignedIntrinsicVariant(IID) : IID;              \
+    }                                                                          \
+    case llvm::Triple::spirv: {                                                \
+      static constexpr llvm::Intrinsic::ID IID =                               \
+          llvm::Intrinsic::spv_##IntrinsicPostfix;                             \
+      return IsUnsigned ? getUnsignedIntrinsicVariant(IID) : IID;              \
+    }                                                                          \
+    default:                                                                   \
+      llvm_unreachable("Intrinsic " #IntrinsicPostfix                          \
+                       " not supported by target architecture");               \
+    }                                                                          \
+  }
+
 using ResourceClass = llvm::dxil::ResourceClass;
 
 namespace llvm {
@@ -141,10 +168,17 @@ public:
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveActiveAllTrue, wave_all)
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveActiveAnyTrue, wave_any)
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveActiveCountBits, wave_active_countbits)
+  GENERATE_HLSL_INTRINSIC_FUNCTION_SELECT_UNSIGNED(WaveActiveSum,
+                                                   wave_reduce_sum)
+  GENERATE_HLSL_INTRINSIC_FUNCTION_SELECT_UNSIGNED(WaveActiveMax,
+                                                   wave_reduce_max)
+  GENERATE_HLSL_INTRINSIC_FUNCTION_SELECT_UNSIGNED(WaveActiveMin,
+                                                   wave_reduce_min)
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveIsFirstLane, wave_is_first_lane)
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveGetLaneCount, wave_get_lane_count)
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveReadLaneAt, wave_readlane)
-  GENERATE_HLSL_INTRINSIC_FUNCTION(WavePrefixSum, wave_prefix_sum)
+  GENERATE_HLSL_INTRINSIC_FUNCTION_SELECT_UNSIGNED(WavePrefixSum,
+                                                   wave_prefix_sum)
   GENERATE_HLSL_INTRINSIC_FUNCTION(FirstBitUHigh, firstbituhigh)
   GENERATE_HLSL_INTRINSIC_FUNCTION(FirstBitSHigh, firstbitshigh)
   GENERATE_HLSL_INTRINSIC_FUNCTION(FirstBitLow, firstbitlow)
@@ -246,6 +280,10 @@ private:
                                     std::optional<unsigned> Index);
 
   llvm::Triple::ArchType getArch();
+
+  // Returns the unsigned variant of the given intrinsic ID if possible,
+  // otherwise, the original intrinsic ID is returned.
+  llvm::Intrinsic::ID getUnsignedIntrinsicVariant(llvm::Intrinsic::ID IID);
 
   llvm::DenseMap<const clang::RecordType *, llvm::TargetExtType *> LayoutTypes;
   unsigned SPIRVLastAssignedInputSemanticLocation = 0;

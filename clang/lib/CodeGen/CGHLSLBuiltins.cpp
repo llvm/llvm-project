@@ -240,61 +240,6 @@ static Intrinsic::ID getFirstBitHighIntrinsic(CGHLSLRuntime &RT, QualType QT) {
   return RT.getFirstBitUHighIntrinsic();
 }
 
-// Return wave active sum that corresponds to the QT scalar type
-static Intrinsic::ID getWaveActiveSumIntrinsic(llvm::Triple::ArchType Arch,
-                                               CGHLSLRuntime &RT, QualType QT) {
-  switch (Arch) {
-  case llvm::Triple::spirv:
-    return Intrinsic::spv_wave_reduce_sum;
-  case llvm::Triple::dxil: {
-    if (QT->isUnsignedIntegerType())
-      return Intrinsic::dx_wave_reduce_usum;
-    return Intrinsic::dx_wave_reduce_sum;
-  }
-  default:
-    llvm_unreachable("Intrinsic WaveActiveSum"
-                     " not supported by target architecture");
-  }
-}
-
-// Return wave active max that corresponds to the QT scalar type
-static Intrinsic::ID getWaveActiveMaxIntrinsic(llvm::Triple::ArchType Arch,
-                                               CGHLSLRuntime &RT, QualType QT) {
-  switch (Arch) {
-  case llvm::Triple::spirv:
-    if (QT->isUnsignedIntegerType())
-      return Intrinsic::spv_wave_reduce_umax;
-    return Intrinsic::spv_wave_reduce_max;
-  case llvm::Triple::dxil: {
-    if (QT->isUnsignedIntegerType())
-      return Intrinsic::dx_wave_reduce_umax;
-    return Intrinsic::dx_wave_reduce_max;
-  }
-  default:
-    llvm_unreachable("Intrinsic WaveActiveMax"
-                     " not supported by target architecture");
-  }
-}
-
-// Return wave active min that corresponds to the QT scalar type
-static Intrinsic::ID getWaveActiveMinIntrinsic(llvm::Triple::ArchType Arch,
-                                               CGHLSLRuntime &RT, QualType QT) {
-  switch (Arch) {
-  case llvm::Triple::spirv:
-    if (QT->isUnsignedIntegerType())
-      return Intrinsic::spv_wave_reduce_umin;
-    return Intrinsic::spv_wave_reduce_min;
-  case llvm::Triple::dxil: {
-    if (QT->isUnsignedIntegerType())
-      return Intrinsic::dx_wave_reduce_umin;
-    return Intrinsic::dx_wave_reduce_min;
-  }
-  default:
-    llvm_unreachable("Intrinsic WaveActiveMin"
-                     " not supported by target architecture");
-  }
-}
-
 // Returns the mangled name for a builtin function that the SPIR-V backend
 // will expand into a spec Constant.
 static std::string getSpecConstantFunctionName(clang::QualType SpecConstantType,
@@ -794,33 +739,33 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
         ArrayRef{OpExpr});
   }
   case Builtin::BI__builtin_hlsl_wave_active_sum: {
-    // Due to the use of variadic arguments, explicitly retreive argument
+    // Due to the use of variadic arguments, explicitly retrieve argument
     Value *OpExpr = EmitScalarExpr(E->getArg(0));
-    Intrinsic::ID IID = getWaveActiveSumIntrinsic(
-        getTarget().getTriple().getArch(), CGM.getHLSLRuntime(),
-        E->getArg(0)->getType());
+    QualType QT = E->getArg(0)->getType();
+    Intrinsic::ID IID = CGM.getHLSLRuntime().getWaveActiveSumIntrinsic(
+        QT->isUnsignedIntegerType());
 
     return EmitRuntimeCall(Intrinsic::getOrInsertDeclaration(
                                &CGM.getModule(), IID, {OpExpr->getType()}),
                            ArrayRef{OpExpr}, "hlsl.wave.active.sum");
   }
   case Builtin::BI__builtin_hlsl_wave_active_max: {
-    // Due to the use of variadic arguments, explicitly retreive argument
+    // Due to the use of variadic arguments, explicitly retrieve argument
     Value *OpExpr = EmitScalarExpr(E->getArg(0));
-    Intrinsic::ID IID = getWaveActiveMaxIntrinsic(
-        getTarget().getTriple().getArch(), CGM.getHLSLRuntime(),
-        E->getArg(0)->getType());
+    QualType QT = E->getArg(0)->getType();
+    Intrinsic::ID IID = CGM.getHLSLRuntime().getWaveActiveMaxIntrinsic(
+        QT->isUnsignedIntegerType());
 
     return EmitRuntimeCall(Intrinsic::getOrInsertDeclaration(
                                &CGM.getModule(), IID, {OpExpr->getType()}),
                            ArrayRef{OpExpr}, "hlsl.wave.active.max");
   }
   case Builtin::BI__builtin_hlsl_wave_active_min: {
-    // Due to the use of variadic arguments, explicitly retreive argument
+    // Due to the use of variadic arguments, explicitly retrieve argument
     Value *OpExpr = EmitScalarExpr(E->getArg(0));
-    Intrinsic::ID IID = getWaveActiveMinIntrinsic(
-        getTarget().getTriple().getArch(), CGM.getHLSLRuntime(),
-        E->getArg(0)->getType());
+    QualType QT = E->getArg(0)->getType();
+    Intrinsic::ID IID = CGM.getHLSLRuntime().getWaveActiveMinIntrinsic(
+        QT->isUnsignedIntegerType());
 
     return EmitRuntimeCall(Intrinsic::getOrInsertDeclaration(
                                &CGM.getModule(), IID, {OpExpr->getType()}),
@@ -866,7 +811,9 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
   }
   case Builtin::BI__builtin_hlsl_wave_prefix_sum: {
     Value *OpExpr = EmitScalarExpr(E->getArg(0));
-    Intrinsic::ID IID = CGM.getHLSLRuntime().getWavePrefixSumIntrinsic();
+    QualType QT = E->getArg(0)->getType();
+    Intrinsic::ID IID = CGM.getHLSLRuntime().getWavePrefixSumIntrinsic(
+        QT->isUnsignedIntegerType());
     return EmitRuntimeCall(Intrinsic::getOrInsertDeclaration(
                                &CGM.getModule(), IID, {OpExpr->getType()}),
                            ArrayRef{OpExpr}, "hlsl.wave.prefix.sum");
