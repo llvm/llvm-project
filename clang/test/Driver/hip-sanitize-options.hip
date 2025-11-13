@@ -57,12 +57,36 @@
 // (The address sanitizer enables the device sanitizer pipeline. The fuzzer
 // implicitly turns on LLVMs SanitizerCoverage, which the driver then forwards
 // to the device cc1. SanitizerCoverage is not supported on amdgcn.)
+
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu --offload-arch=gfx900:xnack+ \
 // RUN:   -fsanitize=address,fuzzer --rocm-path=%S/Inputs/rocm %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=INVALIDCOMBINATION,INVALIDCOMBINATION1 %s
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu --offload-arch=gfx900:xnack+ \
 // RUN:   -fsanitize=fuzzer,address --rocm-path=%S/Inputs/rocm %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=INVALIDCOMBINATION,INVALIDCOMBINATION2 %s
+
+// Do the same for multiple -fsanitize arguments and multi-arch scenarios.
+
+// RUN:   %clang -### --target=x86_64-unknown-linux-gnu --offload-arch=gfx900:xnack+ --offload-arch=gfx908:xnack- \
+// RUN:   -fsanitize=address,fuzzer -fsanitize=leak --rocm-path=%S/Inputs/rocm %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=MULT1,XNACK2 %s
+// RUN:   %clang -### --target=x86_64-unknown-linux-gnu --offload-arch=gfx900:xnack+,gfx908:xnack- \
+// RUN:   -fsanitize=fuzzer,address -fsanitize=leak --rocm-path=%S/Inputs/rocm %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=MULT2,XNACK2 %s
+
+// Test -Xarch_device error scenario
+
+// RUN:   not %clang -### --target=x86_64-unknown-linux-gnu --offload-arch=gfx900:xnack+ \
+// RUN:   -Xarch_device -fsanitize=leak --rocm-path=%S/Inputs/rocm %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=UNSUPPORTEDERROR %s
+
+// RUN:   not %clang -### --target=x86_64-unknown-linux-gnu --offload-arch=gfx900:xnack- \
+// RUN:   -Xarch_device -fsanitize=address --rocm-path=%S/Inputs/rocm %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=XNACKERROR %s
+
+// RUN:   not %clang -### --target=x86_64-unknown-linux-gnu --offload-arch=gfx900:xnack+ \
+// RUN:   -Xarch_device -fsanitize=fuzzer,address --rocm-path=%S/Inputs/rocm %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=INVALIDCOMBINATIONERROR %s
 
 // CHECK-NOT: {{"[^"]*clang[^"]*".* "-fcuda-is-device".* "-fsanitize=address"}}
 // CHECK-NOT: {{"[^"]*clang[^"]*".* "-fcuda-is-device".* "-mlink-bitcode-file" ".*asanrtl.bc"}}
@@ -79,7 +103,7 @@
 
 // FAIL: error: cannot find ROCm device library for ABI version 5; provide its path via '--rocm-path' or '--rocm-device-lib-path', or pass '-nogpulib' to build without ROCm device library
 
-// XNACK-DAG: warning: ignoring 'leak' in '-fsanitize=leak' option as it is not currently supported for target 'amdgcn-amd-amdhsa'
+// XNACK-DAG: warning: ignoring '-fsanitize=leak' option as it is not currently supported for target 'amdgcn-amd-amdhsa'
 // XNACK-DAG: warning: ignoring '-fsanitize=address' option for offload arch 'gfx900:xnack-' as it is not currently supported there. Use it with an offload arch containing 'xnack+' instead
 // XNACK-DAG: warning: ignoring '-fsanitize=address' option for offload arch 'gfx906' as it is not currently supported there. Use it with an offload arch containing 'xnack+' instead
 // XNACK-DAG: {{"[^"]*clang[^"]*".* "-mlink-bitcode-file" ".*asanrtl.bc".* "-target-cpu" "gfx900".* "-target-feature" "\+xnack".* "-fsanitize=address"}}
@@ -118,3 +142,23 @@
 // INVALIDCOMBINATION2-DAG: warning: ignoring 'fuzzer' in '-fsanitize=fuzzer,address' option as it is not currently supported for target 'amdgcn-amd-amdhsa' [-Woption-ignored]
 // INVALIDCOMBINATION-DAG: {{"[^"]*clang[^"]*".* "-mlink-bitcode-file" ".*asanrtl.bc".* "-target-cpu" "gfx900".* "-target-feature" "\+xnack".* "-fsanitize=address"}}
 // INVALIDCOMBINATION-DAG: {{"[^"]*clang[^"]*".* "-triple" "x86_64-unknown-linux-gnu".* "-fsanitize=address,fuzzer,fuzzer-no-link"}}
+
+// MULT1-DAG: warning: ignoring 'fuzzer' in '-fsanitize=address,fuzzer' option as it is not currently supported for target 'amdgcn-amd-amdhsa' [-Woption-ignored]
+// MULT1-DAG: warning: ignoring '-fsanitize=leak' option as it is not currently supported for target 'amdgcn-amd-amdhsa' [-Woption-ignored]
+// MULT1-DAG: warning: ignoring 'fuzzer' in '-fsanitize=address,fuzzer' option as it is not currently supported for target 'amdgcn-amd-amdhsa' [-Woption-ignored]
+// MULT1-DAG: warning: ignoring '-fsanitize=address,fuzzer' option for offload arch 'gfx908:xnack-' as it is not currently supported there. Use it with an offload arch containing 'xnack+' instead [-Woption-ignored]
+// MULT1-DAG: warning: ignoring '-fsanitize=leak' option as it is not currently supported for target 'amdgcn-amd-amdhsa' [-Woption-ignored]
+
+// MULT2-DAG: warning: ignoring 'fuzzer' in '-fsanitize=fuzzer,address' option as it is not currently supported for target 'amdgcn-amd-amdhsa' [-Woption-ignored]
+// MULT2-DAG: warning: ignoring '-fsanitize=leak' option as it is not currently supported for target 'amdgcn-amd-amdhsa' [-Woption-ignored]
+// MULT2-DAG: warning: ignoring 'fuzzer' in '-fsanitize=fuzzer,address' option as it is not currently supported for target 'amdgcn-amd-amdhsa' [-Woption-ignored]
+// MULT2-DAG: warning: ignoring '-fsanitize=fuzzer,address' option for offload arch 'gfx908:xnack-' as it is not currently supported there. Use it with an offload arch containing 'xnack+' instead [-Woption-ignored]
+// MULT2-DAG: warning: ignoring '-fsanitize=leak' option as it is not currently supported for target 'amdgcn-amd-amdhsa' [-Woption-ignored]
+
+// XNACK2-DAG: {{"[^"]*clang[^"]*".* "-mlink-bitcode-file" ".*asanrtl.bc".* "-target-cpu" "gfx900".* "-target-feature" "\+xnack".* "-fsanitize=address"}}
+// XNACK2-DAG: {{"[^"]*clang[^"]*".* "-target-cpu" "gfx908"}}
+// XNACK2-DAG: {{"[^"]*clang[^"]*".* "-triple" "x86_64-unknown-linux-gnu".* "-fsanitize=address,fuzzer,fuzzer-no-link,leak"}}
+
+// UNSUPPORTEDERROR: error: '-fsanitize=leak' option is not currently supported for target 'amdgcn-amd-amdhsa'
+// XNACKERROR: error: '-fsanitize=address' option for offload arch 'gfx900:xnack-' is not currently supported there. Use it with an offload arch containing 'xnack+' instead
+// INVALIDCOMBINATIONERROR: error: 'fuzzer' in '-fsanitize=fuzzer,address' option is not currently supported for target 'amdgcn-amd-amdhsa'

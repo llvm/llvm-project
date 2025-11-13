@@ -219,8 +219,6 @@ HIPAMDToolChain::HIPAMDToolChain(const Driver &D, const llvm::Triple &Triple,
   // Lookup binaries into the driver directory, this is used to
   // discover the clang-offload-bundler executable.
   getProgramPaths().push_back(getDriver().Dir);
-  // Diagnose unsupported sanitizer options only once.
-  diagnoseUnsupportedSanitizers(Args);
 }
 
 void HIPAMDToolChain::addClangTargetOptions(
@@ -291,19 +289,10 @@ HIPAMDToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
 
   const OptTable &Opts = getDriver().getOpts();
 
-  // Skip sanitize options passed from the HostTC. Remove them early.
-  // The decision to sanitize device code is computed only by
-  // 'shouldSkipSanitizeOption'.
-  if (DAL->hasArg(options::OPT_fsanitize_EQ))
-    DAL->eraseArg(options::OPT_fsanitize_EQ);
-
   for (Arg *A : Args) {
-    std::optional<std::string> SupportedSanitizers =
-        filterSanitizeOption(*this, Args, BoundArch, A);
-    if (!SupportedSanitizers)
+    // Filter unsupported sanitizers passed from the HostTC.
+    if (!handleSanitizeOption(*this, *DAL, Args, BoundArch, A))
       DAL->append(A);
-    else if (!SupportedSanitizers->empty())
-      DAL->AddJoinedArg(A, A->getOption(), *SupportedSanitizers);
   }
 
   if (!BoundArch.empty()) {
@@ -358,9 +347,8 @@ void HIPAMDToolChain::AddHIPIncludeArgs(const ArgList &DriverArgs,
 SanitizerMask HIPAMDToolChain::getSupportedSanitizers() const {
   // The HIPAMDToolChain only supports sanitizers in the sense that it allows
   // sanitizer arguments on the command line if they are supported by the host
-  // toolchain. The HIPAMDToolChain will actually ignore any command line
-  // arguments for any of these "supported" sanitizers. That means that no
-  // sanitization of device code is actually supported at this time.
+  // toolchain. The HIPAMDToolChain will later filter unsupported sanitizers
+  // from the command line arguments.
   //
   // This behavior is necessary because the host and device toolchains
   // invocations often share the command line, so the device toolchain must

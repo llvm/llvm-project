@@ -1071,32 +1071,12 @@ ROCMToolChain::getCommonDeviceLibNames(
       getSanitizerArgs(DriverArgs).needsAsanRt());
 }
 
-std::optional<std::string> AMDGPUToolChain::filterSanitizeOption(
+bool AMDGPUToolChain::shouldSkipSanitizeOption(
     const ToolChain &TC, const llvm::opt::ArgList &DriverArgs,
     StringRef TargetID, const llvm::opt::Arg *A) const {
-  // For actions without targetID, do nothing.
-  if (TargetID.empty())
-    return std::nullopt;
-  Option O = A->getOption();
-
-  if (!O.matches(options::OPT_fsanitize_EQ))
-    return std::nullopt;
-
-  if (!DriverArgs.hasFlag(options::OPT_fgpu_sanitize,
-                          options::OPT_fno_gpu_sanitize, true))
-    return "";
-
   auto &Diags = TC.getDriver().getDiags();
-
-  // We only allow the address sanitizer and ignore all other sanitizers.
-  SmallVector<std::string, 4> SupportedSanitizers;
-  for (const char *Value : A->getValues()) {
-    SanitizerMask K = parseSanitizerValue(Value, /*AllowGroups=*/false);
-    if (K == SanitizerKind::Address)
-      SupportedSanitizers.push_back(std::string(Value));
-  }
-  if (SupportedSanitizers.empty())
-    return "";
+  bool IsExplicitDevice =
+      A->getBaseArg().getOption().matches(options::OPT_Xarch_device);
 
   // Check 'xnack+' availability by default
   llvm::StringRef Processor =
@@ -1108,7 +1088,7 @@ std::optional<std::string> AMDGPUToolChain::filterSanitizeOption(
                       ? llvm::AMDGPU::getArchAttrAMDGCN(ProcKind)
                       : llvm::AMDGPU::getArchAttrR600(ProcKind);
   if (Features & llvm::AMDGPU::FEATURE_XNACK_ALWAYS)
-    return std::nullopt;
+    return false;
 
   // Look for the xnack feature in TargetID
   llvm::StringMap<bool> FeatureMap;
@@ -1117,11 +1097,17 @@ std::optional<std::string> AMDGPUToolChain::filterSanitizeOption(
   (void)OptionalGpuArch;
   auto Loc = FeatureMap.find("xnack");
   if (Loc == FeatureMap.end() || !Loc->second) {
-    Diags.Report(
-        clang::diag::warn_drv_unsupported_option_for_offload_arch_req_feature)
-        << A->getAsString(DriverArgs) << TargetID << "xnack+";
-    return "";
+    if (IsExplicitDevice) {
+      Diags.Report(
+          clang::diag::err_drv_unsupported_option_for_offload_arch_req_feature)
+          << A->getAsString(DriverArgs) << TargetID << "xnack+";
+    } else {
+      Diags.Report(
+          clang::diag::warn_drv_unsupported_option_for_offload_arch_req_feature)
+          << A->getAsString(DriverArgs) << TargetID << "xnack+";
+    }
+    return true;
   }
 
-  return llvm::join(SupportedSanitizers, ",");
+  return false;
 }

@@ -101,13 +101,11 @@ public:
   /// Needed for translating LTO options.
   const char *getDefaultLinker() const override { return "ld.lld"; }
 
-  /// Filter supported sanitizers from the sanitize option and return them. If
-  /// there should be no filtering and Arg should be kept as-is, return
-  /// std::nullopt. If no sanitizers are supported, return an empty string.
-  std::optional<std::string>
-  filterSanitizeOption(const ToolChain &TC,
-                       const llvm::opt::ArgList &DriverArgs, StringRef TargetID,
-                       const llvm::opt::Arg *A) const;
+  /// Should skip sanitize option.
+  bool shouldSkipSanitizeOption(const ToolChain &TC,
+                                const llvm::opt::ArgList &DriverArgs,
+                                StringRef TargetID,
+                                const llvm::opt::Arg *A) const;
 
   /// Uses amdgpu-arch tool to get arch of the system GPU. Will return error
   /// if unable to find one.
@@ -157,19 +155,64 @@ public:
     return SanitizerKind::Address;
   }
 
-  void diagnoseUnsupportedSanitizers(const llvm::opt::ArgList &Args) const {
-    if (!Args.hasFlag(options::OPT_fgpu_sanitize, options::OPT_fno_gpu_sanitize,
-                      true))
-      return;
+  bool handleSanitizeOption(const ToolChain &TC, llvm::opt::DerivedArgList &DAL,
+                            const llvm::opt::ArgList &DriverArgs,
+                            StringRef TargetID, const llvm::opt::Arg *A) const {
+    if (TargetID.empty())
+      return false;
+    // If this isn't a sanitizer option, don't handle it.
+    if (!A->getOption().matches(options::OPT_fsanitize_EQ))
+      return false;
+    // If we shouldn't do sanitizing, skip it.
+    if (!DriverArgs.hasFlag(options::OPT_fgpu_sanitize,
+                            options::OPT_fno_gpu_sanitize, true))
+      return true;
+
     auto &Diags = getDriver().getDiags();
-    for (auto *A : Args.filtered(options::OPT_fsanitize_EQ)) {
-      for (const char *Value : A->getValues()) {
-        SanitizerMask K = parseSanitizerValue(Value, /*Allow Groups*/ false);
-        if (K != SanitizerKind::Address)
+    bool IsExplicitDevice =
+        A->getBaseArg().getOption().matches(options::OPT_Xarch_device);
+
+    SmallVector<const char *, 4> SupportedSanitizers;
+    SmallVector<const char *, 4> UnSupportedSanitizers;
+
+    for (const char *Value : A->getValues()) {
+      SanitizerMask K = parseSanitizerValue(Value, /*Allow Groups*/ false);
+      if (K & ROCMToolChain::getSupportedSanitizers())
+        SupportedSanitizers.push_back(Value);
+      else
+        UnSupportedSanitizers.push_back(Value);
+    }
+
+    // If there are no supported sanitizers, drop the whole argument.
+    if (SupportedSanitizers.empty()) {
+      if (IsExplicitDevice) {
+        Diags.Report(clang::diag::err_drv_unsupported_option_for_target)
+            << A->getAsString(DAL) << getTriple().str();
+      } else {
+        Diags.Report(clang::diag::warn_drv_unsupported_option_for_target)
+            << A->getAsString(DAL) << getTriple().str();
+      }
+      return true;
+    }
+    // If only some sanitizers are unsupported, report each one individually.
+    if (!UnSupportedSanitizers.empty()) {
+      for (const char *Value : UnSupportedSanitizers) {
+        if (IsExplicitDevice) {
+          Diags.Report(clang::diag::err_drv_unsupported_option_part_for_target)
+              << Value << A->getAsString(DriverArgs) << getTriple().str();
+        } else {
           Diags.Report(clang::diag::warn_drv_unsupported_option_part_for_target)
-              << Value << A->getAsString(Args) << getTriple().str();
+              << Value << A->getAsString(DriverArgs) << getTriple().str();
+        }
       }
     }
+    // If we know the target arch, check if the sanitizer is supported for it.
+    if (shouldSkipSanitizeOption(TC, DriverArgs, TargetID, A))
+      return true;
+
+    // Add a new argument with only the supported sanitizers.
+    DAL.AddJoinedArg(A, A->getOption(), llvm::join(SupportedSanitizers, ","));
+    return true;
   }
 };
 
