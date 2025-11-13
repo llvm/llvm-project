@@ -2385,7 +2385,7 @@ void VPlanTransforms::optimize(VPlan &Plan) {
 //   %Negated = Not %ALM
 //   branch-on-cond %Negated
 //
-static VPActiveLaneMaskPHIRecipe *addVPLaneMaskPhiAndUpdateExitBranch(
+static VPSingleDefRecipe *addVPLaneMaskPhiAndUpdateExitBranch(
     VPlan &Plan, bool DataAndControlFlowWithoutRuntimeCheck) {
   VPRegionBlock *TopRegion = Plan.getVectorLoopRegion();
   VPBasicBlock *EB = TopRegion->getExitingBasicBlock();
@@ -2508,6 +2508,7 @@ static VPSingleDefRecipe *findHeaderMask(VPlan &Plan) {
 void VPlanTransforms::addActiveLaneMask(
     VPlan &Plan, bool UseActiveLaneMaskForControlFlow,
     bool DataAndControlFlowWithoutRuntimeCheck) {
+
   assert((!DataAndControlFlowWithoutRuntimeCheck ||
           UseActiveLaneMaskForControlFlow) &&
          "DataAndControlFlowWithoutRuntimeCheck implies "

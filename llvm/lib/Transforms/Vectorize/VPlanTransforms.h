@@ -129,10 +129,10 @@ struct VPlanTransforms {
   /// flat CFG into a hierarchical CFG.
   LLVM_ABI_FOR_TEST static void createLoopRegions(VPlan &Plan);
 
-  /// Wrap runtime check block \p CheckBlock in a VPIRBB and \p Cond in a
-  /// VPValue and connect the block to \p Plan, using the VPValue as branch
+  /// Connect \p CheckBlockVPBB to \p Plan, using the \p CondVPV as branch
   /// condition.
-  static void attachCheckBlock(VPlan &Plan, Value *Cond, BasicBlock *CheckBlock,
+  static void attachCheckBlock(VPlan &Plan, VPValue *CondVPV,
+                               VPBasicBlock *CheckBlockVPBB,
                                bool AddBranchWeights);
 
   /// Replaces the VPInstructions in \p Plan with corresponding

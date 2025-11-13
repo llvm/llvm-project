@@ -491,11 +491,12 @@ struct PointerDiffInfo {
   const SCEV *SinkStart;
   unsigned AccessSize;
   bool NeedsFreeze;
+  bool WriteAfterRead;
 
   PointerDiffInfo(const SCEV *SrcStart, const SCEV *SinkStart,
-                  unsigned AccessSize, bool NeedsFreeze)
+                  unsigned AccessSize, bool NeedsFreeze, bool WriteAfterRead)
       : SrcStart(SrcStart), SinkStart(SinkStart), AccessSize(AccessSize),
-        NeedsFreeze(NeedsFreeze) {}
+        NeedsFreeze(NeedsFreeze), WriteAfterRead(WriteAfterRead) {}
 };
 
 /// Holds information about the memory runtime legality checks to verify

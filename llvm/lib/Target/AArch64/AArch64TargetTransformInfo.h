@@ -406,6 +406,8 @@ public:
       TTI::PartialReductionExtendKind OpBExtend, std::optional<unsigned> BinOp,
       TTI::TargetCostKind CostKind) const override;
 
+  bool useSafeEltsMask() const override;
+
   bool enableOrderedReductions() const override { return true; }
 
   InstructionCost getInterleavedMemoryOpCost(

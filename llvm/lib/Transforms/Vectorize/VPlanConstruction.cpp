@@ -640,11 +640,9 @@ void VPlanTransforms::createLoopRegions(VPlan &Plan) {
 // including memory overlap checks block and wrapping/unit-stride checks block.
 static constexpr uint32_t CheckBypassWeights[] = {1, 127};
 
-void VPlanTransforms::attachCheckBlock(VPlan &Plan, Value *Cond,
-                                       BasicBlock *CheckBlock,
+void VPlanTransforms::attachCheckBlock(VPlan &Plan, VPValue *CondVPV,
+                                       VPBasicBlock *CheckBlockVPBB,
                                        bool AddBranchWeights) {
-  VPValue *CondVPV = Plan.getOrAddLiveIn(Cond);
-  VPBasicBlock *CheckBlockVPBB = Plan.createVPIRBasicBlock(CheckBlock);
   VPBlockBase *VectorPH = Plan.getVectorPreheader();
   VPBlockBase *ScalarPH = Plan.getScalarPreheader();
   VPBlockBase *PreVectorPH = VectorPH->getSinglePredecessor();

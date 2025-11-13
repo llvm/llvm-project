@@ -175,6 +175,9 @@ bool llvm::isVectorIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
     return (ScalarOpdIdx == 2);
   case Intrinsic::experimental_vp_splice:
     return ScalarOpdIdx == 2 || ScalarOpdIdx == 4;
+  case Intrinsic::loop_dependence_war_mask:
+  case Intrinsic::loop_dependence_raw_mask:
+    return true;
   default:
     return false;
   }

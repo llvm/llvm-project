@@ -169,6 +169,7 @@ STATISTIC(LoopsVectorized, "Number of loops vectorized");
 STATISTIC(LoopsAnalyzed, "Number of loops analyzed for vectorization");
 STATISTIC(LoopsEpilogueVectorized, "Number of epilogues vectorized");
 STATISTIC(LoopsEarlyExitVectorized, "Number of early exit loops vectorized");
+STATISTIC(LoopsAliasMasked, "Number of loops predicated with an alias mask");
 
 static cl::opt<bool> EnableEpilogueVectorization(
     "enable-epilogue-vectorization", cl::init(true), cl::Hidden,
@@ -1331,6 +1332,12 @@ public:
       return TailFoldingStyle::None;
     return IVUpdateMayOverflow ? ChosenTailFoldingStyle->first
                                : ChosenTailFoldingStyle->second;
+  }
+
+  RTCheckStyle getRTCheckStyle(const TargetTransformInfo &TTI) const {
+    if (TTI.useSafeEltsMask())
+      return RTCheckStyle::UseSafeEltsMask;
+    return RTCheckStyle::ScalarDifference;
   }
 
   /// Selects and saves TailFoldingStyle for 2 options - if IV update may
@@ -8554,6 +8561,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
     bool ForControlFlow = useActiveLaneMaskForControlFlow(Style);
     bool WithoutRuntimeCheck =
         Style == TailFoldingStyle::DataAndControlFlowWithoutRuntimeCheck;
+
     VPlanTransforms::addActiveLaneMask(*Plan, ForControlFlow,
                                        WithoutRuntimeCheck);
   }
@@ -8974,11 +8982,104 @@ void LoopVectorizationPlanner::attachRuntimeChecks(
     assert((!CM.OptForSize ||
             CM.Hints->getForce() == LoopVectorizeHints::FK_Enabled) &&
            "Cannot SCEV check stride or overflow when optimizing for size");
-    VPlanTransforms::attachCheckBlock(Plan, SCEVCheckCond, SCEVCheckBlock,
+    VPlanTransforms::attachCheckBlock(Plan, Plan.getOrAddLiveIn(SCEVCheckCond),
+                                      Plan.createVPIRBasicBlock(SCEVCheckBlock),
                                       HasBranchWeights);
   }
   const auto &[MemCheckCond, MemCheckBlock] = RTChecks.getMemRuntimeChecks();
   if (MemCheckBlock && MemCheckBlock->hasNPredecessors(0)) {
+    VPValue *MemCheckCondVPV = Plan.getOrAddLiveIn(MemCheckCond);
+    VPBasicBlock *MemCheckBlockVP = Plan.createVPIRBasicBlock(MemCheckBlock);
+    std::optional<ArrayRef<PointerDiffInfo>> ChecksOpt =
+        CM.Legal->getRuntimePointerChecking()->getDiffChecks();
+
+    // Create a mask enabling safe elements for each iteration.
+    if (CM.getRTCheckStyle(TTI) == RTCheckStyle::UseSafeEltsMask &&
+        ChecksOpt.has_value() && ChecksOpt->size() > 0) {
+      ArrayRef<PointerDiffInfo> Checks = *ChecksOpt;
+      VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
+      VPBasicBlock *LoopBody = LoopRegion->getEntryBasicBlock();
+      VPBuilder Builder(MemCheckBlockVP);
+
+      /// Create a mask for each possibly-aliasing pointer pair, ANDing them if
+      /// there's more than one pair.
+      VPValue *AliasMask = nullptr;
+      for (PointerDiffInfo Check : Checks) {
+        VPValue *Sink =
+            vputils::getOrCreateVPValueForSCEVExpr(Plan, Check.SinkStart);
+        VPValue *Src =
+            vputils::getOrCreateVPValueForSCEVExpr(Plan, Check.SrcStart);
+
+        Type *PtrType = PointerType::getUnqual(Plan.getContext());
+        Sink = Builder.createScalarCast(Instruction::CastOps::IntToPtr, Sink,
+                                        PtrType, DebugLoc());
+        Src = Builder.createScalarCast(Instruction::CastOps::IntToPtr, Src,
+                                       PtrType, DebugLoc());
+
+        SmallVector<VPValue *, 3> Ops{
+            Src, Sink,
+            Plan.getConstantInt(IntegerType::getInt64Ty(Plan.getContext()),
+                                Check.AccessSize)};
+        VPWidenIntrinsicRecipe *M = new VPWidenIntrinsicRecipe(
+            Check.WriteAfterRead ? Intrinsic::loop_dependence_war_mask
+                                 : Intrinsic::loop_dependence_raw_mask,
+            Ops, IntegerType::getInt1Ty(Plan.getContext()));
+        MemCheckBlockVP->appendRecipe(M);
+        if (AliasMask)
+          AliasMask = Builder.createAnd(AliasMask, M);
+        else
+          AliasMask = M;
+      }
+      assert(AliasMask && "Expected an alias mask to have been created");
+
+      // Replace uses of the loop body's active lane mask phi with an AND of the
+      // phi and the alias mask.
+      for (VPRecipeBase &R : *LoopBody) {
+        auto *MaskPhi = dyn_cast<VPActiveLaneMaskPHIRecipe>(&R);
+        if (!MaskPhi)
+          continue;
+        VPInstruction *And = new VPInstruction(Instruction::BinaryOps::And,
+                                               {MaskPhi, AliasMask});
+        MaskPhi->replaceUsesWithIf(And, [And](VPUser &U, unsigned) {
+          auto *UR = dyn_cast<VPRecipeBase>(&U);
+          // If this is the first user, insert the AND.
+          if (UR && !And->getParent())
+            And->insertBefore(UR);
+          bool Replace = UR != And;
+          return Replace;
+        });
+      }
+
+      // An empty mask would cause an infinite loop since the induction variable
+      // is updated with the number of set elements in the mask. Make sure we
+      // don't execute the vector loop when the mask is empty.
+      VPInstruction *PopCount =
+          new VPInstruction(VPInstruction::PopCount, {AliasMask});
+      PopCount->insertAfter(AliasMask->getDefiningRecipe());
+      VPValue *Cmp =
+          Builder.createICmp(CmpInst::Predicate::ICMP_EQ, PopCount,
+                             Plan.getOrAddLiveIn(ConstantInt::get(
+                                 IntegerType::get(Plan.getContext(), 64), 0)));
+      MemCheckCondVPV = Cmp;
+
+      // Update the IV by the number of active lanes in the mask.
+      auto *CanonicalIVPHI = LoopRegion->getCanonicalIV();
+      auto *CanonicalIVIncrement =
+          cast<VPInstruction>(CanonicalIVPHI->getBackedgeValue());
+
+      // Increment phi by correct amount.
+      VPValue *IncrementBy = PopCount;
+      Type *IVType = CanonicalIVPHI->getScalarType();
+
+      if (IVType->getScalarSizeInBits() < 64) {
+        Builder.setInsertPoint(CanonicalIVIncrement);
+        IncrementBy =
+            Builder.createScalarCast(Instruction::Trunc, IncrementBy, IVType,
+                                     CanonicalIVIncrement->getDebugLoc());
+      }
+      CanonicalIVIncrement->setOperand(1, IncrementBy);
+    }
+
     // VPlan-native path does not do any analysis for runtime checks
     // currently.
     assert((!EnableVPlanNativePath || OrigLoop->isInnermost()) &&
@@ -8999,7 +9100,7 @@ void LoopVectorizationPlanner::attachRuntimeChecks(
                   "(e.g., adding 'restrict').";
       });
     }
-    VPlanTransforms::attachCheckBlock(Plan, MemCheckCond, MemCheckBlock,
+    VPlanTransforms::attachCheckBlock(Plan, MemCheckCondVPV, MemCheckBlockVP,
                                       HasBranchWeights);
   }
 }
@@ -9966,6 +10067,8 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     //  Optimistically generate runtime checks if they are needed. Drop them if
     //  they turn out to not be profitable.
     if (VF.Width.isVector() || SelectedIC > 1) {
+      if (CM.getRTCheckStyle(*TTI) == RTCheckStyle::UseSafeEltsMask)
+        LoopsAliasMasked++;
       Checks.create(L, *LVL.getLAI(), PSE.getPredicate(), VF.Width, SelectedIC);
 
       // Bail out early if either the SCEV or memory runtime checks are known to
