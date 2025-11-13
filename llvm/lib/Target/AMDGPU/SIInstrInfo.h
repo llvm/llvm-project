@@ -87,7 +87,7 @@ struct SIInstrWorklist {
   SetVector<MachineInstr *> &getDeferredList() { return DeferredList; }
 
   DenseMap<MachineInstr *, V2PhysSCopyInfo> WaterFalls;
-  DenseMap<MachineInstr *, bool> V2PhySCopiesToErase;
+  DenseMap<MachineInstr *, bool> V2SPhyCopiesToErase;
 
 private:
   /// InstrList contains the MachineInstrs.
@@ -1668,9 +1668,9 @@ public:
                                             Register DstReg,
                                             MachineInstr &Inst) const;
 
-  void handleCopyToPhyHelper(SIInstrWorklist &Worklist, Register DstReg,
-                             MachineInstr &Inst,
-                             MachineRegisterInfo &MRI) const;
+  void handleCopyToPhysHelper(SIInstrWorklist &Worklist, Register DstReg,
+                              MachineInstr &Inst,
+                              MachineRegisterInfo &MRI) const;
 
   // Enforce operand's \p OpName even alignment if required by target.
   // This is used if an operand is a 32 bit register but needs to be aligned

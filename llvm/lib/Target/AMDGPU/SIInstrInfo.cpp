@@ -7685,7 +7685,7 @@ void SIInstrInfo::moveToVALU(SIInstrWorklist &Worklist,
   for (std::pair<MachineInstr *, V2PhysSCopyInfo> &Entry : Worklist.WaterFalls)
     createWaterFall(Entry.first, MDT, Entry.second.MOs, Entry.second.SGPRs);
 
-  for (std::pair<MachineInstr *, bool> Entry : Worklist.V2PhySCopiesToErase)
+  for (std::pair<MachineInstr *, bool> Entry : Worklist.V2SPhyCopiesToErase)
     if (Entry.second)
       Entry.first->eraseFromParent();
 }
@@ -7723,12 +7723,12 @@ void SIInstrInfo::createReadFirstLaneFromCopyToPhysReg(
   }
 }
 
-void SIInstrInfo::handleCopyToPhyHelper(SIInstrWorklist &Worklist,
-                                        Register DstReg, MachineInstr &Inst,
-                                        MachineRegisterInfo &MRI) const {
+void SIInstrInfo::handleCopyToPhysHelper(SIInstrWorklist &Worklist,
+                                         Register DstReg, MachineInstr &Inst,
+                                         MachineRegisterInfo &MRI) const {
   if (DstReg == AMDGPU::M0) {
     createReadFirstLaneFromCopyToPhysReg(MRI, DstReg, Inst);
-    Worklist.V2PhySCopiesToErase.try_emplace(&Inst, true);
+    Worklist.V2SPhyCopiesToErase.try_emplace(&Inst, true);
     return;
   }
   Register SrcReg = Inst.getOperand(1).getReg();
@@ -7748,17 +7748,18 @@ void SIInstrInfo::handleCopyToPhyHelper(SIInstrWorklist &Worklist,
           V2PhysSCopyInfo &V2SCopyInfo = Worklist.WaterFalls[UseMI];
           V2SCopyInfo.MOs.push_back(MO);
           V2SCopyInfo.SGPRs.push_back(DstReg);
-          Worklist.V2PhySCopiesToErase.try_emplace(&Inst, true);
+          Worklist.V2SPhyCopiesToErase.try_emplace(&Inst, true);
         }
       }
     } else if (I->getOpcode() == AMDGPU::SI_RETURN_TO_EPILOG &&
                I->getOperand(0).isReg() &&
                I->getOperand(0).getReg() == DstReg) {
       createReadFirstLaneFromCopyToPhysReg(MRI, DstReg, Inst);
-      Worklist.V2PhySCopiesToErase.try_emplace(&Inst, true);
-    } else if (I->readsRegister(DstReg, &RI))
+      Worklist.V2SPhyCopiesToErase.try_emplace(&Inst, true);
+    } else if (I->readsRegister(DstReg, &RI)) {
       // COPY cannot be erased if other type of inst uses it.
-      Worklist.V2PhySCopiesToErase[&Inst] = false;
+      Worklist.V2SPhyCopiesToErase[&Inst] = false;
+    }
     if (I->findRegisterDefOperand(DstReg, &RI))
       break;
   }
@@ -8262,7 +8263,7 @@ void SIInstrInfo::moveToVALUImpl(SIInstrWorklist &Worklist,
 
     if (Inst.isCopy() && DstReg.isPhysical() &&
         RI.isVGPR(MRI, Inst.getOperand(1).getReg())) {
-      handleCopyToPhyHelper(Worklist, DstReg, Inst, MRI);
+      handleCopyToPhysHelper(Worklist, DstReg, Inst, MRI);
       return;
     }
 
