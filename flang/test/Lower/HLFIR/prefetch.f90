@@ -50,7 +50,9 @@ subroutine test_prefetch_02(t1)
   a = t1%a ** 2
 
   do i = 1, 256
-    ! HLFIR: fir.prefetch %[[H_A]]#0 {cacheType, localityHint = 3 : i32} : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>>
+    ! HLFIR: %[[A_LOAD:.*]] = fir.load %[[H_A]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>>
+    ! HLFIR: %[[A_BOX:.*]] = fir.box_addr %[[A_LOAD]] : (!fir.box<!fir.heap<!fir.array<?x?xi32>>>) -> !fir.heap<!fir.array<?x?xi32>>
+    ! HLFIR: fir.prefetch %[[A_BOX]] {cacheType, localityHint = 3 : i32} : !fir.heap<!fir.array<?x?xi32>>
     !dir$ prefetch a
     a(i, :) = a(i, :) + i
     do j = 1, 256
