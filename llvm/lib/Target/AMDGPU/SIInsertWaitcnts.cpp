@@ -2089,7 +2089,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
   // An s_wait_xcnt(0) before every atomic store/RMW operation is required to
   // work around the write combining misses hazard.
   if (ST->hasWriteCombiningMissesHazards() && SIInstrInfo::isAtomic(MI) &&
-      SIInstrInfo::isVMEM(MI) && MI.mayStore())
+      SIInstrInfo::isVMEM(MI))
     Wait.XCnt = 0;
 
   // When forcing emit, we need to skip terminators because that would break the
