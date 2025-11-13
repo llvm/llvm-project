@@ -23,6 +23,7 @@
 #ifndef LLVM_SUPPORT_LSP_PROTOCOL_H
 #define LLVM_SUPPORT_LSP_PROTOCOL_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/LogicalResult.h"
 #include "llvm/Support/SourceMgr.h"
@@ -80,7 +81,7 @@ class LSPError : public llvm::ErrorInfo<LSPError> {
 public:
   std::string message;
   ErrorCode code;
-  static char ID;
+  LLVM_ABI_FOR_TEST static char ID;
 
   LSPError(std::string message, ErrorCode code)
       : message(std::move(message)), code(code) {}
@@ -145,9 +146,9 @@ private:
 };
 
 /// Add support for JSON serialization.
-llvm::json::Value toJSON(const URIForFile &value);
-bool fromJSON(const llvm::json::Value &value, URIForFile &result,
-              llvm::json::Path path);
+LLVM_ABI_FOR_TEST llvm::json::Value toJSON(const URIForFile &value);
+LLVM_ABI_FOR_TEST bool fromJSON(const llvm::json::Value &value,
+                                URIForFile &result, llvm::json::Path path);
 raw_ostream &operator<<(raw_ostream &os, const URIForFile &value);
 
 //===----------------------------------------------------------------------===//
@@ -171,8 +172,9 @@ struct ClientCapabilities {
 };
 
 /// Add support for JSON serialization.
-bool fromJSON(const llvm::json::Value &value, ClientCapabilities &result,
-              llvm::json::Path path);
+LLVM_ABI_FOR_TEST bool fromJSON(const llvm::json::Value &value,
+                                ClientCapabilities &result,
+                                llvm::json::Path path);
 
 //===----------------------------------------------------------------------===//
 // ClientInfo
@@ -187,8 +189,8 @@ struct ClientInfo {
 };
 
 /// Add support for JSON serialization.
-bool fromJSON(const llvm::json::Value &value, ClientInfo &result,
-              llvm::json::Path path);
+LLVM_ABI_FOR_TEST bool fromJSON(const llvm::json::Value &value,
+                                ClientInfo &result, llvm::json::Path path);
 
 //===----------------------------------------------------------------------===//
 // InitializeParams
@@ -201,8 +203,8 @@ enum class TraceLevel {
 };
 
 /// Add support for JSON serialization.
-bool fromJSON(const llvm::json::Value &value, TraceLevel &result,
-              llvm::json::Path path);
+LLVM_ABI_FOR_TEST bool fromJSON(const llvm::json::Value &value,
+                                TraceLevel &result, llvm::json::Path path);
 
 struct InitializeParams {
   /// The capabilities provided by the client (editor or tool).
@@ -216,8 +218,9 @@ struct InitializeParams {
 };
 
 /// Add support for JSON serialization.
-bool fromJSON(const llvm::json::Value &value, InitializeParams &result,
-              llvm::json::Path path);
+LLVM_ABI_FOR_TEST bool fromJSON(const llvm::json::Value &value,
+                                InitializeParams &result,
+                                llvm::json::Path path);
 
 //===----------------------------------------------------------------------===//
 // InitializedParams
@@ -248,8 +251,9 @@ struct TextDocumentItem {
 };
 
 /// Add support for JSON serialization.
-bool fromJSON(const llvm::json::Value &value, TextDocumentItem &result,
-              llvm::json::Path path);
+LLVM_ABI_FOR_TEST bool fromJSON(const llvm::json::Value &value,
+                                TextDocumentItem &result,
+                                llvm::json::Path path);
 
 //===----------------------------------------------------------------------===//
 // TextDocumentIdentifier
@@ -261,9 +265,10 @@ struct TextDocumentIdentifier {
 };
 
 /// Add support for JSON serialization.
-llvm::json::Value toJSON(const TextDocumentIdentifier &value);
-bool fromJSON(const llvm::json::Value &value, TextDocumentIdentifier &result,
-              llvm::json::Path path);
+LLVM_ABI_FOR_TEST llvm::json::Value toJSON(const TextDocumentIdentifier &value);
+LLVM_ABI_FOR_TEST bool fromJSON(const llvm::json::Value &value,
+                                TextDocumentIdentifier &result,
+                                llvm::json::Path path);
 
 //===----------------------------------------------------------------------===//
 // VersionedTextDocumentIdentifier
@@ -277,9 +282,11 @@ struct VersionedTextDocumentIdentifier {
 };
 
 /// Add support for JSON serialization.
-llvm::json::Value toJSON(const VersionedTextDocumentIdentifier &value);
-bool fromJSON(const llvm::json::Value &value,
-              VersionedTextDocumentIdentifier &result, llvm::json::Path path);
+LLVM_ABI_FOR_TEST llvm::json::Value
+toJSON(const VersionedTextDocumentIdentifier &value);
+LLVM_ABI_FOR_TEST bool fromJSON(const llvm::json::Value &value,
+                                VersionedTextDocumentIdentifier &result,
+                                llvm::json::Path path);
 
 //===----------------------------------------------------------------------===//
 // Position
@@ -327,9 +334,9 @@ struct Position {
 };
 
 /// Add support for JSON serialization.
-bool fromJSON(const llvm::json::Value &value, Position &result,
-              llvm::json::Path path);
-llvm::json::Value toJSON(const Position &value);
+LLVM_ABI_FOR_TEST bool fromJSON(const llvm::json::Value &value,
+                                Position &result, llvm::json::Path path);
+LLVM_ABI_FOR_TEST llvm::json::Value toJSON(const Position &value);
 raw_ostream &operator<<(raw_ostream &os, const Position &value);
 
 //===----------------------------------------------------------------------===//
@@ -380,9 +387,9 @@ struct Range {
 };
 
 /// Add support for JSON serialization.
-bool fromJSON(const llvm::json::Value &value, Range &result,
-              llvm::json::Path path);
-llvm::json::Value toJSON(const Range &value);
+LLVM_ABI_FOR_TEST bool fromJSON(const llvm::json::Value &value, Range &result,
+                                llvm::json::Path path);
+LLVM_ABI_FOR_TEST llvm::json::Value toJSON(const Range &value);
 raw_ostream &operator<<(raw_ostream &os, const Range &value);
 
 //===----------------------------------------------------------------------===//
@@ -415,9 +422,9 @@ struct Location {
 };
 
 /// Add support for JSON serialization.
-bool fromJSON(const llvm::json::Value &value, Location &result,
-              llvm::json::Path path);
-llvm::json::Value toJSON(const Location &value);
+LLVM_ABI_FOR_TEST bool fromJSON(const llvm::json::Value &value,
+                                Location &result, llvm::json::Path path);
+LLVM_ABI_FOR_TEST llvm::json::Value toJSON(const Location &value);
 raw_ostream &operator<<(raw_ostream &os, const Location &value);
 
 //===----------------------------------------------------------------------===//
@@ -433,8 +440,9 @@ struct TextDocumentPositionParams {
 };
 
 /// Add support for JSON serialization.
-bool fromJSON(const llvm::json::Value &value,
-              TextDocumentPositionParams &result, llvm::json::Path path);
+LLVM_ABI_FOR_TEST bool fromJSON(const llvm::json::Value &value,
+                                TextDocumentPositionParams &result,
+                                llvm::json::Path path);
 
 //===----------------------------------------------------------------------===//
 // ReferenceParams
@@ -446,16 +454,17 @@ struct ReferenceContext {
 };
 
 /// Add support for JSON serialization.
-bool fromJSON(const llvm::json::Value &value, ReferenceContext &result,
-              llvm::json::Path path);
+LLVM_ABI_FOR_TEST bool fromJSON(const llvm::json::Value &value,
+                                ReferenceContext &result,
+                                llvm::json::Path path);
 
 struct ReferenceParams : TextDocumentPositionParams {
   ReferenceContext context;
 };
 
 /// Add support for JSON serialization.
-bool fromJSON(const llvm::json::Value &value, ReferenceParams &result,
-              llvm::json::Path path);
+LLVM_ABI_FOR_TEST bool fromJSON(const llvm::json::Value &value,
+                                ReferenceParams &result, llvm::json::Path path);
 
 //===----------------------------------------------------------------------===//
 // DidOpenTextDocumentParams
@@ -467,8 +476,9 @@ struct DidOpenTextDocumentParams {
 };
 
 /// Add support for JSON serialization.
-bool fromJSON(const llvm::json::Value &value, DidOpenTextDocumentParams &result,
-              llvm::json::Path path);
+LLVM_ABI_FOR_TEST bool fromJSON(const llvm::json::Value &value,
+                                DidOpenTextDocumentParams &result,
+                                llvm::json::Path path);
 
 //===----------------------------------------------------------------------===//
 // DidCloseTextDocumentParams
@@ -480,8 +490,9 @@ struct DidCloseTextDocumentParams {
 };
 
 /// Add support for JSON serialization.
-bool fromJSON(const llvm::json::Value &value,
-              DidCloseTextDocumentParams &result, llvm::json::Path path);
+LLVM_ABI_FOR_TEST bool fromJSON(const llvm::json::Value &value,
+                                DidCloseTextDocumentParams &result,
+                                llvm::json::Path path);
 
 //===----------------------------------------------------------------------===//
 // DidChangeTextDocumentParams
@@ -505,8 +516,9 @@ struct TextDocumentContentChangeEvent {
 };
 
 /// Add support for JSON serialization.
-bool fromJSON(const llvm::json::Value &value,
-              TextDocumentContentChangeEvent &result, llvm::json::Path path);
+LLVM_ABI_FOR_TEST bool fromJSON(const llvm::json::Value &value,
+                                TextDocumentContentChangeEvent &result,
+                                llvm::json::Path path);
 
 struct DidChangeTextDocumentParams {
   /// The document that changed.
@@ -517,8 +529,9 @@ struct DidChangeTextDocumentParams {
 };
 
 /// Add support for JSON serialization.
-bool fromJSON(const llvm::json::Value &value,
-              DidChangeTextDocumentParams &result, llvm::json::Path path);
+LLVM_ABI_FOR_TEST bool fromJSON(const llvm::json::Value &value,
+                                DidChangeTextDocumentParams &result,
+                                llvm::json::Path path);
 
 //===----------------------------------------------------------------------===//
 // MarkupContent
@@ -538,7 +551,7 @@ struct MarkupContent {
 };
 
 /// Add support for JSON serialization.
-llvm::json::Value toJSON(const MarkupContent &mc);
+LLVM_ABI_FOR_TEST llvm::json::Value toJSON(const MarkupContent &mc);
 
 //===----------------------------------------------------------------------===//
 // Hover
@@ -557,7 +570,7 @@ struct Hover {
 };
 
 /// Add support for JSON serialization.
-llvm::json::Value toJSON(const Hover &hover);
+LLVM_ABI_FOR_TEST llvm::json::Value toJSON(const Hover &hover);
 
 //===----------------------------------------------------------------------===//
 // SymbolKind
@@ -632,7 +645,7 @@ struct DocumentSymbol {
 };
 
 /// Add support for JSON serialization.
-llvm::json::Value toJSON(const DocumentSymbol &symbol);
+LLVM_ABI_FOR_TEST llvm::json::Value toJSON(const DocumentSymbol &symbol);
 
 //===----------------------------------------------------------------------===//
 // DocumentSymbolParams
@@ -644,8 +657,9 @@ struct DocumentSymbolParams {
 };
 
 /// Add support for JSON serialization.
-bool fromJSON(const llvm::json::Value &value, DocumentSymbolParams &result,
-              llvm::json::Path path);
+LLVM_ABI_FOR_TEST bool fromJSON(const llvm::json::Value &value,
+                                DocumentSymbolParams &result,
+                                llvm::json::Path path);
 
 //===----------------------------------------------------------------------===//
 // DiagnosticRelatedInformation
@@ -666,9 +680,11 @@ struct DiagnosticRelatedInformation {
 };
 
 /// Add support for JSON serialization.
-bool fromJSON(const llvm::json::Value &value,
-              DiagnosticRelatedInformation &result, llvm::json::Path path);
-llvm::json::Value toJSON(const DiagnosticRelatedInformation &info);
+LLVM_ABI_FOR_TEST bool fromJSON(const llvm::json::Value &value,
+                                DiagnosticRelatedInformation &result,
+                                llvm::json::Path path);
+LLVM_ABI_FOR_TEST llvm::json::Value
+toJSON(const DiagnosticRelatedInformation &info);
 
 //===----------------------------------------------------------------------===//
 // Diagnostic
@@ -690,9 +706,9 @@ enum class DiagnosticTag {
 };
 
 /// Add support for JSON serialization.
-llvm::json::Value toJSON(DiagnosticTag tag);
-bool fromJSON(const llvm::json::Value &value, DiagnosticTag &result,
-              llvm::json::Path path);
+LLVM_ABI_FOR_TEST llvm::json::Value toJSON(DiagnosticTag tag);
+LLVM_ABI_FOR_TEST bool fromJSON(const llvm::json::Value &value,
+                                DiagnosticTag &result, llvm::json::Path path);
 
 struct Diagnostic {
   /// The source range where the message applies.
@@ -724,9 +740,9 @@ struct Diagnostic {
 };
 
 /// Add support for JSON serialization.
-llvm::json::Value toJSON(const Diagnostic &diag);
-bool fromJSON(const llvm::json::Value &value, Diagnostic &result,
-              llvm::json::Path path);
+LLVM_ABI_FOR_TEST llvm::json::Value toJSON(const Diagnostic &diag);
+LLVM_ABI_FOR_TEST bool fromJSON(const llvm::json::Value &value,
+                                Diagnostic &result, llvm::json::Path path);
 
 //===----------------------------------------------------------------------===//
 // PublishDiagnosticsParams
@@ -745,7 +761,8 @@ struct PublishDiagnosticsParams {
 };
 
 /// Add support for JSON serialization.
-llvm::json::Value toJSON(const PublishDiagnosticsParams &params);
+LLVM_ABI_FOR_TEST llvm::json::Value
+toJSON(const PublishDiagnosticsParams &params);
 
 //===----------------------------------------------------------------------===//
 // TextEdit
@@ -765,9 +782,9 @@ inline bool operator==(const TextEdit &lhs, const TextEdit &rhs) {
   return std::tie(lhs.newText, lhs.range) == std::tie(rhs.newText, rhs.range);
 }
 
-bool fromJSON(const llvm::json::Value &value, TextEdit &result,
-              llvm::json::Path path);
-llvm::json::Value toJSON(const TextEdit &value);
+LLVM_ABI_FOR_TEST bool fromJSON(const llvm::json::Value &value,
+                                TextEdit &result, llvm::json::Path path);
+LLVM_ABI_FOR_TEST llvm::json::Value toJSON(const TextEdit &value);
 raw_ostream &operator<<(raw_ostream &os, const TextEdit &value);
 
 //===----------------------------------------------------------------------===//
@@ -803,16 +820,18 @@ enum class CompletionItemKind {
   Operator = 24,
   TypeParameter = 25,
 };
-bool fromJSON(const llvm::json::Value &value, CompletionItemKind &result,
-              llvm::json::Path path);
+LLVM_ABI_FOR_TEST bool fromJSON(const llvm::json::Value &value,
+                                CompletionItemKind &result,
+                                llvm::json::Path path);
 
 constexpr auto kCompletionItemKindMin =
     static_cast<size_t>(CompletionItemKind::Text);
 constexpr auto kCompletionItemKindMax =
     static_cast<size_t>(CompletionItemKind::TypeParameter);
 using CompletionItemKindBitset = std::bitset<kCompletionItemKindMax + 1>;
-bool fromJSON(const llvm::json::Value &value, CompletionItemKindBitset &result,
-              llvm::json::Path path);
+LLVM_ABI_FOR_TEST bool fromJSON(const llvm::json::Value &value,
+                                CompletionItemKindBitset &result,
+                                llvm::json::Path path);
 
 CompletionItemKind
 adjustKindToCapability(CompletionItemKind kind,
@@ -895,7 +914,7 @@ struct CompletionItem {
 };
 
 /// Add support for JSON serialization.
-llvm::json::Value toJSON(const CompletionItem &value);
+LLVM_ABI_FOR_TEST llvm::json::Value toJSON(const CompletionItem &value);
 raw_ostream &operator<<(raw_ostream &os, const CompletionItem &value);
 bool operator<(const CompletionItem &lhs, const CompletionItem &rhs);
 
@@ -914,7 +933,7 @@ struct CompletionList {
 };
 
 /// Add support for JSON serialization.
-llvm::json::Value toJSON(const CompletionList &value);
+LLVM_ABI_FOR_TEST llvm::json::Value toJSON(const CompletionList &value);
 
 //===----------------------------------------------------------------------===//
 // CompletionContext
@@ -943,8 +962,9 @@ struct CompletionContext {
 };
 
 /// Add support for JSON serialization.
-bool fromJSON(const llvm::json::Value &value, CompletionContext &result,
-              llvm::json::Path path);
+LLVM_ABI_FOR_TEST bool fromJSON(const llvm::json::Value &value,
+                                CompletionContext &result,
+                                llvm::json::Path path);
 
 //===----------------------------------------------------------------------===//
 // CompletionParams
@@ -955,8 +975,9 @@ struct CompletionParams : TextDocumentPositionParams {
 };
 
 /// Add support for JSON serialization.
-bool fromJSON(const llvm::json::Value &value, CompletionParams &result,
-              llvm::json::Path path);
+LLVM_ABI_FOR_TEST bool fromJSON(const llvm::json::Value &value,
+                                CompletionParams &result,
+                                llvm::json::Path path);
 
 //===----------------------------------------------------------------------===//
 // ParameterInformation
@@ -976,7 +997,7 @@ struct ParameterInformation {
 };
 
 /// Add support for JSON serialization.
-llvm::json::Value toJSON(const ParameterInformation &value);
+LLVM_ABI_FOR_TEST llvm::json::Value toJSON(const ParameterInformation &value);
 
 //===----------------------------------------------------------------------===//
 // SignatureInformation
@@ -995,7 +1016,7 @@ struct SignatureInformation {
 };
 
 /// Add support for JSON serialization.
-llvm::json::Value toJSON(const SignatureInformation &value);
+LLVM_ABI_FOR_TEST llvm::json::Value toJSON(const SignatureInformation &value);
 raw_ostream &operator<<(raw_ostream &os, const SignatureInformation &value);
 
 //===----------------------------------------------------------------------===//
@@ -1015,7 +1036,7 @@ struct SignatureHelp {
 };
 
 /// Add support for JSON serialization.
-llvm::json::Value toJSON(const SignatureHelp &value);
+LLVM_ABI_FOR_TEST llvm::json::Value toJSON(const SignatureHelp &value);
 
 //===----------------------------------------------------------------------===//
 // DocumentLinkParams
@@ -1028,8 +1049,9 @@ struct DocumentLinkParams {
 };
 
 /// Add support for JSON serialization.
-bool fromJSON(const llvm::json::Value &value, DocumentLinkParams &result,
-              llvm::json::Path path);
+LLVM_ABI_FOR_TEST bool fromJSON(const llvm::json::Value &value,
+                                DocumentLinkParams &result,
+                                llvm::json::Path path);
 
 //===----------------------------------------------------------------------===//
 // DocumentLink
@@ -1065,7 +1087,7 @@ struct DocumentLink {
 };
 
 /// Add support for JSON serialization.
-llvm::json::Value toJSON(const DocumentLink &value);
+LLVM_ABI_FOR_TEST llvm::json::Value toJSON(const DocumentLink &value);
 
 //===----------------------------------------------------------------------===//
 // InlayHintsParams
@@ -1081,8 +1103,9 @@ struct InlayHintsParams {
 };
 
 /// Add support for JSON serialization.
-bool fromJSON(const llvm::json::Value &value, InlayHintsParams &result,
-              llvm::json::Path path);
+LLVM_ABI_FOR_TEST bool fromJSON(const llvm::json::Value &value,
+                                InlayHintsParams &result,
+                                llvm::json::Path path);
 
 //===----------------------------------------------------------------------===//
 // InlayHintKind
@@ -1142,7 +1165,7 @@ struct InlayHint {
 };
 
 /// Add support for JSON serialization.
-llvm::json::Value toJSON(const InlayHint &);
+LLVM_ABI_FOR_TEST llvm::json::Value toJSON(const InlayHint &);
 bool operator==(const InlayHint &lhs, const InlayHint &rhs);
 bool operator<(const InlayHint &lhs, const InlayHint &rhs);
 llvm::raw_ostream &operator<<(llvm::raw_ostream &os, InlayHintKind value);
@@ -1168,8 +1191,9 @@ struct CodeActionContext {
 };
 
 /// Add support for JSON serialization.
-bool fromJSON(const llvm::json::Value &value, CodeActionContext &result,
-              llvm::json::Path path);
+LLVM_ABI_FOR_TEST bool fromJSON(const llvm::json::Value &value,
+                                CodeActionContext &result,
+                                llvm::json::Path path);
 
 //===----------------------------------------------------------------------===//
 // CodeActionParams
@@ -1187,8 +1211,9 @@ struct CodeActionParams {
 };
 
 /// Add support for JSON serialization.
-bool fromJSON(const llvm::json::Value &value, CodeActionParams &result,
-              llvm::json::Path path);
+LLVM_ABI_FOR_TEST bool fromJSON(const llvm::json::Value &value,
+                                CodeActionParams &result,
+                                llvm::json::Path path);
 
 //===----------------------------------------------------------------------===//
 // WorkspaceEdit
@@ -1203,9 +1228,9 @@ struct WorkspaceEdit {
 };
 
 /// Add support for JSON serialization.
-bool fromJSON(const llvm::json::Value &value, WorkspaceEdit &result,
-              llvm::json::Path path);
-llvm::json::Value toJSON(const WorkspaceEdit &value);
+LLVM_ABI_FOR_TEST bool fromJSON(const llvm::json::Value &value,
+                                WorkspaceEdit &result, llvm::json::Path path);
+LLVM_ABI_FOR_TEST llvm::json::Value toJSON(const WorkspaceEdit &value);
 
 //===----------------------------------------------------------------------===//
 // CodeAction
@@ -1242,7 +1267,7 @@ struct CodeAction {
 };
 
 /// Add support for JSON serialization.
-llvm::json::Value toJSON(const CodeAction &);
+LLVM_ABI_FOR_TEST llvm::json::Value toJSON(const CodeAction &);
 
 } // namespace lsp
 } // namespace llvm
