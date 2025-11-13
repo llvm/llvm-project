@@ -46,7 +46,7 @@ namespace {
 class ConstExprEmitter;
 
 static mlir::TypedAttr computePadding(CIRGenModule &cgm, CharUnits size) {
-  mlir::Type eltTy = cgm.UCharTy;
+  mlir::Type eltTy = cgm.uCharTy;
   clang::CharUnits::QuantityType arSize = size.getQuantity();
   CIRGenBuilderTy &bld = cgm.getBuilder();
   if (size > CharUnits::One()) {
@@ -179,8 +179,23 @@ bool ConstantAggregateBuilder::add(mlir::TypedAttr typedAttr, CharUnits offset,
   }
 
   // Uncommon case: constant overlaps what we've already created.
-  cgm.errorNYI("overlapping constants");
-  return false;
+  std::optional<size_t> firstElemToReplace = splitAt(offset);
+  if (!firstElemToReplace)
+    return false;
+
+  CharUnits cSize = getSize(typedAttr);
+  std::optional<size_t> lastElemToReplace = splitAt(offset + cSize);
+  if (!lastElemToReplace)
+    return false;
+
+  assert((firstElemToReplace == lastElemToReplace || allowOverwrite) &&
+         "unexpectedly overwriting field");
+
+  Element newElt(typedAttr, offset);
+  replace(elements, *firstElemToReplace, *lastElemToReplace, {newElt});
+  size = std::max(size, offset + cSize);
+  naturalLayout = false;
+  return true;
 }
 
 bool ConstantAggregateBuilder::addBits(llvm::APInt bits, uint64_t offsetInBits,
@@ -612,10 +627,7 @@ bool ConstRecordBuilder::applyZeroInitPadding(const ASTRecordLayout &layout,
 }
 
 bool ConstRecordBuilder::build(InitListExpr *ile, bool allowOverwrite) {
-  RecordDecl *rd = ile->getType()
-                       ->castAs<clang::RecordType>()
-                       ->getDecl()
-                       ->getDefinitionOrSelf();
+  RecordDecl *rd = ile->getType()->castAsRecordDecl();
   const ASTRecordLayout &layout = cgm.getASTContext().getASTRecordLayout(rd);
 
   // Bail out if we have base classes. We could support these, but they only
@@ -671,17 +683,14 @@ bool ConstRecordBuilder::build(InitListExpr *ile, bool allowOverwrite) {
       return false;
     }
 
-    mlir::TypedAttr eltInit;
-    if (init)
-      eltInit = mlir::cast<mlir::TypedAttr>(
-          emitter.tryEmitPrivateForMemory(init, field->getType()));
-    else
-      eltInit = mlir::cast<mlir::TypedAttr>(emitter.emitNullForMemory(
-          cgm.getLoc(ile->getSourceRange()), field->getType()));
-
-    if (!eltInit)
+    mlir::Attribute eltInitAttr =
+        init ? emitter.tryEmitPrivateForMemory(init, field->getType())
+             : emitter.emitNullForMemory(cgm.getLoc(ile->getSourceRange()),
+                                         field->getType());
+    if (!eltInitAttr)
       return false;
 
+    mlir::TypedAttr eltInit = mlir::cast<mlir::TypedAttr>(eltInitAttr);
     if (!field->isBitField()) {
       // Handle non-bitfield members.
       if (!appendField(field, layout.getFieldOffset(index), eltInit,
@@ -913,9 +922,9 @@ public:
   }
 
   mlir::Attribute VisitCastExpr(CastExpr *e, QualType destType) {
-    if (isa<ExplicitCastExpr>(e))
-      cgm.errorNYI(e->getBeginLoc(),
-                   "ConstExprEmitter::VisitCastExpr explicit cast");
+    if (const auto *ece = dyn_cast<ExplicitCastExpr>(e))
+      cgm.emitExplicitCastExprType(ece,
+                                   const_cast<CIRGenFunction *>(emitter.cgf));
 
     Expr *subExpr = e->getSubExpr();
 
@@ -1011,9 +1020,9 @@ public:
   }
 
   mlir::Attribute VisitCXXDefaultInitExpr(CXXDefaultInitExpr *die, QualType t) {
-    cgm.errorNYI(die->getBeginLoc(),
-                 "ConstExprEmitter::VisitCXXDefaultInitExpr");
-    return {};
+    // No need for a DefaultInitExprScope: we don't handle 'this' in a
+    // constant expression.
+    return Visit(die->getExpr(), t);
   }
 
   mlir::Attribute VisitExprWithCleanups(ExprWithCleanups *e, QualType t) {
@@ -1028,9 +1037,7 @@ public:
 
   mlir::Attribute VisitImplicitValueInitExpr(ImplicitValueInitExpr *e,
                                              QualType t) {
-    cgm.errorNYI(e->getBeginLoc(),
-                 "ConstExprEmitter::VisitImplicitValueInitExpr");
-    return {};
+    return cgm.getBuilder().getZeroInitAttr(cgm.convertType(t));
   }
 
   mlir::Attribute VisitInitListExpr(InitListExpr *ile, QualType t) {
@@ -1071,9 +1078,32 @@ public:
 
   mlir::Attribute VisitCXXConstructExpr(CXXConstructExpr *e, QualType ty) {
     if (!e->getConstructor()->isTrivial())
-      return nullptr;
-    cgm.errorNYI(e->getBeginLoc(), "trivial constructor const handling");
-    return {};
+      return {};
+
+    // Only default and copy/move constructors can be trivial.
+    if (e->getNumArgs()) {
+      assert(e->getNumArgs() == 1 && "trivial ctor with > 1 argument");
+      assert(e->getConstructor()->isCopyOrMoveConstructor() &&
+             "trivial ctor has argument but isn't a copy/move ctor");
+
+      Expr *arg = e->getArg(0);
+      assert(cgm.getASTContext().hasSameUnqualifiedType(ty, arg->getType()) &&
+             "argument to copy ctor is of wrong type");
+
+      // Look through the temporary; it's just converting the value to an lvalue
+      // to pass it to the constructor.
+      if (auto const *mte = dyn_cast<MaterializeTemporaryExpr>(arg))
+        return Visit(mte->getSubExpr(), ty);
+
+      // TODO: Investigate whether there are cases that can fall through to here
+      //       that need to be handled. This is missing in classic codegen also.
+      assert(!cir::MissingFeatures::ctorConstLvalueToRvalueConversion());
+
+      // Don't try to support arbitrary lvalue-to-rvalue conversions for now.
+      return {};
+    }
+
+    return cgm.getBuilder().getZeroInitAttr(cgm.convertType(ty));
   }
 
   mlir::Attribute VisitStringLiteral(StringLiteral *e, QualType t) {

@@ -219,14 +219,13 @@ int f() {
 
 // CIR: cir.func dso_local @_Z1fv() -> !s32i {{.*}} {
 // CIR:   %[[RETVAL:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
-// CIR:   %[[SCOPE_RET:.*]] = cir.scope {
+// CIR:   cir.scope {
 // CIR:     %[[TMP:.*]] = cir.alloca ![[REC_LAM_G2]], !cir.ptr<![[REC_LAM_G2]]>, ["ref.tmp0"]
 // CIR:     %[[G2:.*]] = cir.call @_Z2g2v() : () -> ![[REC_LAM_G2]]
 // CIR:     cir.store{{.*}} %[[G2]], %[[TMP]]
 // CIR:     %[[RESULT:.*]] = cir.call @_ZZ2g2vENK3$_0clEv(%[[TMP]])
-// CIR:     cir.yield %[[RESULT]]
+// CIR:     cir.store{{.*}} %[[RESULT]], %[[RETVAL]]
 // CIR:   }
-// CIR:   cir.store{{.*}} %[[SCOPE_RET]], %[[RETVAL]]
 // CIR:   %[[RET:.*]] = cir.load{{.*}} %[[RETVAL]]
 // CIR:   cir.return %[[RET]]
 
@@ -255,10 +254,9 @@ int f() {
 // LLVM:   %[[G2:.*]] = call %[[REC_LAM_G2]] @_Z2g2v()
 // LLVM:   store %[[REC_LAM_G2]] %[[G2]], ptr %[[TMP]]
 // LLVM:   %[[RESULT:.*]] = call i32 @"_ZZ2g2vENK3$_0clEv"(ptr %[[TMP]])
+// LLVM:   store i32 %[[RESULT]], ptr %[[RETVAL]]
 // LLVM:   br label %[[RET_BB:.*]]
 // LLVM: [[RET_BB]]:
-// LLVM:   %[[RETPHI:.*]] = phi i32 [ %[[RESULT]], %[[SCOPE_BB]] ]
-// LLVM:   store i32 %[[RETPHI]], ptr %[[RETVAL]]
 // LLVM:   %[[RET:.*]] = load i32, ptr %[[RETVAL]]
 // LLVM:   ret i32 %[[RET]]
 
@@ -333,14 +331,13 @@ struct A {
 // CIR:   %[[RETVAL:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
 // CIR:   cir.store %[[THIS_ARG]], %[[THIS_ADDR]]
 // CIR:   %[[THIS]] = cir.load deref %[[THIS_ADDR]] : !cir.ptr<!cir.ptr<!rec_A>>, !cir.ptr<!rec_A>
-// CIR:   %[[SCOPE_RET:.*]] = cir.scope {
+// CIR:   cir.scope {
 // CIR:     %[[LAM_ADDR:.*]] = cir.alloca ![[REC_LAM_A]], !cir.ptr<![[REC_LAM_A]]>, ["ref.tmp0"]
 // CIR:     %[[STRUCT_A:.*]] = cir.get_member %[[LAM_ADDR]][0] {name = "this"} : !cir.ptr<![[REC_LAM_A]]> -> !cir.ptr<!rec_A>
 // CIR:     cir.call @_ZN1AC1ERKS_(%[[STRUCT_A]], %[[THIS]]){{.*}} : (!cir.ptr<!rec_A>, !cir.ptr<!rec_A>){{.*}} -> ()
 // CIR:     %[[LAM_RET:.*]] = cir.call @_ZZN1A3fooEvENKUlvE_clEv(%[[LAM_ADDR]])
-// CIR:     cir.yield %[[LAM_RET]]
+// CIR:     cir.store{{.*}} %[[LAM_RET]], %[[RETVAL]]
 // CIR:   }
-// CIR:   cir.store{{.*}} %[[SCOPE_RET]], %[[RETVAL]]
 // CIR:   %[[RET:.*]] = cir.load{{.*}} %[[RETVAL]]
 // CIR:   cir.return %[[RET]]
 
@@ -355,10 +352,9 @@ struct A {
 // LLVM:   %[[STRUCT_A:.*]] = getelementptr %[[REC_LAM_A]], ptr %[[LAM_ALLOCA]], i32 0, i32 0
 // LLVM:   call void @_ZN1AC1ERKS_(ptr %[[STRUCT_A]], ptr %[[THIS]])
 // LLVM:   %[[LAM_RET:.*]] = call i32 @_ZZN1A3fooEvENKUlvE_clEv(ptr %[[LAM_ALLOCA]])
+// LLVM:   store i32 %[[LAM_RET]], ptr %[[RETVAL]]
 // LLVM:   br label %[[RET_BB:.*]]
 // LLVM: [[RET_BB]]:
-// LLVM:   %[[RETPHI:.*]] = phi i32 [ %[[LAM_RET]], %[[SCOPE_BB]] ]
-// LLVM:   store i32 %[[RETPHI]], ptr %[[RETVAL]]
 // LLVM:   %[[RET:.*]] = load i32, ptr %[[RETVAL]]
 // LLVM:   ret i32 %[[RET]]
 
@@ -407,14 +403,13 @@ struct A {
 // CIR:   %[[RETVAL:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
 // CIR:   cir.store %[[THIS_ARG]], %[[THIS_ADDR]]
 // CIR:   %[[THIS]] = cir.load %[[THIS_ADDR]] : !cir.ptr<!cir.ptr<!rec_A>>, !cir.ptr<!rec_A>
-// CIR:   %[[SCOPE_RET:.*]] = cir.scope {
+// CIR:   cir.scope {
 // CIR:     %[[LAM_ADDR:.*]] = cir.alloca ![[REC_LAM_PTR_A]], !cir.ptr<![[REC_LAM_PTR_A]]>, ["ref.tmp0"]
 // CIR:     %[[A_ADDR_ADDR:.*]] = cir.get_member %[[LAM_ADDR]][0] {name = "this"} : !cir.ptr<![[REC_LAM_PTR_A]]> -> !cir.ptr<!cir.ptr<!rec_A>>
 // CIR:     cir.store{{.*}} %[[THIS]], %[[A_ADDR_ADDR]]
 // CIR:     %[[LAM_RET:.*]] = cir.call @_ZZN1A3barEvENKUlvE_clEv(%[[LAM_ADDR]])
-// CIR:     cir.yield %[[LAM_RET]]
+// CIR:     cir.store{{.*}} %[[LAM_RET]], %[[RETVAL]]
 // CIR:   }
-// CIR:   cir.store{{.*}} %[[SCOPE_RET]], %[[RETVAL]]
 // CIR:   %[[RET:.*]] = cir.load{{.*}} %[[RETVAL]]
 // CIR:   cir.return %[[RET]]
 
@@ -429,10 +424,9 @@ struct A {
 // LLVM:   %[[A_ADDR_ADDR:.*]] = getelementptr %[[REC_LAM_PTR_A]], ptr %[[LAM_ALLOCA]], i32 0, i32 0
 // LLVM:   store ptr %[[THIS]], ptr %[[A_ADDR_ADDR]]
 // LLVM:   %[[LAM_RET:.*]] = call i32 @_ZZN1A3barEvENKUlvE_clEv(ptr %[[LAM_ALLOCA]])
+// LLVM:   store i32 %[[LAM_RET]], ptr %[[RETVAL]]
 // LLVM:   br label %[[RET_BB:.*]]
 // LLVM: [[RET_BB]]:
-// LLVM:   %[[RETPHI:.*]] = phi i32 [ %[[LAM_RET]], %[[SCOPE_BB]] ]
-// LLVM:   store i32 %[[RETPHI]], ptr %[[RETVAL]]
 // LLVM:   %[[RET:.*]] = load i32, ptr %[[RETVAL]]
 // LLVM:   ret i32 %[[RET]]
 

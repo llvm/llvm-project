@@ -114,7 +114,7 @@ Register llvm::constrainOperandRegClass(
   // Assume physical registers are properly constrained.
   assert(Reg.isVirtual() && "PhysReg not implemented");
 
-  const TargetRegisterClass *OpRC = TII.getRegClass(II, OpIdx, &TRI);
+  const TargetRegisterClass *OpRC = TII.getRegClass(II, OpIdx);
   // Some of the target independent instructions, like COPY, may not impose any
   // register class constraints on some of their operands: If it's a use, we can
   // skip constraining as the instruction defining the register would constrain
@@ -1893,6 +1893,8 @@ static bool canCreateUndefOrPoison(Register Reg, const MachineRegisterInfo &MRI,
   case TargetOpcode::G_UADDSAT:
   case TargetOpcode::G_SSUBSAT:
   case TargetOpcode::G_USUBSAT:
+  case TargetOpcode::G_SBFX:
+  case TargetOpcode::G_UBFX:
     return false;
   case TargetOpcode::G_SSHLSAT:
   case TargetOpcode::G_USHLSAT:

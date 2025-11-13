@@ -507,7 +507,9 @@ static Register buildLoadInst(SPIRVType *BaseType, Register PtrRegister,
 static Register buildBuiltinVariableLoad(
     MachineIRBuilder &MIRBuilder, SPIRVType *VariableType,
     SPIRVGlobalRegistry *GR, SPIRV::BuiltIn::BuiltIn BuiltinValue, LLT LLType,
-    Register Reg = Register(0), bool isConst = true, bool hasLinkageTy = true) {
+    Register Reg = Register(0), bool isConst = true,
+    const std::optional<SPIRV::LinkageType::LinkageType> &LinkageTy = {
+        SPIRV::LinkageType::Import}) {
   Register NewRegister =
       MIRBuilder.getMRI()->createVirtualRegister(&SPIRV::pIDRegClass);
   MIRBuilder.getMRI()->setType(
@@ -521,9 +523,8 @@ static Register buildBuiltinVariableLoad(
   // Set up the global OpVariable with the necessary builtin decorations.
   Register Variable = GR->buildGlobalVariable(
       NewRegister, PtrType, getLinkStringForBuiltIn(BuiltinValue), nullptr,
-      SPIRV::StorageClass::Input, nullptr, /* isConst= */ isConst,
-      /* HasLinkageTy */ hasLinkageTy, SPIRV::LinkageType::Import, MIRBuilder,
-      false);
+      SPIRV::StorageClass::Input, nullptr, /* isConst= */ isConst, LinkageTy,
+      MIRBuilder, false);
 
   // Load the value from the global variable.
   Register LoadedRegister =
@@ -1498,18 +1499,25 @@ static bool generateKernelClockInst(const SPIRV::IncomingCall *Call,
 
   Register ResultReg = Call->ReturnRegister;
 
-  // Deduce the `Scope` operand from the builtin function name.
-  SPIRV::Scope::Scope ScopeArg =
-      StringSwitch<SPIRV::Scope::Scope>(Builtin->Name)
-          .EndsWith("device", SPIRV::Scope::Scope::Device)
-          .EndsWith("work_group", SPIRV::Scope::Scope::Workgroup)
-          .EndsWith("sub_group", SPIRV::Scope::Scope::Subgroup);
-  Register ScopeReg = buildConstantIntReg32(ScopeArg, MIRBuilder, GR);
+  if (Builtin->Name == "__spirv_ReadClockKHR") {
+    MIRBuilder.buildInstr(SPIRV::OpReadClockKHR)
+        .addDef(ResultReg)
+        .addUse(GR->getSPIRVTypeID(Call->ReturnType))
+        .addUse(Call->Arguments[0]);
+  } else {
+    // Deduce the `Scope` operand from the builtin function name.
+    SPIRV::Scope::Scope ScopeArg =
+        StringSwitch<SPIRV::Scope::Scope>(Builtin->Name)
+            .EndsWith("device", SPIRV::Scope::Scope::Device)
+            .EndsWith("work_group", SPIRV::Scope::Scope::Workgroup)
+            .EndsWith("sub_group", SPIRV::Scope::Scope::Subgroup);
+    Register ScopeReg = buildConstantIntReg32(ScopeArg, MIRBuilder, GR);
 
-  MIRBuilder.buildInstr(SPIRV::OpReadClockKHR)
-      .addDef(ResultReg)
-      .addUse(GR->getSPIRVTypeID(Call->ReturnType))
-      .addUse(ScopeReg);
+    MIRBuilder.buildInstr(SPIRV::OpReadClockKHR)
+        .addDef(ResultReg)
+        .addUse(GR->getSPIRVTypeID(Call->ReturnType))
+        .addUse(ScopeReg);
+  }
 
   return true;
 }
@@ -1851,7 +1859,7 @@ static bool generateWaveInst(const SPIRV::IncomingCall *Call,
 
   return buildBuiltinVariableLoad(
       MIRBuilder, Call->ReturnType, GR, Value, LLType, Call->ReturnRegister,
-      /* isConst= */ false, /* hasLinkageTy= */ false);
+      /* isConst= */ false, /* LinkageType= */ std::nullopt);
 }
 
 // We expect a builtin
@@ -2380,6 +2388,15 @@ static bool generateBindlessImageINTELInst(const SPIRV::IncomingCall *Call,
       SPIRV::lookupNativeBuiltin(Builtin->Name, Builtin->Set)->Opcode;
 
   return buildBindlessImageINTELInst(Call, Opcode, MIRBuilder, GR);
+}
+
+static bool generateBlockingPipesInst(const SPIRV::IncomingCall *Call,
+                                      MachineIRBuilder &MIRBuilder,
+                                      SPIRVGlobalRegistry *GR) {
+  const SPIRV::DemangledBuiltin *Builtin = Call->Builtin;
+  unsigned Opcode =
+      SPIRV::lookupNativeBuiltin(Builtin->Name, Builtin->Set)->Opcode;
+  return buildOpFromWrapper(MIRBuilder, Opcode, Call, Register(0));
 }
 
 static bool
@@ -3042,6 +3059,8 @@ std::optional<bool> lowerBuiltin(const StringRef DemangledCall,
     return generatePipeInst(Call.get(), MIRBuilder, GR);
   case SPIRV::PredicatedLoadStore:
     return generatePredicatedLoadStoreInst(Call.get(), MIRBuilder, GR);
+  case SPIRV::BlockingPipes:
+    return generateBlockingPipesInst(Call.get(), MIRBuilder, GR);
   }
   return false;
 }

@@ -770,6 +770,24 @@ add_header_library(
 )
 
 add_header_library(
+  exp2m1f16
+  HDRS
+    exp2m1f16.h
+  DEPENDS
+    .expxf16_utils
+    libc.src.__support.common
+    libc.src.__support.FPUtil.cast
+    libc.src.__support.FPUtil.except_value_utils
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.FPUtil.rounding_mode
+    libc.src.__support.macros.optimization
+    libc.src.__support.macros.properties.cpu_features
+)
+
+add_header_library(
   exp10
   HDRS
     exp10.h
@@ -926,6 +944,7 @@ add_header_library(
   sincosf_utils
   HDRS
     sincosf_utils.h
+    sincosf_float_eval.h
   DEPENDS
     .range_reduction
     libc.src.__support.FPUtil.fp_bits

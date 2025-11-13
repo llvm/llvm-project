@@ -546,6 +546,8 @@ void OMPClauseProfiler::VisitOMPNocontextClause(const OMPNocontextClause *C) {
 
 void OMPClauseProfiler::VisitOMPDefaultClause(const OMPDefaultClause *C) { }
 
+void OMPClauseProfiler::VisitOMPThreadsetClause(const OMPThreadsetClause *C) {}
+
 void OMPClauseProfiler::VisitOMPProcBindClause(const OMPProcBindClause *C) { }
 
 void OMPClauseProfiler::VisitOMPUnifiedAddressClause(
@@ -964,6 +966,12 @@ void OMPClauseProfiler::VisitOMPXDynCGroupMemClause(
     const OMPXDynCGroupMemClause *C) {
   VisitOMPClauseWithPreInit(C);
   if (Expr *Size = C->getSize())
+    Profiler->VisitStmt(Size);
+}
+void OMPClauseProfiler::VisitOMPDynGroupprivateClause(
+    const OMPDynGroupprivateClause *C) {
+  VisitOMPClauseWithPreInit(C);
+  if (auto *Size = C->getSize())
     Profiler->VisitStmt(Size);
 }
 void OMPClauseProfiler::VisitOMPDoacrossClause(const OMPDoacrossClause *C) {

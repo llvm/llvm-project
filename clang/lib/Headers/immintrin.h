@@ -475,23 +475,11 @@ _storebe_i64(void * __P, long long __D) {
 
 #include <amxfp8intrin.h>
 
-#include <amxtransposeintrin.h>
-
 #include <amxmovrsintrin.h>
-
-#include <amxmovrstransposeintrin.h>
 
 #include <amxavx512intrin.h>
 
 #include <amxtf32intrin.h>
-
-#include <amxtf32transposeintrin.h>
-
-#include <amxbf16transposeintrin.h>
-
-#include <amxfp16transposeintrin.h>
-
-#include <amxcomplextransposeintrin.h>
 
 #include <avx512vp2intersectintrin.h>
 
