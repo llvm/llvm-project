@@ -7,17 +7,16 @@ define i64 @sve_uaddv(<vscale x 4 x i32> %inv, i1 %c) {
 ; CHECK-LABEL: define i64 @sve_uaddv(
 ; CHECK-SAME: <vscale x 4 x i32> [[INV:%.*]], i1 [[C:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[UADDV:%.*]] = call i64 @llvm.aarch64.sve.uaddv.nxv4i32(<vscale x 4 x i1> splat (i1 true), <vscale x 4 x i32> [[INV]])
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[COND_TRUE:.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
-; CHECK-NEXT:    br i1 [[C]], label %[[COND_TRUE]], label %[[EXIT:.*]]
-; CHECK:       [[COND_TRUE]]:
-; CHECK-NEXT:    [[UADDV:%.*]] = call i64 @llvm.aarch64.sve.uaddv.nxv4i32(<vscale x 4 x i1> splat (i1 true), <vscale x 4 x i32> [[INV]])
 ; CHECK-NEXT:    [[BACKEDGE_COND:%.*]] = icmp ult i64 [[IV]], [[UADDV]]
-; CHECK-NEXT:    br i1 [[BACKEDGE_COND]], label %[[LOOP]], label %[[EXIT]]
+; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[C]], i1 [[BACKEDGE_COND]], i1 false
+; CHECK-NEXT:    br i1 [[OR_COND]], label %[[LOOP]], label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[IV_LCSSA:%.*]] = phi i64 [ [[IV]], %[[COND_TRUE]] ], [ [[IV]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV_LCSSA:%.*]] = phi i64 [ [[IV]], %[[LOOP]] ]
 ; CHECK-NEXT:    ret i64 [[IV_LCSSA]]
 ;
 entry:
