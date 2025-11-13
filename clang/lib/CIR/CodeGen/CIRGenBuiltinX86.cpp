@@ -16,7 +16,6 @@
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/CIR/MissingFeatures.h"
-#include "llvm/IR/IntrinsicsX86.h"
 
 using namespace clang;
 using namespace clang::CIRGen;
@@ -60,9 +59,20 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   case X86::BI__builtin_ia32_tzcnt_u16:
   case X86::BI__builtin_ia32_tzcnt_u32:
   case X86::BI__builtin_ia32_tzcnt_u64:
+    cgm.errorNYI(e->getSourceRange(),
+                 std::string("unimplemented X86 builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinID));
+    return {};
   case X86::BI__builtin_ia32_undef128:
   case X86::BI__builtin_ia32_undef256:
   case X86::BI__builtin_ia32_undef512:
+    // The x86 definition of "undef" is not the same as the LLVM definition
+    // (PR32176). We leave optimizing away an unnecessary zero constant to the
+    // IR optimizer and backend.
+    // TODO: If we had a "freeze" IR instruction to generate a fixed undef
+    //  value, we should use that here instead of a zero.
+    return builder.getNullValue(convertType(e->getType()),
+                                getLoc(e->getExprLoc()));
   case X86::BI__builtin_ia32_vec_ext_v4hi:
   case X86::BI__builtin_ia32_vec_ext_v16qi:
   case X86::BI__builtin_ia32_vec_ext_v8hi:
