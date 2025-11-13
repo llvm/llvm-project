@@ -298,7 +298,7 @@ LIBC_INLINE static void handle_printf(rpc::Server::Port &port,
 
     results[lane] = static_cast<int>(
         fwrite(buffer, 1, writer.get_chars_written(), files[lane]));
-    if (results[lane] != writer.get_chars_written() || ret == -1)
+    if (size_t(results[lane]) != writer.get_chars_written() || ret == -1)
       results[lane] = -1;
   }
 
