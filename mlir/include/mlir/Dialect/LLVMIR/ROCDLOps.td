@@ -254,7 +254,7 @@ def ROCDL_ReadlaneOp : ROCDL_IntrOp<"readlane", [], [0], [AllTypesMatch<["res", 
 }
 
 //===----------------------------------------------------------------------===//
-// Thread index and Block index
+// Thread, Block and Cluster index
 //===----------------------------------------------------------------------===//
 
 def ROCDL_ThreadIdXOp : ROCDL_SpecialIdRegisterOp<"workitem.id.x">;
@@ -264,6 +264,10 @@ def ROCDL_ThreadIdZOp : ROCDL_SpecialIdRegisterOp<"workitem.id.z">;
 def ROCDL_BlockIdXOp : ROCDL_SpecialIdRegisterOp<"workgroup.id.x">;
 def ROCDL_BlockIdYOp : ROCDL_SpecialIdRegisterOp<"workgroup.id.y">;
 def ROCDL_BlockIdZOp : ROCDL_SpecialIdRegisterOp<"workgroup.id.z">;
+
+def ROCDL_ClusterIdXOp : ROCDL_SpecialIdRegisterOp<"cluster.id.x">;
+def ROCDL_ClusterIdYOp : ROCDL_SpecialIdRegisterOp<"cluster.id.y">;
+def ROCDL_ClusterIdZOp : ROCDL_SpecialIdRegisterOp<"cluster.id.z">;
 
 def ROCDL_WavefrontSizeOp : ROCDL_SpecialIdRegisterOp<"wavefrontsize">;
 
@@ -321,6 +325,7 @@ def ROCDL_BarrierOp : ROCDL_Op<"barrier"> {
   let assemblyFormat = "attr-dict";
 }
 
+def ROCDLGlobalBuffer : LLVM_PointerInAddressSpace<1>;
 def ROCDLBufferLDS : LLVM_PointerInAddressSpace<3>;
 
 def ROCDL_BarrierInitOp : ROCDL_IntrOp<"s.barrier.init", [], [], [], 0, 0, 0, 0, [1], ["id"]>,
@@ -387,6 +392,15 @@ def ROCDL_GetBarrierStateOp : ROCDL_ConcreteNonMemIntrOp<"s.get.barrier.state", 
   }];
   let results = (outs I32:$res);
   let assemblyFormat = "$id attr-dict `:` type($res)";
+}
+
+def ROCDL_GetNamedBarrierStateOp : ROCDL_ConcreteNonMemIntrOp<"s.get.named.barrier.state", [], 1, [], []>,
+  Arguments<(ins Arg<ROCDLBufferLDS, "", []>:$ptr)> {
+  let description = [{
+    Available on gfx1250+.
+  }];
+  let results = (outs I32:$res);
+  let assemblyFormat = "$ptr attr-dict `:` type($res)";
 }
 
 def ROCDL_WaitDscntOp: ROCDL_ConcreteNonMemIntrOp<"s.wait.dscnt", [], 0, [0], ["count"]>,
@@ -631,8 +645,6 @@ def ROCDL_wmma_i32_16x16x64_iu8 : ROCDL_Wmma_IntrOp<"wmma.i32.16x16x64.iu8", [1]
 //===---------------------------------------------------------------------===//
 // LDS transpose intrinsics (available in GFX950)
 
-def ROCDLGlobalBuffer : LLVM_PointerInAddressSpace<1>;
-
 class ROCDL_LDS_Read_Tr_IntrOp<string mnemonic> :
   ROCDL_IntrOp<mnemonic, [1], [], [], 1, 0, 1> {
   dag args = (ins Arg<ROCDLBufferLDS, "", [MemRead]>:$ptr);
@@ -649,6 +661,58 @@ def ROCDL_ds_read_tr4_b64 : ROCDL_LDS_Read_Tr_IntrOp<"ds.read.tr4.b64">;
 def ROCDL_ds_read_tr8_b64 : ROCDL_LDS_Read_Tr_IntrOp<"ds.read.tr8.b64">;
 def ROCDL_ds_read_tr6_b96 : ROCDL_LDS_Read_Tr_IntrOp<"ds.read.tr6.b96">;
 def ROCDL_ds_read_tr16_b64 : ROCDL_LDS_Read_Tr_IntrOp<"ds.read.tr16.b64">;
+
+
+
+//===---------------------------------------------------------------------===//
+// Glb/DS load-transpose intrinsics (available in GFX1250+)
+
+class AddrKind<string n, int s> {
+  string name = n;
+  int space = s;
+}
+def GlobalAddrKind : AddrKind<"global", 1>;
+def DSAddrKind : AddrKind<"ds", 3>;
+
+class ROCDL_TrLoadOpMeta<AddrKind kind, int inElemBits, int outElemBits> {
+  AddrKind addrKind = kind;
+  string inBits = !cast<string>(inElemBits);
+  string outBits = !cast<string>(outElemBits);
+  string inBitsEnc = !if(!eq(addrKind.space, 1),
+                     !if(!or(!eq(inElemBits, 8), !eq(inElemBits, 16)), "", inBits), inBits);
+  string mnemonic = addrKind.name # ".load.tr" # inBitsEnc # ".b" # outBits;
+}
+
+class ROCDL_TrLoadOp<ROCDL_TrLoadOpMeta meta> :
+  ROCDL_IntrOp<meta.mnemonic, [1], [], [], 1, 0, 1> {
+
+  dag args = (ins Arg<LLVM_PointerInAddressSpace<meta.addrKind.space>, "", [MemRead]>:$ptr);
+  let arguments = !con(args, baseArgs);
+  let summary = "Loads and transposes a matrix from " # meta.addrKind.name # " memory to registers (available in gfx1250+).";
+  let description = [{
+    Load a matrix of }] # meta.inBits # [{-bit data from the }] # meta.addrKind.name # [{ memory,
+    transpose data between row-major and column-major order,
+    and store the result into a }] # meta.outBits # [{-bit vector register.
+
+    Available in gfx1250+.
+  }];
+  let assemblyFormat = "$ptr attr-dict `:` qualified(type($ptr)) `->` type($res)";
+  let extraClassDefinition = [{
+    ::llvm::SmallVector<::mlir::Value> $cppClass::getAccessedOperands() {
+      return {getPtr()};
+    }
+  }];
+}
+
+def ROCDL_GlobalLoadTr4_B64 : ROCDL_TrLoadOp<ROCDL_TrLoadOpMeta<GlobalAddrKind, 4, 64>>;
+def ROCDL_GlobalLoadTr8_B64 : ROCDL_TrLoadOp<ROCDL_TrLoadOpMeta<GlobalAddrKind, 8, 64>>;
+def ROCDL_GlobalLoadTr6_B96 : ROCDL_TrLoadOp<ROCDL_TrLoadOpMeta<GlobalAddrKind, 6, 96>>;
+def ROCDL_GlobalLoadTr8_B128 : ROCDL_TrLoadOp<ROCDL_TrLoadOpMeta<GlobalAddrKind, 16, 128>>;
+
+def ROCDL_DsLoadTr4_B64 : ROCDL_TrLoadOp<ROCDL_TrLoadOpMeta<DSAddrKind, 4, 64>>;
+def ROCDL_DsLoadTr8_B64 : ROCDL_TrLoadOp<ROCDL_TrLoadOpMeta<DSAddrKind, 8, 64>>;
+def ROCDL_DsLoadTr6_B96 : ROCDL_TrLoadOp<ROCDL_TrLoadOpMeta<DSAddrKind, 6, 96>>;
+def ROCDL_DsLoadTr16_B128 : ROCDL_TrLoadOp<ROCDL_TrLoadOpMeta<DSAddrKind, 16, 128>>;
 
 //===---------------------------------------------------------------------===//
 // Load to LDS intrinsic (available in GFX9 and GFX10)
@@ -690,6 +754,38 @@ def ROCDL_GlobalLoadLDSOp :
       return {getGlobalPtr(), getLdsPtr()};
     }
   }];
+}
+
+//===---------------------------------------------------------------------===//
+// Async load to LDS intrinsic (available in GFX1250)
+//===---------------------------------------------------------------------===//
+
+foreach bitsVal = [8, 32, 64, 128] in {
+  defvar bitsStr = "b" # !cast<string>(bitsVal);
+  def ROCDL_GlobalLoadAsyncToLDS # !toupper(bitsStr) # Op :
+    ROCDL_IntrOp<"global.load.async.to.lds." # bitsStr, [], [], [], 0, 0, 1, 0, [2, 3], ["offset", "aux"]> {
+    dag args = (ins Arg<ROCDLGlobalBuffer, "", [MemRead]>:$globalPtr,
+                   Arg<ROCDLBufferLDS, "", [MemWrite]>:$ldsPtr,
+                   I32Attr:$offset,
+                   I32Attr:$aux);
+    let arguments = !con(args, baseArgs);
+    let assemblyFormat = [{
+      $globalPtr `,`  $ldsPtr `,` $offset `,` $aux
+      attr-dict `:` type($globalPtr) `,` type($ldsPtr)
+    }];
+    let description = [{
+      Asynchronously loads }] # !cast<string>(bitsVal) # [{ bits of data from a global memory pointer
+      to a Local Data Share (LDS) pointer.
+
+      Available on gfx1250+.
+    }];
+
+    let extraClassDefinition = [{
+      ::llvm::SmallVector<::mlir::Value> $cppClass::getAccessedOperands() {
+        return {getGlobalPtr(), getLdsPtr()};
+      }
+    }];
+  }
 }
 
 //===---------------------------------------------------------------------===//

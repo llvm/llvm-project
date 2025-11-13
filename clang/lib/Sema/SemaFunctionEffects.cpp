@@ -1279,7 +1279,15 @@ private:
       const CXXConstructorDecl *Ctor = Construct->getConstructor();
       CallableInfo CI(*Ctor);
       followCall(CI, Construct->getLocation());
+      return true;
+    }
 
+    bool VisitCXXBindTemporaryExpr(CXXBindTemporaryExpr *BTE) override {
+      const CXXDestructorDecl *Dtor = BTE->getTemporary()->getDestructor();
+      if (Dtor != nullptr) {
+        CallableInfo CI(*Dtor);
+        followCall(CI, BTE->getBeginLoc());
+      }
       return true;
     }
 
@@ -1291,6 +1299,14 @@ private:
       // should suffice.
       if (Statement != TrailingRequiresClause && Statement != NoexceptExpr)
         return DynamicRecursiveASTVisitor::TraverseStmt(Statement);
+      return true;
+    }
+
+    bool TraverseCXXRecordDecl(CXXRecordDecl *D) override {
+      // Completely skip local struct/class/union declarations since their
+      // methods would otherwise be incorrectly interpreted as part of the
+      // function we are currently traversing. The initial Sema pass will have
+      // already recorded any nonblocking methods needing analysis.
       return true;
     }
 
