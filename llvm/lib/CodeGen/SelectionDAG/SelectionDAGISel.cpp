@@ -2783,7 +2783,7 @@ void SelectionDAGISel::UpdateChains(
 /// be used as the input node chain for the generated nodes.
 static SDValue
 HandleMergeInputChains(const SmallVectorImpl<SDNode *> &ChainNodesMatched,
-                       SelectionDAG *CurDAG) {
+                       SDValue InputGlue, SelectionDAG *CurDAG) {
 
   SmallPtrSet<const SDNode *, 16> Visited;
   SmallVector<const SDNode *, 8> Worklist;
@@ -2826,8 +2826,16 @@ HandleMergeInputChains(const SmallVectorImpl<SDNode *> &ChainNodesMatched,
   // node that is both the predecessor and successor of the
   // to-be-merged nodes. Fail.
   Visited.clear();
-  for (SDValue V : InputChains)
+  for (SDValue V : InputChains) {
+    // If we need to create a TokenFactor, and any of the input chain nodes will
+    // also be glued to the output, we cannot merge the chains. The TokenFactor
+    // would prevent the glue from being honored.
+    if (InputChains.size() != 1 &&
+        V->getValueType(V->getNumValues() - 1) == MVT::Glue &&
+        InputGlue.getNode() == V.getNode())
+      return SDValue();
     Worklist.push_back(V.getNode());
+  }
 
   for (auto *N : ChainNodesMatched)
     if (SDNode::hasPredecessorHelper(N, Visited, Worklist, Max, true))
@@ -3989,7 +3997,7 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
       }
 
       // Merge the input chains if they are not intra-pattern references.
-      InputChain = HandleMergeInputChains(ChainNodesMatched, CurDAG);
+      InputChain = HandleMergeInputChains(ChainNodesMatched, InputGlue, CurDAG);
 
       if (!InputChain.getNode())
         break;  // Failed to merge.
@@ -4033,7 +4041,7 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
         break;
 
       // Merge the input chains if they are not intra-pattern references.
-      InputChain = HandleMergeInputChains(ChainNodesMatched, CurDAG);
+      InputChain = HandleMergeInputChains(ChainNodesMatched, InputGlue, CurDAG);
 
       if (!InputChain.getNode())
         break;  // Failed to merge.
