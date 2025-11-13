@@ -62,6 +62,21 @@ static void DumpUnwindRowsToLog(Log *log, AddressRange range,
   log->PutString(strm.GetString());
 }
 
+static void DumpInstToLog(Log *log, Instruction &inst,
+                          InstructionList inst_list) {
+  if (!log || !log->GetVerbose())
+    return;
+  const bool show_address = true;
+  const bool show_bytes = true;
+  const bool show_control_flow_kind = false;
+  StreamString strm;
+  lldb_private::FormatEntity::Entry format;
+  FormatEntity::Parse("${frame.pc}: ", format);
+  inst.Dump(&strm, inst_list.GetMaxOpcocdeByteSize(), show_address, show_bytes,
+            show_control_flow_kind, nullptr, nullptr, nullptr, &format, 0);
+  log->PutString(strm.GetString());
+}
+
 bool UnwindAssemblyInstEmulation::GetNonCallSiteUnwindPlanFromAssembly(
     AddressRange &range, uint8_t *opcode_data, size_t opcode_size,
     UnwindPlan &unwind_plan) {
@@ -95,9 +110,6 @@ bool UnwindAssemblyInstEmulation::GetNonCallSiteUnwindPlanFromAssembly(
   m_unwind_plan_ptr = &unwind_plan;
 
   const uint32_t addr_byte_size = m_arch.GetAddressByteSize();
-  const bool show_address = true;
-  const bool show_bytes = true;
-  const bool show_control_flow_kind = false;
 
   m_state.cfa_reg_info = *m_inst_emulator_up->GetRegisterInfo(
       unwind_plan.GetRegisterKind(), unwind_plan.GetInitialCFARegister());
@@ -152,6 +164,7 @@ bool UnwindAssemblyInstEmulation::GetNonCallSiteUnwindPlanFromAssembly(
     inst = inst_list.GetInstructionAtIndex(idx).get();
     if (!inst)
       continue;
+    DumpInstToLog(log, *inst, inst_list);
 
     lldb::addr_t current_offset =
         inst->GetAddress().GetFileAddress() - base_addr;
@@ -183,16 +196,6 @@ bool UnwindAssemblyInstEmulation::GetNonCallSiteUnwindPlanFromAssembly(
 
       // We are starting a new conditional block at the actual offset
       condition_block_start_state = it;
-    }
-
-    if (log && log->GetVerbose()) {
-      StreamString strm;
-      lldb_private::FormatEntity::Entry format;
-      FormatEntity::Parse("${frame.pc}: ", format);
-      inst->Dump(&strm, inst_list.GetMaxOpcocdeByteSize(), show_address,
-                 show_bytes, show_control_flow_kind, nullptr, nullptr, nullptr,
-                 &format, 0);
-      log->PutString(strm.GetString());
     }
 
     last_condition = m_inst_emulator_up->GetInstructionCondition();
