@@ -20,7 +20,6 @@
 #include "llvm/IR/DebugInfoMetadata.h"
 #include <cassert>
 #include <cstdint>
-#include <iterator>
 #include <optional>
 
 namespace llvm {

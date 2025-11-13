@@ -639,7 +639,6 @@ void RISCVInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
                                          MachineBasicBlock::iterator I,
                                          Register SrcReg, bool IsKill, int FI,
                                          const TargetRegisterClass *RC,
-                                         const TargetRegisterInfo *TRI,
                                          Register VReg,
                                          MachineInstr::MIFlag Flags) const {
   MachineFunction *MF = MBB.getParent();
@@ -647,8 +646,8 @@ void RISCVInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
 
   unsigned Opcode;
   if (RISCV::GPRRegClass.hasSubClassEq(RC)) {
-    Opcode = TRI->getRegSizeInBits(RISCV::GPRRegClass) == 32 ?
-             RISCV::SW : RISCV::SD;
+    Opcode = RegInfo.getRegSizeInBits(RISCV::GPRRegClass) == 32 ? RISCV::SW
+                                                                : RISCV::SD;
   } else if (RISCV::GPRF16RegClass.hasSubClassEq(RC)) {
     Opcode = RISCV::SH_INX;
   } else if (RISCV::GPRF32RegClass.hasSubClassEq(RC)) {
@@ -705,7 +704,7 @@ void RISCVInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
         .addFrameIndex(FI)
         .addMemOperand(MMO)
         .setMIFlag(Flags);
-    NumVRegSpilled += TRI->getRegSizeInBits(*RC) / RISCV::RVVBitsPerBlock;
+    NumVRegSpilled += RegInfo.getRegSizeInBits(*RC) / RISCV::RVVBitsPerBlock;
   } else {
     MachineMemOperand *MMO = MF->getMachineMemOperand(
         MachinePointerInfo::getFixedStack(*MF, FI), MachineMemOperand::MOStore,
@@ -720,10 +719,12 @@ void RISCVInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
   }
 }
 
-void RISCVInstrInfo::loadRegFromStackSlot(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator I, Register DstReg,
-    int FI, const TargetRegisterClass *RC, const TargetRegisterInfo *TRI,
-    Register VReg, MachineInstr::MIFlag Flags) const {
+void RISCVInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
+                                          MachineBasicBlock::iterator I,
+                                          Register DstReg, int FI,
+                                          const TargetRegisterClass *RC,
+                                          Register VReg,
+                                          MachineInstr::MIFlag Flags) const {
   MachineFunction *MF = MBB.getParent();
   MachineFrameInfo &MFI = MF->getFrameInfo();
   DebugLoc DL =
@@ -731,8 +732,8 @@ void RISCVInstrInfo::loadRegFromStackSlot(
 
   unsigned Opcode;
   if (RISCV::GPRRegClass.hasSubClassEq(RC)) {
-    Opcode = TRI->getRegSizeInBits(RISCV::GPRRegClass) == 32 ?
-             RISCV::LW : RISCV::LD;
+    Opcode = RegInfo.getRegSizeInBits(RISCV::GPRRegClass) == 32 ? RISCV::LW
+                                                                : RISCV::LD;
   } else if (RISCV::GPRF16RegClass.hasSubClassEq(RC)) {
     Opcode = RISCV::LH_INX;
   } else if (RISCV::GPRF32RegClass.hasSubClassEq(RC)) {
@@ -788,7 +789,7 @@ void RISCVInstrInfo::loadRegFromStackSlot(
         .addFrameIndex(FI)
         .addMemOperand(MMO)
         .setMIFlag(Flags);
-    NumVRegReloaded += TRI->getRegSizeInBits(*RC) / RISCV::RVVBitsPerBlock;
+    NumVRegReloaded += RegInfo.getRegSizeInBits(*RC) / RISCV::RVVBitsPerBlock;
   } else {
     MachineMemOperand *MMO = MF->getMachineMemOperand(
         MachinePointerInfo::getFixedStack(*MF, FI), MachineMemOperand::MOLoad,
@@ -1379,14 +1380,14 @@ void RISCVInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
       report_fatal_error("underestimated function size");
 
     storeRegToStackSlot(MBB, MI, TmpGPR, /*IsKill=*/true, FrameIndex,
-                        &RISCV::GPRRegClass, TRI, Register());
+                        &RISCV::GPRRegClass, Register());
     TRI->eliminateFrameIndex(std::prev(MI.getIterator()),
                              /*SpAdj=*/0, /*FIOperandNum=*/1);
 
     MI.getOperand(1).setMBB(&RestoreBB);
 
     loadRegFromStackSlot(RestoreBB, RestoreBB.end(), TmpGPR, FrameIndex,
-                         &RISCV::GPRRegClass, TRI, Register());
+                         &RISCV::GPRRegClass, Register());
     TRI->eliminateFrameIndex(RestoreBB.back(),
                              /*SpAdj=*/0, /*FIOperandNum=*/1);
   }
@@ -1706,6 +1707,9 @@ unsigned getPredicatedOpcode(unsigned Opcode) {
   case RISCV::MIN:   return RISCV::PseudoCCMIN;
   case RISCV::MINU:  return RISCV::PseudoCCMINU;
   case RISCV::MUL:   return RISCV::PseudoCCMUL;
+  case RISCV::LUI:   return RISCV::PseudoCCLUI;
+  case RISCV::QC_LI:   return RISCV::PseudoCCQC_LI;
+  case RISCV::QC_E_LI:   return RISCV::PseudoCCQC_E_LI;
 
   case RISCV::ADDI:  return RISCV::PseudoCCADDI;
   case RISCV::SLLI:  return RISCV::PseudoCCSLLI;
@@ -2914,6 +2918,9 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
         case RISCVOp::OPERAND_UIMM9_LSB000:
           Ok = isShiftedUInt<6, 3>(Imm);
           break;
+        case RISCVOp::OPERAND_SIMM8_UNSIGNED:
+          Ok = isInt<8>(Imm);
+          break;
         case RISCVOp::OPERAND_SIMM10_LSB0000_NONZERO:
           Ok = isShiftedInt<6, 4>(Imm) && (Imm != 0);
           break;
@@ -2935,6 +2942,7 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
           // clang-format off
         CASE_OPERAND_SIMM(5)
         CASE_OPERAND_SIMM(6)
+        CASE_OPERAND_SIMM(10)
         CASE_OPERAND_SIMM(11)
         CASE_OPERAND_SIMM(12)
         CASE_OPERAND_SIMM(26)
