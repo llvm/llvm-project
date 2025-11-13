@@ -15658,6 +15658,123 @@ SDValue PPCTargetLowering::DAGCombineExtBoolTrunc(SDNode *N,
       ShiftCst);
 }
 
+// The function check a i128 load can convert to 16i8 load for Vcmpequb.
+static bool canConvertToVcmpequb(SDValue &LHS, SDValue &RHS) {
+
+  auto isValidForConvert = [](SDValue &Operand) {
+    if (!Operand.hasOneUse())
+      return false;
+
+    if (Operand.getValueType() != MVT::i128)
+      return false;
+
+    if (Operand.getOpcode() == ISD::Constant)
+      return true;
+
+    auto *LoadNode = dyn_cast<LoadSDNode>(Operand);
+    if (!LoadNode)
+      return false;
+
+    // If memory operation is volatile, do not perform any
+    // optimization or transformation. Volatile operations must be preserved
+    // as written to ensure correct program behavior, so we return an empty
+    // SDValue to indicate no action.
+
+    if (LoadNode->isVolatile())
+      return false;
+
+    // Only combine loads if both use the unindexed addressing mode.
+    // PowerPC AltiVec/VMX does not support vector loads or stores with
+    // pre/post-increment addressing. Indexed modes may imply implicit
+    // pointer updates, which are not compatible with AltiVec vector
+    // instructions.
+    if (LoadNode->getAddressingMode() != ISD::UNINDEXED)
+      return false;
+
+    // Only combine loads if both are non-extending loads
+    // (ISD::NON_EXTLOAD). Extending loads (such as ISD::ZEXTLOAD or
+    // ISD::SEXTLOAD) perform zero or sign extension, which may change the
+    // loaded value's semantics and are not compatible with vector loads.
+    if (LoadNode->getExtensionType() != ISD::NON_EXTLOAD)
+      return false;
+
+    return true;
+  };
+
+  return (isValidForConvert(LHS) && isValidForConvert(RHS));
+}
+
+SDValue convertTwoLoadsAndCmpToVCMPEQUB(SelectionDAG &DAG, SDNode *N,
+                                        const SDLoc &DL) {
+
+  assert(N->getOpcode() == ISD::SETCC && "Should be called with a SETCC node");
+
+  ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
+  assert(CC == ISD::SETNE ||
+         CC == ISD::SETEQ && "CC mus be ISD::SETNE or ISD::SETEQ");
+
+  auto getV16i8Load = [&](const SDValue &Operand) {
+    if (Operand.getOpcode() == ISD::Constant)
+      return DAG.getBitcast(MVT::v16i8, Operand);
+
+    assert(Operand.getOpcode() == ISD::LOAD && "Must be LoadSDNode here.");
+
+    auto *LoadNode = cast<LoadSDNode>(Operand);
+    return DAG.getLoad(MVT::v16i8, DL, LoadNode->getChain(),
+                       LoadNode->getBasePtr(), LoadNode->getMemOperand());
+  };
+
+  // Following code transforms the DAG
+  // t0: ch,glue = EntryToken
+  // t2: i64,ch = CopyFromReg t0, Register:i64 %0
+  // t3: i128,ch = load<(load (s128) from %ir.a, align 1)> t0, t2,
+  //    undef:i64
+  // t4: i64,ch = CopyFromReg t0, Register:i64 %1
+  // t5: i128,ch =
+  //    load<(load (s128) from %ir.b, align 1)> t0, t4, undef:i64 t6: i1 =
+  // setcc t3, t5, setne:ch
+  //
+  //  ---->
+  //
+  // t0: ch,glue = EntryToken
+  // t2: i64,ch = CopyFromReg t0, Register:i64 %0
+  // t3: v16i8,ch = load<(load (s128) from %ir.a, align 1)> t0, t2,
+  //    undef:i64
+  // t4: i64,ch = CopyFromReg t0, Register:i64 %1
+  // t5: v16i8,ch =
+  //    load<(load (s128) from %ir.b, align 1)> t0, t4, undef:i64
+  // t6: i32 =
+  //    llvm.ppc.altivec.vcmpequb.p TargetConstant:i32<10505>,
+  //    Constant:i32<2>, t3, t5
+  // t7: i1 = setcc t6, Constant:i32<0>, seteq:ch
+
+  // Or transforms the DAG
+  //  t5: i128,ch = load<(load (s128) from %ir.X, align 1)> t0, t2, undef:i64
+  //  t8: i1 =
+  //     setcc Constant:i128<237684487579686500932345921536>, t5, setne:ch
+  //
+  //  --->
+  //
+  // t5: v16i8,ch = load<(load (s128) from %ir.X, align 1)> t0, t2, undef:i64
+  // t6: v16i8 = bitcast Constant:i128<237684487579686500932345921536>
+  // t7: i32 =
+  //  llvm.ppc.altivec.vcmpequb.p Constant:i32<10962>, Constant:i32<2>, t5, t2
+
+  SDValue LHSVec = getV16i8Load(N->getOperand(0));
+  SDValue RHSVec = getV16i8Load(N->getOperand(1));
+
+  SDValue IntrID =
+      DAG.getConstant(Intrinsic::ppc_altivec_vcmpequb_p, DL, MVT::i32);
+  SDValue CRSel = DAG.getConstant(2, DL, MVT::i32); // which CR6 predicate field
+  SDValue PredResult = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::i32,
+                                   IntrID, CRSel, LHSVec, RHSVec);
+  // ppc_altivec_vcmpequb_p returns 1 when two vectors are the same,
+  // so we need to invert the CC opcode.
+  return DAG.getSetCC(DL, N->getValueType(0), PredResult,
+                      DAG.getConstant(0, DL, MVT::i32),
+                      CC == ISD::SETNE ? ISD::SETEQ : ISD::SETNE);
+}
+
 SDValue PPCTargetLowering::combineSetCC(SDNode *N,
                                         DAGCombinerInfo &DCI) const {
   assert(N->getOpcode() == ISD::SETCC &&
@@ -15684,6 +15801,22 @@ SDValue PPCTargetLowering::combineSetCC(SDNode *N,
       SDValue Add = DAG.getNode(ISD::ADD, DL, OpVT, LHS, RHS.getOperand(1));
       return DAG.getSetCC(DL, VT, Add, DAG.getConstant(0, DL, OpVT), CC);
     }
+
+    // Optimization: Fold i128 equality/inequality compares of two loads into a
+    // vectorized compare using vcmpequb.p when Altivec is available.
+    //
+    // Rationale:
+    //   A scalar i128 SETCC (eq/ne) normally lowers to multiple scalar ops.
+    //   On VSX-capable subtargets, we can instead reinterpret the i128 loads
+    //   as v16i8 vectors and use the Altive vcmpequb.p instruction to
+    //   perform a full 128-bit equality check in a single vector compare.
+    //
+    // Example Result:
+    //   This transformation replaces memcmp(a, b, 16) with two vector loads
+    //   and one vector compare instruction.
+
+    if (Subtarget.hasAltivec() && canConvertToVcmpequb(LHS, RHS))
+      return convertTwoLoadsAndCmpToVCMPEQUB(DCI.DAG, N, SDLoc(N));
   }
 
   return DAGCombineTruncBoolExt(N, DCI);
