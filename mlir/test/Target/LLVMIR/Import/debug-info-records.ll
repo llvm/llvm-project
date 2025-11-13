@@ -1,4 +1,4 @@
-; RUN: mlir-translate -import-llvm -mlir-print-debuginfo -disable-newdbg-conversion -emit-expensive-warnings -split-input-file %s 2>&1 | FileCheck %s
+; RUN: mlir-translate -import-llvm -mlir-print-debuginfo -convert-debug-rec-to-intrinsics -emit-expensive-warnings -split-input-file %s 2>&1 | FileCheck %s
 ; RUN: mlir-translate -import-llvm -mlir-print-debuginfo -emit-expensive-warnings -split-input-file %s 2>&1 | FileCheck %s
 
 ; CHECK: @callee()

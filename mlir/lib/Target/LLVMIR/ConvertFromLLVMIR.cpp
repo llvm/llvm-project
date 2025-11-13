@@ -30,10 +30,13 @@ void registerFromLLVMIRTranslation() {
       llvm::cl::desc("Emit expensive warnings during LLVM IR import "
                      "(discouraged: testing only!)"),
       llvm::cl::init(false));
-  static llvm::cl::opt<bool> disableNewDbgConversion(
-      "disable-newdbg-conversion",
-      llvm::cl::desc("Disable conversion from new debug info format during "
-                     "LLVM IR import (discouraged: WIP!)"),
+  static llvm::cl::opt<bool> convertDebugRecToIntrinsics(
+      "convert-debug-rec-to-intrinsics",
+      llvm::cl::desc("Change the input LLVM module to use old debug intrinsics "
+                     "instead of records "
+                     "via convertFromNewDbgValues, this happens "
+                     "before importing the debug information"
+                     "(discouraged: to be removed soon!)"),
       llvm::cl::init(false));
   static llvm::cl::opt<bool> dropDICompositeTypeElements(
       "drop-di-composite-type-elements",
@@ -75,7 +78,7 @@ void registerFromLLVMIRTranslation() {
           return nullptr;
 
         // Debug records are WIP in the LLVM IR translator.
-        if (!disableNewDbgConversion)
+        if (!convertDebugRecToIntrinsics)
           llvmModule->convertFromNewDbgValues();
 
         return translateLLVMIRToModule(

@@ -3080,13 +3080,13 @@ static LogicalResult setDebugIntrinsicBuilderInsertionPoint(
   return success();
 }
 
-void ModuleImport::processDebugVariableAndExpression(
+void ModuleImport::processDebugOpArgumentsAndInsertionPt(
     Location loc, DILocalVariableAttr &localVarAttr,
     DIExpressionAttr &localExprAttr, Value &locVal, bool hasArgList,
     bool isKillLocation,
     llvm::function_ref<FailureOr<Value>()> convertArgOperandToValue,
-    llvm::Value *llvmLocation,
-    llvm::PointerUnion<llvm::Value *, llvm::DILocalVariable *> llvmLocalVar,
+    llvm::Value *address,
+    llvm::PointerUnion<llvm::Value *, llvm::DILocalVariable *> variable,
     llvm::DIExpression *expression, DominanceInfo &domInfo) {
   // Drop debug intrinsics with arg lists.
   // TODO: Support debug intrinsics that have arg lists.
@@ -3095,18 +3095,17 @@ void ModuleImport::processDebugVariableAndExpression(
   // Kill locations can have metadata nodes as location operand. This
   // cannot be converted to poison as the type cannot be reconstructed.
   // TODO: find a way to support this case.
-  if (isMetadataKillLocation(isKillLocation, llvmLocation))
+  if (isMetadataKillLocation(isKillLocation, address))
     return;
   // Drop debug intrinsics if the associated variable information cannot be
   // translated due to cyclic debug metadata.
   // TODO: Support cyclic debug metadata.
-  localVarAttr = matchLocalVariableAttr(llvmLocalVar);
+  localVarAttr = matchLocalVariableAttr(variable);
   if (!localVarAttr)
     return;
   FailureOr<Value> argOperand = convertArgOperandToValue();
   if (failed(argOperand)) {
-    emitError(loc) << "failed to convert a debug operand: "
-                   << diag(*llvmLocation);
+    emitError(loc) << "failed to convert a debug operand: " << diag(*address);
     return;
   }
 
@@ -3136,7 +3135,7 @@ ModuleImport::processDebugIntrinsic(llvm::DbgVariableIntrinsic *dbgIntr,
     return convertMetadataValue(dbgIntr->getArgOperand(0));
   };
 
-  processDebugVariableAndExpression(
+  processDebugOpArgumentsAndInsertionPt(
       loc, localVariableAttr, locationExprAttr, locVal, dbgIntr->hasArgList(),
       dbgIntr->isKillLocation(), convertArgOperandToValue,
       dbgIntr->getArgOperand(0), dbgIntr->getArgOperand(1),
@@ -3195,7 +3194,7 @@ LogicalResult ModuleImport::processDebugRecord(llvm::DbgRecord &dr,
       return failure();
     };
 
-    processDebugVariableAndExpression(
+    processDebugOpArgumentsAndInsertionPt(
         loc, localVariableAttr, locationExprAttr, locVal, dbgVar->hasArgList(),
         dbgVar->isKillLocation(), convertArgOperandToValue,
         dbgVar->getAddress(), dbgVar->getVariable(), dbgVar->getExpression(),
