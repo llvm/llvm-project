@@ -8434,7 +8434,7 @@ void SIInstrInfo::lowerScalarAbsDiff(SIInstrWorklist &Worklist,
   MachineBasicBlock &MBB = *Inst.getParent();
   MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
   MachineBasicBlock::iterator MII = Inst;
-  DebugLoc DL = Inst.getDebugLoc();
+  const DebugLoc &DL = Inst.getDebugLoc();
 
   MachineOperand &Dest = Inst.getOperand(0);
   MachineOperand &Src1 = Inst.getOperand(1);
