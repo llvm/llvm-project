@@ -79,6 +79,15 @@ Potentially Breaking Changes
     void foo(void) {
       return ({ 1;; });
     }
+- Downstream projects that previously linked only against ``clangDriver`` may
+  now (also) need to link against the new ``clangOptions`` library, since
+  options-related code has been moved out of the Driver into a separate library.
+- Clang now supports MSVC vector deleting destructors when targeting Windows.
+  This means that vtables of classes with virtual destructors will contain a
+  pointer to vector deleting destructor (instead of scalar deleting destructor)
+  which in fact is a different symbol with different name and linkage. This
+  may cause runtime failures if two binaries using the same class defining a
+  virtual destructor are compiled with different versions of clang.
 
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
@@ -342,6 +351,9 @@ Improvements to Clang's diagnostics
 -----------------------------------
 - Diagnostics messages now refer to ``structured binding`` instead of ``decomposition``,
   to align with `P0615R0 <https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/p0615r0.html>`_ changing the term. (#GH157880)
+- Clang now suppresses runtime behavior warnings for unreachable code in file-scope
+  variable initializers, matching the behavior for functions. This prevents false
+  positives for operations in unreachable branches of constant expressions.
 - Added a separate diagnostic group ``-Wfunction-effect-redeclarations``, for the more pedantic
   diagnostics for function effects (``[[clang::nonblocking]]`` and ``[[clang::nonallocating]]``).
   Moved the warning for a missing (though implied) attribute on a redeclaration into this group.
@@ -582,6 +594,8 @@ Android Support
 Windows Support
 ^^^^^^^^^^^^^^^
 
+- Clang now supports MSVC vector deleting destructors (GH19772).
+
 LoongArch Support
 ^^^^^^^^^^^^^^^^^
 - Enable linker relaxation by default for loongarch64.
@@ -594,6 +608,9 @@ RISC-V Support
 
 - Add `-march=unset` to clear any previous `-march=` value. This ISA string will
   be computed from `-mcpu` or the platform default.
+
+- `__GCC_CONSTRUCTIVE_SIZE` and `__GCC_DESTRUCTIVE_SIZE` are changed to 64. These values are
+  unstable according to `Clang's documentation <https://clang.llvm.org/docs/LanguageExtensions.html#gcc-destructive-size-and-gcc-constructive-size>`_.
 
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -611,6 +628,8 @@ NetBSD Support
 
 WebAssembly Support
 ^^^^^^^^^^^^^^^^^^^
+
+- Fix a bug so that ``__has_attribute(musttail)`` is no longer true when WebAssembly's tail-call is not enabled. (#GH163256)
 
 AVR Support
 ^^^^^^^^^^^
@@ -714,6 +733,7 @@ OpenMP Support
 - Added support for 'omp fuse' directive.
 - Updated parsing and semantic analysis support for ``nowait`` clause to accept
   optional argument in OpenMP >= 60.
+- Added support for ``default`` clause on ``target`` directive.
 
 Improvements
 ^^^^^^^^^^^^

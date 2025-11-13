@@ -17,6 +17,5 @@ static_library("cert") {
   sources = [
     "CERTTidyModule.cpp",
     "LimitedRandomnessCheck.cpp",
-    "ProperlySeededRandomGeneratorCheck.cpp",
   ]
 }
