@@ -91,7 +91,7 @@ def : WriteRes<WriteHint,    []> { let Latency = 1; }
 //===----------------------------------------------------------------------===//
 // Define generic 0 micro-op types
 
-let Latency = 0, NumMicroOps = 0 in
+let Latency = 0, NumMicroOps = 1 in
 def V1Write_0c_0Z : SchedWriteRes<[]>;
 
 

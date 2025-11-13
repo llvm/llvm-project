@@ -7,10 +7,10 @@ cmp x0, #4
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      200
 # CHECK-NEXT: Total Cycles:      37
-# CHECK-NEXT: Total uOps:        100
+# CHECK-NEXT: Total uOps:        200
 
 # CHECK:      Dispatch Width:    8
-# CHECK-NEXT: uOps Per Cycle:    2.70
+# CHECK-NEXT: uOps Per Cycle:    5.41
 # CHECK-NEXT: IPC:               5.41
 # CHECK-NEXT: Block RThroughput: 0.3
 
@@ -23,7 +23,7 @@ cmp x0, #4
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  0      0     0.00                        mov	x0, x1
+# CHECK-NEXT:  1      0     0.13                        mov	x0, x1
 # CHECK-NEXT:  1      1     0.33                        cmp	x0, #4
 
 # CHECK:      Resources:

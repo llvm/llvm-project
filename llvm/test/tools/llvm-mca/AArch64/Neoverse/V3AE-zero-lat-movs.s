@@ -23,18 +23,18 @@ mov  x1, x2
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  0      0     0.00                        mov	x1, #0
-# CHECK-NEXT:  0      0     0.00                        mov	x1, xzr
-# CHECK-NEXT:  0      0     0.00                        mov	w1, #0
-# CHECK-NEXT:  0      0     0.00                        mov	w1, wzr
-# CHECK-NEXT:  0      0     0.00                        fmov	h1, wzr
-# CHECK-NEXT:  0      0     0.00                        fmov	h1, xzr
-# CHECK-NEXT:  0      0     0.00                        fmov	s1, wzr
-# CHECK-NEXT:  0      0     0.00                        fmov	d1, xzr
-# CHECK-NEXT:  0      0     0.00                        movi	d1, #0000000000000000
-# CHECK-NEXT:  0      0     0.00                        movi	v1.2d, #0000000000000000
-# CHECK-NEXT:  0      0     0.00                        mov	w1, w2
-# CHECK-NEXT:  0      0     0.00                        mov	x1, x2
+# CHECK-NEXT:  1      0     0.10                        mov	x1, #0
+# CHECK-NEXT:  1      0     0.10                        mov	x1, xzr
+# CHECK-NEXT:  1      0     0.10                        mov	w1, #0
+# CHECK-NEXT:  1      0     0.10                        mov	w1, wzr
+# CHECK-NEXT:  1      0     0.10                        fmov	h1, wzr
+# CHECK-NEXT:  1      0     0.10                        fmov	h1, xzr
+# CHECK-NEXT:  1      0     0.10                        fmov	s1, wzr
+# CHECK-NEXT:  1      0     0.10                        fmov	d1, xzr
+# CHECK-NEXT:  1      0     0.10                        movi	d1, #0000000000000000
+# CHECK-NEXT:  1      0     0.10                        movi	v1.2d, #0000000000000000
+# CHECK-NEXT:  1      0     0.10                        mov	w1, w2
+# CHECK-NEXT:  1      0     0.10                        mov	x1, x2
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0.0] - V3AEUnitB

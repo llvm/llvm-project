@@ -2508,14 +2508,14 @@ drps
 # CHECK-NEXT:  1      2     0.50                        bics	x3, xzr, x3, lsl #1
 # CHECK-NEXT:  1      2     0.50                        tst	w3, w7, lsl #31
 # CHECK-NEXT:  1      2     0.50                        tst	x2, x20, asr #2
-# CHECK-NEXT:  0      0     0.00                        mov	x3, x6
-# CHECK-NEXT:  0      0     0.00                        mov	x3, xzr
-# CHECK-NEXT:  0      0     0.00                        mov	wzr, w2
-# CHECK-NEXT:  0      0     0.00                        mov	w3, w5
+# CHECK-NEXT:  1      0     0.20                        mov	x3, x6
+# CHECK-NEXT:  1      0     0.20                        mov	x3, xzr
+# CHECK-NEXT:  1      0     0.20                        mov	wzr, w2
+# CHECK-NEXT:  1      0     0.20                        mov	w3, w5
 # CHECK-NEXT:  1      1     0.25                        movz	w2, #0, lsl #16
 # CHECK-NEXT:  1      1     0.25                        mov	w2, #-1235
 # CHECK-NEXT:  1      1     0.25                        mov	x2, #5299989643264
-# CHECK-NEXT:  0      0     0.00                        mov	x2, #0
+# CHECK-NEXT:  1      0     0.20                        mov	x2, #0
 # CHECK-NEXT:  1      1     0.25                        movk	w3, #0
 # CHECK-NEXT:  1      1     0.25                        movz	x4, #0, lsl #16
 # CHECK-NEXT:  1      1     0.25                        movk	w5, #0, lsl #16

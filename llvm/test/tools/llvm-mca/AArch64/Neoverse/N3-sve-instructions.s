@@ -5471,7 +5471,7 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  1      2     0.50                        sel	z23.d, p11, z13.d, z8.d
 # CHECK-NEXT:  1      2     0.50                        sel	z23.h, p11, z13.h, z8.h
 # CHECK-NEXT:  1      2     0.50                        sel	z23.s, p11, z13.s, z8.s
-# CHECK-NEXT:  0      0     0.00           *      U     setffr
+# CHECK-NEXT:  1      0     0.20           *      U     setffr
 # CHECK-NEXT:  1      2     0.50                        shadd	z0.b, p0/m, z0.b, z1.b
 # CHECK-NEXT:  1      2     0.50                        shadd	z0.h, p0/m, z0.h, z1.h
 # CHECK-NEXT:  1      2     0.50                        shadd	z29.s, p7/m, z29.s, z30.s

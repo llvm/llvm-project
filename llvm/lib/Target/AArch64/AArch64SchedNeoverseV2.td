@@ -94,10 +94,7 @@ def : WriteRes<WriteLDHi,    []> { let Latency = 4; }
 //===----------------------------------------------------------------------===//
 
 // Define generic 0 micro-op types
-def V2Write_0c : SchedWriteRes<[]> {
-    let Latency = 0;
-    let NumMicroOps = 0;
-}
+def V2Write_0c : SchedWriteRes<[]> { let Latency = 0; }
 
 // Define generic 1 micro-op types
 

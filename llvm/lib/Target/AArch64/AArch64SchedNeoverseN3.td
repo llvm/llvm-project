@@ -75,7 +75,7 @@ def : WriteRes<WriteHint,    []> { let Latency = 1; }
 
 def N3Write_0c : SchedWriteRes<[]> {
     let Latency = 0;
-    let NumMicroOps = 0;
+    let NumMicroOps = 1;
 }
 
 def N3Write_4c : SchedWriteRes<[]> {
