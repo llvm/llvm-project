@@ -8910,13 +8910,11 @@ static SDValue widenBuildVector(BuildVectorSDNode *BVOp, SDLoc const &DL,
       continue;
     }
 
-    break;
+    return SDValue();
   }
 
-  if (WideOps.size() == (NumElts / 2))
-    return DAG.getBitcast(VT, DAG.getBuildVector(WideVT, DL, WideOps));
-
-  return SDValue();
+  assert(WideOps.size() == (NumElts / 2) && "Failed to widen build vector");
+  return DAG.getBitcast(VT, DAG.getBuildVector(WideVT, DL, WideOps));
 }
 
 /// Create a vector constant without a load. SSE/AVX provide the bare minimum
