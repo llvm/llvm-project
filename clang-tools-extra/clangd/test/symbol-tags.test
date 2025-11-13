@@ -1,0 +1,293 @@
+# COM: Checks the extraction of symbol tags.
+
+# RUN: clangd -lit-test < %s | FileCheck %s
+{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":123,"rootPath":"clangd","capabilities":{"textDocument":{"documentSymbol":{"hierarchicalDocumentSymbolSupport":true}},"workspace":{"symbol":{"symbolKind":{"valueSet": [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26]}}}},"trace":"off"}}
+---
+{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"test:///main.cpp","languageId":"cpp","version":1,
+    "text":
+    "class AbstractClass{\n public:\n virtual ~AbstractClass() = default;\n virtual void f1() = 0;\n void f2() const;\n protected: \n void f3(){}\n private: \n static void f4(){} \n }; void AbstractClass::f2() const {} \n class ImplClass final: public AbstractClass { \n public: \n void f1() final {}};"
+}}}
+---
+{"jsonrpc":"2.0","id":2,"method":"textDocument/documentSymbol","params":{"textDocument":{"uri":"test:///main.cpp"}}}
+# CHECK:  "id": 2,
+# CHECK-NEXT:  "jsonrpc": "2.0",
+# CHECK-NEXT:    "result": [
+# CHECK-NEXT:      {
+# CHECK-NEXT:        "children": [
+# CHECK-NEXT:        {
+# CHECK-NEXT:          "kind": 9,
+# CHECK-NEXT:          "name": "~AbstractClass",
+# CHECK-NEXT:          "range": {
+# CHECK-NEXT:            "end": {
+# CHECK-NEXT:              "character": 35,
+# CHECK-NEXT:              "line": 2
+# CHECK-NEXT:            },
+# CHECK-NEXT:            "start": {
+# CHECK-NEXT:              "character": 1,
+# CHECK-NEXT:              "line": 2
+# CHECK-NEXT:            }
+# CHECK-NEXT:          },
+# CHECK-NEXT:          "selectionRange": {
+# CHECK-NEXT:            "end": {
+# CHECK-NEXT:              "character": 10,
+# CHECK-NEXT:              "line": 2
+# CHECK-NEXT:            },
+# CHECK-NEXT:            "start": {
+# CHECK-NEXT:              "character": 9,
+# CHECK-NEXT:              "line": 2
+# CHECK-NEXT:            }
+# CHECK-NEXT:          },
+# CHECK-NEXT:          "tags": [
+# CHECK-NEXT:            15,
+# CHECK-NEXT:            19,
+# CHECK-NEXT:            5
+# CHECK-NEXT:          ]
+# CHECK-NEXT:        },
+# CHECK-NEXT:        {
+# CHECK-NEXT:          "detail": "void ()",
+# CHECK-NEXT:          "kind": 6,
+# CHECK-NEXT:          "name": "f1",
+# CHECK-NEXT:          "range": {
+# CHECK-NEXT:            "end": {
+# CHECK-NEXT:              "character": 22,
+# CHECK-NEXT:              "line": 3
+# CHECK-NEXT:            },
+# CHECK-NEXT:            "start": {
+# CHECK-NEXT:              "character": 1,
+# CHECK-NEXT:              "line": 3
+# CHECK-NEXT:            }
+# CHECK-NEXT:          },
+# CHECK-NEXT:          "selectionRange": {
+# CHECK-NEXT:            "end": {
+# CHECK-NEXT:              "character": 16,
+# CHECK-NEXT:              "line": 3
+# CHECK-NEXT:            },
+# CHECK-NEXT:            "start": {
+# CHECK-NEXT:              "character": 14,
+# CHECK-NEXT:              "line": 3
+# CHECK-NEXT:            }
+# CHECK-NEXT:          },
+# CHECK-NEXT:          "tags": [
+# CHECK-NEXT:            15,
+# CHECK-NEXT:            9,
+# CHECK-NEXT:            18,
+# CHECK-NEXT:            5
+# CHECK-NEXT:          ]
+# CHECK-NEXT:        },
+# CHECK-NEXT:        {
+# CHECK-NEXT:          "detail": "void () const",
+# CHECK-NEXT:          "kind": 6,
+# CHECK-NEXT:          "name": "f2",
+# CHECK-NEXT:          "range": {
+# CHECK-NEXT:            "end": {
+# CHECK-NEXT:              "character": 16,
+# CHECK-NEXT:              "line": 4
+# CHECK-NEXT:            },
+# CHECK-NEXT:            "start": {
+# CHECK-NEXT:              "character": 1,
+# CHECK-NEXT:              "line": 4
+# CHECK-NEXT:            }
+# CHECK-NEXT:          },
+# CHECK-NEXT:          "selectionRange": {
+# CHECK-NEXT:            "end": {
+# CHECK-NEXT:              "character": 8,
+# CHECK-NEXT:              "line": 4
+# CHECK-NEXT:            },
+# CHECK-NEXT:            "start": {
+# CHECK-NEXT:              "character": 6,
+# CHECK-NEXT:              "line": 4
+# CHECK-NEXT:            }
+# CHECK-NEXT:          },
+# CHECK-NEXT:          "tags": [
+# CHECK-NEXT:            20,
+# CHECK-NEXT:            18,
+# CHECK-NEXT:            5
+# CHECK-NEXT:          ]
+# CHECK-NEXT:        },
+# CHECK-NEXT:        {
+# CHECK-NEXT:          "detail": "void ()",
+# CHECK-NEXT:          "kind": 6,
+# CHECK-NEXT:          "name": "f3",
+# CHECK-NEXT:          "range": {
+# CHECK-NEXT:            "end": {
+# CHECK-NEXT:              "character": 12,
+# CHECK-NEXT:              "line": 6
+# CHECK-NEXT:            },
+# CHECK-NEXT:            "start": {
+# CHECK-NEXT:              "character": 1,
+# CHECK-NEXT:              "line": 6
+# CHECK-NEXT:            }
+# CHECK-NEXT:          },
+# CHECK-NEXT:          "selectionRange": {
+# CHECK-NEXT:            "end": {
+# CHECK-NEXT:              "character": 8,
+# CHECK-NEXT:              "line": 6
+# CHECK-NEXT:            },
+# CHECK-NEXT:            "start": {
+# CHECK-NEXT:              "character": 6,
+# CHECK-NEXT:              "line": 6
+# CHECK-NEXT:            }
+# CHECK-NEXT:          },
+# CHECK-NEXT:          "tags": [
+# CHECK-NEXT:            19,
+# CHECK-NEXT:            4
+# CHECK-NEXT:          ]
+# CHECK-NEXT:        },
+# CHECK-NEXT:        {
+# CHECK-NEXT:          "detail": "void ()",
+# CHECK-NEXT:          "kind": 6,
+# CHECK-NEXT:          "name": "f4",
+# CHECK-NEXT:          "range": {
+# CHECK-NEXT:            "end": {
+# CHECK-NEXT:              "character": 19,
+# CHECK-NEXT:              "line": 8
+# CHECK-NEXT:            },
+# CHECK-NEXT:            "start": {
+# CHECK-NEXT:              "character": 1,
+# CHECK-NEXT:              "line": 8
+# CHECK-NEXT:            }
+# CHECK-NEXT:          },
+# CHECK-NEXT:          "selectionRange": {
+# CHECK-NEXT:            "end": {
+# CHECK-NEXT:              "character": 15,
+# CHECK-NEXT:              "line": 8
+# CHECK-NEXT:            },
+# CHECK-NEXT:            "start": {
+# CHECK-NEXT:              "character": 13,
+# CHECK-NEXT:              "line": 8
+# CHECK-NEXT:            }
+# CHECK-NEXT:          },
+# CHECK-NEXT:          "tags": [
+# CHECK-NEXT:            8,
+# CHECK-NEXT:            19,
+# CHECK-NEXT:            2
+# CHECK-NEXT:          ]
+# CHECK-NEXT:        }
+# CHECK-NEXT:      ],
+# CHECK-NEXT:      "detail": "class",
+# CHECK-NEXT:      "kind": 5,
+# CHECK-NEXT:      "name": "AbstractClass",
+# CHECK-NEXT:      "range": {
+# CHECK-NEXT:        "end": {
+# CHECK-NEXT:          "character": 2,
+# CHECK-NEXT:          "line": 9
+# CHECK-NEXT:        },
+# CHECK-NEXT:        "start": {
+# CHECK-NEXT:          "character": 0,
+# CHECK-NEXT:          "line": 0
+# CHECK-NEXT:        }
+# CHECK-NEXT:      },
+# CHECK-NEXT:      "selectionRange": {
+# CHECK-NEXT:        "end": {
+# CHECK-NEXT:          "character": 19,
+# CHECK-NEXT:          "line": 0
+# CHECK-NEXT:        },
+# CHECK-NEXT:        "start": {
+# CHECK-NEXT:          "character": 6,
+# CHECK-NEXT:          "line": 0
+# CHECK-NEXT:        }
+# CHECK-NEXT:      },
+# CHECK-NEXT:      "tags": [
+# CHECK-NEXT:        9,
+# CHECK-NEXT:        19
+# CHECK-NEXT:      ]
+# CHECK-NEXT:    },
+# CHECK-NEXT:    {
+# CHECK-NEXT:      "detail": "void () const",
+# CHECK-NEXT:      "kind": 6,
+# CHECK-NEXT:      "name": "AbstractClass::f2",
+# CHECK-NEXT:      "range": {
+# CHECK-NEXT:        "end": {
+# CHECK-NEXT:          "character": 37,
+# CHECK-NEXT:          "line": 9
+# CHECK-NEXT:        },
+# CHECK-NEXT:        "start": {
+# CHECK-NEXT:          "character": 4,
+# CHECK-NEXT:          "line": 9
+# CHECK-NEXT:        }
+# CHECK-NEXT:      },
+# CHECK-NEXT:      "selectionRange": {
+# CHECK-NEXT:        "end": {
+# CHECK-NEXT:          "character": 26,
+# CHECK-NEXT:          "line": 9
+# CHECK-NEXT:        },
+# CHECK-NEXT:        "start": {
+# CHECK-NEXT:          "character": 24,
+# CHECK-NEXT:          "line": 9
+# CHECK-NEXT:        }
+# CHECK-NEXT:      },
+# CHECK-NEXT:      "tags": [
+# CHECK-NEXT:        20,
+# CHECK-NEXT:        19,
+# CHECK-NEXT:        5
+# CHECK-NEXT:      ]
+# CHECK-NEXT:    },
+# CHECK-NEXT:    {
+# CHECK-NEXT:      "children": [
+# CHECK-NEXT:        {
+# CHECK-NEXT:          "detail": "void ()",
+# CHECK-NEXT:          "kind": 6,
+# CHECK-NEXT:          "name": "f1",
+# CHECK-NEXT:          "range": {
+# CHECK-NEXT:            "end": {
+# CHECK-NEXT:              "character": 19,
+# CHECK-NEXT:              "line": 12
+# CHECK-NEXT:            },
+# CHECK-NEXT:            "start": {
+# CHECK-NEXT:              "character": 1,
+# CHECK-NEXT:              "line": 12
+# CHECK-NEXT:            }
+# CHECK-NEXT:          },
+# CHECK-NEXT:          "selectionRange": {
+# CHECK-NEXT:            "end": {
+# CHECK-NEXT:              "character": 8,
+# CHECK-NEXT:              "line": 12
+# CHECK-NEXT:            },
+# CHECK-NEXT:            "start": {
+# CHECK-NEXT:              "character": 6,
+# CHECK-NEXT:              "line": 12
+# CHECK-NEXT:            }
+# CHECK-NEXT:          },
+# CHECK-NEXT:          "tags": [
+# CHECK-NEXT:            15,
+# CHECK-NEXT:            10,
+# CHECK-NEXT:            19,
+# CHECK-NEXT:            5
+# CHECK-NEXT:          ]
+# CHECK-NEXT:        }
+# CHECK-NEXT:      ],
+# CHECK-NEXT:      "detail": "class",
+# CHECK-NEXT:      "kind": 5,
+# CHECK-NEXT:      "name": "ImplClass",
+# CHECK-NEXT:      "range": {
+# CHECK-NEXT:        "end": {
+# CHECK-NEXT:          "character": 20,
+# CHECK-NEXT:          "line": 12
+# CHECK-NEXT:        },
+# CHECK-NEXT:        "start": {
+# CHECK-NEXT:          "character": 1,
+# CHECK-NEXT:          "line": 10
+# CHECK-NEXT:        }
+# CHECK-NEXT:      },
+# CHECK-NEXT:      "selectionRange": {
+# CHECK-NEXT:        "end": {
+# CHECK-NEXT:          "character": 16,
+# CHECK-NEXT:          "line": 10
+# CHECK-NEXT:        },
+# CHECK-NEXT:        "start": {
+# CHECK-NEXT:          "character": 7,
+# CHECK-NEXT:          "line": 10
+# CHECK-NEXT:        }
+# CHECK-NEXT:      },
+# CHECK-NEXT:      "tags": [
+# CHECK-NEXT:        10,
+# CHECK-NEXT:        19
+# CHECK-NEXT:      ]
+# CHECK-NEXT:    }
+# CHECK-NEXT:  ]
+# CHECK-NEXT:}
+
+---
+{"jsonrpc":"2.0","id":3,"method":"shutdown"}
+---
+{"jsonrpc":"2.0","method":"exit"}
