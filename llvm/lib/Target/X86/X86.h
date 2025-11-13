@@ -14,6 +14,7 @@
 #ifndef LLVM_LIB_TARGET_X86_X86_H
 #define LLVM_LIB_TARGET_X86_X86_H
 
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/IR/Analysis.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/CodeGen.h"
@@ -83,7 +84,14 @@ FunctionPass *createX86AvoidStoreForwardingBlocks();
 FunctionPass *createX86FlagsCopyLoweringPass();
 
 /// Return a pass that expands DynAlloca pseudo-instructions.
-FunctionPass *createX86DynAllocaExpander();
+class X86DynAllocaExpanderPass
+    : public PassInfoMixin<X86DynAllocaExpanderPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createX86DynAllocaExpanderLegacyPass();
 
 /// Return a pass that config the tile registers.
 FunctionPass *createX86TileConfigPass();
@@ -104,7 +112,15 @@ FunctionPass *createX86LowerTileCopyPass();
 /// CALL instruction. The pass does the same for each funclet as well. This
 /// ensures that the open interval of function start and end PCs contains all
 /// return addresses for the benefit of the Windows x64 unwinder.
-FunctionPass *createX86AvoidTrailingCallPass();
+class X86AvoidTrailingCallPass
+    : public PassInfoMixin<X86AvoidTrailingCallPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+  static bool isRequired() { return true; }
+};
+
+FunctionPass *createX86AvoidTrailingCallLegacyPass();
 
 /// Return a pass that optimizes the code-size of x86 call sequences. This is
 /// done by replacing esp-relative movs with pushes.
@@ -222,12 +238,12 @@ void initializeX86FixupInstTuningPassPass(PassRegistry &);
 void initializeX86FixupVectorConstantsPassPass(PassRegistry &);
 void initializeWinEHStatePassPass(PassRegistry &);
 void initializeX86AvoidSFBPassPass(PassRegistry &);
-void initializeX86AvoidTrailingCallPassPass(PassRegistry &);
+void initializeX86AvoidTrailingCallLegacyPassPass(PassRegistry &);
 void initializeX86CallFrameOptimizationPass(PassRegistry &);
 void initializeX86CmovConverterPassPass(PassRegistry &);
 void initializeX86DAGToDAGISelLegacyPass(PassRegistry &);
 void initializeX86DomainReassignmentPass(PassRegistry &);
-void initializeX86DynAllocaExpanderPass(PassRegistry &);
+void initializeX86DynAllocaExpanderLegacyPass(PassRegistry &);
 void initializeX86ExecutionDomainFixPass(PassRegistry &);
 void initializeX86ExpandPseudoPass(PassRegistry &);
 void initializeX86FastPreTileConfigPass(PassRegistry &);
