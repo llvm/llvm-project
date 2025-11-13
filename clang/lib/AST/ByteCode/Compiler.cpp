@@ -1039,8 +1039,15 @@ bool Compiler<Emitter>::VisitPointerArithBinOp(const BinaryOperator *E) {
     if (!visitAsPointer(RHS, *RT) || !visitAsPointer(LHS, *LT))
       return false;
 
+    QualType ElemType = LHS->getType()->getPointeeType();
+    CharUnits ElemTypeSize;
+    if (ElemType->isVoidType() || ElemType->isFunctionType())
+      ElemTypeSize = CharUnits::One();
+    else
+      ElemTypeSize = Ctx.getASTContext().getTypeSizeInChars(ElemType);
+
     PrimType IntT = classifyPrim(E->getType());
-    if (!this->emitSubPtr(IntT, E))
+    if (!this->emitSubPtr(IntT, ElemTypeSize.isZero(), E))
       return false;
     return DiscardResult ? this->emitPop(IntT, E) : true;
   }
@@ -5432,8 +5439,7 @@ bool Compiler<Emitter>::VisitCXXThisExpr(const CXXThisExpr *E) {
   unsigned EndIndex = 0;
   // Find the init list.
   for (StartIndex = InitStack.size() - 1; StartIndex > 0; --StartIndex) {
-    if (InitStack[StartIndex].Kind == InitLink::K_InitList ||
-        InitStack[StartIndex].Kind == InitLink::K_This) {
+    if (InitStack[StartIndex].Kind == InitLink::K_DIE) {
       EndIndex = StartIndex;
       --StartIndex;
       break;
@@ -5446,7 +5452,8 @@ bool Compiler<Emitter>::VisitCXXThisExpr(const CXXThisExpr *E) {
       continue;
 
     if (InitStack[StartIndex].Kind != InitLink::K_Field &&
-        InitStack[StartIndex].Kind != InitLink::K_Elem)
+        InitStack[StartIndex].Kind != InitLink::K_Elem &&
+        InitStack[StartIndex].Kind != InitLink::K_DIE)
       break;
   }
 
@@ -5457,7 +5464,8 @@ bool Compiler<Emitter>::VisitCXXThisExpr(const CXXThisExpr *E) {
 
   // Emit the instructions.
   for (unsigned I = StartIndex; I != (EndIndex + 1); ++I) {
-    if (InitStack[I].Kind == InitLink::K_InitList)
+    if (InitStack[I].Kind == InitLink::K_InitList ||
+        InitStack[I].Kind == InitLink::K_DIE)
       continue;
     if (!InitStack[I].template emit<Emitter>(this, E))
       return false;
@@ -6328,8 +6336,8 @@ bool Compiler<Emitter>::compileConstructor(const CXXConstructorDecl *Ctor) {
 
       unsigned FirstLinkOffset =
           R->getField(cast<FieldDecl>(IFD->chain()[0]))->Offset;
-      InitStackScope<Emitter> ISS(this, isa<CXXDefaultInitExpr>(InitExpr));
       InitLinkScope<Emitter> ILS(this, InitLink::Field(FirstLinkOffset));
+      InitStackScope<Emitter> ISS(this, isa<CXXDefaultInitExpr>(InitExpr));
       if (!emitFieldInitializer(NestedField, NestedFieldOffset, InitExpr,
                                 IsUnion))
         return false;

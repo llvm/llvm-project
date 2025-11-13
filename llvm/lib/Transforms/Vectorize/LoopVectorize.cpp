@@ -249,6 +249,11 @@ static cl::opt<TailFoldingStyle> ForceTailFoldingStyle(
                    "Use predicated EVL instructions for tail folding. If EVL "
                    "is unsupported, fallback to data-without-lane-mask.")));
 
+cl::opt<bool> llvm::EnableWideActiveLaneMask(
+    "enable-wide-lane-mask", cl::init(false), cl::Hidden,
+    cl::desc("Enable use of wide lane masks when used for control flow in "
+             "tail-folded loops"));
+
 static cl::opt<bool> MaximizeBandwidth(
     "vectorizer-maximize-bandwidth", cl::init(false), cl::Hidden,
     cl::desc("Maximize bandwidth when selecting vectorization factor which "
@@ -1314,6 +1319,12 @@ public:
     return ScalarEpilogueStatus == CM_ScalarEpilogueAllowed;
   }
 
+  /// Returns true if tail-folding is preferred over a scalar epilogue.
+  bool preferPredicatedLoop() const {
+    return ScalarEpilogueStatus == CM_ScalarEpilogueNotNeededUsePredicate ||
+           ScalarEpilogueStatus == CM_ScalarEpilogueNotAllowedUsePredicate;
+  }
+
   /// Returns the TailFoldingStyle that is best for the current loop.
   TailFoldingStyle getTailFoldingStyle(bool IVUpdateMayOverflow = true) const {
     if (!ChosenTailFoldingStyle)
@@ -1372,6 +1383,17 @@ public:
     // TODO: check if it is possible to check for None style independent of
     // IVUpdateMayOverflow flag in getTailFoldingStyle.
     return getTailFoldingStyle() != TailFoldingStyle::None;
+  }
+
+  /// Returns true if the use of wide lane masks is requested and the loop is
+  /// using tail-folding with a lane mask for control flow.
+  bool useWideActiveLaneMask() const {
+    if (!EnableWideActiveLaneMask)
+      return false;
+
+    TailFoldingStyle TF = getTailFoldingStyle();
+    return TF == TailFoldingStyle::DataAndControlFlow ||
+           TF == TailFoldingStyle::DataAndControlFlowWithoutRuntimeCheck;
   }
 
   /// Return maximum safe number of elements to be processed per vector
@@ -3996,6 +4018,9 @@ void LoopVectorizationPlanner::emitInvalidCostRemarks(
             .Case<VPInterleaveRecipe>([](const VPInterleaveRecipe *R) {
               return R->getStoredValues().empty() ? Instruction::Load
                                                   : Instruction::Store;
+            })
+            .Case<VPReductionRecipe>([](const auto *R) {
+              return RecurrenceDescriptor::getOpcode(R->getRecurrenceKind());
             });
 
     // If the next recipe is different, or if there are no other pairs,
@@ -4204,18 +4229,16 @@ VectorizationFactor LoopVectorizationPlanner::selectVectorizationFactor() {
           // Selects are only modelled in the legacy cost model for safe
           // divisors.
           case Instruction::Select: {
-            VPValue *VPV = VPI->getVPSingleValue();
-            if (VPV->getNumUsers() == 1) {
-              if (auto *WR = dyn_cast<VPWidenRecipe>(*VPV->user_begin())) {
-                switch (WR->getOpcode()) {
-                case Instruction::UDiv:
-                case Instruction::SDiv:
-                case Instruction::URem:
-                case Instruction::SRem:
-                  continue;
-                default:
-                  break;
-                }
+            if (auto *WR =
+                    dyn_cast_or_null<VPWidenRecipe>(VPI->getSingleUser())) {
+              switch (WR->getOpcode()) {
+              case Instruction::UDiv:
+              case Instruction::SDiv:
+              case Instruction::URem:
+              case Instruction::SRem:
+                continue;
+              default:
+                break;
               }
             }
             C += VPI->cost(VF, CostCtx);
@@ -4560,7 +4583,12 @@ LoopVectorizationPlanner::selectInterleaveCount(VPlan &Plan, ElementCount VF,
   // 3. We don't interleave if we think that we will spill registers to memory
   // due to the increased register pressure.
 
-  if (!CM.isScalarEpilogueAllowed())
+  // Only interleave tail-folded loops if wide lane masks are requested, as the
+  // overhead of multiple instructions to calculate the predicate is likely
+  // not beneficial. If a scalar epilogue is not allowed for any other reason,
+  // do not interleave.
+  if (!CM.isScalarEpilogueAllowed() &&
+      !(CM.preferPredicatedLoop() && CM.useWideActiveLaneMask()))
     return 1;
 
   if (any_of(Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis(),
@@ -6949,11 +6977,10 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
   // the more accurate VPlan-based cost model.
   for (VPRecipeBase &R : *Plan.getVectorPreheader()) {
     auto *VPI = dyn_cast<VPInstruction>(&R);
-    if (!VPI || VPI->getOpcode() != Instruction::Select ||
-        VPI->getNumUsers() != 1)
+    if (!VPI || VPI->getOpcode() != Instruction::Select)
       continue;
 
-    if (auto *WR = dyn_cast<VPWidenRecipe>(*VPI->user_begin())) {
+    if (auto *WR = dyn_cast_or_null<VPWidenRecipe>(VPI->getSingleUser())) {
       switch (WR->getOpcode()) {
       case Instruction::UDiv:
       case Instruction::SDiv:
@@ -7283,7 +7310,9 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
 
   VPlanTransforms::narrowInterleaveGroups(
       BestVPlan, BestVF,
-      TTI.getRegisterBitWidth(TargetTransformInfo::RGK_FixedWidthVector));
+      TTI.getRegisterBitWidth(BestVF.isScalable()
+                                  ? TargetTransformInfo::RGK_ScalableVector
+                                  : TargetTransformInfo::RGK_FixedWidthVector));
   VPlanTransforms::removeDeadRecipes(BestVPlan);
 
   VPlanTransforms::convertToConcreteRecipes(BestVPlan);
@@ -7607,6 +7636,14 @@ createWidenInductionRecipes(VPInstruction *PhiR,
 
   VPValue *Step =
       vputils::getOrCreateVPValueForSCEVExpr(Plan, IndDesc.getStep());
+
+  // Update wide induction increments to use the same step as the corresponding
+  // wide induction. This enables detecting induction increments directly in
+  // VPlan and removes redundant splats.
+  using namespace llvm::VPlanPatternMatch;
+  if (match(PhiR->getOperand(1), m_Add(m_Specific(PhiR), m_VPValue())))
+    PhiR->getOperand(1)->getDefiningRecipe()->setOperand(1, Step);
+
   PHINode *Phi = cast<PHINode>(PhiR->getUnderlyingInstr());
   return new VPWidenIntOrFpInductionRecipe(Phi, Start, Step, &Plan.getVF(),
                                            IndDesc, PhiR->getDebugLoc());
@@ -8204,9 +8241,7 @@ VPRecipeBuilder::tryToCreatePartialReduction(VPInstruction *Reduction,
 
   VPValue *BinOp = Reduction->getOperand(0);
   VPValue *Accumulator = Reduction->getOperand(1);
-  VPRecipeBase *BinOpRecipe = BinOp->getDefiningRecipe();
-  if (isa<VPReductionPHIRecipe>(BinOpRecipe) ||
-      isa<VPPartialReductionRecipe>(BinOpRecipe))
+  if (isa<VPReductionPHIRecipe>(BinOp) || isa<VPPartialReductionRecipe>(BinOp))
     std::swap(BinOp, Accumulator);
 
   assert(ScaleFactor ==
@@ -8226,15 +8261,8 @@ VPRecipeBuilder::tryToCreatePartialReduction(VPInstruction *Reduction,
   }
 
   VPValue *Cond = nullptr;
-  if (CM.blockNeedsPredicationForAnyReason(ReductionI->getParent())) {
-    assert((ReductionOpcode == Instruction::Add ||
-            ReductionOpcode == Instruction::Sub) &&
-           "Expected an ADD or SUB operation for predicated partial "
-           "reductions (because the neutral element in the mask is zero)!");
+  if (CM.blockNeedsPredicationForAnyReason(ReductionI->getParent()))
     Cond = getBlockInMask(Builder.getInsertBlock());
-    VPValue *Zero = Plan.getConstantInt(ReductionI->getType(), 0);
-    BinOp = Builder.createSelect(Cond, BinOp, Zero, Reduction->getDebugLoc());
-  }
   return new VPPartialReductionRecipe(ReductionOpcode, Accumulator, BinOp, Cond,
                                       ScaleFactor, ReductionI);
 }
@@ -8456,20 +8484,6 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
          "entry block must be set to a VPRegionBlock having a non-empty entry "
          "VPBasicBlock");
 
-  // Update wide induction increments to use the same step as the corresponding
-  // wide induction. This enables detecting induction increments directly in
-  // VPlan and removes redundant splats.
-  for (const auto &[Phi, ID] : Legal->getInductionVars()) {
-    auto *IVInc = cast<Instruction>(
-        Phi->getIncomingValueForBlock(OrigLoop->getLoopLatch()));
-    if (IVInc->getOperand(0) != Phi || IVInc->getOpcode() != Instruction::Add)
-      continue;
-    VPWidenInductionRecipe *WideIV =
-        cast<VPWidenInductionRecipe>(RecipeBuilder.getRecipe(Phi));
-    VPRecipeBase *R = RecipeBuilder.getRecipe(IVInc);
-    R->setOperand(1, WideIV->getStepValue());
-  }
-
   // TODO: We can't call runPass on these transforms yet, due to verifier
   // failures.
   VPlanTransforms::addExitUsersForFirstOrderRecurrences(*Plan, Range);
@@ -8610,6 +8624,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VFRange &Range) {
 void LoopVectorizationPlanner::adjustRecipesForReductions(
     VPlanPtr &Plan, VPRecipeBuilder &RecipeBuilder, ElementCount MinVF) {
   using namespace VPlanPatternMatch;
+  VPTypeAnalysis TypeInfo(*Plan);
   VPRegionBlock *VectorLoopRegion = Plan->getVectorLoopRegion();
   VPBasicBlock *Header = VectorLoopRegion->getEntryBasicBlock();
   VPBasicBlock *MiddleVPBB = Plan->getMiddleBlock();
@@ -8694,8 +8709,8 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
         LinkVPBB->insert(FMulRecipe, CurrentLink->getIterator());
         VecOp = FMulRecipe;
       } else if (PhiR->isInLoop() && Kind == RecurKind::AddChainWithSubs &&
-                 CurrentLinkI->getOpcode() == Instruction::Sub) {
-        Type *PhiTy = PhiR->getUnderlyingValue()->getType();
+                 match(CurrentLink, m_Sub(m_VPValue(), m_VPValue()))) {
+        Type *PhiTy = TypeInfo.inferScalarType(PhiR);
         auto *Zero = Plan->getConstantInt(PhiTy, 0);
         VPWidenRecipe *Sub = new VPWidenRecipe(
             Instruction::Sub, {Zero, CurrentLink->getOperand(1)}, {},
@@ -8771,7 +8786,7 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
 
     const RecurrenceDescriptor &RdxDesc = Legal->getRecurrenceDescriptor(
         cast<PHINode>(PhiR->getUnderlyingInstr()));
-    Type *PhiTy = PhiR->getUnderlyingValue()->getType();
+    Type *PhiTy = TypeInfo.inferScalarType(PhiR);
     // If tail is folded by masking, introduce selects between the phi
     // and the users outside the vector region of each reduction, at the
     // beginning of the dedicated latch block.
@@ -8781,7 +8796,7 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
     // with fewer lanes than the VF. So the operands of the select would have
     // different numbers of lanes. Partial reductions mask the input instead.
     if (!PhiR->isInLoop() && CM.foldTailByMasking() &&
-        !isa<VPPartialReductionRecipe>(OrigExitingVPV->getDefiningRecipe())) {
+        !isa<VPPartialReductionRecipe>(OrigExitingVPV)) {
       VPValue *Cond = RecipeBuilder.getBlockInMask(PhiR->getParent());
       std::optional<FastMathFlags> FMFs =
           PhiTy->isFloatingPointTy()
@@ -8878,7 +8893,8 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
       if (FinalReductionResult == U || Parent->getParent())
         continue;
       U->replaceUsesOfWith(OrigExitingVPV, FinalReductionResult);
-      if (match(U, m_ExtractLastElement(m_VPValue())))
+      if (match(U, m_CombineOr(m_ExtractLastElement(m_VPValue()),
+                               m_ExtractLane(m_VPValue(), m_VPValue()))))
         cast<VPInstruction>(U)->replaceAllUsesWith(FinalReductionResult);
     }
 

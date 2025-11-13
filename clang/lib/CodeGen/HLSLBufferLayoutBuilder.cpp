@@ -66,8 +66,9 @@ namespace CodeGen {
 // annotation though. For those that don't, the PackOffsets array will contain
 // -1 value instead. These elements must be placed at the end of the layout
 // after all of the elements with specific offset.
-llvm::TargetExtType *HLSLBufferLayoutBuilder::createLayoutType(
-    const RecordType *RT, const llvm::SmallVector<int32_t> *PackOffsets) {
+llvm::TargetExtType *
+HLSLBufferLayoutBuilder::createLayoutType(const RecordType *RT,
+                                          const CGHLSLOffsetInfo &OffsetInfo) {
 
   // check if we already have the layout type for this struct
   if (llvm::TargetExtType *Ty =
@@ -101,14 +102,10 @@ llvm::TargetExtType *HLSLBufferLayoutBuilder::createLayoutType(
     const CXXRecordDecl *RD = RecordDecls.pop_back_val();
 
     for (const auto *FD : RD->fields()) {
-      assert((!PackOffsets || Index < PackOffsets->size()) &&
-             "number of elements in layout struct does not match number of "
-             "packoffset annotations");
-
       // No PackOffset info at all, or have a valid packoffset/register(c#)
       // annotations value -> layout the field.
-      const int PO = PackOffsets ? (*PackOffsets)[Index++] : -1;
-      if (!PackOffsets || PO != -1) {
+      const uint32_t PO = OffsetInfo[Index++];
+      if (PO != CGHLSLOffsetInfo::Unspecified) {
         if (!layoutField(FD, EndOffset, FieldOffset, FieldType, PO))
           return nullptr;
         Layout.push_back(FieldOffset);
@@ -175,7 +172,7 @@ bool HLSLBufferLayoutBuilder::layoutField(const FieldDecl *FD,
                                           unsigned &EndOffset,
                                           unsigned &FieldOffset,
                                           llvm::Type *&FieldType,
-                                          int Packoffset) {
+                                          uint32_t Packoffset) {
 
   // Size of element; for arrays this is a size of a single element in the
   // array. Total array size of calculated as (ArrayCount-1) * ArrayStride +
@@ -201,8 +198,9 @@ bool HLSLBufferLayoutBuilder::layoutField(const FieldDecl *FD,
     // For array of structures, create a new array with a layout type
     // instead of the structure type.
     if (Ty->isStructureOrClassType()) {
+      CGHLSLOffsetInfo EmptyOffsets;
       llvm::Type *NewTy = cast<llvm::TargetExtType>(
-          createLayoutType(Ty->getAsCanonical<RecordType>()));
+          createLayoutType(Ty->getAsCanonical<RecordType>(), EmptyOffsets));
       if (!NewTy)
         return false;
       assert(isa<llvm::TargetExtType>(NewTy) && "expected target type");
@@ -216,17 +214,20 @@ bool HLSLBufferLayoutBuilder::layoutField(const FieldDecl *FD,
       ElemLayoutTy = CGM.getTypes().ConvertTypeForMem(FieldTy);
     }
     ArrayStride = llvm::alignTo(ElemSize, CBufferRowSizeInBytes);
-    ElemOffset = (Packoffset != -1) ? Packoffset : NextRowOffset;
+    ElemOffset = (Packoffset != CGHLSLOffsetInfo::Unspecified) ? Packoffset
+                                                               : NextRowOffset;
 
   } else if (FieldTy->isStructureOrClassType()) {
     // Create a layout type for the structure
+    CGHLSLOffsetInfo EmptyOffsets;
     ElemLayoutTy = createLayoutType(
-        cast<RecordType>(FieldTy->getAsCanonical<RecordType>()));
+        cast<RecordType>(FieldTy->getAsCanonical<RecordType>()), EmptyOffsets);
     if (!ElemLayoutTy)
       return false;
     assert(isa<llvm::TargetExtType>(ElemLayoutTy) && "expected target type");
     ElemSize = cast<llvm::TargetExtType>(ElemLayoutTy)->getIntParameter(0);
-    ElemOffset = (Packoffset != -1) ? Packoffset : NextRowOffset;
+    ElemOffset = (Packoffset != CGHLSLOffsetInfo::Unspecified) ? Packoffset
+                                                               : NextRowOffset;
 
   } else {
     // scalar or vector - find element size and alignment
@@ -246,7 +247,7 @@ bool HLSLBufferLayoutBuilder::layoutField(const FieldDecl *FD,
     }
 
     // calculate or get element offset for the vector or scalar
-    if (Packoffset != -1) {
+    if (Packoffset != CGHLSLOffsetInfo::Unspecified) {
       ElemOffset = Packoffset;
     } else {
       ElemOffset = llvm::alignTo(EndOffset, Align);
@@ -267,6 +268,14 @@ bool HLSLBufferLayoutBuilder::layoutField(const FieldDecl *FD,
   FieldOffset = ElemOffset;
   FieldType = ElemLayoutTy;
   return true;
+}
+
+bool HLSLBufferLayoutBuilder::layoutField(const FieldDecl *FD,
+                                          unsigned &EndOffset,
+                                          unsigned &FieldOffset,
+                                          llvm::Type *&FieldType) {
+  return layoutField(FD, EndOffset, FieldOffset, FieldType,
+                     CGHLSLOffsetInfo::Unspecified);
 }
 
 } // namespace CodeGen

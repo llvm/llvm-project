@@ -10988,6 +10988,22 @@ SDValue DAGCombiner::visitSRA(SDNode *N) {
     }
   }
 
+  // fold (sra (xor (sra x, c1), -1), c2) -> (xor (sra x, c3), -1)
+  // This allows merging two arithmetic shifts even when there's a NOT in
+  // between.
+  SDValue X;
+  APInt C1;
+  if (N1C && sd_match(N0, m_OneUse(m_Not(
+                              m_OneUse(m_Sra(m_Value(X), m_ConstInt(C1))))))) {
+    APInt C2 = N1C->getAPIntValue();
+    zeroExtendToMatch(C1, C2, 1 /* Overflow Bit */);
+    APInt Sum = C1 + C2;
+    unsigned ShiftSum = Sum.getLimitedValue(OpSizeInBits - 1);
+    SDValue NewShift = DAG.getNode(
+        ISD::SRA, DL, VT, X, DAG.getShiftAmountConstant(ShiftSum, VT, DL));
+    return DAG.getNOT(DL, NewShift, VT);
+  }
+
   // fold (sra (shl X, m), (sub result_size, n))
   // -> (sign_extend (trunc (shl X, (sub (sub result_size, n), m)))) for
   // result_size - n != m.
@@ -29015,9 +29031,9 @@ bool DAGCombiner::SimplifySelectOps(SDNode *TheSelect, SDValue LHS,
         // over-conservative. It would be beneficial to be able to remember
         // both potential memory locations.  Since we are discarding
         // src value info, don't do the transformation if the memory
-        // locations are not in the default address space.
-        LLD->getPointerInfo().getAddrSpace() != 0 ||
-        RLD->getPointerInfo().getAddrSpace() != 0 ||
+        // locations are not in the same address space.
+        LLD->getPointerInfo().getAddrSpace() !=
+            RLD->getPointerInfo().getAddrSpace() ||
         // We can't produce a CMOV of a TargetFrameIndex since we won't
         // generate the address generation required.
         LLD->getBasePtr().getOpcode() == ISD::TargetFrameIndex ||
@@ -29099,6 +29115,9 @@ bool DAGCombiner::SimplifySelectOps(SDNode *TheSelect, SDValue LHS,
     // but the new load must be the minimum (most restrictive) alignment of the
     // inputs.
     Align Alignment = std::min(LLD->getAlign(), RLD->getAlign());
+    unsigned AddrSpace = LLD->getAddressSpace();
+    assert(AddrSpace == RLD->getAddressSpace());
+
     MachineMemOperand::Flags MMOFlags = LLD->getMemOperand()->getFlags();
     if (!RLD->isInvariant())
       MMOFlags &= ~MachineMemOperand::MOInvariant;
@@ -29107,15 +29126,16 @@ bool DAGCombiner::SimplifySelectOps(SDNode *TheSelect, SDValue LHS,
     if (LLD->getExtensionType() == ISD::NON_EXTLOAD) {
       // FIXME: Discards pointer and AA info.
       Load = DAG.getLoad(TheSelect->getValueType(0), SDLoc(TheSelect),
-                         LLD->getChain(), Addr, MachinePointerInfo(), Alignment,
-                         MMOFlags);
+                         LLD->getChain(), Addr, MachinePointerInfo(AddrSpace),
+                         Alignment, MMOFlags);
     } else {
       // FIXME: Discards pointer and AA info.
       Load = DAG.getExtLoad(
           LLD->getExtensionType() == ISD::EXTLOAD ? RLD->getExtensionType()
                                                   : LLD->getExtensionType(),
           SDLoc(TheSelect), TheSelect->getValueType(0), LLD->getChain(), Addr,
-          MachinePointerInfo(), LLD->getMemoryVT(), Alignment, MMOFlags);
+          MachinePointerInfo(AddrSpace), LLD->getMemoryVT(), Alignment,
+          MMOFlags);
     }
 
     // Users of the select now use the result of the load.

@@ -815,8 +815,9 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   /// Get the unique identifier of the device.
   const char *getDeviceUid() const { return DeviceUid.c_str(); }
 
-  /// Get the total shared memory per block that can be used in any kernel.
-  uint32_t getMaxBlockSharedMemSize() const { return MaxBlockSharedMemSize; }
+  /// Get the total shared memory per block (in bytes) that can be used in any
+  /// kernel.
+  size_t getMaxBlockSharedMemSize() const { return MaxBlockSharedMemSize; }
 
   /// Indicate whether the device supports block shared memory natively.
   bool hasNativeBlockSharedMem() const { return MaxBlockSharedMemSize > 0; }
@@ -1280,7 +1281,7 @@ protected:
 #endif
 
   /// The total per-block native shared memory that a kernel may use.
-  uint32_t MaxBlockSharedMemSize = 0;
+  size_t MaxBlockSharedMemSize = 0;
 };
 
 /// Class implementing common functionalities of offload plugins. Each plugin
