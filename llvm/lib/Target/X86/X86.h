@@ -84,7 +84,14 @@ FunctionPass *createX86AvoidStoreForwardingBlocks();
 FunctionPass *createX86FlagsCopyLoweringPass();
 
 /// Return a pass that expands DynAlloca pseudo-instructions.
-FunctionPass *createX86DynAllocaExpander();
+class X86DynAllocaExpanderPass
+    : public PassInfoMixin<X86DynAllocaExpanderPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createX86DynAllocaExpanderLegacyPass();
 
 /// Return a pass that config the tile registers.
 FunctionPass *createX86TileConfigPass();
@@ -108,7 +115,6 @@ FunctionPass *createX86LowerTileCopyPass();
 class X86AvoidTrailingCallPass
     : public PassInfoMixin<X86AvoidTrailingCallPass> {
 public:
-  X86AvoidTrailingCallPass() = default;
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
   static bool isRequired() { return true; }
@@ -237,7 +243,7 @@ void initializeX86CallFrameOptimizationPass(PassRegistry &);
 void initializeX86CmovConverterPassPass(PassRegistry &);
 void initializeX86DAGToDAGISelLegacyPass(PassRegistry &);
 void initializeX86DomainReassignmentPass(PassRegistry &);
-void initializeX86DynAllocaExpanderPass(PassRegistry &);
+void initializeX86DynAllocaExpanderLegacyPass(PassRegistry &);
 void initializeX86ExecutionDomainFixPass(PassRegistry &);
 void initializeX86ExpandPseudoPass(PassRegistry &);
 void initializeX86FastPreTileConfigPass(PassRegistry &);

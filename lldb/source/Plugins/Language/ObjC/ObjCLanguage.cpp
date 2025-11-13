@@ -1065,3 +1065,10 @@ ObjCLanguage::GetBooleanFromString(llvm::StringRef str) const {
       .Case("NO", {false})
       .Default({});
 }
+
+bool ObjCLanguage::IsPossibleObjCMethodName(llvm::StringRef name) {
+  if (!name.starts_with("-[") && !name.starts_with("+["))
+    return false;
+
+  return name.ends_with("]");
+}
