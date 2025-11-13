@@ -206,6 +206,26 @@ BPFTargetLowering::BPFTargetLowering(const TargetMachine &TM,
   HasJmp32 = STI.getHasJmp32();
   HasJmpExt = STI.getHasJmpExt();
   HasMovsx = STI.hasMovsx();
+
+  AllowsMisalignedMemAccess = STI.getAllowsMisalignedMemAccess();
+}
+
+bool BPFTargetLowering::allowsMisalignedMemoryAccesses(EVT VT, unsigned, Align,
+                                                       MachineMemOperand::Flags,
+                                                       unsigned *Fast) const {
+  // allows-misaligned-mem-access is disabled
+  if (!AllowsMisalignedMemAccess)
+    return false;
+
+  // only allow misalignment for simple value types
+  if (!VT.isSimple())
+    return false;
+
+  // always assume fast mode when misalignment is allowed
+  if (Fast)
+    *Fast = true;
+
+  return true;
 }
 
 bool BPFTargetLowering::isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const {
