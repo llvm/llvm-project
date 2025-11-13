@@ -188,7 +188,12 @@ class AnyAttrOf<list<Attr> allowedAttrs, string summary = "",
 }
 
 def LocationAttr : Attr<CPred<"::llvm::isa<::mlir::LocationAttr>($_self)">,
-                        "location attribute">;
+                        "location attribute"> {
+  let storageType = [{ ::mlir::LocationAttr }];
+  let returnType = [{ ::mlir::Location }];
+  let convertFromStorage = "::mlir::Location($_self)";
+  let constBuilderCall = "(::mlir::LocationAttr)$0";
+}
 
 def BoolAttr : Attr<CPred<"::llvm::isa<::mlir::BoolAttr>($_self)">, "bool attribute"> {
   let storageType = [{ ::mlir::BoolAttr }];
