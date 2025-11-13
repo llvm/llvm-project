@@ -955,6 +955,10 @@ private:
                               Expr *ThisArg) override;
   void ResolvedOperatorGlobDelete(const CXXDestructorDecl *DD,
                                   const FunctionDecl *Delete) override;
+  void ResolvedOperatorArrayDelete(const CXXDestructorDecl *DD,
+                                   const FunctionDecl *Delete) override;
+  void ResolvedOperatorGlobArrayDelete(const CXXDestructorDecl *DD,
+                                       const FunctionDecl *Delete) override;
   void CompletedImplicitDefinition(const FunctionDecl *D) override;
   void InstantiationRequested(const ValueDecl *D) override;
   void VariableDefinitionInstantiated(const VarDecl *D) override;

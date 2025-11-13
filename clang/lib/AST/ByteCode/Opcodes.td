@@ -543,6 +543,7 @@ def SubOffset : AluOpcode;
 // [Pointer, Pointer] -> [Integral]
 def SubPtr : Opcode {
   let Types = [IntegerTypeClass];
+  let Args = [ArgBool];
   let HasGroup = 1;
 }
 
