@@ -8390,7 +8390,7 @@ CompilerType SwiftASTContext::GetUnboundGenericType(opaque_compiler_type_t type,
     llvm::ArrayRef<swift::GenericTypeParamType *> params =
         generic_sig.getGenericParams();
     swift::Type paramTy = params[idx];
-    return ToCompilerType({nominal_type_decl->mapTypeIntoContext(paramTy)
+    return ToCompilerType({nominal_type_decl->mapTypeIntoEnvironment(paramTy)
                                ->castTo<swift::ArchetypeType>()});
   }
 
