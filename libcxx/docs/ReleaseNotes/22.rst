@@ -40,6 +40,7 @@ Implemented Papers
 
 - P2321R2: ``zip`` (`Github <https://llvm.org/PR105169>`__) (The paper is partially implemented. ``zip_transform_view``
   is implemented in this release)
+- P2988R12: ``std::optional<T&>`` (`Github <https://llvm.org/PR148131>`__)
 - P3044R2: sub-``string_view`` from ``string`` (`Github <https://llvm.org/PR148140>`__)
 - P3223R2: Making ``std::istream::ignore`` less surprising (`Github <https://llvm.org/PR148178>`__)
 - P3060R3: Add ``std::views::indices(n)`` (`Github <https://llvm.org/PR148175>`__)

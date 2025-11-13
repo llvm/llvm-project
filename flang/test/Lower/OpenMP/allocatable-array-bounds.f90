@@ -64,7 +64,7 @@ module assumed_allocatable_array_routines
 
 !HOST-LABEL: func.func @_QMassumed_allocatable_array_routinesPassumed_shape_array(
 
-!HOST: %[[DECLARE:.*]]:2 = hlfir.declare %[[ARG:.*]] dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<allocatable, intent_inout>, uniq_name = "_QMassumed_allocatable_array_routinesFassumed_shape_arrayEarr_read_write"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
+!HOST: %[[DECLARE:.*]]:2 = hlfir.declare %[[ARG:.*]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {fortran_attrs = #fir.var_attrs<allocatable, intent_inout>, uniq_name = "_QMassumed_allocatable_array_routinesFassumed_shape_arrayEarr_read_write"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
 !HOST: %[[LOAD_1:.*]] = fir.load %[[DECLARE]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 !HOST: %[[LOAD_2:.*]] = fir.load %[[DECLARE]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 !HOST: %[[CONSTANT_1:.*]] = arith.constant 0 : index

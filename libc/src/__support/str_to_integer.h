@@ -31,22 +31,14 @@ namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
 // Returns the idx to the first character in src that is not a whitespace
-// character (as determined by isspace() / iswspace())
+// character (as determined by isspace())
 template <typename CharType>
 LIBC_INLINE size_t
 first_non_whitespace(const CharType *__restrict src,
                      size_t src_len = cpp::numeric_limits<size_t>::max()) {
   size_t src_cur = 0;
-  while (src_cur < src_len) {
-    if constexpr (cpp::is_same_v<CharType, char>) {
-      if (!internal::isspace(src[src_cur]))
-        break;
-    } else {
-      if (!internal::iswspace(src[src_cur]))
-        break;
-    }
-    ++src_cur;
-  }
+  for (; src_cur < src_len && internal::isspace(src[src_cur]); ++src_cur)
+    ;
   return src_cur;
 }
 
@@ -54,11 +46,11 @@ first_non_whitespace(const CharType *__restrict src,
 // plus sign, minus sign, or neither.
 template <typename CharType>
 LIBC_INLINE static int get_sign(const CharType *__restrict src) {
-  if constexpr (cpp::is_same_v<CharType, char>) {
-    return (src[0] == '+') ? 1 : (src[0] == '-' ? -1 : 0);
-  } else {
-    return (src[0] == L'+') ? 1 : (src[0] == L'-' ? -1 : 0);
-  }
+  if (is_char_or_wchar(src[0], '+', L'+'))
+    return 1;
+  if (is_char_or_wchar(src[0], '-', L'-'))
+    return -1;
+  return 0;
 }
 
 // checks if the next 3 characters of the string pointer are the start of a
@@ -68,13 +60,9 @@ LIBC_INLINE static bool is_hex_start(const CharType *__restrict src,
                                      size_t src_len) {
   if (src_len < 3)
     return false;
-  if constexpr (cpp::is_same_v<CharType, char>) {
-    return src[0] == '0' && tolower(src[1]) == 'x' && isalnum(src[2]) &&
-           b36_char_to_int(src[2]) < 16;
-  } else {
-    return src[0] == L'0' && towlower(src[1]) == L'x' && iswalnum(src[2]) &&
-           b36_wchar_to_int(src[2]) < 16;
-  }
+  return is_char_or_wchar(src[0], '0', L'0') &&
+         is_char_or_wchar(tolower(src[1]), 'x', L'x') && isalnum(src[2]) &&
+         b36_char_to_int(src[2]) < 16;
 }
 
 // Takes the address of the string pointer and parses the base from the start of
@@ -90,14 +78,8 @@ LIBC_INLINE static int infer_base(const CharType *__restrict src,
   // An octal number is defined as "the prefix 0 optionally followed by a
   // sequence of the digits 0 through 7 only" (C standard 6.4.4.1) and so any
   // number that starts with 0, including just 0, is an octal number.
-  if (src_len > 0) {
-    if constexpr (cpp::is_same_v<CharType, char>) {
-      if (src[0] == '0')
-        return 8;
-    } else {
-      if (src[0] == L'0')
-        return 8;
-    }
+  if (src_len > 0 && is_char_or_wchar(src[0], '0', L'0')) {
+    return 8;
   }
   // A decimal number is defined as beginning "with a nonzero digit and
   // consist[ing] of a sequence of decimal digits." (C standard 6.4.4.1)
@@ -150,18 +132,8 @@ strtointeger(const CharType *__restrict src, int base,
   bool is_number = false;
   int error_val = 0;
   ResultType result = 0;
-  while (src_cur < src_len) {
-    int cur_digit;
-    if constexpr (cpp::is_same_v<CharType, char>) {
-      if (!isalnum(src[src_cur]))
-        break;
-      cur_digit = b36_char_to_int(src[src_cur]);
-    } else {
-      if (!iswalnum(src[src_cur]))
-        break;
-      cur_digit = b36_wchar_to_int(src[src_cur]);
-    }
-
+  while (src_cur < src_len && isalnum(src[src_cur])) {
+    int cur_digit = b36_char_to_int(src[src_cur]);
     if (cur_digit >= base)
       break;
 

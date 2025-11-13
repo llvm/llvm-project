@@ -1921,6 +1921,9 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     if (Subtarget->hasSVE2p1() || Subtarget->hasSME2()) {
       setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_FMLA, MVT::nxv4f32,
                                 MVT::nxv8f16, Legal);
+      // We can use SVE2p1 fdot to emulate the fixed-length variant.
+      setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_FMLA, MVT::v4f32,
+                                MVT::v8f16, Custom);
     }
   }
 
@@ -18555,7 +18558,7 @@ bool AArch64TargetLowering::isFMAFasterThanFMulAndFAdd(
   case MVT::f64:
     return true;
   case MVT::bf16:
-    return VT.isScalableVector() && Subtarget->hasSVEB16B16() &&
+    return VT.isScalableVector() && Subtarget->hasBF16() &&
            Subtarget->isNonStreamingSVEorSME2Available();
   default:
     break;
@@ -26111,29 +26114,6 @@ static SDValue performCSELCombine(SDNode *N,
       return DAG.getNode(AArch64ISD::CSEL, DL, N->getVTList(), N->getOperand(0),
                          N->getOperand(1), getCondCode(DAG, NewCond),
                          Sub.getValue(1));
-    }
-  }
-
-  // CSEL a, b, cc, SUBS(SUB(x,y), 0) -> CSEL a, b, cc, SUBS(x,y) if cc doesn't
-  // use overflow flags, to avoid the comparison with zero. In case of success,
-  // this also replaces the original SUB(x,y) with the newly created SUBS(x,y).
-  // NOTE: Perhaps in the future use performFlagSettingCombine to replace SUB
-  // nodes with their SUBS equivalent as is already done for other flag-setting
-  // operators, in which case doing the replacement here becomes redundant.
-  if (Cond.getOpcode() == AArch64ISD::SUBS && Cond->hasNUsesOfValue(1, 1) &&
-      isNullConstant(Cond.getOperand(1))) {
-    SDValue Sub = Cond.getOperand(0);
-    AArch64CC::CondCode CC =
-        static_cast<AArch64CC::CondCode>(N->getConstantOperandVal(2));
-    if (Sub.getOpcode() == ISD::SUB &&
-        (CC == AArch64CC::EQ || CC == AArch64CC::NE || CC == AArch64CC::MI ||
-         CC == AArch64CC::PL)) {
-      SDLoc DL(N);
-      SDValue Subs = DAG.getNode(AArch64ISD::SUBS, DL, Cond->getVTList(),
-                                 Sub.getOperand(0), Sub.getOperand(1));
-      DCI.CombineTo(Sub.getNode(), Subs);
-      DCI.CombineTo(Cond.getNode(), Subs, Subs.getValue(1));
-      return SDValue(N, 0);
     }
   }
 

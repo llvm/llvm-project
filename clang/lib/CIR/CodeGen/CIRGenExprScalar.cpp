@@ -15,6 +15,7 @@
 
 #include "clang/AST/Expr.h"
 #include "clang/AST/StmtVisitor.h"
+#include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/MissingFeatures.h"
 
 #include "mlir/IR/Location.h"
@@ -91,6 +92,7 @@ public:
   //===--------------------------------------------------------------------===//
   //                               Utilities
   //===--------------------------------------------------------------------===//
+  mlir::Type convertType(QualType ty) { return cgf.convertType(ty); }
 
   mlir::Value emitComplexToScalarConversion(mlir::Location loc,
                                             mlir::Value value, CastKind kind,
@@ -1888,6 +1890,35 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
     return cgf.getBuilder().createBitcast(cgf.getLoc(subExpr->getSourceRange()),
                                           src, dstTy);
   }
+  case CK_AddressSpaceConversion: {
+    Expr::EvalResult result;
+    if (subExpr->EvaluateAsRValue(result, cgf.getContext()) &&
+        result.Val.isNullPointer()) {
+      // If e has side effect, it is emitted even if its final result is a
+      // null pointer. In that case, a DCE pass should be able to
+      // eliminate the useless instructions emitted during translating E.
+      if (result.HasSideEffects)
+        Visit(subExpr);
+      return cgf.cgm.emitNullConstant(destTy,
+                                      cgf.getLoc(subExpr->getExprLoc()));
+    }
+
+    clang::QualType srcTy = subExpr->IgnoreImpCasts()->getType();
+    if (srcTy->isPointerType() || srcTy->isReferenceType())
+      srcTy = srcTy->getPointeeType();
+
+    clang::LangAS srcLangAS = srcTy.getAddressSpace();
+    cir::TargetAddressSpaceAttr subExprAS;
+    if (clang::isTargetAddressSpace(srcLangAS))
+      subExprAS = cir::toCIRTargetAddressSpace(cgf.getMLIRContext(), srcLangAS);
+    else
+      cgf.cgm.errorNYI(subExpr->getSourceRange(),
+                       "non-target address space conversion");
+    // Since target may map different address spaces in AST to the same address
+    // space, an address space conversion may end up as a bitcast.
+    return cgf.cgm.getTargetCIRGenInfo().performAddrSpaceCast(
+        cgf, Visit(subExpr), subExprAS, convertType(destTy));
+  }
 
   case CK_AtomicToNonAtomic: {
     cgf.getCIRGenModule().errorNYI(subExpr->getSourceRange(),
@@ -1931,6 +1962,14 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
     }
 
     return builder.createIntToPtr(middleVal, destCIRTy);
+  }
+
+  case CK_UncheckedDerivedToBase:
+  case CK_DerivedToBase: {
+    // The EmitPointerWithAlignment path does this fine; just discard
+    // the alignment.
+    return cgf.getAsNaturalPointerTo(cgf.emitPointerWithAlignment(ce),
+                                     ce->getType()->getPointeeType());
   }
 
   case CK_Dynamic: {
