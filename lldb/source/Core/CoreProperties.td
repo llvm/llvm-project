@@ -25,6 +25,10 @@ let Definition = "modulelist" in {
   def UseSwiftDWARFImporter: Property<"use-swift-dwarfimporter", "Boolean">,
     DefaultTrue,
     Desc<"Reconstruct Clang module dependencies from DWARF when debugging Swift code">;
+  def UseSwiftExplicitModuleLoader
+      : Property<"use-swift-explicit-module-loader", "Boolean">,
+        DefaultTrue,
+        Desc<"Prefer explicitly specified modules over ones found in dSYMs">;
   def SwiftValidateTypeSystem: Property<"swift-validate-typesystem", "Boolean">,
     DefaultFalse,
     Desc<"Validate all Swift typesystem queries. Used for testing an asserts-enabled LLDB only.">;

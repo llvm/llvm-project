@@ -199,6 +199,17 @@ bool ModuleListProperties::SetUseSwiftDWARFImporter(bool new_value) {
   return SetPropertyAtIndex(idx, new_value);
 }
 
+bool ModuleListProperties::GetUseSwiftExplicitModuleLoader() const {
+  const uint32_t idx = ePropertyUseSwiftExplicitModuleLoader;
+  return GetPropertyAtIndexAs<bool>(
+      idx, g_modulelist_properties[idx].default_uint_value != 0);
+}
+
+bool ModuleListProperties::SetUseSwiftExplicitModuleLoader(bool new_value) {
+  const uint32_t idx = ePropertyUseSwiftExplicitModuleLoader;
+  return SetPropertyAtIndex(idx, new_value);
+}
+
 bool ModuleListProperties::GetSwiftValidateTypeSystem() const {
   const uint32_t idx = ePropertySwiftValidateTypeSystem;
   return GetPropertyAtIndexAs<bool>(
