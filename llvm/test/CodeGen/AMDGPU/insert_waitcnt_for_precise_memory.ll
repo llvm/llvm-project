@@ -162,12 +162,11 @@ define i32 @atomic_nand_i32_global(ptr addrspace(1) %ptr) nounwind {
 ; GFX90A-LABEL: atomic_nand_i32_global:
 ; GFX90A:       ; %bb.0:
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX90A-NEXT:    global_load_dword v2, v[0:1], off
+; GFX90A-NEXT:    global_load_dword v3, v[0:1], off
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX90A-NEXT:  .LBB1_1: ; %atomicrmw.start
 ; GFX90A-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX90A-NEXT:    v_mov_b32_e32 v3, v2
 ; GFX90A-NEXT:    v_bfi_b32 v2, v3, -5, -1
 ; GFX90A-NEXT:    buffer_wbl2
 ; GFX90A-NEXT:    global_atomic_cmpswap v2, v[0:1], v[2:3], off glc
@@ -176,6 +175,7 @@ define i32 @atomic_nand_i32_global(ptr addrspace(1) %ptr) nounwind {
 ; GFX90A-NEXT:    buffer_wbinvl1_vol
 ; GFX90A-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v3
 ; GFX90A-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
+; GFX90A-NEXT:    v_mov_b32_e32 v3, v2
 ; GFX90A-NEXT:    s_andn2_b64 exec, exec, s[4:5]
 ; GFX90A-NEXT:    s_cbranch_execnz .LBB1_1
 ; GFX90A-NEXT:  ; %bb.2: ; %atomicrmw.end

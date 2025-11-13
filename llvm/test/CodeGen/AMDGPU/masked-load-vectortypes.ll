@@ -236,8 +236,7 @@ define <16 x i8> @uniform_masked_load_ptr1_mask_v16i8(ptr addrspace(1) inreg noc
 ; GFX942-NEXT:    s_and_saveexec_b64 s[2:3], vcc
 ; GFX942-NEXT:    s_cbranch_execz .LBB8_2
 ; GFX942-NEXT:  ; %bb.1: ; %cond.load
-; GFX942-NEXT:    v_mov_b32_e32 v0, 0
-; GFX942-NEXT:    global_load_dwordx4 v[16:19], v0, s[0:1]
+; GFX942-NEXT:    global_load_dwordx4 v[16:19], v16, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    v_lshrrev_b32_e32 v15, 24, v19
 ; GFX942-NEXT:    v_lshrrev_b32_e32 v14, 16, v19

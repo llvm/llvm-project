@@ -26,7 +26,6 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_MFMA_interleave(ptr
 ; GCN-MINREG-NEXT:    v_add_u32_e32 v5, s1, v0
 ; GCN-MINREG-NEXT:    v_mov_b32_e32 v0, s1
 ; GCN-MINREG-NEXT:    v_add_u32_e32 v3, 0x6000, v4
-; GCN-MINREG-NEXT:    ; sched_group_barrier mask(0x00000100) size(8) SyncID(0)
 ; GCN-MINREG-NEXT:    ; sched_group_barrier mask(0x00000008) size(1) SyncID(0)
 ; GCN-MINREG-NEXT:    s_nop 15
 ; GCN-MINREG-NEXT:    ds_write_b128 v5, a[28:31] offset:112
@@ -48,7 +47,6 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_MFMA_interleave(ptr
 ; GCN-MINREG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-MINREG-NEXT:    v_mfma_f32_32x32x1f32 a[0:31], v2, v1, a[0:31]
 ; GCN-MINREG-NEXT:    ; sched_group_barrier mask(0x00000200) size(8) SyncID(0)
-; GCN-MINREG-NEXT:    ; sched_group_barrier mask(0x00000100) size(8) SyncID(0)
 ; GCN-MINREG-NEXT:    ; sched_group_barrier mask(0x00000008) size(1) SyncID(0)
 ; GCN-MINREG-NEXT:    s_nop 15
 ; GCN-MINREG-NEXT:    s_nop 2
@@ -71,7 +69,6 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_MFMA_interleave(ptr
 ; GCN-MINREG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-MINREG-NEXT:    v_mfma_f32_32x32x1f32 a[0:31], v2, v1, a[0:31]
 ; GCN-MINREG-NEXT:    ; sched_group_barrier mask(0x00000200) size(8) SyncID(0)
-; GCN-MINREG-NEXT:    ; sched_group_barrier mask(0x00000100) size(8) SyncID(0)
 ; GCN-MINREG-NEXT:    ; sched_group_barrier mask(0x00000008) size(1) SyncID(0)
 ; GCN-MINREG-NEXT:    s_nop 15
 ; GCN-MINREG-NEXT:    s_nop 2
@@ -94,7 +91,6 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_MFMA_interleave(ptr
 ; GCN-MINREG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-MINREG-NEXT:    v_mfma_f32_32x32x1f32 a[0:31], v2, v1, a[0:31]
 ; GCN-MINREG-NEXT:    ; sched_group_barrier mask(0x00000200) size(8) SyncID(0)
-; GCN-MINREG-NEXT:    ; sched_group_barrier mask(0x00000100) size(8) SyncID(0)
 ; GCN-MINREG-NEXT:    ; sched_group_barrier mask(0x00000008) size(1) SyncID(0)
 ; GCN-MINREG-NEXT:    s_nop 15
 ; GCN-MINREG-NEXT:    s_nop 2
@@ -117,7 +113,6 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_MFMA_interleave(ptr
 ; GCN-MINREG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-MINREG-NEXT:    v_mfma_f32_32x32x1f32 a[0:31], v2, v1, a[0:31]
 ; GCN-MINREG-NEXT:    ; sched_group_barrier mask(0x00000200) size(8) SyncID(0)
-; GCN-MINREG-NEXT:    ; sched_group_barrier mask(0x00000100) size(8) SyncID(0)
 ; GCN-MINREG-NEXT:    ; sched_group_barrier mask(0x00000008) size(1) SyncID(0)
 ; GCN-MINREG-NEXT:    s_nop 15
 ; GCN-MINREG-NEXT:    s_nop 2
@@ -130,6 +125,11 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_MFMA_interleave(ptr
 ; GCN-MINREG-NEXT:    ds_write_b128 v0, a[0:3] offset:32768
 ; GCN-MINREG-NEXT:    ds_write_b128 v0, a[4:7] offset:32784
 ; GCN-MINREG-NEXT:    ; sched_group_barrier mask(0x00000200) size(8) SyncID(0)
+; GCN-MINREG-NEXT:    ; sched_group_barrier mask(0x00000100) size(8) SyncID(0)
+; GCN-MINREG-NEXT:    ; sched_group_barrier mask(0x00000100) size(8) SyncID(0)
+; GCN-MINREG-NEXT:    ; sched_group_barrier mask(0x00000100) size(8) SyncID(0)
+; GCN-MINREG-NEXT:    ; sched_group_barrier mask(0x00000100) size(8) SyncID(0)
+; GCN-MINREG-NEXT:    ; sched_group_barrier mask(0x00000100) size(8) SyncID(0)
 ; GCN-MINREG-NEXT:    s_endpgm
 ;
 ; GCN-MAXOCC-LABEL: test_sched_group_barrier_pipeline_MFMA_interleave:
@@ -495,8 +495,8 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_MFMA_interleave_spl
 ; GCN-MINREG-NEXT:    v_mfma_f32_32x32x1f32 a[0:31], v1, v0, a[0:31]
 ; GCN-MINREG-NEXT:    v_mov_b32_e32 v2, s1
 ; GCN-MINREG-NEXT:    ; sched_group_barrier mask(0x00000200) size(8) SyncID(0)
-; GCN-MINREG-NEXT:    ; sched_group_barrier mask(0x00000100) size(8) SyncID(0)
 ; GCN-MINREG-NEXT:    ; sched_group_barrier mask(0x00000008) size(1) SyncID(0)
+; GCN-MINREG-NEXT:    ; sched_group_barrier mask(0x00000100) size(8) SyncID(0)
 ; GCN-MINREG-NEXT:    s_nop 15
 ; GCN-MINREG-NEXT:    s_nop 1
 ; GCN-MINREG-NEXT:    ds_write_b128 v2, a[24:27] offset:8288
@@ -520,7 +520,6 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_MFMA_interleave_spl
 ; GCN-MINREG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-MINREG-NEXT:    v_mfma_f32_32x32x1f32 a[0:31], v1, v0, a[0:31]
 ; GCN-MINREG-NEXT:    v_add_u32_e32 v4, 0x6000, v3
-; GCN-MINREG-NEXT:    ; sched_group_barrier mask(0x00000100) size(8) SyncID(0)
 ; GCN-MINREG-NEXT:    ; sched_group_barrier mask(0x00000008) size(1) SyncID(0)
 ; GCN-MINREG-NEXT:    s_nop 15
 ; GCN-MINREG-NEXT:    s_nop 1
@@ -543,7 +542,6 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_MFMA_interleave_spl
 ; GCN-MINREG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-MINREG-NEXT:    v_mfma_f32_32x32x1f32 a[0:31], v1, v0, a[0:31]
 ; GCN-MINREG-NEXT:    ; sched_group_barrier mask(0x00000200) size(8) SyncID(0)
-; GCN-MINREG-NEXT:    ; sched_group_barrier mask(0x00000100) size(8) SyncID(0)
 ; GCN-MINREG-NEXT:    ; sched_group_barrier mask(0x00000008) size(1) SyncID(0)
 ; GCN-MINREG-NEXT:    s_nop 15
 ; GCN-MINREG-NEXT:    s_nop 2
@@ -566,7 +564,6 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_MFMA_interleave_spl
 ; GCN-MINREG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-MINREG-NEXT:    v_mfma_f32_32x32x1f32 a[0:31], v1, v0, a[0:31]
 ; GCN-MINREG-NEXT:    ; sched_group_barrier mask(0x00000200) size(8) SyncID(0)
-; GCN-MINREG-NEXT:    ; sched_group_barrier mask(0x00000100) size(8) SyncID(0)
 ; GCN-MINREG-NEXT:    ; sched_group_barrier mask(0x00000008) size(1) SyncID(0)
 ; GCN-MINREG-NEXT:    s_nop 15
 ; GCN-MINREG-NEXT:    s_nop 2
@@ -579,6 +576,9 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_MFMA_interleave_spl
 ; GCN-MINREG-NEXT:    ds_write_b128 v2, a[4:7] offset:32784
 ; GCN-MINREG-NEXT:    ds_write_b128 v2, a[0:3] offset:32768
 ; GCN-MINREG-NEXT:    ; sched_group_barrier mask(0x00000200) size(8) SyncID(0)
+; GCN-MINREG-NEXT:    ; sched_group_barrier mask(0x00000100) size(8) SyncID(0)
+; GCN-MINREG-NEXT:    ; sched_group_barrier mask(0x00000100) size(8) SyncID(0)
+; GCN-MINREG-NEXT:    ; sched_group_barrier mask(0x00000100) size(8) SyncID(0)
 ; GCN-MINREG-NEXT:    s_endpgm
 ;
 ; GCN-MAXOCC-LABEL: test_sched_group_barrier_pipeline_MFMA_interleave_split_region:

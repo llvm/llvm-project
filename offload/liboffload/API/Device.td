@@ -43,6 +43,7 @@ def ol_device_info_t : Enum {
     TaggedEtor<"ADDRESS_BITS", "uint32_t", "Number of bits used to represent an address in device memory">,
     TaggedEtor<"MAX_MEM_ALLOC_SIZE", "uint64_t", "The maximum size of memory object allocation in bytes">,
     TaggedEtor<"GLOBAL_MEM_SIZE", "uint64_t", "The size of global device memory in bytes">,
+    TaggedEtor<"WORK_GROUP_LOCAL_MEM_SIZE", "uint64_t", "The maximum size of local shared memory per work group in bytes">,
   ];
   list<TaggedEtor> fp_configs = !foreach(type, ["Single", "Double", "Half"], TaggedEtor<type # "_FP_CONFIG", "ol_device_fp_capability_flags_t", type # " precision floating point capability">);
   list<TaggedEtor> native_vec_widths = !foreach(type, ["char","short","int","long","float","double","half"], TaggedEtor<"NATIVE_VECTOR_WIDTH_" # type, "uint32_t", "Native vector width for " # type>);

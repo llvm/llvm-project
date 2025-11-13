@@ -275,6 +275,9 @@ private:
   // Assign index for each instruction to quickly determine dominance.
   InstrPosIndexes PosIndexes;
 
+  void setRegUnitState(MCRegUnit Unit, unsigned NewState);
+  unsigned getRegUnitState(MCRegUnit Unit) const;
+
   void setPhysRegState(MCRegister PhysReg, unsigned NewState);
   bool isPhysRegFree(MCRegister PhysReg) const;
 
@@ -448,14 +451,22 @@ bool RegAllocFastImpl::shouldAllocateRegister(const Register Reg) const {
   return ShouldAllocateRegisterImpl(*TRI, *MRI, Reg);
 }
 
+void RegAllocFastImpl::setRegUnitState(MCRegUnit Unit, unsigned NewState) {
+  RegUnitStates[static_cast<unsigned>(Unit)] = NewState;
+}
+
+unsigned RegAllocFastImpl::getRegUnitState(MCRegUnit Unit) const {
+  return RegUnitStates[static_cast<unsigned>(Unit)];
+}
+
 void RegAllocFastImpl::setPhysRegState(MCRegister PhysReg, unsigned NewState) {
   for (MCRegUnit Unit : TRI->regunits(PhysReg))
-    RegUnitStates[Unit] = NewState;
+    setRegUnitState(Unit, NewState);
 }
 
 bool RegAllocFastImpl::isPhysRegFree(MCRegister PhysReg) const {
   for (MCRegUnit Unit : TRI->regunits(PhysReg)) {
-    if (RegUnitStates[Unit] != regFree)
+    if (getRegUnitState(Unit) != regFree)
       return false;
   }
   return true;
@@ -709,7 +720,7 @@ void RegAllocFastImpl::reloadAtBegin(MachineBasicBlock &MBB) {
       continue;
 
     MCRegUnit FirstUnit = *TRI->regunits(PhysReg).begin();
-    if (RegUnitStates[FirstUnit] == regLiveIn)
+    if (getRegUnitState(FirstUnit) == regLiveIn)
       continue;
 
     assert((&MBB != &MBB.getParent()->front() || IgnoreMissingDefs) &&
@@ -750,7 +761,7 @@ bool RegAllocFastImpl::displacePhysReg(MachineInstr &MI, MCRegister PhysReg) {
   bool displacedAny = false;
 
   for (MCRegUnit Unit : TRI->regunits(PhysReg)) {
-    switch (unsigned VirtReg = RegUnitStates[Unit]) {
+    switch (unsigned VirtReg = getRegUnitState(Unit)) {
     default: {
       LiveRegMap::iterator LRI = findLiveVirtReg(VirtReg);
       assert(LRI != LiveVirtRegs.end() && "datastructures in sync");
@@ -767,7 +778,7 @@ bool RegAllocFastImpl::displacePhysReg(MachineInstr &MI, MCRegister PhysReg) {
       break;
     }
     case regPreAssigned:
-      RegUnitStates[Unit] = regFree;
+      setRegUnitState(Unit, regFree);
       displacedAny = true;
       break;
     case regFree:
@@ -781,7 +792,7 @@ void RegAllocFastImpl::freePhysReg(MCRegister PhysReg) {
   LLVM_DEBUG(dbgs() << "Freeing " << printReg(PhysReg, TRI) << ':');
 
   MCRegUnit FirstUnit = *TRI->regunits(PhysReg).begin();
-  switch (unsigned VirtReg = RegUnitStates[FirstUnit]) {
+  switch (unsigned VirtReg = getRegUnitState(FirstUnit)) {
   case regFree:
     LLVM_DEBUG(dbgs() << '\n');
     return;
@@ -806,7 +817,7 @@ void RegAllocFastImpl::freePhysReg(MCRegister PhysReg) {
 /// \returns spillImpossible when PhysReg or an alias can't be spilled.
 unsigned RegAllocFastImpl::calcSpillCost(MCPhysReg PhysReg) const {
   for (MCRegUnit Unit : TRI->regunits(PhysReg)) {
-    switch (unsigned VirtReg = RegUnitStates[Unit]) {
+    switch (unsigned VirtReg = getRegUnitState(Unit)) {
     case regFree:
       break;
     case regPreAssigned:
@@ -1292,7 +1303,7 @@ bool RegAllocFastImpl::setPhysReg(MachineInstr &MI, MachineOperand &MO,
 
 void RegAllocFastImpl::dumpState() const {
   for (MCRegUnit Unit : TRI->regunits()) {
-    switch (unsigned VirtReg = RegUnitStates[Unit]) {
+    switch (unsigned VirtReg = getRegUnitState(Unit)) {
     case regFree:
       break;
     case regPreAssigned:
@@ -1326,7 +1337,7 @@ void RegAllocFastImpl::dumpState() const {
     if (PhysReg != 0) {
       assert(Register::isPhysicalRegister(PhysReg) && "mapped to physreg");
       for (MCRegUnit Unit : TRI->regunits(PhysReg)) {
-        assert(RegUnitStates[Unit] == VirtReg && "inverse map valid");
+        assert(getRegUnitState(Unit) == VirtReg && "inverse map valid");
       }
     }
   }

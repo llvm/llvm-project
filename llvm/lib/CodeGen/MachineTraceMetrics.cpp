@@ -800,9 +800,10 @@ computeCrossBlockCriticalPath(const TraceBlockInfo &TBI) {
   assert(TBI.HasValidInstrHeights && "Missing height info");
   unsigned MaxLen = 0;
   for (const LiveInReg &LIR : TBI.LiveIns) {
-    if (!LIR.Reg.isVirtual())
+    if (!LIR.VRegOrUnit.isVirtualReg())
       continue;
-    const MachineInstr *DefMI = MTM.MRI->getVRegDef(LIR.Reg);
+    const MachineInstr *DefMI =
+        MTM.MRI->getVRegDef(LIR.VRegOrUnit.asVirtualReg());
     // Ignore dependencies outside the current trace.
     const TraceBlockInfo &DefTBI = BlockInfo[DefMI->getParent()->getNumber()];
     if (!DefTBI.isUsefulDominator(TBI))
@@ -1019,7 +1020,7 @@ addLiveIns(const MachineInstr *DefMI, unsigned DefOp,
       return;
     TraceBlockInfo &TBI = BlockInfo[MBB->getNumber()];
     // Just add the register. The height will be updated later.
-    TBI.LiveIns.push_back(Reg);
+    TBI.LiveIns.emplace_back(VirtRegOrUnit(Reg));
   }
 }
 
@@ -1056,15 +1057,16 @@ computeInstrHeights(const MachineBasicBlock *MBB) {
   if (MBB) {
     TraceBlockInfo &TBI = BlockInfo[MBB->getNumber()];
     for (LiveInReg &LI : TBI.LiveIns) {
-      if (LI.Reg.isVirtual()) {
+      if (LI.VRegOrUnit.isVirtualReg()) {
         // For virtual registers, the def latency is included.
-        unsigned &Height = Heights[MTM.MRI->getVRegDef(LI.Reg)];
+        unsigned &Height =
+            Heights[MTM.MRI->getVRegDef(LI.VRegOrUnit.asVirtualReg())];
         if (Height < LI.Height)
           Height = LI.Height;
       } else {
         // For register units, the def latency is not included because we don't
         // know the def yet.
-        RegUnits[LI.Reg.id()].Cycle = LI.Height;
+        RegUnits[LI.VRegOrUnit.asMCRegUnit()].Cycle = LI.Height;
       }
     }
   }
@@ -1159,14 +1161,15 @@ computeInstrHeights(const MachineBasicBlock *MBB) {
     // height because the final height isn't known until now.
     LLVM_DEBUG(dbgs() << printMBBReference(*MBB) << " Live-ins:");
     for (LiveInReg &LIR : TBI.LiveIns) {
-      const MachineInstr *DefMI = MTM.MRI->getVRegDef(LIR.Reg);
+      Register Reg = LIR.VRegOrUnit.asVirtualReg();
+      const MachineInstr *DefMI = MTM.MRI->getVRegDef(Reg);
       LIR.Height = Heights.lookup(DefMI);
-      LLVM_DEBUG(dbgs() << ' ' << printReg(LIR.Reg) << '@' << LIR.Height);
+      LLVM_DEBUG(dbgs() << ' ' << printReg(Reg) << '@' << LIR.Height);
     }
 
     // Transfer the live regunits to the live-in list.
     for (const LiveRegUnit &RU : RegUnits) {
-      TBI.LiveIns.push_back(LiveInReg(RU.RegUnit, RU.Cycle));
+      TBI.LiveIns.emplace_back(VirtRegOrUnit(RU.RegUnit), RU.Cycle);
       LLVM_DEBUG(dbgs() << ' ' << printRegUnit(RU.RegUnit, MTM.TRI) << '@'
                         << RU.Cycle);
     }

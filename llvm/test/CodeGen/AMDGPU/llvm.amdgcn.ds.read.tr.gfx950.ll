@@ -37,11 +37,11 @@ entry:
 define amdgpu_ps void @ds_read_b96_tr_b6(ptr addrspace(3) %addr, ptr addrspace(1) %use) {
 ; GFX950-SDAG-LABEL: ds_read_b96_tr_b6:
 ; GFX950-SDAG:       ; %bb.0: ; %entry
-; GFX950-SDAG-NEXT:    v_mov_b32_e32 v5, v2
-; GFX950-SDAG-NEXT:    v_mov_b32_e32 v4, v1
-; GFX950-SDAG-NEXT:    ds_read_b96_tr_b6 v[0:2], v0 offset:32
+; GFX950-SDAG-NEXT:    ds_read_b96_tr_b6 v[4:6], v0 offset:32
+; GFX950-SDAG-NEXT:    v_mov_b32_e32 v3, v2
+; GFX950-SDAG-NEXT:    v_mov_b32_e32 v2, v1
 ; GFX950-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX950-SDAG-NEXT:    global_store_dwordx3 v[4:5], v[0:2], off
+; GFX950-SDAG-NEXT:    global_store_dwordx3 v[2:3], v[4:6], off
 ; GFX950-SDAG-NEXT:    s_endpgm
 ;
 ; GFX950-GISEL-LABEL: ds_read_b96_tr_b6:

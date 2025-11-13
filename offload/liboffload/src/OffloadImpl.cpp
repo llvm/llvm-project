@@ -495,6 +495,13 @@ Error olGetDeviceInfoImplDetail(ol_device_handle_t Device,
     return Info.write(static_cast<uint32_t>(Value));
   }
 
+  case OL_DEVICE_INFO_WORK_GROUP_LOCAL_MEM_SIZE: {
+    if (!std::holds_alternative<uint64_t>(Entry->Value))
+      return makeError(ErrorCode::BACKEND_FAILURE,
+                       "plugin returned incorrect type");
+    return Info.write(std::get<uint64_t>(Entry->Value));
+  }
+
   case OL_DEVICE_INFO_MAX_WORK_SIZE_PER_DIMENSION:
   case OL_DEVICE_INFO_MAX_WORK_GROUP_SIZE_PER_DIMENSION: {
     // {x, y, z} triples
@@ -590,6 +597,7 @@ Error olGetDeviceInfoImplDetailHost(ol_device_handle_t Device,
     return Info.write<uint32_t>(std::numeric_limits<uintptr_t>::digits);
   case OL_DEVICE_INFO_MAX_MEM_ALLOC_SIZE:
   case OL_DEVICE_INFO_GLOBAL_MEM_SIZE:
+  case OL_DEVICE_INFO_WORK_GROUP_LOCAL_MEM_SIZE:
     return Info.write<uint64_t>(0);
   default:
     return createOffloadError(ErrorCode::INVALID_ENUMERATION,
