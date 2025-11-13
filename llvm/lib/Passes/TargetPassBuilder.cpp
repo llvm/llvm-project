@@ -66,32 +66,32 @@ ModulePassManager TargetPassBuilder::buildPipeline(raw_pwrite_stream &Out,
                                                    raw_pwrite_stream *DwoOut,
                                                    CodeGenFileType FileType,
                                                    MCContext &Ctx) {
-  ModulePassManager MPM;
+  TargetModulePassManager MPM;
   buildCoreCodeGenPipeline(MPM);
   invokeInjectionCallbacks(MPM);
-  filtPassList(MPM);
+  filterPassList(MPM);
   addPrinterPassesAndFreeMachineFunction(MPM, Out, DwoOut, FileType, Ctx);
-  return constructRealPassManager(std::move(MPM));
+  return constructRealPassManager(MPM);
 }
 
-void TargetPassBuilder::buildCoreCodeGenPipeline(ModulePassManager &MPM) {
+void TargetPassBuilder::buildCoreCodeGenPipeline(TargetModulePassManager &MPM) {
   MPM.addPass(buildCodeGenIRPipeline());
-  MachineFunctionPassManager MFPM;
+  TargetMachineFunctionPassManager MFPM;
+  TargetFunctionPassManager FPM;
   addISelPasses(MFPM);
-  MPM.addPass(createModuleToFunctionPassAdaptor(
-      createFunctionToMachineFunctionPassAdaptor(std::move(MFPM))));
+  FPM.addMachineFunctionPass(std::move(MFPM));
+  MPM.addFunctionPass(std::move(FPM));
   MPM.addPass(buildCodeGenMIRPipeline());
 }
 
-TargetPassBuilder::ModulePassManager
-TargetPassBuilder::buildCodeGenIRPipeline() {
-  ModulePassManager MPM;
+TargetModulePassManager TargetPassBuilder::buildCodeGenIRPipeline() {
+  TargetModulePassManager MPM;
   if (TM->useEmulatedTLS())
     MPM.addPass(LowerEmuTLSPass());
   MPM.addPass(PreISelIntrinsicLoweringPass(TM));
-  FunctionPassManager FPM;
-  FPM.addPass(ExpandLargeDivRemPass(TM));
-  FPM.addPass(ExpandFpPass(TM));
+  TargetFunctionPassManager FPM;
+  FPM.addPass(ExpandLargeDivRemPass(*TM));
+  FPM.addPass(ExpandFpPass(*TM, TM->getOptLevel()));
 
   // Run loop strength reduction before anything else.
   if (TM->getOptLevel() == CodeGenOptLevel::None) {
@@ -104,10 +104,12 @@ TargetPassBuilder::buildCodeGenIRPipeline() {
     FPM.addPass(RequireAnalysisPass<BasicAA, Function>());
 
     if (!CGPBO.DisableLSR) {
-      addLoopPass(FPM, CanonicalizeFreezeInLoopsPass());
-      addLoopPass(FPM, LoopStrengthReducePass());
+      TargetLoopPassManager LPM;
+      LPM.addPass(CanonicalizeFreezeInLoopsPass());
+      LPM.addPass(LoopStrengthReducePass());
       if (CGPBO.EnableLoopTermFold)
-        addLoopPass(FPM, LoopTermFoldPass());
+        LPM.addPass(LoopTermFoldPass());
+      FPM.addLoopPass(std::move(LPM));
     }
 
     // The MergeICmpsPass tries to create memcmp calls by grouping sequences
@@ -116,21 +118,21 @@ TargetPassBuilder::buildCodeGenIRPipeline() {
     // enabled by a target lowering hook.
     if (!CGPBO.DisableMergeICmps)
       FPM.addPass(MergeICmpsPass());
-    FPM.addPass(ExpandMemCmpPass(TM));
+    FPM.addPass(ExpandMemCmpPass(*TM));
   }
 
   // Run GC lowering passes for builtin collectors
   FPM.addPass(GCLoweringPass());
-  MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
-  FPM = FunctionPassManager();
+  MPM.addFunctionPass(std::move(FPM));
+  FPM = TargetFunctionPassManager();
   MPM.addPass(ShadowStackGCLoweringPass());
   // PB.invokeGCLoweringEPCallbacks();
 
   if (TM->getTargetTriple().isOSBinFormatMachO() &&
       !CGPBO.DisableAtExitBasedGlobalDtorLowering) {
-    MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
-    FPM = FunctionPassManager();
-    MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
+    MPM.addFunctionPass(std::move(FPM));
+    FPM = TargetFunctionPassManager();
+    MPM.addFunctionPass(std::move(FPM));
     MPM.addPass(LowerGlobalDtorsPass());
   }
 
@@ -161,26 +163,27 @@ TargetPassBuilder::buildCodeGenIRPipeline() {
 
   // Convert conditional moves to conditional jumps when profitable.
   if (OptLevel != CodeGenOptLevel::None && !CGPBO.DisableSelectOptimize)
-    FPM.addPass(SelectOptimizePass(TM));
+    FPM.addPass(SelectOptimizePass(*TM));
 
-  MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
+  MPM.addFunctionPass(std::move(FPM));
+  FPM = TargetFunctionPassManager();
   if (CGPBO.EnableGlobalMergeFunc)
     MPM.addPass(GlobalMergeFuncPass());
 
   if (OptLevel != CodeGenOptLevel::None && !CGPBO.DisableCGP)
-    FPM.addPass(CodeGenPreparePass(PB.TM));
+    FPM.addPass(CodeGenPreparePass(*TM));
   addExceptionHandlingPasses(FPM);
 
   // Add common passes that perform LLVM IR to IR transforms in preparation for
   // instruction selection.
   if (CGPBO.RequiresCodeGenSCCOrder) {
-    MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
-    FPM = FunctionPassManager();
+    MPM.addFunctionPass(std::move(FPM));
+    FPM = TargetFunctionPassManager();
   }
 
   // Now we need to force codegen to run according to the callgraph if target
   // requires it.
-  FPM.addPass(PreISel());
+  FPM.addPass(PreISelInjectionPoint());
   if (OptLevel != CodeGenOptLevel::None)
     FPM.addPass(ObjCARCContractPass());
 
@@ -188,22 +191,22 @@ TargetPassBuilder::buildCodeGenIRPipeline() {
 
   // Add both the safe stack and the stack protection passes: each of them will
   // only protect functions that have corresponding attributes.
-  FPM.addPass(SafeStackPass(TM));
-  FPM.addPass(StackProtectorPass(TM));
+  FPM.addPass(SafeStackPass(*TM));
+  FPM.addPass(StackProtectorPass(*TM));
 
   // All passes which modify the LLVM IR are now complete; run the verifier
   // to ensure that the IR is valid.
   if (!CGPBO.DisableVerify)
     FPM.addPass(VerifierPass());
   if (CGPBO.RequiresCodeGenSCCOrder)
-    MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(
-        createCGSCCToFunctionPassAdaptor(std::move(FPM))));
+    MPM.addFunctionPassWithPostOrderCGSCC(std::move(FPM));
   else
-    MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
+    MPM.addFunctionPass(std::move(FPM));
+
   return MPM;
 }
 
-void TargetPassBuilder::addISelPasses(MachineFunctionPassManager &MFPM) {
+void TargetPassBuilder::addISelPasses(TargetMachineFunctionPassManager &MFPM) {
   // Add core instruction selection passes.
   // Enable FastISel with -fast-isel, but allow that to be overridden.
   TM->setO0WantsFastISel(CGPBO.EnableFastISelOption.value_or(true));
@@ -259,7 +262,8 @@ void TargetPassBuilder::addISelPasses(MachineFunctionPassManager &MFPM) {
   MFPM.addPass(FinalizeISelPass());
 }
 
-void TargetPassBuilder::addRegAllocPipeline(MachineFunctionPassManager &MFPM) {
+void TargetPassBuilder::addRegAllocPipeline(
+    TargetMachineFunctionPassManager &MFPM) {
   if (CGPBO.OptimizeRegAlloc.value_or(OptLevel != CodeGenOptLevel::None)) {
     MFPM.addPass(DetectDeadLanesPass());
 
@@ -340,13 +344,13 @@ void TargetPassBuilder::addRegAllocPipeline(MachineFunctionPassManager &MFPM) {
   }
 }
 
-void TargetPassBuilder::addRegAllocPass(MachineFunctionPassManager &MFPM,
+void TargetPassBuilder::addRegAllocPass(TargetMachineFunctionPassManager &MFPM,
                                         bool Optimized) {
   // TODO: Handle register allocator
 }
 
 void TargetPassBuilder::addMachineSSAOptimizationPasses(
-    MachineFunctionPassManager &MFPM) {
+    TargetMachineFunctionPassManager &MFPM) {
   // Pre-ra tail duplication.
   MFPM.addPass(EarlyTailDuplicatePass());
 
@@ -367,6 +371,11 @@ void TargetPassBuilder::addMachineSSAOptimizationPasses(
   // used by tail calls, where the tail calls reuse the incoming stack
   // arguments directly (see t11 in test/CodeGen/X86/sibcall.ll).
   MFPM.addPass(DeadMachineInstructionElimPass());
+
+  // Allow targets to insert passes that improve instruction level parallelism,
+  // like if-conversion. Such passes will typically need dominator trees and
+  // loop info, just like LICM and CSE below.
+  MFPM.addPass(ILPOptsInjectionPoint());
 
   // Target can insert passes here that improve instruction level parallelism,
   // like if-conversion. Such passes will typically need dominator trees and
@@ -408,10 +417,9 @@ static std::string getFSRemappingFile(const CGPassBuilderOption &CGPBO,
   return PGOOpt->ProfileRemappingFile;
 }
 
-TargetPassBuilder::ModulePassManager
-TargetPassBuilder::buildCodeGenMIRPipeline() {
-  ModulePassManager MPM;
-  MachineFunctionPassManager MFPM;
+TargetModulePassManager TargetPassBuilder::buildCodeGenMIRPipeline() {
+  TargetModulePassManager MPM;
+  TargetMachineFunctionPassManager MFPM;
   if (OptLevel != CodeGenOptLevel::None) {
     addMachineSSAOptimizationPasses(MFPM);
   } else {
@@ -539,15 +547,17 @@ TargetPassBuilder::buildCodeGenMIRPipeline() {
     bool AddOutliner =
         RunOnAllFunctions || TM->Options.SupportsDefaultOutlining;
     if (AddOutliner) {
-      if (CGPBO.RequiresCodeGenSCCOrder)
-        MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(
-            createCGSCCToFunctionPassAdaptor(
-                createFunctionToMachineFunctionPassAdaptor(std::move(MFPM)))));
-      else
-        MPM.addPass(createModuleToFunctionPassAdaptor(
-            createFunctionToMachineFunctionPassAdaptor(std::move(MFPM))));
+      if (CGPBO.RequiresCodeGenSCCOrder) {
+        MPM.addFunctionPassWithPostOrderCGSCC(
+            TargetFunctionPassManager().addMachineFunctionPass(
+                std::move(MFPM)));
+      } else {
+        MPM.addFunctionPass(TargetFunctionPassManager().addMachineFunctionPass(
+            std::move(MFPM)));
+      }
+
       MPM.addPass(MachineOutlinerPass(RunOnAllFunctions));
-      MFPM = MachineFunctionPassManager();
+      MFPM = TargetMachineFunctionPassManager();
     }
   }
 
@@ -585,14 +595,15 @@ TargetPassBuilder::buildCodeGenMIRPipeline() {
       // static data annotator pass is a module-wide pass. See the file comment
       // in StaticDataAnnotator.cpp for the motivation.
       MFPM.addPass(StaticDataSplitterPass());
-      if (CGPBO.RequiresCodeGenSCCOrder)
-        MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(
-            createCGSCCToFunctionPassAdaptor(
-                createFunctionToMachineFunctionPassAdaptor(std::move(MFPM)))));
-      else
-        MPM.addPass(createModuleToFunctionPassAdaptor(
-            createFunctionToMachineFunctionPassAdaptor(std::move(MFPM))));
-      MFPM = MachineFunctionPassManager();
+      if (CGPBO.RequiresCodeGenSCCOrder) {
+        MPM.addFunctionPassWithPostOrderCGSCC(
+            TargetFunctionPassManager().addMachineFunctionPass(
+                std::move(MFPM)));
+      } else {
+        MPM.addFunctionPass(TargetFunctionPassManager().addMachineFunctionPass(
+            std::move(MFPM)));
+      }
+      MFPM = TargetMachineFunctionPassManager();
       MPM.addPass(StaticDataAnnotatorPass());
     }
   }
@@ -608,24 +619,24 @@ TargetPassBuilder::buildCodeGenMIRPipeline() {
     MFPM.addPass(BasicBlockSectionsPass());
   }
 
-  MFPM.addPass(PostBBSections());
+  MFPM.addPass(PostBBSectionsInjectionPoint());
 
   if (!CGPBO.DisableCFIFixup && TM->Options.EnableCFIFixup)
     MFPM.addPass(CFIFixupPass());
 
   MFPM.addPass(StackFrameLayoutAnalysisPass());
-  MFPM.addPass(PreEmit());
+  MFPM.addPass(PreEmitInjectionPoint());
   if (CGPBO.RequiresCodeGenSCCOrder)
-    MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(
-        createCGSCCToFunctionPassAdaptor(
-            createFunctionToMachineFunctionPassAdaptor(std::move(MFPM)))));
+    MPM.addFunctionPassWithPostOrderCGSCC(
+        TargetFunctionPassManager().addMachineFunctionPass(std::move(MFPM)));
   else
-    MPM.addPass(createModuleToFunctionPassAdaptor(
-        createFunctionToMachineFunctionPassAdaptor(std::move(MFPM))));
+    MPM.addFunctionPass(
+        TargetFunctionPassManager().addMachineFunctionPass(std::move(MFPM)));
   return MPM;
 }
 
-void TargetPassBuilder::addExceptionHandlingPasses(FunctionPassManager &FPM) {
+void TargetPassBuilder::addExceptionHandlingPasses(
+    TargetFunctionPassManager &FPM) {
   const MCAsmInfo *MCAI = TM->getMCAsmInfo();
 
   switch (MCAI->getExceptionHandlingType()) {
@@ -642,14 +653,14 @@ void TargetPassBuilder::addExceptionHandlingPasses(FunctionPassManager &FPM) {
   case ExceptionHandling::ARM:
   case ExceptionHandling::AIX:
   case ExceptionHandling::ZOS:
-    FPM.addPass(DwarfEHPreparePass(TM));
+    FPM.addPass(DwarfEHPreparePass(*TM));
     break;
   case ExceptionHandling::WinEH:
     // We support using both GCC-style and MSVC-style exceptions on Windows, so
     // add both preparation passes. Each pass will only actually run if it
     // recognizes the personality function.
     FPM.addPass(WinEHPreparePass());
-    FPM.addPass(DwarfEHPreparePass(TM));
+    FPM.addPass(DwarfEHPreparePass(*TM));
     break;
   case ExceptionHandling::Wasm:
     // Wasm EH uses Windows EH instructions, but it does not need to demote PHIs
@@ -667,19 +678,19 @@ void TargetPassBuilder::addExceptionHandlingPasses(FunctionPassManager &FPM) {
   }
 }
 
-void TargetPassBuilder::filtPassList(ModulePassManager &MPM) const {
+void TargetPassBuilder::filterPassList(TargetModulePassManager &MPM) const {
   PassList &Passes = MPM.Passes;
   auto *PIC = PB.getPassInstrumentationCallbacks();
   auto ESSI = TargetPassConfig::getStartStopInfo(*PIC);
   if (!ESSI)
-    report_fatal_error(ESSI.takeError(), "invalid start stop flag!");
+    report_fatal_error(ESSI.takeError());
   auto SSI = *ESSI;
   size_t StartCnt = 0, StopCnt = 0;
   bool HandledStartAfter = !SSI.StartAfter, HandledStopAfter = !SSI.StopAfter;
   bool ShouldRemove = !SSI.StartPass.empty();
   for (auto I = Passes.begin(), E = Passes.end(); I != E;) {
     // Handle disabled pass firstly.
-    if (isPassDisabled(I->Name)) {
+    if (isPassDisabled(I->Name) || I->IsInjectionPoint) {
       I = Passes.erase(I);
       continue;
     }
@@ -718,90 +729,87 @@ void TargetPassBuilder::filtPassList(ModulePassManager &MPM) const {
 }
 
 void TargetPassBuilder::addPrinterPassesAndFreeMachineFunction(
-    ModulePassManager &MPM, raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,
-    CodeGenFileType FileType, MCContext &Ctx) {
+    TargetModulePassManager &MPM, raw_pwrite_stream &Out,
+    raw_pwrite_stream *DwoOut, CodeGenFileType FileType, MCContext &Ctx) {
 
   PassList &Passes = MPM.Passes;
   PassList::iterator LastModulePassInsertPoint =
-      llvm::find_if(llvm::reverse(Passes), [](PassWrapper &PW) {
-        return PW.InternalPass.index() == 0; // The last module pass
+      llvm::find_if(llvm::reverse(Passes), [](detail::PassWrapper &PW) {
+        return PW.Ctor.index() == 0; // The last module pass
       }).base();
 
   // FIXME: CodeGenFileType here is not enough, we need an output type for MC
   if (TargetPassConfig::willCompleteCodeGenPipeline()) {
-    ModulePassManager AsmPrinterPM;
-    FunctionPassManager FPM;
+    TargetModulePassManager AsmPrinterPM;
+    TargetFunctionPassManager FPM;
     // MachineFunctionPassManager MFPM;
     // TODO: Insert asm printer initialization pass at LastModulePassInsertPoint
     // TODO: Insert asm printer
     FPM.addPass(InvalidateAnalysisPass<MachineFunctionAnalysis>());
     // TODO: Add asm printer finalization pass.
     if (CGPBO.RequiresCodeGenSCCOrder)
-      AsmPrinterPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(
-          createCGSCCToFunctionPassAdaptor(std::move(FPM))));
+      AsmPrinterPM.addFunctionPassWithPostOrderCGSCC((std::move(FPM)));
     else
-      AsmPrinterPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
+      AsmPrinterPM.addFunctionPass(std::move(FPM));
     MPM.addPass(std::move(AsmPrinterPM));
   } else {
     Passes.insert(LastModulePassInsertPoint,
-                  PassWrapper(PrintMIRPreparePass(Out)));
-    FunctionPassManager FPM;
-    MachineFunctionPassManager MFPM;
+                  detail::PassWrapper(PrintMIRPreparePass(Out)));
+    TargetFunctionPassManager FPM;
+    TargetMachineFunctionPassManager MFPM;
     MFPM.addPass(PrintMIRPass(Out));
-    FPM.addPass(createFunctionToMachineFunctionPassAdaptor(std::move(MFPM)));
+    FPM.addMachineFunctionPass(std::move(MFPM));
     FPM.addPass(InvalidateAnalysisPass<MachineFunctionAnalysis>());
     if (CGPBO.RequiresCodeGenSCCOrder)
-      MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(
-          createCGSCCToFunctionPassAdaptor(std::move(FPM))));
+      MPM.addFunctionPassWithPostOrderCGSCC(std::move(FPM));
     else
-      MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
+      MPM.addFunctionPass(std::move(FPM));
   }
 }
 
-llvm::ModulePassManager
-TargetPassBuilder::constructRealPassManager(ModulePassManager &&MPMW) {
-  llvm::ModulePassManager MPM;
-  llvm::FunctionPassManager FPM;
-  llvm::LoopPassManager LPM;
-  llvm::MachineFunctionPassManager MFPM;
+ModulePassManager TargetPassBuilder::constructRealPassManager(
+    TargetModulePassManager &TMPM) const {
+  ModulePassManager MPM;
+  FunctionPassManager FPM;
+  LoopPassManager LPM;
+  MachineFunctionPassManager MFPM;
 
   std::stack<size_t> S({0});
   bool InCGSCC = false, LastInCGSCC = false;
-  for (auto &P : MPMW.Passes) {
-    auto &PMVar = P.InternalPass;
+  for (auto &P : TMPM.Passes) {
     std::visit(
-        [&](auto &&PM) {
+        [&](auto &Ctor) {
           if (P.InCGSCC)
             InCGSCC = true;
-          size_t VarIdx = PMVar.index();
+          size_t VarIdx = P.Ctor.index();
           while (VarIdx < S.top()) {
             switch (S.top()) {
             case 3:
               if (!MFPM.isEmpty())
-                FPM.addPass(llvm::createFunctionToMachineFunctionPassAdaptor(
+                FPM.addPass(createFunctionToMachineFunctionPassAdaptor(
                     std::move(MFPM)));
-              MFPM = llvm::MachineFunctionPassManager();
+              MFPM = MachineFunctionPassManager();
               S.pop();
               break;
             case 2:
               if (!LPM.isEmpty())
                 FPM.addPass(llvm::createFunctionToLoopPassAdaptor(
                     std::move(LPM), /*UseMemorySSA=*/true));
-              LPM = llvm::LoopPassManager();
+              LPM = LoopPassManager();
               S.pop();
               break;
             case 1:
               if (!FPM.isEmpty()) {
                 if (CGPBO.RequiresCodeGenSCCOrder && LastInCGSCC) {
                   InCGSCC = false;
-                  MPM.addPass(llvm::createModuleToPostOrderCGSCCPassAdaptor(
-                      llvm::createCGSCCToFunctionPassAdaptor(std::move(FPM))));
+                  MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(
+                      createCGSCCToFunctionPassAdaptor(std::move(FPM))));
                 } else {
                   MPM.addPass(
-                      llvm::createModuleToFunctionPassAdaptor(std::move(FPM)));
+                      createModuleToFunctionPassAdaptor(std::move(FPM)));
                 }
               }
-              FPM = llvm::FunctionPassManager();
+              FPM = FunctionPassManager();
               S.pop();
               break;
             case 0:
@@ -813,48 +821,54 @@ TargetPassBuilder::constructRealPassManager(ModulePassManager &&MPMW) {
           while (VarIdx > S.top())
             S.push(S.top() + 1);
 
-          if constexpr (std::is_same_v<std::remove_reference_t<decltype(PM)>,
-                                       llvm::ModulePassManager>)
-            MPM.addPass(std::move(PM));
-          if constexpr (std::is_same_v<std::remove_reference_t<decltype(PM)>,
-                                       llvm::FunctionPassManager>) {
+          if constexpr (std::is_same_v<
+                            std::remove_reference_t<decltype(Ctor)>,
+                            llvm::unique_function<void(ModulePassManager &)>>) {
+            Ctor(MPM);
+          } else if constexpr (std::is_same_v<
+                                   std::remove_reference_t<decltype(Ctor)>,
+                                   llvm::unique_function<void(
+                                       FunctionPassManager &)>>) {
             if (!LastInCGSCC && P.InCGSCC) {
-              MPM.addPass(
-                  llvm::createModuleToFunctionPassAdaptor(std::move(FPM)));
-              FPM = llvm::FunctionPassManager();
+              MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
+              FPM = FunctionPassManager();
             }
-            FPM.addPass(std::move(PM));
+            Ctor(FPM);
+          } else if constexpr (std::is_same_v<
+                                   std::remove_reference_t<decltype(Ctor)>,
+                                   llvm::unique_function<void(
+                                       LoopPassManager &)>>) {
+            Ctor(LPM);
+          } else if constexpr (std::is_same_v<
+                                   decltype(Ctor),
+                                   llvm::unique_function<void(
+                                       MachineFunctionPassManager &)>>) {
+            Ctor(MFPM);
           }
-          if constexpr (std::is_same_v<std::remove_reference_t<decltype(PM)>,
-                                       llvm::LoopPassManager>)
-            LPM.addPass(std::move(PM));
-          if constexpr (std::is_same_v<std::remove_reference_t<decltype(PM)>,
-                                       llvm::MachineFunctionPassManager>)
-            MFPM.addPass(std::move(PM));
 
           LastInCGSCC = P.InCGSCC;
         },
-        PMVar);
+        P.Ctor);
   }
 
   if (!MFPM.isEmpty())
-    FPM.addPass(
-        llvm::createFunctionToMachineFunctionPassAdaptor(std::move(MFPM)));
+    FPM.addPass(createFunctionToMachineFunctionPassAdaptor(std::move(MFPM)));
   if (!LPM.isEmpty())
-    FPM.addPass(llvm::createFunctionToLoopPassAdaptor(std::move(LPM),
-                                                      /*UseMemorySSA=*/true));
+    FPM.addPass(createFunctionToLoopPassAdaptor(std::move(LPM),
+                                                /*UseMemorySSA=*/true));
   if (!FPM.isEmpty()) {
     if (CGPBO.RequiresCodeGenSCCOrder)
-      MPM.addPass(llvm::createModuleToPostOrderCGSCCPassAdaptor(
-          llvm::createCGSCCToFunctionPassAdaptor(std::move(FPM))));
+      MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(
+          createCGSCCToFunctionPassAdaptor(std::move(FPM))));
     else
-      MPM.addPass(llvm::createModuleToFunctionPassAdaptor(std::move(FPM)));
+      MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
   }
 
   return MPM;
 }
 
-void TargetPassBuilder::invokeInjectionCallbacks(ModulePassManager &MPM) const {
+void TargetPassBuilder::invokeInjectionCallbacks(
+    TargetModulePassManager &MPM) const {
   PassList &Passes = MPM.Passes;
   for (auto I = Passes.begin(), E = Passes.end(); I != E; ++I)
     for (auto &C : InjectionCallbacks)
