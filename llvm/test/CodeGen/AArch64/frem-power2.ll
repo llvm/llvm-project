@@ -85,6 +85,84 @@ entry:
   ret float %fmod
 }
 
+define float @frem2_exp(float %x) #0 {
+; CHECK-SD-LABEL: frem2_exp:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-SD-NEXT:    bl expf
+; CHECK-SD-NEXT:    fmov s1, #0.50000000
+; CHECK-SD-NEXT:    fmov s2, #-2.00000000
+; CHECK-SD-NEXT:    fmul s1, s0, s1
+; CHECK-SD-NEXT:    frintz s1, s1
+; CHECK-SD-NEXT:    fmadd s0, s1, s2, s0
+; CHECK-SD-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: frem2_exp:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-GI-NEXT:    bl expf
+; CHECK-GI-NEXT:    fmov s1, #2.00000000
+; CHECK-GI-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-GI-NEXT:    b fmodf
+entry:
+  %a = tail call float @llvm.exp.f32(float %x)
+  %fmod = frem float %a, 2.0
+  ret float %fmod
+}
+
+define float @frem2_exp2(float %x) #0 {
+; CHECK-SD-LABEL: frem2_exp2:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-SD-NEXT:    bl exp2f
+; CHECK-SD-NEXT:    fmov s1, #0.50000000
+; CHECK-SD-NEXT:    fmov s2, #-2.00000000
+; CHECK-SD-NEXT:    fmul s1, s0, s1
+; CHECK-SD-NEXT:    frintz s1, s1
+; CHECK-SD-NEXT:    fmadd s0, s1, s2, s0
+; CHECK-SD-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: frem2_exp2:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-GI-NEXT:    bl exp2f
+; CHECK-GI-NEXT:    fmov s1, #2.00000000
+; CHECK-GI-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-GI-NEXT:    b fmodf
+entry:
+  %a = tail call float @llvm.exp2.f32(float %x)
+  %fmod = frem float %a, 2.0
+  ret float %fmod
+}
+
+define float @frem2_exp10(float %x) #0 {
+; CHECK-SD-LABEL: frem2_exp10:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-SD-NEXT:    bl exp10f
+; CHECK-SD-NEXT:    fmov s1, #0.50000000
+; CHECK-SD-NEXT:    fmov s2, #-2.00000000
+; CHECK-SD-NEXT:    fmul s1, s0, s1
+; CHECK-SD-NEXT:    frintz s1, s1
+; CHECK-SD-NEXT:    fmadd s0, s1, s2, s0
+; CHECK-SD-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: frem2_exp10:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-GI-NEXT:    bl exp10f
+; CHECK-GI-NEXT:    fmov s1, #2.00000000
+; CHECK-GI-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-GI-NEXT:    b fmodf
+entry:
+  %a = tail call float @llvm.exp10.f32(float %x)
+  %fmod = frem float %a, 2.0
+  ret float %fmod
+}
+
 define half @hrem2_nsz(half %x) {
 ; CHECK-SD-LABEL: hrem2_nsz:
 ; CHECK-SD:       // %bb.0: // %entry
@@ -100,9 +178,8 @@ define half @hrem2_nsz(half %x) {
 ; CHECK-GI-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-GI-NEXT:    .cfi_offset w30, -16
-; CHECK-GI-NEXT:    fmov h1, #2.00000000
 ; CHECK-GI-NEXT:    fcvt s0, h0
-; CHECK-GI-NEXT:    fcvt s1, h1
+; CHECK-GI-NEXT:    fmov s1, #2.00000000
 ; CHECK-GI-NEXT:    bl fmodf
 ; CHECK-GI-NEXT:    fcvt h0, s0
 ; CHECK-GI-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
@@ -631,3 +708,5 @@ entry:
   %fmod = frem float -12.50, %y
   ret float %fmod
 }
+
+attributes #0 = { nounwind }

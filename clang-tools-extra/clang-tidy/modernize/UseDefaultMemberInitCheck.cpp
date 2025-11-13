@@ -1,4 +1,4 @@
-//===--- UseDefaultMemberInitCheck.cpp - clang-tidy------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,17 +8,57 @@
 
 #include "UseDefaultMemberInitCheck.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/Expr.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Lex/Lexer.h"
+#include "llvm/ADT/TypeSwitch.h"
 
 using namespace clang::ast_matchers;
 
 namespace clang::tidy::modernize {
 
+static bool isExprAllowedInMemberInit(const Expr *E) {
+  if (!E)
+    return false;
+  return llvm::TypeSwitch<const Expr *, bool>(E)
+      .Case<IntegerLiteral, FloatingLiteral, CXXBoolLiteralExpr,
+            CXXNullPtrLiteralExpr, CharacterLiteral, StringLiteral>(
+          [](const auto *) { return true; })
+      .Case<ImplicitValueInitExpr>([](const auto *) { return true; })
+      .Case<ParenExpr>([](const ParenExpr *PE) {
+        return isExprAllowedInMemberInit(PE->getSubExpr());
+      })
+      .Case<UnaryOperator>([](const UnaryOperator *UO) {
+        return isExprAllowedInMemberInit(UO->getSubExpr());
+      })
+      .Case<BinaryOperator>([](const BinaryOperator *BO) {
+        return isExprAllowedInMemberInit(BO->getLHS()) &&
+               isExprAllowedInMemberInit(BO->getRHS());
+      })
+      .Case<CastExpr>([](const CastExpr *CE) {
+        return isExprAllowedInMemberInit(CE->getSubExpr());
+      })
+      .Case<DeclRefExpr>([](const DeclRefExpr *DRE) {
+        if (const ValueDecl *D = DRE->getDecl()) {
+          if (isa<EnumConstantDecl>(D))
+            return true;
+          if (const auto *VD = dyn_cast<VarDecl>(D))
+            return VD->isConstexpr() || VD->getStorageClass() == SC_Static;
+        }
+        return false;
+      })
+      .Default(false);
+}
+
 namespace {
+
 AST_MATCHER_P(InitListExpr, initCountIs, unsigned, N) {
   return Node.getNumInits() == N;
 }
+
+AST_MATCHER(Expr, allowedInitExpr) { return isExprAllowedInMemberInit(&Node); }
+
 } // namespace
 
 static StringRef getValueOfValueInit(const QualType InitType) {
@@ -123,7 +163,7 @@ static bool isZero(const Expr *E) {
   case Stmt::IntegerLiteralClass:
     return !cast<IntegerLiteral>(E)->getValue();
   case Stmt::FloatingLiteralClass: {
-    llvm::APFloat Value = cast<FloatingLiteral>(E)->getValue();
+    const llvm::APFloat Value = cast<FloatingLiteral>(E)->getValue();
     return Value.isZero() && !Value.isNegative();
   }
   default:
@@ -206,30 +246,10 @@ void UseDefaultMemberInitCheck::storeOptions(
 }
 
 void UseDefaultMemberInitCheck::registerMatchers(MatchFinder *Finder) {
-  auto NumericLiteral = anyOf(integerLiteral(), floatLiteral());
-  auto UnaryNumericLiteral = unaryOperator(hasAnyOperatorName("+", "-"),
-                                           hasUnaryOperand(NumericLiteral));
-
-  auto ConstExprRef = varDecl(anyOf(isConstexpr(), isStaticStorageClass()));
-  auto ImmutableRef =
-      declRefExpr(to(decl(anyOf(enumConstantDecl(), ConstExprRef))));
-
-  auto BinaryNumericExpr = binaryOperator(
-      hasOperands(anyOf(NumericLiteral, ImmutableRef, binaryOperator()),
-                  anyOf(NumericLiteral, ImmutableRef, binaryOperator())));
-
-  auto InitBase =
-      anyOf(stringLiteral(), characterLiteral(), NumericLiteral,
-            UnaryNumericLiteral, cxxBoolLiteral(), cxxNullPtrLiteralExpr(),
-            implicitValueInitExpr(), ImmutableRef, BinaryNumericExpr);
-
-  auto ExplicitCastExpr = castExpr(hasSourceExpression(InitBase));
-  auto InitMatcher = anyOf(InitBase, ExplicitCastExpr);
-
-  auto Init =
-      anyOf(initListExpr(anyOf(allOf(initCountIs(1), hasInit(0, InitMatcher)),
-                               initCountIs(0), hasType(arrayType()))),
-            InitBase, ExplicitCastExpr);
+  auto Init = anyOf(
+      initListExpr(anyOf(allOf(initCountIs(1), hasInit(0, allowedInitExpr())),
+                         initCountIs(0), hasType(arrayType()))),
+      allowedInitExpr());
 
   Finder->addMatcher(
       cxxConstructorDecl(forEachConstructorInitializer(
@@ -277,16 +297,16 @@ void UseDefaultMemberInitCheck::checkDefaultInit(
       }) > 1)
     return;
 
-  SourceLocation StartLoc = Field->getBeginLoc();
+  const SourceLocation StartLoc = Field->getBeginLoc();
   if (StartLoc.isMacroID() && IgnoreMacros)
     return;
 
-  SourceLocation FieldEnd =
+  const SourceLocation FieldEnd =
       Lexer::getLocForEndOfToken(Field->getSourceRange().getEnd(), 0,
                                  *Result.SourceManager, getLangOpts());
-  SourceLocation LParenEnd = Lexer::getLocForEndOfToken(
+  const SourceLocation LParenEnd = Lexer::getLocForEndOfToken(
       Init->getLParenLoc(), 0, *Result.SourceManager, getLangOpts());
-  CharSourceRange InitRange =
+  const CharSourceRange InitRange =
       CharSourceRange::getCharRange(LParenEnd, Init->getRParenLoc());
 
   const Expr *InitExpression = Init->getInit();

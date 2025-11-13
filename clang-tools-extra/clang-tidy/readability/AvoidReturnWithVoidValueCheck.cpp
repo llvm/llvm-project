@@ -1,4 +1,4 @@
-//===--- AvoidReturnWithVoidValueCheck.cpp - clang-tidy -------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -47,9 +47,9 @@ void AvoidReturnWithVoidValueCheck::check(
       Result.Nodes.getNodeAs<CompoundStmt>("compound_parent");
   if (!StrictMode && !SurroundingBlock)
     return;
-  DiagnosticBuilder Diag = diag(VoidReturn->getBeginLoc(),
-                                "return statement within a void function "
-                                "should not have a specified return value");
+  const DiagnosticBuilder Diag = diag(
+      VoidReturn->getBeginLoc(), "return statement within a void function "
+                                 "should not have a specified return value");
   const SourceLocation SemicolonPos = utils::lexer::findNextTerminator(
       VoidReturn->getEndLoc(), *Result.SourceManager, getLangOpts());
   if (SemicolonPos.isInvalid())

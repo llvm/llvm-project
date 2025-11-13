@@ -103,11 +103,11 @@ CPlusPlusLanguage::GetFunctionNameInfo(ConstString name) const {
     return {func_name_type, ConstString(basename)};
 }
 
-bool CPlusPlusLanguage::SymbolNameFitsToLanguage(Mangled mangled) const {
-  const char *mangled_name = mangled.GetMangledName().GetCString();
-  auto mangling_scheme = Mangled::GetManglingScheme(mangled_name);
-  return mangled_name && (mangling_scheme == Mangled::eManglingSchemeItanium ||
-                          mangling_scheme == Mangled::eManglingSchemeMSVC);
+bool CPlusPlusLanguage::SymbolNameFitsToLanguage(const Mangled &mangled) const {
+  auto mangling_scheme =
+      Mangled::GetManglingScheme(mangled.GetMangledName().GetStringRef());
+  return mangling_scheme == Mangled::eManglingSchemeItanium ||
+         mangling_scheme == Mangled::eManglingSchemeMSVC;
 }
 
 ConstString CPlusPlusLanguage::GetDemangledFunctionNameWithoutArguments(
@@ -190,14 +190,16 @@ static bool IsTrivialBasename(const llvm::StringRef &basename) {
   if (basename.size() <= idx)
     return false; // Empty string or "~"
 
-  if (!std::isalpha(basename[idx]) && basename[idx] != '_')
+  if (!std::isalpha(static_cast<unsigned char>(basename[idx])) &&
+      basename[idx] != '_')
     return false; // First character (after removing the possible '~'') isn't in
                   // [A-Za-z_]
 
   // Read all characters matching [A-Za-z_0-9]
   ++idx;
   while (idx < basename.size()) {
-    if (!std::isalnum(basename[idx]) && basename[idx] != '_')
+    if (!std::isalnum(static_cast<unsigned char>(basename[idx])) &&
+        basename[idx] != '_')
       break;
     ++idx;
   }
@@ -2197,6 +2199,7 @@ bool CPlusPlusLanguage::GetFunctionDisplayName(
   case FunctionNameRepresentation::eName:
     return false;
   }
+  llvm_unreachable("Fully covered switch above");
 }
 
 bool CPlusPlusLanguage::HandleFrameFormatVariable(

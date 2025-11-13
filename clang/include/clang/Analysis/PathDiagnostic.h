@@ -885,6 +885,10 @@ public:
     return UniqueingDecl;
   }
 
+  /// Get a hash that identifies the issue.
+  SmallString<32> getIssueHash(const SourceManager &SrcMgr,
+                               const LangOptions &LangOpts) const;
+
   void flattenLocations() {
     Loc.flatten();
     for (const auto &I : pathImpl)

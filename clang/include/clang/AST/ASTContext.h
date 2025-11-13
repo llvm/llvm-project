@@ -25,10 +25,12 @@
 #include "clang/AST/RawCommentList.h"
 #include "clang/AST/SYCLKernelInfo.h"
 #include "clang/AST/TemplateName.h"
+#include "clang/AST/TypeOrdering.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/PartialDiagnostic.h"
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
@@ -50,6 +52,36 @@ class APFixedPoint;
 class FixedPointSemantics;
 struct fltSemantics;
 template <typename T, unsigned N> class SmallPtrSet;
+
+struct ScalableVecTyKey {
+  clang::QualType EltTy;
+  unsigned NumElts;
+  unsigned NumFields;
+
+  bool operator==(const ScalableVecTyKey &RHS) const {
+    return EltTy == RHS.EltTy && NumElts == RHS.NumElts &&
+           NumFields == RHS.NumFields;
+  }
+};
+
+// Provide a DenseMapInfo specialization so that ScalableVecTyKey can be used
+// as a key in DenseMap.
+template <> struct DenseMapInfo<ScalableVecTyKey> {
+  static inline ScalableVecTyKey getEmptyKey() {
+    return {DenseMapInfo<clang::QualType>::getEmptyKey(), ~0U, ~0U};
+  }
+  static inline ScalableVecTyKey getTombstoneKey() {
+    return {DenseMapInfo<clang::QualType>::getTombstoneKey(), ~0U, ~0U};
+  }
+  static unsigned getHashValue(const ScalableVecTyKey &Val) {
+    return hash_combine(DenseMapInfo<clang::QualType>::getHashValue(Val.EltTy),
+                        Val.NumElts, Val.NumFields);
+  }
+  static bool isEqual(const ScalableVecTyKey &LHS,
+                      const ScalableVecTyKey &RHS) {
+    return LHS == RHS;
+  }
+};
 
 } // namespace llvm
 
@@ -241,9 +273,6 @@ class ASTContext : public RefCountedBase<ASTContext> {
   mutable llvm::FoldingSet<UsingType> UsingTypes;
   mutable llvm::FoldingSet<FoldingSetPlaceholder<TypedefType>> TypedefTypes;
   mutable llvm::FoldingSet<DependentNameType> DependentNameTypes;
-  mutable llvm::DenseMap<llvm::FoldingSetNodeID,
-                         DependentTemplateSpecializationType *>
-      DependentTemplateSpecializationTypes;
   mutable llvm::FoldingSet<PackExpansionType> PackExpansionTypes;
   mutable llvm::FoldingSet<ObjCObjectTypeImpl> ObjCObjectTypes;
   mutable llvm::FoldingSet<ObjCObjectPointerType> ObjCObjectPointerTypes;
@@ -340,6 +369,18 @@ class ASTContext : public RefCountedBase<ASTContext> {
 
   mutable llvm::DenseSet<const FunctionDecl *> DestroyingOperatorDeletes;
   mutable llvm::DenseSet<const FunctionDecl *> TypeAwareOperatorNewAndDeletes;
+
+  /// Global and array operators delete are only required for MSVC deleting
+  /// destructors support. Store them here to avoid keeping 4 pointers that are
+  /// not always used in each redeclaration of the destructor.
+  mutable llvm::DenseMap<const CXXDestructorDecl *, FunctionDecl *>
+      OperatorDeletesForVirtualDtor;
+  mutable llvm::DenseMap<const CXXDestructorDecl *, FunctionDecl *>
+      GlobalOperatorDeletesForVirtualDtor;
+  mutable llvm::DenseMap<const CXXDestructorDecl *, FunctionDecl *>
+      ArrayOperatorDeletesForVirtualDtor;
+  mutable llvm::DenseMap<const CXXDestructorDecl *, FunctionDecl *>
+      GlobalArrayOperatorDeletesForVirtualDtor;
 
   /// The next string literal "version" to allocate during constant evaluation.
   /// This is used to distinguish between repeated evaluations of the same
@@ -507,6 +548,9 @@ class ASTContext : public RefCountedBase<ASTContext> {
   llvm::DenseMap<const ObjCInterfaceDecl *,
                  SmallVector<const ObjCInterfaceDecl *, 4>>
       ObjCSubClasses;
+
+  // A mapping from Scalable Vector Type keys to their corresponding QualType.
+  mutable llvm::DenseMap<llvm::ScalableVecTyKey, QualType> ScalableVecTyMap;
 
   ASTContext &this_() { return *this; }
 
@@ -1904,7 +1948,8 @@ public:
                           TemplateTypeParmDecl *ParmDecl = nullptr) const;
 
   QualType getCanonicalTemplateSpecializationType(
-      TemplateName T, ArrayRef<TemplateArgument> CanonicalArgs) const;
+      ElaboratedTypeKeyword Keyword, TemplateName T,
+      ArrayRef<TemplateArgument> CanonicalArgs) const;
 
   QualType
   getTemplateSpecializationType(ElaboratedTypeKeyword Keyword, TemplateName T,
@@ -1934,13 +1979,6 @@ public:
   QualType getDependentNameType(ElaboratedTypeKeyword Keyword,
                                 NestedNameSpecifier NNS,
                                 const IdentifierInfo *Name) const;
-
-  QualType getDependentTemplateSpecializationType(
-      ElaboratedTypeKeyword Keyword, const DependentTemplateStorage &Name,
-      ArrayRef<TemplateArgumentLoc> Args) const;
-  QualType getDependentTemplateSpecializationType(
-      ElaboratedTypeKeyword Keyword, const DependentTemplateStorage &Name,
-      ArrayRef<TemplateArgument> Args, bool IsCanonical = false) const;
 
   TemplateArgument getInjectedTemplateArg(NamedDecl *ParamDecl) const;
 
@@ -2848,11 +2886,11 @@ public:
   /// returned type is guaranteed to be free of any of these, allowing two
   /// canonical types to be compared for exact equality with a simple pointer
   /// comparison.
-  CanQualType getCanonicalType(QualType T) const {
+  static CanQualType getCanonicalType(QualType T) {
     return CanQualType::CreateUnsafe(T.getCanonicalType());
   }
 
-  const Type *getCanonicalType(const Type *T) const {
+  static const Type *getCanonicalType(const Type *T) {
     return T->getCanonicalTypeInternal().getTypePtr();
   }
 
@@ -2864,10 +2902,10 @@ public:
   CanQualType getCanonicalParamType(QualType T) const;
 
   /// Determine whether the given types \p T1 and \p T2 are equivalent.
-  bool hasSameType(QualType T1, QualType T2) const {
+  static bool hasSameType(QualType T1, QualType T2) {
     return getCanonicalType(T1) == getCanonicalType(T2);
   }
-  bool hasSameType(const Type *T1, const Type *T2) const {
+  static bool hasSameType(const Type *T1, const Type *T2) {
     return getCanonicalType(T1) == getCanonicalType(T2);
   }
 
@@ -2895,7 +2933,7 @@ public:
 
   /// Determine whether the given types are equivalent after
   /// cvr-qualifiers have been removed.
-  bool hasSameUnqualifiedType(QualType T1, QualType T2) const {
+  static bool hasSameUnqualifiedType(QualType T1, QualType T2) {
     return getCanonicalType(T1).getTypePtr() ==
            getCanonicalType(T2).getTypePtr();
   }
@@ -3447,6 +3485,16 @@ public:
                                          bool IsTypeAware);
   bool isTypeAwareOperatorNewOrDelete(const FunctionDecl *FD) const;
 
+  enum OperatorDeleteKind { Regular, GlobalRegular, Array, ArrayGlobal };
+
+  void addOperatorDeleteForVDtor(const CXXDestructorDecl *Dtor,
+                                 FunctionDecl *OperatorDelete,
+                                 OperatorDeleteKind K) const;
+  FunctionDecl *getOperatorDeleteForVDtor(const CXXDestructorDecl *Dtor,
+                                          OperatorDeleteKind K) const;
+  bool dtorHasOperatorDelete(const CXXDestructorDecl *Dtor,
+                             OperatorDeleteKind K) const;
+
   /// Retrieve the context for computing mangling numbers in the given
   /// DeclContext.
   MangleNumberingContext &getManglingNumberContext(const DeclContext *DC);
@@ -3851,5 +3899,25 @@ typename clang::LazyGenerationalUpdatePtr<Owner, T, Update>::ValueType
     return new (Ctx) LazyData(Source, Value);
   return Value;
 }
+template <> struct llvm::DenseMapInfo<llvm::FoldingSetNodeID> {
+  static FoldingSetNodeID getEmptyKey() { return FoldingSetNodeID{}; }
+
+  static FoldingSetNodeID getTombstoneKey() {
+    FoldingSetNodeID ID;
+    for (size_t I = 0; I < sizeof(ID) / sizeof(unsigned); ++I) {
+      ID.AddInteger(std::numeric_limits<unsigned>::max());
+    }
+    return ID;
+  }
+
+  static unsigned getHashValue(const FoldingSetNodeID &Val) {
+    return Val.ComputeHash();
+  }
+
+  static bool isEqual(const FoldingSetNodeID &LHS,
+                      const FoldingSetNodeID &RHS) {
+    return LHS == RHS;
+  }
+};
 
 #endif // LLVM_CLANG_AST_ASTCONTEXT_H

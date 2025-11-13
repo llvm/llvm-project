@@ -19,7 +19,7 @@ of functions or subroutines with similar interfaces as an aid to
 comprehension beyond that which might be gained from the standard's
 alphabetical list.
 
-A brief status of intrinsic procedure support in f18 is also given at the end.
+A brief status of intrinsic procedure support in Flang is also given at the end.
 
 Few procedures are actually described here apart from their interfaces; see the
 Fortran 2018 standard (section 16) for the complete story.
@@ -716,6 +716,7 @@ CALL BACKTRACE()
 CALL FDATE(TIME)
 CALL GETLOG(USRNAME)
 CALL GETENV(NAME [, VALUE, LENGTH, STATUS, TRIM_NAME, ERRMSG ])
+unixFD = FNUM(FORTRAN_UNIT)
 ```
 
 ## Intrinsic Procedure Name Resolution
@@ -732,20 +733,20 @@ In case the invocation would be an error if the procedure were the intrinsic
 leaves two choices to the compiler: emit an error about the intrinsic invocation,
 or consider this is an external procedure and emit no error.
 
-f18 will always consider this case to be the intrinsic and emit errors, unless the procedure
+Flang will always consider this case to be the intrinsic and emit errors, unless the procedure
 is used as a function (resp. subroutine) and the intrinsic is a subroutine (resp. function).
 The table below gives some examples of decisions made by Fortran compilers in such case.
 
 | What is ACOS ?     | Bad intrinsic call       | External with warning |  External no warning | Other error |
 | --- | --- | --- | --- | --- |
-| `print*, ACOS()`     | gfortran, nag, xlf, f18  |  ifort                |  nvfortran           | |
-| `print*, ACOS(I)`    | gfortran, nag, xlf, f18  |  ifort                |  nvfortran           | |
-| `print*, ACOS(X=I)`  | gfortran, nag, xlf, f18  |  ifort                |                      | nvfortran (keyword on implicit extrenal )|
-| `print*, ACOS(X, X)` | gfortran, nag, xlf, f18  |  ifort                |  nvfortran           | |
-| `CALL ACOS(X)`       |                          |                       |  gfortran, nag, xlf, nvfortran, ifort, f18  | |
+| `print*, ACOS()`     | gfortran, nag, xlf, flang  |  ifort                |  nvfortran           | |
+| `print*, ACOS(I)`    | gfortran, nag, xlf, flang  |  ifort                |  nvfortran           | |
+| `print*, ACOS(X=I)`  | gfortran, nag, xlf, flang  |  ifort                |                      | nvfortran (keyword on implicit extrenal )|
+| `print*, ACOS(X, X)` | gfortran, nag, xlf, flang  |  ifort                |  nvfortran           | |
+| `CALL ACOS(X)`       |                          |                       |  gfortran, nag, xlf, nvfortran, ifort, flang  | |
 
 
-The rationale for f18 behavior is that when referring to a procedure with an
+The rationale for Flang behavior is that when referring to a procedure with an
 argument number or type that does not match the intrinsic specification, it seems safer to block
 the rather likely case where the user is using the intrinsic the wrong way.
 In case the user wanted to refer to an external function, he can add an explicit EXTERNAL
@@ -758,13 +759,13 @@ Also note that in general, the standard gives the compiler the right to consider
 any procedure that is not explicitly external as a non standard intrinsic (section 4.2 point 4).
 So it is highly advised for the programmer to use EXTERNAL statements to prevent any ambiguity.
 
-## Intrinsic Procedure Support in f18
-This section gives an overview of the support inside f18 libraries for the
+## Intrinsic Procedure Support in Flang
+This section gives an overview of the support inside Flang libraries for the
 intrinsic procedures listed above.
-It may be outdated, refer to f18 code base for the actual support status.
+It may be outdated, refer to Flang code base for the actual support status.
 
 ### Semantic Analysis
-F18 semantic expression analysis phase detects intrinsic procedure references,
+Flang semantic expression analysis phase detects intrinsic procedure references,
 validates the argument types and deduces the return types.
 This phase currently supports all the intrinsic procedures listed above but the ones in the table below.
 
@@ -778,6 +779,7 @@ This phase currently supports all the intrinsic procedures listed above but the 
 | Atomic intrinsic subroutines | ATOMIC_ADD |
 | Collective intrinsic subroutines | CO_REDUCE |
 | Library subroutines | BACKTRACE, FDATE, GETLOG, GETENV |
+| Library functions | FNUM |
 
 
 ### Intrinsic Function Folding
@@ -787,17 +789,17 @@ Constant Expressions may be used to define kind arguments. Therefore, the semant
 expression analysis phase must be able to fold references to intrinsic functions
 listed in section 10.1.12.
 
-F18 intrinsic function folding is either performed by implementations directly
-operating on f18 scalar types or by using host runtime functions and
-host hardware types. F18 supports folding elemental intrinsic functions over
+Flang intrinsic function folding is either performed by implementations directly
+operating on Flang scalar types or by using host runtime functions and
+host hardware types. Flang supports folding elemental intrinsic functions over
 arrays when an implementation is provided for the scalars (regardless of whether
 it is using host hardware types or not).
 The status of intrinsic function folding support is given in the sub-sections below.
 
 #### Intrinsic Functions with Host Independent Folding Support
-Implementations using f18 scalar types enables folding intrinsic functions
-on any host and with any possible type kind supported by f18. The intrinsic functions
-listed below are folded using host independent implementations.
+Implementations using Flang scalar types enables folding intrinsic functions
+on any host and with any possible type kind supported by Flang. The intrinsic
+functions listed below are folded using host independent implementations.
 
 | Return Type | Intrinsic Functions with Host Independent Folding Support|
 | --- | --- |
@@ -808,12 +810,12 @@ listed below are folded using host independent implementations.
 
 #### Intrinsic Functions with Host Dependent Folding Support
 Implementations using the host runtime may not be available for all supported
-f18 types depending on the host hardware types and the libraries available on the host.
+Flang types depending on the hardware type of the host and the libraries available on it.
 The actual support on a host depends on what the host hardware types are.
 The list below gives the functions that are folded using host runtime and the related C/C++ types.
-F18 automatically detects if these types match an f18 scalar type. If so,
-folding of the intrinsic functions will be possible for the related f18 scalar type,
-otherwise an error message will be produced by f18 when attempting to fold related intrinsic functions.
+Flang automatically detects if these types match an Flang scalar type. If so,
+folding of the intrinsic functions will be possible for the related Flang scalar type,
+otherwise an error message will be produced by Flang when attempting to fold related intrinsic functions.
 
 | C/C++ Host Type | Intrinsic Functions with Host Standard C++ Library Based Folding Support |
 | --- | --- |
@@ -821,17 +823,17 @@ otherwise an error message will be produced by f18 when attempting to fold relat
 | std::complex for float, double and long double| ACOS, ACOSH, ASIN, ASINH, ATAN, ATANH, COS, COSH, EXP, LOG, SIN, SINH, SQRT, TAN, TANH |
 
 On top of the default usage of C++ standard library functions for folding described
-in the table above, it is possible to compile f18 evaluate library with
+in the table above, it is possible to compile Flang evaluate library with
 [libpgmath](https://github.com/flang-compiler/flang/tree/master/runtime/libpgmath)
 so that it can be used for folding. To do so, one must have a compiled version
 of the libpgmath library available on the host and add
-`-DLIBPGMATH_DIR=<path to the compiled shared libpgmath library>` to the f18 cmake command.
+`-DLIBPGMATH_DIR=<path to the compiled shared libpgmath library>` to the Flang cmake command.
 
 Libpgmath comes with real and complex functions that replace C++ standard library
 float and double functions to fold all the intrinsic functions listed in the table above.
-It has no long double versions. If the host long double matches an f18 scalar type,
+It has no long double versions. If the host long double matches a Flang scalar type,
 C++ standard library functions will still be used for folding expressions with this scalar type.
-Libpgmath adds the possibility to fold the following functions for f18 real scalar
+Libpgmath adds the possibility to fold the following functions for Flang's real scalar
 types related to host float and double types.
 
 | C/C++ Host Type | Additional Intrinsic Function Folding Support with Libpgmath (Optional) |
@@ -839,10 +841,10 @@ types related to host float and double types.
 |float and double| BESSEL_J0, BESSEL_J1, BESSEL_JN (elemental only), BESSEL_Y0, BESSEL_Y1, BESSEL_Yn (elemental only), DERFC_SCALED, ERFC_SCALED, QERFC_SCALED |
 
 Libpgmath comes in three variants (precise, relaxed and fast). So far, only the
-precise version is used for intrinsic function folding in f18. It guarantees the greatest numerical precision.
+precise version is used for intrinsic function folding in Flang. It guarantees the greatest numerical precision.
 
 ### Intrinsic Functions with Missing Folding Support
-The following intrinsic functions are allowed in constant expressions but f18
+The following intrinsic functions are allowed in constant expressions but Flang
 is not yet able to fold them. Note that there might be constraints on the arguments
 so that these intrinsics can be used in constant expressions (see section 10.1.12 of Fortran 2018 standard).
 
@@ -1131,8 +1133,8 @@ end program rename_proc
 - **Standard:**  GNU extension
 - **Class:**     function
 - **Syntax:**    result = `SECNDS(refTime)`
-- **Arguments:** 
- 
+- **Arguments:**
+
 | ARGUMENT  | INTENT |      TYPE     |          KIND           |           Description                    |
 |-----------|--------|---------------|-------------------------|------------------------------------------|
 | `refTime` | `IN`   | `REAL, scalar`| REAL(KIND=4), required  | Reference time in seconds since midnight |
@@ -1148,6 +1150,32 @@ PROGRAM example_secnds
   elapsed = SECNDS(refTime)
   PRINT *, "Elapsed seconds:", elapsed
 END PROGRAM example_secnds
+```
+### Non-Standard Intrinsics: DSECNDS
+#### Description
+`DSECNDS(refTime)` is the double precision variant of `SECNDS`. It returns the number of seconds
+since midnight minus a user-supplied reference time `refTime`. Uses `REAL(KIND=8)` for higher precision.
+
+#### Usage and Info
+- **Standard:** PGI extension
+- **Class:**     function
+- **Syntax:**    result = `DSECNDS(refTime)`
+- **Arguments:**
+
+| ARGUMENT  | INTENT |      TYPE     |          KIND           |           Description                    |
+|-----------|--------|---------------|-------------------------|------------------------------------------|
+| `refTime` | `IN`   | `REAL, scalar`| REAL(KIND=8), required  | Reference time in seconds since midnight |
+
+- **Return Value:** REAL(KIND=8), scalar — seconds elapsed since `refTime`.
+- **Purity:** Impure
+
+#### Example
+```fortran
+PROGRAM example_dsecnds
+  DOUBLE PRECISION :: refTime
+  refTime = 0.0D0
+  PRINT '(F24.15)', DSECNDS(refTime)
+END PROGRAM example_dsecnds
 ```
 
 ### Non-standard Intrinsics: SECOND

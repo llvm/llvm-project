@@ -954,6 +954,8 @@ const internal::VariadicDynCastAllOfMatcher<Stmt, CXXTryStmt> cxxTryStmt;
 const internal::VariadicDynCastAllOfMatcher<Stmt, CXXThrowExpr> cxxThrowExpr;
 const internal::VariadicDynCastAllOfMatcher<Stmt, NullStmt> nullStmt;
 const internal::VariadicDynCastAllOfMatcher<Stmt, AsmStmt> asmStmt;
+const internal::VariadicDynCastAllOfMatcher<Decl, FileScopeAsmDecl>
+    fileScopeAsmDecl;
 const internal::VariadicDynCastAllOfMatcher<Stmt, CXXBoolLiteralExpr>
     cxxBoolLiteral;
 const internal::VariadicDynCastAllOfMatcher<Stmt, StringLiteral> stringLiteral;
@@ -1009,6 +1011,8 @@ const internal::VariadicDynCastAllOfMatcher<Stmt, CXXDynamicCastExpr>
     cxxDynamicCastExpr;
 const internal::VariadicDynCastAllOfMatcher<Stmt, CXXConstCastExpr>
     cxxConstCastExpr;
+const internal::VariadicDynCastAllOfMatcher<Stmt, CXXNamedCastExpr>
+    cxxNamedCastExpr;
 const internal::VariadicDynCastAllOfMatcher<Stmt, CStyleCastExpr>
     cStyleCastExpr;
 const internal::VariadicDynCastAllOfMatcher<Stmt, ExplicitCastExpr>
@@ -1109,8 +1113,6 @@ const AstTypeMatcher<TemplateTypeParmType> templateTypeParmType;
 const AstTypeMatcher<InjectedClassNameType> injectedClassNameType;
 const AstTypeMatcher<DecayedType> decayedType;
 const AstTypeMatcher<DependentNameType> dependentNameType;
-const AstTypeMatcher<DependentTemplateSpecializationType>
-    dependentTemplateSpecializationType;
 AST_TYPELOC_TRAVERSE_MATCHER_DEF(hasElementType,
                                  AST_POLYMORPHIC_SUPPORTED_TYPES(ArrayType,
                                                                  ComplexType));

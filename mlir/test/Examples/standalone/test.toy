@@ -1,7 +1,9 @@
 # RUN: "%cmake_exe" "%mlir_src_root/examples/standalone" -G "%cmake_generator" \
+# RUN: -DCMAKE_BUILD_TYPE=%cmake_build_type \
 # RUN: -DCMAKE_CXX_COMPILER=%host_cxx -DCMAKE_C_COMPILER=%host_cc \
 # RUN: -DLLVM_ENABLE_LIBCXX=%enable_libcxx -DMLIR_DIR=%mlir_cmake_dir \
 # RUN: -DLLVM_USE_LINKER=%llvm_use_linker \
+# RUN: -DMLIR_PYTHON_PACKAGE_PREFIX=mlir_standalone \
 # RUN: -DPython3_EXECUTABLE=%python \
 # RUN: -DPython_EXECUTABLE=%python
 # RUN: "%cmake_exe" --build . --target check-standalone | tee %t
@@ -11,4 +13,4 @@
 # if any fail.
 # CHECK: Passed
 # CHECK-NOT: Failed
-# UNSUPPORTED: target={{.*(windows|android).*}}
+# UNSUPPORTED: target={{.*(android).*}}

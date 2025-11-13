@@ -41,10 +41,10 @@ class VPRecipeBase;
 class VPInterleaveBase;
 class VPPhiAccessors;
 
-// This is the base class of the VPlan Def/Use graph, used for modeling the data
-// flow into, within and out of the VPlan. VPValues can stand for live-ins
-// coming from the input IR and instructions which VPlan will generate if
-// executed.
+/// This is the base class of the VPlan Def/Use graph, used for modeling the
+/// data flow into, within and out of the VPlan. VPValues can stand for live-ins
+/// coming from the input IR and instructions which VPlan will generate if
+/// executed.
 class LLVM_ABI_FOR_TEST VPValue {
   friend class VPDef;
   friend struct VPDoubleValueDef;
@@ -57,7 +57,7 @@ class LLVM_ABI_FOR_TEST VPValue {
   SmallVector<VPUser *, 1> Users;
 
 protected:
-  // Hold the underlying Value, if any, attached to this VPValue.
+  /// Hold the underlying Value, if any, attached to this VPValue.
   Value *UnderlyingVal;
 
   /// Pointer to the VPDef that defines this VPValue. If it is nullptr, the
@@ -146,6 +146,15 @@ public:
     while (Current != user_end() && *user_begin() == *Current)
       Current++;
     return Current != user_end();
+  }
+
+  bool hasOneUse() const { return getNumUsers() == 1; }
+
+  /// Return the single user of this value, or nullptr if there is not exactly
+  /// one user.
+  VPUser *getSingleUser() { return hasOneUse() ? *user_begin() : nullptr; }
+  const VPUser *getSingleUser() const {
+    return hasOneUse() ? *user_begin() : nullptr;
   }
 
   void replaceAllUsesWith(VPValue *New);
@@ -272,12 +281,12 @@ public:
   virtual bool usesScalars(const VPValue *Op) const {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
-    return onlyFirstLaneUsed(Op);
+    return usesFirstLaneOnly(Op);
   }
 
   /// Returns true if the VPUser only uses the first lane of operand \p Op.
   /// Conservatively returns false.
-  virtual bool onlyFirstLaneUsed(const VPValue *Op) const {
+  virtual bool usesFirstLaneOnly(const VPValue *Op) const {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
     return false;
@@ -285,7 +294,7 @@ public:
 
   /// Returns true if the VPUser only uses the first part of operand \p Op.
   /// Conservatively returns false.
-  virtual bool onlyFirstPartUsed(const VPValue *Op) const {
+  virtual bool usesFirstPartOnly(const VPValue *Op) const {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
     return false;

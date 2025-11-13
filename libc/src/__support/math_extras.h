@@ -25,7 +25,13 @@ LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, T>
 mask_trailing_ones() {
   constexpr unsigned T_BITS = CHAR_BIT * sizeof(T);
   static_assert(count <= T_BITS && "Invalid bit index");
-  return count == 0 ? 0 : (T(-1) >> (T_BITS - count));
+  // MSVC complains about out of range shifts.
+  if constexpr (count == 0)
+    return 0;
+  else if constexpr (count >= T_BITS)
+    return T(-1);
+  else
+    return T(-1) >> (T_BITS - count);
 }
 
 // Create a bitmask with the count left-most bits set to 1, and all other bits
@@ -55,13 +61,23 @@ mask_leading_zeros() {
 // Returns whether 'a + b' overflows, the result is stored in 'res'.
 template <typename T>
 [[nodiscard]] LIBC_INLINE constexpr bool add_overflow(T a, T b, T &res) {
+#if __has_builtin(__builtin_add_overflow)
   return __builtin_add_overflow(a, b, &res);
+#else
+  res = a + b;
+  return (res < a) || (res < b);
+#endif // __builtin_add_overflow
 }
 
 // Returns whether 'a - b' overflows, the result is stored in 'res'.
 template <typename T>
 [[nodiscard]] LIBC_INLINE constexpr bool sub_overflow(T a, T b, T &res) {
+#if __has_builtin(__builtin_sub_overflow)
   return __builtin_sub_overflow(a, b, &res);
+#else
+  res = a - b;
+  return (res > a);
+#endif // __builtin_sub_overflow
 }
 
 #define RETURN_IF(TYPE, BUILTIN)                                               \

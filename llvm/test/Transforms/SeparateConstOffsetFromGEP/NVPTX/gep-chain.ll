@@ -24,11 +24,11 @@ define i32 @more_interesting(ptr %ptr, i32 %offset1, i32 %offset2) {
 ; CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[OFFSET1]] to i64
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds [[STRUCT_UCHAR4:%.*]], ptr [[PTR]], i64 [[IDXPROM]]
 ; CHECK-NEXT:    [[IDXPROM1:%.*]] = sext i32 [[OFFSET2]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_UCHAR4]], ptr [[GEP1]], i64 [[IDXPROM1]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 8
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr [[STRUCT_UCHAR4]], ptr [[GEP1]], i64 [[IDXPROM1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP1]], i64 8
 ; CHECK-NEXT:    [[V1:%.*]] = load i32, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[IDXPROM2:%.*]] = sext i32 [[OFFSET2]] to i64
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[STRUCT_UCHAR4]], ptr [[TMP1]], i64 [[IDXPROM2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr [[STRUCT_UCHAR4]], ptr [[TMP1]], i64 [[IDXPROM2]]
 ; CHECK-NEXT:    [[V2:%.*]] = load i32, ptr [[TMP4]], align 4
 ; CHECK-NEXT:    [[R:%.*]] = add i32 [[V1]], [[V2]]
 ; CHECK-NEXT:    ret i32 [[R]]

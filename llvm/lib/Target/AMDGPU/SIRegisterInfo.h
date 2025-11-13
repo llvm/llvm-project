@@ -154,8 +154,8 @@ public:
   bool isFrameOffsetLegal(const MachineInstr *MI, Register BaseReg,
                           int64_t Offset) const override;
 
-  const TargetRegisterClass *getPointerRegClass(
-    const MachineFunction &MF, unsigned Kind = 0) const override;
+  const TargetRegisterClass *
+  getPointerRegClass(unsigned Kind = 0) const override;
 
   /// Returns a legal register class to copy a register in the specified class
   /// to or from. If it is possible to copy the register directly without using
@@ -357,7 +357,7 @@ public:
                              const MachineFunction &MF, const VirtRegMap *VRM,
                              const LiveRegMatrix *Matrix) const override;
 
-  const int *getRegUnitPressureSets(unsigned RegUnit) const override;
+  const int *getRegUnitPressureSets(MCRegUnit RegUnit) const override;
 
   MCRegister getReturnAddressReg(const MachineFunction &MF) const;
 
@@ -390,8 +390,6 @@ public:
   MCRegister getVCC() const;
 
   MCRegister getExec() const;
-
-  const TargetRegisterClass *getRegClass(unsigned RCID) const;
 
   // Find reaching register definition
   MachineInstr *findReachingDef(Register Reg, unsigned SubReg,

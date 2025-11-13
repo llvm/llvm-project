@@ -1,4 +1,4 @@
-//===--- SizeofContainerCheck.h - clang-tidy---------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -17,7 +17,7 @@ namespace clang::tidy::bugprone {
 /// user wanted to use `.size()` instead.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/sizeof-container.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/sizeof-container.html
 class SizeofContainerCheck : public ClangTidyCheck {
 public:
   SizeofContainerCheck(StringRef Name, ClangTidyContext *Context)

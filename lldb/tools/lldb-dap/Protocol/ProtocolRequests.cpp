@@ -303,7 +303,8 @@ bool fromJSON(const json::Value &Params, LaunchRequestArguments &LRA,
          O.mapOptional("disableSTDIO", LRA.disableSTDIO) &&
          O.mapOptional("shellExpandArguments", LRA.shellExpandArguments) &&
          O.mapOptional("runInTerminal", LRA.console) &&
-         O.mapOptional("console", LRA.console) && parseEnv(Params, LRA.env, P);
+         O.mapOptional("console", LRA.console) &&
+         O.mapOptional("stdio", LRA.stdio) && parseEnv(Params, LRA.env, P);
 }
 
 bool fromJSON(const json::Value &Params, AttachRequestArguments &ARA,
@@ -460,7 +461,7 @@ bool fromJSON(const json::Value &Params, DataBreakpointInfoArguments &DBIA,
               json::Path P) {
   json::ObjectMapper O(Params, P);
   return O && O.map("variablesReference", DBIA.variablesReference) &&
-         O.map("name", DBIA.name) && O.map("frameId", DBIA.frameId) &&
+         O.map("name", DBIA.name) && O.mapOptional("frameId", DBIA.frameId) &&
          O.map("bytes", DBIA.bytes) && O.map("asAddress", DBIA.asAddress) &&
          O.map("mode", DBIA.mode);
 }
@@ -621,6 +622,24 @@ bool fromJSON(const llvm::json::Value &Params, ModuleSymbolsArguments &Args,
 llvm::json::Value toJSON(const ModuleSymbolsResponseBody &DGMSR) {
   json::Object result;
   result.insert({"symbols", DGMSR.symbols});
+  return result;
+}
+
+bool fromJSON(const json::Value &Params, ExceptionInfoArguments &Args,
+              json::Path Path) {
+  json::ObjectMapper O(Params, Path);
+  return O && O.map("threadId", Args.threadId);
+}
+
+json::Value toJSON(const ExceptionInfoResponseBody &ERB) {
+  json::Object result{{"exceptionId", ERB.exceptionId},
+                      {"breakMode", ERB.breakMode}};
+
+  if (!ERB.description.empty())
+    result.insert({"description", ERB.description});
+  if (ERB.details.has_value())
+    result.insert({"details", *ERB.details});
+
   return result;
 }
 

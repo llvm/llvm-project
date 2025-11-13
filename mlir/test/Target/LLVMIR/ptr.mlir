@@ -41,10 +41,10 @@ llvm.func @type_offset(%arg0: !ptr.ptr<#llvm.address_space<0>>) -> !llvm.struct<
   %2 = ptr.type_offset i16 : i32
   %3 = ptr.type_offset i32 : i32
   %4 = llvm.mlir.poison : !llvm.struct<(i32, i32, i32, i32)>
-  %5 = llvm.insertvalue %0, %4[0] : !llvm.struct<(i32, i32, i32, i32)> 
-  %6 = llvm.insertvalue %1, %5[1] : !llvm.struct<(i32, i32, i32, i32)> 
-  %7 = llvm.insertvalue %2, %6[2] : !llvm.struct<(i32, i32, i32, i32)> 
-  %8 = llvm.insertvalue %3, %7[3] : !llvm.struct<(i32, i32, i32, i32)> 
+  %5 = llvm.insertvalue %0, %4[0] : !llvm.struct<(i32, i32, i32, i32)>
+  %6 = llvm.insertvalue %1, %5[1] : !llvm.struct<(i32, i32, i32, i32)>
+  %7 = llvm.insertvalue %2, %6[2] : !llvm.struct<(i32, i32, i32, i32)>
+  %8 = llvm.insertvalue %3, %7[3] : !llvm.struct<(i32, i32, i32, i32)>
   llvm.return %8 : !llvm.struct<(i32, i32, i32, i32)>
 }
 
@@ -92,8 +92,8 @@ llvm.func @store_ops(%arg0: !ptr.ptr<#llvm.address_space<0>>, %arg1: f32, %arg2:
 
 // CHECK-LABEL: define <4 x float> @gather_ops
 // CHECK-SAME: (<4 x ptr> %[[PTRS:.*]], <4 x i1> %[[MASK:.*]], <4 x float> %[[PASSTHROUGH:.*]]) {
-// CHECK-NEXT:   %[[V0:.*]] = call <4 x float> @llvm.masked.gather.v4f32.v4p0(<4 x ptr> %[[PTRS]], i32 1, <4 x i1> %[[MASK]], <4 x float> %[[PASSTHROUGH]])
-// CHECK-NEXT:   %[[V1:.*]] = call <4 x float> @llvm.masked.gather.v4f32.v4p0(<4 x ptr> %[[PTRS]], i32 4, <4 x i1> %[[MASK]], <4 x float> %[[PASSTHROUGH]])
+// CHECK-NEXT:   %[[V0:.*]] = call <4 x float> @llvm.masked.gather.v4f32.v4p0(<4 x ptr> align 1 %[[PTRS]], <4 x i1> %[[MASK]], <4 x float> %[[PASSTHROUGH]])
+// CHECK-NEXT:   %[[V1:.*]] = call <4 x float> @llvm.masked.gather.v4f32.v4p0(<4 x ptr> align 4 %[[PTRS]], <4 x i1> %[[MASK]], <4 x float> %[[PASSTHROUGH]])
 // CHECK-NEXT:   ret <4 x float> %[[V0]]
 // CHECK-NEXT: }
 llvm.func @gather_ops(%ptrs: vector<4x!ptr.ptr<#llvm.address_space<0>>>, %mask: vector<4xi1>, %passthrough: vector<4xf32>) -> vector<4xf32> {
@@ -106,7 +106,7 @@ llvm.func @gather_ops(%ptrs: vector<4x!ptr.ptr<#llvm.address_space<0>>>, %mask: 
 
 // CHECK-LABEL: define <8 x i32> @gather_ops_i32
 // CHECK-SAME: (<8 x ptr> %[[PTRS:.*]], <8 x i1> %[[MASK:.*]], <8 x i32> %[[PASSTHROUGH:.*]]) {
-// CHECK-NEXT:   %[[V0:.*]] = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %[[PTRS]], i32 8, <8 x i1> %[[MASK]], <8 x i32> %[[PASSTHROUGH]])
+// CHECK-NEXT:   %[[V0:.*]] = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> align 8 %[[PTRS]], <8 x i1> %[[MASK]], <8 x i32> %[[PASSTHROUGH]])
 // CHECK-NEXT:   ret <8 x i32> %[[V0]]
 // CHECK-NEXT: }
 llvm.func @gather_ops_i32(%ptrs: vector<8x!ptr.ptr<#llvm.address_space<0>>>, %mask: vector<8xi1>, %passthrough: vector<8xi32>) -> vector<8xi32> {
@@ -116,8 +116,8 @@ llvm.func @gather_ops_i32(%ptrs: vector<8x!ptr.ptr<#llvm.address_space<0>>>, %ma
 
 // CHECK-LABEL: define <4 x float> @masked_load_ops
 // CHECK-SAME: (ptr %[[PTR:.*]], <4 x i1> %[[MASK:.*]], <4 x float> %[[PASSTHROUGH:.*]]) {
-// CHECK-NEXT:   %[[V0:.*]] = call <4 x float> @llvm.masked.load.v4f32.p0(ptr %[[PTR]], i32 1, <4 x i1> %[[MASK]], <4 x float> %[[PASSTHROUGH]])
-// CHECK-NEXT:   %[[V1:.*]] = call <4 x float> @llvm.masked.load.v4f32.p0(ptr %[[PTR]], i32 16, <4 x i1> %[[MASK]], <4 x float> %[[PASSTHROUGH]])
+// CHECK-NEXT:   %[[V0:.*]] = call <4 x float> @llvm.masked.load.v4f32.p0(ptr align 1 %[[PTR]], <4 x i1> %[[MASK]], <4 x float> %[[PASSTHROUGH]])
+// CHECK-NEXT:   %[[V1:.*]] = call <4 x float> @llvm.masked.load.v4f32.p0(ptr align 16 %[[PTR]], <4 x i1> %[[MASK]], <4 x float> %[[PASSTHROUGH]])
 // CHECK-NEXT:   ret <4 x float> %[[V0]]
 // CHECK-NEXT: }
 llvm.func @masked_load_ops(%ptr: !ptr.ptr<#llvm.address_space<0>>, %mask: vector<4xi1>, %passthrough: vector<4xf32>) -> vector<4xf32> {
@@ -130,7 +130,7 @@ llvm.func @masked_load_ops(%ptr: !ptr.ptr<#llvm.address_space<0>>, %mask: vector
 
 // CHECK-LABEL: define <8 x i64> @masked_load_ops_i64
 // CHECK-SAME: (ptr %[[PTR:.*]], <8 x i1> %[[MASK:.*]], <8 x i64> %[[PASSTHROUGH:.*]]) {
-// CHECK-NEXT:   %[[V0:.*]] = call <8 x i64> @llvm.masked.load.v8i64.p0(ptr %[[PTR]], i32 8, <8 x i1> %[[MASK]], <8 x i64> %[[PASSTHROUGH]])
+// CHECK-NEXT:   %[[V0:.*]] = call <8 x i64> @llvm.masked.load.v8i64.p0(ptr align 8 %[[PTR]], <8 x i1> %[[MASK]], <8 x i64> %[[PASSTHROUGH]])
 // CHECK-NEXT:   ret <8 x i64> %[[V0]]
 // CHECK-NEXT: }
 llvm.func @masked_load_ops_i64(%ptr: !ptr.ptr<#llvm.address_space<0>>, %mask: vector<8xi1>, %passthrough: vector<8xi64>) -> vector<8xi64> {
@@ -140,8 +140,8 @@ llvm.func @masked_load_ops_i64(%ptr: !ptr.ptr<#llvm.address_space<0>>, %mask: ve
 
 // CHECK-LABEL: define void @masked_store_ops
 // CHECK-SAME: (ptr %[[PTR:.*]], <4 x float> %[[VALUE:.*]], <4 x i1> %[[MASK:.*]]) {
-// CHECK-NEXT:   call void @llvm.masked.store.v4f32.p0(<4 x float> %[[VALUE]], ptr %[[PTR]], i32 1, <4 x i1> %[[MASK]])
-// CHECK-NEXT:   call void @llvm.masked.store.v4f32.p0(<4 x float> %[[VALUE]], ptr %[[PTR]], i32 32, <4 x i1> %[[MASK]])
+// CHECK-NEXT:   call void @llvm.masked.store.v4f32.p0(<4 x float> %[[VALUE]], ptr align 1 %[[PTR]], <4 x i1> %[[MASK]])
+// CHECK-NEXT:   call void @llvm.masked.store.v4f32.p0(<4 x float> %[[VALUE]], ptr align 32 %[[PTR]], <4 x i1> %[[MASK]])
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }
 llvm.func @masked_store_ops(%ptr: !ptr.ptr<#llvm.address_space<0>>, %value: vector<4xf32>, %mask: vector<4xi1>) {
@@ -154,7 +154,7 @@ llvm.func @masked_store_ops(%ptr: !ptr.ptr<#llvm.address_space<0>>, %value: vect
 
 // CHECK-LABEL: define void @masked_store_ops_i16
 // CHECK-SAME: (ptr %[[PTR:.*]], <8 x i16> %[[VALUE:.*]], <8 x i1> %[[MASK:.*]]) {
-// CHECK-NEXT:   call void @llvm.masked.store.v8i16.p0(<8 x i16> %[[VALUE]], ptr %[[PTR]], i32 4, <8 x i1> %[[MASK]])
+// CHECK-NEXT:   call void @llvm.masked.store.v8i16.p0(<8 x i16> %[[VALUE]], ptr align 4 %[[PTR]], <8 x i1> %[[MASK]])
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }
 llvm.func @masked_store_ops_i16(%ptr: !ptr.ptr<#llvm.address_space<0>>, %value: vector<8xi16>, %mask: vector<8xi1>) {
@@ -164,8 +164,8 @@ llvm.func @masked_store_ops_i16(%ptr: !ptr.ptr<#llvm.address_space<0>>, %value: 
 
 // CHECK-LABEL: define void @scatter_ops
 // CHECK-SAME: (<4 x float> %[[VALUE:.*]], <4 x ptr> %[[PTRS:.*]], <4 x i1> %[[MASK:.*]]) {
-// CHECK-NEXT:   call void @llvm.masked.scatter.v4f32.v4p0(<4 x float> %[[VALUE]], <4 x ptr> %[[PTRS]], i32 1, <4 x i1> %[[MASK]])
-// CHECK-NEXT:   call void @llvm.masked.scatter.v4f32.v4p0(<4 x float> %[[VALUE]], <4 x ptr> %[[PTRS]], i32 8, <4 x i1> %[[MASK]])
+// CHECK-NEXT:   call void @llvm.masked.scatter.v4f32.v4p0(<4 x float> %[[VALUE]], <4 x ptr> align 1 %[[PTRS]], <4 x i1> %[[MASK]])
+// CHECK-NEXT:   call void @llvm.masked.scatter.v4f32.v4p0(<4 x float> %[[VALUE]], <4 x ptr> align 8 %[[PTRS]], <4 x i1> %[[MASK]])
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }
 llvm.func @scatter_ops(%value: vector<4xf32>, %ptrs: vector<4x!ptr.ptr<#llvm.address_space<0>>>, %mask: vector<4xi1>) {
@@ -178,7 +178,7 @@ llvm.func @scatter_ops(%value: vector<4xf32>, %ptrs: vector<4x!ptr.ptr<#llvm.add
 
 // CHECK-LABEL: define void @scatter_ops_i64
 // CHECK-SAME: (<8 x i64> %[[VALUE:.*]], <8 x ptr> %[[PTRS:.*]], <8 x i1> %[[MASK:.*]]) {
-// CHECK-NEXT:   call void @llvm.masked.scatter.v8i64.v8p0(<8 x i64> %[[VALUE]], <8 x ptr> %[[PTRS]], i32 16, <8 x i1> %[[MASK]])
+// CHECK-NEXT:   call void @llvm.masked.scatter.v8i64.v8p0(<8 x i64> %[[VALUE]], <8 x ptr> align 16 %[[PTRS]], <8 x i1> %[[MASK]])
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }
 llvm.func @scatter_ops_i64(%value: vector<8xi64>, %ptrs: vector<8x!ptr.ptr<#llvm.address_space<0>>>, %mask: vector<8xi1>) {
@@ -188,13 +188,13 @@ llvm.func @scatter_ops_i64(%value: vector<8xi64>, %ptrs: vector<8x!ptr.ptr<#llvm
 
 // CHECK-LABEL: define void @mixed_masked_ops_address_spaces
 // CHECK-SAME: (ptr addrspace(3) %[[PTR_SHARED:.*]], <4 x ptr addrspace(3)> %[[PTRS_SHARED:.*]], <4 x i1> %[[MASK:.*]], <4 x double> %[[VALUE_F64:.*]], <4 x double> %[[PASSTHROUGH_F64:.*]]) {
-// CHECK-NEXT:   %[[V0:.*]] = call <4 x double> @llvm.masked.gather.v4f64.v4p3(<4 x ptr addrspace(3)> %[[PTRS_SHARED]], i32 8, <4 x i1> %[[MASK]], <4 x double> %[[PASSTHROUGH_F64]])
-// CHECK-NEXT:   call void @llvm.masked.scatter.v4f64.v4p3(<4 x double> %[[VALUE_F64]], <4 x ptr addrspace(3)> %[[PTRS_SHARED]], i32 8, <4 x i1> %[[MASK]])
-// CHECK-NEXT:   %[[V1:.*]] = call <4 x double> @llvm.masked.load.v4f64.p3(ptr addrspace(3) %[[PTR_SHARED]], i32 8, <4 x i1> %[[MASK]], <4 x double> %[[PASSTHROUGH_F64]])
-// CHECK-NEXT:   call void @llvm.masked.store.v4f64.p3(<4 x double> %[[VALUE_F64]], ptr addrspace(3) %[[PTR_SHARED]], i32 8, <4 x i1> %[[MASK]])
+// CHECK-NEXT:   %[[V0:.*]] = call <4 x double> @llvm.masked.gather.v4f64.v4p3(<4 x ptr addrspace(3)> align 8 %[[PTRS_SHARED]], <4 x i1> %[[MASK]], <4 x double> %[[PASSTHROUGH_F64]])
+// CHECK-NEXT:   call void @llvm.masked.scatter.v4f64.v4p3(<4 x double> %[[VALUE_F64]], <4 x ptr addrspace(3)> align 8 %[[PTRS_SHARED]], <4 x i1> %[[MASK]])
+// CHECK-NEXT:   %[[V1:.*]] = call <4 x double> @llvm.masked.load.v4f64.p3(ptr addrspace(3) align 8 %[[PTR_SHARED]], <4 x i1> %[[MASK]], <4 x double> %[[PASSTHROUGH_F64]])
+// CHECK-NEXT:   call void @llvm.masked.store.v4f64.p3(<4 x double> %[[VALUE_F64]], ptr addrspace(3) align 8 %[[PTR_SHARED]], <4 x i1> %[[MASK]])
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }
-llvm.func @mixed_masked_ops_address_spaces(%ptr: !ptr.ptr<#llvm.address_space<3>>, %ptrs: vector<4x!ptr.ptr<#llvm.address_space<3>>>, 
+llvm.func @mixed_masked_ops_address_spaces(%ptr: !ptr.ptr<#llvm.address_space<3>>, %ptrs: vector<4x!ptr.ptr<#llvm.address_space<3>>>,
                                           %mask: vector<4xi1>, %value: vector<4xf64>, %passthrough: vector<4xf64>) {
   // Test with shared memory address space (3) and f64 elements
   %0 = ptr.gather %ptrs, %mask, %passthrough alignment = 8 : vector<4x!ptr.ptr<#llvm.address_space<3>>> -> vector<4xf64>
@@ -232,4 +232,148 @@ llvm.func @ptr_add_scalar_base_vector_offsets(%ptr: !ptr.ptr<#llvm.address_space
 llvm.func @ptr_add_vector_base_scalar_offset(%ptrs: vector<4x!ptr.ptr<#llvm.address_space<0>>>, %offset: i32) -> vector<4x!ptr.ptr<#llvm.address_space<0>>> {
   %res = ptr.ptr_add %ptrs, %offset : vector<4x!ptr.ptr<#llvm.address_space<0>>>, i32
   llvm.return %res : vector<4x!ptr.ptr<#llvm.address_space<0>>>
+}
+
+// CHECK-LABEL: declare ptr @nvvm_ptr_address_space(ptr addrspace(1), ptr addrspace(3), ptr addrspace(4), ptr addrspace(5), ptr addrspace(6), ptr addrspace(7))
+llvm.func @nvvm_ptr_address_space(
+    !ptr.ptr<#nvvm.memory_space<global>>,
+    !ptr.ptr<#nvvm.memory_space<shared>>,
+    !ptr.ptr<#nvvm.memory_space<constant>>,
+    !ptr.ptr<#nvvm.memory_space<local>>,
+    !ptr.ptr<#nvvm.memory_space<tensor>>,
+    !ptr.ptr<#nvvm.memory_space<shared_cluster>>
+  ) -> !ptr.ptr<#nvvm.memory_space<generic>>
+
+// CHECK-LABEL: define void @llvm_ops_with_ptr_nvvm_values
+// CHECK-SAME:   (ptr %[[ARG:.*]]) {
+// CHECK-NEXT:   %[[V0:.*]] = load ptr addrspace(1), ptr %[[ARG]], align 8
+// CHECK-NEXT:   store ptr addrspace(1) %[[V0]], ptr %[[ARG]], align 8
+// CHECK-NEXT:   ret void
+// CHECK-NEXT: }
+llvm.func @llvm_ops_with_ptr_nvvm_values(%arg0: !llvm.ptr) {
+  %1 = llvm.load %arg0 : !llvm.ptr -> !ptr.ptr<#nvvm.memory_space<global>>
+  llvm.store %1, %arg0 : !ptr.ptr<#nvvm.memory_space<global>>, !llvm.ptr
+  llvm.return
+}
+
+// CHECK-LABEL: define { ptr, ptr addrspace(1), ptr addrspace(2) } @constant_address_op() {
+// CHECK-NEXT: ret { ptr, ptr addrspace(1), ptr addrspace(2) } { ptr null, ptr addrspace(1) inttoptr (i64 4096 to ptr addrspace(1)), ptr addrspace(2) inttoptr (i64 3735928559 to ptr addrspace(2)) }
+llvm.func @constant_address_op() ->
+    !llvm.struct<(!ptr.ptr<#llvm.address_space<0>>,
+                  !ptr.ptr<#llvm.address_space<1>>,
+                  !ptr.ptr<#llvm.address_space<2>>)> {
+  %0 = ptr.constant #ptr.null : !ptr.ptr<#llvm.address_space<0>>
+  %1 = ptr.constant #ptr.address<0x1000> : !ptr.ptr<#llvm.address_space<1>>
+  %2 = ptr.constant #ptr.address<3735928559> : !ptr.ptr<#llvm.address_space<2>>
+  %3 = llvm.mlir.poison : !llvm.struct<(!ptr.ptr<#llvm.address_space<0>>, !ptr.ptr<#llvm.address_space<1>>, !ptr.ptr<#llvm.address_space<2>>)>
+  %4 = llvm.insertvalue %0, %3[0] : !llvm.struct<(!ptr.ptr<#llvm.address_space<0>>, !ptr.ptr<#llvm.address_space<1>>, !ptr.ptr<#llvm.address_space<2>>)>
+  %5 = llvm.insertvalue %1, %4[1] : !llvm.struct<(!ptr.ptr<#llvm.address_space<0>>, !ptr.ptr<#llvm.address_space<1>>, !ptr.ptr<#llvm.address_space<2>>)>
+  %6 = llvm.insertvalue %2, %5[2] : !llvm.struct<(!ptr.ptr<#llvm.address_space<0>>, !ptr.ptr<#llvm.address_space<1>>, !ptr.ptr<#llvm.address_space<2>>)>
+  llvm.return %6 : !llvm.struct<(!ptr.ptr<#llvm.address_space<0>>, !ptr.ptr<#llvm.address_space<1>>, !ptr.ptr<#llvm.address_space<2>>)>
+}
+
+// Test gep folders.
+// CHECK-LABEL: define ptr @ptr_add_cst() {
+// CHECK-NEXT:   ret ptr inttoptr (i64 42 to ptr)
+llvm.func @ptr_add_cst() -> !ptr.ptr<#llvm.address_space<0>> {
+  %off = llvm.mlir.constant(42 : i32) : i32
+  %ptr = ptr.constant #ptr.null : !ptr.ptr<#llvm.address_space<0>>
+  %res = ptr.ptr_add %ptr, %off : !ptr.ptr<#llvm.address_space<0>>, i32
+  llvm.return %res : !ptr.ptr<#llvm.address_space<0>>
+}
+
+// CHECK-LABEL: define i64 @ptr_diff_scalar
+// CHECK-SAME: (ptr %[[PTR1:.*]], ptr %[[PTR2:.*]]) {
+// CHECK-NEXT:   %[[P1INT:.*]] = ptrtoaddr ptr %[[PTR1]] to i64
+// CHECK-NEXT:   %[[P2INT:.*]] = ptrtoaddr ptr %[[PTR2]] to i64
+// CHECK-NEXT:   %[[DIFF:.*]] = sub i64 %[[P1INT]], %[[P2INT]]
+// CHECK-NEXT:   ret i64 %[[DIFF]]
+// CHECK-NEXT: }
+llvm.func @ptr_diff_scalar(%ptr1: !ptr.ptr<#llvm.address_space<0>>, %ptr2: !ptr.ptr<#llvm.address_space<0>>) -> i64 {
+  %diff = ptr.ptr_diff %ptr1, %ptr2 : !ptr.ptr<#llvm.address_space<0>> -> i64
+  llvm.return %diff : i64
+}
+
+// CHECK-LABEL: define i32 @ptr_diff_scalar_i32
+// CHECK-SAME: (ptr %[[PTR1:.*]], ptr %[[PTR2:.*]]) {
+// CHECK-NEXT:   %[[P1INT:.*]] = ptrtoaddr ptr %[[PTR1]] to i64
+// CHECK-NEXT:   %[[P2INT:.*]] = ptrtoaddr ptr %[[PTR2]] to i64
+// CHECK-NEXT:   %[[DIFF:.*]] = sub i64 %[[P1INT]], %[[P2INT]]
+// CHECK-NEXT:   %[[TRUNC:.*]] = trunc i64 %[[DIFF]] to i32
+// CHECK-NEXT:   ret i32 %[[TRUNC]]
+// CHECK-NEXT: }
+llvm.func @ptr_diff_scalar_i32(%ptr1: !ptr.ptr<#llvm.address_space<0>>, %ptr2: !ptr.ptr<#llvm.address_space<0>>) -> i32 {
+  %diff = ptr.ptr_diff %ptr1, %ptr2 : !ptr.ptr<#llvm.address_space<0>> -> i32
+  llvm.return %diff : i32
+}
+
+// CHECK-LABEL: define <4 x i64> @ptr_diff_vector
+// CHECK-SAME: (<4 x ptr> %[[PTRS1:.*]], <4 x ptr> %[[PTRS2:.*]]) {
+// CHECK-NEXT:   %[[P1INT:.*]] = ptrtoaddr <4 x ptr> %[[PTRS1]] to <4 x i64>
+// CHECK-NEXT:   %[[P2INT:.*]] = ptrtoaddr <4 x ptr> %[[PTRS2]] to <4 x i64>
+// CHECK-NEXT:   %[[DIFF:.*]] = sub <4 x i64> %[[P1INT]], %[[P2INT]]
+// CHECK-NEXT:   ret <4 x i64> %[[DIFF]]
+// CHECK-NEXT: }
+llvm.func @ptr_diff_vector(%ptrs1: vector<4x!ptr.ptr<#llvm.address_space<0>>>, %ptrs2: vector<4x!ptr.ptr<#llvm.address_space<0>>>) -> vector<4xi64> {
+  %diffs = ptr.ptr_diff %ptrs1, %ptrs2 : vector<4x!ptr.ptr<#llvm.address_space<0>>> -> vector<4xi64>
+  llvm.return %diffs : vector<4xi64>
+}
+
+// CHECK-LABEL: define <8 x i32> @ptr_diff_vector_i32
+// CHECK-SAME: (<8 x ptr> %[[PTRS1:.*]], <8 x ptr> %[[PTRS2:.*]]) {
+// CHECK-NEXT:   %[[P1INT:.*]] = ptrtoaddr <8 x ptr> %[[PTRS1]] to <8 x i64>
+// CHECK-NEXT:   %[[P2INT:.*]] = ptrtoaddr <8 x ptr> %[[PTRS2]] to <8 x i64>
+// CHECK-NEXT:   %[[DIFF:.*]] = sub <8 x i64> %[[P1INT]], %[[P2INT]]
+// CHECK-NEXT:   %[[TRUNC:.*]] = trunc <8 x i64> %[[DIFF]] to <8 x i32>
+// CHECK-NEXT:   ret <8 x i32> %[[TRUNC]]
+// CHECK-NEXT: }
+llvm.func @ptr_diff_vector_i32(%ptrs1: vector<8x!ptr.ptr<#llvm.address_space<0>>>, %ptrs2: vector<8x!ptr.ptr<#llvm.address_space<0>>>) -> vector<8xi32> {
+  %diffs = ptr.ptr_diff %ptrs1, %ptrs2 : vector<8x!ptr.ptr<#llvm.address_space<0>>> -> vector<8xi32>
+  llvm.return %diffs : vector<8xi32>
+}
+
+// CHECK-LABEL: define i64 @ptr_diff_with_constants() {
+// CHECK-NEXT:   ret i64 4096
+// CHECK-NEXT: }
+llvm.func @ptr_diff_with_constants() -> i64 {
+  %ptr1 = ptr.constant #ptr.address<0x2000> : !ptr.ptr<#llvm.address_space<0>>
+  %ptr2 = ptr.constant #ptr.address<0x1000> : !ptr.ptr<#llvm.address_space<0>>
+  %diff = ptr.ptr_diff %ptr1, %ptr2 : !ptr.ptr<#llvm.address_space<0>> -> i64
+  llvm.return %diff : i64
+}
+
+// CHECK-LABEL: define i64 @ptr_diff_with_flags_nsw
+// CHECK-SAME: (ptr %[[PTR1:.*]], ptr %[[PTR2:.*]]) {
+// CHECK-NEXT:   %[[P1INT:.*]] = ptrtoaddr ptr %[[PTR1]] to i64
+// CHECK-NEXT:   %[[P2INT:.*]] = ptrtoaddr ptr %[[PTR2]] to i64
+// CHECK-NEXT:   %[[DIFF:.*]] = sub nsw i64 %[[P1INT]], %[[P2INT]]
+// CHECK-NEXT:   ret i64 %[[DIFF]]
+// CHECK-NEXT: }
+llvm.func @ptr_diff_with_flags_nsw(%ptr1: !ptr.ptr<#llvm.address_space<0>>, %ptr2: !ptr.ptr<#llvm.address_space<0>>) -> i64 {
+  %diff = ptr.ptr_diff nsw %ptr1, %ptr2 : !ptr.ptr<#llvm.address_space<0>> -> i64
+  llvm.return %diff : i64
+}
+
+// CHECK-LABEL: define i64 @ptr_diff_with_flags_nuw
+// CHECK-SAME: (ptr %[[PTR1:.*]], ptr %[[PTR2:.*]]) {
+// CHECK-NEXT:   %[[P1INT:.*]] = ptrtoaddr ptr %[[PTR1]] to i64
+// CHECK-NEXT:   %[[P2INT:.*]] = ptrtoaddr ptr %[[PTR2]] to i64
+// CHECK-NEXT:   %[[DIFF:.*]] = sub nuw i64 %[[P1INT]], %[[P2INT]]
+// CHECK-NEXT:   ret i64 %[[DIFF]]
+// CHECK-NEXT: }
+llvm.func @ptr_diff_with_flags_nuw(%ptr1: !ptr.ptr<#llvm.address_space<0>>, %ptr2: !ptr.ptr<#llvm.address_space<0>>) -> i64 {
+  %diff = ptr.ptr_diff nuw %ptr1, %ptr2 : !ptr.ptr<#llvm.address_space<0>> -> i64
+  llvm.return %diff : i64
+}
+
+// CHECK-LABEL: define i64 @ptr_diff_with_flags_nsw_nuw
+// CHECK-SAME: (ptr %[[PTR1:.*]], ptr %[[PTR2:.*]]) {
+// CHECK-NEXT:   %[[P1INT:.*]] = ptrtoaddr ptr %[[PTR1]] to i64
+// CHECK-NEXT:   %[[P2INT:.*]] = ptrtoaddr ptr %[[PTR2]] to i64
+// CHECK-NEXT:   %[[DIFF:.*]] = sub nuw nsw i64 %[[P1INT]], %[[P2INT]]
+// CHECK-NEXT:   ret i64 %[[DIFF]]
+// CHECK-NEXT: }
+llvm.func @ptr_diff_with_flags_nsw_nuw(%ptr1: !ptr.ptr<#llvm.address_space<0>>, %ptr2: !ptr.ptr<#llvm.address_space<0>>) -> i64 {
+  %diff = ptr.ptr_diff nsw | nuw %ptr1, %ptr2 : !ptr.ptr<#llvm.address_space<0>> -> i64
+  llvm.return %diff : i64
 }

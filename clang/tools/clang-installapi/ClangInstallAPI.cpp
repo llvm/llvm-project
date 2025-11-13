@@ -35,7 +35,7 @@
 
 using namespace clang;
 using namespace clang::installapi;
-using namespace clang::driver::options;
+using namespace clang::options;
 using namespace llvm::opt;
 using namespace llvm::MachO;
 
@@ -71,7 +71,7 @@ static bool runFrontend(StringRef ProgName, Twine Label, bool Verbose,
 static bool run(ArrayRef<const char *> Args, const char *ProgName) {
   // Setup Diagnostics engine.
   DiagnosticOptions DiagOpts;
-  const llvm::opt::OptTable &ClangOpts = clang::driver::getDriverOptTable();
+  const llvm::opt::OptTable &ClangOpts = getDriverOptTable();
   unsigned MissingArgIndex, MissingArgCount;
   llvm::opt::InputArgList ParsedArgs = ClangOpts.ParseArgs(
       ArrayRef(Args).slice(1), MissingArgIndex, MissingArgCount);
@@ -114,8 +114,9 @@ static bool run(ArrayRef<const char *> Args, const char *ProgName) {
 
   // Set up compilation.
   std::unique_ptr<CompilerInstance> CI(new CompilerInstance());
+  CI->setVirtualFileSystem(FM->getVirtualFileSystemPtr());
   CI->setFileManager(FM);
-  CI->createDiagnostics(FM->getVirtualFileSystem());
+  CI->createDiagnostics();
   if (!CI->hasDiagnostics())
     return EXIT_FAILURE;
 

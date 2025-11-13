@@ -1,7 +1,7 @@
 {
   "name": "lldb-dap",
   "displayName": "LLDB DAP",
-  "version": "0.2.16",
+  "version": "0.2.18",
   "publisher": "llvm-vs-code-extensions",
   "homepage": "https://lldb.llvm.org",
   "description": "Debugging with LLDB in Visual Studio Code",
@@ -27,6 +27,9 @@
   "categories": [
     "Debuggers"
   ],
+  "dependencies": {
+    "chokidar": "^4.0.3"
+  },
   "devDependencies": {
     "@types/node": "^18.19.41",
     "@types/tabulator-tables": "^6.2.10",
@@ -46,13 +49,14 @@
   ],
   "main": "./out/extension",
   "scripts": {
+    "bundle-extension": "npx tsc -p ./ --noEmit && npx esbuild src-ts/extension.ts --bundle --outfile=out/extension.js --external:vscode --format=cjs --platform=node --target=node22 --minify",
     "bundle-symbols-table-view": "npx tsc -p src-ts/webview --noEmit && npx esbuild src-ts/webview/symbols-table-view.ts --bundle --format=iife --outdir=./out/webview",
     "bundle-tabulator": "cp node_modules/tabulator-tables/dist/js/tabulator.min.js ./out/webview/ && cp node_modules/tabulator-tables/dist/css/tabulator_midnight.min.css ./out/webview/ && cp node_modules/tabulator-tables/dist/css/tabulator_simple.min.css ./out/webview/",
     "bundle-webview": "npm run bundle-symbols-table-view && npm run bundle-tabulator",
-    "vscode:prepublish": "npm run bundle-webview && tsc -p ./",
+    "vscode:prepublish": "npm run bundle-webview && npm run bundle-extension",
     "watch": "npm run bundle-webview && tsc -watch -p ./",
     "format": "npx prettier './src-ts/' --write",
-    "package": "rm -rf ./out/lldb-dap.vsix && vsce package --out ./out/lldb-dap.vsix",
+    "package": "rm -rf ./out && vsce package --out ./out/lldb-dap.vsix",
     "publish": "vsce publish",
     "vscode-uninstall": "code --uninstall-extension llvm-vs-code-extensions.lldb-dap",
     "vscode-install": "code --install-extension ./out/lldb-dap.vsix"
@@ -348,6 +352,9 @@
         "language": "objective-c"
       },
       {
+        "language": "objective-cpp"
+      },
+      {
         "language": "objectpascal"
       },
       {
@@ -375,6 +382,7 @@
           "fortran-modern",
           "nim",
           "objective-c",
+          "objective-cpp",
           "objectpascal",
           "pascal",
           "rust",
@@ -409,7 +417,7 @@
                 "anyOf": [
                   {
                     "type": "object",
-                    "markdownDescription": "Additional environment variables to set when launching the debug adapter executable. E.g. `{ \"FOO\": \"1\" }`",
+                    "markdownDescription": "Additional environment variables to set when launching the debug adapter executable. For example `{ \"FOO\": \"1\" }`",
                     "patternProperties": {
                       ".*": {
                         "type": "string"
@@ -419,10 +427,10 @@
                   },
                   {
                     "type": "array",
-                    "markdownDescription": "Additional environment variables to set when launching the debug adapter executable. E.g. `[\"FOO=1\", \"BAR\"]`",
+                    "markdownDescription": "Additional environment variables to set when launching the debug adapter executable. For example `[\"FOO=1\", \"BAR\"]`",
                     "items": {
                       "type": "string",
-                      "pattern": "^((\\w+=.*)|^\\w+)$"
+                      "pattern": "^\\w+(=.*)?$"
                     },
                     "default": []
                   }
@@ -445,7 +453,7 @@
               "cwd": {
                 "type": "string",
                 "description": "Program working directory.",
-                "default": "${workspaceRoot}"
+                "default": "${workspaceFolder}"
               },
               "env": {
                 "anyOf": [
@@ -615,6 +623,17 @@
                 "description": "Specify where to launch the program: internal console, integrated terminal or external terminal.",
                 "default": "internalConsole"
               },
+              "stdio": {
+                "type": "array",
+                "items": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "description": "The stdio property specifies the redirection targets for the debuggee's stdio streams. A null value redirects a stream to the default debug terminal. String can be a path to file, named pipe or TTY device. If less than three values are provided, the list will be padded with the last value. Specifying more than three values will create additional file descriptors (4, 5, etc.).",
+                "default": []
+              },
               "timeout": {
                 "type": "number",
                 "description": "The time in seconds to wait for a program to stop at entry point when launching with \"launchCommands\". Defaults to 30 seconds."
@@ -671,6 +690,29 @@
                   "type": "string"
                 },
                 "markdownDescription": "The list of additional arguments used to launch the debug adapter executable. Overrides any user or workspace settings."
+              },
+              "debugAdapterEnv": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "markdownDescription": "Additional environment variables to set when launching the debug adapter executable. For example `{ \"FOO\": \"1\" }`",
+                    "patternProperties": {
+                      ".*": {
+                        "type": "string"
+                      }
+                    },
+                    "default": {}
+                  },
+                  {
+                    "type": "array",
+                    "markdownDescription": "Additional environment variables to set when launching the debug adapter executable. For example `[\"FOO=1\", \"BAR\"]`",
+                    "items": {
+                      "type": "string",
+                      "pattern": "^\\w+(=.*)?$"
+                    },
+                    "default": []
+                  }
+                ]
               },
               "program": {
                 "type": "string",
@@ -841,10 +883,10 @@
             "type": "lldb-dap",
             "request": "launch",
             "name": "Debug",
-            "program": "${workspaceRoot}/<your program>",
+            "program": "${workspaceFolder}/<your program>",
             "args": [],
             "env": [],
-            "cwd": "${workspaceRoot}"
+            "cwd": "${workspaceFolder}"
           }
         ],
         "configurationSnippets": [
@@ -855,10 +897,10 @@
               "type": "lldb-dap",
               "request": "launch",
               "name": "${2:Launch}",
-              "program": "^\"\\${workspaceRoot}/${1:<your program>}\"",
+              "program": "^\"\\${workspaceFolder}/${1:<your program>}\"",
               "args": [],
               "env": [],
-              "cwd": "^\"\\${workspaceRoot}\""
+              "cwd": "^\"\\${workspaceFolder}\""
             }
           },
           {

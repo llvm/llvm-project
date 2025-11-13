@@ -29,6 +29,18 @@
 using namespace clang;
 using namespace api_notes;
 
+namespace llvm {
+namespace yaml {
+template <> struct ScalarEnumerationTraits<SwiftSafetyKind> {
+  static void enumeration(IO &IO, SwiftSafetyKind &SK) {
+    IO.enumCase(SK, "unspecified", SwiftSafetyKind::Unspecified);
+    IO.enumCase(SK, "safe", SwiftSafetyKind::Safe);
+    IO.enumCase(SK, "unsafe", SwiftSafetyKind::Unsafe);
+  }
+};
+} // namespace yaml
+} // namespace llvm
+
 namespace {
 enum class APIAvailability {
   Available = 0,
@@ -163,6 +175,7 @@ struct Method {
   bool Required = false;
   StringRef ResultType;
   StringRef SwiftReturnOwnership;
+  SwiftSafetyKind SafetyKind = SwiftSafetyKind::None;
 };
 
 typedef std::vector<Method> MethodsSeq;
@@ -199,6 +212,7 @@ template <> struct MappingTraits<Method> {
     IO.mapOptional("ResultType", M.ResultType, StringRef(""));
     IO.mapOptional("SwiftReturnOwnership", M.SwiftReturnOwnership,
                    StringRef(""));
+    IO.mapOptional("SwiftSafety", M.SafetyKind, SwiftSafetyKind::None);
   }
 };
 } // namespace yaml
@@ -214,6 +228,7 @@ struct Property {
   StringRef SwiftName;
   std::optional<bool> SwiftImportAsAccessors;
   StringRef Type;
+  SwiftSafetyKind SafetyKind = SwiftSafetyKind::None;
 };
 
 typedef std::vector<Property> PropertiesSeq;
@@ -235,6 +250,7 @@ template <> struct MappingTraits<Property> {
     IO.mapOptional("SwiftName", P.SwiftName, StringRef(""));
     IO.mapOptional("SwiftImportAsAccessors", P.SwiftImportAsAccessors);
     IO.mapOptional("Type", P.Type, StringRef(""));
+    IO.mapOptional("SwiftSafety", P.SafetyKind, SwiftSafetyKind::None);
   }
 };
 } // namespace yaml
@@ -254,6 +270,7 @@ struct Class {
   std::optional<std::string> SwiftConformance;
   MethodsSeq Methods;
   PropertiesSeq Properties;
+  SwiftSafetyKind SafetyKind = SwiftSafetyKind::None;
 };
 
 typedef std::vector<Class> ClassesSeq;
@@ -279,6 +296,7 @@ template <> struct MappingTraits<Class> {
     IO.mapOptional("SwiftConformsTo", C.SwiftConformance);
     IO.mapOptional("Methods", C.Methods);
     IO.mapOptional("Properties", C.Properties);
+    IO.mapOptional("SwiftSafety", C.SafetyKind, SwiftSafetyKind::None);
   }
 };
 } // namespace yaml
@@ -297,6 +315,7 @@ struct Function {
   StringRef Type;
   StringRef ResultType;
   StringRef SwiftReturnOwnership;
+  SwiftSafetyKind SafetyKind = SwiftSafetyKind::None;
 };
 
 typedef std::vector<Function> FunctionsSeq;
@@ -321,6 +340,7 @@ template <> struct MappingTraits<Function> {
     IO.mapOptional("ResultType", F.ResultType, StringRef(""));
     IO.mapOptional("SwiftReturnOwnership", F.SwiftReturnOwnership,
                    StringRef(""));
+    IO.mapOptional("SwiftSafety", F.SafetyKind, SwiftSafetyKind::None);
   }
 };
 } // namespace yaml
@@ -334,6 +354,7 @@ struct GlobalVariable {
   std::optional<bool> SwiftPrivate;
   StringRef SwiftName;
   StringRef Type;
+  SwiftSafetyKind SafetyKind = SwiftSafetyKind::None;
 };
 
 typedef std::vector<GlobalVariable> GlobalVariablesSeq;
@@ -353,6 +374,7 @@ template <> struct MappingTraits<GlobalVariable> {
     IO.mapOptional("SwiftPrivate", GV.SwiftPrivate);
     IO.mapOptional("SwiftName", GV.SwiftName, StringRef(""));
     IO.mapOptional("Type", GV.Type, StringRef(""));
+    IO.mapOptional("SwiftSafety", GV.SafetyKind, SwiftSafetyKind::None);
   }
 };
 } // namespace yaml
@@ -364,6 +386,7 @@ struct EnumConstant {
   AvailabilityItem Availability;
   std::optional<bool> SwiftPrivate;
   StringRef SwiftName;
+  SwiftSafetyKind SafetyKind = SwiftSafetyKind::None;
 };
 
 typedef std::vector<EnumConstant> EnumConstantsSeq;
@@ -381,6 +404,7 @@ template <> struct MappingTraits<EnumConstant> {
     IO.mapOptional("AvailabilityMsg", EC.Availability.Msg, StringRef(""));
     IO.mapOptional("SwiftPrivate", EC.SwiftPrivate);
     IO.mapOptional("SwiftName", EC.SwiftName, StringRef(""));
+    IO.mapOptional("SwiftSafety", EC.SafetyKind, SwiftSafetyKind::None);
   }
 };
 } // namespace yaml
@@ -424,6 +448,7 @@ struct Field {
   std::optional<bool> SwiftPrivate;
   StringRef SwiftName;
   StringRef Type;
+  SwiftSafetyKind SafetyKind = SwiftSafetyKind::None;
 };
 
 typedef std::vector<Field> FieldsSeq;
@@ -443,6 +468,7 @@ template <> struct MappingTraits<Field> {
     IO.mapOptional("SwiftPrivate", F.SwiftPrivate);
     IO.mapOptional("SwiftName", F.SwiftName, StringRef(""));
     IO.mapOptional("Type", F.Type, StringRef(""));
+    IO.mapOptional("SwiftSafety", F.SafetyKind, SwiftSafetyKind::None);
   }
 };
 } // namespace yaml
@@ -470,6 +496,7 @@ struct Tag {
   std::optional<EnumConvenienceAliasKind> EnumConvenienceKind;
   std::optional<bool> SwiftCopyable;
   std::optional<bool> SwiftEscapable;
+  SwiftSafetyKind SafetyKind = SwiftSafetyKind::None;
   FunctionsSeq Methods;
   FieldsSeq Fields;
 
@@ -515,6 +542,7 @@ template <> struct MappingTraits<Tag> {
     IO.mapOptional("Methods", T.Methods);
     IO.mapOptional("Fields", T.Fields);
     IO.mapOptional("Tags", T.Tags);
+    IO.mapOptional("SwiftSafety", T.SafetyKind, SwiftSafetyKind::None);
   }
 };
 } // namespace yaml
@@ -530,6 +558,7 @@ struct Typedef {
   std::optional<StringRef> NSErrorDomain;
   std::optional<SwiftNewTypeKind> SwiftType;
   std::optional<std::string> SwiftConformance;
+  const SwiftSafetyKind SafetyKind = SwiftSafetyKind::None;
 };
 
 typedef std::vector<Typedef> TypedefsSeq;
@@ -602,6 +631,7 @@ struct Namespace {
   StringRef SwiftName;
   std::optional<bool> SwiftPrivate;
   TopLevelItems Items;
+  const SwiftSafetyKind SafetyKind = SwiftSafetyKind::None;
 };
 } // namespace
 
@@ -797,6 +827,8 @@ public:
                            StringRef APIName) {
     convertAvailability(Common.Availability, Info, APIName);
     Info.setSwiftPrivate(Common.SwiftPrivate);
+    if (Common.SafetyKind != SwiftSafetyKind::None)
+      Info.setSwiftSafety(Common.SafetyKind);
     Info.SwiftName = std::string(Common.SwiftName);
   }
 
@@ -956,6 +988,8 @@ public:
   void convertFunction(const Function &Function, FuncOrMethodInfo &FI) {
     convertAvailability(Function.Availability, FI, Function.Name);
     FI.setSwiftPrivate(Function.SwiftPrivate);
+    if (Function.SafetyKind != SwiftSafetyKind::None)
+      FI.setSwiftSafety(Function.SafetyKind);
     FI.SwiftName = std::string(Function.SwiftName);
     std::optional<ParamInfo> This;
     convertParams(Function.Params, FI, This);

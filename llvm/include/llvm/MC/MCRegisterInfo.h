@@ -45,7 +45,7 @@ public:
   const uint16_t RegSetSize;
   const uint16_t ID;
   const uint16_t RegSizeInBits;
-  const int8_t CopyCost;
+  const uint8_t CopyCost;
   const bool Allocatable;
   const bool BaseClass;
 
@@ -94,7 +94,7 @@ public:
   /// getCopyCost - Return the cost of copying a value between two registers in
   /// this class. A negative number means the register class is very expensive
   /// to copy e.g. status flag register classes.
-  int getCopyCost() const { return CopyCost; }
+  uint8_t getCopyCost() const { return CopyCost; }
 
   /// isAllocatable - Return true if this register class may be used to create
   /// virtual registers.
@@ -272,7 +272,7 @@ public:
   friend class MCRegUnitRootIterator;
   friend class MCRegAliasIterator;
 
-  virtual ~MCRegisterInfo() {}
+  virtual ~MCRegisterInfo() = default;
 
   /// Initialize MCRegisterInfo, called by TableGen
   /// auto-generated routines. *DO NOT USE*.
@@ -687,7 +687,7 @@ public:
   }
 
   /// Returns a (RegUnit, LaneMask) pair.
-  std::pair<unsigned,LaneBitmask> operator*() const {
+  std::pair<MCRegUnit, LaneBitmask> operator*() const {
     return std::make_pair(*RUIter, *MaskListIter);
   }
 
@@ -719,7 +719,7 @@ class MCRegUnitRootIterator {
 public:
   MCRegUnitRootIterator() = default;
 
-  MCRegUnitRootIterator(unsigned RegUnit, const MCRegisterInfo *MCRI) {
+  MCRegUnitRootIterator(MCRegUnit RegUnit, const MCRegisterInfo *MCRI) {
     assert(RegUnit < MCRI->getNumRegUnits() && "Invalid register unit");
     Reg0 = MCRI->RegUnitRoots[RegUnit][0];
     Reg1 = MCRI->RegUnitRoots[RegUnit][1];

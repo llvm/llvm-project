@@ -389,6 +389,7 @@ if (NOT MSVC)
     set(i386_SOURCES
       ${i386_SOURCES}
       i386/chkstk.S
+      i386/chkstk2.S
     )
   endif()
 else () # MSVC
@@ -674,6 +675,11 @@ if (MINGW)
   )
 endif()
 
+# Don't build enable_execute_stack on arm64 darwin.
+if (APPLE)
+  list(REMOVE_ITEM aarch64_SOURCES enable_execute_stack.c)
+endif()
+
 set(amdgcn_SOURCES ${GENERIC_SOURCES})
 
 set(armv4t_SOURCES ${arm_min_SOURCES})
@@ -811,14 +817,15 @@ set(s390x_SOURCES
   ${GENERIC_TF_SOURCES}
 )
 
-set(wasm32_SOURCES
+
+set(wasm_SOURCES
+  wasm/__c_longjmp.S
+  wasm/__cpp_exception.S
   ${GENERIC_TF_SOURCES}
   ${GENERIC_SOURCES}
 )
-set(wasm64_SOURCES
-  ${GENERIC_TF_SOURCES}
-  ${GENERIC_SOURCES}
-)
+set(wasm32_SOURCES ${wasm_SOURCES})
+set(wasm64_SOURCES ${wasm_SOURCES})
 
 set(ve_SOURCES
   ve/grow_stack.S

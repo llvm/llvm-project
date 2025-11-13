@@ -17,7 +17,7 @@
 ; NORETP: define hidden void @__typeid_typeid1_rv_0_branch_funnel(ptr nest %0, ...) !prof !11
 ; NORETP: define internal void @branch_funnel(ptr nest %0, ...) !prof !11
 ; NORETP: define internal void @branch_funnel.1(ptr nest %0, ...) !prof !11
-; NORETP: !11 = !{!"unknown"}
+; NORETP: !11 = !{!"unknown", !"wholeprogramdevirt"}
 
 ; O3: define hidden void @__typeid_typeid1_0_branch_funnel(ptr nest %0, ...) local_unnamed_addr #5 !prof !11
 ; O3: define hidden void @__typeid_typeid1_rv_0_branch_funnel(ptr nest %0, ...) local_unnamed_addr #5 !prof !11
@@ -27,7 +27,7 @@
 ; O3: define hidden void @__typeid_typeid3_rv_0_branch_funnel(ptr nest %0, ...) local_unnamed_addr #5 !prof !12
 ; O3: !10 = !{!"function_entry_count", i64 1000}
 ; O3: !11 = !{!"function_entry_count", i64 3000}
-; O3: !12 = !{!"unknown"}
+; O3: !12 = !{!"unknown", !"wholeprogramdevirt"}
 
 target datalayout = "e-p:64:64"
 target triple = "x86_64-unknown-linux-gnu"

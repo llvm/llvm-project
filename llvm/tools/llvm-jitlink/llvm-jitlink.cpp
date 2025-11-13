@@ -40,6 +40,7 @@
 #include "llvm/ExecutionEngine/Orc/SectCreate.h"
 #include "llvm/ExecutionEngine/Orc/SelfExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
+#include "llvm/ExecutionEngine/Orc/SimpleRemoteMemoryMapper.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/JITLoaderGDB.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/JITLoaderPerf.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/JITLoaderVTune.h"
@@ -312,10 +313,19 @@ static cl::opt<bool>
                                cl::desc("Show FailedToMaterialize errors"),
                                cl::init(false), cl::cat(JITLinkCategory));
 
-static cl::opt<bool> UseSharedMemory(
-    "use-shared-memory",
-    cl::desc("Use shared memory to transfer generated code and data"),
-    cl::init(false), cl::cat(JITLinkCategory));
+enum class MemMgr { Default, Generic, SimpleRemote, Shared };
+
+static cl::opt<MemMgr> UseMemMgr(
+    "use-memmgr", cl::desc("Choose memory manager"), cl::init(MemMgr::Generic),
+    cl::values(clEnumValN(MemMgr::Default, "default",
+                          "Use setup default (InProcess or EPCGeneric)"),
+               clEnumValN(MemMgr::Generic, "generic",
+                          "Generic remote memory manager"),
+               clEnumValN(MemMgr::SimpleRemote, "simple-remote",
+                          "Mapper memory manager with simple-remote backend"),
+               clEnumValN(MemMgr::Shared, "shared",
+                          "Mapper memory manager with shared-memory manager")),
+    cl::cat(JITLinkCategory));
 
 static cl::opt<std::string>
     OverrideTriple("triple", cl::desc("Override target triple detection"),
@@ -623,8 +633,9 @@ public:
         });
   }
 
-  char *prepare(ExecutorAddr Addr, size_t ContentSize) override {
-    return InProcessMemoryMapper::prepare(Addr - DeltaAddr, ContentSize);
+  char *prepare(jitlink::LinkGraph &G, ExecutorAddr Addr,
+                size_t ContentSize) override {
+    return InProcessMemoryMapper::prepare(G, Addr - DeltaAddr, ContentSize);
   }
 
   void initialize(AllocInfo &AI, OnInitializedFunction OnInitialized) override {
@@ -717,6 +728,27 @@ static std::unique_ptr<JITLinkMemoryManager> createInProcessMemoryManager() {
 }
 
 Expected<std::unique_ptr<jitlink::JITLinkMemoryManager>>
+createSimpleRemoteMemoryManager(SimpleRemoteEPC &SREPC) {
+  SimpleRemoteMemoryMapper::SymbolAddrs SAs;
+  if (auto Err = SREPC.getBootstrapSymbols(
+          {{SAs.Instance, rt::SimpleExecutorMemoryManagerInstanceName},
+           {SAs.Reserve, rt::SimpleExecutorMemoryManagerReserveWrapperName},
+           {SAs.Initialize,
+            rt::SimpleExecutorMemoryManagerInitializeWrapperName},
+           {SAs.Deinitialize,
+            rt::SimpleExecutorMemoryManagerDeinitializeWrapperName},
+           {SAs.Release, rt::SimpleExecutorMemoryManagerReleaseWrapperName}}))
+    return std::move(Err);
+#ifdef _WIN32
+  size_t SlabSize = 1024 * 1024;
+#else
+  size_t SlabSize = 1024 * 1024 * 1024;
+#endif
+  return MapperJITLinkMemoryManager::CreateWithMapper<SimpleRemoteMemoryMapper>(
+      SlabSize, SREPC, SAs);
+}
+
+Expected<std::unique_ptr<jitlink::JITLinkMemoryManager>>
 createSharedMemoryManager(SimpleRemoteEPC &SREPC) {
   SharedMemoryMapper::SymbolAddrs SAs;
   if (auto Err = SREPC.getBootstrapSymbols(
@@ -744,6 +776,21 @@ createSharedMemoryManager(SimpleRemoteEPC &SREPC) {
       SlabSize, SREPC, SAs);
 }
 
+#if LLVM_ON_UNIX && LLVM_ENABLE_THREADS
+static void setupEPCRemoteMemoryManager(SimpleRemoteEPC::Setup &S) {
+  switch (UseMemMgr) {
+  case MemMgr::Default:
+  case MemMgr::Generic:
+    break;
+  case MemMgr::SimpleRemote:
+    S.CreateMemoryManager = createSimpleRemoteMemoryManager;
+    break;
+  case MemMgr::Shared:
+    S.CreateMemoryManager = createSharedMemoryManager;
+    break;
+  }
+}
+#endif
 
 static Expected<MaterializationUnit::Interface>
 getTestObjectFileInterface(Session &S, MemoryBufferRef O) {
@@ -903,8 +950,7 @@ static Expected<std::unique_ptr<ExecutorProcessControl>> launchExecutor() {
   close(FromExecutor[WriteEnd]);
 
   auto S = SimpleRemoteEPC::Setup();
-  if (UseSharedMemory)
-    S.CreateMemoryManager = createSharedMemoryManager;
+  setupEPCRemoteMemoryManager(S);
 
   return SimpleRemoteEPC::Create<FDSimpleRemoteEPCTransport>(
       std::make_unique<DynamicThreadPoolTaskDispatcher>(MaterializationThreads),
@@ -993,8 +1039,7 @@ static Expected<std::unique_ptr<ExecutorProcessControl>> connectToExecutor() {
     return SockFD.takeError();
 
   auto S = SimpleRemoteEPC::Setup();
-  if (UseSharedMemory)
-    S.CreateMemoryManager = createSharedMemoryManager;
+  setupEPCRemoteMemoryManager(S);
 
   return SimpleRemoteEPC::Create<FDSimpleRemoteEPCTransport>(
       std::make_unique<DynamicThreadPoolTaskDispatcher>(std::nullopt),
@@ -1519,10 +1564,10 @@ private:
 
 static StringRef detectStubKind(const Session::MemoryRegionInfo &Stub) {
   using namespace support::endian;
-  auto Armv7MovWTle = byte_swap<uint32_t, endianness::little>(0xe300c000);
-  auto Armv7BxR12le = byte_swap<uint32_t, endianness::little>(0xe12fff1c);
-  auto Thumbv7MovWTle = byte_swap<uint32_t, endianness::little>(0x0c00f240);
-  auto Thumbv7BxR12le = byte_swap<uint16_t, endianness::little>(0x4760);
+  auto Armv7MovWTle = byte_swap<uint32_t>(0xe300c000, endianness::little);
+  auto Armv7BxR12le = byte_swap<uint32_t>(0xe12fff1c, endianness::little);
+  auto Thumbv7MovWTle = byte_swap<uint32_t>(0x0c00f240, endianness::little);
+  auto Thumbv7BxR12le = byte_swap<uint16_t>(0x4760, endianness::little);
 
   MemoryMatcher M(Stub.getContent());
   if (M.matchMask(Thumbv7MovWTle)) {
@@ -1636,7 +1681,11 @@ static std::pair<Triple, SubtargetFeatures> getFirstFileTripleAndFeatures() {
       case file_magic::macho_object: {
         auto Obj = ExitOnErr(
             object::ObjectFile::createObjectFile(ObjBuffer->getMemBufferRef()));
-        Triple TT = Obj->makeTriple();
+        Triple TT;
+        if (auto *MachOObj = dyn_cast<object::MachOObjectFile>(Obj.get()))
+          TT = MachOObj->getArchTriple();
+        else
+          TT = Obj->makeTriple();
         if (Magic == file_magic::coff_object) {
           // TODO: Move this to makeTriple() if possible.
           TT.setObjectFormat(Triple::COFF);

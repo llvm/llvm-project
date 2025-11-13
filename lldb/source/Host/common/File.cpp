@@ -81,18 +81,17 @@ File::GetStreamOpenModeFromOptions(File::OpenOptions options) {
 Expected<File::OpenOptions> File::GetOptionsFromMode(llvm::StringRef mode) {
   OpenOptions opts =
       llvm::StringSwitch<OpenOptions>(mode)
-          .Cases("r", "rb", eOpenOptionReadOnly)
-          .Cases("w", "wb", eOpenOptionWriteOnly)
-          .Cases("a", "ab",
-                 eOpenOptionWriteOnly | eOpenOptionAppend |
-                 eOpenOptionCanCreate)
-          .Cases("r+", "rb+", "r+b", eOpenOptionReadWrite)
-          .Cases("w+", "wb+", "w+b",
-                 eOpenOptionReadWrite | eOpenOptionCanCreate |
-                 eOpenOptionTruncate)
-          .Cases("a+", "ab+", "a+b",
-                 eOpenOptionReadWrite | eOpenOptionAppend |
-                     eOpenOptionCanCreate)
+          .Cases({"r", "rb"}, eOpenOptionReadOnly)
+          .Cases({"w", "wb"}, eOpenOptionWriteOnly)
+          .Cases({"a", "ab"}, eOpenOptionWriteOnly | eOpenOptionAppend |
+                                  eOpenOptionCanCreate)
+          .Cases({"r+", "rb+", "r+b"}, eOpenOptionReadWrite)
+          .Cases({"w+", "wb+", "w+b"}, eOpenOptionReadWrite |
+                                           eOpenOptionCanCreate |
+                                           eOpenOptionTruncate)
+          .Cases({"a+", "ab+", "a+b"}, eOpenOptionReadWrite |
+                                           eOpenOptionAppend |
+                                           eOpenOptionCanCreate)
           .Default(eOpenOptionInvalid);
   if (opts != eOpenOptionInvalid)
     return opts;
@@ -659,7 +658,7 @@ Status NativeFile::Write(const void *buf, size_t &num_bytes) {
 #ifdef _WIN32
     if (is_windows_console) {
       llvm::raw_fd_ostream(_fileno(m_stream), false)
-          .write((char *)buf, num_bytes);
+          .write((const char *)buf, num_bytes);
       return error;
     }
 #endif

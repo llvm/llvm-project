@@ -768,58 +768,44 @@ Sema::ActOnDecompositionDeclarator(Scope *S, Declarator &D,
   // C++23 [dcl.pre]/6:
   //   Each decl-specifier in the decl-specifier-seq shall be static,
   //   thread_local, auto (9.2.9.6 [dcl.spec.auto]), or a cv-qualifier.
+  // C++23 [dcl.pre]/7:
+  //   Each decl-specifier in the decl-specifier-seq shall be constexpr,
+  //   constinit, static, thread_local, auto, or a cv-qualifier
   auto &DS = D.getDeclSpec();
-  {
-    // Note: While constrained-auto needs to be checked, we do so separately so
-    // we can emit a better diagnostic.
-    SmallVector<StringRef, 8> BadSpecifiers;
-    SmallVector<SourceLocation, 8> BadSpecifierLocs;
-    SmallVector<StringRef, 8> CPlusPlus20Specifiers;
-    SmallVector<SourceLocation, 8> CPlusPlus20SpecifierLocs;
-    if (auto SCS = DS.getStorageClassSpec()) {
-      if (SCS == DeclSpec::SCS_static) {
-        CPlusPlus20Specifiers.push_back(DeclSpec::getSpecifierName(SCS));
-        CPlusPlus20SpecifierLocs.push_back(DS.getStorageClassSpecLoc());
-      } else {
-        BadSpecifiers.push_back(DeclSpec::getSpecifierName(SCS));
-        BadSpecifierLocs.push_back(DS.getStorageClassSpecLoc());
-      }
-    }
-    if (auto TSCS = DS.getThreadStorageClassSpec()) {
-      CPlusPlus20Specifiers.push_back(DeclSpec::getSpecifierName(TSCS));
-      CPlusPlus20SpecifierLocs.push_back(DS.getThreadStorageClassSpecLoc());
-    }
-    if (DS.hasConstexprSpecifier()) {
-      BadSpecifiers.push_back(
-          DeclSpec::getSpecifierName(DS.getConstexprSpecifier()));
-      BadSpecifierLocs.push_back(DS.getConstexprSpecLoc());
-    }
-    if (DS.isInlineSpecified()) {
-      BadSpecifiers.push_back("inline");
-      BadSpecifierLocs.push_back(DS.getInlineSpecLoc());
-    }
+  auto DiagBadSpecifier = [&](StringRef Name, SourceLocation Loc) {
+    Diag(Loc, diag::err_decomp_decl_spec) << Name;
+  };
 
-    if (!BadSpecifiers.empty()) {
-      auto &&Err = Diag(BadSpecifierLocs.front(), diag::err_decomp_decl_spec);
-      Err << (int)BadSpecifiers.size()
-          << llvm::join(BadSpecifiers.begin(), BadSpecifiers.end(), " ");
-      // Don't add FixItHints to remove the specifiers; we do still respect
-      // them when building the underlying variable.
-      for (auto Loc : BadSpecifierLocs)
-        Err << SourceRange(Loc, Loc);
-    } else if (!CPlusPlus20Specifiers.empty()) {
-      auto &&Warn = DiagCompat(CPlusPlus20SpecifierLocs.front(),
-                               diag_compat::decomp_decl_spec);
-      Warn << (int)CPlusPlus20Specifiers.size()
-           << llvm::join(CPlusPlus20Specifiers.begin(),
-                         CPlusPlus20Specifiers.end(), " ");
-      for (auto Loc : CPlusPlus20SpecifierLocs)
-        Warn << SourceRange(Loc, Loc);
-    }
-    // We can't recover from it being declared as a typedef.
-    if (DS.getStorageClassSpec() == DeclSpec::SCS_typedef)
-      return nullptr;
+  auto DiagCpp20Specifier = [&](StringRef Name, SourceLocation Loc) {
+    DiagCompat(Loc, diag_compat::decomp_decl_spec) << Name;
+  };
+
+  if (auto SCS = DS.getStorageClassSpec()) {
+    if (SCS == DeclSpec::SCS_static)
+      DiagCpp20Specifier(DeclSpec::getSpecifierName(SCS),
+                         DS.getStorageClassSpecLoc());
+    else
+      DiagBadSpecifier(DeclSpec::getSpecifierName(SCS),
+                       DS.getStorageClassSpecLoc());
   }
+  if (auto TSCS = DS.getThreadStorageClassSpec())
+    DiagCpp20Specifier(DeclSpec::getSpecifierName(TSCS),
+                       DS.getThreadStorageClassSpecLoc());
+
+  if (DS.isInlineSpecified())
+    DiagBadSpecifier("inline", DS.getInlineSpecLoc());
+
+  if (ConstexprSpecKind ConstexprSpec = DS.getConstexprSpecifier();
+      ConstexprSpec != ConstexprSpecKind::Unspecified) {
+    if (ConstexprSpec == ConstexprSpecKind::Consteval ||
+        !getLangOpts().CPlusPlus26)
+      DiagBadSpecifier(DeclSpec::getSpecifierName(ConstexprSpec),
+                       DS.getConstexprSpecLoc());
+  }
+
+  // We can't recover from it being declared as a typedef.
+  if (DS.getStorageClassSpec() == DeclSpec::SCS_typedef)
+    return nullptr;
 
   // C++2a [dcl.struct.bind]p1:
   //   A cv that includes volatile is deprecated
@@ -1138,8 +1124,9 @@ static QualType getStdTrait(Sema &S, SourceLocation Loc, StringRef Trait,
   }
 
   // Build the template-id.
-  QualType TraitTy = S.CheckTemplateIdType(ElaboratedTypeKeyword::None,
-                                           TemplateName(TraitTD), Loc, Args);
+  QualType TraitTy = S.CheckTemplateIdType(
+      ElaboratedTypeKeyword::None, TemplateName(TraitTD), Loc, Args,
+      /*Scope=*/nullptr, /*ForNestedNameSpecifier=*/false);
   if (TraitTy.isNull())
     return QualType();
 
@@ -1176,7 +1163,7 @@ getTrivialTypeTemplateArgument(Sema &S, SourceLocation Loc, QualType T) {
 namespace { enum class IsTupleLike { TupleLike, NotTupleLike, Error }; }
 
 static IsTupleLike isTupleLike(Sema &S, SourceLocation Loc, QualType T,
-                               llvm::APSInt &Size) {
+                               unsigned &OutSize) {
   EnterExpressionEvaluationContext ContextRAII(
       S, Sema::ExpressionEvaluationContext::ConstantEvaluated);
 
@@ -1217,10 +1204,24 @@ static IsTupleLike isTupleLike(Sema &S, SourceLocation Loc, QualType T,
   if (E.isInvalid())
     return IsTupleLike::Error;
 
+  llvm::APSInt Size;
   E = S.VerifyIntegerConstantExpression(E.get(), &Size, Diagnoser);
   if (E.isInvalid())
     return IsTupleLike::Error;
 
+  // The implementation limit is UINT_MAX-1, to allow this to be passed down on
+  // an UnsignedOrNone.
+  if (Size < 0 || Size >= UINT_MAX) {
+    llvm::SmallVector<char, 16> Str;
+    Size.toString(Str);
+    S.Diag(Loc, diag::err_decomp_decl_std_tuple_size_invalid)
+        << printTemplateArgs(S.Context.getPrintingPolicy(), Args,
+                             /*Params=*/nullptr)
+        << StringRef(Str.data(), Str.size());
+    return IsTupleLike::Error;
+  }
+
+  OutSize = Size.getExtValue();
   return IsTupleLike::TupleLike;
 }
 
@@ -1278,9 +1279,8 @@ struct InitializingBinding {
 static bool checkTupleLikeDecomposition(Sema &S,
                                         ArrayRef<BindingDecl *> Bindings,
                                         VarDecl *Src, QualType DecompType,
-                                        const llvm::APSInt &TupleSize) {
+                                        unsigned NumElems) {
   auto *DD = cast<DecompositionDecl>(Src);
-  unsigned NumElems = (unsigned)TupleSize.getLimitedValue(UINT_MAX);
   if (CheckBindingsCount(S, DD, DecompType, Bindings, NumElems))
     return true;
 
@@ -1640,7 +1640,7 @@ void Sema::CheckCompleteDecompositionDeclaration(DecompositionDecl *DD) {
   // C++1z [dcl.decomp]/3:
   //   if the expression std::tuple_size<E>::value is a well-formed integral
   //   constant expression, [...]
-  llvm::APSInt TupleSize(32);
+  unsigned TupleSize;
   switch (isTupleLike(*this, DD->getLocation(), DecompType, TupleSize)) {
   case IsTupleLike::Error:
     DD->setInvalidDecl();
@@ -1689,12 +1689,12 @@ UnsignedOrNone Sema::GetDecompositionElementCount(QualType T,
   if (T->getAs<ComplexType>())
     return 2u;
 
-  llvm::APSInt TupleSize(Ctx.getTypeSize(Ctx.getSizeType()));
+  unsigned TupleSize;
   switch (isTupleLike(*this, Loc, T, TupleSize)) {
   case IsTupleLike::Error:
     return std::nullopt;
   case IsTupleLike::TupleLike:
-    return static_cast<unsigned>(TupleSize.getExtValue());
+    return TupleSize;
   case IsTupleLike::NotTupleLike:
     break;
   }
@@ -5630,7 +5630,7 @@ bool Sema::SetCtorInitializers(CXXConstructorDecl *Constructor, bool AnyErrors,
 
 static void PopulateKeysForFields(FieldDecl *Field, SmallVectorImpl<const void*> &IdealInits) {
   if (const RecordType *RT = Field->getType()->getAsCanonical<RecordType>()) {
-    const RecordDecl *RD = RT->getOriginalDecl();
+    const RecordDecl *RD = RT->getDecl();
     if (RD->isAnonymousStructOrUnion()) {
       for (auto *Field : RD->getDefinitionOrSelf()->fields())
         PopulateKeysForFields(Field, IdealInits);
@@ -7630,9 +7630,8 @@ static bool defaultedSpecialMemberIsConstexpr(
         continue;
       QualType BaseType = S.Context.getBaseElementType(F->getType());
       if (const RecordType *RecordTy = BaseType->getAsCanonical<RecordType>()) {
-        CXXRecordDecl *FieldRecDecl =
-            cast<CXXRecordDecl>(RecordTy->getOriginalDecl())
-                ->getDefinitionOrSelf();
+        auto *FieldRecDecl =
+            cast<CXXRecordDecl>(RecordTy->getDecl())->getDefinitionOrSelf();
         if (!specialMemberIsConstexpr(S, FieldRecDecl, CSM,
                                       BaseType.getCVRQualifiers(),
                                       ConstArg && !F->isMutable()))
@@ -8036,7 +8035,7 @@ public:
   DefaultedComparisonVisitor(Sema &S, CXXRecordDecl *RD, FunctionDecl *FD,
                              DefaultedComparisonKind DCK)
       : S(S), RD(RD), FD(FD), DCK(DCK) {
-    if (auto *Info = FD->getDefalutedOrDeletedInfo()) {
+    if (auto *Info = FD->getDefaultedOrDeletedInfo()) {
       // FIXME: Change CreateOverloadedBinOp to take an ArrayRef instead of an
       // UnresolvedSet to avoid this copy.
       Fns.assign(Info->getUnqualifiedLookups().begin(),
@@ -9546,14 +9545,32 @@ bool SpecialMemberDeletionInfo::shouldDeleteForSubobjectCall(
   CXXMethodDecl *Decl = SMOR.getMethod();
   FieldDecl *Field = Subobj.dyn_cast<FieldDecl*>();
 
-  int DiagKind = -1;
+  enum {
+    NotSet = -1,
+    NoDecl,
+    DeletedDecl,
+    MultipleDecl,
+    InaccessibleDecl,
+    NonTrivialDecl
+  } DiagKind = NotSet;
 
-  if (SMOR.getKind() == Sema::SpecialMemberOverloadResult::NoMemberOrDeleted)
-    DiagKind = !Decl ? 0 : 1;
-  else if (SMOR.getKind() == Sema::SpecialMemberOverloadResult::Ambiguous)
-    DiagKind = 2;
+  if (SMOR.getKind() == Sema::SpecialMemberOverloadResult::NoMemberOrDeleted) {
+    if (CSM == CXXSpecialMemberKind::DefaultConstructor && Field &&
+        Field->getParent()->isUnion()) {
+      // [class.default.ctor]p2:
+      //   A defaulted default constructor for class X is defined as deleted if
+      //   - X is a union that has a variant member with a non-trivial default
+      //     constructor and no variant member of X has a default member
+      //     initializer
+      const auto *RD = cast<CXXRecordDecl>(Field->getParent());
+      if (RD->hasInClassInitializer())
+        return false;
+    }
+    DiagKind = !Decl ? NoDecl : DeletedDecl;
+  } else if (SMOR.getKind() == Sema::SpecialMemberOverloadResult::Ambiguous)
+    DiagKind = MultipleDecl;
   else if (!isAccessible(Subobj, Decl))
-    DiagKind = 3;
+    DiagKind = InaccessibleDecl;
   else if (!IsDtorCallInCtor && Field && Field->getParent()->isUnion() &&
            !Decl->isTrivial()) {
     // A member of a union must have a trivial corresponding special member.
@@ -9569,13 +9586,13 @@ bool SpecialMemberDeletionInfo::shouldDeleteForSubobjectCall(
       //     initializer
       const auto *RD = cast<CXXRecordDecl>(Field->getParent());
       if (!RD->hasInClassInitializer())
-        DiagKind = 4;
+        DiagKind = NonTrivialDecl;
     } else {
-      DiagKind = 4;
+      DiagKind = NonTrivialDecl;
     }
   }
 
-  if (DiagKind == -1)
+  if (DiagKind == NotSet)
     return false;
 
   if (Diagnose) {
@@ -9593,9 +9610,9 @@ bool SpecialMemberDeletionInfo::shouldDeleteForSubobjectCall(
           << /*IsObjCPtr*/ false;
     }
 
-    if (DiagKind == 1)
+    if (DiagKind == DeletedDecl)
       S.NoteDeletedFunction(Decl);
-    // FIXME: Explain inaccessibility if DiagKind == 3.
+    // FIXME: Explain inaccessibility if DiagKind == InaccessibleDecl.
   }
 
   return true;
@@ -10627,7 +10644,7 @@ void Sema::checkIllFormedTrivialABIStruct(CXXRecordDecl &RD) {
     if (const auto *RT =
             FT->getBaseElementTypeUnsafe()->getAsCanonical<RecordType>())
       if (!RT->isDependentType() &&
-          !cast<CXXRecordDecl>(RT->getOriginalDecl()->getDefinitionOrSelf())
+          !cast<CXXRecordDecl>(RT->getDecl()->getDefinitionOrSelf())
                ->canPassInRegisters()) {
         PrintDiagAndRemoveAttr(5);
         return;
@@ -11122,9 +11139,11 @@ bool Sema::CheckDestructor(CXXDestructorDecl *Destructor) {
     else
       Loc = RD->getLocation();
 
+    DeclarationName Name =
+        Context.DeclarationNames.getCXXOperatorName(OO_Delete);
     // If we have a virtual destructor, look up the deallocation function
-    if (FunctionDecl *OperatorDelete =
-            FindDeallocationFunctionForDestructor(Loc, RD)) {
+    if (FunctionDecl *OperatorDelete = FindDeallocationFunctionForDestructor(
+            Loc, RD, /*Diagnose=*/true, /*LookForGlobal=*/false, Name)) {
       Expr *ThisArg = nullptr;
 
       // If the notional 'delete this' expression requires a non-trivial
@@ -11159,6 +11178,46 @@ bool Sema::CheckDestructor(CXXDestructorDecl *Destructor) {
       DiagnoseUseOfDecl(OperatorDelete, Loc);
       MarkFunctionReferenced(Loc, OperatorDelete);
       Destructor->setOperatorDelete(OperatorDelete, ThisArg);
+
+      if (isa<CXXMethodDecl>(OperatorDelete) &&
+          Context.getTargetInfo().callGlobalDeleteInDeletingDtor(
+              Context.getLangOpts())) {
+        // In Microsoft ABI whenever a class has a defined operator delete,
+        // scalar deleting destructors check the 3rd bit of the implicit
+        // parameter and if it is set, then, global operator delete must be
+        // called instead of the class-specific one. Find and save the global
+        // operator delete for that case. Do not diagnose at this point because
+        // the lack of a global operator delete is not an error if there are no
+        // delete calls that require it.
+        FunctionDecl *GlobalOperatorDelete =
+            FindDeallocationFunctionForDestructor(Loc, RD, /*Diagnose*/ false,
+                                                  /*LookForGlobal*/ true, Name);
+        Destructor->setOperatorGlobalDelete(GlobalOperatorDelete);
+      }
+
+      if (Context.getTargetInfo().emitVectorDeletingDtors(
+              Context.getLangOpts())) {
+        // Lookup delete[] too in case we have to emit a vector deleting dtor.
+        DeclarationName VDeleteName =
+            Context.DeclarationNames.getCXXOperatorName(OO_Array_Delete);
+        FunctionDecl *ArrOperatorDelete = FindDeallocationFunctionForDestructor(
+            Loc, RD, /*Diagnose*/ false,
+            /*LookForGlobal*/ false, VDeleteName);
+        if (ArrOperatorDelete && isa<CXXMethodDecl>(ArrOperatorDelete)) {
+          FunctionDecl *GlobalArrOperatorDelete =
+              FindDeallocationFunctionForDestructor(Loc, RD, /*Diagnose*/ false,
+                                                    /*LookForGlobal*/ true,
+                                                    VDeleteName);
+          Destructor->setGlobalOperatorArrayDelete(GlobalArrOperatorDelete);
+        } else if (!ArrOperatorDelete) {
+          ArrOperatorDelete = FindDeallocationFunctionForDestructor(
+              Loc, RD, /*Diagnose*/ false,
+              /*LookForGlobal*/ true, VDeleteName);
+        }
+        assert(ArrOperatorDelete &&
+               "Should've found at least global array delete");
+        Destructor->setOperatorArrayDelete(ArrOperatorDelete);
+      }
     }
   }
 
@@ -12315,7 +12374,8 @@ static QualType BuildStdClassTemplate(Sema &S, ClassTemplateDecl *CTD,
   Args.addArgument(TemplateArgumentLoc(TemplateArgument(TypeParam), TSI));
 
   return S.CheckTemplateIdType(ElaboratedTypeKeyword::None, TemplateName(CTD),
-                               Loc, Args);
+                               Loc, Args, /*Scope=*/nullptr,
+                               /*ForNestedNameSpecifier=*/false);
 }
 
 QualType Sema::BuildStdInitializerList(QualType Element, SourceLocation Loc) {
@@ -13643,7 +13703,7 @@ bool Sema::CheckUsingDeclQualifier(SourceLocation UsingLoc, bool HasTypename,
 
     if (Cxx20Enumerator) {
       Diag(NameLoc, diag::warn_cxx17_compat_using_decl_non_member_enumerator)
-          << SS.getRange();
+          << SS.getScopeRep() << SS.getRange();
       return false;
     }
 
@@ -17859,13 +17919,15 @@ Decl *Sema::BuildStaticAssertDeclaration(SourceLocation StaticAssertLoc,
         findFailedBooleanCondition(Converted.get());
       if (const auto *ConceptIDExpr =
               dyn_cast_or_null<ConceptSpecializationExpr>(InnerCond)) {
-        // Drill down into concept specialization expressions to see why they
-        // weren't satisfied.
-        Diag(AssertExpr->getBeginLoc(), diag::err_static_assert_failed)
-            << !HasMessage << Msg.str() << AssertExpr->getSourceRange();
-        ConstraintSatisfaction Satisfaction;
-        if (!CheckConstraintSatisfaction(ConceptIDExpr, Satisfaction))
-          DiagnoseUnsatisfiedConstraint(Satisfaction);
+        const ASTConstraintSatisfaction &Satisfaction =
+            ConceptIDExpr->getSatisfaction();
+        if (!Satisfaction.ContainsErrors || Satisfaction.NumRecords) {
+          Diag(AssertExpr->getBeginLoc(), diag::err_static_assert_failed)
+              << !HasMessage << Msg.str() << AssertExpr->getSourceRange();
+          // Drill down into concept specialization expressions to see why they
+          // weren't satisfied.
+          DiagnoseUnsatisfiedConstraint(ConceptIDExpr);
+        }
       } else if (InnerCond && !isa<CXXBoolLiteralExpr>(InnerCond) &&
                  !isa<IntegerLiteral>(InnerCond)) {
         Diag(InnerCond->getBeginLoc(),

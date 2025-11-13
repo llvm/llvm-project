@@ -1,4 +1,4 @@
-//===--- AvoidBindCheck.cpp - clang-tidy-----------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -252,7 +252,7 @@ static SmallVector<BindArgument, 4>
 buildBindArguments(const MatchFinder::MatchResult &Result,
                    const CallableInfo &Callable) {
   SmallVector<BindArgument, 4> BindArguments;
-  static llvm::Regex MatchPlaceholder("^_([0-9]+)$");
+  static const llvm::Regex MatchPlaceholder("^_([0-9]+)$");
 
   const auto *BindCall = Result.Nodes.getNodeAs<CallExpr>("bind");
 
@@ -267,7 +267,7 @@ buildBindArguments(const MatchFinder::MatchResult &Result,
     if (Callable.Type == CT_MemberFunction)
       --ArgIndex;
 
-    bool IsObjectPtr = (I == 1 && Callable.Type == CT_MemberFunction);
+    const bool IsObjectPtr = (I == 1 && Callable.Type == CT_MemberFunction);
     B.E = E;
     B.SourceTokens = getSourceTextForExpr(Result, E);
 
@@ -340,13 +340,13 @@ static void addPlaceholderArgs(const LambdaProperties &LP,
                                    MaxPlaceholderIt->PlaceHolderIndex == 0))
     return;
 
-  size_t PlaceholderCount = MaxPlaceholderIt->PlaceHolderIndex;
+  const size_t PlaceholderCount = MaxPlaceholderIt->PlaceHolderIndex;
   Stream << "(";
   StringRef Delimiter = "";
   for (size_t I = 1; I <= PlaceholderCount; ++I) {
     Stream << Delimiter << "auto &&";
 
-    int ArgIndex = findPositionOfPlaceholderUse(Args, I);
+    const int ArgIndex = findPositionOfPlaceholderUse(Args, I);
 
     if (ArgIndex != -1 && Args[ArgIndex].IsUsed)
       Stream << " " << Args[ArgIndex].UsageIdentifier;
@@ -392,7 +392,7 @@ findCandidateCallOperators(const CXXRecordDecl *RecordDecl, size_t NumArgs) {
   std::vector<const FunctionDecl *> Candidates;
 
   for (const clang::CXXMethodDecl *Method : RecordDecl->methods()) {
-    OverloadedOperatorKind OOK = Method->getOverloadedOperator();
+    const OverloadedOperatorKind OOK = Method->getOverloadedOperator();
 
     if (OOK != OverloadedOperatorKind::OO_Call)
       continue;
@@ -410,7 +410,7 @@ findCandidateCallOperators(const CXXRecordDecl *RecordDecl, size_t NumArgs) {
       continue;
     const FunctionDecl *FD = FTD->getTemplatedDecl();
 
-    OverloadedOperatorKind OOK = FD->getOverloadedOperator();
+    const OverloadedOperatorKind OOK = FD->getOverloadedOperator();
     if (OOK != OverloadedOperatorKind::OO_Call)
       continue;
 
@@ -471,7 +471,7 @@ getCallMethodDecl(const MatchFinder::MatchResult &Result, CallableType Type,
 
   if (Type == CT_Object) {
     const auto *BindCall = Result.Nodes.getNodeAs<CallExpr>("bind");
-    size_t NumArgs = BindCall->getNumArgs() - 1;
+    const size_t NumArgs = BindCall->getNumArgs() - 1;
     return getCallOperator(Callee->getType()->getAsCXXRecordDecl(), NumArgs);
   }
 
@@ -488,7 +488,7 @@ getCallMethodDecl(const MatchFinder::MatchResult &Result, CallableType Type,
 static CallableType getCallableType(const MatchFinder::MatchResult &Result) {
   const auto *CallableExpr = Result.Nodes.getNodeAs<Expr>("ref");
 
-  QualType QT = CallableExpr->getType();
+  const QualType QT = CallableExpr->getType();
   if (QT->isMemberFunctionPointerType())
     return CT_MemberFunction;
 
@@ -614,7 +614,7 @@ static void emitCaptureList(const LambdaProperties &LP,
     if (B.CM == CM_None || !B.IsUsed)
       continue;
 
-    StringRef Delimiter = AnyCapturesEmitted ? ", " : "";
+    const StringRef Delimiter = AnyCapturesEmitted ? ", " : "";
 
     if (emitCapture(CaptureSet, Delimiter, B.CM, B.CE, B.CaptureIdentifier,
                     B.SourceTokens, Stream))
@@ -669,7 +669,7 @@ void AvoidBindCheck::check(const MatchFinder::MatchResult &Result) {
   emitCaptureList(LP, Result, Stream);
   Stream << "]";
 
-  ArrayRef<BindArgument> FunctionCallArgs = ArrayRef(LP.BindArguments);
+  const ArrayRef<BindArgument> FunctionCallArgs = ArrayRef(LP.BindArguments);
 
   addPlaceholderArgs(LP, Stream, PermissiveParameterList);
 

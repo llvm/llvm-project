@@ -91,7 +91,8 @@ TEST(ASTFrontendAction, Sanity) {
   invocation->getFrontendOpts().ProgramAction = frontend::ParseSyntaxOnly;
   invocation->getTargetOpts().Triple = "i386-unknown-linux-gnu";
   CompilerInstance compiler(std::move(invocation));
-  compiler.createDiagnostics(*llvm::vfs::getRealFileSystem());
+  compiler.setVirtualFileSystem(llvm::vfs::getRealFileSystem());
+  compiler.createDiagnostics();
 
   TestASTFrontendAction test_action;
   ASSERT_TRUE(compiler.ExecuteAction(test_action));
@@ -110,7 +111,8 @@ TEST(ASTFrontendAction, IncrementalParsing) {
   invocation->getFrontendOpts().ProgramAction = frontend::ParseSyntaxOnly;
   invocation->getTargetOpts().Triple = "i386-unknown-linux-gnu";
   CompilerInstance compiler(std::move(invocation));
-  compiler.createDiagnostics(*llvm::vfs::getRealFileSystem());
+  compiler.setVirtualFileSystem(llvm::vfs::getRealFileSystem());
+  compiler.createDiagnostics();
 
   TestASTFrontendAction test_action(/*enableIncrementalProcessing=*/true);
   ASSERT_TRUE(compiler.ExecuteAction(test_action));
@@ -136,7 +138,8 @@ TEST(ASTFrontendAction, LateTemplateIncrementalParsing) {
   invocation->getFrontendOpts().ProgramAction = frontend::ParseSyntaxOnly;
   invocation->getTargetOpts().Triple = "i386-unknown-linux-gnu";
   CompilerInstance compiler(std::move(invocation));
-  compiler.createDiagnostics(*llvm::vfs::getRealFileSystem());
+  compiler.setVirtualFileSystem(llvm::vfs::getRealFileSystem());
+  compiler.createDiagnostics();
 
   TestASTFrontendAction test_action(/*enableIncrementalProcessing=*/true,
                                     /*actOnEndOfTranslationUnit=*/true);
@@ -181,7 +184,8 @@ TEST(PreprocessorFrontendAction, EndSourceFile) {
   Invocation->getFrontendOpts().ProgramAction = frontend::ParseSyntaxOnly;
   Invocation->getTargetOpts().Triple = "i386-unknown-linux-gnu";
   CompilerInstance Compiler(std::move(Invocation));
-  Compiler.createDiagnostics(*llvm::vfs::getRealFileSystem());
+  Compiler.setVirtualFileSystem(llvm::vfs::getRealFileSystem());
+  Compiler.createDiagnostics();
 
   TestPPCallbacks *Callbacks = new TestPPCallbacks;
   TestPPCallbacksFrontendAction TestAction(Callbacks);
@@ -242,8 +246,8 @@ TEST(ASTFrontendAction, ExternalSemaSource) {
   Invocation->getTargetOpts().Triple = "i386-unknown-linux-gnu";
   CompilerInstance Compiler(std::move(Invocation));
   auto *TDC = new TypoDiagnosticConsumer;
-  Compiler.createDiagnostics(*llvm::vfs::getRealFileSystem(), TDC,
-                             /*ShouldOwnClient=*/true);
+  Compiler.setVirtualFileSystem(llvm::vfs::getRealFileSystem());
+  Compiler.createDiagnostics(TDC, /*ShouldOwnClient=*/true);
   Compiler.setExternalSemaSource(
       llvm::makeIntrusiveRefCnt<TypoExternalSemaSource>(Compiler));
 
@@ -275,7 +279,8 @@ TEST(GeneratePCHFrontendAction, CacheGeneratedPCH) {
     Invocation->getFrontendOpts().ProgramAction = frontend::GeneratePCH;
     Invocation->getTargetOpts().Triple = "x86_64-apple-darwin19.0.0";
     CompilerInstance Compiler(std::move(Invocation));
-    Compiler.createDiagnostics(*llvm::vfs::getRealFileSystem());
+    Compiler.setVirtualFileSystem(llvm::vfs::getRealFileSystem());
+    Compiler.createDiagnostics();
 
     GeneratePCHAction TestAction;
     ASSERT_TRUE(Compiler.ExecuteAction(TestAction));

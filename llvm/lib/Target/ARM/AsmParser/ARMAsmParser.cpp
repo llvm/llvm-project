@@ -135,17 +135,17 @@ public:
   MCRegister getFPReg() const { return FPReg; }
 
   void emitFnStartLocNotes() const {
-    for (const SMLoc &Loc : FnStartLocs)
+    for (SMLoc Loc : FnStartLocs)
       Parser.Note(Loc, ".fnstart was specified here");
   }
 
   void emitCantUnwindLocNotes() const {
-    for (const SMLoc &Loc : CantUnwindLocs)
+    for (SMLoc Loc : CantUnwindLocs)
       Parser.Note(Loc, ".cantunwind was specified here");
   }
 
   void emitHandlerDataLocNotes() const {
-    for (const SMLoc &Loc : HandlerDataLocs)
+    for (SMLoc Loc : HandlerDataLocs)
       Parser.Note(Loc, ".handlerdata was specified here");
   }
 
@@ -426,15 +426,15 @@ class ARMAsmParser : public MCTargetAsmParser {
       VPTState.CurPosition = ~0U;
   }
 
-  void Note(SMLoc L, const Twine &Msg, SMRange Range = std::nullopt) {
+  void Note(SMLoc L, const Twine &Msg, SMRange Range = {}) {
     return getParser().Note(L, Msg, Range);
   }
 
-  bool Warning(SMLoc L, const Twine &Msg, SMRange Range = std::nullopt) {
+  bool Warning(SMLoc L, const Twine &Msg, SMRange Range = {}) {
     return getParser().Warning(L, Msg, Range);
   }
 
-  bool Error(SMLoc L, const Twine &Msg, SMRange Range = std::nullopt) {
+  bool Error(SMLoc L, const Twine &Msg, SMRange Range = {}) {
     return getParser().Error(L, Msg, Range);
   }
 

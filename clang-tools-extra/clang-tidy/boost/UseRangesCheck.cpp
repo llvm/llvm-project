@@ -1,4 +1,4 @@
-//===--- UseRangesCheck.cpp - clang-tidy ----------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -18,6 +18,7 @@
 #include <initializer_list>
 #include <optional>
 #include <string>
+#include <utility>
 
 // FixItHint - Let the docs script know that this class does provide fixits
 
@@ -217,11 +218,11 @@ utils::UseRangesCheck::ReplacerMap UseRangesCheck::getReplacerMap() const {
   const auto AddFromStd =
       [&](llvm::IntrusiveRefCntPtr<UseRangesCheck::Replacer> Replacer,
           std::initializer_list<StringRef> Names) {
-        AddFrom(Replacer, Names, "std");
+        AddFrom(std::move(Replacer), Names, "std");
       };
 
   const auto AddFromBoost =
-      [&](llvm::IntrusiveRefCntPtr<UseRangesCheck::Replacer> Replacer,
+      [&](const llvm::IntrusiveRefCntPtr<UseRangesCheck::Replacer> &Replacer,
           std::initializer_list<
               std::pair<StringRef, std::initializer_list<StringRef>>>
               NamespaceAndNames) {
@@ -341,7 +342,7 @@ void UseRangesCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 DiagnosticBuilder UseRangesCheck::createDiag(const CallExpr &Call) {
-  DiagnosticBuilder D =
+  const DiagnosticBuilder D =
       diag(Call.getBeginLoc(), "use a %0 version of this algorithm");
   D << (Call.getDirectCallee()->isInStdNamespace() ? "boost" : "ranged");
   return D;

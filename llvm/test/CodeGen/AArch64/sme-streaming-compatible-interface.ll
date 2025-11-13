@@ -129,12 +129,11 @@ define <2 x double> @streaming_compatible_with_neon_vectors(<2 x double> %arg) "
 ; CHECK-NEXT:    stp x30, x19, [sp, #80] // 16-byte Folded Spill
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
+; CHECK-NEXT:    mrs x19, SVCR
 ; CHECK-NEXT:    add x8, sp, #16
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    str z0, [x8] // 16-byte Folded Spill
-; CHECK-NEXT:    mrs x19, SVCR
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
-; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-NEXT:    tbz w19, #0, .LBB4_2
 ; CHECK-NEXT:  // %bb.1:
 ; CHECK-NEXT:    smstop sm
@@ -209,13 +208,19 @@ define <vscale x 2 x double> @streaming_compatible_with_scalable_vectors(<vscale
 ; CHECK-NEXT:  // %bb.1:
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:  .LBB5_2:
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    addsvl x8, x8, #-1
+; CHECK-NEXT:    cbz x8, .LBB5_4
+; CHECK-NEXT:  // %bb.3:
+; CHECK-NEXT:    brk #0x1
+; CHECK-NEXT:  .LBB5_4:
 ; CHECK-NEXT:    ldr z0, [sp, #1, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    bl normal_callee_scalable_vec_arg
 ; CHECK-NEXT:    str z0, [sp] // 16-byte Folded Spill
-; CHECK-NEXT:    tbz w19, #0, .LBB5_4
-; CHECK-NEXT:  // %bb.3:
+; CHECK-NEXT:    tbz w19, #0, .LBB5_6
+; CHECK-NEXT:  // %bb.5:
 ; CHECK-NEXT:    smstart sm
-; CHECK-NEXT:  .LBB5_4:
+; CHECK-NEXT:  .LBB5_6:
 ; CHECK-NEXT:    ldr z0, [sp, #1, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z1, [sp] // 16-byte Folded Reload
 ; CHECK-NEXT:    fadd z0.d, z1.d, z0.d
@@ -300,13 +305,19 @@ define <vscale x 2 x i1> @streaming_compatible_with_predicate_vectors(<vscale x 
 ; CHECK-NEXT:  // %bb.1:
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:  .LBB6_2:
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    addsvl x8, x8, #-1
+; CHECK-NEXT:    cbz x8, .LBB6_4
+; CHECK-NEXT:  // %bb.3:
+; CHECK-NEXT:    brk #0x1
+; CHECK-NEXT:  .LBB6_4:
 ; CHECK-NEXT:    ldr p0, [sp, #7, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    bl normal_callee_predicate_vec_arg
 ; CHECK-NEXT:    str p0, [sp, #6, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    tbz w19, #0, .LBB6_4
-; CHECK-NEXT:  // %bb.3:
+; CHECK-NEXT:    tbz w19, #0, .LBB6_6
+; CHECK-NEXT:  // %bb.5:
 ; CHECK-NEXT:    smstart sm
-; CHECK-NEXT:  .LBB6_4:
+; CHECK-NEXT:  .LBB6_6:
 ; CHECK-NEXT:    ldr p0, [sp, #7, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr p1, [sp, #6, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    and p0.b, p1/z, p1.b, p0.b

@@ -73,6 +73,10 @@ def hlfir_DeclareOp
         local lower bound values. It is intended to be used when generating FIR
         from HLFIR in order to avoid descriptor creation for simple entities.
 
+    The attribute skip_rebox can be set to indicate that the second and first
+    result are known to be the same descriptors (the input descriptor is known
+    to already have the correct attributes and lower bounds).
+
     Example:
 
     CHARACTER(n) :: c(10:n, 20:n)
@@ -98,14 +102,16 @@ def hlfir_DeclareOp
       DefaultValuedAttr<UI64Attr, "0">:$storage_offset,
       Builtin_StringAttr:$uniq_name,
       OptionalAttr<fir_FortranVariableFlagsAttr>:$fortran_attrs,
-      OptionalAttr<cuf_DataAttributeAttr>:$data_attr);
+      OptionalAttr<cuf_DataAttributeAttr>:$data_attr,
+      OptionalAttr<UnitAttr>:$skip_rebox, OptionalAttr<UI32Attr>:$dummy_arg_no);
 
   let results = (outs AnyFortranVariable, AnyRefOrBoxLike);
 
   let assemblyFormat = [{
     $memref (`(` $shape^ `)`)? (`typeparams` $typeparams^)?
-    (`dummy_scope` $dummy_scope^)?
+    (`dummy_scope` $dummy_scope^ (`arg` $dummy_arg_no^)?)?
     (`storage` `(` $storage^ `[` $storage_offset `]` `)`)?
+    (`skip_rebox` $skip_rebox^)?
     attr-dict `:` functional-type(operands, results)
   }];
 
@@ -116,7 +122,8 @@ def hlfir_DeclareOp
       CArg<"mlir::Value", "{}">:$storage,
       CArg<"std::uint64_t", "0">:$storage_offset,
       CArg<"fir::FortranVariableFlagsAttr", "{}">:$fortran_attrs,
-      CArg<"cuf::DataAttributeAttr", "{}">:$data_attr)>];
+      CArg<"cuf::DataAttributeAttr", "{}">:$data_attr,
+      CArg<"unsigned", "0">:$dummy_arg_no)>];
 
   let extraClassDeclaration = [{
     /// Get the variable original base (same as input). It lacks
@@ -269,6 +276,9 @@ def hlfir_DesignateOp : hlfir_Op<"designate", [AttrSizedOperandSegments,
     using Triplet = std::tuple<mlir::Value, mlir::Value, mlir::Value>;
     using Subscript = std::variant<mlir::Value, Triplet>;
     using Subscripts = llvm::SmallVector<Subscript, 8>;
+    void setFortranAttrs(fir::FortranVariableFlagsEnum flags) {
+      this->setFortranAttrs(std::optional<fir::FortranVariableFlagsEnum>(flags));
+    }
   }];
 
   let builders = [
@@ -319,7 +329,7 @@ def hlfir_ParentComponentOp : hlfir_Op<"parent_comp", [AttrSizedOperandSegments,
     // Implement FortranVariableInterface interface. Parent components have
     // no attributes (pointer, allocatable or contiguous can only be added
     // to regular components).
-    std::optional<fir::FortranVariableFlagsEnum> getFortranAttrs() const {
+    std::optional<fir::FortranVariableFlagsEnum> getFortranAttrs() {
       return std::nullopt;
     }
     void setFortranAttrs(fir::FortranVariableFlagsEnum flags) {}
@@ -882,6 +892,10 @@ def hlfir_AssociateOp : hlfir_Op<"associate", [AttrSizedOperandSegments,
       CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attributes)>];
 
   let extraClassDeclaration = [{
+    void setFortranAttrs(fir::FortranVariableFlagsEnum flags) {
+      this->setFortranAttrs(std::optional<fir::FortranVariableFlagsEnum>(flags));
+    }
+
     /// Override FortranVariableInterface default implementation
     mlir::Value getBase() {
       return getResult(0);

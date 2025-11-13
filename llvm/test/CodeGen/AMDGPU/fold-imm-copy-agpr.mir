@@ -209,8 +209,8 @@ body:             |
   bb.0:
     ; GCN-LABEL: name: s_mov_b32_imm_65_copy_to_av_32
     ; GCN: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 65, implicit $exec
-    ; GCN-NEXT: [[AV_MOV_:%[0-9]+]]:av_32 = AV_MOV_B32_IMM_PSEUDO [[S_MOV_B32_]], implicit $exec
-    ; GCN-NEXT: S_ENDPGM 0, implicit [[AV_MOV_]]
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:av_32 = COPY [[S_MOV_B32_]]
+    ; GCN-NEXT: S_ENDPGM 0, implicit [[COPY]]
     %0:sreg_32 = S_MOV_B32 65, implicit $exec
     %1:av_32 = COPY %0
     S_ENDPGM 0, implicit %1

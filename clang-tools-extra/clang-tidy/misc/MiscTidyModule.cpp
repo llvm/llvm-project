@@ -1,4 +1,4 @@
-//===--- MiscTidyModule.cpp - clang-tidy ----------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -15,12 +15,12 @@
 #include "DefinitionsInHeadersCheck.h"
 #include "HeaderIncludeCycleCheck.h"
 #include "IncludeCleanerCheck.h"
-#include "MisleadingBidirectional.h"
-#include "MisleadingIdentifier.h"
+#include "MisleadingBidirectionalCheck.h"
+#include "MisleadingIdentifierCheck.h"
 #include "MisplacedConstCheck.h"
 #include "NewDeleteOverloadsCheck.h"
 #include "NoRecursionCheck.h"
-#include "NonCopyableObjects.h"
+#include "NonCopyableObjectsCheck.h"
 #include "NonPrivateMemberVariablesInClassesCheck.h"
 #include "OverrideWithDifferentVisibilityCheck.h"
 #include "RedundantExpressionCheck.h"

@@ -82,16 +82,21 @@ size_t strlen(const char *s);
 
 void strlen_constant0(void) {
   clang_analyzer_eval(strlen("123") == 3); // expected-warning{{TRUE}}
+  clang_analyzer_eval(strlen(&("123"[1])) == 2); // expected-warning{{TRUE}}
 }
 
 void strlen_constant1(void) {
   const char *a = "123";
   clang_analyzer_eval(strlen(a) == 3); // expected-warning{{TRUE}}
+  clang_analyzer_eval(strlen(a + 1) == 2); // expected-warning{{TRUE}}
+  clang_analyzer_eval(strlen(a + 3) == 0); // expected-warning{{TRUE}}
+  clang_analyzer_eval(strlen(a + 4)); // expected-warning{{UNKNOWN}}
 }
 
 void strlen_constant2(char x) {
   char a[] = "123";
   clang_analyzer_eval(strlen(a) == 3); // expected-warning{{TRUE}}
+  clang_analyzer_eval(strlen(a + 1) == 2); // expected-warning{{UNKNOWN}}
 
   a[0] = x;
   clang_analyzer_eval(strlen(a) == 3); // expected-warning{{UNKNOWN}}
@@ -105,10 +110,12 @@ char global_non_const_arr[] = "op";
 
 void strlen_global_constant_ptr(void) {
   clang_analyzer_eval(strlen(global_str_ptr) == 4); // expected-warning{{TRUE}}
+  clang_analyzer_eval(strlen(global_str_ptr + 1) == 3); // expected-warning{{TRUE}}
 }
 
 void strlen_global_constant_arr(void) {
   clang_analyzer_eval(strlen(global_str_arr) == 4); // expected-warning{{TRUE}}
+  clang_analyzer_eval(strlen(global_str_arr + 1) == 3); // expected-warning{{TRUE}}
 }
 
 void strlen_global_non_const_ptr(void) {
@@ -235,6 +242,17 @@ void testStrlenCallee(void) {
   clang_analyzer_eval(lenBefore == lenAfter); // expected-warning{{UNKNOWN}}
 }
 
+void strlen_symbolic_offset(unsigned x) {
+  const char *str = "abcd";
+  if (x < 1 || x > 3)
+    return;
+  // FIXME: these should be TRUE
+  clang_analyzer_eval(strlen(str + x) >= 1); // expected-warning{{UNKNOWN}}
+  clang_analyzer_eval(strlen(str + x) <= 3); // expected-warning{{UNKNOWN}}
+  if (x != 1)
+    return;
+  clang_analyzer_eval(strlen(str + x) == 3); // expected-warning{{TRUE}}
+}
 
 //===----------------------------------------------------------------------===
 // strnlen()
@@ -244,32 +262,38 @@ size_t strnlen(const char *s, size_t maxlen);
 
 void strnlen_constant0(void) {
   clang_analyzer_eval(strnlen("123", 10) == 3); // expected-warning{{TRUE}}
+  clang_analyzer_eval(strnlen(&("123"[1]), 10) == 2); // expected-warning{{TRUE}}
 }
 
 void strnlen_constant1(void) {
   const char *a = "123";
   clang_analyzer_eval(strnlen(a, 10) == 3); // expected-warning{{TRUE}}
+  clang_analyzer_eval(strnlen(a + 1, 10) == 2); // expected-warning{{TRUE}}
 }
 
 void strnlen_constant2(char x) {
   char a[] = "123";
   clang_analyzer_eval(strnlen(a, 10) == 3); // expected-warning{{TRUE}}
+  clang_analyzer_eval(strnlen(a + 1, 10) == 2); // expected-warning{{UNKNOWN}}
   a[0] = x;
   clang_analyzer_eval(strnlen(a, 10) == 3); // expected-warning{{UNKNOWN}}
 }
 
 void strnlen_constant4(void) {
   clang_analyzer_eval(strnlen("123456", 3) == 3); // expected-warning{{TRUE}}
+  clang_analyzer_eval(strnlen(&("123456"[1]), 3) == 3); // expected-warning{{TRUE}}
 }
 
 void strnlen_constant5(void) {
   const char *a = "123456";
   clang_analyzer_eval(strnlen(a, 3) == 3); // expected-warning{{TRUE}}
+  clang_analyzer_eval(strnlen(a + 1, 3) == 3); // expected-warning{{TRUE}}
 }
 
 void strnlen_constant6(char x) {
   char a[] = "123456";
   clang_analyzer_eval(strnlen(a, 3) == 3); // expected-warning{{TRUE}}
+  clang_analyzer_eval(strnlen(a + 1, 3) == 3); // expected-warning{{UNKNOWN}}
   a[0] = x;
   clang_analyzer_eval(strnlen(a, 3) == 3); // expected-warning{{UNKNOWN}}
 }
@@ -323,6 +347,19 @@ void strnlen_at_actual(size_t limit) {
   } else {
     clang_analyzer_eval(len == 3); // expected-warning{{UNKNOWN}}
     clang_analyzer_eval(len < 3); // expected-warning{{UNKNOWN}}
+  }
+}
+
+void strnlen_at_actual_1(size_t limit) {
+  const char *str = "abc";
+  size_t len = strnlen(str + 1, limit);
+  clang_analyzer_eval(len <= 2); // expected-warning{{TRUE}}
+  // This is due to eager assertion in strnlen.
+  if (limit == 0) {
+    clang_analyzer_eval(len == 0); // expected-warning{{TRUE}}
+  } else {
+    clang_analyzer_eval(len == 2); // expected-warning{{UNKNOWN}}
+    clang_analyzer_eval(len < 2); // expected-warning{{UNKNOWN}}
   }
 }
 

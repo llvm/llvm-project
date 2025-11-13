@@ -91,6 +91,8 @@ unary_operation(Operation op, InputType input, unsigned int precision,
     return mpfrInput.round();
   case Operation::RoundEven:
     return mpfrInput.roundeven();
+  case Operation::Rsqrt:
+    return mpfrInput.rsqrt();
   case Operation::Sin:
     return mpfrInput.sin();
   case Operation::Sinpi:

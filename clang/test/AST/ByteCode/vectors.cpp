@@ -168,3 +168,15 @@ namespace Assign {
   }
   static_assert(invalid()); // both-error {{not an integral constant expression}}
 }
+
+namespace CopyArrayDummy {
+  struct S {
+    long a, b, c, d;
+  };
+  typedef long T __attribute__((vector_size(4 * sizeof(long))));
+
+  void foo(void) {
+    struct S s;
+    *(T *)&s = (T){0, 1, 2, 3};
+  }
+}

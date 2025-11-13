@@ -436,10 +436,9 @@ bool IndexedReference::delinearize(const LoopInfo &LI) {
       const SCEV *StepRec = AccessFnAR ? AccessFnAR->getStepRecurrence(SE) : nullptr;
 
       if (StepRec && SE.isKnownNegative(StepRec))
-        AccessFn = SE.getAddRecExpr(AccessFnAR->getStart(),
-                                    SE.getNegativeSCEV(StepRec),
-                                    AccessFnAR->getLoop(),
-                                    AccessFnAR->getNoWrapFlags());
+        AccessFn = SE.getAddRecExpr(
+            AccessFnAR->getStart(), SE.getNegativeSCEV(StepRec),
+            AccessFnAR->getLoop(), SCEV::NoWrapFlags::FlagAnyWrap);
       const SCEV *Div = SE.getUDivExactExpr(AccessFn, ElemSize);
       Subscripts.push_back(Div);
       Sizes.push_back(ElemSize);

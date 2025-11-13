@@ -75,7 +75,7 @@ std::string MakeAbsolutePath(StringRef CurrentDir, StringRef Path) {
     return "";
   llvm::SmallString<128> InitialDirectory(CurrentDir);
   llvm::SmallString<128> AbsolutePath(Path);
-  llvm::sys::fs::make_absolute(InitialDirectory, AbsolutePath);
+  llvm::sys::path::make_absolute(InitialDirectory, AbsolutePath);
   return CleanPath(std::move(AbsolutePath));
 }
 

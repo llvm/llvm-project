@@ -177,8 +177,12 @@ protected:
 public:
   virtual ~SparseIterator() = default;
 
-  void setSparseEmitStrategy(SparseEmitStrategy strategy) {
+  virtual void setSparseEmitStrategy(SparseEmitStrategy strategy) {
     emitStrategy = strategy;
+  }
+
+  virtual SparseEmitStrategy getSparseEmitStrategy() const {
+    return emitStrategy;
   }
 
   virtual std::string getDebugInterfacePrefix() const = 0;

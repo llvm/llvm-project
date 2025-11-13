@@ -894,3 +894,116 @@ void pointer_exception_can_not_escape_with_void_handler() noexcept {
   } catch (void *) {
   }
 }
+
+void throw_in_uninvoked_lambda() noexcept {
+  [] { throw 42; };
+}
+
+void throw_in_lambda() noexcept {
+  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: an exception may be thrown in function 'throw_in_lambda' which should not throw exceptions
+  [] { throw 42; }();
+  // CHECK-MESSAGES: :[[@LINE-1]]:8: note: frame #0: unhandled exception of type 'int' may be thrown in function 'operator()' here
+  // CHECK-MESSAGES: :[[@LINE-2]]:19: note: frame #1: function 'throw_in_lambda' calls function 'operator()' here
+}
+
+struct copy_constructor_throws {
+  copy_constructor_throws(const copy_constructor_throws&) { throw 42; }
+};
+
+void throw_in_lambda_default_by_value_capture(const copy_constructor_throws& a) noexcept {
+  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: an exception may be thrown in function 'throw_in_lambda_default_by_value_capture' which should not throw exceptions
+  [=] { a; };
+  // CHECK-MESSAGES: :[[@LINE-6]]:61: note: frame #0: unhandled exception of type 'int' may be thrown in function 'copy_constructor_throws' here
+  // CHECK-MESSAGES: :[[@LINE-2]]:4: note: frame #1: function 'throw_in_lambda_default_by_value_capture' calls function 'copy_constructor_throws' here
+}
+
+void throw_in_lambda_explicit_by_value_capture(const copy_constructor_throws& a) noexcept {
+  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: an exception may be thrown in function 'throw_in_lambda_explicit_by_value_capture' which should not throw exceptions
+  [a] {};
+  // CHECK-MESSAGES: :[[@LINE-13]]:61: note: frame #0: unhandled exception of type 'int' may be thrown in function 'copy_constructor_throws' here
+  // CHECK-MESSAGES: :[[@LINE-2]]:4: note: frame #1: function 'throw_in_lambda_explicit_by_value_capture' calls function 'copy_constructor_throws' here
+}
+
+void no_throw_in_lambda_by_reference_capture(const copy_constructor_throws& a) noexcept {
+  [&] { a; };
+  [&a] {};
+}
+
+void throw_in_lambda_init_capture() noexcept {
+  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: an exception may be thrown in function 'throw_in_lambda_init_capture' which should not throw exceptions
+  [a = [] { throw 42; return 0; }()] {};
+  // CHECK-MESSAGES: :[[@LINE-1]]:13: note: frame #0: unhandled exception of type 'int' may be thrown in function 'operator()' here
+  // CHECK-MESSAGES: :[[@LINE-2]]:34: note: frame #1: function 'throw_in_lambda_init_capture' calls function 'operator()' here
+}
+
+void throw_from_nested_lambda() noexcept {
+  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: an exception may be thrown in function 'throw_from_nested_lambda' which should not throw exceptions
+  [] { [] { throw 42; }(); }();
+  // CHECK-MESSAGES: :[[@LINE-1]]:13: note: frame #0: unhandled exception of type 'int' may be thrown in function 'operator()' here
+  // CHECK-MESSAGES: :[[@LINE-2]]:24: note: frame #1: function 'operator()' calls function 'operator()' here
+  // CHECK-MESSAGES: :[[@LINE-3]]:29: note: frame #2: function 'throw_from_nested_lambda' calls function 'operator()' here
+}
+
+const auto throw_in_noexcept_lambda = [] () noexcept { throw 42; };
+// CHECK-MESSAGES: :[[@LINE-1]]:39: warning: an exception may be thrown in function 'operator()' which should not throw exceptions
+// CHECK-MESSAGES: :[[@LINE-2]]:56: note: frame #0: unhandled exception of type 'int' may be thrown in function 'operator()' here
+
+int thrower() {
+  throw 42;
+}
+
+const auto indirect_throw_in_noexcept_lambda = [] () noexcept { thrower(); };
+// CHECK-MESSAGES: :[[@LINE-1]]:48: warning: an exception may be thrown in function 'operator()' which should not throw exceptions
+// CHECK-MESSAGES: :[[@LINE-5]]:3: note: frame #0: unhandled exception of type 'int' may be thrown in function 'thrower' here
+// CHECK-MESSAGES: :[[@LINE-3]]:65: note: frame #1: function 'operator()' calls function 'thrower' here
+
+int f(int);
+void throw_in_function_arg() noexcept {
+// CHECK-MESSAGES: :[[@LINE-1]]:6: warning: an exception may be thrown in function 'throw_in_function_arg' which should not throw exceptions
+  f(false ? 0 : throw 1);
+}
+// CHECK-MESSAGES: :[[@LINE-2]]:17: note: frame #0: unhandled exception of type 'int' may be thrown in function 'throw_in_function_arg' here
+
+int g(int, int, int);
+void throw_in_last_function_arg() noexcept {
+// CHECK-MESSAGES: :[[@LINE-1]]:6: warning: an exception may be thrown in function 'throw_in_last_function_arg' which should not throw exceptions
+  g(42, 67, false ? 0 : throw 1);
+}
+// CHECK-MESSAGES: :[[@LINE-2]]:25: note: frame #0: unhandled exception of type 'int' may be thrown in function 'throw_in_last_function_arg' here
+
+void indirect_throw_in_function_arg() noexcept {
+// CHECK-MESSAGES: :[[@LINE-1]]:6: warning: an exception may be thrown in function 'indirect_throw_in_function_arg' which should not throw exceptions
+  f(thrower());
+}
+// CHECK-MESSAGES: :[[@LINE-26]]:3: note: frame #0: unhandled exception of type 'int' may be thrown in function 'thrower' here
+// CHECK-MESSAGES: :[[@LINE-3]]:5: note: frame #1: function 'indirect_throw_in_function_arg' calls function 'thrower' here
+
+void indirect_throw_from_lambda_in_function_arg() noexcept {
+// CHECK-MESSAGES: :[[@LINE-1]]:6: warning: an exception may be thrown in function 'indirect_throw_from_lambda_in_function_arg' which should not throw exceptions
+  f([] { throw 1; return 0; }());
+}
+// CHECK-MESSAGES: :[[@LINE-2]]:10: note: frame #0: unhandled exception of type 'int' may be thrown in function 'operator()' here
+// CHECK-MESSAGES: :[[@LINE-3]]:30: note: frame #1: function 'indirect_throw_from_lambda_in_function_arg' calls function 'operator()' here
+
+struct S {
+  S(int) noexcept {}
+};
+
+void throw_in_constructor_arg() noexcept {
+// CHECK-MESSAGES: :[[@LINE-1]]:6: warning: an exception may be thrown in function 'throw_in_constructor_arg' which should not throw exceptions
+  S s(false ? 0 : throw 1);
+}
+// CHECK-MESSAGES: :[[@LINE-2]]:19: note: frame #0: unhandled exception of type 'int' may be thrown in function 'throw_in_constructor_arg' here
+
+void indirect_throw_in_constructor_arg() noexcept {
+// CHECK-MESSAGES: :[[@LINE-1]]:6: warning: an exception may be thrown in function 'indirect_throw_in_constructor_arg' which should not throw exceptions
+  S s = thrower();
+}
+// CHECK-MESSAGES: :[[@LINE-50]]:3: note: frame #0: unhandled exception of type 'int' may be thrown in function 'thrower' here
+// CHECK-MESSAGES: :[[@LINE-3]]:9: note: frame #1: function 'indirect_throw_in_constructor_arg' calls function 'thrower' here
+
+void weird_throw_in_call_subexpression() noexcept {
+// CHECK-MESSAGES: :[[@LINE-1]]:6: warning: an exception may be thrown in function 'weird_throw_in_call_subexpression' which should not throw exceptions
+  (false ? []{} : throw 1)();
+}
+// CHECK-MESSAGES: :[[@LINE-2]]:19: note: frame #0: unhandled exception of type 'int' may be thrown in function 'weird_throw_in_call_subexpression' here

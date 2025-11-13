@@ -62,20 +62,6 @@ def _get_transitive_includes(includes, deps):
         transitive = [_get_dep_transitive_includes(dep) for dep in deps],
     )
 
-def _prefix_roots(ctx, includes):
-    """Map the given includes to be relative to all root directories.
-
-    This will expand them to be relative to all the root directories available
-    in the execution environment for ctx.run (bin and genfiles in addition to
-    the normal source root)
-    """
-    prefixed_includes = []
-    for include in includes:
-        prefixed_includes.append(include)
-        prefixed_includes.append(paths.join(ctx.genfiles_dir.path, include))
-        prefixed_includes.append(paths.join(ctx.bin_dir.path, include))
-    return prefixed_includes
-
 def _resolve_includes(ctx, includes):
     """Resolves include paths to paths relative to the execution root.
 
@@ -92,7 +78,7 @@ def _resolve_includes(ctx, includes):
         else:
             include = paths.join(package, include)
         include = paths.join(workspace_root, include)
-        resolved_includes.extend(_prefix_roots(ctx, [include]))
+        resolved_includes.append(include)
     return resolved_includes
 
 def _td_library_impl(ctx):
@@ -140,6 +126,9 @@ td_library = rule(
     },
 )
 
+def _format_includes(output):
+    return lambda x: ["-I", x, "-I", paths.join(output.root.path, x)]
+
 def _gentbl_rule_impl(ctx):
     td_file = ctx.file.td_file
 
@@ -153,22 +142,21 @@ def _gentbl_rule_impl(ctx):
     # workspace is not the main workspace. Therefore it is not included in the
     # _resolve_includes call that prepends this prefix.
     trans_includes = _get_transitive_includes(
-        _resolve_includes(ctx, ctx.attr.includes + ["/"]) +
-        _prefix_roots(ctx, [td_file.dirname]),
+        _resolve_includes(ctx, ctx.attr.includes + ["/"]) + [td_file.dirname],
         ctx.attr.deps,
     )
 
     args = ctx.actions.args()
     args.add_all(ctx.attr.opts)
     args.add(td_file)
-    args.add_all(trans_includes, before_each = "-I")
-
-    args.add("-o", ctx.outputs.out.path)
+    args.add_all(trans_includes, map_each = _format_includes(ctx.outputs.out), allow_closure = True)
+    args.add("-o", ctx.outputs.out)
 
     ctx.actions.run(
         outputs = [ctx.outputs.out],
         inputs = trans_srcs,
         executable = ctx.executable.tblgen,
+        execution_requirements = {"supports-path-mapping": "1"},
         arguments = [args],
         # Make sure action_env settings are honored so the env is the same as
         # when the tool was built. Important for locating shared libraries with
@@ -234,15 +222,18 @@ def _gentbl_test_impl(ctx):
     # workspace is not the main workspace. Therefore it is not included in the
     # _resolve_includes call that prepends this prefix.
     trans_includes = _get_transitive_includes(
-        _resolve_includes(ctx, ctx.attr.includes + ["/"]) +
-        _prefix_roots(ctx, [td_file.dirname]),
+        _resolve_includes(ctx, ctx.attr.includes + ["/"]) + [td_file.dirname],
         ctx.attr.deps,
     )
 
     test_args = [ctx.executable.tblgen.short_path]
     test_args.extend(ctx.attr.opts)
     test_args.append(td_file.path)
-    test_args.extend(["-I " + include for include in trans_includes.to_list()])
+    test_args.extend([
+        arg
+        for include in trans_includes.to_list()
+        for arg in ["-I", include, "-I", paths.join(ctx.bin_dir.path, include)]
+    ])
 
     test_args.extend(["-o", "/dev/null"])
 
@@ -440,11 +431,12 @@ def _gentbl_shard_impl(ctx):
     args = ctx.actions.args()
     args.add(ctx.file.src_file)
     args.add("-op-shard-index", ctx.attr.index)
-    args.add("-o", ctx.outputs.out.path)
+    args.add("-o", ctx.outputs.out)
     ctx.actions.run(
         outputs = [ctx.outputs.out],
         inputs = [ctx.file.src_file],
         executable = ctx.executable.sharder,
+        execution_requirements = {"supports-path-mapping": "1"},
         arguments = [args],
         use_default_shell_env = True,
         mnemonic = "ShardGenerate",
@@ -506,6 +498,7 @@ def gentbl_sharded_ops(
       includes: See gentbl_rule.includes
       deps: See gentbl_rule.deps
       strip_include_prefix: Attribute to pass through to cc_library.
+      **kwargs: Passed through to all generated rules.
     """
     cc_lib_name = name + "__gentbl_cc_lib"
     gentbl_cc_library(

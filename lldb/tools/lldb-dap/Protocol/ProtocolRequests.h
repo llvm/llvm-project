@@ -300,6 +300,9 @@ struct LaunchRequestArguments {
   /// terminal or external terminal.
   Console console = eConsoleInternal;
 
+  /// An array of file paths for redirecting the program's standard IO streams.
+  std::vector<std::optional<std::string>> stdio;
+
   /// @}
 };
 bool fromJSON(const llvm::json::Value &, LaunchRequestArguments &,
@@ -1035,6 +1038,28 @@ struct ModuleSymbolsResponseBody {
   std::vector<Symbol> symbols;
 };
 llvm::json::Value toJSON(const ModuleSymbolsResponseBody &);
+
+struct ExceptionInfoArguments {
+  /// Thread for which exception information should be retrieved.
+  lldb::tid_t threadId = LLDB_INVALID_THREAD_ID;
+};
+bool fromJSON(const llvm::json::Value &, ExceptionInfoArguments &,
+              llvm::json::Path);
+
+struct ExceptionInfoResponseBody {
+  /// ID of the exception that was thrown.
+  std::string exceptionId;
+
+  /// Descriptive text for the exception.
+  std::string description;
+
+  /// Mode that caused the exception notification to be raised.
+  ExceptionBreakMode breakMode = eExceptionBreakModeNever;
+
+  /// Detailed information about the exception.
+  std::optional<ExceptionDetails> details;
+};
+llvm::json::Value toJSON(const ExceptionInfoResponseBody &);
 
 } // namespace lldb_dap::protocol
 

@@ -258,6 +258,12 @@ class DAGOperand {
   bit hasCompleteDecoder = true;
 }
 
+/// Abstract base class common to RegisterClass and
+/// RegClassByHwMode. This permits using RegClassByHwMode in
+/// RegisterOperand contexts without creating an artificial
+/// RegisterClass.
+class RegisterClassLike : DAGOperand;
+
 // RegisterClass - Now that all of the registers are defined, and aliases
 // between registers are defined, specify which registers belong to which
 // register classes. This also defines the default allocation order of
@@ -265,7 +271,7 @@ class DAGOperand {
 //
 class RegisterClass<string namespace, list<ValueType> regTypes, int alignment,
                     dag regList, RegAltNameIndex idx = NoRegAltName>
-  : DAGOperand {
+  : RegisterClassLike {
   string Namespace = namespace;
 
   // The register size/alignment information, parameterized by a HW mode.
@@ -916,15 +922,30 @@ def decoder;
 /// derived from this. TableGen treats the register class as having a symbolic
 /// type that it doesn't know, and resolves the actual regclass to use by using
 /// the TargetRegisterInfo::getPointerRegClass() hook at codegen time.
+///
+/// This is deprecated in favor of RegClassByHwMode.
 class PointerLikeRegClass<int Kind> {
   int RegClassKind = Kind;
 }
 
+/// RegClassByHwMode - Operands that change the register class based
+/// on the subtarget are derived from this. TableGen
+/// treats the register class as having a symbolic kind that it
+/// doesn't know, and resolves the actual regclass to use by using the
+/// a mapping in TargetInstrInfo at codegen time. This can be used to
+/// define operands which swap the register class with the pointer
+/// type.
+class RegClassByHwMode<list<HwMode> Modes,
+                       list<RegisterClass> RegClasses>
+  : HwModeSelect<Modes, !size(RegClasses)>, RegisterClassLike {
+  list<RegisterClass> Objects = RegClasses;
+}
 
 /// ptr_rc definition - Mark this operand as being a pointer value whose
 /// register class is resolved dynamically via a callback to TargetInstrInfo.
 /// FIXME: We should probably change this to a class which contain a list of
 /// flags. But currently we have but one flag.
+// Deprecated, use RegClassByHwMode instead.
 def ptr_rc : PointerLikeRegClass<0>;
 
 /// unknown definition - Mark this operand as being of unknown type, causing
@@ -1024,10 +1045,10 @@ class Operand<ValueType ty> : DAGOperand {
   AsmOperandClass ParserMatchClass = ImmAsmOperand;
 }
 
-class RegisterOperand<RegisterClass regclass, string pm = "printOperand">
+class RegisterOperand<RegisterClassLike regclass, string pm = "printOperand">
   : DAGOperand {
   // RegClass - The register class of the operand.
-  RegisterClass RegClass = regclass;
+  RegisterClassLike RegClass = regclass;
   // PrintMethod - The target method to call to print register operands of
   // this type. The method normally will just use an alt-name index to look
   // up the name to print. Default to the generic printOperand().
@@ -1415,9 +1436,9 @@ def PREALLOCATED_ARG : StandardPseudoInstruction {
 def LOCAL_ESCAPE : StandardPseudoInstruction {
   // This instruction is really just a label. It has to be part of the chain so
   // that it doesn't get dropped from the DAG, but it produces nothing and has
-  // no side effects.
+  // no side effects. Symbol operand is expected to be a label.
   let OutOperandList = (outs);
-  let InOperandList = (ins ptr_rc:$symbol, i32imm:$id);
+  let InOperandList = (ins unknown:$symbol, i32imm:$id);
   let hasSideEffects = false;
   let hasCtrlDep = true;
 }
@@ -1532,6 +1553,11 @@ def JUMP_TABLE_DEBUG_INFO : StandardPseudoInstruction {
   let hasSideEffects = false;
   let Size = 0;
   let isMeta = true;
+}
+def RELOC_NONE : StandardPseudoInstruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins unknown:$symbol);
+  let hasSideEffects = true;
 }
 
 let hasSideEffects = false, isMeta = true, isConvergent = true in {

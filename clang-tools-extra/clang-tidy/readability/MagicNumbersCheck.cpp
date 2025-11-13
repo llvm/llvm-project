@@ -1,4 +1,4 @@
-//===--- MagicNumbersCheck.cpp - clang-tidy-------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -145,7 +145,7 @@ void MagicNumbersCheck::registerMatchers(MatchFinder *Finder) {
 
 void MagicNumbersCheck::check(const MatchFinder::MatchResult &Result) {
 
-  TraversalKindScope RAII(*Result.Context, TK_AsIs);
+  const TraversalKindScope RAII(*Result.Context, TK_AsIs);
 
   checkBoundMatch<IntegerLiteral>(Result, "integer");
   checkBoundMatch<FloatingLiteral>(Result, "float");
@@ -248,7 +248,7 @@ bool MagicNumbersCheck::isBitFieldWidth(
 bool MagicNumbersCheck::isUserDefinedLiteral(
     const clang::ast_matchers::MatchFinder::MatchResult &Result,
     const clang::Expr &Literal) const {
-  DynTypedNodeList Parents = Result.Context->getParents(Literal);
+  const DynTypedNodeList Parents = Result.Context->getParents(Literal);
   if (Parents.empty())
     return false;
   return Parents[0].get<UserDefinedLiteral>() != nullptr;

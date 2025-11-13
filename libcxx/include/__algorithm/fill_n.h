@@ -9,9 +9,12 @@
 #ifndef _LIBCPP___ALGORITHM_FILL_N_H
 #define _LIBCPP___ALGORITHM_FILL_N_H
 
+#include <__algorithm/for_each_n_segment.h>
 #include <__algorithm/min.h>
 #include <__config>
 #include <__fwd/bit_reference.h>
+#include <__iterator/iterator_traits.h>
+#include <__iterator/segmented_iterator.h>
 #include <__memory/pointer_traits.h>
 #include <__utility/convert_to_integral.h>
 
@@ -28,7 +31,21 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _OutputIterator, class _Size, class _Tp>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _OutputIterator
-__fill_n(_OutputIterator __first, _Size __n, const _Tp& __value);
+__fill_n(_OutputIterator __first, _Size __n, const _Tp& __value) {
+#ifndef _LIBCPP_CXX03_LANG
+  if constexpr (__is_segmented_iterator_v<_OutputIterator>) {
+    using __local_iterator = typename __segmented_iterator_traits<_OutputIterator>::__local_iterator;
+    if constexpr (__has_random_access_iterator_category<__local_iterator>::value) {
+      return std::__for_each_n_segment(__first, __n, [&](__local_iterator __lfirst, __local_iterator __llast) {
+        std::__fill_n(__lfirst, __llast - __lfirst, __value);
+      });
+    }
+  }
+#endif
+  for (; __n > 0; ++__first, (void)--__n)
+    *__first = __value;
+  return __first;
+}
 
 template <bool _FillVal, class _Cp>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
@@ -66,14 +83,6 @@ __fill_n(__bit_iterator<_Cp, false> __first, _Size __n, const bool& __value) {
       std::__fill_n_bool<false>(__first, __n);
   }
   return __first + __n;
-}
-
-template <class _OutputIterator, class _Size, class _Tp>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _OutputIterator
-__fill_n(_OutputIterator __first, _Size __n, const _Tp& __value) {
-  for (; __n > 0; ++__first, (void)--__n)
-    *__first = __value;
-  return __first;
 }
 
 template <class _OutputIterator, class _Size, class _Tp>
