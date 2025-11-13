@@ -1,6 +1,10 @@
 ; RUN: mlir-translate -import-llvm -mlir-print-debuginfo -convert-debug-rec-to-intrinsics -emit-expensive-warnings -split-input-file %s 2>&1 | FileCheck %s
 ; RUN: mlir-translate -import-llvm -mlir-print-debuginfo -emit-expensive-warnings -split-input-file %s 2>&1 | FileCheck %s
 
+; CHECK: #[[LOCAL_VAR0:.*]] = #llvm.di_local_variable<scope = #di_lexical_block>
+; CHECK: #[[LOCAL_VAR1:.*]] = #llvm.di_local_variable<scope = #di_lexical_block_file, name = "arg"
+; CHECK: #[[LOCAL_VAR2:.*]] = #llvm.di_local_variable<scope = #di_lexical_block, name = "alloc"
+
 ; CHECK: @callee()
 define void @callee() {
   ret void
@@ -18,11 +22,11 @@ define void @func_no_debug() {
 ; CHECK: llvm.func @func_with_debug(%[[ARG0:.*]]: i64
 define void @func_with_debug(i64 %0) !dbg !3 {
 
-  ; CHECK: llvm.intr.dbg.value #di_local_variable{{.*}} = %[[ARG0]] : i64
-  ; CHECK: llvm.intr.dbg.value #di_local_variable{{.*}} #llvm.di_expression<[DW_OP_LLVM_fragment(0, 1)]> = %[[ARG0]] : i64
+  ; CHECK: llvm.intr.dbg.value #[[LOCAL_VAR0]] = %[[ARG0]] : i64
+  ; CHECK: llvm.intr.dbg.value #[[LOCAL_VAR1]] #llvm.di_expression<[DW_OP_LLVM_fragment(0, 1)]> = %[[ARG0]] : i64
   ; CHECK: %[[CST:.*]] = llvm.mlir.constant(1 : i32) : i32
   ; CHECK: %[[ADDR:.*]] = llvm.alloca %[[CST]] x i64
-  ; CHECK: llvm.intr.dbg.declare #di_local_variable{{.*}} #llvm.di_expression<[DW_OP_deref, DW_OP_LLVM_convert(4, DW_ATE_signed)]> = %[[ADDR]] : !llvm.ptr
+  ; CHECK: llvm.intr.dbg.declare #[[LOCAL_VAR2]] #llvm.di_expression<[DW_OP_deref, DW_OP_LLVM_convert(4, DW_ATE_signed)]> = %[[ADDR]] : !llvm.ptr
   %2 = alloca i64, align 8, !dbg !19
     #dbg_value(i64 %0, !20, !DIExpression(DW_OP_LLVM_fragment, 0, 1), !22)
     #dbg_declare(ptr %2, !23, !DIExpression(DW_OP_deref, DW_OP_LLVM_convert, 4, DW_ATE_signed), !25)
