@@ -58,12 +58,7 @@ namespace {
 
   struct FPS : public MachineFunctionPass {
     static char ID;
-    FPS() : MachineFunctionPass(ID) {
-      // This is really only to keep valgrind quiet.
-      // The logic in isLive() is too much for it.
-      memset(Stack, 0, sizeof(Stack));
-      memset(RegMap, 0, sizeof(RegMap));
-    }
+    FPS() : MachineFunctionPass(ID) {}
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
       AU.setPreservesCFG();
@@ -148,7 +143,7 @@ namespace {
     // to model that exactly. Usually, each live register corresponds to an
     // FP<n> register, but when dealing with calls, returns, and inline
     // assembly, it is sometimes necessary to have live scratch registers.
-    unsigned Stack[8];          // FP<n> Registers in each stack slot...
+    unsigned Stack[8] = {};     // FP<n> Registers in each stack slot...
     unsigned StackTop = 0;      // The current top of the FP stack.
 
     enum {
@@ -159,7 +154,7 @@ namespace {
     // The first entries correspond to FP0-FP6, the rest are scratch registers
     // used when we need slightly different live registers than what the
     // register allocator thinks.
-    unsigned RegMap[NumFPRegs];
+    unsigned RegMap[NumFPRegs] = {};
 
     // Set up our stack model to match the incoming registers to MBB.
     void setupBlockStack();

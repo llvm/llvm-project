@@ -579,8 +579,7 @@ inline raw_ostream &operator<<(raw_ostream &OS,
   return OS;
 }
 
-LLVM_DUMP_METHOD
-inline raw_ostream &
+[[maybe_unused]] LLVM_DUMP_METHOD inline raw_ostream &
 operator<<(raw_ostream &OS, const StraightLineStrengthReduce::DeltaInfo &DI) {
   OS << "Cand: " << *DI.Cand << "\n";
   OS << "Delta Kind: ";
@@ -686,7 +685,7 @@ void StraightLineStrengthReduce::setBasisAndDeltaFor(Candidate &C) {
   if (const auto *IndexDeltaCandidates =
           CandidateDict.getCandidatesWithDeltaKind(C, Candidate::IndexDelta)) {
     bool FoundConstDelta =
-        SearchFrom(*IndexDeltaCandidates, [&DT = DT, &C](Candidate *Basis) {
+        SearchFrom(*IndexDeltaCandidates, [&](Candidate *Basis) {
           if (isSimilar(C, *Basis, Candidate::IndexDelta)) {
             assert(DT->dominates(Basis->Ins, C.Ins));
             auto *Delta = getIndexDelta(C, *Basis);

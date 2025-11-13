@@ -81,7 +81,7 @@ bool containsSameFields(const FieldSet &Fields,
                         const RecordStorageLocation::FieldToLoc &FieldLocs) {
   if (Fields.size() != FieldLocs.size())
     return false;
-  for ([[maybe_unused]] auto [Field, Loc] : FieldLocs)
+  for (const auto &Field : FieldLocs.keys())
     if (!Fields.contains(cast_or_null<FieldDecl>(Field)))
       return false;
   return true;

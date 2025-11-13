@@ -35,18 +35,13 @@ define signext i32 @zeroEqualityTest02(ptr %x, ptr %y) {
 define signext i32 @zeroEqualityTest01(ptr %x, ptr %y) {
 ; CHECK-LABEL: zeroEqualityTest01:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    ld 5, 0(3)
-; CHECK-NEXT:    ld 6, 0(4)
-; CHECK-NEXT:    cmpld 5, 6
-; CHECK-NEXT:    bne 0, .LBB1_2
-; CHECK-NEXT:  # %bb.1: # %loadbb1
-; CHECK-NEXT:    ld 5, 8(3)
-; CHECK-NEXT:    ld 4, 8(4)
-; CHECK-NEXT:    li 3, 0
-; CHECK-NEXT:    cmpld 5, 4
-; CHECK-NEXT:    beqlr 0
-; CHECK-NEXT:  .LBB1_2: # %res_block
-; CHECK-NEXT:    li 3, 1
+; CHECK-NEXT:    lxvd2x 34, 0, 4
+; CHECK-NEXT:    lxvd2x 35, 0, 3
+; CHECK-NEXT:    vcmpequb. 2, 3, 2
+; CHECK-NEXT:    mfocrf 3, 2
+; CHECK-NEXT:    rlwinm 3, 3, 25, 31, 31
+; CHECK-NEXT:    cntlzw 3, 3
+; CHECK-NEXT:    srwi 3, 3, 5
 ; CHECK-NEXT:    blr
   %call = tail call signext i32 @memcmp(ptr %x, ptr %y, i64 16)
   %not.tobool = icmp ne i32 %call, 0
@@ -85,7 +80,7 @@ define signext i32 @zeroEqualityTest03(ptr %x, ptr %y) {
 ; Validate with > 0
 define signext i32 @zeroEqualityTest04() {
 ; CHECK-LABEL: zeroEqualityTest04:
-; CHECK:       # %bb.0: # %loadbb
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li 3, 0
 ; CHECK-NEXT:    blr
   %call = tail call signext i32 @memcmp(ptr @zeroEqualityTest02.buffer1, ptr @zeroEqualityTest02.buffer2, i64 16)
@@ -97,7 +92,7 @@ define signext i32 @zeroEqualityTest04() {
 ; Validate with < 0
 define signext i32 @zeroEqualityTest05() {
 ; CHECK-LABEL: zeroEqualityTest05:
-; CHECK:       # %bb.0: # %loadbb
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li 3, 0
 ; CHECK-NEXT:    blr
   %call = tail call signext i32 @memcmp(ptr @zeroEqualityTest03.buffer1, ptr @zeroEqualityTest03.buffer2, i64 16)
@@ -109,7 +104,7 @@ define signext i32 @zeroEqualityTest05() {
 ; Validate with memcmp()?:
 define signext i32 @equalityFoldTwoConstants() {
 ; CHECK-LABEL: equalityFoldTwoConstants:
-; CHECK:       # %bb.0: # %loadbb
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li 3, 1
 ; CHECK-NEXT:    blr
   %call = tail call signext i32 @memcmp(ptr @zeroEqualityTest04.buffer1, ptr @zeroEqualityTest04.buffer2, i64 16)
@@ -121,24 +116,13 @@ define signext i32 @equalityFoldTwoConstants() {
 define signext i32 @equalityFoldOneConstant(ptr %X) {
 ; CHECK-LABEL: equalityFoldOneConstant:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li 5, 1
-; CHECK-NEXT:    ld 4, 0(3)
-; CHECK-NEXT:    rldic 5, 5, 32, 31
-; CHECK-NEXT:    cmpld 4, 5
-; CHECK-NEXT:    bne 0, .LBB6_2
-; CHECK-NEXT:  # %bb.1: # %loadbb1
-; CHECK-NEXT:    lis 5, -32768
-; CHECK-NEXT:    ld 4, 8(3)
-; CHECK-NEXT:    li 3, 0
-; CHECK-NEXT:    ori 5, 5, 1
-; CHECK-NEXT:    rldic 5, 5, 1, 30
-; CHECK-NEXT:    cmpld 4, 5
-; CHECK-NEXT:    beq 0, .LBB6_3
-; CHECK-NEXT:  .LBB6_2: # %res_block
-; CHECK-NEXT:    li 3, 1
-; CHECK-NEXT:  .LBB6_3: # %endblock
-; CHECK-NEXT:    cntlzw 3, 3
-; CHECK-NEXT:    srwi 3, 3, 5
+; CHECK-NEXT:   lxvd2x 34, 0, 3
+; CHECK-NEXT:   addis 3, 2, .LCPI6_0@toc@ha
+; CHECK-NEXT:   addi 3, 3, .LCPI6_0@toc@l
+; CHECK-NEXT:   lxvd2x 35, 0, 3
+; CHECK-NEXT:   vcmpequb. 2, 2, 3
+; CHECK-NEXT:   mfocrf 3, 2
+; CHECK-NEXT:   rlwinm 3, 3, 25, 31, 31
 ; CHECK-NEXT:    blr
   %call = tail call signext i32 @memcmp(ptr @zeroEqualityTest04.buffer1, ptr %X, i64 16)
   %not.tobool = icmp eq i32 %call, 0

@@ -14,18 +14,24 @@ func.func @rocdl_special_regs() -> i32 {
   %4 = rocdl.workgroup.id.y : i32
   // CHECK: rocdl.workgroup.id.z : i32
   %5 = rocdl.workgroup.id.z : i32
+  // CHECK: rocdl.cluster.id.x : i32
+  %6 = rocdl.cluster.id.x : i32
+  // CHECK: rocdl.cluster.id.y : i32
+  %7 = rocdl.cluster.id.y : i32
+  // CHECK: rocdl.cluster.id.z : i32
+  %8 = rocdl.cluster.id.z : i32
   // CHECK: rocdl.workgroup.dim.x : i32
-  %6 = rocdl.workgroup.dim.x : i32
+  %9 = rocdl.workgroup.dim.x : i32
   // CHECK: rocdl.workgroup.dim.y : i32
-  %7 = rocdl.workgroup.dim.y : i32
+  %10 = rocdl.workgroup.dim.y : i32
   // CHECK: rocdl.workgroup.dim.z : i32
-  %8 = rocdl.workgroup.dim.z : i32
+  %11 = rocdl.workgroup.dim.z : i32
   // CHECK: rocdl.grid.dim.x : i32
-  %9 = rocdl.grid.dim.x : i32
+  %12 = rocdl.grid.dim.x : i32
   // CHECK: rocdl.grid.dim.y : i32
-  %10 = rocdl.grid.dim.y : i32
+  %13 = rocdl.grid.dim.y : i32
   // CHECK: rocdl.grid.dim.z : i32
-  %11 = rocdl.grid.dim.z : i32
+  %14 = rocdl.grid.dim.z : i32
   llvm.return %0 : i32
 }
 

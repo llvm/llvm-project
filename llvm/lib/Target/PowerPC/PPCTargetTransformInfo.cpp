@@ -443,7 +443,11 @@ bool PPCTTIImpl::enableAggressiveInterleaving(bool LoopHasReductions) const {
 PPCTTIImpl::TTI::MemCmpExpansionOptions
 PPCTTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
   TTI::MemCmpExpansionOptions Options;
-  Options.LoadSizes = {8, 4, 2, 1};
+  if (getST()->hasAltivec())
+    Options.LoadSizes = {16, 8, 4, 2, 1};
+  else
+    Options.LoadSizes = {8, 4, 2, 1};
+
   Options.MaxNumLoads = TLI->getMaxExpandSizeMemcmp(OptSize);
   return Options;
 }

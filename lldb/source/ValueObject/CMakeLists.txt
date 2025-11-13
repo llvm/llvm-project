@@ -1,4 +1,4 @@
-add_lldb_library(lldbValueObject NO_PLUGIN_DEPENDENCIES
+add_lldb_library(lldbValueObject
   DILAST.cpp
   DILEval.cpp
   DILLexer.cpp
@@ -34,4 +34,6 @@ add_lldb_library(lldbValueObject NO_PLUGIN_DEPENDENCIES
     lldbSymbol
     lldbTarget
     lldbUtility
+    lldbPluginCPlusPlusLanguage
+    lldbPluginObjCLanguage
   )
