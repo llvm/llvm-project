@@ -1839,7 +1839,7 @@ static void handleRestrictAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
                  RestrictAttr(S.Context, AL, DeallocE, DeallocPtrIdx));
 }
 
-static bool isSpanLikeType(const QualType &Ty) {
+static bool checkSpanLikeType(const QualType &Ty) {
   // Check that the type is a plain record with one field being a pointer
   // type and the other field being an integer. This matches the common
   // implementation of std::span or sized_allocation_t in P0901R11.
@@ -1866,7 +1866,7 @@ static bool isSpanLikeType(const QualType &Ty) {
 
 static void handleMallocSpanAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   QualType ResultType = getFunctionOrMethodResultType(D);
-  if (!isSpanLikeType(ResultType)) {
+  if (!checkSpanLikeType(ResultType)) {
     S.Diag(AL.getLoc(), diag::warn_attribute_return_span_only)
         << AL << getFunctionOrMethodResultSourceRange(D);
     return;
