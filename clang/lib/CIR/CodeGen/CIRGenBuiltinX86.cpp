@@ -16,7 +16,6 @@
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/CIR/MissingFeatures.h"
-#include "llvm/IR/IntrinsicsX86.h"
 
 using namespace clang;
 using namespace clang::CIRGen;
@@ -42,6 +41,18 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
 
   // Find out if any arguments are required to be integer constant expressions.
   assert(!cir::MissingFeatures::handleBuiltinICEArguments());
+
+  llvm::SmallVector<mlir::Value> ops;
+
+  // Find out if any arguments are required to be integer constant expressions.
+  unsigned iceArguments = 0;
+  ASTContext::GetBuiltinTypeError error;
+  getContext().GetBuiltinType(builtinID, error, &iceArguments);
+  assert(error == ASTContext::GE_None && "Should not codegen an error");
+
+  for (auto [idx, arg] : llvm::enumerate(e->arguments())) {
+    ops.push_back(emitScalarOrConstFoldImmArg(iceArguments, idx, arg));
+  }
 
   switch (builtinID) {
   default:
@@ -82,10 +93,30 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   case X86::BI__builtin_ia32_vec_set_v16hi:
   case X86::BI__builtin_ia32_vec_set_v8si:
   case X86::BI__builtin_ia32_vec_set_v4di:
+    cgm.errorNYI(e->getSourceRange(),
+                 std::string("unimplemented X86 builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinID));
+    return {};
   case X86::BI_mm_setcsr:
-  case X86::BI__builtin_ia32_ldmxcsr:
+  case X86::BI__builtin_ia32_ldmxcsr: {
+    Address tmp =
+        createMemTemp(e->getArg(0)->getType(), getLoc(e->getExprLoc()));
+    builder.createStore(getLoc(e->getExprLoc()), ops[0], tmp);
+    return cir::LLVMIntrinsicCallOp::create(
+               builder, getLoc(e->getExprLoc()),
+               builder.getStringAttr("x86.sse.ldmxcsr"), builder.getVoidTy(),
+               tmp.getPointer())
+        .getResult();
+  }
   case X86::BI_mm_getcsr:
-  case X86::BI__builtin_ia32_stmxcsr:
+  case X86::BI__builtin_ia32_stmxcsr: {
+    Address tmp = createMemTemp(e->getType(), getLoc(e->getExprLoc()));
+    cir::LLVMIntrinsicCallOp::create(builder, getLoc(e->getExprLoc()),
+                                     builder.getStringAttr("x86.sse.stmxcsr"),
+                                     builder.getVoidTy(), tmp.getPointer())
+        .getResult();
+    return builder.createLoad(getLoc(e->getExprLoc()), tmp);
+  }
   case X86::BI__builtin_ia32_xsave:
   case X86::BI__builtin_ia32_xsave64:
   case X86::BI__builtin_ia32_xrstor:
