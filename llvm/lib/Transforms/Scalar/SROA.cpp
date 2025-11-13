@@ -5220,9 +5220,9 @@ AllocaInst *SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS,
       SliceTy = CommonUseTy.second;
       SliceVecTy = dyn_cast<VectorType>(SliceTy);
     }
-  // Try representing the partition as a legal integer type of the same size as the alloca.
-  if ((!SliceTy || SliceTy->isArrayTy()) &&
-      DL.isLegalInteger(P.size() * 8)) {
+  // Try representing the partition as a legal integer type of the same size as
+  // the alloca.
+  if ((!SliceTy || SliceTy->isArrayTy()) && DL.isLegalInteger(P.size() * 8)) {
     SliceTy = Type::getIntNTy(*C, P.size() * 8);
   }
 
