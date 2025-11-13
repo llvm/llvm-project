@@ -708,6 +708,13 @@ void CIRGenFunction::emitCXXDeleteExpr(const CXXDeleteExpr *e) {
   deleteTy = getContext().getBaseElementType(deleteTy);
   ptr = ptr.withElementType(builder, convertTypeForMem(deleteTy));
 
+  if (e->isArrayForm() &&
+      cgm.getContext().getTargetInfo().emitVectorDeletingDtors(
+          cgm.getContext().getLangOpts())) {
+    cgm.errorNYI(e->getSourceRange(),
+                 "emitCXXDeleteExpr: emitVectorDeletingDtors");
+  }
+
   if (e->isArrayForm()) {
     assert(!cir::MissingFeatures::deleteArray());
     cgm.errorNYI(e->getSourceRange(), "emitCXXDeleteExpr: array delete");
