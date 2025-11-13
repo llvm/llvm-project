@@ -169,11 +169,11 @@ protected:
         getObject().getRelocation(RelItr->getRawDataRefImpl());
     MachO::relocation_info RI;
     RI.r_address = ARI.r_word0;
-    RI.r_symbolnum = ARI.r_word1 & 0xffffff;
-    RI.r_pcrel = (ARI.r_word1 >> 24) & 1;
-    RI.r_length = (ARI.r_word1 >> 25) & 3;
-    RI.r_extern = (ARI.r_word1 >> 27) & 1;
-    RI.r_type = (ARI.r_word1 >> 28);
+    RI.r_symbolnum = getObject().getPlainRelocationSymbolNum(ARI);
+    RI.r_pcrel = getObject().getAnyRelocationPCRel(ARI);
+    RI.r_length = getObject().getAnyRelocationLength(ARI);
+    RI.r_extern = getObject().getPlainRelocationExternal(ARI);
+    RI.r_type = getObject().getAnyRelocationType(ARI);
     return RI;
   }
 
