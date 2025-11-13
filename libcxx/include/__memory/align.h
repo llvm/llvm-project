@@ -35,13 +35,13 @@ __align_impl(size_t __align, size_t __sz, void*& __ptr, size_t& __space) {
   return __r;
 }
 
-#ifndef _LIBCPP_ALIGN_DEFINE_LEGACY_INLINE_FUNCTIONS
+#ifndef _LIBCPP_EXPORT_ALIGN_SYMBOL
 
 inline _LIBCPP_HIDE_FROM_ABI void* align(size_t __align, size_t __sz, void*& __ptr, size_t& __space) {
   return __align_impl(__align, __sz, __ptr, __space);
 }
 
-#endif // _LIBCPP_ALIGN_DEFINE_LEGACY_INLINE_FUNCTIONS
+#endif // _LIBCPP_EXPORT_ALIGN_SYMBOL
 
 _LIBCPP_END_NAMESPACE_STD
 

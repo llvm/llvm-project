@@ -114,6 +114,10 @@ hand, backwards compatibility is generally guaranteed.
 
 There are multiple ABI flags that change the symbols exported from the built library:
 
+``_LIBCPP_ABI_DO_NOT_EXPORT_ALIGN``
+-------------------------------------------------
+This removes ``align()``. In the past ``align()`` is not an inline function, but now it changed to an inline function for performance.
+
 ``_LIBCPP_ABI_DO_NOT_EXPORT_BASIC_STRING_COMMON``
 -------------------------------------------------
 This removes ``__basic_string_common<true>::__throw_length_error()`` and
