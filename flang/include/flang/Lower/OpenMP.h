@@ -97,13 +97,6 @@ bool markOpenMPDeferredDeclareTargetFunctions(
     AbstractConverter &);
 void genOpenMPRequires(mlir::Operation *, const Fortran::semantics::Symbol *);
 
-// Materialize omp.declare_mapper ops for mapper declarations found in
-// imported modules. If \p scope is null, materialize for the whole
-// semantics global scope; otherwise, operate recursively starting at \p scope.
-void materializeOpenMPDeclareMappers(
-    Fortran::lower::AbstractConverter &, Fortran::semantics::SemanticsContext &,
-    const Fortran::semantics::Scope *scope = nullptr);
-
 } // namespace lower
 } // namespace Fortran
 
