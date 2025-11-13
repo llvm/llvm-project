@@ -2827,7 +2827,7 @@ HandleMergeInputChains(const SmallVectorImpl<SDNode *> &ChainNodesMatched,
   // to-be-merged nodes. Fail.
   Visited.clear();
   for (SDValue V : InputChains) {
-    // If we need to create a TokenFactor, and any of the input chains will
+    // If we need to create a TokenFactor, and any of the input chain nodes will
     // also be glued to the output, we cannot merge the chains. The TokenFactor
     // would prevent the glue from being honored.
     if (InputChains.size() != 1 &&
