@@ -1986,17 +1986,20 @@ void AsmPrinter::emitFunctionBody() {
     emitBasicBlockStart(MBB);
     DenseMap<StringRef, unsigned> MnemonicCounts;
 
-    SmallVector<unsigned> PrefetchTargets = MBB.getPrefetchTargetIndexes();
+    SmallVector<unsigned> PrefetchTargets = MBB.getPrefetchTargetSubblockIndexes();
     auto PrefetchTargetIt = PrefetchTargets.begin();
     unsigned NumCalls = 0;
+    // Helper to emit a symbol for the prefetch target and proceed to the next
+    // one.
     auto EmitPrefetchTargetSymbolIfNeeded = [&]() {
-      if (PrefetchTargetIt == PrefetchTargets.end() ||
-          NumCalls < *PrefetchTargetIt)
-        return;
+      if (PrefetchTargetIt == PrefetchTargets.end()) return;
+      if (NumCalls < *PrefetchTargetIt) return;
       MCSymbol *PrefetchTargetSymbol = OutContext.getOrCreateSymbol(
           Twine("__llvm_prefetch_target_") + MF->getName() + Twine("_") +
           utostr(MBB.getBBID()->BaseID) + Twine("_") +
           utostr(*PrefetchTargetIt));
+      // If the function is weak-linkage it may be replaced by a strong version,
+      // in which case the prefetch targets should also be replaced.
       OutStreamer->emitSymbolAttribute(
           PrefetchTargetSymbol,
           MF->getFunction().isWeakForLinker() ? MCSA_Weak : MCSA_Global);
@@ -2159,6 +2162,8 @@ void AsmPrinter::emitFunctionBody() {
       for (auto &Handler : Handlers)
         Handler->endInstruction();
     }
+    // If the block ends with a call, we may need to emit a prefetch target
+    // at the end.
     EmitPrefetchTargetSymbolIfNeeded();
 
     // We must emit temporary symbol for the end of this basic block, if either

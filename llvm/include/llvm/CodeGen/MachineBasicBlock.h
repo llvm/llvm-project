@@ -229,7 +229,12 @@ private:
   /// is only computed once and is cached.
   mutable MCSymbol *CachedMCSymbol = nullptr;
 
-  SmallVector<unsigned> PrefetchTargetIndexes;
+  /// Contains the subblock indices in this block that are targets of code prefetching.
+  /// The subblock indexed `i` specifies that region after the `i`th call (or the
+  /// beginning of the block if `i==0`) to before the`i+1`th callsite (or the
+  /// end of the block). The prefetch target is always the beginning of the
+  /// subblock.
+  SmallVector<unsigned> PrefetchTargetSubblockIndexes;
 
   /// Cached MCSymbol for this block (used if IsEHContTarget).
   mutable MCSymbol *CachedEHContMCSymbol = nullptr;
@@ -712,12 +717,12 @@ public:
 
   std::optional<UniqueBBID> getBBID() const { return BBID; }
 
-  const SmallVector<unsigned> &getPrefetchTargetIndexes() const {
-    return PrefetchTargetIndexes;
+  const SmallVector<unsigned> &getPrefetchTargetSubblockIndexes() const {
+    return PrefetchTargetSubblockIndexes;
   }
 
-  void setPrefetchTargetIndexes(const SmallVector<unsigned> &V) {
-    PrefetchTargetIndexes = V;
+  void setPrefetchTargetSubblockIndexes(const SmallVector<unsigned> &V) {
+    PrefetchTargetSubblockIndexes = V;
   }
 
   /// Returns the section ID of this basic block.

@@ -12,9 +12,9 @@
 /// This pass inserts code prefetch instructions according to the prefetch
 /// directives in the basic block section profile. The target of a prefetch can
 /// be the beginning of any dynamic basic block, that is the beginning of a
-/// machine basic block, or immediately after a callsite. A global symbol will
-/// be emitted at the position of the target so it can be addressed from the
-/// prefetch instruction.
+/// machine basic block, or immediately after a callsite. A global symbol is
+/// emitted at the position of the target so it can be addressed from the
+/// prefetch instruction from any module.
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/SmallVector.h"
@@ -68,6 +68,8 @@ bool InsertCodePrefetch::runOnMachineFunction(MachineFunction &MF) {
          "BB Sections list not enabled!");
   if (hasInstrProfHashMismatch(MF))
     return false;
+  // Set each block's prefetch targets so AsmPrinter can emit a special symbol
+  // there.
   SmallVector<BBPosition> PrefetchTargets =
       getAnalysis<BasicBlockSectionsProfileReaderWrapperPass>()
           .getPrefetchTargetsForFunction(MF.getName());
@@ -78,9 +80,8 @@ bool InsertCodePrefetch::runOnMachineFunction(MachineFunction &MF) {
     auto R = PrefetchTargetsByBBID.find(*MBB.getBBID());
     if (R == PrefetchTargetsByBBID.end())
       continue;
-    MBB.setPrefetchTargetIndexes(R->second);
+    MBB.setPrefetchTargetSubblockIndexes(R->second);
   }
-
   return false;
 }
 
