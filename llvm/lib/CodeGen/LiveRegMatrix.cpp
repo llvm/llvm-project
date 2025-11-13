@@ -75,9 +75,8 @@ void LiveRegMatrix::init(MachineFunction &MF, LiveIntervals &pLIS,
 void LiveRegMatrixWrapperLegacy::releaseMemory() { LRM.releaseMemory(); }
 
 void LiveRegMatrix::releaseMemory() {
-  assert(Matrix.size() == TRI->getNumRegUnits());
-  for (MCRegUnit Unit : TRI->regunits()) {
-    Matrix[Unit].clear();
+  for (unsigned i = 0, e = Matrix.size(); i != e; ++i) {
+    Matrix[i].clear();
     // No need to clear Queries here, since LiveIntervalUnion::Query doesn't
     // have anything important to clear and LiveRegMatrix's runOnFunction()
     // does a std::unique_ptr::reset anyways.

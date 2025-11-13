@@ -182,8 +182,7 @@ void LiveIntervals::print(raw_ostream &OS) const {
   OS << "********** INTERVALS **********\n";
 
   // Dump the regunits.
-  assert(RegUnitRanges.size() == TRI->getNumRegUnits());
-  for (MCRegUnit Unit : TRI->regunits())
+  for (unsigned Unit = 0, UnitE = RegUnitRanges.size(); Unit != UnitE; ++Unit)
     if (LiveRange *LR = RegUnitRanges[Unit])
       OS << printRegUnit(Unit, TRI) << ' ' << *LR << '\n';
 

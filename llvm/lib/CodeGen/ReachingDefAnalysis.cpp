@@ -155,12 +155,12 @@ void ReachingDefInfo::enterBasicBlock(MachineBasicBlock *MBB) {
       continue;
 
     // Find the most recent reaching definition from a predecessor.
-    for (MCRegUnit Unit : TRI->regunits())
+    for (unsigned Unit = 0; Unit != NumRegUnits; ++Unit)
       LiveRegs[Unit] = std::max(LiveRegs[Unit], Incoming[Unit]);
   }
 
   // Insert the most recent reaching definition we found.
-  for (MCRegUnit Unit : TRI->regunits())
+  for (unsigned Unit = 0; Unit != NumRegUnits; ++Unit)
     if (LiveRegs[Unit] != ReachingDefDefaultVal)
       MBBReachingDefs.append(MBBNumber, Unit, LiveRegs[Unit]);
 }
@@ -235,7 +235,7 @@ void ReachingDefInfo::reprocessBasicBlock(MachineBasicBlock *MBB) {
     if (Incoming.empty())
       continue;
 
-    for (MCRegUnit Unit : TRI->regunits()) {
+    for (unsigned Unit = 0; Unit != NumRegUnits; ++Unit) {
       int Def = Incoming[Unit];
       if (Def == ReachingDefDefaultVal)
         continue;
@@ -368,7 +368,7 @@ void ReachingDefInfo::traverse() {
   // Make sure reaching defs are sorted and unique.
   for (unsigned MBBNumber = 0, NumBlockIDs = MF->getNumBlockIDs();
        MBBNumber != NumBlockIDs; ++MBBNumber) {
-    for (MCRegUnit Unit : TRI->regunits()) {
+    for (unsigned Unit = 0; Unit != NumRegUnits; ++Unit) {
       int LastDef = ReachingDefDefaultVal;
       for (int Def : MBBReachingDefs.defs(MBBNumber, Unit)) {
         assert(Def > LastDef && "Defs must be sorted and unique");
