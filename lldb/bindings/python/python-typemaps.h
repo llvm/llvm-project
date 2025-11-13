@@ -3,6 +3,7 @@
 
 #include <Python.h>
 
+#if SWIG_VERSION < 0x040100
 // Defined here instead of a .swig file because SWIG 2 doesn't support
 // explicit deleted functions.
 struct Py_buffer_RAII {
@@ -15,5 +16,6 @@ struct Py_buffer_RAII {
       PyBuffer_Release(&buffer);
   }
 };
+#endif
 
 #endif // LLDB_BINDINGS_PYTHON_PYTHON_TYPEMAPS_H
