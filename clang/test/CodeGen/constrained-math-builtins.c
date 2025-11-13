@@ -101,10 +101,10 @@ __builtin_atan2(f,f);        __builtin_atan2f(f,f);       __builtin_atan2l(f,f);
 
   __builtin_exp10(f);       __builtin_exp10f(f);      __builtin_exp10l(f); __builtin_exp10f128(f);
 
-// CHECK: call double @llvm.exp10.f64(double %{{.*}})
-// CHECK: call float @llvm.exp10.f32(float %{{.*}})
-// CHECK: call x86_fp80 @llvm.exp10.f80(x86_fp80 %{{.*}})
-// CHECK: call fp128 @llvm.exp10.f128(fp128 %{{.*}})
+// CHECK: call double @exp10(double noundef %{{.*}})
+// CHECK: call float @exp10f(float noundef %{{.*}})
+// CHECK: call x86_fp80 @exp10l(x86_fp80 noundef %{{.*}})
+// CHECK: call fp128 @exp10f128(fp128 noundef %{{.*}})
 
   __builtin_floor(f);      __builtin_floorf(f);     __builtin_floorl(f); __builtin_floorf128(f);
 
@@ -287,10 +287,10 @@ __builtin_atan2(f,f);        __builtin_atan2f(f,f);       __builtin_atan2l(f,f);
 // CHECK: declare x86_fp80 @llvm.experimental.constrained.exp2.f80(x86_fp80, metadata, metadata)
 // CHECK: declare fp128 @llvm.experimental.constrained.exp2.f128(fp128, metadata, metadata)
 
-// CHECK: declare double @llvm.exp10.f64(double)
-// CHECK: declare float @llvm.exp10.f32(float)
-// CHECK: declare x86_fp80 @llvm.exp10.f80(x86_fp80)
-// CHECK: declare fp128 @llvm.exp10.f128(fp128)
+// CHECK: declare double @exp10(double noundef)
+// CHECK: declare float @exp10f(float noundef)
+// CHECK: declare x86_fp80 @exp10l(x86_fp80 noundef)
+// CHECK: declare fp128 @exp10f128(fp128 noundef)
 
 // CHECK: declare double @llvm.experimental.constrained.floor.f64(double, metadata)
 // CHECK: declare float @llvm.experimental.constrained.floor.f32(float, metadata)

@@ -2847,10 +2847,13 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_exp10f16:
     case Builtin::BI__builtin_exp10l:
     case Builtin::BI__builtin_exp10f128:
-    case Builtin::BI__builtin_elementwise_exp10:
+    case Builtin::BI__builtin_elementwise_exp10: {
       // TODO: strictfp support
+      if (Builder.getIsFPConstrained())
+        break;
       return RValue::get(
           emitBuiltinWithOneOverloadedType<1>(*this, E, Intrinsic::exp10));
+    }
     case Builtin::BIfabs:
     case Builtin::BIfabsf:
     case Builtin::BIfabsl:
