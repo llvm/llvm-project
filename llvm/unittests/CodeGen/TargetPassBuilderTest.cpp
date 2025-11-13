@@ -72,21 +72,20 @@ struct TestDAGISelPass : public PassInfoMixin<TestDAGISelPass> {
 
 class TestPassBuilder : public TargetPassBuilder {
 public:
-  using TargetPassBuilder::ModulePassManager;
+  TestPassBuilder(PassBuilder &PB) : TargetPassBuilder(PB) {}
 
-  TestPassBuilder(PassBuilder &PB) : TargetPassBuilder(PB) {
-
+  void registerCallbacks() override {
     registerSelectionDAGISelPass([]() { return TestDAGISelPass(); });
     CGPBO.RequiresCodeGenSCCOrder = true;
 
     injectBefore<PreISelIntrinsicLoweringPass>([]() {
-      ModulePassManager MPM;
+      TargetModulePassManager MPM;
       MPM.addPass(NoOpModulePass());
       return MPM;
     });
 
-    injectBefore<ExpandFpPass, ModulePassManager>([] {
-      ModulePassManager MPM;
+    injectBefore<ExpandFpPass, TargetModulePassManager>([] {
+      TargetModulePassManager MPM;
       MPM.addPass(NoOpModulePass());
       return MPM;
     });
@@ -98,7 +97,8 @@ template struct PrivateVisitorHelper<
 template struct PrivateVisitorHelper<
     0, &TargetPassBuilder::invokeInjectionCallbacks>;
 template struct PrivateVisitorHelper<
-    0, &TargetPassBuilder::ModulePassManager::Passes>;
+    0, &TargetPassBuilder::constructRealPassManager>;
+template struct PrivateVisitorHelper<0, &TargetModulePassManager::Passes>;
 
 TEST(TargetPassBuilder, Basic) {
   TargetMachine *TM = createTargetMachine();
@@ -118,21 +118,31 @@ TEST(TargetPassBuilder, Basic) {
   PB.crossRegisterProxies(LAM, FAM, CGAM, AM);
 
   TestPassBuilder TPB(PB);
-  using PassList = TargetPassBuilder::PassList;
-  auto MPM = (TPB.*PrivatePtr<0, TestPassBuilder::ModulePassManager (
-                                     TargetPassBuilder::*)()>)();
-  auto &Passes =
-      MPM.*PrivatePtr<0, PassList TestPassBuilder::ModulePassManager::*>;
-  (TPB.*PrivatePtr<0, void (TargetPassBuilder::*)(
-                          TestPassBuilder::ModulePassManager &)
-                          const>)(MPM); // invokeInjectionCallbacks
+  TPB.registerCallbacks();
+  using PassList = std::list<detail::PassWrapper>;
+  TargetModulePassManager TMPM =
+      (TPB.*
+       PrivatePtr<0, TargetModulePassManager (
+                         TargetPassBuilder::*)()>)(); // buildCodeGenIRPipeline
+  auto &Passes = TMPM.*PrivatePtr<0, PassList TargetModulePassManager::*>;
+  (TPB.*PrivatePtr<0, void (TargetPassBuilder::*)(TargetModulePassManager &)
+                          const>)(TMPM); // invokeInjectionCallbacks
   auto B = Passes.begin();
   EXPECT_EQ(B->Name, NoOpModulePass::name());
-  ++B, ++B, ++B;
+  B = std::next(B, 3);
   EXPECT_EQ(B->Name, NoOpModulePass::name());
+
+  ModulePassManager MPM =
+      (TPB.*PrivatePtr<0, ModulePassManager (TargetPassBuilder::*)(
+                              TargetModulePassManager &) const>)(TMPM);
+  std::string PipelineString;
+  llvm::raw_string_ostream OS(PipelineString);
+  MPM.printPipeline(OS, [](StringRef Name) { return Name; });
+  StringRef PipelineStringRef(PipelineString);
+  EXPECT_TRUE(PipelineStringRef.ends_with("VerifierPass"));
 }
 
-template struct PrivateVisitorHelper<1, &TargetPassBuilder::filtPassList>;
+template struct PrivateVisitorHelper<1, &TargetPassBuilder::filterPassList>;
 
 TEST(TargetPassBuilder, StartStop) {
   const char *Argv[] = {"CodeGenTests",
@@ -156,18 +166,16 @@ TEST(TargetPassBuilder, StartStop) {
   PB.registerLoopAnalyses(LAM);
   PB.crossRegisterProxies(LAM, FAM, CGAM, AM);
 
-  using PassList = TargetPassBuilder::PassList;
+  using PassList = std::list<detail::PassWrapper>;
 
   TestPassBuilder TPB(PB);
-  auto MPM = (TPB.*PrivatePtr<0, TestPassBuilder::ModulePassManager (
-                                     TargetPassBuilder::*)()>)();
-  auto &Passes =
-      MPM.*PrivatePtr<0, PassList TestPassBuilder::ModulePassManager::*>;
-  (TPB.*PrivatePtr<0, void (TargetPassBuilder::*)(
-                          TestPassBuilder::ModulePassManager &)
+  TPB.registerCallbacks();
+  TargetModulePassManager MPM =
+      (TPB.*PrivatePtr<0, TargetModulePassManager (TargetPassBuilder::*)()>)();
+  PassList &Passes = MPM.*PrivatePtr<0, PassList TargetModulePassManager::*>;
+  (TPB.*PrivatePtr<0, void (TargetPassBuilder::*)(TargetModulePassManager &)
                           const>)(MPM); // invokeInjectionCallbacks
-  (TPB.*PrivatePtr<1, void (TargetPassBuilder::*)(
-                          TestPassBuilder::ModulePassManager &)
+  (TPB.*PrivatePtr<1, void (TargetPassBuilder::*)(TargetModulePassManager &)
                           const>)(MPM); // filtPassList
   EXPECT_EQ(Passes.size(), 1u);
   EXPECT_EQ(Passes.begin()->Name, ExpandLargeDivRemPass::name());

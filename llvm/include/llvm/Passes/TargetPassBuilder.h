@@ -15,9 +15,9 @@
 #ifndef LLVM_PASSES_TARGETPASSBUILDER_H
 #define LLVM_PASSES_TARGETPASSBUILDER_H
 
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSet.h"
-#include "llvm/ADT/identity.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/Target/CGPassBuilderOption.h"
@@ -35,6 +35,307 @@ class PassBuilder;
 class TargetMachine;
 class SelectionDAGISel;
 
+namespace detail {
+
+struct InjectionPointMixin {};
+
+template <typename PassT, typename IRUnitT>
+using HasRunOnIRUnit = decltype(std::declval<PassT>().run(
+    std::declval<IRUnitT &>(), std::declval<AnalysisManager<IRUnitT> &>()));
+template <typename PassT>
+using HasRunOnLoop = decltype(std::declval<PassT>().run(
+    std::declval<Loop &>(), std::declval<LoopAnalysisManager &>(),
+    std::declval<LoopStandardAnalysisResults &>(),
+    std::declval<LPMUpdater &>()));
+template <typename PassT>
+static constexpr bool isModulePass =
+    is_detected<HasRunOnIRUnit, PassT, Module>::value;
+template <typename PassT>
+static constexpr bool isFunctionPass =
+    is_detected<HasRunOnIRUnit, PassT, Function>::value;
+template <typename PassT>
+static constexpr bool isLoopPass = is_detected<HasRunOnLoop, PassT>::value;
+template <typename PassT>
+static constexpr bool isMachineFunctionPass =
+    is_detected<HasRunOnIRUnit, PassT, MachineFunction>::value;
+
+struct PassWrapper {
+  StringRef Name;
+  bool InCGSCC;
+  bool IsInjectionPoint;
+
+  template <typename PassT,
+            typename = std::enable_if_t<
+                isModulePass<PassT> || isFunctionPass<PassT> ||
+                isLoopPass<PassT> || isMachineFunctionPass<PassT>>>
+  PassWrapper(PassT &&P, bool InCGSCC = false)
+      : Name(std::remove_reference_t<PassT>::name()), InCGSCC(InCGSCC) {
+    if constexpr (isModulePass<PassT>) {
+      Ctor.emplace<llvm::unique_function<void(ModulePassManager &)>>(
+          [P = std::forward<PassT>(P)](ModulePassManager &PM) mutable {
+            PM.addPass(std::move(P));
+          });
+    } else if constexpr (isFunctionPass<PassT>) {
+      Ctor.emplace<llvm::unique_function<void(FunctionPassManager &)>>(
+          [P = std::forward<PassT>(P)](FunctionPassManager &PM) mutable {
+            PM.addPass(std::move(P));
+          });
+    } else if constexpr (isLoopPass<PassT>) {
+      Ctor.emplace<llvm::unique_function<void(LoopPassManager &)>>(
+          [P = std::forward<PassT>(P)](LoopPassManager &PM) mutable {
+            PM.addPass(std::move(P));
+          });
+    } else if constexpr (isMachineFunctionPass<PassT>) {
+      Ctor.emplace<llvm::unique_function<void(MachineFunctionPassManager &)>>(
+          [P = std::forward<PassT>(P)](MachineFunctionPassManager &PM) mutable {
+            PM.addPass(std::move(P));
+          });
+    }
+    IsInjectionPoint =
+        std::is_base_of_v<InjectionPointMixin, std::remove_reference_t<PassT>>;
+  }
+
+  std::variant<llvm::unique_function<void(ModulePassManager &)>,
+               llvm::unique_function<void(FunctionPassManager &)>,
+               llvm::unique_function<void(LoopPassManager &)>,
+               llvm::unique_function<void(MachineFunctionPassManager &)>>
+      Ctor;
+};
+} // namespace detail
+
+class TargetMachineFunctionPassManager {
+  friend class TargetFunctionPassManager;
+  friend class TargetPassBuilder;
+
+public:
+  template <typename PassT>
+  TargetMachineFunctionPassManager &addPass(PassT &&P) & {
+    static_assert(detail::isMachineFunctionPass<PassT>,
+                  "Not a machine function pass!");
+    Passes.emplace_back(std::forward<PassT>(P));
+    return *this;
+  }
+
+  template <typename PassT>
+  TargetMachineFunctionPassManager &&addPass(PassT &&P) && {
+    static_assert(detail::isMachineFunctionPass<PassT>,
+                  "Not a machine function pass!");
+    Passes.emplace_back(std::forward<PassT>(P));
+    return std::move(*this);
+  }
+
+  TargetMachineFunctionPassManager &
+  addPass(TargetMachineFunctionPassManager &&PM) & {
+    for (auto &P : PM.Passes)
+      Passes.push_back(std::move(P));
+    PM.Passes.clear();
+    return *this;
+  }
+
+  TargetMachineFunctionPassManager &&
+  addPass(TargetMachineFunctionPassManager &&PM) && {
+    for (auto &P : PM.Passes)
+      Passes.push_back(std::move(P));
+    PM.Passes.clear();
+    return std::move(*this);
+  }
+
+private:
+  std::list<detail::PassWrapper> Passes;
+};
+
+class TargetLoopPassManager {
+  friend class TargetFunctionPassManager;
+  friend class TargetPassBuilder;
+
+public:
+  template <typename PassT> TargetLoopPassManager &addPass(PassT &&P) & {
+    static_assert(detail::isLoopPass<PassT>, "Not a loop pass!");
+    Passes.emplace_back(std::forward<PassT>(P));
+    return *this;
+  }
+
+  template <typename PassT> TargetLoopPassManager &&addPass(PassT &&P) && {
+    static_assert(detail::isLoopPass<PassT>, "Not a loop pass!");
+    Passes.emplace_back(std::forward<PassT>(P));
+    return std::move(*this);
+  }
+
+  TargetLoopPassManager &addPass(TargetLoopPassManager &&PM) & {
+    for (auto &P : PM.Passes)
+      Passes.push_back(std::move(P));
+    PM.Passes.clear();
+    return *this;
+  }
+
+  TargetLoopPassManager &&addPass(TargetLoopPassManager &&PM) && {
+    for (auto &P : PM.Passes)
+      Passes.push_back(std::move(P));
+    PM.Passes.clear();
+    return std::move(*this);
+  }
+
+private:
+  std::list<detail::PassWrapper> Passes;
+};
+
+class TargetFunctionPassManager {
+  friend class TargetModulePassManager;
+  friend class TargetPassBuilder;
+
+public:
+  template <typename PassT> TargetFunctionPassManager &addPass(PassT &&P) & {
+    static_assert(detail::isFunctionPass<PassT>, "Not a function pass!");
+    Passes.emplace_back(std::forward<PassT>(P));
+    return *this;
+  }
+
+  template <typename PassT> TargetFunctionPassManager &addPass(PassT &&P) && {
+    static_assert(detail::isFunctionPass<PassT>, "Not a function pass!");
+    Passes.emplace_back(std::forward<PassT>(P));
+    return *this;
+  }
+
+  TargetFunctionPassManager &addPass(TargetFunctionPassManager &&PM) & {
+    for (auto &P : PM.Passes)
+      Passes.push_back(std::move(P));
+    PM.Passes.clear();
+    return *this;
+  }
+
+  TargetFunctionPassManager &&addPass(TargetFunctionPassManager &&PM) && {
+    for (auto &P : PM.Passes)
+      Passes.push_back(std::move(P));
+    PM.Passes.clear();
+    return std::move(*this);
+  }
+
+  template <typename PassT>
+  TargetFunctionPassManager &addLoopPass(PassT &&P) & {
+    static_assert(detail::isLoopPass<PassT>, "Not a loop pass!");
+    Passes.emplace_back(std::forward<PassT>(P));
+    return *this;
+  }
+
+  template <typename PassT>
+  TargetFunctionPassManager &&addLoopPass(PassT &&P) && {
+    static_assert(detail::isLoopPass<PassT>, "Not a loop pass!");
+    Passes.emplace_back(std::forward<PassT>(P));
+    return std::move(*this);
+  }
+
+  TargetFunctionPassManager &addLoopPass(TargetLoopPassManager &&PM) & {
+    for (auto &P : PM.Passes)
+      Passes.push_back(std::move(P));
+    PM.Passes.clear();
+    return *this;
+  }
+
+  TargetFunctionPassManager &&addLoopPass(TargetLoopPassManager &&PM) && {
+    for (auto &P : PM.Passes)
+      Passes.push_back(std::move(P));
+    PM.Passes.clear();
+    return std::move(*this);
+  }
+
+  template <typename PassT>
+  TargetFunctionPassManager &addMachineFunctionPass(PassT &&P) & {
+    static_assert(detail::isMachineFunctionPass<PassT>,
+                  "Not a machine function pass!");
+    Passes.emplace_back(std::forward<PassT>(P));
+    return *this;
+  }
+
+  template <typename PassT>
+  TargetFunctionPassManager &&addMachineFunctionPass(PassT &&P) && {
+    static_assert(detail::isMachineFunctionPass<PassT>,
+                  "Not a machine function pass!");
+    Passes.emplace_back(std::forward<PassT>(P));
+    return std::move(*this);
+  }
+
+  TargetFunctionPassManager &
+  addMachineFunctionPass(TargetMachineFunctionPassManager &&PM) & {
+    for (auto &P : PM.Passes)
+      Passes.push_back(std::move(P));
+    PM.Passes.clear();
+    return *this;
+  }
+
+  TargetFunctionPassManager &&
+  addMachineFunctionPass(TargetMachineFunctionPassManager &&PM) && {
+    for (auto &P : PM.Passes)
+      Passes.push_back(std::move(P));
+    PM.Passes.clear();
+    return std::move(*this);
+  }
+
+private:
+  std::list<detail::PassWrapper> Passes;
+};
+
+class TargetModulePassManager {
+  friend class TargetPassBuilder;
+
+public:
+  template <typename PassT> TargetModulePassManager &addPass(PassT &&P) {
+    static_assert(detail::isModulePass<PassT>, "Not a module pass!");
+    Passes.emplace_back(std::forward<PassT>(P));
+    return *this;
+  }
+
+  TargetModulePassManager &addPass(TargetModulePassManager &&PM) {
+    for (auto &P : PM.Passes)
+      Passes.push_back(std::move(P));
+    PM.Passes.clear();
+    return *this;
+  }
+
+  template <typename PassT>
+  TargetModulePassManager &addFunctionPass(PassT &&P) {
+    static_assert(detail::isFunctionPass<PassT>, "Not a function pass!");
+    Passes.emplace_back(std::forward<PassT>(P));
+    return *this;
+  }
+
+  TargetModulePassManager &addFunctionPass(TargetFunctionPassManager &&PM) {
+    for (auto &P : PM.Passes)
+      Passes.push_back(std::move(P));
+    PM.Passes.clear();
+    return *this;
+  }
+
+  template <typename PassT>
+  TargetModulePassManager &addFunctionPassWithPostOrderCGSCC(PassT &&P) {
+    static_assert(detail::isFunctionPass<PassT>, "Not a function pass!");
+    Passes.emplace_back(std::forward<PassT>(P), /*InCGSCC=*/true);
+    return *this;
+  }
+
+  TargetModulePassManager &
+  addFunctionPassWithPostOrderCGSCC(TargetFunctionPassManager &&PM) & {
+    for (auto &P : PM.Passes) {
+      P.InCGSCC = true;
+      Passes.push_back(std::move(P));
+    }
+    PM.Passes.clear();
+    return *this;
+  }
+
+  TargetModulePassManager &&
+  addFunctionPassWithPostOrderCGSCC(TargetFunctionPassManager &&PM) && {
+    for (auto &P : PM.Passes) {
+      P.InCGSCC = true;
+      Passes.push_back(std::move(P));
+    }
+    PM.Passes.clear();
+    return std::move(*this);
+  }
+
+private:
+  std::list<detail::PassWrapper> Passes;
+};
+
 /// @brief Build CodeGen pipeline
 ///
 class TargetPassBuilder {
@@ -51,88 +352,6 @@ public:
                                         MCContext &Ctx);
 
 private:
-  struct PassWrapper {
-    StringRef Name;
-    std::variant<llvm::ModulePassManager, llvm::FunctionPassManager,
-                 llvm::LoopPassManager, llvm::MachineFunctionPassManager>
-        InternalPass;
-    bool InCGSCC = false;
-
-    template <typename PassManagerT>
-    PassWrapper(StringRef Name, PassManagerT &&PM)
-        : Name(Name), InternalPass(std::forward<PassManagerT>(PM)) {}
-
-    template <typename PassT> PassWrapper(PassT &&P) : Name(PassT::name()) {
-      // FIXME: This can't handle the case when `run` is template.
-      if constexpr (isModulePass<PassT>) {
-        llvm::ModulePassManager MPM;
-        MPM.addPass(std::forward<PassT>(P));
-        InternalPass.emplace<llvm::ModulePassManager>(std::move(MPM));
-      } else if constexpr (isFunctionPass<PassT>) {
-        llvm::FunctionPassManager FPM;
-        FPM.addPass(std::forward<PassT>(P));
-        InternalPass.emplace<llvm::FunctionPassManager>(std::move(FPM));
-      } else {
-        static_assert(isMachineFunctionPass<PassT>, "Invalid pass type!");
-        llvm::MachineFunctionPassManager MFPM;
-        MFPM.addPass(std::forward<PassT>(P));
-        InternalPass.emplace<llvm::MachineFunctionPassManager>(std::move(MFPM));
-      }
-    }
-  };
-
-public:
-  using PassList = std::list<PassWrapper>;
-
-private:
-  template <typename InternalPassT> struct AdaptorWrapper : InternalPassT {
-    using InternalPassT::Passes;
-  };
-
-  template <typename PassManagerT, typename InternalPassT = void>
-  class PassManagerWrapper {
-    friend class TargetPassBuilder;
-
-  public:
-    bool isEmpty() const { return Passes.empty(); }
-
-    template <typename PassT> void addPass(PassT &&P) {
-      PassManagerT PM;
-      PM.addPass(std::forward<PassT>(P));
-      // Injection point doesn't add real pass.
-      if constexpr (std::is_base_of_v<InjectionPointMixin, PassT>)
-        PM = PassManagerT();
-      PassWrapper PW(PassT::name(), std::move(PM));
-      Passes.push_back(std::move(PW));
-    }
-
-    void addPass(PassManagerWrapper &&PM) {
-      for (auto &P : PM.Passes)
-        Passes.push_back(std::move(P));
-    }
-
-    void addPass(AdaptorWrapper<InternalPassT> &&Adaptor) {
-      for (auto &P : Adaptor.Passes)
-        Passes.push_back(std::move(P));
-    }
-
-    void addPass(llvm::ModulePassManager &&) = delete;
-    void addPass(llvm::FunctionPassManager &&) = delete;
-    void addPass(llvm::LoopPassManager &&) = delete;
-    void addPass(llvm::MachineFunctionPassManager &&) = delete;
-
-  private:
-    PassList Passes;
-  };
-
-  template <typename NestedPassManagerT, typename PassT>
-  AdaptorWrapper<NestedPassManagerT> createPassAdaptor(PassT &&P) {
-    AdaptorWrapper<NestedPassManagerT> Adaptor;
-    Adaptor.addPass(std::forward<PassT>(P));
-    return Adaptor;
-  }
-
-private:
   template <typename PassT, typename IRUnitT>
   using HasRunOnIRUnit = decltype(std::declval<PassT>().run(
       std::declval<IRUnitT &>(), std::declval<AnalysisManager<IRUnitT> &>()));
@@ -146,83 +365,77 @@ private:
   static constexpr bool isMachineFunctionPass =
       is_detected<HasRunOnIRUnit, PassT, MachineFunction>::value;
 
-protected:
-  // Hijack real pass managers intentionally.
-  using MachineFunctionPassManager =
-      PassManagerWrapper<llvm::MachineFunctionPassManager>;
-  using FunctionPassManager =
-      PassManagerWrapper<llvm::FunctionPassManager, MachineFunctionPassManager>;
-  using ModulePassManager =
-      PassManagerWrapper<llvm::ModulePassManager, FunctionPassManager>;
-
-  struct CGSCCAdaptorWrapper : AdaptorWrapper<FunctionPassManager> {};
+  using PassList = std::list<detail::PassWrapper>;
 
 protected:
-  template <typename FunctionPassT>
-  AdaptorWrapper<FunctionPassManager>
-  createModuleToFunctionPassAdaptor(FunctionPassT &&P) {
-    return createPassAdaptor<FunctionPassManager>(
-        std::forward<FunctionPassT>(P));
-  }
+  virtual void registerCallbacks() = 0;
 
-  AdaptorWrapper<FunctionPassManager>
-  createModuleToPostOrderCGSCCPassAdaptor(CGSCCAdaptorWrapper &&PM) {
-    AdaptorWrapper<FunctionPassManager> AW;
-    AW.Passes = std::move(PM.Passes);
-    return AW;
-  }
-
-  template <typename FunctionPassT>
-  CGSCCAdaptorWrapper createCGSCCToFunctionPassAdaptor(FunctionPassT &&PM) {
-    for (auto &P : PM.Passes)
-      P.InCGSCC = true;
-    CGSCCAdaptorWrapper AW;
-    AW.Passes = std::move(PM.Passes);
-    return AW;
-  }
-
-  template <typename MachineFunctionPassT>
-  AdaptorWrapper<MachineFunctionPassManager>
-  createFunctionToMachineFunctionPassAdaptor(MachineFunctionPassT &&P) {
-    return createPassAdaptor<MachineFunctionPassManager>(
-        std::forward<MachineFunctionPassT>(P));
-  }
-
-  struct InjectionPointMixin {};
-  // When run is template, injectBefore can't recognize pass type correctly.
-  struct DummyFunctionPassBase : InjectionPointMixin {
+  struct DummyFunctionPassMixin {
     PreservedAnalyses run(Function &, FunctionAnalysisManager &) {
-      return PreservedAnalyses();
+      return PreservedAnalyses::all();
     }
   };
-  struct DummyMachineFunctionPassBase : InjectionPointMixin {
+  struct DummyMachineFunctionPassMixin {
     PreservedAnalyses run(MachineFunction &, MachineFunctionAnalysisManager &) {
-      return PreservedAnalyses();
+      return PreservedAnalyses::all();
     }
   };
-  struct PreISel : PassInfoMixin<PreISel>, DummyFunctionPassBase {};
-  struct PostBBSections : PassInfoMixin<PostBBSections>,
-                          DummyMachineFunctionPassBase {};
-  struct PreEmit : PassInfoMixin<PreEmit>, DummyMachineFunctionPassBase {};
 
-protected:
+  struct PreISelInjectionPoint : PassInfoMixin<PreISelInjectionPoint>,
+                                 DummyFunctionPassMixin,
+                                 detail::InjectionPointMixin {};
+
+  struct PostBBSectionsInjectionPoint
+      : PassInfoMixin<PostBBSectionsInjectionPoint>,
+        DummyMachineFunctionPassMixin,
+        detail::InjectionPointMixin {};
+
+  struct PreEmitInjectionPoint : PassInfoMixin<PreEmitInjectionPoint>,
+                                 DummyMachineFunctionPassMixin,
+                                 detail::InjectionPointMixin {};
+
+  struct ILPOptsInjectionPoint : PassInfoMixin<ILPOptsInjectionPoint>,
+                                 DummyMachineFunctionPassMixin,
+                                 detail::InjectionPointMixin {};
+
   PassBuilder &PB;
   TargetMachine *TM;
   CodeGenOptLevel OptLevel;
   CGPassBuilderOption CGPBO = getCGPassBuilderOption();
 
-  /// @brief The only method to extend pipeline
+  /// @brief Add custom passes at injection point PassT
+  /// @tparam PassT The injection point
+  /// @tparam This is the recommended approach to extend the pass pipeline.
+  /// PassManagerT Returned pass manager, by default it depends on the injection
+  /// point.
+  /// @param F Callback to build the pipeline.
+  template <
+      typename PassT,
+      typename PassManagerT = std::conditional_t<
+          isModulePass<PassT>, TargetModulePassManager,
+          std::conditional_t<isFunctionPass<PassT>, TargetFunctionPassManager,
+                             TargetMachineFunctionPassManager>>>
+  void injectAt(
+      typename llvm::type_identity<std::function<PassManagerT()>>::type F) {
+    static_assert(std::is_base_of_v<detail::InjectionPointMixin, PassT>,
+                  "Only injection points are supported!");
+    injectBefore<PassT, PassManagerT>(F);
+  }
+
+  /// @brief Add custom passes before PassT
   /// @tparam PassT The injection point
   /// @tparam PassManagerT Returned pass manager, by default it depends on the
+  /// injection point. Use this method only when there is no appropriate
   /// injection point.
   /// @param F Callback to build the pipeline.
-  template <typename PassT,
-            typename PassManagerT = std::conditional_t<
-                isModulePass<PassT>, ModulePassManager,
-                std::conditional_t<isFunctionPass<PassT>, FunctionPassManager,
-                                   MachineFunctionPassManager>>>
+  template <
+      typename PassT,
+      typename PassManagerT = std::conditional_t<
+          isModulePass<PassT>, TargetModulePassManager,
+          std::conditional_t<isFunctionPass<PassT>, TargetFunctionPassManager,
+                             TargetMachineFunctionPassManager>>>
   void injectBefore(
-      typename llvm::identity<std::function<PassManagerT()>>::argument_type F) {
+      typename llvm::type_identity<std::function<PassManagerT()>>::type F) {
     InjectionCallbacks.push_back(
         [Accessed = false, F](PassList &Passes, PassList::iterator I) mutable {
           if (Accessed)
@@ -236,12 +449,40 @@ protected:
         });
   }
 
+  /// @brief Add custom passes after PassT
+  /// @tparam PassT The injection point
+  /// @tparam PassManagerT Returned pass manager, by default it depends on the
+  /// injection point. Use this method only when there is no appropriate
+  /// injection point.
+  /// @param F Callback to build the pipeline.
+  template <
+      typename PassT,
+      typename PassManagerT = std::conditional_t<
+          isModulePass<PassT>, TargetModulePassManager,
+          std::conditional_t<isFunctionPass<PassT>, TargetFunctionPassManager,
+                             TargetMachineFunctionPassManager>>>
+  void injectAfter(
+      typename llvm::type_identity<std::function<PassManagerT()>>::type F) {
+    InjectionCallbacks.push_back(
+        [Accessed = false, F](PassList &Passes, PassList::iterator I) mutable {
+          if (Accessed)
+            return I;
+          if (PassT::name() != I->Name)
+            return I;
+          Accessed = true;
+          auto PMPasses = F().Passes;
+          auto NextI = std::next(I);
+          return Passes.insert(NextI, std::make_move_iterator(PMPasses.begin()),
+                               std::make_move_iterator(PMPasses.end()));
+        });
+  }
+
   /// @brief Register selection dag isel pass
   /// @tparam BuilderFuncT
   /// @param F A function returns a selection dag isel pass.
   template <typename BuilderFuncT>
   void registerSelectionDAGISelPass(BuilderFuncT F) {
-    AddSelectionDAGISelPass = [=](MachineFunctionPassManager &MFPM) {
+    AddSelectionDAGISelPass = [=](TargetMachineFunctionPassManager &MFPM) {
       using ResultT = std::invoke_result_t<BuilderFuncT>;
       static_assert(isMachineFunctionPass<ResultT> &&
                         !std::is_same_v<MachineFunctionPassManager, ResultT>,
@@ -271,28 +512,29 @@ protected:
   bool isPassEnabled(StringRef Name) const { return !isPassDisabled(Name); }
 
 private:
-  void buildCoreCodeGenPipeline(ModulePassManager &MPM);
+  void buildCoreCodeGenPipeline(TargetModulePassManager &MPM);
 
-  ModulePassManager buildCodeGenIRPipeline();
+  TargetModulePassManager buildCodeGenIRPipeline();
 
   /// Add passes that optimize machine instructions in SSA form.
-  void addISelPasses(MachineFunctionPassManager &MFPM);
-  void addMachineSSAOptimizationPasses(MachineFunctionPassManager &MFPM);
-  void addRegAllocPipeline(MachineFunctionPassManager &MFPM);
-  void addRegAllocPass(MachineFunctionPassManager &MFPM, bool Optimized);
-  ModulePassManager buildCodeGenMIRPipeline();
+  void addISelPasses(TargetMachineFunctionPassManager &MFPM);
+  void addMachineSSAOptimizationPasses(TargetMachineFunctionPassManager &MFPM);
+  void addRegAllocPipeline(TargetMachineFunctionPassManager &MFPM);
+  void addRegAllocPass(TargetMachineFunctionPassManager &MFPM, bool Optimized);
+  TargetModulePassManager buildCodeGenMIRPipeline();
 
-  void addExceptionHandlingPasses(FunctionPassManager &FPM);
+  void addExceptionHandlingPasses(TargetFunctionPassManager &FPM);
 
-  void filtPassList(ModulePassManager &MPM) const;
+  void filterPassList(TargetModulePassManager &MPM) const;
 
-  void addPrinterPassesAndFreeMachineFunction(ModulePassManager &MPM,
+  void addPrinterPassesAndFreeMachineFunction(TargetModulePassManager &MPM,
                                               raw_pwrite_stream &Out,
                                               raw_pwrite_stream *DwoOut,
                                               CodeGenFileType FileType,
                                               MCContext &Ctx);
 
-  llvm::ModulePassManager constructRealPassManager(ModulePassManager &&MPMW);
+  ModulePassManager
+  constructRealPassManager(TargetModulePassManager &MPMW) const;
 
 private:
   virtual void anchor();
@@ -300,21 +542,11 @@ private:
   StringSet<> DisabedPasses;
   std::vector<std::function<PassList::iterator(PassList &, PassList::iterator)>>
       InjectionCallbacks;
-  std::function<void(MachineFunctionPassManager &)> AddSelectionDAGISelPass;
+  std::function<void(TargetMachineFunctionPassManager &)>
+      AddSelectionDAGISelPass;
 
-  void invokeInjectionCallbacks(ModulePassManager &MPM) const;
-
-  // Only Loop Strength Reduction need this, shadow LoopPassManager
-  // in future if it is necessary.
-  template <typename PassT>
-  void addLoopPass(FunctionPassManager &FPM, PassT &&P) {
-    LoopPassManager LPM;
-    LPM.addPass(std::forward<PassT>(P));
-    FPM.Passes.push_back(PassWrapper(PassT::name(), std::move(LPM)));
-  }
+  void invokeInjectionCallbacks(TargetModulePassManager &MPM) const;
 };
-
-template <> struct TargetPassBuilder::AdaptorWrapper<void> {};
 
 } // namespace llvm
 
