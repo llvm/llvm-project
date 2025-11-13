@@ -192,66 +192,94 @@ exit:
   ret i32 %add
 }
 
+define i32 @print_partial_reduction_ext_mul(ptr %a, ptr %b) "target-features"="+neon,+dotprod" {
+; CHECK:      VPlan 'Initial VPlan for VF={8,16},UF>=1' {
+; CHECK-NEXT: Live-in vp<[[VF:%.]]> = VF
+; CHECK-NEXT: Live-in vp<[[VFxUF:%.]]> = VF * UF
+; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
+; CHECK-NEXT: Live-in ir<1024> = original trip-count
+; CHECK-EMPTY:
+; CHECK-NEXT: ir-bb<entry>:
+; CHECK-NEXT: Successor(s): scalar.ph, vector.ph
+; CHECK-EMPTY:
+; CHECK-NEXT: vector.ph:
+; CHECK-NEXT:   EMIT vp<[[RDX_START:%.+]]> = reduction-start-vector ir<0>, ir<0>, ir<4>
+; CHECK-NEXT: Successor(s): vector loop
+; CHECK-EMPTY:
+; CHECK-NEXT: <x1> vector loop: {
+; CHECK-NEXT: vector.body:
+; CHECK-NEXT:   EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION ir<0>, vp<[[CAN_IV_NEXT:%.+]]>
+; CHECK-NEXT:   WIDEN-REDUCTION-PHI ir<[[ACC:%.+]]> = phi vp<[[RDX_START]]>, vp<[[REDUCE:%.+]]> (VF scaled by 1/4)
+; CHECK-NEXT:   vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>, vp<[[VF]]>
+; CHECK-NEXT:   CLONE ir<%gep.a> = getelementptr ir<%a>, vp<[[STEPS]]>
+; CHECK-NEXT:   vp<[[PTR_A:%.+]]> = vector-pointer ir<%gep.a>
+; CHECK-NEXT:   WIDEN ir<%load.a> = load vp<[[PTR_A]]>
+; CHECK-NEXT:   CLONE ir<%gep.b> = getelementptr ir<%b>, vp<[[STEPS]]>
+; CHECK-NEXT:   vp<[[PTR_B:%.+]]> = vector-pointer ir<%gep.b>
+; CHECK-NEXT:   WIDEN ir<%load.b> = load vp<[[PTR_B]]>
+; CHECK-NEXT:   EXPRESSION vp<[[REDUCE]]> = ir<[[ACC]]> + partial.reduce.add (mul (ir<%load.b> zext to i32), (ir<%load.a> zext to i32))
+; CHECK-NEXT:   EMIT vp<[[CAN_IV_NEXT]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
+; CHECK-NEXT:   EMIT branch-on-count vp<[[CAN_IV_NEXT]]>, vp<[[VEC_TC]]>
+; CHECK-NEXT: No successors
+; CHECK-NEXT: }
+; CHECK-NEXT: Successor(s): middle.block
+; CHECK-EMPTY:
+; CHECK-NEXT: middle.block:
+; CHECK-NEXT:   EMIT vp<[[RED_RESULT:%.+]]> = compute-reduction-result ir<[[ACC]]>, vp<[[REDUCE]]>
+; CHECK-NEXT:   EMIT vp<[[CMP:%.+]]> = icmp eq ir<1024>, vp<[[VEC_TC]]>
+; CHECK-NEXT:   EMIT branch-on-cond vp<[[CMP]]>
+; CHECK-NEXT: Successor(s): ir-bb<exit>, scalar.ph
+; CHECK-EMPTY:
+; CHECK-NEXT: ir-bb<exit>:
+; CHECK-NEXT:   IR   %add.lcssa = phi i32 [ %add, %for.body ] (extra operand: vp<[[RED_RESULT]]> from middle.block)
+; CHECK-NEXT: No successors
+; CHECK-EMPTY:
+; CHECK-NEXT: scalar.ph:
+; CHECK-NEXT:   EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VEC_TC]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; CHECK-NEXT:   EMIT-SCALAR vp<%bc.merge.rdx> = phi [ vp<[[RED_RESULT]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; CHECK-NEXT: Successor(s): ir-bb<for.body>
+; CHECK-EMPTY:
+; CHECK-NEXT: ir-bb<for.body>:
+; CHECK-NEXT:   IR   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+; CHECK-NEXT:   IR   %accum = phi i32 [ 0, %entry ], [ %add, %for.body ] (extra operand: vp<%bc.merge.rdx> from scalar.ph)
+; CHECK-NEXT:   IR   %gep.a = getelementptr i8, ptr %a, i64 %iv
+; CHECK-NEXT:   IR   %load.a = load i8, ptr %gep.a, align 1
+; CHECK-NEXT:   IR   %ext.a = zext i8 %load.a to i16
+; CHECK-NEXT:   IR   %gep.b = getelementptr i8, ptr %b, i64 %iv
+; CHECK-NEXT:   IR   %load.b = load i8, ptr %gep.b, align 1
+; CHECK-NEXT:   IR   %ext.b = zext i8 %load.b to i16
+; CHECK-NEXT:   IR   %mul = mul i16 %ext.b, %ext.a
+; CHECK-NEXT:   IR   %mul.ext = zext i16 %mul to i32
+; CHECK-NEXT:   IR   %add = add i32 %mul.ext, %accum
+; CHECK-NEXT:   IR   %iv.next = add i64 %iv, 1
+; CHECK-NEXT:   IR   %exitcond.not = icmp eq i64 %iv.next, 1024
+; CHECK-NEXT: No successors
+; CHECK-NEXT: }
+entry:
+  br label %for.body
+
+for.body:                                         ; preds = %for.body, %entry
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %accum = phi i32 [ 0, %entry ], [ %add, %for.body ]
+  %gep.a = getelementptr i8, ptr %a, i64 %iv
+  %load.a = load i8, ptr %gep.a, align 1
+  %ext.a = zext i8 %load.a to i16
+  %gep.b = getelementptr i8, ptr %b, i64 %iv
+  %load.b = load i8, ptr %gep.b, align 1
+  %ext.b = zext i8 %load.b to i16
+  %mul = mul i16 %ext.b, %ext.a
+  %mul.ext = zext i16 %mul to i32
+  %add = add i32 %mul.ext, %accum
+  %iv.next = add i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, 1024
+  br i1 %exitcond.not, label %exit, label %for.body
+
+exit:
+  ret i32 %add
+}
 
 !0 = distinct !{!0, !2, !3}
 !1 = distinct !{!1, !2, !4}
 !2 = !{!"llvm.loop.interleave.count", i32 1}
 !3 = !{!"llvm.loop.vectorize.predicate.enable", i1 false}
 !4 = !{!"llvm.loop.vectorize.predicate.enable", i1 true}
-
-define i32 @print_partial_reduction_ext_mul(i64 %n, ptr %a, i8 %b) {
-; CHECK:       VPlan 'Initial VPlan for VF={8},UF>=1' {
-; CHECK-NEXT:  Live-in vp<[[VFxUF:%.+]]> = VF * UF
-; CHECK-NEXT:  Live-in vp<[[VTC:%.+]]> = vector-trip-count
-; CHECK-NEXT:  vp<%2> = original trip-count
-; CHECK-EMPTY:
-; CHECK-NEXT:  ir-bb<entry>:
-; CHECK-NEXT:    EMIT vp<%2> = EXPAND SCEV (1 + %n)
-; CHECK-NEXT:  Successor(s): scalar.ph, vector.ph
-; CHECK-EMPTY:
-; CHECK-NEXT:  vector.ph:
-; CHECK-NEXT:    EMIT vp<[[RDX_START:%.+]]> = reduction-start-vector ir<0>, ir<0>, ir<4>
-; CHECK-NEXT:  Successor(s): vector loop
-; CHECK-EMPTY:
-; CHECK-NEXT:  <x1> vector loop: {
-; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:      EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION ir<0>, vp<[[CAN_IV_NEXT:%.+]]>
-; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<[[RDX:%.+]]> = phi vp<[[RDX_START]]>, vp<[[RDX_NEXT:%.+]]> (VF scaled by 1/4)
-; CHECK-NEXT:      CLONE ir<%load> = load ir<%a>
-; CHECK-NEXT:      EXPRESSION vp<[[RDX_NEXT]]> = ir<[[RDX]]> + partial.reduce.add (mul (ir<%b> zext to i32), (ir<%b> zext to i32))
-; CHECK-NEXT:      WIDEN-CAST ir<%load.ext> = sext ir<%load> to i32
-; CHECK-NEXT:      WIDEN-CAST ir<%load.ext.ext> = sext ir<%load.ext> to i64
-; CHECK-NEXT:      EMIT vp<[[CAN_IV_NEXT]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
-; CHECK-NEXT:      EMIT branch-on-count vp<[[CAN_IV_NEXT]]>, vp<[[VTC]]>
-; CHECK-NEXT:    No successors
-; CHECK-NEXT:  }
-; CHECK-NEXT:  Successor(s): middle.block
-; CHECK-EMPTY:
-; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[RED_RESULT:%.+]]> = compute-reduction-result ir<[[RDX]]>, vp<[[RDX_NEXT]]>
-; CHECK-NEXT:    EMIT vp<%vector.recur.extract> = extract-last-element ir<%load.ext.ext>
-; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq vp<%2>, vp<[[VTC]]>
-; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
-; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
-; CHECK-EMPTY:
-entry:
-  br label %loop
-
-loop:
-  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
-  %res1 = phi i64 [ 0, %entry ], [ %load.ext.ext, %loop ]
-  %res2 = phi i32 [ 0, %entry ], [ %add, %loop ]
-  %load = load i16, ptr %a, align 2
-  %iv.next = add i64 %iv, 1
-  %conv = zext i8 %b to i16
-  %mul = mul i16 %conv, %conv
-  %mul.ext = zext i16 %mul to i32
-  %add = add i32 %res2, %mul.ext
-  %load.ext = sext i16 %load to i32
-  %load.ext.ext = sext i32 %load.ext to i64
-  %exitcond740.not = icmp eq i64 %iv, %n
-  br i1 %exitcond740.not, label %exit, label %loop
-
-exit:
-  ret i32 %add
-}

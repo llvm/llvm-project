@@ -8131,14 +8131,10 @@ bool VPRecipeBuilder::getScaledReductions(
 
       ExtOpTypes[I] = ExtOp->getType();
       ExtKinds[I] = TTI::getPartialReductionExtendKind(Exts[I]);
-      // Make sure that the outer extend is either sext or the same kind as the
-      // inner extend.
-      if (OuterExtKind.has_value()) {
-        TTI::PartialReductionExtendKind OuterKind = OuterExtKind.value();
-        if (OuterKind != TTI::PartialReductionExtendKind::PR_SignExtend &&
-            OuterKind != ExtKinds[I])
-          return false;
-      }
+      // The outer extend kind must be the same as the inner extends, so that
+      // they can be folded together.
+      if (OuterExtKind.has_value() && OuterExtKind.value() != ExtKinds[I])
+        return false;
     }
     return true;
   };
