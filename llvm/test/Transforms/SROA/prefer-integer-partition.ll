@@ -14,7 +14,6 @@ entry:
   %src = alloca [2 x float], align 4
   %dst = alloca [2 x float], align 4
   
-  ; Initialize src
   call void @llvm.lifetime.start.p0(i64 8, ptr %src)
   call void @llvm.lifetime.start.p0(i64 8, ptr %dst)
   
