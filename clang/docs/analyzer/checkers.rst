@@ -1679,9 +1679,7 @@ Warn on uses of the Objective-C method ``-decodeValueOfObjCType:at:``.
 
 This diagnostic is emitted only on Apple platforms where the safer
 ``-decodeValueOfObjCType:at:size:`` alternative is available
-(
-iOS 11+, macOS 10.13+, tvOS 11+, watchOS 4.0+
-).
+(iOS 11+, macOS 10.13+, tvOS 11+, watchOS 4.0+).
 
 .. _security-insecureAPI-getpw:
 
