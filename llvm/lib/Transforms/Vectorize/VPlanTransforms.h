@@ -32,6 +32,7 @@ class VPRecipeBuilder;
 struct VFRange;
 
 extern cl::opt<bool> VerifyEachVPlan;
+extern cl::opt<bool> EnableWideActiveLaneMask;
 
 struct VPlanTransforms {
   /// Helper to run a VPlan transform \p Transform on \p VPlan, forwarding extra
@@ -348,7 +349,7 @@ struct VPlanTransforms {
   /// form of loop-aware SLP, where we use interleave groups to identify
   /// candidates.
   static void narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
-                                     unsigned VectorRegWidth);
+                                     TypeSize VectorRegWidth);
 
   /// Predicate and linearize the control-flow in the only loop region of
   /// \p Plan. If \p FoldTail is true, create a mask guarding the loop
