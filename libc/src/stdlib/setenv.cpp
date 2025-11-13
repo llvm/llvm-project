@@ -8,20 +8,14 @@
 
 #include "src/stdlib/setenv.h"
 #include "environ_internal.h"
+#include "hdr/func/free.h"
+#include "hdr/func/malloc.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/common.h"
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
-#include "src/string/memcpy.h"
-#include "src/string/strlen.h"
-
-// We use extern "C" declarations for malloc/free instead of including
-// src/stdlib/malloc.h and src/stdlib/free.h. This allows the implementation
-// to work with different allocator implementations, particularly in integration
-// tests which provide a simple bump allocator. The extern "C" linkage ensures
-// we use whatever allocator is linked with the test or application.
-extern "C" void *malloc(size_t);
-extern "C" void free(void *);
+#include "src/string/memory_utils/inline_memcpy.h"
+#include "src/string/string_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -64,8 +58,8 @@ LLVM_LIBC_FUNCTION(int, setenv,
 
     // Need to replace the value
     // Calculate size for "name=value" string
-    size_t name_len = LIBC_NAMESPACE::strlen(name);
-    size_t value_len = LIBC_NAMESPACE::strlen(value);
+    size_t name_len = LIBC_NAMESPACE::internal::string_length(name);
+    size_t value_len = LIBC_NAMESPACE::internal::string_length(value);
     size_t total_len =
         name_len + 1 + value_len + 1; // name + '=' + value + '\0'
 
@@ -77,9 +71,9 @@ LLVM_LIBC_FUNCTION(int, setenv,
     }
 
     // Build "name=value" string
-    LIBC_NAMESPACE::memcpy(new_string, name, name_len);
+    LIBC_NAMESPACE::inline_memcpy(new_string, name, name_len);
     new_string[name_len] = '=';
-    LIBC_NAMESPACE::memcpy(new_string + name_len + 1, value, value_len);
+    LIBC_NAMESPACE::inline_memcpy(new_string + name_len + 1, value, value_len);
     new_string[name_len + 1 + value_len] = '\0';
 
     // Replace in environ array
@@ -107,8 +101,8 @@ LLVM_LIBC_FUNCTION(int, setenv,
   }
 
   // Calculate size for "name=value" string
-  size_t name_len = LIBC_NAMESPACE::strlen(name);
-  size_t value_len = LIBC_NAMESPACE::strlen(value);
+  size_t name_len = LIBC_NAMESPACE::internal::string_length(name);
+  size_t value_len = LIBC_NAMESPACE::internal::string_length(value);
   size_t total_len = name_len + 1 + value_len + 1; // name + '=' + value + '\0'
 
   char *new_string = reinterpret_cast<char *>(malloc(total_len));
@@ -119,9 +113,9 @@ LLVM_LIBC_FUNCTION(int, setenv,
   }
 
   // Build "name=value" string
-  LIBC_NAMESPACE::memcpy(new_string, name, name_len);
+  LIBC_NAMESPACE::inline_memcpy(new_string, name, name_len);
   new_string[name_len] = '=';
-  LIBC_NAMESPACE::memcpy(new_string + name_len + 1, value, value_len);
+  LIBC_NAMESPACE::inline_memcpy(new_string + name_len + 1, value, value_len);
   new_string[name_len + 1 + value_len] = '\0';
 
   // Add to environ array
