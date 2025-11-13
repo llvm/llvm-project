@@ -3337,7 +3337,7 @@ void GVNPass::assignValNumForDeadCode() {
   }
 }
 
-bool GVNPass::transformMinFindingSelectPattern(Loop *L, BasicBlock *Preheader,
+bool GVNPass::transformMinFindingSelectPattern(Loop *L, Type *LoadType, BasicBlock *Preheader,
                                                BasicBlock *BB, Value *LHS,
                                                Value *RHS, CmpInst *Comparison,
                                                SelectInst *Select,
@@ -3361,7 +3361,7 @@ bool GVNPass::transformMinFindingSelectPattern(Loop *L, BasicBlock *Preheader,
   // Insert PHI node at the top of this block.
   // This PHI node will be used to memoize the current minimum value so far.
   PHINode *KnownMinPhi =
-      PHINode::Create(Builder.getFloatTy(), 2, "known_min", BB->begin());
+      PHINode::Create(LoadType, 2, "known_min", BB->begin());
 
   // Hoist the load and build the necessary operations.
   // 1. hoist_0 = sext i32 to i64
@@ -3369,7 +3369,7 @@ bool GVNPass::transformMinFindingSelectPattern(Loop *L, BasicBlock *Preheader,
       Builder.CreateSExt(InitialMinIndex, Builder.getInt64Ty(), "hoist_sext");
 
   // 2. hoist_gep1 = getelementptr float, ptr BasePtr, i64 HoistedSExt
-  Value *HoistedGEP1 = Builder.CreateGEP(Builder.getFloatTy(), BasePtr,
+  Value *HoistedGEP1 = Builder.CreateGEP(LoadType, BasePtr,
                                          HoistedSExt, "hoist_gep1");
 
   // 3. hoist_gep2 = getelementptr i8, ptr HoistedGEP1, i64 OffsetVal
@@ -3378,7 +3378,7 @@ bool GVNPass::transformMinFindingSelectPattern(Loop *L, BasicBlock *Preheader,
 
   // 4. hoisted_load = load float, ptr HoistedGEP2
   LoadInst *NewLoad =
-      Builder.CreateLoad(Builder.getFloatTy(), HoistedGEP2, "hoisted_load");
+      Builder.CreateLoad(LoadType, HoistedGEP2, "hoisted_load");
 
   // Let the new load now take the place of the old load.
   RHS->replaceAllUsesWith(NewLoad);
@@ -3455,7 +3455,10 @@ bool GVNPass::recognizeMinFindingSelectPattern(SelectInst *Select) {
   LLVM_DEBUG(dbgs() << "GVN: Found minimum finding pattern in Block: "
                     << Select->getParent()->getName() << ".\n");
 
-  return transformMinFindingSelectPattern(L, Preheader, BB, LHS, RHS,
+  // Get type of load.
+  Type *LoadType = dyn_cast<LoadInst>(LHS)->getType();
+  LLVM_DEBUG(dbgs() << "GVN: Transforming minimum finding pattern.\n");
+  return transformMinFindingSelectPattern(L, LoadType,Preheader, BB, LHS, RHS,
                                           Comparison, Select, BasePtr, IndexVal,
                                           OffsetVal);
 }

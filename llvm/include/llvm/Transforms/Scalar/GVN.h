@@ -409,7 +409,7 @@ private:
   void assignBlockRPONumber(Function &F);
 
   bool recognizeMinFindingSelectPattern(SelectInst *Select);
-  bool transformMinFindingSelectPattern(Loop *L, BasicBlock *Preheader,
+  bool transformMinFindingSelectPattern(Loop *L, Type *LoadType, BasicBlock *Preheader,
                                         BasicBlock *BB, Value *LHS, Value *RHS,
                                         CmpInst *Comparison, SelectInst *Select,
                                         Value *BasePtr, Value *IndexVal,
