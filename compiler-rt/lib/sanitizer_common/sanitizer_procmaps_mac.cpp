@@ -307,8 +307,7 @@ static bool NextSegmentLoad(MemoryMappedSegment *segment,
   layout_data->current_load_cmd_count--;
   if (((const load_command *)lc)->cmd == kLCSegment) {
     const SegmentCommand* sc = (const SegmentCommand *)lc;
-    if (internal_strncmp(sc->segname, "__LINKEDIT", sizeof("__LINKEDIT")) ==
-        0) {
+    if (internal_strcmp(sc->segname, "__LINKEDIT") == 0) {
       // The LINKEDIT sections are for internal linker use, and may alias
       // with the LINKEDIT section for other modules. (If we included them,
       // our memory map would contain overlappping sections.)
