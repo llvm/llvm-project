@@ -1350,14 +1350,16 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     // assume(ballot(x) == -1)           -> x = true
     // assume(ballot(x) == 0)            -> x = false
     //
-    // Skip if Arg is not an instruction (e.g., constant, argument).
-    if (!isa<Instruction>(Arg))
+    // Skip if Arg is a constant.
+    if (isa<Constant>(Arg))
       break;
 
     // Skip if ballot width doesn't match wave size.
     if (ST->getWavefrontSize() != II.getType()->getIntegerBitWidth())
       break;
 
+    // For each llvm.assume that references the ballot intrinsic, try to infer
+    // the value of the ballot's condition argument from the assumed relation.
     for (auto &AssumeVH : IC.getAssumptionCache().assumptionsFor(&II)) {
       if (!AssumeVH)
         continue;

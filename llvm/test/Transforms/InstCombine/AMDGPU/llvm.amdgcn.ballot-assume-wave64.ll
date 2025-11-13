@@ -274,11 +274,34 @@ bar:
   ret void
 }
 
+; Test 10: Function argument can be optimized -> arg replaced with true
+define amdgpu_kernel void @wave64_ballot_i64_argument(i1 %arg) {
+; CHECK-LABEL: @wave64_ballot_i64_argument(
+; CHECK-NEXT:    [[BALLOT:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 [[ARG:%.*]])
+; CHECK-NEXT:    [[ALL:%.*]] = icmp eq i64 [[BALLOT]], -1
+; CHECK-NEXT:    call void @llvm.assume(i1 [[ALL]])
+; CHECK-NEXT:    br i1 true, label [[FOO:%.*]], label [[BAR:%.*]]
+; CHECK:       foo:
+; CHECK-NEXT:    ret void
+; CHECK:       bar:
+; CHECK-NEXT:    ret void
+;
+  %ballot = call i64 @llvm.amdgcn.ballot.i64(i1 %arg)
+  %all = icmp eq i64 %ballot, -1
+  call void @llvm.assume(i1 %all)
+  br i1 %arg, label %foo, label %bar
+
+foo:
+  ret void
+bar:
+  ret void
+}
+
 ; ============================================================================
 ; NEGATIVE CASES: ballot.i64 on wave64
 ; ============================================================================
 
-; Test 10: assume(ballot != -1) -> no transformation (requires icmp eq)
+; Test 11: assume(ballot != -1) -> no transformation (requires icmp eq)
 define amdgpu_kernel void @wave64_ballot_i64_ne_negative(i32 %x, ptr addrspace(1) %out) {
 ; CHECK-LABEL: @wave64_ballot_i64_ne_negative(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X:%.*]], 0
@@ -303,7 +326,7 @@ bar:
   ret void
 }
 
-; Test 11: assume(ballot != 0) -> no transformation (requires icmp eq)
+; Test 12: assume(ballot != 0) -> no transformation (requires icmp eq)
 define amdgpu_kernel void @wave64_ballot_i64_ne_zero_negative(i32 %x, ptr addrspace(1) %out) {
 ; CHECK-LABEL: @wave64_ballot_i64_ne_zero_negative(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X:%.*]], 0
@@ -328,7 +351,7 @@ bar:
   ret void
 }
 
-; Test 12: Constant mask (other than -1/0) -> no transformation
+; Test 13: Constant mask (other than -1/0) -> no transformation
 define amdgpu_kernel void @wave64_ballot_i64_constant_mask(i32 %x, ptr addrspace(1) %out) {
 ; CHECK-LABEL: @wave64_ballot_i64_constant_mask(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X:%.*]], 0
@@ -353,7 +376,7 @@ bar:
   ret void
 }
 
-; Test 13: Runtime mask value -> no transformation
+; Test 14: Runtime mask value -> no transformation
 define amdgpu_kernel void @wave64_ballot_i64_arbitrary_mask(i32 %x, i64 %mask, ptr addrspace(1) %out) {
 ; CHECK-LABEL: @wave64_ballot_i64_arbitrary_mask(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X:%.*]], 0
@@ -382,7 +405,7 @@ bar:
 ; NEGATIVE CASES: ballot.i32 on wave64
 ; ============================================================================
 
-; Test 14: assume(ballot.i32 == -1) on wave64 -> no transformation
+; Test 15: assume(ballot.i32 == -1) on wave64 -> no transformation
 define amdgpu_kernel void @wave64_ballot_i32_negative(i32 %x, ptr addrspace(1) %out) {
 ; CHECK-LABEL: @wave64_ballot_i32_negative(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X:%.*]], 0
@@ -407,7 +430,7 @@ bar:
   ret void
 }
 
-; Test 15: assume(ballot.i32 == 0) on wave64 -> no transformation
+; Test 16: assume(ballot.i32 == 0) on wave64 -> no transformation
 define amdgpu_kernel void @wave64_ballot_i32_zero_negative(i32 %x, ptr addrspace(1) %out) {
 ; CHECK-LABEL: @wave64_ballot_i32_zero_negative(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X:%.*]], 0
