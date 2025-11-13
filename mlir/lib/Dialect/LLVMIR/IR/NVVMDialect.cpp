@@ -1517,6 +1517,15 @@ LogicalResult NVVM::BarrierOp::verify() {
   if (getNumberOfThreads() && !getBarrierId())
     return emitOpError(
         "barrier id is missing, it should be set between 0 to 15");
+
+  if (getBarrierId() && (getReductionOp() || getReductionPredicate()))
+    return emitOpError("reduction are only available when id is 0");
+
+  if ((getReductionOp() && !getReductionPredicate()) ||
+      (!getReductionOp() && getReductionPredicate()))
+    return emitOpError("reduction predicate and reduction operation must be "
+                       "specified together");
+
   return success();
 }
 
@@ -1784,6 +1793,39 @@ std::string NVVM::MBarrierTryWaitParityOp::getPtx() {
 //===----------------------------------------------------------------------===//
 // getIntrinsicID/getIntrinsicIDAndArgs methods
 //===----------------------------------------------------------------------===//
+
+mlir::NVVM::IDArgPair NVVM::BarrierOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::BarrierOp>(op);
+  llvm::Value *barrierId = thisOp.getBarrierId()
+                               ? mt.lookupValue(thisOp.getBarrierId())
+                               : builder.getInt32(0);
+  llvm::Intrinsic::ID id;
+  llvm::SmallVector<llvm::Value *> args;
+  if (thisOp.getNumberOfThreads()) {
+    id = llvm::Intrinsic::nvvm_barrier_cta_sync_aligned_count;
+    args.push_back(barrierId);
+    args.push_back(mt.lookupValue(thisOp.getNumberOfThreads()));
+  } else if (thisOp.getReductionOp()) {
+    switch (*thisOp.getReductionOp()) {
+    case NVVM::BarrierReduction::AND:
+      id = llvm::Intrinsic::nvvm_barrier0_and;
+      break;
+    case NVVM::BarrierReduction::OR:
+      id = llvm::Intrinsic::nvvm_barrier0_or;
+      break;
+    case NVVM::BarrierReduction::POPC:
+      id = llvm::Intrinsic::nvvm_barrier0_popc;
+      break;
+    }
+    args.push_back(mt.lookupValue(thisOp.getReductionPredicate()));
+  } else {
+    id = llvm::Intrinsic::nvvm_barrier_cta_sync_aligned_all;
+    args.push_back(barrierId);
+  }
+
+  return {id, std::move(args)};
+}
 
 mlir::NVVM::IDArgPair MBarrierInitOp::getIntrinsicIDAndArgs(
     Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
