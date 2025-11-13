@@ -777,24 +777,6 @@ private:
   DeclVector declList_;
 };
 
-// Used for OpenMP DECLARE MAPPER, it holds the declaration constructs
-// so they can be serialized into module files and later re-parsed when
-// USE-associated.
-class MapperDetails {
-public:
-  using DeclVector = std::vector<const parser::OpenMPDeclarativeConstruct *>;
-
-  MapperDetails() = default;
-
-  void AddDecl(const parser::OpenMPDeclarativeConstruct *decl) {
-    declList_.emplace_back(decl);
-  }
-  const DeclVector &GetDeclList() const { return declList_; }
-
-private:
-  DeclVector declList_;
-};
-
 class UnknownDetails {};
 
 using Details = std::variant<UnknownDetails, MainProgramDetails, ModuleDetails,
@@ -802,7 +784,7 @@ using Details = std::variant<UnknownDetails, MainProgramDetails, ModuleDetails,
     ObjectEntityDetails, ProcEntityDetails, AssocEntityDetails,
     DerivedTypeDetails, UseDetails, UseErrorDetails, HostAssocDetails,
     GenericDetails, ProcBindingDetails, NamelistDetails, CommonBlockDetails,
-    TypeParamDetails, MiscDetails, UserReductionDetails, MapperDetails>;
+    TypeParamDetails, MiscDetails, UserReductionDetails>;
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const Details &);
 std::string DetailsToString(const Details &);
 
