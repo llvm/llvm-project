@@ -2999,6 +2999,12 @@ def AtomicCaptureOp : OpenACC_Op<"atomic.capture",
         acc.atomic.write ...
         acc.terminator
       }
+
+      acc.atomic.capture {
+        acc.atomic.update ...
+        acc.atomic.write ...
+        acc.terminator
+      }
     ```
 
   }];

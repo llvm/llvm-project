@@ -239,6 +239,7 @@ def AtomicCaptureOpInterface : OpInterface<"AtomicCaptureOpInterface"> {
     implement one of the atomic interfaces. It can be found in one of these
     forms:
       `{ atomic.update, atomic.read }`
+      `{ atomic.update, atomic.write }`
       `{ atomic.read, atomic.update }`
       `{ atomic.read, atomic.write }`
   }];
@@ -291,12 +292,15 @@ def AtomicCaptureOpInterface : OpInterface<"AtomicCaptureOpInterface"> {
         auto secondWriteStmt = dyn_cast<AtomicWriteOpInterface>(secondOp);
 
         if (!((firstUpdateStmt && secondReadStmt) ||
+              (firstUpdateStmt && secondWriteStmt) ||
               (firstReadStmt && secondUpdateStmt) ||
               (firstReadStmt && secondWriteStmt)))
           return ops.front().emitError()
                 << "invalid sequence of operations in the capture region";
-        if (firstUpdateStmt && secondReadStmt &&
-            firstUpdateStmt.getX() != secondReadStmt.getX())
+        if ((firstUpdateStmt && secondReadStmt &&
+             firstUpdateStmt.getX() != secondReadStmt.getX()) ||
+            (firstUpdateStmt && secondWriteStmt &&
+             firstUpdateStmt.getX() != secondWriteStmt.getX()))
           return firstUpdateStmt.emitError()
                 << "updated variable in atomic.update must be captured in "
                     "second operation";
