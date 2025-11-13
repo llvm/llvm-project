@@ -422,8 +422,8 @@ def CheckLiteralType : Opcode {
 }
 
 def CheckArraySize : Opcode { let Args = [ArgUint64]; }
-
 def CheckFunctionDecl : Opcode { let Args = [ArgFunctionDecl]; }
+def CheckBitCast : Opcode { let Args = [ArgTypePtr, ArgBool]; }
 
 // [] -> [Value]
 def GetGlobal : AccessOpcode;
@@ -543,6 +543,7 @@ def SubOffset : AluOpcode;
 // [Pointer, Pointer] -> [Integral]
 def SubPtr : Opcode {
   let Types = [IntegerTypeClass];
+  let Args = [ArgBool];
   let HasGroup = 1;
 }
 
