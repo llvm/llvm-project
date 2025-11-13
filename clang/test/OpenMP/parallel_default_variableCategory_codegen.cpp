@@ -32,7 +32,6 @@ int main (int argc, char **argv) {
   }
 
   int *aggregate[VECTOR_SIZE] = {0,0,0,0};
-  std::vector<int *> arr(VECTOR_SIZE,0);
   
   #pragma omp parallel masked num_threads(2)
   {
@@ -46,19 +45,6 @@ int main (int argc, char **argv) {
      #pragma omp task default(shared:aggregate) shared(x)
      for(i=0;i<n;i++) {
        aggregate[i] = &x;
-     }
-     #pragma omp taskwait
-
-     // allocatable
-     #pragma omp task default(shared:allocatable)
-     for(i=0;i<n;i++) {
-       arr[i] = &x;
-     }
-     #pragma omp taskwait
-
-     #pragma omp task default(shared:allocatable) shared(x)
-     for(i=0;i<n;i++) {
-       arr[i] = &x;
      }
      #pragma omp taskwait
 
@@ -89,20 +75,13 @@ int main (int argc, char **argv) {
 // CHECK-DAG:  %n.addr = alloca{{.*}}
 // CHECK-DAG:  %aggregate.addr = alloca{{.*}}
 // CHECK-DAG:  %x.addr = alloca{{.*}}
-// CHECK-DAG:  %arr.addr = alloca{{.*}}
 // CHECK: [[TMP0:%.*]] = load{{.*}}%i.addr{{.*}}
 // CHECK-NEXT:  [[TMP1:%.*]] = load{{.*}}%n.addr{{.*}}
 // CHECK-NEXT:  [[TMP2:%.*]] = load{{.*}}%aggregate.addr{{.*}}
 // CHECK-NEXT:  [[TMP3:%.*]] = load{{.*}}%x.addr{{.*}}
-// CHECK-NEXT:  [[TMP4:%.*]] = load{{.*}}%arr.addr{{.*}}
 // CHECK: store ptr [[TMP2]]{{.*}}
 // CHECK-NEXT:  {{.*}}call{{.*}}__kmpc_omp_task_alloc{{.*}}
 // CHECK: store ptr [[TMP2]]{{.*}}
-// CHECK: store ptr [[TMP3]]{{.*}}
-// CHECK-NEXT:  {{.*}}call{{.*}}__kmpc_omp_task_alloc{{.*}}
-// CHECK: store ptr [[TMP4]]{{.*}}
-// CHECK-NEXT:  {{.*}}call{{.*}}__kmpc_omp_task_alloc{{.*}}
-// CHECK: store ptr [[TMP4]]{{.*}}
 // CHECK: store ptr [[TMP3]]{{.*}}
 // CHECK-NEXT:  {{.*}}call{{.*}}__kmpc_omp_task_alloc{{.*}}
 // CHECK: store ptr [[TMP0]]{{.*}}
