@@ -157,7 +157,7 @@ jobs:
           -DCMAKE_C_COMPILER_LAUNCHER=sccache \
           -DCMAKE_CXX_COMPILER_LAUNCHER=sccache \
           -DCMAKE_INSTALL_PREFIX=${{ steps.strings.outputs.build-install-dir }} \
-          -DARCH_TRIPLE="${{ matrix.target }}"
+          -DARCH_TRIPLE="${{ matrix.target }}" \
           -G Ninja \
           -S ${{ github.workspace }}/runtimes \
           -C ${{ github.workspace }}/clang/cmake/caches/Standalone_libc_baremetal.cache
