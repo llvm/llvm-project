@@ -603,11 +603,6 @@ let Features = "avx", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWid
   def vec_set_v8si : X86Builtin<"_Vector<8, int>(_Vector<8, int>, int, _Constant int)">;
 }
 
-let Features = "avx2", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<256>] in {
- def permvarsi256 : X86Builtin<"_Vector<8, int>(_Vector<8, int>, _Vector<8, int>)">;
- def permvarsf256 : X86Builtin<"_Vector<8, float>(_Vector<8, float>, _Vector<8, int>)">;
-}
-
 let Features = "avx2", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in {
   def mpsadbw256 : X86Builtin<"_Vector<32, char>(_Vector<32, char>, _Vector<32, char>, _Constant char)">;
 
@@ -695,6 +690,9 @@ let Features = "avx2", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWi
   def pshuflw256 : X86Builtin<"_Vector<16, short>(_Vector<16, short>, _Constant int)">;
   def pshufhw256 : X86Builtin<"_Vector<16, short>(_Vector<16, short>, _Constant int)">;
   def pshufd256  : X86Builtin<"_Vector<8, int>(_Vector<8, int>, _Constant int)">;
+
+  def permvarsi256 : X86Builtin<"_Vector<8, int>(_Vector<8, int>, _Vector<8, int>)">;
+  def permvarsf256 : X86Builtin<"_Vector<8, float>(_Vector<8, float>, _Vector<8, int>)">;
 }
 
 let Features = "avx2", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<128>] in {

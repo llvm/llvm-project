@@ -13560,8 +13560,7 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     if (!evalShuffleGeneric(Info, E, R,
                             [](unsigned DstIdx, unsigned ShuffleMask) {
                               int Offset = ShuffleMask & 0x7;
-                              unsigned SrcIdx = 0;
-                              return std::pair<unsigned, int>{SrcIdx, Offset};
+                              return std::pair<unsigned, int>{0, Offset};
                             }))
       return false;
     return Success(R, E);
@@ -13574,8 +13573,7 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     if (!evalShuffleGeneric(Info, E, R,
                             [](unsigned DstIdx, unsigned ShuffleMask) {
                               int Offset = ShuffleMask & 0xF;
-                              unsigned SrcIdx = 0;
-                              return std::pair<unsigned, int>{SrcIdx, Offset};
+                              return std::pair<unsigned, int>{0, Offset};
                             }))
       return false;
     return Success(R, E);
@@ -13586,8 +13584,7 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     if (!evalShuffleGeneric(Info, E, R,
                             [](unsigned DstIdx, unsigned ShuffleMask) {
                               int Offset = ShuffleMask & 0x3;
-                              unsigned SrcIdx = 0;
-                              return std::pair<unsigned, int>{SrcIdx, Offset};
+                              return std::pair<unsigned, int>{0, Offset};
                             }))
       return false;
     return Success(R, E);
@@ -13598,8 +13595,7 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     if (!evalShuffleGeneric(Info, E, R,
                             [](unsigned DstIdx, unsigned ShuffleMask) {
                               int Offset = ShuffleMask & 0x1F;
-                              unsigned SrcIdx = 0;
-                              return std::pair<unsigned, int>{SrcIdx, Offset};
+                              return std::pair<unsigned, int>{0, Offset};
                             }))
       return false;
     return Success(R, E);
@@ -13609,8 +13605,7 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     if (!evalShuffleGeneric(Info, E, R,
                             [](unsigned DstIdx, unsigned ShuffleMask) {
                               int Offset = ShuffleMask & 0x3F;
-                              unsigned SrcIdx = 0;
-                              return std::pair<unsigned, int>{SrcIdx, Offset};
+                              return std::pair<unsigned, int>{0, Offset};
                             }))
       return false;
     return Success(R, E);
