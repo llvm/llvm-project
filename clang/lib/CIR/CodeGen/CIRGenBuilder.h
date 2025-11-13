@@ -572,6 +572,34 @@ public:
                                       info.isSigned, isLvalueVolatile,
                                       addr.getAlignment().getAsAlign().value());
   }
+
+  cir::VecShuffleOp
+  createVecShuffle(mlir::Location loc, mlir::Value vec1, mlir::Value vec2,
+                   llvm::ArrayRef<mlir::Attribute> maskAttrs) {
+    auto vecType = mlir::cast<cir::VectorType>(vec1.getType());
+    auto resultTy = cir::VectorType::get(getContext(), vecType.getElementType(),
+                                         maskAttrs.size());
+    return cir::VecShuffleOp::create(*this, loc, resultTy, vec1, vec2,
+                                     getArrayAttr(maskAttrs));
+  }
+
+  cir::VecShuffleOp createVecShuffle(mlir::Location loc, mlir::Value vec1,
+                                     mlir::Value vec2,
+                                     llvm::ArrayRef<int64_t> mask) {
+    llvm::SmallVector<mlir::Attribute> maskAttrs;
+    for (int32_t idx : mask)
+      maskAttrs.push_back(cir::IntAttr::get(getSInt32Ty(), idx));
+    return createVecShuffle(loc, vec1, vec2, maskAttrs);
+  }
+
+  cir::VecShuffleOp createVecShuffle(mlir::Location loc, mlir::Value vec1,
+                                     llvm::ArrayRef<int64_t> mask) {
+    /// Create a unary shuffle. The second vector operand of the IR instruction
+    /// is poison.
+    cir::ConstantOp poison =
+        getConstant(loc, cir::PoisonAttr::get(vec1.getType()));
+    return createVecShuffle(loc, vec1, poison, mask);
+  }
 };
 
 } // namespace clang::CIRGen

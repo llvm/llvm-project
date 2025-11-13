@@ -669,9 +669,19 @@ RValue CIRGenFunction::emitLoadOfExtVectorElementLValue(LValue lv) {
     return RValue::get(cir::VecExtractOp::create(builder, loc, vec, index));
   }
 
-  cgm.errorNYI(
-      loc, "emitLoadOfExtVectorElementLValue: Result of expr is vector type");
-  return {};
+  // Always use shuffle vector to try to retain the original program structure
+  const unsigned numResultElts = exprVecTy->getNumElements();
+  SmallVector<int64_t> mask;
+  for (unsigned i = 0; i != numResultElts; ++i)
+    mask.push_back(getAccessedFieldNo(i, elts));
+
+  cir::VecShuffleOp resultVec = builder.createVecShuffle(loc, vec, mask);
+  if (lv.getType()->isExtVectorBoolType()) {
+    cgm.errorNYI(loc, "emitLoadOfExtVectorElementLValue: ExtVectorBoolType");
+    return {};
+  }
+
+  return RValue::get(resultVec);
 }
 
 static cir::FuncOp emitFunctionDeclPointer(CIRGenModule &cgm, GlobalDecl gd) {
