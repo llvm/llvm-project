@@ -6551,7 +6551,7 @@ class ARMPipelinerLoopInfo : public TargetInstrInfo::PipelinerLoopInfo {
   static int constexpr LAST_IS_USE = MAX_STAGES;
   static int constexpr SEEN_AS_LIVE = MAX_STAGES + 1;
   typedef std::bitset<MAX_STAGES + 2> IterNeed;
-  typedef std::map<unsigned, IterNeed> IterNeeds;
+  typedef std::map<Register, IterNeed> IterNeeds;
 
   void bumpCrossIterationPressure(RegPressureTracker &RPT,
                                   const IterNeeds &CIN);
@@ -6625,14 +6625,14 @@ void ARMPipelinerLoopInfo::bumpCrossIterationPressure(RegPressureTracker &RPT,
   for (const auto &N : CIN) {
     int Cnt = N.second.count() - N.second[SEEN_AS_LIVE] * 2;
     for (int I = 0; I < Cnt; ++I)
-      RPT.increaseRegPressure(Register(N.first), LaneBitmask::getNone(),
+      RPT.increaseRegPressure(VirtRegOrUnit(N.first), LaneBitmask::getNone(),
                               LaneBitmask::getAll());
   }
   // Decrease pressure by the amounts in CrossIterationNeeds
   for (const auto &N : CIN) {
     int Cnt = N.second.count() - N.second[SEEN_AS_LIVE] * 2;
     for (int I = 0; I < Cnt; ++I)
-      RPT.decreaseRegPressure(Register(N.first), LaneBitmask::getAll(),
+      RPT.decreaseRegPressure(VirtRegOrUnit(N.first), LaneBitmask::getAll(),
                               LaneBitmask::getNone());
   }
 }

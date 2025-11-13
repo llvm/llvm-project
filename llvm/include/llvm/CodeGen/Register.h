@@ -206,6 +206,10 @@ public:
   constexpr bool operator==(const VirtRegOrUnit &Other) const {
     return VRegOrUnit == Other.VRegOrUnit;
   }
+
+  constexpr bool operator<(const VirtRegOrUnit &Other) const {
+    return VRegOrUnit < Other.VRegOrUnit;
+  }
 };
 
 } // namespace llvm

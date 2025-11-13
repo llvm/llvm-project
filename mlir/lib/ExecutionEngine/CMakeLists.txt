@@ -205,6 +205,11 @@ if(LLVM_ENABLE_PIC)
   set_property(TARGET mlir_c_runner_utils PROPERTY CXX_STANDARD 17)
   target_compile_definitions(mlir_c_runner_utils PRIVATE mlir_c_runner_utils_EXPORTS)
 
+  # Conditionally link apfloat wrappers only on Linux.
+  if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    target_link_libraries(mlir_c_runner_utils PUBLIC mlir_apfloat_wrappers)
+  endif()
+
   add_mlir_library(mlir_runner_utils
     SHARED
     RunnerUtils.cpp
@@ -215,6 +220,11 @@ if(LLVM_ENABLE_PIC)
     mlir_float16_utils
   )
   target_compile_definitions(mlir_runner_utils PRIVATE mlir_runner_utils_EXPORTS)
+
+    # Conditionally link apfloat wrappers only on Linux.
+  if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    target_link_libraries(mlir_runner_utils PUBLIC mlir_apfloat_wrappers)
+  endif()
 
   add_mlir_library(mlir_async_runtime
     SHARED

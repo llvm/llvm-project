@@ -1450,7 +1450,7 @@ LLVM_ABI Printable printRegUnit(MCRegUnit Unit, const TargetRegisterInfo *TRI);
 
 /// Create Printable object to print virtual registers and physical
 /// registers on a \ref raw_ostream.
-LLVM_ABI Printable printVRegOrUnit(unsigned VRegOrUnit,
+LLVM_ABI Printable printVRegOrUnit(VirtRegOrUnit VRegOrUnit,
                                    const TargetRegisterInfo *TRI);
 
 /// Create Printable object to print register classes or register banks
