@@ -2242,10 +2242,7 @@ def Vector_ScatterOp
       return build($_builder, $_state, resultType, base, indices, index_vec, mask, valueToStore,
                    alignment.has_value() ? $_builder.getI64IntegerAttr(alignment->value()) :
                                     nullptr);
-    }]>,
-       OpBuilder<(ins "Value":$base, "ValueRange":$indices, "Value":$index_vec,
-           "Value":$mask, "Value":$valueToStore,
-           CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment)>];
+    }]>];
 }
 
 def Vector_ExpandLoadOp :

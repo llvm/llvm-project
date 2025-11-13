@@ -6081,15 +6081,6 @@ LogicalResult ScatterOp::verify() {
     return emitOpError("expected valueToStore dim to match mask dim");
   return success();
 }
-
-void ScatterOp::build(OpBuilder &builder, OperationState &result, Value base,
-                      ValueRange indices, Value index_vec, Value mask,
-                      Value valueToStore, llvm::MaybeAlign alignment) {
-  Type resultType = llvm::dyn_cast<RankedTensorType>(base.getType());
-  build(builder, result, resultType, base, indices, index_vec, mask,
-        valueToStore, alignment);
-}
-
 namespace {
 class ScatterFolder final : public OpRewritePattern<ScatterOp> {
 public:

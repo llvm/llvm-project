@@ -138,18 +138,20 @@ struct ScatterOpInterface
            "only tensor types expected");
     return true;
   }
+
   bool bufferizesToMemoryWrite(Operation *op, OpOperand &opOperand,
                                const AnalysisState &state) const {
     assert(isa<RankedTensorType>(opOperand.get().getType()) &&
            "only tensor types expected");
     return true;
   }
+
   AliasingValueList getAliasingValues(Operation *op, OpOperand &opOperand,
                                       const AnalysisState &state) const {
+    assert(isa<RankedTensorType>(opOperand.get().getType()) &&
+           "only tensor types expected");
     auto scatterOp = cast<vector::ScatterOp>(op);
     if (&opOperand != &scatterOp.getBaseMutable())
-      return {};
-    if (op->getNumResults() == 0)
       return {};
     return {{scatterOp.getResult(), BufferRelation::Equivalent}};
   }
@@ -157,14 +159,15 @@ struct ScatterOpInterface
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
                           const BufferizationOptions &options,
                           BufferizationState &state) const {
-    ScatterOp scatterOp = cast<vector::ScatterOp>(op);
+    auto scatterOp = cast<vector::ScatterOp>(op);
     assert(isa<TensorType>(scatterOp.getBaseType()) &&
            "only tensor types expected");
     FailureOr<Value> buffer =
         getBuffer(rewriter, scatterOp.getBase(), options, state);
     if (failed(buffer))
       return failure();
-    vector::ScatterOp::create(rewriter, scatterOp.getLoc(), *buffer,
+    vector::ScatterOp::create(rewriter, scatterOp.getLoc(),
+                              /*resultType=*/nullptr, *buffer,
                               scatterOp.getOffsets(), scatterOp.getIndices(),
                               scatterOp.getMask(), scatterOp.getValueToStore());
     replaceOpWithBufferizedValues(rewriter, op, *buffer);
