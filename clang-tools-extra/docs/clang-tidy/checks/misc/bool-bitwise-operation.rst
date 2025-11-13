@@ -67,7 +67,7 @@ Options
 
 .. option:: UnsafeMode
 
-    Promotes more fix-it hints even when they might change evaluation order or
+    Provide more fix-it hints even when they might change evaluation order or
     skip side effects. Default value is `false`.
 
 .. option:: IgnoreMacros
