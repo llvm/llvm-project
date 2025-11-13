@@ -11,9 +11,9 @@ program main
    !$omp declare mapper(ty :: maptwo) map(maptwo, maptwo%x)
 
 !! Note, symbols come out in their respective scope, but not in declaration order.
-!CHECK: mymapper: MapperDetails
+!CHECK: mymapper: Misc ConstructName
 !CHECK: ty: DerivedType components: x
-!CHECK: ty.omp.default.mapper: MapperDetails
+!CHECK: ty.omp.default.mapper: Misc ConstructName
 !CHECK: DerivedType scope: ty
 !CHECK: OtherConstruct scope:
 !CHECK: mapped (OmpMapToFrom) {{.*}} ObjectEntity type: TYPE(ty)
@@ -21,3 +21,4 @@ program main
 !CHECK: maptwo (OmpMapToFrom) {{.*}} ObjectEntity type: TYPE(ty)
 
 end program main
+
