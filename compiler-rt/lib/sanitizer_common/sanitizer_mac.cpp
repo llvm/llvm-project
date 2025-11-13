@@ -105,7 +105,7 @@ extern "C" {
     mach_msg_type_number_t *infoCnt);
 
   extern const void* _dyld_get_shared_cache_range(size_t* length);
-  }
+}
 
 #  if !SANITIZER_GO
 // Weak symbol no-op when TSan is not linked
@@ -1415,7 +1415,7 @@ uptr FindAvailableMemoryRange(uptr size, uptr alignment, uptr left_padding,
 //
 // NOTE: range_end is inclusive
 //
-// WARNING: This function should NOT allocate memory, since it is
+// WARNING: This function must NOT allocate memory, since it is
 // used in InitializeShadowMemory between where we search for
 // space for shadow and where we actually allocate it.
 bool MemoryRangeIsAvailable(uptr range_start, uptr range_end) {
