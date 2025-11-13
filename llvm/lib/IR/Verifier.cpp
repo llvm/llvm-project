@@ -1320,6 +1320,23 @@ void Verifier::visitDIDerivedType(const DIDerivedType &N) {
   if (N.getTag() == dwarf::DW_TAG_ptr_to_member_type) {
     CheckDI(isType(N.getRawExtraData()), "invalid pointer to member type", &N,
             N.getRawExtraData());
+  } else if (N.getTag() == dwarf::DW_TAG_template_alias) {
+    CheckDI(isa<MDTuple>(N.getRawExtraData()), "invalid template parameters",
+            &N, N.getRawExtraData());
+  } else if (auto *ExtraData = N.getRawExtraData()) {
+    auto IsValidExtraData = [&]() {
+      if (isa<ConstantAsMetadata>(ExtraData) || isa<MDString>(ExtraData) ||
+          isa<DIObjCProperty>(ExtraData))
+        return true;
+      if (auto *Tuple = dyn_cast<MDTuple>(ExtraData))
+        return Tuple->getNumOperands() == 1 &&
+               isa<ConstantAsMetadata>(Tuple->getOperand(0));
+      return false;
+    };
+    CheckDI(IsValidExtraData(),
+            "extraData must be ConstantAsMetadata, MDString, DIObjCProperty, "
+            "or MDTuple with single ConstantAsMetadata operand",
+            &N, ExtraData);
   }
 
   if (N.getTag() == dwarf::DW_TAG_set_type) {
