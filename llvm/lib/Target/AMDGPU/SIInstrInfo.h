@@ -126,7 +126,7 @@ public:
 
 private:
   bool optimizeSCC(MachineInstr *SCCValid, MachineInstr *SCCRedefine,
-                   const SIRegisterInfo &RI, bool NeedInversion) const;
+                   bool NeedInversion) const;
 
   bool invertSCCUse(MachineInstr *SCCDef) const;
 

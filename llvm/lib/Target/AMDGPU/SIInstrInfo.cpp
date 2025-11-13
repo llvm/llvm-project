@@ -10766,16 +10766,18 @@ bool SIInstrInfo::analyzeCompare(const MachineInstr &MI, Register &SrcReg,
   return false;
 }
 
+// Invert all uses of SCC following SCCDef because SCCDef may be deleted and
+// (incoming SCC) = !(SCC defined by SCCDef).
+// Return true if all uses can be re-written, false otherwise.
 bool SIInstrInfo::invertSCCUse(MachineInstr *SCCDef) const {
   MachineBasicBlock *MBB = SCCDef->getParent();
-  const SIRegisterInfo *TRI = ST.getRegisterInfo();
-  SmallVector<MachineInstr *, 2> InvertInstr;
+  SmallVector<MachineInstr *> InvertInstr;
   bool SCCIsDead = false;
 
   // Scan instructions for SCC uses that need to be inverted until SCC is dead.
   for (MachineInstr &MI :
        make_range(std::next(MachineBasicBlock::iterator(SCCDef)), MBB->end())) {
-    if (MI.readsRegister(AMDGPU::SCC, TRI)) {
+    if (MI.readsRegister(AMDGPU::SCC, &RI)) {
       if (MI.getOpcode() == AMDGPU::S_CSELECT_B32 ||
           MI.getOpcode() == AMDGPU::S_CSELECT_B64 ||
           MI.getOpcode() == AMDGPU::S_CBRANCH_SCC0 ||
@@ -10784,18 +10786,18 @@ bool SIInstrInfo::invertSCCUse(MachineInstr *SCCDef) const {
       else
         return false;
     }
-    if (MI.definesRegister(AMDGPU::SCC, TRI)) {
+    if (MI.definesRegister(AMDGPU::SCC, &RI) ||
+        MI.killsRegister(AMDGPU::SCC, &RI)) {
       SCCIsDead = true;
       break;
     }
   }
 
-  const MachineRegisterInfo &MRI =
-      SCCDef->getParent()->getParent()->getRegInfo();
+  const MachineRegisterInfo &MRI = SCCDef->getMF()->getRegInfo();
   // If SCC is still live, verify that it is not live past the end of this
   // block.
   if (!SCCIsDead && MRI.tracksLiveness())
-    SCCIsDead = MBB->computeRegisterLiveness(TRI, AMDGPU::SCC, MBB->end(), 0) ==
+    SCCIsDead = MBB->computeRegisterLiveness(&RI, AMDGPU::SCC, MBB->end(), 0) ==
                 MachineBasicBlock::LQR_Dead;
 
   if (!SCCIsDead)
@@ -10804,15 +10806,16 @@ bool SIInstrInfo::invertSCCUse(MachineInstr *SCCDef) const {
   // Invert uses
   for (MachineInstr *MI : InvertInstr) {
     if (MI->getOpcode() == AMDGPU::S_CSELECT_B32 ||
-        MI->getOpcode() == AMDGPU::S_CSELECT_B64)
+        MI->getOpcode() == AMDGPU::S_CSELECT_B64) {
       swapOperands(*MI);
-    else if (MI->getOpcode() == AMDGPU::S_CBRANCH_SCC0 ||
-             MI->getOpcode() == AMDGPU::S_CBRANCH_SCC1)
+    } else if (MI->getOpcode() == AMDGPU::S_CBRANCH_SCC0 ||
+               MI->getOpcode() == AMDGPU::S_CBRANCH_SCC1) {
       MI->setDesc(get(MI->getOpcode() == AMDGPU::S_CBRANCH_SCC0
                           ? AMDGPU::S_CBRANCH_SCC1
                           : AMDGPU::S_CBRANCH_SCC0));
-    else
+    } else {
       llvm_unreachable("SCC used but no inversion handling");
+    }
   }
   return true;
 }
@@ -10822,7 +10825,6 @@ bool SIInstrInfo::invertSCCUse(MachineInstr *SCCDef) const {
 // SCCValid. If there are no intervening SCC conflicts delete SCCRedefine and
 // update kill/dead flags if necessary.
 bool SIInstrInfo::optimizeSCC(MachineInstr *SCCValid, MachineInstr *SCCRedefine,
-                              const SIRegisterInfo &RI,
                               bool NeedInversion) const {
   MachineInstr *KillsSCC = nullptr;
   if (SCCValid->getParent() != SCCRedefine->getParent())
@@ -10890,7 +10892,7 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
     if (!setsSCCifResultIsNonZero(*Def) && !foldableSelect(*Def))
       return false;
 
-    if (!optimizeSCC(Def, &CmpInstr, RI, NeedInversion))
+    if (!optimizeSCC(Def, &CmpInstr, NeedInversion))
       return false;
 
     // If s_or_b32 result, sY, is unused (i.e. it is effectively a 64-bit
@@ -10915,7 +10917,7 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
             Def1->getOperand(1).getReg() == Def2->getOperand(1).getReg()) {
           MachineInstr *Select = MRI->getVRegDef(Def1->getOperand(1).getReg());
           if (Select && foldableSelect(*Select))
-            optimizeSCC(Select, Def, RI, false);
+            optimizeSCC(Select, Def, false);
         }
       }
     }
@@ -10996,7 +10998,7 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
     if (IsReversedCC && !MRI->hasOneNonDBGUse(DefReg))
       return false;
 
-    if (!optimizeSCC(Def, &CmpInstr, RI, false))
+    if (!optimizeSCC(Def, &CmpInstr, false))
       return false;
 
     if (!MRI->use_nodbg_empty(DefReg)) {
