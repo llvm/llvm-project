@@ -2448,7 +2448,7 @@ bool SelectionDAGISel::IsLegalToFold(SDValue N, SDNode *U, SDNode *Root,
   // a cycle in the scheduling graph.
 
   // If the node has glue, walk down the graph to the "lowest" node in the
-  // glueged set.
+  // glued set.
   EVT VT = Root->getValueType(Root->getNumValues()-1);
   while (VT == MVT::Glue) {
     SDNode *GU = Root->getGluedUser();
@@ -2547,6 +2547,11 @@ void SelectionDAGISel::Select_UNDEF(SDNode *N) {
 // must come last, because InstrEmitter::AddOperand() requires it.
 void SelectionDAGISel::Select_FAKE_USE(SDNode *N) {
   CurDAG->SelectNodeTo(N, TargetOpcode::FAKE_USE, N->getValueType(0),
+                       N->getOperand(1), N->getOperand(0));
+}
+
+void SelectionDAGISel::Select_RELOC_NONE(SDNode *N) {
+  CurDAG->SelectNodeTo(N, TargetOpcode::RELOC_NONE, N->getValueType(0),
                        N->getOperand(1), N->getOperand(0));
 }
 
@@ -2777,7 +2782,7 @@ void SelectionDAGISel::UpdateChains(
 /// induce cycles in the DAG) and if so, creating a TokenFactor node. that will
 /// be used as the input node chain for the generated nodes.
 static SDValue
-HandleMergeInputChains(SmallVectorImpl<SDNode*> &ChainNodesMatched,
+HandleMergeInputChains(const SmallVectorImpl<SDNode *> &ChainNodesMatched,
                        SelectionDAG *CurDAG) {
 
   SmallPtrSet<const SDNode *, 16> Visited;
@@ -3324,6 +3329,9 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
     return;
   case ISD::FAKE_USE:
     Select_FAKE_USE(NodeToMatch);
+    return;
+  case ISD::RELOC_NONE:
+    Select_RELOC_NONE(NodeToMatch);
     return;
   case ISD::FREEZE:
     Select_FREEZE(NodeToMatch);

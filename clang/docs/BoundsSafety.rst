@@ -58,7 +58,7 @@ adopt, offering these properties that make it widely adoptable in practice:
 * It has a relatively low adoption cost.
 
 This document discusses the key designs of ``-fbounds-safety``. The document is
-subject to be actively updated with a more detailed specification.
+subject to active updates with a more detailed specification.
 
 Programming Model
 =================
@@ -574,7 +574,7 @@ When ``sizeof()`` takes a type name, the compiler doesn't apply an implicit
 bounds annotation on the named pointer types. This means if a bounds annotation
 is not specified, the evaluated pointer type is treated identically to a plain C
 pointer type. Therefore, ``sizeof(int*)`` remains the same with or without
-``-fbounds-safety``. That said, programmers can explicitly add attribute to the
+``-fbounds-safety``. That said, programmers can explicitly add attributes to the
 types, e.g., ``sizeof(int *__bidi_indexable)``, in which case the sizeof
 evaluates to the size of type ``int *__bidi_indexable`` (the value equivalent to
 ``3 * sizeof(int*)``).

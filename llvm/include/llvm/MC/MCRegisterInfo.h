@@ -272,7 +272,7 @@ public:
   friend class MCRegUnitRootIterator;
   friend class MCRegAliasIterator;
 
-  virtual ~MCRegisterInfo() {}
+  virtual ~MCRegisterInfo() = default;
 
   /// Initialize MCRegisterInfo, called by TableGen
   /// auto-generated routines. *DO NOT USE*.
@@ -687,7 +687,7 @@ public:
   }
 
   /// Returns a (RegUnit, LaneMask) pair.
-  std::pair<unsigned,LaneBitmask> operator*() const {
+  std::pair<MCRegUnit, LaneBitmask> operator*() const {
     return std::make_pair(*RUIter, *MaskListIter);
   }
 
@@ -719,7 +719,7 @@ class MCRegUnitRootIterator {
 public:
   MCRegUnitRootIterator() = default;
 
-  MCRegUnitRootIterator(unsigned RegUnit, const MCRegisterInfo *MCRI) {
+  MCRegUnitRootIterator(MCRegUnit RegUnit, const MCRegisterInfo *MCRI) {
     assert(RegUnit < MCRI->getNumRegUnits() && "Invalid register unit");
     Reg0 = MCRI->RegUnitRoots[RegUnit][0];
     Reg1 = MCRI->RegUnitRoots[RegUnit][1];

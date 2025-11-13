@@ -152,7 +152,7 @@ public:
   static constexpr unsigned integerPartWidth = APInt::APINT_BITS_PER_WORD;
 
   /// A signed type to represent a floating point numbers unbiased exponent.
-  typedef int32_t ExponentType;
+  using ExponentType = int32_t;
 
   /// \name Floating Point Semantics.
   /// @{
@@ -938,8 +938,8 @@ LLVM_ABI DoubleAPFloat frexp(const DoubleAPFloat &X, int &Exp, roundingMode);
 // This is a interface class that is currently forwarding functionalities from
 // detail::IEEEFloat.
 class APFloat : public APFloatBase {
-  typedef detail::IEEEFloat IEEEFloat;
-  typedef detail::DoubleAPFloat DoubleAPFloat;
+  using IEEEFloat = detail::IEEEFloat;
+  using DoubleAPFloat = detail::DoubleAPFloat;
 
   static_assert(std::is_standard_layout<IEEEFloat>::value);
 

@@ -152,6 +152,9 @@ public:
   /// global initializers.
   mlir::Operation *curFn = nullptr;
 
+  /// Save Parameter Decl for coroutine.
+  llvm::SmallVector<const ParmVarDecl *> fnArgs;
+
   using DeclMapTy = llvm::DenseMap<const clang::Decl *, Address>;
   /// This keeps track of the CIR allocas or globals for local C
   /// declarations.
@@ -218,6 +221,10 @@ public:
 
   const TargetInfo &getTarget() const { return cgm.getTarget(); }
   mlir::MLIRContext &getMLIRContext() { return cgm.getMLIRContext(); }
+
+  const TargetCIRGenInfo &getTargetHooks() const {
+    return cgm.getTargetCIRGenInfo();
+  }
 
   // ---------------------
   // Opaque value handling
@@ -496,6 +503,12 @@ public:
   /// the type has already been emitted with emitVariablyModifiedType.
   VlaSizePair getVLASize(const VariableArrayType *type);
   VlaSizePair getVLASize(QualType type);
+
+  Address getAsNaturalAddressOf(Address addr, QualType pointeeTy);
+
+  mlir::Value getAsNaturalPointerTo(Address addr, QualType pointeeType) {
+    return getAsNaturalAddressOf(addr, pointeeType).getBasePointer();
+  }
 
   void finishFunction(SourceLocation endLoc);
 
@@ -1271,6 +1284,9 @@ public:
 
   RValue emitAtomicExpr(AtomicExpr *e);
   void emitAtomicInit(Expr *init, LValue dest);
+  void emitAtomicStore(RValue rvalue, LValue dest, bool isInit);
+  void emitAtomicStore(RValue rvalue, LValue dest, cir::MemOrder order,
+                       bool isVolatile, bool isInit);
 
   AutoVarEmission emitAutoVarAlloca(const clang::VarDecl &d,
                                     mlir::OpBuilder::InsertPoint ip = {});
@@ -1303,6 +1319,28 @@ public:
 
   RValue emitBuiltinExpr(const clang::GlobalDecl &gd, unsigned builtinID,
                          const clang::CallExpr *e, ReturnValueSlot returnValue);
+
+  /// Returns a Value corresponding to the size of the given expression by
+  /// emitting a `cir.objsize` operation.
+  ///
+  /// \param e The expression whose object size to compute
+  /// \param type Determines the semantics of the object size computation.
+  ///   The type parameter is a 2-bit value where:
+  ///     bit 0 (type & 1): 0 = whole object, 1 = closest subobject
+  ///     bit 1 (type & 2): 0 = maximum size, 2 = minimum size
+  /// \param resType The result type for the size value
+  /// \param emittedE Optional pre-emitted pointer value. If non-null, we'll
+  ///   call `cir.objsize` on this value rather than emitting e.
+  /// \param isDynamic If true, allows runtime evaluation via dynamic mode
+  mlir::Value emitBuiltinObjectSize(const clang::Expr *e, unsigned type,
+                                    cir::IntType resType, mlir::Value emittedE,
+                                    bool isDynamic);
+
+  mlir::Value evaluateOrEmitBuiltinObjectSize(const clang::Expr *e,
+                                              unsigned type,
+                                              cir::IntType resType,
+                                              mlir::Value emittedE,
+                                              bool isDynamic);
 
   RValue emitCall(const CIRGenFunctionInfo &funcInfo,
                   const CIRGenCallee &callee, ReturnValueSlot returnValue,
@@ -1501,7 +1539,8 @@ public:
                               llvm::ArrayRef<mlir::Value> args = {});
 
   /// Emit the computation of the specified expression of scalar type.
-  mlir::Value emitScalarExpr(const clang::Expr *e);
+  mlir::Value emitScalarExpr(const clang::Expr *e,
+                             bool ignoreResultAssign = false);
 
   mlir::Value emitScalarPrePostIncDec(const UnaryOperator *e, LValue lv,
                                       cir::UnaryOpKind kind, bool isPre);
@@ -1679,8 +1718,8 @@ public:
                           bool isInit);
 
   void emitStoreOfScalar(mlir::Value value, Address addr, bool isVolatile,
-                         clang::QualType ty, bool isInit = false,
-                         bool isNontemporal = false);
+                         clang::QualType ty, LValueBaseInfo baseInfo,
+                         bool isInit = false, bool isNontemporal = false);
   void emitStoreOfScalar(mlir::Value value, LValue lvalue, bool isInit);
 
   /// Store the specified rvalue into the specified

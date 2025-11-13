@@ -326,6 +326,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     # unistd.h entrypoints
     libc.src.unistd.access
     libc.src.unistd.chdir
+    libc.src.unistd.chown
     libc.src.unistd.close
     libc.src.unistd.dup
     libc.src.unistd.dup2
@@ -333,6 +334,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.execve
     libc.src.unistd.faccessat
     libc.src.unistd.fchdir
+    libc.src.unistd.fchown
     libc.src.unistd.fpathconf
     libc.src.unistd.fsync
     libc.src.unistd.ftruncate
@@ -344,6 +346,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.getppid
     libc.src.unistd.getsid
     libc.src.unistd.gettid
+    libc.src.unistd.getgid
     libc.src.unistd.getuid
     libc.src.unistd.isatty
     libc.src.unistd.link
@@ -1311,6 +1314,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.time.ctime_r
     libc.src.time.clock
     libc.src.time.clock_gettime
+    libc.src.time.clock_settime
     libc.src.time.difftime
     libc.src.time.gettimeofday
     libc.src.time.gmtime

@@ -13,8 +13,7 @@
 // The fix for bug 51497 and bug 51499 require and updated dylib due to
 // explicit instantiations. That means Apple backdeployment targets remain
 // broken.
-// TODO: Remove && !darwin once availability markup for LLVM 19 on macOS has been added
-// XFAIL: using-built-library-before-llvm-19 && !darwin
+// XFAIL: using-built-library-before-llvm-19
 
 #include <istream>
 #include <cassert>

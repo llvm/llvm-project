@@ -737,8 +737,7 @@ TEST(TargetParserTest, ARMFPUNeonSupportLevel) {
   for (ARM::FPUKind FK = static_cast<ARM::FPUKind>(0);
        FK <= ARM::FPUKind::FK_LAST;
        FK = static_cast<ARM::FPUKind>(static_cast<unsigned>(FK) + 1))
-    if (FK == ARM::FK_LAST ||
-        ARM::getFPUName(FK).find("neon") == std::string::npos)
+    if (FK == ARM::FK_LAST || !ARM::getFPUName(FK).contains("neon"))
       EXPECT_EQ(ARM::NeonSupportLevel::None, ARM::getFPUNeonSupportLevel(FK));
     else
       EXPECT_NE(ARM::NeonSupportLevel::None, ARM::getFPUNeonSupportLevel(FK));
@@ -748,9 +747,8 @@ TEST(TargetParserTest, ARMFPURestriction) {
   for (ARM::FPUKind FK = static_cast<ARM::FPUKind>(0);
        FK <= ARM::FPUKind::FK_LAST;
        FK = static_cast<ARM::FPUKind>(static_cast<unsigned>(FK) + 1)) {
-    if (FK == ARM::FK_LAST ||
-        (ARM::getFPUName(FK).find("d16") == std::string::npos &&
-         ARM::getFPUName(FK).find("vfpv3xd") == std::string::npos))
+    if (FK == ARM::FK_LAST || (!ARM::getFPUName(FK).contains("d16") &&
+                               !ARM::getFPUName(FK).contains("vfpv3xd")))
       EXPECT_EQ(ARM::FPURestriction::None, ARM::getFPURestriction(FK));
     else
       EXPECT_NE(ARM::FPURestriction::None, ARM::getFPURestriction(FK));
@@ -1454,7 +1452,7 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
       AArch64::AEK_GCIE,         AArch64::AEK_SME2P3,
       AArch64::AEK_SVE2P3,       AArch64::AEK_SVE_B16MM,
       AArch64::AEK_F16MM,        AArch64::AEK_F16F32DOT,
-      AArch64::AEK_F16F32MM,
+      AArch64::AEK_F16F32MM,     AArch64::AEK_MOPS_GO,
   };
 
   std::vector<StringRef> Features;
@@ -1578,6 +1576,7 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
   EXPECT_TRUE(llvm::is_contained(Features, "+f16mm"));
   EXPECT_TRUE(llvm::is_contained(Features, "+f16f32dot"));
   EXPECT_TRUE(llvm::is_contained(Features, "+f16f32mm"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+mops-go"));
 
   // Assuming we listed every extension above, this should produce the same
   // result.
@@ -1756,6 +1755,7 @@ TEST(TargetParserTest, AArch64ArchExtFeature) {
       {"f16mm", "nof16mm", "+f16mm", "-f16mm"},
       {"f16f32dot", "nof16f32dot", "+f16f32dot", "-f16f32dot"},
       {"f16f32mm", "nof16f32mm", "+f16f32mm", "-f16f32mm"},
+      {"mops-go", "nomops-go", "+mops-go", "-mops-go"},
   };
 
   for (unsigned i = 0; i < std::size(ArchExt); i++) {
