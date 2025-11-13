@@ -13083,15 +13083,18 @@ SDValue DAGCombiner::foldPartialReduceMLAMulOp(SDNode *N) {
   SDValue LHSExtOp = LHS->getOperand(0);
   EVT LHSExtOpVT = LHSExtOp.getValueType();
 
-  // Return 'select(P, Op, splat(0))' if P is nonzero,
-  // or 'P' otherwise.
-  auto tryPredicate = [&](SDValue P, SDValue Op) {
+  // Sets Op = select(P, Op, splat(0)) if P is nonzero, or Op otherwise.
+  // Set ToFreezeOp = freeze(ToFreezeOp) if the value may be poison, to
+  // keep the same semantics.
+  auto ApplyPredicate = [&](SDValue P, SDValue &Op, SDValue &ToFreezeOp) {
     if (!P)
-      return Op;
+      return;
+    if (!DAG.isGuaranteedNotToBePoison(ToFreezeOp))
+      ToFreezeOp = DAG.getFreeze(ToFreezeOp);
     EVT OpVT = Op.getValueType();
     SDValue Zero = OpVT.isFloatingPoint() ? DAG.getConstantFP(0.0, DL, OpVT)
                                           : DAG.getConstant(0, DL, OpVT);
-    return DAG.getSelect(DL, OpVT, P, Op, Zero);
+    Op = DAG.getSelect(DL, OpVT, P, Op, Zero);
   };
 
   // partial_reduce_*mla(acc, mul(ext(x), splat(C)), splat(1))
@@ -13116,10 +13119,9 @@ SDValue DAGCombiner::foldPartialReduceMLAMulOp(SDNode *N) {
             TLI.getTypeToTransformTo(*Context, LHSExtOpVT)))
       return SDValue();
 
-    SDValue Constant =
-        tryPredicate(Pred, DAG.getConstant(CTrunc, DL, LHSExtOpVT));
-    return DAG.getNode(NewOpcode, DL, N->getValueType(0), Acc, LHSExtOp,
-                       Constant);
+    SDValue C = DAG.getConstant(CTrunc, DL, LHSExtOpVT);
+    ApplyPredicate(Pred, C, LHSExtOp);
+    return DAG.getNode(NewOpcode, DL, N->getValueType(0), Acc, LHSExtOp, C);
   }
 
   unsigned RHSOpcode = RHS->getOpcode();
@@ -13160,7 +13162,7 @@ SDValue DAGCombiner::foldPartialReduceMLAMulOp(SDNode *N) {
           TLI.getTypeToTransformTo(*Context, LHSExtOpVT)))
     return SDValue();
 
-  RHSExtOp = tryPredicate(Pred, RHSExtOp);
+  ApplyPredicate(Pred, RHSExtOp, LHSExtOp);
   return DAG.getNode(NewOpc, DL, N->getValueType(0), Acc, LHSExtOp, RHSExtOp);
 }
 
