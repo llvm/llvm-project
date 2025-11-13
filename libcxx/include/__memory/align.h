@@ -36,10 +36,17 @@ __align_impl(size_t __align, size_t __sz, void*& __ptr, size_t& __space) {
 }
 
 #ifndef _LIBCPP_EXPORT_ALIGN_SYMBOL
+#  ifdef _LIBCPP_DISABLE_INLINE_OPTIMIZE_BECAUSE_MULTIPLY_SYMBOLS_ERROR
+
+_LIBCPP_EXPORTED_FROM_ABI void* align(size_t __align, size_t __sz, void*& __ptr, size_t& __space);
+
+#  else
 
 inline _LIBCPP_HIDE_FROM_ABI void* align(size_t __align, size_t __sz, void*& __ptr, size_t& __space) {
   return __align_impl(__align, __sz, __ptr, __space);
 }
+
+#  endif //  _LIBCPP_DISABLE_INLINE_OPTIMIZE_BECAUSE_MULTIPLY_SYMBOLS_ERROR
 
 #endif // _LIBCPP_EXPORT_ALIGN_SYMBOL
 

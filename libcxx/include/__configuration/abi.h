@@ -97,6 +97,11 @@
 // so disable it.
 #    define _LIBCPP_DEPRECATED_ABI_LEGACY_LIBRARY_DEFINITIONS_FOR_INLINE_FUNCTIONS
 #  endif
+// The PE/COFF format reports a linking error when encountering multiple symbol definitions where at least one is a
+// strong symbol. So we can't inlining a function without ABI breakchange.
+#  if defined(_LIBCPP_OBJECT_FORMAT_COFF)
+#    define _LIBCPP_DISABLE_INLINE_OPTIMIZE_BECAUSE_MULTIPLY_SYMBOLS_ERROR
+#  endif
 // Feature macros for disabling pre ABI v1 features. All of these options
 // are deprecated.
 #  if defined(__FreeBSD__)
