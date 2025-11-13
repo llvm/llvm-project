@@ -67,6 +67,34 @@ jobs:
             target: armv7m-none-eabi
             include_scudo: OFF
             enable_baremetal_build: ON
+          - os: ubuntu-24.04
+            build__type: MinSizeRel
+            c_compiler: clang-22
+            cpp_compiler: clang++-22
+            target: armv7em-none-eabi
+            include_scudo: OFF
+            enable_baremetal_build: ON
+          - os: ubuntu-24.04
+            build__type: MinSizeRel
+            c_compiler: clang-22
+            cpp_compiler: clang++-22
+            target: armv8m.main-none-eabi
+            include_scudo: OFF
+            enable_baremetal_build: ON
+          - os: ubuntu-24.04
+            build__type: MinSizeRel
+            c_compiler: clang-22
+            cpp_compiler: clang++-22
+            target: armv8.1m.main-none-eabi
+            include_scudo: OFF
+            enable_baremetal_build: ON
+          - os: ubuntu-24.04
+            build__type: MinSizeRel
+            c_compiler: clang-22
+            cpp_compiler: clang++-22
+            target: riscv32-unknown-elf
+            include_scudo: OFF
+            enable_baremetal_build: ON
           # TODO: add back gcc build when it is fixed
           # - c_compiler: gcc
           #   cpp_compiler: g++
@@ -128,12 +156,8 @@ jobs:
           -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
           -DCMAKE_C_COMPILER_LAUNCHER=sccache \
           -DCMAKE_CXX_COMPILER_LAUNCHER=sccache \
-          -DCMAKE_INSTALL_PREFIX=${{ steps.strings.outputs.build-baremetal-install-dir }} \
-          -DLIBC_TARGET_TRIPLE=${{ matrix.target }} \
-          -DLLVM_DEFAULT_TARGET_TRIPLE=${{ matrix.target }} \
-          -DCMAKE_C_COMPILER_TARGET=${{ matrix.target }} \
-          -DCMAKE_CXX_COMPILER_TARGET=${{ matrix.target }} \
-          -DCMAKE_ASM_COMPILER_TARGET=${{ matrix.target }} \
+          -DCMAKE_INSTALL_PREFIX=${{ steps.strings.outputs.build-install-dir }} \
+          -DARCH_TRIPLE="${{ matrix.target }}"
           -G Ninja \
           -S ${{ github.workspace }}/runtimes \
           -C ${{ github.workspace }}/clang/cmake/caches/Standalone_libc_baremetal.cache
