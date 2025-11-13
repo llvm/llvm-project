@@ -712,6 +712,9 @@ private:
   /// that we don't re-emit the initializer.
   llvm::DenseMap<const Decl*, unsigned> DelayedCXXInitPosition;
 
+  /// To remember which types did require a vector deleting dtor.
+  llvm::SmallPtrSet<const CXXRecordDecl *, 16> RequireVectorDeletingDtor;
+
   typedef std::pair<OrderGlobalInitsOrStermFinalizers, llvm::Function *>
       GlobalInitData;
 
@@ -1736,6 +1739,7 @@ public:
   void EmitGlobal(GlobalDecl D);
 
   bool TryEmitBaseDestructorAsAlias(const CXXDestructorDecl *D);
+  void EmitDefinitionAsAlias(GlobalDecl Alias, GlobalDecl Target);
 
   llvm::GlobalValue *GetGlobalValue(StringRef Ref);
 
@@ -2437,6 +2441,8 @@ public:
     // behavior. So projects like the Linux kernel can rely on it.
     return !getLangOpts().CPlusPlus;
   }
+  void requireVectorDestructorDefinition(const CXXRecordDecl *RD);
+  bool classNeedsVectorDestructor(const CXXRecordDecl *RD);
 
   // Helper to get the alignment for a variable.
   unsigned getVtableGlobalVarAlignment(const VarDecl *D = nullptr) {
