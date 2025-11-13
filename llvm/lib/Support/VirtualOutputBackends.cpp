@@ -269,9 +269,16 @@ Error OnDiskOutputFile::tryToCreateTemporary(std::optional<int> &FD) {
   return createDirectoriesOnDemand(OutputPath, Config, [&]() -> Error {
     int NewFD;
     SmallString<128> UniquePath;
+    sys::fs::OpenFlags OF = sys::fs::OF_None;
+    if (Config.getTextWithCRLF())
+      OF |= sys::fs::OF_TextWithCRLF;
+    else if (Config.getText())
+      OF |= sys::fs::OF_Text;
+    if (Config.getAppend())
+      OF |= sys::fs::OF_Append;
     if (std::error_code EC =
-            sys::fs::createUniqueFile(ModelPath, NewFD, UniquePath))
-      return make_error<TempFileOutputError>(ModelPath, OutputPath, EC);
+            sys::fs::createUniqueFile(ModelPath, NewFD, UniquePath, OF))
+    return make_error<TempFileOutputError>(ModelPath, OutputPath, EC);
 
     if (Config.getDiscardOnSignal())
       sys::RemoveFileOnSignal(UniquePath);
