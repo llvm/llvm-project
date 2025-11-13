@@ -144,6 +144,7 @@ public:
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveIsFirstLane, wave_is_first_lane)
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveGetLaneCount, wave_get_lane_count)
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveReadLaneAt, wave_readlane)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(WavePrefixSum, wave_prefix_sum)
   GENERATE_HLSL_INTRINSIC_FUNCTION(FirstBitUHigh, firstbituhigh)
   GENERATE_HLSL_INTRINSIC_FUNCTION(FirstBitSHigh, firstbitshigh)
   GENERATE_HLSL_INTRINSIC_FUNCTION(FirstBitLow, firstbitlow)

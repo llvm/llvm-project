@@ -1079,6 +1079,24 @@ def WaveActiveOp : DXILOp<119, waveActiveOp> {
   let attributes = [Attributes<DXIL1_0, []>];
 }
 
+def WavePrefixOp : DXILOp<121, wavePrefixOp> {
+  let Doc = "returns partial result of the computation in the corresponding lane";
+  let intrinsics = [
+    IntrinSelect<int_dx_wave_prefix_sum,
+                 [
+                   IntrinArgIndex<0>, IntrinArgI8<WaveOpKind_Sum>
+                 ]>
+  ];
+
+  let arguments = [OverloadTy, Int8Ty];
+  let result = OverloadTy;
+  let overloads = [
+    Overloads<DXIL1_0, [HalfTy, FloatTy, DoubleTy, Int16Ty, Int32Ty, Int64Ty]>
+  ];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, []>];
+}
+
 def LegacyF16ToF32 : DXILOp<131, legacyF16ToF32> {
   let Doc = "returns the float16 stored in the low-half of the uint converted "
             "to a float";

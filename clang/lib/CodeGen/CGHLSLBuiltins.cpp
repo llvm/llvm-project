@@ -864,6 +864,13 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
             {OpExpr->getType()}),
         ArrayRef{OpExpr, OpIndex}, "hlsl.wave.readlane");
   }
+  case Builtin::BI__builtin_hlsl_wave_prefix_sum: {
+    Value *OpExpr = EmitScalarExpr(E->getArg(0));
+    Intrinsic::ID IID = CGM.getHLSLRuntime().getWavePrefixSumIntrinsic();
+    return EmitRuntimeCall(Intrinsic::getOrInsertDeclaration(
+                               &CGM.getModule(), IID, {OpExpr->getType()}),
+                           ArrayRef{OpExpr}, "hlsl.wave.prefix.sum");
+  }
   case Builtin::BI__builtin_hlsl_elementwise_sign: {
     auto *Arg0 = E->getArg(0);
     Value *Op0 = EmitScalarExpr(Arg0);
