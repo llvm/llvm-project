@@ -513,6 +513,19 @@ struct StateInfoTy {
   // Delete copy constructor and copy assignment operator to prevent copying
   StateInfoTy(const StateInfoTy &) = delete;
   StateInfoTy &operator=(const StateInfoTy &) = delete;
+
+  /// Check if a pointer falls within any of the newly allocated ranges.
+  /// Returns true if the pointer is within a newly allocated region.
+  bool wasNewlyAllocated(void *Ptr) const {
+    return std::any_of(
+        NewAllocations.begin(), NewAllocations.end(), [&](const auto &Alloc) {
+          void *AllocPtr = Alloc.first;
+          int64_t AllocSize = Alloc.second;
+          return Ptr >= AllocPtr &&
+                 Ptr < reinterpret_cast<void *>(
+                           reinterpret_cast<char *>(AllocPtr) + AllocSize);
+        });
+  }
 };
 
 // Function pointer type for targetData* functions (targetDataBegin,

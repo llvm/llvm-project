@@ -328,15 +328,16 @@ TargetPointerResultTy MappingInfoTy::getTargetPointer(
   // alloc entry for the same pointer, which increased the ref-count from 0 to
   // 1, has already been encountered before. But because the ref-count was
   // already 1 when TO was encountered, it wouldn't incur a transfer. e.g.
-  // ... map(alloc: x) map(to: x).
+  //  int *xp = &x[0];
+  // ... map(alloc: x[:]) map(to: xp[1]).
   auto WasNewlyAllocatedForCurrentRegion = [&]() {
     if (!StateInfo)
       return false;
-    bool IsNewlyAllocated = StateInfo->NewAllocations.contains(HstPtrBegin);
-    if (IsNewlyAllocated)
+    bool WasNewlyAllocated = StateInfo->wasNewlyAllocated(HstPtrBegin);
+    if (WasNewlyAllocated)
       DP("HstPtrBegin " DPxMOD " was newly allocated for the current region\n",
          DPxPTR(HstPtrBegin));
-    return IsNewlyAllocated;
+    return WasNewlyAllocated;
   };
 
   // Even if this isn't a new entry, we still need to do a data-transfer if

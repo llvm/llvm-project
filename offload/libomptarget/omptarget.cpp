@@ -666,17 +666,14 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
                                 : "device failure or illegal mapping");
       return OFFLOAD_FAIL;
     } else if (TgtPtrBegin && HasPresentModifier &&
-               StateInfo->NewAllocations.contains(HstPtrBegin)) {
+               StateInfo->wasNewlyAllocated(HstPtrBegin)) {
       // For "PRESENT" entries, we may have cases like the following:
-      //   map(alloc: p[0]) map(present, alloc: p[0])
-      // If the compiler does not merge these entries, then the "PRESENT" entry
-      // may be encountered after a previous entry allocated new storage for it.
-      // To catch such cases, we should also look at any existing allocations
-      // and error out if we have one matching the pointer. We don't need to
-      // worry about cases like:
-      //   map(alloc: p[1:10]) map(present, alloc: p[2:5])
-      // as the list-items share storage, but are not identical, which is a
-      // user error as per OpenMP.
+      //   int *xp = &x[0];
+      //   map(alloc: x[:]) map(present, alloc: xp[1])
+      // The "PRESENT" entry may be encountered after a previous entry
+      // allocated new storage for the pointer.
+      // To catch such cases, we need to look at any existing allocations
+      // and error out if we have any matching the pointer.
       MESSAGE("device mapping required by 'present' map type modifier does not "
               "exist for host address " DPxMOD " (%" PRId64 " bytes)\n",
               DPxPTR(HstPtrBegin), DataSize);
@@ -811,14 +808,7 @@ int processAttachEntries(DeviceTy &Device, StateInfoTy &StateInfo,
 
     // Lambda to check if a pointer was newly allocated
     auto WasNewlyAllocated = [&](void *Ptr, const char *PtrName) {
-      bool IsNewlyAllocated =
-          llvm::any_of(StateInfo.NewAllocations, [&](const auto &Alloc) {
-            void *AllocPtr = Alloc.first;
-            int64_t AllocSize = Alloc.second;
-            return Ptr >= AllocPtr &&
-                   Ptr < reinterpret_cast<void *>(
-                             reinterpret_cast<char *>(AllocPtr) + AllocSize);
-          });
+      bool IsNewlyAllocated = StateInfo.wasNewlyAllocated(Ptr);
       DP("Attach %s " DPxMOD " was newly allocated: %s\n", PtrName, DPxPTR(Ptr),
          IsNewlyAllocated ? "yes" : "no");
       return IsNewlyAllocated;
