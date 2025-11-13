@@ -41,6 +41,10 @@
 // OpenBSD has no indirect syscalls
 #  define _LIBCPP_FUTEX(...) futex(__VA_ARGS__)
 
+#elif defined(__Fuchsia__)
+
+#  include <zircon/syscalls.h>
+
 #else // <- Add other operating systems here
 
 // Baseline needs no new headers
@@ -99,6 +103,24 @@ __libcpp_platform_wait_on_address(__cxx_atomic_contention_t const volatile* __pt
 
 static void __libcpp_platform_wake_by_address(__cxx_atomic_contention_t const volatile* __ptr, bool __notify_one) {
   _umtx_op(const_cast<__cxx_atomic_contention_t*>(__ptr), UMTX_OP_WAKE, __notify_one ? 1 : INT_MAX, nullptr, nullptr);
+}
+
+#elif defined(__Fuchsia__)
+
+static inline zx_futex_t const* __libcpp_zx_futex(__cxx_atomic_contention_t const volatile* ptr) {
+  // Implicitly link against the vDSO system call ABI without requiring the
+  // final link to specify -lzircon explicitly when statically linking libc++.
+#  pragma comment(lib, "zircon")
+  return const_cast<zx_futex_t const*>(reinterpret_cast<zx_futex_t const volatile*>(&ptr->__a_value));
+}
+
+static void
+__libcpp_platform_wait_on_address(__cxx_atomic_contention_t const volatile* __ptr, __cxx_contention_t __val) {
+  _zx_futex_wait(__libcpp_zx_futex(__ptr), __val, ZX_HANDLE_INVALID, ZX_TIME_INFINITE);
+}
+
+static void __libcpp_platform_wake_by_address(__cxx_atomic_contention_t const volatile* __ptr, bool __notify_one) {
+  _zx_futex_wake(__libcpp_zx_futex(__ptr), __notify_one ? 1 : UINT32_MAX);
 }
 
 #else // <- Add other operating systems here
