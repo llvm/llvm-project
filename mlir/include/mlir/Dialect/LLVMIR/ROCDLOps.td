@@ -390,6 +390,15 @@ def ROCDL_GetBarrierStateOp : ROCDL_ConcreteNonMemIntrOp<"s.get.barrier.state", 
   let assemblyFormat = "$id attr-dict `:` type($res)";
 }
 
+def ROCDL_GetNamedBarrierStateOp : ROCDL_ConcreteNonMemIntrOp<"s.get.named.barrier.state", [], 1, [], []>,
+  Arguments<(ins Arg<ROCDLBufferLDS, "", []>:$ptr)> {
+  let description = [{
+    Available on gfx1250+.
+  }];
+  let results = (outs I32:$res);
+  let assemblyFormat = "$ptr attr-dict `:` type($res)";
+}
+
 def ROCDL_WaitDscntOp: ROCDL_ConcreteNonMemIntrOp<"s.wait.dscnt", [], 0, [0], ["count"]>,
   Arguments<(ins I16Attr:$count)> {
   let summary = "Wait until DSCNT is less than or equal to `count`";
