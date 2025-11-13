@@ -462,6 +462,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     addRegisterClass(MVT::nxv4bf16, &AArch64::ZPRRegClass);
     addRegisterClass(MVT::nxv8bf16, &AArch64::ZPRRegClass);
 
+    addRegisterClass(MVT::aarch64svcount, &AArch64::PPRRegClass);
+
     if (Subtarget->useSVEForFixedLengthVectors()) {
       for (MVT VT : MVT::integer_fixedlen_vector_valuetypes())
         if (useSVEForFixedLengthVectorVT(VT))
@@ -473,14 +475,11 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     }
   }
 
-  if (Subtarget->hasSVE2p1() || Subtarget->hasSME2()) {
-    addRegisterClass(MVT::aarch64svcount, &AArch64::PPRRegClass);
-    setOperationPromotedToType(ISD::LOAD, MVT::aarch64svcount, MVT::nxv16i1);
-    setOperationPromotedToType(ISD::STORE, MVT::aarch64svcount, MVT::nxv16i1);
+  setOperationPromotedToType(ISD::LOAD, MVT::aarch64svcount, MVT::nxv16i1);
+  setOperationPromotedToType(ISD::STORE, MVT::aarch64svcount, MVT::nxv16i1);
 
-    setOperationAction(ISD::SELECT, MVT::aarch64svcount, Custom);
-    setOperationAction(ISD::SELECT_CC, MVT::aarch64svcount, Expand);
-  }
+  setOperationAction(ISD::SELECT, MVT::aarch64svcount, Custom);
+  setOperationAction(ISD::SELECT_CC, MVT::aarch64svcount, Expand);
 
   // Compute derived properties from the register classes
   computeRegisterProperties(Subtarget->getRegisterInfo());
