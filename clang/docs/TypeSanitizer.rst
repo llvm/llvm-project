@@ -144,11 +144,6 @@ forces all code instrumentation to be outlined. This reduces the size of the
 generated code and reduces compile-time overhead, but it also reduces runtime
 performance.
 
-This outlined instrumentation is new. If you wish to verify that the outlined instrumentation
-is behaving in the same way as the inline instrumentation, you can force TypeSanitizer
-to use both types of instrumentation. You can use the clang flag
-``-fsanitize-type-verify-outlined-instrumentation`` (default: ``false``) to do this.
-
 ``__has_feature(type_sanitizer)``
 ------------------------------------
 
