@@ -1104,6 +1104,16 @@ namespace HugeAllocation {
 }
 #endif
 
+namespace ZeroSizeArray {
+  constexpr int foo() {
+    int *A = new int[0];
+    int diff = A - (&A[0]);
+    delete[] A;
+    return diff;
+  }
+  static_assert(foo() == 0);
+}
+
 #else
 /// Make sure we reject this prior to C++20
 constexpr int a() { // both-error {{never produces a constant expression}}
