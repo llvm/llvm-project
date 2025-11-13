@@ -1938,6 +1938,24 @@ func.func @acc_atomic_capture(%v: memref<i32>, %x: memref<i32>, %expr: i32) {
     acc.atomic.write %x = %expr : memref<i32>, i32
   }
 
+  // CHECK: acc.atomic.capture {
+  // CHECK-NEXT: acc.atomic.update %[[x]] : memref<i32>
+  // CHECK-NEXT: (%[[xval:.*]]: i32):
+  // CHECK-NEXT:   %[[newval:.*]] = llvm.add %[[xval]], %[[expr]] : i32
+  // CHECK-NEXT:   acc.yield %[[newval]] : i32
+  // CHECK-NEXT: }
+  // CHECK-NEXT: acc.atomic.write %[[x]] = %[[expr]] : memref<i32>, i32
+  // CHECK-NEXT: }
+  acc.atomic.capture {
+    acc.atomic.update %x : memref<i32> {
+    ^bb0(%xval: i32):
+      %newval = llvm.add %xval, %expr : i32
+      acc.yield %newval : i32
+    }
+    acc.atomic.write %x = %expr : memref<i32>, i32
+    acc.terminator
+  }
+
   return
 }
 
