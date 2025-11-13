@@ -1007,7 +1007,8 @@ def warn_pp_extra_tokens_at_module_directive_eol
 def err_pp_module_decl_in_header
     : Error<"module declaration must not come from an #include directive">;
 def err_pp_cond_span_module_decl
-    : Error<"preprocessor conditionals shall not span a module declaration">;
+    : Error<"module directive lines are not allowed on lines controlled "
+    "by preprocessor conditionals">;
 def err_header_import_semi_in_macro : Error<
   "semicolon terminating header import declaration cannot be produced "
   "by a macro">;

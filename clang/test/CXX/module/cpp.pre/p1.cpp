@@ -253,9 +253,9 @@ export module m
 
 //--- control_line.cpp
 #if 0 // #1
-export module m; // expected-error {{preprocessor conditionals shall not span a module declaration}}
+export module m; // expected-error {{module directive lines are not allowed on lines controlled by preprocessor conditionals}}
 #else
-export module m; // expected-error {{preprocessor conditionals shall not span a module declaration}} \
+export module m; // expected-error {{module directive lines are not allowed on lines controlled by preprocessor conditionals}} \
                  // expected-error {{module declaration must occur at the start of the translation unit}} \
                  // expected-note@#1 {{add 'module;'}}
 #endif
