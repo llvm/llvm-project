@@ -55,7 +55,7 @@ start-group "ninja"
 ninja -C "${BUILD_DIR}" -k 0 ${targets} |& tee ninja.log
 cp ${BUILD_DIR}/.ninja_log ninja.ninja_log
 
-if [[ "${runtime_targets}" != "" ]]; then
+if [[ "${runtimes_targets}" != "" ]]; then
   start-group "ninja runtimes"
   
   ninja -C "${BUILD_DIR}" -k 0 ${runtimes_targets} |& tee ninja_runtimes.log
