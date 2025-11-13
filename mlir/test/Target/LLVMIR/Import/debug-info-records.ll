@@ -90,5 +90,3 @@ define void @empty_types() !dbg !38 {
 !42 = !{!43}
 !43 = !{!"foo", !"bar"}
 !44 = !DILocation(line: 140, column: 3, scope: !38)
-
-; ///// -----
