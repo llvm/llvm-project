@@ -516,8 +516,6 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setTruncStoreAction(MVT::v8i16, MVT::v8i8, Expand);
       setTruncStoreAction(MVT::v2i32, MVT::v2i16, Expand);
       setTruncStoreAction(MVT::v4i16, MVT::v4i8, Expand);
-      setOperationAction(ISD::LOAD, MVT::v2i16, Custom);
-      setOperationAction(ISD::LOAD, MVT::v4i8, Custom);
     } else {
       VTs.append({MVT::v2i16, MVT::v4i8});
     }
@@ -14757,21 +14755,6 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       return;
     }
 
-    if (Subtarget.is64Bit() && Subtarget.enablePExtCodeGen()) {
-      SDLoc DL(N);
-      SDValue ExtLoad =
-          DAG.getExtLoad(ISD::SEXTLOAD, DL, MVT::i64, Ld->getChain(),
-                         Ld->getBasePtr(), MVT::i32, Ld->getMemOperand());
-      if (N->getValueType(0) == MVT::v2i16) {
-        Results.push_back(DAG.getBitcast(MVT::v4i16, ExtLoad));
-        Results.push_back(ExtLoad.getValue(1));
-      } else if (N->getValueType(0) == MVT::v4i8) {
-        Results.push_back(DAG.getBitcast(MVT::v8i8, ExtLoad));
-        Results.push_back(ExtLoad.getValue(1));
-      }
-      return;
-    }
-
     assert(N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
            "Unexpected custom legalisation");
 
@@ -25418,8 +25401,10 @@ bool RISCVTargetLowering::fallBackToDAGISel(const Instruction &Inst) const {
   if (auto *II = dyn_cast<IntrinsicInst>(&Inst)) {
     // Mark RVV intrinsic as supported.
     if (RISCVVIntrinsicsTable::getRISCVVIntrinsicInfo(II->getIntrinsicID())) {
-      // GISel doesn't support tuple types yet.
-      if (Inst.getType()->isRISCVVectorTupleTy())
+      // GISel doesn't support tuple types yet. It also doesn't suport returning
+      // a struct containing a scalable vector like vleff.
+      if (Inst.getType()->isRISCVVectorTupleTy() ||
+          Inst.getType()->isStructTy())
         return true;
 
       for (unsigned i = 0; i < II->arg_size(); ++i)
