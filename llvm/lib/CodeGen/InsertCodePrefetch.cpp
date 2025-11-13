@@ -57,11 +57,11 @@ public:
 //===----------------------------------------------------------------------===//
 
 char InsertCodePrefetch::ID = 0;
-INITIALIZE_PASS_BEGIN(InsertCodePrefetch, DEBUG_TYPE, "Code prefetch insertion", true,
-                      false)
+INITIALIZE_PASS_BEGIN(InsertCodePrefetch, DEBUG_TYPE, "Code prefetch insertion",
+                      true, false)
 INITIALIZE_PASS_DEPENDENCY(BasicBlockSectionsProfileReaderWrapperPass)
-INITIALIZE_PASS_END(InsertCodePrefetch, DEBUG_TYPE, "Code prefetch insertion", true,
-                    false)
+INITIALIZE_PASS_END(InsertCodePrefetch, DEBUG_TYPE, "Code prefetch insertion",
+                    true, false)
 
 bool InsertCodePrefetch::runOnMachineFunction(MachineFunction &MF) {
   assert(MF.getTarget().getBBSectionsType() == BasicBlockSection::List &&

@@ -43,10 +43,10 @@ struct BBClusterInfo {
 };
 
 // Assuming a block is split into subblocks across its callsites, this struct
-// uniquely identifies the subblock in block `BBID` which starts from right after call number `SubblockIndex` (or
-// the beginning of the block if `SubblockIndex` is zero) to the call number
-// `SubblockIndex+1` (or the end of the block if there are are `SubblockIndex`
-// calls in the basic block).
+// uniquely identifies the subblock in block `BBID` which starts from right
+// after call number `SubblockIndex` (or the beginning of the block if
+// `SubblockIndex` is zero) to the call number `SubblockIndex+1` (or the end of
+// the block if there are are `SubblockIndex` calls in the basic block).
 struct SubblockID {
   UniqueBBID BBID;
   unsigned SubblockIndex;
