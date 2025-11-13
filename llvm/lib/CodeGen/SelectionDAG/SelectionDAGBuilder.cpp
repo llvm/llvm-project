@@ -9432,11 +9432,9 @@ bool SelectionDAGBuilder::visitStrCpyCall(const CallInst &I, bool isStpcpy) {
   const Value *Arg0 = I.getArgOperand(0), *Arg1 = I.getArgOperand(1);
 
   const SelectionDAGTargetInfo &TSI = DAG.getSelectionDAGInfo();
-  std::pair<SDValue, SDValue> Res =
-    TSI.EmitTargetCodeForStrcpy(DAG, getCurSDLoc(), getRoot(),
-                                getValue(Arg0), getValue(Arg1),
-                                MachinePointerInfo(Arg0),
-                                MachinePointerInfo(Arg1), isStpcpy);
+  std::pair<SDValue, SDValue> Res = TSI.EmitTargetCodeForStrcpy(
+      DAG, getCurSDLoc(), getRoot(), getValue(Arg0), getValue(Arg1),
+      MachinePointerInfo(Arg0), MachinePointerInfo(Arg1), isStpcpy, &I);
   if (Res.first.getNode()) {
     setValue(&I, Res.first);
     DAG.setRoot(Res.second);
