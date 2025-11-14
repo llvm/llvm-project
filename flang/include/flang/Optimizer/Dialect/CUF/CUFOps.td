@@ -26,8 +26,7 @@ include "mlir/IR/BuiltinAttributes.td"
 class cuf_Op<string mnemonic, list<Trait> traits>
     : Op<CUFDialect, mnemonic, traits>;
 
-def cuf_AllocOp : cuf_Op<"alloc", [AttrSizedOperandSegments,
-    MemoryEffects<[MemAlloc]>]> {
+def cuf_AllocOp : cuf_Op<"alloc", [AttrSizedOperandSegments]> {
   let summary = "Allocate an object on device";
 
   let description = [{
@@ -47,7 +46,9 @@ def cuf_AllocOp : cuf_Op<"alloc", [AttrSizedOperandSegments,
     cuf_DataAttributeAttr:$data_attr
   );
 
-  let results = (outs fir_ReferenceType:$ptr);
+  // Value-scoped Allocate on the returned reference
+  let results =
+      (outs Res<fir_ReferenceType, "", [MemAlloc<DefaultResource>]>:$ptr);
 
   let assemblyFormat = [{
     $in_type (`(` $typeparams^ `:` type($typeparams) `)`)?
