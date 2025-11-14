@@ -4573,7 +4573,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
           unsigned Offset = ShuffleMask & 0b1;
           return std::make_pair(0, static_cast<int>(Lane + Offset));
         });
-    
+
   case X86::BI__builtin_ia32_vpermilvarps:
   case X86::BI__builtin_ia32_vpermilvarps256:
   case X86::BI__builtin_ia32_vpermilvarps512:
