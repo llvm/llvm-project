@@ -1459,7 +1459,7 @@ end subroutine test
 ### Non-Standard Intrinsics: SRAND
 
 #### Description
-`SAND` reinitializes the pseudo-random number generator called by `RAND` and `IRAND`.
+`SRAND` reinitializes the pseudo-random number generator called by `RAND` and `IRAND`.
 The new seed used by the generator is specified by the required argument `SEED`.
 
 #### Usage and Info
