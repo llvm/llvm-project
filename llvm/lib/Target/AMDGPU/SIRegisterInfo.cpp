@@ -4017,28 +4017,6 @@ bool SIRegisterInfo::isProperlyAlignedRC(const TargetRegisterClass &RC) const {
   return true;
 }
 
-const TargetRegisterClass *
-SIRegisterInfo::getProperlyAlignedRC(const TargetRegisterClass *RC) const {
-  if (!RC || !ST.needsAlignedVGPRs())
-    return RC;
-
-  unsigned Size = getRegSizeInBits(*RC);
-  if (Size <= 32)
-    return RC;
-
-  if (RC == &AMDGPU::VS_64RegClass)
-    return &AMDGPU::VS_64_Align2RegClass;
-
-  if (isVGPRClass(RC))
-    return getAlignedVGPRClassForBitWidth(Size);
-  if (isAGPRClass(RC))
-    return getAlignedAGPRClassForBitWidth(Size);
-  if (isVectorSuperClass(RC))
-    return getAlignedVectorSuperClassForBitWidth(Size);
-
-  return RC;
-}
-
 ArrayRef<MCPhysReg>
 SIRegisterInfo::getAllSGPR128(const MachineFunction &MF) const {
   return ArrayRef(AMDGPU::SGPR_128RegClass.begin(), ST.getMaxNumSGPRs(MF) / 4);
