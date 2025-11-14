@@ -109,8 +109,6 @@ bool UnwindAssemblyInstEmulation::GetNonCallSiteUnwindPlanFromAssembly(
   m_range_ptr = &range;
   m_unwind_plan_ptr = &unwind_plan;
 
-  const uint32_t addr_byte_size = m_arch.GetAddressByteSize();
-
   m_state.cfa_reg_info = *m_inst_emulator_up->GetRegisterInfo(
       unwind_plan.GetRegisterKind(), unwind_plan.GetInitialCFARegister());
   m_state.fp_is_cfa = false;
@@ -118,12 +116,8 @@ bool UnwindAssemblyInstEmulation::GetNonCallSiteUnwindPlanFromAssembly(
 
   m_pushed_regs.clear();
 
-  // Initialize the CFA with a known value. In the 32 bit case it will be
-  // 0x80000000, and in the 64 bit case 0x8000000000000000. We use the address
-  // byte size to be safe for any future address sizes
-  m_initial_sp = (1ull << ((addr_byte_size * 8) - 1));
   RegisterValue cfa_reg_value;
-  cfa_reg_value.SetUInt(m_initial_sp, m_state.cfa_reg_info.byte_size);
+  cfa_reg_value.SetUInt(m_initial_cfa, m_state.cfa_reg_info.byte_size);
   SetRegisterValue(m_state.cfa_reg_info, cfa_reg_value);
 
   const InstructionList &inst_list = disasm_sp->GetInstructionList();
@@ -392,7 +386,7 @@ size_t UnwindAssemblyInstEmulation::WriteMemory(
     if (reg_num != LLDB_INVALID_REGNUM &&
         generic_regnum != LLDB_REGNUM_GENERIC_SP) {
       if (m_pushed_regs.try_emplace(reg_num, addr).second) {
-        const int32_t offset = addr - m_initial_sp;
+        const int32_t offset = addr - m_initial_cfa;
         m_state.row.SetRegisterLocationToAtCFAPlusOffset(reg_num, offset,
                                                          /*can_replace=*/true);
         m_curr_row_modified = true;
@@ -559,7 +553,7 @@ bool UnwindAssemblyInstEmulation::WriteRegister(
                   sp_reg_info.kinds[m_unwind_plan_ptr->GetRegisterKind()];
               assert(cfa_reg_num != LLDB_INVALID_REGNUM);
               m_state.row.GetCFAValue().SetIsRegisterPlusOffset(
-                  cfa_reg_num, m_initial_sp - sp_reg_val.GetAsUInt64());
+                  cfa_reg_num, m_initial_cfa - sp_reg_val.GetAsUInt64());
             }
           }
         }
@@ -590,7 +584,7 @@ bool UnwindAssemblyInstEmulation::WriteRegister(
           reg_info->kinds[m_unwind_plan_ptr->GetRegisterKind()];
       assert(cfa_reg_num != LLDB_INVALID_REGNUM);
       m_state.row.GetCFAValue().SetIsRegisterPlusOffset(
-          cfa_reg_num, m_initial_sp - reg_value.GetAsUInt64());
+          cfa_reg_num, m_initial_cfa - reg_value.GetAsUInt64());
       m_curr_row_modified = true;
     }
     break;
@@ -603,7 +597,7 @@ bool UnwindAssemblyInstEmulation::WriteRegister(
           reg_info->kinds[m_unwind_plan_ptr->GetRegisterKind()];
       assert(cfa_reg_num != LLDB_INVALID_REGNUM);
       m_state.row.GetCFAValue().SetIsRegisterPlusOffset(
-          cfa_reg_num, m_initial_sp - reg_value.GetAsUInt64());
+          cfa_reg_num, m_initial_cfa - reg_value.GetAsUInt64());
       m_curr_row_modified = true;
     }
     break;
@@ -614,7 +608,7 @@ bool UnwindAssemblyInstEmulation::WriteRegister(
     if (!m_state.fp_is_cfa) {
       m_state.row.GetCFAValue().SetIsRegisterPlusOffset(
           m_state.row.GetCFAValue().GetRegisterNumber(),
-          m_initial_sp - reg_value.GetAsUInt64());
+          m_initial_cfa - reg_value.GetAsUInt64());
       m_curr_row_modified = true;
     }
     break;
