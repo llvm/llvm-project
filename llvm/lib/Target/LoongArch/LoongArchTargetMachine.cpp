@@ -153,6 +153,7 @@ public:
   LoongArchPassConfig(LoongArchTargetMachine &TM, PassManagerBase &PM)
       : TargetPassConfig(TM, PM) {
     setEnableSinkAndFold(EnableSinkFold);
+    EnableLoopTermFold = true;
   }
 
   LoongArchTargetMachine &getLoongArchTargetMachine() const {
