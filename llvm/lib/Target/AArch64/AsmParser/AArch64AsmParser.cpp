@@ -3893,6 +3893,7 @@ static const struct Extension {
     {"f16mm", {AArch64::FeatureF16MM}},
     {"f16f32dot", {AArch64::FeatureF16F32DOT}},
     {"f16f32mm", {AArch64::FeatureF16F32MM}},
+    {"mops-go", {AArch64::FeatureMOPS_GO}},
 };
 
 static void setRequiredFeatureString(FeatureBitset FBS, std::string &Str) {
@@ -5922,21 +5923,15 @@ bool AArch64AsmParser::validateInstruction(MCInst &Inst, SMLoc &IDLoc,
   case AArch64::CPYETWN:
   case AArch64::CPYETRN:
   case AArch64::CPYETN: {
-    MCRegister Xd_wb = Inst.getOperand(0).getReg();
-    MCRegister Xs_wb = Inst.getOperand(1).getReg();
-    MCRegister Xn_wb = Inst.getOperand(2).getReg();
+    // Xd_wb == op0, Xs_wb == op1, Xn_wb == op2
     MCRegister Xd = Inst.getOperand(3).getReg();
     MCRegister Xs = Inst.getOperand(4).getReg();
     MCRegister Xn = Inst.getOperand(5).getReg();
-    if (Xd_wb != Xd)
-      return Error(Loc[0],
-                   "invalid CPY instruction, Xd_wb and Xd do not match");
-    if (Xs_wb != Xs)
-      return Error(Loc[0],
-                   "invalid CPY instruction, Xs_wb and Xs do not match");
-    if (Xn_wb != Xn)
-      return Error(Loc[0],
-                   "invalid CPY instruction, Xn_wb and Xn do not match");
+
+    assert(Xd == Inst.getOperand(0).getReg() && "Xd_wb and Xd do not match");
+    assert(Xs == Inst.getOperand(1).getReg() && "Xs_wb and Xs do not match");
+    assert(Xn == Inst.getOperand(2).getReg() && "Xn_wb and Xn do not match");
+
     if (Xd == Xs)
       return Error(Loc[0], "invalid CPY instruction, destination and source"
                            " registers are the same");
@@ -5972,17 +5967,14 @@ bool AArch64AsmParser::validateInstruction(MCInst &Inst, SMLoc &IDLoc,
   case AArch64::MOPSSETGET:
   case AArch64::MOPSSETGEN:
   case AArch64::MOPSSETGETN: {
-    MCRegister Xd_wb = Inst.getOperand(0).getReg();
-    MCRegister Xn_wb = Inst.getOperand(1).getReg();
+    // Xd_wb == op0, Xn_wb == op1
     MCRegister Xd = Inst.getOperand(2).getReg();
     MCRegister Xn = Inst.getOperand(3).getReg();
     MCRegister Xm = Inst.getOperand(4).getReg();
-    if (Xd_wb != Xd)
-      return Error(Loc[0],
-                   "invalid SET instruction, Xd_wb and Xd do not match");
-    if (Xn_wb != Xn)
-      return Error(Loc[0],
-                   "invalid SET instruction, Xn_wb and Xn do not match");
+
+    assert(Xd == Inst.getOperand(0).getReg() && "Xd_wb and Xd do not match");
+    assert(Xn == Inst.getOperand(1).getReg() && "Xn_wb and Xn do not match");
+
     if (Xd == Xn)
       return Error(Loc[0], "invalid SET instruction, destination and size"
                            " registers are the same");
@@ -5991,6 +5983,30 @@ bool AArch64AsmParser::validateInstruction(MCInst &Inst, SMLoc &IDLoc,
                            " registers are the same");
     if (Xn == Xm)
       return Error(Loc[0], "invalid SET instruction, source and size"
+                           " registers are the same");
+    break;
+  }
+  case AArch64::SETGOP:
+  case AArch64::SETGOPT:
+  case AArch64::SETGOPN:
+  case AArch64::SETGOPTN:
+  case AArch64::SETGOM:
+  case AArch64::SETGOMT:
+  case AArch64::SETGOMN:
+  case AArch64::SETGOMTN:
+  case AArch64::SETGOE:
+  case AArch64::SETGOET:
+  case AArch64::SETGOEN:
+  case AArch64::SETGOETN: {
+    // Xd_wb == op0, Xn_wb == op1
+    MCRegister Xd = Inst.getOperand(2).getReg();
+    MCRegister Xn = Inst.getOperand(3).getReg();
+
+    assert(Xd == Inst.getOperand(0).getReg() && "Xd_wb and Xd do not match");
+    assert(Xn == Inst.getOperand(1).getReg() && "Xn_wb and Xn do not match");
+
+    if (Xd == Xn)
+      return Error(Loc[0], "invalid SET instruction, destination and size"
                            " registers are the same");
     break;
   }

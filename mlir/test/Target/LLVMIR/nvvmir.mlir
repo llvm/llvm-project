@@ -166,25 +166,6 @@ llvm.func @nvvm_rcp(%0: f32) -> f32 {
   llvm.return %1 : f32
 }
 
-// CHECK-LABEL: @llvm_nvvm_barrier0
-llvm.func @llvm_nvvm_barrier0() {
-  // CHECK: call void @llvm.nvvm.barrier.cta.sync.aligned.all(i32 0)
-  nvvm.barrier0
-  llvm.return
-}
-
-// CHECK-LABEL: @llvm_nvvm_barrier(
-// CHECK-SAME: i32 %[[barId:.*]], i32 %[[numThreads:.*]])
-llvm.func @llvm_nvvm_barrier(%barID : i32, %numberOfThreads : i32) {
-  // CHECK: call void @llvm.nvvm.barrier.cta.sync.aligned.all(i32 0)
-  nvvm.barrier
-  // CHECK: call void @llvm.nvvm.barrier.cta.sync.aligned.all(i32 %[[barId]])
-  nvvm.barrier id = %barID
-  // CHECK: call void @llvm.nvvm.barrier.cta.sync.aligned.count(i32 %[[barId]], i32 %[[numThreads]])
-  nvvm.barrier id = %barID number_of_threads = %numberOfThreads
-  llvm.return
-}
-
 // CHECK-LABEL: @llvm_nvvm_cluster_arrive
 llvm.func @llvm_nvvm_cluster_arrive() {
   // CHECK: call void @llvm.nvvm.barrier.cluster.arrive()

@@ -104,6 +104,9 @@ Changes to the AArch64 Backend
 * Assembler/disassembler support has been added for Armv9.7-A (2025)
   architecture extensions.
 
+* Assembler/disassembler support has been added for 'Virtual Tagging
+  Extension (vMTE)' Future Architecture Technologies extension.
+
 Changes to the AMDGPU Backend
 -----------------------------
 
@@ -187,6 +190,7 @@ Changes to the LLVM tools
 * Some code paths for supporting Python 2.7 in `llvm-lit` have been removed.
 * Support for `%T` in lit has been removed.
 * Add `--save-stats` option to `llc` to save LLVM statistics to a file. Compatible with the Clang option.
+* Add `--save-stats` option to `opt` to save LLVM statistics to a file. Compatible with the Clang option.
 
 * `llvm-config` gained a new flag `--quote-paths` which quotes and escapes paths
   emitted on stdout, to account for spaces or other special characters in path.
