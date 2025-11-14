@@ -13,13 +13,21 @@
 
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
+#include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/CaptureTracking.h"
+#include "llvm/Analysis/ScopedNoAliasAA.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
+#include "llvm/IR/Argument.h"
 #include "llvm/IR/Attributes.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/Target/TargetMachine.h"
+#include <string>
 
 #define DEBUG_TYPE "amdgpu-lower-kernel-arguments"
 
@@ -58,6 +66,145 @@ static BasicBlock::iterator getInsertPt(BasicBlock &BB) {
   return InsPt;
 }
 
+static void addAliasScopeMetadata(Function &F, DataLayout const &DL) {
+  // Collect noalias arguments.
+  auto NoAliasArgs = SmallVector<Argument const *, 4u>();
+
+  for (auto &Arg : F.args())
+    if (Arg.hasNoAliasAttr() && !Arg.use_empty())
+      NoAliasArgs.push_back(&Arg);
+
+  if (NoAliasArgs.empty())
+    return;
+
+  // Add alias scopes for each noalias argument.
+  auto MDB = MDBuilder(F.getContext());
+  auto NewScopes = DenseMap<Argument const *, MDNode *>();
+  auto *NewDomain = MDB.createAnonymousAliasScopeDomain(F.getName());
+
+  for (auto I = 0u; I < NoAliasArgs.size(); ++I) {
+    auto *Arg = NoAliasArgs[I];
+    auto Name = std::string(F.getName());
+
+    if (Arg->hasName())
+      Name += std::string(": %") + std::string(Arg->getName());
+    else
+      Name += std::string(": argument ") + std::to_string(I);
+
+    auto *NewScope = MDB.createAnonymousAliasScope(NewDomain, Name);
+    NewScopes.insert(std::make_pair(Arg, NewScope));
+  }
+
+  // Iterate over all instructions.
+  auto DT = DominatorTree();
+  DT.recalculate(F);
+
+  for (auto Inst = inst_begin(F); Inst != inst_end(F); ++Inst) {
+    // If instruction accesses memory, collect its pointer arguments.
+    auto *I = &(*Inst);
+    auto IsFuncCall = false;
+    auto PtrArgs = SmallVector<Value const *, 2u>();
+
+    if (auto *LI = dyn_cast<LoadInst>(I))
+      PtrArgs.push_back(LI->getPointerOperand());
+    else if (auto *SI = dyn_cast<StoreInst>(I))
+      PtrArgs.push_back(SI->getPointerOperand());
+    else if (auto *VAAI = dyn_cast<VAArgInst>(I))
+      PtrArgs.push_back(VAAI->getPointerOperand());
+    else if (auto *CXI = dyn_cast<AtomicCmpXchgInst>(I))
+      PtrArgs.push_back(CXI->getPointerOperand());
+    else if (auto *RMWI = dyn_cast<AtomicRMWInst>(I))
+      PtrArgs.push_back(RMWI->getPointerOperand());
+    else if (auto *Call = dyn_cast<CallBase>(I)) {
+      if (Call->doesNotAccessMemory())
+        continue;
+
+      IsFuncCall = true;
+
+      for (auto &Arg : Call->args()) {
+        if (!Arg->getType()->isPointerTy())
+          continue;
+
+        PtrArgs.push_back(Arg);
+      }
+    }
+
+    if (PtrArgs.empty() && !IsFuncCall)
+      continue;
+
+    // Collect underlying objects of pointer arguments.
+    auto Scopes = SmallVector<Metadata *, 4u>();
+    auto ObjSet = SmallPtrSet<Value const*, 4u>();
+    auto NoAliases = SmallVector<Metadata *, 4u>();
+
+    for (auto &Ptr : PtrArgs) {
+      auto Objects = SmallVector<Value const *, 4u>();
+      getUnderlyingObjects(Ptr, Objects);
+      ObjSet.insert_range(Objects);
+    }
+
+    auto RequiresNoCaptureBefore = false;
+    auto UsesUnknownObject = false;
+    auto UsesAliasingPtr = false;
+
+    for (auto *Val : ObjSet) {
+      if (isa<ConstantPointerNull>(Val) || isa<ConstantDataVector>(Val) ||
+          isa<ConstantInt>(Val) || isa<ConstantFP>(Val) ||
+          isa<UndefValue>(Val))
+        continue;
+
+      if (auto *Arg = dyn_cast<Argument>(Val)) {
+        if (!Arg->hasAttribute(Attribute::NoAlias))
+          UsesAliasingPtr = true;
+      }
+      else
+        UsesAliasingPtr = true;
+
+      if (isEscapeSource(Val))
+        RequiresNoCaptureBefore = true;
+      else if (!isa<Argument>(Val) && isIdentifiedObject(Val))
+        UsesUnknownObject = true;
+    }
+
+    if (UsesUnknownObject)
+      continue;
+
+    // Collect noalias scopes for instruction.
+    for (auto *Arg : NoAliasArgs) {
+      if (ObjSet.contains(Arg))
+        continue;
+
+      if (!RequiresNoCaptureBefore || 
+          !capturesAnything(PointerMayBeCapturedBefore(
+              Arg, false, I, &DT, false, CaptureComponents::Provenance)))
+        NoAliases.push_back(NewScopes[Arg]);
+    }
+
+    // Add noalias metadata to instruction.
+    if (!NoAliases.empty()) {
+      auto *NewMD = MDNode::concatenate(
+          Inst->getMetadata(LLVMContext::MD_noalias),
+          MDNode::get(F.getContext(), NoAliases));
+      Inst->setMetadata(LLVMContext::MD_noalias, NewMD);
+    }
+
+    // Collect scopes for alias.scope metadata.
+    if (!UsesAliasingPtr)
+      for (auto *Arg : NoAliasArgs) {
+        if (ObjSet.count(Arg))
+          Scopes.push_back(NewScopes[Arg]);
+      }
+
+    // Add alias.scope metadata to instruction.
+    if (!Scopes.empty()) {
+      auto *NewMD = MDNode::concatenate(
+          Inst->getMetadata(LLVMContext::MD_alias_scope),
+          MDNode::get(F.getContext(), Scopes));
+      Inst->setMetadata(LLVMContext::MD_alias_scope, NewMD);
+    }
+  }
+}
+
 static bool lowerKernelArguments(Function &F, const TargetMachine &TM) {
   CallingConv::ID CC = F.getCallingConv();
   if (CC != CallingConv::AMDGPU_KERNEL || F.arg_empty())
@@ -86,6 +233,9 @@ static bool lowerKernelArguments(Function &F, const TargetMachine &TM) {
       Attribute::getWithDereferenceableBytes(Ctx, TotalKernArgSize));
 
   uint64_t ExplicitArgOffset = 0;
+
+  addAliasScopeMetadata(F, F.getParent()->getDataLayout());
+
   for (Argument &Arg : F.args()) {
     const bool IsByRef = Arg.hasByRefAttr();
     Type *ArgTy = IsByRef ? Arg.getParamByRefType() : Arg.getType();
@@ -123,11 +273,6 @@ static bool lowerKernelArguments(Function &F, const TargetMachine &TM) {
       if ((PT->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS ||
            PT->getAddressSpace() == AMDGPUAS::REGION_ADDRESS) &&
           !ST.hasUsableDSOffset())
-        continue;
-
-      // FIXME: We can replace this with equivalent alias.scope/noalias
-      // metadata, but this appears to be a lot of work.
-      if (Arg.hasNoAliasAttr())
         continue;
     }
 
@@ -214,8 +359,6 @@ static bool lowerKernelArguments(Function &F, const TargetMachine &TM) {
                                  Builder.getInt64Ty(), ParamAlign->value()))));
       }
     }
-
-    // TODO: Convert noalias arg to !noalias
 
     if (DoShiftOpt) {
       Value *ExtractBits = OffsetDiff == 0 ?

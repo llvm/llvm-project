@@ -31,11 +31,15 @@ define amdgpu_kernel void @aliasinfo_2i32_NA(ptr addrspace(1) noalias %out, ptr 
 ; CHECK-SAME: ptr addrspace(1) noalias [[OUT:%.*]], ptr addrspace(1) noalias [[IN:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[ALIASINFO_2I32_NA_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(272) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; CHECK-NEXT:    [[OUT_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[ALIASINFO_2I32_NA_KERNARG_SEGMENT]], i64 36
+; CHECK-NEXT:    [[OUT_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT_KERNARG_OFFSET]], align 4, !invariant.load [[META0]]
+; CHECK-NEXT:    [[IN_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[ALIASINFO_2I32_NA_KERNARG_SEGMENT]], i64 44
+; CHECK-NEXT:    [[IN_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[IN_KERNARG_OFFSET]], align 4, !invariant.load [[META0]]
 ; CHECK-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
-; CHECK-NEXT:    [[IN_GEP:%.*]] = getelementptr i32, ptr addrspace(1) [[IN]], i32 [[TID]]
-; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr addrspace(1) [[IN_GEP]], align 4
+; CHECK-NEXT:    [[IN_GEP:%.*]] = getelementptr i32, ptr addrspace(1) [[IN_LOAD]], i32 [[TID]]
+; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr addrspace(1) [[IN_GEP]], align 4, !alias.scope [[META1:![0-9]+]], !noalias [[META4:![0-9]+]]
 ; CHECK-NEXT:    [[CTLZ:%.*]] = call i32 @llvm.ctlz.i32(i32 [[VAL]], i1 false) #[[ATTR5]]
-; CHECK-NEXT:    store i32 [[CTLZ]], ptr addrspace(1) [[OUT]], align 4
+; CHECK-NEXT:    store i32 [[CTLZ]], ptr addrspace(1) [[OUT_LOAD]], align 4, !alias.scope [[META4]], !noalias [[META1]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -58,9 +62,9 @@ define amdgpu_kernel void @aliasinfo_2i32_AS(ptr addrspace(1) %out, ptr addrspac
 ; CHECK-NEXT:    [[IN_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[IN_KERNARG_OFFSET]], align 4, !invariant.load [[META0]]
 ; CHECK-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
 ; CHECK-NEXT:    [[IN_GEP:%.*]] = getelementptr i32, ptr addrspace(1) [[IN_LOAD]], i32 [[TID]]
-; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr addrspace(1) [[IN_GEP]], align 4, !alias.scope [[META1:![0-9]+]], !noalias [[META4:![0-9]+]]
+; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr addrspace(1) [[IN_GEP]], align 4, !alias.scope [[META6:![0-9]+]], !noalias [[META9:![0-9]+]]
 ; CHECK-NEXT:    [[CTLZ:%.*]] = call i32 @llvm.ctlz.i32(i32 [[VAL]], i1 false) #[[ATTR5]]
-; CHECK-NEXT:    store i32 [[CTLZ]], ptr addrspace(1) [[OUT_LOAD]], align 4, !alias.scope [[META4]], !noalias [[META1]]
+; CHECK-NEXT:    store i32 [[CTLZ]], ptr addrspace(1) [[OUT_LOAD]], align 4, !alias.scope [[META9]], !noalias [[META6]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -77,11 +81,15 @@ define amdgpu_kernel void @aliasinfo_2i32_NA_AS(ptr addrspace(1) noalias %out, p
 ; CHECK-SAME: ptr addrspace(1) noalias [[OUT:%.*]], ptr addrspace(1) noalias [[IN:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[ALIASINFO_2I32_NA_AS_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(272) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; CHECK-NEXT:    [[OUT_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[ALIASINFO_2I32_NA_AS_KERNARG_SEGMENT]], i64 36
+; CHECK-NEXT:    [[OUT_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT_KERNARG_OFFSET]], align 4, !invariant.load [[META0]]
+; CHECK-NEXT:    [[IN_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[ALIASINFO_2I32_NA_AS_KERNARG_SEGMENT]], i64 44
+; CHECK-NEXT:    [[IN_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[IN_KERNARG_OFFSET]], align 4, !invariant.load [[META0]]
 ; CHECK-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
-; CHECK-NEXT:    [[IN_GEP:%.*]] = getelementptr i32, ptr addrspace(1) [[IN]], i32 [[TID]]
-; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr addrspace(1) [[IN_GEP]], align 4, !alias.scope [[META1]], !noalias [[META4]]
+; CHECK-NEXT:    [[IN_GEP:%.*]] = getelementptr i32, ptr addrspace(1) [[IN_LOAD]], i32 [[TID]]
+; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr addrspace(1) [[IN_GEP]], align 4, !alias.scope [[META11:![0-9]+]], !noalias [[META14:![0-9]+]]
 ; CHECK-NEXT:    [[CTLZ:%.*]] = call i32 @llvm.ctlz.i32(i32 [[VAL]], i1 false) #[[ATTR5]]
-; CHECK-NEXT:    store i32 [[CTLZ]], ptr addrspace(1) [[OUT]], align 4, !alias.scope [[META4]], !noalias [[META1]]
+; CHECK-NEXT:    store i32 [[CTLZ]], ptr addrspace(1) [[OUT_LOAD]], align 4, !alias.scope [[META14]], !noalias [[META11]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -135,15 +143,23 @@ define amdgpu_kernel void @aliasinfo_v4f32_3v4i8_NA(ptr addrspace(1) noalias %ou
 ; CHECK-SAME: ptr addrspace(1) noalias [[OUT:%.*]], ptr addrspace(1) noalias [[OUT1:%.*]], ptr addrspace(1) noalias [[IN:%.*]], ptr addrspace(1) noalias [[IN1:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[ALIASINFO_V4F32_3V4I8_NA_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(288) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; CHECK-NEXT:    [[OUT_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[ALIASINFO_V4F32_3V4I8_NA_KERNARG_SEGMENT]], i64 36
+; CHECK-NEXT:    [[OUT_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT_KERNARG_OFFSET]], align 4, !invariant.load [[META0]]
+; CHECK-NEXT:    [[OUT1_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[ALIASINFO_V4F32_3V4I8_NA_KERNARG_SEGMENT]], i64 44
+; CHECK-NEXT:    [[OUT1_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT1_KERNARG_OFFSET]], align 4, !invariant.load [[META0]]
+; CHECK-NEXT:    [[IN_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[ALIASINFO_V4F32_3V4I8_NA_KERNARG_SEGMENT]], i64 52
+; CHECK-NEXT:    [[IN_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[IN_KERNARG_OFFSET]], align 4, !invariant.load [[META0]]
+; CHECK-NEXT:    [[IN1_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[ALIASINFO_V4F32_3V4I8_NA_KERNARG_SEGMENT]], i64 60
+; CHECK-NEXT:    [[IN1_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[IN1_KERNARG_OFFSET]], align 4, !invariant.load [[META0]]
 ; CHECK-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr <4 x i8>, ptr addrspace(1) [[IN]], i32 [[TID]]
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr <4 x i8>, ptr addrspace(1) [[IN1]], i32 [[TID]]
-; CHECK-NEXT:    [[LOAD:%.*]] = load <4 x i8>, ptr addrspace(1) [[GEP]], align 1
-; CHECK-NEXT:    [[LOAD1:%.*]] = load <4 x i8>, ptr addrspace(1) [[GEP1]], align 1
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr <4 x i8>, ptr addrspace(1) [[IN_LOAD]], i32 [[TID]]
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr <4 x i8>, ptr addrspace(1) [[IN1_LOAD]], i32 [[TID]]
+; CHECK-NEXT:    [[LOAD:%.*]] = load <4 x i8>, ptr addrspace(1) [[GEP]], align 1, !alias.scope [[META16:![0-9]+]], !noalias [[META19:![0-9]+]]
+; CHECK-NEXT:    [[LOAD1:%.*]] = load <4 x i8>, ptr addrspace(1) [[GEP1]], align 1, !alias.scope [[META23:![0-9]+]], !noalias [[META24:![0-9]+]]
 ; CHECK-NEXT:    [[SHUFFLE0_0:%.*]] = shufflevector <4 x i8> [[LOAD]], <4 x i8> [[LOAD1]], <4 x i32> <i32 3, i32 2, i32 6, i32 2>
 ; CHECK-NEXT:    [[CVT:%.*]] = uitofp <4 x i8> [[SHUFFLE0_0]] to <4 x float>
-; CHECK-NEXT:    store <4 x float> [[CVT]], ptr addrspace(1) [[OUT]], align 16
-; CHECK-NEXT:    store <4 x i8> [[SHUFFLE0_0]], ptr addrspace(1) [[OUT1]], align 4
+; CHECK-NEXT:    store <4 x float> [[CVT]], ptr addrspace(1) [[OUT_LOAD]], align 16, !alias.scope [[META25:![0-9]+]], !noalias [[META26:![0-9]+]]
+; CHECK-NEXT:    store <4 x i8> [[SHUFFLE0_0]], ptr addrspace(1) [[OUT1_LOAD]], align 4, !alias.scope [[META27:![0-9]+]], !noalias [[META28:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -175,12 +191,12 @@ define amdgpu_kernel void @aliasinfo_v4f32_3v4i8_AS(ptr addrspace(1) %out, ptr a
 ; CHECK-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr <4 x i8>, ptr addrspace(1) [[IN_LOAD]], i32 [[TID]]
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr <4 x i8>, ptr addrspace(1) [[IN1_LOAD]], i32 [[TID]]
-; CHECK-NEXT:    [[LOAD:%.*]] = load <4 x i8>, ptr addrspace(1) [[GEP]], align 1, !alias.scope [[META1]], !noalias [[META4]]
-; CHECK-NEXT:    [[LOAD1:%.*]] = load <4 x i8>, ptr addrspace(1) [[GEP1]], align 1, !alias.scope [[META1]], !noalias [[META4]]
+; CHECK-NEXT:    [[LOAD:%.*]] = load <4 x i8>, ptr addrspace(1) [[GEP]], align 1, !alias.scope [[META6]], !noalias [[META9]]
+; CHECK-NEXT:    [[LOAD1:%.*]] = load <4 x i8>, ptr addrspace(1) [[GEP1]], align 1, !alias.scope [[META6]], !noalias [[META9]]
 ; CHECK-NEXT:    [[SHUFFLE0_0:%.*]] = shufflevector <4 x i8> [[LOAD]], <4 x i8> [[LOAD1]], <4 x i32> <i32 3, i32 2, i32 6, i32 2>
 ; CHECK-NEXT:    [[CVT:%.*]] = uitofp <4 x i8> [[SHUFFLE0_0]] to <4 x float>
-; CHECK-NEXT:    store <4 x float> [[CVT]], ptr addrspace(1) [[OUT_LOAD]], align 16, !alias.scope [[META4]], !noalias [[META1]]
-; CHECK-NEXT:    store <4 x i8> [[SHUFFLE0_0]], ptr addrspace(1) [[OUT1_LOAD]], align 4, !alias.scope [[META4]], !noalias [[META1]]
+; CHECK-NEXT:    store <4 x float> [[CVT]], ptr addrspace(1) [[OUT_LOAD]], align 16, !alias.scope [[META9]], !noalias [[META6]]
+; CHECK-NEXT:    store <4 x i8> [[SHUFFLE0_0]], ptr addrspace(1) [[OUT1_LOAD]], align 4, !alias.scope [[META9]], !noalias [[META6]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -201,15 +217,23 @@ define amdgpu_kernel void @aliasinfo_v4f32_3v4i8_NA_AS(ptr addrspace(1) noalias 
 ; CHECK-SAME: ptr addrspace(1) noalias [[OUT:%.*]], ptr addrspace(1) noalias [[OUT1:%.*]], ptr addrspace(1) noalias [[IN:%.*]], ptr addrspace(1) noalias [[IN1:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[ALIASINFO_V4F32_3V4I8_NA_AS_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(288) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; CHECK-NEXT:    [[OUT_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[ALIASINFO_V4F32_3V4I8_NA_AS_KERNARG_SEGMENT]], i64 36
+; CHECK-NEXT:    [[OUT_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT_KERNARG_OFFSET]], align 4, !invariant.load [[META0]]
+; CHECK-NEXT:    [[OUT1_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[ALIASINFO_V4F32_3V4I8_NA_AS_KERNARG_SEGMENT]], i64 44
+; CHECK-NEXT:    [[OUT1_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT1_KERNARG_OFFSET]], align 4, !invariant.load [[META0]]
+; CHECK-NEXT:    [[IN_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[ALIASINFO_V4F32_3V4I8_NA_AS_KERNARG_SEGMENT]], i64 52
+; CHECK-NEXT:    [[IN_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[IN_KERNARG_OFFSET]], align 4, !invariant.load [[META0]]
+; CHECK-NEXT:    [[IN1_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[ALIASINFO_V4F32_3V4I8_NA_AS_KERNARG_SEGMENT]], i64 60
+; CHECK-NEXT:    [[IN1_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[IN1_KERNARG_OFFSET]], align 4, !invariant.load [[META0]]
 ; CHECK-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr <4 x i8>, ptr addrspace(1) [[IN]], i32 [[TID]]
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr <4 x i8>, ptr addrspace(1) [[IN1]], i32 [[TID]]
-; CHECK-NEXT:    [[LOAD:%.*]] = load <4 x i8>, ptr addrspace(1) [[GEP]], align 1, !alias.scope [[META1]], !noalias [[META4]]
-; CHECK-NEXT:    [[LOAD1:%.*]] = load <4 x i8>, ptr addrspace(1) [[GEP1]], align 1, !alias.scope [[META1]], !noalias [[META4]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr <4 x i8>, ptr addrspace(1) [[IN_LOAD]], i32 [[TID]]
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr <4 x i8>, ptr addrspace(1) [[IN1_LOAD]], i32 [[TID]]
+; CHECK-NEXT:    [[LOAD:%.*]] = load <4 x i8>, ptr addrspace(1) [[GEP]], align 1, !alias.scope [[META29:![0-9]+]], !noalias [[META32:![0-9]+]]
+; CHECK-NEXT:    [[LOAD1:%.*]] = load <4 x i8>, ptr addrspace(1) [[GEP1]], align 1, !alias.scope [[META36:![0-9]+]], !noalias [[META37:![0-9]+]]
 ; CHECK-NEXT:    [[SHUFFLE0_0:%.*]] = shufflevector <4 x i8> [[LOAD]], <4 x i8> [[LOAD1]], <4 x i32> <i32 3, i32 2, i32 6, i32 2>
 ; CHECK-NEXT:    [[CVT:%.*]] = uitofp <4 x i8> [[SHUFFLE0_0]] to <4 x float>
-; CHECK-NEXT:    store <4 x float> [[CVT]], ptr addrspace(1) [[OUT]], align 16, !alias.scope [[META4]], !noalias [[META1]]
-; CHECK-NEXT:    store <4 x i8> [[SHUFFLE0_0]], ptr addrspace(1) [[OUT1]], align 4, !alias.scope [[META4]], !noalias [[META1]]
+; CHECK-NEXT:    store <4 x float> [[CVT]], ptr addrspace(1) [[OUT_LOAD]], align 16, !alias.scope [[META38:![0-9]+]], !noalias [[META39:![0-9]+]]
+; CHECK-NEXT:    store <4 x i8> [[SHUFFLE0_0]], ptr addrspace(1) [[OUT1_LOAD]], align 4, !alias.scope [[META40:![0-9]+]], !noalias [[META41:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -325,45 +349,45 @@ define amdgpu_kernel void @aliasinfo_10v16f16_NA(ptr addrspace(3) noalias %in, p
 ; CHECK-NEXT:    [[ALIASINFO_10V16F16_NA_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; CHECK-NEXT:    [[IDX:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
 ; CHECK-NEXT:    [[LOAD_0_ADDR:%.*]] = getelementptr <16 x half>, ptr addrspace(3) [[IN]], i32 [[IDX]]
-; CHECK-NEXT:    [[LOAD_0:%.*]] = load <16 x half>, ptr addrspace(3) [[LOAD_0_ADDR]], align 32
+; CHECK-NEXT:    [[LOAD_0:%.*]] = load <16 x half>, ptr addrspace(3) [[LOAD_0_ADDR]], align 32, !alias.scope [[META42:![0-9]+]], !noalias [[META45:![0-9]+]]
 ; CHECK-NEXT:    [[LOAD_1_ADDR:%.*]] = getelementptr <16 x half>, ptr addrspace(3) [[LOAD_0_ADDR]], i32 64
-; CHECK-NEXT:    [[LOAD_1:%.*]] = load <16 x half>, ptr addrspace(3) [[LOAD_1_ADDR]], align 32
+; CHECK-NEXT:    [[LOAD_1:%.*]] = load <16 x half>, ptr addrspace(3) [[LOAD_1_ADDR]], align 32, !alias.scope [[META42]], !noalias [[META45]]
 ; CHECK-NEXT:    [[LOAD_2_ADDR:%.*]] = getelementptr <16 x half>, ptr addrspace(3) [[LOAD_1_ADDR]], i32 128
-; CHECK-NEXT:    [[LOAD_2:%.*]] = load <16 x half>, ptr addrspace(3) [[LOAD_2_ADDR]], align 32
+; CHECK-NEXT:    [[LOAD_2:%.*]] = load <16 x half>, ptr addrspace(3) [[LOAD_2_ADDR]], align 32, !alias.scope [[META42]], !noalias [[META45]]
 ; CHECK-NEXT:    [[LOAD_3_ADDR:%.*]] = getelementptr <16 x half>, ptr addrspace(3) [[LOAD_2_ADDR]], i32 192
-; CHECK-NEXT:    [[LOAD_3:%.*]] = load <16 x half>, ptr addrspace(3) [[LOAD_3_ADDR]], align 32
+; CHECK-NEXT:    [[LOAD_3:%.*]] = load <16 x half>, ptr addrspace(3) [[LOAD_3_ADDR]], align 32, !alias.scope [[META42]], !noalias [[META45]]
 ; CHECK-NEXT:    [[LOAD_4_ADDR:%.*]] = getelementptr <16 x half>, ptr addrspace(3) [[LOAD_3_ADDR]], i32 256
-; CHECK-NEXT:    [[LOAD_4:%.*]] = load <16 x half>, ptr addrspace(3) [[LOAD_4_ADDR]], align 32
+; CHECK-NEXT:    [[LOAD_4:%.*]] = load <16 x half>, ptr addrspace(3) [[LOAD_4_ADDR]], align 32, !alias.scope [[META42]], !noalias [[META45]]
 ; CHECK-NEXT:    [[MAI_0:%.*]] = call <16 x half> @llvm.amdgcn.wmma.f16.16x16x16.f16.v16f16.v16f16(<16 x half> [[LOAD_0]], <16 x half> [[LOAD_0]], <16 x half> [[LOAD_0]], i1 false)
 ; CHECK-NEXT:    [[MAI_1:%.*]] = call <16 x half> @llvm.amdgcn.wmma.f16.16x16x16.f16.v16f16.v16f16(<16 x half> [[LOAD_1]], <16 x half> [[LOAD_1]], <16 x half> [[LOAD_1]], i1 false)
 ; CHECK-NEXT:    [[MAI_2:%.*]] = call <16 x half> @llvm.amdgcn.wmma.f16.16x16x16.f16.v16f16.v16f16(<16 x half> [[LOAD_2]], <16 x half> [[LOAD_2]], <16 x half> [[LOAD_2]], i1 false)
 ; CHECK-NEXT:    [[MAI_3:%.*]] = call <16 x half> @llvm.amdgcn.wmma.f16.16x16x16.f16.v16f16.v16f16(<16 x half> [[LOAD_3]], <16 x half> [[LOAD_3]], <16 x half> [[LOAD_3]], i1 false)
 ; CHECK-NEXT:    [[MAI_4:%.*]] = call <16 x half> @llvm.amdgcn.wmma.f16.16x16x16.f16.v16f16.v16f16(<16 x half> [[LOAD_4]], <16 x half> [[LOAD_4]], <16 x half> [[LOAD_4]], i1 false)
 ; CHECK-NEXT:    [[STORE_0_ADDR:%.*]] = getelementptr <16 x half>, ptr addrspace(3) [[OUT]], i32 [[IDX]]
-; CHECK-NEXT:    store <16 x half> [[MAI_0]], ptr addrspace(3) [[STORE_0_ADDR]], align 32
+; CHECK-NEXT:    store <16 x half> [[MAI_0]], ptr addrspace(3) [[STORE_0_ADDR]], align 32, !alias.scope [[META45]], !noalias [[META42]]
 ; CHECK-NEXT:    [[STORE_1_ADDR:%.*]] = getelementptr <16 x half>, ptr addrspace(3) [[OUT]], i32 64
-; CHECK-NEXT:    store <16 x half> [[MAI_1]], ptr addrspace(3) [[STORE_1_ADDR]], align 32
+; CHECK-NEXT:    store <16 x half> [[MAI_1]], ptr addrspace(3) [[STORE_1_ADDR]], align 32, !alias.scope [[META45]], !noalias [[META42]]
 ; CHECK-NEXT:    [[STORE_2_ADDR:%.*]] = getelementptr <16 x half>, ptr addrspace(3) [[OUT]], i32 128
-; CHECK-NEXT:    store <16 x half> [[MAI_2]], ptr addrspace(3) [[STORE_2_ADDR]], align 32
+; CHECK-NEXT:    store <16 x half> [[MAI_2]], ptr addrspace(3) [[STORE_2_ADDR]], align 32, !alias.scope [[META45]], !noalias [[META42]]
 ; CHECK-NEXT:    [[STORE_3_ADDR:%.*]] = getelementptr <16 x half>, ptr addrspace(3) [[OUT]], i32 192
-; CHECK-NEXT:    store <16 x half> [[MAI_3]], ptr addrspace(3) [[STORE_3_ADDR]], align 32
+; CHECK-NEXT:    store <16 x half> [[MAI_3]], ptr addrspace(3) [[STORE_3_ADDR]], align 32, !alias.scope [[META45]], !noalias [[META42]]
 ; CHECK-NEXT:    [[STORE_4_ADDR:%.*]] = getelementptr <16 x half>, ptr addrspace(3) [[OUT]], i32 256
-; CHECK-NEXT:    store <16 x half> [[MAI_4]], ptr addrspace(3) [[STORE_4_ADDR]], align 32
-; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 256, i32 2, i32 0)
-; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 8, i32 1, i32 0)
-; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 512, i32 2, i32 0)
-; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 256, i32 2, i32 0)
-; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 8, i32 1, i32 0)
-; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 512, i32 2, i32 0)
-; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 256, i32 2, i32 0)
-; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 8, i32 1, i32 0)
-; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 512, i32 2, i32 0)
-; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 256, i32 2, i32 0)
-; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 8, i32 1, i32 0)
-; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 512, i32 2, i32 0)
-; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 256, i32 2, i32 0)
-; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 8, i32 1, i32 0)
-; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 512, i32 2, i32 0)
+; CHECK-NEXT:    store <16 x half> [[MAI_4]], ptr addrspace(3) [[STORE_4_ADDR]], align 32, !alias.scope [[META45]], !noalias [[META42]]
+; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 256, i32 2, i32 0), !noalias [[META47:![0-9]+]]
+; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 8, i32 1, i32 0), !noalias [[META47]]
+; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 512, i32 2, i32 0), !noalias [[META47]]
+; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 256, i32 2, i32 0), !noalias [[META47]]
+; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 8, i32 1, i32 0), !noalias [[META47]]
+; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 512, i32 2, i32 0), !noalias [[META47]]
+; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 256, i32 2, i32 0), !noalias [[META47]]
+; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 8, i32 1, i32 0), !noalias [[META47]]
+; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 512, i32 2, i32 0), !noalias [[META47]]
+; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 256, i32 2, i32 0), !noalias [[META47]]
+; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 8, i32 1, i32 0), !noalias [[META47]]
+; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 512, i32 2, i32 0), !noalias [[META47]]
+; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 256, i32 2, i32 0), !noalias [[META47]]
+; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 8, i32 1, i32 0), !noalias [[META47]]
+; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 512, i32 2, i32 0), !noalias [[META47]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -418,30 +442,30 @@ define amdgpu_kernel void @aliasinfo_10v16f16_AS(ptr addrspace(3) %in, ptr addrs
 ; CHECK-NEXT:    [[ALIASINFO_10V16F16_AS_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; CHECK-NEXT:    [[IDX:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
 ; CHECK-NEXT:    [[LOAD_0_ADDR:%.*]] = getelementptr <16 x half>, ptr addrspace(3) [[IN]], i32 [[IDX]]
-; CHECK-NEXT:    [[LOAD_0:%.*]] = load <16 x half>, ptr addrspace(3) [[LOAD_0_ADDR]], align 32, !alias.scope [[META1]], !noalias [[META4]]
+; CHECK-NEXT:    [[LOAD_0:%.*]] = load <16 x half>, ptr addrspace(3) [[LOAD_0_ADDR]], align 32, !alias.scope [[META6]], !noalias [[META9]]
 ; CHECK-NEXT:    [[LOAD_1_ADDR:%.*]] = getelementptr <16 x half>, ptr addrspace(3) [[LOAD_0_ADDR]], i32 64
-; CHECK-NEXT:    [[LOAD_1:%.*]] = load <16 x half>, ptr addrspace(3) [[LOAD_1_ADDR]], align 32, !alias.scope [[META1]], !noalias [[META4]]
+; CHECK-NEXT:    [[LOAD_1:%.*]] = load <16 x half>, ptr addrspace(3) [[LOAD_1_ADDR]], align 32, !alias.scope [[META6]], !noalias [[META9]]
 ; CHECK-NEXT:    [[LOAD_2_ADDR:%.*]] = getelementptr <16 x half>, ptr addrspace(3) [[LOAD_1_ADDR]], i32 128
-; CHECK-NEXT:    [[LOAD_2:%.*]] = load <16 x half>, ptr addrspace(3) [[LOAD_2_ADDR]], align 32, !alias.scope [[META1]], !noalias [[META4]]
+; CHECK-NEXT:    [[LOAD_2:%.*]] = load <16 x half>, ptr addrspace(3) [[LOAD_2_ADDR]], align 32, !alias.scope [[META6]], !noalias [[META9]]
 ; CHECK-NEXT:    [[LOAD_3_ADDR:%.*]] = getelementptr <16 x half>, ptr addrspace(3) [[LOAD_2_ADDR]], i32 192
-; CHECK-NEXT:    [[LOAD_3:%.*]] = load <16 x half>, ptr addrspace(3) [[LOAD_3_ADDR]], align 32, !alias.scope [[META1]], !noalias [[META4]]
+; CHECK-NEXT:    [[LOAD_3:%.*]] = load <16 x half>, ptr addrspace(3) [[LOAD_3_ADDR]], align 32, !alias.scope [[META6]], !noalias [[META9]]
 ; CHECK-NEXT:    [[LOAD_4_ADDR:%.*]] = getelementptr <16 x half>, ptr addrspace(3) [[LOAD_3_ADDR]], i32 256
-; CHECK-NEXT:    [[LOAD_4:%.*]] = load <16 x half>, ptr addrspace(3) [[LOAD_4_ADDR]], align 32, !alias.scope [[META1]], !noalias [[META4]]
+; CHECK-NEXT:    [[LOAD_4:%.*]] = load <16 x half>, ptr addrspace(3) [[LOAD_4_ADDR]], align 32, !alias.scope [[META6]], !noalias [[META9]]
 ; CHECK-NEXT:    [[MAI_0:%.*]] = call <16 x half> @llvm.amdgcn.wmma.f16.16x16x16.f16.v16f16.v16f16(<16 x half> [[LOAD_0]], <16 x half> [[LOAD_0]], <16 x half> [[LOAD_0]], i1 false)
 ; CHECK-NEXT:    [[MAI_1:%.*]] = call <16 x half> @llvm.amdgcn.wmma.f16.16x16x16.f16.v16f16.v16f16(<16 x half> [[LOAD_1]], <16 x half> [[LOAD_1]], <16 x half> [[LOAD_1]], i1 false)
 ; CHECK-NEXT:    [[MAI_2:%.*]] = call <16 x half> @llvm.amdgcn.wmma.f16.16x16x16.f16.v16f16.v16f16(<16 x half> [[LOAD_2]], <16 x half> [[LOAD_2]], <16 x half> [[LOAD_2]], i1 false)
 ; CHECK-NEXT:    [[MAI_3:%.*]] = call <16 x half> @llvm.amdgcn.wmma.f16.16x16x16.f16.v16f16.v16f16(<16 x half> [[LOAD_3]], <16 x half> [[LOAD_3]], <16 x half> [[LOAD_3]], i1 false)
 ; CHECK-NEXT:    [[MAI_4:%.*]] = call <16 x half> @llvm.amdgcn.wmma.f16.16x16x16.f16.v16f16.v16f16(<16 x half> [[LOAD_4]], <16 x half> [[LOAD_4]], <16 x half> [[LOAD_4]], i1 false)
 ; CHECK-NEXT:    [[STORE_0_ADDR:%.*]] = getelementptr <16 x half>, ptr addrspace(3) [[OUT]], i32 [[IDX]]
-; CHECK-NEXT:    store <16 x half> [[MAI_0]], ptr addrspace(3) [[STORE_0_ADDR]], align 32, !alias.scope [[META4]], !noalias [[META1]]
+; CHECK-NEXT:    store <16 x half> [[MAI_0]], ptr addrspace(3) [[STORE_0_ADDR]], align 32, !alias.scope [[META9]], !noalias [[META6]]
 ; CHECK-NEXT:    [[STORE_1_ADDR:%.*]] = getelementptr <16 x half>, ptr addrspace(3) [[OUT]], i32 64
-; CHECK-NEXT:    store <16 x half> [[MAI_1]], ptr addrspace(3) [[STORE_1_ADDR]], align 32, !alias.scope [[META4]], !noalias [[META1]]
+; CHECK-NEXT:    store <16 x half> [[MAI_1]], ptr addrspace(3) [[STORE_1_ADDR]], align 32, !alias.scope [[META9]], !noalias [[META6]]
 ; CHECK-NEXT:    [[STORE_2_ADDR:%.*]] = getelementptr <16 x half>, ptr addrspace(3) [[OUT]], i32 128
-; CHECK-NEXT:    store <16 x half> [[MAI_2]], ptr addrspace(3) [[STORE_2_ADDR]], align 32, !alias.scope [[META4]], !noalias [[META1]]
+; CHECK-NEXT:    store <16 x half> [[MAI_2]], ptr addrspace(3) [[STORE_2_ADDR]], align 32, !alias.scope [[META9]], !noalias [[META6]]
 ; CHECK-NEXT:    [[STORE_3_ADDR:%.*]] = getelementptr <16 x half>, ptr addrspace(3) [[OUT]], i32 192
-; CHECK-NEXT:    store <16 x half> [[MAI_3]], ptr addrspace(3) [[STORE_3_ADDR]], align 32, !alias.scope [[META4]], !noalias [[META1]]
+; CHECK-NEXT:    store <16 x half> [[MAI_3]], ptr addrspace(3) [[STORE_3_ADDR]], align 32, !alias.scope [[META9]], !noalias [[META6]]
 ; CHECK-NEXT:    [[STORE_4_ADDR:%.*]] = getelementptr <16 x half>, ptr addrspace(3) [[OUT]], i32 256
-; CHECK-NEXT:    store <16 x half> [[MAI_4]], ptr addrspace(3) [[STORE_4_ADDR]], align 32, !alias.scope [[META4]], !noalias [[META1]]
+; CHECK-NEXT:    store <16 x half> [[MAI_4]], ptr addrspace(3) [[STORE_4_ADDR]], align 32, !alias.scope [[META9]], !noalias [[META6]]
 ; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 256, i32 2, i32 0)
 ; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 8, i32 1, i32 0)
 ; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 512, i32 2, i32 0)
@@ -511,45 +535,45 @@ define amdgpu_kernel void @aliasinfo_10v16f16_NA_AS(ptr addrspace(3) noalias %in
 ; CHECK-NEXT:    [[ALIASINFO_10V16F16_NA_AS_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; CHECK-NEXT:    [[IDX:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
 ; CHECK-NEXT:    [[LOAD_0_ADDR:%.*]] = getelementptr <16 x half>, ptr addrspace(3) [[IN]], i32 [[IDX]]
-; CHECK-NEXT:    [[LOAD_0:%.*]] = load <16 x half>, ptr addrspace(3) [[LOAD_0_ADDR]], align 32, !alias.scope [[META1]], !noalias [[META4]]
+; CHECK-NEXT:    [[LOAD_0:%.*]] = load <16 x half>, ptr addrspace(3) [[LOAD_0_ADDR]], align 32, !alias.scope [[META48:![0-9]+]], !noalias [[META51:![0-9]+]]
 ; CHECK-NEXT:    [[LOAD_1_ADDR:%.*]] = getelementptr <16 x half>, ptr addrspace(3) [[LOAD_0_ADDR]], i32 64
-; CHECK-NEXT:    [[LOAD_1:%.*]] = load <16 x half>, ptr addrspace(3) [[LOAD_1_ADDR]], align 32, !alias.scope [[META1]], !noalias [[META4]]
+; CHECK-NEXT:    [[LOAD_1:%.*]] = load <16 x half>, ptr addrspace(3) [[LOAD_1_ADDR]], align 32, !alias.scope [[META48]], !noalias [[META51]]
 ; CHECK-NEXT:    [[LOAD_2_ADDR:%.*]] = getelementptr <16 x half>, ptr addrspace(3) [[LOAD_1_ADDR]], i32 128
-; CHECK-NEXT:    [[LOAD_2:%.*]] = load <16 x half>, ptr addrspace(3) [[LOAD_2_ADDR]], align 32, !alias.scope [[META1]], !noalias [[META4]]
+; CHECK-NEXT:    [[LOAD_2:%.*]] = load <16 x half>, ptr addrspace(3) [[LOAD_2_ADDR]], align 32, !alias.scope [[META48]], !noalias [[META51]]
 ; CHECK-NEXT:    [[LOAD_3_ADDR:%.*]] = getelementptr <16 x half>, ptr addrspace(3) [[LOAD_2_ADDR]], i32 192
-; CHECK-NEXT:    [[LOAD_3:%.*]] = load <16 x half>, ptr addrspace(3) [[LOAD_3_ADDR]], align 32, !alias.scope [[META1]], !noalias [[META4]]
+; CHECK-NEXT:    [[LOAD_3:%.*]] = load <16 x half>, ptr addrspace(3) [[LOAD_3_ADDR]], align 32, !alias.scope [[META48]], !noalias [[META51]]
 ; CHECK-NEXT:    [[LOAD_4_ADDR:%.*]] = getelementptr <16 x half>, ptr addrspace(3) [[LOAD_3_ADDR]], i32 256
-; CHECK-NEXT:    [[LOAD_4:%.*]] = load <16 x half>, ptr addrspace(3) [[LOAD_4_ADDR]], align 32, !alias.scope [[META1]], !noalias [[META4]]
+; CHECK-NEXT:    [[LOAD_4:%.*]] = load <16 x half>, ptr addrspace(3) [[LOAD_4_ADDR]], align 32, !alias.scope [[META48]], !noalias [[META51]]
 ; CHECK-NEXT:    [[MAI_0:%.*]] = call <16 x half> @llvm.amdgcn.wmma.f16.16x16x16.f16.v16f16.v16f16(<16 x half> [[LOAD_0]], <16 x half> [[LOAD_0]], <16 x half> [[LOAD_0]], i1 false)
 ; CHECK-NEXT:    [[MAI_1:%.*]] = call <16 x half> @llvm.amdgcn.wmma.f16.16x16x16.f16.v16f16.v16f16(<16 x half> [[LOAD_1]], <16 x half> [[LOAD_1]], <16 x half> [[LOAD_1]], i1 false)
 ; CHECK-NEXT:    [[MAI_2:%.*]] = call <16 x half> @llvm.amdgcn.wmma.f16.16x16x16.f16.v16f16.v16f16(<16 x half> [[LOAD_2]], <16 x half> [[LOAD_2]], <16 x half> [[LOAD_2]], i1 false)
 ; CHECK-NEXT:    [[MAI_3:%.*]] = call <16 x half> @llvm.amdgcn.wmma.f16.16x16x16.f16.v16f16.v16f16(<16 x half> [[LOAD_3]], <16 x half> [[LOAD_3]], <16 x half> [[LOAD_3]], i1 false)
 ; CHECK-NEXT:    [[MAI_4:%.*]] = call <16 x half> @llvm.amdgcn.wmma.f16.16x16x16.f16.v16f16.v16f16(<16 x half> [[LOAD_4]], <16 x half> [[LOAD_4]], <16 x half> [[LOAD_4]], i1 false)
 ; CHECK-NEXT:    [[STORE_0_ADDR:%.*]] = getelementptr <16 x half>, ptr addrspace(3) [[OUT]], i32 [[IDX]]
-; CHECK-NEXT:    store <16 x half> [[MAI_0]], ptr addrspace(3) [[STORE_0_ADDR]], align 32, !alias.scope [[META4]], !noalias [[META1]]
+; CHECK-NEXT:    store <16 x half> [[MAI_0]], ptr addrspace(3) [[STORE_0_ADDR]], align 32, !alias.scope [[META51]], !noalias [[META48]]
 ; CHECK-NEXT:    [[STORE_1_ADDR:%.*]] = getelementptr <16 x half>, ptr addrspace(3) [[OUT]], i32 64
-; CHECK-NEXT:    store <16 x half> [[MAI_1]], ptr addrspace(3) [[STORE_1_ADDR]], align 32, !alias.scope [[META4]], !noalias [[META1]]
+; CHECK-NEXT:    store <16 x half> [[MAI_1]], ptr addrspace(3) [[STORE_1_ADDR]], align 32, !alias.scope [[META51]], !noalias [[META48]]
 ; CHECK-NEXT:    [[STORE_2_ADDR:%.*]] = getelementptr <16 x half>, ptr addrspace(3) [[OUT]], i32 128
-; CHECK-NEXT:    store <16 x half> [[MAI_2]], ptr addrspace(3) [[STORE_2_ADDR]], align 32, !alias.scope [[META4]], !noalias [[META1]]
+; CHECK-NEXT:    store <16 x half> [[MAI_2]], ptr addrspace(3) [[STORE_2_ADDR]], align 32, !alias.scope [[META51]], !noalias [[META48]]
 ; CHECK-NEXT:    [[STORE_3_ADDR:%.*]] = getelementptr <16 x half>, ptr addrspace(3) [[OUT]], i32 192
-; CHECK-NEXT:    store <16 x half> [[MAI_3]], ptr addrspace(3) [[STORE_3_ADDR]], align 32, !alias.scope [[META4]], !noalias [[META1]]
+; CHECK-NEXT:    store <16 x half> [[MAI_3]], ptr addrspace(3) [[STORE_3_ADDR]], align 32, !alias.scope [[META51]], !noalias [[META48]]
 ; CHECK-NEXT:    [[STORE_4_ADDR:%.*]] = getelementptr <16 x half>, ptr addrspace(3) [[OUT]], i32 256
-; CHECK-NEXT:    store <16 x half> [[MAI_4]], ptr addrspace(3) [[STORE_4_ADDR]], align 32, !alias.scope [[META4]], !noalias [[META1]]
-; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 256, i32 2, i32 0)
-; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 8, i32 1, i32 0)
-; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 512, i32 2, i32 0)
-; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 256, i32 2, i32 0)
-; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 8, i32 1, i32 0)
-; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 512, i32 2, i32 0)
-; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 256, i32 2, i32 0)
-; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 8, i32 1, i32 0)
-; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 512, i32 2, i32 0)
-; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 256, i32 2, i32 0)
-; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 8, i32 1, i32 0)
-; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 512, i32 2, i32 0)
-; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 256, i32 2, i32 0)
-; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 8, i32 1, i32 0)
-; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 512, i32 2, i32 0)
+; CHECK-NEXT:    store <16 x half> [[MAI_4]], ptr addrspace(3) [[STORE_4_ADDR]], align 32, !alias.scope [[META51]], !noalias [[META48]]
+; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 256, i32 2, i32 0), !noalias [[META53:![0-9]+]]
+; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 8, i32 1, i32 0), !noalias [[META53]]
+; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 512, i32 2, i32 0), !noalias [[META53]]
+; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 256, i32 2, i32 0), !noalias [[META53]]
+; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 8, i32 1, i32 0), !noalias [[META53]]
+; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 512, i32 2, i32 0), !noalias [[META53]]
+; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 256, i32 2, i32 0), !noalias [[META53]]
+; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 8, i32 1, i32 0), !noalias [[META53]]
+; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 512, i32 2, i32 0), !noalias [[META53]]
+; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 256, i32 2, i32 0), !noalias [[META53]]
+; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 8, i32 1, i32 0), !noalias [[META53]]
+; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 512, i32 2, i32 0), !noalias [[META53]]
+; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 256, i32 2, i32 0), !noalias [[META53]]
+; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 8, i32 1, i32 0), !noalias [[META53]]
+; CHECK-NEXT:    call void @llvm.amdgcn.sched.group.barrier(i32 512, i32 2, i32 0), !noalias [[META53]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -613,8 +637,56 @@ attributes #2 = { nounwind readnone speculatable }
 ;.
 ; CHECK: [[META0]] = !{}
 ; CHECK: [[META1]] = !{[[META2:![0-9]+]]}
-; CHECK: [[META2]] = distinct !{[[META2]], [[META3:![0-9]+]], !"alias_scope_3"}
-; CHECK: [[META3]] = distinct !{[[META3]], !"alias_scope_0"}
+; CHECK: [[META2]] = distinct !{[[META2]], [[META3:![0-9]+]], !"aliasinfo_2i32_NA: %in"}
+; CHECK: [[META3]] = distinct !{[[META3]], !"aliasinfo_2i32_NA"}
 ; CHECK: [[META4]] = !{[[META5:![0-9]+]]}
-; CHECK: [[META5]] = distinct !{[[META5]], [[META3]], !"alias_scope_1"}
+; CHECK: [[META5]] = distinct !{[[META5]], [[META3]], !"aliasinfo_2i32_NA: %out"}
+; CHECK: [[META6]] = !{[[META7:![0-9]+]]}
+; CHECK: [[META7]] = distinct !{[[META7]], [[META8:![0-9]+]], !"alias_scope_3"}
+; CHECK: [[META8]] = distinct !{[[META8]], !"alias_scope_0"}
+; CHECK: [[META9]] = !{[[META10:![0-9]+]]}
+; CHECK: [[META10]] = distinct !{[[META10]], [[META8]], !"alias_scope_1"}
+; CHECK: [[META11]] = !{[[META7]], [[META12:![0-9]+]]}
+; CHECK: [[META12]] = distinct !{[[META12]], [[META13:![0-9]+]], !"aliasinfo_2i32_NA_AS: %in"}
+; CHECK: [[META13]] = distinct !{[[META13]], !"aliasinfo_2i32_NA_AS"}
+; CHECK: [[META14]] = !{[[META10]], [[META15:![0-9]+]]}
+; CHECK: [[META15]] = distinct !{[[META15]], [[META13]], !"aliasinfo_2i32_NA_AS: %out"}
+; CHECK: [[META16]] = !{[[META17:![0-9]+]]}
+; CHECK: [[META17]] = distinct !{[[META17]], [[META18:![0-9]+]], !"aliasinfo_v4f32_3v4i8_NA: %in"}
+; CHECK: [[META18]] = distinct !{[[META18]], !"aliasinfo_v4f32_3v4i8_NA"}
+; CHECK: [[META19]] = !{[[META20:![0-9]+]], [[META21:![0-9]+]], [[META22:![0-9]+]]}
+; CHECK: [[META20]] = distinct !{[[META20]], [[META18]], !"aliasinfo_v4f32_3v4i8_NA: %out"}
+; CHECK: [[META21]] = distinct !{[[META21]], [[META18]], !"aliasinfo_v4f32_3v4i8_NA: %out1"}
+; CHECK: [[META22]] = distinct !{[[META22]], [[META18]], !"aliasinfo_v4f32_3v4i8_NA: %in1"}
+; CHECK: [[META23]] = !{[[META22]]}
+; CHECK: [[META24]] = !{[[META20]], [[META21]], [[META17]]}
+; CHECK: [[META25]] = !{[[META20]]}
+; CHECK: [[META26]] = !{[[META21]], [[META17]], [[META22]]}
+; CHECK: [[META27]] = !{[[META21]]}
+; CHECK: [[META28]] = !{[[META20]], [[META17]], [[META22]]}
+; CHECK: [[META29]] = !{[[META7]], [[META30:![0-9]+]]}
+; CHECK: [[META30]] = distinct !{[[META30]], [[META31:![0-9]+]], !"aliasinfo_v4f32_3v4i8_NA_AS: %in"}
+; CHECK: [[META31]] = distinct !{[[META31]], !"aliasinfo_v4f32_3v4i8_NA_AS"}
+; CHECK: [[META32]] = !{[[META10]], [[META33:![0-9]+]], [[META34:![0-9]+]], [[META35:![0-9]+]]}
+; CHECK: [[META33]] = distinct !{[[META33]], [[META31]], !"aliasinfo_v4f32_3v4i8_NA_AS: %out"}
+; CHECK: [[META34]] = distinct !{[[META34]], [[META31]], !"aliasinfo_v4f32_3v4i8_NA_AS: %out1"}
+; CHECK: [[META35]] = distinct !{[[META35]], [[META31]], !"aliasinfo_v4f32_3v4i8_NA_AS: %in1"}
+; CHECK: [[META36]] = !{[[META7]], [[META35]]}
+; CHECK: [[META37]] = !{[[META10]], [[META33]], [[META34]], [[META30]]}
+; CHECK: [[META38]] = !{[[META10]], [[META33]]}
+; CHECK: [[META39]] = !{[[META7]], [[META34]], [[META30]], [[META35]]}
+; CHECK: [[META40]] = !{[[META10]], [[META34]]}
+; CHECK: [[META41]] = !{[[META7]], [[META33]], [[META30]], [[META35]]}
+; CHECK: [[META42]] = !{[[META43:![0-9]+]]}
+; CHECK: [[META43]] = distinct !{[[META43]], [[META44:![0-9]+]], !"aliasinfo_10v16f16_NA: %in"}
+; CHECK: [[META44]] = distinct !{[[META44]], !"aliasinfo_10v16f16_NA"}
+; CHECK: [[META45]] = !{[[META46:![0-9]+]]}
+; CHECK: [[META46]] = distinct !{[[META46]], [[META44]], !"aliasinfo_10v16f16_NA: %out"}
+; CHECK: [[META47]] = !{[[META43]], [[META46]]}
+; CHECK: [[META48]] = !{[[META7]], [[META49:![0-9]+]]}
+; CHECK: [[META49]] = distinct !{[[META49]], [[META50:![0-9]+]], !"aliasinfo_10v16f16_NA_AS: %in"}
+; CHECK: [[META50]] = distinct !{[[META50]], !"aliasinfo_10v16f16_NA_AS"}
+; CHECK: [[META51]] = !{[[META10]], [[META52:![0-9]+]]}
+; CHECK: [[META52]] = distinct !{[[META52]], [[META50]], !"aliasinfo_10v16f16_NA_AS: %out"}
+; CHECK: [[META53]] = !{[[META49]], [[META52]]}
 ;.
