@@ -8633,16 +8633,18 @@ private:
       if (llvm::is_contained(C->getMotionModifiers(),
                              OMPC_MOTION_MODIFIER_present))
         Kind = Present;
-      if (llvm::is_contained(C->getMotionModifiers(), OMPC_MOTION_MODIFIER_iterator)) {
-        if (auto *IteratorExpr =
-                dyn_cast<OMPIteratorExpr>(C->getIteratorModifier()->IgnoreParenImpCasts())) {
-          const auto *VD = llvm::dyn_cast<VarDecl>(IteratorExpr->getIteratorDecl(0));
+      if (llvm::is_contained(C->getMotionModifiers(),
+                             OMPC_MOTION_MODIFIER_iterator)) {
+        if (auto *IteratorExpr = dyn_cast<OMPIteratorExpr>(
+                C->getIteratorModifier()->IgnoreParenImpCasts())) {
+          const auto *VD =
+              llvm::dyn_cast<VarDecl>(IteratorExpr->getIteratorDecl(0));
           CGF.EmitVarDecl(*VD);
 
           OMPIteratorGeneratorScope IteratorScope(
-              CGF,
-              cast_or_null<OMPIteratorExpr>(
-                  IteratorExpr ? IteratorExpr->IgnoreParenImpCasts() : nullptr));
+              CGF, cast_or_null<OMPIteratorExpr>(
+                       IteratorExpr ? IteratorExpr->IgnoreParenImpCasts()
+                                    : nullptr));
         }
       }
 
@@ -8662,16 +8664,18 @@ private:
       if (llvm::is_contained(C->getMotionModifiers(),
                              OMPC_MOTION_MODIFIER_present))
         Kind = Present;
-      if (llvm::is_contained(C->getMotionModifiers(), OMPC_MOTION_MODIFIER_iterator)) {
-        if (auto *IteratorExpr =
-                dyn_cast<OMPIteratorExpr>(C->getIteratorModifier()->IgnoreParenImpCasts())) {
-          const auto *VD = llvm::dyn_cast<VarDecl>(IteratorExpr->getIteratorDecl(0));
+      if (llvm::is_contained(C->getMotionModifiers(),
+                             OMPC_MOTION_MODIFIER_iterator)) {
+        if (auto *IteratorExpr = dyn_cast<OMPIteratorExpr>(
+                C->getIteratorModifier()->IgnoreParenImpCasts())) {
+          const auto *VD =
+              llvm::dyn_cast<VarDecl>(IteratorExpr->getIteratorDecl(0));
           CGF.EmitVarDecl(*VD);
 
           OMPIteratorGeneratorScope IteratorScope(
-              CGF,
-              cast_or_null<OMPIteratorExpr>(
-                  IteratorExpr ? IteratorExpr->IgnoreParenImpCasts() : nullptr));
+              CGF, cast_or_null<OMPIteratorExpr>(
+                       IteratorExpr ? IteratorExpr->IgnoreParenImpCasts()
+                                    : nullptr));
         }
       }
 
