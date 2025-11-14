@@ -222,6 +222,95 @@ static mlir::FlatSymbolRefAttr gatherComponentInit(
   return mlir::FlatSymbolRefAttr::get(mlirContext, name);
 }
 
+/// Emit fir.use_stmt operations for USE statements in the given scope
+static void
+emitUseStatementsFromScope(Fortran::lower::AbstractConverter &converter,
+                           mlir::OpBuilder &builder, mlir::Location loc,
+                           const Fortran::semantics::Scope &scope) {
+  mlir::MLIRContext *context = builder.getContext();
+
+  for (const auto &preservedStmt : scope.preservedUseStmts()) {
+
+    auto getMangledName = [&](const std::string &localName) -> std::string {
+      Fortran::parser::CharBlock charBlock{localName.data(), localName.size()};
+      const auto *sym = scope.FindSymbol(charBlock);
+      if (!sym)
+        return "";
+
+      const auto &ultimateSym = sym->GetUltimate();
+
+      // Skip cases which can cause mangleName to fail.
+      if (ultimateSym.has<Fortran::semantics::DerivedTypeDetails>())
+        return "";
+
+      if (const auto *generic =
+              ultimateSym.detailsIf<Fortran::semantics::GenericDetails>()) {
+        if (!generic->specific())
+          return "";
+      }
+
+      return converter.mangleName(ultimateSym);
+    };
+
+    mlir::StringAttr moduleNameAttr =
+        mlir::StringAttr::get(context, preservedStmt.moduleName);
+
+    llvm::SmallVector<mlir::Attribute> onlySymbolAttrs;
+    llvm::SmallVector<mlir::Attribute> renameAttrs;
+
+    switch (preservedStmt.kind) {
+    case Fortran::semantics::PreservedUseStmt::Kind::UseOnly:
+      // USE mod, ONLY: list
+      for (const auto &name : preservedStmt.onlyNames) {
+        std::string mangledName = getMangledName(name);
+        if (!mangledName.empty())
+          onlySymbolAttrs.push_back(
+              mlir::FlatSymbolRefAttr::get(context, mangledName));
+      }
+      // Handle renames within ONLY clause
+      for (const auto &local : preservedStmt.renames) {
+        std::string mangledName = getMangledName(local);
+        if (!mangledName.empty()) {
+          auto localAttr = mlir::StringAttr::get(context, local);
+          auto symbolRef = mlir::FlatSymbolRefAttr::get(context, mangledName);
+          renameAttrs.push_back(
+              fir::UseRenameAttr::get(context, localAttr, symbolRef));
+        }
+      }
+      break;
+
+    case Fortran::semantics::PreservedUseStmt::Kind::UseRenames:
+      // USE mod, renames (import all with some renames)
+      for (const auto &local : preservedStmt.renames) {
+        std::string mangledName = getMangledName(local);
+        if (!mangledName.empty()) {
+          auto localAttr = mlir::StringAttr::get(context, local);
+          auto symbolRef = mlir::FlatSymbolRefAttr::get(context, mangledName);
+          renameAttrs.push_back(
+              fir::UseRenameAttr::get(context, localAttr, symbolRef));
+        }
+      }
+      break;
+
+    case Fortran::semantics::PreservedUseStmt::Kind::UseAll:
+      // USE mod (import all, no renames)
+      break;
+    }
+
+    // Create optional array attributes
+    mlir::ArrayAttr onlySymbolsAttr =
+        onlySymbolAttrs.empty()
+            ? mlir::ArrayAttr()
+            : mlir::ArrayAttr::get(context, onlySymbolAttrs);
+    mlir::ArrayAttr renamesAttr =
+        renameAttrs.empty() ? mlir::ArrayAttr()
+                            : mlir::ArrayAttr::get(context, renameAttrs);
+
+    fir::UseStmtOp::create(builder, loc, moduleNameAttr, onlySymbolsAttr,
+                           renamesAttr);
+  }
+}
+
 /// Helper class to generate the runtime type info global data and the
 /// fir.type_info operations that contain the dipatch tables (if any).
 /// The type info global data is required to describe the derived type to the
@@ -6284,6 +6373,9 @@ private:
       manageFPEnvironment(funit);
 
     mapDummiesAndResults(funit, callee);
+
+    // Emit USE statement operations for debug info generation
+    emitUseStatementsFromScope(*this, *builder, toLocation(), funit.getScope());
 
     // Map host associated symbols from parent procedure if any.
     if (funit.parentHasHostAssoc())

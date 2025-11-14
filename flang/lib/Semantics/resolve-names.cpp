@@ -3663,6 +3663,86 @@ void ModuleVisitor::Post(const parser::UseStmt &x) {
   for (const auto &[name, symbol] : useModuleScope_->commonBlockUses()) {
     currScope().AddCommonBlockUse(name, symbol->attrs(), symbol->GetUltimate());
   }
+
+  // Preserve USE statement information for debug info generation
+  std::string moduleName{x.moduleName.source.ToString()};
+
+  if (const auto *onlyList{std::get_if<std::list<parser::Only>>(&x.u)}) {
+    // USE mod, ONLY: list
+    PreservedUseStmt stmt{moduleName, PreservedUseStmt::Kind::UseOnly};
+
+    for (const auto &only : *onlyList) {
+      common::visit(
+          common::visitors{
+              [&](const parser::Rename &rename) {
+                // ONLY with rename: ONLY: local => use
+                common::visit(common::visitors{
+                                  [&](const parser::Rename::Names &names) {
+                                    std::string localName{
+                                        std::get<0>(names.t).source.ToString()};
+                                    stmt.renames.push_back(localName);
+                                  },
+                                  [&](const parser::Rename::Operators &) {
+                                    // Operator renames - not commonly needed
+                                    // for debug info
+                                  },
+                              },
+                    rename.u);
+              },
+              [&](const parser::Name &name) {
+                // ONLY without rename: ONLY: name
+                stmt.onlyNames.push_back(name.source.ToString());
+              },
+              [&](const common::Indirection<parser::GenericSpec> &genericSpec) {
+                // Generic spec can contain a Name (for regular symbols) or
+                // operators
+                common::visit(common::visitors{
+                                  [&](const parser::Name &name) {
+                                    stmt.onlyNames.push_back(
+                                        name.source.ToString());
+                                  },
+                                  [&](const auto &) {
+                                    // Operators and special forms - not
+                                    // commonly needed for variable debug info
+                                  },
+                              },
+                    genericSpec.value().u);
+              },
+          },
+          only.u);
+    }
+
+    currScope().add_preservedUseStmt(std::move(stmt));
+  } else if (const auto *renameList{
+                 std::get_if<std::list<parser::Rename>>(&x.u)}) {
+    // USE mod with optional renames (not ONLY)
+    if (renameList->empty()) {
+      // USE mod (import all, no renames)
+      PreservedUseStmt stmt{moduleName, PreservedUseStmt::Kind::UseAll};
+      currScope().add_preservedUseStmt(std::move(stmt));
+    } else {
+      // USE mod, renames (import all with some renames)
+      PreservedUseStmt stmt{moduleName, PreservedUseStmt::Kind::UseRenames};
+
+      for (const auto &rename : *renameList) {
+        common::visit(common::visitors{
+                          [&](const parser::Rename::Names &names) {
+                            std::string localName{
+                                std::get<0>(names.t).source.ToString()};
+                            stmt.renames.push_back(localName);
+                          },
+                          [&](const parser::Rename::Operators &) {
+                            // Operator renames - not commonly needed for debug
+                            // info
+                          },
+                      },
+            rename.u);
+      }
+
+      currScope().add_preservedUseStmt(std::move(stmt));
+    }
+  }
+
   useModuleScope_ = nullptr;
 }
 

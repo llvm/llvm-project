@@ -55,6 +55,19 @@ struct EquivalenceObject {
 };
 using EquivalenceSet = std::vector<EquivalenceObject>;
 
+// Preserved USE statement information for debug info generation.
+struct PreservedUseStmt {
+  enum class Kind { UseOnly, UseRenames, UseAll };
+
+  std::string moduleName;
+  Kind kind;
+  std::vector<std::string> onlyNames; // For Kind::UseOnly
+  std::vector<std::string> renames; // local_name (resolved via GetUltimate)
+
+  PreservedUseStmt(std::string modName, Kind k)
+      : moduleName(std::move(modName)), kind(k) {}
+};
+
 class Scope {
   using mapType = std::map<SourceName, MutableSymbolRef>;
 
@@ -190,6 +203,17 @@ public:
     return equivalenceSets_;
   }
   void add_equivalenceSet(EquivalenceSet &&);
+
+  // Access preserved USE statements for debug info generation
+  std::list<PreservedUseStmt> &preservedUseStmts() {
+    return preservedUseStmts_;
+  }
+  const std::list<PreservedUseStmt> &preservedUseStmts() const {
+    return preservedUseStmts_;
+  }
+  void add_preservedUseStmt(PreservedUseStmt &&stmt) {
+    preservedUseStmts_.push_back(std::move(stmt));
+  }
   // Cray pointers are saved as map of pointee name -> pointer symbol
   const mapType &crayPointers() const { return crayPointers_; }
   void add_crayPointer(const SourceName &, Symbol &);
@@ -301,6 +325,7 @@ private:
   mapType commonBlocks_;
   mapType commonBlockUses_; // USE-assocated COMMON blocks
   std::list<EquivalenceSet> equivalenceSets_;
+  std::list<PreservedUseStmt> preservedUseStmts_;
   mapType crayPointers_;
   std::map<SourceName, common::Reference<Scope>> submodules_;
   std::list<DeclTypeSpec> declTypeSpecs_;
