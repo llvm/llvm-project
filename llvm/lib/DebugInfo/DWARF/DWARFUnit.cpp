@@ -1187,12 +1187,9 @@ DWARFUnit::determineStringOffsetsTableContributionDWO(DWARFDataExtractor &DA) {
   if (getVersion() >= 5) {
     if (DA.getData().data() == nullptr)
       return std::nullopt;
-    // For .dwo files, the section contribution for the .debug_str_offsets
-    // points to the string offsets table header. Decode the format from this
-    // data as llvm-dwp has been modified to be able to emit a
-    // .debug_str_offsets table as DWARF64 even if the compile unit is DWARF32.
-    // This allows .dwp files to have string tables that exceed UINT32_MAX in
-    // size.
+    // FYI: The .debug_str_offsets.dwo section may use DWARF64 even when the
+    // rest of the file uses DWARF32, so respect whichever encoding the
+    // header/length uses.
     uint64_t Length = 0;
     DwarfFormat Format = dwarf::DwarfFormat::DWARF32;
     std::tie(Length, Format) = DA.getInitialLength(&Offset);
