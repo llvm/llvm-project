@@ -17,26 +17,37 @@
 #include <immintrin.h>
 
 __m128d test_mm_undefined_pd(void) {
-  // CIR-X64-LABEL: _mm_undefined_pd
-  // CIR-X64: %{{.*}} = cir.const #cir.zero : !cir.vector<2 x !cir.double>
-  // CIR-X64: cir.return %{{.*}} : !cir.vector<2 x !cir.double>
-  // LLVM-X64-LABEL: test_mm_undefined_pd
-  // LLVM-X64: store <2 x double> zeroinitializer, ptr %[[A:.*]], align 16
-  // LLVM-X64: %{{.*}} = load <2 x double>, ptr %[[A]], align 16
-  // LLVM-X64: ret <2 x double> %{{.*}}
+  // CIR-LABEL: test_mm_undefined_pd
+  // CIR: %{{.*}} = cir.const #cir.zero : !cir.vector<2 x !cir.double>
+  // CIR: cir.return %{{.*}} : !cir.vector<2 x !cir.double>
+
+  // LLVM-LABEL: test_mm_undefined_pd
+  // LLVM: store <2 x double> zeroinitializer, ptr %[[A:.*]], align 16
+  // LLVM: %{{.*}} = load <2 x double>, ptr %[[A]], align 16
+  // LLVM: ret <2 x double> %{{.*}}
+
+  // OGCG-LABEL: test_mm_undefined_pd
+  // OGCG: store <2 x double> zeroinitializer, ptr %[[A:.*]], align 16
+  // OGCG: %{{.*}} = load <2 x double>, ptr %[[A]], align 16
+  // OGCG: ret <2 x double> %{{.*}}
   return _mm_undefined_pd();
 }
 
 __m128i test_mm_undefined_si128(void) {
-  // CIR-LABEL: _mm_undefined_si128
-  // CIR-CHECK: %[[A:.*]] = cir.const #cir.zero : !cir.vector<2 x !cir.double>
-  // CIR-CHECK: %{{.*}} = cir.cast bitcast %[[A]] : !cir.vector<2 x !cir.double> -> !cir.vector<2 x !s64i>
-  // CIR-CHECK: cir.return %{{.*}} : !cir.vector<2 x !s64i>
+  // CIR-LABEL: test_mm_undefined_si128
+  // CIR: %[[A:.*]] = cir.const #cir.zero : !cir.vector<2 x !cir.double>
+  // CIR: %{{.*}} = cir.cast bitcast %[[A]] : !cir.vector<2 x !cir.double> ->
+  // CIR: cir.return %{{.*}} :
 
-  // LLVM-CHECK-LABEL: test_mm_undefined_si128
-  // LLVM-CHECK: store <2 x i64> zeroinitializer, ptr %[[A:.*]], align 16
-  // LLVM-CHECK: %{{.*}} = load <2 x i64>, ptr %[[A]], align 16
-  // LLVM-CHECK: ret <2 x i64> %{{.*}}
+  // LLVM-LABEL: test_mm_undefined_si128
+  // LLVM: store <2 x i64> zeroinitializer, ptr %[[A:.*]], align 16
+  // LLVM: %{{.*}} = load <2 x i64>, ptr %[[A]], align 16
+  // LLVM: ret <2 x i64> %{{.*}}
+
+  // OGCG-LABEL: test_mm_undefined_si128
+  // OGCG: store <2 x i64> zeroinitializer, ptr %[[A:.*]], align 16
+  // OGCG: %{{.*}} = load <2 x i64>, ptr %[[A]], align 16
+  // OGCG: ret <2 x i64> %{{.*}}
   return _mm_undefined_si128();
 }
 

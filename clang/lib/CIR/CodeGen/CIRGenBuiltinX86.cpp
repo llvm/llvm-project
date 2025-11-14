@@ -16,6 +16,7 @@
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/CIR/MissingFeatures.h"
+#include "llvm/IR/IntrinsicsX86.h"
 
 using namespace clang;
 using namespace clang::CIRGen;
