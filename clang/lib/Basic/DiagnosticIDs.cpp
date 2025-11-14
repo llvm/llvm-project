@@ -51,6 +51,22 @@ const StaticDiagInfoDescriptionStringTable StaticDiagInfoDescriptions = {
 #undef DIAG
 };
 
+struct StaticDiagInfoStableIDStringTable {
+#define DIAG(ENUM, CLASS, DEFAULT_SEVERITY, DESC, GROUP, SFINAE, NOWERROR,     \
+             SHOWINSYSHEADER, SHOWINSYSMACRO, DEFERRABLE, CATEGORY)            \
+  char ENUM##_id[sizeof(#ENUM)];
+#include "clang/Basic/AllDiagnosticKinds.inc"
+#undef DIAG
+};
+
+const StaticDiagInfoStableIDStringTable StaticDiagInfoStableIDs = {
+#define DIAG(ENUM, CLASS, DEFAULT_SEVERITY, DESC, GROUP, SFINAE, NOWERROR,     \
+             SHOWINSYSHEADER, SHOWINSYSMACRO, DEFERRABLE, CATEGORY)            \
+  #ENUM,
+#include "clang/Basic/AllDiagnosticKinds.inc"
+#undef DIAG
+};
+
 extern const StaticDiagInfoRec StaticDiagInfo[];
 
 // Stored separately from StaticDiagInfoRec to pack better.  Otherwise,
@@ -59,6 +75,14 @@ const uint32_t StaticDiagInfoDescriptionOffsets[] = {
 #define DIAG(ENUM, CLASS, DEFAULT_SEVERITY, DESC, GROUP, SFINAE, NOWERROR,     \
              SHOWINSYSHEADER, SHOWINSYSMACRO, DEFERRABLE, CATEGORY)            \
   offsetof(StaticDiagInfoDescriptionStringTable, ENUM##_desc),
+#include "clang/Basic/AllDiagnosticKinds.inc"
+#undef DIAG
+};
+
+const uint32_t StaticDiagInfoStableIDOffsets[] = {
+#define DIAG(ENUM, CLASS, DEFAULT_SEVERITY, DESC, GROUP, SFINAE, NOWERROR,     \
+             SHOWINSYSHEADER, SHOWINSYSMACRO, DEFERRABLE, CATEGORY)            \
+  offsetof(StaticDiagInfoStableIDStringTable, ENUM##_id),
 #include "clang/Basic/AllDiagnosticKinds.inc"
 #undef DIAG
 };
@@ -95,6 +119,7 @@ struct StaticDiagInfoRec {
   uint16_t Deferrable : 1;
 
   uint16_t DescriptionLen;
+  uint16_t StableIDLen;
 
   unsigned getOptionGroupIndex() const {
     return OptionGroupIndex;
@@ -105,6 +130,14 @@ struct StaticDiagInfoRec {
     uint32_t StringOffset = StaticDiagInfoDescriptionOffsets[MyIndex];
     const char* Table = reinterpret_cast<const char*>(&StaticDiagInfoDescriptions);
     return StringRef(&Table[StringOffset], DescriptionLen);
+  }
+
+  StringRef getStableID() const {
+    size_t MyIndex = this - &StaticDiagInfo[0];
+    uint32_t StringOffset = StaticDiagInfoStableIDOffsets[MyIndex];
+    const char *Table =
+        reinterpret_cast<const char *>(&StaticDiagInfoStableIDs);
+    return StringRef(&Table[StringOffset], StableIDLen);
   }
 
   diag::Flavor getFlavor() const {
@@ -159,7 +192,8 @@ const StaticDiagInfoRec StaticDiagInfo[] = {
       SHOWINSYSMACRO,                                                          \
       GROUP,                                                                   \
 	    DEFERRABLE,                                                              \
-      STR_SIZE(DESC, uint16_t)},
+      STR_SIZE(DESC, uint16_t),                                               \
+      STR_SIZE(#ENUM, uint16_t)},
 #include "clang/Basic/DiagnosticCommonKinds.inc"
 #include "clang/Basic/DiagnosticDriverKinds.inc"
 #include "clang/Basic/DiagnosticFrontendKinds.inc"
@@ -432,6 +466,15 @@ StringRef DiagnosticIDs::getDescription(unsigned DiagID) const {
     return Info->getDescription();
   assert(CustomDiagInfo && "Invalid CustomDiagInfo");
   return CustomDiagInfo->getDescription(DiagID).GetDescription();
+}
+
+/// getIDString - Given a diagnostic ID, return the stable ID of the diagnostic.
+std::string DiagnosticIDs::getStableID(unsigned DiagID) const {
+  if (const StaticDiagInfoRec *Info = GetDiagInfo(DiagID))
+    return Info->getStableID().str();
+  assert(CustomDiagInfo && "Invalid CustomDiagInfo");
+  // TODO: Stable IDs for custom diagnostics?
+  return std::to_string(DiagID);
 }
 
 static DiagnosticIDs::Level toLevel(diag::Severity SV) {

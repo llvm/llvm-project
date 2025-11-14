@@ -332,6 +332,9 @@ public:
   /// Given a diagnostic ID, return a description of the issue.
   StringRef getDescription(unsigned DiagID) const;
 
+  /// Given a diagnostic ID, return the stable ID of the diagnostic.
+  std::string getStableID(unsigned DiagID) const;
+
   /// Return true if the unmapped diagnostic levelof the specified
   /// diagnostic ID is a Warning or Extension.
   ///
