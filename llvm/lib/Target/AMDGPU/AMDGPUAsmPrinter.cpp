@@ -1161,7 +1161,7 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
   ProgInfo.DX10Clamp = Mode.DX10Clamp;
 
   unsigned LDSAlignShift = 8;
-  switch(getLdsDwGranularity(STM)) {
+  switch (getLdsDwGranularity(STM)) {
   case 512:
   case 320:
     LDSAlignShift = 11;
