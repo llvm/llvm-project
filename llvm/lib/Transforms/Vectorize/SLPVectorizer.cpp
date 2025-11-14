@@ -21412,7 +21412,18 @@ void BoUpSLP::BlockScheduling::initScheduleData(Instruction *FromI,
            "new ScheduleData already in scheduling region");
     SD->init(SchedulingRegionID, I);
 
+    auto CanIgnoreLoad = [](const Instruction *I) {
+      const LoadInst *LI = dyn_cast<LoadInst>(I);
+      // If there is a simple load marked as invariant, we can ignore it.
+      // But, in the (unlikely) case of non-simple invariant load,
+      // we should not ignore it.
+      return LI && LI->isSimple() &&
+             LI->getMetadata(LLVMContext::MD_invariant_load);
+    };
+
     if (I->mayReadOrWriteMemory() &&
+        // Simple InvariantLoad does not depend on other memory accesses.
+        !CanIgnoreLoad(I) &&
         (!isa<IntrinsicInst>(I) ||
          (cast<IntrinsicInst>(I)->getIntrinsicID() != Intrinsic::sideeffect &&
           cast<IntrinsicInst>(I)->getIntrinsicID() !=
@@ -21623,17 +21634,6 @@ void BoUpSLP::BlockScheduling::calculateDependencies(
       }
     }
 
-    // Helper to detect loads marked with !invariant.load metadata. Such loads
-    // are defined to read from memory that never changes for the lifetime of
-    // the program; any store to the same location would be UB. Therefore we
-    // can conservatively treat an invariant load and any store as non-aliasing
-    // for scheduling/dep purposes and skip creating a dependency edge.
-    auto IsInvariantLoad = [](const Instruction *I) {
-      if (const auto *LI = dyn_cast<LoadInst>(I))
-        return LI->getMetadata(LLVMContext::MD_invariant_load) != nullptr;
-      return false;
-    };
-
     // Handle the memory dependencies (if any).
     ScheduleData *NextLoadStore = BundleMember->getNextLoadStore();
     if (!NextLoadStore)
@@ -21647,14 +21647,9 @@ void BoUpSLP::BlockScheduling::calculateDependencies(
     unsigned DistToSrc = 1;
     bool IsNonSimpleSrc = !SrcLoc.Ptr || !isSimple(SrcInst);
 
-    if (IsInvariantLoad(SrcInst))
-      return; // Invariant load cannot have memory dependencies.
-
     for (ScheduleData *DepDest = NextLoadStore; DepDest;
          DepDest = DepDest->getNextLoadStore()) {
       assert(isInSchedulingRegion(*DepDest) && "Expected to be in region");
-
-      Instruction *DestInst = DepDest->getInst();
 
       // We have two limits to reduce the complexity:
       // 1) AliasedCheckLimit: It's a small limit to reduce calls to
@@ -21664,8 +21659,7 @@ void BoUpSLP::BlockScheduling::calculateDependencies(
       //    It's important for the loop break condition (see below) to
       //    check this limit even between two read-only instructions.
       if (DistToSrc >= MaxMemDepDistance ||
-          (!IsInvariantLoad(DestInst) && // Cannot have memory deps.
-           (SrcMayWrite || DepDest->getInst()->mayWriteToMemory()) &&
+          ((SrcMayWrite || DepDest->getInst()->mayWriteToMemory()) &&
            (IsNonSimpleSrc || NumAliased >= AliasedCheckLimit ||
             SLP->isAliased(SrcLoc, SrcInst, DepDest->getInst())))) {
 

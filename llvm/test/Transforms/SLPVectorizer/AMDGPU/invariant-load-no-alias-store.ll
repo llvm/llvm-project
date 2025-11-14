@@ -73,6 +73,45 @@ entry:
   ret void
 }
 
+define void @voltest(ptr addrspace(1) %base, ptr addrspace(1) %otherA, ptr addrspace(1) %otherB) #0 {
+; CHECK-LABEL: define void @voltest(
+; CHECK-SAME: ptr addrspace(1) [[BASE:%.*]], ptr addrspace(1) [[OTHERA:%.*]], ptr addrspace(1) [[OTHERB:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[P0:%.*]] = getelementptr half, ptr addrspace(1) [[BASE]], i32 0
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr half, ptr addrspace(1) [[BASE]], i32 1
+; CHECK-NEXT:    [[A0PTR:%.*]] = getelementptr half, ptr addrspace(1) [[OTHERA]], i32 0
+; CHECK-NEXT:    [[B0PTR:%.*]] = getelementptr half, ptr addrspace(1) [[OTHERB]], i32 0
+; CHECK-NEXT:    [[A0:%.*]] = load volatile half, ptr addrspace(1) [[A0PTR]], align 2, !invariant.load [[META0]]
+; CHECK-NEXT:    [[B0:%.*]] = load volatile half, ptr addrspace(1) [[B0PTR]], align 2, !invariant.load [[META0]]
+; CHECK-NEXT:    [[ADD0:%.*]] = fadd reassoc half [[A0]], [[B0]]
+; CHECK-NEXT:    store half [[ADD0]], ptr addrspace(1) [[P0]], align 2
+; CHECK-NEXT:    [[A1PTR:%.*]] = getelementptr half, ptr addrspace(1) [[OTHERA]], i32 1
+; CHECK-NEXT:    [[B1PTR:%.*]] = getelementptr half, ptr addrspace(1) [[OTHERB]], i32 1
+; CHECK-NEXT:    [[A1:%.*]] = load volatile half, ptr addrspace(1) [[A1PTR]], align 2, !invariant.load [[META0]]
+; CHECK-NEXT:    [[B1:%.*]] = load volatile half, ptr addrspace(1) [[B1PTR]], align 2, !invariant.load [[META0]]
+; CHECK-NEXT:    [[ADD1:%.*]] = fadd reassoc half [[A1]], [[B1]]
+; CHECK-NEXT:    store half [[ADD1]], ptr addrspace(1) [[P1]], align 2
+; CHECK-NEXT:    ret void
+;
+entry:
+  %p0 = getelementptr half, ptr addrspace(1) %base, i32 0
+  %p1 = getelementptr half, ptr addrspace(1) %base, i32 1
+  ; First pair of invariant loads from otherA.
+  %A0PTR = getelementptr half, ptr addrspace(1) %otherA, i32 0
+  %B0PTR = getelementptr half, ptr addrspace(1) %otherB, i32 0
+  %A0 = load volatile half, ptr addrspace(1) %A0PTR, align 2, !invariant.load !0
+  %B0 = load volatile half, ptr addrspace(1) %B0PTR, align 2, !invariant.load !0
+  %add0 = fadd reassoc half %A0, %B0
+  store half %add0, ptr addrspace(1) %p0, align 2
+  %A1PTR = getelementptr half, ptr addrspace(1) %otherA, i32 1
+  %B1PTR = getelementptr half, ptr addrspace(1) %otherB, i32 1
+  %A1 = load volatile half, ptr addrspace(1) %A1PTR, align 2, !invariant.load !0
+  %B1 = load volatile half, ptr addrspace(1) %B1PTR, align 2, !invariant.load !0
+  %add1 = fadd reassoc half %A1, %B1
+  store half %add1, ptr addrspace(1) %p1, align 2
+  ret void
+}
+
 
 attributes #0 = { nounwind }
 
