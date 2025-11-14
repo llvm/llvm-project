@@ -6985,8 +6985,12 @@ Value *llvm::simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
           // VectorShuffle instruction, which is not allowed in simplifyBinOp.
           OptResult = MinMaxOptResult::UseEither;
           for (unsigned i = 0; i != ElemCount.getFixedValue(); ++i) {
-            auto ElemResult = OptimizeConstMinMax(C->getAggregateElement(i),
-                                                  IID, Call, &NewConst);
+            auto *Elt = C->getAggregateElement(i);
+            if (!Elt) {
+              OptResult = MinMaxOptResult::CannotOptimize;
+              break;
+            }
+            auto ElemResult = OptimizeConstMinMax(Elt, IID, Call, &NewConst);
             if (ElemResult == MinMaxOptResult::CannotOptimize ||
                 (ElemResult != OptResult &&
                  OptResult != MinMaxOptResult::UseEither &&
