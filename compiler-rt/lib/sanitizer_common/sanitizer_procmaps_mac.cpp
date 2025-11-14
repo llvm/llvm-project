@@ -45,7 +45,6 @@ struct MemoryMappedSegmentData {
   const char *current_load_cmd_addr;
   u32 lc_type;
   uptr base_virt_addr;
-  uptr addr_mask;
 };
 
 template <typename Section>
@@ -54,10 +53,58 @@ static void NextSectionLoad(LoadedModule *module, MemoryMappedSegmentData *data,
   const Section *sc = (const Section *)data->current_load_cmd_addr;
   data->current_load_cmd_addr += sizeof(Section);
 
-  uptr sec_start = (sc->addr & data->addr_mask) + data->base_virt_addr;
+  uptr sec_start = sc->addr + data->base_virt_addr;
   uptr sec_end = sec_start + sc->size;
   module->addAddressRange(sec_start, sec_end, /*executable=*/false, isWritable,
                           sc->sectname);
+}
+
+static bool VerifyMemoryMapping(MemoryMappingLayout* mapping) {
+  InternalMmapVector<LoadedModule> modules;
+  modules.reserve(128);  // matches DumpProcessMap
+  mapping->DumpListOfModules(&modules);
+
+  InternalMmapVector<LoadedModule::AddressRange> segments;
+  for (uptr i = 0; i < modules.size(); ++i) {
+    for (auto& range : modules[i].ranges()) {
+      segments.push_back(range);
+    }
+  }
+
+  // Verify that none of the segments overlap:
+  // 1. Sort the segments by the start address
+  // 2. Check that every segment starts after the previous one ends.
+  Sort(segments.data(), segments.size(),
+       [](LoadedModule::AddressRange& a, LoadedModule::AddressRange& b) {
+         return a.beg < b.beg;
+       });
+
+  // To avoid spam, we only print the report message once-per-process.
+  static bool invalid_module_map_reported = false;
+  bool well_formed = true;
+
+  for (size_t i = 1; i < segments.size(); i++) {
+    uptr cur_start = segments[i].beg;
+    uptr prev_end = segments[i - 1].end;
+    if (cur_start < prev_end) {
+      well_formed = false;
+      VReport(2, "Overlapping mappings: %s start = %p, %s end = %p\n",
+              segments[i].name, (void*)cur_start, segments[i - 1].name,
+              (void*)prev_end);
+      if (!invalid_module_map_reported) {
+        Report(
+            "WARN: Invalid dyld module map detected. This is most likely a bug "
+            "in the sanitizer.\n");
+        Report("WARN: Backtraces may be unreliable.\n");
+        invalid_module_map_reported = true;
+      }
+    }
+  }
+
+  for (auto& m : modules) m.clear();
+
+  mapping->Reset();
+  return well_formed;
 }
 
 void MemoryMappedSegment::AddAddressRanges(LoadedModule *module) {
@@ -85,6 +132,7 @@ void MemoryMappedSegment::AddAddressRanges(LoadedModule *module) {
 
 MemoryMappingLayout::MemoryMappingLayout(bool cache_enabled) {
   Reset();
+  VerifyMemoryMapping(this);
 }
 
 MemoryMappingLayout::~MemoryMappingLayout() {
@@ -190,6 +238,7 @@ typedef struct dyld_shared_cache_dylib_text_info
 
 extern bool _dyld_get_shared_cache_uuid(uuid_t uuid);
 extern const void *_dyld_get_shared_cache_range(size_t *length);
+extern intptr_t _dyld_get_image_slide(const struct mach_header* mh);
 extern int dyld_shared_cache_iterate_text(
     const uuid_t cacheUuid,
     void (^callback)(const dyld_shared_cache_dylib_text_info *info));
@@ -258,23 +307,21 @@ static bool NextSegmentLoad(MemoryMappedSegment *segment,
   layout_data->current_load_cmd_count--;
   if (((const load_command *)lc)->cmd == kLCSegment) {
     const SegmentCommand* sc = (const SegmentCommand *)lc;
-    uptr base_virt_addr, addr_mask;
-    if (layout_data->current_image == kDyldImageIdx) {
-      base_virt_addr = (uptr)get_dyld_hdr();
-      // vmaddr is masked with 0xfffff because on macOS versions < 10.12,
-      // it contains an absolute address rather than an offset for dyld.
-      // To make matters even more complicated, this absolute address
-      // isn't actually the absolute segment address, but the offset portion
-      // of the address is accurate when combined with the dyld base address,
-      // and the mask will give just this offset.
-      addr_mask = 0xfffff;
-    } else {
-      base_virt_addr =
-          (uptr)_dyld_get_image_vmaddr_slide(layout_data->current_image);
-      addr_mask = ~0;
+    if (internal_strcmp(sc->segname, "__LINKEDIT") == 0) {
+      // The LINKEDIT sections are for internal linker use, and may alias
+      // with the LINKEDIT section for other modules. (If we included them,
+      // our memory map would contain overlappping sections.)
+      return false;
     }
 
-    segment->start = (sc->vmaddr & addr_mask) + base_virt_addr;
+    uptr base_virt_addr;
+    if (layout_data->current_image == kDyldImageIdx)
+      base_virt_addr = (uptr)_dyld_get_image_slide(get_dyld_hdr());
+    else
+      base_virt_addr =
+          (uptr)_dyld_get_image_vmaddr_slide(layout_data->current_image);
+
+    segment->start = sc->vmaddr + base_virt_addr;
     segment->end = segment->start + sc->vmsize;
     // Most callers don't need section information, so only fill this struct
     // when required.
@@ -284,9 +331,9 @@ static bool NextSegmentLoad(MemoryMappedSegment *segment,
           (const char *)lc + sizeof(SegmentCommand);
       seg_data->lc_type = kLCSegment;
       seg_data->base_virt_addr = base_virt_addr;
-      seg_data->addr_mask = addr_mask;
       internal_strncpy(seg_data->name, sc->segname,
                        ARRAY_SIZE(seg_data->name));
+      seg_data->name[ARRAY_SIZE(seg_data->name) - 1] = 0;
     }
 
     // Return the initial protection.
@@ -300,6 +347,7 @@ static bool NextSegmentLoad(MemoryMappedSegment *segment,
                             ? kDyldPath
                             : _dyld_get_image_name(layout_data->current_image);
       internal_strncpy(segment->filename, src, segment->filename_size);
+      segment->filename[segment->filename_size - 1] = 0;
     }
     segment->arch = layout_data->current_arch;
     internal_memcpy(segment->uuid, layout_data->current_uuid, kModuleUUIDSize);
