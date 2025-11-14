@@ -144,7 +144,7 @@ bool UnwindAssemblyInstEmulation::GetNonCallSiteUnwindPlanFromAssembly(
              "Unwind row for the function entry missing");
       --it; // Move it to the row corresponding to the current offset
 
-      // If the offset of m_curr_row don't match with the offset we see in
+      // If the offset of m_state.row doesn't match with the offset we see in
       // saved_unwind_states then we have to update current unwind state to
       // the saved values. It is happening after we processed an epilogue and a
       // return to caller instruction.
