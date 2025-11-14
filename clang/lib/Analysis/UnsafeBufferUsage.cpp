@@ -785,7 +785,7 @@ struct LibcFunNamePrefixSuffixParser {
 // - 'A', if 'cond' has constant true value;
 // - 'B', if 'cond' has constant false value.
 static const Expr *tryConstantFoldConditionalExpr(const Expr *E,
-                                               const ASTContext &Ctx) {
+                                                  const ASTContext &Ctx) {
   // FIXME: more places can use this function
   if (const auto *CE = dyn_cast<ConditionalOperator>(E)) {
     bool CondEval;
