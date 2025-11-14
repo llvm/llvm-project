@@ -15,7 +15,6 @@
 #include "flang/Lower/Allocatable.h"
 #include "flang/Lower/CUDA.h"
 #include "flang/Lower/CallInterface.h"
-#include "flang/Lower/Coarray.h"
 #include "flang/Lower/ConvertCall.h"
 #include "flang/Lower/ConvertExpr.h"
 #include "flang/Lower/ConvertExprToHLFIR.h"
@@ -26,6 +25,7 @@
 #include "flang/Lower/IO.h"
 #include "flang/Lower/IterationSpace.h"
 #include "flang/Lower/Mangler.h"
+#include "flang/Lower/MultiImageFortran.h"
 #include "flang/Lower/OpenACC.h"
 #include "flang/Lower/OpenMP.h"
 #include "flang/Lower/PFTBuilder.h"
@@ -446,6 +446,13 @@ public:
             },
             u);
       }
+    });
+
+    // Ensure imported OpenMP declare mappers are materialized at module
+    // scope before lowering any constructs that may reference them.
+    createBuilderOutsideOfFuncOpAndDo([&]() {
+      Fortran::lower::materializeOpenMPDeclareMappers(
+          *this, bridge.getSemanticsContext());
     });
 
     // Create definitions of intrinsic module constants.
@@ -1111,6 +1118,34 @@ public:
     return bridge.fctCtx();
   }
 
+  /// Initializes values for STAT and ERRMSG
+  std::pair<mlir::Value, mlir::Value>
+  genStatAndErrmsg(mlir::Location loc,
+                   const std::list<Fortran::parser::StatOrErrmsg>
+                       &statOrErrList) override final {
+    Fortran::lower::StatementContext stmtCtx;
+
+    mlir::Value errMsgExpr, statExpr;
+    for (const Fortran::parser::StatOrErrmsg &statOrErr : statOrErrList) {
+      std::visit(Fortran::common::visitors{
+                     [&](const Fortran::parser::StatVariable &statVar) {
+                       const Fortran::semantics::SomeExpr *expr =
+                           Fortran::semantics::GetExpr(statVar);
+                       statExpr =
+                           fir::getBase(genExprAddr(*expr, stmtCtx, &loc));
+                     },
+                     [&](const Fortran::parser::MsgVariable &errMsgVar) {
+                       const Fortran::semantics::SomeExpr *expr =
+                           Fortran::semantics::GetExpr(errMsgVar);
+                       errMsgExpr =
+                           fir::getBase(genExprBox(loc, *expr, stmtCtx));
+                     }},
+                 statOrErr.u);
+    }
+
+    return {statExpr, errMsgExpr};
+  }
+
   mlir::Value hostAssocTupleValue() override final { return hostAssocTuple; }
 
   /// Record a binding for the ssa-value of the tuple for this function.
@@ -1127,6 +1162,12 @@ public:
       Fortran::semantics::SymbolRef symRef) const override final {
     auto *sym = &*symRef;
     return registeredDummySymbols.contains(sym);
+  }
+
+  unsigned getDummyArgPosition(
+      const Fortran::semantics::Symbol &sym) const override final {
+    auto it = dummyArgPositions.find(&sym);
+    return (it != dummyArgPositions.end()) ? it->second : 0;
   }
 
   const Fortran::lower::pft::FunctionLikeUnit *
@@ -1413,11 +1454,14 @@ private:
   /// definitive mapping. The specification expression have not been lowered
   /// yet. The final mapping will be done using this pre-mapping in
   /// Fortran::lower::mapSymbolAttributes.
+  /// \param argNo The 1-based source position of this argument (0 if
+  /// unknown/result)
   bool mapBlockArgToDummyOrResult(const Fortran::semantics::SymbolRef sym,
-                                  mlir::Value val, bool isResult) {
+                                  mlir::Value val, bool isResult,
+                                  unsigned argNo = 0) {
     localSymbols.addSymbol(sym, val);
     if (!isResult)
-      registerDummySymbol(sym);
+      registerDummySymbol(sym, argNo);
 
     return true;
   }
@@ -3275,6 +3319,9 @@ private:
             [&](const Fortran::parser::CompilerDirective::NoInline &) {
               attachInliningDirectiveToStmt(dir, &eval);
             },
+            [&](const Fortran::parser::CompilerDirective::Prefetch &prefetch) {
+              TODO(getCurrentLocation(), "!$dir prefetch");
+            },
             [&](const auto &) {}},
         dir.u);
   }
@@ -3950,13 +3997,30 @@ private:
   }
 
   void genFIR(const Fortran::parser::ChangeTeamConstruct &construct) {
-    TODO(toLocation(), "coarray: ChangeTeamConstruct");
+    Fortran::lower::StatementContext stmtCtx;
+    pushActiveConstruct(getEval(), stmtCtx);
+
+    for (Fortran::lower::pft::Evaluation &e :
+         getEval().getNestedEvaluations()) {
+      if (e.getIf<Fortran::parser::ChangeTeamStmt>()) {
+        maybeStartBlock(e.block);
+        setCurrentPosition(e.position);
+        genFIR(e);
+      } else if (e.getIf<Fortran::parser::EndChangeTeamStmt>()) {
+        maybeStartBlock(e.block);
+        setCurrentPosition(e.position);
+        genFIR(e);
+      } else {
+        genFIR(e);
+      }
+    }
+    popActiveConstruct();
   }
   void genFIR(const Fortran::parser::ChangeTeamStmt &stmt) {
-    TODO(toLocation(), "coarray: ChangeTeamStmt");
+    genChangeTeamStmt(*this, getEval(), stmt);
   }
   void genFIR(const Fortran::parser::EndChangeTeamStmt &stmt) {
-    TODO(toLocation(), "coarray: EndChangeTeamStmt");
+    genEndChangeTeamStmt(*this, getEval(), stmt);
   }
 
   void genFIR(const Fortran::parser::CriticalConstruct &criticalConstruct) {
@@ -5959,7 +6023,16 @@ private:
                             const Fortran::lower::CalleeInterface &callee) {
     assert(builder && "require a builder object at this point");
     using PassBy = Fortran::lower::CalleeInterface::PassEntityBy;
+
+    // Track the source-level argument position (1-based)
+    unsigned argPosition = 0;
+
     auto mapPassedEntity = [&](const auto arg, bool isResult = false) {
+      // Count only actual source-level dummy arguments (not results or
+      // host assoc tuples)
+      if (!isResult && arg.entity.has_value())
+        argPosition++;
+
       if (arg.passBy == PassBy::AddressAndLength) {
         if (callee.characterize().IsBindC())
           return;
@@ -5970,11 +6043,12 @@ private:
         mlir::Value casted =
             builder->createVolatileCast(loc, false, arg.firArgument);
         mlir::Value box = charHelp.createEmboxChar(casted, arg.firLength);
-        mapBlockArgToDummyOrResult(arg.entity->get(), box, isResult);
+        mapBlockArgToDummyOrResult(arg.entity->get(), box, isResult,
+                                   isResult ? 0 : argPosition);
       } else {
         if (arg.entity.has_value()) {
           mapBlockArgToDummyOrResult(arg.entity->get(), arg.firArgument,
-                                     isResult);
+                                     isResult, isResult ? 0 : argPosition);
         } else {
           assert(funit.parentHasTupleHostAssoc() && "expect tuple argument");
         }
@@ -6832,13 +6906,22 @@ private:
   }
 
   /// Record the given symbol as a dummy argument of this function.
-  void registerDummySymbol(Fortran::semantics::SymbolRef symRef) {
+  /// \param symRef The symbol representing the dummy argument
+  /// \param argNo The 1-based position of this argument in the source (0 =
+  /// unknown)
+  void registerDummySymbol(Fortran::semantics::SymbolRef symRef,
+                           unsigned argNo = 0) {
     auto *sym = &*symRef;
     registeredDummySymbols.insert(sym);
+    if (argNo > 0)
+      dummyArgPositions[sym] = argNo;
   }
 
   /// Reset all registered dummy symbols.
-  void resetRegisteredDummySymbols() { registeredDummySymbols.clear(); }
+  void resetRegisteredDummySymbols() {
+    registeredDummySymbols.clear();
+    dummyArgPositions.clear();
+  }
 
   void setCurrentFunctionUnit(Fortran::lower::pft::FunctionLikeUnit *unit) {
     currentFunctionUnit = unit;
@@ -6879,6 +6962,11 @@ private:
   /// of variables for this function.
   llvm::SmallPtrSet<const Fortran::semantics::Symbol *, 16>
       registeredDummySymbols;
+
+  /// Map from dummy symbols to their 1-based argument positions.
+  /// Used to generate debug info with correct argument numbers.
+  llvm::DenseMap<const Fortran::semantics::Symbol *, unsigned>
+      dummyArgPositions;
 
   /// A map of unique names for constant expressions.
   /// The names are used for representing the constant expressions
