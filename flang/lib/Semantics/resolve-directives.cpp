@@ -2446,22 +2446,6 @@ void OmpAttributeVisitor::PrivatizeAssociatedLoopIndexAndCheckLoopLevel(
         }
       }
       CheckAssocLoopLevel(level, GetAssociatedClause());
-    } else if (const auto *loop{std::get_if<
-                   common::Indirection<parser::OpenMPLoopConstruct>>(
-                   innerMostNest)}) {
-      const parser::OmpDirectiveSpecification &beginSpec{
-          loop->value().BeginDir()};
-      const parser::OmpDirectiveName &beginName{beginSpec.DirName()};
-      if (beginName.v != llvm::omp::Directive::OMPD_unroll &&
-          beginName.v != llvm::omp::Directive::OMPD_tile) {
-        context_.Say(GetContext().directiveSource,
-            "Only UNROLL or TILE constructs are allowed between an OpenMP Loop Construct and a DO construct"_err_en_US,
-            parser::ToUpperCaseLetters(llvm::omp::getOpenMPDirectiveName(
-                GetContext().directive, version)
-                    .str()));
-      } else {
-        PrivatizeAssociatedLoopIndexAndCheckLoopLevel(loop->value());
-      }
     } else {
       context_.Say(GetContext().directiveSource,
           "A DO loop must follow the %s directive"_err_en_US,
