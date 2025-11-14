@@ -5918,6 +5918,19 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
   return Cost + 2;
 }
 
+TTI::ShuffleKind AArch64TTIImpl::improveShuffleKindFromMask(
+    TTI::ShuffleKind Kind, ArrayRef<int> Mask, VectorType *SrcTy, int &Index,
+    VectorType *&SubTy) const {
+  TTI::ShuffleKind SuperResult = BasicTTIImplBase::improveShuffleKindFromMask(
+      Kind, Mask, SrcTy, Index, SubTy);
+  if (SuperResult == TTI::ShuffleKind::SK_PermuteTwoSrc && !Mask.empty()) {
+    unsigned DummyUnsigned;
+    if (isTRNMask(Mask, Mask.size(), DummyUnsigned, DummyUnsigned))
+      return TTI::ShuffleKind::SK_Transpose;
+  }
+  return SuperResult;
+}
+
 InstructionCost
 AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
                                VectorType *SrcTy, ArrayRef<int> Mask,

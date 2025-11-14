@@ -28,14 +28,10 @@ entry:
 define dso_local <16 x i8> @transpose_constants_splat(i8 noundef %x) {
 ; CHECK-LABEL: @transpose_constants_splat(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <16 x i8> <i8 0, i8 poison, i8 1, i8 poison, i8 2, i8 poison, i8 3, i8 poison, i8 4, i8 poison, i8 5, i8 poison, i8 6, i8 poison, i8 7, i8 poison>, i8 [[X:%.*]], i64 1
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <16 x i8> [[TMP0]], i8 [[X]], i64 3
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <16 x i8> [[TMP1]], i8 [[X]], i64 5
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <16 x i8> [[TMP2]], i8 [[X]], i64 7
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <16 x i8> [[TMP7]], i8 [[X]], i64 9
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <16 x i8> [[TMP4]], i8 [[X]], i64 11
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <16 x i8> [[TMP5]], i8 [[X]], i64 13
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <16 x i8> [[TMP6]], i8 [[X]], i64 15
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <8 x i8> poison, i8 [[X:%.*]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i8> [[TMP0]], <8 x i8> poison, <8 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i8> [[TMP1]], <8 x i8> poison, <16 x i32> <i32 0, i32 poison, i32 1, i32 poison, i32 2, i32 poison, i32 3, i32 poison, i32 4, i32 poison, i32 5, i32 poison, i32 6, i32 poison, i32 7, i32 poison>
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <16 x i8> <i8 0, i8 poison, i8 1, i8 poison, i8 2, i8 poison, i8 3, i8 poison, i8 4, i8 poison, i8 5, i8 poison, i8 6, i8 poison, i8 7, i8 poison>, <16 x i8> [[TMP2]], <16 x i32> <i32 0, i32 16, i32 2, i32 18, i32 4, i32 20, i32 6, i32 22, i32 8, i32 24, i32 10, i32 26, i32 12, i32 28, i32 14, i32 30>
 ; CHECK-NEXT:    ret <16 x i8> [[TMP3]]
 ;
 entry:

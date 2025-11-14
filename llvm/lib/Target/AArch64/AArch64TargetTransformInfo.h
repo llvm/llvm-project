@@ -494,6 +494,11 @@ public:
       bool IsUnsigned, unsigned RedOpcode, Type *ResTy, VectorType *Ty,
       TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) const override;
 
+  TTI::ShuffleKind improveShuffleKindFromMask(TTI::ShuffleKind Kind,
+                                              ArrayRef<int> Mask,
+                                              VectorType *SrcTy, int &Index,
+                                              VectorType *&SubTy) const;
+
   InstructionCost
   getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
                  ArrayRef<int> Mask, TTI::TargetCostKind CostKind, int Index,
