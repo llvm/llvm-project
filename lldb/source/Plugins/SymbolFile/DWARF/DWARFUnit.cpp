@@ -361,8 +361,10 @@ void DWARFUnit::SetDwoStrOffsetsBase() {
   }
 
   if (GetVersion() >= 5) {
-    const llvm::DWARFDataExtractor &strOffsets =
-        GetSymbolFileDWARF().GetDWARFContext().getOrLoadStrOffsetsData().GetAsLLVMDWARF();
+    const llvm::DWARFDataExtractor &strOffsets = GetSymbolFileDWARF()
+                                                     .GetDWARFContext()
+                                                     .getOrLoadStrOffsetsData()
+                                                     .GetAsLLVMDWARF();
 
     uint64_t length;
     llvm::dwarf::DwarfFormat format;
