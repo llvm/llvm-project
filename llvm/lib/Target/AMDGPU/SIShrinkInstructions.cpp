@@ -535,8 +535,6 @@ void SIShrinkInstructions::shrinkMadFma(MachineInstr &MI) const {
 /// XNOR (as a ^ b == ~(a ^ ~b)).
 /// \returns true if the caller should continue the machine function iterator
 bool SIShrinkInstructions::shrinkScalarLogicOp(MachineInstr &MI) const {
-  MachineBasicBlock &MBB = *MI.getParent();
-  MachineBasicBlock::iterator MBBI = MI.getIterator();
   unsigned Opc = MI.getOpcode();
   const MachineOperand *Dest = &MI.getOperand(0);
   MachineOperand *Src0 = &MI.getOperand(1);
@@ -552,9 +550,9 @@ bool SIShrinkInstructions::shrinkScalarLogicOp(MachineInstr &MI) const {
   uint32_t NewImm = 0;
 
   if (Opc == AMDGPU::S_AND_B32) {
+    MachineOperand *SccDef = MI.findRegisterDefOperand(AMDGPU::SCC, /*TRI=*/nullptr);
     if (isPowerOf2_32(~Imm) &&
-        MBB.computeRegisterLiveness(TRI, AMDGPU::SCC, std::next(MBBI), 2) ==
-            MachineBasicBlock::LQR_Dead) {
+	SccDef->isDead()) {
       NewImm = llvm::countr_one(Imm);
       Opc = AMDGPU::S_BITSET0_B32;
     } else if (AMDGPU::isInlinableLiteral32(~Imm, ST->hasInv2PiInlineImm())) {
@@ -562,9 +560,9 @@ bool SIShrinkInstructions::shrinkScalarLogicOp(MachineInstr &MI) const {
       Opc = AMDGPU::S_ANDN2_B32;
     }
   } else if (Opc == AMDGPU::S_OR_B32) {
+    MachineOperand *SccDef = MI.findRegisterDefOperand(AMDGPU::SCC, /*TRI=*/nullptr);
     if (isPowerOf2_32(Imm) &&
-        MBB.computeRegisterLiveness(TRI, AMDGPU::SCC, std::next(MBBI), 2) ==
-            MachineBasicBlock::LQR_Dead) {
+	SccDef->isDead()) {	
       NewImm = llvm::countr_zero(Imm);
       Opc = AMDGPU::S_BITSET1_B32;
     } else if (AMDGPU::isInlinableLiteral32(~Imm, ST->hasInv2PiInlineImm())) {
