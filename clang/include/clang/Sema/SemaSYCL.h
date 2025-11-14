@@ -66,11 +66,32 @@ public:
 
   void CheckSYCLExternalFunctionDecl(FunctionDecl *FD);
   void CheckSYCLEntryPointFunctionDecl(FunctionDecl *FD);
+
+  /// Builds an expression for the lookup of a 'sycl_kernel_launch' template
+  /// with 'KernelName' as an explicit template argument. Lookup is performed
+  /// as if from the first statement of the body of 'FD' and thus requires
+  /// searching the scopes that exist at parse time. This function therefore
+  /// requires the current semantic context to be the definition of 'FD'. In a
+  /// dependent context, the returned expression will be an UnresolvedLookupExpr
+  /// or an UnresolvedMemberExpr. In a non-dependent context, the returned
+  /// expression will be a DeclRefExpr or MemberExpr. If lookup fails, a null
+  /// error result is returned. The resulting expression is intended to be
+  /// passed as the 'LaunchIdExpr' argument in a call to either
+  /// BuildSYCLKernelCallStmt() or BuildUnresolvedSYCLKernelCallStmt() after
+  /// the function body has been parsed.
+  ExprResult BuildSYCLKernelLaunchIdExpr(FunctionDecl *FD, QualType KernelName);
+
+  /// Builds a SYCLKernelCallStmt to wrap 'Body' and to be used as the body of
+  /// 'FD'. 'LaunchIdExpr' specifies the lookup result returned by a previous
+  /// call to BuildSYCLKernelLaunchIdExpr().
   StmtResult BuildSYCLKernelCallStmt(FunctionDecl *FD, CompoundStmt *Body,
                                      Expr *LaunchIdExpr);
-  ExprResult BuildSYCLKernelLaunchIdExpr(FunctionDecl *FD, QualType KNT);
-  StmtResult BuildUnresolvedSYCLKernelCallStmt(CompoundStmt *CS,
-                                                     Expr *IdExpr);
+
+  /// Builds an UnresolvedSYCLKernelCallStmt to wrap 'Body'. 'LaunchIdExpr'
+  /// specifies the lookup result returned by a previous call to
+  /// BuildSYCLKernelLaunchIdExpr().
+  StmtResult BuildUnresolvedSYCLKernelCallStmt(CompoundStmt *Body,
+                                               Expr *LaunchIdExpr);
 };
 
 } // namespace clang

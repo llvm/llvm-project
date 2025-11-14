@@ -6,17 +6,20 @@ struct sycl_kernel_launcher {
   void sycl_kernel_launch(const char *, Ts...) {}
 
   template<typename KernelName, typename KernelType>
-  void kernel_entry_point(KernelType kernel) {
+  [[clang::sycl_kernel_entry_point(KernelName)]]
+  void sycl_kernel_entry_point(KernelType kernel) {
     kernel();
   }
-// CHECK:      template <typename KernelName, typename KernelType> void kernel_entry_point(KernelType kernel) {
-// CHECK-NEXT:     kernel();
-// CHECK-NEXT: }
-// CHECK:      template<> void kernel_entry_point<KN, (lambda at {{.*}})>((lambda at {{.*}}) kernel) {
-// CHECK-NEXT:     kernel();
-// CHECK-NEXT: }
 };
+// CHECK:      template <typename KernelName, typename KernelType> void sycl_kernel_entry_point(KernelType kernel)
+// CHECK-NEXT: {
+// CHECK-NEXT:     kernel();
+// CHECK-NEXT: }
+// CHECK:      template<> void sycl_kernel_entry_point<KN, (lambda at {{.*}})>((lambda at {{.*}}) kernel)
+// CHECK-NEXT: {
+// CHECK-NEXT:     kernel();
+// CHECK-NEXT: }
 
 void f(sycl_kernel_launcher skl) {
-  skl.kernel_entry_point<struct KN>([]{});
+  skl.sycl_kernel_entry_point<struct KN>([]{});
 }

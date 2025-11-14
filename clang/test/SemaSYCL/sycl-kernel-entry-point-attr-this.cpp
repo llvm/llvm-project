@@ -22,10 +22,9 @@ struct type_info {
 };
 } // namespace std
 
-// A launcher function definition required for host code synthesis to silence
-// complains.
-template <typename KernelName, typename... Tys>
-void sycl_kernel_launch(const char *, Tys &&...Args) {}
+// A generic kernell launch function.
+template<typename KernelName, typename... Ts>
+void sycl_kernel_launch(const char *, Ts...) {}
 
 ////////////////////////////////////////////////////////////////////////////////
 // Valid declarations.

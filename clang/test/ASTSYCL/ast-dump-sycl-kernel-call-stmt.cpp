@@ -34,7 +34,7 @@ template<int> struct K {
   void operator()(Ts...) const {}
 };
 
-template <typename KernelName, typename... Ts>
+template<typename KernelName, typename... Ts>
 void sycl_kernel_launch(const char *, Ts...) {}
 
 [[clang::sycl_kernel_entry_point(KN<1>)]]
@@ -373,18 +373,18 @@ void skep8(S8 k) {
 // CHECK:      | `-SYCLKernelEntryPointAttr {{.*}}
 
 class Handler {
-template <typename KernelName, typename... Ts>
-void sycl_kernel_launch(const char *, Ts...) {}
+  template <typename KNT, typename... Ts>
+  void sycl_kernel_launch(const char *, Ts...) {}
 public:
-template<typename KNT, typename KT>
-[[clang::sycl_kernel_entry_point(KNT)]]
-void skep9(KT k, int a, int b) {
-  k(a, b);
-}
+  template<typename KNT, typename KT>
+  [[clang::sycl_kernel_entry_point(KNT)]]
+  void skep9(KT k, int a, int b) {
+    k(a, b);
+  }
 };
 void foo() {
   Handler H;
-  H.skep9<KN<9>>([=](int a, int b){return a+b;}, 1, 2);
+  H.skep9<KN<9>>([=] (int a, int b) { return a+b; }, 1, 2);
 }
 
 // CHECK: | |-FunctionTemplateDecl {{.*}} skep9

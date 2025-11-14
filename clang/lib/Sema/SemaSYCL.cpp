@@ -392,85 +392,82 @@ void SemaSYCL::CheckSYCLEntryPointFunctionDecl(FunctionDecl *FD) {
 
 ExprResult SemaSYCL::BuildSYCLKernelLaunchIdExpr(FunctionDecl *FD,
                                                  QualType KNT) {
+  // The current context must be the function definition context to ensure
+  // that name lookup is performed within the correct scope.
+  assert(SemaRef.CurContext == FD);
+
+  // An appropriate source location is required to emit diagnostics if
+  // lookup fails to produce an overload set. The desired location is the
+  // start of the function body, but that is not yet available since the
+  // body of the function has not yet been set when this function is called.
+  // The general location of the function is used instead.
+  SourceLocation Loc = FD->getLocation();
 
   ASTContext &Ctx = SemaRef.getASTContext();
-  // Some routines need a valid source location to work correctly.
-  SourceLocation BodyLoc =
-      FD->getEndLoc().isValid() ? FD->getEndLoc() : FD->getLocation();
-
-  IdentifierInfo &LaunchFooName =
+  IdentifierInfo &SYCLKernelLaunchID =
       Ctx.Idents.get("sycl_kernel_launch", tok::TokenKind::identifier);
 
-  // Perform overload resolution for a call to an accessible (member) function
-  // template named 'sycl_kernel_launch' "from within the definition of
-  // FD where":
-  // - The kernel name type is passed as the first template argument.
-  // - Any remaining template parameters are deduced from the function
-  //   arguments or assigned by default template arguments.
-  // - 'this' is passed as the implicit function argument if 'FD' is a
-  //   non-static member function.
-  // - The name of the kernel, expressed as a string literal, is passed as the
-  //   first function argument.
-  // - The parameters of FD are forwarded as-if by 'std::forward()' as the
-  //   remaining explicit function arguments.
-  // - Any remaining function arguments are initialized by default arguments.
-  LookupResult Result(SemaRef, &LaunchFooName, BodyLoc,
+  // Perform ordinary name lookup for a function or variable template that
+  // accepts a single type template argument.
+  LookupResult Result(SemaRef, &SYCLKernelLaunchID, Loc,
                       Sema::LookupOrdinaryName);
-  CXXScopeSpec SS;
-  SemaRef.LookupTemplateName(Result, SemaRef.getCurScope(), SS,
-                             /*ObjectType=*/QualType(),
-                             /*EnteringContext=*/false, BodyLoc);
+  CXXScopeSpec EmptySS;
+  SemaRef.LookupTemplateName(Result, SemaRef.getCurScope(), EmptySS,
+                             /*ObjectType*/ QualType(),
+                             /*EnteringContext*/ false,
+                             Sema::TemplateNameIsRequired);
 
   if (Result.empty() || Result.isAmbiguous()) {
-    SemaRef.Diag(BodyLoc, SemaRef.getLangOpts().SYCLIsHost
-                              ? diag::err_sycl_host_no_launch_function
-                              : diag::warn_sycl_device_no_host_launch_function);
-    SemaRef.Diag(BodyLoc, diag::note_sycl_host_launch_function);
+    SemaRef.Diag(Loc, SemaRef.getLangOpts().SYCLIsHost
+                          ? diag::err_sycl_host_no_launch_function
+                          : diag::warn_sycl_device_no_host_launch_function);
+    SemaRef.Diag(Loc, diag::note_sycl_host_launch_function);
 
     return ExprError();
   }
 
-  TemplateArgumentListInfo TALI{BodyLoc, BodyLoc};
+  TemplateArgumentListInfo TALI{Loc, Loc};
   TemplateArgument KNTA = TemplateArgument(KNT);
   TemplateArgumentLoc TAL =
-      SemaRef.getTrivialTemplateArgumentLoc(KNTA, QualType(), BodyLoc);
+      SemaRef.getTrivialTemplateArgumentLoc(KNTA, QualType(), Loc);
   TALI.addArgument(TAL);
   ExprResult IdExpr;
-  if (SemaRef.isPotentialImplicitMemberAccess(SS, Result,
-                                              /*IsAddressOfOperand=*/false))
-    // BuildPossibleImplicitMemberExpr creates UnresolvedMemberExpr. Using it
-    // allows to pass implicit/explicit this argument automatically.
-    IdExpr = SemaRef.BuildPossibleImplicitMemberExpr(SS, BodyLoc, Result, &TALI,
+  if (SemaRef.isPotentialImplicitMemberAccess(EmptySS, Result,
+                                              /*IsAddressOfOperand*/ false))
+    // The lookup result allows for a possible implicit member access that
+    // would require an implicit or explicit 'this' argument.
+    IdExpr = SemaRef.BuildPossibleImplicitMemberExpr(EmptySS, SourceLocation(),
+                                                     Result, &TALI,
                                                      SemaRef.getCurScope());
   else
-    IdExpr = SemaRef.BuildTemplateIdExpr(SS, BodyLoc, Result,
-                                         /*RequiresADL=*/true, &TALI);
+    IdExpr = SemaRef.BuildTemplateIdExpr(EmptySS, SourceLocation(), Result,
+                                         /*RequiresADL*/ true, &TALI);
 
-  // Can happen if SKEP attributed function is a static member, but the launcher
-  // is a regular member. Perhaps emit a note saying that we're in host code
-  // synthesis.
+  // The resulting expression may be invalid if, for example, 'FD' is a
+  // non-static member function and sycl_kernel_launch lookup selects a
+  // member function (which would require a 'this' argument which is
+  // not available).
   if (IdExpr.isInvalid())
     return ExprError();
 
   return IdExpr;
 }
 
-StmtResult SemaSYCL::BuildUnresolvedSYCLKernelCallStmt(CompoundStmt *CS,
-                                                             Expr *IdExpr) {
-  return UnresolvedSYCLKernelCallStmt::Create(SemaRef.getASTContext(), CS,
-                                                    IdExpr);
-}
-
 namespace {
 
-void PrepareKernelArgumentsForKernelLaunch(SmallVectorImpl<Expr *> &Args,
-                                                  const SYCLKernelInfo *SKI,
-                                                  Sema &SemaRef,
-                                                  SourceLocation Loc) {
-  assert(SKI && "Need a kernel!");
-  ASTContext &Ctx = SemaRef.getASTContext();
+// Constructs the arguments to be passed for the SYCL kernel launch call.
+// The first argument is a string literal that contains the SYCL kernel
+// name. The remaining arguments are the parameters of 'FD'.
+void BuildSYCLKernelLaunchCallArgs(Sema &SemaRef, FunctionDecl *FD,
+                                   const SYCLKernelInfo *SKI,
+                                   SmallVectorImpl<Expr *> &Args,
+                                   SourceLocation Loc) {
+  // The current context must be the function definition context to ensure
+  // that parameter references occur within the correct scope.
+  assert(SemaRef.CurContext == FD);
 
   // Prepare a string literal that contains the kernel name.
+  ASTContext &Ctx = SemaRef.getASTContext();
   const std::string KernelName = SKI->GetKernelName();
   QualType KernelNameCharTy = Ctx.CharTy.withConst();
   llvm::APInt KernelNameSize(Ctx.getTypeSize(Ctx.getSizeType()),
@@ -482,30 +479,23 @@ void PrepareKernelArgumentsForKernelLaunch(SmallVectorImpl<Expr *> &Args,
                             /*Pascal*/ false, KernelNameArrayTy, Loc);
   Args.push_back(KernelNameExpr);
 
-  // Right now we simply forward the arguments of the skep-attributed function.
-  // With decomposition present there can be another logic.
-  // Make sure to use CurContext to avoid diagnostics that we're using a
-  // variable coming from another context. The function should be the same as in
-  // the kernel info though.
-  auto *FD = cast<FunctionDecl>(SemaRef.CurContext);
-  assert(declaresSameEntity(FD, SKI->getKernelEntryPointDecl()));
   for (ParmVarDecl *PVD : FD->parameters()) {
     QualType ParamType = PVD->getOriginalType().getNonReferenceType();
     Expr *DRE = SemaRef.BuildDeclRefExpr(PVD, ParamType, VK_LValue, Loc);
-    assert(DRE);
     Args.push_back(DRE);
   }
 }
 
-StmtResult BuildSYCLKernelLaunchStmt(Sema &SemaRef,
-                                            const SYCLKernelInfo *SKI,
-                                            Expr *IdExpr, SourceLocation Loc) {
+// Constructs the SYCL kernel launch call.
+StmtResult BuildSYCLKernelLaunchCallStmt(Sema &SemaRef, FunctionDecl *FD,
+                                         const SYCLKernelInfo *SKI,
+                                         Expr *IdExpr, SourceLocation Loc) {
   SmallVector<Stmt *> Stmts;
-  assert(SKI && "Need a Kernel!");
 
+  // IdExpr may be null if name lookup failed.
   if (IdExpr) {
     llvm::SmallVector<Expr *, 12> Args;
-    PrepareKernelArgumentsForKernelLaunch(Args, SKI, SemaRef, Loc);
+    BuildSYCLKernelLaunchCallArgs(SemaRef, FD, SKI, Args, Loc);
     ExprResult LaunchResult =
         SemaRef.BuildCallExpr(SemaRef.getCurScope(), IdExpr, Loc, Args, Loc);
     if (LaunchResult.isInvalid())
@@ -630,14 +620,20 @@ StmtResult SemaSYCL::BuildSYCLKernelCallStmt(FunctionDecl *FD,
       BuildSYCLKernelEntryPointOutline(SemaRef, FD, Body);
   assert(OFD);
 
-  // Build host kernel launch stmt.
-  SourceLocation BodyLoc =
-      FD->getEndLoc().isValid() ? FD->getEndLoc() : FD->getLocation();
-  StmtResult LaunchRes =
-      BuildSYCLKernelLaunchStmt(SemaRef, &SKI, LaunchIdExpr, BodyLoc);
+  // Build the host kernel launch statement. An appropriate source location
+  // is required to emit diagnostics.
+  SourceLocation Loc = Body->getLBracLoc();
+  StmtResult LaunchResult =
+      BuildSYCLKernelLaunchCallStmt(SemaRef, FD, &SKI, LaunchIdExpr, Loc);
 
   Stmt *NewBody =
-      new (getASTContext()) SYCLKernelCallStmt(Body, LaunchRes.get(), OFD);
+      new (getASTContext()) SYCLKernelCallStmt(Body, LaunchResult.get(), OFD);
 
   return NewBody;
+}
+
+StmtResult SemaSYCL::BuildUnresolvedSYCLKernelCallStmt(CompoundStmt *Body,
+                                                       Expr *LaunchIdExpr) {
+  return UnresolvedSYCLKernelCallStmt::Create(SemaRef.getASTContext(), Body,
+                                              LaunchIdExpr);
 }

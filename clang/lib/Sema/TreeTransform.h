@@ -12975,7 +12975,6 @@ StmtResult TreeTransform<Derived>::TransformUnresolvedSYCLKernelCallStmt(
     return StmtError();
 
   ExprResult IdExpr = getDerived().TransformExpr(S->getKernelLaunchIdExpr());
-
   if (IdExpr.isInvalid())
      return StmtError();
 
