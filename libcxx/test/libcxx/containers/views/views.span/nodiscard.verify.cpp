@@ -20,8 +20,7 @@
 
 void test() {
   { // Test with a static extent
-    std::array arr{94, 92};
-    std::span sp{arr};
+    std::span<int, 2> sp;
 
     sp.first<1>();      // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
     sp.last<1>();       // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
