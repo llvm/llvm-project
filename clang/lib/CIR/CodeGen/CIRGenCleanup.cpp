@@ -147,8 +147,8 @@ void *EHScopeStack::pushCleanup(CleanupKind kind, size_t size) {
 
   assert(!cir::MissingFeatures::innermostEHScope());
 
-  EHCleanupScope *scope = new (buffer)
-      EHCleanupScope(size, branchFixups.size(), innermostNormalCleanup);
+  EHCleanupScope *scope = new (buffer) EHCleanupScope(
+      size, branchFixups.size(), innermostNormalCleanup, innermostEHScope);
 
   if (isNormalCleanup)
     innermostNormalCleanup = stable_begin();
@@ -191,7 +191,9 @@ void EHScopeStack::popCleanup() {
 EHCatchScope *EHScopeStack::pushCatch(unsigned numHandlers) {
   char *buffer = allocate(EHCatchScope::getSizeForNumHandlers(numHandlers));
   assert(!cir::MissingFeatures::innermostEHScope());
-  EHCatchScope *scope = new (buffer) EHCatchScope(numHandlers);
+  EHCatchScope *scope =
+      new (buffer) EHCatchScope(numHandlers, innermostEHScope);
+  innermostEHScope = stable_begin();
   return scope;
 }
 

@@ -24,6 +24,7 @@
 #include "polly/ScopGraphPrinter.h"
 #include "polly/ScopInfo.h"
 #include "polly/Simplify.h"
+#include "polly/Support/PollyDebug.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/IR/Module.h"
@@ -154,9 +155,16 @@ public:
     TargetTransformInfo &TTI = FAM.getResult<TargetIRAnalysis>(F);
     while (!Worklist.empty()) {
       Region *R = Worklist.pop_back_val();
+      Scop *S = Info.getScop(R);
+      if (!S) {
+        // This can happen if codegenning of a previous SCoP made this region
+        // not-a-SCoP anymore.
+        POLLY_DEBUG(dbgs() << "SCoP in Region '" << *R << "' disappeared");
+        continue;
+      }
+
       if (!SD.isMaxRegionInScop(*R, /*Verify=*/false))
         continue;
-      Scop *S = Info.getScop(R);
 
       // Phase: flatten
       if (Opts.isPhaseEnabled(PassPhase::Flatten))

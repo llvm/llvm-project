@@ -176,10 +176,6 @@ void BPFAsmPrinter::emitInstruction(const MachineInstr *MI) {
         if (const GlobalValue *GV = Op.getGlobal())
           if (GV->getName() == BPF_TRAP)
             SawTrapCall = true;
-      } else if (Op.isSymbol()) {
-        if (const MCSymbol *Sym = Op.getMCSymbol())
-          if (Sym->getName() == BPF_TRAP)
-            SawTrapCall = true;
       }
     }
   }
@@ -219,6 +215,10 @@ void BPFAsmPrinter::emitJumpTableInfo() {
 
   const TargetLoweringObjectFile &TLOF = getObjFileLowering();
   const Function &F = MF->getFunction();
+
+  MCSection *Sec = OutStreamer->getCurrentSectionOnly();
+  MCSymbol *SecStart = Sec->getBeginSymbol();
+
   MCSection *JTS = TLOF.getSectionForJumpTable(F, TM);
   assert(MJTI->getEntryKind() == MachineJumpTableInfo::EK_BlockAddress);
   unsigned EntrySize = MJTI->getEntrySize(getDataLayout());
@@ -231,8 +231,10 @@ void BPFAsmPrinter::emitJumpTableInfo() {
     MCSymbol *JTStart = getJTPublicSymbol(JTI);
     OutStreamer->emitLabel(JTStart);
     for (const MachineBasicBlock *MBB : JTBBs) {
-      const MCExpr *LHS = MCSymbolRefExpr::create(MBB->getSymbol(), OutContext);
-      OutStreamer->emitValue(LHS, EntrySize);
+      const MCExpr *Diff = MCBinaryExpr::createSub(
+          MCSymbolRefExpr::create(MBB->getSymbol(), OutContext),
+          MCSymbolRefExpr::create(SecStart, OutContext), OutContext);
+      OutStreamer->emitValue(Diff, EntrySize);
     }
     const MCExpr *JTSize =
         MCConstantExpr::create(JTBBs.size() * EntrySize, OutContext);
