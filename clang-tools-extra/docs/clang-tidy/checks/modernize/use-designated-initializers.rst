@@ -38,8 +38,8 @@ declaration of ``S``.
 Even when compiling in a language version older than C++20, depending on your
 compiler, designated initializers are potentially supported. Therefore, the
 check is by default restricted to C99/C++20 and above. Check out the options
-``-Wc99-designator`` to get support for mixed designators in initializer list
-in C and ``-Wc++20-designator`` for support of designated initializers in older
+`-Wc99-designator` to get support for mixed designators in initializer list
+in C and `-Wc++20-designator` for support of designated initializers in older
 C++ language modes.
 
 Options

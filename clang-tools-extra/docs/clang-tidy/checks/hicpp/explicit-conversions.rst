@@ -11,7 +11,7 @@ This check is an alias for
 Used to enforce parts of `rule 5.4.1
 <https://www.perforce.com/resources/qac/high-integrity-cpp-coding-standard-expressions>`_.
 This check will enforce that constructors and conversion operators are
-marked `explicit`. Other forms of casting checks are implemented in
+marked ``explicit``. Other forms of casting checks are implemented in
 other places. The following checks can be used to check for more forms
 of casting:
 
