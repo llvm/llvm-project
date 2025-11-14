@@ -3841,6 +3841,12 @@ mlir::LogicalResult CIRToLLVMBlockAddressOpLowering::matchAndRewrite(
   return mlir::failure();
 }
 
+mlir::LogicalResult CIRToLLVMAwaitOpLowering::matchAndRewrite(
+    cir::AwaitOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  return mlir::failure();
+}
+
 std::unique_ptr<mlir::Pass> createConvertCIRToLLVMPass() {
   return std::make_unique<ConvertCIRToLLVMPass>();
 }
