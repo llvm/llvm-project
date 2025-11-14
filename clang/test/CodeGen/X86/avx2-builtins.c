@@ -1119,12 +1119,16 @@ __m256i test_mm256_permutevar8x32_epi32(__m256i a, __m256i b) {
   // CHECK: call <8 x i32> @llvm.x86.avx2.permd(<8 x i32> %{{.*}}, <8 x i32> %{{.*}})
   return _mm256_permutevar8x32_epi32(a, b);
 }
+TEST_CONSTEXPR(match_v8si(_mm256_permutevar8x32_epi32((__m256i)(__v8si){7, 6, 5, 4, 3, 2, 1, 0}, (__m256i)(__v8si){0, 1, 2, 3, 4, 5, 6, 7}), 7, 6, 5, 4, 3, 2, 1, 0));
+TEST_CONSTEXPR(match_v8si(_mm256_permutevar8x32_epi32((__m256i)(__v8si){0, 0, 0, 0, 0, 0, 0, 0}, (__m256i)(__v8si){1, 2, 3, 4, 5, 6, 7, 8}), 0, 0, 0, 0, 0, 0, 0, 0));
 
 __m256 test_mm256_permutevar8x32_ps(__m256 a, __m256i b) {
   // CHECK-LABEL: test_mm256_permutevar8x32_ps
   // CHECK: call {{.*}}<8 x float> @llvm.x86.avx2.permps(<8 x float> %{{.*}}, <8 x i32> %{{.*}})
   return _mm256_permutevar8x32_ps(a, b);
 }
+TEST_CONSTEXPR(match_m256(_mm256_permutevar8x32_ps((__m256){7.0f, 6.0f, 5.0f, 4.0f, 3.0f, 2.0f, 1.0f, 0.0f}, (__m256i)(__v8si){0, 1, 2, 3, 4, 5, 6, 7}), 7.0f, 6.0f, 5.0f, 4.0f, 3.0f, 2.0f, 1.0f, 0.0f));
+TEST_CONSTEXPR(match_m256(_mm256_permutevar8x32_ps((__m256){0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f}, (__m256i)(__v8si){1, 2, 3, 4, 5, 6, 7, 8}), 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f));
 
 __m256i test_mm256_sad_epu8(__m256i x, __m256i y) {
   // CHECK-LABEL: test_mm256_sad_epu8

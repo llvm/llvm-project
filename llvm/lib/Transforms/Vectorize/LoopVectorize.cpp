@@ -4018,6 +4018,9 @@ void LoopVectorizationPlanner::emitInvalidCostRemarks(
             .Case<VPInterleaveRecipe>([](const VPInterleaveRecipe *R) {
               return R->getStoredValues().empty() ? Instruction::Load
                                                   : Instruction::Store;
+            })
+            .Case<VPReductionRecipe>([](const auto *R) {
+              return RecurrenceDescriptor::getOpcode(R->getRecurrenceKind());
             });
 
     // If the next recipe is different, or if there are no other pairs,
@@ -8890,8 +8893,7 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
       if (FinalReductionResult == U || Parent->getParent())
         continue;
       U->replaceUsesOfWith(OrigExitingVPV, FinalReductionResult);
-      if (match(U, m_CombineOr(m_ExtractLastElement(m_VPValue()),
-                               m_ExtractLane(m_VPValue(), m_VPValue()))))
+      if (match(U, m_ExtractLastElement(m_VPValue())))
         cast<VPInstruction>(U)->replaceAllUsesWith(FinalReductionResult);
     }
 
