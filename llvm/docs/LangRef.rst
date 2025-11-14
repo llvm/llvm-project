@@ -12221,7 +12221,7 @@ Overview:
 
 The '``llvm.structured.gep``' intrinsic (structured **G**\ et\ **E**\ lement\ **P**\ tr) computes a new pointer address
 resulting of a logical indexing into the ``<source>`` pointer. The returned
-address depends on the indices and the physical layout of %basetype at
+address depends on the indices and may depend on the layout of %basetype at
 runtime.
 
 Arguments:
