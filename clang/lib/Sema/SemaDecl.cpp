@@ -16353,10 +16353,15 @@ Decl *Sema::ActOnStartOfFunctionDef(Scope *FnBodyScope, Decl *D,
 
   if (FD && !FD->isInvalidDecl() &&
       FD->hasAttr<SYCLKernelEntryPointAttr>() && FnBodyScope) {
-    // Building KernelLaunchIdExpr requires performing an unqualified lookup
-    // which can only be done correctly while the stack of parsing scopes is
-    // alive, so we do it here when we start parsing function body even if it is
-    // a templated function.
+    // An implicit call expression is synthesized for functions declared with
+    // the sycl_kernel_entry_point attribute. The call may resolve to a
+    // function template, a member function template, or a call operator
+    // of a variable template depending on the results of unqualified lookup
+    // for 'sycl_kernel_launch' from the beginning of the function body.
+    // Performing that lookup requires the stack of parsing scopes active
+    // when the definition is parsed and is thus done here; the result is
+    // cached in FunctionScopeInfo and used to synthesize the (possibly
+    // unresolved) call expression after the function body has been parsed.
     const auto *SKEPAttr = FD->getAttr<SYCLKernelEntryPointAttr>();
     if (!SKEPAttr->isInvalidAttr()) {
       ExprResult LaunchIdExpr =
@@ -16566,8 +16571,11 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body, bool IsInstantiation,
       SKEPAttr->setInvalidAttr();
     }
 
-    // We don't need to build SYCLKernelCallStmt for template instantiations
-    // since it was already created by template instantiator.
+    // Build an unresolved SYCL kernel call statement for a function template,
+    // validate that a SYCL kernel call statement was instantiated for an
+    // (implicit or explicit) instantiation of a function template, or otherwise
+    // build a (resolved) SYCL kernel call statement for a non-templated
+    // function or an explicit specialization.
     if (Body && !SKEPAttr->isInvalidAttr()) {
       StmtResult SR;
       if (FD->isTemplated()) {

@@ -100,22 +100,29 @@ public:
 };
 
 // UnresolvedSYCLKernelCallStmt represents an invocation of a SYCL kernel in
-// a dependent context for which lookup of the sycl_enqueue_kernel_launch
-// identifier cannot be performed. These statements are transformed to
-// SYCLKernelCallStmt during template instantiation.
+// a dependent context for which lookup of the sycl_kernel_launch identifier
+// cannot be performed. These statements are transformed to SYCLKernelCallStmt
+// during template instantiation.
 class UnresolvedSYCLKernelCallStmt : public Stmt {
   friend class ASTStmtReader;
+  friend class ASTStmtWriter;
+
+private:
   Stmt *OriginalStmt = nullptr;
   // KernelLaunchIdExpr stores an UnresolvedLookupExpr or UnresolvedMemberExpr
   // corresponding to the SYCL kernel launch function for which a call
   // will be synthesized during template instantiation.
   Expr *KernelLaunchIdExpr = nullptr;
+
   UnresolvedSYCLKernelCallStmt(CompoundStmt *CS, Expr *IdExpr)
       : Stmt(UnresolvedSYCLKernelCallStmtClass), OriginalStmt(CS),
         KernelLaunchIdExpr(IdExpr) {}
 
-  void setKernelLaunchIdExpr(Expr *IdExpr) { KernelLaunchIdExpr = IdExpr; }
+  /// Set the original statement.
   void setOriginalStmt(CompoundStmt *CS) { OriginalStmt = CS; }
+
+  /// Set the kernel launch ID expression.
+  void setKernelLaunchIdExpr(Expr *IdExpr) { KernelLaunchIdExpr = IdExpr; }
 
 public:
   static UnresolvedSYCLKernelCallStmt *
@@ -127,11 +134,15 @@ public:
     return new (C) UnresolvedSYCLKernelCallStmt(nullptr, nullptr);
   }
 
-  Expr *getKernelLaunchIdExpr() const { return KernelLaunchIdExpr; }
+  /// Retrieve the original statement.
   CompoundStmt *getOriginalStmt() { return cast<CompoundStmt>(OriginalStmt); }
   const CompoundStmt *getOriginalStmt() const {
     return cast<CompoundStmt>(OriginalStmt);
   }
+
+  /// Retrieve the kernel launch ID expression.
+  Expr *getKernelLaunchIdExpr() { return KernelLaunchIdExpr; }
+  const Expr *getKernelLaunchIdExpr() const { return KernelLaunchIdExpr; }
 
   SourceLocation getBeginLoc() const LLVM_READONLY {
     return getOriginalStmt()->getBeginLoc();

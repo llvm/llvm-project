@@ -28,8 +28,8 @@
 // A unique kernel name type is required for each declared kernel entry point.
 template<int, int=0> struct KN;
 
-template <typename KernelName, typename... Tys>
-void sycl_kernel_launch(const char *, Tys &&...Args) {}
+template<typename KernelName, typename... Ts>
+void sycl_kernel_launch(const char *, Ts... Args) {}
 
 [[clang::sycl_kernel_entry_point(KN<1>)]]
 void skep1() {

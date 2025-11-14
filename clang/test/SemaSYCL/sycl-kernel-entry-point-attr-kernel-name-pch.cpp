@@ -15,10 +15,9 @@
 #--- pch.h
 template<int> struct KN;
 
-// A launcher function definition required for host code synthesis to silence
-// complains.
-template <typename KernelName, typename... Tys>
-void sycl_kernel_launch(const char *, Tys &&...Args) {}
+// A generic kernel launch function.
+template<typename KN, typename... Ts>
+void sycl_kernel_launch(const char *, Ts...) {}
 
 [[clang::sycl_kernel_entry_point(KN<1>)]]
 void pch_test1() {} // << expected previous declaration note here.
@@ -31,11 +30,11 @@ template void pch_test2<KN<2>>();
 
 #--- test.cpp
 // expected-error@+3 {{the 'clang::sycl_kernel_entry_point' kernel name argument conflicts with a previous declaration}}
-// expected-note@pch.h:9 {{previous declaration is here}}
+// expected-note@pch.h:8 {{previous declaration is here}}
 [[clang::sycl_kernel_entry_point(KN<1>)]]
 void test1() {}
 
 // expected-error@+3 {{the 'clang::sycl_kernel_entry_point' kernel name argument conflicts with a previous declaration}}
-// expected-note@pch.h:13 {{previous declaration is here}}
+// expected-note@pch.h:12 {{previous declaration is here}}
 [[clang::sycl_kernel_entry_point(KN<2>)]]
 void test2() {}
