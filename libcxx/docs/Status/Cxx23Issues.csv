@@ -58,7 +58,7 @@
 "`LWG3495 <https://wg21.link/LWG3495>`__","``constexpr launder`` makes pointers to inactive members of unions usable","2021-02 (Virtual)","|Nothing To Do|","","`#104316 <https://github.com/llvm/llvm-project/issues/104316>`__",""
 "`LWG3500 <https://wg21.link/LWG3500>`__","``join_view::iterator::operator->()`` is bogus","2021-02 (Virtual)","|Complete|","14","`#104318 <https://github.com/llvm/llvm-project/issues/104318>`__",""
 "`LWG3502 <https://wg21.link/LWG3502>`__","``elements_view`` should not be allowed to return dangling reference","2021-02 (Virtual)","|Complete|","16","`#104319 <https://github.com/llvm/llvm-project/issues/104319>`__",""
-"`LWG3505 <https://wg21.link/LWG3505>`__","``split_view::outer-iterator::operator++`` misspecified","2021-02 (Virtual)","","","`#104320 <https://github.com/llvm/llvm-project/issues/104320>`__",""
+"`LWG3505 <https://wg21.link/LWG3505>`__","``split_view::outer-iterator::operator++`` misspecified","2021-02 (Virtual)","|Complete|","15","`#104320 <https://github.com/llvm/llvm-project/issues/104320>`__",""
 "","","","","","",""
 "`LWG2774 <https://wg21.link/LWG2774>`__","``std::function`` construction vs assignment","2021-06 (Virtual)","","","`#104321 <https://github.com/llvm/llvm-project/issues/104321>`__",""
 "`LWG2818 <https://wg21.link/LWG2818>`__","``::std::`` everywhere rule needs tweaking","2021-06 (Virtual)","|Nothing To Do|","","`#104322 <https://github.com/llvm/llvm-project/issues/104322>`__",""
