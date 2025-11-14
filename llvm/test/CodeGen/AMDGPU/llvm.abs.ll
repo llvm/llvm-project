@@ -26,23 +26,20 @@ define amdgpu_cs i8 @abs_sgpr_i8(i8 inreg %arg) {
 ;
 ; SDAG8-LABEL: abs_sgpr_i8:
 ; SDAG8:       ; %bb.0:
-; SDAG8-NEXT:    s_bfe_i32 s0, s0, 0x80000
-; SDAG8-NEXT:    s_sext_i32_i16 s0, s0
+; SDAG8-NEXT:    s_sext_i32_i8 s0, s0
 ; SDAG8-NEXT:    s_abs_i32 s0, s0
 ; SDAG8-NEXT:    ; return to shader part epilog
 ;
 ; SDAG10-LABEL: abs_sgpr_i8:
 ; SDAG10:       ; %bb.0:
-; SDAG10-NEXT:    s_bfe_i32 s0, s0, 0x80000
-; SDAG10-NEXT:    s_sext_i32_i16 s0, s0
+; SDAG10-NEXT:    s_sext_i32_i8 s0, s0
 ; SDAG10-NEXT:    s_abs_i32 s0, s0
 ; SDAG10-NEXT:    ; return to shader part epilog
 ;
 ; SDAG1250-LABEL: abs_sgpr_i8:
 ; SDAG1250:       ; %bb.0:
-; SDAG1250-NEXT:    s_bfe_i32 s0, s0, 0x80000
-; SDAG1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; SDAG1250-NEXT:    s_sext_i32_i16 s0, s0
+; SDAG1250-NEXT:    s_sext_i32_i8 s0, s0
+; SDAG1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; SDAG1250-NEXT:    s_abs_i32 s0, s0
 ; SDAG1250-NEXT:    ; return to shader part epilog
 ;
@@ -939,17 +936,17 @@ define amdgpu_cs <3 x i8> @abs_sgpr_v3i8(<3 x i8> inreg %arg) {
 ; SDAG10-NEXT:    s_bfe_i32 s1, s1, 0x80000
 ; SDAG10-NEXT:    s_bfe_i32 s0, s0, 0x80000
 ; SDAG10-NEXT:    s_sext_i32_i16 s1, s1
-; SDAG10-NEXT:    s_bfe_i32 s2, s2, 0x80000
 ; SDAG10-NEXT:    s_sext_i32_i16 s0, s0
+; SDAG10-NEXT:    s_bfe_i32 s2, s2, 0x80000
 ; SDAG10-NEXT:    s_abs_i32 s1, s1
 ; SDAG10-NEXT:    s_abs_i32 s0, s0
-; SDAG10-NEXT:    s_lshl_b32 s1, s1, 8
 ; SDAG10-NEXT:    s_sext_i32_i16 s2, s2
-; SDAG10-NEXT:    s_or_b32 s0, s0, s1
+; SDAG10-NEXT:    s_lshl_b32 s1, s1, 8
 ; SDAG10-NEXT:    s_abs_i32 s2, s2
-; SDAG10-NEXT:    s_and_b32 s1, s0, 0xffff
-; SDAG10-NEXT:    s_lshl_b32 s3, s2, 16
-; SDAG10-NEXT:    s_or_b32 s1, s1, s3
+; SDAG10-NEXT:    s_or_b32 s0, s0, s1
+; SDAG10-NEXT:    s_lshl_b32 s1, s2, 16
+; SDAG10-NEXT:    s_and_b32 s3, s0, 0xffff
+; SDAG10-NEXT:    s_or_b32 s1, s3, s1
 ; SDAG10-NEXT:    s_lshr_b32 s1, s1, 8
 ; SDAG10-NEXT:    ; return to shader part epilog
 ;
@@ -958,18 +955,18 @@ define amdgpu_cs <3 x i8> @abs_sgpr_v3i8(<3 x i8> inreg %arg) {
 ; SDAG1250-NEXT:    s_bfe_i32 s1, s1, 0x80000
 ; SDAG1250-NEXT:    s_bfe_i32 s0, s0, 0x80000
 ; SDAG1250-NEXT:    s_sext_i32_i16 s1, s1
-; SDAG1250-NEXT:    s_bfe_i32 s2, s2, 0x80000
 ; SDAG1250-NEXT:    s_sext_i32_i16 s0, s0
+; SDAG1250-NEXT:    s_bfe_i32 s2, s2, 0x80000
 ; SDAG1250-NEXT:    s_abs_i32 s1, s1
 ; SDAG1250-NEXT:    s_abs_i32 s0, s0
-; SDAG1250-NEXT:    s_lshl_b32 s1, s1, 8
 ; SDAG1250-NEXT:    s_sext_i32_i16 s2, s2
-; SDAG1250-NEXT:    s_or_b32 s0, s0, s1
+; SDAG1250-NEXT:    s_lshl_b32 s1, s1, 8
 ; SDAG1250-NEXT:    s_abs_i32 s2, s2
-; SDAG1250-NEXT:    s_and_b32 s1, s0, 0xffff
-; SDAG1250-NEXT:    s_lshl_b32 s3, s2, 16
+; SDAG1250-NEXT:    s_or_b32 s0, s0, s1
+; SDAG1250-NEXT:    s_lshl_b32 s1, s2, 16
+; SDAG1250-NEXT:    s_and_b32 s3, s0, 0xffff
 ; SDAG1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; SDAG1250-NEXT:    s_or_b32 s1, s1, s3
+; SDAG1250-NEXT:    s_or_b32 s1, s3, s1
 ; SDAG1250-NEXT:    s_lshr_b32 s1, s1, 8
 ; SDAG1250-NEXT:    ; return to shader part epilog
 ;
