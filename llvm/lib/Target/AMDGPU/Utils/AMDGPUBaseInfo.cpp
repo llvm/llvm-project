@@ -3456,6 +3456,9 @@ getVGPRLoweringOperandTables(const MCInstrDesc &Desc) {
     case AMDGPU::V_WMMA_LD_SCALE16_PAIRED_B64:
     case AMDGPU::V_WMMA_LD_SCALE16_PAIRED_B64_gfx1250:
       return {};
+    case AMDGPU::V_FMAMK_F16:
+    case AMDGPU::V_FMAMK_F16_t16:
+    case AMDGPU::V_FMAMK_F16_t16_gfx12:
     case AMDGPU::V_FMAMK_F32:
     case AMDGPU::V_FMAMK_F32_gfx12:
     case AMDGPU::V_FMAMK_F64:
