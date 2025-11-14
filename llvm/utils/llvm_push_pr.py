@@ -152,7 +152,7 @@ class GitHubAPI:
         self, method: str, endpoint: str, json_payload: Optional[dict] = None
     ) -> dict:
         with self._request(method, endpoint, json_payload) as response:
-            # expect a 200 'OK' or 201 'Created' status on success and JSON body.
+            # Expect a 200 'OK' or 201 'Created' status on success and JSON body.
             self._log_unexpected_status([200, 201], response.status)
 
             response_text = response.read().decode("utf-8")
@@ -164,8 +164,8 @@ class GitHubAPI:
         self, method: str, endpoint: str, json_payload: Optional[dict] = None
     ) -> None:
         with self._request(method, endpoint, json_payload) as response:
-            # expected a 204 No Content status on success,
-            # indicating the operation was successful but there is no body.
+            # Expected a 204 No Content status on success, indicating the
+            # operation was successful but there is no body.
             self._log_unexpected_status([204], response.status)
 
     def _log_unexpected_status(
@@ -374,10 +374,9 @@ class LLVMPRAutomator:
         git_env[LLVM_GITHUB_TOKEN_VAR] = self.config.token
         git_env["GIT_TERMINAL_PROMPT"] = "0"
 
-        self._run_cmd(
-            ["git", "fetch", self.config.upstream_remote, self.config.base_branch],
-            env=git_env,
-        )
+        https_upstream_url = self._get_https_url_for_remote(self.config.upstream_remote)
+        refspec = f"refs/heads/{self.config.base_branch}:refs/remotes/{self.config.upstream_remote}/{self.config.base_branch}"
+        self._run_cmd(["git", "fetch", https_upstream_url, refspec], env=git_env)
 
         try:
             self._run_cmd(["git", "rebase", target], env=git_env)
@@ -407,13 +406,8 @@ class LLVMPRAutomator:
                 self._run_cmd(["git", "rebase", "--abort"], check=False, env=git_env)
             raise LlvmPrError("rebase operation failed.") from e
 
-    def _get_authenticated_remote_url(self, remote_name: str) -> str:
-        """
-        Generates an authenticated URL to use for all operations. This includes
-        for local operations, like rebasing after merging a PR in a stack.
-        This allows the script to avoid reauthenticating (e.g. via ssh), since
-        the token can be reused for all operations.
-        """
+    def _get_https_url_for_remote(self, remote_name: str) -> str:
+        """Gets the URL for a remote and converts it to HTTPS if necessary."""
         remote_url_result = self._run_cmd(
             ["git", "remote", "get-url", remote_name],
             capture_output=True,
@@ -422,12 +416,12 @@ class LLVMPRAutomator:
         )
         remote_url = remote_url_result.stdout.strip()
         if remote_url.startswith("git@github.com:"):
-            return remote_url.replace(
-                "git@github.com:", f"https://{self.config.token}@github.com/"
-            )
+            return remote_url.replace("git@github.com:", "https://github.com/")
         if remote_url.startswith("https://github.com/"):
-            return remote_url.replace("https://", f"https://{self.config.token}@")
-        raise LlvmPrError(f"Unsupported remote URL format: {remote_url}")
+            return remote_url
+        raise LlvmPrError(
+            f"Unsupported remote URL format for {remote_name}: {remote_url}"
+        )
 
     def _get_commit_stack(self) -> List[str]:
         target = f"{self.config.upstream_remote}/{self.config.base_branch}"
@@ -450,6 +444,8 @@ class LLVMPRAutomator:
         return result.stdout.strip().splitlines()
 
     def _get_commit_details(self, commit_hash: str) -> tuple[str, str]:
+        # Get the subject and body from git show. Insert "\n\n" between to make
+        # parsing simple to do w/ split.
         result = self._run_cmd(
             ["git", "show", "-s", "--format=%s%n%n%b", commit_hash],
             capture_output=True,
@@ -493,10 +489,12 @@ class LLVMPRAutomator:
         git_env[LLVM_GITHUB_TOKEN_VAR] = self.config.token
         git_env["GIT_TERMINAL_PROMPT"] = "0"
 
+        https_remote_url = self._get_https_url_for_remote(self.remote)
+
         push_command = [
             "git",
             "push",
-            self.remote,
+            https_remote_url,
             f"{commit_hash}:refs/heads/{branch_name}",
         ]
         self._run_cmd(push_command, env=git_env)
@@ -519,21 +517,21 @@ class LLVMPRAutomator:
             draft=self.config.draft,
         )
 
-        if not self.config.no_merge:
-            if self.config.auto_merge:
-                self.github_api.enable_auto_merge(pr_url)
-            else:
-                merged_branch = self.github_api.merge_pr(pr_url)
-                if merged_branch and not self.repo_settings.get(
-                    "delete_branch_on_merge"
-                ):
-                    # After a merge, the temporary branch should be deleted from
-                    # the user's fork.
-                    self.github_api.delete_branch(merged_branch)
-            if temp_branch in self.created_branches:
-                # If the branch was successfully merged, it should not be deleted
-                # again during cleanup.
-                self.created_branches.remove(temp_branch)
+        if self.config.no_merge:
+            return
+
+        if self.config.auto_merge:
+            self.github_api.enable_auto_merge(pr_url)
+        else:
+            merged_branch = self.github_api.merge_pr(pr_url)
+            if merged_branch and not self.repo_settings.get("delete_branch_on_merge"):
+                # After a merge, the branch should be deleted.
+                self.github_api.delete_branch(merged_branch)
+
+        if temp_branch in self.created_branches:
+            # If the branch was successfully merged, it should not be deleted
+            # again during cleanup.
+            self.created_branches.remove(temp_branch)
 
     def run(self) -> None:
         self.repo_settings = self.github_api.get_repo_settings()
@@ -562,8 +560,8 @@ class LLVMPRAutomator:
                 if i > 0:
                     self._rebase_current_branch()
 
-                # After a rebase, the commit hashes change, so we need to get
-                # the latest commit stack.
+                # After a rebase, the commit hashes can change, so we need to
+                # get the latest commit stack.
                 commits = self._get_commit_stack()
                 if not commits:
                     self.runner.print("Success! All commits have been landed.")
@@ -668,9 +666,6 @@ def main() -> None:
 
     github_api = GitHubAPI(command_runner, token)
     if not args.login:
-        # Create a temporary API client to get the user login.
-        # We need the user login for the branch prefix and for creating PRs
-        # from a fork.
         try:
             args.login = github_api.get_user_login()
         except urllib.error.HTTPError as e:
