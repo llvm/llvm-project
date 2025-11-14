@@ -199,6 +199,10 @@ public:
     return emitNullValue(e->getType(), cgf.getLoc(e->getSourceRange()));
   }
 
+  mlir::Value VisitGNUNullExpr(const GNUNullExpr *e) {
+    return emitNullValue(e->getType(), cgf.getLoc(e->getSourceRange()));
+  }
+
   mlir::Value VisitOpaqueValueExpr(OpaqueValueExpr *e) {
     if (e->isGLValue())
       return emitLoadOfLValue(cgf.getOrCreateOpaqueLValueMapping(e),
@@ -278,6 +282,8 @@ public:
                                 e->getSrcExpr()->getType(), e->getType(),
                                 e->getSourceRange().getBegin());
   }
+
+  mlir::Value VisitExtVectorElementExpr(Expr *e) { return emitLoadOfLValue(e); }
 
   mlir::Value VisitMemberExpr(MemberExpr *e);
 
@@ -1434,6 +1440,28 @@ mlir::Value CIRGenFunction::emitPromotedScalarExpr(const Expr *e,
   if (!promotionType.isNull())
     return ScalarExprEmitter(*this, builder).emitPromoted(e, promotionType);
   return ScalarExprEmitter(*this, builder).Visit(const_cast<Expr *>(e));
+}
+
+mlir::Value CIRGenFunction::emitScalarOrConstFoldImmArg(unsigned iceArguments,
+                                                        unsigned index,
+                                                        const Expr *arg) {
+  mlir::Value result{};
+
+  // The bit at the specified index indicates whether the argument is required
+  // to be a constant integer expression.
+  bool isArgRequiredToBeConstant = (iceArguments & (1 << index));
+
+  if (!isArgRequiredToBeConstant) {
+    result = emitScalarExpr(arg);
+  } else {
+    // If this is required to be a constant, constant fold it so that we
+    // know that the generated intrinsic gets a ConstantInt.
+    std::optional<llvm::APSInt> iceOpt =
+        arg->getIntegerConstantExpr(getContext());
+    assert(iceOpt && "Expected argument to be a constant");
+    result = builder.getConstInt(getLoc(arg->getSourceRange()), *iceOpt);
+  }
+  return result;
 }
 
 [[maybe_unused]] static bool mustVisitNullValue(const Expr *e) {
