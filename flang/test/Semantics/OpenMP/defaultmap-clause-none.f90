@@ -94,3 +94,40 @@ subroutine defaultmap_aggregate_none
         end do
     !$omp end target
 end subroutine defaultmap_aggregate_none
+
+! Verify we do not catch null in defaultmap(none)
+subroutine defaultmap_builtin_none
+    implicit none
+    integer,  pointer :: ptr(:)
+
+    !$omp target defaultmap(none) map(ptr)
+!CHECK-NOT: The DEFAULTMAP(NONE) clause requires that 'null' must be listed in a data-sharing attribute, data-mapping attribute, or is_device_ptr clause
+            ptr => null()
+    !$omp end target
+end subroutine defaultmap_builtin_none
+
+module pro
+ implicit none
+contains
+
+ function test_procedure() result(ret)
+    integer :: ret
+    ret = 1
+ end function test_procedure
+
+! Verify we do not catch a function symbol in defaultmap(none)
+! but do catch procedure pointers
+subroutine defaultmap_func_and_procedure_pointer()
+    implicit none
+    procedure(test_procedure), pointer :: f1
+    integer :: i
+
+    f1 => test_procedure
+
+    !$omp target defaultmap(none) map(i)
+!ERROR: The DEFAULTMAP(NONE) clause requires that 'f1' must be listed in a data-sharing attribute, data-mapping attribute, or is_device_ptr clause
+        i = f1()
+        i = test_procedure()
+    !$omp end target
+end subroutine defaultmap_func_and_procedure_pointer
+end module
