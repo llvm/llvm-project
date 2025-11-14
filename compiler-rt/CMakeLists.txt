@@ -309,6 +309,8 @@ option(COMPILER_RT_USE_BUILTINS_LIBRARY
 
 option(COMPILER_RT_USE_ATOMIC_LIBRARY "Use compiler-rt atomic instead of libatomic" OFF)
 
+option(COMPILER_RT_PROFILE_BAREMETAL "Build minimal baremetal profile library" OFF)
+
 include(config-ix)
 
 #================================
