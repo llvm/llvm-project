@@ -12204,179 +12204,6 @@ makes sense:
     %A = call <8 x double> @llvm.masked.gather.v8f64.v8p0f64(
          <8 x ptr> align 8 %ptrs, <8 x i1> %mask, <8 x double> %passthru)
 
-.. _i_structured_gep:
-
-'``llvm.structured.gep``' Instruction
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-
-::
-
-      <result> = call ptr llvm.structured.gep <basetype> poison, ptr <source>, {, [i32/i64] <index> }*
-
-Overview:
-"""""""""
-
-The '``llvm.structured.gep``' intrinsic (structured **G**\ et\ **E**\ lement\ **P**\ tr) computes a new pointer address
-resulting of a logical indexing into the ``<source>`` pointer. The returned
-address depends on the indices and may depend on the layout of %basetype at
-runtime.
-
-Arguments:
-""""""""""
-
-``<ty> basetype``:
-The type of the element pointed by the pointer source. This type will be
-used along with the provided indices and source operands to compute a new
-pointer representing the result of a logical indexing into a basetype
-pointed by source.
-The actual value passed is ignored, and should be ``poison``.
-
-``ptr <source>``:
-A pointer to a valid memory location assumed to be large enough to hold a
-completely laid out value with the same type as ``basetype``. The physical
-layout of ``basetype`` is target dependent, and is not always known at
-compile time.
-
-``[i32/i64] index, ...``:
-Indices used to traverse into the basetype and determine the target element
-this instruction computes an offset for. Indices can be 32-bit or 64-bit
-unsigned integers. Indices being handled one by one, both sizes can be mixed
-in the same instruction. The precision used to compute the resulting pointer
-is target-dependent.
-
-Semantics:
-""""""""""
-
-The ``llvm.structured.gep`` performs a logical traversal of the type
-``basetype`` using the list of provided indices, computing the pointer
-addressing the targeted element/field assuming ``source`` points to a
-physically laid out ``basetype``.
-
-The first index determines which element/field of ``basetype`` is selected,
-computes the pointer to access this element/field assuming ``source`` points
-to the start of ``basetype``.
-This pointer becomes the new ``source``, the current type the new
-``basetype``, and the next indices is consumed until a scalar type is
-reached or all indices are consumed.
-
-All indices must be consumed, and it is illegal to index into a scalar type.
-Meaning the maximum number of indices depends on the depth of the basetype.
-
-Because this instruction performs a logical addressing, all indices are
-assumed to be inbounds. This means it is not possible to access the next
-element in the logical layout by overflowing:
-
-- If the indexed type is a struct with N fields, the index must be an
-  immediate/constant value in the range ``[0; N[``.
-- If indexing into an array or vector, the index can be a variable, but
-  assumed to be inbounds with regards to the current basetype logical layout.
-- If the traversed type is an array or vector of N elements with ``N > 0``,
-  the index is assumed to belong to ``[0; N[``.
-- If the traversed type is an array of size ``0``, the array size is assumed
-  to be known at runtime, and the instruction assumes the index is always
-  inbound.
-
-If the source pointer is poison, the instruction returns poison.
-The resulting pointer belongs to the same address space as ``source``.
-
-This instruction assumes the pointer ``source`` points to a valid memory
-location large enough to contain the physically laid out version ``basetype``.
-This instruction does not dereference any pointer, but requires the source
-operand to be a valid memory location. Meaning this instruction cannot be
-used as an ``offsetof`` by providing ``ptr 0`` as source.
-If the memory location pointed by source is not large enough, using the
-resulting pointer to access memory yields an undefined behavior.
-
-Example:
-""""""""
-
-**Simple case: logical access of a struct field**
-
-.. code-block:: cpp
-
-    struct A { int a, int b, int c, int d };
-    int val = my_struct->b;
-
-Could be translated to:
-
-.. code-block:: llvm
-
-    %A = type { i32, i32, i32, i32 }
-    %src = call ptr @llvm.structured.gep(%A poison, ptr %my_struct, i32 1)
-    %val = load i32, ptr %src
-
-**A more complex case**
-
-This instruction can also be used on the same pointer with different
-basetypes, as long as codegen knows how those are physically laid out.
-Let’s consider the following code:
-
-.. code-block:: cpp
-
-   struct S {
-       uint3 array[5];
-       float my_float;
-   }
-
-   my_struct->array[2].y = 12;
-   int val = my_struct->array[index].y;
-
-
-The frontend knows this struct has a particular physical layout:
-    - an array of 5 vectors or 3 integers, aligned on 16 bytes.
-    - one float at the end, with no alignment requirement, so packed right
-      after the last ``uint3``, which is a ``<3 x uint>``.
-
-.. code-block:: llvm
-
-    %S = type { [4 x { <3 x i32>, i32 }, <3 x i32>, float }
-    ;                              `-> explicit padding
-    ; -> 4 byte padding between each array element, except
-    ;    between the last vector and the float.
-
-The store is simple:
-
-.. code-block:: llvm
-
-    %dst = call ptr @llvm.structured.gep(%S poison, ptr %my_struct, i32 0, i32 2, i32 0, i32 1)
-    store i32 12, ptr %dst
-
-But the load depends on a dynamic index. This means accessing logically the
-first 4 elements is different than accessing the last:
-
-.. code-block:: llvm
-
-    %firsts = call ptr @llvm.structured.gep(%S poison, ptr %my_struct, i32 0, i32 %index, i32 0)
-    %last = call ptr @llvm.structured.gep(%S poison, ptr %my_struct, i32 1)
-
-And because :ref:`i_structured_gep` always assumes indexing inbounds, we
-cannot reach the last element by doing:
-
-.. code-block:: llvm
-
-    ; BAD
-    call ptr @llvm.structured.gep(%S poison, ptr %my_struct, i32 0, i32 5, i32 0)
-
-If codegen knew nothing about the physical layout of ``%S``, a condition
-would be required to select between ``%firsts`` and ``%last`` depending on
-the value of ``%index``.
-But in our case, the codegen knows that some logical layouts are equivalent
-to others (even if the physical layout is unknown).
-In this context, it knows that the following type can be used to logically
-address every vector in the array, generating the following code:
-
-.. code-block:: llvm
-
-    %T = type [ 5 x { <3 x i32>, i32 } ]
-    %ptr = call ptr @llvm.structured.gep(%T poison, ptr %my_struct, i32 %index, i32 0, i32 1)
-    store i32 12, ptr %ptr
-
-This is however dependent a context codegen has an insight on. This logical
-layout equivalence is not a generic rule.
-
 Conversion Operations
 ---------------------
 
@@ -15013,6 +14840,180 @@ Semantics:
 """"""""""
 
 See the description for :ref:`llvm.stacksave <int_stacksave>`.
+
+.. _i_structured_gep:
+
+'``llvm.structured.gep``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      <result> = call ptr llvm.structured.gep <basetype> poison, ptr <source>, {, [i32/i64] <index> }*
+
+Overview:
+"""""""""
+
+The '``llvm.structured.gep``' intrinsic (structured **G**\ et\ **E**\ lement\ **P**\ tr) computes a new pointer address
+resulting of a logical indexing into the ``<source>`` pointer. The returned
+address depends on the indices and may depend on the layout of %basetype at
+runtime.
+
+Arguments:
+""""""""""
+
+``<ty> basetype``:
+The type of the element pointed by the pointer source. This type will be
+used along with the provided indices and source operands to compute a new
+pointer representing the result of a logical indexing into a basetype
+pointed by source.
+The actual value passed is ignored, and should be ``poison``.
+
+``ptr <source>``:
+A pointer to a valid memory location assumed to be large enough to hold a
+completely laid out value with the same type as ``basetype``. The physical
+layout of ``basetype`` is target dependent, and is not always known at
+compile time.
+
+``[i32/i64] index, ...``:
+Indices used to traverse into the basetype and determine the target element
+this instruction computes an offset for. Indices can be 32-bit or 64-bit
+unsigned integers. Indices being handled one by one, both sizes can be mixed
+in the same instruction. The precision used to compute the resulting pointer
+is target-dependent.
+
+Semantics:
+""""""""""
+
+The ``llvm.structured.gep`` performs a logical traversal of the type
+``basetype`` using the list of provided indices, computing the pointer
+addressing the targeted element/field assuming ``source`` points to a
+physically laid out ``basetype``.
+
+The first index determines which element/field of ``basetype`` is selected,
+computes the pointer to access this element/field assuming ``source`` points
+to the start of ``basetype``.
+This pointer becomes the new ``source``, the current type the new
+``basetype``, and the next indices is consumed until a scalar type is
+reached or all indices are consumed.
+
+All indices must be consumed, and it is illegal to index into a scalar type.
+Meaning the maximum number of indices depends on the depth of the basetype.
+
+Because this instruction performs a logical addressing, all indices are
+assumed to be inbounds. This means it is not possible to access the next
+element in the logical layout by overflowing:
+
+- If the indexed type is a struct with N fields, the index must be an
+  immediate/constant value in the range ``[0; N[``.
+- If indexing into an array or vector, the index can be a variable, but
+  assumed to be inbounds with regards to the current basetype logical layout.
+- If the traversed type is an array or vector of N elements with ``N > 0``,
+  the index is assumed to belong to ``[0; N[``.
+- If the traversed type is an array of size ``0``, the array size is assumed
+  to be known at runtime, and the instruction assumes the index is always
+  inbound.
+
+If the source pointer is poison, the instruction returns poison.
+The resulting pointer belongs to the same address space as ``source``.
+
+This instruction assumes the pointer ``source`` points to a valid memory
+location large enough to contain the physically laid out version ``basetype``.
+This instruction does not dereference any pointer, but requires the source
+operand to be a valid memory location. Meaning this instruction cannot be
+used as an ``offsetof`` by providing ``ptr 0`` as source.
+If the memory location pointed by source is not large enough, using the
+resulting pointer to access memory yields an undefined behavior.
+
+Example:
+""""""""
+
+**Simple case: logical access of a struct field**
+
+.. code-block:: cpp
+
+    struct A { int a, int b, int c, int d };
+    int val = my_struct->b;
+
+Could be translated to:
+
+.. code-block:: llvm
+
+    %A = type { i32, i32, i32, i32 }
+    %src = call ptr @llvm.structured.gep(%A poison, ptr %my_struct, i32 1)
+    %val = load i32, ptr %src
+
+**A more complex case**
+
+This instruction can also be used on the same pointer with different
+basetypes, as long as codegen knows how those are physically laid out.
+Let’s consider the following code:
+
+.. code-block:: cpp
+
+   struct S {
+       uint3 array[5];
+       float my_float;
+   }
+
+   my_struct->array[2].y = 12;
+   int val = my_struct->array[index].y;
+
+
+The frontend knows this struct has a particular physical layout:
+    - an array of 5 vectors or 3 integers, aligned on 16 bytes.
+    - one float at the end, with no alignment requirement, so packed right
+      after the last ``uint3``, which is a ``<3 x uint>``.
+
+.. code-block:: llvm
+
+    %S = type { [4 x { <3 x i32>, i32 }, <3 x i32>, float }
+    ;                              `-> explicit padding
+    ; -> 4 byte padding between each array element, except
+    ;    between the last vector and the float.
+
+The store is simple:
+
+.. code-block:: llvm
+
+    %dst = call ptr @llvm.structured.gep(%S poison, ptr %my_struct, i32 0, i32 2, i32 0, i32 1)
+    store i32 12, ptr %dst
+
+But the load depends on a dynamic index. This means accessing logically the
+first 4 elements is different than accessing the last:
+
+.. code-block:: llvm
+
+    %firsts = call ptr @llvm.structured.gep(%S poison, ptr %my_struct, i32 0, i32 %index, i32 0)
+    %last = call ptr @llvm.structured.gep(%S poison, ptr %my_struct, i32 1)
+
+And because :ref:`i_structured_gep` always assumes indexing inbounds, we
+cannot reach the last element by doing:
+
+.. code-block:: llvm
+
+    ; BAD
+    call ptr @llvm.structured.gep(%S poison, ptr %my_struct, i32 0, i32 5, i32 0)
+
+If codegen knew nothing about the physical layout of ``%S``, a condition
+would be required to select between ``%firsts`` and ``%last`` depending on
+the value of ``%index``.
+But in our case, the codegen knows that some logical layouts are equivalent
+to others (even if the physical layout is unknown).
+In this context, it knows that the following type can be used to logically
+address every vector in the array, generating the following code:
+
+.. code-block:: llvm
+
+    %T = type [ 5 x { <3 x i32>, i32 } ]
+    %ptr = call ptr @llvm.structured.gep(%T poison, ptr %my_struct, i32 %index, i32 0, i32 1)
+    store i32 12, ptr %ptr
+
+This is however dependent a context codegen has an insight on. This logical
+layout equivalence is not a generic rule.
+
 
 .. _int_get_dynamic_area_offset:
 
