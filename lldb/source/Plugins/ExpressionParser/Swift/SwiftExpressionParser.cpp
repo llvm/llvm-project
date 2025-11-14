@@ -687,8 +687,8 @@ AddRequiredAliases(Block *block, lldb::StackFrameSP &stack_frame_sp,
     swift::Type first_arg_type = optional_type->getGenericArgs()[0];
 
     // In Swift only class types can be weakly captured.
-    if (!llvm::isa<swift::ClassType>(first_arg_type) &&
-        !llvm::isa<swift::BoundGenericClassType>(first_arg_type))
+    if (!first_arg_type->is<swift::ClassType>() &&
+        !first_arg_type->is<swift::BoundGenericClassType>())
       return llvm::createStringError(
           "Unable to add the aliases the expression needs because "
           "weakly captured type is not a class type.");
