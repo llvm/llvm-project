@@ -3958,3 +3958,41 @@ bool HexagonTargetLowering::isMaskAndCmp0FoldingBeneficial(
     return false;
   return Mask->getValue().isPowerOf2();
 }
+
+// Check if the result of the node is only used as a return value, as
+// otherwise we can't perform a tail-call.
+bool HexagonTargetLowering::isUsedByReturnOnly(SDNode *N,
+                                               SDValue &Chain) const {
+  if (N->getNumValues() != 1)
+    return false;
+  if (!N->hasNUsesOfValue(1, 0))
+    return false;
+
+  SDNode *Copy = *N->user_begin();
+
+  if (Copy->getOpcode() == ISD::BITCAST) {
+    return isUsedByReturnOnly(Copy, Chain);
+  }
+
+  if (Copy->getOpcode() != ISD::CopyToReg) {
+    return false;
+  }
+
+  // If the ISD::CopyToReg has a glue operand, we conservatively assume it
+  // isn't safe to perform a tail call.
+  if (Copy->getOperand(Copy->getNumOperands() - 1).getValueType() == MVT::Glue)
+    return false;
+
+  // The copy must be used by a HexagonISD::RET_GLUE, and nothing else.
+  bool HasRet = false;
+  for (SDNode *Node : Copy->users()) {
+    if (Node->getOpcode() != HexagonISD::RET_GLUE)
+      return false;
+    HasRet = true;
+  }
+  if (!HasRet)
+    return false;
+
+  Chain = Copy->getOperand(0);
+  return true;
+}
