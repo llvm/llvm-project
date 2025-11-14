@@ -18,9 +18,9 @@
 
 #ifdef SVE_OVERLOADED_FORMS
 // A simple used,unused... macro, long enough to represent any SVE builtin.
-#define SVE_ACLE_FUNC(A1,A2_UNUSED,A3,A4_UNUSED) A1##A3
+#define SVE_ACLE_FUNC(A1,A2_UNUSED) A1
 #else
-#define SVE_ACLE_FUNC(A1,A2,A3,A4) A1##A2##A3##A4
+#define SVE_ACLE_FUNC(A1,A2) A1##A2
 #endif
 
 // CHECK-LABEL: @test_svexpand_s8(
