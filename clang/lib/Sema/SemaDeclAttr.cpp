@@ -1839,19 +1839,24 @@ static void handleRestrictAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
                  RestrictAttr(S.Context, AL, DeallocE, DeallocPtrIdx));
 }
 
-static bool checkSpanLikeType(Sema &S, const ParsedAttr &AL,
-                              const QualType &Ty) {
-  // Check that the type is a plain record with one field being a pointer
-  // type and the other field being an integer. This matches the common
-  // implementation of std::span or sized_allocation_t in P0901R11.
+bool Sema::CheckSpanLikeType(const AttributeCommonInfo &CI,
+                             const QualType &Ty) {
   // Note that there may also be numerous cases of pointer + integer /
   // pointer + pointer / integer + pointer structures not actually exhibiting
   // a span-like semantics, so sometimes these heuristics expectedly
   // lead to false positive results.
-  auto emitWarning = [&S, &AL](unsigned NoteDiagID) {
-    S.Diag(AL.getLoc(), diag::warn_attribute_return_span_only) << AL;
-    return S.Diag(AL.getLoc(), NoteDiagID);
+  auto emitWarning = [this, &CI](unsigned NoteDiagID) {
+    Diag(CI.getLoc(), diag::warn_attribute_return_span_only) << CI;
+    return Diag(CI.getLoc(), NoteDiagID);
   };
+  if (!Ty->isDependentType()) {
+    // If the type is a class template specialization, it may not be
+    // instantiated at this stage. We must force it to be complete to examine
+    // its fields.
+    // The returned value is discarded since the code below emits a warning
+    // if the type keeps being incomplete.
+    (void)isCompleteType(CI.getLoc(), Ty);
+  }
   if (Ty->isIncompleteType())
     return emitWarning(diag::note_returned_incomplete_type);
   const RecordDecl *RD = Ty->getAsRecordDecl();
@@ -1867,13 +1872,13 @@ static bool checkSpanLikeType(Sema &S, const ParsedAttr &AL,
     // It must not point to functions.
     return T->isPointerType() && !T->isFunctionPointerType();
   };
-  auto checkIntegerType = [&S, emitWarning](const QualType &T,
-                                            const int FieldNo) -> bool {
+  auto checkIntegerType = [this, emitWarning](const QualType &T,
+                                              const int FieldNo) -> bool {
     const auto *BT = dyn_cast<BuiltinType>(T.getCanonicalType());
     if (!BT || !BT->isInteger())
       return emitWarning(diag::note_returned_not_integer_field) << FieldNo;
-    const auto IntSize = S.Context.getTypeSize(S.Context.IntTy);
-    if (S.Context.getTypeSize(BT) < IntSize)
+    const auto IntSize = Context.getTypeSize(Context.IntTy);
+    if (Context.getTypeSize(BT) < IntSize)
       return emitWarning(diag::note_returned_not_wide_enough_field)
              << FieldNo << IntSize;
     return false;
@@ -1894,7 +1899,9 @@ static bool checkSpanLikeType(Sema &S, const ParsedAttr &AL,
 
 static void handleMallocSpanAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   QualType ResultType = getFunctionOrMethodResultType(D);
-  if (!checkSpanLikeType(S, AL, ResultType)) {
+  if (ResultType->isDependentType() || !S.CheckSpanLikeType(AL, ResultType)) {
+    // If it's a dependent type, the attribute will be re-checked upon
+    // instantiation.
     D->addAttr(::new (S.Context) MallocSpanAttr(S.Context, AL));
   }
 }

@@ -29,3 +29,46 @@ MemberFuncSpan returns_member_func_span(void) __attribute((malloc_span)) {
   return MemberFuncSpan{};
 }
 
+template<typename FirstType, typename SecondType>
+struct Pair {
+  FirstType first;
+  SecondType second;
+};
+
+Pair<int*, int> returns_templated_span1(void) __attribute((malloc_span)) { // no-warning
+  return Pair<int*, int>{};
+}
+
+Pair<int*, int*> returns_templated_span2(void) __attribute((malloc_span)) { // no-warning
+  return Pair<int*, int*>{};
+}
+
+// expected-warning@+2 {{attribute only applies to functions that return span-like structures}}
+// expected-note@+1 {{returned struct/class fields are not a supported combination for a span-like type}}
+Pair<int, int> returns_templated_span3(void) __attribute((malloc_span)) {
+  return Pair<int, int>{};
+}
+
+// Verify that semantic checks are done on dependent types.
+
+struct GoodSpan {
+  void *ptr;
+  int n;
+};
+
+struct BadSpan {
+  int n;
+};
+
+template <typename T>
+// expected-warning@+2 {{'malloc_span' attribute only applies to functions that return span-like structures}}
+// expected-note@+1 {{returned struct/class has 1 fields, expected 2}}
+T produce_span() __attribute((malloc_span)) {
+  return T{};
+}
+
+void TestGoodBadSpan() {
+  produce_span<GoodSpan>(); // no-warnings
+  // expected-note@+1 {{in instantiation of function template specialization 'produce_span<BadSpan>' requested here}}
+  produce_span<BadSpan>();
+}
