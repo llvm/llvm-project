@@ -1879,6 +1879,7 @@ public:
             [&](const CompilerDirective::NoInline &) {
               Word("!DIR$ NOINLINE");
             },
+            [&](const CompilerDirective::IVDep &) { Word("!DIR$ IVDEP"); },
             [&](const CompilerDirective::Unrecognized &) {
               Word("!DIR$ ");
               Word(x.source.ToString());

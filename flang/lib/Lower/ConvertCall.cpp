@@ -713,7 +713,8 @@ Fortran::lower::genCallOpAndResult(
           builder.getContext(), fir::FortranInlineEnum::always_inline);
     auto call = fir::CallOp::create(
         builder, loc, funcType.getResults(), funcSymbolAttr, operands,
-        /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr, procAttrs, inlineAttr);
+        /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr, procAttrs, inlineAttr,
+        /*accessGroups=*/mlir::ArrayAttr{});
 
     callNumResults = call.getNumResults();
     if (callNumResults != 0)
