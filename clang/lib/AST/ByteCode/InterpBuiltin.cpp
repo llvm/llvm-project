@@ -4563,6 +4563,28 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
           return std::make_pair(0, static_cast<int>(LaneBase + Sel));
         });
 
+  case X86::BI__builtin_ia32_vpermilvarpd:
+  case X86::BI__builtin_ia32_vpermilvarpd256:
+  case X86::BI__builtin_ia32_vpermilvarpd512:
+    return interp__builtin_ia32_shuffle_generic(
+        S, OpPC, Call, [](unsigned DstIdx, unsigned ShuffleMask) {
+          unsigned NumElemPerLane = 2;
+          unsigned Lane = DstIdx / NumElemPerLane;
+          unsigned Offset = ShuffleMask & 0b1;
+          return std::make_pair(0, static_cast<int>(Lane + Offset));
+        });
+    
+  case X86::BI__builtin_ia32_vpermilvarps:
+  case X86::BI__builtin_ia32_vpermilvarps256:
+  case X86::BI__builtin_ia32_vpermilvarps512:
+    return interp__builtin_ia32_shuffle_generic(
+        S, OpPC, Call, [](unsigned DstIdx, unsigned ShuffleMask) {
+          unsigned NumElemPerLane = 4;
+          unsigned Lane = DstIdx / NumElemPerLane;
+          unsigned Offset = ShuffleMask & 0b11;
+          return std::make_pair(0, static_cast<int>(Lane + Offset));
+        });
+
   case X86::BI__builtin_ia32_kandqi:
   case X86::BI__builtin_ia32_kandhi:
   case X86::BI__builtin_ia32_kandsi:
