@@ -31,6 +31,10 @@ class TargetMachine;
 class ToolOutputFile;
 class TargetLibraryInfoImpl;
 
+namespace RTLIB {
+struct RuntimeLibcallsInfo;
+}
+
 extern cl::opt<bool> DebugifyEach;
 extern cl::opt<std::string> DebugifyExport;
 
@@ -67,9 +71,9 @@ void printPasses(raw_ostream &OS);
 /// nullptr.
 bool runPassPipeline(
     StringRef Arg0, Module &M, TargetMachine *TM, TargetLibraryInfoImpl *TLII,
-    ToolOutputFile *Out, ToolOutputFile *ThinLinkOut,
-    ToolOutputFile *OptRemarkFile, StringRef PassPipeline,
-    ArrayRef<PassPlugin> PassPlugins,
+    RTLIB::RuntimeLibcallsInfo &RTLCI, ToolOutputFile *Out,
+    ToolOutputFile *ThinLinkOut, ToolOutputFile *OptRemarkFile,
+    StringRef PassPipeline, ArrayRef<PassPlugin> PassPlugins,
     ArrayRef<std::function<void(PassBuilder &)>> PassBuilderCallbacks,
     opt_tool::OutputKind OK, opt_tool::VerifierKind VK,
     bool ShouldPreserveAssemblyUseListOrder,

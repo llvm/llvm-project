@@ -179,6 +179,13 @@ them.
  segments. Note that many tools will not be able to use an object without
  section headers.
 
+MACH-O-SPECIFIC OPTIONS
+-----------------------
+
+The following options are implemented only for Mach-O objects. If used with other
+objects, :program:`llvm-strip` will either emit an error or silently ignore
+them.
+
 .. option:: -T
 
  Remove Swift symbols.
