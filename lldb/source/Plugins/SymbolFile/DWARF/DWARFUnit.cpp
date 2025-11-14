@@ -361,16 +361,15 @@ void DWARFUnit::SetDwoStrOffsetsBase() {
   }
 
   if (GetVersion() >= 5) {
-    const DWARFDataExtractor &strOffsets =
-        GetSymbolFileDWARF().GetDWARFContext().getOrLoadStrOffsetsData();
-    uint64_t length = strOffsets.GetU32(&baseOffset);
-    if (length == llvm::dwarf::DW_LENGTH_DWARF64) {
-      length = strOffsets.GetU64(&baseOffset);
-      m_str_offset_size = 8;
-    }
+    const llvm::DWARFDataExtractor &strOffsets =
+        GetSymbolFileDWARF().GetDWARFContext().getOrLoadStrOffsetsData().GetAsLLVMDWARF();
 
+    uint64_t length;
+    llvm::dwarf::DwarfFormat format;
+    std::tie(length, format) = strOffsets.getInitialLength(&baseOffset);
+    m_str_offset_size = format == llvm::dwarf::DwarfFormat::DWARF64 ? 8 : 4;
     // Check version.
-    if (strOffsets.GetU16(&baseOffset) < 5)
+    if (strOffsets.getU16(&baseOffset) < 5)
       return;
 
     // Skip padding.
