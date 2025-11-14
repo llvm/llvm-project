@@ -11,6 +11,10 @@
 
 #include "mlir/IR/Value.h"
 
+#include "mlir/Dialect/Vector/Transforms/VectorTransforms.h"
+#include "mlir/IR/OpDefinition.h"
+#include "mlir/IR/PatternMatch.h"
+
 namespace mlir {
 
 class ImplicitLocOpBuilder;
@@ -78,6 +82,12 @@ struct MaskHelper {
     b03 = mask & 0x0f;
   }
 };
+
+//===----------------------------------------------------------------------===//
+
+void populateVectorContractToFMAPatterns(RewritePatternSet &patterns);
+
+void populateVectorContractToPackedTypeDotProductPatterns(RewritePatternSet &patterns);
 
 //===----------------------------------------------------------------------===//
 /// Helpers extracted from:
