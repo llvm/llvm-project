@@ -11,9 +11,13 @@
 #include "Protocol.h"
 #include "Selection.h"
 #include "SourceCode.h"
+#include "support/Bracket.h"
+#include "support/DirectiveTree.h"
+#include "support/Token.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Basic/TokenKinds.h"
 #include "clang/Tooling/Syntax/BuildTree.h"
 #include "clang/Tooling/Syntax/Nodes.h"
 #include "clang/Tooling/Syntax/TokenBufferTokenManager.h"
@@ -22,9 +26,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Error.h"
-#include "support/Bracket.h"
-#include "support/DirectiveTree.h"
-#include "support/Token.h"
 #include <optional>
 #include <queue>
 #include <vector>
@@ -163,6 +164,66 @@ llvm::Expected<SelectionRange> getSemanticRanges(ParsedAST &AST, Position Pos) {
   return std::move(Head);
 }
 
+class PragmaRegionFinder {
+  // Record the token range of a region:
+  //
+  //   #pragma region [[name
+  //   ...
+  //   ]]#pragma region
+  std::vector<Token::Range> &Ranges;
+  const TokenStream &Code;
+  // Stack of starting token (the name of the region) indices for nested #pragma
+  // region.
+  std::vector<unsigned> Stack;
+
+public:
+  PragmaRegionFinder(std::vector<Token::Range> &Ranges, const TokenStream &Code)
+      : Ranges(Ranges), Code(Code) {}
+
+  void walk(const DirectiveTree &T) {
+    for (const auto &C : T.Chunks)
+      std::visit(*this, C);
+  }
+
+  void operator()(const DirectiveTree::Code &C) {}
+
+  void operator()(const DirectiveTree::Directive &D) {
+    // Get the tokens that make up this directive.
+    auto Tokens = Code.tokens(D.Tokens);
+    if (Tokens.empty())
+      return;
+    const Token &HashToken = Tokens.front();
+    assert(HashToken.Kind == tok::hash);
+    const Token &Pragma = HashToken.nextNC();
+    if (Pragma.text() != "pragma")
+      return;
+    const Token &Value = Pragma.nextNC();
+
+    // Handle "#pragma region name"
+    if (Value.text() == "region") {
+      // Record the name token.
+      if (&Value < Tokens.end())
+        Stack.push_back((&Value + 1)->OriginalIndex);
+      return;
+    }
+
+    // Handle "#pragma endregion"
+    if (Value.text() == "endregion") {
+      if (Stack.empty())
+        return; // unmatched end region; ignore.
+
+      unsigned StartIdx = Stack.back();
+      Stack.pop_back();
+      Ranges.push_back(Token::Range{StartIdx, HashToken.OriginalIndex});
+    }
+  }
+
+  void operator()(const DirectiveTree::Conditional &C) {
+    for (const auto &[_, SubTree] : C.Branches)
+      walk(SubTree);
+  }
+};
+
 // FIXME(kirillbobyrev): Collect comments, PP conditional regions, includes and
 // other code regions (e.g. public/private/protected sections of classes,
 // control flow statement bodies).
@@ -285,6 +346,17 @@ getFoldingRanges(const std::string &Code, bool LineFoldingOnly) {
         End.character -= 2;
     }
     AddFoldingRange(Start, End, FoldingRange::COMMENT_KIND);
+  }
+
+  // #pragma region
+  std::vector<Token::Range> Ranges;
+  PragmaRegionFinder(Ranges, OrigStream).walk(DirectiveStructure);
+  auto Ts = OrigStream.tokens();
+  for (const auto &R : Ranges) {
+    auto End = StartPosition(Ts[R.End]);
+    if (LineFoldingOnly)
+      End.line--;
+    AddFoldingRange(EndPosition(Ts[R.Begin]), End, FoldingRange::REGION_KIND);
   }
   return Result;
 }

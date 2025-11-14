@@ -410,6 +410,15 @@ TEST(FoldingRanges, PseudoParserWithoutLineFoldings) {
             Variable = 3;
         #
       )cpp",
+      R"cpp(
+        #pragma region R1[[
+        
+        #pragma region R2[[
+         constexpr int a = 2;
+        ]]#pragma endregion
+        
+        ]]#pragma endregion
+      )cpp",
   };
   for (const char *Test : Tests) {
     auto T = Annotations(Test);
@@ -469,6 +478,12 @@ TEST(FoldingRanges, PseudoParserLineFoldingsOnly) {
 
         //[[ foo
         /* bar */]]
+      )cpp",
+      R"cpp(
+        #pragma region abc[[
+        constexpr int a = 2;
+        ]]
+        #pragma endregion
       )cpp",
       // FIXME: Support folding template arguments.
       // R"cpp(
