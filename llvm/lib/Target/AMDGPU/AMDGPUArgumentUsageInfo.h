@@ -63,13 +63,9 @@ public:
 
   bool isRegister() const { return std::holds_alternative<MCRegister>(Val); }
 
-  MCRegister getRegister() const {
-    return std::get<MCRegister>(Val);
-  }
+  MCRegister getRegister() const { return std::get<MCRegister>(Val); }
 
-  unsigned getStackOffset() const {
-    return std::get<unsigned>(Val);
-  }
+  unsigned getStackOffset() const { return std::get<unsigned>(Val); }
 
   unsigned getMask() const {
     // None of the target SGPRs or VGPRs are expected to have a 'zero' mask.
