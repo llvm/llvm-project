@@ -21,7 +21,6 @@ define i8 @si8_7(i8 %a, i8 %b) {
 ; CHECK-GI-NEXT:    sxtb w8, w0
 ; CHECK-GI-NEXT:    mov w9, #-109 // =0xffffff93
 ; CHECK-GI-NEXT:    mul w8, w8, w9
-; CHECK-GI-NEXT:    sxth w8, w8
 ; CHECK-GI-NEXT:    add w8, w0, w8, asr #8
 ; CHECK-GI-NEXT:    sbfx w8, w8, #2, #6
 ; CHECK-GI-NEXT:    ubfx w9, w8, #7, #1
@@ -52,7 +51,7 @@ define i8 @si8_100(i8 %a, i8 %b) {
 ; CHECK-GI-NEXT:    sxtb w8, w0
 ; CHECK-GI-NEXT:    mov w9, #41 // =0x29
 ; CHECK-GI-NEXT:    mul w8, w8, w9
-; CHECK-GI-NEXT:    sbfx w8, w8, #8, #8
+; CHECK-GI-NEXT:    asr w8, w8, #8
 ; CHECK-GI-NEXT:    asr w8, w8, #4
 ; CHECK-GI-NEXT:    ubfx w9, w8, #7, #1
 ; CHECK-GI-NEXT:    add w8, w8, w9
