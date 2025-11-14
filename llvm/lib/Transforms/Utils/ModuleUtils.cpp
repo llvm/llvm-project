@@ -19,6 +19,7 @@
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Hash.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Instrumentation/KCFI.h"
@@ -208,10 +209,16 @@ void llvm::setKCFIType(Module &M, Function &F, StringRef MangledType) {
   std::string Type = MangledType.str();
   if (M.getModuleFlag("cfi-normalize-integers"))
     Type += ".normalized";
-  F.setMetadata(
-      LLVMContext::MD_kcfi_type,
-      MDNode::get(Ctx, MDB.createConstant(ConstantInt::get(
-                           Type::getInt32Ty(Ctx), getKCFITypeID(Type)))));
+
+  // Determine which hash algorithm to use
+  auto *MD = dyn_cast_or_null<MDString>(M.getModuleFlag("kcfi-hash"));
+  KCFIHashAlgorithm Algorithm =
+      parseKCFIHashAlgorithm(MD ? MD->getString() : "");
+
+  F.setMetadata(LLVMContext::MD_kcfi_type,
+                MDNode::get(Ctx, MDB.createConstant(ConstantInt::get(
+                                     Type::getInt32Ty(Ctx),
+                                     getKCFITypeID(Type, Algorithm)))));
   // If the module was compiled with -fpatchable-function-entry, ensure
   // we use the same patchable-function-prefix.
   if (auto *MD = mdconst::extract_or_null<ConstantInt>(
