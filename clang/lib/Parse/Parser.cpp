@@ -1100,30 +1100,32 @@ Parser::DeclGroupPtrTy Parser::ParseDeclOrFunctionDefInternal(
   // C99 6.7.2.3p6: Handle "struct-or-union identifier;", "enum { X };"
   // declaration-specifiers init-declarator-list[opt] ';'
   if (Tok.is(tok::semi)) {
-    auto LengthOfTSTToken = [](DeclSpec::TST TKind) {
-      assert(DeclSpec::isDeclRep(TKind));
-      switch(TKind) {
-      case DeclSpec::TST_class:
-        return 5;
-      case DeclSpec::TST_struct:
-        return 6;
-      case DeclSpec::TST_union:
-        return 5;
-      case DeclSpec::TST_enum:
-        return 4;
-      case DeclSpec::TST_interface:
-        return 9;
-      default:
-        llvm_unreachable("we only expect to get the length of the class/struct/union/enum");
+    auto GetAdjustedAttrsLoc = [&]() {
+      auto TKind = DS.getTypeSpecType();
+      if (!DeclSpec::isDeclRep(TKind))
+        return SourceLocation();
+
+      if (TKind == DeclSpec::TST_enum) {
+        const auto *ED = dyn_cast_or_null<EnumDecl>(DS.getRepAsDecl());
+        if (ED && ED->isScoped()) {
+          const auto &SM = Actions.getSourceManager();
+          const auto &LangOpts = Actions.getLangOpts();
+          auto End = Lexer::getLocForEndOfToken(DS.getTypeSpecTypeLoc(),
+                                                /*Offset*/ 0, SM, LangOpts);
+          auto NextToken = Lexer::findNextToken(End, SM, LangOpts);
+          if (NextToken)
+            return NextToken->getEndLoc();
+        }
       }
 
+      const auto &Policy = Actions.getASTContext().getPrintingPolicy();
+      unsigned Offset =
+          StringRef(DeclSpec::getSpecifierName(TKind, Policy)).size();
+      return DS.getTypeSpecTypeLoc().getLocWithOffset(Offset);
     };
+
     // Suggest correct location to fix '[[attrib]] struct' to 'struct [[attrib]]'
-    SourceLocation CorrectLocationForAttributes =
-        DeclSpec::isDeclRep(DS.getTypeSpecType())
-            ? DS.getTypeSpecTypeLoc().getLocWithOffset(
-                  LengthOfTSTToken(DS.getTypeSpecType()))
-            : SourceLocation();
+    SourceLocation CorrectLocationForAttributes = GetAdjustedAttrsLoc();
     ProhibitAttributes(Attrs, CorrectLocationForAttributes);
     ConsumeToken();
     RecordDecl *AnonRecord = nullptr;

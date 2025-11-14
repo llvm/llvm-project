@@ -420,6 +420,8 @@ Improvements to Clang's diagnostics
   or continue (#GH166013)
 - Clang now emits a diagnostic in case `vector_size` or `ext_vector_type`
   attributes are used with a negative size (#GH165463).
+- Clang now provides correct caret placement when attributes appear before
+  `enum class` (#GH163224).
 
 Improvements to Clang's time-trace
 ----------------------------------
