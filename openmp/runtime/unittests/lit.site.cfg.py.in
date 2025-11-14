@@ -1,0 +1,9 @@
+@AUTO_GEN_COMMENT@
+
+config.library_dir = "@LIBOMP_LIBRARY_DIR@"
+config.openmp_unittests_dir = "@CMAKE_CURRENT_BINARY_DIR@"
+config.llvm_build_mode = lit_config.substitute("@LLVM_BUILD_MODE@")
+
+# Let the main config do the real work.
+lit_config.load_config(config, "@CMAKE_CURRENT_SOURCE_DIR@/lit.cfg.py")
+

@@ -174,17 +174,26 @@ if(NOT WIN32)
 endif()
 
 # Add the OpenMP library
+
+# First, create an OBJECT library with all the runtime sources.
+# This allows both the main library and unit tests to link against the same compiled objects.
+add_library(omp_objects OBJECT ${LIBOMP_SOURCE_FILES})
+set_property(TARGET omp_objects PROPERTY FOLDER "OpenMP/Libraries")
+set_property(TARGET omp_objects PROPERTY POSITION_INDEPENDENT_CODE ON)
+# Export the omp_objects target so unittests can use it
+set(LIBOMP_OBJECTS_TARGET omp_objects PARENT_SCOPE)
+
 libomp_get_ldflags(LIBOMP_CONFIGURED_LDFLAGS)
 
 libomp_get_libflags(LIBOMP_CONFIGURED_LIBFLAGS)
 # Build libomp library. Add LLVMSupport dependency if building in-tree with libomptarget profiling enabled.
 if(OPENMP_STANDALONE_BUILD OR (NOT OPENMP_ENABLE_LIBOMP_PROFILING))
-  add_library(omp ${LIBOMP_LIBRARY_KIND} ${LIBOMP_SOURCE_FILES})
+  add_library(omp ${LIBOMP_LIBRARY_KIND} $<TARGET_OBJECTS:omp_objects>)
   set_property(TARGET omp PROPERTY FOLDER "OpenMP/Libraries")
   # Linking command will include libraries in LIBOMP_CONFIGURED_LIBFLAGS
   target_link_libraries(omp ${LIBOMP_CONFIGURED_LIBFLAGS} ${LIBOMP_DL_LIBS})
 else()
-  add_llvm_library(omp ${LIBOMP_LIBRARY_KIND} ${LIBOMP_SOURCE_FILES} PARTIAL_SOURCES_INTENDED
+  add_llvm_library(omp ${LIBOMP_LIBRARY_KIND} $<TARGET_OBJECTS:omp_objects> PARTIAL_SOURCES_INTENDED
     LINK_LIBS ${LIBOMP_CONFIGURED_LIBFLAGS} ${LIBOMP_DL_LIBS}
     LINK_COMPONENTS Support
     BUILDTREE_ONLY
