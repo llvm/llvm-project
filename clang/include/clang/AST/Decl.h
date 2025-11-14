@@ -357,9 +357,10 @@ public:
   /// including the '::' at the end. E.g.
   ///    when `printQualifiedName(D)` prints "A::B::i",
   ///    this function prints "A::B::".
-  void printNestedNameSpecifier(raw_ostream &OS) const;
   void printNestedNameSpecifier(raw_ostream &OS,
-                                const PrintingPolicy &Policy) const;
+                                bool AllowFunctionContext = false) const;
+  void printNestedNameSpecifier(raw_ostream &OS, const PrintingPolicy &Policy,
+                                bool AllowFunctionContext = false) const;
 
   // FIXME: Remove string version.
   std::string getQualifiedNameAsString() const;

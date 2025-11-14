@@ -70,18 +70,18 @@ void f() {
   // anything other than another unnamed class/struct.
   auto Lambda = [] {};
   f1<decltype(Lambda)>();
-  // CHECK: !DISubprogram(name: "f1<(lambda at {{.*}}simple-template-names.cpp:[[# @LINE - 2]]:17)>",
+  // CHECK: !DISubprogram(name: "f1<f()::(lambda1)>",
   f1<t1<t1<decltype(Lambda)>>>();
-  // CHECK: !DISubprogram(name: "f1<t1<t1<(lambda at {{.*}}> > >",
+  // CHECK: !DISubprogram(name: "f1<t1<t1<f()::(lambda1)> > >",
   struct {
   } unnamed_struct;
   f1<decltype(unnamed_struct)>();
-  // CHECK: !DISubprogram(name: "f1<(unnamed struct at {{.*}}simple-template-names.cpp:[[# @LINE - 3]]:3)>",
+  // CHECK: !DISubprogram(name: "f1<f()::(unnamed1 struct)>",
   f1<void (decltype(unnamed_struct))>();
-  // CHECK: !DISubprogram(name: "f1<void ((unnamed struct at {{.*}}simple-template-names.cpp:[[# @LINE - 5]]:3))>",
+  // CHECK: !DISubprogram(name: "f1<void (f()::(unnamed1 struct))>",
   enum {} unnamed_enum;
   f1<decltype(unnamed_enum)>();
-  // CHECK: !DISubprogram(name: "f1<(unnamed enum at {{.*}}simple-template-names.cpp:[[# @LINE - 2]]:3)>",
+  // CHECK: !DISubprogram(name: "f1<f()::(unnamed1 enum)>",
 
   // Declarations can't readily be reversed as the value in the DWARF only
   // contains the address of the value - we'd have to do symbol lookup to find
@@ -145,5 +145,5 @@ void f() {
   // CHECK: !DISubprogram(name: "f1<int () __attribute__((noreturn))>",
   
   f4<UnnamedEnum1>();
-  // CHECK: !DISubprogram(name: "f4<((unnamed enum at {{.*}}))0>"
+  // CHECK: !DISubprogram(name: "f4<((unnamed1 enum))0>"
 }
