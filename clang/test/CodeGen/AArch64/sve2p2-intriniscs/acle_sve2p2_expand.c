@@ -10,8 +10,10 @@
 // RUN: %clang_cc1 -triple aarch64 -target-feature +sve -target-feature +sve2p2 -S -disable-O0-optnone -Werror -Wall -o /dev/null %s
 #ifdef __ARM_FEATURE_SME
 #include "arm_sme.h"
+#define STREAMING __arm_streaming
 #else
 #include "arm_sve.h"
+#define STREAMING
 #endif
 
 #ifdef SVE_OVERLOADED_FORMS
@@ -19,12 +21,6 @@
 #define SVE_ACLE_FUNC(A1,A2_UNUSED,A3,A4_UNUSED) A1##A3
 #else
 #define SVE_ACLE_FUNC(A1,A2,A3,A4) A1##A2##A3##A4
-#endif
-
-#ifdef __ARM_FEATURE_SME
-#define STREAMING __arm_streaming
-#else
-#define STREAMING
 #endif
 
 // CHECK-LABEL: @test_svexpand_s8(
@@ -39,7 +35,7 @@
 //
 svint8_t test_svexpand_s8(svbool_t pg, svint8_t op) STREAMING
 {
-  return SVE_ACLE_FUNC(svexpand,_s8,,)(pg, op);
+  return SVE_ACLE_FUNC(svexpand,_s8)(pg, op);
 }
 
 // CHECK-LABEL: @test_svexpand_s16(
@@ -56,7 +52,7 @@ svint8_t test_svexpand_s8(svbool_t pg, svint8_t op) STREAMING
 //
 svint16_t test_svexpand_s16(svbool_t pg, svint16_t op) STREAMING
 {
-  return SVE_ACLE_FUNC(svexpand,_s16,,)(pg, op);
+  return SVE_ACLE_FUNC(svexpand,_s16)(pg, op);
 }
 
 // CHECK-LABEL: @test_svexpand_u8(
@@ -71,7 +67,7 @@ svint16_t test_svexpand_s16(svbool_t pg, svint16_t op) STREAMING
 //
 svuint8_t test_svexpand_u8(svbool_t pg, svuint8_t op) STREAMING
 {
-  return SVE_ACLE_FUNC(svexpand,_u8,,)(pg, op);
+  return SVE_ACLE_FUNC(svexpand,_u8)(pg, op);
 }
 
 // CHECK-LABEL: @test_svexpand_u16(
@@ -88,7 +84,7 @@ svuint8_t test_svexpand_u8(svbool_t pg, svuint8_t op) STREAMING
 //
 svuint16_t test_svexpand_u16(svbool_t pg, svuint16_t op) STREAMING
 {
-  return SVE_ACLE_FUNC(svexpand,_u16,,)(pg, op);
+  return SVE_ACLE_FUNC(svexpand,_u16)(pg, op);
 }
 
 // CHECK-LABEL: @test_svexpand_mf8(
@@ -103,7 +99,7 @@ svuint16_t test_svexpand_u16(svbool_t pg, svuint16_t op) STREAMING
 //
 svmfloat8_t test_svexpand_mf8(svbool_t pg, svmfloat8_t op) STREAMING
 {
-  return SVE_ACLE_FUNC(svexpand,_mf8,,)(pg, op);
+  return SVE_ACLE_FUNC(svexpand,_mf8)(pg, op);
 }
 
 // CHECK-LABEL: @test_svexpand_f16(
@@ -120,7 +116,7 @@ svmfloat8_t test_svexpand_mf8(svbool_t pg, svmfloat8_t op) STREAMING
 //
 svfloat16_t test_svexpand_f16(svbool_t pg, svfloat16_t op) STREAMING
 {
-  return SVE_ACLE_FUNC(svexpand,_f16,,)(pg, op);
+  return SVE_ACLE_FUNC(svexpand,_f16)(pg, op);
 }
 
 // CHECK-LABEL: @test_svexpand_bf16(
@@ -137,7 +133,7 @@ svfloat16_t test_svexpand_f16(svbool_t pg, svfloat16_t op) STREAMING
 //
 svbfloat16_t test_svexpand_bf16(svbool_t pg, svbfloat16_t op) STREAMING
 {
-  return SVE_ACLE_FUNC(svexpand,_bf16,,)(pg, op);
+  return SVE_ACLE_FUNC(svexpand,_bf16)(pg, op);
 }
 
 // CHECK-LABEL: @test_svexpand_s32(
@@ -154,7 +150,7 @@ svbfloat16_t test_svexpand_bf16(svbool_t pg, svbfloat16_t op) STREAMING
 //
 svint32_t test_svexpand_s32(svbool_t pg, svint32_t op) STREAMING
 {
-  return SVE_ACLE_FUNC(svexpand,_s32,,)(pg, op);
+  return SVE_ACLE_FUNC(svexpand,_s32)(pg, op);
 }
 
 // CHECK-LABEL: @test_svexpand_s64(
@@ -171,7 +167,7 @@ svint32_t test_svexpand_s32(svbool_t pg, svint32_t op) STREAMING
 //
 svint64_t test_svexpand_s64(svbool_t pg, svint64_t op) STREAMING
 {
-  return SVE_ACLE_FUNC(svexpand,_s64,,)(pg, op);
+  return SVE_ACLE_FUNC(svexpand,_s64)(pg, op);
 }
 
 // CHECK-LABEL: @test_svexpand_u32(
@@ -188,7 +184,7 @@ svint64_t test_svexpand_s64(svbool_t pg, svint64_t op) STREAMING
 //
 svuint32_t test_svexpand_u32(svbool_t pg, svuint32_t op) STREAMING
 {
-  return SVE_ACLE_FUNC(svexpand,_u32,,)(pg, op);
+  return SVE_ACLE_FUNC(svexpand,_u32)(pg, op);
 }
 
 // CHECK-LABEL: @test_svexpand_u64(
@@ -205,7 +201,7 @@ svuint32_t test_svexpand_u32(svbool_t pg, svuint32_t op) STREAMING
 //
 svuint64_t test_svexpand_u64(svbool_t pg, svuint64_t op) STREAMING
 {
-  return SVE_ACLE_FUNC(svexpand,_u64,,)(pg, op);
+  return SVE_ACLE_FUNC(svexpand,_u64)(pg, op);
 }
 
 // CHECK-LABEL: @test_svexpand_f32(
@@ -222,7 +218,7 @@ svuint64_t test_svexpand_u64(svbool_t pg, svuint64_t op) STREAMING
 //
 svfloat32_t test_svexpand_f32(svbool_t pg, svfloat32_t op) STREAMING
 {
-  return SVE_ACLE_FUNC(svexpand,_f32,,)(pg, op);
+  return SVE_ACLE_FUNC(svexpand,_f32)(pg, op);
 }
 
 // CHECK-LABEL: @test_svexpand_f64(
@@ -239,5 +235,5 @@ svfloat32_t test_svexpand_f32(svbool_t pg, svfloat32_t op) STREAMING
 //
 svfloat64_t test_svexpand_f64(svbool_t pg, svfloat64_t op) STREAMING
 {
-  return SVE_ACLE_FUNC(svexpand,_f64,,)(pg, op);
+  return SVE_ACLE_FUNC(svexpand,_f64)(pg, op);
 }

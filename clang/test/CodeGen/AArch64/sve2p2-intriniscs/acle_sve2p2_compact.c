@@ -11,8 +11,10 @@
 
 #ifdef __ARM_FEATURE_SME
 #include "arm_sme.h"
+#define STREAMING __arm_streaming
 #else
 #include "arm_sve.h"
+#define STREAMING
 #endif
 
 #ifdef SVE_OVERLOADED_FORMS
@@ -20,12 +22,6 @@
 #define SVE_ACLE_FUNC(A1,A2_UNUSED) A1
 #else
 #define SVE_ACLE_FUNC(A1,A2) A1##A2
-#endif
-
-#ifdef __ARM_FEATURE_SME
-#define STREAMING __arm_streaming
-#else
-#define STREAMING
 #endif
 
 // CHECK-LABEL: @test_svcompact_s8(
@@ -40,7 +36,7 @@
 //
 svint8_t test_svcompact_s8(svbool_t pg, svint8_t op) STREAMING
 {
-  return SVE_ACLE_FUNC(svcompact,_s8,,)(pg, op);
+  return SVE_ACLE_FUNC(svcompact,_s8)(pg, op);
 }
 
 // CHECK-LABEL: @test_svcompact_s16(
@@ -57,7 +53,7 @@ svint8_t test_svcompact_s8(svbool_t pg, svint8_t op) STREAMING
 //
 svint16_t test_svcompact_s16(svbool_t pg, svint16_t op) STREAMING
 {
-  return SVE_ACLE_FUNC(svcompact,_s16,,)(pg, op);
+  return SVE_ACLE_FUNC(svcompact,_s16)(pg, op);
 }
 
 // CHECK-LABEL: @test_svcompact_u8(
@@ -72,7 +68,7 @@ svint16_t test_svcompact_s16(svbool_t pg, svint16_t op) STREAMING
 //
 svuint8_t test_svcompact_u8(svbool_t pg, svuint8_t op) STREAMING
 {
-  return SVE_ACLE_FUNC(svcompact,_u8,,)(pg, op);
+  return SVE_ACLE_FUNC(svcompact,_u8)(pg, op);
 }
 
 // CHECK-LABEL: @test_svcompact_u16(
@@ -89,7 +85,7 @@ svuint8_t test_svcompact_u8(svbool_t pg, svuint8_t op) STREAMING
 //
 svuint16_t test_svcompact_u16(svbool_t pg, svuint16_t op) STREAMING
 {
-  return SVE_ACLE_FUNC(svcompact,_u16,,)(pg, op);
+  return SVE_ACLE_FUNC(svcompact,_u16)(pg, op);
 }
 
 // CHECK-LABEL: @test_svcompact_mf8(
@@ -104,7 +100,7 @@ svuint16_t test_svcompact_u16(svbool_t pg, svuint16_t op) STREAMING
 //
 svmfloat8_t test_svcompact_mf8(svbool_t pg, svmfloat8_t op) STREAMING
 {
-  return SVE_ACLE_FUNC(svcompact,_mf8,,)(pg, op);
+  return SVE_ACLE_FUNC(svcompact,_mf8)(pg, op);
 }
 
 // CHECK-LABEL: @test_svcompact_f16(
@@ -121,7 +117,7 @@ svmfloat8_t test_svcompact_mf8(svbool_t pg, svmfloat8_t op) STREAMING
 //
 svfloat16_t test_svcompact_f16(svbool_t pg, svfloat16_t op) STREAMING
 {
-  return SVE_ACLE_FUNC(svcompact,_f16,,)(pg, op);
+  return SVE_ACLE_FUNC(svcompact,_f16)(pg, op);
 }
 
 // CHECK-LABEL: @test_svcompact_bf16(
@@ -138,5 +134,5 @@ svfloat16_t test_svcompact_f16(svbool_t pg, svfloat16_t op) STREAMING
 //
 svbfloat16_t test_svcompact_bf16(svbool_t pg, svbfloat16_t op) STREAMING
 {
-  return SVE_ACLE_FUNC(svcompact,_bf16,,)(pg, op);
+  return SVE_ACLE_FUNC(svcompact,_bf16)(pg, op);
 }

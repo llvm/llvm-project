@@ -10,15 +10,12 @@
 
 #ifdef __ARM_FEATURE_SME
 #include "arm_sme.h"
-#else
-#include "arm_sve.h"
-#endif
-
-#ifdef __ARM_FEATURE_SME
 #define STREAMING __arm_streaming
 #else
+#include "arm_sve.h"
 #define STREAMING
 #endif
+
 
 // CHECK-LABEL: define dso_local i64 @test_svlastp_b8(
 // CHECK-SAME: <vscale x 16 x i1> [[PG:%.*]], <vscale x 16 x i1> [[OP:%.*]]) #[[ATTR0:[0-9]+]] {
