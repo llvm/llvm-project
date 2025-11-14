@@ -262,9 +262,7 @@ class GitHubAPI:
             )
             time.sleep(MERGE_RETRY_DELAY)
 
-        raise LlvmPrError(
-            f"PR was not mergeable after {MERGE_MAX_RETRIES} attempts."
-        )
+        raise LlvmPrError(f"PR was not mergeable after {MERGE_MAX_RETRIES} attempts.")
 
     def enable_auto_merge(self, pr_url: str) -> None:
         if not pr_url:
