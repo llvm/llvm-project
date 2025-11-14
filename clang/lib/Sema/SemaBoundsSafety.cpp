@@ -244,24 +244,30 @@ bool Sema::CheckCountedByAttrOnField(FieldDecl *FD, Expr *E, bool CountInBytes,
 
 // FIXME: for some reason diagnostics highlight the end character, while
 // getSourceText() does not include the end character.
-static SourceRange getAttrNameRangeImpl(const ASTContext &Ctx, SourceLocation Begin,
+static SourceRange getAttrNameRangeImpl(const ASTContext &Ctx,
+                                        SourceLocation Begin,
                                         bool IsForDiagnostics) {
   const SourceManager &SM = Ctx.getSourceManager();
   SourceLocation TokenStart = Begin;
   while (TokenStart.isMacroID())
     TokenStart = SM.getImmediateExpansionRange(TokenStart).getBegin();
   unsigned Offset = IsForDiagnostics ? 1 : 0;
-  SourceLocation End = Lexer::getLocForEndOfToken(TokenStart, Offset, SM, Ctx.getLangOpts());
+  SourceLocation End =
+      Lexer::getLocForEndOfToken(TokenStart, Offset, SM, Ctx.getLangOpts());
   return {TokenStart, End};
 }
 
-StringRef BoundsAttributedTypeLoc::getAttrNameAsWritten(const ASTContext &Ctx) const {
-  SourceRange Range = getAttrNameRangeImpl(Ctx, getAttrRange().getBegin(), false);
+StringRef
+BoundsAttributedTypeLoc::getAttrNameAsWritten(const ASTContext &Ctx) const {
+  SourceRange Range =
+      getAttrNameRangeImpl(Ctx, getAttrRange().getBegin(), false);
   CharSourceRange NameRange = CharSourceRange::getCharRange(Range);
-  return Lexer::getSourceText(NameRange, Ctx.getSourceManager(), Ctx.getLangOpts());
+  return Lexer::getSourceText(NameRange, Ctx.getSourceManager(),
+                              Ctx.getLangOpts());
 }
 
-SourceRange BoundsAttributedTypeLoc::getAttrNameRange(const ASTContext &Ctx) const {
+SourceRange
+BoundsAttributedTypeLoc::getAttrNameRange(const ASTContext &Ctx) const {
   return getAttrNameRangeImpl(Ctx, getAttrRange().getBegin(), true);
 }
 
