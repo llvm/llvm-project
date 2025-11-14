@@ -147,9 +147,17 @@ def bp_compression_sort_startup_functions: Flag<["--"], "bp-compression-sort-sta
     Group<grp_lld>;
 def no_bp_compression_sort_startup_functions: Flag<["--"], "no-bp-compression-sort-startup-functions">,
     HelpText<"Do not order startup function for compression">, Group<grp_lld>;
-def bp_compression_sort: Joined<["--"], "bp-compression-sort=">,
-    MetaVarName<"[none,function,data,both]">,
-    HelpText<"Order sections to improve compressed size">, Group<grp_lld>;
+def bp_compression_sort
+    : Joined<["--"], "bp-compression-sort=">,
+      MetaVarName<"[none,function,data,both]">,
+      HelpText<"Order sections to improve compressed size. Deprecated. Please "
+               "use --bp-compression-sort-section">,
+      Group<grp_lld>;
+def bp_compression_sort_section
+    : Joined<["--"], "bp-compression-sort-section=">,
+      MetaVarName<"<section-glob>">,
+      HelpText<"Order <section-glob> for optimal compressed size">,
+      Group<grp_lld>;
 def irpgo_profile_sort: Separate<["--"], "irpgo-profile-sort">, Group<grp_lld>;
 def irpgo_profile_sort_eq: Joined<["--"], "irpgo-profile-sort=">,
     Alias<!cast<Separate>(irpgo_profile_sort)>, MetaVarName<"<profile>">,

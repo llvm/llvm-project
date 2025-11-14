@@ -231,8 +231,8 @@ struct Configuration {
   llvm::StringRef irpgoProfilePath;
   bool bpStartupFunctionSort = false;
   bool bpCompressionSortStartupFunctions = false;
-  bool bpFunctionOrderForCompression = false;
-  bool bpDataOrderForCompression = false;
+  std::vector<std::string> bpCompressionSortSections;
+  llvm::SmallVector<llvm::GlobPattern> bpCompressionSortSectionGlobs;
   bool bpVerboseSectionOrderer = false;
 
   SectionRenameMap sectionRenameMap;
