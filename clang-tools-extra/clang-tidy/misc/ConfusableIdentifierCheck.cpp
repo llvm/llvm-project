@@ -53,7 +53,6 @@ static llvm::SmallString<64U> skeleton(StringRef Name) {
   const char *Curr = Name.data();
   const char *End = Curr + Name.size();
   while (Curr < End) {
-
     const char *Prev = Curr;
     UTF32 CodePoint = 0;
     const ConversionResult Result = convertUTF8Sequence(

@@ -193,7 +193,6 @@ static bool isFunctionPointerConvertible(QualType From, QualType To) {
 // The function should only be called in C++ mode.
 static bool isQualificationConvertiblePointer(QualType From, QualType To,
                                               const LangOptions &LangOpts) {
-
   // [N4659 7.5 (1)]
   // A cv-decomposition of a type T is a sequence of cv_i and P_i such that T is
   //    cv_0 P_0 cv_1 P_1 ... cv_n−1 P_n−1 cv_n U” for n > 0,

@@ -2,3 +2,7 @@ BasedOnStyle: LLVM
 QualifierAlignment: Left
 LineEnding: LF
 InsertNewlineAtEOF: true
+KeepEmptyLines:
+  AtEndOfFile: false
+  AtStartOfBlock: false
+  AtStartOfFile: false

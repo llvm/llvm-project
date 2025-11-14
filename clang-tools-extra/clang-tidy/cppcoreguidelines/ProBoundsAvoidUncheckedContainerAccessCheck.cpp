@@ -103,7 +103,6 @@ void ProBoundsAvoidUncheckedContainerAccessCheck::registerMatchers(
 
 void ProBoundsAvoidUncheckedContainerAccessCheck::check(
     const MatchFinder::MatchResult &Result) {
-
   const auto *MatchedExpr = Result.Nodes.getNodeAs<CallExpr>("caller");
 
   if (FixMode == None) {
