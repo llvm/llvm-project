@@ -345,7 +345,8 @@ public:
   matchAndRewrite(vector::ScatterOp scatter, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     auto loc = scatter->getLoc();
-    MemRefType memRefType = scatter.getMemRefType();
+    auto memRefType = dyn_cast<MemRefType>(scatter.getBaseType());
+    assert(memRefType && "The base should be bufferized");
 
     if (failed(isMemRefTypeSupported(memRefType, *this->getTypeConverter())))
       return rewriter.notifyMatchFailure(scatter, "memref type not supported");
