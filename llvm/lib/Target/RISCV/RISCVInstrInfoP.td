@@ -21,7 +21,6 @@
 def simm10 : RISCVSImmOp<10>, TImmLeaf<XLenVT, "return isInt<10>(Imm);">;
 def tuimm3 : RISCVUImmOp<3>, TImmLeaf<XLenVT, "return isUInt<3>(Imm);">;
 def tuimm4 : RISCVUImmOp<4>, TImmLeaf<XLenVT, "return isUInt<4>(Imm);">;
-def tuimm5 : RISCVUImmOp<5>, TImmLeaf<XLenVT, "return isUInt<5>(Imm);">;
 
 def SImm8UnsignedAsmOperand : SImmAsmOperand<8, "Unsigned"> {
   let RenderMethod = "addSImm8UnsignedOperands";
