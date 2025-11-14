@@ -79,6 +79,44 @@ def NVVM_Dialect : Dialect {
     sequence must be expressed directly, NVVM provides an `nvvm.inline_ptx` op to
     embed PTX inline as a last-resort escape hatch, with explicit operands and
     results.
+
+
+    **Memory Spaces:** The NVVM dialect introduces the following memory spaces,
+    each with distinct scopes and lifetimes:
+
+    | Memory Space      | Scope                | Lifetime          |
+    |-------------------|----------------------|-------------------|
+    | `generic`         | All threads          | Context-dependent |
+    | `global`          | All threads (device) | Application       |
+    | `shared`          | Thread block (CTA)   | Kernel execution  |
+    | `constant`        | All threads (RO)     | Application       |
+    | `local`           | Single thread        | Kernel execution  |
+    | `tensor`          | Thread block (CTA)   | Kernel execution  |
+    | `shared_cluster`  | Thread block cluster | Kernel execution  |
+
+    **Memory Space Details:**
+    - **generic**: Can point to any memory space; requires runtime resolution of
+      actual address space. Use when pointer origin is unknown at compile time.
+      Performance varies based on the underlying memory space.
+    - **global**: Accessible by all threads across all blocks; persists across
+      kernel launches. Highest latency but largest capacity (device memory). Best
+      for large data and inter-kernel communication.
+    - **shared**: Shared within a thread block (CTA); very fast on-chip memory for
+      cooperation between threads in the same block. Limited capacity. Ideal for 
+      block-level collaboration, caching, and reducing global memory traffic.
+    - **constant**: Read-only memory cached per SM; optimized for broadcast
+      patterns where all threads access the same location. Fast access when cached.
+      Size typically limited to 64KB. Best for read-only data and uniform values
+      accessed by all threads.
+    - **local**: Private to each thread; used for stack frames and register spills.
+      Actually resides in global memory but cached in L1. Use for per-thread
+      private data and automatic variables that don't fit in registers.
+    - **tensor**: Special memory space for Tensor Memory Accelerator (TMA)
+      operations on SM 80+ architectures; used with async tensor operations and
+      wgmma instructions. Provides very fast access for matrix operations.
+    - **shared_cluster**: Shared across thread blocks within a cluster (SM 90+);
+      enables collaboration beyond single-block scope with distributed shared
+      memory. Fast access across cluster threads.
   }];
 
   let name = "nvvm";
