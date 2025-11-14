@@ -90,7 +90,7 @@ define void @many_deps(ptr noalias %buckets, ptr %array, ptr %indices, ptr %othe
 ; NORMAL_DEP_LIMIT-NEXT:    [[TMP15:%.*]] = add <vscale x 4 x i32> [[WIDE_LOAD10]], [[VEC_IND]]
 ; NORMAL_DEP_LIMIT-NEXT:    store <vscale x 4 x i32> [[TMP15]], ptr [[TMP14]], align 4, !alias.scope [[META7]], !noalias [[META0]]
 ; NORMAL_DEP_LIMIT-NEXT:    [[IV_NEXT]] = add nuw i64 [[IV]], [[TMP8]]
-; NORMAL_DEP_LIMIT-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 4 x i32> [[VEC_IND]], [[DOTSPLAT]]
+; NORMAL_DEP_LIMIT-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <vscale x 4 x i32> [[VEC_IND]], [[DOTSPLAT]]
 ; NORMAL_DEP_LIMIT-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[IV_NEXT]], [[N_VEC]]
 ; NORMAL_DEP_LIMIT-NEXT:    br i1 [[TMP16]], label [[MIDDLE_BLOCK:%.*]], label [[FOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; NORMAL_DEP_LIMIT:       middle.block:

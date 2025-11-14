@@ -713,7 +713,7 @@ bool SIFoldOperandsImpl::updateOperand(FoldCandidate &Fold) const {
 
   // Verify the register is compatible with the operand.
   if (const TargetRegisterClass *OpRC =
-          TII->getRegClass(MI->getDesc(), Fold.UseOpNo, TRI)) {
+          TII->getRegClass(MI->getDesc(), Fold.UseOpNo)) {
     const TargetRegisterClass *NewRC =
         TRI->getRegClassForReg(*MRI, New->getReg());
 
@@ -1284,10 +1284,11 @@ void SIFoldOperandsImpl::foldOperand(
         continue;
 
       const int SrcIdx = MovOp == AMDGPU::V_MOV_B16_t16_e64 ? 2 : 1;
-      const TargetRegisterClass *MovSrcRC =
-          TRI->getRegClass(TII->getOpRegClassID(MovDesc.operands()[SrcIdx]));
 
-      if (MovSrcRC) {
+      int16_t RegClassID = TII->getOpRegClassID(MovDesc.operands()[SrcIdx]);
+      if (RegClassID != -1) {
+        const TargetRegisterClass *MovSrcRC = TRI->getRegClass(RegClassID);
+
         if (UseSubReg)
           MovSrcRC = TRI->getMatchingSuperRegClass(SrcRC, MovSrcRC, UseSubReg);
 
@@ -1326,7 +1327,7 @@ void SIFoldOperandsImpl::foldOperand(
       if (MovOp == AMDGPU::V_MOV_B16_t16_e64) {
         const auto &SrcOp = UseMI->getOperand(UseOpIdx);
         MachineOperand NewSrcOp(SrcOp);
-        MachineFunction *MF = UseMI->getParent()->getParent();
+        MachineFunction *MF = UseMI->getMF();
         UseMI->removeOperand(1);
         UseMI->addOperand(*MF, MachineOperand::CreateImm(0)); // src0_modifiers
         UseMI->addOperand(NewSrcOp);                          // src0
@@ -1779,7 +1780,7 @@ bool SIFoldOperandsImpl::foldInstOperand(MachineInstr &MI,
   if (CopiesToReplace.empty() && FoldList.empty())
     return Changed;
 
-  MachineFunction *MF = MI.getParent()->getParent();
+  MachineFunction *MF = MI.getMF();
   // Make sure we add EXEC uses to any new v_mov instructions created.
   for (MachineInstr *Copy : CopiesToReplace)
     Copy->addImplicitDefUseOperands(*MF);
@@ -2394,7 +2395,7 @@ bool SIFoldOperandsImpl::tryFoldRegSequence(MachineInstr &MI) {
 
   unsigned OpIdx = Op - &UseMI->getOperand(0);
   const MCInstrDesc &InstDesc = UseMI->getDesc();
-  const TargetRegisterClass *OpRC = TII->getRegClass(InstDesc, OpIdx, TRI);
+  const TargetRegisterClass *OpRC = TII->getRegClass(InstDesc, OpIdx);
   if (!OpRC || !TRI->isVectorSuperClass(OpRC))
     return false;
 
