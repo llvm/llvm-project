@@ -828,6 +828,14 @@ void ProfiledBinary::populateSymbolAddressList(const ObjectFile *Obj) {
     SymbolStartAddrs[GUID] = Addr;
     StartAddrToSymMap.emplace(Addr, GUID);
   }
+
+  // Load DWARF name too if they are overwritten by the symbol table
+  for (auto [OldGUID, Func] : OverriddenBinaryFunctions) {
+    uint64_t GUID = Function::getGUIDAssumingExternalLinkage(Func->FuncName);
+    uint64_t Addr = SymbolStartAddrs[GUID];
+    SymbolStartAddrs[OldGUID] = Addr;
+    StartAddrToSymMap.emplace(Addr, OldGUID);
+  }
 }
 
 void ProfiledBinary::loadSymbolsFromSymtab(const ObjectFile *Obj) {
@@ -903,13 +911,16 @@ void ProfiledBinary::loadSymbolsFromSymtab(const ObjectFile *Obj) {
       if (!Ret.second)
         continue;
 
+      uint64_t OldGUID = MD5Hash(Range->getFuncName());
+
       Func.FuncName = Ret.first->first;
       Func.Ranges = ErrSym->second.Ranges;
       Func.FromSymtab = true;
 
-      HashBinaryFunctions.erase(MD5Hash(Range->getFuncName()));
+      HashBinaryFunctions.erase(OldGUID);
       BinaryFunctions.erase(ErrSym);
 
+      OverriddenBinaryFunctions[OldGUID] = &Func;
       HashBinaryFunctions[MD5Hash(StringRef(SymName))] = &Func;
       Range->Func = &Func;
       for (auto [RangeStart, _] : Func.Ranges) {

@@ -232,6 +232,10 @@ class ProfiledBinary {
   // GUID to symbol start address map
   DenseMap<uint64_t, uint64_t> SymbolStartAddrs;
 
+  // GUID mapping of the overridden DWARF symbol names to the binary functions
+  // with the symbol table names
+  std::unordered_map<uint64_t, BinaryFunction *> OverriddenBinaryFunctions;
+
   // These maps are for temporary use of warning diagnosis.
   DenseSet<int64_t> AddrsWithMultipleSymbols;
   DenseSet<std::pair<uint64_t, uint64_t>> AddrsWithInvalidInstruction;
