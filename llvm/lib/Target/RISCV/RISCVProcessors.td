@@ -68,6 +68,11 @@ def getRISCVTuneInfo : SearchIndex {
 
 class GenericTuneInfo: RISCVTuneInfo;
 
+class SpacemitX60TuneInfo : GenericTuneInfo {
+  let CacheLineSize = 64;
+  let PrefetchDistance = 128;
+}
+
 class RISCVProcessorModel<string n,
                           SchedMachineModel m,
                           list<SubtargetFeature> f,
@@ -748,7 +753,8 @@ def SPACEMIT_X60 : RISCVProcessorModel<"spacemit-x60",
                                         TuneOptimizedNF2SegmentLoadStore,
                                         TuneOptimizedNF3SegmentLoadStore,
                                         TuneOptimizedNF4SegmentLoadStore,
-                                        TuneVXRMPipelineFlush]> {
+                                        TuneVXRMPipelineFlush]>,
+                   SpacemitX60TuneInfo {
   let MVendorID = 0x710;
   let MArchID = 0x8000000058000001;
   let MImpID = 0x1000000049772200;
