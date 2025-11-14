@@ -14,16 +14,6 @@ define void @test1(ptr noalias nocapture %a, ptr noalias nocapture readonly %b) 
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds float, ptr [[TMP0]], i64 2
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x float>, ptr [[TMP0]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <2 x float>, ptr [[TMP7]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ogt <2 x float> [[WIDE_LOAD]], splat (float 1.000000e+02)
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i1> [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i1> [[TMP1]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = fcmp ogt <2 x float> [[WIDE_LOAD1]], splat (float 1.000000e+02)
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i1> [[TMP2]], i32 0
-; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <2 x i1> [[TMP2]], i32 1
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP4]])
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP5]])
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP6]])
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP13]])
 ; CHECK-NEXT:    [[TMP8:%.*]] = fadd <2 x float> [[WIDE_LOAD]], splat (float 1.000000e+00)
 ; CHECK-NEXT:    [[TMP9:%.*]] = fadd <2 x float> [[WIDE_LOAD1]], splat (float 1.000000e+00)
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDEX]]
@@ -34,6 +24,16 @@ define void @test1(ptr noalias nocapture %a, ptr noalias nocapture readonly %b) 
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1600
 ; CHECK-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[TMP13:%.*]] = fcmp ogt <2 x float> [[WIDE_LOAD]], splat (float 1.000000e+02)
+; CHECK-NEXT:    [[TMP14:%.*]] = fcmp ogt <2 x float> [[WIDE_LOAD1]], splat (float 1.000000e+02)
+; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <2 x i1> [[TMP13]], i32 0
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP15]])
+; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <2 x i1> [[TMP13]], i32 1
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP16]])
+; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <2 x i1> [[TMP14]], i32 0
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP17]])
+; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <2 x i1> [[TMP14]], i32 1
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP18]])
 ; CHECK-NEXT:    br label %[[FOR_END:.*]]
 ; CHECK:       [[FOR_END]]:
 ; CHECK-NEXT:    ret void
@@ -74,8 +74,6 @@ define void @test2(ptr noalias %a, ptr noalias %b) {
 ; CHECK-NEXT:    [[MASKCOND4:%.*]] = icmp eq i64 [[MASKEDPTR3]], 0
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[MASKCOND]])
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[MASKCOND4]])
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -93,6 +91,8 @@ define void @test2(ptr noalias %a, ptr noalias %b) {
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1600
 ; CHECK-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[MASKCOND]])
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[MASKCOND4]])
 ; CHECK-NEXT:    br label %[[FOR_END:.*]]
 ; CHECK:       [[FOR_END]]:
 ; CHECK-NEXT:    ret void

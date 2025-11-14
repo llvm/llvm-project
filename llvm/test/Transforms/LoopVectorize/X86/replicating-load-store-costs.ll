@@ -589,16 +589,25 @@ define double @test_load_used_by_other_load_scev_low_trip_count(ptr %ptr.a, ptr 
 ; I64-NEXT:    [[ADD1:%.*]] = fadd double [[TMP10]], 0.000000e+00
 ; I64-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[TMP3]], i64 8
 ; I64-NEXT:    [[TMP15:%.*]] = load double, ptr [[TMP13]], align 8
-; I64-NEXT:    [[MUL1]] = fmul double [[ADD1]], 0.000000e+00
-; I64-NEXT:    [[MUL2:%.*]] = fmul double [[TMP15]], 0.000000e+00
-; I64-NEXT:    [[ADD2:%.*]] = fadd double [[MUL2]], 0.000000e+00
-; I64-NEXT:    [[ADD3:%.*]] = fadd double [[ADD2]], 1.000000e+00
+; I64-NEXT:    [[TMP16:%.*]] = insertelement <2 x double> poison, double [[TMP14]], i32 0
+; I64-NEXT:    [[TMP17:%.*]] = insertelement <2 x double> [[TMP16]], double [[TMP15]], i32 1
+; I64-NEXT:    [[TMP18:%.*]] = fmul <2 x double> [[TMP11]], zeroinitializer
+; I64-NEXT:    [[TMP23:%.*]] = load double, ptr [[TMP8]], align 8
 ; I64-NEXT:    [[TMP24:%.*]] = load double, ptr [[TMP9]], align 8
-; I64-NEXT:    [[DIV:%.*]] = fdiv double [[TMP24]], [[ADD3]]
-; I64-NEXT:    [[RESULT]] = fsub double [[ACCUM_INNER]], [[DIV]]
-; I64-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
-; I64-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[IV]], 1
-; I64-NEXT:    br i1 [[EXITCOND]], label %[[OUTER_LOOP_LOOPEXIT]], label %[[INNER_LOOP]]
+; I64-NEXT:    [[TMP25:%.*]] = insertelement <2 x double> poison, double [[TMP23]], i32 0
+; I64-NEXT:    [[TMP26:%.*]] = insertelement <2 x double> [[TMP25]], double [[TMP24]], i32 1
+; I64-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
+; I64:       [[MIDDLE_BLOCK]]:
+; I64-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <2 x double> poison, double [[ACCUM]], i64 0
+; I64-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <2 x double> [[BROADCAST_SPLATINSERT1]], <2 x double> poison, <2 x i32> zeroinitializer
+; I64-NEXT:    [[TMP19:%.*]] = shufflevector <2 x double> [[BROADCAST_SPLAT2]], <2 x double> [[TMP18]], <2 x i32> <i32 1, i32 2>
+; I64-NEXT:    [[TMP20:%.*]] = fmul <2 x double> [[TMP17]], zeroinitializer
+; I64-NEXT:    [[TMP21:%.*]] = fadd <2 x double> [[TMP20]], zeroinitializer
+; I64-NEXT:    [[TMP22:%.*]] = fadd <2 x double> [[TMP21]], splat (double 1.000000e+00)
+; I64-NEXT:    [[TMP27:%.*]] = fdiv <2 x double> [[TMP26]], [[TMP22]]
+; I64-NEXT:    [[TMP28:%.*]] = fsub <2 x double> [[TMP19]], [[TMP27]]
+; I64-NEXT:    [[TMP29]] = extractelement <2 x double> [[TMP28]], i32 1
+; I64-NEXT:    br label %[[OUTER_LOOP_LOOPEXIT]]
 ; I64:       [[EXIT]]:
 ; I64-NEXT:    ret double [[ACCUM]]
 ;

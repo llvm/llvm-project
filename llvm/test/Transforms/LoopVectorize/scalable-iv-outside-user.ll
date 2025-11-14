@@ -35,12 +35,12 @@ define i32 @iv_live_out_wide(ptr %dst) {
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i16, ptr [[TMP10]], i64 [[TMP13]]
 ; CHECK-NEXT:    store <vscale x 2 x i16> zeroinitializer, ptr [[TMP10]], align 2
 ; CHECK-NEXT:    store <vscale x 2 x i16> zeroinitializer, ptr [[TMP14]], align 2
-; CHECK-NEXT:    [[TMP15:%.*]] = add <vscale x 2 x i32> [[BROADCAST_SPLAT]], [[STEP_ADD]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], [[TMP6]]
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 2 x i32> [[STEP_ADD]], [[BROADCAST_SPLAT2]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP16]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[TMP15:%.*]] = add <vscale x 2 x i32> [[BROADCAST_SPLAT]], [[STEP_ADD]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = call i32 @llvm.vscale.i32()
 ; CHECK-NEXT:    [[TMP18:%.*]] = mul nuw i32 [[TMP17]], 2
 ; CHECK-NEXT:    [[TMP19:%.*]] = sub i32 [[TMP18]], 1
