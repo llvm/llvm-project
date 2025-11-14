@@ -36,7 +36,7 @@ concurrency:
 jobs:
   stage1:
     if: github.repository_owner == 'llvm'
-    runs-on: llvm-premerge-libcxx-next-runners
+    runs-on: llvm-premerge-libcxx-runners
     continue-on-error: false
     strategy:
       fail-fast: false
@@ -73,7 +73,7 @@ jobs:
             **/crash_diagnostics/*
   stage2:
     if: github.repository_owner == 'llvm'
-    runs-on: llvm-premerge-libcxx-next-runners
+    runs-on: llvm-premerge-libcxx-runners
     needs: [ stage1 ]
     continue-on-error: false
     strategy:
@@ -148,19 +148,19 @@ jobs:
           'generic-static',
           'bootstrapping-build'
         ]
-        machine: [ 'llvm-premerge-libcxx-next-runners' ]
+        machine: [ 'llvm-premerge-libcxx-runners' ]
         include:
         - config: 'generic-cxx26'
-          machine: llvm-premerge-libcxx-next-runners
+          machine: llvm-premerge-libcxx-runners
         - config: 'generic-asan'
-          machine: llvm-premerge-libcxx-next-runners
+          machine: llvm-premerge-libcxx-runners
         - config: 'generic-tsan'
-          machine: llvm-premerge-libcxx-next-runners
+          machine: llvm-premerge-libcxx-runners
         - config: 'generic-ubsan'
-          machine: llvm-premerge-libcxx-next-runners
+          machine: llvm-premerge-libcxx-runners
         # Use a larger machine for MSAN to avoid timeout and memory allocation issues.
         - config: 'generic-msan'
-          machine: llvm-premerge-libcxx-next-runners
+          machine: llvm-premerge-libcxx-runners
     runs-on: ${{ matrix.machine }}
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0

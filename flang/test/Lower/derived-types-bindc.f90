@@ -41,4 +41,10 @@ subroutine s1()
   end type
   type(t4) :: xt4
 ! CHECK-DAG: %_QFs1Tt4 = type <{ i16, [2 x i8], { double, double }, [1 x i8], [3 x i8] }>
+
+  xt0%x2 = 1.
+  xt1%x2 = 1.
+  xt2%x2 = 1.
+  xt3%x2 = (1., 1.)
+  xt4%x2 = (1., 1.)
 end subroutine s1

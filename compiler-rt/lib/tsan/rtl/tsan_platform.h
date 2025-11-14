@@ -958,7 +958,9 @@ struct IsAppMemImpl {
 };
 
 ALWAYS_INLINE
-bool IsAppMem(uptr mem) { return SelectMapping<IsAppMemImpl>(mem); }
+bool IsAppMem(uptr mem) {
+  return SelectMapping<IsAppMemImpl>(STRIP_MTE_TAG(mem));
+}
 
 struct IsShadowMemImpl {
   template <typename Mapping>
@@ -997,7 +999,8 @@ struct MemToShadowImpl {
 
 ALWAYS_INLINE
 RawShadow *MemToShadow(uptr x) {
-  return reinterpret_cast<RawShadow *>(SelectMapping<MemToShadowImpl>(x));
+  return reinterpret_cast<RawShadow*>(
+      SelectMapping<MemToShadowImpl>(STRIP_MTE_TAG(x)));
 }
 
 struct MemToMetaImpl {
@@ -1011,7 +1014,9 @@ struct MemToMetaImpl {
 };
 
 ALWAYS_INLINE
-u32 *MemToMeta(uptr x) { return SelectMapping<MemToMetaImpl>(x); }
+u32* MemToMeta(uptr x) {
+  return SelectMapping<MemToMetaImpl>(STRIP_MTE_TAG(x));
+}
 
 struct ShadowToMemImpl {
   template <typename Mapping>

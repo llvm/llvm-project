@@ -497,4 +497,11 @@
 #  endif
 #endif
 
+#if SANITIZER_APPLE && SANITIZER_WORDSIZE == 64
+// MTE uses the lower half of the top byte.
+#  define STRIP_MTE_TAG(addr) ((addr) & ~((uptr)0x0f << 56))
+#else
+#  define STRIP_MTE_TAG(addr) (addr)
+#endif
+
 #endif  // SANITIZER_PLATFORM_H
