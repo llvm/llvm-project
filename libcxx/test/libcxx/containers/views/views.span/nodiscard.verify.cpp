@@ -48,8 +48,7 @@ void test() {
     std::as_writable_bytes(sp);
   }
   { // Test with a dynamic extent
-    std::vector vec{94, 92};
-    std::span sp{vec};
+    std::span<int> sp;
 
     sp.first<1>();      // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
     sp.last<1>();       // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
