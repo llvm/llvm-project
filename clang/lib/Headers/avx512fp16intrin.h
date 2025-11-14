@@ -621,8 +621,8 @@ _mm_maskz_add_sh(__mmask8 __U, __m128h __A, __m128h __B) {
       (__v8hf)(__m128h)(A), (__v8hf)(__m128h)(B), (__v8hf)_mm_setzero_ph(),    \
       (__mmask8)(U), (int)(R)))
 
-static __inline__ __m128h
-    __DEFAULT_FN_ATTRS128_CONSTEXPR _mm_sub_sh(__m128h __A, __m128h __B) {
+static __inline__ __m128h __DEFAULT_FN_ATTRS128_CONSTEXPR
+_mm_sub_sh(__m128h __A, __m128h __B) {
   __A[0] -= __B[0];
   return __A;
 }
@@ -654,8 +654,8 @@ _mm_maskz_sub_sh(__mmask8 __U, __m128h __A, __m128h __B) {
       (__v8hf)(__m128h)(A), (__v8hf)(__m128h)(B), (__v8hf)_mm_setzero_ph(),    \
       (__mmask8)(U), (int)(R)))
 
-static __inline__ __m128h
-    __DEFAULT_FN_ATTRS128_CONSTEXPR _mm_mul_sh(__m128h __A, __m128h __B) {
+static __inline__ __m128h __DEFAULT_FN_ATTRS128_CONSTEXPR
+_mm_mul_sh(__m128h __A, __m128h __B) {
   __A[0] *= __B[0];
   return __A;
 }
@@ -687,8 +687,8 @@ _mm_maskz_mul_sh(__mmask8 __U, __m128h __A, __m128h __B) {
       (__v8hf)(__m128h)(A), (__v8hf)(__m128h)(B), (__v8hf)_mm_setzero_ph(),    \
       (__mmask8)(U), (int)(R)))
 
-static __inline__ __m128h
-    __DEFAULT_FN_ATTRS128_CONSTEXPR _mm_div_sh(__m128h __A, __m128h __B) {
+static __inline__ __m128h __DEFAULT_FN_ATTRS128_CONSTEXPR
+_mm_div_sh(__m128h __A, __m128h __B) {
   __A[0] /= __B[0];
   return __A;
 }
