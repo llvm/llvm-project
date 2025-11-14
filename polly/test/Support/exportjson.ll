@@ -1,6 +1,6 @@
 ; RUN: rm -rf %t
 ; RUN: mkdir -p %t
-; RUN: opt %loadNPMPolly -polly-import-jscop-dir=%t -polly -O2 -polly-export -S < %s
+; RUN: opt %loadNPMPolly -polly-import-jscop-dir=%t '-passes=polly-custom<export-jscop>' -disable-output < %s
 ; RUN: FileCheck %s -input-file %t/exportjson___%entry.split---%return.jscop
 ;
 ; for (int j = 0; j < n; j += 1) {
@@ -9,27 +9,21 @@
 ;
 define void @exportjson(i32 %n, ptr noalias nonnull %A) {
 entry:
-  br label %for
+  br label %entry.split
 
-for:
-  %j = phi i32 [0, %entry], [%j.inc, %inc]
-  %j.cmp = icmp slt i32 %j, %n
-  br i1 %j.cmp, label %body, label %exit
+entry.split:
+  %j.cmp1 = icmp sgt i32 %n, 0
+  br i1 %j.cmp1, label %body.lr.ph, label %return
 
-    body:
-      store double 42.0, ptr %A
-      br label %inc
-
-inc:
-  %j.inc = add nuw nsw i32 %j, 1
-  br label %for
-
-exit:
+body.lr.ph:
+  store double 4.200000e+01, ptr %A, align 8
   br label %return
 
 return:
   ret void
 }
+
+attributes #0 = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write) }
 
 
 ; CHECK:      {
