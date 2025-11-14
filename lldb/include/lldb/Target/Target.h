@@ -640,7 +640,9 @@ public:
   ///
   /// \param[in] notify
   ///     If notify is true, and the Module is new to this Target,
-  ///     Target::ModulesDidLoad will be called.
+  ///     Target::ModulesDidLoad will be called. See note in
+  ///     Target::ModulesDidLoad about thread-safety with
+  ///     Target::GetOrCreateModule.
   ///     If notify is false, it is assumed that the caller is adding
   ///     multiple Modules and will call ModulesDidLoad with the
   ///     full list at the end.
@@ -941,8 +943,8 @@ public:
   ///   - TargetProperties::GetPreloadSymbols()
   ///   - TargetProperties::GetParallelModuleLoad()
   ///
-  /// Warning: if called in parallel with Target::GetOrCreateModule, this may
-  /// result in a ABBA deadlock situation.
+  /// Warning: if preloading is active and this is called in parallel with
+  /// Target::GetOrCreateModule, this may result in a ABBA deadlock situation.
   void ModulesDidLoad(ModuleList &module_list);
 
   void ModulesDidUnload(ModuleList &module_list, bool delete_locations);
