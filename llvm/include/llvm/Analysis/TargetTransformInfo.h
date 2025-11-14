@@ -125,7 +125,7 @@ struct HardwareLoopInfo {
 
 /// Information for memory intrinsic cost model.
 class MemIntrinsicCostAttributes {
-  /// Optional original context instruction, if one exists, e.g. the
+  /// Optional context instruction, if one exists, e.g. the
   /// load/store to transform to the intrinsic.
   const Instruction *I = nullptr;
 
