@@ -4,43 +4,35 @@
 define i64 @live_out_scalar_vf(i64 %n) {
 ; CHECK-LABEL: define i64 @live_out_scalar_vf(
 ; CHECK-SAME: i64 [[N:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[N]], 1
-; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 2
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i64 [[TMP0]], 1
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], 2
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i64 [[TMP0]], 1
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 2
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VECTOR_RECUR:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[TMP2:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP2]] = add i64 [[INDEX]], 1
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ugt i64 [[TMP1]], [[TRIP_COUNT_MINUS_1]]
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ugt i64 [[TMP2]], [[TRIP_COUNT_MINUS_1]]
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 1
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i1 [[TMP4]], false
-; CHECK-NEXT:    [[TMP7:%.*]] = zext i1 [[TMP6]] to i64
-; CHECK-NEXT:    [[TMP8:%.*]] = add i64 1, [[TMP7]]
-; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i1 [[TMP3]], false
-; CHECK-NEXT:    [[TMP10:%.*]] = zext i1 [[TMP9]] to i64
-; CHECK-NEXT:    [[TMP11:%.*]] = add i64 0, [[TMP10]]
-; CHECK-NEXT:    [[TMP12:%.*]] = icmp ne i64 [[TMP10]], 1
-; CHECK-NEXT:    [[TMP13:%.*]] = select i1 [[TMP12]], i64 [[TMP11]], i64 [[TMP8]]
-; CHECK-NEXT:    [[LAST_ACTIVE_LANE:%.*]] = sub i64 [[TMP13]], 1
-; CHECK-NEXT:    [[TMP14:%.*]] = sub i64 [[LAST_ACTIVE_LANE]], 1
-; CHECK-NEXT:    [[TMP17:%.*]] = sub i64 [[TMP14]], 1
-; CHECK-NEXT:    [[TMP15:%.*]] = icmp uge i64 [[TMP14]], 1
-; CHECK-NEXT:    [[TMP16:%.*]] = select i1 [[TMP15]], i64 [[TMP2]], i64 [[TMP1]]
-; CHECK-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[LAST_ACTIVE_LANE]], 0
-; CHECK-NEXT:    [[TMP19:%.*]] = select i1 [[TMP18]], i64 [[VECTOR_RECUR]], i64 [[TMP16]]
-; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; CHECK:       [[SCALAR_PH]]:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i64 [ [[TMP2]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[EXITVAL:%.*]] = phi i64 [ [[SCALAR_RECUR_INIT]], %[[SCALAR_PH]] ], [ [[IV]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV]], [[N]]
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[TMP19:%.*]] = phi i64 [ [[EXITVAL]], %[[LOOP]] ], [ [[INDEX]], %[[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    ret i64 [[TMP19]]
 ;
 entry:
