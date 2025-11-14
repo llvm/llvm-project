@@ -4926,19 +4926,14 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
       Data.MotionModifiers.push_back(Modifier);
       Data.MotionModifiersLoc.push_back(Tok.getLocation());
       if (PP.getSpelling(Tok) == "iterator" && getLangOpts().OpenMP >= 51) {
-        ColonProtectionRAIIObject ColonRAII(*this);
-        TentativeParsingAction TPA(*this);
         ExprResult Tail;
-        HasIterator = true;
         EnterScope(Scope::OpenMPDirectiveScope | Scope::DeclScope);
         Tail = ParseOpenMPIteratorsExpr();
         Tail = Actions.ActOnFinishFullExpr(Tail.get(), T.getOpenLocation(),
                                            /*DiscardedValue=*/false);
         if (Tail.isUsable()) {
           Data.IteratorExpr = Tail.get();
-          TPA.Commit();
-        } else
-          TPA.Revert();
+        }
       } else {
         ConsumeToken();
         if (Modifier == OMPC_MOTION_MODIFIER_mapper) {
