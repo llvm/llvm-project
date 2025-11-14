@@ -1452,7 +1452,9 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
       AArch64::AEK_GCIE,         AArch64::AEK_SME2P3,
       AArch64::AEK_SVE2P3,       AArch64::AEK_SVE_B16MM,
       AArch64::AEK_F16MM,        AArch64::AEK_F16F32DOT,
-      AArch64::AEK_F16F32MM,
+      AArch64::AEK_F16F32MM,     AArch64::AEK_MOPS_GO,
+      AArch64::AEK_POE2,         AArch64::AEK_TEV,
+      AArch64::AEK_BTIE,
   };
 
   std::vector<StringRef> Features;
@@ -1576,6 +1578,10 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
   EXPECT_TRUE(llvm::is_contained(Features, "+f16mm"));
   EXPECT_TRUE(llvm::is_contained(Features, "+f16f32dot"));
   EXPECT_TRUE(llvm::is_contained(Features, "+f16f32mm"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+mops-go"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+poe2"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+tev"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+btie"));
 
   // Assuming we listed every extension above, this should produce the same
   // result.
@@ -1754,6 +1760,10 @@ TEST(TargetParserTest, AArch64ArchExtFeature) {
       {"f16mm", "nof16mm", "+f16mm", "-f16mm"},
       {"f16f32dot", "nof16f32dot", "+f16f32dot", "-f16f32dot"},
       {"f16f32mm", "nof16f32mm", "+f16f32mm", "-f16f32mm"},
+      {"mops-go", "nomops-go", "+mops-go", "-mops-go"},
+      {"poe2", "nopoe2", "+poe2", "-poe2"},
+      {"tev", "notev", "+tev", "-tev"},
+      {"btie", "nobtie", "+btie", "-btie"},
   };
 
   for (unsigned i = 0; i < std::size(ArchExt); i++) {

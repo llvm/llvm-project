@@ -234,9 +234,9 @@ void RegisterInfoEmitter::EmitRegUnitPressure(raw_ostream &OS,
   }
   OS << "/// Get the weight in units of pressure for this register unit.\n"
      << "unsigned " << ClassName << "::\n"
-     << "getRegUnitWeight(unsigned RegUnit) const {\n"
-     << "  assert(RegUnit < " << RegBank.getNumNativeRegUnits()
-     << " && \"invalid register unit\");\n";
+     << "getRegUnitWeight(MCRegUnit RegUnit) const {\n"
+     << "  assert(static_cast<unsigned>(RegUnit) < "
+     << RegBank.getNumNativeRegUnits() << " && \"invalid register unit\");\n";
   if (!RegUnitsHaveUnitWeight) {
     OS << "  static const uint8_t RUWeightTable[] = {\n    ";
     for (unsigned UnitIdx = 0, UnitEnd = RegBank.getNumNativeRegUnits();
@@ -246,7 +246,7 @@ void RegisterInfoEmitter::EmitRegUnitPressure(raw_ostream &OS,
       OS << RU.Weight << ", ";
     }
     OS << "};\n"
-       << "  return RUWeightTable[RegUnit];\n";
+       << "  return RUWeightTable[static_cast<unsigned>(RegUnit)];\n";
   } else {
     OS << "  // All register units have unit weight.\n"
        << "  return 1;\n";
@@ -330,9 +330,9 @@ void RegisterInfoEmitter::EmitRegUnitPressure(raw_ostream &OS,
      << "register unit.\n"
      << "/// Returns a -1 terminated array of pressure set IDs\n"
      << "const int *" << ClassName << "::\n"
-     << "getRegUnitPressureSets(unsigned RegUnit) const {\n"
-     << "  assert(RegUnit < " << RegBank.getNumNativeRegUnits()
-     << " && \"invalid register unit\");\n";
+     << "getRegUnitPressureSets(MCRegUnit RegUnit) const {\n"
+     << "  assert(static_cast<unsigned>(RegUnit) < "
+     << RegBank.getNumNativeRegUnits() << " && \"invalid register unit\");\n";
   OS << "  static const " << getMinimalTypeForRange(PSetsSeqs.size() - 1, 32)
      << " RUSetStartTable[] = {\n    ";
   for (unsigned UnitIdx = 0, UnitEnd = RegBank.getNumNativeRegUnits();
@@ -341,7 +341,8 @@ void RegisterInfoEmitter::EmitRegUnitPressure(raw_ostream &OS,
        << ",";
   }
   OS << "};\n"
-     << "  return &RCSetsTable[RUSetStartTable[RegUnit]];\n"
+     << "  return "
+        "&RCSetsTable[RUSetStartTable[static_cast<unsigned>(RegUnit)]];\n"
      << "}\n\n";
 }
 
@@ -623,8 +624,8 @@ static void printSubRegIndex(raw_ostream &OS, const CodeGenSubRegIndex *Idx) {
 // The initial value depends on the specific list. The list is terminated by a
 // 0 differential which means we can't encode repeated elements.
 
-typedef SmallVector<int16_t, 4> DiffVec;
-typedef SmallVector<LaneBitmask, 4> MaskVec;
+using DiffVec = SmallVector<int16_t, 4>;
+using MaskVec = SmallVector<LaneBitmask, 4>;
 
 // Fills V with differentials between every two consecutive elements of List.
 static DiffVec &diffEncode(DiffVec &V, SparseBitVector<> List) {
@@ -912,7 +913,7 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS) {
   auto &SubRegIndices = RegBank.getSubRegIndices();
   // The lists of sub-registers and super-registers go in the same array.  That
   // allows us to share suffixes.
-  typedef std::vector<const CodeGenRegister *> RegVec;
+  using RegVec = std::vector<const CodeGenRegister *>;
 
   // Differentially encoded lists.
   SequenceToOffsetTable<DiffVec> DiffSeqs;
@@ -926,7 +927,7 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS) {
 
   // Keep track of sub-register names as well. These are not differentially
   // encoded.
-  typedef SmallVector<const CodeGenSubRegIndex *, 4> SubRegIdxVec;
+  using SubRegIdxVec = SmallVector<const CodeGenSubRegIndex *, 4>;
   SequenceToOffsetTable<SubRegIdxVec, deref<std::less<>>> SubRegIdxSeqs(
       /*Terminator=*/std::nullopt);
   SmallVector<SubRegIdxVec, 4> SubRegIdxLists(Regs.size());
@@ -1168,7 +1169,7 @@ void RegisterInfoEmitter::runTargetHeader(raw_ostream &OS) {
   }
   OS << "  const RegClassWeight &getRegClassWeight("
      << "const TargetRegisterClass *RC) const override;\n"
-     << "  unsigned getRegUnitWeight(unsigned RegUnit) const override;\n"
+     << "  unsigned getRegUnitWeight(MCRegUnit RegUnit) const override;\n"
      << "  unsigned getNumRegPressureSets() const override;\n"
      << "  const char *getRegPressureSetName(unsigned Idx) const override;\n"
      << "  unsigned getRegPressureSetLimit(const MachineFunction &MF, unsigned "
@@ -1176,7 +1177,7 @@ void RegisterInfoEmitter::runTargetHeader(raw_ostream &OS) {
      << "  const int *getRegClassPressureSets("
      << "const TargetRegisterClass *RC) const override;\n"
      << "  const int *getRegUnitPressureSets("
-     << "unsigned RegUnit) const override;\n"
+     << "MCRegUnit RegUnit) const override;\n"
      << "  ArrayRef<const char *> getRegMaskNames() const override;\n"
      << "  ArrayRef<const uint32_t *> getRegMasks() const override;\n"
      << "  bool isGeneralPurposeRegister(const MachineFunction &, "
@@ -1348,7 +1349,7 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS) {
     // Every bit mask present in the list has at least one bit set.
 
     // Compress the sub-reg index lists.
-    typedef std::vector<const CodeGenSubRegIndex *> IdxList;
+    using IdxList = std::vector<const CodeGenSubRegIndex *>;
     SmallVector<IdxList, 8> SuperRegIdxLists(RegisterClasses.size());
     SequenceToOffsetTable<IdxList, deref<std::less<>>> SuperRegIdxSeqs;
     BitVector MaskBV(RegisterClasses.size());
