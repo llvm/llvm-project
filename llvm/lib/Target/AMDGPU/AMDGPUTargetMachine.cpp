@@ -491,6 +491,12 @@ static cl::opt<bool> EnableImageIntrinsicOptimizer(
     cl::desc("Enable image intrinsic optimizer pass"), cl::init(true),
     cl::Hidden);
 
+// Gate insertion of the AMDGPU LDS Buffering pass into the default pipeline.
+static cl::opt<bool> EnableLDSBuffering(
+    "amdgpu-enable-lds-buffering",
+    cl::desc("Enable AMDGPU LDS Buffering pass in the default pipeline"),
+    cl::init(false), cl::Hidden);
+
 static cl::opt<bool>
     EnableLoopPrefetch("amdgpu-loop-prefetch",
                        cl::desc("Enable loop data prefetch on AMDGPU"),
@@ -579,6 +585,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPUPreLegalizerCombinerPass(*PR);
   initializeAMDGPURegBankCombinerPass(*PR);
   initializeAMDGPUPromoteAllocaPass(*PR);
+  initializeAMDGPULDSBufferingLegacyPass(*PR);
   initializeAMDGPUCodeGenPreparePass(*PR);
   initializeAMDGPULateCodeGenPrepareLegacyPass(*PR);
   initializeAMDGPURemoveIncompatibleFunctionsLegacyPass(*PR);
@@ -1353,6 +1360,9 @@ void AMDGPUPassConfig::addIRPasses() {
 
   if (TM.getOptLevel() > CodeGenOptLevel::None) {
     addPass(createAMDGPUPromoteAlloca());
+    // Run per-thread LDS buffering after promote-alloca to use leftover LDS.
+    if (EnableLDSBuffering)
+      addPass(createAMDGPULDSBufferingLegacyPass());
 
     if (isPassEnabled(EnableScalarIRPasses))
       addStraightLineScalarOptimizationPasses();
@@ -2096,6 +2106,9 @@ void AMDGPUCodeGenPassBuilder::addIRPasses(AddIRPass &addPass) const {
 
   if (TM.getOptLevel() > CodeGenOptLevel::None) {
     addPass(AMDGPUPromoteAllocaPass(TM));
+    // Run per-thread LDS buffering after promote-alloca to use leftover LDS.
+    if (EnableLDSBuffering)
+      addPass(AMDGPULDSBufferingPass(TM));
     if (isPassEnabled(EnableScalarIRPasses))
       addStraightLineScalarOptimizationPasses(addPass);
 
