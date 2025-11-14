@@ -3459,6 +3459,8 @@ getVGPRLoweringOperandTables(const MCInstrDesc &Desc) {
     case AMDGPU::V_FMAMK_F16:
     case AMDGPU::V_FMAMK_F16_t16:
     case AMDGPU::V_FMAMK_F16_t16_gfx12:
+    case AMDGPU::V_FMAMK_F16_fake16:
+    case AMDGPU::V_FMAMK_F16_fake16_gfx12:
     case AMDGPU::V_FMAMK_F32:
     case AMDGPU::V_FMAMK_F32_gfx12:
     case AMDGPU::V_FMAMK_F64:
