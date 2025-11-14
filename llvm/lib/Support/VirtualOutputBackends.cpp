@@ -260,7 +260,7 @@ static sys::fs::OpenFlags generateFlagsFromConfig(OutputConfig Config) {
     OF |= sys::fs::OF_TextWithCRLF;
   else if (Config.getText())
     OF |= sys::fs::OF_Text;
-  if (Config.getAppend())
+  if (Config.getAppend() && !Config.getAtomicWrite())
     OF |= sys::fs::OF_Append;
 
   return OF;
