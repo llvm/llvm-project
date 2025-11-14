@@ -670,9 +670,8 @@ RValue CIRGenFunction::emitLoadOfExtVectorElementLValue(LValue lv) {
   }
 
   // Always use shuffle vector to try to retain the original program structure
-  const unsigned numResultElts = exprVecTy->getNumElements();
   SmallVector<int64_t> mask;
-  for (unsigned i = 0; i != numResultElts; ++i)
+  for (auto i : llvm::seq<unsigned>(0, exprVecTy->getNumElements()))
     mask.push_back(getAccessedFieldNo(i, elts));
 
   cir::VecShuffleOp resultVec = builder.createVecShuffle(loc, vec, mask);

@@ -586,9 +586,10 @@ public:
   cir::VecShuffleOp createVecShuffle(mlir::Location loc, mlir::Value vec1,
                                      mlir::Value vec2,
                                      llvm::ArrayRef<int64_t> mask) {
-    llvm::SmallVector<mlir::Attribute> maskAttrs;
-    for (int32_t idx : mask)
-      maskAttrs.push_back(cir::IntAttr::get(getSInt32Ty(), idx));
+    auto maskAttrs = llvm::to_vector_of<mlir::Attribute>(
+        llvm::map_range(mask, [&](int32_t idx) {
+          return cir::IntAttr::get(getSInt32Ty(), idx);
+        }));
     return createVecShuffle(loc, vec1, vec2, maskAttrs);
   }
 
