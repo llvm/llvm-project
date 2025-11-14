@@ -75,6 +75,7 @@ class CommandRunner:
         text: bool = False,
         stdin_input: Optional[str] = None,
         read_only: bool = False,
+        env: Optional[dict] = None,
     ) -> subprocess.CompletedProcess:
         if self.dry_run and not read_only:
             self.print(f"[Dry Run] Would run: {' '.join(command)}")
@@ -89,6 +90,7 @@ class CommandRunner:
                 capture_output=capture_output,
                 text=text,
                 input=stdin_input,
+                env=env,
             )
         except FileNotFoundError as e:
             raise LlvmPrError(
@@ -329,6 +331,9 @@ class LLVMPRAutomator:
         self.original_branch: str = ""
         self.created_branches: List[str] = []
         self.repo_settings: dict = {}
+        self._git_askpass_cmd = (
+            f"python3 -c \"import os; print(os.environ['{LLVM_GITHUB_TOKEN_VAR}'])\""
+        )
 
     def _run_cmd(
         self, command: List[str], read_only: bool = False, **kwargs
@@ -364,17 +369,18 @@ class LLVMPRAutomator:
             f"Fetching from '{self.config.upstream_remote}' and rebasing '{self.original_branch}' on top of '{target}'..."
         )
 
-        authenticated_url = self._get_authenticated_remote_url(
-            self.config.upstream_remote
+        git_env = os.environ.copy()
+        git_env["GIT_ASKPASS"] = self._git_askpass_cmd
+        git_env[LLVM_GITHUB_TOKEN_VAR] = self.config.token
+        git_env["GIT_TERMINAL_PROMPT"] = "0"
+
+        self._run_cmd(
+            ["git", "fetch", self.config.upstream_remote, self.config.base_branch],
+            env=git_env,
         )
-        # Use a refspec to explicitly update the local remote-tracking branch (e.g., origin/main)
-        # when fetching from an authenticated URL. This ensures that 'git rebase origin/main'
-        # operates on the most up-to-date remote state.
-        refspec = f"refs/heads/{self.config.base_branch}:refs/remotes/{self.config.upstream_remote}/{self.config.base_branch}"
-        self._run_cmd(["git", "fetch", authenticated_url, refspec])
 
         try:
-            self._run_cmd(["git", "rebase", target])
+            self._run_cmd(["git", "rebase", target], env=git_env)
         except subprocess.CalledProcessError as e:
             self.runner.print(
                 "Error: The rebase operation failed, likely due to a merge conflict.",
@@ -392,12 +398,13 @@ class LLVMPRAutomator:
                 capture_output=True,
                 text=True,
                 read_only=True,
+                env=git_env,
             )
 
             # REBASE_HEAD exists, so rebase is in progress
             if rebase_status_result.returncode == 0:
                 self.runner.print("Aborting rebase...", file=sys.stderr)
-                self._run_cmd(["git", "rebase", "--abort"], check=False)
+                self._run_cmd(["git", "rebase", "--abort"], check=False, env=git_env)
             raise LlvmPrError("rebase operation failed.") from e
 
     def _get_authenticated_remote_url(self, remote_name: str) -> str:
@@ -481,14 +488,18 @@ class LLVMPRAutomator:
         self.runner.print(f"Processing commit {commit_hash[:7]}: {commit_title}")
         self.runner.print(f"Pushing commit to temporary branch '{branch_name}'")
 
-        push_url = self._get_authenticated_remote_url(self.remote)
+        git_env = os.environ.copy()
+        git_env["GIT_ASKPASS"] = self._git_askpass_cmd
+        git_env[LLVM_GITHUB_TOKEN_VAR] = self.config.token
+        git_env["GIT_TERMINAL_PROMPT"] = "0"
+
         push_command = [
             "git",
             "push",
-            push_url,
+            self.remote,
             f"{commit_hash}:refs/heads/{branch_name}",
         ]
-        self._run_cmd(push_command)
+        self._run_cmd(push_command, env=git_env)
         self.created_branches.append(branch_name)
         return branch_name
 
