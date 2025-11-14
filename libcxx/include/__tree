@@ -936,7 +936,7 @@ public:
     if (__other.size() == 0)
       return;
 
-    *__root_ptr()       = std::__static_fancy_pointer_cast<__node_base_pointer>(__copy_construct_tree(__other.__root()));
+    *__root_ptr() = std::__static_fancy_pointer_cast<__node_base_pointer>(__copy_construct_tree(__other.__root()));
     __root()->__parent_ = __end_node();
     __begin_node_       = std::__static_fancy_pointer_cast<__end_node_pointer>(std::__tree_min(__end_node()->__left_));
     __size_             = __other.size();
@@ -1058,61 +1058,6 @@ public:
         std::forward<_Args>(__args)...);
   }
 
-  // TODO: begin
-  template <class... _Args>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 pair<iterator, bool>
-  __emplace_hint_unique_sfinae(true_type, const_iterator __p, _Args&&... __args) {
-    return __emplace_hint_unique(__p, __args...);
-  }
-
-  template <class... _Args>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 pair<iterator, bool>
-  __emplace_hint_unique_sfinae(false_type, const_iterator, _Args&&...) {
-    // This method body should never be run. It only exists to allow for compilation. See note in
-    // __insert_unique_from_orphaned_node for more information.
-    return pair<iterator, bool>(iterator(__node_pointer()), false);
-  }
-
-  template <class _ValueT = _Tp, __enable_if_t<__is_tree_value_type_v<_ValueT>, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void
-  __insert_unique_from_orphaned_node(const_iterator __p, __get_node_value_type_t<_Tp>&& __value) {
-#if _LIBCPP_STD_VER >= 26
-    if (std::is_constant_evaluated() && std::is_copy_constructible_v<decltype(__value.first)>) {
-      // We create a sfinae wrapper method here, because if the __emplace_hint_unique method gets template instantiated
-      // within __insert_unique_from_orphaned_node, the code will fail to compile when the value is not
-      // copy_constructible (even for runtime execution); unless we use `if constexpr`. Given the copy-constructible
-      // code path will be a performance regression, we want to restrict it to only execute during constant evaluation
-      // , hence, we need to delay the template instantiation.
-      __emplace_hint_unique_sfinae(
-          integral_constant< bool, std::is_copy_constructible_v<decltype(__value.first)> >(),
-          __p,
-          __value.first,
-          std::move(__value.second));
-    } else
-#endif
-    {
-      __emplace_hint_unique(__p, const_cast<key_type&&>(__value.first), std::move(__value.second));
-    }
-  }
-
-  template <class _ValueT = _Tp, __enable_if_t<!__is_tree_value_type_v<_ValueT>, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void
-  __insert_unique_from_orphaned_node(const_iterator __p, _Tp&& __value) {
-    __emplace_hint_unique(__p, std::move(__value));
-  }
-
-  template <class _ValueT = _Tp, __enable_if_t<__is_tree_value_type_v<_ValueT>, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void
-  __insert_multi_from_orphaned_node(const_iterator __p, value_type&& __value) {
-    __emplace_hint_multi(__p, const_cast<key_type&&>(__value.first), std::move(__value.second));
-  }
-
-  template <class _ValueT = _Tp, __enable_if_t<!__is_tree_value_type_v<_ValueT>, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void
-  __insert_multi_from_orphaned_node(const_iterator __p, _Tp&& __value) {
-    __emplace_hint_multi(__p, std::move(__value));
-  }
-// TODO: end
   template <class _InIter, class _Sent>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void __insert_range_multi(_InIter __first, _Sent __last) {
     if (__first == __last)
@@ -1555,15 +1500,18 @@ private:
 #ifdef _LIBCPP_COMPILER_CLANG_BASED // FIXME: GCC complains about not being able to always_inline a recursive function
   _LIBCPP_HIDE_FROM_ABI
 #endif
-  _LIBCPP_CONSTEXPR_SINCE_CXX26 __node_pointer __construct_from_tree(__node_pointer __src, _NodeConstructor __construct) {
+  _LIBCPP_CONSTEXPR_SINCE_CXX26 __node_pointer
+  __construct_from_tree(__node_pointer __src, _NodeConstructor __construct) {
     if (!__src)
       return nullptr;
 
     __node_holder __new_node = __construct(__src->__get_value());
 
     unique_ptr<__node, __tree_deleter> __left(
-        __construct_from_tree(std::__static_fancy_pointer_cast<__node_pointer>(__src->__left_), __construct), __node_alloc_);
-    __node_pointer __right = __construct_from_tree(std::__static_fancy_pointer_cast<__node_pointer>(__src->__right_), __construct);
+        __construct_from_tree(std::__static_fancy_pointer_cast<__node_pointer>(__src->__left_), __construct),
+        __node_alloc_);
+    __node_pointer __right =
+        __construct_from_tree(std::__static_fancy_pointer_cast<__node_pointer>(__src->__right_), __construct);
 
     __node_pointer __new_node_ptr = __new_node.release();
 
@@ -1641,19 +1589,21 @@ private:
     return __dest;
   }
 
-  _LIBCPP_HIDE_FROM_ABI __node_pointer __copy_assign_tree(__node_pointer __dest, __node_pointer __src) {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __node_pointer
+  __copy_assign_tree(__node_pointer __dest, __node_pointer __src) {
     return __assign_from_tree(
         __dest,
         __src,
-        [](value_type& __lhs, const value_type& __rhs) { __assign_value(__lhs, __rhs); },
+        [this](value_type& __lhs, const value_type& __rhs) { __assign_value(__lhs, __rhs); },
         [this](__node_pointer __nd) { return __copy_construct_tree(__nd); });
   }
 
-  _LIBCPP_HIDE_FROM_ABI __node_pointer __move_assign_tree(__node_pointer __dest, __node_pointer __src) {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __node_pointer
+  __move_assign_tree(__node_pointer __dest, __node_pointer __src) {
     return __assign_from_tree(
         __dest,
         __src,
-        [](value_type& __lhs, value_type& __rhs) { __assign_value(__lhs, std::move(__rhs)); },
+        [this](value_type& __lhs, value_type& __rhs) { __assign_value(__lhs, std::move(__rhs)); },
         [this](__node_pointer __nd) { return __move_construct_tree(__nd); });
   }
 };
