@@ -3863,7 +3863,9 @@ void EmitClangAttrHasAttrImpl(const RecordKeeper &Records, raw_ostream &OS) {
       else if (Variety == "AS_Annotation") {
         // We should not be code gening anything with a C++26
         // annotation syntax.
-        // TODO do we want to warn here ?
+        PrintError(R->getLoc(),
+          "Invalid syntax 'Annotation' used on the node '" +
+          R->getName() + "'");
       }
     }
   }

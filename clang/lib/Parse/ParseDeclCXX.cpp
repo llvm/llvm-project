@@ -4707,20 +4707,16 @@ void Parser::ParseCXX11AttributeSpecifierInternal(ParsedAttributes &Attrs,
   bool HasAnnotation = false;
   while (!Tok.isOneOf(tok::r_square, tok::semi, tok::eof)) {
     // If we parsed an attribute/annotation, a comma is required before parsing
-    //  any additional ones.
+    // any additional ones.
     if (HasAttribute || HasAnnotation) {
       if (ExpectAndConsume(tok::comma)) {
         SkipUntil(tok::r_square, StopAtSemi | StopBeforeMatch);
         continue;
       }
-      if (HasAttribute && HasAnnotation) {
-        Diag(Tok.getLocation(), diag::err_mixed_attributes_and_annotations);
-        SkipUntil(tok::r_square, tok::colon, StopBeforeMatch);
-        continue;
-      }
     }
 
-    // Eat all remaining superfluous commas before parsing the next attribute.
+    // Eat all remaining superfluous commas before parsing the next attribute
+    // or annotation
     while (TryConsumeToken(tok::comma))
       ;
 
@@ -4733,7 +4729,7 @@ void Parser::ParseCXX11AttributeSpecifierInternal(ParsedAttributes &Attrs,
     //  - We must not mix with an attribute
     if (Tok.is(tok::equal)) {
       if (!getLangOpts().CPlusPlus26) {
-        Diag(Tok.getLocation(), diag::warn_cxx26_compat_annotation);
+        Diag(Tok.getLocation(), diag::err_cxx26_compat_annotation);
         SkipUntil(tok::r_square, tok::colon, StopBeforeMatch);
         continue;
       }
@@ -4790,6 +4786,11 @@ void Parser::ParseCXX11AttributeSpecifierInternal(ParsedAttributes &Attrs,
                                            ScopeName, ScopeLoc, OpenMPTokens);
 
     if (!HasAttribute) {
+      if (HasAnnotation) {
+        Diag(Tok.getLocation(), diag::err_mixed_attributes_and_annotations);
+        SkipUntil(tok::r_square, tok::colon, StopBeforeMatch);
+        continue;
+      }
       Attrs.addNew(AttrName,
                    SourceRange(ScopeLoc.isValid() && CommonScopeLoc.isInvalid()
                                    ? ScopeLoc

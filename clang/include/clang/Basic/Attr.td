@@ -748,8 +748,9 @@ class Attr {
   // Note: Any additional data members will leak and should be constructed
   // externally on the ASTContext.
   code AdditionalMembers = [{}];
-    // Any additional text that should be included verbatim after instantiating
-  // an attribute on a template.
+  // Any additional text that should be included verbatim after instantiating
+  // an attribute on a template. This can be used if additional bookkeeping is
+  // required for the data members
   code PostInstantiationStmts =[{}];
   // Any documentation that should be associated with the attribute. Since an
   // attribute may be documented under multiple categories, more than one
@@ -946,15 +947,6 @@ private:
   SourceLocation EqLoc;
 
 public:
-  static CXX26AnnotationAttr *Create(ASTContext &Ctx, \
-                                     const AttributeCommonInfo &CommonInfo) {
-    return CXX26AnnotationAttr::Create(Ctx, nullptr,  CommonInfo);
-  }
-  static CXX26AnnotationAttr *CreateImplicit( \
-          ASTContext &Ctx, \
-          const AttributeCommonInfo &CommonInfo) {
-    return CXX26AnnotationAttr::CreateImplicit(Ctx, nullptr, CommonInfo);
-  }
 
   APValue getValue() const { return Value; }
   void setValue(APValue V) { Value = V; }

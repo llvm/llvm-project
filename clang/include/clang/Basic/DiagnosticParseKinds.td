@@ -798,8 +798,8 @@ def err_cxx11_attribute_forbids_ellipsis : Error<
 def warn_cxx14_compat_using_attribute_ns : Warning<
   "default scope specifier for attributes is incompatible with C++ standards "
   "before C++17">, InGroup<CXXPre17Compat>, DefaultIgnore;
-def warn_cxx26_compat_annotation : Warning<
-  "annotation is a C++26 extension">, InGroup<CXXPre26Compat>, DefaultIgnore;
+def err_cxx26_compat_annotation : ExtWarn<
+  "annotations are a C++26 extension">, InGroup<CXXPre26Compat>, DefaultError;
 def err_mixed_attributes_and_annotations : Error<
   "attribute specifier cannot contain both attributes and annotations">;
 def ext_using_attribute_ns : ExtWarn<
