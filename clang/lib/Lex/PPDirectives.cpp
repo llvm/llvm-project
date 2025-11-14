@@ -2509,6 +2509,15 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
       Action = TrackGMFState.inGMF() ? Import : Skip;
     else
       Action = (ModuleToImport && !getLangOpts().CompilingPCH) ? Import : Skip;
+
+    // If we're not entering the header, it might have been marked deprecated
+    // the first time it was included.
+    if (auto MaybeMessage = HeaderInfo.getHeaderDeprecationMessage(*File);
+        MaybeMessage) {
+      std::string_view Message = *MaybeMessage;
+      Diag(FilenameTok, diag::warn_pragma_deprecated_header)
+          << !Message.empty() << Message;
+    }
   }
 
   // Check for circular inclusion of the main file.

@@ -490,6 +490,18 @@ bool Preprocessor::HandleEndOfFile(Token &Result, bool isEndOfMacro) {
             SourceMgr.getFileEntryForID(CurPPLexer->getFileID())))
       FoundPCHThroughHeader = true;
 
+    if (CurPPLexer) {
+      if (OptionalFileEntryRef File = CurPPLexer->getFileEntry()) {
+        if (auto MaybeMessage = HeaderInfo.getHeaderDeprecationMessage(*File);
+            MaybeMessage) {
+          std::string_view Message = *MaybeMessage;
+          Diag(SourceMgr.getIncludeLoc(CurPPLexer->getFileID()),
+               diag::warn_pragma_deprecated_header)
+              << !Message.empty() << Message;
+        }
+      }
+    }
+
     // We're done with the #included file.
     RemoveTopOfLexerStack();
 

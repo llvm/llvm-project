@@ -508,6 +508,13 @@ void Preprocessor::HandlePragmaSystemHeader(Token &SysHeaderTok) {
                         SrcMgr::C_System);
 }
 
+void Preprocessor::HandlePragmaDeprecatedHeader(
+    Token &Tok, std::string DeprecationMessage) {
+  PreprocessorLexer *TheLexer = getCurrentFileLexer();
+  HeaderInfo.MarkFileDeprecated(*TheLexer->getFileEntry(),
+                                std::move(DeprecationMessage));
+}
+
 /// HandlePragmaDependency - Handle \#pragma GCC dependency "foo" blah.
 void Preprocessor::HandlePragmaDependency(Token &DependencyTok) {
   Token FilenameTok;
@@ -2084,6 +2091,39 @@ struct PragmaDeprecatedHandler : public PragmaHandler {
   }
 };
 
+/// "\#pragma clang deprecated_header"
+struct PragmaDeprecatedHeaderHandler : PragmaHandler {
+  PragmaDeprecatedHeaderHandler() : PragmaHandler("deprecated_header") {}
+
+  void HandlePragma(Preprocessor &PP, PragmaIntroducer Introducer,
+                    Token &Tok) override {
+    std::string MessageString;
+
+    PP.Lex(Tok);
+    if (!Tok.is(tok::eod)) {
+      if (!Tok.is(tok::l_paren)) {
+        PP.Diag(Tok, diag::ext_pp_extra_tokens_at_eol)
+            << "pragma clang deprecated_header";
+      } else {
+        PP.Lex(Tok);
+        if (PP.FinishLexStringLiteral(Tok, MessageString,
+                                      "#pragma clang deprecated_header",
+                                      /*AllowMacroExpansion=*/true)) {
+          if (Tok.isNot(tok::r_paren)) {
+            PP.Diag(Tok, diag::err_expected) << ")";
+          } else {
+            PP.Lex(Tok);
+            if (!Tok.is(tok::eod))
+              PP.Diag(Tok, diag::ext_pp_extra_tokens_at_eol)
+                  << "pragma clang deprecated_header";
+          }
+        }
+      }
+    }
+    PP.HandlePragmaDeprecatedHeader(Tok, MessageString);
+  }
+};
+
 /// "\#pragma clang restrict_expansion(...)"
 ///
 /// The syntax is
@@ -2174,6 +2214,7 @@ void Preprocessor::RegisterBuiltinPragmas() {
   AddPragmaHandler("clang", new PragmaARCCFCodeAuditedHandler());
   AddPragmaHandler("clang", new PragmaAssumeNonNullHandler());
   AddPragmaHandler("clang", new PragmaDeprecatedHandler());
+  AddPragmaHandler("clang", new PragmaDeprecatedHeaderHandler());
   AddPragmaHandler("clang", new PragmaRestrictExpansionHandler());
   AddPragmaHandler("clang", new PragmaFinalHandler());
 

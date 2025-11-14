@@ -80,6 +80,9 @@ struct HeaderFileInfo {
   LLVM_PREFERRED_TYPE(SrcMgr::CharacteristicKind)
   unsigned DirInfo : 3;
 
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned IsDeprecated : 1;
+
   /// Whether this header file info was supplied by an external source,
   /// and has not changed since.
   LLVM_PREFERRED_TYPE(bool)
@@ -124,9 +127,9 @@ struct HeaderFileInfo {
 
   HeaderFileInfo()
       : IsLocallyIncluded(false), isImport(false), isPragmaOnce(false),
-        DirInfo(SrcMgr::C_User), External(false), isModuleHeader(false),
-        isTextualModuleHeader(false), isCompilingModuleHeader(false),
-        Resolved(false), IsValid(false) {}
+        DirInfo(SrcMgr::C_User), IsDeprecated(false), External(false),
+        isModuleHeader(false), isTextualModuleHeader(false),
+        isCompilingModuleHeader(false), Resolved(false), IsValid(false) {}
 
   /// Retrieve the controlling macro for this header file, if
   /// any.
@@ -356,6 +359,9 @@ class HeaderSearch {
   // A map of discovered headers with their associated include file name.
   llvm::DenseMap<const FileEntry *, llvm::SmallString<64>> IncludeNames;
 
+  // A map from a file to its deprecation message
+  llvm::DenseMap<const FileEntry *, std::string> DeprecationMessages;
+
   /// Uniqued set of framework names, which is used to track which
   /// headers were included as framework headers.
   llvm::StringSet<llvm::BumpPtrAllocator> FrameworkNames;
@@ -563,6 +569,12 @@ public:
     getFileInfo(File).DirInfo = SrcMgr::C_System;
   }
 
+  void MarkFileDeprecated(FileEntryRef File, std::string DeprecationMessage) {
+    getFileInfo(File).IsDeprecated = true;
+    DeprecationMessages.emplace_or_assign(&File.getFileEntry(),
+                                          std::move(DeprecationMessage));
+  }
+
   /// Mark the specified file as part of a module.
   void MarkFileModuleHeader(FileEntryRef FE, ModuleMap::ModuleHeaderRole Role,
                             bool isCompilingModuleHeader);
@@ -651,6 +663,13 @@ public:
   /// or an empty string if this module does not correspond to any module file.
   std::string getCachedModuleFileName(StringRef ModuleName,
                                       StringRef ModuleMapPath);
+
+  std::optional<std::string_view>
+  getHeaderDeprecationMessage(FileEntryRef File) {
+    if (!getFileInfo(File).IsDeprecated)
+      return std::nullopt;
+    return DeprecationMessages.at(File);
+  }
 
   /// Lookup a module Search for a module with the given name.
   ///

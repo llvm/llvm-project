@@ -666,6 +666,11 @@ def warn_pragma_deprecated_macro_use :
   ExtWarn<"macro %0 has been marked as deprecated%select{|: %2}1">,
   InGroup<DeprecatedPragma>;
 
+// - #pragma depcreated_header
+def warn_pragma_deprecated_header : Warning<
+  "header is deprecated%select{|: %1}0">,
+  InGroup<Deprecated>;
+
 // - #pragma clang restrict_expansion(...)
 def warn_pragma_restrict_expansion_macro_use :
   ExtWarn<"macro %0 has been marked as unsafe for use in headers"
