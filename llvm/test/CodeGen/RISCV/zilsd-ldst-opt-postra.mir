@@ -39,6 +39,13 @@
     ret void
   }
 
+  define void @store_zero_combine_invalid(ptr %0, i32 %1) {
+    store i32 %1, ptr %0, align 8
+    %3 = getelementptr inbounds i32, ptr %0, i32 1
+    store i32 0, ptr %3, align 8
+    ret void
+  }
+
   @global_array = external global [100 x i32]
 
   define i32 @expand_pseudold_invalid_symbolic() {
@@ -138,6 +145,24 @@ body: |
     ; CHECK-NEXT: SD_RV32 $x0_pair, $x10, 0
     ; CHECK-NEXT: PseudoRET
     PseudoSD_RV32_OPT $x0, $x0, $x10, 0
+    PseudoRET
+
+...
+---
+# Test store zero base combinations - zero can't be first register unless both
+# are zeros
+name: store_zero_combine_invalid
+tracksRegLiveness: false
+body: |
+  bb.0:
+    liveins: $x10
+    ; CHECK-LABEL: name: store_zero_combine_invalid
+    ; CHECK: liveins: $x10
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: SW $x0, $x10, 0
+    ; CHECK-NEXT: SW $x1, $x10, 4
+    ; CHECK-NEXT: PseudoRET
+    PseudoSD_RV32_OPT $x0, $x1, $x10, 0
     PseudoRET
 
 ...
