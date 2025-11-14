@@ -117,7 +117,9 @@ static inline size_t getpagesize(void) {
   return S.dwPageSize;
 }
 #else /* defined(_WIN32) */
+#ifndef COMPILER_RT_PROFILE_BAREMETAL
 #include <unistd.h>
+#endif
 #endif /* defined(_WIN32) */
 
 #define PROF_ERR(Format, ...)                                                  \
@@ -137,16 +139,6 @@ static inline size_t getpagesize(void) {
 #define O_BINARY 0
 #endif
 
-#if defined(__FreeBSD__)
-
-#include <inttypes.h>
-#include <sys/types.h>
-
-#else /* defined(__FreeBSD__) */
-
-#include <inttypes.h>
 #include <stdint.h>
-
-#endif /* defined(__FreeBSD__) && defined(__i386__) */
 
 #endif /* PROFILE_INSTRPROFILING_PORT_H_ */

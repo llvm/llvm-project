@@ -11,7 +11,6 @@
 
 #include "InstrProfiling.h"
 #include "InstrProfilingInternal.h"
-#include "InstrProfilingUtil.h"
 
 #define INSTR_PROF_VALUE_PROF_DATA
 #include "profile/InstrProfData.inc"
@@ -131,9 +130,11 @@ COMPILER_RT_VISIBILITY
 int __llvm_profile_merge_from_buffer(const char *ProfileData,
                                      uint64_t ProfileSize) {
   if (__llvm_profile_get_version() & VARIANT_MASK_TEMPORAL_PROF) {
+#ifndef COMPILER_RT_PROFILE_BAREMETAL
     PROF_ERR("%s\n",
              "Temporal profiles do not support profile merging at runtime. "
              "Instead, merge raw profiles using the llvm-profdata tool.");
+#endif
     return 1;
   }
 
