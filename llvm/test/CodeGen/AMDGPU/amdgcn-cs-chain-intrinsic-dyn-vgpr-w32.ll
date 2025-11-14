@@ -4,7 +4,6 @@
 
 declare amdgpu_cs_chain void @callee(<3 x i32> inreg, { i32, ptr addrspace(5), i32, i32 })
 declare amdgpu_cs_chain_preserve void @callee_preserve(<3 x i32> inreg, { i32, ptr addrspace(5), i32, i32 })
-declare void @llvm.amdgcn.cs.chain(ptr, i32, <3 x i32>, { i32, ptr addrspace(5), i32, i32 }, i32, ...) noreturn
 
 define amdgpu_cs_chain void @dynamic_vgprs(i32 inreg %exec, <3 x i32> inreg %sgpr, { i32, ptr addrspace(5), i32, i32 } %vgpr, i32 inreg %num_vgpr) {
 ; GISEL-GFX12-LABEL: dynamic_vgprs:
@@ -94,4 +93,10 @@ define amdgpu_cs_chain void @constants(<3 x i32> inreg %sgpr, { i32, ptr addrspa
   unreachable
 }
 
+define amdgpu_cs_chain void @high_sgpr_pressure(<30 x i32> inreg %sgpr, { i32, ptr addrspace(5), i32, i32 } %vgpr) {
+  call void(ptr, i32, <30 x i32>, { i32, ptr addrspace(5), i32, i32 }, i32, ...) @llvm.amdgcn.cs.chain(ptr @callee_high_sgpr, i32 7, <30 x i32> inreg %sgpr, { i32, ptr addrspace(5), i32, i32 } %vgpr, i32 1, i32 inreg 64, i32 inreg -1, ptr @retry_vgpr_alloc)
+  unreachable
+}
+
+declare amdgpu_cs_chain void @callee_high_sgpr(<30 x i32> inreg, { i32, ptr addrspace(5), i32, i32 })
 declare amdgpu_cs_chain_preserve void @retry_vgpr_alloc(<3 x i32> inreg %sgpr)
