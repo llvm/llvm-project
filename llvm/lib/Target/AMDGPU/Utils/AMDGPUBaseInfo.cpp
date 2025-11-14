@@ -3441,8 +3441,8 @@ getVGPRLoweringOperandTables(const MCInstrDesc &Desc) {
 
   // VOP2 MADMK instructions use src0, imm, src1 scheme.
   static const AMDGPU::OpName VOP2MADMKOps[4] = {
-      AMDGPU::OpName::src0, AMDGPU::OpName::imm, AMDGPU::OpName::src1,
-      AMDGPU::OpName::vdst};
+      AMDGPU::OpName::src0, AMDGPU::OpName::NUM_OPERAND_NAMES,
+      AMDGPU::OpName::src1, AMDGPU::OpName::vdst};
 
   unsigned TSFlags = Desc.TSFlags;
 
