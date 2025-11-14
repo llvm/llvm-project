@@ -1357,7 +1357,7 @@ void SIFoldOperandsImpl::foldOperand(
       // Remove this if 16-bit SGPRs (i.e. SGPR_LO16) are added to the
       // VS_16RegClass
       //
-      // Excerpt from AMDGPUGenRegisterInfo.inc
+      // Excerpt from AMDGPUGenRegisterInfoEnums.inc
       // NoSubRegister, //0
       // hi16, // 1
       // lo16, // 2
