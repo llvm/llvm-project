@@ -118,7 +118,7 @@ const ParsedAttrInfo &ParsedAttrInfo::get(const AttributeCommonInfo &A) {
       0,                                       // IsTargetSpecific
       1,                                       // IsType
       1,                                       // IsStmt
-      0,                                       // IsKnownToGCC,
+      0,                                       // IsKnownToGCC
       0,                                       // IsSupportedByPragmaAttribute
       {},                                      // Spellings
       nullptr                                  // ArgNames

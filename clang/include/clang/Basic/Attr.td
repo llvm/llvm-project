@@ -750,7 +750,7 @@ class Attr {
   code AdditionalMembers = [{}];
   // Any additional text that should be included verbatim after instantiating
   // an attribute on a template. This can be used if additional bookkeeping is
-  // required for the data members
+  // required for the data members.
   code PostInstantiationStmts =[{}];
   // Any documentation that should be associated with the attribute. Since an
   // attribute may be documented under multiple categories, more than one

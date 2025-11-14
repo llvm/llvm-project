@@ -6443,7 +6443,7 @@ static void handleCxx26AnnotationAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
              ? ConstantExprKind::ClassTemplateArgument
              : ConstantExprKind::NonClassTemplateArgument);
 
-    // Argument to annotation must be usable as template argument
+    // Argument to annotation must be usable as template argument.
     if (!CE->EvaluateAsConstantExpr(Result, S.Context, CEKind)) {
       S.Diag(CE->getBeginLoc(), diag::err_attribute_argument_type)
           << "C++26 annotation" << 4 << CE->getSourceRange();
@@ -6452,7 +6452,7 @@ static void handleCxx26AnnotationAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 
       return;
     }
-    // Argument to annotation must evaluate to structural type
+    // Argument to annotation must evaluate to structural type.
     if (!CE->getType()->isStructuralType()) {
       S.Diag(CE->getBeginLoc(), diag::err_attribute_argument_type)
           << "C++26 annotation" << 5 << CE->getSourceRange();

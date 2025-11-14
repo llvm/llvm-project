@@ -3046,7 +3046,7 @@ private:
                                SourceLocation ScopeLoc,
                                CachedTokens &OpenMPTokens);
 
-  /// Parse an annotation as specified from C++26
+  /// Parse an annotation as specified from C++26.
   void ParseAnnotationSpecifier(ParsedAttributes &Attrs,
                                 SourceLocation *EndLoc);
 

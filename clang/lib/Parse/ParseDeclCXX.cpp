@@ -4716,17 +4716,17 @@ void Parser::ParseCXX11AttributeSpecifierInternal(ParsedAttributes &Attrs,
     }
 
     // Eat all remaining superfluous commas before parsing the next attribute
-    // or annotation
+    // or annotation.
     while (TryConsumeToken(tok::comma))
       ;
 
     SourceLocation ScopeLoc, AttrLoc;
     IdentifierInfo *ScopeName = nullptr, *AttrName = nullptr;
 
-    // A '=' token marks the beginning of an annotation
-    //  - We must not be in C++ < 26
-    //  - We must not have seen 'using X::'
-    //  - We must not mix with an attribute
+    // A '=' token marks the beginning of an annotation with the restriction
+    //  - must not be in C++ < 26,
+    //  - must not have seen 'using X::',
+    //  - must not mix with an attribute.
     if (Tok.is(tok::equal)) {
       if (!getLangOpts().CPlusPlus26) {
         Diag(Tok.getLocation(), diag::err_cxx26_compat_annotation);
@@ -4780,7 +4780,7 @@ void Parser::ParseCXX11AttributeSpecifierInternal(ParsedAttributes &Attrs,
       }
     }
 
-    // Parse attribute arguments
+    // Parse attribute arguments.
     HasAttribute = Tok.is(tok::l_paren) &&
                    ParseCXX11AttributeArgs(AttrName, AttrLoc, Attrs, EndLoc,
                                            ScopeName, ScopeLoc, OpenMPTokens);
