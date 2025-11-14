@@ -68,6 +68,13 @@ find_unique(Container &&container, Predicate &&pred) {
 
 namespace tomp {
 
+enum struct ErrorCode : int {
+  NoLeafAllowing,    // No leaf that allows this clause
+  NoLeafPrivatizing, // No leaf that has a privatizing clause
+  InvalidDirNameMod, // Invalid directive name modifier
+  RedModNotApplied,  // Reduction modifier not applied
+};
+
 // ClauseType: Either an instance of ClauseT, or a type derived from ClauseT.
 //   This is the clause representation in the code using this infrastructure.
 //
@@ -114,9 +121,15 @@ struct ConstructDecompositionT {
   }
 
   tomp::ListT<DirectiveWithClauses<ClauseType>> output;
+  llvm::SmallVector<std::pair<const ClauseType *, ErrorCode>> errors;
 
 private:
   bool split();
+
+  bool error(const ClauseTy *node, ErrorCode ec) {
+    errors.emplace_back(node, ec);
+    return false;
+  }
 
   struct LeafReprInternal {
     llvm::omp::Directive id = llvm::omp::Directive::OMPD_unknown;
@@ -456,10 +469,9 @@ bool ConstructDecompositionT<C, H>::applyClause(Specific &&specific,
   // S Some clauses are permitted only on a single leaf construct of the
   // S combined or composite construct, in which case the effect is as if
   // S the clause is applied to that specific construct. (p339, 31-33)
-  if (applyToUnique(node))
-    return true;
-
-  return false;
+  if (!applyToUnique(node))
+    return error(node, ErrorCode::NoLeafAllowing);
+  return true;
 }
 
 // --- Specific clauses -----------------------------------------------
@@ -487,7 +499,9 @@ bool ConstructDecompositionT<C, H>::applyClause(
     });
   });
 
-  return applied;
+  if (!applied)
+    return error(node, ErrorCode::NoLeafPrivatizing);
+  return true;
 }
 
 // COLLAPSE
@@ -501,18 +515,9 @@ template <typename C, typename H>
 bool ConstructDecompositionT<C, H>::applyClause(
     const tomp::clause::CollapseT<TypeTy, IdTy, ExprTy> &clause,
     const ClauseTy *node) {
-  // Apply "collapse" to the innermost directive. If it's not one that
-  // allows it flag an error.
-  if (!leafs.empty()) {
-    auto &last = leafs.back();
-
-    if (llvm::omp::isAllowedClauseForDirective(last.id, node->id, version)) {
-      last.clauses.push_back(node);
-      return true;
-    }
-  }
-
-  return false;
+  if (!applyToInnermost(node))
+    return error(node, ErrorCode::NoLeafAllowing);
+  return true;
 }
 
 // DEFAULT
@@ -527,7 +532,9 @@ bool ConstructDecompositionT<C, H>::applyClause(
     const tomp::clause::DefaultT<TypeTy, IdTy, ExprTy> &clause,
     const ClauseTy *node) {
   // [5.2:340:31]
-  return applyToAll(node);
+  if (!applyToAll(node))
+    return error(node, ErrorCode::NoLeafAllowing);
+  return true;
 }
 
 // FIRSTPRIVATE
@@ -655,7 +662,9 @@ bool ConstructDecompositionT<C, H>::applyClause(
     applied = true;
   }
 
-  return applied;
+  if (!applied)
+    return error(node, ErrorCode::NoLeafAllowing);
+  return true;
 }
 
 // IF
@@ -690,10 +699,12 @@ bool ConstructDecompositionT<C, H>::applyClause(
       hasDir->clauses.push_back(unmodified);
       return true;
     }
-    return false;
+    return error(node, ErrorCode::InvalidDirNameMod);
   }
 
-  return applyToAll(node);
+  if (!applyToAll(node))
+    return error(node, ErrorCode::NoLeafAllowing);
+  return true;
 }
 
 // LASTPRIVATE
@@ -719,12 +730,9 @@ template <typename C, typename H>
 bool ConstructDecompositionT<C, H>::applyClause(
     const tomp::clause::LastprivateT<TypeTy, IdTy, ExprTy> &clause,
     const ClauseTy *node) {
-  bool applied = false;
-
   // [5.2:340:21]
-  applied = applyToAll(node);
-  if (!applied)
-    return false;
+  if (!applyToAll(node))
+    return error(node, ErrorCode::NoLeafAllowing);
 
   auto inFirstprivate = [&](const ObjectTy &object) {
     if (ClauseSet *set = findClausesWith(object)) {
@@ -750,7 +758,6 @@ bool ConstructDecompositionT<C, H>::applyClause(
           llvm::omp::Clause::OMPC_shared,
           tomp::clause::SharedT<TypeTy, IdTy, ExprTy>{/*List=*/sharedObjects});
       dirParallel->clauses.push_back(shared);
-      applied = true;
     }
 
     // [5.2:340:24]
@@ -759,7 +766,6 @@ bool ConstructDecompositionT<C, H>::applyClause(
           llvm::omp::Clause::OMPC_shared,
           tomp::clause::SharedT<TypeTy, IdTy, ExprTy>{/*List=*/sharedObjects});
       dirTeams->clauses.push_back(shared);
-      applied = true;
     }
   }
 
@@ -783,11 +789,10 @@ bool ConstructDecompositionT<C, H>::applyClause(
                           /*Mapper=*/std::nullopt, /*Iterator=*/std::nullopt,
                           /*LocatorList=*/std::move(tofrom)}});
       dirTarget->clauses.push_back(map);
-      applied = true;
     }
   }
 
-  return applied;
+  return true;
 }
 
 // LINEAR
@@ -813,7 +818,7 @@ bool ConstructDecompositionT<C, H>::applyClause(
     const ClauseTy *node) {
   // [5.2:341:15.1]
   if (!applyToInnermost(node))
-    return false;
+    return error(node, ErrorCode::NoLeafAllowing);
 
   // [5.2:341:15.2], [5.2:341:19]
   auto dirSimd = findDirective(llvm::omp::Directive::OMPD_simd);
@@ -858,7 +863,9 @@ template <typename C, typename H>
 bool ConstructDecompositionT<C, H>::applyClause(
     const tomp::clause::NowaitT<TypeTy, IdTy, ExprTy> &clause,
     const ClauseTy *node) {
-  return applyToOutermost(node);
+  if (!applyToOutermost(node))
+    return error(node, ErrorCode::NoLeafAllowing);
+  return true;
 }
 
 // OMPX_ATTRIBUTE
@@ -866,8 +873,9 @@ template <typename C, typename H>
 bool ConstructDecompositionT<C, H>::applyClause(
     const tomp::clause::OmpxAttributeT<TypeTy, IdTy, ExprTy> &clause,
     const ClauseTy *node) {
-  // ERROR: no leaf that allows clause
-  return applyToAll(node);
+  if (!applyToAll(node))
+    return error(node, ErrorCode::NoLeafAllowing);
+  return true;
 }
 
 // OMPX_BARE
@@ -875,7 +883,9 @@ template <typename C, typename H>
 bool ConstructDecompositionT<C, H>::applyClause(
     const tomp::clause::OmpxBareT<TypeTy, IdTy, ExprTy> &clause,
     const ClauseTy *node) {
-  return applyToOutermost(node);
+  if (!applyToOutermost(node))
+    return error(node, ErrorCode::NoLeafAllowing);
+  return true;
 }
 
 // ORDER
@@ -890,7 +900,9 @@ bool ConstructDecompositionT<C, H>::applyClause(
     const tomp::clause::OrderT<TypeTy, IdTy, ExprTy> &clause,
     const ClauseTy *node) {
   // [5.2:340:31]
-  return applyToAll(node);
+  if (!applyToAll(node))
+    return error(node, ErrorCode::NoLeafAllowing);
+  return true;
 }
 
 // PRIVATE
@@ -905,7 +917,9 @@ template <typename C, typename H>
 bool ConstructDecompositionT<C, H>::applyClause(
     const tomp::clause::PrivateT<TypeTy, IdTy, ExprTy> &clause,
     const ClauseTy *node) {
-  return applyToInnermost(node);
+  if (!applyToInnermost(node))
+    return error(node, ErrorCode::NoLeafAllowing);
+  return true;
 }
 
 // REDUCTION
@@ -1007,31 +1021,37 @@ bool ConstructDecompositionT<C, H>::applyClause(
            /*List=*/objects}});
 
   ReductionModifier effective = modifier.value_or(ReductionModifier::Default);
-  bool effectiveApplied = false;
+  bool modifierApplied = false;
+  bool allowingLeaf = false;
   // Walk over the leaf constructs starting from the innermost, and apply
   // the clause as required by the spec.
   for (auto &leaf : llvm::reverse(leafs)) {
     if (!llvm::omp::isAllowedClauseForDirective(leaf.id, node->id, version))
       continue;
+    // Found a leaf that allows this clause. Keep track of this for better
+    // error reporting.
+    allowingLeaf = true;
     if (!applyToParallel && &leaf == dirParallel)
       continue;
     if (!applyToTeams && &leaf == dirTeams)
       continue;
     // Some form of the clause will be applied past this point.
-    if (isValidModifier(leaf.id, effective, effectiveApplied)) {
+    if (isValidModifier(leaf.id, effective, modifierApplied)) {
       // Apply clause with modifier.
       leaf.clauses.push_back(node);
-      effectiveApplied = true;
+      modifierApplied = true;
     } else {
       // Apply clause without modifier.
       leaf.clauses.push_back(unmodified);
     }
     // The modifier must be applied to some construct.
-    applied = effectiveApplied;
+    applied = modifierApplied;
   }
 
+  if (!allowingLeaf)
+    return error(node, ErrorCode::NoLeafAllowing);
   if (!applied)
-    return false;
+    return error(node, ErrorCode::RedModNotApplied);
 
   tomp::ObjectListT<IdTy, ExprTy> sharedObjects;
   llvm::transform(objects, std::back_inserter(sharedObjects),
@@ -1078,11 +1098,10 @@ bool ConstructDecompositionT<C, H>::applyClause(
                /*LocatorList=*/std::move(tofrom)}});
 
       dirTarget->clauses.push_back(map);
-      applied = true;
     }
   }
 
-  return applied;
+  return true;
 }
 
 // SHARED
@@ -1097,7 +1116,9 @@ bool ConstructDecompositionT<C, H>::applyClause(
     const tomp::clause::SharedT<TypeTy, IdTy, ExprTy> &clause,
     const ClauseTy *node) {
   // [5.2:340:31]
-  return applyToAll(node);
+  if (!applyToAll(node))
+    return error(node, ErrorCode::NoLeafAllowing);
+  return true;
 }
 
 // THREAD_LIMIT
@@ -1112,7 +1133,9 @@ bool ConstructDecompositionT<C, H>::applyClause(
     const tomp::clause::ThreadLimitT<TypeTy, IdTy, ExprTy> &clause,
     const ClauseTy *node) {
   // [5.2:340:31]
-  return applyToAll(node);
+  if (!applyToAll(node))
+    return error(node, ErrorCode::NoLeafAllowing);
+  return true;
 }
 
 // --- Splitting ------------------------------------------------------

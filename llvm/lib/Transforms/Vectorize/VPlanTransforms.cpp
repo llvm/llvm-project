@@ -81,8 +81,13 @@ bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
           VPValue *Start = Plan.getOrAddLiveIn(II->getStartValue());
           VPValue *Step =
               vputils::getOrCreateVPValueForSCEVExpr(Plan, II->getStep());
+          // It is always safe to copy over the NoWrap and FastMath flags. In
+          // particular, when folding tail by masking, the masked-off lanes are
+          // never used, so it is safe.
+          VPIRFlags Flags = vputils::getFlagsFromIndDesc(*II);
           NewRecipe = new VPWidenIntOrFpInductionRecipe(
-              Phi, Start, Step, &Plan.getVF(), *II, Ingredient.getDebugLoc());
+              Phi, Start, Step, &Plan.getVF(), *II, Flags,
+              Ingredient.getDebugLoc());
         }
       } else {
         assert(isa<VPInstruction>(&Ingredient) &&
@@ -547,6 +552,11 @@ static void removeRedundantCanonicalIVs(VPlan &Plan) {
     // only.
     if (!vputils::onlyScalarValuesUsed(WidenOriginalIV) ||
         vputils::onlyFirstLaneUsed(WidenNewIV)) {
+      // We are replacing a wide canonical iv with a suitable wide induction.
+      // This is used to compute header mask, hence all lanes will be used and
+      // we need to drop wrap flags only applying to lanes guranteed to execute
+      // in the original scalar loop.
+      WidenOriginalIV->dropPoisonGeneratingFlags();
       WidenNewIV->replaceAllUsesWith(WidenOriginalIV);
       WidenNewIV->eraseFromParent();
       return;
@@ -1437,11 +1447,11 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
           !all_of(RepOrWidenR->users(), [RepOrWidenR](const VPUser *U) {
             if (auto *Store = dyn_cast<VPWidenStoreRecipe>(U)) {
               // VPWidenStore doesn't have users, and stores are always
-              // profitable to widen: hence, permitting single-scalar stored
-              // values is an important leaf condition. The assert must hold as
-              // we checked the RepOrWidenR operand against
-              // vputils::isSingleScalar.
-              assert(RepOrWidenR == Store->getAddr() ||
+              // profitable to widen: hence, permitting address and mask
+              // operands, and single-scalar stored values is an important leaf
+              // condition. The assert must hold as we checked the RepOrWidenR
+              // operand against vputils::isSingleScalar.
+              assert(RepOrWidenR != Store->getStoredValue() ||
                      vputils::isSingleScalar(Store->getStoredValue()));
               return true;
             }
@@ -1849,6 +1859,35 @@ static bool simplifyBranchConditionForVFAndUF(VPlan &Plan, ElementCount BestVF,
   return true;
 }
 
+/// From the definition of llvm.experimental.get.vector.length,
+/// VPInstruction::ExplicitVectorLength(%AVL) = %AVL when %AVL <= VF.
+static bool simplifyKnownEVL(VPlan &Plan, ElementCount VF,
+                             PredicatedScalarEvolution &PSE) {
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_deep(Plan.getEntry()))) {
+    for (VPRecipeBase &R : *VPBB) {
+      VPValue *AVL;
+      if (!match(&R, m_EVL(m_VPValue(AVL))))
+        continue;
+
+      ScalarEvolution &SE = *PSE.getSE();
+      const SCEV *AVLSCEV = vputils::getSCEVExprForVPValue(AVL, SE);
+      if (isa<SCEVCouldNotCompute>(AVLSCEV))
+        continue;
+      const SCEV *VFSCEV = SE.getElementCount(AVLSCEV->getType(), VF);
+      if (!SE.isKnownPredicate(CmpInst::ICMP_ULE, AVLSCEV, VFSCEV))
+        continue;
+
+      VPValue *Trunc = VPBuilder(&R).createScalarZExtOrTrunc(
+          AVL, Type::getInt32Ty(Plan.getContext()), AVLSCEV->getType(),
+          R.getDebugLoc());
+      R.getVPSingleValue()->replaceAllUsesWith(Trunc);
+      return true;
+    }
+  }
+  return false;
+}
+
 void VPlanTransforms::optimizeForVFAndUF(VPlan &Plan, ElementCount BestVF,
                                          unsigned BestUF,
                                          PredicatedScalarEvolution &PSE) {
@@ -1858,6 +1897,7 @@ void VPlanTransforms::optimizeForVFAndUF(VPlan &Plan, ElementCount BestVF,
   bool MadeChange = tryToReplaceALMWithWideALM(Plan, BestVF, BestUF);
   MadeChange |= simplifyBranchConditionForVFAndUF(Plan, BestVF, BestUF, PSE);
   MadeChange |= optimizeVectorInductionWidthForTCAndVFUF(Plan, BestVF, BestUF);
+  MadeChange |= simplifyKnownEVL(Plan, BestVF, PSE);
 
   if (MadeChange) {
     Plan.setVF(BestVF);
@@ -3266,16 +3306,13 @@ expandVPWidenIntOrFpInduction(VPWidenIntOrFpInductionRecipe *WidenIVR,
   const InductionDescriptor &ID = WidenIVR->getInductionDescriptor();
   Instruction::BinaryOps AddOp;
   Instruction::BinaryOps MulOp;
-  // FIXME: The newly created binary instructions should contain nsw/nuw
-  // flags, which can be found from the original scalar operations.
-  VPIRFlags Flags;
+  VPIRFlags Flags = *WidenIVR;
   if (ID.getKind() == InductionDescriptor::IK_IntInduction) {
     AddOp = Instruction::Add;
     MulOp = Instruction::Mul;
   } else {
     AddOp = ID.getInductionOpcode();
     MulOp = Instruction::FMul;
-    Flags = ID.getInductionBinOp()->getFastMathFlags();
   }
 
   // If the phi is truncated, truncate the start and step values.
