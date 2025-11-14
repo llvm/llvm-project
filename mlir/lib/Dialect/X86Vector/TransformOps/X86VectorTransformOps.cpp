@@ -23,8 +23,8 @@ using namespace mlir;
 using namespace mlir::x86vector;
 using namespace mlir::transform;
 
-void mlir::transform::ApplyVectorContractToFMAPatternsOp::
-    populatePatterns(RewritePatternSet &patterns) {
+void mlir::transform::ApplyVectorContractToFMAPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
   x86vector::populateVectorContractToFMAPatterns(patterns);
 }
 

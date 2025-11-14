@@ -87,7 +87,8 @@ struct MaskHelper {
 
 void populateVectorContractToFMAPatterns(RewritePatternSet &patterns);
 
-void populateVectorContractToPackedTypeDotProductPatterns(RewritePatternSet &patterns);
+void populateVectorContractToPackedTypeDotProductPatterns(
+    RewritePatternSet &patterns);
 
 //===----------------------------------------------------------------------===//
 /// Helpers extracted from:
