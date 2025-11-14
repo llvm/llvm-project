@@ -1685,4 +1685,24 @@ bool SemaARM::checkTargetClonesAttr(
   return false;
 }
 
+bool SemaARM::checkSVETypeSupport(QualType Ty, SourceLocation Loc,
+                                  const FunctionDecl *FD,
+                                  const llvm::StringMap<bool> &FeatureMap) {
+  if (!Ty->isSVESizelessBuiltinType())
+    return false;
+
+  if (FeatureMap.lookup("sve"))
+    return false;
+
+  // No SVE environment available.
+  if (!FeatureMap.lookup("sme"))
+    return Diag(Loc, diag::err_sve_vector_in_non_sve_target) << Ty;
+
+  // SVE environment only available to streaming functions.
+  if (FD && !FD->getType().isNull() &&
+      !IsArmStreamingFunction(FD, /*IncludeLocallyStreaming=*/true))
+    return Diag(Loc, diag::err_sve_vector_in_non_streaming_function) << Ty;
+
+  return false;
+}
 } // namespace clang
