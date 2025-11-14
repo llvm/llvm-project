@@ -1312,8 +1312,8 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
     setOperationAction(ISD::STRICT_FSETCCS, MVT::f64, Custom);
   }
 
-  setOperationAction(ISD::FSINCOS, MVT::f64, Custom);
-  setOperationAction(ISD::FSINCOS, MVT::f32, Custom);
+  setOperationAction(ISD::FSINCOS, MVT::f64, Expand);
+  setOperationAction(ISD::FSINCOS, MVT::f32, Expand);
 
   // FP-ARMv8 implements a lot of rounding-like FP operations.
   if (Subtarget->hasFPARMv8Base()) {
@@ -2510,9 +2510,44 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
     if (isTailCall && VA.isMemLoc() && !AfterFormalArgLoads) {
       Chain = DAG.getStackArgumentTokenFactor(Chain);
-      if (ByValTempChain)
+      if (ByValTempChain) {
+        // In case of large byval copies, re-using the stackframe for tail-calls
+        // can lead to overwriting incoming arguments on the stack. Force
+        // loading these stack arguments before the copy to avoid that.
+        SmallVector<SDValue, 8> IncomingLoad;
+        for (unsigned I = 0; I < OutVals.size(); ++I) {
+          if (Outs[I].Flags.isByVal())
+            continue;
+
+          SDValue OutVal = OutVals[I];
+          LoadSDNode *OutLN = dyn_cast_or_null<LoadSDNode>(OutVal);
+          if (!OutLN)
+            continue;
+
+          FrameIndexSDNode *FIN =
+              dyn_cast_or_null<FrameIndexSDNode>(OutLN->getBasePtr());
+          if (!FIN)
+            continue;
+
+          if (!MFI.isFixedObjectIndex(FIN->getIndex()))
+            continue;
+
+          for (const CCValAssign &VA : ArgLocs) {
+            if (VA.isMemLoc())
+              IncomingLoad.push_back(OutVal.getValue(1));
+          }
+        }
+
+        // Update the chain to force loads for potentially clobbered argument
+        // loads to happen before the byval copy.
+        if (!IncomingLoad.empty()) {
+          IncomingLoad.push_back(Chain);
+          Chain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, IncomingLoad);
+        }
+
         Chain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Chain,
                             ByValTempChain);
+      }
       AfterFormalArgLoads = true;
     }
 
@@ -9855,76 +9890,6 @@ static SDValue LowerUADDSUBO_CARRY(SDValue Op, SelectionDAG &DAG) {
   return DAG.getNode(ISD::MERGE_VALUES, DL, N->getVTList(), Result, Carry);
 }
 
-SDValue ARMTargetLowering::LowerFSINCOS(SDValue Op, SelectionDAG &DAG) const {
-  // For iOS, we want to call an alternative entry point: __sincos_stret,
-  // return values are passed via sret.
-  SDLoc dl(Op);
-  SDValue Arg = Op.getOperand(0);
-  EVT ArgVT = Arg.getValueType();
-  RTLIB::Libcall LC = RTLIB::getSINCOS_STRET(ArgVT);
-  RTLIB::LibcallImpl SincosStret = getLibcallImpl(LC);
-  if (SincosStret == RTLIB::Unsupported)
-    return SDValue();
-
-  assert(Subtarget->isTargetDarwin());
-
-  Type *ArgTy = ArgVT.getTypeForEVT(*DAG.getContext());
-  auto PtrVT = getPointerTy(DAG.getDataLayout());
-
-  MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
-
-  // Pair of floats / doubles used to pass the result.
-  Type *RetTy = StructType::get(ArgTy, ArgTy);
-  auto &DL = DAG.getDataLayout();
-
-  ArgListTy Args;
-  bool ShouldUseSRet = getTM().isAPCS_ABI();
-  SDValue SRet;
-  if (ShouldUseSRet) {
-    // Create stack object for sret.
-    const uint64_t ByteSize = DL.getTypeAllocSize(RetTy);
-    const Align StackAlign = DL.getPrefTypeAlign(RetTy);
-    int FrameIdx = MFI.CreateStackObject(ByteSize, StackAlign, false);
-    SRet = DAG.getFrameIndex(FrameIdx, getPointerTy(DL));
-
-    ArgListEntry Entry(SRet, PointerType::getUnqual(RetTy->getContext()));
-    Entry.IsSExt = false;
-    Entry.IsZExt = false;
-    Entry.IsSRet = true;
-    Args.push_back(Entry);
-    RetTy = Type::getVoidTy(*DAG.getContext());
-  }
-
-  Args.emplace_back(Arg, ArgTy);
-
-  StringRef LibcallName = getLibcallImplName(SincosStret);
-  CallingConv::ID CC = getLibcallImplCallingConv(SincosStret);
-  SDValue Callee = DAG.getExternalSymbol(LibcallName.data(), getPointerTy(DL));
-
-  TargetLowering::CallLoweringInfo CLI(DAG);
-  CLI.setDebugLoc(dl)
-      .setChain(DAG.getEntryNode())
-      .setCallee(CC, RetTy, Callee, std::move(Args))
-      .setDiscardResult(ShouldUseSRet);
-  std::pair<SDValue, SDValue> CallResult = LowerCallTo(CLI);
-
-  if (!ShouldUseSRet)
-    return CallResult.first;
-
-  SDValue LoadSin =
-      DAG.getLoad(ArgVT, dl, CallResult.second, SRet, MachinePointerInfo());
-
-  // Address of cos field.
-  SDValue Add = DAG.getNode(ISD::ADD, dl, PtrVT, SRet,
-                            DAG.getIntPtrConstant(ArgVT.getStoreSize(), dl));
-  SDValue LoadCos =
-      DAG.getLoad(ArgVT, dl, LoadSin.getValue(1), Add, MachinePointerInfo());
-
-  SDVTList Tys = DAG.getVTList(ArgVT, ArgVT);
-  return DAG.getNode(ISD::MERGE_VALUES, dl, Tys,
-                     LoadSin.getValue(0), LoadCos.getValue(0));
-}
-
 SDValue ARMTargetLowering::LowerWindowsDIVLibCall(SDValue Op, SelectionDAG &DAG,
                                                   bool Signed,
                                                   SDValue &Chain) const {
@@ -10726,8 +10691,8 @@ SDValue ARMTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::VECREDUCE_SMAX:
     return LowerVecReduceMinMax(Op, DAG, Subtarget);
   case ISD::ATOMIC_LOAD:
-  case ISD::ATOMIC_STORE:  return LowerAtomicLoadStore(Op, DAG);
-  case ISD::FSINCOS:       return LowerFSINCOS(Op, DAG);
+  case ISD::ATOMIC_STORE:
+    return LowerAtomicLoadStore(Op, DAG);
   case ISD::SDIVREM:
   case ISD::UDIVREM:       return LowerDivRem(Op, DAG);
   case ISD::DYNAMIC_STACKALLOC:

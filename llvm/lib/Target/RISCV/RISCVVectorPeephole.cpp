@@ -455,7 +455,7 @@ bool RISCVVectorPeephole::convertSameMaskVMergeToVMv(MachineInstr &MI) {
     True->getOperand(1).setReg(MI.getOperand(2).getReg());
     // If True is masked then its passthru needs to be in VRNoV0.
     MRI->constrainRegClass(True->getOperand(1).getReg(),
-                           TII->getRegClass(True->getDesc(), 1, TRI));
+                           TII->getRegClass(True->getDesc(), 1));
   }
 
   MI.setDesc(TII->get(NewOpc));
@@ -675,7 +675,7 @@ bool RISCVVectorPeephole::foldVMV_V_V(MachineInstr &MI) {
     if (Passthru.getReg().isValid())
       MRI->constrainRegClass(
           Passthru.getReg(),
-          TII->getRegClass(Src->getDesc(), SrcPassthru.getOperandNo(), TRI));
+          TII->getRegClass(Src->getDesc(), SrcPassthru.getOperandNo()));
   }
 
   if (RISCVII::hasVecPolicyOp(Src->getDesc().TSFlags)) {
