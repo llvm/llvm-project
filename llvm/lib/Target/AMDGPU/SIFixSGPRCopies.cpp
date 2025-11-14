@@ -238,7 +238,7 @@ static bool isSGPRToVGPRCopy(const TargetRegisterClass *SrcRC,
 static bool tryChangeVGPRtoSGPRinCopy(MachineInstr &MI,
                                       const SIRegisterInfo *TRI,
                                       const SIInstrInfo *TII) {
-  MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
+  MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
   auto &Src = MI.getOperand(1);
   Register DstReg = MI.getOperand(0).getReg();
   Register SrcReg = Src.getReg();
@@ -930,7 +930,7 @@ bool SIFixSGPRCopies::lowerSpecialCase(MachineInstr &MI,
   // s_mov_b32.
   if (isSafeToFoldImmIntoCopy(&MI, MRI->getVRegDef(SrcReg), TII, SMovOp, Imm)) {
     MI.getOperand(1).ChangeToImmediate(Imm);
-    MI.addImplicitDefUseOperands(*MI.getParent()->getParent());
+    MI.addImplicitDefUseOperands(*MI.getMF());
     MI.setDesc(TII->get(SMovOp));
     return true;
   }
@@ -1122,9 +1122,20 @@ void SIFixSGPRCopies::lowerVGPR2SGPRCopies(MachineFunction &MF) {
       BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_READFIRSTLANE_B32), DstReg)
           .addReg(VReg32);
     } else if (SrcSize == 32) {
-      auto MIB = BuildMI(*MBB, MI, MI->getDebugLoc(),
-                         TII->get(AMDGPU::V_READFIRSTLANE_B32), DstReg);
-      MIB.addReg(SrcReg, 0, SubReg);
+      const MCInstrDesc &ReadFirstLaneDesc =
+          TII->get(AMDGPU::V_READFIRSTLANE_B32);
+      const TargetRegisterClass *OpRC = TII->getRegClass(ReadFirstLaneDesc, 1);
+      BuildMI(*MBB, MI, MI->getDebugLoc(), ReadFirstLaneDesc, DstReg)
+          .addReg(SrcReg, 0, SubReg);
+
+      const TargetRegisterClass *ConstrainRC =
+          SubReg == AMDGPU::NoSubRegister
+              ? OpRC
+              : TRI->getMatchingSuperRegClass(MRI->getRegClass(SrcReg), OpRC,
+                                              SubReg);
+
+      if (!MRI->constrainRegClass(SrcReg, ConstrainRC))
+        llvm_unreachable("failed to constrain register");
     } else {
       auto Result = BuildMI(*MBB, MI, MI->getDebugLoc(),
                             TII->get(AMDGPU::REG_SEQUENCE), DstReg);

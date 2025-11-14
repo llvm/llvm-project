@@ -359,6 +359,8 @@ Improvements to Clang's diagnostics
   Moved the warning for a missing (though implied) attribute on a redeclaration into this group.
   Added a new warning in this group for the case where the attribute is missing/implicit on
   an override of a virtual method.
+- Remove ``-Wperf-constraint-implies-noexcept`` from ``-Wall``. This warning is somewhat nit-picky and
+  attempts to resolve it, by adding ``noexcept``, can create new ways for programs to crash. (#GH167540)
 - Implemented diagnostics when retrieving the tuple size for types where its specialization of `std::tuple_size`
   produces an invalid size (either negative or greater than the implementation limit). (#GH159563)
 - Fixed fix-it hint for fold expressions. Clang now correctly places the suggested right
@@ -595,6 +597,8 @@ Android Support
 
 Windows Support
 ^^^^^^^^^^^^^^^
+- clang-cl now supports /arch:AVX10.1 and /arch:AVX10.2.
+- clang-cl now supports /vlen, /vlen=256 and /vlen=512.
 
 - Clang now supports MSVC vector deleting destructors (GH19772).
 

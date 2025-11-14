@@ -445,6 +445,9 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     addRegisterClass(MVT::nxv8i1, &AArch64::PPRRegClass);
     addRegisterClass(MVT::nxv16i1, &AArch64::PPRRegClass);
 
+    // Add sve predicate as counter type
+    addRegisterClass(MVT::aarch64svcount, &AArch64::PPRRegClass);
+
     // Add legal sve data types
     addRegisterClass(MVT::nxv16i8, &AArch64::ZPRRegClass);
     addRegisterClass(MVT::nxv8i16, &AArch64::ZPRRegClass);
@@ -471,15 +474,6 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
         if (useSVEForFixedLengthVectorVT(VT))
           addRegisterClass(VT, &AArch64::ZPRRegClass);
     }
-  }
-
-  if (Subtarget->hasSVE2p1() || Subtarget->hasSME2()) {
-    addRegisterClass(MVT::aarch64svcount, &AArch64::PPRRegClass);
-    setOperationPromotedToType(ISD::LOAD, MVT::aarch64svcount, MVT::nxv16i1);
-    setOperationPromotedToType(ISD::STORE, MVT::aarch64svcount, MVT::nxv16i1);
-
-    setOperationAction(ISD::SELECT, MVT::aarch64svcount, Custom);
-    setOperationAction(ISD::SELECT_CC, MVT::aarch64svcount, Expand);
   }
 
   // Compute derived properties from the register classes
@@ -1609,6 +1603,14 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
            MVT::nxv4i16, MVT::nxv4i32, MVT::nxv8i8, MVT::nxv8i16 })
       setOperationAction(ISD::SIGN_EXTEND_INREG, VT, Legal);
 
+    // Promote predicate as counter load/stores to standard predicates.
+    setOperationPromotedToType(ISD::LOAD, MVT::aarch64svcount, MVT::nxv16i1);
+    setOperationPromotedToType(ISD::STORE, MVT::aarch64svcount, MVT::nxv16i1);
+
+    // Predicate as counter legalization actions.
+    setOperationAction(ISD::SELECT, MVT::aarch64svcount, Custom);
+    setOperationAction(ISD::SELECT_CC, MVT::aarch64svcount, Expand);
+
     for (auto VT :
          {MVT::nxv16i1, MVT::nxv8i1, MVT::nxv4i1, MVT::nxv2i1, MVT::nxv1i1}) {
       setOperationAction(ISD::CONCAT_VECTORS, VT, Custom);
@@ -2556,7 +2558,7 @@ bool AArch64TargetLowering::targetShrinkDemandedConstant(
     return false;
 
   // Exit early if we demand all bits.
-  if (DemandedBits.popcount() == Size)
+  if (DemandedBits.isAllOnes())
     return false;
 
   unsigned NewOpc;
@@ -9600,8 +9602,9 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
       // using a chain can result in incorrect scheduling. The markers refer to
       // the position just before the CALLSEQ_START (though occur after as
       // CALLSEQ_START lacks in-glue).
-      Chain = DAG.getNode(*ZAMarkerNode, DL, DAG.getVTList(MVT::Other),
-                          {Chain, Chain.getValue(1)});
+      Chain =
+          DAG.getNode(*ZAMarkerNode, DL, DAG.getVTList(MVT::Other, MVT::Glue),
+                      {Chain, Chain.getValue(1)});
     }
   }
 
@@ -10606,16 +10609,41 @@ SDValue AArch64TargetLowering::LowerELFTLSDescCallSeq(SDValue SymAddr,
                                                       const SDLoc &DL,
                                                       SelectionDAG &DAG) const {
   EVT PtrVT = getPointerTy(DAG.getDataLayout());
+  auto &MF = DAG.getMachineFunction();
+  auto *FuncInfo = MF.getInfo<AArch64FunctionInfo>();
 
+  SDValue Glue;
   SDValue Chain = DAG.getEntryNode();
   SDVTList NodeTys = DAG.getVTList(MVT::Other, MVT::Glue);
+
+  SMECallAttrs TLSCallAttrs(FuncInfo->getSMEFnAttrs(), {}, SMEAttrs::Normal);
+  bool RequiresSMChange = TLSCallAttrs.requiresSMChange();
+
+  auto ChainAndGlue = [](SDValue Chain) -> std::pair<SDValue, SDValue> {
+    return {Chain, Chain.getValue(1)};
+  };
+
+  if (RequiresSMChange)
+    std::tie(Chain, Glue) =
+        ChainAndGlue(changeStreamingMode(DAG, DL, /*Enable=*/false, Chain, Glue,
+                                         getSMToggleCondition(TLSCallAttrs)));
 
   unsigned Opcode =
       DAG.getMachineFunction().getInfo<AArch64FunctionInfo>()->hasELFSignedGOT()
           ? AArch64ISD::TLSDESC_AUTH_CALLSEQ
           : AArch64ISD::TLSDESC_CALLSEQ;
-  Chain = DAG.getNode(Opcode, DL, NodeTys, {Chain, SymAddr});
-  SDValue Glue = Chain.getValue(1);
+  SDValue Ops[] = {Chain, SymAddr, Glue};
+  std::tie(Chain, Glue) = ChainAndGlue(DAG.getNode(
+      Opcode, DL, NodeTys, Glue ? ArrayRef(Ops) : ArrayRef(Ops).drop_back()));
+
+  if (TLSCallAttrs.requiresLazySave())
+    std::tie(Chain, Glue) = ChainAndGlue(DAG.getNode(
+        AArch64ISD::REQUIRES_ZA_SAVE, DL, NodeTys, {Chain, Chain.getValue(1)}));
+
+  if (RequiresSMChange)
+    std::tie(Chain, Glue) =
+        ChainAndGlue(changeStreamingMode(DAG, DL, /*Enable=*/true, Chain, Glue,
+                                         getSMToggleCondition(TLSCallAttrs)));
 
   return DAG.getCopyFromReg(Chain, DL, AArch64::X0, PtrVT, Glue);
 }
@@ -29338,11 +29366,16 @@ AArch64TargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
       //   http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2020/p0493r1.pdf
       // (2) low level libgcc and compiler-rt support implemented by:
       //   min/max outline atomics helpers
-      if (AI->getOperation() != AtomicRMWInst::Min &&
-          AI->getOperation() != AtomicRMWInst::Max &&
-          AI->getOperation() != AtomicRMWInst::UMin &&
-          AI->getOperation() != AtomicRMWInst::UMax) {
+      switch (AI->getOperation()) {
+      case AtomicRMWInst::Xchg:
+      case AtomicRMWInst::Add:
+      case AtomicRMWInst::Sub:
+      case AtomicRMWInst::And:
+      case AtomicRMWInst::Or:
+      case AtomicRMWInst::Xor:
         return AtomicExpansionKind::None;
+      default:
+        break;
       }
     }
   }

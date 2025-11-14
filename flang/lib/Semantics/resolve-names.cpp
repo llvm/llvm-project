@@ -1886,11 +1886,12 @@ void OmpVisitor::ProcessMapperSpecifier(const parser::OmpMapperSpecifier &spec,
   auto &mapperName{std::get<std::string>(spec.t)};
   // Create or update the mapper symbol with MapperDetails and
   // keep track of the declarative construct for module emission.
-  Symbol &mapperSym{MakeSymbol(parser::CharBlock(mapperName), Attrs{})};
-  if (auto *md{mapperSym.detailsIf<MapperDetails>()}) {
-    md->AddDecl(declaratives_.back());
-  } else if (mapperSym.has<UnknownDetails>() || mapperSym.has<MiscDetails>()) {
+  SourceName mapperSource{context().SaveTempName(std::string{mapperName})};
+  Symbol &mapperSym{MakeSymbol(mapperSource, Attrs{})};
+  if (!mapperSym.detailsIf<MapperDetails>()) {
     mapperSym.set_details(MapperDetails{});
+  }
+  if (!context().langOptions().OpenMPSimd) {
     mapperSym.get<MapperDetails>().AddDecl(declaratives_.back());
   }
   PushScope(Scope::Kind::OtherConstruct, nullptr);
@@ -10087,7 +10088,8 @@ void ResolveNamesVisitor::Post(const parser::CompilerDirective &x) {
       std::holds_alternative<parser::CompilerDirective::ForceInline>(x.u) ||
       std::holds_alternative<parser::CompilerDirective::Inline>(x.u) ||
       std::holds_alternative<parser::CompilerDirective::Prefetch>(x.u) ||
-      std::holds_alternative<parser::CompilerDirective::NoInline>(x.u)) {
+      std::holds_alternative<parser::CompilerDirective::NoInline>(x.u) ||
+      std::holds_alternative<parser::CompilerDirective::IVDep>(x.u)) {
     return;
   }
   if (const auto *tkr{
