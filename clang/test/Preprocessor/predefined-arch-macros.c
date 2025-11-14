@@ -2561,6 +2561,7 @@
 // CHECK_ARL_M32: #define __AVX__ 1
 // CHECK_ARL_M32: #define __BMI2__ 1
 // CHECK_ARL_M32: #define __BMI__ 1
+// CHECK_NVL_M32: #define __CCMP__ 1
 // CHECK_ARLS_M32-NOT: __CLDEMOTE__
 // CHECK_SRF_M32: #define __CLDEMOTE__ 1
 // CHECK_ARL_M32: #define __CLFLUSHOPT__ 1
@@ -2730,6 +2731,7 @@
 // CHECK_CWF_M64: #define __PREFETCHI__ 1
 // CHECK_ARL_M64: #define __PRFCHW__ 1
 // CHECK_ARL_M64: #define __PTWRITE__ 1
+// CHECK_NVL_M64: #define __PUSH2POP2__ 1
 // CHECK_ARL_M64-NOT: #define __RAOINT__ 1
 // CHECK_ARL_M64: #define __RDPID__ 1
 // CHECK_ARL_M64: #define __RDRND__ 1
