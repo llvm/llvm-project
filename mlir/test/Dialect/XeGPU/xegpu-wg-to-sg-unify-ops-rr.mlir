@@ -134,12 +134,8 @@ gpu.module @test_distribution {
   // CHECK-LABEL: vector_mask_2D
   gpu.func @vector_mask_2D() {
     %cst16 = arith.constant 16 : index
-    // CHECK: %[[CST16:.*]] = arith.constant 16 : index
-    // CHECK-COUNT-4: vector.create_mask %[[CST16:.*]], %[[CST16]] : vector<16x16xi1>
+    // CHECK-COUNT-4: vector.create_mask {{.*}}, {{.*}} : vector<16x16xi1>
     // CHECK-NOT: vector.create_mask
-    // CHECK-COUNT-4: vector.constant_mask [16, 16] : vector<16x16xi1>
-    // CHECK-NOT: vector.constant_mask
-    %create_mask = vector.create_mask %cst16, %cst16 {layout_result_0 = #xegpu.layout<sg_layout = [8, 4], sg_data = [16, 16]>} : vector<256x128xi1>
     %constant_mask = vector.constant_mask [16, 16] {layout_result_0 = #xegpu.layout<sg_layout = [8, 4], sg_data = [16, 16]>} : vector<256x128xi1>
     gpu.return
   }
