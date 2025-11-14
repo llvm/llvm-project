@@ -3364,6 +3364,7 @@ struct StmtFunctionStmt {
 // !DIR$ FORCEINLINE
 // !DIR$ INLINE
 // !DIR$ NOINLINE
+// !DIR$ IVDEP
 // !DIR$ <anything else>
 struct CompilerDirective {
   UNION_CLASS_BOILERPLATE(CompilerDirective);
@@ -3399,12 +3400,13 @@ struct CompilerDirective {
   EMPTY_CLASS(ForceInline);
   EMPTY_CLASS(Inline);
   EMPTY_CLASS(NoInline);
+  EMPTY_CLASS(IVDep);
   EMPTY_CLASS(Unrecognized);
   CharBlock source;
   std::variant<std::list<IgnoreTKR>, LoopCount, std::list<AssumeAligned>,
       VectorAlways, std::list<NameValue>, Unroll, UnrollAndJam, Unrecognized,
       NoVector, NoUnroll, NoUnrollAndJam, ForceInline, Inline, NoInline,
-      Prefetch>
+      Prefetch, IVDep>
       u;
 };
 
