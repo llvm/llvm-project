@@ -7,6 +7,8 @@ String releaseBranchPrefix = 'aocc_'
 
 Boolean targetIsRelBranch = actualTarget.startsWith(releaseBranchPrefix)
 
+Boolean dualFlangBuild = actualTarget != upstreamBranch
+
 /**
  * Coerce Result enums to String, seems to
  * be required by CatchErrorStep.setStageResult()
@@ -56,13 +58,6 @@ if (postsub && !(env.BRANCH_NAME in [stagingBranch, upstreamBranch]) &&
     echo 'Pipeline postsub not supported for branch ' + env.BRANCH_NAME
     return this
 }
-
-/*
- * Code smell: intraJobRepoSync should be false;
- * we should be doing merge/push syncing in the separate llvm_sync job:
- * delete it (set to false), and the repo_sync.sh script.
- */
-Boolean intraJobRepoSync = false
 
 Boolean disableStaging = false, disableRelease = true
 Boolean timerTrigger = currentBuild.getBuildCauses('hudson.triggers.TimerTrigger$TimerTriggerCause')
@@ -126,7 +121,7 @@ Integer successStat = 0
 String jobName
 if (postsub && targetIsRelBranch) {
     // llvmVer is processed by automation:
-    String llvmVer = '21.1.2'
+    String llvmVer = '21.1.6'
     // stageBuildNum is processed during branch creation:
     String stageBuildNum = '12786'
     jobName = 'aocc-compiler-llvm-flang-rel' + dash + llvmVer + dash + stageBuildNum
@@ -196,133 +191,105 @@ try {
                         )
                     }
                 }
-                if (intraJobRepoSync) {
-                    theUrl = 'ssh://git@github.amd.com/AOCC/llvm-project.git'
-                    /*
-                     * Direct CLI clone using the system's orequest SSH credentials,
-                     * so that the later pushes in repo_sync.sh are successful.
-                     */
-                    withEnv([gitPathEnv]) {
-                        sh(
-                            label: 'clone-direct',
-                            script: (
-                                'git clone -q --reference ' +
-                                    referenceRepo + slash + llvmProjRepo + ' -b main ' + theUrl + andChain +
-                                    'cd ' + llvmProj + andChain +
-                                    'git checkout ' + env.BRANCH_NAME + andChain +
-                                    '''git merge main -m "Merge from main on $(date +'%Y-%m-%d')"'''
-                            )
-                        )
-                        dir(llvmProj) {
-                            String gitCommit = sh(
-                                label: 'rev-parse',
-                                script: 'git rev-parse HEAD',
-                                returnStdout: true
-                            ).trim()
-                            gitVars = [(gitCommitEnv): gitCommit]
-                        }
-                    }
-                } else {
-                    theUrl = 'https://github.amd.com/AOCC/llvm-project'
-                    dir (llvmProj) {
-                        gitVars = checkout(
-                            changelog: true,
-                            scm: scmGit(
-                                gitTool: gitTool,
-                                branches: scm.branches,
-                                browser: github(theUrl),
-                                extensions: scm.extensions + [
-                                    cloneOption(
-                                        depth: 2, // To compute the changelog.
-                                        honorRefspec: true, noTags: true, shallow: true,
-                                        reference: referenceRepo + slash + llvmProjRepo
+                theUrl = 'https://github.amd.com/AOCC/llvm-project'
+                dir (llvmProj) {
+                    gitVars = checkout(
+                        changelog: true,
+                        scm: scmGit(
+                            gitTool: gitTool,
+                            branches: scm.branches,
+                            browser: github(theUrl),
+                            extensions: scm.extensions + [
+                                cloneOption(
+                                    depth: 2, // To compute the changelog.
+                                    honorRefspec: true, noTags: true, shallow: true,
+                                    reference: referenceRepo + slash + llvmProjRepo
+                                ),
+                                firstBuildChangelog()
+                            ],
+                            userRemoteConfigs: [
+                                [
+                                    credentialsId: gitHubAppCredsId,
+                                    refspec: (
+                                        '+refs/heads/' + actualHead + ':' +
+                                            'refs/remotes/origin/' + actualHead
                                     ),
-                                    firstBuildChangelog()
-                                ],
-                                userRemoteConfigs: [
-                                    [
-                                        credentialsId: gitHubAppCredsId,
-                                        refspec: (
-                                            '+refs/heads/' + actualHead + ':' +
-                                                'refs/remotes/origin/' + actualHead
-                                        ),
-                                        url: theUrl
-                                    ]
+                                    url: theUrl
                                 ]
-                            )
+                            ]
                         )
-                        assert gitVars.GIT_COMMIT
-                        Integer activeStat = successStat
-                        withEnv([gitPathEnv]) {
-                            if (
-                                gitVars.GIT_PREVIOUS_SUCCESSFUL_COMMIT &&
-                                    gitVars.GIT_PREVIOUS_SUCCESSFUL_COMMIT != gitVars.GIT_COMMIT
-                            ) {
-                                withCredentials([
-                                    gitUsernamePassword(
-                                        credentialsId: gitHubAppCredsId,
-                                        gitToolName: gitTool
-                                    )
-                                ]) {
-                                    activeStat = sh(
-                                        label: 'has-file-changes',
-                                        script: (
-                                            'bash ../aocc-essentials/build_essentials/has_file_changes.sh' + space +
-                                                gitVars.GIT_COMMIT + space + gitVars.GIT_PREVIOUS_SUCCESSFUL_COMMIT
-                                        ),
-                                        returnStatus: true
-                                    )
-                                }
-                            }
-                            if (activeStat == successStat) {
+                    )
+                    assert gitVars.GIT_COMMIT
+                    Integer activeStat = successStat
+                    withEnv([gitPathEnv]) {
+                        if (
+                            gitVars.GIT_PREVIOUS_SUCCESSFUL_COMMIT &&
+                                gitVars.GIT_PREVIOUS_SUCCESSFUL_COMMIT != gitVars.GIT_COMMIT
+                        ) {
+                            withCredentials([
+                                gitUsernamePassword(
+                                    credentialsId: gitHubAppCredsId,
+                                    gitToolName: gitTool
+                                )
+                            ]) {
                                 activeStat = sh(
-                                    label: 'has-active-files',
+                                    label: 'has-file-changes',
                                     script: (
-                                        'bash ../aocc-essentials/build_essentials/has_active_files.sh' + space +
-                                            gitVars.GIT_COMMIT + space +
-                                            '.amd-ci/upstream/upstream_jenkins_excludes.txt'
+                                        'bash ../aocc-essentials/build_essentials/has_file_changes.sh' + space +
+                                            gitVars.GIT_COMMIT + space + gitVars.GIT_PREVIOUS_SUCCESSFUL_COMMIT
                                     ),
                                     returnStatus: true
                                 )
                             }
                         }
-                        if (activeStat != successStat && activeStat != 1) {
-                            error 'Unexpected exit checking file activity.'
+                        if (activeStat == successStat) {
+                            activeStat = sh(
+                                label: 'has-active-files',
+                                script: (
+                                    'bash ../aocc-essentials/build_essentials/has_active_files.sh' + space +
+                                        gitVars.GIT_COMMIT + space +
+                                        '.amd-ci/upstream/upstream_jenkins_excludes.txt'
+                                ),
+                                returnStatus: true
+                            )
                         }
-                        if (activeStat == 1) {
-                            echo(skipStr)
-                            hasSourceChanges = false
-                            return // From stage
-                        }
+                    }
+                    if (activeStat != successStat && activeStat != 1) {
+                        error 'Unexpected exit checking file activity.'
+                    }
+                    if (activeStat == 1) {
+                        echo(skipStr)
+                        hasSourceChanges = false
+                        return // From stage
+                    }
 
-                        String mstat
-                        withEnv([gitPathEnv, gitCommitEnv + '=' + gitVars.GIT_COMMIT]) {
-                            withCredentials([
-                                usernamePassword(
-                                    credentialsId: gitHubAppCredsId,
-                                    usernameVariable: 'GH_APP_USR_NOTREQUIRED',
-                                    passwordVariable: 'GH_ENTERPRISE_TOKEN'
-                                )
-                            ]) {
-                                mstat = sh(
-                                    label: 'merge-stat',
-                                    script: (
-                                        'bash ../aocc-essentials/build_essentials/merge_commit_status.sh' + space +
-                                            gitVars.GIT_COMMIT
-                                    ),
-                                    returnStdout: true
-                                ).trim()
-                            }
+                    String mstat
+                    withEnv([gitPathEnv, gitCommitEnv + '=' + gitVars.GIT_COMMIT]) {
+                        withCredentials([
+                            usernamePassword(
+                                credentialsId: gitHubAppCredsId,
+                                usernameVariable: 'GH_APP_USR_NOTREQUIRED',
+                                passwordVariable: 'GH_ENTERPRISE_TOKEN'
+                            )
+                        ]) {
+                            mstat = sh(
+                                label: 'merge-stat',
+                                script: (
+                                    'bash ../aocc-essentials/build_essentials/merge_commit_status.sh' + space +
+                                        gitVars.GIT_COMMIT
+                                ),
+                                returnStdout: true
+                            ).trim()
                         }
-                        if (mstat && mstat != 'None') {
-                            echo('Merge status is ' + mstat)
-                            if (timerTrigger) {
-                                echo(contTimerReason)
-                            } else {
-                                echo(skipStr)
-                                isSkippableMerge = true
-                                return // From stage
-                            }
+                    }
+                    if (mstat && mstat != 'None') {
+                        echo('Merge status is ' + mstat)
+                        if (timerTrigger) {
+                            echo(contTimerReason)
+                        } else {
+                            echo(skipStr)
+                            isSkippableMerge = true
+                            return // From stage
                         }
                     }
                 }
@@ -338,19 +305,13 @@ try {
                 try {
                     withEnv([
                         'PATH=' + linuxBasePath,
-                        'JOB_NAME=' + jobName
+                        'JOB_NAME=' + jobName,
+                        'AOCC_DUAL_FLANG_BUILD=' + dualFlangBuild
                     ]) {
                         sh 'llvm-project/.amd-ci/upstream/apptainer_run.sh'
                     }
                     currentBuild.result = successResultStr
                 } finally {
-                    if (intraJobRepoSync) {
-                        stage ('merge-post') {
-                            withEnv([gitPathEnv]) {
-                                sh 'llvm-project/.amd-ci/upstream/repo_sync.sh'
-                            }
-                        }
-                    }
                     archiveArtifacts(
                         allowEmptyArchive: true,
                         artifacts: '*.tar.xz,*.txt'
@@ -414,4 +375,29 @@ try {
 } catch (Exception e) {
     currentBuild.result = failureResultStr
     throw e
+}
+
+/*
+ * For when work is skipped.
+ * Code smell: this method is also in the main AOCC CommitCheck class.
+ */
+void setStatusToLastCompleted() {
+    def previousBuild = currentBuild.previousBuild // groovylint-disable-line NoDef,VariableTypeRequired
+    // Default fallback:
+    String previousResult = 'SUCCESS' // Keep as a literal string because of scoping.
+    String nBStr = 'NOT_BUILT' // Keep as a literal string because of scoping.
+
+    while (previousBuild &&
+           (!(previousBuild.result) || previousBuild.result == nBStr)) {
+        previousBuild = previousBuild.previousBuild
+    }
+
+    if (previousBuild && previousBuild.result) {
+        previousResult = previousBuild.result
+    } else {
+        previousResult = nBStr
+    }
+
+    echo('Setting build result to ' + previousResult + ' from a previous build.')
+    currentBuild.result = previousResult
 }

@@ -13,6 +13,7 @@ then
 fi
 apptainer exec \
           --cleanenv \
+          --env AOCC_DUAL_FLANG_BUILD="${AOCC_DUAL_FLANG_BUILD:-false}" \
           --env BUILD_NUMBER="${BUILD_NUMBER:-0}" \
           --env CI="${CI:-false}" \
           --env JOB_NAME="${JOB_NAME:-NoSuchJobName}" \

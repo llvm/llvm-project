@@ -4,6 +4,9 @@
 execute_and_check()
 {
         cmd="$1"
+        echo "********************************************************"
+        echo "Executing command : $cmd - please wait ..."
+        echo "********************************************************"
         $cmd
         retVal=$?
 
@@ -50,28 +53,29 @@ mod_cmd3="module load gcc/11.4.0"
 echo "${mod_cmd3}"
 ${mod_cmd3}
 
-execute_and_check "mkdir -p ${WORKSPACE}/BUILD"
-execute_and_check "cd  ${WORKSPACE}/BUILD"
-
 MEMORY_KILOS=$(grep MemTotal /proc/meminfo | awk '{print $2}')
 MEMORY_GIGS=$(( MEMORY_KILOS / 1000000 ))
 MEMORY_COMPILE_LIMIT=$(( MEMORY_GIGS / 4 ))
 MEMORY_LINK_LIMIT=$(( MEMORY_GIGS / 12 ))
+CURRENT_DATE=$(date +"%Y_%m_%d")
 
-cmake_args=(
+dual_flang_build="${AOCC_DUAL_FLANG_BUILD:-false}"
+
+next_build_dir="${WORKSPACE}/BUILD"
+inst_dir="${JOB_NAME}-${BUILD_NUMBER}"
+cmake_base_args=(
   -G Ninja
   -DCMAKE_BUILD_TYPE:STRING=Release
-  -DCMAKE_INSTALL_PREFIX="${WORKSPACE}/${JOB_NAME}-${BUILD_NUMBER}"
+  -DCMAKE_INSTALL_PREFIX="${WORKSPACE}/${inst_dir}"
+  -DLLVM_VERSION_SUFFIX="pre"
+  -DAOCC_REVISION="AOCC_6.0.0-Build#${BUILD_NUMBER} ${CURRENT_DATE}"
   -DCMAKE_CXX_STANDARD=17
   -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
   -DCMAKE_CXX_LINK_FLAGS="-Wl,-rpath,$LD_LIBRARY_PATH"
   -DLLVM_ENABLE_ASSERTIONS=ON
   -DLLVM_LIT_ARGS=-v
   -DCLANG_DEFAULT_LINKER=lld
-  -DLLVM_ENABLE_PROJECTS="clang;lld;clang-tools-extra;flang"
-  -DLLVM_ENABLE_RUNTIMES="openmp;flang-rt;compiler-rt"
   -S "${WORKSPACE}/llvm-project/llvm"
-  -B "${WORKSPACE}/BUILD"
   -DPython3_EXECUTABLE:STRING=/proj/csse_jenkins2/swtools/apps/python/versions/3.8.12/bin/python
   -DCMAKE_INSTALL_MESSAGE=LAZY
   -DCMAKE_C_COMPILER=gcc
@@ -94,54 +98,229 @@ cmake_args=(
 
 if test -d "${WORKSPACE}/llvm-project/aocc-essentials"
 then
-  echo "This looks like an AOCC branch; adding extra required CMake switches."
-  cmake_args+=(
+  echo "This looks like an AOCC branch."
+  aocc_branch=1
+else
+  aocc_branch=0
+fi
+
+if test ${aocc_branch} -ne 0
+then
+  echo "AOCC branch; adding extra required CMake switches."
+  cmake_base_args+=(
     -DCMAKE_CXX_FLAGS="-Wno-error=pedantic -pthread"
     -DLLVM_LIT_ARGS="--xunit-xml-output=testresults.xunit.xml -v --timeout=600 --param blacklist=${WORKSPACE}/llvm-project/prj-essentials/devo/lit.blacklist.cfg"
+  )
+fi
+
+if test "${dual_flang_build}" = "true"
+then
+  amd_prefix="aocc-"
+fi
+
+amd_tool_links() {
+  ln -sf clang++ "${amd_prefix}clang++"
+  ln -sf clang "${amd_prefix}clang"
+  ln -sf clang-cpp "${amd_prefix}clang-cpp"
+  ln -sf clang-cl "${amd_prefix}clang-cl"
+  ln -sf lld "${amd_prefix}lld"
+  ln -sf "${amd_prefix}flang" flang
+}
+
+execute_and_check "mkdir -p ${next_build_dir}"
+execute_and_check "cd ${next_build_dir}"
+
+cmake_args=("${cmake_base_args[@]}")
+
+if test ${aocc_branch} -ne 0
+then
+  cmake_args+=(
     -DLLVM_ENABLE_CLASSIC_FLANG=OFF
   )
 fi
 
+next_vendor_string="AMD AOCC"
+cmake_args+=(
+  -B "${next_build_dir}"
+  -DCLANG_VENDOR="${next_vendor_string}"
+  -DFLANG_VENDOR="${next_vendor_string}"
+  -DLLVM_ENABLE_PROJECTS="clang;lld;clang-tools-extra;flang"
+  -DLLVM_ENABLE_RUNTIMES="openmp;flang-rt;compiler-rt"
+)
+
 set -x
 cmake "${cmake_args[@]}"
-ninja -C "${WORKSPACE}"/BUILD install
+ninja -C "${next_build_dir}" install
 stat=$?
 set +x
-    if [ "${stat}" -eq 0 ]; then
-        echo "********************************************************"
-        echo "Execution of command : ninja -C ${WORKSPACE}/BUILD install - was successful" >> "${WORKSPACE}/command_executed.txt"
-        echo "Execution of command : ninja -C ${WORKSPACE}/BUILD install - was successful"
-        echo "********************************************************"
-    else
-        echo "########################################################"
-        echo "Execution of command : ninja -C ${WORKSPACE}/BUILD install - was failed"
-        echo "Please check BUILD_INSTALL.log file for details"
-        echo "Please check ${WORKSPACE}/command_executed.txt file for commands executed till now"
-        rm -v "${WORKSPACE}"/build_success.txt
-        exit 1
-        echo "########################################################"
-    fi
+if [ "${stat}" -eq 0 ]; then
+  echo "********************************************************"
+  echo "Execution of command : ninja -C ${next_build_dir} install - was successful" >> "${WORKSPACE}/command_executed.txt"
+  echo "Execution of command : ninja -C ${next_build_dir} install - was successful"
+  echo "********************************************************"
+else
+  echo "########################################################"
+  echo "Execution of command : ninja -C ${next_build_dir} install - was failed"
+  echo "Please check BUILD_INSTALL.log file for details"
+  echo "Please check ${WORKSPACE}/command_executed.txt file for commands executed till now"
+  rm -v "${WORKSPACE}"/build_success.txt
+  exit 1
+  echo "########################################################"
+fi
 
 execute_and_check "cd ${WORKSPACE}"
-execute_and_check "tar -cJf ${JOB_NAME}-${BUILD_NUMBER}.tar.xz ${JOB_NAME}-${BUILD_NUMBER}"
+
+if test "${dual_flang_build}" = "true"
+then
+  (
+    cd "${next_build_dir}/bin" || exit 1
+    amd_tool_links
+  ) || exit 1
+  (
+    cd "${inst_dir}/bin" || exit 1
+    amd_tool_links
+  ) || exit 1
+fi
+
+if test "${dual_flang_build}" != "true"
+then
+  execute_and_check "tar -cJf ${inst_dir}.tar.xz ${inst_dir}"
+fi
 
 set -x
-ninja -C "${WORKSPACE}"/BUILD check-flang check-mlir
+ninja -C "${next_build_dir}" check-flang check-mlir
 stat=$?
 set +x
-    if [ "${stat}" -eq 0 ]; then
-        echo "********************************************************"
-        echo "Execution of command : ninja -C ${WORKSPACE}/BUILD check-flang check-mlir - was successful" >> "${WORKSPACE}/command_executed.txt"
-        echo "Execution of command : ninja -C ${WORKSPACE}/BUILD check-flang check-mlir - was successful"
-        echo "********************************************************"
-    else
-        echo "########################################################"
-        echo "Execution of command : ninja -C ${WORKSPACE}/BUILD check-flang check-mlir - was failed"
-        echo "Please check ${WORKSPACE}/command_executed.txt file for commands executed till now"
-        rm -v "${WORKSPACE}"/build_success.txt
-        exit 1
-        echo "########################################################"
-    fi
+if [ "${stat}" -eq 0 ]; then
+  echo "********************************************************"
+  echo "Execution of command : ninja -C ${next_build_dir} check-flang check-mlir - was successful" >> "${WORKSPACE}/command_executed.txt"
+  echo "Execution of command : ninja -C ${next_build_dir} check-flang check-mlir - was successful"
+  echo "********************************************************"
+else
+  echo "########################################################"
+  echo "Execution of command : ninja -C ${next_build_dir} check-flang check-mlir - was failed"
+  echo "Please check ${WORKSPACE}/command_executed.txt file for commands executed till now"
+  rm -v "${WORKSPACE}"/build_success.txt
+  exit 1
+  echo "########################################################"
+fi
+
+if test "${dual_flang_build}" = "true"
+then
+  next_build_dir="${WORKSPACE}/BUILD_c"
+  execute_and_check "mkdir -p ${next_build_dir}"
+  execute_and_check "cd ${next_build_dir}"
+
+  cmake_args=("${cmake_base_args[@]}")
+  next_vendor_string="AMD"
+  cmake_args+=(
+    -DLLVM_ENABLE_CLASSIC_FLANG=ON
+    -B "${next_build_dir}"
+    -DCLANG_VENDOR="${next_vendor_string}"
+    -DFLANG_VENDOR="${next_vendor_string}"
+    -DLLVM_ENABLE_PROJECTS="clang;lld;clang-tools-extra"
+    -DLLVM_ENABLE_RUNTIMES="openmp;compiler-rt"
+  )
+
+  set -x
+  cmake "${cmake_args[@]}"
+  ninja -C "${next_build_dir}" install
+  stat=$?
+  set +x
+
+  if test "${stat}" -ne 0
+  then
+    rm -v "${WORKSPACE}"/build_success.txt
+    exit 1
+  fi
+
+  set -x
+  ninja -C "${next_build_dir}" check-clang # Code smell: check-all fails in check of Python bindings.
+  stat=$?
+  set +x
+
+  if test "${stat}" -ne 0
+  then
+    rm -v "${WORKSPACE}"/build_success.txt
+    exit 1
+  fi
+
+  pgmath64_build_dir="${next_build_dir}/libpgmath64"
+  next_build_dir="${pgmath64_build_dir}"
+  mkdir -p "${next_build_dir}/include"
+  cp /usr/lib/gcc/x86_64-redhat-linux/8/include/quadmath.h "${next_build_dir}/include"
+
+  cmake_args=(
+    -G Ninja
+    -DCMAKE_BUILD_TYPE:STRING=Release
+    -DCMAKE_INSTALL_PREFIX="${WORKSPACE}/${inst_dir}"
+    -S "${WORKSPACE}/llvm-project/classic-flang/runtime/libpgmath"
+    -B "${next_build_dir}"
+    -DPython3_EXECUTABLE:STRING=/proj/csse_jenkins2/swtools/apps/python/versions/3.8.12/bin/python
+    -DCMAKE_INSTALL_MESSAGE=LAZY
+    -DCMAKE_C_COMPILER="${WORKSPACE}/${inst_dir}/bin/clang"
+    -DCMAKE_CXX_COMPILER="${WORKSPACE}/${inst_dir}/bin/clang++"
+    -DLLVM_PARALLEL_COMPILE_JOBS="${MEMORY_COMPILE_LIMIT}"
+    -DLLVM_PARALLEL_LINK_JOBS="${MEMORY_LINK_LIMIT}"
+    -DCMAKE_C_FLAGS="-I${next_build_dir}/include"
+    -DCMAKE_CXX_FLAGS="-I${next_build_dir}/include"
+  )
+
+  set -x
+  cmake "${cmake_args[@]}"
+  ninja -C "${next_build_dir}" install
+  stat=$?
+  set +x
+
+  if test "${stat}" -ne 0
+  then
+    rm -v "${WORKSPACE}"/build_success.txt
+    exit 1
+  fi
+
+  # ToDo libpgmath32?
+
+  next_build_dir="${next_build_dir}/classic-flang"
+
+  cmake_args=(
+    -G Ninja
+    -DCMAKE_BUILD_TYPE:STRING=Release
+    -DCMAKE_INSTALL_PREFIX="${WORKSPACE}/${inst_dir}"
+    -S "${WORKSPACE}/llvm-project/classic-flang"
+    -B "${next_build_dir}"
+    -DPYTHON_EXECUTABLE:STRING=/proj/csse_jenkins2/swtools/apps/python/versions/3.8.12/bin/python
+    -DCMAKE_INSTALL_MESSAGE=LAZY
+    -DCMAKE_C_COMPILER="${WORKSPACE}/${inst_dir}/bin/clang"
+    -DCMAKE_CXX_COMPILER="${WORKSPACE}/${inst_dir}/bin/clang++"
+    -DCMAKE_Fortran_COMPILER="${WORKSPACE}/${inst_dir}/bin/flang"
+    -DCMAKE_Fortran_COMPILER_ID=Flang
+    -DLLVM_PARALLEL_COMPILE_JOBS="${MEMORY_COMPILE_LIMIT}"
+    -DLLVM_PARALLEL_LINK_JOBS="${MEMORY_LINK_LIMIT}"
+    -DCMAKE_C_FLAGS="-I${pgmath64_build_dir}/include"
+    -DCMAKE_CXX_FLAGS="-I${pgmath64_build_dir}/include"
+    -DFLANG_INCLUDE_DOCS:BOOL=OFF
+    -DFLANG_INCLUDE_TESTS:BOOL=OFF
+    -DFLANG_OPENMP_GPU_NVIDIA=on
+    -DFLANG_OPENMP_GPU_AMD=on
+    -DLLVM_CONFIG="${WORKSPACE}/${inst_dir}/bin/llvm-config"
+  )
+
+  set -x
+  cmake "${cmake_args[@]}"
+  ninja -C "${next_build_dir}" install
+  stat=$?
+  set +x
+
+  if test "${stat}" -ne 0
+  then
+    rm -v "${WORKSPACE}"/build_success.txt
+    exit 1
+  fi
+
+  execute_and_check "cd ${WORKSPACE}"
+
+  execute_and_check "tar -cJf ${inst_dir}.tar.xz ${inst_dir}"
+fi
 
 execute_and_check "cd ${WORKSPACE}/llvm-project"
 MAIN_COMMIT_HASH=$(git rev-parse HEAD)
