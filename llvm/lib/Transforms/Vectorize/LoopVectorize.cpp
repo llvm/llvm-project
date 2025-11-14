@@ -6591,9 +6591,14 @@ void LoopVectorizationCostModel::collectInLoopReductions() {
     if (RdxDesc.getRecurrenceType() != Phi->getType())
       continue;
 
+    // In-loop AnyOf and FindIV reductions are not yet supported.
+    RecurKind Kind = RdxDesc.getRecurrenceKind();
+    if (RecurrenceDescriptor::isAnyOfRecurrenceKind(Kind) ||
+        RecurrenceDescriptor::isFindIVRecurrenceKind(Kind))
+      continue;
+
     // If the target would prefer this reduction to happen "in-loop", then we
     // want to record it as such.
-    RecurKind Kind = RdxDesc.getRecurrenceKind();
     if (!PreferInLoopReductions && !useOrderedReductions(RdxDesc) &&
         !TTI.preferInLoopReduction(Kind, Phi->getType()))
       continue;
