@@ -5804,6 +5804,9 @@ void CompilerInvocationBase::visitPathsImpl(
   for (auto &Entry : HeaderSearchOpts.UserEntries)
     if (Entry.IgnoreSysRoot)
       RETURN_IF(Entry.Path);
+  // TODO: Consider upstreaming this.
+  for (auto &Prefix : HeaderSearchOpts.SystemHeaderPrefixes)
+    RETURN_IF(Prefix.Prefix);
   RETURN_IF(HeaderSearchOpts.ResourceDir);
   RETURN_IF(HeaderSearchOpts.ModuleCachePath);
   RETURN_IF(HeaderSearchOpts.ModuleUserBuildPath);
@@ -5838,6 +5841,7 @@ void CompilerInvocationBase::visitPathsImpl(
   // Filesystem options.
   auto &FileSystemOpts = *this->FSOpts;
   RETURN_IF(FileSystemOpts.WorkingDir);
+  RETURN_IF(FileSystemOpts.CASFileSystemWorkingDirectory);
 
   // Codegen options.
   auto &CodeGenOpts = *this->CodeGenOpts;
@@ -5863,6 +5867,14 @@ void CompilerInvocationBase::visitPaths(
   // the invocation, and our callback takes immutable StringRefs.
   return const_cast<CompilerInvocationBase *>(this)->visitPathsImpl(
       [&Callback](std::string &Path) { return Callback(StringRef(Path)); });
+}
+
+void CompilerInvocation::visitPaths(
+    llvm::function_ref<bool(std::string &)> Callback) {
+  // Unlike the copy-on-write variant (and therefore potentially also the base
+  // class), regular CompilerInvocation does not share the option objects with
+  // anyone else. This makes the potential mutation in the callback safe.
+  visitPathsImpl(Callback);
 }
 
 void CompilerInvocationBase::generateCC1CommandLine(

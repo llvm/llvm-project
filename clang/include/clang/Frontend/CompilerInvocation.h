@@ -313,6 +313,14 @@ public:
   }
   /// @}
 
+  /// Visitation.
+  /// @{
+  /// Visits paths stored in the invocation. The callback may return true to
+  /// short-circuit the visitation, or return false to continue visiting. This
+  /// is allowed to mutate the visited paths.
+  void visitPaths(llvm::function_ref<bool(std::string &)> Callback);
+  /// @}
+
   /// Create a compiler invocation from a list of input options.
   /// \returns true on success.
   ///

@@ -312,6 +312,8 @@ Error IncludeTreeActionController::initialize(
 
     addReversePrefixMappingFileSystem(PrefixMapper, ScanInstance);
 
+    // TODO: Confirm why it's not enough to do this in
+    // DepscanPrefixMapping::remapInvocationPaths.
     // These are written in the predefines buffer, so we need to remap them.
     for (std::string &Include : PPOpts.Includes)
       PrefixMapper.mapInPlace(Include);
