@@ -31,7 +31,7 @@ using wios = basic_ios<wchar_t>;
 template <class _CharT, class _Traits>
 class _LIBCPP_PREFERRED_NAME(ios) _LIBCPP_IF_WIDE_CHARACTERS(_LIBCPP_PREFERRED_NAME(wios)) basic_ios;
 
-#if defined(_NEWLIB_VERSION)
+#if _LIBCPP_HAS_NEWLIB_LIBC || _LIBC_HAS_PICOLIBC
 // On newlib, off_t is 'long int'
 using streamoff = long int; // for char_traits in <string>
 #else

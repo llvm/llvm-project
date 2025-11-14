@@ -59,7 +59,7 @@ int main(int, char**) {
     // responds with an empty message, which we probably want to
     // treat as a failure code otherwise, but we can detect that
     // with the preprocessor.
-#if defined(_NEWLIB_VERSION)
+#if _LIBCPP_HAS_NEWLIB_LIBC || _LIBC_HAS_PICOLIBC
     const bool is_newlib = true;
 #else
     const bool is_newlib = false;
