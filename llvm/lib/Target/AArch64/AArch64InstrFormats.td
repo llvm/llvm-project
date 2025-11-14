@@ -1909,6 +1909,21 @@ def CMHPriorityHint_op : Operand<i32> {
   }];
 }
 
+def TIndexHintOperand : AsmOperandClass {
+  let Name = "TIndexHint";
+  let ParserMethod = "tryParseTIndexHint";
+}
+
+def TIndexhint_op : Operand<i32> {
+  let ParserMatchClass = TIndexHintOperand;
+  let PrintMethod = "printTIndexHintOp";
+  let MCOperandPredicate = [{
+    if (!MCOp.isImm())
+      return false;
+    return AArch64TIndexHint::lookupTIndexByEncoding(MCOp.getImm()) != nullptr;
+  }];
+}
+
 class MRSI : RtSystemI<1, (outs GPR64:$Rt), (ins mrs_sysreg_op:$systemreg),
                        "mrs", "\t$Rt, $systemreg"> {
   bits<16> systemreg;
@@ -13365,4 +13380,85 @@ class STCPHInst<string asm> : I<
     let Inst{11-8}  = 0b0110;
     let Inst{7-5}   = 0b100;
     let Inst{4-0}   = 0b11111;
+}
+
+//---
+// Permission Overlays Extension 2 (FEAT_S1POE2)
+//---
+
+class TCHANGERegInst<string asm, bit isB> : I<
+    (outs GPR64:$Xd),
+    (ins GPR64:$Xn, TIndexhint_op:$nb),
+    asm, "\t$Xd, $Xn, $nb", "", []>, Sched<[]> {
+  bits<5> Xd;
+  bits<5> Xn;
+  bits<1> nb;
+  let Inst{31-19} = 0b1101010110000;
+  let Inst{18}    = isB;
+  let Inst{17}    = nb;
+  let Inst{16-10} = 0b0000000;
+  let Inst{9-5}   = Xn;
+  let Inst{4-0}   = Xd;
+}
+
+class TCHANGEImmInst<string asm, bit isB> : I<
+    (outs GPR64:$Xd),
+    (ins imm0_127:$imm, TIndexhint_op:$nb),
+    asm, "\t$Xd, $imm, $nb", "", []>, Sched<[]> {
+  bits<5> Xd;
+  bits<7> imm;
+  bits<1> nb;
+  let Inst{31-19} = 0b1101010110010;
+  let Inst{18}    = isB;
+  let Inst{17}    = nb;
+  let Inst{16-12} = 0b00000;
+  let Inst{11-5}  = imm;
+  let Inst{4-0}   = Xd;
+}
+
+class TENTERInst<string asm> : I<
+    (outs),
+    (ins imm0_127:$imm, TIndexhint_op:$nb),
+    asm, "\t$imm, $nb", "", []>, Sched<[]> {
+  bits<7> imm;
+  bits<1> nb;
+  let Inst{31-18} = 0b11010100111000;
+  let Inst{17}    = nb;
+  let Inst{16-12} = 0b00000;
+  let Inst{11-5}  = imm;
+  let Inst{4-0}   = 0b00000;
+}
+
+class TEXITInst<string asm> : I<
+    (outs),
+    (ins TIndexhint_op:$nb),
+    asm, "\t$nb", "", []>, Sched<[]> {
+  bits<1> nb;
+  let Inst{31-11} = 0b110101101111111100000;
+  let Inst{10}    = nb;
+  let Inst{9-0}   = 0b1111100000;
+}
+
+
+multiclass TCHANGEReg<string asm , bit isB> {
+  def NAME : TCHANGERegInst<asm, isB>;
+  def      : InstAlias<asm # "\t$Xd, $Xn",
+                      (!cast<Instruction>(NAME) GPR64:$Xd, GPR64:$Xn, 0), 1>;
+}
+
+multiclass TCHANGEImm<string asm, bit isB> {
+  def NAME : TCHANGEImmInst<asm, isB>;
+  def      : InstAlias<asm # "\t$Xd, $imm",
+                      (!cast<Instruction>(NAME) GPR64:$Xd, imm0_127:$imm, 0), 1>;
+}
+
+multiclass TENTER<string asm> {
+  def NAME : TENTERInst<asm>;
+  def      : InstAlias<asm # "\t$imm",
+                      (!cast<Instruction>(NAME) imm0_127:$imm, 0), 1>;
+}
+
+multiclass TEXIT<string asm> {
+  def NAME : TEXITInst<asm>;
+  def      : InstAlias<asm, (!cast<Instruction>(NAME) 0), 1>;
 }

@@ -1047,6 +1047,18 @@ bool AArch64InstPrinter::printSysAlias(const MCInst *MI,
       Ins = "gsb\t";
       Name = std::string(GSB->Name);
     }
+  } else if (CnVal == 10) {
+    // PLBI aliases
+    const AArch64PLBI::PLBI *PLBI = AArch64PLBI::lookupPLBIByEncoding(Encoding);
+    if (!PLBI || !PLBI->haveFeatures(STI.getFeatureBits()))
+      return false;
+
+    NeedsReg = PLBI->NeedsReg;
+    if (STI.hasFeature(AArch64::FeatureAll) ||
+        STI.hasFeature(AArch64::FeatureTLBID))
+      OptionalReg = PLBI->OptionalReg;
+    Ins = "plbi\t";
+    Name = std::string(PLBI->Name);
   } else
     return false;
 
@@ -1608,6 +1620,19 @@ void AArch64InstPrinter::printCMHPriorityHintOp(const MCInst *MI,
       AArch64CMHPriorityHint::lookupCMHPriorityHintByEncoding(priorityhint_op);
   if (PHint)
     O << PHint->Name;
+  else
+    markup(O, Markup::Immediate) << '#' << formatImm(priorityhint_op);
+}
+
+void AArch64InstPrinter::printTIndexHintOp(const MCInst *MI, unsigned OpNum,
+                                           const MCSubtargetInfo &STI,
+                                           raw_ostream &O) {
+  unsigned tindexhintop = MI->getOperand(OpNum).getImm();
+  auto TIndex = AArch64TIndexHint::lookupTIndexByEncoding(tindexhintop);
+  if (TIndex)
+    O << TIndex->Name;
+  else
+    markup(O, Markup::Immediate) << '#' << formatImm(tindexhintop);
 }
 
 void AArch64InstPrinter::printFPImmOperand(const MCInst *MI, unsigned OpNum,
