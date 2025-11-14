@@ -123,6 +123,53 @@ struct HardwareLoopInfo {
   LLVM_ABI bool canAnalyze(LoopInfo &LI);
 };
 
+/// Information for memory intrinsic cost model.
+class MemIntrinsicCostAttributes {
+  /// Optional original context instruction, if one exists, e.g. the
+  /// load/store to transform to the intrinsic.
+  const Instruction *I = nullptr;
+
+  /// Address in memory.
+  const Value *Ptr = nullptr;
+
+  /// Vector type of the data to be loaded or stored.
+  Type *DataTy = nullptr;
+  Intrinsic::ID IID;
+
+  /// True when the memory access is predicated with a mask
+  /// that is not a compile-time constant.
+  bool VariableMask = true;
+  unsigned AddressSpace = 0;
+
+  /// Alignment of single element.
+  Align Alignment;
+
+public:
+  LLVM_ABI MemIntrinsicCostAttributes(Intrinsic::ID Id, Type *DataTy,
+                                      const Value *Ptr, bool VariableMask,
+                                      Align Alignment,
+                                      const Instruction *I = nullptr)
+      : I(I), Ptr(Ptr), DataTy(DataTy), IID(Id), VariableMask(VariableMask),
+        Alignment(Alignment) {}
+  LLVM_ABI MemIntrinsicCostAttributes(Intrinsic::ID Id, Type *DataTy,
+                                      Align Alignment, unsigned AddressSpace)
+      : DataTy(DataTy), IID(Id), AddressSpace(AddressSpace),
+        Alignment(Alignment) {}
+  LLVM_ABI MemIntrinsicCostAttributes(Intrinsic::ID Id, Type *DataTy,
+                                      bool VariableMask, Align Alignment,
+                                      const Instruction *I = nullptr)
+      : I(I), DataTy(DataTy), IID(Id), VariableMask(VariableMask),
+        Alignment(Alignment) {}
+
+  Intrinsic::ID getID() const { return IID; }
+  const Instruction *getInst() const { return I; }
+  const Value *getPointer() const { return Ptr; }
+  Type *getDataType() const { return DataTy; }
+  bool getVariableMask() const { return VariableMask; }
+  unsigned getAddressSpace() const { return AddressSpace; }
+  Align getAlignment() const { return Alignment; }
+};
+
 class IntrinsicCostAttributes {
   const IntrinsicInst *II = nullptr;
   Type *RetTy = nullptr;
@@ -1556,7 +1603,7 @@ public:
 
   /// \return The cost of masked Load and Store instructions.
   LLVM_ABI InstructionCost getMaskedMemoryOpCost(
-      unsigned Opcode, Type *Src, Align Alignment, unsigned AddressSpace,
+      const MemIntrinsicCostAttributes &MICA,
       TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) const;
 
   /// \return The cost of Gather or Scatter operation

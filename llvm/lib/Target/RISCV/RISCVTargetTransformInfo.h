@@ -144,8 +144,7 @@ public:
   bool shouldConsiderVectorizationRegPressure() const override { return true; }
 
   InstructionCost
-  getMaskedMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
-                        unsigned AddressSpace,
+  getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
                         TTI::TargetCostKind CostKind) const override;
 
   InstructionCost
