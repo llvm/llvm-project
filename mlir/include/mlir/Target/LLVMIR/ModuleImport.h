@@ -163,9 +163,10 @@ public:
   /// Converts `value` to a float attribute. Asserts if the matching fails.
   FloatAttr matchFloatAttr(llvm::Value *value);
 
-  /// Converts `value` to a local variable attribute. Asserts if the matching
-  /// fails.
-  DILocalVariableAttr matchLocalVariableAttr(llvm::Value *value);
+  /// Converts `valOrVariable` to a local variable attribute. Asserts if the
+  /// matching fails.
+  DILocalVariableAttr matchLocalVariableAttr(
+      llvm::PointerUnion<llvm::Value *, llvm::DILocalVariable *> valOrVariable);
 
   /// Converts `value` to a label attribute. Asserts if the matching fails.
   DILabelAttr matchLabelAttr(llvm::Value *value);
@@ -281,6 +282,9 @@ public:
   /// after the function conversion has finished.
   void addDebugIntrinsic(llvm::CallInst *intrinsic);
 
+  /// Similar to `addDebugIntrinsic`, but for debug records.
+  void addDebugRecord(llvm::DbgRecord *debugRecord);
+
   /// Converts the LLVM values for an intrinsic to mixed MLIR values and
   /// attributes for LLVM_IntrOpBase. Attributes correspond to LLVM immargs. The
   /// list `immArgPositions` contains the positions of immargs on the LLVM
@@ -339,9 +343,26 @@ private:
   /// Converts all debug intrinsics in `debugIntrinsics`. Assumes that the
   /// function containing the intrinsics has been fully converted to MLIR.
   LogicalResult processDebugIntrinsics();
+  /// Converts all debug records in `debugRecords`. Assumes that the
+  /// function containing the record has been fully converted to MLIR.
+  LogicalResult processDebugRecords();
   /// Converts a single debug intrinsic.
   LogicalResult processDebugIntrinsic(llvm::DbgVariableIntrinsic *dbgIntr,
                                       DominanceInfo &domInfo);
+  /// Converts a single debug record.
+  LogicalResult processDebugRecord(llvm::DbgRecord &debugRecord,
+                                   DominanceInfo &domInfo);
+  /// Process arguments for declare/value operation insertion. `localVarAttr`
+  /// and `localExprAttr` are the attained attributes after importing the debug
+  /// variable and expressions. This also sets the builder insertion point to be
+  /// used by these operations.
+  std::tuple<DILocalVariableAttr, DIExpressionAttr, Value>
+  processDebugOpArgumentsAndInsertionPt(
+      Location loc, bool hasArgList, bool isKillLocation,
+      llvm::function_ref<FailureOr<Value>()> convertArgOperandToValue,
+      llvm::Value *address,
+      llvm::PointerUnion<llvm::Value *, llvm::DILocalVariable *> variable,
+      llvm::DIExpression *expression, DominanceInfo &domInfo);
   /// Converts LLMV IR asm inline call operand's attributes into an array of
   /// MLIR attributes to be utilized in `llvm.inline_asm`.
   ArrayAttr convertAsmInlineOperandAttrs(const llvm::CallBase &llvmCall);
@@ -485,6 +506,9 @@ private:
   /// Function-local list of debug intrinsics that need to be imported after the
   /// function conversion has finished.
   SetVector<llvm::Instruction *> debugIntrinsics;
+  /// Function-local list of debug records that need to be imported after the
+  /// function conversion has finished.
+  SetVector<llvm::DbgRecord *> debugRecords;
   /// Mapping between LLVM alias scope and domain metadata nodes and
   /// attributes in the LLVM dialect corresponding to these nodes.
   DenseMap<const llvm::MDNode *, Attribute> aliasScopeMapping;
