@@ -1216,7 +1216,7 @@ void AMDGPUTargetLowering::analyzeFormalArgumentsCompute(
   const SmallVectorImpl<ISD::InputArg> &Ins) const {
   const MachineFunction &MF = State.getMachineFunction();
   const Function &Fn = MF.getFunction();
-  LLVMContext &Ctx = Fn.getParent()->getContext();
+  LLVMContext &Ctx = Fn.getContext();
   const AMDGPUSubtarget &ST = AMDGPUSubtarget::get(MF);
   const unsigned ExplicitOffset = ST.getExplicitKernelArgOffset();
   CallingConv::ID CC = Fn.getCallingConv();
@@ -1248,7 +1248,8 @@ void AMDGPUTargetLowering::analyzeFormalArgumentsCompute(
 
     SmallVector<EVT, 16> ValueVTs;
     SmallVector<uint64_t, 16> Offsets;
-    ComputeValueVTs(*this, DL, BaseArgTy, ValueVTs, &Offsets, ArgOffset);
+    ComputeValueVTs(*this, DL, BaseArgTy, ValueVTs, /*MemVTs=*/nullptr,
+                    &Offsets, ArgOffset);
 
     for (unsigned Value = 0, NumValues = ValueVTs.size();
          Value != NumValues; ++Value) {

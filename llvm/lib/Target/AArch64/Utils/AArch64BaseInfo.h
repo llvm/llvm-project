@@ -695,6 +695,14 @@ struct CMHPriorityHint : SysAlias {
 #include "AArch64GenSystemOperands.inc"
 } // namespace AArch64CMHPriorityHint
 
+namespace AArch64TIndexHint {
+struct TIndex : SysAlias {
+  using SysAlias::SysAlias;
+};
+#define GET_TINDEX_DECL
+#include "AArch64GenSystemOperands.inc"
+} // namespace AArch64TIndexHint
+
 namespace AArch64SME {
 enum ToggleCondition : unsigned {
   Always,
@@ -852,6 +860,14 @@ struct GSB : SysAlias {
 #define GET_GSBTable_DECL
 #include "AArch64GenSystemOperands.inc"
 } // namespace AArch64GSB
+
+namespace AArch64PLBI {
+struct PLBI : SysAliasOptionalReg {
+  using SysAliasOptionalReg::SysAliasOptionalReg;
+};
+#define GET_PLBITable_DECL
+#include "AArch64GenSystemOperands.inc"
+} // namespace AArch64PLBI
 
 namespace AArch64II {
 /// Target Operand Flag enum.

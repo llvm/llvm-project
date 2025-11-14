@@ -28,7 +28,6 @@
 #include "llvm/TargetParser/Host.h"
 
 #include <memory>
-#include <string>
 #include <vector>
 #if defined(_MSC_VER) && (defined(_M_IX86) || defined(_M_X64)) &&              \
     !defined(_M_ARM64EC)
@@ -870,7 +869,7 @@ constexpr MCPhysReg kDefaultLoopCounterReg = X86::R8;
 
 void ExegesisX86Target::addTargetSpecificPasses(PassManagerBase &PM) const {
   // Lowers FP pseudo-instructions, e.g. ABS_Fp32 -> ABS_F.
-  PM.add(createX86FloatingPointStackifierPass());
+  PM.add(createX86FPStackifierLegacyPass());
 }
 
 MCRegister ExegesisX86Target::getScratchMemoryRegister(const Triple &TT) const {

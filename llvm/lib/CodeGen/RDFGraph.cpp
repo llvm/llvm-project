@@ -1827,7 +1827,7 @@ bool DataFlowGraph::hasUntrackedRef(Stmt S, bool IgnoreReserved) const {
   for (Ref R : S.Addr->members(*this)) {
     Ops.push_back(&R.Addr->getOp());
     RegisterRef RR = R.Addr->getRegRef(*this);
-    if (IgnoreReserved && RR.isReg() && ReservedRegs[RR.idx()])
+    if (IgnoreReserved && RR.isReg() && ReservedRegs[RR.asMCReg().id()])
       continue;
     if (!isTracked(RR))
       return true;
