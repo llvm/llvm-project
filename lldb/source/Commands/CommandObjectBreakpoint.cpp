@@ -1114,9 +1114,7 @@ public:
   CommandObjectBreakpointList(CommandInterpreter &interpreter)
       : CommandObjectParsed(
             interpreter, "breakpoint list",
-            "List some or all breakpoints at configurable levels of detail.",
-            nullptr) {
-    CommandArgumentData bp_id_arg;
+            "List some or all breakpoints at configurable levels of detail.") {
 
     // Define the first (and only) variant of this arg.
     AddSimpleArgumentList(eArgTypeBreakpointID, eArgRepeatOptional);

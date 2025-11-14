@@ -589,7 +589,7 @@ filterDbgVars(iterator_range<simple_ilist<DbgRecord>::iterator> R) {
 /// date.
 class DbgMarker {
 public:
-  DbgMarker() {}
+  DbgMarker() = default;
   /// Link back to the Instruction that owns this marker. Can be null during
   /// operations that move a marker from one instruction to another.
   Instruction *MarkedInstr = nullptr;

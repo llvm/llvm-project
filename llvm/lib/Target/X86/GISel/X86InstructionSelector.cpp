@@ -1879,28 +1879,34 @@ bool X86InstructionSelector::selectSelect(MachineInstr &I,
 
   unsigned OpCmp;
   LLT Ty = MRI.getType(DstReg);
-  switch (Ty.getSizeInBits()) {
-  default:
-    return false;
-  case 8:
-    OpCmp = X86::CMOV_GR8;
-    break;
-  case 16:
-    OpCmp = STI.canUseCMOV() ? X86::CMOV16rr : X86::CMOV_GR16;
-    break;
-  case 32:
-    OpCmp = STI.canUseCMOV() ? X86::CMOV32rr : X86::CMOV_GR32;
-    break;
-  case 64:
-    assert(STI.is64Bit() && STI.canUseCMOV());
-    OpCmp = X86::CMOV64rr;
-    break;
+  if (Ty.getSizeInBits() == 80) {
+    BuildMI(*Sel.getParent(), Sel, Sel.getDebugLoc(), TII.get(X86::CMOVE_Fp80),
+            DstReg)
+        .addReg(Sel.getTrueReg())
+        .addReg(Sel.getFalseReg());
+  } else {
+    switch (Ty.getSizeInBits()) {
+    default:
+      return false;
+    case 8:
+      OpCmp = X86::CMOV_GR8;
+      break;
+    case 16:
+      OpCmp = STI.canUseCMOV() ? X86::CMOV16rr : X86::CMOV_GR16;
+      break;
+    case 32:
+      OpCmp = STI.canUseCMOV() ? X86::CMOV32rr : X86::CMOV_GR32;
+      break;
+    case 64:
+      assert(STI.is64Bit() && STI.canUseCMOV());
+      OpCmp = X86::CMOV64rr;
+      break;
+    }
+    BuildMI(*Sel.getParent(), Sel, Sel.getDebugLoc(), TII.get(OpCmp), DstReg)
+        .addReg(Sel.getTrueReg())
+        .addReg(Sel.getFalseReg())
+        .addImm(X86::COND_E);
   }
-  BuildMI(*Sel.getParent(), Sel, Sel.getDebugLoc(), TII.get(OpCmp), DstReg)
-      .addReg(Sel.getTrueReg())
-      .addReg(Sel.getFalseReg())
-      .addImm(X86::COND_E);
-
   const TargetRegisterClass *DstRC = getRegClass(Ty, DstReg, MRI);
   if (!RBI.constrainGenericRegister(DstReg, *DstRC, MRI)) {
     LLVM_DEBUG(dbgs() << "Failed to constrain CMOV\n");

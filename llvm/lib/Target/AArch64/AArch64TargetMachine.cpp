@@ -54,7 +54,6 @@
 #include "llvm/Transforms/Vectorize/LoopIdiomVectorize.h"
 #include <memory>
 #include <optional>
-#include <string>
 
 using namespace llvm;
 
@@ -764,8 +763,8 @@ bool AArch64PassConfig::addGlobalInstructionSelect() {
 }
 
 void AArch64PassConfig::addMachineSSAOptimization() {
-  if (EnableNewSMEABILowering && TM->getOptLevel() != CodeGenOptLevel::None)
-    addPass(createMachineSMEABIPass());
+  if (TM->getOptLevel() != CodeGenOptLevel::None && EnableNewSMEABILowering)
+    addPass(createMachineSMEABIPass(TM->getOptLevel()));
 
   if (TM->getOptLevel() != CodeGenOptLevel::None && EnableSMEPeepholeOpt)
     addPass(createSMEPeepholeOptPass());
@@ -798,7 +797,7 @@ bool AArch64PassConfig::addILPOpts() {
 
 void AArch64PassConfig::addPreRegAlloc() {
   if (TM->getOptLevel() == CodeGenOptLevel::None && EnableNewSMEABILowering)
-    addPass(createMachineSMEABIPass());
+    addPass(createMachineSMEABIPass(CodeGenOptLevel::None));
 
   // Change dead register definitions to refer to the zero register.
   if (TM->getOptLevel() != CodeGenOptLevel::None &&

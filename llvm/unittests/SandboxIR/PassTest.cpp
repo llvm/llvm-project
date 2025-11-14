@@ -84,7 +84,9 @@ define void @foo() {
   class TestNamePass final : public FunctionPass {
   public:
     TestNamePass(llvm::StringRef Name) : FunctionPass(Name) {}
-    bool runOnFunction(Function &F, const Analyses &A) { return false; }
+    bool runOnFunction(Function &F, const Analyses &A) override {
+      return false;
+    }
   };
   EXPECT_DEATH(TestNamePass("white space"), ".*whitespace.*");
   EXPECT_DEATH(TestNamePass("-dash"), ".*start with.*");
@@ -146,7 +148,7 @@ define i8 @foo(i8 %v0, i8 %v1) {
   class TestNamePass final : public RegionPass {
   public:
     TestNamePass(llvm::StringRef Name) : RegionPass(Name) {}
-    bool runOnRegion(Region &F, const Analyses &A) { return false; }
+    bool runOnRegion(Region &F, const Analyses &A) override { return false; }
   };
   EXPECT_DEATH(TestNamePass("white space"), ".*whitespace.*");
   EXPECT_DEATH(TestNamePass("-dash"), ".*start with.*");

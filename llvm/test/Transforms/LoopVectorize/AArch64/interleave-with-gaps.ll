@@ -69,7 +69,7 @@ define i64 @vector_loop_with_remaining_iterations(ptr %src, ptr noalias %dst, i3
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 2 x i64> [ [[INDUCTION]], %[[VEC_EPILOG_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI8:%.*]] = phi <vscale x 2 x i64> [ [[TMP22]], %[[VEC_EPILOG_PH]] ], [ [[TMP35:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr { [4 x i8] }, ptr [[SRC]], <vscale x 2 x i64> [[VEC_IND]], i32 0, i64 3
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 2 x i8> @llvm.masked.gather.nxv2i8.nxv2p0(<vscale x 2 x ptr> [[TMP28]], i32 1, <vscale x 2 x i1> splat (i1 true), <vscale x 2 x i8> poison)
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 2 x i8> @llvm.masked.gather.nxv2i8.nxv2p0(<vscale x 2 x ptr> align 1 [[TMP28]], <vscale x 2 x i1> splat (i1 true), <vscale x 2 x i8> poison)
 ; CHECK-NEXT:    [[TMP29:%.*]] = zext <vscale x 2 x i8> [[WIDE_MASKED_GATHER]] to <vscale x 2 x i32>
 ; CHECK-NEXT:    [[TMP30:%.*]] = call <vscale x 2 x i32> @llvm.umin.nxv2i32(<vscale x 2 x i32> [[TMP24]], <vscale x 2 x i32> [[TMP29]])
 ; CHECK-NEXT:    [[TMP31:%.*]] = call <vscale x 2 x i32> @llvm.umin.nxv2i32(<vscale x 2 x i32> [[TMP24]], <vscale x 2 x i32> [[TMP30]])
@@ -200,7 +200,7 @@ define i64 @main_vector_loop_fixed_with_no_remaining_iterations(ptr %src, ptr no
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 2 x i64> [ [[INDUCTION]], %[[VEC_EPILOG_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI8:%.*]] = phi <vscale x 2 x i64> [ [[TMP22]], %[[VEC_EPILOG_PH]] ], [ [[TMP35:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr { [4 x i8] }, ptr [[SRC]], <vscale x 2 x i64> [[VEC_IND]], i32 0, i64 3
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 2 x i8> @llvm.masked.gather.nxv2i8.nxv2p0(<vscale x 2 x ptr> [[TMP28]], i32 1, <vscale x 2 x i1> splat (i1 true), <vscale x 2 x i8> poison)
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 2 x i8> @llvm.masked.gather.nxv2i8.nxv2p0(<vscale x 2 x ptr> align 1 [[TMP28]], <vscale x 2 x i1> splat (i1 true), <vscale x 2 x i8> poison)
 ; CHECK-NEXT:    [[TMP29:%.*]] = zext <vscale x 2 x i8> [[WIDE_MASKED_GATHER]] to <vscale x 2 x i32>
 ; CHECK-NEXT:    [[TMP30:%.*]] = call <vscale x 2 x i32> @llvm.umin.nxv2i32(<vscale x 2 x i32> [[TMP24]], <vscale x 2 x i32> [[TMP29]])
 ; CHECK-NEXT:    [[TMP31:%.*]] = call <vscale x 2 x i32> @llvm.umin.nxv2i32(<vscale x 2 x i32> [[TMP24]], <vscale x 2 x i32> [[TMP30]])
@@ -284,17 +284,17 @@ define void @main_vector_loop_fixed_single_vector_iteration_with_runtime_checks(
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <8 x i64>, ptr [[GEP_J]], align 8
 ; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <8 x i64> [[WIDE_VEC]], <8 x i64> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
 ; CHECK-NEXT:    [[TMP5:%.*]] = trunc <4 x i64> [[STRIDED_VEC]] to <4 x i16>
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x i16> [[TMP5]], i32 0
+; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <4 x i16> [[TMP5]], i32 1
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x i16> [[TMP5]], i32 2
+; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <4 x i16> [[TMP5]], i32 3
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i16, ptr [[K]], i64 [[IV]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i16, ptr [[K]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i16, ptr [[K]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i16, ptr [[K]], i64 [[TMP3]]
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x i16> [[TMP5]], i32 0
 ; CHECK-NEXT:    store i16 [[TMP10]], ptr [[TMP6]], align 2
-; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <4 x i16> [[TMP5]], i32 1
 ; CHECK-NEXT:    store i16 [[TMP11]], ptr [[TMP7]], align 2
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x i16> [[TMP5]], i32 2
 ; CHECK-NEXT:    store i16 [[TMP12]], ptr [[TMP8]], align 2
-; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <4 x i16> [[TMP5]], i32 3
 ; CHECK-NEXT:    store i16 [[TMP13]], ptr [[TMP9]], align 2
 ; CHECK-NEXT:    store i64 0, ptr [[A]], align 8
 ; CHECK-NEXT:    store i64 0, ptr [[B]], align 8

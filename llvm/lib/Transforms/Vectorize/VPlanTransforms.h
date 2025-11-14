@@ -31,7 +31,8 @@ class VPBuilder;
 class VPRecipeBuilder;
 struct VFRange;
 
-extern cl::opt<bool> VerifyEachVPlan;
+LLVM_ABI_FOR_TEST extern cl::opt<bool> VerifyEachVPlan;
+LLVM_ABI_FOR_TEST extern cl::opt<bool> EnableWideActiveLaneMask;
 
 struct VPlanTransforms {
   /// Helper to run a VPlan transform \p Transform on \p VPlan, forwarding extra
@@ -180,7 +181,7 @@ struct VPlanTransforms {
   /// Apply VPlan-to-VPlan optimizations to \p Plan, including induction recipe
   /// optimizations, dead recipe removal, replicate region optimizations and
   /// block merging.
-  static void optimize(VPlan &Plan);
+  LLVM_ABI_FOR_TEST static void optimize(VPlan &Plan);
 
   /// Wrap predicated VPReplicateRecipes with a mask operand in an if-then
   /// region block and remove the mask operand. Optimize the created regions by
@@ -325,9 +326,10 @@ struct VPlanTransforms {
   static void materializeBackedgeTakenCount(VPlan &Plan,
                                             VPBasicBlock *VectorPH);
 
-  /// Add explicit Build[Struct]Vector recipes that combine multiple scalar
-  /// values into single vectors.
-  static void materializeBuildVectors(VPlan &Plan);
+  /// Add explicit Build[Struct]Vector recipes to Pack multiple scalar values
+  /// into vectors and Unpack recipes to extract scalars from vectors as
+  /// needed.
+  static void materializePacksAndUnpacks(VPlan &Plan);
 
   /// Materialize VF and VFxUF to be computed explicitly using VPInstructions.
   static void materializeVFAndVFxUF(VPlan &Plan, VPBasicBlock *VectorPH,
@@ -347,7 +349,7 @@ struct VPlanTransforms {
   /// form of loop-aware SLP, where we use interleave groups to identify
   /// candidates.
   static void narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
-                                     unsigned VectorRegWidth);
+                                     TypeSize VectorRegWidth);
 
   /// Predicate and linearize the control-flow in the only loop region of
   /// \p Plan. If \p FoldTail is true, create a mask guarding the loop
