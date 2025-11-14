@@ -2264,13 +2264,6 @@ public:
   /// it is probably another function.
   bool isSymbolValidInScope(const SymbolRef &Symbol, uint64_t SymbolSize) const;
 
-  /// Validates if the target of a direct branch/call is a valid
-  /// executable instruction.
-  /// Return true if the target is valid, false otherwise.
-  bool validateBranchTarget(uint64_t TargetAddress,
-                            uint64_t AbsoluteInstrAddr,
-                            const ArrayRef<uint8_t> &CurrentFunctionData);
-
   /// Disassemble function from raw data.
   /// If successful, this function will populate the list of instructions
   /// for this function together with offsets from the function start
@@ -2326,6 +2319,16 @@ public:
   /// Verify that starting at \p Offset function contents are filled with
   /// zero-value bytes.
   bool isZeroPaddingAt(uint64_t Offset) const;
+
+  /// Validates if the target of an external direct branch/call is a valid
+  /// executable instruction.
+  /// Return true if the target is valid, false otherwise.
+  bool validateExternalBranch(uint64_t TargetAddress);
+
+  /// Validates if the target of an internal direct branch/call is a valid
+  /// executable instruction.
+  /// Return true if the target is valid, false otherwise.
+  bool validateInternalBranch();
 
   /// Check that entry points have an associated instruction at their
   /// offsets after disassembly.

@@ -1421,6 +1421,9 @@ void BinaryContext::processInterproceduralReferences() {
     if (&Function == TargetFunction)
       continue;
 
+    if (!Function.validateExternalBranch(Address))
+      continue;
+
     if (TargetFunction) {
       if (TargetFunction->isFragment() &&
           !areRelatedFragments(TargetFunction, &Function)) {
