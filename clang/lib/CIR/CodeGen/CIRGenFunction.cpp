@@ -921,6 +921,13 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
   case Expr::CXXOperatorCallExprClass:
   case Expr::UserDefinedLiteralClass:
     return emitCallExprLValue(cast<CallExpr>(e));
+  case Expr::ExprWithCleanupsClass: {
+    const auto *cleanups = cast<ExprWithCleanups>(e);
+    RunCleanupsScope scope(*this);
+    LValue lv = emitLValue(cleanups->getSubExpr());
+    assert(!cir::MissingFeatures::cleanupWithPreservedValues());
+    return lv;
+  }
   case Expr::ParenExprClass:
     return emitLValue(cast<ParenExpr>(e)->getSubExpr());
   case Expr::GenericSelectionExprClass:
