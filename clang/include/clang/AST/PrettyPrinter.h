@@ -80,7 +80,7 @@ struct PrintingPolicy {
         UsePreferredNames(true), AlwaysIncludeTypeForTemplateArgument(false),
         CleanUglifiedParameters(false), EntireContentsOfLargeArray(true),
         UseEnumerators(true), UseHLSLTypes(LO.HLSL),
-        CanonicalAnonymousLambdaName(false) {}
+        CanonicalAnonymousEntities(false) {}
 
   /// Adjust this printing policy for cases where it's known that we're
   /// printing C++ code (for instance, if AST dumping reaches a C++-only
@@ -347,10 +347,8 @@ struct PrintingPolicy {
   LLVM_PREFERRED_TYPE(bool)
   unsigned UseHLSLTypes : 1;
 
-  // TODO: this shouldn't be specific to unnamed lambdas, but also unnamed
-  // structures/unions/enums (?)
   LLVM_PREFERRED_TYPE(bool)
-  unsigned CanonicalAnonymousLambdaName : 1;
+  unsigned CanonicalAnonymousEntities : 1;
 
   /// Callbacks to use to allow the behavior of printing to be customized.
   const PrintingCallbacks *Callbacks = nullptr;

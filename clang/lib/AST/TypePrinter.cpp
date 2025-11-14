@@ -1533,10 +1533,8 @@ void TypePrinter::printTagType(const TagType *T, raw_ostream &OS) {
   }
 
   const IdentifierInfo *II = D->getIdentifier();
-  const bool IsLambda =
-      isa<CXXRecordDecl>(D) && cast<CXXRecordDecl>(D)->isLambda();
-  const bool PrintingCanonicalLambdaName =
-      !II && IsLambda && Policy.CanonicalAnonymousLambdaName;
+  const bool PrintingCanonicalAnonName =
+      !II && Policy.CanonicalAnonymousEntities;
 
   if (!Policy.FullyQualifiedName && !T->isCanonicalUnqualified()) {
     T->getQualifier().print(OS, Policy);
@@ -1545,7 +1543,7 @@ void TypePrinter::printTagType(const TagType *T, raw_ostream &OS) {
     // In C, this will always be empty except when the type
     // being printed is anonymous within other Record.
     D->printNestedNameSpecifier(
-        OS, Policy, /*AllowFunctionContext=*/PrintingCanonicalLambdaName);
+        OS, Policy, /*AllowFunctionContext=*/PrintingCanonicalAnonName);
   }
 
   if (II)
@@ -1556,15 +1554,10 @@ void TypePrinter::printTagType(const TagType *T, raw_ostream &OS) {
   } else {
     // Make an unambiguous representation for anonymous types, e.g.
     //   (anonymous enum at /usr/include/string.h:120:9)
-    const bool AddParen = !PrintingCanonicalLambdaName;
-    if (AddParen)
-      OS << (Policy.MSVCFormatting ? '`' : '(');
+    OS << (Policy.MSVCFormatting ? '`' : '(');
 
-    if (IsLambda) {
+    if (isa<CXXRecordDecl>(D) && cast<CXXRecordDecl>(D)->isLambda()) {
       OS << "lambda";
-      if (PrintingCanonicalLambdaName)
-        OS << D->getASTContext().getManglingNumber(D);
-
       HasKindDecoration = true;
     } else if ((isa<RecordDecl>(D) &&
                 cast<RecordDecl>(D)->isAnonymousStructOrUnion())) {
@@ -1573,13 +1566,16 @@ void TypePrinter::printTagType(const TagType *T, raw_ostream &OS) {
       OS << "unnamed";
     }
 
-    if (Policy.AnonymousTagLocations && !PrintingCanonicalLambdaName) {
-      // Suppress the redundant tag keyword if we just printed one.
-      // We don't have to worry about ElaboratedTypes here because you can't
-      // refer to an anonymous type with one.
-      if (!HasKindDecoration)
-        OS << " " << D->getKindName();
+    if (PrintingCanonicalAnonName)
+      OS << D->getASTContext().getManglingNumber(D);
 
+    // Suppress the redundant tag keyword if we just printed one.
+    // We don't have to worry about ElaboratedTypes here because you can't
+    // refer to an anonymous type with one.
+    if (!HasKindDecoration)
+      OS << " " << D->getKindName();
+
+    if (Policy.AnonymousTagLocations && !PrintingCanonicalAnonName) {
       PresumedLoc PLoc = D->getASTContext().getSourceManager().getPresumedLoc(
           D->getLocation());
       if (PLoc.isValid()) {
@@ -1602,8 +1598,7 @@ void TypePrinter::printTagType(const TagType *T, raw_ostream &OS) {
       }
     }
 
-    if (AddParen)
-      OS << (Policy.MSVCFormatting ? '\'' : ')');
+    OS << (Policy.MSVCFormatting ? '\'' : ')');
   }
 
   // If this is a class template specialization, print the template
