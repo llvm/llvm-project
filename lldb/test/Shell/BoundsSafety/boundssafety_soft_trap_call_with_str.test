@@ -1,5 +1,8 @@
 # UNSUPPORTED: system-windows
-# RUN: %clang_host -fbounds-safety -fbounds-safety-soft-traps=call-with-str -g -O0 %S/Inputs/boundsSafetySoftTraps.c -o %t.out
+# RUN: %clang_host -c -fbounds-safety -fbounds-safety-soft-traps=call-with-str -g -O0 %S/Inputs/boundsSafetySoftTraps.c -o %t.o
+# Note: Building the runtime without debug info is intentional because this is the common case
+# RUN: %clang_host -c -O0 %S/Inputs/boundsSafetyMockSoftTrapRuntime.c -o %t.softtrap_runtime.o
+# RUN: %clang_host %t.o %t.softtrap_runtime.o -o %t.out
 # RUN: %lldb -b -s %s %t.out | FileCheck %s
 b __bounds_safety_soft_trap_s
 run
@@ -10,9 +13,9 @@ run
 
 # Check that reason for bounds check failing can be seen in the stacktrace
 bt
-# CHECK: * frame #{{.*}}`__bounds_safety_soft_trap_s(reason="indexing above upper bound in 'array[index]'")
+# CHECK: * frame #{{.*}}`__bounds_safety_soft_trap_s
 # CHECK-NEXT: frame #{{.*}}`__clang_trap_msg$Bounds check failed$indexing above upper bound in 'array[index]'
-# CHECK-NEXT: frame #2{{.*}}`bad_read(index=10) at boundsSafetySoftTraps.c:18
+# CHECK-NEXT: frame #{{.*}}`bad_read(index=10) at boundsSafetySoftTraps.c:5
 
 # Resume execution
 c
