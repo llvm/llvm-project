@@ -1421,9 +1421,6 @@ void BinaryContext::processInterproceduralReferences() {
     if (&Function == TargetFunction)
       continue;
 
-    if (!Function.validateExternalBranch(Address))
-      continue;
-
     if (TargetFunction) {
       if (TargetFunction->isFragment() &&
           !areRelatedFragments(TargetFunction, &Function)) {
@@ -1440,6 +1437,9 @@ void BinaryContext::processInterproceduralReferences() {
 
       continue;
     }
+
+    if (!Function.validateExternalBranch(Address))
+      continue;
 
     // Check if address falls in function padding space - this could be
     // unmarked data in code. In this case adjust the padding space size.

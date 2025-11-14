@@ -1919,6 +1919,11 @@ bool BinaryFunction::validateExternalBranch(uint64_t TargetAddress) {
 
   if (TargetFunction) {
     const uint64_t TargetOffset = TargetAddress - TargetFunction->getAddress();
+    // Skip empty functions and out-of-bounds offsets,
+    // as they may not be disassembled.
+    if (!TargetOffset || (TargetOffset > TargetFunction->getSize()))
+      return true;
+
     if (TargetFunction->CurrentState == State::Disassembled &&
         !TargetFunction->getInstructionAtOffset(TargetOffset))
       IsValid = false;
@@ -1949,8 +1954,12 @@ bool BinaryFunction::validateInternalBranch() {
       continue;
 
     const uint32_t Offset = KV.first;
+    // Skip empty functions and out-of-bounds offsets,
+    // as they may not be disassembled.
+    if (!Offset || (Offset > getSize()))
+      continue;
 
-    if (getInstructionAtOffset(Offset) || !Offset)
+    if (getInstructionAtOffset(Offset))
       continue;
 
     BC.errs() << "BOLT-WARNING: corrupted control flow detected in function "
