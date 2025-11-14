@@ -8,6 +8,8 @@ import shutil
 import subprocess
 import sys
 import traceback
+import platform
+import multiprocessing
 from contextlib import contextmanager
 
 _SHQUOTE_WINDOWS_ESCAPEDCHARS = re.compile(r'(["\\])')
@@ -37,6 +39,72 @@ def report(msg):
     print(msg, file=sys.stderr, flush=True)
 
 
+def report_prog_version(name, cmd):
+    try:
+        p = subprocess.run(cmd, check=True, capture_output=True, text=True)
+        outlines = p.stdout.strip().splitlines()
+        report_list(name, outlines[0])
+    except BaseException:
+        pass
+
+
+def report_list(category, *items):
+    items = list(items)
+    filtered = []
+
+    while items:
+        item = items.pop()
+        match item:
+            case tuple() | list():
+                items += item
+                continue
+            case None:
+                continue
+            case _:
+                item = str(item).strip()
+        if not item:
+            continue
+        if item in filtered:
+            continue
+        filtered.append(item)
+    category += ":"
+    report(f"{category:<9}{', '.join(reversed( filtered))}")
+
+
+def report_platform():
+    report_list(
+        "CPU",
+        platform.machine(),
+        platform.architecture()[0],
+        platform.processor(),
+        f"{multiprocessing.cpu_count()} native threads",
+    )
+    try:
+        releaseinfo = platform.freedesktop_os_release()
+    except BaseException:
+        releaseinfo = dict()
+    report_list(
+        "OS",
+        platform.system(),
+        platform.architecture()[1],
+        platform.platform(),
+        releaseinfo.get("PRETTY_NAME"),
+    )
+    report_list("Python", platform.python_implementation(), platform.python_version())
+
+    report_prog_version("CMake", ["cmake", "--version"])
+    report_prog_version("Ninja", ["ninja", "--version"])
+    report_prog_version("Sphinx", ["sphinx-build", "--version"])
+    report_prog_version("Doxygen", ["doxygen", "--version"])
+
+    report_prog_version("gcc", ["gcc", "--version"])
+    report_prog_version("ld", ["ld", "--version"])
+
+    report_prog_version("LLVM", ["llvm-config", "--version"])
+    report_prog_version("Clang", ["clang", "--version"])
+    report_prog_version("LLD", ["ld.lld", "--version"])
+
+
 def run_command(cmd, shell=False, **kwargs):
     """Report which command is being run, then execute it using subprocess.check_call."""
     report(f"Running: {cmd if shell else shjoin(cmd)}")
@@ -51,8 +119,8 @@ def _remove_readonly(func, path, _):
 
 
 def rmtree(path):
-    """
-    Remove directory path and all its subdirectories. Includes a workaround for Windows where shutil.rmtree errors on read-only files.
+    """Remove directory path and all its subdirectories. Includes a workaround
+    for Windows where shutil.rmtree errors on read-only files.
 
     Taken from official Pythons docs
     https://docs.python.org/3/library/shutil.html#rmtree-example
@@ -163,6 +231,10 @@ class Worker:
         with step(step_name, halt_on_fail=halt_on_fail) as s:
             yield s
 
+    def report(self, msg):
+        """Convenience wrapper for report()"""
+        report(msg)
+
     def run_command(self, *args, **kwargs):
         """Convenience wrapper for run_command()"""
         return run_command(*args, **kwargs)
@@ -179,7 +251,9 @@ class Worker:
 def convert_bool(v):
     """Convert input to bool type
 
-    Use to convert the value of bool environment variables. Specifically, the buildbot master sets 'false' to build properties, which by default Python would interpret as true-ish.
+    Use to convert the value of bool environment variables. Specifically, the
+    buildbot master sets 'false' to build properties, which by default Python
+    would interpret as true-ish.
     """
     match v:
         case None:
@@ -390,4 +464,8 @@ def run(
         )
 
     os.environ["NINJA_STATUS"] = "[%p/%es :: %u->%r->%f (of %t)] "
+
+    with step("platform-info"):
+        report_platform()
+
     yield w
