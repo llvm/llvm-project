@@ -9,11 +9,7 @@
 #ifndef LLVM_LIBC_SYS_SYSCALL_H
 #define LLVM_LIBC_SYS_SYSCALL_H
 
-#if defined(__APPLE__)
-
-#include <sys/syscall.h>
-
-#elif defined(__linux__)
+#if defined(__linux__)
 
 #include <asm/unistd.h>
 
