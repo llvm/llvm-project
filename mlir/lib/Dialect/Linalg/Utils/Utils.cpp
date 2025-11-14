@@ -247,17 +247,17 @@ bool isReductionIterator(utils::IteratorType iteratorType) {
 /// Returns the BlockArgument that leads to `val`, if any. Traverses optional
 /// ext* ops.
 static BlockArgument getBlockArgumentWithOptionalExtOps(Value val) {
-  BlockArgument blockArg;
-  if (!(blockArg = dyn_cast<BlockArgument>(val))) {
-    Operation *defOp = val.getDefiningOp();
-    if (!dyn_cast_if_present<arith::ExtFOp>(defOp) &&
-        !dyn_cast_if_present<arith::ExtSIOp>(defOp) &&
-        !dyn_cast_if_present<arith::ExtUIOp>(defOp)) {
-      return nullptr;
-    }
-    blockArg = dyn_cast<BlockArgument>(defOp->getOperand(0));
+  BlockArgument blockArg = dyn_cast<BlockArgument>(val);
+  if ((blockArg))
+    return blockArg;
+
+  Operation *defOp = val.getDefiningOp();
+  if (!dyn_cast_if_present<arith::ExtFOp>(defOp) &&
+      !dyn_cast_if_present<arith::ExtSIOp>(defOp) &&
+      !dyn_cast_if_present<arith::ExtUIOp>(defOp)) {
+    return nullptr;
   }
-  return blockArg;
+  return dyn_cast<BlockArgument>(defOp->getOperand(0));
 }
 
 /// Utility to match block body for convolution ops.
@@ -312,8 +312,7 @@ static bool bodyMatcherForMaxSignedPoolOps(Value yieldVal, Block *body) {
 }
 
 // max_unsigned ops should not allow float data type.
-// TODO: Retire OPDSL logic. Refer to :
-//       https://github.com/llvm/llvm-project/issues/164800
+// TODO(#164800): Retire OPDSL logic.
 static bool bodyMatcherForMaxUnsignedPoolOps(Value yieldVal, Block *body) {
   return bodyMatcherForPoolOps<arith::MaximumFOp, arith::MaxUIOp>(yieldVal,
                                                                   body);
@@ -325,8 +324,7 @@ static bool bodyMatcherForMinSignedPoolOps(Value yieldVal, Block *body) {
 }
 
 // min_unsigned ops should not allow float data type.
-// TODO: Retire OPDSL logic. Refer to :
-//       https://github.com/llvm/llvm-project/issues/164800
+// TODO(#164800): Retire OPDSL logic.
 static bool bodyMatcherForMinUnsignedPoolOps(Value yieldVal, Block *body) {
   return bodyMatcherForPoolOps<arith::MinimumFOp, arith::MinUIOp>(yieldVal,
                                                                   body);
@@ -336,8 +334,8 @@ static bool bodyMatcherForSumPoolOps(Value yieldVal, Block *body) {
   return bodyMatcherForPoolOps<arith::AddIOp, arith::AddFOp>(yieldVal, body);
 }
 
-static mlir::AffineExpr getAffineMapDim(ArrayAttr indexingMaps,
-                                        uint32_t mapIndex, uint32_t dimIndex) {
+static AffineExpr getAffineMapDim(ArrayAttr indexingMaps, uint32_t mapIndex,
+                                  uint32_t dimIndex) {
   auto affineMap = cast<AffineMapAttr>(indexingMaps[mapIndex]).getValue();
   if (dimIndex < affineMap.getNumResults())
     return affineMap.getResult(dimIndex);
@@ -405,37 +403,22 @@ static bool matchConvDimAddExprPattern(ArrayAttr indexingMaps, unsigned iDim,
   int64_t c0 = isDimTimesConstantOrDimOnly(addExpr.getLHS(), dim0);
   int64_t c1 = isDimTimesConstantOrDimOnly(addExpr.getRHS(), dim1);
 
-  if (c0 != -1 && c1 != -1) {
-    // Pattern matched with dims and constants extracted.
-    AffineExpr fExpr = getAffineMapDim(indexingMaps, filterMapIdx, fDim);
-    AffineExpr oExpr = getAffineMapDim(indexingMaps, outputMapIdx, oDim);
-    if (dim0 == fExpr && dim1 == oExpr) {
-      dilation = c0;
-      stride = c1;
-      return true;
-    } else if (dim1 == fExpr && dim0 == oExpr) {
-      dilation = c1;
-      stride = c0;
-      return true;
-    }
+  if (c0 == -1 || c1 == -1)
+    return false;
+  // Pattern matched with dims and constants extracted.
+  AffineExpr fExpr = getAffineMapDim(indexingMaps, filterMapIdx, fDim);
+  AffineExpr oExpr = getAffineMapDim(indexingMaps, outputMapIdx, oDim);
+  if (dim0 == fExpr && dim1 == oExpr) {
+    dilation = c0;
+    stride = c1;
+    return true;
+  }
+  if (dim1 == fExpr && dim0 == oExpr) {
+    dilation = c1;
+    stride = c0;
+    return true;
   }
   return false;
-}
-
-/// Give an array of AffineMaps, verify each map to be of the corresponding
-/// `expectedSize`.
-static bool verifyConvIndexingMapSizes(ArrayAttr indexingMaps,
-                                       ArrayRef<int64_t> expectedSizes) {
-  if (indexingMaps.size() != expectedSizes.size())
-    return false;
-
-  for (auto [indexingMap, expectedSize] :
-       llvm::zip_equal(indexingMaps, expectedSizes)) {
-    auto affineMap = cast<AffineMapAttr>(indexingMap).getValue();
-    if (affineMap.getNumResults() != expectedSize)
-      return false;
-  }
-  return true;
 }
 
 // ---------------------------------------------
@@ -469,10 +452,6 @@ bool isaConvolutionOpOfType<linalg::DepthwiseConv1DNwcWcOp>(
   assert(isaConvolutionOpInterface(op) &&
          "expected op to implement ConvolutionOpInterface");
 
-  ArrayAttr indexingMaps = op.getIndexingMaps();
-  if (!verifyConvIndexingMapSizes(indexingMaps, {3, 2, 3}))
-    return false;
-
   *dilations = SmallVector<int64_t>(1, 1);
   *strides = SmallVector<int64_t>(1, 1);
   MLIRContext *context = op->getContext();
@@ -480,6 +459,7 @@ bool isaConvolutionOpOfType<linalg::DepthwiseConv1DNwcWcOp>(
   AffineExpr W = getAffineDimExpr(1, context);
   AffineExpr C = getAffineDimExpr(2, context);
   AffineExpr w = getAffineDimExpr(3, context);
+  ArrayAttr indexingMaps = op.getIndexingMaps();
   // First fetch dilations/strides :-
   // Match: W * stride + w * dilation
   if (!matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0,
@@ -496,9 +476,7 @@ bool isaConvolutionOpOfType<linalg::DepthwiseConv1DNwcWcOp>(
   Block *body = op.getBlock();
   auto yieldOp = cast<linalg::YieldOp>(body->getTerminator());
   Value yieldVal = yieldOp.getOperand(0);
-  if (!bodyMatcherForConvolutionOps(yieldVal, body))
-    return false;
-  return true;
+  return bodyMatcherForConvolutionOps(yieldVal, body);
 }
 
 // #inputMap = affine_map<(N, H, W, C, h, w) -> (N, C, H + h, W + w)>
@@ -514,10 +492,6 @@ bool isaConvolutionOpOfType<linalg::DepthwiseConv2DNchwChwOp>(
   assert(isaConvolutionOpInterface(op) &&
          "expected op to implement ConvolutionOpInterface");
 
-  ArrayAttr indexingMaps = op.getIndexingMaps();
-  if (!verifyConvIndexingMapSizes(indexingMaps, {4, 3, 4}))
-    return false;
-
   *dilations = SmallVector<int64_t>(2, 1);
   *strides = SmallVector<int64_t>(2, 1);
   MLIRContext *context = op->getContext();
@@ -527,6 +501,7 @@ bool isaConvolutionOpOfType<linalg::DepthwiseConv2DNchwChwOp>(
   AffineExpr C = getAffineDimExpr(3, context);
   AffineExpr h = getAffineDimExpr(4, context);
   AffineExpr w = getAffineDimExpr(5, context);
+  ArrayAttr indexingMaps = op.getIndexingMaps();
   // First fetch dilations/strides :-
   // Match: H * stride + h * dilation
   if (!matchConvDimAddExprPattern(indexingMaps, /*iDim=*/2, /*fDim=*/1,
@@ -548,9 +523,7 @@ bool isaConvolutionOpOfType<linalg::DepthwiseConv2DNchwChwOp>(
   Block *body = op.getBlock();
   auto yieldOp = cast<linalg::YieldOp>(body->getTerminator());
   Value yieldVal = yieldOp.getOperand(0);
-  if (!bodyMatcherForConvolutionOps(yieldVal, body))
-    return false;
-  return true;
+  return bodyMatcherForConvolutionOps(yieldVal, body);
 }
 
 // #inputMap = affine_map<(N, D, H, W, CM, d, h, w, C)
@@ -569,10 +542,6 @@ bool isaConvolutionOpOfType<linalg::DepthwiseConv3DNdhwcDhwcmOp>(
   assert(isaConvolutionOpInterface(op) &&
          "expected op to implement ConvolutionOpInterface");
 
-  ArrayAttr indexingMaps = op.getIndexingMaps();
-  if (!verifyConvIndexingMapSizes(indexingMaps, {5, 5, 6}))
-    return false;
-
   *dilations = SmallVector<int64_t>(3, 1);
   *strides = SmallVector<int64_t>(3, 1);
   MLIRContext *context = op->getContext();
@@ -585,6 +554,7 @@ bool isaConvolutionOpOfType<linalg::DepthwiseConv3DNdhwcDhwcmOp>(
   AffineExpr h = getAffineDimExpr(6, context);
   AffineExpr w = getAffineDimExpr(7, context);
   AffineExpr C = getAffineDimExpr(8, context);
+  ArrayAttr indexingMaps = op.getIndexingMaps();
   // First fetch dilations/strides :-
   // Match: D * stride + d * dilation
   if (!matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0,
@@ -611,9 +581,7 @@ bool isaConvolutionOpOfType<linalg::DepthwiseConv3DNdhwcDhwcmOp>(
   Block *body = op.getBlock();
   auto yieldOp = cast<linalg::YieldOp>(body->getTerminator());
   Value yieldVal = yieldOp.getOperand(0);
-  if (!bodyMatcherForConvolutionOps(yieldVal, body))
-    return false;
-  return true;
+  return bodyMatcherForConvolutionOps(yieldVal, body);
 }
 
 // #inputMap = affine_map<(N, H, W, C, h, w) -> (N, H + h, W + w, C)>
@@ -629,10 +597,6 @@ bool isaConvolutionOpOfType<linalg::PoolingNhwcMaxOp>(
   assert(isaConvolutionOpInterface(op) &&
          "expected op to implement ConvolutionOpInterface");
 
-  ArrayAttr indexingMaps = op.getIndexingMaps();
-  if (!verifyConvIndexingMapSizes(indexingMaps, {4, 2, 4}))
-    return false;
-
   *dilations = SmallVector<int64_t>(2, 1);
   *strides = SmallVector<int64_t>(2, 1);
   MLIRContext *context = op->getContext();
@@ -642,6 +606,7 @@ bool isaConvolutionOpOfType<linalg::PoolingNhwcMaxOp>(
   AffineExpr C = getAffineDimExpr(3, context);
   AffineExpr h = getAffineDimExpr(4, context);
   AffineExpr w = getAffineDimExpr(5, context);
+  ArrayAttr indexingMaps = op.getIndexingMaps();
   // First fetch dilations/strides :-
   // Match: H * stride + h * dilation
   if (!matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0,
@@ -663,9 +628,7 @@ bool isaConvolutionOpOfType<linalg::PoolingNhwcMaxOp>(
   Block *body = op.getBlock();
   auto yieldOp = cast<linalg::YieldOp>(body->getTerminator());
   Value yieldVal = yieldOp.getOperand(0);
-  if (!bodyMatcherForMaxSignedPoolOps(yieldVal, body))
-    return false;
-  return true;
+  return bodyMatcherForMaxSignedPoolOps(yieldVal, body);
 }
 
 // #inputMap = affine_map<(N, H, W, C, h, w) -> (N, H + h, W + w, C)>
@@ -681,10 +644,6 @@ bool isaConvolutionOpOfType<linalg::PoolingNhwcMinOp>(
   assert(isaConvolutionOpInterface(op) &&
          "expected op to implement ConvolutionOpInterface");
 
-  ArrayAttr indexingMaps = op.getIndexingMaps();
-  if (!verifyConvIndexingMapSizes(indexingMaps, {4, 2, 4}))
-    return false;
-
   *dilations = SmallVector<int64_t>(2, 1);
   *strides = SmallVector<int64_t>(2, 1);
   MLIRContext *context = op->getContext();
@@ -694,6 +653,7 @@ bool isaConvolutionOpOfType<linalg::PoolingNhwcMinOp>(
   AffineExpr C = getAffineDimExpr(3, context);
   AffineExpr h = getAffineDimExpr(4, context);
   AffineExpr w = getAffineDimExpr(5, context);
+  ArrayAttr indexingMaps = op.getIndexingMaps();
   // First fetch dilations/strides :-
   // Match: H * stride + h * dilation
   if (!matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0,
@@ -715,9 +675,7 @@ bool isaConvolutionOpOfType<linalg::PoolingNhwcMinOp>(
   Block *body = op.getBlock();
   auto yieldOp = cast<linalg::YieldOp>(body->getTerminator());
   Value yieldVal = yieldOp.getOperand(0);
-  if (!bodyMatcherForMinSignedPoolOps(yieldVal, body))
-    return false;
-  return true;
+  return bodyMatcherForMinSignedPoolOps(yieldVal, body);
 }
 
 // #inputMap = affine_map<(N, H, W, C, h, w) -> (N, H + h, W + w, C)>
@@ -733,10 +691,6 @@ bool isaConvolutionOpOfType<linalg::PoolingNhwcSumOp>(
   assert(isaConvolutionOpInterface(op) &&
          "expected op to implement ConvolutionOpInterface");
 
-  ArrayAttr indexingMaps = op.getIndexingMaps();
-  if (!verifyConvIndexingMapSizes(indexingMaps, {4, 2, 4}))
-    return false;
-
   *dilations = SmallVector<int64_t>(2, 1);
   *strides = SmallVector<int64_t>(2, 1);
   MLIRContext *context = op->getContext();
@@ -746,6 +700,7 @@ bool isaConvolutionOpOfType<linalg::PoolingNhwcSumOp>(
   AffineExpr C = getAffineDimExpr(3, context);
   AffineExpr h = getAffineDimExpr(4, context);
   AffineExpr w = getAffineDimExpr(5, context);
+  ArrayAttr indexingMaps = op.getIndexingMaps();
   // First fetch dilations/strides :-
   // Match: H * stride + h * dilation
   if (!matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0,
@@ -767,9 +722,7 @@ bool isaConvolutionOpOfType<linalg::PoolingNhwcSumOp>(
   Block *body = op.getBlock();
   auto yieldOp = cast<linalg::YieldOp>(body->getTerminator());
   Value yieldVal = yieldOp.getOperand(0);
-  if (!bodyMatcherForSumPoolOps(yieldVal, body))
-    return false;
-  return true;
+  return bodyMatcherForSumPoolOps(yieldVal, body);
 }
 
 // #inputMap = affine_map<(N, H, W, C, h, w) -> (N, H + h, W + w, C)>
@@ -785,10 +738,6 @@ bool isaConvolutionOpOfType<linalg::PoolingNhwcMaxUnsignedOp>(
   assert(isaConvolutionOpInterface(op) &&
          "expected op to implement ConvolutionOpInterface");
 
-  ArrayAttr indexingMaps = op.getIndexingMaps();
-  if (!verifyConvIndexingMapSizes(indexingMaps, {4, 2, 4}))
-    return false;
-
   *dilations = SmallVector<int64_t>(2, 1);
   *strides = SmallVector<int64_t>(2, 1);
   MLIRContext *context = op->getContext();
@@ -798,6 +747,7 @@ bool isaConvolutionOpOfType<linalg::PoolingNhwcMaxUnsignedOp>(
   AffineExpr C = getAffineDimExpr(3, context);
   AffineExpr h = getAffineDimExpr(4, context);
   AffineExpr w = getAffineDimExpr(5, context);
+  ArrayAttr indexingMaps = op.getIndexingMaps();
   // First fetch dilations/strides :-
   // Match: H * stride + h * dilation
   if (!matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0,
@@ -819,9 +769,7 @@ bool isaConvolutionOpOfType<linalg::PoolingNhwcMaxUnsignedOp>(
   Block *body = op.getBlock();
   auto yieldOp = cast<linalg::YieldOp>(body->getTerminator());
   Value yieldVal = yieldOp.getOperand(0);
-  if (!bodyMatcherForMaxUnsignedPoolOps(yieldVal, body))
-    return false;
-  return true;
+  return bodyMatcherForMaxUnsignedPoolOps(yieldVal, body);
 }
 
 // #inputMap = affine_map<(N, H, W, C, h, w) -> (N, H + h, W + w, C)>
@@ -837,10 +785,6 @@ bool isaConvolutionOpOfType<linalg::PoolingNhwcMinUnsignedOp>(
   assert(isaConvolutionOpInterface(op) &&
          "expected op to implement ConvolutionOpInterface");
 
-  ArrayAttr indexingMaps = op.getIndexingMaps();
-  if (!verifyConvIndexingMapSizes(indexingMaps, {4, 2, 4}))
-    return false;
-
   *dilations = SmallVector<int64_t>(2, 1);
   *strides = SmallVector<int64_t>(2, 1);
   MLIRContext *context = op->getContext();
@@ -850,6 +794,7 @@ bool isaConvolutionOpOfType<linalg::PoolingNhwcMinUnsignedOp>(
   AffineExpr C = getAffineDimExpr(3, context);
   AffineExpr h = getAffineDimExpr(4, context);
   AffineExpr w = getAffineDimExpr(5, context);
+  ArrayAttr indexingMaps = op.getIndexingMaps();
   // First fetch dilations/strides :-
   // Match: H * stride + h * dilation
   if (!matchConvDimAddExprPattern(indexingMaps, /*iDim=*/1, /*fDim=*/0,
@@ -871,9 +816,7 @@ bool isaConvolutionOpOfType<linalg::PoolingNhwcMinUnsignedOp>(
   Block *body = op.getBlock();
   auto yieldOp = cast<linalg::YieldOp>(body->getTerminator());
   Value yieldVal = yieldOp.getOperand(0);
-  if (!bodyMatcherForMinUnsignedPoolOps(yieldVal, body))
-    return false;
-  return true;
+  return bodyMatcherForMinUnsignedPoolOps(yieldVal, body);
 }
 
 Value makeComposedPadHighOp(OpBuilder &b, Location loc, RankedTensorType type,

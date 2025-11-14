@@ -256,7 +256,7 @@ specializeToConvOp(RewriterBase &rewriter, GenericOp genericOp,
   return namedOp;
 }
 
-// Converts linalg.generic to named linalg.*conv/pooling* where possible.
+/// Converts linalg.generic to named linalg.*conv/pooling* where possible.
 static FailureOr<LinalgOp> specializeLinalgConvolutions(RewriterBase &rewriter,
                                                         GenericOp genericOp) {
   SmallVector<int64_t> dilations, strides;

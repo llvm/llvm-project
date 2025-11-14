@@ -2,14 +2,15 @@
 // lifted back up to named op.
 // RUN: mlir-opt %s -linalg-generalize-named-ops | mlir-opt --linalg-specialize-generic-ops | FileCheck %s --implicit-check-not=linalg.generic
 
-func.func @depthwise_conv_1d_nwc_wc(%input: tensor<1x25x8xi8>, %filter: tensor<3x8xi8>, %output: tensor<1x10x8xi32>) -> tensor<1x10x8xi32> {
+// NOTE: Most tests in this file use dynamic shapes as the underlying transformations don't modify shapes. There's one exception that's added as a smoke test. 
+func.func @depthwise_conv_1d_nwc_wc_static(%input: tensor<1x25x8xi8>, %filter: tensor<3x8xi8>, %output: tensor<1x10x8xi32>) -> tensor<1x10x8xi32> {
   %0 = linalg.depthwise_conv_1d_nwc_wc 
          {dilations = dense<3> : tensor<1xi64>, strides = dense<2> : tensor<1xi64>}
          ins (%input, %filter: tensor<1x25x8xi8>, tensor<3x8xi8>)
          outs (%output: tensor<1x10x8xi32>) -> tensor<1x10x8xi32>
   return %0 : tensor<1x10x8xi32>
 }
-//      CHECK: @depthwise_conv_1d_nwc_wc
+//      CHECK: @depthwise_conv_1d_nwc_wc_static
 //      CHECK:   linalg.depthwise_conv_1d_nwc_wc
 // CHECK-SAME:      dilations = dense<3> : tensor<1xi64>, strides = dense<2> : tensor<1xi64>
 
