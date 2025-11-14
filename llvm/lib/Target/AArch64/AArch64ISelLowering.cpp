@@ -7672,7 +7672,7 @@ SDValue AArch64TargetLowering::LowerFMUL(SDValue Op, SelectionDAG &DAG) const {
   auto BFMLALB = MakeGetIntrinsic(Intrinsic::aarch64_sve_bfmlalb);
   auto BFMLALT = MakeGetIntrinsic(Intrinsic::aarch64_sve_bfmlalt);
   auto FCVT = MakeGetIntrinsic(Intrinsic::aarch64_sve_fcvt_bf16f32_v2);
-  auto FCVNT = MakeGetIntrinsic(Intrinsic::aarch64_sve_fcvtnt_bf16f32_v2);
+  auto FCVTNT = MakeGetIntrinsic(Intrinsic::aarch64_sve_fcvtnt_bf16f32_v2);
 
   SDValue LHS = Op.getOperand(0);
   SDValue RHS = Op.getOperand(1);
@@ -7684,14 +7684,14 @@ SDValue AArch64TargetLowering::LowerFMUL(SDValue Op, SelectionDAG &DAG) const {
 
   // Lower bf16 FMUL as a pair (VT == nxv8bf16) of BFMLAL top/bottom
   // instructions. These result in two f32 vectors, which can be converted back
-  // to bf16 with FCVT and FCVNT.
+  // to bf16 with FCVT and FCVTNT.
   SDValue BottomF32 = BFMLALB(MVT::nxv4f32, Zero, LHS, RHS);
   SDValue BottomBF16 = FCVT(VT, DAG.getPOISON(VT), Pg, BottomF32);
   // Note: nxv2bf16 and nxv4bf16 only use even lanes.
   if (VT != MVT::nxv8bf16)
     return BottomBF16;
   SDValue TopF32 = BFMLALT(MVT::nxv4f32, Zero, LHS, RHS);
-  return FCVNT(VT, BottomBF16, Pg, TopF32);
+  return FCVTNT(VT, BottomBF16, Pg, TopF32);
 }
 
 SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
