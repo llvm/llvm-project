@@ -153,6 +153,7 @@ struct MissingFeatures {
   static bool coroEndBuiltinCall() { return false; }
   static bool coroutineFrame() { return false; }
   static bool emitBodyAndFallthrough() { return false; }
+  static bool coroOutsideFrameMD() { return false; }
 
   // Various handling of deferred processing in CIRGenModule.
   static bool cgmRelease() { return false; }
@@ -225,6 +226,7 @@ struct MissingFeatures {
   static bool cleanupAppendInsts() { return false; }
   static bool cleanupBranchThrough() { return false; }
   static bool cleanupIndexAndBIAdjustment() { return false; }
+  static bool cleanupWithPreservedValues() { return false; }
   static bool cleanupsToDeactivate() { return false; }
   static bool constEmitterAggILE() { return false; }
   static bool constEmitterArrayILE() { return false; }
@@ -273,6 +275,7 @@ struct MissingFeatures {
   static bool innermostEHScope() { return false; }
   static bool insertBuiltinUnpredictable() { return false; }
   static bool instrumentation() { return false; }
+  static bool intrinsicElementTypeSupport() { return false; }
   static bool intrinsics() { return false; }
   static bool isMemcpyEquivalentSpecialMember() { return false; }
   static bool isTrivialCtorOrDtor() { return false; }
@@ -298,6 +301,7 @@ struct MissingFeatures {
   static bool opTBAA() { return false; }
   static bool peepholeProtection() { return false; }
   static bool pgoUse() { return false; }
+  static bool pointerAuthentication() { return false; }
   static bool pointerOverflowSanitizer() { return false; }
   static bool preservedAccessIndexRegion() { return false; }
   static bool requiresCleanups() { return false; }
