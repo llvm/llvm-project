@@ -12219,7 +12219,7 @@ Syntax:
 Overview:
 """""""""
 
-The '``llvm.structured.gep``' intrinsic computes a new pointer address
+The '``llvm.structured.gep``' intrinsic (structured **G**\ et\ **E**\ lement\ **P**\ tr) computes a new pointer address
 resulting of a logical indexing into the ``<source>`` pointer. The returned
 address depends on the indices and the physical layout of %basetype at
 runtime.
