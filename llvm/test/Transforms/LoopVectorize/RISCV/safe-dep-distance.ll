@@ -205,7 +205,7 @@ define void @safe_load_store_distance_not_pow_of_2(i64 %N) {
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr [10 x [12 x i16]], ptr @a, i64 0, i64 8, <8 x i64> [[VEC_IND]]
 ; CHECK-NEXT:    call void @llvm.masked.scatter.v8i16.v8p0(<8 x i16> zeroinitializer, <8 x ptr> align 2 [[TMP7]], <8 x i1> splat (i1 true))
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <8 x i64> [[VEC_IND]], splat (i64 24)
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nsw <8 x i64> [[VEC_IND]], splat (i64 24)
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       middle.block:

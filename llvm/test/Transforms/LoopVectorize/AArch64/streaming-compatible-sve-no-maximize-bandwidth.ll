@@ -43,7 +43,7 @@ define i32 @foo(i32 noundef %n, i32 noundef %lag, i32 noundef %shift) vscale_ran
 ; SC_SVE-NEXT:    [[TMP16:%.*]] = shl <4 x i32> [[TMP15]], [[BROADCAST_SPLAT]]
 ; SC_SVE-NEXT:    [[TMP17]] = add <4 x i32> [[TMP16]], [[VEC_PHI]]
 ; SC_SVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; SC_SVE-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IND]], splat (i32 4)
+; SC_SVE-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i32> [[VEC_IND]], splat (i32 4)
 ; SC_SVE-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; SC_SVE-NEXT:    br i1 [[TMP18]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; SC_SVE:       middle.block:
@@ -114,7 +114,7 @@ define i32 @foo(i32 noundef %n, i32 noundef %lag, i32 noundef %shift) vscale_ran
 ; NO_SC_SVE-NEXT:    [[TMP16:%.*]] = shl <8 x i32> [[TMP15]], [[BROADCAST_SPLAT]]
 ; NO_SC_SVE-NEXT:    [[TMP17]] = add <8 x i32> [[TMP16]], [[VEC_PHI]]
 ; NO_SC_SVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
-; NO_SC_SVE-NEXT:    [[VEC_IND_NEXT]] = add <8 x i32> [[VEC_IND]], splat (i32 8)
+; NO_SC_SVE-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <8 x i32> [[VEC_IND]], splat (i32 8)
 ; NO_SC_SVE-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; NO_SC_SVE-NEXT:    br i1 [[TMP18]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; NO_SC_SVE:       middle.block:

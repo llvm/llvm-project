@@ -276,7 +276,7 @@ define void @uniform_gep(i64 %k, ptr noalias %A, ptr noalias %B) {
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT: vector.body:
 ; CHECK-NEXT:   EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
-; CHECK-NEXT:   ir<%iv> = WIDEN-INDUCTION ir<21>, ir<1>, vp<[[VF]]>
+; CHECK-NEXT:   ir<%iv> = WIDEN-INDUCTION nsw ir<21>, ir<1>, vp<[[VF]]>
 ; CHECK-NEXT:   vp<[[DERIVED_IV:%.+]]> = DERIVED-IV ir<21> + vp<[[CAN_IV]]> * ir<1>
 ; CHECK-NEXT:   EMIT vp<[[WIDE_CAN_IV:%.+]]> = WIDEN-CANONICAL-INDUCTION vp<[[CAN_IV]]>
 ; CHECK-NEXT:   EMIT vp<[[MASK:%.+]]> = icmp ule vp<[[WIDE_CAN_IV]]>, vp<[[BTC]]>
@@ -1060,7 +1060,7 @@ define void @merge_with_dead_gep_between_regions(i32 %n, i32 %k, ptr noalias %sr
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT:   vector.body:
 ; CHECK-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
-; CHECK-NEXT:     ir<%iv> = WIDEN-INDUCTION ir<%n>, ir<-1>, vp<[[VF]]>
+; CHECK-NEXT:     ir<%iv> = WIDEN-INDUCTION nsw ir<%n>, ir<-1>, vp<[[VF]]>
 ; CHECK-NEXT:     vp<[[DERIVED_IV:%.+]]> = DERIVED-IV ir<%n> + vp<[[CAN_IV]]> * ir<-1>
 ; CHECK-NEXT:     WIDEN ir<%cond> = icmp ult ir<%iv>, ir<%k>
 ; CHECK-NEXT:   Successor(s): pred.store
