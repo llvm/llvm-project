@@ -20,18 +20,19 @@ function(check_assembler_flag outvar flag)
     set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
 
     # Try to assemble an empty file with a .S name, using the provided flag.
-    try_compile(success
-      SOURCE_FROM_CONTENT "CheckAssemblerFlag.s" ""
-      COMPILE_DEFINITIONS ${flag}
-      NO_CACHE)
+    set(asm_source_file
+      ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CheckAssemblerFlag.S)
+    write_file(${asm_source_file} "")
+    try_compile(${outvar}
+      ${CMAKE_BINARY_DIR}
+      SOURCES ${asm_source_file}
+      COMPILE_DEFINITIONS ${flag})
 
     if(NOT CMAKE_REQUIRED_QUIET)
-      if(success)
+      if(${outvar})
         message(CHECK_PASS "Accepted")
-        set(${outvar} 1 CACHE INTERNAL "Test assembler flag ${flag}")
       else()
         message(CHECK_FAIL "Not accepted")
-        set(${outvar} "" CACHE INTERNAL "Test assembler flag ${flag}")
       endif()
     endif()
   endif()
