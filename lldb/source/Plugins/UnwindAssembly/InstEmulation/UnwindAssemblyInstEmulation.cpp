@@ -120,15 +120,14 @@ bool UnwindAssemblyInstEmulation::GetNonCallSiteUnwindPlanFromAssembly(
   cfa_reg_value.SetUInt(m_initial_cfa, m_state.cfa_reg_info.byte_size);
   SetRegisterValue(m_state.cfa_reg_info, cfa_reg_value);
 
-  const InstructionList &inst_list = disasm_sp->GetInstructionList();
-  const size_t num_instructions = inst_list.GetSize();
+  InstructionList inst_list = disasm_sp->GetInstructionList();
 
-  if (num_instructions == 0) {
+  if (inst_list.GetSize() == 0) {
     DumpUnwindRowsToLog(log, range, unwind_plan);
     return unwind_plan.GetRowCount() > 0;
   }
 
-  Instruction &first_inst = *inst_list.GetInstructionAtIndex(0).get();
+  Instruction &first_inst = *inst_list.GetInstructionAtIndex(0);
   const lldb::addr_t base_addr = first_inst.GetAddress().GetFileAddress();
 
   // Map for storing the unwind state at a given offset. When we see a forward
@@ -151,14 +150,13 @@ bool UnwindAssemblyInstEmulation::GetNonCallSiteUnwindPlanFromAssembly(
   EmulateInstruction::InstructionCondition last_condition =
       EmulateInstruction::UnconditionalCondition;
 
-  for (size_t idx = 0; idx < num_instructions; ++idx) {
-    m_curr_row_modified = false;
-    m_forward_branch_offset = 0;
-
-    Instruction *inst = inst_list.GetInstructionAtIndex(idx).get();
+  for (const InstructionSP &inst : inst_list.Instructions()) {
     if (!inst)
       continue;
     DumpInstToLog(log, *inst, inst_list);
+
+    m_curr_row_modified = false;
+    m_forward_branch_offset = 0;
 
     lldb::addr_t current_offset =
         inst->GetAddress().GetFileAddress() - base_addr;
