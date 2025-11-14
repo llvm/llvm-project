@@ -303,6 +303,11 @@ static bool setAllocKind(Function &F, AllocFnKind K) {
   return true;
 }
 
+static bool setPreserveAllCC(Function &F) {
+  F.setCallingConv(CallingConv::PreserveAll);
+  return true;
+}
+
 bool llvm::inferNonMandatoryLibFuncAttrs(Module *M, StringRef Name,
                                          const TargetLibraryInfo &TLI) {
   Function *F = M->getFunction(Name);
@@ -1390,6 +1395,17 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
     Changed |= setDoesNotCapture(F, 2);
     Changed |= setWillReturn(F);
     Changed |= setOnlyWritesArgMemOrErrnoMem(F);
+    break;
+
+#define UBSAN_HANDLER(Name, String)                                            \
+  case LibFunc___ubsan_handle_##Name##_minimal_preserve:
+
+#define UBSAN_HANDLER_RECOVER(Name, String) UBSAN_HANDLER(Name, String)
+
+#define UBSAN_HANDLER_PTR(Name, String)                                        \
+  case LibFunc___ubsan_handle_##Name##_minimal_preserve:
+#include "llvm/Transforms/Instrumentation/UbsanMinimalHandlers.inc"
+    Changed |= setPreserveAllCC(F);
     break;
   default:
     // FIXME: It'd be really nice to cover all the library functions we're

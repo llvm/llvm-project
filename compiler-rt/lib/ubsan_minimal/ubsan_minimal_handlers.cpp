@@ -127,28 +127,36 @@ void NORETURN CheckFailed(const char *file, int, const char *cond, u64, u64) {
 
 #define INTERFACE extern "C" __attribute__((visibility("default")))
 
-#define HANDLER_RECOVER(name, kind)                                            \
+#define UBSAN_HANDLER_RECOVER(name, kind)                                      \
   INTERFACE void __ubsan_handle_##name##_minimal() {                           \
+    __ubsan_report_error(kind, GET_CALLER_PC(), nullptr);                      \
+  }                                                                            \
+  INTERFACE void __ubsan_handle_##name##_minimal_preserve()                    \
+      [[clang::preserve_all]] {                                                \
     __ubsan_report_error(kind, GET_CALLER_PC(), nullptr);                      \
   }
 
-#define HANDLER_NORECOVER(name, kind)                                          \
+#define UBSAN_HANDLER_NORECOVER(name, kind)                                    \
   INTERFACE void __ubsan_handle_##name##_minimal_abort() {                     \
     uintptr_t caller = GET_CALLER_PC();                                        \
     __ubsan_report_error_fatal(kind, caller, nullptr);                         \
     abort_with_message(kind, caller, nullptr);                                 \
   }
 
-#define HANDLER(name, kind)                                                    \
-  HANDLER_RECOVER(name, kind)                                                  \
-  HANDLER_NORECOVER(name, kind)
+#define UBSAN_HANDLER(name, kind)                                              \
+  UBSAN_HANDLER_RECOVER(name, kind)                                            \
+  UBSAN_HANDLER_NORECOVER(name, kind)
 
-#define HANDLER_RECOVER_PTR(name, kind)                                        \
+#define UBSAN_HANDLER_RECOVER_PTR(name, kind)                                  \
   INTERFACE void __ubsan_handle_##name##_minimal(const uintptr_t address) {    \
+    __ubsan_report_error(kind, GET_CALLER_PC(), &address);                     \
+  }                                                                            \
+  INTERFACE void __ubsan_handle_##name##_minimal_preserve(                     \
+      const uintptr_t address) [[clang::preserve_all]] {                       \
     __ubsan_report_error(kind, GET_CALLER_PC(), &address);                     \
   }
 
-#define HANDLER_NORECOVER_PTR(name, kind)                                      \
+#define UBSAN_HANDLER_NORECOVER_PTR(name, kind)                                \
   INTERFACE void __ubsan_handle_##name##_minimal_abort(                        \
       const uintptr_t address) {                                               \
     uintptr_t caller = GET_CALLER_PC();                                        \
@@ -156,33 +164,9 @@ void NORETURN CheckFailed(const char *file, int, const char *cond, u64, u64) {
     abort_with_message(kind, caller, &address);                                \
   }
 
-// A version of a handler that takes a pointer to a value.
-#define HANDLER_PTR(name, kind)                                                \
-  HANDLER_RECOVER_PTR(name, kind)                                              \
-  HANDLER_NORECOVER_PTR(name, kind)
+// A version of a UBSAN_HANDLER that takes a pointer to a value.
+#define UBSAN_HANDLER_PTR(name, kind)                                          \
+  UBSAN_HANDLER_RECOVER_PTR(name, kind)                                        \
+  UBSAN_HANDLER_NORECOVER_PTR(name, kind)
 
-HANDLER_PTR(type_mismatch, "type-mismatch")
-HANDLER(alignment_assumption, "alignment-assumption")
-HANDLER(add_overflow, "add-overflow")
-HANDLER(sub_overflow, "sub-overflow")
-HANDLER(mul_overflow, "mul-overflow")
-HANDLER(negate_overflow, "negate-overflow")
-HANDLER(divrem_overflow, "divrem-overflow")
-HANDLER(shift_out_of_bounds, "shift-out-of-bounds")
-HANDLER(out_of_bounds, "out-of-bounds")
-HANDLER(local_out_of_bounds, "local-out-of-bounds")
-HANDLER_RECOVER(builtin_unreachable, "builtin-unreachable")
-HANDLER_RECOVER(missing_return, "missing-return")
-HANDLER(vla_bound_not_positive, "vla-bound-not-positive")
-HANDLER(float_cast_overflow, "float-cast-overflow")
-HANDLER(load_invalid_value, "load-invalid-value")
-HANDLER(invalid_builtin, "invalid-builtin")
-HANDLER(invalid_objc_cast, "invalid-objc-cast")
-HANDLER(function_type_mismatch, "function-type-mismatch")
-HANDLER(implicit_conversion, "implicit-conversion")
-HANDLER(nonnull_arg, "nonnull-arg")
-HANDLER(nonnull_return, "nonnull-return")
-HANDLER(nullability_arg, "nullability-arg")
-HANDLER(nullability_return, "nullability-return")
-HANDLER(pointer_overflow, "pointer-overflow")
-HANDLER(cfi_check_fail, "cfi-check-fail")
+#include "UbsanMinimalHandlers.inc"

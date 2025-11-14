@@ -2718,6 +2718,24 @@ TLI_DEFINE_ENUM_INTERNAL(write)
 TLI_DEFINE_STRING_INTERNAL("write")
 TLI_DEFINE_SIG_INTERNAL(SSizeT, Int, Ptr, SizeT)
 
+#define UBSAN_HANDLER(Name, String) \
+TLI_DEFINE_ENUM_INTERNAL(__ubsan_handle_##Name##_minimal_preserve) \
+TLI_DEFINE_STRING_INTERNAL("__ubsan_handle_" #Name "_minimal_preserve") \
+TLI_DEFINE_SIG_INTERNAL(Void)
+
+#define UBSAN_HANDLER_RECOVER(Name, String) UBSAN_HANDLER(Name, String)
+
+#define UBSAN_HANDLER_PTR(Name, String) \
+TLI_DEFINE_ENUM_INTERNAL(__ubsan_handle_##Name##_minimal_preserve) \
+TLI_DEFINE_STRING_INTERNAL("__ubsan_handle_" #Name "_minimal_preserve") \
+TLI_DEFINE_SIG_INTERNAL(Void, IntX)
+
+#include "llvm/Transforms/Instrumentation/UbsanMinimalHandlers.inc"
+
+#undef UBSAN_HANDLER
+#undef UBSAN_HANDLER_RECOVER
+#undef UBSAN_HANDLER_PTR
+
 #undef TLI_DEFINE_ENUM_INTERNAL
 #undef TLI_DEFINE_STRING_INTERNAL
 #undef TLI_DEFINE_SIG_INTERNAL
