@@ -2218,6 +2218,7 @@ findPrologueEndLoc(const MachineFunction *MF) {
   const auto &TII = *MF->getSubtarget().getInstrInfo();
   const MachineInstr *NonTrivialInst = nullptr;
   const Function &F = MF->getFunction();
+  DISubprogram *SP = const_cast<DISubprogram*>(F.getSubprogram());
 
   // Some instructions may be inserted into prologue after this function. Must
   // keep prologue for these cases.
@@ -2305,14 +2306,35 @@ findPrologueEndLoc(const MachineFunction *MF) {
         return *FoundInst;
     }
 
-    // We choose to ignore line-zero locations when setting the prologue as they
-    // can't be stepped on anyway; however in very rare scenarios function calls
-    // can have line zero, and we shouldn't step over those. In these
-    // extraordinary conditions, just bail out and refuse to set a prologue_end.
-    if (CurInst->isCall())
-      if (const DILocation *Loc = CurInst->getDebugLoc().get())
-        if (Loc->getLine() == 0)
+    // In very rare scenarios function calls can have line zero, and we
+    // shouldn't step over such a call while trying to reach prologue_end. In
+    // these extraordinary conditions, force an earlier setup instruction to
+    // have the scope line and put prologue_end there. This will be suboptimal,
+    // and might still be in setup code, but is less catastrophic than missing
+    // a call.
+    if (CurInst->isCall()) {
+      if (const DILocation *Loc = CurInst->getDebugLoc().get();
+          Loc && Loc->getLine() == 0) {
+        // Go back one instruction.
+        auto RIt = std::next(CurInst->getIterator().getReverse());
+        // In the radically unlikely event that there's no prior instruction,
+        // meaning the first instruction in the function is a call, don't set a
+        // prologue_end at all.
+        if (RIt == CurInst->getParent()->rend())
           return std::make_pair(nullptr, true);
+
+        // The prior instruction was either line-zero or unset, or a setup
+        // instruction, or otherwise uninteresting. Force it to have the
+        // scope line.
+        unsigned ScopeLine = SP->getScopeLine();
+        DILocation *ScopeLineDILoc =
+          DILocation::get(SP->getContext(), ScopeLine, 0, SP);
+        const_cast<MachineInstr*>(&*RIt)->setDebugLoc(ScopeLineDILoc);
+
+        // Consider this position to be where prologue_end is placed.
+        return std::make_pair(&*RIt, false);
+      }
+    }
 
     // Try to continue searching, but use a backup-location if substantive
     // computation is happening.

@@ -1,4 +1,4 @@
-# RUN: llc %s -start-after=livedebugvalues -o - -filetype=obj | llvm-dwarfdump - --debug-line | FileCheck %s --implicit-check-not=prologue_end
+# RUN: llc %s -start-after=livedebugvalues -o - -filetype=obj | llvm-dwarfdump - --debug-line | FileCheck %s
 #
 ## Original code, compiled clang -O2 -g -c
 ## 
@@ -23,25 +23,25 @@
 ##   a:   59                      pop    %rcx
 ##   b:   c3                      ret
 ##
-## Where prologue_end is placed on address 8, the clearing of the return
-## register, because it's the first "real" instruction that isn't line zero.
-## This then causes debuggers to skip over the call instruction when entering
-## the function, which is catastrophic.
+## And we could choose to set prologue_end on address 8, the clearing of the
+## return register, because it's the first "real" instruction that isn't line
+## zero. But this then causes debuggers to skip over the call instruction when
+## entering the function, which is catastrophic.
 ##
-## Instead: we shouldn't put a prologue_end on this function at all. It's too
-## deformed from the original code to truly have a position (with a line number)
-## that is both true, and after frame setup. This gives consumers the
+## Instead: we force the xor at address 1 to have a source location (the
+## function scope line number), and put a prologue_end there. While it's a
+## setup instruction, it's better to have a prologue_end that's still slightly
+## in the prologue than to step over the call. This gives consumers the
 ## opportunity to recognise "this is a crazy function" and act accordingly.
 ##
-## Check lines ensure that there's something meaningful in the line table
-## involving line 2, the implicit-check-not is making sure there isn't a
-## prologue_end flag on any line entry.
+## Check lines: the first entry is the start-of-function scope line, the second
+## entry is the prologue_end on the xor, while the third is the zero-line-number
+## call instruction.
 #
-# CHECK: standard_opcode_lengths[DW_LNS_set_prologue_end] = 0
-#
-# CHECK:  Address            Line   Column File
-# CHECK:  2      0      0 
-# CHECK:  end_sequence
+# CHECK:       2      0      0   0             0       0  is_stmt
+# CHECK-NEXT:  2      0      0   0             0       0  is_stmt prologue_end
+# CHECK-NEXT:  0      0      0   0             0       0
+
 --- |
   target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
   target triple = "x86_64-unknown-linux-gnu"
