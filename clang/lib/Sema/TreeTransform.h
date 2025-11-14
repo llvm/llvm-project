@@ -13065,11 +13065,11 @@ StmtResult TreeTransform<Derived>::TransformUnresolvedSYCLKernelCallStmt(
 
   ExprResult IdExpr = getDerived().TransformExpr(S->getKernelLaunchIdExpr());
   if (IdExpr.isInvalid())
-     return StmtError();
+    return StmtError();
 
   StmtResult Body = getDerived().TransformStmt(S->getOriginalStmt());
   if (Body.isInvalid())
-     return StmtError();
+    return StmtError();
 
   StmtResult SR = SemaRef.SYCL().BuildSYCLKernelCallStmt(
       cast<FunctionDecl>(SemaRef.CurContext), cast<CompoundStmt>(Body.get()),
