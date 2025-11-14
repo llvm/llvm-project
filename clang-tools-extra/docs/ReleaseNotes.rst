@@ -406,6 +406,10 @@ Changes in existing checks
   <clang-tidy/checks/google/readability-casting>` check by adding fix-it
   notes for downcasts.
 
+- Improved :doc:`google-readability-todo
+  <clang-tidy/checks/google/readability-todo>` check to accept the new TODO
+  format from the Google Style Guide.
+
 - Improved :doc:`llvm-prefer-isa-or-dyn-cast-in-conditionals
   <clang-tidy/checks/llvm/prefer-isa-or-dyn-cast-in-conditionals>` check:
 
