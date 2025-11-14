@@ -1,8 +1,5 @@
-; RUN: opt %loadNPMPolly '-passes=polly-import-jscop,polly-codegen' \
-; RUN:     -S < %s | FileCheck %s
-; RUN: opt %loadNPMPolly '-passes=polly-import-jscop,polly-codegen' \
-; RUN:     -polly-import-jscop-postfix=pow2 \
-; RUN:     -S < %s | FileCheck %s -check-prefix=POW2
+; RUN: opt %loadNPMPolly '-passes=polly-custom<import-jscop;codegen>' -S < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly-custom<import-jscop;codegen>' -polly-import-jscop-postfix=pow2 -S < %s | FileCheck %s -check-prefix=POW2
 ;
 ;    void exprModDiv(float *A, float *B, float *C, long N, long p) {
 ;      for (long i = 0; i < N; i++)

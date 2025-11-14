@@ -1,7 +1,5 @@
-; RUN: opt %loadNPMPolly -S -passes=polly-codegen \
-; RUN: -polly-invariant-load-hoisting=false < %s | FileCheck %s
-; RUN: opt %loadNPMPolly -S -passes=polly-codegen \
-; RUN: -polly-invariant-load-hoisting=true < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -S '-passes=polly<no-default-opts>' -polly-invariant-load-hoisting=false < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -S '-passes=polly<no-default-opts>' -polly-invariant-load-hoisting=true < %s | FileCheck %s
 ;
 ; Check that we generate valid code even if the load of cont_STACKPOINTER is
 ; hoisted in one SCoP and used (through the phi node %tmp2).

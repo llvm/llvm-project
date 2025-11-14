@@ -1,7 +1,5 @@
-; RUN: opt %loadNPMPolly -aa-pipeline=basic-aa '-passes=print<polly-function-scops>' -polly-allow-modref-calls \
-; RUN:     -disable-output < %s 2>&1 | FileCheck %s
-; RUN: opt %loadNPMPolly -aa-pipeline=basic-aa -passes=polly-codegen -disable-output \
-; RUN:     -polly-allow-modref-calls < %s
+; RUN: opt %loadNPMPolly -aa-pipeline=basic-aa '-passes=polly-custom<scops>' -polly-print-scops -polly-allow-modref-calls -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly -aa-pipeline=basic-aa '-passes=polly<no-default-opts>' -disable-output -polly-allow-modref-calls < %s
 ;
 ; Check that the call to func will "read" not only the A array but also the
 ; B array. The reason is the readonly annotation of func.

@@ -616,6 +616,9 @@ void ModuleDepCollectorPP::EndOfMainFile() {
   if (!MDC.ScanInstance.getPreprocessorOpts().ImplicitPCHInclude.empty())
     MDC.addFileDep(MDC.ScanInstance.getPreprocessorOpts().ImplicitPCHInclude);
 
+  for (StringRef VFS : MDC.ScanInstance.getHeaderSearchOpts().VFSOverlayFiles)
+    MDC.addFileDep(VFS);
+
   for (const Module *M :
        MDC.ScanInstance.getPreprocessor().getAffectingClangModules())
     if (!MDC.isPrebuiltModule(M))

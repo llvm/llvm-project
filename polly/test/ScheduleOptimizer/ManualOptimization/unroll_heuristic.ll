@@ -1,5 +1,5 @@
-; RUN: opt %loadNPMPolly -polly-pragma-based-opts=1 '-passes=print<polly-opt-isl>' -disable-output < %s | FileCheck %s --match-full-lines
-; RUN: opt %loadNPMPolly -polly-pragma-based-opts=0 '-passes=print<polly-opt-isl>' -disable-output < %s | FileCheck %s --match-full-lines
+; RUN: opt %loadNPMPolly -polly-pragma-based-opts=1 '-passes=polly-custom<opt-isl>' -polly-print-opt-isl -disable-output < %s | FileCheck %s --match-full-lines
+; RUN: opt %loadNPMPolly -polly-pragma-based-opts=0 '-passes=polly-custom<opt-isl>' -polly-print-opt-isl -disable-output < %s | FileCheck %s --match-full-lines
 ;
 ; Unrolling with heuristic factor.
 ; Currently not supported and expected to be handled by LLVM's unroll pass.

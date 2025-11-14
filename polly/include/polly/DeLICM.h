@@ -21,15 +21,10 @@
 #include "isl/isl-noexceptions.h"
 
 namespace llvm {
-class PassRegistry;
-class Pass;
 class raw_ostream;
 } // namespace llvm
 
 namespace polly {
-/// Create a new DeLICM pass instance.
-llvm::Pass *createDeLICMWrapperPass();
-llvm::Pass *createDeLICMPrinterLegacyPass(llvm::raw_ostream &OS);
 
 struct DeLICMPass final : llvm::PassInfoMixin<DeLICMPass> {
   DeLICMPass() {}
@@ -59,11 +54,7 @@ bool isConflicting(isl::union_set ExistingOccupied,
                    isl::union_map ProposedWrites,
                    llvm::raw_ostream *OS = nullptr, unsigned Indent = 0);
 
+bool runDeLICM(Scop &S);
 } // namespace polly
-
-namespace llvm {
-void initializeDeLICMWrapperPassPass(llvm::PassRegistry &);
-void initializeDeLICMPrinterLegacyPassPass(llvm::PassRegistry &);
-} // namespace llvm
 
 #endif /* POLLY_DELICM_H */
