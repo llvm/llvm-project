@@ -445,6 +445,9 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     addRegisterClass(MVT::nxv8i1, &AArch64::PPRRegClass);
     addRegisterClass(MVT::nxv16i1, &AArch64::PPRRegClass);
 
+    // Add sve predicate as counter type
+    addRegisterClass(MVT::aarch64svcount, &AArch64::PPRRegClass);
+
     // Add legal sve data types
     addRegisterClass(MVT::nxv16i8, &AArch64::ZPRRegClass);
     addRegisterClass(MVT::nxv8i16, &AArch64::ZPRRegClass);
@@ -471,15 +474,6 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
         if (useSVEForFixedLengthVectorVT(VT))
           addRegisterClass(VT, &AArch64::ZPRRegClass);
     }
-  }
-
-  if (Subtarget->hasSVE2p1() || Subtarget->hasSME2()) {
-    addRegisterClass(MVT::aarch64svcount, &AArch64::PPRRegClass);
-    setOperationPromotedToType(ISD::LOAD, MVT::aarch64svcount, MVT::nxv16i1);
-    setOperationPromotedToType(ISD::STORE, MVT::aarch64svcount, MVT::nxv16i1);
-
-    setOperationAction(ISD::SELECT, MVT::aarch64svcount, Custom);
-    setOperationAction(ISD::SELECT_CC, MVT::aarch64svcount, Expand);
   }
 
   // Compute derived properties from the register classes
@@ -1608,6 +1602,14 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
          { MVT::nxv2i8, MVT::nxv2i16, MVT::nxv2i32, MVT::nxv2i64, MVT::nxv4i8,
            MVT::nxv4i16, MVT::nxv4i32, MVT::nxv8i8, MVT::nxv8i16 })
       setOperationAction(ISD::SIGN_EXTEND_INREG, VT, Legal);
+
+    // Promote predicate as counter load/stores to standard predicates.
+    setOperationPromotedToType(ISD::LOAD, MVT::aarch64svcount, MVT::nxv16i1);
+    setOperationPromotedToType(ISD::STORE, MVT::aarch64svcount, MVT::nxv16i1);
+
+    // Predicate as counter legalization actions.
+    setOperationAction(ISD::SELECT, MVT::aarch64svcount, Custom);
+    setOperationAction(ISD::SELECT_CC, MVT::aarch64svcount, Expand);
 
     for (auto VT :
          {MVT::nxv16i1, MVT::nxv8i1, MVT::nxv4i1, MVT::nxv2i1, MVT::nxv1i1}) {
@@ -26114,29 +26116,6 @@ static SDValue performCSELCombine(SDNode *N,
       return DAG.getNode(AArch64ISD::CSEL, DL, N->getVTList(), N->getOperand(0),
                          N->getOperand(1), getCondCode(DAG, NewCond),
                          Sub.getValue(1));
-    }
-  }
-
-  // CSEL a, b, cc, SUBS(SUB(x,y), 0) -> CSEL a, b, cc, SUBS(x,y) if cc doesn't
-  // use overflow flags, to avoid the comparison with zero. In case of success,
-  // this also replaces the original SUB(x,y) with the newly created SUBS(x,y).
-  // NOTE: Perhaps in the future use performFlagSettingCombine to replace SUB
-  // nodes with their SUBS equivalent as is already done for other flag-setting
-  // operators, in which case doing the replacement here becomes redundant.
-  if (Cond.getOpcode() == AArch64ISD::SUBS && Cond->hasNUsesOfValue(1, 1) &&
-      isNullConstant(Cond.getOperand(1))) {
-    SDValue Sub = Cond.getOperand(0);
-    AArch64CC::CondCode CC =
-        static_cast<AArch64CC::CondCode>(N->getConstantOperandVal(2));
-    if (Sub.getOpcode() == ISD::SUB &&
-        (CC == AArch64CC::EQ || CC == AArch64CC::NE || CC == AArch64CC::MI ||
-         CC == AArch64CC::PL)) {
-      SDLoc DL(N);
-      SDValue Subs = DAG.getNode(AArch64ISD::SUBS, DL, Cond->getVTList(),
-                                 Sub.getOperand(0), Sub.getOperand(1));
-      DCI.CombineTo(Sub.getNode(), Subs);
-      DCI.CombineTo(Cond.getNode(), Subs, Subs.getValue(1));
-      return SDValue(N, 0);
     }
   }
 
