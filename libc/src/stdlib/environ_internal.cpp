@@ -26,21 +26,13 @@ constexpr size_t MIN_ENVIRON_CAPACITY = 32;
 // ENVIRON_GROWTH_FACTOR.
 constexpr size_t ENVIRON_GROWTH_FACTOR = 2;
 
-// Global state for environment management
-Mutex environ_mutex(false, false, false, false);
-char **environ_storage = nullptr;
-EnvStringOwnership *environ_ownership = nullptr;
-size_t environ_capacity = 0;
-size_t environ_size = 0;
-bool environ_is_ours = false;
-
-char **get_environ_array() {
-  if (environ_is_ours)
-    return environ_storage;
+char **EnvironmentManager::get_array() {
+  if (is_ours)
+    return storage;
   return reinterpret_cast<char **>(LIBC_NAMESPACE::app.env_ptr);
 }
 
-void init_environ() {
+void EnvironmentManager::init() {
   // Count entries in the startup environ
   char **env_ptr = reinterpret_cast<char **>(LIBC_NAMESPACE::app.env_ptr);
   if (!env_ptr)
@@ -50,15 +42,15 @@ void init_environ() {
   for (char **env = env_ptr; *env != nullptr; env++)
     count++;
 
-  environ_size = count;
+  size = count;
 }
 
-int find_env_var(cpp::string_view name) {
-  char **env_array = get_environ_array();
+int EnvironmentManager::find_var(cpp::string_view name) {
+  char **env_array = get_array();
   if (!env_array)
     return -1;
 
-  for (size_t i = 0; i < environ_size; i++) {
+  for (size_t i = 0; i < size; i++) {
     cpp::string_view current(env_array[i]);
     if (!current.starts_with(name))
       continue;
@@ -71,12 +63,9 @@ int find_env_var(cpp::string_view name) {
   return -1;
 }
 
-bool ensure_capacity(size_t needed) {
-  // IMPORTANT: This function assumes environ_mutex is already held by the
-  // caller. Do not add locking here as it would cause deadlock.
-
+bool EnvironmentManager::ensure_capacity(size_t needed) {
   // If we're still using the startup environ, we need to copy it
-  if (!environ_is_ours) {
+  if (!is_ours) {
     char **old_env = reinterpret_cast<char **>(LIBC_NAMESPACE::app.env_ptr);
 
     // Allocate new array with room to grow
@@ -99,28 +88,27 @@ bool ensure_capacity(size_t needed) {
     // Copy existing pointers (we don't own the strings yet, so just copy
     // pointers)
     if (old_env) {
-      for (size_t i = 0; i < environ_size; i++) {
+      for (size_t i = 0; i < size; i++) {
         new_storage[i] = old_env[i];
         // Initialize ownership: startup strings are not owned by us
         new_ownership[i] = EnvStringOwnership();
       }
     }
-    new_storage[environ_size] = nullptr;
+    new_storage[size] = nullptr;
 
-    environ_storage = new_storage;
-    environ_ownership = new_ownership;
-    environ_capacity = new_capacity;
-    environ_is_ours = true;
+    storage = new_storage;
+    ownership = new_ownership;
+    capacity = new_capacity;
+    is_ours = true;
 
     // Update app.env_ptr to point to our storage
-    LIBC_NAMESPACE::app.env_ptr =
-        reinterpret_cast<uintptr_t *>(environ_storage);
+    LIBC_NAMESPACE::app.env_ptr = reinterpret_cast<uintptr_t *>(storage);
 
     return true;
   }
 
   // We already own environ, check if we need to grow it
-  if (needed <= environ_capacity)
+  if (needed <= capacity)
     return true;
 
   // Grow capacity by the growth factor
@@ -128,27 +116,27 @@ bool ensure_capacity(size_t needed) {
 
   // Use realloc to grow the arrays
   char **new_storage = reinterpret_cast<char **>(
-      realloc(environ_storage, sizeof(char *) * (new_capacity + 1)));
+      realloc(storage, sizeof(char *) * (new_capacity + 1)));
   if (!new_storage)
     return false;
 
   EnvStringOwnership *new_ownership =
       reinterpret_cast<EnvStringOwnership *>(realloc(
-          environ_ownership, sizeof(EnvStringOwnership) * (new_capacity + 1)));
+          ownership, sizeof(EnvStringOwnership) * (new_capacity + 1)));
   if (!new_ownership) {
     // If ownership realloc fails, we still have the old storage in new_storage
     // which was successfully reallocated. We need to restore or handle this.
     // For safety, we'll keep the successfully reallocated storage.
-    environ_storage = new_storage;
+    storage = new_storage;
     return false;
   }
 
-  environ_storage = new_storage;
-  environ_ownership = new_ownership;
-  environ_capacity = new_capacity;
+  storage = new_storage;
+  ownership = new_ownership;
+  capacity = new_capacity;
 
   // Update app.env_ptr to point to our new storage
-  LIBC_NAMESPACE::app.env_ptr = reinterpret_cast<uintptr_t *>(environ_storage);
+  LIBC_NAMESPACE::app.env_ptr = reinterpret_cast<uintptr_t *>(storage);
 
   return true;
 }

@@ -39,20 +39,19 @@ LLVM_LIBC_FUNCTION(int, setenv,
     return -1;
   }
 
-  // Lock mutex for thread safety
-  internal::environ_mutex.lock();
+  // Get the singleton environment manager
+  auto &env_mgr = internal::EnvironmentManager::instance();
 
   // Initialize environ if not already done
-  internal::init_environ();
+  env_mgr.init();
 
   // Search for existing variable
-  int index = internal::find_env_var(name_view);
+  int index = env_mgr.find_var(name_view);
 
   if (index >= 0) {
     // Variable exists
     if (overwrite == 0) {
       // Don't overwrite, just return success
-      internal::environ_mutex.unlock();
       return 0;
     }
 
@@ -65,7 +64,6 @@ LLVM_LIBC_FUNCTION(int, setenv,
 
     char *new_string = reinterpret_cast<char *>(malloc(total_len));
     if (!new_string) {
-      internal::environ_mutex.unlock();
       libc_errno = ENOMEM;
       return -1;
     }
@@ -77,25 +75,23 @@ LLVM_LIBC_FUNCTION(int, setenv,
     new_string[name_len + 1 + value_len] = '\0';
 
     // Replace in environ array
-    char **env_array = internal::get_environ_array();
+    char **env_array = env_mgr.get_array();
 
     // Free old string if we allocated it
-    if (internal::environ_ownership[index].can_free()) {
+    if (env_mgr.get_ownership()[index].can_free()) {
       free(env_array[index]);
     }
 
     env_array[index] = new_string;
     // Mark this string as allocated by us
-    internal::environ_ownership[index].allocated_by_us = true;
+    env_mgr.get_ownership()[index].allocated_by_us = true;
 
-    internal::environ_mutex.unlock();
     return 0;
   }
 
   // Variable doesn't exist, need to add it
   // Ensure we have capacity for one more entry
-  if (!internal::ensure_capacity(internal::environ_size + 1)) {
-    internal::environ_mutex.unlock();
+  if (!env_mgr.ensure_capacity(env_mgr.get_size() + 1)) {
     libc_errno = ENOMEM;
     return -1;
   }
@@ -107,7 +103,6 @@ LLVM_LIBC_FUNCTION(int, setenv,
 
   char *new_string = reinterpret_cast<char *>(malloc(total_len));
   if (!new_string) {
-    internal::environ_mutex.unlock();
     libc_errno = ENOMEM;
     return -1;
   }
@@ -119,16 +114,17 @@ LLVM_LIBC_FUNCTION(int, setenv,
   new_string[name_len + 1 + value_len] = '\0';
 
   // Add to environ array
-  char **env_array = internal::get_environ_array();
-  env_array[internal::environ_size] = new_string;
+  char **env_array = env_mgr.get_array();
+  size_t current_size = env_mgr.get_size();
+  env_array[current_size] = new_string;
 
   // Mark this string as allocated by us
-  internal::environ_ownership[internal::environ_size].allocated_by_us = true;
+  env_mgr.get_ownership()[current_size].allocated_by_us = true;
 
-  internal::environ_size++;
-  env_array[internal::environ_size] = nullptr; // Maintain null terminator
+  // Increment size and maintain null terminator
+  env_mgr.increment_size();
+  env_array[current_size + 1] = nullptr; // Maintain null terminator
 
-  internal::environ_mutex.unlock();
   return 0;
 }
 

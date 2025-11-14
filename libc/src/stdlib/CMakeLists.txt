@@ -65,38 +65,40 @@ add_entrypoint_object(
   libc.config.app_h
 )
 
-add_object_library(
-  environ_internal
-  SRCS
-    environ_internal.cpp
-  HDRS
-    environ_internal.h
-  DEPENDS
-    libc.config.app_h
-    libc.hdr.types.size_t
-    libc.src.__support.CPP.string_view
-    libc.src.__support.threads.mutex
-    libc.hdr.func.free
-    libc.hdr.func.malloc
-    libc.hdr.func.realloc
-)
+if(LLVM_LIBC_FULL_BUILD)
+  add_object_library(
+    environ_internal
+    SRCS
+      environ_internal.cpp
+    HDRS
+      environ_internal.h
+    DEPENDS
+      libc.config.app_h
+      libc.hdr.types.size_t
+      libc.src.__support.CPP.string_view
+      libc.src.__support.threads.mutex
+      libc.hdr.func.free
+      libc.hdr.func.malloc
+      libc.hdr.func.realloc
+  )
 
-add_entrypoint_object(
-  setenv
-  SRCS
-    setenv.cpp
-  HDRS
-    setenv.h
-  DEPENDS
-    .environ_internal
-    libc.src.__support.CPP.string_view
-    libc.src.__support.libc_errno
-    libc.src.__support.threads.mutex
-    libc.hdr.func.malloc
-    libc.hdr.func.free
-    libc.src.string.memory_utils.inline_memcpy
-    libc.src.string.string_utils
-)
+  add_entrypoint_object(
+    setenv
+    SRCS
+      setenv.cpp
+    HDRS
+      setenv.h
+    DEPENDS
+      .environ_internal
+      libc.src.__support.CPP.string_view
+      libc.src.__support.libc_errno
+      libc.src.__support.threads.mutex
+      libc.hdr.func.malloc
+      libc.hdr.func.free
+      libc.src.string.memory_utils.inline_memcpy
+      libc.src.string.string_utils
+  )
+endif()
 
 add_entrypoint_object(
   strfromf
