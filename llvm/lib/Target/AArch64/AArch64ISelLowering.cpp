@@ -1809,17 +1809,20 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
 
     if (!Subtarget->hasSVEB16B16() ||
         !Subtarget->isNonStreamingSVEorSME2Available()) {
-      for (auto Opcode : {ISD::FADD, ISD::FMA, ISD::FMAXIMUM, ISD::FMAXNUM,
-                          ISD::FMINIMUM, ISD::FMINNUM, ISD::FMUL, ISD::FSUB}) {
-        setOperationPromotedToType(Opcode, MVT::nxv2bf16, MVT::nxv2f32);
-        setOperationPromotedToType(Opcode, MVT::nxv4bf16, MVT::nxv4f32);
-        setOperationPromotedToType(Opcode, MVT::nxv8bf16, MVT::nxv8f32);
-      }
+      for (MVT VT : {MVT::nxv2bf16, MVT::nxv4bf16, MVT::nxv8bf16}) {
+        MVT PromotedVT = VT.changeVectorElementType(MVT::f32);
+        setOperationPromotedToType(ISD::FADD, VT, PromotedVT);
+        setOperationPromotedToType(ISD::FMA, VT, PromotedVT);
+        setOperationPromotedToType(ISD::FMAXIMUM, VT, PromotedVT);
+        setOperationPromotedToType(ISD::FMAXNUM, VT, PromotedVT);
+        setOperationPromotedToType(ISD::FMINIMUM, VT, PromotedVT);
+        setOperationPromotedToType(ISD::FMINNUM, VT, PromotedVT);
+        setOperationPromotedToType(ISD::FSUB, VT, PromotedVT);
 
-      if (Subtarget->hasBF16() &&
-          (Subtarget->hasSVE() || Subtarget->hasSME())) {
-        for (auto VT : {MVT::nxv2bf16, MVT::nxv4bf16, MVT::nxv8bf16})
+        if (Subtarget->hasBF16())
           setOperationAction(ISD::FMUL, VT, Custom);
+        else
+          setOperationPromotedToType(ISD::FMUL, VT, PromotedVT);
       }
     }
 
@@ -7648,40 +7651,46 @@ SDValue AArch64TargetLowering::LowerINIT_TRAMPOLINE(SDValue Op,
 }
 
 SDValue AArch64TargetLowering::LowerFMUL(SDValue Op, SelectionDAG &DAG) const {
+  SDLoc DL(Op);
   EVT VT = Op.getValueType();
   auto &Subtarget = DAG.getSubtarget<AArch64Subtarget>();
   if (VT.getScalarType() != MVT::bf16 ||
-      !(Subtarget.hasBF16() && (Subtarget.hasSVE() || Subtarget.hasSME())))
+      (Subtarget.hasSVEB16B16() &&
+       Subtarget.isNonStreamingSVEorSME2Available()))
     return LowerToPredicatedOp(Op, DAG, AArch64ISD::FMUL_PRED);
 
-  SDLoc DL(Op);
+  assert(Subtarget.hasBF16() && "Expected +bf16 for custom FMUL lowering");
+
+  auto MakeGetIntrinsic = [&](Intrinsic::ID IID) {
+    return [&, IID](EVT VT, auto... Ops) {
+      return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, VT,
+                         DAG.getConstant(IID, DL, MVT::i32), Ops...);
+    };
+  };
+
+  // Create helpers for building intrinsic calls.
+  auto BFMLALB = MakeGetIntrinsic(Intrinsic::aarch64_sve_bfmlalb);
+  auto BFMLALT = MakeGetIntrinsic(Intrinsic::aarch64_sve_bfmlalt);
+  auto FCVT = MakeGetIntrinsic(Intrinsic::aarch64_sve_fcvt_bf16f32_v2);
+  auto FCVNT = MakeGetIntrinsic(Intrinsic::aarch64_sve_fcvtnt_bf16f32_v2);
+
   SDValue Zero = DAG.getConstantFP(0.0, DL, MVT::nxv4f32);
   SDValue LHS = Op.getOperand(0);
   SDValue RHS = Op.getOperand(1);
 
-  auto GetIntrinsic = [&](Intrinsic::ID IID, EVT VT, auto... Ops) {
-    return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, VT,
-                       DAG.getConstant(IID, DL, MVT::i32), Ops...);
-  };
-
   SDValue Pg =
-      getPTrue(DAG, DL, VT == MVT::nxv2bf16 ? MVT::nxv2i1 : MVT::nxv4i1,
-               AArch64SVEPredPattern::all);
+      DAG.getConstant(1, DL, VT == MVT::nxv2bf16 ? MVT::nxv2i1 : MVT::nxv4i1);
+
   // Lower bf16 FMUL as a pair (VT == nxv8bf16) of BFMLAL top/bottom
   // instructions. These result in two f32 vectors, which can be converted back
   // to bf16 with FCVT and FCVNT.
-  SDValue BottomF32 = GetIntrinsic(Intrinsic::aarch64_sve_bfmlalb, MVT::nxv4f32,
-                                   Zero, LHS, RHS);
-  SDValue BottomBF16 = GetIntrinsic(Intrinsic::aarch64_sve_fcvt_bf16f32_v2, VT,
-                                    DAG.getPOISON(VT), Pg, BottomF32);
-  if (VT == MVT::nxv8bf16) {
-    // Note: nxv2bf16 and nxv4bf16 only use even lanes.
-    SDValue TopF32 = GetIntrinsic(Intrinsic::aarch64_sve_bfmlalt, MVT::nxv4f32,
-                                  Zero, LHS, RHS);
-    return GetIntrinsic(Intrinsic::aarch64_sve_fcvtnt_bf16f32_v2, VT,
-                        BottomBF16, Pg, TopF32);
-  }
-  return BottomBF16;
+  SDValue BottomF32 = BFMLALB(MVT::nxv4f32, Zero, LHS, RHS);
+  SDValue BottomBF16 = FCVT(VT, DAG.getPOISON(VT), Pg, BottomF32);
+  // Note: nxv2bf16 and nxv4bf16 only use even lanes.
+  if (VT != MVT::nxv8bf16)
+    return BottomBF16;
+  SDValue TopF32 = BFMLALT(MVT::nxv4f32, Zero, LHS, RHS);
+  return FCVNT(VT, BottomBF16, Pg, TopF32);
 }
 
 SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
