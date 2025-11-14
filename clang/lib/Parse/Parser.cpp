@@ -1100,31 +1100,31 @@ Parser::DeclGroupPtrTy Parser::ParseDeclOrFunctionDefInternal(
   // C99 6.7.2.3p6: Handle "struct-or-union identifier;", "enum { X };"
   // declaration-specifiers init-declarator-list[opt] ';'
   if (Tok.is(tok::semi)) {
-    auto GetAdjustedAttrsLoc = [&]() {
-      auto TKind = DS.getTypeSpecType();
-      if (!DeclSpec::isDeclRep(TKind))
-        return SourceLocation();
-
+    // Suggest correct location to fix '[[attrib]] struct' to 'struct
+    // [[attrib]]'
+    SourceLocation CorrectLocationForAttributes{};
+    auto TKind = DS.getTypeSpecType();
+    if (DeclSpec::isDeclRep(TKind)) {
       if (TKind == DeclSpec::TST_enum) {
         const auto *ED = dyn_cast_or_null<EnumDecl>(DS.getRepAsDecl());
         if (ED) {
-          if (ED->isScoped() && ED->getIdentifier())
-            return ED->getLocation();
-
-          const auto Begin = ED->getBraceRange().getBegin();
-          if (Begin.isValid())
-            return Begin;
+          if (ED->getIdentifier()) {
+            CorrectLocationForAttributes = ED->getLocation();
+          } else {
+            const auto Begin = ED->getBraceRange().getBegin();
+            CorrectLocationForAttributes =
+                Begin.isValid() ? Begin : ED->getEndLoc();
+          }
         }
       }
-
-      const auto &Policy = Actions.getASTContext().getPrintingPolicy();
-      unsigned Offset =
-          StringRef(DeclSpec::getSpecifierName(TKind, Policy)).size();
-      return DS.getTypeSpecTypeLoc().getLocWithOffset(Offset);
-    };
-
-    // Suggest correct location to fix '[[attrib]] struct' to 'struct [[attrib]]'
-    SourceLocation CorrectLocationForAttributes = GetAdjustedAttrsLoc();
+      if (CorrectLocationForAttributes.isInvalid()) {
+        const auto &Policy = Actions.getASTContext().getPrintingPolicy();
+        unsigned Offset =
+            StringRef(DeclSpec::getSpecifierName(TKind, Policy)).size();
+        CorrectLocationForAttributes =
+            DS.getTypeSpecTypeLoc().getLocWithOffset(Offset);
+      }
+    }
     ProhibitAttributes(Attrs, CorrectLocationForAttributes);
     ConsumeToken();
     RecordDecl *AnonRecord = nullptr;
