@@ -9,8 +9,8 @@
 // ABI tags have no effect in MSVC mode.
 // XFAIL: msvc
 
-// Assertion semantics are not supported in C++03 mode
-// UNSUPPORTED: c++03
+// Assertion semantics are not supported in C++03 mode and currently are experimental.
+// UNSUPPORTED: c++03, libcpp-has-no-experimental-hardening-observe-semantic
 
 // Test that we encode the assertion semantic in an ABI tag to avoid ODR violations when linking TUs that have different
 // values for it.
