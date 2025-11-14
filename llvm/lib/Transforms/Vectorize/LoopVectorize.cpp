@@ -7992,13 +7992,13 @@ VPReplicateRecipe *VPRecipeBuilder::handleReplication(VPInstruction *VPI,
 /// Find all possible partial reductions in the loop and track all of those that
 /// are valid so recipes can be formed later.
 void VPRecipeBuilder::collectScaledReductions(VFRange &Range) {
-  // Find all possible partial reductions.
-  SmallVector<std::pair<PartialReductionChain, unsigned>>
-      PartialReductionChains;
-  for (const auto &[Phi, RdxDesc] : Legal->getReductionVars()) {
+  // Find all possible partial reductions, grouping chains by their PHI.
+  MapVector<Instruction *,
+            SmallVector<std::pair<PartialReductionChain, unsigned>>>
+      ChainsByPhi;
+  for (const auto &[Phi, RdxDesc] : Legal->getReductionVars())
     getScaledReductions(Phi, RdxDesc.getLoopExitInstr(), Range,
-                        PartialReductionChains);
-  }
+                        ChainsByPhi[Phi]);
 
   // A partial reduction is invalid if any of its extends are used by
   // something that isn't another partial reduction. This is because the
@@ -8006,8 +8006,9 @@ void VPRecipeBuilder::collectScaledReductions(VFRange &Range) {
 
   // Build up a set of partial reduction ops for efficient use checking.
   SmallPtrSet<User *, 4> PartialReductionOps;
-  for (const auto &[PartialRdx, _] : PartialReductionChains)
-    PartialReductionOps.insert(PartialRdx.ExtendUser);
+  for (const auto &[_, Chains] : ChainsByPhi)
+    for (const auto &[PartialRdx, _] : Chains)
+      PartialReductionOps.insert(PartialRdx.ExtendUser);
 
   auto ExtendIsOnlyUsedByPartialReductions =
       [&PartialReductionOps](Instruction *Extend) {
@@ -8018,31 +8019,41 @@ void VPRecipeBuilder::collectScaledReductions(VFRange &Range) {
 
   // Check if each use of a chain's two extends is a partial reduction
   // and only add those that don't have non-partial reduction users.
-  for (auto Pair : PartialReductionChains) {
-    PartialReductionChain Chain = Pair.first;
-    if (ExtendIsOnlyUsedByPartialReductions(Chain.ExtendA) &&
-        (!Chain.ExtendB || ExtendIsOnlyUsedByPartialReductions(Chain.ExtendB)))
-      ScaledReductionMap.try_emplace(Chain.Reduction, Pair.second);
+  for (const auto &[_, Chains] : ChainsByPhi) {
+    for (const auto &[Chain, Scale] : Chains) {
+      if (ExtendIsOnlyUsedByPartialReductions(Chain.ExtendA) &&
+          (!Chain.ExtendB ||
+           ExtendIsOnlyUsedByPartialReductions(Chain.ExtendB)))
+        ScaledReductionMap.try_emplace(Chain.Reduction, Scale);
+    }
   }
 
   // Check that all partial reductions in a chain are only used by other
   // partial reductions with the same scale factor. Otherwise we end up creating
   // users of scaled reductions where the types of the other operands don't
   // match.
-  for (const auto &[Chain, Scale] : PartialReductionChains) {
-    auto AllUsersPartialRdx = [ScaleVal = Scale, this](const User *U) {
-      auto *UI = cast<Instruction>(U);
-      if (isa<PHINode>(UI) && UI->getParent() == OrigLoop->getHeader()) {
-        return all_of(UI->users(), [ScaleVal, this](const User *U) {
-          auto *UI = cast<Instruction>(U);
-          return ScaledReductionMap.lookup_or(UI, 0) == ScaleVal;
-        });
+  for (const auto &[Phi, Chains] : ChainsByPhi) {
+    for (const auto &[Chain, Scale] : Chains) {
+      auto AllUsersPartialRdx = [ScaleVal = Scale, this](const User *U) {
+        auto *UI = cast<Instruction>(U);
+        if (isa<PHINode>(UI) && UI->getParent() == OrigLoop->getHeader()) {
+          return all_of(UI->users(), [ScaleVal, this](const User *U) {
+            auto *UI = cast<Instruction>(U);
+            return ScaledReductionMap.lookup_or(UI, 0) == ScaleVal;
+          });
+        }
+        return ScaledReductionMap.lookup_or(UI, 0) == ScaleVal ||
+               !OrigLoop->contains(UI->getParent());
+      };
+
+      // If any partial reduction entry for the phi is invalid, invalidate the
+      // whole chain.
+      if (!all_of(Chain.Reduction->users(), AllUsersPartialRdx)) {
+        for (const auto &[Chain, _] : Chains)
+          ScaledReductionMap.erase(Chain.Reduction);
+        break;
       }
-      return ScaledReductionMap.lookup_or(UI, 0) == ScaleVal ||
-             !OrigLoop->contains(UI->getParent());
-    };
-    if (!all_of(Chain.Reduction->users(), AllUsersPartialRdx))
-      ScaledReductionMap.erase(Chain.Reduction);
+    }
   }
 }
 
