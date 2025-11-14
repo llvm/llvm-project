@@ -5405,7 +5405,7 @@ bool SwiftASTContext::IsTupleType(lldb::opaque_compiler_type_t type) {
   VALID_OR_RETURN(false);
 
   auto swift_type = GetSwiftType(type);
-  return llvm::isa<::swift::TupleType>(swift_type);
+  return swift_type->is<swift::TupleType>();
 }
 
 std::optional<TypeSystemSwift::NonTriviallyManagedReferenceKind>
@@ -6015,8 +6015,7 @@ SwiftASTContext::GetStaticSelfType(lldb::opaque_compiler_type_t type) {
   VALID_OR_RETURN_CHECK_TYPE(type, CompilerType());
 
   swift::Type swift_type = GetSwiftType(type);
-  if (auto *dyn_self =
-          llvm::dyn_cast_or_null<swift::DynamicSelfType>(swift_type))
+  if (auto *dyn_self = swift_type->getAs<swift::DynamicSelfType>())
     return ToCompilerType({dyn_self->getSelfType().getPointer()});
   return {weak_from_this(), type};
 }
