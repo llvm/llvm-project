@@ -134,8 +134,8 @@ bool UnwindAssemblyInstEmulation::GetNonCallSiteUnwindPlanFromAssembly(
     return unwind_plan.GetRowCount() > 0;
   }
 
-  Instruction *inst = inst_list.GetInstructionAtIndex(0).get();
-  const lldb::addr_t base_addr = inst->GetAddress().GetFileAddress();
+  Instruction &first_inst = *inst_list.GetInstructionAtIndex(0).get();
+  const lldb::addr_t base_addr = first_inst.GetAddress().GetFileAddress();
 
   // Map for storing the unwind state at a given offset. When we see a forward
   // branch we add a new entry to this map with the actual unwind plan row and
@@ -161,7 +161,7 @@ bool UnwindAssemblyInstEmulation::GetNonCallSiteUnwindPlanFromAssembly(
     m_curr_row_modified = false;
     m_forward_branch_offset = 0;
 
-    inst = inst_list.GetInstructionAtIndex(idx).get();
+    Instruction *inst = inst_list.GetInstructionAtIndex(idx).get();
     if (!inst)
       continue;
     DumpInstToLog(log, *inst, inst_list);
