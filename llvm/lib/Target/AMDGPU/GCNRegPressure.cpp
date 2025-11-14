@@ -282,11 +282,12 @@ collectVirtualRegUses(SmallVectorImpl<VRegMaskOrUnit> &VRegMaskOrUnits,
 
     Register Reg = MO.getReg();
     auto I = llvm::find_if(VRegMaskOrUnits, [Reg](const VRegMaskOrUnit &RM) {
-      return RM.RegUnit == Reg;
+      return RM.VRegOrUnit.asVirtualReg() == Reg;
     });
 
     auto &P = I == VRegMaskOrUnits.end()
-                  ? VRegMaskOrUnits.emplace_back(Reg, LaneBitmask::getNone())
+                  ? VRegMaskOrUnits.emplace_back(VirtRegOrUnit(Reg),
+                                                 LaneBitmask::getNone())
                   : *I;
 
     P.LaneMask |= MO.getSubReg() ? TRI.getSubRegIndexLaneMask(MO.getSubReg())
@@ -295,7 +296,7 @@ collectVirtualRegUses(SmallVectorImpl<VRegMaskOrUnit> &VRegMaskOrUnits,
 
   SlotIndex InstrSI;
   for (auto &P : VRegMaskOrUnits) {
-    auto &LI = LIS.getInterval(P.RegUnit);
+    auto &LI = LIS.getInterval(P.VRegOrUnit.asVirtualReg());
     if (!LI.hasSubRanges())
       continue;
 
@@ -562,10 +563,10 @@ void GCNUpwardRPTracker::recede(const MachineInstr &MI) {
   SmallVector<VRegMaskOrUnit, 8> RegUses;
   collectVirtualRegUses(RegUses, MI, LIS, *MRI);
   for (const VRegMaskOrUnit &U : RegUses) {
-    LaneBitmask &LiveMask = LiveRegs[U.RegUnit];
+    LaneBitmask &LiveMask = LiveRegs[U.VRegOrUnit.asVirtualReg()];
     LaneBitmask PrevMask = LiveMask;
     LiveMask |= U.LaneMask;
-    CurPressure.inc(U.RegUnit, PrevMask, LiveMask, *MRI);
+    CurPressure.inc(U.VRegOrUnit.asVirtualReg(), PrevMask, LiveMask, *MRI);
   }
 
   // Update MaxPressure with uses plus early-clobber defs pressure.
@@ -580,7 +581,7 @@ void GCNUpwardRPTracker::recede(const MachineInstr &MI) {
 
 bool GCNDownwardRPTracker::reset(const MachineInstr &MI,
                                  const LiveRegSet *LiveRegsCopy) {
-  MRI = &MI.getParent()->getParent()->getRegInfo();
+  MRI = &MI.getMF()->getRegInfo();
   LastTrackedMI = nullptr;
   MBBEnd = MI.getParent()->end();
   NextMI = &MI;
@@ -748,9 +749,9 @@ GCNDownwardRPTracker::bumpDownwardPressure(const MachineInstr *MI,
   GCNRegPressure TempPressure = CurPressure;
 
   for (const VRegMaskOrUnit &Use : RegOpers.Uses) {
-    Register Reg = Use.RegUnit;
-    if (!Reg.isVirtual())
+    if (!Use.VRegOrUnit.isVirtualReg())
       continue;
+    Register Reg = Use.VRegOrUnit.asVirtualReg();
     LaneBitmask LastUseMask = getLastUsedLanes(Reg, SlotIdx);
     if (LastUseMask.none())
       continue;
@@ -782,9 +783,9 @@ GCNDownwardRPTracker::bumpDownwardPressure(const MachineInstr *MI,
 
   // Generate liveness for defs.
   for (const VRegMaskOrUnit &Def : RegOpers.Defs) {
-    Register Reg = Def.RegUnit;
-    if (!Reg.isVirtual())
+    if (!Def.VRegOrUnit.isVirtualReg())
       continue;
+    Register Reg = Def.VRegOrUnit.asVirtualReg();
     auto It = LiveRegs.find(Reg);
     LaneBitmask LiveMask = It != LiveRegs.end() ? It->second : LaneBitmask(0);
     LaneBitmask NewMask = LiveMask | Def.LaneMask;
@@ -824,8 +825,7 @@ Printable llvm::print(const GCNRPTracker::LiveRegSet &LiveRegs,
       Register Reg = Register::index2VirtReg(I);
       auto It = LiveRegs.find(Reg);
       if (It != LiveRegs.end() && It->second.any())
-        OS << ' ' << printVRegOrUnit(Reg, TRI) << ':'
-           << PrintLaneMask(It->second);
+        OS << ' ' << printReg(Reg, TRI) << ':' << PrintLaneMask(It->second);
     }
     OS << '\n';
   });

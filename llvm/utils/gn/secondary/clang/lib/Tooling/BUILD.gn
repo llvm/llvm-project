@@ -2,7 +2,7 @@ static_library("Tooling") {
   output_name = "clangTooling"
   configs += [ "//llvm/utils/gn/build:clang_code" ]
   deps = [
-    "//clang/include/clang/Driver:Options",
+    "//clang/include/clang/Options:Options",
     "//clang/lib/AST",
     "//clang/lib/ASTMatchers",
     "//clang/lib/Basic",
@@ -10,6 +10,7 @@ static_library("Tooling") {
     "//clang/lib/Format",
     "//clang/lib/Frontend",
     "//clang/lib/Lex",
+    "//clang/lib/Options",
     "//clang/lib/Rewrite",
     "//clang/lib/Tooling/Core",
     "//llvm/lib/TargetParser",
