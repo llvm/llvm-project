@@ -7708,7 +7708,7 @@ bool AArch64DAGToDAGISel::SelectCmpBranchExtOperand(SDValue N, SDValue &Reg,
   // Use an invalid shift-extend value to indicate we don't need to extend later
   if (N.getOpcode() == ISD::AssertZext || N.getOpcode() == ISD::AssertSext) {
     EVT Ty = cast<VTSDNode>(N.getOperand(1))->getVT();
-    if ((MatchCBB && Ty != MVT::i8) || (!MatchCBB && Ty != MVT::i16))
+    if (Ty != (MatchCBB ? MVT::i8 : MVT::i16))
       return false;
     Reg = N.getOperand(0);
     ExtType = CurDAG->getSignedTargetConstant(AArch64_AM::InvalidShiftExtend,
