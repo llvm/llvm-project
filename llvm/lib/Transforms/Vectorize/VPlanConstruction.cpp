@@ -27,6 +27,7 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/MDBuilder.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/LoopVersioning.h"
 
@@ -467,8 +468,11 @@ static void addCanonicalIVRecipes(VPlan &Plan, VPBasicBlock *HeaderVPBB,
   // We are about to replace the branch to exit the region. Remove the original
   // BranchOnCond, if there is any.
   DebugLoc LatchDL = DL;
+  MDNode *BW = nullptr;
   if (!LatchVPBB->empty() && match(&LatchVPBB->back(), m_BranchOnCond())) {
     LatchDL = LatchVPBB->getTerminator()->getDebugLoc();
+    if (auto *VPI = dyn_cast<VPInstruction>(LatchVPBB->getTerminator()))
+      BW = VPI->getMetadata(LLVMContext::MD_prof);
     LatchVPBB->getTerminator()->eraseFromParent();
   }
 
@@ -480,10 +484,12 @@ static void addCanonicalIVRecipes(VPlan &Plan, VPBasicBlock *HeaderVPBB,
       CanonicalIVPHI, &Plan.getVFxUF(), DL, "index.next", {true, false});
   CanonicalIVPHI->addOperand(CanonicalIVIncrement);
 
+  VPIRMetadata Metadata;
+  Metadata.setMetadata(LLVMContext::MD_prof, BW);
   // Add the BranchOnCount VPInstruction to the latch.
   Builder.createNaryOp(VPInstruction::BranchOnCount,
                        {CanonicalIVIncrement, &Plan.getVectorTripCount()},
-                       LatchDL);
+                       nullptr, {}, Metadata, LatchDL);
 }
 
 /// Creates extracts for values in \p Plan defined in a loop region and used
