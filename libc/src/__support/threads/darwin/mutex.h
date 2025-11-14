@@ -14,7 +14,7 @@
 #include "src/__support/macros/config.h"
 #include "src/__support/threads/mutex_common.h"
 #include "src/__support/threads/sleep.h" // For sleep_briefly
-#include "src/__support/time/linux/abs_timeout.h"
+#include "src/__support/time/abs_timeout.h"
 
 #include <mach/mach_init.h> // For mach_thread_self
 #include <mach/mach_port.h> // For mach_port_t and MACH_PORT_NULL
