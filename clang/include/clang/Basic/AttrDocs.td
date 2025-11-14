@@ -5257,7 +5257,7 @@ where the returned memory range does not alias storage from any other object
 accessible to the caller.
 
 In this context, a span-like structure is assumed to have two fields, one of
-which is a pointer to the start of theallocated memory and another one is
+which is a pointer to the start of the allocated memory and another one is
 either an integer type containing the size of the actually allocated memory
 or a pointer the end of the allocated region.
   }];

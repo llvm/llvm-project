@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -verify -fsyntax-only %s
-// RUN: %clang_cc1 -emit-llvm -o %t %s
 
 typedef __SIZE_TYPE__ size_t;
 

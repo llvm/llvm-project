@@ -1853,7 +1853,7 @@ static bool checkSpanLikeType(Sema &S, const ParsedAttr &AL,
     return S.Diag(AL.getLoc(), NoteDiagID);
   };
   if (Ty->isIncompleteType())
-    return emitWarning(diag::note_returned_incomlete_type);
+    return emitWarning(diag::note_returned_incomplete_type);
   const RecordDecl *RD = Ty->getAsRecordDecl();
   if (!RD || RD->isUnion())
     return emitWarning(diag::note_returned_not_struct);

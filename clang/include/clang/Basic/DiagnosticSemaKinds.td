@@ -3454,7 +3454,7 @@ def warn_attribute_return_span_only
               "structures">,
       InGroup<IgnoredAttributes>;
 def note_returned_not_struct : Note<"returned type is not a struct/class type">;
-def note_returned_incomlete_type : Note<"returned type is incomplete">;
+def note_returned_incomplete_type : Note<"returned type is incomplete">;
 def note_returned_not_two_field_struct
     : Note<"returned struct/class has %0 fields, expected 2">;
 def note_returned_not_span_struct
