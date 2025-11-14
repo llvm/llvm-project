@@ -14,6 +14,10 @@
 #include <string.h>
 #include <unistd.h>
 
+#if SCUDO_LINUX
+#include <sys/mman.h>
+#endif
+
 static const char *MappingName = "scudo:test";
 
 TEST(ScudoMapTest, PageSize) {
@@ -87,5 +91,47 @@ TEST(ScudoMapTest, MapGrowUnmap) {
   Q += PageSize;
   ASSERT_TRUE(MemMap.remap(Q, PageSize, MappingName));
   memset(reinterpret_cast<void *>(Q), 0xbb, PageSize);
+  MemMap.unmap();
+}
+
+// Verify that zeroing works properly.
+TEST(ScudoMapTest, Zeroing) {
+  scudo::ReservedMemoryT ReservedMemory;
+  const scudo::uptr PageSize = scudo::getPageSizeCached();
+  const scudo::uptr Size = 3 * PageSize;
+  ReservedMemory.create(/*Addr=*/0U, Size, MappingName);
+  ASSERT_TRUE(ReservedMemory.isCreated());
+
+  scudo::MemMapT MemMap = ReservedMemory.dispatch(ReservedMemory.getBase(),
+                                                  ReservedMemory.getCapacity());
+  EXPECT_TRUE(
+      MemMap.remap(MemMap.getBase(), MemMap.getCapacity(), MappingName));
+  unsigned char *Data = reinterpret_cast<unsigned char *>(MemMap.getBase());
+  memset(Data, 1U, MemMap.getCapacity());
+  // Spot check some values.
+  EXPECT_EQ(1U, Data[0]);
+  EXPECT_EQ(1U, Data[PageSize]);
+  EXPECT_EQ(1U, Data[PageSize * 2]);
+  MemMap.releaseAndZeroPagesToOS(MemMap.getBase(), MemMap.getCapacity());
+  EXPECT_EQ(0U, Data[0]);
+  EXPECT_EQ(0U, Data[PageSize]);
+  EXPECT_EQ(0U, Data[PageSize * 2]);
+
+#if SCUDO_LINUX
+  // Now verify that if madvise fails, the data is still zeroed.
+  memset(Data, 1U, MemMap.getCapacity());
+  EXPECT_NE(-1, mlock(Data, MemMap.getCapacity()));
+
+  EXPECT_EQ(1U, Data[0]);
+  EXPECT_EQ(1U, Data[PageSize]);
+  EXPECT_EQ(1U, Data[PageSize * 2]);
+  MemMap.releaseAndZeroPagesToOS(MemMap.getBase(), MemMap.getCapacity());
+  EXPECT_EQ(0U, Data[0]);
+  EXPECT_EQ(0U, Data[PageSize]);
+  EXPECT_EQ(0U, Data[PageSize * 2]);
+
+  EXPECT_NE(-1, munlock(Data, MemMap.getCapacity()));
+#endif
+
   MemMap.unmap();
 }

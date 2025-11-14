@@ -1776,10 +1776,14 @@ static unsigned sForm(MachineInstr &Instr) {
   case AArch64::ADDSWri:
   case AArch64::ADDSXrr:
   case AArch64::ADDSXri:
+  case AArch64::ADDSWrx:
+  case AArch64::ADDSXrx:
   case AArch64::SUBSWrr:
   case AArch64::SUBSWri:
+  case AArch64::SUBSWrx:
   case AArch64::SUBSXrr:
   case AArch64::SUBSXri:
+  case AArch64::SUBSXrx:
   case AArch64::ANDSWri:
   case AArch64::ANDSWrr:
   case AArch64::ANDSWrs:
@@ -1800,6 +1804,10 @@ static unsigned sForm(MachineInstr &Instr) {
     return AArch64::ADDSXrr;
   case AArch64::ADDXri:
     return AArch64::ADDSXri;
+  case AArch64::ADDWrx:
+    return AArch64::ADDSWrx;
+  case AArch64::ADDXrx:
+    return AArch64::ADDSXrx;
   case AArch64::ADCWr:
     return AArch64::ADCSWr;
   case AArch64::ADCXr:
@@ -1812,6 +1820,10 @@ static unsigned sForm(MachineInstr &Instr) {
     return AArch64::SUBSXrr;
   case AArch64::SUBXri:
     return AArch64::SUBSXri;
+  case AArch64::SUBWrx:
+    return AArch64::SUBSWrx;
+  case AArch64::SUBXrx:
+    return AArch64::SUBSXrx;
   case AArch64::SBCWr:
     return AArch64::SBCSWr;
   case AArch64::SBCXr:
@@ -2440,11 +2452,10 @@ bool AArch64InstrInfo::isFPRCopy(const MachineInstr &MI) {
   return false;
 }
 
-Register AArch64InstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
-                                               int &FrameIndex) const {
-  switch (MI.getOpcode()) {
+static bool isFrameLoadOpcode(int Opcode) {
+  switch (Opcode) {
   default:
-    break;
+    return false;
   case AArch64::LDRWui:
   case AArch64::LDRXui:
   case AArch64::LDRBui:
@@ -2453,22 +2464,27 @@ Register AArch64InstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
   case AArch64::LDRDui:
   case AArch64::LDRQui:
   case AArch64::LDR_PXI:
-    if (MI.getOperand(0).getSubReg() == 0 && MI.getOperand(1).isFI() &&
-        MI.getOperand(2).isImm() && MI.getOperand(2).getImm() == 0) {
-      FrameIndex = MI.getOperand(1).getIndex();
-      return MI.getOperand(0).getReg();
-    }
-    break;
+    return true;
   }
-
-  return 0;
 }
 
-Register AArch64InstrInfo::isStoreToStackSlot(const MachineInstr &MI,
-                                              int &FrameIndex) const {
-  switch (MI.getOpcode()) {
+Register AArch64InstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
+                                               int &FrameIndex) const {
+  if (!isFrameLoadOpcode(MI.getOpcode()))
+    return Register();
+
+  if (MI.getOperand(0).getSubReg() == 0 && MI.getOperand(1).isFI() &&
+      MI.getOperand(2).isImm() && MI.getOperand(2).getImm() == 0) {
+    FrameIndex = MI.getOperand(1).getIndex();
+    return MI.getOperand(0).getReg();
+  }
+  return Register();
+}
+
+static bool isFrameStoreOpcode(int Opcode) {
+  switch (Opcode) {
   default:
-    break;
+    return false;
   case AArch64::STRWui:
   case AArch64::STRXui:
   case AArch64::STRBui:
@@ -2477,14 +2493,63 @@ Register AArch64InstrInfo::isStoreToStackSlot(const MachineInstr &MI,
   case AArch64::STRDui:
   case AArch64::STRQui:
   case AArch64::STR_PXI:
-    if (MI.getOperand(0).getSubReg() == 0 && MI.getOperand(1).isFI() &&
-        MI.getOperand(2).isImm() && MI.getOperand(2).getImm() == 0) {
-      FrameIndex = MI.getOperand(1).getIndex();
-      return MI.getOperand(0).getReg();
-    }
-    break;
+    return true;
   }
-  return 0;
+}
+
+Register AArch64InstrInfo::isStoreToStackSlot(const MachineInstr &MI,
+                                              int &FrameIndex) const {
+  if (!isFrameStoreOpcode(MI.getOpcode()))
+    return Register();
+
+  if (MI.getOperand(0).getSubReg() == 0 && MI.getOperand(1).isFI() &&
+      MI.getOperand(2).isImm() && MI.getOperand(2).getImm() == 0) {
+    FrameIndex = MI.getOperand(1).getIndex();
+    return MI.getOperand(0).getReg();
+  }
+  return Register();
+}
+
+Register AArch64InstrInfo::isStoreToStackSlotPostFE(const MachineInstr &MI,
+                                                    int &FrameIndex) const {
+  if (!isFrameStoreOpcode(MI.getOpcode()))
+    return Register();
+
+  if (Register Reg = isStoreToStackSlot(MI, FrameIndex))
+    return Reg;
+
+  SmallVector<const MachineMemOperand *, 1> Accesses;
+  if (hasStoreToStackSlot(MI, Accesses)) {
+    if (Accesses.size() > 1)
+      return Register();
+
+    FrameIndex =
+        cast<FixedStackPseudoSourceValue>(Accesses.front()->getPseudoValue())
+            ->getFrameIndex();
+    return MI.getOperand(0).getReg();
+  }
+  return Register();
+}
+
+Register AArch64InstrInfo::isLoadFromStackSlotPostFE(const MachineInstr &MI,
+                                                     int &FrameIndex) const {
+  if (!isFrameLoadOpcode(MI.getOpcode()))
+    return Register();
+
+  if (Register Reg = isLoadFromStackSlot(MI, FrameIndex))
+    return Reg;
+
+  SmallVector<const MachineMemOperand *, 1> Accesses;
+  if (hasLoadFromStackSlot(MI, Accesses)) {
+    if (Accesses.size() > 1)
+      return Register();
+
+    FrameIndex =
+        cast<FixedStackPseudoSourceValue>(Accesses.front()->getPseudoValue())
+            ->getFrameIndex();
+    return MI.getOperand(0).getReg();
+  }
+  return Register();
 }
 
 /// Check all MachineMemOperands for a hint to suppress pairing.

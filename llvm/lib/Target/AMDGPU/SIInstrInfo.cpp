@@ -162,7 +162,7 @@ bool SIInstrInfo::resultDependsOnExec(const MachineInstr &MI) const {
     if (!DstReg.isVirtual())
       return true;
 
-    const MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
+    const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
     for (MachineInstr &Use : MRI.use_nodbg_instructions(DstReg)) {
       switch (Use.getOpcode()) {
       case AMDGPU::S_AND_SAVEEXEC_B32:
@@ -3984,7 +3984,7 @@ static bool getFoldableImm(const MachineOperand *MO, int64_t &Imm,
                            MachineInstr **DefMI = nullptr) {
   if (!MO->isReg())
     return false;
-  const MachineFunction *MF = MO->getParent()->getParent()->getParent();
+  const MachineFunction *MF = MO->getParent()->getMF();
   const MachineRegisterInfo &MRI = MF->getRegInfo();
   return getFoldableImm(MO->getReg(), MRI, Imm, DefMI);
 }
@@ -4046,10 +4046,29 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
                                                  LiveVariables *LV,
                                                  LiveIntervals *LIS) const {
   MachineBasicBlock &MBB = *MI.getParent();
-  ThreeAddressUpdates U;
-  MachineInstr *NewMI = convertToThreeAddressImpl(MI, U);
+  MachineInstr *CandidateMI = &MI;
 
-  if (NewMI) {
+  if (MI.isBundle()) {
+    // This is a temporary placeholder for bundle handling that enables us to
+    // exercise the relevant code paths in the two-address instruction pass.
+    if (MI.getBundleSize() != 1)
+      return nullptr;
+    CandidateMI = MI.getNextNode();
+  }
+
+  ThreeAddressUpdates U;
+  MachineInstr *NewMI = convertToThreeAddressImpl(*CandidateMI, U);
+  if (!NewMI)
+    return nullptr;
+
+  if (MI.isBundle()) {
+    CandidateMI->eraseFromBundle();
+
+    for (MachineOperand &MO : MI.all_defs()) {
+      if (MO.isTied())
+        MI.untieRegOperand(MO.getOperandNo());
+    }
+  } else {
     updateLiveVariables(LV, MI, *NewMI);
     if (LIS) {
       LIS->ReplaceMachineInstrInMaps(MI, *NewMI);
@@ -4090,7 +4109,22 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
         LV->getVarInfo(DefReg).AliveBlocks.clear();
     }
 
-    if (LIS) {
+    if (MI.isBundle()) {
+      VirtRegInfo VRI = AnalyzeVirtRegInBundle(MI, DefReg);
+      if (!VRI.Reads && !VRI.Writes) {
+        for (MachineOperand &MO : MI.all_uses()) {
+          if (MO.isReg() && MO.getReg() == DefReg) {
+            assert(MO.getSubReg() == 0 &&
+                   "tied sub-registers in bundles currently not supported");
+            MI.removeOperand(MO.getOperandNo());
+            break;
+          }
+        }
+
+        if (LIS)
+          LIS->shrinkToUses(&LIS->getInterval(DefReg));
+      }
+    } else if (LIS) {
       LiveInterval &DefLI = LIS->getInterval(DefReg);
 
       // We cannot delete the original instruction here, so hack out the use
@@ -4105,11 +4139,26 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
         }
       }
 
+      if (MI.isBundle()) {
+        VirtRegInfo VRI = AnalyzeVirtRegInBundle(MI, DefReg);
+        if (!VRI.Reads && !VRI.Writes) {
+          for (MachineOperand &MIOp : MI.uses()) {
+            if (MIOp.isReg() && MIOp.getReg() == DefReg) {
+              MIOp.setIsUndef(true);
+              MIOp.setReg(DummyReg);
+            }
+          }
+        }
+
+        MI.addOperand(MachineOperand::CreateReg(DummyReg, false, false, false,
+                                                false, /*isUndef=*/true));
+      }
+
       LIS->shrinkToUses(&DefLI);
     }
   }
 
-  return NewMI;
+  return MI.isBundle() ? &MI : NewMI;
 }
 
 MachineInstr *
@@ -4950,7 +4999,7 @@ bool SIInstrInfo::verifyCopy(const MachineInstr &MI,
 bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
                                     StringRef &ErrInfo) const {
   uint16_t Opcode = MI.getOpcode();
-  const MachineFunction *MF = MI.getParent()->getParent();
+  const MachineFunction *MF = MI.getMF();
   const MachineRegisterInfo &MRI = MF->getRegInfo();
 
   // FIXME: At this point the COPY verify is done only for non-ssa forms.
@@ -5756,7 +5805,7 @@ unsigned SIInstrInfo::getVALUOp(const MachineInstr &MI) const {
   case AMDGPU::STRICT_WWM: return AMDGPU::STRICT_WWM;
   case AMDGPU::STRICT_WQM: return AMDGPU::STRICT_WQM;
   case AMDGPU::S_MOV_B32: {
-    const MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
+    const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
     return MI.getOperand(1).isReg() ||
            RI.isAGPR(MRI, MI.getOperand(0).getReg()) ?
            AMDGPU::COPY : AMDGPU::V_MOV_B32_e32;
@@ -6031,8 +6080,7 @@ const TargetRegisterClass *SIInstrInfo::getOpRegClass(const MachineInstr &MI,
     Register Reg = MI.getOperand(OpNo).getReg();
 
     if (Reg.isVirtual()) {
-      const MachineRegisterInfo &MRI =
-          MI.getParent()->getParent()->getRegInfo();
+      const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
       return MRI.getRegClass(Reg);
     }
     return RI.getPhysRegBaseClass(Reg);
@@ -6123,7 +6171,7 @@ bool SIInstrInfo::isLegalRegOperand(const MachineRegisterInfo &MRI,
   const TargetRegisterClass *RC = MRI.getRegClass(Reg);
 
   if (MO.getSubReg()) {
-    const MachineFunction *MF = MO.getParent()->getParent()->getParent();
+    const MachineFunction *MF = MO.getParent()->getMF();
     const TargetRegisterClass *SuperRC = RI.getLargestLegalSuperClass(RC, *MF);
     if (!SuperRC)
       return false;
@@ -6135,7 +6183,7 @@ bool SIInstrInfo::isLegalRegOperand(const MachineRegisterInfo &MRI,
 
 bool SIInstrInfo::isLegalRegOperand(const MachineInstr &MI, unsigned OpIdx,
                                     const MachineOperand &MO) const {
-  const MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
+  const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
   const MCOperandInfo OpInfo = MI.getDesc().operands()[OpIdx];
   unsigned Opc = MI.getOpcode();
 
@@ -6237,7 +6285,7 @@ bool SIInstrInfo::isLegalGFX12PlusPackedMathFP32Operand(
 
 bool SIInstrInfo::isOperandLegal(const MachineInstr &MI, unsigned OpIdx,
                                  const MachineOperand *MO) const {
-  const MachineFunction &MF = *MI.getParent()->getParent();
+  const MachineFunction &MF = *MI.getMF();
   const MachineRegisterInfo &MRI = MF.getRegInfo();
   const MCInstrDesc &InstDesc = MI.getDesc();
   const MCOperandInfo &OpInfo = InstDesc.operands()[OpIdx];
@@ -7133,7 +7181,7 @@ extractRsrcPtr(const SIInstrInfo &TII, MachineInstr &MI, MachineOperand &Rsrc) {
 MachineBasicBlock *
 SIInstrInfo::legalizeOperands(MachineInstr &MI,
                               MachineDominatorTree *MDT) const {
-  MachineFunction &MF = *MI.getParent()->getParent();
+  MachineFunction &MF = *MI.getMF();
   MachineRegisterInfo &MRI = MF.getRegInfo();
   MachineBasicBlock *CreatedBB = nullptr;
 
@@ -7775,6 +7823,11 @@ void SIInstrInfo::moveToVALUImpl(SIInstrWorklist &Worklist,
     Inst.eraseFromParent();
     return;
 
+  case AMDGPU::S_ABSDIFF_I32:
+    lowerScalarAbsDiff(Worklist, Inst);
+    Inst.eraseFromParent();
+    return;
+
   case AMDGPU::S_CBRANCH_SCC0:
   case AMDGPU::S_CBRANCH_SCC1: {
     // Clear unused bits of vcc
@@ -8124,26 +8177,34 @@ void SIInstrInfo::moveToVALUImpl(SIInstrWorklist &Worklist,
       return;
     }
 
-    if (Inst.isCopy() && Inst.getOperand(1).getReg().isVirtual() &&
-        NewDstRC == RI.getRegClassForReg(MRI, Inst.getOperand(1).getReg())) {
-      // Instead of creating a copy where src and dst are the same register
-      // class, we just replace all uses of dst with src.  These kinds of
-      // copies interfere with the heuristics MachineSink uses to decide
-      // whether or not to split a critical edge.  Since the pass assumes
-      // that copies will end up as machine instructions and not be
-      // eliminated.
-      addUsersToMoveToVALUWorklist(DstReg, MRI, Worklist);
+    if (Inst.isCopy() && Inst.getOperand(1).getReg().isVirtual()) {
       Register NewDstReg = Inst.getOperand(1).getReg();
-      MRI.replaceRegWith(DstReg, NewDstReg);
-      MRI.clearKillFlags(NewDstReg);
-      Inst.getOperand(0).setReg(DstReg);
-      Inst.eraseFromParent();
-      // Legalize t16 operand since replaceReg is called after addUsersToVALU
-      for (MachineOperand &MO :
-           make_early_inc_range(MRI.use_operands(NewDstReg))) {
-        legalizeOperandsVALUt16(*MO.getParent(), MRI);
+      const TargetRegisterClass *SrcRC = RI.getRegClassForReg(MRI, NewDstReg);
+      if (const TargetRegisterClass *CommonRC =
+              RI.getCommonSubClass(NewDstRC, SrcRC)) {
+        // Instead of creating a copy where src and dst are the same register
+        // class, we just replace all uses of dst with src.  These kinds of
+        // copies interfere with the heuristics MachineSink uses to decide
+        // whether or not to split a critical edge.  Since the pass assumes
+        // that copies will end up as machine instructions and not be
+        // eliminated.
+        addUsersToMoveToVALUWorklist(DstReg, MRI, Worklist);
+        MRI.replaceRegWith(DstReg, NewDstReg);
+        MRI.clearKillFlags(NewDstReg);
+        Inst.getOperand(0).setReg(DstReg);
+
+        if (!MRI.constrainRegClass(NewDstReg, CommonRC))
+          llvm_unreachable("failed to constrain register");
+
+        Inst.eraseFromParent();
+        // Legalize t16 operand since replaceReg is called after addUsersToVALU
+        for (MachineOperand &MO :
+             make_early_inc_range(MRI.use_operands(NewDstReg))) {
+          legalizeOperandsVALUt16(*MO.getParent(), MRI);
+        }
+
+        return;
       }
-      return;
     }
 
     // If this is a v2s copy between 16bit and 32bit reg,
@@ -8419,6 +8480,37 @@ void SIInstrInfo::lowerScalarAbs(SIInstrWorklist &Worklist,
   BuildMI(MBB, MII, DL, get(AMDGPU::V_MAX_I32_e64), ResultReg)
     .addReg(Src.getReg())
     .addReg(TmpReg);
+
+  MRI.replaceRegWith(Dest.getReg(), ResultReg);
+  addUsersToMoveToVALUWorklist(ResultReg, MRI, Worklist);
+}
+
+void SIInstrInfo::lowerScalarAbsDiff(SIInstrWorklist &Worklist,
+                                     MachineInstr &Inst) const {
+  MachineBasicBlock &MBB = *Inst.getParent();
+  MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
+  MachineBasicBlock::iterator MII = Inst;
+  const DebugLoc &DL = Inst.getDebugLoc();
+
+  MachineOperand &Dest = Inst.getOperand(0);
+  MachineOperand &Src1 = Inst.getOperand(1);
+  MachineOperand &Src2 = Inst.getOperand(2);
+  Register SubResultReg = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+  Register TmpReg = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+  Register ResultReg = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+
+  unsigned SubOp =
+      ST.hasAddNoCarry() ? AMDGPU::V_SUB_U32_e32 : AMDGPU::V_SUB_CO_U32_e32;
+
+  BuildMI(MBB, MII, DL, get(SubOp), SubResultReg)
+      .addReg(Src1.getReg())
+      .addReg(Src2.getReg());
+
+  BuildMI(MBB, MII, DL, get(SubOp), TmpReg).addImm(0).addReg(SubResultReg);
+
+  BuildMI(MBB, MII, DL, get(AMDGPU::V_MAX_I32_e64), ResultReg)
+      .addReg(SubResultReg)
+      .addReg(TmpReg);
 
   MRI.replaceRegWith(Dest.getReg(), ResultReg);
   addUsersToMoveToVALUWorklist(ResultReg, MRI, Worklist);
@@ -9229,7 +9321,7 @@ void SIInstrInfo::addSCCDefUsersToVALUWorklist(const MachineOperand &Op,
     int SCCIdx = MI.findRegisterUseOperandIdx(AMDGPU::SCC, &RI, false);
     if (SCCIdx != -1) {
       if (MI.isCopy()) {
-        MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
+        MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
         Register DestReg = MI.getOperand(0).getReg();
 
         MRI.replaceRegWith(DestReg, NewCond);
@@ -9341,7 +9433,7 @@ Register SIInstrInfo::findUsedSGPR(const MachineInstr &MI,
     return SGPRReg;
 
   Register UsedSGPRs[3] = {Register()};
-  const MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
+  const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
 
   for (unsigned i = 0; i < 3; ++i) {
     int Idx = OpIndices[i];
@@ -9591,7 +9683,7 @@ unsigned SIInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
     return getInstBundleSize(MI);
   case TargetOpcode::INLINEASM:
   case TargetOpcode::INLINEASM_BR: {
-    const MachineFunction *MF = MI.getParent()->getParent();
+    const MachineFunction *MF = MI.getMF();
     const char *AsmStr = MI.getOperand(0).getSymbolName();
     return getInlineAsmLength(AsmStr, *MF->getTarget().getMCAsmInfo(), &ST);
   }
@@ -9726,7 +9818,7 @@ bool SIInstrInfo::isBasicBlockPrologue(const MachineInstr &MI,
   // needed by the prolog. However, the insertions for scalar registers can
   // always be placed at the BB top as they are independent of the exec mask
   // value.
-  const MachineFunction *MF = MI.getParent()->getParent();
+  const MachineFunction *MF = MI.getMF();
   bool IsNullOrVectorRegister = true;
   if (Reg) {
     const MachineRegisterInfo &MRI = MF->getRegInfo();
@@ -10513,7 +10605,7 @@ SIInstrInfo::getInstructionUniformity(const MachineInstr &MI) const {
     return InstructionUniformity::Default;
   }
 
-  const MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
+  const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
   const AMDGPURegisterBankInfo *RBI = ST.getRegBankInfo();
 
   // FIXME: It's conceptually broken to report this for an instruction, and not
