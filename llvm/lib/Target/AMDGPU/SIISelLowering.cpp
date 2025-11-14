@@ -1035,7 +1035,9 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                        Custom);
   }
 
-  setTargetDAGCombine({ISD::ADD,
+  setTargetDAGCombine({
+                       ISD::ABS,
+                       ISD::ADD,
                        ISD::PTRADD,
                        ISD::SUB,
                        ISD::MUL,
@@ -18597,6 +18599,11 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
 
   if (getTargetMachine().getOptLevel() == CodeGenOptLevel::None)
     return SDValue();
+
+  // expandABS but only for i8 and i16
+  if (N->getOpcode() == ISD::ABS && !N->isDivergent() &&
+      (N->getValueType(0) == MVT::i8 || N->getValueType(0) == MVT::i16))
+    return expandABS(N, DCI.DAG);
 
   switch (N->getOpcode()) {
   case ISD::ADD:
