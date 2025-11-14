@@ -8267,7 +8267,7 @@ void SIInstrInfo::moveToVALUImpl(SIInstrWorklist &Worklist,
     const TargetRegisterClass *NewDstRC = getDestEquivalentVGPRClass(Inst);
 
     if (Inst.isCopy() && DstReg.isPhysical() &&
-        RI.isVGPR(MRI, Inst.getOperand(1).getReg())) {
+        Inst.getOperand(1).getReg().isVirtual()) {
       handleCopyToPhysHelper(Worklist, DstReg, Inst, MRI);
       return;
     }
