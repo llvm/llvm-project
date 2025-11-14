@@ -269,7 +269,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI basic_filebuf* __open(int __fd, ios_base::openmode __mode);
   basic_filebuf* close();
 #    if _LIBCPP_STD_VER >= 26
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI native_handle_type native_handle() const noexcept {
+  _LIBCPP_HIDE_FROM_ABI native_handle_type native_handle() const noexcept {
     _LIBCPP_ASSERT_UNCATEGORIZED(this->is_open(), "File must be opened");
 #      if defined(_LIBCPP_WIN32API)
     return std::__filebuf_windows_native_handle(__file_);
@@ -1178,9 +1178,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI basic_filebuf<char_type, traits_type>* rdbuf() const;
 #    if _LIBCPP_STD_VER >= 26
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI native_handle_type native_handle() const noexcept {
-    return rdbuf()->native_handle();
-  }
+  _LIBCPP_HIDE_FROM_ABI native_handle_type native_handle() const noexcept { return rdbuf()->native_handle(); }
 #    endif
   _LIBCPP_HIDE_FROM_ABI bool is_open() const;
   void open(const char* __s, ios_base::openmode __mode = ios_base::in);
@@ -1336,9 +1334,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI basic_filebuf<char_type, traits_type>* rdbuf() const;
 #    if _LIBCPP_STD_VER >= 26
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI native_handle_type native_handle() const noexcept {
-    return rdbuf()->native_handle();
-  }
+  _LIBCPP_HIDE_FROM_ABI native_handle_type native_handle() const noexcept { return rdbuf()->native_handle(); }
 #    endif
   _LIBCPP_HIDE_FROM_ABI bool is_open() const;
   void open(const char* __s, ios_base::openmode __mode = ios_base::out);
@@ -1500,9 +1496,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI basic_filebuf<char_type, traits_type>* rdbuf() const;
 #    if _LIBCPP_STD_VER >= 26
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI native_handle_type native_handle() const noexcept {
-    return rdbuf()->native_handle();
-  }
+  _LIBCPP_HIDE_FROM_ABI native_handle_type native_handle() const noexcept { return rdbuf()->native_handle(); }
 #    endif
   _LIBCPP_HIDE_FROM_ABI bool is_open() const;
   _LIBCPP_HIDE_FROM_ABI void open(const char* __s, ios_base::openmode __mode = ios_base::in | ios_base::out);
