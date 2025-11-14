@@ -105,7 +105,8 @@ Changes to the AArch64 Backend
   architecture extensions.
 
 * Assembler/disassembler support has been added for 'Virtual Tagging
-  Extension (vMTE)' Future Architecture Technologies extension.
+  Extension (vMTE)' and 'Permission Overlay Extension version 2 (POE2)'
+  Future Architecture Technologies extensions.
 
 Changes to the AMDGPU Backend
 -----------------------------
