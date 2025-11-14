@@ -78,11 +78,10 @@ enum DefaultDataSharingAttributes {
 /// Not mentioning any Variable category attribute indicates
 /// the modifier (DefaultDataSharingAttributes) is for all variables.
 enum DefaultDataSharingVCAttributes {
-  DSA_VC_all = 0,     /// for all variables.
-  DSA_VC_aggregate,   /// for aggregate variables.
-  DSA_VC_allocatable, /// for allocatable variables.
-  DSA_VC_pointer,     /// for pointer variables.
-  DSA_VC_scalar,      /// for scalar variables.
+  DSA_VC_all = 0,   /// for all variables.
+  DSA_VC_aggregate, /// for aggregate variables.
+  DSA_VC_pointer,   /// for pointer variables.
+  DSA_VC_scalar,    /// for scalar variables.
 };
 
 /// Stack for tracking declarations used in OpenMP directives and
@@ -760,11 +759,6 @@ public:
     getTopOfStack().DefaultVCAttr = DSA_VC_all;
     getTopOfStack().DefaultAttrVCLoc = VCLoc;
   }
-  /// Set default data sharing variable category attribute to allocatable.
-  void setDefaultDSAVCAllocatable(SourceLocation VCLoc) {
-    getTopOfStack().DefaultVCAttr = DSA_VC_allocatable;
-    getTopOfStack().DefaultAttrVCLoc = VCLoc;
-  }
   /// Set default data sharing variable category attribute to pointer.
   void setDefaultDSAVCPointer(SourceLocation VCLoc) {
     getTopOfStack().DefaultVCAttr = DSA_VC_pointer;
@@ -1371,11 +1365,6 @@ DSAStackTy::DSAVarData DSAStackTy::getDSA(const_iterator &Iter,
   switch (Iter->DefaultVCAttr) {
   case DSA_VC_aggregate:
     if (!VD->getType()->isAggregateType())
-      IterDA = DSA_none;
-    break;
-  case DSA_VC_allocatable:
-    if (!(VD->getType()->isPointerType() ||
-          VD->getType()->isVariableArrayType()))
       IterDA = DSA_none;
     break;
   case DSA_VC_pointer:
