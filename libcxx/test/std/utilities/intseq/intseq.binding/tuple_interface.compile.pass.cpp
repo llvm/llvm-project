@@ -25,7 +25,7 @@
 #include <type_traits>
 #include <utility>
 
-constexpr void test() {
+void test() {
   // std::tuple_size_v
   using empty = std::integer_sequence<int>;
   static_assert(std::tuple_size_v<empty> == 0);
@@ -47,14 +47,12 @@ constexpr void test() {
   static_assert(std::is_same_v<std::tuple_element_t<3, const size4>, int>);
 
   // std::get
-  constexpr static size4 seq4{};
-  static_assert(get<0>(seq4) == 9);
+  constexpr static size4 seq4;
+  constexpr std::same_as<int> decltype(auto) elt0 = get<0>(seq4);
+  static_assert(elt0 == 9);
   static_assert(get<1>(seq4) == 8);
   static_assert(get<2>(seq4) == 7);
   static_assert(get<3>(seq4) == 2);
 
   static_assert(noexcept(get<0>(seq4)));
-
-  constexpr std::same_as<int> decltype(auto) r = get<0>(seq4);
-  static_assert(r == 9);
 }

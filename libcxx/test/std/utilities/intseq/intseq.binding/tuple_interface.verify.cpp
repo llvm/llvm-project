@@ -27,7 +27,7 @@ void f() {
   // expected-error-re@*:* {{static assertion failed{{.*}}Index out of bounds in std::tuple_element<> (const std::integer_sequence)}}
   using test2 = std::tuple_element_t<0, const std::integer_sequence<int>>;
 
-  auto empty = std::integer_sequence<int>();
+  std::integer_sequence<int> empty;
   // expected-error-re@*:* {{static assertion failed{{.*}}Index out of bounds in std::get<> (std::integer_sequence)}}
   // expected-error-re@*:* {{invalid index 0 for pack {{.*}} of size 0}}
   (void)std::get<0>(empty);
