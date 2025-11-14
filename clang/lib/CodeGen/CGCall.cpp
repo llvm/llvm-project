@@ -5958,9 +5958,6 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
     }
   }
 
-  if (CGDebugInfo *DI = CGM.getModuleDebugInfo())
-    DI->addCallTarget(CI->getCalledFunction(), CalleeDecl, CI);
-
   // If this is within a function that has the guard(nocf) attribute and is an
   // indirect call, add the "guard_nocf" attribute to this call to indicate that
   // Control Flow Guard checks should not be added, even if the call is inlined.
@@ -6298,6 +6295,8 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
       DI->EmitFuncDeclForCallSite(
           CI, DI->getFunctionType(CalleeDecl, ResTy, Args), CalleeGlobalDecl);
     }
+    // Collect call site target information.
+    DI->addCallTarget(CI->getCalledFunction(), CalleeDecl, CI);
   }
 
   return Ret;

@@ -914,7 +914,7 @@ private:
   llvm::StringRef GetMethodLinkageName(const CXXMethodDecl *Method) const;
 
   /// For each 'DISuprogram' we store a list of call instructions 'CallBase'
-  /// that indirectly call  such 'DISuprogram'. We use its linkage name to
+  /// that indirectly call such 'DISuprogram'. We use its linkage name to
   /// update such list.
   /// The 'CallTargetCache' is updated in the following scenarios:
   /// - Both 'CallBase' and 'MDNode' are ready available.

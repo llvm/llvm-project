@@ -2316,8 +2316,14 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       !Subtarget->noBTIAtReturnTwice())
     GuardWithBTI = AFI->branchTargetEnforcement();
 
-  // Set type id for call site info.
-  if (MF.getTarget().Options.EmitCallGraphSection && CB && CB->isIndirectCall())
+  // Set type id for call site info and metadata 'call_target'.
+  // We are filtering for:
+  // a) The call-graph-section use case that wants to know about indirect
+  //    calls, or
+  // b) We want to annotate indirect calls.
+  if (CB && CB->isIndirectCall() &&
+      (MF.getTarget().Options.EmitCallGraphSection ||
+       MF.getTarget().Options.EmitCallSiteInfo))
     CSInfo = MachineFunction::CallSiteInfo(*CB);
 
   // Determine whether this is a non-secure function call.
