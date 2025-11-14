@@ -565,6 +565,10 @@ def N3Write_0or2c_1V : SchedWriteVariant<[
                       SchedVar<NeoverseZeroMove, [N3Write_0c]>,
                       SchedVar<NoSchedPred,      [N3Write_2c_1V]>]>;
 
+def N3Write_0or2c_1M : SchedWriteVariant<[
+                      SchedVar<NeoverseAllElement, [N3Write_0c]>,
+                      SchedVar<NoSchedPred,        [N3Write_2c_1M]>]>;
+
 def N3Write_0or3c_1M0 : SchedWriteVariant<[
                       SchedVar<NeoverseZeroMove, [N3Write_0c]>,
                       SchedVar<NoSchedPred,      [N3Write_3c_1M0]>]>;
@@ -981,6 +985,8 @@ def : InstRW<[WriteAdr, N3Write_2c_1L01_1V_1I], (instregex "^STP[SDQ](post|pre)$
 // ASIMD compare
 // ASIMD logical
 // ASIMD max/min, basic and pair-wise
+def : InstRW<[N3Write_0or2c_1V], (instregex "^ORRv16i8", "^ORRv8i8")>;
+
 def : SchedAlias<WriteVd, N3Write_2c_1V>;
 def : SchedAlias<WriteVq, N3Write_2c_1V>;
 
@@ -1584,10 +1590,11 @@ def : InstRW<[N3Write_2c_1M], (instregex "^REV_PP_[BHSD]")>;
 def : InstRW<[N3Write_1c_1M], (instrs SEL_PPPP)>;
 
 // Predicate set
-def : InstRW<[N3Write_2c_1M], (instregex "^PFALSE", "^PTRUE_[BHSD]")>;
+def : InstRW<[N3Write_0c], (instregex "^PFALSE")>;
+def : InstRW<[N3Write_0or2c_1M], (instregex "^PTRUE_[BHSD]")>;
 
 // Predicate set/initialize, set flags
-def : InstRW<[N3Write_2c_1M], (instregex "^PTRUES_[BHSD]")>;
+def : InstRW<[N3Write_0or2c_1M], (instregex "^PTRUES_[BHSD]")>;
 
 // Predicate find first/next
 def : InstRW<[N3Write_2c_1M], (instregex "^PFIRST_B$", "^PNEXT_[BHSD]$")>;
@@ -1810,10 +1817,11 @@ def : InstRW<[N3Write_5c_1M0_1V], (instregex "^INDEX_(IR|RI|RR)_D$")>;
 // Logical
 def : InstRW<[N3Write_2c_1V],
              (instregex "^(AND|EOR|ORR)_ZI",
-                        "^(AND|BIC|EOR|ORR)_ZZZ",
+                        "^(AND|BIC|EOR)_ZZZ",
                         "^EOR(BT|TB)_ZZZ_[BHSD]",
                         "^(AND|BIC|EOR|NOT|ORR)_(ZPmZ|ZPZZ)_[BHSD]",
                         "^NOT_ZPmZ_[BHSD]")>;
+def : InstRW<[N3Write_0or2c_1V], (instregex "^ORR_ZZZ")>;
 
 // Max/min, basic and pairwise
 def : InstRW<[N3Write_2c_1V], (instregex "^[SU](MAX|MIN)_ZI_[BHSD]",

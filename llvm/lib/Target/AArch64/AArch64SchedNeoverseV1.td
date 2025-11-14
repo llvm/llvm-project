@@ -479,10 +479,6 @@ def V1Write_0or1c_1I : SchedWriteVariant<[
                       SchedVar<NeoverseZeroMove, [V1Write_0c_0Z]>,
                       SchedVar<NoSchedPred,      [V1Write_1c_1I]>]>;
 
-def V1Write_0or2c_1V : SchedWriteVariant<[
-                      SchedVar<NeoverseZeroMove, [V1Write_0c_0Z]>,
-                      SchedVar<NoSchedPred,      [V1Write_2c_1V]>]>;
-
 def V1Write_0or3c_1M0 : SchedWriteVariant<[
                       SchedVar<NeoverseZeroMove, [V1Write_0c_0Z]>,
                       SchedVar<NoSchedPred,      [V1Write_3c_1M0]>]>;
@@ -822,7 +818,7 @@ def : SchedAlias<WriteFImm, V1Write_2c_1V>;
 def : InstRW<[V1Write_2c_1V], (instrs FMOVHr, FMOVSr, FMOVDr)>;
 
 // FP transfer, from gen to low half of vec reg
-def : InstRW<[V1Write_0or3c_1M0], (instrs FMOVWHr, FMOVXHr, FMOVWSr, FMOVXDr)>;
+def : InstRW<[V1Write_3c_1M0], (instrs FMOVWHr, FMOVXHr, FMOVWSr, FMOVXDr)>;
 
 // FP transfer, from gen to high half of vec reg
 def : InstRW<[V1Write_5c_1M0_1V], (instrs FMOVXDHighr)>;
@@ -1139,7 +1135,6 @@ def : InstRW<[V1Write_3c_1V02], (instrs BFCVT)>;
 // ASIMD transpose
 // ASIMD unzip/zip
 // Covered by "SchedAlias (WriteV[dq]...)" above
-def : InstRW<[V1Write_0or2c_1V], (instrs MOVID, MOVIv2d_ns)>;
 
 // ASIMD duplicate, gen reg
 def : InstRW<[V1Write_3c_1M0],
