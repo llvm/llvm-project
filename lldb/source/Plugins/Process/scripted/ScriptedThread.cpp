@@ -210,7 +210,7 @@ bool ScriptedThread::LoadArtificialStackFrames() {
     SymbolContext sc;
     symbol_addr.CalculateSymbolContext(&sc);
 
-    return std::make_shared<StackFrame>(shared_from_this(), idx, idx, cfa,
+    return std::make_shared<StackFrame>(this->shared_from_this(), idx, idx, cfa,
                                         cfa_is_valid, pc,
                                         StackFrame::Kind::Synthetic, artificial,
                                         behaves_like_zeroth_frame, &sc);
@@ -231,8 +231,8 @@ bool ScriptedThread::LoadArtificialStackFrames() {
       return error.ToError();
     }
 
-    auto frame_or_error = ScriptedFrame::Create(
-        shared_from_this(), GetInterface(), nullptr, object_sp->GetAsGeneric());
+    auto frame_or_error =
+        ScriptedFrame::Create(*this, nullptr, object_sp->GetAsGeneric());
 
     if (!frame_or_error) {
       ScriptedInterface::ErrorWithMessage<bool>(
