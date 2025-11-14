@@ -1620,7 +1620,7 @@ bool LLParser::parseEnumAttribute(Attribute::AttrKind Attr, AttrBuilder &B,
     B.addDereferenceableOrNullAttr(Bytes);
     return false;
   }
-  case Attribute::FlattenDeep: {
+  case Attribute::FlattenDepth: {
     uint64_t Depth = 0;
     if (InAttrGroup) {
       Lex.Lex();
@@ -1628,12 +1628,12 @@ bool LLParser::parseEnumAttribute(Attribute::AttrKind Attr, AttrBuilder &B,
       if (parseToken(lltok::equal, "expected '=' here") || parseUInt64(Depth))
         return true;
       if (!Depth)
-        return error(DepthLoc, "flatten_deep depth must be non-zero");
+        return error(DepthLoc, "flatten_depth depth must be non-zero");
     } else {
-      if (parseOptionalFlattenDeepDepth(lltok::kw_flatten_deep, Depth))
+      if (parseOptionalFlattenDepthDepthHint(lltok::kw_flatten_depth, Depth))
         return true;
     }
-    B.addFlattenDeepAttr(Depth);
+    B.addFlattenDepthAttr(Depth);
     return false;
   }
   case Attribute::UWTable: {
@@ -2510,12 +2510,12 @@ bool LLParser::parseOptionalDerefAttrBytes(lltok::Kind AttrKind,
   return false;
 }
 
-/// parseOptionalFlattenDeepDepth
+/// parseOptionalFlattenDepthDepthHint
 ///   ::= /* empty */
-///   ::= 'flatten_deep' '(' 4 ')'
-bool LLParser::parseOptionalFlattenDeepDepth(lltok::Kind AttrKind,
-                                             uint64_t &Depth) {
-  assert(AttrKind == lltok::kw_flatten_deep && "contract!");
+///   ::= 'flatten_depth' '(' 4 ')'
+bool LLParser::parseOptionalFlattenDepthDepthHint(lltok::Kind AttrKind,
+                                                  uint64_t &Depth) {
+  assert(AttrKind == lltok::kw_flatten_depth && "contract!");
 
   Depth = 0;
   if (!EatIfPresent(AttrKind))
@@ -2530,7 +2530,7 @@ bool LLParser::parseOptionalFlattenDeepDepth(lltok::Kind AttrKind,
   if (!EatIfPresent(lltok::rparen))
     return error(ParenLoc, "expected ')'");
   if (!Depth)
-    return error(DepthLoc, "flatten_deep depth must be non-zero");
+    return error(DepthLoc, "flatten_depth depth must be non-zero");
   return false;
 }
 

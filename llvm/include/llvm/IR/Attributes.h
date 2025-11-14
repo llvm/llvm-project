@@ -1246,9 +1246,9 @@ public:
   /// form used internally in Attribute.
   LLVM_ABI AttrBuilder &addDereferenceableOrNullAttr(uint64_t Bytes);
 
-  /// This turns the flatten_deep depth into the form used internally in
+  /// This turns the flatten_depth depth into the form used internally in
   /// Attribute.
-  LLVM_ABI AttrBuilder &addFlattenDeepAttr(uint64_t Depth);
+  LLVM_ABI AttrBuilder &addFlattenDepthAttr(uint64_t Depth);
 
   /// This turns one (or two) ints into the form used internally in Attribute.
   LLVM_ABI AttrBuilder &

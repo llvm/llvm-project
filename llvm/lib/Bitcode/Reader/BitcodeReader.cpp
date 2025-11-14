@@ -2077,8 +2077,8 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::DisableSanitizerInstrumentation;
   case bitc::ATTR_KIND_ELEMENTTYPE:
     return Attribute::ElementType;
-  case bitc::ATTR_KIND_FLATTEN_DEEP:
-    return Attribute::FlattenDeep;
+  case bitc::ATTR_KIND_FLATTEN_DEPTH:
+    return Attribute::FlattenDepth;
   case bitc::ATTR_KIND_FNRETTHUNK_EXTERN:
     return Attribute::FnRetThunkExtern;
   case bitc::ATTR_KIND_INLINE_HINT:
@@ -2395,8 +2395,8 @@ Error BitcodeReader::parseAttributeGroupBlock() {
             B.addDereferenceableAttr(Record[++i]);
           else if (Kind == Attribute::DereferenceableOrNull)
             B.addDereferenceableOrNullAttr(Record[++i]);
-          else if (Kind == Attribute::FlattenDeep)
-            B.addFlattenDeepAttr(Record[++i]);
+          else if (Kind == Attribute::FlattenDepth)
+            B.addFlattenDepthAttr(Record[++i]);
           else if (Kind == Attribute::AllocSize)
             B.addAllocSizeAttrFromRawRepr(Record[++i]);
           else if (Kind == Attribute::VScaleRange)

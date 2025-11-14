@@ -1976,11 +1976,11 @@ def Flatten : InheritableAttr {
   let SimpleHandler = 1;
 }
 
-def FlattenDeep : InheritableAttr {
-  let Spellings = [Clang<"flatten_deep">];
+def FlattenDepth : InheritableAttr {
+  let Spellings = [Clang<"flatten_depth">];
   let Subjects = SubjectList<[Function], ErrorDiag>;
-  let Args = [UnsignedArgument<"MaxDepth">];
-  let Documentation = [FlattenDeepDocs];
+  let Args = [UnsignedArgument<"DepthHint">];
+  let Documentation = [FlattenDepthDocs];
 }
 
 def Format : InheritableAttr {

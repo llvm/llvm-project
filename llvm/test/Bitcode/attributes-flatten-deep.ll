@@ -1,12 +1,12 @@
 ; RUN: llvm-as < %s | llvm-dis | FileCheck %s
 ; RUN: verify-uselistorder %s
 
-; Test that flatten_deep attribute with integer values is properly handled
-; in both attribute groups (flatten_deep=N syntax) and inline (flatten_deep(N) syntax)
+; Test that flatten_depth attribute with integer values is properly handled
+; in both attribute groups (flatten_depth=N syntax) and inline (flatten_depth(N) syntax)
 
 ; Test inline syntax
 ; CHECK: define void @test_inline() #0
-define void @test_inline() flatten_deep(5) {
+define void @test_inline() flatten_depth(5) {
   ret void
 }
 
@@ -22,11 +22,11 @@ define void @test_group_combined() #2 {
   ret void
 }
 
-; CHECK: attributes #0 = { flatten_deep=5 }
-attributes #0 = { flatten_deep=5 }
+; CHECK: attributes #0 = { flatten_depth=5 }
+attributes #0 = { flatten_depth=5 }
 
-; CHECK: attributes #1 = { flatten_deep=3 }
-attributes #1 = { flatten_deep=3 }
+; CHECK: attributes #1 = { flatten_depth=3 }
+attributes #1 = { flatten_depth=3 }
 
-; CHECK: attributes #2 = { noinline nounwind flatten_deep=7 }
-attributes #2 = { noinline nounwind flatten_deep=7 }
+; CHECK: attributes #2 = { noinline nounwind flatten_depth=7 }
+attributes #2 = { noinline nounwind flatten_depth=7 }

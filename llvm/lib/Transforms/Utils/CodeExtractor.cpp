@@ -936,7 +936,7 @@ Function *CodeExtractor::constructFunctionDeclaration(
         continue;
       // Those attributes should be safe to propagate to the extracted function.
       case Attribute::AlwaysInline:
-      case Attribute::FlattenDeep:
+      case Attribute::FlattenDepth:
       case Attribute::Cold:
       case Attribute::DisableSanitizerInstrumentation:
       case Attribute::FnRetThunkExtern:
