@@ -34,13 +34,13 @@ _Static_assert(__builtin_offsetof(div_t, quot) == 0, "ABI mismatch!");
 _Static_assert(__builtin_offsetof(ldiv_t, quot) == 0, "ABI mismatch!");
 _Static_assert(__builtin_offsetof(lldiv_t, quot) == 0, "ABI mismatch!");
 
-#if defined(__GLIBC__) && __cplusplus >= 201703L
+#if defined(__GLIBC__) && __cplusplus >= 201103L
 #define at_quick_exit atexit
 #endif
 
 #include <llvm-libc-decls/stdlib.h>
 
-#if defined(__GLIBC__) && __cplusplus >= 201703L
+#if defined(__GLIBC__) && __cplusplus >= 201103L
 #undef at_quick_exit
 #endif
 

@@ -1697,11 +1697,12 @@ bool BinaryFunction::scanExternalRefs() {
       if (!TargetFunction || ignoreFunctionRef(*TargetFunction))
         continue;
 
-      const uint64_t FunctionOffset =
-          TargetAddress - TargetFunction->getAddress();
+      // Get a reference symbol for the function when address is a valid code
+      // reference.
       BranchTargetSymbol =
-          FunctionOffset ? TargetFunction->addEntryPointAtOffset(FunctionOffset)
-                         : TargetFunction->getSymbol();
+          BC.handleExternalBranchTarget(TargetAddress, *TargetFunction);
+      if (!BranchTargetSymbol)
+        continue;
     }
 
     // Can't find more references. Not creating relocations since we are not
@@ -1893,16 +1894,6 @@ bool BinaryFunction::scanExternalRefs() {
         PatchGroup.clear();
       }
     }
-  }
-
-  // Inform BinaryContext that this function symbols will not be defined and
-  // relocations should not be created against them.
-  if (BC.HasRelocations) {
-    for (std::pair<const uint32_t, MCSymbol *> &LI : Labels)
-      BC.UndefinedSymbols.insert(LI.second);
-    for (MCSymbol *const EndLabel : FunctionEndLabels)
-      if (EndLabel)
-        BC.UndefinedSymbols.insert(EndLabel);
   }
 
   clearList(Relocations);
@@ -2176,13 +2167,10 @@ bool BinaryFunction::postProcessIndirectBranches(
         continue;
       }
 
-      // If this block contains an epilogue code and has an indirect branch,
-      // then most likely it's a tail call. Otherwise, we cannot tell for sure
-      // what it is and conservatively reject the function's CFG.
-      bool IsEpilogue = llvm::any_of(BB, [&](const MCInst &Instr) {
-        return BC.MIB->isLeave(Instr) || BC.MIB->isPop(Instr);
-      });
-      if (IsEpilogue) {
+      // If this block contains epilogue code and has an indirect branch,
+      // then most likely it's a tail call. Otherwise, we cannot tell for
+      // sure what it is and conservatively reject the function's CFG.
+      if (BC.MIB->isEpilogue(BB)) {
         BC.MIB->convertJmpToTailCall(Instr);
         BB.removeAllSuccessors();
         continue;
@@ -3233,14 +3221,6 @@ void BinaryFunction::clearDisasmState() {
   clearList(Instructions);
   clearList(IgnoredBranches);
   clearList(TakenBranches);
-
-  if (BC.HasRelocations) {
-    for (std::pair<const uint32_t, MCSymbol *> &LI : Labels)
-      BC.UndefinedSymbols.insert(LI.second);
-    for (MCSymbol *const EndLabel : FunctionEndLabels)
-      if (EndLabel)
-        BC.UndefinedSymbols.insert(EndLabel);
-  }
 }
 
 void BinaryFunction::setTrapOnEntry() {

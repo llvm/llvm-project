@@ -589,8 +589,8 @@ bool CombinerHelper::matchCombineShuffleVector(
   return true;
 }
 
-void CombinerHelper::applyCombineShuffleVector(
-    MachineInstr &MI, const ArrayRef<Register> Ops) const {
+void CombinerHelper::applyCombineShuffleVector(MachineInstr &MI,
+                                               ArrayRef<Register> Ops) const {
   Register DstReg = MI.getOperand(0).getReg();
   Builder.setInsertPt(*MI.getParent(), MI);
   Register NewDstReg = MRI.cloneVirtualRegister(DstReg);
@@ -4425,6 +4425,7 @@ void CombinerHelper::applyBuildFnNoErase(
 }
 
 bool CombinerHelper::matchOrShiftToFunnelShift(MachineInstr &MI,
+                                               bool AllowScalarConstants,
                                                BuildFnTy &MatchInfo) const {
   assert(MI.getOpcode() == TargetOpcode::G_OR);
 
@@ -4444,31 +4445,29 @@ bool CombinerHelper::matchOrShiftToFunnelShift(MachineInstr &MI,
 
   // Given constants C0 and C1 such that C0 + C1 is bit-width:
   // (or (shl x, C0), (lshr y, C1)) -> (fshl x, y, C0) or (fshr x, y, C1)
-  int64_t CstShlAmt, CstLShrAmt;
+  int64_t CstShlAmt = 0, CstLShrAmt;
   if (mi_match(ShlAmt, MRI, m_ICstOrSplat(CstShlAmt)) &&
       mi_match(LShrAmt, MRI, m_ICstOrSplat(CstLShrAmt)) &&
       CstShlAmt + CstLShrAmt == BitWidth) {
     FshOpc = TargetOpcode::G_FSHR;
     Amt = LShrAmt;
-
   } else if (mi_match(LShrAmt, MRI,
                       m_GSub(m_SpecificICstOrSplat(BitWidth), m_Reg(Amt))) &&
              ShlAmt == Amt) {
     // (or (shl x, amt), (lshr y, (sub bw, amt))) -> (fshl x, y, amt)
     FshOpc = TargetOpcode::G_FSHL;
-
   } else if (mi_match(ShlAmt, MRI,
                       m_GSub(m_SpecificICstOrSplat(BitWidth), m_Reg(Amt))) &&
              LShrAmt == Amt) {
     // (or (shl x, (sub bw, amt)), (lshr y, amt)) -> (fshr x, y, amt)
     FshOpc = TargetOpcode::G_FSHR;
-
   } else {
     return false;
   }
 
   LLT AmtTy = MRI.getType(Amt);
-  if (!isLegalOrBeforeLegalizer({FshOpc, {Ty, AmtTy}}))
+  if (!isLegalOrBeforeLegalizer({FshOpc, {Ty, AmtTy}}) &&
+      (!AllowScalarConstants || CstShlAmt == 0 || !Ty.isScalar()))
     return false;
 
   MatchInfo = [=](MachineIRBuilder &B) {

@@ -163,7 +163,7 @@ static bool isZero(const Expr *E) {
   case Stmt::IntegerLiteralClass:
     return !cast<IntegerLiteral>(E)->getValue();
   case Stmt::FloatingLiteralClass: {
-    llvm::APFloat Value = cast<FloatingLiteral>(E)->getValue();
+    const llvm::APFloat Value = cast<FloatingLiteral>(E)->getValue();
     return Value.isZero() && !Value.isNegative();
   }
   default:
@@ -297,16 +297,16 @@ void UseDefaultMemberInitCheck::checkDefaultInit(
       }) > 1)
     return;
 
-  SourceLocation StartLoc = Field->getBeginLoc();
+  const SourceLocation StartLoc = Field->getBeginLoc();
   if (StartLoc.isMacroID() && IgnoreMacros)
     return;
 
-  SourceLocation FieldEnd =
+  const SourceLocation FieldEnd =
       Lexer::getLocForEndOfToken(Field->getSourceRange().getEnd(), 0,
                                  *Result.SourceManager, getLangOpts());
-  SourceLocation LParenEnd = Lexer::getLocForEndOfToken(
+  const SourceLocation LParenEnd = Lexer::getLocForEndOfToken(
       Init->getLParenLoc(), 0, *Result.SourceManager, getLangOpts());
-  CharSourceRange InitRange =
+  const CharSourceRange InitRange =
       CharSourceRange::getCharRange(LParenEnd, Init->getRParenLoc());
 
   const Expr *InitExpression = Init->getInit();

@@ -152,6 +152,9 @@ public:
   /// global initializers.
   mlir::Operation *curFn = nullptr;
 
+  /// Save Parameter Decl for coroutine.
+  llvm::SmallVector<const ParmVarDecl *> fnArgs;
+
   using DeclMapTy = llvm::DenseMap<const clang::Decl *, Address>;
   /// This keeps track of the CIR allocas or globals for local C
   /// declarations.
@@ -218,6 +221,10 @@ public:
 
   const TargetInfo &getTarget() const { return cgm.getTarget(); }
   mlir::MLIRContext &getMLIRContext() { return cgm.getMLIRContext(); }
+
+  const TargetCIRGenInfo &getTargetHooks() const {
+    return cgm.getTargetCIRGenInfo();
+  }
 
   // ---------------------
   // Opaque value handling
@@ -496,6 +503,12 @@ public:
   /// the type has already been emitted with emitVariablyModifiedType.
   VlaSizePair getVLASize(const VariableArrayType *type);
   VlaSizePair getVLASize(QualType type);
+
+  Address getAsNaturalAddressOf(Address addr, QualType pointeeTy);
+
+  mlir::Value getAsNaturalPointerTo(Address addr, QualType pointeeType) {
+    return getAsNaturalAddressOf(addr, pointeeType).getBasePointer();
+  }
 
   void finishFunction(SourceLocation endLoc);
 
@@ -1103,44 +1116,69 @@ public:
     // ---
 
   private:
-    // `returnBlock`, `returnLoc`, and all the functions that deal with them
-    // will change and become more complicated when `switch` statements are
-    // upstreamed.  `case` statements within the `switch` are in the same scope
-    // but have their own regions.  Therefore the LexicalScope will need to
-    // keep track of multiple return blocks.
-    mlir::Block *returnBlock = nullptr;
-    std::optional<mlir::Location> returnLoc;
+    // On switches we need one return block per region, since cases don't
+    // have their own scopes but are distinct regions nonetheless.
 
-    // See the comment on `getOrCreateRetBlock`.
+    // TODO: This implementation should change once we have support for early
+    //       exits in MLIR structured control flow (llvm-project#161575)
+    llvm::SmallVector<mlir::Block *> retBlocks;
+    llvm::DenseMap<mlir::Block *, mlir::Location> retLocs;
+    llvm::DenseMap<cir::CaseOp, unsigned> retBlockInCaseIndex;
+    std::optional<unsigned> normalRetBlockIndex;
+
+    // There's usually only one ret block per scope, but this needs to be
+    // get or create because of potential unreachable return statements, note
+    // that for those, all source location maps to the first one found.
     mlir::Block *createRetBlock(CIRGenFunction &cgf, mlir::Location loc) {
-      assert(returnBlock == nullptr && "only one return block per scope");
-      // Create the cleanup block but don't hook it up just yet.
+      assert((isa_and_nonnull<cir::CaseOp>(
+                  cgf.builder.getBlock()->getParentOp()) ||
+              retBlocks.size() == 0) &&
+             "only switches can hold more than one ret block");
+
+      // Create the return block but don't hook it up just yet.
       mlir::OpBuilder::InsertionGuard guard(cgf.builder);
-      returnBlock =
-          cgf.builder.createBlock(cgf.builder.getBlock()->getParent());
-      updateRetLoc(returnBlock, loc);
-      return returnBlock;
+      auto *b = cgf.builder.createBlock(cgf.builder.getBlock()->getParent());
+      retBlocks.push_back(b);
+      updateRetLoc(b, loc);
+      return b;
     }
 
     cir::ReturnOp emitReturn(mlir::Location loc);
     void emitImplicitReturn();
 
   public:
-    mlir::Block *getRetBlock() { return returnBlock; }
-    mlir::Location getRetLoc(mlir::Block *b) { return *returnLoc; }
-    void updateRetLoc(mlir::Block *b, mlir::Location loc) { returnLoc = loc; }
+    llvm::ArrayRef<mlir::Block *> getRetBlocks() { return retBlocks; }
+    mlir::Location getRetLoc(mlir::Block *b) { return retLocs.at(b); }
+    void updateRetLoc(mlir::Block *b, mlir::Location loc) {
+      retLocs.insert_or_assign(b, loc);
+    }
 
-    // Create the return block for this scope, or return the existing one.
-    // This get-or-create logic is necessary to handle multiple return
-    // statements within the same scope, which can happen if some of them are
-    // dead code or if there is a `goto` into the middle of the scope.
     mlir::Block *getOrCreateRetBlock(CIRGenFunction &cgf, mlir::Location loc) {
-      if (returnBlock == nullptr) {
-        returnBlock = createRetBlock(cgf, loc);
-        return returnBlock;
+      // Check if we're inside a case region
+      if (auto caseOp = mlir::dyn_cast_if_present<cir::CaseOp>(
+              cgf.builder.getBlock()->getParentOp())) {
+        auto iter = retBlockInCaseIndex.find(caseOp);
+        if (iter != retBlockInCaseIndex.end()) {
+          // Reuse existing return block
+          mlir::Block *ret = retBlocks[iter->second];
+          updateRetLoc(ret, loc);
+          return ret;
+        }
+        // Create new return block
+        mlir::Block *ret = createRetBlock(cgf, loc);
+        retBlockInCaseIndex[caseOp] = retBlocks.size() - 1;
+        return ret;
       }
-      updateRetLoc(returnBlock, loc);
-      return returnBlock;
+
+      if (normalRetBlockIndex) {
+        mlir::Block *ret = retBlocks[*normalRetBlockIndex];
+        updateRetLoc(ret, loc);
+        return ret;
+      }
+
+      mlir::Block *ret = createRetBlock(cgf, loc);
+      normalRetBlockIndex = retBlocks.size() - 1;
+      return ret;
     }
 
     mlir::Block *getEntryBlock() { return entryBlock; }
@@ -1239,6 +1277,8 @@ public:
                               QualType &baseType, Address &addr);
   LValue emitArraySubscriptExpr(const clang::ArraySubscriptExpr *e);
 
+  LValue emitExtVectorElementExpr(const ExtVectorElementExpr *e);
+
   Address emitArrayToPointerDecay(const Expr *e,
                                   LValueBaseInfo *baseInfo = nullptr);
 
@@ -1246,6 +1286,9 @@ public:
 
   RValue emitAtomicExpr(AtomicExpr *e);
   void emitAtomicInit(Expr *init, LValue dest);
+  void emitAtomicStore(RValue rvalue, LValue dest, bool isInit);
+  void emitAtomicStore(RValue rvalue, LValue dest, cir::MemOrder order,
+                       bool isVolatile, bool isInit);
 
   AutoVarEmission emitAutoVarAlloca(const clang::VarDecl &d,
                                     mlir::OpBuilder::InsertPoint ip = {});
@@ -1278,6 +1321,30 @@ public:
 
   RValue emitBuiltinExpr(const clang::GlobalDecl &gd, unsigned builtinID,
                          const clang::CallExpr *e, ReturnValueSlot returnValue);
+
+  /// Returns a Value corresponding to the size of the given expression by
+  /// emitting a `cir.objsize` operation.
+  ///
+  /// \param e The expression whose object size to compute
+  /// \param type Determines the semantics of the object size computation.
+  ///   The type parameter is a 2-bit value where:
+  ///     bit 0 (type & 1): 0 = whole object, 1 = closest subobject
+  ///     bit 1 (type & 2): 0 = maximum size, 2 = minimum size
+  /// \param resType The result type for the size value
+  /// \param emittedE Optional pre-emitted pointer value. If non-null, we'll
+  ///   call `cir.objsize` on this value rather than emitting e.
+  /// \param isDynamic If true, allows runtime evaluation via dynamic mode
+  mlir::Value emitBuiltinObjectSize(const clang::Expr *e, unsigned type,
+                                    cir::IntType resType, mlir::Value emittedE,
+                                    bool isDynamic);
+
+  mlir::Value evaluateOrEmitBuiltinObjectSize(const clang::Expr *e,
+                                              unsigned type,
+                                              cir::IntType resType,
+                                              mlir::Value emittedE,
+                                              bool isDynamic);
+
+  int64_t getAccessedFieldNo(unsigned idx, mlir::ArrayAttr elts);
 
   RValue emitCall(const CIRGenFunctionInfo &funcInfo,
                   const CIRGenCallee &callee, ReturnValueSlot returnValue,
@@ -1476,7 +1543,11 @@ public:
                               llvm::ArrayRef<mlir::Value> args = {});
 
   /// Emit the computation of the specified expression of scalar type.
-  mlir::Value emitScalarExpr(const clang::Expr *e);
+  mlir::Value emitScalarExpr(const clang::Expr *e,
+                             bool ignoreResultAssign = false);
+
+  mlir::Value emitScalarOrConstFoldImmArg(unsigned iceArguments, unsigned index,
+                                          const Expr *arg);
 
   mlir::Value emitScalarPrePostIncDec(const UnaryOperator *e, LValue lv,
                                       cir::UnaryOpKind kind, bool isPre);
@@ -1573,6 +1644,8 @@ public:
   /// Load a complex number from the specified l-value.
   mlir::Value emitLoadOfComplex(LValue src, SourceLocation loc);
 
+  RValue emitLoadOfExtVectorElementLValue(LValue lv);
+
   /// Given an expression that represents a value lvalue, this method emits
   /// the address of the lvalue, then loads the result as an rvalue,
   /// returning the rvalue.
@@ -1654,8 +1727,8 @@ public:
                           bool isInit);
 
   void emitStoreOfScalar(mlir::Value value, Address addr, bool isVolatile,
-                         clang::QualType ty, bool isInit = false,
-                         bool isNontemporal = false);
+                         clang::QualType ty, LValueBaseInfo baseInfo,
+                         bool isInit = false, bool isNontemporal = false);
   void emitStoreOfScalar(mlir::Value value, LValue lvalue, bool isInit);
 
   /// Store the specified rvalue into the specified

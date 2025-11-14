@@ -313,7 +313,7 @@ getCodeModel(const CodeGenOptions &CodeGenOpts) {
                            .Case("kernel", llvm::CodeModel::Kernel)
                            .Case("medium", llvm::CodeModel::Medium)
                            .Case("large", llvm::CodeModel::Large)
-                           .Cases("default", "", ~1u)
+                           .Cases({"default", ""}, ~1u)
                            .Default(~0u);
   assert(CodeModel != ~0u && "invalid code model!");
   if (CodeModel == ~1u)
@@ -800,16 +800,6 @@ static void addSanitizers(const Triple &TargetTriple,
       MPM.addPass(DataFlowSanitizerPass(LangOpts.NoSanitizeFiles,
                                         PB.getVirtualFileSystemPtr()));
     }
-
-    if (LangOpts.Sanitize.has(SanitizerKind::AllocToken)) {
-      if (Level == OptimizationLevel::O0) {
-        // The default pass builder only infers libcall function attrs when
-        // optimizing, so we insert it here because we need it for accurate
-        // memory allocation function detection.
-        MPM.addPass(InferFunctionAttrsPass());
-      }
-      MPM.addPass(AllocTokenPass(getAllocTokenOptions(LangOpts, CodeGenOpts)));
-    }
   };
   if (ClSanitizeOnOptimizerEarlyEP) {
     PB.registerOptimizerEarlyEPCallback(
@@ -850,6 +840,23 @@ static void addSanitizers(const Triple &TargetTriple,
               createModuleToFunctionPassAdaptor(LowerAllowCheckPass(Opts)));
         });
   }
+}
+
+static void addAllocTokenPass(const Triple &TargetTriple,
+                              const CodeGenOptions &CodeGenOpts,
+                              const LangOptions &LangOpts, PassBuilder &PB) {
+  PB.registerOptimizerLastEPCallback([&](ModulePassManager &MPM,
+                                         OptimizationLevel Level,
+                                         ThinOrFullLTOPhase) {
+    if (Level == OptimizationLevel::O0 &&
+        LangOpts.Sanitize.has(SanitizerKind::AllocToken)) {
+      // The default pass builder only infers libcall function attrs when
+      // optimizing, so we insert it here because we need it for accurate
+      // memory allocation function detection with -fsanitize=alloc-token.
+      MPM.addPass(InferFunctionAttrsPass());
+    }
+    MPM.addPass(AllocTokenPass(getAllocTokenOptions(LangOpts, CodeGenOpts)));
+  });
 }
 
 void EmitAssemblyHelper::RunOptimizationPipeline(
@@ -1106,6 +1113,7 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
     if (!IsThinLTOPostLink) {
       addSanitizers(TargetTriple, CodeGenOpts, LangOpts, PB);
       addKCFIPass(TargetTriple, LangOpts, PB);
+      addAllocTokenPass(TargetTriple, CodeGenOpts, LangOpts, PB);
     }
 
     if (std::optional<GCOVOptions> Options =

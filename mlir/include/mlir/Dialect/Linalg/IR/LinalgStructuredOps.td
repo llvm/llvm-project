@@ -235,8 +235,7 @@ def TensorOrMemref :
 
 def MapOp : LinalgStructuredBase_Op<"map", [
     DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
-    DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmBlockArgumentNames"]>,
-    SingleBlockImplicitTerminator<"YieldOp">]> {
+    DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmBlockArgumentNames"]>]> {
   let summary = "Elementwise operations";
   let description = [{
     Models elementwise operations on tensors in terms of arithmetic operations
@@ -293,10 +292,6 @@ def MapOp : LinalgStructuredBase_Op<"map", [
     // Implement functions necessary for DestinationStyleOpInterface.
     MutableOperandRange getDpsInitsMutable() { return getInitMutable(); }
 
-    SmallVector<OpOperand *> getOpOperandsMatchingBBargs() {
-      return getDpsInputOperands();
-    }
-
     bool payloadUsesValueFromOperand(OpOperand * opOperand) {
       if (isDpsInit(opOperand)) return false;
       return !getMatchingBlockArgument(opOperand).use_empty();
@@ -322,8 +317,7 @@ def MapOp : LinalgStructuredBase_Op<"map", [
 def ReduceOp : LinalgStructuredBase_Op<"reduce", [
     DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
     DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmBlockArgumentNames"]>,
-    SameVariadicOperandSize,
-    SingleBlockImplicitTerminator<"YieldOp">]> {
+    SameVariadicOperandSize]> {
   let summary = "Reduce operator";
   let description = [{
     Executes `combiner` on the `dimensions` of `inputs` and returns the
@@ -404,8 +398,7 @@ def ReduceOp : LinalgStructuredBase_Op<"reduce", [
 //===----------------------------------------------------------------------===//
 
 def TransposeOp : LinalgStructuredBase_Op<"transpose", [
-    DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
-    SingleBlockImplicitTerminator<"YieldOp">]> {
+    DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>]> {
   let summary = "Transpose operator";
   let description = [{
     Permutes the dimensions of `input` according to the given `permutation`.
@@ -481,8 +474,7 @@ def TransposeOp : LinalgStructuredBase_Op<"transpose", [
 //===----------------------------------------------------------------------===//
 
 def BroadcastOp : LinalgStructuredBase_Op<"broadcast", [
-    DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
-    SingleBlockImplicitTerminator<"YieldOp">]> {
+    DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>]> {
   let summary = "Static broadcast operator";
   let description = [{
     Broadcast the input into the given shape by adding `dimensions`.
@@ -551,8 +543,9 @@ def BroadcastOp : LinalgStructuredBase_Op<"broadcast", [
 //===----------------------------------------------------------------------===//
 // Op definition for ElementwiseOp
 //===----------------------------------------------------------------------===//
+
 def ElementwiseOp : LinalgStructuredBase_Op<"elementwise", [
-                   AttrSizedOperandSegments]> {
+                    AttrSizedOperandSegments]> {
   let summary = [{ Performs element-wise operation }];
   let description = [{
     The attribute `kind` describes arithmetic operation to perform. The
@@ -688,7 +681,6 @@ def ElementwiseOp : LinalgStructuredBase_Op<"elementwise", [
 def MatmulOp : LinalgStructuredBase_Op<"matmul", [
                AttrSizedOperandSegments,
                LinalgContractionOpInterface]> {
-
   let summary = [{
     Performs a matrix multiplication of two 2D inputs without broadcast or transpose.
     }];
@@ -820,8 +812,8 @@ def MatmulOp : LinalgStructuredBase_Op<"matmul", [
 //===----------------------------------------------------------------------===//
 
 def ContractOp : LinalgStructuredBase_Op<"contract", [
-               AttrSizedOperandSegments,
-               LinalgContractionOpInterface]> {
+                 AttrSizedOperandSegments,
+                 LinalgContractionOpInterface]> {
   let summary = [{
     Perform a contraction on two inputs, accumulating into the third.
   }];
@@ -958,9 +950,9 @@ def ContractOp : LinalgStructuredBase_Op<"contract", [
 // Op definition for BatchMatmulOp
 //===----------------------------------------------------------------------===//
 
-def BatchMatmulOp : LinalgStructuredBase_Op<"batch_matmul", !listconcat([AttrSizedOperandSegments],
-  /*extraInterfaces=*/[LinalgContractionOpInterface])> {
-    
+def BatchMatmulOp : LinalgStructuredBase_Op<"batch_matmul", [
+                    AttrSizedOperandSegments,
+                    LinalgContractionOpInterface]> {
   let summary = [{Performs a batched matrix multiplication of two 3D inputs.}];
   let description = [{Numeric casting is performed on the operands to the inner multiply, promoting
     them to the same data type as the accumulator/output.
@@ -1091,7 +1083,6 @@ def BatchMatmulOp : LinalgStructuredBase_Op<"batch_matmul", !listconcat([AttrSiz
 def BatchReduceMatmulOp : LinalgStructuredBase_Op<"batch_reduce_matmul", [
                           AttrSizedOperandSegments,
                           LinalgContractionOpInterface]> {
-    
   let summary = [{Performs a batch-reduce matrix multiplication on two inputs.
     The partial multiplication results are reduced into a 2D output.}];
   let description = [{

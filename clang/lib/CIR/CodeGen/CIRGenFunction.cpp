@@ -242,12 +242,19 @@ void CIRGenFunction::LexicalScope::cleanup() {
     }
   };
 
-  if (returnBlock != nullptr) {
-    // Write out the return block, which loads the value from `__retval` and
-    // issues the `cir.return`.
+  // Cleanup are done right before codegen resumes a scope. This is where
+  // objects are destroyed. Process all return blocks.
+  // TODO(cir): Handle returning from a switch statement through a cleanup
+  // block. We can't simply jump to the cleanup block, because the cleanup block
+  // is not part of the case region. Either reemit all cleanups in the return
+  // block or wait for MLIR structured control flow to support early exits.
+  llvm::SmallVector<mlir::Block *> retBlocks;
+  for (mlir::Block *retBlock : localScope->getRetBlocks()) {
     mlir::OpBuilder::InsertionGuard guard(builder);
-    builder.setInsertionPointToEnd(returnBlock);
-    (void)emitReturn(*returnLoc);
+    builder.setInsertionPointToEnd(retBlock);
+    retBlocks.push_back(retBlock);
+    mlir::Location retLoc = localScope->getRetLoc(retBlock);
+    emitReturn(retLoc);
   }
 
   auto insertCleanupAndLeave = [&](mlir::Block *insPt) {
@@ -274,19 +281,22 @@ void CIRGenFunction::LexicalScope::cleanup() {
 
     if (localScope->depth == 0) {
       // Reached the end of the function.
-      if (returnBlock != nullptr) {
-        if (returnBlock->getUses().empty()) {
-          returnBlock->erase();
+      // Special handling only for single return block case
+      if (localScope->getRetBlocks().size() == 1) {
+        mlir::Block *retBlock = localScope->getRetBlocks()[0];
+        mlir::Location retLoc = localScope->getRetLoc(retBlock);
+        if (retBlock->getUses().empty()) {
+          retBlock->erase();
         } else {
           // Thread return block via cleanup block.
           if (cleanupBlock) {
-            for (mlir::BlockOperand &blockUse : returnBlock->getUses()) {
+            for (mlir::BlockOperand &blockUse : retBlock->getUses()) {
               cir::BrOp brOp = mlir::cast<cir::BrOp>(blockUse.getOwner());
               brOp.setSuccessor(cleanupBlock);
             }
           }
 
-          cir::BrOp::create(builder, *returnLoc, returnBlock);
+          cir::BrOp::create(builder, retLoc, retBlock);
           return;
         }
       }
@@ -324,8 +334,10 @@ void CIRGenFunction::LexicalScope::cleanup() {
   bool entryBlock = builder.getInsertionBlock()->isEntryBlock();
   if (!entryBlock && curBlock->empty()) {
     curBlock->erase();
-    if (returnBlock != nullptr && returnBlock->getUses().empty())
-      returnBlock->erase();
+    for (mlir::Block *retBlock : retBlocks) {
+      if (retBlock->getUses().empty())
+        retBlock->erase();
+    }
     return;
   }
 
@@ -620,6 +632,10 @@ cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
 
     startFunction(gd, retTy, fn, funcType, args, loc, bodyRange.getBegin());
 
+    // Save parameters for coroutine function.
+    if (body && isa_and_nonnull<CoroutineBodyStmt>(body))
+      llvm::append_range(fnArgs, funcDecl->parameters());
+
     if (isa<CXXDestructorDecl>(funcDecl)) {
       emitDestructorBody(args);
     } else if (isa<CXXConstructorDecl>(funcDecl)) {
@@ -722,7 +738,9 @@ void CIRGenFunction::emitDestructorBody(FunctionArgList &args) {
   // outside of the function-try-block, which means it's always
   // possible to delegate the destructor body to the complete
   // destructor.  Do so.
-  if (dtorType == Dtor_Deleting) {
+  if (dtorType == Dtor_Deleting || dtorType == Dtor_VectorDeleting) {
+    if (cxxStructorImplicitParamValue && dtorType == Dtor_VectorDeleting)
+      cgm.errorNYI(dtor->getSourceRange(), "emitConditionalArrayDtorCall");
     RunCleanupsScope dtorEpilogue(*this);
     enterDtorCleanups(dtor, Dtor_Deleting);
     if (haveInsertPoint()) {
@@ -755,6 +773,7 @@ void CIRGenFunction::emitDestructorBody(FunctionArgList &args) {
   case Dtor_Comdat:
     llvm_unreachable("not expecting a COMDAT");
   case Dtor_Deleting:
+  case Dtor_VectorDeleting:
     llvm_unreachable("already handled deleting case");
 
   case Dtor_Complete:
@@ -871,6 +890,8 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
     return emitConditionalOperatorLValue(cast<BinaryConditionalOperator>(e));
   case Expr::ArraySubscriptExprClass:
     return emitArraySubscriptExpr(cast<ArraySubscriptExpr>(e));
+  case Expr::ExtVectorElementExprClass:
+    return emitExtVectorElementExpr(cast<ExtVectorElementExpr>(e));
   case Expr::UnaryOperatorClass:
     return emitUnaryOpLValue(cast<UnaryOperator>(e));
   case Expr::StringLiteralClass:
@@ -900,6 +921,13 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
   case Expr::CXXOperatorCallExprClass:
   case Expr::UserDefinedLiteralClass:
     return emitCallExprLValue(cast<CallExpr>(e));
+  case Expr::ExprWithCleanupsClass: {
+    const auto *cleanups = cast<ExprWithCleanups>(e);
+    RunCleanupsScope scope(*this);
+    LValue lv = emitLValue(cleanups->getSubExpr());
+    assert(!cir::MissingFeatures::cleanupWithPreservedValues());
+    return lv;
+  }
   case Expr::ParenExprClass:
     return emitLValue(cast<ParenExpr>(e)->getSubExpr());
   case Expr::GenericSelectionExprClass:
@@ -1008,7 +1036,7 @@ CIRGenFunction::emitArrayLength(const clang::ArrayType *origArrayType,
   if (isa<VariableArrayType>(arrayType)) {
     assert(cir::MissingFeatures::vlas());
     cgm.errorNYI(*currSrcLoc, "VLAs");
-    return builder.getConstInt(*currSrcLoc, SizeTy, 0);
+    return builder.getConstInt(*currSrcLoc, sizeTy, 0);
   }
 
   uint64_t countFromCLAs = 1;
@@ -1037,7 +1065,7 @@ CIRGenFunction::emitArrayLength(const clang::ArrayType *origArrayType,
   }
 
   baseType = eltType;
-  return builder.getConstInt(*currSrcLoc, SizeTy, countFromCLAs);
+  return builder.getConstInt(*currSrcLoc, sizeTy, countFromCLAs);
 }
 
 mlir::Value CIRGenFunction::emitAlignmentAssumption(
@@ -1074,7 +1102,7 @@ CIRGenFunction::getVLASize(const VariableArrayType *type) {
     elementType = type->getElementType();
     mlir::Value vlaSize = vlaSizeMap[type->getSizeExpr()];
     assert(vlaSize && "no size for VLA!");
-    assert(vlaSize.getType() == SizeTy);
+    assert(vlaSize.getType() == sizeTy);
 
     if (!numElements) {
       numElements = vlaSize;
@@ -1188,7 +1216,7 @@ void CIRGenFunction::emitVariablyModifiedType(QualType type) {
           // Always zexting here would be wrong if it weren't
           // undefined behavior to have a negative bound.
           // FIXME: What about when size's type is larger than size_t?
-          entry = builder.createIntCast(size, SizeTy);
+          entry = builder.createIntCast(size, sizeTy);
         }
       }
       type = vat->getElementType();

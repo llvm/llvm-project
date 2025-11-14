@@ -26,6 +26,8 @@
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
 #include "flang/Support/Flags.h"
+#include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Frontend/OpenMP/OMP.h.inc"
 #include "llvm/Support/Debug.h"
 #include <list>
@@ -413,6 +415,18 @@ public:
     return true;
   }
 
+  bool Pre(const parser::SpecificationPart &) {
+    partStack_.push_back(PartKind::SpecificationPart);
+    return true;
+  }
+  void Post(const parser::SpecificationPart &) { partStack_.pop_back(); }
+
+  bool Pre(const parser::ExecutionPart &) {
+    partStack_.push_back(PartKind::ExecutionPart);
+    return true;
+  }
+  void Post(const parser::ExecutionPart &) { partStack_.pop_back(); }
+
   bool Pre(const parser::InternalSubprogram &) {
     // Clear the labels being tracked in the previous scope
     ClearLabels();
@@ -453,6 +467,21 @@ public:
     return true;
   }
 
+  bool Pre(const parser::OmpStylizedDeclaration &x) {
+    static llvm::StringMap<Symbol::Flag> map{
+        {"omp_in", Symbol::Flag::OmpInVar},
+        {"omp_orig", Symbol::Flag::OmpOrigVar},
+        {"omp_out", Symbol::Flag::OmpOutVar},
+        {"omp_priv", Symbol::Flag::OmpPrivVar},
+    };
+    if (auto &name{std::get<parser::ObjectName>(x.var.t)}; name.symbol) {
+      if (auto found{map.find(name.ToString())}; found != map.end()) {
+        ResolveOmp(name, found->second,
+            const_cast<Scope &>(DEREF(name.symbol).owner()));
+      }
+    }
+    return false;
+  }
   bool Pre(const parser::OmpMetadirectiveDirective &x) {
     PushContext(x.v.source, llvm::omp::Directive::OMPD_metadirective);
     return true;
@@ -622,8 +651,7 @@ public:
   bool Pre(const parser::OpenMPThreadprivate &);
   void Post(const parser::OpenMPThreadprivate &) { PopContext(); }
 
-  bool Pre(const parser::OpenMPDeclarativeAllocate &);
-  void Post(const parser::OpenMPDeclarativeAllocate &) { PopContext(); }
+  bool Pre(const parser::OmpAllocateDirective &);
 
   bool Pre(const parser::OpenMPAssumeConstruct &);
   void Post(const parser::OpenMPAssumeConstruct &) { PopContext(); }
@@ -633,9 +661,6 @@ public:
 
   bool Pre(const parser::OpenMPDispatchConstruct &);
   void Post(const parser::OpenMPDispatchConstruct &) { PopContext(); }
-
-  bool Pre(const parser::OpenMPExecutableAllocate &);
-  void Post(const parser::OpenMPExecutableAllocate &);
 
   bool Pre(const parser::OpenMPAllocatorsConstruct &);
   void Post(const parser::OpenMPAllocatorsConstruct &);
@@ -980,6 +1005,14 @@ private:
       std::pair<parser::CharBlock, std::optional<DirContext>>>
       targetLabels_;
   parser::CharBlock currentStatementSource_;
+
+  enum class PartKind : int {
+    // There are also other "parts", such as internal-subprogram-part, etc,
+    // but we're keeping track of these two for now.
+    SpecificationPart,
+    ExecutionPart,
+  };
+  std::vector<PartKind> partStack_;
 
   void AddAllocateName(const parser::Name *&object) {
     allocateNames_.push_back(object);
@@ -2413,22 +2446,6 @@ void OmpAttributeVisitor::PrivatizeAssociatedLoopIndexAndCheckLoopLevel(
         }
       }
       CheckAssocLoopLevel(level, GetAssociatedClause());
-    } else if (const auto *loop{std::get_if<
-                   common::Indirection<parser::OpenMPLoopConstruct>>(
-                   innerMostNest)}) {
-      const parser::OmpDirectiveSpecification &beginSpec{
-          loop->value().BeginDir()};
-      const parser::OmpDirectiveName &beginName{beginSpec.DirName()};
-      if (beginName.v != llvm::omp::Directive::OMPD_unroll &&
-          beginName.v != llvm::omp::Directive::OMPD_tile) {
-        context_.Say(GetContext().directiveSource,
-            "Only UNROLL or TILE constructs are allowed between an OpenMP Loop Construct and a DO construct"_err_en_US,
-            parser::ToUpperCaseLetters(llvm::omp::getOpenMPDirectiveName(
-                GetContext().directive, version)
-                    .str()));
-      } else {
-        PrivatizeAssociatedLoopIndexAndCheckLoopLevel(loop->value());
-      }
     } else {
       context_.Say(GetContext().directiveSource,
           "A DO loop must follow the %s directive"_err_en_US,
@@ -2541,10 +2558,24 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPThreadprivate &x) {
   return true;
 }
 
-bool OmpAttributeVisitor::Pre(const parser::OpenMPDeclarativeAllocate &x) {
+bool OmpAttributeVisitor::Pre(const parser::OmpAllocateDirective &x) {
   PushContext(x.source, llvm::omp::Directive::OMPD_allocate);
-  const auto &list{std::get<parser::OmpObjectList>(x.t)};
-  ResolveOmpObjectList(list, Symbol::Flag::OmpDeclarativeAllocateDirective);
+  assert(!partStack_.empty() && "Misplaced directive");
+
+  auto ompFlag{partStack_.back() == PartKind::SpecificationPart
+          ? Symbol::Flag::OmpDeclarativeAllocateDirective
+          : Symbol::Flag::OmpExecutableAllocateDirective};
+
+  parser::omp::OmpAllocateInfo info{parser::omp::SplitOmpAllocate(x)};
+  for (const parser::OmpAllocateDirective *ad : info.dirs) {
+    for (const parser::OmpArgument &arg : ad->BeginDir().Arguments().v) {
+      if (auto *object{omp::GetArgumentObject(arg)}) {
+        ResolveOmpObject(*object, ompFlag);
+      }
+    }
+  }
+
+  PopContext();
   return false;
 }
 
@@ -2560,15 +2591,6 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPAtomicConstruct &x) {
 
 bool OmpAttributeVisitor::Pre(const parser::OpenMPDispatchConstruct &x) {
   PushContext(x.source, llvm::omp::Directive::OMPD_dispatch);
-  return true;
-}
-
-bool OmpAttributeVisitor::Pre(const parser::OpenMPExecutableAllocate &x) {
-  PushContext(x.source, llvm::omp::Directive::OMPD_allocate);
-  const auto &list{std::get<std::optional<parser::OmpObjectList>>(x.t)};
-  if (list) {
-    ResolveOmpObjectList(*list, Symbol::Flag::OmpExecutableAllocateDirective);
-  }
   return true;
 }
 
@@ -2641,10 +2663,6 @@ bool OmpAttributeVisitor::IsNestedInDirective(llvm::omp::Directive directive) {
     }
   }
   return false;
-}
-
-void OmpAttributeVisitor::Post(const parser::OpenMPExecutableAllocate &x) {
-  PopContext();
 }
 
 void OmpAttributeVisitor::Post(const parser::OpenMPAllocatorsConstruct &x) {
@@ -2931,6 +2949,67 @@ void OmpAttributeVisitor::CreateImplicitSymbols(const Symbol *symbol) {
   }
 }
 
+static bool IsOpenMPPointer(const Symbol &symbol) {
+  if (IsPointer(symbol) || IsBuiltinCPtr(symbol))
+    return true;
+  return false;
+}
+
+static bool IsOpenMPAggregate(const Symbol &symbol) {
+  if (IsAllocatable(symbol) || IsOpenMPPointer(symbol))
+    return false;
+
+  const auto *type{symbol.GetType()};
+  // OpenMP categorizes Fortran characters as aggregates.
+  if (type->category() == Fortran::semantics::DeclTypeSpec::Category::Character)
+    return true;
+
+  if (const auto *det{symbol.GetUltimate()
+              .detailsIf<Fortran::semantics::ObjectEntityDetails>()})
+    if (det->IsArray())
+      return true;
+
+  if (type->AsDerived())
+    return true;
+
+  if (IsDeferredShape(symbol) || IsAssumedRank(symbol) ||
+      IsAssumedShape(symbol))
+    return true;
+  return false;
+}
+
+static bool IsOpenMPScalar(const Symbol &symbol) {
+  if (IsOpenMPAggregate(symbol) || IsOpenMPPointer(symbol) ||
+      IsAllocatable(symbol))
+    return false;
+  const auto *type{symbol.GetType()};
+  if ((!symbol.GetShape() || symbol.GetShape()->empty()) &&
+      (type->category() ==
+              Fortran::semantics::DeclTypeSpec::Category::Numeric ||
+          type->category() ==
+              Fortran::semantics::DeclTypeSpec::Category::Logical))
+    return true;
+  return false;
+}
+
+static bool DefaultMapCategoryMatchesSymbol(
+    parser::OmpVariableCategory::Value category, const Symbol &symbol) {
+  using VarCat = parser::OmpVariableCategory::Value;
+  switch (category) {
+  case VarCat::Scalar:
+    return IsOpenMPScalar(symbol);
+  case VarCat::Allocatable:
+    return IsAllocatable(symbol);
+  case VarCat::Aggregate:
+    return IsOpenMPAggregate(symbol);
+  case VarCat::Pointer:
+    return IsOpenMPPointer(symbol);
+  case VarCat::All:
+    return true;
+  }
+  return false;
+}
+
 // For OpenMP constructs, check all the data-refs within the constructs
 // and adjust the symbol for each Name if necessary
 void OmpAttributeVisitor::Post(const parser::Name &name) {
@@ -2961,6 +3040,36 @@ void OmpAttributeVisitor::Post(const parser::Name &name) {
             context_.Say(name.source,
                 "The DEFAULT(NONE) clause requires that '%s' must be listed in a data-sharing attribute clause"_err_en_US,
                 symbol->name());
+          }
+        }
+      }
+    }
+
+    // TODO: handle case where default and defaultmap are present on the same
+    // construct and conflict, defaultmap should supersede default if they
+    // conflict.
+    if (!GetContext().defaultMap.empty()) {
+      // Checked before implicit data sharing attributes as this rule ignores
+      // them and expects explicit predetermined/specified attributes to be in
+      // place for the types specified.
+      if (Symbol * found{currScope().FindSymbol(name.source)}) {
+        // If the variable has declare target applied to it (enter or link) it
+        // is exempt from defaultmap(none) restrictions
+        if (!symbol->GetUltimate().test(Symbol::Flag::OmpDeclareTarget)) {
+          auto &dMap = GetContext().defaultMap;
+          for (auto defaults : dMap) {
+            if (defaults.second ==
+                parser::OmpDefaultmapClause::ImplicitBehavior::None) {
+              if (DefaultMapCategoryMatchesSymbol(defaults.first, *found)) {
+                if (!IsObjectWithDSA(*symbol)) {
+                  context_.Say(name.source,
+                      "The DEFAULTMAP(NONE) clause requires that '%s' must be "
+                      "listed in a "
+                      "data-sharing attribute, data-mapping attribute, or is_device_ptr clause"_err_en_US,
+                      symbol->name());
+                }
+              }
+            }
           }
         }
       }
