@@ -7,12 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/threads/mutex.h"
-#include "src/__support/threads/raw_mutex.h"
 #include "src/__support/threads/mutex_common.h"
+#include "src/__support/threads/raw_mutex.h"
 #include "test/UnitTest/Test.h"
 
 TEST(LlvmLibcSupportThreadsMutexTest, SmokeTest) {
-  LIBC_NAMESPACE::Mutex mutex(0,0,0,0);;
+  LIBC_NAMESPACE::Mutex mutex(0, 0, 0, 0);
+  ;
   ASSERT_EQ(mutex.lock(), LIBC_NAMESPACE::MutexError::NONE);
   ASSERT_EQ(mutex.unlock(), LIBC_NAMESPACE::MutexError::NONE);
   ASSERT_EQ(mutex.try_lock(), LIBC_NAMESPACE::MutexError::NONE);
