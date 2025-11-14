@@ -334,17 +334,17 @@ TEST(HeaderSourceSwitchTest, CaseSensitivity) {
   // index, check if we can still find the source file, which defines less
   // symbols than the header.
   auto HeaderAbsPath = testPath("HEADER.H");
-  // We expect the heuristics to pick:
-  // - header on case sensitive file systems, because the HeaderAbsPath doesn't
-  //   match what we've seen through index.
-  // - source on case insensitive file systems, as the HeaderAbsPath would match
-  //   the filename in index.
+// We expect the heuristics to pick:
+// - header on case sensitive file systems, because the HeaderAbsPath doesn't
+//   match what we've seen through index.
+// - source on case insensitive file systems, as the HeaderAbsPath would match
+//   the filename in index.
 #ifdef CLANGD_PATH_CASE_INSENSITIVE
   EXPECT_THAT(getCorrespondingHeaderOrSource(HeaderAbsPath, AST, Index.get()),
-              llvm::ValueIs(testing::StrCaseEq(testPath(TU.Filename))));
+              llvm::ValueIs(Path(testPath(TU.Filename))));
 #else
   EXPECT_THAT(getCorrespondingHeaderOrSource(HeaderAbsPath, AST, Index.get()),
-              llvm::ValueIs(testing::StrCaseEq(testPath(TU.HeaderFilename))));
+              llvm::ValueIs(Path(testPath(TU.HeaderFilename))));
 #endif
 }
 

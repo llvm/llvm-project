@@ -43,7 +43,8 @@ public:
         [&](std::optional<llvm::StringRef> Data) {
           CachedValue.clear();
           if (Data)
-            for (auto &Fragment : Fragment::parseYAML(*Data, path(), DC)) {
+            for (auto &Fragment :
+                 Fragment::parseYAML(*Data, path().raw(), DC)) {
               Fragment.Source.Directory = Directory;
               Fragment.Source.Trusted = Trusted;
               CachedValue.push_back(std::move(Fragment).compile(DC));
@@ -103,9 +104,9 @@ Provider::fromAncestorRelativeYAMLFiles(llvm::StringRef RelPath,
 
       // Compute absolute paths to all ancestors (substrings of P.Path).
       llvm::SmallVector<llvm::StringRef, 8> Ancestors;
-      for (auto Ancestor = absoluteParent(P.Path); !Ancestor.empty();
-           Ancestor = absoluteParent(Ancestor)) {
-        Ancestors.emplace_back(Ancestor);
+      for (auto Ancestor = PathRef(P.Path).absoluteParent(); !Ancestor.empty();
+           Ancestor = Ancestor.absoluteParent()) {
+        Ancestors.emplace_back(Ancestor.raw());
       }
       // Ensure corresponding cache entries exist in the map.
       llvm::SmallVector<FileConfigCache *, 8> Caches;

@@ -934,11 +934,11 @@ void ClangdLSPServer::onDocumentDidClose(
 
   {
     std::lock_guard<std::mutex> Lock(DiagRefMutex);
-    DiagRefMap.erase(File);
+    DiagRefMap.erase(File.raw());
   }
   {
     std::lock_guard<std::mutex> HLock(SemanticTokensMutex);
-    LastSemanticTokens.erase(File);
+    LastSemanticTokens.erase(File.raw());
   }
   // clangd will not send updates for this file anymore, so we empty out the
   // list of diagnostics shown on the client (e.g. in the "Problems" pane of
@@ -1831,7 +1831,7 @@ void ClangdLSPServer::onDiagnosticsReady(PathRef File, llvm::StringRef Version,
   // Cache DiagRefMap
   {
     std::lock_guard<std::mutex> Lock(DiagRefMutex);
-    DiagRefMap[File] = LocalDiagMap;
+    DiagRefMap[File.raw()] = LocalDiagMap;
   }
 
   // Send a notification to the LSP client.

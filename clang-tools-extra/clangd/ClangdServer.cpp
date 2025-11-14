@@ -88,15 +88,15 @@ struct UpdateIndexCallbacks : public ParsingCallbacks {
       indexStdlib(CI, std::move(*Loc));
 
     // FIndex outlives the UpdateIndexCallbacks.
-    auto Task = [FIndex(FIndex), Path(Path.str()), Version(Version.str()),
+    auto Task = [FIndex(FIndex), Path(Path.owned()), Version(Version.str()),
                  ASTCtx(std::move(ASTCtx)), PI(std::move(PI))]() mutable {
       trace::Span Tracer("PreambleIndexing");
-      FIndex->updatePreamble(Path, Version, ASTCtx.getASTContext(),
+      FIndex->updatePreamble(Path.raw(), Version, ASTCtx.getASTContext(),
                              ASTCtx.getPreprocessor(), *PI);
     };
 
     if (Tasks) {
-      Tasks->runAsync("Preamble indexing for:" + Path + Version,
+      Tasks->runAsync("Preamble indexing for:" + Path.raw() + Version,
                       std::move(Task));
     } else
       Task();
@@ -262,7 +262,7 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
     BackgroundIdx = std::make_unique<BackgroundIndex>(
         TFS, CDB,
         BackgroundIndexStorage::createDiskBackedStorageFactory(
-            [&CDB](llvm::StringRef File) { return CDB.getProjectInfo(File); }),
+            [&CDB](PathRef File) { return CDB.getProjectInfo(File); }),
         std::move(BGOpts));
     AddIndex(BackgroundIdx.get());
   }
@@ -316,14 +316,14 @@ void ClangdServer::addDocument(PathRef File, llvm::StringRef Contents,
   bool NewFile = WorkScheduler->update(File, Inputs, WantDiags);
   // If we loaded Foo.h, we want to make sure Foo.cpp is indexed.
   if (NewFile && BackgroundIdx)
-    BackgroundIdx->boostRelated(File);
+    BackgroundIdx->boostRelated(File.raw());
 }
 
 void ClangdServer::reparseOpenFilesIfNeeded(
     llvm::function_ref<bool(llvm::StringRef File)> Filter) {
   // Reparse only opened files that were modified.
   for (const Path &FilePath : DraftMgr.getActiveFiles())
-    if (Filter(FilePath))
+    if (Filter(FilePath.raw()))
       if (auto Draft = DraftMgr.getDraft(FilePath)) // else disappeared in race?
         addDocument(FilePath, *Draft->Contents, Draft->Version,
                     WantDiagnostics::Auto);
@@ -340,7 +340,7 @@ std::function<Context(PathRef)>
 ClangdServer::createConfiguredContextProvider(const config::Provider *Provider,
                                               Callbacks *Publish) {
   if (!Provider)
-    return [](llvm::StringRef) { return Context::current().clone(); };
+    return [](PathRef) { return Context::current().clone(); };
 
   struct Impl {
     const config::Provider *Provider;
@@ -408,8 +408,8 @@ ClangdServer::createConfiguredContextProvider(const config::Provider *Provider,
   };
 
   // Copyable wrapper.
-  return [I(std::make_shared<Impl>(Provider, Publish))](llvm::StringRef Path) {
-    return (*I)(Path);
+  return [I(std::make_shared<Impl>(Provider, Publish))](PathRef Path) {
+    return (*I)(Path.raw());
   };
 }
 
@@ -426,7 +426,7 @@ void ClangdServer::codeComplete(PathRef File, Position Pos,
   if (!CodeCompleteOpts.Index) // Respect overridden index.
     CodeCompleteOpts.Index = Index;
 
-  auto Task = [Pos, CodeCompleteOpts, File = File.str(), CB = std::move(CB),
+  auto Task = [Pos, CodeCompleteOpts, File = File.owned(), CB = std::move(CB),
                this](llvm::Expected<InputsAndPreamble> IP) mutable {
     if (!IP)
       return CB(IP.takeError());
@@ -442,7 +442,8 @@ void ClangdServer::codeComplete(PathRef File, Position Pos,
       SpecFuzzyFind.emplace();
       {
         std::lock_guard<std::mutex> Lock(CachedCompletionFuzzyFindRequestMutex);
-        SpecFuzzyFind->CachedReq = CachedCompletionFuzzyFindRequestByFile[File];
+        SpecFuzzyFind->CachedReq =
+            CachedCompletionFuzzyFindRequestByFile[File.raw()];
       }
     }
     ParseInputs ParseInput{IP->Command, &getHeaderFS(), IP->Contents.str()};
@@ -474,7 +475,8 @@ void ClangdServer::codeComplete(PathRef File, Position Pos,
       return;
     if (SpecFuzzyFind->NewReq) {
       std::lock_guard<std::mutex> Lock(CachedCompletionFuzzyFindRequestMutex);
-      CachedCompletionFuzzyFindRequestByFile[File] = *SpecFuzzyFind->NewReq;
+      CachedCompletionFuzzyFindRequestByFile[File.raw()] =
+          *SpecFuzzyFind->NewReq;
     }
     // Explicitly block until async task completes, this is fine as we've
     // already provided reply to the client and running as a preamble task
@@ -496,7 +498,7 @@ void ClangdServer::signatureHelp(PathRef File, Position Pos,
                                  MarkupKind DocumentationFormat,
                                  Callback<SignatureHelp> CB) {
 
-  auto Action = [Pos, File = File.str(), CB = std::move(CB),
+  auto Action = [Pos, File = File.owned(), CB = std::move(CB),
                  DocumentationFormat,
                  this](llvm::Expected<InputsAndPreamble> IP) mutable {
     if (!IP)
@@ -544,12 +546,13 @@ void ClangdServer::formatFile(PathRef File, const std::vector<Range> &Rngs,
   }
 
   // Call clang-format.
-  auto Action = [File = File.str(), Code = std::move(*Code),
+  auto Action = [File = File.owned(), Code = std::move(*Code),
                  Ranges = std::move(RequestedRanges), CB = std::move(CB),
                  this]() mutable {
-    format::FormatStyle Style = getFormatStyleForFile(File, Code, TFS, true);
+    format::FormatStyle Style =
+        getFormatStyleForFile(File.raw(), Code, TFS, true);
     tooling::Replacements IncludeReplaces =
-        format::sortIncludes(Style, Code, Ranges, File);
+        format::sortIncludes(Style, Code, Ranges, File.raw());
     auto Changed = tooling::applyAllReplacements(Code, IncludeReplaces);
     if (!Changed)
       return CB(Changed.takeError());
@@ -557,9 +560,9 @@ void ClangdServer::formatFile(PathRef File, const std::vector<Range> &Rngs,
     CB(IncludeReplaces.merge(format::reformat(
         Style, *Changed,
         tooling::calculateRangesAfterReplacements(IncludeReplaces, Ranges),
-        File)));
+        File.raw())));
   };
-  WorkScheduler->runQuick("Format", File, std::move(Action));
+  WorkScheduler->runQuick("Format", File.raw(), std::move(Action));
 }
 
 void ClangdServer::formatOnType(PathRef File, Position Pos,
@@ -572,24 +575,24 @@ void ClangdServer::formatOnType(PathRef File, Position Pos,
   llvm::Expected<size_t> CursorPos = positionToOffset(*Code, Pos);
   if (!CursorPos)
     return CB(CursorPos.takeError());
-  auto Action = [File = File.str(), Code = std::move(*Code),
+  auto Action = [File = File.owned(), Code = std::move(*Code),
                  TriggerText = TriggerText.str(), CursorPos = *CursorPos,
                  CB = std::move(CB), this]() mutable {
-    auto Style = getFormatStyleForFile(File, Code, TFS, false);
+    auto Style = getFormatStyleForFile(File.raw(), Code, TFS, false);
     std::vector<TextEdit> Result;
     for (const tooling::Replacement &R :
          formatIncremental(Code, CursorPos, TriggerText, Style))
       Result.push_back(replacementToEdit(Code, R));
     return CB(Result);
   };
-  WorkScheduler->runQuick("FormatOnType", File, std::move(Action));
+  WorkScheduler->runQuick("FormatOnType", File.raw(), std::move(Action));
 }
 
 void ClangdServer::prepareRename(PathRef File, Position Pos,
                                  std::optional<std::string> NewName,
                                  const RenameOptions &RenameOpts,
                                  Callback<RenameResult> CB) {
-  auto Action = [Pos, File = File.str(), CB = std::move(CB),
+  auto Action = [Pos, File = File.owned(), CB = std::move(CB),
                  NewName = std::move(NewName),
                  RenameOpts](llvm::Expected<InputsAndAST> InpAST) mutable {
     if (!InpAST)
@@ -598,7 +601,7 @@ void ClangdServer::prepareRename(PathRef File, Position Pos,
     // only need main-file references
     auto Results =
         clangd::rename({Pos, NewName.value_or("__clangd_rename_placeholder"),
-                        InpAST->AST, File, /*FS=*/nullptr,
+                        InpAST->AST, File.raw(), /*FS=*/nullptr,
                         /*Index=*/nullptr, RenameOpts});
     if (!Results) {
       // LSP says to return null on failure, but that will result in a generic
@@ -614,7 +617,7 @@ void ClangdServer::prepareRename(PathRef File, Position Pos,
 void ClangdServer::rename(PathRef File, Position Pos, llvm::StringRef NewName,
                           const RenameOptions &Opts,
                           Callback<RenameResult> CB) {
-  auto Action = [File = File.str(), NewName = NewName.str(), Pos, Opts,
+  auto Action = [File = File.owned(), NewName = NewName.str(), Pos, Opts,
                  CB = std::move(CB),
                  this](llvm::Expected<InputsAndAST> InpAST) mutable {
     // Tracks number of files edited per invocation.
@@ -622,13 +625,13 @@ void ClangdServer::rename(PathRef File, Position Pos, llvm::StringRef NewName,
                                                trace::Metric::Distribution);
     if (!InpAST)
       return CB(InpAST.takeError());
-    auto R = clangd::rename({Pos, NewName, InpAST->AST, File,
+    auto R = clangd::rename({Pos, NewName, InpAST->AST, File.raw(),
                              DirtyFS->view(std::nullopt), Index, Opts});
     if (!R)
       return CB(R.takeError());
 
     if (Opts.WantFormat) {
-      auto Style = getFormatStyleForFile(File, InpAST->Inputs.Contents,
+      auto Style = getFormatStyleForFile(File.raw(), InpAST->Inputs.Contents,
                                          *InpAST->Inputs.TFS, false);
       llvm::Error Err = llvm::Error::success();
       for (auto &E : R->GlobalChanges)
@@ -760,7 +763,7 @@ void ClangdServer::applyTweak(PathRef File, Range Sel, StringRef TweakID,
   static constexpr trace::Metric TweakFailed(
       "tweak_failed", trace::Metric::Counter, "tweak_id");
   TweakAttempt.record(1, TweakID);
-  auto Action = [File = File.str(), Sel, TweakID = TweakID.str(),
+  auto Action = [File = File.owned(), Sel, TweakID = TweakID.str(),
                  CB = std::move(CB),
                  this](Expected<InputsAndAST> InpAST) mutable {
     if (!InpAST)
@@ -786,7 +789,7 @@ void ClangdServer::applyTweak(PathRef File, Range Sel, StringRef TweakID,
       for (auto &It : (*Effect)->ApplyEdits) {
         Edit &E = It.second;
         format::FormatStyle Style =
-            getFormatStyleForFile(File, E.InitialCode, TFS, false);
+            getFormatStyleForFile(File.raw(), E.InitialCode, TFS, false);
         if (llvm::Error Err = reformatEdit(E, Style))
           elog("Failed to format {0}: {1}", It.first(), std::move(Err));
       }
@@ -821,7 +824,7 @@ void ClangdServer::switchSourceHeader(
   if (auto CorrespondingFile =
           getCorrespondingHeaderOrSource(Path, TFS.view(std::nullopt)))
     return CB(std::move(CorrespondingFile));
-  auto Action = [Path = Path.str(), CB = std::move(CB),
+  auto Action = [Path = Path.owned(), CB = std::move(CB),
                  this](llvm::Expected<InputsAndAST> InpAST) mutable {
     if (!InpAST)
       return CB(InpAST.takeError());
@@ -844,12 +847,12 @@ void ClangdServer::findDocumentHighlights(
 
 void ClangdServer::findHover(PathRef File, Position Pos,
                              Callback<std::optional<HoverInfo>> CB) {
-  auto Action = [File = File.str(), Pos, CB = std::move(CB),
+  auto Action = [File = File.owned(), Pos, CB = std::move(CB),
                  this](llvm::Expected<InputsAndAST> InpAST) mutable {
     if (!InpAST)
       return CB(InpAST.takeError());
     format::FormatStyle Style = getFormatStyleForFile(
-        File, InpAST->Inputs.Contents, *InpAST->Inputs.TFS, false);
+        File.raw(), InpAST->Inputs.Contents, *InpAST->Inputs.TFS, false);
     CB(clangd::getHover(InpAST->AST, Pos, std::move(Style), Index));
   };
 
@@ -859,7 +862,8 @@ void ClangdServer::findHover(PathRef File, Position Pos,
 void ClangdServer::typeHierarchy(PathRef File, Position Pos, int Resolve,
                                  TypeHierarchyDirection Direction,
                                  Callback<std::vector<TypeHierarchyItem>> CB) {
-  auto Action = [File = File.str(), Pos, Resolve, Direction, CB = std::move(CB),
+  auto Action = [File = File.owned(), Pos, Resolve, Direction,
+                 CB = std::move(CB),
                  this](Expected<InputsAndAST> InpAST) mutable {
     if (!InpAST)
       return CB(InpAST.takeError());
@@ -898,7 +902,7 @@ void ClangdServer::resolveTypeHierarchy(
 
 void ClangdServer::prepareCallHierarchy(
     PathRef File, Position Pos, Callback<std::vector<CallHierarchyItem>> CB) {
-  auto Action = [File = File.str(), Pos,
+  auto Action = [File = File.owned(), Pos,
                  CB = std::move(CB)](Expected<InputsAndAST> InpAST) mutable {
     if (!InpAST)
       return CB(InpAST.takeError());
@@ -980,7 +984,7 @@ void ClangdServer::foldingRanges(llvm::StringRef File,
   WorkScheduler->runQuick("FoldingRanges", File, std::move(Action));
 }
 
-void ClangdServer::findType(llvm::StringRef File, Position Pos,
+void ClangdServer::findType(PathRef File, Position Pos,
                             Callback<std::vector<LocatedSymbol>> CB) {
   auto Action = [Pos, CB = std::move(CB),
                  this](llvm::Expected<InputsAndAST> InpAST) mutable {

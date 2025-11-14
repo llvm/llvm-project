@@ -55,23 +55,23 @@ TEST(GlobalCompilationDatabaseTest, FallbackCommand) {
                                            testPath("foo/bar")));
 }
 
-static tooling::CompileCommand cmd(llvm::StringRef File, llvm::StringRef Arg) {
+static tooling::CompileCommand cmd(PathRef File, llvm::StringRef Arg) {
   return tooling::CompileCommand(
-      testRoot(), File, {"clang", std::string(Arg), std::string(File)}, "");
+      testRoot(), File.owned().raw(),
+      {"clang", std::string(Arg), File.owned().raw()}, "");
 }
 
 class OverlayCDBTest : public ::testing::Test {
   class BaseCDB : public GlobalCompilationDatabase {
   public:
     std::optional<tooling::CompileCommand>
-    getCompileCommand(llvm::StringRef File) const override {
+    getCompileCommand(PathRef File) const override {
       if (File == testPath("foo.cc"))
         return cmd(File, "-DA=1");
       return std::nullopt;
     }
 
-    tooling::CompileCommand
-    getFallbackCommand(llvm::StringRef File) const override {
+    tooling::CompileCommand getFallbackCommand(PathRef File) const override {
       return cmd(File, "-DA=2");
     }
 

@@ -78,7 +78,7 @@ llvm::SmallString<128> getAbsolutePath(const tooling::CompileCommand &Cmd) {
 }
 
 bool shardIsStale(const LoadedShard &LS, llvm::vfs::FileSystem *FS) {
-  auto Buf = FS->getBufferForFile(LS.AbsolutePath);
+  auto Buf = FS->getBufferForFile(LS.AbsolutePath.raw());
   if (!Buf) {
     vlog("Background-index: Couldn't read {0} to validate stored index: {1}",
          LS.AbsolutePath, Buf.getError().message());
@@ -224,14 +224,14 @@ void BackgroundIndex::update(
     // We need to store shards before updating the index, since the latter
     // consumes slabs.
     // FIXME: Also skip serializing the shard if it is already up-to-date.
-    if (auto Error = IndexStorageFactory(Path)->storeShard(Path, *IF))
+    if (auto Error = IndexStorageFactory(Path)->storeShard(Path.raw(), *IF))
       elog("Failed to write background-index shard for file {0}: {1}", Path,
            std::move(Error));
 
     {
       std::lock_guard<std::mutex> Lock(ShardVersionsMu);
       const auto &Hash = FileIt.getValue().second;
-      auto DigestIt = ShardVersions.try_emplace(Path);
+      auto DigestIt = ShardVersions.try_emplace(Path.raw());
       ShardVersion &SV = DigestIt.first->second;
       // Skip if file is already up to date, unless previous index was broken
       // and this one is not.
@@ -386,12 +386,12 @@ BackgroundIndex::loadProject(std::vector<std::string> MainFiles) {
           LS.Shard->Relations
               ? std::make_unique<RelationSlab>(std::move(*LS.Shard->Relations))
               : nullptr;
-      ShardVersion &SV = ShardVersions[LS.AbsolutePath];
+      ShardVersion &SV = ShardVersions[LS.AbsolutePath.raw()];
       SV.Digest = LS.Digest;
       SV.HadErrors = LS.HadErrors;
       ++LoadedShards;
 
-      IndexedSymbols.update(URI::create(LS.AbsolutePath).toString(),
+      IndexedSymbols.update(URI::create(LS.AbsolutePath.raw()).toString(),
                             std::move(SS), std::move(RS), std::move(RelS),
                             LS.CountReferences);
     }
@@ -417,7 +417,9 @@ BackgroundIndex::loadProject(std::vector<std::string> MainFiles) {
     TUsToIndex.insert(TUForFile);
   }
 
-  return {TUsToIndex.begin(), TUsToIndex.end()};
+  auto ToRaw = [](PathRef R) { return R.raw(); };
+  return {llvm::map_iterator(TUsToIndex.begin(), ToRaw),
+          llvm::map_iterator(TUsToIndex.end(), ToRaw)};
 }
 
 void BackgroundIndex::profile(MemoryTree &MT) const {
