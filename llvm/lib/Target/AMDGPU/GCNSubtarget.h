@@ -166,13 +166,13 @@ protected:
   bool HasMAIInsts = false;
   bool HasFP8Insts = false;
   bool HasFP8ConversionInsts = false;
-  bool HasVCUBEInsts = false;
-  bool HasVLERPInsts = false;
-  bool HasVSADInsts = false;
-  bool HasVQSADInsts = false;
-  bool HasVCVTNORMInsts = false;
-  bool HasVCVTPKNORMVOP2Insts = false;
-  bool HasVCVTPKNORMVOP3Insts = false;
+  bool HasCubeInsts = false;
+  bool HasLerpInst = false;
+  bool HasSadInsts = false;
+  bool HasQsadInsts = false;
+  bool HasCvtNormInsts = false;
+  bool HasCvtPkNormVOP2Insts = false;
+  bool HasCvtPkNormVOP3Insts = false;
   bool HasFP8E5M3Insts = false;
   bool HasCvtFP8Vop1Bug = false;
   bool HasPkFmacF16Inst = false;
@@ -899,19 +899,19 @@ public:
 
   bool hasFP8ConversionInsts() const { return HasFP8ConversionInsts; }
 
-  bool hasVCUBEInsts() const { return HasVCUBEInsts; }
+  bool hasCubeInsts() const { return HasCubeInsts; }
 
-  bool hasVLERPInsts() const { return HasVLERPInsts; }
+  bool hasLerpInst() const { return HasLerpInst; }
 
-  bool hasVSADInsts() const { return HasVSADInsts; }
+  bool hasSadInsts() const { return HasSadInsts; }
 
-  bool hasVQSADInsts() const { return HasVQSADInsts; }
+  bool hasQsadInsts() const { return HasQsadInsts; }
 
-  bool hasVCVTNORMInsts() const { return HasVCVTNORMInsts; }
+  bool hasCvtNormInsts() const { return HasCvtNormInsts; }
 
-  bool hasVCVTPKNORMVOP2Insts() const { return HasVCVTPKNORMVOP2Insts; }
+  bool hasCvtPkNormVOP2Insts() const { return HasCvtPkNormVOP2Insts; }
 
-  bool hasVCVTPKNORMVOP3Insts() const { return HasVCVTPKNORMVOP3Insts; }
+  bool hasCvtPkNormVOP3Insts() const { return HasCvtPkNormVOP3Insts; }
 
   bool hasFP8E5M3Insts() const { return HasFP8E5M3Insts; }
 
