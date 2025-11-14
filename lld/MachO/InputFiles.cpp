@@ -411,10 +411,14 @@ void ObjFile::parseSections(ArrayRef<SectionHeader> sectionHeaders) {
       auto *isec = make<ConcatInputSection>(section, data, align);
       if (isDebugSection(isec->getFlags()) &&
           isec->getSegName() == segment_names::dwarf) {
-        // Instead of emitting DWARF sections, we emit STABS symbols to the
-        // object files that contain them. We filter them out early to avoid
-        // parsing their relocations unnecessarily.
+        // Keep debug sections in debugSections for diagnostic purposes
         debugSections.push_back(isec);
+        // Add DWARF sections to subsections so their relocations are processed,
+        // but mark them dead so they aren't emitted (MachO uses STABS, not DWARF).
+        // This fixes crashes with section-relative relocations (e.g., DW_FORM_strp)
+        // while maintaining MachO's traditional STABS-only debug output.
+        isec->live = false;
+        section.subsections.push_back({0, isec});
       } else {
         section.subsections.push_back({0, isec});
       }
