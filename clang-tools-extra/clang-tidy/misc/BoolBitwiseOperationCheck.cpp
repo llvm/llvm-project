@@ -34,16 +34,11 @@ static bool assignsToBoolean(const BinaryOperator *BinOp, ASTContext *AC) {
   TraversalKindScope RAII(*AC, TK_AsIs);
   auto Parents = AC->getParents(*BinOp);
 
-  for (const auto &Parent : Parents) {
-    if (const auto *S = ignoreParensTowardsTheRoot(&Parent, AC)->get<Stmt>()) {
-      if (const auto *ICE = dyn_cast<ImplicitCastExpr>(S)) {
-        if (ICE->getType().getDesugaredType(*AC)->isBooleanType())
-          return true;
-      }
-    }
-  }
-
-  return false;
+  return llvm::any_of(Parents, [&](const DynTypedNode &Parent) {
+    const auto *S = ignoreParensTowardsTheRoot(&Parent, AC)->get<Stmt>();
+    const auto *ICE = dyn_cast_if_present<ImplicitCastExpr>(S);
+    return ICE ? ICE->getType().getDesugaredType(*AC)->isBooleanType() : false;
+  });
 }
 
 static constexpr std::array<std::pair<StringRef, StringRef>, 8U>
