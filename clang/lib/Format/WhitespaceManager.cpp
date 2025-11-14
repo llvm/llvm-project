@@ -516,7 +516,8 @@ static unsigned AlignTokens(const FormatStyle &Style, F &&Matches,
   };
 
   unsigned I = StartAt;
-  for (unsigned E = Changes.size(); I != E; ++I) {
+  const auto E = Changes.size();
+  for (; I != E; ++I) {
     auto &CurrentChange = Changes[I];
     if (CurrentChange.indentAndNestingLevel() < IndentAndNestingLevel)
       break;
@@ -660,8 +661,15 @@ static unsigned AlignTokens(const FormatStyle &Style, F &&Matches,
     MatchedIndices.push_back(I);
   }
 
-  EndOfSequence = I;
+  // Pass entire lines to the function so that it can update the state of all
+  // tokens that move.
+  for (EndOfSequence = I;
+       EndOfSequence < E && Changes[EndOfSequence].NewlinesBefore == 0;
+       ++EndOfSequence) {
+  }
   AlignCurrentSequence();
+  // The return value should still be where the level ends. The rest of the line
+  // may contain stuff to be aligned within an outer level.
   return I;
 }
 
