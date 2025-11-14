@@ -20,6 +20,7 @@
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
+#include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
 #include "llvm/ADT/STLExtras.h"
@@ -96,39 +97,44 @@ static Operation *movePaddingToFillOrGenericOp(RewriterBase &rewriter,
   OpBuilder::InsertionGuard g(rewriter);
   RankedTensorType resultType = padOp.getResultType();
 
-  // Examine the yielded value to decide if a linalg.generic is neede or a
+  // Collect user/dialect attributes from the pad op to preserve on the newly
+  // created ops.
+  SmallVector<NamedAttribute> preservedAttrs =
+      getPrunedAttributeList(padOp, PadOp::getAttributeNames());
+
+  // Examine the yielded value to decide if a linalg.generic is needed or a
   // linalg.fill is sufficient.
   Value yieldedValue =
       cast<tensor::YieldOp>(padOp.getBody()->getTerminator()).getValue();
   Attribute constYieldedValue;
+  const bool isConstYieldedValue =
+      matchPattern(yieldedValue, m_Constant(&constYieldedValue));
   // Is the yielded value a bbArg defined outside of the PadOp?
-  bool outsideBbArg =
+  const bool isOutsideBbArg =
       isa<BlockArgument>(yieldedValue) &&
       cast<BlockArgument>(yieldedValue).getOwner()->getParentOp() !=
           padOp.getOperation();
   // Is the yielded value an OpResult defined outside of the PadOp?
-  bool outsideOpResult =
+  const bool isOutsideOpResult =
       isa<OpResult>(yieldedValue) &&
       yieldedValue.getDefiningOp()->getParentOp() != padOp.getOperation();
-  bool invariantYieldedValue = outsideBbArg || outsideOpResult;
-  if (matchPattern(yieldedValue, m_Constant(&constYieldedValue))) {
-    // Padding with a constant: Create linalg.fill.
-    Dialect *arithDialect =
-        rewriter.getContext()->getLoadedDialect<arith::ArithDialect>();
-    Value fillValue =
-        arithDialect
-            ->materializeConstant(rewriter, constYieldedValue,
-                                  yieldedValue.getType(), yieldedValue.getLoc())
-            ->getResult(0);
-    auto fillOp = linalg::FillOp::create(rewriter, loc, ValueRange(fillValue),
-                                         ValueRange(dest));
-    return fillOp;
-  }
-
-  if (invariantYieldedValue) {
-    // Padding with an invariant value.
+  const bool isInvariantYieldedValue =
+      isConstYieldedValue || isOutsideBbArg || isOutsideOpResult;
+  if (isInvariantYieldedValue) {
+    // Padding with an invariant value: Create linalg.fill.
+    if (isConstYieldedValue) {
+      // Padding with a constant value: Materialize the arith constant.
+      Dialect *arithDialect =
+          rewriter.getContext()->getLoadedDialect<arith::ArithDialect>();
+      yieldedValue = arithDialect
+                         ->materializeConstant(rewriter, constYieldedValue,
+                                               yieldedValue.getType(),
+                                               yieldedValue.getLoc())
+                         ->getResult(0);
+    }
     auto fillOp = linalg::FillOp::create(
         rewriter, loc, ValueRange(yieldedValue), ValueRange(dest));
+    fillOp->setDiscardableAttrs(preservedAttrs);
     return fillOp;
   }
 
@@ -140,7 +146,7 @@ static Operation *movePaddingToFillOrGenericOp(RewriterBase &rewriter,
   auto genericOp = linalg::GenericOp::create(
       rewriter, loc, resultType, /*inputs=*/ValueRange(),
       /*outputs=*/ValueRange{dest}, /*indexingMaps=*/
-      indexingMaps, iteratorTypes);
+      indexingMaps, iteratorTypes, /*bodyBuild=*/nullptr, preservedAttrs);
   Block *body = rewriter.createBlock(&genericOp->getRegion(0), {},
                                      resultType.getElementType(), loc);
   rewriter.setInsertionPointToStart(body);
