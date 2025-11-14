@@ -125,8 +125,8 @@ private:
   void setKernelLaunchIdExpr(Expr *IdExpr) { KernelLaunchIdExpr = IdExpr; }
 
 public:
-  static UnresolvedSYCLKernelCallStmt *
-  Create(const ASTContext &C, CompoundStmt *CS, Expr *IdExpr) {
+  static UnresolvedSYCLKernelCallStmt *Create(const ASTContext &C,
+                                              CompoundStmt *CS, Expr *IdExpr) {
     return new (C) UnresolvedSYCLKernelCallStmt(CS, IdExpr);
   }
 
