@@ -14,13 +14,12 @@
 
 #include <array>
 #include <span>
-#include <vector>
 
 #include "test_macros.h"
 
 void test() {
   { // Test with a static extent
-    std::array<int, 2> arr{94, 82};
+    std::array arr{94, 82};
     std::span<int, 2> sp{arr};
 
     sp.first<1>();      // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
@@ -49,8 +48,7 @@ void test() {
     std::as_writable_bytes(sp);
   }
   { // Test with a dynamic extent
-    std::vector vec{94, 82};
-    std::span<int> sp{vec};
+    std::span<int> sp;
 
     sp.first<1>();      // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
     sp.last<1>();       // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
