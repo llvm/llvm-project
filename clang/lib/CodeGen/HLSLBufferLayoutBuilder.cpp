@@ -52,9 +52,10 @@ HLSLBufferLayoutBuilder::layOutStruct(const RecordType *RT,
     for (const auto *FD : RD->fields())
       FieldsWithOffset.emplace_back(FD, OffsetInfo[OffsetIdx++]);
 
-  llvm::stable_sort(FieldsWithOffset, [](const auto &LHS, const auto &RHS) {
-    return CGHLSLOffsetInfo::compareOffsets(LHS.second, RHS.second);
-  });
+  if (!OffsetInfo.empty())
+    llvm::stable_sort(FieldsWithOffset, [](const auto &LHS, const auto &RHS) {
+      return CGHLSLOffsetInfo::compareOffsets(LHS.second, RHS.second);
+    });
 
   SmallVector<llvm::Type *> Layout;
   CharUnits CurrentOffset = CharUnits::Zero();
@@ -72,8 +73,6 @@ HLSLBufferLayoutBuilder::layOutStruct(const RecordType *RT,
 
     CharUnits NextOffset = CurrentOffset.alignTo(Align);
 
-    // TODO: Do we need to diagnose invalid packoffsets here, or will they have
-    // already been taken care of?
     if (Offset != CGHLSLOffsetInfo::Unspecified) {
       CharUnits PackOffset = CharUnits::fromQuantity(Offset);
       assert(PackOffset >= NextOffset &&

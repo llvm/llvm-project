@@ -267,9 +267,9 @@ CGHLSLRuntime::convertHLSLSpecificType(const Type *T,
   assert(T->isHLSLSpecificType() && "Not an HLSL specific type!");
 
   // Check if the target has a specific translation for this type first.
-  if (llvm::Type *LayoutTy =
+  if (llvm::Type *TargetTy =
           CGM.getTargetCodeGenInfo().getHLSLType(CGM, T, OffsetInfo))
-    return LayoutTy;
+    return TargetTy;
 
   llvm_unreachable("Generic handling of HLSL types is not supported.");
 }
@@ -326,9 +326,10 @@ void CGHLSLRuntime::emitBufferGlobalsAndMetadata(
     DeclsWithOffset.emplace_back(VD, OffsetInfo[OffsetIdx++]);
   }
 
-  llvm::stable_sort(DeclsWithOffset, [](const auto &LHS, const auto &RHS) {
-    return CGHLSLOffsetInfo::compareOffsets(LHS.second, RHS.second);
-  });
+  if (!OffsetInfo.empty())
+    llvm::stable_sort(DeclsWithOffset, [](const auto &LHS, const auto &RHS) {
+      return CGHLSLOffsetInfo::compareOffsets(LHS.second, RHS.second);
+    });
 
   // Associate the buffer global variable with its constants
   SmallVector<llvm::Metadata *> BufGlobals;
@@ -1148,7 +1149,7 @@ std::optional<LValue> CGHLSLRuntime::emitBufferArraySubscriptExpr(
   // be past the end of the in-memory object.
   SmallVector<llvm::Value *, 2> Indices;
   Indices.push_back(Idx);
-  Indices.push_back(llvm::ConstantInt::get(Indices[0]->getType(), 0));
+  Indices.push_back(llvm::ConstantInt::get(Idx->getType(), 0));
 
   llvm::Value *GEP = CGF.Builder.CreateGEP(LayoutTy, Addr.emitRawPointer(CGF),
                                            Indices, "cbufferidx");
@@ -1319,8 +1320,9 @@ LValue CGHLSLRuntime::emitBufferMemberExpr(CodeGenFunction &CGF,
   // Work out the buffer layout type to index into.
   QualType RecType = CGM.getContext().getCanonicalTagType(Rec);
   assert(RecType->isStructureOrClassType() && "Invalid type in HLSL buffer");
-  // Since this is a member of the buffer and not the buffer itself, we
-  // shouldn't have any offsets we need to contend with.
+  // Since this is a member of an object in the buffer and not the buffer's
+  // struct/class itself, we shouldn't have any offsets on the members we need
+  // to contend with.
   CGHLSLOffsetInfo EmptyOffsets;
   llvm::StructType *LayoutTy = HLSLBufferLayoutBuilder(CGM).layOutStruct(
       RecType->getAsCanonical<RecordType>(), EmptyOffsets);

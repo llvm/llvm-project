@@ -28,21 +28,17 @@ private:
 public:
   HLSLBufferLayoutBuilder(CodeGenModule &CGM) : CGM(CGM) {}
 
-  /// Lays out a struct type following HLSL buffer rules and considering
-  /// PackOffsets, if provided. Previously created layout structs are cached by
-  /// CGHLSLRuntime.
+  /// Lays out a struct type following HLSL buffer rules and considering any
+  /// explicit offset information. Previously created layout structs are cached
+  /// by CGHLSLRuntime.
   ///
   /// The function iterates over all fields of the record type (including base
-  /// classes) and calls layoutField to converts each field to its corresponding
-  /// LLVM type and to calculate its HLSL constant buffer layout. Any embedded
-  /// structs (or arrays of structs) are converted to layout types as well.
+  /// classes) and works out a padded llvm type to represent the buffer layout.
   ///
-  /// When PackOffsets are specified the elements will be placed based on the
-  /// user-specified offsets. Not all elements must have a
-  /// packoffset/register(c#) annotation though. For those that don't, the
-  /// PackOffsets array will contain -1 value instead. These elements must be
-  /// placed at the end of the layout after all of the elements with specific
-  /// offset.
+  /// If a non-empty OffsetInfo is provided (ie, from `packoffset` annotations
+  /// in the source), any provided offsets offsets will be respected. If the
+  /// OffsetInfo is available but has empty entries, those will be layed out at
+  /// the end of the structure.
   llvm::StructType *layOutStruct(const RecordType *StructType,
                                  const CGHLSLOffsetInfo &OffsetInfo);
 

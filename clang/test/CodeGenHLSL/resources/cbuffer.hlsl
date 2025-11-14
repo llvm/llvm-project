@@ -33,8 +33,10 @@
 // CHECK: %__cblayout_CBStructs = type <{
 // CHECK-SAME:   %A, target("dx.Padding", 8),
 
-// TODO: We should have target("dx.Padding", 2) padding after %B, but we don't correctly handle
-// 2- and 3-element vectors inside structs yet because of DataLayout rules.
+// TODO: We should have target("dx.Padding", 2) padding after %B, but we don't
+// correctly handle 2- and 3-element vectors inside structs yet because of
+// DataLayout rules. See https://github.com/llvm/llvm-project/issues/123968.
+//
 // CHECK-SAME: %B,
 
 // CHECK-SAME:   %C, target("dx.Padding", 8),
