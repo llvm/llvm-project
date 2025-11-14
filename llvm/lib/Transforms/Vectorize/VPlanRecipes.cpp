@@ -420,17 +420,10 @@ void VPPartialReductionRecipe::execute(VPTransformState &State) {
     BinOpVal = Builder.CreateSelect(Cond, BinOpVal, Zero);
   }
 
-  enum llvm::Intrinsic::IndependentIntrinsics PRIntrinsic;
-  switch (getOpcode()) {
-  case Instruction::Add: {
-    PRIntrinsic = Intrinsic::vector_partial_reduce_add;
-    break;
-  }
-  case Instruction::FAdd: {
-    PRIntrinsic = Intrinsic::vector_partial_reduce_fadd;
-    break;
-  }
-  }
+  assert(getOpcode() == Instruction::Add || getOpcode() == Instruction::FAdd);
+  llvm::Intrinsic::IndependentIntrinsics PRIntrinsic =
+      getOpcode() == Instruction::Add ? Intrinsic::vector_partial_reduce_add
+                                      : Intrinsic::vector_partial_reduce_fadd;
 
   CallInst *V =
       Builder.CreateIntrinsic(RetTy, PRIntrinsic,
