@@ -783,18 +783,6 @@ class DeclOrStmtAttr : InheritableAttr;
 /// An attribute class for HLSL Annotations.
 class HLSLAnnotationAttr : InheritableAttr;
 
-class HLSLSemanticAttr<bit Indexable> : HLSLAnnotationAttr {
-  bit SemanticIndexable = Indexable;
-  int SemanticIndex = 0;
-  bit SemanticExplicitIndex = 0;
-
-  let Spellings = [];
-  let Subjects = SubjectList<[ParmVar, Field, Function]>;
-  let LangOpts = [HLSL];
-  let Args = [DeclArgument<Named, "Target">, IntArgument<"SemanticIndex">,
-              BoolArgument<"SemanticExplicitIndex">];
-}
-
 /// A target-specific attribute.  This class is meant to be used as a mixin
 /// with InheritableAttr or Attr depending on the attribute's needs.
 class TargetSpecificAttr<TargetSpec target> {
@@ -5021,28 +5009,28 @@ def HLSLUnparsedSemantic : HLSLAnnotationAttr {
   let Documentation = [InternalOnly];
 }
 
-def HLSLUserSemantic : HLSLSemanticAttr</* Indexable= */ 1> {
+class HLSLSemanticBaseAttr : HLSLAnnotationAttr {
+  int SemanticIndex = 0;
+
+  let Spellings = [];
+  let Subjects = SubjectList<[ParmVar, Field, Function]>;
+  let LangOpts = [HLSL];
+
+  let Args = [StringArgument<"SemanticName">, IntArgument<"SemanticIndex">];
+}
+
+def HLSLParsedSemantic : HLSLSemanticBaseAttr {
+  let Spellings = [];
+  let Subjects = SubjectList<[ParmVar, Field, Function]>;
+  let LangOpts = [HLSL];
   let Documentation = [InternalOnly];
 }
 
-def HLSLSV_Position : HLSLSemanticAttr</* Indexable= */ 1> {
-  let Documentation = [HLSLSV_PositionDocs];
-}
-
-def HLSLSV_GroupThreadID : HLSLSemanticAttr</* Indexable= */ 0> {
-  let Documentation = [HLSLSV_GroupThreadIDDocs];
-}
-
-def HLSLSV_GroupID : HLSLSemanticAttr</* Indexable= */ 0> {
-  let Documentation = [HLSLSV_GroupIDDocs];
-}
-
-def HLSLSV_GroupIndex : HLSLSemanticAttr</* Indexable= */ 0> {
-  let Documentation = [HLSLSV_GroupIndexDocs];
-}
-
-def HLSLSV_DispatchThreadID : HLSLSemanticAttr</* Indexable= */ 0> {
-  let Documentation = [HLSLSV_DispatchThreadIDDocs];
+def HLSLAppliedSemantic : HLSLSemanticBaseAttr {
+  let Spellings = [];
+  let Subjects = SubjectList<[ParmVar, Field, Function]>;
+  let LangOpts = [HLSL];
+  let Documentation = [InternalOnly];
 }
 
 def HLSLPackOffset: HLSLAnnotationAttr {

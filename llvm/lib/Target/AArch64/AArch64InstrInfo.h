@@ -205,6 +205,15 @@ public:
   Register isStoreToStackSlot(const MachineInstr &MI,
                               int &FrameIndex) const override;
 
+  /// Check for post-frame ptr elimination stack locations as well.  This uses a
+  /// heuristic so it isn't reliable for correctness.
+  Register isStoreToStackSlotPostFE(const MachineInstr &MI,
+                                    int &FrameIndex) const override;
+  /// Check for post-frame ptr elimination stack locations as well.  This uses a
+  /// heuristic so it isn't reliable for correctness.
+  Register isLoadFromStackSlotPostFE(const MachineInstr &MI,
+                                     int &FrameIndex) const override;
+
   /// Does this instruction set its full destination register to zero?
   static bool isGPRZero(const MachineInstr &MI);
 
