@@ -110,6 +110,8 @@ public:
       return Unspecified;
     return Offsets[I];
   }
+
+  bool empty() const { return Offsets.empty(); }
 };
 
 class CGHLSLRuntime {
