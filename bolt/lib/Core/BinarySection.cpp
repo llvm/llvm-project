@@ -221,7 +221,7 @@ void BinarySection::flushPendingRelocations(raw_pwrite_stream &OS,
 
 BinarySection::~BinarySection() {
   LLVM_DEBUG({
-    dbgs() << "[bs] dtor this=" << (const void *)this
+    dbgs() << "BOLT-DEBUG: dtor this=" << (const void *)this
            << " name=" << getName()
            << " data=" << (const void *)getData()
            << " size=" << getSize()
