@@ -9,12 +9,12 @@
 // ABI tags have no effect in MSVC mode.
 // XFAIL: msvc
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
+// Assertion semantics are not supported in C++03 mode
+// UNSUPPORTED: std=c++03
 
 // Test that we encode the assertion semantic in an ABI tag to avoid ODR violations when linking TUs that have different
 // values for it.
 
-// Note that GCC doesn't support `-Wno-macro-redefined`.
 // RUN: %{cxx} %s %{flags} %{compile_flags} -c -DTU1  -U_LIBCPP_ASSERTION_SEMANTIC -D_LIBCPP_ASSERTION_SEMANTIC=_LIBCPP_ASSERTION_SEMANTIC_IGNORE        -o %t.tu1.o
 // RUN: %{cxx} %s %{flags} %{compile_flags} -c -DTU2  -U_LIBCPP_ASSERTION_SEMANTIC -D_LIBCPP_ASSERTION_SEMANTIC=_LIBCPP_ASSERTION_SEMANTIC_OBSERVE       -o %t.tu2.o
 // RUN: %{cxx} %s %{flags} %{compile_flags} -c -DTU3  -U_LIBCPP_ASSERTION_SEMANTIC -D_LIBCPP_ASSERTION_SEMANTIC=_LIBCPP_ASSERTION_SEMANTIC_QUICK_ENFORCE -o %t.tu3.o
