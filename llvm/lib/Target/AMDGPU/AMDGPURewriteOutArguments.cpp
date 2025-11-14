@@ -299,7 +299,7 @@ bool AMDGPURewriteOutArguments::runOnFunction(Function &F) {
   if (Replacements.empty())
     return false;
 
-  LLVMContext &Ctx = F.getParent()->getContext();
+  LLVMContext &Ctx = F.getContext();
   StructType *NewRetTy = StructType::create(Ctx, ReturnTypes, F.getName());
 
   FunctionType *NewFuncTy = FunctionType::get(NewRetTy,

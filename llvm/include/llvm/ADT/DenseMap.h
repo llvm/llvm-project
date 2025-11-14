@@ -1122,6 +1122,7 @@ private:
       Tmp.Small = false;
       Tmp.getLargeRep()->NumBuckets = 0;
     } else {
+      deallocateBuckets();
       Small = false;
       NumTombstones = 0;
       *getLargeRep() = std::move(*Tmp.getLargeRep());
