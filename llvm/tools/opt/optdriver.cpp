@@ -17,6 +17,7 @@
 #include "llvm/Analysis/CallGraphSCCPass.h"
 #include "llvm/Analysis/LoopPass.h"
 #include "llvm/Analysis/RegionPass.h"
+#include "llvm/Analysis/RuntimeLibcallInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/AsmParser/Parser.h"
@@ -64,6 +65,7 @@ using namespace llvm;
 using namespace opt_tool;
 
 static codegen::RegisterCodeGenFlags CFG;
+static codegen::RegisterSaveStatsFlag SSF;
 
 // The OptimizationList is automatically populated with registered Passes by the
 // PassNameParser.
@@ -512,6 +514,8 @@ optMain(int argc, char **argv,
   }
   LLVMRemarkFileHandle RemarksFile = std::move(*RemarksFileOrErr);
 
+  codegen::MaybeEnableStatistics();
+
   // Load the input module...
   auto SetDataLayout = [&](StringRef IRTriple,
                            StringRef IRLayout) -> std::optional<std::string> {
@@ -666,8 +670,15 @@ optMain(int argc, char **argv,
       M->addModuleFlag(Module::Error, "UnifiedLTO", 1);
   }
 
+  VectorLibrary VecLib = codegen::getVectorLibrary();
   // Add an appropriate TargetLibraryInfo pass for the module's triple.
-  TargetLibraryInfoImpl TLII(ModuleTriple);
+  TargetLibraryInfoImpl TLII(ModuleTriple, VecLib);
+
+  RTLIB::RuntimeLibcallsInfo RTLCI(ModuleTriple, codegen::getExceptionModel(),
+                                   codegen::getFloatABIForCalls(),
+                                   codegen::getEABIVersion(),
+                                   "", // FIXME: Get ABI name from MCOptions
+                                   VecLib);
 
   // The -disable-simplify-libcalls flag actually disables all builtin optzns.
   if (DisableSimplifyLibCalls)
@@ -742,15 +753,15 @@ optMain(int argc, char **argv,
     // The user has asked to use the new pass manager and provided a pipeline
     // string. Hand off the rest of the functionality to the new code for that
     // layer.
-    return runPassPipeline(
-               argv[0], *M, TM.get(), &TLII, Out.get(), ThinLinkOut.get(),
-               RemarksFile.get(), Pipeline, PluginList, PassBuilderCallbacks,
-               OK, VK, /* ShouldPreserveAssemblyUseListOrder */ false,
-               /* ShouldPreserveBitcodeUseListOrder */ true, EmitSummaryIndex,
-               EmitModuleHash, EnableDebugify, VerifyDebugInfoPreserve,
-               EnableProfileVerification, UnifiedLTO)
-               ? 0
-               : 1;
+    if (!runPassPipeline(
+            argv[0], *M, TM.get(), &TLII, RTLCI, Out.get(), ThinLinkOut.get(),
+            RemarksFile.get(), Pipeline, PluginList, PassBuilderCallbacks, OK,
+            VK, /* ShouldPreserveAssemblyUseListOrder */ false,
+            /* ShouldPreserveBitcodeUseListOrder */ true, EmitSummaryIndex,
+            EmitModuleHash, EnableDebugify, VerifyDebugInfoPreserve,
+            EnableProfileVerification, UnifiedLTO))
+      return 1;
+    return codegen::MaybeSaveStatistics(OutputFilename, "opt");
   }
 
   if (OptLevelO0 || OptLevelO1 || OptLevelO2 || OptLevelOs || OptLevelOz ||
@@ -928,5 +939,5 @@ optMain(int argc, char **argv,
   if (ThinLinkOut)
     ThinLinkOut->keep();
 
-  return 0;
+  return codegen::MaybeSaveStatistics(OutputFilename, "opt");
 }
