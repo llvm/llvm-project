@@ -2752,12 +2752,10 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
   }
 
   // Handle flatten_depth attribute for depth-based inlining
-  if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
-    if (const FlattenDepthAttr *FDA = FD->getAttr<FlattenDepthAttr>()) {
-      // Add the flatten_depth attribute with the max depth value as a typed int
-      // attribute
-      B.addRawIntAttr(llvm::Attribute::FlattenDepth, FDA->getDepthHint());
-    }
+  if (const FlattenDepthAttr *FDA = D->getAttr<FlattenDepthAttr>()) {
+    // Add the flatten_depth attribute with the max depth value as a typed int
+    // attribute
+    B.addFlattenDepthAttr(FDA->getDepthHint());
   }
 
   // Track whether we need to add the optnone LLVM attribute,

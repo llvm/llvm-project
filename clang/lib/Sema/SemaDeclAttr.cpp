@@ -3699,18 +3699,16 @@ static void handleFlattenDepthAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   Expr *E = AL.getArgAsExpr(0);
   uint32_t depthHint;
   if (!S.checkUInt32Argument(AL, E, depthHint)) {
-    AL.setInvalid();
     return;
   }
 
   if (depthHint == 0) {
     S.Diag(AL.getLoc(), diag::err_attribute_argument_is_zero)
         << AL << E->getSourceRange();
-    AL.setInvalid();
     return;
   }
 
-  D->addAttr(::new (S.Context) FlattenDepthAttr(S.Context, AL, depthHint));
+  D->addAttr(FlattenDepthAttr::Create(S.Context, depthHint, AL));
 }
 
 ErrorAttr *Sema::mergeErrorAttr(Decl *D, const AttributeCommonInfo &CI,
