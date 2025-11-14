@@ -2638,17 +2638,17 @@ Instruction *InstCombinerImpl::foldICmpShrConstant(ICmpInst &Cmp,
   if (Shr->isExact())
     return new ICmpInst(Pred, X, ConstantInt::get(ShrTy, C << ShAmtVal));
 
-  if (C.isZero()) {
-    // == 0 is u< 1.
-    if (Pred == CmpInst::ICMP_EQ)
-      return new ICmpInst(CmpInst::ICMP_ULT, X,
-                          ConstantInt::get(ShrTy, (C + 1).shl(ShAmtVal)));
-    else
-      return new ICmpInst(CmpInst::ICMP_UGT, X,
-                          ConstantInt::get(ShrTy, (C + 1).shl(ShAmtVal) - 1));
-  }
-
   if (Shr->hasOneUse()) {
+    if (0) {
+      // == 0 is u< 1.
+      if (Pred == CmpInst::ICMP_EQ)
+        return new ICmpInst(CmpInst::ICMP_ULT, X,
+                            ConstantInt::get(ShrTy, (C + 1).shl(ShAmtVal)));
+      else
+        return new ICmpInst(CmpInst::ICMP_UGT, X,
+                            ConstantInt::get(ShrTy, (C + 1).shl(ShAmtVal) - 1));
+    }
+
     // Canonicalize the shift into an 'and':
     // icmp eq/ne (shr X, ShAmt), C --> icmp eq/ne (and X, HiMask), (C << ShAmt)
     APInt Val(APInt::getHighBitsSet(TypeBits, TypeBits - ShAmtVal));
