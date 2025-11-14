@@ -47,19 +47,19 @@ PhysicalRegisterInfo::PhysicalRegisterInfo(const TargetRegisterInfo &tri,
   UnitInfos.resize(TRI.getNumRegUnits());
 
   for (MCRegUnit U : TRI.regunits()) {
-    if (UnitInfos[static_cast<unsigned>(U)].Reg != 0)
+    if (UnitInfos[U].Reg != 0)
       continue;
     MCRegUnitRootIterator R(U, &TRI);
     assert(R.isValid());
     RegisterId F = *R;
     ++R;
     if (R.isValid()) {
-      UnitInfos[static_cast<unsigned>(U)].Mask = LaneBitmask::getAll();
-      UnitInfos[static_cast<unsigned>(U)].Reg = F;
+      UnitInfos[U].Mask = LaneBitmask::getAll();
+      UnitInfos[U].Reg = F;
     } else {
       for (MCRegUnitMaskIterator I(F, &TRI); I.isValid(); ++I) {
         std::pair<MCRegUnit, LaneBitmask> P = *I;
-        UnitInfo &UI = UnitInfos[static_cast<unsigned>(P.first)];
+        UnitInfo &UI = UnitInfos[P.first];
         UI.Reg = F;
         UI.Mask = P.second;
       }
@@ -93,7 +93,7 @@ PhysicalRegisterInfo::PhysicalRegisterInfo(const TargetRegisterInfo &tri,
     for (MCRegUnitRootIterator R(U, &TRI); R.isValid(); ++R)
       for (MCPhysReg S : TRI.superregs_inclusive(*R))
         AS.set(S);
-    AliasInfos[static_cast<unsigned>(U)].Regs = AS;
+    AliasInfos[U].Regs = AS;
   }
 }
 
