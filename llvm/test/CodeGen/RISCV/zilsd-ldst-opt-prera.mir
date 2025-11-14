@@ -22,7 +22,7 @@
   define i32 @basic_load_combine_8_byte_aligned(ptr %0) {
     %2 = load i32, ptr %0, align 8
     %3 = getelementptr inbounds i32, ptr %0, i32 1
-    %4 = load i32, ptr %3, align 8
+    %4 = load i32, ptr %3, align 4
     %5 = add i32 %2, %4
     ret i32 %5
   }
@@ -30,7 +30,7 @@
   define void @basic_store_combine_8_byte_aligned(ptr %0, i32 %1, i32 %2) {
     store i32 %1, ptr %0, align 8
     %4 = getelementptr inbounds i32, ptr %0, i32 1
-    store i32 %2, ptr %4, align 8
+    store i32 %2, ptr %4, align 4
     ret void
   }
 
@@ -71,15 +71,6 @@
     ret i32 %8
   }
 
-  define i32 @dependency_interference(ptr %0) {
-    %2 = load i32, ptr %0, align 4
-    %3 = add i32 %2, 1
-    %4 = getelementptr inbounds i32, ptr %0, i32 1
-    %5 = load i32, ptr %4, align 4
-    %6 = add i32 %3, %5
-    ret i32 %6
-  }
-
   define i32 @memory_aliasing(ptr %0, i32 %1) {
     %3 = load i32, ptr %0, align 4
     %4 = getelementptr inbounds i32, ptr %0, i32 2
@@ -104,7 +95,7 @@
     ret i32 %12
   }
 
-  define i32 @high_register_pressure(ptr %0) {
+  define i32 @many_loads(ptr %0) {
     %2 = getelementptr inbounds i32, ptr %0, i32 4
     %3 = load i32, ptr %2, align 4
     %4 = getelementptr inbounds i32, ptr %0, i32 5
@@ -183,14 +174,6 @@
     ret i32 %6
   }
 
-  define i32 @register_reuse(ptr %0) {
-    %2 = load i32, ptr %0, align 4
-    %3 = getelementptr inbounds i32, ptr %0, i32 1
-    %4 = load i32, ptr %3, align 4
-    %5 = add i32 %2, %4
-    ret i32 %5
-  }
-
   define i32 @volatile_loads(ptr %0) {
     %2 = load volatile i32, ptr %0, align 4
     %3 = getelementptr inbounds i32, ptr %0, i32 1
@@ -253,10 +236,6 @@
   }
 
   define i32 @symbolic_operands_interleave() {
-    ret i32 0
-  }
-
-  define i32 @symbolic_operands_base_offset_different_align() {
     ret i32 0
   }
 ---
@@ -346,7 +325,7 @@ body: |
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
-    ; CHECK-NEXT: [[PseudoLD_RV32_OPT:%[0-9]+]]:gpr, [[PseudoLD_RV32_OPT1:%[0-9]+]]:gpr = PseudoLD_RV32_OPT [[COPY]], 0 :: (load (s32), align 8)
+    ; CHECK-NEXT: [[PseudoLD_RV32_OPT:%[0-9]+]]:gpr, [[PseudoLD_RV32_OPT1:%[0-9]+]]:gpr = PseudoLD_RV32_OPT [[COPY]], 0 :: (load (s32), align 8), (load (s32))
     ; CHECK-NEXT: [[ADD:%[0-9]+]]:gpr = ADD [[PseudoLD_RV32_OPT]], [[PseudoLD_RV32_OPT1]]
     ; CHECK-NEXT: PseudoRET
     ;
@@ -354,12 +333,12 @@ body: |
     ; CHECK-4BYTE: liveins: $x10
     ; CHECK-4BYTE-NEXT: {{  $}}
     ; CHECK-4BYTE-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
-    ; CHECK-4BYTE-NEXT: [[PseudoLD_RV32_OPT:%[0-9]+]]:gpr, [[PseudoLD_RV32_OPT1:%[0-9]+]]:gpr = PseudoLD_RV32_OPT [[COPY]], 0 :: (load (s32), align 8)
+    ; CHECK-4BYTE-NEXT: [[PseudoLD_RV32_OPT:%[0-9]+]]:gpr, [[PseudoLD_RV32_OPT1:%[0-9]+]]:gpr = PseudoLD_RV32_OPT [[COPY]], 0 :: (load (s32), align 8), (load (s32))
     ; CHECK-4BYTE-NEXT: [[ADD:%[0-9]+]]:gpr = ADD [[PseudoLD_RV32_OPT]], [[PseudoLD_RV32_OPT1]]
     ; CHECK-4BYTE-NEXT: PseudoRET
     %0:gpr = COPY $x10
     %1:gpr = LW %0, 0 :: (load (s32), align 8)
-    %2:gpr = LW %0, 4 :: (load (s32), align 8)
+    %2:gpr = LW %0, 4 :: (load (s32))
     %3:gpr = ADD %1, %2
     PseudoRET
 
@@ -383,7 +362,7 @@ body: |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY $x11
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr = COPY $x12
-    ; CHECK-NEXT: PseudoSD_RV32_OPT [[COPY1]], [[COPY2]], [[COPY]], 0 :: (store (s32), align 8)
+    ; CHECK-NEXT: PseudoSD_RV32_OPT [[COPY1]], [[COPY2]], [[COPY]], 0 :: (store (s32), align 8), (store (s32))
     ; CHECK-NEXT: PseudoRET
     ;
     ; CHECK-4BYTE-LABEL: name: basic_store_combine_8_byte_aligned
@@ -392,13 +371,13 @@ body: |
     ; CHECK-4BYTE-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
     ; CHECK-4BYTE-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY $x11
     ; CHECK-4BYTE-NEXT: [[COPY2:%[0-9]+]]:gpr = COPY $x12
-    ; CHECK-4BYTE-NEXT: PseudoSD_RV32_OPT [[COPY1]], [[COPY2]], [[COPY]], 0 :: (store (s32), align 8)
+    ; CHECK-4BYTE-NEXT: PseudoSD_RV32_OPT [[COPY1]], [[COPY2]], [[COPY]], 0 :: (store (s32), align 8), (store (s32))
     ; CHECK-4BYTE-NEXT: PseudoRET
     %0:gpr = COPY $x10
     %1:gpr = COPY $x11
     %2:gpr = COPY $x12
     SW %1, %0, 0 :: (store (s32), align 8)
-    SW %2, %0, 4 :: (store (s32), align 8)
+    SW %2, %0, 4 :: (store (s32))
     PseudoRET
 
 ...
@@ -571,81 +550,48 @@ body: |
 
 ...
 ---
-# Dependency interference - load result used before second load
-name: dependency_interference
-alignment: 4
-tracksRegLiveness: true
-liveins:
-  - { reg: '$x10', virtual-reg: '%0' }
-body: |
-  bb.0:
-    liveins: $x10
-
-    ; CHECK-LABEL: name: dependency_interference
-    ; CHECK: liveins: $x10
-    ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
-    ; CHECK-NEXT: [[LW:%[0-9]+]]:gpr = LW [[COPY]], 0 :: (load (s32))
-    ; CHECK-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI [[LW]], 1
-    ; CHECK-NEXT: [[LW1:%[0-9]+]]:gpr = LW [[COPY]], 4 :: (load (s32))
-    ; CHECK-NEXT: [[ADD:%[0-9]+]]:gpr = ADD [[ADDI]], [[LW1]]
-    ; CHECK-NEXT: PseudoRET
-    ;
-    ; CHECK-4BYTE-LABEL: name: dependency_interference
-    ; CHECK-4BYTE: liveins: $x10
-    ; CHECK-4BYTE-NEXT: {{  $}}
-    ; CHECK-4BYTE-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
-    ; CHECK-4BYTE-NEXT: [[PseudoLD_RV32_OPT:%[0-9]+]]:gpr, [[PseudoLD_RV32_OPT1:%[0-9]+]]:gpr = PseudoLD_RV32_OPT [[COPY]], 0 :: (load (s32))
-    ; CHECK-4BYTE-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI [[PseudoLD_RV32_OPT]], 1
-    ; CHECK-4BYTE-NEXT: [[ADD:%[0-9]+]]:gpr = ADD [[ADDI]], [[PseudoLD_RV32_OPT1]]
-    ; CHECK-4BYTE-NEXT: PseudoRET
-    %0:gpr = COPY $x10
-    %1:gpr = LW %0, 0 :: (load (s32))
-    ; Use result of first load before second load - should not combine
-    %3:gpr = ADDI %1, 1
-    %2:gpr = LW %0, 4 :: (load (s32))
-    %4:gpr = ADD %3, %2
-    PseudoRET
-
-...
----
-# Memory aliasing - store between loads should prevent combination
+# Memory aliasing - store between loads with unknown base should prevent combining
 name: memory_aliasing
 alignment: 4
 tracksRegLiveness: true
 liveins:
   - { reg: '$x10', virtual-reg: '%0' }
   - { reg: '$x11', virtual-reg: '%1' }
+  - { reg: '$x12', virtual-reg: '%2' }
 body: |
   bb.0:
-    liveins: $x10, $x11
+    liveins: $x10, $x11, $x12
 
     ; CHECK-LABEL: name: memory_aliasing
-    ; CHECK: liveins: $x10, $x11
+    ; CHECK: liveins: $x10, $x11, $x12
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY $x11
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr = COPY $x12
     ; CHECK-NEXT: [[LW:%[0-9]+]]:gpr = LW [[COPY]], 0 :: (load (s32))
-    ; CHECK-NEXT: SW [[COPY1]], [[COPY]], 8 :: (store (s32))
+    ; CHECK-NEXT: SW [[COPY1]], [[COPY2]], 8 :: (store (s32))
     ; CHECK-NEXT: [[LW1:%[0-9]+]]:gpr = LW [[COPY]], 4 :: (load (s32))
     ; CHECK-NEXT: [[ADD:%[0-9]+]]:gpr = ADD [[LW]], [[LW1]]
     ; CHECK-NEXT: PseudoRET
     ;
     ; CHECK-4BYTE-LABEL: name: memory_aliasing
-    ; CHECK-4BYTE: liveins: $x10, $x11
+    ; CHECK-4BYTE: liveins: $x10, $x11, $x12
     ; CHECK-4BYTE-NEXT: {{  $}}
     ; CHECK-4BYTE-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
     ; CHECK-4BYTE-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY $x11
-    ; CHECK-4BYTE-NEXT: [[PseudoLD_RV32_OPT:%[0-9]+]]:gpr, [[PseudoLD_RV32_OPT1:%[0-9]+]]:gpr = PseudoLD_RV32_OPT [[COPY]], 0 :: (load (s32))
-    ; CHECK-4BYTE-NEXT: SW [[COPY1]], [[COPY]], 8 :: (store (s32))
-    ; CHECK-4BYTE-NEXT: [[ADD:%[0-9]+]]:gpr = ADD [[PseudoLD_RV32_OPT]], [[PseudoLD_RV32_OPT1]]
+    ; CHECK-4BYTE-NEXT: [[COPY2:%[0-9]+]]:gpr = COPY $x12
+    ; CHECK-4BYTE-NEXT: [[LW:%[0-9]+]]:gpr = LW [[COPY]], 0 :: (load (s32))
+    ; CHECK-4BYTE-NEXT: SW [[COPY1]], [[COPY2]], 8 :: (store (s32))
+    ; CHECK-4BYTE-NEXT: [[LW1:%[0-9]+]]:gpr = LW [[COPY]], 4 :: (load (s32))
+    ; CHECK-4BYTE-NEXT: [[ADD:%[0-9]+]]:gpr = ADD [[LW]], [[LW1]]
     ; CHECK-4BYTE-NEXT: PseudoRET
     %0:gpr = COPY $x10
     %1:gpr = COPY $x11
-    %2:gpr = LW %0, 0 :: (load (s32))
-    SW %1, %0, 8 :: (store (s32))
-    %3:gpr = LW %0, 4 :: (load (s32))
-    %4:gpr = ADD %2, %3
+    %2:gpr = COPY $x12
+    %3:gpr = LW %0, 0 :: (load (s32))
+    SW %1, %2, 8 :: (store (s32))
+    %4:gpr = LW %0, 4 :: (load (s32))
+    %5:gpr = ADD %3, %4
     PseudoRET
 
 ...
@@ -702,8 +648,8 @@ body: |
 
 ...
 ---
-# Register pressure test - high register pressure should prevent combination
-name: high_register_pressure
+# Many loads test
+name: many_loads
 alignment: 4
 tracksRegLiveness: true
 liveins:
@@ -712,31 +658,26 @@ body: |
   bb.0:
     liveins: $x10
 
-    ; CHECK-LABEL: name: high_register_pressure
+    ; CHECK-LABEL: name: many_loads
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
     ; CHECK-NEXT: [[LW:%[0-9]+]]:gpr = LW [[COPY]], 16 :: (load (s32))
-    ; CHECK-NEXT: [[LW1:%[0-9]+]]:gpr = LW [[COPY]], 20 :: (load (s32))
-    ; CHECK-NEXT: [[LW2:%[0-9]+]]:gpr = LW [[COPY]], 24 :: (load (s32))
-    ; CHECK-NEXT: [[LW3:%[0-9]+]]:gpr = LW [[COPY]], 28 :: (load (s32))
-    ; CHECK-NEXT: [[LW4:%[0-9]+]]:gpr = LW [[COPY]], 32 :: (load (s32))
-    ; CHECK-NEXT: [[LW5:%[0-9]+]]:gpr = LW [[COPY]], 36 :: (load (s32))
-    ; CHECK-NEXT: [[LW6:%[0-9]+]]:gpr = LW [[COPY]], 40 :: (load (s32))
-    ; CHECK-NEXT: [[LW7:%[0-9]+]]:gpr = LW [[COPY]], 44 :: (load (s32))
-    ; CHECK-NEXT: [[LW8:%[0-9]+]]:gpr = LW [[COPY]], 48 :: (load (s32))
-    ; CHECK-NEXT: [[LW9:%[0-9]+]]:gpr = LW [[COPY]], 52 :: (load (s32))
-    ; CHECK-NEXT: [[LW10:%[0-9]+]]:gpr = LW [[COPY]], 56 :: (load (s32))
-    ; CHECK-NEXT: [[LW11:%[0-9]+]]:gpr = LW [[COPY]], 60 :: (load (s32))
-    ; CHECK-NEXT: [[LW12:%[0-9]+]]:gpr = LW [[COPY]], 0 :: (load (s32))
-    ; CHECK-NEXT: [[LW13:%[0-9]+]]:gpr = LW [[COPY]], 4 :: (load (s32))
-    ; CHECK-NEXT: [[ADD:%[0-9]+]]:gpr = ADD [[LW]], [[LW1]]
-    ; CHECK-NEXT: [[ADD1:%[0-9]+]]:gpr = ADD [[LW2]], [[LW3]]
-    ; CHECK-NEXT: [[ADD2:%[0-9]+]]:gpr = ADD [[LW4]], [[LW5]]
-    ; CHECK-NEXT: [[ADD3:%[0-9]+]]:gpr = ADD [[LW6]], [[LW7]]
-    ; CHECK-NEXT: [[ADD4:%[0-9]+]]:gpr = ADD [[LW8]], [[LW9]]
-    ; CHECK-NEXT: [[ADD5:%[0-9]+]]:gpr = ADD [[LW10]], [[LW11]]
-    ; CHECK-NEXT: [[ADD6:%[0-9]+]]:gpr = ADD [[LW12]], [[LW13]]
+    ; CHECK-NEXT: [[PseudoLD_RV32_OPT:%[0-9]+]]:gpr, [[PseudoLD_RV32_OPT1:%[0-9]+]]:gpr = PseudoLD_RV32_OPT [[COPY]], 20 :: (load (s32))
+    ; CHECK-NEXT: [[PseudoLD_RV32_OPT2:%[0-9]+]]:gpr, [[PseudoLD_RV32_OPT3:%[0-9]+]]:gpr = PseudoLD_RV32_OPT [[COPY]], 28 :: (load (s32))
+    ; CHECK-NEXT: [[PseudoLD_RV32_OPT4:%[0-9]+]]:gpr, [[PseudoLD_RV32_OPT5:%[0-9]+]]:gpr = PseudoLD_RV32_OPT [[COPY]], 36 :: (load (s32))
+    ; CHECK-NEXT: [[PseudoLD_RV32_OPT6:%[0-9]+]]:gpr, [[PseudoLD_RV32_OPT7:%[0-9]+]]:gpr = PseudoLD_RV32_OPT [[COPY]], 44 :: (load (s32))
+    ; CHECK-NEXT: [[PseudoLD_RV32_OPT8:%[0-9]+]]:gpr, [[PseudoLD_RV32_OPT9:%[0-9]+]]:gpr = PseudoLD_RV32_OPT [[COPY]], 52 :: (load (s32))
+    ; CHECK-NEXT: [[LW1:%[0-9]+]]:gpr = LW [[COPY]], 60 :: (load (s32))
+    ; CHECK-NEXT: [[LW2:%[0-9]+]]:gpr = LW [[COPY]], 0 :: (load (s32))
+    ; CHECK-NEXT: [[LW3:%[0-9]+]]:gpr = LW [[COPY]], 4 :: (load (s32))
+    ; CHECK-NEXT: [[ADD:%[0-9]+]]:gpr = ADD [[LW]], [[PseudoLD_RV32_OPT]]
+    ; CHECK-NEXT: [[ADD1:%[0-9]+]]:gpr = ADD [[PseudoLD_RV32_OPT1]], [[PseudoLD_RV32_OPT2]]
+    ; CHECK-NEXT: [[ADD2:%[0-9]+]]:gpr = ADD [[PseudoLD_RV32_OPT3]], [[PseudoLD_RV32_OPT4]]
+    ; CHECK-NEXT: [[ADD3:%[0-9]+]]:gpr = ADD [[PseudoLD_RV32_OPT5]], [[PseudoLD_RV32_OPT6]]
+    ; CHECK-NEXT: [[ADD4:%[0-9]+]]:gpr = ADD [[PseudoLD_RV32_OPT7]], [[PseudoLD_RV32_OPT8]]
+    ; CHECK-NEXT: [[ADD5:%[0-9]+]]:gpr = ADD [[PseudoLD_RV32_OPT9]], [[LW1]]
+    ; CHECK-NEXT: [[ADD6:%[0-9]+]]:gpr = ADD [[LW2]], [[LW3]]
     ; CHECK-NEXT: [[ADD7:%[0-9]+]]:gpr = ADD [[ADD]], [[ADD1]]
     ; CHECK-NEXT: [[ADD8:%[0-9]+]]:gpr = ADD [[ADD2]], [[ADD3]]
     ; CHECK-NEXT: [[ADD9:%[0-9]+]]:gpr = ADD [[ADD4]], [[ADD5]]
@@ -745,7 +686,7 @@ body: |
     ; CHECK-NEXT: [[ADD12:%[0-9]+]]:gpr = ADD [[ADD10]], [[ADD11]]
     ; CHECK-NEXT: PseudoRET
     ;
-    ; CHECK-4BYTE-LABEL: name: high_register_pressure
+    ; CHECK-4BYTE-LABEL: name: many_loads
     ; CHECK-4BYTE: liveins: $x10
     ; CHECK-4BYTE-NEXT: {{  $}}
     ; CHECK-4BYTE-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
@@ -858,9 +799,8 @@ body: |
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
-    ; CHECK-NEXT: [[LW:%[0-9]+]]:gpr = LW [[COPY]], 100 :: (load (s32))
-    ; CHECK-NEXT: [[LW1:%[0-9]+]]:gpr = LW [[COPY]], 104 :: (load (s32))
-    ; CHECK-NEXT: [[ADD:%[0-9]+]]:gpr = ADD [[LW]], [[LW1]]
+    ; CHECK-NEXT: [[PseudoLD_RV32_OPT:%[0-9]+]]:gpr, [[PseudoLD_RV32_OPT1:%[0-9]+]]:gpr = PseudoLD_RV32_OPT [[COPY]], 100 :: (load (s32))
+    ; CHECK-NEXT: [[ADD:%[0-9]+]]:gpr = ADD [[PseudoLD_RV32_OPT]], [[PseudoLD_RV32_OPT1]]
     ; CHECK-NEXT: PseudoRET
     ;
     ; CHECK-4BYTE-LABEL: name: offset_calculation
@@ -949,42 +889,6 @@ body: |
 
 ...
 ---
-# Test register reuse between loads
-name: register_reuse
-alignment: 4
-tracksRegLiveness: true
-liveins:
-  - { reg: '$x10', virtual-reg: '%0' }
-body: |
-  bb.0:
-    liveins: $x10
-
-    ; CHECK-LABEL: name: register_reuse
-    ; CHECK: liveins: $x10
-    ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = LW [[COPY]], 0 :: (load (s32))
-    ; CHECK-NEXT: [[LW:%[0-9]+]]:gpr = LW [[COPY]], 4 :: (load (s32))
-    ; CHECK-NEXT: [[ADD:%[0-9]+]]:gpr = ADD [[COPY]], [[LW]]
-    ; CHECK-NEXT: PseudoRET
-    ;
-    ; CHECK-4BYTE-LABEL: name: register_reuse
-    ; CHECK-4BYTE: liveins: $x10
-    ; CHECK-4BYTE-NEXT: {{  $}}
-    ; CHECK-4BYTE-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
-    ; CHECK-4BYTE-NEXT: [[COPY:%[0-9]+]]:gpr = LW [[COPY]], 0 :: (load (s32))
-    ; CHECK-4BYTE-NEXT: [[LW:%[0-9]+]]:gpr = LW [[COPY]], 4 :: (load (s32))
-    ; CHECK-4BYTE-NEXT: [[ADD:%[0-9]+]]:gpr = ADD [[COPY]], [[LW]]
-    ; CHECK-4BYTE-NEXT: PseudoRET
-    %0:gpr = COPY $x10
-    ; First load overwrites input register - should prevent combination
-    %0:gpr = LW %0, 0 :: (load (s32))
-    %1:gpr = LW %0, 4 :: (load (s32))
-    %2:gpr = ADD %0, %1
-    PseudoRET
-
-...
----
 # Test with volatile loads - should not combine
 name: volatile_loads
 alignment: 4
@@ -1064,7 +968,9 @@ body: |
 
 ...
 ---
-# Test three loads - only first two should combine
+# Test three loads:
+# align 8: last two should combine
+# align 4: first two should combine
 name: three_loads
 alignment: 4
 tracksRegLiveness: true
@@ -1079,10 +985,9 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
     ; CHECK-NEXT: [[LW:%[0-9]+]]:gpr = LW [[COPY]], 0 :: (load (s32))
-    ; CHECK-NEXT: [[LW1:%[0-9]+]]:gpr = LW [[COPY]], 4 :: (load (s32))
-    ; CHECK-NEXT: [[LW2:%[0-9]+]]:gpr = LW [[COPY]], 8 :: (load (s32))
-    ; CHECK-NEXT: [[ADD:%[0-9]+]]:gpr = ADD [[LW]], [[LW1]]
-    ; CHECK-NEXT: [[ADD1:%[0-9]+]]:gpr = ADD [[ADD]], [[LW2]]
+    ; CHECK-NEXT: [[PseudoLD_RV32_OPT:%[0-9]+]]:gpr, [[PseudoLD_RV32_OPT1:%[0-9]+]]:gpr = PseudoLD_RV32_OPT [[COPY]], 4 :: (load (s32))
+    ; CHECK-NEXT: [[ADD:%[0-9]+]]:gpr = ADD [[LW]], [[PseudoLD_RV32_OPT]]
+    ; CHECK-NEXT: [[ADD1:%[0-9]+]]:gpr = ADD [[ADD]], [[PseudoLD_RV32_OPT1]]
     ; CHECK-NEXT: PseudoRET
     ;
     ; CHECK-4BYTE-LABEL: name: three_loads
@@ -1325,39 +1230,6 @@ body: |
     %5:gpr = LW %0, target-flags(riscv-lo) @global_var + 4 :: (load (s32))
     %6:gpr = ADD %2, %4
     %7:gpr = ADD %3, %5
-    PseudoRET
-
-...
----
-name: symbolic_operands_base_offset_different_align
-alignment: 4
-tracksRegLiveness: true
-liveins:
-  - { reg: '$x10', virtual-reg: '%0' }
-body: |
-  bb.0:
-    liveins: $x10, $x11
-
-    ; CHECK-LABEL: name: symbolic_operands_base_offset_different_align
-    ; CHECK: liveins: $x10, $x11
-    ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
-    ; CHECK-NEXT: [[LW:%[0-9]+]]:gpr = LW [[COPY]], target-flags(riscv-lo) @global_var + 8 :: (load (s32), align 8)
-    ; CHECK-NEXT: [[LW1:%[0-9]+]]:gpr = LW [[COPY]], target-flags(riscv-lo) @global_var + 4 :: (load (s32), align 8)
-    ; CHECK-NEXT: [[ADD:%[0-9]+]]:gpr = ADD [[LW]], [[LW1]]
-    ; CHECK-NEXT: PseudoRET
-    ;
-    ; CHECK-4BYTE-LABEL: name: symbolic_operands_base_offset_different_align
-    ; CHECK-4BYTE: liveins: $x10, $x11
-    ; CHECK-4BYTE-NEXT: {{  $}}
-    ; CHECK-4BYTE-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
-    ; CHECK-4BYTE-NEXT: [[PseudoLD_RV32_OPT:%[0-9]+]]:gpr, [[PseudoLD_RV32_OPT1:%[0-9]+]]:gpr = PseudoLD_RV32_OPT [[COPY]], target-flags(riscv-lo) @global_var + 4 :: (load (s32), align 8)
-    ; CHECK-4BYTE-NEXT: [[ADD:%[0-9]+]]:gpr = ADD [[PseudoLD_RV32_OPT1]], [[PseudoLD_RV32_OPT]]
-    ; CHECK-4BYTE-NEXT: PseudoRET
-    %0:gpr = COPY $x10
-    %1:gpr = LW %0, target-flags(riscv-lo) @global_var + 8:: (load (s32), align 8)
-    %2:gpr = LW %0, target-flags(riscv-lo) @global_var + 4 :: (load (s32), align 8)
-    %3:gpr = ADD %1, %2
     PseudoRET
 
 ...

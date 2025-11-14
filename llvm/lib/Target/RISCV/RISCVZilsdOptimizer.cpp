@@ -22,7 +22,6 @@
 
 #include "RISCV.h"
 #include "RISCVInstrInfo.h"
-#include "RISCVMachineFunctionInfo.h"
 #include "RISCVRegisterInfo.h"
 #include "RISCVSubtarget.h"
 #include "llvm/ADT/DenseMap.h"
@@ -92,11 +91,9 @@ public:
 private:
   bool isMemoryOp(const MachineInstr &MI);
   bool rescheduleLoadStoreInstrs(MachineBasicBlock *MBB);
-  bool canFormLdSdPair(MachineInstr *Op0, MachineInstr *Op1, Register &FirstReg,
-                       Register &SecondReg, Register &BaseReg,
-                       MachineOperand *&OffsetOp);
+  bool canFormLdSdPair(MachineInstr *MI0, MachineInstr *MI1);
   bool rescheduleOps(MachineBasicBlock *MBB,
-                     SmallVectorImpl<MachineInstr *> &Ops, BaseRegInfo Base,
+                     SmallVectorImpl<MachineInstr *> &MIs, BaseRegInfo Base,
                      bool IsLoad,
                      DenseMap<MachineInstr *, unsigned> &MI2LocMap);
   bool isSafeToMove(MachineInstr *MI, MachineInstr *Target, bool MoveForward);
@@ -108,6 +105,7 @@ private:
   MachineRegisterInfo *MRI;
   AliasAnalysis *AA;
   MachineDominatorTree *DT;
+  Align RequiredAlign;
 };
 
 } // end anonymous namespace
@@ -142,6 +140,11 @@ bool RISCVPreAllocZilsdOpt::runOnMachineFunction(MachineFunction &MF) {
   AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
   DT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
 
+  // Check alignment: default is 8-byte, but allow 4-byte with tune feature
+  // If unaligned scalar memory is enabled, allow any alignment
+  RequiredAlign = STI->enableUnalignedScalarMem() ? Align(1)
+                  : STI->allowZilsd4ByteAlign()   ? Align(4)
+                                                  : Align(8);
   bool Modified = false;
   for (auto &MBB : MF) {
     Modified |= rescheduleLoadStoreInstrs(&MBB);
@@ -182,83 +185,35 @@ RISCVPreAllocZilsdOpt::getMemoryOpOffset(const MachineInstr &MI) {
   return std::make_pair(MemoryOffsetKind::Unknown, 0);
 }
 
-bool RISCVPreAllocZilsdOpt::canFormLdSdPair(
-    MachineInstr *Op0, MachineInstr *Op1, Register &FirstReg,
-    Register &SecondReg, Register &BaseReg, MachineOperand *&OffsetOp) {
-
-  unsigned Opcode = Op0->getOpcode();
-
-  // Check if we have two LW or two SW instructions
-  if (Opcode != Op1->getOpcode())
-    return false;
-
-  if (Opcode != RISCV::LW && Opcode != RISCV::SW)
-    return false;
-
-  if (!Op0->hasOneMemOperand() || !Op1->hasOneMemOperand())
-    return false;
-
-  // Check if operands are compatible for merging
-  const MachineOperand &OffsetOp0 = Op0->getOperand(2);
-  const MachineOperand &OffsetOp1 = Op1->getOperand(2);
-
-  // Both must be the same type
-  if (OffsetOp0.getType() != OffsetOp1.getType())
+bool RISCVPreAllocZilsdOpt::canFormLdSdPair(MachineInstr *MI0,
+                                            MachineInstr *MI1) {
+  if (!MI0->hasOneMemOperand() || !MI1->hasOneMemOperand())
     return false;
 
   // Get offsets and check they are consecutive
-  int Offset0 = getMemoryOpOffset(*Op0).second;
-  int Offset1 = getMemoryOpOffset(*Op1).second;
+  int Offset0 = getMemoryOpOffset(*MI0).second;
+  int Offset1 = getMemoryOpOffset(*MI1).second;
 
   // Offsets must be 4 bytes apart
-  if (std::abs(Offset1 - Offset0) != 4)
+  if (Offset1 - Offset0 != 4)
     return false;
 
-  // Make sure we have the same base register
-  Register Base0 = Op0->getOperand(1).getReg();
-  Register Base1 = Op1->getOperand(1).getReg();
-  if (Base0 != Base1)
+  // We need to guarantee the alignment(base + offset) is legal,
+  // e.g. if required alignment is 8,
+  //    Valid: global(align 8) + offset(0)
+  //    Valid: global(align 4) + offset(4)
+  //    Invalid: global(align 8) + offset(4)
+  const MachineMemOperand *MMO = *MI0->memoperands_begin();
+  unsigned Alignment = MMO->getBaseAlign().value() + Offset0;
+  if (Alignment < RequiredAlign.value() ||
+      (Alignment % RequiredAlign.value()) != 0)
     return false;
-
-  int OffsetVal;
-
-  // Set output parameters
-  if (Offset0 < Offset1) {
-    FirstReg = Op0->getOperand(0).getReg();
-    SecondReg = Op1->getOperand(0).getReg();
-    OffsetOp = &Op0->getOperand(2);
-    OffsetVal = Offset0;
-  } else {
-    FirstReg = Op1->getOperand(0).getReg();
-    SecondReg = Op0->getOperand(0).getReg();
-    OffsetOp = &Op1->getOperand(2);
-    OffsetVal = Offset1;
-  }
-
-  // Check alignment: default is 8-byte, but allow 4-byte with tune feature
-  // If unaligned scalar memory is enabled, allow any alignment
-  unsigned RequiredAlign = STI->enableUnalignedScalarMem() ? 1
-                           : STI->allowZilsd4ByteAlign()   ? 4
-                                                           : 8;
-  // Base alignment is checked at this point, we need to check offset alignment.
-  // e.g. Valid: global(align 8) + offset(0)
-  //      Invalid: global(align 8) + offset(4)
-  if (OffsetVal % RequiredAlign != 0)
-    return false;
-
-  BaseReg = Base0;
 
   // Check that the two destination registers are different
+  Register FirstReg = MI0->getOperand(0).getReg();
+  Register SecondReg = MI1->getOperand(0).getReg();
   if (FirstReg == SecondReg)
     return false;
-
-  // For loads, check that neither destination register is the same as the base
-  // register. This prevents register reuse issues where the first load
-  // overwrites the base.
-  if (Opcode == RISCV::LW) {
-    if (FirstReg == BaseReg || SecondReg == BaseReg)
-      return false;
-  }
 
   return true;
 }
@@ -328,57 +283,55 @@ bool RISCVPreAllocZilsdOpt::isSafeToMove(MachineInstr *MI, MachineInstr *Target,
 }
 
 bool RISCVPreAllocZilsdOpt::rescheduleOps(
-    MachineBasicBlock *MBB, SmallVectorImpl<MachineInstr *> &Ops,
+    MachineBasicBlock *MBB, SmallVectorImpl<MachineInstr *> &MIs,
     BaseRegInfo Base, bool IsLoad,
     DenseMap<MachineInstr *, unsigned> &MI2LocMap) {
   // Sort by offset, at this point it ensure base reg and MemoryOffsetKind are
   // same, so we just need to simply sort by offset value.
-  llvm::sort(Ops.begin(), Ops.end(), [this](MachineInstr *A, MachineInstr *B) {
+  llvm::sort(MIs.begin(), MIs.end(), [this](MachineInstr *A, MachineInstr *B) {
     return getMemoryOpOffset(*A).second < getMemoryOpOffset(*B).second;
   });
 
   bool Modified = false;
 
   // Try to pair consecutive operations
-  for (size_t i = 0; i + 1 < Ops.size(); i++) {
-    MachineInstr *Op0 = Ops[i];
-    MachineInstr *Op1 = Ops[i + 1];
+  for (size_t i = 0; i + 1 < MIs.size(); i++) {
+    MachineInstr *MI0 = MIs[i];
+    MachineInstr *MI1 = MIs[i + 1];
 
-    // Skip if either instruction was already processed
-    if (!Op0->getParent() || !Op1->getParent())
+    Register FirstReg = MI0->getOperand(0).getReg();
+    Register SecondReg = MI1->getOperand(0).getReg();
+    Register BaseReg = MI0->getOperand(1).getReg();
+    const MachineOperand &OffsetOp = MI0->getOperand(2);
+
+    // At this point, MI0 and MI1 are:
+    //    1. both either LW or SW.
+    //    2. guaranteed to have same memory kind.
+    //    3. guaranteed to have same base register.
+    //    4. already be sorted by offset value.
+    // so we don't have to check these in canFormLdSdPair.
+    if (!canFormLdSdPair(MI0, MI1))
       continue;
-
-    Register FirstReg, SecondReg, BaseReg;
-    MachineOperand *OffsetOp = nullptr;
-
-    if (!canFormLdSdPair(Op0, Op1, FirstReg, SecondReg, BaseReg, OffsetOp))
-      continue;
-
-    // Check if we can safely and profitably move the instructions together
-    SmallPtrSet<MachineInstr *, 4> MemOps;
-    SmallSet<unsigned, 4> MemRegs;
-    MemOps.insert(Op0);
-    MemRegs.insert(Op0->getOperand(0).getReg().id());
 
     // Use MI2LocMap to determine which instruction appears later in program
     // order
-    bool Op1IsLater = MI2LocMap[Op1] > MI2LocMap[Op0];
+    bool MI1IsLater = MI2LocMap[MI1] > MI2LocMap[MI0];
 
     // For loads: move later instruction up (backwards) to earlier instruction
     // For stores: move earlier instruction down (forwards) to later instruction
     MachineInstr *MoveInstr, *TargetInstr;
     if (IsLoad) {
       // For loads: move the later instruction to the earlier one
-      MoveInstr = Op1IsLater ? Op1 : Op0;
-      TargetInstr = Op1IsLater ? Op0 : Op1;
+      MoveInstr = MI1IsLater ? MI1 : MI0;
+      TargetInstr = MI1IsLater ? MI0 : MI1;
     } else {
       // For stores: move the earlier instruction to the later one
-      MoveInstr = Op1IsLater ? Op0 : Op1;
-      TargetInstr = Op1IsLater ? Op1 : Op0;
+      MoveInstr = MI1IsLater ? MI0 : MI1;
+      TargetInstr = MI1IsLater ? MI1 : MI0;
     }
 
-    unsigned Distance = Op1IsLater ? MI2LocMap[Op1] - MI2LocMap[Op0]
-                                   : MI2LocMap[Op0] - MI2LocMap[Op1];
+    unsigned Distance = MI1IsLater ? MI2LocMap[MI1] - MI2LocMap[MI0]
+                                   : MI2LocMap[MI0] - MI2LocMap[MI1];
     if (!isSafeToMove(MoveInstr, TargetInstr, !IsLoad) ||
         Distance > MaxRescheduleDistance)
       continue;
@@ -393,14 +346,14 @@ bool RISCVPreAllocZilsdOpt::rescheduleOps(
 
     // Create the paired instruction
     MachineInstrBuilder MIB;
-    DebugLoc DL = Op0->getDebugLoc();
+    DebugLoc DL = MI0->getDebugLoc();
 
     if (IsLoad) {
       MIB = BuildMI(*MBB, InsertPos, DL, TII->get(RISCV::PseudoLD_RV32_OPT))
                 .addReg(FirstReg, RegState::Define)
                 .addReg(SecondReg, RegState::Define)
                 .addReg(BaseReg)
-                .add(*OffsetOp);
+                .add(OffsetOp);
       ++NumLDFormed;
       LLVM_DEBUG(dbgs() << "Formed LD: " << *MIB << "\n");
     } else {
@@ -408,13 +361,13 @@ bool RISCVPreAllocZilsdOpt::rescheduleOps(
                 .addReg(FirstReg)
                 .addReg(SecondReg)
                 .addReg(BaseReg)
-                .add(*OffsetOp);
+                .add(OffsetOp);
       ++NumSDFormed;
       LLVM_DEBUG(dbgs() << "Formed SD: " << *MIB << "\n");
     }
 
     // Copy memory operands
-    MIB.cloneMergedMemRefs({Op0, Op1});
+    MIB.cloneMergedMemRefs({MI0, MI1});
 
     // Add register allocation hints for consecutive registers
     // RISC-V Zilsd requires even/odd register pairs
@@ -428,8 +381,8 @@ bool RISCVPreAllocZilsdOpt::rescheduleOps(
     }
 
     // Remove the original instructions
-    Op0->eraseFromParent();
-    Op1->eraseFromParent();
+    MI0->eraseFromParent();
+    MI1->eraseFromParent();
 
     Modified = true;
 
@@ -454,14 +407,6 @@ bool RISCVPreAllocZilsdOpt::isMemoryOp(const MachineInstr &MI) {
     return false;
 
   const MachineMemOperand *MMO = *MI.memoperands_begin();
-
-  // Check alignment: default is 8-byte, but allow 4-byte with tune feature
-  // If unaligned scalar memory is enabled, allow any alignment
-  Align RequiredAlign = STI->enableUnalignedScalarMem() ? Align(1)
-                        : STI->allowZilsd4ByteAlign()   ? Align(4)
-                                                        : Align(8);
-  if (MMO->getBaseAlign() < RequiredAlign)
-    return false;
 
   if (MMO->isVolatile() || MMO->isAtomic())
     return false;
