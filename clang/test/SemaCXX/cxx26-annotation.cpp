@@ -1,14 +1,14 @@
 // RUN: %clang_cc1 -std=c++26  -x c++ %s -verify
 
+struct F {
+  bool V;
+};
 // Nominal cases
 // Type
 struct [[=1]] f1 {};
 struct [[=1, =F{true}]] f2 {};
 struct [[=1]] [[=2]] f3 {};
 // Declaration
-struct F {
-  bool V;
-};
 const [[=1]] F f4{};
 // Redeclaration
 [[=2, =3, =2]] void f5();
