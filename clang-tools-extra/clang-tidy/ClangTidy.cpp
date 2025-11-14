@@ -587,7 +587,7 @@ runClangTidy(clang::tidy::ClangTidyContext &Context,
       };
 
   // Remove unwanted arguments passed to the compiler
-  ArgumentsAdjuster PerFileArgumentRemover =
+  const ArgumentsAdjuster PerFileArgumentRemover =
       [&Context](const CommandLineArguments &Args, StringRef Filename) {
         ClangTidyOptions Opts = Context.getOptionsForFile(Filename);
         CommandLineArguments AdjustedArgs = Args;
