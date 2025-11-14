@@ -2909,6 +2909,13 @@ TEST_F(TokenAnnotatorTest, UnderstandsVerilogOperators) {
   EXPECT_EQ(Tokens[0]->TokenText, R"(\busa+index\
 +)");
   EXPECT_TOKEN(Tokens[1], tok::semi, TT_Unknown);
+
+  // A C++ keyword should be treated as an identifier.
+  Tokens = Annotate("volatile delete;");
+  ASSERT_EQ(Tokens.size(), 4u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::identifier, TT_Unknown);
+  EXPECT_TOKEN(Tokens[1], tok::identifier, TT_StartOfName);
+
   // An escaped newline should not be treated as an escaped identifier.
   Tokens = Annotate("\\\n");
   ASSERT_EQ(Tokens.size(), 1u) << Tokens;
