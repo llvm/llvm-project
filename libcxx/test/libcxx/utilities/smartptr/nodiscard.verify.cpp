@@ -6,18 +6,22 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: std-at-least-c++23
-
 // <memory>
 
 // Check that functions are marked [[nodiscard]]
 
 #include <memory>
 
+#include "test_macros.h"
+
 void test() {
-  std::unique_ptr<int> uPtr;
-  // [inout.ptr]
-  std::inout_ptr(uPtr); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  // [out.ptr]
-  std::out_ptr(uPtr); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+#if TEST_STD_VER >= 23
+  {
+    std::unique_ptr<int> uPtr;
+    // [inout.ptr]
+    std::inout_ptr(uPtr); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    // [out.ptr]
+    std::out_ptr(uPtr); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  }
+#endif
 }
