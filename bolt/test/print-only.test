@@ -1,6 +1,6 @@
 # Verify if `--print-only` and `--print-only-files` work fine.
 
-# REQURIES: system-linux
+# REQUIRES: system-linux
 
 # RUN: %clang %cflags -x c %p/Inputs/bolt_icf.cpp -o %t -Wl,-q
 # RUN: llvm-bolt %t -o %t.bolt --icf=none --print-cfg \
