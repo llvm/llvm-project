@@ -64,12 +64,10 @@ public:
   bool isRegister() const { return std::holds_alternative<MCRegister>(Val); }
 
   MCRegister getRegister() const {
-    assert(isRegister());
     return std::get<MCRegister>(Val);
   }
 
   unsigned getStackOffset() const {
-    assert(std::holds_alternative<unsigned>(Val));
     return std::get<unsigned>(Val);
   }
 
