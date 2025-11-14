@@ -74,7 +74,7 @@ class MIREmbedder;
 class SymbolicMIREmbedder;
 
 LLVM_ABI extern llvm::cl::OptionCategory MIR2VecCategory;
-extern cl::opt<float> OpcWeight, CommonOperandWeight, RegOperandWeight;
+LLVM_ABI extern cl::opt<float> OpcWeight, CommonOperandWeight, RegOperandWeight;
 
 using Embedding = ir2vec::Embedding;
 using MachineInstEmbeddingsMap = DenseMap<const MachineInstr *, Embedding>;
@@ -211,14 +211,18 @@ class MIRVocabulary {
 
 public:
   /// Static method for extracting base opcode names (public for testing)
-  static std::string extractBaseOpcodeName(StringRef InstrName);
+  LLVM_ABI_FOR_TEST static std::string
+  extractBaseOpcodeName(StringRef InstrName);
 
   /// Get indices from opcode or operand names. These are public for testing.
   /// String based lookups are inefficient and should be avoided in general.
-  unsigned getCanonicalIndexForBaseName(StringRef BaseName) const;
-  unsigned getCanonicalIndexForOperandName(StringRef OperandName) const;
-  unsigned getCanonicalIndexForRegisterClass(StringRef RegName,
-                                             bool IsPhysical = true) const;
+  LLVM_ABI_FOR_TEST unsigned
+  getCanonicalIndexForBaseName(StringRef BaseName) const;
+  LLVM_ABI_FOR_TEST unsigned
+  getCanonicalIndexForOperandName(StringRef OperandName) const;
+  LLVM_ABI_FOR_TEST unsigned
+  getCanonicalIndexForRegisterClass(StringRef RegName,
+                                    bool IsPhysical = true) const;
 
   /// Get the string key for a vocabulary entry at the given position
   LLVM_ABI std::string getStringKey(unsigned Pos) const;
@@ -262,7 +266,7 @@ public:
   MIRVocabulary() = delete;
 
   /// Factory method to create MIRVocabulary from vocabulary map
-  static Expected<MIRVocabulary>
+  LLVM_ABI_FOR_TEST static Expected<MIRVocabulary>
   create(VocabMap &&OpcMap, VocabMap &&CommonOperandsMap, VocabMap &&PhyRegMap,
          VocabMap &&VirtRegMap, const TargetInstrInfo &TII,
          const TargetRegisterInfo &TRI, const MachineRegisterInfo &MRI);
@@ -349,7 +353,7 @@ private:
 
 public:
   SymbolicMIREmbedder(const MachineFunction &F, const MIRVocabulary &Vocab);
-  static std::unique_ptr<SymbolicMIREmbedder>
+  LLVM_ABI_FOR_TEST static std::unique_ptr<SymbolicMIREmbedder>
   create(const MachineFunction &MF, const MIRVocabulary &Vocab);
 };
 
