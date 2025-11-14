@@ -928,6 +928,11 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
     assert(!cir::MissingFeatures::cleanupWithPreservedValues());
     return lv;
   }
+  case Expr::CXXDefaultArgExprClass: {
+    auto *dae = cast<CXXDefaultArgExpr>(e);
+    CXXDefaultArgExprScope scope(*this, dae);
+    return emitLValue(dae->getExpr());
+  }
   case Expr::ParenExprClass:
     return emitLValue(cast<ParenExpr>(e)->getSubExpr());
   case Expr::GenericSelectionExprClass:
