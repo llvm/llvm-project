@@ -19,8 +19,13 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_ALWAYS_INLINE inline void*
-__align_impl(size_t __align, size_t __sz, void*& __ptr, size_t& __space) {
+#if defined(_LIBCPP_DISABLE_INLINE_OPTIMIZE_BECAUSE_MULTIPLY_SYMBOLS_ERROR) && !defined(_LIBCPP_ABI_DO_NOT_EXPORT_ALIGN)
+
+_LIBCPP_EXPORTED_FROM_ABI void* align(size_t __align, size_t __sz, void*& __ptr, size_t& __space);
+
+#else
+
+_LIBCPP_HIDE_FROM_ABI inline void* align(size_t __align, size_t __sz, void*& __ptr, size_t& __space) {
   void* __r = nullptr;
   if (__sz <= __space) {
     char* __p1 = static_cast<char*>(__ptr);
@@ -35,20 +40,7 @@ __align_impl(size_t __align, size_t __sz, void*& __ptr, size_t& __space) {
   return __r;
 }
 
-#ifndef _LIBCPP_EXPORT_ALIGN_SYMBOL
-#  ifdef _LIBCPP_DISABLE_INLINE_OPTIMIZE_BECAUSE_MULTIPLY_SYMBOLS_ERROR
-
-_LIBCPP_EXPORTED_FROM_ABI void* align(size_t __align, size_t __sz, void*& __ptr, size_t& __space);
-
-#  else
-
-inline _LIBCPP_HIDE_FROM_ABI void* align(size_t __align, size_t __sz, void*& __ptr, size_t& __space) {
-  return __align_impl(__align, __sz, __ptr, __space);
-}
-
-#  endif //  _LIBCPP_DISABLE_INLINE_OPTIMIZE_BECAUSE_MULTIPLY_SYMBOLS_ERROR
-
-#endif // _LIBCPP_EXPORT_ALIGN_SYMBOL
+#endif
 
 _LIBCPP_END_NAMESPACE_STD
 

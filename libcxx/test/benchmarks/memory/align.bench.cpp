@@ -9,17 +9,29 @@
 // UNSUPPORTED: c++03
 
 #include <memory>
+#include <iostream>
 
 #include "benchmark/benchmark.h"
-#include "test_macros.h"
+
+struct Input {
+  std::size_t align;
+  std::size_t size;
+  void* ptr;
+  std::size_t buffer_size;
+};
 
 static void BM_align(benchmark::State& state) {
   char buffer[1024];
-  void* data = buffer + 123;
-  std::size_t sz{sizeof(buffer) - 123};
-
+  Input input{};
+  void* ptr               = buffer + 123;
+  std::size_t buffer_size = sizeof(buffer) - 123;
+  input.align             = state.range();
+  input.size              = state.range();
   for (auto _ : state) {
-    benchmark::DoNotOptimize(std::align(state.range(), state.range(), data, sz));
+    input.ptr         = ptr;
+    input.buffer_size = buffer_size;
+    benchmark::DoNotOptimize(input);
+    benchmark::DoNotOptimize(std::align(input.align, input.size, input.ptr, input.buffer_size));
   }
 }
 BENCHMARK(BM_align)->Range(1, 256);

@@ -10,9 +10,6 @@
 #ifdef _LIBCPP_DEPRECATED_ABI_LEGACY_LIBRARY_DEFINITIONS_FOR_INLINE_FUNCTIONS
 #  define _LIBCPP_SHARED_PTR_DEFINE_LEGACY_INLINE_FUNCTIONS
 #endif
-#ifndef _LIBCPP_ABI_DO_NOT_EXPORT_ALIGN
-#  define _LIBCPP_EXPORT_ALIGN_SYMBOL
-#endif
 
 #include <__functional/hash.h>
 #include <memory>
@@ -134,13 +131,5 @@ __sp_mut& __get_sp_mut(const void* p) {
 }
 
 #endif // _LIBCPP_HAS_THREADS
-
-#if defined(_LIBCPP_EXPORT_ALIGN_SYMBOL)
-
-_LIBCPP_EXPORTED_FROM_ABI void* align(size_t alignment, size_t size, void*& ptr, size_t& space) {
-  return __align_impl(alignment, size, ptr, space);
-}
-
-#endif // _LIBCPP_EXPORT_ALIGN_SYMBOL
 
 _LIBCPP_END_NAMESPACE_STD

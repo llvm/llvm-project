@@ -152,6 +152,7 @@ cxx_sources = [
   "iostream.cpp",
   "locale.cpp",
   "memory.cpp",
+  "memory_align.cpp"
   "memory_resource.cpp",
   "mutex.cpp",
   "mutex_destructor.cpp",

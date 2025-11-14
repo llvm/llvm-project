@@ -31,6 +31,7 @@ set(LIBCXX_SOURCES
   include/to_chars_floating_point.h
   include/from_chars_floating_point.h
   memory.cpp
+  memory_align.cpp
   memory_resource.cpp
   new_handler.cpp
   new_helpers.cpp
