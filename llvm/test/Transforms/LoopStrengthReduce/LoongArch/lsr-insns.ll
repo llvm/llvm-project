@@ -5,20 +5,18 @@
 define void @foo(ptr nocapture readonly %x, ptr nocapture readonly %y, ptr nocapture %q) nounwind {
 ; CHECK-LLC-LABEL: foo:
 ; CHECK-LLC:       # %bb.0: # %entry
-; CHECK-LLC-NEXT:    lu12i.w $a3, -1
-; CHECK-LLC-NEXT:    lu12i.w $a4, 1
+; CHECK-LLC-NEXT:    move $a3, $zero
+; CHECK-LLC-NEXT:    ori $a4, $zero, 1024
 ; CHECK-LLC-NEXT:    .p2align 4, , 16
 ; CHECK-LLC-NEXT:  .LBB0_1: # %for.body
 ; CHECK-LLC-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-LLC-NEXT:    add.d $a5, $a0, $a3
-; CHECK-LLC-NEXT:    ldx.w $a5, $a5, $a4
-; CHECK-LLC-NEXT:    add.d $a6, $a1, $a3
-; CHECK-LLC-NEXT:    ldx.w $a6, $a6, $a4
+; CHECK-LLC-NEXT:    ldx.w $a5, $a0, $a3
+; CHECK-LLC-NEXT:    ldx.w $a6, $a1, $a3
 ; CHECK-LLC-NEXT:    add.d $a5, $a6, $a5
-; CHECK-LLC-NEXT:    add.d $a6, $a2, $a3
+; CHECK-LLC-NEXT:    stx.w $a5, $a2, $a3
+; CHECK-LLC-NEXT:    addi.d $a4, $a4, -1
 ; CHECK-LLC-NEXT:    addi.d $a3, $a3, 4
-; CHECK-LLC-NEXT:    stptr.w $a5, $a6, 4096
-; CHECK-LLC-NEXT:    bnez $a3, .LBB0_1
+; CHECK-LLC-NEXT:    bnez $a4, .LBB0_1
 ; CHECK-LLC-NEXT:  # %bb.2: # %for.cond.cleanup
 ; CHECK-LLC-NEXT:    ret
 ; CHECK-OPT-LABEL: define void @foo(
@@ -28,18 +26,17 @@ define void @foo(ptr nocapture readonly %x, ptr nocapture readonly %y, ptr nocap
 ; CHECK-OPT:       [[FOR_COND_CLEANUP:.*]]:
 ; CHECK-OPT-NEXT:    ret void
 ; CHECK-OPT:       [[FOR_BODY]]:
-; CHECK-OPT-NEXT:    [[LSR_IV:%.*]] = phi i64 [ [[LSR_IV_NEXT:%.*]], %[[FOR_BODY]] ], [ -4096, %[[ENTRY]] ]
+; CHECK-OPT-NEXT:    [[LSR_IV:%.*]] = phi i64 [ [[LSR_IV_NEXT2:%.*]], %[[FOR_BODY]] ], [ 0, %[[ENTRY]] ]
+; CHECK-OPT-NEXT:    [[LSR_IV1:%.*]] = phi i64 [ [[LSR_IV_NEXT:%.*]], %[[FOR_BODY]] ], [ 1024, %[[ENTRY]] ]
 ; CHECK-OPT-NEXT:    [[SCEVGEP4:%.*]] = getelementptr i8, ptr [[X]], i64 [[LSR_IV]]
-; CHECK-OPT-NEXT:    [[SCEVGEP5:%.*]] = getelementptr i8, ptr [[SCEVGEP4]], i64 4096
-; CHECK-OPT-NEXT:    [[LDTMP:%.*]] = load i32, ptr [[SCEVGEP5]], align 4
+; CHECK-OPT-NEXT:    [[LDTMP:%.*]] = load i32, ptr [[SCEVGEP4]], align 4
 ; CHECK-OPT-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[Y]], i64 [[LSR_IV]]
-; CHECK-OPT-NEXT:    [[SCEVGEP3:%.*]] = getelementptr i8, ptr [[SCEVGEP2]], i64 4096
-; CHECK-OPT-NEXT:    [[LDTMP1:%.*]] = load i32, ptr [[SCEVGEP3]], align 4
+; CHECK-OPT-NEXT:    [[LDTMP1:%.*]] = load i32, ptr [[SCEVGEP2]], align 4
 ; CHECK-OPT-NEXT:    [[ADD:%.*]] = add nsw i32 [[LDTMP1]], [[LDTMP]]
 ; CHECK-OPT-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[Q]], i64 [[LSR_IV]]
-; CHECK-OPT-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[SCEVGEP]], i64 4096
-; CHECK-OPT-NEXT:    store i32 [[ADD]], ptr [[SCEVGEP1]], align 4
-; CHECK-OPT-NEXT:    [[LSR_IV_NEXT]] = add nsw i64 [[LSR_IV]], 4
+; CHECK-OPT-NEXT:    store i32 [[ADD]], ptr [[SCEVGEP]], align 4
+; CHECK-OPT-NEXT:    [[LSR_IV_NEXT]] = add nsw i64 [[LSR_IV1]], -1
+; CHECK-OPT-NEXT:    [[LSR_IV_NEXT2]] = add nuw nsw i64 [[LSR_IV]], 4
 ; CHECK-OPT-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[LSR_IV_NEXT]], 0
 ; CHECK-OPT-NEXT:    br i1 [[EXITCOND]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]]
 ;
@@ -69,19 +66,18 @@ define void @bar(ptr nocapture readonly %x, ptr nocapture readonly %y, ptr nocap
 ; CHECK-LLC-NEXT:    addi.w $a4, $a3, 0
 ; CHECK-LLC-NEXT:    blez $a4, .LBB1_3
 ; CHECK-LLC-NEXT:  # %bb.1: # %for.body.preheader
+; CHECK-LLC-NEXT:    move $a4, $zero
 ; CHECK-LLC-NEXT:    bstrpick.d $a3, $a3, 31, 0
+; CHECK-LLC-NEXT:    slli.d $a3, $a3, 2
 ; CHECK-LLC-NEXT:    .p2align 4, , 16
 ; CHECK-LLC-NEXT:  .LBB1_2: # %for.body
 ; CHECK-LLC-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-LLC-NEXT:    ld.w $a4, $a0, 0
-; CHECK-LLC-NEXT:    ld.w $a5, $a1, 0
-; CHECK-LLC-NEXT:    add.d $a4, $a5, $a4
-; CHECK-LLC-NEXT:    st.w $a4, $a2, 0
-; CHECK-LLC-NEXT:    addi.d $a3, $a3, -1
-; CHECK-LLC-NEXT:    addi.d $a2, $a2, 4
-; CHECK-LLC-NEXT:    addi.d $a1, $a1, 4
-; CHECK-LLC-NEXT:    addi.d $a0, $a0, 4
-; CHECK-LLC-NEXT:    bnez $a3, .LBB1_2
+; CHECK-LLC-NEXT:    ldx.w $a5, $a0, $a4
+; CHECK-LLC-NEXT:    ldx.w $a6, $a1, $a4
+; CHECK-LLC-NEXT:    add.d $a5, $a6, $a5
+; CHECK-LLC-NEXT:    stx.w $a5, $a2, $a4
+; CHECK-LLC-NEXT:    addi.d $a4, $a4, 4
+; CHECK-LLC-NEXT:    bne $a3, $a4, .LBB1_2
 ; CHECK-LLC-NEXT:  .LBB1_3: # %for.cond.cleanup
 ; CHECK-LLC-NEXT:    ret
 ; CHECK-OPT-LABEL: define void @bar(
@@ -91,25 +87,23 @@ define void @bar(ptr nocapture readonly %x, ptr nocapture readonly %y, ptr nocap
 ; CHECK-OPT-NEXT:    br i1 [[CMP10]], label %[[FOR_BODY_PREHEADER:.*]], label %[[FOR_COND_CLEANUP:.*]]
 ; CHECK-OPT:       [[FOR_BODY_PREHEADER]]:
 ; CHECK-OPT-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[N]] to i64
+; CHECK-OPT-NEXT:    [[TMP0:%.*]] = shl nuw nsw i64 [[WIDE_TRIP_COUNT]], 2
 ; CHECK-OPT-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK-OPT:       [[FOR_COND_CLEANUP_LOOPEXIT:.*]]:
 ; CHECK-OPT-NEXT:    br label %[[FOR_COND_CLEANUP]]
 ; CHECK-OPT:       [[FOR_COND_CLEANUP]]:
 ; CHECK-OPT-NEXT:    ret void
 ; CHECK-OPT:       [[FOR_BODY]]:
-; CHECK-OPT-NEXT:    [[LSR_IV4:%.*]] = phi ptr [ [[SCEVGEP5:%.*]], %[[FOR_BODY]] ], [ [[X]], %[[FOR_BODY_PREHEADER]] ]
-; CHECK-OPT-NEXT:    [[LSR_IV2:%.*]] = phi ptr [ [[SCEVGEP3:%.*]], %[[FOR_BODY]] ], [ [[Y]], %[[FOR_BODY_PREHEADER]] ]
-; CHECK-OPT-NEXT:    [[LSR_IV1:%.*]] = phi ptr [ [[SCEVGEP:%.*]], %[[FOR_BODY]] ], [ [[Q]], %[[FOR_BODY_PREHEADER]] ]
-; CHECK-OPT-NEXT:    [[LSR_IV:%.*]] = phi i64 [ [[LSR_IV_NEXT:%.*]], %[[FOR_BODY]] ], [ [[WIDE_TRIP_COUNT]], %[[FOR_BODY_PREHEADER]] ]
+; CHECK-OPT-NEXT:    [[LSR_IV:%.*]] = phi i64 [ [[LSR_IV_NEXT:%.*]], %[[FOR_BODY]] ], [ 0, %[[FOR_BODY_PREHEADER]] ]
+; CHECK-OPT-NEXT:    [[LSR_IV4:%.*]] = getelementptr i8, ptr [[X]], i64 [[LSR_IV]]
 ; CHECK-OPT-NEXT:    [[LDTMP:%.*]] = load i32, ptr [[LSR_IV4]], align 4
+; CHECK-OPT-NEXT:    [[LSR_IV2:%.*]] = getelementptr i8, ptr [[Y]], i64 [[LSR_IV]]
 ; CHECK-OPT-NEXT:    [[LDTMP1:%.*]] = load i32, ptr [[LSR_IV2]], align 4
 ; CHECK-OPT-NEXT:    [[ADD:%.*]] = add nsw i32 [[LDTMP1]], [[LDTMP]]
+; CHECK-OPT-NEXT:    [[LSR_IV1:%.*]] = getelementptr i8, ptr [[Q]], i64 [[LSR_IV]]
 ; CHECK-OPT-NEXT:    store i32 [[ADD]], ptr [[LSR_IV1]], align 4
-; CHECK-OPT-NEXT:    [[LSR_IV_NEXT]] = add nsw i64 [[LSR_IV]], -1
-; CHECK-OPT-NEXT:    [[SCEVGEP]] = getelementptr i8, ptr [[LSR_IV1]], i64 4
-; CHECK-OPT-NEXT:    [[SCEVGEP3]] = getelementptr i8, ptr [[LSR_IV2]], i64 4
-; CHECK-OPT-NEXT:    [[SCEVGEP5]] = getelementptr i8, ptr [[LSR_IV4]], i64 4
-; CHECK-OPT-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[LSR_IV_NEXT]], 0
+; CHECK-OPT-NEXT:    [[LSR_IV_NEXT]] = add nuw nsw i64 [[LSR_IV]], 4
+; CHECK-OPT-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[TMP0]], [[LSR_IV_NEXT]]
 ; CHECK-OPT-NEXT:    br i1 [[EXITCOND]], label %[[FOR_COND_CLEANUP_LOOPEXIT]], label %[[FOR_BODY]]
 ;
 entry:
