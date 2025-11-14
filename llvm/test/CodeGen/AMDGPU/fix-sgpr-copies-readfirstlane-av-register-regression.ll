@@ -49,4 +49,19 @@ bb16:                                             ; preds = %bb16, %bb
   br label %bb16
 }
 
-
+define void @av_class_to_m0(ptr addrspace(1) %ptr) {
+; CHECK-LABEL: av_class_to_m0:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    global_load_dword v0, v[0:1], off
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    v_readfirstlane_b32 s4, v0
+; CHECK-NEXT:    s_mov_b32 m0, s4
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use m0
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %load = load i32, ptr addrspace(1) %ptr
+  call void asm sideeffect "; use $0", "{m0}"(i32 %load)
+  ret void
+}
