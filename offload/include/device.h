@@ -37,6 +37,8 @@
 #include "PluginInterface.h"
 
 using GenericPluginTy = llvm::omp::target::plugin::GenericPluginTy;
+using DeviceInfo = llvm::omp::target::plugin::DeviceInfo;
+using InfoTreeNode = llvm::omp::target::plugin::InfoTreeNode;
 
 // Forward declarations.
 struct __tgt_bin_desc;
@@ -167,8 +169,20 @@ struct DeviceTy {
   /// Indicate that there are pending images for this device or not.
   void setHasPendingImages(bool V) { HasPendingImages = V; }
 
-  /// Get the maximum shared memory per team for any kernel.
-  uint64_t getMaxSharedTeamMemory();
+  /// Get information from the device.
+  template <typename T>
+  T getInfo(DeviceInfo Info) const {
+    InfoTreeNode DevInfo = RTL->obtain_device_info(RTLDeviceID);
+
+    auto EntryOpt = DevInfo.get(Info);
+    if (!EntryOpt)
+      return 0;
+
+    auto Entry = *EntryOpt;
+    if (!std::holds_alternative<T>(Entry->Value))
+      return T{};
+    return std::get<T>(Entry->Value);
+  }
 
 private:
   /// Deinitialize the device (and plugin).

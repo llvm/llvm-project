@@ -371,16 +371,3 @@ bool DeviceTy::useAutoZeroCopy() {
 bool DeviceTy::isAccessiblePtr(const void *Ptr, size_t Size) {
   return RTL->is_accessible_ptr(RTLDeviceID, Ptr, Size);
 }
-
-uint64_t DeviceTy::getMaxSharedTeamMemory() {
-  InfoTreeNode Info = RTL->obtain_device_info(RTLDeviceID);
-
-  auto EntryOpt = Info.get(DeviceInfo::WORK_GROUP_LOCAL_MEM_SIZE);
-  if (!EntryOpt)
-    return 0;
-
-  auto Entry = *EntryOpt;
-  if (!std::holds_alternative<uint64_t>(Entry->Value))
-    return 0;
-  return std::get<uint64_t>(Entry->Value);
-}
