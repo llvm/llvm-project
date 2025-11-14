@@ -82,7 +82,6 @@ static_library("IR") {
     "SafepointIRVerifier.cpp",
     "Statepoint.cpp",
     "StructuralHash.cpp",
-    "SystemLibraries.cpp",
     "Type.cpp",
     "TypeFinder.cpp",
     "TypedPointerType.cpp",

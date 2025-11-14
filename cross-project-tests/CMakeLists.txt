@@ -104,6 +104,13 @@ add_lit_testsuite(check-cross-dtlto "Running DTLTO cross-project tests"
   DEPENDS ${CROSS_PROJECT_TEST_DEPS}
   )
 
+# veclib tests.
+add_lit_testsuite(check-cross-veclib "Running veclib cross-project tests"
+  ${CMAKE_CURRENT_BINARY_DIR}/veclib
+  EXCLUDE_FROM_CHECK_ALL
+  DEPENDS ${CROSS_PROJECT_TEST_DEPS}
+  )
+
 # Add check-cross-project-* targets.
 add_lit_testsuites(CROSS_PROJECT ${CMAKE_CURRENT_SOURCE_DIR}
   DEPENDS ${CROSS_PROJECT_TEST_DEPS}

@@ -29,7 +29,8 @@ using namespace RTLIB;
 RuntimeLibcallsInfo::RuntimeLibcallsInfo(const Triple &TT,
                                          ExceptionHandling ExceptionModel,
                                          FloatABI::ABIType FloatABI,
-                                         EABI EABIVersion, StringRef ABIName) {
+                                         EABI EABIVersion, StringRef ABIName,
+                                         VectorLibrary VecLib) {
   // FIXME: The ExceptionModel parameter is to handle the field in
   // TargetOptions. This interface fails to distinguish the forced disable
   // case for targets which support exceptions by default. This should
@@ -40,7 +41,7 @@ RuntimeLibcallsInfo::RuntimeLibcallsInfo(const Triple &TT,
   initLibcalls(TT, ExceptionModel, FloatABI, EABIVersion, ABIName);
 
   // TODO: Tablegen should generate these sets
-  switch (ClVectorLibrary) {
+  switch (VecLib) {
   case VectorLibrary::SLEEFGNUABI:
     for (RTLIB::LibcallImpl Impl :
          {RTLIB::impl__ZGVnN2vl8_modf, RTLIB::impl__ZGVnN4vl4_modff,
