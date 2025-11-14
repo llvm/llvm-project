@@ -1364,15 +1364,15 @@ DSAStackTy::DSAVarData DSAStackTy::getDSA(const_iterator &Iter,
   DefaultDataSharingAttributes IterDA = Iter->DefaultAttr;
   switch (Iter->DefaultVCAttr) {
   case DSA_VC_aggregate:
-    if (!D->getType()->isAggregateType())
+    if (!VD->getType()->isAggregateType())
       IterDA = DSA_none;
     break;
   case DSA_VC_pointer:
-    if (!D->getType()->isPointerType())
+    if (!VD->getType()->isPointerType())
       IterDA = DSA_none;
     break;
   case DSA_VC_scalar:
-    if (!D->getType()->isScalarType())
+    if (!VD->getType()->isScalarType())
       IterDA = DSA_none;
     break;
   case DSA_VC_all:
