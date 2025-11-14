@@ -1103,17 +1103,19 @@ Parser::DeclGroupPtrTy Parser::ParseDeclOrFunctionDefInternal(
     // Suggest correct location to fix '[[attrib]] struct' to 'struct
     // [[attrib]]'
     SourceLocation CorrectLocationForAttributes{};
-    auto TKind = DS.getTypeSpecType();
+    TypeSpecifierType TKind = DS.getTypeSpecType();
     if (DeclSpec::isDeclRep(TKind)) {
       if (TKind == DeclSpec::TST_enum) {
-        const auto *ED = dyn_cast_or_null<EnumDecl>(DS.getRepAsDecl());
-        if (ED) {
+        if (const auto *ED = dyn_cast_or_null<EnumDecl>(DS.getRepAsDecl())) {
           if (ED->getIdentifier()) {
             CorrectLocationForAttributes = ED->getLocation();
           } else {
             const auto Begin = ED->getBraceRange().getBegin();
             CorrectLocationForAttributes =
-                Begin.isValid() ? Begin : ED->getEndLoc();
+                Begin.isValid() ? Begin :
+                                // If there is no brace, fall back to the end
+                                // location, which corresponds to the semicolon.
+                    ED->getEndLoc();
           }
         }
       }
