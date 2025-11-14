@@ -268,7 +268,7 @@ extern "C" {
 #endif
 
 /// The OpenMP access group type. The criterion for grupping tasks using a
-/// specific grouping property.
+/// specific groupping property.
 enum omp_access_t {
   /// Groups the tasks based on the contention group to which they belong.
   omp_access_cgroup = 0,
