@@ -149,6 +149,9 @@ LLVM_ABI bool extractProfTotalWeight(const Instruction &I,
 LLVM_ABI void setBranchWeights(Instruction &I, ArrayRef<uint32_t> Weights,
                                bool IsExpected, bool ElideAllZero = false);
 
+/// Push the weights right to fit in uint32_t.
+LLVM_ABI SmallVector<uint32_t> fitWeights(ArrayRef<uint64_t> Weights);
+
 /// Variant of `setBranchWeights` where the `Weights` will be fit first to
 /// uint32_t by shifting right.
 LLVM_ABI void setFittedBranchWeights(Instruction &I, ArrayRef<uint64_t> Weights,
