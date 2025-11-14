@@ -23,7 +23,7 @@
 ; CHECK-NEXT: .short	0
 ; CHECK-NEXT: .short	0
 ; CHECK-NEXT: .short	0
-; CHECK-NEXT: .short	22000                           # Backend version
+; CHECK-NEXT: .short	{{[0-9]+}}                      # Backend version
 ; CHECK-NEXT: .short	0
 ; CHECK-NEXT: .short	0
 ; CHECK-NEXT: .short	0
