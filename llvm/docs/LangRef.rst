@@ -7989,9 +7989,9 @@ this metadata is added (i.e., has been distributed).  See
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 This metadata records an estimated trip count for the loop.  The first operand
-is the string ``llvm.loop.estimated_trip_count``.  The second operand is a
-positive integer constant of type ``i32`` or smaller specifying the estimate.
-For example:
+is the string ``llvm.loop.estimated_trip_count``.  The second operand is an
+integer constant of type ``i32`` or smaller specifying the estimate.  For
+example:
 
 .. code-block:: llvm
 
@@ -8033,12 +8033,20 @@ pass should record the new estimates by calling
 loop, ``llvm::getLoopEstimatedTripCount`` returns its value instead of
 estimating the trip count from the loop's ``branch_weights`` metadata.
 
-Especially after a transformation like loop peeling, the probability of reaching
-a loop's header might be very low.  Regardless, in the case that it is reached,
-at least one iteration will execute, so an estimated trip count of zero is
-invalid.  Some passes thus rely on non-zero estimated trip counts.
-Nevertheless, some passes naively compute it as zero.  To avoid misbehavior,
-``llvm::setLoopEstimatedTripCount`` converts zero to one.
+Zero
+""""
+
+Some passes set ``llvm.loop.estimated_trip_count`` to 0.  For example, after
+peeling 10 or more iterations from a loop with an estimated trip count of 10,
+``llvm.loop.estimated_trip_count`` becomes 0 on the remaining loop.  It
+indicates that, each time execution reaches the peeled iterations, execution is
+estimated to exit them without reaching the remaining loop's header.
+
+Even if the probability of reaching a loop's header is low, if it is reached, it
+is the start of an iteration.  Consequently, some passes historically assume
+that ``llvm::getLoopEstimatedTripCount`` always returns a positive count or
+``std::nullopt``.  Thus, it returns ``std::nullopt`` when
+``llvm.loop.estimated_trip_count`` is 0.
 
 '``llvm.licm.disable``' Metadata
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

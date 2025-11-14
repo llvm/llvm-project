@@ -214,15 +214,9 @@ static MDNode *createStringMetadata(Loop *TheLoop, StringRef Name, unsigned V) {
 /// different.
 void llvm::addStringMetadataToLoop(Loop *TheLoop, const char *StringMD,
                                    unsigned V) {
-  setLoopStringMetadata(TheLoop, StringMD, V);
-}
-
-void llvm::setLoopStringMetadata(Loop *TheLoop, const char *StringMD,
-                                 std::optional<unsigned> V) {
   SmallVector<Metadata *, 4> MDs(1);
   // If the loop already has metadata, retain it.
   MDNode *LoopID = TheLoop->getLoopID();
-  bool Found = false;
   if (LoopID) {
     for (unsigned i = 1, ie = LoopID->getNumOperands(); i < ie; ++i) {
       MDNode *Node = cast<MDNode>(LoopID->getOperand(i));
@@ -230,27 +224,21 @@ void llvm::setLoopStringMetadata(Loop *TheLoop, const char *StringMD,
       if (Node->getNumOperands() == 2) {
         MDString *S = dyn_cast<MDString>(Node->getOperand(0));
         if (S && S->getString() == StringMD) {
-          Found = true;
-          if (V) {
-            ConstantInt *IntMD =
-                mdconst::extract_or_null<ConstantInt>(Node->getOperand(1));
-            if (IntMD && IntMD->getSExtValue() == *V)
-              // It is already in place. Do nothing.
-              return;
-          }
-          // We need to update/remove the value, so just skip it here and it
-          // will be added/removed after copying other existed nodes.
+          ConstantInt *IntMD =
+              mdconst::extract_or_null<ConstantInt>(Node->getOperand(1));
+          if (IntMD && IntMD->getSExtValue() == V)
+            // It is already in place. Do nothing.
+            return;
+          // We need to update the value, so just skip it here and it will
+          // be added after copying other existed nodes.
           continue;
         }
       }
       MDs.push_back(Node);
     }
   }
-  if (!V && !Found)
-    return;
   // Add new metadata.
-  if (V)
-    MDs.push_back(createStringMetadata(TheLoop, StringMD, *V));
+  MDs.push_back(createStringMetadata(TheLoop, StringMD, V));
   // Replace current metadata node with new one.
   LLVMContext &Context = TheLoop->getHeader()->getContext();
   MDNode *NewLoopID = MDNode::get(Context, MDs);
@@ -924,13 +912,14 @@ llvm::getLoopEstimatedTripCount(Loop *L,
   }
 
   // Return the estimated trip count from metadata unless the metadata is
-  // missing or has no value.
+  // missing or has no value.  Return std::nullopt if it's zero.
   if (auto TC = getOptionalIntLoopAttribute(L, LLVMLoopEstimatedTripCount)) {
-    assert(TC != 0 && "Reached loop header executes at least one iteration");
     LLVM_DEBUG(dbgs() << "getLoopEstimatedTripCount: "
                       << LLVMLoopEstimatedTripCount << " metadata has trip "
-                      << "count of " << *TC << " for " << DbgLoop(L) << "\n");
-    return TC;
+                      << "count of " << *TC
+                      << (*TC == 0 ? " (returning std::nullopt)" : "")
+                      << " for " << DbgLoop(L) << "\n");
+    return *TC == 0 ? std::nullopt : std::optional(*TC);
   }
 
   // Estimate the trip count from latch branch weights.
@@ -949,13 +938,8 @@ bool llvm::setLoopEstimatedTripCount(
   if (!LatchBranch)
     return false;
 
-  // Set the metadata.  Some users of the estimated trip count rely on the value
-  // to be non-zero.
-  if (!EstimatedloopInvocationWeight) {
-    setLoopStringMetadata(L, LLVMLoopEstimatedTripCount,
-                          EstimatedTripCount == 0 ? 1 : EstimatedTripCount);
-    return true;
-  }
+  // Set the metadata.
+  addStringMetadataToLoop(L, LLVMLoopEstimatedTripCount, EstimatedTripCount);
 
   // At the moment, we currently support changing the estimated trip count in
   // the latch branch's branch weights only.  We could extend this API to
@@ -964,13 +948,8 @@ bool llvm::setLoopEstimatedTripCount(
   // TODO: Eventually, once all passes have migrated away from setting branch
   // weights to indicate estimated trip counts, we will not set branch weights
   // here at all.
-
-  // Set the metadata.  Some users of the estimated trip count rely on the value
-  // to be non-zero.
-  setLoopStringMetadata(L, LLVMLoopEstimatedTripCount,
-                        EstimatedTripCount == 0
-                            ? std::nullopt
-                            : std::optional(EstimatedTripCount));
+  if (!EstimatedloopInvocationWeight)
+    return true;
 
   // Calculate taken and exit weights.
   unsigned LatchExitWeight = 0;

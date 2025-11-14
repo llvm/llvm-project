@@ -197,7 +197,7 @@ TEST(LoopUtils, nestedLoopSharedLatchEstimatedTripCount) {
       });
 }
 
-// setLoopEstimatedTripCount implements special handling of zero.
+// {get,set}LoopEstimatedTripCount implement special handling of zero.
 TEST(LoopUtils, zeroEstimatedTripCount) {
   LLVMContext C;
   const char *IR =
@@ -220,10 +220,10 @@ TEST(LoopUtils, zeroEstimatedTripCount) {
       "!5 = !{!\"branch_weights\", i32 1, i32 9}\n"
       "\n";
 
-  // With EstimatedLoopInvocationWeight, setLoopEstimatedTripCount sets zeroed
-  // branch weights and discards any llvm.loop.estimated_trip_count, so
-  // getLoopEstimatedTripCount returns std::nullopt.  Other loop metadata, if
-  // any, is not touched.
+  // With EstimatedLoopInvocationWeight, setLoopEstimatedTripCount sets branch
+  // weights and llvm.loop.estimated_trip_count all to 0, so
+  // getLoopEstimatedTripCount returns std::nullopt.  It does not touch other
+  // loop metadata, if any.
   std::unique_ptr<Module> M = parseIR(C, IR);
   run(*M, "foo",
       [&](Function &F, DominatorTree &DT, ScalarEvolution &SE, LoopInfo &LI) {
@@ -242,14 +242,15 @@ TEST(LoopUtils, zeroEstimatedTripCount) {
           EXPECT_EQ(Weights[1], 0u);
           EXPECT_EQ(getOptionalIntLoopAttribute(L, "foo"), Foo);
           EXPECT_EQ(getOptionalIntLoopAttribute(L, LLVMLoopEstimatedTripCount),
-                    std::nullopt);
+                    0);
           EXPECT_EQ(getLoopEstimatedTripCount(L), std::nullopt);
         }
       });
 
   // Without EstimatedLoopInvocationWeight, setLoopEstimatedTripCount sets
-  // llvm.loop.estimated_trip_count to 1 and does not touch branch weights or
-  // other loop metadata.  getLoopEstimatedTripCount returns 1.
+  // llvm.loop.estimated_trip_count to 0, so getLoopEstimatedTripCount returns
+  // std::nullopt.  It does not touch branch weights or other loop metadata, if
+  // any.
   M = parseIR(C, IR);
   run(*M, "foo",
       [&](Function &F, DominatorTree &DT, ScalarEvolution &SE, LoopInfo &LI) {
@@ -270,8 +271,8 @@ TEST(LoopUtils, zeroEstimatedTripCount) {
           }
           EXPECT_EQ(getOptionalIntLoopAttribute(L, "foo"), Foo);
           EXPECT_EQ(getOptionalIntLoopAttribute(L, LLVMLoopEstimatedTripCount),
-                    1);
-          EXPECT_EQ(getLoopEstimatedTripCount(L), 1);
+                    0);
+          EXPECT_EQ(getLoopEstimatedTripCount(L), std::nullopt);
         }
       });
 }

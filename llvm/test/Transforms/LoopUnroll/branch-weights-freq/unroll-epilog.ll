@@ -111,8 +111,7 @@ do.end:
 !0 = !{!"branch_weights", i32 1, i32 10}
 
 ; ------------------------------------------------------------------------------
-; Check branch weight metadata and estimated trip count metadata.  The minimum
-; valid estimated trip count is 1 not 0.
+; Check branch weight metadata and estimated trip count metadata.
 ;
 ;  UR2: ![[#PROF_UR_GUARD]] = !{!"branch_weights", i32 195225786, i32 1952257862}
 ;  UR4: ![[#PROF_UR_GUARD]] = !{!"branch_weights", i32 534047398, i32 1613436250}
@@ -136,7 +135,7 @@ do.end:
 ;  UR4: ![[#LOOP_UR_TC]] = !{!"llvm.loop.estimated_trip_count", i32 2}
 ; UR10: ![[#LOOP_UR_TC]] = !{!"llvm.loop.estimated_trip_count", i32 1}
 ; UR11: ![[#LOOP_UR_TC]] = !{!"llvm.loop.estimated_trip_count", i32 1}
-; UR12: ![[#LOOP_UR_TC]] = !{!"llvm.loop.estimated_trip_count", i32 1}
+; UR12: ![[#LOOP_UR_TC]] = !{!"llvm.loop.estimated_trip_count", i32 0}
 ;   UR: ![[#DISABLE]] = !{!"llvm.loop.unroll.disable"}
 ;
 ;  UR2: ![[#PROF_RM_GUARD]] = !{!"branch_weights", i32 1022611260, i32 1124872388}
@@ -152,9 +151,10 @@ do.end:
 
 ;  UR4: ![[#LOOP_RM_LATCH]] = distinct !{![[#LOOP_RM_LATCH]], ![[#LOOP_RM_TC:]], ![[#DISABLE:]]}
 ; UR10: ![[#LOOP_RM_LATCH]] = distinct !{![[#LOOP_RM_LATCH]], ![[#LOOP_UR_TC:]], ![[#DISABLE:]]}
-; UR11: ![[#LOOP_RM_LATCH]] = distinct !{![[#LOOP_RM_LATCH]], ![[#LOOP_UR_TC:]], ![[#DISABLE:]]}
+; UR11: ![[#LOOP_RM_LATCH]] = distinct !{![[#LOOP_RM_LATCH]], ![[#LOOP_RM_TC:]], ![[#DISABLE:]]}
 ; UR12: ![[#LOOP_RM_LATCH]] = distinct !{![[#LOOP_RM_LATCH]], ![[#LOOP_RM_TC:]], ![[#DISABLE:]]}
 ;
 ;  UR4: ![[#LOOP_RM_TC]] = !{!"llvm.loop.estimated_trip_count", i32 3}
-; For UR10 and UR11, llvm.loop.estimated_trip_count is the same for both loops.
+; For UR10, llvm.loop.estimated_trip_count is the same for both loops.
+; UR11: ![[#LOOP_RM_TC]] = !{!"llvm.loop.estimated_trip_count", i32 0}
 ; UR12: ![[#LOOP_RM_TC]] = !{!"llvm.loop.estimated_trip_count", i32 11}

@@ -86,5 +86,5 @@ attributes #1 = { nounwind optsize }
 ;CHECK: !16 = !{!"branch_weights", i32 3001, i32 1001}
 ;CHECK: !17 = distinct !{!17, !18, !19, {{.*}}}
 ;CHECK: !18 = !{!"llvm.loop.peeled.count", i32 4}
-;CHECK: !19 = !{!"llvm.loop.estimated_trip_count", i32 1}
+;CHECK: !19 = !{!"llvm.loop.estimated_trip_count", i32 0}
 
