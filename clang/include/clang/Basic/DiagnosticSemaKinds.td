@@ -3453,14 +3453,18 @@ def warn_attribute_return_span_only
     : Warning<"%0 attribute only applies to functions that return span-like "
               "structures">,
       InGroup<IgnoredAttributes>;
-def note_span_must_be_struct : Note<"span-like type must be a struct">;
-def note_span_must_be_complete : Note<"span-like type must be complete">;
-def note_wrong_span_field_count : Note<"span-like type must have 2 fields">;
-def note_wrong_span_field_types
-    : Note<"span-like type must have a pointer and an integer field or two "
-           "pointer fields">;
-def note_span_invalid_integer : Note<"the integer field must be an actual "
-                                     "integer that is at least as big as int">;
+def note_returned_not_struct : Note<"returned type is not a struct/class type">;
+def note_returned_incomlete_type : Note<"returned type is incomplete">;
+def note_returned_not_two_field_struct
+    : Note<"returned struct/class has %0 fields, expected 2">;
+def note_returned_not_span_struct
+    : Note<"returned struct/class fields are not a supported combination for a "
+           "span-like type (expected pointer/integer or pointer/pointer)">;
+def note_returned_not_integer_field
+    : Note<"field #%0 expected to be an integer">;
+def note_returned_not_wide_enough_field
+    : Note<"integer field #%0 of span-like type is not wide enough (minimum "
+           "width: %1)">;
 def warn_attribute_return_pointers_refs_only : Warning<
   "%0 attribute only applies to return values that are pointers or references">,
   InGroup<IgnoredAttributes>;

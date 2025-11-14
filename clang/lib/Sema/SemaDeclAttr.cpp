@@ -1850,59 +1850,51 @@ static bool checkSpanLikeType(Sema &S, const ParsedAttr &AL,
   // lead to false positive results.
   auto emitWarning = [&S, &AL](unsigned NoteDiagID) {
     S.Diag(AL.getLoc(), diag::warn_attribute_return_span_only) << AL;
-    S.Diag(AL.getLoc(), NoteDiagID);
+    return S.Diag(AL.getLoc(), NoteDiagID);
   };
+  if (Ty->isIncompleteType())
+    return emitWarning(diag::note_returned_incomlete_type);
   const RecordDecl *RD = Ty->getAsRecordDecl();
-  if (!RD || RD->isUnion()) {
-    emitWarning(diag::note_span_must_be_struct);
-    return false;
-  }
-  const RecordDecl *Def = RD->getDefinition();
-  if (!Def) {
-    emitWarning(diag::note_span_must_be_complete);
-    return false; // This is an incomplete type.
-  }
-  auto FieldsBegin = Def->field_begin();
-  if (std::distance(FieldsBegin, Def->field_end()) != 2) {
-    emitWarning(diag::note_wrong_span_field_count);
-    return false;
-  }
+  if (!RD || RD->isUnion())
+    return emitWarning(diag::note_returned_not_struct);
+  auto FieldsBegin = RD->field_begin();
+  const auto FieldsCount = std::distance(FieldsBegin, RD->field_end());
+  if (FieldsCount != 2)
+    return emitWarning(diag::note_returned_not_two_field_struct) << FieldsCount;
   const QualType FirstFieldType = FieldsBegin->getType();
   const QualType SecondFieldType = std::next(FieldsBegin)->getType();
   auto validatePointerType = [](const QualType &T) {
     // It must not point to functions.
     return T->isPointerType() && !T->isFunctionPointerType();
   };
-  auto checkIntegerType = [&S, emitWarning](const QualType &T) {
-    bool valid = false;
-    // Must be an actual integer and at least as bit as int.
-    if (const auto *BT = dyn_cast<BuiltinType>(T.getCanonicalType())) {
-      const auto IntSize = S.Context.getTypeSize(S.Context.IntTy);
-      valid = BT->isInteger() && S.Context.getTypeSize(BT) >= IntSize;
-    }
-    if (!valid) {
-      emitWarning(diag::note_span_invalid_integer);
-    }
-    return valid;
+  auto checkIntegerType = [&S, emitWarning](const QualType &T,
+                                            const int FieldNo) -> bool {
+    const auto *BT = dyn_cast<BuiltinType>(T.getCanonicalType());
+    if (!BT || !BT->isInteger())
+      return emitWarning(diag::note_returned_not_integer_field) << FieldNo;
+    const auto IntSize = S.Context.getTypeSize(S.Context.IntTy);
+    if (S.Context.getTypeSize(BT) < IntSize)
+      return emitWarning(diag::note_returned_not_wide_enough_field)
+             << FieldNo << IntSize;
+    return false;
   };
   if (validatePointerType(FirstFieldType) &&
       validatePointerType(SecondFieldType)) {
     // Pointer + pointer.
-    return true;
+    return false;
   } else if (validatePointerType(FirstFieldType)) {
     // Pointer + integer?
-    return checkIntegerType(SecondFieldType);
+    return checkIntegerType(SecondFieldType, 2);
   } else if (validatePointerType(SecondFieldType)) {
     // Integer + pointer?
-    return checkIntegerType(FirstFieldType);
+    return checkIntegerType(FirstFieldType, 1);
   }
-  emitWarning(diag::note_wrong_span_field_types);
-  return false;
+  return emitWarning(diag::note_returned_not_span_struct);
 }
 
 static void handleMallocSpanAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   QualType ResultType = getFunctionOrMethodResultType(D);
-  if (checkSpanLikeType(S, AL, ResultType)) {
+  if (!checkSpanLikeType(S, AL, ResultType)) {
     D->addAttr(::new (S.Context) MallocSpanAttr(S.Context, AL));
   }
 }
