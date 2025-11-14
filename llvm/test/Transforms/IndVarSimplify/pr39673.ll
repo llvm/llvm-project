@@ -148,7 +148,6 @@ loop2.end:                                       ; preds = %loop2
 define i16 @neg_loop_carried(i16 %arg) {
 ; CHECK-LABEL: @neg_loop_carried(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = add i16 [[ARG:%.*]], 2
 ; CHECK-NEXT:    br label [[LOOP1:%.*]]
 ; CHECK:       loop1:
 ; CHECK-NEXT:    [[L1:%.*]] = phi i16 [ 0, [[ENTRY:%.*]] ], [ [[L1_ADD:%.*]], [[LOOP1]] ]
@@ -156,6 +155,7 @@ define i16 @neg_loop_carried(i16 %arg) {
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i16 [[L1_ADD]], 2
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[LOOP1]], label [[LOOP2_PREHEADER:%.*]]
 ; CHECK:       loop2.preheader:
+; CHECK-NEXT:    [[TMP0:%.*]] = add i16 [[ARG:%.*]], 2
 ; CHECK-NEXT:    br label [[LOOP2:%.*]]
 ; CHECK:       loop2:
 ; CHECK-NEXT:    [[K2:%.*]] = phi i16 [ [[K2_ADD:%.*]], [[LOOP2]] ], [ [[TMP0]], [[LOOP2_PREHEADER]] ]

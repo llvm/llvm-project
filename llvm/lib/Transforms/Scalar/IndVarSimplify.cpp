@@ -162,6 +162,8 @@ class IndVarSimplify {
                                  const SCEV *ExitCount,
                                  PHINode *IndVar, SCEVExpander &Rewriter);
 
+  bool sinkUnusedInvariants(Loop *L);
+
 public:
   IndVarSimplify(LoopInfo *LI, ScalarEvolution *SE, DominatorTree *DT,
                  const DataLayout &DL, TargetLibraryInfo *TLI,
@@ -1091,6 +1093,85 @@ linearFunctionTestReplace(Loop *L, BasicBlock *ExitingBB,
   return true;
 }
 
+//===----------------------------------------------------------------------===//
+//  sinkUnusedInvariants. A late subpass to cleanup loop preheaders.
+//===----------------------------------------------------------------------===//
+
+/// If there's a single exit block, sink any loop-invariant values that
+/// were defined in the preheader but not used inside the loop into the
+/// exit block to reduce register pressure in the loop.
+bool IndVarSimplify::sinkUnusedInvariants(Loop *L) {
+  BasicBlock *ExitBlock = L->getExitBlock();
+  if (!ExitBlock) return false;
+
+  BasicBlock *Preheader = L->getLoopPreheader();
+  if (!Preheader) return false;
+
+  bool MadeAnyChanges = false;
+  for (Instruction &I : llvm::make_early_inc_range(llvm::reverse(*Preheader))) {
+
+    // Skip BB Terminator.
+    if (Preheader->getTerminator() == &I)
+      continue;
+
+    // New instructions were inserted at the end of the preheader.
+    if (isa<PHINode>(I))
+      break;
+
+    // Don't move instructions which might have side effects, since the side
+    // effects need to complete before instructions inside the loop.  Also don't
+    // move instructions which might read memory, since the loop may modify
+    // memory. Note that it's okay if the instruction might have undefined
+    // behavior: LoopSimplify guarantees that the preheader dominates the exit
+    // block.
+    if (I.mayHaveSideEffects() || I.mayReadFromMemory())
+      continue;
+
+    // Skip debug or pseudo instructions.
+    if (I.isDebugOrPseudoInst())
+      continue;
+
+    // Skip eh pad instructions.
+    if (I.isEHPad())
+      continue;
+
+    // Don't sink alloca: we never want to sink static alloca's out of the
+    // entry block, and correctly sinking dynamic alloca's requires
+    // checks for stacksave/stackrestore intrinsics.
+    // FIXME: Refactor this check somehow?
+    if (isa<AllocaInst>(&I))
+      continue;
+
+    // Determine if there is a use in or before the loop (direct or
+    // otherwise).
+    bool UsedInLoop = false;
+    for (Use &U : I.uses()) {
+      Instruction *User = cast<Instruction>(U.getUser());
+      BasicBlock *UseBB = User->getParent();
+      if (PHINode *P = dyn_cast<PHINode>(User)) {
+        unsigned i =
+          PHINode::getIncomingValueNumForOperand(U.getOperandNo());
+        UseBB = P->getIncomingBlock(i);
+      }
+      if (UseBB == Preheader || L->contains(UseBB)) {
+        UsedInLoop = true;
+        break;
+      }
+    }
+
+    // If there is, the def must remain in the preheader.
+    if (UsedInLoop)
+      continue;
+
+    // Otherwise, sink it to the exit block.
+    I.moveBefore(ExitBlock->getFirstInsertionPt());
+    SE->forgetValue(&I);
+    MadeAnyChanges = true;
+  }
+
+  return MadeAnyChanges;
+}
+
 static void replaceExitCond(BranchInst *BI, Value *NewCond,
                             SmallVectorImpl<WeakTrackingVH> &DeadInsts) {
   auto *OldCond = BI->getCondition();
@@ -1997,6 +2078,10 @@ bool IndVarSimplify::run(Loop *L) {
   }
 
   // The Rewriter may not be used from this point on.
+
+  // Loop-invariant instructions in the preheader that aren't used in the
+  // loop may be sunk below the loop to reduce register pressure.
+  Changed |= sinkUnusedInvariants(L);
 
   // rewriteFirstIterationLoopExitValues does not rely on the computation of
   // trip count and therefore can further simplify exit values in addition to

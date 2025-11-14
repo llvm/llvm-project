@@ -1,9 +1,9 @@
-; RUN: opt < %s -passes=licm -verify-memoryssa -S | FileCheck %s
+; RUN: opt < %s -passes=indvars -S | FileCheck %s
 target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f32:32:32-f64:32:64-v64:64:64-v128:128:128-a0:0:64-f80:128:128"
 target triple = "i386-apple-darwin10.0"
 
 ; PR4775
-; LICM shouldn't sink the alloca out of the entry block, even though
+; Indvars shouldn't sink the alloca out of the entry block, even though
 ; it's not used until after the loop.
 define i32 @main() nounwind {
 ; CHECK: entry:
@@ -25,7 +25,7 @@ while.end:                                        ; preds = %while.cond
 declare i32 @bar()
 
 ; <rdar://problem/10352360>
-; LICM shouldn't sink the first alloca between the stacksave and stackrestore
+; Indvars shouldn't sink the first alloca between the stacksave and stackrestore
 ; intrinsics.
 declare ptr @a(...)
 declare ptr @llvm.stacksave() nounwind
