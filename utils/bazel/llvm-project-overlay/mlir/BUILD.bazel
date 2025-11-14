@@ -3884,6 +3884,7 @@ cc_library(
         ":GPUDialect",
         ":IR",
         ":SCFDialect",
+        ":SCFUtils",
         ":TransformDialect",
         ":TransformDialectInterfaces",
         ":XeGPUDialect",
@@ -4234,6 +4235,7 @@ cc_library(
         ":AMDGPUToROCDL",
         ":AffineToStandard",
         ":ArithToAMDGPU",
+        ":ArithToAPFloat",
         ":ArithToArmSME",
         ":ArithToEmitC",
         ":ArithToLLVM",
@@ -8411,6 +8413,25 @@ cc_library(
         ":VectorDialect",
         ":VectorTransforms",
         ":VectorUtils",
+    ],
+)
+
+cc_library(
+    name = "ArithToAPFloat",
+    srcs = glob(["lib/Conversion/ArithToAPFloat/*.cpp"]),
+    hdrs = glob(["include/mlir/Conversion/ArithToAPFloat/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":ArithDialect",
+        ":ArithTransforms",
+        ":ArithUtils",
+        ":ConversionPassIncGen",
+        ":DialectUtils",
+        ":FuncDialect",
+        ":FuncUtils",
+        ":IR",
+        ":Pass",
+        ":TransformUtils",
     ],
 )
 

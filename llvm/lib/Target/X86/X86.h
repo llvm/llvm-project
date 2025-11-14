@@ -44,7 +44,13 @@ FunctionPass *createCleanupLocalDynamicTLSPass();
 /// This function returns a pass which converts floating-point register
 /// references and pseudo instructions into floating-point stack references and
 /// physical instructions.
-FunctionPass *createX86FloatingPointStackifierPass();
+class X86FPStackifierPass : public PassInfoMixin<X86FPStackifierPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createX86FPStackifierLegacyPass();
 
 /// This pass inserts AVX vzeroupper instructions before each call to avoid
 /// transition penalty between functions encoded with AVX and SSE.
@@ -84,7 +90,14 @@ FunctionPass *createX86AvoidStoreForwardingBlocks();
 FunctionPass *createX86FlagsCopyLoweringPass();
 
 /// Return a pass that expands DynAlloca pseudo-instructions.
-FunctionPass *createX86DynAllocaExpander();
+class X86DynAllocaExpanderPass
+    : public PassInfoMixin<X86DynAllocaExpanderPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createX86DynAllocaExpanderLegacyPass();
 
 /// Return a pass that config the tile registers.
 FunctionPass *createX86TileConfigPass();
@@ -108,7 +121,6 @@ FunctionPass *createX86LowerTileCopyPass();
 class X86AvoidTrailingCallPass
     : public PassInfoMixin<X86AvoidTrailingCallPass> {
 public:
-  X86AvoidTrailingCallPass() = default;
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
   static bool isRequired() { return true; }
@@ -223,7 +235,6 @@ FunctionPass *createX86ArgumentStackSlotPass();
 FunctionPass *createX86SuppressAPXForRelocationPass();
 
 void initializeCompressEVEXPassPass(PassRegistry &);
-void initializeFPSPass(PassRegistry &);
 void initializeFixupBWInstPassPass(PassRegistry &);
 void initializeFixupLEAPassPass(PassRegistry &);
 void initializeX86ArgumentStackSlotPassPass(PassRegistry &);
@@ -237,9 +248,10 @@ void initializeX86CallFrameOptimizationPass(PassRegistry &);
 void initializeX86CmovConverterPassPass(PassRegistry &);
 void initializeX86DAGToDAGISelLegacyPass(PassRegistry &);
 void initializeX86DomainReassignmentPass(PassRegistry &);
-void initializeX86DynAllocaExpanderPass(PassRegistry &);
+void initializeX86DynAllocaExpanderLegacyPass(PassRegistry &);
 void initializeX86ExecutionDomainFixPass(PassRegistry &);
 void initializeX86ExpandPseudoPass(PassRegistry &);
+void initializeX86FPStackifierLegacyPass(PassRegistry &);
 void initializeX86FastPreTileConfigPass(PassRegistry &);
 void initializeX86FastTileConfigPass(PassRegistry &);
 void initializeX86FixupSetCCPassPass(PassRegistry &);

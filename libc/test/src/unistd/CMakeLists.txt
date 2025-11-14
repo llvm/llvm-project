@@ -147,6 +147,26 @@ add_libc_unittest(
 )
 
 add_libc_unittest(
+  fchown_test
+  SUITE
+    libc_unistd_unittests
+  SRCS
+    fchown_test.cpp
+  DEPENDS
+    libc.hdr.fcntl_macros
+    libc.include.unistd
+    libc.src.errno.errno
+    libc.src.unistd.fchown
+    libc.src.unistd.close
+    libc.src.unistd.unlink
+    libc.src.fcntl.open
+    libc.src.unistd.getuid
+    libc.src.unistd.getgid
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_unittest(
   ftruncate_test
   SUITE
     libc_unistd_unittests

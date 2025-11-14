@@ -6756,6 +6756,11 @@ public:
     /// suffice, e.g., in a default function argument.
     Decl *ManglingContextDecl;
 
+    /// Declaration for initializer if one is currently being
+    /// parsed. Used when an expression has a possibly unreachable
+    /// diagnostic to reference the declaration as a whole.
+    VarDecl *DeclForInitializer = nullptr;
+
     /// If we are processing a decltype type, a set of call expressions
     /// for which we have deferred checking the completeness of the return type.
     SmallVector<CallExpr *, 8> DelayedDecltypeCalls;
@@ -8565,7 +8570,8 @@ public:
   FunctionDecl *FindDeallocationFunctionForDestructor(SourceLocation StartLoc,
                                                       CXXRecordDecl *RD,
                                                       bool Diagnose,
-                                                      bool LookForGlobal);
+                                                      bool LookForGlobal,
+                                                      DeclarationName Name);
 
   /// ActOnCXXDelete - Parsed a C++ 'delete' expression (C++ 5.3.5), as in:
   /// @code ::delete ptr; @endcode
