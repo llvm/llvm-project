@@ -411,7 +411,7 @@ public:
   DebuggerKind DebuggerTuning = DebuggerKind::Default;
 
   /// Vector math library to use.
-  VectorLibrary VectorLibrary = VectorLibrary::NoLibrary;
+  VectorLibrary VecLib = VectorLibrary::NoLibrary;
 
 private:
   /// Flushing mode to assume in default FP environment.

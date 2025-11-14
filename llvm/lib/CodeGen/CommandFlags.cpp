@@ -632,7 +632,7 @@ codegen::InitTargetOptionsFromCodeGenFlags(const Triple &TheTriple) {
   Options.EnableTLSDESC =
       getExplicitEnableTLSDESC().value_or(TheTriple.hasDefaultTLSDESC());
   Options.ExceptionModel = getExceptionModel();
-  Options.VectorLibrary = getVectorLibrary();
+  Options.VecLib = getVectorLibrary();
   Options.EmitStackSizeSection = getEnableStackSizeSection();
   Options.EnableMachineFunctionSplitter = getEnableMachineFunctionSplitter();
   Options.EnableStaticDataPartitioning = getEnableStaticDataPartitioning();
