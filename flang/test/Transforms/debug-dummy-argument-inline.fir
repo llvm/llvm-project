@@ -2,8 +2,8 @@
 // procedure where the calls were inlined.
 // RUN: fir-opt --add-debug-info --mlir-print-debuginfo %s -o - | FileCheck %s
 
-!CHECK: #di_local_variable = #llvm.di_local_variable<scope = #di_subprogram, name = "i", file = #di_file, line = 6, arg = 1, type = #di_basic_type>
-!CHECK: #di_local_variable1 = #llvm.di_local_variable<scope = #di_subprogram, name = "i", file = #di_file, line = 1, type = #di_basic_type>
+// CHECK: #di_local_variable = #llvm.di_local_variable<scope = #di_subprogram, name = "i", file = #di_file, line = 6, arg = 1, type = #di_basic_type>
+// CHECK: #di_local_variable1 = #llvm.di_local_variable<scope = #di_subprogram, name = "i", file = #di_file, line = 1, type = #di_basic_type>
 
 func.func @foo_(%arg0: !fir.ref<i32> {fir.bindc_name = "i"} loc("debug-dummy-argument-inline.f90":5:1)) attributes {fir.internal_name = "_QPfoo"} {
   %0 = fir.undefined !fir.dscope loc(#loc5)
