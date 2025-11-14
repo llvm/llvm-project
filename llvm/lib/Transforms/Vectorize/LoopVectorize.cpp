@@ -8304,8 +8304,6 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
       VPlanTransforms::runPass(VPlanTransforms::truncateToMinimalBitwidths,
                                *Plan, CM.getMinimalBitwidths());
       VPlanTransforms::runPass(VPlanTransforms::optimize, *Plan);
-      if (PreferControlFlow || TTI.preferControlFlow())
-        VPlanTransforms::optimizeConditionalVPBB(*Plan);
       // TODO: try to put it close to addActiveLaneMask().
       if (CM.foldTailWithEVL())
         VPlanTransforms::runPass(VPlanTransforms::addExplicitVectorLength,
@@ -8559,6 +8557,9 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
                                        WithoutRuntimeCheck);
   }
   VPlanTransforms::optimizeInductionExitUsers(*Plan, IVEndValues, *PSE.getSE());
+
+  if (PreferControlFlow || TTI.preferControlFlow())
+    VPlanTransforms::optimizeConditionalVPBB(*Plan);
 
   assert(verifyVPlanIsValid(*Plan) && "VPlan is invalid");
   return Plan;

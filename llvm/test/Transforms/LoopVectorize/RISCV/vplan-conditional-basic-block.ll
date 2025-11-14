@@ -28,7 +28,7 @@ define void @test(i32 %control1, i32 %control2, i32 %target, i32 %reg.4.val, ptr
 ; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT1]], <4 x i64> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY_SPLIT:.*]] ]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[IF_THEN9_SPLIT:.*]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i64, ptr [[REG_24_VAL]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i64, ptr [[TMP2]], i32 4
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP2]], align 8
@@ -41,14 +41,14 @@ define void @test(i32 %control1, i32 %control2, i32 %target, i32 %reg.4.val, ptr
 ; CHECK-NEXT:    [[TMP13:%.*]] = freeze <4 x i1> [[TMP8]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = or <4 x i1> [[TMP12]], [[TMP13]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP14]])
-; CHECK-NEXT:    br i1 [[TMP11]], label %[[VECTOR_IF_BB:.*]], label %[[VECTOR_BODY_SPLIT]]
+; CHECK-NEXT:    br i1 [[TMP11]], label %[[VECTOR_IF_BB:.*]], label %[[IF_THEN9_SPLIT]]
 ; CHECK:       [[VECTOR_IF_BB]]:
 ; CHECK-NEXT:    [[TMP9:%.*]] = xor <4 x i64> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = xor <4 x i64> [[WIDE_LOAD3]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> [[TMP9]], ptr align 8 [[TMP2]], <4 x i1> [[TMP7]])
 ; CHECK-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> [[TMP10]], ptr align 8 [[TMP4]], <4 x i1> [[TMP8]])
-; CHECK-NEXT:    br label %[[VECTOR_BODY_SPLIT]]
-; CHECK:       [[VECTOR_BODY_SPLIT]]:
+; CHECK-NEXT:    br label %[[IF_THEN9_SPLIT]]
+; CHECK:       [[IF_THEN9_SPLIT]]:
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP26:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP26]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]

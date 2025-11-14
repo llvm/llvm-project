@@ -4734,9 +4734,11 @@ void VPlanTransforms::optimizeConditionalVPBB(VPlan &Plan) {
         M->hasDefiningRecipe() ? M->getDefiningRecipe()->getParent() : nullptr;
 
     // Don't move recipes before the mask and PHI recipes.
-    auto End = MaskBlock == SR->getParent()
-                   ? M->getDefiningRecipe()->getReverseIterator()
-                   : SR->getParent()->getFirstNonPhi()->getReverseIterator();
+    auto End =
+        MaskBlock == SR->getParent()
+            ? M->getDefiningRecipe()->getReverseIterator()
+            : std::next(
+                  SR->getParent()->getFirstNonPhi()->getReverseIterator());
     // Also don't move the recipes through any recipe that may have side effects
     // or write to memory.
     for (auto It = std::next(SR->getReverseIterator()); It != End; ++It) {
