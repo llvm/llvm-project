@@ -624,12 +624,9 @@ let isBranch = 1, isTerminator = 1, isBarrier = 1 in {
   }
 }
 
-// FIXME: should be able to write a pattern for ARMBrcond, but can't use
-// a two-value operand where a dag node expects two operands. :(
 let isBranch = 1, isTerminator = 1 in
   def tBcc : T1I<(outs), (ins thumb_bcc_target:$target, pred:$p), IIC_Br,
-                 "b${p}\t$target",
-                 [/*(ARMbrcond bb:$target, imm:$cc)*/]>,
+                 "b${p}\t$target", []>,
              T1BranchCond<{1,1,0,1}>, Sched<[WriteBr]> {
   bits<4> p;
   bits<8> target;

@@ -40,12 +40,6 @@ def SDT_ARMCMov : SDTypeProfile<1, 4, [
   SDTCisVT<4, FlagsVT>,    // in flags
 ]>;
 
-def SDT_ARMBrcond : SDTypeProfile<0, 2, [
-  SDTCisVT<0, OtherVT>,    // target basic block
-  SDTCisVT<1, CondCodeVT>, // condition code
-  SDTCisVT<2, FlagsVT>,    // in flags
-]>;
-
 def SDT_ARMBrJT    : SDTypeProfile<0, 2,
                                   [SDTCisPtrTy<0>, SDTCisVT<1, i32>]>;
 
@@ -193,8 +187,6 @@ def ARMcmov          : SDNode<"ARMISD::CMOV", SDT_ARMCMov>;
 def ARMssat   : SDNode<"ARMISD::SSAT", SDTIntSatNoShOp, []>;
 
 def ARMusat   : SDNode<"ARMISD::USAT", SDTIntSatNoShOp, []>;
-
-def ARMbrcond        : SDNode<"ARMISD::BRCOND", SDT_ARMBrcond, [SDNPHasChain]>;
 
 def ARMbrjt          : SDNode<"ARMISD::BR_JT", SDT_ARMBrJT,
                               [SDNPHasChain]>;
@@ -2596,11 +2588,8 @@ def : ARMPat<(ARMcall_pred GPRnoip:$func), (BLX_pred_noip $func)>,
 
 
 let isBranch = 1, isTerminator = 1 in {
-  // FIXME: should be able to write a pattern for ARMBrcond, but can't use
-  // a two-value operand where a dag node expects two operands. :(
   def Bcc : ABI<0b1010, (outs), (ins arm_br_target:$target),
-               IIC_Br, "b", "\t$target",
-               [/*(ARMbrcond bb:$target, imm:$cc, CCR:$ccr)*/]>,
+               IIC_Br, "b", "\t$target", []>,
                Sched<[WriteBr]>  {
     bits<24> target;
     let Inst{23-0} = target;
