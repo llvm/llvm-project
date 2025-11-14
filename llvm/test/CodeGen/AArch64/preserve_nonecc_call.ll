@@ -18,7 +18,7 @@ define void @caller1(ptr %a) {
 ; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
-; CHECK-NEXT:    str x30, [sp, #64] // 8-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #64] // 8-byte Spill
 ; CHECK-NEXT:    stp x28, x27, [sp, #80] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp x26, x25, [sp, #96] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp x24, x23, [sp, #112] // 16-byte Folded Spill
@@ -47,7 +47,7 @@ define void @caller1(ptr %a) {
 ; CHECK-NEXT:    mov x20, x0
 ; CHECK-NEXT:    bl callee
 ; CHECK-NEXT:    ldp x20, x19, [sp, #144] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x30, [sp, #64] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #64] // 8-byte Reload
 ; CHECK-NEXT:    ldp x22, x21, [sp, #128] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp x24, x23, [sp, #112] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp x26, x25, [sp, #96] // 16-byte Folded Reload
@@ -118,7 +118,7 @@ define void @caller1(ptr %a) {
 ; WIN-NEXT:    .seh_save_regp x25, 48
 ; WIN-NEXT:    stp x27, x28, [sp, #64] // 16-byte Folded Spill
 ; WIN-NEXT:    .seh_save_regp x27, 64
-; WIN-NEXT:    str x30, [sp, #80] // 8-byte Folded Spill
+; WIN-NEXT:    str x30, [sp, #80] // 8-byte Spill
 ; WIN-NEXT:    .seh_save_reg x30, 80
 ; WIN-NEXT:    stp d8, d9, [sp, #88] // 16-byte Folded Spill
 ; WIN-NEXT:    .seh_save_fregp d8, 88
@@ -140,7 +140,7 @@ define void @caller1(ptr %a) {
 ; WIN-NEXT:    .seh_save_fregp d10, 104
 ; WIN-NEXT:    ldp d8, d9, [sp, #88] // 16-byte Folded Reload
 ; WIN-NEXT:    .seh_save_fregp d8, 88
-; WIN-NEXT:    ldr x30, [sp, #80] // 8-byte Folded Reload
+; WIN-NEXT:    ldr x30, [sp, #80] // 8-byte Reload
 ; WIN-NEXT:    .seh_save_reg x30, 80
 ; WIN-NEXT:    ldp x27, x28, [sp, #64] // 16-byte Folded Reload
 ; WIN-NEXT:    .seh_save_regp x27, 64
@@ -256,7 +256,7 @@ define preserve_nonecc i64 @callee_with_many_param(i64 %a1, i64 %a2, i64 %a3, i6
 ; WIN-NEXT:  // %bb.0:
 ; WIN-NEXT:    sub sp, sp, #32
 ; WIN-NEXT:    .seh_stackalloc 32
-; WIN-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
+; WIN-NEXT:    str x30, [sp, #16] // 8-byte Spill
 ; WIN-NEXT:    .seh_save_reg x30, 16
 ; WIN-NEXT:    .seh_endprologue
 ; WIN-NEXT:    ldr x8, [sp, #32]
@@ -287,7 +287,7 @@ define preserve_nonecc i64 @callee_with_many_param(i64 %a1, i64 %a2, i64 %a3, i6
 ; WIN-NEXT:    str x15, [sp]
 ; WIN-NEXT:    bl callee_with_many_param2
 ; WIN-NEXT:    .seh_startepilogue
-; WIN-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
+; WIN-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
 ; WIN-NEXT:    .seh_save_reg x30, 16
 ; WIN-NEXT:    add sp, sp, #32
 ; WIN-NEXT:    .seh_stackalloc 32
@@ -306,7 +306,7 @@ define i64 @caller3() {
 ; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
-; CHECK-NEXT:    str x30, [sp, #64] // 8-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #64] // 8-byte Spill
 ; CHECK-NEXT:    stp x28, x27, [sp, #80] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp x26, x25, [sp, #96] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp x24, x23, [sp, #112] // 16-byte Folded Spill
@@ -358,7 +358,7 @@ define i64 @caller3() {
 ; CHECK-NEXT:    mov w15, #24 // =0x18
 ; CHECK-NEXT:    bl callee_with_many_param
 ; CHECK-NEXT:    ldp x20, x19, [sp, #144] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x30, [sp, #64] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #64] // 8-byte Reload
 ; CHECK-NEXT:    ldp x22, x21, [sp, #128] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp x24, x23, [sp, #112] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp x26, x25, [sp, #96] // 16-byte Folded Reload
@@ -454,7 +454,7 @@ define i64 @caller3() {
 ; WIN-NEXT:    .seh_save_regp x25, 64
 ; WIN-NEXT:    stp x27, x28, [sp, #80] // 16-byte Folded Spill
 ; WIN-NEXT:    .seh_save_regp x27, 80
-; WIN-NEXT:    str x30, [sp, #96] // 8-byte Folded Spill
+; WIN-NEXT:    str x30, [sp, #96] // 8-byte Spill
 ; WIN-NEXT:    .seh_save_reg x30, 96
 ; WIN-NEXT:    stp d8, d9, [sp, #104] // 16-byte Folded Spill
 ; WIN-NEXT:    .seh_save_fregp d8, 104
@@ -500,7 +500,7 @@ define i64 @caller3() {
 ; WIN-NEXT:    .seh_save_fregp d10, 120
 ; WIN-NEXT:    ldp d8, d9, [sp, #104] // 16-byte Folded Reload
 ; WIN-NEXT:    .seh_save_fregp d8, 104
-; WIN-NEXT:    ldr x30, [sp, #96] // 8-byte Folded Reload
+; WIN-NEXT:    ldr x30, [sp, #96] // 8-byte Reload
 ; WIN-NEXT:    .seh_save_reg x30, 96
 ; WIN-NEXT:    ldp x27, x28, [sp, #80] // 16-byte Folded Reload
 ; WIN-NEXT:    .seh_save_regp x27, 80

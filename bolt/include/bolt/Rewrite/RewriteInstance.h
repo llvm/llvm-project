@@ -139,6 +139,9 @@ private:
   void handleRelocation(const object::SectionRef &RelocatedSection,
                         const RelocationRef &Rel);
 
+  /// Collect functions that are specified to be bumped.
+  void selectFunctionsToPrint();
+
   /// Mark functions that are not meant for processing as ignored.
   void selectFunctionsToProcess();
 

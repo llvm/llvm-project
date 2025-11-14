@@ -149,13 +149,13 @@ define i100 @test_signed_i100_f32(float %f) nounwind {
 ; CHECK-SD-LABEL: test_signed_i100_f32:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    str d8, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-SD-NEXT:    str x30, [sp, #8] // 8-byte Folded Spill
+; CHECK-SD-NEXT:    str x30, [sp, #8] // 8-byte Spill
 ; CHECK-SD-NEXT:    fmov s8, s0
 ; CHECK-SD-NEXT:    bl __fixsfti
 ; CHECK-SD-NEXT:    movi v0.2s, #241, lsl #24
 ; CHECK-SD-NEXT:    mov w8, #1895825407 // =0x70ffffff
 ; CHECK-SD-NEXT:    mov x10, #34359738367 // =0x7ffffffff
-; CHECK-SD-NEXT:    ldr x30, [sp, #8] // 8-byte Folded Reload
+; CHECK-SD-NEXT:    ldr x30, [sp, #8] // 8-byte Reload
 ; CHECK-SD-NEXT:    fcmp s8, s0
 ; CHECK-SD-NEXT:    fmov s0, w8
 ; CHECK-SD-NEXT:    mov x8, #-34359738368 // =0xfffffff800000000
@@ -173,13 +173,13 @@ define i100 @test_signed_i100_f32(float %f) nounwind {
 ; CHECK-GI-LABEL: test_signed_i100_f32:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    str d8, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-GI-NEXT:    str x30, [sp, #8] // 8-byte Folded Spill
+; CHECK-GI-NEXT:    str x30, [sp, #8] // 8-byte Spill
 ; CHECK-GI-NEXT:    fmov s8, s0
 ; CHECK-GI-NEXT:    bl __fixsfti
 ; CHECK-GI-NEXT:    movi v0.2s, #241, lsl #24
 ; CHECK-GI-NEXT:    mov w8, #1895825407 // =0x70ffffff
 ; CHECK-GI-NEXT:    mov x10, #34359738367 // =0x7ffffffff
-; CHECK-GI-NEXT:    ldr x30, [sp, #8] // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ldr x30, [sp, #8] // 8-byte Reload
 ; CHECK-GI-NEXT:    fcmp s8, s0
 ; CHECK-GI-NEXT:    fmov s0, w8
 ; CHECK-GI-NEXT:    mov x8, #34359738368 // =0x800000000
@@ -201,13 +201,13 @@ define i128 @test_signed_i128_f32(float %f) nounwind {
 ; CHECK-SD-LABEL: test_signed_i128_f32:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    str d8, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-SD-NEXT:    str x30, [sp, #8] // 8-byte Folded Spill
+; CHECK-SD-NEXT:    str x30, [sp, #8] // 8-byte Spill
 ; CHECK-SD-NEXT:    fmov s8, s0
 ; CHECK-SD-NEXT:    bl __fixsfti
 ; CHECK-SD-NEXT:    movi v0.2s, #255, lsl #24
 ; CHECK-SD-NEXT:    mov w8, #2130706431 // =0x7effffff
 ; CHECK-SD-NEXT:    mov x10, #9223372036854775807 // =0x7fffffffffffffff
-; CHECK-SD-NEXT:    ldr x30, [sp, #8] // 8-byte Folded Reload
+; CHECK-SD-NEXT:    ldr x30, [sp, #8] // 8-byte Reload
 ; CHECK-SD-NEXT:    fcmp s8, s0
 ; CHECK-SD-NEXT:    fmov s0, w8
 ; CHECK-SD-NEXT:    mov x8, #-9223372036854775808 // =0x8000000000000000
@@ -225,13 +225,13 @@ define i128 @test_signed_i128_f32(float %f) nounwind {
 ; CHECK-GI-LABEL: test_signed_i128_f32:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    str d8, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-GI-NEXT:    str x30, [sp, #8] // 8-byte Folded Spill
+; CHECK-GI-NEXT:    str x30, [sp, #8] // 8-byte Spill
 ; CHECK-GI-NEXT:    fmov s8, s0
 ; CHECK-GI-NEXT:    bl __fixsfti
 ; CHECK-GI-NEXT:    movi v0.2s, #255, lsl #24
 ; CHECK-GI-NEXT:    mov w8, #2130706431 // =0x7effffff
 ; CHECK-GI-NEXT:    mov x10, #9223372036854775807 // =0x7fffffffffffffff
-; CHECK-GI-NEXT:    ldr x30, [sp, #8] // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ldr x30, [sp, #8] // 8-byte Reload
 ; CHECK-GI-NEXT:    fcmp s8, s0
 ; CHECK-GI-NEXT:    fmov s0, w8
 ; CHECK-GI-NEXT:    mov x8, #-9223372036854775808 // =0x8000000000000000
@@ -394,12 +394,12 @@ define i100 @test_signed_i100_f64(double %f) nounwind {
 ; CHECK-SD-LABEL: test_signed_i100_f64:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    str d8, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-SD-NEXT:    str x30, [sp, #8] // 8-byte Folded Spill
+; CHECK-SD-NEXT:    str x30, [sp, #8] // 8-byte Spill
 ; CHECK-SD-NEXT:    fmov d8, d0
 ; CHECK-SD-NEXT:    bl __fixdfti
 ; CHECK-SD-NEXT:    mov x8, #-4170333254945079296 // =0xc620000000000000
 ; CHECK-SD-NEXT:    mov x10, #34359738367 // =0x7ffffffff
-; CHECK-SD-NEXT:    ldr x30, [sp, #8] // 8-byte Folded Reload
+; CHECK-SD-NEXT:    ldr x30, [sp, #8] // 8-byte Reload
 ; CHECK-SD-NEXT:    fmov d0, x8
 ; CHECK-SD-NEXT:    mov x8, #5053038781909696511 // =0x461fffffffffffff
 ; CHECK-SD-NEXT:    fcmp d8, d0
@@ -419,12 +419,12 @@ define i100 @test_signed_i100_f64(double %f) nounwind {
 ; CHECK-GI-LABEL: test_signed_i100_f64:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    str d8, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-GI-NEXT:    str x30, [sp, #8] // 8-byte Folded Spill
+; CHECK-GI-NEXT:    str x30, [sp, #8] // 8-byte Spill
 ; CHECK-GI-NEXT:    fmov d8, d0
 ; CHECK-GI-NEXT:    bl __fixdfti
 ; CHECK-GI-NEXT:    mov x8, #-4170333254945079296 // =0xc620000000000000
 ; CHECK-GI-NEXT:    mov x10, #34359738367 // =0x7ffffffff
-; CHECK-GI-NEXT:    ldr x30, [sp, #8] // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ldr x30, [sp, #8] // 8-byte Reload
 ; CHECK-GI-NEXT:    fmov d0, x8
 ; CHECK-GI-NEXT:    mov x8, #5053038781909696511 // =0x461fffffffffffff
 ; CHECK-GI-NEXT:    fcmp d8, d0
@@ -448,12 +448,12 @@ define i128 @test_signed_i128_f64(double %f) nounwind {
 ; CHECK-SD-LABEL: test_signed_i128_f64:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    str d8, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-SD-NEXT:    str x30, [sp, #8] // 8-byte Folded Spill
+; CHECK-SD-NEXT:    str x30, [sp, #8] // 8-byte Spill
 ; CHECK-SD-NEXT:    fmov d8, d0
 ; CHECK-SD-NEXT:    bl __fixdfti
 ; CHECK-SD-NEXT:    mov x8, #-4044232465378705408 // =0xc7e0000000000000
 ; CHECK-SD-NEXT:    mov x10, #9223372036854775807 // =0x7fffffffffffffff
-; CHECK-SD-NEXT:    ldr x30, [sp, #8] // 8-byte Folded Reload
+; CHECK-SD-NEXT:    ldr x30, [sp, #8] // 8-byte Reload
 ; CHECK-SD-NEXT:    fmov d0, x8
 ; CHECK-SD-NEXT:    mov x8, #5179139571476070399 // =0x47dfffffffffffff
 ; CHECK-SD-NEXT:    fcmp d8, d0
@@ -473,12 +473,12 @@ define i128 @test_signed_i128_f64(double %f) nounwind {
 ; CHECK-GI-LABEL: test_signed_i128_f64:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    str d8, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-GI-NEXT:    str x30, [sp, #8] // 8-byte Folded Spill
+; CHECK-GI-NEXT:    str x30, [sp, #8] // 8-byte Spill
 ; CHECK-GI-NEXT:    fmov d8, d0
 ; CHECK-GI-NEXT:    bl __fixdfti
 ; CHECK-GI-NEXT:    mov x8, #-4044232465378705408 // =0xc7e0000000000000
 ; CHECK-GI-NEXT:    mov x10, #9223372036854775807 // =0x7fffffffffffffff
-; CHECK-GI-NEXT:    ldr x30, [sp, #8] // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ldr x30, [sp, #8] // 8-byte Reload
 ; CHECK-GI-NEXT:    fmov d0, x8
 ; CHECK-GI-NEXT:    mov x8, #5179139571476070399 // =0x47dfffffffffffff
 ; CHECK-GI-NEXT:    fcmp d8, d0
@@ -853,13 +853,13 @@ define i100 @test_signed_i100_f16(half %f) nounwind {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    str d8, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-SD-NEXT:    fcvt s8, h0
-; CHECK-SD-NEXT:    str x30, [sp, #8] // 8-byte Folded Spill
+; CHECK-SD-NEXT:    str x30, [sp, #8] // 8-byte Spill
 ; CHECK-SD-NEXT:    fmov s0, s8
 ; CHECK-SD-NEXT:    bl __fixsfti
 ; CHECK-SD-NEXT:    movi v0.2s, #241, lsl #24
 ; CHECK-SD-NEXT:    mov w8, #1895825407 // =0x70ffffff
 ; CHECK-SD-NEXT:    mov x10, #34359738367 // =0x7ffffffff
-; CHECK-SD-NEXT:    ldr x30, [sp, #8] // 8-byte Folded Reload
+; CHECK-SD-NEXT:    ldr x30, [sp, #8] // 8-byte Reload
 ; CHECK-SD-NEXT:    fcmp s8, s0
 ; CHECK-SD-NEXT:    fmov s0, w8
 ; CHECK-SD-NEXT:    mov x8, #-34359738368 // =0xfffffff800000000
@@ -895,13 +895,13 @@ define i128 @test_signed_i128_f16(half %f) nounwind {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    str d8, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-SD-NEXT:    fcvt s8, h0
-; CHECK-SD-NEXT:    str x30, [sp, #8] // 8-byte Folded Spill
+; CHECK-SD-NEXT:    str x30, [sp, #8] // 8-byte Spill
 ; CHECK-SD-NEXT:    fmov s0, s8
 ; CHECK-SD-NEXT:    bl __fixsfti
 ; CHECK-SD-NEXT:    movi v0.2s, #255, lsl #24
 ; CHECK-SD-NEXT:    mov w8, #2130706431 // =0x7effffff
 ; CHECK-SD-NEXT:    mov x10, #9223372036854775807 // =0x7fffffffffffffff
-; CHECK-SD-NEXT:    ldr x30, [sp, #8] // 8-byte Folded Reload
+; CHECK-SD-NEXT:    ldr x30, [sp, #8] // 8-byte Reload
 ; CHECK-SD-NEXT:    fcmp s8, s0
 ; CHECK-SD-NEXT:    fmov s0, w8
 ; CHECK-SD-NEXT:    mov x8, #-9223372036854775808 // =0x8000000000000000
@@ -941,20 +941,20 @@ define i32 @test_signed_f128_i32(fp128 %f) {
 ; CHECK-SD-NEXT:    .cfi_offset w19, -8
 ; CHECK-SD-NEXT:    .cfi_offset w30, -16
 ; CHECK-SD-NEXT:    adrp x8, .LCPI30_0
-; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Folded Spill
+; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Spill
 ; CHECK-SD-NEXT:    ldr q1, [x8, :lo12:.LCPI30_0]
 ; CHECK-SD-NEXT:    bl __getf2
-; CHECK-SD-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
+; CHECK-SD-NEXT:    ldr q0, [sp] // 16-byte Reload
 ; CHECK-SD-NEXT:    mov w19, w0
 ; CHECK-SD-NEXT:    bl __fixtfsi
 ; CHECK-SD-NEXT:    cmp w19, #0
 ; CHECK-SD-NEXT:    mov w8, #-2147483648 // =0x80000000
-; CHECK-SD-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
+; CHECK-SD-NEXT:    ldr q0, [sp] // 16-byte Reload
 ; CHECK-SD-NEXT:    csel w19, w8, w0, mi
 ; CHECK-SD-NEXT:    adrp x8, .LCPI30_1
 ; CHECK-SD-NEXT:    ldr q1, [x8, :lo12:.LCPI30_1]
 ; CHECK-SD-NEXT:    bl __gttf2
-; CHECK-SD-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
+; CHECK-SD-NEXT:    ldr q0, [sp] // 16-byte Reload
 ; CHECK-SD-NEXT:    mov w8, #2147483647 // =0x7fffffff
 ; CHECK-SD-NEXT:    cmp w0, #0
 ; CHECK-SD-NEXT:    csel w19, w8, w19, gt
@@ -969,17 +969,17 @@ define i32 @test_signed_f128_i32(fp128 %f) {
 ; CHECK-GI-LABEL: test_signed_f128_i32:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    sub sp, sp, #48
-; CHECK-GI-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
+; CHECK-GI-NEXT:    str x30, [sp, #16] // 8-byte Spill
 ; CHECK-GI-NEXT:    stp x20, x19, [sp, #32] // 16-byte Folded Spill
 ; CHECK-GI-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-GI-NEXT:    .cfi_offset w19, -8
 ; CHECK-GI-NEXT:    .cfi_offset w20, -16
 ; CHECK-GI-NEXT:    .cfi_offset w30, -32
 ; CHECK-GI-NEXT:    adrp x8, .LCPI30_1
-; CHECK-GI-NEXT:    str q0, [sp] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    str q0, [sp] // 16-byte Spill
 ; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI30_1]
 ; CHECK-GI-NEXT:    bl __gttf2
-; CHECK-GI-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
+; CHECK-GI-NEXT:    ldr q0, [sp] // 16-byte Reload
 ; CHECK-GI-NEXT:    cmp w0, #0
 ; CHECK-GI-NEXT:    mov x9, #-4603241769126068224 // =0xc01e000000000000
 ; CHECK-GI-NEXT:    fmov x8, d0
@@ -999,12 +999,12 @@ define i32 @test_signed_f128_i32(fp128 %f) {
 ; CHECK-GI-NEXT:    csel x8, x20, x8, mi
 ; CHECK-GI-NEXT:    mov v0.d[1], x8
 ; CHECK-GI-NEXT:    bl __fixtfsi
-; CHECK-GI-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
+; CHECK-GI-NEXT:    ldr q0, [sp] // 16-byte Reload
 ; CHECK-GI-NEXT:    mov w19, w0
 ; CHECK-GI-NEXT:    mov v1.16b, v0.16b
 ; CHECK-GI-NEXT:    bl __unordtf2
 ; CHECK-GI-NEXT:    cmp w0, #0
-; CHECK-GI-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
 ; CHECK-GI-NEXT:    csel w0, wzr, w19, ne
 ; CHECK-GI-NEXT:    ldp x20, x19, [sp, #32] // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    add sp, sp, #48

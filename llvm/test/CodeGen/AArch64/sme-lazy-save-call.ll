@@ -13,7 +13,7 @@ define void @test_lazy_save_1_callee() nounwind "aarch64_inout_za" {
 ; CHECK-COMMON-LABEL: test_lazy_save_1_callee:
 ; CHECK-COMMON:       // %bb.0:
 ; CHECK-COMMON-NEXT:    stp x29, x30, [sp, #-32]! // 16-byte Folded Spill
-; CHECK-COMMON-NEXT:    str x19, [sp, #16] // 8-byte Folded Spill
+; CHECK-COMMON-NEXT:    str x19, [sp, #16] // 8-byte Spill
 ; CHECK-COMMON-NEXT:    mov x29, sp
 ; CHECK-COMMON-NEXT:    sub sp, sp, #16
 ; CHECK-COMMON-NEXT:    rdsvl x8, #1
@@ -33,7 +33,7 @@ define void @test_lazy_save_1_callee() nounwind "aarch64_inout_za" {
 ; CHECK-COMMON-NEXT:  .LBB0_2:
 ; CHECK-COMMON-NEXT:    msr TPIDR2_EL0, xzr
 ; CHECK-COMMON-NEXT:    mov sp, x29
-; CHECK-COMMON-NEXT:    ldr x19, [sp, #16] // 8-byte Folded Reload
+; CHECK-COMMON-NEXT:    ldr x19, [sp, #16] // 8-byte Reload
 ; CHECK-COMMON-NEXT:    ldp x29, x30, [sp], #32 // 16-byte Folded Reload
 ; CHECK-COMMON-NEXT:    ret
   call void @private_za_callee()
@@ -82,7 +82,7 @@ define void @test_lazy_save_2_callees() nounwind "aarch64_inout_za" {
 ; CHECK-NEWLOWERING-LABEL: test_lazy_save_2_callees:
 ; CHECK-NEWLOWERING:       // %bb.0:
 ; CHECK-NEWLOWERING-NEXT:    stp x29, x30, [sp, #-32]! // 16-byte Folded Spill
-; CHECK-NEWLOWERING-NEXT:    str x19, [sp, #16] // 8-byte Folded Spill
+; CHECK-NEWLOWERING-NEXT:    str x19, [sp, #16] // 8-byte Spill
 ; CHECK-NEWLOWERING-NEXT:    mov x29, sp
 ; CHECK-NEWLOWERING-NEXT:    sub sp, sp, #16
 ; CHECK-NEWLOWERING-NEXT:    rdsvl x8, #1
@@ -103,7 +103,7 @@ define void @test_lazy_save_2_callees() nounwind "aarch64_inout_za" {
 ; CHECK-NEWLOWERING-NEXT:  .LBB1_2:
 ; CHECK-NEWLOWERING-NEXT:    msr TPIDR2_EL0, xzr
 ; CHECK-NEWLOWERING-NEXT:    mov sp, x29
-; CHECK-NEWLOWERING-NEXT:    ldr x19, [sp, #16] // 8-byte Folded Reload
+; CHECK-NEWLOWERING-NEXT:    ldr x19, [sp, #16] // 8-byte Reload
 ; CHECK-NEWLOWERING-NEXT:    ldp x29, x30, [sp], #32 // 16-byte Folded Reload
 ; CHECK-NEWLOWERING-NEXT:    ret
   call void @private_za_callee()
@@ -116,7 +116,7 @@ define float @test_lazy_save_expanded_intrinsic(float %a) nounwind "aarch64_inou
 ; CHECK-COMMON-LABEL: test_lazy_save_expanded_intrinsic:
 ; CHECK-COMMON:       // %bb.0:
 ; CHECK-COMMON-NEXT:    stp x29, x30, [sp, #-32]! // 16-byte Folded Spill
-; CHECK-COMMON-NEXT:    str x19, [sp, #16] // 8-byte Folded Spill
+; CHECK-COMMON-NEXT:    str x19, [sp, #16] // 8-byte Spill
 ; CHECK-COMMON-NEXT:    mov x29, sp
 ; CHECK-COMMON-NEXT:    sub sp, sp, #16
 ; CHECK-COMMON-NEXT:    rdsvl x8, #1
@@ -136,7 +136,7 @@ define float @test_lazy_save_expanded_intrinsic(float %a) nounwind "aarch64_inou
 ; CHECK-COMMON-NEXT:  .LBB2_2:
 ; CHECK-COMMON-NEXT:    msr TPIDR2_EL0, xzr
 ; CHECK-COMMON-NEXT:    mov sp, x29
-; CHECK-COMMON-NEXT:    ldr x19, [sp, #16] // 8-byte Folded Reload
+; CHECK-COMMON-NEXT:    ldr x19, [sp, #16] // 8-byte Reload
 ; CHECK-COMMON-NEXT:    ldp x29, x30, [sp], #32 // 16-byte Folded Reload
 ; CHECK-COMMON-NEXT:    ret
   %res = call float @llvm.cos.f32(float %a)
@@ -296,7 +296,7 @@ define void @test_lazy_save_mixed_shared_and_private_callees() "aarch64_new_za"
 ; CHECK-NEWLOWERING-LABEL: test_lazy_save_mixed_shared_and_private_callees:
 ; CHECK-NEWLOWERING:       // %bb.0:
 ; CHECK-NEWLOWERING-NEXT:    stp x29, x30, [sp, #-32]! // 16-byte Folded Spill
-; CHECK-NEWLOWERING-NEXT:    str x19, [sp, #16] // 8-byte Folded Spill
+; CHECK-NEWLOWERING-NEXT:    str x19, [sp, #16] // 8-byte Spill
 ; CHECK-NEWLOWERING-NEXT:    mov x29, sp
 ; CHECK-NEWLOWERING-NEXT:    sub sp, sp, #16
 ; CHECK-NEWLOWERING-NEXT:    .cfi_def_cfa w29, 32
@@ -335,7 +335,7 @@ define void @test_lazy_save_mixed_shared_and_private_callees() "aarch64_new_za"
 ; CHECK-NEWLOWERING-NEXT:    msr TPIDR2_EL0, xzr
 ; CHECK-NEWLOWERING-NEXT:    smstop za
 ; CHECK-NEWLOWERING-NEXT:    mov sp, x29
-; CHECK-NEWLOWERING-NEXT:    ldr x19, [sp, #16] // 8-byte Folded Reload
+; CHECK-NEWLOWERING-NEXT:    ldr x19, [sp, #16] // 8-byte Reload
 ; CHECK-NEWLOWERING-NEXT:    ldp x29, x30, [sp], #32 // 16-byte Folded Reload
 ; CHECK-NEWLOWERING-NEXT:    ret
 {
@@ -434,7 +434,7 @@ define void @test_many_back2back_private_za_calls() "aarch64_inout_za" {
 ; CHECK-NEWLOWERING-LABEL: test_many_back2back_private_za_calls:
 ; CHECK-NEWLOWERING:       // %bb.0:
 ; CHECK-NEWLOWERING-NEXT:    stp x29, x30, [sp, #-32]! // 16-byte Folded Spill
-; CHECK-NEWLOWERING-NEXT:    str x19, [sp, #16] // 8-byte Folded Spill
+; CHECK-NEWLOWERING-NEXT:    str x19, [sp, #16] // 8-byte Spill
 ; CHECK-NEWLOWERING-NEXT:    mov x29, sp
 ; CHECK-NEWLOWERING-NEXT:    sub sp, sp, #16
 ; CHECK-NEWLOWERING-NEXT:    .cfi_def_cfa w29, 32
@@ -465,7 +465,7 @@ define void @test_many_back2back_private_za_calls() "aarch64_inout_za" {
 ; CHECK-NEWLOWERING-NEXT:    msr TPIDR2_EL0, xzr
 ; CHECK-NEWLOWERING-NEXT:    bl shared_za_callee
 ; CHECK-NEWLOWERING-NEXT:    mov sp, x29
-; CHECK-NEWLOWERING-NEXT:    ldr x19, [sp, #16] // 8-byte Folded Reload
+; CHECK-NEWLOWERING-NEXT:    ldr x19, [sp, #16] // 8-byte Reload
 ; CHECK-NEWLOWERING-NEXT:    ldp x29, x30, [sp], #32 // 16-byte Folded Reload
 ; CHECK-NEWLOWERING-NEXT:    ret
   call void @shared_za_callee()
@@ -483,7 +483,7 @@ define void @test_shared_private_shared() nounwind "aarch64_inout_za" {
 ; CHECK-COMMON-LABEL: test_shared_private_shared:
 ; CHECK-COMMON:       // %bb.0:
 ; CHECK-COMMON-NEXT:    stp x29, x30, [sp, #-32]! // 16-byte Folded Spill
-; CHECK-COMMON-NEXT:    str x19, [sp, #16] // 8-byte Folded Spill
+; CHECK-COMMON-NEXT:    str x19, [sp, #16] // 8-byte Spill
 ; CHECK-COMMON-NEXT:    mov x29, sp
 ; CHECK-COMMON-NEXT:    sub sp, sp, #16
 ; CHECK-COMMON-NEXT:    rdsvl x8, #1
@@ -505,7 +505,7 @@ define void @test_shared_private_shared() nounwind "aarch64_inout_za" {
 ; CHECK-COMMON-NEXT:    msr TPIDR2_EL0, xzr
 ; CHECK-COMMON-NEXT:    bl shared_za_callee
 ; CHECK-COMMON-NEXT:    mov sp, x29
-; CHECK-COMMON-NEXT:    ldr x19, [sp, #16] // 8-byte Folded Reload
+; CHECK-COMMON-NEXT:    ldr x19, [sp, #16] // 8-byte Reload
 ; CHECK-COMMON-NEXT:    ldp x29, x30, [sp], #32 // 16-byte Folded Reload
 ; CHECK-COMMON-NEXT:    ret
   call void @shared_za_callee()
@@ -532,7 +532,7 @@ define i64 @test_shared_private_shared_i64(i64 %x) nounwind "aarch64_inout_za" {
 ; CHECK-COMMON-LABEL: test_shared_private_shared_i64:
 ; CHECK-COMMON:       // %bb.0:
 ; CHECK-COMMON-NEXT:    stp x29, x30, [sp, #-32]! // 16-byte Folded Spill
-; CHECK-COMMON-NEXT:    str x19, [sp, #16] // 8-byte Folded Spill
+; CHECK-COMMON-NEXT:    str x19, [sp, #16] // 8-byte Spill
 ; CHECK-COMMON-NEXT:    mov x29, sp
 ; CHECK-COMMON-NEXT:    sub sp, sp, #16
 ; CHECK-COMMON-NEXT:    rdsvl x8, #1
@@ -556,7 +556,7 @@ define i64 @test_shared_private_shared_i64(i64 %x) nounwind "aarch64_inout_za" {
 ; CHECK-COMMON-NEXT:    msr TPIDR2_EL0, xzr
 ; CHECK-COMMON-NEXT:    bl shared_za_callee_i64
 ; CHECK-COMMON-NEXT:    mov sp, x29
-; CHECK-COMMON-NEXT:    ldr x19, [sp, #16] // 8-byte Folded Reload
+; CHECK-COMMON-NEXT:    ldr x19, [sp, #16] // 8-byte Reload
 ; CHECK-COMMON-NEXT:    ldp x29, x30, [sp], #32 // 16-byte Folded Reload
 ; CHECK-COMMON-NEXT:    ret
   %a = call i64 @shared_za_callee_i64(i64 %x)
@@ -575,7 +575,7 @@ define i64  @test_many_callee_arguments(
 ; CHECK-LABEL: test_many_callee_arguments:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stp x29, x30, [sp, #-32]! // 16-byte Folded Spill
-; CHECK-NEXT:    str x19, [sp, #16] // 8-byte Folded Spill
+; CHECK-NEXT:    str x19, [sp, #16] // 8-byte Spill
 ; CHECK-NEXT:    mov x29, sp
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    mov x8, sp
@@ -600,14 +600,14 @@ define i64  @test_many_callee_arguments(
 ; CHECK-NEXT:    mov x0, x1
 ; CHECK-NEXT:    msr TPIDR2_EL0, xzr
 ; CHECK-NEXT:    mov sp, x29
-; CHECK-NEXT:    ldr x19, [sp, #16] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x19, [sp, #16] // 8-byte Reload
 ; CHECK-NEXT:    ldp x29, x30, [sp], #32 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-NEWLOWERING-LABEL: test_many_callee_arguments:
 ; CHECK-NEWLOWERING:       // %bb.0:
 ; CHECK-NEWLOWERING-NEXT:    stp x29, x30, [sp, #-32]! // 16-byte Folded Spill
-; CHECK-NEWLOWERING-NEXT:    str x19, [sp, #16] // 8-byte Folded Spill
+; CHECK-NEWLOWERING-NEXT:    str x19, [sp, #16] // 8-byte Spill
 ; CHECK-NEWLOWERING-NEXT:    mov x29, sp
 ; CHECK-NEWLOWERING-NEXT:    sub sp, sp, #16
 ; CHECK-NEWLOWERING-NEXT:    rdsvl x8, #1
@@ -632,7 +632,7 @@ define i64  @test_many_callee_arguments(
 ; CHECK-NEWLOWERING-NEXT:    mov x0, x8
 ; CHECK-NEWLOWERING-NEXT:    msr TPIDR2_EL0, xzr
 ; CHECK-NEWLOWERING-NEXT:    mov sp, x29
-; CHECK-NEWLOWERING-NEXT:    ldr x19, [sp, #16] // 8-byte Folded Reload
+; CHECK-NEWLOWERING-NEXT:    ldr x19, [sp, #16] // 8-byte Reload
 ; CHECK-NEWLOWERING-NEXT:    ldp x29, x30, [sp], #32 // 16-byte Folded Reload
 ; CHECK-NEWLOWERING-NEXT:    ret
   i64 %0, i64 %1, i64 %2, i64 %3, i64 %4, i64 %5, i64 %6, i64 %7, i64 %8, i64 %9

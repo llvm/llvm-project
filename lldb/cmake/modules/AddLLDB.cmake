@@ -172,6 +172,7 @@ function(add_lldb_executable name)
     if(NOT LIBLLDB_INDEX EQUAL -1)
       if (MSVC)
         target_link_options(${name} PRIVATE "/DELAYLOAD:$<TARGET_FILE_NAME:liblldb>")
+        target_link_libraries(${name} PRIVATE delayimp)
       elseif (MINGW AND LINKER_IS_LLD)
         # LLD can delay load just by passing a --delayload flag, as long as the import
         # library is a short type import library (which LLD and MS link.exe produce).

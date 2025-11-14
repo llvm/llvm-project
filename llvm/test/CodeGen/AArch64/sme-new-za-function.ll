@@ -56,12 +56,12 @@ define i32 @private_za_multiple_exit(i32 %a, i32 %b, i64 %cond) "aarch64_new_za"
 ; CHECK-LABEL: private_za_multiple_exit:
 ; CHECK:       // %bb.0: // %prelude
 ; CHECK-NEXT:    sub sp, sp, #32
-; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    str x2, [sp] // 8-byte Folded Spill
-; CHECK-NEXT:    str w1, [sp, #8] // 4-byte Folded Spill
-; CHECK-NEXT:    str w0, [sp, #12] // 4-byte Folded Spill
+; CHECK-NEXT:    str x2, [sp] // 8-byte Spill
+; CHECK-NEXT:    str w1, [sp, #8] // 4-byte Spill
+; CHECK-NEXT:    str w0, [sp, #12] // 4-byte Spill
 ; CHECK-NEXT:    rdsvl x8, #1
 ; CHECK-NEXT:    mrs x8, TPIDR2_EL0
 ; CHECK-NEXT:    cbz x8, .LBB1_2
@@ -72,26 +72,26 @@ define i32 @private_za_multiple_exit(i32 %a, i32 %b, i64 %cond) "aarch64_new_za"
 ; CHECK-NEXT:    msr TPIDR2_EL0, x8
 ; CHECK-NEXT:    b .LBB1_2
 ; CHECK-NEXT:  .LBB1_2: // %entry
-; CHECK-NEXT:    ldr x8, [sp] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x8, [sp] // 8-byte Reload
 ; CHECK-NEXT:    smstart za
 ; CHECK-NEXT:    zero {za}
 ; CHECK-NEXT:    subs x8, x8, #1
 ; CHECK-NEXT:    b.ne .LBB1_4
 ; CHECK-NEXT:    b .LBB1_3
 ; CHECK-NEXT:  .LBB1_3: // %if.else
-; CHECK-NEXT:    ldr w8, [sp, #12] // 4-byte Folded Reload
-; CHECK-NEXT:    ldr w9, [sp, #8] // 4-byte Folded Reload
+; CHECK-NEXT:    ldr w8, [sp, #12] // 4-byte Reload
+; CHECK-NEXT:    ldr w9, [sp, #8] // 4-byte Reload
 ; CHECK-NEXT:    add w0, w8, w9
 ; CHECK-NEXT:    smstop za
-; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
 ; CHECK-NEXT:    add sp, sp, #32
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB1_4: // %if.end
-; CHECK-NEXT:    ldr w8, [sp, #12] // 4-byte Folded Reload
-; CHECK-NEXT:    ldr w9, [sp, #8] // 4-byte Folded Reload
+; CHECK-NEXT:    ldr w8, [sp, #12] // 4-byte Reload
+; CHECK-NEXT:    ldr w9, [sp, #8] // 4-byte Reload
 ; CHECK-NEXT:    subs w0, w8, w9
 ; CHECK-NEXT:    smstop za
-; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
 ; CHECK-NEXT:    add sp, sp, #32
 ; CHECK-NEXT:    ret
 ;
@@ -109,21 +109,21 @@ define i32 @private_za_multiple_exit(i32 %a, i32 %b, i64 %cond) "aarch64_new_za"
 ; CHECK-NEWLOWERING-NEXT:    b .LBB1_2
 ; CHECK-NEWLOWERING-NEXT:  .LBB1_2: // %entry
 ; CHECK-NEWLOWERING-NEXT:    smstart za
-; CHECK-NEWLOWERING-NEXT:    str w1, [sp, #8] // 4-byte Folded Spill
-; CHECK-NEWLOWERING-NEXT:    str w0, [sp, #12] // 4-byte Folded Spill
+; CHECK-NEWLOWERING-NEXT:    str w1, [sp, #8] // 4-byte Spill
+; CHECK-NEWLOWERING-NEXT:    str w0, [sp, #12] // 4-byte Spill
 ; CHECK-NEWLOWERING-NEXT:    subs x8, x2, #1
 ; CHECK-NEWLOWERING-NEXT:    b.ne .LBB1_4
 ; CHECK-NEWLOWERING-NEXT:    b .LBB1_3
 ; CHECK-NEWLOWERING-NEXT:  .LBB1_3: // %if.else
-; CHECK-NEWLOWERING-NEXT:    ldr w8, [sp, #12] // 4-byte Folded Reload
-; CHECK-NEWLOWERING-NEXT:    ldr w9, [sp, #8] // 4-byte Folded Reload
+; CHECK-NEWLOWERING-NEXT:    ldr w8, [sp, #12] // 4-byte Reload
+; CHECK-NEWLOWERING-NEXT:    ldr w9, [sp, #8] // 4-byte Reload
 ; CHECK-NEWLOWERING-NEXT:    add w0, w8, w9
 ; CHECK-NEWLOWERING-NEXT:    smstop za
 ; CHECK-NEWLOWERING-NEXT:    add sp, sp, #16
 ; CHECK-NEWLOWERING-NEXT:    ret
 ; CHECK-NEWLOWERING-NEXT:  .LBB1_4: // %if.end
-; CHECK-NEWLOWERING-NEXT:    ldr w8, [sp, #12] // 4-byte Folded Reload
-; CHECK-NEWLOWERING-NEXT:    ldr w9, [sp, #8] // 4-byte Folded Reload
+; CHECK-NEWLOWERING-NEXT:    ldr w8, [sp, #12] // 4-byte Reload
+; CHECK-NEWLOWERING-NEXT:    ldr w9, [sp, #8] // 4-byte Reload
 ; CHECK-NEWLOWERING-NEXT:    subs w0, w8, w9
 ; CHECK-NEWLOWERING-NEXT:    smstop za
 ; CHECK-NEWLOWERING-NEXT:    add sp, sp, #16
@@ -146,10 +146,10 @@ define i32 @private_za_trivially_does_not_use_za(i32 %x) "aarch64_new_za" {
 ; CHECK-LABEL: private_za_trivially_does_not_use_za:
 ; CHECK:       // %bb.0: // %prelude
 ; CHECK-NEXT:    sub sp, sp, #32
-; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    str w0, [sp, #12] // 4-byte Folded Spill
+; CHECK-NEXT:    str w0, [sp, #12] // 4-byte Spill
 ; CHECK-NEXT:    rdsvl x8, #1
 ; CHECK-NEXT:    mrs x8, TPIDR2_EL0
 ; CHECK-NEXT:    cbz x8, .LBB2_2
@@ -160,12 +160,12 @@ define i32 @private_za_trivially_does_not_use_za(i32 %x) "aarch64_new_za" {
 ; CHECK-NEXT:    msr TPIDR2_EL0, x8
 ; CHECK-NEXT:    b .LBB2_2
 ; CHECK-NEXT:  .LBB2_2:
-; CHECK-NEXT:    ldr w8, [sp, #12] // 4-byte Folded Reload
+; CHECK-NEXT:    ldr w8, [sp, #12] // 4-byte Reload
 ; CHECK-NEXT:    smstart za
 ; CHECK-NEXT:    zero {za}
 ; CHECK-NEXT:    add w0, w8, w8
 ; CHECK-NEXT:    smstop za
-; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
 ; CHECK-NEXT:    add sp, sp, #32
 ; CHECK-NEXT:    ret
 ;

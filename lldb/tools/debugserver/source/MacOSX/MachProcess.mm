@@ -1739,7 +1739,7 @@ bool MachProcess::Detach() {
     ReplyToAllExceptions();
   }
 
-  m_task.ShutDownExcecptionThread();
+  m_task.ShutDownExceptionThread();
 
   // Detach from our process
   errno = 0;
