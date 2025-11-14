@@ -280,6 +280,32 @@ default:
   ret void
 }
 
+@G = constant i16 zeroinitializer, align 1
+
+; Make sure we don't remove edges when the condition is a unresolved constant expression.
+
+define i16 @switch_on_nonimmediate_constant_expr() {
+; CHECK-LABEL: @switch_on_nonimmediate_constant_expr(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret i16 789
+;
+entry:
+  switch i32 ptrtoint (ptr @G to i32), label %sw.default [
+  i32 1, label %sw.bb
+  i32 2, label %sw.bb1
+  ]
+
+sw.bb:
+  ret i16 123
+
+sw.bb1:
+  ret i16 456
+
+sw.default:
+  ret i16 789
+}
+
+
 declare void @llvm.trap() nounwind noreturn
 declare void @bees.a() nounwind
 declare void @bees.b() nounwind
