@@ -653,14 +653,14 @@ bool SparcInstrInfo::analyzeCompare(const MachineInstr &MI, Register &SrcReg,
     SrcReg2 = 0;
     CmpMask = ~0;
     CmpValue = MI.getOperand(2).getImm();
-    return (DstReg == SP::G0) && (CmpValue == 0);
+    return DstReg == SP::G0 && CmpValue == 0;
   case SP::SUBCCrr:
     DstReg = MI.getOperand(0).getReg();
     SrcReg = MI.getOperand(1).getReg();
     SrcReg2 = MI.getOperand(2).getReg();
     CmpMask = ~0;
     CmpValue = 0;
-    return (DstReg == SP::G0) && (SrcReg2 == SP::G0);
+    return DstReg == SP::G0 && SrcReg2 == SP::G0;
   }
 
   return false;
@@ -730,7 +730,7 @@ bool SparcInstrInfo::optimizeCompareInstr(
     return false;
   }
 
-  bool IsSafe = false;
+  bool IsICCModified = false;
   MachineBasicBlock::iterator I = MI;
   MachineBasicBlock::iterator C = CmpInstr;
   MachineBasicBlock::iterator E = CmpInstr.getParent()->end();
@@ -745,25 +745,24 @@ bool SparcInstrInfo::optimizeCompareInstr(
   while (++I != E) {
     // Only allow conditionals on equality.
     if (I->readsRegister(SP::ICC, TRI)) {
-      bool IsICCBranch = (I->getOpcode() == SP::BCOND) ||
-                         (I->getOpcode() == SP::BPICC) ||
-                         (I->getOpcode() == SP::BPXCC);
-      bool IsICCMove = (I->getOpcode() == SP::MOVICCrr) ||
-                       (I->getOpcode() == SP::MOVICCri) ||
-                       (I->getOpcode() == SP::MOVXCCrr) ||
-                       (I->getOpcode() == SP::MOVXCCri);
+      bool IsICCBranch = I->getOpcode() == SP::BCOND ||
+                         I->getOpcode() == SP::BPICC ||
+                         I->getOpcode() == SP::BPXCC;
+      bool IsICCMove =
+          I->getOpcode() == SP::MOVICCrr || I->getOpcode() == SP::MOVICCri ||
+          I->getOpcode() == SP::MOVXCCrr || I->getOpcode() == SP::MOVXCCri;
       bool IsICCConditional = IsICCBranch || IsICCMove;
       if (!IsICCConditional ||
           (I->getOperand(IsICCBranch ? 1 : 3).getImm() != SPCC::ICC_E &&
            I->getOperand(IsICCBranch ? 1 : 3).getImm() != SPCC::ICC_NE))
         return false;
     } else if (I->modifiesRegister(SP::ICC, TRI)) {
-      IsSafe = true;
+      IsICCModified = true;
       break;
     }
   }
 
-  if (!IsSafe) {
+  if (!IsICCModified) {
     MachineBasicBlock *MBB = CmpInstr.getParent();
     if (any_of(MBB->successors(),
                [](MachineBasicBlock *Succ) { return Succ->isLiveIn(SP::ICC); }))

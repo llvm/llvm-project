@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=sparc | FileCheck %s
 ; RUN: llc < %s -mtriple=sparcv9 | FileCheck %s -check-prefix=CHECK64
 
-define i32 @test(i32 %a) #0 {
+define i32 @test(i32 %a) nounwind {
 ; CHECK-LABEL: test:
 ; CHECK:       ! %bb.0: ! %entry
 ; CHECK-NEXT:    andcc %o0, 1, %g0
@@ -39,7 +39,7 @@ if.end:
 }
 
 ; Same as above, with select.
-define i32 @test_select(i32 %a) #0 {
+define i32 @test_select(i32 %a) nounwind {
 ; CHECK-LABEL: test_select:
 ; CHECK:       ! %bb.0:
 ; CHECK-NEXT:    andcc %o0, 1, %g0
@@ -66,7 +66,7 @@ define i32 @test_select(i32 %a) #0 {
 
 
 ; No instruction can be changed to set ICC
-define i32 @no_candidate(i32 %a) #0 {
+define i32 @no_candidate(i32 %a) nounwind {
 ; CHECK-LABEL: no_candidate:
 ; CHECK:       ! %bb.0: ! %entry
 ; CHECK-NEXT:    cmp %o0, 0
@@ -102,7 +102,7 @@ if.end:
 }
 
 ; Defining instruction and compare not in same block
-define i32 @not_same_block(i32 %a) #0 {
+define i32 @not_same_block(i32 %a) nounwind {
 ; CHECK-LABEL: not_same_block:
 ; CHECK:       ! %bb.0: ! %entry
 ; CHECK-NEXT:    and %o0, 1, %o0
@@ -140,7 +140,7 @@ if.end:
 }
 
 ; Compare instruction is not checking equality
-define i32 @not_equality(i32 %a) #0 {
+define i32 @not_equality(i32 %a) nounwind {
 ; CHECK-LABEL: not_equality:
 ; CHECK:       ! %bb.0: ! %entry
 ; CHECK-NEXT:    and %o0, 1, %o1
@@ -169,7 +169,7 @@ entry:
 
 ; Instruction that modifies ICC (call) between defining
 ; and compare instruction.
-define i32 @call_between(i32 %a) #0 {
+define i32 @call_between(i32 %a) nounwind {
 ; CHECK-LABEL: call_between:
 ; CHECK:       ! %bb.0: ! %entry
 ; CHECK-NEXT:    save %sp, -96, %sp
@@ -204,7 +204,7 @@ entry:
 }
 
 ; ICC is used in successor block.
-define i32 @icc_live_out(i32 %a) #0 {
+define i32 @icc_live_out(i32 %a) nounwind {
 ; CHECK-LABEL: icc_live_out:
 ; CHECK:       ! %bb.0: ! %entry
 ; CHECK-NEXT:    andcc %o0, 1, %o1
@@ -246,5 +246,3 @@ case1:
 case2:
   ret i32 2
 }
-
-attributes #0 = { nounwind }
