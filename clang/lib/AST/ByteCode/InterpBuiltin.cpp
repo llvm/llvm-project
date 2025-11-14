@@ -4565,21 +4565,22 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
           unsigned Sel = (ShuffleMask >> (2 * LaneIdx)) & 0x3;
           return std::make_pair(0, static_cast<int>(LaneBase + Sel));
         });
-  
+
   case X86::BI__builtin_ia32_vpermilpd:
   case X86::BI__builtin_ia32_vpermilpd256:
   case X86::BI__builtin_ia32_vpermilpd512:
-    return interp__builtin_ia32_shuffle_generic(S, OpPC, Call, [](unsigned DstIdx, unsigned Control) {
-      unsigned NumElemPerLane = 2;
-      unsigned BitsPerElem = 1;
-      unsigned MaskBits = 8;
-      unsigned IndexMask = 0x1;
-      unsigned Lane = DstIdx / NumElemPerLane;
-      unsigned LaneOffset = Lane * NumElemPerLane;
-      unsigned BitIndex = (DstIdx * BitsPerElem) % MaskBits;
-      unsigned Index = (Control >> BitIndex) & IndexMask;
-      return std::make_pair(0, static_cast<int>(LaneOffset + Index));
-    });
+    return interp__builtin_ia32_shuffle_generic(
+        S, OpPC, Call, [](unsigned DstIdx, unsigned Control) {
+          unsigned NumElemPerLane = 2;
+          unsigned BitsPerElem = 1;
+          unsigned MaskBits = 8;
+          unsigned IndexMask = 0x1;
+          unsigned Lane = DstIdx / NumElemPerLane;
+          unsigned LaneOffset = Lane * NumElemPerLane;
+          unsigned BitIndex = (DstIdx * BitsPerElem) % MaskBits;
+          unsigned Index = (Control >> BitIndex) & IndexMask;
+          return std::make_pair(0, static_cast<int>(LaneOffset + Index));
+        });
 
   case X86::BI__builtin_ia32_kandqi:
   case X86::BI__builtin_ia32_kandhi:
