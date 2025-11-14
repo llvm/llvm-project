@@ -10,7 +10,7 @@
 // XFAIL: msvc
 
 // Assertion semantics are not supported in C++03 mode
-// UNSUPPORTED: std=c++03
+// UNSUPPORTED: c++03
 
 // Test that we encode the assertion semantic in an ABI tag to avoid ODR violations when linking TUs that have different
 // values for it.
