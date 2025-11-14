@@ -1532,16 +1532,23 @@ void TypePrinter::printTagType(const TagType *T, raw_ostream &OS) {
       OS << ' ';
   }
 
+  const IdentifierInfo *II = D->getIdentifier();
+  const bool IsLambda =
+      isa<CXXRecordDecl>(D) && cast<CXXRecordDecl>(D)->isLambda();
+  const bool PrintingCanonicalLambdaName =
+      !II && IsLambda && Policy.CanonicalAnonymousLambdaName;
+
   if (!Policy.FullyQualifiedName && !T->isCanonicalUnqualified()) {
     T->getQualifier().print(OS, Policy);
   } else if (!Policy.SuppressScope) {
     // Compute the full nested-name-specifier for this type.
     // In C, this will always be empty except when the type
     // being printed is anonymous within other Record.
-    D->printNestedNameSpecifier(OS, Policy);
+    D->printNestedNameSpecifier(
+        OS, Policy, /*AllowFunctionContext=*/PrintingCanonicalLambdaName);
   }
 
-  if (const IdentifierInfo *II = D->getIdentifier())
+  if (II)
     OS << II->getName();
   else if (TypedefNameDecl *Typedef = D->getTypedefNameForAnonDecl()) {
     assert(Typedef->getIdentifier() && "Typedef without identifier?");
@@ -1549,12 +1556,15 @@ void TypePrinter::printTagType(const TagType *T, raw_ostream &OS) {
   } else {
     // Make an unambiguous representation for anonymous types, e.g.
     //   (anonymous enum at /usr/include/string.h:120:9)
-    OS << (Policy.MSVCFormatting ? '`' : '(');
+    const bool AddParen = !PrintingCanonicalLambdaName || Policy.AnonymousTagLocations;
+    if (AddParen)
+      OS << (Policy.MSVCFormatting ? '`' : '(');
 
-    if (isa<CXXRecordDecl>(D) && cast<CXXRecordDecl>(D)->isLambda()) {
+    if (IsLambda) {
       OS << "lambda";
       HasKindDecoration = true;
-    } else if ((isa<RecordDecl>(D) && cast<RecordDecl>(D)->isAnonymousStructOrUnion())) {
+    } else if ((isa<RecordDecl>(D) &&
+                cast<RecordDecl>(D)->isAnonymousStructOrUnion())) {
       OS << "anonymous";
     } else {
       OS << "unnamed";
@@ -1589,7 +1599,8 @@ void TypePrinter::printTagType(const TagType *T, raw_ostream &OS) {
       }
     }
 
-    OS << (Policy.MSVCFormatting ? '\'' : ')');
+    if (AddParen)
+      OS << (Policy.MSVCFormatting ? '\'' : ')');
   }
 
   // If this is a class template specialization, print the template
