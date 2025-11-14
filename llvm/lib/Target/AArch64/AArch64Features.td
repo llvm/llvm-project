@@ -394,9 +394,6 @@ def FeatureTRBE : Extension<"trbe", "TRBE", "FEAT_TRBE",
 def FeatureETE : Extension<"ete", "ETE", "FEAT_ETE",
   "Enable Embedded Trace Extension", [FeatureTRBE]>;
 
-def FeatureTME : ExtensionWithMArch<"tme", "TME", "FEAT_TME",
-  "Enable Transactional Memory Extension">;
-
 //===----------------------------------------------------------------------===//
 //  Armv9.1 Architecture Extensions
 //===----------------------------------------------------------------------===//
