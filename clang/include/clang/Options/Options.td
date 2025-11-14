@@ -4692,8 +4692,9 @@ def fenable_matrix : Flag<["-"], "fenable-matrix">, Group<f_Group>,
     HelpText<"Enable matrix data type and related builtin functions">,
     MarshallingInfoFlag<LangOpts<"MatrixTypes">, hlsl.KeyPath>;
 
-def fmatrix_default_layout_EQ : Joined<["-"], "fmatrix-default-layout=">,
-    HelpText<"Set default matrix layout (row-major or column-major)">,
+def fmatrix_memory_layout_EQ : Joined<["-"], "fmatrix-memory-layout=">,
+    Visibility<[ClangOption, CC1Option]>,
+    HelpText<"Sets the matrix memory layout (row-major or column-major)">,
     Values<"row-major,column-major">,
     Group<f_Group>;
 

@@ -1074,9 +1074,9 @@ The matrix type extension supports explicit casts. Implicit type conversion betw
   }
 
 The matrix type extension will support column and row major layouts. The flag
-to change this behavior is `-fmatrix-default-layout` used like so
-`-fmatrix-default-layout=column-major` for column major and like so
-`-fmatrix-default-layout=row-major` for row major.
+to change this behavior is `-fmatrix-memory-layout` used like so
+`-fmatrix-memory-layout=column-major` for column major and like so
+`-fmatrix-memory-layout=row-major` for row major.
 
 Half-Precision Floating Point
 =============================
