@@ -869,8 +869,8 @@ class DebugCommunication(object):
             self.request_threads()
             if not stopped_on_entry:
                 # Drop the initial cached threads if we did not stop-on-entry.
-                # In VSCode, immediately following 'configurationDone', a 
-                # 'threads' request is made to get the initial set of threads, 
+                # In VSCode, immediately following 'configurationDone', a
+                # 'threads' request is made to get the initial set of threads,
                 # specifically the main threads id and name.
                 # We issue the threads request to mimic this pattern but in our
                 # tests we don't want to cache the result unless the process is
