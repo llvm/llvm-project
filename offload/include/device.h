@@ -170,8 +170,7 @@ struct DeviceTy {
   void setHasPendingImages(bool V) { HasPendingImages = V; }
 
   /// Get information from the device.
-  template <typename T>
-  T getInfo(DeviceInfo Info) const {
+  template <typename T> T getInfo(DeviceInfo Info) const {
     InfoTreeNode DevInfo = RTL->obtain_device_info(RTLDeviceID);
 
     auto EntryOpt = DevInfo.get(Info);
