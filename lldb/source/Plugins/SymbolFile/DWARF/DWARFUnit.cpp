@@ -376,6 +376,7 @@ void DWARFUnit::SetDwoStrOffsetsBase() {
     // Skip padding.
     baseOffset += 2;
   }
+
   SetStrOffsetsBase(baseOffset);
 }
 
