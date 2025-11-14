@@ -376,6 +376,12 @@ newer (19.14) is required.
 
 Libc++ also supports being built with clang targeting MinGW environments.
 
+Libc++ supports Windows 7 or newer. However, the minimum runtime version
+of the build is determined by the ``_WIN32_WINNT`` define, which in many
+SDKs defaults to the latest version. To build a version that runs on an
+older version, define e.g. ``_WIN32_WINNT=0x601`` while building libc++,
+to target Windows 7.
+
 CMake + Visual Studio
 ---------------------
 
