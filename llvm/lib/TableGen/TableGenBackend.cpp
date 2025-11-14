@@ -61,12 +61,21 @@ Opt::Opt(StringRef Name, FnT CB, StringRef Desc, bool ByDefault) {
 /// Apply callback specified on the command line. Returns true if no callback
 /// was applied.
 bool llvm::TableGen::Emitter::ApplyCallback(const RecordKeeper &Records,
-                                            raw_ostream &OS) {
+                                            TableGenOutputFiles &OutFiles,
+                                            StringRef FilenamePrefix) {
   FnT Fn = CallbackFunction->getValue();
-  if (!Fn)
-    return true;
-  Fn(Records, OS);
-  return false;
+  if (Fn.SingleFileGenerator) {
+    std::string S;
+    raw_string_ostream OS(S);
+    Fn.SingleFileGenerator(Records, OS);
+    OutFiles = {S, {}};
+    return false;
+  }
+  if (Fn.MultiFileGenerator) {
+    OutFiles = Fn.MultiFileGenerator(FilenamePrefix, Records);
+    return false;
+  }
+  return true;
 }
 
 static void printLine(raw_ostream &OS, const Twine &Prefix, char Fill,

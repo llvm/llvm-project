@@ -1,5 +1,5 @@
 // This is to test the scenario where different HwMode attributes coexist.
-// RUN: llvm-tblgen -gen-register-info -register-info-debug -I %p/../../include %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=CHECK-REG
+// RUN: llvm-tblgen -gen-register-info -register-info-debug -I %p/../../include %s -o - 2>&1 >/dev/null | FileCheck %s --check-prefix=CHECK-REG
 // RUN: llvm-tblgen -gen-subtarget -I %p/../../include %s -o - 2>&1 | FileCheck %s --check-prefix=CHECK-SUBTARGET
 
 
