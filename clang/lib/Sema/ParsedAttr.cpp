@@ -109,19 +109,19 @@ const ParsedAttrInfo &ParsedAttrInfo::get(const AttributeCommonInfo &A) {
 
   // If this is an annotation then return an appropriate ParsedAttrInfo.
   static const ParsedAttrInfo AnnotationAttrInfo(
-    AttributeCommonInfo::AT_CXX26Annotation, // AttrKind
-    1, // NumArgs
-    0, // OptArgs
-    1, // NumArgMembers
-    1, // HasCustomParsing
-    0, // AcceptsExprPack
-    0, // IsTargetSpecific
-    1, // IsType
-    1, // IsStmt
-    0, // IsKnownToGCC,
-    0, // IsSupportedByPragmaAttribute
-    {}, // Spellings
-    nullptr // ArgNames
+      AttributeCommonInfo::AT_CXX26Annotation, // AttrKind
+      1,                                       // NumArgs
+      0,                                       // OptArgs
+      1,                                       // NumArgMembers
+      1,                                       // HasCustomParsing
+      0,                                       // AcceptsExprPack
+      0,                                       // IsTargetSpecific
+      1,                                       // IsType
+      1,                                       // IsStmt
+      0,                                       // IsKnownToGCC,
+      0,                                       // IsSupportedByPragmaAttribute
+      {},                                      // Spellings
+      nullptr                                  // ArgNames
   );
   if (A.getSyntax() == AttributeCommonInfo::AS_Annotation)
     return AnnotationAttrInfo;

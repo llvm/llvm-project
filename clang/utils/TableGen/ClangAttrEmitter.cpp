@@ -3864,8 +3864,8 @@ void EmitClangAttrHasAttrImpl(const RecordKeeper &Records, raw_ostream &OS) {
         // We should not be code gening anything with a C++26
         // annotation syntax.
         PrintError(R->getLoc(),
-          "Invalid syntax 'Annotation' used on the node '" +
-          R->getName() + "'");
+                   "Invalid syntax 'Annotation' used on the node '" +
+                       R->getName() + "'");
       }
     }
   }
