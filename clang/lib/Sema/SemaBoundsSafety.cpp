@@ -12,6 +12,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/StmtVisitor.h"
@@ -243,25 +244,25 @@ bool Sema::CheckCountedByAttrOnField(FieldDecl *FD, Expr *E, bool CountInBytes,
 
 // FIXME: for some reason diagnostics highlight the end character, while
 // getSourceText() does not include the end character.
-static SourceRange getAttrNameRangeImpl(Sema &S, SourceLocation Begin,
+static SourceRange getAttrNameRangeImpl(const ASTContext &Ctx, SourceLocation Begin,
                                         bool IsForDiagnostics) {
-  SourceManager &SM = S.getSourceManager();
+  const SourceManager &SM = Ctx.getSourceManager();
   SourceLocation TokenStart = Begin;
   while (TokenStart.isMacroID())
     TokenStart = SM.getImmediateExpansionRange(TokenStart).getBegin();
   unsigned Offset = IsForDiagnostics ? 1 : 0;
-  SourceLocation End = S.getLocForEndOfToken(TokenStart, Offset);
+  SourceLocation End = Lexer::getLocForEndOfToken(TokenStart, Offset, SM, Ctx.getLangOpts());
   return {TokenStart, End};
 }
 
-StringRef BoundsAttributedTypeLoc::getAttrNameAsWritten(Sema &S) const {
-  SourceRange Range = getAttrNameRangeImpl(S, getAttrRange().getBegin(), false);
+StringRef BoundsAttributedTypeLoc::getAttrNameAsWritten(const ASTContext &Ctx) const {
+  SourceRange Range = getAttrNameRangeImpl(Ctx, getAttrRange().getBegin(), false);
   CharSourceRange NameRange = CharSourceRange::getCharRange(Range);
-  return Lexer::getSourceText(NameRange, S.getSourceManager(), S.getLangOpts());
+  return Lexer::getSourceText(NameRange, Ctx.getSourceManager(), Ctx.getLangOpts());
 }
 
-SourceRange BoundsAttributedTypeLoc::getAttrNameRange(Sema &S) const {
-  return getAttrNameRangeImpl(S, getAttrRange().getBegin(), true);
+SourceRange BoundsAttributedTypeLoc::getAttrNameRange(const ASTContext &Ctx) const {
+  return getAttrNameRangeImpl(Ctx, getAttrRange().getBegin(), true);
 }
 
 static TypeSourceInfo *getTSI(const Decl *D) {
@@ -333,9 +334,9 @@ static void EmitIncompleteCountedByPointeeNotes(Sema &S,
         << CATy->isOrNull();
     return;
   }
-  SourceRange AttrSrcRange = CATL.getAttrNameRange(S);
+  SourceRange AttrSrcRange = CATL.getAttrNameRange(S.getASTContext());
 
-  StringRef Spelling = CATL.getAttrNameAsWritten(S);
+  StringRef Spelling = CATL.getAttrNameAsWritten(S.getASTContext());
   StringRef FixedSpelling =
       llvm::StringSwitch<StringRef>(Spelling)
           .Case("__counted_by", "__sized_by")

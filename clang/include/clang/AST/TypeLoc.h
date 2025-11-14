@@ -19,7 +19,6 @@
 #include "clang/AST/NestedNameSpecifierBase.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/TypeBase.h"
-#include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
@@ -43,7 +42,6 @@ class ObjCInterfaceDecl;
 class ObjCProtocolDecl;
 class ObjCTypeParamDecl;
 class ParmVarDecl;
-class Sema;
 class TemplateTypeParmDecl;
 class UnqualTypeLoc;
 class UnresolvedUsingTypenameDecl;
@@ -1320,8 +1318,8 @@ public:
   void setAttrRange(SourceRange Range) { getLocalData()->Range = Range; }
   SourceRange getAttrRange() const { return getLocalData()->Range; }
 
-  StringRef getAttrNameAsWritten(Sema &S) const;
-  SourceRange getAttrNameRange(Sema &S) const;
+  StringRef getAttrNameAsWritten(const ASTContext &Ctx) const;
+  SourceRange getAttrNameRange(const ASTContext &Ctx) const;
 
   unsigned getLocalDataSize() const { return sizeof(BoundsAttributedLocInfo); }
 };
