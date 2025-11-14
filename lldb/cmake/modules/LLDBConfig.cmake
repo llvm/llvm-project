@@ -181,7 +181,7 @@ if (LLDB_ENABLE_PYTHON)
   endif()
 
   if (SWIG_VERSION VERSION_GREATER_EQUAL "4.2"
-      Python3_VERSION VERSION_GREATER_EQUAL "3.11"
+      AND Python3_VERSION VERSION_GREATER_EQUAL "3.11"
       AND NOT LLDB_EMBED_PYTHON_HOME)
     set(default_enable_python_limited_api ON)
   else()
