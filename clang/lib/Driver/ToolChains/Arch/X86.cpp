@@ -42,6 +42,8 @@ std::string x86::getX86TargetCPU(const Driver &D, const ArgList &Args,
         {"AVX2", "haswell"},
         {"AVX512F", "knl"},
         {"AVX512", "skylake-avx512"},
+        {"AVX10.1", "sapphirerapids"},
+        {"AVX10.2", "diamondrapids"},
     });
     if (Triple.getArch() == llvm::Triple::x86) {
       // 32-bit-only /arch: flags.
