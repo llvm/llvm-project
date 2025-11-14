@@ -340,10 +340,12 @@ SIRegisterInfo::SIRegisterInfo(const GCNSubtarget &ST)
          "getNumCoveredRegs() will not work with generated subreg masks!");
 
   RegPressureIgnoredUnits.resize(getNumRegUnits());
-  RegPressureIgnoredUnits.set(*regunits(MCRegister::from(AMDGPU::M0)).begin());
+  RegPressureIgnoredUnits.set(
+      static_cast<unsigned>(*regunits(MCRegister::from(AMDGPU::M0)).begin()));
   for (auto Reg : AMDGPU::VGPR_16RegClass) {
     if (AMDGPU::isHi16Reg(Reg, *this))
-      RegPressureIgnoredUnits.set(*regunits(Reg).begin());
+      RegPressureIgnoredUnits.set(
+          static_cast<unsigned>(*regunits(Reg).begin()));
   }
 
   // HACK: Until this is fully tablegen'd.
@@ -3639,6 +3641,14 @@ SIRegisterInfo::getEquivalentAGPRClass(const TargetRegisterClass *SRC) const {
 }
 
 const TargetRegisterClass *
+SIRegisterInfo::getEquivalentAVClass(const TargetRegisterClass *SRC) const {
+  unsigned Size = getRegSizeInBits(*SRC);
+  const TargetRegisterClass *ARC = getVectorSuperClassForBitWidth(Size);
+  assert(ARC && "Invalid register class size");
+  return ARC;
+}
+
+const TargetRegisterClass *
 SIRegisterInfo::getEquivalentSGPRClass(const TargetRegisterClass *VRC) const {
   unsigned Size = getRegSizeInBits(*VRC);
   if (Size == 32)
@@ -3795,7 +3805,7 @@ unsigned SIRegisterInfo::getRegPressureSetLimit(const MachineFunction &MF,
 const int *SIRegisterInfo::getRegUnitPressureSets(MCRegUnit RegUnit) const {
   static const int Empty[] = { -1 };
 
-  if (RegPressureIgnoredUnits[RegUnit])
+  if (RegPressureIgnoredUnits[static_cast<unsigned>(RegUnit)])
     return Empty;
 
   return AMDGPUGenRegisterInfo::getRegUnitPressureSets(RegUnit);
@@ -4005,28 +4015,6 @@ bool SIRegisterInfo::isProperlyAlignedRC(const TargetRegisterClass &RC) const {
   assert(&RC != &AMDGPU::VS_64RegClass);
 
   return true;
-}
-
-const TargetRegisterClass *
-SIRegisterInfo::getProperlyAlignedRC(const TargetRegisterClass *RC) const {
-  if (!RC || !ST.needsAlignedVGPRs())
-    return RC;
-
-  unsigned Size = getRegSizeInBits(*RC);
-  if (Size <= 32)
-    return RC;
-
-  if (RC == &AMDGPU::VS_64RegClass)
-    return &AMDGPU::VS_64_Align2RegClass;
-
-  if (isVGPRClass(RC))
-    return getAlignedVGPRClassForBitWidth(Size);
-  if (isAGPRClass(RC))
-    return getAlignedAGPRClassForBitWidth(Size);
-  if (isVectorSuperClass(RC))
-    return getAlignedVectorSuperClassForBitWidth(Size);
-
-  return RC;
 }
 
 ArrayRef<MCPhysReg>
