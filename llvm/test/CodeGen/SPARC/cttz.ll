@@ -184,8 +184,7 @@ define i32 @i32_poison(i32 %x) nounwind {
 define i64 @i64_nopoison(i64 %x) nounwind {
 ; SPARC-LABEL: i64_nopoison:
 ; SPARC:       ! %bb.0:
-; SPARC-NEXT:    or %o1, %o0, %o2
-; SPARC-NEXT:    cmp %o2, 0
+; SPARC-NEXT:    orcc %o1, %o0, %g0
 ; SPARC-NEXT:    be .LBB2_3
 ; SPARC-NEXT:    nop
 ; SPARC-NEXT:  ! %bb.1: ! %cond.false
@@ -219,8 +218,7 @@ define i64 @i64_nopoison(i64 %x) nounwind {
 ;
 ; SPARC-POPC-LABEL: i64_nopoison:
 ; SPARC-POPC:       ! %bb.0:
-; SPARC-POPC-NEXT:    or %o1, %o0, %o2
-; SPARC-POPC-NEXT:    cmp %o2, 0
+; SPARC-POPC-NEXT:    orcc %o1, %o0, %g0
 ; SPARC-POPC-NEXT:    be .LBB2_3
 ; SPARC-POPC-NEXT:    nop
 ; SPARC-POPC-NEXT:  ! %bb.1: ! %cond.false
