@@ -9,7 +9,7 @@ define void @test_lazy_save() nounwind "aarch64_inout_za" {
 ; CHECK-LABEL: test_lazy_save:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stp x30, x29, [sp, #-32]! // 16-byte Folded Spill
-; CHECK-NEXT:    str x19, [sp, #16] // 8-byte Folded Spill
+; CHECK-NEXT:    str x19, [sp, #16] // 8-byte Spill
 ; CHECK-NEXT:    mov x29, sp
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    rdsvl x8, #1
@@ -31,7 +31,7 @@ define void @test_lazy_save() nounwind "aarch64_inout_za" {
 ; CHECK-NEXT:  .LBB0_2:
 ; CHECK-NEXT:    msr TPIDR2_EL0, xzr
 ; CHECK-NEXT:    mov sp, x29
-; CHECK-NEXT:    ldr x19, [sp, #16] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x19, [sp, #16] // 8-byte Reload
 ; CHECK-NEXT:    ldp x30, x29, [sp], #32 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
   call void @private_za_callee()

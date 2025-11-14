@@ -145,7 +145,7 @@ define void @call_copy_pod() {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    str x19, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    .seh_save_reg_x x19, 16
-; CHECK-NEXT:    str x30, [sp, #8] // 8-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #8] // 8-byte Spill
 ; CHECK-NEXT:    .seh_save_reg x30, 8
 ; CHECK-NEXT:    .seh_endprologue
 ; CHECK-NEXT:    adrp x19, Pod
@@ -154,7 +154,7 @@ define void @call_copy_pod() {
 ; CHECK-NEXT:    bl copy_pod
 ; CHECK-NEXT:    stp d0, d1, [x19]
 ; CHECK-NEXT:    .seh_startepilogue
-; CHECK-NEXT:    ldr x30, [sp, #8] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #8] // 8-byte Reload
 ; CHECK-NEXT:    .seh_save_reg x30, 8
 ; CHECK-NEXT:    ldr x19, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    .seh_save_reg_x x19, 16
@@ -175,9 +175,9 @@ define void @call_copy_notcxx14aggregate() {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #32
 ; CHECK-NEXT:    .seh_stackalloc 32
-; CHECK-NEXT:    str x19, [sp, #16] // 8-byte Folded Spill
+; CHECK-NEXT:    str x19, [sp, #16] // 8-byte Spill
 ; CHECK-NEXT:    .seh_save_reg x19, 16
-; CHECK-NEXT:    str x30, [sp, #24] // 8-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #24] // 8-byte Spill
 ; CHECK-NEXT:    .seh_save_reg x30, 24
 ; CHECK-NEXT:    .seh_endprologue
 ; CHECK-NEXT:    adrp x19, NotCXX14Aggregate
@@ -188,9 +188,9 @@ define void @call_copy_notcxx14aggregate() {
 ; CHECK-NEXT:    ldp d0, d1, [sp]
 ; CHECK-NEXT:    stp d0, d1, [x19]
 ; CHECK-NEXT:    .seh_startepilogue
-; CHECK-NEXT:    ldr x30, [sp, #24] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #24] // 8-byte Reload
 ; CHECK-NEXT:    .seh_save_reg x30, 24
-; CHECK-NEXT:    ldr x19, [sp, #16] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x19, [sp, #16] // 8-byte Reload
 ; CHECK-NEXT:    .seh_save_reg x19, 16
 ; CHECK-NEXT:    add sp, sp, #32
 ; CHECK-NEXT:    .seh_stackalloc 32
@@ -213,7 +213,7 @@ define void @call_copy_notpod() {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    str x19, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    .seh_save_reg_x x19, 16
-; CHECK-NEXT:    str x30, [sp, #8] // 8-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #8] // 8-byte Spill
 ; CHECK-NEXT:    .seh_save_reg x30, 8
 ; CHECK-NEXT:    .seh_endprologue
 ; CHECK-NEXT:    adrp x19, NotPod
@@ -222,7 +222,7 @@ define void @call_copy_notpod() {
 ; CHECK-NEXT:    bl copy_notpod
 ; CHECK-NEXT:    stp x0, x1, [x19]
 ; CHECK-NEXT:    .seh_startepilogue
-; CHECK-NEXT:    ldr x30, [sp, #8] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #8] // 8-byte Reload
 ; CHECK-NEXT:    .seh_save_reg x30, 8
 ; CHECK-NEXT:    ldr x19, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    .seh_save_reg_x x19, 16

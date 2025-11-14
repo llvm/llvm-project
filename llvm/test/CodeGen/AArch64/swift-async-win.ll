@@ -21,7 +21,7 @@ define hidden swifttailcc void @"$ss23withCheckedContinuation8function_xSS_yScCy
 ; CHECK-NEXT:    sub sp, sp, #48
 ; CHECK-NEXT:    stp x30, x29, [sp, #24] // 16-byte Folded Spill
 ; CHECK-NEXT:    add x29, sp, #24
-; CHECK-NEXT:    str x19, [sp, #40] // 8-byte Folded Spill
+; CHECK-NEXT:    str x19, [sp, #40] // 8-byte Spill
 ; CHECK-NEXT:    adrp x19, __imp_swift_task_dealloc
 ; CHECK-NEXT:    str xzr, [sp, #16]
 ; CHECK-NEXT:    ldr x8, [x0]
@@ -36,7 +36,7 @@ define hidden swifttailcc void @"$ss23withCheckedContinuation8function_xSS_yScCy
 ; CHECK-NEXT:    ldp x30, x29, [sp, #24] // 16-byte Folded Reload
 ; CHECK-NEXT:    mov x0, x20
 ; CHECK-NEXT:    ldr x1, [x20, #8]
-; CHECK-NEXT:    ldr x19, [sp, #40] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x19, [sp, #40] // 8-byte Reload
 ; CHECK-NEXT:    add sp, sp, #48
 ; CHECK-NEXT:    br x1
 entryresume.0:

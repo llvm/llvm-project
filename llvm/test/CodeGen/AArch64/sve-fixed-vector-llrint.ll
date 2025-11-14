@@ -870,17 +870,17 @@ define <2 x i64> @llrint_v2i64_v2fp128(<2 x fp128> %x) nounwind {
 ; CHECK-LABEL: llrint_v2i64_v2fp128:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #48
-; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
+; CHECK-NEXT:    str q0, [sp] // 16-byte Spill
 ; CHECK-NEXT:    mov v0.16b, v1.16b
-; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Spill
 ; CHECK-NEXT:    bl llrintl
 ; CHECK-NEXT:    fmov d0, x0
-; CHECK-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
-; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    str q0, [sp, #16] // 16-byte Spill
+; CHECK-NEXT:    ldr q0, [sp] // 16-byte Reload
 ; CHECK-NEXT:    bl llrintl
 ; CHECK-NEXT:    fmov d0, x0
-; CHECK-NEXT:    ldr q1, [sp, #16] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x30, [sp, #32] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
+; CHECK-NEXT:    ldr x30, [sp, #32] // 8-byte Reload
 ; CHECK-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-NEXT:    add sp, sp, #48
 ; CHECK-NEXT:    ret
@@ -895,27 +895,27 @@ define <4 x i64> @llrint_v4i64_v4fp128(<4 x fp128> %x) nounwind {
 ; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
 ; CHECK-NEXT:    sub sp, sp, #64
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    str q0, [sp, #48] // 16-byte Folded Spill
+; CHECK-NEXT:    str q0, [sp, #48] // 16-byte Spill
 ; CHECK-NEXT:    mov v0.16b, v3.16b
 ; CHECK-NEXT:    stp q2, q1, [sp, #16] // 32-byte Folded Spill
 ; CHECK-NEXT:    bl llrintl
 ; CHECK-NEXT:    fmov d0, x0
-; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
-; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    str q0, [sp] // 16-byte Spill
+; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
 ; CHECK-NEXT:    bl llrintl
 ; CHECK-NEXT:    fmov d0, x0
-; CHECK-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr q1, [sp] // 16-byte Reload
 ; CHECK-NEXT:    add x8, sp, #64
 ; CHECK-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-NEXT:    str z0, [x8] // 16-byte Folded Spill
-; CHECK-NEXT:    ldr q0, [sp, #32] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr q0, [sp, #32] // 16-byte Reload
 ; CHECK-NEXT:    bl llrintl
 ; CHECK-NEXT:    fmov d0, x0
-; CHECK-NEXT:    str q0, [sp, #32] // 16-byte Folded Spill
-; CHECK-NEXT:    ldr q0, [sp, #48] // 16-byte Folded Reload
+; CHECK-NEXT:    str q0, [sp, #32] // 16-byte Spill
+; CHECK-NEXT:    ldr q0, [sp, #48] // 16-byte Reload
 ; CHECK-NEXT:    bl llrintl
 ; CHECK-NEXT:    fmov d0, x0
-; CHECK-NEXT:    ldr q1, [sp, #32] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr q1, [sp, #32] // 16-byte Reload
 ; CHECK-NEXT:    add x8, sp, #64
 ; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    mov v0.d[1], v1.d[0]
@@ -940,54 +940,54 @@ define <8 x i64> @llrint_v8i64_v8fp128(<8 x fp128> %x) nounwind {
 ; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
 ; CHECK-NEXT:    sub sp, sp, #128
 ; CHECK-NEXT:    addvl sp, sp, #-2
-; CHECK-NEXT:    str q0, [sp, #112] // 16-byte Folded Spill
+; CHECK-NEXT:    str q0, [sp, #112] // 16-byte Spill
 ; CHECK-NEXT:    mov v0.16b, v7.16b
 ; CHECK-NEXT:    stp q6, q5, [sp, #16] // 32-byte Folded Spill
 ; CHECK-NEXT:    stp q4, q3, [sp, #48] // 32-byte Folded Spill
 ; CHECK-NEXT:    stp q2, q1, [sp, #80] // 32-byte Folded Spill
 ; CHECK-NEXT:    bl llrintl
 ; CHECK-NEXT:    fmov d0, x0
-; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
-; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    str q0, [sp] // 16-byte Spill
+; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
 ; CHECK-NEXT:    bl llrintl
 ; CHECK-NEXT:    fmov d0, x0
-; CHECK-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr q1, [sp] // 16-byte Reload
 ; CHECK-NEXT:    add x8, sp, #128
 ; CHECK-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-NEXT:    str z0, [x8, #1, mul vl] // 16-byte Folded Spill
-; CHECK-NEXT:    ldr q0, [sp, #32] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr q0, [sp, #32] // 16-byte Reload
 ; CHECK-NEXT:    bl llrintl
 ; CHECK-NEXT:    fmov d0, x0
-; CHECK-NEXT:    str q0, [sp, #32] // 16-byte Folded Spill
-; CHECK-NEXT:    ldr q0, [sp, #48] // 16-byte Folded Reload
+; CHECK-NEXT:    str q0, [sp, #32] // 16-byte Spill
+; CHECK-NEXT:    ldr q0, [sp, #48] // 16-byte Reload
 ; CHECK-NEXT:    bl llrintl
 ; CHECK-NEXT:    fmov d0, x0
-; CHECK-NEXT:    ldr q1, [sp, #32] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr q1, [sp, #32] // 16-byte Reload
 ; CHECK-NEXT:    add x8, sp, #128
 ; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-NEXT:    ldr z1, [x8, #1, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    splice z0.d, p0, z0.d, z1.d
 ; CHECK-NEXT:    str z0, [x8, #1, mul vl] // 16-byte Folded Spill
-; CHECK-NEXT:    ldr q0, [sp, #64] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr q0, [sp, #64] // 16-byte Reload
 ; CHECK-NEXT:    bl llrintl
 ; CHECK-NEXT:    fmov d0, x0
-; CHECK-NEXT:    str q0, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    ldr q0, [sp, #80] // 16-byte Folded Reload
+; CHECK-NEXT:    str q0, [sp, #64] // 16-byte Spill
+; CHECK-NEXT:    ldr q0, [sp, #80] // 16-byte Reload
 ; CHECK-NEXT:    bl llrintl
 ; CHECK-NEXT:    fmov d0, x0
-; CHECK-NEXT:    ldr q1, [sp, #64] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr q1, [sp, #64] // 16-byte Reload
 ; CHECK-NEXT:    add x8, sp, #128
 ; CHECK-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-NEXT:    str z0, [x8] // 16-byte Folded Spill
-; CHECK-NEXT:    ldr q0, [sp, #96] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr q0, [sp, #96] // 16-byte Reload
 ; CHECK-NEXT:    bl llrintl
 ; CHECK-NEXT:    fmov d0, x0
-; CHECK-NEXT:    str q0, [sp, #96] // 16-byte Folded Spill
-; CHECK-NEXT:    ldr q0, [sp, #112] // 16-byte Folded Reload
+; CHECK-NEXT:    str q0, [sp, #96] // 16-byte Spill
+; CHECK-NEXT:    ldr q0, [sp, #112] // 16-byte Reload
 ; CHECK-NEXT:    bl llrintl
 ; CHECK-NEXT:    fmov d0, x0
-; CHECK-NEXT:    ldr q1, [sp, #96] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr q1, [sp, #96] // 16-byte Reload
 ; CHECK-NEXT:    add x8, sp, #128
 ; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    ldr z2, [x8, #1, mul vl] // 16-byte Folded Reload
@@ -1018,127 +1018,127 @@ define <16 x i64> @llrint_v16fp128(<16 x fp128> %x) nounwind {
 ; CHECK-NEXT:    sub sp, sp, #256
 ; CHECK-NEXT:    addvl sp, sp, #-4
 ; CHECK-NEXT:    addvl x8, sp, #4
-; CHECK-NEXT:    str q1, [sp, #240] // 16-byte Folded Spill
+; CHECK-NEXT:    str q1, [sp, #240] // 16-byte Spill
 ; CHECK-NEXT:    ldr q1, [x8, #272]
 ; CHECK-NEXT:    addvl x8, sp, #4
-; CHECK-NEXT:    str q0, [sp, #224] // 16-byte Folded Spill
+; CHECK-NEXT:    str q0, [sp, #224] // 16-byte Spill
 ; CHECK-NEXT:    stp q7, q6, [sp, #128] // 32-byte Folded Spill
-; CHECK-NEXT:    str q1, [sp, #112] // 16-byte Folded Spill
+; CHECK-NEXT:    str q1, [sp, #112] // 16-byte Spill
 ; CHECK-NEXT:    ldr q1, [x8, #288]
 ; CHECK-NEXT:    addvl x8, sp, #4
 ; CHECK-NEXT:    stp q5, q4, [sp, #160] // 32-byte Folded Spill
-; CHECK-NEXT:    str q1, [sp, #96] // 16-byte Folded Spill
+; CHECK-NEXT:    str q1, [sp, #96] // 16-byte Spill
 ; CHECK-NEXT:    ldr q1, [x8, #304]
 ; CHECK-NEXT:    addvl x8, sp, #4
 ; CHECK-NEXT:    stp q3, q2, [sp, #192] // 32-byte Folded Spill
-; CHECK-NEXT:    str q1, [sp, #80] // 16-byte Folded Spill
+; CHECK-NEXT:    str q1, [sp, #80] // 16-byte Spill
 ; CHECK-NEXT:    ldr q1, [x8, #320]
 ; CHECK-NEXT:    addvl x8, sp, #4
-; CHECK-NEXT:    str q1, [sp, #64] // 16-byte Folded Spill
+; CHECK-NEXT:    str q1, [sp, #64] // 16-byte Spill
 ; CHECK-NEXT:    ldr q1, [x8, #336]
 ; CHECK-NEXT:    addvl x8, sp, #4
-; CHECK-NEXT:    str q1, [sp, #48] // 16-byte Folded Spill
+; CHECK-NEXT:    str q1, [sp, #48] // 16-byte Spill
 ; CHECK-NEXT:    ldr q1, [x8, #352]
 ; CHECK-NEXT:    addvl x8, sp, #4
-; CHECK-NEXT:    str q1, [sp, #32] // 16-byte Folded Spill
+; CHECK-NEXT:    str q1, [sp, #32] // 16-byte Spill
 ; CHECK-NEXT:    ldr q1, [x8, #368]
 ; CHECK-NEXT:    addvl x8, sp, #4
-; CHECK-NEXT:    str q1, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    str q1, [sp, #16] // 16-byte Spill
 ; CHECK-NEXT:    ldr q1, [x8, #384]
 ; CHECK-NEXT:    mov v0.16b, v1.16b
 ; CHECK-NEXT:    bl llrintl
 ; CHECK-NEXT:    fmov d0, x0
-; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
-; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    str q0, [sp] // 16-byte Spill
+; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
 ; CHECK-NEXT:    bl llrintl
 ; CHECK-NEXT:    fmov d0, x0
-; CHECK-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr q1, [sp] // 16-byte Reload
 ; CHECK-NEXT:    add x8, sp, #256
 ; CHECK-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-NEXT:    str z0, [x8, #3, mul vl] // 16-byte Folded Spill
-; CHECK-NEXT:    ldr q0, [sp, #32] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr q0, [sp, #32] // 16-byte Reload
 ; CHECK-NEXT:    bl llrintl
 ; CHECK-NEXT:    fmov d0, x0
-; CHECK-NEXT:    str q0, [sp, #32] // 16-byte Folded Spill
-; CHECK-NEXT:    ldr q0, [sp, #48] // 16-byte Folded Reload
+; CHECK-NEXT:    str q0, [sp, #32] // 16-byte Spill
+; CHECK-NEXT:    ldr q0, [sp, #48] // 16-byte Reload
 ; CHECK-NEXT:    bl llrintl
 ; CHECK-NEXT:    fmov d0, x0
-; CHECK-NEXT:    ldr q1, [sp, #32] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr q1, [sp, #32] // 16-byte Reload
 ; CHECK-NEXT:    add x8, sp, #256
 ; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-NEXT:    ldr z1, [x8, #3, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    splice z0.d, p0, z0.d, z1.d
 ; CHECK-NEXT:    str z0, [x8, #3, mul vl] // 16-byte Folded Spill
-; CHECK-NEXT:    ldr q0, [sp, #64] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr q0, [sp, #64] // 16-byte Reload
 ; CHECK-NEXT:    bl llrintl
 ; CHECK-NEXT:    fmov d0, x0
-; CHECK-NEXT:    str q0, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    ldr q0, [sp, #80] // 16-byte Folded Reload
+; CHECK-NEXT:    str q0, [sp, #64] // 16-byte Spill
+; CHECK-NEXT:    ldr q0, [sp, #80] // 16-byte Reload
 ; CHECK-NEXT:    bl llrintl
 ; CHECK-NEXT:    fmov d0, x0
-; CHECK-NEXT:    ldr q1, [sp, #64] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr q1, [sp, #64] // 16-byte Reload
 ; CHECK-NEXT:    add x8, sp, #256
 ; CHECK-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-NEXT:    str z0, [x8, #2, mul vl] // 16-byte Folded Spill
-; CHECK-NEXT:    ldr q0, [sp, #96] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr q0, [sp, #96] // 16-byte Reload
 ; CHECK-NEXT:    bl llrintl
 ; CHECK-NEXT:    fmov d0, x0
-; CHECK-NEXT:    str q0, [sp, #96] // 16-byte Folded Spill
-; CHECK-NEXT:    ldr q0, [sp, #112] // 16-byte Folded Reload
+; CHECK-NEXT:    str q0, [sp, #96] // 16-byte Spill
+; CHECK-NEXT:    ldr q0, [sp, #112] // 16-byte Reload
 ; CHECK-NEXT:    bl llrintl
 ; CHECK-NEXT:    fmov d0, x0
-; CHECK-NEXT:    ldr q1, [sp, #96] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr q1, [sp, #96] // 16-byte Reload
 ; CHECK-NEXT:    add x8, sp, #256
 ; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-NEXT:    ldr z1, [x8, #2, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    splice z0.d, p0, z0.d, z1.d
 ; CHECK-NEXT:    str z0, [x8, #2, mul vl] // 16-byte Folded Spill
-; CHECK-NEXT:    ldr q0, [sp, #128] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr q0, [sp, #128] // 16-byte Reload
 ; CHECK-NEXT:    bl llrintl
 ; CHECK-NEXT:    fmov d0, x0
-; CHECK-NEXT:    str q0, [sp, #128] // 16-byte Folded Spill
-; CHECK-NEXT:    ldr q0, [sp, #144] // 16-byte Folded Reload
+; CHECK-NEXT:    str q0, [sp, #128] // 16-byte Spill
+; CHECK-NEXT:    ldr q0, [sp, #144] // 16-byte Reload
 ; CHECK-NEXT:    bl llrintl
 ; CHECK-NEXT:    fmov d0, x0
-; CHECK-NEXT:    ldr q1, [sp, #128] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr q1, [sp, #128] // 16-byte Reload
 ; CHECK-NEXT:    add x8, sp, #256
 ; CHECK-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-NEXT:    str z0, [x8, #1, mul vl] // 16-byte Folded Spill
-; CHECK-NEXT:    ldr q0, [sp, #160] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr q0, [sp, #160] // 16-byte Reload
 ; CHECK-NEXT:    bl llrintl
 ; CHECK-NEXT:    fmov d0, x0
-; CHECK-NEXT:    str q0, [sp, #160] // 16-byte Folded Spill
-; CHECK-NEXT:    ldr q0, [sp, #176] // 16-byte Folded Reload
+; CHECK-NEXT:    str q0, [sp, #160] // 16-byte Spill
+; CHECK-NEXT:    ldr q0, [sp, #176] // 16-byte Reload
 ; CHECK-NEXT:    bl llrintl
 ; CHECK-NEXT:    fmov d0, x0
-; CHECK-NEXT:    ldr q1, [sp, #160] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr q1, [sp, #160] // 16-byte Reload
 ; CHECK-NEXT:    add x8, sp, #256
 ; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-NEXT:    ldr z1, [x8, #1, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    splice z0.d, p0, z0.d, z1.d
 ; CHECK-NEXT:    str z0, [x8, #1, mul vl] // 16-byte Folded Spill
-; CHECK-NEXT:    ldr q0, [sp, #192] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr q0, [sp, #192] // 16-byte Reload
 ; CHECK-NEXT:    bl llrintl
 ; CHECK-NEXT:    fmov d0, x0
-; CHECK-NEXT:    str q0, [sp, #192] // 16-byte Folded Spill
-; CHECK-NEXT:    ldr q0, [sp, #208] // 16-byte Folded Reload
+; CHECK-NEXT:    str q0, [sp, #192] // 16-byte Spill
+; CHECK-NEXT:    ldr q0, [sp, #208] // 16-byte Reload
 ; CHECK-NEXT:    bl llrintl
 ; CHECK-NEXT:    fmov d0, x0
-; CHECK-NEXT:    ldr q1, [sp, #192] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr q1, [sp, #192] // 16-byte Reload
 ; CHECK-NEXT:    add x8, sp, #256
 ; CHECK-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-NEXT:    str z0, [x8] // 16-byte Folded Spill
-; CHECK-NEXT:    ldr q0, [sp, #240] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr q0, [sp, #240] // 16-byte Reload
 ; CHECK-NEXT:    bl llrintl
 ; CHECK-NEXT:    fmov d0, x0
-; CHECK-NEXT:    str q0, [sp, #240] // 16-byte Folded Spill
-; CHECK-NEXT:    ldr q0, [sp, #224] // 16-byte Folded Reload
+; CHECK-NEXT:    str q0, [sp, #240] // 16-byte Spill
+; CHECK-NEXT:    ldr q0, [sp, #224] // 16-byte Reload
 ; CHECK-NEXT:    bl llrintl
 ; CHECK-NEXT:    fmov d0, x0
-; CHECK-NEXT:    ldr q1, [sp, #240] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr q1, [sp, #240] // 16-byte Reload
 ; CHECK-NEXT:    add x8, sp, #256
 ; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    ldr z2, [x8, #1, mul vl] // 16-byte Folded Reload

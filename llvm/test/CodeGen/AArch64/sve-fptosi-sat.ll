@@ -251,9 +251,9 @@ define <vscale x 8 x i32> @test_signed_v8f64_v8i32(<vscale x 8 x double> %f) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    str p6, [sp, #5, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p5, [sp, #6, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p6, [sp, #5, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p5, [sp, #6, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 16 + 8 * VG
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    mov x8, #-4476578029606273024 // =0xc1e0000000000000
@@ -283,16 +283,16 @@ define <vscale x 8 x i32> @test_signed_v8f64_v8i32(<vscale x 8 x double> %f) {
 ; CHECK-NEXT:    fcvtzs z4.d, p2/m, z2.d
 ; CHECK-NEXT:    fcmuo p2.d, p0/z, z0.d, z0.d
 ; CHECK-NEXT:    sel z0.d, p4, z25.d, z6.d
-; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    mov z1.d, p3/m, #0 // =0x0
 ; CHECK-NEXT:    fcmuo p6.d, p0/z, z3.d, z3.d
 ; CHECK-NEXT:    fcmuo p0.d, p0/z, z2.d, z2.d
 ; CHECK-NEXT:    sel z2.d, p1, z25.d, z7.d
 ; CHECK-NEXT:    sel z3.d, p5, z25.d, z4.d
-; CHECK-NEXT:    ldr p5, [sp, #6, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p5, [sp, #6, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    mov z0.d, p2/m, #0 // =0x0
 ; CHECK-NEXT:    mov z2.d, p6/m, #0 // =0x0
-; CHECK-NEXT:    ldr p6, [sp, #5, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p6, [sp, #5, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    mov z3.d, p0/m, #0 // =0x0
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z1.s
 ; CHECK-NEXT:    uzp1 z1.s, z3.s, z2.s
@@ -338,9 +338,9 @@ define <vscale x 8 x i16> @test_signed_v8f64_v8i16(<vscale x 8 x double> %f) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    str p6, [sp, #5, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p5, [sp, #6, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p6, [sp, #5, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p5, [sp, #6, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 16 + 8 * VG
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    mov x8, #-4548635623644200960 // =0xc0e0000000000000
@@ -373,14 +373,14 @@ define <vscale x 8 x i16> @test_signed_v8f64_v8i16(<vscale x 8 x double> %f) {
 ; CHECK-NEXT:    mov z4.d, p3/m, #0 // =0x0
 ; CHECK-NEXT:    fcmuo p0.d, p0/z, z0.d, z0.d
 ; CHECK-NEXT:    sel z0.d, p4, z25.d, z7.d
-; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    sel z1.d, p1, z25.d, z24.d
 ; CHECK-NEXT:    sel z2.d, p5, z25.d, z3.d
-; CHECK-NEXT:    ldr p5, [sp, #6, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p5, [sp, #6, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    mov z0.d, p2/m, #0 // =0x0
 ; CHECK-NEXT:    mov z1.d, p6/m, #0 // =0x0
 ; CHECK-NEXT:    mov z2.d, p0/m, #0 // =0x0
-; CHECK-NEXT:    ldr p6, [sp, #5, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p6, [sp, #5, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z4.s
 ; CHECK-NEXT:    uzp1 z1.s, z2.s, z1.s
 ; CHECK-NEXT:    uzp1 z0.h, z1.h, z0.h

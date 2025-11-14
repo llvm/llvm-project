@@ -99,7 +99,7 @@ define void @dynamic_align_64(i64 %size, ptr %out) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stp x29, x30, [sp, #-32]! // 16-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    str x19, [sp, #16] // 8-byte Folded Spill
+; CHECK-NEXT:    str x19, [sp, #16] // 8-byte Spill
 ; CHECK-NEXT:    mov x29, sp
 ; CHECK-NEXT:    .cfi_def_cfa w29, 32
 ; CHECK-NEXT:    .cfi_offset w19, -16
@@ -128,7 +128,7 @@ define void @dynamic_align_64(i64 %size, ptr %out) #0 {
 ; CHECK-NEXT:    str x8, [x1]
 ; CHECK-NEXT:    mov sp, x29
 ; CHECK-NEXT:    .cfi_def_cfa wsp, 32
-; CHECK-NEXT:    ldr x19, [sp, #16] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x19, [sp, #16] // 8-byte Reload
 ; CHECK-NEXT:    ldp x29, x30, [sp], #32 // 16-byte Folded Reload
 ; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    .cfi_restore w19
@@ -149,7 +149,7 @@ define void @dynamic_align_8192(i64 %size, ptr %out) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stp x29, x30, [sp, #-32]! // 16-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    str x19, [sp, #16] // 8-byte Folded Spill
+; CHECK-NEXT:    str x19, [sp, #16] // 8-byte Spill
 ; CHECK-NEXT:    mov x29, sp
 ; CHECK-NEXT:    .cfi_def_cfa w29, 32
 ; CHECK-NEXT:    .cfi_offset w19, -16
@@ -188,7 +188,7 @@ define void @dynamic_align_8192(i64 %size, ptr %out) #0 {
 ; CHECK-NEXT:    str x8, [x1]
 ; CHECK-NEXT:    mov sp, x29
 ; CHECK-NEXT:    .cfi_def_cfa wsp, 32
-; CHECK-NEXT:    ldr x19, [sp, #16] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x19, [sp, #16] // 8-byte Reload
 ; CHECK-NEXT:    ldp x29, x30, [sp], #32 // 16-byte Folded Reload
 ; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    .cfi_restore w19
@@ -293,7 +293,7 @@ define void @reserved_call_frame(i64 %n) #0 {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    stp x29, x30, [sp, #-32]! // 16-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    str x28, [sp, #16] // 8-byte Folded Spill
+; CHECK-NEXT:    str x28, [sp, #16] // 8-byte Spill
 ; CHECK-NEXT:    mov x29, sp
 ; CHECK-NEXT:    .cfi_def_cfa w29, 32
 ; CHECK-NEXT:    .cfi_offset w28, -16
@@ -305,7 +305,7 @@ define void @reserved_call_frame(i64 %n) #0 {
 ; CHECK-NEXT:    bl callee_stack_args
 ; CHECK-NEXT:    add sp, sp, #1504
 ; CHECK-NEXT:    .cfi_def_cfa wsp, 32
-; CHECK-NEXT:    ldr x28, [sp, #16] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x28, [sp, #16] // 8-byte Reload
 ; CHECK-NEXT:    ldp x29, x30, [sp], #32 // 16-byte Folded Reload
 ; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    .cfi_restore w28
@@ -326,7 +326,7 @@ define void @dynamic_sve(i64 %size, ptr %out) #0 "target-features"="+sve" {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stp x29, x30, [sp, #-32]! // 16-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    str x19, [sp, #16] // 8-byte Folded Spill
+; CHECK-NEXT:    str x19, [sp, #16] // 8-byte Spill
 ; CHECK-NEXT:    mov x29, sp
 ; CHECK-NEXT:    .cfi_def_cfa w29, 32
 ; CHECK-NEXT:    .cfi_offset w19, -16
@@ -351,7 +351,7 @@ define void @dynamic_sve(i64 %size, ptr %out) #0 "target-features"="+sve" {
 ; CHECK-NEXT:    str x8, [x1]
 ; CHECK-NEXT:    mov sp, x29
 ; CHECK-NEXT:    .cfi_def_cfa wsp, 32
-; CHECK-NEXT:    ldr x19, [sp, #16] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x19, [sp, #16] // 8-byte Reload
 ; CHECK-NEXT:    ldp x29, x30, [sp], #32 // 16-byte Folded Reload
 ; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    .cfi_restore w19

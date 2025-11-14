@@ -32,7 +32,7 @@ define void @static_256(ptr %out) #0 {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sub sp, sp, #272
 ; CHECK-NEXT:    .cfi_def_cfa_offset 272
-; CHECK-NEXT:    str x29, [sp, #256] // 8-byte Folded Spill
+; CHECK-NEXT:    str x29, [sp, #256] // 8-byte Spill
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    mov x8, sp
 ; CHECK-NEXT:    str x8, [x0]
