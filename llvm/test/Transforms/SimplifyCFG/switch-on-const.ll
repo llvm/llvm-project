@@ -287,7 +287,11 @@ default:
 define i16 @switch_on_nonimmediate_constant_expr() {
 ; CHECK-LABEL: @switch_on_nonimmediate_constant_expr(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret i16 789
+; CHECK-NEXT:    [[SWITCH_SELECTCMP:%.*]] = icmp eq i32 ptrtoint (ptr @G to i32), 2
+; CHECK-NEXT:    [[SWITCH_SELECT:%.*]] = select i1 [[SWITCH_SELECTCMP]], i16 456, i16 789
+; CHECK-NEXT:    [[SWITCH_SELECTCMP1:%.*]] = icmp eq i32 ptrtoint (ptr @G to i32), 1
+; CHECK-NEXT:    [[SWITCH_SELECT2:%.*]] = select i1 [[SWITCH_SELECTCMP1]], i16 123, i16 [[SWITCH_SELECT]]
+; CHECK-NEXT:    ret i16 [[SWITCH_SELECT2]]
 ;
 entry:
   switch i32 ptrtoint (ptr @G to i32), label %sw.default [
