@@ -2533,14 +2533,43 @@ void VPlanTransforms::cse(VPlan &Plan) {
 
 /// Move loop-invariant recipes out of the vector loop region in \p Plan.
 static void licm(VPlan &Plan) {
-  VPBasicBlock *Preheader = Plan.getVectorPreheader();
+  VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
+
+  /// Sink recipes with no users inside the vector loop region into a dedicated
+  /// exit block.
+  auto *SingleExit =
+      cast_or_null<VPBasicBlock>(LoopRegion->getSingleSuccessor());
+  // Check whether there is a unique dedicated exit block.
+  // TODO: Should check all predecessors of the exit block.
+  if (SingleExit && SingleExit->getSinglePredecessor() == LoopRegion) {
+    for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+             vp_depth_first_shallow(LoopRegion->getEntry()))) {
+      for (VPRecipeBase &R : make_early_inc_range(reverse(*VPBB))) {
+        if (isDeadRecipe(R)) {
+          R.eraseFromParent();
+          continue;
+        }
+        if (cannotHoistOrSinkRecipe(R))
+          continue;
+
+        auto *Def = cast<VPSingleDefRecipe>(&R);
+        if (any_of(Def->users(), [LoopRegion](VPUser *U) {
+              auto *UR = cast<VPRecipeBase>(U);
+              return UR->getParent()->getEnclosingLoopRegion();
+            }))
+          continue;
+        Def->moveBefore(*SingleExit, SingleExit->getFirstNonPhi());
+      }
+    }
+  }
+
+  VPBasicBlock *Preheader = LoopRegion->getPlan()->getVectorPreheader();
 
   // Hoist any loop invariant recipes from the vector loop region to the
   // preheader. Preform a shallow traversal of the vector loop region, to
   // exclude recipes in replicate regions. Since the top-level blocks in the
   // vector loop region are guaranteed to execute if the vector pre-header is,
   // we don't need to check speculation safety.
-  VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   assert(Preheader->getSingleSuccessor() == LoopRegion &&
          "Expected vector prehader's successor to be the vector loop region");
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(

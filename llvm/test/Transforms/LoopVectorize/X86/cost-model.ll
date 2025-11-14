@@ -498,9 +498,6 @@ define i64 @cost_assume(ptr %end, i64 %N) {
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP2]], 8
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i64 [[N]], 0
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP3]])
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP3]])
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -516,6 +513,9 @@ define i64 @cost_assume(ptr %end, i64 %N) {
 ; CHECK-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP13]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP18:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[TMP11:%.*]] = icmp ne i64 [[N]], 0
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP11]])
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP11]])
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = add <2 x i64> [[TMP8]], [[TMP7]]
 ; CHECK-NEXT:    [[BIN_RDX5:%.*]] = add <2 x i64> [[TMP9]], [[BIN_RDX]]
 ; CHECK-NEXT:    [[BIN_RDX6:%.*]] = add <2 x i64> [[TMP10]], [[BIN_RDX5]]
