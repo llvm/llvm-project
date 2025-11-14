@@ -1539,6 +1539,20 @@ let Predicates = [HasStdExtP, IsRV64] in {
   // 32-bit PLI SD node pattern
   def: Pat<(v2i32 (riscv_pli simm10:$imm10)), (PLI_W simm10:$imm10)>;
 
+  // Basic 32-bit arithmetic patterns
+  def: Pat<(v2i32 (add GPR:$rs1, GPR:$rs2)), (PADD_W GPR:$rs1, GPR:$rs2)>;
+  def: Pat<(v2i32 (sub GPR:$rs1, GPR:$rs2)), (PSUB_W GPR:$rs1, GPR:$rs2)>;
+
+  // 32-bit saturating add/sub patterns
+  def: Pat<(v2i32 (saddsat GPR:$rs1, GPR:$rs2)), (PSADD_W GPR:$rs1, GPR:$rs2)>;
+  def: Pat<(v2i32 (uaddsat GPR:$rs1, GPR:$rs2)), (PSADDU_W GPR:$rs1, GPR:$rs2)>;
+  def: Pat<(v2i32 (ssubsat GPR:$rs1, GPR:$rs2)), (PSSUB_W GPR:$rs1, GPR:$rs2)>;
+  def: Pat<(v2i32 (usubsat GPR:$rs1, GPR:$rs2)), (PSSUBU_W GPR:$rs1, GPR:$rs2)>;
+
+  // 32-bit averaging patterns
+  def: Pat<(v2i32 (avgfloors GPR:$rs1, GPR:$rs2)), (PAADD_W GPR:$rs1, GPR:$rs2)>;
+  def: Pat<(v2i32 (avgflooru GPR:$rs1, GPR:$rs2)), (PAADDU_W GPR:$rs1, GPR:$rs2)>;
+
   // 32-bit averaging-sub patterns
   def: Pat<(v2i32 (riscv_pasub GPR:$rs1, GPR:$rs2)), (PASUB_W GPR:$rs1, GPR:$rs2)>;
   def: Pat<(v2i32 (riscv_pasubu GPR:$rs1, GPR:$rs2)), (PASUBU_W GPR:$rs1, GPR:$rs2)>;

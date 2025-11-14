@@ -495,6 +495,182 @@ define void @test_extract_vector_32(ptr %ret_ptr, ptr %a_ptr) {
   ret void
 }
 
+; Test basic add/sub operations for v2i32 (RV64 only)
+define void @test_padd_w(ptr %ret_ptr, ptr %a_ptr, ptr %b_ptr) {
+; CHECK-LABEL: test_padd_w:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ld a1, 0(a1)
+; CHECK-NEXT:    ld a2, 0(a2)
+; CHECK-NEXT:    padd.w a1, a1, a2
+; CHECK-NEXT:    sd a1, 0(a0)
+; CHECK-NEXT:    ret
+  %a = load <2 x i32>, ptr %a_ptr
+  %b = load <2 x i32>, ptr %b_ptr
+  %res = add <2 x i32> %a, %b
+  store <2 x i32> %res, ptr %ret_ptr
+  ret void
+}
+
+define void @test_psub_w(ptr %ret_ptr, ptr %a_ptr, ptr %b_ptr) {
+; CHECK-LABEL: test_psub_w:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ld a1, 0(a1)
+; CHECK-NEXT:    ld a2, 0(a2)
+; CHECK-NEXT:    psub.w a1, a1, a2
+; CHECK-NEXT:    sd a1, 0(a0)
+; CHECK-NEXT:    ret
+  %a = load <2 x i32>, ptr %a_ptr
+  %b = load <2 x i32>, ptr %b_ptr
+  %res = sub <2 x i32> %a, %b
+  store <2 x i32> %res, ptr %ret_ptr
+  ret void
+}
+
+; Test saturating add operations for v2i32 (RV64 only)
+define void @test_psadd_w(ptr %ret_ptr, ptr %a_ptr, ptr %b_ptr) {
+; CHECK-LABEL: test_psadd_w:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ld a1, 0(a1)
+; CHECK-NEXT:    ld a2, 0(a2)
+; CHECK-NEXT:    psadd.w a1, a1, a2
+; CHECK-NEXT:    sd a1, 0(a0)
+; CHECK-NEXT:    ret
+  %a = load <2 x i32>, ptr %a_ptr
+  %b = load <2 x i32>, ptr %b_ptr
+  %res = call <2 x i32> @llvm.sadd.sat.v2i32(<2 x i32> %a, <2 x i32> %b)
+  store <2 x i32> %res, ptr %ret_ptr
+  ret void
+}
+
+define void @test_psaddu_w(ptr %ret_ptr, ptr %a_ptr, ptr %b_ptr) {
+; CHECK-LABEL: test_psaddu_w:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ld a1, 0(a1)
+; CHECK-NEXT:    ld a2, 0(a2)
+; CHECK-NEXT:    psaddu.w a1, a1, a2
+; CHECK-NEXT:    sd a1, 0(a0)
+; CHECK-NEXT:    ret
+  %a = load <2 x i32>, ptr %a_ptr
+  %b = load <2 x i32>, ptr %b_ptr
+  %res = call <2 x i32> @llvm.uadd.sat.v2i32(<2 x i32> %a, <2 x i32> %b)
+  store <2 x i32> %res, ptr %ret_ptr
+  ret void
+}
+
+; Test saturating sub operations for v2i32 (RV64 only)
+define void @test_pssub_w(ptr %ret_ptr, ptr %a_ptr, ptr %b_ptr) {
+; CHECK-LABEL: test_pssub_w:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ld a1, 0(a1)
+; CHECK-NEXT:    ld a2, 0(a2)
+; CHECK-NEXT:    pssub.w a1, a1, a2
+; CHECK-NEXT:    sd a1, 0(a0)
+; CHECK-NEXT:    ret
+  %a = load <2 x i32>, ptr %a_ptr
+  %b = load <2 x i32>, ptr %b_ptr
+  %res = call <2 x i32> @llvm.ssub.sat.v2i32(<2 x i32> %a, <2 x i32> %b)
+  store <2 x i32> %res, ptr %ret_ptr
+  ret void
+}
+
+define void @test_pssubu_w(ptr %ret_ptr, ptr %a_ptr, ptr %b_ptr) {
+; CHECK-LABEL: test_pssubu_w:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ld a1, 0(a1)
+; CHECK-NEXT:    ld a2, 0(a2)
+; CHECK-NEXT:    pssubu.w a1, a1, a2
+; CHECK-NEXT:    sd a1, 0(a0)
+; CHECK-NEXT:    ret
+  %a = load <2 x i32>, ptr %a_ptr
+  %b = load <2 x i32>, ptr %b_ptr
+  %res = call <2 x i32> @llvm.usub.sat.v2i32(<2 x i32> %a, <2 x i32> %b)
+  store <2 x i32> %res, ptr %ret_ptr
+  ret void
+}
+
+; Test averaging floor signed operations for v2i32 (RV64 only)
+; avgfloors pattern: (a + b) arithmetic shift right 1
+define void @test_paadd_w(ptr %ret_ptr, ptr %a_ptr, ptr %b_ptr) {
+; CHECK-LABEL: test_paadd_w:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ld a1, 0(a1)
+; CHECK-NEXT:    ld a2, 0(a2)
+; CHECK-NEXT:    paadd.w a1, a1, a2
+; CHECK-NEXT:    sd a1, 0(a0)
+; CHECK-NEXT:    ret
+  %a = load <2 x i32>, ptr %a_ptr
+  %b = load <2 x i32>, ptr %b_ptr
+  %ext.a = sext <2 x i32> %a to <2 x i64>
+  %ext.b = sext <2 x i32> %b to <2 x i64>
+  %add = add nsw <2 x i64> %ext.a, %ext.b
+  %shift = ashr <2 x i64> %add, <i64 1, i64 1>
+  %res = trunc <2 x i64> %shift to <2 x i32>
+  store <2 x i32> %res, ptr %ret_ptr
+  ret void
+}
+
+; Test averaging floor unsigned operations for v2i32 (RV64 only)
+; avgflooru pattern: (a & b) + ((a ^ b) >> 1)
+define void @test_paaddu_w(ptr %ret_ptr, ptr %a_ptr, ptr %b_ptr) {
+; CHECK-LABEL: test_paaddu_w:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ld a1, 0(a1)
+; CHECK-NEXT:    ld a2, 0(a2)
+; CHECK-NEXT:    paaddu.w a1, a1, a2
+; CHECK-NEXT:    sd a1, 0(a0)
+; CHECK-NEXT:    ret
+  %a = load <2 x i32>, ptr %a_ptr
+  %b = load <2 x i32>, ptr %b_ptr
+  %and = and <2 x i32> %a, %b
+  %xor = xor <2 x i32> %a, %b
+  %shift = lshr <2 x i32> %xor, <i32 1, i32 1>
+  %res = add <2 x i32> %and, %shift
+  store <2 x i32> %res, ptr %ret_ptr
+  ret void
+}
+
+; Test averaging floor subtraction signed for v2i32 (RV64 only)
+; pasub pattern: (a - b) arithmetic shift right 1
+define void @test_pasub_w(ptr %ret_ptr, ptr %a_ptr, ptr %b_ptr) {
+; CHECK-LABEL: test_pasub_w:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ld a1, 0(a1)
+; CHECK-NEXT:    ld a2, 0(a2)
+; CHECK-NEXT:    pasub.w a1, a1, a2
+; CHECK-NEXT:    sd a1, 0(a0)
+; CHECK-NEXT:    ret
+  %a = load <2 x i32>, ptr %a_ptr
+  %b = load <2 x i32>, ptr %b_ptr
+  %a_ext = sext <2 x i32> %a to <2 x i64>
+  %b_ext = sext <2 x i32> %b to <2 x i64>
+  %sub = sub <2 x i64> %a_ext, %b_ext
+  %res = ashr <2 x i64> %sub, <i64 1, i64 1>
+  %res_trunc = trunc <2 x i64> %res to <2 x i32>
+  store <2 x i32> %res_trunc, ptr %ret_ptr
+  ret void
+}
+
+; Test averaging floor subtraction unsigned for v2i32 (RV64 only)
+; pasubu pattern: (a - b) logical shift right 1
+define void @test_pasubu_w(ptr %ret_ptr, ptr %a_ptr, ptr %b_ptr) {
+; CHECK-LABEL: test_pasubu_w:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ld a1, 0(a1)
+; CHECK-NEXT:    ld a2, 0(a2)
+; CHECK-NEXT:    pasubu.w a1, a1, a2
+; CHECK-NEXT:    sd a1, 0(a0)
+; CHECK-NEXT:    ret
+  %a = load <2 x i32>, ptr %a_ptr
+  %b = load <2 x i32>, ptr %b_ptr
+  %a_ext = zext <2 x i32> %a to <2 x i64>
+  %b_ext = zext <2 x i32> %b to <2 x i64>
+  %sub = sub <2 x i64> %a_ext, %b_ext
+  %res = lshr <2 x i64> %sub, <i64 1, i64 1>
+  %res_trunc = trunc <2 x i64> %res to <2 x i32>
+  store <2 x i32> %res_trunc, ptr %ret_ptr
+  ret void
+}
+
 ; Intrinsic declarations
 declare <4 x i16> @llvm.sadd.sat.v4i16(<4 x i16>, <4 x i16>)
 declare <4 x i16> @llvm.uadd.sat.v4i16(<4 x i16>, <4 x i16>)
