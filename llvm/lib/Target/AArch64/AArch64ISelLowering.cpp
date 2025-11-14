@@ -19988,7 +19988,9 @@ static SDValue performIntToFpCombine(SDNode *N, SelectionDAG &DAG,
     return Res;
 
   EVT VT = N->getValueType(0);
-  if (VT != MVT::f32 && VT != MVT::f64)
+  if (VT != MVT::f16 && VT != MVT::f32 && VT != MVT::f64)
+    return SDValue();
+  if (VT == MVT::f16 && !Subtarget->hasFullFP16())
     return SDValue();
 
   // Only optimize when the source and destination types have the same width.
