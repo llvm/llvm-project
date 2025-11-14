@@ -16802,9 +16802,7 @@ static SDValue expandMulToAddOrSubOfShl(SDNode *N, SelectionDAG &DAG,
     // because X is exact (Y >> M + 2).
     uint64_t ShAmt = Log2_64(MulAmtLowBit) + 2;
     using namespace SDPatternMatch;
-    return sd_match(X, m_AnyOf(m_Sra(m_Value(), m_SpecificInt(ShAmt)),
-                               m_Srl(m_Value(), m_SpecificInt(ShAmt)))) &&
-           X->getFlags().hasExact();
+    return sd_match(X, m_ExactSr(m_Value(), m_SpecificInt(ShAmt)));
   };
   if (isPowerOf2_64(MulAmt - MulAmtLowBit) && !(CanSub && PreferSub())) {
     Op = ISD::ADD;
