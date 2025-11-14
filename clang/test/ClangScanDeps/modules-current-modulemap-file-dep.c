@@ -12,7 +12,9 @@
 // CHECK:            "command-line": [
 // CHECK:              "-fmodule-map-file=[[PREFIX]]/remapped/module.modulemap"
 // CHECK:            "file-deps": [
-// CHECK:              "[[PREFIX]]/remapped/module.modulemap"
+// CHECK:              "[[PREFIX]]/original/module.modulemap"
+
+// Verify that "file-deps" references actual on-disk module map and not using the virtual path.
 
 //--- vfs.yaml.in
 {
