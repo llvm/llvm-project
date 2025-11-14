@@ -3546,8 +3546,15 @@ bool isDPALU_DPP(const MCInstrDesc &OpDesc, const MCInstrInfo &MII,
 }
 
 unsigned getLdsDwGranularity(const MCSubtargetInfo &ST) {
-  return ST.hasFeature(AMDGPU::FeatureAddressableLocalMemorySize327680) ? 512
-                                                                        : 128;
+  if (ST.getFeatureBits().test(FeatureAddressableLocalMemorySize32768))
+    return 64;
+  if (ST.getFeatureBits().test(FeatureAddressableLocalMemorySize65536))
+    return 128;
+  if (ST.getFeatureBits().test(FeatureAddressableLocalMemorySize163840))
+    return 320;
+  if (ST.getFeatureBits().test(FeatureAddressableLocalMemorySize327680))
+    return 512;
+  return 64;
 }
 
 bool isPackedFP32Inst(unsigned Opc) {
