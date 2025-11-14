@@ -116,7 +116,7 @@ public:
 
   constexpr unsigned asMaskIdx() const {
     assert(isMask());
-    return toMaskIdx(Reg);
+    return Reg & ~MaskFlag;
   }
 
   constexpr operator bool() const {
@@ -138,11 +138,6 @@ public:
 
   static constexpr RegisterId toMaskId(unsigned Idx) { return Idx | MaskFlag; }
 
-  static constexpr unsigned toMaskIdx(RegisterId Id) {
-    assert(isMaskId(Id));
-    return Id & ~MaskFlag;
-  }
-
   bool operator<(RegisterRef) const = delete;
   bool operator==(RegisterRef) const = delete;
   bool operator!=(RegisterRef) const = delete;
@@ -157,7 +152,7 @@ struct PhysicalRegisterInfo {
   }
 
   const uint32_t *getRegMaskBits(RegisterId R) const {
-    return RegMasks.get(RegisterRef::toMaskIdx(R));
+    return RegMasks.get(RegisterRef(R).asMaskIdx());
   }
 
   bool alias(RegisterRef RA, RegisterRef RB) const;
@@ -170,7 +165,7 @@ struct PhysicalRegisterInfo {
   }
 
   const BitVector &getMaskUnits(RegisterId MaskId) const {
-    return MaskInfos[RegisterRef::toMaskIdx(MaskId)].Units;
+    return MaskInfos[RegisterRef(MaskId).asMaskIdx()].Units;
   }
 
   std::set<RegisterId> getUnits(RegisterRef RR) const;
