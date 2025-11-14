@@ -21413,7 +21413,7 @@ void BoUpSLP::BlockScheduling::initScheduleData(Instruction *FromI,
     SD->init(SchedulingRegionID, I);
 
     auto CanIgnoreLoad = [](const Instruction *I) {
-      const LoadInst *LI = dyn_cast<LoadInst>(I);
+      const auto *LI = dyn_cast<LoadInst>(I);
       // If there is a simple load marked as invariant, we can ignore it.
       // But, in the (unlikely) case of non-simple invariant load,
       // we should not ignore it.
