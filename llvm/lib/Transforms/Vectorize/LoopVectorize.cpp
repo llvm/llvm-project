@@ -6591,9 +6591,14 @@ void LoopVectorizationCostModel::collectInLoopReductions() {
     if (RdxDesc.getRecurrenceType() != Phi->getType())
       continue;
 
+    // In-loop AnyOf and FindIV reductions are not yet supported.
+    RecurKind Kind = RdxDesc.getRecurrenceKind();
+    if (RecurrenceDescriptor::isAnyOfRecurrenceKind(Kind) ||
+        RecurrenceDescriptor::isFindIVRecurrenceKind(Kind))
+      continue;
+
     // If the target would prefer this reduction to happen "in-loop", then we
     // want to record it as such.
-    RecurKind Kind = RdxDesc.getRecurrenceKind();
     if (!PreferInLoopReductions && !useOrderedReductions(RdxDesc) &&
         !TTI.preferInLoopReduction(Kind, Phi->getType()))
       continue;
@@ -7634,6 +7639,10 @@ createWidenInductionRecipes(VPInstruction *PhiR,
   assert(Plan.getLiveIn(IndDesc.getStartValue()) == Start &&
          "Start VPValue must match IndDesc's start value");
 
+  // It is always safe to copy over the NoWrap and FastMath flags. In
+  // particular, when folding tail by masking, the masked-off lanes are never
+  // used, so it is safe.
+  VPIRFlags Flags = vputils::getFlagsFromIndDesc(IndDesc);
   VPValue *Step =
       vputils::getOrCreateVPValueForSCEVExpr(Plan, IndDesc.getStep());
 
@@ -7646,7 +7655,7 @@ createWidenInductionRecipes(VPInstruction *PhiR,
 
   PHINode *Phi = cast<PHINode>(PhiR->getUnderlyingInstr());
   return new VPWidenIntOrFpInductionRecipe(Phi, Start, Step, &Plan.getVF(),
-                                           IndDesc, PhiR->getDebugLoc());
+                                           IndDesc, Flags, PhiR->getDebugLoc());
 }
 
 VPHeaderPHIRecipe *
@@ -7700,10 +7709,15 @@ VPRecipeBuilder::tryToOptimizeInductionTruncate(VPInstruction *VPI,
   PHINode *Phi = WidenIV->getPHINode();
   VPValue *Start = WidenIV->getStartValue();
   const InductionDescriptor &IndDesc = WidenIV->getInductionDescriptor();
+
+  // It is always safe to copy over the NoWrap and FastMath flags. In
+  // particular, when folding tail by masking, the masked-off lanes are never
+  // used, so it is safe.
+  VPIRFlags Flags = vputils::getFlagsFromIndDesc(IndDesc);
   VPValue *Step =
       vputils::getOrCreateVPValueForSCEVExpr(Plan, IndDesc.getStep());
-  return new VPWidenIntOrFpInductionRecipe(Phi, Start, Step, &Plan.getVF(),
-                                           IndDesc, I, VPI->getDebugLoc());
+  return new VPWidenIntOrFpInductionRecipe(
+      Phi, Start, Step, &Plan.getVF(), IndDesc, I, Flags, VPI->getDebugLoc());
 }
 
 VPSingleDefRecipe *VPRecipeBuilder::tryToWidenCall(VPInstruction *VPI,
@@ -8395,7 +8409,9 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
   // ---------------------------------------------------------------------------
   VPRecipeBuilder RecipeBuilder(*Plan, OrigLoop, TLI, &TTI, Legal, CM, PSE,
                                 Builder, BlockMaskCache, LVer);
-  RecipeBuilder.collectScaledReductions(Range);
+  // TODO: Handle partial reductions with EVL tail folding.
+  if (!CM.foldTailWithEVL())
+    RecipeBuilder.collectScaledReductions(Range);
 
   // Scan the body of the loop in a topological order to visit each basic block
   // after having visited its predecessor basic blocks.
@@ -8893,8 +8909,7 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
       if (FinalReductionResult == U || Parent->getParent())
         continue;
       U->replaceUsesOfWith(OrigExitingVPV, FinalReductionResult);
-      if (match(U, m_CombineOr(m_ExtractLastElement(m_VPValue()),
-                               m_ExtractLane(m_VPValue(), m_VPValue()))))
+      if (match(U, m_ExtractLastElement(m_VPValue())))
         cast<VPInstruction>(U)->replaceAllUsesWith(FinalReductionResult);
     }
 

@@ -3579,10 +3579,10 @@ genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
     TODO(converter.getCurrentLocation(), "OpenMPDeclareSimdConstruct");
 }
 
-static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
-                   semantics::SemanticsContext &semaCtx,
-                   lower::pft::Evaluation &eval,
-                   const parser::OpenMPDeclareMapperConstruct &construct) {
+static void genOpenMPDeclareMapperImpl(
+    lower::AbstractConverter &converter, semantics::SemanticsContext &semaCtx,
+    const parser::OpenMPDeclareMapperConstruct &construct,
+    const semantics::Symbol *mapperSymOpt = nullptr) {
   mlir::Location loc = converter.genLocation(construct.source);
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   const parser::OmpArgumentList &args = construct.v.Arguments();
@@ -3598,8 +3598,17 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
          "Expected derived type");
 
   std::string mapperNameStr = mapperName;
-  if (auto *sym = converter.getCurrentScope().FindSymbol(mapperNameStr))
+  if (mapperSymOpt && mapperNameStr != "default") {
+    mapperNameStr = converter.mangleName(mapperNameStr, mapperSymOpt->owner());
+  } else if (auto *sym =
+                 converter.getCurrentScope().FindSymbol(mapperNameStr)) {
     mapperNameStr = converter.mangleName(mapperNameStr, sym->owner());
+  }
+
+  // If the mapper op already exists (e.g., created by regular lowering or by
+  // materialization of imported mappers), do not recreate it.
+  if (converter.getModuleOp().lookupSymbol(mapperNameStr))
+    return;
 
   // Save current insertion point before moving to the module scope to create
   // the DeclareMapperOp
@@ -3620,6 +3629,13 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
   ClauseProcessor cp(converter, semaCtx, clauses);
   cp.processMap(loc, stmtCtx, clauseOps);
   mlir::omp::DeclareMapperInfoOp::create(firOpBuilder, loc, clauseOps.mapVars);
+}
+
+static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
+                   semantics::SemanticsContext &semaCtx,
+                   lower::pft::Evaluation &eval,
+                   const parser::OpenMPDeclareMapperConstruct &construct) {
+  genOpenMPDeclareMapperImpl(converter, semaCtx, construct);
 }
 
 static void
@@ -4255,5 +4271,38 @@ void Fortran::lower::genOpenMPRequires(mlir::Operation *mod,
       mlirFlags = mlirFlags | MlirRequires::unified_shared_memory;
 
     offloadMod.setRequires(mlirFlags);
+  }
+}
+
+// Walk scopes and materialize omp.declare_mapper ops for mapper declarations
+// found in imported modules. If \p scope is null, start from the global scope.
+void Fortran::lower::materializeOpenMPDeclareMappers(
+    Fortran::lower::AbstractConverter &converter,
+    semantics::SemanticsContext &semaCtx, const semantics::Scope *scope) {
+  const semantics::Scope &root = scope ? *scope : semaCtx.globalScope();
+
+  // Recurse into child scopes first (modules, submodules, etc.).
+  for (const semantics::Scope &child : root.children())
+    materializeOpenMPDeclareMappers(converter, semaCtx, &child);
+
+  // Only consider module scopes to avoid duplicating local constructs.
+  if (!root.IsModule())
+    return;
+
+  // Only materialize for modules coming from mod files to avoid duplicates.
+  if (!root.symbol() || !root.symbol()->test(semantics::Symbol::Flag::ModFile))
+    return;
+
+  // Scan symbols in this module scope for MapperDetails.
+  for (auto &it : root) {
+    const semantics::Symbol &sym = *it.second;
+    if (auto *md = sym.detailsIf<semantics::MapperDetails>()) {
+      for (const auto *decl : md->GetDeclList()) {
+        if (const auto *mapperDecl =
+                std::get_if<parser::OpenMPDeclareMapperConstruct>(&decl->u)) {
+          genOpenMPDeclareMapperImpl(converter, semaCtx, *mapperDecl, &sym);
+        }
+      }
+    }
   }
 }

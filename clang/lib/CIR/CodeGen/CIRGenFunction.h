@@ -1546,6 +1546,9 @@ public:
   mlir::Value emitScalarExpr(const clang::Expr *e,
                              bool ignoreResultAssign = false);
 
+  mlir::Value emitScalarOrConstFoldImmArg(unsigned iceArguments, unsigned index,
+                                          const Expr *arg);
+
   mlir::Value emitScalarPrePostIncDec(const UnaryOperator *e, LValue lv,
                                       cir::UnaryOpKind kind, bool isPre);
 

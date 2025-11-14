@@ -1363,10 +1363,14 @@ bool ClauseProcessor::processMap(
     }
     if (mappers) {
       assert(mappers->size() == 1 && "more than one mapper");
-      mapperIdName = mappers->front().v.id().symbol->name().ToString();
-      if (mapperIdName != "default")
-        mapperIdName = converter.mangleName(
-            mapperIdName, mappers->front().v.id().symbol->owner());
+      const semantics::Symbol *mapperSym = mappers->front().v.id().symbol;
+      mapperIdName = mapperSym->name().ToString();
+      if (mapperIdName != "default") {
+        // Mangle with the ultimate owner so that use-associated mapper
+        // identifiers resolve to the same symbol as their defining scope.
+        const semantics::Symbol &ultimate = mapperSym->GetUltimate();
+        mapperIdName = converter.mangleName(mapperIdName, ultimate.owner());
+      }
     }
 
     processMapObjects(stmtCtx, clauseLocation,

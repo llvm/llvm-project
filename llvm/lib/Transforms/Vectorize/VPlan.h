@@ -588,7 +588,7 @@ public:
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print this VPSingleDefRecipe to dbgs() (for debugging).
-  LLVM_DUMP_METHOD void dump() const;
+  LLVM_ABI_FOR_TEST LLVM_DUMP_METHOD void dump() const;
 #endif
 };
 
@@ -1047,13 +1047,6 @@ public:
     // It produces the lane index across all unrolled iterations. Unrolling will
     // add all copies of its original operand as additional operands.
     FirstActiveLane,
-    // Calculates the last active lane index of the vector predicate operands.
-    // The predicates must be prefix-masks (all 1s before all 0s). Used when
-    // tail-folding to extract the correct live-out value from the last active
-    // iteration. It produces the lane index across all unrolled iterations.
-    // Unrolling will add all copies of its original operand as additional
-    // operands.
-    LastActiveLane,
 
     // The opcodes below are used for VPInstructionWithType.
     //
@@ -2131,7 +2124,8 @@ public:
 /// A recipe for handling phi nodes of integer and floating-point inductions,
 /// producing their vector values. This is an abstract recipe and must be
 /// converted to concrete recipes before executing.
-class VPWidenIntOrFpInductionRecipe : public VPWidenInductionRecipe {
+class VPWidenIntOrFpInductionRecipe : public VPWidenInductionRecipe,
+                                      public VPIRFlags {
   TruncInst *Trunc;
 
   // If this recipe is unrolled it will have 2 additional operands.
@@ -2140,19 +2134,20 @@ class VPWidenIntOrFpInductionRecipe : public VPWidenInductionRecipe {
 public:
   VPWidenIntOrFpInductionRecipe(PHINode *IV, VPValue *Start, VPValue *Step,
                                 VPValue *VF, const InductionDescriptor &IndDesc,
-                                DebugLoc DL)
+                                const VPIRFlags &Flags, DebugLoc DL)
       : VPWidenInductionRecipe(VPDef::VPWidenIntOrFpInductionSC, IV, Start,
                                Step, IndDesc, DL),
-        Trunc(nullptr) {
+        VPIRFlags(Flags), Trunc(nullptr) {
     addOperand(VF);
   }
 
   VPWidenIntOrFpInductionRecipe(PHINode *IV, VPValue *Start, VPValue *Step,
                                 VPValue *VF, const InductionDescriptor &IndDesc,
-                                TruncInst *Trunc, DebugLoc DL)
+                                TruncInst *Trunc, const VPIRFlags &Flags,
+                                DebugLoc DL)
       : VPWidenInductionRecipe(VPDef::VPWidenIntOrFpInductionSC, IV, Start,
                                Step, IndDesc, DL),
-        Trunc(Trunc) {
+        VPIRFlags(Flags), Trunc(Trunc) {
     addOperand(VF);
     SmallVector<std::pair<unsigned, MDNode *>> Metadata;
     (void)Metadata;
@@ -2166,7 +2161,7 @@ public:
   VPWidenIntOrFpInductionRecipe *clone() override {
     return new VPWidenIntOrFpInductionRecipe(
         getPHINode(), getStartValue(), getStepValue(), getVFValue(),
-        getInductionDescriptor(), Trunc, getDebugLoc());
+        getInductionDescriptor(), Trunc, *this, getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPDef::VPWidenIntOrFpInductionSC)
@@ -3506,8 +3501,8 @@ public:
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
-  void print(raw_ostream &O, const Twine &Indent,
-             VPSlotTracker &SlotTracker) const override;
+  LLVM_ABI_FOR_TEST void print(raw_ostream &O, const Twine &Indent,
+                               VPSlotTracker &SlotTracker) const override;
 #endif
 
   /// Returns the scalar type of the induction.
@@ -3606,8 +3601,8 @@ public:
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
-  void print(raw_ostream &O, const Twine &Indent,
-             VPSlotTracker &SlotTracker) const override;
+  LLVM_ABI_FOR_TEST void print(raw_ostream &O, const Twine &Indent,
+                               VPSlotTracker &SlotTracker) const override;
 #endif
 };
 
@@ -4448,10 +4443,10 @@ public:
   void printLiveIns(raw_ostream &O) const;
 
   /// Print this VPlan to \p O.
-  void print(raw_ostream &O) const;
+  LLVM_ABI_FOR_TEST void print(raw_ostream &O) const;
 
   /// Print this VPlan in DOT format to \p O.
-  void printDOT(raw_ostream &O) const;
+  LLVM_ABI_FOR_TEST void printDOT(raw_ostream &O) const;
 
   /// Dump the plan to stderr (for debugging).
   LLVM_DUMP_METHOD void dump() const;
@@ -4459,7 +4454,7 @@ public:
 
   /// Clone the current VPlan, update all VPValues of the new VPlan and cloned
   /// recipes to refer to the clones, and return it.
-  VPlan *duplicate();
+  LLVM_ABI_FOR_TEST VPlan *duplicate();
 
   /// Create a new VPBasicBlock with \p Name and containing \p Recipe if
   /// present. The returned block is owned by the VPlan and deleted once the

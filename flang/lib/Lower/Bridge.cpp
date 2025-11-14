@@ -86,10 +86,6 @@
 
 #define DEBUG_TYPE "flang-lower-bridge"
 
-static llvm::cl::opt<bool> dumpBeforeFir(
-    "fdebug-dump-pre-fir", llvm::cl::init(false),
-    llvm::cl::desc("dump the Pre-FIR tree prior to FIR generation"));
-
 static llvm::cl::opt<bool> forceLoopToExecuteOnce(
     "always-execute-loop-body", llvm::cl::init(false),
     llvm::cl::desc("force the body of a loop to execute at least once"));
@@ -446,6 +442,13 @@ public:
             },
             u);
       }
+    });
+
+    // Ensure imported OpenMP declare mappers are materialized at module
+    // scope before lowering any constructs that may reference them.
+    createBuilderOutsideOfFuncOpAndDo([&]() {
+      Fortran::lower::materializeOpenMPDeclareMappers(
+          *this, bridge.getSemanticsContext());
     });
 
     // Create definitions of intrinsic module constants.
@@ -7020,8 +7023,6 @@ void Fortran::lower::LoweringBridge::lower(
     const Fortran::semantics::SemanticsContext &semanticsContext) {
   std::unique_ptr<Fortran::lower::pft::Program> pft =
       Fortran::lower::createPFT(prg, semanticsContext);
-  if (dumpBeforeFir)
-    Fortran::lower::dumpPFT(llvm::errs(), *pft);
   FirConverter converter{*this};
   converter.run(*pft);
 }
