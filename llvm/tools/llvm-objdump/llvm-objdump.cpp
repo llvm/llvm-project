@@ -3533,20 +3533,17 @@ commaSeparatedValues(const llvm::opt::InputArgList &InputArgs, int ID) {
   return Values;
 }
 
-static int mcpuHelp() {
+static void mcpuHelp() {
   if (!TripleName.empty()) {
     std::string Error;
     Triple DummyTriple(TripleName);
     const Target *DummyTarget =
         TargetRegistry::lookupTarget(DummyTriple, Error);
-    if (!DummyTarget) {
+    if (!DummyTarget)
       reportCmdLineError(Error);
-      return 2;
-    }
-    // We need to access the Help() through the corresponding MCSubtargetInfo
-    DummyTarget->createMCSubtargetInfo(DummyTriple, MCPU, "");
+    // createMCSubtargetInfo prints the mcpu help text when called with "help"
+    DummyTarget->createMCSubtargetInfo(DummyTriple, "help", "");
   }
-  return 0;
 }
 
 static void parseOtoolOptions(const llvm::opt::InputArgList &InputArgs) {
