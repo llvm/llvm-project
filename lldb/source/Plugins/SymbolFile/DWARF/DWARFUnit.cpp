@@ -348,6 +348,10 @@ void DWARFUnit::ExtractDIEsRWLocked() {
 void DWARFUnit::SetDwoStrOffsetsBase() {
   lldb::offset_t baseOffset = 0;
 
+  // Size of offset for .debug_str_offsets is same as DWARF offset byte size
+  // of the DWARFUnit as a default. We might override this if below if needed.
+  m_str_offset_size = m_header.getDwarfOffsetByteSize();
+
   if (const llvm::DWARFUnitIndex::Entry *entry = m_header.getIndexEntry()) {
     if (const auto *contribution =
             entry->getContribution(llvm::DW_SECT_STR_OFFSETS))
@@ -362,7 +366,7 @@ void DWARFUnit::SetDwoStrOffsetsBase() {
     uint64_t length = strOffsets.GetU32(&baseOffset);
     if (length == llvm::dwarf::DW_LENGTH_DWARF64) {
       length = strOffsets.GetU64(&baseOffset);
-      m_str_offsets_size = 8;
+      m_str_offset_size = 8;
     }
 
     // Check version.
@@ -371,13 +375,7 @@ void DWARFUnit::SetDwoStrOffsetsBase() {
 
     // Skip padding.
     baseOffset += 2;
-  } else {
-    // Size of offset for .debug_str_offsets is same as DWARF offset byte size
-    // of the DWARFUnit for DWARF version 4 and earlier.
-    m_str_offsets_size = m_header.getDwarfOffsetByteSize();
   }
-
-
   SetStrOffsetsBase(baseOffset);
 }
 
@@ -416,7 +414,16 @@ void DWARFUnit::AddUnitDIE(const DWARFDebugInfoEntry &cu_die) {
       SetRangesBase(form_value.Unsigned());
       break;
     case DW_AT_str_offsets_base:
+      // When we have a DW_AT_str_offsets_base attribute, it points us to the
+      // first string offset for this DWARFUnit which is after the string
+      // offsets table header. In this case we use the DWARF32/DWARF64 of the
+      // DWARFUnit to determine the string offset byte size. DWO files do not
+      // use this attribute and they point to the start of the string offsets
+      // table header which can be used to determine the DWARF32/DWARF64 status
+      // of the string table. See SetDwoStrOffsetsBase() for now it figures out
+      // the m_str_offset_size value that should be used.
       SetStrOffsetsBase(form_value.Unsigned());
+      m_str_offset_size = m_header.getDwarfOffsetByteSize();
       break;
     case DW_AT_low_pc:
       SetBaseAddress(form_value.Address());
@@ -1086,9 +1093,9 @@ uint32_t DWARFUnit::GetHeaderByteSize() const { return m_header.getSize(); }
 
 std::optional<uint64_t>
 DWARFUnit::GetStringOffsetSectionItem(uint32_t index) const {
-  lldb::offset_t offset = GetStrOffsetsBase() + index * m_str_offsets_size;
+  lldb::offset_t offset = GetStrOffsetsBase() + index * m_str_offset_size;
   return m_dwarf.GetDWARFContext().getOrLoadStrOffsetsData().GetMaxU64(
-      &offset, m_str_offsets_size);
+      &offset, m_str_offset_size);
 }
 
 llvm::Expected<llvm::DWARFAddressRangesVector>
