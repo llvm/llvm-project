@@ -12,13 +12,16 @@
 
 // Check that functions are marked [[nodiscard]]
 
+#include <array>
 #include <span>
+#include <vector>
 
 #include "test_macros.h"
 
 void test() {
   { // Test with a static extent
-    std::span<int, 2> sp;
+    std::array<int, 2> arr{94, 82};
+    std::span<int, 2> sp{arr};
 
     sp.first<1>();      // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
     sp.last<1>();       // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
@@ -46,7 +49,8 @@ void test() {
     std::as_writable_bytes(sp);
   }
   { // Test with a dynamic extent
-    std::span<int> sp;
+    std::vector vec{94, 82};
+    std::span<int> sp{vec};
 
     sp.first<1>();      // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
     sp.last<1>();       // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
