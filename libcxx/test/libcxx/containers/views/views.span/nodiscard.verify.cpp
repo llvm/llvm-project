@@ -13,7 +13,6 @@
 // Check that functions are marked [[nodiscard]]
 
 #include <span>
-#include <vector>
 
 #include "test_macros.h"
 
