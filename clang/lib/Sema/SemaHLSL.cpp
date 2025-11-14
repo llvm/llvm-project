@@ -825,7 +825,9 @@ bool SemaHLSL::determineActiveSemantic(
       ActiveSemantic.Index = ActiveSemantic.Semantic->getSemanticIndex();
   }
 
-  const Type *T = D->getType()->getUnqualifiedDesugaredType();
+  const Type *T = D == FD ? &*FD->getReturnType() : &*D->getType();
+  T = T->getUnqualifiedDesugaredType();
+
   const RecordType *RT = dyn_cast<RecordType>(T);
   if (!RT)
     return determineActiveSemanticOnScalar(FD, OutputDecl, D, ActiveSemantic,
@@ -915,13 +917,21 @@ void SemaHLSL::CheckEntryPoint(FunctionDecl *FD) {
     if (ActiveSemantic.Semantic)
       ActiveSemantic.Index = ActiveSemantic.Semantic->getSemanticIndex();
 
+    // FIXME: Verify output semantics in parameters.
     if (!determineActiveSemantic(FD, Param, Param, ActiveSemantic,
                                  ActiveInputSemantics)) {
       Diag(Param->getLocation(), diag::note_previous_decl) << Param;
       FD->setInvalidDecl();
     }
   }
-  // FIXME: Verify return type semantic annotation.
+
+  SemanticInfo ActiveSemantic;
+  llvm::StringSet<> ActiveOutputSemantics;
+  ActiveSemantic.Semantic = FD->getAttr<HLSLParsedSemanticAttr>();
+  if (ActiveSemantic.Semantic)
+    ActiveSemantic.Index = ActiveSemantic.Semantic->getSemanticIndex();
+  if (!FD->getReturnType()->isVoidType())
+    determineActiveSemantic(FD, FD, FD, ActiveSemantic, ActiveOutputSemantics);
 }
 
 void SemaHLSL::checkSemanticAnnotation(
