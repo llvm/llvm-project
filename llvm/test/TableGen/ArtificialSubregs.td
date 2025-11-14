@@ -1,4 +1,4 @@
-// RUN: llvm-tblgen -gen-register-info -register-info-debug -I %p/../../include %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=CHECK
+// RUN: llvm-tblgen -gen-register-info -register-info-debug -I %p/../../include %s -o - 2>&1 >/dev/null | FileCheck %s --check-prefix=CHECK
 include "llvm/Target/Target.td"
 
 // This file tests that when using `isArtificial` for subregisters in

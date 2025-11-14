@@ -60,7 +60,9 @@ static TableGen::Emitter::Opt X[] = {
      true},
     {"print-detailed-records", EmitDetailedRecords,
      "Print full details of all records to stdout"},
-    {"null-backend", [](const RecordKeeper &Records, raw_ostream &OS) {},
+    {"null-backend",
+     TableGen::Emitter::FnT(
+         [](const RecordKeeper &Records, raw_ostream &OS) {}),
      "Do nothing after parsing (useful for timing)"},
     {"dump-json", EmitJSON, "Dump all records as machine-readable JSON"},
     {"print-enums", printEnums, "Print enum values for a class"},
@@ -71,7 +73,8 @@ int tblgen_main(int argc, char **argv) {
   InitLLVM X(argc, argv);
   cl::ParseCommandLineOptions(argc, argv);
 
-  return TableGenMain(argv[0]);
+  std::function<MultiFileTableGenMainFn> MainFn = nullptr;
+  return TableGenMain(argv[0], MainFn);
 }
 
 #ifndef __has_feature

@@ -3139,28 +3139,6 @@ IntrinsicProcTable::Implementation::HandleC_F_Pointer(
         if (type->HasDeferredTypeParameter()) {
           context.messages().Say(at,
               "FPTR= argument to C_F_POINTER() may not have a deferred type parameter"_err_en_US);
-        } else if (type->category() == TypeCategory::Derived) {
-          if (type->IsUnlimitedPolymorphic()) {
-            context.Warn(common::UsageWarning::Interoperability, at,
-                "FPTR= argument to C_F_POINTER() should not be unlimited polymorphic"_warn_en_US);
-          } else if (!type->GetDerivedTypeSpec().typeSymbol().attrs().test(
-                         semantics::Attr::BIND_C)) {
-            context.Warn(common::UsageWarning::Portability, at,
-                "FPTR= argument to C_F_POINTER() should not have a derived type that is not BIND(C)"_port_en_US);
-          }
-        } else if (!IsInteroperableIntrinsicType(
-                       *type, &context.languageFeatures())
-                        .value_or(true)) {
-          if (type->category() == TypeCategory::Character &&
-              type->kind() == 1) {
-            context.Warn(common::UsageWarning::CharacterInteroperability, at,
-                "FPTR= argument to C_F_POINTER() should not have the non-interoperable character length %s"_warn_en_US,
-                type->AsFortran());
-          } else {
-            context.Warn(common::UsageWarning::Interoperability, at,
-                "FPTR= argument to C_F_POINTER() should not have the non-interoperable intrinsic type or kind %s"_warn_en_US,
-                type->AsFortran());
-          }
         }
         if (ExtractCoarrayRef(*expr)) {
           context.messages().Say(at,

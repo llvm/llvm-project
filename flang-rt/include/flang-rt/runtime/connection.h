@@ -66,6 +66,14 @@ struct ConnectionState : public ConnectionAttributes {
   RT_API_ATTRS bool NeedAdvance(std::size_t width) const {
     return positionInRecord > 0 && width > RemainingSpaceInRecord();
   }
+  RT_API_ATTRS bool NeedHardAdvance(std::size_t width) const {
+    auto recl{recordLength};
+    if (!recl) {
+      recl = openRecl;
+    }
+    return recl && positionInRecord > 0 &&
+        static_cast<std::int64_t>(positionInRecord + width) > *recl;
+  }
   RT_API_ATTRS void HandleAbsolutePosition(std::int64_t n) {
     positionInRecord = (n < 0 ? 0 : n) + leftTabLimit.value_or(0);
   }

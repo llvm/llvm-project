@@ -15,9 +15,9 @@
 #ifndef FLANG_RT_RUNTIME_IO_ERROR_H_
 #define FLANG_RT_RUNTIME_IO_ERROR_H_
 
+#include "iostat.h"
 #include "memory.h"
 #include "terminator.h"
-#include "flang/Runtime/iostat.h"
 #include <cinttypes>
 
 namespace Fortran::runtime::io {
