@@ -220,9 +220,9 @@ AND call SWIG_fail at the same time, because it will result in a double free.
 }
 
 // Disable default type checking for this method to avoid SWIG dispatch issues.
-// 
+//
 // Problem: SBThread::GetStopDescription has two overloads:
-//   1. GetStopDescription(char* dst_or_null, size_t dst_len) 
+//   1. GetStopDescription(char* dst_or_null, size_t dst_len)
 //   2. GetStopDescription(lldb::SBStream& stream)
 //
 // SWIG generates a dispatch function to select the correct overload based on argument types.
@@ -230,9 +230,9 @@ AND call SWIG_fail at the same time, because it will result in a double free.
 // However, this dispatcher doesn't consider typemaps that transform function signatures.
 //
 // In Python, our typemap converts GetStopDescription(char*, size_t) to GetStopDescription(int).
-// The dispatcher still checks against the original (char*, size_t) signature instead of 
+// The dispatcher still checks against the original (char*, size_t) signature instead of
 // the transformed (int) signature, causing type matching to fail.
-// This only affects SBThread::GetStopDescription since the type check also matches 
+// This only affects SBThread::GetStopDescription since the type check also matches
 // the argument name, which is unique to this function.
 %typemap(typecheck, precedence=SWIG_TYPECHECK_POINTER) (char *dst_or_null, size_t dst_len) ""
 
@@ -628,12 +628,11 @@ template <> bool SetNumberFromPyObject<double>(double &number, PyObject *obj) {
   }
 }
 
-// These two pybuffer macros are copied out of swig/Lib/python/pybuffer.i,
-// and fixed so they will not crash if PyObject_GetBuffer fails.
-// https://github.com/swig/swig/issues/1640
-//
-// I've also moved the call to PyBuffer_Release to the end of the SWIG wrapper,
-// doing it right away is not legal according to the python buffer protocol.
+// These two pybuffer macros are copied out of swig/Lib/python/pybuffer.i.
+// - Avoids crash if PyObject_GetBuffer fails and delays calling
+//   PyBuffer_Release (https://github.com/swig/swig/issues/1640)
+// - Avoids using deprecated "old buffer protocol" APIs when targeting the
+//   Stable C API.
 %inline %{
 struct Py_buffer_RAII {
   Py_buffer buffer = {};

@@ -180,12 +180,14 @@ if (LLDB_ENABLE_PYTHON)
       "Path to use as PYTHONHOME in lldb. If a relative path is specified, it will be resolved at runtime relative to liblldb directory.")
   endif()
 
-  if (SWIG_VERSION VERSION_GREATER_EQUAL "4.2" AND NOT LLDB_EMBED_PYTHON_HOME)
+  if (SWIG_VERSION VERSION_GREATER_EQUAL "4.2"
+      Python3_VERSION VERSION_GREATER_EQUAL "3.11"
+      AND NOT LLDB_EMBED_PYTHON_HOME)
     set(default_enable_python_limited_api ON)
   else()
     set(default_enable_python_limited_api OFF)
   endif()
-  option(LLDB_ENABLE_PYTHON_LIMITED_API "Force LLDB to only use the Python Limited API (requires SWIG 4.2 or later)"
+  option(LLDB_ENABLE_PYTHON_LIMITED_API "Only use the Python Limited API (requires at least Python 3.11 and SWIG 4.2)"
     ${default_enable_python_limited_api})
 else()
   # Even if Python scripting is disabled, we still need a Python interpreter to
