@@ -1,6 +1,4 @@
-; RUN: opt %loadNPMPolly '-passes=polly-delicm,polly-simplify,polly-opt-isl' \
-; RUN: -polly-pattern-matching-based-opts=true \
-; RUN: -polly-tc-opt=true -debug -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly-custom<delicm;simplify-1;opt-isl>' -polly-pattern-matching-based-opts=true -polly-tc-opt=true -debug -disable-output < %s 2>&1 | FileCheck %s
 ; REQUIRES: asserts
 ;
 ; Check that the pattern matching detects the tensor contraction pattern

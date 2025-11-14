@@ -1,5 +1,4 @@
-; RUN: opt %loadNPMPolly -pass-remarks-analysis="polly-scops" '-passes=print<polly-function-scops>' \
-; RUN:     -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly -pass-remarks-analysis=polly-scops '-passes=polly-custom<scops>' -polly-print-scops -disable-output < %s 2>&1 | FileCheck %s
 ;
 ; CHECK: Low complexity assumption: {  : false }
 ;
