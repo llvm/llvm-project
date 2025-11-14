@@ -260,6 +260,8 @@ static sys::fs::OpenFlags generateFlagsFromConfig(OutputConfig Config) {
     OF |= sys::fs::OF_TextWithCRLF;
   else if (Config.getText())
     OF |= sys::fs::OF_Text;
+  // Don't pass OF_Append if writting to temporary since OF_Append is 
+  // not Atomic Append
   if (Config.getAppend() && !Config.getAtomicWrite())
     OF |= sys::fs::OF_Append;
 
