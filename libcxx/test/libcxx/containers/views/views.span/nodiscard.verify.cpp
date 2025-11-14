@@ -12,7 +12,6 @@
 
 // Check that functions are marked [[nodiscard]]
 
-#include <array>
 #include <span>
 #include <vector>
 
