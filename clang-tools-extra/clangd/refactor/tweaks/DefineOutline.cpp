@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AST.h"
+#include "FindSymbols.h"
 #include "FindTarget.h"
 #include "HeaderSourceSwitch.h"
 #include "ParsedAST.h"
@@ -34,6 +35,7 @@
 #include <cstddef>
 #include <optional>
 #include <string>
+#include <tuple>
 
 namespace clang {
 namespace clangd {
@@ -362,6 +364,12 @@ struct InsertionPoint {
   size_t Offset;
 };
 
+enum class RelativeInsertPos { Before, After };
+struct InsertionAnchor {
+  Location Loc;
+  RelativeInsertPos RelInsertPos = RelativeInsertPos::Before;
+};
+
 // Returns the range that should be deleted from declaration, which always
 // contains function body. In addition to that it might contain constructor
 // initializers.
@@ -489,8 +497,14 @@ public:
 
   Expected<Effect> apply(const Selection &Sel) override {
     const SourceManager &SM = Sel.AST->getSourceManager();
-    auto CCFile = SameFile ? Sel.AST->tuPath().str()
-                           : getSourceFile(Sel.AST->tuPath(), Sel);
+    std::optional<Path> CCFile;
+    auto Anchor = getDefinitionOfAdjacentDecl(Sel);
+    if (Anchor) {
+      CCFile = Anchor->Loc.uri.file();
+    } else {
+      CCFile = SameFile ? Sel.AST->tuPath().str()
+                        : getSourceFile(Sel.AST->tuPath(), Sel);
+    }
     if (!CCFile)
       return error("Couldn't find a suitable implementation file.");
     assert(Sel.FS && "FS Must be set in apply");
@@ -499,21 +513,62 @@ public:
     // doesn't exist?
     if (!Buffer)
       return llvm::errorCodeToError(Buffer.getError());
+
     auto Contents = Buffer->get()->getBuffer();
-    auto InsertionPoint = getInsertionPoint(Contents, Sel);
-    if (!InsertionPoint)
-      return InsertionPoint.takeError();
+    SourceManagerForFile SMFF(*CCFile, Contents);
+
+    std::optional<Position> InsertionPos;
+    if (Anchor) {
+      if (auto P = getInsertionPointFromExistingDefinition(
+              SMFF, **Buffer, Anchor->Loc, Anchor->RelInsertPos, Sel.AST)) {
+        InsertionPos = *P;
+      }
+    }
+
+    std::optional<std::size_t> Offset;
+    const DeclContext *EnclosingNamespace = nullptr;
+    std::string EnclosingNamespaceName;
+
+    if (InsertionPos) {
+      EnclosingNamespaceName = getNamespaceAtPosition(Contents, *InsertionPos,
+                                                      Sel.AST->getLangOpts());
+    } else if (SameFile) {
+      auto P = getInsertionPointInMainFile(Sel.AST);
+      if (!P)
+        return P.takeError();
+      Offset = P->Offset;
+      EnclosingNamespace = P->EnclosingNamespace;
+    } else {
+      auto Region = getEligiblePoints(
+          Contents, Source->getQualifiedNameAsString(), Sel.AST->getLangOpts());
+      assert(!Region.EligiblePoints.empty());
+      EnclosingNamespaceName = Region.EnclosingNamespace;
+      InsertionPos = Region.EligiblePoints.back();
+    }
+
+    if (InsertionPos) {
+      auto O = positionToOffset(Contents, *InsertionPos);
+      if (!O)
+        return O.takeError();
+      Offset = *O;
+      auto TargetContext =
+          findContextForNS(EnclosingNamespaceName, Source->getDeclContext());
+      if (!TargetContext)
+        return error("define outline: couldn't find a context for target");
+      EnclosingNamespace = *TargetContext;
+    }
+
+    assert(Offset);
+    assert(EnclosingNamespace);
 
     auto FuncDef = getFunctionSourceCode(
-        Source, InsertionPoint->EnclosingNamespace, Sel.AST->getTokens(),
+        Source, EnclosingNamespace, Sel.AST->getTokens(),
         Sel.AST->getHeuristicResolver(),
         SameFile && isHeaderFile(Sel.AST->tuPath(), Sel.AST->getLangOpts()));
     if (!FuncDef)
       return FuncDef.takeError();
 
-    SourceManagerForFile SMFF(*CCFile, Contents);
-    const tooling::Replacement InsertFunctionDef(
-        *CCFile, InsertionPoint->Offset, 0, *FuncDef);
+    const tooling::Replacement InsertFunctionDef(*CCFile, *Offset, 0, *FuncDef);
     auto Effect = Effect::mainFileEdit(
         SMFF.get(), tooling::Replacements(InsertFunctionDef));
     if (!Effect)
@@ -548,59 +603,188 @@ public:
     return std::move(*Effect);
   }
 
-  // Returns the most natural insertion point for \p QualifiedName in \p
-  // Contents. This currently cares about only the namespace proximity, but in
-  // feature it should also try to follow ordering of declarations. For example,
-  // if decls come in order `foo, bar, baz` then this function should return
-  // some point between foo and baz for inserting bar.
-  // FIXME: The selection can be made smarter by looking at the definition
-  // locations for adjacent decls to Source. Unfortunately pseudo parsing in
-  // getEligibleRegions only knows about namespace begin/end events so we
-  // can't match function start/end positions yet.
-  llvm::Expected<InsertionPoint> getInsertionPoint(llvm::StringRef Contents,
-                                                   const Selection &Sel) {
+  std::optional<InsertionAnchor>
+  getDefinitionOfAdjacentDecl(const Selection &Sel) {
+    if (!Sel.Index)
+      return {};
+    std::optional<Location> Anchor;
+    std::string TuURI = URI::createFile(Sel.AST->tuPath()).toString();
+    auto CheckCandidate = [&](Decl *Candidate) {
+      assert(Candidate != Source);
+      if (auto Func = llvm::dyn_cast_or_null<FunctionDecl>(Candidate);
+          !Func || Func->isThisDeclarationADefinition()) {
+        return;
+      }
+      std::optional<Location> CandidateLoc;
+      Sel.Index->lookup({{getSymbolID(Candidate)}}, [&](const Symbol &S) {
+        if (S.Definition) {
+          if (auto Loc = indexToLSPLocation(S.Definition, Sel.AST->tuPath()))
+            CandidateLoc = *Loc;
+          else
+            log("getDefinitionOfAdjacentDecl: {0}", Loc.takeError());
+        }
+      });
+      if (!CandidateLoc)
+        return;
+
+      // If our definition is constrained to the same file, ignore
+      // definitions that are not located there.
+      // If our definition is not constrained to the same file, but
+      // our anchor definition is in the same file, then we also put our
+      // definition there, because that appears to be the user preference.
+      // Exception: If the existing definition is a template, then the
+      // location is likely due to technical necessity rather than preference,
+      // so ignore that definition.
+      bool CandidateSameFile = TuURI == CandidateLoc->uri.uri();
+      if (SameFile && !CandidateSameFile)
+        return;
+      if (!SameFile && CandidateSameFile) {
+        if (Candidate->isTemplateDecl())
+          return;
+        SameFile = true;
+      }
+      Anchor = *CandidateLoc;
+    };
+
+    // Try to find adjacent function declarations.
+    // Determine the closest one by alternatingly going "up" and "down"
+    // from our function in increasing steps.
+    const DeclContext *ParentContext = Source->getParent();
+    const auto SourceIt = llvm::find_if(
+        ParentContext->decls(), [this](const Decl *D) { return D == Source; });
+    if (SourceIt == ParentContext->decls_end())
+      return {};
+    const int Preceding = std::distance(ParentContext->decls_begin(), SourceIt);
+    const int Following =
+        std::distance(SourceIt, ParentContext->decls_end()) - 1;
+    for (int Offset = 1; Offset <= Preceding || Offset <= Following; ++Offset) {
+      if (Offset <= Preceding)
+        CheckCandidate(
+            *std::next(ParentContext->decls_begin(), Preceding - Offset));
+      if (Anchor)
+        return InsertionAnchor{*Anchor, RelativeInsertPos::After};
+      if (Offset <= Following)
+        CheckCandidate(*std::next(SourceIt, Offset));
+      if (Anchor)
+        return InsertionAnchor{*Anchor, RelativeInsertPos::Before};
+    }
+    return {};
+  }
+
+  // We don't know the actual start or end of the definition, only the position
+  // of the name. Therefore, we heuristically try to locate the last token
+  // before or in this function, respectively. Adapt as required by user code.
+  std::optional<Position> getInsertionPointFromExistingDefinition(
+      SourceManagerForFile &SMFF, const llvm::MemoryBuffer &Buffer,
+      const Location &Loc, RelativeInsertPos RelInsertPos, ParsedAST *AST) {
+    auto StartOffset = positionToOffset(Buffer.getBuffer(), Loc.range.start);
+    if (!StartOffset)
+      return {};
+    SourceLocation InsertionLoc;
+    SourceManager &SM = SMFF.get();
+
+    auto InsertBefore = [&] {
+      // Go backwards until we encounter one of the following:
+      //   - An opening brace (of a namespace).
+      //   - A closing brace (of a function definition).
+      //   - A semicolon (of a declaration).
+      // If no such token was found, then the first token in the file starts the
+      // definition.
+      auto Tokens = syntax::tokenize(
+          syntax::FileRange(SM.getMainFileID(), 0, *StartOffset), SM,
+          AST->getLangOpts());
+      if (Tokens.empty())
+        return;
+      for (auto I = std::rbegin(Tokens);
+           InsertionLoc.isInvalid() && I != std::rend(Tokens); ++I) {
+        switch (I->kind()) {
+        case tok::l_brace:
+        case tok::r_brace:
+        case tok::semi:
+          if (I != std::rbegin(Tokens))
+            InsertionLoc = std::prev(I)->location();
+          else
+            InsertionLoc = I->endLocation();
+          break;
+        default:
+          break;
+        }
+      }
+      if (InsertionLoc.isInvalid())
+        InsertionLoc = Tokens.front().location();
+    };
+
+    if (RelInsertPos == RelativeInsertPos::Before) {
+      InsertBefore();
+    } else {
+      // Skip over one top-level pair of parentheses (for the parameter list)
+      // and one pair of curly braces (for the code block).
+      // If that fails, insert before the function instead.
+      auto Tokens =
+          syntax::tokenize(syntax::FileRange(SM.getMainFileID(), *StartOffset,
+                                             Buffer.getBuffer().size()),
+                           SM, AST->getLangOpts());
+      bool SkippedParams = false;
+      int OpenParens = 0;
+      int OpenBraces = 0;
+      std::optional<syntax::Token> Tok;
+      for (const auto &T : Tokens) {
+        tok::TokenKind StartKind = SkippedParams ? tok::l_brace : tok::l_paren;
+        tok::TokenKind EndKind = SkippedParams ? tok::r_brace : tok::r_paren;
+        int &Count = SkippedParams ? OpenBraces : OpenParens;
+        if (T.kind() == StartKind) {
+          ++Count;
+        } else if (T.kind() == EndKind) {
+          if (--Count == 0) {
+            if (SkippedParams) {
+              Tok = T;
+              break;
+            }
+            SkippedParams = true;
+          } else if (Count < 0) {
+            break;
+          }
+        }
+      }
+      if (Tok)
+        InsertionLoc = Tok->endLocation();
+      else
+        InsertBefore();
+    }
+
+    if (!InsertionLoc.isValid())
+      return {};
+    return sourceLocToPosition(SM, InsertionLoc);
+  }
+
+  // Returns the most natural insertion point in this file.
+  // This is a fallback for when we failed to find an existing definition to
+  // place the new one next to. It only considers namespace proximity.
+  llvm::Expected<InsertionPoint> getInsertionPointInMainFile(ParsedAST *AST) {
     // If the definition goes to the same file and there is a namespace,
     // we should (and, in the case of anonymous namespaces, need to)
     // put the definition into the original namespace block.
-    if (SameFile) {
-      auto *Klass = Source->getDeclContext()->getOuterLexicalRecordContext();
-      if (!Klass)
-        return error("moving to same file not supported for free functions");
-      const SourceLocation EndLoc = Klass->getBraceRange().getEnd();
-      const auto &TokBuf = Sel.AST->getTokens();
-      auto Tokens = TokBuf.expandedTokens();
-      auto It = llvm::lower_bound(
-          Tokens, EndLoc, [](const syntax::Token &Tok, SourceLocation EndLoc) {
-            return Tok.location() < EndLoc;
-          });
-      while (It != Tokens.end()) {
-        if (It->kind() != tok::semi) {
-          ++It;
-          continue;
-        }
-        unsigned Offset = Sel.AST->getSourceManager()
-                              .getDecomposedLoc(It->endLocation())
-                              .second;
-        return InsertionPoint{Klass->getEnclosingNamespaceContext(), Offset};
+    auto *Klass = Source->getDeclContext()->getOuterLexicalRecordContext();
+    if (!Klass)
+      return error("moving to same file not supported for free functions");
+    const SourceLocation EndLoc = Klass->getBraceRange().getEnd();
+    const auto &TokBuf = AST->getTokens();
+    auto Tokens = TokBuf.expandedTokens();
+    auto It = llvm::lower_bound(
+        Tokens, EndLoc, [](const syntax::Token &Tok, SourceLocation EndLoc) {
+          return Tok.location() < EndLoc;
+        });
+    while (It != Tokens.end()) {
+      if (It->kind() != tok::semi) {
+        ++It;
+        continue;
       }
-      return error(
-          "failed to determine insertion location: no end of class found");
+      unsigned Offset =
+          AST->getSourceManager().getDecomposedLoc(It->endLocation()).second;
+      return InsertionPoint{Klass->getEnclosingNamespaceContext(), Offset};
     }
-
-    auto Region = getEligiblePoints(
-        Contents, Source->getQualifiedNameAsString(), Sel.AST->getLangOpts());
-
-    assert(!Region.EligiblePoints.empty());
-    auto Offset = positionToOffset(Contents, Region.EligiblePoints.back());
-    if (!Offset)
-      return Offset.takeError();
-
-    auto TargetContext =
-        findContextForNS(Region.EnclosingNamespace, Source->getDeclContext());
-    if (!TargetContext)
-      return error("define outline: couldn't find a context for target");
-
-    return InsertionPoint{*TargetContext, *Offset};
+    return error(
+        "failed to determine insertion location: no end of class found");
   }
 
 private:
