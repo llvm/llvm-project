@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly '-passes=polly-optree,polly-opt-isl,polly-codegen' -S < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly-custom<optree;opt-isl;codegen>' -S < %s | FileCheck %s
 ;
 ; llvm.org/PR35362
 ; isl codegen does not allow to generate isl_ast_expr from pw_aff which have an

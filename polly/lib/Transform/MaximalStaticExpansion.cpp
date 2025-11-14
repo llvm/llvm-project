@@ -13,14 +13,13 @@
 
 #include "polly/MaximalStaticExpansion.h"
 #include "polly/DependenceInfo.h"
-#include "polly/LinkAllPasses.h"
+#include "polly/Options.h"
 #include "polly/ScopInfo.h"
 #include "polly/ScopPass.h"
 #include "polly/Support/ISLTools.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
-#include "llvm/InitializePasses.h"
 #include "isl/isl-noexceptions.h"
 #include "isl/union_map.h"
 #include <cassert>
@@ -35,28 +34,10 @@ using namespace polly;
 
 namespace {
 
-class MaximalStaticExpanderWrapperPass final : public ScopPass {
-public:
-  static char ID;
-
-  explicit MaximalStaticExpanderWrapperPass() : ScopPass(ID) {}
-
-  ~MaximalStaticExpanderWrapperPass() override = default;
-
-  /// Expand the accesses of the SCoP.
-  ///
-  /// @param S The SCoP that must be expanded.
-  bool runOnScop(Scop &S) override;
-
-  /// Print the SCoP.
-  ///
-  /// @param OS The stream where to print.
-  /// @param S The SCop that must be printed.
-  void printScop(raw_ostream &OS, Scop &S) const override;
-
-  /// Register all analyses and transformations required.
-  void getAnalysisUsage(AnalysisUsage &AU) const override;
-};
+static cl::opt<bool>
+    PollyPrintMSE("polly-print-mse",
+                  cl::desc("Polly - Print Maximal static expansion of SCoP"),
+                  cl::cat(PollyCategory));
 
 #ifndef NDEBUG
 /// Whether a dimension of a set is bounded (lower and upper) by a constant,
@@ -458,8 +439,8 @@ public:
 };
 
 static std::unique_ptr<MaximalStaticExpansionImpl>
-runMaximalStaticExpansion(Scop &S, OptimizationRemarkEmitter &ORE,
-                          const Dependences &D) {
+runMaximalStaticExpansionImpl(Scop &S, OptimizationRemarkEmitter &ORE,
+                              const Dependences &D) {
   auto Dependences = D.getDependences(Dependences::TYPE_RAW);
 
   std::unique_ptr<MaximalStaticExpansionImpl> Impl =
@@ -478,7 +459,7 @@ static PreservedAnalyses runMSEUsingNPM(Scop &S, ScopAnalysisManager &SAM,
   auto &D = DI.getDependences(Dependences::AL_Reference);
 
   std::unique_ptr<MaximalStaticExpansionImpl> Impl =
-      runMaximalStaticExpansion(S, ORE, D);
+      runMaximalStaticExpansionImpl(S, ORE, D);
 
   if (OS) {
     *OS << "Printing analysis 'Polly - Maximal static expansion of SCoP' for "
@@ -511,42 +492,24 @@ MaximalStaticExpansionPrinterPass::run(Scop &S, ScopAnalysisManager &SAM,
   return runMSEUsingNPM(S, SAM, SAR, &OS);
 }
 
-char MaximalStaticExpanderWrapperPass::ID = 0;
+void polly::runMaximalStaticExpansion(Scop &S, DependenceAnalysis::Result &DI) {
+  OptimizationRemarkEmitter ORE(&S.getFunction());
 
-bool MaximalStaticExpanderWrapperPass::runOnScop(Scop &S) {
-  // Get the ORE from OptimizationRemarkEmitterWrapperPass.
-  OptimizationRemarkEmitter *ORE =
-      &getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE();
-
-  // Get the RAW Dependences.
-  auto &DI = getAnalysis<DependenceInfo>();
   auto &D = DI.getDependences(Dependences::AL_Reference);
 
   std::unique_ptr<MaximalStaticExpansionImpl> Impl =
-      runMaximalStaticExpansion(S, *ORE, D);
+      runMaximalStaticExpansionImpl(S, ORE, D);
 
-  return false;
+  if (PollyPrintMSE) {
+    outs()
+        << "Printing analysis 'Polly - Maximal static expansion of SCoP' for "
+           "region: '"
+        << S.getName() << "' in function '" << S.getFunction().getName()
+        << "':\n";
+
+    if (Impl) {
+      outs() << "MSE result:\n";
+      Impl->print(llvm::outs());
+    }
+  }
 }
-
-void MaximalStaticExpanderWrapperPass::printScop(raw_ostream &OS,
-                                                 Scop &S) const {
-  S.print(OS, false);
-}
-
-void MaximalStaticExpanderWrapperPass::getAnalysisUsage(
-    AnalysisUsage &AU) const {
-  ScopPass::getAnalysisUsage(AU);
-  AU.addRequired<DependenceInfo>();
-  AU.addRequired<OptimizationRemarkEmitterWrapperPass>();
-}
-
-Pass *polly::createMaximalStaticExpansionPass() {
-  return new MaximalStaticExpanderWrapperPass();
-}
-
-INITIALIZE_PASS_BEGIN(MaximalStaticExpanderWrapperPass, "polly-mse",
-                      "Polly - Maximal static expansion of SCoP", false, false);
-INITIALIZE_PASS_DEPENDENCY(DependenceInfo);
-INITIALIZE_PASS_DEPENDENCY(OptimizationRemarkEmitterWrapperPass);
-INITIALIZE_PASS_END(MaximalStaticExpanderWrapperPass, "polly-mse",
-                    "Polly - Maximal static expansion of SCoP", false, false)

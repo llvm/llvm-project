@@ -1,5 +1,5 @@
-; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-import-jscop-postfix=transformed -polly-print-import-jscop -disable-output < %s | FileCheck %s
-; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-import-jscop-postfix=transformed -polly-import-jscop -polly-codegen -S < %s | FileCheck %s --check-prefix=CODEGEN
+; RUN: opt %loadNPMPolly -polly-stmt-granularity=bb -polly-import-jscop-postfix=transformed '-passes=polly-custom<import-jscop>' -polly-print-import-jscop -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -polly-stmt-granularity=bb -polly-import-jscop-postfix=transformed '-passes=polly-custom<import-jscop;codegen>' -S < %s | FileCheck %s --check-prefix=CODEGEN
 
 define void @map_scalar_access(ptr noalias nonnull %A) {
 entry:
