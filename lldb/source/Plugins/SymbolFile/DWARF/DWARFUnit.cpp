@@ -360,8 +360,10 @@ void DWARFUnit::SetDwoStrOffsetsBase() {
     const DWARFDataExtractor &strOffsets =
         GetSymbolFileDWARF().GetDWARFContext().getOrLoadStrOffsetsData();
     uint64_t length = strOffsets.GetU32(&baseOffset);
-    if (length == 0xffffffff)
+    if (length == llvm::dwarf::DW_LENGTH_DWARF64) {
       length = strOffsets.GetU64(&baseOffset);
+      m_str_offsets_size = 8;
+    }
 
     // Check version.
     if (strOffsets.GetU16(&baseOffset) < 5)
@@ -369,7 +371,12 @@ void DWARFUnit::SetDwoStrOffsetsBase() {
 
     // Skip padding.
     baseOffset += 2;
+  } else {
+    // Size of offset for .debug_str_offsets is same as DWARF offset byte size
+    // of the DWARFUnit for DWARF version 4 and earlier.
+    m_str_offsets_size = m_header.getDwarfOffsetByteSize();
   }
+
 
   SetStrOffsetsBase(baseOffset);
 }
@@ -1079,10 +1086,9 @@ uint32_t DWARFUnit::GetHeaderByteSize() const { return m_header.getSize(); }
 
 std::optional<uint64_t>
 DWARFUnit::GetStringOffsetSectionItem(uint32_t index) const {
-  lldb::offset_t offset =
-      GetStrOffsetsBase() + index * m_header.getDwarfOffsetByteSize();
+  lldb::offset_t offset = GetStrOffsetsBase() + index * m_str_offsets_size;
   return m_dwarf.GetDWARFContext().getOrLoadStrOffsetsData().GetMaxU64(
-      &offset, m_header.getDwarfOffsetByteSize());
+      &offset, m_str_offsets_size);
 }
 
 llvm::Expected<llvm::DWARFAddressRangesVector>
