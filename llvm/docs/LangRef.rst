@@ -12232,7 +12232,7 @@ The type of the element pointed by the pointer source. This type will be
 used along with the provided indices and source operands to compute a new
 pointer representing the result of a logical indexing into a basetype
 pointed by source.
-The actual value passed is ignored, and should usualy be ``poison``.
+The actual value passed is ignored, and should be ``poison``.
 
 ``ptr <source>``:
 A pointer to a valid memory location assumed to be large enough to hold a
