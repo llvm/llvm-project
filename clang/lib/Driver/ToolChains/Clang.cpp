@@ -29,10 +29,10 @@
 #include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Distro.h"
 #include "clang/Driver/InputInfo.h"
-#include "clang/Driver/Options.h"
 #include "clang/Driver/SanitizerArgs.h"
 #include "clang/Driver/Types.h"
 #include "clang/Driver/XRayArgs.h"
+#include "clang/Options/Options.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
@@ -65,7 +65,7 @@ using namespace clang;
 using namespace llvm::opt;
 
 static void CheckPreprocessingOptions(const Driver &D, const ArgList &Args) {
-  if (Arg *A = Args.getLastArg(clang::driver::options::OPT_C, options::OPT_CC,
+  if (Arg *A = Args.getLastArg(options::OPT_C, options::OPT_CC,
                                options::OPT_fminimize_whitespace,
                                options::OPT_fno_minimize_whitespace,
                                options::OPT_fkeep_system_includes,
@@ -1661,7 +1661,7 @@ void Clang::AddAArch64TargetArgs(const ArgList &Args,
 
   AddAAPCSVolatileBitfieldArgs(Args, CmdArgs);
 
-  if (const Arg *A = Args.getLastArg(clang::driver::options::OPT_mtune_EQ)) {
+  if (const Arg *A = Args.getLastArg(options::OPT_mtune_EQ)) {
     CmdArgs.push_back("-tune-cpu");
     if (strcmp(A->getValue(), "native") == 0)
       CmdArgs.push_back(Args.MakeArgString(llvm::sys::getHostCPUName()));
@@ -2067,7 +2067,7 @@ void Clang::AddSparcTargetArgs(const ArgList &Args,
     CmdArgs.push_back("hard");
   }
 
-  if (const Arg *A = Args.getLastArg(clang::driver::options::OPT_mtune_EQ)) {
+  if (const Arg *A = Args.getLastArg(options::OPT_mtune_EQ)) {
     StringRef Name = A->getValue();
     std::string TuneCPU;
     if (Name == "native")
@@ -2173,12 +2173,11 @@ void Clang::AddX86TargetArgs(const ArgList &Args,
 
   // Default to "generic" unless -march is present or targetting the PS4/PS5.
   std::string TuneCPU;
-  if (!Args.hasArg(clang::driver::options::OPT_march_EQ) &&
-      !getToolChain().getTriple().isPS())
+  if (!Args.hasArg(options::OPT_march_EQ) && !getToolChain().getTriple().isPS())
     TuneCPU = "generic";
 
   // Override based on -mtune.
-  if (const Arg *A = Args.getLastArg(clang::driver::options::OPT_mtune_EQ)) {
+  if (const Arg *A = Args.getLastArg(options::OPT_mtune_EQ)) {
     StringRef Name = A->getValue();
 
     if (Name == "native") {
@@ -5704,6 +5703,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     break;
   case CodeGenOptions::FramePointerKind::Reserved:
     FPKeepKindStr = "-mframe-pointer=reserved";
+    break;
+  case CodeGenOptions::FramePointerKind::NonLeafNoReserve:
+    FPKeepKindStr = "-mframe-pointer=non-leaf-no-reserve";
     break;
   case CodeGenOptions::FramePointerKind::NonLeaf:
     FPKeepKindStr = "-mframe-pointer=non-leaf";
