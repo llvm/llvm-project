@@ -1,3 +1,4 @@
 BasedOnStyle: LLVM
 QualifierAlignment: Left
 LineEnding: LF
+InsertNewlineAtEOF: true
