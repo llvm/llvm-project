@@ -164,7 +164,8 @@ RegisterRef PhysicalRegisterInfo::mapTo(RegisterRef RR, RegisterId R) const {
     return RR;
   if (unsigned Idx = TRI.getSubRegIndex(RegisterRef(R).asMCReg(), RR.asMCReg()))
     return RegisterRef(R, TRI.composeSubRegIndexLaneMask(Idx, RR.Mask));
-  if (unsigned Idx = TRI.getSubRegIndex(RR.asMCReg(), RegisterRef(R).asMCReg())) {
+  if (unsigned Idx =
+          TRI.getSubRegIndex(RR.asMCReg(), RegisterRef(R).asMCReg())) {
     const RegInfo &RI = RegInfos[R];
     LaneBitmask RCM =
         RI.RegClass ? RI.RegClass->LaneMask : LaneBitmask::getAll();
