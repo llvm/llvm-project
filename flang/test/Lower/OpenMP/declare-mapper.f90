@@ -6,7 +6,9 @@
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 %t/omp-declare-mapper-3.f90 -o - | FileCheck %t/omp-declare-mapper-3.f90
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 %t/omp-declare-mapper-4.f90 -o - | FileCheck %t/omp-declare-mapper-4.f90
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 %t/omp-declare-mapper-5.f90 -o - | FileCheck %t/omp-declare-mapper-5.f90
-! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=51 %t/omp-declare-mapper-6.f90 -o - | FileCheck %t/omp-declare-mapper-6.f90
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 %t/omp-declare-mapper-6.f90 -o - | FileCheck %t/omp-declare-mapper-6.f90
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 -module-dir %t %t/omp-declare-mapper-7.mod.f90 -o - >/dev/null
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 -J %t %t/omp-declare-mapper-7.use.f90 -o - | FileCheck %t/omp-declare-mapper-7.use.f90
 
 !--- omp-declare-mapper-1.f90
 subroutine declare_mapper_1
@@ -80,7 +82,7 @@ subroutine declare_mapper_2
    !CHECK:        %[[VAL_8:.*]] = omp.map.bounds lower_bound(%[[VAL_6]] : index) upper_bound(%[[VAL_7]] : index) extent(%[[VAL_2]] : index) stride(%[[VAL_5]] : index) start_idx(%[[VAL_5]] : index)
    !CHECK:        %[[VAL_9:.*]] = omp.map.info var_ptr(%[[VAL_4]] : !fir.ref<!fir.array<250xf32>>, !fir.array<250xf32>) map_clauses(tofrom) capture(ByRef) bounds(%[[VAL_8]]) -> !fir.ref<!fir.array<250xf32>> {name = "v%[[VAL_10:.*]]"}
    !CHECK:        %[[VAL_11:.*]] = hlfir.designate %[[VAL_1]]#0{"temp"}   : (!fir.ref<[[MY_TYPE]]>) -> !fir.ref<!fir.type<_QFdeclare_mapper_2Tmy_type{num_vals:i32,values:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>
-   !CHECK:        %[[VAL_12:.*]] = omp.map.info var_ptr(%[[VAL_11]] : !fir.ref<!fir.type<_QFdeclare_mapper_2Tmy_type{num_vals:i32,values:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>, !fir.type<_QFdeclare_mapper_2Tmy_type{num_vals:i32,values:!fir.box<!fir.heap<!fir.array<?xi32>>>}>) map_clauses(exit_release_or_enter_alloc) capture(ByRef) -> !fir.ref<!fir.type<_QFdeclare_mapper_2Tmy_type{num_vals:i32,values:!fir.box<!fir.heap<!fir.array<?xi32>>>}>> {name = "v%[[VAL_13:.*]]"}
+   !CHECK:        %[[VAL_12:.*]] = omp.map.info var_ptr(%[[VAL_11]] : !fir.ref<!fir.type<_QFdeclare_mapper_2Tmy_type{num_vals:i32,values:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>, !fir.type<_QFdeclare_mapper_2Tmy_type{num_vals:i32,values:!fir.box<!fir.heap<!fir.array<?xi32>>>}>) map_clauses(storage) capture(ByRef) -> !fir.ref<!fir.type<_QFdeclare_mapper_2Tmy_type{num_vals:i32,values:!fir.box<!fir.heap<!fir.array<?xi32>>>}>> {name = "v%[[VAL_13:.*]]"}
    !CHECK:        %[[VAL_14:.*]] = omp.map.info var_ptr(%[[VAL_1]]#1 : !fir.ref<[[MY_TYPE]]>, [[MY_TYPE]]) map_clauses(tofrom) capture(ByRef) members(%[[VAL_9]], %[[VAL_12]] : [3], [1] : !fir.ref<!fir.array<250xf32>>, !fir.ref<!fir.type<_QFdeclare_mapper_2Tmy_type{num_vals:i32,values:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>) -> !fir.ref<[[MY_TYPE]]> {name = "v", partial_map = true}
    !CHECK:        omp.declare_mapper.info map_entries(%[[VAL_14]], %[[VAL_9]], %[[VAL_12]] : !fir.ref<[[MY_TYPE]]>, !fir.ref<!fir.array<250xf32>>, !fir.ref<!fir.type<_QFdeclare_mapper_2Tmy_type{num_vals:i32,values:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>)
    !CHECK:      }
@@ -301,3 +303,25 @@ subroutine declare_mapper_nested_parent
     r%real_arr = r%base_arr(1) + r%inner%deep_arr(1)
   !$omp end target
 end subroutine declare_mapper_nested_parent
+
+!--- omp-declare-mapper-7.mod.f90
+! Module with DECLARE MAPPER to be compiled separately
+module m_mod
+  implicit none
+  type :: mty
+    integer :: x
+  end type mty
+  !$omp declare mapper(mymap : mty :: v) map(tofrom: v%x)
+end module m_mod
+
+!--- omp-declare-mapper-7.use.f90
+! Consumer program that USEs the module and applies the mapper by name.
+! CHECK: %{{.*}} = omp.map.info {{.*}} mapper(@{{.*mymap}}) {{.*}} {name = "a"}
+program use_module_mapper
+  use m_mod
+  implicit none
+  type(mty) :: a
+  !$omp target map(mapper(mymap) : a)
+    a%x = 42
+  !$omp end target
+end program use_module_mapper

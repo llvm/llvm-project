@@ -755,10 +755,9 @@ void AggExprEmitter::VisitOpaqueValueExpr(OpaqueValueExpr *e) {
 
 void
 AggExprEmitter::VisitCompoundLiteralExpr(CompoundLiteralExpr *E) {
-  if (Dest.isPotentiallyAliased() &&
-      E->getType().isPODType(CGF.getContext())) {
-    // For a POD type, just emit a load of the lvalue + a copy, because our
-    // compound literal might alias the destination.
+  if (Dest.isPotentiallyAliased()) {
+    // Just emit a load of the lvalue + a copy, because our compound literal
+    // might alias the destination.
     EmitAggLoadOfLValue(E);
     return;
   }
@@ -2080,7 +2079,7 @@ static CharUnits GetNumNonZeroBytesInInit(const Expr *E, CodeGenFunction &CGF) {
   // referencee.  InitListExprs for unions and arrays can't have references.
   if (const RecordType *RT = E->getType()->getAsCanonical<RecordType>()) {
     if (!RT->isUnionType()) {
-      RecordDecl *SD = RT->getOriginalDecl()->getDefinitionOrSelf();
+      RecordDecl *SD = RT->getDecl()->getDefinitionOrSelf();
       CharUnits NumNonZeroBytes = CharUnits::Zero();
 
       unsigned ILEElement = 0;
@@ -2133,7 +2132,7 @@ static void CheckAggExprForMemSetUse(AggValueSlot &Slot, const Expr *E,
     if (const RecordType *RT = CGF.getContext()
                                    .getBaseElementType(E->getType())
                                    ->getAsCanonical<RecordType>()) {
-      const CXXRecordDecl *RD = cast<CXXRecordDecl>(RT->getOriginalDecl());
+      const auto *RD = cast<CXXRecordDecl>(RT->getDecl());
       if (RD->hasUserDeclaredConstructor())
         return;
     }

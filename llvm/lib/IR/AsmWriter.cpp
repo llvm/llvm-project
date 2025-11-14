@@ -102,6 +102,10 @@ static cl::opt<bool> PrintProfData(
     "print-prof-data", cl::Hidden,
     cl::desc("Pretty print perf data (branch weights, etc) when dumping"));
 
+static cl::opt<bool> PreserveAssemblyUseListOrder(
+    "preserve-ll-uselistorder", cl::Hidden, cl::init(false),
+    cl::desc("Preserve use-list order when writing LLVM assembly."));
+
 // Make virtual table appear in this compilation unit.
 AssemblyAnnotationWriter::~AssemblyAnnotationWriter() = default;
 
@@ -754,14 +758,12 @@ void TypePrinting::printStructBody(StructType *STy, raw_ostream &OS) {
 
 AbstractSlotTrackerStorage::~AbstractSlotTrackerStorage() = default;
 
-namespace llvm {
-
 //===----------------------------------------------------------------------===//
 // SlotTracker Class: Enumerate slot numbers for unnamed values
 //===----------------------------------------------------------------------===//
 /// This class provides computation of slot numbers for LLVM Assembly writing.
 ///
-class SlotTracker : public AbstractSlotTrackerStorage {
+class llvm::SlotTracker : public AbstractSlotTrackerStorage {
 public:
   /// ValueMap - A mapping of Values to slot numbers.
   using ValueMap = DenseMap<const Value *, unsigned>;
@@ -839,7 +841,7 @@ public:
   SlotTracker(const SlotTracker &) = delete;
   SlotTracker &operator=(const SlotTracker &) = delete;
 
-  ~SlotTracker() = default;
+  ~SlotTracker() override = default;
 
   void setProcessHook(
       std::function<void(AbstractSlotTrackerStorage *, const Module *, bool)>);
@@ -938,8 +940,6 @@ private:
   /// Add all of the metadata from a DbgRecord.
   void processDbgRecordMetadata(const DbgRecord &DVR);
 };
-
-} // end namespace llvm
 
 ModuleSlotTracker::ModuleSlotTracker(SlotTracker &Machine, const Module *M,
                                      const Function *F)
@@ -2195,6 +2195,7 @@ static void writeDIBasicType(raw_ostream &Out, const DIBasicType *N,
   Printer.printString("name", N->getName());
   Printer.printMetadataOrInt("size", N->getRawSizeInBits(), true);
   Printer.printInt("align", N->getAlignInBits());
+  Printer.printInt("dataSize", N->getDataSizeInBits());
   Printer.printDwarfEnum("encoding", N->getEncoding(),
                          dwarf::AttributeEncodingString);
   Printer.printInt("num_extra_inhabitants", N->getNumExtraInhabitants());
@@ -2370,10 +2371,21 @@ static void writeDICompileUnit(raw_ostream &Out, const DICompileUnit *N,
   Out << "!DICompileUnit(";
   MDFieldPrinter Printer(Out, WriterCtx);
 
-  Printer.printDwarfEnum("language",
-                         N->getSourceLanguage().getUnversionedName(),
-                         dwarf::LanguageString,
-                         /* ShouldSkipZero */ false);
+  DISourceLanguageName Lang = N->getSourceLanguage();
+
+  if (Lang.hasVersionedName()) {
+    Printer.printDwarfEnum(
+        "sourceLanguageName",
+        static_cast<llvm::dwarf::SourceLanguageName>(Lang.getName()),
+        dwarf::SourceLanguageNameString,
+        /* ShouldSkipZero */ false);
+
+    Printer.printInt("sourceLanguageVersion", Lang.getVersion(),
+                     /*ShouldSkipZero=*/true);
+  } else {
+    Printer.printDwarfEnum("language", Lang.getName(), dwarf::LanguageString,
+                           /* ShouldSkipZero */ false);
+  }
 
   Printer.printMetadata("file", N->getRawFile(), /* ShouldSkipNull */ false);
   Printer.printString("producer", N->getProducer());
@@ -2919,7 +2931,7 @@ private:
 
   // printInfoComment - Print a little comment after the instruction indicating
   // which slot it occupies.
-  void printInfoComment(const Value &V);
+  void printInfoComment(const Value &V, bool isMaterializable = false);
 
   // printGCRelocateComment - print comment after call to the gc.relocate
   // intrinsic indicating base and derived pointer names.
@@ -2933,7 +2945,10 @@ AssemblyWriter::AssemblyWriter(formatted_raw_ostream &o, SlotTracker &Mac,
                                bool IsForDebug, bool ShouldPreserveUseListOrder)
     : Out(o), TheModule(M), Machine(Mac), TypePrinter(M), AnnotationWriter(AAW),
       IsForDebug(IsForDebug),
-      ShouldPreserveUseListOrder(ShouldPreserveUseListOrder) {
+      ShouldPreserveUseListOrder(
+          PreserveAssemblyUseListOrder.getNumOccurrences()
+              ? PreserveAssemblyUseListOrder
+              : ShouldPreserveUseListOrder) {
   if (!TheModule)
     return;
   for (const GlobalObject &GO : TheModule->global_objects())
@@ -2944,7 +2959,8 @@ AssemblyWriter::AssemblyWriter(formatted_raw_ostream &o, SlotTracker &Mac,
 AssemblyWriter::AssemblyWriter(formatted_raw_ostream &o, SlotTracker &Mac,
                                const ModuleSummaryIndex *Index, bool IsForDebug)
     : Out(o), TheIndex(Index), Machine(Mac), TypePrinter(/*Module=*/nullptr),
-      IsForDebug(IsForDebug), ShouldPreserveUseListOrder(false) {}
+      IsForDebug(IsForDebug),
+      ShouldPreserveUseListOrder(PreserveAssemblyUseListOrder) {}
 
 void AssemblyWriter::writeOperand(const Value *Operand, bool PrintType) {
   if (!Operand) {
@@ -3177,7 +3193,7 @@ void AssemblyWriter::printModuleSummaryIndex() {
   // for aliasee (then update BitcodeWriter.cpp and remove get/setAliaseeGUID).
   for (auto &GlobalList : *TheIndex) {
     auto GUID = GlobalList.first;
-    for (auto &Summary : GlobalList.second.SummaryList)
+    for (auto &Summary : GlobalList.second.getSummaryList())
       SummaryToGUIDMap[Summary.get()] = GUID;
   }
 
@@ -3947,7 +3963,7 @@ void AssemblyWriter::printGlobal(const GlobalVariable *GV) {
   if (Attrs.hasAttributes())
     Out << " #" << Machine.getAttributeGroupSlot(Attrs);
 
-  printInfoComment(*GV);
+  printInfoComment(*GV, GV->isMaterializable());
 }
 
 void AssemblyWriter::printAlias(const GlobalAlias *GA) {
@@ -3985,7 +4001,7 @@ void AssemblyWriter::printAlias(const GlobalAlias *GA) {
     Out << '"';
   }
 
-  printInfoComment(*GA);
+  printInfoComment(*GA, GA->isMaterializable());
   Out << '\n';
 }
 
@@ -4024,7 +4040,7 @@ void AssemblyWriter::printIFunc(const GlobalIFunc *GI) {
     printMetadataAttachments(MDs, ", ");
   }
 
-  printInfoComment(*GI);
+  printInfoComment(*GI, GI->isMaterializable());
   Out << '\n';
 }
 
@@ -4063,10 +4079,10 @@ void AssemblyWriter::printTypeIdentities() {
 
 /// printFunction - Print all aspects of a function.
 void AssemblyWriter::printFunction(const Function *F) {
-  if (AnnotationWriter) AnnotationWriter->emitFunctionAnnot(F, Out);
-
   if (F->isMaterializable())
     Out << "; Materializable\n";
+  else if (AnnotationWriter)
+    AnnotationWriter->emitFunctionAnnot(F, Out);
 
   const AttributeList &Attrs = F->getAttributes();
   if (Attrs.hasFnAttrs()) {
@@ -4303,13 +4319,12 @@ void AssemblyWriter::printGCRelocateComment(const GCRelocateInst &Relocate) {
 
 /// printInfoComment - Print a little comment after the instruction indicating
 /// which slot it occupies.
-void AssemblyWriter::printInfoComment(const Value &V) {
+void AssemblyWriter::printInfoComment(const Value &V, bool isMaterializable) {
   if (const auto *Relocate = dyn_cast<GCRelocateInst>(&V))
     printGCRelocateComment(*Relocate);
 
-  if (AnnotationWriter) {
+  if (AnnotationWriter && !isMaterializable)
     AnnotationWriter->printInfoComment(V, Out);
-  }
 
   if (PrintInstDebugLocs) {
     if (auto *I = dyn_cast<Instruction>(&V)) {
@@ -5304,7 +5319,7 @@ struct MDTreeAsmWriterContext : public AsmWriterContext {
     --Level;
   }
 
-  ~MDTreeAsmWriterContext() {
+  ~MDTreeAsmWriterContext() override {
     for (const auto &Entry : Buffer) {
       MainOS << "\n";
       unsigned NumIndent = Entry.first * 2U;

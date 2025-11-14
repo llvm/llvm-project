@@ -12,8 +12,11 @@ set(ORC_RT_HEADERS
     orc-rt/IntervalSet.h
     orc-rt/Math.h
     orc-rt/MemoryFlags.h
+    orc-rt/ResourceManager.h
     orc-rt/RTTI.h
     orc-rt/ScopeExit.h
+    orc-rt/Session.h
+    orc-rt/SimpleNativeMemoryMap.h
     orc-rt/SimplePackedSerialization.h
     orc-rt/SPSAllocAction.h
     orc-rt/SPSMemoryFlags.h

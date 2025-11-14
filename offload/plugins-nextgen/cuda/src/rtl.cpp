@@ -25,6 +25,7 @@
 #include "PluginInterface.h"
 #include "Utils/ELF.h"
 
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/Frontend/OpenMP/OMPGridValues.h"
@@ -293,6 +294,12 @@ struct CUDADeviceTy : public GenericDeviceTy {
     if (auto Err = Plugin::check(Res, "error in cuDeviceGet: %s"))
       return Err;
 
+    CUuuid UUID = {0};
+    Res = cuDeviceGetUuid(&UUID, Device);
+    if (auto Err = Plugin::check(Res, "error in cuDeviceGetUuid: %s"))
+      return Err;
+    setDeviceUidFromVendorUid(toHex(UUID.bytes, true));
+
     // Query the current flags of the primary context and set its flags if
     // it is inactive.
     unsigned int FormerPrimaryCtxFlags = 0;
@@ -371,6 +378,12 @@ struct CUDADeviceTy : public GenericDeviceTy {
     if (auto Err = getDeviceAttr(CU_DEVICE_ATTRIBUTE_WARP_SIZE, WarpSize))
       return Err;
     HardwareParallelism = NumMuliprocessors * (MaxThreadsPerSM / WarpSize);
+
+    uint32_t MaxSharedMem;
+    if (auto Err = getDeviceAttr(
+            CU_DEVICE_ATTRIBUTE_MAX_SHARED_MEMORY_PER_BLOCK, MaxSharedMem))
+      return Err;
+    MaxBlockSharedMemSize = MaxSharedMem;
 
     return Plugin::success();
   }
@@ -900,23 +913,6 @@ struct CUDADeviceTy : public GenericDeviceTy {
     return Plugin::success();
   }
 
-  /// Initialize the device info for interoperability purposes.
-  Error initDeviceInfoImpl(__tgt_device_info *DeviceInfo) override {
-    assert(Context && "Context is null");
-    assert(Device != CU_DEVICE_INVALID && "Invalid CUDA device");
-
-    if (auto Err = setContext())
-      return Err;
-
-    if (!DeviceInfo->Context)
-      DeviceInfo->Context = Context;
-
-    if (!DeviceInfo->Device)
-      DeviceInfo->Device = reinterpret_cast<void *>(Device);
-
-    return Plugin::success();
-  }
-
   interop_spec_t selectInteropPreference(int32_t InteropType,
                                          int32_t NumPrefers,
                                          interop_spec_t *Prefers) override {
@@ -1099,10 +1095,8 @@ struct CUDADeviceTy : public GenericDeviceTy {
     if (Res == CUDA_SUCCESS)
       Info.add("Total Constant Memory", TmpInt, "bytes");
 
-    Res = getDeviceAttrRaw(CU_DEVICE_ATTRIBUTE_MAX_SHARED_MEMORY_PER_BLOCK,
-                           TmpInt);
-    if (Res == CUDA_SUCCESS)
-      Info.add("Max Shared Memory per Block", TmpInt, "bytes");
+    Info.add("Max Shared Memory per Block", MaxBlockSharedMemSize, "bytes",
+             DeviceInfo::WORK_GROUP_LOCAL_MEM_SIZE);
 
     Res = getDeviceAttrRaw(CU_DEVICE_ATTRIBUTE_MAX_REGISTERS_PER_BLOCK, TmpInt);
     if (Res == CUDA_SUCCESS)
@@ -1245,11 +1239,6 @@ struct CUDADeviceTy : public GenericDeviceTy {
     return Info;
   }
 
-  virtual bool shouldSetupDeviceMemoryPool() const override {
-    /// We use the CUDA malloc for now.
-    return false;
-  }
-
   /// Getters and setters for stack and heap sizes.
   Error getDeviceStackSize(uint64_t &Value) override {
     return getCtxLimit(CU_LIMIT_STACK_SIZE, Value);
@@ -1257,6 +1246,7 @@ struct CUDADeviceTy : public GenericDeviceTy {
   Error setDeviceStackSize(uint64_t Value) override {
     return setCtxLimit(CU_LIMIT_STACK_SIZE, Value);
   }
+  bool hasDeviceHeapSize() override { return true; }
   Error getDeviceHeapSize(uint64_t &Value) override {
     return getCtxLimit(CU_LIMIT_MALLOC_HEAP_SIZE, Value);
   }

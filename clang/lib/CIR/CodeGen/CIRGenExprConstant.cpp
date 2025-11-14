@@ -46,7 +46,7 @@ namespace {
 class ConstExprEmitter;
 
 static mlir::TypedAttr computePadding(CIRGenModule &cgm, CharUnits size) {
-  mlir::Type eltTy = cgm.UCharTy;
+  mlir::Type eltTy = cgm.uCharTy;
   clang::CharUnits::QuantityType arSize = size.getQuantity();
   CIRGenBuilderTy &bld = cgm.getBuilder();
   if (size > CharUnits::One()) {
@@ -179,8 +179,23 @@ bool ConstantAggregateBuilder::add(mlir::TypedAttr typedAttr, CharUnits offset,
   }
 
   // Uncommon case: constant overlaps what we've already created.
-  cgm.errorNYI("overlapping constants");
-  return false;
+  std::optional<size_t> firstElemToReplace = splitAt(offset);
+  if (!firstElemToReplace)
+    return false;
+
+  CharUnits cSize = getSize(typedAttr);
+  std::optional<size_t> lastElemToReplace = splitAt(offset + cSize);
+  if (!lastElemToReplace)
+    return false;
+
+  assert((firstElemToReplace == lastElemToReplace || allowOverwrite) &&
+         "unexpectedly overwriting field");
+
+  Element newElt(typedAttr, offset);
+  replace(elements, *firstElemToReplace, *lastElemToReplace, {newElt});
+  size = std::max(size, offset + cSize);
+  naturalLayout = false;
+  return true;
 }
 
 bool ConstantAggregateBuilder::addBits(llvm::APInt bits, uint64_t offsetInBits,
@@ -500,6 +515,26 @@ private:
   bool appendBitField(const FieldDecl *field, uint64_t fieldOffset,
                       cir::IntAttr ci, bool allowOverwrite = false);
 
+  /// Applies zero-initialization to padding bytes before and within a field.
+  /// \param layout The record layout containing field offset information.
+  /// \param fieldNo The field index in the record.
+  /// \param field The field declaration.
+  /// \param allowOverwrite Whether to allow overwriting existing values.
+  /// \param sizeSoFar The current size processed, updated by this function.
+  /// \param zeroFieldSize Set to true if the field has zero size.
+  /// \returns true on success, false if padding could not be applied.
+  bool applyZeroInitPadding(const ASTRecordLayout &layout, unsigned fieldNo,
+                            const FieldDecl &field, bool allowOverwrite,
+                            CharUnits &sizeSoFar, bool &zeroFieldSize);
+
+  /// Applies zero-initialization to trailing padding bytes in a record.
+  /// \param layout The record layout containing size information.
+  /// \param allowOverwrite Whether to allow overwriting existing values.
+  /// \param sizeSoFar The current size processed.
+  /// \returns true on success, false if padding could not be applied.
+  bool applyZeroInitPadding(const ASTRecordLayout &layout, bool allowOverwrite,
+                            CharUnits &sizeSoFar);
+
   bool build(InitListExpr *ile, bool allowOverwrite);
   bool build(const APValue &val, const RecordDecl *rd, bool isPrimaryBase,
              const CXXRecordDecl *vTableClass, CharUnits baseOffset);
@@ -548,11 +583,51 @@ bool ConstRecordBuilder::appendBitField(const FieldDecl *field,
                          allowOverwrite);
 }
 
+bool ConstRecordBuilder::applyZeroInitPadding(
+    const ASTRecordLayout &layout, unsigned fieldNo, const FieldDecl &field,
+    bool allowOverwrite, CharUnits &sizeSoFar, bool &zeroFieldSize) {
+  uint64_t startBitOffset = layout.getFieldOffset(fieldNo);
+  CharUnits startOffset =
+      cgm.getASTContext().toCharUnitsFromBits(startBitOffset);
+  if (sizeSoFar < startOffset) {
+    if (!appendBytes(sizeSoFar, computePadding(cgm, startOffset - sizeSoFar),
+                     allowOverwrite))
+      return false;
+  }
+
+  if (!field.isBitField()) {
+    CharUnits fieldSize =
+        cgm.getASTContext().getTypeSizeInChars(field.getType());
+    sizeSoFar = startOffset + fieldSize;
+    zeroFieldSize = fieldSize.isZero();
+  } else {
+    const CIRGenRecordLayout &rl =
+        cgm.getTypes().getCIRGenRecordLayout(field.getParent());
+    const CIRGenBitFieldInfo &info = rl.getBitFieldInfo(&field);
+    uint64_t endBitOffset = startBitOffset + info.size;
+    sizeSoFar = cgm.getASTContext().toCharUnitsFromBits(endBitOffset);
+    if (endBitOffset % cgm.getASTContext().getCharWidth() != 0)
+      sizeSoFar++;
+    zeroFieldSize = info.size == 0;
+  }
+  return true;
+}
+
+bool ConstRecordBuilder::applyZeroInitPadding(const ASTRecordLayout &layout,
+                                              bool allowOverwrite,
+                                              CharUnits &sizeSoFar) {
+  CharUnits totalSize = layout.getSize();
+  if (sizeSoFar < totalSize) {
+    if (!appendBytes(sizeSoFar, computePadding(cgm, totalSize - sizeSoFar),
+                     allowOverwrite))
+      return false;
+  }
+  sizeSoFar = totalSize;
+  return true;
+}
+
 bool ConstRecordBuilder::build(InitListExpr *ile, bool allowOverwrite) {
-  RecordDecl *rd = ile->getType()
-                       ->castAs<clang::RecordType>()
-                       ->getOriginalDecl()
-                       ->getDefinitionOrSelf();
+  RecordDecl *rd = ile->getType()->castAsRecordDecl();
   const ASTRecordLayout &layout = cgm.getASTContext().getASTRecordLayout(rd);
 
   // Bail out if we have base classes. We could support these, but they only
@@ -562,11 +637,9 @@ bool ConstRecordBuilder::build(InitListExpr *ile, bool allowOverwrite) {
     if (cxxrd->getNumBases())
       return false;
 
-  if (cgm.shouldZeroInitPadding()) {
-    assert(!cir::MissingFeatures::recordZeroInitPadding());
-    cgm.errorNYI(rd->getSourceRange(), "zero init padding");
-    return false;
-  }
+  const bool zeroInitPadding = cgm.shouldZeroInitPadding();
+  bool zeroFieldSize = false;
+  CharUnits sizeSoFar = CharUnits::Zero();
 
   unsigned elementNo = 0;
   for (auto [index, field] : llvm::enumerate(rd->fields())) {
@@ -596,7 +669,10 @@ bool ConstRecordBuilder::build(InitListExpr *ile, bool allowOverwrite) {
       continue;
     }
 
-    assert(!cir::MissingFeatures::recordZeroInitPadding());
+    if (zeroInitPadding &&
+        !applyZeroInitPadding(layout, index, *field, allowOverwrite, sizeSoFar,
+                              zeroFieldSize))
+      return false;
 
     // When emitting a DesignatedInitUpdateExpr, a nested InitListExpr
     // represents additional overwriting of our current constant value, and not
@@ -607,17 +683,14 @@ bool ConstRecordBuilder::build(InitListExpr *ile, bool allowOverwrite) {
       return false;
     }
 
-    mlir::TypedAttr eltInit;
-    if (init)
-      eltInit = mlir::cast<mlir::TypedAttr>(
-          emitter.tryEmitPrivateForMemory(init, field->getType()));
-    else
-      eltInit = mlir::cast<mlir::TypedAttr>(emitter.emitNullForMemory(
-          cgm.getLoc(ile->getSourceRange()), field->getType()));
-
-    if (!eltInit)
+    mlir::Attribute eltInitAttr =
+        init ? emitter.tryEmitPrivateForMemory(init, field->getType())
+             : emitter.emitNullForMemory(cgm.getLoc(ile->getSourceRange()),
+                                         field->getType());
+    if (!eltInitAttr)
       return false;
 
+    mlir::TypedAttr eltInit = mlir::cast<mlir::TypedAttr>(eltInitAttr);
     if (!field->isBitField()) {
       // Handle non-bitfield members.
       if (!appendField(field, layout.getFieldOffset(index), eltInit,
@@ -641,8 +714,8 @@ bool ConstRecordBuilder::build(InitListExpr *ile, bool allowOverwrite) {
     }
   }
 
-  assert(!cir::MissingFeatures::recordZeroInitPadding());
-  return true;
+  return !zeroInitPadding ||
+         applyZeroInitPadding(layout, allowOverwrite, sizeSoFar);
 }
 
 namespace {
@@ -753,9 +826,8 @@ bool ConstRecordBuilder::build(const APValue &val, const RecordDecl *rd,
 
 mlir::Attribute ConstRecordBuilder::finalize(QualType type) {
   type = type.getNonReferenceType();
-  RecordDecl *rd = type->castAs<clang::RecordType>()
-                       ->getOriginalDecl()
-                       ->getDefinitionOrSelf();
+  RecordDecl *rd =
+      type->castAs<clang::RecordType>()->getDecl()->getDefinitionOrSelf();
   mlir::Type valTy = cgm.convertType(type);
   return builder.build(valTy, rd->hasFlexibleArrayMember());
 }
@@ -778,9 +850,8 @@ mlir::Attribute ConstRecordBuilder::buildRecord(ConstantEmitter &emitter,
   ConstantAggregateBuilder constant(emitter.cgm);
   ConstRecordBuilder builder(emitter, constant, CharUnits::Zero());
 
-  const RecordDecl *rd = valTy->castAs<clang::RecordType>()
-                             ->getOriginalDecl()
-                             ->getDefinitionOrSelf();
+  const RecordDecl *rd =
+      valTy->castAs<clang::RecordType>()->getDecl()->getDefinitionOrSelf();
   const CXXRecordDecl *cd = dyn_cast<CXXRecordDecl>(rd);
   if (!builder.build(val, rd, false, cd, CharUnits::Zero()))
     return nullptr;
@@ -809,7 +880,7 @@ bool ConstRecordBuilder::updateRecord(ConstantEmitter &emitter,
 class ConstExprEmitter
     : public StmtVisitor<ConstExprEmitter, mlir::Attribute, QualType> {
   CIRGenModule &cgm;
-  LLVM_ATTRIBUTE_UNUSED ConstantEmitter &emitter;
+  [[maybe_unused]] ConstantEmitter &emitter;
 
 public:
   ConstExprEmitter(ConstantEmitter &emitter)
@@ -851,9 +922,9 @@ public:
   }
 
   mlir::Attribute VisitCastExpr(CastExpr *e, QualType destType) {
-    if (isa<ExplicitCastExpr>(e))
-      cgm.errorNYI(e->getBeginLoc(),
-                   "ConstExprEmitter::VisitCastExpr explicit cast");
+    if (const auto *ece = dyn_cast<ExplicitCastExpr>(e))
+      cgm.emitExplicitCastExprType(ece,
+                                   const_cast<CIRGenFunction *>(emitter.cgf));
 
     Expr *subExpr = e->getSubExpr();
 
@@ -949,9 +1020,9 @@ public:
   }
 
   mlir::Attribute VisitCXXDefaultInitExpr(CXXDefaultInitExpr *die, QualType t) {
-    cgm.errorNYI(die->getBeginLoc(),
-                 "ConstExprEmitter::VisitCXXDefaultInitExpr");
-    return {};
+    // No need for a DefaultInitExprScope: we don't handle 'this' in a
+    // constant expression.
+    return Visit(die->getExpr(), t);
   }
 
   mlir::Attribute VisitExprWithCleanups(ExprWithCleanups *e, QualType t) {
@@ -966,9 +1037,7 @@ public:
 
   mlir::Attribute VisitImplicitValueInitExpr(ImplicitValueInitExpr *e,
                                              QualType t) {
-    cgm.errorNYI(e->getBeginLoc(),
-                 "ConstExprEmitter::VisitImplicitValueInitExpr");
-    return {};
+    return cgm.getBuilder().getZeroInitAttr(cgm.convertType(t));
   }
 
   mlir::Attribute VisitInitListExpr(InitListExpr *ile, QualType t) {
@@ -1009,9 +1078,32 @@ public:
 
   mlir::Attribute VisitCXXConstructExpr(CXXConstructExpr *e, QualType ty) {
     if (!e->getConstructor()->isTrivial())
-      return nullptr;
-    cgm.errorNYI(e->getBeginLoc(), "trivial constructor const handling");
-    return {};
+      return {};
+
+    // Only default and copy/move constructors can be trivial.
+    if (e->getNumArgs()) {
+      assert(e->getNumArgs() == 1 && "trivial ctor with > 1 argument");
+      assert(e->getConstructor()->isCopyOrMoveConstructor() &&
+             "trivial ctor has argument but isn't a copy/move ctor");
+
+      Expr *arg = e->getArg(0);
+      assert(cgm.getASTContext().hasSameUnqualifiedType(ty, arg->getType()) &&
+             "argument to copy ctor is of wrong type");
+
+      // Look through the temporary; it's just converting the value to an lvalue
+      // to pass it to the constructor.
+      if (auto const *mte = dyn_cast<MaterializeTemporaryExpr>(arg))
+        return Visit(mte->getSubExpr(), ty);
+
+      // TODO: Investigate whether there are cases that can fall through to here
+      //       that need to be handled. This is missing in classic codegen also.
+      assert(!cir::MissingFeatures::ctorConstLvalueToRvalueConversion());
+
+      // Don't try to support arbitrary lvalue-to-rvalue conversions for now.
+      return {};
+    }
+
+    return cgm.getBuilder().getZeroInitAttr(cgm.convertType(ty));
   }
 
   mlir::Attribute VisitStringLiteral(StringLiteral *e, QualType t) {
