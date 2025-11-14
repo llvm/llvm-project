@@ -724,6 +724,7 @@ bool llvm::willNotFreeBetween(const Instruction *Assume,
   // Handle cross-block case: CtxI in a successor of Assume's block.
   const BasicBlock *CtxBB = CtxI->getParent();
   const BasicBlock *AssumeBB = Assume->getParent();
+  BasicBlock::const_iterator CtxIter = CtxI->getIterator();
   if (CtxBB != AssumeBB) {
     if (CtxBB->getSinglePredecessor() != AssumeBB)
       return false;
@@ -731,16 +732,16 @@ bool llvm::willNotFreeBetween(const Instruction *Assume,
     if (!hasNoFreeCalls(make_range(CtxBB->begin(), CtxBB->end())))
       return false;
 
-    CtxI = AssumeBB->getTerminator();
+    CtxIter = AssumeBB->end();
+  } else {
+    // Same block case: check that Assume comes before CtxI.
+    if (!Assume->comesBefore(CtxI))
+      return false;
   }
 
-  // Same block case: check that Assume comes before CtxI.
-  if (!Assume->comesBefore(CtxI))
-    return false;
-
-  // Check if there are any calls between Assume and CtxI that may free memory.
-  return hasNoFreeCalls(
-      make_range(Assume->getIterator(), std::next(CtxI->getIterator())));
+  // Check if there are any calls between Assume and CtxIter that may free
+  // memory.
+  return hasNoFreeCalls(make_range(Assume->getIterator(), CtxIter));
 }
 
 // TODO: cmpExcludesZero misses many cases where `RHS` is non-constant but
