@@ -180,8 +180,11 @@ if (LLDB_ENABLE_PYTHON)
       "Path to use as PYTHONHOME in lldb. If a relative path is specified, it will be resolved at runtime relative to liblldb directory.")
   endif()
 
-  if (SWIG_VERSION VERSION_GREATER_EQUAL "4.2"
-      AND Python3_VERSION VERSION_GREATER_EQUAL "3.11"
+  set(python_limited_api_swig_version "4.2")
+  set(python_limited_api_python_version "3.11")
+
+  if (SWIG_VERSION VERSION_GREATER_EQUAL python_limited_api_swig_version
+      AND Python3_VERSION VERSION_GREATER_EQUAL python_limited_api_python_version
       AND NOT LLDB_EMBED_PYTHON_HOME)
     set(default_enable_python_limited_api ON)
   else()
@@ -189,6 +192,17 @@ if (LLDB_ENABLE_PYTHON)
   endif()
   option(LLDB_ENABLE_PYTHON_LIMITED_API "Only use the Python Limited API (requires at least Python 3.11 and SWIG 4.2)"
     ${default_enable_python_limited_api})
+
+  # Diagnose unsupported configurations.
+  if (LLDB_ENABLE_PYTHON_LIMITED_API AND LLDB_EMBED_PYTHON_HOME)
+    message(SEND_ERROR "LLDB_ENABLE_PYTHON_LIMITED_API is not compatible with LLDB_EMBED_PYTHON_HOME")
+  endif()
+  if (LLDB_ENABLE_PYTHON_LIMITED_API AND Python3_VERSION VERSION_LESS python_limited_api_python_version)
+    message(SEND_ERROR "LLDB_ENABLE_PYTHON_LIMITED_API is not compatible with Python ${Python3_VERSION} (requires Python ${python_limited_api_python_version})")
+  endif()
+  if (LLDB_ENABLE_PYTHON_LIMITED_API AND SWIG_VERSION VERSION_LESS python_limited_api_swig_version)
+    message(SEND_ERROR "LLDB_ENABLE_PYTHON_LIMITED_API is not compatible with SWIG ${SWIG_VERSION} (requires SWIG ${python_limited_api_swig_version})")
+  endif()
 else()
   # Even if Python scripting is disabled, we still need a Python interpreter to
   # build, for example to generate SBLanguages.h.
