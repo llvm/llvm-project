@@ -127,7 +127,7 @@ private:
   // will also be preloaded even if that data is unused.
   Function *cloneFunctionWithPreloadImplicitArgs(unsigned LastPreloadIndex) {
     FunctionType *FT = F.getFunctionType();
-    LLVMContext &Ctx = F.getParent()->getContext();
+    LLVMContext &Ctx = F.getContext();
     SmallVector<Type *, 16> FTypes(FT->param_begin(), FT->param_end());
     for (unsigned I = 0; I <= LastPreloadIndex; ++I)
       FTypes.push_back(getHiddenArgType(Ctx, HiddenArg(I)));
@@ -196,7 +196,7 @@ public:
     SmallVector<std::pair<LoadInst *, unsigned>, 4> ImplicitArgLoads;
     for (auto *U : ImplicitArgPtr->users()) {
       Instruction *CI = dyn_cast<Instruction>(U);
-      if (!CI || CI->getParent()->getParent() != &F)
+      if (!CI || CI->getFunction() != &F)
         continue;
 
       for (auto *U : CI->users()) {
@@ -213,7 +213,7 @@ public:
           continue;
 
         // FIXME: Expand handle merged loads.
-        LLVMContext &Ctx = F.getParent()->getContext();
+        LLVMContext &Ctx = F.getContext();
         Type *LoadTy = Load->getType();
         HiddenArg HA = getHiddenArgFromOffset(Offset);
         if (HA == END_HIDDEN_ARGS || LoadTy != getHiddenArgType(Ctx, HA))

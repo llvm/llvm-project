@@ -1042,11 +1042,11 @@ def AArch64uitof: SDNode<"AArch64ISD::UITOF", SDT_AArch64ITOF>;
 // offset of a variable into X0, using the TLSDesc model.
 def AArch64tlsdesc_callseq : SDNode<"AArch64ISD::TLSDESC_CALLSEQ",
                                     SDT_AArch64TLSDescCallSeq,
-                                    [SDNPOutGlue, SDNPHasChain, SDNPVariadic]>;
+                                    [SDNPOutGlue, SDNPOptInGlue, SDNPHasChain, SDNPVariadic]>;
 
 def AArch64tlsdesc_auth_callseq : SDNode<"AArch64ISD::TLSDESC_AUTH_CALLSEQ",
                                     SDT_AArch64TLSDescCallSeq,
-                                    [SDNPOutGlue, SDNPHasChain, SDNPVariadic]>;
+                                    [SDNPOutGlue, SDNPOptInGlue, SDNPHasChain, SDNPVariadic]>;
 
 def AArch64WrapperLarge : SDNode<"AArch64ISD::WrapperLarge",
                                  SDT_AArch64WrapperLarge>;

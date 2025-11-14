@@ -777,7 +777,7 @@ getSynchronizeAddrSpaceMD(const MachineInstr &MI) {
 
 void SIMemOpAccess::reportUnsupported(const MachineBasicBlock::iterator &MI,
                                       const char *Msg) const {
-  const Function &Func = MI->getParent()->getParent()->getFunction();
+  const Function &Func = MI->getMF()->getFunction();
   Func.getContext().diagnose(
       DiagnosticInfoUnsupported(Func, Msg, MI->getDebugLoc()));
 }

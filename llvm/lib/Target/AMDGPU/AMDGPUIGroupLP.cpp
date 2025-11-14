@@ -1968,7 +1968,7 @@ private:
       int NumBits = 0;
 
       auto TRI = TII->getRegisterInfo();
-      auto &MRI = MI->getParent()->getParent()->getRegInfo();
+      auto &MRI = MI->getMF()->getRegInfo();
       for (auto &Elt : Collection) {
         auto Op = Elt->getInstr()->getOperand(0);
         auto Size =

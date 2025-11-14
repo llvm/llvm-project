@@ -1378,7 +1378,7 @@ bool AMDGPUPromoteAllocaImpl::hasSufficientLocalMem(const Function &F) {
   auto visitUsers = [&](const GlobalVariable *GV, const Constant *Val) -> bool {
     for (const User *U : Val->users()) {
       if (const Instruction *Use = dyn_cast<Instruction>(U)) {
-        if (Use->getParent()->getParent() == &F)
+        if (Use->getFunction() == &F)
           return true;
       } else {
         const Constant *C = cast<Constant>(U);
@@ -1489,7 +1489,7 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToLDS(AllocaInst &I,
   const DataLayout &DL = Mod->getDataLayout();
   IRBuilder<> Builder(&I);
 
-  const Function &ContainingFunction = *I.getParent()->getParent();
+  const Function &ContainingFunction = *I.getFunction();
   CallingConv::ID CC = ContainingFunction.getCallingConv();
 
   // Don't promote the alloca to LDS for shader calling conventions as the work
@@ -1544,7 +1544,7 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToLDS(AllocaInst &I,
 
   LLVM_DEBUG(dbgs() << "Promoting alloca to local memory\n");
 
-  Function *F = I.getParent()->getParent();
+  Function *F = I.getFunction();
 
   Type *GVTy = ArrayType::get(I.getAllocatedType(), WorkGroupSize);
   GlobalVariable *GV = new GlobalVariable(

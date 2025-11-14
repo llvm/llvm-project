@@ -468,7 +468,7 @@ RegisterBankInfo::InstructionMappings
 AMDGPURegisterBankInfo::getInstrAlternativeMappings(
     const MachineInstr &MI) const {
 
-  const MachineFunction &MF = *MI.getParent()->getParent();
+  const MachineFunction &MF = *MI.getMF();
   const MachineRegisterInfo &MRI = MF.getRegInfo();
 
 
@@ -2409,7 +2409,7 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
       if (DstBank == &AMDGPU::VCCRegBank)
         break;
 
-      MachineFunction *MF = MI.getParent()->getParent();
+      MachineFunction *MF = MI.getMF();
       ApplyRegBankMapping ApplyBank(B, *this, MRI, DstBank);
       LegalizerHelper Helper(*MF, ApplyBank, B);
 
@@ -2489,7 +2489,7 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     // There is no VALU abs instruction so we need to replace it with a sub and
     // max combination.
     if (SrcBank && SrcBank == &AMDGPU::VGPRRegBank) {
-      MachineFunction *MF = MI.getParent()->getParent();
+      MachineFunction *MF = MI.getMF();
       ApplyRegBankMapping Apply(B, *this, MRI, &AMDGPU::VGPRRegBank);
       LegalizerHelper Helper(*MF, Apply, B);
 
@@ -3604,7 +3604,7 @@ unsigned AMDGPURegisterBankInfo::getMappingType(const MachineRegisterInfo &MRI,
 }
 
 bool AMDGPURegisterBankInfo::isSALUMapping(const MachineInstr &MI) const {
-  const MachineFunction &MF = *MI.getParent()->getParent();
+  const MachineFunction &MF = *MI.getMF();
   const MachineRegisterInfo &MRI = MF.getRegInfo();
   for (const MachineOperand &MO : MI.operands()) {
     if (!MO.isReg())
@@ -3620,7 +3620,7 @@ bool AMDGPURegisterBankInfo::isSALUMapping(const MachineInstr &MI) const {
 
 const RegisterBankInfo::InstructionMapping &
 AMDGPURegisterBankInfo::getDefaultMappingSOP(const MachineInstr &MI) const {
-  const MachineFunction &MF = *MI.getParent()->getParent();
+  const MachineFunction &MF = *MI.getMF();
   const MachineRegisterInfo &MRI = MF.getRegInfo();
   SmallVector<const ValueMapping*, 8> OpdsMapping(MI.getNumOperands());
 
@@ -3638,7 +3638,7 @@ AMDGPURegisterBankInfo::getDefaultMappingSOP(const MachineInstr &MI) const {
 
 const RegisterBankInfo::InstructionMapping &
 AMDGPURegisterBankInfo::getDefaultMappingVOP(const MachineInstr &MI) const {
-  const MachineFunction &MF = *MI.getParent()->getParent();
+  const MachineFunction &MF = *MI.getMF();
   const MachineRegisterInfo &MRI = MF.getRegInfo();
   SmallVector<const ValueMapping*, 8> OpdsMapping(MI.getNumOperands());
 
@@ -3662,7 +3662,7 @@ AMDGPURegisterBankInfo::getDefaultMappingVOP(const MachineInstr &MI) const {
 
 const RegisterBankInfo::InstructionMapping &
 AMDGPURegisterBankInfo::getDefaultMappingAllVGPR(const MachineInstr &MI) const {
-  const MachineFunction &MF = *MI.getParent()->getParent();
+  const MachineFunction &MF = *MI.getMF();
   const MachineRegisterInfo &MRI = MF.getRegInfo();
   SmallVector<const ValueMapping*, 8> OpdsMapping(MI.getNumOperands());
 
@@ -3741,7 +3741,7 @@ AMDGPURegisterBankInfo::getValueMappingForPtr(const MachineRegisterInfo &MRI,
 const RegisterBankInfo::InstructionMapping &
 AMDGPURegisterBankInfo::getInstrMappingForLoad(const MachineInstr &MI) const {
 
-  const MachineFunction &MF = *MI.getParent()->getParent();
+  const MachineFunction &MF = *MI.getMF();
   const MachineRegisterInfo &MRI = MF.getRegInfo();
   SmallVector<const ValueMapping*, 2> OpdsMapping(2);
   unsigned Size = getSizeInBits(MI.getOperand(0).getReg(), MRI, *TRI);
@@ -3831,7 +3831,7 @@ AMDGPURegisterBankInfo::getAGPROpMapping(Register Reg,
 //
 const RegisterBankInfo::InstructionMapping &
 AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
-  const MachineFunction &MF = *MI.getParent()->getParent();
+  const MachineFunction &MF = *MI.getMF();
   const MachineRegisterInfo &MRI = MF.getRegInfo();
 
   if (MI.isCopy() || MI.getOpcode() == AMDGPU::G_FREEZE) {
