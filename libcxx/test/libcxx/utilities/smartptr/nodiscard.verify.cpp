@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-UNSUPPORTED: c++03
+// UNSUPPORTED: c++03
+
 // <memory>
 
 // Check that functions are marked [[nodiscard]]
