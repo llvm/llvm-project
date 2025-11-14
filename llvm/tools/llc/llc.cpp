@@ -696,8 +696,7 @@ static int compileModule(char **argv, LLVMContext &Context,
   }
 
   // Add an appropriate TargetLibraryInfo pass for the module's triple.
-  TargetLibraryInfoImpl TLII(M->getTargetTriple(),
-                             Target->Options.VectorLibrary);
+  TargetLibraryInfoImpl TLII(M->getTargetTriple(), Target->Options.VecLib);
 
   // The -disable-simplify-libcalls flag actually disables all builtin optzns.
   if (DisableSimplifyLibCalls)

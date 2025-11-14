@@ -483,31 +483,31 @@ static bool initTargetOptions(const CompilerInstance &CI,
 
   switch (CodeGenOpts.getVecLib()) {
   case llvm::driver::VectorLibrary::NoLibrary:
-    Options.VectorLibrary = llvm::VectorLibrary::NoLibrary;
+    Options.VecLib = llvm::VectorLibrary::NoLibrary;
     break;
   case llvm::driver::VectorLibrary::Accelerate:
-    Options.VectorLibrary = llvm::VectorLibrary::Accelerate;
+    Options.VecLib = llvm::VectorLibrary::Accelerate;
     break;
   case llvm::driver::VectorLibrary::Darwin_libsystem_m:
-    Options.VectorLibrary = llvm::VectorLibrary::DarwinLibSystemM;
+    Options.VecLib = llvm::VectorLibrary::DarwinLibSystemM;
     break;
   case llvm::driver::VectorLibrary::LIBMVEC:
-    Options.VectorLibrary = llvm::VectorLibrary::LIBMVEC;
+    Options.VecLib = llvm::VectorLibrary::LIBMVEC;
     break;
   case llvm::driver::VectorLibrary::MASSV:
-    Options.VectorLibrary = llvm::VectorLibrary::MASSV;
+    Options.VecLib = llvm::VectorLibrary::MASSV;
     break;
   case llvm::driver::VectorLibrary::SVML:
-    Options.VectorLibrary = llvm::VectorLibrary::SVML;
+    Options.VecLib = llvm::VectorLibrary::SVML;
     break;
   case llvm::driver::VectorLibrary::SLEEF:
-    Options.VectorLibrary = llvm::VectorLibrary::SLEEFGNUABI;
+    Options.VecLib = llvm::VectorLibrary::SLEEFGNUABI;
     break;
   case llvm::driver::VectorLibrary::ArmPL:
-    Options.VectorLibrary = llvm::VectorLibrary::ArmPL;
+    Options.VecLib = llvm::VectorLibrary::ArmPL;
     break;
   case llvm::driver::VectorLibrary::AMDLIBM:
-    Options.VectorLibrary = llvm::VectorLibrary::AMDLIBM;
+    Options.VecLib = llvm::VectorLibrary::AMDLIBM;
     break;
   }
 
