@@ -518,11 +518,7 @@ class LLVMPRAutomator:
                 ):
                     # After a merge, the temporary branch should be deleted from
                     # the user's fork.
-                    delete_url = self._get_authenticated_remote_url(self.remote)
-                    self._run_cmd(
-                        ["git", "push", delete_url, "--delete", merged_branch],
-                        check=False,
-                    )
+                    self.github_api.delete_branch(merged_branch)
             if temp_branch in self.created_branches:
                 # If the branch was successfully merged, it should not be deleted
                 # again during cleanup.
@@ -571,11 +567,8 @@ class LLVMPRAutomator:
         self._run_cmd(["git", "checkout", self.original_branch], capture_output=True)
         if self.created_branches:
             self.runner.print("Cleaning up temporary remote branches...")
-            delete_url = self._get_authenticated_remote_url(self.remote)
-            self._run_cmd(
-                ["git", "push", delete_url, "--delete"] + self.created_branches,
-                check=False,
-            )
+            for branch in self.created_branches:
+                self.github_api.delete_branch(branch)
 
 
 def check_prerequisites(runner: CommandRunner) -> None:
