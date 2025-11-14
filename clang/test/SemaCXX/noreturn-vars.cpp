@@ -272,3 +272,27 @@ extern void abc_02(func_type *);
   LF(func_ptr);
   func_ptr();
 }
+
+[[noreturn]] void call_lambda_by_ptr(int x) {
+  func_type func_ptr = noret;
+  auto LF = [&func_ptr](){};
+  auto LFPtr = &LF;
+  (*LFPtr)();
+  func_ptr();
+} // expected-warning {{function declared 'noreturn' should not return}}
+
+[[noreturn]] void call_lambda_by_ptr_no_capture(int x) {
+  func_type func_ptr = noret;
+  auto LF = [](){};
+  auto LFPtr = &LF;
+  (*LFPtr)();
+  func_ptr();
+}
+
+[[noreturn]] void call_lambda_by_ptr_capture_value(int x) {
+  func_type func_ptr = noret;
+  auto LF = [func_ptr](){};
+  auto LFPtr = &LF;
+  (*LFPtr)();
+  func_ptr();
+}

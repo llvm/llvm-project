@@ -469,18 +469,16 @@ struct TransferFunctions : public StmtVisitor<TransferFunctions> {
   }
 
   void VisitCXXOperatorCallExpr(CXXOperatorCallExpr *CE) {
-    if (CE->getOperator() == OO_Call && CE->getNumArgs() > 0) {
-      Expr *Obj = CE->getArg(0)->IgnoreParenCasts();
-      if (auto *MTE = dyn_cast<MaterializeTemporaryExpr>(Obj))
-        Obj = MTE->getSubExpr();
-      if (auto *DRE = dyn_cast<DeclRefExpr>(Obj)) {
-        auto *D = dyn_cast<VarDecl>(DRE->getDecl());
-        if (D && D->hasInit())
-          Obj = D->getInit();
-      }
-      Visit(Obj);
-    }
+    if (CE->getOperator() == OO_Call && CE->getNumArgs() > 0)
+      Visit(CE->getArg(0)->IgnoreParenCasts());
     VisitCallExpr(CE);
+  }
+
+  void VisitDeclRefExpr(DeclRefExpr *DRef) {
+    if (auto *D = dyn_cast<VarDecl>(DRef->getDecl())) {
+      if (D->hasInit())
+        Visit(D->getInit());
+    }
   }
 
   void VisitLambdaExpr(LambdaExpr *LE) {
