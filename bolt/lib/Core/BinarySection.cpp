@@ -219,7 +219,19 @@ void BinarySection::flushPendingRelocations(raw_pwrite_stream &OS,
   }
 }
 
-BinarySection::~BinarySection() { updateContents(nullptr, 0); }
+BinarySection::~BinarySection() {
+  LLVM_DEBUG({
+    dbgs() << "[bs] dtor this=" << (const void *)this
+           << " name=" << getName()
+           << " data=" << (const void *)getData()
+           << " size=" << getSize()
+           << " outputData=" << (const void *)getOutputData()
+           << " outputSize=" << getOutputSize()
+           << "\n";
+  });
+
+  updateContents(nullptr, 0);
+}
 
 void BinarySection::clearRelocations() { clearList(Relocations); }
 
