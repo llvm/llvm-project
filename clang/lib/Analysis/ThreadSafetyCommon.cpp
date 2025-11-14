@@ -394,6 +394,13 @@ til::SExpr *SExprBuilder::translateDeclRefExpr(const DeclRefExpr *DRE,
   if (const auto *VarD = dyn_cast<VarDecl>(VD))
     return translateVariable(VarD, Ctx);
 
+  if (const auto *FD = dyn_cast<FieldDecl>(VD)) {
+    if (Ctx && Ctx->SelfArg) {
+      til::SExpr *E = new (Arena) til::SApply(SelfVar);
+      return new (Arena) til::Project(E, FD);
+    }
+  }
+
   // For non-local variables, treat it as a reference to a named object.
   return new (Arena) til::LiteralPtr(VD);
 }
