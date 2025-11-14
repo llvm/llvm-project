@@ -125,7 +125,7 @@ define <4 x float> @fmul_pow2_ldexp_4xfloat(<4 x i32> %i) {
 ; CHECK-SKX:       # %bb.0:
 ; CHECK-SKX-NEXT:    vcvtdq2ps %xmm0, %xmm0
 ; CHECK-SKX-NEXT:    vbroadcastss {{.*#+}} xmm1 = [9.0E+0,9.0E+0,9.0E+0,9.0E+0]
-; CHECK-SKX-NEXT:    vscalefss %xmm0, %xmm1, %xmm0
+; CHECK-SKX-NEXT:    vscalefps %xmm0, %xmm1, %xmm0
 ; CHECK-SKX-NEXT:    retq
   %r = call <4 x float> @llvm.ldexp.v4f32.v4i32(<4 x float> <float 9.000000e+00, float 9.000000e+00, float 9.000000e+00, float 9.000000e+00>, <4 x i32> %i)
   ret <4 x float> %r

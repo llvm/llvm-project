@@ -126,13 +126,13 @@ define <4 x float> @test_ldexp_4xfloat(<4 x float> %x, <4 x i32> %exp) nounwind 
 ; AVX512VL-LABEL: test_ldexp_4xfloat:
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vcvtdq2ps %xmm1, %xmm1
-; AVX512VL-NEXT:    vscalefss %xmm1, %xmm0, %xmm0
+; AVX512VL-NEXT:    vscalefps %xmm1, %xmm0, %xmm0
 ; AVX512VL-NEXT:    retq
 ;
 ; AVX512VLFP16-LABEL: test_ldexp_4xfloat:
 ; AVX512VLFP16:       # %bb.0:
 ; AVX512VLFP16-NEXT:    vcvtdq2ps %xmm1, %xmm1
-; AVX512VLFP16-NEXT:    vscalefss %xmm1, %xmm0, %xmm0
+; AVX512VLFP16-NEXT:    vscalefps %xmm1, %xmm0, %xmm0
 ; AVX512VLFP16-NEXT:    retq
   %r = call <4 x float> @llvm.ldexp.v4f32.v4i32(<4 x float> %x, <4 x i32> %exp)
   ret <4 x float> %r
