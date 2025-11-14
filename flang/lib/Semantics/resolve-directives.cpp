@@ -3054,8 +3054,13 @@ void OmpAttributeVisitor::Post(const parser::Name &name) {
       // place for the types specified.
       if (Symbol * found{currScope().FindSymbol(name.source)}) {
         // If the variable has declare target applied to it (enter or link) it
-        // is exempt from defaultmap(none) restrictions
-        if (!symbol->GetUltimate().test(Symbol::Flag::OmpDeclareTarget)) {
+        // is exempt from defaultmap(none) restrictions.
+        // We also exempt procedures and named constants from defaultmap(none)
+        // checking.
+        if (!symbol->GetUltimate().test(Symbol::Flag::OmpDeclareTarget) &&
+            !(IsProcedure(*symbol) &&
+                !semantics::IsProcedurePointer(*symbol)) &&
+            !IsNamedConstant(*symbol)) {
           auto &dMap = GetContext().defaultMap;
           for (auto defaults : dMap) {
             if (defaults.second ==
