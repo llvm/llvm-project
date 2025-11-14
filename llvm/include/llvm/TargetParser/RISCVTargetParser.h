@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -54,6 +55,9 @@ static constexpr unsigned RVVBytesPerBlock = RVVBitsPerBlock / 8;
 LLVM_ABI void getFeaturesForCPU(StringRef CPU,
                                 SmallVectorImpl<std::string> &EnabledFeatures,
                                 bool NeedPlus = false);
+LLVM_ABI void getAllTuneFeatures(SmallVectorImpl<StringRef> &TuneFeatures);
+LLVM_ABI Error parseTuneFeatureString(
+    StringRef TFString, SmallVectorImpl<std::string> &TuneFeatures);
 LLVM_ABI bool parseCPU(StringRef CPU, bool IsRV64);
 LLVM_ABI bool parseTuneCPU(StringRef CPU, bool IsRV64);
 LLVM_ABI StringRef getMArchFromMcpu(StringRef CPU);

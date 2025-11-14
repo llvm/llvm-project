@@ -1740,6 +1740,10 @@ def HasVendorXSMTVDot
 // LLVM specific features and extensions
 //===----------------------------------------------------------------------===//
 
+class RISCVTuneFeature<string name, string field_name, string value,
+                       string description, list<SubtargetFeature> implied = []>
+    : SubtargetFeature<name, field_name, value, description, implied>;
+
 // Feature32Bit exists to mark CPUs that support RV32 to distinguish them from
 // tuning CPU names.
 def Feature32Bit
@@ -1788,46 +1792,46 @@ def FeatureUnalignedVectorMem
                       "loads and stores">;
 
 def TuneNLogNVRGather
-   : SubtargetFeature<"log-vrgather", "RISCVVRGatherCostModel", "NLog2N",
+   : RISCVTuneFeature<"log-vrgather", "RISCVVRGatherCostModel", "NLog2N",
                       "Has vrgather.vv with LMUL*log2(LMUL) latency">;
 
-def TunePostRAScheduler : SubtargetFeature<"use-postra-scheduler",
+def TunePostRAScheduler : RISCVTuneFeature<"use-postra-scheduler",
     "UsePostRAScheduler", "true", "Schedule again after register allocation">;
 
-def TuneDisableMISchedLoadClustering : SubtargetFeature<"disable-misched-load-clustering",
+def TuneDisableMISchedLoadClustering : RISCVTuneFeature<"disable-misched-load-clustering",
     "EnableMISchedLoadClustering", "false", "Disable load clustering in the machine scheduler">;
 
-def TuneDisableMISchedStoreClustering : SubtargetFeature<"disable-misched-store-clustering",
+def TuneDisableMISchedStoreClustering : RISCVTuneFeature<"disable-misched-store-clustering",
     "EnableMISchedStoreClustering", "false", "Disable store clustering in the machine scheduler">;
 
-def TuneDisablePostMISchedLoadClustering : SubtargetFeature<"disable-postmisched-load-clustering",
+def TuneDisablePostMISchedLoadClustering : RISCVTuneFeature<"disable-postmisched-load-clustering",
     "EnablePostMISchedLoadClustering", "false", "Disable PostRA load clustering in the machine scheduler">;
 
-def TuneDisablePostMISchedStoreClustering : SubtargetFeature<"disable-postmisched-store-clustering",
+def TuneDisablePostMISchedStoreClustering : RISCVTuneFeature<"disable-postmisched-store-clustering",
     "EnablePostMISchedStoreClustering", "false", "Disable PostRA store clustering in the machine scheduler">;
 
 def TuneDisableLatencySchedHeuristic
-    : SubtargetFeature<"disable-latency-sched-heuristic", "DisableLatencySchedHeuristic", "true",
+    : RISCVTuneFeature<"disable-latency-sched-heuristic", "DisableLatencySchedHeuristic", "true",
                        "Disable latency scheduling heuristic">;
 
 def TunePredictableSelectIsExpensive
-    : SubtargetFeature<"predictable-select-expensive", "PredictableSelectIsExpensive", "true",
+    : RISCVTuneFeature<"predictable-select-expensive", "PredictableSelectIsExpensive", "true",
                        "Prefer likely predicted branches over selects">;
 
 def TuneOptimizedZeroStrideLoad
-   : SubtargetFeature<"optimized-zero-stride-load", "HasOptimizedZeroStrideLoad",
+   : RISCVTuneFeature<"optimized-zero-stride-load", "HasOptimizedZeroStrideLoad",
                       "true", "Optimized (perform fewer memory operations)"
                       "zero-stride vector load">;
 
 foreach nf = {2-8} in
   def TuneOptimizedNF#nf#SegmentLoadStore :
-      SubtargetFeature<"optimized-nf"#nf#"-segment-load-store",
+      RISCVTuneFeature<"optimized-nf"#nf#"-segment-load-store",
                        "HasOptimizedNF"#nf#"SegmentLoadStore",
                        "true", "vlseg"#nf#"eN.v and vsseg"#nf#"eN.v are "
                        "implemented as a wide memory op and shuffle">;
 
 def TuneVLDependentLatency
-    : SubtargetFeature<"vl-dependent-latency", "HasVLDependentLatency", "true",
+    : RISCVTuneFeature<"vl-dependent-latency", "HasVLDependentLatency", "true",
                        "Latency of vector instructions is dependent on the "
                        "dynamic value of vl">;
 
@@ -1839,50 +1843,50 @@ def Experimental
 // and instead split over multiple cycles. DLEN refers to the datapath width
 // that can be done in parallel.
 def TuneDLenFactor2
-   : SubtargetFeature<"dlen-factor-2", "DLenFactor2", "true",
+   : RISCVTuneFeature<"dlen-factor-2", "DLenFactor2", "true",
                       "Vector unit DLEN(data path width) is half of VLEN">;
 
 def TuneNoDefaultUnroll
-    : SubtargetFeature<"no-default-unroll", "EnableDefaultUnroll", "false",
+    : RISCVTuneFeature<"no-default-unroll", "EnableDefaultUnroll", "false",
                        "Disable default unroll preference.">;
 
 // SiFive 7 is able to fuse integer ALU operations with a preceding branch
 // instruction.
 def TuneShortForwardBranchOpt
-    : SubtargetFeature<"short-forward-branch-opt", "HasShortForwardBranchOpt",
+    : RISCVTuneFeature<"short-forward-branch-opt", "HasShortForwardBranchOpt",
                        "true", "Enable short forward branch optimization">;
 def HasShortForwardBranchOpt : Predicate<"Subtarget->hasShortForwardBranchOpt()">;
 def NoShortForwardBranchOpt : Predicate<"!Subtarget->hasShortForwardBranchOpt()">;
 
 def TuneShortForwardBranchIMinMax
-    : SubtargetFeature<"short-forward-branch-i-minmax", "HasShortForwardBranchIMinMax",
+    : RISCVTuneFeature<"short-forward-branch-i-minmax", "HasShortForwardBranchIMinMax",
                        "true", "Enable short forward branch optimization for min,max instructions in Zbb",
                        [TuneShortForwardBranchOpt]>;
 
 def TuneShortForwardBranchIMul
-    : SubtargetFeature<"short-forward-branch-i-mul", "HasShortForwardBranchIMul",
+    : RISCVTuneFeature<"short-forward-branch-i-mul", "HasShortForwardBranchIMul",
                        "true", "Enable short forward branch optimization for mul instruction",
                        [TuneShortForwardBranchOpt]>;
 
 // Some subtargets require a S2V transfer buffer to move scalars into vectors.
 // FIXME: Forming .vx/.vf/.wx/.wf can reduce register pressure.
 def TuneNoSinkSplatOperands
-    : SubtargetFeature<"no-sink-splat-operands", "SinkSplatOperands",
+    : RISCVTuneFeature<"no-sink-splat-operands", "SinkSplatOperands",
                        "false", "Disable sink splat operands to enable .vx, .vf,"
                        ".wx, and .wf instructions">;
 
 def TunePreferWInst
-    : SubtargetFeature<"prefer-w-inst", "PreferWInst", "true",
+    : RISCVTuneFeature<"prefer-w-inst", "PreferWInst", "true",
                        "Prefer instructions with W suffix">;
 
 def TuneConditionalCompressedMoveFusion
-    : SubtargetFeature<"conditional-cmv-fusion", "HasConditionalCompressedMoveFusion",
+    : RISCVTuneFeature<"conditional-cmv-fusion", "HasConditionalCompressedMoveFusion",
                        "true", "Enable branch+c.mv fusion">;
 def HasConditionalMoveFusion : Predicate<"Subtarget->hasConditionalMoveFusion()">;
 def NoConditionalMoveFusion  : Predicate<"!Subtarget->hasConditionalMoveFusion()">;
 
 def TuneHasSingleElementVecFP64
-    : SubtargetFeature<"single-element-vec-fp64", "HasSingleElementVectorFP64", "true",
+    : RISCVTuneFeature<"single-element-vec-fp64", "HasSingleElementVectorFP64", "true",
                        "Certain vector FP64 operations produce a single result "
                        "element per cycle">;
 
@@ -1899,11 +1903,11 @@ def TuneVentanaVeyron : SubtargetFeature<"ventana-veyron", "RISCVProcFamily", "V
 def TuneAndes45 : SubtargetFeature<"andes45", "RISCVProcFamily", "Andes45",
                                    "Andes 45-Series processors">;
 
-def TuneVXRMPipelineFlush : SubtargetFeature<"vxrm-pipeline-flush", "HasVXRMPipelineFlush",
+def TuneVXRMPipelineFlush : RISCVTuneFeature<"vxrm-pipeline-flush", "HasVXRMPipelineFlush",
                                              "true", "VXRM writes causes pipeline flush">;
 
 def TunePreferVsetvliOverReadVLENB
-    : SubtargetFeature<"prefer-vsetvli-over-read-vlenb",
+    : RISCVTuneFeature<"prefer-vsetvli-over-read-vlenb",
                        "PreferVsetvliOverReadVLENB",
                        "true",
                        "Prefer vsetvli over read vlenb CSR to calculate VLEN">;

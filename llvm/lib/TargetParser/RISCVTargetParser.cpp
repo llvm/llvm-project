@@ -12,7 +12,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/TargetParser/RISCVTargetParser.h"
+#include "llvm/ADT/SetOperations.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/TargetParser/RISCVISAInfo.h"
 
@@ -145,6 +149,101 @@ void getFeaturesForCPU(StringRef CPU,
       EnabledFeatures.push_back(F.substr(1));
 }
 
+using RISCVImpliedTuneFeature = std::pair<const char *, const char *>;
+
+#define GET_TUNE_FEATURES
+#define GET_IMPLIED_TUNE_FEATURES
+#include "llvm/TargetParser/RISCVTargetParserDef.inc"
+
+void getAllTuneFeatures(SmallVectorImpl<StringRef> &Features) {
+  Features.assign(std::begin(TuneFeatures), std::end(TuneFeatures));
+}
+
+Error parseTuneFeatureString(StringRef TFString,
+                             SmallVectorImpl<std::string> &ResFeatures) {
+  const StringSet<> AllTuneFeatureSet(llvm::from_range, TuneFeatures);
+  using SmallStringSet = SmallSet<StringRef, 4>;
+
+  TFString = TFString.trim();
+  // Note: StringSet is not really ergnomic to use in this case here.
+  SmallStringSet PositiveFeatures;
+  SmallStringSet NegativeFeatures;
+  // Phase 1: Collect explicit features.
+  StringRef FeatureStr;
+  do {
+    std::tie(FeatureStr, TFString) = TFString.split(",");
+    if (AllTuneFeatureSet.count(FeatureStr)) {
+      if (!PositiveFeatures.insert(FeatureStr).second)
+        return createStringError(inconvertibleErrorCode(),
+                                 "cannot specify more than one instance of '" +
+                                     Twine(FeatureStr) + "'");
+    } else if (FeatureStr.starts_with("no-")) {
+      // Check if this is a negative feature, like `no-foo` for `foo`.
+      StringRef ActualFeature = FeatureStr.drop_front(3);
+      if (AllTuneFeatureSet.count(ActualFeature)) {
+        if (!NegativeFeatures.insert(ActualFeature).second)
+          return createStringError(
+              inconvertibleErrorCode(),
+              "cannot specify more than one instance of '" + Twine(FeatureStr) +
+                  "'");
+      }
+    } else {
+      return createStringError(inconvertibleErrorCode(),
+                               "unrecognized tune feature directive '" +
+                                   Twine(FeatureStr) + "'");
+    }
+  } while (!TFString.empty());
+
+  auto Intersection =
+      llvm::set_intersection(PositiveFeatures, NegativeFeatures);
+  if (!Intersection.empty()) {
+    std::string IntersectedStr = join(Intersection, "', '");
+    return createStringError(inconvertibleErrorCode(),
+                             "Feature(s) '" + Twine(IntersectedStr) +
+                                 "' cannot appear in both "
+                                 "positive and negative directives");
+  }
+
+  // Phase 2: Derive implied features.
+  StringMap<SmallVector<StringRef, 2>> ImpliedFeatureMap;
+  StringMap<SmallVector<StringRef, 2>> InverseImpliedFeatureMap;
+  for (auto [Feature, ImpliedFeature] : ImpliedTuneFeatures) {
+    ImpliedFeatureMap[Feature].push_back(ImpliedFeature);
+    InverseImpliedFeatureMap[ImpliedFeature].push_back(Feature);
+  }
+
+  for (StringRef PF : PositiveFeatures) {
+    auto ItFeatures = ImpliedFeatureMap.find(PF);
+    if (ItFeatures != ImpliedFeatureMap.end())
+      PositiveFeatures.insert(ItFeatures->second.begin(),
+                              ItFeatures->second.end());
+  }
+  for (StringRef NF : NegativeFeatures) {
+    auto ItFeatures = InverseImpliedFeatureMap.find(NF);
+    if (ItFeatures != InverseImpliedFeatureMap.end())
+      NegativeFeatures.insert(ItFeatures->second.begin(),
+                              ItFeatures->second.end());
+  }
+
+  Intersection = llvm::set_intersection(PositiveFeatures, NegativeFeatures);
+  if (!Intersection.empty()) {
+    std::string IntersectedStr = join(Intersection, "', '");
+    return createStringError(inconvertibleErrorCode(),
+                             "Feature(s) '" + Twine(IntersectedStr) +
+                                 "' were implied by both "
+                                 "positive and negative directives");
+  }
+
+  // Export the result.
+  const std::string PosPrefix("+");
+  const std::string NegPrefix("-");
+  for (StringRef PF : PositiveFeatures)
+    ResFeatures.emplace_back(PosPrefix + PF.str());
+  for (StringRef NF : NegativeFeatures)
+    ResFeatures.emplace_back(NegPrefix + NF.str());
+
+  return Error::success();
+}
 } // namespace RISCV
 
 namespace RISCVVType {

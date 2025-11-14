@@ -14,6 +14,7 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/RISCVISAUtils.h"
+#include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
 
@@ -259,7 +260,52 @@ static void emitRISCVExtensionBitmask(const RecordKeeper &RK, raw_ostream &OS) {
                  << "},\n";
   }
   OS << "};\n";
-  OS << "#endif\n";
+  OS << "#endif\n\n";
+}
+
+static void emitRISCVTuneFeatures(const RecordKeeper &RK, raw_ostream &OS) {
+  std::vector<const Record *> TuneFeatureRecords =
+      RK.getAllDerivedDefinitionsIfDefined("RISCVTuneFeature");
+
+  SmallVector<StringRef> TuneFeatures;
+  // A list of {Feature -> Implied Feature}
+  SmallVector<std::pair<StringRef, StringRef>> ImpliedFeatures;
+  for (const auto *R : TuneFeatureRecords) {
+    StringRef FeatureName = R->getValueAsString("Name");
+    TuneFeatures.push_back(FeatureName);
+    std::vector<const Record *> Implies = R->getValueAsListOfDefs("Implies");
+    for (const auto *ImpliedRecord : Implies) {
+      if (!ImpliedRecord->isSubClassOf("RISCVTuneFeature") ||
+          ImpliedRecord == R) {
+        PrintError(ImpliedRecord,
+                   "RISCVTuneFeature can only imply other RISCVTuneFeatures");
+        PrintFatalNote(R, "implied by this RISCVTuneFeature");
+      }
+      ImpliedFeatures.emplace_back(FeatureName,
+                                   ImpliedRecord->getValueAsString("Name"));
+    }
+  }
+
+  OS << "#ifdef GET_TUNE_FEATURES\n";
+  OS << "#undef GET_TUNE_FEATURES\n\n";
+
+  OS << "static const char *TuneFeatures[] = {\n";
+  for (StringRef Feature : TuneFeatures)
+    OS.indent(4) << "\"" << Feature << "\",\n";
+  OS << "};\n\n";
+
+  OS << "#endif // GET_TUNE_FEATURES\n\n";
+
+  OS << "#ifdef GET_IMPLIED_TUNE_FEATURES\n";
+  OS << "#undef GET_IMPLIED_TUNE_FEATURES\n\n";
+
+  OS << "static const RISCVImpliedTuneFeature ImpliedTuneFeatures[] = {\n";
+  for (auto [Feature, ImpliedFeature] : ImpliedFeatures)
+    OS.indent(4) << "{" << "\"" << Feature << "\", \"" << ImpliedFeature
+                 << "\"},\n";
+  OS << "};\n\n";
+
+  OS << "#endif // GET_IMPLIED_TUNE_FEATURES\n";
 }
 
 static void emitRiscvTargetDef(const RecordKeeper &RK, raw_ostream &OS) {
@@ -267,6 +313,7 @@ static void emitRiscvTargetDef(const RecordKeeper &RK, raw_ostream &OS) {
   emitRISCVProfiles(RK, OS);
   emitRISCVProcs(RK, OS);
   emitRISCVExtensionBitmask(RK, OS);
+  emitRISCVTuneFeatures(RK, OS);
 }
 
 static TableGen::Emitter::Opt X("gen-riscv-target-def", emitRiscvTargetDef,
