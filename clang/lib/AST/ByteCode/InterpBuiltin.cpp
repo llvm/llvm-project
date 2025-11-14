@@ -296,7 +296,7 @@ static bool interp__builtin_strcmp(InterpState &S, CodePtr OpPC,
 static bool interp__builtin_strlen(InterpState &S, CodePtr OpPC,
                                    const InterpFrame *Frame,
                                    const CallExpr *Call, unsigned ID) {
-  const Pointer &StrPtr = S.Stk.pop<Pointer>();
+  const Pointer &StrPtr = S.Stk.pop<Pointer>().expand();
 
   if (ID == Builtin::BIstrlen || ID == Builtin::BIwcslen)
     diagnoseNonConstexprBuiltin(S, OpPC, ID);
@@ -1439,7 +1439,7 @@ static bool interp__builtin_operator_new(InterpState &S, CodePtr OpPC,
         Allocator.allocate(Desc, NumElems.getZExtValue(), S.Ctx.getEvalID(),
                            DynamicAllocator::Form::Operator);
     assert(B);
-    S.Stk.push<Pointer>(Pointer(B).atIndex(0));
+    S.Stk.push<Pointer>(Pointer(B).atIndex(0).narrow());
     return true;
   }
 
@@ -1763,8 +1763,8 @@ static bool interp__builtin_memcpy(InterpState &S, CodePtr OpPC,
   assert(Call->getNumArgs() == 3);
   const ASTContext &ASTCtx = S.getASTContext();
   APSInt Size = popToAPSInt(S, Call->getArg(2));
-  const Pointer SrcPtr = S.Stk.pop<Pointer>();
-  const Pointer DestPtr = S.Stk.pop<Pointer>();
+  Pointer SrcPtr = S.Stk.pop<Pointer>().expand();
+  Pointer DestPtr = S.Stk.pop<Pointer>().expand();
 
   assert(!Size.isSigned() && "memcpy and friends take an unsigned size");
 
