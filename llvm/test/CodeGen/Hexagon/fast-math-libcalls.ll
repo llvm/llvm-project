@@ -9,15 +9,8 @@ define float @fast_sqrt_f32(float %x) {
 ; CHECK-LABEL: fast_sqrt_f32:
 ; CHECK:         .cfi_startproc
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    .cfi_def_cfa r30, 8
-; CHECK-NEXT:    .cfi_offset r31, -4
-; CHECK-NEXT:    .cfi_offset r30, -8
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     call __hexagon_fast2_sqrtf
-; CHECK-NEXT:     allocframe(r29,#0):raw
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     r31:30 = dealloc_return(r30):raw
+; CHECK-NEXT:     jump __hexagon_fast2_sqrtf
 ; CHECK-NEXT:    }
   %result = call nnan ninf nsz afn float @llvm.sqrt.f32(float %x)
   ret float %result
@@ -27,15 +20,8 @@ define double @fast_sqrt_f64(double %x) {
 ; CHECK-LABEL: fast_sqrt_f64:
 ; CHECK:         .cfi_startproc
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    .cfi_def_cfa r30, 8
-; CHECK-NEXT:    .cfi_offset r31, -4
-; CHECK-NEXT:    .cfi_offset r30, -8
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     call __hexagon_fast2_sqrtdf2
-; CHECK-NEXT:     allocframe(r29,#0):raw
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     r31:30 = dealloc_return(r30):raw
+; CHECK-NEXT:     jump __hexagon_fast2_sqrtdf2
 ; CHECK-NEXT:    }
   %result = call nnan ninf nsz afn double @llvm.sqrt.f64(double %x)
   ret double %result
@@ -61,15 +47,8 @@ define double @fast_add_f64(double %x, double %y) {
 ; CHECK-LABEL: fast_add_f64:
 ; CHECK:         .cfi_startproc
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    .cfi_def_cfa r30, 8
-; CHECK-NEXT:    .cfi_offset r31, -4
-; CHECK-NEXT:    .cfi_offset r30, -8
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     call __hexagon_fast_adddf3
-; CHECK-NEXT:     allocframe(r29,#0):raw
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     r31:30 = dealloc_return(r30):raw
+; CHECK-NEXT:     jump __hexagon_fast_adddf3
 ; CHECK-NEXT:    }
   %result = fadd nnan ninf nsz afn double %x, %y
   ret double %result
@@ -95,15 +74,8 @@ define double @fast_sub_f64(double %x, double %y) {
 ; CHECK-LABEL: fast_sub_f64:
 ; CHECK:         .cfi_startproc
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    .cfi_def_cfa r30, 8
-; CHECK-NEXT:    .cfi_offset r31, -4
-; CHECK-NEXT:    .cfi_offset r30, -8
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     call __hexagon_fast_subdf3
-; CHECK-NEXT:     allocframe(r29,#0):raw
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     r31:30 = dealloc_return(r30):raw
+; CHECK-NEXT:     jump __hexagon_fast_subdf3
 ; CHECK-NEXT:    }
   %result = fsub nnan ninf nsz afn double %x, %y
   ret double %result
@@ -129,15 +101,8 @@ define double @fast_mul_f64(double %x, double %y) {
 ; CHECK-LABEL: fast_mul_f64:
 ; CHECK:         .cfi_startproc
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    .cfi_def_cfa r30, 8
-; CHECK-NEXT:    .cfi_offset r31, -4
-; CHECK-NEXT:    .cfi_offset r30, -8
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     call __hexagon_fast_muldf3
-; CHECK-NEXT:     allocframe(r29,#0):raw
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     r31:30 = dealloc_return(r30):raw
+; CHECK-NEXT:     jump __hexagon_fast_muldf3
 ; CHECK-NEXT:    }
   %result = fmul nnan ninf nsz afn double %x, %y
   ret double %result
@@ -194,15 +159,8 @@ define double @fast_div_f64(double %x, double %y) {
 ; CHECK-LABEL: fast_div_f64:
 ; CHECK:         .cfi_startproc
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    .cfi_def_cfa r30, 8
-; CHECK-NEXT:    .cfi_offset r31, -4
-; CHECK-NEXT:    .cfi_offset r30, -8
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     call __hexagon_fast_divdf3
-; CHECK-NEXT:     allocframe(r29,#0):raw
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     r31:30 = dealloc_return(r30):raw
+; CHECK-NEXT:     jump __hexagon_fast_divdf3
 ; CHECK-NEXT:    }
   %result = fdiv nnan ninf nsz afn double %x, %y
   ret double %result
@@ -217,15 +175,8 @@ define float @sqrt_f32__afn(float %x) {
 ; CHECK-LABEL: sqrt_f32__afn:
 ; CHECK:         .cfi_startproc
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    .cfi_def_cfa r30, 8
-; CHECK-NEXT:    .cfi_offset r31, -4
-; CHECK-NEXT:    .cfi_offset r30, -8
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     call __hexagon_sqrtf
-; CHECK-NEXT:     allocframe(r29,#0):raw
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     r31:30 = dealloc_return(r30):raw
+; CHECK-NEXT:     jump __hexagon_sqrtf
 ; CHECK-NEXT:    }
   %result = call afn float @llvm.sqrt.f32(float %x)
   ret float %result
@@ -235,15 +186,8 @@ define float @sqrt_f32__afn_ninf(float %x) {
 ; CHECK-LABEL: sqrt_f32__afn_ninf:
 ; CHECK:         .cfi_startproc
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    .cfi_def_cfa r30, 8
-; CHECK-NEXT:    .cfi_offset r31, -4
-; CHECK-NEXT:    .cfi_offset r30, -8
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     call __hexagon_sqrtf
-; CHECK-NEXT:     allocframe(r29,#0):raw
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     r31:30 = dealloc_return(r30):raw
+; CHECK-NEXT:     jump __hexagon_sqrtf
 ; CHECK-NEXT:    }
   %result = call afn ninf float @llvm.sqrt.f32(float %x)
   ret float %result
@@ -253,15 +197,8 @@ define float @sqrt_f32__afn_nnan(float %x) {
 ; CHECK-LABEL: sqrt_f32__afn_nnan:
 ; CHECK:         .cfi_startproc
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    .cfi_def_cfa r30, 8
-; CHECK-NEXT:    .cfi_offset r31, -4
-; CHECK-NEXT:    .cfi_offset r30, -8
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     call __hexagon_sqrtf
-; CHECK-NEXT:     allocframe(r29,#0):raw
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     r31:30 = dealloc_return(r30):raw
+; CHECK-NEXT:     jump __hexagon_sqrtf
 ; CHECK-NEXT:    }
   %result = call afn nnan float @llvm.sqrt.f32(float %x)
   ret float %result
@@ -271,15 +208,8 @@ define float @sqrt_f32__nnan(float %x) {
 ; CHECK-LABEL: sqrt_f32__nnan:
 ; CHECK:         .cfi_startproc
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    .cfi_def_cfa r30, 8
-; CHECK-NEXT:    .cfi_offset r31, -4
-; CHECK-NEXT:    .cfi_offset r30, -8
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     call __hexagon_sqrtf
-; CHECK-NEXT:     allocframe(r29,#0):raw
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     r31:30 = dealloc_return(r30):raw
+; CHECK-NEXT:     jump __hexagon_sqrtf
 ; CHECK-NEXT:    }
   %result = call nnan float @llvm.sqrt.f32(float %x)
   ret float %result
@@ -289,15 +219,8 @@ define float @sqrt_f32_nnan_ninf_afn(float %x) {
 ; CHECK-LABEL: sqrt_f32_nnan_ninf_afn:
 ; CHECK:         .cfi_startproc
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    .cfi_def_cfa r30, 8
-; CHECK-NEXT:    .cfi_offset r31, -4
-; CHECK-NEXT:    .cfi_offset r30, -8
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     call __hexagon_sqrtf
-; CHECK-NEXT:     allocframe(r29,#0):raw
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     r31:30 = dealloc_return(r30):raw
+; CHECK-NEXT:     jump __hexagon_sqrtf
 ; CHECK-NEXT:    }
   %result = call nnan ninf afn float @llvm.sqrt.f32(float %x)
   ret float %result
