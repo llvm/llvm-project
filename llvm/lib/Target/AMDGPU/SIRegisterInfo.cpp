@@ -1951,7 +1951,7 @@ void SIRegisterInfo::buildSpillLoadStore(
 
 void SIRegisterInfo::addImplicitUsesForBlockCSRLoad(MachineInstrBuilder &MIB,
                                                     Register BlockReg) const {
-  const MachineFunction *MF = MIB->getParent()->getParent();
+  const MachineFunction *MF = MIB->getMF();
   const SIMachineFunctionInfo *FuncInfo = MF->getInfo<SIMachineFunctionInfo>();
   uint32_t Mask = FuncInfo->getMaskForVGPRBlockOps(BlockReg);
   Register BaseVGPR = getSubReg(BlockReg, AMDGPU::sub0);
@@ -2321,7 +2321,7 @@ bool SIRegisterInfo::eliminateSGPRToVGPRSpillFrameIndex(
 bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
                                         int SPAdj, unsigned FIOperandNum,
                                         RegScavenger *RS) const {
-  MachineFunction *MF = MI->getParent()->getParent();
+  MachineFunction *MF = MI->getMF();
   MachineBasicBlock *MBB = MI->getParent();
   SIMachineFunctionInfo *MFI = MF->getInfo<SIMachineFunctionInfo>();
   MachineFrameInfo &FrameInfo = MF->getFrameInfo();

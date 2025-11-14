@@ -4062,7 +4062,7 @@ bool SITargetLowering::mayBeEmittedAsTailCall(const CallInst *CI) const {
   if (!CI->isTailCall())
     return false;
 
-  const Function *ParentFn = CI->getParent()->getParent();
+  const Function *ParentFn = CI->getFunction();
   if (AMDGPU::isEntryFunctionCC(ParentFn->getCallingConv()))
     return false;
   return true;
@@ -17432,7 +17432,7 @@ void SITargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
                                                      SDNode *Node) const {
   const SIInstrInfo *TII = getSubtarget()->getInstrInfo();
 
-  MachineFunction *MF = MI.getParent()->getParent();
+  MachineFunction *MF = MI.getMF();
   MachineRegisterInfo &MRI = MF->getRegInfo();
 
   if (TII->isVOP3(MI.getOpcode())) {

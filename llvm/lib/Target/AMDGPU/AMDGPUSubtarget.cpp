@@ -282,7 +282,7 @@ bool AMDGPUSubtarget::isSingleLaneExecution(const Function &Func) const {
 }
 
 bool AMDGPUSubtarget::makeLIDRangeMetadata(Instruction *I) const {
-  Function *Kernel = I->getParent()->getParent();
+  Function *Kernel = I->getFunction();
   unsigned MinSize = 0;
   unsigned MaxSize = getFlatWorkGroupSizes(*Kernel).second;
   bool IdQuery = false;
