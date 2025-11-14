@@ -1556,12 +1556,15 @@ void TypePrinter::printTagType(const TagType *T, raw_ostream &OS) {
   } else {
     // Make an unambiguous representation for anonymous types, e.g.
     //   (anonymous enum at /usr/include/string.h:120:9)
-    const bool AddParen = !PrintingCanonicalLambdaName || Policy.AnonymousTagLocations;
+    const bool AddParen = !PrintingCanonicalLambdaName;
     if (AddParen)
       OS << (Policy.MSVCFormatting ? '`' : '(');
 
     if (IsLambda) {
       OS << "lambda";
+      if (PrintingCanonicalLambdaName)
+        OS << D->getASTContext().getManglingNumber(D);
+
       HasKindDecoration = true;
     } else if ((isa<RecordDecl>(D) &&
                 cast<RecordDecl>(D)->isAnonymousStructOrUnion())) {
@@ -1570,7 +1573,7 @@ void TypePrinter::printTagType(const TagType *T, raw_ostream &OS) {
       OS << "unnamed";
     }
 
-    if (Policy.AnonymousTagLocations) {
+    if (Policy.AnonymousTagLocations && !PrintingCanonicalLambdaName) {
       // Suppress the redundant tag keyword if we just printed one.
       // We don't have to worry about ElaboratedTypes here because you can't
       // refer to an anonymous type with one.

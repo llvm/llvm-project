@@ -70,9 +70,9 @@ void f() {
   // anything other than another unnamed class/struct.
   auto Lambda = [] {};
   f1<decltype(Lambda)>();
-  // CHECK: !DISubprogram(name: "f1<(lambda at {{.*}}simple-template-names.cpp:[[# @LINE - 2]]:17)>",
+  // CHECK: !DISubprogram(name: "f1<f()::lambda1>",
   f1<t1<t1<decltype(Lambda)>>>();
-  // CHECK: !DISubprogram(name: "f1<t1<t1<(lambda at {{.*}}> > >",
+  // CHECK: !DISubprogram(name: "f1<t1<t1<f()::lambda1> > >",
   struct {
   } unnamed_struct;
   f1<decltype(unnamed_struct)>();
