@@ -87,8 +87,8 @@ private:
 
 struct RegisterRef {
 private:
-  static constexpr unsigned MaskFlag = 1u << 30;
-  static constexpr unsigned UnitFlag = 1u << 31;
+  static constexpr RegisterId MaskFlag = 1u << 30;
+  static constexpr RegisterId UnitFlag = 1u << 31;
 
 public:
   RegisterId Reg = 0;
@@ -114,7 +114,7 @@ public:
     return Reg & ~UnitFlag;
   }
 
-  constexpr unsigned getMaskIdx() const {
+  constexpr unsigned asMaskIdx() const {
     assert(isMask());
     return toMaskIdx(Reg);
   }

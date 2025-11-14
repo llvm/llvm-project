@@ -260,7 +260,7 @@ void PhysicalRegisterInfo::print(raw_ostream &OS, RegisterRef A) const {
   } else if (A.isUnit()) {
     OS << printRegUnit(A.asMCRegUnit(), &TRI);
   } else {
-    unsigned Idx = A.getMaskIdx();
+    unsigned Idx = A.asMaskIdx();
     const char *Fmt = Idx < 0x10000 ? "%04x" : "%08x";
     OS << "M#" << format(Fmt, Idx);
   }
