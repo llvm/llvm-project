@@ -400,43 +400,53 @@ static RecurrenceDescriptor getMinMaxRecurrence(PHINode *Phi, Loop *TheLoop,
       return {};
     WorkList.push_back(AMatches ? A : B);
   }
-
-  // Check users of RdxNext. It can have
-  // * a single user outside the loop,
-  // * used stores to the same invariant address,
-  // * used by the starting recurrence phis.
-  unsigned IncOut = 0;
+  // Validate uses: in-chain, stores to same invariant address, intermediate
+  // min/max, or single out-of-loop use of RdxNext.
   StoreInst *IntermediateStore = nullptr;
-  for (Use &U : RdxNext->uses()) {
-    auto *User = cast<Instruction>(U.getUser());
-    if (!TheLoop->contains(User->getParent())) {
-      if (IncOut > 0)
+  const SCEV *StorePtrSCEV = nullptr;
+  SmallPtrSet<Instruction *, 8> IntermediateMinMax;
+  unsigned OutOfLoopUses = 0;
+
+  for (Value *V : Chain) {
+    for (User *U : V->users()) {
+      if (Chain.contains(U) || (U == Phi && V == RdxNext))
+        continue;
+      auto *I = dyn_cast<Instruction>(U);
+      if (!I ||
+          (!TheLoop->contains(I) && (V != RdxNext || ++OutOfLoopUses > 1)))
         return {};
-      IncOut++;
-    } else if (auto *SI = dyn_cast<StoreInst>(User)) {
-      // This check matches LVerLegality::isInvariantAddressOfReduction and
-      // enables vectorizing reductions with stores to invariant addresses in
-      // the loop, by sinking them outside the loop.
-      const SCEV *Ptr = SE->getSCEV(SI->getPointerOperand());
-      if (U.getOperandNo() == SI->getPointerOperandIndex() ||
-          !SE->isLoopInvariant(Ptr, TheLoop) ||
-          (IntermediateStore &&
-           SE->getSCEV(IntermediateStore->getPointerOperand()) != Ptr))
+      if (!TheLoop->contains(I))
+        continue;
+      if (auto *SI = dyn_cast<StoreInst>(I)) {
+        const SCEV *Ptr = SE->getSCEV(SI->getPointerOperand());
+        if (!SE->isLoopInvariant(Ptr, TheLoop) ||
+            (StorePtrSCEV && StorePtrSCEV != Ptr))
+          return {};
+        StorePtrSCEV = StorePtrSCEV ? StorePtrSCEV : Ptr;
+        IntermediateStore =
+            !IntermediateStore || IntermediateStore->comesBefore(SI)
+                ? SI
+                : IntermediateStore;
+        continue;
+      }
+      Value *A, *B;
+      if (GetMinMaxRK(I, A, B) != RK)
         return {};
-      // Keep the store that appears last in the block, as it will be the final
-      // reduction value.
-      if (!IntermediateStore || IntermediateStore->comesBefore(SI))
-        IntermediateStore = SI;
-    } else if (Phi != User)
-      return {};
+      IntermediateMinMax.insert(I);
+    }
   }
 
-  // All ops on the chain from Phi to RdxNext must only be used by instructions
-  // in the chain.
-  for (Value *Op : Chain)
-    if (Op != RdxNext &&
-        any_of(Op->users(), [&Chain](User *U) { return !Chain.contains(U); }))
-      return {};
+  if (!IntermediateMinMax.empty() && !IntermediateStore)
+    return {};
+  for (Instruction *I : IntermediateMinMax)
+    for (User *U : I->users())
+      if (!Chain.contains(U) &&
+          (!isa<StoreInst>(U) ||
+           !SE->isLoopInvariant(
+               SE->getSCEV(cast<StoreInst>(U)->getPointerOperand()), TheLoop) ||
+           StorePtrSCEV !=
+               SE->getSCEV(cast<StoreInst>(U)->getPointerOperand())))
+        return {};
 
   return RecurrenceDescriptor(
       Phi->getIncomingValueForBlock(TheLoop->getLoopPreheader()),
