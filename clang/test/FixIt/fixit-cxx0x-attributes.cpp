@@ -4,27 +4,34 @@
 [[nodiscard]] enum class E1 { };
 // expected-error@-1 {{misplaced attributes; expected attributes here}}
 // CHECK: {{^}}{{\[\[}}nodiscard]] enum class E1 { };
-// CHECK: {{^}}~~~~~~~~~~~~~           ^
-// CHECK: fix-it:"{{.*}}":{[[@LINE-4]]:1-[[@LINE-4]]:15}:""
-// CHECK: fix-it:"{{.*}}":{[[@LINE-5]]:25-[[@LINE-5]]:25}:"{{\[\[}}nodiscard]]"
-
-[[nodiscard]] enum struct E2 { };
-// expected-error@-1 {{misplaced attributes; expected attributes here}}
-// CHECK: {{^}}{{\[\[}}nodiscard]] enum struct E2 { };
 // CHECK: {{^}}~~~~~~~~~~~~~            ^
 // CHECK: fix-it:"{{.*}}":{[[@LINE-4]]:1-[[@LINE-4]]:15}:""
 // CHECK: fix-it:"{{.*}}":{[[@LINE-5]]:26-[[@LINE-5]]:26}:"{{\[\[}}nodiscard]]"
 
+[[nodiscard]] enum struct E2 { };
+// expected-error@-1 {{misplaced attributes; expected attributes here}}
+// CHECK: {{^}}{{\[\[}}nodiscard]] enum struct E2 { };
+// CHECK: {{^}}~~~~~~~~~~~~~             ^
+// CHECK: fix-it:"{{.*}}":{[[@LINE-4]]:1-[[@LINE-4]]:15}:""
+// CHECK: fix-it:"{{.*}}":{[[@LINE-5]]:27-[[@LINE-5]]:27}:"{{\[\[}}nodiscard]]"
+
 [[nodiscard]] enum          class E3 { };
 // expected-error@-1 {{misplaced attributes; expected attributes here}}
 // CHECK: {{^}}{{\[\[}}nodiscard]] enum          class E3 { };
-// CHECK: {{^}}~~~~~~~~~~~~~                    ^
+// CHECK: {{^}}~~~~~~~~~~~~~                     ^
 // CHECK: fix-it:"{{.*}}":{[[@LINE-4]]:1-[[@LINE-4]]:15}:""
-// CHECK: fix-it:"{{.*}}":{[[@LINE-5]]:34-[[@LINE-5]]:34}:"{{\[\[}}nodiscard]]"
+// CHECK: fix-it:"{{.*}}":{[[@LINE-5]]:35-[[@LINE-5]]:35}:"{{\[\[}}nodiscard]]"
 
 [[nodiscard]] enum  /*comment*/ class E4 { };
 // expected-error@-1 {{misplaced attributes; expected attributes here}}
 // CHECK: {{^}}{{\[\[}}nodiscard]] enum  /*comment*/ class E4 { };
-// CHECK: {{^}}~~~~~~~~~~~~~                        ^
+// CHECK: {{^}}~~~~~~~~~~~~~                         ^
 // CHECK: fix-it:"{{.*}}":{[[@LINE-4]]:1-[[@LINE-4]]:15}:""
-// CHECK: fix-it:"{{.*}}":{[[@LINE-5]]:38-[[@LINE-5]]:38}:"{{\[\[}}nodiscard]]"
+// CHECK: fix-it:"{{.*}}":{[[@LINE-5]]:39-[[@LINE-5]]:39}:"{{\[\[}}nodiscard]]"
+
+[[nodiscard]] enum { A = 0 };
+// expected-error@-1 {{misplaced attributes; expected attributes here}}
+// CHECK: {{^}}{{\[\[}}nodiscard]] enum { A = 0 };
+// CHECK: {{^}}~~~~~~~~~~~~~      ^
+// CHECK: fix-it:"{{.*}}":{[[@LINE-4]]:1-[[@LINE-4]]:15}:""
+// CHECK: fix-it:"{{.*}}":{[[@LINE-5]]:20-[[@LINE-5]]:20}:"{{\[\[}}nodiscard]]"

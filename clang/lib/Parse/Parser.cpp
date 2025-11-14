@@ -1107,14 +1107,13 @@ Parser::DeclGroupPtrTy Parser::ParseDeclOrFunctionDefInternal(
 
       if (TKind == DeclSpec::TST_enum) {
         const auto *ED = dyn_cast_or_null<EnumDecl>(DS.getRepAsDecl());
-        if (ED && ED->isScoped()) {
-          const auto &SM = Actions.getSourceManager();
-          const auto &LangOpts = Actions.getLangOpts();
-          auto End = Lexer::getLocForEndOfToken(DS.getTypeSpecTypeLoc(),
-                                                /*Offset*/ 0, SM, LangOpts);
-          auto NextToken = Lexer::findNextToken(End, SM, LangOpts);
-          if (NextToken)
-            return NextToken->getEndLoc();
+        if (ED) {
+          if (ED->isScoped() && ED->getIdentifier())
+            return ED->getLocation();
+
+          const auto Begin = ED->getBraceRange().getBegin();
+          if (Begin.isValid())
+            return Begin;
         }
       }
 
