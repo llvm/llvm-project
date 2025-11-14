@@ -716,6 +716,51 @@ public:
     return Insts;
   }
 
+  bool isCompAndBranch(const MCInst &Inst) const {
+    const unsigned opcode = Inst.getOpcode();
+    switch (opcode) {
+    case AArch64::CBBEQWrr:
+    case AArch64::CBBGEWrr:
+    case AArch64::CBBGTWrr:
+    case AArch64::CBBHIWrr:
+    case AArch64::CBBHSWrr:
+    case AArch64::CBBNEWrr:
+    case AArch64::CBHEQWrr:
+    case AArch64::CBHGEWrr:
+    case AArch64::CBHGTWrr:
+    case AArch64::CBHHIWrr:
+    case AArch64::CBHHSWrr:
+    case AArch64::CBHNEWrr:
+    case AArch64::CBHIWrr:
+    case AArch64::CBHIXrr:
+    case AArch64::CBHSWrr:
+    case AArch64::CBHSXrr:
+    case AArch64::CBNEWrr:
+    case AArch64::CBNEXrr:
+    case AArch64::CBEQWrr:
+    case AArch64::CBEQXrr:
+    case AArch64::CBGEWrr:
+    case AArch64::CBGEXrr:
+    case AArch64::CBGTWrr:
+    case AArch64::CBGTXrr:
+    case AArch64::CBEQWri:
+    case AArch64::CBEQXri:
+    case AArch64::CBGTWri:
+    case AArch64::CBGTXri:
+    case AArch64::CBHIWri:
+    case AArch64::CBHIXri:
+    case AArch64::CBLOWri:
+    case AArch64::CBLOXri:
+    case AArch64::CBLTWri:
+    case AArch64::CBLTXri:
+    case AArch64::CBNEWri:
+    case AArch64::CBNEXri:
+      return true;
+    default:
+      return false;
+    }
+  }
+
   bool isTB(const MCInst &Inst) const {
     return (Inst.getOpcode() == AArch64::TBNZW ||
             Inst.getOpcode() == AArch64::TBNZX ||
@@ -1260,7 +1305,7 @@ public:
       if (isConditionalBranch(Inst) || isADR(Inst) || isADRP(Inst) ||
           isMOVW(Inst))
         OpNum = 1;
-      if (isTB(Inst) || isAddXri(Inst))
+      if (isTB(Inst) || isAddXri(Inst) || isCompAndBranch(Inst))
         OpNum = 2;
     }
 
@@ -1329,7 +1374,7 @@ public:
       ++OI;
     }
 
-    if (isTB(Inst)) {
+    if (isTB(Inst) || isCompAndBranch(Inst)) {
       assert(MCPlus::getNumPrimeOperands(Inst) >= 3 &&
              "Invalid number of operands");
       OI = Inst.begin() + 2;
@@ -1682,6 +1727,42 @@ public:
     case AArch64::CBZX:     return AArch64::CBNZX;
     case AArch64::CBNZW:    return AArch64::CBZW;
     case AArch64::CBNZX:    return AArch64::CBZX;
+    case AArch64::CBGTWrr:  return AArch64::CBGEWrr;
+    case AArch64::CBGTXrr:  return AArch64::CBGEXrr;
+    case AArch64::CBGEWrr:  return AArch64::CBGTWrr;
+    case AArch64::CBGEXrr:  return AArch64::CBGTXrr;
+    case AArch64::CBHIWrr:  return AArch64::CBHSWrr;
+    case AArch64::CBHIXrr:  return AArch64::CBHSXrr;
+    case AArch64::CBHSWrr:  return AArch64::CBHIWrr;
+    case AArch64::CBHSXrr:  return AArch64::CBHIXrr;
+    case AArch64::CBEQWrr:  return AArch64::CBNEWrr;
+    case AArch64::CBEQXrr:  return AArch64::CBNEXrr;
+    case AArch64::CBNEWrr:  return AArch64::CBEQWrr;
+    case AArch64::CBNEXrr:  return AArch64::CBEQXrr;
+    case AArch64::CBHGTWrr: return AArch64::CBHGEWrr;
+    case AArch64::CBHGEWrr: return AArch64::CBHGTWrr;
+    case AArch64::CBHHIWrr: return AArch64::CBHHSWrr;
+    case AArch64::CBHHSWrr: return AArch64::CBHHIWrr;
+    case AArch64::CBHEQWrr: return AArch64::CBHNEWrr;
+    case AArch64::CBHNEWrr: return AArch64::CBHEQWrr;
+    case AArch64::CBBGTWrr: return AArch64::CBBGEWrr;
+    case AArch64::CBBGEWrr: return AArch64::CBBGTWrr;
+    case AArch64::CBBHIWrr: return AArch64::CBBHSWrr;
+    case AArch64::CBBHSWrr: return AArch64::CBBHIWrr;
+    case AArch64::CBBEQWrr: return AArch64::CBBNEWrr;
+    case AArch64::CBBNEWrr: return AArch64::CBBEQWrr;
+    case AArch64::CBGTWri:  return AArch64::CBLTWri;
+    case AArch64::CBGTXri:  return AArch64::CBLTXri;
+    case AArch64::CBLTWri:  return AArch64::CBGTWri;
+    case AArch64::CBLTXri:  return AArch64::CBGTXri;
+    case AArch64::CBHIWri:  return AArch64::CBLOWri;
+    case AArch64::CBHIXri:  return AArch64::CBLOXri;
+    case AArch64::CBLOWri:  return AArch64::CBHIWri;
+    case AArch64::CBLOXri:  return AArch64::CBHIXri;
+    case AArch64::CBEQWri:  return AArch64::CBNEWri;
+    case AArch64::CBEQXri:  return AArch64::CBNEXri;
+    case AArch64::CBNEWri:  return AArch64::CBEQWri;
+    case AArch64::CBNEXri:  return AArch64::CBEQXri;
     }
   }
 
@@ -1702,9 +1783,63 @@ public:
     }
   }
 
+  bool needsRegSwap(unsigned Opcode) const {
+    switch (Opcode) {
+    default:
+      return false;
+    case AArch64::CBGTWrr:
+    case AArch64::CBGTXrr:
+    case AArch64::CBGEWrr:
+    case AArch64::CBGEXrr:
+    case AArch64::CBHIWrr:
+    case AArch64::CBHIXrr:
+    case AArch64::CBHSWrr:
+    case AArch64::CBHSXrr:
+    case AArch64::CBHGTWrr:
+    case AArch64::CBHGEWrr:
+    case AArch64::CBHHIWrr:
+    case AArch64::CBHHSWrr:
+    case AArch64::CBBGTWrr:
+    case AArch64::CBBGEWrr:
+    case AArch64::CBBHIWrr:
+    case AArch64::CBBHSWrr:
+      return true;
+    }
+  }
+
+  bool needsImmDec(unsigned Opcode) const {
+    switch (Opcode) {
+    default:
+      return false;
+    case AArch64::CBLTWri:
+    case AArch64::CBLTXri:
+    case AArch64::CBLOWri:
+    case AArch64::CBLOXri:
+      return true;
+    }
+  }
+
+  bool needsImmInc(unsigned Opcode) const {
+    switch (Opcode) {
+    default:
+      return false;
+    case AArch64::CBGTWri:
+    case AArch64::CBGTXri:
+    case AArch64::CBHIWri:
+    case AArch64::CBHIXri:
+      return true;
+    }
+  }
+
   void reverseBranchCondition(MCInst &Inst, const MCSymbol *TBB,
                               MCContext *Ctx) const override {
-    if (isTB(Inst) || isCB(Inst)) {
+    if (isTB(Inst) || isCB(Inst) || isCompAndBranch(Inst)) {
+      if (needsRegSwap(Inst.getOpcode()))
+        std::swap(Inst.getOperand(0), Inst.getOperand(1));
+      else if (needsImmDec(Inst.getOpcode()))
+        Inst.getOperand(1).setImm(Inst.getOperand(1).getImm() - 1);
+      else if (needsImmInc(Inst.getOpcode()))
+        Inst.getOperand(1).setImm(Inst.getOperand(1).getImm() + 1);
       Inst.setOpcode(getInvertedBranchOpcode(Inst.getOpcode()));
       assert(Inst.getOpcode() != 0 && "Invalid branch instruction");
     } else if (Inst.getOpcode() == AArch64::Bcc) {
@@ -1721,18 +1856,16 @@ public:
   }
 
   int getPCRelEncodingSize(const MCInst &Inst) const override {
+    if (isCompAndBranch(Inst))
+      return 11;
+    if (isTB(Inst))
+      return 16;
+    if (isCB(Inst))
+      return 21;
     switch (Inst.getOpcode()) {
     default:
       llvm_unreachable("Failed to get pcrel encoding size");
       return 0;
-    case AArch64::TBZW:     return 16;
-    case AArch64::TBZX:     return 16;
-    case AArch64::TBNZW:    return 16;
-    case AArch64::TBNZX:    return 16;
-    case AArch64::CBZW:     return 21;
-    case AArch64::CBZX:     return 21;
-    case AArch64::CBNZW:    return 21;
-    case AArch64::CBNZX:    return 21;
     case AArch64::B:        return 28;
     case AArch64::BL:       return 28;
     case AArch64::Bcc:      return 21;
