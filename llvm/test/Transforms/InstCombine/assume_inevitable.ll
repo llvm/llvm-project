@@ -17,7 +17,7 @@ define i32 @assume_inevitable(ptr %a, ptr %b, ptr %c) {
 ; CHECK-NEXT:    [[OBJSZ:%.*]] = call i64 @llvm.objectsize.i64.p0(ptr [[C:%.*]], i1 false, i1 false, i1 false)
 ; CHECK-NEXT:    store i64 [[OBJSZ]], ptr [[M_A]], align 4
 ; CHECK-NEXT:    [[PTRINT:%.*]] = ptrtoint ptr [[A]] to i64
-; CHECK-NEXT:    [[MASKEDPTR:%.*]] = and i64 [[PTRINT]], 31
+; CHECK-NEXT:    [[MASKEDPTR:%.*]] = and i64 [[PTRINT]], 28
 ; CHECK-NEXT:    [[MASKCOND:%.*]] = icmp eq i64 [[MASKEDPTR]], 0
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[MASKCOND]])
 ; CHECK-NEXT:    ret i32 [[TMP0]]

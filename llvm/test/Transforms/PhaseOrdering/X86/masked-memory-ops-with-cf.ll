@@ -6,9 +6,9 @@ define void @basic(i1 %cond, ptr %b, ptr %p, ptr %q) {
 ; CHECK-LABEL: @basic(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i1 [[COND:%.*]] to <1 x i1>
-; CHECK-NEXT:    [[TMP1:%.*]] = call <1 x i16> @llvm.masked.load.v1i16.p0(ptr align 2 [[P:%.*]], <1 x i1> [[TMP0]], <1 x i16> poison)
+; CHECK-NEXT:    [[TMP1:%.*]] = call <1 x i16> @llvm.masked.load.v1i16.p0(ptr align 4 [[P:%.*]], <1 x i1> [[TMP0]], <1 x i16> poison)
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <1 x i16> [[TMP1]] to i16
-; CHECK-NEXT:    [[TMP3:%.*]] = call <1 x i32> @llvm.masked.load.v1i32.p0(ptr align 4 [[Q:%.*]], <1 x i1> [[TMP0]], <1 x i32> poison)
+; CHECK-NEXT:    [[TMP3:%.*]] = call <1 x i32> @llvm.masked.load.v1i32.p0(ptr align 8 [[Q:%.*]], <1 x i1> [[TMP0]], <1 x i32> poison)
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <1 x i32> [[TMP3]] to i32
 ; CHECK-NEXT:    [[TMP5:%.*]] = call <1 x i64> @llvm.masked.load.v1i64.p0(ptr align 8 [[B:%.*]], <1 x i1> [[TMP0]], <1 x i64> poison)
 ; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <1 x i64> [[TMP5]] to i64

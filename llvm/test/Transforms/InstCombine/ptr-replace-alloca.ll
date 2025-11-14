@@ -207,7 +207,7 @@ define i32 @test_memcpy_after_phi(i1 %cond, ptr %ptr) {
 ; CHECK-NEXT:    br label [[JOIN]]
 ; CHECK:       join:
 ; CHECK-NEXT:    [[PHI:%.*]] = phi ptr [ [[A]], [[IF]] ], [ [[PTR:%.*]], [[ENTRY:%.*]] ]
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(32) [[PHI]], ptr noundef nonnull align 16 dereferenceable(32) @g1, i64 32, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 4 dereferenceable(32) [[PHI]], ptr noundef nonnull align 16 dereferenceable(32) @g1, i64 32, i1 false)
 ; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[PHI]], align 4
 ; CHECK-NEXT:    ret i32 [[V]]
 ;
