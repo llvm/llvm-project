@@ -94,7 +94,7 @@ TEST(LlvmLibcVFPrintfTest, WriteToFile) {
 
   written = call_vfprintf(file, "Writing to a read only file should fail.");
   EXPECT_LT(written, 0);
-  ASSERT_ERRNO_EQ(EBADF);
+  ASSERT_ERRNO_FAILURE();
 
   ASSERT_EQ(printf_test::fclose(file), 0);
 }

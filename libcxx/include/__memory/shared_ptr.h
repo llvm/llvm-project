@@ -41,13 +41,11 @@
 #include <__type_traits/enable_if.h>
 #include <__type_traits/integral_constant.h>
 #include <__type_traits/is_array.h>
-#include <__type_traits/is_bounded_array.h>
 #include <__type_traits/is_constructible.h>
 #include <__type_traits/is_convertible.h>
 #include <__type_traits/is_function.h>
 #include <__type_traits/is_reference.h>
 #include <__type_traits/is_same.h>
-#include <__type_traits/is_unbounded_array.h>
 #include <__type_traits/nat.h>
 #include <__type_traits/negation.h>
 #include <__type_traits/remove_cv.h>
@@ -317,10 +315,8 @@ public:
 #endif
 
   // A shared_ptr contains only two raw pointers which point to the heap and move constructing already doesn't require
-  // any bookkeeping, so it's always trivially relocatable. It is also replaceable because assignment just rebinds the
-  // shared_ptr to manage a different object.
+  // any bookkeeping, so it's always trivially relocatable.
   using __trivially_relocatable _LIBCPP_NODEBUG = shared_ptr;
-  using __replaceable _LIBCPP_NODEBUG           = shared_ptr;
 
 private:
   element_type* __ptr_;
@@ -487,45 +483,16 @@ public:
 
   template <class _Yp,
             class _Dp,
-            __enable_if_t<!is_lvalue_reference<_Dp>::value && __compatible_with<_Yp, _Tp>::value &&
+            __enable_if_t<__compatible_with<_Yp, _Tp>::value &&
                               is_convertible<typename unique_ptr<_Yp, _Dp>::pointer, element_type*>::value,
                           int> = 0>
   _LIBCPP_HIDE_FROM_ABI shared_ptr(unique_ptr<_Yp, _Dp>&& __r) : __ptr_(__r.get()) {
-#if _LIBCPP_STD_VER >= 14
-    if (__ptr_ == nullptr)
-      __cntrl_ = nullptr;
-    else
-#endif
-    {
-      typedef typename __shared_ptr_default_allocator<_Yp>::type _AllocT;
-      typedef __shared_ptr_pointer<typename unique_ptr<_Yp, _Dp>::pointer, _Dp, _AllocT> _CntrlBlk;
-      __cntrl_ = new _CntrlBlk(__r.get(), std::move(__r.get_deleter()), _AllocT());
-      __enable_weak_this(__r.get(), __r.get());
-    }
-    __r.release();
-  }
+    using _AllocT   = typename __shared_ptr_default_allocator<_Yp>::type;
+    using _Deleter  = _If<is_lvalue_reference<_Dp>::value, reference_wrapper<__libcpp_remove_reference_t<_Dp> >, _Dp>;
+    using _CntrlBlk = __shared_ptr_pointer<typename unique_ptr<_Yp, _Dp>::pointer, _Deleter, _AllocT>;
 
-  template <class _Yp,
-            class _Dp,
-            class              = void,
-            __enable_if_t<is_lvalue_reference<_Dp>::value && __compatible_with<_Yp, _Tp>::value &&
-                              is_convertible<typename unique_ptr<_Yp, _Dp>::pointer, element_type*>::value,
-                          int> = 0>
-  _LIBCPP_HIDE_FROM_ABI shared_ptr(unique_ptr<_Yp, _Dp>&& __r) : __ptr_(__r.get()) {
-#if _LIBCPP_STD_VER >= 14
-    if (__ptr_ == nullptr)
-      __cntrl_ = nullptr;
-    else
-#endif
-    {
-      typedef typename __shared_ptr_default_allocator<_Yp>::type _AllocT;
-      typedef __shared_ptr_pointer<typename unique_ptr<_Yp, _Dp>::pointer,
-                                   reference_wrapper<__libcpp_remove_reference_t<_Dp> >,
-                                   _AllocT>
-          _CntrlBlk;
-      __cntrl_ = new _CntrlBlk(__r.get(), std::ref(__r.get_deleter()), _AllocT());
-      __enable_weak_this(__r.get(), __r.get());
-    }
+    __cntrl_ = __ptr_ ? new _CntrlBlk(__r.get(), std::forward<_Dp>(__r.get_deleter()), _AllocT()) : nullptr;
+    __enable_weak_this(__r.get(), __r.get());
     __r.release();
   }
 
@@ -1186,9 +1153,8 @@ public:
 #endif
 
   // A weak_ptr contains only two raw pointers which point to the heap and move constructing already doesn't require
-  // any bookkeeping, so it's always trivially relocatable. It's also replaceable for the same reason.
+  // any bookkeeping, so it's always trivially relocatable.
   using __trivially_relocatable _LIBCPP_NODEBUG = weak_ptr;
-  using __replaceable _LIBCPP_NODEBUG           = weak_ptr;
 
 private:
   element_type* __ptr_;

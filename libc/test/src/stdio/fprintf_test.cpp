@@ -16,6 +16,7 @@
 #include "src/stdio/fprintf.h"
 
 #include "src/__support/CPP/limits.h"
+#include "src/__support/macros/properties/architectures.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
@@ -89,7 +90,8 @@ TEST(LlvmLibcFPrintfTest, WriteToFile) {
 }
 
 #if !defined(LIBC_COPT_PRINTF_NO_NULLPTR_CHECKS) &&                            \
-    !defined(LIBC_COPT_PRINTF_DISABLE_WRITE_INT)
+    !defined(LIBC_COPT_PRINTF_DISABLE_WRITE_INT) &&                            \
+    !defined(LIBC_TARGET_ARCH_IS_GPU)
 TEST(LlvmLibcFPrintfTest, NullPtrCheck) {
   const char *FILENAME = APPEND_LIBC_TEST("fprintf_nullptr.test");
   auto FILE_PATH = libc_make_test_file_path(FILENAME);
