@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 #include "lldb/Expression/DWARFExpression.h"
 #include "ValueMatcher.h"
+#include <unordered_map>
 #ifdef ARCH_AARCH64
 #include "Plugins/ABI/AArch64/ABISysV_arm64.h"
 #endif
@@ -67,21 +68,74 @@ struct MockProcess : Process {
   }
 };
 
-/// A Process whose `ReadMemory` override queries a DenseMap.
+/// Mock memory implementation for testing.
+/// Stores predefined memory contents indexed by {address, size} pairs.
+class MockMemory {
+public:
+  /// Represents a memory read request with an address and size.
+  /// Used as a key in the memory map to look up predefined test data.
+  struct Request {
+    lldb::addr_t addr;
+    size_t size;
+
+    bool operator==(const Request &other) const {
+      return addr == other.addr && size == other.size;
+    }
+
+    /// Hash function for Request to enable its use in unordered_map.
+    struct Hash {
+      size_t operator()(const Request &req) const {
+        size_t h1 = std::hash<lldb::addr_t>{}(req.addr);
+        size_t h2 = std::hash<size_t>{}(req.size);
+        return h1 ^ (h2 << 1);
+      }
+    };
+  };
+
+  typedef std::unordered_map<Request, std::vector<uint8_t>, Request::Hash> Map;
+  MockMemory(Map memory) : m_memory(std::move(memory)) {
+    // Make sure the requested memory size matches the returned value.
+    for (auto &kv : m_memory) {
+      auto &req = kv.first;
+      auto &bytes = kv.second;
+      assert(bytes.size() == req.size);
+    }
+  }
+
+  llvm::Expected<std::vector<uint8_t>> ReadMemory(lldb::addr_t addr,
+                                                  size_t size) {
+    if (!m_memory.count({addr, size})) {
+      return llvm::createStringError(
+          llvm::inconvertibleErrorCode(),
+          "MockMemory::ReadMemory {address=0x%" PRIx64 ", size=%zu} not found",
+          addr, size);
+    }
+    return m_memory[{addr, size}];
+  }
+
+private:
+  std::unordered_map<Request, std::vector<uint8_t>, Request::Hash> m_memory;
+};
+
+/// A Process whose `ReadMemory` override queries MockMemory.
 struct MockProcessWithMemRead : Process {
   using addr_t = lldb::addr_t;
 
-  llvm::DenseMap<addr_t, addr_t> memory_map;
+  MockMemory m_memory;
 
   MockProcessWithMemRead(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp,
-                         llvm::DenseMap<addr_t, addr_t> &&memory_map)
-      : Process(target_sp, listener_sp), memory_map(memory_map) {}
+                         MockMemory memory)
+      : Process(target_sp, listener_sp), m_memory(std::move(memory)) {}
   size_t DoReadMemory(addr_t vm_addr, void *buf, size_t size,
                       Status &error) override {
-    assert(memory_map.contains(vm_addr));
-    assert(size == sizeof(addr_t));
-    *reinterpret_cast<addr_t *>(buf) = memory_map[vm_addr];
-    return sizeof(addr_t);
+    auto expected_memory = m_memory.ReadMemory(vm_addr, size);
+    if (!expected_memory) {
+      error = Status::FromError(expected_memory.takeError());
+      return 0;
+    }
+    assert(expected_memory->size() == size);
+    std::memcpy(buf, expected_memory->data(), expected_memory->size());
+    return size;
   }
   size_t ReadMemory(addr_t addr, void *buf, size_t size,
                     Status &status) override {
@@ -202,6 +256,35 @@ public:
   }
 };
 
+/// Mock target implementation for testing.
+/// Provides predefined memory contents via MockMemory instead of reading from
+/// a real process.
+class MockTarget : public Target {
+public:
+  MockTarget(Debugger &debugger, const ArchSpec &target_arch,
+             const lldb::PlatformSP &platform_sp, MockMemory memory)
+      : Target(debugger, target_arch, platform_sp, true),
+        m_memory(std::move(memory)) {}
+
+  size_t ReadMemory(const Address &addr, void *dst, size_t dst_len,
+                    Status &error, bool force_live_memory = false,
+                    lldb::addr_t *load_addr_ptr = nullptr,
+                    bool *did_read_live_memory = nullptr) override {
+    auto expected_memory = m_memory.ReadMemory(addr.GetOffset(), dst_len);
+    if (!expected_memory) {
+      error = Status::FromError(expected_memory.takeError());
+      return 0;
+    }
+    const size_t bytes_read = expected_memory->size();
+    assert(bytes_read <= dst_len);
+    std::memcpy(dst, expected_memory->data(), bytes_read);
+    return bytes_read;
+  }
+
+private:
+  MockMemory m_memory;
+};
+
 struct TestContext {
   lldb::PlatformSP platform_sp;
   lldb::TargetSP target_sp;
@@ -213,27 +296,33 @@ struct TestContext {
 
 /// A helper function to create TestContext objects with the
 /// given triple, memory, and register contents.
-static bool CreateTestContext(
-    TestContext *ctx, llvm::StringRef triple,
-    std::optional<RegisterValue> reg_value = {},
-    std::optional<llvm::DenseMap<lldb::addr_t, lldb::addr_t>> memory = {}) {
+static bool CreateTestContext(TestContext *ctx, llvm::StringRef triple,
+                              std::optional<RegisterValue> reg_value = {},
+                              std::optional<MockMemory> process_memory = {},
+                              std::optional<MockMemory> target_memory = {}) {
   ArchSpec arch(triple);
-  Platform::SetHostPlatform(
-      platform_linux::PlatformLinux::CreateInstance(true, &arch));
-  lldb::PlatformSP platform_sp;
+  lldb::PlatformSP platform_sp =
+      platform_linux::PlatformLinux::CreateInstance(true, &arch);
+  Platform::SetHostPlatform(platform_sp);
   lldb::TargetSP target_sp;
   lldb::DebuggerSP debugger_sp = Debugger::CreateInstance();
-  Status status = debugger_sp->GetTargetList().CreateTarget(
-      *debugger_sp, "", arch, eLoadDependentsNo, platform_sp, target_sp);
+
+  Status status;
+  if (target_memory)
+    target_sp = std::make_shared<MockTarget>(*debugger_sp, arch, platform_sp,
+                                             std::move(*target_memory));
+  else
+    status = debugger_sp->GetTargetList().CreateTarget(
+        *debugger_sp, "", arch, eLoadDependentsNo, platform_sp, target_sp);
 
   EXPECT_TRUE(status.Success());
   if (!status.Success())
     return false;
 
   lldb::ProcessSP process_sp;
-  if (memory)
+  if (process_memory)
     process_sp = std::make_shared<MockProcessWithMemRead>(
-        target_sp, Listener::MakeListener("dummy"), std::move(*memory));
+        target_sp, Listener::MakeListener("dummy"), std::move(*process_memory));
   else
     process_sp = std::make_shared<MockProcess>(target_sp,
                                                Listener::MakeListener("dummy"));
@@ -252,35 +341,6 @@ static bool CreateTestContext(
                      process_sp,  thread_sp, reg_ctx_sp};
   return true;
 }
-
-// NB: This class doesn't use the override keyword to avoid
-// -Winconsistent-missing-override warnings from the compiler. The
-// inconsistency comes from the overriding definitions in the MOCK_*** macros.
-class MockTarget : public Target {
-public:
-  MockTarget(Debugger &debugger, const ArchSpec &target_arch,
-             const lldb::PlatformSP &platform_sp)
-      : Target(debugger, target_arch, platform_sp, true) {}
-
-  MOCK_METHOD2(ReadMemory,
-               llvm::Expected<std::vector<uint8_t>>(lldb::addr_t addr,
-                                                    size_t size));
-
-  size_t ReadMemory(const Address &addr, void *dst, size_t dst_len,
-                    Status &error, bool force_live_memory = false,
-                    lldb::addr_t *load_addr_ptr = nullptr,
-                    bool *did_read_live_memory = nullptr) /*override*/ {
-    auto expected_memory = this->ReadMemory(addr.GetOffset(), dst_len);
-    if (!expected_memory) {
-      llvm::consumeError(expected_memory.takeError());
-      return 0;
-    }
-    const size_t bytes_read = expected_memory->size();
-    assert(bytes_read <= dst_len);
-    std::memcpy(dst, expected_memory->data(), bytes_read);
-    return bytes_read;
-  }
-};
 
 TEST(DWARFExpression, DW_OP_pick) {
   EXPECT_THAT_EXPECTED(Evaluate({DW_OP_lit1, DW_OP_lit0, DW_OP_pick, 0}),
@@ -1057,23 +1117,16 @@ TEST_F(DWARFExpressionMockProcessTest, DW_OP_piece_file_addr) {
   using ::testing::Return;
 
   // Set up a mock process.
-  ArchSpec arch("i386-pc-linux");
-  Platform::SetHostPlatform(
-      platform_linux::PlatformLinux::CreateInstance(true, &arch));
-  lldb::DebuggerSP debugger_sp = Debugger::CreateInstance();
-  ASSERT_TRUE(debugger_sp);
-  lldb::PlatformSP platform_sp;
-  auto target_sp =
-      std::make_shared<MockTarget>(*debugger_sp, arch, platform_sp);
-  ASSERT_TRUE(target_sp);
-  ASSERT_TRUE(target_sp->GetArchitecture().IsValid());
+  TestContext test_ctx;
+  MockMemory::Map memory = {
+      {{0x40, 1}, {0x11}},
+      {{0x50, 1}, {0x22}},
+  };
+  ASSERT_TRUE(
+      CreateTestContext(&test_ctx, "i386-pc-linux", {}, {}, std::move(memory)));
+  ASSERT_TRUE(test_ctx.target_sp->GetArchitecture().IsValid());
 
-  EXPECT_CALL(*target_sp, ReadMemory(0x40, 1))
-      .WillOnce(Return(ByMove(std::vector<uint8_t>{0x11})));
-  EXPECT_CALL(*target_sp, ReadMemory(0x50, 1))
-      .WillOnce(Return(ByMove(std::vector<uint8_t>{0x22})));
-
-  ExecutionContext exe_ctx(static_cast<lldb::TargetSP>(target_sp), false);
+  ExecutionContext exe_ctx(test_ctx.target_sp, false);
 
   uint8_t expr[] = {DW_OP_addr, 0x40, 0x0, 0x0, 0x0, DW_OP_piece, 1,
                     DW_OP_addr, 0x50, 0x0, 0x0, 0x0, DW_OP_piece, 1};
@@ -1106,10 +1159,10 @@ public:
 /// The expression DW_OP_breg22, 0, DW_OP_deref should produce that same value,
 /// without clearing the top byte 0xff.
 TEST_F(DWARFExpressionMockProcessTestWithAArch, DW_op_deref_no_ptr_fixing) {
-  llvm::DenseMap<lldb::addr_t, lldb::addr_t> memory;
   constexpr lldb::addr_t expected_value = ((0xffULL) << 56) | 0xabcdefULL;
   constexpr lldb::addr_t addr = 42;
-  memory[addr] = expected_value;
+  MockMemory::Map memory = {
+      {{addr, sizeof(addr)}, {0xef, 0xcd, 0xab, 0x00, 0x00, 0x00, 0x00, 0xff}}};
 
   TestContext test_ctx;
   ASSERT_TRUE(CreateTestContext(&test_ctx, "aarch64-pc-linux",
