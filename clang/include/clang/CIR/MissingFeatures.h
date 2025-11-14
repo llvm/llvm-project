@@ -226,6 +226,7 @@ struct MissingFeatures {
   static bool cleanupAppendInsts() { return false; }
   static bool cleanupBranchThrough() { return false; }
   static bool cleanupIndexAndBIAdjustment() { return false; }
+  static bool cleanupWithPreservedValues() { return false; }
   static bool cleanupsToDeactivate() { return false; }
   static bool constEmitterAggILE() { return false; }
   static bool constEmitterArrayILE() { return false; }
@@ -274,6 +275,7 @@ struct MissingFeatures {
   static bool innermostEHScope() { return false; }
   static bool insertBuiltinUnpredictable() { return false; }
   static bool instrumentation() { return false; }
+  static bool intrinsicElementTypeSupport() { return false; }
   static bool intrinsics() { return false; }
   static bool isMemcpyEquivalentSpecialMember() { return false; }
   static bool isTrivialCtorOrDtor() { return false; }
