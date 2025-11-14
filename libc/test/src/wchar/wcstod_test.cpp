@@ -64,7 +64,8 @@ TEST_F(LlvmLibcWcstodTest, SimpleTest) {
 
   // Found while looking for difficult test cases here:
   // https://github.com/nigeltao/parse-number-fxx-test-data/blob/main/more-test-cases/golang-org-issue-36657.txt
-  run_test(L"1090544144181609348835077142190", 31, uint64_t(0x462b8779f2474dfb));
+  run_test(L"1090544144181609348835077142190", 31,
+           uint64_t(0x462b8779f2474dfb));
 
   run_test(L"0x123", 5, uint64_t(0x4072300000000000));
 }
