@@ -89,7 +89,7 @@ public:
   /// - "decl_file": string path to the file where variable is declared
   /// - "decl_line": unsigned integer line number where variable is declared
   /// - "type_name": string type name of the variable
-  lldb::SBStructuredData GetVariableAnnotations(lldb::SBTarget target);
+  lldb::SBStructuredData GetVariableAnnotations();
 
 protected:
   friend class SBInstructionList;

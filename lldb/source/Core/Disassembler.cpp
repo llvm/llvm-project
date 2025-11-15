@@ -302,10 +302,8 @@ const std::string VariableAnnotator::kUndefLocationFormatted =
 // The goal is to give users helpful live variable hints alongside the
 // disassembled instruction stream, similar to how debug information
 // enhances source-level debugging.
-std::vector<std::string> VariableAnnotator::Annotate(Instruction &inst,
-                                                     Target &target,
-                                                     lldb::ModuleSP module_sp) {
-  auto structured_annotations = AnnotateStructured(inst, target, module_sp);
+std::vector<std::string> VariableAnnotator::Annotate(Instruction &inst) {
+  auto structured_annotations = AnnotateStructured(inst);
 
   std::vector<std::string> events;
   events.reserve(structured_annotations.size());
@@ -328,9 +326,10 @@ std::vector<std::string> VariableAnnotator::Annotate(Instruction &inst,
 }
 
 std::vector<VariableAnnotation>
-VariableAnnotator::AnnotateStructured(Instruction &inst, Target &target,
-                                      lldb::ModuleSP module_sp) {
+VariableAnnotator::AnnotateStructured(Instruction &inst) {
   std::vector<VariableAnnotation> annotations;
+
+  ModuleSP module_sp = inst.GetAddress().GetModule();
 
   // If we lost module context, mark all live variables as undefined.
   if (!module_sp) {
@@ -377,7 +376,7 @@ VariableAnnotator::AnnotateStructured(Instruction &inst, Target &target,
   const lldb::addr_t func_file = sc.function->GetAddress().GetFileAddress();
 
   // ABI from Target (pretty reg names if plugin exists). Safe to be null.
-  lldb::ABISP abi_sp = ABI::FindPlugin(nullptr, target.GetArchitecture());
+  lldb::ABISP abi_sp = ABI::FindPlugin(nullptr, module_sp->GetArchitecture());
   ABI *abi = abi_sp.get();
 
   llvm::DIDumpOptions opts;
@@ -737,7 +736,7 @@ void Disassembler::PrintInstructions(Debugger &debugger, const ArchSpec &arch,
                  address_text_size);
 
       if ((options & eOptionVariableAnnotations) && target_sp) {
-        auto annotations = annot.Annotate(*inst, *target_sp, module_sp);
+        auto annotations = annot.Annotate(*inst);
         if (!annotations.empty()) {
           const size_t annotation_column = 100;
           inst_line.FillLastLineToColumn(annotation_column, ' ');

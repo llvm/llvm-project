@@ -351,19 +351,16 @@ bool SBInstruction::TestEmulation(lldb::SBStream &output_stream,
   return false;
 }
 
-lldb::SBStructuredData
-SBInstruction::GetVariableAnnotations(lldb::SBTarget target) {
-  LLDB_INSTRUMENT_VA(this, target);
+lldb::SBStructuredData SBInstruction::GetVariableAnnotations() {
+  LLDB_INSTRUMENT_VA(this);
 
   SBStructuredData result;
 
-  if (!m_opaque_sp || !m_opaque_sp->IsValid() || !target.IsValid())
+  if (!m_opaque_sp || !m_opaque_sp->IsValid())
     return result;
 
   lldb::InstructionSP inst_sp = m_opaque_sp->GetSP();
-  lldb::TargetSP target_sp = target.GetSP();
-
-  if (!inst_sp || !target_sp)
+  if (!inst_sp)
     return result;
 
   const Address &addr = inst_sp->GetAddress();
@@ -374,7 +371,7 @@ SBInstruction::GetVariableAnnotations(lldb::SBTarget target) {
 
   VariableAnnotator annotator;
   std::vector<VariableAnnotation> annotations =
-      annotator.AnnotateStructured(*inst_sp, *target_sp, module_sp);
+      annotator.AnnotateStructured(*inst_sp);
 
   auto array_sp = std::make_shared<StructuredData::Array>();
 

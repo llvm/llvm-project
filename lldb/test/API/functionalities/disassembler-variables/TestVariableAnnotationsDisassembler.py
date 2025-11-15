@@ -146,7 +146,7 @@ class TestVariableAnnotationsDisassembler(TestBase):
             inst = instructions.GetInstructionAtIndex(i)
             self.assertTrue(inst.IsValid(), f"Invalid instruction at index {i}")
 
-            annotations = inst.GetVariableAnnotations(target)
+            annotations = inst.GetVariableAnnotations()
 
             self.assertIsInstance(annotations, lldb.SBStructuredData,
                                 "GetVariableAnnotations should return SBStructuredData")

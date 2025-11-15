@@ -597,13 +597,10 @@ class VariableAnnotator {
 public:
   /// Compute annotation strings for a single instruction and update `Live_`.
   /// Returns only the events that should be printed *at this instruction*.
-  std::vector<std::string> Annotate(Instruction &inst, Target &target,
-                                    lldb::ModuleSP module_sp);
+  std::vector<std::string> Annotate(Instruction &inst);
 
   /// Returns structured data for all variables relevant at this instruction.
-  std::vector<VariableAnnotation> AnnotateStructured(Instruction &inst,
-                                                     Target &target,
-                                                     lldb::ModuleSP module_sp);
+  std::vector<VariableAnnotation> AnnotateStructured(Instruction &inst);
 };
 
 } // namespace lldb_private
