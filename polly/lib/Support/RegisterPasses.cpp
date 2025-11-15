@@ -576,22 +576,6 @@ parseFunctionPipeline(StringRef Name, FunctionPassManager &FPM,
   return false;
 }
 
-static bool isScopPassName(StringRef Name) {
-#define SCOP_ANALYSIS(NAME, CREATE_PASS)                                       \
-  if (Name == "require<" NAME ">")                                             \
-    return true;                                                               \
-  if (Name == "invalidate<" NAME ">")                                          \
-    return true;
-
-#define SCOP_PASS(NAME, CREATE_PASS)                                           \
-  if (Name == NAME)                                                            \
-    return true;
-
-#include "PollyPasses.def"
-
-  return false;
-}
-
 static llvm::Expected<bool>
 parseModulePipeline(StringRef Name, llvm::ModulePassManager &MPM,
                     PassInstrumentationCallbacks *PIC,
