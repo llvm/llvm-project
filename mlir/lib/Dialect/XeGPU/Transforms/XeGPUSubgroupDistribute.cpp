@@ -926,8 +926,7 @@ static SmallVector<Value> computeDistributedCoordinatesForMatrixOp(
   SmallVector<OpFoldResult> ofrVec = xegpu::addWithRightAligned(
       rewriter, loc, getAsOpFoldResult(maybeCoords.value()[0]),
       getAsOpFoldResult(origOffsets));
-  newCoods = llvm::to_vector(llvm::map_range(
-      ofrVec, [&](OpFoldResult ofr) -> Value { return cast<Value>(ofr); }));
+  newCoods = llvm::map_to_vector(ofrVec, llvm::CastTo<Value>);
   return newCoods;
 }
 

@@ -26,8 +26,10 @@ namespace llvm {
 class AArch64RegisterBankInfo;
 class AArch64Subtarget;
 class AArch64TargetMachine;
+enum class CodeGenOptLevel;
 class FunctionPass;
 class InstructionSelector;
+class ModulePass;
 
 FunctionPass *createAArch64DeadRegisterDefinitions();
 FunctionPass *createAArch64RedundantCopyEliminationPass();

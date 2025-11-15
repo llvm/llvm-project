@@ -15306,13 +15306,15 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
 
     return Success(Val.reverseBits(), E);
   }
-
+  case Builtin::BI__builtin_bswapg:
   case Builtin::BI__builtin_bswap16:
   case Builtin::BI__builtin_bswap32:
   case Builtin::BI__builtin_bswap64: {
     APSInt Val;
     if (!EvaluateInteger(E->getArg(0), Val, Info))
       return false;
+    if (Val.getBitWidth() == 8)
+      return Success(Val, E);
 
     return Success(Val.byteSwap(), E);
   }

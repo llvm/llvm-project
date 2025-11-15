@@ -3618,6 +3618,19 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
           Builder.CreateArithmeticFence(ArgValue, ConvertType(ArgType)));
     return RValue::get(ArgValue);
   }
+  case Builtin::BI__builtin_bswapg: {
+    Value *ArgValue = EmitScalarExpr(E->getArg(0));
+    llvm::IntegerType *IntTy = cast<llvm::IntegerType>(ArgValue->getType());
+    assert(IntTy && "LLVM's __builtin_bswapg only supports integer variants");
+    assert(((IntTy->getBitWidth() % 16 == 0 && IntTy->getBitWidth() != 0) ||
+            IntTy->getBitWidth() == 8) &&
+           "LLVM's __builtin_bswapg only supports integer variants that has a "
+           "multiple of 16 bits as well as a single byte");
+    if (IntTy->getBitWidth() == 8)
+      return RValue::get(ArgValue);
+    return RValue::get(
+        emitBuiltinWithOneOverloadedType<1>(*this, E, Intrinsic::bswap));
+  }
   case Builtin::BI__builtin_bswap16:
   case Builtin::BI__builtin_bswap32:
   case Builtin::BI__builtin_bswap64:
