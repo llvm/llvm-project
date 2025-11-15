@@ -2951,8 +2951,13 @@ def : GCNPat <
 >;
 
 def : GCNPat <
-  (i64 (anyext i32:$src)),
+  (i64 (UniformUnaryFrag<anyext> i32:$src)),
   (REG_SEQUENCE SReg_64, $src, sub0, (i32 (IMPLICIT_DEF)), sub1)
+>;
+
+def : GCNPat <
+  (i64 (anyext i32:$src)),
+  (REG_SEQUENCE VReg_64, $src, sub0, (i32 (IMPLICIT_DEF)), sub1)
 >;
 
 class ZExt_i64_i1_Pat <SDNode ext> : GCNPat <
