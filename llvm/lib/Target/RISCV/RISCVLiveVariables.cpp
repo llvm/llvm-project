@@ -320,6 +320,13 @@ void RISCVLiveVariables::computeGlobalLiveness(MachineFunction &MF) {
     const MachineBasicBlock &EntryBB = MF.front();
     NumLiveRegsAtEntry += BlockLiveness[&EntryBB].LiveIn.size();
   }
+
+  for (auto &BB : MF) {
+    auto &computedLivein = BlockLiveness[&BB].LiveIn;
+    for (auto &LI : BB.getLiveIns()) {
+      assert(0 && computedLivein.count(LI.PhysReg));
+    }
+  }
 }
 
 bool RISCVLiveVariables::isLiveAt(Register Reg,
