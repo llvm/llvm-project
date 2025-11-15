@@ -267,7 +267,7 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
   if (auto *OCE = dyn_cast<CXXOperatorCallExpr>(CE)) {
     if (OCE->isAssignmentOp()) {
       if (TrivialAssignment) {
-        TrivialAssignmentRHS = EmitLValue(CE->getArg(1));
+        TrivialAssignmentRHS = EmitCheckedLValue(CE->getArg(1), TCK_Load);
       } else {
         RtlArgs = &RtlArgStorage;
         EmitCallArgs(*RtlArgs, MD->getType()->castAs<FunctionProtoType>(),
@@ -277,22 +277,26 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
     }
   }
 
-  LValue This;
-  if (IsArrow) {
-    LValueBaseInfo BaseInfo;
-    TBAAAccessInfo TBAAInfo;
-    Address ThisValue = EmitPointerWithAlignment(Base, &BaseInfo, &TBAAInfo);
-    This = MakeAddrLValue(ThisValue, Base->getType()->getPointeeType(),
-                          BaseInfo, TBAAInfo);
-  } else {
-    This = EmitLValue(Base);
-  }
+  auto getLValueForThis = [this, IsArrow,
+                           Base](bool EmitCheckedForStore = false) {
+    if (IsArrow) {
+      LValueBaseInfo BaseInfo;
+      TBAAAccessInfo TBAAInfo;
+      Address ThisValue = EmitPointerWithAlignment(Base, &BaseInfo, &TBAAInfo);
+      return MakeAddrLValue(ThisValue, Base->getType()->getPointeeType(),
+                            BaseInfo, TBAAInfo);
+    }
+    if (EmitCheckedForStore)
+      return EmitCheckedLValue(Base, TCK_Store);
+    return EmitLValue(Base);
+  };
 
   if (const CXXConstructorDecl *Ctor = dyn_cast<CXXConstructorDecl>(MD)) {
     // This is the MSVC p->Ctor::Ctor(...) extension. We assume that's
     // constructing a new complete object of type Ctor.
     assert(!RtlArgs);
     assert(ReturnValue.isNull() && "Constructor shouldn't have return value");
+    LValue This = getLValueForThis();
     CallArgList Args;
     commonEmitCXXMemberOrOperatorCall(
         *this, {Ctor, Ctor_Complete}, This.getPointer(*this),
@@ -313,12 +317,14 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
     if (TrivialAssignment) {
       // We don't like to generate the trivial copy/move assignment operator
       // when it isn't necessary; just produce the proper effect here.
+      LValue This = getLValueForThis(/*EmitCheckedForStore=*/true);
+
       // It's important that we use the result of EmitLValue here rather than
       // emitting call arguments, in order to preserve TBAA information from
       // the RHS.
       LValue RHS = isa<CXXOperatorCallExpr>(CE)
                        ? TrivialAssignmentRHS
-                       : EmitLValue(*CE->arg_begin());
+                       : EmitCheckedLValue(*CE->arg_begin(), TCK_Load);
       EmitAggregateAssign(This, RHS, CE->getType());
       return RValue::get(This.getPointer(*this));
     }
@@ -357,6 +363,7 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
       SkippedChecks.set(SanitizerKind::Null, true);
   }
 
+  LValue This = getLValueForThis();
   if (sanitizePerformTypeCheck())
     EmitTypeCheck(CodeGenFunction::TCK_MemberCall, CallLoc,
                   This.emitRawPointer(*this),
