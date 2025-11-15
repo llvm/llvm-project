@@ -35,14 +35,16 @@ using namespace llvm;
 #define DEBUG_TYPE "insert-code-prefetch"
 
 namespace llvm {
-SmallString<128> getPrefetchTargetSymbolName(StringRef FunctionName, const UniqueBBID &BBID, unsigned SubblockIndex) {
-          SmallString<128> R("__llvm_prefetch_target_");
-          R += FunctionName;
-          R += "_";
-          R += utostr(BBID.BaseID);
-          R += "_";
-          R += utostr(SubblockIndex);
-          return R;
+SmallString<128> getPrefetchTargetSymbolName(StringRef FunctionName,
+                                             const UniqueBBID &BBID,
+                                             unsigned SubblockIndex) {
+  SmallString<128> R("__llvm_prefetch_target_");
+  R += FunctionName;
+  R += "_";
+  R += utostr(BBID.BaseID);
+  R += "_";
+  R += utostr(SubblockIndex);
+  return R;
 }
 } // namespace llvm
 
@@ -105,16 +107,16 @@ bool InsertCodePrefetch::runOnMachineFunction(MachineFunction &MF) {
   SmallVector<PrefetchHint> PrefetchHints =
       getAnalysis<BasicBlockSectionsProfileReaderWrapperPass>()
           .getPrefetchHintsForFunction(MF.getName());
-  DenseMap<UniqueBBID, SmallVector<PrefetchHint>>
-      PrefetchHintsBySiteBBID;
+  DenseMap<UniqueBBID, SmallVector<PrefetchHint>> PrefetchHintsBySiteBBID;
   for (const auto &H : PrefetchHints)
     PrefetchHintsBySiteBBID[H.SiteID.BBID].push_back(H);
-  for (auto &[SiteBBID, H]: PrefetchHintsBySiteBBID) {
+  for (auto &[SiteBBID, H] : PrefetchHintsBySiteBBID) {
     llvm::sort(H, [](const PrefetchHint &H1, const PrefetchHint &H2) {
       return H1.SiteID.SubblockIndex < H2.SiteID.SubblockIndex;
     });
   }
-  auto PtrTy = PointerType::getUnqual(MF.getFunction().getParent()->getContext());
+  auto PtrTy =
+      PointerType::getUnqual(MF.getFunction().getParent()->getContext());
   const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
   for (auto &BB : MF) {
     auto It = PrefetchHintsBySiteBBID.find(*BB.getBBID());
@@ -123,15 +125,21 @@ bool InsertCodePrefetch::runOnMachineFunction(MachineFunction &MF) {
     const auto &PrefetchHints = It->second;
     unsigned NumCallsInBB = 0;
     auto InstrIt = BB.begin();
-    for(auto HintIt = PrefetchHints.begin() ; HintIt != PrefetchHints.end();) {
+    for (auto HintIt = PrefetchHints.begin(); HintIt != PrefetchHints.end();) {
       auto NextInstrIt = InstrIt == BB.end() ? BB.end() : std::next(InstrIt);
       while (NumCallsInBB >= HintIt->SiteID.SubblockIndex) {
-        auto *GV = MF.getFunction().getParent()->getOrInsertGlobal(getPrefetchTargetSymbolName(HintIt->TargetFunction, HintIt->TargetID.BBID, HintIt->TargetID.SubblockIndex), PtrTy);
+        auto *GV = MF.getFunction().getParent()->getOrInsertGlobal(
+            getPrefetchTargetSymbolName(HintIt->TargetFunction,
+                                        HintIt->TargetID.BBID,
+                                        HintIt->TargetID.SubblockIndex),
+            PtrTy);
         TII->insertCodePrefetchInstr(BB, NextInstrIt, GV);
         ++HintIt;
       }
-      if (InstrIt == BB.end()) break;
-      if (InstrIt->isCall()) ++NumCallsInBB;
+      if (InstrIt == BB.end())
+        break;
+      if (InstrIt->isCall())
+        ++NumCallsInBB;
       InstrIt = NextInstrIt;
     }
   }

@@ -380,10 +380,10 @@ Error BasicBlockSectionsProfileReader::ReadV1Profile() {
       if (getAsUnsignedInteger(PrefetchTargetStr[2], 10, TargetSubblockIndex))
         return createProfileParseError(Twine("unsigned integer expected: '") +
                                        PrefetchTargetStr[2]);
-      FI->second.PrefetchHints.push_back(
-          PrefetchHint{SubblockID{*SiteBBID, static_cast<unsigned>(SiteSubblockIndex)},
-                       PrefetchTargetStr[0],
-                       SubblockID{*TargetBBID, static_cast<unsigned>(TargetSubblockIndex)}});
+      FI->second.PrefetchHints.push_back(PrefetchHint{
+          SubblockID{*SiteBBID, static_cast<unsigned>(SiteSubblockIndex)},
+          PrefetchTargetStr[0],
+          SubblockID{*TargetBBID, static_cast<unsigned>(TargetSubblockIndex)}});
       continue;
     }
     case 't': { // Prefetch target specifier.

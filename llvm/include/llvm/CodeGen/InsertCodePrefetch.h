@@ -11,12 +11,14 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
-#include "llvm/Support/UniqueBBID.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/UniqueBBID.h"
 
 namespace llvm {
 
-SmallString<128> getPrefetchTargetSymbolName(StringRef FunctionName, const UniqueBBID &BBID, unsigned SubblockIndex);
+SmallString<128> getPrefetchTargetSymbolName(StringRef FunctionName,
+                                             const UniqueBBID &BBID,
+                                             unsigned SubblockIndex);
 
 } // end namespace llvm
 

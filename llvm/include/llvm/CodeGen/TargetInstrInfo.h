@@ -2389,7 +2389,6 @@ public:
     return false;
   }
 
-
 private:
   mutable std::unique_ptr<MIRFormatter> Formatter;
   unsigned CallFrameSetupOpcode, CallFrameDestroyOpcode;
