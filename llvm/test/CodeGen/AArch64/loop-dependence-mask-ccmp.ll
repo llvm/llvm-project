@@ -15,9 +15,8 @@ define <1 x i1> @test_war_mask_ccmp(ptr %a, ptr %b) {
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr64 = COPY $x1
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr64 = COPY $x0
   ; CHECK-NEXT:   [[SUBSXrr:%[0-9]+]]:gpr64common = SUBSXrr [[COPY]], [[COPY1]], implicit-def dead $nzcv
-  ; CHECK-NEXT:   [[SUBSXri:%[0-9]+]]:gpr64 = SUBSXri [[SUBSXrr]], 0, 0, implicit-def $nzcv
-  ; CHECK-NEXT:   CCMPXr [[SUBSXrr]], 0, 4, 13, implicit-def $nzcv, implicit $nzcv
-  ; CHECK-NEXT:   [[CSINCWr:%[0-9]+]]:gpr32 = CSINCWr $wzr, $wzr, 1, implicit $nzcv
+  ; CHECK-NEXT:   [[ADDSXri:%[0-9]+]]:gpr64 = ADDSXri killed [[SUBSXrr]], 1, 0, implicit-def $nzcv
+  ; CHECK-NEXT:   [[CSINCWr:%[0-9]+]]:gpr32 = CSINCWr $wzr, $wzr, 13, implicit $nzcv
   ; CHECK-NEXT:   $w0 = COPY [[CSINCWr]]
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
 entry:
@@ -33,9 +32,8 @@ define <1 x i1> @test_raw_mask_ccmp(ptr %a, ptr %b) {
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr64 = COPY $x1
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr64 = COPY $x0
   ; CHECK-NEXT:   [[SUBSXrr:%[0-9]+]]:gpr64common = SUBSXrr [[COPY]], [[COPY1]], implicit-def dead $nzcv
-  ; CHECK-NEXT:   [[SUBSXri:%[0-9]+]]:gpr64 = SUBSXri [[SUBSXrr]], 0, 0, implicit-def $nzcv
-  ; CHECK-NEXT:   CCMPXr [[SUBSXrr]], 0, 4, 13, implicit-def $nzcv, implicit $nzcv
-  ; CHECK-NEXT:   [[CSINCWr:%[0-9]+]]:gpr32 = CSINCWr $wzr, $wzr, 1, implicit $nzcv
+  ; CHECK-NEXT:   [[ADDSXri:%[0-9]+]]:gpr64 = ADDSXri killed [[SUBSXrr]], 1, 0, implicit-def $nzcv
+  ; CHECK-NEXT:   [[CSINCWr:%[0-9]+]]:gpr32 = CSINCWr $wzr, $wzr, 13, implicit $nzcv
   ; CHECK-NEXT:   $w0 = COPY [[CSINCWr]]
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
 entry:
