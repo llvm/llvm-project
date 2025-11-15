@@ -716,10 +716,9 @@ void XCOFFWriter::recordRelocation(const MCFragment &F, const MCFixup &Fixup,
     // For non toc-data external symbols, R_TOC type relocation will relocate to
     // data symbols that have XCOFF::XTY_SD type csect. For toc-data external
     // symbols, R_TOC type relocation will relocate to data symbols that have
-    // XCOFF_ER type csect. For XCOFF_ER kind symbols, there will be no TOC
-    // entry for them, so the FixedValue should always be 0.
+    // XCOFF_ER type csect.
     if (SymASec->getCSectType() == XCOFF::XTY_ER) {
-      FixedValue = 0;
+      FixedValue = Target.getConstant();
     } else {
       // The FixedValue should be the TOC entry offset from the TOC-base plus
       // any constant offset value.
