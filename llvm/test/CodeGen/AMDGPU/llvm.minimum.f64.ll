@@ -2381,8 +2381,8 @@ define <16 x double> @v_minimum_v16f64(<16 x double> %src0, <16 x double> %src1)
 ; GFX950-NEXT:    v_accvgpr_write_b32 a13, v61 ; Reload Reuse
 ; GFX950-NEXT:    v_accvgpr_write_b32 a14, v62 ; Reload Reuse
 ; GFX950-NEXT:    v_accvgpr_write_b32 a15, v63 ; Reload Reuse
-; GFX950-NEXT:    scratch_load_dword v33, off, s32 offset:8
-; GFX950-NEXT:    scratch_load_dword v32, off, s32 offset:4
+; GFX950-NEXT:    scratch_load_dword v35, off, s32 offset:8
+; GFX950-NEXT:    scratch_load_dword v34, off, s32 offset:4
 ; GFX950-NEXT:    scratch_load_dword v37, off, s32 offset:16
 ; GFX950-NEXT:    scratch_load_dword v36, off, s32 offset:12
 ; GFX950-NEXT:    scratch_load_dword v39, off, s32 offset:24
@@ -2406,13 +2406,13 @@ define <16 x double> @v_minimum_v16f64(<16 x double> %src0, <16 x double> %src1)
 ; GFX950-NEXT:    scratch_load_dword v49, off, s32 offset:96
 ; GFX950-NEXT:    scratch_load_dword v48, off, s32 offset:92
 ; GFX950-NEXT:    scratch_load_dword v31, off, s32
-; GFX950-NEXT:    scratch_load_dword v35, off, s32 offset:104
-; GFX950-NEXT:    scratch_load_dword v34, off, s32 offset:100
+; GFX950-NEXT:    scratch_load_dword v33, off, s32 offset:104
+; GFX950-NEXT:    scratch_load_dword v32, off, s32 offset:100
 ; GFX950-NEXT:    s_waitcnt vmcnt(25)
-; GFX950-NEXT:    v_min_f64 v[58:59], v[0:1], v[32:33]
-; GFX950-NEXT:    v_cmp_u_f64_e32 vcc, v[0:1], v[32:33]
-; GFX950-NEXT:    scratch_load_dword v33, off, s32 offset:112
-; GFX950-NEXT:    scratch_load_dword v32, off, s32 offset:108
+; GFX950-NEXT:    v_min_f64 v[58:59], v[0:1], v[34:35]
+; GFX950-NEXT:    v_cmp_u_f64_e32 vcc, v[0:1], v[34:35]
+; GFX950-NEXT:    scratch_load_dword v35, off, s32 offset:112
+; GFX950-NEXT:    scratch_load_dword v34, off, s32 offset:108
 ; GFX950-NEXT:    s_waitcnt vmcnt(25)
 ; GFX950-NEXT:    v_min_f64 v[60:61], v[2:3], v[36:37]
 ; GFX950-NEXT:    v_cmp_u_f64_e64 s[0:1], v[2:3], v[36:37]
@@ -2486,16 +2486,16 @@ define <16 x double> @v_minimum_v16f64(<16 x double> %src0, <16 x double> %src1)
 ; GFX950-NEXT:    v_cndmask_b32_e64 v22, v0, 0, vcc
 ; GFX950-NEXT:    v_cndmask_b32_e32 v23, v1, v2, vcc
 ; GFX950-NEXT:    s_waitcnt vmcnt(6)
-; GFX950-NEXT:    v_min_f64 v[0:1], v[24:25], v[34:35]
-; GFX950-NEXT:    v_cmp_u_f64_e32 vcc, v[24:25], v[34:35]
+; GFX950-NEXT:    v_min_f64 v[0:1], v[24:25], v[32:33]
+; GFX950-NEXT:    v_cmp_u_f64_e32 vcc, v[24:25], v[32:33]
 ; GFX950-NEXT:    v_accvgpr_read_b32 v42, a2 ; Reload Reuse
 ; GFX950-NEXT:    v_accvgpr_read_b32 v41, a1 ; Reload Reuse
 ; GFX950-NEXT:    v_cndmask_b32_e64 v24, v0, 0, vcc
 ; GFX950-NEXT:    v_cndmask_b32_e32 v25, v1, v2, vcc
 ; GFX950-NEXT:    v_accvgpr_read_b32 v40, a0 ; Reload Reuse
 ; GFX950-NEXT:    s_waitcnt vmcnt(4)
-; GFX950-NEXT:    v_min_f64 v[0:1], v[26:27], v[32:33]
-; GFX950-NEXT:    v_cmp_u_f64_e32 vcc, v[26:27], v[32:33]
+; GFX950-NEXT:    v_min_f64 v[0:1], v[26:27], v[34:35]
+; GFX950-NEXT:    v_cmp_u_f64_e32 vcc, v[26:27], v[34:35]
 ; GFX950-NEXT:    s_nop 1
 ; GFX950-NEXT:    v_cndmask_b32_e64 v26, v0, 0, vcc
 ; GFX950-NEXT:    v_cndmask_b32_e32 v27, v1, v2, vcc
