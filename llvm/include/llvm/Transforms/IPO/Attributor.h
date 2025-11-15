@@ -5928,8 +5928,8 @@ public:
       insert(AA::RangeTy{AA::RangeTy::Unknown, AA::RangeTy::Unknown}, V);
     }
 
-    // Increment all ranges by Inc.
-    // Add an origin V to all offsets.
+    // We need to increment all ranges by Inc and add an origin V to all
+    // offsets.
     void addToAll(int64_t Inc, Value &V) {
       for (auto &Range : Ranges)
         Range.Offset += Inc;
@@ -5955,13 +5955,20 @@ public:
     ///
     /// Ideally all lists should be strictly ascending, but we defer that to the
     /// actual use of the list. So we just blindly append here.
-
     bool merge(const OffsetInfo &R) {
+      bool Changed = false;
 
-      SmallSet<AA::RangeTy, 2> Set1(Ranges.begin(), Ranges.end());
-      SmallSet<AA::RangeTy, 2> Set2(R.Ranges.begin(), R.Ranges.end());
+      for (const auto &Range : R.Ranges) {
+        if (!is_contained(Ranges, Range)) {
+          Changed = true;
+          break;
+        }
+      }
 
-      bool Changed = set_union(Set1, Set2);
+      // No need to merge if the Ranges did not change.
+      if (!Changed)
+        return Changed;
+
       Ranges.append(R.Ranges);
       // ensure elements are unique.
       sort(Ranges.begin(), Ranges.end());
@@ -5974,15 +5981,21 @@ public:
       return Changed;
     }
 
-    // Merge two OffsetInfo structs.
-    // takes an additional origin argument
-    // and adds it to the corresponding offset in the
-    // origins map.
+    // Merge two OffsetInfo structs. The function takes an additional origin
+    // argument (CurPtr) and adds it to the corresponding offset in the origins
+    // map.
     bool mergeWithOffset(const OffsetInfo &R, Value &CurPtr) {
-      SmallSet<AA::RangeTy, 2> Set1(Ranges.begin(), Ranges.end());
-      SmallSet<AA::RangeTy, 2> Set2(R.Ranges.begin(), R.Ranges.end());
+      bool Changed = false;
 
-      bool Changed = set_union(Set1, Set2);
+      // We cannot return if nothing changed since we might still be adding a
+      // new Origin.
+      for (const auto &Range : Ranges) {
+        if (!is_contained(Ranges, Range)) {
+          Changed = true;
+          break;
+        }
+      }
+
       Ranges.append(R.Ranges);
       // ensure elements are unique.
       sort(Ranges.begin(), Ranges.end());
@@ -6330,8 +6343,7 @@ public:
 
     // Check if the chain exists in the AccessPathsSet.
     bool existsChain(const AccessPathTy *NewPath) const {
-
-      if (AccessPaths == nullptr)
+      if (!AccessPaths)
         return false;
 
       for (auto *OldPath : *AccessPaths)
@@ -6342,18 +6354,17 @@ public:
     }
 
     void dumpAccessPaths(raw_ostream &O) const {
-      O << "Print all access paths found:"
-        << "\n";
+      O << "Print all access paths found:\n";
 
-      if (AccessPaths == nullptr) {
+      if (!AccessPaths) {
         O << "Could not find any access paths!\n";
+        return;
       }
 
       for (auto *It : *AccessPaths) {
         O << "Backtrack a unique access path:\n";
-        for (Value *Ins : *It) {
+        for (Value *Ins : *It)
           O << *Ins << "\n";
-        }
       }
     }
 
