@@ -13260,7 +13260,8 @@ def err_sycl_entry_point_invalid : Error<
       "%ConstexprFn{constexpr function}|"
       "%ConstevalFn{consteval function}|"
       "%NoreturnFn{function declared with the 'noreturn' attribute}|"
-      "%FunctionTryBlock{function defined with a function try block}"
+      "%FunctionTryBlock{function defined with a function try block}|"
+      "%ExplicitObjectFn{function with an explicit object parameter}|"
       "}1">;
 def err_sycl_entry_point_invalid_redeclaration : Error<
   "the %0 kernel name argument does not match prior"

@@ -325,6 +325,13 @@ void SemaSYCL::CheckSYCLEntryPointFunctionDecl(FunctionDecl *FD) {
         << SKEPAttr << diag::InvalidSKEPReason::Destructor;
     SKEPAttr->setInvalidAttr();
   }
+  if (const auto *MD = dyn_cast<CXXMethodDecl>(FD)) {
+    if (MD->isExplicitObjectMemberFunction()) {
+      Diag(SKEPAttr->getLocation(), diag::err_sycl_entry_point_invalid)
+          << SKEPAttr << diag::InvalidSKEPReason::ExplicitObjectFn;
+      SKEPAttr->setInvalidAttr();
+    }
+  }
 
   if (FD->isVariadic()) {
     Diag(SKEPAttr->getLocation(), diag::err_sycl_entry_point_invalid)

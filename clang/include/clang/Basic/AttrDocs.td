@@ -551,6 +551,7 @@ following requirements.
 
 * Has a non-deduced ``void`` return type.
 * Is not a constructor or destructor.
+* Is not a non-static member function with an explicit object parameter.
 * Is not a C variadic function.
 * Is not a coroutine.
 * Is not defined as deleted or as defaulted.
