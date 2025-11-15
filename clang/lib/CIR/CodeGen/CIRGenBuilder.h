@@ -315,8 +315,10 @@ public:
     return getConstantInt(loc, getUInt32Ty(), c);
   }
   cir::ConstantOp getSInt64(uint64_t c, mlir::Location loc) {
-    cir::IntType sInt64Ty = getSInt64Ty();
-    return cir::ConstantOp::create(*this, loc, cir::IntAttr::get(sInt64Ty, c));
+    return getConstantInt(loc, getSInt64Ty(), c);
+  }
+  cir::ConstantOp getUInt64(uint64_t c, mlir::Location loc) {
+    return getConstantInt(loc, getUInt64Ty(), c);
   }
 
   mlir::Value createNeg(mlir::Value value) {
