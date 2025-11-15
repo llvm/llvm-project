@@ -36,17 +36,7 @@ class DuplicateIncludeCallbacks : public PPCallbacks {
 public:
   DuplicateIncludeCallbacks(DuplicateIncludeCheck &Check,
                             const SourceManager &SM,
-                            const std::vector<StringRef> &IgnoredList)
-      : Check(Check), SM(SM) {
-    // The main file doesn't participate in the FileChanged notification.
-    Files.emplace_back();
-
-    AllowedRegexes.reserve(IgnoredList.size());
-    for (const StringRef &It : IgnoredList) {
-      if (!It.empty())
-        AllowedRegexes.emplace_back(It);
-    }
-  }
+                            const std::vector<StringRef> &IgnoredList);
 
   void FileChanged(SourceLocation Loc, FileChangeReason Reason,
                    SrcMgr::CharacteristicKind FileType,
@@ -67,26 +57,12 @@ public:
                       const MacroDirective *Undef) override;
 
 private:
+  bool isAllowedDuplicate(StringRef FileName, OptionalFileEntryRef File) const;
   // A list of included files is kept for each file we enter.
   SmallVector<FileList> Files;
   DuplicateIncludeCheck &Check;
   const SourceManager &SM;
   std::vector<llvm::Regex> AllowedRegexes;
-
-  bool isAllowedDuplicate(StringRef FileName, OptionalFileEntryRef File) const {
-    if (llvm::any_of(AllowedRegexes,
-                     [&](const llvm::Regex &R) { return R.match(FileName); }))
-      return true;
-
-    if (File) {
-      const StringRef Resolved = File->getName();
-      if (llvm::any_of(AllowedRegexes,
-                       [&](const llvm::Regex &R) { return R.match(Resolved); }))
-        return true;
-    }
-
-    return false;
-  }
 };
 
 } // namespace
@@ -96,6 +72,37 @@ DuplicateIncludeCheck::DuplicateIncludeCheck(StringRef Name,
     : ClangTidyCheck(Name, Context),
       IgnoredFilesList(utils::options::parseStringList(
           Options.get("IgnoredFilesList", ""))) {}
+
+DuplicateIncludeCallbacks::DuplicateIncludeCallbacks(
+    DuplicateIncludeCheck &Check, const SourceManager &SM,
+    const std::vector<StringRef> &IgnoredList)
+    : Check(Check), SM(SM) {
+  // The main file doesn't participate in the FileChanged notification.
+  Files.emplace_back();
+
+  AllowedRegexes.reserve(IgnoredList.size());
+  for (const StringRef &It : IgnoredList) {
+    if (!It.empty())
+      AllowedRegexes.emplace_back(It);
+  }
+}
+
+bool DuplicateIncludeCallbacks::isAllowedDuplicate(
+    StringRef FileName, OptionalFileEntryRef File) const {
+  if (llvm::any_of(AllowedRegexes, [&FileName](const llvm::Regex &R) {
+        return R.match(FileName);
+      }))
+    return true;
+
+  if (File) {
+    const StringRef Resolved = File->getName();
+    return llvm::any_of(AllowedRegexes, [&Resolved](const llvm::Regex &R) {
+      return R.match(Resolved);
+    });
+  }
+
+  return false;
+}
 
 void DuplicateIncludeCallbacks::FileChanged(SourceLocation Loc,
                                             FileChangeReason Reason,
@@ -117,9 +124,8 @@ void DuplicateIncludeCallbacks::InclusionDirective(
       FilenameRange.getEnd().isMacroID())
     return;
   if (llvm::is_contained(Files.back(), FileName)) {
-    if (isAllowedDuplicate(FileName, File)) {
+    if (isAllowedDuplicate(FileName, File))
       return;
-    }
     // We want to delete the entire line, so make sure that [Start,End] covers
     // everything.
     const SourceLocation Start =
