@@ -111,11 +111,6 @@ EnableGlobalMerge("enable-global-merge", cl::Hidden,
                   cl::desc("Enable the global merge pass"),
                   cl::init(true));
 
-static cl::opt<bool>
-ForceEnableGlobalMerge("force-enable-global-merge", cl::Hidden,
-                  cl::desc("Force enable the global merge, regardless of the optimization level"),
-                  cl::init(false));
-
 static cl::opt<unsigned>
 GlobalMergeMaxOffset("global-merge-max-offset", cl::Hidden,
                      cl::desc("Set maximum offset for global merge pass"),
@@ -379,8 +374,7 @@ bool GlobalMergeImpl::doMerge(SmallVectorImpl<GlobalVariable *> &Globals,
         Function *ParentFn = I->getParent()->getParent();
 
         // If we're only optimizing for size, ignore non-minsize functions.
-        // And add a config to force global merge
-        if (!ForceEnableGlobalMerge && (Opt.SizeOnly && !ParentFn->hasMinSize()))
+        if (Opt.SizeOnly && !ParentFn->hasMinSize())
           continue;
 
         size_t UGSIdx = GlobalUsesByFunction[ParentFn];
