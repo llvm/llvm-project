@@ -1133,3 +1133,4 @@ class __declspec(dllexport) ACE_Service_Object : public ACE_Shared_Object {};
 // MSVC2015-DAG: define weak_odr dso_local dllexport {{.+}}ACE_Service_Object@@Q{{.+}}@$$Q
 // The declarations should not be exported.
 // MSVC2013-NOT: define weak_odr dso_local dllexport {{.+}}ACE_Service_Object@@Q{{.+}}@$$Q
+// PS-NOT: define weak_odr dllexport void @_ZN18ACE_Service_ObjectC1EOS_

@@ -10,11 +10,13 @@
 
 template <class T>
 class c {
+  c(c &&) noexcept {}
   void f() {}
 };
 
 template class __declspec(dllexport) c<int>;
 
+// CHECK-NOT: define {{.*}} dllexport {{.*}} @_ZN1cIiEC1EOS0_
 // CHECK: define {{.*}} dllexport {{.*}} @_ZN1cIiE1fEv
 
 extern template class __declspec(dllexport) c<char>;
