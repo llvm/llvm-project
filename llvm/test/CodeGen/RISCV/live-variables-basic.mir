@@ -3,6 +3,8 @@
 #
 # Test basic live variable analysis with simple control flow and basic blocks
 
+# REQUIRES: Assertions
+
 --- |
   define i64 @test_simple_add(i64 %a, i64 %b) {
   entry:

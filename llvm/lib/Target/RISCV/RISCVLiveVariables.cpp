@@ -31,6 +31,7 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include <set>
 
@@ -99,6 +100,7 @@ public:
   /// Print liveness information for debugging
   void print(raw_ostream &OS, const Module *M = nullptr) const override;
 
+  void verifyLiveness(MachineFunction &MF) const;
 private:
   /// Compute local liveness information (Use and Def sets) for each block
   void computeLocalLiveness(MachineFunction &MF);
@@ -160,7 +162,7 @@ bool RISCVLiveVariables::isTrackableRegister(
 void RISCVLiveVariables::processInstruction(const MachineInstr &MI,
                                              LivenessInfo &Info,
                                              const TargetRegisterInfo *TRI) {
-  // Process all operands
+  std::vector<Register> GenVec;
   for (const MachineOperand &MO : MI.operands()) {
     if (!MO.isReg() || !MO.getReg())
       continue;
@@ -195,16 +197,16 @@ void RISCVLiveVariables::processInstruction(const MachineInstr &MI,
       }
     }
 
-    if (MO.isDef()) {
-      // This is a definition
-      Info.Gen.insert(Reg);
+    if (MO.isDef()) // Collect defs for later processing.
+      GenVec.push_back(Reg);
+  }
 
-      // Also handle sub-registers for physical registers
-      if (Reg.isPhysical()) {
-        for (MCSubRegIterator SubRegs(Reg, TRI, /*IncludeSelf=*/false);
-             SubRegs.isValid(); ++SubRegs) {
-          Info.Gen.insert(*SubRegs);
-        }
+  for (auto Reg : GenVec) {
+    Info.Gen.insert(Reg);
+    if (Reg.isPhysical()) {
+      for (MCSubRegIterator SubRegs(Reg, TRI, /*IncludeSelf=*/false);
+                SubRegs.isValid(); ++SubRegs) {
+            Info.Gen.insert(*SubRegs);
       }
     }
   }
@@ -253,7 +255,7 @@ void RISCVLiveVariables::computeLocalLiveness(MachineFunction &MF) {
       for (Register Reg : Info.Use)
         dbgs() << printReg(Reg, TRI) << " ";
       dbgs() << "\n  Def: ";
-      for (Register Reg : Info.Def)
+      for (Register Reg : Info.Gen)
         dbgs() << printReg(Reg, TRI) << " ";
       dbgs() << "\n";
     });
@@ -273,7 +275,7 @@ void RISCVLiveVariables::computeGlobalLiveness(MachineFunction &MF) {
     Changed = false;
     ++Iterations;
 
-    // Process blocks in reverse post-order for better convergence
+    // Process blocks in **post-order** for better convergence
     ReversePostOrderTraversal<MachineFunction *> RPOT(&MF);
 
     for (MachineBasicBlock *MBB : RPOT) {
@@ -320,13 +322,6 @@ void RISCVLiveVariables::computeGlobalLiveness(MachineFunction &MF) {
     const MachineBasicBlock &EntryBB = MF.front();
     NumLiveRegsAtEntry += BlockLiveness[&EntryBB].LiveIn.size();
   }
-
-  for (auto &BB : MF) {
-    auto &computedLivein = BlockLiveness[&BB].LiveIn;
-    for (auto &LI : BB.getLiveIns()) {
-      assert(0 && computedLivein.count(LI.PhysReg));
-    }
-  }
 }
 
 bool RISCVLiveVariables::isLiveAt(Register Reg,
@@ -355,8 +350,25 @@ bool RISCVLiveVariables::isLiveAt(Register Reg,
   return false;
 }
 
+void RISCVLiveVariables::verifyLiveness(MachineFunction &MF) const {
+  for (auto &BB : MF) {
+    auto BBLiveness = BlockLiveness.find(&BB);
+    assert(BBLiveness != BlockLiveness.end() && "Missing Liveness");
+    auto &ComputedLivein = BBLiveness->second.LiveIn;
+    for (auto &LI : BB.getLiveIns()) {
+      if (!ComputedLivein.count(LI.PhysReg)) {
+        LLVM_DEBUG(dbgs() << "Warning: Live-in register "
+                          << printReg(LI.PhysReg, TRI)
+                          << " missing from computed live-in set of block "
+                          << BB.getName() << "\n");
+        llvm_unreachable("Computed live-in set is inconsistent with MBB.");
+      }
+    }
+  }
+}
+
 bool RISCVLiveVariables::runOnMachineFunction(MachineFunction &MF) {
-  if (skipFunction(MF.getFunction()))
+  if (skipFunction(MF.getFunction()) || MF.empty())
     return false;
 
   const RISCVSubtarget &Subtarget = MF.getSubtarget<RISCVSubtarget>();
@@ -373,8 +385,6 @@ bool RISCVLiveVariables::runOnMachineFunction(MachineFunction &MF) {
 
   LLVM_DEBUG(dbgs() << "***** RISC-V Live Variable Analysis *****\n");
   LLVM_DEBUG(dbgs() << "Function: " << MF.getName() << "\n");
-  LLVM_DEBUG(dbgs() << "Target: RV" << (Subtarget.is64Bit() ? "64" : "32")
-                    << "\n");
 
   // Clear any previous analysis
   BlockLiveness.clear();
@@ -390,6 +400,7 @@ bool RISCVLiveVariables::runOnMachineFunction(MachineFunction &MF) {
     print(dbgs());
   });
 
+  verifyLiveness(MF);
   // This is an analysis pass, it doesn't modify the function
   return false;
 }
