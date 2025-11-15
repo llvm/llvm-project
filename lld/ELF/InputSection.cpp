@@ -1398,7 +1398,7 @@ template <class ELFT> void EhInputSection::split() {
     }
 
     // Find the first relocation that points to [off,off+size). Relocations
-    // have been sorted by r_offset.
+    // have been sorted by offset.
     const uint64_t off = d.data() - content().data();
     while (relI != rels.size() && rels[relI].offset < off)
       ++relI;
