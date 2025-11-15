@@ -136,7 +136,7 @@ struct DAP final : public DAPTransport::MessageHandler {
   /// unless we send a "thread" event to indicate the thread exited.
   llvm::DenseSet<lldb::tid_t> thread_ids;
 
-  uint32_t reverse_request_seq = 0;
+  protocol::Id seq = 0;
   std::mutex call_mutex;
   llvm::SmallDenseMap<int64_t, std::unique_ptr<ResponseHandler>>
       inflight_reverse_requests;
@@ -220,8 +220,8 @@ struct DAP final : public DAPTransport::MessageHandler {
   /// Serialize the JSON value into a string and send the JSON packet to the
   /// "out" stream.
   void SendJSON(const llvm::json::Value &json);
-  /// Send the given message to the client
-  void Send(const protocol::Message &message);
+  /// Send the given message to the client.
+  protocol::Id Send(const protocol::Message &message);
 
   void SendOutput(OutputType o, const llvm::StringRef output);
 
@@ -353,19 +353,13 @@ struct DAP final : public DAPTransport::MessageHandler {
   template <typename Handler>
   void SendReverseRequest(llvm::StringRef command,
                           llvm::json::Value arguments) {
-    int64_t id;
-    {
-      std::lock_guard<std::mutex> locker(call_mutex);
-      id = ++reverse_request_seq;
-      inflight_reverse_requests[id] = std::make_unique<Handler>(command, id);
-    }
-
-    SendJSON(llvm::json::Object{
-        {"type", "request"},
-        {"seq", id},
-        {"command", command},
-        {"arguments", std::move(arguments)},
+    protocol::Id id = Send(protocol::Request{
+        command.str(),
+        std::move(arguments),
     });
+
+    std::lock_guard<std::mutex> locker(call_mutex);
+    inflight_reverse_requests[id] = std::make_unique<Handler>(command, id);
   }
 
   /// The set of capabilities supported by this adapter.
@@ -460,6 +454,11 @@ private:
   /// Event threads.
   /// @{
   void EventThread();
+  void HandleProcessEvent(const lldb::SBEvent &event, bool &process_exited);
+  void HandleTargetEvent(const lldb::SBEvent &event);
+  void HandleBreakpointEvent(const lldb::SBEvent &event);
+  void HandleThreadEvent(const lldb::SBEvent &event);
+  void HandleDiagnosticEvent(const lldb::SBEvent &event);
   void ProgressEventThread();
 
   std::thread event_thread;

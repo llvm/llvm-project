@@ -23,7 +23,7 @@ for.body:                                         ; preds = %for.cond
   br i1 true, label %cond.false, label %land.rhs
 
 land.rhs:                                         ; preds = %for.body
-  br i1 poison, label %cond.end, label %cond.false
+  br i1 false, label %cond.end, label %cond.false
 
 cond.false:                                       ; preds = %for.body, %land.rhs
   br label %cond.end

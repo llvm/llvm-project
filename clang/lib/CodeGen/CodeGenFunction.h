@@ -3352,9 +3352,14 @@ public:
   SanitizerAnnotateDebugInfo(ArrayRef<SanitizerKind::SanitizerOrdinal> Ordinals,
                              SanitizerHandler Handler);
 
-  /// Emit additional metadata used by the AllocToken instrumentation.
+  /// Build metadata used by the AllocToken instrumentation.
+  llvm::MDNode *buildAllocToken(QualType AllocType);
+  /// Emit and set additional metadata used by the AllocToken instrumentation.
   void EmitAllocToken(llvm::CallBase *CB, QualType AllocType);
-  /// Emit additional metadata used by the AllocToken instrumentation,
+  /// Build additional metadata used by the AllocToken instrumentation,
+  /// inferring the type from an allocation call expression.
+  llvm::MDNode *buildAllocToken(const CallExpr *E);
+  /// Emit and set additional metadata used by the AllocToken instrumentation,
   /// inferring the type from an allocation call expression.
   void EmitAllocToken(llvm::CallBase *CB, const CallExpr *E);
 

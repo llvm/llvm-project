@@ -802,17 +802,17 @@ define void @multiple_ivs_wide(ptr %dst) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[TMP0]], 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i32 [[TMP0]], 6
 ; CHECK-NEXT:    [[TMP5:%.*]] = add <4 x i32> [[VEC_IND]], splat (i32 2)
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x i32> [[TMP5]], i32 0
+; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <4 x i32> [[TMP5]], i32 1
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x i32> [[TMP5]], i32 2
+; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <4 x i32> [[TMP5]], i32 3
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[DST]], i32 [[TMP1]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[DST]], i32 [[TMP2]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, ptr [[DST]], i32 [[TMP3]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, ptr [[DST]], i32 [[TMP4]]
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x i32> [[TMP5]], i32 0
 ; CHECK-NEXT:    store i32 [[TMP10]], ptr [[TMP6]], align 4
-; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <4 x i32> [[TMP5]], i32 1
 ; CHECK-NEXT:    store i32 [[TMP11]], ptr [[TMP7]], align 4
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x i32> [[TMP5]], i32 2
 ; CHECK-NEXT:    store i32 [[TMP12]], ptr [[TMP8]], align 4
-; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <4 x i32> [[TMP5]], i32 3
 ; CHECK-NEXT:    store i32 [[TMP13]], ptr [[TMP9]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IND]], splat (i32 8)
@@ -838,17 +838,17 @@ define void @multiple_ivs_wide(ptr %dst) {
 ; CHECK-NEXT:    [[TMP17:%.*]] = add i32 [[OFFSET_IDX]], 4
 ; CHECK-NEXT:    [[TMP18:%.*]] = add i32 [[OFFSET_IDX]], 6
 ; CHECK-NEXT:    [[TMP19:%.*]] = add <4 x i32> [[VEC_IND2]], splat (i32 2)
+; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <4 x i32> [[TMP19]], i32 0
+; CHECK-NEXT:    [[TMP25:%.*]] = extractelement <4 x i32> [[TMP19]], i32 1
+; CHECK-NEXT:    [[TMP26:%.*]] = extractelement <4 x i32> [[TMP19]], i32 2
+; CHECK-NEXT:    [[TMP27:%.*]] = extractelement <4 x i32> [[TMP19]], i32 3
 ; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i32, ptr [[DST]], i32 [[TMP15]]
 ; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i32, ptr [[DST]], i32 [[TMP16]]
 ; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i32, ptr [[DST]], i32 [[TMP17]]
 ; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds i32, ptr [[DST]], i32 [[TMP18]]
-; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <4 x i32> [[TMP19]], i32 0
 ; CHECK-NEXT:    store i32 [[TMP24]], ptr [[TMP20]], align 4
-; CHECK-NEXT:    [[TMP25:%.*]] = extractelement <4 x i32> [[TMP19]], i32 1
 ; CHECK-NEXT:    store i32 [[TMP25]], ptr [[TMP21]], align 4
-; CHECK-NEXT:    [[TMP26:%.*]] = extractelement <4 x i32> [[TMP19]], i32 2
 ; CHECK-NEXT:    store i32 [[TMP26]], ptr [[TMP22]], align 4
-; CHECK-NEXT:    [[TMP27:%.*]] = extractelement <4 x i32> [[TMP19]], i32 3
 ; CHECK-NEXT:    store i32 [[TMP27]], ptr [[TMP23]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT4]] = add nuw i32 [[INDEX1]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT3]] = add <4 x i32> [[VEC_IND2]], splat (i32 8)

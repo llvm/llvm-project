@@ -908,7 +908,7 @@ defm SUB    : F3_12  <"sub"  , 0b000100, sub, IntRegs, i32, simm13Op>;
 let Uses = [ICC], Defs = [ICC] in
   defm SUBE   : F3_12  <"subxcc" , 0b011100, sube, IntRegs, i32, simm13Op>;
 
-let Defs = [ICC], hasPostISelHook = true in
+let Defs = [ICC], hasPostISelHook = true, isCompare = 1 in
   defm SUBCC  : F3_12  <"subcc", 0b010100, subc, IntRegs, i32, simm13Op>;
 
 let Uses = [ICC] in

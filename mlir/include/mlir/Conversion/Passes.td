@@ -187,6 +187,21 @@ def ArithToLLVMConversionPass : Pass<"convert-arith-to-llvm"> {
 }
 
 //===----------------------------------------------------------------------===//
+// ArithToAPFloat
+//===----------------------------------------------------------------------===//
+
+def ArithToAPFloatConversionPass
+    : Pass<"convert-arith-to-apfloat", "ModuleOp"> {
+  let summary = "Convert Arith ops to APFloat runtime library calls";
+  let description = [{
+    This pass converts supported Arith ops to APFloat-based runtime library
+    calls (APFloatWrappers.cpp). APFloat is a software implementation of
+    floating-point arithmetic operations.
+  }];
+  let dependentDialects = ["func::FuncDialect"];
+}
+
+//===----------------------------------------------------------------------===//
 // ArithToSPIRV
 //===----------------------------------------------------------------------===//
 
@@ -778,6 +793,10 @@ def ConvertMathToROCDL : Pass<"convert-math-to-rocdl", "ModuleOp"> {
   let summary = "Convert Math dialect to ROCDL library calls";
   let description = [{
     This pass converts supported Math ops to ROCDL library calls.
+
+    The chipset option specifies the target AMDGPU architecture. If the chipset
+    is empty, none of the chipset-dependent patterns are added, and the pass
+    will not attempt to parse the chipset.
   }];
   let dependentDialects = [
     "arith::ArithDialect",
@@ -785,6 +804,9 @@ def ConvertMathToROCDL : Pass<"convert-math-to-rocdl", "ModuleOp"> {
     "ROCDL::ROCDLDialect",
     "vector::VectorDialect",
   ];
+  let options = [Option<"chipset", "chipset", "std::string",
+                        /*default=*/"\"\"",
+                        "Chipset that these operations will run on">];
 }
 
 //===----------------------------------------------------------------------===//
@@ -800,7 +822,7 @@ def ConvertMathToSPIRVPass : Pass<"convert-math-to-spirv"> {
 // MathToXeVM
 //===----------------------------------------------------------------------===//
 
-def ConvertMathToXeVM : Pass<"convert-math-to-xevm", "ModuleOp"> {
+def ConvertMathToXeVM : Pass<"convert-math-to-xevm"> {
   let summary =
       "Convert (fast) math operations to native XeVM/SPIRV equivalents";
   let description = [{

@@ -127,6 +127,14 @@ public:
   cir::BoolType getBoolTy() { return cir::BoolType::get(getContext()); }
   cir::VoidType getVoidTy() { return cir::VoidType::get(getContext()); }
 
+  cir::IntType getUIntNTy(int n) {
+    return cir::IntType::get(getContext(), n, false);
+  }
+
+  cir::IntType getSIntNTy(int n) {
+    return cir::IntType::get(getContext(), n, true);
+  }
+
   cir::PointerType getPointerTo(mlir::Type ty) {
     return cir::PointerType::get(ty);
   }
@@ -303,8 +311,9 @@ public:
   }
 
   /// Create a copy with inferred length.
-  cir::CopyOp createCopy(mlir::Value dst, mlir::Value src) {
-    return cir::CopyOp::create(*this, dst.getLoc(), dst, src);
+  cir::CopyOp createCopy(mlir::Value dst, mlir::Value src,
+                         bool isVolatile = false) {
+    return cir::CopyOp::create(*this, dst.getLoc(), dst, src, isVolatile);
   }
 
   cir::StoreOp createStore(mlir::Location loc, mlir::Value val, mlir::Value dst,
@@ -454,6 +463,15 @@ public:
   mlir::Value createPtrIsNull(mlir::Value ptr) {
     mlir::Value nullPtr = getNullPtr(ptr.getType(), ptr.getLoc());
     return createCompare(ptr.getLoc(), cir::CmpOpKind::eq, ptr, nullPtr);
+  }
+
+  mlir::Value createAddrSpaceCast(mlir::Location loc, mlir::Value src,
+                                  mlir::Type newTy) {
+    return createCast(loc, cir::CastKind::address_space, src, newTy);
+  }
+
+  mlir::Value createAddrSpaceCast(mlir::Value src, mlir::Type newTy) {
+    return createAddrSpaceCast(src.getLoc(), src, newTy);
   }
 
   //===--------------------------------------------------------------------===//

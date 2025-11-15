@@ -717,5 +717,46 @@ exit:
   ret void
 }
 
+define void @test_urem_non_constant(ptr %dst, i32 %a, i32 %b) {
+; CHECK-LABEL: 'test_urem_non_constant'
+; CHECK-NEXT:  Classifying expressions for: @test_urem_non_constant
+; CHECK-NEXT:    %rem = urem i32 %a, %b
+; CHECK-NEXT:    --> ((-1 * (%a /u %b) * %b) + %a) U: full-set S: full-set
+; CHECK-NEXT:    %and.0 = and i1 %pre.0, %pre.1
+; CHECK-NEXT:    --> (%pre.1 umin %pre.0) U: full-set S: full-set
+; CHECK-NEXT:    %and.1 = and i1 %and.0, %pre.2
+; CHECK-NEXT:    --> (%pre.1 umin %pre.2 umin %pre.0) U: full-set S: full-set
+; CHECK-NEXT:    %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+; CHECK-NEXT:    --> {0,+,%b}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %gep.dst = getelementptr inbounds i8, ptr %dst, i32 %b
+; CHECK-NEXT:    --> ((sext i32 %b to i64) + %dst) U: full-set S: full-set Exits: ((sext i32 %b to i64) + %dst) LoopDispositions: { %loop: Invariant }
+; CHECK-NEXT:    %iv.next = add i32 %iv, %b
+; CHECK-NEXT:    --> {%b,+,%b}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @test_urem_non_constant
+; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
+;
+entry:
+  %rem = urem i32 %a, %b
+  %pre.0 = icmp eq i32 %rem, 0
+  %pre.1 = icmp ne i32 %a, 0
+  %pre.2 = icmp ne i32 %b, 0
+  %and.0 = and i1 %pre.0, %pre.1
+  %and.1 = and i1 %and.0, %pre.2
+  br i1 %and.1, label %loop, label %exit
+
+loop:
+  %iv = phi i32 [ 0, %entry], [ %iv.next, %loop ]
+  %gep.dst = getelementptr inbounds i8, ptr %dst, i32 %b
+  store i8 0, ptr %gep.dst
+  %iv.next = add i32 %iv, %b
+  %ec = icmp ne i32 %iv.next, %a
+  br i1 %ec, label %loop, label %exit
+
+exit:
+  ret void
+}
+
 declare void @llvm.assume(i1)
 declare void @llvm.experimental.guard(i1, ...)

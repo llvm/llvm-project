@@ -2532,15 +2532,12 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
 
   SCS.setToType(2, FromType);
 
-  // If we have not converted the argument type to the parameter type,
-  // this is a bad conversion sequence, unless we're resolving an overload in C.
-  //
-  // Permit conversions from a function without `cfi_unchecked_callee` to a
-  // function with `cfi_unchecked_callee`.
-  if (CanonFrom == CanonTo || S.AddingCFIUncheckedCallee(CanonFrom, CanonTo))
+  if (CanonFrom == CanonTo)
     return true;
 
-  if ((S.getLangOpts().CPlusPlus || !InOverloadResolution))
+  // If we have not converted the argument type to the parameter type,
+  // this is a bad conversion sequence, unless we're resolving an overload in C.
+  if (S.getLangOpts().CPlusPlus || !InOverloadResolution)
     return false;
 
   ExprResult ER = ExprResult{From};
@@ -13208,7 +13205,10 @@ void OverloadCandidateSet::NoteCandidates(
 
   auto Cands = CompleteCandidates(S, OCD, Args, OpLoc, Filter);
 
-  S.Diag(PD.first, PD.second, shouldDeferDiags(S, Args, OpLoc));
+  {
+    Sema::DeferDiagsRAII RAII{S, shouldDeferDiags(S, Args, OpLoc)};
+    S.Diag(PD.first, PD.second);
+  }
 
   // In WebAssembly we don't want to emit further diagnostics if a table is
   // passed as an argument to a function.
@@ -13271,10 +13271,10 @@ void OverloadCandidateSet::NoteCandidates(Sema &S, ArrayRef<Expr *> Args,
   // inform the future value of S.Diags.getNumOverloadCandidatesToShow().
   S.Diags.overloadCandidatesShown(CandsShown);
 
-  if (I != E)
-    S.Diag(OpLoc, diag::note_ovl_too_many_candidates,
-           shouldDeferDiags(S, Args, OpLoc))
-        << int(E - I);
+  if (I != E) {
+    Sema::DeferDiagsRAII RAII{S, shouldDeferDiags(S, Args, OpLoc)};
+    S.Diag(OpLoc, diag::note_ovl_too_many_candidates) << int(E - I);
+  }
 }
 
 static SourceLocation

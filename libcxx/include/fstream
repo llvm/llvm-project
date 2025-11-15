@@ -308,6 +308,25 @@ protected:
     return basic_streambuf<_CharT, _Traits>::xsputn(__str, __len);
   }
 
+  _LIBCPP_HIDE_FROM_ABI_VIRTUAL streamsize xsgetn(char_type* __str, streamsize __len) override {
+    if (__always_noconv_) {
+      const streamsize __n = std::min(this->egptr() - this->gptr(), __len);
+      if (__n != 0) {
+        traits_type::copy(__str, this->gptr(), __n);
+        this->__gbump_ptrdiff(__n);
+      }
+      const streamsize __remainder    = __len - __n;
+      const streamsize __buffer_space = this->egptr() - this->eback();
+
+      if (__remainder >= __buffer_space)
+        return std::fread(__str + __n, sizeof(char_type), __remainder, __file_) + __n;
+      else if (__remainder > 0)
+        return basic_streambuf<_CharT, _Traits>::xsgetn(__str + __n, __remainder) + __n;
+      return __n;
+    }
+    return basic_streambuf<_CharT, _Traits>::xsgetn(__str, __len);
+  }
+
 private:
   char* __extbuf_;
   const char* __extbufnext_;

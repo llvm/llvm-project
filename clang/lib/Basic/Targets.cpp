@@ -222,6 +222,8 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
       return std::make_unique<OHOSTargetInfo<ARMleTargetInfo>>(Triple, Opts);
     case llvm::Triple::FreeBSD:
       return std::make_unique<FreeBSDTargetInfo<ARMleTargetInfo>>(Triple, Opts);
+    case llvm::Triple::Fuchsia:
+      return std::make_unique<FuchsiaTargetInfo<ARMleTargetInfo>>(Triple, Opts);
     case llvm::Triple::NetBSD:
       return std::make_unique<NetBSDTargetInfo<ARMleTargetInfo>>(Triple, Opts);
     case llvm::Triple::OpenBSD:
@@ -254,6 +256,8 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
       return std::make_unique<AppleMachOARMTargetInfo>(Triple, Opts);
 
     switch (os) {
+    case llvm::Triple::Fuchsia:
+      return std::make_unique<FuchsiaTargetInfo<ARMbeTargetInfo>>(Triple, Opts);
     case llvm::Triple::Linux:
       return std::make_unique<LinuxTargetInfo<ARMbeTargetInfo>>(Triple, Opts);
     case llvm::Triple::NetBSD:

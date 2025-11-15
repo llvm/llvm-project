@@ -145,7 +145,9 @@ mlir::Attribute CIRGenVTables::getVTableComponent(
   case VTableComponent::CK_FunctionPointer:
   case VTableComponent::CK_CompleteDtorPointer:
   case VTableComponent::CK_DeletingDtorPointer: {
-    GlobalDecl gd = component.getGlobalDecl();
+    GlobalDecl gd = component.getGlobalDecl(
+        cgm.getASTContext().getTargetInfo().emitVectorDeletingDtors(
+            cgm.getASTContext().getLangOpts()));
 
     assert(!cir::MissingFeatures::cudaSupport());
 

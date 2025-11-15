@@ -1,0 +1,31 @@
+RUN: rm -rf %t
+RUN: mkdir %t
+
+# Ingest a blob which just fits inside the CAS data pool to make sure the validate passes.
+RUN: truncate -s 7 %t/file
+RUN: cat %t/file | \
+RUN:   llvm-cas --cas %t/cas  --make-blob \
+RUN:   --data -
+RUN: llvm-cas --cas %t/cas --validate --check-hash
+
+RUN: llvm-cas --cas %t/cas --validate
+RUN: llvm-cas --cas %t/cas --validate --check-hash
+
+RUN: rm %t/cas/v1.1/data.v1
+RUN: not llvm-cas --cas %t/cas --validate
+RUN: not llvm-cas --cas %t/cas --validate --check-hash
+
+RUN: mkdir %t/ac
+
+RUN: llvm-cas --cas %t/ac --make-blob \
+RUN:   --data /dev/null > %t/empty.casid
+RUN: echo "abc" | \
+RUN:   llvm-cas --cas %t/ac  --make-blob \
+RUN:   --data - >%t/abc.casid
+
+RUN: llvm-cas --cas %t/ac --put-cache-key @%t/abc.casid @%t/empty.casid
+RUN: llvm-cas --cas %t/ac --validate
+# Note: records are 40 bytes (32 hash bytes + 8 byte value), so trim the last
+# allocated record, leaving it invalid.
+RUN: truncate -s -40 %t/ac/v1.1/actions.v1
+RUN: not llvm-cas --cas %t/ac --validate

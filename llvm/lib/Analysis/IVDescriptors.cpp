@@ -1220,11 +1220,6 @@ unsigned RecurrenceDescriptor::getOpcode(RecurKind Kind) {
     return Instruction::Add;
   case RecurKind::Mul:
     return Instruction::Mul;
-  case RecurKind::AnyOf:
-  case RecurKind::FindFirstIVSMin:
-  case RecurKind::FindFirstIVUMin:
-  case RecurKind::FindLastIVSMax:
-  case RecurKind::FindLastIVUMax:
   case RecurKind::Or:
     return Instruction::Or;
   case RecurKind::And:
@@ -1248,6 +1243,13 @@ unsigned RecurrenceDescriptor::getOpcode(RecurKind Kind) {
   case RecurKind::FMaximumNum:
   case RecurKind::FMinimumNum:
     return Instruction::FCmp;
+  case RecurKind::AnyOf:
+  case RecurKind::FindFirstIVSMin:
+  case RecurKind::FindFirstIVUMin:
+  case RecurKind::FindLastIVSMax:
+  case RecurKind::FindLastIVUMax:
+    // TODO: Set AnyOf and FindIV to Instruction::Select once in-loop reductions
+    // are supported.
   default:
     llvm_unreachable("Unknown recurrence operation");
   }

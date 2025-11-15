@@ -59,6 +59,7 @@ static void PutBound(llvm::raw_ostream &, const Bound &);
 static void PutShapeSpec(llvm::raw_ostream &, const ShapeSpec &);
 static void PutShape(
     llvm::raw_ostream &, const ArraySpec &, char open, char close);
+static void PutMapper(llvm::raw_ostream &, const Symbol &, SemanticsContext &);
 
 static llvm::raw_ostream &PutAttr(llvm::raw_ostream &, Attr);
 static llvm::raw_ostream &PutType(llvm::raw_ostream &, const DeclTypeSpec &);
@@ -938,6 +939,7 @@ void ModFileWriter::PutEntity(llvm::raw_ostream &os, const Symbol &symbol) {
           [&](const ProcEntityDetails &) { PutProcEntity(os, symbol); },
           [&](const TypeParamDetails &) { PutTypeParam(os, symbol); },
           [&](const UserReductionDetails &) { PutUserReduction(os, symbol); },
+          [&](const MapperDetails &) { PutMapper(decls_, symbol, context_); },
           [&](const auto &) {
             common::die("PutEntity: unexpected details: %s",
                 DetailsToString(symbol.details()).c_str());
@@ -1021,6 +1023,9 @@ void ModFileWriter::PutObjectEntity(
       case common::IgnoreTKR::Contiguous:
         os << 'c';
         break;
+      case common::IgnoreTKR::Pointer:
+        os << 'p';
+        break;
       }
     });
     os << ") " << symbol.name() << '\n';
@@ -1095,6 +1100,16 @@ void ModFileWriter::PutUserReduction(
   // Decls are pointers, so do not use a reference.
   for (const auto *decl : details.GetDeclList()) {
     Unparse(os, *decl, context_.langOptions());
+  }
+}
+
+static void PutMapper(
+    llvm::raw_ostream &os, const Symbol &symbol, SemanticsContext &context) {
+  const auto &details{symbol.get<MapperDetails>()};
+  // Emit each saved DECLARE MAPPER construct as-is, so that consumers of the
+  // module can reparse it and recreate the mapper symbol and semantics state.
+  for (const auto *decl : details.GetDeclList()) {
+    Unparse(os, *decl, context.langOptions());
   }
 }
 

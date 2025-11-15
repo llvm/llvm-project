@@ -293,7 +293,7 @@ class RAIINewLineStream final : public raw_ostream {
 
 public:
   RAIINewLineStream(raw_ostream &Os) : Os(Os) { SetUnbuffered(); }
-  ~RAIINewLineStream() { Os << '\n'; }
+  ~RAIINewLineStream() override { Os << '\n'; }
   void write_impl(const char *Ptr, size_t Size) final { Os.write(Ptr, Size); }
   uint64_t current_pos() const final { return Os.tell(); }
   RAIINewLineStream &asLvalue() { return *this; }
