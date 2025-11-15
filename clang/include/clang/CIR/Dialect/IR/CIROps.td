@@ -3386,6 +3386,10 @@ def CIR_BaseClassAddrOp : CIR_Op<"base_class_addr"> {
     cannot be known by the operation, and that information affects how the
     operation is lowered.
 
+    The validity of the relationship of derived and base cannot yet be verified.
+    If the target class is not a valid base class for the object, the behavior
+    is undefined.
+
     Example:
     ```c++
     struct Base { };
@@ -3399,8 +3403,6 @@ def CIR_BaseClassAddrOp : CIR_Op<"base_class_addr"> {
     ```
   }];
 
-  // The validity of the relationship of derived and base cannot yet be
-  // verified, currently not worth adding a verifier.
   let arguments = (ins
     Arg<CIR_PointerType, "derived class pointer", [MemRead]>:$derived_addr,
     IndexAttr:$offset, UnitAttr:$assume_not_null);
@@ -3430,6 +3432,10 @@ def CIR_DerivedClassAddrOp : CIR_Op<"derived_class_addr"> {
     That depends on the context and cannot be known by the operation, and that
     information affects how the operation is lowered.
 
+    The validity of the relationship of derived and base cannot yet be verified.
+    If the target class is not a valid derived class for the object, the
+    behavior is undefined.
+
     Example:
     ```c++
     class A {};
@@ -3447,8 +3453,6 @@ def CIR_DerivedClassAddrOp : CIR_Op<"derived_class_addr"> {
     ```
   }];
 
-  // The validity of the relationship of derived and base cannot yet be
-  // verified, currently not worth adding a verifier.
   let arguments = (ins
     Arg<CIR_PointerType, "base class pointer", [MemRead]>:$base_addr,
     IndexAttr:$offset, UnitAttr:$assume_not_null);
