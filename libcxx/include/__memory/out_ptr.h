@@ -88,7 +88,7 @@ private:
 };
 
 template <class _Pointer = void, class _Smart, class... _Args>
-_LIBCPP_HIDE_FROM_ABI auto out_ptr(_Smart& __s, _Args&&... __args) {
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI auto out_ptr(_Smart& __s, _Args&&... __args) {
   using _Ptr = conditional_t<is_void_v<_Pointer>, __pointer_of_t<_Smart>, _Pointer>;
   return std::out_ptr_t<_Smart, _Ptr, _Args&&...>(__s, std::forward<_Args>(__args)...);
 }
