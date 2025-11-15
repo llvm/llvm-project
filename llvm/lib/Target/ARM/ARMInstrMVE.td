@@ -683,8 +683,13 @@ class MVE_VADDV<string iname, string suffix, dag iops, string cstr,
 def SDTVecReduceP : SDTypeProfile<1, 2, [    // VADDLVp
   SDTCisInt<0>, SDTCisVec<1>, SDTCisVec<2>
 ]>;
+
+// sign- or zero-extend the elements of a vector to i32,
+// add them all together, and return an i32 of their sum
 def ARMVADDVs       : SDNode<"ARMISD::VADDVs", SDTVecReduce>;
 def ARMVADDVu       : SDNode<"ARMISD::VADDVu", SDTVecReduce>;
+
+// Same as VADDV[su] but with a v4i1 predicate mask
 def ARMVADDVps      : SDNode<"ARMISD::VADDVps", SDTVecReduceP>;
 def ARMVADDVpu      : SDNode<"ARMISD::VADDVpu", SDTVecReduceP>;
 
@@ -806,9 +811,19 @@ multiclass MVE_VADDLV_A<MVEVectorVTInfo VTI> {
   defvar InstN = !cast<Instruction>(NAME # "no_acc");
 
   defvar letter = VTI.SuffixLetter;
+
+  // sign- or zero-extend elements to i64 and sum, returning
+  // the low and high 32-bit halves of the sum
   defvar ARMVADDLV = SDNode<"ARMISD::VADDLV" # letter, SDTVecReduceL>;
+
+  // Same as VADDLV[su] but also add an input accumulator
+  // provided as low and high halves
   defvar ARMVADDLVA = SDNode<"ARMISD::VADDLVA" # letter, SDTVecReduceLA>;
+
+  // Same as VADDLV[su] but with a v4i1 predicate mask
   defvar ARMVADDLVp = SDNode<"ARMISD::VADDLVp" # letter, SDTVecReduceLP>;
+
+  // Same as VADDLVp[su] but with a v4i1 predicate mask
   defvar ARMVADDLVAp = SDNode<"ARMISD::VADDLVAp" # letter, SDTVecReduceLPA>;
 
   let Predicates = [HasMVEInt] in {
@@ -943,9 +958,17 @@ multiclass MVE_VMINMAXV_ty<string iname, bit isMin, string intrBaseName> {
 def SDTVecReduceR : SDTypeProfile<1, 2, [   // Reduction of an integer and vector into an integer
   SDTCisInt<0>, SDTCisInt<1>, SDTCisVec<2>
 ]>;
+
+// Find minimum unsigned value of a vector and register
 def ARMVMINVu       : SDNode<"ARMISD::VMINVu", SDTVecReduceR>;
+
+// Find minimum signed value of a vector and register
 def ARMVMINVs       : SDNode<"ARMISD::VMINVs", SDTVecReduceR>;
+
+// Find maximum unsigned value of a vector and register
 def ARMVMAXVu       : SDNode<"ARMISD::VMAXVu", SDTVecReduceR>;
+
+// Find maximum signed value of a vector and register
 def ARMVMAXVs       : SDNode<"ARMISD::VMAXVs", SDTVecReduceR>;
 
 defm MVE_VMINV : MVE_VMINMAXV_ty<"vminv", 1, "int_arm_mve_minv">;
@@ -1146,16 +1169,31 @@ def SDTVecReduce2LAP : SDTypeProfile<2, 5, [    // VMLALVA
   SDTCisInt<0>, SDTCisInt<1>, SDTCisInt<2>, SDTCisInt<3>,
   SDTCisVec<4>, SDTCisVec<5>, SDTCisVec<6>
 ]>;
+
+// sign- or zero-extend the elements of two vectors to i32, multiply
+// them and add the results together, returning an i32 of the sum
 def ARMVMLAVs       : SDNode<"ARMISD::VMLAVs", SDTVecReduce2>;
 def ARMVMLAVu       : SDNode<"ARMISD::VMLAVu", SDTVecReduce2>;
+
+// Same as VMLAV but with i64, returning the low and
+// high 32-bit halves of the sum
 def ARMVMLALVs      : SDNode<"ARMISD::VMLALVs", SDTVecReduce2L>;
 def ARMVMLALVu      : SDNode<"ARMISD::VMLALVu", SDTVecReduce2L>;
+
+// Same as VMLALV but also add an input accumulator
+// provided as low and high halves
 def ARMVMLALVAs     : SDNode<"ARMISD::VMLALVAs", SDTVecReduce2LA>;
 def ARMVMLALVAu     : SDNode<"ARMISD::VMLALVAu", SDTVecReduce2LA>;
+
+// Same as VMLAV[su] with a v4i1 predicate mask
 def ARMVMLAVps      : SDNode<"ARMISD::VMLAVps", SDTVecReduce2P>;
 def ARMVMLAVpu      : SDNode<"ARMISD::VMLAVpu", SDTVecReduce2P>;
+
+// Same as VMLALV[su] with a v4i1 predicate mask
 def ARMVMLALVps     : SDNode<"ARMISD::VMLALVps", SDTVecReduce2LP>;
 def ARMVMLALVpu     : SDNode<"ARMISD::VMLALVpu", SDTVecReduce2LP>;
+
+// Same as VMLALVA[su] with a v4i1 predicate mask
 def ARMVMLALVAps    : SDNode<"ARMISD::VMLALVAps", SDTVecReduce2LAP>;
 def ARMVMLALVApu    : SDNode<"ARMISD::VMLALVApu", SDTVecReduce2LAP>;
 
@@ -1997,6 +2035,7 @@ class MVE_VQxDMULH_Base<string iname, string suffix, bits<2> size, bit rounding,
   let validForTailPredication = 1;
 }
 
+// MVE vqdmulh instruction
 def MVEvqdmulh : SDNode<"ARMISD::VQDMULH", SDTIntBinOp>;
 
 multiclass MVE_VQxDMULH_m<string iname, MVEVectorVTInfo VTI,
@@ -4414,6 +4453,7 @@ let Predicates = [HasMVEInt] in {
   defm PEOR   : two_predops<xor, t2EORrr>;
 }
 
+// Predicate cast for MVE i1 types
 // Occasionally we need to cast between a i32 and a boolean vector, for
 // example when moving between rGPR and VPR.P0 as part of predicate vector
 // shuffles. We also sometimes need to cast between different predicate
@@ -4810,6 +4850,7 @@ defm MVE_VQMOVNu32  : MVE_VxMOVxN_halves<"vqmovn",  "u32", 0b1, 0b1, 0b01>;
 defm MVE_VQMOVUNs16 : MVE_VxMOVxN_halves<"vqmovun", "s16", 0b0, 0b0, 0b00>;
 defm MVE_VQMOVUNs32 : MVE_VxMOVxN_halves<"vqmovun", "s32", 0b0, 0b0, 0b01>;
 
+// MVE vmovn
 def MVEvmovn       : SDNode<"ARMISD::VMOVN", SDTARMVEXT>;
 
 multiclass MVE_VMOVN_p<Instruction Inst, bit top,
@@ -4880,7 +4921,11 @@ defm : MVE_VQMOVN_p<MVE_VQMOVUNs16th, 1, 0, 1, MVE_v16i8, MVE_v8i16>;
 
 def SDTARMVMOVNQ : SDTypeProfile<1, 3, [SDTCisVec<0>, SDTCisSameAs<0, 1>,
                                         SDTCisVec<2>, SDTCisVT<3, i32>]>;
+
+// Vector (V) Saturating (Q) Move and Narrow (N), signed (s)
 def MVEvqmovns   : SDNode<"ARMISD::VQMOVNs", SDTARMVMOVNQ>;
+
+// Vector (V) Saturating (Q) Move and Narrow (N), unsigned (u)
 def MVEvqmovnu   : SDNode<"ARMISD::VQMOVNu", SDTARMVMOVNQ>;
 
 let Predicates = [HasMVEInt] in {
@@ -4938,7 +4983,11 @@ class MVE_VCVT_ff<string iname, string suffix, bit op, bit T,
 
 def SDTARMVCVTL    : SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisVec<1>,
                                          SDTCisVT<2, i32>]>;
+
+// MVE vcvt f32 -> f16, truncating into either the bottom or top lanes
 def MVEvcvtn       : SDNode<"ARMISD::VCVTN", SDTARMVMOVNQ>;
+
+// MVE vcvt f16 -> f32, extending from either the bottom or top lanes
 def MVEvcvtl       : SDNode<"ARMISD::VCVTL", SDTARMVCVTL>;
 
 multiclass MVE_VCVT_f2h_m<string iname, int half> {
@@ -6006,26 +6055,24 @@ foreach wb = [MVE_vldst24_writeback<
                      "vst" # n.nvecs # stage # "." # s.lanesize>;
 }
 
-// VLD1DUP has an extra alignment op.
+// Vector load N-element structure to all lanes
 def MVE_VLD1DUP : SDNode<"ARMISD::VLD1DUP", SDTypeProfile<1, 2, []>, [SDNPHasChain, SDNPMemOperand]>;
 def MVE_VLD2DUP : SDNode<"ARMISD::VLD2DUP", SDTypeProfile<2, 1, []>, [SDNPHasChain, SDNPMemOperand]>;
 def MVE_VLD3DUP : SDNode<"ARMISD::VLD3DUP", SDTypeProfile<3, 1, []>, [SDNPHasChain, SDNPMemOperand]>;
 def MVE_VLD4DUP : SDNode<"ARMISD::VLD4DUP", SDTypeProfile<4, 1, []>, [SDNPHasChain, SDNPMemOperand]>;
 
-def MVE_VLD1DUP_UPD : SDNode<"ARMISD::VLD1DUP_UPD", SDTypeProfile<2, 3, []>, [SDNPHasChain, SDNPMemOperand]>;
-def MVE_VLD2DUP_UPD : SDNode<"ARMISD::VLD2DUP_UPD", SDTypeProfile<3, 3, []>, [SDNPHasChain, SDNPMemOperand]>;
-def MVE_VLD3DUP_UPD : SDNode<"ARMISD::VLD3DUP_UPD", SDTypeProfile<4, 3, []>, [SDNPHasChain, SDNPMemOperand]>;
-def MVE_VLD4DUP_UPD : SDNode<"ARMISD::VLD4DUP_UPD", SDTypeProfile<5, 3, []>, [SDNPHasChain, SDNPMemOperand]>;
-
+// NEON loads with post-increment base updates
 def MVE_VLD1_UPD : SDNode<"ARMISD::VLD1_UPD", SDTypeProfile<2, 3, []>, [SDNPHasChain, SDNPMemOperand]>;
 def MVE_VLD2_UPD : SDNode<"ARMISD::VLD2_UPD", SDTypeProfile<3, 3, []>, [SDNPHasChain, SDNPMemOperand]>;
 def MVE_VLD3_UPD : SDNode<"ARMISD::VLD3_UPD", SDTypeProfile<4, 3, []>, [SDNPHasChain, SDNPMemOperand]>;
 def MVE_VLD4_UPD : SDNode<"ARMISD::VLD4_UPD", SDTypeProfile<5, 3, []>, [SDNPHasChain, SDNPMemOperand]>;
-
 def MVE_VLD2LN_UPD : SDNode<"ARMISD::VLD2LN_UPD", SDTypeProfile<3, 6, []>, [SDNPHasChain, SDNPMemOperand]>;
 def MVE_VLD3LN_UPD : SDNode<"ARMISD::VLD3LN_UPD", SDTypeProfile<4, 7, []>, [SDNPHasChain, SDNPMemOperand]>;
 def MVE_VLD4LN_UPD : SDNode<"ARMISD::VLD4LN_UPD", SDTypeProfile<5, 8, []>, [SDNPHasChain, SDNPMemOperand]>;
-
+def MVE_VLD1DUP_UPD : SDNode<"ARMISD::VLD1DUP_UPD", SDTypeProfile<2, 3, []>, [SDNPHasChain, SDNPMemOperand]>;
+def MVE_VLD2DUP_UPD : SDNode<"ARMISD::VLD2DUP_UPD", SDTypeProfile<3, 3, []>, [SDNPHasChain, SDNPMemOperand]>;
+def MVE_VLD3DUP_UPD : SDNode<"ARMISD::VLD3DUP_UPD", SDTypeProfile<4, 3, []>, [SDNPHasChain, SDNPMemOperand]>;
+def MVE_VLD4DUP_UPD : SDNode<"ARMISD::VLD4DUP_UPD", SDTypeProfile<5, 3, []>, [SDNPHasChain, SDNPMemOperand]>;
 def MVE_VLD1x2_UPD : SDNode<"ARMISD::VLD1x2_UPD", SDTypeProfile<3, 3, []>, [SDNPHasChain, SDNPMemOperand]>;
 def MVE_VLD1x3_UPD : SDNode<"ARMISD::VLD1x3_UPD", SDTypeProfile<4, 3, []>, [SDNPHasChain, SDNPMemOperand]>;
 def MVE_VLD1x4_UPD : SDNode<"ARMISD::VLD1x4_UPD", SDTypeProfile<5, 3, []>, [SDNPHasChain, SDNPMemOperand]>;
@@ -6039,15 +6086,15 @@ def SDTARMVST3 : SDTypeProfile<1, 6, [SDTCisPtrTy<0>, SDTCisPtrTy<1>, SDTCisVT<2
 def SDTARMVST4 : SDTypeProfile<1, 7, [SDTCisPtrTy<0>, SDTCisPtrTy<1>, SDTCisVT<2, i32>, SDTCisVec<3>,
                                       SDTCisSameAs<3, 4>, SDTCisSameAs<3, 5>,
                                       SDTCisSameAs<3, 6>, SDTCisVT<7, i32>]>;
+
+// NEON stores with post-increment base updates
 def MVE_VST1_UPD : SDNode<"ARMISD::VST1_UPD", SDTARMVST1, [SDNPHasChain, SDNPMemOperand]>;
 def MVE_VST2_UPD : SDNode<"ARMISD::VST2_UPD", SDTARMVST2, [SDNPHasChain, SDNPMemOperand]>;
 def MVE_VST3_UPD : SDNode<"ARMISD::VST3_UPD", SDTARMVST3, [SDNPHasChain, SDNPMemOperand]>;
 def MVE_VST4_UPD : SDNode<"ARMISD::VST4_UPD", SDTARMVST4, [SDNPHasChain, SDNPMemOperand]>;
-
 def MVE_VST2LN_UPD : SDNode<"ARMISD::VST2LN_UPD", SDTypeProfile<1, 6, []>, [SDNPHasChain, SDNPMemOperand]>;
 def MVE_VST3LN_UPD : SDNode<"ARMISD::VST3LN_UPD", SDTypeProfile<1, 7, []>, [SDNPHasChain, SDNPMemOperand]>;
 def MVE_VST4LN_UPD : SDNode<"ARMISD::VST4LN_UPD", SDTypeProfile<1, 8, []>, [SDNPHasChain, SDNPMemOperand]>;
-
 def MVE_VST1x2_UPD : SDNode<"ARMISD::VST1x2_UPD", SDTypeProfile<1, 5, []>, [SDNPHasChain, SDNPMemOperand]>;
 def MVE_VST1x3_UPD : SDNode<"ARMISD::VST1x3_UPD", SDTypeProfile<1, 6, []>, [SDNPHasChain, SDNPMemOperand]>;
 def MVE_VST1x4_UPD : SDNode<"ARMISD::VST1x4_UPD", SDTypeProfile<1, 7, []>, [SDNPHasChain, SDNPMemOperand]>;
@@ -6903,6 +6950,9 @@ class MVE_WLSTP<string asm, bits<2> size>
 
 def SDT_MVEMEMCPYLOOPNODE
     : SDTypeProfile<0, 3, [SDTCisPtrTy<0>, SDTCisPtrTy<1>, SDTCisVT<2, i32>]>;
+
+// Pseudo-instruction representing a memory copy using a tail predicated
+// loop
 def MVE_MEMCPYLOOPNODE : SDNode<"ARMISD::MEMCPYLOOP", SDT_MVEMEMCPYLOOPNODE,
                                 [SDNPHasChain, SDNPMayStore, SDNPMayLoad]>;
 
@@ -6915,6 +6965,9 @@ let usesCustomInserter = 1, hasNoSchedulingInfo = 1, Defs = [CPSR] in {
 
 def SDT_MVEMEMSETLOOPNODE
     : SDTypeProfile<0, 3, [SDTCisPtrTy<0>, SDTCisVT<1, v16i8>, SDTCisVT<2, i32>]>;
+
+// Pseudo-instruction representing a memset using a tail predicated
+// loop
 def MVE_MEMSETLOOPNODE : SDNode<"ARMISD::MEMSETLOOP", SDT_MVEMEMSETLOOPNODE,
                                 [SDNPHasChain, SDNPMayStore, SDNPMayLoad]>;
 
