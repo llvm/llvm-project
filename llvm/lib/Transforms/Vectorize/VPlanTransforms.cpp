@@ -1222,25 +1222,34 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
 
   // Fold any-of (fcmp uno %A, %A), (fcmp uno %B, %B), ... ->
   //      any-of (fcmp uno %A, %B), ...
-  if (match(Def, m_AnyOf()) && Def->getNumOperands() % 2 == 0) {
+  if (match(Def, m_AnyOf())) {
     SmallVector<VPValue *, 4> NewOps;
-    unsigned NumOps = Def->getNumOperands();
-    for (unsigned I = 0; I < NumOps; I += 2) {
-      VPValue *A, *B;
-      if (!match(
-              Def->getOperand(I),
-              m_SpecificCmp(CmpInst::FCMP_UNO, m_VPValue(A), m_Deferred(A))) ||
-          !match(Def->getOperand(I + 1),
-                 m_SpecificCmp(CmpInst::FCMP_UNO, m_VPValue(B), m_Deferred(B))))
-        break;
-
-      NewOps.push_back(Builder.createFCmp(CmpInst::FCMP_UNO, A, B));
+    VPRecipeBase *UnpairedCmp = nullptr;
+    for (VPValue *Op : Def->operands()) {
+      VPValue *X;
+      if (Op->getNumUsers() > 1 ||
+          !match(Op, m_SpecificCmp(CmpInst::FCMP_UNO, m_VPValue(X),
+                                   m_Deferred(X)))) {
+        NewOps.push_back(Op);
+        continue;
+      }
+      if (UnpairedCmp) {
+        NewOps.push_back(Builder.createFCmp(CmpInst::FCMP_UNO,
+                                            UnpairedCmp->getOperand(0), X));
+        UnpairedCmp = nullptr;
+      } else {
+        UnpairedCmp = Op->getDefiningRecipe();
+      }
     }
 
-    if (NewOps.size() == NumOps / 2) {
+    if (UnpairedCmp)
+      NewOps.push_back(UnpairedCmp->getVPSingleValue());
+
+    if (NewOps.size() < Def->getNumOperands()) {
       VPValue *NewAnyOf = Builder.createNaryOp(VPInstruction::AnyOf, NewOps);
       return Def->replaceAllUsesWith(NewAnyOf);
     }
+  }
 
   // Fold (fcmp uno %X, %X) or (fcmp uno %Y, %Y) -> fcmp uno %X, %Y
   // This is useful for fmax/fmin without fast-math flags, where we need to
