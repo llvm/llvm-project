@@ -6399,7 +6399,7 @@ bool CodeGenPrepare::optimizeGatherScatterInst(Instruction *MemoryInst,
 // Check the pattern we are interested in where there are maximum 2 uses
 // of the intrinsic which are the extract instructions.
 static bool matchOverflowPattern(Instruction *&I, ExtractValueInst *&MulExtract,
-                                ExtractValueInst *&OverflowExtract) {
+                                 ExtractValueInst *&OverflowExtract) {
   if (I->getNumUses() > 2)
     return false;
 
@@ -6413,7 +6413,8 @@ static bool matchOverflowPattern(Instruction *&I, ExtractValueInst *&MulExtract,
       MulExtract = Extract;
     else if (Index == 1)
       OverflowExtract = Extract;
-    else return false;
+    else
+      return false;
   }
   return true;
 }
@@ -6434,11 +6435,14 @@ static bool matchOverflowPattern(Instruction *&I, ExtractValueInst *&MulExtract,
 // overflow:
 // overflow.res:
 // \returns true if optimization was applied
-// TODO: This optimization can be further improved but it will get more complex, so we leave it for future work.
+// TODO: This optimization can be further improved but it will get more complex,
+// so we leave it for future work.
 bool CodeGenPrepare::optimizeMulWithOverflow(Instruction *I, bool IsSigned,
                                              ModifyDT &ModifiedDT) {
   // Check if target supports this optimization.
-  if (!TLI->shouldOptimizeMulOverflowWithZeroHighBits(I->getContext(), TLI->getValueType(*DL, I->getType()->getContainedType(0))))
+  if (!TLI->shouldOptimizeMulOverflowWithZeroHighBits(
+          I->getContext(),
+          TLI->getValueType(*DL, I->getType()->getContainedType(0))))
     return false;
 
   ExtractValueInst *MulExtract = nullptr, *OverflowExtract = nullptr;
@@ -6459,7 +6463,8 @@ bool CodeGenPrepare::optimizeMulWithOverflow(Instruction *I, bool IsSigned,
   std::string OriginalBlockName = I->getParent()->getName().str();
   BasicBlock *OverflowEntryBB =
       I->getParent()->splitBasicBlock(I, "overflow.entry", /*Before*/ true);
-  // Keep the 'br' instruction that is generated as a result of the split to be erased/replaced later.
+  // Keep the 'br' instruction that is generated as a result of the split to be
+  // erased/replaced later.
   Instruction *OldTerminator = OverflowEntryBB->getTerminator();
   BasicBlock *NoOverflowBB =
       BasicBlock::Create(I->getContext(), "overflow.no", I->getFunction());
@@ -6525,8 +6530,8 @@ bool CodeGenPrepare::optimizeMulWithOverflow(Instruction *I, bool IsSigned,
 
   // BB overflow.res:
   Builder.SetInsertPoint(OverflowResBB, OverflowResBB->getFirstInsertionPt());
-  // Create PHI nodes to merge results from no.overflow BB and overflow BB to replace the
-  // extract instructions.
+  // Create PHI nodes to merge results from no.overflow BB and overflow BB to
+  // replace the extract instructions.
   PHINode *OverflowResPHI = Builder.CreatePHI(Ty, 2),
           *OverflowFlagPHI =
               Builder.CreatePHI(IntegerType::getInt1Ty(I->getContext()), 2);
@@ -6546,7 +6551,8 @@ bool CodeGenPrepare::optimizeMulWithOverflow(Instruction *I, bool IsSigned,
     OverflowExtract->eraseFromParent();
   }
 
-  // Remove the intrinsic from parent (overflow.res BB) as it will be part of overflow BB
+  // Remove the intrinsic from parent (overflow.res BB) as it will be part of
+  // overflow BB
   I->removeFromParent();
   // BB overflow:
   I->insertInto(OverflowBB, OverflowBB->end());
