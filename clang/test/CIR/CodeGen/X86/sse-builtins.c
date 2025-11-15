@@ -24,6 +24,10 @@ void test_mm_setcsr(unsigned int A) {
   // LLVM-LABEL: test_mm_setcsr
   // LLVM: store i32
   // LLVM: call void @llvm.x86.sse.ldmxcsr(ptr {{.*}})
+
+  // OGCG-LABEL: test_mm_setcsr
+  // OGCG: store i32
+  // OGCG: call void @llvm.x86.sse.ldmxcsr(ptr {{.*}})
   _mm_setcsr(A);
 }
 
@@ -35,6 +39,10 @@ unsigned int test_mm_getcsr(void) {
   // LLVM-LABEL: test_mm_getcsr
   // LLVM: call void @llvm.x86.sse.stmxcsr(ptr %{{.*}})
   // LLVM: load i32
+
+  // OGCG-LABEL: test_mm_getcsr
+  // OGCG: call void @llvm.x86.sse.stmxcsr(ptr %{{.*}})
+  // OGCG: load i32
   return _mm_getcsr();
 }
 
