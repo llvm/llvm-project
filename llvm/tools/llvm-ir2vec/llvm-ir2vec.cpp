@@ -395,7 +395,7 @@ public:
   /// FIXME: Use --target option to get target info directly, avoiding the need
   /// to parse machine functions for pre-training operations.
   bool initializeVocabularyForLayout(const Module &M) {
-    for (const Function &F : M.function_definitions()) {
+    for (const Function &F : M.getFunctionDefs()) {
 
       MachineFunction *MF = MMI.getMachineFunction(F);
       if (!MF)
@@ -429,7 +429,7 @@ public:
     std::string Relationships;
     raw_string_ostream RelOS(Relationships);
 
-    for (const Function &F : M.function_definitions()) {
+    for (const Function &F : M.getFunctionDefs()) {
 
       MachineFunction *MF = MMI.getMachineFunction(F);
       if (!MF) {
@@ -528,7 +528,7 @@ public:
       return;
     }
 
-    for (const Function &F : M.function_definitions()) {
+    for (const Function &F : M.getFunctionDefs()) {
 
       MachineFunction *MF = MMI.getMachineFunction(F);
       if (!MF) {

@@ -434,7 +434,7 @@ define void @Foo2() {
 }
 
 TEST(ModuleTest, FunctionDefinitions) {
-  // Test function_definitions() method which returns only functions with bodies
+  // Test getFunctionDefs() method which returns only functions with bodies
   LLVMContext Context;
   SMDiagnostic Err;
   std::unique_ptr<Module> M = parseAssemblyString(R"(
@@ -468,14 +468,14 @@ define void @Def3() {
 
   // Count function definitions only (should be 3)
   size_t DefinitionCount = 0;
-  for (Function &F : M->function_definitions()) {
+  for (Function &F : M->getFunctionDefs()) {
     EXPECT_FALSE(F.isDeclaration());
     ++DefinitionCount;
   }
   EXPECT_EQ(DefinitionCount, 3u);
 
   // Verify the names of the definitions
-  auto DefRange = M->function_definitions();
+  auto DefRange = M->getFunctionDefs();
   auto It = DefRange.begin();
   EXPECT_EQ(It->getName(), "Def1");
   ++It;
@@ -487,7 +487,7 @@ define void @Def3() {
 }
 
 TEST(ModuleTest, FunctionDefinitionsEmpty) {
-  // Test function_definitions() with no definitions (only declarations)
+  // Test getFunctionDefs() with no definitions (only declarations)
   LLVMContext Context;
   SMDiagnostic Err;
   std::unique_ptr<Module> M = parseAssemblyString(R"(
@@ -504,7 +504,7 @@ declare void @Decl3()
 
   // But no definitions
   size_t DefinitionCount = 0;
-  for (Function &F : M->function_definitions()) {
+  for (Function &F : M->getFunctionDefs()) {
     (void)F;
     ++DefinitionCount;
   }

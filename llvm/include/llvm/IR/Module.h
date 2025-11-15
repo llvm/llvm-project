@@ -712,11 +712,11 @@ public:
 
   /// Get an iterator range over all function definitions (excluding
   /// declarations).
-  auto function_definitions() {
+  auto getFunctionDefs() {
     return make_filter_range(functions(),
                              [](Function &F) { return !F.isDeclaration(); });
   }
-  auto function_definitions() const {
+  auto getFunctionDefs() const {
     return make_filter_range(
         functions(), [](const Function &F) { return !F.isDeclaration(); });
   }
