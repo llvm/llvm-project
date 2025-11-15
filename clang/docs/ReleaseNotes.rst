@@ -543,6 +543,10 @@ Bug Fixes to C++ Support
 - Fix a crash when extracting unavailable member type from alias in template deduction. (#GH165560)
 - Fix incorrect diagnostics for lambdas with init-captures inside braced initializers. (#GH163498)
 
+- Emit an error when the same identifier appears with both internal and
+  external linkage in a translation unit Fixes:
+  (`#54215 <https://github.com/llvm/llvm-project/issues/54215>`_)
+
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fix incorrect name qualifiers applied to alias CTAD. (#GH136624)
