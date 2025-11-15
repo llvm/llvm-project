@@ -30,8 +30,11 @@ TEST_F(VPVerifierTest, VPInstructionUseBeforeDefSameBB) {
   VPBB1->appendRecipe(DefI);
 
   VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("");
-  VPBB2->appendRecipe(CanIV);
-  VPRegionBlock *R1 = Plan.createLoopRegion("R1", VPBB2, VPBB2);
+  // Add a dummy instruction to VPBB2 to make it non-empty
+  VPInstruction *Dummy = new VPInstruction(Instruction::Add, {Zero});
+  VPBB2->appendRecipe(Dummy);
+  VPRegionBlock *R1 =
+      Plan.createLoopRegion(Type::getInt32Ty(C), DebugLoc(), "R1", VPBB2, VPBB2);
   VPBlockUtils::connectBlocks(VPBB1, R1);
   VPBlockUtils::connectBlocks(R1, Plan.getScalarHeader());
 
@@ -68,7 +71,8 @@ TEST_F(VPVerifierTest, VPInstructionUseBeforeDefDifferentBB) {
   VPBB2->appendRecipe(DefI);
   VPBB2->appendRecipe(BranchOnCond);
 
-  VPRegionBlock *R1 = Plan.createLoopRegion("R1", VPBB2, VPBB2);
+  VPRegionBlock *R1 =
+      Plan.createLoopRegion(Type::getInt32Ty(C), DebugLoc(), "R1", VPBB2, VPBB2);
   VPBlockUtils::connectBlocks(VPBB1, R1);
   VPBlockUtils::connectBlocks(R1, Plan.getScalarHeader());
 
@@ -112,7 +116,8 @@ TEST_F(VPVerifierTest, VPBlendUseBeforeDefDifferentBB) {
 
   VPBlockUtils::connectBlocks(VPBB2, VPBB3);
   VPBlockUtils::connectBlocks(VPBB3, VPBB4);
-  VPRegionBlock *R1 = Plan.createLoopRegion("R1", VPBB2, VPBB4);
+  VPRegionBlock *R1 =
+      Plan.createLoopRegion(Type::getInt32Ty(C), DebugLoc(), "R1", VPBB2, VPBB4);
   VPBlockUtils::connectBlocks(VPBB1, R1);
   VPBB3->setParent(R1);
 
@@ -153,7 +158,8 @@ TEST_F(VPVerifierTest, VPPhiIncomingValueDoesntDominateIncomingBlock) {
   VPBB2->appendRecipe(Phi);
   VPBB2->appendRecipe(DefI);
 
-  VPRegionBlock *R1 = Plan.createLoopRegion("R1", VPBB3, VPBB3);
+  VPRegionBlock *R1 =
+      Plan.createLoopRegion(Type::getInt32Ty(C), DebugLoc(), "R1", VPBB3, VPBB3);
   VPBlockUtils::connectBlocks(VPBB1, VPBB2);
   VPBlockUtils::connectBlocks(VPBB2, R1);
   VPBlockUtils::connectBlocks(VPBB4, Plan.getScalarHeader());
@@ -191,7 +197,8 @@ TEST_F(VPVerifierTest, DuplicateSuccessorsOutsideRegion) {
   VPBB1->appendRecipe(BranchOnCond2);
   VPBB2->appendRecipe(BranchOnCond);
 
-  VPRegionBlock *R1 = Plan.createLoopRegion("R1", VPBB2, VPBB2);
+  VPRegionBlock *R1 =
+      Plan.createLoopRegion(Type::getInt32Ty(C), DebugLoc(), "R1", VPBB2, VPBB2);
   VPBlockUtils::connectBlocks(VPBB1, R1);
   VPBlockUtils::connectBlocks(VPBB1, R1);
 
@@ -226,7 +233,8 @@ TEST_F(VPVerifierTest, DuplicateSuccessorsInsideRegion) {
 
   VPBlockUtils::connectBlocks(VPBB2, VPBB3);
   VPBlockUtils::connectBlocks(VPBB2, VPBB3);
-  VPRegionBlock *R1 = Plan.createLoopRegion("R1", VPBB2, VPBB3);
+  VPRegionBlock *R1 =
+      Plan.createLoopRegion(Type::getInt32Ty(C), DebugLoc(), "R1", VPBB2, VPBB3);
   VPBlockUtils::connectBlocks(VPBB1, R1);
   VPBB3->setParent(R1);
 
@@ -248,7 +256,7 @@ TEST_F(VPVerifierTest, BlockOutsideRegionWithParent) {
   VPBasicBlock *VPBB1 = Plan.getEntry();
   VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("");
 
-  VPValue *Zero = Plan.getConstanInt(32, 0);
+  VPValue *Zero = Plan.getConstantInt(32, 0);
 
   VPInstruction *DefI = new VPInstruction(Instruction::Add, {Zero});
   VPInstruction *BranchOnCond =
@@ -257,7 +265,8 @@ TEST_F(VPVerifierTest, BlockOutsideRegionWithParent) {
   VPBB1->appendRecipe(DefI);
   VPBB2->appendRecipe(BranchOnCond);
 
-  VPRegionBlock *R1 = Plan.createLoopRegion("R1", VPBB2, VPBB2);
+  VPRegionBlock *R1 =
+      Plan.createLoopRegion(Type::getInt32Ty(C), DebugLoc(), "R1", VPBB2, VPBB2);
   VPBlockUtils::connectBlocks(VPBB1, R1);
 
   VPBlockUtils::connectBlocks(R1, Plan.getScalarHeader());
@@ -275,7 +284,7 @@ TEST_F(VPVerifierTest, BlockOutsideRegionWithParent) {
 
 TEST_F(VPVerifierTest, NonHeaderPHIInHeader) {
   VPlan &Plan = getPlan();
-  VPValue *Zero = Plan.getConstantInt(32, 0));
+  VPValue *Zero = Plan.getConstantInt(32, 0);
   auto *BranchOnCond = new VPInstruction(VPInstruction::BranchOnCond, {Zero});
 
   VPBasicBlock *VPBB1 = Plan.getEntry();
@@ -286,7 +295,8 @@ TEST_F(VPVerifierTest, NonHeaderPHIInHeader) {
   VPBB2->appendRecipe(IRPhi);
   VPBB2->appendRecipe(BranchOnCond);
 
-  VPRegionBlock *R1 = Plan.createLoopRegion("R1", VPBB2, VPBB2);
+  VPRegionBlock *R1 =
+      Plan.createLoopRegion(Type::getInt32Ty(C), DebugLoc(), "R1", VPBB2, VPBB2);
   VPBlockUtils::connectBlocks(VPBB1, R1);
   VPBlockUtils::connectBlocks(R1, Plan.getScalarHeader());
 

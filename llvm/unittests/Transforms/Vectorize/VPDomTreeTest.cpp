@@ -33,7 +33,8 @@ TEST_F(VPDominatorTreeTest, DominanceNoRegionsTest) {
   VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("VPBB2");
   VPBasicBlock *VPBB3 = Plan.createVPBasicBlock("VPBB3");
   VPBasicBlock *VPBB4 = Plan.createVPBasicBlock("VPBB4");
-  VPRegionBlock *R1 = Plan.createLoopRegion("R1", VPBB1, VPBB4);
+  VPRegionBlock *R1 =
+      Plan.createLoopRegion(Type::getInt32Ty(C), DebugLoc(), "R1", VPBB1, VPBB4);
   VPBB2->setParent(R1);
   VPBB3->setParent(R1);
 
@@ -99,7 +100,8 @@ TEST_F(VPDominatorTreeTest, DominanceRegionsTest) {
     VPBasicBlock *R1BB2 = Plan.createVPBasicBlock("");
     VPBasicBlock *R1BB3 = Plan.createVPBasicBlock("");
     VPBasicBlock *R1BB4 = Plan.createVPBasicBlock("");
-    VPRegionBlock *R1 = Plan.createLoopRegion("R1", R1BB1, R1BB4);
+    VPRegionBlock *R1 =
+        Plan.createLoopRegion(Type::getInt32Ty(C), DebugLoc(), "R1", R1BB1, R1BB4);
     R1BB2->setParent(R1);
     R1BB3->setParent(R1);
     VPBlockUtils::connectBlocks(VPBB0, R1);
@@ -112,7 +114,8 @@ TEST_F(VPDominatorTreeTest, DominanceRegionsTest) {
 
     VPBasicBlock *R2BB1 = Plan.createVPBasicBlock("");
     VPBasicBlock *R2BB2 = Plan.createVPBasicBlock("");
-    VPRegionBlock *R2 = Plan.createLoopRegion("R2", R2BB1, R2BB2);
+    VPRegionBlock *R2 =
+        Plan.createLoopRegion(Type::getInt32Ty(C), DebugLoc(), "R2", R2BB1, R2BB2);
     VPBlockUtils::connectBlocks(R2BB1, R2BB2);
     VPBlockUtils::connectBlocks(R1, R2);
 
@@ -171,12 +174,14 @@ TEST_F(VPDominatorTreeTest, DominanceRegionsTest) {
     VPBasicBlock *R1BB1 = Plan.createVPBasicBlock("R1BB1");
     VPBasicBlock *R1BB2 = Plan.createVPBasicBlock("R1BB2");
     VPBasicBlock *R1BB3 = Plan.createVPBasicBlock("R1BB3");
-    VPRegionBlock *R1 = Plan.createLoopRegion("R1", R1BB1, R1BB3);
+    VPRegionBlock *R1 =
+        Plan.createLoopRegion(Type::getInt32Ty(C), DebugLoc(), "R1", R1BB1, R1BB3);
 
     VPBasicBlock *R2BB1 = Plan.createVPBasicBlock("R2BB1");
     VPBasicBlock *R2BB2 = Plan.createVPBasicBlock("R2BB2");
     VPBasicBlock *R2BB3 = Plan.createVPBasicBlock("R2BB#");
-    VPRegionBlock *R2 = Plan.createLoopRegion("R2", R2BB1, R2BB3);
+    VPRegionBlock *R2 =
+        Plan.createLoopRegion(Type::getInt32Ty(C), DebugLoc(), "R2", R2BB1, R2BB3);
     R2BB2->setParent(R2);
     VPBlockUtils::connectBlocks(R2BB1, R2BB2);
     VPBlockUtils::connectBlocks(R2BB2, R2BB1);

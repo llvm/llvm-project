@@ -25,7 +25,7 @@ TEST_F(VPPatternMatchTest, ScalarIVSteps) {
   VPlan &Plan = getPlan();
   IntegerType *I64Ty = IntegerType::get(C, 64);
   VPRegionBlock *VPR =
-      Plan.createVPRegionBlock(DebugLoc::getCompilerGenerated(), "");
+      Plan.createLoopRegion(I64Ty, DebugLoc::getCompilerGenerated(), "");
   VPValue *CanIV = VPR->getCanonicalIV();
   VPBasicBlock *VPBB = Plan.createVPBasicBlock("");
   VPBuilder Builder(VPBB);

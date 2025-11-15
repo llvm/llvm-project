@@ -91,6 +91,15 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
   return TypeSwitch<const VPRecipeBase *, const SCEV *>(V->getDefiningRecipe())
       .Case<VPExpandSCEVRecipe>(
           [](const VPExpandSCEVRecipe *R) { return R->getSCEV(); })
+      .Case<VPWidenIntOrFpInductionRecipe>(
+          [&SE, L](const VPWidenIntOrFpInductionRecipe *R) {
+            const SCEV *Step = getSCEVExprForVPValue(R->getStepValue(), SE, L);
+            if (!L || isa<SCEVCouldNotCompute>(Step))
+              return SE.getCouldNotCompute();
+            const SCEV *Start =
+                getSCEVExprForVPValue(R->getStartValue(), SE, L);
+            return SE.getAddRecExpr(Start, Step, L, SCEV::FlagAnyWrap);
+          })
       .Case<VPDerivedIVRecipe>([&SE, L](const VPDerivedIVRecipe *R) {
         const SCEV *Start = getSCEVExprForVPValue(R->getOperand(0), SE, L);
         const SCEV *IV = getSCEVExprForVPValue(R->getOperand(1), SE, L);

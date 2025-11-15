@@ -587,7 +587,7 @@ public:
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print this VPSingleDefRecipe to dbgs() (for debugging).
-  LLVM_DUMP_METHOD void dump() const;
+  LLVM_ABI_FOR_TEST LLVM_DUMP_METHOD void dump() const;
 #endif
 };
 
@@ -3535,8 +3535,8 @@ public:
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
-  void print(raw_ostream &O, const Twine &Indent,
-             VPSlotTracker &SlotTracker) const override;
+  LLVM_ABI_FOR_TEST void print(raw_ostream &O, const Twine &Indent,
+                               VPSlotTracker &SlotTracker) const override;
 #endif
 };
 
@@ -3950,10 +3950,6 @@ public:
       : CanIV(std::make_unique<VPRegionValue>(Region)), Ty(Ty), HasNUW(HasNUW),
         DL(DL) {}
 
-  VPCanonicalIVInfo *clone(VPRegionBlock *Region) const {
-    return new VPCanonicalIVInfo(Ty, DL, Region, HasNUW);
-  }
-
   VPRegionValue *getVPValue() { return CanIV.get(); }
   Type *getType() const { return Ty; }
   DebugLoc getDebugLoc() const { return DL; }
@@ -3980,10 +3976,10 @@ class LLVM_ABI_FOR_TEST VPRegionBlock : public VPBlockBase {
   VPBlockBase *Exiting;
 
   /// Holds the Canonical IV of the loop region along with additional
-  /// information. If CanIV is nullptr, the region is a replicating region. Loop
-  /// regions retain their canonical IVs until they are dissolved, even if they
-  /// may not have any users.
-  VPCanonicalIVInfo *CanIVInfo = nullptr;
+  /// information. If CanIVInfo is nullptr, the region is a replicating region.
+  /// Loop regions retain their canonical IVs until they are dissolved, even if
+  /// they may not have any users.
+  std::unique_ptr<VPCanonicalIVInfo> CanIVInfo;
 
   /// Use VPlan::createVPRegionBlock to create VPRegionBlocks.
   VPRegionBlock(VPBlockBase *Entry, VPBlockBase *Exiting,
@@ -4003,11 +3999,11 @@ class LLVM_ABI_FOR_TEST VPRegionBlock : public VPBlockBase {
   VPRegionBlock(Type *CanIVTy, DebugLoc DL, VPBlockBase *Entry,
                 VPBlockBase *Exiting, const std::string &Name = "")
       : VPRegionBlock(Entry, Exiting, Name) {
-    CanIVInfo = new VPCanonicalIVInfo(CanIVTy, DL, this);
+    CanIVInfo = std::make_unique<VPCanonicalIVInfo>(CanIVTy, DL, this);
   }
 
 public:
-  ~VPRegionBlock() override { delete CanIVInfo; }
+  ~VPRegionBlock() override = default;
 
   /// Method to support type inquiry through isa, cast, and dyn_cast.
   static inline bool classof(const VPBlockBase *V) {
@@ -4182,10 +4178,9 @@ public:
 
   /// Construct a VPlan with a new VPBasicBlock as entry, a VPIRBasicBlock
   /// wrapping \p ScalarHeaderBB and a trip count of \p TC.
-  VPlan(BasicBlock *ScalarHeaderBB, VPValue *TC) {
+  VPlan(BasicBlock *ScalarHeaderBB) {
     setEntry(createVPBasicBlock("preheader"));
     ScalarHeader = createVPIRBasicBlock(ScalarHeaderBB);
-    TripCount = TC;
   }
 
   LLVM_ABI_FOR_TEST ~VPlan();
@@ -4409,10 +4404,10 @@ public:
   void printLiveIns(raw_ostream &O) const;
 
   /// Print this VPlan to \p O.
-  void print(raw_ostream &O) const;
+  LLVM_ABI_FOR_TEST void print(raw_ostream &O) const;
 
   /// Print this VPlan in DOT format to \p O.
-  void printDOT(raw_ostream &O) const;
+  LLVM_ABI_FOR_TEST void printDOT(raw_ostream &O) const;
 
   /// Dump the plan to stderr (for debugging).
   LLVM_DUMP_METHOD void dump() const;
@@ -4420,7 +4415,7 @@ public:
 
   /// Clone the current VPlan, update all VPValues of the new VPlan and cloned
   /// recipes to refer to the clones, and return it.
-  VPlan *duplicate();
+  LLVM_ABI_FOR_TEST VPlan *duplicate();
 
   /// Create a new VPBasicBlock with \p Name and containing \p Recipe if
   /// present. The returned block is owned by the VPlan and deleted once the

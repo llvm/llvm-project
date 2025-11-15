@@ -23,8 +23,6 @@ using namespace llvm;
 #define DEBUG_TYPE "vplan"
 
 VPTypeAnalysis::VPTypeAnalysis(const VPlan &Plan) : Ctx(Plan.getContext()) {
-  // If there's no canonical IV, retrieve the type from the trip count
-  // expression.
   auto *TC = Plan.getTripCount();
   if (TC->isLiveIn()) {
     CanonicalIVTy = TC->getLiveInIRValue()->getType();

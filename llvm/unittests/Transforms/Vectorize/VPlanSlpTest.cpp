@@ -97,8 +97,8 @@ TEST_F(VPlanSlpTest, testSlpSimple_2) {
 
   VPBasicBlock *Body = Plan->getVectorLoopRegion()->getEntryBasicBlock();
 
-  VPInstruction *Store1 = cast<VPInstruction>(&*std::next(Body->begin(), 13));
-  VPInstruction *Store2 = cast<VPInstruction>(&*std::next(Body->begin(), 15));
+  VPInstruction *Store1 = cast<VPInstruction>(&*std::next(Body->begin(), 12));
+  VPInstruction *Store2 = cast<VPInstruction>(&*std::next(Body->begin(), 14));
 
   VPlanSlp Slp(VPIAI, *Body);
   SmallVector<VPValue *, 4> StoreRoot = {Store1, Store2};
@@ -167,8 +167,9 @@ TEST_F(VPlanSlpTest, testSlpSimple_3) {
 
   VPBasicBlock *Body = Plan->getVectorLoopRegion()->getEntryBasicBlock();
 
-  VPInstruction *Store1 = cast<VPInstruction>(&*std::next(Body->begin(), 13));
-  VPInstruction *Store2 = cast<VPInstruction>(&*std::next(Body->begin(), 15));
+  // Indices adjusted: canonical IV recipe was removed, so decrement by 1
+  VPInstruction *Store1 = cast<VPInstruction>(&*std::next(Body->begin(), 12));
+  VPInstruction *Store2 = cast<VPInstruction>(&*std::next(Body->begin(), 14));
 
   auto VPIAI = getInterleavedAccessInfo(*F, LI->getLoopFor(LoopHeader), *Plan);
 
@@ -186,8 +187,8 @@ TEST_F(VPlanSlpTest, testSlpSimple_3) {
   EXPECT_EQ(VPInstruction::SLPLoad, CombinedLoadA->getOpcode());
   EXPECT_EQ(VPInstruction::SLPLoad, CombinedLoadB->getOpcode());
 
-  VPInstruction *GetA = cast<VPInstruction>(&*std::next(Body->begin(), 2));
-  VPInstruction *GetB = cast<VPInstruction>(&*std::next(Body->begin(), 4));
+  VPInstruction *GetA = cast<VPInstruction>(&*std::next(Body->begin(), 1));
+  VPInstruction *GetB = cast<VPInstruction>(&*std::next(Body->begin(), 3));
   EXPECT_EQ(GetA, CombinedLoadA->getOperand(0));
   EXPECT_EQ(GetB, CombinedLoadB->getOperand(0));
 
@@ -237,8 +238,8 @@ TEST_F(VPlanSlpTest, testSlpReuse_1) {
 
   VPBasicBlock *Body = Plan->getVectorLoopRegion()->getEntryBasicBlock();
 
-  VPInstruction *Store1 = cast<VPInstruction>(&*std::next(Body->begin(), 9));
-  VPInstruction *Store2 = cast<VPInstruction>(&*std::next(Body->begin(), 11));
+  VPInstruction *Store1 = cast<VPInstruction>(&*std::next(Body->begin(), 8));
+  VPInstruction *Store2 = cast<VPInstruction>(&*std::next(Body->begin(), 10));
 
   VPlanSlp Slp(VPIAI, *Body);
   SmallVector<VPValue *, 4> StoreRoot = {Store1, Store2};
@@ -299,8 +300,8 @@ TEST_F(VPlanSlpTest, testSlpReuse_2) {
 
   VPBasicBlock *Body = Plan->getVectorLoopRegion()->getEntryBasicBlock();
 
-  VPInstruction *Store1 = cast<VPInstruction>(&*std::next(Body->begin(), 6));
-  VPInstruction *Store2 = cast<VPInstruction>(&*std::next(Body->begin(), 11));
+  VPInstruction *Store1 = cast<VPInstruction>(&*std::next(Body->begin(), 5));
+  VPInstruction *Store2 = cast<VPInstruction>(&*std::next(Body->begin(), 10));
 
   VPlanSlp Slp(VPIAI, *Body);
   SmallVector<VPValue *, 4> StoreRoot = {Store1, Store2};
@@ -331,16 +332,16 @@ static void checkReorderExample(VPInstruction *Store1, VPInstruction *Store2,
   VPInstruction *CombinedLoadA =
       cast<VPInstruction>(CombinedMulAB->getOperand(0));
   EXPECT_EQ(VPInstruction::SLPLoad, CombinedLoadA->getOpcode());
-  VPInstruction *LoadvA0 = cast<VPInstruction>(&*std::next(Body->begin(), 3));
-  VPInstruction *LoadvA1 = cast<VPInstruction>(&*std::next(Body->begin(), 13));
+  VPInstruction *LoadvA0 = cast<VPInstruction>(&*std::next(Body->begin(), 1));
+  VPInstruction *LoadvA1 = cast<VPInstruction>(&*std::next(Body->begin(), 11));
   EXPECT_EQ(LoadvA0->getOperand(0), CombinedLoadA->getOperand(0));
   EXPECT_EQ(LoadvA1->getOperand(0), CombinedLoadA->getOperand(1));
 
   VPInstruction *CombinedLoadB =
       cast<VPInstruction>(CombinedMulAB->getOperand(1));
   EXPECT_EQ(VPInstruction::SLPLoad, CombinedLoadB->getOpcode());
-  VPInstruction *LoadvB0 = cast<VPInstruction>(&*std::next(Body->begin(), 5));
-  VPInstruction *LoadvB1 = cast<VPInstruction>(&*std::next(Body->begin(), 15));
+  VPInstruction *LoadvB0 = cast<VPInstruction>(&*std::next(Body->begin(), 3));
+  VPInstruction *LoadvB1 = cast<VPInstruction>(&*std::next(Body->begin(), 13));
   EXPECT_EQ(LoadvB0->getOperand(0), CombinedLoadB->getOperand(0));
   EXPECT_EQ(LoadvB1->getOperand(0), CombinedLoadB->getOperand(1));
 
@@ -349,16 +350,16 @@ static void checkReorderExample(VPInstruction *Store1, VPInstruction *Store2,
   VPInstruction *CombinedLoadC =
       cast<VPInstruction>(CombinedMulCD->getOperand(0));
   EXPECT_EQ(VPInstruction::SLPLoad, CombinedLoadC->getOpcode());
-  VPInstruction *LoadvC0 = cast<VPInstruction>(&*std::next(Body->begin(), 8));
-  VPInstruction *LoadvC1 = cast<VPInstruction>(&*std::next(Body->begin(), 18));
+  VPInstruction *LoadvC0 = cast<VPInstruction>(&*std::next(Body->begin(), 6));
+  VPInstruction *LoadvC1 = cast<VPInstruction>(&*std::next(Body->begin(), 16));
   EXPECT_EQ(LoadvC0->getOperand(0), CombinedLoadC->getOperand(0));
   EXPECT_EQ(LoadvC1->getOperand(0), CombinedLoadC->getOperand(1));
 
   VPInstruction *CombinedLoadD =
       cast<VPInstruction>(CombinedMulCD->getOperand(1));
   EXPECT_EQ(VPInstruction::SLPLoad, CombinedLoadD->getOpcode());
-  VPInstruction *LoadvD0 = cast<VPInstruction>(&*std::next(Body->begin(), 10));
-  VPInstruction *LoadvD1 = cast<VPInstruction>(&*std::next(Body->begin(), 20));
+  VPInstruction *LoadvD0 = cast<VPInstruction>(&*std::next(Body->begin(), 8));
+  VPInstruction *LoadvD1 = cast<VPInstruction>(&*std::next(Body->begin(), 18));
   EXPECT_EQ(LoadvD0->getOperand(0), CombinedLoadD->getOperand(0));
   EXPECT_EQ(LoadvD1->getOperand(0), CombinedLoadD->getOperand(1));
 
@@ -434,8 +435,8 @@ TEST_F(VPlanSlpTest, testSlpReorder_1) {
 
   VPBasicBlock *Body = Plan->getVectorLoopRegion()->getEntryBasicBlock();
 
-  VPInstruction *Store1 = cast<VPInstruction>(&*std::next(Body->begin(), 25));
-  VPInstruction *Store2 = cast<VPInstruction>(&*std::next(Body->begin(), 27));
+  VPInstruction *Store1 = cast<VPInstruction>(&*std::next(Body->begin(), 24));
+  VPInstruction *Store2 = cast<VPInstruction>(&*std::next(Body->begin(), 26));
 
   checkReorderExample(
       Store1, Store2, Body,
@@ -504,8 +505,8 @@ TEST_F(VPlanSlpTest, testSlpReorder_2) {
 
   VPBasicBlock *Body = Plan->getVectorLoopRegion()->getEntryBasicBlock();
 
-  VPInstruction *Store1 = cast<VPInstruction>(&*std::next(Body->begin(), 25));
-  VPInstruction *Store2 = cast<VPInstruction>(&*std::next(Body->begin(), 27));
+  VPInstruction *Store1 = cast<VPInstruction>(&*std::next(Body->begin(), 24));
+  VPInstruction *Store2 = cast<VPInstruction>(&*std::next(Body->begin(), 26));
 
   checkReorderExample(
       Store1, Store2, Body,
@@ -574,8 +575,8 @@ TEST_F(VPlanSlpTest, testSlpReorder_3) {
 
   VPBasicBlock *Body = Plan->getVectorLoopRegion()->getEntryBasicBlock();
 
-  VPInstruction *Store1 = cast<VPInstruction>(&*std::next(Body->begin(), 25));
-  VPInstruction *Store2 = cast<VPInstruction>(&*std::next(Body->begin(), 27));
+  VPInstruction *Store1 = cast<VPInstruction>(&*std::next(Body->begin(), 24));
+  VPInstruction *Store2 = cast<VPInstruction>(&*std::next(Body->begin(), 26));
 
   auto VPIAI = getInterleavedAccessInfo(*F, LI->getLoopFor(LoopHeader), *Plan);
   VPlanSlp Slp(VPIAI, *Body);
@@ -648,8 +649,8 @@ TEST_F(VPlanSlpTest, testSlpReorder_4) {
 
   VPBasicBlock *Body = Plan->getVectorLoopRegion()->getEntryBasicBlock();
 
-  VPInstruction *Store1 = cast<VPInstruction>(&*std::next(Body->begin(), 25));
-  VPInstruction *Store2 = cast<VPInstruction>(&*std::next(Body->begin(), 27));
+  VPInstruction *Store1 = cast<VPInstruction>(&*std::next(Body->begin(), 24));
+  VPInstruction *Store2 = cast<VPInstruction>(&*std::next(Body->begin(), 26));
 
   checkReorderExample(
       Store1, Store2, Body,
@@ -826,8 +827,9 @@ TEST_F(VPlanSlpTest, testSlpAtomicLoad) {
 
   VPBasicBlock *Body = Plan->getVectorLoopRegion()->getEntryBasicBlock();
 
-  VPInstruction *Store1 = cast<VPInstruction>(&*std::next(Body->begin(), 13));
-  VPInstruction *Store2 = cast<VPInstruction>(&*std::next(Body->begin(), 15));
+  // Indices adjusted: canonical IV recipe was removed, so decrement by 1
+  VPInstruction *Store1 = cast<VPInstruction>(&*std::next(Body->begin(), 12));
+  VPInstruction *Store2 = cast<VPInstruction>(&*std::next(Body->begin(), 14));
 
   VPlanSlp Slp(VPIAI, *Body);
   SmallVector<VPValue *, 4> StoreRoot = {Store1, Store2};
@@ -883,8 +885,9 @@ TEST_F(VPlanSlpTest, testSlpAtomicStore) {
 
   VPBasicBlock *Body = Plan->getVectorLoopRegion()->getEntryBasicBlock();
 
-  VPInstruction *Store1 = cast<VPInstruction>(&*std::next(Body->begin(), 13));
-  VPInstruction *Store2 = cast<VPInstruction>(&*std::next(Body->begin(), 15));
+  // Indices adjusted: canonical IV recipe was removed, so decrement by 1
+  VPInstruction *Store1 = cast<VPInstruction>(&*std::next(Body->begin(), 12));
+  VPInstruction *Store2 = cast<VPInstruction>(&*std::next(Body->begin(), 14));
 
   VPlanSlp Slp(VPIAI, *Body);
   SmallVector<VPValue *, 4> StoreRoot = {Store1, Store2};

@@ -50,20 +50,22 @@ TEST_F(VPlanHCFGTest, testBuildHCFGInnerLoop) {
   // Check that the region following the preheader consists of a block for the
   // original header and a separate latch.
   VPBasicBlock *VecBB = Plan->getVectorLoopRegion()->getEntryBasicBlock();
-  EXPECT_EQ(11u, VecBB->size());
+  EXPECT_EQ(10u, VecBB->size());
   EXPECT_EQ(0u, VecBB->getNumPredecessors());
   EXPECT_EQ(0u, VecBB->getNumSuccessors());
   EXPECT_EQ(VecBB->getParent()->getEntryBasicBlock(), VecBB);
   EXPECT_EQ(&*Plan, VecBB->getPlan());
 
   auto Iter = VecBB->begin();
-  VPWidenPHIRecipe *Phi = dyn_cast<VPWidenPHIRecipe>(&*Iter++);
-  EXPECT_NE(nullptr, Phi);
+  // The first recipe is now a scalar PHI for the canonical IV
+  VPRecipeBase *ScalarIVPhi = &*Iter++;
+  VPValue *IVValue = ScalarIVPhi->getVPSingleValue();
+  EXPECT_NE(nullptr, IVValue);
 
   VPInstruction *Idx = dyn_cast<VPInstruction>(&*Iter++);
   EXPECT_EQ(Instruction::GetElementPtr, Idx->getOpcode());
   EXPECT_EQ(2u, Idx->getNumOperands());
-  EXPECT_EQ(Phi, Idx->getOperand(1));
+  EXPECT_EQ(IVValue, Idx->getOperand(1));
 
   VPInstruction *Load = dyn_cast<VPInstruction>(&*Iter++);
   EXPECT_EQ(Instruction::Load, Load->getOpcode());
@@ -84,7 +86,7 @@ TEST_F(VPlanHCFGTest, testBuildHCFGInnerLoop) {
   VPInstruction *IndvarAdd = dyn_cast<VPInstruction>(&*Iter++);
   EXPECT_EQ(Instruction::Add, IndvarAdd->getOpcode());
   EXPECT_EQ(2u, IndvarAdd->getNumOperands());
-  EXPECT_EQ(Phi, IndvarAdd->getOperand(0));
+  EXPECT_EQ(IVValue, IndvarAdd->getOperand(0));
 
   VPInstruction *ICmp = dyn_cast<VPInstruction>(&*Iter++);
   EXPECT_EQ(Instruction::ICmp, ICmp->getOpcode());
@@ -135,7 +137,6 @@ compound=true
     label="\<x1\> vector loop"
     N4 [label =
       "vector.body:\l" +
-      "  EMIT vp\<%2\> = CANONICAL-INDUCTION ir\<0\>, vp\<%index.next\>\l" +
       "  EMIT-SCALAR ir\<%indvars.iv\> = phi [ ir\<0\>, vector.ph ], [ ir\<%indvars.iv.next\>, vector.body ]\l" +
       "  EMIT ir\<%arr.idx\> = getelementptr ir\<%A\>, ir\<%indvars.iv\>\l" +
       "  EMIT ir\<%l1\> = load ir\<%arr.idx\>\l" +
@@ -210,7 +211,7 @@ TEST_F(VPlanHCFGTest, testVPInstructionToVPRecipesInner) {
   // Check that the region following the preheader consists of a block for the
   // original header and a separate latch.
   VPBasicBlock *VecBB = Plan->getVectorLoopRegion()->getEntryBasicBlock();
-  EXPECT_EQ(12u, VecBB->size());
+  EXPECT_EQ(11u, VecBB->size());
   EXPECT_EQ(0u, VecBB->getNumPredecessors());
   EXPECT_EQ(0u, VecBB->getNumSuccessors());
   EXPECT_EQ(VecBB->getParent()->getEntryBasicBlock(), VecBB);
@@ -300,7 +301,6 @@ compound=true
     label="\<x1\> vector loop"
     N4 [label =
       "vector.body:\l" +
-      "  EMIT vp\<%2\> = CANONICAL-INDUCTION ir\<0\>, vp\<%index.next\>\l" +
       "  EMIT-SCALAR ir\<%iv\> = phi [ ir\<0\>, vector.ph ], [ ir\<%iv.next\>, loop.latch ]\l" +
       "  EMIT ir\<%arr.idx\> = getelementptr ir\<%A\>, ir\<%iv\>\l" +
       "  EMIT ir\<%l1\> = load ir\<%arr.idx\>\l" +

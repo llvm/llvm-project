@@ -269,7 +269,8 @@ TEST_F(VPBasicBlockTest, getPlan) {
     // VPBasicBlock is the entry into the VPlan, followed by a region.
     VPBasicBlock *R1BB1 = Plan.createVPBasicBlock("");
     VPBasicBlock *R1BB2 = Plan.createVPBasicBlock("");
-    VPRegionBlock *R1 = Plan.createLoopRegion("R1", R1BB1, R1BB2);
+    VPRegionBlock *R1 =
+        Plan.createLoopRegion(Type::getInt32Ty(C), DebugLoc(), "R1", R1BB1, R1BB2);
     VPBlockUtils::connectBlocks(R1BB1, R1BB2);
 
     VPBlockUtils::connectBlocks(VPBB1, R1);
@@ -286,12 +287,14 @@ TEST_F(VPBasicBlockTest, getPlan) {
     VPlan &Plan = getPlan();
     VPBasicBlock *R1BB1 = Plan.createVPBasicBlock("");
     VPBasicBlock *R1BB2 = Plan.createVPBasicBlock("");
-    VPRegionBlock *R1 = Plan.createLoopRegion("R1", R1BB1, R1BB2);
+    VPRegionBlock *R1 =
+        Plan.createLoopRegion(Type::getInt32Ty(C), DebugLoc(), "R1", R1BB1, R1BB2);
     VPBlockUtils::connectBlocks(R1BB1, R1BB2);
 
     VPBasicBlock *R2BB1 = Plan.createVPBasicBlock("");
     VPBasicBlock *R2BB2 = Plan.createVPBasicBlock("");
-    VPRegionBlock *R2 = Plan.createLoopRegion("R2", R2BB1, R2BB2);
+    VPRegionBlock *R2 =
+        Plan.createLoopRegion(Type::getInt32Ty(C), DebugLoc(), "R2", R2BB1, R2BB2);
     VPBlockUtils::connectBlocks(R2BB1, R2BB2);
 
     VPBasicBlock *VPBB1 = Plan.getEntry();
@@ -369,7 +372,8 @@ TEST_F(VPBasicBlockTest, TraversingIteratorTest) {
     VPBasicBlock *R1BB2 = Plan.createVPBasicBlock("");
     VPBasicBlock *R1BB3 = Plan.createVPBasicBlock("");
     VPBasicBlock *R1BB4 = Plan.createVPBasicBlock("");
-    VPRegionBlock *R1 = Plan.createLoopRegion("R1", R1BB1, R1BB4);
+    VPRegionBlock *R1 =
+        Plan.createLoopRegion(Type::getInt32Ty(C), DebugLoc(), "R1", R1BB1, R1BB4);
     R1BB2->setParent(R1);
     R1BB3->setParent(R1);
     VPBlockUtils::connectBlocks(VPBB0, R1);
@@ -382,7 +386,8 @@ TEST_F(VPBasicBlockTest, TraversingIteratorTest) {
 
     VPBasicBlock *R2BB1 = Plan.createVPBasicBlock("");
     VPBasicBlock *R2BB2 = Plan.createVPBasicBlock("");
-    VPRegionBlock *R2 = Plan.createLoopRegion("R2", R2BB1, R2BB2);
+    VPRegionBlock *R2 =
+        Plan.createLoopRegion(Type::getInt32Ty(C), DebugLoc(), "R2", R2BB1, R2BB2);
     VPBlockUtils::connectBlocks(R2BB1, R2BB2);
     VPBlockUtils::connectBlocks(R1, R2);
 
@@ -467,12 +472,14 @@ TEST_F(VPBasicBlockTest, TraversingIteratorTest) {
     VPBasicBlock *R1BB1 = Plan.createVPBasicBlock("R1BB1");
     VPBasicBlock *R1BB2 = Plan.createVPBasicBlock("R1BB2");
     VPBasicBlock *R1BB3 = Plan.createVPBasicBlock("R1BB3");
-    VPRegionBlock *R1 = Plan.createLoopRegion("R1", R1BB1, R1BB3);
+    VPRegionBlock *R1 =
+        Plan.createLoopRegion(Type::getInt32Ty(C), DebugLoc(), "R1", R1BB1, R1BB3);
 
     VPBasicBlock *R2BB1 = Plan.createVPBasicBlock("R2BB1");
     VPBasicBlock *R2BB2 = Plan.createVPBasicBlock("R2BB2");
     VPBasicBlock *R2BB3 = Plan.createVPBasicBlock("R2BB3");
-    VPRegionBlock *R2 = Plan.createLoopRegion("R2", R2BB1, R2BB3);
+    VPRegionBlock *R2 =
+        Plan.createLoopRegion(Type::getInt32Ty(C), DebugLoc(), "R2", R2BB1, R2BB3);
     R2BB2->setParent(R2);
     VPBlockUtils::connectBlocks(R2BB1, R2BB2);
     VPBlockUtils::connectBlocks(R2BB2, R2BB1);
@@ -537,10 +544,12 @@ TEST_F(VPBasicBlockTest, TraversingIteratorTest) {
     VPlan &Plan = getPlan();
     VPBasicBlock *R2BB1 = Plan.createVPBasicBlock("R2BB1");
     VPBasicBlock *R2BB2 = Plan.createVPBasicBlock("R2BB2");
-    VPRegionBlock *R2 = Plan.createLoopRegion("R2", R2BB1, R2BB2);
+    VPRegionBlock *R2 =
+        Plan.createLoopRegion(Type::getInt32Ty(C), DebugLoc(), "R2", R2BB1, R2BB2);
     VPBlockUtils::connectBlocks(R2BB1, R2BB2);
 
-    VPRegionBlock *R1 = Plan.createLoopRegion("R1", R2, R2);
+    VPRegionBlock *R1 =
+        Plan.createLoopRegion(Type::getInt32Ty(C), DebugLoc(), "R1", R2, R2);
     R2->setParent(R1);
 
     VPBasicBlock *VPBB1 = Plan.getEntry();
@@ -590,14 +599,17 @@ TEST_F(VPBasicBlockTest, TraversingIteratorTest) {
     //
     VPlan &Plan = getPlan();
     VPBasicBlock *R3BB1 = Plan.createVPBasicBlock("R3BB1");
-    VPRegionBlock *R3 = Plan.createLoopRegion("R3", R3BB1, R3BB1);
+    VPRegionBlock *R3 =
+        Plan.createLoopRegion(Type::getInt32Ty(C), DebugLoc(), "R3", R3BB1, R3BB1);
 
     VPBasicBlock *R2BB1 = Plan.createVPBasicBlock("R2BB1");
-    VPRegionBlock *R2 = Plan.createLoopRegion("R2", R2BB1, R3);
+    VPRegionBlock *R2 =
+        Plan.createLoopRegion(Type::getInt32Ty(C), DebugLoc(), "R2", R2BB1, R3);
     R3->setParent(R2);
     VPBlockUtils::connectBlocks(R2BB1, R3);
 
-    VPRegionBlock *R1 = Plan.createLoopRegion("R1", R2, R2);
+    VPRegionBlock *R1 =
+        Plan.createLoopRegion(Type::getInt32Ty(C), DebugLoc(), "R1", R2, R2);
     R2->setParent(R1);
 
     VPBasicBlock *VPBB1 = Plan.getEntry();
@@ -687,7 +699,8 @@ TEST_F(VPBasicBlockTest, reassociateBlocks) {
     VPlan &Plan = getPlan();
     VPBasicBlock *VPBB1 = Plan.createVPBasicBlock("VPBB1");
     VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("VPBB2");
-    VPRegionBlock *R1 = Plan.createLoopRegion("R1", VPBB2, VPBB2);
+    VPRegionBlock *R1 =
+        Plan.createLoopRegion(Type::getInt32Ty(C), DebugLoc(), "R1", VPBB2, VPBB2);
     VPBlockUtils::connectBlocks(VPBB1, R1);
 
     auto *WidenPhi = new VPWidenPHIRecipe(nullptr);
@@ -720,12 +733,10 @@ TEST_F(VPBasicBlockTest, splitAtEnd) {
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 TEST_F(VPBasicBlockTest, print) {
-  VPInstruction *TC = new VPInstruction(Instruction::PHI, {});
-  VPlan &Plan = getPlan(TC);
+  VPlan &Plan = getPlan();
   IntegerType *Int32 = IntegerType::get(C, 32);
   VPValue *Val = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
   VPBasicBlock *VPBB0 = Plan.getEntry();
-  VPBB0->appendRecipe(TC);
 
   VPInstruction *I1 = new VPInstruction(Instruction::Add, {Val, Val});
   VPInstruction *I2 = new VPInstruction(Instruction::Sub, {I1, Val});
@@ -762,28 +773,27 @@ TEST_F(VPBasicBlockTest, print) {
   Plan.printDOT(OS);
 
   const char *ExpectedStr = R"(digraph VPlan {
-graph [labelloc=t, fontsize=30; label="Vectorization Plan\n for UF\>=1\nvp\<%1\> = original trip-count\n"]
+graph [labelloc=t, fontsize=30; label="Vectorization Plan\n for UF\>=1\nLive-in ir\<1024\> = original trip-count\n"]
 node [shape=rect, fontname=Courier, fontsize=30]
 edge [fontname=Courier, fontsize=30]
 compound=true
   N0 [label =
     "preheader:\l" +
-    "  EMIT-SCALAR vp\<%1\> = phi \l" +
     "Successor(s): bb1\l"
   ]
   N0 -> N1 [ label=""]
   N1 [label =
     "bb1:\l" +
-    "  EMIT vp\<%2\> = add ir\<1\>, ir\<1\>\l" +
-    "  EMIT vp\<%3\> = sub vp\<%2\>, ir\<1\>\l" +
-    "  EMIT br vp\<%2\>, vp\<%3\>\l" +
+    "  EMIT vp\<%1\> = add ir\<1\>, ir\<1\>\l" +
+    "  EMIT vp\<%2\> = sub vp\<%1\>, ir\<1\>\l" +
+    "  EMIT br vp\<%1\>, vp\<%2\>\l" +
     "Successor(s): bb2\l"
   ]
   N1 -> N2 [ label=""]
   N2 [label =
     "bb2:\l" +
-    "  EMIT vp\<%5\> = mul vp\<%3\>, vp\<%2\>\l" +
-    "  EMIT br vp\<%5\>\l" +
+    "  EMIT vp\<%4\> = mul vp\<%2\>, vp\<%1\>\l" +
+    "  EMIT br vp\<%4\>\l" +
     "Successor(s): ir-bb\<scalar.header\>\l"
   ]
   N2 -> N3 [ label=""]
@@ -796,9 +806,9 @@ compound=true
   EXPECT_EQ(ExpectedStr, FullDump);
 
   const char *ExpectedBlock1Str = R"(bb1:
-  EMIT vp<%2> = add ir<1>, ir<1>
-  EMIT vp<%3> = sub vp<%2>, ir<1>
-  EMIT br vp<%2>, vp<%3>
+  EMIT vp<%1> = add ir<1>, ir<1>
+  EMIT vp<%2> = sub vp<%1>, ir<1>
+  EMIT br vp<%1>, vp<%2>
 Successor(s): bb2
 )";
   std::string Block1Dump;
@@ -808,8 +818,8 @@ Successor(s): bb2
 
   // Ensure that numbering is good when dumping the second block in isolation.
   const char *ExpectedBlock2Str = R"(bb2:
-  EMIT vp<%5> = mul vp<%3>, vp<%2>
-  EMIT br vp<%5>
+  EMIT vp<%4> = mul vp<%2>, vp<%1>
+  EMIT br vp<%4>
 Successor(s): ir-bb<scalar.header>
 )";
   std::string Block2Dump;
@@ -822,22 +832,20 @@ Successor(s): ir-bb<scalar.header>
     raw_string_ostream OS(I3Dump);
     VPSlotTracker SlotTracker(&Plan);
     I3->print(OS, "", SlotTracker);
-    EXPECT_EQ("EMIT br vp<%2>, vp<%3>", I3Dump);
+    EXPECT_EQ("EMIT br vp<%1>, vp<%2>", I3Dump);
   }
 
   {
     std::string I4Dump;
     raw_string_ostream OS(I4Dump);
     OS << *I4;
-    EXPECT_EQ("EMIT vp<%5> = mul vp<%3>, vp<%2>", I4Dump);
+    EXPECT_EQ("EMIT vp<%4> = mul vp<%2>, vp<%1>", I4Dump);
   }
 }
 
 TEST_F(VPBasicBlockTest, printPlanWithVFsAndUFs) {
-  VPInstruction *TC = new VPInstruction(Instruction::Sub, {});
-  VPlan &Plan = getPlan(TC);
+  VPlan &Plan = getPlan();
   VPBasicBlock *VPBB0 = Plan.getEntry();
-  VPBB0->appendRecipe(TC);
 
   VPInstruction *I1 = new VPInstruction(Instruction::Add, {});
   VPBasicBlock *VPBB1 = Plan.createVPBasicBlock("");
@@ -855,14 +863,13 @@ TEST_F(VPBasicBlockTest, printPlanWithVFsAndUFs) {
     Plan.print(OS);
 
     const char *ExpectedStr = R"(VPlan 'TestPlan for VF={4},UF>=1' {
-vp<%1> = original trip-count
+Live-in ir<1024> = original trip-count
 
 preheader:
-  EMIT vp<%1> = sub 
 Successor(s): bb1
 
 bb1:
-  EMIT vp<%2> = add 
+  EMIT vp<%1> = add 
 Successor(s): ir-bb<scalar.header>
 
 ir-bb<scalar.header>:
@@ -879,14 +886,13 @@ No successors
     Plan.print(OS);
 
     const char *ExpectedStr = R"(VPlan 'TestPlan for VF={4,vscale x 8},UF>=1' {
-vp<%1> = original trip-count
+Live-in ir<1024> = original trip-count
 
 preheader:
-  EMIT vp<%1> = sub 
 Successor(s): bb1
 
 bb1:
-  EMIT vp<%2> = add 
+  EMIT vp<%1> = add 
 Successor(s): ir-bb<scalar.header>
 
 ir-bb<scalar.header>:
@@ -903,14 +909,13 @@ No successors
     Plan.print(OS);
 
     const char *ExpectedStr = R"(VPlan 'TestPlan for VF={4,vscale x 8},UF={4}' {
-vp<%1> = original trip-count
+Live-in ir<1024> = original trip-count
 
 preheader:
-  EMIT vp<%1> = sub 
 Successor(s): bb1
 
 bb1:
-  EMIT vp<%2> = add 
+  EMIT vp<%1> = add 
 Successor(s): ir-bb<scalar.header>
 
 ir-bb<scalar.header>:
@@ -922,7 +927,7 @@ No successors
 }
 
 TEST_F(VPBasicBlockTest, cloneAndPrint) {
-  VPlan &Plan = getPlan(nullptr);
+  VPlan &Plan = getPlan();
   VPBasicBlock *VPBB0 = Plan.getEntry();
 
   IntegerType *Int32 = IntegerType::get(C, 32);
@@ -940,7 +945,7 @@ TEST_F(VPBasicBlockTest, cloneAndPrint) {
   VPBlockUtils::connectBlocks(VPBB0, VPBB1);
 
   const char *ExpectedStr = R"(digraph VPlan {
-graph [labelloc=t, fontsize=30; label="Vectorization Plan\n for UF\>=1\n"]
+graph [labelloc=t, fontsize=30; label="Vectorization Plan\n for UF\>=1\nLive-in ir\<1024\> = original trip-count\n"]
 node [shape=rect, fontname=Courier, fontsize=30]
 edge [fontname=Courier, fontsize=30]
 compound=true

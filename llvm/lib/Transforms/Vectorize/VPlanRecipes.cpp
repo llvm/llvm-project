@@ -310,18 +310,27 @@ VPPartialReductionRecipe::computeCost(ElementCount VF,
   std::optional<unsigned> Opcode;
   VPValue *Op = getVecOp();
   uint64_t MulConst;
+
+  InstructionCost CondCost = 0;
+  if (isConditional()) {
+    CmpInst::Predicate Pred = CmpInst::BAD_ICMP_PREDICATE;
+    auto *VecTy = Ctx.Types.inferScalarType(Op);
+    auto *CondTy = Ctx.Types.inferScalarType(getCondOp());
+    CondCost = Ctx.TTI.getCmpSelInstrCost(Instruction::Select, VecTy, CondTy,
+                                          Pred, Ctx.CostKind);
+  }
+
   // If the partial reduction is predicated, a select will be operand 1.
   // If it isn't predicated and the mul isn't operating on a constant, then it
   // should have been turned into a VPExpressionRecipe.
   // FIXME: Replace the entire function with this once all partial reduction
   // variants are bundled into VPExpressionRecipe.
-  if (!match(Op, m_Select(m_VPValue(), m_VPValue(Op), m_VPValue())) &&
-      !match(Op, m_Mul(m_VPValue(), m_ConstantInt(MulConst)))) {
+  if (!match(Op, m_Mul(m_VPValue(), m_ConstantInt(MulConst)))) {
     auto *PhiType = Ctx.Types.inferScalarType(getChainOp());
     auto *InputType = Ctx.Types.inferScalarType(getVecOp());
-    return Ctx.TTI.getPartialReductionCost(getOpcode(), InputType, InputType,
-                                           PhiType, VF, TTI::PR_None,
-                                           TTI::PR_None, {}, Ctx.CostKind);
+    return CondCost + Ctx.TTI.getPartialReductionCost(
+                          getOpcode(), InputType, InputType, PhiType, VF,
+                          TTI::PR_None, TTI::PR_None, {}, Ctx.CostKind);
   }
 
   VPRecipeBase *OpR = Op->getDefiningRecipe();
@@ -346,7 +355,7 @@ VPPartialReductionRecipe::computeCost(ElementCount VF,
   // recipe.
   auto HandleWiden = [&](VPWidenRecipe *Widen) {
     if (match(Widen, m_Sub(m_ZeroInt(), m_VPValue(Op)))) {
-      Widen = dyn_cast<VPWidenRecipe>(Op->getDefiningRecipe());
+      Widen = dyn_cast<VPWidenRecipe>(Op);
     }
     Opcode = Widen->getOpcode();
     VPRecipeBase *ExtAR = Widen->getOperand(0)->getDefiningRecipe();
@@ -371,21 +380,21 @@ VPPartialReductionRecipe::computeCost(ElementCount VF,
     InputTypeA = Ctx.Types.inferScalarType(OpR->getOperand(0));
     ExtAType = GetExtendKind(OpR);
   } else if (isa<VPReductionPHIRecipe>(OpR)) {
-    auto RedPhiOp1R = getOperand(1)->getDefiningRecipe();
-    if (isa<VPWidenCastRecipe>(RedPhiOp1R)) {
+    if (auto RedPhiOp1R = dyn_cast_or_null<VPWidenCastRecipe>(getOperand(1))) {
       InputTypeA = Ctx.Types.inferScalarType(RedPhiOp1R->getOperand(0));
       ExtAType = GetExtendKind(RedPhiOp1R);
-    } else if (auto Widen = dyn_cast<VPWidenRecipe>(RedPhiOp1R))
+    } else if (auto Widen = dyn_cast_or_null<VPWidenRecipe>(getOperand(1)))
       HandleWiden(Widen);
   } else if (auto Widen = dyn_cast<VPWidenRecipe>(OpR)) {
     HandleWiden(Widen);
   } else if (auto Reduction = dyn_cast<VPPartialReductionRecipe>(OpR)) {
-    return Reduction->computeCost(VF, Ctx);
+    return CondCost + Reduction->computeCost(VF, Ctx);
   }
   auto *PhiType = Ctx.Types.inferScalarType(getOperand(1));
-  return Ctx.TTI.getPartialReductionCost(getOpcode(), InputTypeA, InputTypeB,
-                                         PhiType, VF, ExtAType, ExtBType,
-                                         Opcode, Ctx.CostKind);
+  return CondCost + Ctx.TTI.getPartialReductionCost(
+                        getOpcode(), InputTypeA, InputTypeB, PhiType, VF,
+                        ExtAType, ExtBType, Opcode, Ctx.CostKind);
+  ;
 }
 
 void VPPartialReductionRecipe::execute(VPTransformState &State) {
@@ -394,11 +403,17 @@ void VPPartialReductionRecipe::execute(VPTransformState &State) {
   assert(getOpcode() == Instruction::Add &&
          "Unhandled partial reduction opcode");
 
-  Value *BinOpVal = State.get(getOperand(1));
-  Value *PhiVal = State.get(getOperand(0));
+  Value *BinOpVal = State.get(getVecOp());
+  Value *PhiVal = State.get(getChainOp());
   assert(PhiVal && BinOpVal && "Phi and Mul must be set");
 
   Type *RetTy = PhiVal->getType();
+
+  if (isConditional()) {
+    Value *Cond = State.get(getCondOp());
+    Value *Zero = ConstantInt::get(BinOpVal->getType(), 0);
+    BinOpVal = Builder.CreateSelect(Cond, BinOpVal, Zero);
+  }
 
   CallInst *V =
       Builder.CreateIntrinsic(RetTy, Intrinsic::vector_partial_reduce_add,
@@ -805,10 +820,9 @@ Value *VPInstruction::generate(VPTransformState &State) {
     auto *OrigPhi = cast<PHINode>(PhiR->getUnderlyingValue());
     Value *ReducedPartRdx = State.get(getOperand(2));
     for (unsigned Idx = 3; Idx < getNumOperands(); ++Idx)
-      ReducedPartRdx = Builder.CreateBinOp(
-          (Instruction::BinaryOps)RecurrenceDescriptor::getOpcode(
-              RecurKind::AnyOf),
-          State.get(getOperand(Idx)), ReducedPartRdx, "bin.rdx");
+      ReducedPartRdx =
+          Builder.CreateBinOp(Instruction::Or, State.get(getOperand(Idx)),
+                              ReducedPartRdx, "bin.rdx");
     return createAnyOfReduction(Builder, ReducedPartRdx,
                                 State.get(getOperand(1), VPLane(0)), OrigPhi);
   }
@@ -1258,6 +1272,7 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   case VPInstruction::ExtractLastLanePerPart:
   case VPInstruction::ExtractPenultimateElement:
   case VPInstruction::ActiveLaneMask:
+  case VPInstruction::ExplicitVectorLength:
   case VPInstruction::FirstActiveLane:
   case VPInstruction::FirstOrderRecurrenceSplice:
   case VPInstruction::LogicalAnd:
@@ -3178,10 +3193,10 @@ bool VPReplicateRecipe::shouldPack() const {
 static const SCEV *getAddressAccessSCEV(const VPValue *Ptr, ScalarEvolution &SE,
                                         const Loop *L) {
   auto *PtrR = Ptr->getDefiningRecipe();
-  if (!PtrR || !((isa<VPReplicateRecipe>(PtrR) &&
-                  cast<VPReplicateRecipe>(PtrR)->getOpcode() ==
+  if (!PtrR || !((isa<VPReplicateRecipe>(Ptr) &&
+                  cast<VPReplicateRecipe>(Ptr)->getOpcode() ==
                       Instruction::GetElementPtr) ||
-                 isa<VPWidenGEPRecipe>(PtrR) ||
+                 isa<VPWidenGEPRecipe>(Ptr) ||
                  match(Ptr, m_GetElementPtr(m_VPValue(), m_VPValue()))))
     return nullptr;
 

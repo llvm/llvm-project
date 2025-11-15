@@ -1192,6 +1192,12 @@ def TestLocationDstNoResOp : TEST_Op<"loc_dst_no_res"> {
   let results = (outs);
 }
 
+def TestLocationAttrOp : TEST_Op<"op_with_loc_attr"> {
+  let arguments = (ins LocationAttr:$loc_attr);
+  let results = (outs );
+  let assemblyFormat = "$loc_attr attr-dict";
+}
+
 //===----------------------------------------------------------------------===//
 // Test Patterns
 //===----------------------------------------------------------------------===//
