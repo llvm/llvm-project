@@ -87,7 +87,7 @@ llvm::getReleaseModeAdvisor(Module &M, ModuleAnalysisManager &MAM,
           EmbeddedModelRunnerOptions().setModelSelector(ModelSelector));
     else {
       AOTRunner = std::make_unique<InteractiveModelRunner>(
-	M.getContext(), InputFeatures, getInlineDecisionSpec(),
+          M.getContext(), InputFeatures, getInlineDecisionSpec(),
           InteractiveChannelBaseName + ".out",
           InteractiveChannelBaseName + ".in");
     }
