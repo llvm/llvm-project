@@ -109,7 +109,7 @@ static cl::opt<bool> EnableCFIInstrInserter(
     cl::Hidden);
 
 static cl::opt<bool> EnableRISCVLiveVariables(
-    "riscv-live-variables",
+    "riscv-enable-live-variables",
     cl::desc("Enable Live Variable Analysis for RISC-V"), cl::init(false),
     cl::Hidden);
 

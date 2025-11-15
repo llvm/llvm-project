@@ -101,6 +101,7 @@ public:
   void print(raw_ostream &OS, const Module *M = nullptr) const override;
 
   void verifyLiveness(MachineFunction &MF) const;
+
 private:
   /// Compute local liveness information (Use and Def sets) for each block
   void computeLocalLiveness(MachineFunction &MF);
@@ -160,8 +161,8 @@ bool RISCVLiveVariables::isTrackableRegister(
 }
 
 void RISCVLiveVariables::processInstruction(const MachineInstr &MI,
-                                             LivenessInfo &Info,
-                                             const TargetRegisterInfo *TRI) {
+                                            LivenessInfo &Info,
+                                            const TargetRegisterInfo *TRI) {
   std::vector<Register> GenVec;
   for (const MachineOperand &MO : MI.operands()) {
     if (!MO.isReg() || !MO.getReg())
@@ -174,7 +175,8 @@ void RISCVLiveVariables::processInstruction(const MachineInstr &MI,
       continue;
 
     if (MO.isUse()) {
-      // This is a use - only add to Use set if not already defined in this block
+      // This is a use - only add to Use set if not already defined in this
+      // block
       if (Info.Gen.find(Reg) == Info.Gen.end()) {
         Info.Use.insert(Reg);
 
@@ -205,8 +207,8 @@ void RISCVLiveVariables::processInstruction(const MachineInstr &MI,
     Info.Gen.insert(Reg);
     if (Reg.isPhysical()) {
       for (MCSubRegIterator SubRegs(Reg, TRI, /*IncludeSelf=*/false);
-                SubRegs.isValid(); ++SubRegs) {
-            Info.Gen.insert(*SubRegs);
+           SubRegs.isValid(); ++SubRegs) {
+        Info.Gen.insert(*SubRegs);
       }
     }
   }
@@ -324,8 +326,7 @@ void RISCVLiveVariables::computeGlobalLiveness(MachineFunction &MF) {
   }
 }
 
-bool RISCVLiveVariables::isLiveAt(Register Reg,
-                                   const MachineInstr &MI) const {
+bool RISCVLiveVariables::isLiveAt(Register Reg, const MachineInstr &MI) const {
   const MachineBasicBlock *MBB = MI.getParent();
   auto It = BlockLiveness.find(MBB);
 
