@@ -87,7 +87,7 @@ llvm::getReleaseModeAdvisor(Module &M, ModuleAnalysisManager &MAM,
           EmbeddedModelRunnerOptions().setModelSelector(ModelSelector));
     else {
       AOTRunner = std::make_unique<InteractiveModelRunner>(
-          M.getContext(), InputFeatures, InlineDecisionSpec,
+	M.getContext(), InputFeatures, getInlineDecisionSpec(),
           InteractiveChannelBaseName + ".out",
           InteractiveChannelBaseName + ".in");
     }
@@ -127,11 +127,17 @@ static std::vector<TensorSpec> FeatureMap{
 }
 
 const char *const llvm::DecisionName = "inlining_decision";
-const TensorSpec llvm::InlineDecisionSpec =
-    TensorSpec::createSpec<int64_t>(DecisionName, {1});
+const TensorSpec &llvm::getInlineDecisionSpec() {
+  static const TensorSpec T =
+      TensorSpec::createSpec<int64_t>(DecisionName, {1});
+  return T;
+}
 const char *const llvm::DefaultDecisionName = "inlining_default";
-const TensorSpec llvm::DefaultDecisionSpec =
-    TensorSpec::createSpec<int64_t>(DefaultDecisionName, {1});
+const TensorSpec &llvm::getDefaultDecisionSpec() {
+  static const TensorSpec T =
+      TensorSpec::createSpec<int64_t>(DefaultDecisionName, {1});
+  return T;
+}
 const char *const llvm::RewardName = "delta_size";
 
 CallBase *getInlinableCS(Instruction &I) {
@@ -209,7 +215,7 @@ MLInlineAdvisor::MLInlineAdvisor(
         TensorSpec::createSpec<float>("caller_embedding", {IR2VecDim}));
   }
   if (InteractiveIncludeDefault)
-    FeatureMap.push_back(DefaultDecisionSpec);
+    FeatureMap.push_back(getDefaultDecisionSpec());
 
   ModelRunner = GetModelRunner(getFeatureMap());
   if (!ModelRunner) {
