@@ -456,8 +456,9 @@ namespace {
 
 // Constructs the arguments to be passed for the SYCL kernel launch call.
 // The first argument is a string literal that contains the SYCL kernel
-// name. The remaining arguments are the parameters of 'FD'.
-void BuildSYCLKernelLaunchCallArgs(Sema &SemaRef, FunctionDecl *FD,
+// name. The remaining arguments are the parameters of 'FD' passed as
+// move-elligible xvalues. Returns true on error and false otherwise.
+bool BuildSYCLKernelLaunchCallArgs(Sema &SemaRef, FunctionDecl *FD,
                                    const SYCLKernelInfo *SKI,
                                    SmallVectorImpl<Expr *> &Args,
                                    SourceLocation Loc) {
@@ -478,11 +479,23 @@ void BuildSYCLKernelLaunchCallArgs(Sema &SemaRef, FunctionDecl *FD,
                             /*Pascal*/ false, KernelNameArrayTy, Loc);
   Args.push_back(KernelNameExpr);
 
+  // Forward all parameters of 'FD' to the SYCL kernel launch function as if
+  // by std::move().
   for (ParmVarDecl *PVD : FD->parameters()) {
     QualType ParamType = PVD->getOriginalType().getNonReferenceType();
-    Expr *DRE = SemaRef.BuildDeclRefExpr(PVD, ParamType, VK_LValue, Loc);
-    Args.push_back(DRE);
+    ExprResult E = SemaRef.BuildDeclRefExpr(PVD, ParamType, VK_LValue, Loc);
+    if (E.isInvalid())
+      return true;
+    if (!PVD->getType()->isLValueReferenceType())
+      E = ImplicitCastExpr::Create(SemaRef.Context, E.get()->getType(), CK_NoOp,
+                                   E.get(), nullptr, VK_XValue,
+                                   FPOptionsOverride());
+    if (E.isInvalid())
+      return true;
+    Args.push_back(E.get());
   }
+
+  return false;
 }
 
 // Constructs the SYCL kernel launch call.
@@ -494,7 +507,8 @@ StmtResult BuildSYCLKernelLaunchCallStmt(Sema &SemaRef, FunctionDecl *FD,
   // IdExpr may be null if name lookup failed.
   if (IdExpr) {
     llvm::SmallVector<Expr *, 12> Args;
-    BuildSYCLKernelLaunchCallArgs(SemaRef, FD, SKI, Args, Loc);
+    if (BuildSYCLKernelLaunchCallArgs(SemaRef, FD, SKI, Args, Loc))
+      return StmtError();
     ExprResult LaunchResult =
         SemaRef.BuildCallExpr(SemaRef.getCurScope(), IdExpr, Loc, Args, Loc);
     if (LaunchResult.isInvalid())

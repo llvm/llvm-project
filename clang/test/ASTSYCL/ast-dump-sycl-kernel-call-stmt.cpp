@@ -92,8 +92,8 @@ void skep2<KN<2>>(K<2>);
 // CHECK-NEXT: |   | |   | `-DeclRefExpr {{.*}} 'void (const char *, K<2>)' lvalue Function {{.*}} 'sycl_kernel_launch' {{.*}}
 // CHECK-NEXT: |   | |   |-ImplicitCastExpr {{.*}} 'const char *' <ArrayToPointerDecay>
 // CHECK-NEXT: |   | |   | `-StringLiteral {{.*}} 'const char[14]' lvalue "_ZTS2KNILi2EE"
-// CHECK-NEXT: |   | |   `-CXXConstructExpr {{.*}} 'K<2>' 'void (const K<2> &) noexcept'
-// CHECK-NEXT: |   | |     `-ImplicitCastExpr {{.*}} <NoOp>
+// CHECK-NEXT: |   | |   `-CXXConstructExpr {{.*}} 'K<2>' 'void (K<2> &&) noexcept'
+// CHECK-NEXT: |   | |     `-ImplicitCastExpr {{.*}} 'K<2>' xvalue <NoOp>
 // CHECK-NEXT: |   | |       `-DeclRefExpr {{.*}} 'K<2>' lvalue ParmVar {{.*}} 'k' 'K<2>'
 // CHECK-NEXT: |   | `-OutlinedFunctionDecl {{.*}}
 // CHECK-NEXT: |   |   |-ImplicitParamDecl {{.*}} implicit used k 'K<2>'
@@ -148,8 +148,8 @@ void skep3<KN<3>>(K<3> k) {
 // CHECK-NEXT: | | |   | `-DeclRefExpr {{.*}} 'void (const char *, K<3>)' lvalue Function {{.*}} 'sycl_kernel_launch' 'void (const char *, K<3>)' {{.*}}
 // CHECK-NEXT: | | |   |-ImplicitCastExpr {{.*}} 'const char *' <ArrayToPointerDecay>
 // CHECK-NEXT: | | |   | `-StringLiteral {{.*}} 'const char[14]' lvalue "_ZTS2KNILi3EE"
-// CHECK-NEXT: | | |   `-CXXConstructExpr {{.*}} 'K<3>' 'void (const K<3> &) noexcept'
-// CHECK-NEXT: | | |     `-ImplicitCastExpr {{.*}} 'const K<3>' lvalue <NoOp>
+// CHECK-NEXT: | | |   `-CXXConstructExpr {{.*}} 'K<3>' 'void (K<3> &&) noexcept'
+// CHECK-NEXT: | | |     `-ImplicitCastExpr {{.*}} 'K<3>' xvalue <NoOp>
 // CHECK-NEXT: | | |       `-DeclRefExpr {{.*}} 'K<3>' lvalue ParmVar {{.*}} 'k' 'K<3>'
 // CHECK-NEXT: | | `-OutlinedFunctionDecl {{.*}}
 // CHECK-NEXT: | |   |-ImplicitParamDecl {{.*}} implicit used k 'K<3>'
@@ -186,13 +186,15 @@ void skep4(K<4> k, int p1, int p2) {
 // CHECK-NEXT: | | |   | `-DeclRefExpr {{.*}} 'void (const char *, K<4>, int, int)' lvalue Function {{.*}} 'sycl_kernel_launch' 'void (const char *, K<4>, int, int)' {{.*}}
 // CHECK-NEXT: | | |   |-ImplicitCastExpr {{.*}} 'const char *' <ArrayToPointerDecay>
 // CHECK-NEXT: | | |   | `-StringLiteral {{.*}} 'const char[14]' lvalue "_ZTS2KNILi4EE"
-// CHECK-NEXT: | | |   |-CXXConstructExpr {{.*}} 'K<4>' 'void (const K<4> &) noexcept'
-// CHECK-NEXT: | | |   | `-ImplicitCastExpr {{.*}} 'const K<4>' lvalue <NoOp>
+// CHECK-NEXT: | | |   |-CXXConstructExpr {{.*}} 'K<4>' 'void (K<4> &&) noexcept'
+// CHECK-NEXT: | | |   | `-ImplicitCastExpr {{.*}} 'K<4>' xvalue <NoOp>
 // CHECK-NEXT: | | |   |   `-DeclRefExpr {{.*}} 'K<4>' lvalue ParmVar {{.*}} 'k' 'K<4>'
 // CHECK-NEXT: | | |   |-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
-// CHECK-NEXT: | | |   | `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'p1' 'int'
+// CHECK-NEXT: | | |   | `-ImplicitCastExpr {{.*}} 'int' xvalue <NoOp>
+// CHECK-NEXT: | | |   |   `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'p1' 'int'
 // CHECK-NEXT: | | |   `-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
-// CHECK-NEXT: | | |     `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'p2' 'int'
+// CHECK-NEXT: | | |     `-ImplicitCastExpr {{.*}} 'int' xvalue <NoOp>
+// CHECK-NEXT: | | |       `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'p2' 'int'
 // CHECK-NEXT: | | `-OutlinedFunctionDecl {{.*}}
 // CHECK-NEXT: | |   |-ImplicitParamDecl {{.*}} implicit used k 'K<4>'
 // CHECK-NEXT: | |   |-ImplicitParamDecl {{.*}} implicit used p1 'int'
@@ -230,16 +232,20 @@ void skep5(int unused1, K<5> k, int unused2, int p, int unused3) {
 // CHECK-NEXT: | | |   |-ImplicitCastExpr {{.*}} 'const char *' <ArrayToPointerDecay>
 // CHECK-NEXT: | | |   | `-StringLiteral {{.*}} 'const char[14]' lvalue "_ZTS2KNILi5EE"
 // CHECK-NEXT: | | |   |-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
-// CHECK-NEXT: | | |   | `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'unused1' 'int'
-// CHECK-NEXT: | | |   |-CXXConstructExpr {{.*}} 'K<5>' 'void (const K<5> &) noexcept'
-// CHECK-NEXT: | | |   | `-ImplicitCastExpr {{.*}} 'const K<5>' lvalue <NoOp>
+// CHECK-NEXT: | | |   | `-ImplicitCastExpr {{.*}} 'int' xvalue <NoOp>
+// CHECK-NEXT: | | |   |   `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'unused1' 'int'
+// CHECK-NEXT: | | |   |-CXXConstructExpr {{.*}} 'K<5>' 'void (K<5> &&) noexcept'
+// CHECK-NEXT: | | |   | `-ImplicitCastExpr {{.*}} 'K<5>' xvalue <NoOp>
 // CHECK-NEXT: | | |   |   `-DeclRefExpr {{.*}} 'K<5>' lvalue ParmVar {{.*}} 'k' 'K<5>'
 // CHECK-NEXT: | | |   |-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
-// CHECK-NEXT: | | |   | `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'unused2' 'int'
+// CHECK-NEXT: | | |   | `-ImplicitCastExpr {{.*}} 'int' xvalue <NoOp>
+// CHECK-NEXT: | | |   |   `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'unused2' 'int'
 // CHECK-NEXT: | | |   |-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
-// CHECK-NEXT: | | |   | `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'p' 'int'
+// CHECK-NEXT: | | |   | `-ImplicitCastExpr {{.*}} 'int' xvalue <NoOp>
+// CHECK-NEXT: | | |   |   `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'p' 'int'
 // CHECK-NEXT: | | |   `-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
-// CHECK-NEXT: | | |     `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'unused3' 'int'
+// CHECK-NEXT: | | |     `-ImplicitCastExpr {{.*}} 'int' xvalue <NoOp>
+// CHECK-NEXT: | | |       `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'unused3' 'int'
 // CHECK-NEXT: | | `-OutlinedFunctionDecl {{.*}}
 // CHECK-NEXT: | |   |-ImplicitParamDecl {{.*}} implicit unused1 'int'
 // CHECK-NEXT: | |   |-ImplicitParamDecl {{.*}} implicit used k 'K<5>'
@@ -332,8 +338,8 @@ void skep7(S7 k) {
 // CHECK-NEXT: | | |   | `-DeclRefExpr {{.*}} 'void (const char *, S7)' lvalue Function {{.*}} 'sycl_kernel_launch' 'void (const char *, S7)' {{.*}}
 // CHECK-NEXT: | | |   |-ImplicitCastExpr {{.*}} 'const char *' <ArrayToPointerDecay>
 // CHECK-NEXT: | | |   | `-StringLiteral {{.*}} 'const char[14]' lvalue "_ZTS2KNILi7EE"
-// CHECK-NEXT: | | |   `-CXXConstructExpr {{.*}} 'S7' 'void (const S7 &) noexcept'
-// CHECK-NEXT: | | |     `-ImplicitCastExpr {{.*}} 'const S7' lvalue <NoOp>
+// CHECK-NEXT: | | |   `-CXXConstructExpr {{.*}} 'S7' 'void (S7 &&) noexcept'
+// CHECK-NEXT: | | |     `-ImplicitCastExpr {{.*}} 'S7' xvalue <NoOp>
 // CHECK-NEXT: | | |       `-DeclRefExpr {{.*}} 'S7' lvalue ParmVar {{.*}} 'k' 'S7'
 // CHECK-NEXT: | | `-OutlinedFunctionDecl {{.*}}
 // CHECK-NEXT: | |   |-ImplicitParamDecl {{.*}} implicit used k 'S7'
@@ -366,8 +372,8 @@ void skep8(S8 k) {
 // CHECK-NEXT: | | |   | `-DeclRefExpr {{.*}} 'void (const char *, S8)' lvalue Function {{.*}} 'sycl_kernel_launch' 'void (const char *, S8)' {{.*}}
 // CHECK-NEXT: | | |   |-ImplicitCastExpr {{.*}} 'const char *' <ArrayToPointerDecay>
 // CHECK-NEXT: | | |   | `-StringLiteral {{.*}} 'const char[12]' lvalue "_ZTS6\316\264\317\204\317\207"
-// CHECK-NEXT: | | |   `-CXXConstructExpr {{.*}} 'S8' 'void (const S8 &) noexcept'
-// CHECK-NEXT: | | |     `-ImplicitCastExpr {{.*}} 'const S8' lvalue <NoOp>
+// CHECK-NEXT: | | |   `-CXXConstructExpr {{.*}} 'S8' 'void (S8 &&) noexcept'
+// CHECK-NEXT: | | |     `-ImplicitCastExpr {{.*}} 'S8' xvalue <NoOp>
 // CHECK-NEXT: | | |       `-DeclRefExpr {{.*}} 'S8' lvalue ParmVar {{.*}} 'k' 'S8'
 // CHECK:      | | `-OutlinedFunctionDecl {{.*}}
 // CHECK:      | `-SYCLKernelEntryPointAttr {{.*}}
@@ -429,12 +435,14 @@ void foo() {
 // CHECK-NEXT: | |   | |   |-ImplicitCastExpr {{.*}} 'const char *' <ArrayToPointerDecay>
 // CHECK-NEXT: | |   | |   | `-StringLiteral {{.*}} 'const char[14]' lvalue "_ZTS2KNILi9EE"
 // CHECK-NEXT: | |   | |   |-CXXConstructExpr {{.*}}
-// CHECK-NEXT: | |   | |   | `-ImplicitCastExpr {{.*}} lvalue <NoOp>
+// CHECK-NEXT: | |   | |   | `-ImplicitCastExpr {{.*}} xvalue <NoOp>
 // CHECK-NEXT: | |   | |   |   `-DeclRefExpr {{.*}} lvalue ParmVar {{.*}} 'k' {{.*}}
 // CHECK-NEXT: | |   | |   |-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
-// CHECK-NEXT: | |   | |   | `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'a' 'int'
+// CHECK-NEXT: | |   | |   | `-ImplicitCastExpr {{.*}} 'int' xvalue <NoOp>
+// CHECK-NEXT: | |   | |   |   `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'a' 'int'
 // CHECK-NEXT: | |   | |   `-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
-// CHECK-NEXT: | |   | |     `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'b' 'int'
+// CHECK-NEXT: | |   | |     `-ImplicitCastExpr {{.*}} 'int' xvalue <NoOp>
+// CHECK-NEXT: | |   | |       `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'b' 'int'
 // CHECK-NEXT: | |   | `-OutlinedFunctionDecl {{.*}}
 // CHECK-NEXT: | |   |   |-ImplicitParamDecl {{.*}} implicit used k {{.*}}
 // CHECK-NEXT: | |   |   |-ImplicitParamDecl {{.*}} implicit used a 'int'
