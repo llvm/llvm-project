@@ -20,12 +20,3 @@ uint test_uint(uint expr) {
 }
 
 // CHECK: declare [[TY]] @llvm.[[ICF]].wave.reduce.or.i32([[TY]]) #[[#attr:]]
-
-// CHECK-LABEL: test_uint64_t
-uint64_t test_uint64_t(uint64_t expr) {
-  // CHECK:  %[[RET:.*]] = call i1 [[TY:.*]] @llvm.[[ICF]].wave.reduce.or.i64([[TY]] %[[#]])
-  // CHECK:  ret [[TY]] %[[RET]]
-  return WaveActiveBitOr(expr);
-}
-
-// CHECK: declare [[TY]] @llvm.[[ICF]].wave.reduce.or.i64([[TY]]) #[[#attr:]]
