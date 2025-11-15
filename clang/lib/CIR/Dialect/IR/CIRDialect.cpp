@@ -2196,11 +2196,6 @@ void cir::AwaitOp::build(OpBuilder &builder, OperationState &result,
   }
 }
 
-/// Given the region at `index`, or the parent operation if `index` is None,
-/// return the successor regions. These are the regions that may be selected
-/// during the flow of control. `operands` is a set of optional attributes
-/// that correspond to a constant value for each operand, or null if that
-/// operand is not a constant.
 void cir::AwaitOp::getSuccessorRegions(
     mlir::RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
   // If any index all the underlying regions branch back to the parent
@@ -2211,8 +2206,9 @@ void cir::AwaitOp::getSuccessorRegions(
     return;
   }
 
-  // FIXME: we want to look at cond region for getting more accurate results
-  // if the other regions will get a chance to execute.
+  // TODO: retrieve information from the promise and only push the
+  // necessary ones. Example: `std::suspend_never` on initial or final
+  // await's might allow suspend region to be skipped.
   regions.push_back(RegionSuccessor(&this->getReady()));
   regions.push_back(RegionSuccessor(&this->getSuspend()));
   regions.push_back(RegionSuccessor(&this->getResume()));
