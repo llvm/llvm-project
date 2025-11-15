@@ -1,27 +1,36 @@
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -fsanitize=alignment,null \
-// RUN:   -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK-UBSAN
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm %s -o - \
-// RUN:   | FileCheck %s --check-prefix=CHECK-NO-UBSAN
+// RUN:   -emit-llvm -std=c23 %s -o - \
+// RUN:   | FileCheck %s --check-prefixes=CHECK,CHECK-UBSAN
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -std=c23 %s -o - \
+// RUN:   | FileCheck %s --check-prefixes=CHECK,CHECK-NO-UBSAN
+//
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsanitize=alignment,null \
+// RUN:   -emit-llvm -xc++ %s -o - \
+// RUN:   | FileCheck %s --check-prefixes=CHECK,CHECK-UBSAN
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -xc++ %s -o - \
+// RUN:   | FileCheck %s --check-prefixes=CHECK,CHECK-NO-UBSAN
 
 // Test that EmitAggregateCopy emits null and alignment checks when sanitizers
 // are enabled for aggregate copy operations with pointers.
 
-struct alignas(16) AlignedStruct {
-  int a;
+typedef struct AlignedStruct {
+  alignas(16) int a;
   int b;
   int c;
   int d;
-};
+} AlignedStruct;
 
-struct NormalStruct {
+typedef struct NormalStruct {
   int x;
   int y;
   int z;
-};
+} NormalStruct;
 
+#if __cplusplus
+extern "C" {
+#endif
 // Stack-to-stack copies are optimized away (compiler knows they're valid)
-// CHECK-UBSAN-LABEL: define {{.*}}void @_Z19test_aligned_structv()
-// CHECK-NO-UBSAN-LABEL: define {{.*}}void @_Z19test_aligned_structv()
+// CHECK-LABEL: define {{.*}}void @test_aligned_struct()
 void test_aligned_struct() {
   AlignedStruct src = {1, 2, 3, 4};
   AlignedStruct dest;
@@ -32,8 +41,7 @@ void test_aligned_struct() {
   dest = src;
 }
 
-// CHECK-UBSAN-LABEL: define {{.*}}void @_Z18test_normal_structv()
-// CHECK-NO-UBSAN-LABEL: define {{.*}}void @_Z18test_normal_structv()
+// CHECK-LABEL: define {{.*}}void @test_normal_struct()
 void test_normal_struct() {
   NormalStruct src = {10, 20, 30};
   NormalStruct dest;
@@ -45,8 +53,7 @@ void test_normal_struct() {
 }
 
 // This is the key test - copying through pointers requires runtime checks
-// CHECK-UBSAN-LABEL: define {{.*}}void @_Z19test_pointer_to_ptrP13AlignedStructS0_(
-// CHECK-NO-UBSAN-LABEL: define {{.*}}void @_Z19test_pointer_to_ptrP13AlignedStructS0_(
+// CHECK-LABEL: define {{.*}}void @test_pointer_to_ptr(
 void test_pointer_to_ptr(AlignedStruct *src, AlignedStruct *dest) {
   // CHECK-UBSAN: %[[SRC_LOAD:.*]] = load ptr, ptr %src.addr
   // CHECK-UBSAN: %[[DEST_LOAD:.*]] = load ptr, ptr %dest.addr
@@ -87,8 +94,7 @@ void test_pointer_to_ptr(AlignedStruct *src, AlignedStruct *dest) {
 }
 
 // Array copies also need checks for non-constant indices
-// CHECK-UBSAN-LABEL: define {{.*}}void @_Z15test_array_copyv()
-// CHECK-NO-UBSAN-LABEL: define {{.*}}void @_Z15test_array_copyv()
+// CHECK-LABEL: define {{.*}}void @test_array_copy()
 void test_array_copy() {
   AlignedStruct src[3] = {{1, 2, 3, 4}, {5, 6, 7, 8}, {9, 10, 11, 12}};
   AlignedStruct dest[3];
@@ -121,8 +127,7 @@ void test_array_copy() {
 }
 
 // Test with normal struct through pointers
-// CHECK-UBSAN-LABEL: define {{.*}}void @_Z23test_normal_struct_ptrsP12NormalStructS0_
-// CHECK-NO-UBSAN-LABEL: define {{.*}}void @_Z23test_normal_struct_ptrsP12NormalStructS0_
+// CHECK-LABEL: define {{.*}}void @test_normal_struct_ptrs(
 void test_normal_struct_ptrs(NormalStruct *src, NormalStruct *dest) {
   // Should still check for null even with normal alignment
   // CHECK-UBSAN: icmp ne ptr %{{.*}}, null
@@ -132,3 +137,6 @@ void test_normal_struct_ptrs(NormalStruct *src, NormalStruct *dest) {
 
   *dest = *src;
 }
+#if __cplusplus
+}
+#endif
