@@ -384,7 +384,10 @@ HTML-CALC:                    </div>
 HTML-CALC:                    <h3>Returns</h3>
 HTML-CALC:                        <p> double The result of a / b.</p>
 HTML-CALC:                        <p></p>
-HTML-CALC:                        </div>
+HTML-CALC:                    <h3>Throws</h3>
+HTML-CALC:                    <div>
+HTML-CALC:                        <b>std::invalid_argument</b> if b is zero.
+HTML-CALC:                    </div>
 HTML-CALC:     </div>
 HTML-CALC: </div>
 HTML-CALC: <div class="delimiter-container">
