@@ -82,6 +82,7 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMRemarkStreamer.h"
+#include "llvm/CodeGen/InsertCodePrefetch.h"
 #include "llvm/IR/Mangler.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
@@ -1988,7 +1989,6 @@ void AsmPrinter::emitFunctionBody() {
   FunctionCallGraphInfo FuncCGInfo;
   const auto &CallSitesInfoMap = MF->getCallSitesInfo();
   for (auto &MBB : *MF) {
-    int NextPrefetchTargetIndex = MBB.getPrefetchTargets().empty() ? -1 : 0;
     // Print a label for the basic block.
     emitBasicBlockStart(MBB);
     DenseMap<StringRef, unsigned> MnemonicCounts;

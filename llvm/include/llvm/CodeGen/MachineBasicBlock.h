@@ -1297,12 +1297,6 @@ public:
   /// Return the MCSymbol for this basic block.
   LLVM_ABI MCSymbol *getSymbol() const;
 
-  MCSymbol *getCallInstSymbol(unsigned CallInstNumber) const;
-
-  const SmallVector<MCSymbol *, 4> &getCallInstSymbols() const {
-    return CallInstSymbols;
-  }
-
   /// Return the Windows EH Continuation Symbol for this basic block.
   LLVM_ABI MCSymbol *getEHContSymbol() const;
 

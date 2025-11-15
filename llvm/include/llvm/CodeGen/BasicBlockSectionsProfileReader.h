@@ -50,10 +50,12 @@ struct CallsiteID {
   unsigned CallsiteIndex;
 };
 
+// This represents a prefetch hint to be injected at site `SiteID`, targetting
+// `TargetID` in function `TargetFunction`.
 struct PrefetchHint {
-  SubblockID SitePosition;
-  StringRef TargetFunctionName;
-  osition TargetPosition;
+  SubblockID SiteID;
+  StringRef TargetFunction;
+  SubblockID TargetID;
 };
 
 // This represents the raw input profile for one function.
@@ -76,27 +78,6 @@ struct FunctionPathAndClusterInfo {
   // (not cloned blocks), hence the map key being unsigned instead of
   // UniqueBBID.
   DenseMap<unsigned, uint64_t> BBHashes;
-};
-
-// Provides DenseMapInfo SubblockID.
-template <> struct DenseMapInfo<SubblockID> {
-  static inline SubblockID getEmptyKey() {
-    return {DenseMapInfo<UniqueBBID>::getEmptyKey(),
-            DenseMapInfo<unsigned>::getEmptyKey()};
-  }
-  static inline SubblockID getTombstoneKey() {
-    return SubblockID{DenseMapInfo<UniqueBBID>::getTombstoneKey(),
-                      DenseMapInfo<unsigned>::getTombstoneKey()};
-  }
-  static unsigned getHashValue(const SubblockID &Val) {
-    std::pair<unsigned, unsigned> PairVal = std::make_pair(
-        DenseMapInfo<UniqueBBID>::getHashValue(Val.BBID), Val.BBOffset);
-    return DenseMapInfo<std::pair<unsigned, unsigned>>::getHashValue(PairVal);
-  }
-  static bool isEqual(const SubblockID &LHS, const SubblockID &RHS) {
-    return DenseMapInfo<UniqueBBID>::isEqual(LHS.BBID, RHS.BBID) &&
-           DenseMapInfo<unsigned>::isEqual(LHS.BBOffset, RHS.BBOffset);
-  }
 };
 
 class BasicBlockSectionsProfileReader {
@@ -130,6 +111,7 @@ public:
   SmallVector<CallsiteID>
   getPrefetchTargetsForFunction(StringRef FuncName) const;
 
+  // Returns the prefetch hints to be injected in function `FuncName`.
   SmallVector<PrefetchHint>
   getPrefetchHintsForFunction(StringRef FuncName) const;
 
@@ -241,10 +223,9 @@ public:
 
   uint64_t getEdgeCount(StringRef FuncName, const UniqueBBID &SrcBBID,
                         const UniqueBBID &DestBBID) const;
+
   SmallVector<PrefetchHint>
   getPrefetchHintsForFunction(StringRef FuncName) const;
-
-  DenseSet<SubblockID> getPrefetchTargetsForFunction(StringRef FuncName) const;
 
   SmallVector<CallsiteID>
   getPrefetchTargetsForFunction(StringRef FuncName) const;

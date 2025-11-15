@@ -365,8 +365,8 @@ Error BasicBlockSectionsProfileReader::ReadV1Profile() {
       auto SiteBBID = parseUniqueBBID(PrefetchSiteStr[0]);
       if (!SiteBBID)
         return SiteBBID.takeError();
-      unsigned long long SiteBBOffset;
-      if (getAsUnsignedInteger(PrefetchSiteStr[1], 10, SiteBBOffset))
+      unsigned long long SiteSubblockIndex;
+      if (getAsUnsignedInteger(PrefetchSiteStr[1], 10, SiteSubblockIndex))
         return createProfileParseError(Twine("unsigned integer expected: '") +
                                        PrefetchSiteStr[1]);
 
@@ -376,14 +376,14 @@ Error BasicBlockSectionsProfileReader::ReadV1Profile() {
       auto TargetBBID = parseUniqueBBID(PrefetchTargetStr[1]);
       if (!TargetBBID)
         return TargetBBID.takeError();
-      unsigned long long TargetBBOffset;
-      if (getAsUnsignedInteger(PrefetchTargetStr[2], 10, TargetBBOffset))
+      unsigned long long TargetSubblockIndex;
+      if (getAsUnsignedInteger(PrefetchTargetStr[2], 10, TargetSubblockIndex))
         return createProfileParseError(Twine("unsigned integer expected: '") +
                                        PrefetchTargetStr[2]);
       FI->second.PrefetchHints.push_back(
-          PrefetchHint{{*SiteBBID, static_cast<unsigned>(SiteBBOffset)},
+          PrefetchHint{SubblockID{*SiteBBID, static_cast<unsigned>(SiteSubblockIndex)},
                        PrefetchTargetStr[0],
-                       {*TargetBBID, static_cast<unsigned>(TargetBBOffset)}});
+                       SubblockID{*TargetBBID, static_cast<unsigned>(TargetSubblockIndex)}});
       continue;
     }
     case 't': { // Prefetch target specifier.

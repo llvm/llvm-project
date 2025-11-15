@@ -90,19 +90,6 @@ MCSymbol *MachineBasicBlock::getSymbol() const {
   return CachedMCSymbol;
 }
 
-MCSymbol *MachineBasicBlock::getCallInstSymbol(unsigned CallInstNumber) const {
-  if (CallInstSymbols.size() <= CallInstNumber) {
-    const MachineFunction *MF = getParent();
-    MCContext &Ctx = MF->getContext();
-    CallInstSymbols.resize(CallInstNumber + 1);
-    CallInstSymbols[CallInstNumber] = Ctx.createBlockSymbol(
-        "BB" + Twine(MF->getFunctionNumber()) + "_" + Twine(getNumber()) + "_" +
-            Twine(CallInstNumber),
-        /*AlwaysEmit=*/true);
-  }
-  return CallInstSymbols[CallInstNumber];
-}
-
 MCSymbol *MachineBasicBlock::getEHContSymbol() const {
   if (!CachedEHContMCSymbol) {
     const MachineFunction *MF = getParent();
