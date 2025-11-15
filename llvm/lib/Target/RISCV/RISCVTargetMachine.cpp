@@ -108,6 +108,11 @@ static cl::opt<bool> EnableCFIInstrInserter(
     cl::desc("Enable CFI Instruction Inserter for RISC-V"), cl::init(false),
     cl::Hidden);
 
+static cl::opt<bool> EnableRISCVLiveVariables(
+    "riscv-live-variables",
+    cl::desc("Enable Live Variable Analysis for RISC-V"), cl::init(false),
+    cl::Hidden);
+
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   RegisterTargetMachine<RISCVTargetMachine> X(getTheRISCV32Target());
   RegisterTargetMachine<RISCVTargetMachine> Y(getTheRISCV64Target());
@@ -631,7 +636,8 @@ void RISCVPassConfig::addPostRegAlloc() {
       EnableRedundantCopyElimination)
     addPass(createRISCVRedundantCopyEliminationPass());
 
-  addPass(createRISCVLiveVariablesPass());
+  if (EnableRISCVLiveVariables)
+    addPass(createRISCVLiveVariablesPass());
 }
 
 bool RISCVPassConfig::addILPOpts() {
