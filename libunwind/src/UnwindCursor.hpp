@@ -2865,6 +2865,21 @@ void UnwindCursor<A, R>::setInfoBasedOnIPRegister(bool isReturnAddress) {
 
 #if defined(_LIBUNWIND_CHECK_LINUX_SIGRETURN) &&                               \
     defined(_LIBUNWIND_TARGET_AARCH64)
+
+/*
+ * The linux sigreturn restorer stub will always have the form:
+ *
+ *  d2801168        movz    x8, #0x8b
+ *  d4000001        svc     #0x0
+ */
+#if defined(__AARCH64EB__)
+#define MOVZ_X8_8B 0x681180d2
+#define SVC_0 0x010000d4
+#else
+#define MOVZ_X8_8B 0xd2801168
+#define SVC_0 0xd4000001
+#endif
+
 template <typename A, typename R>
 bool UnwindCursor<A, R>::setInfoForSigReturn(Registers_arm64 &) {
   // Look for the sigreturn trampoline. The trampoline's body is two
@@ -2889,7 +2904,7 @@ bool UnwindCursor<A, R>::setInfoForSigReturn(Registers_arm64 &) {
     return false;
   auto *instructions = reinterpret_cast<const uint32_t *>(pc);
   // Look for instructions: mov x8, #0x8b; svc #0x0
-  if (instructions[0] != 0xd2801168 || instructions[1] != 0xd4000001)
+  if (instructions[0] != MOVZ_X8_8B || instructions[1] != SVC_0)
     return false;
 
   _info = {};
