@@ -412,7 +412,7 @@ public:
 
   /// Return the live range for register unit \p Unit. It will be computed if
   /// it doesn't exist.
-  LiveRange &getRegUnit(unsigned Unit) {
+  LiveRange &getRegUnit(MCRegUnit Unit) {
     LiveRange *LR = RegUnitRanges[Unit];
     if (!LR) {
       // Compute missing ranges on demand.
@@ -425,15 +425,15 @@ public:
 
   /// Return the live range for register unit \p Unit if it has already been
   /// computed, or nullptr if it hasn't been computed yet.
-  LiveRange *getCachedRegUnit(unsigned Unit) { return RegUnitRanges[Unit]; }
+  LiveRange *getCachedRegUnit(MCRegUnit Unit) { return RegUnitRanges[Unit]; }
 
-  const LiveRange *getCachedRegUnit(unsigned Unit) const {
+  const LiveRange *getCachedRegUnit(MCRegUnit Unit) const {
     return RegUnitRanges[Unit];
   }
 
   /// Remove computed live range for register unit \p Unit. Subsequent uses
   /// should rely on on-demand recomputation.
-  void removeRegUnit(unsigned Unit) {
+  void removeRegUnit(MCRegUnit Unit) {
     delete RegUnitRanges[Unit];
     RegUnitRanges[Unit] = nullptr;
   }
@@ -489,7 +489,7 @@ private:
   void dumpInstrs() const;
 
   void computeLiveInRegUnits();
-  LLVM_ABI void computeRegUnitRange(LiveRange &, unsigned Unit);
+  LLVM_ABI void computeRegUnitRange(LiveRange &, MCRegUnit Unit);
   LLVM_ABI bool computeVirtRegInterval(LiveInterval &);
 
   using ShrinkToUsesWorkList = SmallVector<std::pair<SlotIndex, VNInfo *>, 16>;
