@@ -63,6 +63,15 @@ clang::CIRGen::createX8664TargetCIRGenInfo(CIRGenTypes &cgt) {
 
 ABIInfo::~ABIInfo() noexcept = default;
 
+cir::VectorType
+ABIInfo::getOptimalVectorMemoryType(cir::VectorType ty,
+                                    const LangOptions &opt) const {
+  if (ty.getSize() == 3 && !opt.PreserveVec3Type) {
+    return cir::VectorType::get(ty.getElementType(), 4);
+  }
+  return ty;
+}
+
 bool TargetCIRGenInfo::isNoProtoCallVariadic(
     const FunctionNoProtoType *fnType) const {
   // The following conventions are known to require this to be false:

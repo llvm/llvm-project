@@ -319,21 +319,36 @@ void CIRGenFunction::emitStoreOfScalar(mlir::Value value, Address addr,
                                        bool isNontemporal) {
   assert(!cir::MissingFeatures::opLoadStoreThreadLocal());
 
+  mlir::Type srcTy = addr.getElementType();
   if (const auto *clangVecTy = ty->getAs<clang::VectorType>()) {
-    // Boolean vectors use `iN` as storage type.
-    if (clangVecTy->isExtVectorBoolType())
-      cgm.errorNYI(addr.getPointer().getLoc(),
-                   "emitStoreOfScalar ExtVectorBoolType");
+    if (auto vecTy = dyn_cast<cir::VectorType>(srcTy)) {
+      cir::VectorType newVecTy =
+          cgm.getTargetCIRGenInfo().getABIInfo().getOptimalVectorMemoryType(
+              vecTy, getLangOpts());
 
-    // Handle vectors of size 3 like size 4 for better performance.
-    const mlir::Type elementType = addr.getElementType();
-    const auto vecTy = cast<cir::VectorType>(elementType);
+      if (!clangVecTy->isPackedVectorBoolType(getContext()) &&
+          vecTy != newVecTy) {
 
-    // TODO(CIR): Use `ABIInfo::getOptimalVectorMemoryType` once it upstreamed
-    assert(!cir::MissingFeatures::cirgenABIInfo());
-    if (vecTy.getSize() == 3 && !getLangOpts().PreserveVec3Type)
-      cgm.errorNYI(addr.getPointer().getLoc(),
-                   "emitStoreOfScalar Vec3 & PreserveVec3Type disabled");
+        const unsigned oldNumElements = vecTy.getSize();
+        const unsigned newNumElements = newVecTy.getSize();
+        SmallVector<mlir::Attribute, 8> indices;
+        indices.reserve(newNumElements);
+        for (unsigned i = 0; i < newNumElements; ++i) {
+          int64_t value = i < oldNumElements ? (int64_t)i : -1;
+          indices.push_back(cir::IntAttr::get(builder.getSInt64Ty(), value));
+        }
+
+        cir::ConstantOp poison = builder.getConstant(
+            value.getLoc(), cir::PoisonAttr::get(value.getType()));
+        value =
+            cir::VecShuffleOp::create(builder, value.getLoc(), newVecTy, value,
+                                      poison, builder.getArrayAttr(indices));
+        srcTy = newVecTy;
+      }
+
+      if (addr.getElementType() != srcTy)
+        addr = addr.withElementType(builder, srcTy);
+    }
   }
 
   value = emitToMemory(value, ty);
@@ -577,13 +592,31 @@ mlir::Value CIRGenFunction::emitLoadOfScalar(Address addr, bool isVolatile,
       return nullptr;
     }
 
-    const auto vecTy = cast<cir::VectorType>(eltTy);
+    // Handles vectors of sizes that are likely to be expanded to a larger size
+    // to optimize performance.
+    auto vecTy = cast<cir::VectorType>(eltTy);
+    cir::VectorType newVecTy =
+        cgm.getTargetCIRGenInfo().getABIInfo().getOptimalVectorMemoryType(
+            vecTy, getLangOpts());
 
-    // Handle vectors of size 3 like size 4 for better performance.
-    assert(!cir::MissingFeatures::cirgenABIInfo());
-    if (vecTy.getSize() == 3 && !getLangOpts().PreserveVec3Type)
-      cgm.errorNYI(addr.getPointer().getLoc(),
-                   "emitLoadOfScalar Vec3 & PreserveVec3Type disabled");
+    if (vecTy != newVecTy) {
+      Address cast = addr.withElementType(builder, newVecTy);
+      mlir::Value value = builder.createLoad(cgm.getLoc(loc), cast, isVolatile);
+
+      unsigned oldNumElements = vecTy.getSize();
+      SmallVector<mlir::Attribute, 8> indices;
+      indices.reserve(oldNumElements);
+      for (unsigned i = 0; i < oldNumElements; i++) {
+        indices.push_back(cir::IntAttr::get(builder.getSInt64Ty(), i));
+      }
+
+      cir::ConstantOp poison = builder.getConstant(
+          value.getLoc(), cir::PoisonAttr::get(value.getType()));
+      value = builder.create<cir::VecShuffleOp>(
+          cgm.getLoc(loc), vecTy, value, poison, builder.getArrayAttr(indices));
+
+      return value;
+    }
   }
 
   assert(!cir::MissingFeatures::opLoadStoreTbaa());

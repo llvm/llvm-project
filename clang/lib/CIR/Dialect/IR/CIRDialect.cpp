@@ -326,6 +326,12 @@ static LogicalResult checkConstantTypes(mlir::Operation *op, mlir::Type opType,
         "zero expects struct, array, vector, or complex type");
   }
 
+  if (isa<cir::PoisonAttr>(attrType)) {
+    if (!::mlir::isa<cir::VoidType>(opType))
+      return success();
+    return op->emitOpError("poison expects non-void type");
+  }
+
   if (mlir::isa<cir::BoolAttr>(attrType)) {
     if (!mlir::isa<cir::BoolType>(opType))
       return op->emitOpError("result type (")
@@ -2330,23 +2336,25 @@ OpFoldResult cir::VecShuffleOp::fold(FoldAdaptor adaptor) {
   if (!vec1Attr || !vec2Attr)
     return {};
 
-  mlir::Type vec1ElemTy =
-      mlir::cast<cir::VectorType>(vec1Attr.getType()).getElementType();
+  mlir::ArrayAttr indicesElts = adaptor.getIndices();
+  auto indicesEltsRange = indicesElts.getAsRange<cir::IntAttr>();
+
+  // In MLIR DenseElementsAttr can't contain undef attr, so we can't fold
+  // the shuffle op to ConstVector if it's contain index  with -1 value
+  if (std::find_if(indicesEltsRange.begin(), indicesEltsRange.end(),
+                   [](cir::IntAttr idx) { return idx.getSInt() != -1; }) !=
+      indicesEltsRange.end()) {
+    return {};
+  }
 
   mlir::ArrayAttr vec1Elts = vec1Attr.getElts();
   mlir::ArrayAttr vec2Elts = vec2Attr.getElts();
-  mlir::ArrayAttr indicesElts = adaptor.getIndices();
 
   SmallVector<mlir::Attribute, 16> elements;
   elements.reserve(indicesElts.size());
 
   uint64_t vec1Size = vec1Elts.size();
-  for (const auto &idxAttr : indicesElts.getAsRange<cir::IntAttr>()) {
-    if (idxAttr.getSInt() == -1) {
-      elements.push_back(cir::UndefAttr::get(vec1ElemTy));
-      continue;
-    }
-
+  for (const auto &idxAttr : indicesEltsRange) {
     uint64_t idxValue = idxAttr.getUInt();
     elements.push_back(idxValue < vec1Size ? vec1Elts[idxValue]
                                            : vec2Elts[idxValue - vec1Size]);
