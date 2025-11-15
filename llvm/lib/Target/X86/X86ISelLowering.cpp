@@ -38316,7 +38316,7 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
       Opc = X86::TCVTROWPS2PHLrri;
       break;
     case X86::PTILEMOVROWrri:
-      Opc = X86::TILEMOVROWrri;
+      Opc = X86::TILEMOVROWrti;
       break;
     }
     MachineInstrBuilder MIB = BuildMI(*BB, MI, DL, TII->get(Opc));
@@ -38354,7 +38354,7 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
       Opc = X86::TCVTROWPS2PHLrre;
       break;
     case X86::PTILEMOVROWrre:
-      Opc = X86::TILEMOVROWrre;
+      Opc = X86::TILEMOVROWrte;
       break;
     }
     MachineInstrBuilder MIB = BuildMI(*BB, MI, DL, TII->get(Opc));

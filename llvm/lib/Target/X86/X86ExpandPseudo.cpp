@@ -638,10 +638,10 @@ bool X86ExpandPseudo::expandMI(MachineBasicBlock &MBB,
       Opc = X86::TCVTROWPS2PHLrri;
       break;
     case X86::PTILEMOVROWrreV:
-      Opc = X86::TILEMOVROWrre;
+      Opc = X86::TILEMOVROWrte;
       break;
     case X86::PTILEMOVROWrriV:
-      Opc = X86::TILEMOVROWrri;
+      Opc = X86::TILEMOVROWrti;
       break;
     default:
       llvm_unreachable("Unexpected Opcode");
