@@ -151,7 +151,7 @@ jobs:
 
         case "${{ matrix.target }}" in
           *-none-eabi|riscv32-unknown-elf)
-              $CMAKE_FLAGS \
+            cmake $CMAKE_FLAGS \
               -C ${{ github.workspace }}/libc/cmake/caches/${{ matrix.target }}.cmake
             ;;
           *)
