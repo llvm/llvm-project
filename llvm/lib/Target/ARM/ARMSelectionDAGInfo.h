@@ -30,10 +30,6 @@ enum NodeType : unsigned {
   MVEZEXT,  //  or truncating two/four vectors into one. Eventually becomes
   MVETRUNC, //  stack store/load sequence, if not optimized to anything else.
 
-  UMLAL, // 64bit Unsigned Accumulate Multiply
-  SMLAL, // 64bit Signed Accumulate Multiply
-  UMAAL, // 64-bit Unsigned Accumulate Accumulate Multiply
-
   // Operands of the standard BUILD_VECTOR node are not legalized, which
   // is fine if BUILD_VECTORs are always lowered to shuffles or other
   // operations, but for ARM some BUILD_VECTORs are legal as-is and their

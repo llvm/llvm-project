@@ -133,6 +133,10 @@ def SDT_ARMIntShiftParts : SDTypeProfile<2, 3, [SDTCisSameAs<0, 1>,
                                               SDTCisInt<0>,
                                               SDTCisInt<4>]>;
 
+def ARMsmlal : SDNode<"ARMISD::SMLAL", SDT_LongMac>;
+def ARMumlal : SDNode<"ARMISD::UMLAL", SDT_LongMac>;
+def ARMumaal : SDNode<"ARMISD::UMAAL", SDT_LongMac>;
+
 def ARMSmlald        : SDNode<"ARMISD::SMLALD", SDT_LongMac>;
 def ARMSmlaldx       : SDNode<"ARMISD::SMLALDX", SDT_LongMac>;
 def ARMSmlsld        : SDNode<"ARMISD::SMLSLD", SDT_LongMac>;
