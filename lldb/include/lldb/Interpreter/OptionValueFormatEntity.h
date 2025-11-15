@@ -45,6 +45,9 @@ public:
 
   const FormatEntity::Entry &GetDefaultValue() const { return m_default_entry; }
 
+  llvm::StringRef GetDefaultFormatStr() const { return m_default_format; }
+  std::string GetEscapedDefaultFormatStr() const;
+
 protected:
   std::string m_current_format;
   std::string m_default_format;

@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "DocumentationGenerator.h"
 #include "FormatUtil.h"
 #include "SystemInitializerTest.h"
 
@@ -65,6 +66,10 @@ cl::SubCommand SymTabSubcommand("symtab",
                                 "Test symbol table functionality");
 cl::SubCommand IRMemoryMapSubcommand("ir-memory-map", "Test IRMemoryMap");
 cl::SubCommand AssertSubcommand("assert", "Test assert handling");
+
+static cl::SubCommand
+    GenerateDocsSubcommand("generate-docs",
+                           "Generate markdown documentation from settings");
 
 cl::opt<std::string> Log("log", cl::desc("Path to a log file"), cl::init(""),
                          cl::sub(BreakpointSubcommand),
@@ -300,6 +305,15 @@ int evaluateMemoryMapCommands(Debugger &Dbg);
 namespace assert {
 int lldb_assert(Debugger &Dbg);
 } // namespace assert
+
+namespace generate_docs {
+
+static cl::opt<std::string>
+    OutputDir("output-dir",
+              cl::desc("Directory to place the generated files in."),
+              cl::Required, cl::sub(GenerateDocsSubcommand));
+
+} // namespace generate_docs
 } // namespace opts
 
 llvm::SmallVector<CompilerContext, 4> parseCompilerContext() {
@@ -1284,6 +1298,9 @@ int main(int argc, const char *argv[]) {
     return opts::irmemorymap::evaluateMemoryMapCommands(*Dbg);
   if (opts::AssertSubcommand)
     return opts::assert::lldb_assert(*Dbg);
+  if (opts::GenerateDocsSubcommand)
+    return lldb_private::generateMarkdownDocs(*Dbg,
+                                              opts::generate_docs::OutputDir);
 
   WithColor::error() << "No command specified.\n";
   return 1;

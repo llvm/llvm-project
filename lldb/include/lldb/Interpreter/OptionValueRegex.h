@@ -55,6 +55,8 @@ public:
 
   bool IsValid() const { return m_regex.IsValid(); }
 
+  llvm::StringRef GetDefaultValue() const { return m_default_regex_str; }
+
 protected:
   RegularExpression m_regex;
   std::string m_default_regex_str;

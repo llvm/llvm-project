@@ -82,6 +82,11 @@ public:
     return ProtectedGetPropertyAtIndex(idx);
   }
 
+  virtual size_t
+  GetNumProperties(const ExecutionContext *exe_ctx = nullptr) const {
+    return m_properties.size();
+  }
+
   // Property can be a property path like
   // "target.process.extra-startup-command"
   virtual const Property *

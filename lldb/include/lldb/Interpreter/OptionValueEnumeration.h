@@ -70,6 +70,8 @@ public:
 
   void SetDefaultValue(enum_type value) { m_default_value = value; }
 
+  const EnumerationMap &Enumerations() const { return m_enumerations; }
+
 protected:
   void SetEnumerations(const OptionEnumValues &enumerators);
   void DumpEnum(Stream &strm, enum_type value);
