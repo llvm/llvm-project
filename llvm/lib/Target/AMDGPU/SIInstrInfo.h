@@ -425,6 +425,9 @@ public:
 
   void removeModOperands(MachineInstr &MI) const;
 
+  void mutateAndCleanupImplicit(MachineInstr &MI,
+                                const MCInstrDesc &NewDesc) const;
+
   /// Return the extracted immediate value in a subregister use from a constant
   /// materialized in a super register.
   ///
