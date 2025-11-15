@@ -565,7 +565,6 @@ void RISCVPassConfig::addPreEmitPass() {
   addPass(createRISCVIndirectBranchTrackingPass());
   addPass(&BranchRelaxationPassID);
   addPass(createRISCVMakeCompressibleOptPass());
-  addPass(createRISCVLiveVariablesPass());
 }
 
 void RISCVPassConfig::addPreEmitPass2() {
@@ -598,7 +597,6 @@ void RISCVPassConfig::addMachineSSAOptimization() {
   TargetPassConfig::addMachineSSAOptimization();
 
   if (TM->getTargetTriple().isRISCV64()) {
-    addPass(createRISCVLiveVariablesPass());
     addPass(createRISCVOptWInstrsPass());
   }
 }
@@ -632,6 +630,8 @@ void RISCVPassConfig::addPostRegAlloc() {
   if (TM->getOptLevel() != CodeGenOptLevel::None &&
       EnableRedundantCopyElimination)
     addPass(createRISCVRedundantCopyEliminationPass());
+
+  addPass(createRISCVLiveVariablesPass());
 }
 
 bool RISCVPassConfig::addILPOpts() {
