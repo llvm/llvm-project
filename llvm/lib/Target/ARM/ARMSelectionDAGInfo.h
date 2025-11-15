@@ -40,40 +40,6 @@ enum NodeType : unsigned {
   // operands need to be legalized.  Define an ARM-specific version of
   // BUILD_VECTOR for this purpose.
   BUILD_VECTOR,
-
-  // Vector load N-element structure to all lanes:
-  FIRST_MEMORY_OPCODE,
-  VLD1DUP = FIRST_MEMORY_OPCODE,
-  VLD2DUP,
-  VLD3DUP,
-  VLD4DUP,
-
-  // NEON loads with post-increment base updates:
-  VLD1_UPD,
-  VLD2_UPD,
-  VLD3_UPD,
-  VLD4_UPD,
-  VLD2LN_UPD,
-  VLD3LN_UPD,
-  VLD4LN_UPD,
-  VLD1DUP_UPD,
-  VLD2DUP_UPD,
-  VLD3DUP_UPD,
-  VLD4DUP_UPD,
-  VLD1x2_UPD,
-  VLD1x3_UPD,
-  VLD1x4_UPD,
-
-  // NEON stores with post-increment base updates:
-  VST1_UPD,
-  VST3_UPD,
-  VST2LN_UPD,
-  VST3LN_UPD,
-  VST4LN_UPD,
-  VST1x2_UPD,
-  VST1x3_UPD,
-  VST1x4_UPD,
-  LAST_MEMORY_OPCODE = VST1x4_UPD,
 };
 
 } // namespace ARMISD
@@ -99,8 +65,6 @@ public:
   ARMSelectionDAGInfo();
 
   const char *getTargetNodeName(unsigned Opcode) const override;
-
-  bool isTargetMemoryOpcode(unsigned Opcode) const override;
 
   void verifyTargetNode(const SelectionDAG &DAG,
                         const SDNode *N) const override;

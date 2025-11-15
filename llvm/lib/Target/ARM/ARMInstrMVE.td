@@ -6006,13 +6006,51 @@ foreach wb = [MVE_vldst24_writeback<
                      "vst" # n.nvecs # stage # "." # s.lanesize>;
 }
 
-def SDTARMVST2    : SDTypeProfile<1, 5, [SDTCisPtrTy<0>, SDTCisPtrTy<1>, SDTCisVT<2, i32>, SDTCisVec<3>,
-                                         SDTCisSameAs<3, 4>, SDTCisVT<5, i32>]>;
-def SDTARMVST4    : SDTypeProfile<1, 7, [SDTCisPtrTy<0>, SDTCisPtrTy<1>, SDTCisVT<2, i32>, SDTCisVec<3>,
-                                         SDTCisSameAs<3, 4>, SDTCisSameAs<3, 5>,
-                                         SDTCisSameAs<3, 6>, SDTCisVT<7, i32>]>;
-def MVEVST2UPD       : SDNode<"ARMISD::VST2_UPD", SDTARMVST2, [SDNPHasChain, SDNPMemOperand]>;
-def MVEVST4UPD       : SDNode<"ARMISD::VST4_UPD", SDTARMVST4, [SDNPHasChain, SDNPMemOperand]>;
+// VLD1DUP has an extra alignment op.
+def MVE_VLD1DUP : SDNode<"ARMISD::VLD1DUP", SDTypeProfile<1, 2, []>, [SDNPHasChain, SDNPMemOperand]>;
+def MVE_VLD2DUP : SDNode<"ARMISD::VLD2DUP", SDTypeProfile<2, 1, []>, [SDNPHasChain, SDNPMemOperand]>;
+def MVE_VLD3DUP : SDNode<"ARMISD::VLD3DUP", SDTypeProfile<3, 1, []>, [SDNPHasChain, SDNPMemOperand]>;
+def MVE_VLD4DUP : SDNode<"ARMISD::VLD4DUP", SDTypeProfile<4, 1, []>, [SDNPHasChain, SDNPMemOperand]>;
+
+def MVE_VLD1DUP_UPD : SDNode<"ARMISD::VLD1DUP_UPD", SDTypeProfile<2, 3, []>, [SDNPHasChain, SDNPMemOperand]>;
+def MVE_VLD2DUP_UPD : SDNode<"ARMISD::VLD2DUP_UPD", SDTypeProfile<3, 3, []>, [SDNPHasChain, SDNPMemOperand]>;
+def MVE_VLD3DUP_UPD : SDNode<"ARMISD::VLD3DUP_UPD", SDTypeProfile<4, 3, []>, [SDNPHasChain, SDNPMemOperand]>;
+def MVE_VLD4DUP_UPD : SDNode<"ARMISD::VLD4DUP_UPD", SDTypeProfile<5, 3, []>, [SDNPHasChain, SDNPMemOperand]>;
+
+def MVE_VLD1_UPD : SDNode<"ARMISD::VLD1_UPD", SDTypeProfile<2, 3, []>, [SDNPHasChain, SDNPMemOperand]>;
+def MVE_VLD2_UPD : SDNode<"ARMISD::VLD2_UPD", SDTypeProfile<3, 3, []>, [SDNPHasChain, SDNPMemOperand]>;
+def MVE_VLD3_UPD : SDNode<"ARMISD::VLD3_UPD", SDTypeProfile<4, 3, []>, [SDNPHasChain, SDNPMemOperand]>;
+def MVE_VLD4_UPD : SDNode<"ARMISD::VLD4_UPD", SDTypeProfile<5, 3, []>, [SDNPHasChain, SDNPMemOperand]>;
+
+def MVE_VLD2LN_UPD : SDNode<"ARMISD::VLD2LN_UPD", SDTypeProfile<3, 6, []>, [SDNPHasChain, SDNPMemOperand]>;
+def MVE_VLD3LN_UPD : SDNode<"ARMISD::VLD3LN_UPD", SDTypeProfile<4, 7, []>, [SDNPHasChain, SDNPMemOperand]>;
+def MVE_VLD4LN_UPD : SDNode<"ARMISD::VLD4LN_UPD", SDTypeProfile<5, 8, []>, [SDNPHasChain, SDNPMemOperand]>;
+
+def MVE_VLD1x2_UPD : SDNode<"ARMISD::VLD1x2_UPD", SDTypeProfile<3, 3, []>, [SDNPHasChain, SDNPMemOperand]>;
+def MVE_VLD1x3_UPD : SDNode<"ARMISD::VLD1x3_UPD", SDTypeProfile<4, 3, []>, [SDNPHasChain, SDNPMemOperand]>;
+def MVE_VLD1x4_UPD : SDNode<"ARMISD::VLD1x4_UPD", SDTypeProfile<5, 3, []>, [SDNPHasChain, SDNPMemOperand]>;
+
+def SDTARMVST1 : SDTypeProfile<1, 4, [SDTCisPtrTy<0>, SDTCisPtrTy<1>, SDTCisVT<2, i32>, SDTCisVec<3>,
+                                      SDTCisVT<4, i32>]>;
+def SDTARMVST2 : SDTypeProfile<1, 5, [SDTCisPtrTy<0>, SDTCisPtrTy<1>, SDTCisVT<2, i32>, SDTCisVec<3>,
+                                      SDTCisSameAs<3, 4>, SDTCisVT<5, i32>]>;
+def SDTARMVST3 : SDTypeProfile<1, 6, [SDTCisPtrTy<0>, SDTCisPtrTy<1>, SDTCisVT<2, i32>, SDTCisVec<3>,
+                                      SDTCisSameAs<3, 4>, SDTCisSameAs<3, 5>, SDTCisVT<6, i32>]>;
+def SDTARMVST4 : SDTypeProfile<1, 7, [SDTCisPtrTy<0>, SDTCisPtrTy<1>, SDTCisVT<2, i32>, SDTCisVec<3>,
+                                      SDTCisSameAs<3, 4>, SDTCisSameAs<3, 5>,
+                                      SDTCisSameAs<3, 6>, SDTCisVT<7, i32>]>;
+def MVE_VST1_UPD : SDNode<"ARMISD::VST1_UPD", SDTARMVST1, [SDNPHasChain, SDNPMemOperand]>;
+def MVE_VST2_UPD : SDNode<"ARMISD::VST2_UPD", SDTARMVST2, [SDNPHasChain, SDNPMemOperand]>;
+def MVE_VST3_UPD : SDNode<"ARMISD::VST3_UPD", SDTARMVST3, [SDNPHasChain, SDNPMemOperand]>;
+def MVE_VST4_UPD : SDNode<"ARMISD::VST4_UPD", SDTARMVST4, [SDNPHasChain, SDNPMemOperand]>;
+
+def MVE_VST2LN_UPD : SDNode<"ARMISD::VST2LN_UPD", SDTypeProfile<1, 6, []>, [SDNPHasChain, SDNPMemOperand]>;
+def MVE_VST3LN_UPD : SDNode<"ARMISD::VST3LN_UPD", SDTypeProfile<1, 7, []>, [SDNPHasChain, SDNPMemOperand]>;
+def MVE_VST4LN_UPD : SDNode<"ARMISD::VST4LN_UPD", SDTypeProfile<1, 8, []>, [SDNPHasChain, SDNPMemOperand]>;
+
+def MVE_VST1x2_UPD : SDNode<"ARMISD::VST1x2_UPD", SDTypeProfile<1, 5, []>, [SDNPHasChain, SDNPMemOperand]>;
+def MVE_VST1x3_UPD : SDNode<"ARMISD::VST1x3_UPD", SDTypeProfile<1, 6, []>, [SDNPHasChain, SDNPMemOperand]>;
+def MVE_VST1x4_UPD : SDNode<"ARMISD::VST1x4_UPD", SDTypeProfile<1, 7, []>, [SDNPHasChain, SDNPMemOperand]>;
 
 multiclass MVE_vst24_patterns<int lanesize, ValueType VT> {
   foreach stage = [0,1] in
@@ -6022,7 +6060,7 @@ multiclass MVE_vst24_patterns<int lanesize, ValueType VT> {
                 (REG_SEQUENCE MQQPR, VT:$v0, qsub_0, VT:$v1, qsub_1),
                 t2_addr_offset_none:$addr)>;
   foreach stage = [0,1] in
-    def : Pat<(i32 (MVEVST2UPD i32:$addr, (i32 32),
+    def : Pat<(i32 (MVE_VST2_UPD i32:$addr, (i32 32),
                 (VT MQPR:$v0), (VT MQPR:$v1), (i32 stage))),
               (i32 (!cast<Instruction>("MVE_VST2"#stage#"_"#lanesize#_wb)
                 (REG_SEQUENCE MQQPR, VT:$v0, qsub_0, VT:$v1, qsub_1),
@@ -6037,7 +6075,7 @@ multiclass MVE_vst24_patterns<int lanesize, ValueType VT> {
                                        VT:$v2, qsub_2, VT:$v3, qsub_3),
                 t2_addr_offset_none:$addr)>;
   foreach stage = [0,1,2,3] in
-    def : Pat<(i32 (MVEVST4UPD i32:$addr, (i32 64),
+    def : Pat<(i32 (MVE_VST4_UPD i32:$addr, (i32 64),
                 (VT MQPR:$v0), (VT MQPR:$v1),
                 (VT MQPR:$v2), (VT MQPR:$v3), (i32 stage))),
               (i32 (!cast<Instruction>("MVE_VST4"#stage#"_"#lanesize#_wb)
