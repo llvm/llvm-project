@@ -6,4 +6,4 @@
 // RUN: | FileCheck %s
 
 // CHECK-NOT: {{".*clang-linker-wrapper.*"}} {{.*}} "-o" "[[OUTPUT_FILE:.*.o]]" {{.*}}"[[OUTPUT_FILE]]"
-// CHECK: {{".*clang-linker-wrapper.*"}} {{.*}} "-o" {{".*.tmp.o"}}
+// CHECK: {{".*clang-linker-wrapper.*"}} {{.*}} "-o" {{".*.hipfb"}}
