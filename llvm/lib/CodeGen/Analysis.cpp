@@ -147,38 +147,28 @@ void llvm::ComputeValueVTs(const TargetLowering &TLI, const DataLayout &DL,
 }
 
 void llvm::computeValueLLTs(const DataLayout &DL, Type &Ty,
-                            SmallVectorImpl<LLT> &ValueTys,
-                            SmallVectorImpl<uint64_t> *Offsets,
-                            uint64_t StartingOffset) {
-  // Given a struct type, recursively traverse the elements.
-  if (StructType *STy = dyn_cast<StructType>(&Ty)) {
-    // If the Offsets aren't needed, don't query the struct layout. This allows
-    // us to support structs with scalable vectors for operations that don't
-    // need offsets.
-    const StructLayout *SL = Offsets ? DL.getStructLayout(STy) : nullptr;
-    for (unsigned I = 0, E = STy->getNumElements(); I != E; ++I) {
-      uint64_t EltOffset = SL ? SL->getElementOffset(I) : 0;
-      computeValueLLTs(DL, *STy->getElementType(I), ValueTys, Offsets,
-                       StartingOffset + EltOffset);
-    }
-    return;
+                            SmallVectorImpl<LLT> &ValueLLTs,
+                            SmallVectorImpl<TypeSize> *Offsets,
+                            TypeSize StartingOffset) {
+  SmallVector<Type *> ValTys;
+  ComputeValueTypes(DL, &Ty, ValTys, Offsets, StartingOffset);
+  for (Type *ValTy : ValTys)
+    ValueLLTs.push_back(getLLTForType(*ValTy, DL));
+}
+
+void llvm::computeValueLLTs(const DataLayout &DL, Type &Ty,
+                            SmallVectorImpl<LLT> &ValueLLTs,
+                            SmallVectorImpl<uint64_t> *FixedOffsets,
+                            uint64_t FixedStartingOffset) {
+  TypeSize StartingOffset = TypeSize::getFixed(FixedStartingOffset);
+  if (FixedOffsets) {
+    SmallVector<TypeSize, 4> Offsets;
+    computeValueLLTs(DL, Ty, ValueLLTs, &Offsets, StartingOffset);
+    for (TypeSize Offset : Offsets)
+      FixedOffsets->push_back(Offset.getFixedValue());
+  } else {
+    computeValueLLTs(DL, Ty, ValueLLTs, nullptr, StartingOffset);
   }
-  // Given an array type, recursively traverse the elements.
-  if (ArrayType *ATy = dyn_cast<ArrayType>(&Ty)) {
-    Type *EltTy = ATy->getElementType();
-    uint64_t EltSize = DL.getTypeAllocSize(EltTy).getFixedValue();
-    for (unsigned i = 0, e = ATy->getNumElements(); i != e; ++i)
-      computeValueLLTs(DL, *EltTy, ValueTys, Offsets,
-                       StartingOffset + i * EltSize);
-    return;
-  }
-  // Interpret void as zero return values.
-  if (Ty.isVoidTy())
-    return;
-  // Base case: we can get an LLT for this LLVM IR type.
-  ValueTys.push_back(getLLTForType(Ty, DL));
-  if (Offsets)
-    Offsets->push_back(StartingOffset);
 }
 
 /// ExtractTypeInfo - Returns the type info, possibly bitcast, encoded in V.
