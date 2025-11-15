@@ -270,8 +270,7 @@ REGISTER_LIST_WITH_PROGRAMSTATE(ActiveCritSections, CritSectionMarker)
 // TODO: Move these to llvm::ImmutableList when overhauling immutable data
 // structures for proper iterator concept support.
 template <>
-struct std::iterator_traits<
-    typename llvm::ImmutableList<CritSectionMarker>::iterator> {
+struct std::iterator_traits<llvm::ImmutableList<CritSectionMarker>::iterator> {
   using iterator_category = std::forward_iterator_tag;
   using value_type = CritSectionMarker;
   using difference_type = std::ptrdiff_t;

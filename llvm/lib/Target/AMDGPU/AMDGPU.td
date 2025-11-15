@@ -2069,6 +2069,7 @@ def FeatureISAVersion12 : FeatureSet<
    FeatureMemoryAtomicFAddF32DenormalSupport,
    FeatureBVHDualAndBVH8Insts,
    FeatureWaitsBeforeSystemScopeStores,
+   FeatureD16Writes32BitVgpr
    ]>;
 
 def FeatureISAVersion12_50 : FeatureSet<
@@ -2143,6 +2144,7 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureSupportsXNACK,
    FeatureXNACK,
    FeatureClusters,
+   FeatureD16Writes32BitVgpr,
 ]>;
 
 def FeatureISAVersion12_51 : FeatureSet<
@@ -2974,15 +2976,46 @@ def HasSetPrioIncWgInst : Predicate<"Subtarget->hasSetPrioIncWgInst()">,
 def NeedsAlignedVGPRs : Predicate<"Subtarget->needsAlignedVGPRs()">,
                       AssemblerPredicate<(all_of FeatureRequiresAlignedVGPRs)>;
 
+def NotNeedsAlignedVGPRs : Predicate<"!Subtarget->needsAlignedVGPRs()">,
+                      AssemblerPredicate<(all_of (not FeatureRequiresAlignedVGPRs))>;
+
+def isWave32 : Predicate<"Subtarget->isWave32()">,
+  AssemblerPredicate <(any_of FeatureWavefrontSize32,
+                              FeatureAssemblerPermissiveWavesize)>;
+def isWave64 : Predicate<"Subtarget->isWave64()">,
+  AssemblerPredicate <(any_of FeatureWavefrontSize64,
+                              FeatureAssemblerPermissiveWavesize)>;
+
+def isWave32Strict : Predicate<"Subtarget->isWave32()">,
+  AssemblerPredicate <(all_of FeatureWavefrontSize32)>;
+def isWave64Strict : Predicate<"Subtarget->isWave64()">,
+  AssemblerPredicate <(all_of FeatureWavefrontSize64)>;
+
 //===----------------------------------------------------------------------===//
 // HwModes
 //===----------------------------------------------------------------------===//
 
-// gfx90a-gfx950. Has AGPRs, and also the align2 VGPR/AGPR requirement
+defvar DefaultMode_Wave64 = DefaultMode;
+defvar DefaultMode_Wave32 = HwMode<[isWave32, NotNeedsAlignedVGPRs]>;
+
+// gfx90a-gfx950. Has AGPRs, and also the align2 VGPR/AGPR requirement. Implied
+// wave64.
 def AVAlign2LoadStoreMode : HwMode<[HasMAIInsts, NeedsAlignedVGPRs]>;
 
 // gfx1250, has alignment requirement but no AGPRs.
-def AlignedVGPRNoAGPRMode : HwMode<[NotHasMAIInsts, NeedsAlignedVGPRs]>;
+def AlignedVGPRNoAGPRMode_Wave32 : HwMode<[NotHasMAIInsts, NeedsAlignedVGPRs, isWave32Strict]>;
+def AlignedVGPRNoAGPRMode_Wave64 : HwMode<[NotHasMAIInsts, NeedsAlignedVGPRs, isWave64Strict]>;
+
+// FIXME: This should be able to only define a separate hwmode that
+// only depends on wavesize for just ValueTypes. These use different
+// HwMode namespaces. If we don't define the full set of modes used
+// for RegClassByHwMode, tablegen crashes for some reason
+def WaveSizeVT : ValueTypeByHwMode<[
+  DefaultMode_Wave64,
+  AVAlign2LoadStoreMode,
+  AlignedVGPRNoAGPRMode_Wave64,
+  DefaultMode_Wave32,
+  AlignedVGPRNoAGPRMode_Wave32], [i64, i64, i64, i32, i32]>;
 
 
 // Include AMDGPU TD files

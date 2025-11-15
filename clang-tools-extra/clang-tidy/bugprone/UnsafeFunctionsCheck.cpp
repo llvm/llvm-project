@@ -141,7 +141,7 @@ parseCheckedFunctions(StringRef Option, ClangTidyContext *Context) {
   std::vector<UnsafeFunctionsCheck::CheckedFunction> Result;
   Result.reserve(Functions.size());
 
-  for (StringRef Function : Functions) {
+  for (const StringRef Function : Functions) {
     if (Function.empty())
       continue;
 
@@ -301,7 +301,7 @@ void UnsafeFunctionsCheck::check(const MatchFinder::MatchResult &Result) {
   if (Custom) {
     for (const auto &Entry : CustomFunctions) {
       if (Entry.Pattern.match(*FuncDecl)) {
-        StringRef Reason =
+        const StringRef Reason =
             Entry.Reason.empty() ? "is marked as unsafe" : Entry.Reason.c_str();
 
         if (Entry.Replacement.empty()) {

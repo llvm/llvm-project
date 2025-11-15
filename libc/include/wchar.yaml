@@ -360,3 +360,10 @@ functions:
       - type: const wchar_t *__restrict
       - type: wchar_t **__restrict
       - type: int
+  - name: wcstof
+    standards:
+      - stdc
+    return_type: float
+    arguments:
+      - type: const wchar_t *__restrict
+      - type: wchar_t **__restrict

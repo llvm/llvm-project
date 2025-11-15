@@ -23,7 +23,7 @@ namespace {
 // Test fixture class
 class SmallStringTest : public testing::Test {
 protected:
-  typedef SmallString<40> StringType;
+  using StringType = SmallString<40>;
 
   StringType theString;
 

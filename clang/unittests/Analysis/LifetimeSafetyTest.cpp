@@ -530,6 +530,7 @@ TEST_F(LifetimeAnalysisTest, PointersInACycle) {
         p1 = p2;
         p2 = p3;
         p3 = temp;
+        POINT(in_loop);
       }
       POINT(after_loop);
     }
@@ -543,7 +544,11 @@ TEST_F(LifetimeAnalysisTest, PointersInACycle) {
   EXPECT_THAT(Origin("p1"), HasLoansTo({"v1", "v2", "v3"}, "after_loop"));
   EXPECT_THAT(Origin("p2"), HasLoansTo({"v1", "v2", "v3"}, "after_loop"));
   EXPECT_THAT(Origin("p3"), HasLoansTo({"v1", "v2", "v3"}, "after_loop"));
-  EXPECT_THAT(Origin("temp"), HasLoansTo({"v1", "v2", "v3"}, "after_loop"));
+
+  EXPECT_THAT(Origin("temp"), HasLoansTo({"v1", "v2", "v3"}, "in_loop"));
+  // 'temp' is a block-local origin and it's loans are not tracked outside the
+  // block.
+  EXPECT_THAT(Origin("temp"), HasLoansTo({}, "after_loop"));
 }
 
 TEST_F(LifetimeAnalysisTest, PointersAndExpirationInACycle) {
@@ -684,7 +689,6 @@ TEST_F(LifetimeAnalysisTest, GslPointerConstructFromView) {
   EXPECT_THAT(Origin("q"), HasLoansTo({"a"}, "p1"));
 }
 
-// FIXME: Handle loans in ternary operator!
 TEST_F(LifetimeAnalysisTest, GslPointerInConditionalOperator) {
   SetupTest(R"(
     void target(bool cond) {
@@ -693,7 +697,24 @@ TEST_F(LifetimeAnalysisTest, GslPointerInConditionalOperator) {
       POINT(p1);
     }
   )");
-  EXPECT_THAT(Origin("v"), HasLoansTo({}, "p1"));
+  EXPECT_THAT(Origin("v"), HasLoansTo({"a", "b"}, "p1"));
+}
+
+TEST_F(LifetimeAnalysisTest, ExtraParenthesis) {
+  SetupTest(R"(
+    void target() {
+      MyObj a;
+      View x = ((View((((a))))));
+      View y = ((View{(((x)))}));
+      View z = ((View(((y)))));
+      View p = ((View{((x))}));
+      POINT(p1);
+    }
+  )");
+  EXPECT_THAT(Origin("x"), HasLoansTo({"a"}, "p1"));
+  EXPECT_THAT(Origin("y"), HasLoansTo({"a"}, "p1"));
+  EXPECT_THAT(Origin("z"), HasLoansTo({"a"}, "p1"));
+  EXPECT_THAT(Origin("p"), HasLoansTo({"a"}, "p1"));
 }
 
 // FIXME: Handle temporaries.

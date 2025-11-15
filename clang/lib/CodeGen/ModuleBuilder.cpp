@@ -23,6 +23,7 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include <memory>
 
@@ -378,3 +379,31 @@ clang::CreateLLVMCodeGen(DiagnosticsEngine &Diags, llvm::StringRef ModuleName,
                                HeaderSearchOpts, PreprocessorOpts, CGO, C,
                                CoverageInfo);
 }
+
+namespace clang {
+namespace CodeGen {
+std::optional<std::pair<StringRef, StringRef>>
+DemangleTrapReasonInDebugInfo(StringRef FuncName) {
+  static auto TrapRegex =
+      llvm::Regex(llvm::formatv("^{0}\\$(.*)\\$(.*)$", ClangTrapPrefix).str());
+  llvm::SmallVector<llvm::StringRef, 3> Matches;
+  std::string *ErrorPtr = nullptr;
+#ifndef NDEBUG
+  std::string Error;
+  ErrorPtr = &Error;
+#endif
+  if (!TrapRegex.match(FuncName, &Matches, ErrorPtr)) {
+    assert(ErrorPtr && ErrorPtr->empty() && "Invalid regex pattern");
+    return {};
+  }
+
+  if (Matches.size() != 3) {
+    assert(0 && "Expected 3 matches from Regex::match");
+    return {};
+  }
+
+  // Returns { Trap Category, Trap Message }
+  return std::make_pair(Matches[1], Matches[2]);
+}
+} // namespace CodeGen
+} // namespace clang

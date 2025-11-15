@@ -140,7 +140,7 @@ void AvoidCStyleCastsCheck::check(const MatchFinder::MatchResult &Result) {
 
   CharSourceRange ReplaceRange = getReplaceRange(CastExpr);
 
-  bool FnToFnCast =
+  const bool FnToFnCast =
       IsFunction(SourceTypeAsWritten) && IsFunction(DestTypeAsWritten);
 
   const bool ConstructorCast = !CastExpr->getTypeAsWritten().hasQualifiers() &&
@@ -239,8 +239,8 @@ void AvoidCStyleCastsCheck::check(const MatchFinder::MatchResult &Result) {
       return;
     }
     if (DestType->isReferenceType()) {
-      QualType Dest = DestType.getNonReferenceType();
-      QualType Source = SourceType.getNonReferenceType();
+      const QualType Dest = DestType.getNonReferenceType();
+      const QualType Source = SourceType.getNonReferenceType();
       if (Source == Dest.withConst() ||
           SourceType.getNonReferenceType() == DestType.getNonReferenceType()) {
         ReplaceWithNamedCast("const_cast");
@@ -266,6 +266,12 @@ void AvoidCStyleCastsCheck::check(const MatchFinder::MatchResult &Result) {
         ReplaceWithNamedCast("static_cast");
       else
         ReplaceWithNamedCast("reinterpret_cast");
+      return;
+    }
+    break;
+  case CK_BaseToDerived:
+    if (!needsConstCast(SourceType, DestType)) {
+      ReplaceWithNamedCast("static_cast");
       return;
     }
     break;

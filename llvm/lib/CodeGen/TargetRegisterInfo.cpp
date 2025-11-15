@@ -133,7 +133,7 @@ Printable llvm::printReg(Register Reg, const TargetRegisterInfo *TRI,
   });
 }
 
-Printable llvm::printRegUnit(unsigned Unit, const TargetRegisterInfo *TRI) {
+Printable llvm::printRegUnit(MCRegUnit Unit, const TargetRegisterInfo *TRI) {
   return Printable([Unit, TRI](raw_ostream &OS) {
     // Generic printout when TRI is missing.
     if (!TRI) {
@@ -156,12 +156,13 @@ Printable llvm::printRegUnit(unsigned Unit, const TargetRegisterInfo *TRI) {
   });
 }
 
-Printable llvm::printVRegOrUnit(unsigned Unit, const TargetRegisterInfo *TRI) {
-  return Printable([Unit, TRI](raw_ostream &OS) {
-    if (Register::isVirtualRegister(Unit)) {
-      OS << '%' << Register(Unit).virtRegIndex();
+Printable llvm::printVRegOrUnit(VirtRegOrUnit VRegOrUnit,
+                                const TargetRegisterInfo *TRI) {
+  return Printable([VRegOrUnit, TRI](raw_ostream &OS) {
+    if (VRegOrUnit.isVirtualReg()) {
+      OS << '%' << VRegOrUnit.asVirtualReg().virtRegIndex();
     } else {
-      OS << printRegUnit(Unit, TRI);
+      OS << printRegUnit(VRegOrUnit.asMCRegUnit(), TRI);
     }
   });
 }

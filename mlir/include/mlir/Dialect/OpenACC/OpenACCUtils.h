@@ -52,6 +52,16 @@ std::string getRecipeName(mlir::acc::RecipeKind kind, mlir::Type type);
 // base `array` from an operation that only accesses a subarray.
 mlir::Value getBaseEntity(mlir::Value val);
 
+/// Check if a symbol use is valid for use in an OpenACC region.
+/// This includes looking for various attributes such as `acc.routine_info`
+/// and `acc.declare` attributes.
+/// \param user The operation using the symbol
+/// \param symbol The symbol reference being used
+/// \param definingOpPtr Optional output parameter to receive the defining op
+/// \return true if the symbol use is valid, false otherwise
+bool isValidSymbolUse(mlir::Operation *user, mlir::SymbolRefAttr symbol,
+                      mlir::Operation **definingOpPtr = nullptr);
+
 } // namespace acc
 } // namespace mlir
 

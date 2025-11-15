@@ -1260,9 +1260,15 @@ public:
   /// stack arguments from being clobbered.
   LLVM_ABI SDValue getStackArgumentTokenFactor(SDValue Chain);
 
-  std::pair<SDValue, SDValue> getMemcmp(SDValue Chain, const SDLoc &dl,
-                                        SDValue Dst, SDValue Src, SDValue Size,
-                                        const CallInst *CI);
+  /// Lower a memcmp operation into a target library call and return the
+  /// resulting chain and call result as SelectionDAG SDValues.
+  LLVM_ABI std::pair<SDValue, SDValue> getMemcmp(SDValue Chain, const SDLoc &dl,
+                                                 SDValue Dst, SDValue Src,
+                                                 SDValue Size,
+                                                 const CallInst *CI);
+
+  /// Lower a strlen operation into a target library call and return the
+  /// resulting chain and call result as SelectionDAG SDValues.
   LLVM_ABI std::pair<SDValue, SDValue>
   getStrlen(SDValue Chain, const SDLoc &dl, SDValue Src, const CallInst *CI);
 
@@ -1712,16 +1718,6 @@ public:
   /// the target's desired shift amount type.
   LLVM_ABI SDValue getShiftAmountOperand(EVT LHSTy, SDValue Op);
 
-  /// Expands a node with multiple results to an FP or vector libcall. The
-  /// libcall is expected to take all the operands of the \p Node followed by
-  /// output pointers for each of the results. \p CallRetResNo can be optionally
-  /// set to indicate that one of the results comes from the libcall's return
-  /// value.
-  LLVM_ABI bool
-  expandMultipleResultFPLibCall(RTLIB::Libcall LC, SDNode *Node,
-                                SmallVectorImpl<SDValue> &Results,
-                                std::optional<unsigned> CallRetResNo = {});
-
   /// Expand the specified \c ISD::VAARG node as the Legalize pass would.
   LLVM_ABI SDValue expandVAArg(SDNode *Node);
 
@@ -2065,6 +2061,10 @@ public:
   /// Return true if the sign bit of Op is known to be zero.
   /// We use this predicate to simplify operations downstream.
   LLVM_ABI bool SignBitIsZero(SDValue Op, unsigned Depth = 0) const;
+
+  /// Return true if the sign bit of Op is known to be zero, for a
+  /// floating-point value.
+  LLVM_ABI bool SignBitIsZeroFP(SDValue Op, unsigned Depth = 0) const;
 
   /// Return true if 'Op & Mask' is known to be zero.  We
   /// use this predicate to simplify operations downstream.  Op and Mask are

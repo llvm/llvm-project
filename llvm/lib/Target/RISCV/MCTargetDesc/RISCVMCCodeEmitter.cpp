@@ -725,7 +725,7 @@ unsigned RISCVMCCodeEmitter::getVMaskReg(const MCInst &MI, unsigned OpNo,
   MCOperand MO = MI.getOperand(OpNo);
   assert(MO.isReg() && "Expected a register.");
 
-  switch (MO.getReg()) {
+  switch (MO.getReg().id()) {
   default:
     llvm_unreachable("Invalid mask register.");
   case RISCV::V0:

@@ -14,9 +14,14 @@
 using namespace mlir;
 using namespace cir;
 
+namespace mlir {
+#define GEN_PASS_DEF_GOTOSOLVER
+#include "clang/CIR/Dialect/Passes.h.inc"
+} // namespace mlir
+
 namespace {
 
-struct GotoSolverPass : public GotoSolverBase<GotoSolverPass> {
+struct GotoSolverPass : public impl::GotoSolverBase<GotoSolverPass> {
   GotoSolverPass() = default;
   void runOnOperation() override;
 };

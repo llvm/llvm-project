@@ -36,7 +36,7 @@ define amdgpu_ps double @global_atomic_fadd_f64_rtn_atomicrmw(ptr addrspace(1) %
   ; GFX90A-NEXT:   [[COPY4:%[0-9]+]]:vreg_64_align2 = COPY [[REG_SEQUENCE]]
   ; GFX90A-NEXT:   [[COPY5:%[0-9]+]]:vreg_64_align2 = COPY [[REG_SEQUENCE1]]
   ; GFX90A-NEXT:   [[COPY6:%[0-9]+]]:vreg_64_align2 = COPY [[REG_SEQUENCE1]]
-  ; GFX90A-NEXT:   [[GLOBAL_LOAD_DWORDX2_:%[0-9]+]]:vreg_64_align2 = GLOBAL_LOAD_DWORDX2 [[COPY6]], 0, 0, implicit $exec :: (load (s64) from %ir.ptr, addrspace 1)
+  ; GFX90A-NEXT:   [[GLOBAL_LOAD_DWORDX2_:%[0-9]+]]:av_64_align2 = GLOBAL_LOAD_DWORDX2 [[COPY6]], 0, 0, implicit $exec :: (load (s64) from %ir.ptr, addrspace 1)
   ; GFX90A-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 0
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT: bb.1.atomicrmw.start:
@@ -45,20 +45,20 @@ define amdgpu_ps double @global_atomic_fadd_f64_rtn_atomicrmw(ptr addrspace(1) %
   ; GFX90A-NEXT:   [[PHI:%[0-9]+]]:sreg_64 = PHI [[S_MOV_B64_]], %bb.0, %4, %bb.1
   ; GFX90A-NEXT:   [[PHI1:%[0-9]+]]:vreg_64_align2 = PHI [[GLOBAL_LOAD_DWORDX2_]], %bb.0, %3, %bb.1
   ; GFX90A-NEXT:   [[V_ADD_F64_e64_:%[0-9]+]]:vreg_64_align2 = nofpexcept V_ADD_F64_e64 0, [[PHI1]], 0, [[COPY4]], 0, 0, implicit $mode, implicit $exec
-  ; GFX90A-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[V_ADD_F64_e64_]].sub1
-  ; GFX90A-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[V_ADD_F64_e64_]].sub0
-  ; GFX90A-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[PHI1]].sub1
-  ; GFX90A-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[PHI1]].sub0
-  ; GFX90A-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:sgpr_128 = REG_SEQUENCE killed [[COPY8]], %subreg.sub0, killed [[COPY7]], %subreg.sub1, killed [[COPY10]], %subreg.sub2, killed [[COPY9]], %subreg.sub3
-  ; GFX90A-NEXT:   [[COPY11:%[0-9]+]]:vreg_128_align2 = COPY [[REG_SEQUENCE2]]
-  ; GFX90A-NEXT:   [[GLOBAL_ATOMIC_CMPSWAP_X2_RTN:%[0-9]+]]:vreg_64_align2 = GLOBAL_ATOMIC_CMPSWAP_X2_RTN [[COPY5]], killed [[COPY11]], 0, 1, implicit $exec :: (load store syncscope("wavefront") monotonic monotonic (s64) on %ir.ptr, addrspace 1)
+  ; GFX90A-NEXT:   [[COPY7:%[0-9]+]]:av_32 = COPY [[V_ADD_F64_e64_]].sub1
+  ; GFX90A-NEXT:   [[COPY8:%[0-9]+]]:av_32 = COPY [[V_ADD_F64_e64_]].sub0
+  ; GFX90A-NEXT:   [[COPY9:%[0-9]+]]:av_32 = COPY [[PHI1]].sub1
+  ; GFX90A-NEXT:   [[COPY10:%[0-9]+]]:av_32 = COPY [[PHI1]].sub0
+  ; GFX90A-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE killed [[COPY8]], %subreg.sub0, killed [[COPY7]], %subreg.sub1, killed [[COPY10]], %subreg.sub2, killed [[COPY9]], %subreg.sub3
+  ; GFX90A-NEXT:   [[GLOBAL_ATOMIC_CMPSWAP_X2_RTN:%[0-9]+]]:vreg_64_align2 = GLOBAL_ATOMIC_CMPSWAP_X2_RTN [[COPY5]], killed [[REG_SEQUENCE2]], 0, 1, implicit $exec :: (load store syncscope("wavefront") monotonic monotonic (s64) on %ir.ptr, addrspace 1)
   ; GFX90A-NEXT:   [[V_CMP_EQ_U64_e64_:%[0-9]+]]:sreg_64 = V_CMP_EQ_U64_e64 [[GLOBAL_ATOMIC_CMPSWAP_X2_RTN]], [[PHI1]], implicit $exec
+  ; GFX90A-NEXT:   [[COPY11:%[0-9]+]]:av_64_align2 = COPY [[GLOBAL_ATOMIC_CMPSWAP_X2_RTN]]
   ; GFX90A-NEXT:   [[SI_IF_BREAK:%[0-9]+]]:sreg_64 = SI_IF_BREAK killed [[V_CMP_EQ_U64_e64_]], [[PHI]], implicit-def dead $scc
   ; GFX90A-NEXT:   SI_LOOP [[SI_IF_BREAK]], %bb.1, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; GFX90A-NEXT:   S_BRANCH %bb.2
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT: bb.2.atomicrmw.end:
-  ; GFX90A-NEXT:   [[PHI2:%[0-9]+]]:vreg_64_align2 = PHI [[GLOBAL_ATOMIC_CMPSWAP_X2_RTN]], %bb.1
+  ; GFX90A-NEXT:   [[PHI2:%[0-9]+]]:av_64_align2 = PHI [[COPY11]], %bb.1
   ; GFX90A-NEXT:   [[PHI3:%[0-9]+]]:sreg_64 = PHI [[SI_IF_BREAK]], %bb.1
   ; GFX90A-NEXT:   SI_END_CF [[PHI3]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; GFX90A-NEXT:   [[COPY12:%[0-9]+]]:vgpr_32 = COPY [[PHI2]].sub0

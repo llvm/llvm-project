@@ -26,8 +26,8 @@
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/OptionUtils.h"
-#include "clang/Driver/Options.h"
+#include "clang/Options/OptionUtils.h"
+#include "clang/Options/Options.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -82,11 +82,11 @@ static bool parseShowColorsArgs(const llvm::opt::ArgList &args,
 
   for (auto *a : args) {
     const llvm::opt::Option &opt = a->getOption();
-    if (opt.matches(clang::driver::options::OPT_fcolor_diagnostics)) {
+    if (opt.matches(clang::options::OPT_fcolor_diagnostics)) {
       showColors = Colors_On;
-    } else if (opt.matches(clang::driver::options::OPT_fno_color_diagnostics)) {
+    } else if (opt.matches(clang::options::OPT_fno_color_diagnostics)) {
       showColors = Colors_Off;
-    } else if (opt.matches(clang::driver::options::OPT_fdiagnostics_color_EQ)) {
+    } else if (opt.matches(clang::options::OPT_fdiagnostics_color_EQ)) {
       llvm::StringRef value(a->getValue());
       if (value == "always")
         showColors = Colors_On;
@@ -107,15 +107,13 @@ static unsigned getOptimizationLevel(llvm::opt::ArgList &args,
                                      clang::DiagnosticsEngine &diags) {
   unsigned defaultOpt = 0;
 
-  if (llvm::opt::Arg *a =
-          args.getLastArg(clang::driver::options::OPT_O_Group)) {
-    if (a->getOption().matches(clang::driver::options::OPT_O0))
+  if (llvm::opt::Arg *a = args.getLastArg(clang::options::OPT_O_Group)) {
+    if (a->getOption().matches(clang::options::OPT_O0))
       return 0;
 
-    assert(a->getOption().matches(clang::driver::options::OPT_O));
+    assert(a->getOption().matches(clang::options::OPT_O));
 
-    return getLastArgIntValue(args, clang::driver::options::OPT_O, defaultOpt,
-                              diags);
+    return getLastArgIntValue(args, clang::options::OPT_O, defaultOpt, diags);
   }
 
   return defaultOpt;
@@ -133,7 +131,7 @@ static bool parseDebugArgs(Fortran::frontend::CodeGenOptions &opts,
                            clang::DiagnosticsEngine &diags) {
   using DebugInfoKind = llvm::codegenoptions::DebugInfoKind;
   if (llvm::opt::Arg *arg =
-          args.getLastArg(clang::driver::options::OPT_debug_info_kind_EQ)) {
+          args.getLastArg(clang::options::OPT_debug_info_kind_EQ)) {
     std::optional<DebugInfoKind> val =
         llvm::StringSwitch<std::optional<DebugInfoKind>>(arg->getValue())
             .Case("line-tables-only", llvm::codegenoptions::DebugLineTablesOnly)
@@ -158,13 +156,13 @@ static bool parseDebugArgs(Fortran::frontend::CodeGenOptions &opts,
       diags.Report(debugWarning) << arg->getValue();
     }
     opts.DwarfVersion =
-        getLastArgIntValue(args, clang::driver::options::OPT_dwarf_version_EQ,
+        getLastArgIntValue(args, clang::options::OPT_dwarf_version_EQ,
                            /*Default=*/0, diags);
     if (const llvm::opt::Arg *a =
-            args.getLastArg(clang::driver::options::OPT_split_dwarf_file))
+            args.getLastArg(clang::options::OPT_split_dwarf_file))
       opts.SplitDwarfFile = a->getValue();
     if (const llvm::opt::Arg *a =
-            args.getLastArg(clang::driver::options::OPT_split_dwarf_output))
+            args.getLastArg(clang::options::OPT_split_dwarf_output))
       opts.SplitDwarfOutput = a->getValue();
   }
   return true;
@@ -174,7 +172,7 @@ static void parseDoConcurrentMapping(Fortran::frontend::CodeGenOptions &opts,
                                      llvm::opt::ArgList &args,
                                      clang::DiagnosticsEngine &diags) {
   llvm::opt::Arg *arg =
-      args.getLastArg(clang::driver::options::OPT_fdo_concurrent_to_openmp_EQ);
+      args.getLastArg(clang::options::OPT_fdo_concurrent_to_openmp_EQ);
   if (!arg)
     return;
 
@@ -199,7 +197,7 @@ static void parseDoConcurrentMapping(Fortran::frontend::CodeGenOptions &opts,
 static bool parseVectorLibArg(Fortran::frontend::CodeGenOptions &opts,
                               llvm::opt::ArgList &args,
                               clang::DiagnosticsEngine &diags) {
-  llvm::opt::Arg *arg = args.getLastArg(clang::driver::options::OPT_fveclib);
+  llvm::opt::Arg *arg = args.getLastArg(clang::options::OPT_fveclib);
   if (!arg)
     return true;
 
@@ -237,7 +235,7 @@ parseOptimizationRemark(clang::DiagnosticsEngine &diags,
   CodeGenOptions::OptRemark result;
 
   for (llvm::opt::Arg *a : args) {
-    if (a->getOption().matches(clang::driver::options::OPT_R_Joined)) {
+    if (a->getOption().matches(clang::options::OPT_R_Joined)) {
       llvm::StringRef value = a->getValue();
 
       if (value == remarkOptName) {
@@ -274,43 +272,45 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
                              clang::DiagnosticsEngine &diags) {
   opts.OptimizationLevel = getOptimizationLevel(args, diags);
 
-  if (args.hasFlag(clang::driver::options::OPT_fdebug_pass_manager,
-                   clang::driver::options::OPT_fno_debug_pass_manager, false))
+  if (args.hasFlag(clang::options::OPT_fdebug_pass_manager,
+                   clang::options::OPT_fno_debug_pass_manager, false))
     opts.DebugPassManager = 1;
 
-  if (args.hasFlag(clang::driver::options::OPT_fstack_arrays,
-                   clang::driver::options::OPT_fno_stack_arrays, false))
+  if (args.hasFlag(clang::options::OPT_fstack_arrays,
+                   clang::options::OPT_fno_stack_arrays, false))
     opts.StackArrays = 1;
 
-  if (args.getLastArg(clang::driver::options::OPT_floop_interchange))
+  if (args.getLastArg(clang::options::OPT_floop_interchange))
     opts.InterchangeLoops = 1;
 
-  if (args.getLastArg(clang::driver::options::OPT_fexperimental_loop_fusion))
+  if (args.getLastArg(clang::options::OPT_fexperimental_loop_fusion))
     opts.FuseLoops = 1;
 
-  if (args.getLastArg(clang::driver::options::OPT_vectorize_loops))
+  if (args.getLastArg(clang::options::OPT_vectorize_loops))
     opts.VectorizeLoop = 1;
 
-  if (args.getLastArg(clang::driver::options::OPT_vectorize_slp))
+  if (args.getLastArg(clang::options::OPT_vectorize_slp))
     opts.VectorizeSLP = 1;
 
-  if (args.hasFlag(clang::driver::options::OPT_floop_versioning,
-                   clang::driver::options::OPT_fno_loop_versioning, false))
+  if (args.hasFlag(clang::options::OPT_floop_versioning,
+                   clang::options::OPT_fno_loop_versioning, false))
     opts.LoopVersioning = 1;
 
-  opts.UnrollLoops = args.hasFlag(clang::driver::options::OPT_funroll_loops,
-                                  clang::driver::options::OPT_fno_unroll_loops,
+  opts.UnrollLoops = args.hasFlag(clang::options::OPT_funroll_loops,
+                                  clang::options::OPT_fno_unroll_loops,
                                   (opts.OptimizationLevel > 1));
 
   opts.AliasAnalysis = opts.OptimizationLevel > 0;
 
   // -mframe-pointer=none/non-leaf/reserved/all option.
   if (const llvm::opt::Arg *a =
-          args.getLastArg(clang::driver::options::OPT_mframe_pointer_EQ)) {
+          args.getLastArg(clang::options::OPT_mframe_pointer_EQ)) {
     std::optional<llvm::FramePointerKind> val =
         llvm::StringSwitch<std::optional<llvm::FramePointerKind>>(a->getValue())
             .Case("none", llvm::FramePointerKind::None)
             .Case("non-leaf", llvm::FramePointerKind::NonLeaf)
+            .Case("non-leaf-no-reserve",
+                  llvm::FramePointerKind::NonLeafNoReserve)
             .Case("reserved", llvm::FramePointerKind::Reserved)
             .Case("all", llvm::FramePointerKind::All)
             .Default(std::nullopt);
@@ -322,7 +322,7 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
       opts.setFramePointer(val.value());
   }
 
-  for (auto *a : args.filtered(clang::driver::options::OPT_fpass_plugin_EQ))
+  for (auto *a : args.filtered(clang::options::OPT_fpass_plugin_EQ))
     opts.LLVMPassPlugins.push_back(a->getValue());
 
   opts.Reciprocals = clang::driver::tools::parseMRecipOption(diags, args);
@@ -331,15 +331,14 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
       clang::driver::tools::parseMPreferVectorWidthOption(diags, args);
 
   // -fembed-offload-object option
-  for (auto *a :
-       args.filtered(clang::driver::options::OPT_fembed_offload_object_EQ))
+  for (auto *a : args.filtered(clang::options::OPT_fembed_offload_object_EQ))
     opts.OffloadObjects.push_back(a->getValue());
 
-  if (args.hasArg(clang::driver::options::OPT_finstrument_functions))
+  if (args.hasArg(clang::options::OPT_finstrument_functions))
     opts.InstrumentFunctions = 1;
 
-  if (const llvm::opt::Arg *a = args.getLastArg(
-          clang::driver::options::OPT_mcode_object_version_EQ)) {
+  if (const llvm::opt::Arg *a =
+          args.getLastArg(clang::options::OPT_mcode_object_version_EQ)) {
     llvm::StringRef s = a->getValue();
     if (s == "6")
       opts.CodeObjectVersion = llvm::CodeObjectVersionKind::COV_6;
@@ -353,36 +352,36 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
 
   // -f[no-]save-optimization-record[=<format>]
   if (const llvm::opt::Arg *a =
-          args.getLastArg(clang::driver::options::OPT_opt_record_file))
+          args.getLastArg(clang::options::OPT_opt_record_file))
     opts.OptRecordFile = a->getValue();
 
   // Optimization file format. Defaults to yaml
   if (const llvm::opt::Arg *a =
-          args.getLastArg(clang::driver::options::OPT_opt_record_format))
+          args.getLastArg(clang::options::OPT_opt_record_format))
     opts.OptRecordFormat = a->getValue();
 
   // Specifies, using a regex, which successful optimization passes(middle and
   // backend), to include in the final optimization record file generated. If
   // not provided -fsave-optimization-record will include all passes.
   if (const llvm::opt::Arg *a =
-          args.getLastArg(clang::driver::options::OPT_opt_record_passes))
+          args.getLastArg(clang::options::OPT_opt_record_passes))
     opts.OptRecordPasses = a->getValue();
 
   // Create OptRemark that allows printing of all successful optimization
   // passes applied.
   opts.OptimizationRemark =
-      parseOptimizationRemark(diags, args, clang::driver::options::OPT_Rpass_EQ,
+      parseOptimizationRemark(diags, args, clang::options::OPT_Rpass_EQ,
                               /*remarkOptName=*/"pass");
 
   // Create OptRemark that allows all missed optimization passes to be printed.
-  opts.OptimizationRemarkMissed = parseOptimizationRemark(
-      diags, args, clang::driver::options::OPT_Rpass_missed_EQ,
-      /*remarkOptName=*/"pass-missed");
+  opts.OptimizationRemarkMissed =
+      parseOptimizationRemark(diags, args, clang::options::OPT_Rpass_missed_EQ,
+                              /*remarkOptName=*/"pass-missed");
 
   // Create OptRemark that allows all optimization decisions made by LLVM
   // to be printed.
   opts.OptimizationRemarkAnalysis = parseOptimizationRemark(
-      diags, args, clang::driver::options::OPT_Rpass_analysis_EQ,
+      diags, args, clang::options::OPT_Rpass_analysis_EQ,
       /*remarkOptName=*/"pass-analysis");
 
   if (opts.getDebugInfo() == llvm::codegenoptions::NoDebugInfo) {
@@ -400,23 +399,22 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
       opts.setDebugInfo(llvm::codegenoptions::LocTrackingOnly);
   }
 
-  if (auto *a = args.getLastArg(clang::driver::options::OPT_save_temps_EQ))
+  if (auto *a = args.getLastArg(clang::options::OPT_save_temps_EQ))
     opts.SaveTempsDir = a->getValue();
 
   // -record-command-line option.
   if (const llvm::opt::Arg *a =
-          args.getLastArg(clang::driver::options::OPT_record_command_line)) {
+          args.getLastArg(clang::options::OPT_record_command_line)) {
     opts.RecordCommandLine = a->getValue();
   }
 
   // -mlink-builtin-bitcode
-  for (auto *a :
-       args.filtered(clang::driver::options::OPT_mlink_builtin_bitcode))
+  for (auto *a : args.filtered(clang::options::OPT_mlink_builtin_bitcode))
     opts.BuiltinBCLibs.push_back(a->getValue());
 
   // -mrelocation-model option.
   if (const llvm::opt::Arg *a =
-          args.getLastArg(clang::driver::options::OPT_mrelocation_model)) {
+          args.getLastArg(clang::options::OPT_mrelocation_model)) {
     llvm::StringRef modelName = a->getValue();
     auto relocModel =
         llvm::StringSwitch<std::optional<llvm::Reloc::Model>>(modelName)
@@ -435,31 +433,30 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
   }
 
   // -pic-level and -pic-is-pie option.
-  if (int picLevel = getLastArgIntValue(
-          args, clang::driver::options::OPT_pic_level, 0, diags)) {
+  if (int picLevel =
+          getLastArgIntValue(args, clang::options::OPT_pic_level, 0, diags)) {
     if (picLevel > 2)
       diags.Report(clang::diag::err_drv_invalid_value)
-          << args.getLastArg(clang::driver::options::OPT_pic_level)
-                 ->getAsString(args)
+          << args.getLastArg(clang::options::OPT_pic_level)->getAsString(args)
           << picLevel;
 
     opts.PICLevel = picLevel;
-    if (args.hasArg(clang::driver::options::OPT_pic_is_pie))
+    if (args.hasArg(clang::options::OPT_pic_is_pie))
       opts.IsPIE = 1;
   }
 
-  if (args.hasArg(clang::driver::options::OPT_fprofile_generate)) {
+  if (args.hasArg(clang::options::OPT_fprofile_generate)) {
     opts.setProfileInstr(llvm::driver::ProfileInstrKind::ProfileIRInstr);
   }
 
-  if (auto A = args.getLastArg(clang::driver::options::OPT_fprofile_use_EQ)) {
+  if (auto A = args.getLastArg(clang::options::OPT_fprofile_use_EQ)) {
     opts.setProfileUse(llvm::driver::ProfileInstrKind::ProfileIRInstr);
     opts.ProfileInstrumentUsePath = A->getValue();
   }
 
   // -mcmodel option.
   if (const llvm::opt::Arg *a =
-          args.getLastArg(clang::driver::options::OPT_mcmodel_EQ)) {
+          args.getLastArg(clang::options::OPT_mcmodel_EQ)) {
     llvm::StringRef modelName = a->getValue();
     std::optional<llvm::CodeModel::Model> codeModel = getCodeModel(modelName);
 
@@ -470,8 +467,8 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
           << a->getAsString(args) << modelName;
   }
 
-  if (const llvm::opt::Arg *arg = args.getLastArg(
-          clang::driver::options::OPT_mlarge_data_threshold_EQ)) {
+  if (const llvm::opt::Arg *arg =
+          args.getLastArg(clang::options::OPT_mlarge_data_threshold_EQ)) {
     uint64_t LDT;
     if (llvm::StringRef(arg->getValue()).getAsInteger(/*Radix=*/10, LDT)) {
       diags.Report(clang::diag::err_drv_invalid_value)
@@ -481,15 +478,15 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
   }
 
   // This option is compatible with -f[no-]underscoring in gfortran.
-  if (args.hasFlag(clang::driver::options::OPT_fno_underscoring,
-                   clang::driver::options::OPT_funderscoring, false)) {
+  if (args.hasFlag(clang::options::OPT_fno_underscoring,
+                   clang::options::OPT_funderscoring, false)) {
     opts.Underscoring = 0;
   }
 
   parseDoConcurrentMapping(opts, args, diags);
 
   if (const llvm::opt::Arg *arg =
-          args.getLastArg(clang::driver::options::OPT_complex_range_EQ)) {
+          args.getLastArg(clang::options::OPT_complex_range_EQ)) {
     llvm::StringRef argValue = llvm::StringRef(arg->getValue());
     if (argValue == "full") {
       opts.setComplexRange(CodeGenOptions::ComplexRangeKind::CX_Full);
@@ -510,46 +507,42 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
 /// \param [in] opts The target options instance to update
 /// \param [in] args The list of input arguments (from the compiler invocation)
 static void parseTargetArgs(TargetOptions &opts, llvm::opt::ArgList &args) {
-  if (const llvm::opt::Arg *a =
-          args.getLastArg(clang::driver::options::OPT_triple))
+  if (const llvm::opt::Arg *a = args.getLastArg(clang::options::OPT_triple))
     opts.triple = a->getValue();
 
-  opts.atomicIgnoreDenormalMode = args.hasFlag(
-      clang::driver::options::OPT_fatomic_ignore_denormal_mode,
-      clang::driver::options::OPT_fno_atomic_ignore_denormal_mode, false);
-  opts.atomicFineGrainedMemory = args.hasFlag(
-      clang::driver::options::OPT_fatomic_fine_grained_memory,
-      clang::driver::options::OPT_fno_atomic_fine_grained_memory, false);
+  opts.atomicIgnoreDenormalMode =
+      args.hasFlag(clang::options::OPT_fatomic_ignore_denormal_mode,
+                   clang::options::OPT_fno_atomic_ignore_denormal_mode, false);
+  opts.atomicFineGrainedMemory =
+      args.hasFlag(clang::options::OPT_fatomic_fine_grained_memory,
+                   clang::options::OPT_fno_atomic_fine_grained_memory, false);
   opts.atomicRemoteMemory =
-      args.hasFlag(clang::driver::options::OPT_fatomic_remote_memory,
-                   clang::driver::options::OPT_fno_atomic_remote_memory, false);
+      args.hasFlag(clang::options::OPT_fatomic_remote_memory,
+                   clang::options::OPT_fno_atomic_remote_memory, false);
 
-  if (const llvm::opt::Arg *a =
-          args.getLastArg(clang::driver::options::OPT_target_cpu))
+  if (const llvm::opt::Arg *a = args.getLastArg(clang::options::OPT_target_cpu))
     opts.cpu = a->getValue();
 
-  if (const llvm::opt::Arg *a =
-          args.getLastArg(clang::driver::options::OPT_tune_cpu))
+  if (const llvm::opt::Arg *a = args.getLastArg(clang::options::OPT_tune_cpu))
     opts.cpuToTuneFor = a->getValue();
 
   for (const llvm::opt::Arg *currentArg :
-       args.filtered(clang::driver::options::OPT_target_feature))
+       args.filtered(clang::options::OPT_target_feature))
     opts.featuresAsWritten.emplace_back(currentArg->getValue());
 
-  if (args.hasArg(clang::driver::options::OPT_fdisable_real_10))
+  if (args.hasArg(clang::options::OPT_fdisable_real_10))
     opts.disabledRealKinds.push_back(10);
 
-  if (args.hasArg(clang::driver::options::OPT_fdisable_real_3))
+  if (args.hasArg(clang::options::OPT_fdisable_real_3))
     opts.disabledRealKinds.push_back(3);
 
-  if (args.hasArg(clang::driver::options::OPT_fdisable_integer_2))
+  if (args.hasArg(clang::options::OPT_fdisable_integer_2))
     opts.disabledIntegerKinds.push_back(2);
 
-  if (args.hasArg(clang::driver::options::OPT_fdisable_integer_16))
+  if (args.hasArg(clang::options::OPT_fdisable_integer_16))
     opts.disabledIntegerKinds.push_back(16);
 
-  if (const llvm::opt::Arg *a =
-          args.getLastArg(clang::driver::options::OPT_mabi_EQ)) {
+  if (const llvm::opt::Arg *a = args.getLastArg(clang::options::OPT_mabi_EQ)) {
     opts.abi = a->getValue();
     llvm::StringRef V = a->getValue();
     if (V == "vec-extabi") {
@@ -559,9 +552,8 @@ static void parseTargetArgs(TargetOptions &opts, llvm::opt::ArgList &args) {
     }
   }
 
-  opts.asmVerbose =
-      args.hasFlag(clang::driver::options::OPT_fverbose_asm,
-                   clang::driver::options::OPT_fno_verbose_asm, false);
+  opts.asmVerbose = args.hasFlag(clang::options::OPT_fverbose_asm,
+                                 clang::options::OPT_fno_verbose_asm, false);
 }
 // Tweak the frontend configuration based on the frontend action
 static void setUpFrontendBasedOnAction(FrontendOptions &opts) {
@@ -594,108 +586,114 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
   // Treat multiple action options as an invocation error. Note that `clang
   // -cc1` does accept multiple action options, but will only consider the
   // rightmost one.
-  if (args.hasMultipleArgs(clang::driver::options::OPT_Action_Group)) {
-    const unsigned diagID = diags.getCustomDiagID(
-        clang::DiagnosticsEngine::Error, "Only one action option is allowed");
-    diags.Report(diagID);
+  if (args.hasMultipleArgs(clang::options::OPT_Action_Group)) {
+    llvm::SmallString<32> buf;
+    llvm::raw_svector_ostream os(buf);
+    for (const llvm::opt::Arg *arg :
+         args.filtered(clang::options::OPT_Action_Group)) {
+      if (buf.size())
+        os << ", ";
+      os << "'" << arg->getSpelling() << "'";
+    }
+    diags.Report(clang::diag::err_drv_too_many_actions) << buf;
     return false;
   }
 
   // Identify the action (i.e. opts.ProgramAction)
   if (const llvm::opt::Arg *a =
-          args.getLastArg(clang::driver::options::OPT_Action_Group)) {
+          args.getLastArg(clang::options::OPT_Action_Group)) {
     switch (a->getOption().getID()) {
     default: {
       llvm_unreachable("Invalid option in group!");
     }
-    case clang::driver::options::OPT_test_io:
+    case clang::options::OPT_test_io:
       opts.programAction = InputOutputTest;
       break;
-    case clang::driver::options::OPT_E:
+    case clang::options::OPT_E:
       opts.programAction = PrintPreprocessedInput;
       break;
-    case clang::driver::options::OPT_fsyntax_only:
+    case clang::options::OPT_fsyntax_only:
       opts.programAction = ParseSyntaxOnly;
       break;
-    case clang::driver::options::OPT_emit_fir:
+    case clang::options::OPT_emit_fir:
       opts.programAction = EmitFIR;
       break;
-    case clang::driver::options::OPT_emit_hlfir:
+    case clang::options::OPT_emit_hlfir:
       opts.programAction = EmitHLFIR;
       break;
-    case clang::driver::options::OPT_emit_llvm:
+    case clang::options::OPT_emit_llvm:
       opts.programAction = EmitLLVM;
       break;
-    case clang::driver::options::OPT_emit_llvm_bc:
+    case clang::options::OPT_emit_llvm_bc:
       opts.programAction = EmitLLVMBitcode;
       break;
-    case clang::driver::options::OPT_emit_obj:
+    case clang::options::OPT_emit_obj:
       opts.programAction = EmitObj;
       break;
-    case clang::driver::options::OPT_S:
+    case clang::options::OPT_S:
       opts.programAction = EmitAssembly;
       break;
-    case clang::driver::options::OPT_fdebug_unparse:
+    case clang::options::OPT_fdebug_unparse:
       opts.programAction = DebugUnparse;
       break;
-    case clang::driver::options::OPT_fdebug_unparse_no_sema:
+    case clang::options::OPT_fdebug_unparse_no_sema:
       opts.programAction = DebugUnparseNoSema;
       break;
-    case clang::driver::options::OPT_fdebug_unparse_with_symbols:
+    case clang::options::OPT_fdebug_unparse_with_symbols:
       opts.programAction = DebugUnparseWithSymbols;
       break;
-    case clang::driver::options::OPT_fdebug_unparse_with_modules:
+    case clang::options::OPT_fdebug_unparse_with_modules:
       opts.programAction = DebugUnparseWithModules;
       break;
-    case clang::driver::options::OPT_fdebug_dump_symbols:
+    case clang::options::OPT_fdebug_dump_symbols:
       opts.programAction = DebugDumpSymbols;
       break;
-    case clang::driver::options::OPT_fdebug_dump_parse_tree:
+    case clang::options::OPT_fdebug_dump_parse_tree:
       opts.programAction = DebugDumpParseTree;
       break;
-    case clang::driver::options::OPT_fdebug_dump_pft:
+    case clang::options::OPT_fdebug_dump_pft:
       opts.programAction = DebugDumpPFT;
       break;
-    case clang::driver::options::OPT_fdebug_dump_all:
+    case clang::options::OPT_fdebug_dump_all:
       opts.programAction = DebugDumpAll;
       break;
-    case clang::driver::options::OPT_fdebug_dump_parse_tree_no_sema:
+    case clang::options::OPT_fdebug_dump_parse_tree_no_sema:
       opts.programAction = DebugDumpParseTreeNoSema;
       break;
-    case clang::driver::options::OPT_fdebug_dump_provenance:
+    case clang::options::OPT_fdebug_dump_provenance:
       opts.programAction = DebugDumpProvenance;
       break;
-    case clang::driver::options::OPT_fdebug_dump_parsing_log:
+    case clang::options::OPT_fdebug_dump_parsing_log:
       opts.programAction = DebugDumpParsingLog;
       break;
-    case clang::driver::options::OPT_fdebug_measure_parse_tree:
+    case clang::options::OPT_fdebug_measure_parse_tree:
       opts.programAction = DebugMeasureParseTree;
       break;
-    case clang::driver::options::OPT_fdebug_pre_fir_tree:
+    case clang::options::OPT_fdebug_pre_fir_tree:
       opts.programAction = DebugPreFIRTree;
       break;
-    case clang::driver::options::OPT_fget_symbols_sources:
+    case clang::options::OPT_fget_symbols_sources:
       opts.programAction = GetSymbolsSources;
       break;
-    case clang::driver::options::OPT_fget_definition:
+    case clang::options::OPT_fget_definition:
       opts.programAction = GetDefinition;
       break;
-    case clang::driver::options::OPT_init_only:
+    case clang::options::OPT_init_only:
       opts.programAction = InitOnly;
       break;
 
       // TODO:
-      // case clang::driver::options::OPT_emit_llvm:
-      // case clang::driver::options::OPT_emit_llvm_only:
-      // case clang::driver::options::OPT_emit_codegen_only:
-      // case clang::driver::options::OPT_emit_module:
+      // case clang::options::OPT_emit_llvm:
+      // case clang::options::OPT_emit_llvm_only:
+      // case clang::options::OPT_emit_codegen_only:
+      // case clang::options::OPT_emit_module:
       // (...)
     }
 
     // Parse the values provided with `-fget-definition` (there should be 3
     // integers)
     if (llvm::opt::OptSpecifier(a->getOption().getID()) ==
-        clang::driver::options::OPT_fget_definition) {
+        clang::options::OPT_fget_definition) {
       unsigned optVals[3] = {0, 0, 0};
 
       for (unsigned i = 0; i < 3; i++) {
@@ -715,27 +713,25 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
   }
 
   // Parsing -load <dsopath> option and storing shared object path
-  if (llvm::opt::Arg *a = args.getLastArg(clang::driver::options::OPT_load)) {
+  if (llvm::opt::Arg *a = args.getLastArg(clang::options::OPT_load)) {
     opts.plugins.push_back(a->getValue());
   }
 
   // Parsing -plugin <name> option and storing plugin name and setting action
-  if (const llvm::opt::Arg *a =
-          args.getLastArg(clang::driver::options::OPT_plugin)) {
+  if (const llvm::opt::Arg *a = args.getLastArg(clang::options::OPT_plugin)) {
     opts.programAction = PluginAction;
     opts.actionName = a->getValue();
   }
 
-  opts.outputFile = args.getLastArgValue(clang::driver::options::OPT_o);
-  opts.showHelp = args.hasArg(clang::driver::options::OPT_help);
-  opts.showVersion = args.hasArg(clang::driver::options::OPT_version);
+  opts.outputFile = args.getLastArgValue(clang::options::OPT_o);
+  opts.showHelp = args.hasArg(clang::options::OPT_help);
+  opts.showVersion = args.hasArg(clang::options::OPT_version);
   opts.printSupportedCPUs =
-      args.hasArg(clang::driver::options::OPT_print_supported_cpus);
+      args.hasArg(clang::options::OPT_print_supported_cpus);
 
   // Get the input kind (from the value passed via `-x`)
   InputKind dashX(Language::Unknown);
-  if (const llvm::opt::Arg *a =
-          args.getLastArg(clang::driver::options::OPT_x)) {
+  if (const llvm::opt::Arg *a = args.getLastArg(clang::options::OPT_x)) {
     llvm::StringRef xValue = a->getValue();
     // Principal languages.
     dashX = llvm::StringSwitch<InputKind>(xValue)
@@ -762,7 +758,7 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
 
   // Collect the input files and save them in our instance of FrontendOptions.
   std::vector<std::string> inputs =
-      args.getAllArgValues(clang::driver::options::OPT_INPUT);
+      args.getAllArgValues(clang::options::OPT_INPUT);
   opts.inputs.clear();
   if (inputs.empty())
     // '-' is the default input if none is given.
@@ -782,18 +778,16 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
   }
 
   // Set fortranForm based on options -ffree-form and -ffixed-form.
-  if (const auto *arg =
-          args.getLastArg(clang::driver::options::OPT_ffixed_form,
-                          clang::driver::options::OPT_ffree_form)) {
-    opts.fortranForm =
-        arg->getOption().matches(clang::driver::options::OPT_ffixed_form)
-            ? FortranForm::FixedForm
-            : FortranForm::FreeForm;
+  if (const auto *arg = args.getLastArg(clang::options::OPT_ffixed_form,
+                                        clang::options::OPT_ffree_form)) {
+    opts.fortranForm = arg->getOption().matches(clang::options::OPT_ffixed_form)
+                           ? FortranForm::FixedForm
+                           : FortranForm::FreeForm;
   }
 
   // Set fixedFormColumns based on -ffixed-line-length=<value>
   if (const auto *arg =
-          args.getLastArg(clang::driver::options::OPT_ffixed_line_length_EQ)) {
+          args.getLastArg(clang::options::OPT_ffixed_line_length_EQ)) {
     llvm::StringRef argValue = llvm::StringRef(arg->getValue());
     std::int64_t columns = -1;
     if (argValue == "none") {
@@ -815,8 +809,7 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
   }
 
   // Set conversion based on -fconvert=<value>
-  if (const auto *arg =
-          args.getLastArg(clang::driver::options::OPT_fconvert_EQ)) {
+  if (const auto *arg = args.getLastArg(clang::options::OPT_fconvert_EQ)) {
     const char *argValue = arg->getValue();
     if (auto convert = parseConvertArg(argValue))
       opts.envDefaults.push_back({"FORT_CONVERT", *convert});
@@ -826,59 +819,55 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
   }
 
   // -f{no-}implicit-none
-  opts.features.Enable(
-      Fortran::common::LanguageFeature::ImplicitNoneTypeAlways,
-      args.hasFlag(clang::driver::options::OPT_fimplicit_none,
-                   clang::driver::options::OPT_fno_implicit_none, false));
+  opts.features.Enable(Fortran::common::LanguageFeature::ImplicitNoneTypeAlways,
+                       args.hasFlag(clang::options::OPT_fimplicit_none,
+                                    clang::options::OPT_fno_implicit_none,
+                                    false));
 
   // -f{no-}implicit-none-ext
-  opts.features.Enable(
-      Fortran::common::LanguageFeature::ImplicitNoneExternal,
-      args.hasFlag(clang::driver::options::OPT_fimplicit_none_ext,
-                   clang::driver::options::OPT_fno_implicit_none_ext, false));
+  opts.features.Enable(Fortran::common::LanguageFeature::ImplicitNoneExternal,
+                       args.hasFlag(clang::options::OPT_fimplicit_none_ext,
+                                    clang::options::OPT_fno_implicit_none_ext,
+                                    false));
 
   // -f{no-}backslash
   opts.features.Enable(Fortran::common::LanguageFeature::BackslashEscapes,
-                       args.hasFlag(clang::driver::options::OPT_fbackslash,
-                                    clang::driver::options::OPT_fno_backslash,
-                                    false));
+                       args.hasFlag(clang::options::OPT_fbackslash,
+                                    clang::options::OPT_fno_backslash, false));
 
   // -f{no-}logical-abbreviations
   opts.features.Enable(
       Fortran::common::LanguageFeature::LogicalAbbreviations,
-      args.hasFlag(clang::driver::options::OPT_flogical_abbreviations,
-                   clang::driver::options::OPT_fno_logical_abbreviations,
-                   false));
+      args.hasFlag(clang::options::OPT_flogical_abbreviations,
+                   clang::options::OPT_fno_logical_abbreviations, false));
 
   // -f{no-}unsigned
   opts.features.Enable(Fortran::common::LanguageFeature::Unsigned,
-                       args.hasFlag(clang::driver::options::OPT_funsigned,
-                                    clang::driver::options::OPT_fno_unsigned,
-                                    false));
+                       args.hasFlag(clang::options::OPT_funsigned,
+                                    clang::options::OPT_fno_unsigned, false));
 
   // -f{no-}xor-operator
-  opts.features.Enable(
-      Fortran::common::LanguageFeature::XOROperator,
-      args.hasFlag(clang::driver::options::OPT_fxor_operator,
-                   clang::driver::options::OPT_fno_xor_operator, false));
+  opts.features.Enable(Fortran::common::LanguageFeature::XOROperator,
+                       args.hasFlag(clang::options::OPT_fxor_operator,
+                                    clang::options::OPT_fno_xor_operator,
+                                    false));
 
   // -fno-automatic
-  if (args.hasArg(clang::driver::options::OPT_fno_automatic)) {
+  if (args.hasArg(clang::options::OPT_fno_automatic)) {
     opts.features.Enable(Fortran::common::LanguageFeature::DefaultSave);
   }
 
   // -f{no}-save-main-program
-  opts.features.Enable(
-      Fortran::common::LanguageFeature::SaveMainProgram,
-      args.hasFlag(clang::driver::options::OPT_fsave_main_program,
-                   clang::driver::options::OPT_fno_save_main_program, false));
+  opts.features.Enable(Fortran::common::LanguageFeature::SaveMainProgram,
+                       args.hasFlag(clang::options::OPT_fsave_main_program,
+                                    clang::options::OPT_fno_save_main_program,
+                                    false));
 
-  if (args.hasArg(
-          clang::driver::options::OPT_falternative_parameter_statement)) {
+  if (args.hasArg(clang::options::OPT_falternative_parameter_statement)) {
     opts.features.Enable(Fortran::common::LanguageFeature::OldStyleParameter);
   }
   if (const llvm::opt::Arg *arg =
-          args.getLastArg(clang::driver::options::OPT_finput_charset_EQ)) {
+          args.getLastArg(clang::options::OPT_finput_charset_EQ)) {
     llvm::StringRef argValue = arg->getValue();
     if (argValue == "utf-8") {
       opts.encoding = Fortran::parser::Encoding::UTF_8;
@@ -923,9 +912,9 @@ static std::string getOpenMPHeadersDir(const char *argv) {
 static void parsePreprocessorArgs(Fortran::frontend::PreprocessorOptions &opts,
                                   llvm::opt::ArgList &args) {
   // Add macros from the command line.
-  for (const auto *currentArg : args.filtered(clang::driver::options::OPT_D,
-                                              clang::driver::options::OPT_U)) {
-    if (currentArg->getOption().matches(clang::driver::options::OPT_D)) {
+  for (const auto *currentArg :
+       args.filtered(clang::options::OPT_D, clang::options::OPT_U)) {
+    if (currentArg->getOption().matches(clang::options::OPT_D)) {
       opts.addMacroDef(currentArg->getValue());
     } else {
       opts.addMacroUndef(currentArg->getValue());
@@ -933,34 +922,33 @@ static void parsePreprocessorArgs(Fortran::frontend::PreprocessorOptions &opts,
   }
 
   // Add the ordered list of -I's.
-  for (const auto *currentArg : args.filtered(clang::driver::options::OPT_I))
+  for (const auto *currentArg : args.filtered(clang::options::OPT_I))
     opts.searchDirectoriesFromDashI.emplace_back(currentArg->getValue());
 
   // Prepend the ordered list of -intrinsic-modules-path
   // to the default location to search.
   for (const auto *currentArg :
-       args.filtered(clang::driver::options::OPT_fintrinsic_modules_path))
+       args.filtered(clang::options::OPT_fintrinsic_modules_path))
     opts.searchDirectoriesFromIntrModPath.emplace_back(currentArg->getValue());
 
   // -cpp/-nocpp
-  if (const auto *currentArg = args.getLastArg(
-          clang::driver::options::OPT_cpp, clang::driver::options::OPT_nocpp))
-    opts.macrosFlag =
-        (currentArg->getOption().matches(clang::driver::options::OPT_cpp))
-            ? PPMacrosFlag::Include
-            : PPMacrosFlag::Exclude;
+  if (const auto *currentArg =
+          args.getLastArg(clang::options::OPT_cpp, clang::options::OPT_nocpp))
+    opts.macrosFlag = (currentArg->getOption().matches(clang::options::OPT_cpp))
+                          ? PPMacrosFlag::Include
+                          : PPMacrosFlag::Exclude;
   // Enable -cpp based on -x unless explicitly disabled with -nocpp
   if (opts.macrosFlag != PPMacrosFlag::Exclude)
-    if (const auto *dashX = args.getLastArg(clang::driver::options::OPT_x))
+    if (const auto *dashX = args.getLastArg(clang::options::OPT_x))
       opts.macrosFlag = llvm::StringSwitch<PPMacrosFlag>(dashX->getValue())
                             .Case("f95-cpp-input", PPMacrosFlag::Include)
                             .Default(opts.macrosFlag);
 
-  opts.noReformat = args.hasArg(clang::driver::options::OPT_fno_reformat);
+  opts.noReformat = args.hasArg(clang::options::OPT_fno_reformat);
   opts.preprocessIncludeLines =
-      args.hasArg(clang::driver::options::OPT_fpreprocess_include_lines);
-  opts.noLineDirectives = args.hasArg(clang::driver::options::OPT_P);
-  opts.showMacros = args.hasArg(clang::driver::options::OPT_dM);
+      args.hasArg(clang::options::OPT_fpreprocess_include_lines);
+  opts.noLineDirectives = args.hasArg(clang::options::OPT_P);
+  opts.showMacros = args.hasArg(clang::options::OPT_dM);
 }
 
 /// Parses all semantic related arguments and populates the variables
@@ -971,7 +959,7 @@ static bool parseSemaArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
 
   // -J/module-dir option
   std::vector<std::string> moduleDirList =
-      args.getAllArgValues(clang::driver::options::OPT_module_dir);
+      args.getAllArgValues(clang::options::OPT_module_dir);
   // User can only specify one -J/-module-dir directory, but may repeat
   // -J/-module-dir as long as the directory is the same each time.
   // https://gcc.gnu.org/onlinedocs/gfortran/Directory-Options.html
@@ -990,25 +978,25 @@ static bool parseSemaArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
     res.setModuleDir(moduleDirList[0]);
 
   // -fdebug-module-writer option
-  if (args.hasArg(clang::driver::options::OPT_fdebug_module_writer)) {
+  if (args.hasArg(clang::options::OPT_fdebug_module_writer)) {
     res.setDebugModuleDir(true);
   }
 
   // -fhermetic-module-files option
-  if (args.hasArg(clang::driver::options::OPT_fhermetic_module_files)) {
+  if (args.hasArg(clang::options::OPT_fhermetic_module_files)) {
     res.setHermeticModuleFileOutput(true);
   }
 
   // -module-suffix
   if (const auto *moduleSuffix =
-          args.getLastArg(clang::driver::options::OPT_module_suffix)) {
+          args.getLastArg(clang::options::OPT_module_suffix)) {
     res.setModuleFileSuffix(moduleSuffix->getValue());
   }
 
   // -f{no-}analyzed-objects-for-unparse
-  res.setUseAnalyzedObjectsForUnparse(args.hasFlag(
-      clang::driver::options::OPT_fanalyzed_objects_for_unparse,
-      clang::driver::options::OPT_fno_analyzed_objects_for_unparse, true));
+  res.setUseAnalyzedObjectsForUnparse(
+      args.hasFlag(clang::options::OPT_fanalyzed_objects_for_unparse,
+                   clang::options::OPT_fno_analyzed_objects_for_unparse, true));
 
   return diags.getNumErrors() == numErrorsBefore;
 }
@@ -1025,7 +1013,7 @@ static bool parseDiagArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
   // chosen to match clang's behavior.
 
   // -pedantic
-  if (args.hasArg(clang::driver::options::OPT_pedantic)) {
+  if (args.hasArg(clang::options::OPT_pedantic)) {
     features.WarnOnAllNonstandard();
     features.WarnOnAllUsage();
     res.setEnableConformanceChecks();
@@ -1035,9 +1023,8 @@ static bool parseDiagArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
   // -Werror option
   // TODO: Currently throws a Diagnostic for anything other than -W<error>,
   // this has to change when other -W<opt>'s are supported.
-  if (args.hasArg(clang::driver::options::OPT_W_Joined)) {
-    const auto &wArgs =
-        args.getAllArgValues(clang::driver::options::OPT_W_Joined);
+  if (args.hasArg(clang::options::OPT_W_Joined)) {
+    const auto &wArgs = args.getAllArgValues(clang::options::OPT_W_Joined);
     for (const auto &wArg : wArgs) {
       if (wArg == "error") {
         res.setWarnAsErr(true);
@@ -1054,7 +1041,7 @@ static bool parseDiagArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
   }
 
   // -w
-  if (args.hasArg(clang::driver::options::OPT_w)) {
+  if (args.hasArg(clang::options::OPT_w)) {
     features.DisableAllWarnings();
     res.setDisableWarnings();
   }
@@ -1074,7 +1061,7 @@ static bool parseDialectArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
   unsigned numErrorsBefore = diags.getNumErrors();
 
   // -fd-lines-as-code
-  if (args.hasArg(clang::driver::options::OPT_fd_lines_as_code)) {
+  if (args.hasArg(clang::options::OPT_fd_lines_as_code)) {
     if (res.getFrontendOpts().fortranForm == FortranForm::FreeForm) {
       const unsigned fdLinesAsWarning = diags.getCustomDiagID(
           clang::DiagnosticsEngine::Warning,
@@ -1087,7 +1074,7 @@ static bool parseDialectArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
   }
 
   // -fd-lines-as-comments
-  if (args.hasArg(clang::driver::options::OPT_fd_lines_as_comments)) {
+  if (args.hasArg(clang::options::OPT_fd_lines_as_comments)) {
     if (res.getFrontendOpts().fortranForm == FortranForm::FreeForm) {
       const unsigned fdLinesAsWarning = diags.getCustomDiagID(
           clang::DiagnosticsEngine::Warning,
@@ -1100,18 +1087,18 @@ static bool parseDialectArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
   }
 
   // -fdefault* family
-  if (args.hasArg(clang::driver::options::OPT_fdefault_real_8)) {
+  if (args.hasArg(clang::options::OPT_fdefault_real_8)) {
     res.getDefaultKinds().set_defaultRealKind(8);
     res.getDefaultKinds().set_doublePrecisionKind(16);
   }
-  if (args.hasArg(clang::driver::options::OPT_fdefault_integer_8)) {
+  if (args.hasArg(clang::options::OPT_fdefault_integer_8)) {
     res.getDefaultKinds().set_defaultIntegerKind(8);
     res.getDefaultKinds().set_subscriptIntegerKind(8);
     res.getDefaultKinds().set_sizeIntegerKind(8);
     res.getDefaultKinds().set_defaultLogicalKind(8);
   }
-  if (args.hasArg(clang::driver::options::OPT_fdefault_double_8)) {
-    if (!args.hasArg(clang::driver::options::OPT_fdefault_real_8)) {
+  if (args.hasArg(clang::options::OPT_fdefault_double_8)) {
+    if (!args.hasArg(clang::options::OPT_fdefault_real_8)) {
       // -fdefault-double-8 has to be used with -fdefault-real-8
       // to be compatible with gfortran
       const unsigned diagID = diags.getCustomDiagID(
@@ -1122,18 +1109,18 @@ static bool parseDialectArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
     // https://gcc.gnu.org/onlinedocs/gfortran/Fortran-Dialect-Options.html
     res.getDefaultKinds().set_doublePrecisionKind(8);
   }
-  if (args.hasArg(clang::driver::options::OPT_flarge_sizes))
+  if (args.hasArg(clang::options::OPT_flarge_sizes))
     res.getDefaultKinds().set_sizeIntegerKind(8);
 
   // -x cuda
-  auto language = args.getLastArgValue(clang::driver::options::OPT_x);
+  auto language = args.getLastArgValue(clang::options::OPT_x);
   if (language == "cuda") {
     res.getFrontendOpts().features.Enable(
         Fortran::common::LanguageFeature::CUDA);
   }
 
   // -fopenacc
-  if (args.hasArg(clang::driver::options::OPT_fopenacc)) {
+  if (args.hasArg(clang::options::OPT_fopenacc)) {
     res.getFrontendOpts().features.Enable(
         Fortran::common::LanguageFeature::OpenACC);
   }
@@ -1141,8 +1128,8 @@ static bool parseDialectArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
   // -std=f2018
   // TODO: Set proper options when more fortran standards
   // are supported.
-  if (args.hasArg(clang::driver::options::OPT_std_EQ)) {
-    auto standard = args.getLastArgValue(clang::driver::options::OPT_std_EQ);
+  if (args.hasArg(clang::options::OPT_std_EQ)) {
+    auto standard = args.getLastArgValue(clang::options::OPT_std_EQ);
     // We only allow f2018 as the given standard
     if (standard == "f2018") {
       res.setEnableConformanceChecks();
@@ -1155,7 +1142,7 @@ static bool parseDialectArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
     }
   }
   // -fcoarray
-  if (args.hasArg(clang::driver::options::OPT_fcoarray)) {
+  if (args.hasArg(clang::options::OPT_fcoarray)) {
     res.getFrontendOpts().features.Enable(
         Fortran::common::LanguageFeature::Coarray);
     const unsigned diagID =
@@ -1173,13 +1160,12 @@ static bool parseDialectArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
 /// generated.
 static bool parseOpenMPArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
                             clang::DiagnosticsEngine &diags) {
-  llvm::opt::Arg *arg = args.getLastArg(clang::driver::options::OPT_fopenmp,
-                                        clang::driver::options::OPT_fno_openmp);
-  if (!arg ||
-      arg->getOption().matches(clang::driver::options::OPT_fno_openmp)) {
-    bool isSimdSpecified = args.hasFlag(
-        clang::driver::options::OPT_fopenmp_simd,
-        clang::driver::options::OPT_fno_openmp_simd, /*Default=*/false);
+  llvm::opt::Arg *arg = args.getLastArg(clang::options::OPT_fopenmp,
+                                        clang::options::OPT_fno_openmp);
+  if (!arg || arg->getOption().matches(clang::options::OPT_fno_openmp)) {
+    bool isSimdSpecified =
+        args.hasFlag(clang::options::OPT_fopenmp_simd,
+                     clang::options::OPT_fno_openmp_simd, /*Default=*/false);
     if (!isSimdSpecified)
       return true;
     res.getLangOpts().OpenMPSimd = 1;
@@ -1194,8 +1180,7 @@ static bool parseOpenMPArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
   res.getLangOpts().OpenMPVersion = newestFullySupported;
   res.getFrontendOpts().features.Enable(
       Fortran::common::LanguageFeature::OpenMP);
-  if (auto *arg =
-          args.getLastArg(clang::driver::options::OPT_fopenmp_version_EQ)) {
+  if (auto *arg = args.getLastArg(clang::options::OPT_fopenmp_version_EQ)) {
     llvm::ArrayRef<unsigned> ompVersions = llvm::omp::getOpenMPVersions();
     unsigned oldVersions[] = {11, 20, 25, 30};
     unsigned version = 0;
@@ -1248,16 +1233,16 @@ static bool parseOpenMPArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
     }
   }
 
-  if (args.hasArg(clang::driver::options::OPT_fopenmp_force_usm)) {
+  if (args.hasArg(clang::options::OPT_fopenmp_force_usm)) {
     res.getLangOpts().OpenMPForceUSM = 1;
   }
-  if (args.hasArg(clang::driver::options::OPT_fopenmp_is_target_device)) {
+  if (args.hasArg(clang::options::OPT_fopenmp_is_target_device)) {
     res.getLangOpts().OpenMPIsTargetDevice = 1;
 
     // Get OpenMP host file path if any and report if a non existent file is
     // found
-    if (auto *arg = args.getLastArg(
-            clang::driver::options::OPT_fopenmp_host_ir_file_path)) {
+    if (auto *arg =
+            args.getLastArg(clang::options::OPT_fopenmp_host_ir_file_path)) {
       res.getLangOpts().OMPHostIRFile = arg->getValue();
       if (!llvm::sys::fs::exists(res.getLangOpts().OMPHostIRFile))
         diags.Report(clang::diag::err_omp_host_ir_file_not_found)
@@ -1265,37 +1250,34 @@ static bool parseOpenMPArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
     }
 
     if (args.hasFlag(
-            clang::driver::options::OPT_fopenmp_assume_teams_oversubscription,
-            clang::driver::options::
-                OPT_fno_openmp_assume_teams_oversubscription,
+            clang::options::OPT_fopenmp_assume_teams_oversubscription,
+            clang::options::OPT_fno_openmp_assume_teams_oversubscription,
             /*Default=*/false))
       res.getLangOpts().OpenMPTeamSubscription = true;
 
-    if (args.hasArg(clang::driver::options::OPT_fopenmp_assume_no_thread_state))
+    if (args.hasArg(clang::options::OPT_fopenmp_assume_no_thread_state))
       res.getLangOpts().OpenMPNoThreadState = 1;
 
-    if (args.hasArg(
-            clang::driver::options::OPT_fopenmp_assume_no_nested_parallelism))
+    if (args.hasArg(clang::options::OPT_fopenmp_assume_no_nested_parallelism))
       res.getLangOpts().OpenMPNoNestedParallelism = 1;
 
     if (args.hasFlag(
-            clang::driver::options::OPT_fopenmp_assume_threads_oversubscription,
-            clang::driver::options::
-                OPT_fno_openmp_assume_threads_oversubscription,
+            clang::options::OPT_fopenmp_assume_threads_oversubscription,
+            clang::options::OPT_fno_openmp_assume_threads_oversubscription,
             /*Default=*/false))
       res.getLangOpts().OpenMPThreadSubscription = true;
 
-    if ((args.hasArg(clang::driver::options::OPT_fopenmp_target_debug) ||
-         args.hasArg(clang::driver::options::OPT_fopenmp_target_debug_EQ))) {
-      res.getLangOpts().OpenMPTargetDebug = getLastArgIntValue(
-          args, clang::driver::options::OPT_fopenmp_target_debug_EQ,
-          res.getLangOpts().OpenMPTargetDebug, diags);
+    if ((args.hasArg(clang::options::OPT_fopenmp_target_debug) ||
+         args.hasArg(clang::options::OPT_fopenmp_target_debug_EQ))) {
+      res.getLangOpts().OpenMPTargetDebug =
+          getLastArgIntValue(args, clang::options::OPT_fopenmp_target_debug_EQ,
+                             res.getLangOpts().OpenMPTargetDebug, diags);
 
       if (!res.getLangOpts().OpenMPTargetDebug &&
-          args.hasArg(clang::driver::options::OPT_fopenmp_target_debug))
+          args.hasArg(clang::options::OPT_fopenmp_target_debug))
         res.getLangOpts().OpenMPTargetDebug = 1;
     }
-    if (args.hasArg(clang::driver::options::OPT_no_offloadlib))
+    if (args.hasArg(clang::options::OPT_no_offloadlib))
       res.getLangOpts().NoGPULib = 1;
   }
   if (llvm::Triple(res.getTargetOpts().triple).isGPU()) {
@@ -1311,8 +1293,7 @@ static bool parseOpenMPArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
   }
 
   // Get the OpenMP target triples if any.
-  if (auto *arg =
-          args.getLastArg(clang::driver::options::OPT_offload_targets_EQ)) {
+  if (auto *arg = args.getLastArg(clang::options::OPT_offload_targets_EQ)) {
     enum ArchPtrSize { Arch16Bit, Arch32Bit, Arch64Bit };
     auto getArchPtrSize = [](const llvm::Triple &triple) {
       if (triple.isArch16Bit())
@@ -1355,7 +1336,7 @@ static bool parseIntegerOverflowArgs(CompilerInvocation &invoc,
                                      clang::DiagnosticsEngine &diags) {
   Fortran::common::LangOptions &opts = invoc.getLangOpts();
 
-  if (args.getLastArg(clang::driver::options::OPT_fwrapv))
+  if (args.getLastArg(clang::options::OPT_fwrapv))
     opts.setSignedOverflowBehavior(Fortran::common::LangOptions::SOB_Defined);
 
   return true;
@@ -1374,7 +1355,7 @@ static bool parseFloatingPointArgs(CompilerInvocation &invoc,
   Fortran::common::LangOptions &opts = invoc.getLangOpts();
 
   if (const llvm::opt::Arg *a =
-          args.getLastArg(clang::driver::options::OPT_ffp_contract)) {
+          args.getLastArg(clang::options::OPT_ffp_contract)) {
     const llvm::StringRef val = a->getValue();
     enum Fortran::common::LangOptions::FPModeKind fpContractMode;
 
@@ -1391,31 +1372,31 @@ static bool parseFloatingPointArgs(CompilerInvocation &invoc,
     opts.setFPContractMode(fpContractMode);
   }
 
-  if (args.getLastArg(clang::driver::options::OPT_menable_no_infs)) {
+  if (args.getLastArg(clang::options::OPT_menable_no_infs)) {
     opts.NoHonorInfs = true;
   }
 
-  if (args.getLastArg(clang::driver::options::OPT_menable_no_nans)) {
+  if (args.getLastArg(clang::options::OPT_menable_no_nans)) {
     opts.NoHonorNaNs = true;
   }
 
-  if (args.getLastArg(clang::driver::options::OPT_fapprox_func)) {
+  if (args.getLastArg(clang::options::OPT_fapprox_func)) {
     opts.ApproxFunc = true;
   }
 
-  if (args.getLastArg(clang::driver::options::OPT_fno_signed_zeros)) {
+  if (args.getLastArg(clang::options::OPT_fno_signed_zeros)) {
     opts.NoSignedZeros = true;
   }
 
-  if (args.getLastArg(clang::driver::options::OPT_mreassociate)) {
+  if (args.getLastArg(clang::options::OPT_mreassociate)) {
     opts.AssociativeMath = true;
   }
 
-  if (args.getLastArg(clang::driver::options::OPT_freciprocal_math)) {
+  if (args.getLastArg(clang::options::OPT_freciprocal_math)) {
     opts.ReciprocalMath = true;
   }
 
-  if (args.getLastArg(clang::driver::options::OPT_ffast_math)) {
+  if (args.getLastArg(clang::options::OPT_ffast_math)) {
     opts.NoHonorInfs = true;
     opts.NoHonorNaNs = true;
     opts.AssociativeMath = true;
@@ -1425,7 +1406,7 @@ static bool parseFloatingPointArgs(CompilerInvocation &invoc,
     opts.setFPContractMode(Fortran::common::LangOptions::FPM_Fast);
   }
 
-  if (args.hasArg(clang::driver::options::OPT_fno_fast_real_mod))
+  if (args.hasArg(clang::options::OPT_fno_fast_real_mod))
     opts.NoFastRealMod = true;
 
   return true;
@@ -1440,10 +1421,8 @@ static bool parseFloatingPointArgs(CompilerInvocation &invoc,
 /// \param [out] diags DiagnosticsEngine to report erros with
 static bool parseVScaleArgs(CompilerInvocation &invoc, llvm::opt::ArgList &args,
                             clang::DiagnosticsEngine &diags) {
-  const auto *vscaleMin =
-      args.getLastArg(clang::driver::options::OPT_mvscale_min_EQ);
-  const auto *vscaleMax =
-      args.getLastArg(clang::driver::options::OPT_mvscale_max_EQ);
+  const auto *vscaleMin = args.getLastArg(clang::options::OPT_mvscale_min_EQ);
+  const auto *vscaleMax = args.getLastArg(clang::options::OPT_mvscale_max_EQ);
 
   if (!vscaleMin && !vscaleMax)
     return true;
@@ -1491,8 +1470,7 @@ static bool parseLinkerOptionsArgs(CompilerInvocation &invoc,
 
   // TODO: support --dependent-lib on other platforms when MLIR supports
   //       !llvm.dependent.lib
-  if (args.hasArg(clang::driver::options::OPT_dependent_lib) &&
-      !triple.isOSWindows()) {
+  if (args.hasArg(clang::options::OPT_dependent_lib) && !triple.isOSWindows()) {
     const unsigned diagID =
         diags.getCustomDiagID(clang::DiagnosticsEngine::Error,
                               "--dependent-lib is only supported on Windows");
@@ -1500,12 +1478,10 @@ static bool parseLinkerOptionsArgs(CompilerInvocation &invoc,
     return false;
   }
 
-  opts.DependentLibs =
-      args.getAllArgValues(clang::driver::options::OPT_dependent_lib);
+  opts.DependentLibs = args.getAllArgValues(clang::options::OPT_dependent_lib);
 
   // -flto=full/thin option.
-  if (const llvm::opt::Arg *a =
-          args.getLastArg(clang::driver::options::OPT_flto_EQ)) {
+  if (const llvm::opt::Arg *a = args.getLastArg(clang::options::OPT_flto_EQ)) {
     llvm::StringRef s = a->getValue();
     assert((s == "full" || s == "thin") && "Unknown LTO mode.");
     if (s == "full")
@@ -1516,10 +1492,10 @@ static bool parseLinkerOptionsArgs(CompilerInvocation &invoc,
 
   // -ffat-lto-objects
   if (const llvm::opt::Arg *arg =
-          args.getLastArg(clang::driver::options::OPT_ffat_lto_objects,
-                          clang::driver::options::OPT_fno_fat_lto_objects)) {
+          args.getLastArg(clang::options::OPT_ffat_lto_objects,
+                          clang::options::OPT_fno_fat_lto_objects)) {
     opts.PrepareForFatLTO =
-        arg->getOption().matches(clang::driver::options::OPT_ffat_lto_objects);
+        arg->getOption().matches(clang::options::OPT_ffat_lto_objects);
     if (opts.PrepareForFatLTO) {
       assert((opts.PrepareForFullLTO || opts.PrepareForThinLTO) &&
              "Unknown LTO mode");
@@ -1560,8 +1536,8 @@ bool CompilerInvocation::createFromArgs(
       llvm::Triple::normalize(llvm::sys::getDefaultTargetTriple());
 
   // Parse the arguments
-  const llvm::opt::OptTable &opts = clang::driver::getDriverOptTable();
-  llvm::opt::Visibility visibilityMask(clang::driver::options::FC1Option);
+  const llvm::opt::OptTable &opts = clang::getDriverOptTable();
+  llvm::opt::Visibility visibilityMask(clang::options::FC1Option);
   unsigned missingArgIndex, missingArgCount;
   llvm::opt::InputArgList args = opts.ParseArgs(
       commandLineArgs, missingArgIndex, missingArgCount, visibilityMask);
@@ -1574,7 +1550,7 @@ bool CompilerInvocation::createFromArgs(
   }
 
   // Issue errors on unknown arguments
-  for (const auto *a : args.filtered(clang::driver::options::OPT_UNKNOWN)) {
+  for (const auto *a : args.filtered(clang::options::OPT_UNKNOWN)) {
     auto argString = a->getAsString(args);
     std::string nearest;
     if (opts.findNearest(argString, nearest, visibilityMask) > 1)
@@ -1586,15 +1562,15 @@ bool CompilerInvocation::createFromArgs(
   }
 
   // -flang-experimental-hlfir
-  if (args.hasArg(clang::driver::options::OPT_flang_experimental_hlfir) ||
-      args.hasArg(clang::driver::options::OPT_emit_hlfir)) {
+  if (args.hasArg(clang::options::OPT_flang_experimental_hlfir) ||
+      args.hasArg(clang::options::OPT_emit_hlfir)) {
     invoc.loweringOpts.setLowerToHighLevelFIR(true);
   }
 
   // -flang-deprecated-no-hlfir
-  if (args.hasArg(clang::driver::options::OPT_flang_deprecated_no_hlfir) &&
-      !args.hasArg(clang::driver::options::OPT_emit_hlfir)) {
-    if (args.hasArg(clang::driver::options::OPT_flang_experimental_hlfir)) {
+  if (args.hasArg(clang::options::OPT_flang_deprecated_no_hlfir) &&
+      !args.hasArg(clang::options::OPT_emit_hlfir)) {
+    if (args.hasArg(clang::options::OPT_flang_experimental_hlfir)) {
       const unsigned diagID = diags.getCustomDiagID(
           clang::DiagnosticsEngine::Error,
           "Options '-flang-experimental-hlfir' and "
@@ -1605,13 +1581,13 @@ bool CompilerInvocation::createFromArgs(
   }
 
   // -fno-ppc-native-vector-element-order
-  if (args.hasArg(clang::driver::options::OPT_fno_ppc_native_vec_elem_order)) {
+  if (args.hasArg(clang::options::OPT_fno_ppc_native_vec_elem_order)) {
     invoc.loweringOpts.setNoPPCNativeVecElemOrder(true);
   }
 
   // -f[no-]init-global-zero
-  if (args.hasFlag(clang::driver::options::OPT_finit_global_zero,
-                   clang::driver::options::OPT_fno_init_global_zero,
+  if (args.hasFlag(clang::options::OPT_finit_global_zero,
+                   clang::options::OPT_fno_init_global_zero,
                    /*default=*/true))
     invoc.loweringOpts.setInitGlobalZero(true);
   else
@@ -1620,8 +1596,8 @@ bool CompilerInvocation::createFromArgs(
   // Preserve all the remark options requested, i.e. -Rpass, -Rpass-missed or
   // -Rpass-analysis. This will be used later when processing and outputting the
   // remarks generated by LLVM in ExecuteCompilerInvocation.cpp.
-  for (auto *a : args.filtered(clang::driver::options::OPT_R_Group)) {
-    if (a->getOption().matches(clang::driver::options::OPT_R_value_Group))
+  for (auto *a : args.filtered(clang::options::OPT_R_Group)) {
+    if (a->getOption().matches(clang::options::OPT_R_value_Group))
       // This is -Rfoo=, where foo is the name of the diagnostic
       // group. Add only the remark option name to the diagnostics. e.g. for
       // -Rpass= we will add the string "pass".
@@ -1634,20 +1610,19 @@ bool CompilerInvocation::createFromArgs(
   }
 
   // -frealloc-lhs is the default.
-  if (!args.hasFlag(clang::driver::options::OPT_frealloc_lhs,
-                    clang::driver::options::OPT_fno_realloc_lhs, true))
+  if (!args.hasFlag(clang::options::OPT_frealloc_lhs,
+                    clang::options::OPT_fno_realloc_lhs, true))
     invoc.loweringOpts.setReallocateLHS(false);
 
-  invoc.loweringOpts.setRepackArrays(
-      args.hasFlag(clang::driver::options::OPT_frepack_arrays,
-                   clang::driver::options::OPT_fno_repack_arrays,
-                   /*default=*/false));
+  invoc.loweringOpts.setRepackArrays(args.hasFlag(
+      clang::options::OPT_frepack_arrays, clang::options::OPT_fno_repack_arrays,
+      /*default=*/false));
   invoc.loweringOpts.setStackRepackArrays(
-      args.hasFlag(clang::driver::options::OPT_fstack_repack_arrays,
-                   clang::driver::options::OPT_fno_stack_repack_arrays,
+      args.hasFlag(clang::options::OPT_fstack_repack_arrays,
+                   clang::options::OPT_fno_stack_repack_arrays,
                    /*default=*/false));
-  if (auto *arg = args.getLastArg(
-          clang::driver::options::OPT_frepack_arrays_contiguity_EQ))
+  if (auto *arg =
+          args.getLastArg(clang::options::OPT_frepack_arrays_contiguity_EQ))
     invoc.loweringOpts.setRepackArraysWhole(arg->getValue() ==
                                             llvm::StringRef{"whole"});
 
@@ -1667,10 +1642,8 @@ bool CompilerInvocation::createFromArgs(
   // `mlirArgs`. Instead, you can use
   //    * `-mllvm <your-llvm-option>`, or
   //    * `-mmlir <your-mlir-option>`.
-  invoc.frontendOpts.llvmArgs =
-      args.getAllArgValues(clang::driver::options::OPT_mllvm);
-  invoc.frontendOpts.mlirArgs =
-      args.getAllArgValues(clang::driver::options::OPT_mmlir);
+  invoc.frontendOpts.llvmArgs = args.getAllArgValues(clang::options::OPT_mllvm);
+  invoc.frontendOpts.mlirArgs = args.getAllArgValues(clang::options::OPT_mmlir);
 
   success &= parseLangOptionsArgs(invoc, args, diags);
 
@@ -1694,7 +1667,7 @@ bool CompilerInvocation::createFromArgs(
   }
 
   // Process the timing-related options.
-  if (args.hasArg(clang::driver::options::OPT_ftime_report))
+  if (args.hasArg(clang::options::OPT_ftime_report))
     invoc.enableTimers = true;
 
   invoc.setArgv0(argv0);

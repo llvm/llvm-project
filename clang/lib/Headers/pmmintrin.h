@@ -166,7 +166,7 @@ _mm_moveldup_ps(__m128 __a)
 ///    A 128-bit vector of [2 x double] containing the right source operand.
 /// \returns A 128-bit vector of [2 x double] containing the alternating sums
 ///    and differences of both operands.
-static __inline__ __m128d __DEFAULT_FN_ATTRS_CONSTEXPR
+static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_addsub_pd(__m128d __a, __m128d __b) {
   return __builtin_ia32_addsubpd((__v2df)__a, (__v2df)__b);
 }

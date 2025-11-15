@@ -20,7 +20,6 @@
 #include "llvm/MC/SectionKind.h"
 #include "llvm/Support/SMLoc.h"
 #include <cstdint>
-#include <utility>
 
 using namespace llvm;
 

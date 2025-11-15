@@ -29,7 +29,6 @@
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
 #include <memory>
-#include <string>
 #include <utility>
 
 using namespace llvm;
@@ -148,21 +147,27 @@ GlobalVariable *createBinDesc(Module &M, ArrayRef<ArrayRef<char>> Bufs,
     Image->setAlignment(Align(object::OffloadBinary::getAlignment()));
 
     StringRef Binary(Buf.data(), Buf.size());
-    assert(identify_magic(Binary) == file_magic::offload_binary &&
-           "Invalid binary format");
 
+    uint64_t BeginOffset = 0;
+    uint64_t EndOffset = Binary.size();
+
+    // Optionally use an offload binary for its offload dumping support.
     // The device image struct contains the pointer to the beginning and end of
     // the image stored inside of the offload binary. There should only be one
     // of these for each buffer so we parse it out manually.
-    const auto *Header =
-        reinterpret_cast<const object::OffloadBinary::Header *>(
-            Binary.bytes_begin());
-    const auto *Entry = reinterpret_cast<const object::OffloadBinary::Entry *>(
-        Binary.bytes_begin() + Header->EntryOffset);
+    if (identify_magic(Binary) == file_magic::offload_binary) {
+      const auto *Header =
+          reinterpret_cast<const object::OffloadBinary::Header *>(
+              Binary.bytes_begin());
+      const auto *Entry =
+          reinterpret_cast<const object::OffloadBinary::Entry *>(
+              Binary.bytes_begin() + Header->EntryOffset);
+      BeginOffset = Entry->ImageOffset;
+      EndOffset = Entry->ImageOffset + Entry->ImageSize;
+    }
 
-    auto *Begin = ConstantInt::get(getSizeTTy(M), Entry->ImageOffset);
-    auto *Size =
-        ConstantInt::get(getSizeTTy(M), Entry->ImageOffset + Entry->ImageSize);
+    auto *Begin = ConstantInt::get(getSizeTTy(M), BeginOffset);
+    auto *Size = ConstantInt::get(getSizeTTy(M), EndOffset);
     Constant *ZeroBegin[] = {Zero, Begin};
     Constant *ZeroSize[] = {Zero, Size};
 

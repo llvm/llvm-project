@@ -204,7 +204,7 @@ public:
   LLVM_ABI void scheduleMapGlobalInitializer(GlobalVariable &GV, Constant &Init,
                                              unsigned MappingContextID = 0);
   LLVM_ABI void scheduleMapAppendingVariable(GlobalVariable &GV,
-                                             Constant *InitPrefix,
+                                             GlobalVariable *OldGV,
                                              bool IsOldCtorDtor,
                                              ArrayRef<Constant *> NewMembers,
                                              unsigned MappingContextID = 0);

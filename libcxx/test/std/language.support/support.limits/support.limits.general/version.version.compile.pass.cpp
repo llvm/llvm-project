@@ -7310,7 +7310,7 @@
 #    endif
 #  endif
 
-#  if !defined(_LIBCPP_VERSION)
+#  if __has_builtin(__builtin_is_within_lifetime)
 #    ifndef __cpp_lib_is_within_lifetime
 #      error "__cpp_lib_is_within_lifetime should be defined in c++26"
 #    endif
@@ -7319,7 +7319,7 @@
 #    endif
 #  else
 #    ifdef __cpp_lib_is_within_lifetime
-#      error "__cpp_lib_is_within_lifetime should not be defined because it is unimplemented in libc++!"
+#      error "__cpp_lib_is_within_lifetime should not be defined when the requirement '__has_builtin(__builtin_is_within_lifetime)' is not met!"
 #    endif
 #  endif
 
@@ -7509,8 +7509,8 @@
 #  ifndef __cpp_lib_optional
 #    error "__cpp_lib_optional should be defined in c++26"
 #  endif
-#  if __cpp_lib_optional != 202110L
-#    error "__cpp_lib_optional should have the value 202110L in c++26"
+#  if __cpp_lib_optional != 202506L
+#    error "__cpp_lib_optional should have the value 202506L in c++26"
 #  endif
 
 #  ifndef __cpp_lib_optional_range_support

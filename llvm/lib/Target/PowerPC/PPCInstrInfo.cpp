@@ -89,7 +89,7 @@ static cl::opt<bool> EnableFMARegPressureReduction(
 void PPCInstrInfo::anchor() {}
 
 PPCInstrInfo::PPCInstrInfo(const PPCSubtarget &STI)
-    : PPCGenInstrInfo(STI, PPC::ADJCALLSTACKDOWN, PPC::ADJCALLSTACKUP,
+    : PPCGenInstrInfo(STI, RI, PPC::ADJCALLSTACKDOWN, PPC::ADJCALLSTACKUP,
                       /* CatchRetOpcode */ -1,
                       STI.isPPC64() ? PPC::BLR8 : PPC::BLR),
       Subtarget(STI), RI(STI.getTargetMachine()) {}
@@ -2014,8 +2014,7 @@ void PPCInstrInfo::StoreRegToStackSlot(
 
 void PPCInstrInfo::storeRegToStackSlotNoUpd(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, unsigned SrcReg,
-    bool isKill, int FrameIdx, const TargetRegisterClass *RC,
-    const TargetRegisterInfo *TRI) const {
+    bool isKill, int FrameIdx, const TargetRegisterClass *RC) const {
   MachineFunction &MF = *MBB.getParent();
   SmallVector<MachineInstr *, 4> NewMIs;
 
@@ -2034,8 +2033,7 @@ void PPCInstrInfo::storeRegToStackSlotNoUpd(
 
 void PPCInstrInfo::storeRegToStackSlot(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register SrcReg,
-    bool isKill, int FrameIdx, const TargetRegisterClass *RC,
-    const TargetRegisterInfo *TRI, Register VReg,
+    bool isKill, int FrameIdx, const TargetRegisterClass *RC, Register VReg,
     MachineInstr::MIFlag Flags) const {
   // We need to avoid a situation in which the value from a VRRC register is
   // spilled using an Altivec instruction and reloaded into a VSRC register
@@ -2045,7 +2043,7 @@ void PPCInstrInfo::storeRegToStackSlot(
   // the register is defined using an Altivec instruction and is then used by a
   // VSX instruction.
   RC = updatedRC(RC);
-  storeRegToStackSlotNoUpd(MBB, MI, SrcReg, isKill, FrameIdx, RC, TRI);
+  storeRegToStackSlotNoUpd(MBB, MI, SrcReg, isKill, FrameIdx, RC);
 }
 
 void PPCInstrInfo::LoadRegFromStackSlot(MachineFunction &MF, const DebugLoc &DL,
@@ -2060,8 +2058,7 @@ void PPCInstrInfo::LoadRegFromStackSlot(MachineFunction &MF, const DebugLoc &DL,
 
 void PPCInstrInfo::loadRegFromStackSlotNoUpd(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, unsigned DestReg,
-    int FrameIdx, const TargetRegisterClass *RC,
-    const TargetRegisterInfo *TRI) const {
+    int FrameIdx, const TargetRegisterClass *RC) const {
   MachineFunction &MF = *MBB.getParent();
   SmallVector<MachineInstr*, 4> NewMIs;
   DebugLoc DL;
@@ -2080,10 +2077,12 @@ void PPCInstrInfo::loadRegFromStackSlotNoUpd(
   NewMIs.back()->addMemOperand(MF, MMO);
 }
 
-void PPCInstrInfo::loadRegFromStackSlot(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register DestReg,
-    int FrameIdx, const TargetRegisterClass *RC, const TargetRegisterInfo *TRI,
-    Register VReg, MachineInstr::MIFlag Flags) const {
+void PPCInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
+                                        MachineBasicBlock::iterator MI,
+                                        Register DestReg, int FrameIdx,
+                                        const TargetRegisterClass *RC,
+                                        Register VReg,
+                                        MachineInstr::MIFlag Flags) const {
   // We need to avoid a situation in which the value from a VRRC register is
   // spilled using an Altivec instruction and reloaded into a VSRC register
   // using a VSX instruction. The issue with this is that the VSX
@@ -2093,7 +2092,7 @@ void PPCInstrInfo::loadRegFromStackSlot(
   // VSX instruction.
   RC = updatedRC(RC);
 
-  loadRegFromStackSlotNoUpd(MBB, MI, DestReg, FrameIdx, RC, TRI);
+  loadRegFromStackSlotNoUpd(MBB, MI, DestReg, FrameIdx, RC);
 }
 
 bool PPCInstrInfo::

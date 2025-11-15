@@ -59,6 +59,11 @@ except ImportError:
 // Parameter types will be used in the autodoc string.
 %feature("autodoc", "1");
 
+// Include lldb-python first as it sets Py_LIMITED_API.
+%begin %{
+#include "../source/Plugins/ScriptInterpreter/Python/lldb-python.h"
+%}
+
 %pythoncode%{
 import uuid
 import re

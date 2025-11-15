@@ -722,39 +722,27 @@ define i1 @ne_v4i256(<4 x i256> %a0) {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    movq {{[0-9]+}}(%rsp), %rax
 ; AVX512-NEXT:    movq {{[0-9]+}}(%rsp), %r10
-; AVX512-NEXT:    orq {{[0-9]+}}(%rsp), %rax
-; AVX512-NEXT:    vmovd %eax, %xmm0
-; AVX512-NEXT:    shrq $32, %rax
-; AVX512-NEXT:    vpinsrd $1, %eax, %xmm0, %xmm0
 ; AVX512-NEXT:    orq {{[0-9]+}}(%rsp), %r10
-; AVX512-NEXT:    vpinsrd $2, %r10d, %xmm0, %xmm0
-; AVX512-NEXT:    shrq $32, %r10
-; AVX512-NEXT:    vpinsrd $3, %r10d, %xmm0, %xmm0
-; AVX512-NEXT:    orq {{[0-9]+}}(%rsp), %r8
-; AVX512-NEXT:    vmovd %r8d, %xmm1
-; AVX512-NEXT:    shrq $32, %r8
-; AVX512-NEXT:    vpinsrd $1, %r8d, %xmm1, %xmm1
+; AVX512-NEXT:    vmovq %r10, %xmm0
+; AVX512-NEXT:    orq {{[0-9]+}}(%rsp), %rax
+; AVX512-NEXT:    vmovq %rax, %xmm1
+; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
 ; AVX512-NEXT:    orq {{[0-9]+}}(%rsp), %r9
-; AVX512-NEXT:    vpinsrd $2, %r9d, %xmm1, %xmm1
-; AVX512-NEXT:    shrq $32, %r9
-; AVX512-NEXT:    vpinsrd $3, %r9d, %xmm1, %xmm1
+; AVX512-NEXT:    vmovq %r9, %xmm1
+; AVX512-NEXT:    orq {{[0-9]+}}(%rsp), %r8
+; AVX512-NEXT:    vmovq %r8, %xmm2
+; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
 ; AVX512-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
-; AVX512-NEXT:    orq {{[0-9]+}}(%rsp), %rdx
-; AVX512-NEXT:    vmovd %edx, %xmm1
-; AVX512-NEXT:    shrq $32, %rdx
-; AVX512-NEXT:    vpinsrd $1, %edx, %xmm1, %xmm1
 ; AVX512-NEXT:    orq {{[0-9]+}}(%rsp), %rcx
-; AVX512-NEXT:    vpinsrd $2, %ecx, %xmm1, %xmm1
-; AVX512-NEXT:    shrq $32, %rcx
-; AVX512-NEXT:    vpinsrd $3, %ecx, %xmm1, %xmm1
-; AVX512-NEXT:    orq {{[0-9]+}}(%rsp), %rdi
-; AVX512-NEXT:    vmovd %edi, %xmm2
-; AVX512-NEXT:    shrq $32, %rdi
-; AVX512-NEXT:    vpinsrd $1, %edi, %xmm2, %xmm2
+; AVX512-NEXT:    vmovq %rcx, %xmm1
+; AVX512-NEXT:    orq {{[0-9]+}}(%rsp), %rdx
+; AVX512-NEXT:    vmovq %rdx, %xmm2
+; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
 ; AVX512-NEXT:    orq {{[0-9]+}}(%rsp), %rsi
-; AVX512-NEXT:    vpinsrd $2, %esi, %xmm2, %xmm2
-; AVX512-NEXT:    shrq $32, %rsi
-; AVX512-NEXT:    vpinsrd $3, %esi, %xmm2, %xmm2
+; AVX512-NEXT:    vmovq %rsi, %xmm2
+; AVX512-NEXT:    orq {{[0-9]+}}(%rsp), %rdi
+; AVX512-NEXT:    vmovq %rdi, %xmm3
+; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm3[0],xmm2[0]
 ; AVX512-NEXT:    vinserti128 $1, %xmm1, %ymm2, %ymm1
 ; AVX512-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
 ; AVX512-NEXT:    vptestmd %zmm0, %zmm0, %k0

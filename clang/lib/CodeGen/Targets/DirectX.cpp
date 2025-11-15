@@ -29,14 +29,13 @@ public:
   DirectXTargetCodeGenInfo(CodeGen::CodeGenTypes &CGT)
       : TargetCodeGenInfo(std::make_unique<DefaultABIInfo>(CGT)) {}
 
-  llvm::Type *
-  getHLSLType(CodeGenModule &CGM, const Type *T,
-              const SmallVector<int32_t> *Packoffsets = nullptr) const override;
+  llvm::Type *getHLSLType(CodeGenModule &CGM, const Type *T,
+                          const CGHLSLOffsetInfo &OffsetInfo) const override;
 };
 
 llvm::Type *DirectXTargetCodeGenInfo::getHLSLType(
     CodeGenModule &CGM, const Type *Ty,
-    const SmallVector<int32_t> *Packoffsets) const {
+    const CGHLSLOffsetInfo &OffsetInfo) const {
   auto *ResType = dyn_cast<HLSLAttributedResourceType>(Ty);
   if (!ResType)
     return nullptr;
@@ -78,7 +77,7 @@ llvm::Type *DirectXTargetCodeGenInfo::getHLSLType(
     llvm::Type *BufferLayoutTy =
         HLSLBufferLayoutBuilder(CGM, "dx.Layout")
             .createLayoutType(ContainedTy->castAsCanonical<RecordType>(),
-                              Packoffsets);
+                              OffsetInfo);
     if (!BufferLayoutTy)
       return nullptr;
 

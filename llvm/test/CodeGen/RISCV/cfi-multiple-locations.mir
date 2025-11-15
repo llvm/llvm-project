@@ -1,0 +1,35 @@
+# RUN: llc %s -mtriple=riscv64 \
+# RUN: -run-pass=cfi-instr-inserter \
+# RUN: -riscv-enable-cfi-instr-inserter=true
+# XFAIL: *
+
+# Technically, it is possible that a callee-saved register is saved in multiple different locations.
+# CFIInstrInserter should handle this, but currently it does not.
+---
+name: multiple_locations
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10, $x9, $x2
+    BEQ $x10, $x0, %bb.3
+    PseudoBR %bb.2
+
+  bb.1:
+    liveins: $x10, $x9, $x2
+    $x5 = COPY $x9
+    CFI_INSTRUCTION register $x9, $x5
+    $x9 = COPY $x5
+    CFI_INSTRUCTION register $x9, $x9
+    PseudoBR %bb.3
+
+  bb.2:
+    liveins: $x10, $x9, $x2
+    SD $x9, $x2, 0 :: (store (s64))
+    CFI_INSTRUCTION offset $x9, 0
+    $x9  = LD $x2, 0 :: (load (s64))
+    CFI_INSTRUCTION register $x9, $x9
+    PseudoBR %bb.3
+
+  bb.3:
+    PseudoRET
+...

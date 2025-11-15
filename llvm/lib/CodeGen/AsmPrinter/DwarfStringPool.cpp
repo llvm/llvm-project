@@ -13,7 +13,6 @@
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCStreamer.h"
 #include <cassert>
-#include <utility>
 
 using namespace llvm;
 

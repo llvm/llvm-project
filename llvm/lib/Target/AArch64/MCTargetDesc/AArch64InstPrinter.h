@@ -156,6 +156,9 @@ protected:
   void printCMHPriorityHintOp(const MCInst *MI, unsigned OpNum,
                               const MCSubtargetInfo &STI, raw_ostream &O);
 
+  void printTIndexHintOp(const MCInst *MI, unsigned OpNum,
+                         const MCSubtargetInfo &STI, raw_ostream &O);
+
   void printFPImmOperand(const MCInst *MI, unsigned OpNum,
                          const MCSubtargetInfo &STI, raw_ostream &O);
 

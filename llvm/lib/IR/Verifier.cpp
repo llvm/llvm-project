@@ -136,9 +136,7 @@ static cl::opt<bool> VerifyNoAliasScopeDomination(
     cl::desc("Ensure that llvm.experimental.noalias.scope.decl for identical "
              "scopes are not dominating"));
 
-namespace llvm {
-
-struct VerifierSupport {
+struct llvm::VerifierSupport {
   raw_ostream *OS;
   const Module &M;
   ModuleSlotTracker MST;
@@ -317,8 +315,6 @@ public:
       WriteTs(V1, Vs...);
   }
 };
-
-} // namespace llvm
 
 namespace {
 
@@ -1563,11 +1559,27 @@ void Verifier::visitDISubprogram(const DISubprogram &N) {
     auto *Node = dyn_cast<MDTuple>(RawNode);
     CheckDI(Node, "invalid retained nodes list", &N, RawNode);
     for (Metadata *Op : Node->operands()) {
-      CheckDI(Op && (isa<DILocalVariable>(Op) || isa<DILabel>(Op) ||
-                     isa<DIImportedEntity>(Op)),
+      CheckDI(Op, "nullptr in retained nodes", &N, Node);
+
+      auto True = [](const Metadata *) { return true; };
+      auto False = [](const Metadata *) { return false; };
+      bool IsTypeCorrect =
+          DISubprogram::visitRetainedNode<bool>(Op, True, True, True, False);
+      CheckDI(IsTypeCorrect,
               "invalid retained nodes, expected DILocalVariable, DILabel or "
               "DIImportedEntity",
               &N, Node, Op);
+
+      auto *RetainedNode = cast<DINode>(Op);
+      auto *RetainedNodeScope = dyn_cast_or_null<DILocalScope>(
+          DISubprogram::getRawRetainedNodeScope(RetainedNode));
+      CheckDI(RetainedNodeScope,
+              "invalid retained nodes, retained node is not local", &N, Node,
+              RetainedNode);
+      CheckDI(
+          RetainedNodeScope->getSubprogram() == &N,
+          "invalid retained nodes, retained node does not belong to subprogram",
+          &N, Node, RetainedNode, RetainedNodeScope);
     }
   }
   CheckDI(!hasConflictingReferenceFlags(N.getFlags()),
@@ -2484,7 +2496,8 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
 
   if (Attribute FPAttr = Attrs.getFnAttr("frame-pointer"); FPAttr.isValid()) {
     StringRef FP = FPAttr.getValueAsString();
-    if (FP != "all" && FP != "non-leaf" && FP != "none" && FP != "reserved")
+    if (FP != "all" && FP != "non-leaf" && FP != "none" && FP != "reserved" &&
+        FP != "non-leaf-no-reserve")
       CheckFailed("invalid value for 'frame-pointer' attribute: " + FP, V);
   }
 
@@ -2553,6 +2566,20 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
     if (!parseDenormalFPAttribute(S).isValid())
       CheckFailed("invalid value for 'denormal-fp-math-f32' attribute: " + S,
                   V);
+  }
+
+  if (auto A = Attrs.getFnAttr("modular-format"); A.isValid()) {
+    StringRef S = A.getValueAsString();
+    SmallVector<StringRef> Args;
+    S.split(Args, ',');
+    Check(Args.size() >= 5,
+          "modular-format attribute requires at least 5 arguments", V);
+    unsigned FirstArgIdx;
+    Check(!Args[2].getAsInteger(10, FirstArgIdx),
+          "modular-format attribute first arg index is not an integer", V);
+    unsigned UpperBound = FT->getNumParams() + (FT->isVarArg() ? 1 : 0);
+    Check(FirstArgIdx > 0 && FirstArgIdx <= UpperBound,
+          "modular-format attribute first arg index is out of bounds", V);
   }
 }
 void Verifier::verifyUnknownProfileMetadata(MDNode *MD) {
@@ -6017,6 +6044,12 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     Check(cast<ConstantInt>(Call.getArgOperand(3))->getZExtValue() < 2,
           "cache type argument to llvm.prefetch must be 0-1", Call);
     break;
+  case Intrinsic::reloc_none: {
+    Check(isa<MDString>(
+              cast<MetadataAsValue>(Call.getArgOperand(0))->getMetadata()),
+          "llvm.reloc.none argument must be a metadata string", &Call);
+    break;
+  }
   case Intrinsic::stackprotector:
     Check(isa<AllocaInst>(Call.getArgOperand(1)->stripPointerCasts()),
           "llvm.stackprotector parameter #2 must resolve to an alloca.", Call);
@@ -6581,6 +6614,7 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     }
     break;
   }
+  case Intrinsic::vector_partial_reduce_fadd:
   case Intrinsic::vector_partial_reduce_add: {
     VectorType *AccTy = cast<VectorType>(Call.getArgOperand(0)->getType());
     VectorType *VecTy = cast<VectorType>(Call.getArgOperand(1)->getType());

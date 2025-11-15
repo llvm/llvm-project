@@ -193,7 +193,6 @@ void ReachingDefInfo::processDefs(MachineInstr *MI) {
   for (auto &MO : MI->operands()) {
     if (MO.isFI()) {
       int FrameIndex = MO.getIndex();
-      assert(FrameIndex >= 0 && "Can't handle negative frame indicies yet!");
       if (!isFIDef(*MI, FrameIndex, TII))
         continue;
       MBBFrameObjsReachingDefs[{MBBNumber, FrameIndex}].push_back(CurInstr);
@@ -302,8 +301,6 @@ void ReachingDefInfo::print(raw_ostream &OS) {
         Register Reg;
         if (MO.isFI()) {
           int FrameIndex = MO.getIndex();
-          assert(FrameIndex >= 0 &&
-                 "Can't handle negative frame indicies yet!");
           Reg = Register::index2StackSlot(FrameIndex);
         } else if (MO.isReg()) {
           if (MO.isDef())

@@ -22,10 +22,11 @@ private:
     virtual ~DirectResultSender() {}
     virtual void send(orc_rt_SessionRef Session,
                       orc_rt::WrapperFunctionBuffer ResultBytes) = 0;
-    static void send(orc_rt_SessionRef Session, void *CallCtx,
+    static void send(orc_rt_SessionRef Session, uint64_t CallId,
                      orc_rt_WrapperFunctionBuffer ResultBytes) {
       std::unique_ptr<DirectResultSender>(
-          reinterpret_cast<DirectResultSender *>(CallCtx))
+          reinterpret_cast<DirectResultSender *>(
+              static_cast<uintptr_t>(CallId)))
           ->send(Session, ResultBytes);
     }
   };
@@ -59,7 +60,8 @@ public:
                   orc_rt::WrapperFunctionBuffer ArgBytes) {
     auto DR =
         makeDirectResultSender(std::forward<HandleResultFn>(HandleResult));
-    Fn(Session, reinterpret_cast<void *>(DR.release()),
+    Fn(Session,
+       static_cast<uint64_t>(reinterpret_cast<uintptr_t>(DR.release())),
        DirectResultSender::send, ArgBytes.release());
   }
 

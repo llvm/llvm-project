@@ -1378,8 +1378,7 @@ static bool foldMemChr(CallInst *Call, DomTreeUpdater *DTU,
       IRB.CreateTrunc(Call->getArgOperand(1), ByteTy), BBNext, N);
   // We can't know the precise weights here, as they would depend on the value
   // distribution of Call->getArgOperand(1). So we just mark it as "unknown".
-  setExplicitlyUnknownBranchWeightsIfProfiled(*SI, *Call->getFunction(),
-                                              DEBUG_TYPE);
+  setExplicitlyUnknownBranchWeightsIfProfiled(*SI, DEBUG_TYPE);
   Type *IndexTy = DL.getIndexType(Call->getType());
   SmallVector<DominatorTree::UpdateType, 8> Updates;
 

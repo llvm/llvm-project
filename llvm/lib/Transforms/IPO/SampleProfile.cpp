@@ -83,7 +83,6 @@
 #include <cstdint>
 #include <functional>
 #include <limits>
-#include <map>
 #include <memory>
 #include <queue>
 #include <string>
@@ -2293,7 +2292,6 @@ bool SampleProfileLoader::runOnFunction(Function &F,
   // count value.
   if (!F.getEntryCount())
     F.setEntryCount(ProfileCount(initialEntryCount, Function::PCT_Real));
-  std::unique_ptr<OptimizationRemarkEmitter> OwnedORE;
   auto &FAM = AM.getResult<FunctionAnalysisManagerModuleProxy>(*F.getParent())
                   .getManager();
   ORE = &FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);

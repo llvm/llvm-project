@@ -41,8 +41,7 @@ namespace {
 static bool isAssumedSize(mlir::ValueRange shape) {
   if (shape.size() != 1)
     return false;
-  std::optional<std::int64_t> val = fir::getIntIfConstant(shape[0]);
-  if (val && *val == -1)
+  if (llvm::isa_and_nonnull<fir::AssumedSizeExtentOp>(shape[0].getDefiningOp()))
     return true;
   return false;
 }

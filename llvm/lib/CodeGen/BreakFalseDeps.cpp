@@ -133,7 +133,7 @@ bool BreakFalseDeps::pickBestRegisterForUndef(MachineInstr *MI, unsigned OpIdx,
   }
 
   // Get the undef operand's register class
-  const TargetRegisterClass *OpRC = TII->getRegClass(MI->getDesc(), OpIdx, TRI);
+  const TargetRegisterClass *OpRC = TII->getRegClass(MI->getDesc(), OpIdx);
   assert(OpRC && "Not a valid register class");
 
   // If the instruction has a true dependency, we can hide the false depdency

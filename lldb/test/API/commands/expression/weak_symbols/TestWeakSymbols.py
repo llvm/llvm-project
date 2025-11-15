@@ -15,7 +15,7 @@ class TestWeakSymbolsInExpressions(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     @skipUnlessDarwin
-    @skipIf(compiler="clang", compiler_version=["<", "7.0"])
+    @skipIf(compiler="clang", compiler_version=["<", "19.0"])
     def test_weak_symbol_in_expr(self):
         """Tests that we can refer to weak symbols in expressions."""
         self.build()

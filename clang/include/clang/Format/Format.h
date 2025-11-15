@@ -601,9 +601,19 @@ struct FormatStyle {
     ///   int abcdef; // but this isn't
     /// \endcode
     unsigned OverEmptyLines;
+    /// If comments following preprocessor directive should be aligned with
+    /// comments that don't.
+    /// \code
+    ///   true:                               false:
+    ///   #define A  // Comment   vs.         #define A  // Comment
+    ///   #define AB // Aligned               #define AB // Aligned
+    ///   int i;     // Aligned               int i; // Not aligned
+    /// \endcode
+    bool AlignPPAndNotPP;
 
     bool operator==(const TrailingCommentsAlignmentStyle &R) const {
-      return Kind == R.Kind && OverEmptyLines == R.OverEmptyLines;
+      return Kind == R.Kind && OverEmptyLines == R.OverEmptyLines &&
+             AlignPPAndNotPP == R.AlignPPAndNotPP;
     }
     bool operator!=(const TrailingCommentsAlignmentStyle &R) const {
       return !(*this == R);

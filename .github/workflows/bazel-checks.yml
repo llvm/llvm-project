@@ -30,3 +30,32 @@ jobs:
       - name: Run Buildifier
         run: |
           buildifier --mode=check $(find ./utils/bazel -name *BUILD*)
+  
+  bazel-build:
+    name: "Bazel Build/Test"
+    # Only run on US Central workers so we only have to keep one cache warm as
+    # the cache buckets are per cluster.
+    runs-on:
+      group: llvm-premerge-cluster-us-central
+      labels: llvm-premerge-linux-runners
+    if: github.repository == 'llvm/llvm-project'
+    steps:
+      - name: Fetch LLVM sources
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        # TODO(boomanaiden154): We should use a purpose built container for this. Move
+        # over when we have fixed the issues with using custom containers with Github
+        # ARC in GKE.
+      - name: Setup System Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libmpfr-dev libpfm4-dev m4 libedit-dev
+          sudo curl -L https://github.com/bazelbuild/bazelisk/releases/download/v1.27.0/bazelisk-amd64.deb > /tmp/bazelisk.deb
+          sudo apt-get install -y /tmp/bazelisk.deb
+          rm /tmp/bazelisk.deb
+      - name: Build/Test
+        working-directory: utils/bazel
+        run: |
+          bazelisk test --config=ci --sandbox_base="" \
+            --remote_cache=https://storage.googleapis.com/$CACHE_GCS_BUCKET-bazel \
+            --google_default_credentials \
+            @llvm-project//... //...

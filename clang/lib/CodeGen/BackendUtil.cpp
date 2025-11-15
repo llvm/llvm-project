@@ -481,6 +481,36 @@ static bool initTargetOptions(const CompilerInstance &CI,
   Options.JMCInstrument = CodeGenOpts.JMCInstrument;
   Options.XCOFFReadOnlyPointers = CodeGenOpts.XCOFFReadOnlyPointers;
 
+  switch (CodeGenOpts.getVecLib()) {
+  case llvm::driver::VectorLibrary::NoLibrary:
+    Options.VecLib = llvm::VectorLibrary::NoLibrary;
+    break;
+  case llvm::driver::VectorLibrary::Accelerate:
+    Options.VecLib = llvm::VectorLibrary::Accelerate;
+    break;
+  case llvm::driver::VectorLibrary::Darwin_libsystem_m:
+    Options.VecLib = llvm::VectorLibrary::DarwinLibSystemM;
+    break;
+  case llvm::driver::VectorLibrary::LIBMVEC:
+    Options.VecLib = llvm::VectorLibrary::LIBMVEC;
+    break;
+  case llvm::driver::VectorLibrary::MASSV:
+    Options.VecLib = llvm::VectorLibrary::MASSV;
+    break;
+  case llvm::driver::VectorLibrary::SVML:
+    Options.VecLib = llvm::VectorLibrary::SVML;
+    break;
+  case llvm::driver::VectorLibrary::SLEEF:
+    Options.VecLib = llvm::VectorLibrary::SLEEFGNUABI;
+    break;
+  case llvm::driver::VectorLibrary::ArmPL:
+    Options.VecLib = llvm::VectorLibrary::ArmPL;
+    break;
+  case llvm::driver::VectorLibrary::AMDLIBM:
+    Options.VecLib = llvm::VectorLibrary::AMDLIBM;
+    break;
+  }
+
   switch (CodeGenOpts.getSwiftAsyncFramePointer()) {
   case CodeGenOptions::SwiftAsyncFramePointerKind::Auto:
     Options.SwiftAsyncFramePointer =
@@ -584,6 +614,7 @@ static void setCommandLineOpts(const CodeGenOptions &CodeGenOpts,
     BackendArgs.push_back("-limit-float-precision");
     BackendArgs.push_back(CodeGenOpts.LimitFloatPrecision.c_str());
   }
+
   // Check for the default "clang" invocation that won't set any cl::opt values.
   // Skip trying to parse the command line invocation to avoid the issues
   // described below.

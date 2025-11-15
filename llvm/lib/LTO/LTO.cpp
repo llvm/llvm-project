@@ -1076,63 +1076,59 @@ Expected<ArrayRef<SymbolResolution>>
 LTO::addThinLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
                 ArrayRef<SymbolResolution> Res) {
   llvm::TimeTraceScope timeScope("LTO add thin LTO");
+  const auto BMID = BM.getModuleIdentifier();
   ArrayRef<SymbolResolution> ResTmp = Res;
   for (const InputFile::Symbol &Sym : Syms) {
     assert(!ResTmp.empty());
     const SymbolResolution &R = ResTmp.consume_front();
 
-    if (!Sym.getIRName().empty()) {
+    if (!Sym.getIRName().empty() && R.Prevailing) {
       auto GUID = GlobalValue::getGUIDAssumingExternalLinkage(
           GlobalValue::getGlobalIdentifier(Sym.getIRName(),
                                            GlobalValue::ExternalLinkage, ""));
-      if (R.Prevailing)
-        ThinLTO.setPrevailingModuleForGUID(GUID, BM.getModuleIdentifier());
+      ThinLTO.setPrevailingModuleForGUID(GUID, BMID);
     }
   }
 
-  if (Error Err =
-          BM.readSummary(ThinLTO.CombinedIndex, BM.getModuleIdentifier(),
-                         [&](GlobalValue::GUID GUID) {
-                           return ThinLTO.isPrevailingModuleForGUID(
-                               GUID, BM.getModuleIdentifier());
-                         }))
+  if (Error Err = BM.readSummary(
+          ThinLTO.CombinedIndex, BMID, [&](GlobalValue::GUID GUID) {
+            return ThinLTO.isPrevailingModuleForGUID(GUID, BMID);
+          }))
     return Err;
-  LLVM_DEBUG(dbgs() << "Module " << BM.getModuleIdentifier() << "\n");
+  LLVM_DEBUG(dbgs() << "Module " << BMID << "\n");
 
   for (const InputFile::Symbol &Sym : Syms) {
     assert(!Res.empty());
     const SymbolResolution &R = Res.consume_front();
 
-    if (!Sym.getIRName().empty()) {
+    if (!Sym.getIRName().empty() &&
+        (R.Prevailing || R.FinalDefinitionInLinkageUnit)) {
       auto GUID = GlobalValue::getGUIDAssumingExternalLinkage(
           GlobalValue::getGlobalIdentifier(Sym.getIRName(),
                                            GlobalValue::ExternalLinkage, ""));
       if (R.Prevailing) {
-        assert(
-            ThinLTO.isPrevailingModuleForGUID(GUID, BM.getModuleIdentifier()));
+        assert(ThinLTO.isPrevailingModuleForGUID(GUID, BMID));
 
         // For linker redefined symbols (via --wrap or --defsym) we want to
         // switch the linkage to `weak` to prevent IPOs from happening.
         // Find the summary in the module for this very GV and record the new
         // linkage so that we can switch it when we import the GV.
         if (R.LinkerRedefined)
-          if (auto S = ThinLTO.CombinedIndex.findSummaryInModule(
-                  GUID, BM.getModuleIdentifier()))
+          if (auto S = ThinLTO.CombinedIndex.findSummaryInModule(GUID, BMID))
             S->setLinkage(GlobalValue::WeakAnyLinkage);
       }
 
       // If the linker resolved the symbol to a local definition then mark it
       // as local in the summary for the module we are adding.
       if (R.FinalDefinitionInLinkageUnit) {
-        if (auto S = ThinLTO.CombinedIndex.findSummaryInModule(
-                GUID, BM.getModuleIdentifier())) {
+        if (auto S = ThinLTO.CombinedIndex.findSummaryInModule(GUID, BMID)) {
           S->setDSOLocal(true);
         }
       }
     }
   }
 
-  if (!ThinLTO.ModuleMap.insert({BM.getModuleIdentifier(), BM}).second)
+  if (!ThinLTO.ModuleMap.insert({BMID, BM}).second)
     return make_error<StringError>(
         "Expected at most one ThinLTO module per bitcode file",
         inconvertibleErrorCode());
@@ -1143,10 +1139,10 @@ LTO::addThinLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
     // This is a fuzzy name matching where only modules with name containing the
     // specified switch values are going to be compiled.
     for (const std::string &Name : Conf.ThinLTOModulesToCompile) {
-      if (BM.getModuleIdentifier().contains(Name)) {
-        ThinLTO.ModulesToCompile->insert({BM.getModuleIdentifier(), BM});
-        LLVM_DEBUG(dbgs() << "[ThinLTO] Selecting " << BM.getModuleIdentifier()
-                          << " to compile\n");
+      if (BMID.contains(Name)) {
+        ThinLTO.ModulesToCompile->insert({BMID, BM});
+        LLVM_DEBUG(dbgs() << "[ThinLTO] Selecting " << BMID << " to compile\n");
+        break;
       }
     }
   }
@@ -1400,11 +1396,10 @@ Error LTO::runRegularLTO(AddStreamFn AddStream) {
 SmallVector<const char *> LTO::getRuntimeLibcallSymbols(const Triple &TT) {
   RTLIB::RuntimeLibcallsInfo Libcalls(TT);
   SmallVector<const char *> LibcallSymbols;
-  ArrayRef<RTLIB::LibcallImpl> LibcallImpls = Libcalls.getLibcallImpls();
-  LibcallSymbols.reserve(LibcallImpls.size());
+  LibcallSymbols.reserve(Libcalls.getNumAvailableLibcallImpls());
 
-  for (RTLIB::LibcallImpl Impl : LibcallImpls) {
-    if (Impl != RTLIB::Unsupported)
+  for (RTLIB::LibcallImpl Impl : RTLIB::libcall_impls()) {
+    if (Libcalls.isAvailable(Impl))
       LibcallSymbols.push_back(Libcalls.getLibcallImplName(Impl).data());
   }
 

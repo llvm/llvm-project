@@ -11,7 +11,7 @@ module m
       real :: x
     end function
     character(:) function char_func(x)
-      pointer :: char_func 
+      pointer :: char_func
       integer :: x
     end function
     subroutine sub(x)
@@ -148,7 +148,7 @@ subroutine  sub5()
 use m
   procedure(real), pointer :: p3
 
-  p3 => real_func 
+  p3 => real_func
 ! CHECK: %[[VAL_0:.*]] = fir.alloca !fir.boxproc<() -> f32> {bindc_name = "p3", uniq_name = "_QFsub5Ep3"}
 ! CHECK: %[[VAL_1:.*]] = fir.zero_bits () -> f32
 ! CHECK: %[[VAL_2:.*]] = fir.emboxproc %[[VAL_1]] : (() -> f32) -> !fir.boxproc<() -> f32>
@@ -165,7 +165,7 @@ use m
   procedure(), pointer :: p4
   real :: r
 
-  p4 => sub 
+  p4 => sub
 ! CHECK: %[[VAL_0:.*]] = fir.alloca !fir.boxproc<() -> ()> {bindc_name = "p4", uniq_name = "_QFsub6Ep4"}
 ! CHECK: %[[VAL_1:.*]] = fir.zero_bits () -> ()
 ! CHECK: %[[VAL_2:.*]] = fir.emboxproc %[[VAL_1]] : (() -> ()) -> !fir.boxproc<() -> ()>
@@ -186,10 +186,10 @@ end subroutine
 subroutine sub7(p1, p2)
 use m
   procedure(real_func), pointer :: p1
-! CHECK: %[[VAL_0:.*]]:2 = hlfir.declare %arg0 dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFsub7Ep1"} : (!fir.ref<!fir.boxproc<() -> ()>>, !fir.dscope) -> (!fir.ref<!fir.boxproc<() -> ()>>, !fir.ref<!fir.boxproc<() -> ()>>)
+! CHECK: %[[VAL_0:.*]]:2 = hlfir.declare %arg0 dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFsub7Ep1"} : (!fir.ref<!fir.boxproc<() -> ()>>, !fir.dscope) -> (!fir.ref<!fir.boxproc<() -> ()>>, !fir.ref<!fir.boxproc<() -> ()>>)
 
   procedure(char_func), pointer :: p2
-! CHECK: %[[VAL_1:.*]]:2 = hlfir.declare %arg1 dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFsub7Ep2"} : (!fir.ref<!fir.boxproc<() -> ()>>, !fir.dscope) -> (!fir.ref<!fir.boxproc<() -> ()>>, !fir.ref<!fir.boxproc<() -> ()>>)
+! CHECK: %[[VAL_1:.*]]:2 = hlfir.declare %arg1 dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFsub7Ep2"} : (!fir.ref<!fir.boxproc<() -> ()>>, !fir.dscope) -> (!fir.ref<!fir.boxproc<() -> ()>>, !fir.ref<!fir.boxproc<() -> ()>>)
 
   call foo1(p1)
 ! CHECK: %[[VAL_2:.*]] = fir.load %[[VAL_0]]#0 : !fir.ref<!fir.boxproc<() -> ()>>
@@ -197,7 +197,7 @@ use m
 
   call foo2(p2)
 ! CHECK: fir.call @_QPfoo2(%[[VAL_1]]#0) fastmath<contract> : (!fir.ref<!fir.boxproc<() -> ()>>) -> ()
-end 
+end
 
 subroutine sub8()
 use m
@@ -265,7 +265,7 @@ contains
   function reffunc(arg) result(pp)
     integer :: arg
     procedure(real_func), pointer :: pp
-! CHECK: %[[VAL_0:.*]]:2 = hlfir.declare %arg0 dummy_scope %{{[0-9]+}} {uniq_name = "_QFsub10FreffuncEarg"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK: %[[VAL_0:.*]]:2 = hlfir.declare %arg0 dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFsub10FreffuncEarg"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK: %[[VAL_1:.*]] = fir.alloca !fir.boxproc<(!fir.ref<f32>) -> f32> {bindc_name = "pp", uniq_name = "_QFsub10FreffuncEpp"}
 ! CHECK: %[[VAL_2:.*]] = fir.zero_bits (!fir.ref<f32>) -> f32
 ! CHECK: %[[VAL_3:.*]] = fir.emboxproc %[[VAL_2]] : ((!fir.ref<f32>) -> f32) -> !fir.boxproc<(!fir.ref<f32>) -> f32>
@@ -338,7 +338,7 @@ use m
 ! CHECK: %[[VAL_16:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = ".tmp.intrinsic_result"} : (!fir.ref<!fir.boxproc<(!fir.ref<i32>) -> !fir.box<!fir.ptr<!fir.char<1,?>>>>>) -> (!fir.ref<!fir.boxproc<(!fir.ref<i32>) -> !fir.box<!fir.ptr<!fir.char<1,?>>>>>, !fir.ref<!fir.boxproc<(!fir.ref<i32>) -> !fir.box<!fir.ptr<!fir.char<1,?>>>>>)
 ! CHECK: %[[VAL_17:.*]] = fir.convert %[[VAL_16]]#0 : (!fir.ref<!fir.boxproc<(!fir.ref<i32>) -> !fir.box<!fir.ptr<!fir.char<1,?>>>>>) -> !fir.ref<!fir.boxproc<() -> ()>>
 ! CHECK: fir.call @_QPfoo2(%[[VAL_17]]) fastmath<contract> : (!fir.ref<!fir.boxproc<() -> ()>>) -> ()
-end 
+end
 
 subroutine test_opt_pointer()
   interface

@@ -10,7 +10,7 @@
 ;   s0 += (1ULL << 62) + 1;
 ;   s1 += (1ULL << 62) + 2;
 ; }
-; FIXME: We cannot use inbounds on idx.0, idx.1 to infer no-wrap (and determine
+; We cannot use inbounds on idx.0, idx.1 to infer no-wrap (and determine
 ; there are no dependences), as the pointers are not dereferenced in all loop iterations.
 define void @test_inbounds_gep_used_in_predicated_block(ptr %A, i64 %n) {
 ; CHECK-LABEL: 'test_inbounds_gep_used_in_predicated_block'
@@ -19,9 +19,14 @@ define void @test_inbounds_gep_used_in_predicated_block(ptr %A, i64 %n) {
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group GRP0:
+; CHECK-NEXT:          (Low: %A High: (-4611686018427387705 + %A))
+; CHECK-NEXT:            Member: {%A,+,4611686018427387906}<%loop.header>
+; CHECK-NEXT:            Member: {%A,+,4611686018427387905}<%loop.header>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
+; CHECK-NEXT:      {%A,+,4611686018427387906}<%loop.header> Added Flags: <nusw>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:
 ;
@@ -63,9 +68,14 @@ define void @test_inbounds_gep_used_in_predicated_block_stored_value_operand(ptr
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group GRP0:
+; CHECK-NEXT:          (Low: %A High: (-4611686018427387705 + %A))
+; CHECK-NEXT:            Member: {%A,+,4611686018427387906}<%loop.header>
+; CHECK-NEXT:            Member: {%A,+,4611686018427387905}<%loop.header>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
+; CHECK-NEXT:      {%A,+,4611686018427387906}<%loop.header> Added Flags: <nusw>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:
 ;
@@ -109,9 +119,14 @@ define void @test_inbounds_gep_used_in_predicated_block_non_memop_user(ptr %A, i
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group GRP0:
+; CHECK-NEXT:          (Low: %A High: (-4611686018427387705 + %A))
+; CHECK-NEXT:            Member: {%A,+,4611686018427387906}<%loop.header>
+; CHECK-NEXT:            Member: {%A,+,4611686018427387905}<%loop.header>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
+; CHECK-NEXT:      {%A,+,4611686018427387906}<%loop.header> Added Flags: <nusw>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:
 ;

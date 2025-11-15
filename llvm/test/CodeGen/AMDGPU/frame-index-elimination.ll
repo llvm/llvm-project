@@ -244,9 +244,9 @@ declare void @func(ptr addrspace(5) nocapture) #0
 
 ; GCN-LABEL: {{^}}undefined_stack_store_reg:
 ; GCN: s_and_saveexec_b64
-; MUBUF: buffer_store_dword v0, off, s[0:3], s33 offset:
-; MUBUF: buffer_store_dword v0, off, s[0:3], s33 offset:
-; MUBUF: buffer_store_dword v0, off, s[0:3], s33 offset:
+; MUBUF: buffer_store_dword v{{[0-9]+}}, off, s[0:3], s33 offset:
+; MUBUF: buffer_store_dword v{{[0-9]+}}, off, s[0:3], s33 offset:
+; MUBUF: buffer_store_dword v{{[0-9]+}}, off, s[0:3], s33 offset:
 ; MUBUF: buffer_store_dword v{{[0-9]+}}, off, s[0:3], s33 offset:
 ; FLATSCR: scratch_store_dword v0, off, s33 offset:
 ; FLATSCR: scratch_store_dword v0, off, s33 offset:

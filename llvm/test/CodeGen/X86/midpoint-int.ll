@@ -658,9 +658,9 @@ define i16 @scalar_i16_signed_reg_reg(i16 %a1, i16 %a2) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    xorl %ebx, %ebx
-; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:    movl %eax, %ecx
 ; X86-NEXT:    subw %dx, %ax
 ; X86-NEXT:    setle %bl
 ; X86-NEXT:    leal -1(%ebx,%ebx), %edx
@@ -710,9 +710,9 @@ define i16 @scalar_i16_unsigned_reg_reg(i16 %a1, i16 %a2) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    xorl %ebx, %ebx
-; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:    movl %eax, %ecx
 ; X86-NEXT:    subw %dx, %ax
 ; X86-NEXT:    setbe %bl
 ; X86-NEXT:    leal -1(%ebx,%ebx), %edx
@@ -765,9 +765,9 @@ define i16 @scalar_i16_signed_mem_reg(ptr %a1_addr, i16 %a2) nounwind {
 ; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movzwl (%eax), %ecx
+; X86-NEXT:    movzwl (%eax), %eax
 ; X86-NEXT:    xorl %ebx, %ebx
-; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:    movl %eax, %ecx
 ; X86-NEXT:    subw %dx, %ax
 ; X86-NEXT:    setle %bl
 ; X86-NEXT:    leal -1(%ebx,%ebx), %edx
@@ -817,11 +817,11 @@ define i16 @scalar_i16_signed_reg_mem(i16 %a1, ptr %a2_addr) nounwind {
 ; X86-LABEL: scalar_i16_signed_reg_mem:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %ebx
-; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movzwl (%eax), %edx
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movzwl (%ecx), %edx
 ; X86-NEXT:    xorl %ebx, %ebx
-; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:    movl %eax, %ecx
 ; X86-NEXT:    subw %dx, %ax
 ; X86-NEXT:    setle %bl
 ; X86-NEXT:    leal -1(%ebx,%ebx), %edx
@@ -871,12 +871,12 @@ define i16 @scalar_i16_signed_mem_mem(ptr %a1_addr, ptr %a2_addr) nounwind {
 ; X86-LABEL: scalar_i16_signed_mem_mem:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %ebx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movzwl (%ecx), %ecx
-; X86-NEXT:    movzwl (%eax), %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movzwl (%eax), %eax
+; X86-NEXT:    movzwl (%ecx), %edx
 ; X86-NEXT:    xorl %ebx, %ebx
-; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:    movl %eax, %ecx
 ; X86-NEXT:    subw %dx, %ax
 ; X86-NEXT:    setle %bl
 ; X86-NEXT:    leal -1(%ebx,%ebx), %edx

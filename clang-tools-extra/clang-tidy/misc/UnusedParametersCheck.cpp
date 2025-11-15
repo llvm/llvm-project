@@ -165,7 +165,7 @@ void UnusedParametersCheck::warnOnUnusedParameter(
     if (!Result.Context->getLangOpts().CPlusPlus)
       return;
 
-    SourceRange RemovalRange(Param->getLocation());
+    const SourceRange RemovalRange(Param->getLocation());
     // Note: We always add a space before the '/*' to not accidentally create
     // a '*/*' for pointer types, which doesn't start a comment. clang-format
     // will clean this up afterwards.

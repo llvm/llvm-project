@@ -176,6 +176,15 @@ void FactsGenerator::VisitBinaryOperator(const BinaryOperator *BO) {
     handleAssignment(BO->getLHS(), BO->getRHS());
 }
 
+void FactsGenerator::VisitConditionalOperator(const ConditionalOperator *CO) {
+  if (hasOrigin(CO)) {
+    // Merge origins from both branches of the conditional operator.
+    // We kill to clear the initial state and merge both origins into it.
+    killAndFlowOrigin(*CO, *CO->getTrueExpr());
+    flowOrigin(*CO, *CO->getFalseExpr());
+  }
+}
+
 void FactsGenerator::VisitCXXOperatorCallExpr(const CXXOperatorCallExpr *OCE) {
   // Assignment operators have special "kill-then-propagate" semantics
   // and are handled separately.
@@ -333,7 +342,7 @@ void FactsGenerator::handleAssignment(const Expr *LHSExpr,
 // (e.g. on the left-hand side of an assignment).
 void FactsGenerator::handleUse(const DeclRefExpr *DRE) {
   if (isPointerType(DRE->getType())) {
-    UseFact *UF = FactMgr.createFact<UseFact>(DRE);
+    UseFact *UF = FactMgr.createFact<UseFact>(DRE, FactMgr.getOriginMgr());
     CurrentBlockFacts.push_back(UF);
     assert(!UseFacts.contains(DRE));
     UseFacts[DRE] = UF;

@@ -825,6 +825,16 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .legalFor(
           {{s32, s16}, {s64, s16}, {s64, s32}, {v4s32, v4s16}, {v2s64, v2s32}})
       .libcallFor({{s128, s64}, {s128, s32}, {s128, s16}})
+      .moreElementsToNextPow2(0)
+      .widenScalarIf(
+          [](const LegalityQuery &Q) {
+            LLT DstTy = Q.Types[0];
+            LLT SrcTy = Q.Types[1];
+            return SrcTy.isVector() && DstTy.isVector() &&
+                   SrcTy.getScalarSizeInBits() == 16 &&
+                   DstTy.getScalarSizeInBits() == 64;
+          },
+          changeElementTo(1, s32))
       .clampNumElements(0, v4s32, v4s32)
       .clampNumElements(0, v2s64, v2s64)
       .scalarize(0);
@@ -1809,6 +1819,9 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     return LowerBinOp(TargetOpcode::G_FMAXNUM);
   case Intrinsic::aarch64_neon_fminnm:
     return LowerBinOp(TargetOpcode::G_FMINNUM);
+  case Intrinsic::aarch64_neon_pmull:
+  case Intrinsic::aarch64_neon_pmull64:
+    return LowerBinOp(AArch64::G_PMULL);
   case Intrinsic::aarch64_neon_smull:
     return LowerBinOp(AArch64::G_SMULL);
   case Intrinsic::aarch64_neon_umull:

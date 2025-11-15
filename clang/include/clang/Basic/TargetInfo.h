@@ -229,6 +229,7 @@ class TargetInfo : public TransferrableTargetInfo,
 protected:
   // Target values set by the ctor of the actual target implementation.  Default
   // values are specified by the TargetInfo constructor.
+  bool HasMustTail;
   bool BigEndian;
   bool TLSSupported;
   bool VLASupported;
@@ -668,6 +669,8 @@ public:
     return PaddingOnUnsignedFixedPoint ? getLongFractScale()
                                        : getLongFractScale() + 1;
   }
+
+  virtual bool hasMustTail() const { return HasMustTail; }
 
   /// Determine whether the __int128 type is supported on this target.
   virtual bool hasInt128Type() const {
@@ -1792,6 +1795,11 @@ public:
   /// with Microsoft ABI, so it will call global operator delete in the deleting
   /// destructor body.
   virtual bool callGlobalDeleteInDeletingDtor(const LangOptions &) const;
+
+  /// Controls whether to emit MSVC vector deleting destructors. The support for
+  /// vector deleting affects vtable layout and therefore is an ABI breaking
+  /// change. The support was only implemented at Clang 22 timeframe.
+  virtual bool emitVectorDeletingDtors(const LangOptions &) const;
 
   /// Controls if __builtin_longjmp / __builtin_setjmp can be lowered to
   /// llvm.eh.sjlj.longjmp / llvm.eh.sjlj.setjmp.

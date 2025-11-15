@@ -134,7 +134,7 @@ private:
   BitVector ClobberedRegUnits;
 
   // Scratch pad for findInsertionPoint.
-  SparseSet<unsigned> LiveRegUnits;
+  SparseSet<MCRegUnit> LiveRegUnits;
 
   /// Insertion point in Head for speculatively executed instructions form TBB
   /// and FBB.
@@ -421,7 +421,7 @@ bool SSAIfConv::findInsertionPoint() {
     if (!LiveRegUnits.empty()) {
       LLVM_DEBUG({
         dbgs() << "Would clobber";
-        for (unsigned LRU : LiveRegUnits)
+        for (MCRegUnit LRU : LiveRegUnits)
           dbgs() << ' ' << printRegUnit(LRU, TRI);
         dbgs() << " live before " << *I;
       });

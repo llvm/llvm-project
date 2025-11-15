@@ -17,6 +17,7 @@
 #include "OpGenHelpers.h"
 #include "mlir/TableGen/Argument.h"
 #include "mlir/TableGen/Attribute.h"
+#include "mlir/TableGen/Builder.h"
 #include "mlir/TableGen/Class.h"
 #include "mlir/TableGen/CodeGenHelpers.h"
 #include "mlir/TableGen/Format.h"
@@ -24,16 +25,24 @@
 #include "mlir/TableGen/Interfaces.h"
 #include "mlir/TableGen/Operator.h"
 #include "mlir/TableGen/Property.h"
+#include "mlir/TableGen/Region.h"
 #include "mlir/TableGen/SideEffects.h"
+#include "mlir/TableGen/Successor.h"
 #include "mlir/TableGen/Trait.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/PointerUnion.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/CodeGenHelpers.h"
@@ -380,9 +389,8 @@ public:
   Formatter emitErrorPrefix() const {
     return [this](raw_ostream &os) -> raw_ostream & {
       if (emitForOp)
-        return os << "emitOpError(";
-      return os << formatv("emitError(loc, \"'{0}' op \"",
-                           op.getOperationName());
+        return os << "emitOpError(\"";
+      return os << formatv("emitError(loc, \"'{0}' op ", op.getOperationName());
     };
   }
 
@@ -940,7 +948,7 @@ genAttributeVerifier(const OpOrAdaptorHelper &emitHelper, FmtContext &ctx,
   // {4}: Attribute/constraint description.
   const char *const verifyAttrInline = R"(
   if ({0} && !({1}))
-    return {2}"attribute '{3}' failed to satisfy constraint: {4}");
+    return {2}attribute '{3}' failed to satisfy constraint: {4}");
 )";
   // Verify the attribute using a uniqued constraint. Can only be used within
   // the context of an op.
@@ -993,10 +1001,11 @@ while (true) {{
         (constraintFn = staticVerifierEmitter.getAttrConstraintFn(attr))) {
       body << formatv(verifyAttrUnique, *constraintFn, varName, attrName);
     } else {
-      body << formatv(verifyAttrInline, varName,
-                      tgfmt(condition, &ctx.withSelf(varName)),
-                      emitHelper.emitErrorPrefix(), attrName,
-                      escapeString(attr.getSummary()));
+      body << formatv(
+          verifyAttrInline, varName, tgfmt(condition, &ctx.withSelf(varName)),
+          emitHelper.emitErrorPrefix(), attrName,
+          buildErrorStreamingString(attr.getSummary(), ctx.withSelf(varName),
+                                    ErrorStreamType::InsideOpError));
     }
   };
 
@@ -1017,7 +1026,7 @@ while (true) {{
           it.first);
       if (metadata.isRequired)
         body << formatv(
-            "if (!tblgen_{0}) return {1}\"requires attribute '{0}'\");\n",
+            "if (!tblgen_{0}) return {1}requires attribute '{0}'\");\n",
             it.first, emitHelper.emitErrorPrefix());
     }
   } else {
@@ -1099,7 +1108,7 @@ static void genPropertyVerifier(
   // {3}: Property description.
   const char *const verifyPropertyInline = R"(
   if (!({0}))
-    return {1}"property '{2}' failed to satisfy constraint: {3}");
+    return {1}property '{2}' failed to satisfy constraint: {3}");
 )";
 
   // Verify the property using a uniqued constraint. Can only be used
@@ -1143,9 +1152,12 @@ static void genPropertyVerifier(
     if (uniquedFn.has_value() && emitHelper.isEmittingForOp())
       body << formatv(verifyPropertyUniqued, *uniquedFn, varName, prop.name);
     else
-      body << formatv(
-          verifyPropertyInline, tgfmt(rawCondition, &ctx.withSelf(varName)),
-          emitHelper.emitErrorPrefix(), prop.name, prop.prop.getSummary());
+      body << formatv(verifyPropertyInline,
+                      tgfmt(rawCondition, &ctx.withSelf(varName)),
+                      emitHelper.emitErrorPrefix(), prop.name,
+                      buildErrorStreamingString(
+                          prop.prop.getSummary(), ctx.withSelf(varName),
+                          ErrorStreamType::InsideOpError));
   }
 }
 

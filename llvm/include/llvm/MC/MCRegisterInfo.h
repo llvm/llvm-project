@@ -16,6 +16,7 @@
 #define LLVM_MC_MCREGISTERINFO_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/MC/LaneBitmask.h"
@@ -259,6 +260,9 @@ public:
                        iterator_range<MCSuperRegIterator>>
   sub_and_superregs_inclusive(MCRegister Reg) const;
 
+  /// Returns an iterator range over all regunits.
+  iota_range<MCRegUnit> regunits() const;
+
   /// Returns an iterator range over all regunits for \p Reg.
   iterator_range<MCRegUnitIterator> regunits(MCRegister Reg) const;
 
@@ -272,7 +276,7 @@ public:
   friend class MCRegUnitRootIterator;
   friend class MCRegAliasIterator;
 
-  virtual ~MCRegisterInfo() {}
+  virtual ~MCRegisterInfo() = default;
 
   /// Initialize MCRegisterInfo, called by TableGen
   /// auto-generated routines. *DO NOT USE*.
@@ -687,7 +691,7 @@ public:
   }
 
   /// Returns a (RegUnit, LaneMask) pair.
-  std::pair<unsigned,LaneBitmask> operator*() const {
+  std::pair<MCRegUnit, LaneBitmask> operator*() const {
     return std::make_pair(*RUIter, *MaskListIter);
   }
 
@@ -719,7 +723,7 @@ class MCRegUnitRootIterator {
 public:
   MCRegUnitRootIterator() = default;
 
-  MCRegUnitRootIterator(unsigned RegUnit, const MCRegisterInfo *MCRI) {
+  MCRegUnitRootIterator(MCRegUnit RegUnit, const MCRegisterInfo *MCRI) {
     assert(RegUnit < MCRI->getNumRegUnits() && "Invalid register unit");
     Reg0 = MCRI->RegUnitRoots[RegUnit][0];
     Reg1 = MCRI->RegUnitRoots[RegUnit][1];
@@ -796,6 +800,10 @@ inline detail::concat_range<const MCPhysReg, iterator_range<MCSubRegIterator>,
                             iterator_range<MCSuperRegIterator>>
 MCRegisterInfo::sub_and_superregs_inclusive(MCRegister Reg) const {
   return concat<const MCPhysReg>(subregs_inclusive(Reg), superregs(Reg));
+}
+
+inline iota_range<MCRegUnit> MCRegisterInfo::regunits() const {
+  return seq(getNumRegUnits());
 }
 
 inline iterator_range<MCRegUnitIterator>

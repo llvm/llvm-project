@@ -43,6 +43,7 @@ public:
   void VisitUnaryOperator(const UnaryOperator *UO);
   void VisitReturnStmt(const ReturnStmt *RS);
   void VisitBinaryOperator(const BinaryOperator *BO);
+  void VisitConditionalOperator(const ConditionalOperator *CO);
   void VisitCXXOperatorCallExpr(const CXXOperatorCallExpr *OCE);
   void VisitCXXFunctionalCastExpr(const CXXFunctionalCastExpr *FCE);
   void VisitInitListExpr(const InitListExpr *ILE);

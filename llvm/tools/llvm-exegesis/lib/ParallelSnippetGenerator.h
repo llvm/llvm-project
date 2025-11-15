@@ -28,7 +28,7 @@ public:
   generateCodeTemplates(InstructionTemplate Variant,
                         const BitVector &ForbiddenRegisters) const override;
 
-  static constexpr const size_t kMinNumDifferentAddresses = 6;
+  static constexpr size_t kMinNumDifferentAddresses = 6;
 
 private:
   // Instantiates memory operands within a snippet.

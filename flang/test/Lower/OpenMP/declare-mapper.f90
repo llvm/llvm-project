@@ -6,7 +6,9 @@
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 %t/omp-declare-mapper-3.f90 -o - | FileCheck %t/omp-declare-mapper-3.f90
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 %t/omp-declare-mapper-4.f90 -o - | FileCheck %t/omp-declare-mapper-4.f90
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 %t/omp-declare-mapper-5.f90 -o - | FileCheck %t/omp-declare-mapper-5.f90
-! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=51 %t/omp-declare-mapper-6.f90 -o - | FileCheck %t/omp-declare-mapper-6.f90
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 %t/omp-declare-mapper-6.f90 -o - | FileCheck %t/omp-declare-mapper-6.f90
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 -module-dir %t %t/omp-declare-mapper-7.mod.f90 -o - >/dev/null
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 -J %t %t/omp-declare-mapper-7.use.f90 -o - | FileCheck %t/omp-declare-mapper-7.use.f90
 
 !--- omp-declare-mapper-1.f90
 subroutine declare_mapper_1
@@ -163,7 +165,7 @@ subroutine declare_mapper_4
    b = 20
    !$omp end target
 
-   !CHECK: %{{.*}} = omp.map.info var_ptr(%{{.*}} : !fir.ref<i32>, i32) map_clauses(tofrom) capture(ByRef) mapper(@[[MY_TYPE_MAPPER]]) -> !fir.ref<i32> {name = "a%{{.*}}"}
+   !CHECK: %{{.*}} = omp.map.info var_ptr(%{{.*}} : !fir.ref<i32>, i32) map_clauses(tofrom) capture(ByRef) -> !fir.ref<i32> {name = "a%{{.*}}"}
    !$omp target map(a%num)
    a%num = 30
    !$omp end target
@@ -301,3 +303,25 @@ subroutine declare_mapper_nested_parent
     r%real_arr = r%base_arr(1) + r%inner%deep_arr(1)
   !$omp end target
 end subroutine declare_mapper_nested_parent
+
+!--- omp-declare-mapper-7.mod.f90
+! Module with DECLARE MAPPER to be compiled separately
+module m_mod
+  implicit none
+  type :: mty
+    integer :: x
+  end type mty
+  !$omp declare mapper(mymap : mty :: v) map(tofrom: v%x)
+end module m_mod
+
+!--- omp-declare-mapper-7.use.f90
+! Consumer program that USEs the module and applies the mapper by name.
+! CHECK: %{{.*}} = omp.map.info {{.*}} mapper(@{{.*mymap}}) {{.*}} {name = "a"}
+program use_module_mapper
+  use m_mod
+  implicit none
+  type(mty) :: a
+  !$omp target map(mapper(mymap) : a)
+    a%x = 42
+  !$omp end target
+end program use_module_mapper

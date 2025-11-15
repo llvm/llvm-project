@@ -1959,15 +1959,13 @@ define i32 @scalarize_induction_variable_05(ptr %a, i32 %x, i1 %c, i32 %n) {
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[SMAX]], 2
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[SMAX]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i1> poison, i1 [[C:%.*]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i1> [[BROADCAST_SPLATINSERT]], <2 x i1> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_UDIV_CONTINUE2:%.*]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <2 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP16:%.*]], [[PRED_UDIV_CONTINUE2]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i32 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP1]], align 4
-; CHECK-NEXT:    br i1 [[C]], label [[PRED_UDIV_IF:%.*]], label [[PRED_UDIV_CONTINUE:%.*]]
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[PRED_UDIV_IF:%.*]], label [[PRED_UDIV_CONTINUE:%.*]]
 ; CHECK:       pred.udiv.if:
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i32 [[INDEX]], 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i32> [[WIDE_LOAD]], i32 0
@@ -1985,7 +1983,7 @@ define i32 @scalarize_induction_variable_05(ptr %a, i32 %x, i1 %c, i32 %n) {
 ; CHECK-NEXT:    br label [[PRED_UDIV_CONTINUE2]]
 ; CHECK:       pred.udiv.continue2:
 ; CHECK-NEXT:    [[TMP11:%.*]] = phi <2 x i32> [ [[TMP12]], [[PRED_UDIV_CONTINUE]] ], [ [[TMP10]], [[PRED_UDIV_IF1]] ]
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[BROADCAST_SPLAT]], <2 x i32> [[TMP11]], <2 x i32> [[WIDE_LOAD]]
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select i1 [[C]], <2 x i32> [[TMP11]], <2 x i32> [[WIDE_LOAD]]
 ; CHECK-NEXT:    [[TMP16]] = add <2 x i32> [[PREDPHI]], [[VEC_PHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP13:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
@@ -2024,8 +2022,6 @@ define i32 @scalarize_induction_variable_05(ptr %a, i32 %x, i1 %c, i32 %n) {
 ; IND-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; IND:       vector.ph:
 ; IND-NEXT:    [[N_VEC:%.*]] = and i32 [[SMAX]], 2147483646
-; IND-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i1> poison, i1 [[C:%.*]], i64 0
-; IND-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i1> [[BROADCAST_SPLATINSERT]], <2 x i1> poison, <2 x i32> zeroinitializer
 ; IND-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; IND:       vector.body:
 ; IND-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_UDIV_CONTINUE2:%.*]] ]
@@ -2033,7 +2029,7 @@ define i32 @scalarize_induction_variable_05(ptr %a, i32 %x, i1 %c, i32 %n) {
 ; IND-NEXT:    [[TMP0:%.*]] = sext i32 [[INDEX]] to i64
 ; IND-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[TMP0]]
 ; IND-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP1]], align 4
-; IND-NEXT:    br i1 [[C]], label [[PRED_UDIV_IF:%.*]], label [[PRED_UDIV_CONTINUE:%.*]]
+; IND-NEXT:    br i1 [[C:%.*]], label [[PRED_UDIV_IF:%.*]], label [[PRED_UDIV_CONTINUE:%.*]]
 ; IND:       pred.udiv.if:
 ; IND-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[WIDE_LOAD]], i64 0
 ; IND-NEXT:    [[TMP3:%.*]] = udiv i32 [[TMP2]], [[INDEX]]
@@ -2049,8 +2045,7 @@ define i32 @scalarize_induction_variable_05(ptr %a, i32 %x, i1 %c, i32 %n) {
 ; IND-NEXT:    [[TMP9:%.*]] = insertelement <2 x i32> [[TMP5]], i32 [[TMP8]], i64 1
 ; IND-NEXT:    br label [[PRED_UDIV_CONTINUE2]]
 ; IND:       pred.udiv.continue2:
-; IND-NEXT:    [[TMP10:%.*]] = phi <2 x i32> [ [[TMP5]], [[PRED_UDIV_CONTINUE]] ], [ [[TMP9]], [[PRED_UDIV_IF1]] ]
-; IND-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[BROADCAST_SPLAT]], <2 x i32> [[TMP10]], <2 x i32> [[WIDE_LOAD]]
+; IND-NEXT:    [[PREDPHI:%.*]] = phi <2 x i32> [ [[WIDE_LOAD]], [[PRED_UDIV_CONTINUE]] ], [ [[TMP9]], [[PRED_UDIV_IF1]] ]
 ; IND-NEXT:    [[TMP13]] = add <2 x i32> [[PREDPHI]], [[VEC_PHI]]
 ; IND-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
 ; IND-NEXT:    [[TMP14:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
@@ -2090,8 +2085,6 @@ define i32 @scalarize_induction_variable_05(ptr %a, i32 %x, i1 %c, i32 %n) {
 ; UNROLL-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; UNROLL:       vector.ph:
 ; UNROLL-NEXT:    [[N_VEC:%.*]] = and i32 [[SMAX]], 2147483644
-; UNROLL-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i1> poison, i1 [[C:%.*]], i64 0
-; UNROLL-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i1> [[BROADCAST_SPLATINSERT]], <2 x i1> poison, <2 x i32> zeroinitializer
 ; UNROLL-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; UNROLL:       vector.body:
 ; UNROLL-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_UDIV_CONTINUE8:%.*]] ]
@@ -2102,7 +2095,7 @@ define i32 @scalarize_induction_variable_05(ptr %a, i32 %x, i1 %c, i32 %n) {
 ; UNROLL-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP1]], i64 8
 ; UNROLL-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP1]], align 4
 ; UNROLL-NEXT:    [[WIDE_LOAD2:%.*]] = load <2 x i32>, ptr [[TMP2]], align 4
-; UNROLL-NEXT:    br i1 [[C]], label [[PRED_UDIV_IF:%.*]], label [[PRED_UDIV_CONTINUE:%.*]]
+; UNROLL-NEXT:    br i1 [[C:%.*]], label [[PRED_UDIV_IF:%.*]], label [[PRED_UDIV_CONTINUE:%.*]]
 ; UNROLL:       pred.udiv.if:
 ; UNROLL-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[WIDE_LOAD]], i64 0
 ; UNROLL-NEXT:    [[TMP4:%.*]] = udiv i32 [[TMP3]], [[INDEX]]
@@ -2136,9 +2129,8 @@ define i32 @scalarize_induction_variable_05(ptr %a, i32 %x, i1 %c, i32 %n) {
 ; UNROLL-NEXT:    [[TMP20:%.*]] = insertelement <2 x i32> [[TMP16]], i32 [[TMP19]], i64 1
 ; UNROLL-NEXT:    br label [[PRED_UDIV_CONTINUE8]]
 ; UNROLL:       pred.udiv.continue8:
-; UNROLL-NEXT:    [[TMP21:%.*]] = phi <2 x i32> [ [[TMP16]], [[PRED_UDIV_CONTINUE6]] ], [ [[TMP20]], [[PRED_UDIV_IF7]] ]
-; UNROLL-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[BROADCAST_SPLAT]], <2 x i32> [[TMP11]], <2 x i32> [[WIDE_LOAD]]
-; UNROLL-NEXT:    [[PREDPHI9:%.*]] = select <2 x i1> [[BROADCAST_SPLAT]], <2 x i32> [[TMP21]], <2 x i32> [[WIDE_LOAD2]]
+; UNROLL-NEXT:    [[PREDPHI9:%.*]] = phi <2 x i32> [ [[WIDE_LOAD2]], [[PRED_UDIV_CONTINUE6]] ], [ [[TMP20]], [[PRED_UDIV_IF7]] ]
+; UNROLL-NEXT:    [[PREDPHI:%.*]] = phi <2 x i32> [ [[WIDE_LOAD]], [[PRED_UDIV_CONTINUE6]] ], [ [[TMP11]], [[PRED_UDIV_IF7]] ]
 ; UNROLL-NEXT:    [[TMP22]] = add <2 x i32> [[PREDPHI]], [[VEC_PHI]]
 ; UNROLL-NEXT:    [[TMP23]] = add <2 x i32> [[PREDPHI9]], [[VEC_PHI1]]
 ; UNROLL-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
@@ -2181,8 +2173,6 @@ define i32 @scalarize_induction_variable_05(ptr %a, i32 %x, i1 %c, i32 %n) {
 ; UNROLL-NO-IC:       vector.ph:
 ; UNROLL-NO-IC-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[SMAX]], 4
 ; UNROLL-NO-IC-NEXT:    [[N_VEC:%.*]] = sub i32 [[SMAX]], [[N_MOD_VF]]
-; UNROLL-NO-IC-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i1> poison, i1 [[C:%.*]], i64 0
-; UNROLL-NO-IC-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i1> [[BROADCAST_SPLATINSERT]], <2 x i1> poison, <2 x i32> zeroinitializer
 ; UNROLL-NO-IC-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; UNROLL-NO-IC:       vector.body:
 ; UNROLL-NO-IC-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_UDIV_CONTINUE8:%.*]] ]
@@ -2192,7 +2182,7 @@ define i32 @scalarize_induction_variable_05(ptr %a, i32 %x, i1 %c, i32 %n) {
 ; UNROLL-NO-IC-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 2
 ; UNROLL-NO-IC-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP0]], align 4
 ; UNROLL-NO-IC-NEXT:    [[WIDE_LOAD2:%.*]] = load <2 x i32>, ptr [[TMP2]], align 4
-; UNROLL-NO-IC-NEXT:    br i1 [[C]], label [[PRED_UDIV_IF:%.*]], label [[PRED_UDIV_CONTINUE:%.*]]
+; UNROLL-NO-IC-NEXT:    br i1 [[C:%.*]], label [[PRED_UDIV_IF:%.*]], label [[PRED_UDIV_CONTINUE:%.*]]
 ; UNROLL-NO-IC:       pred.udiv.if:
 ; UNROLL-NO-IC-NEXT:    [[TMP7:%.*]] = add i32 [[INDEX]], 0
 ; UNROLL-NO-IC-NEXT:    [[TMP8:%.*]] = extractelement <2 x i32> [[WIDE_LOAD]], i32 0
@@ -2228,8 +2218,8 @@ define i32 @scalarize_induction_variable_05(ptr %a, i32 %x, i1 %c, i32 %n) {
 ; UNROLL-NO-IC-NEXT:    br label [[PRED_UDIV_CONTINUE8]]
 ; UNROLL-NO-IC:       pred.udiv.continue8:
 ; UNROLL-NO-IC-NEXT:    [[TMP29:%.*]] = phi <2 x i32> [ [[TMP23]], [[PRED_UDIV_CONTINUE6]] ], [ [[TMP28]], [[PRED_UDIV_IF7]] ]
-; UNROLL-NO-IC-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[BROADCAST_SPLAT]], <2 x i32> [[TMP17]], <2 x i32> [[WIDE_LOAD]]
-; UNROLL-NO-IC-NEXT:    [[PREDPHI9:%.*]] = select <2 x i1> [[BROADCAST_SPLAT]], <2 x i32> [[TMP29]], <2 x i32> [[WIDE_LOAD2]]
+; UNROLL-NO-IC-NEXT:    [[PREDPHI:%.*]] = select i1 [[C]], <2 x i32> [[TMP17]], <2 x i32> [[WIDE_LOAD]]
+; UNROLL-NO-IC-NEXT:    [[PREDPHI9:%.*]] = select i1 [[C]], <2 x i32> [[TMP29]], <2 x i32> [[WIDE_LOAD2]]
 ; UNROLL-NO-IC-NEXT:    [[TMP32]] = add <2 x i32> [[PREDPHI]], [[VEC_PHI]]
 ; UNROLL-NO-IC-NEXT:    [[TMP33]] = add <2 x i32> [[PREDPHI9]], [[VEC_PHI1]]
 ; UNROLL-NO-IC-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
@@ -2270,8 +2260,6 @@ define i32 @scalarize_induction_variable_05(ptr %a, i32 %x, i1 %c, i32 %n) {
 ; INTERLEAVE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; INTERLEAVE:       vector.ph:
 ; INTERLEAVE-NEXT:    [[N_VEC:%.*]] = and i32 [[SMAX]], 2147483640
-; INTERLEAVE-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i1> poison, i1 [[C:%.*]], i64 0
-; INTERLEAVE-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i1> [[BROADCAST_SPLATINSERT]], <4 x i1> poison, <4 x i32> zeroinitializer
 ; INTERLEAVE-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; INTERLEAVE:       vector.body:
 ; INTERLEAVE-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_UDIV_CONTINUE16:%.*]] ]
@@ -2282,7 +2270,7 @@ define i32 @scalarize_induction_variable_05(ptr %a, i32 %x, i1 %c, i32 %n) {
 ; INTERLEAVE-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP1]], i64 16
 ; INTERLEAVE-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP1]], align 4
 ; INTERLEAVE-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x i32>, ptr [[TMP2]], align 4
-; INTERLEAVE-NEXT:    br i1 [[C]], label [[PRED_UDIV_IF:%.*]], label [[PRED_UDIV_CONTINUE:%.*]]
+; INTERLEAVE-NEXT:    br i1 [[C:%.*]], label [[PRED_UDIV_IF:%.*]], label [[PRED_UDIV_CONTINUE:%.*]]
 ; INTERLEAVE:       pred.udiv.if:
 ; INTERLEAVE-NEXT:    [[TMP3:%.*]] = extractelement <4 x i32> [[WIDE_LOAD]], i64 0
 ; INTERLEAVE-NEXT:    [[TMP4:%.*]] = udiv i32 [[TMP3]], [[INDEX]]
@@ -2352,9 +2340,8 @@ define i32 @scalarize_induction_variable_05(ptr %a, i32 %x, i1 %c, i32 %n) {
 ; INTERLEAVE-NEXT:    [[TMP40:%.*]] = insertelement <4 x i32> [[TMP36]], i32 [[TMP39]], i64 3
 ; INTERLEAVE-NEXT:    br label [[PRED_UDIV_CONTINUE16]]
 ; INTERLEAVE:       pred.udiv.continue16:
-; INTERLEAVE-NEXT:    [[TMP41:%.*]] = phi <4 x i32> [ [[TMP36]], [[PRED_UDIV_CONTINUE14]] ], [ [[TMP40]], [[PRED_UDIV_IF15]] ]
-; INTERLEAVE-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[BROADCAST_SPLAT]], <4 x i32> [[TMP21]], <4 x i32> [[WIDE_LOAD]]
-; INTERLEAVE-NEXT:    [[PREDPHI17:%.*]] = select <4 x i1> [[BROADCAST_SPLAT]], <4 x i32> [[TMP41]], <4 x i32> [[WIDE_LOAD2]]
+; INTERLEAVE-NEXT:    [[PREDPHI17:%.*]] = phi <4 x i32> [ [[WIDE_LOAD2]], [[PRED_UDIV_CONTINUE14]] ], [ [[TMP40]], [[PRED_UDIV_IF15]] ]
+; INTERLEAVE-NEXT:    [[PREDPHI:%.*]] = phi <4 x i32> [ [[WIDE_LOAD]], [[PRED_UDIV_CONTINUE14]] ], [ [[TMP21]], [[PRED_UDIV_IF15]] ]
 ; INTERLEAVE-NEXT:    [[TMP42]] = add <4 x i32> [[PREDPHI]], [[VEC_PHI]]
 ; INTERLEAVE-NEXT:    [[TMP43]] = add <4 x i32> [[PREDPHI17]], [[VEC_PHI1]]
 ; INTERLEAVE-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8

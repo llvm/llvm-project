@@ -166,7 +166,8 @@ class LValue {
   // this is the alignment of the whole vector)
   unsigned alignment;
   mlir::Value v;
-  mlir::Value vectorIdx; // Index for vector subscript
+  mlir::Value vectorIdx;      // Index for vector subscript
+  mlir::Attribute vectorElts; // ExtVector element subset: V.xyx
   mlir::Type elementType;
   LValueBaseInfo baseInfo;
   const CIRGenBitFieldInfo *bitFieldInfo{nullptr};
@@ -190,6 +191,7 @@ public:
   bool isSimple() const { return lvType == Simple; }
   bool isVectorElt() const { return lvType == VectorElt; }
   bool isBitField() const { return lvType == BitField; }
+  bool isExtVectorElt() const { return lvType == ExtVectorElt; }
   bool isGlobalReg() const { return lvType == GlobalReg; }
   bool isVolatile() const { return quals.hasVolatile(); }
 
@@ -254,6 +256,22 @@ public:
     return vectorIdx;
   }
 
+  // extended vector elements.
+  Address getExtVectorAddress() const {
+    assert(isExtVectorElt());
+    return Address(getExtVectorPointer(), elementType, getAlignment());
+  }
+
+  mlir::Value getExtVectorPointer() const {
+    assert(isExtVectorElt());
+    return v;
+  }
+
+  mlir::ArrayAttr getExtVectorElts() const {
+    assert(isExtVectorElt());
+    return mlir::cast<mlir::ArrayAttr>(vectorElts);
+  }
+
   static LValue makeVectorElt(Address vecAddress, mlir::Value index,
                               clang::QualType t, LValueBaseInfo baseInfo) {
     LValue r;
@@ -262,6 +280,19 @@ public:
     r.elementType = vecAddress.getElementType();
     r.vectorIdx = index;
     r.initialize(t, t.getQualifiers(), vecAddress.getAlignment(), baseInfo);
+    return r;
+  }
+
+  static LValue makeExtVectorElt(Address vecAddress, mlir::ArrayAttr elts,
+                                 clang::QualType type,
+                                 LValueBaseInfo baseInfo) {
+    LValue r;
+    r.lvType = ExtVectorElt;
+    r.v = vecAddress.getPointer();
+    r.elementType = vecAddress.getElementType();
+    r.vectorElts = elts;
+    r.initialize(type, type.getQualifiers(), vecAddress.getAlignment(),
+                 baseInfo);
     return r;
   }
 

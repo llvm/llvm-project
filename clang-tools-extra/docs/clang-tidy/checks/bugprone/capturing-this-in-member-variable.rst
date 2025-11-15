@@ -6,11 +6,11 @@ bugprone-capturing-this-in-member-variable
 Finds lambda captures that capture the ``this`` pointer and store it as class
 members without handle the copy and move constructors and the assignments.
 
-Capture this in a lambda and store it as a class member is dangerous because the
-lambda can outlive the object it captures. Especially when the object is copied
-or moved, the captured ``this`` pointer will be implicitly propagated to the
-new object. Most of the time, people will believe that the captured ``this``
-pointer points to the new object, which will lead to bugs.
+Capture this in a lambda and store it as a class member is dangerous because
+the lambda can outlive the object it captures. Especially when the object is
+copied or moved, the captured ``this`` pointer will be implicitly propagated
+to the new object. Most of the time, people will believe that the captured
+``this`` pointer points to the new object, which will lead to bugs.
 
 .. code-block:: c++
 
@@ -30,7 +30,7 @@ Possible fixes:
   - marking copy and move constructors and assignment operators deleted.
   - using class member method instead of class member variable with function
     object types.
-  - passing ``this`` pointer as parameter 
+  - passing ``this`` pointer as parameter.
 
 Options
 -------

@@ -513,6 +513,9 @@ private:
   bool SelectAnyPredicate(SDValue N);
 
   bool SelectCmpBranchUImm6Operand(SDNode *P, SDValue N, SDValue &Imm);
+
+  template <bool MatchCBB>
+  bool SelectCmpBranchExtOperand(SDValue N, SDValue &Reg, SDValue &ExtType);
 };
 
 class AArch64DAGToDAGISelLegacy : public SelectionDAGISelLegacy {
@@ -7693,6 +7696,34 @@ bool AArch64DAGToDAGISel::SelectCmpBranchUImm6Operand(SDNode *P, SDValue N,
       Imm = CurDAG->getTargetConstant(CN->getZExtValue(), DL, N.getValueType());
       return true;
     }
+  }
+
+  return false;
+}
+
+template <bool MatchCBB>
+bool AArch64DAGToDAGISel::SelectCmpBranchExtOperand(SDValue N, SDValue &Reg,
+                                                    SDValue &ExtType) {
+
+  // Use an invalid shift-extend value to indicate we don't need to extend later
+  if (N.getOpcode() == ISD::AssertZext || N.getOpcode() == ISD::AssertSext) {
+    EVT Ty = cast<VTSDNode>(N.getOperand(1))->getVT();
+    if (Ty != (MatchCBB ? MVT::i8 : MVT::i16))
+      return false;
+    Reg = N.getOperand(0);
+    ExtType = CurDAG->getSignedTargetConstant(AArch64_AM::InvalidShiftExtend,
+                                              SDLoc(N), MVT::i32);
+    return true;
+  }
+
+  AArch64_AM::ShiftExtendType ET = getExtendTypeForNode(N);
+
+  if ((MatchCBB && (ET == AArch64_AM::UXTB || ET == AArch64_AM::SXTB)) ||
+      (!MatchCBB && (ET == AArch64_AM::UXTH || ET == AArch64_AM::SXTH))) {
+    Reg = N.getOperand(0);
+    ExtType =
+        CurDAG->getTargetConstant(getExtendEncoding(ET), SDLoc(N), MVT::i32);
+    return true;
   }
 
   return false;

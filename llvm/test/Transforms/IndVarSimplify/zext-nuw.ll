@@ -24,13 +24,13 @@ define void @_Z3fn1v() {
 ; CHECK-NEXT:    [[X8:%.*]] = icmp ult i32 0, 4
 ; CHECK-NEXT:    br i1 [[X8]], label [[DOTPREHEADER_LR_PH:%.*]], label [[X22]]
 ; CHECK:       .preheader.lr.ph:
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[K_09]], i64 [[TMP5]]
 ; CHECK-NEXT:    br label [[DOTPREHEADER:%.*]]
 ; CHECK:       .preheader:
 ; CHECK-NEXT:    br label [[X17:%.*]]
 ; CHECK:       x17:
 ; CHECK-NEXT:    br i1 false, label [[DOTPREHEADER]], label [[DOT_CRIT_EDGE_8:%.*]]
 ; CHECK:       ._crit_edge.8:
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[K_09]], i64 [[TMP5]]
 ; CHECK-NEXT:    br label [[X22]]
 ; CHECK:       x22:
 ; CHECK-NEXT:    [[K_1_LCSSA:%.*]] = phi ptr [ [[SCEVGEP]], [[DOT_CRIT_EDGE_8]] ], [ [[K_09]], [[DOTPREHEADER4]] ]

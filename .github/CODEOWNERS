@@ -60,6 +60,16 @@
 /mlir/lib/Conversion/*ToROCDL @krzysz00 @kuhar
 /mlir/include/mlir/Dialect/LLVMIR/ROCDL* @krzysz00 @kuhar
 
+# XeGPU and XeVM dialects in MLIR.
+/mlir/include/mlir/Dialect/XeGPU @charithaintc @Jianhui-Li
+/mlir/lib/Dialect/XeGPU @charithaintc @Jianhui-Li
+/mlir/lib/Conversion/*XeGPU* @charithaintc @Jianhui-Li
+/mlir/include/mlir/Dialect/XeGPU/Transforms @charithaintc @Jianhui-Li
+/mlir/lib/Dialect/XeGPU/Transforms @charithaintc @Jianhui-Li
+/mlir/include/mlir/Dialect/LLVMIR/XeVM* @silee2
+/mlir/lib/Dialect/LLVMIR/IR/XeVM @silee2
+/mlir/lib/Conversion/*XeVM* @silee2
+
 # Bufferization Dialect in MLIR.
 /mlir/include/mlir/Dialect/Bufferization @matthias-springer
 /mlir/lib/Dialect/Bufferization @matthias-springer

@@ -149,13 +149,18 @@ public:
           !assignOp.isTemporaryLHS() &&
           mlir::isa<fir::RecordType>(fir::getElementTypeOf(lhsExv));
 
+      mlir::ArrayAttr accessGroups;
+      if (auto attrs = assignOp.getOperation()->getAttrOfType<mlir::ArrayAttr>(
+              "access_groups"))
+        accessGroups = attrs;
+
       // genScalarAssignment() must take care of potential overlap
       // between LHS and RHS. Note that the overlap is possible
       // also for components of LHS/RHS, and the Assign() runtime
       // must take care of it.
-      fir::factory::genScalarAssignment(builder, loc, lhsExv, rhsExv,
-                                        needFinalization,
-                                        assignOp.isTemporaryLHS());
+      fir::factory::genScalarAssignment(
+          builder, loc, lhsExv, rhsExv, needFinalization,
+          assignOp.isTemporaryLHS(), accessGroups);
     }
     rewriter.eraseOp(assignOp);
     return mlir::success();
@@ -308,7 +313,8 @@ public:
         declareOp.getTypeparams(), declareOp.getDummyScope(),
         /*storage=*/declareOp.getStorage(),
         /*storage_offset=*/declareOp.getStorageOffset(),
-        declareOp.getUniqName(), fortranAttrs, dataAttr);
+        declareOp.getUniqName(), fortranAttrs, dataAttr,
+        declareOp.getDummyArgNoAttr());
 
     // Propagate other attributes from hlfir.declare to fir.declare.
     // OpenACC's acc.declare is one example. Right now, the propagation

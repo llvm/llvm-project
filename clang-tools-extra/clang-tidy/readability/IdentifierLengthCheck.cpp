@@ -91,7 +91,7 @@ void IdentifierLengthCheck::check(const MatchFinder::MatchResult &Result) {
     if (!StandaloneVar->getIdentifier())
       return;
 
-    StringRef VarName = StandaloneVar->getName();
+    const StringRef VarName = StandaloneVar->getName();
 
     if (VarName.size() >= MinimumVariableNameLength ||
         IgnoredVariableNames.match(VarName))
@@ -106,7 +106,7 @@ void IdentifierLengthCheck::check(const MatchFinder::MatchResult &Result) {
     if (!ExceptionVarName->getIdentifier())
       return;
 
-    StringRef VarName = ExceptionVarName->getName();
+    const StringRef VarName = ExceptionVarName->getName();
     if (VarName.size() >= MinimumExceptionNameLength ||
         IgnoredExceptionVariableNames.match(VarName))
       return;
@@ -120,7 +120,7 @@ void IdentifierLengthCheck::check(const MatchFinder::MatchResult &Result) {
     if (!LoopVar->getIdentifier())
       return;
 
-    StringRef VarName = LoopVar->getName();
+    const StringRef VarName = LoopVar->getName();
 
     if (VarName.size() >= MinimumLoopCounterNameLength ||
         IgnoredLoopCounterNames.match(VarName))
@@ -135,7 +135,7 @@ void IdentifierLengthCheck::check(const MatchFinder::MatchResult &Result) {
     if (!ParamVar->getIdentifier())
       return;
 
-    StringRef VarName = ParamVar->getName();
+    const StringRef VarName = ParamVar->getName();
 
     if (VarName.size() >= MinimumParameterNameLength ||
         IgnoredParameterNames.match(VarName))

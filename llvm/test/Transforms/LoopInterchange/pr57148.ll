@@ -126,7 +126,8 @@ define void @test2() {
 ; CHECK-NEXT:    br i1 true, label [[MIDDLE_BLOCK80]], label [[VECTOR_BODY85]]
 ; CHECK:       middle.block80:
 ; CHECK-NEXT:    [[INC66]] = add nuw nsw i16 [[J_165]], 1
-; CHECK-NEXT:    br i1 true, label [[FOR_COND75_PREHEADER:%.*]], label [[FOR_COND37_PREHEADER]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i16 [[INC66]], 42
+; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_COND75_PREHEADER:%.*]], label [[FOR_COND37_PREHEADER]]
 ; CHECK:       for.inc68:
 ; CHECK-NEXT:    [[INC69]] = add nuw nsw i16 [[I_166]], 1
 ; CHECK-NEXT:    [[EXITCOND77_NOT:%.*]] = icmp eq i16 [[INC69]], 2
@@ -156,7 +157,8 @@ vector.body85:                                    ; preds = %vector.body85, %for
 
 middle.block80:                                   ; preds = %vector.body85
   %inc66 = add nuw nsw i16 %j.165, 1
-  br i1 true, label %for.inc68, label %for.cond37.preheader
+  %cmp = icmp slt i16 %inc66, 42
+  br i1 %cmp, label %for.inc68, label %for.cond37.preheader
 
 for.inc68:                                        ; preds = %middle.block80
   %inc69 = add nuw nsw i16 %i.166, 1
