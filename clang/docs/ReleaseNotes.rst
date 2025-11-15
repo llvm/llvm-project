@@ -69,6 +69,8 @@ Potentially Breaking Changes
   call the member ``operator delete`` instead of the expected global
   delete operator. The old behavior is retained under ``-fclang-abi-compat=21``
   flag.
+- Clang warning suppressions file, ``--warning-suppression-mappings=``, now will
+  use the last matching entry instead of the longest one.
 - Trailing null statements in GNU statement expressions are no longer
   ignored by Clang; they now result in a void type. Clang previously
   matched GCC's behavior, which was recently clarified to be incorrect.
@@ -595,6 +597,8 @@ Android Support
 
 Windows Support
 ^^^^^^^^^^^^^^^
+- clang-cl now supports /arch:AVX10.1 and /arch:AVX10.2.
+- clang-cl now supports /vlen, /vlen=256 and /vlen=512.
 
 - Clang now supports MSVC vector deleting destructors (GH19772).
 
