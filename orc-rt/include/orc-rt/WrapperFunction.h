@@ -137,14 +137,14 @@ using WFHandlerTraits = CallableTraitsHelper<WFHandlerTraitsImpl, C>;
 
 template <typename Serializer> class StructuredYieldBase {
 public:
-  StructuredYieldBase(orc_rt_SessionRef Session, void *CallCtx,
+  StructuredYieldBase(orc_rt_SessionRef Session, uint64_t CallId,
                       orc_rt_WrapperFunctionReturn Return, Serializer &&S)
-      : Session(Session), CallCtx(CallCtx), Return(Return),
+      : Session(Session), CallId(CallId), Return(Return),
         S(std::forward<Serializer>(S)) {}
 
 protected:
   orc_rt_SessionRef Session;
-  void *CallCtx;
+  uint64_t CallId;
   orc_rt_WrapperFunctionReturn Return;
   std::decay_t<Serializer> S;
 };
@@ -158,9 +158,9 @@ public:
   using StructuredYieldBase<Serializer>::StructuredYieldBase;
   void operator()(RetT &&R) {
     if (auto ResultBytes = this->S.result().serialize(std::forward<RetT>(R)))
-      this->Return(this->Session, this->CallCtx, ResultBytes->release());
+      this->Return(this->Session, this->CallId, ResultBytes->release());
     else
-      this->Return(this->Session, this->CallCtx,
+      this->Return(this->Session, this->CallId,
                    WrapperFunctionBuffer::createOutOfBandError(
                        "Could not serialize wrapper function result data")
                        .release());
@@ -173,7 +173,7 @@ class StructuredYield<std::tuple<>, Serializer>
 public:
   using StructuredYieldBase<Serializer>::StructuredYieldBase;
   void operator()() {
-    this->Return(this->Session, this->CallCtx,
+    this->Return(this->Session, this->CallId,
                  WrapperFunctionBuffer().release());
   }
 };
@@ -251,12 +251,12 @@ struct WrapperFunction {
   ///
   ///
   ///   static void adder_add_async_sps_wrapper(
-  ///       orc_rt_SessionRef Session, void *CallCtx,
+  ///       orc_rt_SessionRef Session, uint64_t CallId,
   ///       orc_rt_WrapperFunctionReturn Return,
   ///       orc_rt_WrapperFunctionBuffer ArgBytes) {
   ///     using SPSSig = SPSString(SPSExecutorAddr, int32_t, bool);
   ///     SPSWrapperFunction<SPSSig>::handle(
-  ///         Session, CallCtx, Return, ArgBytes,
+  ///         Session, CallId, Return, ArgBytes,
   ///         WrapperFunction::handleWithAsyncMethod(&MyClass::myMethod));
   ///   }
   ///   @endcode
@@ -313,12 +313,12 @@ struct WrapperFunction {
   ///
   ///
   ///   static void adder_add_sync_sps_wrapper(
-  ///       orc_rt_SessionRef Session, void *CallCtx,
+  ///       orc_rt_SessionRef Session, uint64_t CallId,
   ///       orc_rt_WrapperFunctionReturn Return,
   ///       orc_rt_WrapperFunctionBuffer ArgBytes) {
   ///     using SPSSig = SPSString(SPSExecutorAddr, int32_t, bool);
   ///     SPSWrapperFunction<SPSSig>::handle(
-  ///         Session, CallCtx, Return, ArgBytes,
+  ///         Session, CallId, Return, ArgBytes,
   ///         WrapperFunction::handleWithSyncMethod(&Adder::addSync));
   ///   }
   ///   @endcode
@@ -368,7 +368,7 @@ struct WrapperFunction {
   /// This utility deserializes and serializes arguments and return values
   /// (using the given Serializer), and calls the given handler.
   template <typename Serializer, typename Handler>
-  static void handle(orc_rt_SessionRef Session, void *CallCtx,
+  static void handle(orc_rt_SessionRef Session, uint64_t CallId,
                      orc_rt_WrapperFunctionReturn Return,
                      WrapperFunctionBuffer ArgBytes, Serializer &&S,
                      Handler &&H) {
@@ -380,16 +380,16 @@ struct WrapperFunction {
     typedef typename CallableArgInfo<Yield>::args_tuple_type RetTupleType;
 
     if (ArgBytes.getOutOfBandError())
-      return Return(Session, CallCtx, ArgBytes.release());
+      return Return(Session, CallId, ArgBytes.release());
 
     if (auto Args = S.arguments().template deserialize<ArgTuple>(ArgBytes))
       std::apply(HandlerTraits::forwardArgsAsRequested(bind_front(
                      std::forward<Handler>(H),
                      detail::StructuredYield<RetTupleType, Serializer>(
-                         Session, CallCtx, Return, std::move(S)))),
+                         Session, CallId, Return, std::move(S)))),
                  *Args);
     else
-      Return(Session, CallCtx,
+      Return(Session, CallId,
              WrapperFunctionBuffer::createOutOfBandError(
                  "Could not deserialize wrapper function arg data")
                  .release());
