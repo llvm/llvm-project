@@ -1925,9 +1925,9 @@ void ContinuationIndenter::moveStatePastFakeLParens(LineState &State,
         (!Style.isTableGen() ||
          (Previous && Previous->isOneOf(TT_TableGenDAGArgListComma,
                                         TT_TableGenDAGArgListCommaToBreak)))) {
-      NewParenState.Indent = std::max(
-          std::max(IndentationAndAlignment(State.Column), NewParenState.Indent),
-          IndentationAndAlignment(CurrentState.LastSpace));
+      NewParenState.Indent =
+          std::max({IndentationAndAlignment(State.Column), NewParenState.Indent,
+                    IndentationAndAlignment(CurrentState.LastSpace)});
     }
 
     // Special case for generic selection expressions, its comma-separated
