@@ -439,7 +439,7 @@ added in the future:
 "``preserve_allcc``" - The `PreserveAll` calling convention
     This calling convention attempts to make the code in the caller even less
     intrusive than the `PreserveMost` calling convention. This calling
-    convention also behaves identical to the `C` calling convention on how
+    convention also behaves identically to the `C` calling convention on how
     arguments and return values are passed, but it uses a different set of
     caller/callee-saved registers. This removes the burden of saving and
     recovering a large register set before and after the call in the caller. If
@@ -479,7 +479,7 @@ added in the future:
     preserving as many registers as possible (all the registers that are
     preserved on the fast path, composed of the entry and exit blocks).
 
-    This calling convention behaves identical to the `C` calling convention on
+    This calling convention behaves identically to the `C` calling convention on
     how arguments and return values are passed, but it uses a different set of
     caller/callee-saved registers.
 

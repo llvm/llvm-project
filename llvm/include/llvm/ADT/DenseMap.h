@@ -441,8 +441,12 @@ protected:
     moveFromImpl(OldBuckets);
   }
 
-  // Move key/value from Other to *this.  Other will be in a zombie state.
-  void moveFrom(DerivedT &Other) { moveFromImpl(Other.buckets()); }
+  // Move key/value from Other to *this.
+  // Other is left in a valid but empty state.
+  void moveFrom(DerivedT &Other) {
+    moveFromImpl(Other.buckets());
+    Other.derived().kill();
+  }
 
   void copyFrom(const DerivedT &other) {
     this->destroyAll();
@@ -768,15 +772,6 @@ public:
     deallocateBuckets();
   }
 
-private:
-  void swapImpl(DenseMap &RHS) {
-    std::swap(Buckets, RHS.Buckets);
-    std::swap(NumEntries, RHS.NumEntries);
-    std::swap(NumTombstones, RHS.NumTombstones);
-    std::swap(NumBuckets, RHS.NumBuckets);
-  }
-
-public:
   DenseMap &operator=(const DenseMap &other) {
     if (&other != this)
       this->copyFrom(other);
@@ -792,6 +787,13 @@ public:
   }
 
 private:
+  void swapImpl(DenseMap &RHS) {
+    std::swap(Buckets, RHS.Buckets);
+    std::swap(NumEntries, RHS.NumEntries);
+    std::swap(NumTombstones, RHS.NumTombstones);
+    std::swap(NumBuckets, RHS.NumBuckets);
+  }
+
   unsigned getNumEntries() const { return NumEntries; }
 
   void setNumEntries(unsigned Num) { NumEntries = Num; }
@@ -828,6 +830,13 @@ private:
       NumEntries = 0;
       NumTombstones = 0;
     }
+  }
+
+  // Put the zombie instance in a known good state after a move.
+  void kill() {
+    deallocateBuckets();
+    Buckets = nullptr;
+    NumBuckets = 0;
   }
 
   void grow(unsigned AtLeast) {
@@ -934,6 +943,20 @@ public:
     deallocateBuckets();
   }
 
+  SmallDenseMap &operator=(const SmallDenseMap &other) {
+    if (&other != this)
+      this->copyFrom(other);
+    return *this;
+  }
+
+  SmallDenseMap &operator=(SmallDenseMap &&other) {
+    this->destroyAll();
+    deallocateBuckets();
+    init(0);
+    this->swap(other);
+    return *this;
+  }
+
 private:
   void swapImpl(SmallDenseMap &RHS) {
     unsigned TmpNumEntries = RHS.NumEntries;
@@ -1006,22 +1029,6 @@ private:
     new (SmallSide.getLargeRep()) LargeRep(std::move(TmpRep));
   }
 
-public:
-  SmallDenseMap &operator=(const SmallDenseMap &other) {
-    if (&other != this)
-      this->copyFrom(other);
-    return *this;
-  }
-
-  SmallDenseMap &operator=(SmallDenseMap &&other) {
-    this->destroyAll();
-    deallocateBuckets();
-    init(0);
-    this->swap(other);
-    return *this;
-  }
-
-private:
   unsigned getNumEntries() const { return NumEntries; }
 
   void setNumEntries(unsigned Num) {
@@ -1107,6 +1114,13 @@ private:
     this->BaseT::initEmpty();
   }
 
+  // Put the zombie instance in a known good state after a move.
+  void kill() {
+    deallocateBuckets();
+    Small = false;
+    new (getLargeRep()) LargeRep{nullptr, 0};
+  }
+
   void grow(unsigned AtLeast) {
     if (AtLeast > InlineBuckets)
       AtLeast = std::max<unsigned>(64, NextPowerOf2(AtLeast - 1));
@@ -1117,14 +1131,13 @@ private:
     if (Tmp.Small) {
       // Use moveFrom in those rare cases where we stay in the small mode.  This
       // can happen when we have many tombstones.
+      Small = true;
       this->BaseT::initEmpty();
       this->moveFrom(Tmp);
-      Tmp.Small = false;
-      Tmp.getLargeRep()->NumBuckets = 0;
     } else {
-      deallocateBuckets();
       Small = false;
-      NumTombstones = 0;
+      NumEntries = Tmp.NumEntries;
+      NumTombstones = Tmp.NumTombstones;
       *getLargeRep() = std::move(*Tmp.getLargeRep());
       Tmp.getLargeRep()->NumBuckets = 0;
     }
