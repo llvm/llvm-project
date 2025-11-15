@@ -1,4 +1,5 @@
 set(CMAKE_SYSTEM_PROCESSOR arm CACHE STRING "")
+set(ARCH_TRIPLE "armv7m-none-eabi" CACHE STRING "")
 
 foreach(lang C;CXX;ASM)
     set(CMAKE_${lang}_FLAGS "-march=armv7m -mcpu=cortex-m4 -mfloat-abi=soft -Wno-atomic-alignment \"-Dvfprintf(stream, format, vlist)=vprintf(format, vlist)\" \"-Dfprintf(stream, format, ...)=printf(format)\" \"-Dfputs(string, stream)=puts(string)\" -D_LIBCPP_PRINT=1" CACHE STRING "")

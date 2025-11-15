@@ -1,4 +1,5 @@
 set(CMAKE_SYSTEM_PROCESSOR arm CACHE STRING "")
+set(ARCH_TRIPLE "armv8m.main-none-eabi" CACHE STRING "")
 
 foreach(lang C;CXX;ASM)
     set(CMAKE_${lang}_FLAGS "-mfloat-abi=softfp -march=armv8m.main+fp+dsp -mcpu=cortex-m33" CACHE STRING "")
