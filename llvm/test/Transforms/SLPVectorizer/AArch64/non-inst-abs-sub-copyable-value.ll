@@ -5,9 +5,9 @@ define i1 @test(i32 %shr.i.i90, i32 %x) {
 ; CHECK-LABEL: define i1 @test(
 ; CHECK-SAME: i32 [[SHR_I_I90:%.*]], i32 [[X:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[SUB32_I_I:%.*]] = sub i32 [[X]], 2
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> poison, i32 [[SHR_I_I90]], i32 1
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> [[TMP0]], i32 [[SUB32_I_I]], i32 0
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> poison, i32 [[X]], i32 0
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i32> [[TMP0]], i32 [[SHR_I_I90]], i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = sub <2 x i32> [[TMP6]], <i32 2, i32 0>
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i32> @llvm.abs.v2i32(<2 x i32> [[TMP1]], i1 true)
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext <2 x i32> [[TMP2]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ugt <2 x i64> [[TMP3]], <i64 100, i64 300>
