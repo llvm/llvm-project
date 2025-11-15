@@ -1575,8 +1575,8 @@ let Predicates = [HasStdExtP, IsRV64] in {
            (PSLLI_W GPR:$rs1, tuimm5:$shamt)>;
 
   // 32-bit signed saturation shift left patterns
-  def: Pat<(v2i32 (sshlsat GPR:$rs1, (v2i32 (riscv_pli tuimm4:$shamt)))),
-           (PSSLAI_W GPR:$rs1, tuimm4:$shamt)>;
+  def: Pat<(v2i32 (sshlsat GPR:$rs1, (v2i32 (riscv_pli tuimm5:$shamt)))),
+           (PSSLAI_W GPR:$rs1, tuimm5:$shamt)>;
 
   // Load/Store patterns
   def : StPat<store, SD, GPR, v8i8>;
