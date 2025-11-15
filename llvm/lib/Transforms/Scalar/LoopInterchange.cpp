@@ -123,9 +123,9 @@ static cl::list<RuleTy> Profitabilities(
 // FIXME: this option exists mainly for a couple of tests that check some
 // corner cases that is more difficult to trigger otherwise; these tests should
 // be rewritten and this option removed if possible.
-static cl::opt<bool> SkipLoopsWithZeroBTC(
-    "loop-interchange-skip-zero-btc", cl::init(true), cl::Hidden,
-    cl::desc("Do not consider loops with a backedge taken count of 0"));
+//static cl::opt<bool> SkipLoopsWithZeroBTC(
+//    "loop-interchange-skip-zero-btc", cl::init(true), cl::Hidden,
+//    cl::desc("Do not consider loops with a backedge taken count of 0"));
 
 #ifndef NDEBUG
 static bool noDuplicateRulesAndIgnore(ArrayRef<RuleTy> Rules) {
@@ -438,9 +438,10 @@ static bool isComputableLoopNest(ScalarEvolution *SE,
     // A loop with a backedge that isn't taken, e.g. an unconditional branch
     // true, isn't really a loop and we don't want to consider it as a
     // candidate.
-    if (ExitCountOuter && SkipLoopsWithZeroBTC && ExitCountOuter->isZero()) {
+    if (ExitCountOuter && /*SkipLoopsWithZeroBTC && */ExitCountOuter->isZero()) {
       LLVM_DEBUG(dbgs() << "The loop back-edge isn't taken, rejecting single "
                            "iteration loop\n");
+      LLVM_DEBUG(L->dump());
       return false;
     }
     if (L->getNumBackEdges() != 1) {
