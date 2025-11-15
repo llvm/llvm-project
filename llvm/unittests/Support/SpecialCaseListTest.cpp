@@ -314,9 +314,9 @@ TEST_F(SpecialCaseListTest, DotSlash) {
                          "[not]\n"
                          "fun:foo\n"
                          "src:bar\n";
-  std::unique_ptr<SpecialCaseList> SCL2 = makeSpecialCaseList(IgnoreList);
-  std::unique_ptr<SpecialCaseList> SCL3 =
-      makeSpecialCaseList(IgnoreList, /*Version=*/3);
+  std::unique_ptr<SpecialCaseList> SCL2 = makeSpecialCaseList(IgnoreList,
+                                                              /*Version=*/2);
+  std::unique_ptr<SpecialCaseList> SCL3 = makeSpecialCaseList(IgnoreList);
   std::unique_ptr<SpecialCaseList> SCL4 = makeSpecialCaseList(IgnoreList,
                                                               /*Version=*/4);
 
