@@ -177,8 +177,8 @@ void llvm::computeValueLLTs(const TargetLowering &TLI, const DataLayout &DL,
     return;
   // Base case: we can get an LLT for this LLVM IR type.
   ValueTys.push_back(TLI.getLLTForType(Ty, DL));
-  if (Offsets != nullptr)
-    Offsets->push_back(StartingOffset * 8);
+  if (Offsets)
+    Offsets->push_back(StartingOffset);
 }
 
 /// ExtractTypeInfo - Returns the type info, possibly bitcast, encoded in V.
