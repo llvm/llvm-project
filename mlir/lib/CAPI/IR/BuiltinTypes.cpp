@@ -536,7 +536,7 @@ MlirLogicalResult mlirMemRefTypeGetStridesAndOffset(MlirType type,
   if (failed(memrefType.getStridesAndOffset(strides_, *offset)))
     return mlirLogicalResultFailure();
 
-  (void)std::copy(strides_.begin(), strides_.end(), strides);
+  (void)llvm::copy(strides_, strides);
   return mlirLogicalResultSuccess();
 }
 
