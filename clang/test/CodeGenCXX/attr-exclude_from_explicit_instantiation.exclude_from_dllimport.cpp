@@ -13,10 +13,11 @@ struct C {
   // inherits dllimport from the class instantiation.
   void to_be_imported() noexcept;
 
-  // Per-member dllimport in explicitly dllimport-ed template instantiation is not allowed.
-  //EXCLUDE_FROM_EXPLICIT_INSTANTIATION __declspec(dllimport) void to_be_imported_explicitly() noexcept;
+  // This will be instantiated implicitly as an imported function because it is
+  // marked as dllimport explicitly.
+  EXCLUDE_FROM_EXPLICIT_INSTANTIATION __declspec(dllimport) void to_be_imported_explicitly() noexcept;
 
-  // This will be instantiated implicitly as an imported function unintentionally.
+  // This will be instantiated implicitly but won't be imported.
   EXCLUDE_FROM_EXPLICIT_INSTANTIATION void not_to_be_imported() noexcept;
 
   // This won't be instantiated.
@@ -27,6 +28,8 @@ template <class T> void C<T>::to_be_imported() noexcept {}
 template <class T> void C<T>::not_to_be_imported() noexcept {}
 template <class T> void C<T>::not_to_be_instantiated() noexcept {}
 
+// MSC: $"?not_to_be_imported@?$C@H@@QEAAXXZ" = comdat any
+// GNU: $_ZN1CIiE18not_to_be_importedEv = comdat any
 extern template struct __declspec(dllimport) C<int>;
 
 void use() {
@@ -36,7 +39,9 @@ void use() {
   // GNU: call void @_ZN1CIiE14to_be_importedEv
   c.to_be_imported();
 
-  //c.to_be_imported_explicitly();
+  // MSC: call void @"?to_be_imported_explicitly@?$C@H@@QEAAXXZ"
+  // GNU: call void @_ZN1CIiE25to_be_imported_explicitlyEv
+  c.to_be_imported_explicitly(); // implicitly instantiated here
 
   // MSC: call void @"?not_to_be_imported@?$C@H@@QEAAXXZ"
   // GNU: call void @_ZN1CIiE18not_to_be_importedEv
@@ -46,5 +51,8 @@ void use() {
 // MSC: declare dllimport void @"?to_be_imported@?$C@H@@QEAAXXZ"
 // GNU: declare dllimport void @_ZN1CIiE14to_be_importedEv
 
-// MSC: declare dllimport void @"?not_to_be_imported@?$C@H@@QEAAXXZ"
-// GNU: declare dllimport void @_ZN1CIiE18not_to_be_importedEv
+// MSC: declare dllimport void @"?to_be_imported_explicitly@?$C@H@@QEAAXXZ"
+// GNU: declare dllimport void @_ZN1CIiE25to_be_imported_explicitlyEv
+
+// MSC: define linkonce_odr dso_local void @"?not_to_be_imported@?$C@H@@QEAAXXZ"
+// GNU: define linkonce_odr dso_local void @_ZN1CIiE18not_to_be_importedEv

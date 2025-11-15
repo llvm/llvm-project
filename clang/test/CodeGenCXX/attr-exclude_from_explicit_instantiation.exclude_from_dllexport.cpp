@@ -17,7 +17,7 @@ struct C {
   // marked as dllexport explicitly.
   EXCLUDE_FROM_EXPLICIT_INSTANTIATION __declspec(dllexport) void to_be_exported_explicitly() noexcept;
 
-  // This will be instantiated implicitly as an exported function unintentionally.
+  // This will be instantiated implicitly but won't be exported.
   EXCLUDE_FROM_EXPLICIT_INSTANTIATION void not_to_be_exported() noexcept;
 
   // This won't be instantiated.
@@ -32,11 +32,9 @@ template <class T> void C<T>::not_to_be_instantiated() noexcept {}
 // MSC: $"?to_be_exported@?$C@H@@QEAAXXZ" = comdat any
 // MSC: $"?to_be_exported_explicitly@?$C@H@@QEAAXXZ" = comdat any
 // MSC: $"?not_to_be_exported@?$C@H@@QEAAXXZ" = comdat any
-// MSC: $"?not_to_be_instantiated@?$C@H@@QEAAXXZ" = comdat any
 // GNU: $_ZN1CIiE14to_be_exportedEv = comdat any
 // GNU: $_ZN1CIiE25to_be_exported_explicitlyEv = comdat any
 // GNU: $_ZN1CIiE18not_to_be_exportedEv = comdat any
-// GNU: $_ZN1CIiE22not_to_be_instantiatedEv = comdat any
 
 // MSC: define weak_odr dso_local dllexport{{.*}} void @"?to_be_exported@?$C@H@@QEAAXXZ"
 // GNU: define weak_odr dso_local dllexport{{.*}} void @_ZN1CIiE14to_be_exportedEv
@@ -57,8 +55,5 @@ void use() {
 // MSC: define weak_odr dso_local dllexport{{.*}} void @"?to_be_exported_explicitly@?$C@H@@QEAAXXZ"
 // GNU: define weak_odr dso_local dllexport{{.*}} void @_ZN1CIiE25to_be_exported_explicitlyEv
 
-// MSC: define weak_odr dso_local dllexport void @"?not_to_be_exported@?$C@H@@QEAAXXZ"
-// GNU: define weak_odr dso_local dllexport void @_ZN1CIiE18not_to_be_exportedEv
-
-// MSC: define weak_odr dso_local dllexport void @"?not_to_be_instantiated@?$C@H@@QEAAXXZ"
-// GNU: define weak_odr dso_local dllexport void @_ZN1CIiE22not_to_be_instantiatedEv
+// MSC: define linkonce_odr dso_local void @"?not_to_be_exported@?$C@H@@QEAAXXZ"
+// GNU: define linkonce_odr dso_local void @_ZN1CIiE18not_to_be_exportedEv
