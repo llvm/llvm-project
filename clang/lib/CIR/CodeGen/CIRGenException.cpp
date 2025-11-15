@@ -14,6 +14,7 @@
 #include "CIRGenFunction.h"
 
 #include "clang/AST/StmtVisitor.h"
+#include "clang/CIR/MissingFeatures.h"
 #include "llvm/Support/SaveAndRestore.h"
 
 using namespace clang;
@@ -344,7 +345,8 @@ void CIRGenFunction::enterCXXTryStmt(const CXXTryStmt &s, cir::TryOp tryOp,
 
     // No exception decl indicates '...', a catch-all.
     mlir::Region *handler = &tryOp.getHandlerRegions()[i];
-    catchScope->setHandler(i, cgm.getCXXABI().getCatchAllTypeInfo(), handler);
+    catchScope->setHandler(i, cgm.getCXXABI().getCatchAllTypeInfo(), handler,
+                           s.getHandler(i));
 
     // Under async exceptions, catch(...) needs to catch HW exception too
     // Mark scope with SehTryBegin as a SEH __try scope
@@ -385,8 +387,8 @@ void CIRGenFunction::exitCXXTryStmt(const CXXTryStmt &s, bool isFnTryBlock) {
 
   // Copy the handler blocks off before we pop the EH stack.  Emitting
   // the handlers might scribble on this memory.
-  SmallVector<EHCatchScope::Handler, 8> handlers(
-      catchScope.begin(), catchScope.begin() + numHandlers);
+  SmallVector<EHCatchScope::Handler> handlers(catchScope.begin(),
+                                              catchScope.begin() + numHandlers);
 
   ehStack.popCatch();
 
@@ -404,21 +406,20 @@ void CIRGenFunction::exitCXXTryStmt(const CXXTryStmt &s, bool isFnTryBlock) {
   }
 
   bool hasCatchAll = false;
-  for (unsigned i = numHandlers; i != 0; --i) {
-    hasCatchAll |= handlers[i - 1].isCatchAll();
-    mlir::Region *catchRegion = handlers[i - 1].region;
+  for (auto &handler : llvm::reverse(handlers)) {
+    hasCatchAll |= handler.isCatchAll();
+    mlir::Region *catchRegion = handler.region;
+    const CXXCatchStmt *catchStmt = handler.stmt;
 
     mlir::OpBuilder::InsertionGuard guard(builder);
     builder.setInsertionPointToStart(&catchRegion->front());
-
-    const CXXCatchStmt *catchStmt = s.getHandler(i - 1);
 
     // Enter a cleanup scope, including the catch variable and the
     // end-catch.
     RunCleanupsScope catchScope(*this);
 
     // Initialize the catch variable and set up the cleanups.
-    // TODO: emitBeginCatch
+    assert(!cir::MissingFeatures::catchParamOp());
 
     // Emit the PGO counter increment.
     assert(!cir::MissingFeatures::incrementProfileCounter());
@@ -428,7 +429,7 @@ void CIRGenFunction::exitCXXTryStmt(const CXXTryStmt &s, bool isFnTryBlock) {
         emitStmt(catchStmt->getHandlerBlock(), /*useCurrentScope=*/true);
     assert(emitResult.succeeded() && "failed to emit catch handler block");
 
-    // TODO(cir): This yeild should replaced by CatchParamOp once it upstreamed
+    assert(!cir::MissingFeatures::catchParamOp());
     cir::YieldOp::create(builder, tryOp->getLoc());
 
     // [except.handle]p11:
@@ -469,7 +470,7 @@ void CIRGenFunction::populateCatchHandlers(cir::TryOp tryOp) {
   EHScope &innermostEHScope = *ehStack.find(ehStack.getInnermostEHScope());
   switch (innermostEHScope.getKind()) {
   case EHScope::Terminate:
-    cgm.errorNYI("emitLandingPad: terminate");
+    cgm.errorNYI("populateCatchHandlers: terminate");
     return;
 
   case EHScope::Catch:
@@ -491,29 +492,25 @@ void CIRGenFunction::populateCatchHandlers(cir::TryOp tryOp) {
     for (EHScopeStack::iterator i = ehStack.begin(), e = ehStack.end(); i != e;
          ++i) {
       switch (i->getKind()) {
-      case EHScope::Cleanup: {
+      case EHScope::Cleanup:
         cgm.errorNYI("emitLandingPad: Cleanup");
         return;
-      }
 
-      case EHScope::Filter: {
+      case EHScope::Filter:
         cgm.errorNYI("emitLandingPad: Filter");
         return;
-      }
 
-      case EHScope::Terminate: {
+      case EHScope::Terminate:
         cgm.errorNYI("emitLandingPad: Terminate");
         return;
-      }
 
       case EHScope::Catch:
         break;
-      }
+      } // end switch
 
       EHCatchScope &catchScope = cast<EHCatchScope>(*i);
-      for (unsigned handlerIdx = 0, he = catchScope.getNumHandlers();
-           handlerIdx != he; ++handlerIdx) {
-        EHCatchScope::Handler handler = catchScope.getHandler(handlerIdx);
+      for (const EHCatchScope::Handler &handler :
+           llvm::make_range(catchScope.begin(), catchScope.end())) {
         assert(handler.type.flags == 0 &&
                "landingpads do not support catch handler flags");
 
@@ -617,15 +614,14 @@ void CIRGenFunction::populateEHCatchRegions(EHScopeStack::stable_iterator scope,
 // `getInvokeDestImpl`, in CIR we need the condition to know if the EH scope may
 // throw exception or now.
 bool CIRGenFunction::isCatchOrCleanupRequired() {
-  if (!ehStack.requiresCatchOrCleanup())
-    return false;
-
   // If exceptions are disabled/ignored and SEH is not in use, then there is no
   // invoke destination. SEH "works" even if exceptions are off. In practice,
   // this means that C++ destructors and other EH cleanups don't run, which is
   // consistent with MSVC's behavior, except in the presence of -EHa
   const LangOptions &lo = cgm.getLangOpts();
   if (!lo.Exceptions || lo.IgnoreExceptions) {
+    if (!lo.Borland && !lo.MicrosoftExt)
+      return false;
     cgm.errorNYI("isInvokeDest: no exceptions or ignore exception");
     return false;
   }
@@ -634,7 +630,7 @@ bool CIRGenFunction::isCatchOrCleanupRequired() {
   if (lo.CUDA && lo.CUDAIsDevice)
     return false;
 
-  return true;
+  return ehStack.requiresCatchOrCleanup();
 }
 
 // In classic codegen this function is equivalent to `getInvokeDestImpl`, in

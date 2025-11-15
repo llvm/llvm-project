@@ -335,6 +335,9 @@ struct MissingFeatures {
   static bool vtableRelativeLayout() { return false; }
   static bool weakRefReference() { return false; }
   static bool writebacks() { return false; }
+  static bool msvcCXXPersonality() { return false; }
+  static bool functionUsesSEHTry() { return false; }
+  static bool nothrowAttr() { return false; }
 
   // Missing types
   static bool dataMemberType() { return false; }
@@ -359,6 +362,7 @@ struct MissingFeatures {
   static bool tryOp() { return false; }
   static bool vecTernaryOp() { return false; }
   static bool zextOp() { return false; }
+  static bool catchParamOp() { return false; }
 
   // Future CIR attributes
   static bool optInfoAttr() { return false; }

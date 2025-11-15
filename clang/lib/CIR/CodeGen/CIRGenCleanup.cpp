@@ -190,8 +190,13 @@ void EHScopeStack::popCleanup() {
 
 bool EHScopeStack::requiresCatchOrCleanup() const {
   for (stable_iterator si = getInnermostEHScope(); si != stable_end();) {
-    // TODO(cir): Skip lifetime markers.
-    assert(!cir::MissingFeatures::emitLifetimeMarkers());
+    if (auto *cleanup = dyn_cast<EHCleanupScope>(&*find(si))) {
+      if (cleanup->isLifetimeMarker()) {
+        // Skip lifetime markers and continue from the enclosing EH scope
+        assert(!cir::MissingFeatures::emitLifetimeMarkers());
+        continue;
+      }
+    }
     return true;
   }
   return false;

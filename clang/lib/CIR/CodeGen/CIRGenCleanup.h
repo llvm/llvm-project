@@ -18,6 +18,7 @@
 #include "CIRGenModule.h"
 #include "EHScopeStack.h"
 #include "mlir/IR/Value.h"
+#include "clang/AST/StmtCXX.h"
 
 namespace clang::CIRGen {
 
@@ -124,6 +125,9 @@ public:
     /// The catch handler for this type.
     mlir::Region *region;
 
+    /// The catch handler stmt.
+    const CXXCatchStmt *stmt;
+
     bool isCatchAll() const { return type.rtti == nullptr; }
   };
 
@@ -150,10 +154,13 @@ public:
 
   unsigned getNumHandlers() const { return catchBits.numHandlers; }
 
-  void setHandler(unsigned i, CatchTypeInfo type, mlir::Region *region) {
+  void setHandler(unsigned i, CatchTypeInfo type, mlir::Region *region,
+                  const CXXCatchStmt *stmt) {
     assert(i < getNumHandlers());
-    getHandlers()[i].type = type;
-    getHandlers()[i].region = region;
+    Handler *handler = &getHandlers()[i];
+    handler->type = type;
+    handler->region = region;
+    handler->stmt = stmt;
   }
 
   const Handler &getHandler(unsigned i) const {
@@ -233,6 +240,8 @@ public:
 
   bool isActive() const { return cleanupBits.isActive; }
   void setActive(bool isActive) { cleanupBits.isActive = isActive; }
+
+  bool isLifetimeMarker() const { return cleanupBits.isLifetimeMarker; }
 
   unsigned getFixupDepth() const { return fixupDepth; }
   EHScopeStack::stable_iterator getEnclosingNormalCleanup() const {

@@ -661,9 +661,10 @@ RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &funcInfo,
     indirectFuncVal = calleePtr->getResult(0);
   }
 
-  // TODO(cir): currentFunctionUsesSEHTry
-  // TODO(cir): check for MSVCXXPersonality
-  // TODO(cir): Create NoThrowAttr
+  assert(!cir::MissingFeatures::msvcCXXPersonality());
+  assert(!cir::MissingFeatures::functionUsesSEHTry());
+  assert(!cir::MissingFeatures::nothrowAttr());
+
   bool cannotThrow = attrs.getNamed("nothrow").has_value();
   bool isInvoke = !cannotThrow && isCatchOrCleanupRequired();
 
