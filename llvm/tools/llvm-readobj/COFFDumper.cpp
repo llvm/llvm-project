@@ -2330,8 +2330,7 @@ void COFFDumper::printResourceDirectoryTable(
       std::vector<UTF16> EndianCorrectedNameString;
       if (llvm::sys::IsBigEndianHost) {
         EndianCorrectedNameString.resize(RawEntryNameString.size() + 1);
-        std::copy(RawEntryNameString.begin(), RawEntryNameString.end(),
-                  EndianCorrectedNameString.begin() + 1);
+        llvm::copy(RawEntryNameString, EndianCorrectedNameString.begin() + 1);
         EndianCorrectedNameString[0] = UNI_UTF16_BYTE_ORDER_MARK_SWAPPED;
         RawEntryNameString = ArrayRef(EndianCorrectedNameString);
       }

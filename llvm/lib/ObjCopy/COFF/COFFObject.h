@@ -69,7 +69,7 @@ private:
 struct AuxSymbol {
   AuxSymbol(ArrayRef<uint8_t> In) {
     assert(In.size() == sizeof(Opaque));
-    std::copy(In.begin(), In.end(), Opaque);
+    llvm::copy(In, Opaque);
   }
 
   ArrayRef<uint8_t> getRef() const {

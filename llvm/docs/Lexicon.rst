@@ -57,7 +57,7 @@ C
     This abbreviation has two meanings.
     Either:
     Call Frame Information. Used in DWARF debug info and in C++ unwind info
-    to show how the function prolog lays out the stack frame.
+    to show how the function prologue lays out the stack frame.
 
     Or:
     Control Flow Integrity. A general term for computer security techniques
@@ -194,7 +194,7 @@ L
     generic unwinding mechanism.  As the unwinder walks each frame, it calls
     a "personality" function to do language-specific analysis.  Each function's
     FDE points to an optional LSDA which is passed to the personality function.
-    For C++, the LSDA contain info about the type and location of catch
+    For C++, the LSDA contains info about the type and location of catch
     statements in that function.
 
 **Load-VN**
@@ -256,7 +256,7 @@ R
 
 **Reassociation**
     Rearranging associative expressions to promote better redundancy elimination
-    and other optimization.  For example, changing ``(A+B-A)`` into ``(B+A-A)``,
+    and other optimizations.  For example, changing ``(A+B-A)`` into ``(B+A-A)``,
     permitting it to be optimized into ``(B+0)`` then ``(B)``.
 
 **RFC**

@@ -95,7 +95,7 @@ memory access occurred.
 To maintain distinct source locations for SamplePGO, it is often beneficial to
 retain an arbitrary but deterministic location instead of discarding line and
 column information as part of merging. In particular, loss of location
-information for calls inhibit optimizations such as indirect call promotion.
+information for calls inhibits optimizations such as indirect call promotion.
 This behavior can be optionally enabled until support for accurately
 representing merged instructions in the line table is implemented.
 
