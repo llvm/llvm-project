@@ -29,6 +29,10 @@ template <typename Pattern> bool match(VPUser *U, const Pattern &P) {
   return R && match(R, P);
 }
 
+template <typename Pattern> bool match(VPSingleDefRecipe *R, const Pattern &P) {
+  return P.match(static_cast<const VPRecipeBase *>(R));
+}
+
 template <typename Val, typename Pattern> struct VPMatchFunctor {
   const Pattern &P;
   VPMatchFunctor(const Pattern &P) : P(P) {}
