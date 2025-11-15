@@ -38,16 +38,13 @@ namespace llvm {
 
 namespace {
 
-using Match = std::pair<StringRef, unsigned>;
-static constexpr Match NotMatched = {"", 0};
-
 // Lagacy v1 matcher.
 class RegexMatcher {
 public:
   Error insert(StringRef Pattern, unsigned LineNumber);
-  void preprocess(bool BySize);
+  void preprocess();
 
-  Match match(StringRef Query) const;
+  unsigned match(StringRef Query) const;
 
   struct Reg {
     Reg(StringRef Name, unsigned LineNo, Regex &&Rg)
@@ -63,9 +60,9 @@ public:
 class GlobMatcher {
 public:
   Error insert(StringRef Pattern, unsigned LineNumber);
-  void preprocess(bool BySize);
+  void preprocess();
 
-  Match match(StringRef Query) const;
+  unsigned match(StringRef Query) const;
 
   struct Glob {
     Glob(StringRef Name, unsigned LineNo, GlobPattern &&Pattern)
@@ -92,10 +89,10 @@ public:
   Matcher(bool UseGlobs, bool RemoveDotSlash);
 
   Error insert(StringRef Pattern, unsigned LineNumber);
-  void preprocess(bool BySize);
-  Match match(StringRef Query) const;
+  void preprocess();
+  unsigned match(StringRef Query) const;
 
-  bool matchAny(StringRef Query) const { return match(Query).second > 0; }
+  bool matchAny(StringRef Query) const { return match(Query); }
 
   std::variant<RegexMatcher, GlobMatcher> M;
   bool RemoveDotSlash;
@@ -125,19 +122,13 @@ Error RegexMatcher::insert(StringRef Pattern, unsigned LineNumber) {
   return Error::success();
 }
 
-void RegexMatcher::preprocess(bool BySize) {
-  if (BySize) {
-    llvm::stable_sort(RegExes, [](const Reg &A, const Reg &B) {
-      return A.Name.size() < B.Name.size();
-    });
-  }
-}
+void RegexMatcher::preprocess() {}
 
-Match RegexMatcher::match(StringRef Query) const {
+unsigned RegexMatcher::match(StringRef Query) const {
   for (const auto &R : reverse(RegExes))
     if (R.Rg.match(Query))
-      return {R.Name, R.LineNo};
-  return NotMatched;
+      return R.LineNo;
+  return 0;
 }
 
 Error GlobMatcher::insert(StringRef Pattern, unsigned LineNumber) {
@@ -151,13 +142,7 @@ Error GlobMatcher::insert(StringRef Pattern, unsigned LineNumber) {
   return Error::success();
 }
 
-void GlobMatcher::preprocess(bool BySize) {
-  if (BySize) {
-    llvm::stable_sort(Globs, [](const Glob &A, const Glob &B) {
-      return A.Name.size() < B.Name.size();
-    });
-  }
-
+void GlobMatcher::preprocess() {
   for (const auto &[Idx, G] : enumerate(Globs)) {
     StringRef Prefix = G.Pattern.prefix();
     StringRef Suffix = G.Pattern.suffix();
@@ -181,7 +166,7 @@ void GlobMatcher::preprocess(bool BySize) {
   }
 }
 
-Match GlobMatcher::match(StringRef Query) const {
+unsigned GlobMatcher::match(StringRef Query) const {
   int Best = -1;
   if (!PrefixSuffixToGlob.empty()) {
     for (const auto &[_, SToGlob] : PrefixSuffixToGlob.find_prefixes(Query)) {
@@ -224,9 +209,7 @@ Match GlobMatcher::match(StringRef Query) const {
       }
     }
   }
-  if (Best < 0)
-    return NotMatched;
-  return {Globs[Best].Name, Globs[Best].LineNo};
+  return Best < 0 ? 0 : Globs[Best].LineNo;
 }
 
 Matcher::Matcher(bool UseGlobs, bool RemoveDotSlash)
@@ -241,20 +224,20 @@ Error Matcher::insert(StringRef Pattern, unsigned LineNumber) {
   return std::visit([&](auto &V) { return V.insert(Pattern, LineNumber); }, M);
 }
 
-void Matcher::preprocess(bool BySize) {
-  return std::visit([&](auto &V) { return V.preprocess(BySize); }, M);
+void Matcher::preprocess() {
+  return std::visit([&](auto &V) { return V.preprocess(); }, M);
 }
 
-Match Matcher::match(StringRef Query) const {
+unsigned Matcher::match(StringRef Query) const {
   if (RemoveDotSlash)
     Query = llvm::sys::path::remove_leading_dotslash(Query);
-  return std::visit([&](auto &V) -> Match { return V.match(Query); }, M);
+  return std::visit([&](auto &V) -> unsigned { return V.match(Query); }, M);
 }
 } // namespace
 
 class SpecialCaseList::Section::SectionImpl {
 public:
-  void preprocess(bool OrderBySize);
+  void preprocess();
   const Matcher *findMatcher(StringRef Prefix, StringRef Category) const;
 
   using SectionEntries = StringMap<StringMap<Matcher>>;
@@ -304,7 +287,7 @@ bool SpecialCaseList::createInternal(const std::vector<std::string> &Paths,
       return false;
     }
     std::string ParseError;
-    if (!parse(i, FileOrErr.get().get(), ParseError, /*OrderBySize=*/false)) {
+    if (!parse(i, FileOrErr.get().get(), ParseError)) {
       Error = (Twine("error parsing file '") + Path + "': " + ParseError).str();
       return false;
     }
@@ -312,9 +295,9 @@ bool SpecialCaseList::createInternal(const std::vector<std::string> &Paths,
   return true;
 }
 
-bool SpecialCaseList::createInternal(const MemoryBuffer *MB, std::string &Error,
-                                     bool OrderBySize) {
-  if (!parse(0, MB, Error, OrderBySize))
+bool SpecialCaseList::createInternal(const MemoryBuffer *MB,
+                                     std::string &Error) {
+  if (!parse(0, MB, Error))
     return false;
   return true;
 }
@@ -337,7 +320,7 @@ SpecialCaseList::addSection(StringRef SectionStr, unsigned FileNo,
 }
 
 bool SpecialCaseList::parse(unsigned FileIdx, const MemoryBuffer *MB,
-                            std::string &Error, bool OrderBySize) {
+                            std::string &Error) {
   unsigned long long Version = 2;
 
   StringRef Header = MB->getBuffer();
@@ -413,7 +396,7 @@ bool SpecialCaseList::parse(unsigned FileIdx, const MemoryBuffer *MB,
   }
 
   for (Section &S : Sections)
-    S.Impl->preprocess(OrderBySize);
+    S.Impl->preprocess();
 
   return true;
 }
@@ -465,27 +448,19 @@ SpecialCaseList::Section::SectionImpl::findMatcher(StringRef Prefix,
   return &II->second;
 }
 
-void SpecialCaseList::Section::SectionImpl::preprocess(bool OrderBySize) {
-  SectionMatcher.preprocess(false);
+void SpecialCaseList::Section::SectionImpl::preprocess() {
+  SectionMatcher.preprocess();
   for (auto &[K1, E] : Entries)
     for (auto &[K2, M] : E)
-      M.preprocess(OrderBySize);
+      M.preprocess();
 }
 
 unsigned SpecialCaseList::Section::getLastMatch(StringRef Prefix,
                                                 StringRef Query,
                                                 StringRef Category) const {
   if (const Matcher *M = Impl->findMatcher(Prefix, Category))
-    return M->match(Query).second;
+    return M->match(Query);
   return 0;
-}
-
-StringRef SpecialCaseList::Section::getLongestMatch(StringRef Prefix,
-                                                    StringRef Query,
-                                                    StringRef Category) const {
-  if (const Matcher *M = Impl->findMatcher(Prefix, Category))
-    return M->match(Query).first;
-  return {};
 }
 
 bool SpecialCaseList::Section::hasPrefix(StringRef Prefix) const {
