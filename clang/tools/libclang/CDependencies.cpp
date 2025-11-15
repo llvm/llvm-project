@@ -20,12 +20,15 @@
 
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/SerializedDiagnosticPrinter.h"
+#include "clang/Options/Options.h"
 #include "clang/Tooling/DependencyScanning/DependencyScanningService.h"
 #include "clang/Tooling/DependencyScanning/DependencyScanningTool.h"
 #include "clang/Tooling/DependencyScanning/DependencyScanningWorker.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/CAS/CASProvidingFileSystem.h"
 #include "llvm/CAS/CachingOnDiskFileSystem.h"
+#include "llvm/Option/ArgList.h"
+#include "llvm/Option/OptTable.h"
 #include "llvm/Support/Process.h"
 
 using namespace clang;
@@ -856,18 +859,32 @@ enum CXErrorCode clang_experimental_DependencyScanner_generateReproducer(
     ScriptOS << ' ' << Arg;
   ScriptOS << "\n\n";
 
+  const llvm::opt::OptTable &ClangOpts = getDriverOptTable();
+
   ScriptOS << "# Dependencies:\n";
   // Output the executable as an environment variable with a default value, so
   // it is easier to run the reproducer with a different compiler and to
   // simplify running an individual command manually.
   std::string ReproExecutable = "\"${CLANG:-" + Opts.BuildArgs.front() + "}\"";
-  auto PrintArguments = [&ReproExecutable,
-                         &FileCacheName](llvm::raw_fd_ostream &OS,
-                                         ArrayRef<std::string> Arguments) {
+  auto PrintArguments = [&ReproExecutable, &FileCacheName,
+                         &ClangOpts](llvm::raw_fd_ostream &OS,
+                                     ArrayRef<std::string> Arguments) {
+    std::vector<const char *> CharArgs(Arguments.size());
+    for (const std::string &Arg : Arguments)
+      CharArgs.push_back(Arg.c_str());
+    unsigned MissingArgIndex, MissingArgCount;
+    llvm::opt::InputArgList ParsedArgs =
+        ClangOpts.ParseArgs(CharArgs, MissingArgIndex, MissingArgCount,
+                            llvm::opt::Visibility(options::CC1Option));
+
     OS << ReproExecutable;
-    for (int I = 0, E = Arguments.size(); I < E; ++I) {
-      OS << ' ';
-      llvm::sys::printArg(OS, Arguments[I], /*Quote=*/true);
+    for (const llvm::opt::Arg *Arg : ParsedArgs) {
+      llvm::opt::ArgStringList OutArgs;
+      Arg->render(ParsedArgs, OutArgs);
+      for (const auto &OutArg : OutArgs) {
+        OS << ' ';
+        llvm::sys::printArg(OS, OutArg, /*Quote=*/true);
+      }
     }
     OS << " -ivfsoverlay \"" << FileCacheName << "/vfs/vfs.yaml\"";
     OS << '\n';
