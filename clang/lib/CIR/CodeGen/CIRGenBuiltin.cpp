@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "CIRGenCall.h"
-#include "CIRGenConstantEmitter.h"
 #include "CIRGenFunction.h"
 #include "CIRGenModule.h"
 #include "CIRGenValue.h"
@@ -22,6 +21,7 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/GlobalDecl.h"
 #include "clang/Basic/Builtins.h"
+#include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "llvm/Support/ErrorHandling.h"
 
@@ -193,11 +193,16 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     // default (e.g. in C / C++ auto vars are in the generic address space). At
     // the AST level this is handled within CreateTempAlloca et al., but for the
     // builtin / dynamic alloca we have to handle it here.
-    assert(!cir::MissingFeatures::addressSpace());
+
+    if (!cir::isMatchingAddressSpace(
+            getCIRAllocaAddressSpace(),
+            e->getType()->getPointeeType().getAddressSpace())) {
+      cgm.errorNYI(e->getSourceRange(), "Non-default address space for alloca");
+    }
 
     // Bitcast the alloca to the expected type.
-    return RValue::get(
-        builder.createBitcast(allocaAddr, builder.getVoidPtrTy()));
+    return RValue::get(builder.createBitcast(
+        allocaAddr, builder.getVoidPtrTy(getCIRAllocaAddressSpace())));
   }
 
   case Builtin::BIcos:
@@ -623,6 +628,22 @@ CIRGenFunction::emitTargetBuiltinExpr(unsigned builtinID, const CallExpr *e,
 
   return emitTargetArchBuiltinExpr(this, builtinID, e, returnValue,
                                    getTarget().getTriple().getArch());
+}
+
+mlir::Value CIRGenFunction::emitScalarOrConstFoldImmArg(
+    const unsigned iceArguments, const unsigned idx, const Expr *argExpr) {
+  mlir::Value arg = {};
+  if ((iceArguments & (1 << idx)) == 0) {
+    arg = emitScalarExpr(argExpr);
+  } else {
+    // If this is required to be a constant, constant fold it so that we
+    // know that the generated intrinsic gets a ConstantInt.
+    const std::optional<llvm::APSInt> result =
+        argExpr->getIntegerConstantExpr(getContext());
+    assert(result && "Expected argument to be a constant");
+    arg = builder.getConstInt(getLoc(argExpr->getSourceRange()), *result);
+  }
+  return arg;
 }
 
 /// Given a builtin id for a function like "__builtin_fabsf", return a Function*

@@ -344,14 +344,14 @@ define void @loop_absmax32_pred_c(ptr %0, i32 %1, ptr nocapture %2) {
 ; CHECK-NEXT:    vmov.i32 q0, #0x0
 ; CHECK-NEXT:    dlstp.32 lr, r1
 ; CHECK-NEXT:  .LBB19_1: @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vldrw.u32 q1, [r0], #16
-; CHECK-NEXT:    vmaxnma.f32 q1, q0
-; CHECK-NEXT:    vmov q0, q1
+; CHECK-NEXT:    vmov q1, q0
+; CHECK-NEXT:    vldrw.u32 q0, [r0], #16
+; CHECK-NEXT:    vmaxnma.f32 q0, q1
 ; CHECK-NEXT:    letp lr, .LBB19_1
 ; CHECK-NEXT:  @ %bb.2:
-; CHECK-NEXT:    vldr s0, .LCPI19_0
-; CHECK-NEXT:    vmov r0, s0
-; CHECK-NEXT:    vmaxnmav.f32 r0, q1
+; CHECK-NEXT:    vldr s4, .LCPI19_0
+; CHECK-NEXT:    vmov r0, s4
+; CHECK-NEXT:    vmaxnmav.f32 r0, q0
 ; CHECK-NEXT:    vmov s0, r0
 ; CHECK-NEXT:    vstr s0, [r2]
 ; CHECK-NEXT:    pop {r7, pc}
@@ -538,14 +538,14 @@ define void @loop_absmax16_pred_c(ptr %0, i32 %1, ptr nocapture %2) {
 ; CHECK-NEXT:    vmov.i32 q0, #0x0
 ; CHECK-NEXT:    dlstp.16 lr, r1
 ; CHECK-NEXT:  .LBB23_1: @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vldrh.u16 q1, [r0], #8
-; CHECK-NEXT:    vmaxnma.f16 q1, q0
-; CHECK-NEXT:    vmov q0, q1
+; CHECK-NEXT:    vmov q1, q0
+; CHECK-NEXT:    vldrh.u16 q0, [r0], #8
+; CHECK-NEXT:    vmaxnma.f16 q0, q1
 ; CHECK-NEXT:    letp lr, .LBB23_1
 ; CHECK-NEXT:  @ %bb.2:
-; CHECK-NEXT:    vldr.16 s0, .LCPI23_0
-; CHECK-NEXT:    vmov r0, s0
-; CHECK-NEXT:    vmaxnmav.f16 r0, q1
+; CHECK-NEXT:    vldr.16 s4, .LCPI23_0
+; CHECK-NEXT:    vmov r0, s4
+; CHECK-NEXT:    vmaxnmav.f16 r0, q0
 ; CHECK-NEXT:    vmov s0, r0
 ; CHECK-NEXT:    vstr.16 s0, [r2]
 ; CHECK-NEXT:    pop {r7, pc}
