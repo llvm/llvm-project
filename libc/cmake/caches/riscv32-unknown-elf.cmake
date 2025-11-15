@@ -1,0 +1,3 @@
+set(CMAKE_SYSTEM_PROCESSOR RISCV CACHE STRING "")
+
+include(${CMAKE_CURRENT_LIST_DIR}/baremetal_common.cmake)

@@ -153,7 +153,7 @@ jobs:
           *-none-eabi|riscv32-unknown-elf)
             cmake -DARCH_TRIPLE="${{ matrix.target }}" \
               $CMAKE_FLAGS \
-              -C ${{ github.workspace }}/libc/cmake/caches/Standalone_libc_baremetal.cmake
+              -C ${{ github.workspace }}/libc/cmake/caches/${{ matrix.target }}.cmake
             ;;
           *)
             cmake -DLLVM_RUNTIME_TARGETS=${{ matrix.target }} \
