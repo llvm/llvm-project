@@ -44,6 +44,11 @@ static auto SerializeReferenceLambda = [](const auto &Ref, Object &Object) {
   serializeReference(Ref, Object);
 };
 
+static void insertNonEmpty(StringRef Key, StringRef Value, Object &Obj) {
+  if (!Value.empty())
+    Obj[Key] = Value;
+}
+
 static std::string infoTypeToString(InfoType IT) {
   switch (IT) {
   case InfoType::IT_default:
@@ -276,11 +281,11 @@ serializeCommonAttributes(const Info &I, json::Object &Obj,
   Obj["Name"] = I.Name;
   Obj["USR"] = toHex(toStringRef(I.USR));
   Obj["InfoType"] = infoTypeToString(I.IT);
-  if (!I.DocumentationFileName.empty())
-    Obj["DocumentationFileName"] = I.DocumentationFileName;
-
-  if (!I.Path.empty())
-    Obj["Path"] = I.Path;
+  // Conditionally insert fields.
+  // Empty properties are omitted because Mustache templates use existence
+  // to conditionally render content.
+  insertNonEmpty("DocumentationFileName", I.DocumentationFileName, Obj);
+  insertNonEmpty("Path", I.Path, Obj);
 
   if (!I.Namespace.empty()) {
     Obj["Namespace"] = json::Array();
@@ -318,7 +323,7 @@ serializeCommonAttributes(const Info &I, json::Object &Obj,
 }
 
 static void serializeReference(const Reference &Ref, Object &ReferenceObj) {
-  ReferenceObj["Path"] = Ref.Path;
+  insertNonEmpty("Path", Ref.Path, ReferenceObj);
   ReferenceObj["Name"] = Ref.Name;
   ReferenceObj["QualName"] = Ref.QualName;
   ReferenceObj["USR"] = toHex(toStringRef(Ref.USR));
@@ -656,6 +661,51 @@ static SmallString<16> determineFileName(Info *I, SmallString<128> &Path) {
   return FileName;
 }
 
+// Creates a JSON file above the global namespace directory.
+// An index can be used to create the top-level HTML index page or the Markdown
+// index file.
+static Error serializeIndex(const ClangDocContext &CDCtx, StringRef RootDir) {
+  if (CDCtx.Idx.Children.empty())
+    return Error::success();
+
+  json::Value ObjVal = Object();
+  Object &Obj = *ObjVal.getAsObject();
+  insertNonEmpty("ProjectName", CDCtx.ProjectName, Obj);
+
+  auto IndexCopy = CDCtx.Idx;
+  IndexCopy.sort();
+  json::Value IndexArray = json::Array();
+  auto &IndexArrayRef = *IndexArray.getAsArray();
+
+  if (IndexCopy.Children.empty()) {
+    // If the index is empty, default to displaying the global namespace.
+    IndexCopy.Children.emplace_back(GlobalNamespaceID, "",
+                                    InfoType::IT_namespace, "GlobalNamespace");
+  } else {
+    IndexArrayRef.reserve(CDCtx.Idx.Children.size());
+  }
+
+  for (auto &Idx : IndexCopy.Children) {
+    if (Idx.Children.empty())
+      continue;
+    std::string TypeStr = infoTypeToString(Idx.RefType);
+    json::Value IdxVal = Object();
+    auto &IdxObj = *IdxVal.getAsObject();
+    serializeReference(Idx, IdxObj);
+    IndexArrayRef.push_back(IdxVal);
+  }
+  Obj["Index"] = IndexArray;
+
+  SmallString<128> IndexFilePath(RootDir);
+  sys::path::append(IndexFilePath, "/json/index.json");
+  std::error_code FileErr;
+  raw_fd_ostream RootOS(IndexFilePath, FileErr, sys::fs::OF_Text);
+  if (FileErr)
+    return createFileError("cannot open file " + IndexFilePath, FileErr);
+  RootOS << llvm::formatv("{0:2}", ObjVal);
+  return Error::success();
+}
+
 Error JSONGenerator::generateDocumentation(
     StringRef RootDir, llvm::StringMap<std::unique_ptr<doc::Info>> Infos,
     const ClangDocContext &CDCtx, std::string DirName) {
@@ -694,7 +744,7 @@ Error JSONGenerator::generateDocumentation(
         return Err;
   }
 
-  return Error::success();
+  return serializeIndex(CDCtx, RootDir);
 }
 
 Error JSONGenerator::generateDocForInfo(Info *I, raw_ostream &OS,

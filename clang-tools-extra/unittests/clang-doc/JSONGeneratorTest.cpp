@@ -135,7 +135,6 @@ TEST_F(JSONGeneratorTest, emitRecordJSON) {
     {
       "End": true,
       "Name": "F",
-      "Path": "",
       "QualName": "",
       "USR": "0000000000000000000000000000000000000000"
     }
