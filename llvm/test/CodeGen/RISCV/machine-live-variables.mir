@@ -1,18 +1,13 @@
-# RUN: llc -mtriple=riscv64 -verify-machineinstrs -run-pass=riscv-live-variables -debug < %s | FileCheck %s
+# RUN: llc -x mir -mtriple=riscv64 -verify-machineinstrs -run-pass=riscv-live-variables -debug < %s 2>&1 \
+# RUN: | FileCheck %s
 
 # REQUIRES: asserts
 
-;CHECK: Block:  (Number: 1)
-;CHECK:   Live-In:  { }
-;CHECK:   Live-Out: { }
-;CHECK:   Use:      { }
-;CHECK:   Def:      { $x10 $x11 $x12 $x13 $x14 $x15 $x16 $x10_h $x11_h $x12_h $x13_h $x14_h $x15_h $x16_h $x10_w $x11_w $x12_w $x13_w $x14_w $x15_w $x16_w }
-;CHECK: 
-;CHECK: Block:  (Number: 0)
-;CHECK:   Live-In:  { $x11 $x12 $x13 $x14 $x15 $x16 $x17 $x11_h $x12_h $x13_h $x14_h $x15_h $x16_h $x17_h $x11_w $x12_w $x13_w $x14_w $x15_w $x16_w $x17_w }
-;CHECK:   Live-Out: { }
-;CHECK:   Use:      { $x11 $x12 $x13 $x14 $x15 $x16 $x17 $x11_h $x12_h $x13_h $x14_h $x15_h $x16_h $x17_h $x11_w $x12_w $x13_w $x14_w $x15_w $x16_w $x17_w }
-;CHECK:   Def:      { $x10 $x11 $x12 $x10_h $x11_h $x12_h $x10_w $x11_w $x12_w }
+# CHECK: Block: (Number: 0)
+# CHECK:   Live-In:  { $x11 $x12 $x13 $x14 $x15 $x16 $x17 $x11_h $x12_h $x13_h $x14_h $x15_h $x16_h $x17_h $x11_w $x12_w $x13_w $x14_w $x15_w $x16_w $x17_w }
+# CHECK:   Live-Out: { }
+# CHECK:   Use:      { $x11 $x12 $x13 $x14 $x15 $x16 $x17 $x11_h $x12_h $x13_h $x14_h $x15_h $x16_h $x17_h $x11_w $x12_w $x13_w $x14_w $x15_w $x16_w $x17_w }
+# CHECK:   Def:      { $x10 $x11 $x12 $x10_h $x11_h $x12_h $x10_w $x11_w $x12_w }
 
 --- |
 
@@ -77,3 +72,5 @@ body: |
     SW killed renamable $x12, %stack.0.va, 4 :: (store (s32) into %ir.va + 4)
     renamable $x10 = LW killed renamable $x10, 0 :: (load (s32) from %ir.argp.cur)
     PseudoRET implicit $x10
+
+...
