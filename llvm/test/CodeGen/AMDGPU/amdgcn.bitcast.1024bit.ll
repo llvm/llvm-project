@@ -169656,8 +169656,8 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; VI-NEXT:    s_bfe_u32 s47, s41, 0x10010
 ; VI-NEXT:    s_add_i32 s47, s47, s41
 ; VI-NEXT:    s_addk_i32 s47, 0x7fff
-; VI-NEXT:    s_bitset1_b32 s41, 22
 ; VI-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
+; VI-NEXT:    s_bitset1_b32 s41, 22
 ; VI-NEXT:    s_and_b64 s[56:57], vcc, exec
 ; VI-NEXT:    s_cselect_b32 s41, s41, s47
 ; VI-NEXT:    s_lshr_b32 s47, s41, 16
@@ -169668,8 +169668,8 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; VI-NEXT:    s_bfe_u32 s47, s41, 0x10010
 ; VI-NEXT:    s_add_i32 s47, s47, s41
 ; VI-NEXT:    s_addk_i32 s47, 0x7fff
-; VI-NEXT:    s_bitset1_b32 s41, 22
 ; VI-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
+; VI-NEXT:    s_bitset1_b32 s41, 22
 ; VI-NEXT:    s_and_b64 s[56:57], vcc, exec
 ; VI-NEXT:    s_cselect_b32 s56, s41, s47
 ; VI-NEXT:    s_and_b32 s40, s40, 0xffff0000
@@ -169690,8 +169690,8 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; VI-NEXT:    s_bfe_u32 s56, s47, 0x10010
 ; VI-NEXT:    s_add_i32 s56, s56, s47
 ; VI-NEXT:    s_add_i32 s58, s56, 0x7fff
-; VI-NEXT:    s_bitset1_b32 s47, 22
 ; VI-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
+; VI-NEXT:    s_bitset1_b32 s47, 22
 ; VI-NEXT:    s_and_b64 s[56:57], vcc, exec
 ; VI-NEXT:    s_cselect_b32 s56, s47, s58
 ; VI-NEXT:    s_and_b32 s17, s17, 0xffff0000
@@ -169700,8 +169700,8 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; VI-NEXT:    s_bfe_u32 s47, s17, 0x10010
 ; VI-NEXT:    s_add_i32 s47, s47, s17
 ; VI-NEXT:    s_addk_i32 s47, 0x7fff
-; VI-NEXT:    s_bitset1_b32 s17, 22
 ; VI-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
+; VI-NEXT:    s_bitset1_b32 s17, 22
 ; VI-NEXT:    s_and_b64 s[58:59], vcc, exec
 ; VI-NEXT:    s_cselect_b32 s17, s17, s47
 ; VI-NEXT:    s_lshr_b32 s57, s17, 16
@@ -169712,8 +169712,8 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; VI-NEXT:    s_add_i32 s47, s47, s17
 ; VI-NEXT:    s_lshr_b64 s[56:57], s[56:57], 16
 ; VI-NEXT:    s_addk_i32 s47, 0x7fff
-; VI-NEXT:    s_bitset1_b32 s17, 22
 ; VI-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
+; VI-NEXT:    s_bitset1_b32 s17, 22
 ; VI-NEXT:    s_and_b64 s[58:59], vcc, exec
 ; VI-NEXT:    s_cselect_b32 s58, s17, s47
 ; VI-NEXT:    s_and_b32 s16, s16, 0xffff0000
@@ -169734,8 +169734,8 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; VI-NEXT:    s_add_i32 s57, s57, s47
 ; VI-NEXT:    s_lshr_b64 s[16:17], s[58:59], 16
 ; VI-NEXT:    s_addk_i32 s57, 0x7fff
-; VI-NEXT:    s_bitset1_b32 s47, 22
 ; VI-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
+; VI-NEXT:    s_bitset1_b32 s47, 22
 ; VI-NEXT:    s_and_b64 s[58:59], vcc, exec
 ; VI-NEXT:    s_cselect_b32 s58, s47, s57
 ; VI-NEXT:    s_and_b32 s15, s15, 0xffff0000
@@ -169744,8 +169744,8 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; VI-NEXT:    s_bfe_u32 s47, s15, 0x10010
 ; VI-NEXT:    s_add_i32 s47, s47, s15
 ; VI-NEXT:    s_addk_i32 s47, 0x7fff
-; VI-NEXT:    s_bitset1_b32 s15, 22
 ; VI-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
+; VI-NEXT:    s_bitset1_b32 s15, 22
 ; VI-NEXT:    s_and_b64 s[60:61], vcc, exec
 ; VI-NEXT:    s_cselect_b32 s15, s15, s47
 ; VI-NEXT:    s_lshr_b32 s59, s15, 16
@@ -169756,8 +169756,8 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; VI-NEXT:    s_add_i32 s47, s47, s15
 ; VI-NEXT:    s_lshr_b64 s[58:59], s[58:59], 16
 ; VI-NEXT:    s_addk_i32 s47, 0x7fff
-; VI-NEXT:    s_bitset1_b32 s15, 22
 ; VI-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
+; VI-NEXT:    s_bitset1_b32 s15, 22
 ; VI-NEXT:    s_and_b64 s[60:61], vcc, exec
 ; VI-NEXT:    s_cselect_b32 s60, s15, s47
 ; VI-NEXT:    s_and_b32 s14, s14, 0xffff0000
@@ -169778,8 +169778,8 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; VI-NEXT:    s_add_i32 s57, s57, s47
 ; VI-NEXT:    s_lshr_b64 s[14:15], s[60:61], 16
 ; VI-NEXT:    s_addk_i32 s57, 0x7fff
-; VI-NEXT:    s_bitset1_b32 s47, 22
 ; VI-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
+; VI-NEXT:    s_bitset1_b32 s47, 22
 ; VI-NEXT:    s_and_b64 s[60:61], vcc, exec
 ; VI-NEXT:    s_cselect_b32 s60, s47, s57
 ; VI-NEXT:    s_and_b32 s13, s13, 0xffff0000
@@ -169788,8 +169788,8 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; VI-NEXT:    s_bfe_u32 s47, s13, 0x10010
 ; VI-NEXT:    s_add_i32 s47, s47, s13
 ; VI-NEXT:    s_addk_i32 s47, 0x7fff
-; VI-NEXT:    s_bitset1_b32 s13, 22
 ; VI-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
+; VI-NEXT:    s_bitset1_b32 s13, 22
 ; VI-NEXT:    s_and_b64 s[62:63], vcc, exec
 ; VI-NEXT:    s_cselect_b32 s13, s13, s47
 ; VI-NEXT:    s_lshr_b32 s61, s13, 16
@@ -169800,8 +169800,8 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; VI-NEXT:    s_add_i32 s47, s47, s13
 ; VI-NEXT:    s_lshr_b64 s[60:61], s[60:61], 16
 ; VI-NEXT:    s_addk_i32 s47, 0x7fff
-; VI-NEXT:    s_bitset1_b32 s13, 22
 ; VI-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
+; VI-NEXT:    s_bitset1_b32 s13, 22
 ; VI-NEXT:    s_and_b64 s[62:63], vcc, exec
 ; VI-NEXT:    s_cselect_b32 s62, s13, s47
 ; VI-NEXT:    s_and_b32 s12, s12, 0xffff0000
@@ -169822,8 +169822,8 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; VI-NEXT:    s_add_i32 s57, s57, s47
 ; VI-NEXT:    s_lshr_b64 s[12:13], s[62:63], 16
 ; VI-NEXT:    s_addk_i32 s57, 0x7fff
-; VI-NEXT:    s_bitset1_b32 s47, 22
 ; VI-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
+; VI-NEXT:    s_bitset1_b32 s47, 22
 ; VI-NEXT:    s_and_b64 s[62:63], vcc, exec
 ; VI-NEXT:    s_cselect_b32 s62, s47, s57
 ; VI-NEXT:    s_and_b32 s11, s11, 0xffff0000
@@ -169832,8 +169832,8 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; VI-NEXT:    s_bfe_u32 s47, s11, 0x10010
 ; VI-NEXT:    s_add_i32 s47, s47, s11
 ; VI-NEXT:    s_addk_i32 s47, 0x7fff
-; VI-NEXT:    s_bitset1_b32 s11, 22
 ; VI-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
+; VI-NEXT:    s_bitset1_b32 s11, 22
 ; VI-NEXT:    s_and_b64 s[72:73], vcc, exec
 ; VI-NEXT:    s_cselect_b32 s11, s11, s47
 ; VI-NEXT:    s_lshr_b32 s63, s11, 16
@@ -169844,8 +169844,8 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; VI-NEXT:    s_add_i32 s47, s47, s11
 ; VI-NEXT:    s_lshr_b64 s[62:63], s[62:63], 16
 ; VI-NEXT:    s_addk_i32 s47, 0x7fff
-; VI-NEXT:    s_bitset1_b32 s11, 22
 ; VI-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
+; VI-NEXT:    s_bitset1_b32 s11, 22
 ; VI-NEXT:    s_and_b64 s[72:73], vcc, exec
 ; VI-NEXT:    s_cselect_b32 s72, s11, s47
 ; VI-NEXT:    s_and_b32 s10, s10, 0xffff0000
@@ -169866,8 +169866,8 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; VI-NEXT:    s_add_i32 s57, s57, s47
 ; VI-NEXT:    s_lshr_b64 s[10:11], s[72:73], 16
 ; VI-NEXT:    s_addk_i32 s57, 0x7fff
-; VI-NEXT:    s_bitset1_b32 s47, 22
 ; VI-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
+; VI-NEXT:    s_bitset1_b32 s47, 22
 ; VI-NEXT:    s_and_b64 s[72:73], vcc, exec
 ; VI-NEXT:    s_cselect_b32 s72, s47, s57
 ; VI-NEXT:    s_and_b32 s9, s9, 0xffff0000
@@ -169876,8 +169876,8 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; VI-NEXT:    s_bfe_u32 s47, s9, 0x10010
 ; VI-NEXT:    s_add_i32 s47, s47, s9
 ; VI-NEXT:    s_addk_i32 s47, 0x7fff
-; VI-NEXT:    s_bitset1_b32 s9, 22
 ; VI-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
+; VI-NEXT:    s_bitset1_b32 s9, 22
 ; VI-NEXT:    s_and_b64 s[74:75], vcc, exec
 ; VI-NEXT:    s_cselect_b32 s9, s9, s47
 ; VI-NEXT:    s_lshr_b32 s73, s9, 16
@@ -169888,8 +169888,8 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; VI-NEXT:    s_add_i32 s47, s47, s9
 ; VI-NEXT:    s_lshr_b64 s[72:73], s[72:73], 16
 ; VI-NEXT:    s_addk_i32 s47, 0x7fff
-; VI-NEXT:    s_bitset1_b32 s9, 22
 ; VI-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
+; VI-NEXT:    s_bitset1_b32 s9, 22
 ; VI-NEXT:    s_and_b64 s[74:75], vcc, exec
 ; VI-NEXT:    s_cselect_b32 s74, s9, s47
 ; VI-NEXT:    s_and_b32 s8, s8, 0xffff0000
@@ -169910,8 +169910,8 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; VI-NEXT:    s_add_i32 s57, s57, s47
 ; VI-NEXT:    s_lshr_b64 s[8:9], s[74:75], 16
 ; VI-NEXT:    s_addk_i32 s57, 0x7fff
-; VI-NEXT:    s_bitset1_b32 s47, 22
 ; VI-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
+; VI-NEXT:    s_bitset1_b32 s47, 22
 ; VI-NEXT:    s_and_b64 s[74:75], vcc, exec
 ; VI-NEXT:    s_cselect_b32 s74, s47, s57
 ; VI-NEXT:    s_and_b32 s7, s7, 0xffff0000
@@ -169920,8 +169920,8 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; VI-NEXT:    s_bfe_u32 s47, s7, 0x10010
 ; VI-NEXT:    s_add_i32 s47, s47, s7
 ; VI-NEXT:    s_addk_i32 s47, 0x7fff
-; VI-NEXT:    s_bitset1_b32 s7, 22
 ; VI-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
+; VI-NEXT:    s_bitset1_b32 s7, 22
 ; VI-NEXT:    s_and_b64 s[76:77], vcc, exec
 ; VI-NEXT:    s_cselect_b32 s7, s7, s47
 ; VI-NEXT:    s_lshr_b32 s75, s7, 16
@@ -169932,8 +169932,8 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; VI-NEXT:    s_add_i32 s47, s47, s7
 ; VI-NEXT:    s_lshr_b64 s[74:75], s[74:75], 16
 ; VI-NEXT:    s_addk_i32 s47, 0x7fff
-; VI-NEXT:    s_bitset1_b32 s7, 22
 ; VI-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
+; VI-NEXT:    s_bitset1_b32 s7, 22
 ; VI-NEXT:    s_and_b64 s[76:77], vcc, exec
 ; VI-NEXT:    s_cselect_b32 s76, s7, s47
 ; VI-NEXT:    s_and_b32 s6, s6, 0xffff0000
@@ -169954,8 +169954,8 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; VI-NEXT:    s_add_i32 s57, s57, s47
 ; VI-NEXT:    s_lshr_b64 s[6:7], s[76:77], 16
 ; VI-NEXT:    s_addk_i32 s57, 0x7fff
-; VI-NEXT:    s_bitset1_b32 s47, 22
 ; VI-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
+; VI-NEXT:    s_bitset1_b32 s47, 22
 ; VI-NEXT:    s_and_b64 s[76:77], vcc, exec
 ; VI-NEXT:    s_cselect_b32 s76, s47, s57
 ; VI-NEXT:    s_and_b32 s5, s5, 0xffff0000
@@ -169964,8 +169964,8 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; VI-NEXT:    s_bfe_u32 s47, s5, 0x10010
 ; VI-NEXT:    s_add_i32 s47, s47, s5
 ; VI-NEXT:    s_addk_i32 s47, 0x7fff
-; VI-NEXT:    s_bitset1_b32 s5, 22
 ; VI-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
+; VI-NEXT:    s_bitset1_b32 s5, 22
 ; VI-NEXT:    s_and_b64 s[78:79], vcc, exec
 ; VI-NEXT:    s_cselect_b32 s5, s5, s47
 ; VI-NEXT:    s_lshr_b32 s77, s5, 16
@@ -169976,8 +169976,8 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; VI-NEXT:    s_add_i32 s47, s47, s5
 ; VI-NEXT:    s_lshr_b64 s[76:77], s[76:77], 16
 ; VI-NEXT:    s_addk_i32 s47, 0x7fff
-; VI-NEXT:    s_bitset1_b32 s5, 22
 ; VI-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
+; VI-NEXT:    s_bitset1_b32 s5, 22
 ; VI-NEXT:    s_and_b64 s[78:79], vcc, exec
 ; VI-NEXT:    s_cselect_b32 s78, s5, s47
 ; VI-NEXT:    s_and_b32 s4, s4, 0xffff0000
@@ -169998,8 +169998,8 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; VI-NEXT:    s_add_i32 s57, s57, s47
 ; VI-NEXT:    s_lshr_b64 s[4:5], s[78:79], 16
 ; VI-NEXT:    s_addk_i32 s57, 0x7fff
-; VI-NEXT:    s_bitset1_b32 s47, 22
 ; VI-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
+; VI-NEXT:    s_bitset1_b32 s47, 22
 ; VI-NEXT:    s_and_b64 s[78:79], vcc, exec
 ; VI-NEXT:    s_cselect_b32 s78, s47, s57
 ; VI-NEXT:    s_and_b32 s45, s45, 0xffff0000
@@ -170008,8 +170008,8 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; VI-NEXT:    s_bfe_u32 s47, s45, 0x10010
 ; VI-NEXT:    s_add_i32 s47, s47, s45
 ; VI-NEXT:    s_addk_i32 s47, 0x7fff
-; VI-NEXT:    s_bitset1_b32 s45, 22
 ; VI-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
+; VI-NEXT:    s_bitset1_b32 s45, 22
 ; VI-NEXT:    s_and_b64 s[88:89], vcc, exec
 ; VI-NEXT:    s_cselect_b32 s45, s45, s47
 ; VI-NEXT:    s_lshr_b32 s79, s45, 16
@@ -170020,8 +170020,8 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; VI-NEXT:    s_add_i32 s47, s47, s45
 ; VI-NEXT:    s_lshr_b64 s[78:79], s[78:79], 16
 ; VI-NEXT:    s_addk_i32 s47, 0x7fff
-; VI-NEXT:    s_bitset1_b32 s45, 22
 ; VI-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
+; VI-NEXT:    s_bitset1_b32 s45, 22
 ; VI-NEXT:    s_and_b64 s[88:89], vcc, exec
 ; VI-NEXT:    s_cselect_b32 s88, s45, s47
 ; VI-NEXT:    s_and_b32 s44, s44, 0xffff0000
@@ -170042,8 +170042,8 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; VI-NEXT:    s_add_i32 s57, s57, s47
 ; VI-NEXT:    s_lshr_b64 s[44:45], s[88:89], 16
 ; VI-NEXT:    s_addk_i32 s57, 0x7fff
-; VI-NEXT:    s_bitset1_b32 s47, 22
 ; VI-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
+; VI-NEXT:    s_bitset1_b32 s47, 22
 ; VI-NEXT:    s_and_b64 s[88:89], vcc, exec
 ; VI-NEXT:    s_cselect_b32 s88, s47, s57
 ; VI-NEXT:    s_and_b32 s43, s43, 0xffff0000
@@ -170052,8 +170052,8 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; VI-NEXT:    s_bfe_u32 s47, s43, 0x10010
 ; VI-NEXT:    s_add_i32 s47, s47, s43
 ; VI-NEXT:    s_addk_i32 s47, 0x7fff
-; VI-NEXT:    s_bitset1_b32 s43, 22
 ; VI-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
+; VI-NEXT:    s_bitset1_b32 s43, 22
 ; VI-NEXT:    s_and_b64 s[90:91], vcc, exec
 ; VI-NEXT:    s_cselect_b32 s43, s43, s47
 ; VI-NEXT:    s_lshr_b32 s89, s43, 16
@@ -170064,8 +170064,8 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; VI-NEXT:    s_add_i32 s47, s47, s43
 ; VI-NEXT:    s_lshr_b64 s[88:89], s[88:89], 16
 ; VI-NEXT:    s_addk_i32 s47, 0x7fff
-; VI-NEXT:    s_bitset1_b32 s43, 22
 ; VI-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
+; VI-NEXT:    s_bitset1_b32 s43, 22
 ; VI-NEXT:    s_and_b64 s[90:91], vcc, exec
 ; VI-NEXT:    s_cselect_b32 s90, s43, s47
 ; VI-NEXT:    s_and_b32 s42, s42, 0xffff0000
@@ -170086,8 +170086,8 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; VI-NEXT:    s_add_i32 s57, s57, s47
 ; VI-NEXT:    s_lshr_b64 s[42:43], s[90:91], 16
 ; VI-NEXT:    s_addk_i32 s57, 0x7fff
-; VI-NEXT:    s_bitset1_b32 s47, 22
 ; VI-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
+; VI-NEXT:    s_bitset1_b32 s47, 22
 ; VI-NEXT:    s_and_b64 s[90:91], vcc, exec
 ; VI-NEXT:    s_cselect_b32 s90, s47, s57
 ; VI-NEXT:    s_and_b32 s29, s29, 0xffff0000
@@ -170096,8 +170096,8 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; VI-NEXT:    s_bfe_u32 s47, s29, 0x10010
 ; VI-NEXT:    s_add_i32 s47, s47, s29
 ; VI-NEXT:    s_addk_i32 s47, 0x7fff
-; VI-NEXT:    s_bitset1_b32 s29, 22
 ; VI-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
+; VI-NEXT:    s_bitset1_b32 s29, 22
 ; VI-NEXT:    s_and_b64 vcc, vcc, exec
 ; VI-NEXT:    s_cselect_b32 s29, s29, s47
 ; VI-NEXT:    s_lshr_b32 s91, s29, 16
@@ -170108,8 +170108,8 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; VI-NEXT:    s_add_i32 s47, s47, s29
 ; VI-NEXT:    s_lshr_b64 s[90:91], s[90:91], 16
 ; VI-NEXT:    s_addk_i32 s47, 0x7fff
-; VI-NEXT:    s_bitset1_b32 s29, 22
 ; VI-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
+; VI-NEXT:    s_bitset1_b32 s29, 22
 ; VI-NEXT:    s_and_b64 vcc, vcc, exec
 ; VI-NEXT:    s_cselect_b32 s30, s29, s47
 ; VI-NEXT:    s_and_b32 s28, s28, 0xffff0000
@@ -170130,8 +170130,8 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; VI-NEXT:    s_add_i32 s57, s57, s47
 ; VI-NEXT:    s_lshr_b64 s[28:29], s[30:31], 16
 ; VI-NEXT:    s_addk_i32 s57, 0x7fff
-; VI-NEXT:    s_bitset1_b32 s47, 22
 ; VI-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
+; VI-NEXT:    s_bitset1_b32 s47, 22
 ; VI-NEXT:    s_and_b64 vcc, vcc, exec
 ; VI-NEXT:    s_cselect_b32 s30, s47, s57
 ; VI-NEXT:    s_and_b32 s27, s27, 0xffff0000
@@ -170140,8 +170140,8 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; VI-NEXT:    s_bfe_u32 s47, s27, 0x10010
 ; VI-NEXT:    s_add_i32 s47, s47, s27
 ; VI-NEXT:    s_addk_i32 s47, 0x7fff
-; VI-NEXT:    s_bitset1_b32 s27, 22
 ; VI-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
+; VI-NEXT:    s_bitset1_b32 s27, 22
 ; VI-NEXT:    s_and_b64 vcc, vcc, exec
 ; VI-NEXT:    s_cselect_b32 s27, s27, s47
 ; VI-NEXT:    s_lshr_b32 s31, s27, 16
@@ -170152,8 +170152,8 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; VI-NEXT:    s_add_i32 s47, s47, s27
 ; VI-NEXT:    s_lshr_b64 s[30:31], s[30:31], 16
 ; VI-NEXT:    s_addk_i32 s47, 0x7fff
-; VI-NEXT:    s_bitset1_b32 s27, 22
 ; VI-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
+; VI-NEXT:    s_bitset1_b32 s27, 22
 ; VI-NEXT:    s_and_b64 vcc, vcc, exec
 ; VI-NEXT:    s_cselect_b32 s34, s27, s47
 ; VI-NEXT:    s_and_b32 s26, s26, 0xffff0000
@@ -170174,8 +170174,8 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; VI-NEXT:    s_add_i32 s57, s57, s47
 ; VI-NEXT:    s_lshr_b64 s[26:27], s[34:35], 16
 ; VI-NEXT:    s_addk_i32 s57, 0x7fff
-; VI-NEXT:    s_bitset1_b32 s47, 22
 ; VI-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
+; VI-NEXT:    s_bitset1_b32 s47, 22
 ; VI-NEXT:    s_and_b64 vcc, vcc, exec
 ; VI-NEXT:    s_cselect_b32 s34, s47, s57
 ; VI-NEXT:    s_and_b32 s25, s25, 0xffff0000
@@ -170184,8 +170184,8 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; VI-NEXT:    s_bfe_u32 s47, s25, 0x10010
 ; VI-NEXT:    s_add_i32 s47, s47, s25
 ; VI-NEXT:    s_addk_i32 s47, 0x7fff
-; VI-NEXT:    s_bitset1_b32 s25, 22
 ; VI-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
+; VI-NEXT:    s_bitset1_b32 s25, 22
 ; VI-NEXT:    s_and_b64 vcc, vcc, exec
 ; VI-NEXT:    s_cselect_b32 s25, s25, s47
 ; VI-NEXT:    s_lshr_b32 s35, s25, 16
@@ -170196,8 +170196,8 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; VI-NEXT:    s_add_i32 s47, s47, s25
 ; VI-NEXT:    s_lshr_b64 s[36:37], s[34:35], 16
 ; VI-NEXT:    s_addk_i32 s47, 0x7fff
-; VI-NEXT:    s_bitset1_b32 s25, 22
 ; VI-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
+; VI-NEXT:    s_bitset1_b32 s25, 22
 ; VI-NEXT:    s_and_b64 vcc, vcc, exec
 ; VI-NEXT:    s_cselect_b32 s34, s25, s47
 ; VI-NEXT:    s_and_b32 s24, s24, 0xffff0000
@@ -170218,8 +170218,8 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; VI-NEXT:    s_add_i32 s57, s57, s47
 ; VI-NEXT:    s_lshr_b64 s[24:25], s[34:35], 16
 ; VI-NEXT:    s_addk_i32 s57, 0x7fff
-; VI-NEXT:    s_bitset1_b32 s47, 22
 ; VI-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
+; VI-NEXT:    s_bitset1_b32 s47, 22
 ; VI-NEXT:    s_and_b64 vcc, vcc, exec
 ; VI-NEXT:    s_cselect_b32 s34, s47, s57
 ; VI-NEXT:    s_and_b32 s23, s23, 0xffff0000
@@ -170228,8 +170228,8 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; VI-NEXT:    s_bfe_u32 s47, s23, 0x10010
 ; VI-NEXT:    s_add_i32 s47, s47, s23
 ; VI-NEXT:    s_addk_i32 s47, 0x7fff
-; VI-NEXT:    s_bitset1_b32 s23, 22
 ; VI-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
+; VI-NEXT:    s_bitset1_b32 s23, 22
 ; VI-NEXT:    s_and_b64 vcc, vcc, exec
 ; VI-NEXT:    s_cselect_b32 s23, s23, s47
 ; VI-NEXT:    s_lshr_b32 s35, s23, 16
@@ -170240,8 +170240,8 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; VI-NEXT:    s_add_i32 s47, s47, s23
 ; VI-NEXT:    s_lshr_b64 s[48:49], s[34:35], 16
 ; VI-NEXT:    s_addk_i32 s47, 0x7fff
-; VI-NEXT:    s_bitset1_b32 s23, 22
 ; VI-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
+; VI-NEXT:    s_bitset1_b32 s23, 22
 ; VI-NEXT:    s_and_b64 vcc, vcc, exec
 ; VI-NEXT:    s_cselect_b32 s34, s23, s47
 ; VI-NEXT:    s_and_b32 s22, s22, 0xffff0000
@@ -170262,8 +170262,8 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; VI-NEXT:    s_add_i32 s57, s57, s47
 ; VI-NEXT:    s_lshr_b64 s[22:23], s[34:35], 16
 ; VI-NEXT:    s_addk_i32 s57, 0x7fff
-; VI-NEXT:    s_bitset1_b32 s47, 22
 ; VI-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
+; VI-NEXT:    s_bitset1_b32 s47, 22
 ; VI-NEXT:    s_and_b64 vcc, vcc, exec
 ; VI-NEXT:    s_cselect_b32 s34, s47, s57
 ; VI-NEXT:    s_and_b32 s21, s21, 0xffff0000
@@ -170272,8 +170272,8 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; VI-NEXT:    s_bfe_u32 s47, s21, 0x10010
 ; VI-NEXT:    s_add_i32 s47, s47, s21
 ; VI-NEXT:    s_addk_i32 s47, 0x7fff
-; VI-NEXT:    s_bitset1_b32 s21, 22
 ; VI-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
+; VI-NEXT:    s_bitset1_b32 s21, 22
 ; VI-NEXT:    s_and_b64 vcc, vcc, exec
 ; VI-NEXT:    s_cselect_b32 s21, s21, s47
 ; VI-NEXT:    s_lshr_b32 s35, s21, 16
@@ -170284,8 +170284,8 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; VI-NEXT:    s_add_i32 s47, s47, s21
 ; VI-NEXT:    s_lshr_b64 s[52:53], s[34:35], 16
 ; VI-NEXT:    s_addk_i32 s47, 0x7fff
-; VI-NEXT:    s_bitset1_b32 s21, 22
 ; VI-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
+; VI-NEXT:    s_bitset1_b32 s21, 22
 ; VI-NEXT:    s_and_b64 vcc, vcc, exec
 ; VI-NEXT:    s_cselect_b32 s34, s21, s47
 ; VI-NEXT:    s_and_b32 s20, s20, 0xffff0000
@@ -170306,8 +170306,8 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; VI-NEXT:    s_add_i32 s57, s57, s47
 ; VI-NEXT:    s_lshr_b64 s[20:21], s[34:35], 16
 ; VI-NEXT:    s_addk_i32 s57, 0x7fff
-; VI-NEXT:    s_bitset1_b32 s47, 22
 ; VI-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
+; VI-NEXT:    s_bitset1_b32 s47, 22
 ; VI-NEXT:    s_and_b64 vcc, vcc, exec
 ; VI-NEXT:    s_cselect_b32 s34, s47, s57
 ; VI-NEXT:    s_and_b32 s19, s19, 0xffff0000
@@ -170316,8 +170316,8 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; VI-NEXT:    s_bfe_u32 s47, s19, 0x10010
 ; VI-NEXT:    s_add_i32 s47, s47, s19
 ; VI-NEXT:    s_addk_i32 s47, 0x7fff
-; VI-NEXT:    s_bitset1_b32 s19, 22
 ; VI-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
+; VI-NEXT:    s_bitset1_b32 s19, 22
 ; VI-NEXT:    s_and_b64 vcc, vcc, exec
 ; VI-NEXT:    s_cselect_b32 s19, s19, s47
 ; VI-NEXT:    s_lshr_b32 s35, s19, 16
@@ -170328,8 +170328,8 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; VI-NEXT:    s_add_i32 s47, s47, s19
 ; VI-NEXT:    s_lshr_b64 s[64:65], s[34:35], 16
 ; VI-NEXT:    s_addk_i32 s47, 0x7fff
-; VI-NEXT:    s_bitset1_b32 s19, 22
 ; VI-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
+; VI-NEXT:    s_bitset1_b32 s19, 22
 ; VI-NEXT:    s_and_b64 vcc, vcc, exec
 ; VI-NEXT:    s_cselect_b32 s34, s19, s47
 ; VI-NEXT:    s_and_b32 s18, s18, 0xffff0000
@@ -171476,8 +171476,8 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; GFX9-NEXT:    s_bfe_u32 s46, s41, 0x10010
 ; GFX9-NEXT:    s_add_i32 s46, s46, s41
 ; GFX9-NEXT:    s_add_i32 s56, s46, 0x7fff
-; GFX9-NEXT:    s_bitset1_b32 s41, 22
 ; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
+; GFX9-NEXT:    s_bitset1_b32 s41, 22
 ; GFX9-NEXT:    s_and_b64 s[46:47], vcc, exec
 ; GFX9-NEXT:    s_cselect_b32 s41, s41, s56
 ; GFX9-NEXT:    s_and_b32 s46, s40, 0xffff0000
@@ -171500,8 +171500,8 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; GFX9-NEXT:    s_bfe_u32 s46, s40, 0x10010
 ; GFX9-NEXT:    s_add_i32 s46, s46, s40
 ; GFX9-NEXT:    s_add_i32 s57, s46, 0x7fff
-; GFX9-NEXT:    s_bitset1_b32 s40, 22
 ; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
+; GFX9-NEXT:    s_bitset1_b32 s40, 22
 ; GFX9-NEXT:    s_and_b64 s[46:47], vcc, exec
 ; GFX9-NEXT:    s_cselect_b32 s40, s40, s57
 ; GFX9-NEXT:    s_and_b32 s46, s17, 0xffff0000
@@ -171523,8 +171523,8 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; GFX9-NEXT:    s_bfe_u32 s46, s17, 0x10010
 ; GFX9-NEXT:    s_add_i32 s46, s46, s17
 ; GFX9-NEXT:    s_add_i32 s56, s46, 0x7fff
-; GFX9-NEXT:    s_bitset1_b32 s17, 22
 ; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
+; GFX9-NEXT:    s_bitset1_b32 s17, 22
 ; GFX9-NEXT:    s_and_b64 s[46:47], vcc, exec
 ; GFX9-NEXT:    s_cselect_b32 s17, s17, s56
 ; GFX9-NEXT:    s_and_b32 s46, s16, 0xffff0000
@@ -171547,8 +171547,8 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; GFX9-NEXT:    s_bfe_u32 s46, s16, 0x10010
 ; GFX9-NEXT:    s_add_i32 s46, s46, s16
 ; GFX9-NEXT:    s_add_i32 s57, s46, 0x7fff
-; GFX9-NEXT:    s_bitset1_b32 s16, 22
 ; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
+; GFX9-NEXT:    s_bitset1_b32 s16, 22
 ; GFX9-NEXT:    s_and_b64 s[46:47], vcc, exec
 ; GFX9-NEXT:    s_cselect_b32 s16, s16, s57
 ; GFX9-NEXT:    s_and_b32 s46, s15, 0xffff0000
@@ -171570,8 +171570,8 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; GFX9-NEXT:    s_bfe_u32 s46, s15, 0x10010
 ; GFX9-NEXT:    s_add_i32 s46, s46, s15
 ; GFX9-NEXT:    s_add_i32 s56, s46, 0x7fff
-; GFX9-NEXT:    s_bitset1_b32 s15, 22
 ; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
+; GFX9-NEXT:    s_bitset1_b32 s15, 22
 ; GFX9-NEXT:    s_and_b64 s[46:47], vcc, exec
 ; GFX9-NEXT:    s_cselect_b32 s15, s15, s56
 ; GFX9-NEXT:    s_and_b32 s46, s14, 0xffff0000
@@ -171594,8 +171594,8 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; GFX9-NEXT:    s_bfe_u32 s46, s14, 0x10010
 ; GFX9-NEXT:    s_add_i32 s46, s46, s14
 ; GFX9-NEXT:    s_add_i32 s57, s46, 0x7fff
-; GFX9-NEXT:    s_bitset1_b32 s14, 22
 ; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
+; GFX9-NEXT:    s_bitset1_b32 s14, 22
 ; GFX9-NEXT:    s_and_b64 s[46:47], vcc, exec
 ; GFX9-NEXT:    s_cselect_b32 s14, s14, s57
 ; GFX9-NEXT:    s_and_b32 s46, s13, 0xffff0000
@@ -171617,8 +171617,8 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; GFX9-NEXT:    s_bfe_u32 s46, s13, 0x10010
 ; GFX9-NEXT:    s_add_i32 s46, s46, s13
 ; GFX9-NEXT:    s_add_i32 s56, s46, 0x7fff
-; GFX9-NEXT:    s_bitset1_b32 s13, 22
 ; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
+; GFX9-NEXT:    s_bitset1_b32 s13, 22
 ; GFX9-NEXT:    s_and_b64 s[46:47], vcc, exec
 ; GFX9-NEXT:    s_cselect_b32 s13, s13, s56
 ; GFX9-NEXT:    s_and_b32 s46, s12, 0xffff0000
@@ -171641,8 +171641,8 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; GFX9-NEXT:    s_bfe_u32 s46, s12, 0x10010
 ; GFX9-NEXT:    s_add_i32 s46, s46, s12
 ; GFX9-NEXT:    s_add_i32 s57, s46, 0x7fff
-; GFX9-NEXT:    s_bitset1_b32 s12, 22
 ; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
+; GFX9-NEXT:    s_bitset1_b32 s12, 22
 ; GFX9-NEXT:    s_and_b64 s[46:47], vcc, exec
 ; GFX9-NEXT:    s_cselect_b32 s12, s12, s57
 ; GFX9-NEXT:    s_and_b32 s46, s11, 0xffff0000
@@ -171664,8 +171664,8 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; GFX9-NEXT:    s_bfe_u32 s46, s11, 0x10010
 ; GFX9-NEXT:    s_add_i32 s46, s46, s11
 ; GFX9-NEXT:    s_add_i32 s56, s46, 0x7fff
-; GFX9-NEXT:    s_bitset1_b32 s11, 22
 ; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
+; GFX9-NEXT:    s_bitset1_b32 s11, 22
 ; GFX9-NEXT:    s_and_b64 s[46:47], vcc, exec
 ; GFX9-NEXT:    s_cselect_b32 s11, s11, s56
 ; GFX9-NEXT:    s_and_b32 s46, s10, 0xffff0000
@@ -171688,8 +171688,8 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; GFX9-NEXT:    s_bfe_u32 s46, s10, 0x10010
 ; GFX9-NEXT:    s_add_i32 s46, s46, s10
 ; GFX9-NEXT:    s_add_i32 s57, s46, 0x7fff
-; GFX9-NEXT:    s_bitset1_b32 s10, 22
 ; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
+; GFX9-NEXT:    s_bitset1_b32 s10, 22
 ; GFX9-NEXT:    s_and_b64 s[46:47], vcc, exec
 ; GFX9-NEXT:    s_cselect_b32 s10, s10, s57
 ; GFX9-NEXT:    s_and_b32 s46, s9, 0xffff0000
@@ -171711,8 +171711,8 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; GFX9-NEXT:    s_bfe_u32 s46, s9, 0x10010
 ; GFX9-NEXT:    s_add_i32 s46, s46, s9
 ; GFX9-NEXT:    s_add_i32 s56, s46, 0x7fff
-; GFX9-NEXT:    s_bitset1_b32 s9, 22
 ; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
+; GFX9-NEXT:    s_bitset1_b32 s9, 22
 ; GFX9-NEXT:    s_and_b64 s[46:47], vcc, exec
 ; GFX9-NEXT:    s_cselect_b32 s9, s9, s56
 ; GFX9-NEXT:    s_and_b32 s46, s8, 0xffff0000
@@ -171735,8 +171735,8 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; GFX9-NEXT:    s_bfe_u32 s46, s8, 0x10010
 ; GFX9-NEXT:    s_add_i32 s46, s46, s8
 ; GFX9-NEXT:    s_add_i32 s57, s46, 0x7fff
-; GFX9-NEXT:    s_bitset1_b32 s8, 22
 ; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
+; GFX9-NEXT:    s_bitset1_b32 s8, 22
 ; GFX9-NEXT:    s_and_b64 s[46:47], vcc, exec
 ; GFX9-NEXT:    s_cselect_b32 s8, s8, s57
 ; GFX9-NEXT:    s_and_b32 s46, s7, 0xffff0000
@@ -171758,8 +171758,8 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; GFX9-NEXT:    s_bfe_u32 s46, s7, 0x10010
 ; GFX9-NEXT:    s_add_i32 s46, s46, s7
 ; GFX9-NEXT:    s_add_i32 s56, s46, 0x7fff
-; GFX9-NEXT:    s_bitset1_b32 s7, 22
 ; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
+; GFX9-NEXT:    s_bitset1_b32 s7, 22
 ; GFX9-NEXT:    s_and_b64 s[46:47], vcc, exec
 ; GFX9-NEXT:    s_cselect_b32 s7, s7, s56
 ; GFX9-NEXT:    s_and_b32 s46, s6, 0xffff0000
@@ -171780,8 +171780,8 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; GFX9-NEXT:    s_bfe_u32 s46, s6, 0x10010
 ; GFX9-NEXT:    s_add_i32 s46, s46, s6
 ; GFX9-NEXT:    s_add_i32 s58, s46, 0x7fff
-; GFX9-NEXT:    s_bitset1_b32 s6, 22
 ; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
+; GFX9-NEXT:    s_bitset1_b32 s6, 22
 ; GFX9-NEXT:    s_and_b64 s[46:47], vcc, exec
 ; GFX9-NEXT:    s_cselect_b32 s6, s6, s58
 ; GFX9-NEXT:    s_and_b32 s46, s5, 0xffff0000
@@ -171802,8 +171802,8 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; GFX9-NEXT:    s_bfe_u32 s46, s5, 0x10010
 ; GFX9-NEXT:    s_add_i32 s46, s46, s5
 ; GFX9-NEXT:    s_add_i32 s58, s46, 0x7fff
-; GFX9-NEXT:    s_bitset1_b32 s5, 22
 ; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
+; GFX9-NEXT:    s_bitset1_b32 s5, 22
 ; GFX9-NEXT:    s_and_b64 s[46:47], vcc, exec
 ; GFX9-NEXT:    s_cselect_b32 s5, s5, s58
 ; GFX9-NEXT:    s_and_b32 s46, s4, 0xffff0000
@@ -171814,10 +171814,10 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; GFX9-NEXT:    v_writelane_b32 v21, s57, 6
 ; GFX9-NEXT:    s_lshr_b32 s5, s5, 16
 ; GFX9-NEXT:    s_add_i32 s72, s58, 0x7fff
-; GFX9-NEXT:    s_bitset1_b32 s46, 22
 ; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
 ; GFX9-NEXT:    v_writelane_b32 v21, s59, 7
 ; GFX9-NEXT:    s_pack_ll_b32_b16 s47, s5, s59
+; GFX9-NEXT:    s_bitset1_b32 s46, 22
 ; GFX9-NEXT:    s_and_b64 s[58:59], vcc, exec
 ; GFX9-NEXT:    s_cselect_b32 s46, s46, s72
 ; GFX9-NEXT:    s_lshl_b32 s4, s4, 16
@@ -171827,8 +171827,8 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; GFX9-NEXT:    s_add_i32 s58, s58, s4
 ; GFX9-NEXT:    s_lshr_b32 s46, s46, 16
 ; GFX9-NEXT:    s_add_i32 s72, s58, 0x7fff
-; GFX9-NEXT:    s_bitset1_b32 s4, 22
 ; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
+; GFX9-NEXT:    s_bitset1_b32 s4, 22
 ; GFX9-NEXT:    s_and_b64 s[58:59], vcc, exec
 ; GFX9-NEXT:    s_cselect_b32 s4, s4, s72
 ; GFX9-NEXT:    s_and_b32 s58, s45, 0xffff0000
@@ -171849,8 +171849,8 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; GFX9-NEXT:    s_bfe_u32 s58, s45, 0x10010
 ; GFX9-NEXT:    s_add_i32 s58, s58, s45
 ; GFX9-NEXT:    s_add_i32 s72, s58, 0x7fff
-; GFX9-NEXT:    s_bitset1_b32 s45, 22
 ; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
+; GFX9-NEXT:    s_bitset1_b32 s45, 22
 ; GFX9-NEXT:    s_and_b64 s[58:59], vcc, exec
 ; GFX9-NEXT:    s_cselect_b32 s45, s45, s72
 ; GFX9-NEXT:    s_and_b32 s58, s44, 0xffff0000
@@ -171873,8 +171873,8 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; GFX9-NEXT:    s_bfe_u32 s58, s44, 0x10010
 ; GFX9-NEXT:    s_add_i32 s58, s58, s44
 ; GFX9-NEXT:    s_add_i32 s73, s58, 0x7fff
-; GFX9-NEXT:    s_bitset1_b32 s44, 22
 ; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
+; GFX9-NEXT:    s_bitset1_b32 s44, 22
 ; GFX9-NEXT:    s_and_b64 s[58:59], vcc, exec
 ; GFX9-NEXT:    s_cselect_b32 s44, s44, s73
 ; GFX9-NEXT:    s_and_b32 s58, s43, 0xffff0000
@@ -171896,8 +171896,8 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; GFX9-NEXT:    s_bfe_u32 s58, s43, 0x10010
 ; GFX9-NEXT:    s_add_i32 s58, s58, s43
 ; GFX9-NEXT:    s_add_i32 s72, s58, 0x7fff
-; GFX9-NEXT:    s_bitset1_b32 s43, 22
 ; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
+; GFX9-NEXT:    s_bitset1_b32 s43, 22
 ; GFX9-NEXT:    s_and_b64 s[58:59], vcc, exec
 ; GFX9-NEXT:    s_cselect_b32 s43, s43, s72
 ; GFX9-NEXT:    s_and_b32 s58, s42, 0xffff0000
@@ -171920,8 +171920,8 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; GFX9-NEXT:    s_bfe_u32 s58, s42, 0x10010
 ; GFX9-NEXT:    s_add_i32 s58, s58, s42
 ; GFX9-NEXT:    s_add_i32 s73, s58, 0x7fff
-; GFX9-NEXT:    s_bitset1_b32 s42, 22
 ; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
+; GFX9-NEXT:    s_bitset1_b32 s42, 22
 ; GFX9-NEXT:    s_and_b64 s[58:59], vcc, exec
 ; GFX9-NEXT:    s_cselect_b32 s42, s42, s73
 ; GFX9-NEXT:    s_and_b32 s58, s29, 0xffff0000
@@ -171943,8 +171943,8 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; GFX9-NEXT:    s_bfe_u32 s58, s29, 0x10010
 ; GFX9-NEXT:    s_add_i32 s58, s58, s29
 ; GFX9-NEXT:    s_add_i32 s72, s58, 0x7fff
-; GFX9-NEXT:    s_bitset1_b32 s29, 22
 ; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
+; GFX9-NEXT:    s_bitset1_b32 s29, 22
 ; GFX9-NEXT:    s_and_b64 s[58:59], vcc, exec
 ; GFX9-NEXT:    s_cselect_b32 s29, s29, s72
 ; GFX9-NEXT:    s_and_b32 s58, s28, 0xffff0000
@@ -171967,8 +171967,8 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; GFX9-NEXT:    s_bfe_u32 s58, s28, 0x10010
 ; GFX9-NEXT:    s_add_i32 s58, s58, s28
 ; GFX9-NEXT:    s_add_i32 s73, s58, 0x7fff
-; GFX9-NEXT:    s_bitset1_b32 s28, 22
 ; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
+; GFX9-NEXT:    s_bitset1_b32 s28, 22
 ; GFX9-NEXT:    s_and_b64 s[58:59], vcc, exec
 ; GFX9-NEXT:    s_cselect_b32 s28, s28, s73
 ; GFX9-NEXT:    s_and_b32 s58, s27, 0xffff0000
@@ -171990,8 +171990,8 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; GFX9-NEXT:    s_bfe_u32 s58, s27, 0x10010
 ; GFX9-NEXT:    s_add_i32 s58, s58, s27
 ; GFX9-NEXT:    s_add_i32 s72, s58, 0x7fff
-; GFX9-NEXT:    s_bitset1_b32 s27, 22
 ; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
+; GFX9-NEXT:    s_bitset1_b32 s27, 22
 ; GFX9-NEXT:    s_and_b64 s[58:59], vcc, exec
 ; GFX9-NEXT:    s_cselect_b32 s27, s27, s72
 ; GFX9-NEXT:    s_and_b32 s58, s26, 0xffff0000
@@ -172014,8 +172014,8 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; GFX9-NEXT:    s_bfe_u32 s58, s26, 0x10010
 ; GFX9-NEXT:    s_add_i32 s58, s58, s26
 ; GFX9-NEXT:    s_add_i32 s73, s58, 0x7fff
-; GFX9-NEXT:    s_bitset1_b32 s26, 22
 ; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
+; GFX9-NEXT:    s_bitset1_b32 s26, 22
 ; GFX9-NEXT:    s_and_b64 s[58:59], vcc, exec
 ; GFX9-NEXT:    s_cselect_b32 s26, s26, s73
 ; GFX9-NEXT:    s_and_b32 s58, s25, 0xffff0000
@@ -172037,8 +172037,8 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; GFX9-NEXT:    s_bfe_u32 s58, s25, 0x10010
 ; GFX9-NEXT:    s_add_i32 s58, s58, s25
 ; GFX9-NEXT:    s_add_i32 s72, s58, 0x7fff
-; GFX9-NEXT:    s_bitset1_b32 s25, 22
 ; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
+; GFX9-NEXT:    s_bitset1_b32 s25, 22
 ; GFX9-NEXT:    s_and_b64 s[58:59], vcc, exec
 ; GFX9-NEXT:    s_cselect_b32 s25, s25, s72
 ; GFX9-NEXT:    s_and_b32 s58, s24, 0xffff0000
@@ -172061,8 +172061,8 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; GFX9-NEXT:    s_bfe_u32 s58, s24, 0x10010
 ; GFX9-NEXT:    s_add_i32 s58, s58, s24
 ; GFX9-NEXT:    s_add_i32 s73, s58, 0x7fff
-; GFX9-NEXT:    s_bitset1_b32 s24, 22
 ; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
+; GFX9-NEXT:    s_bitset1_b32 s24, 22
 ; GFX9-NEXT:    s_and_b64 s[58:59], vcc, exec
 ; GFX9-NEXT:    s_cselect_b32 s24, s24, s73
 ; GFX9-NEXT:    s_and_b32 s58, s23, 0xffff0000
@@ -172084,8 +172084,8 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; GFX9-NEXT:    s_bfe_u32 s58, s23, 0x10010
 ; GFX9-NEXT:    s_add_i32 s58, s58, s23
 ; GFX9-NEXT:    s_add_i32 s72, s58, 0x7fff
-; GFX9-NEXT:    s_bitset1_b32 s23, 22
 ; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
+; GFX9-NEXT:    s_bitset1_b32 s23, 22
 ; GFX9-NEXT:    s_and_b64 s[58:59], vcc, exec
 ; GFX9-NEXT:    s_cselect_b32 s23, s23, s72
 ; GFX9-NEXT:    s_and_b32 s58, s22, 0xffff0000
@@ -172108,8 +172108,8 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; GFX9-NEXT:    s_bfe_u32 s58, s22, 0x10010
 ; GFX9-NEXT:    s_add_i32 s58, s58, s22
 ; GFX9-NEXT:    s_add_i32 s73, s58, 0x7fff
-; GFX9-NEXT:    s_bitset1_b32 s22, 22
 ; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
+; GFX9-NEXT:    s_bitset1_b32 s22, 22
 ; GFX9-NEXT:    s_and_b64 s[58:59], vcc, exec
 ; GFX9-NEXT:    s_cselect_b32 s22, s22, s73
 ; GFX9-NEXT:    s_and_b32 s58, s21, 0xffff0000
@@ -172131,8 +172131,8 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; GFX9-NEXT:    s_bfe_u32 s58, s21, 0x10010
 ; GFX9-NEXT:    s_add_i32 s58, s58, s21
 ; GFX9-NEXT:    s_add_i32 s72, s58, 0x7fff
-; GFX9-NEXT:    s_bitset1_b32 s21, 22
 ; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
+; GFX9-NEXT:    s_bitset1_b32 s21, 22
 ; GFX9-NEXT:    s_and_b64 s[58:59], vcc, exec
 ; GFX9-NEXT:    s_cselect_b32 s21, s21, s72
 ; GFX9-NEXT:    s_and_b32 s58, s20, 0xffff0000
@@ -172153,8 +172153,8 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; GFX9-NEXT:    s_bfe_u32 s58, s20, 0x10010
 ; GFX9-NEXT:    s_add_i32 s58, s58, s20
 ; GFX9-NEXT:    s_add_i32 s38, s58, 0x7fff
-; GFX9-NEXT:    s_bitset1_b32 s20, 22
 ; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
+; GFX9-NEXT:    s_bitset1_b32 s20, 22
 ; GFX9-NEXT:    s_and_b64 s[58:59], vcc, exec
 ; GFX9-NEXT:    s_cselect_b32 s20, s20, s38
 ; GFX9-NEXT:    s_and_b32 s58, s19, 0xffff0000
@@ -172175,8 +172175,8 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; GFX9-NEXT:    s_bfe_u32 s58, s19, 0x10010
 ; GFX9-NEXT:    s_add_i32 s58, s58, s19
 ; GFX9-NEXT:    s_add_i32 s38, s58, 0x7fff
-; GFX9-NEXT:    s_bitset1_b32 s19, 22
 ; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
+; GFX9-NEXT:    s_bitset1_b32 s19, 22
 ; GFX9-NEXT:    s_and_b64 s[58:59], vcc, exec
 ; GFX9-NEXT:    s_cselect_b32 s19, s19, s38
 ; GFX9-NEXT:    s_and_b32 s58, s18, 0xffff0000
@@ -172197,8 +172197,8 @@ define inreg <128 x i8> @bitcast_v64bf16_to_v128i8_scalar(<64 x bfloat> inreg %a
 ; GFX9-NEXT:    s_bfe_u32 s58, s18, 0x10010
 ; GFX9-NEXT:    s_add_i32 s58, s58, s18
 ; GFX9-NEXT:    s_add_i32 s39, s58, 0x7fff
-; GFX9-NEXT:    s_bitset1_b32 s18, 22
 ; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v1, v1
+; GFX9-NEXT:    s_bitset1_b32 s18, 22
 ; GFX9-NEXT:    s_and_b64 s[58:59], vcc, exec
 ; GFX9-NEXT:    s_pack_ll_b32_b16 s59, s19, s69
 ; GFX9-NEXT:    s_cselect_b32 s18, s18, s39

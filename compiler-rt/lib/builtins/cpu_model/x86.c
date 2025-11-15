@@ -229,10 +229,8 @@ enum ProcessorFeatures {
   FEATURE_SM4,
   FEATURE_APXF,
   FEATURE_USERMSR,
-  FEATURE_AVX10_1_256,
-  FEATURE_AVX10_1_512,
-  FEATURE_AVX10_2_256,
-  FEATURE_AVX10_2_512,
+  FEATURE_AVX10_1 = 114,
+  FEATURE_AVX10_2 = 116,
   FEATURE_MOVRS,
   CPU_FEATURE_MAX
 };
@@ -1093,18 +1091,11 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
   bool HasLeaf24 =
       MaxLevel >= 0x24 && !getX86CpuIDAndInfo(0x24, &EAX, &EBX, &ECX, &EDX);
   if (HasLeaf7Subleaf1 && ((EDX >> 19) & 1) && HasLeaf24) {
-    bool Has512Len = (EBX >> 18) & 1;
     int AVX10Ver = EBX & 0xff;
-    if (AVX10Ver >= 2) {
-      setFeature(FEATURE_AVX10_2_256);
-      if (Has512Len)
-        setFeature(FEATURE_AVX10_2_512);
-    }
-    if (AVX10Ver >= 1) {
-      setFeature(FEATURE_AVX10_1_256);
-      if (Has512Len)
-        setFeature(FEATURE_AVX10_1_512);
-    }
+    if (AVX10Ver >= 1)
+      setFeature(FEATURE_AVX10_1);
+    if (AVX10Ver >= 2)
+      setFeature(FEATURE_AVX10_2);
   }
 
   unsigned MaxExtLevel = 0;
