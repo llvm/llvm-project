@@ -380,9 +380,9 @@ define <12 x i8> @bitcast_v3i32_to_v12i8(<3 x i32> %a, i32 %b) {
 ; SI-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ; SI-NEXT:  .LBB4_3: ; %cmp.false
-; SI-NEXT:    v_alignbit_b32 v11, s4, v8, 24
-; SI-NEXT:    v_alignbit_b32 v10, s4, v8, 16
-; SI-NEXT:    v_alignbit_b32 v9, s4, v8, 8
+; SI-NEXT:    v_alignbit_b32 v11, v0, v8, 24
+; SI-NEXT:    v_alignbit_b32 v10, v0, v8, 16
+; SI-NEXT:    v_alignbit_b32 v9, v0, v8, 8
 ; SI-NEXT:    v_alignbit_b32 v3, v4, v0, 24
 ; SI-NEXT:    v_alignbit_b32 v2, v4, v0, 16
 ; SI-NEXT:    v_alignbit_b32 v1, v4, v0, 8
@@ -398,9 +398,9 @@ define <12 x i8> @bitcast_v3i32_to_v12i8(<3 x i32> %a, i32 %b) {
 ; SI-NEXT:    v_alignbit_b32 v3, v4, v0, 24
 ; SI-NEXT:    v_alignbit_b32 v2, v4, v0, 16
 ; SI-NEXT:    v_alignbit_b32 v1, v4, v0, 8
-; SI-NEXT:    v_alignbit_b32 v11, s4, v8, 24
-; SI-NEXT:    v_alignbit_b32 v10, s4, v8, 16
-; SI-NEXT:    v_alignbit_b32 v9, s4, v8, 8
+; SI-NEXT:    v_alignbit_b32 v11, v0, v8, 24
+; SI-NEXT:    v_alignbit_b32 v10, v0, v8, 16
+; SI-NEXT:    v_alignbit_b32 v9, v0, v8, 8
 ; SI-NEXT:    v_lshrrev_b32_e32 v7, 24, v4
 ; SI-NEXT:    v_lshrrev_b32_e32 v6, 16, v4
 ; SI-NEXT:    v_lshrrev_b32_e32 v5, 8, v4
@@ -3114,7 +3114,7 @@ define <6 x i16> @bitcast_v3i32_to_v6i16(<3 x i32> %a, i32 %b) {
 ; SI-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ; SI-NEXT:  .LBB16_3: ; %cmp.false
-; SI-NEXT:    v_alignbit_b32 v5, s4, v4, 16
+; SI-NEXT:    v_alignbit_b32 v5, v0, v4, 16
 ; SI-NEXT:    v_alignbit_b32 v1, v2, v0, 16
 ; SI-NEXT:    v_lshrrev_b32_e32 v3, 16, v2
 ; SI-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
@@ -3124,7 +3124,7 @@ define <6 x i16> @bitcast_v3i32_to_v6i16(<3 x i32> %a, i32 %b) {
 ; SI-NEXT:    v_add_i32_e32 v2, vcc, 3, v2
 ; SI-NEXT:    v_add_i32_e32 v0, vcc, 3, v0
 ; SI-NEXT:    v_alignbit_b32 v1, v2, v0, 16
-; SI-NEXT:    v_alignbit_b32 v5, s4, v4, 16
+; SI-NEXT:    v_alignbit_b32 v5, v0, v4, 16
 ; SI-NEXT:    v_lshrrev_b32_e32 v3, 16, v2
 ; SI-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; SI-NEXT:    s_setpc_b64 s[30:31]
@@ -3575,9 +3575,9 @@ define <12 x i8> @bitcast_v3f32_to_v12i8(<3 x float> %a, i32 %b) {
 ; SI-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ; SI-NEXT:  .LBB20_3: ; %cmp.false
-; SI-NEXT:    v_alignbit_b32 v11, s4, v8, 24
-; SI-NEXT:    v_alignbit_b32 v10, s4, v8, 16
-; SI-NEXT:    v_alignbit_b32 v9, s4, v8, 8
+; SI-NEXT:    v_alignbit_b32 v11, v0, v8, 24
+; SI-NEXT:    v_alignbit_b32 v10, v0, v8, 16
+; SI-NEXT:    v_alignbit_b32 v9, v0, v8, 8
 ; SI-NEXT:    v_alignbit_b32 v3, v4, v0, 24
 ; SI-NEXT:    v_alignbit_b32 v2, v4, v0, 16
 ; SI-NEXT:    v_alignbit_b32 v1, v4, v0, 8
@@ -3593,9 +3593,9 @@ define <12 x i8> @bitcast_v3f32_to_v12i8(<3 x float> %a, i32 %b) {
 ; SI-NEXT:    v_alignbit_b32 v3, v4, v0, 24
 ; SI-NEXT:    v_alignbit_b32 v2, v4, v0, 16
 ; SI-NEXT:    v_alignbit_b32 v1, v4, v0, 8
-; SI-NEXT:    v_alignbit_b32 v11, s4, v8, 24
-; SI-NEXT:    v_alignbit_b32 v10, s4, v8, 16
-; SI-NEXT:    v_alignbit_b32 v9, s4, v8, 8
+; SI-NEXT:    v_alignbit_b32 v11, v0, v8, 24
+; SI-NEXT:    v_alignbit_b32 v10, v0, v8, 16
+; SI-NEXT:    v_alignbit_b32 v9, v0, v8, 8
 ; SI-NEXT:    v_lshrrev_b32_e32 v7, 24, v4
 ; SI-NEXT:    v_lshrrev_b32_e32 v6, 16, v4
 ; SI-NEXT:    v_lshrrev_b32_e32 v5, 8, v4
@@ -6334,7 +6334,7 @@ define <6 x i16> @bitcast_v3f32_to_v6i16(<3 x float> %a, i32 %b) {
 ; SI-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ; SI-NEXT:  .LBB32_3: ; %cmp.false
-; SI-NEXT:    v_alignbit_b32 v5, s4, v4, 16
+; SI-NEXT:    v_alignbit_b32 v5, v0, v4, 16
 ; SI-NEXT:    v_alignbit_b32 v1, v2, v0, 16
 ; SI-NEXT:    v_lshrrev_b32_e32 v3, 16, v2
 ; SI-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
@@ -6344,7 +6344,7 @@ define <6 x i16> @bitcast_v3f32_to_v6i16(<3 x float> %a, i32 %b) {
 ; SI-NEXT:    v_add_f32_e32 v2, 1.0, v2
 ; SI-NEXT:    v_add_f32_e32 v0, 1.0, v0
 ; SI-NEXT:    v_alignbit_b32 v1, v2, v0, 16
-; SI-NEXT:    v_alignbit_b32 v5, s4, v4, 16
+; SI-NEXT:    v_alignbit_b32 v5, v0, v4, 16
 ; SI-NEXT:    v_lshrrev_b32_e32 v3, 16, v2
 ; SI-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; SI-NEXT:    s_setpc_b64 s[30:31]

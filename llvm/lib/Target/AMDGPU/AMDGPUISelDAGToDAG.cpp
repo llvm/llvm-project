@@ -726,10 +726,14 @@ void AMDGPUDAGToDAGISel::Select(SDNode *N) {
       break;
     }
 
+    const SIRegisterInfo *TRI = Subtarget->getRegisterInfo();
     assert(VT.getVectorElementType().bitsEq(MVT::i32));
-    unsigned RegClassID =
-        SIRegisterInfo::getSGPRClassForBitWidth(NumVectorElts * 32)->getID();
-    SelectBuildVector(N, RegClassID);
+    const TargetRegisterClass *RegClass =
+        N->isDivergent()
+            ? TRI->getDefaultVectorSuperClassForBitWidth(NumVectorElts * 32)
+            : SIRegisterInfo::getSGPRClassForBitWidth(NumVectorElts * 32);
+
+    SelectBuildVector(N, RegClass->getID());
     return;
   }
   case ISD::VECTOR_SHUFFLE:
