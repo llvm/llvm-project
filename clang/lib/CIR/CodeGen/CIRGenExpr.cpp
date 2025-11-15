@@ -1178,7 +1178,8 @@ LValue CIRGenFunction::emitExtVectorElementExpr(const ExtVectorElementExpr *e) {
     // it.
     LValueBaseInfo baseInfo;
     Address ptr = emitPointerWithAlignment(e->getBase(), &baseInfo);
-    auto *clangPtrTy = e->getBase()->getType()->castAs<clang::PointerType>();
+    const auto *clangPtrTy =
+        e->getBase()->getType()->castAs<clang::PointerType>();
     base = makeAddrLValue(ptr, clangPtrTy->getPointeeType(), baseInfo);
     base.getQuals().removeObjCGCAttr();
   } else if (e->getBase()->isGLValue()) {
