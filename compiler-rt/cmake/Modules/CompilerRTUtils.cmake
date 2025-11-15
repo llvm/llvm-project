@@ -578,11 +578,13 @@ function(add_compiler_rt_install_targets name)
                       DEPENDS ${ARG_PARENT_TARGET}
                       COMMAND "${CMAKE_COMMAND}"
                               -DCMAKE_INSTALL_COMPONENT=${ARG_PARENT_TARGET}
+                              -DCMAKE_INSTALL_CONFIG_NAME=$<CONFIG>
                               -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
     add_custom_target(install-${ARG_PARENT_TARGET}-stripped
                       DEPENDS ${ARG_PARENT_TARGET}
                       COMMAND "${CMAKE_COMMAND}"
                               -DCMAKE_INSTALL_COMPONENT=${ARG_PARENT_TARGET}
+                              -DCMAKE_INSTALL_CONFIG_NAME=$<CONFIG>
                               -DCMAKE_INSTALL_DO_STRIP=1
                               -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
     set_target_properties(install-${ARG_PARENT_TARGET} PROPERTIES
