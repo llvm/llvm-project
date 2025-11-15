@@ -13066,7 +13066,8 @@ def err_sycl_entry_point_invalid : Error<
            "constructor|destructor|coroutine|"
            "constexpr function|consteval function|"
            "function declared with the 'noreturn' attribute|"
-           "function defined with a function try block}1">;
+           "function defined with a function try block|"
+           "function with an explicit object parameter}1">;
 def err_sycl_entry_point_invalid_redeclaration : Error<
   "the %0 kernel name argument does not match prior"
   " declaration%diff{: $ vs $|}1,2">;

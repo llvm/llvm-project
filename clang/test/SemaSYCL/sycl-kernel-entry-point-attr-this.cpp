@@ -1,9 +1,9 @@
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -fsyntax-only -std=c++17 -fsycl-is-host -verify %s
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -fsyntax-only -std=c++17 -fsycl-is-device -verify %s
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsyntax-only -std=c++20 -fsycl-is-host -verify -DCXX20 %s
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsyntax-only -std=c++20 -fsycl-is-device -verify -DCXX20 %s
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsyntax-only -std=c++23 -fsycl-is-host -verify -DCXX23 %s
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsyntax-only -std=c++23 -fsycl-is-device -verify -DCXX23 %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsyntax-only -std=c++20 -fsycl-is-host -verify %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsyntax-only -std=c++20 -fsycl-is-device -verify %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsyntax-only -std=c++23 -fsycl-is-host -verify %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsyntax-only -std=c++23 -fsycl-is-device -verify %s
 
 // These tests validate diagnostics for invalid use of 'this' in the body of
 // a function declared with the sycl_kernel_entry_point attribute.
@@ -82,7 +82,7 @@ struct S7 {
 template void S7<KN<7,0>, false>::ok7();
 template void S7<KN<7,1>, true>::ok7();
 
-#if defined(CXX20)
+#if __cplusplus >= 202002L
 template<typename KN, typename T>
 struct S8 {
   void mf(T);
@@ -96,14 +96,6 @@ struct S9 {
   [[clang::sycl_kernel_entry_point(KN)]] void ok9() requires(requires { this->mf(1); }) {}
 };
 template void S9<KN<9>, int>::ok9();
-#endif
-
-#if defined(CXX23)
-struct S10 {
-  [[clang::sycl_kernel_entry_point(KN<10>)]] void ok10(this S10 self) {
-    (void)self;
-  }
-};
 #endif
 
 
@@ -185,3 +177,12 @@ struct B8 {
 };
 // expected-note@+1 {{in instantiation of member function 'B8<BADKN<8>>::bad8' requested here}}
 template void B8<BADKN<8>>::bad8();
+
+#if __cplusplus >= 202302L
+struct B9 {
+  // expected-error@+1 {{the 'clang::sycl_kernel_entry_point' attribute cannot be applied to a function with an explicit object parameter}}
+  [[clang::sycl_kernel_entry_point(BADKN<9>)]] void bad9(this B9 self) {
+    (void)self;
+  }
+};
+#endif

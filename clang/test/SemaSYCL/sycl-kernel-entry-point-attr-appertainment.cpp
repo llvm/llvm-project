@@ -377,3 +377,29 @@ struct B42 {
   // expected-warning@+1 {{declaration does not declare anything}}
   [[clang::sycl_kernel_entry_point(BADKN<42>)]];
 };
+
+#if __cplusplus >= 202302L
+struct B43 {
+  // expected-error@+2 {{the 'clang::sycl_kernel_entry_point' attribute cannot be applied to a function with an explicit object parameter}}
+  template<typename KNT>
+  [[clang::sycl_kernel_entry_point(KNT)]]
+  void bad43(this B43) {}
+};
+#endif
+
+#if __cplusplus >= 202302L
+struct B44 {
+  // expected-error@+1 {{the 'clang::sycl_kernel_entry_point' attribute cannot be applied to a function with an explicit object parameter}}
+  [[clang::sycl_kernel_entry_point(BADKN<44>)]]
+  void bad44(this B44);
+};
+#endif
+
+#if __cplusplus >= 202302L
+template<typename KNT>
+struct B45 {
+  // expected-error@+1 {{the 'clang::sycl_kernel_entry_point' attribute cannot be applied to a function with an explicit object parameter}}
+  [[clang::sycl_kernel_entry_point(KNT)]]
+  void bad45(this B45);
+};
+#endif
