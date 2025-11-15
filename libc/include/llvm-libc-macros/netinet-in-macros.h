@@ -33,4 +33,12 @@
 #define INET_ADDRSTRLEN 16
 #define INET6_ADDRSTRLEN 46
 
+#define IN6_IS_ADDR_LINKLOCAL(a)                                               \
+  ((__LLVM_LIBC_CAST(reinterpret_cast, uint8_t *, a)[0]) == 0xfe &&            \
+   (__LLVM_LIBC_CAST(reinterpret_cast, uint8_t *, a)[1] & 0xc0) == 0x80)
+
+#define IN6_IS_ADDR_SITELOCAL(a)                                               \
+  ((__LLVM_LIBC_CAST(reinterpret_cast, uint8_t *, a)[0]) == 0xfe &&            \
+   (__LLVM_LIBC_CAST(reinterpret_cast, uint8_t *, a)[1] & 0xc0) == 0xc0)
+
 #endif // LLVM_LIBC_MACROS_NETINET_IN_MACROS_H
