@@ -485,7 +485,6 @@ define i64 @called_i64(i64 %a) noinline {
 ; GFX9-O0-NEXT:    v_lshlrev_b64 v[1:2], s4, v[0:1]
 ; GFX9-O0-NEXT:    v_mov_b32_e32 v3, v2
 ; GFX9-O0-NEXT:    ; kill: def $vgpr6 killed $vgpr6 killed $vgpr6_vgpr7 killed $exec
-; GFX9-O0-NEXT:    s_mov_b32 s5, 0
 ; GFX9-O0-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-O0-NEXT:    ; kill: def $vgpr6 killed $vgpr6 def $vgpr6_vgpr7 killed $exec
 ; GFX9-O0-NEXT:    v_mov_b32_e32 v7, v0
@@ -1317,7 +1316,6 @@ define i64 @strict_wwm_called_i64(i64 %a) noinline {
 ; GFX9-O0-NEXT:    v_lshlrev_b64 v[1:2], s4, v[0:1]
 ; GFX9-O0-NEXT:    v_mov_b32_e32 v3, v2
 ; GFX9-O0-NEXT:    ; kill: def $vgpr6 killed $vgpr6 killed $vgpr6_vgpr7 killed $exec
-; GFX9-O0-NEXT:    s_mov_b32 s5, 0
 ; GFX9-O0-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-O0-NEXT:    ; kill: def $vgpr6 killed $vgpr6 def $vgpr6_vgpr7 killed $exec
 ; GFX9-O0-NEXT:    v_mov_b32_e32 v7, v0
