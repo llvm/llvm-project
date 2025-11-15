@@ -109,6 +109,11 @@ static cl::opt<bool> EnableCFIInstrInserter(
     cl::desc("Enable CFI Instruction Inserter for RISC-V"), cl::init(false),
     cl::Hidden);
 
+static cl::opt<bool> EnableRISCVLiveVariables(
+    "riscv-live-variables",
+    cl::desc("Enable Live Variable Analysis for RISC-V"), cl::init(false),
+    cl::Hidden);
+
 static cl::opt<bool>
     EnableSelectOpt("riscv-select-opt", cl::Hidden,
                     cl::desc("Enable select to branch optimizations"),
@@ -654,7 +659,8 @@ void RISCVPassConfig::addPostRegAlloc() {
       EnableRedundantCopyElimination)
     addPass(createRISCVRedundantCopyEliminationPass());
 
-  addPass(createRISCVLiveVariablesPass());
+  if (EnableRISCVLiveVariables)
+    addPass(createRISCVLiveVariablesPass());
 }
 
 bool RISCVPassConfig::addILPOpts() {

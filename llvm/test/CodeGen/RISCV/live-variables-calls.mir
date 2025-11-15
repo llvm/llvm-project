@@ -4,6 +4,8 @@
 # Test live variable analysis with function calls and register clobbering
 # Function calls clobber caller-saved registers, which affects liveness
 
+# REQUIRES: Assertions
+
 --- |
   declare i64 @external_func(i64, i64)
   declare void @void_func(i64)
