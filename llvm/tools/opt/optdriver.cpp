@@ -670,13 +670,15 @@ optMain(int argc, char **argv,
       M->addModuleFlag(Module::Error, "UnifiedLTO", 1);
   }
 
+  VectorLibrary VecLib = codegen::getVectorLibrary();
   // Add an appropriate TargetLibraryInfo pass for the module's triple.
-  TargetLibraryInfoImpl TLII(ModuleTriple);
+  TargetLibraryInfoImpl TLII(ModuleTriple, VecLib);
 
-  // FIXME: Get ABI name from MCOptions
   RTLIB::RuntimeLibcallsInfo RTLCI(ModuleTriple, codegen::getExceptionModel(),
                                    codegen::getFloatABIForCalls(),
-                                   codegen::getEABIVersion());
+                                   codegen::getEABIVersion(),
+                                   "", // FIXME: Get ABI name from MCOptions
+                                   VecLib);
 
   // The -disable-simplify-libcalls flag actually disables all builtin optzns.
   if (DisableSimplifyLibCalls)

@@ -3850,9 +3850,8 @@ define amdgpu_kernel void @test_call_external_void_func_v32i32_p3_p5() #0 {
   ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (invariant load (p1) from `ptr addrspace(4) poison`, addrspace 4)
   ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(<32 x s32>) = G_LOAD [[LOAD]](p1) :: ("amdgpu-noclobber" load (<32 x s32>) from %ir.ptr0, addrspace 1)
-  ; CHECK-NEXT:   [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[DEF1]](p1) :: ("amdgpu-noclobber" load (s32) from `ptr addrspace(1) poison`, addrspace 1)
-  ; CHECK-NEXT:   [[INTTOPTR:%[0-9]+]]:_(p3) = G_INTTOPTR [[LOAD2]](s32)
-  ; CHECK-NEXT:   [[INTTOPTR1:%[0-9]+]]:_(p5) = G_INTTOPTR [[LOAD2]](s32)
+  ; CHECK-NEXT:   [[LOAD2:%[0-9]+]]:_(p3) = G_LOAD [[DEF1]](p1) :: ("amdgpu-noclobber" load (p3) from `ptr addrspace(1) poison`, addrspace 1)
+  ; CHECK-NEXT:   [[LOAD3:%[0-9]+]]:_(p5) = G_LOAD [[DEF1]](p1) :: ("amdgpu-noclobber" load (p5) from `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_void_func_v32i32_p3_p5
   ; CHECK-NEXT:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -3881,10 +3880,10 @@ define amdgpu_kernel void @test_call_external_void_func_v32i32_p3_p5() #0 {
   ; CHECK-NEXT:   G_STORE [[UV31]](s32), [[PTR_ADD1]](p5) :: (store (s32) into stack, align 16, addrspace 5)
   ; CHECK-NEXT:   [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
   ; CHECK-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p5) = G_PTR_ADD [[AMDGPU_WAVE_ADDRESS]], [[C4]](s32)
-  ; CHECK-NEXT:   G_STORE [[INTTOPTR]](p3), [[PTR_ADD2]](p5) :: (store (p3) into stack + 4, addrspace 5)
+  ; CHECK-NEXT:   G_STORE [[LOAD2]](p3), [[PTR_ADD2]](p5) :: (store (p3) into stack + 4, addrspace 5)
   ; CHECK-NEXT:   [[C5:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
   ; CHECK-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p5) = G_PTR_ADD [[AMDGPU_WAVE_ADDRESS]], [[C5]](s32)
-  ; CHECK-NEXT:   G_STORE [[INTTOPTR1]](p5), [[PTR_ADD3]](p5) :: (store (p5) into stack + 8, align 8, addrspace 5)
+  ; CHECK-NEXT:   G_STORE [[LOAD3]](p5), [[PTR_ADD3]](p5) :: (store (p5) into stack + 8, align 8, addrspace 5)
   ; CHECK-NEXT:   $vgpr0 = COPY [[UV]](s32)
   ; CHECK-NEXT:   $vgpr1 = COPY [[UV1]](s32)
   ; CHECK-NEXT:   $vgpr2 = COPY [[UV2]](s32)

@@ -16,7 +16,6 @@
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/CIR/MissingFeatures.h"
-#include "llvm/IR/IntrinsicsX86.h"
 
 using namespace clang;
 using namespace clang::CIRGen;
@@ -66,9 +65,8 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   getContext().GetBuiltinType(builtinID, error, &iceArguments);
   assert(error == ASTContext::GE_None && "Error while getting builtin type.");
 
-  for (auto [idx, arg] : llvm::enumerate(e->arguments())) {
+  for (auto [idx, arg] : llvm::enumerate(e->arguments()))
     ops.push_back(emitScalarOrConstFoldImmArg(iceArguments, idx, arg));
-  }
 
   CIRGenBuilderTy &builder = getBuilder();
   mlir::Type voidTy = builder.getVoidTy();
@@ -118,7 +116,22 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   case X86::BI__builtin_ia32_vec_ext_v32qi:
   case X86::BI__builtin_ia32_vec_ext_v16hi:
   case X86::BI__builtin_ia32_vec_ext_v8si:
-  case X86::BI__builtin_ia32_vec_ext_v4di:
+  case X86::BI__builtin_ia32_vec_ext_v4di: {
+    unsigned numElts = cast<cir::VectorType>(ops[0].getType()).getSize();
+
+    uint64_t index =
+        ops[1].getDefiningOp<cir::ConstantOp>().getIntValue().getZExtValue();
+
+    index &= numElts - 1;
+
+    cir::ConstantOp indexVal =
+        builder.getUInt64(index, getLoc(e->getExprLoc()));
+
+    // These builtins exist so we can ensure the index is an ICE and in range.
+    // Otherwise we could just do this in the header file.
+    return cir::VecExtractOp::create(builder, getLoc(e->getExprLoc()), ops[0],
+                                     indexVal);
+  }
   case X86::BI__builtin_ia32_vec_set_v4hi:
   case X86::BI__builtin_ia32_vec_set_v16qi:
   case X86::BI__builtin_ia32_vec_set_v8hi:

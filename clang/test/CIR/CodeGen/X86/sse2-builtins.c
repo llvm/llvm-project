@@ -53,6 +53,22 @@ __m128i test_mm_undefined_si128(void) {
   return _mm_undefined_si128();
 }
 
+// Lowering to pextrw requires optimization.
+int test_mm_extract_epi16(__m128i A) {
+  // CIR-LABEL: test_mm_extract_epi16
+  // CIR %{{.*}} = cir.vec.extract %{{.*}}[%{{.*}} : {{!u32i|!u64i}}] : !cir.vector<!s16i x 8>
+  // CIR %{{.*}} = cir.cast integral %{{.*}} : !u16i -> !s32i
+
+  // LLVM-LABEL: test_mm_extract_epi16
+  // LLVM: extractelement <8 x i16> %{{.*}}, {{i32|i64}} 1
+  // LLVM: zext i16 %{{.*}} to i32
+
+  // OGCG-LABEL: test_mm_extract_epi16
+  // OGCG: extractelement <8 x i16> %{{.*}}, {{i32|i64}} 1
+  // OGCG: zext i16 %{{.*}} to i32
+  return _mm_extract_epi16(A, 1);
+}
+
 void test_mm_clflush(void* A) {
   // CIR-LABEL: test_mm_clflush
   // LLVM-LABEL: test_mm_clflush
