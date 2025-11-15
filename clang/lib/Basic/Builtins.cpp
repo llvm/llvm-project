@@ -222,19 +222,17 @@ static bool isBuiltinConstForTriple(unsigned BuiltinID, llvm::Triple Trip) {
   return false;
 }
 
-bool Builtin::Context::shouldGenerateFPMathIntrinsic(unsigned BuiltinID,
-                                    llvm::Triple Trip,
-                                    std::optional<bool> ErrnoOverwritten,
-                                    bool MathErrnoEnabled,
-                                    bool HasOptNoneAttr,
-                                    bool IsOptimizationEnabled) const {
+bool Builtin::Context::shouldGenerateFPMathIntrinsic(
+    unsigned BuiltinID, llvm::Triple Trip, std::optional<bool> ErrnoOverwritten,
+    bool MathErrnoEnabled, bool HasOptNoneAttr,
+    bool IsOptimizationEnabled) const {
 
   // True if we are compiling at -O2 and errno has been disabled
   // using the '#pragma float_control(precise, off)', and
   // attribute opt-none hasn't been seen.
-  bool ErrnoOverridenToFalseWithOpt =
-      ErrnoOverwritten.has_value() && !ErrnoOverwritten.value()
-        && !HasOptNoneAttr && IsOptimizationEnabled;
+  bool ErrnoOverridenToFalseWithOpt = ErrnoOverwritten.has_value() &&
+                                      !ErrnoOverwritten.value() &&
+                                      !HasOptNoneAttr && IsOptimizationEnabled;
 
   // There are LLVM math intrinsics/instructions corresponding to math library
   // functions except the LLVM op will never set errno while the math library
@@ -243,9 +241,11 @@ bool Builtin::Context::shouldGenerateFPMathIntrinsic(unsigned BuiltinID,
   // LLVM counterparts if the call is marked 'const' (known to never set errno).
   // In case FP exceptions are enabled, the experimental versions of the
   // intrinsics model those.
-  bool ConstAlways = isConst(BuiltinID) || isBuiltinConstForTriple(BuiltinID, Trip);
+  bool ConstAlways =
+      isConst(BuiltinID) || isBuiltinConstForTriple(BuiltinID, Trip);
 
-  bool ConstWithoutErrnoAndExceptions = isConstWithoutErrnoAndExceptions(BuiltinID);
+  bool ConstWithoutErrnoAndExceptions =
+      isConstWithoutErrnoAndExceptions(BuiltinID);
   bool ConstWithoutExceptions = isConstWithoutExceptions(BuiltinID);
 
   // ConstAttr is enabled in fast-math mode. In fast-math mode, math-errno is
@@ -268,7 +268,8 @@ bool Builtin::Context::shouldGenerateFPMathIntrinsic(unsigned BuiltinID,
   bool GenerateIntrinsics =
       (ConstAlways && !HasOptNoneAttr) ||
       (!MathErrnoEnabled &&
-      !(ErrnoOverwritten.has_value() && ErrnoOverwritten.value()) && !HasOptNoneAttr);
+       !(ErrnoOverwritten.has_value() && ErrnoOverwritten.value()) &&
+       !HasOptNoneAttr);
   if (!GenerateIntrinsics) {
     GenerateIntrinsics =
         ConstWithoutErrnoOrExceptions && !ConstWithoutErrnoAndExceptions;
@@ -276,7 +277,8 @@ bool Builtin::Context::shouldGenerateFPMathIntrinsic(unsigned BuiltinID,
       GenerateIntrinsics =
           ConstWithoutErrnoOrExceptions &&
           (!MathErrnoEnabled &&
-          !(ErrnoOverwritten.has_value() && ErrnoOverwritten.value()) && !HasOptNoneAttr);
+           !(ErrnoOverwritten.has_value() && ErrnoOverwritten.value()) &&
+           !HasOptNoneAttr);
     if (!GenerateIntrinsics)
       GenerateIntrinsics =
           ConstWithoutErrnoOrExceptions && ErrnoOverridenToFalseWithOpt;

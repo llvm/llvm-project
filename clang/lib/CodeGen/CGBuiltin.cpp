@@ -2642,9 +2642,10 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
 
   bool IsOptimizationEnabled = CGM.getCodeGenOpts().OptimizationLevel != 0;
 
-  bool GenerateFPMathIntrinsics = getContext().BuiltinInfo.shouldGenerateFPMathIntrinsic(
-      BuiltinID, CGM.getTriple(), ErrnoOverriden,
-      getLangOpts().MathErrno, OptNone, IsOptimizationEnabled);
+  bool GenerateFPMathIntrinsics =
+      getContext().BuiltinInfo.shouldGenerateFPMathIntrinsic(
+          BuiltinID, CGM.getTriple(), ErrnoOverriden, getLangOpts().MathErrno,
+          OptNone, IsOptimizationEnabled);
 
   if (GenerateFPMathIntrinsics) {
     switch (BuiltinIDIfNoAsmLabel) {

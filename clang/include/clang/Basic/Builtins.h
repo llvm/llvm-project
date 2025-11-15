@@ -417,11 +417,9 @@ public:
   ///        command line.
   /// \param HasOptNoneAttr True iff 'attribute__((optnone))' is used.
   /// \param IsOptimizationEnabled True iff the optimization level is not 'O0'.
-  bool shouldGenerateFPMathIntrinsic(unsigned BuiltinID,
-                                     llvm::Triple Trip,
+  bool shouldGenerateFPMathIntrinsic(unsigned BuiltinID, llvm::Triple Trip,
                                      std::optional<bool> ErrnoOverwritten,
-                                     bool MathErrnoEnabled,
-                                     bool HasOptNoneAttr,
+                                     bool MathErrnoEnabled, bool HasOptNoneAttr,
                                      bool IsOptimizationEnabled) const;
 
   const char *getRequiredFeatures(unsigned ID) const;
