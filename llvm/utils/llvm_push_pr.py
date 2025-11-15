@@ -557,16 +557,14 @@ class LLVMPRAutomator:
                 branch_base_name = self._sanitize_branch_name(first_commit_title)
 
             for i in range(len(commits)):
-                if i > 0:
-                    self._rebase_current_branch()
-
-                # After a rebase, the commit hashes can change, so we need to
-                # get the latest commit stack.
-                commits = self._get_commit_stack()
                 if not commits:
                     self.runner.print("Success! All commits have been landed.")
                     break
                 self._process_commit(commits[0], branch_base_name, i)
+                self._rebase_current_branch()
+                # After a rebase, the commit hashes can change, so we need to
+                # get the latest commit stack.
+                commits = self._get_commit_stack()
 
         finally:
             self._cleanup()
