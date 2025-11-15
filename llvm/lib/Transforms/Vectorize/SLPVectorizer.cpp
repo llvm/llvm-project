@@ -537,8 +537,7 @@ static bool isSplat(ArrayRef<Value *> VL) {
 /// \param I The instruction to check for commutativity
 /// \param ValWithUses The value whose uses are analyzed for special
 /// patterns
-static bool isCommutative(Instruction *I, Value *ValWithUses,
-                          bool IsCopyable = false) {
+static bool isCommutative(Instruction *I, Value *ValWithUses) {
   if (auto *Cmp = dyn_cast<CmpInst>(I))
     return Cmp->isCommutative();
   if (auto *BO = dyn_cast<BinaryOperator>(I))
@@ -547,7 +546,7 @@ static bool isCommutative(Instruction *I, Value *ValWithUses,
             !ValWithUses->hasNUsesOrMore(UsesLimit) &&
             all_of(
                 ValWithUses->uses(),
-                [&](const Use &U) {
+                [](const Use &U) {
                   // Commutative, if icmp eq/ne sub, 0
                   CmpPredicate Pred;
                   if (match(U.getUser(),
@@ -556,11 +555,10 @@ static bool isCommutative(Instruction *I, Value *ValWithUses,
                     return true;
                   // Commutative, if abs(sub nsw, true) or abs(sub, false).
                   ConstantInt *Flag;
-                  auto *I = dyn_cast<BinaryOperator>(U.get());
                   return match(U.getUser(),
                                m_Intrinsic<Intrinsic::abs>(
                                    m_Specific(U.get()), m_ConstantInt(Flag))) &&
-                         ((!IsCopyable && I && !I->hasNoSignedWrap()) ||
+                         (!cast<Instruction>(U.get())->hasNoSignedWrap() ||
                           Flag->isOne());
                 })) ||
            (BO->getOpcode() == Instruction::FSub &&
@@ -3166,8 +3164,7 @@ public:
         bool IsInverseOperation = false;
         if (S.isCopyableElement(VL[Lane])) {
           // The value is a copyable element.
-          IsInverseOperation =
-              !isCommutative(MainOp, VL[Lane], /*IsCopyable=*/true);
+          IsInverseOperation = !isCommutative(MainOp, VL[Lane]);
         } else {
           assert(I && "Expected instruction");
           auto [SelectedOp, Ops] = convertTo(I, S);
