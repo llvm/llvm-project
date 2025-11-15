@@ -117,24 +117,20 @@ const llvm::fltSemantics &llvm::getFltSemanticForLLT(LLT Ty) {
   assert((Ty.isAnyScalar() || Ty.isFloat()) &&
          "Expected a any scalar or float type.");
 
-  if (Ty.isBFloat(16))
-    return APFloat::BFloat();
-  if (Ty.isX86FP80())
-    return APFloat::x87DoubleExtended();
-  if (Ty.isPPCF128())
-    return APFloat::PPCDoubleDouble();
-
-  assert(!Ty.isVariantFloat() && "Unhandled variant float type");
-
-  switch (Ty.getSizeInBits()) {
-  case 16:
-    return APFloat::IEEEhalf();
-  case 32:
-    return APFloat::IEEEsingle();
-  case 64:
-    return APFloat::IEEEdouble();
-  case 128:
-    return APFloat::IEEEquad();
+  if (Ty.isAnyScalar()) {
+    switch (Ty.getSizeInBits()) {
+    default:
+      llvm_unreachable("Invalid FP type size.");
+    case 16:
+      return APFloat::IEEEhalf();
+    case 32:
+      return APFloat::IEEEsingle();
+    case 64:
+      return APFloat::IEEEdouble();
+    case 128:
+      return APFloat::IEEEquad();
+    }
   }
-  llvm_unreachable("Invalid FP type size.");
+
+  return APFloat::EnumToSemantics(Ty.getFpSemantics());
 }

@@ -111,13 +111,13 @@ TEST_F(AArch64IRTranslatorTest, IRTranslateBfloat16) {
       llvm::MachineFunctionProperties::Property::FailedISel));
   for (auto &MI : MF->front()) {
     if (MI.getOpcode() == TargetOpcode::G_LOAD) {
-      ASSERT_TRUE(MRI.getType(MI.getOperand(0).getReg()).isBFloat(16));
+      ASSERT_TRUE(MRI.getType(MI.getOperand(0).getReg()).isBFloat16());
     }
 
     if (MI.getOpcode() == TargetOpcode::G_FADD ||
         MI.getOpcode() == TargetOpcode::G_FMUL) {
       for (auto &Op : MI.operands()) {
-        ASSERT_TRUE(MRI.getType(Op.getReg()).isBFloat(16));
+        ASSERT_TRUE(MRI.getType(Op.getReg()).isBFloat16());
       }
     }
   }

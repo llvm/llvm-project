@@ -114,7 +114,7 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 // EXTENDED-NEXT:  const static size_t NumTypeObjects = 3;
 // EXTENDED-NEXT:  const static LLT TypeObjects[] = {
 // EXTENDED-NEXT:    LLT::integer(32),
-// EXTENDED-NEXT:    LLT::floatingPoint(32, LLT::FPVariant::IEEE_FLOAT),
+// EXTENDED-NEXT:    LLT::floatIEEE(32),
 // EXTENDED-NEXT:    LLT::pointer(0, 32),
 // EXTENDED-NEXT:  };
 

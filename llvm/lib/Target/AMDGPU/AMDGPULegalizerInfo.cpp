@@ -317,9 +317,9 @@ constexpr LLT V10S16 = LLT::fixed_vector(10, 16);
 constexpr LLT V12S16 = LLT::fixed_vector(12, 16);
 constexpr LLT V16S16 = LLT::fixed_vector(16, 16);
 
-constexpr LLT V2F16 =
-    LLT::fixed_vector(2, LLT::scalar(16)); // TODO: Expected float16
-constexpr LLT V2BF16 = V2F16;              // FIXME
+// TODO: Expected LLT::fixed_vector(2, LLT::float16())
+constexpr LLT V2F16 = LLT::fixed_vector(2, LLT::scalar(16));
+constexpr LLT V2BF16 = V2F16; // FIXME
 
 constexpr LLT V2S32 = LLT::fixed_vector(2, 32);
 constexpr LLT V3S32 = LLT::fixed_vector(3, 32);
@@ -3344,7 +3344,7 @@ bool AMDGPULegalizerInfo::legalizeFMad(
   const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
 
   // TODO: Always legal with future ftz flag.
-  // TODO: Type is expected to be float32/float16
+  // TODO: Type is expected to be LLT::float32()/LLT::float16()
   // FIXME: Do we need just output?
   if (Ty == LLT::scalar(32) &&
       MFI->getMode().FP32Denormals == DenormalMode::getPreserveSign())
@@ -3895,8 +3895,8 @@ bool AMDGPULegalizerInfo::legalizeFPow(MachineInstr &MI,
   Register Src1 = MI.getOperand(2).getReg();
   unsigned Flags = MI.getFlags();
   LLT Ty = B.getMRI()->getType(Dst);
-  const LLT F16 = LLT::scalar(16); // TODO: Expected float16
-  const LLT F32 = LLT::scalar(32); // TODO: Expected float32
+  const LLT F16 = LLT::scalar(16); // TODO: Expected LLT::float16()
+  const LLT F32 = LLT::scalar(32); // TODO: Expected LLT::float32()
 
   if (Ty == F32) {
     auto Log = B.buildFLog2(F32, Src0, Flags);

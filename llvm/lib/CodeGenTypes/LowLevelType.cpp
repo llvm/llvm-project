@@ -16,19 +16,25 @@
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
 
-static std::optional<LLT::FPVariant> deriveFPInfo(MVT VT) {
-  if (!VT.isFloatingPoint())
-    return std::nullopt;
-
+// Repeat logic of MVT::getFltSemantics to exclude CodeGen dependency
+static LLT::FpSemantics getFpSemanticsForMVT(MVT VT) {
   switch (VT.getScalarType().SimpleTy) {
-  case MVT::bf16:
-    return LLT::FPVariant::BF16;
-  case MVT::f80:
-    return LLT::FPVariant::EXTENDED_FP80;
-  case MVT::ppcf128:
-    return LLT::FPVariant::PPC128_FLOAT;
   default:
-    return LLT::FPVariant::IEEE_FLOAT;
+    llvm_unreachable("Unknown FP format");
+  case MVT::f16:
+    return LLT::FpSemantics::S_IEEEhalf;
+  case MVT::bf16:
+    return LLT::FpSemantics::S_BFloat;
+  case MVT::f32:
+    return LLT::FpSemantics::S_IEEEsingle;
+  case MVT::f64:
+    return LLT::FpSemantics::S_IEEEdouble;
+  case MVT::f80:
+    return LLT::FpSemantics::S_x87DoubleExtended;
+  case MVT::f128:
+    return LLT::FpSemantics::S_IEEEquad;
+  case MVT::ppcf128:
+    return LLT::FpSemantics::S_PPCDoubleDouble;
   }
 }
 
@@ -38,10 +44,11 @@ LLT::LLT(MVT VT, bool AllowExtendedLLT) {
       bool AsVector = VT.getVectorMinNumElements() > 1 || VT.isScalableVector();
       Kind Info = AsVector ? Kind::VECTOR_ANY : Kind::ANY_SCALAR;
       init(Info, VT.getVectorElementCount(),
-           VT.getVectorElementType().getSizeInBits(), 0, FPVariant::IEEE_FLOAT);
+           VT.getVectorElementType().getSizeInBits(), 0,
+           static_cast<FpSemantics>(0));
     } else if (VT.isValid() && !VT.isScalableTargetExtVT()) {
       init(Kind::ANY_SCALAR, ElementCount::getFixed(0), VT.getSizeInBits(), 0,
-           FPVariant::IEEE_FLOAT);
+           static_cast<FpSemantics>(0));
     } else {
       this->Info = Kind::INVALID;
       this->RawData = 0;
@@ -49,25 +56,24 @@ LLT::LLT(MVT VT, bool AllowExtendedLLT) {
     return;
   }
 
-  auto FP = deriveFPInfo(VT);
+  bool IsFloatingPoint = VT.isFloatingPoint();
+  FpSemantics FpSem =
+      IsFloatingPoint ? getFpSemanticsForMVT(VT) : static_cast<FpSemantics>(0);
   bool AsVector = VT.isVector() &&
                   (VT.getVectorMinNumElements() > 1 || VT.isScalableVector());
-
   LLT::Kind Info;
-  if (FP.has_value())
+  if (IsFloatingPoint)
     Info = AsVector ? LLT::Kind::VECTOR_FLOAT : LLT::Kind::FLOAT;
   else
     Info = AsVector ? LLT::Kind::VECTOR_INTEGER : LLT::Kind::INTEGER;
 
   if (VT.isVector()) {
     init(Info, VT.getVectorElementCount(),
-         VT.getVectorElementType().getSizeInBits(), 0,
-         FP.value_or(LLT::FPVariant::IEEE_FLOAT));
+         VT.getVectorElementType().getSizeInBits(), 0, FpSem);
   } else if (VT.isValid() && !VT.isScalableTargetExtVT()) {
     // Aggregates are no different from real scalars as far as GlobalISel is
     // concerned.
-    init(Info, ElementCount::getFixed(0), VT.getSizeInBits(), 0,
-         FP.value_or(LLT::FPVariant::IEEE_FLOAT));
+    init(Info, ElementCount::getFixed(0), VT.getSizeInBits(), 0, FpSem);
   } else {
     this->Info = Kind::INVALID;
     this->RawData = 0;
@@ -81,12 +87,11 @@ void LLT::print(raw_ostream &OS) const {
     OS << getElementCount() << " x " << getElementType() << ">";
   } else if (isPointer()) {
     OS << "p" << getAddressSpace();
-  } else if (isBFloat(16)) {
+  } else if (isBFloat16()) {
     OS << "bf16";
   } else if (isPPCF128()) {
     OS << "ppcf128";
-  } else if (isFloat()) {
-    assert(!isVariantFloat() && "unknown float variant");
+  } else if (isFloatIEEE()) {
     OS << "f" << getScalarSizeInBits();
   } else if (isInteger()) {
     OS << "i" << getScalarSizeInBits();

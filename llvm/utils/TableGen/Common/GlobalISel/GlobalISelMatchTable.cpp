@@ -369,7 +369,7 @@ std::string LLTCodeGen::getCxxEnumValue() const {
 
 void LLTCodeGen::emitCxxEnumValue(raw_ostream &OS) const {
   if (Ty.isScalar()) {
-    if (Ty.isBFloat(16))
+    if (Ty.isBFloat16())
       OS << "GILLT_bf16";
     else if (Ty.isPPCF128())
       OS << "GILLT_ppcf128";
@@ -388,7 +388,7 @@ void LLTCodeGen::emitCxxEnumValue(raw_ostream &OS) const {
        << Ty.getElementCount().getKnownMinValue();
 
     LLT ElemTy = Ty.getElementType();
-    if (ElemTy.isBFloat(16))
+    if (ElemTy.isBFloat16())
       OS << "bf16";
     else if (ElemTy.isPPCF128())
       OS << "ppcf128";
@@ -417,15 +417,14 @@ void LLTCodeGen::emitCxxConstructorCall(raw_ostream &OS) const {
   if (Ty.isScalar()) {
     if (Ty.isInteger())
       OS << "LLT::integer(" << Ty.getScalarSizeInBits() << ")";
-    else if (Ty.isBFloat(16))
+    else if (Ty.isBFloat16())
       OS << "LLT::bfloat16()";
     else if (Ty.isPPCF128())
       OS << "LLT::ppcf128()";
     else if (Ty.isX86FP80())
       OS << "LLT::x86fp80()";
     else if (Ty.isFloat())
-      OS << "LLT::floatingPoint(" << Ty.getScalarSizeInBits()
-         << ", LLT::FPVariant::IEEE_FLOAT)";
+      OS << "LLT::floatIEEE(" << Ty.getScalarSizeInBits() << ")";
     else
       OS << "LLT::scalar(" << Ty.getScalarSizeInBits() << ")";
     return;
@@ -440,15 +439,14 @@ void LLTCodeGen::emitCxxConstructorCall(raw_ostream &OS) const {
     LLT ElemTy = Ty.getElementType();
     if (ElemTy.isInteger())
       OS << "LLT::integer(" << ElemTy.getScalarSizeInBits() << ")";
-    else if (ElemTy.isBFloat(16))
+    else if (ElemTy.isBFloat16())
       OS << "LLT::bfloat16()";
     else if (ElemTy.isPPCF128())
       OS << "LLT::ppcf128()";
     else if (ElemTy.isX86FP80())
       OS << "LLT::x86fp80()";
     else if (ElemTy.isFloat())
-      OS << "LLT::floatingPoint(" << ElemTy.getScalarSizeInBits()
-         << ", LLT::FPVariant::IEEE_FLOAT)";
+      OS << "LLT::floatIEEE(" << ElemTy.getScalarSizeInBits() << ")";
     else
       OS << "LLT::scalar(" << Ty.getScalarSizeInBits() << ")";
     OS << ")";

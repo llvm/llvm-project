@@ -1969,18 +1969,15 @@ bool MIParser::parseLowLevelType(StringRef::iterator Loc, LLT &Ty) {
   }
 
   if (Token.range().starts_with("f") || Token.range().starts_with("bf")) {
-    LLT::FPVariant FPVariant;
-    if (Token.range().starts_with("f"))
-      FPVariant = LLT::FPVariant::IEEE_FLOAT;
-    else if (Token.range().starts_with("bf"))
-      FPVariant = LLT::FPVariant::BF16;
-    else
-      return error("unknown floating point type identifier");
-
     auto ScalarSize = APSInt(TypeDigits).getZExtValue();
     if (!ScalarSize || !verifyScalarSize(ScalarSize))
       return error("invalid size for scalar type");
-    Ty = LLT::floatingPoint(ScalarSize, FPVariant);
+
+    if (Token.range().starts_with("bf") && ScalarSize != 16)
+      return error("invalid size for bfloat");
+
+    Ty = Token.range().starts_with("bf") ? LLT::bfloat16()
+                                         : LLT::floatIEEE(ScalarSize);
     lex();
     return false;
   }
@@ -2050,12 +2047,12 @@ bool MIParser::parseLowLevelType(StringRef::iterator Loc, LLT &Ty) {
     auto ScalarSize = APSInt(VectorTyDigits).getZExtValue();
     if (!verifyScalarSize(ScalarSize))
       return error("invalid size for float element in vector");
-    Ty = LLT::floatingPoint(ScalarSize, LLT::FPVariant::IEEE_FLOAT);
+    Ty = LLT::floatIEEE(ScalarSize);
   } else if (Token.range().starts_with("bf")) {
     auto ScalarSize = APSInt(VectorTyDigits).getZExtValue();
     if (!verifyScalarSize(ScalarSize))
       return error("invalid size for bfloat element in vector");
-    Ty = LLT::floatingPoint(ScalarSize, LLT::FPVariant::BF16);
+    Ty = LLT::bfloat16();
   } else
     return GetError();
   lex();
