@@ -441,8 +441,12 @@ protected:
     moveFromImpl(OldBuckets);
   }
 
-  // Move key/value from Other to *this.  Other will be in a zombie state.
-  void moveFrom(DerivedT &Other) { moveFromImpl(Other.buckets()); }
+  // Move key/value from Other to *this.
+  // Other is left in a valid but empty state.
+  void moveFrom(DerivedT &Other) {
+    moveFromImpl(Other.buckets());
+    Other.derived().kill();
+  }
 
   void copyFrom(const DerivedT &other) {
     this->destroyAll();
@@ -830,6 +834,13 @@ private:
     }
   }
 
+  // Put the zombie instance in a known good state after a move.
+  void kill() {
+    deallocateBuckets();
+    Buckets = nullptr;
+    NumBuckets = 0;
+  }
+
   void grow(unsigned AtLeast) {
     unsigned OldNumBuckets = NumBuckets;
     BucketT *OldBuckets = Buckets;
@@ -1107,6 +1118,13 @@ private:
     this->BaseT::initEmpty();
   }
 
+  // Put the zombie instance in a known good state after a move.
+  void kill() {
+    deallocateBuckets();
+    Small = false;
+    new (getLargeRep()) LargeRep{nullptr, 0};
+  }
+
   void grow(unsigned AtLeast) {
     if (AtLeast > InlineBuckets)
       AtLeast = std::max<unsigned>(64, NextPowerOf2(AtLeast - 1));
@@ -1117,14 +1135,13 @@ private:
     if (Tmp.Small) {
       // Use moveFrom in those rare cases where we stay in the small mode.  This
       // can happen when we have many tombstones.
+      Small = true;
       this->BaseT::initEmpty();
       this->moveFrom(Tmp);
-      Tmp.Small = false;
-      Tmp.getLargeRep()->NumBuckets = 0;
     } else {
-      deallocateBuckets();
       Small = false;
-      NumTombstones = 0;
+      NumEntries = Tmp.NumEntries;
+      NumTombstones = Tmp.NumTombstones;
       *getLargeRep() = std::move(*Tmp.getLargeRep());
       Tmp.getLargeRep()->NumBuckets = 0;
     }
