@@ -8454,22 +8454,29 @@ void Clang::AddClangCLArgs(const ArgList &Args, types::ID InputType,
     llvm::Triple::ArchType AT = getToolChain().getArch();
     StringRef Default = AT == llvm::Triple::x86 ? "IA32" : "SSE2";
     StringRef Arch = Args.getLastArgValue(options::OPT__SLASH_arch, Default);
+    llvm::SmallSet<StringRef, 4> Arch512 = {"AVX512F", "AVX512", "AVX10.1",
+                                            "AVX10.2"};
 
     if (A->getOption().matches(options::OPT__SLASH_vlen_EQ_512)) {
-      if (Arch == "AVX512F" || Arch == "AVX512")
+      if (Arch512.contains(Arch))
         CmdArgs.push_back("-mprefer-vector-width=512");
       else
         D.Diag(diag::warn_drv_argument_not_allowed_with)
             << "/vlen=512" << std::string("/arch:").append(Arch);
-    }
-
-    if (A->getOption().matches(options::OPT__SLASH_vlen_EQ_256)) {
-      if (Arch == "AVX512F" || Arch == "AVX512")
+    } else if (A->getOption().matches(options::OPT__SLASH_vlen_EQ_256)) {
+      if (Arch512.contains(Arch))
         CmdArgs.push_back("-mprefer-vector-width=256");
       else if (Arch != "AVX" && Arch != "AVX2")
         D.Diag(diag::warn_drv_argument_not_allowed_with)
             << "/vlen=256" << std::string("/arch:").append(Arch);
+    } else {
+      if (Arch == "AVX10.1" || Arch == "AVX10.2")
+        CmdArgs.push_back("-mprefer-vector-width=256");
     }
+  } else {
+    StringRef Arch = Args.getLastArgValue(options::OPT__SLASH_arch);
+    if (Arch == "AVX10.1" || Arch == "AVX10.2")
+      CmdArgs.push_back("-mprefer-vector-width=256");
   }
 
   Arg *MostGeneralArg = Args.getLastArg(options::OPT__SLASH_vmg);
