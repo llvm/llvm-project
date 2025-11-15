@@ -313,29 +313,22 @@ collectVirtualRegUses(SmallVectorImpl<VRegMaskOrUnit> &VRegMaskOrUnits,
 /// Mostly copy/paste from CodeGen/RegisterPressure.cpp
 static LaneBitmask getLanesWithProperty(
     const LiveIntervals &LIS, const MachineRegisterInfo &MRI,
-    bool TrackLaneMasks, Register RegUnit, SlotIndex Pos,
-    LaneBitmask SafeDefault,
+    bool TrackLaneMasks, Register Reg, SlotIndex Pos,
     function_ref<bool(const LiveRange &LR, SlotIndex Pos)> Property) {
-  if (RegUnit.isVirtual()) {
-    const LiveInterval &LI = LIS.getInterval(RegUnit);
-    LaneBitmask Result;
-    if (TrackLaneMasks && LI.hasSubRanges()) {
-      for (const LiveInterval::SubRange &SR : LI.subranges()) {
-        if (Property(SR, Pos))
-          Result |= SR.LaneMask;
-      }
-    } else if (Property(LI, Pos)) {
-      Result = TrackLaneMasks ? MRI.getMaxLaneMaskForVReg(RegUnit)
-                              : LaneBitmask::getAll();
+  assert(Reg.isVirtual());
+  const LiveInterval &LI = LIS.getInterval(Reg);
+  LaneBitmask Result;
+  if (TrackLaneMasks && LI.hasSubRanges()) {
+    for (const LiveInterval::SubRange &SR : LI.subranges()) {
+      if (Property(SR, Pos))
+        Result |= SR.LaneMask;
     }
-
-    return Result;
+  } else if (Property(LI, Pos)) {
+    Result =
+        TrackLaneMasks ? MRI.getMaxLaneMaskForVReg(Reg) : LaneBitmask::getAll();
   }
 
-  const LiveRange *LR = LIS.getCachedRegUnit(RegUnit);
-  if (LR == nullptr)
-    return SafeDefault;
-  return Property(*LR, Pos) ? LaneBitmask::getAll() : LaneBitmask::getNone();
+  return Result;
 }
 
 /// Mostly copy/paste from CodeGen/RegisterPressure.cpp
@@ -503,10 +496,9 @@ void GCNRPTracker::reset(const MachineRegisterInfo &MRI_,
 }
 
 /// Mostly copy/paste from CodeGen/RegisterPressure.cpp
-LaneBitmask GCNRPTracker::getLastUsedLanes(Register RegUnit,
-                                           SlotIndex Pos) const {
+LaneBitmask GCNRPTracker::getLastUsedLanes(Register Reg, SlotIndex Pos) const {
   return getLanesWithProperty(
-      LIS, *MRI, true, RegUnit, Pos.getBaseIndex(), LaneBitmask::getNone(),
+      LIS, *MRI, true, Reg, Pos.getBaseIndex(),
       [](const LiveRange &LR, SlotIndex Pos) {
         const LiveRange::Segment *S = LR.getSegmentContaining(Pos);
         return S != nullptr && S->end == Pos.getRegSlot();

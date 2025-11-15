@@ -292,7 +292,7 @@ protected:
   /// Mostly copy/paste from CodeGen/RegisterPressure.cpp
   void bumpDeadDefs(ArrayRef<VRegMaskOrUnit> DeadDefs);
 
-  LaneBitmask getLastUsedLanes(Register RegUnit, SlotIndex Pos) const;
+  LaneBitmask getLastUsedLanes(Register Reg, SlotIndex Pos) const;
 
 public:
   // reset tracker and set live register set to the specified value.
