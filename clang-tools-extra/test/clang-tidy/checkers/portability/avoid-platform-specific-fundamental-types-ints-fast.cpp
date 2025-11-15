@@ -26,12 +26,12 @@ unsigned short global_unsigned_short = 10U;
 // CHECK-FIXES: uint_fast16_t global_unsigned_short = 10U;
 
 long global_long = 100L;
-// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: avoid using platform-dependent fundamental integer type 'long'; consider using '{{u?}}int_fast{{(32|64)}}_t' instead [portability-avoid-platform-specific-fundamental-types]
-// CHECK-FIXES: {{u?}}int_fast{{(32|64)}}_t global_long = 100L;
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: avoid using platform-dependent fundamental integer type 'long'; consider using 'int_fast64_t' instead [portability-avoid-platform-specific-fundamental-types]
+// CHECK-FIXES: int_fast64_t global_long = 100L;
 
 unsigned long global_unsigned_long = 100UL;
-// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: avoid using platform-dependent fundamental integer type 'unsigned long'; consider using 'uint_fast{{(32|64)}}_t' instead [portability-avoid-platform-specific-fundamental-types]
-// CHECK-FIXES: uint_fast{{(32|64)}}_t global_unsigned_long = 100UL;
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: avoid using platform-dependent fundamental integer type 'unsigned long'; consider using 'uint_fast64_t' instead [portability-avoid-platform-specific-fundamental-types]
+// CHECK-FIXES: uint_fast64_t global_unsigned_long = 100UL;
 
 long long global_long_long = 1000LL;
 // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: avoid using platform-dependent fundamental integer type 'long long'; consider using 'int_fast64_t' instead [portability-avoid-platform-specific-fundamental-types]
@@ -72,6 +72,6 @@ struct TestStruct {
     // CHECK-FIXES: int_fast32_t member_int;
     
     long member_long;
-    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: avoid using platform-dependent fundamental integer type 'long'; consider using '{{u?}}int_fast{{(32|64)}}_t' instead [portability-avoid-platform-specific-fundamental-types]
-    // CHECK-FIXES: {{u?}}int_fast{{(32|64)}}_t member_long;
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: avoid using platform-dependent fundamental integer type 'long'; consider using 'int_fast64_t' instead [portability-avoid-platform-specific-fundamental-types]
+    // CHECK-FIXES: int_fast64_t member_long;
 };
