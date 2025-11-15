@@ -149,6 +149,25 @@ static std::optional<std::string> getFloatReplacement(const BuiltinType *BT,
   }
 }
 
+static std::string getIntegerReplacementPrefix(
+    AvoidPlatformSpecificFundamentalTypesCheck::IntegerReplacementStyle Style,
+    bool IsSigned) {
+  std::string SignedPrefix = IsSigned ? "int" : "uint";
+  switch (Style) {
+  case AvoidPlatformSpecificFundamentalTypesCheck::IntegerReplacementStyle::
+      Exact:
+    return SignedPrefix;
+  case AvoidPlatformSpecificFundamentalTypesCheck::IntegerReplacementStyle::
+      Fast:
+    return SignedPrefix + "_fast";
+  case AvoidPlatformSpecificFundamentalTypesCheck::IntegerReplacementStyle::
+      Least:
+    return SignedPrefix + "_least";
+  default:
+    llvm_unreachable("Invalid integer replacement style");
+  }
+}
+
 static std::optional<std::string> getIntegerReplacement(
     const BuiltinType *BT, ASTContext &Context,
     AvoidPlatformSpecificFundamentalTypesCheck::IntegerReplacementStyle Style) {
@@ -156,22 +175,7 @@ static std::optional<std::string> getIntegerReplacement(
 
   auto GetReplacementType =
       [Style](unsigned Width, bool IsSigned) -> std::optional<std::string> {
-    std::string Prefix = [Style, IsSigned]() {
-      std::string SignedPrefix = IsSigned ? "int" : "uint";
-      switch (Style) {
-      case AvoidPlatformSpecificFundamentalTypesCheck::IntegerReplacementStyle::
-          Exact:
-        return SignedPrefix;
-      case AvoidPlatformSpecificFundamentalTypesCheck::IntegerReplacementStyle::
-          Fast:
-        return SignedPrefix + "_fast";
-      case AvoidPlatformSpecificFundamentalTypesCheck::IntegerReplacementStyle::
-          Least:
-        return SignedPrefix + "_least";
-      default:
-        llvm_unreachable("Invalid integer replacement style");
-      }
-    }();
+    const std::string Prefix = getIntegerReplacementPrefix(Style, IsSigned);
 
     switch (Width) {
     case 8U:
@@ -268,6 +272,36 @@ void AvoidPlatformSpecificFundamentalTypesCheck::check(
     diag(Loc, "avoid using platform-dependent character type '%0'; "
               "consider using 'char8_t' for text or 'std::byte' for bytes")
         << TypeName;
+  } else if (BT->getKind() == BuiltinType::Long ||
+             BT->getKind() == BuiltinType::ULong) {
+    // Special case, since Unix and Windows handle these differently.
+    // Always suggest 64_t for maximum compatibility between platforms.
+    const auto Replacement =
+        getIntegerReplacementPrefix(IntegerReplacementStyleValue,
+                                    /*IsSigned=*/BT->getKind() ==
+                                        BuiltinType::Long) +
+        "64_t";
+    auto Diag =
+        diag(Loc,
+             "avoid using platform-dependent fundamental integer type '%0'; "
+             "consider using '%1' instead")
+        << TypeName << Replacement;
+
+    if (TypeRange.isValid())
+      Diag << FixItHint::CreateReplacement(TypeRange, Replacement);
+
+    if (auto IncludeFixit = IncludeInserter.createIncludeInsertion(
+            Result.SourceManager->getFileID(Loc), "<cstdint>")) {
+      Diag << *IncludeFixit;
+    }
+
+    if (Replacement != getIntegerReplacement(BT, *Result.Context,
+                                             IntegerReplacementStyleValue))
+      diag(Loc,
+           "'%0' suggested for compatibility with Windows, which uses "
+           "64-bit '%1'",
+           DiagnosticIDs::Note)
+          << Replacement << TypeName;
   } else {
     // Handle integer types
     const auto Replacement = getIntegerReplacement(
