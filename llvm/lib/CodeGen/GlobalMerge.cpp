@@ -196,13 +196,6 @@ class GlobalMerge : public FunctionPass {
 public:
   static char ID; // Pass identification, replacement for typeid.
 
-  explicit GlobalMerge() : FunctionPass(ID) {
-    Opt.MaxOffset = GlobalMergeMaxOffset;
-    Opt.MergeConstantGlobals = EnableGlobalMergeOnConst;
-    Opt.MergeConstAggressive = GlobalMergeAllConst;
-    initializeGlobalMergePass(*PassRegistry::getPassRegistry());
-  }
-
   explicit GlobalMerge(const TargetMachine *TM, unsigned MaximalOffset,
                        bool OnlyOptimizeForSize, bool MergeExternalGlobals,
                        bool MergeConstantGlobals, bool MergeConstAggressive)
@@ -772,7 +765,8 @@ Pass *llvm::createGlobalMergePass(const TargetMachine *TM, unsigned Offset,
   bool MergeConstAggressive = GlobalMergeAllConst.getNumOccurrences() > 0
                                   ? GlobalMergeAllConst
                                   : MergeConstAggressiveByDefault;
-  unsigned PreferOffset = GlobalMergeMaxOffset ? GlobalMergeMaxOffset : Offset;
+  unsigned PreferOffset = GlobalMergeMaxOffset.getNumOccurrences() > 0 ?
+    GlobalMergeMaxOffset : Offset;
   return new GlobalMerge(TM, PreferOffset, OnlyOptimizeForSize, MergeExternal,
                          MergeConstant, MergeConstAggressive);
 }
