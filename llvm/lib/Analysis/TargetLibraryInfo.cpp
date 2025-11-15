@@ -160,7 +160,8 @@ static void initializeBase(TargetLibraryInfoImpl &TLI, const Triple &T) {
 /// target triple. This should be carefully written so that a missing target
 /// triple gets a sane set of defaults.
 static void initializeLibCalls(TargetLibraryInfoImpl &TLI, const Triple &T,
-                               ArrayRef<StringLiteral> StandardNames) {
+                               ArrayRef<StringLiteral> StandardNames,
+                               VectorLibrary VecLib) {
   // Set IO unlocked variants as unavailable
   // Set them as available per system below
   TLI.setUnavailable(LibFunc_getc_unlocked);
@@ -924,23 +925,25 @@ static void initializeLibCalls(TargetLibraryInfoImpl &TLI, const Triple &T,
   if (T.isOSAIX())
     TLI.setUnavailable(LibFunc_memrchr);
 
-  TLI.addVectorizableFunctionsFromVecLib(ClVectorLibrary, T);
+  TLI.addVectorizableFunctionsFromVecLib(VecLib, T);
 }
 
 /// Initialize the set of available library functions based on the specified
 /// target triple. This should be carefully written so that a missing target
 /// triple gets a sane set of defaults.
 static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
-                       ArrayRef<StringLiteral> StandardNames) {
+                       ArrayRef<StringLiteral> StandardNames,
+                       VectorLibrary VecLib) {
   initializeBase(TLI, T);
-  initializeLibCalls(TLI, T, StandardNames);
+  initializeLibCalls(TLI, T, StandardNames, VecLib);
 }
 
-TargetLibraryInfoImpl::TargetLibraryInfoImpl(const Triple &T) {
+TargetLibraryInfoImpl::TargetLibraryInfoImpl(const Triple &T,
+                                             VectorLibrary VecLib) {
   // Default to everything being available.
   memset(AvailableArray, -1, sizeof(AvailableArray));
 
-  initialize(*this, T, StandardNames);
+  initialize(*this, T, StandardNames, VecLib);
 }
 
 TargetLibraryInfoImpl::TargetLibraryInfoImpl(const TargetLibraryInfoImpl &TLI)

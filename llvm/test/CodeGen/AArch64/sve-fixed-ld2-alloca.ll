@@ -12,12 +12,12 @@ define void @st1d_fixed(ptr %ptr) #0 {
 ; CHECK-NEXT:    stp x20, x19, [sp, #144] // 16-byte Folded Spill
 ; CHECK-NEXT:    mov x19, x0
 ; CHECK-NEXT:    mov x0, sp
-; CHECK-NEXT:    str x30, [sp, #128] // 8-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #128] // 8-byte Spill
 ; CHECK-NEXT:    mov x20, sp
 ; CHECK-NEXT:    bl def
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    ld2d { z0.d, z1.d }, p0/z, [x20]
-; CHECK-NEXT:    ldr x30, [sp, #128] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #128] // 8-byte Reload
 ; CHECK-NEXT:    str z0, [x19]
 ; CHECK-NEXT:    ldp x20, x19, [sp, #144] // 16-byte Folded Reload
 ; CHECK-NEXT:    add sp, sp, #160
