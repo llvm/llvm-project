@@ -103,8 +103,7 @@ swift::SILValue SwiftSILManipulator::emitLValueForVariable(
   swift::LoadInst *pointer_to_variable =
       m_builder.createLoad(null_loc, pointer_to_return_slot,
                            swift::LoadOwnershipQualifier::Trivial);
-  auto type = var->getDeclContext()->mapTypeIntoContext(
-      var->getInterfaceType());
+  auto type = var->getTypeInContext();
   auto loweredType = converter.getLoweredRValueType(
       swift::TypeExpansionContext::minimal(), type);
 
