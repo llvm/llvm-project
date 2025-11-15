@@ -172,8 +172,21 @@ namespace ok10 {
   };
 }
 
-// sycl_kernel_launch with forward reference parameters.
+// sycl_kernel_launch with non-reference parameters.
 namespace ok11 {
+  template<typename KN, typename... Ts>
+  void sycl_kernel_launch(const char *, Ts...);
+  struct move_only {
+    move_only(move_only&&) = default;
+  };
+  [[clang::sycl_kernel_entry_point(KN<11>)]]
+  void skep(KT<11> k, move_only) {
+    k();
+  }
+}
+
+// sycl_kernel_launch with forward reference parameters.
+namespace ok12 {
   template<typename KN, typename... Ts>
   void sycl_kernel_launch(const char *, Ts &&...);
   struct non_copyable {
@@ -182,8 +195,11 @@ namespace ok11 {
   struct non_moveable {
     non_moveable(non_moveable&&) = delete;
   };
-  [[clang::sycl_kernel_entry_point(KN<11>)]]
-  void skep(KT<11> k, non_copyable, non_moveable) {
+  struct move_only {
+    move_only(move_only&&) = default;
+  };
+  [[clang::sycl_kernel_entry_point(KN<12>)]]
+  void skep(KT<12> k, non_copyable, non_moveable, move_only) {
     k();
   }
 }
@@ -437,10 +453,10 @@ namespace bad14 {
     k();
   }
   struct non_moveable {
-    // expected-note@+1 {{copy constructor is implicitly deleted because 'non_moveable' has a user-declared move constructor}}
+    // expected-note@+1 {{'non_moveable' has been explicitly marked deleted here}}
     non_moveable(non_moveable&&) = delete;
   };
-  // expected-error@+2 {{call to implicitly-deleted copy constructor of 'bad14::non_moveable'}}
+  // expected-error@+2 {{call to deleted constructor of 'bad14::non_moveable'}}
   [[clang::sycl_kernel_entry_point(BADKN<14,1>)]]
   void skep(BADKT<14,1> k, non_moveable) {
     k();
