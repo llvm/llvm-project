@@ -413,7 +413,7 @@ SDValue DAGTypeLegalizer::ScalarizeVecRes_LOOP_DEPENDENCE_MASK(SDNode *N) {
   SDValue Diff = DAG.getNode(ISD::SUB, DL, PtrVT, SinkValue, SourceValue);
   EVT CmpVT = TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(),
                                      Diff.getValueType());
-  SDValue Zero = DAG.getTargetConstant(0, DL, PtrVT);
+  SDValue Zero = DAG.getConstant(0, DL, PtrVT);
   return DAG.getNode(ISD::OR, DL, CmpVT,
                      DAG.getSetCC(DL, CmpVT, Diff, EltSize, ISD::SETGE),
                      DAG.getSetCC(DL, CmpVT, Diff, Zero, ISD::SETEQ));
