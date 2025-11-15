@@ -306,9 +306,6 @@ export namespace std {
       using std::ranges::views::pairwise;
     } // namespace views
 
-#endif // _LIBCPP_STD_VER >= 23
-
-#if 0
     using std::ranges::adjacent_transform_view;
 
     namespace views {
@@ -316,6 +313,9 @@ export namespace std {
       using std::ranges::views::pairwise_transform;
     } // namespace views
 
+#endif // _LIBCPP_STD_VER >= 23
+
+#if 0
     using std::ranges::chunk_view;
 
     using std::ranges::chunk_view<V>;
