@@ -531,10 +531,10 @@ define void @multiple_exit_conditions(ptr %src, ptr noalias %dst) #1 {
 ; DEFAULT-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 8
 ; DEFAULT-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[DST]], i64 [[OFFSET_IDX]]
 ; DEFAULT-NEXT:    [[TMP1:%.*]] = load i16, ptr [[SRC]], align 2
-; DEFAULT-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i16> poison, i16 [[TMP1]], i64 0
+; DEFAULT-NEXT:    [[TMP2:%.*]] = or i16 [[TMP1]], 1
+; DEFAULT-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i16> poison, i16 [[TMP2]], i64 0
 ; DEFAULT-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i16> [[BROADCAST_SPLATINSERT]], <8 x i16> poison, <8 x i32> zeroinitializer
-; DEFAULT-NEXT:    [[TMP2:%.*]] = or <8 x i16> [[BROADCAST_SPLAT]], splat (i16 1)
-; DEFAULT-NEXT:    [[TMP3:%.*]] = uitofp <8 x i16> [[TMP2]] to <8 x double>
+; DEFAULT-NEXT:    [[TMP3:%.*]] = uitofp <8 x i16> [[BROADCAST_SPLAT]] to <8 x double>
 ; DEFAULT-NEXT:    store <8 x double> [[TMP3]], ptr [[NEXT_GEP]], align 8
 ; DEFAULT-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; DEFAULT-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 256
@@ -563,10 +563,10 @@ define void @multiple_exit_conditions(ptr %src, ptr noalias %dst) #1 {
 ; PRED-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 8
 ; PRED-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[DST]], i64 [[OFFSET_IDX]]
 ; PRED-NEXT:    [[TMP12:%.*]] = load i16, ptr [[SRC]], align 2
-; PRED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i16> poison, i16 [[TMP12]], i64 0
+; PRED-NEXT:    [[TMP11:%.*]] = or i16 [[TMP12]], 1
+; PRED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i16> poison, i16 [[TMP11]], i64 0
 ; PRED-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x i16> [[BROADCAST_SPLATINSERT]], <vscale x 2 x i16> poison, <vscale x 2 x i32> zeroinitializer
-; PRED-NEXT:    [[TMP13:%.*]] = or <vscale x 2 x i16> [[BROADCAST_SPLAT]], splat (i16 1)
-; PRED-NEXT:    [[TMP14:%.*]] = uitofp <vscale x 2 x i16> [[TMP13]] to <vscale x 2 x double>
+; PRED-NEXT:    [[TMP14:%.*]] = uitofp <vscale x 2 x i16> [[BROADCAST_SPLAT]] to <vscale x 2 x double>
 ; PRED-NEXT:    call void @llvm.masked.store.nxv2f64.p0(<vscale x 2 x double> [[TMP14]], ptr align 8 [[NEXT_GEP]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
 ; PRED-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP1]]
 ; PRED-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 [[INDEX]], i64 [[TMP10]])
@@ -672,10 +672,10 @@ define void @test_conditional_interleave_group (ptr noalias %src.1, ptr noalias 
 ; DEFAULT-NEXT:    [[BROADCAST_SPLATINSERT8:%.*]] = insertelement <8 x float> poison, float [[TMP15]], i64 0
 ; DEFAULT-NEXT:    [[BROADCAST_SPLAT9:%.*]] = shufflevector <8 x float> [[BROADCAST_SPLATINSERT8]], <8 x float> poison, <8 x i32> zeroinitializer
 ; DEFAULT-NEXT:    [[TMP16:%.*]] = load float, ptr [[SRC_2]], align 4
-; DEFAULT-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x float> poison, float [[TMP16]], i64 0
+; DEFAULT-NEXT:    [[TMP17:%.*]] = fmul float [[TMP16]], 0.000000e+00
+; DEFAULT-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x float> poison, float [[TMP17]], i64 0
 ; DEFAULT-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x float> [[BROADCAST_SPLATINSERT]], <8 x float> poison, <8 x i32> zeroinitializer
-; DEFAULT-NEXT:    [[TMP17:%.*]] = fmul <8 x float> [[BROADCAST_SPLAT]], zeroinitializer
-; DEFAULT-NEXT:    [[TMP18:%.*]] = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> [[BROADCAST_SPLAT9]], <8 x float> zeroinitializer, <8 x float> [[TMP17]])
+; DEFAULT-NEXT:    [[TMP18:%.*]] = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> [[BROADCAST_SPLAT9]], <8 x float> zeroinitializer, <8 x float> [[BROADCAST_SPLAT]])
 ; DEFAULT-NEXT:    [[TMP19:%.*]] = load float, ptr [[SRC_3]], align 4
 ; DEFAULT-NEXT:    [[BROADCAST_SPLATINSERT10:%.*]] = insertelement <8 x float> poison, float [[TMP19]], i64 0
 ; DEFAULT-NEXT:    [[BROADCAST_SPLAT11:%.*]] = shufflevector <8 x float> [[BROADCAST_SPLATINSERT10]], <8 x float> poison, <8 x i32> zeroinitializer
@@ -857,10 +857,10 @@ define void @test_conditional_interleave_group (ptr noalias %src.1, ptr noalias 
 ; PRED-NEXT:    [[BROADCAST_SPLATINSERT8:%.*]] = insertelement <8 x float> poison, float [[TMP18]], i64 0
 ; PRED-NEXT:    [[BROADCAST_SPLAT9:%.*]] = shufflevector <8 x float> [[BROADCAST_SPLATINSERT8]], <8 x float> poison, <8 x i32> zeroinitializer
 ; PRED-NEXT:    [[TMP19:%.*]] = load float, ptr [[SRC_2]], align 4
-; PRED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x float> poison, float [[TMP19]], i64 0
+; PRED-NEXT:    [[TMP20:%.*]] = fmul float [[TMP19]], 0.000000e+00
+; PRED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x float> poison, float [[TMP20]], i64 0
 ; PRED-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x float> [[BROADCAST_SPLATINSERT]], <8 x float> poison, <8 x i32> zeroinitializer
-; PRED-NEXT:    [[TMP20:%.*]] = fmul <8 x float> [[BROADCAST_SPLAT]], zeroinitializer
-; PRED-NEXT:    [[TMP21:%.*]] = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> [[BROADCAST_SPLAT9]], <8 x float> zeroinitializer, <8 x float> [[TMP20]])
+; PRED-NEXT:    [[TMP21:%.*]] = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> [[BROADCAST_SPLAT9]], <8 x float> zeroinitializer, <8 x float> [[BROADCAST_SPLAT]])
 ; PRED-NEXT:    [[TMP22:%.*]] = load float, ptr [[SRC_3]], align 4
 ; PRED-NEXT:    [[BROADCAST_SPLATINSERT10:%.*]] = insertelement <8 x float> poison, float [[TMP22]], i64 0
 ; PRED-NEXT:    [[BROADCAST_SPLAT11:%.*]] = shufflevector <8 x float> [[BROADCAST_SPLATINSERT10]], <8 x float> poison, <8 x i32> zeroinitializer

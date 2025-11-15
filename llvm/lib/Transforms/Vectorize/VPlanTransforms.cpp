@@ -1425,32 +1425,33 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
         continue;
       }
 
-      // Skip recipes that aren't single scalars or don't have only their
-      // scalar results used. In the latter case, we would introduce extra
-      // broadcasts.
+      // Skip recipes that aren't single scalars or when conversion to
+      // single-scalar does not introduce additional broadcasts. That is, either
+      // only the scalars of the recipe are used, or at least one of the
+      // operands would require a broadcast. In the latter case, the
+      // single-scalar may need to be broadcasted, but another broadcast is
+      // removed. scalar results used. In the latter case, we would introduce
+      // extra broadcasts.
       if (!vputils::isSingleScalar(RepOrWidenR) ||
-          !all_of(RepOrWidenR->users(), [RepOrWidenR](const VPUser *U) {
-            if (auto *Store = dyn_cast<VPWidenStoreRecipe>(U)) {
-              // VPWidenStore doesn't have users, and stores are always
-              // profitable to widen: hence, permitting address and mask
-              // operands, and single-scalar stored values is an important leaf
-              // condition. The assert must hold as we checked the RepOrWidenR
-              // operand against vputils::isSingleScalar.
-              assert(RepOrWidenR != Store->getStoredValue() ||
-                     vputils::isSingleScalar(Store->getStoredValue()));
-              return true;
-            }
+          (!all_of(RepOrWidenR->users(),
+                   [RepOrWidenR](const VPUser *U) {
+                     if (auto *VPI = dyn_cast<VPInstruction>(U)) {
+                       unsigned Opcode = VPI->getOpcode();
+                       if (Opcode == VPInstruction::ExtractLastElement ||
+                           Opcode == VPInstruction::ExtractLastLanePerPart ||
+                           Opcode == VPInstruction::ExtractPenultimateElement)
+                         return true;
+                     }
 
-            if (auto *VPI = dyn_cast<VPInstruction>(U)) {
-              unsigned Opcode = VPI->getOpcode();
-              if (Opcode == VPInstruction::ExtractLastElement ||
-                  Opcode == VPInstruction::ExtractLastLanePerPart ||
-                  Opcode == VPInstruction::ExtractPenultimateElement)
-                return true;
-            }
-
-            return U->usesScalars(RepOrWidenR);
-          }))
+                     return U->usesScalars(RepOrWidenR);
+                   }) &&
+           none_of(RepOrWidenR->operands(), [RepOrWidenR](VPValue *Op) {
+             return Op->getSingleUser() == RepOrWidenR &&
+                    ((Op->isLiveIn() &&
+                      !isa<Constant>(Op->getLiveInIRValue())) ||
+                     (isa<VPReplicateRecipe>(Op) &&
+                      cast<VPReplicateRecipe>(Op)->isSingleScalar()));
+           })))
         continue;
 
       auto *Clone = new VPReplicateRecipe(RepOrWidenR->getUnderlyingInstr(),
