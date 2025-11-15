@@ -1594,7 +1594,7 @@ private:
     return __assign_from_tree(
         __dest,
         __src,
-        [this](value_type& __lhs, const value_type& __rhs) { __assign_value(__lhs, __rhs); },
+        [this](value_type& __lhs, const value_type& __rhs) { this->__assign_value(__lhs, __rhs); },
         [this](__node_pointer __nd) { return __copy_construct_tree(__nd); });
   }
 
@@ -1603,7 +1603,7 @@ private:
     return __assign_from_tree(
         __dest,
         __src,
-        [this](value_type& __lhs, value_type& __rhs) { __assign_value(__lhs, std::move(__rhs)); },
+        [this](value_type& __lhs, value_type& __rhs) { this->__assign_value(__lhs, std::move(__rhs)); },
         [this](__node_pointer __nd) { return __move_construct_tree(__nd); });
   }
 };
