@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly -polly-invariant-load-hoisting=true '-passes=print<polly-function-scops>' -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly -polly-invariant-load-hoisting=true '-passes=polly-custom<scops>' -polly-print-scops -disable-output < %s 2>&1 | FileCheck %s
 ;
 ;    void f(unsigned long *restrict I, unsigned *restrict A, unsigned N) {
 ;      for (unsigned i = 0; i < N; i++) {

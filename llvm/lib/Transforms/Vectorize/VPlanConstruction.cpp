@@ -20,6 +20,7 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopIterator.h"
 #include "llvm/Analysis/ScalarEvolution.h"
+#include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/MDBuilder.h"
 
 #define DEBUG_TYPE "vplan"
@@ -233,10 +234,15 @@ void PlainCFGBuilder::createVPInstructionsForVPBB(VPBasicBlock *VPBB,
       for (Value *Op : Inst->operands())
         VPOperands.push_back(getOrCreateVPOperand(Op));
 
-      // Build VPInstruction for any arbitrary Instruction without specific
-      // representation in VPlan.
-      NewR = cast<VPInstruction>(
-          VPIRBuilder.createNaryOp(Inst->getOpcode(), VPOperands, Inst));
+      if (auto *CI = dyn_cast<CastInst>(Inst)) {
+        NewR = VPIRBuilder.createScalarCast(CI->getOpcode(), VPOperands[0],
+                                            CI->getType(), CI->getDebugLoc());
+        NewR->setUnderlyingValue(CI);
+      } else {
+        // Build VPInstruction for any arbitrary Instruction without specific
+        // representation in VPlan.
+        NewR = VPIRBuilder.createNaryOp(Inst->getOpcode(), VPOperands, Inst);
+      }
     }
 
     IRDef2VPValue[Inst] = NewR;
@@ -790,10 +796,21 @@ void VPlanTransforms::addMinimumVectorEpilogueIterationCheck(
   Branch->addMetadata(LLVMContext::MD_prof, BranchWeights);
 }
 
+/// If \p RedPhiR is used by a ComputeReductionResult recipe, return it.
+/// Otherwise return nullptr.
+static VPInstruction *
+findComputeReductionResult(VPReductionPHIRecipe *RedPhiR) {
+  auto It = find_if(RedPhiR->users(), [](VPUser *U) {
+    auto *VPI = dyn_cast<VPInstruction>(U);
+    return VPI && VPI->getOpcode() == VPInstruction::ComputeReductionResult;
+  });
+  return It == RedPhiR->user_end() ? nullptr : cast<VPInstruction>(*It);
+}
+
 bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
   auto GetMinMaxCompareValue = [](VPReductionPHIRecipe *RedPhiR) -> VPValue * {
-    auto *MinMaxR = dyn_cast<VPRecipeWithIRFlags>(
-        RedPhiR->getBackedgeValue()->getDefiningRecipe());
+    auto *MinMaxR =
+        dyn_cast_or_null<VPRecipeWithIRFlags>(RedPhiR->getBackedgeValue());
     if (!MinMaxR)
       return nullptr;
 
@@ -894,13 +911,7 @@ bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
 
     // If we exit early due to NaNs, compute the final reduction result based on
     // the reduction phi at the beginning of the last vector iteration.
-    auto *RdxResult = find_singleton<VPSingleDefRecipe>(
-        RedPhiR->users(), [](VPUser *U, bool) -> VPSingleDefRecipe * {
-          auto *VPI = dyn_cast<VPInstruction>(U);
-          if (VPI && VPI->getOpcode() == VPInstruction::ComputeReductionResult)
-            return VPI;
-          return nullptr;
-        });
+    auto *RdxResult = findComputeReductionResult(RedPhiR);
 
     auto *NewSel = MiddleBuilder.createSelect(AnyNaNLane, RedPhiR,
                                               RdxResult->getOperand(1));

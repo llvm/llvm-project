@@ -10988,6 +10988,22 @@ SDValue DAGCombiner::visitSRA(SDNode *N) {
     }
   }
 
+  // fold (sra (xor (sra x, c1), -1), c2) -> (xor (sra x, c3), -1)
+  // This allows merging two arithmetic shifts even when there's a NOT in
+  // between.
+  SDValue X;
+  APInt C1;
+  if (N1C && sd_match(N0, m_OneUse(m_Not(
+                              m_OneUse(m_Sra(m_Value(X), m_ConstInt(C1))))))) {
+    APInt C2 = N1C->getAPIntValue();
+    zeroExtendToMatch(C1, C2, 1 /* Overflow Bit */);
+    APInt Sum = C1 + C2;
+    unsigned ShiftSum = Sum.getLimitedValue(OpSizeInBits - 1);
+    SDValue NewShift = DAG.getNode(
+        ISD::SRA, DL, VT, X, DAG.getShiftAmountConstant(ShiftSum, VT, DL));
+    return DAG.getNOT(DL, NewShift, VT);
+  }
+
   // fold (sra (shl X, m), (sub result_size, n))
   // -> (sign_extend (trunc (shl X, (sub (sub result_size, n), m)))) for
   // result_size - n != m.
@@ -18657,11 +18673,13 @@ SDValue DAGCombiner::visitFDIV(SDNode *N) {
   if (Flags.hasAllowReciprocal()) {
     // If this FDIV is part of a reciprocal square root, it may be folded
     // into a target-specific square root estimate instruction.
+    bool N1AllowReciprocal = N1->getFlags().hasAllowReciprocal();
     if (N1.getOpcode() == ISD::FSQRT) {
       if (SDValue RV = buildRsqrtEstimate(N1.getOperand(0)))
         return DAG.getNode(ISD::FMUL, DL, VT, N0, RV);
     } else if (N1.getOpcode() == ISD::FP_EXTEND &&
-               N1.getOperand(0).getOpcode() == ISD::FSQRT) {
+               N1.getOperand(0).getOpcode() == ISD::FSQRT &&
+               N1AllowReciprocal) {
       if (SDValue RV = buildRsqrtEstimate(N1.getOperand(0).getOperand(0))) {
         RV = DAG.getNode(ISD::FP_EXTEND, SDLoc(N1), VT, RV);
         AddToWorklist(RV.getNode());
@@ -18862,6 +18880,26 @@ SDValue DAGCombiner::visitFCOPYSIGN(SDNode *N) {
 
   if (SimplifyDemandedBits(SDValue(N, 0)))
     return SDValue(N, 0);
+
+  if (VT != N1.getValueType())
+    return SDValue();
+
+  // If this is equivalent to a disjoint or, replace it with one. This can
+  // happen if the sign operand is a sign mask (i.e., x << sign_bit_position).
+  if (DAG.SignBitIsZeroFP(N0) &&
+      DAG.computeKnownBits(N1).Zero.isMaxSignedValue()) {
+    // TODO: Just directly match the shift pattern. computeKnownBits is heavy
+    // for a such a narrowly targeted case.
+    EVT IntVT = VT.changeTypeToInteger();
+    // TODO: It appears to be profitable in some situations to unconditionally
+    // emit a fabs(n0) to perform this combine.
+    SDValue CastSrc0 = DAG.getNode(ISD::BITCAST, DL, IntVT, N0);
+    SDValue CastSrc1 = DAG.getNode(ISD::BITCAST, DL, IntVT, N1);
+
+    SDValue SignOr = DAG.getNode(ISD::OR, DL, IntVT, CastSrc0, CastSrc1,
+                                 SDNodeFlags::Disjoint);
+    return DAG.getNode(ISD::BITCAST, DL, VT, SignOr);
+  }
 
   return SDValue();
 }
@@ -28995,9 +29033,9 @@ bool DAGCombiner::SimplifySelectOps(SDNode *TheSelect, SDValue LHS,
         // over-conservative. It would be beneficial to be able to remember
         // both potential memory locations.  Since we are discarding
         // src value info, don't do the transformation if the memory
-        // locations are not in the default address space.
-        LLD->getPointerInfo().getAddrSpace() != 0 ||
-        RLD->getPointerInfo().getAddrSpace() != 0 ||
+        // locations are not in the same address space.
+        LLD->getPointerInfo().getAddrSpace() !=
+            RLD->getPointerInfo().getAddrSpace() ||
         // We can't produce a CMOV of a TargetFrameIndex since we won't
         // generate the address generation required.
         LLD->getBasePtr().getOpcode() == ISD::TargetFrameIndex ||
@@ -29079,6 +29117,9 @@ bool DAGCombiner::SimplifySelectOps(SDNode *TheSelect, SDValue LHS,
     // but the new load must be the minimum (most restrictive) alignment of the
     // inputs.
     Align Alignment = std::min(LLD->getAlign(), RLD->getAlign());
+    unsigned AddrSpace = LLD->getAddressSpace();
+    assert(AddrSpace == RLD->getAddressSpace());
+
     MachineMemOperand::Flags MMOFlags = LLD->getMemOperand()->getFlags();
     if (!RLD->isInvariant())
       MMOFlags &= ~MachineMemOperand::MOInvariant;
@@ -29087,15 +29128,16 @@ bool DAGCombiner::SimplifySelectOps(SDNode *TheSelect, SDValue LHS,
     if (LLD->getExtensionType() == ISD::NON_EXTLOAD) {
       // FIXME: Discards pointer and AA info.
       Load = DAG.getLoad(TheSelect->getValueType(0), SDLoc(TheSelect),
-                         LLD->getChain(), Addr, MachinePointerInfo(), Alignment,
-                         MMOFlags);
+                         LLD->getChain(), Addr, MachinePointerInfo(AddrSpace),
+                         Alignment, MMOFlags);
     } else {
       // FIXME: Discards pointer and AA info.
       Load = DAG.getExtLoad(
           LLD->getExtensionType() == ISD::EXTLOAD ? RLD->getExtensionType()
                                                   : LLD->getExtensionType(),
           SDLoc(TheSelect), TheSelect->getValueType(0), LLD->getChain(), Addr,
-          MachinePointerInfo(), LLD->getMemoryVT(), Alignment, MMOFlags);
+          MachinePointerInfo(AddrSpace), LLD->getMemoryVT(), Alignment,
+          MMOFlags);
     }
 
     // Users of the select now use the result of the load.
