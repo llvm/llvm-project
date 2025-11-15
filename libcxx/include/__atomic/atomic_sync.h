@@ -286,6 +286,7 @@ _LIBCPP_HIDE_FROM_ABI void __atomic_notify_all(const _AtomicWaitable& __a) {
   static_assert(__atomic_waitable<_AtomicWaitable>::value, "");
   std::__cxx_atomic_notify_all(__atomic_waitable_traits<__decay_t<_AtomicWaitable> >::__atomic_contention_address(__a));
 }
+
 #    endif
 
 #  else // _LIBCPP_HAS_THREADS
