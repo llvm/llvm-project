@@ -114,6 +114,8 @@ _LIBCPP_AVAILABILITY_NEW_SYNC _LIBCPP_EXPORTED_FROM_ABI void __atomic_notify_all
         _APPLY(8)
 #    elif defined(__FreeBSD__) && __SIZEOF_LONG__ == 8
 #      define _LIBCPP_NATIVE_PLATFORM_WAIT_SIZES(_APPLY) _APPLY(8)
+#    elif defined(_WIN32)
+#      define _LIBCPP_NATIVE_PLATFORM_WAIT_SIZES(_APPLY) _APPLY(8)
 #    else
 #      define _LIBCPP_NATIVE_PLATFORM_WAIT_SIZES(_APPLY) _APPLY(sizeof(__cxx_contention_t))
 #    endif // __linux__

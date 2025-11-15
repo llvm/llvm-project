@@ -29,6 +29,8 @@ using __cxx_contention_t _LIBCPP_NODEBUG = int64_t;
 using __cxx_contention_t _LIBCPP_NODEBUG = int64_t;
 #  elif defined(_AIX) && !defined(__64BIT__)
 using __cxx_contention_t _LIBCPP_NODEBUG = int32_t;
+#elif defined(_WIN32)
+using __cxx_contention_t _LIBCPP_NODEBUG = int64_t;
 #  else
 using __cxx_contention_t _LIBCPP_NODEBUG = int64_t;
 #  endif // __linux__

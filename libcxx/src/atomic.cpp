@@ -155,27 +155,30 @@ static void* win32_get_synch_api_function(const char* function_name) {
   return reinterpret_cast<void*>(GetProcAddress(module_handle, function_name));
 }
 
-static void
-__libcpp_platform_wait_on_address(__cxx_atomic_contention_t const volatile* __ptr, __cxx_contention_t __val) {
+template <std::size_t _Size>
+static void __platform_wait_on_address(void const volatile* __ptr, void const* __val) {
+  static_assert(_Size == 8, "Can only wait on 8 bytes value");
   // WaitOnAddress was added in Windows 8 (build 9200)
   static auto wait_on_address = reinterpret_cast<BOOL(WINAPI*)(volatile void*, PVOID, SIZE_T, DWORD)>(
       win32_get_synch_api_function("WaitOnAddress"));
   if (wait_on_address != nullptr) {
-    wait_on_address(const_cast<__cxx_atomic_contention_t*>(__ptr), &__val, sizeof(__val), INFINITE);
+    wait_on_address(const_cast<void*>(__ptr), &__val, _Size, INFINITE);
   } else {
     __libcpp_thread_poll_with_backoff(
-        [=]() -> bool { return !__cxx_nonatomic_compare_equal(__cxx_atomic_load(__ptr, memory_order_relaxed), __val); },
+        [=]() -> bool { return std::memcmp(const_cast<const void*>(__ptr), __val, _Size) != 0; },
         __libcpp_timed_backoff_policy());
   }
 }
 
-static void __libcpp_platform_wake_by_address(__cxx_atomic_contention_t const volatile* __ptr, bool __notify_one) {
+template <std::size_t _Size>
+static void __platform_wake_by_address(void const volatile* __ptr, bool __notify_one) {
+  static_assert(_Size == 8, "Can only wake up on 8 bytes value");
   if (__notify_one) {
     // WakeByAddressSingle was added in Windows 8 (build 9200)
     static auto wake_by_address_single =
         reinterpret_cast<void(WINAPI*)(PVOID)>(win32_get_synch_api_function("WakeByAddressSingle"));
     if (wake_by_address_single != nullptr) {
-      wake_by_address_single(const_cast<__cxx_atomic_contention_t*>(__ptr));
+      wake_by_address_single(const_cast<void*>(__ptr));
     } else {
       // The fallback implementation of waking does nothing, as the fallback wait implementation just does polling, so
       // there's nothing to do here.
@@ -185,7 +188,7 @@ static void __libcpp_platform_wake_by_address(__cxx_atomic_contention_t const vo
     static auto wake_by_address_all =
         reinterpret_cast<void(WINAPI*)(PVOID)>(win32_get_synch_api_function("WakeByAddressAll"));
     if (wake_by_address_all != nullptr) {
-      wake_by_address_all(const_cast<__cxx_atomic_contention_t*>(__ptr));
+      wake_by_address_all(const_cast<void*>(__ptr));
     } else {
       // The fallback implementation of waking does nothing, as the fallback wait implementation just does polling, so
       // there's nothing to do here.
