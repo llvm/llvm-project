@@ -376,10 +376,6 @@ void DWARFUnit::SetDwoStrOffsetsBase() {
 
     // Skip padding.
     baseOffset += 2;
-  } else {
-    // Size of offset for .debug_str_offsets is same as DWARF offset byte size
-    // of the DWARFUnit for DWARF version 4 and earlier.
-    m_str_offsets_size = m_header.getDwarfOffsetByteSize();
   }
 
   SetStrOffsetsBase(baseOffset);
