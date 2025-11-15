@@ -630,6 +630,22 @@ CIRGenFunction::emitTargetBuiltinExpr(unsigned builtinID, const CallExpr *e,
                                    getTarget().getTriple().getArch());
 }
 
+mlir::Value CIRGenFunction::emitScalarOrConstFoldImmArg(
+    const unsigned iceArguments, const unsigned idx, const Expr *argExpr) {
+  mlir::Value arg = {};
+  if ((iceArguments & (1 << idx)) == 0) {
+    arg = emitScalarExpr(argExpr);
+  } else {
+    // If this is required to be a constant, constant fold it so that we
+    // know that the generated intrinsic gets a ConstantInt.
+    const std::optional<llvm::APSInt> result =
+        argExpr->getIntegerConstantExpr(getContext());
+    assert(result && "Expected argument to be a constant");
+    arg = builder.getConstInt(getLoc(argExpr->getSourceRange()), *result);
+  }
+  return arg;
+}
+
 /// Given a builtin id for a function like "__builtin_fabsf", return a Function*
 /// for "fabsf".
 cir::FuncOp CIRGenModule::getBuiltinLibFunction(const FunctionDecl *fd,
