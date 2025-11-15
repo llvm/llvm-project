@@ -525,8 +525,7 @@ define <2 x float> @div_constant_dividend2_reassoc_only(<2 x float> %x) {
 
 define <2 x float> @div_constant_dividend3(<2 x float> %x) {
 ; CHECK-LABEL: @div_constant_dividend3(
-; CHECK-NEXT:    [[TMP1:%.*]] = fmul reassoc arcp <2 x float> [[X:%.*]], <float 1.500000e+01, float -7.000000e+00>
-; CHECK-NEXT:    [[T2:%.*]] = fmul reassoc arcp <2 x float> [[TMP1]], <float 0x3FD5555560000000, float 0x3FC24924A0000000>
+; CHECK-NEXT:    [[T2:%.*]] = fmul reassoc arcp <2 x float> [[X:%.*]], <float 5.000000e+00, float -1.000000e+00>
 ; CHECK-NEXT:    ret <2 x float> [[T2]]
 ;
   %t1 = fdiv <2 x float> <float 3.0e0, float 7.0e0>, %x
