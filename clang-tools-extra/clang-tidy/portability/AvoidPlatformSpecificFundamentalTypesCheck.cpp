@@ -48,16 +48,28 @@ AST_MATCHER(clang::QualType, isBuiltinFloat) {
 } // namespace
 
 template <>
-struct clang::tidy::OptionEnumMapping<clang::tidy::portability::AvoidPlatformSpecificFundamentalTypesCheck::IntegerReplacementStyle> {
+struct clang::tidy::OptionEnumMapping<
+    clang::tidy::portability::AvoidPlatformSpecificFundamentalTypesCheck::
+        IntegerReplacementStyle> {
   static llvm::ArrayRef<
-      std::pair<portability::AvoidPlatformSpecificFundamentalTypesCheck::IntegerReplacementStyle, StringRef>>
+      std::pair<portability::AvoidPlatformSpecificFundamentalTypesCheck::
+                    IntegerReplacementStyle,
+                StringRef>>
   getEnumMapping() {
-    static constexpr std::pair<portability::AvoidPlatformSpecificFundamentalTypesCheck::IntegerReplacementStyle,
-                               StringRef>
+    static constexpr std::pair<
+        portability::AvoidPlatformSpecificFundamentalTypesCheck::
+            IntegerReplacementStyle,
+        StringRef>
         Mapping[] = {
-            {portability::AvoidPlatformSpecificFundamentalTypesCheck::IntegerReplacementStyle::Exact, "Exact"},
-            {portability::AvoidPlatformSpecificFundamentalTypesCheck::IntegerReplacementStyle::Fast, "Fast"},
-            {portability::AvoidPlatformSpecificFundamentalTypesCheck::IntegerReplacementStyle::Least, "Least"},
+            {portability::AvoidPlatformSpecificFundamentalTypesCheck::
+                 IntegerReplacementStyle::Exact,
+             "Exact"},
+            {portability::AvoidPlatformSpecificFundamentalTypesCheck::
+                 IntegerReplacementStyle::Fast,
+             "Fast"},
+            {portability::AvoidPlatformSpecificFundamentalTypesCheck::
+                 IntegerReplacementStyle::Least,
+             "Least"},
         };
     return {Mapping};
   }
@@ -72,7 +84,8 @@ AvoidPlatformSpecificFundamentalTypesCheck::
       WarnOnFloats(Options.get("WarnOnFloats", true)),
       WarnOnInts(Options.get("WarnOnInts", true)),
       WarnOnChars(Options.get("WarnOnChars", true)),
-      IntegerReplacementStyleValue(Options.get("IntegerReplacementStyle", IntegerReplacementStyle::Exact)),
+      IntegerReplacementStyleValue(Options.get("IntegerReplacementStyle",
+                                               IntegerReplacementStyle::Exact)),
       IncludeInserter(Options.getLocalOrGlobal("IncludeStyle",
                                                utils::IncludeSorter::IS_LLVM),
                       areDiagsSelfContained()) {
@@ -141,20 +154,24 @@ static std::optional<std::string> getIntegerReplacement(
     AvoidPlatformSpecificFundamentalTypesCheck::IntegerReplacementStyle Style) {
   const TargetInfo &Target = Context.getTargetInfo();
 
-  auto GetReplacementType = [Style](unsigned Width, bool IsSigned) -> std::optional<std::string> {
-    std::string Prefix = [Style, IsSigned](){
-    std::string SignedPrefix = IsSigned ? "int" : "uint";
-    switch (Style) {
-    case AvoidPlatformSpecificFundamentalTypesCheck::IntegerReplacementStyle::Exact:
-      return SignedPrefix;
-    case AvoidPlatformSpecificFundamentalTypesCheck::IntegerReplacementStyle::Fast:
-      return SignedPrefix + "_fast";
-    case AvoidPlatformSpecificFundamentalTypesCheck::IntegerReplacementStyle::Least:
-      return SignedPrefix + "_least";
-    default:
-      llvm_unreachable("Invalid integer replacement style");
-    }
-  }();
+  auto GetReplacementType =
+      [Style](unsigned Width, bool IsSigned) -> std::optional<std::string> {
+    std::string Prefix = [Style, IsSigned]() {
+      std::string SignedPrefix = IsSigned ? "int" : "uint";
+      switch (Style) {
+      case AvoidPlatformSpecificFundamentalTypesCheck::IntegerReplacementStyle::
+          Exact:
+        return SignedPrefix;
+      case AvoidPlatformSpecificFundamentalTypesCheck::IntegerReplacementStyle::
+          Fast:
+        return SignedPrefix + "_fast";
+      case AvoidPlatformSpecificFundamentalTypesCheck::IntegerReplacementStyle::
+          Least:
+        return SignedPrefix + "_least";
+      default:
+        llvm_unreachable("Invalid integer replacement style");
+      }
+    }();
 
     switch (Width) {
     case 8U:
@@ -253,7 +270,8 @@ void AvoidPlatformSpecificFundamentalTypesCheck::check(
         << TypeName;
   } else {
     // Handle integer types
-    const auto Replacement = getIntegerReplacement(BT, *Result.Context, IntegerReplacementStyleValue);
+    const auto Replacement = getIntegerReplacement(
+        BT, *Result.Context, IntegerReplacementStyleValue);
 
     if (!Replacement.has_value()) {
       diag(Loc, "avoid using platform-dependent fundamental integer type '%0'; "
@@ -263,8 +281,9 @@ void AvoidPlatformSpecificFundamentalTypesCheck::check(
     }
 
     auto Diag =
-        diag(Loc, "avoid using platform-dependent fundamental integer type '%0'; "
-                  "consider using '%1' instead")
+        diag(Loc,
+             "avoid using platform-dependent fundamental integer type '%0'; "
+             "consider using '%1' instead")
         << TypeName << Replacement.value();
 
     if (TypeRange.isValid())
