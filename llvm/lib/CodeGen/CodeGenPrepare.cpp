@@ -6395,17 +6395,58 @@ bool CodeGenPrepare::optimizeGatherScatterInst(Instruction *MemoryInst,
   return true;
 }
 
+// This is a helper for CodeGenPrepare::optimizeMulWithOverflow.
+// Check the pattern we are interested in where there are maximum 2 uses
+// of the intrinsic which are the extract instructions.
+static bool matchOverflowPattern(Instruction *&I, ExtractValueInst *&MulExtract,
+                                ExtractValueInst *&OverflowExtract) {
+  if (I->getNumUses() > 2)
+    return false;
+
+  for (User *U : I->users()) {
+    auto *Extract = dyn_cast<ExtractValueInst>(U);
+    if (!Extract || Extract->getNumIndices() != 1)
+      return false;
+
+    unsigned Index = Extract->getIndices()[0];
+    if (Index == 0)
+      MulExtract = Extract;
+    else if (Index == 1)
+      OverflowExtract = Extract;
+    else return false;
+  }
+  return true;
+}
+
 // Rewrite the mul_with_overflow intrinsic by checking if both of the
-// operands' value range is within the legal type. If so, we can optimize the
+// operands' value ranges are within the legal type. If so, we can optimize the
 // multiplication algorithm. This code is supposed to be written during the step
 // of type legalization, but given that we need to reconstruct the IR which is
 // not doable there, we do it here.
+// The IR after the optimization will look like:
+// entry:
+//   if signed:
+//     ( (lhs_lo>>BW-1) ^ lhs_hi) || ( (rhs_lo>>BW-1) ^ rhs_hi) ? overflow,
+//     overflow_no
+//   else:
+//     (lhs_hi != 0) || (rhs_hi != 0) ? overflow, overflow_no
+// overflow_no:
+// overflow:
+// overflow.res:
+// \returns true if optimization was applied
+// TODO: This optimization can be further improved but it will get more complex, so we leave it for future work.
 bool CodeGenPrepare::optimizeMulWithOverflow(Instruction *I, bool IsSigned,
                                              ModifyDT &ModifiedDT) {
-  if (!TLI->shouldOptimizeMulOverflowWithZeroHighBits(
-          I->getContext(),
-          TLI->getValueType(*DL, I->getType()->getContainedType(0))))
+  // Check if target supports this optimization.
+  if (!TLI->shouldOptimizeMulOverflowWithZeroHighBits(I->getContext(), TLI->getValueType(*DL, I->getType()->getContainedType(0))))
     return false;
+
+  ExtractValueInst *MulExtract = nullptr, *OverflowExtract = nullptr;
+  if (!matchOverflowPattern(I, MulExtract, OverflowExtract))
+    return false;
+
+  // Keep track of the instruction to stop reoptimizing it again.
+  InsertedInsts.insert(I);
 
   Value *LHS = I->getOperand(0);
   Value *RHS = I->getOperand(1);
@@ -6414,146 +6455,12 @@ bool CodeGenPrepare::optimizeMulWithOverflow(Instruction *I, bool IsSigned,
   IntegerType *LegalTy =
       IntegerType::getIntNTy(I->getContext(), VTHalfBitWidth);
 
-  // Check the pattern we are interested in where there are maximum 2 uses
-  // of the intrinsic which are the extract instructions.
-  if (I->getNumUses() > 2)
-    return false;
-  ExtractValueInst *MulExtract = nullptr, *OverflowExtract = nullptr;
-  for (User *U : I->users()) {
-    auto *Extract = dyn_cast<ExtractValueInst>(U);
-    if (!Extract)
-      return false;
-
-    unsigned Index = Extract->getIndices()[0];
-    if (Index == 0)
-      MulExtract = Extract;
-    else if (Index == 1)
-      OverflowExtract = Extract;
-  }
-
-
-  // Keep track of the instruction to stop reoptimizing it again.
-  InsertedInsts.insert(I);
-
-  // Check if there is a Br that is testing the overflow bit:
-  bool TakeFastPath = false;
-  BasicBlock *NoOverflowBrBB = nullptr, *OverflowBrBB = nullptr;
-  if (auto *Br = dyn_cast<BranchInst>(I->getParent()->getTerminator())) {
-    if (Br->isConditional()) {
-      auto *ExtInstr = dyn_cast<ExtractValueInst>(Br->getOperand(0));
-      if (ExtInstr && ExtInstr->getIndices()[0] == 1) {
-        // Check if the Br is a loop:
-        if (Br->getSuccessor(1) == I->getParent())
-          TakeFastPath = false;
-        else 
-        {
-          OverflowBrBB = Br->getSuccessor(0) /*if.then*/;
-          NoOverflowBrBB = Br->getSuccessor(1) /*if.end*/;
-          TakeFastPath = true;
-        }
-      }
-    }
-  }
-
-  // If there is no overflow, we can jump directly to the no-overflow BB (fast path).
-  // But we can do that only if we can guarantee that no user of MulExtract is
-  // reachable by 'both' NoOverflowBrBB and OverflowBrBB because that will make
-  // it complicated/not feasible to update those users.
-  // We do that check early here before modifying the CFG to avoid resetting the DT.
-  // We also have to keep track of the users that we need to modify later to avoid
-  // resetting/recalculating the DT.
-  SmallVector<User *, 2> MulUsers, OverflowBitUsers;
-  if (TakeFastPath) {
-    DominatorTree &DT = getDT(*I->getFunction());
-
-    if (MulExtract) {
-      if (MulExtract->getParent() == NoOverflowBrBB) {
-        MulUsers.insert(MulUsers.end(), MulExtract->user_begin(),
-                        MulExtract->user_end());
-      }
-      else {
-        for (User *U : MulExtract->users()) {
-          Instruction *UserInst = dyn_cast<Instruction>(U);
-          if (UserInst->getParent() == I->getParent() ||
-              UserInst->getParent() == OverflowBrBB) {
-            continue;
-          }
-          if (UserInst->getParent() == NoOverflowBrBB &&
-              isa<PHINode>(UserInst)) {
-            // Don't track PHI nodes as they are handled separately.
-            continue;
-          }
-          if (DT.dominates(NoOverflowBrBB, UserInst->getParent())) {
-            // Keep track of the users to modify them later.
-            MulUsers.push_back(UserInst);
-            continue;
-          }
-          if (DT.dominates(OverflowBrBB, UserInst->getParent())) {
-            // Skip users that are only dominated by the OverflowBr BB.
-            continue;
-          }
-          // If we reach here, that might mean that the user is reachable
-          // by both NoOverflowBrBB and OverflowBrBB, so we cannot take
-          // the fast path.
-          TakeFastPath = false;
-          break;
-        }
-      }
-    }
-    if (TakeFastPath && OverflowExtract) {
-      for (User *U : OverflowExtract->users()) {
-        Instruction *UserInst = dyn_cast<Instruction>(U);
-        if (UserInst->getParent() == I->getParent() ||
-            UserInst->getParent() == OverflowBrBB)
-          continue;
-        if (UserInst->getParent() == NoOverflowBrBB && isa<PHINode>(UserInst)) {
-          // Don't track PHI nodes as they are handled separately.
-          continue;
-        }
-        if (DT.dominates(NoOverflowBrBB, UserInst->getParent())) {
-          // Keep track of the users to modify them later.
-          OverflowBitUsers.push_back(UserInst);
-          continue;
-        }
-        if (DT.dominates(OverflowBrBB, UserInst->getParent())) {
-          continue;
-        }
-        TakeFastPath = false;
-        break;
-      }
-    }
-  }
-
-  // Start the optimization:
-  // For the simple case where IR just checks the overflow flag, new blocks
-  // should be:
-  //  entry:
-  //    if signed:
-  //      ( (lhs_lo>>BW-1) ^ lhs_hi) || ( (rhs_lo>>BW-1) ^ rhs_hi) ? overflow,
-  //      overflow_no
-  //    else:
-  //      (lhs_hi != 0) || (rhs_hi != 0) ? overflow, overflow_no
-  //  overflow_no:
-  //  overflow:
-
-  // otherwise, new blocks should be:
-  //  entry:
-  //    if signed:
-  //      ( (lhs_lo>>BW-1) ^ lhs_hi) || ( (rhs_lo>>BW-1) ^ rhs_hi) ? overflow,
-  //      overflow_no
-  //    else:
-  //      (lhs_hi != 0) || (rhs_hi != 0) ? overflow, overflow_no
-  //  overflow_no:
-  //  overflow:
-  //  overflow.res:
-
   // New BBs:
-  std::string KeepBBName = I->getParent()->getName().str();
+  std::string OriginalBlockName = I->getParent()->getName().str();
   BasicBlock *OverflowEntryBB =
       I->getParent()->splitBasicBlock(I, "overflow.entry", /*Before*/ true);
-  // Remove the 'br' instruction that is generated as a result of the split
-  // as we are going to append new instructions.
-  OverflowEntryBB->getTerminator()->eraseFromParent();
+  // Keep the 'br' instruction that is generated as a result of the split to be erased/replaced later.
+  Instruction *OldTerminator = OverflowEntryBB->getTerminator();
   BasicBlock *NoOverflowBB =
       BasicBlock::Create(I->getContext(), "overflow.no", I->getFunction());
   NoOverflowBB->moveAfter(OverflowEntryBB);
@@ -6563,10 +6470,12 @@ bool CodeGenPrepare::optimizeMulWithOverflow(Instruction *I, bool IsSigned,
 
   // BB overflow.entry:
   IRBuilder<> Builder(OverflowEntryBB);
-  // Get Lo and Hi of LHS & RHS:
+  // Extract low and high halves of LHS:
   Value *LoLHS = Builder.CreateTrunc(LHS, LegalTy, "lo.lhs");
   Value *HiLHS = Builder.CreateLShr(LHS, VTHalfBitWidth, "lhs.lsr");
   HiLHS = Builder.CreateTrunc(HiLHS, LegalTy, "hi.lhs");
+
+  // Extract low and high halves of RHS:
   Value *LoRHS = Builder.CreateTrunc(RHS, LegalTy, "lo.rhs");
   Value *HiRHS = Builder.CreateLShr(RHS, VTHalfBitWidth, "rhs.lsr");
   HiRHS = Builder.CreateTrunc(HiRHS, LegalTy, "hi.rhs");
@@ -6604,146 +6513,25 @@ bool CodeGenPrepare::optimizeMulWithOverflow(Instruction *I, bool IsSigned,
 
   Value *Mul = Builder.CreateMul(ExtLoLHS, ExtLoRHS, "mul.overflow.no");
 
-  // In overflow.no BB: we are sure that the overflow flag is false.
-  // So, when we find this pattern:
-  // br (extractvalue (%mul, 1)), label %if.then, label %if.end
-  // then we can jump directly to %if.end as we're sure that there is no
-  // overflow. This is checking the simple case where the exiting br of I's BB
-  // is the branch we are interested in.
-
-  // Duplicate instructions from I's BB to the NoOverflowBB:
-  // For now, only duplicate store instruction as in most of the cases there
-  // will be a store instruction for storing the multiplication result.
-  SmallVector<Instruction *, 1> ToBeClonedInsts;
-  if (TakeFastPath) {
-    for (auto It = std::next(BasicBlock::iterator(I));
-        &*It != I->getParent()->getTerminator(); ++It) {
-      Instruction *OrigInst = &*It;
-      if (isa<DbgInfoIntrinsic>(OrigInst) || OrigInst == MulExtract ||
-          OrigInst == OverflowExtract)
-        continue;
-      if (!isa<StoreInst>(OrigInst)) {
-        // We have an instruction that is not supported for cloning yet.
-        // Avoid the fast path optimization.
-        TakeFastPath = false;
-        break;
-      }
-      ToBeClonedInsts.push_back(OrigInst);
-    }
-  }
-
-  if (TakeFastPath) {
-    for (auto *Inst : ToBeClonedInsts) {
-      Instruction *NewInst = Inst->clone();
-      Builder.Insert(NewInst);
-    }
-    ToBeClonedInsts.clear();
-    // Replace uses of MulExtract at the 'overflow.no' BB
-    if (MulExtract)
-      MulExtract->replaceUsesWithIf(Mul, [&](Use &U) {
-        return cast<Instruction>(U.getUser())->getParent() == NoOverflowBB;
-      });
-    if (OverflowExtract)
-      // Overflow flag is always false as we are sure it's not overflow.
-      OverflowExtract->replaceUsesWithIf(
-          ConstantInt::getFalse(I->getContext()), [&](Use &U) {
-            return cast<Instruction>(U.getUser())->getParent() == NoOverflowBB;
-          });
-    // BB overflow.no: jump directly to if.end BB
-    Builder.CreateBr(NoOverflowBrBB);
-
-    // Remove the original BB as it's divided into 'overflow.entry' and
-    // another BB where I exists.
-    BasicBlock *ToBeRemoveBB = I->getParent();
-    
-    // Check if the Br BB has PHI nodes and I->getParent() is one of
-    // the incoming BBs:
-    for (Instruction &Inst : *NoOverflowBrBB) {
-      if (!isa<PHINode>(&Inst))
-        break;
-      PHINode *Phi = cast<PHINode>(&Inst);
-      for (unsigned Op = 0, e = Phi->getNumOperands(); Op != e; ++Op) {
-        if (Phi->getIncomingBlock(Op) == ToBeRemoveBB) {
-          // Replace the old block by the new 'overflow' BB:
-          Phi->setIncomingBlock(Op, OverflowBB);
-          Value *IncomingValue = Phi->getIncomingValue(Op);
-          if (isa<Instruction>(IncomingValue)) {
-            if (cast<Instruction>(IncomingValue) == MulExtract) {
-              Phi->addIncoming(Mul, NoOverflowBB);
-              continue;
-            }
-            if (cast<Instruction>(IncomingValue) == OverflowExtract) {
-              Phi->addIncoming(ConstantInt::getFalse(Inst.getContext()),
-                              NoOverflowBB);
-              continue;
-            }
-          }
-          // Otherwise, duplicate it:
-          Phi->addIncoming(IncomingValue, NoOverflowBB);
-        }
-      }
-    }
-    // BB overflow:
-    // Merge the original BB of I into the 'overflow' BB:
-    OverflowBrBB->replacePhiUsesWith(ToBeRemoveBB, OverflowBB);
-    OverflowBB->splice(OverflowBB->end(), ToBeRemoveBB);
-    ToBeRemoveBB->eraseFromParent();
-    // Restore the original name of the overflow.entry BB:
-    OverflowEntryBB->setName(KeepBBName);
-
-    auto ReplaceUsers = [&](SmallVector<User *, 2> &Users, Value *OldVal, Value *NewVal) {
-      for (User *UserInst : Users) {
-        UserInst->replaceUsesOfWith(OldVal, NewVal);
-      }
-    };
-    ReplaceUsers(OverflowBitUsers, OverflowExtract, ConstantInt::getFalse(I->getContext()));
-
-    if (MulExtract && !MulUsers.empty()) {
-      // Create PHI node to get the results of multiplication from 'overflow.no'
-      // and 'overflow' BBs:
-      Builder.SetInsertPoint(NoOverflowBrBB,
-                              NoOverflowBrBB->getFirstInsertionPt());
-      PHINode *MulPN = Builder.CreatePHI(Ty, 2);
-      MulPN->addIncoming(Mul, NoOverflowBB);
-      if (MulExtract->getParent() == OverflowBB) {
-        MulPN->addIncoming(MulExtract, OverflowBB);
-      } else {
-        Builder.SetInsertPoint(OverflowBB, OverflowBB->end());
-        Value *IntrinsicMulRes =
-            Builder.CreateExtractValue(I, {0}, "mul.extract");
-        cast<Instruction>(IntrinsicMulRes)->moveAfter(I);
-        MulPN->addIncoming(IntrinsicMulRes, OverflowBB);
-      }
-      // Replace all users of MulExtract to use the PHI node:
-      ReplaceUsers(MulUsers, MulExtract, MulPN);
-      if (MulPN->use_empty())
-        MulPN->eraseFromParent();
-    }
-    if (MulExtract && MulExtract->use_empty())
-      MulExtract->eraseFromParent();
-    MulUsers.clear();
-    OverflowBitUsers.clear();
-    ModifiedDT = ModifyDT::ModifyBBDT;
-    return true;
-  }
-  // Clear DS we don't need here:
-  ToBeClonedInsts.clear();
-  MulUsers.clear();
-  OverflowBitUsers.clear();
-  // Otherwise, we need to create the 'overflow.res' BB to merge the results of
+  // Create the 'overflow.res' BB to merge the results of
   // the two paths:
-  I->getParent()->setName("overflow.res");
   BasicBlock *OverflowResBB = I->getParent();
+  OverflowResBB->setName("overflow.res");
 
   // BB overflow.no: jump to overflow.res BB
   Builder.CreateBr(OverflowResBB);
+  // No we don't need the old terminator in overflow.entry BB, erase it:
+  OldTerminator->eraseFromParent();
 
   // BB overflow.res:
   Builder.SetInsertPoint(OverflowResBB, OverflowResBB->getFirstInsertionPt());
+  // Create PHI nodes to merge results from no.overflow BB and overflow BB to replace the
+  // extract instructions.
   PHINode *OverflowResPHI = Builder.CreatePHI(Ty, 2),
           *OverflowFlagPHI =
               Builder.CreatePHI(IntegerType::getInt1Ty(I->getContext()), 2);
 
+  // Add the incoming values from no.overflow BB and later from overflow BB.
   OverflowResPHI->addIncoming(Mul, NoOverflowBB);
   OverflowFlagPHI->addIncoming(ConstantInt::getFalse(I->getContext()),
                                NoOverflowBB);
@@ -6757,8 +6545,9 @@ bool CodeGenPrepare::optimizeMulWithOverflow(Instruction *I, bool IsSigned,
     OverflowExtract->replaceAllUsesWith(OverflowFlagPHI);
     OverflowExtract->eraseFromParent();
   }
-  I->removeFromParent();
 
+  // Remove the intrinsic from parent (overflow.res BB) as it will be part of overflow BB
+  I->removeFromParent();
   // BB overflow:
   I->insertInto(OverflowBB, OverflowBB->end());
   Builder.SetInsertPoint(OverflowBB, OverflowBB->end());
@@ -6766,12 +6555,12 @@ bool CodeGenPrepare::optimizeMulWithOverflow(Instruction *I, bool IsSigned,
   Value *OverflowFlag = Builder.CreateExtractValue(I, {1}, "overflow.flag");
   Builder.CreateBr(OverflowResBB);
 
-  // Add The Extracted values to the PHINodes in the overflow.res block.
+  // Add The Extracted values to the PHINodes in the overflow.res BB.
   OverflowResPHI->addIncoming(MulOverflow, OverflowBB);
   OverflowFlagPHI->addIncoming(OverflowFlag, OverflowBB);
 
   // Restore the original name of the overflow.entry BB:
-  OverflowEntryBB->setName(KeepBBName);
+  OverflowEntryBB->setName(OriginalBlockName);
 
   ModifiedDT = ModifyDT::ModifyBBDT;
   return true;
