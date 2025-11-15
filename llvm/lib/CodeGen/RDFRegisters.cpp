@@ -101,13 +101,13 @@ bool PhysicalRegisterInfo::alias(RegisterRef RA, RegisterRef RB) const {
   return !disjoint(getUnits(RA), getUnits(RB));
 }
 
-std::set<RegisterId> PhysicalRegisterInfo::getAliasSet(RegisterId Reg) const {
+std::set<RegisterId> PhysicalRegisterInfo::getAliasSet(RegisterRef RR) const {
   // Do not include Reg in the alias set.
   std::set<RegisterId> AS;
-  assert(!RegisterRef::isUnitId(Reg) && "No units allowed");
-  if (RegisterRef::isMaskId(Reg)) {
+  assert(!RR.isUnit() && "No units allowed");
+  if (RR.isMask()) {
     // XXX SLOW
-    const uint32_t *MB = getRegMaskBits(Reg);
+    const uint32_t *MB = getRegMaskBits(RR);
     for (unsigned i = 1, e = TRI.getNumRegs(); i != e; ++i) {
       if (MB[i / 32] & (1u << (i % 32)))
         continue;
@@ -116,8 +116,8 @@ std::set<RegisterId> PhysicalRegisterInfo::getAliasSet(RegisterId Reg) const {
     return AS;
   }
 
-  assert(RegisterRef::isRegId(Reg));
-  for (MCRegAliasIterator AI(Reg, &TRI, false); AI.isValid(); ++AI)
+  assert(RR.isReg());
+  for (MCRegAliasIterator AI(RR.asMCReg(), &TRI, false); AI.isValid(); ++AI)
     AS.insert(*AI);
 
   return AS;
@@ -139,7 +139,7 @@ std::set<RegisterId> PhysicalRegisterInfo::getUnits(RegisterRef RR) const {
 
   assert(RR.isMask());
   unsigned NumRegs = TRI.getNumRegs();
-  const uint32_t *MB = getRegMaskBits(RR.Reg);
+  const uint32_t *MB = getRegMaskBits(RR);
   for (unsigned I = 0, E = (NumRegs + 31) / 32; I != E; ++I) {
     uint32_t C = ~MB[I]; // Clobbered regs
     if (I == 0)          // Reg 0 should be ignored
@@ -160,7 +160,7 @@ std::set<RegisterId> PhysicalRegisterInfo::getUnits(RegisterRef RR) const {
 }
 
 RegisterRef PhysicalRegisterInfo::mapTo(RegisterRef RR, RegisterId R) const {
-  if (RR.Reg == R)
+  if (RR.Id == R)
     return RR;
   if (unsigned Idx = TRI.getSubRegIndex(RegisterRef(R).asMCReg(), RR.asMCReg()))
     return RegisterRef(R, TRI.composeSubRegIndexLaneMask(Idx, RR.Mask));
@@ -177,11 +177,11 @@ RegisterRef PhysicalRegisterInfo::mapTo(RegisterRef RR, RegisterId R) const {
 
 bool PhysicalRegisterInfo::equal_to(RegisterRef A, RegisterRef B) const {
   if (!A.isReg() || !B.isReg()) {
-    // For non-regs, or comparing reg and non-reg, use only the Reg member.
-    return A.Reg == B.Reg;
+    // For non-regs, or comparing reg and non-reg, use only the Id member.
+    return A.Id == B.Id;
   }
 
-  if (A.Reg == B.Reg)
+  if (A.Id == B.Id)
     return A.Mask == B.Mask;
 
   // Compare reg units lexicographically.
@@ -213,14 +213,14 @@ bool PhysicalRegisterInfo::equal_to(RegisterRef A, RegisterRef B) const {
 
 bool PhysicalRegisterInfo::less(RegisterRef A, RegisterRef B) const {
   if (!A.isReg() || !B.isReg()) {
-    // For non-regs, or comparing reg and non-reg, use only the Reg member.
-    return A.Reg < B.Reg;
+    // For non-regs, or comparing reg and non-reg, use only the Id member.
+    return A.Id < B.Id;
   }
 
-  if (A.Reg == B.Reg)
+  if (A.Id == B.Id)
     return A.Mask < B.Mask;
   if (A.Mask == B.Mask)
-    return A.Reg < B.Reg;
+    return A.Id < B.Id;
 
   // Compare reg units lexicographically.
   llvm::MCRegUnitMaskIterator AI(A.asMCReg(), &getTRI());
@@ -275,7 +275,7 @@ void PhysicalRegisterInfo::print(raw_ostream &OS, const RegisterAggr &A) const {
 
 bool RegisterAggr::hasAliasOf(RegisterRef RR) const {
   if (RR.isMask())
-    return Units.anyCommon(PRI.getMaskUnits(RR.Reg));
+    return Units.anyCommon(PRI.getMaskUnits(RR));
 
   for (MCRegUnitMaskIterator U(RR.asMCReg(), &PRI.getTRI()); U.isValid(); ++U) {
     auto [Unit, LaneMask] = *U;
@@ -288,7 +288,7 @@ bool RegisterAggr::hasAliasOf(RegisterRef RR) const {
 
 bool RegisterAggr::hasCoverOf(RegisterRef RR) const {
   if (RR.isMask()) {
-    BitVector T(PRI.getMaskUnits(RR.Reg));
+    BitVector T(PRI.getMaskUnits(RR));
     return T.reset(Units).none();
   }
 
@@ -303,7 +303,7 @@ bool RegisterAggr::hasCoverOf(RegisterRef RR) const {
 
 RegisterAggr &RegisterAggr::insert(RegisterRef RR) {
   if (RR.isMask()) {
-    Units |= PRI.getMaskUnits(RR.Reg);
+    Units |= PRI.getMaskUnits(RR);
     return *this;
   }
 
@@ -392,7 +392,7 @@ RegisterAggr::ref_iterator::ref_iterator(const RegisterAggr &RG, bool End)
     : Owner(&RG) {
   for (int U = RG.Units.find_first(); U >= 0; U = RG.Units.find_next(U)) {
     RegisterRef R = RG.PRI.getRefForUnit(static_cast<MCRegUnit>(U));
-    Masks[R.Reg] |= R.Mask;
+    Masks[R.Id] |= R.Mask;
   }
   Pos = End ? Masks.end() : Masks.begin();
   Index = End ? Masks.size() : 0;
