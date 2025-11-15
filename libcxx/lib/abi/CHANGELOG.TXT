@@ -33,13 +33,13 @@ Version 22.0
 
   All platforms
   -------------
-  Symbol added: _ZNSt3__123__atomic_monitor_globalEPVKv
-  Symbol added: _ZNSt3__126__atomic_wait_global_tableEPVKvi
-  Symbol added: _ZNSt3__126__atomic_notify_one_nativeILm4EEEvPVKv
-  Symbol added: _ZNSt3__132__atomic_notify_all_global_tableEPVKv
-  Symbol added: _ZNSt3__120__atomic_wait_nativeILm4EEEvPVKvPKv
-  Symbol added: _ZNSt3__126__atomic_notify_all_nativeILm4EEEvPVKv
-  Symbol added: _ZNSt3__132__atomic_notify_one_global_tableEPVKv
+  Symbol added: __ZNSt3__123__atomic_monitor_globalEPKv
+  Symbol added: __ZNSt3__126__atomic_wait_global_tableEPKvx
+  Symbol added: __ZNSt3__126__atomic_notify_one_nativeILm8EEEvPKv
+  Symbol added: __ZNSt3__132__atomic_notify_all_global_tableEPKv
+  Symbol added: __ZNSt3__120__atomic_wait_nativeILm8EEEvPKvS2_
+  Symbol added: __ZNSt3__126__atomic_notify_all_nativeILm8EEEvPKv
+  Symbol added: __ZNSt3__132__atomic_notify_one_global_tableEPKv
 
 ------------
 Version 21.0
