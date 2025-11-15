@@ -1161,9 +1161,8 @@ define i128 @v_srem_i128_vv(i128 %lhs, i128 %rhs) {
 ; GFX9-O0-NEXT:    v_add3_u32 v8, v0, v2, v8
 ; GFX9-O0-NEXT:    ; implicit-def: $sgpr5
 ; GFX9-O0-NEXT:    ; implicit-def: $sgpr6
-; GFX9-O0-NEXT:    v_mov_b32_e32 v0, s5
 ; GFX9-O0-NEXT:    ; kill: def $vgpr8 killed $vgpr8 def $vgpr8_vgpr9 killed $exec
-; GFX9-O0-NEXT:    v_mov_b32_e32 v9, v0
+; GFX9-O0-NEXT:    v_mov_b32_e32 v9, s5
 ; GFX9-O0-NEXT:    v_lshlrev_b64 v[8:9], s4, v[8:9]
 ; GFX9-O0-NEXT:    v_mov_b32_e32 v14, v9
 ; GFX9-O0-NEXT:    ; kill: def $vgpr17 killed $vgpr17 killed $vgpr17_vgpr18 killed $exec
@@ -1190,9 +1189,8 @@ define i128 @v_srem_i128_vv(i128 %lhs, i128 %rhs) {
 ; GFX9-O0-NEXT:    v_add3_u32 v14, v9, v14, v15
 ; GFX9-O0-NEXT:    ; implicit-def: $sgpr5
 ; GFX9-O0-NEXT:    ; implicit-def: $sgpr6
-; GFX9-O0-NEXT:    v_mov_b32_e32 v9, s5
 ; GFX9-O0-NEXT:    ; kill: def $vgpr14 killed $vgpr14 def $vgpr14_vgpr15 killed $exec
-; GFX9-O0-NEXT:    v_mov_b32_e32 v15, v9
+; GFX9-O0-NEXT:    v_mov_b32_e32 v15, s5
 ; GFX9-O0-NEXT:    v_lshlrev_b64 v[14:15], s4, v[14:15]
 ; GFX9-O0-NEXT:    v_mov_b32_e32 v16, v15
 ; GFX9-O0-NEXT:    ; kill: def $vgpr19 killed $vgpr19 killed $vgpr19_vgpr20 killed $exec
@@ -1221,9 +1219,8 @@ define i128 @v_srem_i128_vv(i128 %lhs, i128 %rhs) {
 ; GFX9-O0-NEXT:    v_mov_b32_e32 v14, v15
 ; GFX9-O0-NEXT:    ; implicit-def: $sgpr5
 ; GFX9-O0-NEXT:    ; implicit-def: $sgpr6
-; GFX9-O0-NEXT:    v_mov_b32_e32 v16, s5
 ; GFX9-O0-NEXT:    ; kill: def $vgpr14 killed $vgpr14 def $vgpr14_vgpr15 killed $exec
-; GFX9-O0-NEXT:    v_mov_b32_e32 v15, v16
+; GFX9-O0-NEXT:    v_mov_b32_e32 v15, s5
 ; GFX9-O0-NEXT:    v_lshlrev_b64 v[15:16], s4, v[14:15]
 ; GFX9-O0-NEXT:    v_mov_b32_e32 v14, v16
 ; GFX9-O0-NEXT:    v_or_b32_e64 v9, v9, v14
@@ -1240,9 +1237,8 @@ define i128 @v_srem_i128_vv(i128 %lhs, i128 %rhs) {
 ; GFX9-O0-NEXT:    v_mov_b32_e32 v14, v15
 ; GFX9-O0-NEXT:    ; implicit-def: $sgpr5
 ; GFX9-O0-NEXT:    ; implicit-def: $sgpr6
-; GFX9-O0-NEXT:    v_mov_b32_e32 v9, s5
 ; GFX9-O0-NEXT:    ; kill: def $vgpr14 killed $vgpr14 def $vgpr14_vgpr15 killed $exec
-; GFX9-O0-NEXT:    v_mov_b32_e32 v15, v9
+; GFX9-O0-NEXT:    v_mov_b32_e32 v15, s5
 ; GFX9-O0-NEXT:    v_lshlrev_b64 v[14:15], s4, v[14:15]
 ; GFX9-O0-NEXT:    v_mov_b32_e32 v9, v15
 ; GFX9-O0-NEXT:    v_or_b32_e64 v8, v8, v9
@@ -1280,9 +1276,8 @@ define i128 @v_srem_i128_vv(i128 %lhs, i128 %rhs) {
 ; GFX9-O0-NEXT:    v_mov_b32_e32 v23, v24
 ; GFX9-O0-NEXT:    ; implicit-def: $sgpr5
 ; GFX9-O0-NEXT:    ; implicit-def: $sgpr6
-; GFX9-O0-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX9-O0-NEXT:    ; kill: def $vgpr23 killed $vgpr23 def $vgpr23_vgpr24 killed $exec
-; GFX9-O0-NEXT:    v_mov_b32_e32 v24, v1
+; GFX9-O0-NEXT:    v_mov_b32_e32 v24, s5
 ; GFX9-O0-NEXT:    v_lshlrev_b64 v[23:24], s4, v[23:24]
 ; GFX9-O0-NEXT:    v_mov_b32_e32 v1, v24
 ; GFX9-O0-NEXT:    v_or_b32_e64 v0, v0, v1
@@ -2447,9 +2442,8 @@ define i128 @v_urem_i128_vv(i128 %lhs, i128 %rhs) {
 ; GFX9-O0-NEXT:    v_add3_u32 v2, v2, v3, v10
 ; GFX9-O0-NEXT:    ; implicit-def: $sgpr5
 ; GFX9-O0-NEXT:    ; implicit-def: $sgpr6
-; GFX9-O0-NEXT:    v_mov_b32_e32 v10, s5
 ; GFX9-O0-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
-; GFX9-O0-NEXT:    v_mov_b32_e32 v3, v10
+; GFX9-O0-NEXT:    v_mov_b32_e32 v3, s5
 ; GFX9-O0-NEXT:    v_lshlrev_b64 v[17:18], s4, v[2:3]
 ; GFX9-O0-NEXT:    v_mov_b32_e32 v3, v18
 ; GFX9-O0-NEXT:    v_mov_b32_e32 v13, v4
@@ -2476,9 +2470,8 @@ define i128 @v_urem_i128_vv(i128 %lhs, i128 %rhs) {
 ; GFX9-O0-NEXT:    v_add3_u32 v2, v2, v3, v11
 ; GFX9-O0-NEXT:    ; implicit-def: $sgpr5
 ; GFX9-O0-NEXT:    ; implicit-def: $sgpr6
-; GFX9-O0-NEXT:    v_mov_b32_e32 v11, s5
 ; GFX9-O0-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
-; GFX9-O0-NEXT:    v_mov_b32_e32 v3, v11
+; GFX9-O0-NEXT:    v_mov_b32_e32 v3, s5
 ; GFX9-O0-NEXT:    v_lshlrev_b64 v[2:3], s4, v[2:3]
 ; GFX9-O0-NEXT:    v_mov_b32_e32 v12, v3
 ; GFX9-O0-NEXT:    ; kill: def $vgpr15 killed $vgpr15 killed $vgpr15_vgpr16 killed $exec
@@ -2507,9 +2500,8 @@ define i128 @v_urem_i128_vv(i128 %lhs, i128 %rhs) {
 ; GFX9-O0-NEXT:    v_mov_b32_e32 v15, v16
 ; GFX9-O0-NEXT:    ; implicit-def: $sgpr5
 ; GFX9-O0-NEXT:    ; implicit-def: $sgpr6
-; GFX9-O0-NEXT:    v_mov_b32_e32 v12, s5
 ; GFX9-O0-NEXT:    ; kill: def $vgpr15 killed $vgpr15 def $vgpr15_vgpr16 killed $exec
-; GFX9-O0-NEXT:    v_mov_b32_e32 v16, v12
+; GFX9-O0-NEXT:    v_mov_b32_e32 v16, s5
 ; GFX9-O0-NEXT:    v_lshlrev_b64 v[15:16], s4, v[15:16]
 ; GFX9-O0-NEXT:    v_mov_b32_e32 v12, v16
 ; GFX9-O0-NEXT:    v_or_b32_e64 v11, v11, v12
@@ -2526,9 +2518,8 @@ define i128 @v_urem_i128_vv(i128 %lhs, i128 %rhs) {
 ; GFX9-O0-NEXT:    v_mov_b32_e32 v15, v16
 ; GFX9-O0-NEXT:    ; implicit-def: $sgpr5
 ; GFX9-O0-NEXT:    ; implicit-def: $sgpr6
-; GFX9-O0-NEXT:    v_mov_b32_e32 v17, s5
 ; GFX9-O0-NEXT:    ; kill: def $vgpr15 killed $vgpr15 def $vgpr15_vgpr16 killed $exec
-; GFX9-O0-NEXT:    v_mov_b32_e32 v16, v17
+; GFX9-O0-NEXT:    v_mov_b32_e32 v16, s5
 ; GFX9-O0-NEXT:    v_lshlrev_b64 v[15:16], s4, v[15:16]
 ; GFX9-O0-NEXT:    v_mov_b32_e32 v17, v16
 ; GFX9-O0-NEXT:    v_or_b32_e64 v10, v10, v17
@@ -2566,9 +2557,8 @@ define i128 @v_urem_i128_vv(i128 %lhs, i128 %rhs) {
 ; GFX9-O0-NEXT:    v_mov_b32_e32 v19, v20
 ; GFX9-O0-NEXT:    ; implicit-def: $sgpr5
 ; GFX9-O0-NEXT:    ; implicit-def: $sgpr6
-; GFX9-O0-NEXT:    v_mov_b32_e32 v12, s5
 ; GFX9-O0-NEXT:    ; kill: def $vgpr19 killed $vgpr19 def $vgpr19_vgpr20 killed $exec
-; GFX9-O0-NEXT:    v_mov_b32_e32 v20, v12
+; GFX9-O0-NEXT:    v_mov_b32_e32 v20, s5
 ; GFX9-O0-NEXT:    v_lshlrev_b64 v[19:20], s4, v[19:20]
 ; GFX9-O0-NEXT:    v_mov_b32_e32 v12, v20
 ; GFX9-O0-NEXT:    v_or_b32_e64 v5, v5, v12
