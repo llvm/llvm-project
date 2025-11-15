@@ -228,7 +228,8 @@ public:
   void emitELFSize(MCSymbol *Symbol, const MCExpr *Value) override;
   void emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
                         Align ByteAlignment) override;
-
+  void emitLargeCommonSymbol(MCSymbol *Symbol, uint64_t Size,
+                             Align ByteAlignment) override;
   /// Emit a local common (.lcomm) symbol.
   ///
   /// @param Symbol - The common symbol to emit.
@@ -1073,6 +1074,19 @@ void MCAsmStreamer::emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
     if (XSym && XSym->hasRename())
       emitXCOFFRenameDirective(XSym, XSym->getSymbolTableName());
   }
+}
+
+void MCAsmStreamer::emitLargeCommonSymbol(MCSymbol *Symbol, uint64_t Size,
+                                          Align ByteAlignment) {
+  OS << "\t.largecomm\t";
+  Symbol->print(OS, MAI);
+  OS << ',' << Size;
+
+  if (MAI->getCOMMDirectiveAlignmentIsInBytes())
+    OS << ',' << ByteAlignment.value();
+  else
+    OS << ',' << Log2(ByteAlignment);
+  EmitEOL();
 }
 
 void MCAsmStreamer::emitLocalCommonSymbol(MCSymbol *Symbol, uint64_t Size,

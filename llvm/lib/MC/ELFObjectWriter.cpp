@@ -27,6 +27,7 @@
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCFixup.h"
+#include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCSectionELF.h"
@@ -544,7 +545,10 @@ void ELFWriter::computeSymbolTable(const RevGroupMapTy &RevGroupMap) {
       auto Shndx = Symbol.getIndex();
       if (!Shndx) {
         assert(!Local);
-        Shndx = ELF::SHN_COMMON;
+        if (Symbol.isLargeCommon())
+          Shndx = ELF::SHN_X86_64_LCOMMON;
+        else
+          Shndx = ELF::SHN_COMMON;
       }
       MSD.SectionIndex = Shndx;
     } else if (Symbol.isUndefined()) {

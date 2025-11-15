@@ -48,6 +48,9 @@ public:
   void setMemtag(bool Tagged);
   bool isMemtag() const;
 
+  void setIsLargeCommon();
+  bool isLargeCommon() const;
+
 private:
   void setIsBindingSet() const;
 };

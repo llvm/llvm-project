@@ -76,6 +76,7 @@ public:
       &ELFAsmParser::parseDirectiveSymbolAttribute>(".hidden");
     addDirectiveHandler<&ELFAsmParser::parseDirectiveSubsection>(".subsection");
     addDirectiveHandler<&ELFAsmParser::parseDirectiveCGProfile>(".cg_profile");
+    addDirectiveHandler<&ELFAsmParser::parseDirectiveLargecomm>(".largecomm");
   }
 
   // FIXME: Part of this logic is duplicated in the MCELFStreamer. What is
@@ -125,6 +126,7 @@ public:
   bool parseDirectiveSymbolAttribute(StringRef, SMLoc);
   bool parseDirectiveSubsection(StringRef, SMLoc);
   bool parseDirectiveCGProfile(StringRef, SMLoc);
+  bool parseDirectiveLargecomm(StringRef, SMLoc);
 
 private:
   bool parseSectionName(StringRef &SectionName);
@@ -885,6 +887,54 @@ bool ELFAsmParser::parseDirectiveSubsection(StringRef, SMLoc) {
 
 bool ELFAsmParser::parseDirectiveCGProfile(StringRef S, SMLoc Loc) {
   return MCAsmParserExtension::parseDirectiveCGProfile(S, Loc);
+}
+
+bool ELFAsmParser::parseDirectiveLargecomm(StringRef, SMLoc Loc) {
+  if (getParser().checkForValidSection())
+    return true;
+
+  MCSymbol *Sym;
+  if (getParser().parseSymbol(Sym))
+    return TokError("expected identifier in directive");
+
+  if (getLexer().isNot(AsmToken::Comma))
+    return TokError("expected a comma");
+  Lex();
+
+  int64_t Size;
+  SMLoc SizeLoc = getLexer().getLoc();
+  if (getParser().parseAbsoluteExpression(Size))
+    return true;
+
+  int64_t Pow2Alignment = 0;
+  SMLoc Pow2AlignmentLoc;
+  if (getLexer().is(AsmToken::Comma)) {
+    Lex();
+    Pow2AlignmentLoc = getLexer().getLoc();
+    if (getParser().parseAbsoluteExpression(Pow2Alignment))
+      return true;
+
+    // If this target takes alignments in bytes (not log) validate and convert.
+    if (getLexer().getMAI().getCOMMDirectiveAlignmentIsInBytes()) {
+      if (!isPowerOf2_64(Pow2Alignment))
+        return Error(Pow2AlignmentLoc, "alignment must be a power of 2");
+      Pow2Alignment = Log2_64(Pow2Alignment);
+    }
+  }
+
+  if (parseEOL())
+    return true;
+
+  if (Size < 0)
+    return Error(SizeLoc, "size must be non-negative");
+
+  Sym->redefineIfPossible();
+  if (!Sym->isUndefined())
+    return Error(Loc, "invalid symbol redefinition");
+
+  getStreamer().emitLargeCommonSymbol(Sym, Size, Align(1ULL << Pow2Alignment));
+
+  return false;
 }
 
 namespace llvm {
