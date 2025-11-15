@@ -274,6 +274,7 @@ _LIBCPP_HIDE_FROM_ABI void __atomic_notify_all(const _AtomicWaitable& __a) {
 }
 
 #    else // _LIBCPP_AVAILABILITY_HAS_NEW_SYNC
+
 template <class _AtomicWaitable>
 _LIBCPP_HIDE_FROM_ABI void __atomic_notify_one(const _AtomicWaitable& __a) {
   static_assert(__atomic_waitable<_AtomicWaitable>::value, "");
