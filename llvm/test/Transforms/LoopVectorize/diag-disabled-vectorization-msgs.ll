@@ -88,13 +88,11 @@ entry:
   br label %loop
 
 loop:
-  %indvars.iv = phi i64 [ %indvars.iv.next, %loop ], [ 0, %entry ]
-  %arrayidx = getelementptr inbounds i32, ptr %a, i64 %indvars.iv
-  %0 = trunc i64 %indvars.iv to i32
-  store i32 %0, ptr %arrayidx, align 4
-  %indvars.iv.next = add i64 %indvars.iv, 1
-  %lftr.wideiv = trunc i64 %indvars.iv.next to i32
-  %exitcond = icmp eq i32 %lftr.wideiv, %n
+  %iv = phi i32 [ %iv.next, %loop ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds i32, ptr %a, i32 %iv
+  store i32 %iv, ptr %arrayidx, align 4
+  %iv.next = add i32 %iv, 1
+  %exitcond = icmp eq i32 %iv.next, %n
   br i1 %exitcond, label %end, label %loop, !llvm.loop !2
 
 end:
