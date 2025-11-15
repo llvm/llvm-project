@@ -311,13 +311,6 @@ AffineExpr AffineParser::parseSSAIdExpr(bool isSymbol) {
   if (getToken().isNot(Token::percent_identifier))
     return emitWrongTokenError("expected ssa identifier"), nullptr;
   auto name = getTokenSpelling();
-  // Check if we already parsed this SSA id.
-  for (auto entry : dimsAndSymbols) {
-    if (entry.first == name) {
-      consumeToken(Token::percent_identifier);
-      return entry.second;
-    }
-  }
   // Parse the SSA id and add an AffineDim/SymbolExpr to represent it.
   if (parseElement(isSymbol))
     return nullptr;
