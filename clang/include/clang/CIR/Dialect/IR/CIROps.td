@@ -4804,12 +4804,12 @@ def CIR_AtomicClearOp : CIR_Op<"atomic.clear"> {
 // BlockAddressOp
 //===----------------------------------------------------------------------===//
 
-def CIR_BlockAddressOp : CIR_Op<"blockaddress", [Pure]> {
+def CIR_BlockAddressOp : CIR_Op<"block_address", [Pure]> {
   let summary = "Get the address of a cir.label within a function";
   let description = [{
     The `cir.blockaddress` operation takes a function name and a label and
-    produces a pointer value that represents the address of that cir.label within
-    the specified function.
+    produces a pointer value that represents the address of that cir.label
+    within the specified function.
 
     This operation models GCC's "labels as values" extension (`&&label`), which
     allows taking the address of a local label and using it as a computed
@@ -4817,8 +4817,9 @@ def CIR_BlockAddressOp : CIR_Op<"blockaddress", [Pure]> {
 
     Example:
     ```mlir
-    %1 = cir.alloca !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>, ["ptr", init] {alignment = 8 : i64}
-    %addr = cir.blockaddress("foo", "label") -> !cir.ptr<!cir.void>
+    %1 = cir.alloca !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>, ["ptr", init]
+                                                          {alignment = 8 : i64}
+    %addr = cir.block_address <@c, "label1"> : !cir.ptr<!cir.void>
     cir.store align(8) %addr, %1 : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>
     cir.br ^bb1
    ^bb1:
@@ -4826,10 +4827,10 @@ def CIR_BlockAddressOp : CIR_Op<"blockaddress", [Pure]> {
     ```
   }];
 
-  let arguments = (ins CIR_BlockAddrInfoAttr:$blockAddrInfo);
+  let arguments = (ins CIR_BlockAddrInfoAttr:$block_addr_info);
   let results = (outs CIR_VoidPtrType:$addr);
   let assemblyFormat = [{
-    $blockAddrInfo `->` qualified(type($addr)) attr-dict
+    $block_addr_info `:` qualified(type($addr)) attr-dict
   }];
 }
 
