@@ -1442,28 +1442,6 @@ mlir::Value CIRGenFunction::emitPromotedScalarExpr(const Expr *e,
   return ScalarExprEmitter(*this, builder).Visit(const_cast<Expr *>(e));
 }
 
-mlir::Value CIRGenFunction::emitScalarOrConstFoldImmArg(unsigned iceArguments,
-                                                        unsigned index,
-                                                        const Expr *arg) {
-  mlir::Value result{};
-
-  // The bit at the specified index indicates whether the argument is required
-  // to be a constant integer expression.
-  bool isArgRequiredToBeConstant = (iceArguments & (1 << index));
-
-  if (!isArgRequiredToBeConstant) {
-    result = emitScalarExpr(arg);
-  } else {
-    // If this is required to be a constant, constant fold it so that we
-    // know that the generated intrinsic gets a ConstantInt.
-    std::optional<llvm::APSInt> iceOpt =
-        arg->getIntegerConstantExpr(getContext());
-    assert(iceOpt && "Expected argument to be a constant");
-    result = builder.getConstInt(getLoc(arg->getSourceRange()), *iceOpt);
-  }
-  return result;
-}
-
 [[maybe_unused]] static bool mustVisitNullValue(const Expr *e) {
   // If a null pointer expression's type is the C++0x nullptr_t and
   // the expression is not a simple literal, it must be evaluated
