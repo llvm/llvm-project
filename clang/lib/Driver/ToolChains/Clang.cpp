@@ -9171,6 +9171,32 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
   CmdArgs.push_back(
       Args.MakeArgString("--host-triple=" + getToolChain().getTripleString()));
 
+  const Driver &D = getToolChain().getDriver();
+  const llvm::Triple TheTriple = getToolChain().getTriple();
+  std::string HostCPU = tools::getCPUName(D, Args, TheTriple);
+  if (!HostCPU.empty())
+    CmdArgs.push_back(Args.MakeArgString("--host-cpu=" + HostCPU));
+
+  ArgStringList HostFeatureArgs;
+  getTargetFeatures(D, TheTriple, Args, HostFeatureArgs, /*ForAS=*/false,
+                    /*IsAux=*/false);
+
+  // getTargetFeatures() returns arguments in the form ["-target-feature", "+f",
+  // "-target-feature", "+d"] but clang-linker-wrapper expects
+  // --host-features=+f,+d format, so we need to extract only the feature
+  // strings ("+f", "+d") and skip the "-target-feature" flags.
+  std::vector<StringRef> HostFeatures;
+  // Features always come in pairs: ["-target-feature", "value"], so take every
+  // odd element
+  for (size_t i = 1; i < HostFeatureArgs.size(); i += 2) {
+    HostFeatures.push_back(HostFeatureArgs[i]);
+  }
+
+  if (!HostFeatures.empty()) {
+    std::string HostFeaturesStr = llvm::join(HostFeatures, ",");
+    CmdArgs.push_back(Args.MakeArgString("--host-features=" + HostFeaturesStr));
+  }
+
   // CMake hack, suppress passing verbose arguments for the special-case HIP
   // non-RDC mode compilation. This confuses default CMake implicit linker
   // argument parsing when the language is set to HIP and the system linker is

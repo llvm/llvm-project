@@ -641,7 +641,8 @@ Expected<StringRef> writeOffloadFile(const OffloadFile &File) {
 
 // Compile the module to an object file using the appropriate target machine for
 // the host triple.
-Expected<StringRef> compileModule(Module &M, OffloadKind Kind) {
+Expected<StringRef> compileModule(Module &M, const ArgList &Args,
+                                  OffloadKind Kind) {
   llvm::TimeTraceScope TimeScope("Compile module");
   std::string Msg;
   const Target *T = TargetRegistry::lookupTarget(M.getTargetTriple(), Msg);
@@ -650,8 +651,8 @@ Expected<StringRef> compileModule(Module &M, OffloadKind Kind) {
 
   auto Options =
       codegen::InitTargetOptionsFromCodeGenFlags(M.getTargetTriple());
-  StringRef CPU = "";
-  StringRef Features = "";
+  StringRef CPU = Args.getLastArgValue(OPT_host_cpu_EQ, "");
+  StringRef Features = Args.getLastArgValue(OPT_host_features_EQ, "");
   std::unique_ptr<TargetMachine> TM(
       T->createTargetMachine(M.getTargetTriple(), CPU, Features, Options,
                              Reloc::PIC_, M.getCodeModel()));
@@ -746,7 +747,7 @@ wrapDeviceImages(ArrayRef<std::unique_ptr<MemoryBuffer>> Buffers,
     WriteBitcodeToFile(M, OS);
   }
 
-  auto FileOrErr = compileModule(M, Kind);
+  auto FileOrErr = compileModule(M, Args, Kind);
   if (!FileOrErr)
     return FileOrErr.takeError();
   return *FileOrErr;
