@@ -64,7 +64,9 @@ jobs:
 
     - name: Push the images
       if: github.event_name == 'push'
-      run: docker compose push libcxx-linux-builder-base libcxx-linux-builder libcxx-android-builder
+      run: docker compose --file libcxx/utils/ci/docker/docker-compose.yml push libcxx-linux-builder-base libcxx-linux-builder libcxx-android-builder
+      env:
+        TAG: ${{ github.sha }}
 
     # We create tarballs with the images and upload them as artifacts, since that's useful for testing
     # the images when making changes.
