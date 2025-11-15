@@ -6985,11 +6985,10 @@ bool BoUpSLP::analyzeConstantStrideCandidate(
   if (NeedsWidening) {
     if (Sz % GroupSize != 0)
       return false;
-    VecSz = Sz / GroupSize;
 
     if (StrideWithinGroup != 1)
       return false;
-    unsigned VecSz = Sz / GroupSize;
+    VecSz = Sz / GroupSize;
     NewScalarTy = Type::getIntNTy(
         SE->getContext(),
         DL->getTypeSizeInBits(ScalarTy).getFixedValue() * GroupSize);
@@ -7013,19 +7012,14 @@ bool BoUpSLP::analyzeConstantStrideCandidate(
         return false;
     }
 
-    auto CheckGroup = [&](const unsigned StartIdx, const unsigned GroupSize0,
-                          const int64_t StrideWithinGroup) -> bool {
-      unsigned GroupEndIdx = StartIdx + 1;
-      for (; GroupEndIdx != Sz; ++GroupEndIdx) {
-        if (SortedOffsetsFromBase[GroupEndIdx] -
-                SortedOffsetsFromBase[GroupEndIdx - 1] !=
-            StrideWithinGroup)
-          break;
-      }
-      return GroupEndIdx - StartIdx == GroupSize0;
+    auto CheckGroup = [=](const unsigned StartIdx) -> bool {
+      auto Indices = seq<unsigned>(StartIdx + 1, Sz);
+      auto FoundIt = llvm::find_if(Indices, IsEndOfGroupIndex);
+      unsigned GroupEndIdx = FoundIt != Indices.end() ? *FoundIt : Sz;
+      return GroupEndIdx - StartIdx == GroupSize;
     };
     for (unsigned I = 0; I < Sz; I += GroupSize) {
-      if (!CheckGroup(I, GroupSize, StrideWithinGroup))
+      if (!CheckGroup(I))
         return false;
     }
   }
