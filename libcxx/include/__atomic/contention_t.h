@@ -19,6 +19,10 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
+// The original definition of `__cxx_contention_t` seemed a bit arbitrary.
+// When we enable the _LIBCPP_ABI_ATOMIC_WAIT_NATIVE_BY_SIZE ABI,
+// use definitions that are based on what the underlying platform supports
+// instead.
 #if defined(_LIBCPP_ABI_ATOMIC_WAIT_NATIVE_BY_SIZE)
 
 #  ifdef __linux__
@@ -29,7 +33,7 @@ using __cxx_contention_t _LIBCPP_NODEBUG = int64_t;
 using __cxx_contention_t _LIBCPP_NODEBUG = int64_t;
 #  elif defined(_AIX) && !defined(__64BIT__)
 using __cxx_contention_t _LIBCPP_NODEBUG = int32_t;
-#elif defined(_WIN32)
+#  elif defined(_WIN32)
 using __cxx_contention_t _LIBCPP_NODEBUG = int64_t;
 #  else
 using __cxx_contention_t _LIBCPP_NODEBUG = int64_t;

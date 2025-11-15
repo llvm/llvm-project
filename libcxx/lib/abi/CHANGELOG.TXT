@@ -26,6 +26,13 @@ Version 22.0
   Symbol removed: _ZNSt3__118__time_get_storageIcE9__analyzeEcRKNS_5ctypeIcEE
   Symbol removed: _ZNSt3__118__time_get_storageIwE4initERKNS_5ctypeIwEE
   Symbol removed: _ZNSt3__118__time_get_storageIwE9__analyzeEcRKNS_5ctypeIwEE
+
+* [libc++] Allows any types of size 4 and 8 to use native platform ulock_wait
+
+  This patch added symbols for platform wait functions with the size of the type 
+
+  All platforms
+  -------------
   Symbol added: _ZNSt3__123__atomic_monitor_globalEPVKv
   Symbol added: _ZNSt3__126__atomic_wait_global_tableEPVKvi
   Symbol added: _ZNSt3__126__atomic_notify_one_nativeILm4EEEvPVKv

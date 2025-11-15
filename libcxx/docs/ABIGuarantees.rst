@@ -209,7 +209,10 @@ resulting in an ABI break.
 ------------------------------------------
 This flag changes the implementation of ``atomic::wait()`` and ``atomic::notify_one()/notify_all()`` to use the
 native atomic wait/notify operations on platforms that support them based on the size of the atomic type, instead
-of the type itself. This means for example that a type with ``sizeof(T) == 4`` on Linux that doesn't have padding bytes would be able to use the underlying platform's atomic wait primitive, which is otherwise only used for ``int32_t``. Since the whole program must use the same implementation for correctness, changing this is an ABI break since libc++ supports linking against TUs that were compiled against older versions of the library.
+of the type itself. This means for example that a type with ``sizeof(T) == 4`` on Linux that doesn't have padding
+bytes would be able to use the underlying platform's atomic wait primitive, which is otherwise only used for ``int32_t``.
+Since the whole program must use the same implementation for correctness, changing this is an ABI break since libc++
+supports linking against TUs that were compiled against older versions of the library.
 
 
 inline namespaces
