@@ -41,7 +41,7 @@ int main(int, char**) {
 
     // This would hang forever if the bug is present, but the test will fail in a bounded amount of
     // time due to the timeout above.
-    std::__libcpp_atomic_wait(&ct, old_val);
+    std::__atomic_wait_native<sizeof(std::__cxx_atomic_contention_t)>(&ct, &old_val);
 
     done = true;
     timeout_thread.join();
