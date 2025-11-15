@@ -316,7 +316,7 @@ Changes in existing checks
   exceptions from captures are now diagnosed, exceptions in the bodies of
   lambdas that aren't actually invoked are not. Additionally, fixed an issue
   where the check wouldn't diagnose throws in arguments to functions or
-  constructors. Added fine-grained configuration via options 
+  constructors. Added fine-grained configuration via options
   `CheckDestructors`, `CheckMoveMemberFunctions`, `CheckMain`,
   `CheckedSwapFunctions`, and `CheckNothrowFunctions`.
 
@@ -504,6 +504,11 @@ Changes in existing checks
   generating fix-it hints when size method is called from implicit ``this``,
   ignoring default constructors with user provided arguments and adding
   detection in container's method except ``empty``.
+
+- Improved :doc:`readability-duplicate-include
+  <clang-tidy/checks/readability/duplicate-include>` check by adding
+  the ``IgnoredFilesList`` option (semicolon-separated list of regexes or
+  filenames) to allow intentional duplicates.
 
 - Improved :doc:`readability-identifier-naming
   <clang-tidy/checks/readability/identifier-naming>` check by ignoring

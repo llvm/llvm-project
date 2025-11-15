@@ -7,6 +7,17 @@ Looks for duplicate includes and removes them.  The check maintains a list of
 included files and looks for duplicates.  If a macro is defined or undefined
 then the list of included files is cleared.
 
+Options
+-------
+
+.. option:: IgnoredFilesList
+
+  A semicolon-separated list of regular expressions or filenames that are
+  allowed to be included multiple times without diagnostics. Matching is
+  performed against the textual include name. If the header can be
+  resolved, its full path is also matched against the patterns.
+  Default is empty.
+
 Examples:
 
 .. code-block:: c++

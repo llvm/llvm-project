@@ -10,6 +10,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_DUPLICATEINCLUDECHECK_H
 
 #include "../ClangTidyCheck.h"
+#include <vector>
 
 namespace clang::tidy::readability {
 
@@ -19,11 +20,16 @@ namespace clang::tidy::readability {
 /// directives between them are analyzed.
 class DuplicateIncludeCheck : public ClangTidyCheck {
 public:
-  DuplicateIncludeCheck(StringRef Name, ClangTidyContext *Context)
-      : ClangTidyCheck(Name, Context) {}
+  DuplicateIncludeCheck(StringRef Name, ClangTidyContext *Context);
 
   void registerPPCallbacks(const SourceManager &SM, Preprocessor *PP,
                            Preprocessor *ModuleExpanderPP) override;
+  void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
+
+private:
+  // Semicolon-separated list of regexes or file names to ignore from duplicate
+  // warnings.
+  const std::vector<StringRef> IgnoredFilesList;
 };
 
 } // namespace clang::tidy::readability

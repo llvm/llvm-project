@@ -7,10 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "DuplicateIncludeCheck.h"
+#include "../utils/OptionsUtils.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/Regex.h"
 #include <memory>
 
 namespace clang::tidy::readability {
@@ -33,10 +35,17 @@ using FileList = SmallVector<StringRef>;
 class DuplicateIncludeCallbacks : public PPCallbacks {
 public:
   DuplicateIncludeCallbacks(DuplicateIncludeCheck &Check,
-                            const SourceManager &SM)
+                            const SourceManager &SM,
+                            const std::vector<StringRef> &IgnoredList)
       : Check(Check), SM(SM) {
     // The main file doesn't participate in the FileChanged notification.
     Files.emplace_back();
+
+    AllowedRegexes.reserve(IgnoredList.size());
+    for (const StringRef &It : IgnoredList) {
+      if (!It.empty())
+        AllowedRegexes.emplace_back(It);
+    }
   }
 
   void FileChanged(SourceLocation Loc, FileChangeReason Reason,
@@ -62,9 +71,31 @@ private:
   SmallVector<FileList> Files;
   DuplicateIncludeCheck &Check;
   const SourceManager &SM;
+  std::vector<llvm::Regex> AllowedRegexes;
+
+  bool isAllowedDuplicate(StringRef FileName, OptionalFileEntryRef File) const {
+    if (llvm::any_of(AllowedRegexes,
+                     [&](const llvm::Regex &R) { return R.match(FileName); }))
+      return true;
+
+    if (File) {
+      const StringRef Resolved = File->getName();
+      if (llvm::any_of(AllowedRegexes,
+                       [&](const llvm::Regex &R) { return R.match(Resolved); }))
+        return true;
+    }
+
+    return false;
+  }
 };
 
 } // namespace
+
+DuplicateIncludeCheck::DuplicateIncludeCheck(StringRef Name,
+                                             ClangTidyContext *Context)
+    : ClangTidyCheck(Name, Context),
+      IgnoredFilesList(utils::options::parseStringList(
+          Options.get("IgnoredFilesList", ""))) {}
 
 void DuplicateIncludeCallbacks::FileChanged(SourceLocation Loc,
                                             FileChangeReason Reason,
@@ -86,6 +117,9 @@ void DuplicateIncludeCallbacks::InclusionDirective(
       FilenameRange.getEnd().isMacroID())
     return;
   if (llvm::is_contained(Files.back(), FileName)) {
+    if (isAllowedDuplicate(FileName, File)) {
+      return;
+    }
     // We want to delete the entire line, so make sure that [Start,End] covers
     // everything.
     const SourceLocation Start =
@@ -111,7 +145,13 @@ void DuplicateIncludeCallbacks::MacroUndefined(const Token &MacroNameTok,
 
 void DuplicateIncludeCheck::registerPPCallbacks(
     const SourceManager &SM, Preprocessor *PP, Preprocessor *ModuleExpanderPP) {
-  PP->addPPCallbacks(std::make_unique<DuplicateIncludeCallbacks>(*this, SM));
+  PP->addPPCallbacks(
+      std::make_unique<DuplicateIncludeCallbacks>(*this, SM, IgnoredFilesList));
+}
+
+void DuplicateIncludeCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "IgnoredFilesList",
+                utils::options::serializeStringList(IgnoredFilesList));
 }
 
 } // namespace clang::tidy::readability
