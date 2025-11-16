@@ -298,7 +298,7 @@ void AvoidPlatformSpecificFundamentalTypesCheck::check(
     if (Replacement != getIntegerReplacement(BT, *Result.Context,
                                              IntegerReplacementStyleValue))
       diag(Loc,
-           "'%0' suggested for compatibility with Windows, which uses "
+           "'%0' suggested for compatibility with Unix, which uses "
            "64-bit '%1'",
            DiagnosticIDs::Note)
           << Replacement << TypeName;
