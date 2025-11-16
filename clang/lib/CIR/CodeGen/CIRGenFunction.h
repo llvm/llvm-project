@@ -1718,6 +1718,9 @@ public:
   void emitScalarInit(const clang::Expr *init, mlir::Location loc,
                       LValue lvalue, bool capturedByInit = false);
 
+  mlir::Value emitScalarOrConstFoldImmArg(unsigned iceArguments, unsigned idx,
+                                          const Expr *argExpr);
+
   void emitStaticVarDecl(const VarDecl &d, cir::GlobalLinkageKind linkage);
 
   void emitStoreOfComplex(mlir::Location loc, mlir::Value v, LValue dest,
