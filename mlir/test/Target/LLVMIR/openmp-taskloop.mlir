@@ -67,9 +67,9 @@ llvm.func @_QPtest() {
 // CHECK:           call void @__kmpc_taskgroup(ptr @1, i32 %[[GTID]])
 // CHECK:           %[[TASK_PTR:.*]] = call ptr @__kmpc_omp_task_alloc(ptr @1, i32 %[[GTID]], i32 1, i64 64, i64 8, ptr @_QPtest..omp_par)
 // CHECK:           %[[LB_GEP:.*]] = getelementptr inbounds nuw %struct.kmp_task_info, ptr %[[TASK_PTR]], i32 0, i32 5
-// CHECK:           store i32 1, ptr %[[LB_GEP]], align 4
+// CHECK:           store i64 1, ptr %[[LB_GEP]], align 4
 // CHECK:           %[[UB_GEP:.*]] = getelementptr inbounds nuw %struct.kmp_task_info, ptr %[[TASK_PTR]], i32 0, i32 6
-// CHECK:           store i32 5, ptr %[[UB_GEP]], align 4
+// CHECK:           store i64 5, ptr %[[UB_GEP]], align 4
 // CHECK:           %[[STEP_GEP:.*]] = getelementptr inbounds nuw %struct.kmp_task_info, ptr %[[TASK_PTR]], i32 0, i32 7
 // CHECK:           store i64 1, ptr %[[STEP_GEP]], align 4
 // CHECK:           %[[LOAD_STEP:.*]] = load i64, ptr %[[STEP_GEP]], align 4
@@ -89,9 +89,11 @@ llvm.func @_QPtest() {
 // CHECK:           taskloop.alloca:
 // CHECK:           %[[LOAD_TASK_PTR:.*]] = load ptr, ptr %[[TASK_PTR1]], align 8
 // CHECK:           %[[GEP_LB:.*]] = getelementptr inbounds nuw %struct.kmp_task_info, ptr %[[TASK_PTR1]], i32 0, i32 5
-// CHECK:           %[[LB:.*]] = load i32, ptr %[[GEP_LB]], align 4
+// CHECK:           %[[LOAD_LB64:.*]] = load i64, ptr %[[GEP_LB]], align 4
+// CHECK:           %[[LB:.*]] = trunc i64 %[[LOAD_LB64]] to i32
 // CHECK:           %[[GEP_UB:.*]] = getelementptr inbounds nuw %struct.kmp_task_info, ptr %[[TASK_PTR1]], i32 0, i32 6
-// CHECK:           %[[UB:.*]] = load i32, ptr %[[GEP_UB]], align 4
+// CHECK:           %[[LOAD_UB64:.*]] = load i64, ptr %[[GEP_UB]], align 4
+// CHECK:           %[[UB:.*]] = trunc i64 %[[LOAD_UB64]] to i32
 // CHECK:           %[[GEP_OMP_TASK_CONTEXT_PTR:.*]] = getelementptr { ptr }, ptr %[[LOAD_TASK_PTR]], i32 0, i32 0
 // CHECK:           %[[LOADGEP_OMP_TASK_CONTEXT_PTR:.*]] = load ptr, ptr %[[GEP_OMP_TASK_CONTEXT_PTR]], align 8, !align !1
 // CHECK:           %[[OMP_PRIVATE_ALLOC:.*]] = alloca i32, align 4
