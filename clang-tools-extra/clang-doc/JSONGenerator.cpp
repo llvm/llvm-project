@@ -572,12 +572,16 @@ static void serializeInfo(const RecordInfo &I, json::Object &Obj,
           serializeInfo(Base, BaseObj, RepositoryUrl);
         });
 
-  if (!I.Parents.empty())
+  if (!I.Parents.empty()) {
     serializeArray(I.Parents, Obj, "Parents", SerializeReferenceLambda);
+    Obj["HasParents"] = true;
+  }
 
-  if (!I.VirtualParents.empty())
+  if (!I.VirtualParents.empty()) {
     serializeArray(I.VirtualParents, Obj, "VirtualParents",
                    SerializeReferenceLambda);
+    Obj["HasVirtualParents"] = true;
+  }
 
   if (I.Template)
     serializeInfo(I.Template.value(), Obj);
