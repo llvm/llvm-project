@@ -10766,7 +10766,7 @@ bool SIInstrInfo::invertSCCUse(MachineInstr *SCCDef) const {
 
   // If SCC is still live, verify that it is not live past the end of this
   // block.
-  if (!SCCIsDead && MBB->isLiveOut(AMDGPU::SCC))
+  if (!SCCIsDead)
     return false;
 
   // Invert uses
