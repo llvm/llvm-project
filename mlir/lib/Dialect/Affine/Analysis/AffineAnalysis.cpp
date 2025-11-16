@@ -21,6 +21,7 @@
 #include "mlir/Dialect/Affine/IR/AffineValueMap.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -469,7 +470,18 @@ LogicalResult MemRefAccess::getAccessRelation(IntegerRelation &rel) const {
 
   // Merge and align domain ids of `rel` with ids of `domain`. Since the domain
   // of the access map is a subset of the domain of access, the domain ids of
-  // `rel` are guranteed to be a subset of ids of `domain`.
+  // `rel` should be a subset of ids of `domain`. If not, return failure.
+
+  for (unsigned i = 0, e = rel.getNumDimVars(); i < e; ++i) {
+    if (rel.getVarKindAt(i) != VarKind::SetDim)
+      continue;
+    Identifier idi = rel.getIds(VarKind::SetDim)[i];
+    ArrayRef<Identifier> domainIds = domain.getIds(VarKind::SetDim);
+    if (llvm::is_contained(domainIds, idi)) {
+      return failure();
+    }
+  }
+
   unsigned inserts = 0;
   for (unsigned i = 0, e = domain.getNumDimVars(); i < e; ++i) {
     const Identifier domainIdi = Identifier(domain.getValue(i));
