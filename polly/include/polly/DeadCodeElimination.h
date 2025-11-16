@@ -13,16 +13,10 @@
 #ifndef POLLY_DEADCODEELIMINATION_H
 #define POLLY_DEADCODEELIMINATION_H
 
+#include "polly/DependenceInfo.h"
 #include "polly/ScopPass.h"
 
-namespace llvm {
-class PassRegistry;
-class Pass;
-class raw_ostream;
-} // namespace llvm
-
 namespace polly {
-llvm::Pass *createDeadCodeElimWrapperPass();
 
 struct DeadCodeElimPass final : llvm::PassInfoMixin<DeadCodeElimPass> {
   DeadCodeElimPass() {}
@@ -31,10 +25,7 @@ struct DeadCodeElimPass final : llvm::PassInfoMixin<DeadCodeElimPass> {
                               ScopStandardAnalysisResults &SAR, SPMUpdater &U);
 };
 
+bool runDeadCodeElim(Scop &S, DependenceAnalysis::Result &DA);
 } // namespace polly
-
-namespace llvm {
-void initializeDeadCodeElimWrapperPassPass(llvm::PassRegistry &);
-} // namespace llvm
 
 #endif /* POLLY_DEADCODEELIMINATION_H */
