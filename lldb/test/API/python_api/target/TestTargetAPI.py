@@ -107,17 +107,18 @@ class TargetAPITestCase(TestBase):
 
     def test_get_arch_name(self):
         d = {"EXE": "b.out"}
-        self.build(dictionary=d)
+        expected_arch = "x86_64"
+        self.build(dictionary=d, architecture=expected_arch)
         self.setTearDownCleanup(dictionary=d)
         target = self.create_simple_target("b.out")
 
         arch_name = target.arch_name
-        self.assertNotEqual(len(arch_name), 0, "Got an arch name string")
+        self.assertEqual(expected_arch, arch_name, "Got an expected arch name")
 
         # Test consistency with triple.
         triple = target.triple
-        if triple:
-            self.assertEqual(triple.split("-")[0], arch_name)
+        self.assertTrue(len(triple) > 0, "Got a triple")
+        self.assertEqual(triple.split("-")[0], arch_name, "Arch name is equal to the first item of the triple")
 
     def test_get_ABIName(self):
         d = {"EXE": "b.out"}
