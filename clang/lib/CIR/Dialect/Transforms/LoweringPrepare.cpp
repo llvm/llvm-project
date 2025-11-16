@@ -74,7 +74,6 @@ struct LoweringPreparePass
   void lowerDynamicCastOp(cir::DynamicCastOp op);
   void lowerArrayDtor(cir::ArrayDtor op);
   void lowerArrayCtor(cir::ArrayCtor op);
-  void lowerTrivialConstructorCall(cir::CallOp op);
 
   /// Build the function that initializes the specified global
   cir::FuncOp buildCXXGlobalVarDeclInitFunc(cir::GlobalOp op);
@@ -987,29 +986,6 @@ void LoweringPreparePass::lowerArrayCtor(cir::ArrayCtor op) {
                              true);
 }
 
-void LoweringPreparePass::lowerTrivialConstructorCall(cir::CallOp op) {
-  FuncOp funcOp = getCalledFunction(op);
-  if (!funcOp)
-    return;
-
-  mlir::Attribute cxxSpecialMember = funcOp.getCxxSpecialMemberAttr();
-  if (!cxxSpecialMember)
-    return;
-
-  if (auto cxxCtor = dyn_cast<cir::CXXCtorAttr>(cxxSpecialMember)) {
-    if (cxxCtor.getCtorKind() == cir::CtorKind::Copy) {
-      // Replace the trivial copy constructor call with a `CopyOp`
-      CIRBaseBuilderTy builder(getContext());
-      auto operands = op.getOperands();
-      mlir::Value dest = operands[0];
-      mlir::Value src = operands[1];
-      builder.setInsertionPoint(op);
-      builder.createCopy(dest, src);
-      op.erase();
-    }
-  }
-}
-
 void LoweringPreparePass::runOnOp(mlir::Operation *op) {
   if (auto arrayCtor = dyn_cast<cir::ArrayCtor>(op)) {
     lowerArrayCtor(arrayCtor);
@@ -1032,8 +1008,6 @@ void LoweringPreparePass::runOnOp(mlir::Operation *op) {
       globalCtorList.emplace_back(fnOp.getName(), globalCtor.value());
     else if (auto globalDtor = fnOp.getGlobalDtorPriority())
       globalDtorList.emplace_back(fnOp.getName(), globalDtor.value());
-  } else if (auto callOp = dyn_cast<cir::CallOp>(op)) {
-    lowerTrivialConstructorCall(callOp);
   }
 }
 
