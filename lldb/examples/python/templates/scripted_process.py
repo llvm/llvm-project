@@ -35,7 +35,7 @@ class ScriptedProcess(metaclass=ABCMeta):
             target = exe_ctx.target
         if isinstance(target, lldb.SBTarget) and target.IsValid():
             self.target = target
-            self.arch = target.arch_name
+            self.arch = target.GetArchName()
             self.dbg = target.GetDebugger()
         if isinstance(args, lldb.SBStructuredData) and args.IsValid():
             self.args = args
