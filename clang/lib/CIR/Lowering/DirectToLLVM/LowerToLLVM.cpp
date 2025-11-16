@@ -3082,8 +3082,8 @@ mlir::LogicalResult CIRToLLVMEhInflightOpLowering::matchAndRewrite(
   mlir::Block *entryBlock = &llvmFn.getRegion().front();
   assert(entryBlock->isEntryBlock());
 
-  mlir::ArrayAttr symListAttr = op.getSymTypeListAttr();
-  mlir::SmallVector<mlir::Value, 4> symAddrs;
+  mlir::ArrayAttr catchListAttr = op.getCatchTypeListAttr();
+  mlir::SmallVector<mlir::Value> catchSymAddrs;
 
   auto llvmPtrTy = mlir::LLVM::LLVMPointerType::get(rewriter.getContext());
   mlir::Location loc = op.getLoc();
@@ -3091,25 +3091,27 @@ mlir::LogicalResult CIRToLLVMEhInflightOpLowering::matchAndRewrite(
   // %landingpad = landingpad { ptr, i32 }
   // Note that since llvm.landingpad has to be the first operation on the
   // block, any needed value for its operands has to be added somewhere else.
-  if (symListAttr) {
+  if (catchListAttr) {
     //   catch ptr @_ZTIi
     //   catch ptr @_ZTIPKc
-    for (mlir::Attribute attr : symListAttr) {
-      auto symAttr = cast<mlir::FlatSymbolRefAttr>(attr);
+    for (mlir::Attribute catchAttr : catchListAttr) {
+      auto symAttr = cast<mlir::FlatSymbolRefAttr>(catchAttr);
       // Generate `llvm.mlir.addressof` for each symbol, and place those
       // operations in the LLVM function entry basic block.
       mlir::OpBuilder::InsertionGuard guard(rewriter);
       rewriter.setInsertionPointToStart(entryBlock);
       mlir::Value addrOp = mlir::LLVM::AddressOfOp::create(
           rewriter, loc, llvmPtrTy, symAttr.getValue());
-      symAddrs.push_back(addrOp);
+      catchSymAddrs.push_back(addrOp);
     }
   } else if (!op.getCleanup()) {
-    // catch ptr null
+    // We need to emit catch-all only if cleanup is not set, because when we
+    // have catch-all handler, there is no case when we set would unwind past
+    // the handler
     mlir::OpBuilder::InsertionGuard guard(rewriter);
     rewriter.setInsertionPointToStart(entryBlock);
     mlir::Value nullOp = mlir::LLVM::ZeroOp::create(rewriter, loc, llvmPtrTy);
-    symAddrs.push_back(nullOp);
+    catchSymAddrs.push_back(nullOp);
   }
 
   // %slot = extractvalue { ptr, i32 } %x, 0
@@ -3117,7 +3119,7 @@ mlir::LogicalResult CIRToLLVMEhInflightOpLowering::matchAndRewrite(
   mlir::LLVM::LLVMStructType llvmLandingPadStructTy =
       getLLVMLandingPadStructTy(rewriter);
   auto landingPadOp = mlir::LLVM::LandingpadOp::create(
-      rewriter, loc, llvmLandingPadStructTy, symAddrs);
+      rewriter, loc, llvmLandingPadStructTy, catchSymAddrs);
 
   if (op.getCleanup())
     landingPadOp.setCleanup(true);
@@ -3139,7 +3141,7 @@ mlir::LogicalResult CIRToLLVMEhInflightOpLowering::matchAndRewrite(
   auto personalityFnTy =
       mlir::LLVM::LLVMFunctionType::get(rewriter.getI32Type(), {},
                                         /*isVarArg=*/true);
-  // Get or create `__gxx_personality_v0`
+
   const StringRef fnName = "__gxx_personality_v0";
   createLLVMFuncOpIfNotExist(rewriter, op, fnName, personalityFnTy);
   llvmFn.setPersonality(fnName);
