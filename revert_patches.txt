@@ -8,3 +8,7 @@ breaks build of ROCmValidationSuite
 needs more integration offload.
 [Offload] Add device info for shared memory (#167817)
 ---
+breaks conformance/2.0/relationals/test_relationals relational_select_signed
+"DAG: Allow select ptr combine for non-0 address spaces (#167909)"
+---
+
