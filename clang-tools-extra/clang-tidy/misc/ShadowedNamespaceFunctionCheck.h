@@ -10,6 +10,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_SHADOWEDNAMESPACEFUNCTIONCHECK_H
 
 #include "../ClangTidyCheck.h"
+#include <tuple>
 
 namespace clang::tidy::misc {
 
@@ -27,11 +28,10 @@ public:
     return LangOpts.CPlusPlus;
   }
 private:
-  void findShadowedInNamespace(const NamespaceDecl *NS,
-                               const FunctionDecl *GlobalFunc,
-                               const std::string &GlobalFuncName,
-                               const FunctionDecl *&ShadowedFunc,
-                               const NamespaceDecl *&ShadowedNamespace);
+  std::pair<const FunctionDecl *, const NamespaceDecl *>
+  findShadowedInNamespace(const NamespaceDecl *NS,
+                          const FunctionDecl *GlobalFunc,
+                          const std::string &GlobalFuncName);
 };
 
 } // namespace clang::tidy::misc

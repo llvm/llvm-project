@@ -45,14 +45,14 @@ void ShadowedNamespaceFunctionCheck::check(
 
   // Skip templates, static functions, main, etc.
   if (Func->isTemplated() || Func->isStatic() || 
-      Func->getName() == "main" || Func->isImplicit())
+      Func->isMain() || Func->isImplicit())
     return;
 
-  std::string FuncName = Func->getNameAsString();
+  const std::string FuncName = Func->getNameAsString();
   if (FuncName.empty())
     return;
 
-  ASTContext *Context = Result.Context;
+  const ASTContext *Context = Result.Context;
 
   // Look for functions with the same name in namespaces
   const FunctionDecl *ShadowedFunc = nullptr;
@@ -61,7 +61,7 @@ void ShadowedNamespaceFunctionCheck::check(
   // Traverse all declarations in the translation unit
   for (const auto *Decl : Context->getTranslationUnitDecl()->decls()) {
     if (const auto *NS = dyn_cast<NamespaceDecl>(Decl)) {
-      findShadowedInNamespace(NS, Func, FuncName, ShadowedFunc, ShadowedNamespace);
+      std::tie(ShadowedFunc, ShadowedNamespace) = findShadowedInNamespace(NS, Func, FuncName);
       if (ShadowedFunc) break;
     }
   }
@@ -73,7 +73,7 @@ void ShadowedNamespaceFunctionCheck::check(
     return;
 
   // Generate warning message
-  std::string NamespaceName = ShadowedNamespace->getQualifiedNameAsString();
+  const std::string NamespaceName = ShadowedNamespace->getQualifiedNameAsString();
   auto Diag = diag(Func->getLocation(), 
                    "free function %0 shadows '%1::%2'")
               << Func->getDeclName() 
@@ -81,9 +81,9 @@ void ShadowedNamespaceFunctionCheck::check(
               << ShadowedFunc->getDeclName().getAsString();
 
   // Generate fixit hint to add namespace qualification
-  SourceLocation NameLoc = Func->getLocation();
+  const SourceLocation NameLoc = Func->getLocation();
   if (NameLoc.isValid() && !Func->getPreviousDecl()) {
-    std::string Fix = NamespaceName + "::";
+    const std::string Fix = NamespaceName + "::";
     Diag << FixItHint::CreateInsertion(NameLoc, Fix);
   }
 
@@ -93,23 +93,21 @@ void ShadowedNamespaceFunctionCheck::check(
       << ShadowedFunc->getDeclName();
 }
 
-void ShadowedNamespaceFunctionCheck::findShadowedInNamespace(
+std::pair<const FunctionDecl *, const NamespaceDecl *> ShadowedNamespaceFunctionCheck::findShadowedInNamespace(
     const NamespaceDecl *NS, 
     const FunctionDecl *GlobalFunc,
-    const std::string &GlobalFuncName,
-    const FunctionDecl *&ShadowedFunc,
-    const NamespaceDecl *&ShadowedNamespace) {
+    const std::string &GlobalFuncName) {
   
   // Skip anonymous namespaces
   if (NS->isAnonymousNamespace())
-    return;
+    return {nullptr, nullptr};
 
   for (const auto *Decl : NS->decls()) {
     // Check nested namespaces
     if (const auto *NestedNS = dyn_cast<NamespaceDecl>(Decl)) {
-      findShadowedInNamespace(NestedNS, GlobalFunc, GlobalFuncName, 
-                             ShadowedFunc, ShadowedNamespace);
-      if (ShadowedFunc) return;
+      auto [ShadowedFunc, ShadowedNamespace] = findShadowedInNamespace(NestedNS, GlobalFunc, GlobalFuncName);
+      if (ShadowedFunc)
+        return {ShadowedFunc, ShadowedNamespace};
     }
 
     // Check functions
@@ -120,12 +118,11 @@ void ShadowedNamespaceFunctionCheck::findShadowedInNamespace(
         continue;
 
       if (Func->getNameAsString() == GlobalFuncName) {
-        ShadowedFunc = Func;
-        ShadowedNamespace = NS;
-        return;
+        return {Func, NS};
       }
     }
   }
+  return {nullptr, nullptr};
 }
 
 } // namespace misc
