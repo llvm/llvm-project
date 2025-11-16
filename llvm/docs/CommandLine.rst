@@ -1262,7 +1262,7 @@ specify boolean properties that modify the option.
 .. _cl::DefaultOption:
 
 * The **cl::DefaultOption** modifier is used to specify that the option is a
-  default that can be overridden by application specific parsers. For example,
+  default that can be overridden by application-specific parsers. For example,
   the ``-help`` alias, ``-h``, is registered this way, so it can be overridden
   by applications that need to use the ``-h`` option for another purpose,
   either as a regular option or an alias for another option.
