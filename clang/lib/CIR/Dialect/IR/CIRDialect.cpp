@@ -12,6 +12,7 @@
 
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 
+#include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 
@@ -1761,12 +1762,15 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
   if (parser.parseOptionalKeyword("special_member").succeeded()) {
     cir::CXXCtorAttr ctorAttr;
     cir::CXXDtorAttr dtorAttr;
+    cir::CXXAssignAttr assignAttr;
     if (parser.parseLess().failed())
       return failure();
     if (parser.parseOptionalAttribute(ctorAttr).has_value())
       state.addAttribute(specialMemberAttr, ctorAttr);
     else if (parser.parseOptionalAttribute(dtorAttr).has_value())
       state.addAttribute(specialMemberAttr, dtorAttr);
+    else if (parser.parseOptionalAttribute(assignAttr).has_value())
+      state.addAttribute(specialMemberAttr, assignAttr);
     if (parser.parseGreater().failed())
       return failure();
   }
