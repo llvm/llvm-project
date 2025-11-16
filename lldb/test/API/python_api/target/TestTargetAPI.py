@@ -107,11 +107,11 @@ class TargetAPITestCase(TestBase):
 
     def test_get_arch_name(self):
         d = {"EXE": "b.out"}
-        expected_arch = "x86_64"
-        self.build(dictionary=d, architecture=expected_arch)
+        self.build(dictionary=d)
         self.setTearDownCleanup(dictionary=d)
         target = self.create_simple_target("b.out")
 
+        expected_arch = self.getArchitecture()
         arch_name = target.arch_name
         self.assertEqual(expected_arch, arch_name, "Got an expected arch name")
 
