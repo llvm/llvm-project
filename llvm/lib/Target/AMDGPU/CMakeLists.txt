@@ -36,7 +36,6 @@ tablegen(LLVM R600GenDFAPacketizer.inc -gen-dfa-packetizer)
 tablegen(LLVM R600GenInstrInfo.inc -gen-instr-info)
 tablegen(LLVM R600GenMCCodeEmitter.inc -gen-emitter)
 tablegen(LLVM R600GenRegisterInfo.inc -gen-register-info)
-tablegen(LLVM R600GenSDNodeInfo.inc -gen-sd-node-info)
 tablegen(LLVM R600GenSubtargetInfo.inc -gen-subtarget)
 
 add_public_tablegen_target(AMDGPUCommonTableGen)
