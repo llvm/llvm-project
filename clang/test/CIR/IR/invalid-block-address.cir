@@ -1,4 +1,4 @@
-// RUN: cir-opt %s -verify-diagnostics -split-input-file --verify-roundtrip
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
 
 !void = !cir.void
 
