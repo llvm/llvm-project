@@ -2579,7 +2579,7 @@ public:
 
       MemoryBufferRef ObjFileMbRef = ObjFileMbOrErr->get()->getMemBufferRef();
       if (Cache.isValid()) {
-        // Cache hits are takes care of earlier. At this point, we could only
+        // Cache hits are taken care of earlier. At this point, we could only
         // have cache misses.
         assert(Job.CacheAddStream);
         // Obtain a file stream for a storing a cache entry.
