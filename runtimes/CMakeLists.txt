@@ -90,7 +90,7 @@ include(CheckCXXCompilerFlag)
 # Determine whether we are in the runtimes/runtimes-bins directory of a
 # bootstrap build.
 set(LLVM_TREE_AVAILABLE OFF)
-if (LLVM_LIBRARY_OUTPUT_INTDIR AND LLVM_RUNTIME_OUTPUT_INTDIR AND PACKAGE_VERSION)
+if (LLVM_LIBRARY_DIR AND LLVM_TOOLS_BINARY_DIR AND PACKAGE_VERSION)
   set(LLVM_TREE_AVAILABLE ON)
 endif()
 
