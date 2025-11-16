@@ -1289,7 +1289,10 @@ void test_builtin_ctzg(unsigned char uc, unsigned short us, unsigned int ui,
 // CHECK-LABEL: define{{.*}} void @test_builtin_bswapg
 void test_builtin_bswapg(unsigned char uc, unsigned short us, unsigned int ui,
                        unsigned long ul, unsigned long long ull,
-                       unsigned __int128 ui128, _BitInt(8) bi8,
+#ifdef __SIZEOF_INT128__
+                       unsigned __int128 ui128,
+#endif
+                       _BitInt(8) bi8,
                        _BitInt(16) bi16, _BitInt(32) bi32, 
                        _BitInt(64) bi64, _BitInt(128) bi128) {
   uc = __builtin_bswapg(uc);
@@ -1303,8 +1306,10 @@ void test_builtin_bswapg(unsigned char uc, unsigned short us, unsigned int ui,
   // CHECK: call i64 @llvm.bswap.i64
   ull = __builtin_bswapg(ull);
   // CHECK: call i64 @llvm.bswap.i64
+#ifdef __SIZEOF_INT128__
   ui128 = __builtin_bswapg(ui128);
   // CHECK: call i128 @llvm.bswap.i128
+#endif
   bi8 = __builtin_bswapg(bi8);
   // CHECK: %17 = load i8, ptr %bi8.addr, align 1
   // CHECK: store i8 %17, ptr %bi8.addr
