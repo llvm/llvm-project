@@ -54,6 +54,8 @@ void HexagonSelectionDAGInfo::verifyTargetNode(const SelectionDAG &DAG,
     break;
   case HexagonISD::VALIGNADDR:
     // invalid number of operands; expected 1, got 2
+  case HexagonISD::VINSERTW0:
+    // operand #1 must have type i32, but has type v4i8/v2i16
     return;
   }
 
