@@ -114,7 +114,7 @@ class TargetAPITestCase(TestBase):
         arch_name = target.arch_name
         self.assertNotEqual(len(arch_name), 0, "Got an arch name string")
 
-        # Test consistency with GetTriple().
+        # Test consistency with triple.
         triple = target.triple
         if triple:
             self.assertEqual(triple.split("-")[0],  arch_name)
