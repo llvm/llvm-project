@@ -23,8 +23,8 @@ Consider this example:
     return a == b;
   }
 
-The function will return ``true``, since the objects are implicitly converted to
-``bool`` before comparison, which is unlikely to be the intent.
+The function will return ``true``, since the objects are implicitly converted
+to ``bool`` before comparison, which is unlikely to be the intent.
 
 The check will suggest inserting ``explicit`` before the constructor or
 conversion operator declaration. However, copy and move constructors should not

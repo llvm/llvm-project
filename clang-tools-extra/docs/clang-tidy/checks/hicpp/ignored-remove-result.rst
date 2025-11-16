@@ -13,7 +13,8 @@ operating over. On completion, they return an iterator to the last valid
 element. In the majority of cases the correct behavior is to use this result as
 the first operand in a call to ``std::erase``.
 
-This check is a subset of :doc:`bugprone-unused-return-value <../bugprone/unused-return-value>`
+This check is a subset of :doc:`bugprone-unused-return-value
+<../bugprone/unused-return-value>`
 and depending on used options it can be superfluous to enable both checks.
 
 Options
