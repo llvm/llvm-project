@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AArch64.h"
-#include "Utils/AArch64SMEAttributes.h"
+#include "AArch64SMEAttributes.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
