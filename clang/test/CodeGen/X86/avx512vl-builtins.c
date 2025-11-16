@@ -10518,6 +10518,53 @@ __m256i test_mm256_maskz_alignr_epi64(__mmask8 __U, __m256i __A, __m256i __B) {
   return _mm256_maskz_alignr_epi64(__U, __A, __B, 1);
 }
 
+TEST_CONSTEXPR(match_v4si(_mm_alignr_epi32(((__m128i)(__v4si){100, 200, 300, 400}),
+                                           ((__m128i)(__v4si){10, 20, 30, 40}), 1),
+                          20, 30, 40, 100));
+TEST_CONSTEXPR(match_v4si(_mm_mask_alignr_epi32(((__m128i)(__v4si){1000, 2000, 3000, 4000}), 0x5,
+                                                ((__m128i)(__v4si){100, 200, 300, 400}),
+                                                ((__m128i)(__v4si){10, 20, 30, 40}), 1),
+                          20, 2000, 40, 4000));
+TEST_CONSTEXPR(match_v4si(_mm_maskz_alignr_epi32(0x3,
+                                                 ((__m128i)(__v4si){100, 200, 300, 400}),
+                                                 ((__m128i)(__v4si){10, 20, 30, 40}), 1),
+                          20, 30, 0, 0));
+
+TEST_CONSTEXPR(match_v8si(_mm256_alignr_epi32(((__m256i)(__v8si){100, 200, 300, 400, 500, 600, 700, 800}),
+                                              ((__m256i)(__v8si){1, 2, 3, 4, 5, 6, 7, 8}), 3),
+                          4, 5, 6, 7, 8, 100, 200, 300));
+TEST_CONSTEXPR(match_v8si(_mm256_mask_alignr_epi32(((__m256i)(__v8si){1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000}),
+                                                   0xA5,
+                                                   ((__m256i)(__v8si){100, 200, 300, 400, 500, 600, 700, 800}),
+                                                   ((__m256i)(__v8si){1, 2, 3, 4, 5, 6, 7, 8}), 3),
+                          4, 2000, 6, 4000, 5000, 100, 7000, 300));
+TEST_CONSTEXPR(match_v8si(_mm256_maskz_alignr_epi32(0x33,
+                                                    ((__m256i)(__v8si){100, 200, 300, 400, 500, 600, 700, 800}),
+                                                    ((__m256i)(__v8si){1, 2, 3, 4, 5, 6, 7, 8}), 3),
+                          4, 5, 0, 0, 8, 100, 0, 0));
+
+TEST_CONSTEXPR(match_v2di(_mm_alignr_epi64(((__m128i)(__v2di){10, 11}), ((__m128i)(__v2di){1, 2}), 1), 2, 10));
+TEST_CONSTEXPR(match_v2di(_mm_mask_alignr_epi64(((__m128i)(__v2di){1000, 2000}), 0x1,
+                                                ((__m128i)(__v2di){10, 11}),
+                                                ((__m128i)(__v2di){1, 2}), 1),
+                          2, 2000));
+TEST_CONSTEXPR(match_v2di(_mm_maskz_alignr_epi64(0x2,
+                                                 ((__m128i)(__v2di){10, 11}),
+                                                 ((__m128i)(__v2di){1, 2}), 1),
+                          0, 10));
+
+TEST_CONSTEXPR(match_v4di(_mm256_alignr_epi64(((__m256i)(__v4di){10, 11, 12, 13}),
+                                              ((__m256i)(__v4di){1, 2, 3, 4}), 2),
+                          3, 4, 10, 11));
+TEST_CONSTEXPR(match_v4di(_mm256_mask_alignr_epi64(((__m256i)(__v4di){1000, 2000, 3000, 4000}), 0x5,
+                                                   ((__m256i)(__v4di){10, 11, 12, 13}),
+                                                   ((__m256i)(__v4di){1, 2, 3, 4}), 2),
+                          3, 2000, 10, 4000));
+TEST_CONSTEXPR(match_v4di(_mm256_maskz_alignr_epi64(0xA,
+                                                    ((__m256i)(__v4di){10, 11, 12, 13}),
+                                                    ((__m256i)(__v4di){1, 2, 3, 4}), 2),
+                          0, 4, 0, 11));
+
 __m128 test_mm_mask_movehdup_ps(__m128 __W, __mmask8 __U, __m128 __A) {
   // CHECK-LABEL: test_mm_mask_movehdup_ps
   // CHECK: shufflevector <4 x float> %{{.*}}, <4 x float> %{{.*}}, <4 x i32> <i32 1, i32 1, i32 3, i32 3>
