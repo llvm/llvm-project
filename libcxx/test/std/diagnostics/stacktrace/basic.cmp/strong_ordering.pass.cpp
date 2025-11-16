@@ -19,11 +19,13 @@
 //            lexicographical_compare_three_way(x.begin(), x.end(), y.begin(), y.end()) otherwise.
 
 #include <cassert>
+#include <cstdint>
 #include <stacktrace>
 
 namespace {
 
-std::stacktrace contrive(std::vector<uintptr_t> addrs) {
+// Create a stacktrace with entries having the given addresses.
+std::stacktrace fake_trace(std::vector<uintptr_t> const& addrs) {
   std::stacktrace ret;
   auto& base = *reinterpret_cast<std::__stacktrace::_Trace*>(&ret);
   for (uintptr_t addr : addrs) {
@@ -38,20 +40,22 @@ std::stacktrace contrive(std::vector<uintptr_t> addrs) {
 } // namespace
 
 int main(int, char**) {
+  using vec = std::vector<uintptr_t>;
+
   auto lt = std::strong_ordering::less;
   auto eq = std::strong_ordering::equal;
   auto gt = std::strong_ordering::greater;
 
-  assert(lt == (contrive({}) <=> contrive({100})));
-  assert(lt == (contrive({99}) <=> contrive({100})));
-  assert(lt == (contrive({100}) <=> contrive({100, 200})));
+  assert(lt == (fake_trace(vec{}) <=> fake_trace(vec{100})));
+  assert(lt == (fake_trace(vec{99}) <=> fake_trace(vec{100})));
+  assert(lt == (fake_trace(vec{100}) <=> fake_trace(vec{100, 200})));
 
-  assert(eq == (contrive({}) <=> contrive({})));
-  assert(eq == (contrive({100}) <=> contrive({100})));
+  assert(eq == (fake_trace(vec{}) <=> fake_trace(vec{})));
+  assert(eq == (fake_trace(vec{100}) <=> fake_trace(vec{100})));
 
-  assert(gt == (contrive({100}) <=> contrive({})));
-  assert(gt == (contrive({100}) <=> contrive({99})));
-  assert(gt == (contrive({100, 200}) <=> contrive({100})));
+  assert(gt == (fake_trace(vec{100}) <=> fake_trace(vec{})));
+  assert(gt == (fake_trace(vec{100}) <=> fake_trace(vec{99})));
+  assert(gt == (fake_trace(vec{100, 200}) <=> fake_trace(vec{100})));
 
   return 0;
 }

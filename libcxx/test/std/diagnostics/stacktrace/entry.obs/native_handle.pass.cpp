@@ -19,6 +19,7 @@ namespace std {
 */
 
 #include <cassert>
+#include <cstdint>
 #include <stacktrace>
 
 int main(int, char**) noexcept {

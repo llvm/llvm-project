@@ -18,6 +18,7 @@
 #include <cassert>
 #include <memory>
 #include <stacktrace>
+#include <type_traits>
 
 namespace {
 
