@@ -749,7 +749,7 @@ TEST_F(VPBasicBlockTest, print) {
     std::string I3Dump;
     raw_string_ostream OS(I3Dump);
     VPSlotTracker SlotTracker;
-    I3->printRecipe(OS, "", SlotTracker);
+    cast<VPRecipeBase>(I3)->print(OS, "", SlotTracker);
     EXPECT_EQ("EMIT br <badref>, <badref>", I3Dump);
   }
 
@@ -818,7 +818,7 @@ Successor(s): ir-bb<scalar.header>
     std::string I3Dump;
     raw_string_ostream OS(I3Dump);
     VPSlotTracker SlotTracker(&Plan);
-    I3->printRecipe(OS, "", SlotTracker);
+    cast<VPRecipeBase>(I3)->print(OS, "", SlotTracker);
     EXPECT_EQ("EMIT br vp<%1>, vp<%2>", I3Dump);
   }
 
