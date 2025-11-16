@@ -1105,8 +1105,7 @@ private:
 public:
   VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands,
                 DebugLoc DL = DebugLoc::getUnknown(), const Twine &Name = "")
-      : VPRecipeWithIRFlags(VPDef::VPInstructionSC, Operands, DL),
-        VPIRMetadata(), Opcode(Opcode), Name(Name.str()) {}
+      : VPInstruction(Opcode, Operands, {}, {}, DL, Name) {}
 
   VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands,
                 const VPIRFlags &Flags, const VPIRMetadata &MD = {},
