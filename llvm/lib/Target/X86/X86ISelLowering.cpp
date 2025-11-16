@@ -29629,9 +29629,9 @@ static SDValue LowerMUL(SDValue Op, const X86Subtarget &Subtarget,
       }
       if (!(IsLoLaneAllZeroOrUndef || IsHiLaneAllZeroOrUndef)) {
         SDValue Mask = DAG.getBitcast(VT, DAG.getConstant(0x00FF, dl, ExVT));
-        SDValue BLo = DAG.getNode(ISD::AND, dl, VT, Mask, B);
         SDValue BHi = DAG.getNode(X86ISD::ANDNP, dl, VT, Mask, B);
-        SDValue RLo = DAG.getNode(X86ISD::VPMADDUBSW, dl, ExVT, A, BLo);
+        SDValue RLo = DAG.getNode(ISD::MUL, dl, ExVT, DAG.getBitcast(ExVT, A),
+                                  DAG.getBitcast(ExVT, B));
         SDValue RHi = DAG.getNode(X86ISD::VPMADDUBSW, dl, ExVT, A, BHi);
         RLo = DAG.getNode(ISD::AND, dl, VT, DAG.getBitcast(VT, RLo), Mask);
         RHi = DAG.getNode(X86ISD::VSHLI, dl, ExVT, RHi,
