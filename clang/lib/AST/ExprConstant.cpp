@@ -16296,12 +16296,9 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
       return false;
 
     // Generic kunpack: extract lower half of each operand and concatenate
-    // Result = (A[HalfWidth-1:0] << HalfWidth) | B[HalfWidth-1:0]
-    unsigned HalfWidth = A.getBitWidth() / 2;
-    APSInt Result(A.getLoBits(HalfWidth).zext(A.getBitWidth()), A.isUnsigned());
-    Result <<= HalfWidth;
-    Result |=
-        APSInt(B.getLoBits(HalfWidth).zext(B.getBitWidth()), B.isUnsigned());
+    // Result = A[HalfWidth-1:0] concat B[HalfWidth-1:0]
+    unsigned BW = A.getBitWidth();
+    APSInt Result(A.trunc(BW / 2).concat(B.trunc(BW / 2)), A.isUnsigned());
     return Success(Result, E);
   }
 
