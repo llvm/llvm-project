@@ -134,8 +134,8 @@ void ReachingDefInfo::enterBasicBlock(MachineBasicBlock *MBB) {
         // Treat function live-ins as if they were defined just before the first
         // instruction.  Usually, function arguments are set up immediately
         // before the call.
-        if (LiveRegs[Unit] != -1) {
-          LiveRegs[Unit] = -1;
+        if (LiveRegs[static_cast<unsigned>(Unit)] != -1) {
+          LiveRegs[static_cast<unsigned>(Unit)] = -1;
           MBBReachingDefs.append(MBBNumber, Unit, -1);
         }
       }
@@ -162,7 +162,8 @@ void ReachingDefInfo::enterBasicBlock(MachineBasicBlock *MBB) {
   // Insert the most recent reaching definition we found.
   for (unsigned Unit = 0; Unit != NumRegUnits; ++Unit)
     if (LiveRegs[Unit] != ReachingDefDefaultVal)
-      MBBReachingDefs.append(MBBNumber, Unit, LiveRegs[Unit]);
+      MBBReachingDefs.append(MBBNumber, static_cast<MCRegUnit>(Unit),
+                             LiveRegs[Unit]);
 }
 
 void ReachingDefInfo::leaveBasicBlock(MachineBasicBlock *MBB) {
@@ -205,8 +206,8 @@ void ReachingDefInfo::processDefs(MachineInstr *MI) {
                         << *MI);
 
       // How many instructions since this reg unit was last written?
-      if (LiveRegs[Unit] != CurInstr) {
-        LiveRegs[Unit] = CurInstr;
+      if (LiveRegs[static_cast<unsigned>(Unit)] != CurInstr) {
+        LiveRegs[static_cast<unsigned>(Unit)] = CurInstr;
         MBBReachingDefs.append(MBBNumber, Unit, CurInstr);
       }
     }
@@ -240,16 +241,17 @@ void ReachingDefInfo::reprocessBasicBlock(MachineBasicBlock *MBB) {
       if (Def == ReachingDefDefaultVal)
         continue;
 
-      auto Defs = MBBReachingDefs.defs(MBBNumber, Unit);
+      auto Defs = MBBReachingDefs.defs(MBBNumber, static_cast<MCRegUnit>(Unit));
       if (!Defs.empty() && Defs.front() < 0) {
         if (Defs.front() >= Def)
           continue;
 
         // Update existing reaching def from predecessor to a more recent one.
-        MBBReachingDefs.replaceFront(MBBNumber, Unit, Def);
+        MBBReachingDefs.replaceFront(MBBNumber, static_cast<MCRegUnit>(Unit),
+                                     Def);
       } else {
         // Insert new reaching def from predecessor.
-        MBBReachingDefs.prepend(MBBNumber, Unit, Def);
+        MBBReachingDefs.prepend(MBBNumber, static_cast<MCRegUnit>(Unit), Def);
       }
 
       // Update reaching def at end of BB. Keep in mind that these are
@@ -370,7 +372,8 @@ void ReachingDefInfo::traverse() {
        MBBNumber != NumBlockIDs; ++MBBNumber) {
     for (unsigned Unit = 0; Unit != NumRegUnits; ++Unit) {
       int LastDef = ReachingDefDefaultVal;
-      for (int Def : MBBReachingDefs.defs(MBBNumber, Unit)) {
+      for (int Def :
+           MBBReachingDefs.defs(MBBNumber, static_cast<MCRegUnit>(Unit))) {
         assert(Def > LastDef && "Defs must be sorted and unique");
         LastDef = Def;
       }

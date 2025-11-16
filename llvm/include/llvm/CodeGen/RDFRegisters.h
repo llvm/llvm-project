@@ -10,6 +10,7 @@
 #define LLVM_CODEGEN_RDFREGISTERS_H
 
 #include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/IndexedMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
@@ -111,7 +112,7 @@ public:
 
   constexpr MCRegUnit asMCRegUnit() const {
     assert(isUnit());
-    return Id & ~UnitFlag;
+    return static_cast<MCRegUnit>(Id & ~UnitFlag);
   }
 
   constexpr unsigned asMaskIdx() const {
@@ -160,7 +161,7 @@ struct PhysicalRegisterInfo {
   // Returns the set of aliased physical registers.
   std::set<RegisterId> getAliasSet(RegisterRef RR) const;
 
-  RegisterRef getRefForUnit(uint32_t U) const {
+  RegisterRef getRefForUnit(MCRegUnit U) const {
     return RegisterRef(UnitInfos[U].Reg, UnitInfos[U].Mask);
   }
 
@@ -170,7 +171,7 @@ struct PhysicalRegisterInfo {
 
   std::set<RegisterId> getUnits(RegisterRef RR) const;
 
-  const BitVector &getUnitAliases(uint32_t U) const {
+  const BitVector &getUnitAliases(MCRegUnit U) const {
     return AliasInfos[U].Regs;
   }
 
@@ -201,9 +202,9 @@ private:
   const TargetRegisterInfo &TRI;
   IndexedSet<const uint32_t *> RegMasks;
   std::vector<RegInfo> RegInfos;
-  std::vector<UnitInfo> UnitInfos;
+  IndexedMap<UnitInfo, MCRegUnitToIndex> UnitInfos;
   std::vector<MaskInfo> MaskInfos;
-  std::vector<AliasInfo> AliasInfos;
+  IndexedMap<AliasInfo, MCRegUnitToIndex> AliasInfos;
 };
 
 struct RegisterRefEqualTo {

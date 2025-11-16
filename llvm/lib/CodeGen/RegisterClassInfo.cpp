@@ -85,7 +85,7 @@ void RegisterClassInfo::runOnMachineFunction(const MachineFunction &mf,
     CalleeSavedAliases.assign(TRI->getNumRegUnits(), 0);
     for (const MCPhysReg *I = CSR; *I; ++I) {
       for (MCRegUnit U : TRI->regunits(*I))
-        CalleeSavedAliases[U] = *I;
+        CalleeSavedAliases[static_cast<unsigned>(U)] = *I;
       LastCalleeSavedRegs.push_back(*I);
     }
 
