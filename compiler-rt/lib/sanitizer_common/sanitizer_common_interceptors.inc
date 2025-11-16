@@ -10387,6 +10387,24 @@ INTERCEPTOR(int, getservbyport_r, int port, const char *proto,
 #  define INIT_GETSERVBYPORT_R
 #endif
 
+#if SANITIZER_INTERCEPT_CPUSET_GETDOMAIN
+INTERCEPTOR(int, cpuset_getdomain, int level, int which, uptr id,
+            SIZE_T domainsetsize, __sanitizer_domainset_t *mask, int *policy) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, cpuset_getdomain, level, which, id, domainsetsize,
+                           mask, policy);
+  int res = REAL(cpuset_getdomain)(level, which, id, domainsetsize, mask, policy);
+  if (mask && !res) {
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, mask, domainsetsize);
+    if (policy) COMMON_INTERCEPTOR_WRITE_RANGE(ctx, policy, sizeof(*policy));
+  }
+  return res;
+}
+#define INIT_CPUSET_GETDOMAIN COMMON_INTERCEPT_FUNCTION(cpuset_getdomain);
+#else
+#define INIT_CPUSET_GETDOMAIN
+#endif
+
 #include "sanitizer_common_interceptors_netbsd_compat.inc"
 
 namespace __sanitizer {
@@ -10711,6 +10729,7 @@ static void InitializeCommonInterceptors() {
   INIT_PREADV2;
   INIT_PWRITEV2;
   INIT_FREADLINK;
+  INIT_CPUSET_GETDOMAIN;
 
   INIT___PRINTF_CHK;
   INIT_GETSERVENT_R;
