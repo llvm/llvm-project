@@ -111,7 +111,7 @@ class TargetAPITestCase(TestBase):
         self.setTearDownCleanup(dictionary=d)
         target = self.create_simple_target("b.out")
 
-        arch_name = target.GetArchName()
+        arch_name = target.arch_name
         self.assertNotEqual(len(arch_name), 0, "Got an arch name string")
 
         # Test consistency with GetTriple().
