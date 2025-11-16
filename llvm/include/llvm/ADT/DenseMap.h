@@ -413,11 +413,13 @@ protected:
     return NextPowerOf2(NumEntries * 4 / 3 + 1);
   }
 
-  void moveFromImpl(iterator_range<BucketT *> OldBuckets) {
+  // Move key/value from Other to *this.
+  // Other is left in a valid but empty state.
+  void moveFrom(DerivedT &Other) {
     // Insert all the old elements.
     const KeyT EmptyKey = KeyInfoT::getEmptyKey();
     const KeyT TombstoneKey = KeyInfoT::getTombstoneKey();
-    for (BucketT &B : OldBuckets) {
+    for (BucketT &B : Other.buckets()) {
       if (!KeyInfoT::isEqual(B.getFirst(), EmptyKey) &&
           !KeyInfoT::isEqual(B.getFirst(), TombstoneKey)) {
         // Insert the key/value into the new table.
@@ -434,17 +436,6 @@ protected:
       }
       B.getFirst().~KeyT();
     }
-  }
-
-  void moveFromOldBuckets(iterator_range<BucketT *> OldBuckets) {
-    initEmpty();
-    moveFromImpl(OldBuckets);
-  }
-
-  // Move key/value from Other to *this.
-  // Other is left in a valid but empty state.
-  void moveFrom(DerivedT &Other) {
-    moveFromImpl(Other.buckets());
     Other.derived().kill();
   }
 
@@ -738,6 +729,11 @@ class DenseMap : public DenseMapBase<DenseMap<KeyT, ValueT, KeyInfoT, BucketT>,
   unsigned NumTombstones;
   unsigned NumBuckets;
 
+  struct ExactBucketCount {};
+  explicit DenseMap(unsigned NumBuckets, ExactBucketCount) {
+    initWithExactBucketCount(NumBuckets);
+  }
+
 public:
   /// Create a DenseMap with an optional \p NumElementsToReserve to guarantee
   /// that this number of elements can be inserted in the map without grow().
@@ -822,14 +818,18 @@ private:
     return true;
   }
 
-  void init(unsigned InitNumEntries) {
-    auto InitBuckets = BaseT::getMinBucketToReserveForEntries(InitNumEntries);
-    if (allocateBuckets(InitBuckets)) {
+  void initWithExactBucketCount(unsigned NewNumBuckets) {
+    if (allocateBuckets(NewNumBuckets)) {
       this->BaseT::initEmpty();
     } else {
       NumEntries = 0;
       NumTombstones = 0;
     }
+  }
+
+  void init(unsigned InitNumEntries) {
+    auto InitBuckets = BaseT::getMinBucketToReserveForEntries(InitNumEntries);
+    initWithExactBucketCount(InitBuckets);
   }
 
   // Put the zombie instance in a known good state after a move.
@@ -840,23 +840,10 @@ private:
   }
 
   void grow(unsigned AtLeast) {
-    unsigned OldNumBuckets = NumBuckets;
-    BucketT *OldBuckets = Buckets;
-
-    allocateBuckets(std::max<unsigned>(
-        64, static_cast<unsigned>(NextPowerOf2(AtLeast - 1))));
-    assert(Buckets);
-    if (!OldBuckets) {
-      this->BaseT::initEmpty();
-      return;
-    }
-
-    this->moveFromOldBuckets(
-        llvm::make_range(OldBuckets, OldBuckets + OldNumBuckets));
-
-    // Free the old table.
-    deallocate_buffer(OldBuckets, sizeof(BucketT) * OldNumBuckets,
-                      alignof(BucketT));
+    AtLeast = std::max<unsigned>(64, NextPowerOf2(AtLeast - 1));
+    DenseMap Tmp(AtLeast, ExactBucketCount{});
+    Tmp.moveFrom(*this);
+    swapImpl(Tmp);
   }
 
   // Plan how to shrink the bucket table.  Return:
