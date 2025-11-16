@@ -311,6 +311,10 @@ static LogicalResult checkImplementationStatus(Operation &op) {
         result = todo("cancel directive inside of taskloop");
     }
   };
+  auto checkCollapse = [&todo](auto op, LogicalResult &result) {
+    if (op.getCollapseNumLoops() > 1)
+      result = todo("collapse");
+  };
   auto checkDepend = [&todo](auto op, LogicalResult &result) {
     if (!op.getDependVars().empty() || op.getDependKinds())
       result = todo("depend");
@@ -331,9 +335,9 @@ static LogicalResult checkImplementationStatus(Operation &op) {
     if (op.getGrainsize())
       result = todo("grainsize");
   };
-  auto checkIf = [](auto op, LogicalResult &) {
+  auto checkIf = [&todo](auto op, LogicalResult &result) {
     if (op.getIfExpr())
-      op.emitWarning("if");
+      result = todo("if");
   };
   auto checkHint = [](auto op, LogicalResult &) {
     if (op.getHint())
@@ -413,6 +417,10 @@ static LogicalResult checkImplementationStatus(Operation &op) {
         checkAllocate(op, result);
         checkDistSchedule(op, result);
         checkOrder(op, result);
+      })
+      .Case([&](omp::LoopNestOp op) {
+        if (mlir::isa<omp::TaskloopOp>(op.getOperation()->getParentOp()))
+          checkCollapse(op, result);
       })
       .Case([&](omp::OrderedRegionOp op) { checkParLevelSimd(op, result); })
       .Case([&](omp::SectionsOp op) {
@@ -2631,7 +2639,7 @@ convertOmpTaskloopOp(Operation &opInst, llvm::IRBuilderBase &builder,
 
     // dummy check to ensure that the task context structure is accessed inside
     // the outlined fn.
-    llvm::Value *cond = taskStructMgr.isAllocated();
+    [[maybe_unused]] llvm::Value *cond = taskStructMgr.isAllocated();
     return llvm::Error::success();
   };
 
@@ -2642,7 +2650,6 @@ convertOmpTaskloopOp(Operation &opInst, llvm::IRBuilderBase &builder,
     return loopInfo;
   };
 
-  llvm::OpenMPIRBuilder &ompBuilder = *moduleTranslation.getOpenMPBuilder();
   llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
   llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterIP =
       moduleTranslation.getOpenMPBuilder()->createTaskloop(
@@ -2662,6 +2669,11 @@ convertOmpTaskloopOp(Operation &opInst, llvm::IRBuilderBase &builder,
                                 privateVarsInfo.privatizers)))
     return failure();
 
+  // Note: This free is valid because end_taskgroup waits until all generated
+  // tasks are complete before returning. In the presence of Nogroup clause,
+  // @__kmpc_taskgroup(..)/@__kmpc_end_taskgroup(..) is not called, have to
+  // ensure that this freeStructPtr() is not called until every thread has
+  // completed execution
   taskStructMgr.freeStructPtr();
 
   return success();
@@ -3238,6 +3250,9 @@ convertOmpLoopNest(Operation &opInst, llvm::IRBuilderBase &builder,
                    LLVM::ModuleTranslation &moduleTranslation) {
   llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
   auto loopOp = cast<omp::LoopNestOp>(opInst);
+
+  if (failed(checkImplementationStatus(opInst)))
+    return failure();
 
   // Set up the source location value for OpenMP runtime.
   llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);

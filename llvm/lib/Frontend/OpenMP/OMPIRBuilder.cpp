@@ -1936,7 +1936,7 @@ static Value *emitTaskDependencies(
 OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTaskloop(
     const LocationDescription &Loc, InsertPointTy AllocaIP,
     BodyGenCallbackTy BodyGenCB,
-    llvm::function_ref<llvm::Expected<llvm::CanonicalLoopInfo *>()> loopInfo,
+    llvm::function_ref<llvm::Expected<llvm::CanonicalLoopInfo *>()> LoopInfo,
     Value *LBVal, Value *UBVal, Value *StepVal, bool Tied) {
 
   if (!updateToLocation(Loc))
@@ -1961,7 +1961,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTaskloop(
   if (Error Err = BodyGenCB(TaskloopAllocaIP, TaskloopBodyIP))
     return Err;
 
-  llvm::Expected<llvm::CanonicalLoopInfo *> result = loopInfo();
+  llvm::Expected<llvm::CanonicalLoopInfo *> result = LoopInfo();
   if (!result) {
     return result.takeError();
   }
@@ -2036,12 +2036,13 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTaskloop(
     // and set up the lowerbound,upperbound and step values
     llvm::Value *lb =
         Builder.CreateStructGEP(OpenMPIRBuilder::Taskloop, TaskData, 5);
-    //  Value *LbVal_ext = Builder.CreateSExt(LBVal, Builder.getInt64Ty());
-    Builder.CreateStore(LBVal, lb);
+    Value *LbVal_ext = Builder.CreateSExt(LBVal, Builder.getInt64Ty());
+    Builder.CreateStore(LbVal_ext, lb);
 
     llvm::Value *ub =
         Builder.CreateStructGEP(OpenMPIRBuilder::Taskloop, TaskData, 6);
-    Builder.CreateStore(UBVal, ub);
+    Value *UbVal_ext = Builder.CreateSExt(UBVal, Builder.getInt64Ty());
+    Builder.CreateStore(UbVal_ext, ub);
 
     llvm::Value *step =
         Builder.CreateStructGEP(OpenMPIRBuilder::Taskloop, TaskData, 7);
@@ -2063,6 +2064,8 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTaskloop(
     Value *NoGroup = Builder.getInt32(1);
     Value *Sched = Builder.getInt32(0);
     Value *GrainSize = Builder.getInt64(0);
+
+    // TODO: Handle the case when TaskDup pointer isn't empty
     Value *TaskDup = Constant::getNullValue(Builder.getPtrTy());
 
     Value *Args[] = {Ident,    ThreadID, TaskData, IfVal,     lb,     ub,
@@ -2092,13 +2095,15 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTaskloop(
     Type *IVTy = IV->getType();
     Constant *One = ConstantInt::get(IVTy, 1);
 
-    Value *task_lb = Builder.CreateStructGEP(OpenMPIRBuilder::Taskloop,
-                                             OutlinedFn.getArg(1), 5, "gep_lb");
-    Value *LowerBound = Builder.CreateLoad(IVTy, task_lb, "lb");
+    Value *TaskLB = Builder.CreateStructGEP(OpenMPIRBuilder::Taskloop,
+                                            OutlinedFn.getArg(1), 5, "gep_lb");
+    Value *LoadTaskLB = Builder.CreateLoad(Builder.getInt64Ty(), TaskLB);
+    Value *LowerBound = Builder.CreateTrunc(LoadTaskLB, IVTy, "lb");
 
-    Value *task_ub = Builder.CreateStructGEP(OpenMPIRBuilder::Taskloop,
-                                             OutlinedFn.getArg(1), 6, "gep_ub");
-    Value *UpperBound = Builder.CreateLoad(IVTy, task_ub, "ub");
+    Value *TaskUB = Builder.CreateStructGEP(OpenMPIRBuilder::Taskloop,
+                                            OutlinedFn.getArg(1), 6, "gep_ub");
+    Value *LoadTaskUB = Builder.CreateLoad(Builder.getInt64Ty(), TaskUB);
+    Value *UpperBound = Builder.CreateTrunc(LoadTaskUB, IVTy, "ub");
 
     Builder.SetInsertPoint(CLI->getPreheader()->getTerminator());
 
