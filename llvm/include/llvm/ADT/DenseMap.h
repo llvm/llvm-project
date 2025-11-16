@@ -556,7 +556,10 @@ private:
     return llvm::make_range(getBuckets(), getBucketsEnd());
   }
 
-  void grow(unsigned AtLeast) { derived().grow(AtLeast); }
+  void grow(unsigned AtLeast) {
+    AtLeast = derived().computeNumBuckets(AtLeast);
+    derived().grow(AtLeast);
+  }
 
   template <typename LookupKeyT>
   BucketT *findBucketForInsertion(const LookupKeyT &Lookup,
@@ -840,8 +843,11 @@ private:
     NumBuckets = 0;
   }
 
+  static unsigned computeNumBuckets(unsigned NumBuckets) {
+    return std::max(64u, static_cast<unsigned>(NextPowerOf2(NumBuckets - 1)));
+  }
+
   void grow(unsigned AtLeast) {
-    AtLeast = std::max<unsigned>(64, NextPowerOf2(AtLeast - 1));
     DenseMap Tmp(AtLeast, typename BaseT::ExactBucketCount{});
     Tmp.moveFrom(*this);
     swapImpl(Tmp);
@@ -1106,10 +1112,14 @@ private:
     new (getLargeRep()) LargeRep{nullptr, 0};
   }
 
-  void grow(unsigned AtLeast) {
-    if (AtLeast > InlineBuckets)
-      AtLeast = std::max<unsigned>(64, NextPowerOf2(AtLeast - 1));
+  static unsigned computeNumBuckets(unsigned NumBuckets) {
+    if (NumBuckets > InlineBuckets)
+      NumBuckets =
+          std::max(64u, static_cast<unsigned>(NextPowerOf2(NumBuckets - 1)));
+    return NumBuckets;
+  }
 
+  void grow(unsigned AtLeast) {
     SmallDenseMap Tmp(AtLeast, typename BaseT::ExactBucketCount{});
     Tmp.moveFrom(*this);
 
