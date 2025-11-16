@@ -4587,7 +4587,8 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
           // Generic kunpack: extract lower half of each operand and concatenate
           // Result = A[HalfWidth-1:0] concat B[HalfWidth-1:0]
           unsigned BW = A.getBitWidth();
-          return APSInt(A.trunc(BW / 2).concat(B.trunc(BW / 2)), A.isUnsigned());
+          return APSInt(A.trunc(BW / 2).concat(B.trunc(BW / 2)),
+                        A.isUnsigned());
         });
 
   case X86::BI__builtin_ia32_phminposuw128:
