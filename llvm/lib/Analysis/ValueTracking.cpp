@@ -729,7 +729,7 @@ bool llvm::willNotFreeBetween(const Instruction *Assume,
     if (CtxBB->getSinglePredecessor() != AssumeBB)
       return false;
 
-    if (!hasNoFreeCalls(make_range(CtxBB->begin(), CtxBB->end())))
+    if (!hasNoFreeCalls(make_range(CtxBB->begin(), CtxIter)))
       return false;
 
     CtxIter = AssumeBB->end();
@@ -10504,7 +10504,8 @@ bool llvm::collectPossibleValues(const Value *V,
   SmallPtrSet<const Instruction *, 8> Visited;
   SmallVector<const Instruction *, 8> Worklist;
   auto Push = [&](const Value *V) -> bool {
-    if (auto *C = dyn_cast<Constant>(V)) {
+    Constant *C;
+    if (match(const_cast<Value *>(V), m_ImmConstant(C))) {
       if (!AllowUndefOrPoison && !isGuaranteedNotToBeUndefOrPoison(C))
         return false;
       // Check existence first to avoid unnecessary allocations.

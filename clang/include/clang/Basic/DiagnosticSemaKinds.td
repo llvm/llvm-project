@@ -12967,6 +12967,9 @@ def err_builtin_invalid_arg_type: Error<
   "%plural{0:|: }3"
   "%plural{[0,3]:type|:types}1 (was %4)">;
 
+def err_bswapg_invalid_bit_width : Error<
+  "_BitInt type %0 (%1 bits) must be a multiple of 16 bits for byte swapping">;
+
 def err_builtin_trivially_relocate_invalid_arg_type: Error <
   "first%select{||| and second}0 argument%select{|||s}0 to "
   "'__builtin_trivially_relocate' must be"
