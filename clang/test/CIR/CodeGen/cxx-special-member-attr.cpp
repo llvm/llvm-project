@@ -3,8 +3,9 @@
 
 struct Flub {
   int a = 123;
-  // CIR: @_ZN4FlubC1ERKS_(%arg0: !cir.ptr<!rec_Flub> loc({{.*}}), %arg1: !cir.ptr<!rec_Flub> loc({{.*}})) special_member<#cir.cxx_ctor<!rec_Flub, copy, trivial true>>
-  // CIR: @_ZN4FlubC2EOS_(%arg0: !cir.ptr<!rec_Flub> loc({{.*}}), %arg1: !cir.ptr<!rec_Flub> loc({{.*}})) special_member<#cir.cxx_ctor<!rec_Flub, move, trivial true>
+  // COM: Trivial copy constructors/assignments are replaced with cir.copy
+  // CIR: cir.copy {{.*}} : !cir.ptr<!rec_Flub>
+  // CIR: @_ZN4FlubC1EOS_(%arg0: !cir.ptr<!rec_Flub> loc({{.*}}), %arg1: !cir.ptr<!rec_Flub> loc({{.*}})) special_member<#cir.cxx_ctor<!rec_Flub, move, trivial true>
   // CIR: @_ZN4FlubaSERKS_(%arg0: !cir.ptr<!rec_Flub> loc({{.*}}), %arg1: !cir.ptr<!rec_Flub> loc({{.*}})) -> !cir.ptr<!rec_Flub> special_member<#cir.cxx_assign<!rec_Flub, copy, trivial true>>
   // CIR: @_ZN4FlubaSEOS_(%arg0: !cir.ptr<!rec_Flub> loc({{.*}}), %arg1: !cir.ptr<!rec_Flub> loc({{.*}})) -> !cir.ptr<!rec_Flub> special_member<#cir.cxx_assign<!rec_Flub, move, trivial true>>
 };
@@ -42,7 +43,7 @@ struct Foo {
   ~Foo();
 };
 
-void trivial() {
+void trivial_func() {
   Flub f1{};
   Flub f2 = f1;
   Flub f3 = static_cast<Flub&&>(f1);
@@ -50,7 +51,7 @@ void trivial() {
   f1 = static_cast<Flub&&>(f3);
 }
 
-void non_trivial() {
+void non_trivial_func() {
   Foo f1{};
   Foo f2 = f1;
   Foo f3 = static_cast<Foo&&>(f1);
