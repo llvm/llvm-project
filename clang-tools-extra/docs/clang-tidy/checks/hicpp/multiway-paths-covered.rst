@@ -4,15 +4,16 @@ hicpp-multiway-paths-covered
 ============================
 
 This check discovers situations where code paths are not fully-covered.
-It furthermore suggests using ``if`` instead of ``switch`` if the code will be more clear.
+It furthermore suggests using ``if`` instead of ``switch`` if the code
+will be more clear.
 The `rule 6.1.2 <https://www.perforce.com/resources/qac/high-integrity-cpp-coding-standard/statements>`_
 and `rule 6.1.4 <https://www.perforce.com/resources/qac/high-integrity-cpp-coding-standard/statements>`_
 of the High Integrity C++ Coding Standard are enforced.
 
-``if-else if`` chains that miss a final ``else`` branch might lead to unexpected
-program execution and be the result of a logical error.
-If the missing ``else`` branch is intended you can leave it empty with a clarifying
-comment.
+``if-else if`` chains that miss a final ``else`` branch might lead to
+unexpected program execution and be the result of a logical error.
+If the missing ``else`` branch is intended you can leave it empty with
+a clarifying comment.
 This warning can be noisy on some code bases, so it is disabled by default.
 
 .. code-block:: c++
@@ -28,7 +29,8 @@ This warning can be noisy on some code bases, so it is disabled by default.
      // ...
   }
 
-Similar arguments hold for ``switch`` statements which do not cover all possible code paths.
+Similar arguments hold for ``switch`` statements which do not cover all
+possible code paths.
 
 .. code-block:: c++
 
