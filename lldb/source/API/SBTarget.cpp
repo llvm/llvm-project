@@ -1618,9 +1618,9 @@ const char *SBTarget::GetArchName() {
   LLDB_INSTRUMENT_VA(this);
 
   if (TargetSP target_sp = GetSP()) {
-    std::string arch_name =
-        target_sp->GetArchitecture().GetTriple().getArchName().str();
-    ConstString const_arch_name(arch_name.c_str());
+    llvm::StringRef arch_name =
+        target_sp->GetArchitecture().GetTriple().getArchName();
+    ConstString const_arch_name(arch_name);
 
     return const_arch_name.GetCString();
   }
