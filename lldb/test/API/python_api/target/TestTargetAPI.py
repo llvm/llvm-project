@@ -118,7 +118,11 @@ class TargetAPITestCase(TestBase):
         # Test consistency with triple.
         triple = target.triple
         self.assertTrue(len(triple) > 0, "Got a triple")
-        self.assertEqual(triple.split("-")[0], arch_name, "Arch name is equal to the first item of the triple")
+        self.assertEqual(
+            triple.split("-")[0],
+            arch_name,
+            "Arch name is equal to the first item of the triple",
+        )
 
     def test_get_ABIName(self):
         d = {"EXE": "b.out"}
