@@ -35,8 +35,8 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 
-#include <unordered_map>
 #include <set>
+#include <unordered_map>
 
 using namespace llvm;
 
@@ -385,8 +385,8 @@ void RISCVLiveVariables::verifyLiveness(MachineFunction &MF) const {
 }
 
 void RISCVLiveVariables::markKills(MachineFunction &MF) {
-    auto KillSetSize = PreRegAlloc ? RegCounter : TRI->getNumRegs();
-    for (MachineBasicBlock *MBB : post_order(&MF)) {
+  auto KillSetSize = PreRegAlloc ? RegCounter : TRI->getNumRegs();
+  for (MachineBasicBlock *MBB : post_order(&MF)) {
     // Set all the registers that are not live-out of the block.
     // Since the global liveness is available (even though a bit conservative),
     // this initialization is safe.
@@ -405,7 +405,8 @@ void RISCVLiveVariables::markKills(MachineFunction &MF) {
 
         Register Reg = MO.getReg();
         // Does not track physical registers pre-regalloc.
-        if ((PreRegAlloc && Reg.isPhysical()) || !isTrackableRegister(Reg, TRI, MRI))
+        if ((PreRegAlloc && Reg.isPhysical()) ||
+            !isTrackableRegister(Reg, TRI, MRI))
           continue;
 
         assert(TrackedRegisters.find(Reg) != TrackedRegisters.end() &&

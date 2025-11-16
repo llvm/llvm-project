@@ -1,4 +1,4 @@
-# RUN: llc -x mir -mtriple=riscv64 -verify-machineinstrs -run-pass=riscv-live-variables -debug < %s 2>&1 \
+# RUN: llc -x mir -mtriple=riscv64 -verify-machineinstrs -riscv-enable-live-variables -debug < %s 2>&1 \
 # RUN: | FileCheck %s
 
 # REQUIRES: asserts
