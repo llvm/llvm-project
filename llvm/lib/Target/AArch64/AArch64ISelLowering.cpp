@@ -2558,7 +2558,7 @@ bool AArch64TargetLowering::targetShrinkDemandedConstant(
     return false;
 
   // Exit early if we demand all bits.
-  if (DemandedBits.popcount() == Size)
+  if (DemandedBits.isAllOnes())
     return false;
 
   unsigned NewOpc;
@@ -9602,8 +9602,9 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
       // using a chain can result in incorrect scheduling. The markers refer to
       // the position just before the CALLSEQ_START (though occur after as
       // CALLSEQ_START lacks in-glue).
-      Chain = DAG.getNode(*ZAMarkerNode, DL, DAG.getVTList(MVT::Other),
-                          {Chain, Chain.getValue(1)});
+      Chain =
+          DAG.getNode(*ZAMarkerNode, DL, DAG.getVTList(MVT::Other, MVT::Glue),
+                      {Chain, Chain.getValue(1)});
     }
   }
 
@@ -10608,16 +10609,41 @@ SDValue AArch64TargetLowering::LowerELFTLSDescCallSeq(SDValue SymAddr,
                                                       const SDLoc &DL,
                                                       SelectionDAG &DAG) const {
   EVT PtrVT = getPointerTy(DAG.getDataLayout());
+  auto &MF = DAG.getMachineFunction();
+  auto *FuncInfo = MF.getInfo<AArch64FunctionInfo>();
 
+  SDValue Glue;
   SDValue Chain = DAG.getEntryNode();
   SDVTList NodeTys = DAG.getVTList(MVT::Other, MVT::Glue);
+
+  SMECallAttrs TLSCallAttrs(FuncInfo->getSMEFnAttrs(), {}, SMEAttrs::Normal);
+  bool RequiresSMChange = TLSCallAttrs.requiresSMChange();
+
+  auto ChainAndGlue = [](SDValue Chain) -> std::pair<SDValue, SDValue> {
+    return {Chain, Chain.getValue(1)};
+  };
+
+  if (RequiresSMChange)
+    std::tie(Chain, Glue) =
+        ChainAndGlue(changeStreamingMode(DAG, DL, /*Enable=*/false, Chain, Glue,
+                                         getSMToggleCondition(TLSCallAttrs)));
 
   unsigned Opcode =
       DAG.getMachineFunction().getInfo<AArch64FunctionInfo>()->hasELFSignedGOT()
           ? AArch64ISD::TLSDESC_AUTH_CALLSEQ
           : AArch64ISD::TLSDESC_CALLSEQ;
-  Chain = DAG.getNode(Opcode, DL, NodeTys, {Chain, SymAddr});
-  SDValue Glue = Chain.getValue(1);
+  SDValue Ops[] = {Chain, SymAddr, Glue};
+  std::tie(Chain, Glue) = ChainAndGlue(DAG.getNode(
+      Opcode, DL, NodeTys, Glue ? ArrayRef(Ops) : ArrayRef(Ops).drop_back()));
+
+  if (TLSCallAttrs.requiresLazySave())
+    std::tie(Chain, Glue) = ChainAndGlue(DAG.getNode(
+        AArch64ISD::REQUIRES_ZA_SAVE, DL, NodeTys, {Chain, Chain.getValue(1)}));
+
+  if (RequiresSMChange)
+    std::tie(Chain, Glue) =
+        ChainAndGlue(changeStreamingMode(DAG, DL, /*Enable=*/true, Chain, Glue,
+                                         getSMToggleCondition(TLSCallAttrs)));
 
   return DAG.getCopyFromReg(Chain, DL, AArch64::X0, PtrVT, Glue);
 }

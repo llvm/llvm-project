@@ -5322,6 +5322,7 @@ void CompilerInvocationBase::visitPathsImpl(
 
     RETURN_IF(Input.File);
   }
+  // TODO: Also report output files such as FrontendOpts.OutputFile;
   RETURN_IF(FrontendOpts.CodeCompletionAt.FileName);
   RETURN_IF_MANY(FrontendOpts.ModuleMapFiles);
   RETURN_IF_MANY(FrontendOpts.ModuleFiles);

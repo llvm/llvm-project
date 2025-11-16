@@ -4087,9 +4087,9 @@ static bool hlslAggSplatHelper(EvalInfo &Info, const Expr *E, APValue &SrcVal,
   if (!Evaluate(SrcVal, Info, E))
     return false;
 
-  assert(SrcVal.isFloat() || SrcVal.isInt() ||
-         (SrcVal.isVector() && SrcVal.getVectorLength() == 1) &&
-             "Not a valid HLSLAggregateSplatCast.");
+  assert((SrcVal.isFloat() || SrcVal.isInt() ||
+          (SrcVal.isVector() && SrcVal.getVectorLength() == 1)) &&
+         "Not a valid HLSLAggregateSplatCast.");
 
   if (SrcVal.isVector()) {
     assert(SrcTy->isVectorType() && "Type mismatch.");
