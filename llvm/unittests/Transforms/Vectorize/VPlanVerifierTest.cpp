@@ -22,8 +22,8 @@ namespace {
 TEST_F(VPVerifierTest, VPInstructionUseBeforeDefSameBB) {
   VPlan &Plan = getPlan();
   VPValue *Zero = Plan.getConstantInt(32, 0);
-  VPInstruction *DefI = new VPInstruction(Instruction::Add, {Zero});
-  VPInstruction *UseI = new VPInstruction(Instruction::Sub, {DefI});
+  VPInstruction *DefI = new VPInstruction(Instruction::Add, {Zero, Zero});
+  VPInstruction *UseI = new VPInstruction(Instruction::Sub, {DefI, Zero});
   auto *CanIV = new VPCanonicalIVPHIRecipe(Zero, {});
 
   VPBasicBlock *VPBB1 = Plan.getEntry();
@@ -43,9 +43,9 @@ TEST_F(VPVerifierTest, VPInstructionUseBeforeDefSameBB) {
 #if GTEST_HAS_STREAM_REDIRECTION
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   EXPECT_STREQ("Use before def!\n"
-               "  EMIT vp<%1> = sub vp<%2>\n"
+               "  EMIT vp<%1> = sub vp<%2>, ir<0>\n"
                "  before\n"
-               "  EMIT vp<%2> = add ir<0>\n",
+               "  EMIT vp<%2> = add ir<0>, ir<0>\n",
                ::testing::internal::GetCapturedStderr().c_str());
 #else
   EXPECT_STREQ("Use before def!\n",
@@ -57,8 +57,8 @@ TEST_F(VPVerifierTest, VPInstructionUseBeforeDefSameBB) {
 TEST_F(VPVerifierTest, VPInstructionUseBeforeDefDifferentBB) {
   VPlan &Plan = getPlan();
   VPValue *Zero = Plan.getConstantInt(32, 0);
-  VPInstruction *DefI = new VPInstruction(Instruction::Add, {Zero});
-  VPInstruction *UseI = new VPInstruction(Instruction::Sub, {DefI});
+  VPInstruction *DefI = new VPInstruction(Instruction::Add, {Zero, Zero});
+  VPInstruction *UseI = new VPInstruction(Instruction::Sub, {DefI, Zero});
   auto *CanIV = new VPCanonicalIVPHIRecipe(Zero, {});
   VPInstruction *BranchOnCond =
       new VPInstruction(VPInstruction::BranchOnCond, {CanIV});
@@ -82,9 +82,9 @@ TEST_F(VPVerifierTest, VPInstructionUseBeforeDefDifferentBB) {
 #if GTEST_HAS_STREAM_REDIRECTION
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   EXPECT_STREQ("Use before def!\n"
-               "  EMIT vp<%1> = sub vp<%3>\n"
+               "  EMIT vp<%1> = sub vp<%3>, ir<0>\n"
                "  before\n"
-               "  EMIT vp<%3> = add ir<0>\n",
+               "  EMIT vp<%3> = add ir<0>, ir<0>\n",
                ::testing::internal::GetCapturedStderr().c_str());
 #else
   EXPECT_STREQ("Use before def!\n",
@@ -99,7 +99,7 @@ TEST_F(VPVerifierTest, VPBlendUseBeforeDefDifferentBB) {
   auto *Phi = PHINode::Create(Int32, 1);
   VPValue *Zero = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 0));
 
-  VPInstruction *DefI = new VPInstruction(Instruction::Add, {Zero});
+  VPInstruction *DefI = new VPInstruction(Instruction::Add, {Zero, Zero});
   auto *CanIV = new VPCanonicalIVPHIRecipe(Zero, {});
   VPInstruction *BranchOnCond =
       new VPInstruction(VPInstruction::BranchOnCond, {CanIV});
@@ -132,7 +132,7 @@ TEST_F(VPVerifierTest, VPBlendUseBeforeDefDifferentBB) {
   EXPECT_STREQ("Use before def!\n"
                "  BLEND ir<<badref>> = vp<%2>\n"
                "  before\n"
-               "  EMIT vp<%2> = add ir<0>\n",
+               "  EMIT vp<%2> = add ir<0>, ir<0>\n",
                ::testing::internal::GetCapturedStderr().c_str());
 #else
   EXPECT_STREQ("Use before def!\n",
@@ -153,7 +153,7 @@ TEST_F(VPVerifierTest, VPPhiIncomingValueDoesntDominateIncomingBlock) {
   VPBasicBlock *VPBB3 = Plan.createVPBasicBlock("");
   VPBasicBlock *VPBB4 = Plan.createVPBasicBlock("");
 
-  VPInstruction *DefI = new VPInstruction(Instruction::Add, {Zero});
+  VPInstruction *DefI = new VPInstruction(Instruction::Add, {Zero, Zero});
   VPPhi *Phi = new VPPhi({DefI}, {});
   VPBB2->appendRecipe(Phi);
   VPBB2->appendRecipe(DefI);
@@ -171,7 +171,7 @@ TEST_F(VPVerifierTest, VPPhiIncomingValueDoesntDominateIncomingBlock) {
 #if GTEST_HAS_STREAM_REDIRECTION
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   EXPECT_STREQ("Incoming def does not dominate incoming block!\n"
-               "  EMIT vp<%2> = add ir<0>\n"
+               "  EMIT vp<%2> = add ir<0>, ir<0>\n"
                "  does not dominate preheader for\n"
                "  EMIT-SCALAR vp<%1> = phi [ vp<%2>, preheader ]",
                ::testing::internal::GetCapturedStderr().c_str());
@@ -185,7 +185,7 @@ TEST_F(VPVerifierTest, VPPhiIncomingValueDoesntDominateIncomingBlock) {
 TEST_F(VPVerifierTest, DuplicateSuccessorsOutsideRegion) {
   VPlan &Plan = getPlan();
   VPValue *Zero = Plan.getConstantInt(32, 0);
-  VPInstruction *I1 = new VPInstruction(Instruction::Add, {Zero});
+  VPInstruction *I1 = new VPInstruction(Instruction::Add, {Zero, Zero});
   auto *CanIV = new VPCanonicalIVPHIRecipe(Zero, {});
   VPInstruction *BranchOnCond =
       new VPInstruction(VPInstruction::BranchOnCond, {CanIV});
@@ -219,7 +219,7 @@ TEST_F(VPVerifierTest, DuplicateSuccessorsOutsideRegion) {
 TEST_F(VPVerifierTest, DuplicateSuccessorsInsideRegion) {
   VPlan &Plan = getPlan();
   VPValue *Zero = Plan.getConstantInt(32, 0);
-  VPInstruction *I1 = new VPInstruction(Instruction::Add, {Zero});
+  VPInstruction *I1 = new VPInstruction(Instruction::Add, {Zero, Zero});
   auto *CanIV = new VPCanonicalIVPHIRecipe(Zero, {});
   VPInstruction *BranchOnCond =
       new VPInstruction(VPInstruction::BranchOnCond, {CanIV});
@@ -263,7 +263,7 @@ TEST_F(VPVerifierTest, BlockOutsideRegionWithParent) {
   auto *CanIV = new VPCanonicalIVPHIRecipe(Zero, {});
   VPBB2->appendRecipe(CanIV);
 
-  VPInstruction *DefI = new VPInstruction(Instruction::Add, {Zero});
+  VPInstruction *DefI = new VPInstruction(Instruction::Add, {Zero, Zero});
   VPInstruction *BranchOnCond =
       new VPInstruction(VPInstruction::BranchOnCond, {DefI});
 

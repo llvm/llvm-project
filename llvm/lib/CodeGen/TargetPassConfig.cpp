@@ -401,8 +401,6 @@ struct InsertedPass {
 
 namespace llvm {
 
-extern cl::opt<bool> EnableFSDiscriminator;
-
 class PassConfigImpl {
 public:
   // List of passes explicitly substituted by this target. Normally this is
