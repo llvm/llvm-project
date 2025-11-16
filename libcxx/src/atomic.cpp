@@ -163,7 +163,7 @@ static void __platform_wait_on_address(void const* __ptr, void const* __val) {
   static auto wait_on_address =
       reinterpret_cast<BOOL(WINAPI*)(void*, PVOID, SIZE_T, DWORD)>(win32_get_synch_api_function("WaitOnAddress"));
   if (wait_on_address != nullptr) {
-    wait_on_address(const_cast<void*>(__ptr), &__val, _Size, INFINITE);
+    wait_on_address(const_cast<void*>(__ptr), const_cast<void*>(__val), _Size, INFINITE);
   } else {
     __libcpp_thread_poll_with_backoff(
         [=]() -> bool { return std::memcmp(const_cast<const void*>(__ptr), __val, _Size) != 0; },
