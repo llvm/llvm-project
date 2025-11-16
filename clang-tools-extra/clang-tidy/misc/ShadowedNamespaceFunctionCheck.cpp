@@ -70,7 +70,7 @@ void ShadowedNamespaceFunctionCheck::check(
     return;
 
   // Generate warning message
-  std::string NamespaceName = ShadowedNamespace->getNameAsString();
+  std::string NamespaceName = ShadowedNamespace->getQualifiedNameAsString();
   auto Diag = diag(Func->getLocation(), 
                    "free function %0 shadows '%1::%2'")
               << Func->getDeclName() 

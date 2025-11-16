@@ -43,4 +43,3 @@ Limitations
 - Does not warn about template functions
 - Does not warn about static functions or member functions
 - Does not warn about the ``main`` function
-- Only considers functions declared before the global definition
