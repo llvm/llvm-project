@@ -1047,13 +1047,6 @@ public:
     // It produces the lane index across all unrolled iterations. Unrolling will
     // add all copies of its original operand as additional operands.
     FirstActiveLane,
-    // Calculates the last active lane index of the vector predicate operands.
-    // The predicates must be prefix-masks (all 1s before all 0s). Used when
-    // tail-folding to extract the correct live-out value from the last active
-    // iteration. It produces the lane index across all unrolled iterations.
-    // Unrolling will add all copies of its original operand as additional
-    // operands.
-    LastActiveLane,
 
     // The opcodes below are used for VPInstructionWithType.
     //
@@ -4221,10 +4214,9 @@ public:
 
   /// Construct a VPlan with a new VPBasicBlock as entry, a VPIRBasicBlock
   /// wrapping \p ScalarHeaderBB and a trip count of \p TC.
-  VPlan(BasicBlock *ScalarHeaderBB, VPValue *TC) {
+  VPlan(BasicBlock *ScalarHeaderBB) {
     setEntry(createVPBasicBlock("preheader"));
     ScalarHeader = createVPIRBasicBlock(ScalarHeaderBB);
-    TripCount = TC;
   }
 
   LLVM_ABI_FOR_TEST ~VPlan();
