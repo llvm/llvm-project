@@ -25,29 +25,24 @@ HexagonSelectionDAGInfo::HexagonSelectionDAGInfo()
     : SelectionDAGGenTargetInfo(HexagonGenSDNodeInfo) {}
 
 const char *HexagonSelectionDAGInfo::getTargetNodeName(unsigned Opcode) const {
+#define CASE(NAME)                                                             \
+  case HexagonISD::NAME:                                                       \
+    return "HexagonISD::" #NAME
+
   // These nodes don't have corresponding entries in *.td files yet.
   switch (static_cast<HexagonISD::NodeType>(Opcode)) {
-  case HexagonISD::CALLR:
-    return "HexagonISD::CALLR";
-  case HexagonISD::VROR:
-    return "HexagonISD::VROR";
-  case HexagonISD::D2P:
-    return "HexagonISD::D2P";
-  case HexagonISD::P2D:
-    return "HexagonISD::P2D";
-  case HexagonISD::V2Q:
-    return "HexagonISD::V2Q";
-  case HexagonISD::Q2V:
-    return "HexagonISD::Q2V";
-  case HexagonISD::TL_EXTEND:
-    return "HexagonISD::TL_EXTEND";
-  case HexagonISD::TL_TRUNCATE:
-    return "HexagonISD::TL_TRUNCATE";
-  case HexagonISD::TYPECAST:
-    return "HexagonISD::TYPECAST";
-  case HexagonISD::ISEL:
-    return "HexagonISD::ISEL";
+    CASE(CALLR);
+    CASE(VROR);
+    CASE(D2P);
+    CASE(P2D);
+    CASE(V2Q);
+    CASE(Q2V);
+    CASE(TL_EXTEND);
+    CASE(TL_TRUNCATE);
+    CASE(TYPECAST);
+    CASE(ISEL);
   }
+#undef CASE
 
   return SelectionDAGGenTargetInfo::getTargetNodeName(Opcode);
 }
