@@ -117,7 +117,7 @@ class TargetAPITestCase(TestBase):
         # Test consistency with triple.
         triple = target.triple
         if triple:
-            self.assertEqual(triple.split("-")[0],  arch_name)
+            self.assertEqual(triple.split("-")[0], arch_name)
 
     def test_get_ABIName(self):
         d = {"EXE": "b.out"}
