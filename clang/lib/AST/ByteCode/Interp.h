@@ -2390,7 +2390,7 @@ static inline bool DecPtr(InterpState &S, CodePtr OpPC) {
 /// 2) Pops another Pointer from the stack.
 /// 3) Pushes the difference of the indices of the two pointers on the stack.
 template <PrimType Name, class T = typename PrimConv<Name>::T>
-inline bool SubPtr(InterpState &S, CodePtr OpPC) {
+inline bool SubPtr(InterpState &S, CodePtr OpPC, bool ElemSizeIsZero) {
   const Pointer &LHS = S.Stk.pop<Pointer>();
   const Pointer &RHS = S.Stk.pop<Pointer>();
 
@@ -2402,25 +2402,23 @@ inline bool SubPtr(InterpState &S, CodePtr OpPC) {
     return false;
   }
 
+  if (ElemSizeIsZero) {
+    QualType PtrT = LHS.getType();
+    while (auto *AT = dyn_cast<ArrayType>(PtrT))
+      PtrT = AT->getElementType();
+
+    QualType ArrayTy = S.getASTContext().getConstantArrayType(
+        PtrT, APInt::getZero(1), nullptr, ArraySizeModifier::Normal, 0);
+    S.FFDiag(S.Current->getSource(OpPC),
+             diag::note_constexpr_pointer_subtraction_zero_size)
+        << ArrayTy;
+
+    return false;
+  }
+
   if (LHS == RHS) {
     S.Stk.push<T>();
     return true;
-  }
-
-  for (const Pointer &P : {LHS, RHS}) {
-    if (P.isZeroSizeArray()) {
-      QualType PtrT = P.getType();
-      while (auto *AT = dyn_cast<ArrayType>(PtrT))
-        PtrT = AT->getElementType();
-
-      QualType ArrayTy = S.getASTContext().getConstantArrayType(
-          PtrT, APInt::getZero(1), nullptr, ArraySizeModifier::Normal, 0);
-      S.FFDiag(S.Current->getSource(OpPC),
-               diag::note_constexpr_pointer_subtraction_zero_size)
-          << ArrayTy;
-
-      return false;
-    }
   }
 
   int64_t A64 =

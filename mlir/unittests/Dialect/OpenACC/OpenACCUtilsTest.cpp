@@ -674,3 +674,242 @@ TEST_F(OpenACCUtilsTest, getBaseEntityChainedSubviews) {
   Value ultimateBase = getBaseEntity(baseEntity);
   EXPECT_EQ(ultimateBase, baseMemref);
 }
+
+//===----------------------------------------------------------------------===//
+// isValidSymbolUse Tests
+//===----------------------------------------------------------------------===//
+
+TEST_F(OpenACCUtilsTest, isValidSymbolUseNoDefiningOp) {
+  // Create a memref.get_global that references a non-existent global
+  auto memrefType = MemRefType::get({10}, b.getI32Type());
+  llvm::StringRef globalName = "nonexistent_global";
+  SymbolRefAttr nonExistentSymbol = SymbolRefAttr::get(&context, globalName);
+
+  OwningOpRef<memref::GetGlobalOp> getGlobalOp =
+      memref::GetGlobalOp::create(b, loc, memrefType, globalName);
+
+  Operation *definingOp = nullptr;
+  bool result =
+      isValidSymbolUse(getGlobalOp.get(), nonExistentSymbol, &definingOp);
+
+  EXPECT_FALSE(result);
+  EXPECT_EQ(definingOp, nullptr);
+}
+
+TEST_F(OpenACCUtilsTest, isValidSymbolUseRecipe) {
+  // Create a module to hold the recipe
+  OwningOpRef<ModuleOp> module = ModuleOp::create(loc);
+  Block *moduleBlock = module->getBody();
+
+  OpBuilder::InsertionGuard guard(b);
+  b.setInsertionPointToStart(moduleBlock);
+
+  // Create a private recipe (any recipe type would work)
+  auto i32Type = b.getI32Type();
+  llvm::StringRef recipeName = "test_recipe";
+  OwningOpRef<PrivateRecipeOp> recipeOp =
+      PrivateRecipeOp::create(b, loc, recipeName, i32Type);
+
+  // Create a value to privatize
+  auto memrefTy = MemRefType::get({10}, b.getI32Type());
+  OwningOpRef<memref::AllocaOp> allocOp =
+      memref::AllocaOp::create(b, loc, memrefTy);
+  TypedValue<PointerLikeType> varPtr =
+      cast<TypedValue<PointerLikeType>>(allocOp->getResult());
+
+  // Create a private op as the user operation
+  OwningOpRef<PrivateOp> privateOp = PrivateOp::create(
+      b, loc, varPtr, /*structured=*/true, /*implicit=*/false);
+
+  // Create a symbol reference to the recipe
+  SymbolRefAttr recipeSymbol = SymbolRefAttr::get(&context, recipeName);
+
+  Operation *definingOp = nullptr;
+  bool result = isValidSymbolUse(privateOp.get(), recipeSymbol, &definingOp);
+
+  EXPECT_TRUE(result);
+  EXPECT_EQ(definingOp, recipeOp.get());
+}
+
+TEST_F(OpenACCUtilsTest, isValidSymbolUseFunctionWithRoutineInfo) {
+  // Create a module to hold the function
+  OwningOpRef<ModuleOp> module = ModuleOp::create(loc);
+  Block *moduleBlock = module->getBody();
+
+  OpBuilder::InsertionGuard guard(b);
+  b.setInsertionPointToStart(moduleBlock);
+
+  // Create a function with routine_info attribute
+  auto funcType = b.getFunctionType({}, {});
+  llvm::StringRef funcName = "routine_func";
+  OwningOpRef<func::FuncOp> funcOp =
+      func::FuncOp::create(b, loc, funcName, funcType);
+
+  // Add routine_info attribute with a reference to a routine
+  SmallVector<SymbolRefAttr> routineRefs = {
+      SymbolRefAttr::get(&context, "acc_routine")};
+  funcOp.get()->setAttr(getRoutineInfoAttrName(),
+                        RoutineInfoAttr::get(&context, routineRefs));
+
+  // Create a call operation that uses the function symbol
+  SymbolRefAttr funcSymbol = SymbolRefAttr::get(&context, funcName);
+  OwningOpRef<func::CallOp> callOp = func::CallOp::create(
+      b, loc, funcSymbol, funcType.getResults(), ValueRange{});
+
+  Operation *definingOp = nullptr;
+  bool result = isValidSymbolUse(callOp.get(), funcSymbol, &definingOp);
+
+  EXPECT_TRUE(result);
+  EXPECT_NE(definingOp, nullptr);
+}
+
+TEST_F(OpenACCUtilsTest, isValidSymbolUseLLVMIntrinsic) {
+  // Create a module to hold the function
+  OwningOpRef<ModuleOp> module = ModuleOp::create(loc);
+  Block *moduleBlock = module->getBody();
+
+  OpBuilder::InsertionGuard guard(b);
+  b.setInsertionPointToStart(moduleBlock);
+
+  // Create a private function with LLVM intrinsic name
+  auto funcType = b.getFunctionType({b.getF32Type()}, {b.getF32Type()});
+  llvm::StringRef intrinsicName = "llvm.sqrt.f32";
+  OwningOpRef<func::FuncOp> funcOp =
+      func::FuncOp::create(b, loc, intrinsicName, funcType);
+
+  // Set visibility to private (required for intrinsics)
+  funcOp->setPrivate();
+
+  // Create a call operation that uses the intrinsic
+  SymbolRefAttr funcSymbol = SymbolRefAttr::get(&context, intrinsicName);
+  OwningOpRef<func::CallOp> callOp = func::CallOp::create(
+      b, loc, funcSymbol, funcType.getResults(), ValueRange{});
+
+  Operation *definingOp = nullptr;
+  bool result = isValidSymbolUse(callOp.get(), funcSymbol, &definingOp);
+
+  EXPECT_TRUE(result);
+  EXPECT_NE(definingOp, nullptr);
+}
+
+TEST_F(OpenACCUtilsTest, isValidSymbolUseFunctionNotIntrinsic) {
+  // Create a module to hold the function
+  OwningOpRef<ModuleOp> module = ModuleOp::create(loc);
+  Block *moduleBlock = module->getBody();
+
+  OpBuilder::InsertionGuard guard(b);
+  b.setInsertionPointToStart(moduleBlock);
+
+  // Create a private function that looks like intrinsic but isn't
+  auto funcType = b.getFunctionType({}, {});
+  llvm::StringRef funcName = "llvm.not_a_real_intrinsic";
+  OwningOpRef<func::FuncOp> funcOp =
+      func::FuncOp::create(b, loc, funcName, funcType);
+  funcOp->setPrivate();
+
+  // Create a call operation that uses the function
+  SymbolRefAttr funcSymbol = SymbolRefAttr::get(&context, funcName);
+  OwningOpRef<func::CallOp> callOp = func::CallOp::create(
+      b, loc, funcSymbol, funcType.getResults(), ValueRange{});
+
+  Operation *definingOp = nullptr;
+  bool result = isValidSymbolUse(callOp.get(), funcSymbol, &definingOp);
+
+  // Should be false because it's not a valid intrinsic and has no
+  // acc.routine_info attr
+  EXPECT_FALSE(result);
+  EXPECT_NE(definingOp, nullptr);
+}
+
+TEST_F(OpenACCUtilsTest, isValidSymbolUseWithDeclareAttr) {
+  // Create a module to hold a function
+  OwningOpRef<ModuleOp> module = ModuleOp::create(loc);
+  Block *moduleBlock = module->getBody();
+
+  OpBuilder::InsertionGuard guard(b);
+  b.setInsertionPointToStart(moduleBlock);
+
+  // Create a function with declare attribute
+  auto funcType = b.getFunctionType({}, {});
+  llvm::StringRef funcName = "declared_func";
+  OwningOpRef<func::FuncOp> funcOp =
+      func::FuncOp::create(b, loc, funcName, funcType);
+
+  // Add declare attribute
+  funcOp.get()->setAttr(
+      getDeclareAttrName(),
+      DeclareAttr::get(&context,
+                       DataClauseAttr::get(&context, DataClause::acc_copy)));
+
+  // Create a call operation that uses the function
+  SymbolRefAttr funcSymbol = SymbolRefAttr::get(&context, funcName);
+  OwningOpRef<func::CallOp> callOp = func::CallOp::create(
+      b, loc, funcSymbol, funcType.getResults(), ValueRange{});
+
+  Operation *definingOp = nullptr;
+  bool result = isValidSymbolUse(callOp.get(), funcSymbol, &definingOp);
+
+  EXPECT_TRUE(result);
+  EXPECT_NE(definingOp, nullptr);
+}
+
+TEST_F(OpenACCUtilsTest, isValidSymbolUseWithoutValidAttributes) {
+  // Create a module to hold a function
+  OwningOpRef<ModuleOp> module = ModuleOp::create(loc);
+  Block *moduleBlock = module->getBody();
+
+  OpBuilder::InsertionGuard guard(b);
+  b.setInsertionPointToStart(moduleBlock);
+
+  // Create a function without any special attributes
+  auto funcType = b.getFunctionType({}, {});
+  llvm::StringRef funcName = "regular_func";
+  OwningOpRef<func::FuncOp> funcOp =
+      func::FuncOp::create(b, loc, funcName, funcType);
+
+  // Create a call operation that uses the function
+  SymbolRefAttr funcSymbol = SymbolRefAttr::get(&context, funcName);
+  OwningOpRef<func::CallOp> callOp = func::CallOp::create(
+      b, loc, funcSymbol, funcType.getResults(), ValueRange{});
+
+  Operation *definingOp = nullptr;
+  bool result = isValidSymbolUse(callOp.get(), funcSymbol, &definingOp);
+
+  // Should be false - no routine_info, not an intrinsic, no declare attribute
+  EXPECT_FALSE(result);
+  EXPECT_NE(definingOp, nullptr);
+}
+
+TEST_F(OpenACCUtilsTest, isValidSymbolUseNullDefiningOpPtr) {
+  // Create a module to hold a recipe
+  OwningOpRef<ModuleOp> module = ModuleOp::create(loc);
+  Block *moduleBlock = module->getBody();
+
+  OpBuilder::InsertionGuard guard(b);
+  b.setInsertionPointToStart(moduleBlock);
+
+  // Create a private recipe
+  auto i32Type = b.getI32Type();
+  llvm::StringRef recipeName = "test_recipe";
+  OwningOpRef<PrivateRecipeOp> recipeOp =
+      PrivateRecipeOp::create(b, loc, recipeName, i32Type);
+
+  // Create a value to privatize
+  auto memrefTy = MemRefType::get({10}, b.getI32Type());
+  OwningOpRef<memref::AllocaOp> allocOp =
+      memref::AllocaOp::create(b, loc, memrefTy);
+  TypedValue<PointerLikeType> varPtr =
+      cast<TypedValue<PointerLikeType>>(allocOp->getResult());
+
+  // Create a private op as the user operation
+  OwningOpRef<PrivateOp> privateOp = PrivateOp::create(
+      b, loc, varPtr, /*structured=*/true, /*implicit=*/false);
+
+  // Create a symbol reference to the recipe
+  SymbolRefAttr recipeSymbol = SymbolRefAttr::get(&context, recipeName);
+
+  // Call without definingOpPtr (nullptr)
+  bool result = isValidSymbolUse(privateOp.get(), recipeSymbol, nullptr);
+
+  EXPECT_TRUE(result);
+}
