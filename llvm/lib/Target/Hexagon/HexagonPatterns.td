@@ -92,6 +92,16 @@ def SDTVecLeaf:
 def SDTVecVecIntOp:
   SDTypeProfile<1, 3, [SDTCisVec<0>, SDTCisVec<1>, SDTCisSameAs<1,2>,
                        SDTCisVT<3,i32>]>;
+def SDTIntBinOpWithCarryInOut:
+  SDTypeProfile<2, 3, [SDTCisInt<0>, SDTCisVT<1, i1>, SDTCisSameAs<2, 0>,
+                       SDTCisSameAs<3, 0>, SDTCisVT<4, i1>]>;
+
+def HexagonADDC: SDNode<"HexagonISD::ADDC", SDTIntBinOpWithCarryInOut>;
+def HexagonSUBC: SDNode<"HexagonISD::SUBC", SDTIntBinOpWithCarryInOut>;
+
+def HexagonSMUL_LOHI: SDNode<"HexagonISD::SMUL_LOHI", SDTIntBinHiLoOp>;
+def HexagonUMUL_LOHI: SDNode<"HexagonISD::UMUL_LOHI", SDTIntBinHiLoOp>;
+def HexagonUSMUL_LOHI: SDNode<"HexagonISD::USMUL_LOHI", SDTIntBinHiLoOp>;
 
 def HexagonPTRUE:      SDNode<"HexagonISD::PTRUE",      SDTVecLeaf>;
 def HexagonPFALSE:     SDNode<"HexagonISD::PFALSE",     SDTVecLeaf>;

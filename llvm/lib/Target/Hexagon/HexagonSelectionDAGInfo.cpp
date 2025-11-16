@@ -27,18 +27,8 @@ HexagonSelectionDAGInfo::HexagonSelectionDAGInfo()
 const char *HexagonSelectionDAGInfo::getTargetNodeName(unsigned Opcode) const {
   // These nodes don't have corresponding entries in *.td files yet.
   switch (static_cast<HexagonISD::NodeType>(Opcode)) {
-  case HexagonISD::ADDC:
-    return "HexagonISD::ADDC";
-  case HexagonISD::SUBC:
-    return "HexagonISD::SUBC";
   case HexagonISD::CALLR:
     return "HexagonISD::CALLR";
-  case HexagonISD::SMUL_LOHI:
-    return "HexagonISD::SMUL_LOHI";
-  case HexagonISD::UMUL_LOHI:
-    return "HexagonISD::UMUL_LOHI";
-  case HexagonISD::USMUL_LOHI:
-    return "HexagonISD::USMUL_LOHI";
   case HexagonISD::VROR:
     return "HexagonISD::VROR";
   case HexagonISD::D2P:

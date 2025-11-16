@@ -22,16 +22,7 @@ namespace llvm {
 namespace HexagonISD {
 
 enum NodeType : unsigned {
-  ADDC = GENERATED_OPCODE_END, // Add with carry: (X, Y, Cin) -> (X+Y, Cout).
-  SUBC, // Sub with carry: (X, Y, Cin) -> (X+~Y+Cin, Cout).
-
-  CALLR,
-
-  SMUL_LOHI,  // Same as ISD::SMUL_LOHI, but opaque to the combiner.
-  UMUL_LOHI,  // Same as ISD::UMUL_LOHI, but opaque to the combiner.
-              // We want to legalize MULH[SU] to [SU]MUL_LOHI, but the
-              // combiner will keep rewriting it back to MULH[SU].
-  USMUL_LOHI, // Like SMUL_LOHI, but unsigned*signed.
+  CALLR = GENERATED_OPCODE_END,
 
   VROR,
   D2P, // Convert 8-byte value to 8-bit predicate register. [*]
