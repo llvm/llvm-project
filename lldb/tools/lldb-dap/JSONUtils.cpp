@@ -787,6 +787,7 @@ VariableDescription::VariableDescription(lldb::SBValue v,
     os_display_value << "<error: " << error << ">";
   } else {
     value = llvm::StringRef(v.GetValue()).str();
+    object_description = llvm::StringRef(v.GetObjectDescription()).str();
     summary = llvm::StringRef(v.GetSummary()).str();
     if (summary.empty() && auto_variable_summaries)
       auto_summary = TryCreateAutoSummary(v);
@@ -794,7 +795,10 @@ VariableDescription::VariableDescription(lldb::SBValue v,
     std::optional<std::string> effective_summary =
         !summary.empty() ? summary : auto_summary;
 
-    if (!value.empty()) {
+    if (!object_description.empty() &&
+        (!effective_summary || effective_summary->empty())) {
+      os_display_value << object_description;
+    } else if (!value.empty()) {
       os_display_value << value;
       if (effective_summary)
         os_display_value << " " << *effective_summary;
@@ -820,18 +824,18 @@ VariableDescription::VariableDescription(lldb::SBValue v,
 std::string VariableDescription::GetResult(llvm::StringRef context) {
   // In repl context, the results can be displayed as multiple lines so more
   // detailed descriptions can be returned.
-  if (context != "repl")
+  if (context != "repl" || !v.IsValid())
     return display_value;
 
-  if (!v.IsValid())
-    return display_value;
+  // First, try the SBValue::GetObjectDescription(), which may call into
+  // language runtime specific formatters (see ValueObjectPrinter).
+  if (!object_description.empty())
+    return object_description;
 
-  // Try the SBValue::GetDescription(), which may call into language runtime
-  // specific formatters (see ValueObjectPrinter).
+  // Fallback to the default description for the value.
   lldb::SBStream stream;
   v.GetDescription(stream);
-  llvm::StringRef description = stream.GetData();
-  return description.trim().str();
+  return llvm::StringRef(stream.GetData()).trim().str();
 }
 
 bool ValuePointsToCode(lldb::SBValue v) {

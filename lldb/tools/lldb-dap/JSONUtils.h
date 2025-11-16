@@ -335,6 +335,9 @@ struct VariableDescription {
   std::string evaluate_name;
   // The output of SBValue.GetValue() if it doesn't fail. It might be empty.
   std::string value;
+  // The output of SBValue.GetObjectDescription() if it doesn't fail. It might
+  // be empty.
+  std::string object_description;
   // The summary string of this variable. It might be empty.
   std::string summary;
   // The auto summary if using `enableAutoVariableSummaries`.
