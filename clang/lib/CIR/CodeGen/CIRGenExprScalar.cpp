@@ -203,6 +203,8 @@ public:
     return emitNullValue(e->getType(), cgf.getLoc(e->getSourceRange()));
   }
 
+  mlir::Value VisitOffsetOfExpr(OffsetOfExpr *e);
+
   mlir::Value VisitOpaqueValueExpr(OpaqueValueExpr *e) {
     if (e->isGLValue())
       return emitLoadOfLValue(cgf.getOrCreateOpaqueLValueMapping(e),
@@ -1442,28 +1444,6 @@ mlir::Value CIRGenFunction::emitPromotedScalarExpr(const Expr *e,
   return ScalarExprEmitter(*this, builder).Visit(const_cast<Expr *>(e));
 }
 
-mlir::Value CIRGenFunction::emitScalarOrConstFoldImmArg(unsigned iceArguments,
-                                                        unsigned index,
-                                                        const Expr *arg) {
-  mlir::Value result{};
-
-  // The bit at the specified index indicates whether the argument is required
-  // to be a constant integer expression.
-  bool isArgRequiredToBeConstant = (iceArguments & (1 << index));
-
-  if (!isArgRequiredToBeConstant) {
-    result = emitScalarExpr(arg);
-  } else {
-    // If this is required to be a constant, constant fold it so that we
-    // know that the generated intrinsic gets a ConstantInt.
-    std::optional<llvm::APSInt> iceOpt =
-        arg->getIntegerConstantExpr(getContext());
-    assert(iceOpt && "Expected argument to be a constant");
-    result = builder.getConstInt(getLoc(arg->getSourceRange()), *iceOpt);
-  }
-  return result;
-}
-
 [[maybe_unused]] static bool mustVisitNullValue(const Expr *e) {
   // If a null pointer expression's type is the C++0x nullptr_t and
   // the expression is not a simple literal, it must be evaluated
@@ -2229,6 +2209,21 @@ mlir::Value ScalarExprEmitter::VisitUnaryLNot(const UnaryOperator *e) {
 
   // ZExt result to the expr type.
   return maybePromoteBoolResult(boolVal, cgf.convertType(e->getType()));
+}
+
+mlir::Value ScalarExprEmitter::VisitOffsetOfExpr(OffsetOfExpr *e) {
+  // Try folding the offsetof to a constant.
+  Expr::EvalResult evalResult;
+  if (e->EvaluateAsInt(evalResult, cgf.getContext())) {
+    mlir::Type type = cgf.convertType(e->getType());
+    llvm::APSInt value = evalResult.Val.getInt();
+    return builder.getConstAPInt(cgf.getLoc(e->getExprLoc()), type, value);
+  }
+
+  cgf.getCIRGenModule().errorNYI(
+      e->getSourceRange(),
+      "ScalarExprEmitter::VisitOffsetOfExpr Can't eval expr as int");
+  return {};
 }
 
 mlir::Value ScalarExprEmitter::VisitUnaryReal(const UnaryOperator *e) {
