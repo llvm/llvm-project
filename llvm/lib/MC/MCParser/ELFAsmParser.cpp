@@ -25,7 +25,6 @@
 #include "llvm/Support/SMLoc.h"
 #include <cassert>
 #include <cstdint>
-#include <utility>
 
 using namespace llvm;
 
@@ -695,15 +694,15 @@ bool ELFAsmParser::parseDirectivePrevious(StringRef DirName, SMLoc) {
 
 static MCSymbolAttr MCAttrForString(StringRef Type) {
   return StringSwitch<MCSymbolAttr>(Type)
-          .Cases("STT_FUNC", "function", MCSA_ELF_TypeFunction)
-          .Cases("STT_OBJECT", "object", MCSA_ELF_TypeObject)
-          .Cases("STT_TLS", "tls_object", MCSA_ELF_TypeTLS)
-          .Cases("STT_COMMON", "common", MCSA_ELF_TypeCommon)
-          .Cases("STT_NOTYPE", "notype", MCSA_ELF_TypeNoType)
-          .Cases("STT_GNU_IFUNC", "gnu_indirect_function",
-                 MCSA_ELF_TypeIndFunction)
-          .Case("gnu_unique_object", MCSA_ELF_TypeGnuUniqueObject)
-          .Default(MCSA_Invalid);
+      .Cases({"STT_FUNC", "function"}, MCSA_ELF_TypeFunction)
+      .Cases({"STT_OBJECT", "object"}, MCSA_ELF_TypeObject)
+      .Cases({"STT_TLS", "tls_object"}, MCSA_ELF_TypeTLS)
+      .Cases({"STT_COMMON", "common"}, MCSA_ELF_TypeCommon)
+      .Cases({"STT_NOTYPE", "notype"}, MCSA_ELF_TypeNoType)
+      .Cases({"STT_GNU_IFUNC", "gnu_indirect_function"},
+             MCSA_ELF_TypeIndFunction)
+      .Case("gnu_unique_object", MCSA_ELF_TypeGnuUniqueObject)
+      .Default(MCSA_Invalid);
 }
 
 /// parseDirectiveELFType

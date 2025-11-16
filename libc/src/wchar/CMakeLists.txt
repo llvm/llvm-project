@@ -63,7 +63,7 @@ add_entrypoint_object(
     wcstol.h
   DEPENDS
     libc.src.errno.errno
-    libc.src.__support.wcs_to_integer
+    libc.src.__support.str_to_integer
 )
 
 add_entrypoint_object(
@@ -74,7 +74,7 @@ add_entrypoint_object(
     wcstoll.h
   DEPENDS
     libc.src.errno.errno
-    libc.src.__support.wcs_to_integer
+    libc.src.__support.str_to_integer
 )
 
 add_entrypoint_object(
@@ -85,7 +85,7 @@ add_entrypoint_object(
     wcstoul.h
   DEPENDS
     libc.src.errno.errno
-    libc.src.__support.wcs_to_integer
+    libc.src.__support.str_to_integer
 )
 
 add_entrypoint_object(
@@ -96,7 +96,18 @@ add_entrypoint_object(
     wcstoull.h
   DEPENDS
     libc.src.errno.errno
-    libc.src.__support.wcs_to_integer
+    libc.src.__support.str_to_integer
+)
+
+add_entrypoint_object(
+  wcstof
+  SRCS
+    wcstof.cpp
+  HDRS
+    wcstof.h
+  DEPENDS
+    libc.src.__support.str_to_float
+    libc.src.errno.errno
 )
 
 add_entrypoint_object(

@@ -1,11 +1,15 @@
 header: wchar.h
 header_template: wchar.h.def
 macros:
-  - macro_name: NULL
+  - macro_name: "NULL"
     macro_header: null-macro.h
 types:
   - type_name: FILE
   - type_name: size_t
+  # TODO: Remove this once we have a function declaration using "struct tm"
+  # (wcsftime). We're declaring it here now, since libc++ expects
+  # forward-declaration of "struct tm" in the <wchar.h> header.
+  - type_name: struct_tm
   - type_name: wint_t
   - type_name: wchar_t
   - type_name: mbstate_t
@@ -188,8 +192,8 @@ functions:
     standards:
       - stdc
     return_type: wchar_t *
-    arguments: 
-      - type: wchar_t *__restrict 
+    arguments:
+      - type: wchar_t *__restrict
       - type: const wchar_t *__restrict
       - type: size_t
   - name: wmemmove
@@ -212,7 +216,7 @@ functions:
     standards:
       - stdc
     return_type: wchar_t *
-    arguments: 
+    arguments:
       - type: wchar_t *__restrict
       - type: const wchar_t *__restrict
   - name: wcslcat
@@ -356,3 +360,10 @@ functions:
       - type: const wchar_t *__restrict
       - type: wchar_t **__restrict
       - type: int
+  - name: wcstof
+    standards:
+      - stdc
+    return_type: float
+    arguments:
+      - type: const wchar_t *__restrict
+      - type: wchar_t **__restrict

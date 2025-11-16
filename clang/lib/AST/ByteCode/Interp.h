@@ -117,6 +117,7 @@ bool CheckBitCast(InterpState &S, CodePtr OpPC, bool HasIndeterminateBits,
                   bool TargetIsUCharOrByte);
 bool CheckBCPResult(InterpState &S, const Pointer &Ptr);
 bool CheckDestructor(InterpState &S, CodePtr OpPC, const Pointer &Ptr);
+bool CheckFunctionDecl(InterpState &S, CodePtr OpPC, const FunctionDecl *FD);
 
 bool handleFixedPointOverflow(InterpState &S, CodePtr OpPC,
                               const FixedPoint &FP);
@@ -1915,6 +1916,9 @@ bool Load(InterpState &S, CodePtr OpPC) {
     return false;
   if (!Ptr.isBlockPointer())
     return false;
+  if (const Descriptor *D = Ptr.getFieldDesc();
+      !(D->isPrimitive() || D->isPrimitiveArray()) || D->getPrimType() != Name)
+    return false;
   S.Stk.push<T>(Ptr.deref<T>());
   return true;
 }
@@ -1925,6 +1929,9 @@ bool LoadPop(InterpState &S, CodePtr OpPC) {
   if (!CheckLoad(S, OpPC, Ptr))
     return false;
   if (!Ptr.isBlockPointer())
+    return false;
+  if (const Descriptor *D = Ptr.getFieldDesc();
+      !(D->isPrimitive() || D->isPrimitiveArray()) || D->getPrimType() != Name)
     return false;
   S.Stk.push<T>(Ptr.deref<T>());
   return true;
@@ -2383,7 +2390,7 @@ static inline bool DecPtr(InterpState &S, CodePtr OpPC) {
 /// 2) Pops another Pointer from the stack.
 /// 3) Pushes the difference of the indices of the two pointers on the stack.
 template <PrimType Name, class T = typename PrimConv<Name>::T>
-inline bool SubPtr(InterpState &S, CodePtr OpPC) {
+inline bool SubPtr(InterpState &S, CodePtr OpPC, bool ElemSizeIsZero) {
   const Pointer &LHS = S.Stk.pop<Pointer>();
   const Pointer &RHS = S.Stk.pop<Pointer>();
 
@@ -2395,25 +2402,23 @@ inline bool SubPtr(InterpState &S, CodePtr OpPC) {
     return false;
   }
 
+  if (ElemSizeIsZero) {
+    QualType PtrT = LHS.getType();
+    while (auto *AT = dyn_cast<ArrayType>(PtrT))
+      PtrT = AT->getElementType();
+
+    QualType ArrayTy = S.getASTContext().getConstantArrayType(
+        PtrT, APInt::getZero(1), nullptr, ArraySizeModifier::Normal, 0);
+    S.FFDiag(S.Current->getSource(OpPC),
+             diag::note_constexpr_pointer_subtraction_zero_size)
+        << ArrayTy;
+
+    return false;
+  }
+
   if (LHS == RHS) {
     S.Stk.push<T>();
     return true;
-  }
-
-  for (const Pointer &P : {LHS, RHS}) {
-    if (P.isZeroSizeArray()) {
-      QualType PtrT = P.getType();
-      while (auto *AT = dyn_cast<ArrayType>(PtrT))
-        PtrT = AT->getElementType();
-
-      QualType ArrayTy = S.getASTContext().getConstantArrayType(
-          PtrT, APInt::getZero(1), nullptr, ArraySizeModifier::Normal, 0);
-      S.FFDiag(S.Current->getSource(OpPC),
-               diag::note_constexpr_pointer_subtraction_zero_size)
-          << ArrayTy;
-
-      return false;
-    }
   }
 
   int64_t A64 =
@@ -3283,17 +3288,69 @@ inline bool SideEffect(InterpState &S, CodePtr OpPC) {
   return S.noteSideEffect();
 }
 
+inline bool CheckBitCast(InterpState &S, CodePtr OpPC, const Type *TargetType,
+                         bool SrcIsVoidPtr) {
+  const auto &Ptr = S.Stk.peek<Pointer>();
+  if (Ptr.isZero())
+    return true;
+  if (!Ptr.isBlockPointer())
+    return true;
+
+  if (TargetType->isIntegerType())
+    return true;
+
+  if (SrcIsVoidPtr && S.getLangOpts().CPlusPlus) {
+    bool HasValidResult = !Ptr.isZero();
+
+    if (HasValidResult) {
+      if (S.getStdAllocatorCaller("allocate"))
+        return true;
+
+      const auto &E = cast<CastExpr>(S.Current->getExpr(OpPC));
+      if (S.getLangOpts().CPlusPlus26 &&
+          S.getASTContext().hasSimilarType(Ptr.getType(),
+                                           QualType(TargetType, 0)))
+        return true;
+
+      S.CCEDiag(E, diag::note_constexpr_invalid_void_star_cast)
+          << E->getSubExpr()->getType() << S.getLangOpts().CPlusPlus26
+          << Ptr.getType().getCanonicalType() << E->getType()->getPointeeType();
+    } else if (!S.getLangOpts().CPlusPlus26) {
+      const SourceInfo &E = S.Current->getSource(OpPC);
+      S.CCEDiag(E, diag::note_constexpr_invalid_cast)
+          << diag::ConstexprInvalidCastKind::CastFrom << "'void *'"
+          << S.Current->getRange(OpPC);
+    }
+  }
+
+  QualType PtrType = Ptr.getType();
+  if (PtrType->isRecordType() &&
+      PtrType->getAsRecordDecl() != TargetType->getAsRecordDecl()) {
+    S.CCEDiag(S.Current->getSource(OpPC), diag::note_constexpr_invalid_cast)
+        << diag::ConstexprInvalidCastKind::ThisConversionOrReinterpret
+        << S.getLangOpts().CPlusPlus << S.Current->getRange(OpPC);
+    return false;
+  }
+  return true;
+}
+
 /// Same here, but only for casts.
 inline bool InvalidCast(InterpState &S, CodePtr OpPC, CastKind Kind,
                         bool Fatal) {
   const SourceLocation &Loc = S.Current->getLocation(OpPC);
 
-  if (Kind == CastKind::Reinterpret) {
+  switch (Kind) {
+  case CastKind::Reinterpret:
     S.CCEDiag(Loc, diag::note_constexpr_invalid_cast)
-        << static_cast<unsigned>(Kind) << S.Current->getRange(OpPC);
+        << diag::ConstexprInvalidCastKind::Reinterpret
+        << S.Current->getRange(OpPC);
     return !Fatal;
-  }
-  if (Kind == CastKind::Volatile) {
+  case CastKind::ReinterpretLike:
+    S.CCEDiag(Loc, diag::note_constexpr_invalid_cast)
+        << diag::ConstexprInvalidCastKind::ThisConversionOrReinterpret
+        << S.getLangOpts().CPlusPlus << S.Current->getRange(OpPC);
+    return !Fatal;
+  case CastKind::Volatile:
     if (!S.checkingPotentialConstantExpression()) {
       const auto *E = cast<CastExpr>(S.Current->getExpr(OpPC));
       if (S.getLangOpts().CPlusPlus)
@@ -3304,14 +3361,13 @@ inline bool InvalidCast(InterpState &S, CodePtr OpPC, CastKind Kind,
     }
 
     return false;
-  }
-  if (Kind == CastKind::Dynamic) {
+  case CastKind::Dynamic:
     assert(!S.getLangOpts().CPlusPlus20);
-    S.CCEDiag(S.Current->getSource(OpPC), diag::note_constexpr_invalid_cast)
+    S.CCEDiag(Loc, diag::note_constexpr_invalid_cast)
         << diag::ConstexprInvalidCastKind::Dynamic;
     return true;
   }
-
+  llvm_unreachable("Unhandled CastKind");
   return false;
 }
 

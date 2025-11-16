@@ -45,21 +45,6 @@ static inline bool getConstantValue(SDValue N, uint32_t &Out) {
   return false;
 }
 
-// TODO: Handle undef as zero
-static inline SDNode *packConstantV2I16(const SDNode *N, SelectionDAG &DAG) {
-  assert(N->getOpcode() == ISD::BUILD_VECTOR && N->getNumOperands() == 2);
-  uint32_t LHSVal, RHSVal;
-  if (getConstantValue(N->getOperand(0), LHSVal) &&
-      getConstantValue(N->getOperand(1), RHSVal)) {
-    SDLoc SL(N);
-    uint32_t K = (LHSVal & 0xffff) | (RHSVal << 16);
-    return DAG.getMachineNode(AMDGPU::S_MOV_B32, SL, N->getValueType(0),
-                              DAG.getTargetConstant(K, SL, MVT::i32));
-  }
-
-  return nullptr;
-}
-
 /// AMDGPU specific code to select AMDGPU machine instructions for
 /// SelectionDAG operations.
 class AMDGPUDAGToDAGISel : public SelectionDAGISel {
@@ -114,6 +99,8 @@ private:
                                   SDValue &RHS) const;
 
   MachineSDNode *buildSMovImm64(SDLoc &DL, uint64_t Val, EVT VT) const;
+
+  SDNode *packConstantV2I16(const SDNode *N, SelectionDAG &DAG) const;
 
   SDNode *glueCopyToOp(SDNode *N, SDValue NewChain, SDValue Glue) const;
   SDNode *glueCopyToM0(SDNode *N, SDValue Val) const;

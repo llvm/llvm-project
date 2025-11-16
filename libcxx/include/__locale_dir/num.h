@@ -9,6 +9,7 @@
 #ifndef _LIBCPP___LOCALE_DIR_NUM_H
 #define _LIBCPP___LOCALE_DIR_NUM_H
 
+#include <__algorithm/copy.h>
 #include <__algorithm/find.h>
 #include <__algorithm/reverse.h>
 #include <__charconv/to_chars_integral.h>
@@ -748,6 +749,13 @@ void __num_put<_CharT>::__widen_and_group_int(
     __op = __ob + (__np - __nb);
 }
 
+_LIBCPP_HIDE_FROM_ABI inline bool __isdigit(char __c) { return __c >= '0' && __c <= '9'; }
+
+_LIBCPP_HIDE_FROM_ABI inline bool __isxdigit(char __c) {
+  auto __lower = __c | 0x20;
+  return std::__isdigit(__c) || (__lower >= 'a' && __lower <= 'f');
+}
+
 template <class _CharT>
 void __num_put<_CharT>::__widen_and_group_float(
     char* __nb, char* __np, char* __ne, _CharT* __ob, _CharT*& __op, _CharT*& __oe, const locale& __loc) {
@@ -763,11 +771,11 @@ void __num_put<_CharT>::__widen_and_group_float(
     *__oe++ = __ct.widen(*__nf++);
     *__oe++ = __ct.widen(*__nf++);
     for (__ns = __nf; __ns < __ne; ++__ns)
-      if (!__locale::__isxdigit(*__ns, _LIBCPP_GET_C_LOCALE))
+      if (!std::__isxdigit(*__ns))
         break;
   } else {
     for (__ns = __nf; __ns < __ne; ++__ns)
-      if (!__locale::__isdigit(*__ns, _LIBCPP_GET_C_LOCALE))
+      if (!std::__isdigit(*__ns))
         break;
   }
   if (__grouping.empty()) {
@@ -885,9 +893,7 @@ num_put<_CharT, _OutputIterator>::do_put(iter_type __s, ios_base& __iob, char_ty
   const numpunct<char_type>& __np = std::use_facet<numpunct<char_type> >(__iob.getloc());
   typedef typename numpunct<char_type>::string_type string_type;
   string_type __nm = __v ? __np.truename() : __np.falsename();
-  for (typename string_type::iterator __i = __nm.begin(); __i != __nm.end(); ++__i, ++__s)
-    *__s = *__i;
-  return __s;
+  return std::copy(__nm.begin(), __nm.end(), __s);
 }
 
 template <class _CharT, class _OutputIterator>
