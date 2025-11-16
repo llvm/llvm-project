@@ -17,9 +17,9 @@ This issue can occur even with refcounted smart pointers and copyable types.
 When a lambda expression creates a coroutine, it results in a closure object
 with storage, which is often on the stack and will eventually go out of scope.
 When the closure object goes out of scope, its captures also go out of scope.
-While normal lambdas finish executing before this happens, coroutine lambdas may
-resume from suspension after the closure object has been destructed, resulting
-in use-after-free memory access for all captures.
+While normal lambdas finish executing before this happens, coroutine lambdas
+may resume from suspension after the closure object has been destructed,
+resulting in use-after-free memory access for all captures.
 
 Consider the following example:
 

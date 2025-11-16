@@ -3,9 +3,9 @@
 cppcoreguidelines-owning-memory
 ===============================
 
-This check implements the type-based semantics of ``gsl::owner<T*>``, which allows
-static analysis on code, that uses raw pointers to handle resources like
-dynamic memory, but won't introduce RAII concepts.
+This check implements the type-based semantics of ``gsl::owner<T*>``, which
+allows static analysis on code, that uses raw pointers to handle resources
+like dynamic memory, but won't introduce RAII concepts.
 
 This check implements `I.11
 <https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#i11-never-transfer-ownership-by-a-raw-pointer-t-or-reference-t>`_,
@@ -27,9 +27,10 @@ the `Guideline Support Library <https://isocpp.github.io/CppCoreGuidelines/CppCo
 
 All checks are purely type based and not (yet) flow sensitive.
 
-The following examples will demonstrate the correct and incorrect initializations
-of owners, assignment is handled the same way. Note that both ``new`` and
-``malloc()``-like resource functions are considered to produce resources.
+The following examples will demonstrate the correct and incorrect
+initializations of owners, assignment is handled the same way.
+Note that both ``new`` and ``malloc()``-like resource functions are
+considered to produce resources.
 
 .. code-block:: c++
 
@@ -62,8 +63,9 @@ to be deleted.
   gsl::owner<int*> Owner = new int(42); // Good
   delete Owner; // Good as well, statically enforced, that only owners get deleted
 
-The check will furthermore ensure, that functions, that expect a ``gsl::owner<T*>`` as
-argument get called with either a ``gsl::owner<T*>`` or a newly created resource.
+The check will furthermore ensure, that functions, that expect a
+``gsl::owner<T*>`` as argument get called with either a ``gsl::owner<T*>`` or
+a newly created resource.
 
 .. code-block:: c++
 
@@ -164,8 +166,8 @@ Known code constructs that do not get diagnosed correctly are:
   // False positive, getValue returns int* and not gsl::owner<int*>
   gsl::owner<int*> OwnedInt = Owner.getValue();
 
-Another limitation of the current implementation is only the type based checking.
-Suppose you have code like the following:
+Another limitation of the current implementation is only the type based
+checking. Suppose you have code like the following:
 
 .. code-block:: c++
 
@@ -176,9 +178,9 @@ Suppose you have code like the following:
   Owner2 = Owner1; // Conceptual Leak of initial resource of Owner2!
   Owner1 = nullptr;
 
-The semantic of a ``gsl::owner<T*>`` is mostly like a ``std::unique_ptr<T>``, therefore
-assignment of two ``gsl::owner<T*>`` is considered a move, which requires that the
-resource ``Owner2`` must have been released before the assignment.
-This kind of condition could be caught in later improvements of this check with
-flowsensitive analysis. Currently, the `Clang Static Analyzer` catches this bug
-for dynamic memory, but not for general types of resources.
+The semantic of a ``gsl::owner<T*>`` is mostly like a ``std::unique_ptr<T>``,
+therefore assignment of two ``gsl::owner<T*>`` is considered a move, which
+requires that the resource ``Owner2`` must have been released before the
+assignment. This kind of condition could be caught in later improvements of
+this check with flowsensitive analysis. Currently, the `Clang Static Analyzer`
+catches this bug for dynamic memory, but not for general types of resources.

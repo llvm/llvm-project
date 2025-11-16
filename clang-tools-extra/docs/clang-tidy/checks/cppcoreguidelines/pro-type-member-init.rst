@@ -20,9 +20,9 @@ account but generates false positives for fields initialized in
 methods invoked in the constructor body.
 
 The check also flags variables with automatic storage duration that have record
-types without a user-provided constructor and are not initialized. The suggested
-fix is to zero initialize the variable via ``{}`` for C++11 and beyond or ``=
-{}`` for older language versions.
+types without a user-provided constructor and are not initialized. The
+suggested fix is to zero initialize the variable via ``{}`` for C++11 and
+beyond or ``= {}`` for older language versions.
 
 Options
 -------
