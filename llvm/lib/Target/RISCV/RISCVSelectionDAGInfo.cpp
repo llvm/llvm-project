@@ -22,27 +22,22 @@ RISCVSelectionDAGInfo::~RISCVSelectionDAGInfo() = default;
 
 void RISCVSelectionDAGInfo::verifyTargetNode(const SelectionDAG &DAG,
                                              const SDNode *N) const {
+  SelectionDAGGenTargetInfo::verifyTargetNode(DAG, N);
+
 #ifndef NDEBUG
+  // Some additional checks not yet implemented by verifyTargetNode.
   switch (N->getOpcode()) {
-  default:
-    return SelectionDAGGenTargetInfo::verifyTargetNode(DAG, N);
   case RISCVISD::TUPLE_EXTRACT:
-    assert(N->getNumOperands() == 2 && "Expected three operands!");
     assert(N->getOperand(1).getOpcode() == ISD::TargetConstant &&
-           N->getOperand(1).getValueType() == MVT::i32 &&
-           "Expected index to be an i32 target constant!");
+           "Expected index to be a target constant!");
     break;
   case RISCVISD::TUPLE_INSERT:
-    assert(N->getNumOperands() == 3 && "Expected three operands!");
     assert(N->getOperand(2).getOpcode() == ISD::TargetConstant &&
-           N->getOperand(2).getValueType() == MVT::i32 &&
-           "Expected index to be an i32 target constant!");
+           "Expected index to be a target constant!");
     break;
   case RISCVISD::VQDOT_VL:
   case RISCVISD::VQDOTU_VL:
   case RISCVISD::VQDOTSU_VL: {
-    assert(N->getNumValues() == 1 && "Expected one result!");
-    assert(N->getNumOperands() == 5 && "Expected five operands!");
     EVT VT = N->getValueType(0);
     assert(VT.isScalableVector() && VT.getVectorElementType() == MVT::i32 &&
            "Expected result to be an i32 scalable vector");
@@ -52,13 +47,9 @@ void RISCVSelectionDAGInfo::verifyTargetNode(const SelectionDAG &DAG,
            "Expected result and first 3 operands to have the same type!");
     EVT MaskVT = N->getOperand(3).getValueType();
     assert(MaskVT.isScalableVector() &&
-           MaskVT.getVectorElementType() == MVT::i1 &&
            MaskVT.getVectorElementCount() == VT.getVectorElementCount() &&
            "Expected mask VT to be an i1 scalable vector with same number of "
            "elements as the result");
-    assert((N->getOperand(4).getValueType() == MVT::i32 ||
-            N->getOperand(4).getValueType() == MVT::i64) &&
-           "Expect VL operand to be i32 or i64");
     break;
   }
   }
