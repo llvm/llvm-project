@@ -56,7 +56,7 @@ class ExprOptionsTestCase(TestBase):
         # Make sure it fails if language is set to C:
         options.SetLanguage(lldb.eLanguageTypeC)
         val = frame.EvaluateExpression("foo != nullptr", options)
-        self.assertTrue(val.IsValid())
+        self.assertFalse(val.IsValid())
         self.assertFalse(val.GetError().Success())
 
     def test_expr_options_lang(self):
@@ -83,5 +83,5 @@ class ExprOptionsTestCase(TestBase):
         # Make sure we can't retrieve `id` variable if language is set to ObjC:
         options.SetLanguage(lldb.eLanguageTypeObjC)
         val = frame.EvaluateExpression("id == 0", options)
-        self.assertTrue(val.IsValid())
+        self.assertFalse(val.IsValid())
         self.assertFalse(val.GetError().Success())
