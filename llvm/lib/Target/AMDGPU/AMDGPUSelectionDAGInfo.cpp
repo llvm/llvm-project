@@ -42,3 +42,18 @@ const char *AMDGPUSelectionDAGInfo::getTargetNodeName(unsigned Opcode) const {
 
   return SelectionDAGGenTargetInfo::getTargetNodeName(Opcode);
 }
+
+void AMDGPUSelectionDAGInfo::verifyTargetNode(const SelectionDAG &DAG,
+                                              const SDNode *N) const {
+  switch (N->getOpcode()) {
+  case AMDGPUISD::IF:
+    // result #0 must have type i1, but has type i32/i64
+  case AMDGPUISD::ELSE:
+  case AMDGPUISD::LOOP:
+    // operand #1 must have type i1, but has type i32/i64
+  case AMDGPUISD::LDS:
+    // result #0 must have type i64 (iPTR), but has type i32
+    return;
+  }
+  SelectionDAGGenTargetInfo::verifyTargetNode(DAG, N);
+}

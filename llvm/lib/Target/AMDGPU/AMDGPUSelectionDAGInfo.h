@@ -51,6 +51,9 @@ public:
   ~AMDGPUSelectionDAGInfo() override;
 
   const char *getTargetNodeName(unsigned Opcode) const override;
+
+  void verifyTargetNode(const SelectionDAG &DAG,
+                        const SDNode *N) const override;
 };
 
 } // namespace llvm
