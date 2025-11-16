@@ -6435,8 +6435,10 @@ static bool matchOverflowPattern(Instruction *&I, ExtractValueInst *&MulExtract,
 // overflow:
 // overflow.res:
 // \returns true if optimization was applied
-// TODO: This optimization can be further improved but it will get more complex,
-// so we leave it for future work.
+// TODO: This optimization can be further improved to optimize branching on
+// overflow where the 'overflow_no' BB can branch directly to the false
+// successor of overflow, but that would add additional complexity so we leave
+// it for future work.
 bool CodeGenPrepare::optimizeMulWithOverflow(Instruction *I, bool IsSigned,
                                              ModifyDT &ModifiedDT) {
   // Check if target supports this optimization.
@@ -6456,8 +6458,7 @@ bool CodeGenPrepare::optimizeMulWithOverflow(Instruction *I, bool IsSigned,
   Value *RHS = I->getOperand(1);
   Type *Ty = LHS->getType();
   unsigned VTHalfBitWidth = Ty->getScalarSizeInBits() / 2;
-  IntegerType *LegalTy =
-      IntegerType::getIntNTy(I->getContext(), VTHalfBitWidth);
+  Type *LegalTy = Ty->getWithNewBitWidth(VTHalfBitWidth);
 
   // New BBs:
   std::string OriginalBlockName = I->getParent()->getName().str();
