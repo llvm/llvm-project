@@ -1223,13 +1223,17 @@ void ObjFile<ELFT>::initializeSymbols(const object::ELFFile<ELFT> &obj) {
 
     Symbol *sym = symbols[i];
     sym->isUsedInRegularObj = true;
-    if (LLVM_UNLIKELY(eSym.st_shndx == SHN_COMMON)) {
+
+    bool isLargeCommon = LLVM_UNLIKELY(eSym.st_shndx == SHN_AMD64_LCOMMON) &&
+                         ctx.arg.emachine == EM_X86_64;
+    if (LLVM_UNLIKELY(eSym.st_shndx == SHN_COMMON) || isLargeCommon) {
+
       if (value == 0 || value >= UINT32_MAX)
         Err(ctx) << this << ": common symbol '" << sym->getName()
                  << "' has invalid alignment: " << value;
       hasCommonSyms = true;
       sym->resolve(ctx, CommonSymbol{ctx, this, StringRef(), binding, stOther,
-                                     type, value, size});
+                                     type, value, size, isLargeCommon});
       continue;
     }
 
