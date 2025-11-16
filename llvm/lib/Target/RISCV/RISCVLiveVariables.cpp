@@ -399,10 +399,7 @@ void RISCVLiveVariables::markKills(MachineFunction &MF) {
     }
 
     for (MachineInstr &MI : reverse(*MBB)) {
-      for (MachineOperand &MO : MI.operands()) {
-        if (!MO.isReg())
-          continue;
-
+      for (MachineOperand &MO : MI.all_defs()) {
         Register Reg = MO.getReg();
         // Does not track physical registers pre-regalloc.
         if ((PreRegAlloc && Reg.isPhysical()) ||
@@ -413,20 +410,28 @@ void RISCVLiveVariables::markKills(MachineFunction &MF) {
                "Register not tracked");
         auto RegIdx = PreRegAlloc ? TrackedRegisters[Reg] : Reg.asMCReg().id();
 
-        if (MO.isDef()) {
-          KillSet.set(RegIdx);
+        KillSet.set(RegIdx);
 
-          // Also handle sub-registers for physical registers
-          if (!PreRegAlloc && Reg.isPhysical()) {
-            for (MCRegAliasIterator RA(Reg, TRI, true); RA.isValid(); ++RA)
-              KillSet.set(*RA);
-          }
-          continue;
+        // Also handle sub-registers for physical registers
+        if (!PreRegAlloc && Reg.isPhysical()) {
+          for (MCRegAliasIterator RA(Reg, TRI, true); RA.isValid(); ++RA)
+            KillSet.set(*RA);
         }
+      }
 
-        // Use.
+      for (MachineOperand &MO : MI.all_uses()) {
+        Register Reg = MO.getReg();
+        // Does not track physical registers pre-regalloc.
+        if ((PreRegAlloc && Reg.isPhysical()) ||
+            !isTrackableRegister(Reg, TRI, MRI))
+          continue;
+
+        assert(TrackedRegisters.find(Reg) != TrackedRegisters.end() &&
+               "Register not tracked");
+        auto RegIdx = PreRegAlloc ? TrackedRegisters[Reg] : Reg.asMCReg().id();
+
         if (KillSet[RegIdx]) {
-          if (!MO.isKill() && !MI.isPHI() && !MI.isCall())
+          if (!MO.isKill() && !MI.isPHI())
             MO.setIsKill(true);
           LLVM_DEBUG(dbgs() << "Marking kill of " << printReg(Reg, TRI)
                             << " at instruction: " << MI);
