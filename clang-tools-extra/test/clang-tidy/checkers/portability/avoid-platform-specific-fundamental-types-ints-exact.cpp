@@ -27,10 +27,12 @@ unsigned short global_unsigned_short = 10U;
 
 long global_long = 100L;
 // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: avoid using platform-dependent fundamental integer type 'long'; consider using 'int64_t' instead [portability-avoid-platform-specific-fundamental-types]
+// CHECK-MESSAGES: {{.*note: 'int64_t' suggested for compatibility with Unix, which uses 64-bit 'long'.*|^$}}
 // CHECK-FIXES: int64_t global_long = 100L;
 
 unsigned long global_unsigned_long = 100UL;
 // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: avoid using platform-dependent fundamental integer type 'unsigned long'; consider using 'uint64_t' instead [portability-avoid-platform-specific-fundamental-types]
+// CHECK-MESSAGES: {{.*note: 'uint64_t' suggested for compatibility with Unix, which uses 64-bit 'unsigned long'.*|^$}}
 // CHECK-FIXES: uint64_t global_unsigned_long = 100UL;
 
 long long global_long_long = 1000LL;
@@ -73,5 +75,6 @@ struct TestStruct {
     
     long member_long;
     // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: avoid using platform-dependent fundamental integer type 'long'; consider using 'int64_t' instead [portability-avoid-platform-specific-fundamental-types]
+    // CHECK-MESSAGES: {{.*note: 'int64_t' suggested for compatibility with Unix, which uses 64-bit 'long'.*|^$}}
     // CHECK-FIXES: int64_t member_long;
 };
