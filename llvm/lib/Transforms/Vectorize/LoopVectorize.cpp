@@ -4428,11 +4428,13 @@ VectorizationFactor LoopVectorizationPlanner::selectEpilogueVectorizationFactor(
   assert(!isa<SCEVCouldNotCompute>(TC) && "Trip count SCEV must be computable");
   const SCEV *KnownMinTC;
   bool ScalableTC = match(TC, m_scev_c_Mul(m_SCEV(KnownMinTC), m_SCEVVScale()));
+  bool ScalableRemIter = false;
   // Use versions of TC and VF in which both are either scalable or fixed.
-  if (ScalableTC == MainLoopVF.isScalable())
+  if (ScalableTC == MainLoopVF.isScalable()) {
+    ScalableRemIter = ScalableTC;
     RemainingIterations =
         SE.getURemExpr(TC, SE.getElementCount(TCType, MainLoopVF * IC));
-  else if (ScalableTC) {
+  } else if (ScalableTC) {
     const SCEV *EstimatedTC = SE.getMulExpr(
         KnownMinTC,
         SE.getConstant(TCType, CM.getVScaleForTuning().value_or(1)));
@@ -4455,15 +4457,6 @@ VectorizationFactor LoopVectorizationPlanner::selectEpilogueVectorizationFactor(
     LLVM_DEBUG(dbgs() << "LEV: Maximum Trip Count for Epilogue: "
                       << MaxTripCount << "\n");
   }
-  // Check if the RemainingIterations is scalable.
-  const SCEV *KnownMinRemIter = nullptr, *EstimatedRemIter = nullptr;
-  bool ScalableRemIter =
-      match(RemainingIterations,
-            m_scev_c_Mul(m_SCEV(KnownMinRemIter), m_SCEVVScale()));
-  if (ScalableRemIter)
-    EstimatedRemIter = SE.getMulExpr(
-        KnownMinRemIter,
-        SE.getConstant(TCType, CM.getVScaleForTuning().value_or(1)));
 
   auto SkipVF = [&](const SCEV *VF, const SCEV *RemIter) -> bool {
     return SE.isKnownPredicate(CmpInst::ICMP_UGT, VF, RemIter);
@@ -4485,21 +4478,21 @@ VectorizationFactor LoopVectorizationPlanner::selectEpilogueVectorizationFactor(
 
     // If NextVF is greater than the number of remaining iterations, the
     // epilogue loop would be dead. Skip such factors.
-    if (ScalableRemIter == NextVF.Width.isScalable()) {
-      if (SkipVF(SE.getElementCount(TCType, NextVF.Width), RemainingIterations))
+    // TODO: We should also consider comparing against scalable RemIter when
+    // SCEV be able to evaluate non-canonical vscale-based expressions.
+    if (!ScalableRemIter) {
+      // Handle the case where NextVF and RemainingIterations are in different
+      // numerical spaces.
+      if (NextVF.Width.isScalable()) {
+        ElementCount EstimatedRuntimeNextVF = ElementCount::getFixed(
+            estimateElementCount(NextVF.Width, CM.getVScaleForTuning()));
+        if (SkipVF(SE.getElementCount(TCType, EstimatedRuntimeNextVF),
+                   RemainingIterations))
+          continue;
+      } else if (SkipVF(SE.getElementCount(TCType, NextVF.Width),
+                        RemainingIterations))
         continue;
     }
-    // Handle the case where NextVF and RemainingIterations are in different
-    // numerical spaces.
-    else if (NextVF.Width.isScalable()) {
-      ElementCount EstimatedRuntimeNextVF = ElementCount::getFixed(
-          estimateElementCount(NextVF.Width, CM.getVScaleForTuning()));
-      if (SkipVF(SE.getElementCount(TCType, EstimatedRuntimeNextVF),
-                 RemainingIterations))
-        continue;
-    } else if (SkipVF(SE.getElementCount(TCType, NextVF.Width),
-                      EstimatedRemIter))
-      continue;
 
     if (Result.Width.isScalar() ||
         isMoreProfitable(NextVF, Result, MaxTripCount, !CM.foldTailByMasking(),
