@@ -229,7 +229,7 @@ New checks
 - New :doc:`misc-shadowed-namespace-function
   <clang-tidy/checks/misc/shadowed-namespace-function>` check.
 
-  FIXME: Write a short description.
+  Detects free functions in global namespace that shadow functions from other namespaces.
 
 - New :doc:`readability-redundant-parentheses
   <clang-tidy/checks/readability/redundant-parentheses>` check.

@@ -13,7 +13,7 @@
 
 namespace clang::tidy::misc {
 
-/// FIXME: Write a short description.
+/// Detects free functions in global namespace that shadow functions from other namespaces.
 ///
 /// For the user-facing documentation see:
 /// https://clang.llvm.org/extra/clang-tidy/checks/misc/shadowed-namespace-function.html
