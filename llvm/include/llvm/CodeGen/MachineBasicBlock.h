@@ -514,11 +514,6 @@ public:
   LLVM_ABI bool isLiveIn(MCRegister Reg,
                          LaneBitmask LaneMask = LaneBitmask::getAll()) const;
 
-  /// Return true if the specified register is live out (i.e. in the live in set
-  /// of a successor)
-  LLVM_ABI bool isLiveOut(MCRegister Reg,
-                          LaneBitmask LaneMask = LaneBitmask::getAll()) const;
-
   // Iteration support for live in sets.  These sets are kept in sorted
   // order by their register number.
   using livein_iterator = LiveInVector::const_iterator;

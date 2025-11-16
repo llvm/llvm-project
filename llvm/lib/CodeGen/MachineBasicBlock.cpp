@@ -639,13 +639,6 @@ bool MachineBasicBlock::isLiveIn(MCRegister Reg, LaneBitmask LaneMask) const {
   return I != livein_end() && (I->LaneMask & LaneMask).any();
 }
 
-bool MachineBasicBlock::isLiveOut(MCRegister Reg, LaneBitmask LaneMask) const {
-  for (MachineBasicBlock *S : successors())
-    if (S->isLiveIn(Reg, LaneMask))
-      return true;
-  return false;
-}
-
 void MachineBasicBlock::sortUniqueLiveIns() {
   llvm::sort(LiveIns,
              [](const RegisterMaskPair &LI0, const RegisterMaskPair &LI1) {
