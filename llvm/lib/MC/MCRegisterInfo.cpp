@@ -149,7 +149,7 @@ int64_t MCRegisterInfo::getDwarfRegNum(MCRegister Reg, bool isEH) const {
     return -1;
   DwarfLLVMRegPair Key = {Reg.id(), 0};
   const DwarfLLVMRegPair *I = std::lower_bound(M, M+Size, Key);
-  if (I == M+Size || I->FromReg != Reg)
+  if (I == M + Size || I->FromReg != Reg)
     return -1;
   // Consumers need to be able to detect -1 and -2, but at various points
   // the numbers move between unsigned and signed representations, as well as
@@ -203,9 +203,9 @@ int MCRegisterInfo::getCodeViewRegNum(MCRegister Reg) const {
     report_fatal_error("target does not implement codeview register mapping");
   const DenseMap<MCRegister, int>::const_iterator I = L2CVRegs.find(Reg);
   if (I == L2CVRegs.end())
-    report_fatal_error(
-        "unknown codeview register " +
-        (Reg.id() < getNumRegs() ? getName(Reg) : Twine(Reg.id())));
+    report_fatal_error("unknown codeview register " + (Reg.id() < getNumRegs()
+                                                           ? getName(Reg)
+                                                           : Twine(Reg.id())));
   return I->second;
 }
 
