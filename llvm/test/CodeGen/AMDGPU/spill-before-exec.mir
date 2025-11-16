@@ -4,7 +4,7 @@
 ---
 # Check that physreg candidate is not used since cannot be spilled in a block,
 # e.g. before exec mask preamble
-# CHECK: , cannot spill all interferences.
+# CHECK-NOT: , cannot spill all interferences.
 
 name:            foo
 tracksRegLiveness: true

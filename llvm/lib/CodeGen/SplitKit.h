@@ -89,6 +89,9 @@ public:
     return Res;
   }
 
+  /// Return true if we can split \pCurLI before \pMBB's prolog.
+  bool canSplitBeforeProlog(const LiveInterval &CurLI,
+                            const MachineBasicBlock &MBB);
 };
 
 /// SplitAnalysis - Analyze a LiveInterval, looking for live range splitting
@@ -246,6 +249,11 @@ public:
 
   SlotIndex getFirstSplitPoint(unsigned Num) {
     return IPA.getFirstInsertPoint(*MF.getBlockNumbered(Num));
+  }
+
+  bool canSplitBeforeProlog(unsigned Num) {
+    MachineBasicBlock *BB = MF.getBlockNumbered(Num);
+    return IPA.canSplitBeforeProlog(*CurLI, *BB);
   }
 };
 

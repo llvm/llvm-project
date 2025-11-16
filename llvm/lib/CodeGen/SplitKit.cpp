@@ -147,6 +147,34 @@ InsertPointAnalysis::getLastInsertPointIter(const LiveInterval &CurLI,
   return LIS.getInstructionFromIndex(LIP);
 }
 
+bool InsertPointAnalysis::canSplitBeforeProlog(const LiveInterval &CurLI,
+                                               const MachineBasicBlock &MBB) {
+  const TargetInstrInfo *TII = MBB.getParent()->getSubtarget().getInstrInfo();
+
+  for (auto &MI : MBB) {
+    if (MI.isPHI() || MI.isPosition() || MI.isDebugInstr() ||
+        MI.isPseudoProbe())
+      continue;
+
+    if (!TII->isBasicBlockPrologue(MI))
+      return true;
+
+    for (auto &MO : MI.operands()) {
+      if (!MO.isReg() || !MO.isDef() || !MO.getReg().isVirtual())
+        continue;
+
+      const MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
+      const TargetRegisterInfo *TRI = MRI.getTargetRegisterInfo();
+      const TargetRegisterClass *RC = MRI.getRegClass(MO.getReg());
+      const TargetRegisterClass *CurRC = MRI.getRegClass(CurLI.reg());
+      if (TRI->getCommonSubClass(RC, CurRC))
+        return false;
+    }
+  }
+
+  return true;
+}
+
 //===----------------------------------------------------------------------===//
 //                                 Split Analysis
 //===----------------------------------------------------------------------===//
