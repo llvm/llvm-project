@@ -133,10 +133,6 @@ INITIALIZE_PASS(RegAllocScoring, "regallocscoringpass",
 // Common ML Advisor declarations
 // ===================================
 namespace {
-// The model can only accept a specified number of opcodes and will error it if
-// fed an opcode it hasn't seen before. This constant sets the current cutoff.
-static const int OpcodeValueCutoff = 17716;
-
 // Most features are as described above, so we'll reuse this vector in defining
 // them.
 static const std::vector<int64_t> PerLiveRangeShape{1, NumberOfInterferences};
