@@ -598,6 +598,8 @@ void RISCVPassConfig::addPreEmitPass2() {
 void RISCVPassConfig::addMachineSSAOptimization() {
   addPass(createRISCVVectorPeepholePass());
   addPass(createRISCVFoldMemOffsetPass());
+  if (EnableRISCVLiveVariables)
+    addPass(createRISCVLiveVariablesPass(true));
 
   TargetPassConfig::addMachineSSAOptimization();
 
@@ -637,7 +639,7 @@ void RISCVPassConfig::addPostRegAlloc() {
     addPass(createRISCVRedundantCopyEliminationPass());
 
   if (EnableRISCVLiveVariables)
-    addPass(createRISCVLiveVariablesPass());
+    addPass(createRISCVLiveVariablesPass(false));
 }
 
 bool RISCVPassConfig::addILPOpts() {

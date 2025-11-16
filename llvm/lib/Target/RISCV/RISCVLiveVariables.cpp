@@ -21,6 +21,7 @@
 #include "RISCV.h"
 #include "RISCVInstrInfo.h"
 #include "RISCVSubtarget.h"
+#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/Statistic.h"
@@ -33,6 +34,8 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
+
+#include <unordered_map>
 #include <set>
 
 using namespace llvm;
@@ -42,6 +45,10 @@ using namespace llvm;
 
 STATISTIC(NumLiveRegsAtEntry, "Number of registers live at function entry");
 STATISTIC(NumLiveRegsTotal, "Total number of live registers across all blocks");
+
+static cl::opt<bool> UpdateKills("riscv-liveness-update-kills",
+                                 cl::desc("Update kill flags"), cl::init(false),
+                                 cl::Hidden);
 
 namespace {
 
@@ -67,14 +74,14 @@ class RISCVLiveVariables : public MachineFunctionPass {
 public:
   static char ID;
 
-  RISCVLiveVariables() : MachineFunctionPass(ID) {
+  RISCVLiveVariables(bool PreRegAlloc)
+      : MachineFunctionPass(ID), PreRegAlloc(PreRegAlloc) {
     initializeRISCVLiveVariablesPass(*PassRegistry::getPassRegistry());
   }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesAll();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -102,6 +109,9 @@ public:
 
   void verifyLiveness(MachineFunction &MF) const;
 
+  /// Mark operands that kill a register
+  void markKills(MachineFunction &MF);
+
 private:
   /// Compute local liveness information (Use and Def sets) for each block
   void computeLocalLiveness(MachineFunction &MF);
@@ -116,6 +126,13 @@ private:
   /// Check if a register is allocatable (relevant for liveness tracking)
   bool isTrackableRegister(Register Reg, const TargetRegisterInfo *TRI,
                            const MachineRegisterInfo *MRI) const;
+
+  bool PreRegAlloc;
+  unsigned RegCounter = 0;
+
+  // PreRA can have large number of registers and basic block
+  // level liveness may be expensive without a bitvector representation.
+  std::unordered_map<unsigned, unsigned> TrackedRegisters;
 
   /// Liveness information for each basic block
   DenseMap<const MachineBasicBlock *, LivenessInfo> BlockLiveness;
@@ -134,8 +151,8 @@ char RISCVLiveVariables::ID = 0;
 INITIALIZE_PASS(RISCVLiveVariables, DEBUG_TYPE, RISCV_LIVE_VARIABLES_NAME,
                 false, true)
 
-FunctionPass *llvm::createRISCVLiveVariablesPass() {
-  return new RISCVLiveVariables();
+FunctionPass *llvm::createRISCVLiveVariablesPass(bool PreRegAlloc) {
+  return new RISCVLiveVariables(PreRegAlloc);
 }
 
 bool RISCVLiveVariables::isTrackableRegister(
@@ -169,6 +186,8 @@ void RISCVLiveVariables::processInstruction(const MachineInstr &MI,
       continue;
 
     Register Reg = MO.getReg();
+
+    TrackedRegisters.insert(std::pair(Reg, RegCounter++));
 
     // Skip non-trackable registers
     if (!isTrackableRegister(Reg, TRI, MRI))
@@ -277,10 +296,7 @@ void RISCVLiveVariables::computeGlobalLiveness(MachineFunction &MF) {
     Changed = false;
     ++Iterations;
 
-    // Process blocks in **post-order** for better convergence
-    ReversePostOrderTraversal<MachineFunction *> RPOT(&MF);
-
-    for (MachineBasicBlock *MBB : RPOT) {
+    for (MachineBasicBlock *MBB : post_order(&MF)) {
       LivenessInfo &Info = BlockLiveness[MBB];
       std::set<Register> OldLiveIn = Info.LiveIn;
       std::set<Register> NewLiveOut;
@@ -368,6 +384,62 @@ void RISCVLiveVariables::verifyLiveness(MachineFunction &MF) const {
   }
 }
 
+void RISCVLiveVariables::markKills(MachineFunction &MF) {
+    auto KillSetSize = PreRegAlloc ? RegCounter : TRI->getNumRegs();
+    for (MachineBasicBlock *MBB : post_order(&MF)) {
+    // Set all the registers that are not live-out of the block.
+    // Since the global liveness is available (even though a bit conservative),
+    // this initialization is safe.
+    llvm::BitVector KillSet(KillSetSize, true);
+    LivenessInfo &Info = BlockLiveness[MBB];
+
+    for (Register Reg : Info.LiveOut) {
+      auto RegIdx = PreRegAlloc ? TrackedRegisters[Reg] : Reg.asMCReg().id();
+      KillSet.reset(RegIdx);
+    }
+
+    for (MachineInstr &MI : reverse(*MBB)) {
+      for (MachineOperand &MO : MI.operands()) {
+        if (!MO.isReg())
+          continue;
+
+        Register Reg = MO.getReg();
+        // Does not track physical registers pre-regalloc.
+        if ((PreRegAlloc && Reg.isPhysical()) || !isTrackableRegister(Reg, TRI, MRI))
+          continue;
+
+        assert(TrackedRegisters.find(Reg) != TrackedRegisters.end() &&
+               "Register not tracked");
+        auto RegIdx = PreRegAlloc ? TrackedRegisters[Reg] : Reg.asMCReg().id();
+
+        if (MO.isDef()) {
+          KillSet.set(RegIdx);
+
+          // Also handle sub-registers for physical registers
+          if (!PreRegAlloc && Reg.isPhysical()) {
+            for (MCRegAliasIterator RA(Reg, TRI, true); RA.isValid(); ++RA)
+              KillSet.set(*RA);
+          }
+          continue;
+        }
+
+        // Use.
+        if (KillSet[RegIdx]) {
+          if (!MO.isKill() && !MI.isPHI() && !MI.isCall())
+            MO.setIsKill(true);
+          LLVM_DEBUG(dbgs() << "Marking kill of " << printReg(Reg, TRI)
+                            << " at instruction: " << MI);
+          KillSet.reset(RegIdx);
+          if (Reg.isPhysical()) {
+            for (MCRegAliasIterator RA(Reg, TRI, true); RA.isValid(); ++RA)
+              KillSet.reset(*RA);
+          }
+        }
+      }
+    }
+  }
+}
+
 bool RISCVLiveVariables::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()) || MF.empty())
     return false;
@@ -395,6 +467,12 @@ bool RISCVLiveVariables::runOnMachineFunction(MachineFunction &MF) {
 
   // Step 2: Compute global liveness (LiveIn and LiveOut sets)
   computeGlobalLiveness(MF);
+
+  // TODO: Update live-in/live-out sets of MBBs
+
+  // Step 3: Mark kill flags on operands
+  if (UpdateKills)
+    markKills(MF);
 
   LLVM_DEBUG({
     dbgs() << "\n***** Final Liveness Information *****\n";
