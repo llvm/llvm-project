@@ -412,6 +412,16 @@ void CIRGenFunction::LexicalScope::emitImplicitReturn() {
   (void)emitReturn(localScope->endLoc);
 }
 
+cir::TryOp CIRGenFunction::LexicalScope::getClosestTryParent() {
+  LexicalScope *scope = this;
+  while (scope) {
+    if (scope->isTry())
+      return scope->getTry();
+    scope = scope->parentScope;
+  }
+  return nullptr;
+}
+
 void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
                                    cir::FuncOp fn, cir::FuncType funcType,
                                    FunctionArgList args, SourceLocation loc,
