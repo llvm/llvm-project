@@ -125,8 +125,10 @@ class TestVariableAnnotationsDisassembler(TestBase):
         target = self._create_target(obj)
 
         main_symbols = target.FindSymbols("main")
-        self.assertTrue(main_symbols.IsValid() and main_symbols.GetSize() > 0,
-                       "Could not find 'main' symbol")
+        self.assertTrue(
+            main_symbols.IsValid() and main_symbols.GetSize() > 0,
+            "Could not find 'main' symbol",
+        )
 
         main_symbol = main_symbols.GetContextAtIndex(0).GetSymbol()
         start_addr = main_symbol.GetStartAddress()
@@ -136,7 +138,9 @@ class TestVariableAnnotationsDisassembler(TestBase):
         self.assertGreater(instructions.GetSize(), 0, "No instructions read")
 
         if self.TraceOn():
-            print(f"\nTesting GetVariableAnnotations() API on {instructions.GetSize()} instructions")
+            print(
+                f"\nTesting GetVariableAnnotations() API on {instructions.GetSize()} instructions"
+            )
 
         expected_vars = ["argc", "argv", "i"]
         found_variables = set()
@@ -148,11 +152,16 @@ class TestVariableAnnotationsDisassembler(TestBase):
 
             annotations = inst.GetVariableAnnotations()
 
-            self.assertIsInstance(annotations, lldb.SBStructuredData,
-                                "GetVariableAnnotations should return SBStructuredData")
+            self.assertIsInstance(
+                annotations,
+                lldb.SBStructuredData,
+                "GetVariableAnnotations should return SBStructuredData",
+            )
 
-            self.assertTrue(annotations.GetSize() > 0,
-                            "GetVariableAnnotations should return non empty array")
+            self.assertTrue(
+                annotations.GetSize() > 0,
+                "GetVariableAnnotations should return non empty array",
+            )
 
             if annotations.GetSize() > 0:
                 # Validate each annotation.
@@ -160,38 +169,46 @@ class TestVariableAnnotationsDisassembler(TestBase):
                     ann = annotations.GetItemAtIndex(j)
                     self.assertTrue(ann.IsValid(), f"Invalid annotation at index {j}")
 
-                    self.assertEqual(ann.GetType(), lldb.eStructuredDataTypeDictionary,
-                                   "Each annotation should be a dictionary")
+                    self.assertEqual(
+                        ann.GetType(),
+                        lldb.eStructuredDataTypeDictionary,
+                        "Each annotation should be a dictionary",
+                    )
 
                     var_name_obj = ann.GetValueForKey("variable_name")
-                    self.assertTrue(var_name_obj.IsValid(),
-                                  "Missing 'variable_name' field")
+                    self.assertTrue(
+                        var_name_obj.IsValid(), "Missing 'variable_name' field"
+                    )
 
                     location_obj = ann.GetValueForKey("location_description")
-                    self.assertTrue(location_obj.IsValid(),
-                                  "Missing 'location_description' field")
+                    self.assertTrue(
+                        location_obj.IsValid(), "Missing 'location_description' field"
+                    )
 
                     is_live_obj = ann.GetValueForKey("is_live")
-                    self.assertTrue(is_live_obj.IsValid(),
-                                  "Missing 'is_live' field")
+                    self.assertTrue(is_live_obj.IsValid(), "Missing 'is_live' field")
 
                     start_addr_obj = ann.GetValueForKey("start_address")
-                    self.assertTrue(start_addr_obj.IsValid(),
-                                  "Missing 'start_address' field")
+                    self.assertTrue(
+                        start_addr_obj.IsValid(), "Missing 'start_address' field"
+                    )
 
                     end_addr_obj = ann.GetValueForKey("end_address")
-                    self.assertTrue(end_addr_obj.IsValid(),
-                                  "Missing 'end_address' field")
+                    self.assertTrue(
+                        end_addr_obj.IsValid(), "Missing 'end_address' field"
+                    )
 
                     register_kind_obj = ann.GetValueForKey("register_kind")
-                    self.assertTrue(register_kind_obj.IsValid(),
-                                  "Missing 'register_kind' field")
+                    self.assertTrue(
+                        register_kind_obj.IsValid(), "Missing 'register_kind' field"
+                    )
 
                     var_name = var_name_obj.GetStringValue(1024)
 
                     # Check for expected variables in this function.
-                    self.assertIn(var_name, expected_vars,
-                                f"Unexpected variable name: {var_name}")
+                    self.assertIn(
+                        var_name, expected_vars, f"Unexpected variable name: {var_name}"
+                    )
 
                     found_variables.add(var_name)
 
