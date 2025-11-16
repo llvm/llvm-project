@@ -14,7 +14,6 @@
 #include "polly/Options.h"
 #include "polly/ScopBuilder.h"
 #include "polly/ScopInfo.h"
-#include "polly/ScopPass.h"
 #include "polly/Support/GICHelper.h"
 #include "polly/Support/ISLOStream.h"
 #include "polly/Support/ISLTools.h"
@@ -1070,48 +1069,7 @@ static std::unique_ptr<ForwardOpTreeImpl> runForwardOpTreeImpl(Scop &S,
 
   return Impl;
 }
-
-static PreservedAnalyses
-runForwardOpTreeUsingNPM(Scop &S, ScopAnalysisManager &SAM,
-                         ScopStandardAnalysisResults &SAR, SPMUpdater &U,
-                         raw_ostream *OS) {
-  LoopInfo &LI = SAR.LI;
-
-  std::unique_ptr<ForwardOpTreeImpl> Impl = runForwardOpTreeImpl(S, LI);
-  if (OS) {
-    *OS << "Printing analysis 'Polly - Forward operand tree' for region: '"
-        << S.getName() << "' in function '" << S.getFunction().getName()
-        << "':\n";
-    if (Impl) {
-      assert(Impl->getScop() == &S);
-
-      Impl->print(*OS);
-    }
-  }
-
-  if (!Impl->isModified())
-    return PreservedAnalyses::all();
-
-  PreservedAnalyses PA;
-  PA.preserveSet<AllAnalysesOn<Module>>();
-  PA.preserveSet<AllAnalysesOn<Function>>();
-  PA.preserveSet<AllAnalysesOn<Loop>>();
-  return PA;
-}
 } // namespace
-
-llvm::PreservedAnalyses ForwardOpTreePass::run(Scop &S,
-                                               ScopAnalysisManager &SAM,
-                                               ScopStandardAnalysisResults &SAR,
-                                               SPMUpdater &U) {
-  return runForwardOpTreeUsingNPM(S, SAM, SAR, U, nullptr);
-}
-
-llvm::PreservedAnalyses
-ForwardOpTreePrinterPass::run(Scop &S, ScopAnalysisManager &SAM,
-                              ScopStandardAnalysisResults &SAR, SPMUpdater &U) {
-  return runForwardOpTreeUsingNPM(S, SAM, SAR, U, &OS);
-}
 
 bool polly::runForwardOpTree(Scop &S) {
   LoopInfo &LI = *S.getLI();

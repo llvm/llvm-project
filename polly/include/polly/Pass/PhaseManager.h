@@ -17,14 +17,16 @@
 
 #include "polly/DependenceInfo.h"
 #include "llvm/ADT/Bitset.h"
+#include "llvm/IR/PassManager.h"
 #include <stddef.h>
 
 namespace llvm {
-class Function;
-class Error;
+template <typename EnumT> struct enum_iteration_traits;
 } // namespace llvm
 
 namespace polly {
+using llvm::Function;
+using llvm::StringRef;
 
 /// Phases (in execution order) within the Polly pass.
 enum class PassPhase {

@@ -17,7 +17,6 @@
 #include "polly/DeLICM.h"
 #include "polly/Options.h"
 #include "polly/ScopInfo.h"
-#include "polly/ScopPass.h"
 #include "polly/Support/GICHelper.h"
 #include "polly/Support/ISLOStream.h"
 #include "polly/Support/ISLTools.h"
@@ -1394,49 +1393,7 @@ static std::unique_ptr<DeLICMImpl> runDeLICMImpl(Scop &S, LoopInfo &LI) {
 
   return Impl;
 }
-
-static PreservedAnalyses runDeLICMUsingNPM(Scop &S, ScopAnalysisManager &SAM,
-                                           ScopStandardAnalysisResults &SAR,
-                                           SPMUpdater &U, raw_ostream *OS) {
-  LoopInfo &LI = SAR.LI;
-  std::unique_ptr<DeLICMImpl> Impl = runDeLICMImpl(S, LI);
-
-  if (OS) {
-    *OS << "Printing analysis 'Polly - DeLICM/DePRE' for region: '"
-        << S.getName() << "' in function '" << S.getFunction().getName()
-        << "':\n";
-    if (Impl) {
-      assert(Impl->getScop() == &S);
-
-      *OS << "DeLICM result:\n";
-      Impl->print(*OS);
-    }
-  }
-
-  if (!Impl->isModified())
-    return PreservedAnalyses::all();
-
-  PreservedAnalyses PA;
-  PA.preserveSet<AllAnalysesOn<Module>>();
-  PA.preserveSet<AllAnalysesOn<Function>>();
-  PA.preserveSet<AllAnalysesOn<Loop>>();
-  return PA;
-}
 } // anonymous namespace
-
-llvm::PreservedAnalyses polly::DeLICMPass::run(Scop &S,
-                                               ScopAnalysisManager &SAM,
-                                               ScopStandardAnalysisResults &SAR,
-                                               SPMUpdater &U) {
-  return runDeLICMUsingNPM(S, SAM, SAR, U, nullptr);
-}
-
-llvm::PreservedAnalyses DeLICMPrinterPass::run(Scop &S,
-                                               ScopAnalysisManager &SAM,
-                                               ScopStandardAnalysisResults &SAR,
-                                               SPMUpdater &U) {
-  return runDeLICMUsingNPM(S, SAM, SAR, U, &OS);
-}
 
 bool polly::isConflicting(
     isl::union_set ExistingOccupied, isl::union_set ExistingUnused,

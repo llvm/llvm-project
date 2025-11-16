@@ -14,7 +14,6 @@
 #include "polly/DependenceInfo.h"
 #include "polly/Options.h"
 #include "polly/ScopInfo.h"
-#include "polly/ScopPass.h"
 #include "polly/Support/ISLTools.h"
 #include "polly/Support/ScopLocation.h"
 #include "llvm/ADT/Statistic.h"
@@ -714,32 +713,6 @@ static bool importScop(Scop &S, const Dependences &D, const DataLayout &DL,
   if (!Success)
     return false;
   return true;
-}
-
-PreservedAnalyses JSONExportPass::run(Scop &S, ScopAnalysisManager &SAM,
-                                      ScopStandardAnalysisResults &SAR,
-                                      SPMUpdater &) {
-  exportScop(S);
-  return PreservedAnalyses::all();
-}
-
-PreservedAnalyses JSONImportPass::run(Scop &S, ScopAnalysisManager &SAM,
-                                      ScopStandardAnalysisResults &SAR,
-                                      SPMUpdater &) {
-  const Dependences &D =
-      SAM.getResult<DependenceAnalysis>(S, SAR).getDependences(
-          Dependences::AL_Statement);
-  const DataLayout &DL = S.getFunction().getParent()->getDataLayout();
-
-  if (!importScop(S, D, DL))
-    report_fatal_error("Tried to import a malformed jscop file.");
-
-  // This invalidates all analyses on Scop.
-  PreservedAnalyses PA;
-  PA.preserveSet<AllAnalysesOn<Module>>();
-  PA.preserveSet<AllAnalysesOn<Function>>();
-  PA.preserveSet<AllAnalysesOn<Loop>>();
-  return PA;
 }
 
 void polly::runImportJSON(Scop &S, DependenceAnalysis::Result &DA) {
