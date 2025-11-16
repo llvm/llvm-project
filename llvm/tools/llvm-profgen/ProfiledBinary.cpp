@@ -473,8 +473,12 @@ void ProfiledBinary::decodePseudoProbe(const ObjectFile *Obj) {
       GuidFilter.insert(Function::getGUIDAssumingExternalLinkage(F->FuncName));
       for (auto &Range : F->Ranges) {
         auto GUIDs = StartAddrToSymMap.equal_range(Range.first);
-        for (const auto &[StartAddr, Func] : make_range(GUIDs))
+        for (const auto &[StartAddr, Func] : make_range(GUIDs)) {
           FuncStartAddresses[Func] = StartAddr;
+          // Function name may be changed when symbol table is loaded. Adding
+          // back the original GUID if possible
+          GuidFilter.insert(Func);
+        }
       }
     }
   }
@@ -865,9 +869,11 @@ void ProfiledBinary::loadSymbolsFromSymtab(const ObjectFile *Obj) {
     const uint64_t EndAddr = StartAddr + Size;
     const StringRef SymName =
         FunctionSamples::getCanonicalFnName(Name, Suffixes);
+    assert(StartAddr < EndAddr && StartAddr >= getPreferredBaseAddress());
 
     auto Range = findFuncRange(StartAddr);
     if (!Range) {
+      assert(findFuncRange(EndAddr - 1) == nullptr);
       // Function from symbol table not found previously in DWARF, store ranges.
       auto Ret = BinaryFunctions.emplace(SymName, BinaryFunction());
       auto &Func = Ret.first->second;
