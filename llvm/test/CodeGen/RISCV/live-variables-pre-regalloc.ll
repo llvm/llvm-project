@@ -1,8 +1,29 @@
-; RUN: llc -mtriple riscv64 -mattr=+d -riscv-enable-live-variables --stop-after=riscv-live-variables -riscv-liveness-update-kills < %s | FileCheck %s
+; RUN: llc -mtriple riscv64 -mattr=+d -riscv-enable-live-variables \
+; RUN: --stop-after=riscv-live-variables -riscv-liveness-update-kills < %s | FileCheck %s
+
+; RUN: llc -mtriple riscv64 -mattr=+d -riscv-enable-live-variables \
+; RUN: -riscv-liveness-update-kills < %s | FileCheck --check-prefix=CHECK-LICM %s
 
 ; Issue: #166141 Pessimistic MachineLICM due to missing liveness info.
 
-; CHECK: %42:fpr64 = nofpexcept FMUL_D killed %2, killed %41, 7, implicit $frm
+; Check that live variable analysis correctly marks %41 as kill
+; CHECK:  bb.2.if:
+; CHECK:    successors: %bb.3(0x80000000)
+;
+; CHECK:    %40:gpr = LUI target-flags(riscv-hi) %const.0
+; CHECK:    %41:fpr64 = FLD killed %40, target-flags(riscv-lo) %const.0 :: (load (s64) from constant-pool)
+; CHECK:    %42:fpr64 = nofpexcept FMUL_D killed %2, killed %41, 7, implicit $frm
+; CHECK:    FSD killed %42, %1, 0 :: (store (s64) into %ir.lsr.iv1)
+
+; Check that the loop invariant `fld` is hoisted out of the loop.
+; CHECK-LICM: # %bb.0:
+; CHECK-LICM:        lui     a1, %hi(.LCPI0_0)
+; CHECK-LICM:        fld     fa5, %lo(.LCPI0_0)(a1)
+; CHECK-LICM:        lui     a1, 2
+; CHECK-LICM:        add     a1, a0, a1
+; CHECK-LICM:        fmv.d.x fa4, zero
+; CHECK-LICM:        j       .LBB0_2
+; CHECK-LICM: .LBB0_1:
 
 define void @f(ptr %p) {
 entry:
