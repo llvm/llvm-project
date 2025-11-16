@@ -72,14 +72,14 @@ void ShadowedNamespaceFunctionCheck::check(
   // Generate warning message
   std::string NamespaceName = ShadowedNamespace->getNameAsString();
   auto Diag = diag(Func->getLocation(), 
-                   "free function %0 shadows %1::%2")
+                   "free function %0 shadows '%1::%2'")
               << Func->getDeclName() 
               << NamespaceName 
-              << ShadowedFunc->getDeclName();
+              << ShadowedFunc->getDeclName().getAsString();
 
   // Generate fixit hint to add namespace qualification
   SourceLocation NameLoc = Func->getLocation();
-  if (NameLoc.isValid()) {
+  if (NameLoc.isValid() && !Func->getPreviousDecl()) {
     std::string Fix = NamespaceName + "::";
     Diag << FixItHint::CreateInsertion(NameLoc, Fix);
   }
