@@ -10,11 +10,9 @@
 // The pass computes liveness information for virtual and physical registers
 // in RISC-V machine functions, optimized for RV64 (64-bit RISC-V architecture).
 //
-// The analysis performs a backward dataflow analysis to compute:
-// - Live-in sets: Registers that are live at the entry of a basic block
-// - Live-out sets: Registers that are live at the exit of a basic block
-// - Kill points: Instructions where a register's last use occurs
-// - Def points: Instructions where a register is defined
+// The analysis performs a backward dataflow analysis to compute
+// liveness information. Also updates the kill flags on register operands.
+// There is also a verification step to ensure consistency with MBB live-ins.
 //
 //===----------------------------------------------------------------------===//
 
@@ -49,6 +47,10 @@ STATISTIC(NumLiveRegsTotal, "Total number of live registers across all blocks");
 static cl::opt<bool> UpdateKills("riscv-liveness-update-kills",
                                  cl::desc("Update kill flags"), cl::init(false),
                                  cl::Hidden);
+
+static cl::opt<unsigned> MaxVRegs("riscv-liveness-max-vregs",
+                                  cl::desc("Maximum VRegs to track"),
+                                  cl::init(1024), cl::Hidden);
 
 namespace {
 
@@ -158,21 +160,16 @@ FunctionPass *llvm::createRISCVLiveVariablesPass(bool PreRegAlloc) {
 bool RISCVLiveVariables::isTrackableRegister(
     Register Reg, const TargetRegisterInfo *TRI,
     const MachineRegisterInfo *MRI) const {
-  // Track virtual registers
+  // Track all virtual registers but only allocatable physical registers.
+  // 1. General purpose registers (X0-X31)
+  // 2. Floating point registers (F0-F31)
+  // 3. Vector registers if present
+
   if (Reg.isVirtual())
     return true;
 
-  // For physical registers, only track allocatable ones
-  if (Reg.isPhysical()) {
-    // Check if register is allocatable
-    if (!TRI->isInAllocatableClass(Reg))
-      return false;
-
-    // Track general purpose registers (X0-X31)
-    // Track floating point registers (F0-F31)
-    // Track vector registers for RVV if present
-    return true;
-  }
+  if (Reg.isPhysical())
+    return TRI->isInAllocatableClass(Reg);
 
   return false;
 }
@@ -194,8 +191,7 @@ void RISCVLiveVariables::processInstruction(const MachineInstr &MI,
       continue;
 
     if (MO.isUse()) {
-      // This is a use - only add to Use set if not already defined in this
-      // block
+      // Only add to Use set if not already defined in this block.
       if (Info.Gen.find(Reg) == Info.Gen.end()) {
         Info.Use.insert(Reg);
 
@@ -477,7 +473,7 @@ bool RISCVLiveVariables::runOnMachineFunction(MachineFunction &MF) {
   // TODO: Update live-in/live-out sets of MBBs
 
   // Step 3: Mark kill flags on operands
-  if (UpdateKills)
+  if (UpdateKills && MaxVRegs >= RegCounter)
     markKills(MF);
 
   LLVM_DEBUG({
