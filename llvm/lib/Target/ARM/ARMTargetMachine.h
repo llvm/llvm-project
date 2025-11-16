@@ -86,6 +86,15 @@ public:
            TargetTriple.isOSWindows() || TargetABI == ARM::ARM_ABI_AAPCS16;
   }
 
+  bool isROPI() const {
+    return getRelocationModel() == Reloc::ROPI ||
+           getRelocationModel() == Reloc::ROPI_RWPI;
+  }
+  bool isRWPI() const {
+    return getRelocationModel() == Reloc::RWPI ||
+           getRelocationModel() == Reloc::ROPI_RWPI;
+  }
+
   bool targetSchedulesPostRAScheduling() const override { return true; };
 
   MachineFunctionInfo *

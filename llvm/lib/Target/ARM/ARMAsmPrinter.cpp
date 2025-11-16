@@ -51,8 +51,8 @@ using namespace llvm;
 
 ARMAsmPrinter::ARMAsmPrinter(TargetMachine &TM,
                              std::unique_ptr<MCStreamer> Streamer)
-    : AsmPrinter(TM, std::move(Streamer), ID), Subtarget(nullptr), AFI(nullptr),
-      MCP(nullptr), InConstantPool(false), OptimizationGoals(-1) {}
+    : AsmPrinter(TM, std::move(Streamer), ID), AFI(nullptr), MCP(nullptr),
+      InConstantPool(false), OptimizationGoals(-1) {}
 
 const ARMBaseTargetMachine &ARMAsmPrinter::getTM() const {
   return static_cast<const ARMBaseTargetMachine &>(TM);
@@ -116,7 +116,6 @@ void ARMAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
 bool ARMAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   AFI = MF.getInfo<ARMFunctionInfo>();
   MCP = MF.getConstantPool();
-  Subtarget = &MF.getSubtarget<ARMSubtarget>();
 
   SetupMachineFunction(MF);
   const Function &F = MF.getFunction();
@@ -154,7 +153,7 @@ bool ARMAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   else if (OptimizationGoals != (int)OptimizationGoal) // conflicting goals
     OptimizationGoals = 0;
 
-  if (Subtarget->isTargetCOFF()) {
+  if (TM.getTargetTriple().isOSBinFormatCOFF()) {
     bool Local = F.hasLocalLinkage();
     COFF::SymbolStorageClass Scl =
         Local ? COFF::IMAGE_SYM_CLASS_STATIC : COFF::IMAGE_SYM_CLASS_EXTERNAL;
@@ -260,8 +259,8 @@ void ARMAsmPrinter::printOperand(const MachineInstr *MI, int OpNum,
     break;
   }
   case MachineOperand::MO_ConstantPoolIndex:
-    if (Subtarget->genExecuteOnly())
-      llvm_unreachable("execute-only should not generate constant pools");
+    assert(!MF->getSubtarget<ARMSubtarget>().genExecuteOnly() &&
+           "execute-only should not generate constant pools");
     GetCPISymbol(MO.getIndex())->print(O, MAI);
     break;
   }
@@ -680,14 +679,14 @@ void ARMAsmPrinter::emitAttributes() {
   if (isPositionIndependent()) {
     ATS.emitAttribute(ARMBuildAttrs::ABI_PCS_RW_data,
                       ARMBuildAttrs::AddressRWPCRel);
-  } else if (STI.isRWPI()) {
+  } else if (getTM().isRWPI()) {
     // RWPI specific attributes.
     ATS.emitAttribute(ARMBuildAttrs::ABI_PCS_RW_data,
                       ARMBuildAttrs::AddressRWSBRel);
   }
 
   // RO data addressing.
-  if (isPositionIndependent() || STI.isROPI()) {
+  if (isPositionIndependent() || getTM().isROPI()) {
     ATS.emitAttribute(ARMBuildAttrs::ABI_PCS_RO_data,
                       ARMBuildAttrs::AddressROPCRel);
   }
@@ -833,7 +832,7 @@ void ARMAsmPrinter::emitAttributes() {
   }
 
   // We currently do not support using R9 as the TLS pointer.
-  if (STI.isRWPI())
+  if (getTM().isRWPI())
     ATS.emitAttribute(ARMBuildAttrs::ABI_PCS_R9_use,
                       ARMBuildAttrs::R9IsSB);
   else if (STI.isR9Reserved())
@@ -1048,7 +1047,7 @@ void ARMAsmPrinter::emitJumpTableAddrs(const MachineInstr *MI) {
     //    .word (LBB1 - LJTI_0_0)
     const MCExpr *Expr = MCSymbolRefExpr::create(MBB->getSymbol(), OutContext);
 
-    if (isPositionIndependent() || Subtarget->isROPI())
+    if (isPositionIndependent() || getTM().isROPI())
       Expr = MCBinaryExpr::createSub(Expr, MCSymbolRefExpr::create(JTISymbol,
                                                                    OutContext),
                                      OutContext);
@@ -1097,7 +1096,8 @@ void ARMAsmPrinter::emitJumpTableTBInst(const MachineInstr *MI,
   const MachineOperand &MO1 = MI->getOperand(1);
   unsigned JTI = MO1.getIndex();
 
-  if (Subtarget->isThumb1Only())
+  const ARMSubtarget &STI = MF->getSubtarget<ARMSubtarget>();
+  if (STI.isThumb1Only())
     emitAlignment(Align(4));
 
   MCSymbol *JTISymbol = GetARMJTIPICJumpTableLabel(JTI);
@@ -1905,6 +1905,7 @@ void ARMAsmPrinter::emitInstruction(const MachineInstr *MI) {
   ARM_MC::verifyInstructionPredicates(MI->getOpcode(),
                                       getSubtargetInfo().getFeatureBits());
 
+  const ARMSubtarget &STI = MF->getSubtarget<ARMSubtarget>();
   const DataLayout &DL = getDataLayout();
   MCTargetStreamer &TS = *OutStreamer->getTargetStreamer();
   ARMTargetStreamer &ATS = static_cast<ARMTargetStreamer &>(TS);
@@ -1916,8 +1917,8 @@ void ARMAsmPrinter::emitInstruction(const MachineInstr *MI) {
   }
 
   // Emit unwinding stuff for frame-related instructions
-  if (Subtarget->isTargetEHABICompatible() &&
-       MI->getFlag(MachineInstr::FrameSetup))
+  if (TM.getTargetTriple().isTargetEHABICompatible() &&
+      MI->getFlag(MachineInstr::FrameSetup))
     EmitUnwindingInstruction(MI);
 
   // Do any auto-generated pseudo lowerings.
@@ -1983,14 +1984,13 @@ void ARMAsmPrinter::emitInstruction(const MachineInstr *MI) {
       // Add 's' bit operand (always reg0 for this)
       .addReg(0));
 
-    assert(Subtarget->hasV4TOps());
-    EmitToStreamer(*OutStreamer, MCInstBuilder(ARM::BX)
-      .addReg(MI->getOperand(0).getReg()));
+    assert(STI.hasV4TOps() && "Expected V4TOps for BX call");
+    EmitToStreamer(*OutStreamer,
+                   MCInstBuilder(ARM::BX).addReg(MI->getOperand(0).getReg()));
     return;
   }
   case ARM::tBX_CALL: {
-    if (Subtarget->hasV5TOps())
-      llvm_unreachable("Expected BLX to be selected for v5t+");
+    assert(!STI.hasV5TOps() && "Expected BLX to be selected for v5t+");
 
     // On ARM v4t, when doing a call from thumb mode, we need to ensure
     // that the saved lr has its LSB set correctly (the arch doesn't
@@ -2279,8 +2279,8 @@ void ARMAsmPrinter::emitInstruction(const MachineInstr *MI) {
     return;
   }
   case ARM::CONSTPOOL_ENTRY: {
-    if (Subtarget->genExecuteOnly())
-      llvm_unreachable("execute-only should not generate constant pools");
+    assert(!STI.genExecuteOnly() &&
+           "execute-only should not generate constant pools");
 
     /// CONSTPOOL_ENTRY - This instruction represents a floating constant pool
     /// in the function.  The first operand is the ID# for this instruction, the
@@ -2486,7 +2486,7 @@ void ARMAsmPrinter::emitInstruction(const MachineInstr *MI) {
   case ARM::TRAP: {
     // Non-Darwin binutils don't yet support the "trap" mnemonic.
     // FIXME: Remove this special case when they do.
-    if (!Subtarget->isTargetMachO()) {
+    if (!TM.getTargetTriple().isOSBinFormatMachO()) {
       uint32_t Val = 0xe7ffdefeUL;
       OutStreamer->AddComment("trap");
       ATS.emitInst(Val);
@@ -2497,7 +2497,7 @@ void ARMAsmPrinter::emitInstruction(const MachineInstr *MI) {
   case ARM::tTRAP: {
     // Non-Darwin binutils don't yet support the "trap" mnemonic.
     // FIXME: Remove this special case when they do.
-    if (!Subtarget->isTargetMachO()) {
+    if (!TM.getTargetTriple().isOSBinFormatMachO()) {
       uint16_t Val = 0xdefe;
       OutStreamer->AddComment("trap");
       ATS.emitInst(Val, 'n');
@@ -2657,9 +2657,6 @@ void ARMAsmPrinter::emitInstruction(const MachineInstr *MI) {
       .addImm(ARMCC::AL)
       .addReg(0));
 
-    const MachineFunction &MF = *MI->getParent()->getParent();
-    const ARMSubtarget &STI = MF.getSubtarget<ARMSubtarget>();
-
     if (STI.isTargetDarwin() || STI.isTargetWindows()) {
       // These platforms always use the same frame register
       EmitToStreamer(*OutStreamer, MCInstBuilder(ARM::LDRi12)
@@ -2688,7 +2685,7 @@ void ARMAsmPrinter::emitInstruction(const MachineInstr *MI) {
         .addReg(0));
     }
 
-    assert(Subtarget->hasV4TOps());
+    assert(STI.hasV4TOps());
     EmitToStreamer(*OutStreamer, MCInstBuilder(ARM::BX)
       .addReg(ScratchReg)
       // Predicate.
@@ -2704,9 +2701,6 @@ void ARMAsmPrinter::emitInstruction(const MachineInstr *MI) {
     // bx $scratch
     Register SrcReg = MI->getOperand(0).getReg();
     Register ScratchReg = MI->getOperand(1).getReg();
-
-    const MachineFunction &MF = *MI->getParent()->getParent();
-    const ARMSubtarget &STI = MF.getSubtarget<ARMSubtarget>();
 
     EmitToStreamer(*OutStreamer, MCInstBuilder(ARM::tLDRi)
       .addReg(ScratchReg)
