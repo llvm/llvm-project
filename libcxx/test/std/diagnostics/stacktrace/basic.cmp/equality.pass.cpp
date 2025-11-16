@@ -21,9 +21,9 @@
 
 // Call chain is: main -> c -> b -> a -> stacktrace::current;
 // we're only checking a, b, c in the returned stacktrace, so use max_depth of 3.
-TEST_NOINLINE TEST_NO_TAIL_CALLS std::stacktrace a(size_t skip = 0) { return std::stacktrace::current(skip, 3); }
-TEST_NOINLINE TEST_NO_TAIL_CALLS std::stacktrace b(size_t skip = 0) { return a(skip); }
-TEST_NOINLINE TEST_NO_TAIL_CALLS std::stacktrace c(size_t skip = 0) { return b(skip); }
+TEST_NO_TAIL_CALLS TEST_NOINLINE std::stacktrace a(size_t skip = 0) { return std::stacktrace::current(skip, 3); }
+TEST_NO_TAIL_CALLS TEST_NOINLINE std::stacktrace b(size_t skip = 0) { return a(skip); }
+TEST_NO_TAIL_CALLS TEST_NOINLINE std::stacktrace c(size_t skip = 0) { return b(skip); }
 
 int main(int, char**) {
   std::stacktrace st0;

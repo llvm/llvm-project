@@ -22,10 +22,11 @@ namespace std {
 
 #include <cassert>
 #include <stacktrace>
+#include "test_macros.h"
 
 namespace {
-std::stacktrace_entry func1() { return std::stacktrace::current()[0]; }
-std::stacktrace_entry func2() { return std::stacktrace::current()[0]; }
+TEST_NO_TAIL_CALLS TEST_NOINLINE std::stacktrace_entry func1() { return std::stacktrace::current()[0]; }
+TEST_NO_TAIL_CALLS TEST_NOINLINE std::stacktrace_entry func2() { return std::stacktrace::current()[0]; }
 } // namespace
 
 int main(int, char**) {

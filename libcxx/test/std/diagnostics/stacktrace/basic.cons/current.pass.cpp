@@ -27,6 +27,8 @@
 #include <cassert>
 #include <cstdint>
 #include <stacktrace>
+#include <vector>
+
 #include "test_macros.h"
 
 // These let us produce dummy functions with distinct addresses to build test stacks.
@@ -34,13 +36,13 @@
 // therefore the stacktrace built in `a` should contain, starting at the top,
 // `a`, `b`, `c` (followed by `main`, `_start` on some platforms, and so on).
 
-TEST_NOINLINE TEST_NO_TAIL_CALLS std::stacktrace a(size_t skip = 0, size_t max_depth = 99) {
+TEST_NO_TAIL_CALLS TEST_NOINLINE std::stacktrace a(size_t skip = 0, size_t max_depth = 99) {
   return std::stacktrace::current(skip, max_depth);
 }
-TEST_NOINLINE TEST_NO_TAIL_CALLS std::stacktrace b(size_t skip = 0, size_t max_depth = 99) {
+TEST_NO_TAIL_CALLS TEST_NOINLINE std::stacktrace b(size_t skip = 0, size_t max_depth = 99) {
   return a(skip, max_depth);
 }
-TEST_NOINLINE TEST_NO_TAIL_CALLS std::stacktrace c(size_t skip = 0, size_t max_depth = 99) {
+TEST_NO_TAIL_CALLS TEST_NOINLINE std::stacktrace c(size_t skip = 0, size_t max_depth = 99) {
   return b(skip, max_depth);
 }
 
@@ -60,8 +62,6 @@ void expect_trace(const std::stacktrace& st, std::vector<uintptr_t> const& expec
 }
 
 int main(int, char**) {
-  using vec = std::vector<uintptr_t>;
-
   // All overloads are noexcept
   static_assert(noexcept(std::stacktrace::current()));
   static_assert(noexcept(std::stacktrace::current({})));
@@ -72,17 +72,17 @@ int main(int, char**) {
   // skip == 0 yields top frames a, b, c (we ignore other frames).
   // skip removes that many top frames; max_depth caps the number of frames returned.
 
-  expect_trace(c(0, 3), vec{_a, _b, _c});
-  expect_trace(c(0, 2), vec{_a, _b});
-  expect_trace(c(0, 1), vec{_a});
-  expect_trace(c(0, 0), vec{});
+  expect_trace(c(0, 3), {_a, _b, _c});
+  expect_trace(c(0, 2), {_a, _b});
+  expect_trace(c(0, 1), {_a});
+  expect_trace(c(0, 0), {});
 
-  expect_trace(c(1, 2), vec{_b, _c});
-  expect_trace(c(1, 1), vec{_b});
-  expect_trace(c(1, 0), vec{});
+  expect_trace(c(1, 2), {_b, _c});
+  expect_trace(c(1, 1), {_b});
+  expect_trace(c(1, 0), {});
 
-  expect_trace(c(2, 1), vec{_c});
-  expect_trace(c(2, 0), vec{});
+  expect_trace(c(2, 1), {_c});
+  expect_trace(c(2, 0), {});
 
   return 0;
 }
