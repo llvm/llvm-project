@@ -104,6 +104,10 @@ void ARMSelectionDAGInfo::verifyTargetNode(const SelectionDAG &DAG,
     // invalid number of operands; expected 6, got 5
   case ARMISD::MEMCPY:
     // invalid number of operands; expected 5, got 4
+  case ARMISD::VMOVRRD:
+    // operand #0 must have type f64, but has type v1i64/v4f16/v8i8
+  case ARMISD::VMOVIMM:
+    // operand #0 must have type i32, but has type i16
     return;
   }
 
