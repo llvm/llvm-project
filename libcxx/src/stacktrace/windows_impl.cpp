@@ -19,10 +19,8 @@
 #  include <cstring>
 #  include <mutex>
 
-#  if defined(_MSC_VER)
-#    pragma comment(lib, "dbghelp")
-#    pragma comment(lib, "psapi")
-#  endif
+#  pragma comment(lib, "dbghelp")
+#  pragma comment(lib, "psapi")
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __stacktrace {
