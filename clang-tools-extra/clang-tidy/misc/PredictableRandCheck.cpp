@@ -6,22 +6,22 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "LimitedRandomnessCheck.h"
+#include "PredictableRandCheck.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
 using namespace clang::ast_matchers;
 
-namespace clang::tidy::cert {
+namespace clang::tidy::misc {
 
-void LimitedRandomnessCheck::registerMatchers(MatchFinder *Finder) {
+void PredictableRandCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(callExpr(callee(functionDecl(namedDecl(hasName("::rand")),
                                                   parameterCountIs(0))))
                          .bind("randomGenerator"),
                      this);
 }
 
-void LimitedRandomnessCheck::check(const MatchFinder::MatchResult &Result) {
+void PredictableRandCheck::check(const MatchFinder::MatchResult &Result) {
   std::string Msg;
   if (getLangOpts().CPlusPlus)
     Msg = "; use C++11 random library instead";
@@ -30,4 +30,4 @@ void LimitedRandomnessCheck::check(const MatchFinder::MatchResult &Result) {
   diag(MatchedDecl->getBeginLoc(), "rand() has limited randomness" + Msg);
 }
 
-} // namespace clang::tidy::cert
+} // namespace clang::tidy::misc
