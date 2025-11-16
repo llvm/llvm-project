@@ -27,17 +27,22 @@
 #include <cassert>
 #include <cstdint>
 #include <stacktrace>
+#include "test_macros.h"
 
 // These let us produce dummy functions with distinct addresses to build test stacks.
 // `main` calls `c`, which calls `b`, which calls `a`, which calls `current`;
 // therefore the stacktrace built in `a` should contain, starting at the top,
 // `a`, `b`, `c` (followed by `main`, `_start` on some platforms, and so on).
 
-_LIBCPP_NOINLINE std::stacktrace a(size_t skip = 0, size_t max_depth = 99) {
+TEST_NOINLINE TEST_NO_TAIL_CALLS std::stacktrace a(size_t skip = 0, size_t max_depth = 99) {
   return std::stacktrace::current(skip, max_depth);
 }
-_LIBCPP_NOINLINE std::stacktrace b(size_t skip = 0, size_t max_depth = 99) { return a(skip, max_depth); }
-_LIBCPP_NOINLINE std::stacktrace c(size_t skip = 0, size_t max_depth = 99) { return b(skip, max_depth); }
+TEST_NOINLINE TEST_NO_TAIL_CALLS std::stacktrace b(size_t skip = 0, size_t max_depth = 99) {
+  return a(skip, max_depth);
+}
+TEST_NOINLINE TEST_NO_TAIL_CALLS std::stacktrace c(size_t skip = 0, size_t max_depth = 99) {
+  return b(skip, max_depth);
+}
 
 // We cannot guarantee that we can resolve symbols at runtime in the test environment,
 // so we can't simply check the stacktrace entries' descriptions.  But we can at least get
