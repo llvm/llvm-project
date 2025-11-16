@@ -7666,9 +7666,9 @@ VPRecipeBuilder::tryToOptimizeInductionPHI(VPInstruction *VPI) {
   // Check if this is pointer induction. If so, build the recipe for it.
   if (auto *II = Legal->getPointerInductionDescriptor(Phi)) {
     VPValue *Step = vputils::getOrCreateVPValueForSCEVExpr(Plan, II->getStep());
-    return new VPWidenPointerInductionRecipe(
-        Phi, VPI->getOperand(0), Step, &Plan.getVFxUF(), *II,
-        VPI->getDebugLoc());
+    return new VPWidenPointerInductionRecipe(Phi, VPI->getOperand(0), Step,
+                                             &Plan.getVFxUF(), *II,
+                                             VPI->getDebugLoc());
   }
   return nullptr;
 }
