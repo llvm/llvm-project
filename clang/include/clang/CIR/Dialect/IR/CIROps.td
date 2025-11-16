@@ -2789,18 +2789,16 @@ def CIR_AwaitOp : CIR_Op<"await",[
       - suspend: wraps actual x.await_suspend() logic
       - resume: handles x.await_resume()
 
-    Breaking this up in regions allow individual scrutiny of conditions
+    Breaking this up in regions allows individual scrutiny of conditions
     which might lead to folding some of them out. Lowerings coming out
     of CIR, e.g. LLVM, should use the `suspend` region to track more
     lower level codegen (e.g. intrinsic emission for coro.save/coro.suspend).
 
     There are also 4 flavors of `cir.await` available:
     - `init`: compiler generated initial suspend via implicit `co_await`.
-    - `user`: also known as normal, representing user written co_await's.
+    - `user`: also known as normal, representing a user written `co_await`.
     - `yield`: user written `co_yield` expressions.
     - `final`: compiler generated final suspend via implicit `co_await`.
-
-    From the C++ snippet we get:
 
     ```mlir
       cir.scope {
