@@ -2717,6 +2717,12 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
       GenerateIntrinsics =
           ConstWithoutErrnoOrExceptions && ErrnoOverridenToFalseWithOpt;
   }
+  // The GPU targets do not want math intrinsics to reach the backend.
+  // TODO: We should add a custom pass to lower these early enough for LTO.
+  if (getTarget().getTriple().isNVPTX() || getTarget().getTriple().isAMDGPU())
+    GenerateIntrinsics = !getContext().BuiltinInfo.isPredefinedLibFunction(
+        BuiltinIDIfNoAsmLabel);
+
   if (GenerateIntrinsics) {
     switch (BuiltinIDIfNoAsmLabel) {
     case Builtin::BIacos:
