@@ -2151,7 +2151,7 @@ let Features = "avx512f", Attributes = [NoThrow, Const, RequiredVectorWidth<128>
   def vcomiss : X86Builtin<"int(_Vector<4, float>, _Vector<4, float>, _Constant int, _Constant int)">;
 }
 
-let Features = "avx512bw", Attributes = [NoThrow, Const] in {
+let Features = "avx512bw", Attributes = [NoThrow, Const, Constexpr] in {
   def kunpckdi : X86Builtin<"unsigned long long int(unsigned long long int, unsigned long long int)">;
   def kunpcksi : X86Builtin<"unsigned int(unsigned int, unsigned int)">;
 }
@@ -3194,7 +3194,7 @@ let Features = "avx512bw", Attributes = [NoThrow, Const, Constexpr] in {
   def ktestzdi : X86Builtin<"int(unsigned long long int, unsigned long long int)">;
 }
 
-let Features = "avx512f", Attributes = [NoThrow, Const] in {
+let Features = "avx512f", Attributes = [NoThrow, Const, Constexpr] in {
   def kunpckhi : X86Builtin<"unsigned short(unsigned short, unsigned short)">;
 }
 

@@ -4579,6 +4579,32 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
         S, OpPC, Call,
         [](const APSInt &LHS, const APSInt &RHS) { return LHS + RHS; });
 
+  case X86::BI__builtin_ia32_kunpckhi:
+  case X86::BI__builtin_ia32_kunpckdi:
+  case X86::BI__builtin_ia32_kunpcksi:
+    return interp__builtin_elementwise_int_binop(S, OpPC, Call,
+                                                 [](const APSInt &A,
+                                                    const APSInt &B) {
+                                                   // Generic kunpack: extract
+                                                   // lower half of each operand
+                                                   // and concatenate Result =
+                                                   // (A[HalfWidth-1:0] <<
+                                                   // HalfWidth) |
+                                                   // B[HalfWidth-1:0]
+                                                   unsigned HalfWidth =
+                                                       A.getBitWidth() / 2;
+                                                   APSInt Result(
+                                                       A.getLoBits(HalfWidth)
+                                                           .zext(A.getBitWidth()),
+                                                       A.isUnsigned());
+                                                   Result <<= HalfWidth;
+                                                   Result |= APSInt(
+                                                       B.getLoBits(HalfWidth)
+                                                           .zext(B.getBitWidth()),
+                                                       B.isUnsigned());
+                                                   return Result;
+                                                 });
+
   case X86::BI__builtin_ia32_phminposuw128:
     return interp__builtin_ia32_phminposuw(S, OpPC, Call);
 
