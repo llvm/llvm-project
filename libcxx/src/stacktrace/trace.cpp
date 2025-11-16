@@ -39,7 +39,7 @@ _LIBCPP_EXPORTED_FROM_ABI ostream& _Trace::write_to(std::ostream& __os) const {
 
       // printf-style format to a small buffer, to avoid messing with stream (with `setw` etc.)
       char index_str[21];
-      snprintf(index_str, sizeof(index_str), "%3lu", __i + 1);
+      snprintf(index_str, sizeof(index_str), "%3zu", __i + 1);
       __os << "  frame " << index_str << ": " << entry;
     }
   }

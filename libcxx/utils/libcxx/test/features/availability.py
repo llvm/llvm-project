@@ -196,4 +196,12 @@ features += [
             cfg.available_features,
         ),
     ),
+    # Tests that require std::stacktrace in the built library
+    Feature(
+        name="availability-stacktrace-missing",
+        when=lambda cfg: BooleanExpression.evaluate(
+            "!libcpp-has-no-availability-markup && (stdlib=apple-libc++ && !_target-has-llvm-21)",
+            cfg.available_features,
+        ),
+    ),
 ]

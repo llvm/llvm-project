@@ -21,6 +21,7 @@
 #include <cassert>
 #include <cstdint>
 #include <stacktrace>
+#include <vector>
 
 namespace {
 
@@ -40,22 +41,20 @@ std::stacktrace fake_trace(std::vector<uintptr_t> const& addrs) {
 } // namespace
 
 int main(int, char**) {
-  using vec = std::vector<uintptr_t>;
-
   auto lt = std::strong_ordering::less;
   auto eq = std::strong_ordering::equal;
   auto gt = std::strong_ordering::greater;
 
-  assert(lt == (fake_trace(vec{}) <=> fake_trace(vec{100})));
-  assert(lt == (fake_trace(vec{99}) <=> fake_trace(vec{100})));
-  assert(lt == (fake_trace(vec{100}) <=> fake_trace(vec{100, 200})));
+  assert(lt == (fake_trace({}) <=> fake_trace({100})));
+  assert(lt == (fake_trace({99}) <=> fake_trace({100})));
+  assert(lt == (fake_trace({100}) <=> fake_trace({100, 200})));
 
-  assert(eq == (fake_trace(vec{}) <=> fake_trace(vec{})));
-  assert(eq == (fake_trace(vec{100}) <=> fake_trace(vec{100})));
+  assert(eq == (fake_trace({}) <=> fake_trace({})));
+  assert(eq == (fake_trace({100}) <=> fake_trace({100})));
 
-  assert(gt == (fake_trace(vec{100}) <=> fake_trace(vec{})));
-  assert(gt == (fake_trace(vec{100}) <=> fake_trace(vec{99})));
-  assert(gt == (fake_trace(vec{100, 200}) <=> fake_trace(vec{100})));
+  assert(gt == (fake_trace({100}) <=> fake_trace({})));
+  assert(gt == (fake_trace({100}) <=> fake_trace({99})));
+  assert(gt == (fake_trace({100, 200}) <=> fake_trace({100})));
 
   return 0;
 }
