@@ -55,6 +55,8 @@ void expect_trace(const std::stacktrace& st, std::vector<uintptr_t> const& expec
 }
 
 int main(int, char**) {
+  using vec = std::vector<uintptr_t>;
+
   // All overloads are noexcept
   static_assert(noexcept(std::stacktrace::current()));
   static_assert(noexcept(std::stacktrace::current({})));
@@ -65,17 +67,17 @@ int main(int, char**) {
   // skip == 0 yields top frames a, b, c (we ignore other frames).
   // skip removes that many top frames; max_depth caps the number of frames returned.
 
-  expect_trace(c(0, 3), {_a, _b, _c});
-  expect_trace(c(0, 2), {_a, _b});
-  expect_trace(c(0, 1), {_a});
-  expect_trace(c(0, 0), {});
+  expect_trace(c(0, 3), vec{_a, _b, _c});
+  expect_trace(c(0, 2), vec{_a, _b});
+  expect_trace(c(0, 1), vec{_a});
+  expect_trace(c(0, 0), vec{});
 
-  expect_trace(c(1, 2), {_b, _c});
-  expect_trace(c(1, 1), {_b});
-  expect_trace(c(1, 0), {});
+  expect_trace(c(1, 2), vec{_b, _c});
+  expect_trace(c(1, 1), vec{_b});
+  expect_trace(c(1, 0), vec{});
 
-  expect_trace(c(2, 1), {_c});
-  expect_trace(c(2, 0), {});
+  expect_trace(c(2, 1), vec{_c});
+  expect_trace(c(2, 0), vec{});
 
   return 0;
 }
