@@ -13,7 +13,6 @@
 #include "polly/Simplify.h"
 #include "polly/Options.h"
 #include "polly/ScopInfo.h"
-#include "polly/ScopPass.h"
 #include "polly/Support/GICHelper.h"
 #include "polly/Support/ISLOStream.h"
 #include "polly/Support/ISLTools.h"
@@ -761,41 +760,7 @@ void SimplifyImpl::printScop(raw_ostream &OS, Scop &S) const {
   printAccesses(OS);
 }
 
-static llvm::PreservedAnalyses
-runSimplifyUsingNPM(Scop &S, ScopAnalysisManager &SAM,
-                    ScopStandardAnalysisResults &SAR, SPMUpdater &U, int CallNo,
-                    raw_ostream *OS) {
-  SimplifyImpl Impl(CallNo);
-  Impl.run(S, &SAR.LI);
-  if (OS) {
-    *OS << "Printing analysis 'Polly - Simplify' for region: '" << S.getName()
-        << "' in function '" << S.getFunction().getName() << "':\n";
-    Impl.printScop(*OS, S);
-  }
-
-  if (!Impl.isModified())
-    return llvm::PreservedAnalyses::all();
-
-  PreservedAnalyses PA;
-  PA.preserveSet<AllAnalysesOn<Module>>();
-  PA.preserveSet<AllAnalysesOn<Function>>();
-  PA.preserveSet<AllAnalysesOn<Loop>>();
-  return PA;
-}
-
 } // anonymous namespace
-
-llvm::PreservedAnalyses SimplifyPass::run(Scop &S, ScopAnalysisManager &SAM,
-                                          ScopStandardAnalysisResults &SAR,
-                                          SPMUpdater &U) {
-  return runSimplifyUsingNPM(S, SAM, SAR, U, CallNo, nullptr);
-}
-
-llvm::PreservedAnalyses
-SimplifyPrinterPass::run(Scop &S, ScopAnalysisManager &SAM,
-                         ScopStandardAnalysisResults &SAR, SPMUpdater &U) {
-  return runSimplifyUsingNPM(S, SAM, SAR, U, CallNo, &OS);
-}
 
 SmallVector<MemoryAccess *, 32> polly::getAccessesInOrder(ScopStmt &Stmt) {
   SmallVector<MemoryAccess *, 32> Accesses;

@@ -14,16 +14,8 @@
 #define POLLY_DEADCODEELIMINATION_H
 
 #include "polly/DependenceInfo.h"
-#include "polly/ScopPass.h"
 
 namespace polly {
-
-struct DeadCodeElimPass final : llvm::PassInfoMixin<DeadCodeElimPass> {
-  DeadCodeElimPass() {}
-
-  llvm::PreservedAnalyses run(Scop &S, ScopAnalysisManager &SAM,
-                              ScopStandardAnalysisResults &SAR, SPMUpdater &U);
-};
 
 bool runDeadCodeElim(Scop &S, DependenceAnalysis::Result &DA);
 } // namespace polly

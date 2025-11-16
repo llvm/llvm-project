@@ -143,26 +143,3 @@ bool polly::runDeadCodeElim(Scop &S, DependenceAnalysis::Result &DA) {
 
   return Changed;
 }
-
-llvm::PreservedAnalyses DeadCodeElimPass::run(Scop &S, ScopAnalysisManager &SAM,
-                                              ScopStandardAnalysisResults &SAR,
-                                              SPMUpdater &U) {
-  DependenceAnalysis::Result &DA = SAM.getResult<DependenceAnalysis>(S, SAR);
-  const Dependences &Deps = DA.getDependences(Dependences::AL_Statement);
-
-  bool Changed = runDeadCodeElimination(S, DCEPreciseSteps, Deps);
-
-  // FIXME: We can probably avoid the recomputation of all dependences by
-  // updating them explicitly.
-  if (Changed)
-    DA.recomputeDependences(Dependences::AL_Statement);
-
-  if (!Changed)
-    return PreservedAnalyses::all();
-
-  PreservedAnalyses PA;
-  PA.preserveSet<AllAnalysesOn<Module>>();
-  PA.preserveSet<AllAnalysesOn<Function>>();
-  PA.preserveSet<AllAnalysesOn<Loop>>();
-  return PA;
-}
