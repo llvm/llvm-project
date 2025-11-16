@@ -105,12 +105,19 @@ public:
         IsSigned(Signed), IsOrdered(Ordered),
         PhiHasUsesOutsideReductionChain(PhiHasUsesOutsideReductionChain),
         MinWidthCastToRecurrenceType(MinWidthCastToRecurTy) {
-    if (CI)
-      CastInsts.insert_range(*CI);
+    CastInsts.insert_range(CI);
     assert(
         (!PhiHasUsesOutsideReductionChain || isMinMaxRecurrenceKind(K)) &&
         "Only min/max recurrences are allowed to have multiple uses currently");
   }
+
+  /// Simpler constructor for min/max recurrences that don't track cast
+  /// instructions.
+  RecurrenceDescriptor(Value *Start, Instruction *Exit, StoreInst *Store,
+                       RecurKind K, FastMathFlags FMF, Instruction *ExactFP,
+                       Type *RT)
+      : IntermediateStore(Store), StartValue(Start), LoopExitInstr(Exit),
+        Kind(K), FMF(FMF), ExactFPMathInst(ExactFP), RecurrenceType(RT) {}
 
   /// This POD struct holds information about a potential recurrence operation.
   class InstDesc {

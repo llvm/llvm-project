@@ -218,60 +218,13 @@ static bool checkOrderedReduction(RecurKind Kind, Instruction *ExactFPMathInst,
   return true;
 }
 
-/// Returns true if \p Phi is a min/max reduction matching \p Kind where \p Phi
-/// is used outside the reduction chain. This is common for loops selecting the
-/// index of a minimum/maximum value (argmin/argmax).
-static bool isMinMaxReductionPhiWithUsersOutsideReductionChain(
-    PHINode *Phi, RecurKind Kind, Loop *TheLoop, RecurrenceDescriptor &RedDes) {
-  BasicBlock *Latch = TheLoop->getLoopLatch();
-  if (!Latch)
-    return false;
-
-  assert(Phi->getNumIncomingValues() == 2 && "phi must have 2 incoming values");
-  Value *Inc = Phi->getIncomingValueForBlock(Latch);
-  if (Phi->hasOneUse() || !Inc->hasOneUse() ||
-      !RecurrenceDescriptor::isIntMinMaxRecurrenceKind(Kind))
-    return false;
-
-  Value *A, *B;
-  bool IsMinMax = [&]() {
-    switch (Kind) {
-    case RecurKind::UMax:
-      return match(Inc, m_UMax(m_Value(A), m_Value(B)));
-    case RecurKind::UMin:
-      return match(Inc, m_UMin(m_Value(A), m_Value(B)));
-    case RecurKind::SMax:
-      return match(Inc, m_SMax(m_Value(A), m_Value(B)));
-    case RecurKind::SMin:
-      return match(Inc, m_SMin(m_Value(A), m_Value(B)));
-    default:
-      llvm_unreachable("all min/max kinds must be handled");
-    }
-  }();
-  if (!IsMinMax)
-    return false;
-
-  if (A == B || (A != Phi && B != Phi))
-    return false;
-
-  SmallPtrSet<Instruction *, 4> CastInsts;
-  Value *RdxStart = Phi->getIncomingValueForBlock(TheLoop->getLoopPreheader());
-  RedDes =
-      RecurrenceDescriptor(RdxStart, /*Exit=*/nullptr, /*Store=*/nullptr, Kind,
-                           FastMathFlags(), /*ExactFP=*/nullptr, Phi->getType(),
-                           /*Signed=*/false, /*Ordered=*/false, CastInsts,
-                           /*MinWidthCastToRecurTy=*/-1U, /*PhiMultiUse=*/true);
-  return true;
-}
-
-// Helper to collect FMF from a value and its associated fcmp in select patterns
+// Collect FMF from a value and its associated fcmp in select patterns
 static FastMathFlags collectMinMaxFMF(Value *V) {
   FastMathFlags FMF = cast<FPMathOperator>(V)->getFastMathFlags();
   if (auto *Sel = dyn_cast<SelectInst>(V)) {
-    // Accept FMF on either fcmp or select of a min/max idiom.
-    // TODO: This is a hack to work-around the fact that FMF may not be
-    //       assigned/propagated correctly. If that problem is fixed or we
-    //       standardize on fmin/fmax via intrinsics, this can be removed.
+    // Accept FMF from either fcmp or select in a min/max idiom.
+    // TODO: Remove this when FMF propagation is fixed or we standardize on
+    // intrinsics.
     if (auto *FCmp = dyn_cast<FCmpInst>(Sel->getCondition()))
       FMF |= FCmp->getFastMathFlags();
   }
@@ -312,13 +265,11 @@ hasRequiredFastMathFlags(FPMathOperator *FPOp, RecurKind &RK,
 static RecurrenceDescriptor getMinMaxRecurrence(PHINode *Phi, Loop *TheLoop,
                                                 FastMathFlags FuncFMF,
                                                 ScalarEvolution *SE) {
-  if (Phi->getNumIncomingValues() != 2 ||
-      Phi->getParent() != TheLoop->getHeader())
-    return {};
-
   Type *Ty = Phi->getType();
   BasicBlock *Latch = TheLoop->getLoopLatch();
-  if ((!Ty->isIntegerTy() && !Ty->isFloatingPointTy()) || !Latch)
+  if (Phi->getNumIncomingValues() != 2 ||
+      Phi->getParent() != TheLoop->getHeader() ||
+      (!Ty->isIntegerTy() && !Ty->isFloatingPointTy()) || !Latch)
     return {};
 
   auto GetMinMaxRK = [](Value *V, Value *&A, Value *&B) -> RecurKind {
@@ -348,11 +299,11 @@ static RecurrenceDescriptor getMinMaxRecurrence(PHINode *Phi, Loop *TheLoop,
   };
 
   FastMathFlags FMF = FastMathFlags::getFast();
-  Value *RdxNext = Phi->getIncomingValueForBlock(Latch);
+  Value *BackedgeValue = Phi->getIncomingValueForBlock(Latch);
   RecurKind RK = RecurKind::None;
-  // Identify min/max recurrences by walking the def-use chains upwards,
-  // starting at RdxNext.
-  SmallVector<Value *> WorkList({RdxNext});
+  // Walk def-use chains upwards from BackedgeValue to identify min/max
+  // recurrences.
+  SmallVector<Value *> WorkList({BackedgeValue});
   SmallPtrSet<Value *, 8> Chain({Phi});
   while (!WorkList.empty()) {
     Value *Cur = WorkList.pop_back_val();
@@ -362,8 +313,7 @@ static RecurrenceDescriptor getMinMaxRecurrence(PHINode *Phi, Loop *TheLoop,
     if (!I || !TheLoop->contains(I))
       return {};
     if (auto *PN = dyn_cast<PHINode>(I)) {
-      if (PN != Phi)
-        append_range(WorkList, PN->operands());
+      append_range(WorkList, PN->operands());
       continue;
     }
     Value *A, *B;
@@ -372,8 +322,7 @@ static RecurrenceDescriptor getMinMaxRecurrence(PHINode *Phi, Loop *TheLoop,
       return {};
 
     RK = CurRK;
-    // For floating point recurrences, check we have the required fast-math
-    // flags.
+    // Check required fast-math flags for FP recurrences.
     if (RecurrenceDescriptor::isFPMinMaxRecurrenceKind(CurRK)) {
       auto CurFMF =
           hasRequiredFastMathFlags(cast<FPMathOperator>(Cur), RK, FuncFMF);
@@ -382,15 +331,14 @@ static RecurrenceDescriptor getMinMaxRecurrence(PHINode *Phi, Loop *TheLoop,
       FMF &= *CurFMF;
     }
 
-    Chain.insert(I);
     if (auto *SI = dyn_cast<SelectInst>(I))
       Chain.insert(SI->getCondition());
 
     if (A == Phi || B == Phi)
       continue;
 
-    // Add operand to worklist if it matches the pattern - exactly one must
-    // match
+    // Add operand to worklist if it matches the pattern (exactly one must
+    // match)
     Value *X, *Y;
     auto *IA = dyn_cast<Instruction>(A);
     auto *IB = dyn_cast<Instruction>(B);
@@ -400,57 +348,76 @@ static RecurrenceDescriptor getMinMaxRecurrence(PHINode *Phi, Loop *TheLoop,
       return {};
     WorkList.push_back(AMatches ? A : B);
   }
-  // Validate uses: in-chain, stores to same invariant address, intermediate
-  // min/max, or single out-of-loop use of RdxNext.
-  StoreInst *IntermediateStore = nullptr;
-  const SCEV *StorePtrSCEV = nullptr;
-  SmallPtrSet<Instruction *, 8> IntermediateMinMax;
-  unsigned OutOfLoopUses = 0;
 
+  // Handle argmin/argmax pattern: PHI has uses outside the reduction chain
+  // that are not intermediate min/max operations (which are handled below).
+  // Requires integer min/max, and single-use BackedgeValue (so vectorizer can
+  // handle both PHIs together).
+  bool PhiHasInvalidUses = any_of(Phi->users(), [&](User *U) {
+    Value *A, *B;
+    return !Chain.contains(U) && TheLoop->contains(cast<Instruction>(U)) &&
+           GetMinMaxRK(U, A, B) == RecurKind::None;
+  });
+  if (PhiHasInvalidUses) {
+    if (!RecurrenceDescriptor::isIntMinMaxRecurrenceKind(RK) ||
+        !BackedgeValue->hasOneUse())
+      return {};
+    SmallPtrSet<Instruction *, 4> CastInsts;
+    return RecurrenceDescriptor(
+        Phi->getIncomingValueForBlock(TheLoop->getLoopPreheader()),
+        /*Exit=*/nullptr, /*Store=*/nullptr, RK, FastMathFlags(),
+        /*ExactFP=*/nullptr, Phi->getType(), /*Signed=*/false,
+        /*Ordered=*/false, CastInsts, /*MinWidthCastToRecurTy=*/-1U,
+        /*PhiMultiUse=*/true);
+  }
+
+  // Validate chain entries and collect stores from chain entries and
+  // intermediate ops.
+  SmallVector<StoreInst *> Stores;
+  unsigned OutOfLoopUses = 0;
   for (Value *V : Chain) {
     for (User *U : V->users()) {
-      if (Chain.contains(U) || (U == Phi && V == RdxNext))
+      if (Chain.contains(U))
         continue;
       auto *I = dyn_cast<Instruction>(U);
-      if (!I ||
-          (!TheLoop->contains(I) && (V != RdxNext || ++OutOfLoopUses > 1)))
+      if (!I || (!TheLoop->contains(I) &&
+                 (V != BackedgeValue || ++OutOfLoopUses > 1)))
         return {};
       if (!TheLoop->contains(I))
         continue;
       if (auto *SI = dyn_cast<StoreInst>(I)) {
-        const SCEV *Ptr = SE->getSCEV(SI->getPointerOperand());
-        if (!SE->isLoopInvariant(Ptr, TheLoop) ||
-            (StorePtrSCEV && StorePtrSCEV != Ptr))
-          return {};
-        StorePtrSCEV = StorePtrSCEV ? StorePtrSCEV : Ptr;
-        IntermediateStore =
-            !IntermediateStore || IntermediateStore->comesBefore(SI)
-                ? SI
-                : IntermediateStore;
+        Stores.push_back(SI);
         continue;
       }
+      // Must be intermediate min/max of the same kind.
       Value *A, *B;
       if (GetMinMaxRK(I, A, B) != RK)
         return {};
-      IntermediateMinMax.insert(I);
+      for (User *IU : I->users()) {
+        if (auto *SI = dyn_cast<StoreInst>(IU))
+          Stores.push_back(SI);
+        else if (!Chain.contains(IU))
+          return {};
+      }
     }
   }
 
-  if (!IntermediateMinMax.empty() && !IntermediateStore)
-    return {};
-  for (Instruction *I : IntermediateMinMax)
-    for (User *U : I->users())
-      if (!Chain.contains(U) &&
-          (!isa<StoreInst>(U) ||
-           !SE->isLoopInvariant(
-               SE->getSCEV(cast<StoreInst>(U)->getPointerOperand()), TheLoop) ||
-           StorePtrSCEV !=
-               SE->getSCEV(cast<StoreInst>(U)->getPointerOperand())))
-        return {};
+  // Validate all stores go to same invariant address.
+  StoreInst *IntermediateStore = nullptr;
+  const SCEV *StorePtrSCEV = nullptr;
+  for (StoreInst *SI : Stores) {
+    const SCEV *Ptr = SE->getSCEV(SI->getPointerOperand());
+    if (!SE->isLoopInvariant(Ptr, TheLoop) ||
+        (StorePtrSCEV && StorePtrSCEV != Ptr))
+      return {};
+    StorePtrSCEV = Ptr;
+    if (!IntermediateStore || IntermediateStore->comesBefore(SI))
+      IntermediateStore = SI;
+  }
 
   return RecurrenceDescriptor(
       Phi->getIncomingValueForBlock(TheLoop->getLoopPreheader()),
-      cast<Instruction>(RdxNext), IntermediateStore, RK, FMF, nullptr,
+      cast<Instruction>(BackedgeValue), IntermediateStore, RK, FMF, nullptr,
       Phi->getType());
 }
 
@@ -464,11 +431,6 @@ bool RecurrenceDescriptor::AddReductionVar(
   // Reduction variables are only found in the loop header block.
   if (Phi->getParent() != TheLoop->getHeader())
     return false;
-
-  // Check for min/max reduction variables that feed other users in the loop.
-  if (isMinMaxReductionPhiWithUsersOutsideReductionChain(Phi, Kind, TheLoop,
-                                                         RedDes))
-    return true;
 
   // Obtain the reduction start value from the value that comes from the loop
   // preheader.

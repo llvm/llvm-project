@@ -1889,7 +1889,6 @@ for.exit:                        ; preds = %for.body
   ret i32 %result
 }
 
-<<<<<<< HEAD
 define i32 @dotp_ext_mul(i64 %n, ptr %a, i8 %b) {
 ; CHECK-INTERLEAVE1-LABEL: define i32 @dotp_ext_mul(
 ; CHECK-INTERLEAVE1-SAME: i64 [[N:%.*]], ptr [[A:%.*]], i8 [[B:%.*]]) #[[ATTR0]] {
@@ -2393,9 +2392,9 @@ loop:
   %load.ext = sext i16 %load to i32
   %load.ext.ext = sext i32 %load.ext to i64
   %ec = icmp eq i64 %iv, %n
-  br i1 %ec, label %exit, label %loop
+  br i1 %ec, label %end, label %loop
 
-for.exit:
+end:
   ret i32 %add
 }
 
@@ -2419,15 +2418,15 @@ define i32 @zext_add_reduc_i8_i32_store_invariant(ptr %a, ptr %dst) {
 ; CHECK-INTERLEAVE1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH1]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-INTERLEAVE1-NEXT:    [[VEC_PHI:%.*]] = phi <16 x i32> [ zeroinitializer, [[VECTOR_PH1]] ], [ [[TMP3:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[A]], i64 [[INDEX]]
-; CHECK-INTERLEAVE1-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[TMP0]], align 1, !alias.scope [[META11:![0-9]+]]
+; CHECK-INTERLEAVE1-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[TMP0]], align 1, !alias.scope [[META19:![0-9]+]]
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP1:%.*]] = zext <16 x i8> [[WIDE_LOAD]] to <16 x i32>
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP3]] = add <16 x i32> [[TMP1]], [[VEC_PHI]]
 ; CHECK-INTERLEAVE1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
-; CHECK-INTERLEAVE1-NEXT:    br i1 [[TMP2]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
+; CHECK-INTERLEAVE1-NEXT:    br i1 [[TMP2]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP22:![0-9]+]]
 ; CHECK-INTERLEAVE1:       middle.block:
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP4:%.*]] = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> [[TMP3]])
-; CHECK-INTERLEAVE1-NEXT:    store i32 [[TMP4]], ptr [[GEP_DST]], align 4, !alias.scope [[META15:![0-9]+]], !noalias [[META11]]
+; CHECK-INTERLEAVE1-NEXT:    store i32 [[TMP4]], ptr [[GEP_DST]], align 4, !alias.scope [[META23:![0-9]+]], !noalias [[META19]]
 ; CHECK-INTERLEAVE1-NEXT:    br label [[FOR_EXIT:%.*]]
 ; CHECK-INTERLEAVE1:       scalar.ph:
 ;
@@ -2451,20 +2450,20 @@ define i32 @zext_add_reduc_i8_i32_store_invariant(ptr %a, ptr %dst) {
 ; CHECK-INTERLEAVED-NEXT:    [[VEC_PHI:%.*]] = phi <16 x i32> [ zeroinitializer, [[VECTOR_PH1]] ], [ [[TMP6:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-INTERLEAVED-NEXT:    [[VEC_PHI2:%.*]] = phi <16 x i32> [ zeroinitializer, [[VECTOR_PH1]] ], [ [[TMP5:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[A]], i64 [[INDEX]]
-; CHECK-INTERLEAVED-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 16
-; CHECK-INTERLEAVED-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[TMP0]], align 1, !alias.scope [[META11:![0-9]+]]
-; CHECK-INTERLEAVED-NEXT:    [[WIDE_LOAD2:%.*]] = load <16 x i8>, ptr [[TMP1]], align 1, !alias.scope [[META11]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i64 16
+; CHECK-INTERLEAVED-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[TMP0]], align 1, !alias.scope [[META19:![0-9]+]]
+; CHECK-INTERLEAVED-NEXT:    [[WIDE_LOAD2:%.*]] = load <16 x i8>, ptr [[TMP1]], align 1, !alias.scope [[META19]]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP2:%.*]] = zext <16 x i8> [[WIDE_LOAD]] to <16 x i32>
 ; CHECK-INTERLEAVED-NEXT:    [[TMP3:%.*]] = zext <16 x i8> [[WIDE_LOAD2]] to <16 x i32>
 ; CHECK-INTERLEAVED-NEXT:    [[TMP6]] = add <16 x i32> [[TMP2]], [[VEC_PHI]]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP5]] = add <16 x i32> [[TMP3]], [[VEC_PHI2]]
 ; CHECK-INTERLEAVED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 32
 ; CHECK-INTERLEAVED-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
-; CHECK-INTERLEAVED-NEXT:    br i1 [[TMP4]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
+; CHECK-INTERLEAVED-NEXT:    br i1 [[TMP4]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP22:![0-9]+]]
 ; CHECK-INTERLEAVED:       middle.block:
 ; CHECK-INTERLEAVED-NEXT:    [[BIN_RDX:%.*]] = add <16 x i32> [[TMP5]], [[TMP6]]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP7:%.*]] = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> [[BIN_RDX]])
-; CHECK-INTERLEAVED-NEXT:    store i32 [[TMP7]], ptr [[GEP_DST]], align 4, !alias.scope [[META15:![0-9]+]], !noalias [[META11]]
+; CHECK-INTERLEAVED-NEXT:    store i32 [[TMP7]], ptr [[GEP_DST]], align 4, !alias.scope [[META23:![0-9]+]], !noalias [[META19]]
 ; CHECK-INTERLEAVED-NEXT:    br label [[FOR_EXIT:%.*]]
 ; CHECK-INTERLEAVED:       scalar.ph:
 ;
@@ -2487,26 +2486,26 @@ define i32 @zext_add_reduc_i8_i32_store_invariant(ptr %a, ptr %dst) {
 ; CHECK-MAXBW-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH1]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-MAXBW-NEXT:    [[VEC_PHI:%.*]] = phi <16 x i32> [ zeroinitializer, [[VECTOR_PH1]] ], [ [[TMP3:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-MAXBW-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[A]], i64 [[INDEX]]
-; CHECK-MAXBW-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[TMP0]], align 1, !alias.scope [[META11:![0-9]+]]
+; CHECK-MAXBW-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[TMP0]], align 1, !alias.scope [[META19:![0-9]+]]
 ; CHECK-MAXBW-NEXT:    [[TMP1:%.*]] = zext <16 x i8> [[WIDE_LOAD]] to <16 x i32>
 ; CHECK-MAXBW-NEXT:    [[TMP3]] = add <16 x i32> [[TMP1]], [[VEC_PHI]]
 ; CHECK-MAXBW-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; CHECK-MAXBW-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
-; CHECK-MAXBW-NEXT:    br i1 [[TMP2]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
+; CHECK-MAXBW-NEXT:    br i1 [[TMP2]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP22:![0-9]+]]
 ; CHECK-MAXBW:       middle.block:
 ; CHECK-MAXBW-NEXT:    [[TMP4:%.*]] = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> [[TMP3]])
-; CHECK-MAXBW-NEXT:    store i32 [[TMP4]], ptr [[GEP_DST]], align 4, !alias.scope [[META15:![0-9]+]], !noalias [[META11]]
+; CHECK-MAXBW-NEXT:    store i32 [[TMP4]], ptr [[GEP_DST]], align 4, !alias.scope [[META23:![0-9]+]], !noalias [[META19]]
 ; CHECK-MAXBW-NEXT:    br label [[FOR_EXIT:%.*]]
 ; CHECK-MAXBW:       scalar.ph:
 ;
 entry:
   %gep.dst = getelementptr inbounds i32, ptr %dst, i64 42
   store i32 0, ptr %gep.dst, align 4
-  br label %for.body
+  br label %loop
 
-for.body:
-  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
-  %accum = phi i32 [ 0, %entry ], [ %add, %for.body ]
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %accum = phi i32 [ 0, %entry ], [ %add, %loop ]
   %gep.a = getelementptr i8, ptr %a, i64 %iv
   %load.a = load i8, ptr %gep.a, align 1
   %ext.a = zext i8 %load.a to i32
@@ -2514,9 +2513,9 @@ for.body:
   store i32 %add, ptr %gep.dst, align 4
   %iv.next = add i64 %iv, 1
   %exitcond.not = icmp eq i64 %iv.next, 1024
-  br i1 %exitcond.not, label %for.exit, label %for.body
+  br i1 %exitcond.not, label %end, label %for.body
 
-for.exit:
+end:
   ret i32 %add
 }
 
