@@ -25465,7 +25465,7 @@ static SDValue combineConcatVectorOfScalars(SDNode *N, SelectionDAG &DAG) {
         !Op.getOperand(0).getValueType().isVector())
       Ops.push_back(Op.getOperand(0));
     else if (Op.isUndef())
-      Ops.push_back(DAG.getNode(ISD::UNDEF, DL, SVT));
+      Ops.push_back(DAG.getNode(Op.getOpcode(), DL, SVT));
     else
       return SDValue();
 
@@ -25487,7 +25487,7 @@ static SDValue combineConcatVectorOfScalars(SDNode *N, SelectionDAG &DAG) {
       if (Op.getValueType() == SVT)
         continue;
       if (Op.isUndef())
-        Op = DAG.getNode(ISD::UNDEF, DL, SVT);
+        Op = DAG.getNode(Op.getOpcode(), DL, SVT);
       else
         Op = DAG.getBitcast(SVT, Op);
     }
