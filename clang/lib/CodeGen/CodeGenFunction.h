@@ -422,7 +422,6 @@ public:
   /// we prefer to insert allocas.
   llvm::AssertingVH<llvm::Instruction> AllocaInsertPt;
 
-private:
   /// PostAllocaInsertPt - This is a place in the prologue where code can be
   /// inserted that will be dominated by all the static allocas. This helps
   /// achieve two things:
@@ -433,7 +432,6 @@ private:
   /// PostAllocaInsertPt will be lazily created when it is *really* required.
   llvm::AssertingVH<llvm::Instruction> PostAllocaInsertPt = nullptr;
 
-public:
   /// Return PostAllocaInsertPt. If it is not yet created, then insert it
   /// immediately after AllocaInsertPt.
   llvm::Instruction *getPostAllocaInsertPoint() {
@@ -2018,11 +2016,17 @@ public:
 
         OldReturnBlock = CGF.ReturnBlock;
         CGF.ReturnBlock = CGF.getJumpDestInCurrentScope(&RetBB);
+
+        CGF.PostAllocaInsertPt = nullptr;
+
       }
 
       ~OutlinedRegionBodyRAII() {
         CGF.AllocaInsertPt = OldAllocaIP;
         CGF.ReturnBlock = OldReturnBlock;
+
+        CGF.PostAllocaInsertPt = nullptr;
+
       }
     };
 
@@ -2045,8 +2049,10 @@ public:
                "Insertion point should be in the entry block of containing "
                "function!");
         OldAllocaIP = CGF.AllocaInsertPt;
-        if (AllocaIP.isSet())
+        if (AllocaIP.isSet()) {
           CGF.AllocaInsertPt = &*AllocaIP.getPoint();
+          CGF.PostAllocaInsertPt = nullptr;
+        }
 
         // TODO: Remove the call, after making sure the counter is not used by
         //       the EHStack.
@@ -2056,7 +2062,11 @@ public:
         (void)CGF.getJumpDestInCurrentScope(&FiniBB);
       }
 
-      ~InlinedRegionBodyRAII() { CGF.AllocaInsertPt = OldAllocaIP; }
+      ~InlinedRegionBodyRAII()
+      {
+        CGF.AllocaInsertPt = OldAllocaIP;
+        CGF.PostAllocaInsertPt = nullptr;
+      }
     };
   };
 
