@@ -1,5 +1,6 @@
 // UNSUPPORTED: system-windows
 // REQUIRES: amdgpu-registered-target
+// REQUIRES: lld
 
 // Test HIP non-RDC linker wrapper behavior with new offload driver.
 // The linker wrapper should output .hipfb files directly without using -r option.
