@@ -16,6 +16,7 @@
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 
+#include "mlir/IR/Attributes.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/FunctionImplementation.h"
@@ -1872,7 +1873,7 @@ bool cir::FuncOp::isCxxSpecialAssignment() {
 }
 
 std::optional<CtorKind> cir::FuncOp::getCxxConstructorKind() {
-  auto attr = getCxxSpecialMemberAttr();
+  mlir::Attribute attr = getCxxSpecialMemberAttr();
   if (attr) {
     if (auto ctor = dyn_cast<CXXCtorAttr>(attr))
       return ctor.getCtorKind();
@@ -1881,12 +1882,25 @@ std::optional<CtorKind> cir::FuncOp::getCxxConstructorKind() {
 }
 
 std::optional<AssignKind> cir::FuncOp::getCxxSpecialAssignKind() {
-  auto attr = getCxxSpecialMemberAttr();
+  mlir::Attribute attr = getCxxSpecialMemberAttr();
   if (attr) {
     if (auto assign = dyn_cast<CXXAssignAttr>(attr))
       return assign.getAssignKind();
   }
   return std::nullopt;
+}
+
+bool cir::FuncOp::isCxxTrivialMemberFunction() {
+  mlir::Attribute attr = getCxxSpecialMemberAttr();
+  if (attr) {
+    if (auto ctor = dyn_cast<CXXCtorAttr>(attr))
+      return ctor.getIsTrivial();
+    if (auto dtor = dyn_cast<CXXDtorAttr>(attr))
+      return dtor.getIsTrivial();
+    if (auto assign = dyn_cast<CXXAssignAttr>(attr))
+      return assign.getIsTrivial();
+  }
+  return false;
 }
 
 mlir::Region *cir::FuncOp::getCallableRegion() {

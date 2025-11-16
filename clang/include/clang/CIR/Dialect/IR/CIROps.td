@@ -2595,6 +2595,11 @@ def CIR_FuncOp : CIR_Op<"func", [
     /// Returns the kind of assignment operator (move, copy) this function
     /// represents, if any.
     std::optional<AssignKind> getCxxSpecialAssignKind();
+
+    /// Returns true if the function is a trivial C++ member functions such as
+    /// trivial default constructor, copy/move constructor, copy/move assignment,
+    /// or destructor.
+    bool isCxxTrivialMemberFunction();
 }];
 
   let hasCustomAssemblyFormat = 1;
@@ -4173,7 +4178,7 @@ def CIR_ObjSizeOp : CIR_Op<"objsize", [Pure]> {
     When the `min` attribute is present, the operation returns the minimum
     guaranteed accessible size. When absent (max mode), it returns the maximum
     possible object size. Corresponds to `llvm.objectsize`'s `min` argument.
-    
+
     The `dynamic` attribute determines if the value should be evaluated at
     runtime. Corresponds to `llvm.objectsize`'s `dynamic` argument.
 
