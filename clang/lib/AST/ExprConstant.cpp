@@ -16300,7 +16300,8 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     unsigned HalfWidth = A.getBitWidth() / 2;
     APSInt Result(A.getLoBits(HalfWidth).zext(A.getBitWidth()), A.isUnsigned());
     Result <<= HalfWidth;
-    Result |= APSInt(B.getLoBits(HalfWidth).zext(B.getBitWidth()), B.isUnsigned());
+    Result |=
+        APSInt(B.getLoBits(HalfWidth).zext(B.getBitWidth()), B.isUnsigned());
     return Success(Result, E);
   }
 
@@ -16429,7 +16430,6 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     APSInt Result = ~Val;
     return Success(APValue(Result), E);
   }
-
 
   case X86::BI__builtin_ia32_kaddqi:
   case X86::BI__builtin_ia32_kaddhi:
