@@ -55,7 +55,6 @@ enum NodeType : unsigned {
   ISEL,     // Marker for nodes that were created during ISel, and
             // which need explicit selection (would have been left
             // unselected otherwise).
-  // clang-format on
 };
 
 } // namespace HexagonISD
@@ -77,6 +76,6 @@ public:
                                   MachinePointerInfo SrcPtrInfo) const override;
 };
 
-}
+} // namespace llvm
 
 #endif
