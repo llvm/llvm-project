@@ -283,9 +283,19 @@ New check aliases
   <clang-tidy/checks/bugprone/default-operator-new-on-overaligned-type>`
   keeping initial check as an alias to the new one.
 
+- Renamed :doc:`cert-msc30-c <clang-tidy/checks/cert/msc30-c>` to
+  :doc:`misc-predictable-rand
+  <clang-tidy/checks/misc/predictable-rand>`
+  keeping initial check as an alias to the new one.
+
 - Renamed :doc:`cert-msc32-c <clang-tidy/checks/cert/msc32-c>` to
   :doc:`bugprone-random-generator-seed
   <clang-tidy/checks/bugprone/random-generator-seed>`
+  keeping initial check as an alias to the new one.
+
+- Renamed :doc:`cert-msc50-cpp <clang-tidy/checks/cert/msc50-cpp>` to
+  :doc:`misc-predictable-rand
+  <clang-tidy/checks/misc/predictable-rand>`
   keeping initial check as an alias to the new one.
 
 - Renamed :doc:`cert-msc51-cpp <clang-tidy/checks/cert/msc51-cpp>` to
@@ -316,7 +326,7 @@ Changes in existing checks
   exceptions from captures are now diagnosed, exceptions in the bodies of
   lambdas that aren't actually invoked are not. Additionally, fixed an issue
   where the check wouldn't diagnose throws in arguments to functions or
-  constructors. Added fine-grained configuration via options 
+  constructors. Added fine-grained configuration via options
   `CheckDestructors`, `CheckMoveMemberFunctions`, `CheckMain`,
   `CheckedSwapFunctions`, and `CheckNothrowFunctions`.
 
