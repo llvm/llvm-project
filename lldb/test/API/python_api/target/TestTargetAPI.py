@@ -105,6 +105,20 @@ class TargetAPITestCase(TestBase):
         self.assertIsNotNone(data_section2)
         self.assertEqual(data_section.name, data_section2.name)
 
+    def test_get_arch_name(self):
+        d = {"EXE": "b.out"}
+        self.build(dictionary=d)
+        self.setTearDownCleanup(dictionary=d)
+        target = self.create_simple_target("b.out")
+
+        arch_name = target.arch_name
+        self.assertNotEqual(len(arch_name), 0, "Got an arch name string")
+
+        # Test consistency with GetTriple().
+        triple = target.triple
+        if triple:
+            self.assertEqual(triple.split("-")[0],  arch_name)
+
     def test_get_ABIName(self):
         d = {"EXE": "b.out"}
         self.build(dictionary=d)

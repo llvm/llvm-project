@@ -353,6 +353,8 @@ public:
 
   const char *GetTriple();
 
+  const char *GetArchName();
+
   const char *GetABIName();
 
   const char *GetLabel() const;
