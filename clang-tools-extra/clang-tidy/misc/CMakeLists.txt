@@ -34,6 +34,7 @@ add_clang_library(clangTidyMiscModule STATIC
   NonPrivateMemberVariablesInClassesCheck.cpp
   OverrideWithDifferentVisibilityCheck.cpp
   RedundantExpressionCheck.cpp
+  ShadowedNamespaceFunctionCheck.cpp
   StaticAssertCheck.cpp
   ThrowByValueCatchByReferenceCheck.cpp
   UnconventionalAssignOperatorCheck.cpp

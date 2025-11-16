@@ -226,6 +226,11 @@ New checks
   Finds virtual function overrides with different visibility than the function
   in the base class.
 
+- New :doc:`misc-shadowed-namespace-function
+  <clang-tidy/checks/misc/shadowed-namespace-function>` check.
+
+  FIXME: Write a short description.
+
 - New :doc:`readability-redundant-parentheses
   <clang-tidy/checks/readability/redundant-parentheses>` check.
 
