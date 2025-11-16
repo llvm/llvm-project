@@ -21640,9 +21640,8 @@ static SDValue performBuildVectorCombine(SDNode *N,
       SDValue LowLanesSrcVec = Elt0->getOperand(0)->getOperand(0);
       if (LowLanesSrcVec.getValueType() == MVT::v2f64) {
         SDValue HighLanes;
-        if (Elt2->getOpcode() == ISD::UNDEF &&
-            Elt3->getOpcode() == ISD::UNDEF) {
-          HighLanes = DAG.getUNDEF(MVT::v2f32);
+        if (Elt2->isUndef() && Elt3->isUndef()) {
+          HighLanes = DAG.getPOISON(MVT::v2f32);
         } else if (Elt2->getOpcode() == ISD::FP_ROUND &&
                    Elt3->getOpcode() == ISD::FP_ROUND &&
                    isa<ConstantSDNode>(Elt2->getOperand(1)) &&
@@ -23977,7 +23976,7 @@ static SDValue performUzpCombine(SDNode *N, SelectionDAG &DAG,
     return SDValue();
 
   // uzp1(x, undef) -> concat(truncate(x), undef)
-  if (Op1.getOpcode() == ISD::UNDEF) {
+  if (Op1.isUndef()) {
     EVT BCVT = MVT::Other, HalfVT = MVT::Other;
     switch (ResVT.getSimpleVT().SimpleTy) {
     default:
@@ -26423,8 +26422,7 @@ performSetccMergeZeroCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
     SDValue L1 = LHS->getOperand(1);
     SDValue L2 = LHS->getOperand(2);
 
-    if (L0.getOpcode() == ISD::UNDEF && isNullConstant(L2) &&
-        isSignExtInReg(L1)) {
+    if (L0.isUndef() && isNullConstant(L2) && isSignExtInReg(L1)) {
       SDLoc DL(N);
       SDValue Shl = L1.getOperand(0);
       SDValue NewLHS = DAG.getNode(ISD::INSERT_SUBVECTOR, DL,
