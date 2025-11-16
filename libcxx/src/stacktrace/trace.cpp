@@ -9,10 +9,10 @@
 #include <__config>
 #include <__stacktrace/basic_stacktrace.h>
 #include <__stacktrace/stacktrace_entry.h>
+#include <stacktrace>
 #include <string>
 
 #if _LIBCPP_HAS_LOCALIZATION
-#  include <iomanip>
 #  include <iostream>
 #  include <sstream>
 #endif //_LIBCPP_HAS_LOCALIZATION
@@ -34,8 +34,13 @@ _LIBCPP_EXPORTED_FROM_ABI ostream& _Trace::write_to(std::ostream& __os) const {
       if (__i) {
         __os << '\n';
       }
-      __os << "  frame " << std::setw(3) << std::setfill(' ') << std::dec << (__i + 1) << ": "
-           << *(stacktrace_entry const*)(iters.data() + __i);
+
+      stacktrace_entry& entry = *reinterpret_cast<stacktrace_entry*>(iters.data() + __i);
+
+      // printf-style format to a small buffer, to avoid messing with stream (with `setw` etc.)
+      char index_str[21];
+      snprintf(index_str, sizeof(index_str), "%3lu", __i + 1);
+      __os << "  frame " << index_str << ": " << entry;
     }
   }
   return __os;
