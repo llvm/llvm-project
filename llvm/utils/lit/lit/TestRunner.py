@@ -845,11 +845,25 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
                     env_str = "\n".join(
                         f"{key}={value}" for key, value in sorted(cmd_shenv.env.items())
                     )
-                    results.append(
-                        ShellCommandResult(
-                            j, env_str, "", 0, timeoutHelper.timeoutReached(), []
-                        )
+                    # Process redirections.
+                    stdin, stdout, stderr = processRedirects(
+                        j, default_stdin, cmd_shenv, opened_files
                     )
+                    if stdout != default_stdin:
+                        # Write directly to the redirected file (stdout).
+                        stdout.write(env_str)
+                        results.append(
+                            ShellCommandResult(
+                                j, "", "", 0, timeoutHelper.timeoutReached(), []
+                            )
+                        )
+                    else:
+                        # Capture the output for cases without redirection.
+                        results.append(
+                            ShellCommandResult(
+                                j, env_str, "", 0, timeoutHelper.timeoutReached(), []
+                            )
+                        )
                     return 0
             elif args[0] == "not":
                 not_args.append(args.pop(0))

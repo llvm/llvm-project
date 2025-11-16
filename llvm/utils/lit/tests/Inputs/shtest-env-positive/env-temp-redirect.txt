@@ -1,0 +1,7 @@
+## Test the env command with output redirection to a file.
+# RUN: rm -f %t
+# RUN: env > %t
+# RUN: FileCheck %s < %t
+
+# CHECK: BAR=2
+# CHECK: FOO=1

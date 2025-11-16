@@ -53,6 +53,12 @@
 # CHECK-NOT: # error:
 # CHECK: --
 
+# CHECK: PASS: shtest-env :: env-temp-redirect.txt ({{[^)]*}})
+# CHECK: env {{.*}}/env-temp-redirect.txt.tmp
+# CHECK: # executed command: env
+# CHECK-NOT: # error:
+# CHECK: --
+
 # CHECK: PASS: shtest-env :: env-u.txt ({{[^)]*}})
 # CHECK: env -u FOO | {{.*}}
 # CHECK: # executed command: env -u FOO
