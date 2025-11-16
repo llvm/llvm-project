@@ -13649,6 +13649,62 @@ struct AAAllocationInfoImpl : public AAAllocationInfo {
             A, this, IRP, DepClassTy::OPTIONAL, IsKnownNoCapture))
       return indicatePessimisticFixpoint();
 
+    const auto *AAPrivatizablePtrI = A.getOrCreateAAFor<AAPrivatizablePtr>(
+        getIRPosition(), *this, DepClassTy::OPTIONAL);
+
+    // If this allocation is privatizable we don't want to modify its allocation
+    // size.
+    // TODO: update AAPointerInfo to update bins once AAPrivitizable makes a
+    // change.
+    if (AAPrivatizablePtrI && (AAPrivatizablePtrI->isAssumedPrivatizablePtr() ||
+                               AAPrivatizablePtrI->isKnownPrivatizablePtr()))
+      return indicateOptimisticFixpoint();
+
+    // For all call sites, check if the called function can privatize the
+    // pointer.
+    for (Use &U : I->uses()) {
+      auto *CB = dyn_cast<CallBase>(U.getUser());
+      if (!CB)
+        continue;
+
+      unsigned ArgIdx = 0;
+      for (auto *It = CB->arg_begin(); It != CB->arg_end(); It++) {
+        Value *ArgVal = *It;
+
+        // Remove any pointer casts.
+        Value *Stripped = ArgVal->stripPointerCasts();
+        if (Stripped != I)
+          continue;
+
+        Function *Callee = CB->getCalledFunction();
+        if (!Callee)
+          continue;
+
+        if (ArgIdx >= Callee->arg_size())
+          continue;
+
+        Argument &FunctionDefArg = *Callee->getArg(ArgIdx);
+
+        IRPosition FunctionDefArgPos = IRPosition::argument(FunctionDefArg);
+
+        const auto *AAPrivateArgPos = A.getOrCreateAAFor<AAPrivatizablePtr>(
+            FunctionDefArgPos, *this, DepClassTy::OPTIONAL);
+
+        if (!AAPrivateArgPos)
+          continue;
+
+        // If this allocation is privitizable we don't want to modify its
+        // allocation size.
+        // TODO: update AAPointerInfo to update bins once AAPrivitizable makes a
+        // change.
+        if (AAPrivateArgPos->isAssumedPrivatizablePtr() ||
+            AAPrivateArgPos->isKnownPrivatizablePtr())
+          return indicateOptimisticFixpoint();
+
+        ArgIdx++;
+      }
+    }
+
     const AAPointerInfo *PI =
         A.getOrCreateAAFor<AAPointerInfo>(IRP, *this, DepClassTy::REQUIRED);
 
