@@ -69,6 +69,9 @@ void ShadowedNamespaceFunctionCheck::check(
   if (!ShadowedFunc || !ShadowedNamespace)
     return;
 
+  if (ShadowedFunc->getDefinition())
+    return;
+
   // Generate warning message
   std::string NamespaceName = ShadowedNamespace->getQualifiedNameAsString();
   auto Diag = diag(Func->getLocation(), 
