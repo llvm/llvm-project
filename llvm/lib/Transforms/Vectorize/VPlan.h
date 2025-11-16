@@ -1120,7 +1120,7 @@ private:
 
 public:
   VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands,
-                const VPIRFlags &Flags, const VPIRMetadata &MD = {},
+                const VPIRFlags &Flags = {}, const VPIRMetadata &MD = {},
                 DebugLoc DL = DebugLoc::getUnknown(), const Twine &Name = "");
 
   VP_CLASSOF_IMPL(VPDef::VPInstructionSC)
@@ -1210,14 +1210,10 @@ class VPInstructionWithType : public VPInstruction {
 
 public:
   VPInstructionWithType(unsigned Opcode, ArrayRef<VPValue *> Operands,
-                        Type *ResultTy, const VPIRFlags &Flags, DebugLoc DL,
+                        Type *ResultTy, const VPIRFlags &Flags = {},
+                        const VPIRMetadata &Metadata = {},
+                        DebugLoc DL = DebugLoc::getUnknown(),
                         const Twine &Name = "")
-      : VPInstruction(Opcode, Operands, Flags, {}, DL, Name),
-        ResultTy(ResultTy) {}
-
-  VPInstructionWithType(unsigned Opcode, ArrayRef<VPValue *> Operands,
-                        Type *ResultTy, DebugLoc DL, const VPIRFlags &Flags,
-                        const VPIRMetadata &Metadata, const Twine &Name = "")
       : VPInstruction(Opcode, Operands, Flags, Metadata, DL, Name),
         ResultTy(ResultTy) {}
 
@@ -1246,7 +1242,7 @@ public:
   VPInstruction *clone() override {
     auto *New =
         new VPInstructionWithType(getOpcode(), operands(), getResultType(),
-                                  *this, getDebugLoc(), getName());
+                                  *this, *this, getDebugLoc(), getName());
     New->setUnderlyingValue(getUnderlyingValue());
     return New;
   }
@@ -1330,7 +1326,7 @@ public:
 
 struct LLVM_ABI_FOR_TEST VPPhi : public VPInstruction, public VPPhiAccessors {
   VPPhi(ArrayRef<VPValue *> Operands, DebugLoc DL, const Twine &Name = "")
-      : VPInstruction(Instruction::PHI, Operands, {}, DL, Name) {}
+      : VPInstruction(Instruction::PHI, Operands, {}, {}, DL, Name) {}
 
   static inline bool classof(const VPUser *U) {
     auto *VPI = dyn_cast<VPInstruction>(U);
@@ -1476,10 +1472,8 @@ public:
 
   VPWidenRecipe(Instruction &I, ArrayRef<VPValue *> Operands,
                 const VPIRMetadata &Metadata, DebugLoc DL)
-      : VPRecipeWithIRFlags(VPDef::VPWidenSC, Operands, VPIRFlags(I), DL),
-        VPIRMetadata(Metadata), Opcode(I.getOpcode()) {
-    setUnderlyingValue(&I);
-  }
+      : VPRecipeWithIRFlags(VPDef::VPWidenSC, Operands, I),
+        VPIRMetadata(Metadata), Opcode(I.getOpcode()) {}
 
   ~VPWidenRecipe() override = default;
 
@@ -1520,26 +1514,30 @@ class VPWidenCastRecipe : public VPRecipeWithIRFlags, public VPIRMetadata {
 
 public:
   VPWidenCastRecipe(Instruction::CastOps Opcode, VPValue *Op, Type *ResultTy,
-                    CastInst *UI = nullptr, const VPIRFlags &Flags = {},
+                    CastInst &UI, const VPIRMetadata &Metadata)
+      : VPRecipeWithIRFlags(VPDef::VPWidenCastSC, Op, UI),
+        VPIRMetadata(Metadata), Opcode(Opcode), ResultTy(ResultTy) {
+    assert(UI.getOpcode() == Opcode &&
+           "opcode of underlying cast doesn't match");
+  }
+  VPWidenCastRecipe(Instruction::CastOps Opcode, VPValue *Op, Type *ResultTy,
+                    const VPIRFlags &Flags = {},
                     const VPIRMetadata &Metadata = {},
                     DebugLoc DL = DebugLoc::getUnknown())
-      : VPRecipeWithIRFlags(VPDef::VPWidenCastSC, Op,
-                            UI ? VPIRFlags(*UI) : Flags,
-                            UI ? UI->getDebugLoc() : DL),
+      : VPRecipeWithIRFlags(VPDef::VPWidenCastSC, Op, Flags, DL),
         VPIRMetadata(Metadata), Opcode(Opcode), ResultTy(ResultTy) {
     assert(flagsValidForOpcode(Opcode) &&
            "Set flags not supported for the provided opcode");
-    assert((!UI || UI->getOpcode() == Opcode) &&
-           "opcode of underlying cast doesn't match");
-    setUnderlyingValue(UI);
   }
 
   ~VPWidenCastRecipe() override = default;
 
   VPWidenCastRecipe *clone() override {
-    return new VPWidenCastRecipe(Opcode, getOperand(0), ResultTy,
-                                 cast_or_null<CastInst>(getUnderlyingValue()),
-                                 *this, *this, getDebugLoc());
+    auto *New = new VPWidenCastRecipe(Opcode, getOperand(0), ResultTy, *this,
+                                      *this, getDebugLoc());
+    if (auto *UV = getUnderlyingValue())
+      New->setUnderlyingValue(UV);
+    return New;
   }
 
   VP_CLASSOF_IMPL(VPDef::VPWidenCastSC)
@@ -1594,9 +1592,13 @@ public:
 
   VPWidenIntrinsicRecipe(Intrinsic::ID VectorIntrinsicID,
                          ArrayRef<VPValue *> CallArguments, Type *Ty,
+                         const VPIRFlags &Flags = {},
+                         const VPIRMetadata &Metadata = {},
                          DebugLoc DL = DebugLoc::getUnknown())
-      : VPRecipeWithIRFlags(VPDef::VPWidenIntrinsicSC, CallArguments, DL),
-        VPIRMetadata(), VectorIntrinsicID(VectorIntrinsicID), ResultTy(Ty) {
+      : VPRecipeWithIRFlags(VPDef::VPWidenIntrinsicSC, CallArguments, Flags,
+                            DL),
+        VPIRMetadata(Metadata), VectorIntrinsicID(VectorIntrinsicID),
+        ResultTy(Ty) {
     LLVMContext &Ctx = Ty->getContext();
     AttributeSet Attrs = Intrinsic::getFnAttributes(Ctx, VectorIntrinsicID);
     MemoryEffects ME = Attrs.getMemoryEffects();
@@ -1615,7 +1617,7 @@ public:
                                         operands(), ResultTy, *this,
                                         getDebugLoc());
     return new VPWidenIntrinsicRecipe(VectorIntrinsicID, operands(), ResultTy,
-                                      getDebugLoc());
+                                      *this, *this, getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPDef::VPWidenIntrinsicSC)
@@ -1756,15 +1758,16 @@ protected:
 /// instruction.
 struct LLVM_ABI_FOR_TEST VPWidenSelectRecipe : public VPRecipeWithIRFlags,
                                                public VPIRMetadata {
-  VPWidenSelectRecipe(SelectInst &I, ArrayRef<VPValue *> Operands)
+  VPWidenSelectRecipe(SelectInst &I, ArrayRef<VPValue *> Operands,
+                      VPIRMetadata &MD)
       : VPRecipeWithIRFlags(VPDef::VPWidenSelectSC, Operands, I),
-        VPIRMetadata(I) {}
+        VPIRMetadata(MD) {}
 
   ~VPWidenSelectRecipe() override = default;
 
   VPWidenSelectRecipe *clone() override {
     return new VPWidenSelectRecipe(*cast<SelectInst>(getUnderlyingInstr()),
-                                   operands());
+                                   operands(), *this);
   }
 
   VP_CLASSOF_IMPL(VPDef::VPWidenSelectSC)

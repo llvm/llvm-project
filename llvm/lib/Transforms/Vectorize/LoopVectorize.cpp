@@ -8234,13 +8234,14 @@ VPRecipeBase *VPRecipeBuilder::tryToCreateWidenRecipe(VPSingleDefRecipe *R,
     return new VPWidenGEPRecipe(cast<GetElementPtrInst>(Instr), R->operands());
 
   if (VPI->getOpcode() == Instruction::Select)
-    return new VPWidenSelectRecipe(*cast<SelectInst>(Instr), R->operands());
+    return new VPWidenSelectRecipe(*cast<SelectInst>(Instr), R->operands(),
+                                   *VPI);
 
   if (Instruction::isCast(VPI->getOpcode())) {
     auto *CastR = cast<VPInstructionWithType>(R);
     auto *CI = cast<CastInst>(Instr);
     return new VPWidenCastRecipe(CI->getOpcode(), VPI->getOperand(0),
-                                 CastR->getResultType(), CI, *VPI, *VPI);
+                                 CastR->getResultType(), *CI, *VPI);
   }
 
   return tryToWiden(VPI);
