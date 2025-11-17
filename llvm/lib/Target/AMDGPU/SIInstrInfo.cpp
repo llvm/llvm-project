@@ -4187,7 +4187,7 @@ SIInstrInfo::convertToThreeAddressImpl(MachineInstr &MI,
   if (NewMFMAOpc != -1) {
     MachineInstrBuilder MIB =
         BuildMI(MBB, MI, MI.getDebugLoc(), get(NewMFMAOpc));
-    for (unsigned I = 0, E = MI.getNumOperands(); I != E; ++I)
+    for (unsigned I = 0, E = MI.getNumExplicitOperands(); I != E; ++I)
       MIB.add(MI.getOperand(I));
     return MIB;
   }
@@ -4196,7 +4196,7 @@ SIInstrInfo::convertToThreeAddressImpl(MachineInstr &MI,
     unsigned NewOpc = AMDGPU::mapWMMA2AddrTo3AddrOpcode(MI.getOpcode());
     MachineInstrBuilder MIB = BuildMI(MBB, MI, MI.getDebugLoc(), get(NewOpc))
                                   .setMIFlags(MI.getFlags());
-    for (unsigned I = 0, E = MI.getNumOperands(); I != E; ++I)
+    for (unsigned I = 0, E = MI.getNumExplicitOperands(); I != E; ++I)
       MIB->addOperand(MI.getOperand(I));
     return MIB;
   }
