@@ -267,6 +267,13 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
     PrefLoopAlignment = Align(32);
     MaxBytesForLoopAlignment = 16;
     break;
+  case NeoverseN2:
+    ShouldMaximizeScalableVectorBandwidth = false;
+    PrefFunctionAlignment = Align(16);
+    PrefLoopAlignment = Align(32);
+    MaxBytesForLoopAlignment = 16;
+    VScaleForTuning = 1;
+    break;
   case NeoverseV2:
   case NeoverseV3:
     CacheLineSize = 64;
@@ -274,7 +281,6 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
     MaxInterleaveFactor = 4;
     ScatterOverhead = 13;
     [[fallthrough]];
-  case NeoverseN2:
   case NeoverseN3:
     PrefFunctionAlignment = Align(16);
     PrefLoopAlignment = Align(32);
@@ -282,6 +288,7 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
     VScaleForTuning = 1;
     break;
   case NeoverseV1:
+    ShouldMaximizeScalableVectorBandwidth = false;
     PrefFunctionAlignment = Align(16);
     PrefLoopAlignment = Align(32);
     MaxBytesForLoopAlignment = 16;
