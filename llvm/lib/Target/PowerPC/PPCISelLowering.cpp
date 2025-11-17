@@ -15775,10 +15775,81 @@ SDValue convertTwoLoadsAndCmpToVCMPEQUB(SelectionDAG &DAG, SDNode *N,
                       CC == ISD::SETNE ? ISD::SETEQ : ISD::SETNE);
 }
 
+// Detect whether there is a pattern like (setcc (and X, 1), 0, eq).
+// If it is , return true; otherwise return false.
+static bool canConvertSETCCToXori(SDNode *N) {
+  if (N->getOpcode() != ISD::SETCC)
+    return false;
+
+  ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
+  if (CC != ISD::SETEQ)
+    return false;
+
+  SDValue LHS = N->getOperand(0);
+  SDValue RHS = N->getOperand(1);
+
+  // Check the `SDValue &V` is from `and` with `1`.
+  auto IsAndWithOne = [](SDValue &V) {
+    if (V.getOpcode() == ISD::AND) {
+      SDNode *AndNode = V.getNode();
+      for (const SDValue &Op : AndNode->ops())
+        if (auto *C = dyn_cast<ConstantSDNode>(Op))
+          if (C->isOne())
+            return true;
+    }
+    return false;
+  };
+
+  // Check whether the SETCC compare with zero.
+  auto IsCompareWithZero = [](SDValue &V) {
+    if (auto *C = dyn_cast<ConstantSDNode>(V))
+      if (C->isZero())
+        return true;
+    return false;
+  };
+
+  return (IsAndWithOne(LHS) && IsCompareWithZero(RHS)) ||
+         (IsAndWithOne(RHS) && IsCompareWithZero(LHS));
+}
+
+// You must check whether the `SDNode* N` can be converted to Xori using
+// the function `static bool canConvertSETCCToXori(SDNode *N)`
+// before calling the function; otherwise, it may produce incorrect results.
+static SDValue ConvertSETCCToXori(SDNode *N, SelectionDAG &DAG) {
+
+  assert(N->getOpcode() == ISD::SETCC && "Should SETCC SDNode here.");
+  SDValue LHS = N->getOperand(0);
+  SDValue RHS = N->getOperand(1);
+  SDLoc DL(N);
+
+  ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
+  assert((CC == ISD::SETEQ) && "CC must be ISD::SETEQ.");
+  // Rewrite it as XORI (and X, 1), 1.
+  auto MakeXor1 = [&](SDValue V) {
+    EVT VT = V.getValueType();
+    SDValue One = DAG.getConstant(1, DL, VT);
+    SDValue Xor = DAG.getNode(ISD::XOR, DL, VT, V, One);
+    return DAG.getNode(ISD::TRUNCATE, DL, MVT::i1, Xor);
+  };
+
+  if (LHS.getOpcode() == ISD::AND && RHS.getOpcode() != ISD::AND)
+    return MakeXor1(LHS);
+
+  if (RHS.getOpcode() == ISD::AND && LHS.getOpcode() != ISD::AND)
+    return MakeXor1(RHS);
+
+  llvm_unreachable("Should not reach here.");
+}
+
 SDValue PPCTargetLowering::combineSetCC(SDNode *N,
                                         DAGCombinerInfo &DCI) const {
   assert(N->getOpcode() == ISD::SETCC &&
          "Should be called with a SETCC node");
+
+  // Check if the pattern (setcc (and X, 1), 0, eq) is present.
+  // If it is, rewrite it as XORI (and X, 1), 1.
+  if (canConvertSETCCToXori(N))
+    return ConvertSETCCToXori(N, DCI.DAG);
 
   ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
   if (CC == ISD::SETNE || CC == ISD::SETEQ) {
