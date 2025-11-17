@@ -1263,7 +1263,7 @@ bool llvm::maskIsAllZeroOrUndef(Value *Mask) {
   auto *ConstMask = dyn_cast<Constant>(Mask);
   if (!ConstMask)
     return false;
-  if (ConstMask->isNullValue() || isa<UndefValue>(ConstMask))
+  if (match(ConstMask, m_CombineOr(m_Zero(), m_Undef())))
     return true;
   if (isa<ScalableVectorType>(ConstMask->getType()))
     return false;
@@ -1272,7 +1272,7 @@ bool llvm::maskIsAllZeroOrUndef(Value *Mask) {
            E = cast<FixedVectorType>(ConstMask->getType())->getNumElements();
        I != E; ++I) {
     if (auto *MaskElt = ConstMask->getAggregateElement(I))
-      if (MaskElt->isNullValue() || isa<UndefValue>(MaskElt))
+      if (match(MaskElt, m_CombineOr(m_Zero(), m_Undef())))
         continue;
     return false;
   }
@@ -1289,7 +1289,7 @@ bool llvm::maskIsAllOneOrUndef(Value *Mask) {
   auto *ConstMask = dyn_cast<Constant>(Mask);
   if (!ConstMask)
     return false;
-  if (ConstMask->isAllOnesValue() || isa<UndefValue>(ConstMask))
+  if (match(ConstMask, m_CombineOr(m_AllOnes(), m_Undef())))
     return true;
   if (isa<ScalableVectorType>(ConstMask->getType()))
     return false;
@@ -1298,7 +1298,7 @@ bool llvm::maskIsAllOneOrUndef(Value *Mask) {
            E = cast<FixedVectorType>(ConstMask->getType())->getNumElements();
        I != E; ++I) {
     if (auto *MaskElt = ConstMask->getAggregateElement(I))
-      if (MaskElt->isAllOnesValue() || isa<UndefValue>(MaskElt))
+      if (match(MaskElt, m_CombineOr(m_AllOnes(), m_Undef())))
         continue;
     return false;
   }
@@ -1315,7 +1315,7 @@ bool llvm::maskContainsAllOneOrUndef(Value *Mask) {
   auto *ConstMask = dyn_cast<Constant>(Mask);
   if (!ConstMask)
     return false;
-  if (ConstMask->isAllOnesValue() || isa<UndefValue>(ConstMask))
+  if (match(ConstMask, m_CombineOr(m_AllOnes(), m_Undef())))
     return true;
   if (isa<ScalableVectorType>(ConstMask->getType()))
     return false;
@@ -1324,7 +1324,7 @@ bool llvm::maskContainsAllOneOrUndef(Value *Mask) {
            E = cast<FixedVectorType>(ConstMask->getType())->getNumElements();
        I != E; ++I) {
     if (auto *MaskElt = ConstMask->getAggregateElement(I))
-      if (MaskElt->isAllOnesValue() || isa<UndefValue>(MaskElt))
+      if (match(MaskElt, m_CombineOr(m_AllOnes(), m_Undef())))
         return true;
   }
   return false;
