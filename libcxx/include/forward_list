@@ -223,14 +223,12 @@ template <class T, class Allocator, class Predicate>
 #  include <__ranges/concepts.h>
 #  include <__ranges/container_compatible_range.h>
 #  include <__ranges/from_range.h>
-#  include <__type_traits/conditional.h>
 #  include <__type_traits/container_traits.h>
 #  include <__type_traits/enable_if.h>
 #  include <__type_traits/is_allocator.h>
 #  include <__type_traits/is_const.h>
 #  include <__type_traits/is_nothrow_assignable.h>
 #  include <__type_traits/is_nothrow_constructible.h>
-#  include <__type_traits/is_pointer.h>
 #  include <__type_traits/is_same.h>
 #  include <__type_traits/is_swappable.h>
 #  include <__type_traits/remove_cv.h>
@@ -284,17 +282,6 @@ struct __forward_node_traits {
   typedef _NodePtr __node_pointer;
   typedef __forward_begin_node<_NodePtr> __begin_node;
   typedef __rebind_pointer_t<_NodePtr, __begin_node> __begin_node_pointer;
-
-// TODO(LLVM 22): Remove this check
-#  ifndef _LIBCPP_ABI_FORWARD_LIST_REMOVE_NODE_POINTER_UB
-  static_assert(sizeof(__begin_node_pointer) == sizeof(__node_pointer) && _LIBCPP_ALIGNOF(__begin_node_pointer) ==
-                    _LIBCPP_ALIGNOF(__node_pointer),
-                "It looks like you are using std::forward_list with a fancy pointer type that thas a different "
-                "representation depending on whether it points to a forward_list base pointer or a forward_list node "
-                "pointer (both of which are implementation details of the standard library). This means that your ABI "
-                "is being broken between LLVM 19 and LLVM 20. If you don't care about your ABI being broken, define "
-                "the _LIBCPP_ABI_FORWARD_LIST_REMOVE_NODE_POINTER_UB macro to silence this diagnostic.");
-#  endif
 };
 
 template <class _NodePtr>

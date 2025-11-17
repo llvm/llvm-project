@@ -18,6 +18,11 @@ def apple_silicon():
 
 
 def rosetta_debugserver_installed():
+    import platform
+    version = platform.mac_ver()
+    # Workaround for an undiagnosed problem on green dragon.
+    if version[0] == '15.5':
+        return False
     return exists("/Library/Apple/usr/libexec/oah/debugserver")
 
 

@@ -34,7 +34,6 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
-#include <utility>
 
 using namespace llvm;
 
@@ -395,7 +394,7 @@ void AggressiveAntiDepBreaker::PrescanInstruction(
     // Note register reference...
     const TargetRegisterClass *RC = nullptr;
     if (i < MI.getDesc().getNumOperands())
-      RC = TII->getRegClass(MI.getDesc(), i, TRI);
+      RC = TII->getRegClass(MI.getDesc(), i);
     AggressiveAntiDepState::RegisterReference RR = { &MO, RC };
     RegRefs.emplace(Reg.asMCReg(), RR);
   }
@@ -479,7 +478,7 @@ void AggressiveAntiDepBreaker::ScanInstruction(MachineInstr &MI,
     // Note register reference...
     const TargetRegisterClass *RC = nullptr;
     if (i < MI.getDesc().getNumOperands())
-      RC = TII->getRegClass(MI.getDesc(), i, TRI);
+      RC = TII->getRegClass(MI.getDesc(), i);
     AggressiveAntiDepState::RegisterReference RR = { &MO, RC };
     RegRefs.emplace(Reg.asMCReg(), RR);
   }

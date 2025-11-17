@@ -3785,7 +3785,7 @@ static bool handleFormatAttrCommon(Sema &S, Decl *D, const ParsedAttr &AL,
 
   // In C++ the implicit 'this' function parameter also counts, and they are
   // counted from one.
-  bool HasImplicitThisParam = isInstanceMethod(D);
+  bool HasImplicitThisParam = hasImplicitObjectParameter(D);
   Info->NumArgs = getFunctionOrMethodNumParams(D) + HasImplicitThisParam;
 
   Info->Identifier = AL.getArgAsIdent(0)->getIdentifierInfo();
@@ -3926,7 +3926,7 @@ static void handleCallbackAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     return;
   }
 
-  bool HasImplicitThisParam = isInstanceMethod(D);
+  bool HasImplicitThisParam = hasImplicitObjectParameter(D);
   int32_t NumArgs = getFunctionOrMethodNumParams(D);
 
   FunctionDecl *FD = D->getAsFunction();
@@ -4110,7 +4110,7 @@ static void handleLifetimeCaptureByAttr(Sema &S, Decl *D,
 }
 
 void Sema::LazyProcessLifetimeCaptureByParams(FunctionDecl *FD) {
-  bool HasImplicitThisParam = isInstanceMethod(FD);
+  bool HasImplicitThisParam = hasImplicitObjectParameter(FD);
   SmallVector<LifetimeCaptureByAttr *, 1> Attrs;
   for (ParmVarDecl *PVD : FD->parameters())
     if (auto *A = PVD->getAttr<LifetimeCaptureByAttr>())

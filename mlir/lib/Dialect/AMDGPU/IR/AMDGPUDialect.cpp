@@ -344,14 +344,27 @@ void RawBufferAtomicCmpswapOp::getCanonicalizationPatterns(
 LogicalResult ScaledExtPacked816Op::verify() {
   int blockSize = getBlockSize();
   assert((blockSize == 16 || blockSize == 32) && "invalid block size");
+
   int firstScaleByte = getFirstScaleByte();
-  if (blockSize == 16 && !llvm::is_contained({0, 1}, firstScaleByte)) {
-    return emitOpError(
-        "blockSize of 16 can only have firstScaleByte be 0 or 1.");
+  auto sourceType = cast<VectorType>(getSource().getType());
+  Type elementType = sourceType.getElementType();
+  auto floatType = cast<FloatType>(elementType);
+  int bitWidth = floatType.getWidth();
+
+  if (llvm::is_contained({4, 6}, bitWidth) && blockSize == 16 &&
+      !llvm::is_contained({0, 1}, firstScaleByte)) {
+    return emitOpError("blockSize of 16 can only have firstScaleByte be 0 or 1 "
+                       "for f4 and f6.");
   }
-  if (blockSize == 32 && !llvm::is_contained({0, 2}, firstScaleByte)) {
+  if (llvm::is_contained({4, 6}, bitWidth) && blockSize == 32 &&
+      !llvm::is_contained({0, 2}, firstScaleByte)) {
+    return emitOpError("blockSize of 32 can only have firstScaleByte be 0 or 2 "
+                       "for f4 and f6.");
+  }
+  if (bitWidth == 8 && blockSize == 16 &&
+      !llvm::is_contained({0, 2}, firstScaleByte)) {
     return emitOpError(
-        "blockSize of 32 can only have firstScaleByte be 0 or 2.");
+        "blockSize of 16 can only have firstScaleByte be 0 or 2 for f8.");
   }
 
   return success();
@@ -399,13 +412,15 @@ LogicalResult WMMAOp::verify() {
 
   if (!sourceAElemType.isFloat(8) && sourceAElemType != sourceBElemType) {
     return emitOpError(
-               "source element types much match (except for fp8) but have ")
+               "source element types must match (except for fp8/bf8) but have ")
            << sourceAType << " and " << sourceBType;
   }
 
-  if (!sourceAElemType.isInteger(4) && getK() != 16) {
-    return emitOpError("K dimension must be 16 for source element type ")
-           << sourceAElemType;
+  if (isSrcFloat) {
+    if (getClamp())
+      return emitOpError("clamp flag is not supported for float types");
+    if (getUnsignedA() || getUnsignedB())
+      return emitOpError("unsigned flags are not supported for float types");
   }
   return success();
 }

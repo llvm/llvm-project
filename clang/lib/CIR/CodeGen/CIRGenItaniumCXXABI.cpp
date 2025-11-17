@@ -1846,13 +1846,13 @@ mlir::Value CIRGenItaniumCXXABI::getVirtualBaseClassOffset(
     const CXXRecordDecl *classDecl, const CXXRecordDecl *baseClassDecl) {
   CIRGenBuilderTy &builder = cgf.getBuilder();
   mlir::Value vtablePtr = cgf.getVTablePtr(loc, thisAddr, classDecl);
-  mlir::Value vtableBytePtr = builder.createBitcast(vtablePtr, cgm.UInt8PtrTy);
+  mlir::Value vtableBytePtr = builder.createBitcast(vtablePtr, cgm.uInt8PtrTy);
   CharUnits vbaseOffsetOffset =
       cgm.getItaniumVTableContext().getVirtualBaseOffsetOffset(classDecl,
                                                                baseClassDecl);
   mlir::Value offsetVal =
       builder.getSInt64(vbaseOffsetOffset.getQuantity(), loc);
-  auto vbaseOffsetPtr = cir::PtrStrideOp::create(builder, loc, cgm.UInt8PtrTy,
+  auto vbaseOffsetPtr = cir::PtrStrideOp::create(builder, loc, cgm.uInt8PtrTy,
                                                  vtableBytePtr, offsetVal);
 
   mlir::Value vbaseOffset;
@@ -1861,9 +1861,9 @@ mlir::Value CIRGenItaniumCXXABI::getVirtualBaseClassOffset(
     cgm.errorNYI(loc, "getVirtualBaseClassOffset: relative layout");
   } else {
     mlir::Value offsetPtr = builder.createBitcast(
-        vbaseOffsetPtr, builder.getPointerTo(cgm.PtrDiffTy));
+        vbaseOffsetPtr, builder.getPointerTo(cgm.ptrDiffTy));
     vbaseOffset = builder.createLoad(
-        loc, Address(offsetPtr, cgm.PtrDiffTy, cgf.getPointerAlign()));
+        loc, Address(offsetPtr, cgm.ptrDiffTy, cgf.getPointerAlign()));
   }
   return vbaseOffset;
 }
@@ -2244,7 +2244,7 @@ Address CIRGenItaniumCXXABI::initializeArrayCookie(CIRGenFunction &cgf,
 
   // Write the number of elements into the appropriate slot.
   Address numElementsPtr =
-      cookiePtr.withElementType(cgf.getBuilder(), cgf.SizeTy);
+      cookiePtr.withElementType(cgf.getBuilder(), cgf.sizeTy);
   cgf.getBuilder().createStore(loc, numElements, numElementsPtr);
 
   // Finally, compute a pointer to the actual data buffer by skipping

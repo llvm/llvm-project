@@ -589,8 +589,8 @@ bool CombinerHelper::matchCombineShuffleVector(
   return true;
 }
 
-void CombinerHelper::applyCombineShuffleVector(
-    MachineInstr &MI, const ArrayRef<Register> Ops) const {
+void CombinerHelper::applyCombineShuffleVector(MachineInstr &MI,
+                                               ArrayRef<Register> Ops) const {
   Register DstReg = MI.getOperand(0).getReg();
   Builder.setInsertPt(*MI.getParent(), MI);
   Register NewDstReg = MRI.cloneVirtualRegister(DstReg);
@@ -3463,6 +3463,88 @@ static bool isConstValidTrue(const TargetLowering &TLI, unsigned ScalarSizeBits,
          isConstTrueVal(TLI, Cst, IsVector, IsFP);
 }
 
+// This pattern aims to match the following shape to avoid extra mov
+// instructions
+// G_BUILD_VECTOR(
+//   G_UNMERGE_VALUES(src, 0)
+//   G_UNMERGE_VALUES(src, 1)
+//   G_IMPLICIT_DEF
+//   G_IMPLICIT_DEF
+// )
+// ->
+// G_CONCAT_VECTORS(
+//   src,
+//   undef
+// )
+bool CombinerHelper::matchCombineBuildUnmerge(MachineInstr &MI,
+                                              MachineRegisterInfo &MRI,
+                                              Register &UnmergeSrc) const {
+  auto &BV = cast<GBuildVector>(MI);
+
+  unsigned BuildUseCount = BV.getNumSources();
+  if (BuildUseCount % 2 != 0)
+    return false;
+
+  unsigned NumUnmerge = BuildUseCount / 2;
+
+  auto *Unmerge = getOpcodeDef<GUnmerge>(BV.getSourceReg(0), MRI);
+
+  // Check the first operand is an unmerge and has the correct number of
+  // operands
+  if (!Unmerge || Unmerge->getNumDefs() != NumUnmerge)
+    return false;
+
+  UnmergeSrc = Unmerge->getSourceReg();
+
+  LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
+  LLT UnmergeSrcTy = MRI.getType(UnmergeSrc);
+
+  // Ensure we only generate legal instructions post-legalizer
+  if (!IsPreLegalize &&
+      !isLegal({TargetOpcode::G_CONCAT_VECTORS, {DstTy, UnmergeSrcTy}}))
+    return false;
+
+  // Check that all of the operands before the midpoint come from the same
+  // unmerge and are in the same order as they are used in the build_vector
+  for (unsigned I = 0; I < NumUnmerge; ++I) {
+    auto MaybeUnmergeReg = BV.getSourceReg(I);
+    auto *LoopUnmerge = getOpcodeDef<GUnmerge>(MaybeUnmergeReg, MRI);
+
+    if (!LoopUnmerge || LoopUnmerge != Unmerge)
+      return false;
+
+    if (LoopUnmerge->getOperand(I).getReg() != MaybeUnmergeReg)
+      return false;
+  }
+
+  // Check that all of the unmerged values are used
+  if (Unmerge->getNumDefs() != NumUnmerge)
+    return false;
+
+  // Check that all of the operands after the mid point are undefs.
+  for (unsigned I = NumUnmerge; I < BuildUseCount; ++I) {
+    auto *Undef = getDefIgnoringCopies(BV.getSourceReg(I), MRI);
+
+    if (Undef->getOpcode() != TargetOpcode::G_IMPLICIT_DEF)
+      return false;
+  }
+
+  return true;
+}
+
+void CombinerHelper::applyCombineBuildUnmerge(MachineInstr &MI,
+                                              MachineRegisterInfo &MRI,
+                                              MachineIRBuilder &B,
+                                              Register &UnmergeSrc) const {
+  assert(UnmergeSrc && "Expected there to be one matching G_UNMERGE_VALUES");
+  B.setInstrAndDebugLoc(MI);
+
+  Register UndefVec = B.buildUndef(MRI.getType(UnmergeSrc)).getReg(0);
+  B.buildConcatVectors(MI.getOperand(0), {UnmergeSrc, UndefVec});
+
+  MI.eraseFromParent();
+}
+
 // This combine tries to reduce the number of scalarised G_TRUNC instructions by
 // using vector truncates instead
 //
@@ -4425,6 +4507,7 @@ void CombinerHelper::applyBuildFnNoErase(
 }
 
 bool CombinerHelper::matchOrShiftToFunnelShift(MachineInstr &MI,
+                                               bool AllowScalarConstants,
                                                BuildFnTy &MatchInfo) const {
   assert(MI.getOpcode() == TargetOpcode::G_OR);
 
@@ -4444,31 +4527,29 @@ bool CombinerHelper::matchOrShiftToFunnelShift(MachineInstr &MI,
 
   // Given constants C0 and C1 such that C0 + C1 is bit-width:
   // (or (shl x, C0), (lshr y, C1)) -> (fshl x, y, C0) or (fshr x, y, C1)
-  int64_t CstShlAmt, CstLShrAmt;
+  int64_t CstShlAmt = 0, CstLShrAmt;
   if (mi_match(ShlAmt, MRI, m_ICstOrSplat(CstShlAmt)) &&
       mi_match(LShrAmt, MRI, m_ICstOrSplat(CstLShrAmt)) &&
       CstShlAmt + CstLShrAmt == BitWidth) {
     FshOpc = TargetOpcode::G_FSHR;
     Amt = LShrAmt;
-
   } else if (mi_match(LShrAmt, MRI,
                       m_GSub(m_SpecificICstOrSplat(BitWidth), m_Reg(Amt))) &&
              ShlAmt == Amt) {
     // (or (shl x, amt), (lshr y, (sub bw, amt))) -> (fshl x, y, amt)
     FshOpc = TargetOpcode::G_FSHL;
-
   } else if (mi_match(ShlAmt, MRI,
                       m_GSub(m_SpecificICstOrSplat(BitWidth), m_Reg(Amt))) &&
              LShrAmt == Amt) {
     // (or (shl x, (sub bw, amt)), (lshr y, amt)) -> (fshr x, y, amt)
     FshOpc = TargetOpcode::G_FSHR;
-
   } else {
     return false;
   }
 
   LLT AmtTy = MRI.getType(Amt);
-  if (!isLegalOrBeforeLegalizer({FshOpc, {Ty, AmtTy}}))
+  if (!isLegalOrBeforeLegalizer({FshOpc, {Ty, AmtTy}}) &&
+      (!AllowScalarConstants || CstShlAmt == 0 || !Ty.isScalar()))
     return false;
 
   MatchInfo = [=](MachineIRBuilder &B) {

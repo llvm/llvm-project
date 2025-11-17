@@ -16,6 +16,7 @@
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/Dialect/LLVMIR/ROCDLDialect.h"
+#include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/TypeUtilities.h"
@@ -77,12 +78,6 @@ static Value convertUnsignedToI64(ConversionPatternRewriter &rewriter,
 static Value createI64Constant(ConversionPatternRewriter &rewriter,
                                Location loc, int64_t value) {
   return LLVM::ConstantOp::create(rewriter, loc, rewriter.getI64Type(), value);
-}
-
-static Value createI1Constant(ConversionPatternRewriter &rewriter, Location loc,
-                              bool value) {
-  Type llvmI1 = rewriter.getI1Type();
-  return LLVM::ConstantOp::create(rewriter, loc, llvmI1, value);
 }
 
 /// Returns the linear index used to access an element in the memref.
@@ -684,12 +679,11 @@ static Value castMFMAScaleOperand(ConversionPatternRewriter &rewriter,
 /// intrinsics having been defined before the AMD backend supported bfloat. We
 /// similarly need to pack 8-bit float types into integers as if they were i8
 /// (which they are for the backend's purposes).
-static void wmmaPushInputOperand(ConversionPatternRewriter &rewriter,
-                                 Location loc,
-                                 const TypeConverter *typeConverter,
-                                 bool isUnsigned, Value llvmInput,
-                                 Value mlirInput,
-                                 SmallVector<Value, 4> &operands) {
+static void wmmaPushInputOperand(
+    ConversionPatternRewriter &rewriter, Location loc,
+    const TypeConverter *typeConverter, bool isUnsigned, Value llvmInput,
+    Value mlirInput, SmallVectorImpl<Value> &operands,
+    SmallVectorImpl<NamedAttribute> &attrs, StringRef attrName) {
   Type inputType = llvmInput.getType();
   auto vectorType = dyn_cast<VectorType>(inputType);
   if (!vectorType) {
@@ -697,10 +691,6 @@ static void wmmaPushInputOperand(ConversionPatternRewriter &rewriter,
     return;
   }
   Type elemType = vectorType.getElementType();
-
-  if (elemType.isBF16())
-    llvmInput = LLVM::BitcastOp::create(
-        rewriter, loc, vectorType.clone(rewriter.getI16Type()), llvmInput);
   if (elemType.getIntOrFloatBitWidth() > 8) {
     operands.push_back(llvmInput);
     return;
@@ -719,8 +709,8 @@ static void wmmaPushInputOperand(ConversionPatternRewriter &rewriter,
     } else if (elemType.isSignedInteger()) {
       localIsUnsigned = false;
     }
-    Value sign = createI1Constant(rewriter, loc, !localIsUnsigned);
-    operands.push_back(sign);
+    attrs.push_back(
+        NamedAttribute(attrName, rewriter.getBoolAttr(!localIsUnsigned)));
   }
 
   int64_t numBits =
@@ -751,18 +741,17 @@ static void wmmaPushOutputOperand(ConversionPatternRewriter &rewriter,
                                   Location loc,
                                   const TypeConverter *typeConverter,
                                   Value output, int32_t subwordOffset,
-                                  bool clamp, SmallVector<Value, 4> &operands) {
+                                  bool clamp, SmallVectorImpl<Value> &operands,
+                                  SmallVectorImpl<NamedAttribute> &attrs) {
   Type inputType = output.getType();
   auto vectorType = dyn_cast<VectorType>(inputType);
   Type elemType = vectorType.getElementType();
-  if (elemType.isBF16())
-    output = LLVM::BitcastOp::create(
-        rewriter, loc, vectorType.clone(rewriter.getI16Type()), output);
   operands.push_back(output);
   if (elemType.isF16() || elemType.isBF16() || elemType.isInteger(16)) {
-    operands.push_back(createI1Constant(rewriter, loc, subwordOffset));
+    attrs.push_back(
+        NamedAttribute("opsel", rewriter.getBoolAttr(subwordOffset)));
   } else if (elemType.isInteger(32)) {
-    operands.push_back(createI1Constant(rewriter, loc, clamp));
+    attrs.push_back(NamedAttribute("clamp", rewriter.getBoolAttr(clamp)));
   }
 }
 
@@ -935,7 +924,7 @@ static std::optional<uint32_t> mfmaTypeSelectCode(Type mlirElemType) {
       .Case([](Float6E2M3FNType) { return 2u; })
       .Case([](Float6E3M2FNType) { return 3u; })
       .Case([](Float4E2M1FNType) { return 4u; })
-      .Default([](Type) { return std::nullopt; });
+      .Default(std::nullopt);
 }
 
 /// If there is a scaled MFMA instruction for the input element types `aType`
@@ -989,7 +978,156 @@ mfmaOpToScaledIntrinsic(ScaledMFMAOp smfma, Chipset chipset) {
                                  smfma.getN(), smfma.getK(), 1u, chipset);
 }
 
+/// Returns the `rocdl` intrinsic corresponding to a WMMA operation `wmma`
+/// for RDNA3/4 architectures.
+static std::optional<StringRef>
+wmmaOpToIntrinsicRDNA(Type elemSourceType, Type elemBSourceType,
+                      Type elemDestType, uint32_t k, bool isRDNA3) {
+  using fp8 = Float8E4M3FNType;
+  using bf8 = Float8E5M2Type;
+
+  // Handle k == 16 for RDNA3/4.
+  if (k == 16) {
+    // Common patterns for RDNA3 and RDNA4.
+    if (elemSourceType.isF16() && elemDestType.isF32())
+      return ROCDL::wmma_f32_16x16x16_f16::getOperationName();
+    if (elemSourceType.isBF16() && elemDestType.isF32())
+      return ROCDL::wmma_f32_16x16x16_bf16::getOperationName();
+    if (elemSourceType.isF16() && elemDestType.isF16())
+      return ROCDL::wmma_f16_16x16x16_f16::getOperationName();
+    if (elemSourceType.isBF16() && elemDestType.isBF16())
+      return ROCDL::wmma_bf16_16x16x16_bf16::getOperationName();
+    if (elemSourceType.isInteger(8) && elemDestType.isInteger(32))
+      return ROCDL::wmma_i32_16x16x16_iu8::getOperationName();
+
+    // RDNA3 specific patterns.
+    if (isRDNA3) {
+      if (elemSourceType.isInteger(4) && elemDestType.isInteger(32))
+        return ROCDL::wmma_i32_16x16x16_iu4::getOperationName();
+      return std::nullopt;
+    }
+
+    // RDNA4 specific patterns (fp8/bf8).
+    if (isa<fp8>(elemSourceType) && isa<fp8>(elemBSourceType) &&
+        elemDestType.isF32())
+      return ROCDL::wmma_f32_16x16x16_fp8_fp8::getOperationName();
+    if (isa<fp8>(elemSourceType) && isa<bf8>(elemBSourceType) &&
+        elemDestType.isF32())
+      return ROCDL::wmma_f32_16x16x16_fp8_bf8::getOperationName();
+    if (isa<bf8>(elemSourceType) && isa<bf8>(elemBSourceType) &&
+        elemDestType.isF32())
+      return ROCDL::wmma_f32_16x16x16_bf8_bf8::getOperationName();
+    if (isa<bf8>(elemSourceType) && isa<fp8>(elemBSourceType) &&
+        elemDestType.isF32())
+      return ROCDL::wmma_f32_16x16x16_bf8_fp8::getOperationName();
+    if (elemSourceType.isInteger(4) && elemDestType.isInteger(32))
+      return ROCDL::wmma_i32_16x16x16_iu4::getOperationName();
+
+    return std::nullopt;
+  }
+
+  // Handle k == 32 for RDNA4.
+  if (k == 32 && !isRDNA3) {
+    if (elemSourceType.isInteger(4) && elemDestType.isInteger(32))
+      return ROCDL::wmma_i32_16x16x32_iu4::getOperationName();
+  }
+
+  return std::nullopt;
+}
+
 /// Return the `rocdl` intrinsic corresponding to a WMMA operation `wmma`
+/// for the gfx1250 architecture.
+static std::optional<StringRef> wmmaOpToIntrinsicGfx1250(Type elemSourceType,
+                                                         Type elemBSourceType,
+                                                         Type elemDestType,
+                                                         uint32_t k) {
+  using fp8 = Float8E4M3FNType;
+  using bf8 = Float8E5M2Type;
+
+  if (k == 4) {
+    if (elemSourceType.isF32() && elemDestType.isF32())
+      return ROCDL::wmma_f32_16x16x4_f32::getOperationName();
+
+    return std::nullopt;
+  }
+
+  if (k == 32) {
+    if (elemSourceType.isF16() && elemDestType.isF32())
+      return ROCDL::wmma_f32_16x16x32_f16::getOperationName();
+    if (elemSourceType.isBF16() && elemDestType.isF32())
+      return ROCDL::wmma_f32_16x16x32_bf16::getOperationName();
+    if (elemSourceType.isF16() && elemDestType.isF16())
+      return ROCDL::wmma_f16_16x16x32_f16::getOperationName();
+    if (elemSourceType.isBF16() && elemDestType.isBF16())
+      return ROCDL::wmma_bf16_16x16x32_bf16::getOperationName();
+
+    return std::nullopt;
+  }
+
+  if (k == 64) {
+    if (isa<fp8>(elemSourceType) && isa<fp8>(elemBSourceType)) {
+      if (elemDestType.isF32())
+        return ROCDL::wmma_f32_16x16x64_fp8_fp8::getOperationName();
+      if (elemDestType.isF16())
+        return ROCDL::wmma_f16_16x16x64_fp8_fp8::getOperationName();
+    }
+    if (isa<fp8>(elemSourceType) && isa<bf8>(elemBSourceType)) {
+      if (elemDestType.isF32())
+        return ROCDL::wmma_f32_16x16x64_fp8_bf8::getOperationName();
+      if (elemDestType.isF16())
+        return ROCDL::wmma_f16_16x16x64_fp8_bf8::getOperationName();
+    }
+    if (isa<bf8>(elemSourceType) && isa<bf8>(elemBSourceType)) {
+      if (elemDestType.isF32())
+        return ROCDL::wmma_f32_16x16x64_bf8_bf8::getOperationName();
+      if (elemDestType.isF16())
+        return ROCDL::wmma_f16_16x16x64_bf8_bf8::getOperationName();
+    }
+    if (isa<bf8>(elemSourceType) && isa<fp8>(elemBSourceType)) {
+      if (elemDestType.isF32())
+        return ROCDL::wmma_f32_16x16x64_bf8_fp8::getOperationName();
+      if (elemDestType.isF16())
+        return ROCDL::wmma_f16_16x16x64_bf8_fp8::getOperationName();
+    }
+    if (elemSourceType.isInteger(8) && elemDestType.isInteger(32))
+      return ROCDL::wmma_i32_16x16x64_iu8::getOperationName();
+
+    return std::nullopt;
+  }
+
+  if (k == 128) {
+    if (isa<fp8>(elemSourceType) && isa<fp8>(elemBSourceType)) {
+      if (elemDestType.isF32())
+        return ROCDL::wmma_f32_16x16x128_fp8_fp8::getOperationName();
+      if (elemDestType.isF16())
+        return ROCDL::wmma_f16_16x16x128_fp8_fp8::getOperationName();
+    }
+    if (isa<fp8>(elemSourceType) && isa<bf8>(elemBSourceType)) {
+      if (elemDestType.isF32())
+        return ROCDL::wmma_f32_16x16x128_fp8_bf8::getOperationName();
+      if (elemDestType.isF16())
+        return ROCDL::wmma_f16_16x16x128_fp8_bf8::getOperationName();
+    }
+    if (isa<bf8>(elemSourceType) && isa<bf8>(elemBSourceType)) {
+      if (elemDestType.isF32())
+        return ROCDL::wmma_f32_16x16x128_bf8_bf8::getOperationName();
+      if (elemDestType.isF16())
+        return ROCDL::wmma_f16_16x16x128_bf8_bf8::getOperationName();
+    }
+    if (isa<bf8>(elemSourceType) && isa<fp8>(elemBSourceType)) {
+      if (elemDestType.isF32())
+        return ROCDL::wmma_f32_16x16x128_bf8_fp8::getOperationName();
+      if (elemDestType.isF16())
+        return ROCDL::wmma_f16_16x16x128_bf8_fp8::getOperationName();
+    }
+
+    return std::nullopt;
+  }
+
+  return std::nullopt;
+}
+
+/// Returns the `rocdl` intrinsic corresponding to a WMMA operation `wmma`
 /// if one exists. This includes checking to ensure the intrinsic is supported
 /// on the architecture you are compiling for.
 static std::optional<StringRef> wmmaOpToIntrinsic(WMMAOp wmma,
@@ -1002,52 +1140,20 @@ static std::optional<StringRef> wmmaOpToIntrinsic(WMMAOp wmma,
   Type elemDestType = destVectorType.getElementType();
 
   const uint32_t k = wmma.getK();
+  const bool isRDNA3 = chipset.majorVersion == 11;
+  const bool isRDNA4 = chipset.majorVersion == 12 && chipset.minorVersion == 0;
 
-  if (k == 16) {
-    if (elemSourceType.isF16() && elemDestType.isF32())
-      return ROCDL::wmma_f32_16x16x16_f16::getOperationName();
-    if (elemSourceType.isBF16() && elemDestType.isF32())
-      return ROCDL::wmma_f32_16x16x16_bf16::getOperationName();
-    if (elemSourceType.isF16() && elemDestType.isF16())
-      return ROCDL::wmma_f16_16x16x16_f16::getOperationName();
-    if (elemSourceType.isBF16() && elemDestType.isBF16())
-      return ROCDL::wmma_bf16_16x16x16_bf16::getOperationName();
-    if (elemSourceType.isInteger(8) && elemDestType.isInteger(32))
-      return ROCDL::wmma_i32_16x16x16_iu8::getOperationName();
-    if (chipset.majorVersion == 11) {
-      if (elemSourceType.isInteger(4) && elemDestType.isInteger(32))
-        return ROCDL::wmma_i32_16x16x16_iu4::getOperationName();
-    }
-  }
-  if (chipset.majorVersion < 12)
-    return std::nullopt;
+  // Handle RDNA3 and RDNA4.
+  if (isRDNA3 || isRDNA4)
+    return wmmaOpToIntrinsicRDNA(elemSourceType, elemBSourceType, elemDestType,
+                                 k, isRDNA3);
 
-  // gfx12+
-  if (k == 16) {
-    if (isa<Float8E4M3FNType>(elemSourceType) &&
-        isa<Float8E4M3FNType>(elemBSourceType) && elemDestType.isF32())
-      return ROCDL::wmma_f32_16x16x16_fp8_fp8::getOperationName();
-    if (isa<Float8E4M3FNType>(elemSourceType) &&
-        isa<Float8E5M2Type>(elemBSourceType) && elemDestType.isF32())
-      return ROCDL::wmma_f32_16x16x16_fp8_bf8::getOperationName();
-    if (isa<Float8E5M2Type>(elemSourceType) &&
-        isa<Float8E5M2Type>(elemBSourceType) && elemDestType.isF32())
-      return ROCDL::wmma_f32_16x16x16_bf8_bf8::getOperationName();
-    if (isa<Float8E5M2Type>(elemSourceType) &&
-        isa<Float8E4M3FNType>(elemBSourceType) && elemDestType.isF32())
-      return ROCDL::wmma_f32_16x16x16_bf8_fp8::getOperationName();
-    if (elemSourceType.isInteger(4) && elemDestType.isInteger(32))
-      return ROCDL::wmma_i32_16x16x16_iu4::getOperationName();
+  // Handle gfx1250.
+  if (chipset == Chipset{12, 5, 0})
+    return wmmaOpToIntrinsicGfx1250(elemSourceType, elemBSourceType,
+                                    elemDestType, k);
 
-    return std::nullopt;
-  }
-  if (k == 32) {
-    if (elemSourceType.isInteger(4) && elemDestType.isInteger(32))
-      return ROCDL::wmma_i32_16x16x32_iu4::getOperationName();
-    return std::nullopt;
-  }
-
-  llvm_unreachable("unhandled WMMA case");
+  return std::nullopt;
 }
 
 namespace {
@@ -1194,11 +1300,33 @@ struct WMMAOpLowering : public ConvertOpToLLVMPattern<WMMAOp> {
     if (chipset.majorVersion != 11 && chipset.majorVersion != 12)
       return op->emitOpError("WMMA only supported on gfx11 and gfx12");
 
-    // The WMMA operations represent vectors of bf16s as vectors of i16s, so we
-    // need to bitcast bfloats to i16 and then bitcast them back.
+    bool isGFX1250 = chipset >= Chipset(12, 5, 0);
+
+    // The WMMA operations represent vectors of bf16s as vectors of i16s
+    // (except on gfx1250), so we need to bitcast bfloats to i16 and then
+    // bitcast them back.
+    auto aType = cast<VectorType>(adaptor.getSourceA().getType());
+    auto bType = cast<VectorType>(adaptor.getSourceB().getType());
+    auto destCType = cast<VectorType>(adaptor.getDestC().getType());
+    bool castAToI16 = aType.getElementType().isBF16() && !isGFX1250;
+    bool castBToI16 = bType.getElementType().isBF16() && !isGFX1250;
+    bool castDestCToI16 = destCType.getElementType().isBF16() && !isGFX1250;
+    bool castOutToI16 = outType.getElementType().isBF16() && !isGFX1250;
     VectorType rawOutType = outType;
-    if (outType.getElementType().isBF16())
+    if (castOutToI16)
       rawOutType = outType.clone(rewriter.getI16Type());
+    Value a = adaptor.getSourceA();
+    if (castAToI16)
+      a = LLVM::BitcastOp::create(rewriter, loc,
+                                  aType.clone(rewriter.getI16Type()), a);
+    Value b = adaptor.getSourceB();
+    if (castBToI16)
+      b = LLVM::BitcastOp::create(rewriter, loc,
+                                  bType.clone(rewriter.getI16Type()), b);
+    Value destC = adaptor.getDestC();
+    if (castDestCToI16)
+      destC = LLVM::BitcastOp::create(
+          rewriter, loc, destCType.clone(rewriter.getI16Type()), destC);
 
     std::optional<StringRef> maybeIntrinsic = wmmaOpToIntrinsic(op, chipset);
 
@@ -1208,18 +1336,20 @@ struct WMMAOpLowering : public ConvertOpToLLVMPattern<WMMAOp> {
     if (chipset.majorVersion >= 12 && op.getSubwordOffset() != 0)
       return op.emitOpError("subwordOffset not supported on gfx12+");
 
+    SmallVector<Value, 4> operands;
+    SmallVector<NamedAttribute, 4> attrs;
+    wmmaPushInputOperand(rewriter, loc, typeConverter, op.getUnsignedA(), a,
+                         op.getSourceA(), operands, attrs, "signA");
+    wmmaPushInputOperand(rewriter, loc, typeConverter, op.getUnsignedB(), b,
+                         op.getSourceB(), operands, attrs, "signB");
+    wmmaPushOutputOperand(rewriter, loc, typeConverter, destC,
+                          op.getSubwordOffset(), op.getClamp(), operands,
+                          attrs);
+
     OperationState loweredOp(loc, *maybeIntrinsic);
     loweredOp.addTypes(rawOutType);
-
-    SmallVector<Value, 4> operands;
-    wmmaPushInputOperand(rewriter, loc, typeConverter, op.getUnsignedA(),
-                         adaptor.getSourceA(), op.getSourceA(), operands);
-    wmmaPushInputOperand(rewriter, loc, typeConverter, op.getUnsignedB(),
-                         adaptor.getSourceB(), op.getSourceB(), operands);
-    wmmaPushOutputOperand(rewriter, loc, typeConverter, adaptor.getDestC(),
-                          op.getSubwordOffset(), op.getClamp(), operands);
-
     loweredOp.addOperands(operands);
+    loweredOp.addAttributes(attrs);
     Operation *lowered = rewriter.create(loweredOp);
 
     Operation *maybeCastBack = lowered;

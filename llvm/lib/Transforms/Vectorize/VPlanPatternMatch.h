@@ -29,6 +29,10 @@ template <typename Pattern> bool match(VPUser *U, const Pattern &P) {
   return R && match(R, P);
 }
 
+template <typename Pattern> bool match(VPSingleDefRecipe *R, const Pattern &P) {
+  return P.match(static_cast<const VPRecipeBase *>(R));
+}
+
 template <typename Val, typename Pattern> struct VPMatchFunctor {
   const Pattern &P;
   VPMatchFunctor(const Pattern &P) : P(P) {}
@@ -313,7 +317,8 @@ private:
     // Check for recipes that do not have opcodes.
     if constexpr (std::is_same_v<RecipeTy, VPScalarIVStepsRecipe> ||
                   std::is_same_v<RecipeTy, VPCanonicalIVPHIRecipe> ||
-                  std::is_same_v<RecipeTy, VPDerivedIVRecipe>)
+                  std::is_same_v<RecipeTy, VPDerivedIVRecipe> ||
+                  std::is_same_v<RecipeTy, VPVectorEndPointerRecipe>)
       return DefR;
     else
       return DefR && DefR->getOpcode() == Opcode;
@@ -471,6 +476,12 @@ template <unsigned Opcode, typename Op0_t, typename Op1_t>
 inline AllRecipe_commutative_match<Opcode, Op0_t, Op1_t>
 m_c_Binary(const Op0_t &Op0, const Op1_t &Op1) {
   return AllRecipe_commutative_match<Opcode, Op0_t, Op1_t>(Op0, Op1);
+}
+
+template <typename Op0_t, typename Op1_t>
+inline AllRecipe_match<Instruction::Add, Op0_t, Op1_t> m_Add(const Op0_t &Op0,
+                                                             const Op1_t &Op1) {
+  return m_Binary<Instruction::Add, Op0_t, Op1_t>(Op0, Op1);
 }
 
 template <typename Op0_t, typename Op1_t>
@@ -684,6 +695,64 @@ template <typename Op0_t, typename Op1_t, typename Op2_t>
 inline VPDerivedIV_match<Op0_t, Op1_t, Op2_t>
 m_DerivedIV(const Op0_t &Op0, const Op1_t &Op1, const Op2_t &Op2) {
   return VPDerivedIV_match<Op0_t, Op1_t, Op2_t>({Op0, Op1, Op2});
+}
+
+template <typename Addr_t, typename Mask_t> struct Load_match {
+  Addr_t Addr;
+  Mask_t Mask;
+
+  Load_match(Addr_t Addr, Mask_t Mask) : Addr(Addr), Mask(Mask) {}
+
+  template <typename OpTy> bool match(const OpTy *V) const {
+    auto *Load = dyn_cast<VPWidenLoadRecipe>(V);
+    if (!Load || !Addr.match(Load->getAddr()) || !Load->isMasked() ||
+        !Mask.match(Load->getMask()))
+      return false;
+    return true;
+  }
+};
+
+/// Match a (possibly reversed) masked load.
+template <typename Addr_t, typename Mask_t>
+inline Load_match<Addr_t, Mask_t> m_MaskedLoad(const Addr_t &Addr,
+                                               const Mask_t &Mask) {
+  return Load_match<Addr_t, Mask_t>(Addr, Mask);
+}
+
+template <typename Addr_t, typename Val_t, typename Mask_t> struct Store_match {
+  Addr_t Addr;
+  Val_t Val;
+  Mask_t Mask;
+
+  Store_match(Addr_t Addr, Val_t Val, Mask_t Mask)
+      : Addr(Addr), Val(Val), Mask(Mask) {}
+
+  template <typename OpTy> bool match(const OpTy *V) const {
+    auto *Store = dyn_cast<VPWidenStoreRecipe>(V);
+    if (!Store || !Addr.match(Store->getAddr()) ||
+        !Val.match(Store->getStoredValue()) || !Store->isMasked() ||
+        !Mask.match(Store->getMask()))
+      return false;
+    return true;
+  }
+};
+
+/// Match a (possibly reversed) masked store.
+template <typename Addr_t, typename Val_t, typename Mask_t>
+inline Store_match<Addr_t, Val_t, Mask_t>
+m_MaskedStore(const Addr_t &Addr, const Val_t &Val, const Mask_t &Mask) {
+  return Store_match<Addr_t, Val_t, Mask_t>(Addr, Val, Mask);
+}
+
+template <typename Op0_t, typename Op1_t>
+using VectorEndPointerRecipe_match =
+    Recipe_match<std::tuple<Op0_t, Op1_t>, 0,
+                 /*Commutative*/ false, VPVectorEndPointerRecipe>;
+
+template <typename Op0_t, typename Op1_t>
+VectorEndPointerRecipe_match<Op0_t, Op1_t> m_VecEndPtr(const Op0_t &Op0,
+                                                       const Op1_t &Op1) {
+  return VectorEndPointerRecipe_match<Op0_t, Op1_t>(Op0, Op1);
 }
 
 /// Match a call argument at a given argument index.
