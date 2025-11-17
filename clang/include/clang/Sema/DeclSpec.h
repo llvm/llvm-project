@@ -368,6 +368,8 @@ private:
   unsigned FS_virtual_specified : 1;
   LLVM_PREFERRED_TYPE(bool)
   unsigned FS_noreturn_specified : 1;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned FS_custom_specified : 1;
 
   // friend-specifier
   LLVM_PREFERRED_TYPE(bool)
@@ -409,7 +411,8 @@ private:
   SourceRange TypeofParensRange;
   SourceLocation TQ_constLoc, TQ_restrictLoc, TQ_volatileLoc, TQ_atomicLoc,
       TQ_unalignedLoc;
-  SourceLocation FS_inlineLoc, FS_virtualLoc, FS_explicitLoc, FS_noreturnLoc;
+  SourceLocation FS_inlineLoc, FS_virtualLoc, FS_explicitLoc, FS_noreturnLoc,
+      FS_customLoc;
   SourceLocation FS_explicitCloseParenLoc;
   SourceLocation FS_forceinlineLoc;
   SourceLocation FriendLoc, ModulePrivateLoc, ConstexprLoc;
@@ -462,7 +465,8 @@ public:
         TypeSpecPipe(false), TypeSpecSat(false), ConstrainedAuto(false),
         TypeQualifiers(TQ_unspecified), FS_inline_specified(false),
         FS_forceinline_specified(false), FS_virtual_specified(false),
-        FS_noreturn_specified(false), FriendSpecifiedFirst(false),
+        FS_noreturn_specified(false), FS_custom_specified(false),
+        FriendSpecifiedFirst(false),
         ConstexprSpecifier(
             static_cast<unsigned>(ConstexprSpecKind::Unspecified)),
         Attrs(attrFactory), writtenBS(), ObjCQualifiers(nullptr) {}
@@ -631,6 +635,9 @@ public:
   bool isNoreturnSpecified() const { return FS_noreturn_specified; }
   SourceLocation getNoreturnSpecLoc() const { return FS_noreturnLoc; }
 
+  bool isCustomSpecified() const { return FS_custom_specified; }
+  SourceLocation getCustomSpecLoc() const { return FS_customLoc; }
+
   void ClearFunctionSpecs() {
     FS_inline_specified = false;
     FS_inlineLoc = SourceLocation();
@@ -643,6 +650,8 @@ public:
     FS_explicitCloseParenLoc = SourceLocation();
     FS_noreturn_specified = false;
     FS_noreturnLoc = SourceLocation();
+    FS_custom_specified = false;
+    FS_customLoc = SourceLocation();
   }
 
   /// This method calls the passed in handler on each CVRU qual being
@@ -780,6 +789,8 @@ public:
                                SourceLocation CloseParenLoc);
   bool setFunctionSpecNoreturn(SourceLocation Loc, const char *&PrevSpec,
                                unsigned &DiagID);
+  bool setFunctionSpecCustom(SourceLocation Loc, const char *&PrevSpec,
+                             unsigned &DiagID);
 
   bool SetFriendSpec(SourceLocation Loc, const char *&PrevSpec,
                      unsigned &DiagID);

@@ -1078,6 +1078,20 @@ bool DeclSpec::setFunctionSpecNoreturn(SourceLocation Loc,
   return false;
 }
 
+bool DeclSpec::setFunctionSpecCustom(SourceLocation Loc,
+                                     const char *&PrevSpec,
+                                     unsigned &DiagID) {
+  // 'custom custom' is not allowed.
+  if (FS_custom_specified) {
+    DiagID = diag::err_duplicate_declspec;
+    PrevSpec = "custom";
+    return true;
+  }
+  FS_custom_specified = true;
+  FS_customLoc = Loc;
+  return false;
+}
+
 bool DeclSpec::SetFriendSpec(SourceLocation Loc, const char *&PrevSpec,
                              unsigned &DiagID) {
   if (isFriendSpecified()) {

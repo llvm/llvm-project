@@ -37,6 +37,9 @@
 #ifndef COROUTINES_KEYWORD
 #define COROUTINES_KEYWORD(X) CXX20_KEYWORD(X,KEYCOROUTINES)
 #endif
+#ifndef CUSTOMFN_KEYWORD
+#define CUSTOMFN_KEYWORD(X) CXX20_KEYWORD(X,KEYCUSTOMFN)
+#endif
 #ifndef MODULES_KEYWORD
 #define MODULES_KEYWORD(X) KEYWORD(X,KEYMODULES)
 #endif
@@ -287,6 +290,7 @@ PUNCTUATOR(greatergreatergreater, ">>>")
 //                which are heavily based on AltiVec
 //   KEYBORLAND - This is a keyword if Borland extensions are enabled
 //   KEYCOROUTINES - This is a keyword if support for C++ coroutines is enabled
+//   KEYCUSTOMFN - This is a keyword if support for customizable functions is enabled
 //   BOOLSUPPORT - This is a keyword if 'bool' is a built-in type
 //   HALFSUPPORT - This is a keyword if 'half' is a built-in type
 //   WCHARSUPPORT - This is a keyword if 'wchar_t' is a built-in type
@@ -430,6 +434,9 @@ CXX20_KEYWORD(consteval             , 0)
 CXX20_KEYWORD(constinit             , 0)
 CXX20_KEYWORD(concept               , 0)
 CXX20_KEYWORD(requires              , 0)
+
+// C++20 / customizable functions keyword
+CUSTOMFN_KEYWORD(custom)
 
 // Not a CXX20_KEYWORD because it is disabled by -fno-char8_t.
 KEYWORD(char8_t                     , CHAR8SUPPORT)

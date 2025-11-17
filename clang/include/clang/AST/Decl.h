@@ -2904,6 +2904,14 @@ public:
     FunctionDeclBits.IsInline = I;
   }
 
+  /// Determine whether the "custom" keyword was specified for this function.
+  bool isCustomFunction() const { return FunctionDeclBits.IsCustomFunction; }
+
+  /// Set whether the "custom" keyword was specified for this function.
+  void setCustomFunction(bool C = true) {
+    FunctionDeclBits.IsCustomFunction = C;
+  }
+
   /// Determine whether the function was declared in source context
   /// that requires constrained FP intrinsics
   bool UsesFPIntrin() const { return FunctionDeclBits.UsesFPIntrin; }

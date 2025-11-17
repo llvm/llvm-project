@@ -4170,6 +4170,9 @@ void Parser::ParseDeclarationSpecifiers(
         isInvalid = DS.setFunctionSpecVirtual(Loc, PrevSpec, DiagID);
       }
       break;
+    case tok::kw_custom:
+      isInvalid = DS.setFunctionSpecCustom(Loc, PrevSpec, DiagID);
+      break;
     case tok::kw_explicit: {
       SourceLocation ExplicitLoc = Loc;
       SourceLocation CloseParenLoc;
