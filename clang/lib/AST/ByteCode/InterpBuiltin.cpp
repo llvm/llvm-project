@@ -2724,10 +2724,10 @@ static bool interp__builtin_ia32_addsub(InterpState &S, CodePtr OpPC,
   FPOptions FPO = Call->getFPFeaturesInEffect(S.Ctx.getLangOpts());
   llvm::RoundingMode RM = getRoundingMode(FPO);
   const auto *VT = Call->getArg(0)->getType()->castAs<VectorType>();
-  unsigned NumElts = VT->getNumElements();
+  unsigned NumElems = VT->getNumElements();
 
   using T = PrimConv<PT_Float>::T;
-  for (unsigned I = 0; I < NumElts; ++I) {
+  for (unsigned I = 0; I != NumElems; ++I) {
     APFloat LElem = LHS.elem<T>(I).getAPFloat();
     APFloat RElem = RHS.elem<T>(I).getAPFloat();
     if (I % 2 == 0) {
