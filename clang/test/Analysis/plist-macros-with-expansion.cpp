@@ -405,14 +405,14 @@ void commaInBracketsTest() {
   code
 
 void commaInBracesTest() {
-  PASTE_CODE({
+  PASTE_CODE({ // expected-warning{{Dereference of null pointer}}
     // NOTE: If we were to add a new variable here after a comma, we'd get a
     // compilation error, so this test is mainly here to show that this was also
     // investigated.
     //
     // int *ptr = nullptr, a;
     int *ptr = nullptr;
-    *ptr = 5; // expected-warning{{Dereference of null pointer}}
+    *ptr = 5;
   })
 }
 
@@ -425,14 +425,14 @@ void commaInBracesTest() {
 // CHECK-NEXT:      <key>col</key><integer>3</integer>
 // CHECK-NEXT:      <key>file</key><integer>0</integer>
 // CHECK-NEXT:     </dict>
-// CHECK-NEXT:     <key>name</key><string>PASTE_CODE({
+// CHECK-NEXT:     <key>name</key><string>PASTE_CODE({ // expected-
 // CHECK-NEXT:    // NOTE: If we were to add a new variable here after a comma, we&apos;d get a
 // CHECK-NEXT:    // compilation error, so this test is mainly here to show that this was also
 // CHECK-NEXT:    // investigated.
 // CHECK-NEXT:    //
 // CHECK-NEXT:    // int *ptr = nullptr, a;
 // CHECK-NEXT:    int *ptr = nullptr;
-// CHECK-NEXT:    *ptr = 5; // expected-
+// CHECK-NEXT:    *ptr = 5;
 // CHECK-NEXT:  })</string>
 // CHECK-NEXT:     <key>expansion</key><string>{int *ptr =nullptr ;*ptr =5;}</string>
 // CHECK-NEXT:    </dict>
