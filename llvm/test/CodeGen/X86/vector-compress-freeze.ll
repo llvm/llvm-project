@@ -18,3 +18,20 @@ define <16 x i32> @test_compress_freeze_elimination(<16 x i32> %a0, <16 x i32> %
   %and = and <16 x i32> %fr, splat(i32 255)
   ret <16 x i32> %and
 }
+
+; Negative Case
+define <16 x i32> @test_compress_freeze_must_remain(<16 x i32> %a0, <16 x i32> %a1, <16 x i8> %a3) {
+; CHECK-LABEL: test_compress_freeze_must_remain:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpcmpgtd %zmm1, %zmm0, %k1
+; CHECK-NEXT:    vpmovzxbd {{.*#+}} zmm0 = xmm2[0],zero,zero,zero,xmm2[1],zero,zero,zero,xmm2[2],zero,zero,zero,xmm2[3],zero,zero,zero,xmm2[4],zero,zero,zero,xmm2[5],zero,zero,zero,xmm2[6],zero,zero,zero,xmm2[7],zero,zero,zero,xmm2[8],zero,zero,zero,xmm2[9],zero,zero,zero,xmm2[10],zero,zero,zero,xmm2[11],zero,zero,zero,xmm2[12],zero,zero,zero,xmm2[13],zero,zero,zero,xmm2[14],zero,zero,zero,xmm2[15],zero,zero,zero
+; CHECK-NEXT:    vpcompressd %zmm0, %zmm0 {%k1} {z}
+; CHECK-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm0, %zmm0
+; CHECK-NEXT:    retq
+  %cmp = icmp sgt <16 x i32> %a0, %a1
+  %ext = zext <16 x i8> %a3 to <16 x i32>
+  %cpr = call <16 x i32> @llvm.experimental.vector.compress.v16i32(<16 x i32> %ext, <16 x i1> %cmp, <16 x i32> poison)
+  %fr = freeze <16 x i32> %cpr
+  %and = and <16 x i32> %fr, splat(i32 255)
+  ret <16 x i32> %and
+}
