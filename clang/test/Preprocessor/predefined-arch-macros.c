@@ -2525,15 +2525,32 @@
 // RUN: %clang -march=wildcatlake -m32 -E -dM %s -o - 2>&1 \
 // RUN:     -target i386-unknown-linux \
 // RUN:   | FileCheck -match-full-lines %s -check-prefixes=CHECK_ARL_M32,CHECK_ARLS_M32,CHECK_NKL_M32
-// RUN: %clang -march=novalake -m32 -E -dM %s -o - 2>&1 \
-// RUN:     -target i386-unknown-linux \
-// RUN:   | FileCheck -match-full-lines %s -check-prefixes=CHECK_ARL_M32,CHECK_ARLS_M32,CHECK_NVL_M32,CHECK_NKL_M32
 // RUN: %clang -march=clearwaterforest -m32 -E -dM %s -o - 2>&1 \
 // RUN:     -target i386-unknown-linux \
-// RUN:   | FileCheck -match-full-lines %s -check-prefixes=CHECK_SRF_M32,CHECK_ARLS_M32,CHECK_NVL_M32,CHECK_UMSR_M32,CHECK_NKL_M32
+// RUN:   | FileCheck -match-full-lines %s -check-prefixes=CHECK_SRF_M32,CHECK_ARLS_M32,CHECK_UMSR_M32,CHECK_CWF_M32,CHECK_NKL_M32
+// RUN: %clang -march=novalake -m32 -E -dM %s -o - 2>&1 \
+// RUN:     -target i386-unknown-linux \
+// RUN:   | FileCheck -match-full-lines %s -check-prefixes=CHECK_ARL_M32,CHECK_ARLS_M32,CHECK_CWF_M32,CHECK_NVL_M32,CHECK_NKL_M32
 // CHECK_ARL_M32: #define __ADX__ 1
 // CHECK_ARL_M32: #define __AES__ 1
+// CHECK_NVL_M32: #define __AVX10_1__ 1
+// CHECK_NVL_M32: #define __AVX10_2__ 1
 // CHECK_ARL_M32: #define __AVX2__ 1
+// CHECK_NVL_M32: #define __AVX512BF16__ 1
+// CHECK_NVL_M32: #define __AVX512BITALG__ 1
+// CHECK_NVL_M32: #define __AVX512BW__ 1
+// CHECK_NVL_M32: #define __AVX512CD__ 1
+// CHECK_NVL_M32: #define __AVX512DQ__ 1
+// CHECK_NVL_M32: #define __AVX512FP16__ 1
+// CHECK_NVL_M32: #define __AVX512F__ 1
+// CHECK_NVL_M32: #define __AVX512IFMA__ 1
+// CHECK_NVL_M32: #define __AVX512VBMI2__ 1
+// CHECK_NVL_M32: #define __AVX512VBMI__ 1
+// CHECK_NVL_M32: #define __AVX512VL__ 1
+// CHECK_NVL_M32: #define __AVX512VNNI__ 1
+// CHECK_NVL_M32: #define __AVX512VPOPCNTDQ__ 1
+// We check for NOT AVX512 after all checks for AVX512, so 
+// if we missed some check on NVL, the test will fail.
 // CHECK_ARL_M32-NOT: AVX512
 // CHECK_ARL_M32: #define __AVXIFMA__ 1
 // CHECK_ARL_M32: #define __AVXNECONVERT__ 1
@@ -2544,11 +2561,13 @@
 // CHECK_ARL_M32: #define __AVX__ 1
 // CHECK_ARL_M32: #define __BMI2__ 1
 // CHECK_ARL_M32: #define __BMI__ 1
+// CHECK_NVL_M32: #define __CCMP__ 1
 // CHECK_ARLS_M32-NOT: __CLDEMOTE__
 // CHECK_SRF_M32: #define __CLDEMOTE__ 1
 // CHECK_ARL_M32: #define __CLFLUSHOPT__ 1
 // CHECK_ARL_M32: #define __CLWB__ 1
 // CHECK_ARL_M32: #define __CMPCCXADD__ 1
+// CHECK_NVL_M32: #define __EGPR__ 1
 // CHECK_ARL_M32: #define __ENQCMD__ 1
 // CHECK_ARL_M32: #define __F16C__ 1
 // CHECK_ARL_M32: #define __FMA__ 1
@@ -2564,15 +2583,20 @@
 // CHECK_ARL_M32: #define __MOVBE__ 1
 // CHECK_ARL_M32: #define __MOVDIR64B__ 1
 // CHECK_ARL_M32: #define __MOVDIRI__ 1
+// CHECK_NVL_M32: #define __MOVRS__ 1
+// CHECK_NVL_M32: #define __NDD__ 1
+// CHECK_NVL_M32: #define __NF__ 1
 // CHECK_ARL_M32: #define __PCLMUL__ 1
 // CHECK_ARL_M32: #define __PCONFIG__ 1
 // CHECK_ARL_M32: #define __PKU__ 1
 // CHECK_ARL_M32: #define __POPCNT__ 1
+// CHECK_NVL_M32: #define __PPX__ 1
 // CHECK_ARL_M32-NOT: #define __PREFETCHI__ 1
 // CHECK_ARLS_M32-NOT: #define __PREFETCHI__ 1
-// CHECK_NVL_M32: #define __PREFETCHI__ 1
+// CHECK_CWF_M32: #define __PREFETCHI__ 1
 // CHECK_ARL_M32: #define __PRFCHW__ 1
 // CHECK_ARL_M32: #define __PTWRITE__ 1
+// CHECK_NVL_M32: #define __PUSH2POP2__ 1
 // CHECK_ARL_M32-NOT: #define __RAOINT__ 1
 // CHECK_ARL_M32: #define __RDPID__ 1
 // CHECK_ARL_M32: #define __RDRND__ 1
@@ -2607,6 +2631,7 @@
 // CHECK_ARL_M32: #define __XSAVEOPT__ 1
 // CHECK_ARL_M32: #define __XSAVES__ 1
 // CHECK_ARL_M32: #define __XSAVE__ 1
+// CHECK_NVL_M32: #define __ZU__ 1
 // CHECK_ARL_M32: #define __corei7 1
 // CHECK_ARL_M32: #define __corei7__ 1
 // CHECK_ARL_M32: #define __i386 1
@@ -2635,15 +2660,30 @@
 // RUN: %clang -march=wildcatlake -m64 -E -dM %s -o - 2>&1 \
 // RUN:     -target i386-unknown-linux \
 // RUN:   | FileCheck -match-full-lines %s -check-prefixes=CHECK_ARL_M64,CHECK_ARLS_M64,CHECK_NKL_M64
-// RUN: %clang -march=novalake -m64 -E -dM %s -o - 2>&1 \
-// RUN:     -target i386-unknown-linux \
-// RUN:   | FileCheck -match-full-lines %s -check-prefixes=CHECK_ARL_M64,CHECK_ARLS_M64,CHECK_NVL_M64,CHECK_NKL_M64
 // RUN: %clang -march=clearwaterforest -m64 -E -dM %s -o - 2>&1 \
 // RUN:     -target i386-unknown-linux \
-// RUN:   | FileCheck -match-full-lines %s -check-prefixes=CHECK_ARL_M64,CHECK_SRF_M64,CHECK_ARLS_M64,CHECK_NVL_M64,CHECK_UMSR_M64,CHECK_NKL_M64
+// RUN:   | FileCheck -match-full-lines %s -check-prefixes=CHECK_SRF_M64,CHECK_ARLS_M64,CHECK_UMSR_M64,CHECK_CWF_M64,CHECK_NKL_M64
+// RUN: %clang -march=novalake -m64 -E -dM %s -o - 2>&1 \
+// RUN:     -target i386-unknown-linux \
+// RUN:   | FileCheck -match-full-lines %s -check-prefixes=CHECK_ARL_M64,CHECK_ARLS_M64,CHECK_CWF_M64,CHECK_NVL_M64,CHECK_NKL_M64
 // CHECK_ARL_M64: #define __ADX__ 1
 // CHECK_ARL_M64: #define __AES__ 1
+// CHECK_NVL_M64: #define __AVX10_1__ 1
+// CHECK_NVL_M64: #define __AVX10_2__ 1
 // CHECK_ARL_M64: #define __AVX2__ 1
+// CHECK_NVL_M64: #define __AVX512BF16__ 1
+// CHECK_NVL_M64: #define __AVX512BITALG__ 1
+// CHECK_NVL_M64: #define __AVX512BW__ 1
+// CHECK_NVL_M64: #define __AVX512CD__ 1
+// CHECK_NVL_M64: #define __AVX512DQ__ 1
+// CHECK_NVL_M64: #define __AVX512FP16__ 1
+// CHECK_NVL_M64: #define __AVX512F__ 1
+// CHECK_NVL_M64: #define __AVX512IFMA__ 1
+// CHECK_NVL_M64: #define __AVX512VBMI2__ 1
+// CHECK_NVL_M64: #define __AVX512VBMI__ 1
+// CHECK_NVL_M64: #define __AVX512VL__ 1
+// CHECK_NVL_M64: #define __AVX512VNNI__ 1
+// CHECK_NVL_M64: #define __AVX512VPOPCNTDQ__ 1
 // CHECK_ARL_M64-NOT: AVX512
 // CHECK_ARL_M64: #define __AVXIFMA__ 1
 // CHECK_ARL_M64: #define __AVXNECONVERT__ 1
@@ -2654,11 +2694,13 @@
 // CHECK_ARL_M64: #define __AVX__ 1
 // CHECK_ARL_M64: #define __BMI2__ 1
 // CHECK_ARL_M64: #define __BMI__ 1
+// CHECK_NVL_M64: #define __CCMP__ 1
 // CHECK_ARLS_M64-NOT: __CLDEMOTE__
 // CHECK_SRF_M64: #define __CLDEMOTE__ 1
 // CHECK_ARL_M64: #define __CLFLUSHOPT__ 1
 // CHECK_ARL_M64: #define __CLWB__ 1
 // CHECK_ARL_M64: #define __CMPCCXADD__ 1
+// CHECK_NVL_M64: #define __EGPR__ 1
 // CHECK_ARL_M64: #define __ENQCMD__ 1
 // CHECK_ARL_M64: #define __F16C__ 1
 // CHECK_ARL_M64: #define __FMA__ 1
@@ -2674,15 +2716,20 @@
 // CHECK_ARL_M64: #define __MOVBE__ 1
 // CHECK_ARL_M64: #define __MOVDIR64B__ 1
 // CHECK_ARL_M64: #define __MOVDIRI__ 1
+// CHECK_NVL_M64: #define __MOVRS__ 1
+// CHECK_NVL_M64: #define __NDD__ 1
+// CHECK_NVL_M64: #define __NF__ 1
 // CHECK_ARL_M64: #define __PCLMUL__ 1
 // CHECK_ARL_M64: #define __PCONFIG__ 1
 // CHECK_ARL_M64: #define __PKU__ 1
 // CHECK_ARL_M64: #define __POPCNT__ 1
+// CHECK_NVL_M64: #define __PPX__ 1
 // CHECK_ARL_M64-NOT: #define __PREFETCHI__ 1
 // CHECK_ARLS_M64-NOT: #define __PREFETCHI__ 1
-// CHECK_NVL_M64: #define __PREFETCHI__ 1
+// CHECK_CWF_M64: #define __PREFETCHI__ 1
 // CHECK_ARL_M64: #define __PRFCHW__ 1
 // CHECK_ARL_M64: #define __PTWRITE__ 1
+// CHECK_NVL_M64: #define __PUSH2POP2__ 1
 // CHECK_ARL_M64-NOT: #define __RAOINT__ 1
 // CHECK_ARL_M64: #define __RDPID__ 1
 // CHECK_ARL_M64: #define __RDRND__ 1
@@ -2718,6 +2765,7 @@
 // CHECK_ARL_M64: #define __XSAVEOPT__ 1
 // CHECK_ARL_M64: #define __XSAVES__ 1
 // CHECK_ARL_M64: #define __XSAVE__ 1
+// CHECK_NVL_M64: #define __ZU__ 1
 // CHECK_ARL_M64: #define __amd64 1
 // CHECK_ARL_M64: #define __amd64__ 1
 // CHECK_ARL_M64: #define __corei7 1
