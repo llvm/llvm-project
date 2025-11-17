@@ -94,6 +94,11 @@ struct Config {
   /// need to create copies, so it can set this field to false.
   bool KeepSymbolNameCopies = true;
 
+  /// This flag is used as one of parameters to calculate cache entries and to
+  /// ensure that in-process cache and out-of-process (DTLTO) cache are
+  /// distinguished.
+  mutable bool Dtlto = 0;
+
   /// Allows non-imported definitions to get the potentially more constraining
   /// visibility from the prevailing definition. FromPrevailing is the default
   /// because it works for many binary formats. ELF can use the more optimized
