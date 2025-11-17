@@ -20,7 +20,8 @@ using namespace clang::tidy;
 
 namespace clang::tidy::misc {
 
-static bool hasSameParameters(const FunctionDecl *Func1, const FunctionDecl *Func2) {
+static bool hasSameParameters(const FunctionDecl *Func1,
+                              const FunctionDecl *Func2) {
   if (Func1->param_size() != Func2->param_size())
     return false;
 
@@ -34,18 +35,13 @@ static bool hasSameParameters(const FunctionDecl *Func1, const FunctionDecl *Fun
 
 void ShadowedNamespaceFunctionCheck::registerMatchers(MatchFinder *Finder) {
   // Simple matcher for all function definitions
-  Finder->addMatcher(
-      functionDecl(
-          isDefinition()
-      ).bind("func"),
-      this
-  );
+  Finder->addMatcher(functionDecl(isDefinition()).bind("func"), this);
 }
 
 void ShadowedNamespaceFunctionCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto *Func = Result.Nodes.getNodeAs<FunctionDecl>("func");
-  
+
   if (!Func || !Result.SourceManager)
     return;
 
@@ -55,8 +51,8 @@ void ShadowedNamespaceFunctionCheck::check(
     return;
 
   // Skip templates, static functions, main, etc.
-  if (Func->isTemplated() || Func->isStatic() || 
-      Func->isMain() || Func->isImplicit() || Func->isVariadic())
+  if (Func->isTemplated() || Func->isStatic() || Func->isMain() ||
+      Func->isImplicit() || Func->isVariadic())
     return;
 
   const std::string FuncName = Func->getNameAsString();
@@ -72,8 +68,10 @@ void ShadowedNamespaceFunctionCheck::check(
   // Traverse all declarations in the translation unit
   for (const auto *Decl : Context->getTranslationUnitDecl()->decls()) {
     if (const auto *NS = dyn_cast<NamespaceDecl>(Decl)) {
-      std::tie(ShadowedFunc, ShadowedNamespace) = findShadowedInNamespace(NS, Func, FuncName);
-      if (ShadowedFunc) break;
+      std::tie(ShadowedFunc, ShadowedNamespace) =
+          findShadowedInNamespace(NS, Func, FuncName);
+      if (ShadowedFunc)
+        break;
     }
   }
 
@@ -84,11 +82,10 @@ void ShadowedNamespaceFunctionCheck::check(
     return;
 
   // Generate warning message
-  const std::string NamespaceName = ShadowedNamespace->getQualifiedNameAsString();
-  auto Diag = diag(Func->getLocation(), 
-                   "free function %0 shadows '%1::%2'")
-              << Func->getDeclName() 
-              << NamespaceName 
+  const std::string NamespaceName =
+      ShadowedNamespace->getQualifiedNameAsString();
+  auto Diag = diag(Func->getLocation(), "free function %0 shadows '%1::%2'")
+              << Func->getDeclName() << NamespaceName
               << ShadowedFunc->getDeclName().getAsString();
 
   // Generate fixit hint to add namespace qualification
@@ -99,16 +96,16 @@ void ShadowedNamespaceFunctionCheck::check(
   }
 
   // Note: Also show where the shadowed function is declared
-  diag(ShadowedFunc->getLocation(), 
-       "function %0 declared here", DiagnosticIDs::Note)
+  diag(ShadowedFunc->getLocation(), "function %0 declared here",
+       DiagnosticIDs::Note)
       << ShadowedFunc->getDeclName();
 }
 
-std::pair<const FunctionDecl *, const NamespaceDecl *> ShadowedNamespaceFunctionCheck::findShadowedInNamespace(
-    const NamespaceDecl *NS, 
-    const FunctionDecl *GlobalFunc,
+std::pair<const FunctionDecl *, const NamespaceDecl *>
+ShadowedNamespaceFunctionCheck::findShadowedInNamespace(
+    const NamespaceDecl *NS, const FunctionDecl *GlobalFunc,
     const std::string &GlobalFuncName) {
-  
+
   // Skip anonymous namespaces
   if (NS->isAnonymousNamespace())
     return {nullptr, nullptr};
@@ -116,7 +113,8 @@ std::pair<const FunctionDecl *, const NamespaceDecl *> ShadowedNamespaceFunction
   for (const auto *Decl : NS->decls()) {
     // Check nested namespaces
     if (const auto *NestedNS = dyn_cast<NamespaceDecl>(Decl)) {
-      auto [ShadowedFunc, ShadowedNamespace] = findShadowedInNamespace(NestedNS, GlobalFunc, GlobalFuncName);
+      auto [ShadowedFunc, ShadowedNamespace] =
+          findShadowedInNamespace(NestedNS, GlobalFunc, GlobalFuncName);
       if (ShadowedFunc)
         return {ShadowedFunc, ShadowedNamespace};
     }
@@ -124,11 +122,14 @@ std::pair<const FunctionDecl *, const NamespaceDecl *> ShadowedNamespaceFunction
     // Check functions
     if (const auto *Func = dyn_cast<FunctionDecl>(Decl)) {
       // Skip if it's the same function, templates, or definitions
-      if (Func == GlobalFunc || Func->isTemplated() || 
+      if (Func == GlobalFunc || Func->isTemplated() ||
           Func->isThisDeclarationADefinition())
         continue;
 
-      if (Func->getNameAsString() == GlobalFuncName && !Func->isVariadic() && hasSameParameters(Func, GlobalFunc) && Func->getReturnType().getCanonicalType() == GlobalFunc->getReturnType().getCanonicalType()) {
+      if (Func->getNameAsString() == GlobalFuncName && !Func->isVariadic() &&
+          hasSameParameters(Func, GlobalFunc) &&
+          Func->getReturnType().getCanonicalType() ==
+              GlobalFunc->getReturnType().getCanonicalType()) {
         return {Func, NS};
       }
     }
@@ -137,4 +138,3 @@ std::pair<const FunctionDecl *, const NamespaceDecl *> ShadowedNamespaceFunction
 }
 
 } // namespace clang::tidy::misc
-

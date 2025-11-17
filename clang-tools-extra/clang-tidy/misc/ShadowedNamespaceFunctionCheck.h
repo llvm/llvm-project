@@ -14,7 +14,8 @@
 
 namespace clang::tidy::misc {
 
-/// Detects free functions in global namespace that shadow functions from other namespaces.
+/// Detects free functions in global namespace that shadow functions from other
+/// namespaces.
 ///
 /// For the user-facing documentation see:
 /// https://clang.llvm.org/extra/clang-tidy/checks/misc/shadowed-namespace-function.html
@@ -27,6 +28,7 @@ public:
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
     return LangOpts.CPlusPlus;
   }
+
 private:
   std::pair<const FunctionDecl *, const NamespaceDecl *>
   findShadowedInNamespace(const NamespaceDecl *NS,
