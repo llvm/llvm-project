@@ -185,19 +185,4 @@ class EmitC_LValueOf<list<Type> allowedTypes> :
     "::mlir::emitc::LValueType"
   >;
 
-class EmitC_TypesMatchOnElementType<
-  string summary, string lhsArg, string rhsArg, string transformL, string transformR,
-  string comparator = "std::equal_to<>()"
-> : PredOpTrait<summary, CPred<comparator # "(" #
-      !subst("$_self", "$" # lhsArg # ".getType()", transformL) #
-      ", " #
-      !subst("$_self", "$" # rhsArg # ".getType()", transformL) #
-      ")">
-> {
-  string lhs = lhsArg;
-  string rhs = rhsArg;
-  string transformerL = transformL;
-  string transformerR = transformR;
-}
-
 #endif // MLIR_DIALECT_EMITC_IR_EMITCTYPES
