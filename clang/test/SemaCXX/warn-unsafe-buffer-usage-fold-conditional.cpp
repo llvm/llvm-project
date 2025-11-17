@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fsyntax-only -std=c++20 -Wno-all -Wunsafe-buffer-usage -verify %s
-// RUN: %clang_cc1 -fsyntax-only -x c -Wno-all -Wunsafe-buffer-usage -verify %s
+// RUN: %clang_cc1 -fsyntax-only -Wno-all -Wunsafe-buffer-usage -verify %s -std=c++20
+// RUN: %clang_cc1 -fsyntax-only -Wno-all -Wunsafe-buffer-usage -verify %s -x c
 // expected-no-diagnostics
 
 typedef struct {} FILE;
