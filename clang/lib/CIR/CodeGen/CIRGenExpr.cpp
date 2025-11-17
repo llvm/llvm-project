@@ -669,9 +669,18 @@ RValue CIRGenFunction::emitLoadOfExtVectorElementLValue(LValue lv) {
     return RValue::get(cir::VecExtractOp::create(builder, loc, vec, index));
   }
 
-  cgm.errorNYI(
-      loc, "emitLoadOfExtVectorElementLValue: Result of expr is vector type");
-  return {};
+  // Always use shuffle vector to try to retain the original program structure
+  SmallVector<int64_t> mask;
+  for (auto i : llvm::seq<unsigned>(0, exprVecTy->getNumElements()))
+    mask.push_back(getAccessedFieldNo(i, elts));
+
+  cir::VecShuffleOp resultVec = builder.createVecShuffle(loc, vec, mask);
+  if (lv.getType()->isExtVectorBoolType()) {
+    cgm.errorNYI(loc, "emitLoadOfExtVectorElementLValue: ExtVectorBoolType");
+    return {};
+  }
+
+  return RValue::get(resultVec);
 }
 
 static cir::FuncOp emitFunctionDeclPointer(CIRGenModule &cgm, GlobalDecl gd) {
@@ -1165,9 +1174,14 @@ LValue CIRGenFunction::emitExtVectorElementExpr(const ExtVectorElementExpr *e) {
 
   // ExtVectorElementExpr's base can either be a vector or pointer to vector.
   if (e->isArrow()) {
-    cgm.errorNYI(e->getSourceRange(),
-                 "emitExtVectorElementExpr: pointer to vector");
-    return {};
+    // If it is a pointer to a vector, emit the address and form an lvalue with
+    // it.
+    LValueBaseInfo baseInfo;
+    Address ptr = emitPointerWithAlignment(e->getBase(), &baseInfo);
+    const auto *clangPtrTy =
+        e->getBase()->getType()->castAs<clang::PointerType>();
+    base = makeAddrLValue(ptr, clangPtrTy->getPointeeType(), baseInfo);
+    base.getQuals().removeObjCGCAttr();
   } else if (e->getBase()->isGLValue()) {
     // Otherwise, if the base is an lvalue ( as in the case of foo.x.x),
     // emit the base as an lvalue.

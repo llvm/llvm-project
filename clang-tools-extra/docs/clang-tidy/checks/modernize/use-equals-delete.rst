@@ -13,9 +13,9 @@ definition. This approach would result in either a compiler error (when
 attempting to call a private function) or a linker error (due to an undefined
 reference).
 
-However, subsequent to the advent of C++11, a more conventional approach emerged
-for achieving this purpose. It involves flagging functions as ``= delete`` and
-keeping them in the ``public`` section of the class.
+However, subsequent to the advent of C++11, a more conventional approach
+emerged for achieving this purpose. It involves flagging functions as
+``= delete`` and keeping them in the ``public`` section of the class.
 
 To prevent false positives, this check is only active within a translation
 unit where all other member functions have been implemented. The check will
