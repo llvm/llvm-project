@@ -1196,6 +1196,11 @@ LValue CIRGenFunction::emitExtVectorElementExpr(const ExtVectorElementExpr *e) {
     // Store the vector to memory (because LValue wants an address).
     QualType baseTy = e->getBase()->getType();
     Address vecMem = createMemTemp(baseTy, vec.getLoc(), "tmp");
+    if (baseTy->isExtVectorBoolType()) {
+      cgm.errorNYI(e->getSourceRange(),
+                   "emitExtVectorElementExpr: VectorBoolType");
+      return {};
+    }
     builder.createStore(vec.getLoc(), vec, vecMem);
     base = makeAddrLValue(vecMem, baseTy, AlignmentSource::Decl);
   }
