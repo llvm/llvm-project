@@ -676,10 +676,6 @@ func.func @nested_parallel_with_side_effect() {
 
 // -----
 
-// RUN: mlir-opt %s --convert-parallel-loops-to-gpu | FileCheck %s --check-prefix=CRASH-REG
-// Minimal 2-D mapped case that used to tickle index creation:
-//   newIndex = id * step + lowerBound
-// After the fix it must lower and contain a gpu.launch and an affine.apply.
 func.func @scf2gpu_index_creation_2d() {
   %c0  = arith.constant 0 : index
   %c1  = arith.constant 1 : index
@@ -699,14 +695,12 @@ func.func @scf2gpu_index_creation_2d() {
   return
 }
 
-// CRASH-REG-LABEL: func.func @scf2gpu_index_creation_2d
-// CRASH-REG:       gpu.launch
-// CRASH-REG:       affine.apply
+// CHECK-LABEL: func.func @scf2gpu_index_creation_2d
+// CHECK:       gpu.launch
+// CHECK:       affine.apply
 
 // -----
 
-// RUN: mlir-opt %s --convert-parallel-loops-to-gpu | FileCheck %s --check-prefix=IDX-OK
-// Sanity: 1-D mapped loop still lowers and computes index.
 func.func @scf2gpu_index_creation_1d() {
   %c0  = arith.constant 0 : index
   %c1  = arith.constant 1 : index
@@ -722,6 +716,8 @@ func.func @scf2gpu_index_creation_1d() {
   return
 }
 
-// IDX-OK-LABEL: func.func @scf2gpu_index_creation_1d
-// IDX-OK:       gpu.launch
-// IDX-OK:       affine.apply
+// CHECK-LABEL: func.func @scf2gpu_index_creation_1d
+// CHECK:       gpu.launch
+// CHECK:       affine.apply
+
+
