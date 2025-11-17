@@ -12,7 +12,6 @@
 #ifndef FORTRAN_LOWER_CLAUSEPROCESSOR_H
 #define FORTRAN_LOWER_CLAUSEPROCESSOR_H
 
-
 #include "ClauseFinder.h"
 #include "Utils.h"
 #include "flang/Lower/AbstractConverter.h"
