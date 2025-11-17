@@ -2755,9 +2755,10 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
   if (const FlattenDepthAttr *FDA = D->getAttr<FlattenDepthAttr>()) {
     Expr *DepthExpr = FDA->getDepthHint();
     Expr::EvalResult Result;
-    if (DepthExpr->EvaluateAsInt(Result, getContext())) {
-      B.addFlattenDepthAttr(Result.Val.getInt().getZExtValue());
-    }
+    [[maybe_unused]] bool Success =
+        DepthExpr->EvaluateAsInt(Result, getContext());
+    assert(Success && "flatten_depth expression should be an integer constant");
+    B.addFlattenDepthAttr(Result.Val.getInt().getZExtValue());
   }
 
   // Track whether we need to add the optnone LLVM attribute,

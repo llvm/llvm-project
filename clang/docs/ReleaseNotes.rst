@@ -351,7 +351,7 @@ Attribute Changes in Clang
   inline calls within the attributed function up to a specified depth. This attribute takes
   a single unsigned integer argument representing the requested depth of inlining. Unlike
   a strict limit, the requested depth is a hint that works cooperatively with other inlining
-  mechanisms:
+  mechanisms, including:
 
   - Functions marked with ``always_inline`` will be inlined even if they exceed the requested depth
   - The compiler's cost model may choose to inline beyond the requested depth for beneficial cases

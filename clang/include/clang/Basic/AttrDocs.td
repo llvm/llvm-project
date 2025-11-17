@@ -4054,7 +4054,7 @@ The actual inlining behavior is subject to several considerations:
 - **Cost model decisions**: The compiler's inlining cost model may choose to
   inline functions beyond the requested depth if doing so is deemed beneficial
   (e.g., trivial wrapper functions or obvious optimization opportunities). This
-  prevents the attribute from becoming a footgun that blocks beneficial optimizations.
+  prevents the attribute from blocking beneficial optimizations.
 
 - **Insufficient call depth**: If the call tree is shallower than the requested
   depth, the attribute simply inlines as far as the call tree allows.
