@@ -47,8 +47,7 @@
 
 // Force linking some of the runtimes that helps attaching to a debugger.
 LLVM_ATTRIBUTE_USED void linkComponents() {
-  llvm::errs() << (void *)&llvm_orc_registerJITLoaderGDBWrapper
-               << (void *)&llvm_orc_registerJITLoaderGDBAllocAction;
+  llvm::errs() << (void *)&llvm_orc_registerJITLoaderGDBAllocAction;
 }
 
 namespace clang {
