@@ -254,12 +254,14 @@ void PlainCFGBuilder::createVPInstructionsForVPBB(VPBasicBlock *VPBB,
 
       if (auto *CI = dyn_cast<CastInst>(Inst)) {
         NewR = VPIRBuilder.createScalarCast(CI->getOpcode(), VPOperands[0],
-                                            CI->getType(), CI->getDebugLoc(), {}, MD);
+                                            CI->getType(), CI->getDebugLoc(),
+                                            {}, MD);
         NewR->setUnderlyingValue(CI);
       } else {
         // Build VPInstruction for any arbitrary Instruction without specific
         // representation in VPlan.
-        NewR = VPIRBuilder.createNaryOp(Inst->getOpcode(), VPOperands, Inst, MD, Inst->getDebugLoc());
+        NewR = VPIRBuilder.createNaryOp(Inst->getOpcode(), VPOperands, Inst, MD,
+                                        Inst->getDebugLoc());
       }
     }
 
