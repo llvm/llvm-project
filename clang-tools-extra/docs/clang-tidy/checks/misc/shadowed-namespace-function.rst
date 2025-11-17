@@ -32,6 +32,7 @@ The check will suggest adding the appropriate namespace qualification:
   + void utils::process() {}
 
 The check will not warn about:
+
 - Static functions or member functions;
 - Functions in anonymous namespaces;
 - The ``main`` function.
@@ -45,8 +46,8 @@ Limitations
 
   namespace llvm::gsym {
     struct MergedFunctionsInfo {
-        friend bool operator==(const llvm::gsym::MergedFunctionsInfo &LHS,
-                               const llvm::gsym::MergedFunctionsInfo &RHS);
+        friend bool operator==(const MergedFunctionsInfo &LHS,
+                               const MergedFunctionsInfo &RHS);
     };
   }
 
