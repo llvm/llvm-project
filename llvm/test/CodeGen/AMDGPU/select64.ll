@@ -40,10 +40,10 @@ define amdgpu_kernel void @select_trunc_i64_2(ptr addrspace(1) %out, i32 %cond, 
 ; GCN-LABEL: {{^}}v_select_trunc_i64_2:
 ; GCN: s_cselect_b32
 ; GCN-NOT: s_cselect_b32
-define amdgpu_kernel void @v_select_trunc_i64_2(ptr addrspace(1) %out, i32 %cond, ptr addrspace(1) %aptr, ptr addrspace(4) %bptr) nounwind {
+define amdgpu_kernel void @v_select_trunc_i64_2(ptr addrspace(1) %out, i32 %cond, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr) nounwind {
   %cmp = icmp ugt i32 %cond, 5
   %a = load i64, ptr addrspace(1) %aptr, align 8
-  %b = load i64, ptr addrspace(4) %bptr, align 8
+  %b = load i64, ptr addrspace(1) %bptr, align 8
   %sel = select i1 %cmp, i64 %a, i64 %b
   %trunc = trunc i64 %sel to i32
   store i32 %trunc, ptr addrspace(1) %out, align 4

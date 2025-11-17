@@ -29033,9 +29033,9 @@ bool DAGCombiner::SimplifySelectOps(SDNode *TheSelect, SDValue LHS,
         // over-conservative. It would be beneficial to be able to remember
         // both potential memory locations.  Since we are discarding
         // src value info, don't do the transformation if the memory
-        // locations are not in the same address space.
-        LLD->getPointerInfo().getAddrSpace() !=
-            RLD->getPointerInfo().getAddrSpace() ||
+        // locations are not in the default address space.
+        LLD->getPointerInfo().getAddrSpace() != 0 ||
+        RLD->getPointerInfo().getAddrSpace() != 0 ||
         // We can't produce a CMOV of a TargetFrameIndex since we won't
         // generate the address generation required.
         LLD->getBasePtr().getOpcode() == ISD::TargetFrameIndex ||
@@ -29117,9 +29117,6 @@ bool DAGCombiner::SimplifySelectOps(SDNode *TheSelect, SDValue LHS,
     // but the new load must be the minimum (most restrictive) alignment of the
     // inputs.
     Align Alignment = std::min(LLD->getAlign(), RLD->getAlign());
-    unsigned AddrSpace = LLD->getAddressSpace();
-    assert(AddrSpace == RLD->getAddressSpace());
-
     MachineMemOperand::Flags MMOFlags = LLD->getMemOperand()->getFlags();
     if (!RLD->isInvariant())
       MMOFlags &= ~MachineMemOperand::MOInvariant;
@@ -29128,16 +29125,15 @@ bool DAGCombiner::SimplifySelectOps(SDNode *TheSelect, SDValue LHS,
     if (LLD->getExtensionType() == ISD::NON_EXTLOAD) {
       // FIXME: Discards pointer and AA info.
       Load = DAG.getLoad(TheSelect->getValueType(0), SDLoc(TheSelect),
-                         LLD->getChain(), Addr, MachinePointerInfo(AddrSpace),
-                         Alignment, MMOFlags);
+                         LLD->getChain(), Addr, MachinePointerInfo(), Alignment,
+                         MMOFlags);
     } else {
       // FIXME: Discards pointer and AA info.
       Load = DAG.getExtLoad(
           LLD->getExtensionType() == ISD::EXTLOAD ? RLD->getExtensionType()
                                                   : LLD->getExtensionType(),
           SDLoc(TheSelect), TheSelect->getValueType(0), LLD->getChain(), Addr,
-          MachinePointerInfo(AddrSpace), LLD->getMemoryVT(), Alignment,
-          MMOFlags);
+          MachinePointerInfo(), LLD->getMemoryVT(), Alignment, MMOFlags);
     }
 
     // Users of the select now use the result of the load.

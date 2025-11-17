@@ -768,18 +768,17 @@ define bfloat @test_select_cc_bf16_f64(double %a, double %b, bfloat %c, bfloat %
 ; CHECK-LABEL: test_select_cc_bf16_f64(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<2>;
-; CHECK-NEXT:    .reg .b16 %rs<2>;
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b16 %rs<4>;
+; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [test_select_cc_bf16_f64_param_0];
 ; CHECK-NEXT:    ld.param.b64 %rd2, [test_select_cc_bf16_f64_param_1];
 ; CHECK-NEXT:    setp.lt.f64 %p1, %rd1, %rd2;
-; CHECK-NEXT:    mov.b64 %rd3, test_select_cc_bf16_f64_param_3;
-; CHECK-NEXT:    mov.b64 %rd4, test_select_cc_bf16_f64_param_2;
-; CHECK-NEXT:    selp.b64 %rd5, %rd4, %rd3, %p1;
-; CHECK-NEXT:    ld.param.b16 %rs1, [%rd5];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    ld.param.b16 %rs1, [test_select_cc_bf16_f64_param_2];
+; CHECK-NEXT:    ld.param.b16 %rs2, [test_select_cc_bf16_f64_param_3];
+; CHECK-NEXT:    selp.b16 %rs3, %rs1, %rs2, %p1;
+; CHECK-NEXT:    st.param.b16 [func_retval0], %rs3;
 ; CHECK-NEXT:    ret;
   %cc = fcmp olt double %a, %b
   %r = select i1 %cc, bfloat %c, bfloat %d

@@ -8,24 +8,21 @@ define i32 @test_select_i1_trunc(i32 %a, i32 %b, i32 %c, i32 %true, i32 %false) 
 ; CHECK-LABEL: test_select_i1_trunc(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<3>;
-; CHECK-NEXT:    .reg .b32 %r<6>;
-; CHECK-NEXT:    .reg .b64 %rd<7>;
+; CHECK-NEXT:    .reg .b32 %r<10>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [test_select_i1_trunc_param_0];
 ; CHECK-NEXT:    and.b32 %r2, %r1, 1;
 ; CHECK-NEXT:    setp.ne.b32 %p1, %r2, 0;
-; CHECK-NEXT:    mov.b64 %rd1, test_select_i1_trunc_param_2;
-; CHECK-NEXT:    mov.b64 %rd2, test_select_i1_trunc_param_1;
-; CHECK-NEXT:    selp.b64 %rd3, %rd2, %rd1, %p1;
-; CHECK-NEXT:    ld.param.b32 %r3, [%rd3];
-; CHECK-NEXT:    and.b32 %r4, %r3, 1;
-; CHECK-NEXT:    setp.ne.b32 %p2, %r4, 0;
-; CHECK-NEXT:    mov.b64 %rd4, test_select_i1_trunc_param_4;
-; CHECK-NEXT:    mov.b64 %rd5, test_select_i1_trunc_param_3;
-; CHECK-NEXT:    selp.b64 %rd6, %rd5, %rd4, %p2;
-; CHECK-NEXT:    ld.param.b32 %r5, [%rd6];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r5;
+; CHECK-NEXT:    ld.param.b32 %r3, [test_select_i1_trunc_param_1];
+; CHECK-NEXT:    ld.param.b32 %r4, [test_select_i1_trunc_param_2];
+; CHECK-NEXT:    ld.param.b32 %r5, [test_select_i1_trunc_param_3];
+; CHECK-NEXT:    selp.b32 %r6, %r3, %r4, %p1;
+; CHECK-NEXT:    and.b32 %r7, %r6, 1;
+; CHECK-NEXT:    setp.ne.b32 %p2, %r7, 0;
+; CHECK-NEXT:    ld.param.b32 %r8, [test_select_i1_trunc_param_4];
+; CHECK-NEXT:    selp.b32 %r9, %r5, %r8, %p2;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r9;
 ; CHECK-NEXT:    ret;
   %a_trunc = trunc i32 %a to i1
   %b_trunc = trunc i32 %b to i1
@@ -39,25 +36,23 @@ define i32 @test_select_i1_trunc_2(i64 %a, i16 %b, i32 %c, i32 %true, i32 %false
 ; CHECK-LABEL: test_select_i1_trunc_2(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<3>;
-; CHECK-NEXT:    .reg .b16 %rs<3>;
-; CHECK-NEXT:    .reg .b32 %r<2>;
-; CHECK-NEXT:    .reg .b64 %rd<9>;
+; CHECK-NEXT:    .reg .b16 %rs<5>;
+; CHECK-NEXT:    .reg .b32 %r<4>;
+; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [test_select_i1_trunc_2_param_0];
 ; CHECK-NEXT:    and.b64 %rd2, %rd1, 1;
 ; CHECK-NEXT:    setp.ne.b64 %p1, %rd2, 0;
-; CHECK-NEXT:    mov.b64 %rd3, test_select_i1_trunc_2_param_2;
-; CHECK-NEXT:    mov.b64 %rd4, test_select_i1_trunc_2_param_1;
-; CHECK-NEXT:    selp.b64 %rd5, %rd4, %rd3, %p1;
-; CHECK-NEXT:    ld.param.b16 %rs1, [%rd5];
-; CHECK-NEXT:    and.b16 %rs2, %rs1, 1;
-; CHECK-NEXT:    setp.ne.b16 %p2, %rs2, 0;
-; CHECK-NEXT:    mov.b64 %rd6, test_select_i1_trunc_2_param_4;
-; CHECK-NEXT:    mov.b64 %rd7, test_select_i1_trunc_2_param_3;
-; CHECK-NEXT:    selp.b64 %rd8, %rd7, %rd6, %p2;
-; CHECK-NEXT:    ld.param.b32 %r1, [%rd8];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    ld.param.b16 %rs1, [test_select_i1_trunc_2_param_1];
+; CHECK-NEXT:    ld.param.b16 %rs2, [test_select_i1_trunc_2_param_2];
+; CHECK-NEXT:    ld.param.b32 %r1, [test_select_i1_trunc_2_param_3];
+; CHECK-NEXT:    selp.b16 %rs3, %rs1, %rs2, %p1;
+; CHECK-NEXT:    and.b16 %rs4, %rs3, 1;
+; CHECK-NEXT:    setp.ne.b16 %p2, %rs4, 0;
+; CHECK-NEXT:    ld.param.b32 %r2, [test_select_i1_trunc_2_param_4];
+; CHECK-NEXT:    selp.b32 %r3, %r1, %r2, %p2;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
 ; CHECK-NEXT:    ret;
   %a_trunc = trunc i64 %a to i1
   %b_trunc = trunc i16 %b to i1
@@ -71,8 +66,7 @@ define i32 @test_select_i1_basic(i32 %v1, i32 %v2, i32 %v3, i32 %true, i32 %fals
 ; CHECK-LABEL: test_select_i1_basic(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<4>;
-; CHECK-NEXT:    .reg .b32 %r<6>;
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b32 %r<10>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [test_select_i1_basic_param_0];
@@ -81,14 +75,13 @@ define i32 @test_select_i1_basic(i32 %v1, i32 %v2, i32 %v3, i32 %true, i32 %fals
 ; CHECK-NEXT:    setp.ne.b32 %p1, %r1, 0;
 ; CHECK-NEXT:    ld.param.b32 %r4, [test_select_i1_basic_param_2];
 ; CHECK-NEXT:    setp.eq.b32 %p2, %r4, 0;
+; CHECK-NEXT:    ld.param.b32 %r5, [test_select_i1_basic_param_3];
 ; CHECK-NEXT:    setp.eq.b32 %p3, %r3, 0;
-; CHECK-NEXT:    mov.b64 %rd1, test_select_i1_basic_param_4;
-; CHECK-NEXT:    mov.b64 %rd2, test_select_i1_basic_param_3;
-; CHECK-NEXT:    selp.b64 %rd3, %rd2, %rd1, %p2;
-; CHECK-NEXT:    selp.b64 %rd4, %rd3, %rd1, %p1;
-; CHECK-NEXT:    selp.b64 %rd5, %rd2, %rd4, %p3;
-; CHECK-NEXT:    ld.param.b32 %r5, [%rd5];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r5;
+; CHECK-NEXT:    ld.param.b32 %r6, [test_select_i1_basic_param_4];
+; CHECK-NEXT:    selp.b32 %r7, %r5, %r6, %p2;
+; CHECK-NEXT:    selp.b32 %r8, %r7, %r6, %p1;
+; CHECK-NEXT:    selp.b32 %r9, %r5, %r8, %p3;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r9;
 ; CHECK-NEXT:    ret;
   %b1 = icmp eq i32 %v1, 0
   %b2 = icmp eq i32 %v2, 0
@@ -102,8 +95,7 @@ define i32 @test_select_i1_basic_folding(i32 %v1, i32 %v2, i32 %v3, i32 %true, i
 ; CHECK-LABEL: test_select_i1_basic_folding(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<11>;
-; CHECK-NEXT:    .reg .b32 %r<5>;
-; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b32 %r<7>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [test_select_i1_basic_folding_param_0];
@@ -113,17 +105,16 @@ define i32 @test_select_i1_basic_folding(i32 %v1, i32 %v2, i32 %v3, i32 %true, i
 ; CHECK-NEXT:    setp.eq.b32 %p3, %r2, 0;
 ; CHECK-NEXT:    ld.param.b32 %r3, [test_select_i1_basic_folding_param_2];
 ; CHECK-NEXT:    setp.eq.b32 %p4, %r3, 0;
+; CHECK-NEXT:    ld.param.b32 %r4, [test_select_i1_basic_folding_param_3];
 ; CHECK-NEXT:    xor.pred %p5, %p1, %p3;
+; CHECK-NEXT:    ld.param.b32 %r5, [test_select_i1_basic_folding_param_4];
 ; CHECK-NEXT:    and.pred %p6, %p5, %p4;
 ; CHECK-NEXT:    and.pred %p7, %p2, %p4;
 ; CHECK-NEXT:    and.pred %p8, %p3, %p6;
 ; CHECK-NEXT:    or.pred %p9, %p8, %p7;
 ; CHECK-NEXT:    xor.pred %p10, %p9, %p3;
-; CHECK-NEXT:    mov.b64 %rd1, test_select_i1_basic_folding_param_4;
-; CHECK-NEXT:    mov.b64 %rd2, test_select_i1_basic_folding_param_3;
-; CHECK-NEXT:    selp.b64 %rd3, %rd2, %rd1, %p10;
-; CHECK-NEXT:    ld.param.b32 %r4, [%rd3];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r4;
+; CHECK-NEXT:    selp.b32 %r6, %r4, %r5, %p10;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r6;
 ; CHECK-NEXT:    ret;
   %b1 = icmp eq i32 %v1, 0
   %b2 = icmp eq i32 %v2, 0
