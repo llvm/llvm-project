@@ -1026,4 +1026,29 @@ def CIR_UnwindAttr : CIR_UnitAttr<"Unwind", "unwind"> {
   let storageType = [{ CatchUnwind }];
 }
 
+//===----------------------------------------------------------------------===//
+// CIR_BlockAddrInfoAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_BlockAddrInfoAttr : CIR_Attr<"BlockAddrInfo", "block_addr_info"> {
+  let summary = "Block Addres attribute";
+  let description = [{
+    This attribute is used to represent the address of a basic block
+    within a function. It combines the symbol reference to a function
+    with the name of a label inside that function.
+  }];
+  let parameters = (ins "mlir::FlatSymbolRefAttr":$func,
+                        "mlir::StringAttr":$label);
+
+  let assemblyFormat = "`<` $func `,` $label `>`";
+  let builders = [
+    AttrBuilder<(ins "llvm::StringRef":$func_name,
+                     "llvm::StringRef":$label_name
+                     ), [{
+      return $_get($_ctxt, mlir::FlatSymbolRefAttr::get($_ctxt, func_name),
+                   mlir::StringAttr::get($_ctxt, label_name));
+    }]>
+  ];
+}
+
 #endif // CLANG_CIR_DIALECT_IR_CIRATTRS_TD
