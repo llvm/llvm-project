@@ -10758,7 +10758,7 @@ bool SIInstrInfo::invertSCCUse(MachineInstr *SCCDef) const {
         return false;
     }
     if (MI.definesRegister(AMDGPU::SCC, &RI) ||
-        MI.killsRegister(AMDGPU::SCC, &RI)) {
+        MI.killsRegister(AMDGPU::SCC, &RI) || MI.isReturn()) {
       SCCIsDead = true;
       break;
     }
