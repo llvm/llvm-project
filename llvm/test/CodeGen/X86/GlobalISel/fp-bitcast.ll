@@ -3,18 +3,18 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -global-isel -mattr=+avx | FileCheck %s --check-prefixes=CHECK,AVX
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -global-isel -mattr=+avx512f | FileCheck %s --check-prefixes=CHECK,AVX512
 
-define dso_local noundef half @bar(i16 %0) {
-; SSE2-LABEL: bar:
+define dso_local noundef half @test_i16_to_half(i16 %0) {
+; SSE2-LABEL: test_i16_to_half:
 ; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    pinsrw $0, %di, %xmm0
 ; SSE2-NEXT:    retq
 ;
-; AVX-LABEL: bar:
+; AVX-LABEL: test_i16_to_half:
 ; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    vpinsrw $0, %di, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
-; AVX512-LABEL: bar:
+; AVX512-LABEL: test_i16_to_half:
 ; AVX512:       # %bb.0: # %entry
 ; AVX512-NEXT:    vpinsrw $0, %di, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
