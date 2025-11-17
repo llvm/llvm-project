@@ -239,7 +239,6 @@ set all_cmake_flags=^
   %cmake_flags% ^
   -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;lld;lldb;" ^
   %common_lldb_flags% ^
-  -DPYTHON_HOME=%PYTHONHOME% ^
   -DCMAKE_C_COMPILER=%stage0_bin_dir%/clang-cl.exe ^
   -DCMAKE_CXX_COMPILER=%stage0_bin_dir%/clang-cl.exe ^
   -DCMAKE_LINKER=%stage0_bin_dir%/lld-link.exe ^
@@ -324,7 +323,6 @@ call :do_generate_profile || exit /b 1
 cmake -GNinja %cmake_flags% ^
   -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;lld;lldb;flang;mlir" ^
   %common_lldb_flags% ^
-  -DPYTHON_HOME=%PYTHONHOME% ^
   %cmake_profile_flags% %llvm_src%\llvm || exit /b 1
 ninja || ninja || ninja || exit /b 1
 ninja check-llvm || exit /b 1
