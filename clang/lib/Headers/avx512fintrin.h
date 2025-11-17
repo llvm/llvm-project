@@ -8383,30 +8383,24 @@ _mm512_maskz_moveldup_ps(__mmask16 __U, __m512 __A) {
                                              (__v16sf)_mm512_setzero_ps());
 }
 
-static __inline__ __m128 __DEFAULT_FN_ATTRS128 _mm_mask_move_ss(__m128 __W,
-                                                                __mmask8 __U,
-                                                                __m128 __A,
-                                                                __m128 __B) {
+static __inline__ __m128 __DEFAULT_FN_ATTRS128_CONSTEXPR
+_mm_mask_move_ss(__m128 __W, __mmask8 __U, __m128 __A, __m128 __B) {
   return __builtin_ia32_selectss_128(__U, _mm_move_ss(__A, __B), __W);
 }
 
-static __inline__ __m128 __DEFAULT_FN_ATTRS128 _mm_maskz_move_ss(__mmask8 __U,
-                                                                 __m128 __A,
-                                                                 __m128 __B) {
+static __inline__ __m128 __DEFAULT_FN_ATTRS128_CONSTEXPR
+_mm_maskz_move_ss(__mmask8 __U, __m128 __A, __m128 __B) {
   return __builtin_ia32_selectss_128(__U, _mm_move_ss(__A, __B),
                                      _mm_setzero_ps());
 }
 
-static __inline__ __m128d __DEFAULT_FN_ATTRS128 _mm_mask_move_sd(__m128d __W,
-                                                                 __mmask8 __U,
-                                                                 __m128d __A,
-                                                                 __m128d __B) {
+static __inline__ __m128d __DEFAULT_FN_ATTRS128_CONSTEXPR
+_mm_mask_move_sd(__m128d __W, __mmask8 __U, __m128d __A, __m128d __B) {
   return __builtin_ia32_selectsd_128(__U, _mm_move_sd(__A, __B), __W);
 }
 
-static __inline__ __m128d __DEFAULT_FN_ATTRS128 _mm_maskz_move_sd(__mmask8 __U,
-                                                                  __m128d __A,
-                                                                  __m128d __B) {
+static __inline__ __m128d __DEFAULT_FN_ATTRS128_CONSTEXPR
+_mm_maskz_move_sd(__mmask8 __U, __m128d __A, __m128d __B) {
   return __builtin_ia32_selectsd_128(__U, _mm_move_sd(__A, __B),
                                      _mm_setzero_pd());
 }
