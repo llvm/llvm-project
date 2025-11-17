@@ -1548,7 +1548,7 @@ defm S_BRANCH : SOPP_With_Relaxation<
   [(br bb:$simm16)]>;
 }
 
-let Uses = [SCC] in {
+let usesCustomInserter = 1, Uses = [SCC] in {
 defm S_CBRANCH_SCC0 : SOPP_With_Relaxation<
   "s_cbranch_scc0" , (ins SOPPBrTarget:$simm16),
   "$simm16"
