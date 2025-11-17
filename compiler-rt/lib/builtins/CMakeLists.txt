@@ -427,6 +427,7 @@ set(arm_or_thumb2_base_SOURCES
 option(COMPILER_RT_ARM_OPTIMIZED_FP
   "On 32-bit Arm, use optimized assembly implementations of FP arithmetic. Likely to increase code size, but be faster." ON)
 
+set(arm_or_thumb2_optimized_fp_SOURCES)
 if(COMPILER_RT_ARM_OPTIMIZED_FP AND BUILTIN_SUPPORTED_ARCH MATCHES "arm")
   check_assembler_flag(COMPILER_RT_HAS_MIMPLICIT_IT -mimplicit-it=always)
   if(COMPILER_RT_HAS_MIMPLICIT_IT)
@@ -448,12 +449,11 @@ if(COMPILER_RT_ARM_OPTIMIZED_FP AND BUILTIN_SUPPORTED_ARCH MATCHES "arm")
       arm/divsf3.S)
     set_source_files_properties(${assembly_files}
       PROPERTIES COMPILE_OPTIONS ${implicit_it_flag})
-    set(arm_or_thumb2_base_SOURCES
+    set(arm_or_thumb2_optimized_fp_SOURCES
       ${assembly_files}
       arm/fnan2.c
       arm/fnorm2.c
       arm/funder.c
-      ${arm_or_thumb2_base_SOURCES}
       )
   endif()
 endif()
@@ -612,6 +612,7 @@ if(MINGW)
     arm/aeabi_uldivmod.S
     arm/chkstk.S
     ${arm_or_thumb2_base_SOURCES}
+    ${arm_or_thumb2_optimized_fp_SOURCES}
     ${arm_sync_SOURCES}
   )
 
@@ -622,6 +623,7 @@ elseif(NOT WIN32)
   # TODO the EABI sources should only be added to EABI targets
   set(arm_SOURCES
     ${arm_or_thumb2_base_SOURCES}
+    ${arm_or_thumb2_optimized_fp_SOURCES}
     ${arm_sync_SOURCES}
     ${arm_EABI_SOURCES}
     ${arm_Thumb1_SOURCES}
