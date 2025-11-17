@@ -113,12 +113,12 @@ def CommitZASavePseudo
 
 def AArch64_inout_za_use
   : SDNode<"AArch64ISD::INOUT_ZA_USE", SDTypeProfile<0, 0,[]>,
-           [SDNPHasChain, SDNPInGlue]>;
+           [SDNPHasChain, SDNPInGlue, SDNPOutGlue]>;
 def : Pat<(AArch64_inout_za_use), (InOutZAUsePseudo)>;
 
 def AArch64_requires_za_save
   : SDNode<"AArch64ISD::REQUIRES_ZA_SAVE", SDTypeProfile<0, 0,[]>,
-           [SDNPHasChain, SDNPInGlue]>;
+           [SDNPHasChain, SDNPInGlue, SDNPOutGlue]>;
 def : Pat<(AArch64_requires_za_save), (RequiresZASavePseudo)>;
 
 def AArch64_sme_state_alloc
