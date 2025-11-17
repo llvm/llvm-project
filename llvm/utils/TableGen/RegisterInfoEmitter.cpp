@@ -29,6 +29,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
@@ -104,7 +105,8 @@ static void emitInclude(StringRef FilenamePrefix, StringRef IncludeFile,
                         StringRef GuardMacro, raw_ostream &OS) {
   OS << "#ifdef " << GuardMacro << '\n';
   OS << "#undef " << GuardMacro << '\n';
-  OS << "#include \"" << FilenamePrefix << IncludeFile << "\"\n";
+  OS << "#include \"" << sys::path::stem(FilenamePrefix) << IncludeFile
+     << "\"\n";
   OS << "#endif\n\n";
 }
 
