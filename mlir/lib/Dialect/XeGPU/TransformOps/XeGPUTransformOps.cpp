@@ -7,7 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/XeGPU/TransformOps/XeGPUTransformOps.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
+#include "mlir/Dialect/SCF/Utils/Utils.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
 
@@ -338,6 +340,304 @@ void transform::SetOpLayoutAttrOp::getEffects(
   onlyReadsHandle(getSgLayoutMutable(), effects);
   onlyReadsHandle(getSgDataMutable(), effects);
   onlyReadsHandle(getInstDataMutable(), effects);
+  modifiesPayload(effects);
+}
+
+void transform::SetGPULaunchThreadsOp::build(
+    OpBuilder &builder, OperationState &ostate, Value target,
+    ArrayRef<OpFoldResult> mixedThreads) {
+  SmallVector<int64_t> staticThreads;
+  SmallVector<Value> dynamicThreads;
+  dispatchIndexOpFoldResults(mixedThreads, dynamicThreads, staticThreads);
+  build(builder, ostate, target.getType(),
+        /*target=*/target,
+        /*threads=*/dynamicThreads,
+        /*static_threads=*/staticThreads);
+}
+
+DiagnosedSilenceableFailure
+transform::SetGPULaunchThreadsOp::apply(transform::TransformRewriter &rewriter,
+                                        transform::TransformResults &results,
+                                        transform::TransformState &state) {
+  auto targetOps = state.getPayloadOps(getTarget());
+  if (!llvm::hasSingleElement(targetOps)) {
+    return emitDefiniteFailure() << "Requires exactly one targetOp handle (got "
+                                 << llvm::range_size(targetOps) << ")";
+  }
+  Operation *target = *targetOps.begin();
+
+  auto launchOp = dyn_cast<gpu::LaunchOp>(target);
+  if (!launchOp) {
+    auto diag = emitSilenceableFailure(getLoc())
+                << "Expected a gpu.launch op, but got: " << target->getName();
+    diag.attachNote(target->getLoc()) << "target op";
+    return diag;
+  }
+
+  SmallVector<int32_t> threads;
+  DiagnosedSilenceableFailure status =
+      convertMixedValuesToInt(state, (*this), threads, getMixedThreads());
+  if (!status.succeeded())
+    return status;
+
+  if (threads.size() != 3) {
+    return emitSilenceableFailure(getLoc())
+           << "Expected threads argument to consist of three values (got "
+           << threads.size() << ")";
+  }
+
+  rewriter.setInsertionPoint(launchOp);
+  auto createConstValue = [&](int value) {
+    return arith::ConstantIndexOp::create(rewriter, launchOp.getLoc(), value);
+  };
+
+  // Replace threads in-place.
+  launchOp.getBlockSizeXMutable().assign(createConstValue(threads[0]));
+  launchOp.getBlockSizeYMutable().assign(createConstValue(threads[1]));
+  launchOp.getBlockSizeZMutable().assign(createConstValue(threads[2]));
+
+  return DiagnosedSilenceableFailure::success();
+}
+
+void transform::SetGPULaunchThreadsOp::getEffects(
+    ::llvm::SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  onlyReadsHandle(getTargetMutable(), effects);
+  onlyReadsHandle(getThreadsMutable(), effects);
+  modifiesPayload(effects);
+}
+
+DiagnosedSilenceableFailure
+transform::InsertPrefetchOp::apply(transform::TransformRewriter &rewriter,
+                                   transform::TransformResults &results,
+                                   transform::TransformState &state) {
+  auto targetValues = state.getPayloadValues(getTarget());
+  if (!llvm::hasSingleElement(targetValues))
+    return emitDefiniteFailure()
+           << "requires exactly one target value handle (got "
+           << llvm::range_size(targetValues) << ")";
+  auto value = *targetValues.begin();
+
+  int64_t nbPrefetch = getStaticNbPrefetch();
+  if (getDynamicNbPrefetch()) {
+    // Get dynamic prefetch count from transform param or handle.
+    SmallVector<int32_t> dynamicNbPrefetch;
+    auto status = convertMixedValuesToInt(state, (*this), dynamicNbPrefetch,
+                                          {getDynamicNbPrefetch()});
+    if (!status.succeeded())
+      return status;
+    if (dynamicNbPrefetch.size() != 1)
+      return emitDefiniteFailure()
+             << "requires exactly one value for dynamic_nb_prefetch";
+    nbPrefetch = dynamicNbPrefetch[0];
+  }
+  if (nbPrefetch <= 0)
+    return emitSilenceableFailure(getLoc())
+           << "nb_prefetch must be a positive integer.";
+
+  // Find load operation of the operand.
+  auto maybeLoadOp = findProducerOfType<xegpu::LoadNdOp>(value);
+  if (!maybeLoadOp)
+    return emitSilenceableFailure(getLoc()) << "Could not find load op.";
+  auto loadOp = *maybeLoadOp;
+  if (loadOp.getMixedOffsets().size() == 0) {
+    auto diag = emitSilenceableFailure(getLoc())
+                << "Load op must have offsets.";
+    diag.attachNote(loadOp.getLoc()) << "load op";
+    return diag;
+  }
+
+  // Find the parent scf.for loop.
+  auto forOp = loadOp->getParentOfType<scf::ForOp>();
+  if (!forOp) {
+    auto diag = emitSilenceableFailure(getLoc())
+                << "Load op is not contained in a scf.for loop.";
+    diag.attachNote(loadOp.getLoc()) << "load op";
+    return diag;
+  }
+
+  // Find descriptor op.
+  auto maybeDescOp = findProducerOfType<xegpu::CreateNdDescOp>(value);
+  if (!maybeDescOp)
+    return emitSilenceableFailure(getLoc()) << "Could not find descriptor op.";
+  auto descOp = *maybeDescOp;
+  if (descOp.getMixedOffsets().size() > 0) {
+    auto diag = emitSilenceableFailure(getLoc())
+                << "desc op with offsets is not supported.";
+    diag.attachNote(descOp.getLoc()) << "desc op";
+  }
+
+  // Clone desc op outside the loop.
+  rewriter.setInsertionPoint(forOp);
+  auto newDescOp =
+      cast<xegpu::CreateNdDescOp>(rewriter.clone(*descOp.getOperation()));
+
+  // Clone reduction loop to emit initial prefetches.
+  // Compute upper bound of the init loop: start + nbPrefetch * step.
+  auto nbPrefetchCst =
+      arith::ConstantIndexOp::create(rewriter, forOp.getLoc(), nbPrefetch);
+  auto nbStep = rewriter.createOrFold<arith::MulIOp>(
+      forOp.getLoc(), nbPrefetchCst, forOp.getStep());
+  auto initUpBound = rewriter.createOrFold<arith::AddIOp>(
+      forOp.getLoc(), forOp.getLowerBound(), nbStep);
+  auto initForOp =
+      scf::ForOp::create(rewriter, forOp.getLoc(), forOp.getLowerBound(),
+                         initUpBound, forOp.getStep());
+
+  auto ctx = rewriter.getContext();
+  auto readCacheHint =
+      xegpu::CachePolicyAttr::get(ctx, xegpu::CachePolicy::CACHED);
+
+  // Modify loadOp mixedOffsets by replacing the for loop induction variable
+  // with the given value.
+  auto getPrefetchOffsets =
+      [&](Value replacementVal) -> SmallVector<OpFoldResult> {
+    IRMapping mapping;
+    mapping.map(forOp.getInductionVar(), replacementVal);
+    SmallVector<Value> dynamicOffsets =
+        llvm::to_vector(llvm::map_range(loadOp.getOffsets(), [&](Value v) {
+          return mapping.lookupOrDefault(v);
+        }));
+    auto constOffsets = loadOp.getConstOffsets().value();
+    return getMixedValues(constOffsets, dynamicOffsets, ctx);
+  };
+
+  // Insert prefetch op in init loop.
+  // Replace induction var with the init loop induction var.
+  rewriter.setInsertionPointToStart(initForOp.getBody());
+  xegpu::PrefetchNdOp::create(rewriter, newDescOp.getLoc(),
+                              newDescOp.getResult(),
+                              getPrefetchOffsets(initForOp.getInductionVar()),
+                              readCacheHint, readCacheHint, readCacheHint);
+
+  // Insert prefetch op in main loop.
+  // Calculate prefetch offset after the init prefetches have been issued.
+  rewriter.setInsertionPointToStart(forOp.getBody());
+  auto prefetchOffset = arith::AddIOp::create(rewriter, forOp.getLoc(),
+                                              forOp.getInductionVar(), nbStep);
+  // Replace induction var with correct offset.
+  xegpu::PrefetchNdOp::create(rewriter, newDescOp.getLoc(),
+                              newDescOp.getResult(),
+                              getPrefetchOffsets(prefetchOffset), readCacheHint,
+                              readCacheHint, readCacheHint);
+
+  // Unroll the init loop.
+  if (failed(loopUnrollFull(initForOp)))
+    return emitSilenceableFailure(getLoc()) << "Failed to unroll the loop";
+
+  results.set(llvm::cast<OpResult>(getResult()), {newDescOp});
+
+  return DiagnosedSilenceableFailure::success();
+}
+
+void transform::InsertPrefetchOp::getEffects(
+    ::llvm::SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  onlyReadsHandle(getTargetMutable(), effects);
+  onlyReadsHandle(getDynamicNbPrefetchMutable(), effects);
+  producesHandle(getOperation()->getOpResults(), effects);
+  modifiesPayload(effects);
+}
+
+void transform::ConvertLayoutOp::build(
+    OpBuilder &builder, OperationState &ostate, Value target,
+    ArrayRef<OpFoldResult> mixedInputSgLayout,
+    ArrayRef<OpFoldResult> mixedInputSgData,
+    ArrayRef<OpFoldResult> mixedInputInstData,
+    ArrayRef<OpFoldResult> mixedTargetSgLayout,
+    ArrayRef<OpFoldResult> mixedTargetSgData,
+    ArrayRef<OpFoldResult> mixedTargetInstData) {
+  SmallVector<int64_t> staticInputSgLayout, staticInputSgData,
+      staticInputInstData;
+  SmallVector<Value> dynamicInputSgLayout, dynamicInputSgData,
+      dynamicInputInstData;
+  dispatchIndexOpFoldResults(mixedInputSgLayout, dynamicInputSgLayout,
+                             staticInputSgLayout);
+  dispatchIndexOpFoldResults(mixedInputSgData, dynamicInputSgData,
+                             staticInputSgData);
+  dispatchIndexOpFoldResults(mixedInputInstData, dynamicInputInstData,
+                             staticInputInstData);
+  SmallVector<int64_t> staticTargetSgLayout, staticTargetSgData,
+      staticTargetInstData;
+  SmallVector<Value> dynamicTargetSgLayout, dynamicTargetSgData,
+      dynamicTargetInstData;
+  dispatchIndexOpFoldResults(mixedTargetSgLayout, dynamicTargetSgLayout,
+                             staticTargetSgLayout);
+  dispatchIndexOpFoldResults(mixedTargetSgData, dynamicTargetSgData,
+                             staticTargetSgData);
+  dispatchIndexOpFoldResults(mixedTargetInstData, dynamicTargetInstData,
+                             staticTargetInstData);
+  build(builder, ostate, target.getType(),
+        /*target=*/target,
+        /*input_sg_layout=*/dynamicInputSgLayout,
+        /*input_sg_data=*/dynamicInputSgData,
+        /*input_inst_data=*/dynamicInputInstData,
+        /*target_sg_layout=*/dynamicTargetSgLayout,
+        /*target_sg_data=*/dynamicTargetSgData,
+        /*target_inst_data=*/dynamicTargetInstData,
+        /*static_input_sg_layout=*/staticInputSgLayout,
+        /*static_input_sg_data=*/staticInputSgData,
+        /*static_input_inst_data=*/staticInputInstData,
+        /*static_target_sg_layout=*/staticTargetSgLayout,
+        /*static_target_sg_data=*/staticTargetSgData,
+        /*static_target_inst_data=*/staticTargetInstData);
+}
+
+DiagnosedSilenceableFailure
+transform::ConvertLayoutOp::apply(transform::TransformRewriter &rewriter,
+                                  transform::TransformResults &results,
+                                  transform::TransformState &state) {
+  auto targetValues = state.getPayloadValues(getTarget());
+  if (!llvm::hasSingleElement(targetValues))
+    return emitDefiniteFailure()
+           << "requires exactly one target value handle (got "
+           << llvm::range_size(targetValues) << ")";
+  auto value = *targetValues.begin();
+
+  // Construct layout attributes.
+  xegpu::LayoutAttr inputLayoutAttr = nullptr;
+  auto status = getLayoutAttrFromOperands(
+      getContext(), state, (*this), getMixedInputSgLayout(),
+      getMixedInputSgData(), getMixedInputInstData(), inputLayoutAttr);
+  if (!status.succeeded())
+    return status;
+
+  xegpu::LayoutAttr targetLayoutAttr = nullptr;
+  status = getLayoutAttrFromOperands(
+      getContext(), state, (*this), getMixedTargetSgLayout(),
+      getMixedTargetSgData(), getMixedTargetInstData(), targetLayoutAttr);
+  if (!status.succeeded())
+    return status;
+
+  // Find first user op to define insertion point for layout conversion.
+  if (value.use_empty())
+    return emitSilenceableFailure(getLoc())
+           << "Value has no users to insert layout conversion.";
+  Operation *userOp = *value.getUsers().begin();
+
+  // Emit convert_layout op.
+  rewriter.setInsertionPoint(userOp);
+  auto convLayoutOp =
+      xegpu::ConvertLayoutOp::create(rewriter, value.getLoc(), value.getType(),
+                                     value, inputLayoutAttr, targetLayoutAttr);
+  // Replace load op result with the converted layout.
+  rewriter.replaceUsesWithIf(
+      value, convLayoutOp.getResult(), [&](OpOperand &use) {
+        return use.getOwner() != convLayoutOp.getOperation();
+      });
+
+  results.set(llvm::cast<OpResult>(getResult()), {convLayoutOp});
+  return DiagnosedSilenceableFailure::success();
+}
+
+void transform::ConvertLayoutOp::getEffects(
+    ::llvm::SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  onlyReadsHandle(getTargetMutable(), effects);
+  onlyReadsHandle(getInputSgLayoutMutable(), effects);
+  onlyReadsHandle(getInputSgDataMutable(), effects);
+  onlyReadsHandle(getInputInstDataMutable(), effects);
+  onlyReadsHandle(getTargetSgLayoutMutable(), effects);
+  onlyReadsHandle(getTargetSgDataMutable(), effects);
+  onlyReadsHandle(getTargetInstDataMutable(), effects);
+  producesHandle(getOperation()->getOpResults(), effects);
   modifiesPayload(effects);
 }
 

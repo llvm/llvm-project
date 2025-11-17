@@ -122,7 +122,12 @@ void MemMapLinux::setMemoryPermissionImpl(uptr Addr, uptr Size, uptr Flags) {
 void MemMapLinux::releaseAndZeroPagesToOSImpl(uptr From, uptr Size) {
   void *Addr = reinterpret_cast<void *>(From);
 
-  while (madvise(Addr, Size, MADV_DONTNEED) == -1 && errno == EAGAIN) {
+  int rc;
+  while ((rc = madvise(Addr, Size, MADV_DONTNEED)) == -1 && errno == EAGAIN) {
+  }
+  if (rc == -1) {
+    // If we can't madvies the memory, then we still need to zero it.
+    memset(Addr, 0, Size);
   }
 }
 

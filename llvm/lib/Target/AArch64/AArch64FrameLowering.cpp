@@ -218,10 +218,10 @@
 #include "AArch64MachineFunctionInfo.h"
 #include "AArch64PrologueEpilogue.h"
 #include "AArch64RegisterInfo.h"
+#include "AArch64SMEAttributes.h"
 #include "AArch64Subtarget.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "MCTargetDesc/AArch64MCTargetDesc.h"
-#include "Utils/AArch64SMEAttributes.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -1554,8 +1554,10 @@ static bool produceCompactUnwindFrame(const AArch64FrameLowering &AFL,
          !AFL.requiresSaveVG(MF) && !AFI->isSVECC();
 }
 
-static bool invalidateWindowsRegisterPairing(unsigned Reg1, unsigned Reg2,
-                                             bool NeedsWinCFI, bool IsFirst,
+static bool invalidateWindowsRegisterPairing(bool SpillExtendedVolatile,
+                                             unsigned SpillCount, unsigned Reg1,
+                                             unsigned Reg2, bool NeedsWinCFI,
+                                             bool IsFirst,
                                              const TargetRegisterInfo *TRI) {
   // If we are generating register pairs for a Windows function that requires
   // EH support, then pair consecutive registers only.  There are no unwind
@@ -1568,8 +1570,18 @@ static bool invalidateWindowsRegisterPairing(unsigned Reg1, unsigned Reg2,
     return true;
   if (!NeedsWinCFI)
     return false;
+
+  // ARM64EC introduced `save_any_regp`, which expects 16-byte alignment.
+  // This is handled by only allowing paired spills for registers spilled at
+  // even positions (which should be 16-byte aligned, as other GPRs/FPRs are
+  // 8-bytes). We carve out an exception for {FP,LR}, which does not require
+  // 16-byte alignment in the uop representation.
   if (TRI->getEncodingValue(Reg2) == TRI->getEncodingValue(Reg1) + 1)
-    return false;
+    return SpillExtendedVolatile
+               ? !((Reg1 == AArch64::FP && Reg2 == AArch64::LR) ||
+                   (SpillCount % 2) == 0)
+               : false;
+
   // If pairing a GPR with LR, the pair can be described by the save_lrpair
   // opcode. If this is the first register pair, it would end up with a
   // predecrement, but there's no save_lrpair_x opcode, so we can only do this
@@ -1585,12 +1597,15 @@ static bool invalidateWindowsRegisterPairing(unsigned Reg1, unsigned Reg2,
 /// WindowsCFI requires that only consecutive registers can be paired.
 /// LR and FP need to be allocated together when the frame needs to save
 /// the frame-record. This means any other register pairing with LR is invalid.
-static bool invalidateRegisterPairing(unsigned Reg1, unsigned Reg2,
-                                      bool UsesWinAAPCS, bool NeedsWinCFI,
-                                      bool NeedsFrameRecord, bool IsFirst,
+static bool invalidateRegisterPairing(bool SpillExtendedVolatile,
+                                      unsigned SpillCount, unsigned Reg1,
+                                      unsigned Reg2, bool UsesWinAAPCS,
+                                      bool NeedsWinCFI, bool NeedsFrameRecord,
+                                      bool IsFirst,
                                       const TargetRegisterInfo *TRI) {
   if (UsesWinAAPCS)
-    return invalidateWindowsRegisterPairing(Reg1, Reg2, NeedsWinCFI, IsFirst,
+    return invalidateWindowsRegisterPairing(SpillExtendedVolatile, SpillCount,
+                                            Reg1, Reg2, NeedsWinCFI, IsFirst,
                                             TRI);
 
   // If we need to store the frame record, don't pair any register
@@ -1688,6 +1703,21 @@ void computeCalleeSaveRegisterPairs(const AArch64FrameLowering &AFL,
   }
 
   bool FPAfterSVECalleeSaves = IsWindows && AFI->getSVECalleeSavedStackSize();
+  // Windows AAPCS has x9-x15 as volatile registers, x16-x17 as intra-procedural
+  // scratch, x18 as platform reserved. However, clang has extended calling
+  // convensions such as preserve_most and preserve_all which treat these as
+  // CSR. As such, the ARM64 unwind uOPs bias registers by 19. We use ARM64EC
+  // uOPs which have separate restrictions. We need to check for that.
+  //
+  // NOTE: we currently do not account for the D registers as LLVM does not
+  // support non-ABI compliant D register spills.
+  bool SpillExtendedVolatile =
+      IsWindows && std::any_of(std::begin(CSI), std::end(CSI),
+                               [](const CalleeSavedInfo &CSI) {
+                                 const auto &Reg = CSI.getReg();
+                                 return Reg >= AArch64::X0 &&
+                                        Reg <= AArch64::X18;
+                               });
 
   int ZPRByteOffset = 0;
   int PPRByteOffset = 0;
@@ -1749,17 +1779,19 @@ void computeCalleeSaveRegisterPairs(const AArch64FrameLowering &AFL,
     if (unsigned(i + RegInc) < Count && !HasCSHazardPadding) {
       MCRegister NextReg = CSI[i + RegInc].getReg();
       bool IsFirst = i == FirstReg;
+      unsigned SpillCount = NeedsWinCFI ? FirstReg - i : i;
       switch (RPI.Type) {
       case RegPairInfo::GPR:
         if (AArch64::GPR64RegClass.contains(NextReg) &&
-            !invalidateRegisterPairing(RPI.Reg1, NextReg, IsWindows,
-                                       NeedsWinCFI, NeedsFrameRecord, IsFirst,
-                                       TRI))
+            !invalidateRegisterPairing(
+                SpillExtendedVolatile, SpillCount, RPI.Reg1, NextReg, IsWindows,
+                NeedsWinCFI, NeedsFrameRecord, IsFirst, TRI))
           RPI.Reg2 = NextReg;
         break;
       case RegPairInfo::FPR64:
         if (AArch64::FPR64RegClass.contains(NextReg) &&
-            !invalidateWindowsRegisterPairing(RPI.Reg1, NextReg, NeedsWinCFI,
+            !invalidateWindowsRegisterPairing(SpillExtendedVolatile, SpillCount,
+                                              RPI.Reg1, NextReg, NeedsWinCFI,
                                               IsFirst, TRI))
           RPI.Reg2 = NextReg;
         break;
@@ -2380,9 +2412,31 @@ void AArch64FrameLowering::determineStackHazardSlot(
     AFI->setStackHazardSlotIndex(ID);
   }
 
-  // Determine if we should use SplitSVEObjects. This should only be used if
-  // there's a possibility of a stack hazard between PPRs and ZPRs or FPRs.
+  if (!AFI->hasStackHazardSlotIndex())
+    return;
+
   if (SplitSVEObjects) {
+    CallingConv::ID CC = MF.getFunction().getCallingConv();
+    if (AFI->isSVECC() || CC == CallingConv::AArch64_SVE_VectorCall) {
+      AFI->setSplitSVEObjects(true);
+      LLVM_DEBUG(dbgs() << "Using SplitSVEObjects for SVE CC function\n");
+      return;
+    }
+
+    // We only use SplitSVEObjects in non-SVE CC functions if there's a
+    // possibility of a stack hazard between PPRs and ZPRs/FPRs.
+    LLVM_DEBUG(dbgs() << "Determining if SplitSVEObjects should be used in "
+                         "non-SVE CC function...\n");
+
+    // If another calling convention is explicitly set FPRs can't be promoted to
+    // ZPR callee-saves.
+    if (!is_contained({CallingConv::C, CallingConv::Fast}, CC)) {
+      LLVM_DEBUG(
+          dbgs()
+          << "Calling convention is not supported with SplitSVEObjects\n");
+      return;
+    }
+
     if (!HasPPRCSRs && !HasPPRStackObjects) {
       LLVM_DEBUG(
           dbgs() << "Not using SplitSVEObjects as no PPRs are on the stack\n");
@@ -2393,16 +2447,6 @@ void AArch64FrameLowering::determineStackHazardSlot(
       LLVM_DEBUG(
           dbgs()
           << "Not using SplitSVEObjects as no FPRs or ZPRs are on the stack\n");
-      return;
-    }
-
-    // If another calling convention is explicitly set FPRs can't be promoted to
-    // ZPR callee-saves.
-    if (!is_contained({CallingConv::C, CallingConv::Fast,
-                       CallingConv::AArch64_SVE_VectorCall},
-                      MF.getFunction().getCallingConv())) {
-      LLVM_DEBUG(
-          dbgs() << "Calling convention is not supported with SplitSVEObjects");
       return;
     }
 
