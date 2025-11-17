@@ -19,6 +19,8 @@
 
 #include "orc-rt-c/CoreTypes.h"
 
+#include <memory>
+#include <mutex>
 #include <vector>
 
 namespace orc_rt {
