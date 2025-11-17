@@ -367,3 +367,17 @@ functions:
     arguments:
       - type: const wchar_t *__restrict
       - type: wchar_t **__restrict
+  - name: wcstod
+    standards:
+      - stdc
+    return_type: double
+    arguments:
+      - type: const wchar_t *__restrict
+      - type: wchar_t **__restrict
+  - name: wcstold
+    standards:
+      - stdc
+    return_type: long double
+    arguments:
+      - type: const wchar_t *__restrict
+      - type: wchar_t **__restrict
