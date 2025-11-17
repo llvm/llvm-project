@@ -4478,19 +4478,17 @@ VectorizationFactor LoopVectorizationPlanner::selectEpilogueVectorizationFactor(
 
     // If NextVF is greater than the number of remaining iterations, the
     // epilogue loop would be dead. Skip such factors.
-    // TODO: We should also consider comparing against scalable RemIter when
-    // SCEV be able to evaluate non-canonical vscale-based expressions.
+    // TODO: We should also consider comparing against a scalable
+    // RemainingIterations when SCEV be able to evaluate non-canonical
+    // vscale-based expressions.
     if (!ScalableRemIter) {
       // Handle the case where NextVF and RemainingIterations are in different
       // numerical spaces.
-      if (NextVF.Width.isScalable()) {
-        ElementCount EstimatedRuntimeNextVF = ElementCount::getFixed(
+      ElementCount EC = NextVF.Width;
+      if (NextVF.Width.isScalable())
+        EC = ElementCount::getFixed(
             estimateElementCount(NextVF.Width, CM.getVScaleForTuning()));
-        if (SkipVF(SE.getElementCount(TCType, EstimatedRuntimeNextVF),
-                   RemainingIterations))
-          continue;
-      } else if (SkipVF(SE.getElementCount(TCType, NextVF.Width),
-                        RemainingIterations))
+      if (SkipVF(SE.getElementCount(TCType, EC), RemainingIterations))
         continue;
     }
 
