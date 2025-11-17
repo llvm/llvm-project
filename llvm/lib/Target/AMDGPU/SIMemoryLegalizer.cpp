@@ -1249,7 +1249,7 @@ bool SIGfx6CacheControl::insertWait(MachineBasicBlock::iterator &MI,
 static bool canUseBUFFER_WBINVL1_VOL(const GCNSubtarget &ST) {
   if (ST.getGeneration() <= AMDGPUSubtarget::SOUTHERN_ISLANDS)
     return false;
-  return !(ST.isAmdPalOS() || ST.isMesa3DOS());
+  return !ST.isAmdPalOS() && !ST.isMesa3DOS();
 }
 
 bool SIGfx6CacheControl::insertAcquire(MachineBasicBlock::iterator &MI,
