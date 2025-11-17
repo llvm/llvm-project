@@ -12719,7 +12719,7 @@ SDValue PPCTargetLowering::LowerSADDO(SDValue Op, SelectionDAG &DAG) const {
 
   // overflow = (x eqv y) & (s xor x)
   SDValue OverflowInSign = DAG.getNode(ISD::AND, dl, VT, EqvXY, SumXorX);
-  
+
   // Shift sign bit down to LSB
   SDValue Overflow =
       DAG.getNode(ISD::SRL, dl, VT, OverflowInSign,
