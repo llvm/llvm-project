@@ -174,6 +174,13 @@ define amdgpu_gs void @_amdgpu_gs_main(i32 inreg %primShaderTableAddrLow, <31 x 
   ; CHECK-NEXT:   [[BUFFER_LOAD_DWORD_OFFSET3:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET [[S_LOAD_DWORDX4_IMM17]], 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 8)
   ; CHECK-NEXT:   [[S_LOAD_DWORDX4_IMM18:%[0-9]+]]:sgpr_128 = S_LOAD_DWORDX4_IMM [[S_ADD_U32_12]], 0, 0 :: (invariant load (s128) from %ir.207, addrspace 4)
   ; CHECK-NEXT:   [[S_LOAD_DWORDX4_IMM19:%[0-9]+]]:sgpr_128 = S_LOAD_DWORDX4_IMM [[S_ADD_U32_13]], 0, 0 :: (invariant load (s128) from %ir.213, addrspace 4)
+=======
+  ; CHECK-NEXT:   [[S_LOAD_DWORDX2_IMM1:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[S_ADD_U32_19]], 168, 0 :: (invariant load (s64) from %ir.282, addrspace 4)
+  ; CHECK-NEXT:   [[BUFFER_LOAD_DWORD_OFFSET2:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET [[S_LOAD_DWORDX4_IMM17]], 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 8)
+  ; CHECK-NEXT:   [[BUFFER_LOAD_DWORD_OFFSET3:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET [[S_LOAD_DWORDX4_IMM18]], 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 8)
+  ; CHECK-NEXT:   [[S_LOAD_DWORDX4_IMM19:%[0-9]+]]:sgpr_128 = S_LOAD_DWORDX4_IMM [[S_ADD_U32_12]], 0, 0 :: (invariant load (s128) from %ir.205, addrspace 4)
+  ; CHECK-NEXT:   [[S_LOAD_DWORDX4_IMM20:%[0-9]+]]:sgpr_128 = S_LOAD_DWORDX4_IMM [[S_ADD_U32_13]], 0, 0 :: (invariant load (s128) from %ir.211, addrspace 4)
+>>>>>>> ff2e2ba62bb4 (Revert "Redesign Straight-Line Strength Reduction (SLSR) (#162930)")
   ; CHECK-NEXT:   [[COPY16:%[0-9]+]]:sgpr_128 = COPY [[S_LOAD_DWORDX2_IMM]]
   ; CHECK-NEXT:   [[S_LOAD_DWORDX4_IMM20:%[0-9]+]]:sgpr_128 = S_LOAD_DWORDX4_IMM [[S_ADD_U32_14]], 0, 0 :: (invariant load (s128) from %ir.218, addrspace 4)
   ; CHECK-NEXT:   [[S_LOAD_DWORDX4_IMM21:%[0-9]+]]:sgpr_128 = S_LOAD_DWORDX4_IMM [[S_ADD_U32_15]], 0, 0 :: (invariant load (s128) from %ir.223, addrspace 4)
@@ -206,6 +213,11 @@ define amdgpu_gs void @_amdgpu_gs_main(i32 inreg %primShaderTableAddrLow, <31 x 
   ; CHECK-NEXT:   [[S_LOAD_DWORD_IMM1:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM [[S_ADD_U32_21]], 168, 0 :: (invariant load (s32) from %ir.307, align 8, addrspace 4)
   ; CHECK-NEXT:   [[BUFFER_LOAD_FORMAT_X_IDXEN21:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_FORMAT_X_IDXEN [[V_MOV_B32_e32_]], [[S_LOAD_DWORDX4_IMM22]], 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 8)
   ; CHECK-NEXT:   [[BUFFER_LOAD_FORMAT_X_IDXEN22:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_FORMAT_X_IDXEN [[V_MOV_B32_e32_]], [[S_LOAD_DWORDX4_IMM23]], 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 8)
+=======
+  ; CHECK-NEXT:   [[S_LOAD_DWORD_IMM2:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM [[S_ADD_U32_21]], 168, 0 :: (invariant load (s32) from %ir.305, align 8, addrspace 4)
+  ; CHECK-NEXT:   [[BUFFER_LOAD_FORMAT_X_IDXEN21:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_FORMAT_X_IDXEN [[V_MOV_B32_e32_]], [[S_LOAD_DWORDX4_IMM23]], 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 8)
+  ; CHECK-NEXT:   [[BUFFER_LOAD_FORMAT_X_IDXEN22:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_FORMAT_X_IDXEN [[V_MOV_B32_e32_]], [[S_LOAD_DWORDX4_IMM24]], 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 8)
+>>>>>>> ff2e2ba62bb4 (Revert "Redesign Straight-Line Strength Reduction (SLSR) (#162930)")
   ; CHECK-NEXT:   KILL [[S_LOAD_DWORDX4_IMM23]]
   ; CHECK-NEXT:   KILL [[S_LOAD_DWORDX4_IMM22]]
   ; CHECK-NEXT:   [[S_AND_B32_2:%[0-9]+]]:sreg_32 = S_AND_B32 %73.sub0, 65535, implicit-def dead $scc
@@ -232,6 +244,19 @@ define amdgpu_gs void @_amdgpu_gs_main(i32 inreg %primShaderTableAddrLow, <31 x 
   ; CHECK-NEXT:   [[BUFFER_LOAD_FORMAT_X_IDXEN24:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_FORMAT_X_IDXEN [[V_MOV_B32_e32_]], [[S_LOAD_DWORDX4_IMM25]], 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 8)
   ; CHECK-NEXT:   [[BUFFER_LOAD_FORMAT_X_IDXEN25:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_FORMAT_X_IDXEN [[V_MOV_B32_e32_]], [[S_LOAD_DWORDX4_IMM26]], 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 8)
   ; CHECK-NEXT:   KILL [[S_LOAD_DWORDX4_IMM24]]
+=======
+  ; CHECK-NEXT:   [[S_LOAD_DWORDX4_IMM25:%[0-9]+]]:sgpr_128 = S_LOAD_DWORDX4_IMM [[S_ADD_U32_22]], 96, 0 :: (invariant load (s128) from %ir.323, addrspace 4)
+  ; CHECK-NEXT:   undef [[S_ADD_U32_23:%[0-9]+]].sub0:sreg_64 = S_ADD_U32 [[COPY1]], [[S_LSHL_B32_1]], implicit-def $scc
+  ; CHECK-NEXT:   [[S_ADD_U32_23:%[0-9]+]].sub1:sreg_64 = S_ADDC_U32 undef %33:sreg_32, [[S_ASHR_I32_1]], implicit-def dead $scc, implicit $scc
+  ; CHECK-NEXT:   [[S_LOAD_DWORDX4_IMM26:%[0-9]+]]:sgpr_128 = S_LOAD_DWORDX4_IMM [[S_ADD_U32_23]], 96, 0 :: (invariant load (s128) from %ir.329, addrspace 4)
+  ; CHECK-NEXT:   undef [[S_ADD_U32_24:%[0-9]+]].sub0:sreg_64 = S_ADD_U32 [[COPY1]], [[S_LSHL_B32_2]], implicit-def $scc
+  ; CHECK-NEXT:   [[S_ADD_U32_24:%[0-9]+]].sub1:sreg_64 = S_ADDC_U32 undef %33:sreg_32, [[S_ASHR_I32_2]], implicit-def dead $scc, implicit $scc
+  ; CHECK-NEXT:   [[S_LOAD_DWORDX4_IMM27:%[0-9]+]]:sgpr_128 = S_LOAD_DWORDX4_IMM [[S_ADD_U32_24]], 96, 0 :: (invariant load (s128) from %ir.335, addrspace 4)
+  ; CHECK-NEXT:   [[BUFFER_LOAD_FORMAT_X_IDXEN23:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_FORMAT_X_IDXEN [[V_MOV_B32_e32_]], [[S_LOAD_DWORDX4_IMM25]], 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 8)
+  ; CHECK-NEXT:   [[BUFFER_LOAD_FORMAT_X_IDXEN24:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_FORMAT_X_IDXEN [[V_MOV_B32_e32_]], [[S_LOAD_DWORDX4_IMM26]], 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 8)
+  ; CHECK-NEXT:   [[BUFFER_LOAD_FORMAT_X_IDXEN25:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_FORMAT_X_IDXEN [[V_MOV_B32_e32_]], [[S_LOAD_DWORDX4_IMM27]], 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 8)
+  ; CHECK-NEXT:   KILL [[S_LOAD_DWORDX4_IMM26]]
+>>>>>>> ff2e2ba62bb4 (Revert "Redesign Straight-Line Strength Reduction (SLSR) (#162930)")
   ; CHECK-NEXT:   KILL [[V_MOV_B32_e32_]]
   ; CHECK-NEXT:   KILL [[S_LOAD_DWORDX4_IMM25]]
   ; CHECK-NEXT:   KILL [[S_LOAD_DWORDX4_IMM26]]
