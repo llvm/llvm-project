@@ -1741,7 +1741,8 @@ LogicalResult ScaledExtPacked816OpLowering::matchAndRewrite(
         "no intrinsic matching packed scaled conversion on the given chipset");
 
   OperationState loweredOp(loc, *maybeIntrinsic);
-  loweredOp.addTypes({op.getResult().getType()});
+  Type llvmResultType = typeConverter->convertType(op.getResult().getType());
+  loweredOp.addTypes({llvmResultType});
   loweredOp.addOperands({castedSource, castedScale});
 
   SmallVector<NamedAttribute, 1> attrs;
