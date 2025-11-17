@@ -195,8 +195,8 @@
 ! CHECK-LABEL: acc.firstprivate.recipe @firstprivatization_ref_i32 : !fir.ref<i32> init {
 ! CHECK: ^bb0(%{{.*}}: !fir.ref<i32>):
 ! CHECK:   %[[ALLOCA:.*]] = fir.alloca i32
-! CHECK:   %[[DECLARE:.*]]:2 = hlfir.declare %[[ALLOCA]] {uniq_name = "acc.private.init"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>) 
-! CHECK:   acc.yield %[[DECLARE]]#0 : !fir.ref<i32> 
+! CHECK:   %[[DECLARE:.*]]:2 = hlfir.declare %[[ALLOCA]] {uniq_name = "acc.private.init"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:   acc.yield %[[DECLARE]]#0 : !fir.ref<i32>
 ! CHECK: } copy {
 ! CHECK: ^bb0(%[[SRC:.*]]: !fir.ref<i32>, %[[DST:.*]]: !fir.ref<i32>):
 ! CHECK:   %[[VALUE:.*]] = fir.load %[[SRC]] : !fir.ref<i32>
@@ -223,8 +223,8 @@
 ! CHECK-LABEL: acc.private.recipe @privatization_ref_i32 : !fir.ref<i32> init {
 ! CHECK: ^bb0(%{{.*}}: !fir.ref<i32>):
 ! CHECK:   %[[ALLOCA:.*]] = fir.alloca i32
-! CHECK:   %[[DECLARE:.*]]:2 = hlfir.declare %[[ALLOCA]] {uniq_name = "acc.private.init"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>) 
-! CHECK:   acc.yield %[[DECLARE]]#0 : !fir.ref<i32> 
+! CHECK:   %[[DECLARE:.*]]:2 = hlfir.declare %[[ALLOCA]] {uniq_name = "acc.private.init"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:   acc.yield %[[DECLARE]]#0 : !fir.ref<i32>
 ! CHECK: }
 
 program acc_private
