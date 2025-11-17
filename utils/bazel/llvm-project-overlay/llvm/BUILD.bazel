@@ -3098,7 +3098,7 @@ llvm_target_lib_list = [lib for lib in [
             ),
             (
                 ["-gen-register-bank"],
-                "lib/Target/SPIRV/SPIRVGenRegisterInfoBank.inc",
+                "lib/Target/SPIRV/SPIRVGenRegisterBank.inc",
             ),
             (
                 ["-gen-register-info"],
@@ -3281,7 +3281,7 @@ llvm_target_lib_list = [lib for lib in [
         "tbl_outs": [
             (
                 ["-gen-register-bank"],
-                "lib/Target/X86/X86GenRegisterInfoBank.inc",
+                "lib/Target/X86/X86GenRegisterBank.inc",
             ),
             (
                 ["-gen-register-info"],
