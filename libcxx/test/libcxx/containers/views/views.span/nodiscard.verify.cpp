@@ -12,22 +12,20 @@
 
 // Check that functions are marked [[nodiscard]]
 
-#include <array>
 #include <span>
 
 #include "test_macros.h"
 
 void test() {
   { // Test with a static extent
-    std::array arr{94, 82};
-    std::span<int, 2> sp{arr};
+    std::span<int, 0> sp;
 
-    sp.first<1>();      // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-    sp.last<1>();       // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-    sp.first(1);        // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-    sp.last(1);         // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-    sp.subspan<0, 1>(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-    sp.subspan(0, 1);   // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    sp.first<0>();      // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    sp.last<0>();       // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    sp.first(0);        // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    sp.last(0);         // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    sp.subspan<0, 0>(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    sp.subspan(0, 0);   // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
     sp.size();          // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
     sp.size_bytes();    // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
     sp.empty();         // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
@@ -50,12 +48,12 @@ void test() {
   { // Test with a dynamic extent
     std::span<int> sp;
 
-    sp.first<1>();      // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-    sp.last<1>();       // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-    sp.first(1);        // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-    sp.last(1);         // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-    sp.subspan<0, 1>(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-    sp.subspan(0, 1);   // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    sp.first<0>();      // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    sp.last<0>();       // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    sp.first(0);        // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    sp.last(0);         // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    sp.subspan<0, 0>(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    sp.subspan(0, 0);   // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
     sp.size();          // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
     sp.size_bytes();    // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
     sp.empty();         // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
