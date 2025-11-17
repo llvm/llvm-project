@@ -4087,9 +4087,9 @@ static bool hlslAggSplatHelper(EvalInfo &Info, const Expr *E, APValue &SrcVal,
   if (!Evaluate(SrcVal, Info, E))
     return false;
 
-  assert(SrcVal.isFloat() || SrcVal.isInt() ||
-         (SrcVal.isVector() && SrcVal.getVectorLength() == 1) &&
-             "Not a valid HLSLAggregateSplatCast.");
+  assert((SrcVal.isFloat() || SrcVal.isInt() ||
+          (SrcVal.isVector() && SrcVal.getVectorLength() == 1)) &&
+         "Not a valid HLSLAggregateSplatCast.");
 
   if (SrcVal.isVector()) {
     assert(SrcTy->isVectorType() && "Type mismatch.");
@@ -13551,6 +13551,65 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
       return false;
     return Success(R, E);
   }
+  case X86::BI__builtin_ia32_permvarsi256:
+  case X86::BI__builtin_ia32_permvarsf256:
+  case X86::BI__builtin_ia32_permvardf512:
+  case X86::BI__builtin_ia32_permvardi512:
+  case X86::BI__builtin_ia32_permvarhi128: {
+    APValue R;
+    if (!evalShuffleGeneric(Info, E, R,
+                            [](unsigned DstIdx, unsigned ShuffleMask) {
+                              int Offset = ShuffleMask & 0x7;
+                              return std::pair<unsigned, int>{0, Offset};
+                            }))
+      return false;
+    return Success(R, E);
+  }
+  case X86::BI__builtin_ia32_permvarqi128:
+  case X86::BI__builtin_ia32_permvarhi256:
+  case X86::BI__builtin_ia32_permvarsi512:
+  case X86::BI__builtin_ia32_permvarsf512: {
+    APValue R;
+    if (!evalShuffleGeneric(Info, E, R,
+                            [](unsigned DstIdx, unsigned ShuffleMask) {
+                              int Offset = ShuffleMask & 0xF;
+                              return std::pair<unsigned, int>{0, Offset};
+                            }))
+      return false;
+    return Success(R, E);
+  }
+  case X86::BI__builtin_ia32_permvardi256:
+  case X86::BI__builtin_ia32_permvardf256: {
+    APValue R;
+    if (!evalShuffleGeneric(Info, E, R,
+                            [](unsigned DstIdx, unsigned ShuffleMask) {
+                              int Offset = ShuffleMask & 0x3;
+                              return std::pair<unsigned, int>{0, Offset};
+                            }))
+      return false;
+    return Success(R, E);
+  }
+  case X86::BI__builtin_ia32_permvarqi256:
+  case X86::BI__builtin_ia32_permvarhi512: {
+    APValue R;
+    if (!evalShuffleGeneric(Info, E, R,
+                            [](unsigned DstIdx, unsigned ShuffleMask) {
+                              int Offset = ShuffleMask & 0x1F;
+                              return std::pair<unsigned, int>{0, Offset};
+                            }))
+      return false;
+    return Success(R, E);
+  }
+  case X86::BI__builtin_ia32_permvarqi512: {
+    APValue R;
+    if (!evalShuffleGeneric(Info, E, R,
+                            [](unsigned DstIdx, unsigned ShuffleMask) {
+                              int Offset = ShuffleMask & 0x3F;
+                              return std::pair<unsigned, int>{0, Offset};
+                            }))
+      return false;
+    return Success(R, E);
+  }
   case X86::BI__builtin_ia32_vpermi2varq128:
   case X86::BI__builtin_ia32_vpermi2varpd128: {
     APValue R;
@@ -15247,13 +15306,15 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
 
     return Success(Val.reverseBits(), E);
   }
-
+  case Builtin::BI__builtin_bswapg:
   case Builtin::BI__builtin_bswap16:
   case Builtin::BI__builtin_bswap32:
   case Builtin::BI__builtin_bswap64: {
     APSInt Val;
     if (!EvaluateInteger(E->getArg(0), Val, Info))
       return false;
+    if (Val.getBitWidth() == 8)
+      return Success(Val, E);
 
     return Success(Val.byteSwap(), E);
   }
@@ -16285,6 +16346,21 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
       return false;
 
     return Success((A | B) == 0, E);
+  }
+
+  case clang::X86::BI__builtin_ia32_kunpckhi:
+  case clang::X86::BI__builtin_ia32_kunpckdi:
+  case clang::X86::BI__builtin_ia32_kunpcksi: {
+    APSInt A, B;
+    if (!EvaluateInteger(E->getArg(0), A, Info) ||
+        !EvaluateInteger(E->getArg(1), B, Info))
+      return false;
+
+    // Generic kunpack: extract lower half of each operand and concatenate
+    // Result = A[HalfWidth-1:0] concat B[HalfWidth-1:0]
+    unsigned BW = A.getBitWidth();
+    APSInt Result(A.trunc(BW / 2).concat(B.trunc(BW / 2)), A.isUnsigned());
+    return Success(Result, E);
   }
 
   case clang::X86::BI__builtin_ia32_lzcnt_u16:

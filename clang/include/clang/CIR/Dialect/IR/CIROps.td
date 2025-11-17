@@ -413,6 +413,18 @@ def CIR_ConstantOp : CIR_Op<"const", [
 
     template <typename T>
     T getValueAttr() { return mlir::dyn_cast<T>(getValue()); }
+
+    llvm::APInt getIntValue() {
+      if (const auto intAttr = getValueAttr<cir::IntAttr>())
+        return intAttr.getValue();
+      llvm_unreachable("Expected an IntAttr in ConstantOp");
+    }
+
+    bool getBoolValue() {
+      if (const auto boolAttr = getValueAttr<cir::BoolAttr>())
+        return boolAttr.getValue();
+      llvm_unreachable("Expected a BoolAttr in ConstantOp");
+    }
   }];
 
   let hasFolder = 1;
@@ -2577,6 +2589,39 @@ def CIR_FuncOp : CIR_Op<"func", [
                          OpAdaptor adaptor,
                          mlir::ConversionPatternRewriter &rewriter) const;
   }];
+}
+
+//===----------------------------------------------------------------------===//
+// LLVMIntrinsicCallOp
+//===----------------------------------------------------------------------===//
+
+def CIR_LLVMIntrinsicCallOp : CIR_Op<"call_llvm_intrinsic"> {
+  let summary = "Call to llvm intrinsic functions that is not defined in CIR";
+  let description = [{
+    `cir.call_llvm_intrinsic` operation represents a call-like expression which has
+    return type and arguments that maps directly to a llvm intrinsic.
+    It only records intrinsic `intrinsic_name`.
+  }];
+
+  let results = (outs Optional<CIR_AnyType>:$result);
+  let arguments = (ins
+                   StrAttr:$intrinsic_name, Variadic<CIR_AnyType>:$arg_ops);
+
+  let skipDefaultBuilders = 1;
+
+  let assemblyFormat = [{
+    $intrinsic_name $arg_ops `:` functional-type($arg_ops, $result) attr-dict
+  }];
+
+  let builders = [
+    OpBuilder<(ins "mlir::StringAttr":$intrinsic_name, "mlir::Type":$resType,
+              CArg<"mlir::ValueRange", "{}">:$operands), [{
+      $_state.addAttribute("intrinsic_name", intrinsic_name);
+      $_state.addOperands(operands);
+      if (resType)
+        $_state.addTypes(resType);
+    }]>,
+  ];
 }
 
 //===----------------------------------------------------------------------===//
