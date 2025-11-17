@@ -5191,50 +5191,55 @@ Action *Driver::ConstructPhaseAction(
     return C.MakeAction<CompileJobAction>(Input, types::TY_LLVM_BC);
   }
   case phases::Backend: {
+    bool IsOffloadHIP = TargetDeviceOffloadKind == Action::OFK_HIP;
+    bool IsNewOffloadDriver =
+        Args.hasFlag(options::OPT_offload_new_driver,
+                     options::OPT_no_offload_new_driver, false);
     // Skip a redundant Backend phase for HIP device code when using the new
     // offload driver, where mid-end is done in linker wrapper.
-    if (TargetDeviceOffloadKind == Action::OFK_HIP &&
-        Args.hasFlag(options::OPT_offload_new_driver,
-                     options::OPT_no_offload_new_driver, false) &&
-        !offloadDeviceOnly())
+    if (IsOffloadHIP && IsNewOffloadDriver && !offloadDeviceOnly())
       return Input;
-
-    if (isUsingLTO() && TargetDeviceOffloadKind == Action::OFK_None) {
+    bool IsOffloadBuild = TargetDeviceOffloadKind != Action::OFK_None;
+    bool IsEmitLLVM = Args.hasArg(options::OPT_emit_llvm);
+    bool IsEmitAssembly = Args.hasArg(options::OPT_S);
+    if (isUsingLTO() && !IsOffloadBuild) {
       types::ID Output;
-      if (Args.hasArg(options::OPT_ffat_lto_objects) &&
-          !Args.hasArg(options::OPT_emit_llvm))
+      if (Args.hasArg(options::OPT_ffat_lto_objects) && !IsEmitLLVM)
         Output = types::TY_PP_Asm;
-      else if (Args.hasArg(options::OPT_S))
+      else if (IsEmitAssembly)
         Output = types::TY_LTO_IR;
       else
         Output = types::TY_LTO_BC;
       return C.MakeAction<BackendJobAction>(Input, Output);
     }
-    if (isUsingOffloadLTO() && TargetDeviceOffloadKind != Action::OFK_None) {
-      types::ID Output =
-          Args.hasArg(options::OPT_S) ? types::TY_LTO_IR : types::TY_LTO_BC;
+    if (isUsingOffloadLTO() && IsOffloadBuild) {
+      types::ID Output = IsEmitAssembly ? types::TY_LTO_IR : types::TY_LTO_BC;
       return C.MakeAction<BackendJobAction>(Input, Output);
     }
-    if (Args.hasArg(options::OPT_emit_llvm) ||
-        TargetDeviceOffloadKind == Action::OFK_SYCL ||
-        (((Input->getOffloadingToolChain() &&
-           Input->getOffloadingToolChain()->getTriple().isAMDGPU() &&
-           TargetDeviceOffloadKind != Action::OFK_None) ||
-          TargetDeviceOffloadKind == Action::OFK_HIP) &&
-         ((Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc,
-                        false) ||
-           (Args.hasFlag(options::OPT_offload_new_driver,
-                         options::OPT_no_offload_new_driver, false) &&
-            (!offloadDeviceOnly() ||
-             (Input->getOffloadingToolChain() &&
-              TargetDeviceOffloadKind == Action::OFK_HIP &&
-              Input->getOffloadingToolChain()->getTriple().isSPIRV())))) ||
-          TargetDeviceOffloadKind == Action::OFK_OpenMP))) {
+
+    bool IsOffloadSYCL = TargetDeviceOffloadKind == Action::OFK_SYCL;
+    auto OffloadingToolChain = Input->getOffloadingToolChain();
+    bool IsOffloadAMDGPU = OffloadingToolChain &&
+                           OffloadingToolChain->getTriple().isAMDGPU() &&
+                           IsOffloadBuild;
+    bool IsRDC =
+        Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc, false);
+    bool IsSPIRV =
+        OffloadingToolChain && OffloadingToolChain->getTriple().isSPIRV();
+    bool IsOffloadOpenMP = TargetDeviceOffloadKind == Action::OFK_OpenMP;
+
+    bool IsLLVMBitcodeOutput =
+        IsEmitLLVM || IsOffloadSYCL ||
+        ((IsOffloadAMDGPU || IsOffloadHIP) &&
+         ((IsRDC || (IsNewOffloadDriver &&
+                     (!offloadDeviceOnly() || (IsOffloadHIP && IsSPIRV)))) ||
+          IsOffloadOpenMP));
+
+    if (IsLLVMBitcodeOutput) {
       types::ID Output =
-          Args.hasArg(options::OPT_S) &&
-                  (TargetDeviceOffloadKind == Action::OFK_None ||
-                   offloadDeviceOnly() ||
-                   (TargetDeviceOffloadKind == Action::OFK_HIP &&
+          IsEmitAssembly &&
+                  (!IsOffloadBuild || offloadDeviceOnly() ||
+                   (IsOffloadHIP &&
                     !Args.hasFlag(options::OPT_offload_new_driver,
                                   options::OPT_no_offload_new_driver,
                                   C.isOffloadingHostKind(Action::OFK_Cuda))))
