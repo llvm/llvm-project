@@ -43,6 +43,20 @@ if (isPrBranch &&
     return this
 }
 
+// Code smell: buildTypes are also defined in CommitCheck
+String buildTypePresub = 'PRESUB' // groovylint-disable-line UnusedVariable
+String buildTypeRelease = 'RELEASE' // groovylint-disable-line UnusedVariable
+String buildTypeStaging = 'STAGING' // groovylint-disable-line UnusedVariable
+// buildType is processed during branch creation:
+String buildType = (isPrBranch ? buildTypePresub : buildTypeRelease)
+
+if (!isPrBranch &&
+    env.BRANCH_NAME != stagingBranch &&
+    !env.BRANCH_NAME.startsWith(releaseBranchPrefix)) {
+    // Treat it as 'presub'.
+    buildType = buildTypePresub
+}
+
 Boolean postsub = (
     !isPrBranch &&
         (
@@ -81,7 +95,7 @@ Boolean runDownstream = (
 )
 
 String space = ' ', andChain = '&&', underScore = '_', slash = '/', dash = '-'
-String gitCommitEnv = 'GIT_COMMIT'
+String gitCommitEnv = 'GIT_COMMIT', bashCmd = 'bash'
 String skipStr = 'Skipping build.', contStr = 'Continuing build.'
 String contTimerReason = 'Timer trigger.' + space + contStr
 
@@ -118,12 +132,18 @@ String theUrl
 Boolean hasSourceChanges = true, isSkippableMerge = false
 Integer successStat = 0
 
+// llvmVer is processed by automation:
+String llvmVer = '22.0.0'
+// stageBuildNum is processed during branch creation:
+String stageBuildNum = env.BUILD_NUMBER
+// versionVal is processed during branch creation:
+String versionVal = 'AOCC_' + llvmVer + dash + (buildType == buildTypePresub ? 'Presub' : 'Stage')
+
+// relMode should be changed to 'CANDIDATE' when the release is close to readiness:
+String relMode = 'PRE'
+
 String jobName
 if (postsub && targetIsRelBranch) {
-    // llvmVer is processed by automation:
-    String llvmVer = '21.1.6'
-    // stageBuildNum is processed during branch creation:
-    String stageBuildNum = '12786'
     jobName = 'aocc-compiler-llvm-flang-rel' + dash + llvmVer + dash + stageBuildNum
 } else {
     jobName = (
@@ -152,44 +172,50 @@ try {
                     deleteDirs: true,
                     patterns: cleanExcludes
                 )
-                dir('aocc-devops') {
-                    checkout(
-                        changelog: false,
-                        scm: scmGit(
-                            gitTool: gitTool,
-                            branches: [[name: 'main']],
-                            extensions: [
-                                cloneOption(
-                                    reference: referenceRepo + '/aocc-devops.git'
-                                )
-                            ],
-                            userRemoteConfigs: [
-                                [
-                                    credentialsId: gitHubAppCredsId,
-                                    url: 'https://github.amd.com/AOCC/aocc-devops.git'
+                String essDir
+                if (actualTarget == upstreamBranch) {
+                    dir('aocc-devops') {
+                        checkout(
+                            changelog: false,
+                            scm: scmGit(
+                                gitTool: gitTool,
+                                branches: [[name: 'main']],
+                                extensions: [
+                                    cloneOption(
+                                        reference: referenceRepo + '/aocc-devops.git'
+                                    )
+                                ],
+                                userRemoteConfigs: [
+                                    [
+                                        credentialsId: gitHubAppCredsId,
+                                        url: 'https://github.amd.com/AOCC/aocc-devops.git'
+                                    ]
                                 ]
-                            ]
-                        )
-                    )
-                }
-                withCredentials([
-                    gitUsernamePassword(
-                        credentialsId: gitHubAppCredsId,
-                        gitToolName: gitTool
-                    )
-                ]) {
-                    withEnv([gitPathEnv]) {
-                        sh(
-                            label: 'clone-essentials',
-                            script: (
-                                'set +x; . aocc-devops/utils.sh' + space + andChain + space +
-                                    'export BRANCH_NAME=' + stagingBranch + space + andChain + space +
-                                    'sparse_clone_essentials' + space + andChain + space +
-                                    'mv llvm-project/aocc-essentials . '  + space + andChain + space +
-                                    'rm -rf llvm-project'
                             )
                         )
                     }
+                    withCredentials([
+                        gitUsernamePassword(
+                            credentialsId: gitHubAppCredsId,
+                            gitToolName: gitTool
+                        )
+                    ]) {
+                        withEnv([gitPathEnv]) {
+                            sh(
+                                label: 'clone-essentials',
+                                script: (
+                                    'set +x; . aocc-devops/utils.sh' + space + andChain + space +
+                                        'export BRANCH_NAME=' + stagingBranch + space + andChain + space +
+                                        'sparse_clone_essentials' + space + andChain + space +
+                                        'mv llvm-project/aocc-essentials . '  + space + andChain + space +
+                                        'rm -rf llvm-project'
+                                )
+                            )
+                        }
+                    }
+                    essDir = '../aocc-essentials'
+                } else {
+                    essDir = 'aocc-essentials'
                 }
                 theUrl = 'https://github.amd.com/AOCC/llvm-project'
                 dir (llvmProj) {
@@ -235,7 +261,7 @@ try {
                                 activeStat = sh(
                                     label: 'has-file-changes',
                                     script: (
-                                        'bash ../aocc-essentials/build_essentials/has_file_changes.sh' + space +
+                                        bashCmd + space + essDir + '/build_essentials/has_file_changes.sh' + space +
                                             gitVars.GIT_COMMIT + space + gitVars.GIT_PREVIOUS_SUCCESSFUL_COMMIT
                                     ),
                                     returnStatus: true
@@ -246,8 +272,9 @@ try {
                             activeStat = sh(
                                 label: 'has-active-files',
                                 script: (
-                                    'bash ../aocc-essentials/build_essentials/has_active_files.sh' + space +
+                                    bashCmd + space + essDir + '/build_essentials/has_active_files.sh' + space +
                                         gitVars.GIT_COMMIT + space +
+                                        gitVars.GIT_PREVIOUS_SUCCESSFUL_COMMIT + space +
                                         '.amd-ci/upstream/upstream_jenkins_excludes.txt'
                                 ),
                                 returnStatus: true
@@ -275,7 +302,7 @@ try {
                             mstat = sh(
                                 label: 'merge-stat',
                                 script: (
-                                    'bash ../aocc-essentials/build_essentials/merge_commit_status.sh' + space +
+                                    bashCmd + space + essDir + '/build_essentials/merge_commit_status.sh' + space +
                                         gitVars.GIT_COMMIT
                                 ),
                                 returnStdout: true
@@ -306,7 +333,11 @@ try {
                     withEnv([
                         'PATH=' + linuxBasePath,
                         'JOB_NAME=' + jobName,
-                        'AOCC_DUAL_FLANG_BUILD=' + dualFlangBuild
+                        'AOCC_DUAL_FLANG_BUILD=' + dualFlangBuild,
+                        'STAGE_BUILD_NUM=' + stageBuildNum,
+                        'VERSION_VAL=' + versionVal,
+                        'REL_MODE=' + relMode,
+                        'BUILD_TYPE=' + buildType
                     ]) {
                         sh 'llvm-project/.amd-ci/upstream/apptainer_run.sh'
                     }
@@ -314,7 +345,7 @@ try {
                 } finally {
                     archiveArtifacts(
                         allowEmptyArchive: true,
-                        artifacts: '*.tar.xz,*.txt'
+                        artifacts: '*_logs/**,*.tar.xz,*.txt'
                     )
                     cleanWs(
                         deleteDirs: true,
