@@ -71,3 +71,15 @@ Options
 
    Comma separated list containing type names which are not counted as thrown
    exceptions in the check. Default value is an empty string.
+
+.. option:: KnownUnannotatedAsThrowing
+
+   When `true`, treat calls to functions with visible definitions that are not
+   explicitly declared as non-throwing (i.e. lack ``noexcept`` or ``throw()``)
+   as potentially throwing, even if their bodies are visible and no explicit
+   throw is found. Default value is `false`.
+
+.. option:: UnknownAsThrowing
+
+   When `true`, treat calls to functions without visible definitions as
+   potentially throwing. Default value is `false`.

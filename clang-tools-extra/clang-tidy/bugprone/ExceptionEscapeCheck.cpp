@@ -42,7 +42,10 @@ ExceptionEscapeCheck::ExceptionEscapeCheck(StringRef Name,
       CheckDestructors(Options.get("CheckDestructors", true)),
       CheckMoveMemberFunctions(Options.get("CheckMoveMemberFunctions", true)),
       CheckMain(Options.get("CheckMain", true)),
-      CheckNothrowFunctions(Options.get("CheckNothrowFunctions", true)) {
+      CheckNothrowFunctions(Options.get("CheckNothrowFunctions", true)),
+      KnownUnannotatedAsThrowing(
+          Options.get("KnownUnannotatedAsThrowing", false)),
+      UnknownAsThrowing(Options.get("UnknownAsThrowing", false)) {
   llvm::SmallVector<StringRef, 8> FunctionsThatShouldNotThrowVec,
       IgnoredExceptionsVec, CheckedSwapFunctionsVec;
   RawFunctionsThatShouldNotThrow.split(FunctionsThatShouldNotThrowVec, ",", -1,
@@ -57,6 +60,7 @@ ExceptionEscapeCheck::ExceptionEscapeCheck(StringRef Name,
   IgnoredExceptions.insert_range(IgnoredExceptionsVec);
   Tracer.ignoreExceptions(std::move(IgnoredExceptions));
   Tracer.ignoreBadAlloc(true);
+  Tracer.assumeUnannotatedFunctionsThrow(KnownUnannotatedAsThrowing);
 }
 
 void ExceptionEscapeCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
@@ -68,6 +72,8 @@ void ExceptionEscapeCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "CheckMoveMemberFunctions", CheckMoveMemberFunctions);
   Options.store(Opts, "CheckMain", CheckMain);
   Options.store(Opts, "CheckNothrowFunctions", CheckNothrowFunctions);
+  Options.store(Opts, "KnownUnannotatedAsThrowing", KnownUnannotatedAsThrowing);
+  Options.store(Opts, "UnknownAsThrowing", UnknownAsThrowing);
 }
 
 void ExceptionEscapeCheck::registerMatchers(MatchFinder *Finder) {
@@ -103,41 +109,53 @@ void ExceptionEscapeCheck::check(const MatchFinder::MatchResult &Result) {
   const utils::ExceptionAnalyzer::ExceptionInfo Info =
       Tracer.analyze(MatchedDecl);
 
-  if (Info.getBehaviour() != utils::ExceptionAnalyzer::State::Throwing)
+  const auto Behaviour = Info.getBehaviour();
+  const bool IsThrowing =
+      Behaviour == utils::ExceptionAnalyzer::State::Throwing;
+  const bool IsUnknown = Behaviour == utils::ExceptionAnalyzer::State::Unknown;
+
+  const bool ReportUnknown =
+      IsUnknown &&
+      ((KnownUnannotatedAsThrowing && Info.hasUnknownFromKnownUnannotated()) ||
+       (UnknownAsThrowing && Info.hasUnknownFromMissingDefinition()));
+
+  if (!(IsThrowing || ReportUnknown))
     return;
 
-  diag(MatchedDecl->getLocation(), "an exception may be thrown in function "
-                                   "%0 which should not throw exceptions")
+  diag(MatchedDecl->getLocation(), "an exception may be thrown in function %0 "
+                                   "which should not throw exceptions")
       << MatchedDecl;
 
-  const auto &[ThrowType, ThrowInfo] = *Info.getExceptions().begin();
+  if (!Info.getExceptions().empty()) {
+    const auto &[ThrowType, ThrowInfo] = *Info.getExceptions().begin();
 
-  if (ThrowInfo.Loc.isInvalid())
-    return;
+    if (ThrowInfo.Loc.isInvalid())
+      return;
 
-  const utils::ExceptionAnalyzer::CallStack &Stack = ThrowInfo.Stack;
-  diag(ThrowInfo.Loc,
-       "frame #0: unhandled exception of type %0 may be thrown in function %1 "
-       "here",
-       DiagnosticIDs::Note)
-      << QualType(ThrowType, 0U) << Stack.back().first;
+    const utils::ExceptionAnalyzer::CallStack &Stack = ThrowInfo.Stack;
+    diag(ThrowInfo.Loc,
+         "frame #0: unhandled exception of type %0 may be thrown in function "
+         "%1 here",
+         DiagnosticIDs::Note)
+        << QualType(ThrowType, 0U) << Stack.back().first;
 
-  size_t FrameNo = 1;
-  for (auto CurrIt = ++Stack.rbegin(), PrevIt = Stack.rbegin();
-       CurrIt != Stack.rend(); ++CurrIt, ++PrevIt) {
-    const FunctionDecl *CurrFunction = CurrIt->first;
-    const FunctionDecl *PrevFunction = PrevIt->first;
-    const SourceLocation PrevLocation = PrevIt->second;
-    if (PrevLocation.isValid()) {
-      diag(PrevLocation, "frame #%0: function %1 calls function %2 here",
-           DiagnosticIDs::Note)
-          << FrameNo << CurrFunction << PrevFunction;
-    } else {
-      diag(CurrFunction->getLocation(),
-           "frame #%0: function %1 calls function %2", DiagnosticIDs::Note)
-          << FrameNo << CurrFunction << PrevFunction;
+    size_t FrameNo = 1;
+    for (auto CurrIt = ++Stack.rbegin(), PrevIt = Stack.rbegin();
+         CurrIt != Stack.rend(); ++CurrIt, ++PrevIt) {
+      const FunctionDecl *CurrFunction = CurrIt->first;
+      const FunctionDecl *PrevFunction = PrevIt->first;
+      const SourceLocation PrevLocation = PrevIt->second;
+      if (PrevLocation.isValid()) {
+        diag(PrevLocation, "frame #%0: function %1 calls function %2 here",
+             DiagnosticIDs::Note)
+            << FrameNo << CurrFunction << PrevFunction;
+      } else {
+        diag(CurrFunction->getLocation(),
+             "frame #%0: function %1 calls function %2", DiagnosticIDs::Note)
+            << FrameNo << CurrFunction << PrevFunction;
+      }
+      ++FrameNo;
     }
-    ++FrameNo;
   }
 }
 

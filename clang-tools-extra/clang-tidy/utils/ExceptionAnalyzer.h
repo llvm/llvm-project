@@ -52,7 +52,7 @@ public:
     using Throwables = llvm::SmallDenseMap<const Type *, ThrowInfo, 2>;
 
     static ExceptionInfo createUnknown() { return {State::Unknown}; }
-    static ExceptionInfo createNonThrowing() { return {State::Throwing}; }
+    static ExceptionInfo createNonThrowing() { return {State::NotThrowing}; }
 
     /// By default the exception situation is unknown and must be
     /// clarified step-wise.
@@ -66,6 +66,22 @@ public:
     ExceptionInfo &operator=(ExceptionInfo &&) = default;
 
     State getBehaviour() const { return Behaviour; }
+
+    /// Unknown cause tracking.
+    void markUnknownFromMissingDefinition() {
+      UnknownFromMissingDefinition = true;
+      ContainsUnknown = true;
+    }
+    void markUnknownFromKnownUnannotated() {
+      UnknownFromKnownUnannotated = true;
+      ContainsUnknown = true;
+    }
+    bool hasUnknownFromMissingDefinition() const {
+      return UnknownFromMissingDefinition;
+    }
+    bool hasUnknownFromKnownUnannotated() const {
+      return UnknownFromKnownUnannotated;
+    }
 
     /// Register a single exception type as recognized potential exception to be
     /// thrown.
@@ -124,12 +140,20 @@ public:
     /// after filtering.
     bool ContainsUnknown;
 
+    bool UnknownFromMissingDefinition = false;
+    bool UnknownFromKnownUnannotated = false;
+
     /// 'ThrownException' is empty if the 'Behaviour' is either 'NotThrowing' or
     /// 'Unknown'.
     Throwables ThrownExceptions;
   };
 
   ExceptionAnalyzer() = default;
+  /// When enabled, treat any function that is not explicitly non-throwing
+  /// as potentially throwing, even if its body analysis finds no throw.
+  void assumeUnannotatedFunctionsThrow(bool Enable) {
+    AssumeUnannotatedThrowing = Enable;
+  }
 
   void ignoreBadAlloc(bool ShallIgnore) { IgnoreBadAlloc = ShallIgnore; }
   void ignoreExceptions(llvm::StringSet<> ExceptionNames) {
@@ -154,6 +178,7 @@ private:
   bool IgnoreBadAlloc = true;
   llvm::StringSet<> IgnoredExceptions;
   llvm::DenseMap<const FunctionDecl *, ExceptionInfo> FunctionCache{32U};
+  bool AssumeUnannotatedThrowing = false;
 };
 
 } // namespace clang::tidy::utils

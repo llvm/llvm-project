@@ -328,7 +328,11 @@ Changes in existing checks
   where the check wouldn't diagnose throws in arguments to functions or
   constructors. Added fine-grained configuration via options
   `CheckDestructors`, `CheckMoveMemberFunctions`, `CheckMain`,
-  `CheckedSwapFunctions`, and `CheckNothrowFunctions`.
+  `CheckedSwapFunctions`, and `CheckNothrowFunctions`; and added
+  ``KnownUnannotatedAsThrowing`` and ``UnknownAsThrowing`` to support
+  reporting for unannotated functions, enabling reporting when no explicit
+  ``throw`` is seen and allowing separate tuning for known and unknown
+  implementations.
 
 - Improved :doc:`bugprone-infinite-loop
   <clang-tidy/checks/bugprone/infinite-loop>` check by adding detection for

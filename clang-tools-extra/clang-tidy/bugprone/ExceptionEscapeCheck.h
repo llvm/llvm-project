@@ -42,6 +42,9 @@ private:
   const bool CheckMain;
   const bool CheckNothrowFunctions;
 
+  const bool KnownUnannotatedAsThrowing;
+  const bool UnknownAsThrowing;
+
   llvm::StringSet<> FunctionsThatShouldNotThrow;
   llvm::StringSet<> CheckedSwapFunctions;
   utils::ExceptionAnalyzer Tracer;

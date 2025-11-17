@@ -39,6 +39,10 @@ ExceptionAnalyzer::ExceptionInfo &ExceptionAnalyzer::ExceptionInfo::merge(
     Behaviour = State::Unknown;
 
   ContainsUnknown = ContainsUnknown || Other.ContainsUnknown;
+  UnknownFromMissingDefinition =
+      UnknownFromMissingDefinition || Other.UnknownFromMissingDefinition;
+  UnknownFromKnownUnannotated =
+      UnknownFromKnownUnannotated || Other.UnknownFromKnownUnannotated;
   ThrownExceptions.insert_range(Other.ThrownExceptions);
   return *this;
 }
@@ -484,10 +488,19 @@ ExceptionAnalyzer::ExceptionInfo ExceptionAnalyzer::throwsException(
     }
 
     CallStack.erase(Func);
+    // Optionally treat unannotated functions as potentially throwing if they
+    // are not explicitly non-throwing and no throw was discovered.
+    if (AssumeUnannotatedThrowing &&
+        Result.getBehaviour() == State::NotThrowing && canThrow(Func)) {
+      auto Unknown = ExceptionInfo::createUnknown();
+      Unknown.markUnknownFromKnownUnannotated();
+      return Unknown;
+    }
     return Result;
   }
 
   auto Result = ExceptionInfo::createUnknown();
+  Result.markUnknownFromMissingDefinition();
   if (const auto *FPT = Func->getType()->getAs<FunctionProtoType>()) {
     for (const QualType &Ex : FPT->exceptions()) {
       CallStack.insert({Func, CallLoc});
