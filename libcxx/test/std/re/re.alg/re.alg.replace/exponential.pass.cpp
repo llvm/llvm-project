@@ -24,16 +24,15 @@
 
 #include "test_macros.h"
 
-int main(int, char**)
-{
-    try {
-        std::regex re("a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?aaaaaaaaaaaaaaaaaaaa");
-        const char s[] = "aaaaaaaaaaaaaaaaaaaa";
-        std::string r = std::regex_replace(s, re, "123-&", std::regex_constants::format_sed);
-        LIBCPP_ASSERT(false);
-        assert(r == "123-aaaaaaaaaaaaaaaaaaaa");
-    } catch (const std::regex_error &e) {
-      assert(e.code() == std::regex_constants::error_complexity);
-    }
-    return 0;
+int main(int, char**) {
+  try {
+    std::regex re("a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?aaaaaaaaaaaaaaaaaaaa");
+    const char s[] = "aaaaaaaaaaaaaaaaaaaa";
+    std::string r  = std::regex_replace(s, re, "123-&", std::regex_constants::format_sed);
+    LIBCPP_ASSERT(false);
+    assert(r == "123-aaaaaaaaaaaaaaaaaaaa");
+  } catch (const std::regex_error& e) {
+    assert(e.code() == std::regex_constants::error_complexity);
+  }
+  return 0;
 }

@@ -17,12 +17,11 @@
 #include <cassert>
 #include "test_macros.h"
 
-int main(int, char**)
-{
-    std::regex r2;
-    r2 = std::string("(a([bc]))");
-    assert(r2.flags() == std::regex::ECMAScript);
-    assert(r2.mark_count() == 2);
+int main(int, char**) {
+  std::regex r2;
+  r2 = std::string("(a([bc]))");
+  assert(r2.flags() == std::regex::ECMAScript);
+  assert(r2.mark_count() == 2);
 
   return 0;
 }

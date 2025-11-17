@@ -19,22 +19,21 @@
 #include <cassert>
 #include "test_macros.h"
 
-int main(int, char**)
-{
-    // Iterating over /^a/ should yield one instance at the beginning
-    // of the text.
+int main(int, char**) {
+  // Iterating over /^a/ should yield one instance at the beginning
+  // of the text.
 
-    const char *text = "aaa\naa";
-    std::regex re("^a");
-    std::cregex_iterator it(text, text+6, re);
-    std::cregex_iterator end = std::cregex_iterator();
+  const char* text = "aaa\naa";
+  std::regex re("^a");
+  std::cregex_iterator it(text, text + 6, re);
+  std::cregex_iterator end = std::cregex_iterator();
 
-    assert(it->str() == "a");
-    assert(it->position(0) == 0);
-    assert(it->length(0) == 1);
+  assert(it->str() == "a");
+  assert(it->position(0) == 0);
+  assert(it->length(0) == 1);
 
-    ++it;
-    assert(it == end);
+  ++it;
+  assert(it == end);
 
   return 0;
 }

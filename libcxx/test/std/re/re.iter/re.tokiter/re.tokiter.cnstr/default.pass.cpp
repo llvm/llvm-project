@@ -17,20 +17,17 @@
 #include "test_macros.h"
 
 template <class CharT>
-void
-test()
-{
-    typedef std::regex_token_iterator<const CharT*> I;
-    I i1;
-    assert(i1 == I());
+void test() {
+  typedef std::regex_token_iterator<const CharT*> I;
+  I i1;
+  assert(i1 == I());
 }
 
-int main(int, char**)
-{
-    test<char>();
+int main(int, char**) {
+  test<char>();
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
-    test<wchar_t>();
+  test<wchar_t>();
 #endif
 
-    return 0;
+  return 0;
 }

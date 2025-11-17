@@ -24,25 +24,22 @@
 #include <cassert>
 #include "test_macros.h"
 
-void
-test()
-{
-    std::match_results<const char*> m1;
-    const char s[] = "abcdefghijk";
-    assert(std::regex_search(s, m1, std::regex("cd((e)fg)hi")));
-    std::match_results<const char*> m2;
+void test() {
+  std::match_results<const char*> m1;
+  const char s[] = "abcdefghijk";
+  assert(std::regex_search(s, m1, std::regex("cd((e)fg)hi")));
+  std::match_results<const char*> m2;
 
-    assert(m1 == m1);
-    assert(m1 != m2);
+  assert(m1 == m1);
+  assert(m1 != m2);
 
-    m2 = m1;
+  m2 = m1;
 
-    assert(m1 == m2);
+  assert(m1 == m2);
 }
 
-int main(int, char**)
-{
-    test();
+int main(int, char**) {
+  test();
 
   return 0;
 }
