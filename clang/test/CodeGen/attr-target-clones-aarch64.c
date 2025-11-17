@@ -172,7 +172,8 @@ inline int __attribute__((target_clones("fp16", "sve2-bitperm+fcma", "default"))
 // CHECK-NEXT:    ret i32 [[ADD5]]
 //
 //
-// CHECK-LABEL: define {{[^@]+}}@ftc_def.resolver() comdat {
+// CHECK-LABEL: define {{[^@]+}}@ftc_def.resolver()
+// CHECK-SAME: #[[ATTR_RESOLVER:[0-9]+]] comdat {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
@@ -194,7 +195,8 @@ inline int __attribute__((target_clones("fp16", "sve2-bitperm+fcma", "default"))
 // CHECK-NEXT:    ret ptr @ftc_def.default
 //
 //
-// CHECK-LABEL: define {{[^@]+}}@ftc_dup1.resolver() comdat {
+// CHECK-LABEL: define {{[^@]+}}@ftc_dup1.resolver()
+// CHECK-SAME: #[[ATTR_RESOLVER]] comdat {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
@@ -208,7 +210,8 @@ inline int __attribute__((target_clones("fp16", "sve2-bitperm+fcma", "default"))
 // CHECK-NEXT:    ret ptr @ftc_dup1.default
 //
 //
-// CHECK-LABEL: define {{[^@]+}}@ftc_dup2.resolver() comdat {
+// CHECK-LABEL: define {{[^@]+}}@ftc_dup2.resolver()
+// CHECK-SAME: #[[ATTR_RESOLVER]] comdat {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
@@ -230,7 +233,8 @@ inline int __attribute__((target_clones("fp16", "sve2-bitperm+fcma", "default"))
 // CHECK-NEXT:    ret ptr @ftc_dup2.default
 //
 //
-// CHECK-LABEL: define {{[^@]+}}@ftc_dup3.resolver() comdat {
+// CHECK-LABEL: define {{[^@]+}}@ftc_dup3.resolver()
+// CHECK-SAME: #[[ATTR_RESOLVER]] comdat {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
@@ -273,7 +277,8 @@ inline int __attribute__((target_clones("fp16", "sve2-bitperm+fcma", "default"))
 // CHECK-NEXT:    ret i32 2
 //
 //
-// CHECK-LABEL: define {{[^@]+}}@ftc_inline2.resolver() comdat {
+// CHECK-LABEL: define {{[^@]+}}@ftc_inline2.resolver()
+// CHECK-SAME: #[[ATTR_RESOLVER]] comdat {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
@@ -337,7 +342,8 @@ inline int __attribute__((target_clones("fp16", "sve2-bitperm+fcma", "default"))
 // CHECK-NEXT:    ret i32 3
 //
 //
-// CHECK-LABEL: define {{[^@]+}}@ftc_inline3.resolver() comdat {
+// CHECK-LABEL: define {{[^@]+}}@ftc_inline3.resolver()
+// CHECK-SAME: #[[ATTR_RESOLVER]] comdat {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
@@ -563,7 +569,8 @@ inline int __attribute__((target_clones("fp16", "sve2-bitperm+fcma", "default"))
 // CHECK-MTE-BTI-NEXT:    ret i32 [[ADD5]]
 //
 //
-// CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc_def.resolver() comdat {
+// CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc_def.resolver()
+// CHECK-MTE-BTI-SAME: #[[ATTR_RESOLVER:[0-9]+]] comdat {
 // CHECK-MTE-BTI-NEXT:  resolver_entry:
 // CHECK-MTE-BTI-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-MTE-BTI-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
@@ -585,7 +592,8 @@ inline int __attribute__((target_clones("fp16", "sve2-bitperm+fcma", "default"))
 // CHECK-MTE-BTI-NEXT:    ret ptr @ftc_def.default
 //
 //
-// CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc_dup1.resolver() comdat {
+// CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc_dup1.resolver()
+// CHECK-MTE-BTI-SAME: #[[ATTR_RESOLVER]] comdat {
 // CHECK-MTE-BTI-NEXT:  resolver_entry:
 // CHECK-MTE-BTI-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-MTE-BTI-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
@@ -599,7 +607,8 @@ inline int __attribute__((target_clones("fp16", "sve2-bitperm+fcma", "default"))
 // CHECK-MTE-BTI-NEXT:    ret ptr @ftc_dup1.default
 //
 //
-// CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc_dup2.resolver() comdat {
+// CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc_dup2.resolver()
+// CHECK-MTE-BTI-SAME: #[[ATTR_RESOLVER]] comdat {
 // CHECK-MTE-BTI-NEXT:  resolver_entry:
 // CHECK-MTE-BTI-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-MTE-BTI-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
@@ -621,7 +630,8 @@ inline int __attribute__((target_clones("fp16", "sve2-bitperm+fcma", "default"))
 // CHECK-MTE-BTI-NEXT:    ret ptr @ftc_dup2.default
 //
 //
-// CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc_dup3.resolver() comdat {
+// CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc_dup3.resolver()
+// CHECK-MTE-BTI-SAME: #[[ATTR_RESOLVER]] comdat {
 // CHECK-MTE-BTI-NEXT:  resolver_entry:
 // CHECK-MTE-BTI-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-MTE-BTI-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
@@ -664,7 +674,8 @@ inline int __attribute__((target_clones("fp16", "sve2-bitperm+fcma", "default"))
 // CHECK-MTE-BTI-NEXT:    ret i32 2
 //
 //
-// CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc_inline2.resolver() comdat {
+// CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc_inline2.resolver()
+// CHECK-MTE-BTI-SAME: #[[ATTR_RESOLVER]] comdat {
 // CHECK-MTE-BTI-NEXT:  resolver_entry:
 // CHECK-MTE-BTI-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-MTE-BTI-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
@@ -728,7 +739,8 @@ inline int __attribute__((target_clones("fp16", "sve2-bitperm+fcma", "default"))
 // CHECK-MTE-BTI-NEXT:    ret i32 3
 //
 //
-// CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc_inline3.resolver() comdat {
+// CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc_inline3.resolver()
+// CHECK-MTE-BTI-SAME: #[[ATTR_RESOLVER]] comdat {
 // CHECK-MTE-BTI-NEXT:  resolver_entry:
 // CHECK-MTE-BTI-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-MTE-BTI-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
@@ -749,6 +761,8 @@ inline int __attribute__((target_clones("fp16", "sve2-bitperm+fcma", "default"))
 // CHECK-MTE-BTI:       resolver_else2:
 // CHECK-MTE-BTI-NEXT:    ret ptr @ftc_inline3.default
 //
+// CHECK: attributes #[[ATTR_RESOLVER]] = { disable_sanitizer_instrumentation }
+// CHECK-MTE-BTI: attributes #[[ATTR_RESOLVER]] = { disable_sanitizer_instrumentation }
 //.
 // CHECK: [[META0:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
 // CHECK: [[META1:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}

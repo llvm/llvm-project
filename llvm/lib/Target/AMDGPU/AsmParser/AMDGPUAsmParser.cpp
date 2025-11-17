@@ -1602,11 +1602,6 @@ public:
 
   bool hasKernargPreload() const { return AMDGPU::hasKernargPreload(getSTI()); }
 
-  bool isFlatInstAndNVAllowed(const MCInst &Inst) const {
-    uint64_t TSFlags = MII.get(Inst.getOpcode()).TSFlags;
-    return (TSFlags & SIInstrFlags::FLAT) && isGFX9() && !isGFX90A();
-  }
-
   AMDGPUTargetStreamer &getTargetStreamer() {
     MCTargetStreamer &TS = *getParser().getStreamer().getTargetStreamer();
     return static_cast<AMDGPUTargetStreamer &>(TS);
@@ -1870,7 +1865,7 @@ private:
   unsigned getConstantBusLimit(unsigned Opcode) const;
   bool usesConstantBus(const MCInst &Inst, unsigned OpIdx);
   bool isInlineConstant(const MCInst &Inst, unsigned OpIdx) const;
-  unsigned findImplicitSGPRReadInVOP(const MCInst &Inst) const;
+  MCRegister findImplicitSGPRReadInVOP(const MCInst &Inst) const;
 
   bool isSupportedMnemo(StringRef Mnemo,
                         const FeatureBitset &FBS);
@@ -3670,7 +3665,8 @@ StringRef AMDGPUAsmParser::getMatchedVariantName() const {
   return "";
 }
 
-unsigned AMDGPUAsmParser::findImplicitSGPRReadInVOP(const MCInst &Inst) const {
+MCRegister
+AMDGPUAsmParser::findImplicitSGPRReadInVOP(const MCInst &Inst) const {
   const MCInstrDesc &Desc = MII.get(Inst.getOpcode());
   for (MCPhysReg Reg : Desc.implicit_uses()) {
     switch (Reg) {
@@ -3684,7 +3680,7 @@ unsigned AMDGPUAsmParser::findImplicitSGPRReadInVOP(const MCInst &Inst) const {
       break;
     }
   }
-  return AMDGPU::NoRegister;
+  return MCRegister();
 }
 
 // NB: This code is correct only when used to check constant
@@ -3859,9 +3855,9 @@ bool AMDGPUAsmParser::validateConstantBusLimitations(
     LiteralSize = 4;
   }
 
-  SmallDenseSet<unsigned> SGPRsUsed;
-  unsigned SGPRUsed = findImplicitSGPRReadInVOP(Inst);
-  if (SGPRUsed != AMDGPU::NoRegister) {
+  SmallDenseSet<MCRegister> SGPRsUsed;
+  MCRegister SGPRUsed = findImplicitSGPRReadInVOP(Inst);
+  if (SGPRUsed) {
     SGPRsUsed.insert(SGPRUsed);
     ++ConstantBusUseCount;
   }
@@ -5375,7 +5371,7 @@ bool AMDGPUAsmParser::validateCoherencyBits(const MCInst &Inst,
       S = SMLoc::getFromPointer(&CStr.data()[CStr.find("scale_offset")]);
       Error(S, "scale_offset is not supported on this GPU");
     }
-    if ((CPol & CPol::NV) && !isFlatInstAndNVAllowed(Inst)) {
+    if (CPol & CPol::NV) {
       SMLoc S = getImmLoc(AMDGPUOperand::ImmTyCPol, Operands);
       StringRef CStr(S.getPointer());
       S = SMLoc::getFromPointer(&CStr.data()[CStr.find("nv")]);
@@ -7048,6 +7044,12 @@ ParseStatus AMDGPUAsmParser::parseNamedBit(StringRef Name,
   if (Name == "a16" && !hasA16())
     return Error(S, "a16 modifier is not supported on this GPU");
 
+  if (Bit == 0 && Name == "gds") {
+    StringRef Mnemo = ((AMDGPUOperand &)*Operands[0]).getToken();
+    if (Mnemo.starts_with("ds_gws"))
+      return Error(S, "nogds is not allowed");
+  }
+
   if (isGFX9() && ImmTy == AMDGPUOperand::ImmTyA16)
     ImmTy = AMDGPUOperand::ImmTyR128A16;
 
@@ -7150,13 +7152,6 @@ ParseStatus AMDGPUAsmParser::parseCPol(OperandVector &Operands) {
   unsigned Enabled = 0, Seen = 0;
   for (;;) {
     SMLoc S = getLoc();
-
-    if (isGFX9() && trySkipId("nv")) {
-      Enabled |= CPol::NV;
-      Seen |= CPol::NV;
-      continue;
-    }
-
     bool Disabling;
     unsigned CPol = getCPolKind(getId(), Mnemo, Disabling);
     if (!CPol)

@@ -253,10 +253,6 @@
 #define bit_RDPRU       0x00000010
 #define bit_WBNOINVD    0x00000200
 
-/* Features in %ebx for leaf 0x24 */
-#define bit_AVX10_256   0x00020000
-#define bit_AVX10_512   0x00040000
-
 #ifdef __i386__
 #define __cpuid(__leaf, __eax, __ebx, __ecx, __edx) \
     __asm("cpuid" : "=a"(__eax), "=b" (__ebx), "=c"(__ecx), "=d"(__edx) \

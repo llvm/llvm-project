@@ -25,14 +25,15 @@ add_clang_library(clangTidyMiscModule STATIC
   HeaderIncludeCycleCheck.cpp
   IncludeCleanerCheck.cpp
   MiscTidyModule.cpp
-  MisleadingBidirectional.cpp
-  MisleadingIdentifier.cpp
+  MisleadingBidirectionalCheck.cpp
+  MisleadingIdentifierCheck.cpp
   MisplacedConstCheck.cpp
   NewDeleteOverloadsCheck.cpp
   NoRecursionCheck.cpp
-  NonCopyableObjects.cpp
+  NonCopyableObjectsCheck.cpp
   NonPrivateMemberVariablesInClassesCheck.cpp
   OverrideWithDifferentVisibilityCheck.cpp
+  PredictableRandCheck.cpp
   RedundantExpressionCheck.cpp
   StaticAssertCheck.cpp
   ThrowByValueCatchByReferenceCheck.cpp

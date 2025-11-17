@@ -48,6 +48,19 @@ using namespace NVVM;
 static constexpr unsigned notIntrinsic = llvm::Intrinsic::not_intrinsic;
 
 //===----------------------------------------------------------------------===//
+// Helper/Utility methods
+//===----------------------------------------------------------------------===//
+
+static bool isPtrInAddrSpace(mlir::Value ptr, NVVMMemorySpace targetAS) {
+  auto ptrTy = llvm::cast<LLVM::LLVMPointerType>(ptr.getType());
+  return ptrTy.getAddressSpace() == static_cast<unsigned>(targetAS);
+}
+
+static bool isPtrInSharedCTASpace(mlir::Value ptr) {
+  return isPtrInAddrSpace(ptr, NVVMMemorySpace::Shared);
+}
+
+//===----------------------------------------------------------------------===//
 // Verifier methods
 //===----------------------------------------------------------------------===//
 
@@ -196,6 +209,14 @@ LogicalResult CpAsyncBulkTensorReduceOp::verify() {
   case TMAStoreMode::TILE_SCATTER4:
     return emitError("Scatter mode unsupported for CpAsyncBulkTensorReduceOp");
   }
+  return success();
+}
+
+LogicalResult CpAsyncBulkGlobalToSharedClusterOp::verify() {
+  bool isSharedCTA = isPtrInSharedCTASpace(getDstMem());
+  if (isSharedCTA && getMulticastMask())
+    return emitError("Multicast is not supported with shared::cta mode.");
+
   return success();
 }
 
@@ -1504,6 +1525,15 @@ LogicalResult NVVM::BarrierOp::verify() {
   if (getNumberOfThreads() && !getBarrierId())
     return emitOpError(
         "barrier id is missing, it should be set between 0 to 15");
+
+  if (getBarrierId() && (getReductionOp() || getReductionPredicate()))
+    return emitOpError("reduction are only available when id is 0");
+
+  if ((getReductionOp() && !getReductionPredicate()) ||
+      (!getReductionOp() && getReductionPredicate()))
+    return emitOpError("reduction predicate and reduction operation must be "
+                       "specified together");
+
   return success();
 }
 
@@ -1741,24 +1771,68 @@ void Tcgen05MmaSmemDescOp::createSmemDescriptor(Operation &op,
 //===----------------------------------------------------------------------===//
 
 std::string NVVM::MBarrierInitOp::getPtx() {
-  unsigned addressSpace =
-      llvm::cast<LLVM::LLVMPointerType>(getAddr().getType()).getAddressSpace();
-  return (addressSpace == NVVMMemorySpace::Shared)
-             ? std::string("mbarrier.init.shared.b64 [%0], %1;")
-             : std::string("mbarrier.init.b64 [%0], %1;");
+  bool isShared = isPtrInSharedCTASpace(getAddr());
+  return isShared ? std::string("mbarrier.init.shared.b64 [%0], %1;")
+                  : std::string("mbarrier.init.b64 [%0], %1;");
+}
+
+std::string NVVM::MBarrierArriveExpectTxOp::getPtx() {
+  bool isShared = isPtrInSharedCTASpace(getAddr());
+  return isShared
+             ? std::string("mbarrier.arrive.expect_tx.shared.b64 _, [%0], %1;")
+             : std::string("mbarrier.arrive.expect_tx.b64 _, [%0], %1;");
+}
+
+std::string NVVM::MBarrierTryWaitParityOp::getPtx() {
+  bool isShared = isPtrInSharedCTASpace(getAddr());
+  llvm::StringRef space = isShared ? ".shared" : "";
+
+  return llvm::formatv("{\n\t"
+                       ".reg .pred       P1; \n\t"
+                       "LAB_WAIT: \n\t"
+                       "mbarrier.try_wait.parity{0}.b64 P1, [%0], %1, %2; \n\t"
+                       "@P1 bra.uni DONE; \n\t"
+                       "bra.uni     LAB_WAIT; \n\t"
+                       "DONE: \n\t"
+                       "}",
+                       space);
 }
 
 //===----------------------------------------------------------------------===//
 // getIntrinsicID/getIntrinsicIDAndArgs methods
 //===----------------------------------------------------------------------===//
 
-static bool isPtrInAddrSpace(mlir::Value ptr, NVVMMemorySpace targetAS) {
-  auto ptrTy = llvm::cast<LLVM::LLVMPointerType>(ptr.getType());
-  return ptrTy.getAddressSpace() == static_cast<unsigned>(targetAS);
-}
+mlir::NVVM::IDArgPair NVVM::BarrierOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::BarrierOp>(op);
+  llvm::Value *barrierId = thisOp.getBarrierId()
+                               ? mt.lookupValue(thisOp.getBarrierId())
+                               : builder.getInt32(0);
+  llvm::Intrinsic::ID id;
+  llvm::SmallVector<llvm::Value *> args;
+  if (thisOp.getNumberOfThreads()) {
+    id = llvm::Intrinsic::nvvm_barrier_cta_sync_aligned_count;
+    args.push_back(barrierId);
+    args.push_back(mt.lookupValue(thisOp.getNumberOfThreads()));
+  } else if (thisOp.getReductionOp()) {
+    switch (*thisOp.getReductionOp()) {
+    case NVVM::BarrierReduction::AND:
+      id = llvm::Intrinsic::nvvm_barrier0_and;
+      break;
+    case NVVM::BarrierReduction::OR:
+      id = llvm::Intrinsic::nvvm_barrier0_or;
+      break;
+    case NVVM::BarrierReduction::POPC:
+      id = llvm::Intrinsic::nvvm_barrier0_popc;
+      break;
+    }
+    args.push_back(mt.lookupValue(thisOp.getReductionPredicate()));
+  } else {
+    id = llvm::Intrinsic::nvvm_barrier_cta_sync_aligned_all;
+    args.push_back(barrierId);
+  }
 
-static bool isPtrInSharedCTASpace(mlir::Value ptr) {
-  return isPtrInAddrSpace(ptr, NVVMMemorySpace::Shared);
+  return {id, std::move(args)};
 }
 
 mlir::NVVM::IDArgPair MBarrierInitOp::getIntrinsicIDAndArgs(
@@ -1914,11 +1988,15 @@ mlir::NVVM::IDArgPair CpAsyncBulkGlobalToSharedClusterOp::getIntrinsicIDAndArgs(
   args.push_back(mt.lookupValue(thisOp.getSrcMem()));
   args.push_back(mt.lookupValue(thisOp.getSize()));
 
-  // Multicast mask, if available.
+  // Multicast mask for shared::cluster only, if available.
   mlir::Value multicastMask = thisOp.getMulticastMask();
   const bool hasMulticastMask = static_cast<bool>(multicastMask);
-  llvm::Value *i16Unused = llvm::ConstantInt::get(builder.getInt16Ty(), 0);
-  args.push_back(hasMulticastMask ? mt.lookupValue(multicastMask) : i16Unused);
+  const bool isSharedCTA = isPtrInSharedCTASpace(thisOp.getDstMem());
+  if (!isSharedCTA) {
+    llvm::Value *i16Unused = llvm::ConstantInt::get(builder.getInt16Ty(), 0);
+    args.push_back(hasMulticastMask ? mt.lookupValue(multicastMask)
+                                    : i16Unused);
+  }
 
   // Cache hint, if available.
   mlir::Value cacheHint = thisOp.getL2CacheHint();
@@ -1927,11 +2005,14 @@ mlir::NVVM::IDArgPair CpAsyncBulkGlobalToSharedClusterOp::getIntrinsicIDAndArgs(
   args.push_back(hasCacheHint ? mt.lookupValue(cacheHint) : i64Unused);
 
   // Flag arguments for multicast and cachehint.
-  args.push_back(builder.getInt1(hasMulticastMask));
+  if (!isSharedCTA)
+    args.push_back(builder.getInt1(hasMulticastMask));
   args.push_back(builder.getInt1(hasCacheHint));
 
   llvm::Intrinsic::ID id =
-      llvm::Intrinsic::nvvm_cp_async_bulk_global_to_shared_cluster;
+      isSharedCTA
+          ? llvm::Intrinsic::nvvm_cp_async_bulk_global_to_shared_cta
+          : llvm::Intrinsic::nvvm_cp_async_bulk_global_to_shared_cluster;
 
   return {id, std::move(args)};
 }
