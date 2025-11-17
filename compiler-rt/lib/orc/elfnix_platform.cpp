@@ -47,7 +47,7 @@ __unw_remove_dynamic_eh_frame_section(const void *) ORC_RT_WEAK_IMPORT;
 namespace {
 
 struct TLSInfoEntry {
-  unsigned long Key = 0;
+  pthread_key_t Key;
   unsigned long DataAddress = 0;
 };
 

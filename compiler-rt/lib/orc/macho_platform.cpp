@@ -146,7 +146,7 @@ public:
 namespace {
 struct TLVDescriptor {
   void *(*Thunk)(TLVDescriptor *) = nullptr;
-  unsigned long Key = 0;
+  pthread_key_t Key;
   unsigned long DataAddress = 0;
 };
 
