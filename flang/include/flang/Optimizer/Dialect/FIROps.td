@@ -306,7 +306,8 @@ def fir_LoadOp : fir_OneResultOp<"load", [FirAliasTagOpInterface,
   }];
 
   let arguments = (ins AnyReferenceLike:$memref,
-      OptionalAttr<LLVM_TBAATagArrayAttr>:$tbaa, UnitAttr:$nontemporal);
+      OptionalAttr<LLVM_TBAATagArrayAttr>:$tbaa, UnitAttr:$nontemporal,
+      OptionalAttr<LLVM_AccessGroupArrayAttr>:$accessGroups);
 
   let builders = [OpBuilder<(ins "mlir::Value":$refVal)>,
                   OpBuilder<(ins "mlir::Type":$resTy, "mlir::Value":$refVal)>];
@@ -339,7 +340,8 @@ def fir_StoreOp : fir_Op<"store", [FirAliasTagOpInterface,
   }];
 
   let arguments = (ins AnyType:$value, AnyReferenceLike:$memref,
-      OptionalAttr<LLVM_TBAATagArrayAttr>:$tbaa, UnitAttr:$nontemporal);
+      OptionalAttr<LLVM_TBAATagArrayAttr>:$tbaa, UnitAttr:$nontemporal,
+      OptionalAttr<LLVM_AccessGroupArrayAttr>:$accessGroups);
 
   let builders = [OpBuilder<(ins "mlir::Value":$value, "mlir::Value":$memref)>];
 
@@ -2575,16 +2577,14 @@ def fir_CallOp : fir_Op<"call",
     ```
   }];
 
-  let arguments = (ins
-    OptionalAttr<SymbolRefAttr>:$callee,
-    Variadic<AnyType>:$args,
-    OptionalAttr<DictArrayAttr>:$arg_attrs,
-    OptionalAttr<DictArrayAttr>:$res_attrs,
-    OptionalAttr<fir_FortranProcedureFlagsAttr>:$procedure_attrs,
-    OptionalAttr<fir_FortranInlineAttr>:$inline_attr,
-    DefaultValuedAttr<Arith_FastMathAttr,
-                      "::mlir::arith::FastMathFlags::none">:$fastmath
-  );
+  let arguments = (ins OptionalAttr<SymbolRefAttr>:$callee,
+      Variadic<AnyType>:$args, OptionalAttr<DictArrayAttr>:$arg_attrs,
+      OptionalAttr<DictArrayAttr>:$res_attrs,
+      OptionalAttr<fir_FortranProcedureFlagsAttr>:$procedure_attrs,
+      OptionalAttr<fir_FortranInlineAttr>:$inline_attr,
+      OptionalAttr<LLVM_AccessGroupArrayAttr>:$accessGroups,
+      DefaultValuedAttr<Arith_FastMathAttr,
+                        "::mlir::arith::FastMathFlags::none">:$fastmath);
   let results = (outs Variadic<AnyType>);
 
   let hasCustomAssemblyFormat = 1;

@@ -724,9 +724,10 @@ public:
   MCRegUnitRootIterator() = default;
 
   MCRegUnitRootIterator(MCRegUnit RegUnit, const MCRegisterInfo *MCRI) {
-    assert(RegUnit < MCRI->getNumRegUnits() && "Invalid register unit");
-    Reg0 = MCRI->RegUnitRoots[RegUnit][0];
-    Reg1 = MCRI->RegUnitRoots[RegUnit][1];
+    assert(static_cast<unsigned>(RegUnit) < MCRI->getNumRegUnits() &&
+           "Invalid register unit");
+    Reg0 = MCRI->RegUnitRoots[static_cast<unsigned>(RegUnit)][0];
+    Reg1 = MCRI->RegUnitRoots[static_cast<unsigned>(RegUnit)][1];
   }
 
   /// Dereference to get the current root register.
@@ -803,7 +804,9 @@ MCRegisterInfo::sub_and_superregs_inclusive(MCRegister Reg) const {
 }
 
 inline iota_range<MCRegUnit> MCRegisterInfo::regunits() const {
-  return seq(getNumRegUnits());
+  return enum_seq(static_cast<MCRegUnit>(0),
+                  static_cast<MCRegUnit>(getNumRegUnits()),
+                  force_iteration_on_noniterable_enum);
 }
 
 inline iterator_range<MCRegUnitIterator>

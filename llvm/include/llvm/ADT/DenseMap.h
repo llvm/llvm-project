@@ -369,6 +369,17 @@ public:
 protected:
   DenseMapBase() = default;
 
+  struct ExactBucketCount {};
+
+  void initWithExactBucketCount(unsigned NewNumBuckets) {
+    if (derived().allocateBuckets(NewNumBuckets)) {
+      initEmpty();
+    } else {
+      setNumEntries(0);
+      setNumTombstones(0);
+    }
+  }
+
   void destroyAll() {
     // No need to iterate through the buckets if both KeyT and ValueT are
     // trivially destructible.
@@ -413,11 +424,13 @@ protected:
     return NextPowerOf2(NumEntries * 4 / 3 + 1);
   }
 
-  void moveFromImpl(iterator_range<BucketT *> OldBuckets) {
+  // Move key/value from Other to *this.
+  // Other is left in a valid but empty state.
+  void moveFrom(DerivedT &Other) {
     // Insert all the old elements.
     const KeyT EmptyKey = KeyInfoT::getEmptyKey();
     const KeyT TombstoneKey = KeyInfoT::getTombstoneKey();
-    for (BucketT &B : OldBuckets) {
+    for (BucketT &B : Other.buckets()) {
       if (!KeyInfoT::isEqual(B.getFirst(), EmptyKey) &&
           !KeyInfoT::isEqual(B.getFirst(), TombstoneKey)) {
         // Insert the key/value into the new table.
@@ -434,15 +447,8 @@ protected:
       }
       B.getFirst().~KeyT();
     }
+    Other.derived().kill();
   }
-
-  void moveFromOldBuckets(iterator_range<BucketT *> OldBuckets) {
-    initEmpty();
-    moveFromImpl(OldBuckets);
-  }
-
-  // Move key/value from Other to *this.  Other will be in a zombie state.
-  void moveFrom(DerivedT &Other) { moveFromImpl(Other.buckets()); }
 
   void copyFrom(const DerivedT &other) {
     this->destroyAll();
@@ -734,6 +740,10 @@ class DenseMap : public DenseMapBase<DenseMap<KeyT, ValueT, KeyInfoT, BucketT>,
   unsigned NumTombstones;
   unsigned NumBuckets;
 
+  explicit DenseMap(unsigned NumBuckets, typename BaseT::ExactBucketCount) {
+    this->initWithExactBucketCount(NumBuckets);
+  }
+
 public:
   /// Create a DenseMap with an optional \p NumElementsToReserve to guarantee
   /// that this number of elements can be inserted in the map without grow().
@@ -768,15 +778,6 @@ public:
     deallocateBuckets();
   }
 
-private:
-  void swapImpl(DenseMap &RHS) {
-    std::swap(Buckets, RHS.Buckets);
-    std::swap(NumEntries, RHS.NumEntries);
-    std::swap(NumTombstones, RHS.NumTombstones);
-    std::swap(NumBuckets, RHS.NumBuckets);
-  }
-
-public:
   DenseMap &operator=(const DenseMap &other) {
     if (&other != this)
       this->copyFrom(other);
@@ -792,6 +793,13 @@ public:
   }
 
 private:
+  void swapImpl(DenseMap &RHS) {
+    std::swap(Buckets, RHS.Buckets);
+    std::swap(NumEntries, RHS.NumEntries);
+    std::swap(NumTombstones, RHS.NumTombstones);
+    std::swap(NumBuckets, RHS.NumBuckets);
+  }
+
   unsigned getNumEntries() const { return NumEntries; }
 
   void setNumEntries(unsigned Num) { NumEntries = Num; }
@@ -822,32 +830,21 @@ private:
 
   void init(unsigned InitNumEntries) {
     auto InitBuckets = BaseT::getMinBucketToReserveForEntries(InitNumEntries);
-    if (allocateBuckets(InitBuckets)) {
-      this->BaseT::initEmpty();
-    } else {
-      NumEntries = 0;
-      NumTombstones = 0;
-    }
+    this->initWithExactBucketCount(InitBuckets);
+  }
+
+  // Put the zombie instance in a known good state after a move.
+  void kill() {
+    deallocateBuckets();
+    Buckets = nullptr;
+    NumBuckets = 0;
   }
 
   void grow(unsigned AtLeast) {
-    unsigned OldNumBuckets = NumBuckets;
-    BucketT *OldBuckets = Buckets;
-
-    allocateBuckets(std::max<unsigned>(
-        64, static_cast<unsigned>(NextPowerOf2(AtLeast - 1))));
-    assert(Buckets);
-    if (!OldBuckets) {
-      this->BaseT::initEmpty();
-      return;
-    }
-
-    this->moveFromOldBuckets(
-        llvm::make_range(OldBuckets, OldBuckets + OldNumBuckets));
-
-    // Free the old table.
-    deallocate_buffer(OldBuckets, sizeof(BucketT) * OldNumBuckets,
-                      alignof(BucketT));
+    AtLeast = std::max<unsigned>(64, NextPowerOf2(AtLeast - 1));
+    DenseMap Tmp(AtLeast, typename BaseT::ExactBucketCount{});
+    Tmp.moveFrom(*this);
+    swapImpl(Tmp);
   }
 
   // Plan how to shrink the bucket table.  Return:
@@ -895,10 +892,8 @@ class SmallDenseMap
   /// a large bucket. This union will be discriminated by the 'Small' bit.
   AlignedCharArrayUnion<BucketT[InlineBuckets], LargeRep> storage;
 
-  struct ExactBucketCount {};
-  SmallDenseMap(unsigned NumBuckets, ExactBucketCount) {
-    allocateBuckets(NumBuckets);
-    this->BaseT::initEmpty();
+  SmallDenseMap(unsigned NumBuckets, typename BaseT::ExactBucketCount) {
+    this->initWithExactBucketCount(NumBuckets);
   }
 
 public:
@@ -932,6 +927,20 @@ public:
   ~SmallDenseMap() {
     this->destroyAll();
     deallocateBuckets();
+  }
+
+  SmallDenseMap &operator=(const SmallDenseMap &other) {
+    if (&other != this)
+      this->copyFrom(other);
+    return *this;
+  }
+
+  SmallDenseMap &operator=(SmallDenseMap &&other) {
+    this->destroyAll();
+    deallocateBuckets();
+    init(0);
+    this->swap(other);
+    return *this;
   }
 
 private:
@@ -1006,22 +1015,6 @@ private:
     new (SmallSide.getLargeRep()) LargeRep(std::move(TmpRep));
   }
 
-public:
-  SmallDenseMap &operator=(const SmallDenseMap &other) {
-    if (&other != this)
-      this->copyFrom(other);
-    return *this;
-  }
-
-  SmallDenseMap &operator=(SmallDenseMap &&other) {
-    this->destroyAll();
-    deallocateBuckets();
-    init(0);
-    this->swap(other);
-    return *this;
-  }
-
-private:
   unsigned getNumEntries() const { return NumEntries; }
 
   void setNumEntries(unsigned Num) {
@@ -1103,27 +1096,33 @@ private:
 
   void init(unsigned InitNumEntries) {
     auto InitBuckets = BaseT::getMinBucketToReserveForEntries(InitNumEntries);
-    allocateBuckets(InitBuckets);
-    this->BaseT::initEmpty();
+    this->initWithExactBucketCount(InitBuckets);
+  }
+
+  // Put the zombie instance in a known good state after a move.
+  void kill() {
+    deallocateBuckets();
+    Small = false;
+    new (getLargeRep()) LargeRep{nullptr, 0};
   }
 
   void grow(unsigned AtLeast) {
     if (AtLeast > InlineBuckets)
       AtLeast = std::max<unsigned>(64, NextPowerOf2(AtLeast - 1));
 
-    SmallDenseMap Tmp(AtLeast, ExactBucketCount{});
+    SmallDenseMap Tmp(AtLeast, typename BaseT::ExactBucketCount{});
     Tmp.moveFrom(*this);
 
     if (Tmp.Small) {
       // Use moveFrom in those rare cases where we stay in the small mode.  This
       // can happen when we have many tombstones.
+      Small = true;
       this->BaseT::initEmpty();
       this->moveFrom(Tmp);
-      Tmp.Small = false;
-      Tmp.getLargeRep()->NumBuckets = 0;
     } else {
       Small = false;
-      NumTombstones = 0;
+      NumEntries = Tmp.NumEntries;
+      NumTombstones = Tmp.NumTombstones;
       *getLargeRep() = std::move(*Tmp.getLargeRep());
       Tmp.getLargeRep()->NumBuckets = 0;
     }

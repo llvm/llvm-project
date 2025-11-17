@@ -1491,9 +1491,9 @@ func.func @gather_non_power_of_two_alignment(%base: memref<16xf32>, %indices: ve
 func.func @scatter_to_vector(%base: vector<16xf32>, %indices: vector<16xi32>,
                              %mask: vector<16xi1>, %pass_thru: vector<16xf32>) {
   %c0 = arith.constant 0 : index
-  // expected-error@+2 {{custom op 'vector.scatter' invalid kind of type specified}}
+  // expected-error@+1 {{'vector.scatter' op operand #0 must be Tensor or MemRef of any type values, but got 'vector<16xf32>'}}
   vector.scatter %base[%c0][%indices], %mask, %pass_thru
-    : vector<16xf32>, vector<16xi32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
+    : vector<16xf32>, vector<16xi32>, vector<16xi1>, vector<16xf32>
 }
 
 // -----

@@ -22,9 +22,8 @@ entry:
 }
 
 ; CHECK-LABEL: @cast_to_cast
-; CHECK: load i64
-; CHECK-NEXT: inttoptr i64
-; CHECK-NEXT: inttoptr i64
+; CHECK: %tmp4 = load ptr, ptr %tmp1, align 8
+; CHECK: %tmp5 = load ptr, ptr %tmp3, align 8
 define void @cast_to_cast() {
 entry:
   %a.ascast = addrspacecast ptr addrspace(5) undef to ptr
