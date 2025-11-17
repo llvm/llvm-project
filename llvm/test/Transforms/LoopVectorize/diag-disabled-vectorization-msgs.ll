@@ -6,7 +6,7 @@
 ; RUN: opt -S -passes=loop-vectorize -pass-remarks=loop-vectorize \
 ; RUN:     -pass-remarks-missed=loop-vectorize \
 ; RUN:     -pass-remarks-analysis=loop-vectorize -debug \
-; RUN:     < %s 2>&1 | FileCheck --dump-input=always --check-prefixes=METADATA,BOTH %s
+; RUN:     < %s 2>&1 | FileCheck --check-prefixes=METADATA,BOTH %s
 ; TEST 2
 ; Checks that we emit only the correct debug messages and
 ; optimization remark when the loop is not vectorized due to the 
@@ -17,7 +17,7 @@
 ; RUN:   -pass-remarks=loop-vectorize \
 ; RUN:   -pass-remarks-missed=loop-vectorize \
 ; RUN:   -pass-remarks-analysis=loop-vectorize -debug \
-; RUN:   2>&1 | FileCheck --dump-input=always --check-prefixes=FORCEDONLY,BOTH %s
+; RUN:   2>&1 | FileCheck --check-prefixes=FORCEDONLY,BOTH %s
 ; TEST 3
 ; Checks that we emit only the correct debug messages and
 ; optimization remark when the loop vectorizer is disabled by loop metadata
@@ -26,7 +26,7 @@
 ; RUN:     -pass-remarks-missed=loop-vectorize \
 ; RUN:     -pass-remarks-analysis=loop-vectorize -debug \
 ; RUN:     -force-vector-interleave=1 -force-vector-width=2 \
-; RUN:     < %s 2>&1 | FileCheck --dump-input=always %s
+; RUN:     < %s 2>&1 | FileCheck %s
 
 ; BOTH-LABEL: 'disabled_loop_vectorization' from <stdin>
 ; BOTH-NOT: LV: We can vectorize this loop
