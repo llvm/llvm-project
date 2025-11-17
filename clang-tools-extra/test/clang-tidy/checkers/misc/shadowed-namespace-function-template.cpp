@@ -8,6 +8,9 @@ namespace foo {
   template<typename T>
   void f1();
 }
+
+// FIXME: provide warning in these two cases
+// FIXME: provide fixit for f0
 template<typename T>
 void f0() {}
 template<typename T>
