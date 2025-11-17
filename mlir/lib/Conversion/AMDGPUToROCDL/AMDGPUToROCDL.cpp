@@ -1718,7 +1718,8 @@ LogicalResult ScaledExtPacked816OpLowering::matchAndRewrite(
       LLVM::BitcastOp::create(rewriter, loc, i32, adaptor.getScale());
 
   Value source = adaptor.getSource();
-  Type packedType;
+  Type llvmResultType = typeConverter->convertType(op.getResult().getType());
+  Type packedType = nullptr;
   if (isa<fp4>(srcElemType)) {
     packedType = i32;
     packedType = getTypeConverter()->convertType(packedType);
@@ -1729,8 +1730,13 @@ LogicalResult ScaledExtPacked816OpLowering::matchAndRewrite(
     packedType = VectorType::get(3, i32);
     packedType = getTypeConverter()->convertType(packedType);
   } else {
-    llvm_unreachable("invalid element type for scaled ext");
+    llvm_unreachable("invalid element type for packed scaled ext");
   }
+
+  if (!packedType || !llvmResultType) {
+    return rewriter.notifyMatchFailure(op, "type conversion failed");
+  }
+
   Value castedSource =
       LLVM::BitcastOp::create(rewriter, loc, packedType, source);
 
@@ -1741,7 +1747,6 @@ LogicalResult ScaledExtPacked816OpLowering::matchAndRewrite(
         "no intrinsic matching packed scaled conversion on the given chipset");
 
   OperationState loweredOp(loc, *maybeIntrinsic);
-  Type llvmResultType = typeConverter->convertType(op.getResult().getType());
   loweredOp.addTypes({llvmResultType});
   loweredOp.addOperands({castedSource, castedScale});
 
