@@ -556,8 +556,8 @@ private:
     return llvm::make_range(getBuckets(), getBucketsEnd());
   }
 
-  void grow(unsigned NumBuckets) {
-    NumBuckets = DerivedT::roundUpNumBuckets(NumBuckets);
+  void grow(unsigned MinNumBuckets) {
+    unsigned NumBuckets = DerivedT::roundUpNumBuckets(MinNumBuckets);
     derived().grow(NumBuckets);
   }
 
