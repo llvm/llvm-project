@@ -3225,6 +3225,10 @@ llvm_target_lib_list = [lib for lib in [
                 ["-gen-subtarget"],
                 "lib/Target/VE/VEGenSubtargetInfo.inc",
             ),
+            (
+                ["-gen-sd-node-info"],
+                "lib/Target/VE/VEGenSDNodeInfo.inc",
+            ),
         ],
     },
     {
