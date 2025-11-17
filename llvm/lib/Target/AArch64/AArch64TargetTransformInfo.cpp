@@ -77,6 +77,10 @@ static cl::opt<unsigned> DMBLookaheadThreshold(
     "dmb-lookahead-threshold", cl::init(10), cl::Hidden,
     cl::desc("The number of instructions to search for a redundant dmb"));
 
+static cl::opt<int> Aarch64ForceUnrollThreshold(
+    "aarch64-force-unroll-threshold", cl::init(0), cl::Hidden,
+    cl::desc("Threshold for forced unrolling of small loops in AArch64"));
+
 namespace {
 class TailFoldingOption {
   // These bitfields will only ever be set to something non-zero in operator=,
@@ -5250,6 +5254,7 @@ void AArch64TTIImpl::getUnrollingPreferences(
   // inlining. Don't unroll auto-vectorized loops either, though do allow
   // unrolling of the scalar remainder.
   bool IsVectorized = getBooleanLoopAttribute(L, "llvm.loop.isvectorized");
+  InstructionCost Cost = 0;
   for (auto *BB : L->getBlocks()) {
     for (auto &I : *BB) {
       // Both auto-vectorized loops and the scalar remainder have the
@@ -5264,6 +5269,10 @@ void AArch64TTIImpl::getUnrollingPreferences(
               continue;
         return;
       }
+
+      SmallVector<const Value *, 4> Operands(I.operand_values());
+      Cost += getInstructionCost(&I, Operands,
+                                 TargetTransformInfo::TCK_SizeAndLatency);
     }
   }
 
@@ -5310,6 +5319,11 @@ void AArch64TTIImpl::getUnrollingPreferences(
     UP.UnrollAndJam = true;
     UP.UnrollAndJamInnerLoopThreshold = 60;
   }
+
+  // Force unrolling small loops can be very useful because of the branch
+  // taken cost of the backedge.
+  if (Cost < Aarch64ForceUnrollThreshold)
+    UP.Force = true;
 }
 
 void AArch64TTIImpl::getPeelingPreferences(Loop *L, ScalarEvolution &SE,
