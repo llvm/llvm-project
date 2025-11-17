@@ -10,6 +10,7 @@ struct [[=1, =F{true}]] f2 {};
 struct [[=1]] [[=2]] f3 {};
 // Declaration
 const [[=1]] F f4{};
+void foo([[=F{false}]]int i) {}
 // Redeclaration
 [[=2, =3, =2]] void f5();
 void f5 [[=4, =2]] ();
@@ -27,9 +28,24 @@ struct G {
 // Substituting into an annotation is not in the immediate context
 template<class T>
   [[=T::type()]] void h(T t); // expected-error {{type 'char' cannot be used prior to '::' because it has no members}}
-                              // expected-note@#inst {{in instantiation of function template specialization 'h<char>' requested here}}
+                              // expected-note@#inst-H {{in instantiation of function template specialization 'h<char>' requested here}}
+struct T {
+  static constexpr int type() { return 0; }
+};
+
 void h(int);
 void hh() {
   h(0);
-  h('0'); // #inst
+  h('0'); // #inst-H
+  h(T{});
 }
+
+// Handle copying lvalue
+struct U {
+  bool V;
+  constexpr U(bool v) : V(v) {}
+  U(const U&) = delete; // #del-U
+};
+constexpr U u(true);
+struct [[ =u ]] h2{}; // expected-error {{call to deleted constructor of 'U'}}
+                      // expected-note@#del-U {{'U' has been explicitly marked deleted here}}
