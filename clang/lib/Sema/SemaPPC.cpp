@@ -266,8 +266,7 @@ bool SemaPPC::CheckPPCBuiltinFunctionCall(const TargetInfo &TI,
       return false;
     Expr *Arg = TheCall->getArg(2);
     return SemaRef.Diag(Arg->getBeginLoc(), diag::err_argument_invalid_range)
-           << toString(Result, 10) << "0-4, 6" << "8"
-           << Arg->getSourceRange();
+           << toString(Result, 10) << "0-4, 6" << "8" << Arg->getSourceRange();
   }
   }
   llvm_unreachable("must return from switch");
