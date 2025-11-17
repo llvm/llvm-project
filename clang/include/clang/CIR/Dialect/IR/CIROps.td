@@ -5122,6 +5122,41 @@ def CIR_AtomicClearOp : CIR_Op<"atomic.clear"> {
   }];
 }
 
+def CIR_SyncScopeKind : CIR_I32EnumAttr<"SyncScopeKind", "sync scope kind", [
+  I32EnumAttrCase<"SingleThread", 0, "single_thread">,
+  I32EnumAttrCase<"System", 1, "system">
+]>;
+
+def CIR_AtomicFence : CIR_Op<"atomic.fence"> {
+  let summary = "Atomic thread fence";
+  let description = [{
+    C/C++ Atomic thread fence synchronization primitive. Implements the builtin
+    `__atomic_thread_fence` which enforces memory ordering constraints across
+    threads within the specified synchronization scope.
+
+    This handles all variations including:
+      - `__atomic_thread_fence`
+      - `__atomic_signal_fence`
+      - `__c11_atomic_thread_fence`
+      - `__c11_atomic_signal_fence`
+
+    Example:
+    ```mlir
+      cir.atomic.fence syncscope(system) seq_cst
+      cir.atomic.fence syncscope(single_thread) seq_cst
+    ```
+  }];
+
+  let arguments = (ins
+    Arg<CIR_MemOrder, "memory order">:$ordering,
+    OptionalAttr<CIR_SyncScopeKind>:$syncscope
+  );
+
+  let assemblyFormat = [{
+    (`syncscope` `(` $syncscope^ `)`)? $ordering attr-dict
+  }];
+}
+
 //===----------------------------------------------------------------------===//
 // BlockAddressOp
 //===----------------------------------------------------------------------===//

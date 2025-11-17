@@ -58,6 +58,28 @@ static RValue emitBuiltinBitOp(CIRGenFunction &cgf, const CallExpr *e,
   return RValue::get(result);
 }
 
+static mlir::Value makeAtomicFenceValue(CIRGenFunction &cgf,
+                                        const CallExpr *expr,
+                                        cir::SyncScopeKind syncScope) {
+  auto &builder = cgf.getBuilder();
+  mlir::Value orderingVal = cgf.emitScalarExpr(expr->getArg(0));
+
+  auto constOrdering = orderingVal.getDefiningOp<cir::ConstantOp>();
+  if (!constOrdering)
+    llvm_unreachable("NYI: variable ordering not supported");
+
+  if (auto constOrderingAttr = constOrdering.getValueAttr<cir::IntAttr>()) {
+    cir::MemOrder ordering =
+        static_cast<cir::MemOrder>(constOrderingAttr.getUInt());
+
+    cir::AtomicFence::create(
+        builder, cgf.getLoc(expr->getSourceRange()), ordering,
+        cir::SyncScopeKindAttr::get(&cgf.getMLIRContext(), syncScope));
+  }
+
+  return {};
+}
+
 RValue CIRGenFunction::emitRotate(const CallExpr *e, bool isRotateLeft) {
   mlir::Value input = emitScalarExpr(e->getArg(0));
   mlir::Value amount = emitScalarExpr(e->getArg(1));
@@ -612,6 +634,12 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
         builder.createIsFPClass(loc, v, cir::FPClassTest(test)),
         convertType(e->getType())));
   }
+  case Builtin::BI__atomic_thread_fence:
+    return RValue::get(
+        makeAtomicFenceValue(*this, e, cir::SyncScopeKind::System));
+  case Builtin::BI__atomic_signal_fence:
+    return RValue::get(
+        makeAtomicFenceValue(*this, e, cir::SyncScopeKind::SingleThread));
   }
 
   // If this is an alias for a lib function (e.g. __builtin_sin), emit
