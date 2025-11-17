@@ -2464,7 +2464,7 @@ def fsanitize_type_outline_instrumentation : Flag<["-"], "fsanitize-type-outline
                                                 HelpText<"Always generate function calls for type sanitizer instrumentation">;
 def fno_sanitize_type_outline_instrumentation : Flag<["-"], "fno-sanitize-type-outline-instrumentation">,
                                                    Group<f_clang_Group>,
-                                                   HelpText<"Use default code inlining logic for the type sanitizer">;
+                                                   HelpText<"Use code inlining logic for the type sanitizer">;
 defm sanitize_stable_abi
   : OptInCC1FFlag<"sanitize-stable-abi", "Stable  ", "Conventional ",
     "ABI instrumentation for sanitizer runtime. Default: Conventional">;

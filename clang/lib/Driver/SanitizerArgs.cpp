@@ -1507,11 +1507,7 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
     CmdArgs.push_back("-asan-instrumentation-with-call-threshold=0");
   }
 
-  if (TysanOutlineInstrumentation) {
-    CmdArgs.push_back("-mllvm");
-    CmdArgs.push_back("-tysan-outline-instrumentation");
-  }
-  else{
+  if (!TysanOutlineInstrumentation) {
     CmdArgs.push_back("-mllvm");
     CmdArgs.push_back("-tysan-outline-instrumentation=false");
   }
