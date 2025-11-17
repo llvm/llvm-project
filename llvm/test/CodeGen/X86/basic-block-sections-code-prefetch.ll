@@ -7,12 +7,19 @@
 ; RUN: echo 't 1,0' >> %t
 ; RUN: echo 't 1,1' >> %t
 ; RUN: echo 't 2,1' >> %t
+<<<<<<< HEAD
 ; RUN: echo 't 3,0' >> %t
+=======
+; RUN: echo 't 4,0' >> %t
+; RUN: echo 'i 3@0 _Z3barv@0@0' >> %t
+; RUN: echo 'i 2@1 _Z3foob@1@0' >> %t
+>>>>>>> d2ddce6b2050 (Expand the test case to prefetch hints.)
 ; RUN: echo 'f _Z3barv' >> %t
 ; RUN: echo 't 0,0' >> %t
 ; RUN: echo 't 21,1' >> %t
+; RUN: echo 'i 0@1 _Z3foob@0@0' >> %t
 ;;
-; RUN: llc < %s -mtriple=x86_64-pc-linux -asm-verbose=false -function-sections -basic-block-sections=%t -O0 | FileCheck %s
+; RUN: llc < %s -O0 -mtriple=x86_64-pc-linux -asm-verbose=false -function-sections -basic-block-sections=%t  | FileCheck %s
 
 define i32 @_Z3foob(i1 zeroext %0) nounwind {
   %2 = alloca i32, align 4
@@ -45,6 +52,7 @@ define i32 @_Z3foob(i1 zeroext %0) nounwind {
 ; CHECK:        callq _Z3bazv@PLT
 ; CHECK-NEXT:   .globl __llvm_prefetch_target__Z3foob_2_1
 ; CHECK-NEXT: __llvm_prefetch_target__Z3foob_2_1:
+; CHECK-NEXT:   prefetchit1	__llvm_prefetch_target__Z3foob_1_0(%rip)
 
 13:                                               ; preds = %11, %9
   %14 = load i32, ptr %2, align 4
@@ -52,14 +60,22 @@ define i32 @_Z3foob(i1 zeroext %0) nounwind {
 ; CHECK:      .LBB0_3:
 ; CHECK-NEXT:   .globl	__llvm_prefetch_target__Z3foob_3_0
 ; CHECK-NEXT: __llvm_prefetch_target__Z3foob_3_0:
+; CHECK-NEXT:   prefetchit1	__llvm_prefetch_target__Z3barv_0_0(%rip)
+; CHECK:        retq
+
+>>>>>>> d2ddce6b2050 (Expand the test case to prefetch hints.)
 }
 
 define weak i32 @_Z3barv() nounwind {
   %1 = call i32 @_Z3bazv()
-  ret i32 %1
+  br label %2
 ; CHECK:      _Z3barv:
 ; CHECK-NEXT:   .weak __llvm_prefetch_target__Z3barv_0_0
 ; CHECK-NEXT: __llvm_prefetch_target__Z3barv_0_0:
+; CHECK:        callq _Z3bazv@PLT
+; CHECK-NEXT:   prefetchit1	__llvm_prefetch_target__Z3foob_0_0(%rip)
+2:
+  ret i32 %1
 }
 
 declare i32 @_Z3bazv() #1
