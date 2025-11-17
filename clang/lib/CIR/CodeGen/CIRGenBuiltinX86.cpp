@@ -20,17 +20,16 @@
 using namespace clang;
 using namespace clang::CIRGen;
 
-template <typename... Operands>
+namespace {
 static mlir::Value emitIntrinsicCallOp(CIRGenFunction &cgf, const CallExpr *e,
-                                       const std::string &str,
-                                       const mlir::Type &resTy,
-                                       Operands &&...op) {
-  CIRGenBuilderTy &builder = cgf.getBuilder();
-  mlir::Location location = cgf.getLoc(e->getExprLoc());
-  return cir::LLVMIntrinsicCallOp::create(builder, location,
-                                          builder.getStringAttr(str), resTy,
-                                          std::forward<Operands>(op)...)
-      .getResult();
+                                       llvm::StringRef name,
+                                       mlir::Type resultType,
+                                       llvm::ArrayRef<mlir::Value> args = {}) {
+  cgf.getCIRGenModule().errorNYI(
+      e->getSourceRange(),
+      ("CIR intrinsic lowering NYI for " + name.str()).c_str());
+  return {};
+}
 }
 
 mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
@@ -55,9 +54,6 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   // Find out if any arguments are required to be integer constant expressions.
   assert(!cir::MissingFeatures::handleBuiltinICEArguments());
 
-  // The operands of the builtin call
-  llvm::SmallVector<mlir::Value> ops;
-
   // `ICEArguments` is a bitmap indicating whether the argument at the i-th bit
   // is required to be a constant integer expression.
   unsigned iceArguments = 0;
@@ -65,8 +61,10 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   getContext().GetBuiltinType(builtinID, error, &iceArguments);
   assert(error == ASTContext::GE_None && "Error while getting builtin type.");
 
-  for (auto [idx, arg] : llvm::enumerate(e->arguments()))
-    ops.push_back(emitScalarOrConstFoldImmArg(iceArguments, idx, arg));
+  llvm::SmallVector<mlir::Value> ops;
+  ops.reserve(e->getNumArgs());
+  for (const Expr *arg : e->arguments())
+    ops.push_back(emitScalarExpr(arg));
 
   CIRGenBuilderTy &builder = getBuilder();
   mlir::Type voidTy = builder.getVoidTy();
@@ -75,7 +73,7 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   default:
     return {};
   case X86::BI_mm_clflush:
-    return emitIntrinsicCallOp(*this, e, "x86.sse2.clflush", voidTy, ops[0]);
+    return emitIntrinsicCallOp(*this, e, "x86.sse2.clflush", voidTy, {ops[0]});
   case X86::BI_mm_lfence:
     return emitIntrinsicCallOp(*this, e, "x86.sse2.lfence", voidTy);
   case X86::BI_mm_pause:
@@ -643,6 +641,10 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   case X86::BI__builtin_ia32_kunpckdi:
   case X86::BI__builtin_ia32_kunpcksi:
   case X86::BI__builtin_ia32_kunpckhi:
+    cgm.errorNYI(e->getSourceRange(),
+                 std::string("unimplemented X86 builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinID));
+    return {};
   case X86::BI__builtin_ia32_sqrtsh_round_mask:
   case X86::BI__builtin_ia32_sqrtsd_round_mask:
   case X86::BI__builtin_ia32_sqrtss_round_mask:
@@ -650,6 +652,9 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   case X86::BI__builtin_ia32_sqrtpd:
   case X86::BI__builtin_ia32_sqrtps256:
   case X86::BI__builtin_ia32_sqrtps:
+    cgm.errorNYI(e->getSourceRange(),
+                 "CIR lowering for x86 sqrt builtins is not implemented yet");
+    return {};
   case X86::BI__builtin_ia32_sqrtph256:
   case X86::BI__builtin_ia32_sqrtph:
   case X86::BI__builtin_ia32_sqrtph512:

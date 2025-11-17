@@ -21,6 +21,7 @@
 
 #include "clang/CIR/MissingFeatures.h"
 
+#include<algorithm>
 using namespace clang;
 using namespace clang::CIRGen;
 
@@ -97,7 +98,7 @@ EHScopeStack::getInnermostActiveNormalCleanup() const {
 char *EHScopeStack::allocate(size_t size) {
   size = llvm::alignTo(size, ScopeStackAlignment);
   if (!startOfBuffer) {
-    unsigned capacity = llvm::PowerOf2Ceil(std::max(size, 1024ul));
+    unsigned capacity = llvm::PowerOf2Ceil(std::max(static_cast<unsigned long>(size), 1024ul));
     startOfBuffer = std::make_unique<char[]>(capacity);
     startOfData = endOfBuffer = startOfBuffer.get() + capacity;
   } else if (static_cast<size_t>(startOfData - startOfBuffer.get()) < size) {
