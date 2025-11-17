@@ -9,18 +9,16 @@
 #include "ShadowedNamespaceFunctionCheck.h"
 #include "../utils/FixItHintUtils.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/ASTMatchers/ASTMatchers.h"
 #include "llvm/ADT/STLExtras.h"
 
 using namespace clang;
 using namespace clang::ast_matchers;
 using namespace clang::tidy;
 
-namespace clang {
-namespace tidy {
-namespace misc {
+namespace clang::tidy::misc {
 
 static bool hasSameParameters(const FunctionDecl *Func1, const FunctionDecl *Func2) {
   if (Func1->param_size() != Func2->param_size())
@@ -138,7 +136,5 @@ std::pair<const FunctionDecl *, const NamespaceDecl *> ShadowedNamespaceFunction
   return {nullptr, nullptr};
 }
 
-} // namespace misc
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::misc
 
