@@ -2217,15 +2217,14 @@ void Ripple::padToTargetSIMDWidth() {
         for (unsigned IEl = 0; IEl < PaddedLength; ++IEl)
           MaskEls[IEl] = irBuilder.getInt1(IEl < UnpaddedLength);
 
-        Value *PaddedMask = GetPaddedV(IntrnscInst->getArgOperand(2),
+        Value *PaddedMask = GetPaddedV(IntrnscInst->getArgOperand(1),
                                        PaddedLength, InstToPadded);
         Value *NewMask =
             irBuilder.CreateAnd(ConstantVector::get(MaskEls), PaddedMask,
                                 PaddedMask->getName() + ".pad");
-        Value *NewPassthru = GetPaddedV(IntrnscInst->getArgOperand(3),
+        Value *NewPassthru = GetPaddedV(IntrnscInst->getArgOperand(2),
                                         PaddedLength, InstToPadded);
-        Align AlignVal(
-            dyn_cast<ConstantInt>(IntrnscInst->getOperand(1))->getZExtValue());
+        Align AlignVal(IntrnscInst->getParamAlign(0).valueOrOne());
 
         auto *NewMaskedLoad =
             irBuilder.CreateMaskedLoad(NewLoadTy, IntrnscInst->getArgOperand(0),
@@ -2250,13 +2249,12 @@ void Ripple::padToTargetSIMDWidth() {
         for (unsigned IEl = 0; IEl < PaddedLength; ++IEl)
           MaskEls[IEl] = irBuilder.getInt1(IEl < UnpaddedLength);
 
-        Value *PaddedMask = GetPaddedV(IntrnscInst->getArgOperand(3),
+        Value *PaddedMask = GetPaddedV(IntrnscInst->getArgOperand(2),
                                        PaddedLength, InstToPadded);
         Value *NewMask =
             irBuilder.CreateAnd(ConstantVector::get(MaskEls), PaddedMask,
                                 PaddedMask->getName() + ".pad");
-        Align AlignVal(
-            dyn_cast<ConstantInt>(IntrnscInst->getOperand(2))->getZExtValue());
+        Align AlignVal(IntrnscInst->getParamAlign(1).valueOrOne());
 
         irBuilder.CreateMaskedStore(NewVal, IntrnscInst->getArgOperand(1),
                                     AlignVal, NewMask);
@@ -2270,19 +2268,18 @@ void Ripple::padToTargetSIMDWidth() {
             IntrnscInst->getType()->getScalarType(), PaddedLength, false);
         Value *NewPtrs = GetPaddedV(IntrnscInst->getArgOperand(0), PaddedLength,
                                     InstToPadded);
-        Align AlignVal(
-            dyn_cast<ConstantInt>(IntrnscInst->getOperand(1))->getZExtValue());
+        Align AlignVal(IntrnscInst->getParamAlign(0).valueOrOne());
 
         std::vector<Constant *> MaskEls(PaddedLength, nullptr);
         for (unsigned IEl = 0; IEl < PaddedLength; ++IEl)
           MaskEls[IEl] = irBuilder.getInt1(IEl < UnpaddedLength);
 
-        Value *PaddedMask = GetPaddedV(IntrnscInst->getArgOperand(2),
+        Value *PaddedMask = GetPaddedV(IntrnscInst->getArgOperand(1),
                                        PaddedLength, InstToPadded);
         Value *NewMask =
             irBuilder.CreateAnd(ConstantVector::get(MaskEls), PaddedMask,
                                 PaddedMask->getName() + ".pad");
-        Value *NewPassthru = GetPaddedV(IntrnscInst->getArgOperand(3),
+        Value *NewPassthru = GetPaddedV(IntrnscInst->getArgOperand(2),
                                         PaddedLength, InstToPadded);
 
         auto *NewMaskedGather = irBuilder.CreateMaskedGather(
@@ -2314,14 +2311,13 @@ void Ripple::padToTargetSIMDWidth() {
                                     InstToPadded);
         Value *NewPtrs = GetPaddedV(IntrnscInst->getArgOperand(1), PaddedLength,
                                     InstToPadded);
-        Align AlignVal(
-            dyn_cast<ConstantInt>(IntrnscInst->getOperand(2))->getZExtValue());
+        Align AlignVal(IntrnscInst->getParamAlign(1).valueOrOne());
 
         std::vector<Constant *> MaskEls(PaddedLength, nullptr);
         for (unsigned IEl = 0; IEl < PaddedLength; ++IEl)
           MaskEls[IEl] = irBuilder.getInt1(IEl < UnpaddedLength);
 
-        Value *PaddedMask = GetPaddedV(IntrnscInst->getArgOperand(3),
+        Value *PaddedMask = GetPaddedV(IntrnscInst->getArgOperand(2),
                                        PaddedLength, InstToPadded);
         Value *NewMask =
             irBuilder.CreateAnd(ConstantVector::get(MaskEls), PaddedMask,
