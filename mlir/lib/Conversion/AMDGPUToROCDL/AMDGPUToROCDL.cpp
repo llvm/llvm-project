@@ -1641,7 +1641,7 @@ int32_t getScaleSel(int32_t blockSize, unsigned bitWidth,
 
   if (!is_fp8) {
     int bit_0 = is_block_16;
-    assert(llvm::is_contained({0, 2}, firstScaleByte));
+    assert(llvm::is_contained({0, 1, 2}, firstScaleByte));
     int bit_1 = (firstScaleByte == 2) << 1;
     assert(llvm::is_contained({0, 1}, firstScaleLane));
     int bit_2 = firstScaleLane << 2;
