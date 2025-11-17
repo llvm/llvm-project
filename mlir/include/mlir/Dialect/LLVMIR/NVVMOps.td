@@ -79,6 +79,40 @@ def NVVM_Dialect : Dialect {
     sequence must be expressed directly, NVVM provides an `nvvm.inline_ptx` op to
     embed PTX inline as a last-resort escape hatch, with explicit operands and
     results.
+
+
+    **Memory Spaces:** The NVVM dialect introduces the following memory spaces,
+    each with distinct scopes and lifetimes:
+```
+    | Memory Space      | Address Space | Scope                | Lifetime          |
+    |-------------------|---------------|----------------------|-------------------|
+    | `generic`         | 0             | All threads          | Context-dependent |
+    | `global`          | 1             | All threads (device) | Application       |
+    | `shared`          | 3             | Thread block (CTA)   | Kernel execution  |
+    | `constant`        | 4             | All threads (RO)     | Application       |
+    | `local`           | 5             | Single thread        | Kernel execution  |
+    | `tensor`          | 6             | Thread block (CTA)   | Kernel execution  |
+    | `shared_cluster`  | 7             | Thread block cluster | Kernel execution  |
+```
+    **Memory Space Details:**
+    - **generic**: Can point to any memory space; requires runtime resolution of
+      actual address space. Use when pointer origin is unknown at compile time.
+      Performance varies based on the underlying memory space.
+    - **global**: Accessible by all threads across all blocks; persists across
+      kernel launches. Highest latency but largest capacity (device memory). Best
+      for large data and inter-kernel communication.
+    - **shared**: Shared within a thread block (CTA); very fast on-chip memory for
+      cooperation between threads in the same block. Limited capacity. Ideal for 
+      block-level collaboration, caching, and reducing global memory traffic.
+    - **constant**: Read-only memory cached per SM. Size typically limited to 
+      64KB. Best for read-only data and uniform values accessed by all threads.
+    - **local**: Private to each thread. Use for per-thread private data and
+      automatic variables that don't fit in registers.
+    - **tensor**: Special memory space for tensor core operations. Used by
+      `tcgen05` instructions on SM 100+ for tensor input/output operations.
+    - **shared_cluster**: Distributed shared memory across thread blocks within
+      a cluster (SM 90+). Enables collaboration beyond single-block scope with
+      fast access across cluster threads.
   }];
 
   let name = "nvvm";
