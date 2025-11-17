@@ -8,8 +8,9 @@
 // RUN:     xray_naive_log_func_duration_threshold_us=1000 \
 // RUN:     xray_naive_log_max_stack_depth=2" %run %t 2>&1 | \
 // RUN:     FileCheck %s
+// RUN: ls basic-filtering-* | head -1 | tr -d '\n' > %t.log
 // RUN: %llvm_xray convert --symbolize --output-format=yaml -instr_map=%t \
-// RUN:     "`ls basic-filtering-* | head -1`" | \
+// RUN:     "%{readfile:%t.log}" | \
 // RUN:     FileCheck %s --check-prefix TRACE
 // RUN: rm -f basic-filtering-*
 //
@@ -18,8 +19,9 @@
 // RUN:     xray_logfile_base=basic-filtering-" \
 // RUN: env XRAY_BASIC_OPTIONS="func_duration_threshold_us=1000 max_stack_depth=2" \
 // RUN:     %run %t 2>&1 | FileCheck %s
+// RUN: ls basic-filtering-* | head -1 | tr -d '\n' > %t.log
 // RUN: %llvm_xray convert --symbolize --output-format=yaml -instr_map=%t \
-// RUN:     "`ls basic-filtering-* | head -1`" | \
+// RUN:     "%{readfile:%t.log}" | \
 // RUN:     FileCheck %s --check-prefix TRACE
 // RUN: rm -f basic-filtering-*
 
