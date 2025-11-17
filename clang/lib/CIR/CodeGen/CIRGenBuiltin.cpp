@@ -21,6 +21,7 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/GlobalDecl.h"
 #include "clang/Basic/Builtins.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -55,6 +56,107 @@ static RValue emitBuiltinBitOp(CIRGenFunction &cgf, const CallExpr *e,
   if (exprTy != result.getType())
     result = builder.createIntCast(result, exprTy);
 
+  return RValue::get(result);
+}
+
+/// Emit the conversions required to turn the given value into an
+/// integer of the given size.
+static mlir::Value emitToInt(CIRGenFunction &cgf, mlir::Value v, QualType t,
+                             cir::IntType intType) {
+  v = cgf.emitToMemory(v, t);
+
+  if (isa<cir::PointerType>(v.getType()))
+    return cgf.getBuilder().createPtrToInt(v, intType);
+
+  assert(v.getType() == intType);
+  return v;
+}
+
+static mlir::Value emitFromInt(CIRGenFunction &cgf, mlir::Value v, QualType t,
+                               mlir::Type resultType) {
+  v = cgf.emitFromMemory(v, t);
+
+  if (isa<cir::PointerType>(resultType))
+    return cgf.getBuilder().createIntToPtr(v, resultType);
+
+  assert(v.getType() == resultType);
+  return v;
+}
+
+static Address checkAtomicAlignment(CIRGenFunction &cgf, const CallExpr *e) {
+  ASTContext &astContext = cgf.getContext();
+  Address ptr = cgf.emitPointerWithAlignment(e->getArg(0));
+  unsigned bytes =
+      isa<cir::PointerType>(ptr.getElementType())
+          ? astContext.getTypeSizeInChars(astContext.VoidPtrTy).getQuantity()
+          : cgf.cgm.getDataLayout().getTypeSizeInBits(ptr.getElementType()) / 8;
+  unsigned align = ptr.getAlignment().getQuantity();
+  if (align % bytes != 0) {
+    DiagnosticsEngine &diags = cgf.cgm.getDiags();
+    diags.Report(e->getBeginLoc(), diag::warn_sync_op_misaligned);
+    // Force address to be at least naturally-aligned.
+    return ptr.withAlignment(CharUnits::fromQuantity(bytes));
+  }
+  return ptr;
+}
+
+/// Utility to insert an atomic instruction based on Intrinsic::ID
+/// and the expression node.
+static mlir::Value makeBinaryAtomicValue(
+    CIRGenFunction &cgf, cir::AtomicFetchKind kind, const CallExpr *expr,
+    mlir::Value *neededValP = nullptr,
+    cir::MemOrder ordering = cir::MemOrder::SequentiallyConsistent) {
+
+  QualType type = expr->getType();
+  QualType ptrType = expr->getArg(0)->getType();
+
+  assert(ptrType->isPointerType());
+  assert(
+      cgf.getContext().hasSameUnqualifiedType(type, ptrType->getPointeeType()));
+  assert(cgf.getContext().hasSameUnqualifiedType(type,
+                                                 expr->getArg(1)->getType()));
+
+  Address destAddr = checkAtomicAlignment(cgf, expr);
+  CIRGenBuilderTy &builder = cgf.getBuilder();
+  cir::IntType intType =
+      ptrType->getPointeeType()->isUnsignedIntegerType()
+          ? builder.getUIntNTy(cgf.getContext().getTypeSize(type))
+          : builder.getSIntNTy(cgf.getContext().getTypeSize(type));
+  mlir::Value val = cgf.emitScalarExpr(expr->getArg(1));
+  mlir::Type valueType = val.getType();
+  val = emitToInt(cgf, val, type, intType);
+
+  // This output argument is needed for post atomic fetch operations
+  // that calculate the result of the operation as return value of
+  // <binop>_and_fetch builtins. The `AtomicFetch` operation only updates the
+  // memory location and returns the old value.
+  if (neededValP) {
+    *neededValP = val;
+  }
+
+  auto rmwi = cir::AtomicFetchOp::create(
+      builder, cgf.getLoc(expr->getSourceRange()), destAddr.emitRawPointer(),
+      val, kind, ordering, false, /* is volatile */
+      true);                      /* fetch first */
+  return emitFromInt(cgf, rmwi->getResult(0), type, valueType);
+}
+
+static RValue emitBinaryAtomicPost(CIRGenFunction &cgf,
+                                   cir::AtomicFetchKind atomicOpkind,
+                                   const CallExpr *e, cir::BinOpKind binopKind,
+                                   bool invert = false) {
+  mlir::Value val;
+  clang::QualType typ = e->getType();
+  mlir::Value result = makeBinaryAtomicValue(cgf, atomicOpkind, e, &val);
+  clang::CIRGen::CIRGenBuilderTy &builder = cgf.getBuilder();
+  result = cir::BinOp::create(builder, result.getLoc(), binopKind, result, val);
+
+  if (invert) {
+    result = cir::UnaryOp::create(builder, result.getLoc(),
+                                  cir::UnaryOpKind::Not, result);
+  }
+
+  result = emitFromInt(cgf, result, typ, val.getType());
   return RValue::get(result);
 }
 
@@ -520,6 +622,172 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     cir::PrefetchOp::create(builder, loc, address, locality, isWrite);
     return RValue::get(nullptr);
   }
+  case Builtin::BI__sync_fetch_and_add:
+  case Builtin::BI__sync_fetch_and_sub:
+  case Builtin::BI__sync_fetch_and_or:
+  case Builtin::BI__sync_fetch_and_and:
+  case Builtin::BI__sync_fetch_and_xor:
+  case Builtin::BI__sync_fetch_and_nand:
+  case Builtin::BI__sync_add_and_fetch:
+  case Builtin::BI__sync_sub_and_fetch:
+  case Builtin::BI__sync_and_and_fetch:
+  case Builtin::BI__sync_or_and_fetch:
+  case Builtin::BI__sync_xor_and_fetch:
+  case Builtin::BI__sync_nand_and_fetch:
+  case Builtin::BI__sync_val_compare_and_swap:
+  case Builtin::BI__sync_bool_compare_and_swap:
+  case Builtin::BI__sync_lock_test_and_set:
+  case Builtin::BI__sync_lock_release:
+  case Builtin::BI__sync_swap:
+    llvm_unreachable("Shouldn't make it through sema");
+
+  case Builtin::BI__sync_fetch_and_add_1:
+  case Builtin::BI__sync_fetch_and_add_2:
+  case Builtin::BI__sync_fetch_and_add_4:
+  case Builtin::BI__sync_fetch_and_add_8:
+  case Builtin::BI__sync_fetch_and_add_16:
+    llvm_unreachable("BI__sync_fetch_and_add NYI");
+  case Builtin::BI__sync_fetch_and_sub_1:
+  case Builtin::BI__sync_fetch_and_sub_2:
+  case Builtin::BI__sync_fetch_and_sub_4:
+  case Builtin::BI__sync_fetch_and_sub_8:
+  case Builtin::BI__sync_fetch_and_sub_16:
+    llvm_unreachable("BI__sync_fetch_and_sub NYI");
+
+  case Builtin::BI__sync_fetch_and_or_1:
+  case Builtin::BI__sync_fetch_and_or_2:
+  case Builtin::BI__sync_fetch_and_or_4:
+  case Builtin::BI__sync_fetch_and_or_8:
+  case Builtin::BI__sync_fetch_and_or_16:
+    llvm_unreachable("BI__sync_fetch_and_or NYI");
+  case Builtin::BI__sync_fetch_and_and_1:
+  case Builtin::BI__sync_fetch_and_and_2:
+  case Builtin::BI__sync_fetch_and_and_4:
+  case Builtin::BI__sync_fetch_and_and_8:
+  case Builtin::BI__sync_fetch_and_and_16:
+    llvm_unreachable("BI__sync_fetch_and_and NYI");
+  case Builtin::BI__sync_fetch_and_xor_1:
+  case Builtin::BI__sync_fetch_and_xor_2:
+  case Builtin::BI__sync_fetch_and_xor_4:
+  case Builtin::BI__sync_fetch_and_xor_8:
+  case Builtin::BI__sync_fetch_and_xor_16:
+    llvm_unreachable("BI__sync_fetch_and_xor NYI");
+  case Builtin::BI__sync_fetch_and_nand_1:
+  case Builtin::BI__sync_fetch_and_nand_2:
+  case Builtin::BI__sync_fetch_and_nand_4:
+  case Builtin::BI__sync_fetch_and_nand_8:
+  case Builtin::BI__sync_fetch_and_nand_16:
+    llvm_unreachable("BI__sync_fetch_and_nand NYI");
+
+  // Clang extensions: not overloaded yet.
+  case Builtin::BI__sync_fetch_and_min:
+    llvm_unreachable("BI__sync_fetch_and_min NYI");
+  case Builtin::BI__sync_fetch_and_max:
+    llvm_unreachable("BI__sync_fetch_and_max NYI");
+  case Builtin::BI__sync_fetch_and_umin:
+    llvm_unreachable("BI__sync_fetch_and_umin NYI");
+  case Builtin::BI__sync_fetch_and_umax:
+    llvm_unreachable("BI__sync_fetch_and_umax NYI");
+
+  case Builtin::BI__sync_add_and_fetch_1:
+  case Builtin::BI__sync_add_and_fetch_2:
+  case Builtin::BI__sync_add_and_fetch_4:
+  case Builtin::BI__sync_add_and_fetch_8:
+  case Builtin::BI__sync_add_and_fetch_16:
+    return emitBinaryAtomicPost(*this, cir::AtomicFetchKind::Add, e,
+                                cir::BinOpKind::Add);
+
+  case Builtin::BI__sync_sub_and_fetch_1:
+  case Builtin::BI__sync_sub_and_fetch_2:
+  case Builtin::BI__sync_sub_and_fetch_4:
+  case Builtin::BI__sync_sub_and_fetch_8:
+  case Builtin::BI__sync_sub_and_fetch_16:
+    return emitBinaryAtomicPost(*this, cir::AtomicFetchKind::Sub, e,
+                                cir::BinOpKind::Sub);
+
+  case Builtin::BI__sync_and_and_fetch_1:
+  case Builtin::BI__sync_and_and_fetch_2:
+  case Builtin::BI__sync_and_and_fetch_4:
+  case Builtin::BI__sync_and_and_fetch_8:
+  case Builtin::BI__sync_and_and_fetch_16:
+    return emitBinaryAtomicPost(*this, cir::AtomicFetchKind::And, e,
+                                cir::BinOpKind::And);
+
+  case Builtin::BI__sync_or_and_fetch_1:
+  case Builtin::BI__sync_or_and_fetch_2:
+  case Builtin::BI__sync_or_and_fetch_4:
+  case Builtin::BI__sync_or_and_fetch_8:
+  case Builtin::BI__sync_or_and_fetch_16:
+    return emitBinaryAtomicPost(*this, cir::AtomicFetchKind::Or, e,
+                                cir::BinOpKind::Or);
+
+  case Builtin::BI__sync_xor_and_fetch_1:
+  case Builtin::BI__sync_xor_and_fetch_2:
+  case Builtin::BI__sync_xor_and_fetch_4:
+  case Builtin::BI__sync_xor_and_fetch_8:
+  case Builtin::BI__sync_xor_and_fetch_16:
+    return emitBinaryAtomicPost(*this, cir::AtomicFetchKind::Xor, e,
+                                cir::BinOpKind::Xor);
+
+  case Builtin::BI__sync_nand_and_fetch_1:
+  case Builtin::BI__sync_nand_and_fetch_2:
+  case Builtin::BI__sync_nand_and_fetch_4:
+  case Builtin::BI__sync_nand_and_fetch_8:
+  case Builtin::BI__sync_nand_and_fetch_16:
+    return emitBinaryAtomicPost(*this, cir::AtomicFetchKind::Nand, e,
+                                cir::BinOpKind::And, true);
+
+  case Builtin::BI__sync_val_compare_and_swap_1:
+  case Builtin::BI__sync_val_compare_and_swap_2:
+  case Builtin::BI__sync_val_compare_and_swap_4:
+  case Builtin::BI__sync_val_compare_and_swap_8:
+  case Builtin::BI__sync_val_compare_and_swap_16:
+    llvm_unreachable("BI__sync_val_compare_and_swap NYI");
+  case Builtin::BI__sync_bool_compare_and_swap_1:
+  case Builtin::BI__sync_bool_compare_and_swap_2:
+  case Builtin::BI__sync_bool_compare_and_swap_4:
+  case Builtin::BI__sync_bool_compare_and_swap_8:
+  case Builtin::BI__sync_bool_compare_and_swap_16:
+    llvm_unreachable("BI__sync_bool_compare_and_swap NYI");
+  case Builtin::BI__sync_swap_1:
+  case Builtin::BI__sync_swap_2:
+  case Builtin::BI__sync_swap_4:
+  case Builtin::BI__sync_swap_8:
+  case Builtin::BI__sync_swap_16:
+    llvm_unreachable("BI__sync_swap1 like NYI");
+  case Builtin::BI__sync_lock_test_and_set_1:
+  case Builtin::BI__sync_lock_test_and_set_2:
+  case Builtin::BI__sync_lock_test_and_set_4:
+  case Builtin::BI__sync_lock_test_and_set_8:
+  case Builtin::BI__sync_lock_test_and_set_16:
+    llvm_unreachable("BI__sync_lock_test_and_set_1 like NYI");
+  case Builtin::BI__sync_lock_release_1:
+  case Builtin::BI__sync_lock_release_2:
+  case Builtin::BI__sync_lock_release_4:
+  case Builtin::BI__sync_lock_release_8:
+  case Builtin::BI__sync_lock_release_16:
+    llvm_unreachable("BI__sync_lock_release_1 like NYI");
+  case Builtin::BI__sync_synchronize:
+    llvm_unreachable("BI__sync_synchronize NYI");
+  case Builtin::BI__builtin_nontemporal_load:
+    llvm_unreachable("BI__builtin_nontemporal_load NYI");
+  case Builtin::BI__builtin_nontemporal_store:
+    llvm_unreachable("BI__builtin_nontemporal_store NYI");
+  case Builtin::BI__c11_atomic_is_lock_free:
+    llvm_unreachable("BI__c11_atomic_is_lock_free NYI");
+  case Builtin::BI__atomic_is_lock_free:
+    llvm_unreachable("BI__atomic_is_lock_free NYI");
+  case Builtin::BI__atomic_test_and_set:
+    llvm_unreachable("BI__atomic_test_and_set NYI");
+  case Builtin::BI__atomic_clear:
+    llvm_unreachable("BI__atomic_clear NYI");
+  case Builtin::BI__atomic_thread_fence:
+    llvm_unreachable("BI__atomic_thread_fence NYI");
+  case Builtin::BI__atomic_signal_fence:
+    llvm_unreachable("BI__atomic_signal_fence NYI");
+  case Builtin::BI__c11_atomic_thread_fence:
+  case Builtin::BI__c11_atomic_signal_fence:
+    llvm_unreachable("BI__c11_atomic_thread_fence like NYI");
   }
 
   // If this is an alias for a lib function (e.g. __builtin_sin), emit

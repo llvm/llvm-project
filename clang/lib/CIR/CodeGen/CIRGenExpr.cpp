@@ -553,6 +553,14 @@ mlir::Value CIRGenFunction::emitToMemory(mlir::Value value, QualType ty) {
   return value;
 }
 
+mlir::Value CIRGenFunction::emitFromMemory(mlir::Value value, QualType ty) {
+  if (!ty->isBooleanType() && hasBooleanRepresentation(ty)) {
+    llvm_unreachable("NIY");
+  }
+
+  return value;
+}
+
 void CIRGenFunction::emitStoreOfScalar(mlir::Value value, LValue lvalue,
                                        bool isInit) {
   if (lvalue.getType()->isConstantMatrixType()) {
@@ -1919,6 +1927,21 @@ RValue CIRGenFunction::emitCall(clang::QualType calleeTy,
   assert(!cir::MissingFeatures::generateDebugInfo());
 
   return callResult;
+}
+
+// TODO: this can also be abstrated into common AST helpers
+bool CIRGenFunction::hasBooleanRepresentation(QualType type) {
+
+  if (type->isBooleanType())
+    return true;
+
+  if (const EnumType *enumType = type->getAs<EnumType>())
+    return enumType->getDecl()->getIntegerType()->isBooleanType();
+
+  if (const AtomicType *atomicType = type->getAs<AtomicType>())
+    return hasBooleanRepresentation(atomicType->getValueType());
+
+  return false;
 }
 
 CIRGenCallee CIRGenFunction::emitCallee(const clang::Expr *e) {

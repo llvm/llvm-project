@@ -1370,6 +1370,7 @@ public:
   RValue emitCallExpr(const clang::CallExpr *e,
                       ReturnValueSlot returnValue = ReturnValueSlot());
   LValue emitCallExprLValue(const clang::CallExpr *e);
+  bool hasBooleanRepresentation(QualType type);
   CIRGenCallee emitCallee(const clang::Expr *e);
 
   template <typename T>
@@ -1755,6 +1756,10 @@ public:
   /// Note: CIR defers most of the special casting to the final lowering passes
   /// to conserve the high level information.
   mlir::Value emitToMemory(mlir::Value value, clang::QualType ty);
+
+  /// EmitFromMemory - Change a scalar value from its memory
+  /// representation to its value representation.
+  mlir::Value emitFromMemory(mlir::Value value, clang::QualType ty);
 
   /// Emit a trap instruction, which is used to abort the program in an abnormal
   /// way, usually for debugging purposes.
