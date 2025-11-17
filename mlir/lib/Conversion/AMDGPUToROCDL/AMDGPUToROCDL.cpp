@@ -1627,62 +1627,29 @@ int getScaleSel(int blockSize, int bitWidth, int firstScaleLane,
   const bool is_fp8 = bitWidth == 8;
   const bool is_block_16 = blockSize == 16;
 
-  if (!is_fp8 && firstScaleLane == 0 && firstScaleByte == 0 && !is_block_16) {
-    return 0b000;
-  }
-  if (!is_fp8 && firstScaleLane == 0 && firstScaleByte == 0 && is_block_16) {
-    return 0b001;
-  }
-  if (!is_fp8 && firstScaleLane == 0 && firstScaleByte == 2 && !is_block_16) {
-    return 0b010;
-  }
-  if (!is_fp8 && firstScaleLane == 0 && firstScaleByte == 2 && is_block_16) {
-    return 0b011;
-  }
-  if (!is_fp8 && firstScaleLane == 1 && firstScaleByte == 0 && !is_block_16) {
-    return 0b100;
-  }
-  if (!is_fp8 && firstScaleLane == 1 && firstScaleByte == 0 && is_block_16) {
-    return 0b101;
-  }
-  if (!is_fp8 && firstScaleLane == 1 && firstScaleByte == 2 && !is_block_16) {
-    return 0b110;
-  }
-  if (!is_fp8 && firstScaleLane == 1 && firstScaleByte == 2 && is_block_16) {
-    return 0b111;
-  }
-
-  if (is_fp8 && firstScaleLane == 0 && firstScaleByte == 0 && !is_block_16) {
-    return 0b0000;
-  }
-  if (is_fp8 && firstScaleLane == 0 && firstScaleByte == 0 && is_block_16) {
-    return 0b0001;
-  }
-  if (is_fp8 && firstScaleLane == 0 && firstScaleByte == 1 && !is_block_16) {
-    return 0b0010;
-  }
-  if (is_fp8 && firstScaleLane == 0 && firstScaleByte == 2 && !is_block_16) {
-    return 0b0100;
-  }
-  if (is_fp8 && firstScaleLane == 0 && firstScaleByte == 3 && !is_block_16) {
-    return 0b0110;
-  }
-  if (is_fp8 && firstScaleLane == 1 && firstScaleByte == 1 && !is_block_16) {
-    return 0b1010;
-  }
-  if (is_fp8 && firstScaleLane == 1 && firstScaleByte == 2 && !is_block_16) {
-    return 0b1100;
-  }
-  if (is_fp8 && firstScaleLane == 1 && firstScaleByte == 2 && is_block_16) {
-    return 0b1101;
-  }
-  if (is_fp8 && firstScaleLane == 1 && firstScaleByte == 3 && !is_block_16) {
-    return 0b1110;
+  if (!is_fp8) {
+    int bit_0 = is_block_16;
+    assert(llvm::is_contained({0, 2}, firstScaleByte));
+    int bit_1 = (firstScaleByte == 2) << 1;
+    assert(llvm::is_contained({0, 1}, firstScaleLane));
+    int bit_2 = firstScaleLane << 2;
+    return bit_2 | bit_1 | bit_0;
+  } else {
+    int bit_0 = is_block_16;
+    // firstScaleByte is guaranteed to be defined by two bits.
+    assert(llvm::is_contained({0, 1, 2, 3}, firstScaleByte));
+    int bit_2_and_1 = firstScaleByte << 1;
+    assert(llvm::is_contained({0, 1}, firstScaleLane));
+    int bit_3 = firstScaleLane << 3;
+    int bits = bit_3 | bit_2_and_1 | bit_0;
+    // These are invalid cases.
+    assert(!llvm::is_contained(
+        {0b0011, 0b0101, 0b0111, 0b1000, 0b1001, 0b1011, 0b1111}, bits));
+    return bits;
   }
 
   llvm_unreachable("invalid combination of firstScaleLane, firstScaleByte, "
                    "blockSize and type.");
-  return 0;
 }
 
 LogicalResult ScaledExtPacked816OpLowering::matchAndRewrite(
