@@ -1,4 +1,4 @@
-# RUN: llc %s -start-after=livedebugvalues -o - -filetype=obj | llvm-dwarfdump - --debug-line | FileCheck %s
+# RUN: llc %s -start-after=livedebugvalues -o - | FileCheck %s
 #
 ## Original code, compiled clang -O2 -g -c
 ## 
@@ -28,19 +28,30 @@
 ## zero. But this then causes debuggers to skip over the call instruction when
 ## entering the function, which is catastrophic.
 ##
-## Instead: we force the xor at address 1 to have a source location (the
-## function scope line number), and put a prologue_end there. While it's a
-## setup instruction, it's better to have a prologue_end that's still slightly
+## Instead: force the call itself to have a source location (the function scope
+## line number), and put a prologue_end there. While it's not the original
+## source of the call, it's better to have a prologue_end that means we'll stop
 ## in the prologue than to step over the call. This gives consumers the
 ## opportunity to recognise "this is a crazy function" and act accordingly.
 ##
-## Check lines: the first entry is the start-of-function scope line, the second
-## entry is the prologue_end on the xor, while the third is the zero-line-number
-## call instruction.
+## Check lines: ensure that we set prologue_end. The first entry is the
+## start-of-function scope line, the second entry is the prologue_end on the
+## call.
 #
-# CHECK:       2      0      0   0             0       0  is_stmt
-# CHECK-NEXT:  2      0      0   0             0       0  is_stmt prologue_end
-# CHECK-NEXT:  0      0      0   0             0       0
+#
+# CHECK:         main:
+# CHECK-NEXT:    .Lfunc_begin0:
+# CHECK-NEXT:        .file   0 "/tmp/test.c"
+# CHECK-NEXT:        .loc    0 2 0
+# CHECK-NEXT:        .cfi_startproc
+# CHECK-NEXT:    # %bb.0:
+# CHECK-NEXT:        pushq   %rax
+# CHECK-NEXT:        .cfi_def_cfa_offset 16
+# CHECK-NEXT:    .Ltmp0:
+# CHECK-NEXT:        .loc    0 0 0 is_stmt 0
+# CHECK-NEXT:        xorl    %eax, %eax
+# CHECK-NEXT:        .loc    0 2 0 prologue_end is_stmt 1
+# CHECK-NEXT:        callq   ext@PLT
 
 --- |
   target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
@@ -49,8 +60,6 @@
   ; Function Attrs: nounwind uwtable
   define dso_local noundef i32 @main(i32 noundef %argc, ptr noundef readnone captures(none) %argv) local_unnamed_addr !dbg !10 {
   entry:
-      #dbg_value(i32 %argc, !19, !DIExpression(), !21)
-      #dbg_value(ptr %argv, !20, !DIExpression(), !21)
     tail call void (...) @ext(), !dbg !22
     ret i32 0, !dbg !24
   }
@@ -112,14 +121,10 @@ machineFunctionInfo:
   amxProgModel:    None
 body:             |
   bb.0.entry:
-    DBG_VALUE $edi, $noreg, !19, !DIExpression(),  debug-location !21
-    DBG_VALUE $rsi, $noreg, !20, !DIExpression(),  debug-location !21
     frame-setup PUSH64r undef $rax, implicit-def $rsp, implicit $rsp
     frame-setup CFI_INSTRUCTION def_cfa_offset 16
     dead $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags, implicit-def $al,  debug-location !22
     CALL64pcrel32 target-flags(x86-plt) @ext, csr_64, implicit $rsp, implicit $ssp, implicit killed $al, implicit-def $rsp, implicit-def $ssp,  debug-location !22
-    DBG_VALUE $rsi, $noreg, !20, !DIExpression(DW_OP_LLVM_entry_value, 1),  debug-location !21
-    DBG_VALUE $edi, $noreg, !19, !DIExpression(DW_OP_LLVM_entry_value, 1),  debug-location !21
     $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags,  debug-location !24
     $rcx = frame-destroy POP64r implicit-def $rsp, implicit $rsp,  debug-location !24
     frame-destroy CFI_INSTRUCTION def_cfa_offset 8,  debug-location !24
