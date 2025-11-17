@@ -389,7 +389,7 @@ static LogicalResult checkImplementationStatus(Operation &op) {
       result = todo("privatization");
   };
   auto checkReduction = [&todo](auto op, LogicalResult &result) {
-    if (isa<omp::TeamsOp>(op))
+    if (isa<omp::TeamsOp>(op) || isa<omp::TaskloopOp>(op))
       if (!op.getReductionVars().empty() || op.getReductionByref() ||
           op.getReductionSyms())
         result = todo("reduction");
