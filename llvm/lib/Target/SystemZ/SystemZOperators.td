@@ -265,74 +265,151 @@ def callseq_end         : SDNode<"ISD::CALLSEQ_END",   SDT_CallSeqEnd,
                                   SDNPOutGlue]>;
 def global_offset_table : SDNode<"ISD::GLOBAL_OFFSET_TABLE", SDTPtrLeaf>;
 
-// Nodes for SystemZISD::*.  See SystemZISelLowering.h for more details.
+// Return with a glue operand.  Operand 0 is the chain operand.
 def z_retglue           : SDNode<"SystemZISD::RET_GLUE", SDTNone,
                                  [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
+
+// Calls a function.  Operand 0 is the chain operand and operand 1
+// is the target address.  The arguments start at operand 2.
+// There is an optional glue operand at the end.
 def z_call              : SDNode<"SystemZISD::CALL", SDT_ZCall,
                                  [SDNPHasChain, SDNPOutGlue, SDNPOptInGlue,
                                   SDNPVariadic]>;
 def z_sibcall           : SDNode<"SystemZISD::SIBCALL", SDT_ZCall,
                                  [SDNPHasChain, SDNPOutGlue, SDNPOptInGlue,
                                   SDNPVariadic]>;
+// TLS calls.  Like regular calls, except operand 1 is the TLS symbol.
+// (The call target is implicitly __tls_get_offset.)
 def z_tls_gdcall        : SDNode<"SystemZISD::TLS_GDCALL", SDT_ZCall,
                                  [SDNPHasChain, SDNPInGlue, SDNPOutGlue,
                                   SDNPVariadic]>;
 def z_tls_ldcall        : SDNode<"SystemZISD::TLS_LDCALL", SDT_ZCall,
                                  [SDNPHasChain, SDNPInGlue, SDNPOutGlue,
                                   SDNPVariadic]>;
+
+// Wraps a TargetGlobalAddress that should be loaded using PC-relative
+// accesses (LARL).  Operand 0 is the address.
 def z_pcrel_wrapper     : SDNode<"SystemZISD::PCREL_WRAPPER", SDT_ZWrapPtr, []>;
+
+// Used in cases where an offset is applied to a TargetGlobalAddress.
+// Operand 0 is the full TargetGlobalAddress and operand 1 is a
+// PCREL_WRAPPER for an anchor point.  This is used so that we can
+// cheaply refer to either the full address or the anchor point
+// as a register base.
 def z_pcrel_offset      : SDNode<"SystemZISD::PCREL_OFFSET",
                                  SDT_ZWrapOffset, []>;
+
+// Integer comparisons.  There are three operands: the two values
+// to compare, and an integer of type SystemZICMP.
 def z_icmp              : SDNode<"SystemZISD::ICMP", SDT_ZICmp>;
+
+// Floating-point comparisons.  The two operands are the values to compare.
 def z_fcmp              : SDNode<"SystemZISD::FCMP", SDT_ZCmp>;
-def z_strict_fcmp       : SDNode<"SystemZISD::STRICT_FCMP", SDT_ZCmp,
-                                 [SDNPHasChain]>;
-def z_strict_fcmps      : SDNode<"SystemZISD::STRICT_FCMPS", SDT_ZCmp,
-                                 [SDNPHasChain]>;
+
+let IsStrictFP = true in {
+  // Strict variants of scalar floating-point comparisons.
+  // Quiet and signaling versions.
+  def z_strict_fcmp : SDNode<"SystemZISD::STRICT_FCMP", SDT_ZCmp,
+                             [SDNPHasChain]>;
+  def z_strict_fcmps : SDNode<"SystemZISD::STRICT_FCMPS", SDT_ZCmp,
+                              [SDNPHasChain]>;
+}
+
+// Test under mask.  The first operand is ANDed with the second operand
+// and the condition codes are set on the result.  The third operand is
+// a boolean that is true if the condition codes need to distinguish
+// between CCMASK_TM_MIXED_MSB_0 and CCMASK_TM_MIXED_MSB_1 (which the
+// register forms do but the memory forms don't).
 def z_tm                : SDNode<"SystemZISD::TM", SDT_ZICmp>;
+
+// Branches if a condition is true.  Operand 0 is the chain operand;
+// operand 1 is the 4-bit condition-code mask, with bit N in
+// big-endian order meaning "branch if CC=N"; operand 2 is the
+// target block and operand 3 is the flag operand.
 def z_br_ccmask_1       : SDNode<"SystemZISD::BR_CCMASK", SDT_ZBRCCMask,
                                  [SDNPHasChain]>;
+
+// Selects between operand 0 and operand 1.  Operand 2 is the
+// mask of condition-code values for which operand 0 should be
+// chosen over operand 1; it has the same form as BR_CCMASK.
+// Operand 3 is the flag operand.
 def z_select_ccmask_1   : SDNode<"SystemZISD::SELECT_CCMASK",
                                  SDT_ZSelectCCMask>;
+
+// Store the CC value in bits 29 and 28 of an integer.
 def z_ipm_1             : SDNode<"SystemZISD::IPM", SDT_ZIPM>;
+
+// Evaluates to the gap between the stack pointer and the
+// base of the dynamically-allocatable area.
 def z_adjdynalloc       : SDNode<"SystemZISD::ADJDYNALLOC", SDT_ZAdjDynAlloc>;
+
+// For allocating stack space when using stack clash protector.
+// Allocation is performed by block, and each block is probed.
 def z_probed_alloca     : SDNode<"SystemZISD::PROBED_ALLOCA", SDT_ZProbedAlloca,
                                  [SDNPHasChain]>;
+
+// Count number of bits set in operand 0 per byte.
 def z_popcnt            : SDNode<"SystemZISD::POPCNT", SDTIntUnaryOp>;
+
+// Wrappers around the ISD opcodes of the same name.  The output is GR128.
+// Input operands may be GR64 or GR32, depending on the instruction.
 def z_smul_lohi         : SDNode<"SystemZISD::SMUL_LOHI", SDT_ZGR128Binary>;
 def z_umul_lohi         : SDNode<"SystemZISD::UMUL_LOHI", SDT_ZGR128Binary>;
 def z_sdivrem           : SDNode<"SystemZISD::SDIVREM", SDT_ZGR128Binary>;
 def z_udivrem           : SDNode<"SystemZISD::UDIVREM", SDT_ZGR128Binary>;
+
+// Add/subtract with overflow/carry.  These have the same operands as
+// the corresponding standard operations, except with the carry flag
+// replaced by a condition code value.
 def z_saddo             : SDNode<"SystemZISD::SADDO", SDT_ZBinaryWithFlags>;
 def z_ssubo             : SDNode<"SystemZISD::SSUBO", SDT_ZBinaryWithFlags>;
 def z_uaddo             : SDNode<"SystemZISD::UADDO", SDT_ZBinaryWithFlags>;
 def z_usubo             : SDNode<"SystemZISD::USUBO", SDT_ZBinaryWithFlags>;
 def z_addcarry_1        : SDNode<"SystemZISD::ADDCARRY", SDT_ZBinaryWithCarry>;
 def z_subcarry_1        : SDNode<"SystemZISD::SUBCARRY", SDT_ZBinaryWithCarry>;
+
+// Compute carry/borrow indication for add/subtract.
 def z_vacc              : SDNode<"SystemZISD::VACC", SDTIntBinOp>;
-def z_vac               : SDNode<"SystemZISD::VAC", SDT_ZTernary>;
-def z_vaccc             : SDNode<"SystemZISD::VACCC", SDT_ZTernary>;
 def z_vscbi             : SDNode<"SystemZISD::VSCBI", SDTIntBinOp>;
+
+// Add/subtract with carry/borrow.
+def z_vac               : SDNode<"SystemZISD::VAC", SDT_ZTernary>;
 def z_vsbi              : SDNode<"SystemZISD::VSBI", SDT_ZTernary>;
+
+// Compute carry/borrow indication for add/subtract with carry/borrow.
+def z_vaccc             : SDNode<"SystemZISD::VACCC", SDT_ZTernary>;
 def z_vsbcbi            : SDNode<"SystemZISD::VSBCBI", SDT_ZTernary>;
+
+// High-word multiply-and-add.
 def z_vmah              : SDNode<"SystemZISD::VMAH", SDT_ZTernary>;
 def z_vmalh             : SDNode<"SystemZISD::VMALH", SDT_ZTernary>;
+
+// Widen and multiply even/odd vector elements.
 def z_vme               : SDNode<"SystemZISD::VME", SDT_ZBinaryConv>;
 def z_vmle              : SDNode<"SystemZISD::VMLE", SDT_ZBinaryConv>;
 def z_vmo               : SDNode<"SystemZISD::VMO", SDT_ZBinaryConv>;
 def z_vmlo              : SDNode<"SystemZISD::VMLO", SDT_ZBinaryConv>;
 
+// Byte swapping load/store.  Same operands as regular load/store.
 def z_loadbswap        : SDNode<"SystemZISD::LRV", SDTLoad,
                                  [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 def z_storebswap       : SDNode<"SystemZISD::STRV", SDTStore,
                                  [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
+
+// Element swapping load/store.  Same operands as regular load/store.
 def z_loadeswap        : SDNode<"SystemZISD::VLER", SDTLoad,
                                  [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 def z_storeeswap       : SDNode<"SystemZISD::VSTER", SDTStore,
                                  [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
+
+// Use STORE CLOCK FAST to store current TOD clock value.
 def z_stckf            : SDNode<"SystemZISD::STCKF", SDT_ZStoreInherent,
                                 [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 
+// Test Data Class.
+//
+// Operand 0: the value to test
+// Operand 1: the bit mask
 def z_tdc               : SDNode<"SystemZISD::TDC", SDT_ZTest>;
 
 def z_eh_sjlj_setjmp    : SDNode<"ISD::EH_SJLJ_SETJMP", SDT_ZSetJmp,
@@ -346,26 +423,75 @@ def z_vector_insert     : SDNode<"ISD::INSERT_VECTOR_ELT",
                                  SDT_ZInsertVectorElt>;
 def z_vector_extract    : SDNode<"ISD::EXTRACT_VECTOR_ELT",
                                  SDT_ZExtractVectorElt>;
+
+// Create a vector constant by filling byte N of the result with bit
+// 15-N of the single operand.
 def z_byte_mask         : SDNode<"SystemZISD::BYTE_MASK", SDT_ZReplicate>;
+
+// Create a vector constant by replicating an element-sized RISBG-style mask.
+// The first operand specifies the starting set bit and the second operand
+// specifies the ending set bit.  Both operands count from the MSB of the
+// element.
 def z_rotate_mask       : SDNode<"SystemZISD::ROTATE_MASK", SDT_ZRotateMask>;
+
+// Replicate a GPR scalar value into all elements of a vector.
 def z_replicate         : SDNode<"SystemZISD::REPLICATE", SDT_ZReplicate>;
+
+// Create a vector from two i64 GPRs.
 def z_join_dwords       : SDNode<"SystemZISD::JOIN_DWORDS", SDT_ZJoinDwords>;
+
+// Replicate one element of a vector into all elements.  The first operand
+// is the vector and the second is the index of the element to replicate.
 def z_splat             : SDNode<"SystemZISD::SPLAT", SDT_ZVecBinaryInt>;
+
+// Interleave elements from the high half of operand 0 and the high half
+// of operand 1.
 def z_merge_high        : SDNode<"SystemZISD::MERGE_HIGH", SDT_ZVecBinary>;
+
+// Likewise for the low halves.
 def z_merge_low         : SDNode<"SystemZISD::MERGE_LOW", SDT_ZVecBinary>;
+
+// Concatenate the vectors in the first two operands, shift them left
+// by the third operand, and take the first half of the result.
 def z_shl_double        : SDNode<"SystemZISD::SHL_DOUBLE", SDT_ZVecTernaryInt>;
+
+// Concatenate the vectors in the first two operands, shift them left/right
+// bitwise by the third operand, and take the first/last half of the result.
 def z_shl_double_bit    : SDNode<"SystemZISD::SHL_DOUBLE_BIT", SDT_ZVecTernaryInt>;
 def z_shr_double_bit    : SDNode<"SystemZISD::SHR_DOUBLE_BIT", SDT_ZVecTernaryInt>;
+
+// Take one element of the first v2i64 operand and the one element of
+// the second v2i64 operand and concatenate them to form a v2i64 result.
+// The third operand is a 4-bit value of the form 0A0B, where A and B
+// are the element selectors for the first operand and second operands
+// respectively.
 def z_permute_dwords    : SDNode<"SystemZISD::PERMUTE_DWORDS",
                                  SDT_ZVecTernaryInt>;
+
+// Perform a general vector permute on vector operands 0 and 1.
+// Each byte of operand 2 controls the corresponding byte of the result,
+// in the same way as a byte-level VECTOR_SHUFFLE mask.
 def z_permute           : SDNode<"SystemZISD::PERMUTE", SDT_ZVecTernary>;
+
+// Pack vector operands 0 and 1 into a single vector with half-sized elements.
 def z_pack              : SDNode<"SystemZISD::PACK", SDT_ZVecBinaryConv>;
+
+// Likewise, but saturate the result and set CC.  PACKS_CC does signed
+// saturation and PACKLS_CC does unsigned saturation.
 def z_packs_cc          : SDNode<"SystemZISD::PACKS_CC", SDT_ZVecBinaryConvCC>;
 def z_packls_cc         : SDNode<"SystemZISD::PACKLS_CC", SDT_ZVecBinaryConvCC>;
+
+// Unpack the first half of vector operand 0 into double-sized elements.
+// UNPACK_HIGH sign-extends and UNPACKL_HIGH zero-extends.
 def z_unpack_high       : SDNode<"SystemZISD::UNPACK_HIGH", SDT_ZVecUnpack>;
 def z_unpackl_high      : SDNode<"SystemZISD::UNPACKL_HIGH", SDT_ZVecUnpack>;
+
+// Likewise for the second half.
 def z_unpack_low        : SDNode<"SystemZISD::UNPACK_LOW", SDT_ZVecUnpack>;
 def z_unpackl_low       : SDNode<"SystemZISD::UNPACKL_LOW", SDT_ZVecUnpack>;
+
+// Shift/rotate each element of vector operand 0 by the number of bits
+// specified by scalar operand 1.
 def z_vshl_by_scalar    : SDNode<"SystemZISD::VSHL_BY_SCALAR",
                                  SDT_ZVecBinaryInt>;
 def z_vsrl_by_scalar    : SDNode<"SystemZISD::VSRL_BY_SCALAR",
@@ -374,40 +500,75 @@ def z_vsra_by_scalar    : SDNode<"SystemZISD::VSRA_BY_SCALAR",
                                  SDT_ZVecBinaryInt>;
 def z_vrotl_by_scalar   : SDNode<"SystemZISD::VROTL_BY_SCALAR",
                                  SDT_ZVecBinaryInt>;
+
+// For each element of the output type, sum across all sub-elements of
+// operand 0 belonging to the corresponding element, and add in the
+// rightmost sub-element of the corresponding element of operand 1.
 def z_vsum              : SDNode<"SystemZISD::VSUM", SDT_ZBinaryConv>;
+
+// Compare integer vector operands 0 and 1 to produce the usual 0/-1
+// vector result.  VICMPE is for equality, VICMPH for "signed greater than"
+// and VICMPHL for "unsigned greater than".
 def z_vicmpe            : SDNode<"SystemZISD::VICMPE", SDT_ZVecCompare>;
 def z_vicmph            : SDNode<"SystemZISD::VICMPH", SDT_ZVecCompare>;
 def z_vicmphl           : SDNode<"SystemZISD::VICMPHL", SDT_ZVecCompare>;
+
+// Likewise, but also set the condition codes on the result.
 def z_vicmpes           : SDNode<"SystemZISD::VICMPES", SDT_ZVecCompareCC>;
 def z_vicmphs           : SDNode<"SystemZISD::VICMPHS", SDT_ZVecCompareCC>;
 def z_vicmphls          : SDNode<"SystemZISD::VICMPHLS", SDT_ZVecCompareCC>;
+
+// Compare floating-point vector operands 0 and 1 to produce the usual 0/-1
+// vector result.  VFCMPE is for "ordered and equal", VFCMPH for "ordered and
+// greater than" and VFCMPHE for "ordered and greater than or equal to".
 def z_vfcmpe            : SDNode<"SystemZISD::VFCMPE", SDT_ZVecBinaryConv>;
-def z_strict_vfcmpe     : SDNode<"SystemZISD::STRICT_VFCMPE",
-                                 SDT_ZVecBinaryConv, [SDNPHasChain]>;
-def z_strict_vfcmpes    : SDNode<"SystemZISD::STRICT_VFCMPES",
-                                 SDT_ZVecBinaryConv, [SDNPHasChain]>;
 def z_vfcmph            : SDNode<"SystemZISD::VFCMPH", SDT_ZVecBinaryConv>;
-def z_strict_vfcmph     : SDNode<"SystemZISD::STRICT_VFCMPH",
-                                 SDT_ZVecBinaryConv, [SDNPHasChain]>;
-def z_strict_vfcmphs    : SDNode<"SystemZISD::STRICT_VFCMPHS",
-                                 SDT_ZVecBinaryConv, [SDNPHasChain]>;
 def z_vfcmphe           : SDNode<"SystemZISD::VFCMPHE", SDT_ZVecBinaryConv>;
-def z_strict_vfcmphe    : SDNode<"SystemZISD::STRICT_VFCMPHE",
-                                 SDT_ZVecBinaryConv, [SDNPHasChain]>;
-def z_strict_vfcmphes   : SDNode<"SystemZISD::STRICT_VFCMPHES",
-                                 SDT_ZVecBinaryConv, [SDNPHasChain]>;
+
+// Likewise, but also set the condition codes on the result.
 def z_vfcmpes           : SDNode<"SystemZISD::VFCMPES", SDT_ZVecBinaryConvCC>;
 def z_vfcmphs           : SDNode<"SystemZISD::VFCMPHS", SDT_ZVecBinaryConvCC>;
 def z_vfcmphes          : SDNode<"SystemZISD::VFCMPHES", SDT_ZVecBinaryConvCC>;
+
+// Extend the even f32 elements of vector operand 0 to produce a vector
+// of f64 elements.
 def z_vextend           : SDNode<"SystemZISD::VEXTEND", SDT_ZVecUnaryConv>;
-def z_strict_vextend    : SDNode<"SystemZISD::STRICT_VEXTEND",
-                                 SDT_ZVecUnaryConv, [SDNPHasChain]>;
+
+// Round the f64 elements of vector operand 0 to f32s and store them in the
+// even elements of the result.
 def z_vround            : SDNode<"SystemZISD::VROUND", SDT_ZVecUnaryConv>;
-def z_strict_vround     : SDNode<"SystemZISD::STRICT_VROUND",
+
+let IsStrictFP = true in {
+  // Strict variants of vector floating-point comparisons.
+  // Quiet and signaling versions.
+  def z_strict_vfcmpe   : SDNode<"SystemZISD::STRICT_VFCMPE",
+                                 SDT_ZVecBinaryConv, [SDNPHasChain]>;
+  def z_strict_vfcmph   : SDNode<"SystemZISD::STRICT_VFCMPH",
+                                 SDT_ZVecBinaryConv, [SDNPHasChain]>;
+  def z_strict_vfcmphe  : SDNode<"SystemZISD::STRICT_VFCMPHE",
+                                 SDT_ZVecBinaryConv, [SDNPHasChain]>;
+  def z_strict_vfcmpes  : SDNode<"SystemZISD::STRICT_VFCMPES",
+                                 SDT_ZVecBinaryConv, [SDNPHasChain]>;
+  def z_strict_vfcmphs  : SDNode<"SystemZISD::STRICT_VFCMPHS",
+                                 SDT_ZVecBinaryConv, [SDNPHasChain]>;
+  def z_strict_vfcmphes : SDNode<"SystemZISD::STRICT_VFCMPHES",
+                                 SDT_ZVecBinaryConv, [SDNPHasChain]>;
+
+  // Strict variants of VEXTEND and VROUND.
+  def z_strict_vextend  : SDNode<"SystemZISD::STRICT_VEXTEND",
                                  SDT_ZVecUnaryConv, [SDNPHasChain]>;
+  def z_strict_vround   : SDNode<"SystemZISD::STRICT_VROUND",
+                                 SDT_ZVecUnaryConv, [SDNPHasChain]>;
+}
+
+// AND the two vector operands together and set CC based on the result.
 def z_vtm               : SDNode<"SystemZISD::VTM", SDT_ZCmp>;
+
+// i128 high integer comparisons.
 def z_scmp128hi         : SDNode<"SystemZISD::SCMP128HI", SDT_ZCmp>;
 def z_ucmp128hi         : SDNode<"SystemZISD::UCMP128HI", SDT_ZCmp>;
+
+// String operations that set CC as a side-effect.
 def z_vfae_cc           : SDNode<"SystemZISD::VFAE_CC", SDT_ZVecTernaryIntCC>;
 def z_vfaez_cc          : SDNode<"SystemZISD::VFAEZ_CC", SDT_ZVecTernaryIntCC>;
 def z_vfee_cc           : SDNode<"SystemZISD::VFEE_CC", SDT_ZVecBinaryCC>;
@@ -423,12 +584,24 @@ def z_vstrs_cc          : SDNode<"SystemZISD::VSTRS_CC",
                                  SDT_ZVecTernaryConvCC>;
 def z_vstrsz_cc         : SDNode<"SystemZISD::VSTRSZ_CC",
                                  SDT_ZVecTernaryConvCC>;
+
+// Test floating-point data class for vectors.
 def z_vftci             : SDNode<"SystemZISD::VFTCI", SDT_ZVecBinaryConvIntCC>;
 
 class AtomicWOp<string name, SDTypeProfile profile = SDT_ZAtomicLoadBinaryW>
   : SDNode<"SystemZISD::"#name, profile,
            [SDNPHasChain, SDNPMayStore, SDNPMayLoad, SDNPMemOperand]>;
 
+// Wrappers around the inner loop of an 8- or 16-bit ATOMIC_SWAP or
+// ATOMIC_LOAD_<op>.
+//
+// Operand 0: the address of the containing 32-bit-aligned field
+// Operand 1: the second operand of <op>, in the high bits of an i32
+//            for everything except ATOMIC_SWAPW
+// Operand 2: how many bits to rotate the i32 left to bring the first
+//            operand into the high bits
+// Operand 3: the negative of operand 2, for rotating the other way
+// Operand 4: the width of the field in bits (8 or 16)
 def z_atomic_swapw      : AtomicWOp<"ATOMIC_SWAPW">;
 def z_atomic_loadw_add  : AtomicWOp<"ATOMIC_LOADW_ADD">;
 def z_atomic_loadw_sub  : AtomicWOp<"ATOMIC_LOADW_SUB">;
@@ -441,55 +614,117 @@ def z_atomic_loadw_max  : AtomicWOp<"ATOMIC_LOADW_MAX">;
 def z_atomic_loadw_umin : AtomicWOp<"ATOMIC_LOADW_UMIN">;
 def z_atomic_loadw_umax : AtomicWOp<"ATOMIC_LOADW_UMAX">;
 
+// Atomic compare-and-swap returning CC value.
+// Val, CC, OUTCHAIN = ATOMIC_CMP_SWAP(INCHAIN, ptr, cmp, swap)
 def z_atomic_cmp_swap   : SDNode<"SystemZISD::ATOMIC_CMP_SWAP",
                                  SDT_ZAtomicCmpSwap,
                                  [SDNPHasChain, SDNPMayStore, SDNPMayLoad,
                                   SDNPMemOperand]>;
+
+// A wrapper around the inner loop of an ATOMIC_CMP_SWAP.
+//
+// Operand 0: the address of the containing 32-bit-aligned field
+// Operand 1: the compare value, in the low bits of an i32
+// Operand 2: the swap value, in the low bits of an i32
+// Operand 3: how many bits to rotate the i32 left to bring the first
+//            operand into the high bits
+// Operand 4: the negative of operand 2, for rotating the other way
+// Operand 5: the width of the field in bits (8 or 16)
 def z_atomic_cmp_swapw  : SDNode<"SystemZISD::ATOMIC_CMP_SWAPW",
                                  SDT_ZAtomicCmpSwapW,
                                  [SDNPHasChain, SDNPMayStore, SDNPMayLoad,
                                   SDNPMemOperand]>;
 
+// 128-bit atomic load.
+// Val, OUTCHAIN = ATOMIC_LOAD_128(INCHAIN, ptr)
 def z_atomic_load_128   : SDNode<"SystemZISD::ATOMIC_LOAD_128",
                                  SDT_ZAtomicLoad128,
                                  [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+
+// 128-bit atomic store.
+// OUTCHAIN = ATOMIC_STORE_128(INCHAIN, val, ptr)
 def z_atomic_store_128  : SDNode<"SystemZISD::ATOMIC_STORE_128",
                                  SDT_ZAtomicStore128,
                                  [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
+
+// 128-bit atomic compare-and-swap.
+// Val, CC, OUTCHAIN = ATOMIC_CMP_SWAP(INCHAIN, ptr, cmp, swap)
 def z_atomic_cmp_swap_128 : SDNode<"SystemZISD::ATOMIC_CMP_SWAP_128",
                                    SDT_ZAtomicCmpSwap128,
                                    [SDNPHasChain, SDNPMayStore, SDNPMayLoad,
                                     SDNPMemOperand]>;
 
+// Use a series of MVCs to copy bytes from one memory location to another.
+// The operands are:
+// - the target address
+// - the source address
+// - the constant length
+//
+// This isn't a memory opcode because we'd need to attach two
+// MachineMemOperands rather than one.
 def z_mvc               : SDNode<"SystemZISD::MVC", SDT_ZMemMemLength,
                                  [SDNPHasChain, SDNPMayStore, SDNPMayLoad]>;
+
+// Similar to MVC, but for logic operations (AND, OR, XOR).
 def z_nc                : SDNode<"SystemZISD::NC", SDT_ZMemMemLength,
                                   [SDNPHasChain, SDNPMayStore, SDNPMayLoad]>;
 def z_oc                : SDNode<"SystemZISD::OC", SDT_ZMemMemLength,
                                   [SDNPHasChain, SDNPMayStore, SDNPMayLoad]>;
 def z_xc                : SDNode<"SystemZISD::XC", SDT_ZMemMemLength,
                                   [SDNPHasChain, SDNPMayStore, SDNPMayLoad]>;
+
+// Use CLC to compare two blocks of memory, with the same comments
+// as for MVC.
 def z_clc               : SDNode<"SystemZISD::CLC", SDT_ZMemMemLengthCC,
                                  [SDNPHasChain, SDNPMayLoad]>;
+
+// Use MVC to set a block of memory after storing the first byte.
 def z_memset_mvc        : SDNode<"SystemZISD::MEMSET_MVC", SDT_ZMemsetMVC,
                                  [SDNPHasChain, SDNPMayStore, SDNPMayLoad]>;
+
+// Use a CLST-based sequence to implement strcmp().  The two input operands
+// are the addresses of the strings to compare.
 def z_strcmp            : SDNode<"SystemZISD::STRCMP", SDT_ZStringCC,
                                  [SDNPHasChain, SDNPMayLoad]>;
+
+// Use an MVST-based sequence to implement stpcpy().
 def z_stpcpy            : SDNode<"SystemZISD::STPCPY", SDT_ZString,
                                  [SDNPHasChain, SDNPMayStore, SDNPMayLoad]>;
+
+// Use an SRST-based sequence to search a block of memory.  The first
+// operand is the end address, the second is the start, and the third
+// is the character to search for.  CC is set to 1 on success and 2
+// on failure.
 def z_search_string     : SDNode<"SystemZISD::SEARCH_STRING", SDT_ZStringCC,
                                  [SDNPHasChain, SDNPMayLoad]>;
+
+// Prefetch from the second operand using the 4-bit control code in
+// the first operand.  The code is 1 for a load prefetch and 2 for
+// a store prefetch.
 def z_prefetch          : SDNode<"SystemZISD::PREFETCH", SDT_ZPrefetch,
                                  [SDNPHasChain, SDNPMayLoad, SDNPMayStore,
                                   SDNPMemOperand]>;
 
+// Transaction begin.  The first operand is the chain, the second
+// the TDB pointer, and the third the immediate control field.
+// Returns CC value and chain.
 def z_tbegin            : SDNode<"SystemZISD::TBEGIN", SDT_ZTBegin,
                                  [SDNPHasChain, SDNPMayStore, SDNPSideEffect]>;
 def z_tbegin_nofloat    : SDNode<"SystemZISD::TBEGIN_NOFLOAT", SDT_ZTBegin,
                                  [SDNPHasChain, SDNPMayStore, SDNPSideEffect]>;
+
+// Transaction end.  Just the chain operand.  Returns CC value and chain.
 def z_tend              : SDNode<"SystemZISD::TEND", SDT_ZTEnd,
                                  [SDNPHasChain, SDNPSideEffect]>;
 
+// z/OS XPLINK ADA Entry
+// Wraps a TargetGlobalAddress that should be loaded from a function's
+// AssociatedData Area (ADA). Tha ADA is passed to the function by the
+// caller in the XPLink ABI defined register R5.
+// Operand 0: the GlobalValue/External Symbol
+// Operand 1: the ADA register
+// Operand 2: the offset (0 for the first and 8 for the second element in the
+// function descriptor)
 def z_ada_entry         : SDNode<"SystemZISD::ADA_ENTRY",
                                   SDT_ZADAENTRY>;
 

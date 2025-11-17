@@ -1103,6 +1103,7 @@ libc_support_library(
         ":func_realloc",
         ":hdr_stdio_macros",
         ":hdr_stdio_overlay",
+        ":string_memory_utils",
         ":types_off_t",
     ],
 )
