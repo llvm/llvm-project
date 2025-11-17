@@ -19,6 +19,7 @@
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/ExecutionEngine/JITLink/JITLinkDylib.h"
 #include "llvm/ExecutionEngine/JITLink/JITLinkMemoryManager.h"
+#include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/MSVCErrorWorkarounds.h"
@@ -115,7 +116,9 @@ class DebugObject {
 public:
   DebugObject(JITLinkMemoryManager &MemMgr, const JITLinkDylib *JD,
               ExecutionSession &ES)
-      : MemMgr(MemMgr), JD(JD), ES(ES), Flags(DebugObjectFlags{}) {}
+      : MemMgr(MemMgr), JD(JD), ES(ES), Flags(DebugObjectFlags{}) {
+    FinalizeFuture = FinalizePromise.get_future();
+  }
 
   bool hasFlags(DebugObjectFlags F) const { return Flags & F; }
   void setFlags(DebugObjectFlags F) {
@@ -126,8 +129,17 @@ public:
   }
 
   using FinalizeContinuation = std::function<void(Expected<ExecutorAddrRange>)>;
+  void finalizeAsync(FinalizeContinuation OnAsync);
 
-  void finalizeAsync(FinalizeContinuation OnFinalize);
+  void failMaterialization(Error Err) {
+    FinalizePromise.set_value(std::move(Err));
+  }
+
+  void reportTargetMem(ExecutorAddrRange TargetMem) {
+    FinalizePromise.set_value(TargetMem);
+  }
+
+  Expected<ExecutorAddrRange> awaitTargetMem() { return FinalizeFuture.get(); }
 
   virtual ~DebugObject() {
     if (Alloc) {
@@ -151,6 +163,9 @@ protected:
   const JITLinkDylib *JD = nullptr;
   ExecutionSession &ES;
 
+  std::promise<MSVCPExpected<ExecutorAddrRange>> FinalizePromise;
+  std::future<MSVCPExpected<ExecutorAddrRange>> FinalizeFuture;
+
 private:
   DebugObjectFlags Flags;
   FinalizedAlloc Alloc;
@@ -160,8 +175,7 @@ private:
 // copying memory over to the target and pass on the result once we're done.
 // Ownership of the allocation remains with us for the rest of our lifetime.
 void DebugObject::finalizeAsync(FinalizeContinuation OnFinalize) {
-  assert(!Alloc && "Cannot finalize more than once");
-
+  assert(!this->Alloc && "Cannot finalize more than once");
   if (auto SimpleSegAlloc = finalizeWorkingMemory()) {
     auto ROSeg = SimpleSegAlloc->getSegInfo(MemProt::Read);
     ExecutorAddrRange DebugObjRange(ROSeg.Addr, ROSeg.WorkingMem.size());
@@ -169,13 +183,19 @@ void DebugObject::finalizeAsync(FinalizeContinuation OnFinalize) {
         [this, DebugObjRange,
          OnFinalize = std::move(OnFinalize)](Expected<FinalizedAlloc> FA) {
           if (FA) {
-            Alloc = std::move(*FA);
+            // Note: FA->getAddress() is supposed to be the address of the
+            // memory range on the target, but InProcessMemoryManager returns
+            // the address of a FinalizedAllocInfo helper instead.
+            this->Alloc = std::move(*FA);
             OnFinalize(DebugObjRange);
           } else
             OnFinalize(FA.takeError());
         });
-  } else
+  } else {
+    // We could report this error synchronously, but it's easier this way,
+    // because the FinalizePromise will be triggered unconditionally.
     OnFinalize(SimpleSegAlloc.takeError());
+  }
 }
 
 /// The current implementation of ELFDebugObject replicates the approach used in
@@ -386,16 +406,17 @@ createDebugObjectFromBuffer(ExecutionSession &ES, LinkGraph &G,
   }
 }
 
-DebugObjectManagerPlugin::DebugObjectManagerPlugin(
-    ExecutionSession &ES, std::unique_ptr<DebugObjectRegistrar> Target,
-    bool RequireDebugSections, bool AutoRegisterCode)
-    : ES(ES), Target(std::move(Target)),
-      RequireDebugSections(RequireDebugSections),
-      AutoRegisterCode(AutoRegisterCode) {}
-
-DebugObjectManagerPlugin::DebugObjectManagerPlugin(
-    ExecutionSession &ES, std::unique_ptr<DebugObjectRegistrar> Target)
-    : DebugObjectManagerPlugin(ES, std::move(Target), true, true) {}
+DebugObjectManagerPlugin::DebugObjectManagerPlugin(ExecutionSession &ES,
+                                                   bool RequireDebugSections,
+                                                   bool AutoRegisterCode,
+                                                   Error &Err)
+    : ES(ES), RequireDebugSections(RequireDebugSections),
+      AutoRegisterCode(AutoRegisterCode) {
+  // Pass bootstrap symbol for registration function to enable debugging
+  ErrorAsOutParameter _(&Err);
+  Err = ES.getExecutorProcessControl().getBootstrapSymbols(
+      {{RegistrationAction, rt::RegisterJITLoaderGDBAllocActionName}});
+}
 
 DebugObjectManagerPlugin::~DebugObjectManagerPlugin() = default;
 
@@ -440,48 +461,50 @@ void DebugObjectManagerPlugin::modifyPassConfig(
                                                     SectionRange(GraphSection));
           return Error::success();
         });
+
+    PassConfig.PreFixupPasses.push_back(
+        [this, &DebugObj, &MR](LinkGraph &G) -> Error {
+          DebugObj.finalizeAsync([this, &DebugObj,
+                                  &MR](Expected<ExecutorAddrRange> TargetMem) {
+            if (!TargetMem) {
+              DebugObj.failMaterialization(TargetMem.takeError());
+              return;
+            }
+            // Update tracking info
+            Error Err = MR.withResourceKeyDo([&](ResourceKey K) {
+              std::lock_guard<std::mutex> LockPending(PendingObjsLock);
+              std::lock_guard<std::mutex> LockRegistered(RegisteredObjsLock);
+              auto It = PendingObjs.find(&MR);
+              RegisteredObjs[K].push_back(std::move(It->second));
+              PendingObjs.erase(It);
+            });
+
+            if (Err)
+              DebugObj.failMaterialization(std::move(Err));
+
+            // Unblock post-fixup pass
+            DebugObj.reportTargetMem(*TargetMem);
+          });
+          return Error::success();
+        });
+
+    PassConfig.PostFixupPasses.push_back(
+        [this, &DebugObj](LinkGraph &G) -> Error {
+          Expected<ExecutorAddrRange> R = DebugObj.awaitTargetMem();
+          if (!R)
+            return R.takeError();
+          if (R->empty())
+            return Error::success();
+
+          using namespace shared;
+          G.allocActions().push_back(
+              {cantFail(WrapperFunctionCall::Create<
+                        SPSArgList<SPSExecutorAddrRange, bool>>(
+                   RegistrationAction, *R, AutoRegisterCode)),
+               {/* no deregistration */}});
+          return Error::success();
+        });
   }
-}
-
-Error DebugObjectManagerPlugin::notifyEmitted(
-    MaterializationResponsibility &MR) {
-  std::lock_guard<std::mutex> Lock(PendingObjsLock);
-  auto It = PendingObjs.find(&MR);
-  if (It == PendingObjs.end())
-    return Error::success();
-
-  // During finalization the debug object is registered with the target.
-  // Materialization must wait for this process to finish. Otherwise we might
-  // start running code before the debugger processed the corresponding debug
-  // info.
-  std::promise<MSVCPError> FinalizePromise;
-  std::future<MSVCPError> FinalizeErr = FinalizePromise.get_future();
-
-  It->second->finalizeAsync(
-      [this, &FinalizePromise, &MR](Expected<ExecutorAddrRange> TargetMem) {
-        // Any failure here will fail materialization.
-        if (!TargetMem) {
-          FinalizePromise.set_value(TargetMem.takeError());
-          return;
-        }
-        if (Error Err =
-                Target->registerDebugObject(*TargetMem, AutoRegisterCode)) {
-          FinalizePromise.set_value(std::move(Err));
-          return;
-        }
-
-        // Once our tracking info is updated, notifyEmitted() can return and
-        // finish materialization.
-        FinalizePromise.set_value(MR.withResourceKeyDo([&](ResourceKey K) {
-          assert(PendingObjs.count(&MR) && "We still hold PendingObjsLock");
-          std::lock_guard<std::mutex> Lock(RegisteredObjsLock);
-          auto It = PendingObjs.find(&MR);
-          RegisteredObjs[K].push_back(std::move(It->second));
-          PendingObjs.erase(It);
-        }));
-      });
-
-  return FinalizeErr.get();
 }
 
 Error DebugObjectManagerPlugin::notifyFailed(
