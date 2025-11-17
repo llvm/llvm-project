@@ -7070,23 +7070,28 @@ static void CheckMissingFormatAttributes(Sema *S, FormatStringType FormatType,
 
   // Emit the diagnostic and fixit.
   unsigned FormatStringIndex = CallerParamIdx + CallerArgumentIndexOffset;
-  StringRef AttrPrefix, AttrSuffix;
-  if (S->getLangOpts().C23 || S->getLangOpts().CPlusPlus11) {
-    AttrPrefix = "[[gnu::";
-    AttrSuffix = "]] ";
-  } else {
-    AttrPrefix = "__attribute__((";
-    AttrSuffix = ")) ";
-  }
   StringRef FormatTypeName = S->GetFormatStringTypeName(FormatType);
-  std::string Attr =
-      ("format(" + FormatTypeName + ", " + llvm::Twine(FormatStringIndex) +
-       ", " + llvm::Twine(FirstArgumentIndex) + ")")
-          .str();
-  S->Diag(Loc, diag::warn_missing_format_attribute)
-      << Attr << Caller
-      << FixItHint::CreateInsertion(Caller->getBeginLoc(),
-                                    (AttrPrefix + Attr + AttrSuffix).str());
+  {
+    std::string Attr =
+        ("format(" + FormatTypeName + ", " + llvm::Twine(FormatStringIndex) +
+         ", " + llvm::Twine(FirstArgumentIndex) + ")")
+            .str();
+    auto DB = S->Diag(Loc, diag::warn_missing_format_attribute)
+              << Attr << Caller;
+    const LangOptions &LO = S->getLangOpts();
+    StringRef AttrPrefix, AttrSuffix;
+    if (LO.C23 || LO.CPlusPlus11) {
+      AttrPrefix = "[[gnu::";
+      AttrSuffix = "]] ";
+    } else if (LO.ObjC || LO.GNUMode) {
+      AttrPrefix = "__attribute__((";
+      AttrSuffix = ")) ";
+    }
+    if (!AttrPrefix.empty()) {
+      DB << FixItHint::CreateInsertion(Caller->getBeginLoc(),
+                                       (AttrPrefix + Attr + AttrSuffix).str());
+    }
+  }
   S->Diag(Caller->getLocation(), diag::note_entity_declared_at) << Caller;
 }
 
