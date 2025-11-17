@@ -1858,11 +1858,11 @@ bool Sema::CheckSpanLikeType(const AttributeCommonInfo &CI,
   if (!RD || RD->isUnion())
     return emitWarning(diag::note_returned_not_struct);
   auto FieldsBegin = RD->field_begin();
-  const auto FieldsCount = std::distance(FieldsBegin, RD->field_end());
+  auto FieldsCount = std::distance(FieldsBegin, RD->field_end());
   if (FieldsCount != 2)
     return emitWarning(diag::note_returned_not_two_field_struct) << FieldsCount;
-  const QualType FirstFieldType = FieldsBegin->getType();
-  const QualType SecondFieldType = std::next(FieldsBegin)->getType();
+  QualType FirstFieldType = FieldsBegin->getType();
+  QualType SecondFieldType = std::next(FieldsBegin)->getType();
   auto validatePointerType = [](const QualType &T) {
     // It must not point to functions.
     return T->isPointerType() && !T->isFunctionPointerType();
@@ -1872,7 +1872,7 @@ bool Sema::CheckSpanLikeType(const AttributeCommonInfo &CI,
     const auto *BT = dyn_cast<BuiltinType>(T.getCanonicalType());
     if (!BT || !BT->isInteger())
       return emitWarning(diag::note_returned_not_integer_field) << FieldNo;
-    const auto IntSize = Context.getTypeSize(Context.IntTy);
+    auto IntSize = Context.getTypeSize(Context.IntTy);
     if (Context.getTypeSize(BT) < IntSize)
       return emitWarning(diag::note_returned_not_wide_enough_field)
              << FieldNo << IntSize;
