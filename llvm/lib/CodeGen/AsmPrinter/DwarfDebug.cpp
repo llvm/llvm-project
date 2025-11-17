@@ -2223,7 +2223,7 @@ findPrologueEndLoc(const MachineFunction *MF) {
   const auto &TII = *MF->getSubtarget().getInstrInfo();
   const MachineInstr *NonTrivialInst = nullptr;
   const Function &F = MF->getFunction();
-  DISubprogram *SP = const_cast<DISubprogram*>(F.getSubprogram());
+  DISubprogram *SP = const_cast<DISubprogram *>(F.getSubprogram());
 
   // Some instructions may be inserted into prologue after this function. Must
   // keep prologue for these cases.
@@ -2323,8 +2323,8 @@ findPrologueEndLoc(const MachineFunction *MF) {
         // Create and assign the scope-line position.
         unsigned ScopeLine = SP->getScopeLine();
         DILocation *ScopeLineDILoc =
-          DILocation::get(SP->getContext(), ScopeLine, 0, SP);
-        const_cast<MachineInstr*>(&*CurInst)->setDebugLoc(ScopeLineDILoc);
+            DILocation::get(SP->getContext(), ScopeLine, 0, SP);
+        const_cast<MachineInstr *>(&*CurInst)->setDebugLoc(ScopeLineDILoc);
 
         // Consider this position to be where prologue_end is placed.
         return std::make_pair(&*CurInst, false);
