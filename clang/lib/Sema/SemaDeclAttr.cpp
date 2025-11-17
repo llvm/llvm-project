@@ -1849,15 +1849,10 @@ bool Sema::CheckSpanLikeType(const AttributeCommonInfo &CI,
     Diag(CI.getLoc(), diag::warn_attribute_return_span_only) << CI;
     return Diag(CI.getLoc(), NoteDiagID);
   };
-  if (!Ty->isDependentType()) {
-    // If the type is a class template specialization, it may not be
-    // instantiated at this stage. We must force it to be complete to examine
-    // its fields.
-    // The returned value is discarded since the code below emits a warning
-    // if the type keeps being incomplete.
-    (void)isCompleteType(CI.getLoc(), Ty);
-  }
-  if (Ty->isIncompleteType())
+  if (Ty->isDependentType())
+    return false;
+  // isCompleteType is used to force template class instantiation.
+  if (!isCompleteType(CI.getLoc(), Ty))
     return emitWarning(diag::note_returned_incomplete_type);
   const RecordDecl *RD = Ty->getAsRecordDecl();
   if (!RD || RD->isUnion())
@@ -1899,11 +1894,8 @@ bool Sema::CheckSpanLikeType(const AttributeCommonInfo &CI,
 
 static void handleMallocSpanAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   QualType ResultType = getFunctionOrMethodResultType(D);
-  if (ResultType->isDependentType() || !S.CheckSpanLikeType(AL, ResultType)) {
-    // If it's a dependent type, the attribute will be re-checked upon
-    // instantiation.
+  if (!S.CheckSpanLikeType(AL, ResultType))
     D->addAttr(::new (S.Context) MallocSpanAttr(S.Context, AL));
-  }
 }
 
 static void handleCPUSpecificAttr(Sema &S, Decl *D, const ParsedAttr &AL) {

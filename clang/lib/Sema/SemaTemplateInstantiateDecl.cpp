@@ -800,14 +800,8 @@ static void instantiateDependentMallocSpanAttr(Sema &S,
                                                const MallocSpanAttr *Attr,
                                                Decl *New) {
   QualType RT = getFunctionOrMethodResultType(New);
-  if (RT->isDependentType()) {
-    // The type is still dependent.
-    // Clone the attribute, it will be checked later.
+  if (!S.CheckSpanLikeType(*Attr, RT))
     New->addAttr(Attr->clone(S.getASTContext()));
-  } else if (!S.CheckSpanLikeType(*Attr, RT)) {
-    // The conditions have been successfully validated.
-    New->addAttr(Attr->clone(S.getASTContext()));
-  }
 }
 
 void Sema::InstantiateAttrsForDecl(
