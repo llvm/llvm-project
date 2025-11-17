@@ -9,7 +9,7 @@
 #include <clc/atomic/clc_atomic_fetch_min.h>
 #include <clc/opencl/atomic/atom_min.h>
 
-// Non-volatile overloads is for backward compatibility with OpenCL 1.0.
+// Non-volatile overloads are for backward compatibility with OpenCL 1.0.
 
 #define __CLC_IMPL(AS, TYPE)                                                   \
   _CLC_OVERLOAD _CLC_DEF TYPE atom_min(volatile AS TYPE *p, TYPE val) {        \

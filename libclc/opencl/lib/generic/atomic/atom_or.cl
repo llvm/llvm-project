@@ -9,7 +9,7 @@
 #include <clc/atomic/clc_atomic_fetch_or.h>
 #include <clc/opencl/atomic/atom_or.h>
 
-// Non-volatile overloads is for backward compatibility with OpenCL 1.0.
+// Non-volatile overloads are for backward compatibility with OpenCL 1.0.
 
 #define __CLC_IMPL(AS, TYPE)                                                   \
   _CLC_OVERLOAD _CLC_DEF TYPE atom_or(volatile AS TYPE *p, TYPE val) {         \
