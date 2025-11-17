@@ -13383,12 +13383,12 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     if (!EvaluateAsRValue(Info, E->getArg(0), SourceLHS) ||
         !EvaluateAsRValue(Info, E->getArg(1), SourceRHS))
       return false;
-    unsigned NumElts = SourceLHS.getVectorLength();
+    unsigned NumElems = SourceLHS.getVectorLength();
     SmallVector<APValue, 8> ResultElements;
-    ResultElements.reserve(NumElts);
+    ResultElements.reserve(NumElems);
     llvm::RoundingMode RM = getActiveRoundingMode(getEvalInfo(), E);
 
-    for (unsigned I = 0; I < NumElts; ++I) {
+    for (unsigned I = 0; I != NumElems; ++I) {
       APFloat LHS = SourceLHS.getVectorElt(I).getFloat();
       APFloat RHS = SourceRHS.getVectorElt(I).getFloat();
       if (I % 2 == 0) {
