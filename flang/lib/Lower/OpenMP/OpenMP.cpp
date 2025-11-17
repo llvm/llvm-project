@@ -2612,8 +2612,8 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
               typeSpec->name().ToString() + llvm::omp::OmpDefaultMapperName;
           if (auto *mapperSym =
                   converter.getCurrentScope().FindSymbol(mapperIdName))
-            mapperIdName =
-                converter.mangleName(mapperIdName, mapperSym->owner());
+            mapperIdName = converter.mangleName(
+                mapperIdName, mapperSym->GetUltimate().owner());
           else
             mapperIdName =
                 converter.mangleName(mapperIdName, *typeSpec->GetScope());
