@@ -2087,7 +2087,8 @@ SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
         &parsed_expr->module, IRGenOpts, m_swift_ast_ctx.GetTBDGenOptions(),
         std::move(sil_module), "lldb_module",
         swift::PrimarySpecificPaths("", parsed_expr->main_filename),
-        llvm::ArrayRef<std::string>(), llvm::ArrayRef<std::string>());
+        /*CAS=*/nullptr, llvm::ArrayRef<std::string>(),
+        llvm::ArrayRef<std::string>());
 
     if (GenModule) {
       swift::performLLVMOptimizations(
