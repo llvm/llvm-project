@@ -604,6 +604,25 @@ define <2 x i64> @zext_v2i16_v2i64(ptr %a) {
   ret <2 x i64> %y
 }
 
+define <4 x i32> @zext_v4i16_v4i32(ptr %a) {
+; CHECK-LE-LABEL: zext_v4i16_v4i32:
+; CHECK-LE:       // %bb.0:
+; CHECK-LE-NEXT:    ldr d0, [x0]
+; CHECK-LE-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-LE-NEXT:    ret
+;
+; CHECK-BE-LABEL: zext_v4i16_v4i32:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    ld1 { v0.4h }, [x0]
+; CHECK-BE-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-BE-NEXT:    rev64 v0.4s, v0.4s
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ret
+  %x = load <4 x i16>, ptr %a
+  %y = zext <4 x i16> %x to <4 x i32>
+  ret <4 x i32> %y
+}
+
 define <2 x i64> @sext_v2i8_v2i64(ptr %a) {
 ; CHECK-LE-LABEL: sext_v2i8_v2i64:
 ; CHECK-LE:       // %bb.0:
@@ -666,4 +685,23 @@ define <2 x i64> @sext_v2i16_v2i64(ptr %a) {
   %x = load <2 x i16>, ptr %a
   %y = sext <2 x i16> %x to <2 x i64>
   ret <2 x i64> %y
+}
+
+define <4 x i32> @sext_v4i16_v4i32(ptr %a) {
+; CHECK-LE-LABEL: sext_v4i16_v4i32:
+; CHECK-LE:       // %bb.0:
+; CHECK-LE-NEXT:    ldr d0, [x0]
+; CHECK-LE-NEXT:    sshll v0.4s, v0.4h, #0
+; CHECK-LE-NEXT:    ret
+;
+; CHECK-BE-LABEL: sext_v4i16_v4i32:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    ld1 { v0.4h }, [x0]
+; CHECK-BE-NEXT:    sshll v0.4s, v0.4h, #0
+; CHECK-BE-NEXT:    rev64 v0.4s, v0.4s
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ret
+  %x = load <4 x i16>, ptr %a
+  %y = sext <4 x i16> %x to <4 x i32>
+  ret <4 x i32> %y
 }

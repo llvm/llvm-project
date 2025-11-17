@@ -1445,9 +1445,6 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setLoadExtAction(ISD::EXTLOAD, MVT::v2i64, MVT::v2i16, Custom);
     setLoadExtAction(ISD::SEXTLOAD, MVT::v2i64, MVT::v2i16, Custom);
     setLoadExtAction(ISD::ZEXTLOAD, MVT::v2i64, MVT::v2i16, Custom);
-    setLoadExtAction(ISD::EXTLOAD, MVT::v4i32, MVT::v4i16, Custom);
-    setLoadExtAction(ISD::SEXTLOAD, MVT::v4i32, MVT::v4i16, Custom);
-    setLoadExtAction(ISD::ZEXTLOAD, MVT::v4i32, MVT::v4i16, Custom);
 
     // ADDP custom lowering
     for (MVT VT : { MVT::v32i8, MVT::v16i16, MVT::v8i32, MVT::v4i64 })
@@ -6752,8 +6749,7 @@ static bool isEligibleForSmallVectorLoadOpt(LoadSDNode *LD,
     return false;
 
   EVT MemVT = LD->getMemoryVT();
-  if (MemVT != MVT::v2i8 && MemVT != MVT::v4i8 && MemVT != MVT::v2i16 &&
-      MemVT != MVT::v4i16)
+  if (MemVT != MVT::v2i8 && MemVT != MVT::v4i8 && MemVT != MVT::v2i16)
     return false;
 
   Align Alignment = LD->getAlign();
@@ -7232,8 +7228,7 @@ SDValue AArch64TargetLowering::LowerStore128(SDValue Op,
 
 /// Helper function to optimize loads of extended small vectors.
 /// These patterns would otherwise get scalarized into inefficient sequences.
-static SDValue performSmallVectorLoadExtCombine(LoadSDNode *Load,
-                                                SelectionDAG &DAG) {
+static SDValue tryLowerSmallVectorExtLoad(LoadSDNode *Load, SelectionDAG &DAG) {
   const AArch64Subtarget &Subtarget = DAG.getSubtarget<AArch64Subtarget>();
   if (!isEligibleForSmallVectorLoadOpt(Load, Subtarget))
     return SDValue();
@@ -7308,10 +7303,8 @@ SDValue AArch64TargetLowering::LowerLOAD(SDValue Op,
   LoadSDNode *LoadNode = cast<LoadSDNode>(Op);
   assert(LoadNode && "Expected custom lowering of a load node");
 
-  if (LoadNode->getExtensionType() != ISD::NON_EXTLOAD) {
-    if (SDValue Result = performSmallVectorLoadExtCombine(LoadNode, DAG))
-      return Result;
-  }
+  if (SDValue Result = tryLowerSmallVectorExtLoad(LoadNode, DAG))
+    return Result;
 
   if (LoadNode->getMemoryVT() == MVT::i64x8) {
     SmallVector<SDValue, 8> Ops;
