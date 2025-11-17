@@ -159,7 +159,7 @@
 ; CHECK-NEXT:...
 ; CHECK-NEXT:        .end_amdgpu_pal_metadata
 
-define dllexport amdgpu_cs void @_amdgpu_cs_main(i32 inreg %arg1, i32 %arg2) #0 !lgc.shaderstage !1 {
+define amdgpu_cs void @_amdgpu_cs_main(i32 inreg %arg1, i32 %arg2) #0 !lgc.shaderstage !1 {
 .entry:
   %i = call i64 @llvm.amdgcn.s.getpc()
   %i1 = and i64 %i, -4294967296
@@ -176,13 +176,13 @@ define dllexport amdgpu_cs void @_amdgpu_cs_main(i32 inreg %arg1, i32 %arg2) #0 
   ret void
 }
 
-define dllexport amdgpu_ps void @ps_shader() #1 {
+define amdgpu_ps void @ps_shader() #1 {
   ret void
 }
 
 @LDS.GS = external addrspace(3) global [1 x i32], align 4
 
-define dllexport amdgpu_gs void @gs_shader() #2 {
+define amdgpu_gs void @gs_shader() {
   %ptr = getelementptr i32, ptr addrspace(3) @LDS.GS, i32 0
   store i32 0, ptr addrspace(3) %ptr, align 4
   ret void
@@ -190,7 +190,7 @@ define dllexport amdgpu_gs void @gs_shader() #2 {
 
 @LDS.HS = external addrspace(3) global [1024 x i32], align 4
 
-define dllexport amdgpu_hs void @hs_shader() #2 {
+define amdgpu_hs void @hs_shader() {
   %ptr = getelementptr i32, ptr addrspace(3) @LDS.HS, i32 0
   store i32 0, ptr addrspace(3) %ptr, align 4
   ret void

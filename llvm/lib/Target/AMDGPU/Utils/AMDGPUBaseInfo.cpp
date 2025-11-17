@@ -3554,7 +3554,7 @@ unsigned getLdsDwGranularity(const MCSubtargetInfo &ST) {
     return 320;
   if (ST.getFeatureBits().test(FeatureAddressableLocalMemorySize327680))
     return 512;
-  return 64;
+  llvm_unreachable("Unknown Subtarget");
 }
 
 bool isPackedFP32Inst(unsigned Opc) {
