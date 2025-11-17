@@ -15,6 +15,6 @@ int vprintf(const char *, va_list);
 // CHECK: fix-it:"{{.*}}":{[[@LINE+1]]:1-[[@LINE+1]]:1}:"__attribute__((format(printf, 1, 0))) "
 void f1(char *out, va_list args) // #f1
 {
-  vprintf(out, args); // expected-warning {{diagnostic behavior may be improved by adding the 'printf' format attribute to the declaration of 'f1'}}
+  vprintf(out, args); // expected-warning {{diagnostic behavior may be improved by adding the 'format(printf, 1, 0)' attribute to the declaration of 'f1'}}
                       // expected-note@#f1 {{'f1' declared here}}
 }

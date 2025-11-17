@@ -28,33 +28,33 @@ size_t strftime(char *, size_t, const char *, const struct tm *);
 ssize_t strfmon(char *, size_t, const char *, ...);
 
 // CHECK: fix-it:"{{.*}}":{[[@LINE+1]]:1-[[@LINE+1]]:1}:"{{\[\[}}gnu::format(printf, 1, 0)]] "
-void f1(char *out, va_list args) // #f1
+void f1(const char *fmt, va_list args) // #f1
 {
-  vprintf(out, args); // expected-warning {{diagnostic behavior may be improved by adding the 'printf' format attribute to the declaration of 'f1'}}
+  vprintf(fmt, args); // expected-warning {{diagnostic behavior may be improved by adding the 'format(printf, 1, 0)' attribute to the declaration of 'f1'}}
                       // expected-note@#f1 {{'f1' declared here}}
 }
 
 // CHECK: fix-it:"{{.*}}":{[[@LINE+1]]:1-[[@LINE+1]]:1}:"{{\[\[}}gnu::format(scanf, 1, 0)]] "
-void f2(const char *out, va_list args) // #f2
+void f2(const char *fmt, va_list args) // #f2
 {
-  vscanf(out, args); // expected-warning {{diagnostic behavior may be improved by adding the 'scanf' format attribute to the declaration of 'f2'}}
-                      // expected-note@#f2 {{'f2' declared here}}
+  vscanf(fmt, args); // expected-warning {{diagnostic behavior may be improved by adding the 'format(scanf, 1, 0)' attribute to the declaration of 'f2'}}
+                     // expected-note@#f2 {{'f2' declared here}}
 }
 
 // CHECK: fix-it:"{{.*}}":{[[@LINE+1]]:1-[[@LINE+1]]:1}:"{{\[\[}}gnu::format(printf, 1, 2)]] "
-void f3(const char *out, ... /* args */) // #f3
+void f3(const char *fmt, ... /* args */) // #f3
 {
   va_list args;
-  vprintf(out, args); // expected-warning {{diagnostic behavior may be improved by adding the 'printf' format attribute to the declaration of 'f3'}}
+  vprintf(fmt, args); // expected-warning {{diagnostic behavior may be improved by adding the 'format(printf, 1, 2)' attribute to the declaration of 'f3'}}
                       // expected-note@#f3 {{'f3' declared here}}
 }
 
 // CHECK: fix-it:"{{.*}}":{[[@LINE+1]]:1-[[@LINE+1]]:1}:"{{\[\[}}gnu::format(scanf, 1, 2)]] "
-void f4(const char *out, ... /* args */) // #f4
+void f4(const char *fmt, ... /* args */) // #f4
 {
   va_list args;
-  vscanf(out, args); // expected-warning {{diagnostic behavior may be improved by adding the 'scanf' format attribute to the declaration of 'f4'}}
-                      // expected-note@#f4 {{'f4' declared here}}
+  vscanf(fmt, args); // expected-warning {{diagnostic behavior may be improved by adding the 'format(scanf, 1, 2)' attribute to the declaration of 'f4'}}
+                     // expected-note@#f4 {{'f4' declared here}}
 }
 
 // CHECK: fix-it:"{{.*}}":{[[@LINE+2]]:1-[[@LINE+2]]:1}:"{{\[\[}}gnu::format(printf, 2, 3)]] "
@@ -62,15 +62,16 @@ void f4(const char *out, ... /* args */) // #f4
 void f5(char *out, const char *format, ... /* args */) // #f5
 {
   va_list args;
-  vsprintf(out, format, args); // expected-warning {{diagnostic behavior may be improved by adding the 'printf' format attribute to the declaration of 'f5'}}
+  vsprintf(out, format, args); // expected-warning {{diagnostic behavior may be improved by adding the 'format(printf, 2, 3)' attribute to the declaration of 'f5'}}
                                // expected-note@#f5 {{'f5' declared here}}
 }
 
+// CHECK: fix-it:"{{.*}}":{[[@LINE+2]]:1-[[@LINE+2]]:1}:"{{\[\[}}gnu::format(printf, 2, 3)]] "
 [[gnu::format(scanf, 1, 3)]]
 void f6(char *out, const char *format, ... /* args */) // #f6
 {
   va_list args;
-  vsprintf(out, format, args); // expected-warning {{diagnostic behavior may be improved by adding the 'printf' format attribute to the declaration of 'f6'}}
+  vsprintf(out, format, args); // expected-warning {{diagnostic behavior may be improved by adding the 'format(printf, 2, 3)' attribute to the declaration of 'f6'}}
                                // expected-note@#f6 {{'f6' declared here}}
 }
 
@@ -105,9 +106,9 @@ void f9(va_list args)
 void f10(const char *out, ... /* args */) // #f10
 {
   va_list args;
-  vscanf(out, args);  // expected-warning {{diagnostic behavior may be improved by adding the 'scanf' format attribute to the declaration of 'f10'}}
+  vscanf(out, args);  // expected-warning {{diagnostic behavior may be improved by adding the 'format(scanf, 1, 2)' attribute to the declaration of 'f10'}}
                       // expected-note@#f10 {{'f10' declared here}}
-  vprintf(out, args); // expected-warning {{diagnostic behavior may be improved by adding the 'printf' format attribute to the declaration of 'f10'}}
+  vprintf(out, args); // expected-warning {{diagnostic behavior may be improved by adding the 'format(printf, 1, 2)' attribute to the declaration of 'f10'}}
                       // expected-note@#f10 {{'f10' declared here}}
 }
 
@@ -117,7 +118,7 @@ void f11(const char out[], ... /* args */) // #f11
   va_list args;
   char ch[10] = "format";
   vprintf(ch, args);
-  vsprintf(ch, out, args); // expected-warning {{diagnostic behavior may be improved by adding the 'printf' format attribute to the declaration of 'f11'}}
+  vsprintf(ch, out, args); // expected-warning {{diagnostic behavior may be improved by adding the 'format(printf, 1, 2)' attribute to the declaration of 'f11'}}
                             // expected-note@#f11 {{'f11' declared here}}
 }
 
@@ -127,7 +128,7 @@ void f12(char* out) // #f12
   va_list args;
   const char *ch = "format";
   vsprintf(out, ch, args);
-  vprintf(out, args); // expected-warning {{diagnostic behavior may be improved by adding the 'printf' format attribute to the declaration of 'f12'}}
+  vprintf(out, args); // expected-warning {{diagnostic behavior may be improved by adding the 'format(printf, 1, 0)' attribute to the declaration of 'f12'}}
                       // expected-note@#f12 {{'f12' declared here}}
 }
 
@@ -136,9 +137,9 @@ void f12(char* out) // #f12
 void f13(char *out, ... /* args */) // #f13
 {
   va_list args;
-  vscanf(out, args);  // expected-warning {{diagnostic behavior may be improved by adding the 'scanf' format attribute to the declaration of 'f13'}}
+  vscanf(out, args);  // expected-warning {{diagnostic behavior may be improved by adding the 'format(scanf, 1, 2)' attribute to the declaration of 'f13'}}
                       // expected-note@#f13 {{'f13' declared here}}
-  vprintf(out, args); // expected-warning {{diagnostic behavior may be improved by adding the 'printf' format attribute to the declaration of 'f13'}}
+  vprintf(out, args); // expected-warning {{diagnostic behavior may be improved by adding the 'format(printf, 1, 2)' attribute to the declaration of 'f13'}}
                       // expected-note@#f13 {{'f13' declared here}}
 }
 
@@ -146,9 +147,9 @@ void f13(char *out, ... /* args */) // #f13
 // CHECK: fix-it:"{{.*}}":{[[@LINE+1]]:1-[[@LINE+1]]:1}:"{{\[\[}}gnu::format(printf, 1, 0)]] "
 void f14(char *out, va_list args) // #f14
 {
-  vscanf(out, args);  // expected-warning {{diagnostic behavior may be improved by adding the 'scanf' format attribute to the declaration of 'f14'}}
+  vscanf(out, args);  // expected-warning {{diagnostic behavior may be improved by adding the 'format(scanf, 1, 0)' attribute to the declaration of 'f14'}}
                       // expected-note@#f14 {{'f14' declared here}}
-  vprintf(out, args); // expected-warning {{diagnostic behavior may be improved by adding the 'printf' format attribute to the declaration of 'f14'}}
+  vprintf(out, args); // expected-warning {{diagnostic behavior may be improved by adding the 'format(printf, 1, 0)' attribute to the declaration of 'f14'}}
                       // expected-note@#f14 {{'f14' declared here}}
 }
 
@@ -156,9 +157,9 @@ void f14(char *out, va_list args) // #f14
 void f15(char *out, ... /* args */) // #f15
 {
   va_list args;
-  vscanf(out, args); // expected-warning {{diagnostic behavior may be improved by adding the 'scanf' format attribute to the declaration of 'f15'}}
+  vscanf(out, args); // expected-warning {{diagnostic behavior may be improved by adding the 'format(scanf, 1, 2)' attribute to the declaration of 'f15'}}
                      // expected-note@#f15 {{'f15' declared here}}
-  vscanf(out, args); // expected-warning {{diagnostic behavior may be improved by adding the 'scanf' format attribute to the declaration of 'f15'}}
+  vscanf(out, args); // expected-warning {{diagnostic behavior may be improved by adding the 'format(scanf, 1, 2)' attribute to the declaration of 'f15'}}
                      // expected-note@#f15 {{'f15' declared here}}
 }
 
@@ -167,9 +168,9 @@ void f15(char *out, ... /* args */) // #f15
 void f16(char *ch, const char *out, ... /* args */) // #f16
 {
   va_list args;
-  vprintf(ch, args); // expected-warning {{diagnostic behavior may be improved by adding the 'printf' format attribute to the declaration of 'f16'}}
+  vprintf(ch, args); // expected-warning {{diagnostic behavior may be improved by adding the 'format(printf, 1, 3)' attribute to the declaration of 'f16'}}
                       // expected-note@#f16 {{'f16' declared here}}
-  vprintf(out, args); // expected-warning {{diagnostic behavior may be improved by adding the 'printf' format attribute to the declaration of 'f16'}}
+  vprintf(out, args); // expected-warning {{diagnostic behavior may be improved by adding the 'format(printf, 2, 3)' attribute to the declaration of 'f16'}}
                       // expected-note@#f16 {{'f16' declared here}}
 }
 
@@ -178,14 +179,14 @@ void f17(const char *a, ...) // #f17
 {
 	va_list ap;
 	const char *const b = a;
-	vprintf(b, ap); // expected-warning {{diagnostic behavior may be improved by adding the 'printf' format attribute to the declaration of 'f17'}}
+	vprintf(b, ap); // expected-warning {{diagnostic behavior may be improved by adding the 'format(printf, 1, 2)' attribute to the declaration of 'f17'}}
                   // expected-note@#f17 {{'f17' declared here}}
 }
 
 // CHECK: fix-it:"{{.*}}":{[[@LINE+1]]:1-[[@LINE+1]]:1}:"{{\[\[}}gnu::format(printf, 1, 2)]] "
 void f18(char *fmt, unsigned x, unsigned y, unsigned z) // #f18
 {
-  printf(fmt, x, y, z); // expected-warning {{diagnostic behavior may be improved by adding the 'printf' format attribute to the declaration of 'f18'}}
+  printf(fmt, x, y, z); // expected-warning {{diagnostic behavior may be improved by adding the 'format(printf, 1, 2)' attribute to the declaration of 'f18'}}
                         // expected-note@#f18 {{'f18' declared here}}
 }
 
@@ -205,13 +206,13 @@ void f21(char *out, const size_t len, const char *format) // #f21
 {
   struct tm tm_arg;
   tm_arg.i = 0;
-  strftime(out, len, format, &tm_arg); // expected-warning {{diagnostic behavior may be improved by adding the 'strftime' format attribute to the declaration of 'f21'}}
+  strftime(out, len, format, &tm_arg); // expected-warning {{diagnostic behavior may be improved by adding the 'format(strftime, 3, 0)' attribute to the declaration of 'f21'}}
                                        // expected-note@#f21 {{'f21' declared here}}
 }
 
 // CHECK: fix-it:"{{.*}}":{[[@LINE+1]]:1-[[@LINE+1]]:1}:"{{\[\[}}gnu::format(strfmon, 3, 4)]] "
 void f22(char *out, const size_t len, const char *format, int x, int y) // #f22
 {
-  strfmon(out, len, format, x, y); // expected-warning {{diagnostic behavior may be improved by adding the 'strfmon' format attribute to the declaration of 'f22'}}
+  strfmon(out, len, format, x, y); // expected-warning {{diagnostic behavior may be improved by adding the 'format(strfmon, 3, 4)' attribute to the declaration of 'f22'}}
                                    // expected-note@#f22 {{'f22' declared here}}
 }

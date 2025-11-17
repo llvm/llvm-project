@@ -17,6 +17,7 @@
 #include "clang/AST/ASTDiagnostic.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/AttrIterator.h"
+#include "clang/AST/Attrs.inc"
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
@@ -6511,14 +6512,16 @@ static const Expr *maybeConstEvalStringLiteral(ASTContext &Context,
 // If this function returns false on the arguments to a function expecting a
 // format string, we will usually need to emit a warning.
 // True string literals are then checked by CheckFormatString.
-static StringLiteralCheckType checkFormatStringExpr(
-    Sema &S, const StringLiteral *ReferenceFormatString, const Expr *E,
-    ArrayRef<const Expr *> Args, Sema::FormatArgumentPassingKind APK,
-    unsigned format_idx, unsigned firstDataArg, FormatStringType Type,
-    VariadicCallType CallType, bool InFunctionCall,
-    llvm::SmallBitVector &CheckedVarArgs, UncoveredArgHandler &UncoveredArg,
-    llvm::APSInt Offset, std::optional<unsigned> *CallerParamIdx = nullptr,
-    bool IgnoreStringsWithoutSpecifiers = false) {
+static StringLiteralCheckType
+checkFormatStringExpr(Sema &S, const StringLiteral *ReferenceFormatString,
+                      const Expr *E, ArrayRef<const Expr *> Args,
+                      Sema::FormatArgumentPassingKind APK, unsigned format_idx,
+                      unsigned firstDataArg, FormatStringType Type,
+                      VariadicCallType CallType, bool InFunctionCall,
+                      llvm::SmallBitVector &CheckedVarArgs,
+                      UncoveredArgHandler &UncoveredArg, llvm::APSInt Offset,
+                      std::optional<unsigned> *CallerFormatParamIdx = nullptr,
+                      bool IgnoreStringsWithoutSpecifiers = false) {
   if (S.isConstantEvaluatedContext())
     return SLCT_NotALiteral;
 tryAgain:
@@ -6540,10 +6543,11 @@ tryAgain:
   case Stmt::InitListExprClass:
     // Handle expressions like {"foobar"}.
     if (const clang::Expr *SLE = maybeConstEvalStringLiteral(S.Context, E)) {
-      return checkFormatStringExpr(
-          S, ReferenceFormatString, SLE, Args, APK, format_idx, firstDataArg,
-          Type, CallType, /*InFunctionCall*/ false, CheckedVarArgs,
-          UncoveredArg, Offset, CallerParamIdx, IgnoreStringsWithoutSpecifiers);
+      return checkFormatStringExpr(S, ReferenceFormatString, SLE, Args, APK,
+                                   format_idx, firstDataArg, Type, CallType,
+                                   /*InFunctionCall*/ false, CheckedVarArgs,
+                                   UncoveredArg, Offset, CallerFormatParamIdx,
+                                   IgnoreStringsWithoutSpecifiers);
     }
     return SLCT_NotALiteral;
   case Stmt::BinaryConditionalOperatorClass:
@@ -6575,10 +6579,11 @@ tryAgain:
     if (!CheckLeft)
       Left = SLCT_UncheckedLiteral;
     else {
-      Left = checkFormatStringExpr(
-          S, ReferenceFormatString, C->getTrueExpr(), Args, APK, format_idx,
-          firstDataArg, Type, CallType, InFunctionCall, CheckedVarArgs,
-          UncoveredArg, Offset, CallerParamIdx, IgnoreStringsWithoutSpecifiers);
+      Left = checkFormatStringExpr(S, ReferenceFormatString, C->getTrueExpr(),
+                                   Args, APK, format_idx, firstDataArg, Type,
+                                   CallType, InFunctionCall, CheckedVarArgs,
+                                   UncoveredArg, Offset, CallerFormatParamIdx,
+                                   IgnoreStringsWithoutSpecifiers);
       if (Left == SLCT_NotALiteral || !CheckRight) {
         return Left;
       }
@@ -6587,7 +6592,8 @@ tryAgain:
     StringLiteralCheckType Right = checkFormatStringExpr(
         S, ReferenceFormatString, C->getFalseExpr(), Args, APK, format_idx,
         firstDataArg, Type, CallType, InFunctionCall, CheckedVarArgs,
-        UncoveredArg, Offset, CallerParamIdx, IgnoreStringsWithoutSpecifiers);
+        UncoveredArg, Offset, CallerFormatParamIdx,
+        IgnoreStringsWithoutSpecifiers);
 
     return (CheckLeft && Left < Right) ? Left : Right;
   }
@@ -6639,7 +6645,7 @@ tryAgain:
           return checkFormatStringExpr(
               S, ReferenceFormatString, Init, Args, APK, format_idx,
               firstDataArg, Type, CallType, /*InFunctionCall=*/false,
-              CheckedVarArgs, UncoveredArg, Offset, CallerParamIdx);
+              CheckedVarArgs, UncoveredArg, Offset, CallerFormatParamIdx);
         }
       }
 
@@ -6691,8 +6697,8 @@ tryAgain:
       // format arguments, in all cases.
       //
       if (const auto *PV = dyn_cast<ParmVarDecl>(VD)) {
-        if (CallerParamIdx)
-          *CallerParamIdx = PV->getFunctionScopeIndex();
+        if (CallerFormatParamIdx)
+          *CallerFormatParamIdx = PV->getFunctionScopeIndex();
         if (const auto *D = dyn_cast<Decl>(PV->getDeclContext())) {
           for (const auto *PVFormatMatches :
                D->specific_attrs<FormatMatchesAttr>()) {
@@ -6718,7 +6724,7 @@ tryAgain:
                   S, ReferenceFormatString, PVFormatMatches->getFormatString(),
                   Args, APK, format_idx, firstDataArg, Type, CallType,
                   /*InFunctionCall*/ false, CheckedVarArgs, UncoveredArg,
-                  Offset, CallerParamIdx, IgnoreStringsWithoutSpecifiers);
+                  Offset, CallerFormatParamIdx, IgnoreStringsWithoutSpecifiers);
             }
           }
 
@@ -6773,7 +6779,7 @@ tryAgain:
         StringLiteralCheckType Result = checkFormatStringExpr(
             S, ReferenceFormatString, Arg, Args, APK, format_idx, firstDataArg,
             Type, CallType, InFunctionCall, CheckedVarArgs, UncoveredArg,
-            Offset, CallerParamIdx, IgnoreStringsWithoutSpecifiers);
+            Offset, CallerFormatParamIdx, IgnoreStringsWithoutSpecifiers);
         if (IsFirst) {
           CommonResult = Result;
           IsFirst = false;
@@ -6787,19 +6793,20 @@ tryAgain:
         if (BuiltinID == Builtin::BI__builtin___CFStringMakeConstantString ||
             BuiltinID == Builtin::BI__builtin___NSStringMakeConstantString) {
           const Expr *Arg = CE->getArg(0);
-          return checkFormatStringExpr(S, ReferenceFormatString, Arg, Args, APK,
-                                       format_idx, firstDataArg, Type, CallType,
-                                       InFunctionCall, CheckedVarArgs,
-                                       UncoveredArg, Offset, CallerParamIdx,
-                                       IgnoreStringsWithoutSpecifiers);
+          return checkFormatStringExpr(
+              S, ReferenceFormatString, Arg, Args, APK, format_idx,
+              firstDataArg, Type, CallType, InFunctionCall, CheckedVarArgs,
+              UncoveredArg, Offset, CallerFormatParamIdx,
+              IgnoreStringsWithoutSpecifiers);
         }
       }
     }
     if (const Expr *SLE = maybeConstEvalStringLiteral(S.Context, E))
-      return checkFormatStringExpr(
-          S, ReferenceFormatString, SLE, Args, APK, format_idx, firstDataArg,
-          Type, CallType, /*InFunctionCall*/ false, CheckedVarArgs,
-          UncoveredArg, Offset, CallerParamIdx, IgnoreStringsWithoutSpecifiers);
+      return checkFormatStringExpr(S, ReferenceFormatString, SLE, Args, APK,
+                                   format_idx, firstDataArg, Type, CallType,
+                                   /*InFunctionCall*/ false, CheckedVarArgs,
+                                   UncoveredArg, Offset, CallerFormatParamIdx,
+                                   IgnoreStringsWithoutSpecifiers);
     return SLCT_NotALiteral;
   }
   case Stmt::ObjCMessageExprClass: {
@@ -6825,7 +6832,7 @@ tryAgain:
         return checkFormatStringExpr(
             S, ReferenceFormatString, Arg, Args, APK, format_idx, firstDataArg,
             Type, CallType, InFunctionCall, CheckedVarArgs, UncoveredArg,
-            Offset, CallerParamIdx, IgnoreStringsWithoutSpecifiers);
+            Offset, CallerFormatParamIdx, IgnoreStringsWithoutSpecifiers);
       }
     }
 
@@ -7011,9 +7018,11 @@ static void CheckMissingFormatAttributes(Sema *S, FormatStringType FormatType,
                                          Sema::FormatArgumentPassingKind APK,
                                          unsigned CallerParamIdx,
                                          SourceLocation Loc) {
-  const FunctionDecl *Caller = S->getCurFunctionDecl();
+  NamedDecl *Caller = S->getCurFunctionOrMethodDecl();
   if (!Caller)
     return;
+
+  unsigned NumCallerParams = getFunctionOrMethodNumParams(Caller);
 
   // Find the offset to convert between attribute and parameter indexes.
   unsigned CallerArgumentIndexOffset =
@@ -7030,12 +7039,11 @@ static void CheckMissingFormatAttributes(Sema *S, FormatStringType FormatType,
     // emit a diag with the caller idx, otherwise we can't determine the callee
     // arguments.
     unsigned NumCalleeArgs = Args.size() - FirstArg;
-    if (NumCalleeArgs == 0 || Caller->getNumParams() < NumCalleeArgs) {
-      // There aren't enough arugments in the caller to pass to callee.
+    if (NumCalleeArgs == 0 || NumCallerParams < NumCalleeArgs) {
+      // There aren't enough arguments in the caller to pass to callee.
       return;
     }
-    for (unsigned CalleeIdx = Args.size() - 1,
-                  CallerIdx = Caller->getNumParams() - 1;
+    for (unsigned CalleeIdx = Args.size() - 1, CallerIdx = NumCallerParams - 1;
          CalleeIdx >= FirstArg; --CalleeIdx, --CallerIdx) {
       const auto *Arg =
           dyn_cast<DeclRefExpr>(Args[CalleeIdx]->IgnoreParenCasts());
@@ -7046,15 +7054,14 @@ static void CheckMissingFormatAttributes(Sema *S, FormatStringType FormatType,
         return;
     }
     FirstArgumentIndex =
-        Caller->getNumParams() + CallerArgumentIndexOffset - NumCalleeArgs;
+        NumCallerParams + CallerArgumentIndexOffset - NumCalleeArgs;
     break;
   }
   case Sema::FormatArgumentPassingKind::FAPK_VAList:
     // Caller arguments are either variadic or a va_list.
-    FirstArgumentIndex =
-        Caller->isVariadic()
-            ? (Caller->getNumParams() + CallerArgumentIndexOffset)
-            : 0;
+    FirstArgumentIndex = isFunctionOrMethodVariadic(Caller)
+                             ? (NumCallerParams + CallerArgumentIndexOffset)
+                             : 0;
     break;
   case Sema::FormatArgumentPassingKind::FAPK_Elsewhere:
     // Args are not passed to the callee.
@@ -7063,25 +7070,24 @@ static void CheckMissingFormatAttributes(Sema *S, FormatStringType FormatType,
 
   // Emit the diagnostic and fixit.
   unsigned FormatStringIndex = CallerParamIdx + CallerArgumentIndexOffset;
-  StringRef FormatTypeName = S->GetFormatStringTypeName(FormatType);
   StringRef AttrPrefix, AttrSuffix;
   if (S->getLangOpts().C23 || S->getLangOpts().CPlusPlus11) {
-    AttrPrefix = "[[gnu::format(";
-    AttrSuffix = ")]] ";
+    AttrPrefix = "[[gnu::";
+    AttrSuffix = "]] ";
   } else {
-    AttrPrefix = "__attribute__((format(";
-    AttrSuffix = "))) ";
+    AttrPrefix = "__attribute__((";
+    AttrSuffix = ")) ";
   }
+  StringRef FormatTypeName = S->GetFormatStringTypeName(FormatType);
+  std::string Attr =
+      ("format(" + FormatTypeName + ", " + llvm::Twine(FormatStringIndex) +
+       ", " + llvm::Twine(FirstArgumentIndex) + ")")
+          .str();
   S->Diag(Loc, diag::warn_missing_format_attribute)
-      << FormatTypeName << Caller
-      << FixItHint::CreateInsertion(Caller->getFirstDecl()->getBeginLoc(),
-                                    (AttrPrefix + FormatTypeName + ", " +
-                                     llvm::Twine(FormatStringIndex) + ", " +
-                                     llvm::Twine(FirstArgumentIndex) +
-                                     AttrSuffix)
-                                        .str());
-  S->Diag(Caller->getFirstDecl()->getLocation(), diag::note_callee_decl)
-      << Caller;
+      << Attr << Caller
+      << FixItHint::CreateInsertion(Caller->getBeginLoc(),
+                                    (AttrPrefix + Attr + AttrSuffix).str());
+  S->Diag(Caller->getLocation(), diag::note_entity_declared_at) << Caller;
 }
 
 bool Sema::CheckFormatArguments(ArrayRef<const Expr *> Args,
