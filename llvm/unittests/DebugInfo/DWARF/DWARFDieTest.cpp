@@ -839,4 +839,144 @@ TEST(DWARFDie, DWARFTypePrinterTest) {
   testAppendQualifiedName(Ctx->getDIEForOffset(0x1a), "t1<t3<int> >::t2");
   testAppendQualifiedName(Ctx->getDIEForOffset(0x28), "t3<int>::my_int");
 }
+
+TEST(DWARFDie, DWARFTypePrinterTest_BitInt) {
+  // Make sure we can reconstruct the case where a template value parameter
+  // is a _BitInt.
+
+  // DW_TAG_compile_unit
+  //   DW_TAG_base_type
+  //     DW_AT_name      ("_BitInt(2)")
+  //     DW_AT_bit_size ("2")
+  //   DW_TAG_base_type
+  //     DW_AT_name      ("_BitInt(65)")
+  //     DW_AT_bit_size ("65")
+  //   DW_TAG_base_type
+  //     DW_AT_name      ("unsigned _BitInt(2)")
+  //     DW_AT_bit_size ("2")
+  //   DW_TAG_base_type
+  //     DW_AT_name      ("unsigned _BitInt(65)")
+  //     DW_AT_bit_size ("65")
+  //   DW_TAG_structure_type
+  //     DW_AT_name      ("foo")
+  //     DW_TAG_template_value_parameter
+  //       DW_AT_type    ("_BitInt(2)")
+  //       DW_AT_const_value (DW_FORM_sdata "-1")
+  //     DW_TAG_template_value_parameter
+  //       DW_AT_type    ("unsigned _BitInt(2)")
+  //       DW_AT_const_value (DW_FORM_udata "12")
+  //     DW_TAG_template_value_parameter
+  //       DW_AT_type    ("_BitInt(65)")
+  //       DW_AT_const_value (DW_FORM_block1 "1")
+  //     DW_TAG_template_value_parameter
+  //       DW_AT_type    ("unsigned _BitInt(65)")
+  //       DW_AT_const_value (DW_FORM_block1 "1")
+  //     NULL
+  //   NULL
+  const char *yamldata = R"(
+  debug_abbrev:
+    - ID:              0
+      Table:
+        - Code:            0x1
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+        - Code:            0x2
+          Tag:             DW_TAG_base_type
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_string
+        - Code:            0x3
+          Tag:             DW_TAG_structure_type
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_string
+        - Code:            0x4
+          Tag:             DW_TAG_template_value_parameter
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_type
+              Form:            DW_FORM_ref4
+            - Attribute:       DW_AT_const_value
+              Form:            DW_FORM_sdata
+        - Code:            0x5
+          Tag:             DW_TAG_template_value_parameter
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_type
+              Form:            DW_FORM_ref4
+            - Attribute:       DW_AT_const_value
+              Form:            DW_FORM_udata
+        - Code:            0x6
+          Tag:             DW_TAG_template_value_parameter
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_type
+              Form:            DW_FORM_ref4
+            - Attribute:       DW_AT_const_value
+              Form:            DW_FORM_block1
+  debug_info:
+    - Version:         4
+      AddrSize:        8
+      Entries:
+        - AbbrCode:        0x1
+        - AbbrCode:        0x2
+          Values:
+            - Value:           0xDEADBEEFDEADBEEF
+              CStr:            _BitInt(2)
+        - AbbrCode:        0x2
+          Values:
+            - Value:           0xDEADBEEFDEADBEEF
+              CStr:            _BitInt(65)
+        - AbbrCode:        0x2
+          Values:
+            - Value:           0xDEADBEEFDEADBEEF
+              CStr:            unsigned _BitInt(2)
+        - AbbrCode:        0x2
+          Values:
+            - Value:           0xDEADBEEFDEADBEEF
+              CStr:            unsigned _BitInt(65)
+        - AbbrCode:        0x3
+          Values:
+            - Value:           0xDEADBEEFDEADBEEF
+              CStr:            foo
+        - AbbrCode:        0x4
+          Values:
+            - Value:            0x0000000c
+            - Value:            0xffffffffffffffff
+        - AbbrCode:        0x5
+          Values:
+            - Value:            0x00000025
+            - Value:            12
+        - AbbrCode:        0x6
+          Values:
+            - Value:            0x00000018
+            - Value:            0x0F
+              BlockData:       [ 0x22, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+                                 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0 ]     
+        - AbbrCode:        0x6
+          Values:
+            - Value:            0x0000003a
+            - Value:            0x0F
+              BlockData:       [ 0x22, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+                                 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0 ]     
+        - AbbrCode:        0x0
+        - AbbrCode:        0x0
+)";
+  Expected<StringMap<std::unique_ptr<MemoryBuffer>>> Sections =
+      DWARFYAML::emitDebugSections(StringRef(yamldata),
+                                   /*IsLittleEndian=*/true,
+                                   /*Is64BitAddrSize=*/true);
+  ASSERT_THAT_EXPECTED(Sections, Succeeded());
+  std::unique_ptr<DWARFContext> Ctx =
+      DWARFContext::create(*Sections, 4, /*isLittleEndian=*/true);
+
+  // FIXME: support _BitInt's with block forms. Currently they are just omitted.
+  // Will be necessary once -gsimple-template-names emit template value
+  // parameters with bit-width larger than 64.
+  testAppendAndTerminateTemplateParameters(
+      Ctx->getDIEForOffset(0x50),
+      "<(_BitInt(2))-1, (unsigned _BitInt(2))12, , >");
+}
 } // end anonymous namespace
