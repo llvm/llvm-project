@@ -2535,7 +2535,6 @@
 // CHECK_ARL_M32: #define __AES__ 1
 // CHECK_NVL_M32: #define __AVX10_1__ 1
 // CHECK_NVL_M32: #define __AVX10_2__ 1
-// AVX2 needs to be here, not after AES because otherwise NVL fails
 // CHECK_ARL_M32: #define __AVX2__ 1
 // CHECK_NVL_M32: #define __AVX512BF16__ 1
 // CHECK_NVL_M32: #define __AVX512BITALG__ 1
@@ -2550,6 +2549,8 @@
 // CHECK_NVL_M32: #define __AVX512VL__ 1
 // CHECK_NVL_M32: #define __AVX512VNNI__ 1
 // CHECK_NVL_M32: #define __AVX512VPOPCNTDQ__ 1
+// We check for NOT AVX512 after all checks for AVX512, so 
+// if we missed some check on NVL, the test will fail.
 // CHECK_ARL_M32-NOT: AVX512
 // CHECK_ARL_M32: #define __AVXIFMA__ 1
 // CHECK_ARL_M32: #define __AVXNECONVERT__ 1
