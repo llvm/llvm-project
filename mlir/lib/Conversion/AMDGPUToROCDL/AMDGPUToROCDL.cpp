@@ -1634,7 +1634,7 @@ int32_t getScaleSel(int32_t blockSize, unsigned bitWidth,
   // firstScaleByte are merged into a single attribute scaleSel. This is how
   // those values are merged together.
   assert(llvm::is_contained({16, 32}, blockSize));
-  assert(llvm::is_contained(::llvm::ArrayRef<unsigned>{4, 6, 8}, bitWidth));
+  assert(llvm::is_contained(llvm::ArrayRef<unsigned>{4, 6, 8}, bitWidth));
 
   const bool is_fp8 = bitWidth == 8;
   const bool is_block_16 = blockSize == 16;

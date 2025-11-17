@@ -155,3 +155,10 @@ func.func @amdgpu.scaled_ext_packed816_invalid_src_elem_type(%v: vector<16xf16>,
   return %ret0: vector<16xf16>
 }
 
+// -----
+
+func.func @amdgpu.scaled_ext_packed816_invalid_dst_elem_type(%v: vector<16xf6E3M2FN>, %scale: vector<4xf8E8M0FNU>) -> (vector<16xf64>) {
+  // expected-error@+1 {{'amdgpu.scaled_ext_packed816' op result #0 must be vector}}
+  %ret0 = amdgpu.scaled_ext_packed816 %v scale(%scale) blockSize(32) firstScaleLane(0) firstScaleByte(0) : vector<16xf6E3M2FN>, vector<4xf8E8M0FNU> -> vector<16xf64>
+  return %ret0: vector<16xf64>
+}
