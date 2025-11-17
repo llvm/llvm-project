@@ -405,6 +405,19 @@ public:
     return Address(baseAddr, destType, addr.getAlignment());
   }
 
+  Address createDerivedClassAddr(mlir::Location loc, Address addr,
+                                 mlir::Type destType, unsigned offset,
+                                 bool assumeNotNull) {
+    if (destType == addr.getElementType())
+      return addr;
+
+    cir::PointerType ptrTy = getPointerTo(destType);
+    auto derivedAddr =
+        cir::DerivedClassAddrOp::create(*this, loc, ptrTy, addr.getPointer(),
+                                        mlir::APInt(64, offset), assumeNotNull);
+    return Address(derivedAddr, destType, addr.getAlignment());
+  }
+
   mlir::Value createVTTAddrPoint(mlir::Location loc, mlir::Type retTy,
                                  mlir::Value addr, uint64_t offset) {
     return cir::VTTAddrPointOp::create(*this, loc, retTy,
@@ -573,6 +586,35 @@ public:
                                       storageType, info.name, info.size, offset,
                                       info.isSigned, isLvalueVolatile,
                                       addr.getAlignment().getAsAlign().value());
+  }
+
+  cir::VecShuffleOp
+  createVecShuffle(mlir::Location loc, mlir::Value vec1, mlir::Value vec2,
+                   llvm::ArrayRef<mlir::Attribute> maskAttrs) {
+    auto vecType = mlir::cast<cir::VectorType>(vec1.getType());
+    auto resultTy = cir::VectorType::get(getContext(), vecType.getElementType(),
+                                         maskAttrs.size());
+    return cir::VecShuffleOp::create(*this, loc, resultTy, vec1, vec2,
+                                     getArrayAttr(maskAttrs));
+  }
+
+  cir::VecShuffleOp createVecShuffle(mlir::Location loc, mlir::Value vec1,
+                                     mlir::Value vec2,
+                                     llvm::ArrayRef<int64_t> mask) {
+    auto maskAttrs = llvm::to_vector_of<mlir::Attribute>(
+        llvm::map_range(mask, [&](int32_t idx) {
+          return cir::IntAttr::get(getSInt32Ty(), idx);
+        }));
+    return createVecShuffle(loc, vec1, vec2, maskAttrs);
+  }
+
+  cir::VecShuffleOp createVecShuffle(mlir::Location loc, mlir::Value vec1,
+                                     llvm::ArrayRef<int64_t> mask) {
+    /// Create a unary shuffle. The second vector operand of the IR instruction
+    /// is poison.
+    cir::ConstantOp poison =
+        getConstant(loc, cir::PoisonAttr::get(vec1.getType()));
+    return createVecShuffle(loc, vec1, poison, mask);
   }
 };
 

@@ -413,7 +413,7 @@ SDValue DAGTypeLegalizer::ScalarizeVecRes_LOOP_DEPENDENCE_MASK(SDNode *N) {
   SDValue Diff = DAG.getNode(ISD::SUB, DL, PtrVT, SinkValue, SourceValue);
   EVT CmpVT = TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(),
                                      Diff.getValueType());
-  SDValue Zero = DAG.getTargetConstant(0, DL, PtrVT);
+  SDValue Zero = DAG.getConstant(0, DL, PtrVT);
   return DAG.getNode(ISD::OR, DL, CmpVT,
                      DAG.getSetCC(DL, CmpVT, Diff, EltSize, ISD::SETGE),
                      DAG.getSetCC(DL, CmpVT, Diff, Zero, ISD::SETEQ));
@@ -2186,7 +2186,7 @@ void DAGTypeLegalizer::SplitVecRes_ScalarOp(SDNode *N, SDValue &Lo,
   std::tie(LoVT, HiVT) = DAG.GetSplitDestVTs(N->getValueType(0));
   Lo = DAG.getNode(N->getOpcode(), dl, LoVT, N->getOperand(0));
   if (N->getOpcode() == ISD::SCALAR_TO_VECTOR) {
-    Hi = DAG.getUNDEF(HiVT);
+    Hi = DAG.getPOISON(HiVT);
   } else {
     assert(N->getOpcode() == ISD::SPLAT_VECTOR && "Unexpected opcode");
     Hi = Lo;
@@ -2363,7 +2363,7 @@ void DAGTypeLegalizer::SplitVecRes_VP_LOAD_FF(VPLoadFFSDNode *LD, SDValue &Lo,
   Lo = DAG.getLoadFFVP(LoVT, dl, Ch, Ptr, MaskLo, EVLLo, MMO);
 
   // Fill the upper half with poison.
-  Hi = DAG.getUNDEF(HiVT);
+  Hi = DAG.getPOISON(HiVT);
 
   ReplaceValueWith(SDValue(LD, 1), Lo.getValue(1));
   ReplaceValueWith(SDValue(LD, 2), Lo.getValue(2));
