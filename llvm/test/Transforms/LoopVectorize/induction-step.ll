@@ -37,19 +37,19 @@ define void @induction_with_global(i32 %init, ptr noalias nocapture %A, i32 %N) 
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <8 x i32> [[DOTSPLATINSERT]], <8 x i32> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    [[DOTSPLATINSERT2:%.*]] = insertelement <8 x i32> poison, i32 [[TMP0]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT3:%.*]] = shufflevector <8 x i32> [[DOTSPLATINSERT2]], <8 x i32> poison, <8 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP6:%.*]] = mul <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>, [[DOTSPLAT3]]
-; CHECK-NEXT:    [[INDUCTION4:%.*]] = add <8 x i32> [[DOTSPLAT]], [[TMP6]]
-; CHECK-NEXT:    [[TMP7:%.*]] = mul i32 [[TMP0]], 8
+; CHECK-NEXT:    [[TMP6:%.*]] = mul nsw <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>, [[DOTSPLAT3]]
+; CHECK-NEXT:    [[INDUCTION:%.*]] = add nsw <8 x i32> [[DOTSPLAT]], [[TMP6]]
+; CHECK-NEXT:    [[TMP7:%.*]] = mul nsw i32 [[TMP0]], 8
 ; CHECK-NEXT:    [[DOTSPLATINSERT5:%.*]] = insertelement <8 x i32> poison, i32 [[TMP7]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT6:%.*]] = shufflevector <8 x i32> [[DOTSPLATINSERT5]], <8 x i32> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[TMP8:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <8 x i32> [ [[INDUCTION4]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <8 x i32> [ [[INDUCTION]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP8]]
 ; CHECK-NEXT:    store <8 x i32> [[VEC_IND]], ptr [[TMP9]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP8]], 8
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <8 x i32> [[VEC_IND]], [[DOTSPLAT6]]
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nsw <8 x i32> [[VEC_IND]], [[DOTSPLAT6]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
@@ -126,19 +126,19 @@ define i32 @induction_with_loop_inv(i32 %init, ptr noalias nocapture %A, i32 %N,
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <8 x i32> [[DOTSPLATINSERT]], <8 x i32> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    [[DOTSPLATINSERT2:%.*]] = insertelement <8 x i32> poison, i32 [[J_012]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT3:%.*]] = shufflevector <8 x i32> [[DOTSPLATINSERT2]], <8 x i32> poison, <8 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP4:%.*]] = mul <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>, [[DOTSPLAT3]]
-; CHECK-NEXT:    [[INDUCTION4:%.*]] = add <8 x i32> [[DOTSPLAT]], [[TMP4]]
-; CHECK-NEXT:    [[TMP5:%.*]] = mul i32 [[J_012]], 8
+; CHECK-NEXT:    [[TMP8:%.*]] = mul nsw <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>, [[DOTSPLAT3]]
+; CHECK-NEXT:    [[INDUCTION:%.*]] = add nsw <8 x i32> [[DOTSPLAT]], [[TMP8]]
+; CHECK-NEXT:    [[TMP5:%.*]] = mul nsw i32 [[J_012]], 8
 ; CHECK-NEXT:    [[DOTSPLATINSERT5:%.*]] = insertelement <8 x i32> poison, i32 [[TMP5]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT6:%.*]] = shufflevector <8 x i32> [[DOTSPLATINSERT5]], <8 x i32> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[TMP6:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <8 x i32> [ [[INDUCTION4]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <8 x i32> [ [[INDUCTION]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP6]]
 ; CHECK-NEXT:    store <8 x i32> [[VEC_IND]], ptr [[TMP7]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP6]], 8
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <8 x i32> [[VEC_IND]], [[DOTSPLAT6]]
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nsw <8 x i32> [[VEC_IND]], [[DOTSPLAT6]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP10]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
@@ -219,19 +219,19 @@ define void @non_primary_iv_loop_inv_trunc(ptr %a, i64 %n, i64 %step) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = trunc i64 [[STEP]] to i32
 ; CHECK-NEXT:    [[DOTSPLATINSERT5:%.*]] = insertelement <8 x i32> poison, i32 [[TMP3]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT6:%.*]] = shufflevector <8 x i32> [[DOTSPLATINSERT5]], <8 x i32> poison, <8 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP4:%.*]] = mul <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>, [[DOTSPLAT6]]
-; CHECK-NEXT:    [[INDUCTION7:%.*]] = add <8 x i32> zeroinitializer, [[TMP4]]
-; CHECK-NEXT:    [[TMP5:%.*]] = mul i32 [[TMP3]], 8
+; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw nsw <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>, [[DOTSPLAT6]]
+; CHECK-NEXT:    [[INDUCTION:%.*]] = add nuw nsw <8 x i32> zeroinitializer, [[TMP2]]
+; CHECK-NEXT:    [[TMP5:%.*]] = mul nuw nsw i32 [[TMP3]], 8
 ; CHECK-NEXT:    [[DOTSPLATINSERT8:%.*]] = insertelement <8 x i32> poison, i32 [[TMP5]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT9:%.*]] = shufflevector <8 x i32> [[DOTSPLATINSERT8]], <8 x i32> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[TMP6:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_IND10:%.*]] = phi <8 x i32> [ [[INDUCTION7]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT11:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_IND10:%.*]] = phi <8 x i32> [ [[INDUCTION]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP6]]
 ; CHECK-NEXT:    store <8 x i32> [[VEC_IND10]], ptr [[TMP7]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP6]], 8
-; CHECK-NEXT:    [[VEC_IND_NEXT11]] = add <8 x i32> [[VEC_IND10]], [[DOTSPLAT9]]
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <8 x i32> [[VEC_IND10]], [[DOTSPLAT9]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:

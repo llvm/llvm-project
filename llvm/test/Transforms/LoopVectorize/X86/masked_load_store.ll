@@ -1021,7 +1021,7 @@ define void @foo4(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture rea
 ; AVX512-NEXT:    [[TMP6:%.*]] = getelementptr inbounds double, ptr [[A]], <8 x i64> [[VEC_IND]]
 ; AVX512-NEXT:    call void @llvm.masked.scatter.v8f64.v8p0(<8 x double> [[TMP5]], <8 x ptr> align 8 [[TMP6]], <8 x i1> [[TMP1]]), !alias.scope [[META29:![0-9]+]], !noalias [[META31:![0-9]+]]
 ; AVX512-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
-; AVX512-NEXT:    [[VEC_IND_NEXT]] = add <8 x i64> [[VEC_IND]], splat (i64 128)
+; AVX512-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <8 x i64> [[VEC_IND]], splat (i64 128)
 ; AVX512-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], 624
 ; AVX512-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP32:![0-9]+]]
 ; AVX512:       [[MIDDLE_BLOCK]]:

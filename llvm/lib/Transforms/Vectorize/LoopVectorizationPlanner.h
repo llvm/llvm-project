@@ -178,11 +178,10 @@ public:
         new VPInstructionWithType(Opcode, Operands, ResultTy, Flags, DL, Name));
   }
 
-  VPInstruction *createOverflowingOp(unsigned Opcode,
-                                     ArrayRef<VPValue *> Operands,
-                                     VPRecipeWithIRFlags::WrapFlagsTy WrapFlags,
-                                     DebugLoc DL = DebugLoc::getUnknown(),
-                                     const Twine &Name = "") {
+  VPInstruction *createOverflowingOp(
+      unsigned Opcode, ArrayRef<VPValue *> Operands,
+      VPRecipeWithIRFlags::WrapFlagsTy WrapFlags = {false, false},
+      DebugLoc DL = DebugLoc::getUnknown(), const Twine &Name = "") {
     return tryInsertInstruction(
         new VPInstruction(Opcode, Operands, WrapFlags, {}, DL, Name));
   }
