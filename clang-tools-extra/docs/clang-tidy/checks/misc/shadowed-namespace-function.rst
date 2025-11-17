@@ -42,4 +42,5 @@ Limitations
 - Does not warn about functions in anonymous namespaces
 - Does not warn about template functions
 - Does not warn about static functions or member functions
+- Does not warn about variadic functions
 - Does not warn about the ``main`` function

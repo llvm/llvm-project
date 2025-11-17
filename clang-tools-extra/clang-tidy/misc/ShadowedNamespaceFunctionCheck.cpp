@@ -12,6 +12,7 @@
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
+#include "llvm/ADT/STLExtras.h"
 
 using namespace clang;
 using namespace clang::ast_matchers;
@@ -20,6 +21,18 @@ using namespace clang::tidy;
 namespace clang {
 namespace tidy {
 namespace misc {
+
+static bool hasSameParameters(const FunctionDecl *Func1, const FunctionDecl *Func2) {
+  if (Func1->param_size() != Func2->param_size())
+    return false;
+
+  return llvm::all_of_zip(
+      Func1->parameters(), Func2->parameters(),
+      [](const ParmVarDecl *Param1, const ParmVarDecl *Param2) {
+        return Param1->getType().getCanonicalType() ==
+               Param2->getType().getCanonicalType();
+      });
+}
 
 void ShadowedNamespaceFunctionCheck::registerMatchers(MatchFinder *Finder) {
   // Simple matcher for all function definitions
@@ -45,7 +58,7 @@ void ShadowedNamespaceFunctionCheck::check(
 
   // Skip templates, static functions, main, etc.
   if (Func->isTemplated() || Func->isStatic() || 
-      Func->isMain() || Func->isImplicit())
+      Func->isMain() || Func->isImplicit() || Func->isVariadic())
     return;
 
   const std::string FuncName = Func->getNameAsString();
@@ -117,7 +130,7 @@ std::pair<const FunctionDecl *, const NamespaceDecl *> ShadowedNamespaceFunction
           Func->isThisDeclarationADefinition())
         continue;
 
-      if (Func->getNameAsString() == GlobalFuncName) {
+      if (Func->getNameAsString() == GlobalFuncName && !Func->isVariadic() && hasSameParameters(Func, GlobalFunc) && Func->getReturnType().getCanonicalType() == GlobalFunc->getReturnType().getCanonicalType()) {
         return {Func, NS};
       }
     }
