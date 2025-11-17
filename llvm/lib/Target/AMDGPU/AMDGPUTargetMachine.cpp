@@ -2027,6 +2027,35 @@ bool GCNTargetMachine::parseMachineFunctionInfo(
                              MFI->ArgInfo.WorkItemIDZ, 0, 0)))
     return true;
 
+  // Parse FirstKernArgPreloadReg separately, since it's a Register,
+  // not ArgDescriptor.
+  if (YamlMFI.ArgInfo && YamlMFI.ArgInfo->FirstKernArgPreloadReg) {
+    const auto &A = *YamlMFI.ArgInfo->FirstKernArgPreloadReg;
+
+    if (!A.IsRegister) {
+      const MemoryBuffer &Buffer =
+          *PFS.SM->getMemoryBuffer(PFS.SM->getMainFileID());
+      Error =
+          SMDiagnostic(*PFS.SM, SMLoc(), Buffer.getBufferIdentifier(), 1, 0,
+                       SourceMgr::DK_Error,
+                       "firstKernArgPreloadReg must be a register", "", {}, {});
+      return true;
+    }
+
+    Register Reg;
+    if (parseNamedRegisterReference(PFS, Reg, A.RegisterName.Value, Error)) {
+      SourceRange = A.RegisterName.SourceRange;
+      return true;
+    }
+
+    if (!AMDGPU::SGPR_32RegClass.contains(Reg))
+      return diagnoseRegisterClass(A.RegisterName);
+
+    MFI->ArgInfo.FirstKernArgPreloadReg = Reg;
+
+    MFI->NumUserSGPRs += YamlMFI.NumKernargPreloadSGPRs;
+  }
+
   if (ST.hasIEEEMode())
     MFI->Mode.IEEE = YamlMFI.Mode.IEEE;
   if (ST.hasDX10ClampMode())
