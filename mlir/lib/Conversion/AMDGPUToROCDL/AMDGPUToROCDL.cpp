@@ -1658,6 +1658,13 @@ LogicalResult ScaledExtPacked816OpLowering::matchAndRewrite(
   using bf8 = Float8E5M2Type;
   using fp6 = Float6E2M3FNType;
   using bf6 = Float6E3M2FNType;
+  Location loc = op.getLoc();
+  if (chipset != Chipset{12, 5, 0}) {
+    return rewriter.notifyMatchFailure(
+        loc,
+        "Scaled fp packed conversion instructions are not available on target "
+        "architecture and their emulation is not implemented");
+  }
   int32_t firstScaleLane = op.getFirstScaleLane();
   int32_t firstScaleByte = op.getFirstScaleByte();
   int32_t blockSize = op.getBlockSize();
@@ -1669,7 +1676,6 @@ LogicalResult ScaledExtPacked816OpLowering::matchAndRewrite(
 
   auto targetType = cast<VectorType>(op.getResult().getType());
   auto destElemType = cast<FloatType>(targetType.getElementType());
-  Location loc = op.getLoc();
   IntegerType i32 = rewriter.getI32Type();
   Value castedScale =
       LLVM::BitcastOp::create(rewriter, loc, i32, adaptor.getScale());
