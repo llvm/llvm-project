@@ -49,37 +49,37 @@ jobs:
             target: x86_64-unknown-uefi-llvm
             include_scudo: OFF
           - os: ubuntu-24.04
-            build__type: MinSizeRel
+            build_type: MinSizeRel
             c_compiler: clang-22
             cpp_compiler: clang++-22
             target: armv6m-none-eabi
             include_scudo: OFF
           - os: ubuntu-24.04
-            build__type: MinSizeRel
+            build_type: MinSizeRel
             c_compiler: clang-22
             cpp_compiler: clang++-22
             target: armv7m-none-eabi
             include_scudo: OFF
           - os: ubuntu-24.04
-            build__type: MinSizeRel
+            build_type: MinSizeRel
             c_compiler: clang-22
             cpp_compiler: clang++-22
             target: armv7em-none-eabi
             include_scudo: OFF
           - os: ubuntu-24.04
-            build__type: MinSizeRel
+            build_type: MinSizeRel
             c_compiler: clang-22
             cpp_compiler: clang++-22
             target: armv8m.main-none-eabi
             include_scudo: OFF
           - os: ubuntu-24.04
-            build__type: MinSizeRel
+            build_type: MinSizeRel
             c_compiler: clang-22
             cpp_compiler: clang++-22
             target: armv8.1m.main-none-eabi
             include_scudo: OFF
           - os: ubuntu-24.04
-            build__type: MinSizeRel
+            build_type: MinSizeRel
             c_compiler: clang-22
             cpp_compiler: clang++-22
             target: riscv32-unknown-elf

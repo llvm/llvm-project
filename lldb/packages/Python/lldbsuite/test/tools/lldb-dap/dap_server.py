@@ -191,6 +191,11 @@ class NotSupportedError(KeyError):
 
 
 class DebugCommunication(object):
+    @property
+    def is_stopped(self) -> bool:
+        """Returns True if the debuggee is stopped, otherwise False."""
+        return len(self.thread_stop_reasons) > 0 or self.exit_status is not None
+
     def __init__(
         self,
         recv: BinaryIO,
@@ -860,7 +865,17 @@ class DebugCommunication(object):
         response = self._send_recv(command_dict)
         if response:
             self.configuration_done_sent = True
+            stopped_on_entry = self.is_stopped
             self.request_threads()
+            if not stopped_on_entry:
+                # Drop the initial cached threads if we did not stop-on-entry.
+                # In VSCode, immediately following 'configurationDone', a
+                # 'threads' request is made to get the initial set of threads,
+                # specifically the main threads id and name.
+                # We issue the threads request to mimic this pattern but in our
+                # tests we don't want to cache the result unless the process is
+                # actually stopped.
+                self.threads = None
         return response
 
     def _process_stopped(self):

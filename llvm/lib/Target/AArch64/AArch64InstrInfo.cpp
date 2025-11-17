@@ -1144,6 +1144,28 @@ static bool isCheapImmediate(const MachineInstr &MI, unsigned BitSize) {
   return Is.size() <= 2;
 }
 
+// Check if a COPY instruction is cheap.
+static bool isCheapCopy(const MachineInstr &MI, const AArch64RegisterInfo &RI) {
+  assert(MI.isCopy() && "Expected COPY instruction");
+  const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
+
+  // Cross-bank copies (e.g., between GPR and FPR) are expensive on AArch64,
+  // typically requiring an FMOV instruction with a 2-6 cycle latency.
+  auto GetRegClass = [&](Register Reg) -> const TargetRegisterClass * {
+    if (Reg.isVirtual())
+      return MRI.getRegClass(Reg);
+    if (Reg.isPhysical())
+      return RI.getMinimalPhysRegClass(Reg);
+    return nullptr;
+  };
+  const TargetRegisterClass *DstRC = GetRegClass(MI.getOperand(0).getReg());
+  const TargetRegisterClass *SrcRC = GetRegClass(MI.getOperand(1).getReg());
+  if (DstRC && SrcRC && !RI.getCommonSubClass(DstRC, SrcRC))
+    return false;
+
+  return MI.isAsCheapAsAMove();
+}
+
 // FIXME: this implementation should be micro-architecture dependent, so a
 // micro-architecture target hook should be introduced here in future.
 bool AArch64InstrInfo::isAsCheapAsAMove(const MachineInstr &MI) const {
@@ -1156,6 +1178,9 @@ bool AArch64InstrInfo::isAsCheapAsAMove(const MachineInstr &MI) const {
   switch (MI.getOpcode()) {
   default:
     return MI.isAsCheapAsAMove();
+
+  case TargetOpcode::COPY:
+    return isCheapCopy(MI, RI);
 
   case AArch64::ADDWrs:
   case AArch64::ADDXrs:
