@@ -358,6 +358,32 @@ bool AMDGPUAsmPrinter::doInitialization(Module &M) {
   return AsmPrinter::doInitialization(M);
 }
 
+/// Mimics GCNSubtarget::computeOccupancy for MCExpr.
+///
+/// Remove dependency on GCNSubtarget and depend only only the necessary values
+/// for said occupancy computation. Should match computeOccupancy implementation
+/// without passing \p STM on.
+const AMDGPUMCExpr *createOccupancy(unsigned InitOcc, const MCExpr *NumSGPRs,
+                                    const MCExpr *NumVGPRs,
+                                    unsigned DynamicVGPRBlockSize,
+                                    const GCNSubtarget &STM, MCContext &Ctx) {
+  unsigned MaxWaves = IsaInfo::getMaxWavesPerEU(&STM);
+  unsigned Granule = IsaInfo::getVGPRAllocGranule(&STM, DynamicVGPRBlockSize);
+  unsigned TargetTotalNumVGPRs = IsaInfo::getTotalNumVGPRs(&STM);
+  unsigned Generation = STM.getGeneration();
+
+  auto CreateExpr = [&Ctx](unsigned Value) {
+    return MCConstantExpr::create(Value, Ctx);
+  };
+
+  return AMDGPUMCExpr::create(AMDGPUMCExpr::AGVK_Occupancy,
+                              {CreateExpr(MaxWaves), CreateExpr(Granule),
+                               CreateExpr(TargetTotalNumVGPRs),
+                               CreateExpr(Generation), CreateExpr(InitOcc),
+                               NumSGPRs, NumVGPRs},
+                              Ctx);
+}
+
 void AMDGPUAsmPrinter::validateMCResourceInfo(Function &F) {
   if (F.isDeclaration() || !AMDGPU::isModuleEntryFunctionCC(F.getCallingConv()))
     return;
@@ -459,7 +485,7 @@ void AMDGPUAsmPrinter::validateMCResourceInfo(Function &F) {
                         MaxWaves, MFI.getDynamicVGPRBlockSize())});
       uint64_t NumSGPRsForWavesPerEU = std::max(
           {NumSgpr, (uint64_t)1, (uint64_t)STM.getMinNumSGPRs(MaxWaves)});
-      const MCExpr *OccupancyExpr = AMDGPUMCExpr::createOccupancy(
+      const MCExpr *OccupancyExpr = createOccupancy(
           STM.getOccupancyWithWorkGroupSizes(*MF).second,
           MCConstantExpr::create(NumSGPRsForWavesPerEU, OutContext),
           MCConstantExpr::create(NumVGPRsForWavesPerEU, OutContext),
@@ -1270,7 +1296,7 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
                 amdhsa::COMPUTE_PGM_RSRC3_GFX125_NAMED_BAR_CNT,
                 amdhsa::COMPUTE_PGM_RSRC3_GFX125_NAMED_BAR_CNT_SHIFT);
 
-  ProgInfo.Occupancy = AMDGPUMCExpr::createOccupancy(
+  ProgInfo.Occupancy = createOccupancy(
       STM.computeOccupancy(F, ProgInfo.LDSSize).second,
       ProgInfo.NumSGPRsForWavesPerEU, ProgInfo.NumVGPRsForWavesPerEU,
       MFI->getDynamicVGPRBlockSize(), STM, Ctx);

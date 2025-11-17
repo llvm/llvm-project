@@ -142,6 +142,25 @@ class Range<AttrIndex idx, int lower, int upper> : IntrinsicProperty {
   int Upper = upper;
 }
 
+// ArgProperty - Base class for argument properties that can be specified in ArgInfo.
+class ArgProperty;
+
+// ArgName - Specifies the name of an argument for pretty-printing.
+class ArgName<string name> : ArgProperty {
+  string Name = name;
+}
+
+// ImmArgPrinter - Specifies a custom printer function for immediate arguments.
+class ImmArgPrinter<string funcname> : ArgProperty {
+  string FuncName = funcname;
+}
+
+// ArgInfo - The specified argument has properties defined by a list of ArgProperty objects.
+class ArgInfo<ArgIndex idx, list<ArgProperty> arg_properties> : IntrinsicProperty {
+  int ArgNo = idx.Value;
+  list<ArgProperty> Properties = arg_properties;
+}
+
 def IntrNoReturn : IntrinsicProperty;
 
 // Applied by default.

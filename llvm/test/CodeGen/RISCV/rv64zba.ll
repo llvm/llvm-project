@@ -5016,3 +5016,74 @@ define ptr @shl_add_knownbits(ptr %p, i64 %i) {
   %r = getelementptr i8, ptr %p, i64 %shr
   ret ptr %r
 }
+
+define i64 @exactashr1mul6(i64 %a) {
+; RV64I-LABEL: exactashr1mul6:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    slli a1, a0, 1
+; RV64I-NEXT:    add a0, a1, a0
+; RV64I-NEXT:    ret
+;
+; RV64ZBA-LABEL: exactashr1mul6:
+; RV64ZBA:       # %bb.0:
+; RV64ZBA-NEXT:    sh1add a0, a0, a0
+; RV64ZBA-NEXT:    ret
+;
+; RV64XANDESPERF-LABEL: exactashr1mul6:
+; RV64XANDESPERF:       # %bb.0:
+; RV64XANDESPERF-NEXT:    nds.lea.h a0, a0, a0
+; RV64XANDESPERF-NEXT:    ret
+  %c = ashr exact i64 %a, 1
+  %d = mul i64 %c, 6
+  ret i64 %d
+}
+
+define i64 @exactlshr3mul22(i64 %a) {
+; RV64I-LABEL: exactlshr3mul22:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    srli a0, a0, 3
+; RV64I-NEXT:    li a1, 22
+; RV64I-NEXT:    mul a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64ZBA-LABEL: exactlshr3mul22:
+; RV64ZBA:       # %bb.0:
+; RV64ZBA-NEXT:    srli a0, a0, 2
+; RV64ZBA-NEXT:    sh2add a1, a0, a0
+; RV64ZBA-NEXT:    sh1add a0, a1, a0
+; RV64ZBA-NEXT:    ret
+;
+; RV64XANDESPERF-LABEL: exactlshr3mul22:
+; RV64XANDESPERF:       # %bb.0:
+; RV64XANDESPERF-NEXT:    srli a0, a0, 2
+; RV64XANDESPERF-NEXT:    nds.lea.w a1, a0, a0
+; RV64XANDESPERF-NEXT:    nds.lea.h a0, a0, a1
+; RV64XANDESPERF-NEXT:    ret
+  %c = lshr exact i64 %a, 3
+  %d = mul i64 %c, 22
+  ret i64 %d
+}
+
+define i64 @exactashr1mul36(i64 %a) {
+; RV64I-LABEL: exactashr1mul36:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    slli a1, a0, 1
+; RV64I-NEXT:    slli a0, a0, 4
+; RV64I-NEXT:    add a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64ZBA-LABEL: exactashr1mul36:
+; RV64ZBA:       # %bb.0:
+; RV64ZBA-NEXT:    slli a0, a0, 1
+; RV64ZBA-NEXT:    sh3add a0, a0, a0
+; RV64ZBA-NEXT:    ret
+;
+; RV64XANDESPERF-LABEL: exactashr1mul36:
+; RV64XANDESPERF:       # %bb.0:
+; RV64XANDESPERF-NEXT:    slli a0, a0, 1
+; RV64XANDESPERF-NEXT:    nds.lea.d a0, a0, a0
+; RV64XANDESPERF-NEXT:    ret
+  %c = ashr exact i64 %a, 1
+  %d = mul i64 %c, 36
+  ret i64 %d
+}

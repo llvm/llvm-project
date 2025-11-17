@@ -1110,6 +1110,25 @@ mlir::Value CIRGenFunction::getVTTParameter(GlobalDecl gd, bool forVirtualBase,
   }
 }
 
+Address CIRGenFunction::getAddressOfDerivedClass(
+    mlir::Location loc, Address baseAddr, const CXXRecordDecl *derived,
+    llvm::iterator_range<CastExpr::path_const_iterator> path,
+    bool nullCheckValue) {
+  assert(!path.empty() && "Base path should not be empty!");
+
+  QualType derivedTy = getContext().getCanonicalTagType(derived);
+  mlir::Type derivedValueTy = convertType(derivedTy);
+  CharUnits nonVirtualOffset =
+      cgm.computeNonVirtualBaseClassOffset(derived, path);
+
+  // Note that in OG, no offset (nonVirtualOffset.getQuantity() == 0) means it
+  // just gives the address back. In CIR a `cir.derived_class` is created and
+  // made into a nop later on during lowering.
+  return builder.createDerivedClassAddr(loc, baseAddr, derivedValueTy,
+                                        nonVirtualOffset.getQuantity(),
+                                        /*assumeNotNull=*/!nullCheckValue);
+}
+
 Address CIRGenFunction::getAddressOfBaseClass(
     Address value, const CXXRecordDecl *derived,
     llvm::iterator_range<CastExpr::path_const_iterator> path,

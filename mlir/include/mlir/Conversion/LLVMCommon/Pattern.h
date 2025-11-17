@@ -19,16 +19,14 @@ class CallOpInterface;
 
 namespace LLVM {
 namespace detail {
-/// Handle generically setting flags as native properties on LLVM operations.
-void setNativeProperties(Operation *op, IntegerOverflowFlags overflowFlags);
-
 /// Replaces the given operation "op" with a new operation of type "targetOp"
 /// and given operands.
-LogicalResult oneToOneRewrite(
-    Operation *op, StringRef targetOp, ValueRange operands,
-    ArrayRef<NamedAttribute> targetAttrs,
-    const LLVMTypeConverter &typeConverter, ConversionPatternRewriter &rewriter,
-    IntegerOverflowFlags overflowFlags = IntegerOverflowFlags::none);
+LogicalResult oneToOneRewrite(Operation *op, StringRef targetOp,
+                              ValueRange operands,
+                              ArrayRef<NamedAttribute> targetAttrs,
+                              Attribute propertiesAttr,
+                              const LLVMTypeConverter &typeConverter,
+                              ConversionPatternRewriter &rewriter);
 
 /// Replaces the given operation "op" with a call to an LLVM intrinsic with the
 /// specified name "intrinsic" and operands.
@@ -307,9 +305,9 @@ public:
   LogicalResult
   matchAndRewrite(SourceOp op, typename SourceOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    return LLVM::detail::oneToOneRewrite(op, TargetOp::getOperationName(),
-                                         adaptor.getOperands(), op->getAttrs(),
-                                         *this->getTypeConverter(), rewriter);
+    return LLVM::detail::oneToOneRewrite(
+        op, TargetOp::getOperationName(), adaptor.getOperands(), op->getAttrs(),
+        /*propertiesAttr=*/Attribute{}, *this->getTypeConverter(), rewriter);
   }
 };
 

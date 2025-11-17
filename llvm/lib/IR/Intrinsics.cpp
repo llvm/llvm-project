@@ -32,6 +32,7 @@
 #include "llvm/IR/IntrinsicsX86.h"
 #include "llvm/IR/IntrinsicsXCore.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/NVVMIntrinsicUtils.h"
 #include "llvm/IR/Type.h"
 
 using namespace llvm;
@@ -601,6 +602,12 @@ bool Intrinsic::isOverloaded(ID id) {
 #undef GET_INTRINSIC_OVERLOAD_TABLE
 }
 
+bool Intrinsic::hasPrettyPrintedArgs(ID id){
+#define GET_INTRINSIC_PRETTY_PRINT_TABLE
+#include "llvm/IR/IntrinsicImpl.inc"
+#undef GET_INTRINSIC_PRETTY_PRINT_TABLE
+}
+
 /// Table of per-target intrinsic name tables.
 #define GET_INTRINSIC_TARGET_DATA
 #include "llvm/IR/IntrinsicImpl.inc"
@@ -1142,3 +1149,7 @@ Intrinsic::ID Intrinsic::getDeinterleaveIntrinsicID(unsigned Factor) {
   assert(Factor >= 2 && Factor <= 8 && "Unexpected factor");
   return InterleaveIntrinsics[Factor - 2].Deinterleave;
 }
+
+#define GET_INTRINSIC_PRETTY_PRINT_ARGUMENTS
+#include "llvm/IR/IntrinsicImpl.inc"
+#undef GET_INTRINSIC_PRETTY_PRINT_ARGUMENTS

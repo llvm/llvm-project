@@ -529,7 +529,7 @@ subroutine omp_target_device_ptr
    use iso_c_binding, only : c_ptr, c_loc
    type(c_ptr) :: a
    integer, target :: b
-   !CHECK: %[[MAP:.*]] = omp.map.info var_ptr({{.*}})   map_clauses(tofrom) capture(ByRef) mapper(@[[CPTR_DEFAULT:_QQM__fortran_builtinsc_ptr\.omp\.default\.mapper]]) -> {{.*}} {name = "a"}
+   !CHECK: %[[MAP:.*]] = omp.map.info var_ptr({{.*}})   map_clauses(tofrom) capture(ByRef) mapper(@[[CPTR_DEFAULT:_QQM__fortran_builtinsc_ptr_omp_default_mapper]]) -> {{.*}} {name = "a"}
    !CHECK: omp.target_data map_entries(%[[MAP]]{{.*}}) use_device_ptr({{.*}} -> %[[VAL_1:.*]] : !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>)
    !$omp target data map(tofrom: a) use_device_ptr(a)
    !CHECK: {{.*}} = fir.coordinate_of %[[VAL_1:.*]], __address : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>) -> !fir.ref<i64>

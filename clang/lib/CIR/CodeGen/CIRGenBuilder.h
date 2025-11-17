@@ -405,6 +405,19 @@ public:
     return Address(baseAddr, destType, addr.getAlignment());
   }
 
+  Address createDerivedClassAddr(mlir::Location loc, Address addr,
+                                 mlir::Type destType, unsigned offset,
+                                 bool assumeNotNull) {
+    if (destType == addr.getElementType())
+      return addr;
+
+    cir::PointerType ptrTy = getPointerTo(destType);
+    auto derivedAddr =
+        cir::DerivedClassAddrOp::create(*this, loc, ptrTy, addr.getPointer(),
+                                        mlir::APInt(64, offset), assumeNotNull);
+    return Address(derivedAddr, destType, addr.getAlignment());
+  }
+
   mlir::Value createVTTAddrPoint(mlir::Location loc, mlir::Type retTy,
                                  mlir::Value addr, uint64_t offset) {
     return cir::VTTAddrPointOp::create(*this, loc, retTy,
