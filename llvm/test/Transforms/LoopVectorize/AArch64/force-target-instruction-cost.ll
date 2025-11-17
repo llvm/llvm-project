@@ -380,6 +380,124 @@ for.end:
   ret void
 }
 
+define void @loop_with_freeze_and_conditional_srem(ptr %dst, ptr %keyinfo, ptr %invariant.ptr, i32 %divisor) #1 {
+; COMMON-LABEL: define void @loop_with_freeze_and_conditional_srem(
+; COMMON-SAME: ptr [[DST:%.*]], ptr [[KEYINFO:%.*]], ptr [[INVARIANT_PTR:%.*]], i32 [[DIVISOR:%.*]]) {
+; COMMON-NEXT:  [[ENTRY:.*:]]
+; COMMON-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
+; COMMON:       [[VECTOR_MEMCHECK]]:
+; COMMON-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[DST]], i64 4
+; COMMON-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[KEYINFO]], i64 4
+; COMMON-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[INVARIANT_PTR]], i64 4
+; COMMON-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[DST]], [[SCEVGEP1]]
+; COMMON-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[KEYINFO]], [[SCEVGEP]]
+; COMMON-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
+; COMMON-NEXT:    [[BOUND03:%.*]] = icmp ult ptr [[DST]], [[SCEVGEP2]]
+; COMMON-NEXT:    [[BOUND14:%.*]] = icmp ult ptr [[INVARIANT_PTR]], [[SCEVGEP]]
+; COMMON-NEXT:    [[FOUND_CONFLICT5:%.*]] = and i1 [[BOUND03]], [[BOUND14]]
+; COMMON-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[FOUND_CONFLICT]], [[FOUND_CONFLICT5]]
+; COMMON-NEXT:    [[BOUND06:%.*]] = icmp ult ptr [[KEYINFO]], [[SCEVGEP2]]
+; COMMON-NEXT:    [[BOUND17:%.*]] = icmp ult ptr [[INVARIANT_PTR]], [[SCEVGEP1]]
+; COMMON-NEXT:    [[FOUND_CONFLICT8:%.*]] = and i1 [[BOUND06]], [[BOUND17]]
+; COMMON-NEXT:    [[CONFLICT_RDX9:%.*]] = or i1 [[CONFLICT_RDX]], [[FOUND_CONFLICT8]]
+; COMMON-NEXT:    br i1 [[CONFLICT_RDX9]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; COMMON:       [[VECTOR_PH]]:
+; COMMON-NEXT:    br label %[[VECTOR_BODY:.*]]
+; COMMON:       [[VECTOR_BODY]]:
+; COMMON-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE23:.*]] ]
+; COMMON-NEXT:    [[TMP0:%.*]] = load i32, ptr [[INVARIANT_PTR]], align 4, !alias.scope [[META16:![0-9]+]]
+; COMMON-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[TMP0]], i64 0
+; COMMON-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
+; COMMON-NEXT:    [[TMP1:%.*]] = freeze <4 x i32> [[BROADCAST_SPLAT]]
+; COMMON-NEXT:    [[TMP2:%.*]] = icmp eq <4 x i32> [[TMP1]], zeroinitializer
+; COMMON-NEXT:    [[TMP3:%.*]] = xor <4 x i1> [[TMP2]], splat (i1 true)
+; COMMON-NEXT:    [[TMP4:%.*]] = extractelement <4 x i1> [[TMP3]], i32 0
+; COMMON-NEXT:    br i1 [[TMP4]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
+; COMMON:       [[PRED_STORE_IF]]:
+; COMMON-NEXT:    [[TMP5:%.*]] = srem i32 1, [[DIVISOR]]
+; COMMON-NEXT:    store i32 [[TMP5]], ptr [[DST]], align 4, !alias.scope [[META19:![0-9]+]], !noalias [[META21:![0-9]+]]
+; COMMON-NEXT:    br label %[[PRED_STORE_CONTINUE]]
+; COMMON:       [[PRED_STORE_CONTINUE]]:
+; COMMON-NEXT:    [[TMP6:%.*]] = extractelement <4 x i1> [[TMP3]], i32 1
+; COMMON-NEXT:    br i1 [[TMP6]], label %[[PRED_STORE_IF10:.*]], label %[[PRED_STORE_CONTINUE11:.*]]
+; COMMON:       [[PRED_STORE_IF10]]:
+; COMMON-NEXT:    [[TMP7:%.*]] = srem i32 1, [[DIVISOR]]
+; COMMON-NEXT:    store i32 [[TMP7]], ptr [[DST]], align 4, !alias.scope [[META19]], !noalias [[META21]]
+; COMMON-NEXT:    br label %[[PRED_STORE_CONTINUE11]]
+; COMMON:       [[PRED_STORE_CONTINUE11]]:
+; COMMON-NEXT:    [[TMP8:%.*]] = extractelement <4 x i1> [[TMP3]], i32 2
+; COMMON-NEXT:    br i1 [[TMP8]], label %[[PRED_STORE_IF12:.*]], label %[[PRED_STORE_CONTINUE13:.*]]
+; COMMON:       [[PRED_STORE_IF12]]:
+; COMMON-NEXT:    [[TMP9:%.*]] = srem i32 1, [[DIVISOR]]
+; COMMON-NEXT:    store i32 [[TMP9]], ptr [[DST]], align 4, !alias.scope [[META19]], !noalias [[META21]]
+; COMMON-NEXT:    br label %[[PRED_STORE_CONTINUE13]]
+; COMMON:       [[PRED_STORE_CONTINUE13]]:
+; COMMON-NEXT:    [[TMP10:%.*]] = extractelement <4 x i1> [[TMP3]], i32 3
+; COMMON-NEXT:    br i1 [[TMP10]], label %[[PRED_STORE_IF14:.*]], label %[[PRED_STORE_CONTINUE15:.*]]
+; COMMON:       [[PRED_STORE_IF14]]:
+; COMMON-NEXT:    [[TMP11:%.*]] = srem i32 1, [[DIVISOR]]
+; COMMON-NEXT:    store i32 [[TMP11]], ptr [[DST]], align 4, !alias.scope [[META19]], !noalias [[META21]]
+; COMMON-NEXT:    br label %[[PRED_STORE_CONTINUE15]]
+; COMMON:       [[PRED_STORE_CONTINUE15]]:
+; COMMON-NEXT:    [[TMP12:%.*]] = extractelement <4 x i1> [[TMP2]], i32 0
+; COMMON-NEXT:    br i1 [[TMP12]], label %[[PRED_STORE_IF16:.*]], label %[[PRED_STORE_CONTINUE17:.*]]
+; COMMON:       [[PRED_STORE_IF16]]:
+; COMMON-NEXT:    store i32 0, ptr [[KEYINFO]], align 4, !alias.scope [[META23:![0-9]+]], !noalias [[META16]]
+; COMMON-NEXT:    br label %[[PRED_STORE_CONTINUE17]]
+; COMMON:       [[PRED_STORE_CONTINUE17]]:
+; COMMON-NEXT:    [[TMP13:%.*]] = extractelement <4 x i1> [[TMP2]], i32 1
+; COMMON-NEXT:    br i1 [[TMP13]], label %[[PRED_STORE_IF18:.*]], label %[[PRED_STORE_CONTINUE19:.*]]
+; COMMON:       [[PRED_STORE_IF18]]:
+; COMMON-NEXT:    store i32 0, ptr [[KEYINFO]], align 4, !alias.scope [[META23]], !noalias [[META16]]
+; COMMON-NEXT:    br label %[[PRED_STORE_CONTINUE19]]
+; COMMON:       [[PRED_STORE_CONTINUE19]]:
+; COMMON-NEXT:    [[TMP14:%.*]] = extractelement <4 x i1> [[TMP2]], i32 2
+; COMMON-NEXT:    br i1 [[TMP14]], label %[[PRED_STORE_IF20:.*]], label %[[PRED_STORE_CONTINUE21:.*]]
+; COMMON:       [[PRED_STORE_IF20]]:
+; COMMON-NEXT:    store i32 0, ptr [[KEYINFO]], align 4, !alias.scope [[META23]], !noalias [[META16]]
+; COMMON-NEXT:    br label %[[PRED_STORE_CONTINUE21]]
+; COMMON:       [[PRED_STORE_CONTINUE21]]:
+; COMMON-NEXT:    [[TMP15:%.*]] = extractelement <4 x i1> [[TMP2]], i32 3
+; COMMON-NEXT:    br i1 [[TMP15]], label %[[PRED_STORE_IF22:.*]], label %[[PRED_STORE_CONTINUE23]]
+; COMMON:       [[PRED_STORE_IF22]]:
+; COMMON-NEXT:    store i32 0, ptr [[KEYINFO]], align 4, !alias.scope [[META23]], !noalias [[META16]]
+; COMMON-NEXT:    br label %[[PRED_STORE_CONTINUE23]]
+; COMMON:       [[PRED_STORE_CONTINUE23]]:
+; COMMON-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; COMMON-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[INDEX_NEXT]], 32
+; COMMON-NEXT:    br i1 [[TMP16]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP24:![0-9]+]]
+; COMMON:       [[MIDDLE_BLOCK]]:
+; COMMON-NEXT:    br label %[[SCALAR_PH]]
+; COMMON:       [[SCALAR_PH]]:
+;
+entry:
+  br label %loop
+
+loop:                                             ; preds = %loop.latch, %entry
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
+  %loaded = load i32, ptr %invariant.ptr, align 4
+  %frozen = freeze i32 %loaded
+  %cmp = icmp eq i32 %frozen, 0
+  br i1 %cmp, label %if.zero, label %if.nonzero
+
+if.zero:                                          ; preds = %loop
+  store i32 0, ptr %keyinfo, align 4
+  br label %loop.latch
+
+if.nonzero:                                       ; preds = %loop
+  %rem = srem i32 1, %divisor
+  store i32 %rem, ptr %dst, align 4
+  br label %loop.latch
+
+loop.latch:                                       ; preds = %if.nonzero, %if.zero
+  %iv.next = add i64 %iv, 1
+  %exitcond = icmp eq i64 %iv, 32
+  br i1 %exitcond, label %exit, label %loop
+
+exit:                                             ; preds = %loop.latch
+  ret void
+}
+
 attributes #0 = { "target-features"="+neon,+sve" vscale_range(1,16) }
 
 declare void @llvm.assume(i1 noundef)
