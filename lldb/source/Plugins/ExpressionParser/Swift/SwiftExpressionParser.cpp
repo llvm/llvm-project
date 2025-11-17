@@ -2109,7 +2109,8 @@ SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
         std::move(sil_module), "lldb_module",
         swift::PrimarySpecificPaths("", parsed_expr->main_filename),
         llvm::ArrayRef<std::string>(), llvm::ArrayRef<std::string>());
-
+        /*CAS=*/nullptr, llvm::ArrayRef<std::string>(),
+        llvm::ArrayRef<std::string>());
     if (GenModule) {
       auto parse_result = verify(*GenModule.getModule());
       if (parse_result != ParseResult::success)
