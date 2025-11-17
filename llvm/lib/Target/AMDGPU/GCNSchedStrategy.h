@@ -70,6 +70,13 @@ protected:
   void printCandidateDecision(const SchedCandidate &Current,
                               const SchedCandidate &Preferred);
 
+  void getRegisterPressures(bool AtTop, const RegPressureTracker &RPTracker,
+                            SUnit *SU, std::vector<unsigned> &Pressure,
+                            std::vector<unsigned> &MaxPressure,
+                            GCNDownwardRPTracker &DownwardTracker,
+                            GCNUpwardRPTracker &UpwardTracker,
+                            ScheduleDAGMI *DAG, const SIRegisterInfo *SRI);
+
   std::vector<unsigned> Pressure;
 
   std::vector<unsigned> MaxPressure;
@@ -93,6 +100,8 @@ protected:
 
   // GCN RP Tracker for botttom-up scheduling
   mutable GCNUpwardRPTracker UpwardTracker;
+
+  bool UseGCNTrackers = false;
 
 public:
   // schedule() have seen register pressure over the critical limits and had to
@@ -140,6 +149,8 @@ public:
   bool advanceStage();
 
   bool hasNextStage() const;
+
+  bool useGCNTrackers() const { return UseGCNTrackers; }
 
   GCNSchedStageID getNextStage() const;
 
