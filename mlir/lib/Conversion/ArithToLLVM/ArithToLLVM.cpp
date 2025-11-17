@@ -281,6 +281,7 @@ ConstantOpLowering::matchAndRewrite(arith::ConstantOp op, OpAdaptor adaptor,
                                     ConversionPatternRewriter &rewriter) const {
   return LLVM::detail::oneToOneRewrite(op, LLVM::ConstantOp::getOperationName(),
                                        adaptor.getOperands(), op->getAttrs(),
+                                       /*propAttr=*/Attribute{},
                                        *getTypeConverter(), rewriter);
 }
 
