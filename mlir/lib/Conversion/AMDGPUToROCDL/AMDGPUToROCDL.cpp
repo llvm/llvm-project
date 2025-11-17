@@ -1632,22 +1632,19 @@ int32_t getScaleSel(int32_t blockSize, unsigned bitWidth,
     assert(llvm::is_contained({0, 1}, firstScaleLane));
     int bit_2 = firstScaleLane << 2;
     return bit_2 | bit_1 | bit_0;
-  } else {
-    int bit_0 = is_block_16;
-    // firstScaleByte is guaranteed to be defined by two bits.
-    assert(llvm::is_contained({0, 1, 2, 3}, firstScaleByte));
-    int bit_2_and_1 = firstScaleByte << 1;
-    assert(llvm::is_contained({0, 1}, firstScaleLane));
-    int bit_3 = firstScaleLane << 3;
-    int bits = bit_3 | bit_2_and_1 | bit_0;
-    // These are invalid cases.
-    assert(!llvm::is_contained(
-        {0b0011, 0b0101, 0b0111, 0b1000, 0b1001, 0b1011, 0b1111}, bits));
-    return bits;
   }
 
-  llvm_unreachable("invalid combination of firstScaleLane, firstScaleByte, "
-                   "blockSize and type.");
+  int bit_0 = is_block_16;
+  // firstScaleByte is guaranteed to be defined by two bits.
+  assert(llvm::is_contained({0, 1, 2, 3}, firstScaleByte));
+  int bit_2_and_1 = firstScaleByte << 1;
+  assert(llvm::is_contained({0, 1}, firstScaleLane));
+  int bit_3 = firstScaleLane << 3;
+  int bits = bit_3 | bit_2_and_1 | bit_0;
+  // These are invalid cases.
+  assert(!llvm::is_contained(
+      {0b0011, 0b0101, 0b0111, 0b1000, 0b1001, 0b1011, 0b1111}, bits));
+  return bits;
 }
 
 LogicalResult ScaledExtPacked816OpLowering::matchAndRewrite(
