@@ -1667,37 +1667,53 @@ scaledExtPacked816ToIntrinsic(Type srcElemType, Type destElemType) {
   using bf8 = Float8E5M2Type;
   using fp6 = Float6E2M3FNType;
   using bf6 = Float6E3M2FNType;
-  if (isa<fp4>(srcElemType) && destElemType.isF16())
-    return ROCDL::CvtPkScalePk8F16Fp4Op::getOperationName();
-  if (isa<fp8>(srcElemType) && destElemType.isF16())
-    return ROCDL::CvtPkScalePk8F16Fp8Op::getOperationName();
-  if (isa<bf8>(srcElemType) && destElemType.isF16())
-    return ROCDL::CvtPkScalePk8F16Bf8Op::getOperationName();
-  if (isa<fp4>(srcElemType) && destElemType.isBF16())
-    return ROCDL::CvtPkScalePk8Bf16Fp4Op::getOperationName();
-  if (isa<fp8>(srcElemType) && destElemType.isBF16())
-    return ROCDL::CvtPkScalePk8Bf16Fp8Op::getOperationName();
-  if (isa<bf8>(srcElemType) && destElemType.isBF16())
-    return ROCDL::CvtPkScalePk8Bf16Bf8Op::getOperationName();
-  if (isa<fp4>(srcElemType) && destElemType.isF32())
-    return ROCDL::CvtPkScalePk8F32Fp4Op::getOperationName();
-  if (isa<fp8>(srcElemType) && destElemType.isF32())
-    return ROCDL::CvtPkScalePk8F32Fp8Op::getOperationName();
-  if (isa<bf8>(srcElemType) && destElemType.isF32())
-    return ROCDL::CvtPkScalePk8F32Bf8Op::getOperationName();
-  if (isa<fp6>(srcElemType) && destElemType.isF16())
-    return ROCDL::CvtPkScalePk16F16Fp6Op::getOperationName();
-  if (isa<bf6>(srcElemType) && destElemType.isF16())
-    return ROCDL::CvtPkScalePk16F16Bf6Op::getOperationName();
-  if (isa<fp6>(srcElemType) && destElemType.isBF16())
-    return ROCDL::CvtPkScalePk16Bf16Fp6Op::getOperationName();
-  if (isa<bf6>(srcElemType) && destElemType.isBF16())
-    return ROCDL::CvtPkScalePk16Bf16Bf6Op::getOperationName();
-  if (isa<fp6>(srcElemType) && destElemType.isF32())
-    return ROCDL::CvtPkScalePk16F32Fp6Op::getOperationName();
-  if (isa<bf6>(srcElemType) && destElemType.isF32())
-    return ROCDL::CvtPkScalePk16F32Bf6Op::getOperationName();
-  return std::nullopt;
+  if (isa<fp4>(srcElemType)) {
+    if (destElemType.isF16())
+      return ROCDL::CvtPkScalePk8F16Fp4Op::getOperationName();
+    if (destElemType.isBF16())
+      return ROCDL::CvtPkScalePk8Bf16Fp4Op::getOperationName();
+    if (destElemType.isF32())
+      return ROCDL::CvtPkScalePk8F32Fp4Op::getOperationName();
+    return std::nullopt;
+  }
+  if (isa<fp8>(srcElemType)) {
+    if (destElemType.isF16())
+      return ROCDL::CvtPkScalePk8F16Fp8Op::getOperationName();
+    if (destElemType.isBF16())
+      return ROCDL::CvtPkScalePk8Bf16Fp8Op::getOperationName();
+    if (destElemType.isF32())
+      return ROCDL::CvtPkScalePk8F32Fp8Op::getOperationName();
+    return std::nullopt;
+  }
+  if (isa<bf8>(srcElemType)) {
+    if (destElemType.isF16())
+      return ROCDL::CvtPkScalePk8F16Bf8Op::getOperationName();
+    if (destElemType.isBF16())
+      return ROCDL::CvtPkScalePk8Bf16Bf8Op::getOperationName();
+    if (destElemType.isF32())
+      return ROCDL::CvtPkScalePk8F32Bf8Op::getOperationName();
+    return std::nullopt;
+  }
+  if (isa<fp6>(srcElemType)) {
+    if (destElemType.isF16())
+      return ROCDL::CvtPkScalePk16F16Fp6Op::getOperationName();
+    if (destElemType.isBF16())
+      return ROCDL::CvtPkScalePk16Bf16Fp6Op::getOperationName();
+    if (destElemType.isF32())
+      return ROCDL::CvtPkScalePk16F32Fp6Op::getOperationName();
+    return std::nullopt;
+  }
+  if (isa<bf6>(srcElemType)) {
+    if (destElemType.isF16())
+      return ROCDL::CvtPkScalePk16F16Bf6Op::getOperationName();
+    if (destElemType.isBF16())
+      return ROCDL::CvtPkScalePk16Bf16Bf6Op::getOperationName();
+    if (destElemType.isF32())
+      return ROCDL::CvtPkScalePk16F32Bf6Op::getOperationName();
+    return std::nullopt;
+  }
+  llvm_unreachable("invalid combination of element types for packed conversion "
+                   "instructions");
 }
 
 LogicalResult ScaledExtPacked816OpLowering::matchAndRewrite(
