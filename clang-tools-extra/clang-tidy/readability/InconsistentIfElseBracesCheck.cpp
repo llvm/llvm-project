@@ -9,7 +9,10 @@
 #include "InconsistentIfElseBracesCheck.h"
 #include "../utils/BracesAroundStatement.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/Stmt.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
+#include "clang/Basic/SourceLocation.h"
+#include "clang/Lex/Lexer.h"
 
 using namespace clang::ast_matchers;
 
@@ -55,17 +58,19 @@ void InconsistentIfElseBracesCheck::checkIfStmt(
     // If the then-branch is a nested IfStmt, first we need to add braces to
     // it, then we need to check the inner IfStmt.
     emitDiagnostic(Result, If->getThen(), If->getRParenLoc(), If->getElseLoc());
+
     if (shouldHaveBraces(NestedIf))
       checkIfStmt(Result, NestedIf);
   } else if (!isa<CompoundStmt>(Then)) {
-    emitDiagnostic(Result, If->getThen(), If->getRParenLoc(), If->getElseLoc());
+    emitDiagnostic(Result, Then, If->getRParenLoc(), If->getElseLoc());
   }
 
   if (const Stmt *const Else = If->getElse()) {
     if (const auto *NestedIf = dyn_cast<const IfStmt>(Else))
       checkIfStmt(Result, NestedIf);
-    else if (!isa<CompoundStmt>(Else))
+    else if (!isa<CompoundStmt>(Else)) {
       emitDiagnostic(Result, If->getElse(), If->getElseLoc());
+    }
   }
 }
 
@@ -74,7 +79,6 @@ void InconsistentIfElseBracesCheck::emitDiagnostic(
     SourceLocation StartLoc, SourceLocation EndLocHint) {
   const SourceManager &SM = *Result.SourceManager;
   const LangOptions &LangOpts = Result.Context->getLangOpts();
-
   if (!StartLoc.isMacroID()) {
     const utils::BraceInsertionHints Hints =
         utils::getBraceInsertionsHints(S, LangOpts, SM, StartLoc, EndLocHint);

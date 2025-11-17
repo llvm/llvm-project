@@ -1,5 +1,8 @@
 // RUN: %check_clang_tidy -std=c++98-or-later %s readability-inconsistent-ifelse-braces %t
 
+#define MACRO_COND(x) cond(x)
+#define MACRO_FUN (void)0
+
 bool cond(const char *) { return false; }
 void do_something(const char *) {}
 
@@ -101,6 +104,18 @@ void f() {
   // CHECK-MESSAGES: :[[@LINE-2]]:28: warning: <message> [readability-inconsistent-ifelse-braces]
   // CHECK-FIXES: } else if (cond("if5.1")) {
   // CHECK-FIXES: }
+
+  if (MACRO_COND("if6")) MACRO_FUN;
+  else {
+  }
+  // CHECK-MESSAGES: :[[@LINE-3]]:20: warning: <message> [readability-inconsistent-ifelse-braces]
+  // CHECK-FIXES: if (MACRO_COND("if6")) { MACRO_FUN;
+  // CHECK-FIXES: } else {
+
+  if (MACRO_COND("if6")) {
+  } else MACRO_FUN;
+  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: <message> [readability-inconsistent-ifelse-braces]
+  // CHECK-FIXES: } else { MACRO_FUN;
 }
 
 // Negative tests.
