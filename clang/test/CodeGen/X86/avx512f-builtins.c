@@ -9162,6 +9162,12 @@ __mmask16 test_mm512_kunpackb(__m512i __A, __m512i __B, __m512i __C, __m512i __D
                                                        __E, __F);
 }
 
+TEST_CONSTEXPR(_mm512_kunpackb(0xFF00, 0x00FF) == 0x00FF);
+TEST_CONSTEXPR(_mm512_kunpackb(0xABCD, 0x1234) == 0xCD34);
+TEST_CONSTEXPR(_mm512_kunpackb(0x00FF, 0xFF00) == 0xFF00);
+TEST_CONSTEXPR(_mm512_kunpackb(0xAAAA, 0x5555) == 0xAA55);
+TEST_CONSTEXPR(_mm512_kunpackb(0x1234, 0xABCD) == 0x34CD);
+
 __mmask16 test_mm512_kxnor(__m512i __A, __m512i __B, __m512i __C, __m512i __D, __m512i __E, __m512i __F) {
   // CHECK-LABEL: test_mm512_kxnor
   // CHECK: [[LHS:%.*]] = bitcast i16 %{{.*}} to <16 x i1>
