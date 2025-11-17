@@ -133,3 +133,23 @@ module attributes { test.nested_nosymboltable_region_notcalled } {
     "test.finish"() : () -> ()
   }) : () -> ()
 }
+
+// -----
+
+// Check that symbols with SSA results are not DCE'd if their result is used.
+// CHECK-LABEL: module attributes {test.symbol_with_ssa_result}
+module attributes {test.symbol_with_ssa_result} {
+  // CHECK: "test.symbol_with_result"() <{sym_name = "used_symbol", sym_visibility = "private"}> : () -> i32
+  %0 = "test.symbol_with_result"() <{sym_name = "used_symbol", sym_visibility = "private"}> : () -> i32
+
+  // CHECK-NOT: test.symbol_with_result
+  // CHECK-NOT: unused_symbol
+  %1 = "test.symbol_with_result"() <{sym_name = "unused_symbol", sym_visibility = "private"}> : () -> i32
+
+  // CHECK-NOT: test.symbol
+  // CHECK-NOT: another_unused_symbol
+  "test.symbol"() <{sym_name = "another_unused_symbol", sym_visibility = "private"}> : () -> ()
+
+  // Use %0, keeping @used_symbol alive via SSA
+  "test.use"(%0) : (i32) -> ()
+}
