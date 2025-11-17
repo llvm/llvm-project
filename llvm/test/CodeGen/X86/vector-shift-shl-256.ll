@@ -1313,9 +1313,9 @@ define <32 x i8> @constant_shift_v32i8(<32 x i8> %a) nounwind {
 ; AVX1-NEXT:    vpmaddubsw %xmm1, %xmm3, %xmm1
 ; AVX1-NEXT:    vpsllw $8, %xmm1, %xmm1
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm2, %ymm1
-; AVX1-NEXT:    vpmovzxbw {{.*#+}} xmm2 = [1,4,16,64,128,32,8,2]
-; AVX1-NEXT:    vpmaddubsw %xmm2, %xmm3, %xmm3
-; AVX1-NEXT:    vpmaddubsw %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [1,2,4,8,16,32,64,128,128,64,32,16,8,4,2,1]
+; AVX1-NEXT:    vpmullw %xmm2, %xmm3, %xmm3
+; AVX1-NEXT:    vpmullw %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm0
 ; AVX1-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX1-NEXT:    vorps %ymm1, %ymm0, %ymm0
@@ -1325,7 +1325,7 @@ define <32 x i8> @constant_shift_v32i8(<32 x i8> %a) nounwind {
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpmaddubsw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm1 # [0,2,0,8,0,32,0,128,0,64,0,16,0,4,0,1,0,2,0,8,0,32,0,128,0,64,0,16,0,4,0,1]
 ; AVX2-NEXT:    vpsllw $8, %ymm1, %ymm1
-; AVX2-NEXT:    vpmaddubsw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0 # [1,0,4,0,16,0,64,0,128,0,32,0,8,0,2,0,1,0,4,0,16,0,64,0,128,0,32,0,8,0,2,0]
+; AVX2-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0 # [1,2,4,8,16,32,64,128,128,64,32,16,8,4,2,1,1,2,4,8,16,32,64,128,128,64,32,16,8,4,2,1]
 ; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX2-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
@@ -1352,7 +1352,7 @@ define <32 x i8> @constant_shift_v32i8(<32 x i8> %a) nounwind {
 ; AVX512DQ:       # %bb.0:
 ; AVX512DQ-NEXT:    vpmaddubsw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm1 # [0,2,0,8,0,32,0,128,0,64,0,16,0,4,0,1,0,2,0,8,0,32,0,128,0,64,0,16,0,4,0,1]
 ; AVX512DQ-NEXT:    vpsllw $8, %ymm1, %ymm1
-; AVX512DQ-NEXT:    vpmaddubsw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0 # [1,0,4,0,16,0,64,0,128,0,32,0,8,0,2,0,1,0,4,0,16,0,64,0,128,0,32,0,8,0,2,0]
+; AVX512DQ-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0 # [1,2,4,8,16,32,64,128,128,64,32,16,8,4,2,1,1,2,4,8,16,32,64,128,128,64,32,16,8,4,2,1]
 ; AVX512DQ-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX512DQ-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; AVX512DQ-NEXT:    retq
@@ -1366,7 +1366,7 @@ define <32 x i8> @constant_shift_v32i8(<32 x i8> %a) nounwind {
 ;
 ; AVX512DQVL-LABEL: constant_shift_v32i8:
 ; AVX512DQVL:       # %bb.0:
-; AVX512DQVL-NEXT:    vpmaddubsw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm1 # [1,0,4,0,16,0,64,0,128,0,32,0,8,0,2,0,1,0,4,0,16,0,64,0,128,0,32,0,8,0,2,0]
+; AVX512DQVL-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm1 # [1,2,4,8,16,32,64,128,128,64,32,16,8,4,2,1,1,2,4,8,16,32,64,128,128,64,32,16,8,4,2,1]
 ; AVX512DQVL-NEXT:    vpmaddubsw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0 # [0,2,0,8,0,32,0,128,0,64,0,16,0,4,0,1,0,2,0,8,0,32,0,128,0,64,0,16,0,4,0,1]
 ; AVX512DQVL-NEXT:    vpsllw $8, %ymm0, %ymm0
 ; AVX512DQVL-NEXT:    vpternlogd {{.*#+}} ymm0 = ymm0 | (ymm1 & m32bcst)
@@ -1388,9 +1388,9 @@ define <32 x i8> @constant_shift_v32i8(<32 x i8> %a) nounwind {
 ; X86-AVX1-NEXT:    vpmaddubsw %xmm1, %xmm3, %xmm1
 ; X86-AVX1-NEXT:    vpsllw $8, %xmm1, %xmm1
 ; X86-AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm2, %ymm1
-; X86-AVX1-NEXT:    vpmovzxbw {{.*#+}} xmm2 = [1,4,16,64,128,32,8,2]
-; X86-AVX1-NEXT:    vpmaddubsw %xmm2, %xmm3, %xmm3
-; X86-AVX1-NEXT:    vpmaddubsw %xmm2, %xmm0, %xmm0
+; X86-AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [1,2,4,8,16,32,64,128,128,64,32,16,8,4,2,1]
+; X86-AVX1-NEXT:    vpmullw %xmm2, %xmm3, %xmm3
+; X86-AVX1-NEXT:    vpmullw %xmm2, %xmm0, %xmm0
 ; X86-AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm0
 ; X86-AVX1-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
 ; X86-AVX1-NEXT:    vorps %ymm1, %ymm0, %ymm0
@@ -1400,7 +1400,7 @@ define <32 x i8> @constant_shift_v32i8(<32 x i8> %a) nounwind {
 ; X86-AVX2:       # %bb.0:
 ; X86-AVX2-NEXT:    vpmaddubsw {{\.?LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm1 # [0,2,0,8,0,32,0,128,0,64,0,16,0,4,0,1,0,2,0,8,0,32,0,128,0,64,0,16,0,4,0,1]
 ; X86-AVX2-NEXT:    vpsllw $8, %ymm1, %ymm1
-; X86-AVX2-NEXT:    vpmaddubsw {{\.?LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0 # [1,0,4,0,16,0,64,0,128,0,32,0,8,0,2,0,1,0,4,0,16,0,64,0,128,0,32,0,8,0,2,0]
+; X86-AVX2-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0 # [1,2,4,8,16,32,64,128,128,64,32,16,8,4,2,1,1,2,4,8,16,32,64,128,128,64,32,16,8,4,2,1]
 ; X86-AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
 ; X86-AVX2-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; X86-AVX2-NEXT:    retl
