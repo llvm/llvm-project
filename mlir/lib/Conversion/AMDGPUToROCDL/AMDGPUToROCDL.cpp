@@ -1613,8 +1613,8 @@ LogicalResult ExtPackedFp8OpLowering::matchAndRewrite(
   return success();
 }
 
-int getScaleSel(int blockSize, int bitWidth, int firstScaleLane,
-                int firstScaleByte) {
+int32_t getScaleSel(int32_t blockSize, unsigned bitWidth,
+                    int32_t firstScaleLane, int32_t firstScaleByte) {
   // When lowering amdgpu.scaled_ext_packed816 to
   // rocdl.cvt.scale.pk*.f*.f* operations, the
   // attributes blockSize, sourceType, firstScaleLane and firstScaleByte
@@ -1656,13 +1656,13 @@ LogicalResult ScaledExtPacked816OpLowering::matchAndRewrite(
     ScaledExtPacked816Op op, ScaledExtPacked816OpAdaptor adaptor,
     ConversionPatternRewriter &rewriter) const {
 
-  int firstScaleLane = op.getFirstScaleLane();
-  int firstScaleByte = op.getFirstScaleByte();
-  int blockSize = op.getBlockSize();
+  int32_t firstScaleLane = op.getFirstScaleLane();
+  int32_t firstScaleByte = op.getFirstScaleByte();
+  int32_t blockSize = op.getBlockSize();
   auto sourceType = cast<VectorType>(op.getSource().getType());
   auto srcElemType = cast<FloatType>(sourceType.getElementType());
-  int bitWidth = srcElemType.getWidth();
-  int scaleSel =
+  unsigned bitWidth = srcElemType.getWidth();
+  int32_t scaleSel =
       getScaleSel(blockSize, bitWidth, firstScaleLane, firstScaleByte);
 
   auto targetType = cast<VectorType>(op.getResult().getType());
