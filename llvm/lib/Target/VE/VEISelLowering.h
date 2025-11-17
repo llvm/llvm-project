@@ -20,51 +20,6 @@
 namespace llvm {
 class VESubtarget;
 
-namespace VEISD {
-enum NodeType : unsigned {
-  FIRST_NUMBER = ISD::BUILTIN_OP_END,
-
-  CMPI, // Compare between two signed integer values.
-  CMPU, // Compare between two unsigned integer values.
-  CMPF, // Compare between two floating-point values.
-  CMPQ, // Compare between two quad floating-point values.
-  CMOV, // Select between two values using the result of comparison.
-
-  CALL,                   // A call instruction.
-  EH_SJLJ_LONGJMP,        // SjLj exception handling longjmp.
-  EH_SJLJ_SETJMP,         // SjLj exception handling setjmp.
-  EH_SJLJ_SETUP_DISPATCH, // SjLj exception handling setup_dispatch.
-  GETFUNPLT,              // Load function address through %plt insturction.
-  GETTLSADDR,             // Load address for TLS access.
-  GETSTACKTOP,            // Retrieve address of stack top (first address of
-                          // locals and temporaries).
-  GLOBAL_BASE_REG,        // Global base reg for PIC.
-  Hi,                     // Hi/Lo operations, typically on a global address.
-  Lo,                     // Hi/Lo operations, typically on a global address.
-  RET_GLUE,               // Return with a flag operand.
-  TS1AM,                  // A TS1AM instruction used for 1/2 bytes swap.
-  VEC_UNPACK_LO,          // unpack the lo v256 slice of a packed v512 vector.
-  VEC_UNPACK_HI,          // unpack the hi v256 slice of a packed v512 vector.
-                          //    0: v512 vector, 1: AVL
-  VEC_PACK,               // pack a lo and a hi vector into one v512 vector
-                          //    0: v256 lo vector, 1: v256 hi vector, 2: AVL
-
-  VEC_BROADCAST, // A vector broadcast instruction.
-                 //   0: scalar value, 1: VL
-  REPL_I32,
-  REPL_F32, // Replicate subregister to other half.
-
-  // Annotation as a wrapper. LEGALAVL(VL) means that VL refers to 64bit of
-  // data, whereas the raw EVL coming in from VP nodes always refers to number
-  // of elements, regardless of their size.
-  LEGALAVL,
-
-// VVP_* nodes.
-#define ADD_VVP_OP(VVP_NAME, ...) VVP_NAME,
-#include "VVPNodes.def"
-};
-}
-
 /// Convert a DAG integer condition code to a VE ICC condition.
 inline static VECC::CondCode intCondCode2Icc(ISD::CondCode CC) {
   switch (CC) {
@@ -167,7 +122,6 @@ class VETargetLowering : public TargetLowering {
 public:
   VETargetLowering(const TargetMachine &TM, const VESubtarget &STI);
 
-  const char *getTargetNodeName(unsigned Opcode) const override;
   MVT getScalarShiftAmountTy(const DataLayout &, EVT) const override {
     return MVT::i32;
   }

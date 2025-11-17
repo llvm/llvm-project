@@ -72,9 +72,6 @@ bool MarkRAStates::runOnFunction(BinaryFunction &BF) {
           BF.setIgnored();
           return false;
         }
-        // The signing instruction itself is unsigned, the next will be
-        // signed.
-        BC.MIB->setRAUnsigned(Inst);
       } else if (BC.MIB->isPAuthOnLR(Inst)) {
         if (!RAState) {
           // RA authenticating instructions should only follow signed RA state.
@@ -86,14 +83,9 @@ bool MarkRAStates::runOnFunction(BinaryFunction &BF) {
           BF.setIgnored();
           return false;
         }
-        // The authenticating instruction itself is signed, but the next will be
-        // unsigned.
-        BC.MIB->setRASigned(Inst);
-      } else if (RAState) {
-        BC.MIB->setRASigned(Inst);
-      } else {
-        BC.MIB->setRAUnsigned(Inst);
       }
+
+      BC.MIB->setRAState(Inst, RAState);
 
       // Updating RAState. All updates are valid from the next instruction.
       // Because the same instruction can have remember and restore, the order

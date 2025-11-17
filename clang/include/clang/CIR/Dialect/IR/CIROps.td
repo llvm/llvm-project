@@ -413,6 +413,18 @@ def CIR_ConstantOp : CIR_Op<"const", [
 
     template <typename T>
     T getValueAttr() { return mlir::dyn_cast<T>(getValue()); }
+
+    llvm::APInt getIntValue() {
+      if (const auto intAttr = getValueAttr<cir::IntAttr>())
+        return intAttr.getValue();
+      llvm_unreachable("Expected an IntAttr in ConstantOp");
+    }
+
+    bool getBoolValue() {
+      if (const auto boolAttr = getValueAttr<cir::BoolAttr>())
+        return boolAttr.getValue();
+      llvm_unreachable("Expected a BoolAttr in ConstantOp");
+    }
   }];
 
   let hasFolder = 1;
@@ -2580,6 +2592,39 @@ def CIR_FuncOp : CIR_Op<"func", [
 }
 
 //===----------------------------------------------------------------------===//
+// LLVMIntrinsicCallOp
+//===----------------------------------------------------------------------===//
+
+def CIR_LLVMIntrinsicCallOp : CIR_Op<"call_llvm_intrinsic"> {
+  let summary = "Call to llvm intrinsic functions that is not defined in CIR";
+  let description = [{
+    `cir.call_llvm_intrinsic` operation represents a call-like expression which has
+    return type and arguments that maps directly to a llvm intrinsic.
+    It only records intrinsic `intrinsic_name`.
+  }];
+
+  let results = (outs Optional<CIR_AnyType>:$result);
+  let arguments = (ins
+                   StrAttr:$intrinsic_name, Variadic<CIR_AnyType>:$arg_ops);
+
+  let skipDefaultBuilders = 1;
+
+  let assemblyFormat = [{
+    $intrinsic_name $arg_ops `:` functional-type($arg_ops, $result) attr-dict
+  }];
+
+  let builders = [
+    OpBuilder<(ins "mlir::StringAttr":$intrinsic_name, "mlir::Type":$resType,
+              CArg<"mlir::ValueRange", "{}">:$operands), [{
+      $_state.addAttribute("intrinsic_name", intrinsic_name);
+      $_state.addOperands(operands);
+      if (resType)
+        $_state.addTypes(resType);
+    }]>,
+  ];
+}
+
+//===----------------------------------------------------------------------===//
 // CallOp
 //===----------------------------------------------------------------------===//
 
@@ -4090,6 +4135,57 @@ def CIR_PrefetchOp : CIR_Op<"prefetch"> {
 }
 
 //===----------------------------------------------------------------------===//
+// ObjSizeOp
+//===----------------------------------------------------------------------===//
+
+def CIR_ObjSizeOp : CIR_Op<"objsize", [Pure]> {
+  let summary = "Implements the llvm.objsize builtin";
+  let description = [{
+    The `cir.objsize` operation is designed to provide information to the
+    optimizer to determine whether a) an operation (like memcpy) will
+    overflow a buffer that corresponds to an object, or b) that a runtime
+    check for overflow isn’t necessary. An object in this context means an
+    allocation of a specific class, structure, array, or other object.
+
+    When the `min` attribute is present, the operation returns the minimum
+    guaranteed accessible size. When absent (max mode), it returns the maximum
+    possible object size. Corresponds to `llvm.objectsize`'s `min` argument.
+    
+    The `dynamic` attribute determines if the value should be evaluated at
+    runtime. Corresponds to `llvm.objectsize`'s `dynamic` argument.
+
+    The `nullunknown` attribute controls how null pointers are handled. When
+    present, null pointers are treated as having unknown size. When absent,
+    null pointers are treated as having 0 size (in min mode) or -1 size
+    (in max mode). Corresponds to `llvm.objectsize`'s `nullunknown` argument.
+
+    Example:
+
+    ```mlir
+    %size = cir.objsize min %ptr : !cir.ptr<i32> -> i64
+    %dsize = cir.objsize max dynamic %ptr : !cir.ptr<i32> -> i64
+    %nsize = cir.objsize min nullunknown %ptr : !cir.ptr<i32> -> i64
+    ```
+  }];
+
+  let arguments = (ins
+    CIR_PointerType:$ptr,
+    UnitAttr:$min,
+    UnitAttr:$nullunknown,
+    UnitAttr:$dynamic
+  );
+
+  let results = (outs CIR_AnyFundamentalIntType:$result);
+
+  let assemblyFormat = [{
+      (`min` $min^) : (`max`)?
+      (`nullunknown` $nullunknown^)?
+      (`dynamic` $dynamic^)?
+      $ptr `:` qualified(type($ptr)) `->` qualified(type($result)) attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // PtrDiffOp
 //===----------------------------------------------------------------------===//
 
@@ -4171,10 +4267,30 @@ def CIR_ATanOp : CIR_UnaryFPToFPBuiltinOp<"atan", "ATanOp"> {
   }];
 }
 
+def CIR_CeilOp : CIR_UnaryFPToFPBuiltinOp<"ceil", "FCeilOp"> {
+  let summary = "Computes the ceiling of the specified value";
+  let description = [{
+    `cir.ceil` computes the ceiling of a given value and returns a result
+    of the same type.
+
+    Floating-point exceptions are ignored, and it does not set `errno`.
+  }];
+}
+
 def CIR_CosOp : CIR_UnaryFPToFPBuiltinOp<"cos", "CosOp"> {
   let summary = "Computes the floating-point cosine value";
   let description = [{
     `cir.cos` computes the cosine of a floating-point operand and returns
+    a result of the same type.
+
+    Floating-point exceptions are ignored, and it does not set `errno`.
+  }];
+}
+
+def CIR_ExpOp : CIR_UnaryFPToFPBuiltinOp<"exp", "ExpOp"> {
+  let summary = "Computes the floating-point base-e exponential value";
+  let description = [{
+    `cir.exp` computes the exponential of a floating-point operand and returns
     a result of the same type.
 
     Floating-point exceptions are ignored, and it does not set `errno`.

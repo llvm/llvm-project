@@ -26,7 +26,6 @@
 #include <cstdlib>
 #include <cstring>
 #include <thread>
-#include <tuple>
 #include <utility>
 
 // The implicit arguments of COV5 AMDGPU kernels.

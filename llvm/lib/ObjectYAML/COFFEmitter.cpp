@@ -99,7 +99,7 @@ struct COFFParser {
       // store it in the string table.
       StringRef Name = Sym.Name;
       if (Name.size() <= COFF::NameSize) {
-        std::copy(Name.begin(), Name.end(), Sym.Header.Name);
+        llvm::copy(Name, Sym.Header.Name);
       } else {
         // Add string to the string table and format the index for output.
         unsigned Index = getStringIndex(Name);

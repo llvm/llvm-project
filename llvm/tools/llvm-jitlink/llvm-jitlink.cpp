@@ -776,6 +776,7 @@ createSharedMemoryManager(SimpleRemoteEPC &SREPC) {
       SlabSize, SREPC, SAs);
 }
 
+#if LLVM_ON_UNIX && LLVM_ENABLE_THREADS
 static void setupEPCRemoteMemoryManager(SimpleRemoteEPC::Setup &S) {
   switch (UseMemMgr) {
   case MemMgr::Default:
@@ -789,6 +790,7 @@ static void setupEPCRemoteMemoryManager(SimpleRemoteEPC::Setup &S) {
     break;
   }
 }
+#endif
 
 static Expected<MaterializationUnit::Interface>
 getTestObjectFileInterface(Session &S, MemoryBufferRef O) {
@@ -1295,9 +1297,16 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
   } else if (TT.isOSBinFormatELF()) {
     if (!NoExec)
       ObjLayer.addPlugin(ExitOnErr(EHFrameRegistrationPlugin::Create(ES)));
-    if (DebuggerSupport)
-      ObjLayer.addPlugin(std::make_unique<DebugObjectManagerPlugin>(
-          ES, ExitOnErr(createJITLoaderGDBRegistrar(this->ES)), true, true));
+    if (DebuggerSupport) {
+      Error TargetSymErr = Error::success();
+      auto Plugin = std::make_unique<DebugObjectManagerPlugin>(ES, true, true,
+                                                               TargetSymErr);
+      if (!TargetSymErr)
+        ObjLayer.addPlugin(std::move(Plugin));
+      else
+        logAllUnhandledErrors(std::move(TargetSymErr), errs(),
+                              "Debugger support not available: ");
+    }
   }
 
   if (auto MainJDOrErr = ES.createJITDylib("main"))
