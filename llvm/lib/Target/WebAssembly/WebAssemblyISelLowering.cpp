@@ -2603,18 +2603,12 @@ SDValue WebAssemblyTargetLowering::LowerBUILD_VECTOR(SDValue Op,
         // Values may need to be fixed so that they will sign extend to be
         // within the expected range during ISel. Check whether the value is in
         // bounds based on the lane bit width and if it is out of bounds, lop
-        // off the extra bits and subtract 2^n to reflect giving the high bit
-        // value -2^(n-1) rather than +2^(n-1). Skip the i64 case because it
-        // cannot possibly be out of range.
-        auto *Const = dyn_cast<ConstantSDNode>(Lane.getNode());
-        int64_t Val = Const ? Const->getSExtValue() : 0;
+        // off the extra bits.
         uint64_t LaneBits = 128 / Lanes;
-        assert((LaneBits == 64 || Val >= -(1ll << (LaneBits - 1))) &&
-               "Unexpected out of bounds negative value");
-        if (Const && LaneBits != 64 && Val > (1ll << (LaneBits - 1)) - 1) {
-          uint64_t Mask = (1ll << LaneBits) - 1;
-          auto NewVal = (((uint64_t)Val & Mask) - (1ll << LaneBits)) & Mask;
-          ConstLanes.push_back(DAG.getConstant(NewVal, SDLoc(Lane), LaneT));
+        if (auto *Const = dyn_cast<ConstantSDNode>(Lane.getNode())) {
+          ConstLanes.push_back(DAG.getConstant(
+              Const->getAPIntValue().trunc(LaneBits).getZExtValue(),
+              SDLoc(Lane), LaneT));
         } else {
           ConstLanes.push_back(Lane);
         }
