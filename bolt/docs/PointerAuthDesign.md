@@ -10,6 +10,10 @@ intended audience is BOLT developers. The document is an updated version of the
 in assembly, or `OpNegateRAState` in BOLT sources. In this document, I will use
 **negate-ra-state** as a shorthand.
 
+Note: there are two resolutions for CFI:
+- Call Frame Instruction: individual DWARF instruction, e.g. negate-ra-state
+- Control Flow Integrity: a security mechanism, e.g. pointer authentication.
+
 ## Introduction
 
 ### Pointer Authentication
