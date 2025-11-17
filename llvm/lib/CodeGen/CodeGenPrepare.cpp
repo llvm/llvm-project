@@ -6462,9 +6462,9 @@ bool CodeGenPrepare::optimizeMulWithOverflow(Instruction *I, bool IsSigned,
   Type *LegalTy = Ty->getWithNewBitWidth(VTHalfBitWidth);
 
   // New BBs:
-  std::string OriginalBlockName = I->getParent()->getName().str();
   BasicBlock *OverflowEntryBB =
-      I->getParent()->splitBasicBlock(I, "overflow.entry", /*Before*/ true);
+      I->getParent()->splitBasicBlock(I, "", /*Before*/ true);
+  OverflowEntryBB->takeName(I->getParent());
   // Keep the 'br' instruction that is generated as a result of the split to be
   // erased/replaced later.
   Instruction *OldTerminator = OverflowEntryBB->getTerminator();
@@ -6566,9 +6566,6 @@ bool CodeGenPrepare::optimizeMulWithOverflow(Instruction *I, bool IsSigned,
   // Add The Extracted values to the PHINodes in the overflow.res BB.
   OverflowResPHI->addIncoming(MulOverflow, OverflowBB);
   OverflowFlagPHI->addIncoming(OverflowFlag, OverflowBB);
-
-  // Restore the original name of the overflow.entry BB:
-  OverflowEntryBB->setName(OriginalBlockName);
 
   ModifiedDT = ModifyDT::ModifyBBDT;
   return true;
