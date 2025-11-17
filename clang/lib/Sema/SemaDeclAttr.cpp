@@ -8303,14 +8303,15 @@ void Sema::redelayDiagnostics(DelayedDiagnosticPool &pool) {
 }
 
 void Sema::ActOnCleanupAttr(Decl *D, const Attr *A) {
+  VarDecl *VD = cast<VarDecl>(D);
+  if (VD->getType()->isDependentType())
+    return;
+
   // Obtains the FunctionDecl that was found when handling the attribute
   // earlier.
   CleanupAttr *Attr = D->getAttr<CleanupAttr>();
   FunctionDecl *FD = Attr->getFunctionDecl();
   DeclarationNameInfo NI = FD->getNameInfo();
-  VarDecl *VD = cast<VarDecl>(D);
-  if (VD->getType()->isDependentType())
-    return;
 
   // We're currently more strict than GCC about what function types we accept.
   // If this ever proves to be a problem it should be easy to fix.
