@@ -558,7 +558,12 @@ private:
 
   void grow(unsigned MinNumBuckets) {
     unsigned NumBuckets = DerivedT::roundUpNumBuckets(MinNumBuckets);
-    derived().grow(NumBuckets);
+    DerivedT Tmp(NumBuckets, ExactBucketCount{});
+    Tmp.moveFrom(derived());
+    if (derived().maybeMoveFast(std::move(Tmp)))
+      return;
+    initWithExactBucketCount(NumBuckets);
+    moveFrom(Tmp);
   }
 
   template <typename LookupKeyT>
@@ -848,10 +853,9 @@ private:
                     static_cast<unsigned>(NextPowerOf2(MinNumBuckets - 1)));
   }
 
-  void grow(unsigned AtLeast) {
-    DenseMap Tmp(AtLeast, typename BaseT::ExactBucketCount{});
-    Tmp.moveFrom(*this);
-    swapImpl(Tmp);
+  bool maybeMoveFast(DenseMap &&Other) {
+    swapImpl(Other);
+    return true;
   }
 
   // Plan how to shrink the bucket table.  Return:
@@ -1120,23 +1124,16 @@ private:
                     static_cast<unsigned>(NextPowerOf2(MinNumBuckets - 1)));
   }
 
-  void grow(unsigned NumBuckets) {
-    SmallDenseMap Tmp(NumBuckets, typename BaseT::ExactBucketCount{});
-    Tmp.moveFrom(*this);
+  bool maybeMoveFast(SmallDenseMap &&Other) {
+    if (Other.Small)
+      return false;
 
-    if (Tmp.Small) {
-      // Use moveFrom in those rare cases where we stay in the small mode.  This
-      // can happen when we have many tombstones.
-      Small = true;
-      this->BaseT::initEmpty();
-      this->moveFrom(Tmp);
-    } else {
-      Small = false;
-      NumEntries = Tmp.NumEntries;
-      NumTombstones = Tmp.NumTombstones;
-      *getLargeRep() = std::move(*Tmp.getLargeRep());
-      Tmp.getLargeRep()->NumBuckets = 0;
-    }
+    Small = false;
+    NumEntries = Other.NumEntries;
+    NumTombstones = Other.NumTombstones;
+    *getLargeRep() = std::move(*Other.getLargeRep());
+    Other.getLargeRep()->NumBuckets = 0;
+    return true;
   }
 
   // Plan how to shrink the bucket table.  Return:
