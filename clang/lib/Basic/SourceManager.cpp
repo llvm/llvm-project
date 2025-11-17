@@ -1435,7 +1435,7 @@ PresumedLoc SourceManager::getPresumedLoc(SourceLocation Loc,
   if (Loc.isInvalid()) return PresumedLoc();
 
   // Presumed locations are always for expansion points.
-  FileIDAndOffset LocInfo = getDecomposedExpansionLoc(Loc);
+  FileIDAndOffset LocInfo = getDecomposedLoc(getFileLoc(Loc));
 
   bool Invalid = false;
   const SLocEntry &Entry = getSLocEntry(LocInfo.first, &Invalid);

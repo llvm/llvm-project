@@ -81,13 +81,8 @@ bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
           VPValue *Start = Plan.getOrAddLiveIn(II->getStartValue());
           VPValue *Step =
               vputils::getOrCreateVPValueForSCEVExpr(Plan, II->getStep());
-          // It is always safe to copy over the NoWrap and FastMath flags. In
-          // particular, when folding tail by masking, the masked-off lanes are
-          // never used, so it is safe.
-          VPIRFlags Flags = vputils::getFlagsFromIndDesc(*II);
           NewRecipe = new VPWidenIntOrFpInductionRecipe(
-              Phi, Start, Step, &Plan.getVF(), *II, Flags,
-              Ingredient.getDebugLoc());
+              Phi, Start, Step, &Plan.getVF(), *II, Ingredient.getDebugLoc());
         }
       } else {
         assert(isa<VPInstruction>(&Ingredient) &&
@@ -246,7 +241,7 @@ static bool sinkScalarOperands(VPlan &Plan) {
 
 /// If \p R is a region with a VPBranchOnMaskRecipe in the entry block, return
 /// the mask.
-VPValue *getPredicatedMask(VPRegionBlock *R) {
+static VPValue *getPredicatedMask(VPRegionBlock *R) {
   auto *EntryBB = dyn_cast<VPBasicBlock>(R->getEntry());
   if (!EntryBB || EntryBB->size() != 1 ||
       !isa<VPBranchOnMaskRecipe>(EntryBB->begin()))
@@ -552,11 +547,6 @@ static void removeRedundantCanonicalIVs(VPlan &Plan) {
     // only.
     if (!vputils::onlyScalarValuesUsed(WidenOriginalIV) ||
         vputils::onlyFirstLaneUsed(WidenNewIV)) {
-      // We are replacing a wide canonical iv with a suitable wide induction.
-      // This is used to compute header mask, hence all lanes will be used and
-      // we need to drop wrap flags only applying to lanes guranteed to execute
-      // in the original scalar loop.
-      WidenOriginalIV->dropPoisonGeneratingFlags();
       WidenNewIV->replaceAllUsesWith(WidenOriginalIV);
       WidenNewIV->eraseFromParent();
       return;
@@ -1903,9 +1893,6 @@ void VPlanTransforms::optimizeForVFAndUF(VPlan &Plan, ElementCount BestVF,
     Plan.setVF(BestVF);
     assert(Plan.getUF() == BestUF && "BestUF must match the Plan's UF");
   }
-  // TODO: Further simplifications are possible
-  //      1. Replace inductions with constants.
-  //      2. Replace vector loop region with VPBasicBlock.
 }
 
 /// Sink users of \p FOR after the recipe defining the previous value \p
@@ -2613,9 +2600,7 @@ template <typename Op0_t, typename Op1_t> struct RemoveMask_match {
       Out = nullptr;
       return true;
     }
-    if (m_LogicalAnd(m_Specific(In), m_VPValue(Out)).match(V))
-      return true;
-    return false;
+    return m_LogicalAnd(m_Specific(In), m_VPValue(Out)).match(V);
   }
 };
 
@@ -3306,13 +3291,16 @@ expandVPWidenIntOrFpInduction(VPWidenIntOrFpInductionRecipe *WidenIVR,
   const InductionDescriptor &ID = WidenIVR->getInductionDescriptor();
   Instruction::BinaryOps AddOp;
   Instruction::BinaryOps MulOp;
-  VPIRFlags Flags = *WidenIVR;
+  // FIXME: The newly created binary instructions should contain nsw/nuw
+  // flags, which can be found from the original scalar operations.
+  VPIRFlags Flags;
   if (ID.getKind() == InductionDescriptor::IK_IntInduction) {
     AddOp = Instruction::Add;
     MulOp = Instruction::Mul;
   } else {
     AddOp = ID.getInductionOpcode();
     MulOp = Instruction::FMul;
+    Flags = ID.getInductionBinOp()->getFastMathFlags();
   }
 
   // If the phi is truncated, truncate the start and step values.
