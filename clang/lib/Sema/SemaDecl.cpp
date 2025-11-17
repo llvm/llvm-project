@@ -10088,9 +10088,8 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
     bool isVirtual = D.getDeclSpec().isVirtualSpecified();
     bool hasExplicit = D.getDeclSpec().hasExplicitSpecifier();
     isFriend = D.getDeclSpec().isFriendSpecified();
-    bool isCustom = D.getDeclSpec().isCustomSpecified();
-    if (isCustom)
-      NewFD->setCustomFunction(true);
+    // TODO(Phase 2): Store custom function flag when implementing transformation
+    // bool isCustom = D.getDeclSpec().isCustomSpecified();
     if (ImplicitInlineCXX20 && isFriend && D.isFunctionDefinition()) {
       // Pre-C++20 [class.friend]p5
       //   A function can be defined in a friend declaration of a
