@@ -56,7 +56,7 @@ define void @test_compressstore_nxv2f64(ptr %p, <vscale x 2 x double> %vec, <vsc
   ret void
 }
 
-;; Promoted SVE vector types promoted to 32/64-bit (non-exhaustive)
+;; SVE vector types promoted to 32/64-bit (non-exhaustive)
 
 define void @test_compressstore_nxv2i8(ptr %p, <vscale x 2 x i8> %vec, <vscale x 2 x i1> %mask) {
 ; CHECK-LABEL: test_compressstore_nxv2i8:
