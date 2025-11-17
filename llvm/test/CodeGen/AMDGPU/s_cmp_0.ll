@@ -23,7 +23,6 @@ define amdgpu_ps i32 @shl32(i32 inreg %val0, i32 inreg %val1) {
 
 ; s_lshl_b32 sets SCC if result is non-zero.
 ; Deletion of equal to zero comparison will require inversion of use.
-; FIXME: Can't invert because kill flag not set on last use.
 define amdgpu_ps i32 @shl32_eq(i32 inreg %val0, i32 inreg %val1) {
 ; CHECK-LABEL: shl32_eq:
 ; CHECK:       ; %bb.0:
@@ -36,39 +35,20 @@ define amdgpu_ps i32 @shl32_eq(i32 inreg %val0, i32 inreg %val1) {
   ret i32 %select
 }
 
-; s_lshl_b32 sets SCC if result is non-zero.
-; Deletion of equal to zero comparison will require inversion of use.
-define amdgpu_ps i32 @shl32_eq_with_scc_clobber(i32 inreg %val0, i32 inreg %val1) {
-; CHECK-LABEL: shl32_eq_with_scc_clobber:
-; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_lshl_b32 s0, s0, 1
-; CHECK-NEXT:    s_cselect_b32 s0, 0, s1
-; CHECK-NEXT:    s_xor_b32 s0, s0, s1
-; CHECK-NEXT:    ; return to shader part epilog
-  %result = shl i32 %val0, 1
-  %cmp = icmp eq i32 %result, 0
-  %select = select i1 %cmp, i32 %val1, i32 0
-  %xor = xor i32 %select, %val1
-  ret i32 %xor
-}
-
 ; 64-bit selection will generate two 32-bit selects.  Inversion of multiple
 ; uses is required.
-define amdgpu_ps i64 @shl32_eq_multi_use_with_scc_clobber(i32 inreg %val0, i64 inreg %val1) {
-; CHECK-LABEL: shl32_eq_multi_use_with_scc_clobber:
+define amdgpu_ps i64 @shl32_eq_multi_use(i32 inreg %val0, i64 inreg %val1) {
+; CHECK-LABEL: shl32_eq_multi_use:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_mov_b32 s3, s2
-; CHECK-NEXT:    s_mov_b32 s2, s1
 ; CHECK-NEXT:    s_lshl_b32 s0, s0, 1
-; CHECK-NEXT:    s_cselect_b32 s1, 0, s3
-; CHECK-NEXT:    s_cselect_b32 s0, 0, s2
-; CHECK-NEXT:    s_xor_b64 s[0:1], s[0:1], s[2:3]
+; CHECK-NEXT:    s_cselect_b32 s2, 0, s2
+; CHECK-NEXT:    s_cselect_b32 s0, 0, s1
+; CHECK-NEXT:    s_mov_b32 s1, s2
 ; CHECK-NEXT:    ; return to shader part epilog
   %result = shl i32 %val0, 1
   %cmp = icmp eq i32 %result, 0
   %select = select i1 %cmp, i64 %val1, i64 0
-  %xor = xor i64 %select, %val1
-  ret i64 %xor
+  ret i64 %select
 }
 
 define amdgpu_ps i32 @shl64(i64 inreg %val0, i64 inreg %val1) {
@@ -711,14 +691,14 @@ define amdgpu_ps i32 @si_pc_add_rel_offset_must_not_optimize() {
 ; CHECK-NEXT:    s_add_u32 s0, s0, __unnamed_1@rel32@lo+4
 ; CHECK-NEXT:    s_addc_u32 s1, s1, __unnamed_1@rel32@hi+12
 ; CHECK-NEXT:    s_cmp_lg_u64 s[0:1], 0
-; CHECK-NEXT:    s_cbranch_scc0 .LBB41_2
+; CHECK-NEXT:    s_cbranch_scc0 .LBB40_2
 ; CHECK-NEXT:  ; %bb.1: ; %endif
 ; CHECK-NEXT:    s_mov_b32 s0, 1
-; CHECK-NEXT:    s_branch .LBB41_3
-; CHECK-NEXT:  .LBB41_2: ; %if
+; CHECK-NEXT:    s_branch .LBB40_3
+; CHECK-NEXT:  .LBB40_2: ; %if
 ; CHECK-NEXT:    s_mov_b32 s0, 0
-; CHECK-NEXT:    s_branch .LBB41_3
-; CHECK-NEXT:  .LBB41_3:
+; CHECK-NEXT:    s_branch .LBB40_3
+; CHECK-NEXT:  .LBB40_3:
   %cmp = icmp ne ptr addrspace(4) @1, null
   br i1 %cmp, label %endif, label %if
 
