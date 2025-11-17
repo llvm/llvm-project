@@ -2714,6 +2714,35 @@ static bool interp_builtin_horizontal_fp_binop(
   return true;
 }
 
+static bool interp__builtin_ia32_addsub(InterpState &S, CodePtr OpPC,
+                                        const CallExpr *Call) {
+  // Addsub: alternates between subtraction and addition
+  // Result[i] = (i % 2 == 0) ? (a[i] - b[i]) : (a[i] + b[i])
+  const Pointer &RHS = S.Stk.pop<Pointer>();
+  const Pointer &LHS = S.Stk.pop<Pointer>();
+  const Pointer &Dst = S.Stk.peek<Pointer>();
+  FPOptions FPO = Call->getFPFeaturesInEffect(S.Ctx.getLangOpts());
+  llvm::RoundingMode RM = getRoundingMode(FPO);
+  const auto *VT = Call->getArg(0)->getType()->castAs<VectorType>();
+  unsigned NumElts = VT->getNumElements();
+
+  using T = PrimConv<PT_Float>::T;
+  for (unsigned I = 0; I < NumElts; ++I) {
+    APFloat LElem = LHS.elem<T>(I).getAPFloat();
+    APFloat RElem = RHS.elem<T>(I).getAPFloat();
+    if (I % 2 == 0) {
+      // Even indices: subtract
+      LElem.subtract(RElem, RM);
+    } else {
+      // Odd indices: add
+      LElem.add(RElem, RM);
+    }
+    Dst.elem<T>(I) = static_cast<T>(LElem);
+  }
+  Dst.initializeAllElements();
+  return true;
+}
+
 static bool interp__builtin_elementwise_triop_fp(
     InterpState &S, CodePtr OpPC, const CallExpr *Call,
     llvm::function_ref<APFloat(const APFloat &, const APFloat &,
@@ -4282,33 +4311,8 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case clang::X86::BI__builtin_ia32_addsubpd:
   case clang::X86::BI__builtin_ia32_addsubps:
   case clang::X86::BI__builtin_ia32_addsubpd256:
-  case clang::X86::BI__builtin_ia32_addsubps256: {
-    // Addsub: alternates between subtraction and addition
-    // Result[i] = (i % 2 == 0) ? (a[i] - b[i]) : (a[i] + b[i])
-    const Pointer &RHS = S.Stk.pop<Pointer>();
-    const Pointer &LHS = S.Stk.pop<Pointer>();
-    const Pointer &Dst = S.Stk.peek<Pointer>();
-    FPOptions FPO = Call->getFPFeaturesInEffect(S.Ctx.getLangOpts());
-    llvm::RoundingMode RM = getRoundingMode(FPO);
-    const auto *VT = Call->getArg(0)->getType()->castAs<VectorType>();
-    unsigned NumElts = VT->getNumElements();
-
-    using T = PrimConv<PT_Float>::T;
-    for (unsigned I = 0; I < NumElts; ++I) {
-      APFloat LElem = LHS.elem<T>(I).getAPFloat();
-      APFloat RElem = RHS.elem<T>(I).getAPFloat();
-      if (I % 2 == 0) {
-        // Even indices: subtract
-        LElem.subtract(RElem, RM);
-      } else {
-        // Odd indices: add
-        LElem.add(RElem, RM);
-      }
-      Dst.elem<T>(I) = static_cast<T>(LElem);
-    }
-    Dst.initializeAllElements();
-    return true;
-  }
+  case clang::X86::BI__builtin_ia32_addsubps256:
+    return interp__builtin_ia32_addsub(S, OpPC, Call);
 
   case clang::X86::BI__builtin_ia32_pmuldq128:
   case clang::X86::BI__builtin_ia32_pmuldq256:
