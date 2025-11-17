@@ -25,7 +25,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <__unsigned_integer _Tp>
 [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool has_single_bit(_Tp __t) noexcept {
-  return __t != 0 && (((__t & (__t - 1)) == 0));
+  return __t != 0 && ((__t & (__t - 1)) == 0);
 }
 
 _LIBCPP_END_NAMESPACE_STD

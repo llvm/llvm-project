@@ -228,15 +228,14 @@ template <class T, class Allocator, class Predicate>
 #  include <__ranges/concepts.h>
 #  include <__ranges/container_compatible_range.h>
 #  include <__ranges/from_range.h>
-#  include <__type_traits/conditional.h>
 #  include <__type_traits/container_traits.h>
 #  include <__type_traits/enable_if.h>
 #  include <__type_traits/is_allocator.h>
 #  include <__type_traits/is_nothrow_assignable.h>
 #  include <__type_traits/is_nothrow_constructible.h>
-#  include <__type_traits/is_pointer.h>
 #  include <__type_traits/is_same.h>
 #  include <__type_traits/type_identity.h>
+#  include <__utility/exception_guard.h>
 #  include <__utility/forward.h>
 #  include <__utility/move.h>
 #  include <__utility/swap.h>
@@ -275,17 +274,6 @@ template <class _Tp, class _VoidPtr>
 struct __list_node_pointer_traits {
   typedef __rebind_pointer_t<_VoidPtr, __list_node<_Tp, _VoidPtr> > __node_pointer;
   typedef __rebind_pointer_t<_VoidPtr, __list_node_base<_Tp, _VoidPtr> > __base_pointer;
-
-// TODO(LLVM 22): Remove this check
-#  ifndef _LIBCPP_ABI_LIST_REMOVE_NODE_POINTER_UB
-  static_assert(sizeof(__node_pointer) == sizeof(__node_pointer) && _LIBCPP_ALIGNOF(__base_pointer) ==
-                    _LIBCPP_ALIGNOF(__node_pointer),
-                "It looks like you are using std::list with a fancy pointer type that thas a different representation "
-                "depending on whether it points to a list base pointer or a list node pointer (both of which are "
-                "implementation details of the standard library). This means that your ABI is being broken between "
-                "LLVM 19 and LLVM 20. If you don't care about your ABI being broken, define the "
-                "_LIBCPP_ABI_LIST_REMOVE_NODE_POINTER_UB macro to silence this diagnostic.");
-#  endif
 };
 
 template <class _Tp, class _VoidPtr>
@@ -724,7 +712,7 @@ public:
   _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI explicit list(size_type __n, const allocator_type& __a);
 #  endif
   _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI list(size_type __n, const value_type& __x);
-  template <__enable_if_t<__is_allocator<_Alloc>::value, int> = 0>
+  template <__enable_if_t<__is_allocator_v<_Alloc>, int> = 0>
   _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI
   list(size_type __n, const value_type& __x, const allocator_type& __a)
       : __base(__a) {
@@ -1000,22 +988,22 @@ private:
 
 #  if _LIBCPP_STD_VER >= 17
 template <class _InputIterator,
-          class _Alloc = allocator<__iter_value_type<_InputIterator>>,
+          class _Alloc = allocator<__iterator_value_type<_InputIterator>>,
           class        = enable_if_t<__has_input_iterator_category<_InputIterator>::value>,
-          class        = enable_if_t<__is_allocator<_Alloc>::value> >
-list(_InputIterator, _InputIterator) -> list<__iter_value_type<_InputIterator>, _Alloc>;
+          class        = enable_if_t<__is_allocator_v<_Alloc>>>
+list(_InputIterator, _InputIterator) -> list<__iterator_value_type<_InputIterator>, _Alloc>;
 
 template <class _InputIterator,
           class _Alloc,
           class = enable_if_t<__has_input_iterator_category<_InputIterator>::value>,
-          class = enable_if_t<__is_allocator<_Alloc>::value> >
-list(_InputIterator, _InputIterator, _Alloc) -> list<__iter_value_type<_InputIterator>, _Alloc>;
+          class = enable_if_t<__is_allocator_v<_Alloc>>>
+list(_InputIterator, _InputIterator, _Alloc) -> list<__iterator_value_type<_InputIterator>, _Alloc>;
 #  endif
 
 #  if _LIBCPP_STD_VER >= 23
 template <ranges::input_range _Range,
           class _Alloc = allocator<ranges::range_value_t<_Range>>,
-          class        = enable_if_t<__is_allocator<_Alloc>::value> >
+          class        = enable_if_t<__is_allocator_v<_Alloc>>>
 list(from_range_t, _Range&&, _Alloc = _Alloc()) -> list<ranges::range_value_t<_Range>, _Alloc>;
 #  endif
 
@@ -1233,14 +1221,7 @@ list<_Tp, _Alloc>::insert(const_iterator __p, size_type __n, const value_type& _
     ++__ds;
     __r          = iterator(__node->__as_link());
     iterator __e = __r;
-#  if _LIBCPP_HAS_EXCEPTIONS
-    try {
-#  endif // _LIBCPP_HAS_EXCEPTIONS
-      for (--__n; __n != 0; --__n, (void)++__e, ++__ds) {
-        __e.__ptr_->__next_ = this->__create_node(/* prev = */ __e.__ptr_, /* next = */ nullptr, __x)->__as_link();
-      }
-#  if _LIBCPP_HAS_EXCEPTIONS
-    } catch (...) {
+    auto __guard = std::__make_exception_guard([&] {
       while (true) {
         __base_pointer __prev    = __e.__ptr_->__prev_;
         __node_pointer __current = __e.__ptr_->__as_node();
@@ -1249,9 +1230,11 @@ list<_Tp, _Alloc>::insert(const_iterator __p, size_type __n, const value_type& _
           break;
         __e = iterator(__prev);
       }
-      throw;
+    });
+    for (--__n; __n != 0; --__n, (void)++__e, ++__ds) {
+      __e.__ptr_->__next_ = this->__create_node(/* prev = */ __e.__ptr_, /* next = */ nullptr, __x)->__as_link();
     }
-#  endif // _LIBCPP_HAS_EXCEPTIONS
+    __guard.__complete();
     __link_nodes(__p.__ptr_, __r.__ptr_, __e.__ptr_);
     this->__size_ += __ds;
   }
@@ -1276,14 +1259,7 @@ list<_Tp, _Alloc>::__insert_with_sentinel(const_iterator __p, _Iterator __f, _Se
     ++__ds;
     __r          = iterator(__node->__as_link());
     iterator __e = __r;
-#  if _LIBCPP_HAS_EXCEPTIONS
-    try {
-#  endif // _LIBCPP_HAS_EXCEPTIONS
-      for (++__f; __f != __l; ++__f, (void)++__e, ++__ds) {
-        __e.__ptr_->__next_ = this->__create_node(/* prev = */ __e.__ptr_, /* next = */ nullptr, *__f)->__as_link();
-      }
-#  if _LIBCPP_HAS_EXCEPTIONS
-    } catch (...) {
+    auto __guard = std::__make_exception_guard([&] {
       while (true) {
         __base_pointer __prev    = __e.__ptr_->__prev_;
         __node_pointer __current = __e.__ptr_->__as_node();
@@ -1292,9 +1268,11 @@ list<_Tp, _Alloc>::__insert_with_sentinel(const_iterator __p, _Iterator __f, _Se
           break;
         __e = iterator(__prev);
       }
-      throw;
+    });
+    for (++__f; __f != __l; ++__f, (void)++__e, ++__ds) {
+      __e.__ptr_->__next_ = this->__create_node(/* prev = */ __e.__ptr_, /* next = */ nullptr, *__f)->__as_link();
     }
-#  endif // _LIBCPP_HAS_EXCEPTIONS
+    __guard.__complete();
     __link_nodes(__p.__ptr_, __r.__ptr_, __e.__ptr_);
     this->__size_ += __ds;
   }
@@ -1452,14 +1430,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX26 void list<_Tp, _Alloc>::resize(size_type __n) {
     ++__ds;
     iterator __r = iterator(__node->__as_link());
     iterator __e = __r;
-#  if _LIBCPP_HAS_EXCEPTIONS
-    try {
-#  endif // _LIBCPP_HAS_EXCEPTIONS
-      for (--__n; __n != 0; --__n, (void)++__e, ++__ds) {
-        __e.__ptr_->__next_ = this->__create_node(/* prev = */ __e.__ptr_, /* next = */ nullptr)->__as_link();
-      }
-#  if _LIBCPP_HAS_EXCEPTIONS
-    } catch (...) {
+    auto __guard = std::__make_exception_guard([&] {
       while (true) {
         __base_pointer __prev    = __e.__ptr_->__prev_;
         __node_pointer __current = __e.__ptr_->__as_node();
@@ -1468,9 +1439,11 @@ _LIBCPP_CONSTEXPR_SINCE_CXX26 void list<_Tp, _Alloc>::resize(size_type __n) {
           break;
         __e = iterator(__prev);
       }
-      throw;
+    });
+    for (--__n; __n != 0; --__n, (void)++__e, ++__ds) {
+      __e.__ptr_->__next_ = this->__create_node(/* prev = */ __e.__ptr_, /* next = */ nullptr)->__as_link();
     }
-#  endif // _LIBCPP_HAS_EXCEPTIONS
+    __guard.__complete();
     __link_nodes_at_back(__r.__ptr_, __e.__ptr_);
     this->__size_ += __ds;
   }
@@ -1488,14 +1461,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX26 void list<_Tp, _Alloc>::resize(size_type __n, cons
     __base_pointer __nl = __node->__as_link();
     iterator __r        = iterator(__nl);
     iterator __e        = __r;
-#  if _LIBCPP_HAS_EXCEPTIONS
-    try {
-#  endif // _LIBCPP_HAS_EXCEPTIONS
-      for (--__n; __n != 0; --__n, (void)++__e, ++__ds) {
-        __e.__ptr_->__next_ = this->__create_node(/* prev = */ __e.__ptr_, /* next = */ nullptr, __x)->__as_link();
-      }
-#  if _LIBCPP_HAS_EXCEPTIONS
-    } catch (...) {
+    auto __guard        = std::__make_exception_guard([&] {
       while (true) {
         __base_pointer __prev    = __e.__ptr_->__prev_;
         __node_pointer __current = __e.__ptr_->__as_node();
@@ -1504,9 +1470,11 @@ _LIBCPP_CONSTEXPR_SINCE_CXX26 void list<_Tp, _Alloc>::resize(size_type __n, cons
           break;
         __e = iterator(__prev);
       }
-      throw;
+    });
+    for (--__n; __n != 0; --__n, (void)++__e, ++__ds) {
+      __e.__ptr_->__next_ = this->__create_node(/* prev = */ __e.__ptr_, /* next = */ nullptr, __x)->__as_link();
     }
-#  endif // _LIBCPP_HAS_EXCEPTIONS
+    __guard.__complete();
     __link_nodes(__base::__end_as_link(), __r.__ptr_, __e.__ptr_);
     this->__size_ += __ds;
   }

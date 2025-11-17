@@ -27,6 +27,14 @@ bool IsX86_MMXType(llvm::Type *IRType) {
 static llvm::Type *X86AdjustInlineAsmType(CodeGen::CodeGenFunction &CGF,
                                           StringRef Constraint,
                                           llvm::Type *Ty) {
+  bool IsMMXCons = llvm::StringSwitch<bool>(Constraint)
+                       .Cases({"y", "&y", "^Ym"}, true)
+                       .Default(false);
+  if (IsMMXCons && Ty->isVectorTy() &&
+      cast<llvm::VectorType>(Ty)->getPrimitiveSizeInBits().getFixedValue() !=
+          64)
+    return nullptr; // Invalid MMX constraint
+
   if (Constraint == "k") {
     llvm::Type *Int1Ty = llvm::Type::getInt1Ty(CGF.getLLVMContext());
     return llvm::FixedVectorType::get(Int1Ty, Ty->getScalarSizeInBits());
@@ -795,8 +803,7 @@ ABIArgInfo X86_32ABIInfo::classifyArgumentType(QualType Ty, CCState &State,
   if (isAggregateTypeForABI(Ty)) {
     // Structures with flexible arrays are always indirect.
     // FIXME: This should not be byval!
-    if (RT &&
-        RT->getOriginalDecl()->getDefinitionOrSelf()->hasFlexibleArrayMember())
+    if (RT && RT->getDecl()->getDefinitionOrSelf()->hasFlexibleArrayMember())
       return getIndirectResult(Ty, true, State);
 
     // Ignore empty structs/unions on non-Windows.
@@ -831,7 +838,7 @@ ABIArgInfo X86_32ABIInfo::classifyArgumentType(QualType Ty, CCState &State,
       unsigned AlignInBits = 0;
       if (RT) {
         const ASTRecordLayout &Layout =
-            getContext().getASTRecordLayout(RT->getOriginalDecl());
+            getContext().getASTRecordLayout(RT->getDecl());
         AlignInBits = getContext().toBits(Layout.getRequiredAlignment());
       } else if (TI.isAlignRequired()) {
         AlignInBits = TI.Align;
@@ -1343,9 +1350,10 @@ class X86_64ABIInfo : public ABIInfo {
   }
 
   bool returnCXXRecordGreaterThan128InMem() const {
-    // Clang <= 20.0 did not do this.
+    // Clang <= 20.0 did not do this, and PlayStation does not do this.
     if (getContext().getLangOpts().getClangABICompat() <=
-        LangOptions::ClangABI::Ver20)
+            LangOptions::ClangABI::Ver20 ||
+        getTarget().getTriple().isPS())
       return false;
 
     return true;
@@ -2041,7 +2049,7 @@ void X86_64ABIInfo::classify(QualType Ty, uint64_t OffsetBase, Class &Lo,
     if (getRecordArgABI(RT, getCXXABI()))
       return;
 
-    const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
+    const RecordDecl *RD = RT->getDecl()->getDefinitionOrSelf();
 
     // Assume variable sized types are passed in memory.
     if (RD->hasFlexibleArrayMember())
@@ -2850,9 +2858,8 @@ ABIArgInfo
 X86_64ABIInfo::classifyRegCallStructTypeImpl(QualType Ty, unsigned &NeededInt,
                                              unsigned &NeededSSE,
                                              unsigned &MaxVectorWidth) const {
-  auto *RD = cast<RecordType>(Ty.getCanonicalType())
-                 ->getOriginalDecl()
-                 ->getDefinitionOrSelf();
+  auto *RD =
+      cast<RecordType>(Ty.getCanonicalType())->getDecl()->getDefinitionOrSelf();
 
   if (RD->hasFlexibleArrayMember())
     return getIndirectReturnResult(Ty);
@@ -3312,7 +3319,7 @@ ABIArgInfo WinX86_64ABIInfo::classify(QualType Ty, unsigned &FreeSSERegs,
                                        RAA == CGCXXABI::RAA_DirectInMemory);
     }
 
-    if (RT->getOriginalDecl()->getDefinitionOrSelf()->hasFlexibleArrayMember())
+    if (RT->getDecl()->getDefinitionOrSelf()->hasFlexibleArrayMember())
       return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
                                      /*ByVal=*/false);
   }

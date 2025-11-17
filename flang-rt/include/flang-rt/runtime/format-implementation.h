@@ -430,6 +430,9 @@ RT_API_ATTRS int FormatControl<CONTEXT>::CueUpNextDataEdit(
       if constexpr (std::is_base_of_v<InputStatementState, CONTEXT>) {
         context.HandleRelativePosition(chars);
       } else {
+        if (context.GetConnectionState().NeedHardAdvance(chars)) {
+          context.AdvanceRecord();
+        }
         EmitAscii(context, format_ + start, chars);
       }
     } else if (ch == 'H') {
@@ -442,6 +445,9 @@ RT_API_ATTRS int FormatControl<CONTEXT>::CueUpNextDataEdit(
       if constexpr (std::is_base_of_v<InputStatementState, CONTEXT>) {
         context.HandleRelativePosition(static_cast<std::size_t>(*repeat));
       } else {
+        if (context.GetConnectionState().NeedHardAdvance(*repeat)) {
+          context.AdvanceRecord();
+        }
         EmitAscii(
             context, format_ + offset_, static_cast<std::size_t>(*repeat));
       }
@@ -487,6 +493,9 @@ RT_API_ATTRS int FormatControl<CONTEXT>::CueUpNextDataEdit(
     } else if (ch == '\t' || ch == '\v') {
       // Tabs (extension)
       // TODO: any other raw characters?
+      if (context.GetConnectionState().NeedHardAdvance(1)) {
+        context.AdvanceRecord();
+      }
       EmitAscii(context, format_ + offset_ - 1, 1);
     } else {
       ReportBadFormat(
@@ -532,7 +541,7 @@ RT_API_ATTRS common::optional<DataEdit> FormatControl<CONTEXT>::GetNextDataEdit(
           ReportBadFormat(context, "Excessive DT'iotype' in FORMAT", start);
           return common::nullopt;
         }
-        edit.ioType[edit.ioTypeChars++] = ch;
+        context.ioType[edit.ioTypeChars++] = ch;
         if (ch == quote) {
           ++offset_;
         }
@@ -556,7 +565,7 @@ RT_API_ATTRS common::optional<DataEdit> FormatControl<CONTEXT>::GetNextDataEdit(
           ReportBadFormat(context, "Excessive DT(v_list) in FORMAT", start);
           return common::nullopt;
         }
-        edit.vList[edit.vListEntries++] = n;
+        context.vList[edit.vListEntries++] = n;
         auto ch{static_cast<char>(GetNextChar(context))};
         if (ch != ',') {
           ok = ch == ')';

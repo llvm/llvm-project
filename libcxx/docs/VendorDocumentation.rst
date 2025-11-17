@@ -162,10 +162,10 @@ General purpose options
 
 .. option:: LIBCXX_ENABLE_FILESYSTEM:BOOL
 
-   **Default**: ``ON`` except on Windows when using MSVC.
+   **Default**: ``ON``
 
    This option can be used to enable or disable the filesystem components on
-   platforms that may not support them. For example on Windows when using MSVC.
+   platforms that may not support them.
 
 .. option:: LIBCXX_ENABLE_WIDE_CHARACTERS:BOOL
 
@@ -376,6 +376,12 @@ newer (19.14) is required.
 
 Libc++ also supports being built with clang targeting MinGW environments.
 
+Libc++ supports Windows 7 or newer. However, the minimum runtime version
+of the build is determined by the ``_WIN32_WINNT`` define, which in many
+SDKs defaults to the latest version. To build a version that runs on an
+older version, define e.g. ``_WIN32_WINNT=0x601`` while building libc++,
+to target Windows 7.
+
 CMake + Visual Studio
 ---------------------
 
@@ -443,7 +449,7 @@ e.g. the ``mingw-w64-x86_64-clang`` package), together with CMake and ninja.
           -DCMAKE_C_COMPILER=clang                                                    \
           -DCMAKE_CXX_COMPILER=clang++                                                \
           -DLLVM_ENABLE_LLD=ON                                                        \
-          -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi"                                   \
+          -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind"                         \
           -DLIBCXXABI_ENABLE_SHARED=OFF                                               \
           -DLIBCXX_ENABLE_STATIC_ABI_LIBRARY=ON
   > ninja -C build cxx

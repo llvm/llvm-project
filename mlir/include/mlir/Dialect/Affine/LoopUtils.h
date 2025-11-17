@@ -61,7 +61,7 @@ LogicalResult loopUnrollUpToFactor(AffineForOp forOp, uint64_t unrollFactor);
 
 /// Returns true if `loops` is a perfectly nested loop nest, where loops appear
 /// in it from outermost to innermost.
-bool LLVM_ATTRIBUTE_UNUSED isPerfectlyNested(ArrayRef<AffineForOp> loops);
+[[maybe_unused]] bool isPerfectlyNested(ArrayRef<AffineForOp> loops);
 
 /// Get perfectly nested sequence of loops starting at root of loop nest
 /// (the first op being another AffineFor, and the second op - a terminator).

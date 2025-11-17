@@ -29,7 +29,8 @@ namespace clang {
 namespace doc {
 static Error generateDocForJSON(json::Value &JSON, StringRef Filename,
                                 StringRef Path, raw_fd_ostream &OS,
-                                const ClangDocContext &CDCtx);
+                                const ClangDocContext &CDCtx,
+                                StringRef HTMLRootPath);
 
 static Error createFileOpenError(StringRef FileName, std::error_code EC) {
   return createFileError("cannot open file " + FileName, EC);
@@ -46,7 +47,13 @@ public:
                            const ClangDocContext &CDCtx) override;
 };
 
-class MustacheTemplateFile : public Template {
+class MustacheTemplateFile {
+  BumpPtrAllocator Allocator;
+  StringSaver Saver;
+  MustacheContext Ctx;
+  Template T;
+  std::unique_ptr<MemoryBuffer> Buffer;
+
 public:
   static Expected<std::unique_ptr<MustacheTemplateFile>>
   createMustacheFile(StringRef FileName) {
@@ -54,10 +61,8 @@ public:
         MemoryBuffer::getFile(FileName);
     if (auto EC = BufferOrError.getError())
       return createFileOpenError(FileName, EC);
-
-    std::unique_ptr<MemoryBuffer> Buffer = std::move(BufferOrError.get());
-    StringRef FileContent = Buffer->getBuffer();
-    return std::make_unique<MustacheTemplateFile>(FileContent);
+    return std::make_unique<MustacheTemplateFile>(
+        std::move(BufferOrError.get()));
   }
 
   Error registerPartialFile(StringRef Name, StringRef FileName) {
@@ -68,11 +73,15 @@ public:
 
     std::unique_ptr<MemoryBuffer> Buffer = std::move(BufferOrError.get());
     StringRef FileContent = Buffer->getBuffer();
-    registerPartial(Name.str(), FileContent.str());
+    T.registerPartial(Name.str(), FileContent.str());
     return Error::success();
   }
 
-  MustacheTemplateFile(StringRef TemplateStr) : Template(TemplateStr) {}
+  void render(json::Value &V, raw_ostream &OS) { T.render(V, OS); }
+
+  MustacheTemplateFile(std::unique_ptr<MemoryBuffer> &&B)
+      : Saver(Allocator), Ctx(Allocator, Saver), T(B->getBuffer(), Ctx),
+        Buffer(std::move(B)) {}
 };
 
 static std::unique_ptr<MustacheTemplateFile> NamespaceTemplate = nullptr;
@@ -147,20 +156,27 @@ Error MustacheHTMLGenerator::generateDocs(
   SmallString<128> JSONPath;
   sys::path::native(RootDir.str() + "/json", JSONPath);
 
-  StringMap<json::Value> JSONFileMap;
   {
     llvm::TimeTraceScope TS("Iterate JSON files");
     std::error_code EC;
-    sys::fs::directory_iterator JSONIter(JSONPath, EC);
+    sys::fs::recursive_directory_iterator JSONIter(JSONPath, EC);
     std::vector<json::Value> JSONFiles;
     JSONFiles.reserve(Infos.size());
     if (EC)
       return createStringError("Failed to create directory iterator.");
 
-    SmallString<128> HTMLDirPath(RootDir.str() + "/html/");
+    SmallString<128> HTMLDirPath(RootDir.str() + "/html");
     if (auto EC = sys::fs::create_directories(HTMLDirPath))
       return createFileError(HTMLDirPath, EC);
-    while (JSONIter != sys::fs::directory_iterator()) {
+    while (JSONIter != sys::fs::recursive_directory_iterator()) {
+      // create the same directory structure in the HTML dir
+      if (JSONIter->type() == sys::fs::file_type::directory_file) {
+        SmallString<128> HTMLClonedPath(JSONIter->path());
+        sys::path::replace_path_prefix(HTMLClonedPath, JSONPath, HTMLDirPath);
+        if (auto EC = sys::fs::create_directories(HTMLClonedPath))
+          return createFileError(HTMLClonedPath, EC);
+      }
+
       if (EC)
         return createFileError("Failed to iterate: " + JSONIter->path(), EC);
 
@@ -182,15 +198,16 @@ Error MustacheHTMLGenerator::generateDocs(
         return Parsed.takeError();
 
       std::error_code FileErr;
-      SmallString<128> HTMLFilePath(HTMLDirPath);
-      sys::path::append(HTMLFilePath, sys::path::filename(Path));
+      SmallString<128> HTMLFilePath(JSONIter->path());
+      sys::path::replace_path_prefix(HTMLFilePath, JSONPath, HTMLDirPath);
       sys::path::replace_extension(HTMLFilePath, "html");
       raw_fd_ostream InfoOS(HTMLFilePath, FileErr, sys::fs::OF_None);
       if (FileErr)
         return createFileOpenError(Path, FileErr);
 
-      if (Error Err = generateDocForJSON(*Parsed, sys::path::stem(HTMLFilePath),
-                                         HTMLFilePath, InfoOS, CDCtx))
+      if (Error Err =
+              generateDocForJSON(*Parsed, sys::path::stem(HTMLFilePath),
+                                 HTMLFilePath, InfoOS, CDCtx, HTMLDirPath))
         return Err;
       JSONIter.increment(EC);
     }
@@ -199,16 +216,16 @@ Error MustacheHTMLGenerator::generateDocs(
   return Error::success();
 }
 
-static Error setupTemplateValue(const ClangDocContext &CDCtx, json::Value &V) {
+static Error setupTemplateValue(const ClangDocContext &CDCtx, json::Value &V,
+                                SmallString<128> RelativeHTMLPath) {
   V.getAsObject()->insert({"ProjectName", CDCtx.ProjectName});
   json::Value StylesheetArr = Array();
-  SmallString<128> RelativePath("./");
-  sys::path::native(RelativePath, sys::path::Style::posix);
+  sys::path::native(RelativeHTMLPath, sys::path::Style::posix);
 
   auto *SSA = StylesheetArr.getAsArray();
   SSA->reserve(CDCtx.UserStylesheets.size());
   for (const auto &FilePath : CDCtx.UserStylesheets) {
-    SmallString<128> StylesheetPath = RelativePath;
+    SmallString<128> StylesheetPath = RelativeHTMLPath;
     sys::path::append(StylesheetPath, sys::path::Style::posix,
                       sys::path::filename(FilePath));
     SSA->emplace_back(StylesheetPath);
@@ -219,7 +236,7 @@ static Error setupTemplateValue(const ClangDocContext &CDCtx, json::Value &V) {
   auto *SCA = ScriptArr.getAsArray();
   SCA->reserve(CDCtx.JsScripts.size());
   for (auto Script : CDCtx.JsScripts) {
-    SmallString<128> JsPath = RelativePath;
+    SmallString<128> JsPath = RelativeHTMLPath;
     sys::path::append(JsPath, sys::path::Style::posix,
                       sys::path::filename(Script));
     SCA->emplace_back(JsPath);
@@ -230,7 +247,8 @@ static Error setupTemplateValue(const ClangDocContext &CDCtx, json::Value &V) {
 
 static Error generateDocForJSON(json::Value &JSON, StringRef Filename,
                                 StringRef Path, raw_fd_ostream &OS,
-                                const ClangDocContext &CDCtx) {
+                                const ClangDocContext &CDCtx,
+                                StringRef HTMLRootPath) {
   auto StrValue = (*JSON.getAsObject())["InfoType"];
   if (StrValue.kind() != json::Value::Kind::String)
     return createStringError("JSON file '%s' does not contain key: 'InfoType'.",
@@ -241,13 +259,17 @@ static Error generateDocForJSON(json::Value &JSON, StringRef Filename,
         "JSON file '%s' does not contain 'InfoType' field as a string.",
         Filename.str().c_str());
 
+  SmallString<128> PathVec(Path);
+  // Remove filename, or else the relative path will have an extra "../"
+  sys::path::remove_filename(PathVec);
+  auto RelativeHTMLPath = computeRelativePath(HTMLRootPath, PathVec);
   if (ObjTypeStr.value() == "namespace") {
-    if (auto Err = setupTemplateValue(CDCtx, JSON))
+    if (auto Err = setupTemplateValue(CDCtx, JSON, RelativeHTMLPath))
       return Err;
     assert(NamespaceTemplate && "NamespaceTemplate is nullptr.");
     NamespaceTemplate->render(JSON, OS);
   } else if (ObjTypeStr.value() == "record") {
-    if (auto Err = setupTemplateValue(CDCtx, JSON))
+    if (auto Err = setupTemplateValue(CDCtx, JSON, RelativeHTMLPath))
       return Err;
     assert(RecordTemplate && "RecordTemplate is nullptr.");
     RecordTemplate->render(JSON, OS);
@@ -274,11 +296,12 @@ Error MustacheHTMLGenerator::generateDocForInfo(Info *I, raw_ostream &OS,
 }
 
 Error MustacheHTMLGenerator::createResources(ClangDocContext &CDCtx) {
+  std::string ResourcePath(CDCtx.OutDirectory + "/html");
   for (const auto &FilePath : CDCtx.UserStylesheets)
-    if (Error Err = copyFile(FilePath, CDCtx.OutDirectory))
+    if (Error Err = copyFile(FilePath, ResourcePath))
       return Err;
   for (const auto &FilePath : CDCtx.JsScripts)
-    if (Error Err = copyFile(FilePath, CDCtx.OutDirectory))
+    if (Error Err = copyFile(FilePath, ResourcePath))
       return Err;
   return Error::success();
 }

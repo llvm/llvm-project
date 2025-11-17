@@ -110,6 +110,7 @@ STATISTIC(NumFailZeroMII, "Pipeliner abort due to zero MII");
 STATISTIC(NumFailNoSchedule, "Pipeliner abort due to no schedule found");
 STATISTIC(NumFailZeroStage, "Pipeliner abort due to zero stage");
 STATISTIC(NumFailLargeMaxStage, "Pipeliner abort due to too many stages");
+STATISTIC(NumFailTooManyStores, "Pipeliner abort due to too many stores");
 
 /// A command line option to turn software pipelining on or off.
 static cl::opt<bool> EnableSWP("enable-pipeliner", cl::Hidden, cl::init(true),
@@ -193,16 +194,22 @@ static cl::opt<bool>
     MVECodeGen("pipeliner-mve-cg", cl::Hidden, cl::init(false),
                cl::desc("Use the MVE code generator for software pipelining"));
 
-namespace llvm {
+/// A command line argument to limit the number of store instructions in the
+/// target basic block.
+static cl::opt<unsigned> SwpMaxNumStores(
+    "pipeliner-max-num-stores",
+    cl::desc("Maximum number of stores allwed in the target loop."), cl::Hidden,
+    cl::init(200));
 
 // A command line option to enable the CopyToPhi DAG mutation.
-cl::opt<bool> SwpEnableCopyToPhi("pipeliner-enable-copytophi", cl::ReallyHidden,
-                                 cl::init(true),
-                                 cl::desc("Enable CopyToPhi DAG Mutation"));
+cl::opt<bool>
+    llvm::SwpEnableCopyToPhi("pipeliner-enable-copytophi", cl::ReallyHidden,
+                             cl::init(true),
+                             cl::desc("Enable CopyToPhi DAG Mutation"));
 
 /// A command line argument to force pipeliner to use specified issue
 /// width.
-cl::opt<int> SwpForceIssueWidth(
+cl::opt<int> llvm::SwpForceIssueWidth(
     "pipeliner-force-issue-width",
     cl::desc("Force pipeliner to use specified issue width."), cl::Hidden,
     cl::init(-1));
@@ -217,8 +224,6 @@ static cl::opt<WindowSchedulingFlag> WindowSchedulingOption(
                           "Use window algorithm after SMS algorithm fails."),
                clEnumValN(WindowSchedulingFlag::WS_Force, "force",
                           "Use window algorithm instead of SMS algorithm.")));
-
-} // end namespace llvm
 
 unsigned SwingSchedulerDAG::Circuits::MaxPaths = 5;
 char MachinePipeliner::ID = 0;
@@ -540,6 +545,23 @@ bool MachinePipeliner::canPipelineLoop(MachineLoop &L) {
       return MachineOptimizationRemarkAnalysis(DEBUG_TYPE, "canPipelineLoop",
                                                L.getStartLoc(), L.getHeader())
              << "No loop preheader found";
+    });
+    return false;
+  }
+
+  unsigned NumStores = 0;
+  for (MachineInstr &MI : *L.getHeader())
+    if (MI.mayStore())
+      ++NumStores;
+  if (NumStores > SwpMaxNumStores) {
+    LLVM_DEBUG(dbgs() << "Too many stores\n");
+    NumFailTooManyStores++;
+    ORE->emit([&]() {
+      return MachineOptimizationRemarkAnalysis(DEBUG_TYPE, "canPipelineLoop",
+                                               L.getStartLoc(), L.getHeader())
+             << "Too many store instructions in the loop: "
+             << ore::NV("NumStores", NumStores) << " > "
+             << ore::NV("SwpMaxNumStores", SwpMaxNumStores) << ".";
     });
     return false;
   }
@@ -1487,7 +1509,11 @@ private:
 
   void dumpPSet(Register Reg) const {
     dbgs() << "Reg=" << printReg(Reg, TRI, 0, &MRI) << " PSet=";
-    for (auto PSetIter = MRI.getPressureSets(Reg); PSetIter.isValid();
+    // FIXME: The static_cast is a bug compensating bugs in the callers.
+    VirtRegOrUnit VRegOrUnit =
+        Reg.isVirtual() ? VirtRegOrUnit(Reg)
+                        : VirtRegOrUnit(static_cast<MCRegUnit>(Reg.id()));
+    for (auto PSetIter = MRI.getPressureSets(VRegOrUnit); PSetIter.isValid();
          ++PSetIter) {
       dbgs() << *PSetIter << ' ';
     }
@@ -1496,7 +1522,11 @@ private:
 
   void increaseRegisterPressure(std::vector<unsigned> &Pressure,
                                 Register Reg) const {
-    auto PSetIter = MRI.getPressureSets(Reg);
+    // FIXME: The static_cast is a bug compensating bugs in the callers.
+    VirtRegOrUnit VRegOrUnit =
+        Reg.isVirtual() ? VirtRegOrUnit(Reg)
+                        : VirtRegOrUnit(static_cast<MCRegUnit>(Reg.id()));
+    auto PSetIter = MRI.getPressureSets(VRegOrUnit);
     unsigned Weight = PSetIter.getWeight();
     for (; PSetIter.isValid(); ++PSetIter)
       Pressure[*PSetIter] += Weight;
@@ -1504,7 +1534,7 @@ private:
 
   void decreaseRegisterPressure(std::vector<unsigned> &Pressure,
                                 Register Reg) const {
-    auto PSetIter = MRI.getPressureSets(Reg);
+    auto PSetIter = MRI.getPressureSets(VirtRegOrUnit(Reg));
     unsigned Weight = PSetIter.getWeight();
     for (; PSetIter.isValid(); ++PSetIter) {
       auto &P = Pressure[*PSetIter];
@@ -1537,7 +1567,11 @@ private:
       if (MI.isDebugInstr())
         continue;
       for (auto &Use : ROMap[&MI].Uses) {
-        auto Reg = Use.RegUnit;
+        // FIXME: The static_cast is a bug.
+        Register Reg =
+            Use.VRegOrUnit.isVirtualReg()
+                ? Use.VRegOrUnit.asVirtualReg()
+                : Register(static_cast<unsigned>(Use.VRegOrUnit.asMCRegUnit()));
         // Ignore the variable that appears only on one side of phi instruction
         // because it's used only at the first iteration.
         if (MI.isPHI() && Reg != getLoopPhiReg(MI, OrigMBB))
@@ -1587,8 +1621,14 @@ private:
         Register Reg = getLoopPhiReg(*MI, OrigMBB);
         UpdateTargetRegs(Reg);
       } else {
-        for (auto &Use : ROMap.find(MI)->getSecond().Uses)
-          UpdateTargetRegs(Use.RegUnit);
+        for (auto &Use : ROMap.find(MI)->getSecond().Uses) {
+          // FIXME: The static_cast is a bug.
+          Register Reg = Use.VRegOrUnit.isVirtualReg()
+                             ? Use.VRegOrUnit.asVirtualReg()
+                             : Register(static_cast<unsigned>(
+                                   Use.VRegOrUnit.asMCRegUnit()));
+          UpdateTargetRegs(Reg);
+        }
       }
     }
 
@@ -1599,7 +1639,11 @@ private:
     DenseMap<Register, MachineInstr *> LastUseMI;
     for (MachineInstr *MI : llvm::reverse(OrderedInsts)) {
       for (auto &Use : ROMap.find(MI)->getSecond().Uses) {
-        auto Reg = Use.RegUnit;
+        // FIXME: The static_cast is a bug.
+        Register Reg =
+            Use.VRegOrUnit.isVirtualReg()
+                ? Use.VRegOrUnit.asVirtualReg()
+                : Register(static_cast<unsigned>(Use.VRegOrUnit.asMCRegUnit()));
         if (!TargetRegs.contains(Reg))
           continue;
         auto [Ite, Inserted] = LastUseMI.try_emplace(Reg, MI);
@@ -1613,8 +1657,8 @@ private:
     }
 
     Instr2LastUsesTy LastUses;
-    for (auto &Entry : LastUseMI)
-      LastUses[Entry.second].insert(Entry.first);
+    for (auto [Reg, MI] : LastUseMI)
+      LastUses[MI].insert(Reg);
     return LastUses;
   }
 
@@ -1653,7 +1697,12 @@ private:
     });
 
     const auto InsertReg = [this, &CurSetPressure](RegSetTy &RegSet,
-                                                   Register Reg) {
+                                                   VirtRegOrUnit VRegOrUnit) {
+      // FIXME: The static_cast is a bug.
+      Register Reg =
+          VRegOrUnit.isVirtualReg()
+              ? VRegOrUnit.asVirtualReg()
+              : Register(static_cast<unsigned>(VRegOrUnit.asMCRegUnit()));
       if (!Reg.isValid() || isReservedRegister(Reg))
         return;
 
@@ -1690,7 +1739,7 @@ private:
         const unsigned Iter = I - Stage;
 
         for (auto &Def : ROMap.find(MI)->getSecond().Defs)
-          InsertReg(LiveRegSets[Iter], Def.RegUnit);
+          InsertReg(LiveRegSets[Iter], Def.VRegOrUnit);
 
         for (auto LastUse : LastUses[MI]) {
           if (MI->isPHI()) {
@@ -2213,7 +2262,7 @@ static void computeLiveOuts(MachineFunction &MF, RegPressureTracker &RPTracker,
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
   MachineRegisterInfo &MRI = MF.getRegInfo();
   SmallVector<VRegMaskOrUnit, 8> LiveOutRegs;
-  SmallSet<Register, 4> Uses;
+  SmallSet<VirtRegOrUnit, 4> Uses;
   for (SUnit *SU : NS) {
     const MachineInstr *MI = SU->getInstr();
     if (MI->isPHI())
@@ -2221,9 +2270,10 @@ static void computeLiveOuts(MachineFunction &MF, RegPressureTracker &RPTracker,
     for (const MachineOperand &MO : MI->all_uses()) {
       Register Reg = MO.getReg();
       if (Reg.isVirtual())
-        Uses.insert(Reg);
+        Uses.insert(VirtRegOrUnit(Reg));
       else if (MRI.isAllocatable(Reg))
-        Uses.insert_range(TRI->regunits(Reg.asMCReg()));
+        for (MCRegUnit Unit : TRI->regunits(Reg.asMCReg()))
+          Uses.insert(VirtRegOrUnit(Unit));
     }
   }
   for (SUnit *SU : NS)
@@ -2231,12 +2281,14 @@ static void computeLiveOuts(MachineFunction &MF, RegPressureTracker &RPTracker,
       if (!MO.isDead()) {
         Register Reg = MO.getReg();
         if (Reg.isVirtual()) {
-          if (!Uses.count(Reg))
-            LiveOutRegs.emplace_back(Reg, LaneBitmask::getNone());
+          if (!Uses.count(VirtRegOrUnit(Reg)))
+            LiveOutRegs.emplace_back(VirtRegOrUnit(Reg),
+                                     LaneBitmask::getNone());
         } else if (MRI.isAllocatable(Reg)) {
           for (MCRegUnit Unit : TRI->regunits(Reg.asMCReg()))
-            if (!Uses.count(Unit))
-              LiveOutRegs.emplace_back(Unit, LaneBitmask::getNone());
+            if (!Uses.count(VirtRegOrUnit(Unit)))
+              LiveOutRegs.emplace_back(VirtRegOrUnit(Unit),
+                                       LaneBitmask::getNone());
         }
       }
   RPTracker.addLiveRegs(LiveOutRegs);

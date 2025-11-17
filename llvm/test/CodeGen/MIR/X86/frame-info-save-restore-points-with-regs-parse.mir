@@ -1,6 +1,8 @@
 # RUN: llc -run-pass none -o - %s | FileCheck %s 
 
 --- |
+  target triple = "x86_64-unknown-linux-gnu"
+
   define ptr @foo(ptr %ptr, i64 %p2, i64 %p3, i64 %p4, i64 %p5, i64 %p6) {
   entry:
     %tobool.not = icmp eq ptr %ptr, null

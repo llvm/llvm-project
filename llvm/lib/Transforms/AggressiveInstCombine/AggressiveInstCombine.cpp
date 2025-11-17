@@ -28,7 +28,12 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Instruction.h"
+#include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/ProfDataUtils.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/BuildLibCalls.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -37,6 +42,10 @@ using namespace llvm;
 using namespace PatternMatch;
 
 #define DEBUG_TYPE "aggressive-instcombine"
+
+namespace llvm {
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+}
 
 STATISTIC(NumAnyOrAllBitsSet, "Number of any/all-bits-set patterns folded");
 STATISTIC(NumGuardedRotates,
@@ -598,6 +607,14 @@ static bool tryToRecognizeTableBasedCttz(Instruction &I, const DataLayout &DL) {
     auto Cmp = B.CreateICmpEQ(X1, ConstantInt::get(XType, 0));
     auto Select = B.CreateSelect(Cmp, B.CreateZExt(ZeroTableElem, XType), Cttz);
 
+    // The true branch of select handles the cttz(0) case, which is rare.
+    if (!ProfcheckDisableMetadataFixes) {
+      if (Instruction *SelectI = dyn_cast<Instruction>(Select))
+        SelectI->setMetadata(
+            LLVMContext::MD_prof,
+            MDBuilder(SelectI->getContext()).createUnlikelyBranchWeights());
+    }
+
     // NOTE: If the table[0] is 0, but the cttz(0) is defined by the Target
     // it should be handled as: `cttz(x) & (typeSize - 1)`.
 
@@ -890,10 +907,20 @@ static bool mergeConsecutivePartStores(ArrayRef<PartStore> Parts,
   StoreInst *Store = Builder.CreateAlignedStore(
       Val, First.Store->getPointerOperand(), First.Store->getAlign());
 
+  // Merge various metadata onto the new store.
   AAMDNodes AATags = First.Store->getAAMetadata();
-  for (const PartStore &Part : drop_begin(Parts))
+  SmallVector<Instruction *> Stores = {First.Store};
+  Stores.reserve(Parts.size());
+  SmallVector<DebugLoc> DbgLocs = {First.Store->getDebugLoc()};
+  DbgLocs.reserve(Parts.size());
+  for (const PartStore &Part : drop_begin(Parts)) {
     AATags = AATags.concat(Part.Store->getAAMetadata());
+    Stores.push_back(Part.Store);
+    DbgLocs.push_back(Part.Store->getDebugLoc());
+  }
   Store->setAAMetadata(AATags);
+  Store->mergeDIAssignID(Stores);
+  Store->setDebugLoc(DebugLoc::getMergedLocations(DbgLocs));
 
   // Remove the old stores.
   for (const PartStore &Part : Parts)
@@ -1283,11 +1310,19 @@ void StrNCmpInliner::inlineCompare(Value *LHS, StringRef RHS, uint64_t N,
     Value *VR =
         ConstantInt::get(CI->getType(), static_cast<unsigned char>(RHS[i]));
     Value *Sub = Swapped ? B.CreateSub(VR, VL) : B.CreateSub(VL, VR);
-    if (i < N - 1)
-      B.CreateCondBr(B.CreateICmpNE(Sub, ConstantInt::get(CI->getType(), 0)),
-                     BBNE, BBSubs[i + 1]);
-    else
+    if (i < N - 1) {
+      BranchInst *CondBrInst = B.CreateCondBr(
+          B.CreateICmpNE(Sub, ConstantInt::get(CI->getType(), 0)), BBNE,
+          BBSubs[i + 1]);
+
+      Function *F = CI->getFunction();
+      assert(F && "Instruction does not belong to a function!");
+      std::optional<Function::ProfileCount> EC = F->getEntryCount();
+      if (EC && EC->getCount() > 0)
+        setExplicitlyUnknownBranchWeights(*CondBrInst, DEBUG_TYPE);
+    } else {
       B.CreateBr(BBNE);
+    }
 
     Phi->addIncoming(Sub, BBSubs[i]);
   }
@@ -1341,6 +1376,9 @@ static bool foldMemChr(CallInst *Call, DomTreeUpdater *DTU,
   BB->getTerminator()->eraseFromParent();
   SwitchInst *SI = IRB.CreateSwitch(
       IRB.CreateTrunc(Call->getArgOperand(1), ByteTy), BBNext, N);
+  // We can't know the precise weights here, as they would depend on the value
+  // distribution of Call->getArgOperand(1). So we just mark it as "unknown".
+  setExplicitlyUnknownBranchWeightsIfProfiled(*SI, DEBUG_TYPE);
   Type *IndexTy = DL.getIndexType(Call->getType());
   SmallVector<DominatorTree::UpdateType, 8> Updates;
 

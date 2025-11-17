@@ -173,7 +173,7 @@ std::vector<Fix> IncludeFixer::fix(DiagnosticsEngine::Level DiagLevel,
           // `enum x : int;' is not formally an incomplete type.
           // We may need a full definition anyway.
           if (auto * ET = llvm::dyn_cast<EnumType>(T))
-            if (!ET->getOriginalDecl()->getDefinition())
+            if (!ET->getDecl()->getDefinition())
               return fixIncompleteType(*T);
         }
       }

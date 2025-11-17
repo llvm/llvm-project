@@ -10,7 +10,7 @@ define <8 x i64> @shl_i512_1(<8 x i64> %a)  {
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    valignq {{.*#+}} zmm1 = zmm0[3,4,5,6,7,0,1,2]
 ; AVX512VL-NEXT:    vextracti128 $1, %ymm0, %xmm2
-; AVX512VL-NEXT:    vpsllq $1, %xmm0, %xmm3
+; AVX512VL-NEXT:    vpaddq %xmm0, %xmm0, %xmm3
 ; AVX512VL-NEXT:    vpshufd {{.*#+}} xmm4 = xmm0[2,3,2,3]
 ; AVX512VL-NEXT:    vpsrlq $63, %xmm4, %xmm4
 ; AVX512VL-NEXT:    vpaddq %xmm2, %xmm2, %xmm2
@@ -34,7 +34,7 @@ define <8 x i64> @shl_i512_1(<8 x i64> %a)  {
 ; AVX512VBMI-NEXT:    vextracti128 $1, %ymm0, %xmm2
 ; AVX512VBMI-NEXT:    vpshufd {{.*#+}} xmm3 = xmm0[2,3,2,3]
 ; AVX512VBMI-NEXT:    vpshldq $1, %xmm3, %xmm2, %xmm3
-; AVX512VBMI-NEXT:    vpsllq $1, %xmm0, %xmm4
+; AVX512VBMI-NEXT:    vpaddq %xmm0, %xmm0, %xmm4
 ; AVX512VBMI-NEXT:    vinserti128 $1, %xmm3, %ymm4, %ymm3
 ; AVX512VBMI-NEXT:    vinserti128 $1, %xmm1, %ymm2, %ymm1
 ; AVX512VBMI-NEXT:    vpshufd {{.*#+}} ymm1 = ymm1[2,3,2,3,6,7,6,7]
@@ -51,7 +51,7 @@ define <8 x i64> @shl_i512_1(<8 x i64> %a)  {
 ; ZNVER4-NEXT:    vextracti32x4 $2, %zmm0, %xmm1
 ; ZNVER4-NEXT:    vextracti128 $1, %ymm0, %xmm2
 ; ZNVER4-NEXT:    vpshufd {{.*#+}} xmm3 = xmm0[2,3,2,3]
-; ZNVER4-NEXT:    vpsllq $1, %xmm0, %xmm4
+; ZNVER4-NEXT:    vpaddq %xmm0, %xmm0, %xmm4
 ; ZNVER4-NEXT:    vinserti128 $1, %xmm1, %ymm2, %ymm1
 ; ZNVER4-NEXT:    vpshldq $1, %xmm3, %xmm2, %xmm3
 ; ZNVER4-NEXT:    vextracti64x4 $1, %zmm0, %ymm2

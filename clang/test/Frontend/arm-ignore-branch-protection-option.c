@@ -15,4 +15,4 @@ __attribute__((target("arch=cortex-m0"))) void f() {}
 // CHECK-NOT:  attributes { {{.*}} "branch-target-enforcement"
 
 /// Check that there are branch protection module attributes despite the warning.
-// CHECK: !{i32 8, !"branch-target-enforcement", i32 1}
+// CHECK: !{i32 8, !"branch-target-enforcement", i32 2}

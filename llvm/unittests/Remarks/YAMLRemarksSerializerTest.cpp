@@ -163,3 +163,33 @@ TEST(YAMLRemarks, SerializerRemarkParsedStrTabStandaloneNoStrTab) {
                 "...\n"),
       std::move(PreFilledStrTab));
 }
+
+TEST(YAMLRemarks, SerializerRemarkStringRefOOBRead) {
+  remarks::Remark R;
+  R.RemarkType = remarks::Type::Missed;
+  R.PassName = StringRef("passAAAA", 4);
+  R.RemarkName = StringRef("nameAAAA", 4);
+  R.FunctionName = StringRef("funcAAAA", 4);
+  R.Loc = remarks::RemarkLocation{StringRef("pathAAAA", 4), 3, 4};
+  R.Hotness = 5;
+  R.Args.emplace_back();
+  R.Args.back().Key = StringRef("keyAAAA", 3);
+  R.Args.back().Val = StringRef("valueAAAA", 5);
+  R.Args.emplace_back();
+  R.Args.back().Key = StringRef("keydebugAAAA", 8);
+  R.Args.back().Val = StringRef("valuedebugAAAA", 10);
+  R.Args.back().Loc =
+      remarks::RemarkLocation{StringRef("argpathAAAA", 7), 6, 7};
+  checkStandalone(remarks::Format::YAML, R,
+                  "--- !Missed\n"
+                  "Pass:            pass\n"
+                  "Name:            name\n"
+                  "DebugLoc:        { File: path, Line: 3, Column: 4 }\n"
+                  "Function:        func\n"
+                  "Hotness:         5\n"
+                  "Args:\n"
+                  "  - key:             value\n"
+                  "  - keydebug:        valuedebug\n"
+                  "    DebugLoc:        { File: argpath, Line: 6, Column: 7 }\n"
+                  "...\n");
+}
