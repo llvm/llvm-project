@@ -3172,6 +3172,113 @@ static bool interp__builtin_ia32_pternlog(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+static inline void writeMaskFloat(Pointer &Vec, unsigned lane, bool truth,
+                                  bool isF64) {
+  if (isF64) {
+    llvm::APInt bits(64, truth ? ~0ULL : 0ULL);
+    llvm::APFloat F(llvm::APFloat::IEEEdouble(), bits);
+    Vec.elem<Floating>(lane) = Floating(F);
+  } else {
+    llvm::APInt bits(32, truth ? 0xFFFFFFFFu : 0u);
+    llvm::APFloat F(llvm::APFloat::IEEEsingle(), bits);
+    Vec.elem<Floating>(lane) = Floating(F);
+  }
+}
+
+static inline bool laneCompareToBool(const Pointer &A, const Pointer &B,
+                                     int Lane, uint32_t Imm) {
+  llvm::APFloat A0 = A.elem<Floating>(Lane).getAPFloat();
+  llvm::APFloat B0 = B.elem<Floating>(Lane).getAPFloat();
+  auto CR = A0.compare(B0);
+  FPCompareFlags F{/*IsUnordered=*/CR == llvm::APFloatBase::cmpUnordered,
+                   /*IsEq=*/CR == llvm::APFloatBase::cmpEqual,
+                   /*IsGt=*/CR == llvm::APFloatBase::cmpGreaterThan,
+                   /*IsLt=*/CR == llvm::APFloatBase::cmpLessThan};
+  return EvaluateX86FPImmPredicate(Imm, F);
+}
+
+bool interp__builtin_x86_cmp(InterpState &S, CodePtr OpPC,
+                             const InterpFrame *Frame, const CallExpr *Call,
+                             unsigned ID) {
+  llvm::APSInt ImmAPS =
+      popToAPSInt(S.Stk, *S.getContext().classify(Call->getArg(2)));
+  uint32_t imm = ImmAPS.getZExtValue();
+  const Pointer &VB = S.Stk.pop<Pointer>();
+  const Pointer &VA = S.Stk.pop<Pointer>();
+  Pointer &Dst = S.Stk.peek<Pointer>();
+
+  bool isScalar = (ID == X86::BI__builtin_ia32_cmpss) ||
+                  (ID == X86::BI__builtin_ia32_cmpsd);
+  bool isF64 = (ID == X86::BI__builtin_ia32_cmppd) ||
+               (ID == X86::BI__builtin_ia32_cmpsd) ||
+               (ID == X86::BI__builtin_ia32_cmppd256);
+  int lanes = VA.getNumElems();
+
+  if (isScalar) {
+    bool Result = laneCompareToBool(VA, VB, /*lane*/ 0, imm);
+    writeMaskFloat(Dst, /*lane*/ 0, Result, isF64);
+    for (int i = 1; i < lanes; ++i)
+      Dst.elem<Floating>(i) = VA.elem<Floating>(i);
+  } else {
+    for (int i = 0; i < lanes; i++) {
+      bool Result = laneCompareToBool(VA, VB, i, imm);
+      writeMaskFloat(Dst, i, Result, isF64);
+    }
+  }
+
+  Dst.initializeAllElements();
+  return true;
+}
+
+static bool interp__builtin_x86_vcomish(InterpState &S, CodePtr OpPC,
+                                        const InterpFrame *Frame,
+                                        const CallExpr *Call) {
+  using CmpResult = llvm::APFloatBase::cmpResult;
+
+  llvm::APSInt R =
+      popToAPSInt(S.Stk, *S.getContext().classify(Call->getArg(3)));
+  llvm::APSInt P =
+      popToAPSInt(S.Stk, *S.getContext().classify(Call->getArg(2)));
+  const Pointer &VB = S.Stk.pop<Pointer>();
+  const Pointer &VA = S.Stk.pop<Pointer>();
+
+  llvm::APFloat A0 = VA.elem<Floating>(0).getAPFloat();
+  llvm::APFloat B0 = VB.elem<Floating>(0).getAPFloat();
+  CmpResult cmp = A0.compare(B0);
+  FPCompareFlags F{/*IsUnordered=*/cmp == llvm::APFloatBase::cmpUnordered,
+                   /*IsEq=*/cmp == CmpResult::cmpEqual,
+                   /*IsGt=*/cmp == CmpResult::cmpGreaterThan,
+                   /*IsLt=*/cmp == CmpResult::cmpLessThan};
+  bool result =
+      EvaluateX86FPImmPredicate(static_cast<uint32_t>(P.getZExtValue()), F);
+
+  pushInteger(S, result ? 1 : 0, Call->getType());
+  return true;
+}
+
+static bool interp__builtin_x86_compare_scalar(InterpState &S, CodePtr OpPC,
+                                               const InterpFrame *Frame,
+                                               const CallExpr *Call,
+                                               unsigned ID) {
+  using CmpResult = llvm::APFloatBase::cmpResult;
+
+  const Pointer &VB = S.Stk.pop<Pointer>();
+  const Pointer &VA = S.Stk.pop<Pointer>();
+
+  llvm::APFloat A0 = VA.elem<Floating>(0).getAPFloat();
+  llvm::APFloat B0 = VB.elem<Floating>(0).getAPFloat();
+  CmpResult cmp = A0.compare(B0);
+
+  FPCompareFlags F{/*IsUnordered=*/cmp == llvm::APFloatBase::cmpUnordered,
+                   /*IsEq=*/cmp == CmpResult::cmpEqual,
+                   /*IsGt=*/cmp == CmpResult::cmpGreaterThan,
+                   /*IsLt=*/cmp == CmpResult::cmpLessThan};
+  bool result =
+      EvaluateX86ScalarComiPredicate(DecodeX86ScalarComiBuiltin(ID), F);
+  pushInteger(S, result ? 1 : 0, S.getASTContext().IntTy);
+  return true;
+}
+
 static bool interp__builtin_vec_ext(InterpState &S, CodePtr OpPC,
                                     const CallExpr *Call, unsigned ID) {
   assert(Call->getNumArgs() == 2);
@@ -4673,6 +4780,41 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_insert128i256:
     return interp__builtin_x86_insert_subvector(S, OpPC, Call, BuiltinID);
 
+  case X86::BI__builtin_ia32_vcomish:
+    return interp__builtin_x86_vcomish(S, OpPC, Frame, Call);
+  case X86::BI__builtin_ia32_comieq:
+  case X86::BI__builtin_ia32_ucomieq:
+  case X86::BI__builtin_ia32_comisdeq:
+  case X86::BI__builtin_ia32_ucomisdeq:
+  case X86::BI__builtin_ia32_comineq:
+  case X86::BI__builtin_ia32_ucomineq:
+  case X86::BI__builtin_ia32_comisdneq:
+  case X86::BI__builtin_ia32_ucomisdneq:
+  case X86::BI__builtin_ia32_comige:
+  case X86::BI__builtin_ia32_ucomige:
+  case X86::BI__builtin_ia32_comisdge:
+  case X86::BI__builtin_ia32_ucomisdge:
+  case X86::BI__builtin_ia32_comilt:
+  case X86::BI__builtin_ia32_ucomilt:
+  case X86::BI__builtin_ia32_comisdlt:
+  case X86::BI__builtin_ia32_ucomisdlt:
+  case X86::BI__builtin_ia32_comile:
+  case X86::BI__builtin_ia32_ucomile:
+  case X86::BI__builtin_ia32_comisdle:
+  case X86::BI__builtin_ia32_ucomisdle:
+  case X86::BI__builtin_ia32_comigt:
+  case X86::BI__builtin_ia32_ucomigt:
+  case X86::BI__builtin_ia32_comisdgt:
+  case X86::BI__builtin_ia32_ucomisdgt:
+    return interp__builtin_x86_compare_scalar(S, OpPC, Frame, Call, BuiltinID);
+
+  case X86::BI__builtin_ia32_cmpps:
+  case X86::BI__builtin_ia32_cmppd:
+  case X86::BI__builtin_ia32_cmpss:
+  case X86::BI__builtin_ia32_cmpsd:
+  case X86::BI__builtin_ia32_cmpps256:
+  case X86::BI__builtin_ia32_cmppd256:
+    return interp__builtin_x86_cmp(S, OpPC, Frame, Call, BuiltinID);
   case X86::BI__builtin_ia32_vec_ext_v4hi:
   case X86::BI__builtin_ia32_vec_ext_v16qi:
   case X86::BI__builtin_ia32_vec_ext_v8hi:
@@ -4823,8 +4965,8 @@ bool InterpretOffsetOf(InterpState &S, CodePtr OpPC, const OffsetOfExpr *E,
       break;
     }
     case OffsetOfNode::Array: {
-      // When generating bytecode, we put all the index expressions as Sint64 on
-      // the stack.
+      // When generating bytecode, we put all the index expressions as Sint64
+      // on the stack.
       int64_t Index = ArrayIndices[ArrayIndex];
       const ArrayType *AT = S.getASTContext().getAsArrayType(CurrentType);
       if (!AT)

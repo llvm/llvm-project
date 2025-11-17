@@ -16497,6 +16497,159 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
         [](const APSInt &LHS, const APSInt &RHS) { return LHS + RHS; });
   }
 
+  case X86::BI__builtin_ia32_cmpps:
+  case X86::BI__builtin_ia32_cmppd:
+  case X86::BI__builtin_ia32_cmpss:
+  case X86::BI__builtin_ia32_cmpsd:
+  case X86::BI__builtin_ia32_cmpps256:
+  case X86::BI__builtin_ia32_cmppd256: {
+    using CmpResult = llvm::APFloatBase::cmpResult;
+
+    const Expr *A = E->getArg(0);
+    const Expr *B = E->getArg(1);
+    const Expr *Imm = E->getArg(2);
+
+    APValue AV, BV;
+    APSInt ImmVal;
+    if (!EvaluateVector(A, AV, Info) || !EvaluateVector(B, BV, Info))
+      return false;
+    if (!EvaluateInteger(Imm, ImmVal, Info))
+      return false;
+
+    if (!AV.isVector() || !BV.isVector())
+      return false;
+    unsigned Lanes = AV.getVectorLength();
+    if (Lanes == 0 || BV.getVectorLength() != Lanes)
+      return false;
+
+    QualType RetTy = E->getType();
+    const auto *VT = RetTy->getAs<VectorType>();
+    if (!VT)
+      return false;
+    bool IsF64 =
+        VT->getElementType()->isSpecificBuiltinType(BuiltinType::Double);
+    const bool IsScalar = (BuiltinOp == X86::BI__builtin_ia32_cmpss) ||
+                          (BuiltinOp == X86::BI__builtin_ia32_cmpsd);
+    const uint32_t imm = ImmVal.getZExtValue();
+
+    auto writeMaskFloat = [&](APValue &Dst, unsigned Lane, bool Bit,
+                              bool IsF64Elt) {
+      if (IsF64Elt) {
+        llvm::APInt I(64, Bit ? ~0ULL : 0ULL);
+        llvm::APFloat F(Info.Ctx.getFloatTypeSemantics(Info.Ctx.DoubleTy), I);
+        Dst.getVectorElt(Lane) = APValue(F);
+      } else {
+        llvm::APInt I(32, Bit ? 0xFFFFFFFFu : 0u);
+        llvm::APFloat F(Info.Ctx.getFloatTypeSemantics(Info.Ctx.FloatTy), I);
+        Dst.getVectorElt(Lane) = APValue(F);
+      }
+    };
+
+    auto cmpLaneToBit = [&](unsigned Lane) -> bool {
+      const APValue &AE = AV.getVectorElt(Lane);
+      const APValue &BE = BV.getVectorElt(Lane);
+      if (!AE.isFloat() || !BE.isFloat())
+        return false;
+      llvm::APFloat A0 = AE.getFloat();
+      llvm::APFloat B0 = BE.getFloat();
+      auto CR = A0.compare(B0);
+      FPCompareFlags F{/*IsUnordered=*/CR == llvm::APFloatBase::cmpUnordered,
+                       /*IsEq=*/CR == CmpResult::cmpEqual,
+                       /*IsGt=*/CR == CmpResult::cmpGreaterThan,
+                       /*IsLt=*/CR == CmpResult::cmpLessThan};
+      return EvaluateX86FPImmPredicate(imm, F);
+    };
+
+    APValue Res((const APValue *)nullptr, Lanes);
+    for (unsigned i = 0; i < Lanes; ++i)
+      Res.getVectorElt(i) = AV.getVectorElt(i);
+
+    if (IsScalar) {
+      bool bit = cmpLaneToBit(0);
+      writeMaskFloat(Res, 0, bit, IsF64);
+    } else {
+      for (unsigned i = 0; i < Lanes; ++i) {
+        bool bit = cmpLaneToBit(i);
+        writeMaskFloat(Res, i, bit, IsF64);
+      }
+    }
+    return Success(Res, E);
+  }
+  case X86::BI__builtin_ia32_vcomish: {
+    APSInt R, P;
+    if (!EvaluateInteger(E->getArg(3), R, Info))
+      return false;
+    if (!EvaluateInteger(E->getArg(2), P, Info))
+      return false;
+    APValue AV, BV;
+    if (!EvaluateVector(E->getArg(0), AV, Info) ||
+        !EvaluateVector(E->getArg(1), BV, Info))
+      return false;
+    if (!AV.isVector() || !BV.isVector() || AV.getVectorLength() == 0 ||
+        BV.getVectorLength() == 0)
+      return false;
+    const APValue &A0V = AV.getVectorElt(0);
+    const APValue &B0V = BV.getVectorElt(0);
+    if (!A0V.isFloat() || !B0V.isFloat())
+      return false;
+    const llvm::APFloat &A0 = A0V.getFloat();
+    const llvm::APFloat &B0 = B0V.getFloat();
+    auto CR = A0.compare(B0);
+    FPCompareFlags F{/*IsUnordered=*/CR == llvm::APFloatBase::cmpUnordered,
+                     /*IsEq=*/CR == llvm::APFloatBase::cmpEqual,
+                     /*IsGt=*/CR == llvm::APFloatBase::cmpGreaterThan,
+                     /*IsLt=*/CR == llvm::APFloatBase::cmpLessThan};
+    bool Result =
+        EvaluateX86FPImmPredicate(static_cast<uint32_t>(P.getZExtValue()), F);
+    return Success(Result ? 1 : 0, E);
+  }
+  case X86::BI__builtin_ia32_comieq:
+  case X86::BI__builtin_ia32_ucomieq:
+  case X86::BI__builtin_ia32_comisdeq:
+  case X86::BI__builtin_ia32_ucomisdeq:
+  case X86::BI__builtin_ia32_comineq:
+  case X86::BI__builtin_ia32_ucomineq:
+  case X86::BI__builtin_ia32_comisdneq:
+  case X86::BI__builtin_ia32_ucomisdneq:
+  case X86::BI__builtin_ia32_comige:
+  case X86::BI__builtin_ia32_ucomige:
+  case X86::BI__builtin_ia32_comisdge:
+  case X86::BI__builtin_ia32_ucomisdge:
+  case X86::BI__builtin_ia32_comilt:
+  case X86::BI__builtin_ia32_ucomilt:
+  case X86::BI__builtin_ia32_comisdlt:
+  case X86::BI__builtin_ia32_ucomisdlt:
+  case X86::BI__builtin_ia32_comigt:
+  case X86::BI__builtin_ia32_ucomigt:
+  case X86::BI__builtin_ia32_comisdgt:
+  case X86::BI__builtin_ia32_ucomisdgt:
+  case X86::BI__builtin_ia32_comile:
+  case X86::BI__builtin_ia32_ucomile:
+  case X86::BI__builtin_ia32_comisdle:
+  case X86::BI__builtin_ia32_ucomisdle: {
+    APValue AV, BV;
+    if (!EvaluateVector(E->getArg(0), AV, Info) ||
+        !EvaluateVector(E->getArg(1), BV, Info))
+      return false;
+    if (!AV.isVector() || !BV.isVector() || AV.getVectorLength() == 0 ||
+        BV.getVectorLength() == 0)
+      return false;
+    const APValue &A0V = AV.getVectorElt(0);
+    const APValue &B0V = BV.getVectorElt(0);
+    if (!A0V.isFloat() || !B0V.isFloat())
+      return false;
+    const llvm::APFloat &A0 = A0V.getFloat();
+    const llvm::APFloat &B0 = B0V.getFloat();
+    auto CR = A0.compare(B0);
+    FPCompareFlags F{/*IsUnordered=*/CR == llvm::APFloatBase::cmpUnordered,
+                     /*IsEq=*/CR == llvm::APFloatBase::cmpEqual,
+                     /*IsGt=*/CR == llvm::APFloatBase::cmpGreaterThan,
+                     /*IsLt=*/CR == llvm::APFloatBase::cmpLessThan};
+    bool Result = EvaluateX86ScalarComiPredicate(
+        DecodeX86ScalarComiBuiltin(BuiltinOp), F);
+    return Success(Result ? 1 : 0, E);
+  }
+
   case clang::X86::BI__builtin_ia32_vec_ext_v4hi:
   case clang::X86::BI__builtin_ia32_vec_ext_v16qi:
   case clang::X86::BI__builtin_ia32_vec_ext_v8hi:

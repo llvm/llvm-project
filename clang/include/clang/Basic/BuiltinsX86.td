@@ -58,7 +58,7 @@ let Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<64>], Features 
 }
 
 // SSE intrinsics
-let Attributes = [Const, NoThrow, RequiredVectorWidth<128>] in {
+let Attributes = [Const, Constexpr, NoThrow, RequiredVectorWidth<128>] in {
   foreach Cmp = ["eq", "lt", "le", "gt", "ge", "neq"] in {
     let Features = "sse" in {
       def comi#Cmp : X86Builtin<"int(_Vector<4, float>, _Vector<4, float>)">;
@@ -67,18 +67,6 @@ let Attributes = [Const, NoThrow, RequiredVectorWidth<128>] in {
     let Features = "sse2" in {
       def comisd#Cmp : X86Builtin<"int(_Vector<2, double>, _Vector<2, double>)">;
       def ucomisd#Cmp : X86Builtin<"int(_Vector<2, double>, _Vector<2, double>)">;
-    }
-  }
-
-  foreach Cmp = ["cmpeq", "cmplt", "cmple", "cmpunord", "cmpneq", "cmpnlt",
-                 "cmpnle", "cmpord", "min", "max"] in {
-    let Features = "sse" in {
-      def Cmp#ps : X86Builtin<"_Vector<4, float>(_Vector<4, float>, _Vector<4, float>)">;
-      def Cmp#ss : X86Builtin<"_Vector<4, float>(_Vector<4, float>, _Vector<4, float>)">;
-    }
-    let Features = "sse2" in {
-      def Cmp#pd : X86Builtin<"_Vector<2, double>(_Vector<2, double>, _Vector<2, double>)">;
-      def Cmp#sd : X86Builtin<"_Vector<2, double>(_Vector<2, double>, _Vector<2, double>)">;
     }
   }
 
@@ -91,7 +79,20 @@ let Attributes = [Const, NoThrow, RequiredVectorWidth<128>] in {
     def cmppd : X86Builtin<"_Vector<2, double>(_Vector<2, double>, _Vector<2, double>, _Constant char)">;
     def cmpsd : X86Builtin<"_Vector<2, double>(_Vector<2, double>, _Vector<2, double>, _Constant char)">;
   }
+}
 
+let Attributes = [Const, NoThrow, RequiredVectorWidth<128>] in {
+  foreach Cmp = ["cmpeq", "cmplt", "cmple", "cmpunord", "cmpneq", "cmpnlt",
+                 "cmpnle", "cmpord", "min", "max"] in {
+    let Features = "sse" in {
+      def Cmp#ps : X86Builtin<"_Vector<4, float>(_Vector<4, float>, _Vector<4, float>)">;
+      def Cmp#ss : X86Builtin<"_Vector<4, float>(_Vector<4, float>, _Vector<4, float>)">;
+    }
+    let Features = "sse2" in {
+      def Cmp#pd : X86Builtin<"_Vector<2, double>(_Vector<2, double>, _Vector<2, double>)">;
+      def Cmp#sd : X86Builtin<"_Vector<2, double>(_Vector<2, double>, _Vector<2, double>)">;
+    }
+  }
 
   let Features = "sse3" in {
     foreach Op = ["addsub"] in {
@@ -491,6 +492,8 @@ let Features = "avx512f,vpclmulqdq", Attributes = [NoThrow, Const, RequiredVecto
 let Features = "avx", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<256>] in {
   def shufpd256 : X86Builtin<"_Vector<4, double>(_Vector<4, double>, _Vector<4, double>, _Constant int)">;
   def shufps256 : X86Builtin<"_Vector<8, float>(_Vector<8, float>, _Vector<8, float>, _Constant int)">;
+  def cmppd256 : X86Builtin<"_Vector<4, double>(_Vector<4, double>, _Vector<4, double>, _Constant char)">;
+  def cmpps256 : X86Builtin<"_Vector<8, float>(_Vector<8, float>, _Vector<8, float>, _Constant char)">;
 }
 
 let Features = "avx", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in {
@@ -499,8 +502,7 @@ let Features = "avx", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in
   def vpermilvarpd256 : X86Builtin<"_Vector<4, double>(_Vector<4, double>, _Vector<4, long long int>)">;
   def vpermilvarps256 : X86Builtin<"_Vector<8, float>(_Vector<8, float>, _Vector<8, int>)">;
   def dpps256 : X86Builtin<"_Vector<8, float>(_Vector<8, float>, _Vector<8, float>, _Constant char)">;
-  def cmppd256 : X86Builtin<"_Vector<4, double>(_Vector<4, double>, _Vector<4, double>, _Constant char)">;
-  def cmpps256 : X86Builtin<"_Vector<8, float>(_Vector<8, float>, _Vector<8, float>, _Constant char)">;
+  // cmppd256/cmpps256 are declared in the Constexpr AVX block above.
   def cvtpd2ps256 : X86Builtin<"_Vector<4, float>(_Vector<4, double>)">;
   def cvtps2dq256 : X86Builtin<"_Vector<8, int>(_Vector<8, float>)">;
   def cvttpd2dq256 : X86Builtin<"_Vector<4, int>(_Vector<4, double>)">;
@@ -3448,7 +3450,7 @@ let Features = "avx512vp2intersect,avx512vl", Attributes = [NoThrow, RequiredVec
   def vp2intersect_d_128 : X86Builtin<"void(_Vector<4, int>, _Vector<4, int>, unsigned char *, unsigned char *)">;
 }
 
-let Features = "avx512fp16", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
+let Features = "avx512fp16", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<128>] in {
   def vcomish : X86Builtin<"int(_Vector<8, _Float16>, _Vector<8, _Float16>, _Constant int, _Constant int)">;
 }
 
