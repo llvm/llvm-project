@@ -128,7 +128,7 @@ def main(
                 ),
             )
         ]
-        with open("comment", "w") as comment_file_handle:
+        with open("comments", "w") as comment_file_handle:
             json.dump(comments, comment_file_handle)
     else:
         print(advisor_response.reason)
