@@ -4294,10 +4294,28 @@ static unsigned CopyToFromAsymmetricReg(Register DestReg, Register SrcReg,
 
   if (X86::VR128XRegClass.contains(DestReg) &&
       X86::GR32RegClass.contains(SrcReg))
-    // Copy from a VR128 register to a VR128 register.
+    // Copy from a GR32 register to a VR128 register.
     return HasAVX512 ? X86::VMOVDI2PDIZrr
            : HasAVX  ? X86::VMOVDI2PDIrr
                      : X86::MOVDI2PDIrr;
+
+  // SrcReg(VR128) -> DestReg(GR16)
+  // SrcReg(GR16)  -> DestReg(VR128)
+
+  if (X86::GR16RegClass.contains(DestReg) &&
+      X86::VR128XRegClass.contains(SrcReg))
+    // Copy from a VR128 register to a GR16 register.
+    return HasAVX512 ? X86::VPEXTRWZrri
+           : HasAVX  ? X86::VPEXTRWrri
+                     : X86::PEXTRWrri;
+
+  if (X86::VR128XRegClass.contains(DestReg) &&
+      X86::GR16RegClass.contains(SrcReg))
+    // Copy from a GR16 register to a VR128 register.
+    return HasAVX512 ? X86::VPINSRWZrri
+           : HasAVX  ? X86::VPINSRWrri
+                     : X86::PINSRWrri;
+
   return 0;
 }
 
@@ -4370,8 +4388,24 @@ void X86InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     Opc = CopyToFromAsymmetricReg(DestReg, SrcReg, Subtarget);
 
   if (Opc) {
-    BuildMI(MBB, MI, DL, get(Opc), DestReg)
-        .addReg(SrcReg, getKillRegState(KillSrc));
+    auto MIB = BuildMI(MBB, MI, DL, get(Opc), DestReg);
+    switch (Opc) {
+    case X86::VPINSRWZrri:
+    case X86::VPINSRWrri:
+    case X86::PINSRWrri:
+      MIB.addReg(DestReg, RegState::Undef)
+          .addReg(SrcReg, getKillRegState(KillSrc))
+          .addImm(0);
+      break;
+    case X86::VPEXTRWZrri:
+    case X86::VPEXTRWrri:
+    case X86::PEXTRWrri:
+      MIB.addReg(SrcReg, getKillRegState(KillSrc)).addImm(0);
+      break;
+    default:
+      MIB.addReg(SrcReg, getKillRegState(KillSrc));
+      break;
+    }
     return;
   }
 
