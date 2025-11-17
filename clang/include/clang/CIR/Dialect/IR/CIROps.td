@@ -413,6 +413,18 @@ def CIR_ConstantOp : CIR_Op<"const", [
 
     template <typename T>
     T getValueAttr() { return mlir::dyn_cast<T>(getValue()); }
+
+    llvm::APInt getIntValue() {
+      if (const auto intAttr = getValueAttr<cir::IntAttr>())
+        return intAttr.getValue();
+      llvm_unreachable("Expected an IntAttr in ConstantOp");
+    }
+
+    bool getBoolValue() {
+      if (const auto boolAttr = getValueAttr<cir::BoolAttr>())
+        return boolAttr.getValue();
+      llvm_unreachable("Expected a BoolAttr in ConstantOp");
+    }
   }];
 
   let hasFolder = 1;
@@ -2580,6 +2592,39 @@ def CIR_FuncOp : CIR_Op<"func", [
 }
 
 //===----------------------------------------------------------------------===//
+// LLVMIntrinsicCallOp
+//===----------------------------------------------------------------------===//
+
+def CIR_LLVMIntrinsicCallOp : CIR_Op<"call_llvm_intrinsic"> {
+  let summary = "Call to llvm intrinsic functions that is not defined in CIR";
+  let description = [{
+    `cir.call_llvm_intrinsic` operation represents a call-like expression which has
+    return type and arguments that maps directly to a llvm intrinsic.
+    It only records intrinsic `intrinsic_name`.
+  }];
+
+  let results = (outs Optional<CIR_AnyType>:$result);
+  let arguments = (ins
+                   StrAttr:$intrinsic_name, Variadic<CIR_AnyType>:$arg_ops);
+
+  let skipDefaultBuilders = 1;
+
+  let assemblyFormat = [{
+    $intrinsic_name $arg_ops `:` functional-type($arg_ops, $result) attr-dict
+  }];
+
+  let builders = [
+    OpBuilder<(ins "mlir::StringAttr":$intrinsic_name, "mlir::Type":$resType,
+              CArg<"mlir::ValueRange", "{}">:$operands), [{
+      $_state.addAttribute("intrinsic_name", intrinsic_name);
+      $_state.addOperands(operands);
+      if (resType)
+        $_state.addTypes(resType);
+    }]>,
+  ];
+}
+
+//===----------------------------------------------------------------------===//
 // CallOp
 //===----------------------------------------------------------------------===//
 
@@ -3341,6 +3386,10 @@ def CIR_BaseClassAddrOp : CIR_Op<"base_class_addr"> {
     cannot be known by the operation, and that information affects how the
     operation is lowered.
 
+    The validity of the relationship of derived and base cannot yet be verified.
+    If the target class is not a valid base class for the object, the behavior
+    is undefined.
+
     Example:
     ```c++
     struct Base { };
@@ -3354,8 +3403,6 @@ def CIR_BaseClassAddrOp : CIR_Op<"base_class_addr"> {
     ```
   }];
 
-  // The validity of the relationship of derived and base cannot yet be
-  // verified, currently not worth adding a verifier.
   let arguments = (ins
     Arg<CIR_PointerType, "derived class pointer", [MemRead]>:$derived_addr,
     IndexAttr:$offset, UnitAttr:$assume_not_null);
@@ -3366,6 +3413,56 @@ def CIR_BaseClassAddrOp : CIR_Op<"base_class_addr"> {
       $derived_addr `:` qualified(type($derived_addr))
       (`nonnull` $assume_not_null^)?
       ` ` `[` $offset `]` `->` qualified(type($base_addr)) attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// DerivedClassAddrOp
+//===----------------------------------------------------------------------===//
+
+def CIR_DerivedClassAddrOp : CIR_Op<"derived_class_addr"> {
+  let summary = "Get the derived class address for a class/struct";
+  let description = [{
+    The `cir.derived_class_addr` operaration gets the address of a particular
+    derived class given a non-virtual base class pointer. The offset in bytes
+    of the base class must be passed in, similar to `cir.base_class_addr`, but
+    going into the other direction. This means lowering to a negative offset.
+
+    The operation contains a flag for whether or not the operand may be nullptr.
+    That depends on the context and cannot be known by the operation, and that
+    information affects how the operation is lowered.
+
+    The validity of the relationship of derived and base cannot yet be verified.
+    If the target class is not a valid derived class for the object, the
+    behavior is undefined.
+
+    Example:
+    ```c++
+    class A {};
+    class B : public A {};
+
+    B *getAsB(A *a) {
+      return static_cast<B*>(a);
+    }
+    ```
+
+    leads to
+    ```mlir
+      %2 = cir.load %0 : !cir.ptr<!cir.ptr<!rec_A>>, !cir.ptr<!rec_A>
+      %3 = cir.base_class_addr %2 : !cir.ptr<!rec_B> [0] -> !cir.ptr<!rec_A>
+    ```
+  }];
+
+  let arguments = (ins
+    Arg<CIR_PointerType, "base class pointer", [MemRead]>:$base_addr,
+    IndexAttr:$offset, UnitAttr:$assume_not_null);
+
+  let results = (outs Res<CIR_PointerType, "">:$derived_addr);
+
+  let assemblyFormat = [{
+      $base_addr `:` qualified(type($base_addr))
+      (`nonnull` $assume_not_null^)?
+      ` ` `[` $offset `]` `->` qualified(type($derived_addr)) attr-dict
   }];
 }
 

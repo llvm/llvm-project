@@ -146,7 +146,6 @@ public:
   }
 
   bool enableMachineScheduler() const override { return true; }
-  bool enableTerminalRule() const override { return true; }
 
   bool enablePostRAScheduler() const override { return UsePostRAScheduler; }
 
@@ -321,6 +320,8 @@ public:
       llvm_unreachable("Unexpected NF");
     }
   }
+
+  bool enablePExtCodeGen() const;
 
   // Returns VLEN divided by DLEN. Where DLEN is the datapath width of the
   // vector hardware implementation which may be less than VLEN.
