@@ -67,13 +67,13 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-extern FILE * stderr;
+extern FILE *stderr;
 __LIBC_ATTRS;
 
-extern FILE * stdin;
+extern FILE *stdin;
 __LIBC_ATTRS;
 
-extern FILE * stdout;
+extern FILE *stdout;
 __LIBC_ATTRS;
 
 #ifdef __cplusplus
