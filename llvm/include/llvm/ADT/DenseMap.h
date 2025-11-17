@@ -363,7 +363,16 @@ public:
   void swap(DerivedT &RHS) {
     this->incrementEpoch();
     RHS.incrementEpoch();
-    derived().swapImpl(RHS);
+    if (derived().maybeSwapFast(RHS.derived()))
+      return;
+
+    DerivedT &LHS = derived();
+    DerivedT Tmp;
+    Tmp.destroyAll();
+    Tmp.derived().kill();
+    Tmp.moveWithoutRehash(std::move(LHS));
+    LHS.moveWithoutRehash(std::move(RHS));
+    RHS.moveWithoutRehash(std::move(Tmp));
   }
 
 protected:
@@ -422,6 +431,43 @@ protected:
     // +1 is required because of the strict inequality.
     // For example, if NumEntries is 48, we need to return 128.
     return NextPowerOf2(NumEntries * 4 / 3 + 1);
+  }
+
+  // Move buckets without rehash.
+  //
+  // Preconditions:
+  // - *this is killed.
+  // - RHS is valid.
+  //
+  // Post conditions:
+  // - *this is valid.
+  // - RHS is valid or killed (but not uninitialized).
+  void moveWithoutRehash(DerivedT &&RHS) {
+    if (derived().maybeMoveFast(std::move(RHS.derived())))
+      return;
+
+    derived().allocateBuckets(RHS.getNumBuckets());
+    setNumEntries(RHS.getNumEntries());
+    setNumTombstones(RHS.getNumTombstones());
+    DerivedT &LHS = derived();
+    iterator_range<BucketT *> LHSBuckets = LHS.buckets();
+    iterator_range<BucketT *> RHSBuckets = RHS.buckets();
+    assert(std::distance(LHSBuckets.begin(), LHSBuckets.end()) ==
+           std::distance(RHSBuckets.begin(), RHSBuckets.end()));
+    const KeyT EmptyKey = KeyInfoT::getEmptyKey();
+    const KeyT TombstoneKey = KeyInfoT::getTombstoneKey();
+    for (BucketT *L = LHSBuckets.begin(), *R = RHSBuckets.begin(),
+                 *E = LHSBuckets.end();
+         L != E; ++L, ++R) {
+      ::new (&L->getFirst()) KeyT(std::move(R->getFirst()));
+      R->getFirst().~KeyT();
+      if (!KeyInfoT::isEqual(L->getFirst(), EmptyKey) &&
+          !KeyInfoT::isEqual(L->getFirst(), TombstoneKey)) {
+        ::new (&L->getSecond()) ValueT(std::move(R->getSecond()));
+        R->getSecond().~ValueT();
+      }
+    }
+    RHS.derived().kill();
   }
 
   // Move key/value from Other to *this.
@@ -795,13 +841,6 @@ public:
   }
 
 private:
-  void swapImpl(DenseMap &RHS) {
-    std::swap(Buckets, RHS.Buckets);
-    std::swap(NumEntries, RHS.NumEntries);
-    std::swap(NumTombstones, RHS.NumTombstones);
-    std::swap(NumBuckets, RHS.NumBuckets);
-  }
-
   unsigned getNumEntries() const { return NumEntries; }
 
   void setNumEntries(unsigned Num) { NumEntries = Num; }
@@ -842,10 +881,15 @@ private:
                     static_cast<unsigned>(NextPowerOf2(MinNumBuckets - 1)));
   }
 
-  bool maybeMoveFast(DenseMap &&Other) {
-    swapImpl(Other);
+  bool maybeSwapFast(DenseMap &Other) {
+    std::swap(Buckets, Other.Buckets);
+    std::swap(NumEntries, Other.NumEntries);
+    std::swap(NumTombstones, Other.NumTombstones);
+    std::swap(NumBuckets, Other.NumBuckets);
     return true;
   }
+
+  bool maybeMoveFast(DenseMap &&Other) { return maybeSwapFast(Other); }
 
   // Plan how to shrink the bucket table.  Return:
   // - {false, 0} to reuse the existing bucket table
@@ -941,77 +985,6 @@ public:
   }
 
 private:
-  void swapImpl(SmallDenseMap &RHS) {
-    unsigned TmpNumEntries = RHS.NumEntries;
-    RHS.NumEntries = NumEntries;
-    NumEntries = TmpNumEntries;
-    std::swap(NumTombstones, RHS.NumTombstones);
-
-    const KeyT EmptyKey = KeyInfoT::getEmptyKey();
-    const KeyT TombstoneKey = KeyInfoT::getTombstoneKey();
-    if (Small && RHS.Small) {
-      // If we're swapping inline bucket arrays, we have to cope with some of
-      // the tricky bits of DenseMap's storage system: the buckets are not
-      // fully initialized. Thus we swap every key, but we may have
-      // a one-directional move of the value.
-      for (unsigned i = 0, e = InlineBuckets; i != e; ++i) {
-        BucketT *LHSB = &getInlineBuckets()[i],
-                *RHSB = &RHS.getInlineBuckets()[i];
-        bool hasLHSValue = (!KeyInfoT::isEqual(LHSB->getFirst(), EmptyKey) &&
-                            !KeyInfoT::isEqual(LHSB->getFirst(), TombstoneKey));
-        bool hasRHSValue = (!KeyInfoT::isEqual(RHSB->getFirst(), EmptyKey) &&
-                            !KeyInfoT::isEqual(RHSB->getFirst(), TombstoneKey));
-        if (hasLHSValue && hasRHSValue) {
-          // Swap together if we can...
-          std::swap(*LHSB, *RHSB);
-          continue;
-        }
-        // Swap separately and handle any asymmetry.
-        std::swap(LHSB->getFirst(), RHSB->getFirst());
-        if (hasLHSValue) {
-          ::new (&RHSB->getSecond()) ValueT(std::move(LHSB->getSecond()));
-          LHSB->getSecond().~ValueT();
-        } else if (hasRHSValue) {
-          ::new (&LHSB->getSecond()) ValueT(std::move(RHSB->getSecond()));
-          RHSB->getSecond().~ValueT();
-        }
-      }
-      return;
-    }
-    if (!Small && !RHS.Small) {
-      std::swap(*getLargeRep(), *RHS.getLargeRep());
-      return;
-    }
-
-    SmallDenseMap &SmallSide = Small ? *this : RHS;
-    SmallDenseMap &LargeSide = Small ? RHS : *this;
-
-    // First stash the large side's rep and move the small side across.
-    LargeRep TmpRep = std::move(*LargeSide.getLargeRep());
-    LargeSide.getLargeRep()->~LargeRep();
-    LargeSide.Small = true;
-    // This is similar to the standard move-from-old-buckets, but the bucket
-    // count hasn't actually rotated in this case. So we have to carefully
-    // move construct the keys and values into their new locations, but there
-    // is no need to re-hash things.
-    for (unsigned i = 0, e = InlineBuckets; i != e; ++i) {
-      BucketT *NewB = &LargeSide.getInlineBuckets()[i],
-              *OldB = &SmallSide.getInlineBuckets()[i];
-      ::new (&NewB->getFirst()) KeyT(std::move(OldB->getFirst()));
-      OldB->getFirst().~KeyT();
-      if (!KeyInfoT::isEqual(NewB->getFirst(), EmptyKey) &&
-          !KeyInfoT::isEqual(NewB->getFirst(), TombstoneKey)) {
-        ::new (&NewB->getSecond()) ValueT(std::move(OldB->getSecond()));
-        OldB->getSecond().~ValueT();
-      }
-    }
-
-    // The hard part of moving the small buckets across is done, just move
-    // the TmpRep into its new home.
-    SmallSide.Small = false;
-    new (SmallSide.getLargeRep()) LargeRep(std::move(TmpRep));
-  }
-
   unsigned getNumEntries() const { return NumEntries; }
 
   void setNumEntries(unsigned Num) {
@@ -1103,6 +1076,18 @@ private:
       return MinNumBuckets;
     return std::max(64u,
                     static_cast<unsigned>(NextPowerOf2(MinNumBuckets - 1)));
+  }
+
+  bool maybeSwapFast(SmallDenseMap &Other) {
+    if (Small || Other.Small)
+      return false;
+
+    unsigned Tmp = Other.NumEntries;
+    Other.NumEntries = NumEntries;
+    NumEntries = Tmp;
+    std::swap(NumTombstones, Other.NumTombstones);
+    std::swap(*getLargeRep(), *Other.getLargeRep());
+    return true;
   }
 
   bool maybeMoveFast(SmallDenseMap &&Other) {
