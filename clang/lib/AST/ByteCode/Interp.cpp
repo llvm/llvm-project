@@ -1149,7 +1149,7 @@ bool CheckDeleteSource(InterpState &S, CodePtr OpPC, const Expr *Source,
   // Whatever this is, we didn't heap allocate it.
   const SourceInfo &Loc = S.Current->getSource(OpPC);
   S.FFDiag(Loc, diag::note_constexpr_delete_not_heap_alloc)
-      << Ptr.toDiagnosticString(S.getASTContext());
+      << Ptr.toDiagnosticString(S.getASTContext(), S.P);
 
   if (Ptr.isTemporary())
     S.Note(Ptr.getDeclLoc(), diag::note_constexpr_temporary_here);
@@ -1321,7 +1321,8 @@ bool Free(InterpState &S, CodePtr OpPC, bool DeleteIsArrayForm,
         (Ptr.isArrayElement() && Ptr.getIndex() != 0)) {
       const SourceInfo &Loc = S.Current->getSource(OpPC);
       S.FFDiag(Loc, diag::note_constexpr_delete_subobject)
-          << Ptr.toDiagnosticString(S.getASTContext()) << Ptr.isOnePastEnd();
+          << Ptr.toDiagnosticString(S.getASTContext(), S.P)
+          << Ptr.isOnePastEnd();
       return false;
     }
 
@@ -1445,7 +1446,7 @@ static bool getField(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
     // `typeid(int).name`, but we currently diagnose `&typeid(int)`.
     S.FFDiag(S.Current->getSource(OpPC),
              diag::note_constexpr_access_unreadable_object)
-        << AK_Read << Ptr.toDiagnosticString(S.getASTContext());
+        << AK_Read << Ptr.toDiagnosticString(S.getASTContext(), S.P);
     return false;
   }
 
@@ -1677,7 +1678,7 @@ static bool GetDynamicDecl(InterpState &S, CodePtr OpPC, Pointer TypePtr,
     if (const VarDecl *VD = TypePtr.getDeclDesc()->asVarDecl();
         VD && !VD->isConstexpr()) {
       const Expr *E = S.Current->getExpr(OpPC);
-      APValue V = TypePtr.toAPValue(S.getASTContext());
+      APValue V = TypePtr.toAPValue(S.getASTContext(), S.P);
       QualType TT = S.getASTContext().getLValueReferenceType(DynamicType);
       S.FFDiag(E, diag::note_constexpr_polymorphic_unknown_dynamic_type)
           << AccessKinds::AK_MemberCall << V.getAsString(S.getASTContext(), TT);
@@ -2064,10 +2065,10 @@ bool handleFixedPointOverflow(InterpState &S, CodePtr OpPC,
   if (S.checkingForUndefinedBehavior()) {
     S.getASTContext().getDiagnostics().Report(
         E->getExprLoc(), diag::warn_fixedpoint_constant_overflow)
-        << FP.toDiagnosticString(S.getASTContext()) << E->getType();
+        << FP.toDiagnosticString(S.getASTContext(), S.P) << E->getType();
   }
   S.CCEDiag(E, diag::note_constexpr_overflow)
-      << FP.toDiagnosticString(S.getASTContext()) << E->getType();
+      << FP.toDiagnosticString(S.getASTContext(), S.P) << E->getType();
   return S.noteUndefinedBehavior();
 }
 
@@ -2085,18 +2086,23 @@ bool CheckPointerToIntegralCast(InterpState &S, CodePtr OpPC,
   S.CCEDiag(E, diag::note_constexpr_invalid_cast)
       << 2 << S.getLangOpts().CPlusPlus << S.Current->getRange(OpPC);
 
-  if (Ptr.isDummy())
+  if (Ptr.isDummy() && !Ptr.pointsToLabel())
     return false;
-  if (Ptr.isFunctionPointer())
+  if (Ptr.isIntegralPointer())
     return true;
 
-  if (Ptr.isBlockPointer() && !Ptr.isZero()) {
+  if (!Ptr.isZero()) {
     // Only allow based lvalue casts if they are lossless.
     if (S.getASTContext().getTargetInfo().getPointerWidth(LangAS::Default) !=
         BitWidth)
       return Invalid(S, OpPC);
   }
   return true;
+}
+
+bool CheckIntegralAddressCast(InterpState &S, CodePtr OpPC, unsigned BitWidth) {
+  return (S.getASTContext().getTargetInfo().getPointerWidth(LangAS::Default) ==
+          BitWidth);
 }
 
 bool CastPointerIntegralAP(InterpState &S, CodePtr OpPC, uint32_t BitWidth) {
@@ -2184,13 +2190,19 @@ bool DiagTypeid(InterpState &S, CodePtr OpPC) {
 
 bool arePotentiallyOverlappingStringLiterals(const Pointer &LHS,
                                              const Pointer &RHS) {
+  if (!LHS.pointsToStringLiteral() || !RHS.pointsToStringLiteral())
+    return false;
+
   unsigned LHSOffset = LHS.isOnePastEnd() ? LHS.getNumElems() : LHS.getIndex();
   unsigned RHSOffset = RHS.isOnePastEnd() ? RHS.getNumElems() : RHS.getIndex();
-  unsigned LHSLength = (LHS.getNumElems() - 1) * LHS.elemSize();
-  unsigned RHSLength = (RHS.getNumElems() - 1) * RHS.elemSize();
+  const auto *LHSLit = cast<StringLiteral>(LHS.getDeclDesc()->asExpr());
+  const auto *RHSLit = cast<StringLiteral>(RHS.getDeclDesc()->asExpr());
 
-  StringRef LHSStr((const char *)LHS.atIndex(0).getRawAddress(), LHSLength);
-  StringRef RHSStr((const char *)RHS.atIndex(0).getRawAddress(), RHSLength);
+  StringRef LHSStr(LHSLit->getBytes());
+  unsigned LHSLength = LHSStr.size();
+  StringRef RHSStr(RHSLit->getBytes());
+  unsigned RHSLength = RHSStr.size();
+
   int32_t IndexDiff = RHSOffset - LHSOffset;
   if (IndexDiff < 0) {
     if (static_cast<int32_t>(LHSLength) < -IndexDiff)
@@ -2206,11 +2218,11 @@ bool arePotentiallyOverlappingStringLiterals(const Pointer &LHS,
   StringRef Shorter;
   StringRef Longer;
   if (LHSLength < RHSLength) {
-    ShorterCharWidth = LHS.elemSize();
+    ShorterCharWidth = LHS.getFieldDesc()->getElemDataSize();
     Shorter = LHSStr;
     Longer = RHSStr;
   } else {
-    ShorterCharWidth = RHS.elemSize();
+    ShorterCharWidth = RHS.getFieldDesc()->getElemDataSize();
     Shorter = RHSStr;
     Longer = LHSStr;
   }

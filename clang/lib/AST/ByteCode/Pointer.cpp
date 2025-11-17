@@ -169,7 +169,7 @@ Pointer &Pointer::operator=(Pointer &&P) {
   return *this;
 }
 
-APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
+APValue Pointer::toAPValue(const ASTContext &ASTCtx, const Program &) const {
   llvm::SmallVector<APValue::LValuePathEntry, 5> Path;
 
   if (isZero())
@@ -425,7 +425,8 @@ size_t Pointer::computeOffsetForComparison() const {
   return Result;
 }
 
-std::string Pointer::toDiagnosticString(const ASTContext &Ctx) const {
+std::string Pointer::toDiagnosticString(const ASTContext &Ctx,
+                                        const Program &P) const {
   if (isZero())
     return "nullptr";
 
@@ -435,7 +436,7 @@ std::string Pointer::toDiagnosticString(const ASTContext &Ctx) const {
   if (isFunctionPointer())
     return asFunctionPointer().toDiagnosticString(Ctx);
 
-  return toAPValue(Ctx).getAsString(Ctx, getType());
+  return toAPValue(Ctx, P).getAsString(Ctx, getType());
 }
 
 bool Pointer::isInitialized() const {
@@ -683,6 +684,15 @@ bool Pointer::pointsToStringLiteral() const {
   return isa_and_nonnull<StringLiteral>(E);
 }
 
+bool Pointer::pointsToLabel() const {
+  if (isZero() || !isBlockPointer())
+    return false;
+
+  if (const Expr *E = BS.Pointee->getDescriptor()->asExpr())
+    return isa<AddrLabelExpr>(E);
+  return false;
+}
+
 std::optional<std::pair<Pointer, Pointer>>
 Pointer::computeSplitPoint(const Pointer &A, const Pointer &B) {
   if (!A.isBlockPointer() || !B.isBlockPointer())
@@ -726,13 +736,14 @@ Pointer::computeSplitPoint(const Pointer &A, const Pointer &B) {
 }
 
 std::optional<APValue> Pointer::toRValue(const Context &Ctx,
-                                         QualType ResultType) const {
+                                         QualType ResultType,
+                                         const Program &P) const {
   const ASTContext &ASTCtx = Ctx.getASTContext();
   assert(!ResultType.isNull());
   // Method to recursively traverse composites.
   std::function<bool(QualType, const Pointer &, APValue &)> Composite;
-  Composite = [&Composite, &Ctx, &ASTCtx](QualType Ty, const Pointer &Ptr,
-                                          APValue &R) {
+  Composite = [&Composite, &Ctx, &ASTCtx, &P](QualType Ty, const Pointer &Ptr,
+                                              APValue &R) {
     if (const auto *AT = Ty->getAs<AtomicType>())
       Ty = AT->getValueType();
 
@@ -743,7 +754,7 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx,
 
     // Primitive values.
     if (OptPrimType T = Ctx.classify(Ty)) {
-      TYPE_SWITCH(*T, R = Ptr.deref<T>().toAPValue(ASTCtx));
+      TYPE_SWITCH(*T, R = Ptr.deref<T>().toAPValue(ASTCtx, P));
       return true;
     }
 
@@ -760,7 +771,7 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx,
           QualType FieldTy = F.Decl->getType();
           if (FP.isActive()) {
             if (OptPrimType T = Ctx.classify(FieldTy)) {
-              TYPE_SWITCH(*T, Value = FP.deref<T>().toAPValue(ASTCtx));
+              TYPE_SWITCH(*T, Value = FP.deref<T>().toAPValue(ASTCtx, P));
             } else {
               Ok &= Composite(FieldTy, FP, Value);
             }
@@ -783,7 +794,7 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx,
           APValue &Value = R.getStructField(I);
 
           if (OptPrimType T = Ctx.classify(FieldTy)) {
-            TYPE_SWITCH(*T, Value = FP.deref<T>().toAPValue(ASTCtx));
+            TYPE_SWITCH(*T, Value = FP.deref<T>().toAPValue(ASTCtx, P));
           } else {
             Ok &= Composite(FieldTy, FP, Value);
           }
@@ -822,7 +833,7 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx,
       for (unsigned I = 0; I != NumElems; ++I) {
         APValue &Slot = R.getArrayInitializedElt(I);
         if (ElemT) {
-          TYPE_SWITCH(*ElemT, Slot = Ptr.elem<T>(I).toAPValue(ASTCtx));
+          TYPE_SWITCH(*ElemT, Slot = Ptr.elem<T>(I).toAPValue(ASTCtx, P));
         } else {
           Ok &= Composite(ElemTy, Ptr.atIndex(I).narrow(), Slot);
         }
@@ -864,7 +875,7 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx,
       Values.reserve(VT->getNumElements());
       for (unsigned I = 0; I != VT->getNumElements(); ++I) {
         TYPE_SWITCH(ElemT,
-                    { Values.push_back(Ptr.elem<T>(I).toAPValue(ASTCtx)); });
+                    { Values.push_back(Ptr.elem<T>(I).toAPValue(ASTCtx, P)); });
       }
 
       assert(Values.size() == VT->getNumElements());
@@ -881,11 +892,11 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx,
 
   // We can return these as rvalues, but we can't deref() them.
   if (isZero() || isIntegralPointer())
-    return toAPValue(ASTCtx);
+    return toAPValue(ASTCtx, P);
 
   // Just load primitive types.
   if (OptPrimType T = Ctx.classify(ResultType)) {
-    TYPE_SWITCH(*T, return this->deref<T>().toAPValue(ASTCtx));
+    TYPE_SWITCH(*T, return this->deref<T>().toAPValue(ASTCtx, P));
   }
 
   // Return the composite type.

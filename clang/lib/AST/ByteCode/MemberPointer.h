@@ -86,7 +86,7 @@ public:
     return MemberPointer(Instance, this->Dcl, this->PtrOffset);
   }
 
-  APValue toAPValue(const ASTContext &) const;
+  APValue toAPValue(const ASTContext &, const Program &) const;
 
   bool isZero() const { return Base.isZero() && !Dcl; }
   bool hasBase() const { return !Base.isZero(); }
@@ -101,8 +101,9 @@ public:
        << ")";
   }
 
-  std::string toDiagnosticString(const ASTContext &Ctx) const {
-    return toAPValue(Ctx).getAsString(Ctx, Dcl->getType());
+  std::string toDiagnosticString(const ASTContext &Ctx,
+                                 const Program &P) const {
+    return toAPValue(Ctx, P).getAsString(Ctx, Dcl->getType());
   }
 
   ComparisonCategoryResult compare(const MemberPointer &RHS) const {
