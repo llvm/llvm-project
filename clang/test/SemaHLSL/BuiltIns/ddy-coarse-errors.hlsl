@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.6-library %s -fnative-half-type -verify
+// RUN: %clang_cc1 -triple spirv-unknown-vulkan1.3-library %s -fnative-half-type -verify
 
 float no_arg() {
   return __builtin_hlsl_elementwise_ddy_coarse();
