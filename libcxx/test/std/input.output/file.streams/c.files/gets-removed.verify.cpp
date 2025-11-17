@@ -7,15 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11
-// test <cstdio>
 
-// gets
+// Verify that std::gets has been removed in C++14 and later
 
 #include <cstdio>
 
-int main(int, char**)
-{
-    (void) std::gets((char *) NULL);
-
-  return 0;
+void f(char const* str) {
+  (void)std::gets(str); // expected-error {{no member named 'gets' in namespace 'std'}}
 }
