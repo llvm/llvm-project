@@ -1620,7 +1620,7 @@ int32_t getScaleSel(int32_t blockSize, unsigned bitWidth,
   // firstScaleByte are merged into a single attribute scaleSel. This is how
   // those values are merged together.
   assert(llvm::is_contained({16, 32}, blockSize));
-  assert(llvm::is_contained({4, 6, 8}, bitWidth));
+  assert(llvm::is_contained(::llvm::ArrayRef<unsigned>{4, 6, 8}, bitWidth));
 
   const bool is_fp8 = bitWidth == 8;
   const bool is_block_16 = blockSize == 16;
@@ -1653,6 +1653,11 @@ int32_t getScaleSel(int32_t blockSize, unsigned bitWidth,
 LogicalResult ScaledExtPacked816OpLowering::matchAndRewrite(
     ScaledExtPacked816Op op, ScaledExtPacked816OpAdaptor adaptor,
     ConversionPatternRewriter &rewriter) const {
+  using fp4 = Float4E2M1FNType;
+  using fp8 = Float8E4M3FNType;
+  using bf8 = Float8E5M2Type;
+  using fp6 = Float6E2M3FNType;
+  using bf6 = Float6E3M2FNType;
   int32_t firstScaleLane = op.getFirstScaleLane();
   int32_t firstScaleByte = op.getFirstScaleByte();
   int32_t blockSize = op.getBlockSize();
@@ -1671,79 +1676,64 @@ LogicalResult ScaledExtPacked816OpLowering::matchAndRewrite(
 
   Value source = adaptor.getSource();
   Type packedType;
-  if (isa<Float4E2M1FNType>(srcElemType)) {
+  if (isa<fp4>(srcElemType)) {
     packedType = i32;
     packedType = getTypeConverter()->convertType(packedType);
-  } else if (isa<Float8E4M3FNType>(srcElemType) ||
-             isa<Float8E5M2Type>(srcElemType)) {
+  } else if (isa<fp8, bf8>(srcElemType)) {
     packedType = VectorType::get(2, i32);
     packedType = getTypeConverter()->convertType(packedType);
-  } else if (isa<Float6E2M3FNType>(srcElemType) ||
-             isa<Float6E3M2FNType>(srcElemType)) {
+  } else if (isa<fp6, bf6>(srcElemType)) {
     packedType = VectorType::get(3, i32);
     packedType = getTypeConverter()->convertType(packedType);
   } else {
     llvm_unreachable("invalid element type for scaled ext");
   }
-  // smallT = [Fp4, Fp8, Bf8]
-  //           Bf8 = E5M2
-  //           Fp8 = E4M3
-  //
-  // largeT = [F16, Bf16, F32]
-  // CvtPkScalePk8${largeT}${smallT}
   Value castedSource =
       LLVM::BitcastOp::create(rewriter, loc, packedType, source);
 
-  if (isa<Float4E2M1FNType>(srcElemType) && destElemType.isF16()) {
+  if (isa<fp4>(srcElemType) && destElemType.isF16()) {
     rewriter.replaceOpWithNewOp<ROCDL::CvtPkScalePk8F16Fp4Op>(
         op, op.getResult().getType(), castedSource, castedScale, scaleSel);
-  } else if (isa<Float8E4M3FNType>(srcElemType) && destElemType.isF16()) {
+  } else if (isa<fp8>(srcElemType) && destElemType.isF16()) {
     rewriter.replaceOpWithNewOp<ROCDL::CvtPkScalePk8F16Fp8Op>(
         op, op.getResult().getType(), castedSource, castedScale, scaleSel);
-  } else if (isa<Float8E5M2Type>(srcElemType) && destElemType.isF16()) {
+  } else if (isa<bf8>(srcElemType) && destElemType.isF16()) {
     rewriter.replaceOpWithNewOp<ROCDL::CvtPkScalePk8F16Bf8Op>(
         op, op.getResult().getType(), castedSource, castedScale, scaleSel);
-  } else if (isa<Float4E2M1FNType>(srcElemType) && destElemType.isBF16()) {
+  } else if (isa<fp4>(srcElemType) && destElemType.isBF16()) {
     rewriter.replaceOpWithNewOp<ROCDL::CvtPkScalePk8Bf16Fp4Op>(
         op, op.getResult().getType(), castedSource, castedScale, scaleSel);
-  } else if (isa<Float8E4M3FNType>(srcElemType) && destElemType.isBF16()) {
+  } else if (isa<fp8>(srcElemType) && destElemType.isBF16()) {
     rewriter.replaceOpWithNewOp<ROCDL::CvtPkScalePk8Bf16Fp8Op>(
         op, op.getResult().getType(), castedSource, castedScale, scaleSel);
-  } else if (isa<Float8E5M2Type>(srcElemType) && destElemType.isBF16()) {
+  } else if (isa<bf8>(srcElemType) && destElemType.isBF16()) {
     rewriter.replaceOpWithNewOp<ROCDL::CvtPkScalePk8Bf16Bf8Op>(
         op, op.getResult().getType(), castedSource, castedScale, scaleSel);
-  } else if (isa<Float4E2M1FNType>(srcElemType) && destElemType.isF32()) {
+  } else if (isa<fp4>(srcElemType) && destElemType.isF32()) {
     rewriter.replaceOpWithNewOp<ROCDL::CvtPkScalePk8F32Fp4Op>(
         op, op.getResult().getType(), castedSource, castedScale, scaleSel);
-  } else if (isa<Float8E4M3FNType>(srcElemType) && destElemType.isF32()) {
+  } else if (isa<fp8>(srcElemType) && destElemType.isF32()) {
     rewriter.replaceOpWithNewOp<ROCDL::CvtPkScalePk8F32Fp8Op>(
         op, op.getResult().getType(), castedSource, castedScale, scaleSel);
-  } else if (isa<Float8E5M2Type>(srcElemType) && destElemType.isF32()) {
+  } else if (isa<bf8>(srcElemType) && destElemType.isF32()) {
     rewriter.replaceOpWithNewOp<ROCDL::CvtPkScalePk8F32Bf8Op>(
         op, op.getResult().getType(), castedSource, castedScale, scaleSel);
-  }
-  // smallT = [Fp6, Bf6]
-  //           Fp6 = Float6E2M3FN
-  //           Bf6 = Float6E3M2FN
-  // largeT = [F16, Bf16, F32]
-  //
-  // CvtPkScalePk16${largeT}${smallT}
-  else if (isa<Float6E2M3FNType>(srcElemType) && destElemType.isF16()) {
+  } else if (isa<fp6>(srcElemType) && destElemType.isF16()) {
     rewriter.replaceOpWithNewOp<ROCDL::CvtPkScalePk16F16Fp6Op>(
         op, op.getResult().getType(), castedSource, castedScale, scaleSel);
-  } else if (isa<Float6E3M2FNType>(srcElemType) && destElemType.isF16()) {
+  } else if (isa<bf6>(srcElemType) && destElemType.isF16()) {
     rewriter.replaceOpWithNewOp<ROCDL::CvtPkScalePk16F16Bf6Op>(
         op, op.getResult().getType(), castedSource, castedScale, scaleSel);
-  } else if (isa<Float6E2M3FNType>(srcElemType) && destElemType.isBF16()) {
+  } else if (isa<fp6>(srcElemType) && destElemType.isBF16()) {
     rewriter.replaceOpWithNewOp<ROCDL::CvtPkScalePk16Bf16Fp6Op>(
         op, op.getResult().getType(), castedSource, castedScale, scaleSel);
-  } else if (isa<Float6E3M2FNType>(srcElemType) && destElemType.isBF16()) {
+  } else if (isa<bf6>(srcElemType) && destElemType.isBF16()) {
     rewriter.replaceOpWithNewOp<ROCDL::CvtPkScalePk16Bf16Bf6Op>(
         op, op.getResult().getType(), castedSource, castedScale, scaleSel);
-  } else if (isa<Float6E2M3FNType>(srcElemType) && destElemType.isF32()) {
+  } else if (isa<fp6>(srcElemType) && destElemType.isF32()) {
     rewriter.replaceOpWithNewOp<ROCDL::CvtPkScalePk16F32Fp6Op>(
         op, op.getResult().getType(), castedSource, castedScale, scaleSel);
-  } else if (isa<Float6E3M2FNType>(srcElemType) && destElemType.isF32()) {
+  } else if (isa<bf6>(srcElemType) && destElemType.isF32()) {
     rewriter.replaceOpWithNewOp<ROCDL::CvtPkScalePk16F32Bf6Op>(
         op, op.getResult().getType(), castedSource, castedScale, scaleSel);
   } else {
