@@ -3,13 +3,14 @@
 ; All kernels have the same value for amdgpu-flat-work-group-size, except the
 ; second and third kernels explicitly set it. The first and second kernel also
 ; have the same final waves/EU range, except the second kernel explicitly sets
-; it with amdgpu-waves-per-eu. 
+; it with amdgpu-waves-per-eu. As a result the first and second kernels are
+; treated identically. 
 ;
 ; The third kernel hints the compiler that a maximum occupancy of 1 is desired
 ; with amdgpu-waves-per-eu, so the alloca promotion pass is free to use more LDS
 ; space than when limiting itself to support the maximum default occupancy of
 ; 10. This does not break the ABI requirement to support the full possible range
-; of workgroup sizes 
+; of workgroup sizes as specified by amdgpu-flat-work-group-size.
 
 ; CHECK-NOT: @no_attributes.stack
 ; CHECK-NOT: @explicit_default_workgroup_size_and_waves.stack
