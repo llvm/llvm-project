@@ -3,13 +3,13 @@
 ;; Specify the bb sections profile:
 ; RUN: echo 'v1' > %t
 ; RUN: echo 'f _Z3foob' >> %t
-; RUN: echo 't 0@0' >> %t
-; RUN: echo 't 1@0' >> %t
-; RUN: echo 't 1@1' >> %t
-; RUN: echo 't 2@1' >> %t
+; RUN: echo 't 0,0' >> %t
+; RUN: echo 't 1,0' >> %t
+; RUN: echo 't 1,1' >> %t
+; RUN: echo 't 2,1' >> %t
 ; RUN: echo 'f _Z3barv' >> %t
-; RUN: echo 't 0@0' >> %t
-; RUN: echo 't 21@1' >> %t
+; RUN: echo 't 0,0' >> %t
+; RUN: echo 't 21,1' >> %t
 ;;
 ; RUN: llc < %s -mtriple=x86_64-pc-linux -asm-verbose=false -function-sections -basic-block-sections=%t  | FileCheck %s
 

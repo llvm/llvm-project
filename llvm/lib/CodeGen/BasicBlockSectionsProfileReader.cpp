@@ -320,10 +320,11 @@ Error BasicBlockSectionsProfileReader::ReadV1Profile() {
       // past-the-end element.
       if (FI == ProgramPathAndClusterInfo.end())
         continue;
-      assert(Values.size() == 1);
       SmallVector<StringRef, 2> PrefetchTargetStr;
-      Values[0].split(PrefetchTargetStr, '@');
-      assert(PrefetchTargetStr.size() == 2);
+      Values[0].split(PrefetchTargetStr, ',');
+      if (PrefetchTargetStr.size() != 2)
+        return createProfileParseError(
+            Twine("Prefetch target target expected: ") + Value);
       auto TargetBBID = parseUniqueBBID(PrefetchTargetStr[0]);
       if (!TargetBBID)
         return TargetBBID.takeError();
