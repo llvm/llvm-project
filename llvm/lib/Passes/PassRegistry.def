@@ -366,7 +366,6 @@ FUNCTION_ANALYSIS("ephemerals", EphemeralValuesAnalysis())
 FUNCTION_ANALYSIS("func-properties", FunctionPropertiesAnalysis())
 FUNCTION_ANALYSIS("machine-function-info", MachineFunctionAnalysis(*TM))
 FUNCTION_ANALYSIS("gc-function", GCFunctionAnalysis())
-FUNCTION_ANALYSIS("inliner-size-estimator", InlineSizeEstimatorAnalysis())
 FUNCTION_ANALYSIS("last-run-tracking", LastRunTrackingAnalysis())
 FUNCTION_ANALYSIS("lazy-value-info", LazyValueAnalysis())
 FUNCTION_ANALYSIS("loops", LoopAnalysis())
@@ -439,7 +438,6 @@ FUNCTION_PASS("dot-post-dom", PostDomPrinter())
 FUNCTION_PASS("dot-post-dom-only", PostDomOnlyPrinter())
 FUNCTION_PASS("dse", DSEPass())
 FUNCTION_PASS("dwarf-eh-prepare", DwarfEHPreparePass(*TM))
-FUNCTION_PASS("drop-unnecessary-assumes", DropUnnecessaryAssumesPass())
 FUNCTION_PASS("expand-large-div-rem", ExpandLargeDivRemPass(*TM))
 FUNCTION_PASS("expand-memcmp", ExpandMemCmpPass(*TM))
 FUNCTION_PASS("expand-reductions", ExpandReductionsPass())
@@ -523,8 +521,6 @@ FUNCTION_PASS("print<domfrontier>", DominanceFrontierPrinterPass(errs()))
 FUNCTION_PASS("print<domtree>", DominatorTreePrinterPass(errs()))
 FUNCTION_PASS("print<func-properties>", FunctionPropertiesPrinterPass(errs()))
 FUNCTION_PASS("print<inline-cost>", InlineCostAnnotationPrinterPass(errs()))
-FUNCTION_PASS("print<inliner-size-estimator>",
-              InlineSizeEstimatorAnalysisPrinterPass(errs()))
 FUNCTION_PASS("print<lazy-value-info>", LazyValueInfoPrinterPass(errs()))
 FUNCTION_PASS("print<loops>", LoopPrinterPass(errs()))
 FUNCTION_PASS("print<memoryssa-walker>", MemorySSAWalkerPrinterPass(errs()))
@@ -591,6 +587,10 @@ FUNCTION_PASS_WITH_PARAMS(
     "early-cse", "EarlyCSEPass",
     [](bool UseMemorySSA) { return EarlyCSEPass(UseMemorySSA); },
     parseEarlyCSEPassOptions, "memssa")
+FUNCTION_PASS_WITH_PARAMS(
+    "drop-unnecessary-assumes", "DropUnnecessaryAssumesPass",
+    [](bool DropDereferenceable) { return DropUnnecessaryAssumesPass(DropDereferenceable); },
+    parseDropUnnecessaryAssumesPassOptions, "drop-deref")
 FUNCTION_PASS_WITH_PARAMS(
     "ee-instrument", "EntryExitInstrumenterPass",
     [](bool PostInlining) { return EntryExitInstrumenterPass(PostInlining); },

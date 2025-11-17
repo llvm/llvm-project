@@ -59,6 +59,7 @@
 #include "clang/Sema/SemaWasm.h"
 #include "clang/Sema/Template.h"
 #include "llvm/ADT/STLForwardCompat.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
@@ -13117,6 +13118,13 @@ namespace {
     if (isa<ParmVarDecl>(OrigDecl))
       return;
 
+    // Skip checking for file-scope constexpr variables - constant evaluation
+    // will produce appropriate errors without needing runtime diagnostics.
+    // Local constexpr should still emit runtime warnings.
+    if (auto *VD = dyn_cast<VarDecl>(OrigDecl);
+        VD && VD->isConstexpr() && VD->isFileVarDecl())
+      return;
+
     E = E->IgnoreParens();
 
     // Skip checking T a = a where T is not a record or reference type.
@@ -13744,6 +13752,11 @@ void Sema::DiagnoseUniqueObjectDuplication(const VarDecl *VD) {
 }
 
 void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
+  auto ResetDeclForInitializer = llvm::make_scope_exit([this]() {
+    if (this->ExprEvalContexts.empty())
+      this->ExprEvalContexts.back().DeclForInitializer = nullptr;
+  });
+
   // If there is no declaration, there was an error parsing it.  Just ignore
   // the initializer.
   if (!RealDecl) {
@@ -15095,6 +15108,10 @@ void Sema::FinalizeDeclaration(Decl *ThisDecl) {
   VarDecl *VD = dyn_cast_or_null<VarDecl>(ThisDecl);
   if (!VD)
     return;
+
+  // Emit any deferred warnings for the variable's initializer, even if the
+  // variable is invalid
+  AnalysisWarnings.issueWarningsForRegisteredVarDecl(VD);
 
   // Apply an implicit SectionAttr if '#pragma clang section bss|data|rodata' is active
   if (VD->hasGlobalStorage() && VD->isThisDeclarationADefinition() &&

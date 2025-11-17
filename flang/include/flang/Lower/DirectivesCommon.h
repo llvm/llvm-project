@@ -515,11 +515,19 @@ fir::factory::AddrAndBoundsInfo gatherDataOperandAddrAndBounds(
       }
       bool dataExvIsAssumedSize =
           Fortran::semantics::IsAssumedSizeArray(symRef->get().GetUltimate());
-      if (genDefaultBounds &&
-          mlir::isa<fir::SequenceType>(fir::unwrapRefType(info.addr.getType())))
+      if (genDefaultBounds && mlir::isa<fir::SequenceType>(
+                                  fir::unwrapRefType(info.addr.getType()))) {
         bounds = fir::factory::genBaseBoundsOps<BoundsOp, BoundsType>(
             builder, operandLocation, dataExv, dataExvIsAssumedSize,
             strideIncludeLowerExtent);
+      }
+      if (genDefaultBounds && fir::characterWithDynamicLen(
+                                  fir::unwrapRefType(info.addr.getType())) ||
+          mlir::isa<fir::BoxCharType>(
+              fir::unwrapRefType(info.addr.getType()))) {
+        bounds = {fir::factory::genBoundsOpFromBoxChar<BoundsOp, BoundsType>(
+            builder, operandLocation, dataExv, info)};
+      }
       asFortran << symRef->get().name().ToString();
     } else { // Unsupported
       llvm::report_fatal_error("Unsupported type of OpenACC operand");

@@ -8,6 +8,14 @@ project(hipcc VERSION "1.1.1" LANGUAGES C CXX)
 include(CMakePackageConfigHelpers)
 include(GNUInstallDirs)
 
+include( utils.cmake )
+set( HIPCC "hipcc" )
+set( HIPCC_NVIDIA "hipcc-nvidia")
+set( COMP_TYPE "AMD" )
+set( COMP_TYPE_NVIDIA "NVIDIA" )
+set( BUILD_ENABLE_LINTIAN_OVERRIDES ON CACHE BOOL "Enable/Disable Lintian Overrides" )
+set( BUILD_DEBIAN_PKGING_FLAG ON CACHE BOOL "Internal Status Flag to indicate Debian Packaging Build" )
+
 # Generate static package, when BUILD_SHARED_LIBS is set to OFF.
 # Default to ON
 option(BUILD_SHARED_LIBS "Build using shared libraries" ON)
@@ -48,11 +56,13 @@ endif()
 file(COPY ${PROJECT_SOURCE_DIR}/bin/ DESTINATION ${PROJECT_BINARY_DIR})
 
 # Packaging:
+set(PKG_MAINTAINER_NM  "ROCm Compiler Support")
+set(PKG_MAINTAINER_EMAIL  "rocm.compiler.support@amd.com")
 set(CPACK_RPM_COMPONENT_INSTALL ON)
 set(CPACK_ARCHIVE_COMPONENT_INSTALL ON)
 set(CPACK_COMPONENTS_ALL AMD NVIDIA)
 set(CPACK_GENERATOR "DEB;RPM;ZIP" CACHE STRING "Default packaging generators")
-set(CPACK_PACKAGE_CONTACT "ROCm Compiler Support <rocm.compiler.support@amd.com>")
+set(CPACK_PACKAGE_CONTACT "${PKG_MAINTAINER_NM} <${PKG_MAINTAINER_EMAIL}>")
 set(CPACK_PACKAGE_DESCRIPTION "HIP Compiler Driver")
 set(CPACK_PACKAGE_NAME "${PROJECT_NAME}")
 set(CPACK_PACKAGE_VENDOR "Advanced Micro Devices, Inc.")
@@ -174,6 +184,8 @@ install(TARGETS ${HIPCONFIG_BIN}
         COMPONENT AMD
         RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 
+configure_pkg( ${HIPCC} ${COMP_TYPE} ${CPACK_PACKAGE_VERSION} ${PKG_MAINTAINER_NM} ${PKG_MAINTAINER_EMAIL} )
+
 # NVIDIA specific.
 install(FILES
   "LICENSE.txt"
@@ -186,6 +198,8 @@ install(TARGETS ${HIPCC_BIN}
 install(TARGETS ${HIPCONFIG_BIN}
         COMPONENT NVIDIA
         RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+
+configure_pkg( ${HIPCC_NVIDIA} ${COMP_TYPE_NVIDIA} ${CPACK_PACKAGE_VERSION} ${PKG_MAINTAINER_NM} ${PKG_MAINTAINER_EMAIL} )
 
 # TODO: WIN32 check need to be removed if backward
 # compatibility is required for WIN32.

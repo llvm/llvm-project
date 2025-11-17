@@ -189,15 +189,6 @@ struct CppEmitter {
   /// emitc::ForOp.
   StringRef getOrCreateInductionVarName(Value val);
 
-  // Returns the textual representation of a subscript operation.
-  std::string getSubscriptName(emitc::SubscriptOp op);
-
-  // Returns the textual representation of a member (of object) operation.
-  std::string createMemberAccess(emitc::MemberOp op);
-
-  // Returns the textual representation of a member of pointer operation.
-  std::string createMemberAccess(emitc::MemberOfPtrOp op);
-
   /// Return the existing or a new label of a Block.
   StringRef getOrCreateName(Block &block);
 
@@ -400,6 +391,57 @@ static bool shouldBeInlined(ExpressionOp expressionOp) {
   }
 
   return false;
+}
+
+static LogicalResult printOperation(CppEmitter &emitter,
+                                    emitc::GetFieldOp getFieldOp) {
+  emitter.cacheDeferredOpResult(getFieldOp.getResult(),
+                                getFieldOp.getFieldName());
+  return success();
+}
+
+static LogicalResult printOperation(CppEmitter &emitter,
+                                    emitc::GetGlobalOp getGlobalOp) {
+  emitter.cacheDeferredOpResult(getGlobalOp.getResult(), getGlobalOp.getName());
+  return success();
+}
+
+static LogicalResult printOperation(CppEmitter &emitter,
+                                    emitc::LiteralOp literalOp) {
+  emitter.cacheDeferredOpResult(literalOp.getResult(), literalOp.getValue());
+  return success();
+}
+
+static LogicalResult printOperation(CppEmitter &emitter,
+                                    emitc::MemberOp memberOp) {
+  std::string out;
+  llvm::raw_string_ostream ss(out);
+  ss << emitter.getOrCreateName(memberOp.getOperand());
+  ss << "." << memberOp.getMember();
+  emitter.cacheDeferredOpResult(memberOp.getResult(), out);
+  return success();
+}
+
+static LogicalResult printOperation(CppEmitter &emitter,
+                                    emitc::MemberOfPtrOp memberOfPtrOp) {
+  std::string out;
+  llvm::raw_string_ostream ss(out);
+  ss << emitter.getOrCreateName(memberOfPtrOp.getOperand());
+  ss << "->" << memberOfPtrOp.getMember();
+  emitter.cacheDeferredOpResult(memberOfPtrOp.getResult(), out);
+  return success();
+}
+
+static LogicalResult printOperation(CppEmitter &emitter,
+                                    emitc::SubscriptOp subscriptOp) {
+  std::string out;
+  llvm::raw_string_ostream ss(out);
+  ss << emitter.getOrCreateName(subscriptOp.getValue());
+  for (auto index : subscriptOp.getIndices()) {
+    ss << "[" << emitter.getOrCreateName(index) << "]";
+  }
+  emitter.cacheDeferredOpResult(subscriptOp.getResult(), out);
+  return success();
 }
 
 static LogicalResult printConstantOp(CppEmitter &emitter, Operation *operation,
@@ -1337,32 +1379,6 @@ CppEmitter::CppEmitter(raw_ostream &os, bool declareVariablesAtTop,
   labelInScopeCount.push(0);
 }
 
-std::string CppEmitter::getSubscriptName(emitc::SubscriptOp op) {
-  std::string out;
-  llvm::raw_string_ostream ss(out);
-  ss << getOrCreateName(op.getValue());
-  for (auto index : op.getIndices()) {
-    ss << "[" << getOrCreateName(index) << "]";
-  }
-  return out;
-}
-
-std::string CppEmitter::createMemberAccess(emitc::MemberOp op) {
-  std::string out;
-  llvm::raw_string_ostream ss(out);
-  ss << getOrCreateName(op.getOperand());
-  ss << "." << op.getMember();
-  return out;
-}
-
-std::string CppEmitter::createMemberAccess(emitc::MemberOfPtrOp op) {
-  std::string out;
-  llvm::raw_string_ostream ss(out);
-  ss << getOrCreateName(op.getOperand());
-  ss << "->" << op.getMember();
-  return out;
-}
-
 void CppEmitter::cacheDeferredOpResult(Value value, StringRef str) {
   if (!valueMapper.count(value))
     valueMapper.insert(value, str.str());
@@ -1762,41 +1778,19 @@ LogicalResult CppEmitter::emitOperation(Operation &op, bool trailingSemicolon) {
                 emitc::CmpOp, emitc::ConditionalOp, emitc::ConstantOp,
                 emitc::DeclareFuncOp, emitc::DivOp, emitc::DoOp,
                 emitc::ExpressionOp, emitc::FieldOp, emitc::FileOp,
-                emitc::ForOp, emitc::FuncOp, emitc::GlobalOp, emitc::IfOp,
-                emitc::IncludeOp, emitc::LoadOp, emitc::LogicalAndOp,
-                emitc::LogicalNotOp, emitc::LogicalOrOp, emitc::MulOp,
-                emitc::RemOp, emitc::ReturnOp, emitc::SubOp, emitc::SwitchOp,
-                emitc::UnaryMinusOp, emitc::UnaryPlusOp, emitc::VariableOp,
-                emitc::VerbatimOp>(
+                emitc::ForOp, emitc::FuncOp, emitc::GetFieldOp,
+                emitc::GetGlobalOp, emitc::GlobalOp, emitc::IfOp,
+                emitc::IncludeOp, emitc::LiteralOp, emitc::LoadOp,
+                emitc::LogicalAndOp, emitc::LogicalNotOp, emitc::LogicalOrOp,
+                emitc::MemberOfPtrOp, emitc::MemberOp, emitc::MulOp,
+                emitc::RemOp, emitc::ReturnOp, emitc::SubscriptOp, emitc::SubOp,
+                emitc::SwitchOp, emitc::UnaryMinusOp, emitc::UnaryPlusOp,
+                emitc::VariableOp, emitc::VerbatimOp>(
 
               [&](auto op) { return printOperation(*this, op); })
           // Func ops.
           .Case<func::CallOp, func::FuncOp, func::ReturnOp>(
               [&](auto op) { return printOperation(*this, op); })
-          .Case<emitc::GetGlobalOp>([&](auto op) {
-            cacheDeferredOpResult(op.getResult(), op.getName());
-            return success();
-          })
-          .Case<emitc::GetFieldOp>([&](auto op) {
-            cacheDeferredOpResult(op.getResult(), op.getFieldName());
-            return success();
-          })
-          .Case<emitc::LiteralOp>([&](auto op) {
-            cacheDeferredOpResult(op.getResult(), op.getValue());
-            return success();
-          })
-          .Case<emitc::MemberOp>([&](auto op) {
-            cacheDeferredOpResult(op.getResult(), createMemberAccess(op));
-            return success();
-          })
-          .Case<emitc::MemberOfPtrOp>([&](auto op) {
-            cacheDeferredOpResult(op.getResult(), createMemberAccess(op));
-            return success();
-          })
-          .Case<emitc::SubscriptOp>([&](auto op) {
-            cacheDeferredOpResult(op.getResult(), getSubscriptName(op));
-            return success();
-          })
           .Default([&](Operation *) {
             return op.emitOpError("unable to find printer for op");
           });

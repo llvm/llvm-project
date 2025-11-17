@@ -227,7 +227,7 @@ void TargetFrameLowering::spillCalleeSavedRegister(
   } else {
     const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
     TII->storeRegToStackSlot(SaveBlock, MI, Reg, true, CS.getFrameIdx(), RC,
-                             TRI, Register());
+                             Register());
   }
 }
 
@@ -241,8 +241,7 @@ void TargetFrameLowering::restoreCalleeSavedRegister(
         .addReg(CS.getDstReg(), getKillRegState(true));
   } else {
     const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
-    TII->loadRegFromStackSlot(MBB, MI, Reg, CS.getFrameIdx(), RC, TRI,
-                              Register());
+    TII->loadRegFromStackSlot(MBB, MI, Reg, CS.getFrameIdx(), RC, Register());
     assert(MI != MBB.begin() && "loadRegFromStackSlot didn't insert any code!");
   }
 }

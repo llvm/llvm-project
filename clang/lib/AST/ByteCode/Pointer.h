@@ -830,6 +830,9 @@ private:
 
 inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Pointer &P) {
   P.print(OS);
+  OS << ' ';
+  if (const Descriptor *D = P.getFieldDesc())
+    D->dump(OS);
   return OS;
 }
 

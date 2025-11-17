@@ -13,6 +13,8 @@
 // Clang 19 and AppleClang don't have diagnose_if with diagnostic flags
 // UNSUPPORTED: clang-19, apple-clang-17
 
+// ADDITIONAL_COMPILE_FLAGS: -Wno-unused-result
+
 #include <string>
 
 #include "test_macros.h"

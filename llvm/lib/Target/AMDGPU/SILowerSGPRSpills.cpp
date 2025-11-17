@@ -100,10 +100,10 @@ static void insertCSRSaves(const GCNSubtarget &ST, MachineBasicBlock &SaveBlock,
                            SlotIndexes *Indexes,
                            LiveIntervals *LIS) {
   const TargetFrameLowering *TFI = ST.getFrameLowering();
-  const TargetRegisterInfo *TRI = ST.getRegisterInfo();
+  const SIRegisterInfo *RI = ST.getRegisterInfo();
   MachineBasicBlock::iterator I = SaveBlock.begin();
   MachineInstrSpan MIS(I, &SaveBlock);
-  bool Success = TFI->spillCalleeSavedRegisters(SaveBlock, I, CSI, TRI);
+  bool Success = TFI->spillCalleeSavedRegisters(SaveBlock, I, CSI, RI);
   assert(Success && "spillCalleeSavedRegisters should always succeed");
   (void)Success;
 

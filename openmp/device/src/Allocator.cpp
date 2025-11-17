@@ -98,7 +98,7 @@ void allocator::free(void *Ptr) {
 #elif defined(__AMDGPU__) && !defined(OMPTARGET_HAS_LIBC)
   __ockl_dm_dealloc(reinterpret_cast<uint64_t>(Ptr));
 #else
-  ::free(Size);
+  ::free(Ptr);
 #endif
 }
 
