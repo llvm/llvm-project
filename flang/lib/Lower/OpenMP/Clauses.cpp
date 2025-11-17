@@ -994,9 +994,9 @@ Initializer make(const parser::OmpClause::Initializer &inp,
       semantics::SomeExpr evalProcRef{procRef};
       return Initializer{evalProcRef};
     }
-  } else {
-    llvm_unreachable("Unexpected initializer");
   }
+
+  llvm_unreachable("Unexpected initializer");
 }
 
 InReduction make(const parser::OmpClause::InReduction &inp,
