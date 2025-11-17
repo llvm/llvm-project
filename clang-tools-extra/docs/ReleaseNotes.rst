@@ -283,9 +283,19 @@ New check aliases
   <clang-tidy/checks/bugprone/default-operator-new-on-overaligned-type>`
   keeping initial check as an alias to the new one.
 
+- Renamed :doc:`cert-msc30-c <clang-tidy/checks/cert/msc30-c>` to
+  :doc:`misc-predictable-rand
+  <clang-tidy/checks/misc/predictable-rand>`
+  keeping initial check as an alias to the new one.
+
 - Renamed :doc:`cert-msc32-c <clang-tidy/checks/cert/msc32-c>` to
   :doc:`bugprone-random-generator-seed
   <clang-tidy/checks/bugprone/random-generator-seed>`
+  keeping initial check as an alias to the new one.
+
+- Renamed :doc:`cert-msc50-cpp <clang-tidy/checks/cert/msc50-cpp>` to
+  :doc:`misc-predictable-rand
+  <clang-tidy/checks/misc/predictable-rand>`
   keeping initial check as an alias to the new one.
 
 - Renamed :doc:`cert-msc51-cpp <clang-tidy/checks/cert/msc51-cpp>` to
@@ -316,7 +326,7 @@ Changes in existing checks
   exceptions from captures are now diagnosed, exceptions in the bodies of
   lambdas that aren't actually invoked are not. Additionally, fixed an issue
   where the check wouldn't diagnose throws in arguments to functions or
-  constructors. Added fine-grained configuration via options 
+  constructors. Added fine-grained configuration via options
   `CheckDestructors`, `CheckMoveMemberFunctions`, `CheckMain`,
   `CheckedSwapFunctions`, and `CheckNothrowFunctions`.
 
@@ -402,6 +412,14 @@ Changes in existing checks
   adding an option to allow pointer arithmetic via prefix/postfix increment or
   decrement operators.
 
+- Improved :doc:`google-readability-casting
+  <clang-tidy/checks/google/readability-casting>` check by adding fix-it
+  notes for downcasts.
+
+- Improved :doc:`google-readability-todo
+  <clang-tidy/checks/google/readability-todo>` check to accept the new TODO
+  format from the Google Style Guide.
+
 - Improved :doc:`llvm-prefer-isa-or-dyn-cast-in-conditionals
   <clang-tidy/checks/llvm/prefer-isa-or-dyn-cast-in-conditionals>` check:
 
@@ -418,6 +436,11 @@ Changes in existing checks
   and avoid false positives of function pointer and fix false
   positives on return of non-const pointer and fix false positives on
   pointer-to-member operator.
+
+- Improved :doc:`misc-coroutine-hostile-raii
+  <clang-tidy/checks/misc/coroutine-hostile-raii>` check by adding the option
+  `AllowedCallees`, that allows exempting safely awaitable callees from the
+  check.
 
 - Improved :doc:`misc-header-include-cycle
   <clang-tidy/checks/misc/header-include-cycle>` check performance.
