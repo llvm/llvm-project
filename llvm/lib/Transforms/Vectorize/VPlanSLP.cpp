@@ -464,7 +464,8 @@ VPInstruction *VPlanSlp::buildGraph(ArrayRef<VPValue *> Values) {
         LLVM_DEBUG(dbgs() << "    Adding multinode Ops\n");
         // Create dummy VPInstruction, which will we replace later by the
         // re-ordered operand.
-        VPInstruction *Op = new VPInstruction(0, {});
+        VPInstruction *Op =
+            new VPInstruction(VPInstruction::Broadcast, {Values[0]});
         CombinedOperands.push_back(Op);
         MultiNodeOps.emplace_back(Op, Operands);
       }
