@@ -12617,6 +12617,8 @@ SDValue PPCTargetLowering::LowerSSUBO(SDValue Op, SelectionDAG &DAG) const {
   return DAG.getMergeValues({Sub, OverflowTrunc}, dl);
 }
 
+/// Implements signed add with overflow detection using the rule:
+/// (x eqv y) & (sum xor x), where the overflow bit is extracted from the sign
 SDValue PPCTargetLowering::LowerSADDO(SDValue Op, SelectionDAG &DAG) const {
 
   SDLoc dl(Op);
@@ -12624,22 +12626,26 @@ SDValue PPCTargetLowering::LowerSADDO(SDValue Op, SelectionDAG &DAG) const {
   SDValue RHS = Op.getOperand(1);
   EVT VT = Op.getNode()->getValueType(0);
 
-  SDValue Add = DAG.getNode(ISD::ADD, dl, VT, LHS, RHS);
+  SDValue Sum = DAG.getNode(ISD::ADD, dl, VT, LHS, RHS);
 
-  SDValue Xor1 = DAG.getNode(ISD::XOR, dl, VT, LHS, RHS);
-  SDValue NotXor1 = DAG.getNOT(dl, Xor1, VT);
-  SDValue Xor2 = DAG.getNode(ISD::XOR, dl, VT, Add, LHS);
+  // Compute ~(x xor y)
+  SDValue XorXY = DAG.getNode(ISD::XOR, dl, VT, LHS, RHS);
+  SDValue EqvXY = DAG.getNOT(dl, XorXY, VT);
+  // Compute (s xor x)
+  SDValue SumXorX = DAG.getNode(ISD::XOR, dl, VT, Sum, LHS);
 
-  SDValue And = DAG.getNode(ISD::AND, dl, VT, NotXor1, Xor2);
-
+  // overflow = (x eqv y) & (s xor x)
+  SDValue OverflowInSign = DAG.getNode(ISD::AND, dl, VT, EqvXY, SumXorX);
+  
+  // Shift sign bit down to LSB
   SDValue Overflow =
-      DAG.getNode(ISD::SRL, dl, VT, And,
+      DAG.getNode(ISD::SRL, dl, VT, OverflowInSign,
                   DAG.getConstant(VT.getSizeInBits() - 1, dl, MVT::i32));
-
+  // Truncate to the overflow type (i1)
   SDValue OverflowTrunc =
       DAG.getNode(ISD::TRUNCATE, dl, Op.getNode()->getValueType(1), Overflow);
 
-  return DAG.getMergeValues({Add, OverflowTrunc}, dl);
+  return DAG.getMergeValues({Sum, OverflowTrunc}, dl);
 }
 
 /// LowerOperation - Provide custom lowering hooks for some operations.
