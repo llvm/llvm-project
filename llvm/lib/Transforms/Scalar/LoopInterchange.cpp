@@ -121,13 +121,6 @@ static cl::list<RuleTy> Profitabilities(
                           "Ignore profitability, force interchange (does not "
                           "work with other options)")));
 
-// FIXME: this option exists mainly for a couple of tests that check some
-// corner cases that is more difficult to trigger otherwise; these tests should
-// be rewritten and this option removed if possible.
-//static cl::opt<bool> SkipLoopsWithZeroBTC(
-//    "loop-interchange-skip-zero-btc", cl::init(true), cl::Hidden,
-//    cl::desc("Do not consider loops with a backedge taken count of 0"));
-
 #ifndef NDEBUG
 static bool noDuplicateRulesAndIgnore(ArrayRef<RuleTy> Rules) {
   SmallSet<RuleTy, 4> Set;
