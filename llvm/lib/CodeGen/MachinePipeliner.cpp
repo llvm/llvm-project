@@ -523,8 +523,8 @@ static bool hasPHICycle(const MachineBasicBlock *LoopHeader,
     auto Ins = PhiDeps.try_emplace(DefReg).first;
 
     // PHI operands are (Reg, MBB) pairs starting at index 1.
-    for (unsigned i = 1; i < MI.getNumOperands(); i += 2)
-      Ins->second.push_back(MI.getOperand(i).getReg());
+    for (unsigned I = 1; I < MI.getNumOperands(); I += 2)
+      Ins->second.push_back(MI.getOperand(I).getReg());
   }
 
   // DFS to detect cycles among PHI nodes.
