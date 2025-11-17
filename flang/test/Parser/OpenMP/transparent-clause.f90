@@ -74,4 +74,5 @@ end
 !PARSE-TREE: | | OmpClauseList -> OmpClause -> Transparent -> OmpTransparentClause -> Scalar -> Integer -> Expr = '2_4'
 !PARSE-TREE: | | | LiteralConstant -> IntLiteralConstant = '2'
 !PARSE-TREE: | | Flags = None
-!PARSE-TREE: | DoConstruct
+!PARSE-TREE: | Block
+!PARSE-TREE: | | ExecutionPartConstruct -> ExecutableConstruct -> DoConstruct

@@ -7,8 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Parser/parse-tree.h"
+
 #include "flang/Common/idioms.h"
 #include "flang/Common/indirection.h"
+#include "flang/Parser/openmp-utils.h"
 #include "flang/Parser/tools.h"
 #include "flang/Parser/user-state.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -430,6 +432,20 @@ const OmpClauseList &OmpDirectiveSpecification::Clauses() const {
     return *clauses;
   }
   return empty;
+}
+
+const DoConstruct *OpenMPLoopConstruct::GetNestedLoop() const {
+  if (auto &body{std::get<Block>(t)}; !body.empty()) {
+    return Unwrap<DoConstruct>(body.front());
+  }
+  return nullptr;
+}
+
+const OpenMPLoopConstruct *OpenMPLoopConstruct::GetNestedConstruct() const {
+  if (auto &body{std::get<Block>(t)}; !body.empty()) {
+    return Unwrap<OpenMPLoopConstruct>(body.front());
+  }
+  return nullptr;
 }
 
 static bool InitCharBlocksFromStrings(llvm::MutableArrayRef<CharBlock> blocks,
