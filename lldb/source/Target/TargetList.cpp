@@ -48,7 +48,11 @@ Status TargetList::CreateTarget(Debugger &debugger,
                                 LoadDependentFiles load_dependent_files,
                                 const OptionGroupPlatform *platform_options,
                                 TargetSP &target_sp) {
-  std::lock_guard<std::recursive_mutex> guard(m_target_list_mutex);
+  // Create Target Internal does not modify any state
+  // directly and instead calls into methods which
+  // themselves are thread-safe. We need to do this so
+  // the locate module call back doesn't cause a re-entry
+  // dead lock when creating the target.
   auto result = TargetList::CreateTargetInternal(
       debugger, user_exe_path, triple_str, load_dependent_files,
       platform_options, target_sp);
@@ -63,7 +67,11 @@ Status TargetList::CreateTarget(Debugger &debugger,
                                 const ArchSpec &specified_arch,
                                 LoadDependentFiles load_dependent_files,
                                 PlatformSP &platform_sp, TargetSP &target_sp) {
-  std::lock_guard<std::recursive_mutex> guard(m_target_list_mutex);
+  // Create Target Internal does not modify any state
+  // directly and instead calls into methods which
+  // themselves are thread-safe. We need to do this so
+  // the locate module call back doesn't cause a re-entry
+  // dead lock when creating the target.
   auto result = TargetList::CreateTargetInternal(
       debugger, user_exe_path, specified_arch, load_dependent_files,
       platform_sp, target_sp);
@@ -525,6 +533,7 @@ uint32_t TargetList::GetIndexOfTarget(lldb::TargetSP target_sp) const {
 }
 
 void TargetList::AddTargetInternal(TargetSP target_sp, bool do_select) {
+  std::lock_guard<std::recursive_mutex> guard(m_target_list_mutex);
   lldbassert(!llvm::is_contained(m_target_list, target_sp) &&
              "target already exists it the list");
   UnregisterInProcessTarget(target_sp);
