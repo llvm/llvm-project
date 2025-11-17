@@ -12,6 +12,9 @@
 ; RUN:  llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx1100 -mattr=+real-true16 -amdgpu-enable-delay-alu=0 < %s | FileCheck --check-prefixes=GFX11CHECK,GFX11GLISEL,GFX11GLISEL-TRUE16 %s
 ; RUN:  llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx1100 -mattr=-real-true16 -amdgpu-enable-delay-alu=0 < %s | FileCheck --check-prefixes=GFX11CHECK,GFX11GLISEL,GFX11GLISEL-FAKE16 %s
 
+; FIXME: There are code size regressions in GlobalISel due to use of SGPRs and
+; moving those SGPRs into VGPRs.
+
 define amdgpu_kernel void @sgpr_isnan_f16(ptr addrspace(1) %out, half %x) {
 ; GFX7SELDAG-LABEL: sgpr_isnan_f16:
 ; GFX7SELDAG:       ; %bb.0:
