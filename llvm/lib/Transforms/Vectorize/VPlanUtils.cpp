@@ -42,7 +42,10 @@ VPValue *vputils::getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr) {
   if (U && !isa<Instruction>(U->getValue()))
     return Plan.getOrAddLiveIn(U->getValue());
   auto *Expanded = new VPExpandSCEVRecipe(Expr);
-  Plan.getEntry()->appendRecipe(Expanded);
+  auto Iterator = Plan.getEntry()->begin();
+  while (Iterator != Plan.getEntry()->end() && Iterator->isPhi())
+    ++Iterator;
+  Plan.getEntry()->insert(Expanded->getDefiningRecipe(), Iterator);
   return Expanded;
 }
 

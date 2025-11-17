@@ -37,6 +37,7 @@
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/LoopVersioning.h"
+#include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 #include <cassert>
 
 using namespace llvm;
@@ -678,6 +679,12 @@ Value *VPInstruction::generate(VPTransformState &State) {
   case Instruction::PHI: {
     llvm_unreachable("should be handled by VPPhi::execute");
   }
+  case Instruction::Store: {
+    assert(vputils::onlyFirstLaneUsed(this) && "Should be scalar store");
+    Value *V = State.get(getOperand(0), true);
+    Value *P = State.get(getOperand(1), true);
+    return Builder.CreateStore(V, P);
+  }
   case Instruction::Select: {
     bool OnlyFirstLaneUsed = vputils::onlyFirstLaneUsed(this);
     Value *Cond =
@@ -1299,7 +1306,8 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
 
 bool VPInstruction::usesFirstLaneOnly(const VPValue *Op) const {
   assert(is_contained(operands(), Op) && "Op must be an operand of the recipe");
-  if (Instruction::isBinaryOp(getOpcode()) || Instruction::isCast(getOpcode()))
+  if (Instruction::isBinaryOp(getOpcode()) ||
+      Instruction::isCast(getOpcode()) || getOpcode() == Instruction::Store)
     return vputils::onlyFirstLaneUsed(this);
 
   switch (getOpcode()) {
@@ -1552,7 +1560,52 @@ void VPPhi::execute(VPTransformState &State) {
   State.set(this, NewPhi, VPLane(0));
 }
 
+void VPScalarIVPromotionRecipe::execute(VPTransformState &State) {
+  auto &Builder = State.Builder;
+  State.setDebugLocFrom(getDebugLoc());
+
+  Value *VL = State.get(getVFxUF(), VPLane(0));
+  Type *Ty = State.get(getOperand(0), VPLane(0))->getType();
+  VL = Builder.CreateZExtOrTrunc(VL, Ty);
+
+  auto PhiInsertPoint =
+      State.CFG.VPBB2IRBB[getParent()->getExitingBasicBlock()]
+          ->getFirstNonPHIIt();
+  auto DefaultInsertPoint = State.Builder.GetInsertPoint();
+
+  State.Builder.SetInsertPoint(PhiInsertPoint);
+  auto Phi = Builder.CreatePHI(State.TypeAnalysis.inferScalarType(this), 2, "");
+  State.Builder.SetInsertPoint(DefaultInsertPoint);
+  auto EntryValue = State.get(getOperand(0), VPLane(0));
+  VPBlockBase *Pred = getParent()->getPredecessors()[0];
+  auto *PredVPBB = Pred->getExitingBasicBlock();
+  Phi->addIncoming(EntryValue, State.CFG.VPBB2IRBB[PredVPBB]);
+
+  auto SCEVStep = State.get(getOperand(1), VPLane(0));
+  SCEVStep = Builder.CreateZExtOrTrunc(SCEVStep, Ty);
+
+  auto Mul = Builder.CreateNAryOp(Instruction::Mul, {SCEVStep, VL});
+  auto Add = Builder.CreateNAryOp(Instruction::Add, {Phi, Mul});
+
+  auto Pointer = State.get(getOperand(2), VPLane(0));
+  Builder.CreateStore(Add, Pointer);
+
+  Phi->addIncoming(Add, dyn_cast<Instruction>(Add)->getParent());
+}
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void VPScalarIVPromotionRecipe::print(raw_ostream &O, const Twine &Indent,
+                                      VPSlotTracker &SlotTracker) const {
+  O << Indent << "EMIT" << (isSingleScalar() ? "-SCALAR" : "") << " ";
+  printAsOperand(O, SlotTracker);
+  O << " = Scalar Promotion IV ";
+  printOperands(O, SlotTracker);
+
+  if (auto DL = getDebugLoc()) {
+    O << ", !dbg ";
+    DL.print(O);
+  }
+}
 void VPPhi::print(raw_ostream &O, const Twine &Indent,
                   VPSlotTracker &SlotTracker) const {
   O << Indent << "EMIT" << (isSingleScalar() ? "-SCALAR" : "") << " ";

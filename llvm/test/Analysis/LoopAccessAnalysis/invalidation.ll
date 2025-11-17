@@ -11,6 +11,7 @@
 ; CHECK-AA-NEXT: Running analysis: LoopAccessAnalysis on foo
 ; CHECK-AA: Running pass: InvalidateAnalysisPass
 ; CHECK-AA-NEXT: Invalidating analysis: AAManager on foo
+; CHECK-AA-NEXT: Invalidating analysis: MemorySSAAnalysis on foo
 ; CHECK-AA-NEXT: Invalidating analysis: LoopAccessAnalysis on foo
 ; CHECK-AA-NEXT: Running pass: LoopAccessInfoPrinterPass on foo
 ; CHECK-AA-NEXT: Running analysis: LoopAccessAnalysis on foo

@@ -465,6 +465,8 @@ class LoopVectorizationPlanner {
 
   PredicatedScalarEvolution &PSE;
 
+  LoopAccessInfoManager *LAIs;
+
   const LoopVectorizeHints &Hints;
 
   OptimizationRemarkEmitter *ORE;
@@ -498,10 +500,10 @@ public:
       Loop *L, LoopInfo *LI, DominatorTree *DT, const TargetLibraryInfo *TLI,
       const TargetTransformInfo &TTI, LoopVectorizationLegality *Legal,
       LoopVectorizationCostModel &CM, InterleavedAccessInfo &IAI,
-      PredicatedScalarEvolution &PSE, const LoopVectorizeHints &Hints,
-      OptimizationRemarkEmitter *ORE)
+      PredicatedScalarEvolution &PSE, LoopAccessInfoManager *LAIs,
+      const LoopVectorizeHints &Hints, OptimizationRemarkEmitter *ORE)
       : OrigLoop(L), LI(LI), DT(DT), TLI(TLI), TTI(TTI), Legal(Legal), CM(CM),
-        IAI(IAI), PSE(PSE), Hints(Hints), ORE(ORE) {}
+        IAI(IAI), PSE(PSE), LAIs(LAIs), Hints(Hints), ORE(ORE) {}
 
   /// Build VPlans for the specified \p UserVF and \p UserIC if they are
   /// non-zero or all applicable candidate VFs otherwise. If vectorization and
@@ -627,6 +629,8 @@ private:
   void adjustRecipesForReductions(VPlanPtr &Plan,
                                   VPRecipeBuilder &RecipeBuilder,
                                   ElementCount MinVF);
+
+  void adjustScalarIVPromotions(VPlanPtr &Plan);
 
   /// Attach the runtime checks of \p RTChecks to \p Plan.
   void attachRuntimeChecks(VPlan &Plan, GeneratedRTChecks &RTChecks,

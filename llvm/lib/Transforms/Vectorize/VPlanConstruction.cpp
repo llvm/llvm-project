@@ -29,6 +29,15 @@ using namespace llvm;
 using namespace VPlanPatternMatch;
 
 namespace {
+
+struct ScalarPromotionInfo {
+  LoadInst *Load;
+  StoreInst *Store;
+  const SCEV *Step = nullptr;
+
+  SmallVector<Instruction *, 1> Instructions;
+};
+
 // Class that is used to build the plain CFG for the incoming IR.
 class PlainCFGBuilder {
   // The outermost loop of the input loop nest considered for vectorization.
@@ -39,6 +48,10 @@ class PlainCFGBuilder {
 
   // Vectorization plan that we are working on.
   std::unique_ptr<VPlan> Plan;
+
+  PredicatedScalarEvolution *PSE;
+
+  LoopAccessInfoManager *LAIs;
 
   // Builder of the VPlan instruction-level representation.
   VPBuilder VPIRBuilder;
@@ -54,6 +67,8 @@ class PlainCFGBuilder {
   // Hold phi node's that need to be fixed once the plain CFG has been built.
   SmallVector<PHINode *, 8> PhisToFix;
 
+  SmallVector<ScalarPromotionInfo, 2> ScalarPromotions;
+
   // Utility functions.
   void setVPBBPredsFromBB(VPBasicBlock *VPBB, BasicBlock *BB);
   void fixHeaderPhis();
@@ -64,9 +79,13 @@ class PlainCFGBuilder {
   VPValue *getOrCreateVPOperand(Value *IRVal);
   void createVPInstructionsForVPBB(VPBasicBlock *VPBB, BasicBlock *BB);
 
+  void analyzeScalarPromotion(VPBasicBlock *VPBB, BasicBlock *BB);
+
 public:
-  PlainCFGBuilder(Loop *Lp, LoopInfo *LI)
-      : TheLoop(Lp), LI(LI), Plan(std::make_unique<VPlan>(Lp)) {}
+  PlainCFGBuilder(Loop *Lp, LoopInfo *LI, PredicatedScalarEvolution *PSE,
+                  LoopAccessInfoManager *LAIs)
+      : TheLoop(Lp), LI(LI), Plan(std::make_unique<VPlan>(Lp)), PSE(PSE),
+        LAIs(LAIs) {}
 
   /// Build plain CFG for TheLoop and connect it to Plan's entry.
   std::unique_ptr<VPlan> buildPlainCFG();
@@ -166,11 +185,36 @@ VPValue *PlainCFGBuilder::getOrCreateVPOperand(Value *IRVal) {
   return NewVPVal;
 }
 
+void PlainCFGBuilder::analyzeScalarPromotion(VPBasicBlock *VPBB,
+                                             BasicBlock *BB) {
+  for (Instruction &InstRef : BB->instructionsWithoutDebug(false)) {
+    Instruction *Inst = &InstRef;
+
+    if (auto *Load = dyn_cast<LoadInst>(Inst)) {
+      auto Loop = LI->getLoopFor(Inst->getParent());
+      auto &LAI = LAIs->getInfo(*Loop);
+      StoreInst *Store = nullptr;
+      const SCEV *Step = nullptr;
+
+      if (Loop->isLoopInvariant(Load->getPointerOperand())) {
+        SmallVector<Instruction *, 4> Is;
+        if (LAI.getDepChecker().isInvariantLoadHoistable(Load, *PSE->getSE(),
+                                                         &Store, &Step, &Is)) {
+          ScalarPromotions.push_back(ScalarPromotionInfo{Load, Store, Step});
+          ScalarPromotions.back().Instructions.insert(
+              ScalarPromotions.back().Instructions.end(), Is.begin(), Is.end());
+        }
+      }
+    }
+  }
+}
+
 // Create new VPInstructions in a VPBasicBlock, given its BasicBlock
 // counterpart. This function must be invoked in RPO so that the operands of a
 // VPInstruction in \p BB have been visited before (except for Phi nodes).
 void PlainCFGBuilder::createVPInstructionsForVPBB(VPBasicBlock *VPBB,
                                                   BasicBlock *BB) {
+  DenseSet<Value *> SkipInsts;
   VPIRBuilder.setInsertPoint(VPBB);
   // TODO: Model and preserve debug intrinsics in VPlan.
   for (Instruction &InstRef : BB->instructionsWithoutDebug(false)) {
@@ -228,6 +272,46 @@ void PlainCFGBuilder::createVPInstructionsForVPBB(VPBasicBlock *VPBB,
               VPPredToIncomingValue.lookup(Pred->getExitingBasicBlock()));
       }
     } else {
+      auto skip = false;
+      for (auto &SP : ScalarPromotions) {
+        if (Inst == SP.Load) {
+          VPBasicBlock *PreheaderVPBB =
+              Plan->getVectorPreheader(); // vector preheader, not the IR loop
+                                          // preheader
+          if (!PreheaderVPBB)
+            PreheaderVPBB = Plan->getEntry();
+
+          SmallVector<VPValue *, 4> VPOperands;
+          for (Value *Op : SP.Load->operands()) {
+            VPOperands.push_back(getOrCreateVPOperand(Op));
+          }
+          auto *Load = new VPReplicateRecipe(SP.Load, VPOperands,
+                                             /*IsSingleScalar=*/true);
+          auto SCEVRecipe = new VPExpandSCEVRecipe(SP.Step);
+          PreheaderVPBB->appendRecipe(SCEVRecipe);
+          PreheaderVPBB->appendRecipe(Load);
+
+          auto StepValue = SCEVRecipe->getVPSingleValue();
+
+          NewR = new VPScalarIVPromotionRecipe(
+              {Load, StepValue,
+               getOrCreateVPOperand(SP.Store->getPointerOperand())},
+              SP.Load->getDebugLoc());
+          VPBB->appendRecipe(NewR);
+          skip = true;
+          break;
+        } else if (Inst == SP.Store) {
+          skip = true;
+          break;
+        } else if (Inst == SP.Instructions[0]) {
+          skip = true;
+          break;
+        }
+      }
+
+      if (skip)
+        continue;
+
       // Translate LLVM-IR operands into VPValue operands and set them in the
       // new VPInstruction.
       SmallVector<VPValue *, 4> VPOperands;
@@ -274,6 +358,8 @@ std::unique_ptr<VPlan> PlainCFGBuilder::buildPlainCFG() {
     IRDef2VPValue[&I] = Plan->getOrAddLiveIn(&I);
   }
 
+  // dbgs() << "ECHO 9.1 "; Plan->dump();
+
   LoopBlocksRPO RPO(TheLoop);
   RPO.perform(LI);
 
@@ -282,6 +368,8 @@ std::unique_ptr<VPlan> PlainCFGBuilder::buildPlainCFG() {
     VPBasicBlock *VPBB = getOrCreateVPBB(BB);
     // Set VPBB predecessors in the same order as they are in the incoming BB.
     setVPBBPredsFromBB(VPBB, BB);
+
+    analyzeScalarPromotion(VPBB, BB);
 
     // Create VPInstructions for BB.
     createVPInstructionsForVPBB(VPBB, BB);
@@ -537,8 +625,9 @@ static void addInitialSkeleton(VPlan &Plan, Type *InductionTy, DebugLoc IVDL,
 
 std::unique_ptr<VPlan>
 VPlanTransforms::buildVPlan0(Loop *TheLoop, LoopInfo &LI, Type *InductionTy,
-                             DebugLoc IVDL, PredicatedScalarEvolution &PSE) {
-  PlainCFGBuilder Builder(TheLoop, &LI);
+                             DebugLoc IVDL, PredicatedScalarEvolution &PSE,
+                             LoopAccessInfoManager *LAIs) {
+  PlainCFGBuilder Builder(TheLoop, &LI, &PSE, LAIs);
   std::unique_ptr<VPlan> VPlan0 = Builder.buildPlainCFG();
   addInitialSkeleton(*VPlan0, InductionTy, IVDL, PSE, TheLoop);
   return VPlan0;
@@ -726,8 +815,11 @@ void VPlanTransforms::addMinimumIterationCheck(
       // Don't execute the vector loop if (UMax - n) < (VF * UF).
       // FIXME: Should only check VF * UF, but currently checks Step=max(VF*UF,
       // minProfitableTripCount).
-      TripCountCheck = Builder.createICmp(ICmpInst::ICMP_ULT, DistanceToMax,
-                                          Builder.createExpandSCEV(Step), DL);
+      TripCountCheck =
+          Builder.createICmp(ICmpInst::ICMP_ULT, DistanceToMax,
+                             VPBuilder(EntryVPBB, EntryVPBB->getFirstNonPhi())
+                                 .createExpandSCEV(Step),
+                             DL);
     } else {
       // TripCountCheck = false, folding tail implies positive vector trip
       // count.
@@ -745,7 +837,9 @@ void VPlanTransforms::addMinimumIterationCheck(
                                     TripCount, Step)) {
       // Generate the minimum iteration check only if we cannot prove the
       // check is known to be true, or known to be false.
-      VPValue *MinTripCountVPV = Builder.createExpandSCEV(Step);
+      VPValue *MinTripCountVPV =
+          VPBuilder(EntryVPBB, EntryVPBB->getFirstNonPhi())
+              .createExpandSCEV(Step);
       TripCountCheck = Builder.createICmp(
           CmpPred, TripCountVPV, MinTripCountVPV, DL, "min.iters.check");
     } // else step known to be < trip count, use TripCountCheck preset to false.
@@ -767,8 +861,11 @@ void VPlanTransforms::addMinimumVectorEpilogueIterationCheck(
   // Add the minimum iteration check for the epilogue vector loop.
   VPValue *TC = Plan.getOrAddLiveIn(TripCount);
   VPBuilder Builder(cast<VPBasicBlock>(Plan.getEntry()));
-  VPValue *VFxUF = Builder.createExpandSCEV(SE.getElementCount(
-      TripCount->getType(), (EpilogueVF * EpilogueUF), SCEV::FlagNUW));
+  VPValue *VFxUF =
+      VPBuilder(cast<VPBasicBlock>(Plan.getEntry()),
+                cast<VPBasicBlock>(Plan.getEntry())->getFirstNonPhi())
+          .createExpandSCEV(SE.getElementCount(
+              TripCount->getType(), (EpilogueVF * EpilogueUF), SCEV::FlagNUW));
   VPValue *Count = Builder.createNaryOp(
       Instruction::Sub, {TC, Plan.getOrAddLiveIn(VectorTripCount)},
       DebugLoc::getUnknown(), "n.vec.remaining");
