@@ -13373,6 +13373,35 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     }
     return Success(APValue(ResultElements.data(), ResultElements.size()), E);
   }
+  case clang::X86::BI__builtin_ia32_addsubpd:
+  case clang::X86::BI__builtin_ia32_addsubps:
+  case clang::X86::BI__builtin_ia32_addsubpd256:
+  case clang::X86::BI__builtin_ia32_addsubps256: {
+    // Addsub: alternates between subtraction and addition
+    // Result[i] = (i % 2 == 0) ? (a[i] - b[i]) : (a[i] + b[i])
+    APValue SourceLHS, SourceRHS;
+    if (!EvaluateAsRValue(Info, E->getArg(0), SourceLHS) ||
+        !EvaluateAsRValue(Info, E->getArg(1), SourceRHS))
+      return false;
+    unsigned NumElems = SourceLHS.getVectorLength();
+    SmallVector<APValue, 8> ResultElements;
+    ResultElements.reserve(NumElems);
+    llvm::RoundingMode RM = getActiveRoundingMode(getEvalInfo(), E);
+
+    for (unsigned I = 0; I != NumElems; ++I) {
+      APFloat LHS = SourceLHS.getVectorElt(I).getFloat();
+      APFloat RHS = SourceRHS.getVectorElt(I).getFloat();
+      if (I % 2 == 0) {
+        // Even indices: subtract
+        LHS.subtract(RHS, RM);
+      } else {
+        // Odd indices: add
+        LHS.add(RHS, RM);
+      }
+      ResultElements.push_back(APValue(LHS));
+    }
+    return Success(APValue(ResultElements.data(), ResultElements.size()), E);
+  }
   case Builtin::BI__builtin_elementwise_fshl:
   case Builtin::BI__builtin_elementwise_fshr: {
     APValue SourceHi, SourceLo, SourceShift;
