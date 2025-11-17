@@ -163,6 +163,7 @@ protected:
   static bool isDebugSection(const NormalizedSection &NSec);
   static bool isZeroFillSection(const NormalizedSection &NSec);
 
+  template <endianness ObjE>
   MachO::relocation_info
   getRelocationInfo(const object::relocation_iterator RelItr) {
     MachO::any_relocation_info ARI =
@@ -170,10 +171,17 @@ protected:
     MachO::relocation_info RI;
     RI.r_address = ARI.r_word0;
     RI.r_symbolnum = ARI.r_word1 & 0xffffff;
-    RI.r_pcrel = (ARI.r_word1 >> 24) & 1;
-    RI.r_length = (ARI.r_word1 >> 25) & 3;
-    RI.r_extern = (ARI.r_word1 >> 27) & 1;
-    RI.r_type = (ARI.r_word1 >> 28);
+    if (ObjE == endianness::native) {
+      RI.r_pcrel = (ARI.r_word1 >> 24) & 1;
+      RI.r_length = (ARI.r_word1 >> 25) & 3;
+      RI.r_extern = (ARI.r_word1 >> 27) & 1;
+      RI.r_type = (ARI.r_word1 >> 28);
+    } else {
+      RI.r_pcrel = (ARI.r_word1 >> 28) & 0x1;
+      RI.r_length = (ARI.r_word1 >> 26) & 0x3;
+      RI.r_extern = (ARI.r_word1 >> 25) & 0x1;
+      RI.r_type = (ARI.r_word1 >> 24) & 0xf;
+    }
     return RI;
   }
 

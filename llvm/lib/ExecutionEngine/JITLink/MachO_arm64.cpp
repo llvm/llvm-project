@@ -165,7 +165,7 @@ private:
       return make_error<JITLinkError>("arm64 SUBTRACTOR without paired "
                                       "UNSIGNED relocation");
 
-    auto UnsignedRI = getRelocationInfo(UnsignedRelItr);
+    auto UnsignedRI = getRelocationInfo<endianness::little>(UnsignedRelItr);
 
     if (SubRI.r_address != UnsignedRI.r_address)
       return make_error<JITLinkError>("arm64 SUBTRACTOR and paired UNSIGNED "
@@ -288,7 +288,8 @@ private:
       for (auto RelItr = S.relocation_begin(), RelEnd = S.relocation_end();
            RelItr != RelEnd; ++RelItr) {
 
-        MachO::relocation_info RI = getRelocationInfo(RelItr);
+        MachO::relocation_info RI =
+            getRelocationInfo<endianness::little>(RelItr);
 
         // Validate the relocation kind.
         auto MachORelocKind = getRelocationKind(RI);
@@ -337,7 +338,7 @@ private:
           if (RelItr == RelEnd)
             return make_error<JITLinkError>("Unpaired Addend reloc at " +
                                             formatv("{0:x16}", FixupAddress));
-          RI = getRelocationInfo(RelItr);
+          RI = getRelocationInfo<endianness::little>(RelItr);
 
           MachORelocKind = getRelocationKind(RI);
           if (!MachORelocKind)

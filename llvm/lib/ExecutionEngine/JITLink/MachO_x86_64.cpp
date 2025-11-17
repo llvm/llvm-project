@@ -140,7 +140,7 @@ private:
       return make_error<JITLinkError>("x86_64 SUBTRACTOR without paired "
                                       "UNSIGNED relocation");
 
-    auto UnsignedRI = getRelocationInfo(UnsignedRelItr);
+    auto UnsignedRI = getRelocationInfo<endianness::little>(UnsignedRelItr);
 
     if (SubRI.r_address != UnsignedRI.r_address)
       return make_error<JITLinkError>("x86_64 SUBTRACTOR and paired UNSIGNED "
@@ -264,7 +264,8 @@ private:
       for (auto RelItr = S.relocation_begin(), RelEnd = S.relocation_end();
            RelItr != RelEnd; ++RelItr) {
 
-        MachO::relocation_info RI = getRelocationInfo(RelItr);
+        MachO::relocation_info RI =
+            getRelocationInfo<endianness::little>(RelItr);
 
         // Find the address of the value to fix up.
         auto FixupAddress = SectionAddress + (uint32_t)RI.r_address;
