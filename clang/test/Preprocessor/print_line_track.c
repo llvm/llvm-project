@@ -1,7 +1,7 @@
-/* RUN: %clang_cc1 -E %s | grep -z 'a.3'
- * RUN: %clang_cc1 -E %s | grep -z 'b.16'
- * RUN: %clang_cc1 -E -P %s | grep -z 'a.3'
- * RUN: %clang_cc1 -E -P %s | grep -z 'b.16'
+/* RUN: %clang_cc1 -E %s | awk '/a/,/3/{exit 0} {exit 1}'
+ * RUN: %clang_cc1 -E %s | awk '/b/,/16/{exit 0} {exit 1}'
+ * RUN: %clang_cc1 -E -P %s | awk '/a/,/3/{exit 0} {exit 1}'
+ * RUN: %clang_cc1 -E -P %s | awk '/b/,/16/{exit 0} {exit 1}'
  * RUN: %clang_cc1 -E %s | not grep '# 0 '
  * RUN: %clang_cc1 -E -P %s | count 4
  * PR1848 PR3437 PR7360
