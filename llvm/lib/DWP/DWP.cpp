@@ -429,7 +429,8 @@ void writeStringsAndOffsets(MCStreamer &Out, DWPStringPool &Strings,
                             MCSection *StrOffsetSection,
                             StringRef CurStrSection,
                             StringRef CurStrOffsetSection, uint16_t Version,
-                            SectionLengths &SectionLength) {
+                            SectionLengths &SectionLength,
+                            const bool ForceDwarf64StringOffsets) {
   // Could possibly produce an error or warning if one of these was non-null but
   // the other was null.
   if (CurStrSection.empty() || CurStrOffsetSection.empty())
@@ -442,9 +443,11 @@ void writeStringsAndOffsets(MCStreamer &Out, DWPStringPool &Strings,
   uint64_t PrevOffset = 0;
 
   // Keep track if any new string offsets exceed UINT32_MAX. If any do, we can
-  // emit a DWARF64 .debug_str_offsets table for this compile unit.
+  // emit a DWARF64 .debug_str_offsets table for this compile unit. If the
+  // \a ForceDwarf64StringOffsets argument is true, then force the emission of
+  // DWARF64 .debug_str_offsets for testing.
   uint32_t OldOffsetSize = 4;
-  uint32_t NewOffsetSize = 4;
+  uint32_t NewOffsetSize = ForceDwarf64StringOffsets ? 8 : 4;
   while (const char *S = Data.getCStr(&LocalOffset)) {
     uint64_t NewOffset = Strings.getOffset(S, LocalOffset - PrevOffset);
     OffsetRemapping[PrevOffset] = NewOffset;
@@ -666,7 +669,8 @@ Error handleSection(
 }
 
 Error write(MCStreamer &Out, ArrayRef<std::string> Inputs,
-            OnCuIndexOverflow OverflowOptValue) {
+            OnCuIndexOverflow OverflowOptValue,
+            bool ForceDwarf64StringOffsets) {
   const auto &MCOFI = *Out.getContext().getObjectFileInfo();
   MCSection *const StrSection = MCOFI.getDwarfStrDWOSection();
   MCSection *const StrOffsetSection = MCOFI.getDwarfStrOffDWOSection();
@@ -759,7 +763,8 @@ Error write(MCStreamer &Out, ArrayRef<std::string> Inputs,
     }
 
     writeStringsAndOffsets(Out, Strings, StrOffsetSection, CurStrSection,
-                           CurStrOffsetSection, Header.Version, SectionLength);
+                           CurStrOffsetSection, Header.Version, SectionLength,
+                           ForceDwarf64StringOffsets);
 
     for (auto Pair : SectionLength) {
       auto Index = getContributionIndex(Pair.first, IndexVersion);

@@ -16,3 +16,7 @@ def continueOnCuIndexOverflow_EQ : Joined<["-", "--"], "continue-on-cu-index-ove
     "\t\ttruncated but valid DWP file, discarding any DWO files that would not fit within \n"
     "\t\tthe 32 bit/4GB limits of the format.">,
   Values<"continue,soft-stop">;
+def forceDwarf64StringOffsets : Flag<["-", "--"], "force-dwarf64-str-offsets">,
+  Flags<[HelpHidden]>,
+  HelpText<"Force all .debug_str_offsets to be emitted as DWARF64 tables. This "
+    "option is used for testing.">;

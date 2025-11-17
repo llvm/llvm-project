@@ -68,7 +68,8 @@ struct CompileUnitIdentifiers {
 };
 
 LLVM_ABI Error write(MCStreamer &Out, ArrayRef<std::string> Inputs,
-                     OnCuIndexOverflow OverflowOptValue);
+                     OnCuIndexOverflow OverflowOptValue,
+                     bool ForceDwarf64StringOffsets);
 
 typedef std::vector<std::pair<DWARFSectionKind, uint32_t>> SectionLengths;
 

@@ -73,6 +73,7 @@ public:
 static std::vector<std::string> ExecFilenames;
 static std::string OutputFilename;
 static std::string ContinueOption;
+static bool ForceDwarf64StringOffsets = false;
 
 static Expected<SmallVector<std::string, 16>>
 getDWOFilenames(StringRef ExecFilename) {
@@ -160,6 +161,8 @@ int llvm_dwp_main(int argc, char **argv, const llvm::ToolContext &) {
       }
     }
   }
+  if (Args.getLastArg(OPT_forceDwarf64StringOffsets))
+    ForceDwarf64StringOffsets = true;
 
   for (const llvm::opt::Arg *A : Args.filtered(OPT_execFileNames))
     ExecFilenames.emplace_back(A->getValue());
@@ -274,7 +277,8 @@ int llvm_dwp_main(int argc, char **argv, const llvm::ToolContext &) {
   if (!MS)
     return error("no object streamer for target " + TripleName, Context);
 
-  if (auto Err = write(*MS, DWOFilenames, OverflowOptValue)) {
+  if (auto Err = write(*MS, DWOFilenames, OverflowOptValue,
+                       ForceDwarf64StringOffsets)) {
     logAllUnhandledErrors(std::move(Err), WithColor::error());
     return 1;
   }
