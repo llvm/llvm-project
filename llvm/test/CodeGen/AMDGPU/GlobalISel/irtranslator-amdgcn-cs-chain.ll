@@ -22,7 +22,7 @@ define amdgpu_cs_chain void @chain_call(<3 x i32> inreg %sgpr, { i32, ptr addrsp
   ; GFX11-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @callee
   ; GFX11-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1
   ; GFX11-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; GFX11-NEXT:   [[GV1:%[0-9]+]]:ccr_sgpr_64(p0) = G_GLOBAL_VALUE @callee
+  ; GFX11-NEXT:   [[GV1:%[0-9]+]]:sgpr_64(p0) = G_GLOBAL_VALUE @callee
   ; GFX11-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<3 x s32>)
   ; GFX11-NEXT:   [[INTRINSIC_CONVERGENT:%[0-9]+]]:_(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[UV]](s32)
   ; GFX11-NEXT:   $sgpr0 = COPY [[INTRINSIC_CONVERGENT]](s32)
@@ -51,7 +51,7 @@ define amdgpu_cs_chain void @chain_call(<3 x i32> inreg %sgpr, { i32, ptr addrsp
   ; GFX10-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @callee
   ; GFX10-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1
   ; GFX10-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; GFX10-NEXT:   [[GV1:%[0-9]+]]:ccr_sgpr_64(p0) = G_GLOBAL_VALUE @callee
+  ; GFX10-NEXT:   [[GV1:%[0-9]+]]:sgpr_64(p0) = G_GLOBAL_VALUE @callee
   ; GFX10-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<3 x s32>)
   ; GFX10-NEXT:   [[INTRINSIC_CONVERGENT:%[0-9]+]]:_(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[UV]](s32)
   ; GFX10-NEXT:   $sgpr0 = COPY [[INTRINSIC_CONVERGENT]](s32)
@@ -86,7 +86,7 @@ define amdgpu_cs_chain void @chain_preserve_call(<3 x i32> inreg %sgpr, { i32, p
   ; GFX11-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @callee_preserve
   ; GFX11-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1
   ; GFX11-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; GFX11-NEXT:   [[GV1:%[0-9]+]]:ccr_sgpr_64(p0) = G_GLOBAL_VALUE @callee_preserve
+  ; GFX11-NEXT:   [[GV1:%[0-9]+]]:sgpr_64(p0) = G_GLOBAL_VALUE @callee_preserve
   ; GFX11-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<3 x s32>)
   ; GFX11-NEXT:   [[INTRINSIC_CONVERGENT:%[0-9]+]]:_(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[UV]](s32)
   ; GFX11-NEXT:   $sgpr0 = COPY [[INTRINSIC_CONVERGENT]](s32)
@@ -115,7 +115,7 @@ define amdgpu_cs_chain void @chain_preserve_call(<3 x i32> inreg %sgpr, { i32, p
   ; GFX10-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @callee_preserve
   ; GFX10-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1
   ; GFX10-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; GFX10-NEXT:   [[GV1:%[0-9]+]]:ccr_sgpr_64(p0) = G_GLOBAL_VALUE @callee_preserve
+  ; GFX10-NEXT:   [[GV1:%[0-9]+]]:sgpr_64(p0) = G_GLOBAL_VALUE @callee_preserve
   ; GFX10-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<3 x s32>)
   ; GFX10-NEXT:   [[INTRINSIC_CONVERGENT:%[0-9]+]]:_(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[UV]](s32)
   ; GFX10-NEXT:   $sgpr0 = COPY [[INTRINSIC_CONVERGENT]](s32)
