@@ -74,6 +74,11 @@
 // RUN:   -fsanitize=fuzzer,address -fsanitize=leak --rocm-path=%S/Inputs/rocm %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=MULT2,XNACK2 %s
 
+// Check for -fsanitize-coverage options
+// RUN:   %clang -### --target=x86_64-unknown-linux-gnu --offload-arch=gfx900:xnack+ \
+// RUN:   -fsanitize=address -fsanitize-coverage=inline-bool-flag --rocm-path=%S/Inputs/rocm %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=WARNSANCOV %s
+
 // Test -Xarch_device error scenario
 
 // RUN:   not %clang -### --target=x86_64-unknown-linux-gnu --offload-arch=gfx900:xnack+ \
@@ -87,6 +92,10 @@
 // RUN:   not %clang -### --target=x86_64-unknown-linux-gnu --offload-arch=gfx900:xnack+ \
 // RUN:   -Xarch_device -fsanitize=fuzzer,address --rocm-path=%S/Inputs/rocm %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=INVALIDCOMBINATIONERROR %s
+
+// RUN:   not %clang -### --target=x86_64-unknown-linux-gnu --offload-arch=gfx900:xnack+ \
+// RUN:   -fsanitize=address -Xarch_device -fsanitize-coverage-stack-depth-callback-min=42 --rocm-path=%S/Inputs/rocm %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=ERRSANCOV %s
 
 // CHECK-NOT: {{"[^"]*clang[^"]*".* "-fcuda-is-device".* "-fsanitize=address"}}
 // CHECK-NOT: {{"[^"]*clang[^"]*".* "-fcuda-is-device".* "-mlink-bitcode-file" ".*asanrtl.bc"}}
@@ -162,3 +171,6 @@
 // UNSUPPORTEDERROR: error: '-fsanitize=leak' option is not currently supported for target 'amdgcn-amd-amdhsa'
 // XNACKERROR: error: '-fsanitize=address' option for offload arch 'gfx900:xnack-' is not currently supported there. Use it with an offload arch containing 'xnack+' instead
 // INVALIDCOMBINATIONERROR: error: 'fuzzer' in '-fsanitize=fuzzer,address' option is not currently supported for target 'amdgcn-amd-amdhsa'
+
+// WARNSANCOV: warning: ignoring '-fsanitize-coverage=inline-bool-flag' option as it is not currently supported for target 'amdgcn-amd-amdhsa'
+// ERRSANCOV: error: '-fsanitize-coverage-stack-depth-callback-min=42' option is not currently supported for target 'amdgcn-amd-amdhsa'
