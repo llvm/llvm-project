@@ -89,34 +89,61 @@ define i32 @csr_d8(i32 noundef %num) "aarch64_pstate_sm_compatible" {
 ;
 ; CHECK64-LABEL: csr_d8:
 ; CHECK64:       // %bb.0: // %entry
-; CHECK64-NEXT:    sub sp, sp, #144
-; CHECK64-NEXT:    str d8, [sp, #64] // 8-byte Spill
-; CHECK64-NEXT:    .cfi_def_cfa_offset 144
-; CHECK64-NEXT:    .cfi_offset b8, -80
+; CHECK64-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK64-NEXT:    sub sp, sp, #64
+; CHECK64-NEXT:    addvl sp, sp, #-1
+; CHECK64-NEXT:    str z8, [sp] // 16-byte Folded Spill
+; CHECK64-NEXT:    sub sp, sp, #64
+; CHECK64-NEXT:    .cfi_escape 0x0f, 0x09, 0x8f, 0x90, 0x01, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 144 + 8 * VG
+; CHECK64-NEXT:    .cfi_offset w29, -16
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x48, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x78, 0x1e, 0x22, 0x11, 0xb0, 0x7f, 0x22 // $d8 @ cfa - 8 * VG - 80
+; CHECK64-NEXT:    mov w0, wzr
 ; CHECK64-NEXT:    //APP
 ; CHECK64-NEXT:    //NO_APP
-; CHECK64-NEXT:    mov w0, wzr
-; CHECK64-NEXT:    ldr d8, [sp, #64] // 8-byte Reload
-; CHECK64-NEXT:    add sp, sp, #144
+; CHECK64-NEXT:    add sp, sp, #64
+; CHECK64-NEXT:    ldr z8, [sp] // 16-byte Folded Reload
+; CHECK64-NEXT:    add sp, sp, #64
+; CHECK64-NEXT:    addvl sp, sp, #1
+; CHECK64-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK64-NEXT:    ret
 ;
-; CHECK1024-LABEL: csr_d8:
-; CHECK1024:       // %bb.0: // %entry
-; CHECK1024-NEXT:    sub sp, sp, #1040
-; CHECK1024-NEXT:    str d8, [sp] // 8-byte Spill
-; CHECK1024-NEXT:    str x29, [sp, #1032] // 8-byte Spill
-; CHECK1024-NEXT:    sub sp, sp, #1024
-; CHECK1024-NEXT:    .cfi_def_cfa_offset 2064
-; CHECK1024-NEXT:    .cfi_offset w29, -8
-; CHECK1024-NEXT:    .cfi_offset b8, -1040
-; CHECK1024-NEXT:    mov w0, wzr
-; CHECK1024-NEXT:    //APP
-; CHECK1024-NEXT:    //NO_APP
-; CHECK1024-NEXT:    add sp, sp, #1024
-; CHECK1024-NEXT:    ldr x29, [sp, #1032] // 8-byte Reload
-; CHECK1024-NEXT:    ldr d8, [sp] // 8-byte Reload
-; CHECK1024-NEXT:    add sp, sp, #1040
-; CHECK1024-NEXT:    ret
+; CHECK1024-NOSPLITSVE-LABEL: csr_d8:
+; CHECK1024-NOSPLITSVE:       // %bb.0: // %entry
+; CHECK1024-NOSPLITSVE-NEXT:    sub sp, sp, #1040
+; CHECK1024-NOSPLITSVE-NEXT:    str d8, [sp] // 8-byte Spill
+; CHECK1024-NOSPLITSVE-NEXT:    str x29, [sp, #1032] // 8-byte Spill
+; CHECK1024-NOSPLITSVE-NEXT:    sub sp, sp, #1024
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_def_cfa_offset 2064
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_offset w29, -8
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_offset b8, -1040
+; CHECK1024-NOSPLITSVE-NEXT:    mov w0, wzr
+; CHECK1024-NOSPLITSVE-NEXT:    //APP
+; CHECK1024-NOSPLITSVE-NEXT:    //NO_APP
+; CHECK1024-NOSPLITSVE-NEXT:    add sp, sp, #1024
+; CHECK1024-NOSPLITSVE-NEXT:    ldr x29, [sp, #1032] // 8-byte Reload
+; CHECK1024-NOSPLITSVE-NEXT:    ldr d8, [sp] // 8-byte Reload
+; CHECK1024-NOSPLITSVE-NEXT:    add sp, sp, #1040
+; CHECK1024-NOSPLITSVE-NEXT:    ret
+;
+; CHECK1024-SPLITSVE-LABEL: csr_d8:
+; CHECK1024-SPLITSVE:       // %bb.0: // %entry
+; CHECK1024-SPLITSVE-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK1024-SPLITSVE-NEXT:    sub sp, sp, #1024
+; CHECK1024-SPLITSVE-NEXT:    addvl sp, sp, #-1
+; CHECK1024-SPLITSVE-NEXT:    str z8, [sp] // 16-byte Folded Spill
+; CHECK1024-SPLITSVE-NEXT:    sub sp, sp, #1024
+; CHECK1024-SPLITSVE-NEXT:    .cfi_escape 0x0f, 0x09, 0x8f, 0x90, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 2064 + 8 * VG
+; CHECK1024-SPLITSVE-NEXT:    .cfi_offset w29, -16
+; CHECK1024-SPLITSVE-NEXT:    .cfi_escape 0x10, 0x48, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x78, 0x1e, 0x22, 0x11, 0xf0, 0x77, 0x22 // $d8 @ cfa - 8 * VG - 1040
+; CHECK1024-SPLITSVE-NEXT:    mov w0, wzr
+; CHECK1024-SPLITSVE-NEXT:    //APP
+; CHECK1024-SPLITSVE-NEXT:    //NO_APP
+; CHECK1024-SPLITSVE-NEXT:    add sp, sp, #1024
+; CHECK1024-SPLITSVE-NEXT:    ldr z8, [sp] // 16-byte Folded Reload
+; CHECK1024-SPLITSVE-NEXT:    add sp, sp, #1024
+; CHECK1024-SPLITSVE-NEXT:    addvl sp, sp, #1
+; CHECK1024-SPLITSVE-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK1024-SPLITSVE-NEXT:    ret
 entry:
   tail call void asm sideeffect "", "~{d8}"() #1
   ret i32 0
@@ -135,26 +162,41 @@ define i32 @nocsr_allocd(double %d) "aarch64_pstate_sm_compatible" {
 ;
 ; CHECK64-LABEL: nocsr_allocd:
 ; CHECK64:       // %bb.0: // %entry
-; CHECK64-NEXT:    sub sp, sp, #80
-; CHECK64-NEXT:    .cfi_def_cfa_offset 80
+; CHECK64-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK64-NEXT:    sub sp, sp, #144
+; CHECK64-NEXT:    .cfi_def_cfa_offset 160
+; CHECK64-NEXT:    .cfi_offset w29, -16
 ; CHECK64-NEXT:    mov w0, wzr
 ; CHECK64-NEXT:    str d0, [sp, #72]
 ; CHECK64-NEXT:    add sp, sp, #80
+; CHECK64-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK64-NEXT:    ret
 ;
-; CHECK1024-LABEL: nocsr_allocd:
-; CHECK1024:       // %bb.0: // %entry
-; CHECK1024-NEXT:    sub sp, sp, #1040
-; CHECK1024-NEXT:    str x29, [sp, #1024] // 8-byte Spill
-; CHECK1024-NEXT:    sub sp, sp, #1040
-; CHECK1024-NEXT:    .cfi_def_cfa_offset 2080
-; CHECK1024-NEXT:    .cfi_offset w29, -16
-; CHECK1024-NEXT:    mov w0, wzr
-; CHECK1024-NEXT:    str d0, [sp, #1032]
-; CHECK1024-NEXT:    add sp, sp, #1040
-; CHECK1024-NEXT:    ldr x29, [sp, #1024] // 8-byte Reload
-; CHECK1024-NEXT:    add sp, sp, #1040
-; CHECK1024-NEXT:    ret
+; CHECK1024-NOSPLITSVE-LABEL: nocsr_allocd:
+; CHECK1024-NOSPLITSVE:       // %bb.0: // %entry
+; CHECK1024-NOSPLITSVE-NEXT:    sub sp, sp, #1040
+; CHECK1024-NOSPLITSVE-NEXT:    str x29, [sp, #1024] // 8-byte Spill
+; CHECK1024-NOSPLITSVE-NEXT:    sub sp, sp, #1040
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_def_cfa_offset 2080
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_offset w29, -16
+; CHECK1024-NOSPLITSVE-NEXT:    mov w0, wzr
+; CHECK1024-NOSPLITSVE-NEXT:    str d0, [sp, #1032]
+; CHECK1024-NOSPLITSVE-NEXT:    add sp, sp, #1040
+; CHECK1024-NOSPLITSVE-NEXT:    ldr x29, [sp, #1024] // 8-byte Reload
+; CHECK1024-NOSPLITSVE-NEXT:    add sp, sp, #1040
+; CHECK1024-NOSPLITSVE-NEXT:    ret
+;
+; CHECK1024-SPLITSVE-LABEL: nocsr_allocd:
+; CHECK1024-SPLITSVE:       // %bb.0: // %entry
+; CHECK1024-SPLITSVE-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK1024-SPLITSVE-NEXT:    sub sp, sp, #2064
+; CHECK1024-SPLITSVE-NEXT:    .cfi_def_cfa_offset 2080
+; CHECK1024-SPLITSVE-NEXT:    .cfi_offset w29, -16
+; CHECK1024-SPLITSVE-NEXT:    mov w0, wzr
+; CHECK1024-SPLITSVE-NEXT:    str d0, [sp, #1032]
+; CHECK1024-SPLITSVE-NEXT:    add sp, sp, #1040
+; CHECK1024-SPLITSVE-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK1024-SPLITSVE-NEXT:    ret
 entry:
   %a = alloca double
   store double %d, ptr %a
@@ -176,36 +218,68 @@ define i32 @csr_d8d9(i32 noundef %num) "aarch64_pstate_sm_compatible" {
 ;
 ; CHECK64-LABEL: csr_d8d9:
 ; CHECK64:       // %bb.0: // %entry
-; CHECK64-NEXT:    sub sp, sp, #144
-; CHECK64-NEXT:    stp d9, d8, [sp, #64] // 16-byte Folded Spill
-; CHECK64-NEXT:    .cfi_def_cfa_offset 144
-; CHECK64-NEXT:    .cfi_offset b8, -72
-; CHECK64-NEXT:    .cfi_offset b9, -80
+; CHECK64-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK64-NEXT:    sub sp, sp, #64
+; CHECK64-NEXT:    addvl sp, sp, #-2
+; CHECK64-NEXT:    str z9, [sp] // 16-byte Folded Spill
+; CHECK64-NEXT:    str z8, [sp, #1, mul vl] // 16-byte Folded Spill
+; CHECK64-NEXT:    sub sp, sp, #64
+; CHECK64-NEXT:    .cfi_escape 0x0f, 0x09, 0x8f, 0x90, 0x01, 0x92, 0x2e, 0x00, 0x40, 0x1e, 0x22 // sp + 144 + 16 * VG
+; CHECK64-NEXT:    .cfi_offset w29, -16
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x48, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x78, 0x1e, 0x22, 0x11, 0xb0, 0x7f, 0x22 // $d8 @ cfa - 8 * VG - 80
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x49, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x70, 0x1e, 0x22, 0x11, 0xb0, 0x7f, 0x22 // $d9 @ cfa - 16 * VG - 80
+; CHECK64-NEXT:    mov w0, wzr
 ; CHECK64-NEXT:    //APP
 ; CHECK64-NEXT:    //NO_APP
-; CHECK64-NEXT:    mov w0, wzr
-; CHECK64-NEXT:    ldp d9, d8, [sp, #64] // 16-byte Folded Reload
-; CHECK64-NEXT:    add sp, sp, #144
+; CHECK64-NEXT:    add sp, sp, #64
+; CHECK64-NEXT:    ldr z9, [sp] // 16-byte Folded Reload
+; CHECK64-NEXT:    ldr z8, [sp, #1, mul vl] // 16-byte Folded Reload
+; CHECK64-NEXT:    add sp, sp, #64
+; CHECK64-NEXT:    addvl sp, sp, #2
+; CHECK64-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK64-NEXT:    ret
 ;
-; CHECK1024-LABEL: csr_d8d9:
-; CHECK1024:       // %bb.0: // %entry
-; CHECK1024-NEXT:    sub sp, sp, #1056
-; CHECK1024-NEXT:    stp d9, d8, [sp] // 16-byte Folded Spill
-; CHECK1024-NEXT:    str x29, [sp, #1040] // 8-byte Spill
-; CHECK1024-NEXT:    sub sp, sp, #1024
-; CHECK1024-NEXT:    .cfi_def_cfa_offset 2080
-; CHECK1024-NEXT:    .cfi_offset w29, -16
-; CHECK1024-NEXT:    .cfi_offset b8, -1048
-; CHECK1024-NEXT:    .cfi_offset b9, -1056
-; CHECK1024-NEXT:    mov w0, wzr
-; CHECK1024-NEXT:    //APP
-; CHECK1024-NEXT:    //NO_APP
-; CHECK1024-NEXT:    add sp, sp, #1024
-; CHECK1024-NEXT:    ldp d9, d8, [sp] // 16-byte Folded Reload
-; CHECK1024-NEXT:    ldr x29, [sp, #1040] // 8-byte Reload
-; CHECK1024-NEXT:    add sp, sp, #1056
-; CHECK1024-NEXT:    ret
+; CHECK1024-NOSPLITSVE-LABEL: csr_d8d9:
+; CHECK1024-NOSPLITSVE:       // %bb.0: // %entry
+; CHECK1024-NOSPLITSVE-NEXT:    sub sp, sp, #1056
+; CHECK1024-NOSPLITSVE-NEXT:    stp d9, d8, [sp] // 16-byte Folded Spill
+; CHECK1024-NOSPLITSVE-NEXT:    str x29, [sp, #1040] // 8-byte Spill
+; CHECK1024-NOSPLITSVE-NEXT:    sub sp, sp, #1024
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_def_cfa_offset 2080
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_offset w29, -16
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_offset b8, -1048
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_offset b9, -1056
+; CHECK1024-NOSPLITSVE-NEXT:    mov w0, wzr
+; CHECK1024-NOSPLITSVE-NEXT:    //APP
+; CHECK1024-NOSPLITSVE-NEXT:    //NO_APP
+; CHECK1024-NOSPLITSVE-NEXT:    add sp, sp, #1024
+; CHECK1024-NOSPLITSVE-NEXT:    ldp d9, d8, [sp] // 16-byte Folded Reload
+; CHECK1024-NOSPLITSVE-NEXT:    ldr x29, [sp, #1040] // 8-byte Reload
+; CHECK1024-NOSPLITSVE-NEXT:    add sp, sp, #1056
+; CHECK1024-NOSPLITSVE-NEXT:    ret
+;
+; CHECK1024-SPLITSVE-LABEL: csr_d8d9:
+; CHECK1024-SPLITSVE:       // %bb.0: // %entry
+; CHECK1024-SPLITSVE-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK1024-SPLITSVE-NEXT:    sub sp, sp, #1024
+; CHECK1024-SPLITSVE-NEXT:    addvl sp, sp, #-2
+; CHECK1024-SPLITSVE-NEXT:    str z9, [sp] // 16-byte Folded Spill
+; CHECK1024-SPLITSVE-NEXT:    str z8, [sp, #1, mul vl] // 16-byte Folded Spill
+; CHECK1024-SPLITSVE-NEXT:    sub sp, sp, #1024
+; CHECK1024-SPLITSVE-NEXT:    .cfi_escape 0x0f, 0x09, 0x8f, 0x90, 0x10, 0x92, 0x2e, 0x00, 0x40, 0x1e, 0x22 // sp + 2064 + 16 * VG
+; CHECK1024-SPLITSVE-NEXT:    .cfi_offset w29, -16
+; CHECK1024-SPLITSVE-NEXT:    .cfi_escape 0x10, 0x48, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x78, 0x1e, 0x22, 0x11, 0xf0, 0x77, 0x22 // $d8 @ cfa - 8 * VG - 1040
+; CHECK1024-SPLITSVE-NEXT:    .cfi_escape 0x10, 0x49, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x70, 0x1e, 0x22, 0x11, 0xf0, 0x77, 0x22 // $d9 @ cfa - 16 * VG - 1040
+; CHECK1024-SPLITSVE-NEXT:    mov w0, wzr
+; CHECK1024-SPLITSVE-NEXT:    //APP
+; CHECK1024-SPLITSVE-NEXT:    //NO_APP
+; CHECK1024-SPLITSVE-NEXT:    add sp, sp, #1024
+; CHECK1024-SPLITSVE-NEXT:    ldr z9, [sp] // 16-byte Folded Reload
+; CHECK1024-SPLITSVE-NEXT:    ldr z8, [sp, #1, mul vl] // 16-byte Folded Reload
+; CHECK1024-SPLITSVE-NEXT:    add sp, sp, #1024
+; CHECK1024-SPLITSVE-NEXT:    addvl sp, sp, #2
+; CHECK1024-SPLITSVE-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK1024-SPLITSVE-NEXT:    ret
 entry:
   tail call void asm sideeffect "", "~{d8},~{d9}"() #1
   ret i32 0
@@ -225,35 +299,64 @@ define i32 @csr_d8_allocd(double %d) "aarch64_pstate_sm_compatible" {
 ;
 ; CHECK64-LABEL: csr_d8_allocd:
 ; CHECK64:       // %bb.0: // %entry
-; CHECK64-NEXT:    sub sp, sp, #160
-; CHECK64-NEXT:    stp d0, d8, [sp, #72] // 8-byte Folded Spill
-; CHECK64-NEXT:    .cfi_def_cfa_offset 160
-; CHECK64-NEXT:    .cfi_offset b8, -80
+; CHECK64-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK64-NEXT:    sub sp, sp, #64
+; CHECK64-NEXT:    addvl sp, sp, #-1
+; CHECK64-NEXT:    str z8, [sp] // 16-byte Folded Spill
+; CHECK64-NEXT:    sub sp, sp, #80
+; CHECK64-NEXT:    .cfi_escape 0x0f, 0x09, 0x8f, 0xa0, 0x01, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 160 + 8 * VG
+; CHECK64-NEXT:    .cfi_offset w29, -16
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x48, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x78, 0x1e, 0x22, 0x11, 0xb0, 0x7f, 0x22 // $d8 @ cfa - 8 * VG - 80
+; CHECK64-NEXT:    mov w0, wzr
 ; CHECK64-NEXT:    //APP
 ; CHECK64-NEXT:    //NO_APP
-; CHECK64-NEXT:    mov w0, wzr
-; CHECK64-NEXT:    ldr d8, [sp, #80] // 8-byte Reload
-; CHECK64-NEXT:    add sp, sp, #160
+; CHECK64-NEXT:    str d0, [sp, #72]
+; CHECK64-NEXT:    add sp, sp, #80
+; CHECK64-NEXT:    ldr z8, [sp] // 16-byte Folded Reload
+; CHECK64-NEXT:    add sp, sp, #64
+; CHECK64-NEXT:    addvl sp, sp, #1
+; CHECK64-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK64-NEXT:    ret
 ;
-; CHECK1024-LABEL: csr_d8_allocd:
-; CHECK1024:       // %bb.0: // %entry
-; CHECK1024-NEXT:    sub sp, sp, #1040
-; CHECK1024-NEXT:    str d8, [sp] // 8-byte Spill
-; CHECK1024-NEXT:    str x29, [sp, #1032] // 8-byte Spill
-; CHECK1024-NEXT:    sub sp, sp, #1040
-; CHECK1024-NEXT:    .cfi_def_cfa_offset 2080
-; CHECK1024-NEXT:    .cfi_offset w29, -8
-; CHECK1024-NEXT:    .cfi_offset b8, -1040
-; CHECK1024-NEXT:    mov w0, wzr
-; CHECK1024-NEXT:    //APP
-; CHECK1024-NEXT:    //NO_APP
-; CHECK1024-NEXT:    str d0, [sp, #1032]
-; CHECK1024-NEXT:    add sp, sp, #1040
-; CHECK1024-NEXT:    ldr x29, [sp, #1032] // 8-byte Reload
-; CHECK1024-NEXT:    ldr d8, [sp] // 8-byte Reload
-; CHECK1024-NEXT:    add sp, sp, #1040
-; CHECK1024-NEXT:    ret
+; CHECK1024-NOSPLITSVE-LABEL: csr_d8_allocd:
+; CHECK1024-NOSPLITSVE:       // %bb.0: // %entry
+; CHECK1024-NOSPLITSVE-NEXT:    sub sp, sp, #1040
+; CHECK1024-NOSPLITSVE-NEXT:    str d8, [sp] // 8-byte Spill
+; CHECK1024-NOSPLITSVE-NEXT:    str x29, [sp, #1032] // 8-byte Spill
+; CHECK1024-NOSPLITSVE-NEXT:    sub sp, sp, #1040
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_def_cfa_offset 2080
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_offset w29, -8
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_offset b8, -1040
+; CHECK1024-NOSPLITSVE-NEXT:    mov w0, wzr
+; CHECK1024-NOSPLITSVE-NEXT:    //APP
+; CHECK1024-NOSPLITSVE-NEXT:    //NO_APP
+; CHECK1024-NOSPLITSVE-NEXT:    str d0, [sp, #1032]
+; CHECK1024-NOSPLITSVE-NEXT:    add sp, sp, #1040
+; CHECK1024-NOSPLITSVE-NEXT:    ldr x29, [sp, #1032] // 8-byte Reload
+; CHECK1024-NOSPLITSVE-NEXT:    ldr d8, [sp] // 8-byte Reload
+; CHECK1024-NOSPLITSVE-NEXT:    add sp, sp, #1040
+; CHECK1024-NOSPLITSVE-NEXT:    ret
+;
+; CHECK1024-SPLITSVE-LABEL: csr_d8_allocd:
+; CHECK1024-SPLITSVE:       // %bb.0: // %entry
+; CHECK1024-SPLITSVE-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK1024-SPLITSVE-NEXT:    sub sp, sp, #1024
+; CHECK1024-SPLITSVE-NEXT:    addvl sp, sp, #-1
+; CHECK1024-SPLITSVE-NEXT:    str z8, [sp] // 16-byte Folded Spill
+; CHECK1024-SPLITSVE-NEXT:    sub sp, sp, #1040
+; CHECK1024-SPLITSVE-NEXT:    .cfi_escape 0x0f, 0x09, 0x8f, 0xa0, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 2080 + 8 * VG
+; CHECK1024-SPLITSVE-NEXT:    .cfi_offset w29, -16
+; CHECK1024-SPLITSVE-NEXT:    .cfi_escape 0x10, 0x48, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x78, 0x1e, 0x22, 0x11, 0xf0, 0x77, 0x22 // $d8 @ cfa - 8 * VG - 1040
+; CHECK1024-SPLITSVE-NEXT:    mov w0, wzr
+; CHECK1024-SPLITSVE-NEXT:    //APP
+; CHECK1024-SPLITSVE-NEXT:    //NO_APP
+; CHECK1024-SPLITSVE-NEXT:    str d0, [sp, #1032]
+; CHECK1024-SPLITSVE-NEXT:    add sp, sp, #1040
+; CHECK1024-SPLITSVE-NEXT:    ldr z8, [sp] // 16-byte Folded Reload
+; CHECK1024-SPLITSVE-NEXT:    add sp, sp, #1024
+; CHECK1024-SPLITSVE-NEXT:    addvl sp, sp, #1
+; CHECK1024-SPLITSVE-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK1024-SPLITSVE-NEXT:    ret
 entry:
   %a = alloca double
   tail call void asm sideeffect "", "~{d8}"() #1
@@ -277,38 +380,67 @@ define i32 @csr_d8_alloci64(i64 %d) "aarch64_pstate_sm_compatible" {
 ;
 ; CHECK64-LABEL: csr_d8_alloci64:
 ; CHECK64:       // %bb.0: // %entry
-; CHECK64-NEXT:    sub sp, sp, #160
-; CHECK64-NEXT:    str d8, [sp, #80] // 8-byte Spill
-; CHECK64-NEXT:    .cfi_def_cfa_offset 160
-; CHECK64-NEXT:    .cfi_offset b8, -80
-; CHECK64-NEXT:    //APP
-; CHECK64-NEXT:    //NO_APP
+; CHECK64-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK64-NEXT:    sub sp, sp, #64
+; CHECK64-NEXT:    addvl sp, sp, #-1
+; CHECK64-NEXT:    str z8, [sp] // 16-byte Folded Spill
+; CHECK64-NEXT:    sub sp, sp, #80
+; CHECK64-NEXT:    .cfi_escape 0x0f, 0x09, 0x8f, 0xa0, 0x01, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 160 + 8 * VG
+; CHECK64-NEXT:    .cfi_offset w29, -16
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x48, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x78, 0x1e, 0x22, 0x11, 0xb0, 0x7f, 0x22 // $d8 @ cfa - 8 * VG - 80
 ; CHECK64-NEXT:    mov x8, x0
 ; CHECK64-NEXT:    mov w0, wzr
-; CHECK64-NEXT:    ldr d8, [sp, #80] // 8-byte Reload
+; CHECK64-NEXT:    //APP
+; CHECK64-NEXT:    //NO_APP
 ; CHECK64-NEXT:    str x8, [sp, #8]
-; CHECK64-NEXT:    add sp, sp, #160
+; CHECK64-NEXT:    add sp, sp, #80
+; CHECK64-NEXT:    ldr z8, [sp] // 16-byte Folded Reload
+; CHECK64-NEXT:    add sp, sp, #64
+; CHECK64-NEXT:    addvl sp, sp, #1
+; CHECK64-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK64-NEXT:    ret
 ;
-; CHECK1024-LABEL: csr_d8_alloci64:
-; CHECK1024:       // %bb.0: // %entry
-; CHECK1024-NEXT:    sub sp, sp, #1040
-; CHECK1024-NEXT:    str d8, [sp] // 8-byte Spill
-; CHECK1024-NEXT:    str x29, [sp, #1032] // 8-byte Spill
-; CHECK1024-NEXT:    sub sp, sp, #1040
-; CHECK1024-NEXT:    .cfi_def_cfa_offset 2080
-; CHECK1024-NEXT:    .cfi_offset w29, -8
-; CHECK1024-NEXT:    .cfi_offset b8, -1040
-; CHECK1024-NEXT:    mov x8, x0
-; CHECK1024-NEXT:    mov w0, wzr
-; CHECK1024-NEXT:    //APP
-; CHECK1024-NEXT:    //NO_APP
-; CHECK1024-NEXT:    str x8, [sp, #8]
-; CHECK1024-NEXT:    add sp, sp, #1040
-; CHECK1024-NEXT:    ldr x29, [sp, #1032] // 8-byte Reload
-; CHECK1024-NEXT:    ldr d8, [sp] // 8-byte Reload
-; CHECK1024-NEXT:    add sp, sp, #1040
-; CHECK1024-NEXT:    ret
+; CHECK1024-NOSPLITSVE-LABEL: csr_d8_alloci64:
+; CHECK1024-NOSPLITSVE:       // %bb.0: // %entry
+; CHECK1024-NOSPLITSVE-NEXT:    sub sp, sp, #1040
+; CHECK1024-NOSPLITSVE-NEXT:    str d8, [sp] // 8-byte Spill
+; CHECK1024-NOSPLITSVE-NEXT:    str x29, [sp, #1032] // 8-byte Spill
+; CHECK1024-NOSPLITSVE-NEXT:    sub sp, sp, #1040
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_def_cfa_offset 2080
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_offset w29, -8
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_offset b8, -1040
+; CHECK1024-NOSPLITSVE-NEXT:    mov x8, x0
+; CHECK1024-NOSPLITSVE-NEXT:    mov w0, wzr
+; CHECK1024-NOSPLITSVE-NEXT:    //APP
+; CHECK1024-NOSPLITSVE-NEXT:    //NO_APP
+; CHECK1024-NOSPLITSVE-NEXT:    str x8, [sp, #8]
+; CHECK1024-NOSPLITSVE-NEXT:    add sp, sp, #1040
+; CHECK1024-NOSPLITSVE-NEXT:    ldr x29, [sp, #1032] // 8-byte Reload
+; CHECK1024-NOSPLITSVE-NEXT:    ldr d8, [sp] // 8-byte Reload
+; CHECK1024-NOSPLITSVE-NEXT:    add sp, sp, #1040
+; CHECK1024-NOSPLITSVE-NEXT:    ret
+;
+; CHECK1024-SPLITSVE-LABEL: csr_d8_alloci64:
+; CHECK1024-SPLITSVE:       // %bb.0: // %entry
+; CHECK1024-SPLITSVE-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK1024-SPLITSVE-NEXT:    sub sp, sp, #1024
+; CHECK1024-SPLITSVE-NEXT:    addvl sp, sp, #-1
+; CHECK1024-SPLITSVE-NEXT:    str z8, [sp] // 16-byte Folded Spill
+; CHECK1024-SPLITSVE-NEXT:    sub sp, sp, #1040
+; CHECK1024-SPLITSVE-NEXT:    .cfi_escape 0x0f, 0x09, 0x8f, 0xa0, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 2080 + 8 * VG
+; CHECK1024-SPLITSVE-NEXT:    .cfi_offset w29, -16
+; CHECK1024-SPLITSVE-NEXT:    .cfi_escape 0x10, 0x48, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x78, 0x1e, 0x22, 0x11, 0xf0, 0x77, 0x22 // $d8 @ cfa - 8 * VG - 1040
+; CHECK1024-SPLITSVE-NEXT:    mov x8, x0
+; CHECK1024-SPLITSVE-NEXT:    mov w0, wzr
+; CHECK1024-SPLITSVE-NEXT:    //APP
+; CHECK1024-SPLITSVE-NEXT:    //NO_APP
+; CHECK1024-SPLITSVE-NEXT:    str x8, [sp, #8]
+; CHECK1024-SPLITSVE-NEXT:    add sp, sp, #1040
+; CHECK1024-SPLITSVE-NEXT:    ldr z8, [sp] // 16-byte Folded Reload
+; CHECK1024-SPLITSVE-NEXT:    add sp, sp, #1024
+; CHECK1024-SPLITSVE-NEXT:    addvl sp, sp, #1
+; CHECK1024-SPLITSVE-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK1024-SPLITSVE-NEXT:    ret
 entry:
   %a = alloca i64
   tail call void asm sideeffect "", "~{d8}"() #1
@@ -337,44 +469,72 @@ define i32 @csr_d8_allocd_framepointer(double %d) "aarch64_pstate_sm_compatible"
 ;
 ; CHECK64-LABEL: csr_d8_allocd_framepointer:
 ; CHECK64:       // %bb.0: // %entry
-; CHECK64-NEXT:    sub sp, sp, #176
-; CHECK64-NEXT:    stp d0, d8, [sp, #72] // 8-byte Folded Spill
-; CHECK64-NEXT:    stp x29, x30, [sp, #152] // 16-byte Folded Spill
-; CHECK64-NEXT:    add x29, sp, #152
-; CHECK64-NEXT:    .cfi_def_cfa w29, 24
-; CHECK64-NEXT:    .cfi_offset w30, -16
-; CHECK64-NEXT:    .cfi_offset w29, -24
-; CHECK64-NEXT:    .cfi_offset b8, -96
+; CHECK64-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
+; CHECK64-NEXT:    mov x29, sp
+; CHECK64-NEXT:    sub sp, sp, #64
+; CHECK64-NEXT:    addvl sp, sp, #-1
+; CHECK64-NEXT:    str z8, [sp] // 16-byte Folded Spill
+; CHECK64-NEXT:    sub sp, sp, #80
+; CHECK64-NEXT:    .cfi_def_cfa w29, 16
+; CHECK64-NEXT:    .cfi_offset w30, -8
+; CHECK64-NEXT:    .cfi_offset w29, -16
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x48, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x78, 0x1e, 0x22, 0x11, 0xb0, 0x7f, 0x22 // $d8 @ cfa - 8 * VG - 80
+; CHECK64-NEXT:    mov w0, wzr
 ; CHECK64-NEXT:    //APP
 ; CHECK64-NEXT:    //NO_APP
-; CHECK64-NEXT:    ldr x29, [sp, #152] // 8-byte Reload
-; CHECK64-NEXT:    mov w0, wzr
-; CHECK64-NEXT:    ldr d8, [sp, #80] // 8-byte Reload
-; CHECK64-NEXT:    add sp, sp, #176
+; CHECK64-NEXT:    str d0, [sp, #72]
+; CHECK64-NEXT:    add sp, sp, #80
+; CHECK64-NEXT:    ldr z8, [sp] // 16-byte Folded Reload
+; CHECK64-NEXT:    add sp, sp, #64
+; CHECK64-NEXT:    addvl sp, sp, #1
+; CHECK64-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
 ; CHECK64-NEXT:    ret
 ;
-; CHECK1024-LABEL: csr_d8_allocd_framepointer:
-; CHECK1024:       // %bb.0: // %entry
-; CHECK1024-NEXT:    sub sp, sp, #1056
-; CHECK1024-NEXT:    str d8, [sp] // 8-byte Spill
-; CHECK1024-NEXT:    str x29, [sp, #1032] // 8-byte Spill
-; CHECK1024-NEXT:    add x29, sp, #1032
-; CHECK1024-NEXT:    str x30, [sp, #1040] // 8-byte Spill
-; CHECK1024-NEXT:    sub sp, sp, #1040
-; CHECK1024-NEXT:    .cfi_def_cfa w29, 24
-; CHECK1024-NEXT:    .cfi_offset w30, -16
-; CHECK1024-NEXT:    .cfi_offset w29, -24
-; CHECK1024-NEXT:    .cfi_offset b8, -1056
-; CHECK1024-NEXT:    mov w0, wzr
-; CHECK1024-NEXT:    //APP
-; CHECK1024-NEXT:    //NO_APP
-; CHECK1024-NEXT:    str d0, [sp, #1032]
-; CHECK1024-NEXT:    add sp, sp, #1040
-; CHECK1024-NEXT:    ldr x30, [sp, #1040] // 8-byte Reload
-; CHECK1024-NEXT:    ldr x29, [sp, #1032] // 8-byte Reload
-; CHECK1024-NEXT:    ldr d8, [sp] // 8-byte Reload
-; CHECK1024-NEXT:    add sp, sp, #1056
-; CHECK1024-NEXT:    ret
+; CHECK1024-NOSPLITSVE-LABEL: csr_d8_allocd_framepointer:
+; CHECK1024-NOSPLITSVE:       // %bb.0: // %entry
+; CHECK1024-NOSPLITSVE-NEXT:    sub sp, sp, #1056
+; CHECK1024-NOSPLITSVE-NEXT:    str d8, [sp] // 8-byte Spill
+; CHECK1024-NOSPLITSVE-NEXT:    str x29, [sp, #1032] // 8-byte Spill
+; CHECK1024-NOSPLITSVE-NEXT:    add x29, sp, #1032
+; CHECK1024-NOSPLITSVE-NEXT:    str x30, [sp, #1040] // 8-byte Spill
+; CHECK1024-NOSPLITSVE-NEXT:    sub sp, sp, #1040
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_def_cfa w29, 24
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_offset w30, -16
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_offset w29, -24
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_offset b8, -1056
+; CHECK1024-NOSPLITSVE-NEXT:    mov w0, wzr
+; CHECK1024-NOSPLITSVE-NEXT:    //APP
+; CHECK1024-NOSPLITSVE-NEXT:    //NO_APP
+; CHECK1024-NOSPLITSVE-NEXT:    str d0, [sp, #1032]
+; CHECK1024-NOSPLITSVE-NEXT:    add sp, sp, #1040
+; CHECK1024-NOSPLITSVE-NEXT:    ldr x30, [sp, #1040] // 8-byte Reload
+; CHECK1024-NOSPLITSVE-NEXT:    ldr x29, [sp, #1032] // 8-byte Reload
+; CHECK1024-NOSPLITSVE-NEXT:    ldr d8, [sp] // 8-byte Reload
+; CHECK1024-NOSPLITSVE-NEXT:    add sp, sp, #1056
+; CHECK1024-NOSPLITSVE-NEXT:    ret
+;
+; CHECK1024-SPLITSVE-LABEL: csr_d8_allocd_framepointer:
+; CHECK1024-SPLITSVE:       // %bb.0: // %entry
+; CHECK1024-SPLITSVE-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
+; CHECK1024-SPLITSVE-NEXT:    mov x29, sp
+; CHECK1024-SPLITSVE-NEXT:    sub sp, sp, #1024
+; CHECK1024-SPLITSVE-NEXT:    addvl sp, sp, #-1
+; CHECK1024-SPLITSVE-NEXT:    str z8, [sp] // 16-byte Folded Spill
+; CHECK1024-SPLITSVE-NEXT:    sub sp, sp, #1040
+; CHECK1024-SPLITSVE-NEXT:    .cfi_def_cfa w29, 16
+; CHECK1024-SPLITSVE-NEXT:    .cfi_offset w30, -8
+; CHECK1024-SPLITSVE-NEXT:    .cfi_offset w29, -16
+; CHECK1024-SPLITSVE-NEXT:    .cfi_escape 0x10, 0x48, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x78, 0x1e, 0x22, 0x11, 0xf0, 0x77, 0x22 // $d8 @ cfa - 8 * VG - 1040
+; CHECK1024-SPLITSVE-NEXT:    mov w0, wzr
+; CHECK1024-SPLITSVE-NEXT:    //APP
+; CHECK1024-SPLITSVE-NEXT:    //NO_APP
+; CHECK1024-SPLITSVE-NEXT:    str d0, [sp, #1032]
+; CHECK1024-SPLITSVE-NEXT:    add sp, sp, #1040
+; CHECK1024-SPLITSVE-NEXT:    ldr z8, [sp] // 16-byte Folded Reload
+; CHECK1024-SPLITSVE-NEXT:    add sp, sp, #1024
+; CHECK1024-SPLITSVE-NEXT:    addvl sp, sp, #1
+; CHECK1024-SPLITSVE-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
+; CHECK1024-SPLITSVE-NEXT:    ret
 entry:
   %a = alloca double
   tail call void asm sideeffect "", "~{d8}"() #1
@@ -404,47 +564,76 @@ define i32 @csr_d8_allocnxv4i32(i64 %d) "aarch64_pstate_sm_compatible" {
 ;
 ; CHECK64-LABEL: csr_d8_allocnxv4i32:
 ; CHECK64:       // %bb.0: // %entry
-; CHECK64-NEXT:    str d8, [sp, #-80]! // 8-byte Folded Spill
-; CHECK64-NEXT:    str x29, [sp, #72] // 8-byte Spill
+; CHECK64-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK64-NEXT:    sub sp, sp, #64
 ; CHECK64-NEXT:    addvl sp, sp, #-1
-; CHECK64-NEXT:    .cfi_escape 0x0f, 0x09, 0x8f, 0x90, 0x01, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 144 + 8 * VG
-; CHECK64-NEXT:    .cfi_offset w29, -8
-; CHECK64-NEXT:    .cfi_offset b8, -80
+; CHECK64-NEXT:    str z8, [sp] // 16-byte Folded Spill
+; CHECK64-NEXT:    sub sp, sp, #64
+; CHECK64-NEXT:    addvl sp, sp, #-1
+; CHECK64-NEXT:    .cfi_escape 0x0f, 0x09, 0x8f, 0x90, 0x01, 0x92, 0x2e, 0x00, 0x40, 0x1e, 0x22 // sp + 144 + 16 * VG
+; CHECK64-NEXT:    .cfi_offset w29, -16
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x48, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x78, 0x1e, 0x22, 0x11, 0xb0, 0x7f, 0x22 // $d8 @ cfa - 8 * VG - 80
 ; CHECK64-NEXT:    mov z0.s, #0 // =0x0
 ; CHECK64-NEXT:    add x8, sp, #64
 ; CHECK64-NEXT:    mov w0, wzr
 ; CHECK64-NEXT:    //APP
 ; CHECK64-NEXT:    //NO_APP
 ; CHECK64-NEXT:    str z0, [x8]
-; CHECK64-NEXT:    addvl sp, sp, #1
 ; CHECK64-NEXT:    add sp, sp, #64
-; CHECK64-NEXT:    ldr x29, [sp, #72] // 8-byte Reload
-; CHECK64-NEXT:    ldr d8, [sp], #80 // 8-byte Folded Reload
+; CHECK64-NEXT:    addvl sp, sp, #1
+; CHECK64-NEXT:    ldr z8, [sp] // 16-byte Folded Reload
+; CHECK64-NEXT:    add sp, sp, #64
+; CHECK64-NEXT:    addvl sp, sp, #1
+; CHECK64-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK64-NEXT:    ret
 ;
-; CHECK1024-LABEL: csr_d8_allocnxv4i32:
-; CHECK1024:       // %bb.0: // %entry
-; CHECK1024-NEXT:    sub sp, sp, #1040
-; CHECK1024-NEXT:    str d8, [sp] // 8-byte Spill
-; CHECK1024-NEXT:    str x29, [sp, #1032] // 8-byte Spill
-; CHECK1024-NEXT:    sub sp, sp, #1024
-; CHECK1024-NEXT:    addvl sp, sp, #-1
-; CHECK1024-NEXT:    .cfi_escape 0x0f, 0x09, 0x8f, 0x90, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 2064 + 8 * VG
-; CHECK1024-NEXT:    .cfi_offset w29, -8
-; CHECK1024-NEXT:    .cfi_offset b8, -1040
-; CHECK1024-NEXT:    mov z0.s, #0 // =0x0
-; CHECK1024-NEXT:    add x8, sp, #1024
-; CHECK1024-NEXT:    mov w0, wzr
-; CHECK1024-NEXT:    //APP
-; CHECK1024-NEXT:    //NO_APP
-; CHECK1024-NEXT:    str z0, [x8]
-; CHECK1024-NEXT:    addvl sp, sp, #1
-; CHECK1024-NEXT:    add sp, sp, #1024
-; CHECK1024-NEXT:    ldr x29, [sp, #1032] // 8-byte Reload
-; CHECK1024-NEXT:    ldr d8, [sp] // 8-byte Reload
-; CHECK1024-NEXT:    add sp, sp, #1040
-; CHECK1024-NEXT:    ret
+; CHECK1024-NOSPLITSVE-LABEL: csr_d8_allocnxv4i32:
+; CHECK1024-NOSPLITSVE:       // %bb.0: // %entry
+; CHECK1024-NOSPLITSVE-NEXT:    sub sp, sp, #1040
+; CHECK1024-NOSPLITSVE-NEXT:    str d8, [sp] // 8-byte Spill
+; CHECK1024-NOSPLITSVE-NEXT:    str x29, [sp, #1032] // 8-byte Spill
+; CHECK1024-NOSPLITSVE-NEXT:    sub sp, sp, #1024
+; CHECK1024-NOSPLITSVE-NEXT:    addvl sp, sp, #-1
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_escape 0x0f, 0x09, 0x8f, 0x90, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 2064 + 8 * VG
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_offset w29, -8
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_offset b8, -1040
+; CHECK1024-NOSPLITSVE-NEXT:    mov z0.s, #0 // =0x0
+; CHECK1024-NOSPLITSVE-NEXT:    add x8, sp, #1024
+; CHECK1024-NOSPLITSVE-NEXT:    mov w0, wzr
+; CHECK1024-NOSPLITSVE-NEXT:    //APP
+; CHECK1024-NOSPLITSVE-NEXT:    //NO_APP
+; CHECK1024-NOSPLITSVE-NEXT:    str z0, [x8]
+; CHECK1024-NOSPLITSVE-NEXT:    addvl sp, sp, #1
+; CHECK1024-NOSPLITSVE-NEXT:    add sp, sp, #1024
+; CHECK1024-NOSPLITSVE-NEXT:    ldr x29, [sp, #1032] // 8-byte Reload
+; CHECK1024-NOSPLITSVE-NEXT:    ldr d8, [sp] // 8-byte Reload
+; CHECK1024-NOSPLITSVE-NEXT:    add sp, sp, #1040
+; CHECK1024-NOSPLITSVE-NEXT:    ret
+;
+; CHECK1024-SPLITSVE-LABEL: csr_d8_allocnxv4i32:
+; CHECK1024-SPLITSVE:       // %bb.0: // %entry
+; CHECK1024-SPLITSVE-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK1024-SPLITSVE-NEXT:    sub sp, sp, #1024
+; CHECK1024-SPLITSVE-NEXT:    addvl sp, sp, #-1
+; CHECK1024-SPLITSVE-NEXT:    str z8, [sp] // 16-byte Folded Spill
+; CHECK1024-SPLITSVE-NEXT:    sub sp, sp, #1024
+; CHECK1024-SPLITSVE-NEXT:    addvl sp, sp, #-1
+; CHECK1024-SPLITSVE-NEXT:    .cfi_escape 0x0f, 0x09, 0x8f, 0x90, 0x10, 0x92, 0x2e, 0x00, 0x40, 0x1e, 0x22 // sp + 2064 + 16 * VG
+; CHECK1024-SPLITSVE-NEXT:    .cfi_offset w29, -16
+; CHECK1024-SPLITSVE-NEXT:    .cfi_escape 0x10, 0x48, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x78, 0x1e, 0x22, 0x11, 0xf0, 0x77, 0x22 // $d8 @ cfa - 8 * VG - 1040
+; CHECK1024-SPLITSVE-NEXT:    mov z0.s, #0 // =0x0
+; CHECK1024-SPLITSVE-NEXT:    add x8, sp, #1024
+; CHECK1024-SPLITSVE-NEXT:    mov w0, wzr
+; CHECK1024-SPLITSVE-NEXT:    //APP
+; CHECK1024-SPLITSVE-NEXT:    //NO_APP
+; CHECK1024-SPLITSVE-NEXT:    str z0, [x8]
+; CHECK1024-SPLITSVE-NEXT:    add sp, sp, #1024
+; CHECK1024-SPLITSVE-NEXT:    addvl sp, sp, #1
+; CHECK1024-SPLITSVE-NEXT:    ldr z8, [sp] // 16-byte Folded Reload
+; CHECK1024-SPLITSVE-NEXT:    add sp, sp, #1024
+; CHECK1024-SPLITSVE-NEXT:    addvl sp, sp, #1
+; CHECK1024-SPLITSVE-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK1024-SPLITSVE-NEXT:    ret
 entry:
   %a = alloca <vscale x 4 x i32>
   tail call void asm sideeffect "", "~{d8}"() #1
@@ -501,16 +690,22 @@ define i32 @csr_x18_25_d8_15_allocdi64(i64 %d, double %e) "aarch64_pstate_sm_com
 ;
 ; CHECK64-LABEL: csr_x18_25_d8_15_allocdi64:
 ; CHECK64:       // %bb.0: // %entry
-; CHECK64-NEXT:    sub sp, sp, #288
-; CHECK64-NEXT:    stp d15, d14, [sp, #96] // 16-byte Folded Spill
-; CHECK64-NEXT:    stp d13, d12, [sp, #112] // 16-byte Folded Spill
-; CHECK64-NEXT:    stp d11, d10, [sp, #128] // 16-byte Folded Spill
-; CHECK64-NEXT:    stp d9, d8, [sp, #144] // 16-byte Folded Spill
-; CHECK64-NEXT:    stp x29, x25, [sp, #224] // 16-byte Folded Spill
-; CHECK64-NEXT:    stp x24, x23, [sp, #240] // 16-byte Folded Spill
-; CHECK64-NEXT:    stp x22, x21, [sp, #256] // 16-byte Folded Spill
-; CHECK64-NEXT:    stp x20, x19, [sp, #272] // 16-byte Folded Spill
-; CHECK64-NEXT:    .cfi_def_cfa_offset 288
+; CHECK64-NEXT:    stp x29, x25, [sp, #-64]! // 16-byte Folded Spill
+; CHECK64-NEXT:    stp x24, x23, [sp, #16] // 16-byte Folded Spill
+; CHECK64-NEXT:    stp x22, x21, [sp, #32] // 16-byte Folded Spill
+; CHECK64-NEXT:    stp x20, x19, [sp, #48] // 16-byte Folded Spill
+; CHECK64-NEXT:    sub sp, sp, #64
+; CHECK64-NEXT:    addvl sp, sp, #-8
+; CHECK64-NEXT:    str z15, [sp] // 16-byte Folded Spill
+; CHECK64-NEXT:    str z14, [sp, #1, mul vl] // 16-byte Folded Spill
+; CHECK64-NEXT:    str z13, [sp, #2, mul vl] // 16-byte Folded Spill
+; CHECK64-NEXT:    str z12, [sp, #3, mul vl] // 16-byte Folded Spill
+; CHECK64-NEXT:    str z11, [sp, #4, mul vl] // 16-byte Folded Spill
+; CHECK64-NEXT:    str z10, [sp, #5, mul vl] // 16-byte Folded Spill
+; CHECK64-NEXT:    str z9, [sp, #6, mul vl] // 16-byte Folded Spill
+; CHECK64-NEXT:    str z8, [sp, #7, mul vl] // 16-byte Folded Spill
+; CHECK64-NEXT:    sub sp, sp, #96
+; CHECK64-NEXT:    .cfi_escape 0x0f, 0x0b, 0x8f, 0xe0, 0x01, 0x92, 0x2e, 0x00, 0x11, 0xc0, 0x00, 0x1e, 0x22 // sp + 224 + 64 * VG
 ; CHECK64-NEXT:    .cfi_offset w19, -8
 ; CHECK64-NEXT:    .cfi_offset w20, -16
 ; CHECK64-NEXT:    .cfi_offset w21, -24
@@ -519,89 +714,154 @@ define i32 @csr_x18_25_d8_15_allocdi64(i64 %d, double %e) "aarch64_pstate_sm_com
 ; CHECK64-NEXT:    .cfi_offset w24, -48
 ; CHECK64-NEXT:    .cfi_offset w25, -56
 ; CHECK64-NEXT:    .cfi_offset w29, -64
-; CHECK64-NEXT:    .cfi_offset b8, -136
-; CHECK64-NEXT:    .cfi_offset b9, -144
-; CHECK64-NEXT:    .cfi_offset b10, -152
-; CHECK64-NEXT:    .cfi_offset b11, -160
-; CHECK64-NEXT:    .cfi_offset b12, -168
-; CHECK64-NEXT:    .cfi_offset b13, -176
-; CHECK64-NEXT:    .cfi_offset b14, -184
-; CHECK64-NEXT:    .cfi_offset b15, -192
-; CHECK64-NEXT:    //APP
-; CHECK64-NEXT:    //NO_APP
-; CHECK64-NEXT:    //APP
-; CHECK64-NEXT:    //NO_APP
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x48, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x78, 0x1e, 0x22, 0x11, 0x80, 0x7f, 0x22 // $d8 @ cfa - 8 * VG - 128
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x49, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x70, 0x1e, 0x22, 0x11, 0x80, 0x7f, 0x22 // $d9 @ cfa - 16 * VG - 128
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x4a, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x68, 0x1e, 0x22, 0x11, 0x80, 0x7f, 0x22 // $d10 @ cfa - 24 * VG - 128
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x4b, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x60, 0x1e, 0x22, 0x11, 0x80, 0x7f, 0x22 // $d11 @ cfa - 32 * VG - 128
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x4c, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x58, 0x1e, 0x22, 0x11, 0x80, 0x7f, 0x22 // $d12 @ cfa - 40 * VG - 128
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x4d, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x50, 0x1e, 0x22, 0x11, 0x80, 0x7f, 0x22 // $d13 @ cfa - 48 * VG - 128
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x4e, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x48, 0x1e, 0x22, 0x11, 0x80, 0x7f, 0x22 // $d14 @ cfa - 56 * VG - 128
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x4f, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x40, 0x1e, 0x22, 0x11, 0x80, 0x7f, 0x22 // $d15 @ cfa - 64 * VG - 128
 ; CHECK64-NEXT:    mov x8, x0
-; CHECK64-NEXT:    ldp x20, x19, [sp, #272] // 16-byte Folded Reload
 ; CHECK64-NEXT:    mov w0, wzr
-; CHECK64-NEXT:    ldp x22, x21, [sp, #256] // 16-byte Folded Reload
+; CHECK64-NEXT:    //APP
+; CHECK64-NEXT:    //NO_APP
+; CHECK64-NEXT:    //APP
+; CHECK64-NEXT:    //NO_APP
 ; CHECK64-NEXT:    str x8, [sp, #8]
-; CHECK64-NEXT:    ldp x24, x23, [sp, #240] // 16-byte Folded Reload
 ; CHECK64-NEXT:    str d0, [sp, #88]
-; CHECK64-NEXT:    ldp x29, x25, [sp, #224] // 16-byte Folded Reload
-; CHECK64-NEXT:    ldp d9, d8, [sp, #144] // 16-byte Folded Reload
-; CHECK64-NEXT:    ldp d11, d10, [sp, #128] // 16-byte Folded Reload
-; CHECK64-NEXT:    ldp d13, d12, [sp, #112] // 16-byte Folded Reload
-; CHECK64-NEXT:    ldp d15, d14, [sp, #96] // 16-byte Folded Reload
-; CHECK64-NEXT:    add sp, sp, #288
+; CHECK64-NEXT:    add sp, sp, #96
+; CHECK64-NEXT:    ldr z15, [sp] // 16-byte Folded Reload
+; CHECK64-NEXT:    ldr z14, [sp, #1, mul vl] // 16-byte Folded Reload
+; CHECK64-NEXT:    ldr z13, [sp, #2, mul vl] // 16-byte Folded Reload
+; CHECK64-NEXT:    ldr z12, [sp, #3, mul vl] // 16-byte Folded Reload
+; CHECK64-NEXT:    ldr z11, [sp, #4, mul vl] // 16-byte Folded Reload
+; CHECK64-NEXT:    ldr z10, [sp, #5, mul vl] // 16-byte Folded Reload
+; CHECK64-NEXT:    ldr z9, [sp, #6, mul vl] // 16-byte Folded Reload
+; CHECK64-NEXT:    ldr z8, [sp, #7, mul vl] // 16-byte Folded Reload
+; CHECK64-NEXT:    add sp, sp, #64
+; CHECK64-NEXT:    addvl sp, sp, #8
+; CHECK64-NEXT:    ldp x20, x19, [sp, #48] // 16-byte Folded Reload
+; CHECK64-NEXT:    ldp x22, x21, [sp, #32] // 16-byte Folded Reload
+; CHECK64-NEXT:    ldp x24, x23, [sp, #16] // 16-byte Folded Reload
+; CHECK64-NEXT:    ldp x29, x25, [sp], #64 // 16-byte Folded Reload
 ; CHECK64-NEXT:    ret
 ;
-; CHECK1024-LABEL: csr_x18_25_d8_15_allocdi64:
-; CHECK1024:       // %bb.0: // %entry
-; CHECK1024-NEXT:    sub sp, sp, #1152
-; CHECK1024-NEXT:    stp d15, d14, [sp] // 16-byte Folded Spill
-; CHECK1024-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
-; CHECK1024-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
-; CHECK1024-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
-; CHECK1024-NEXT:    str x29, [sp, #1088] // 8-byte Spill
-; CHECK1024-NEXT:    str x25, [sp, #1096] // 8-byte Spill
-; CHECK1024-NEXT:    str x24, [sp, #1104] // 8-byte Spill
-; CHECK1024-NEXT:    str x23, [sp, #1112] // 8-byte Spill
-; CHECK1024-NEXT:    str x22, [sp, #1120] // 8-byte Spill
-; CHECK1024-NEXT:    str x21, [sp, #1128] // 8-byte Spill
-; CHECK1024-NEXT:    str x20, [sp, #1136] // 8-byte Spill
-; CHECK1024-NEXT:    str x19, [sp, #1144] // 8-byte Spill
-; CHECK1024-NEXT:    sub sp, sp, #1056
-; CHECK1024-NEXT:    .cfi_def_cfa_offset 2208
-; CHECK1024-NEXT:    .cfi_offset w19, -8
-; CHECK1024-NEXT:    .cfi_offset w20, -16
-; CHECK1024-NEXT:    .cfi_offset w21, -24
-; CHECK1024-NEXT:    .cfi_offset w22, -32
-; CHECK1024-NEXT:    .cfi_offset w23, -40
-; CHECK1024-NEXT:    .cfi_offset w24, -48
-; CHECK1024-NEXT:    .cfi_offset w25, -56
-; CHECK1024-NEXT:    .cfi_offset w29, -64
-; CHECK1024-NEXT:    .cfi_offset b8, -1096
-; CHECK1024-NEXT:    .cfi_offset b9, -1104
-; CHECK1024-NEXT:    .cfi_offset b10, -1112
-; CHECK1024-NEXT:    .cfi_offset b11, -1120
-; CHECK1024-NEXT:    .cfi_offset b12, -1128
-; CHECK1024-NEXT:    .cfi_offset b13, -1136
-; CHECK1024-NEXT:    .cfi_offset b14, -1144
-; CHECK1024-NEXT:    .cfi_offset b15, -1152
-; CHECK1024-NEXT:    mov x8, x0
-; CHECK1024-NEXT:    mov w0, wzr
-; CHECK1024-NEXT:    //APP
-; CHECK1024-NEXT:    //NO_APP
-; CHECK1024-NEXT:    //APP
-; CHECK1024-NEXT:    //NO_APP
-; CHECK1024-NEXT:    str x8, [sp, #8]
-; CHECK1024-NEXT:    str d0, [sp, #1048]
-; CHECK1024-NEXT:    add sp, sp, #1056
-; CHECK1024-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
-; CHECK1024-NEXT:    ldr x19, [sp, #1144] // 8-byte Reload
-; CHECK1024-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
-; CHECK1024-NEXT:    ldr x20, [sp, #1136] // 8-byte Reload
-; CHECK1024-NEXT:    ldr x21, [sp, #1128] // 8-byte Reload
-; CHECK1024-NEXT:    ldr x22, [sp, #1120] // 8-byte Reload
-; CHECK1024-NEXT:    ldr x23, [sp, #1112] // 8-byte Reload
-; CHECK1024-NEXT:    ldr x24, [sp, #1104] // 8-byte Reload
-; CHECK1024-NEXT:    ldr x25, [sp, #1096] // 8-byte Reload
-; CHECK1024-NEXT:    ldr x29, [sp, #1088] // 8-byte Reload
-; CHECK1024-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
-; CHECK1024-NEXT:    ldp d15, d14, [sp] // 16-byte Folded Reload
-; CHECK1024-NEXT:    add sp, sp, #1152
-; CHECK1024-NEXT:    ret
+; CHECK1024-NOSPLITSVE-LABEL: csr_x18_25_d8_15_allocdi64:
+; CHECK1024-NOSPLITSVE:       // %bb.0: // %entry
+; CHECK1024-NOSPLITSVE-NEXT:    sub sp, sp, #1152
+; CHECK1024-NOSPLITSVE-NEXT:    stp d15, d14, [sp] // 16-byte Folded Spill
+; CHECK1024-NOSPLITSVE-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
+; CHECK1024-NOSPLITSVE-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
+; CHECK1024-NOSPLITSVE-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
+; CHECK1024-NOSPLITSVE-NEXT:    str x29, [sp, #1088] // 8-byte Spill
+; CHECK1024-NOSPLITSVE-NEXT:    str x25, [sp, #1096] // 8-byte Spill
+; CHECK1024-NOSPLITSVE-NEXT:    str x24, [sp, #1104] // 8-byte Spill
+; CHECK1024-NOSPLITSVE-NEXT:    str x23, [sp, #1112] // 8-byte Spill
+; CHECK1024-NOSPLITSVE-NEXT:    str x22, [sp, #1120] // 8-byte Spill
+; CHECK1024-NOSPLITSVE-NEXT:    str x21, [sp, #1128] // 8-byte Spill
+; CHECK1024-NOSPLITSVE-NEXT:    str x20, [sp, #1136] // 8-byte Spill
+; CHECK1024-NOSPLITSVE-NEXT:    str x19, [sp, #1144] // 8-byte Spill
+; CHECK1024-NOSPLITSVE-NEXT:    sub sp, sp, #1056
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_def_cfa_offset 2208
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_offset w19, -8
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_offset w20, -16
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_offset w21, -24
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_offset w22, -32
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_offset w23, -40
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_offset w24, -48
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_offset w25, -56
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_offset w29, -64
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_offset b8, -1096
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_offset b9, -1104
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_offset b10, -1112
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_offset b11, -1120
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_offset b12, -1128
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_offset b13, -1136
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_offset b14, -1144
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_offset b15, -1152
+; CHECK1024-NOSPLITSVE-NEXT:    mov x8, x0
+; CHECK1024-NOSPLITSVE-NEXT:    mov w0, wzr
+; CHECK1024-NOSPLITSVE-NEXT:    //APP
+; CHECK1024-NOSPLITSVE-NEXT:    //NO_APP
+; CHECK1024-NOSPLITSVE-NEXT:    //APP
+; CHECK1024-NOSPLITSVE-NEXT:    //NO_APP
+; CHECK1024-NOSPLITSVE-NEXT:    str x8, [sp, #8]
+; CHECK1024-NOSPLITSVE-NEXT:    str d0, [sp, #1048]
+; CHECK1024-NOSPLITSVE-NEXT:    add sp, sp, #1056
+; CHECK1024-NOSPLITSVE-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
+; CHECK1024-NOSPLITSVE-NEXT:    ldr x19, [sp, #1144] // 8-byte Reload
+; CHECK1024-NOSPLITSVE-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
+; CHECK1024-NOSPLITSVE-NEXT:    ldr x20, [sp, #1136] // 8-byte Reload
+; CHECK1024-NOSPLITSVE-NEXT:    ldr x21, [sp, #1128] // 8-byte Reload
+; CHECK1024-NOSPLITSVE-NEXT:    ldr x22, [sp, #1120] // 8-byte Reload
+; CHECK1024-NOSPLITSVE-NEXT:    ldr x23, [sp, #1112] // 8-byte Reload
+; CHECK1024-NOSPLITSVE-NEXT:    ldr x24, [sp, #1104] // 8-byte Reload
+; CHECK1024-NOSPLITSVE-NEXT:    ldr x25, [sp, #1096] // 8-byte Reload
+; CHECK1024-NOSPLITSVE-NEXT:    ldr x29, [sp, #1088] // 8-byte Reload
+; CHECK1024-NOSPLITSVE-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
+; CHECK1024-NOSPLITSVE-NEXT:    ldp d15, d14, [sp] // 16-byte Folded Reload
+; CHECK1024-NOSPLITSVE-NEXT:    add sp, sp, #1152
+; CHECK1024-NOSPLITSVE-NEXT:    ret
+;
+; CHECK1024-SPLITSVE-LABEL: csr_x18_25_d8_15_allocdi64:
+; CHECK1024-SPLITSVE:       // %bb.0: // %entry
+; CHECK1024-SPLITSVE-NEXT:    stp x29, x25, [sp, #-64]! // 16-byte Folded Spill
+; CHECK1024-SPLITSVE-NEXT:    stp x24, x23, [sp, #16] // 16-byte Folded Spill
+; CHECK1024-SPLITSVE-NEXT:    stp x22, x21, [sp, #32] // 16-byte Folded Spill
+; CHECK1024-SPLITSVE-NEXT:    stp x20, x19, [sp, #48] // 16-byte Folded Spill
+; CHECK1024-SPLITSVE-NEXT:    sub sp, sp, #1024
+; CHECK1024-SPLITSVE-NEXT:    addvl sp, sp, #-8
+; CHECK1024-SPLITSVE-NEXT:    str z15, [sp] // 16-byte Folded Spill
+; CHECK1024-SPLITSVE-NEXT:    str z14, [sp, #1, mul vl] // 16-byte Folded Spill
+; CHECK1024-SPLITSVE-NEXT:    str z13, [sp, #2, mul vl] // 16-byte Folded Spill
+; CHECK1024-SPLITSVE-NEXT:    str z12, [sp, #3, mul vl] // 16-byte Folded Spill
+; CHECK1024-SPLITSVE-NEXT:    str z11, [sp, #4, mul vl] // 16-byte Folded Spill
+; CHECK1024-SPLITSVE-NEXT:    str z10, [sp, #5, mul vl] // 16-byte Folded Spill
+; CHECK1024-SPLITSVE-NEXT:    str z9, [sp, #6, mul vl] // 16-byte Folded Spill
+; CHECK1024-SPLITSVE-NEXT:    str z8, [sp, #7, mul vl] // 16-byte Folded Spill
+; CHECK1024-SPLITSVE-NEXT:    sub sp, sp, #1056
+; CHECK1024-SPLITSVE-NEXT:    .cfi_escape 0x0f, 0x0b, 0x8f, 0xe0, 0x10, 0x92, 0x2e, 0x00, 0x11, 0xc0, 0x00, 0x1e, 0x22 // sp + 2144 + 64 * VG
+; CHECK1024-SPLITSVE-NEXT:    .cfi_offset w19, -8
+; CHECK1024-SPLITSVE-NEXT:    .cfi_offset w20, -16
+; CHECK1024-SPLITSVE-NEXT:    .cfi_offset w21, -24
+; CHECK1024-SPLITSVE-NEXT:    .cfi_offset w22, -32
+; CHECK1024-SPLITSVE-NEXT:    .cfi_offset w23, -40
+; CHECK1024-SPLITSVE-NEXT:    .cfi_offset w24, -48
+; CHECK1024-SPLITSVE-NEXT:    .cfi_offset w25, -56
+; CHECK1024-SPLITSVE-NEXT:    .cfi_offset w29, -64
+; CHECK1024-SPLITSVE-NEXT:    .cfi_escape 0x10, 0x48, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x78, 0x1e, 0x22, 0x11, 0xc0, 0x77, 0x22 // $d8 @ cfa - 8 * VG - 1088
+; CHECK1024-SPLITSVE-NEXT:    .cfi_escape 0x10, 0x49, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x70, 0x1e, 0x22, 0x11, 0xc0, 0x77, 0x22 // $d9 @ cfa - 16 * VG - 1088
+; CHECK1024-SPLITSVE-NEXT:    .cfi_escape 0x10, 0x4a, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x68, 0x1e, 0x22, 0x11, 0xc0, 0x77, 0x22 // $d10 @ cfa - 24 * VG - 1088
+; CHECK1024-SPLITSVE-NEXT:    .cfi_escape 0x10, 0x4b, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x60, 0x1e, 0x22, 0x11, 0xc0, 0x77, 0x22 // $d11 @ cfa - 32 * VG - 1088
+; CHECK1024-SPLITSVE-NEXT:    .cfi_escape 0x10, 0x4c, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x58, 0x1e, 0x22, 0x11, 0xc0, 0x77, 0x22 // $d12 @ cfa - 40 * VG - 1088
+; CHECK1024-SPLITSVE-NEXT:    .cfi_escape 0x10, 0x4d, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x50, 0x1e, 0x22, 0x11, 0xc0, 0x77, 0x22 // $d13 @ cfa - 48 * VG - 1088
+; CHECK1024-SPLITSVE-NEXT:    .cfi_escape 0x10, 0x4e, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x48, 0x1e, 0x22, 0x11, 0xc0, 0x77, 0x22 // $d14 @ cfa - 56 * VG - 1088
+; CHECK1024-SPLITSVE-NEXT:    .cfi_escape 0x10, 0x4f, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x40, 0x1e, 0x22, 0x11, 0xc0, 0x77, 0x22 // $d15 @ cfa - 64 * VG - 1088
+; CHECK1024-SPLITSVE-NEXT:    mov x8, x0
+; CHECK1024-SPLITSVE-NEXT:    mov w0, wzr
+; CHECK1024-SPLITSVE-NEXT:    //APP
+; CHECK1024-SPLITSVE-NEXT:    //NO_APP
+; CHECK1024-SPLITSVE-NEXT:    //APP
+; CHECK1024-SPLITSVE-NEXT:    //NO_APP
+; CHECK1024-SPLITSVE-NEXT:    str x8, [sp, #8]
+; CHECK1024-SPLITSVE-NEXT:    str d0, [sp, #1048]
+; CHECK1024-SPLITSVE-NEXT:    add sp, sp, #1056
+; CHECK1024-SPLITSVE-NEXT:    ldr z15, [sp] // 16-byte Folded Reload
+; CHECK1024-SPLITSVE-NEXT:    ldr z14, [sp, #1, mul vl] // 16-byte Folded Reload
+; CHECK1024-SPLITSVE-NEXT:    ldr z13, [sp, #2, mul vl] // 16-byte Folded Reload
+; CHECK1024-SPLITSVE-NEXT:    ldr z12, [sp, #3, mul vl] // 16-byte Folded Reload
+; CHECK1024-SPLITSVE-NEXT:    ldr z11, [sp, #4, mul vl] // 16-byte Folded Reload
+; CHECK1024-SPLITSVE-NEXT:    ldr z10, [sp, #5, mul vl] // 16-byte Folded Reload
+; CHECK1024-SPLITSVE-NEXT:    ldr z9, [sp, #6, mul vl] // 16-byte Folded Reload
+; CHECK1024-SPLITSVE-NEXT:    ldr z8, [sp, #7, mul vl] // 16-byte Folded Reload
+; CHECK1024-SPLITSVE-NEXT:    add sp, sp, #1024
+; CHECK1024-SPLITSVE-NEXT:    addvl sp, sp, #8
+; CHECK1024-SPLITSVE-NEXT:    ldp x20, x19, [sp, #48] // 16-byte Folded Reload
+; CHECK1024-SPLITSVE-NEXT:    ldp x22, x21, [sp, #32] // 16-byte Folded Reload
+; CHECK1024-SPLITSVE-NEXT:    ldp x24, x23, [sp, #16] // 16-byte Folded Reload
+; CHECK1024-SPLITSVE-NEXT:    ldp x29, x25, [sp], #64 // 16-byte Folded Reload
+; CHECK1024-SPLITSVE-NEXT:    ret
 entry:
   %a = alloca i64
   %b = alloca double
@@ -689,18 +949,15 @@ define i32 @csr_x18_25_d8_15_allocdi64_locallystreaming(i64 %d, double %e) "aarc
 ;
 ; CHECK64-LABEL: csr_x18_25_d8_15_allocdi64_locallystreaming:
 ; CHECK64:       // %bb.0: // %entry
-; CHECK64-NEXT:    sub sp, sp, #304
-; CHECK64-NEXT:    .cfi_def_cfa_offset 304
+; CHECK64-NEXT:    stp x29, x30, [sp, #-80]! // 16-byte Folded Spill
+; CHECK64-NEXT:    .cfi_def_cfa_offset 80
 ; CHECK64-NEXT:    cntd x9
-; CHECK64-NEXT:    stp d15, d14, [sp, #96] // 16-byte Folded Spill
-; CHECK64-NEXT:    stp d13, d12, [sp, #112] // 16-byte Folded Spill
-; CHECK64-NEXT:    stp d11, d10, [sp, #128] // 16-byte Folded Spill
-; CHECK64-NEXT:    stp d9, d8, [sp, #144] // 16-byte Folded Spill
-; CHECK64-NEXT:    stp x29, x30, [sp, #224] // 16-byte Folded Spill
-; CHECK64-NEXT:    stp x9, x25, [sp, #240] // 16-byte Folded Spill
-; CHECK64-NEXT:    stp x24, x23, [sp, #256] // 16-byte Folded Spill
-; CHECK64-NEXT:    stp x22, x21, [sp, #272] // 16-byte Folded Spill
-; CHECK64-NEXT:    stp x20, x19, [sp, #288] // 16-byte Folded Spill
+; CHECK64-NEXT:    stp x24, x23, [sp, #32] // 16-byte Folded Spill
+; CHECK64-NEXT:    stp x9, x25, [sp, #16] // 16-byte Folded Spill
+; CHECK64-NEXT:    stp x22, x21, [sp, #48] // 16-byte Folded Spill
+; CHECK64-NEXT:    stp x20, x19, [sp, #64] // 16-byte Folded Spill
+; CHECK64-NEXT:    mov x29, sp
+; CHECK64-NEXT:    .cfi_def_cfa w29, 80
 ; CHECK64-NEXT:    .cfi_offset w19, -8
 ; CHECK64-NEXT:    .cfi_offset w20, -16
 ; CHECK64-NEXT:    .cfi_offset w21, -24
@@ -711,14 +968,25 @@ define i32 @csr_x18_25_d8_15_allocdi64_locallystreaming(i64 %d, double %e) "aarc
 ; CHECK64-NEXT:    .cfi_offset vg, -64
 ; CHECK64-NEXT:    .cfi_offset w30, -72
 ; CHECK64-NEXT:    .cfi_offset w29, -80
-; CHECK64-NEXT:    .cfi_offset b8, -152
-; CHECK64-NEXT:    .cfi_offset b9, -160
-; CHECK64-NEXT:    .cfi_offset b10, -168
-; CHECK64-NEXT:    .cfi_offset b11, -176
-; CHECK64-NEXT:    .cfi_offset b12, -184
-; CHECK64-NEXT:    .cfi_offset b13, -192
-; CHECK64-NEXT:    .cfi_offset b14, -200
-; CHECK64-NEXT:    .cfi_offset b15, -208
+; CHECK64-NEXT:    sub sp, sp, #64
+; CHECK64-NEXT:    addsvl sp, sp, #-8
+; CHECK64-NEXT:    str z15, [sp] // 16-byte Folded Spill
+; CHECK64-NEXT:    str z14, [sp, #1, mul vl] // 16-byte Folded Spill
+; CHECK64-NEXT:    str z13, [sp, #2, mul vl] // 16-byte Folded Spill
+; CHECK64-NEXT:    str z12, [sp, #3, mul vl] // 16-byte Folded Spill
+; CHECK64-NEXT:    str z11, [sp, #4, mul vl] // 16-byte Folded Spill
+; CHECK64-NEXT:    str z10, [sp, #5, mul vl] // 16-byte Folded Spill
+; CHECK64-NEXT:    str z9, [sp, #6, mul vl] // 16-byte Folded Spill
+; CHECK64-NEXT:    str z8, [sp, #7, mul vl] // 16-byte Folded Spill
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x48, 0x0d, 0x12, 0x11, 0x40, 0x22, 0x06, 0x11, 0x78, 0x1e, 0x22, 0x11, 0xf0, 0x7e, 0x22 // $d8 @ cfa - 8 * IncomingVG - 144
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x49, 0x0d, 0x12, 0x11, 0x40, 0x22, 0x06, 0x11, 0x70, 0x1e, 0x22, 0x11, 0xf0, 0x7e, 0x22 // $d9 @ cfa - 16 * IncomingVG - 144
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x4a, 0x0d, 0x12, 0x11, 0x40, 0x22, 0x06, 0x11, 0x68, 0x1e, 0x22, 0x11, 0xf0, 0x7e, 0x22 // $d10 @ cfa - 24 * IncomingVG - 144
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x4b, 0x0d, 0x12, 0x11, 0x40, 0x22, 0x06, 0x11, 0x60, 0x1e, 0x22, 0x11, 0xf0, 0x7e, 0x22 // $d11 @ cfa - 32 * IncomingVG - 144
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x4c, 0x0d, 0x12, 0x11, 0x40, 0x22, 0x06, 0x11, 0x58, 0x1e, 0x22, 0x11, 0xf0, 0x7e, 0x22 // $d12 @ cfa - 40 * IncomingVG - 144
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x4d, 0x0d, 0x12, 0x11, 0x40, 0x22, 0x06, 0x11, 0x50, 0x1e, 0x22, 0x11, 0xf0, 0x7e, 0x22 // $d13 @ cfa - 48 * IncomingVG - 144
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x4e, 0x0d, 0x12, 0x11, 0x40, 0x22, 0x06, 0x11, 0x48, 0x1e, 0x22, 0x11, 0xf0, 0x7e, 0x22 // $d14 @ cfa - 56 * IncomingVG - 144
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x4f, 0x0d, 0x12, 0x11, 0x40, 0x22, 0x06, 0x11, 0x40, 0x1e, 0x22, 0x11, 0xf0, 0x7e, 0x22 // $d15 @ cfa - 64 * IncomingVG - 144
+; CHECK64-NEXT:    sub sp, sp, #96
 ; CHECK64-NEXT:    str d0, [sp, #80] // 8-byte Spill
 ; CHECK64-NEXT:    smstart sm
 ; CHECK64-NEXT:    //APP
@@ -729,17 +997,32 @@ define i32 @csr_x18_25_d8_15_allocdi64_locallystreaming(i64 %d, double %e) "aarc
 ; CHECK64-NEXT:    str x0, [sp, #8]
 ; CHECK64-NEXT:    str d0, [sp, #88]
 ; CHECK64-NEXT:    smstop sm
-; CHECK64-NEXT:    ldp x20, x19, [sp, #288] // 16-byte Folded Reload
 ; CHECK64-NEXT:    mov w0, wzr
-; CHECK64-NEXT:    ldp x22, x21, [sp, #272] // 16-byte Folded Reload
-; CHECK64-NEXT:    ldr x25, [sp, #248] // 8-byte Reload
-; CHECK64-NEXT:    ldp x24, x23, [sp, #256] // 16-byte Folded Reload
-; CHECK64-NEXT:    ldp x29, x30, [sp, #224] // 16-byte Folded Reload
-; CHECK64-NEXT:    ldp d9, d8, [sp, #144] // 16-byte Folded Reload
-; CHECK64-NEXT:    ldp d11, d10, [sp, #128] // 16-byte Folded Reload
-; CHECK64-NEXT:    ldp d13, d12, [sp, #112] // 16-byte Folded Reload
-; CHECK64-NEXT:    ldp d15, d14, [sp, #96] // 16-byte Folded Reload
-; CHECK64-NEXT:    add sp, sp, #304
+; CHECK64-NEXT:    add sp, sp, #96
+; CHECK64-NEXT:    ldr z15, [sp] // 16-byte Folded Reload
+; CHECK64-NEXT:    ldr z14, [sp, #1, mul vl] // 16-byte Folded Reload
+; CHECK64-NEXT:    ldr z13, [sp, #2, mul vl] // 16-byte Folded Reload
+; CHECK64-NEXT:    ldr z12, [sp, #3, mul vl] // 16-byte Folded Reload
+; CHECK64-NEXT:    ldr z11, [sp, #4, mul vl] // 16-byte Folded Reload
+; CHECK64-NEXT:    ldr z10, [sp, #5, mul vl] // 16-byte Folded Reload
+; CHECK64-NEXT:    ldr z9, [sp, #6, mul vl] // 16-byte Folded Reload
+; CHECK64-NEXT:    ldr z8, [sp, #7, mul vl] // 16-byte Folded Reload
+; CHECK64-NEXT:    add sp, sp, #64
+; CHECK64-NEXT:    addsvl sp, sp, #8
+; CHECK64-NEXT:    .cfi_restore z8
+; CHECK64-NEXT:    .cfi_restore z9
+; CHECK64-NEXT:    .cfi_restore z10
+; CHECK64-NEXT:    .cfi_restore z11
+; CHECK64-NEXT:    .cfi_restore z12
+; CHECK64-NEXT:    .cfi_restore z13
+; CHECK64-NEXT:    .cfi_restore z14
+; CHECK64-NEXT:    .cfi_restore z15
+; CHECK64-NEXT:    .cfi_def_cfa wsp, 80
+; CHECK64-NEXT:    ldp x20, x19, [sp, #64] // 16-byte Folded Reload
+; CHECK64-NEXT:    ldr x25, [sp, #24] // 8-byte Reload
+; CHECK64-NEXT:    ldp x22, x21, [sp, #48] // 16-byte Folded Reload
+; CHECK64-NEXT:    ldp x24, x23, [sp, #32] // 16-byte Folded Reload
+; CHECK64-NEXT:    ldp x29, x30, [sp], #80 // 16-byte Folded Reload
 ; CHECK64-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK64-NEXT:    .cfi_restore w19
 ; CHECK64-NEXT:    .cfi_restore w20
@@ -751,102 +1034,183 @@ define i32 @csr_x18_25_d8_15_allocdi64_locallystreaming(i64 %d, double %e) "aarc
 ; CHECK64-NEXT:    .cfi_restore vg
 ; CHECK64-NEXT:    .cfi_restore w30
 ; CHECK64-NEXT:    .cfi_restore w29
-; CHECK64-NEXT:    .cfi_restore b8
-; CHECK64-NEXT:    .cfi_restore b9
-; CHECK64-NEXT:    .cfi_restore b10
-; CHECK64-NEXT:    .cfi_restore b11
-; CHECK64-NEXT:    .cfi_restore b12
-; CHECK64-NEXT:    .cfi_restore b13
-; CHECK64-NEXT:    .cfi_restore b14
-; CHECK64-NEXT:    .cfi_restore b15
 ; CHECK64-NEXT:    ret
 ;
-; CHECK1024-LABEL: csr_x18_25_d8_15_allocdi64_locallystreaming:
-; CHECK1024:       // %bb.0: // %entry
-; CHECK1024-NEXT:    sub sp, sp, #1168
-; CHECK1024-NEXT:    .cfi_def_cfa_offset 1168
-; CHECK1024-NEXT:    cntd x9
-; CHECK1024-NEXT:    stp d15, d14, [sp] // 16-byte Folded Spill
-; CHECK1024-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
-; CHECK1024-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
-; CHECK1024-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
-; CHECK1024-NEXT:    str x29, [sp, #1088] // 8-byte Spill
-; CHECK1024-NEXT:    str x30, [sp, #1096] // 8-byte Spill
-; CHECK1024-NEXT:    str x9, [sp, #1104] // 8-byte Spill
-; CHECK1024-NEXT:    str x25, [sp, #1112] // 8-byte Spill
-; CHECK1024-NEXT:    str x24, [sp, #1120] // 8-byte Spill
-; CHECK1024-NEXT:    str x23, [sp, #1128] // 8-byte Spill
-; CHECK1024-NEXT:    str x22, [sp, #1136] // 8-byte Spill
-; CHECK1024-NEXT:    str x21, [sp, #1144] // 8-byte Spill
-; CHECK1024-NEXT:    str x20, [sp, #1152] // 8-byte Spill
-; CHECK1024-NEXT:    str x19, [sp, #1160] // 8-byte Spill
-; CHECK1024-NEXT:    .cfi_offset w19, -8
-; CHECK1024-NEXT:    .cfi_offset w20, -16
-; CHECK1024-NEXT:    .cfi_offset w21, -24
-; CHECK1024-NEXT:    .cfi_offset w22, -32
-; CHECK1024-NEXT:    .cfi_offset w23, -40
-; CHECK1024-NEXT:    .cfi_offset w24, -48
-; CHECK1024-NEXT:    .cfi_offset w25, -56
-; CHECK1024-NEXT:    .cfi_offset vg, -64
-; CHECK1024-NEXT:    .cfi_offset w30, -72
-; CHECK1024-NEXT:    .cfi_offset w29, -80
-; CHECK1024-NEXT:    .cfi_offset b8, -1112
-; CHECK1024-NEXT:    .cfi_offset b9, -1120
-; CHECK1024-NEXT:    .cfi_offset b10, -1128
-; CHECK1024-NEXT:    .cfi_offset b11, -1136
-; CHECK1024-NEXT:    .cfi_offset b12, -1144
-; CHECK1024-NEXT:    .cfi_offset b13, -1152
-; CHECK1024-NEXT:    .cfi_offset b14, -1160
-; CHECK1024-NEXT:    .cfi_offset b15, -1168
-; CHECK1024-NEXT:    sub sp, sp, #1056
-; CHECK1024-NEXT:    .cfi_def_cfa_offset 2224
-; CHECK1024-NEXT:    str d0, [sp, #1040] // 8-byte Spill
-; CHECK1024-NEXT:    smstart sm
-; CHECK1024-NEXT:    //APP
-; CHECK1024-NEXT:    //NO_APP
-; CHECK1024-NEXT:    //APP
-; CHECK1024-NEXT:    //NO_APP
-; CHECK1024-NEXT:    ldr d0, [sp, #1040] // 8-byte Reload
-; CHECK1024-NEXT:    str x0, [sp, #8]
-; CHECK1024-NEXT:    str d0, [sp, #1048]
-; CHECK1024-NEXT:    smstop sm
-; CHECK1024-NEXT:    mov w0, wzr
-; CHECK1024-NEXT:    add sp, sp, #1056
-; CHECK1024-NEXT:    .cfi_def_cfa_offset 1168
-; CHECK1024-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
-; CHECK1024-NEXT:    ldr x19, [sp, #1160] // 8-byte Reload
-; CHECK1024-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
-; CHECK1024-NEXT:    ldr x20, [sp, #1152] // 8-byte Reload
-; CHECK1024-NEXT:    ldr x21, [sp, #1144] // 8-byte Reload
-; CHECK1024-NEXT:    ldr x22, [sp, #1136] // 8-byte Reload
-; CHECK1024-NEXT:    ldr x23, [sp, #1128] // 8-byte Reload
-; CHECK1024-NEXT:    ldr x24, [sp, #1120] // 8-byte Reload
-; CHECK1024-NEXT:    ldr x25, [sp, #1112] // 8-byte Reload
-; CHECK1024-NEXT:    ldr x30, [sp, #1096] // 8-byte Reload
-; CHECK1024-NEXT:    ldr x29, [sp, #1088] // 8-byte Reload
-; CHECK1024-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
-; CHECK1024-NEXT:    ldp d15, d14, [sp] // 16-byte Folded Reload
-; CHECK1024-NEXT:    add sp, sp, #1168
-; CHECK1024-NEXT:    .cfi_def_cfa_offset 0
-; CHECK1024-NEXT:    .cfi_restore w19
-; CHECK1024-NEXT:    .cfi_restore w20
-; CHECK1024-NEXT:    .cfi_restore w21
-; CHECK1024-NEXT:    .cfi_restore w22
-; CHECK1024-NEXT:    .cfi_restore w23
-; CHECK1024-NEXT:    .cfi_restore w24
-; CHECK1024-NEXT:    .cfi_restore w25
-; CHECK1024-NEXT:    .cfi_restore vg
-; CHECK1024-NEXT:    .cfi_restore w30
-; CHECK1024-NEXT:    .cfi_restore w29
-; CHECK1024-NEXT:    .cfi_restore b8
-; CHECK1024-NEXT:    .cfi_restore b9
-; CHECK1024-NEXT:    .cfi_restore b10
-; CHECK1024-NEXT:    .cfi_restore b11
-; CHECK1024-NEXT:    .cfi_restore b12
-; CHECK1024-NEXT:    .cfi_restore b13
-; CHECK1024-NEXT:    .cfi_restore b14
-; CHECK1024-NEXT:    .cfi_restore b15
-; CHECK1024-NEXT:    ret
+; CHECK1024-NOSPLITSVE-LABEL: csr_x18_25_d8_15_allocdi64_locallystreaming:
+; CHECK1024-NOSPLITSVE:       // %bb.0: // %entry
+; CHECK1024-NOSPLITSVE-NEXT:    sub sp, sp, #1168
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_def_cfa_offset 1168
+; CHECK1024-NOSPLITSVE-NEXT:    cntd x9
+; CHECK1024-NOSPLITSVE-NEXT:    stp d15, d14, [sp] // 16-byte Folded Spill
+; CHECK1024-NOSPLITSVE-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
+; CHECK1024-NOSPLITSVE-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
+; CHECK1024-NOSPLITSVE-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
+; CHECK1024-NOSPLITSVE-NEXT:    str x29, [sp, #1088] // 8-byte Spill
+; CHECK1024-NOSPLITSVE-NEXT:    str x30, [sp, #1096] // 8-byte Spill
+; CHECK1024-NOSPLITSVE-NEXT:    str x9, [sp, #1104] // 8-byte Spill
+; CHECK1024-NOSPLITSVE-NEXT:    str x25, [sp, #1112] // 8-byte Spill
+; CHECK1024-NOSPLITSVE-NEXT:    str x24, [sp, #1120] // 8-byte Spill
+; CHECK1024-NOSPLITSVE-NEXT:    str x23, [sp, #1128] // 8-byte Spill
+; CHECK1024-NOSPLITSVE-NEXT:    str x22, [sp, #1136] // 8-byte Spill
+; CHECK1024-NOSPLITSVE-NEXT:    str x21, [sp, #1144] // 8-byte Spill
+; CHECK1024-NOSPLITSVE-NEXT:    str x20, [sp, #1152] // 8-byte Spill
+; CHECK1024-NOSPLITSVE-NEXT:    str x19, [sp, #1160] // 8-byte Spill
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_offset w19, -8
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_offset w20, -16
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_offset w21, -24
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_offset w22, -32
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_offset w23, -40
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_offset w24, -48
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_offset w25, -56
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_offset vg, -64
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_offset w30, -72
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_offset w29, -80
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_offset b8, -1112
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_offset b9, -1120
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_offset b10, -1128
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_offset b11, -1136
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_offset b12, -1144
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_offset b13, -1152
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_offset b14, -1160
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_offset b15, -1168
+; CHECK1024-NOSPLITSVE-NEXT:    sub sp, sp, #1056
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_def_cfa_offset 2224
+; CHECK1024-NOSPLITSVE-NEXT:    str d0, [sp, #1040] // 8-byte Spill
+; CHECK1024-NOSPLITSVE-NEXT:    smstart sm
+; CHECK1024-NOSPLITSVE-NEXT:    //APP
+; CHECK1024-NOSPLITSVE-NEXT:    //NO_APP
+; CHECK1024-NOSPLITSVE-NEXT:    //APP
+; CHECK1024-NOSPLITSVE-NEXT:    //NO_APP
+; CHECK1024-NOSPLITSVE-NEXT:    ldr d0, [sp, #1040] // 8-byte Reload
+; CHECK1024-NOSPLITSVE-NEXT:    str x0, [sp, #8]
+; CHECK1024-NOSPLITSVE-NEXT:    str d0, [sp, #1048]
+; CHECK1024-NOSPLITSVE-NEXT:    smstop sm
+; CHECK1024-NOSPLITSVE-NEXT:    mov w0, wzr
+; CHECK1024-NOSPLITSVE-NEXT:    add sp, sp, #1056
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_def_cfa_offset 1168
+; CHECK1024-NOSPLITSVE-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
+; CHECK1024-NOSPLITSVE-NEXT:    ldr x19, [sp, #1160] // 8-byte Reload
+; CHECK1024-NOSPLITSVE-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
+; CHECK1024-NOSPLITSVE-NEXT:    ldr x20, [sp, #1152] // 8-byte Reload
+; CHECK1024-NOSPLITSVE-NEXT:    ldr x21, [sp, #1144] // 8-byte Reload
+; CHECK1024-NOSPLITSVE-NEXT:    ldr x22, [sp, #1136] // 8-byte Reload
+; CHECK1024-NOSPLITSVE-NEXT:    ldr x23, [sp, #1128] // 8-byte Reload
+; CHECK1024-NOSPLITSVE-NEXT:    ldr x24, [sp, #1120] // 8-byte Reload
+; CHECK1024-NOSPLITSVE-NEXT:    ldr x25, [sp, #1112] // 8-byte Reload
+; CHECK1024-NOSPLITSVE-NEXT:    ldr x30, [sp, #1096] // 8-byte Reload
+; CHECK1024-NOSPLITSVE-NEXT:    ldr x29, [sp, #1088] // 8-byte Reload
+; CHECK1024-NOSPLITSVE-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
+; CHECK1024-NOSPLITSVE-NEXT:    ldp d15, d14, [sp] // 16-byte Folded Reload
+; CHECK1024-NOSPLITSVE-NEXT:    add sp, sp, #1168
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_def_cfa_offset 0
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_restore w19
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_restore w20
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_restore w21
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_restore w22
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_restore w23
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_restore w24
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_restore w25
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_restore vg
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_restore w30
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_restore w29
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_restore b8
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_restore b9
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_restore b10
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_restore b11
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_restore b12
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_restore b13
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_restore b14
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_restore b15
+; CHECK1024-NOSPLITSVE-NEXT:    ret
+;
+; CHECK1024-SPLITSVE-LABEL: csr_x18_25_d8_15_allocdi64_locallystreaming:
+; CHECK1024-SPLITSVE:       // %bb.0: // %entry
+; CHECK1024-SPLITSVE-NEXT:    stp x29, x30, [sp, #-80]! // 16-byte Folded Spill
+; CHECK1024-SPLITSVE-NEXT:    .cfi_def_cfa_offset 80
+; CHECK1024-SPLITSVE-NEXT:    cntd x9
+; CHECK1024-SPLITSVE-NEXT:    stp x24, x23, [sp, #32] // 16-byte Folded Spill
+; CHECK1024-SPLITSVE-NEXT:    stp x9, x25, [sp, #16] // 16-byte Folded Spill
+; CHECK1024-SPLITSVE-NEXT:    stp x22, x21, [sp, #48] // 16-byte Folded Spill
+; CHECK1024-SPLITSVE-NEXT:    stp x20, x19, [sp, #64] // 16-byte Folded Spill
+; CHECK1024-SPLITSVE-NEXT:    mov x29, sp
+; CHECK1024-SPLITSVE-NEXT:    .cfi_def_cfa w29, 80
+; CHECK1024-SPLITSVE-NEXT:    .cfi_offset w19, -8
+; CHECK1024-SPLITSVE-NEXT:    .cfi_offset w20, -16
+; CHECK1024-SPLITSVE-NEXT:    .cfi_offset w21, -24
+; CHECK1024-SPLITSVE-NEXT:    .cfi_offset w22, -32
+; CHECK1024-SPLITSVE-NEXT:    .cfi_offset w23, -40
+; CHECK1024-SPLITSVE-NEXT:    .cfi_offset w24, -48
+; CHECK1024-SPLITSVE-NEXT:    .cfi_offset w25, -56
+; CHECK1024-SPLITSVE-NEXT:    .cfi_offset vg, -64
+; CHECK1024-SPLITSVE-NEXT:    .cfi_offset w30, -72
+; CHECK1024-SPLITSVE-NEXT:    .cfi_offset w29, -80
+; CHECK1024-SPLITSVE-NEXT:    sub sp, sp, #1024
+; CHECK1024-SPLITSVE-NEXT:    addsvl sp, sp, #-8
+; CHECK1024-SPLITSVE-NEXT:    str z15, [sp] // 16-byte Folded Spill
+; CHECK1024-SPLITSVE-NEXT:    str z14, [sp, #1, mul vl] // 16-byte Folded Spill
+; CHECK1024-SPLITSVE-NEXT:    str z13, [sp, #2, mul vl] // 16-byte Folded Spill
+; CHECK1024-SPLITSVE-NEXT:    str z12, [sp, #3, mul vl] // 16-byte Folded Spill
+; CHECK1024-SPLITSVE-NEXT:    str z11, [sp, #4, mul vl] // 16-byte Folded Spill
+; CHECK1024-SPLITSVE-NEXT:    str z10, [sp, #5, mul vl] // 16-byte Folded Spill
+; CHECK1024-SPLITSVE-NEXT:    str z9, [sp, #6, mul vl] // 16-byte Folded Spill
+; CHECK1024-SPLITSVE-NEXT:    str z8, [sp, #7, mul vl] // 16-byte Folded Spill
+; CHECK1024-SPLITSVE-NEXT:    .cfi_escape 0x10, 0x48, 0x0d, 0x12, 0x11, 0x40, 0x22, 0x06, 0x11, 0x78, 0x1e, 0x22, 0x11, 0xb0, 0x77, 0x22 // $d8 @ cfa - 8 * IncomingVG - 1104
+; CHECK1024-SPLITSVE-NEXT:    .cfi_escape 0x10, 0x49, 0x0d, 0x12, 0x11, 0x40, 0x22, 0x06, 0x11, 0x70, 0x1e, 0x22, 0x11, 0xb0, 0x77, 0x22 // $d9 @ cfa - 16 * IncomingVG - 1104
+; CHECK1024-SPLITSVE-NEXT:    .cfi_escape 0x10, 0x4a, 0x0d, 0x12, 0x11, 0x40, 0x22, 0x06, 0x11, 0x68, 0x1e, 0x22, 0x11, 0xb0, 0x77, 0x22 // $d10 @ cfa - 24 * IncomingVG - 1104
+; CHECK1024-SPLITSVE-NEXT:    .cfi_escape 0x10, 0x4b, 0x0d, 0x12, 0x11, 0x40, 0x22, 0x06, 0x11, 0x60, 0x1e, 0x22, 0x11, 0xb0, 0x77, 0x22 // $d11 @ cfa - 32 * IncomingVG - 1104
+; CHECK1024-SPLITSVE-NEXT:    .cfi_escape 0x10, 0x4c, 0x0d, 0x12, 0x11, 0x40, 0x22, 0x06, 0x11, 0x58, 0x1e, 0x22, 0x11, 0xb0, 0x77, 0x22 // $d12 @ cfa - 40 * IncomingVG - 1104
+; CHECK1024-SPLITSVE-NEXT:    .cfi_escape 0x10, 0x4d, 0x0d, 0x12, 0x11, 0x40, 0x22, 0x06, 0x11, 0x50, 0x1e, 0x22, 0x11, 0xb0, 0x77, 0x22 // $d13 @ cfa - 48 * IncomingVG - 1104
+; CHECK1024-SPLITSVE-NEXT:    .cfi_escape 0x10, 0x4e, 0x0d, 0x12, 0x11, 0x40, 0x22, 0x06, 0x11, 0x48, 0x1e, 0x22, 0x11, 0xb0, 0x77, 0x22 // $d14 @ cfa - 56 * IncomingVG - 1104
+; CHECK1024-SPLITSVE-NEXT:    .cfi_escape 0x10, 0x4f, 0x0d, 0x12, 0x11, 0x40, 0x22, 0x06, 0x11, 0x40, 0x1e, 0x22, 0x11, 0xb0, 0x77, 0x22 // $d15 @ cfa - 64 * IncomingVG - 1104
+; CHECK1024-SPLITSVE-NEXT:    sub sp, sp, #1056
+; CHECK1024-SPLITSVE-NEXT:    str d0, [sp, #1040] // 8-byte Spill
+; CHECK1024-SPLITSVE-NEXT:    smstart sm
+; CHECK1024-SPLITSVE-NEXT:    //APP
+; CHECK1024-SPLITSVE-NEXT:    //NO_APP
+; CHECK1024-SPLITSVE-NEXT:    //APP
+; CHECK1024-SPLITSVE-NEXT:    //NO_APP
+; CHECK1024-SPLITSVE-NEXT:    ldr d0, [sp, #1040] // 8-byte Reload
+; CHECK1024-SPLITSVE-NEXT:    str x0, [sp, #8]
+; CHECK1024-SPLITSVE-NEXT:    str d0, [sp, #1048]
+; CHECK1024-SPLITSVE-NEXT:    smstop sm
+; CHECK1024-SPLITSVE-NEXT:    mov w0, wzr
+; CHECK1024-SPLITSVE-NEXT:    add sp, sp, #1056
+; CHECK1024-SPLITSVE-NEXT:    ldr z15, [sp] // 16-byte Folded Reload
+; CHECK1024-SPLITSVE-NEXT:    ldr z14, [sp, #1, mul vl] // 16-byte Folded Reload
+; CHECK1024-SPLITSVE-NEXT:    ldr z13, [sp, #2, mul vl] // 16-byte Folded Reload
+; CHECK1024-SPLITSVE-NEXT:    ldr z12, [sp, #3, mul vl] // 16-byte Folded Reload
+; CHECK1024-SPLITSVE-NEXT:    ldr z11, [sp, #4, mul vl] // 16-byte Folded Reload
+; CHECK1024-SPLITSVE-NEXT:    ldr z10, [sp, #5, mul vl] // 16-byte Folded Reload
+; CHECK1024-SPLITSVE-NEXT:    ldr z9, [sp, #6, mul vl] // 16-byte Folded Reload
+; CHECK1024-SPLITSVE-NEXT:    ldr z8, [sp, #7, mul vl] // 16-byte Folded Reload
+; CHECK1024-SPLITSVE-NEXT:    add sp, sp, #1024
+; CHECK1024-SPLITSVE-NEXT:    addsvl sp, sp, #8
+; CHECK1024-SPLITSVE-NEXT:    .cfi_restore z8
+; CHECK1024-SPLITSVE-NEXT:    .cfi_restore z9
+; CHECK1024-SPLITSVE-NEXT:    .cfi_restore z10
+; CHECK1024-SPLITSVE-NEXT:    .cfi_restore z11
+; CHECK1024-SPLITSVE-NEXT:    .cfi_restore z12
+; CHECK1024-SPLITSVE-NEXT:    .cfi_restore z13
+; CHECK1024-SPLITSVE-NEXT:    .cfi_restore z14
+; CHECK1024-SPLITSVE-NEXT:    .cfi_restore z15
+; CHECK1024-SPLITSVE-NEXT:    .cfi_def_cfa wsp, 80
+; CHECK1024-SPLITSVE-NEXT:    ldp x20, x19, [sp, #64] // 16-byte Folded Reload
+; CHECK1024-SPLITSVE-NEXT:    ldr x25, [sp, #24] // 8-byte Reload
+; CHECK1024-SPLITSVE-NEXT:    ldp x22, x21, [sp, #48] // 16-byte Folded Reload
+; CHECK1024-SPLITSVE-NEXT:    ldp x24, x23, [sp, #32] // 16-byte Folded Reload
+; CHECK1024-SPLITSVE-NEXT:    ldp x29, x30, [sp], #80 // 16-byte Folded Reload
+; CHECK1024-SPLITSVE-NEXT:    .cfi_def_cfa_offset 0
+; CHECK1024-SPLITSVE-NEXT:    .cfi_restore w19
+; CHECK1024-SPLITSVE-NEXT:    .cfi_restore w20
+; CHECK1024-SPLITSVE-NEXT:    .cfi_restore w21
+; CHECK1024-SPLITSVE-NEXT:    .cfi_restore w22
+; CHECK1024-SPLITSVE-NEXT:    .cfi_restore w23
+; CHECK1024-SPLITSVE-NEXT:    .cfi_restore w24
+; CHECK1024-SPLITSVE-NEXT:    .cfi_restore w25
+; CHECK1024-SPLITSVE-NEXT:    .cfi_restore vg
+; CHECK1024-SPLITSVE-NEXT:    .cfi_restore w30
+; CHECK1024-SPLITSVE-NEXT:    .cfi_restore w29
+; CHECK1024-SPLITSVE-NEXT:    ret
 entry:
   %a = alloca i64
   %b = alloca double
@@ -897,34 +1261,63 @@ define float @csr_d8_stackargs(float %a, float %b, float %c, float %d, float %e,
 ;
 ; CHECK64-LABEL: csr_d8_stackargs:
 ; CHECK64:       // %bb.0: // %entry
-; CHECK64-NEXT:    sub sp, sp, #144
-; CHECK64-NEXT:    str d8, [sp, #64] // 8-byte Spill
-; CHECK64-NEXT:    .cfi_def_cfa_offset 144
-; CHECK64-NEXT:    .cfi_offset b8, -80
+; CHECK64-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK64-NEXT:    sub sp, sp, #64
+; CHECK64-NEXT:    addvl sp, sp, #-1
+; CHECK64-NEXT:    str z8, [sp] // 16-byte Folded Spill
+; CHECK64-NEXT:    sub sp, sp, #64
+; CHECK64-NEXT:    .cfi_escape 0x0f, 0x09, 0x8f, 0x90, 0x01, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 144 + 8 * VG
+; CHECK64-NEXT:    .cfi_offset w29, -16
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x48, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x78, 0x1e, 0x22, 0x11, 0xb0, 0x7f, 0x22 // $d8 @ cfa - 8 * VG - 80
+; CHECK64-NEXT:    addvl x8, sp, #1
 ; CHECK64-NEXT:    //APP
 ; CHECK64-NEXT:    //NO_APP
-; CHECK64-NEXT:    ldr s0, [sp, #144]
-; CHECK64-NEXT:    ldr d8, [sp, #64] // 8-byte Reload
-; CHECK64-NEXT:    add sp, sp, #144
+; CHECK64-NEXT:    ldr s0, [x8, #144]
+; CHECK64-NEXT:    add sp, sp, #64
+; CHECK64-NEXT:    ldr z8, [sp] // 16-byte Folded Reload
+; CHECK64-NEXT:    add sp, sp, #64
+; CHECK64-NEXT:    addvl sp, sp, #1
+; CHECK64-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK64-NEXT:    ret
 ;
-; CHECK1024-LABEL: csr_d8_stackargs:
-; CHECK1024:       // %bb.0: // %entry
-; CHECK1024-NEXT:    sub sp, sp, #1040
-; CHECK1024-NEXT:    str d8, [sp] // 8-byte Spill
-; CHECK1024-NEXT:    str x29, [sp, #1032] // 8-byte Spill
-; CHECK1024-NEXT:    sub sp, sp, #1024
-; CHECK1024-NEXT:    .cfi_def_cfa_offset 2064
-; CHECK1024-NEXT:    .cfi_offset w29, -8
-; CHECK1024-NEXT:    .cfi_offset b8, -1040
-; CHECK1024-NEXT:    ldr s0, [sp, #2064]
-; CHECK1024-NEXT:    //APP
-; CHECK1024-NEXT:    //NO_APP
-; CHECK1024-NEXT:    add sp, sp, #1024
-; CHECK1024-NEXT:    ldr x29, [sp, #1032] // 8-byte Reload
-; CHECK1024-NEXT:    ldr d8, [sp] // 8-byte Reload
-; CHECK1024-NEXT:    add sp, sp, #1040
-; CHECK1024-NEXT:    ret
+; CHECK1024-NOSPLITSVE-LABEL: csr_d8_stackargs:
+; CHECK1024-NOSPLITSVE:       // %bb.0: // %entry
+; CHECK1024-NOSPLITSVE-NEXT:    sub sp, sp, #1040
+; CHECK1024-NOSPLITSVE-NEXT:    str d8, [sp] // 8-byte Spill
+; CHECK1024-NOSPLITSVE-NEXT:    str x29, [sp, #1032] // 8-byte Spill
+; CHECK1024-NOSPLITSVE-NEXT:    sub sp, sp, #1024
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_def_cfa_offset 2064
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_offset w29, -8
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_offset b8, -1040
+; CHECK1024-NOSPLITSVE-NEXT:    ldr s0, [sp, #2064]
+; CHECK1024-NOSPLITSVE-NEXT:    //APP
+; CHECK1024-NOSPLITSVE-NEXT:    //NO_APP
+; CHECK1024-NOSPLITSVE-NEXT:    add sp, sp, #1024
+; CHECK1024-NOSPLITSVE-NEXT:    ldr x29, [sp, #1032] // 8-byte Reload
+; CHECK1024-NOSPLITSVE-NEXT:    ldr d8, [sp] // 8-byte Reload
+; CHECK1024-NOSPLITSVE-NEXT:    add sp, sp, #1040
+; CHECK1024-NOSPLITSVE-NEXT:    ret
+;
+; CHECK1024-SPLITSVE-LABEL: csr_d8_stackargs:
+; CHECK1024-SPLITSVE:       // %bb.0: // %entry
+; CHECK1024-SPLITSVE-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK1024-SPLITSVE-NEXT:    sub sp, sp, #1024
+; CHECK1024-SPLITSVE-NEXT:    addvl sp, sp, #-1
+; CHECK1024-SPLITSVE-NEXT:    str z8, [sp] // 16-byte Folded Spill
+; CHECK1024-SPLITSVE-NEXT:    sub sp, sp, #1024
+; CHECK1024-SPLITSVE-NEXT:    .cfi_escape 0x0f, 0x09, 0x8f, 0x90, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 2064 + 8 * VG
+; CHECK1024-SPLITSVE-NEXT:    .cfi_offset w29, -16
+; CHECK1024-SPLITSVE-NEXT:    .cfi_escape 0x10, 0x48, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x78, 0x1e, 0x22, 0x11, 0xf0, 0x77, 0x22 // $d8 @ cfa - 8 * VG - 1040
+; CHECK1024-SPLITSVE-NEXT:    addvl x8, sp, #1
+; CHECK1024-SPLITSVE-NEXT:    //APP
+; CHECK1024-SPLITSVE-NEXT:    //NO_APP
+; CHECK1024-SPLITSVE-NEXT:    ldr s0, [x8, #2064]
+; CHECK1024-SPLITSVE-NEXT:    add sp, sp, #1024
+; CHECK1024-SPLITSVE-NEXT:    ldr z8, [sp] // 16-byte Folded Reload
+; CHECK1024-SPLITSVE-NEXT:    add sp, sp, #1024
+; CHECK1024-SPLITSVE-NEXT:    addvl sp, sp, #1
+; CHECK1024-SPLITSVE-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK1024-SPLITSVE-NEXT:    ret
 entry:
   tail call void asm sideeffect "", "~{d8}"() #1
   ret float %i
@@ -1785,17 +2178,14 @@ define i32 @f128_libcall(fp128 %v0, fp128 %v1, fp128 %v2, fp128 %v3, i32 %a, i32
 ;
 ; CHECK64-LABEL: f128_libcall:
 ; CHECK64:       // %bb.0:
-; CHECK64-NEXT:    sub sp, sp, #320
-; CHECK64-NEXT:    .cfi_def_cfa_offset 320
+; CHECK64-NEXT:    stp x29, x30, [sp, #-64]! // 16-byte Folded Spill
+; CHECK64-NEXT:    .cfi_def_cfa_offset 64
 ; CHECK64-NEXT:    cntd x9
-; CHECK64-NEXT:    stp d15, d14, [sp, #128] // 16-byte Folded Spill
-; CHECK64-NEXT:    stp d13, d12, [sp, #144] // 16-byte Folded Spill
-; CHECK64-NEXT:    stp d11, d10, [sp, #160] // 16-byte Folded Spill
-; CHECK64-NEXT:    stp d9, d8, [sp, #176] // 16-byte Folded Spill
-; CHECK64-NEXT:    stp x29, x30, [sp, #256] // 16-byte Folded Spill
-; CHECK64-NEXT:    stp x9, x28, [sp, #272] // 16-byte Folded Spill
-; CHECK64-NEXT:    stp x22, x21, [sp, #288] // 16-byte Folded Spill
-; CHECK64-NEXT:    stp x20, x19, [sp, #304] // 16-byte Folded Spill
+; CHECK64-NEXT:    stp x22, x21, [sp, #32] // 16-byte Folded Spill
+; CHECK64-NEXT:    stp x9, x28, [sp, #16] // 16-byte Folded Spill
+; CHECK64-NEXT:    stp x20, x19, [sp, #48] // 16-byte Folded Spill
+; CHECK64-NEXT:    mov x29, sp
+; CHECK64-NEXT:    .cfi_def_cfa w29, 64
 ; CHECK64-NEXT:    .cfi_offset w19, -8
 ; CHECK64-NEXT:    .cfi_offset w20, -16
 ; CHECK64-NEXT:    .cfi_offset w21, -24
@@ -1804,14 +2194,25 @@ define i32 @f128_libcall(fp128 %v0, fp128 %v1, fp128 %v2, fp128 %v3, i32 %a, i32
 ; CHECK64-NEXT:    .cfi_offset vg, -48
 ; CHECK64-NEXT:    .cfi_offset w30, -56
 ; CHECK64-NEXT:    .cfi_offset w29, -64
-; CHECK64-NEXT:    .cfi_offset b8, -136
-; CHECK64-NEXT:    .cfi_offset b9, -144
-; CHECK64-NEXT:    .cfi_offset b10, -152
-; CHECK64-NEXT:    .cfi_offset b11, -160
-; CHECK64-NEXT:    .cfi_offset b12, -168
-; CHECK64-NEXT:    .cfi_offset b13, -176
-; CHECK64-NEXT:    .cfi_offset b14, -184
-; CHECK64-NEXT:    .cfi_offset b15, -192
+; CHECK64-NEXT:    sub sp, sp, #64
+; CHECK64-NEXT:    addvl sp, sp, #-8
+; CHECK64-NEXT:    str z15, [sp] // 16-byte Folded Spill
+; CHECK64-NEXT:    str z14, [sp, #1, mul vl] // 16-byte Folded Spill
+; CHECK64-NEXT:    str z13, [sp, #2, mul vl] // 16-byte Folded Spill
+; CHECK64-NEXT:    str z12, [sp, #3, mul vl] // 16-byte Folded Spill
+; CHECK64-NEXT:    str z11, [sp, #4, mul vl] // 16-byte Folded Spill
+; CHECK64-NEXT:    str z10, [sp, #5, mul vl] // 16-byte Folded Spill
+; CHECK64-NEXT:    str z9, [sp, #6, mul vl] // 16-byte Folded Spill
+; CHECK64-NEXT:    str z8, [sp, #7, mul vl] // 16-byte Folded Spill
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x48, 0x0d, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x78, 0x1e, 0x22, 0x11, 0x80, 0x7f, 0x22 // $d8 @ cfa - 8 * IncomingVG - 128
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x49, 0x0d, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x70, 0x1e, 0x22, 0x11, 0x80, 0x7f, 0x22 // $d9 @ cfa - 16 * IncomingVG - 128
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x4a, 0x0d, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x68, 0x1e, 0x22, 0x11, 0x80, 0x7f, 0x22 // $d10 @ cfa - 24 * IncomingVG - 128
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x4b, 0x0d, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x60, 0x1e, 0x22, 0x11, 0x80, 0x7f, 0x22 // $d11 @ cfa - 32 * IncomingVG - 128
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x4c, 0x0d, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x58, 0x1e, 0x22, 0x11, 0x80, 0x7f, 0x22 // $d12 @ cfa - 40 * IncomingVG - 128
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x4d, 0x0d, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x50, 0x1e, 0x22, 0x11, 0x80, 0x7f, 0x22 // $d13 @ cfa - 48 * IncomingVG - 128
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x4e, 0x0d, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x48, 0x1e, 0x22, 0x11, 0x80, 0x7f, 0x22 // $d14 @ cfa - 56 * IncomingVG - 128
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x4f, 0x0d, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x40, 0x1e, 0x22, 0x11, 0x80, 0x7f, 0x22 // $d15 @ cfa - 64 * IncomingVG - 128
+; CHECK64-NEXT:    sub sp, sp, #128
 ; CHECK64-NEXT:    mov w19, w1
 ; CHECK64-NEXT:    mov w20, w0
 ; CHECK64-NEXT:    stp q0, q1, [sp, #64] // 32-byte Folded Spill
@@ -1841,18 +2242,33 @@ define i32 @f128_libcall(fp128 %v0, fp128 %v1, fp128 %v2, fp128 %v3, i32 %a, i32
 ; CHECK64-NEXT:    smstart sm
 ; CHECK64-NEXT:  .LBB27_8:
 ; CHECK64-NEXT:    cmp w0, #0
-; CHECK64-NEXT:    ldp x29, x30, [sp, #256] // 16-byte Folded Reload
 ; CHECK64-NEXT:    cset w8, pl
-; CHECK64-NEXT:    ldp d9, d8, [sp, #176] // 16-byte Folded Reload
 ; CHECK64-NEXT:    tst w8, w22
-; CHECK64-NEXT:    ldp x22, x21, [sp, #288] // 16-byte Folded Reload
 ; CHECK64-NEXT:    csel w0, w20, w19, ne
-; CHECK64-NEXT:    ldp x20, x19, [sp, #304] // 16-byte Folded Reload
-; CHECK64-NEXT:    ldp d11, d10, [sp, #160] // 16-byte Folded Reload
-; CHECK64-NEXT:    ldr x28, [sp, #280] // 8-byte Reload
-; CHECK64-NEXT:    ldp d13, d12, [sp, #144] // 16-byte Folded Reload
-; CHECK64-NEXT:    ldp d15, d14, [sp, #128] // 16-byte Folded Reload
-; CHECK64-NEXT:    add sp, sp, #320
+; CHECK64-NEXT:    add sp, sp, #128
+; CHECK64-NEXT:    ldr z15, [sp] // 16-byte Folded Reload
+; CHECK64-NEXT:    ldr z14, [sp, #1, mul vl] // 16-byte Folded Reload
+; CHECK64-NEXT:    ldr z13, [sp, #2, mul vl] // 16-byte Folded Reload
+; CHECK64-NEXT:    ldr z12, [sp, #3, mul vl] // 16-byte Folded Reload
+; CHECK64-NEXT:    ldr z11, [sp, #4, mul vl] // 16-byte Folded Reload
+; CHECK64-NEXT:    ldr z10, [sp, #5, mul vl] // 16-byte Folded Reload
+; CHECK64-NEXT:    ldr z9, [sp, #6, mul vl] // 16-byte Folded Reload
+; CHECK64-NEXT:    ldr z8, [sp, #7, mul vl] // 16-byte Folded Reload
+; CHECK64-NEXT:    add sp, sp, #64
+; CHECK64-NEXT:    addvl sp, sp, #8
+; CHECK64-NEXT:    .cfi_restore z8
+; CHECK64-NEXT:    .cfi_restore z9
+; CHECK64-NEXT:    .cfi_restore z10
+; CHECK64-NEXT:    .cfi_restore z11
+; CHECK64-NEXT:    .cfi_restore z12
+; CHECK64-NEXT:    .cfi_restore z13
+; CHECK64-NEXT:    .cfi_restore z14
+; CHECK64-NEXT:    .cfi_restore z15
+; CHECK64-NEXT:    .cfi_def_cfa wsp, 64
+; CHECK64-NEXT:    ldp x20, x19, [sp, #48] // 16-byte Folded Reload
+; CHECK64-NEXT:    ldr x28, [sp, #24] // 8-byte Reload
+; CHECK64-NEXT:    ldp x22, x21, [sp, #32] // 16-byte Folded Reload
+; CHECK64-NEXT:    ldp x29, x30, [sp], #64 // 16-byte Folded Reload
 ; CHECK64-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK64-NEXT:    .cfi_restore w19
 ; CHECK64-NEXT:    .cfi_restore w20
@@ -1862,119 +2278,219 @@ define i32 @f128_libcall(fp128 %v0, fp128 %v1, fp128 %v2, fp128 %v3, i32 %a, i32
 ; CHECK64-NEXT:    .cfi_restore vg
 ; CHECK64-NEXT:    .cfi_restore w30
 ; CHECK64-NEXT:    .cfi_restore w29
-; CHECK64-NEXT:    .cfi_restore b8
-; CHECK64-NEXT:    .cfi_restore b9
-; CHECK64-NEXT:    .cfi_restore b10
-; CHECK64-NEXT:    .cfi_restore b11
-; CHECK64-NEXT:    .cfi_restore b12
-; CHECK64-NEXT:    .cfi_restore b13
-; CHECK64-NEXT:    .cfi_restore b14
-; CHECK64-NEXT:    .cfi_restore b15
 ; CHECK64-NEXT:    ret
 ;
-; CHECK1024-LABEL: f128_libcall:
-; CHECK1024:       // %bb.0:
-; CHECK1024-NEXT:    sub sp, sp, #1152
-; CHECK1024-NEXT:    .cfi_def_cfa_offset 1152
-; CHECK1024-NEXT:    cntd x9
-; CHECK1024-NEXT:    stp d15, d14, [sp] // 16-byte Folded Spill
-; CHECK1024-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
-; CHECK1024-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
-; CHECK1024-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
-; CHECK1024-NEXT:    str x29, [sp, #1088] // 8-byte Spill
-; CHECK1024-NEXT:    str x30, [sp, #1096] // 8-byte Spill
-; CHECK1024-NEXT:    str x9, [sp, #1104] // 8-byte Spill
-; CHECK1024-NEXT:    str x28, [sp, #1112] // 8-byte Spill
-; CHECK1024-NEXT:    str x22, [sp, #1120] // 8-byte Spill
-; CHECK1024-NEXT:    str x21, [sp, #1128] // 8-byte Spill
-; CHECK1024-NEXT:    str x20, [sp, #1136] // 8-byte Spill
-; CHECK1024-NEXT:    str x19, [sp, #1144] // 8-byte Spill
-; CHECK1024-NEXT:    .cfi_offset w19, -8
-; CHECK1024-NEXT:    .cfi_offset w20, -16
-; CHECK1024-NEXT:    .cfi_offset w21, -24
-; CHECK1024-NEXT:    .cfi_offset w22, -32
-; CHECK1024-NEXT:    .cfi_offset w28, -40
-; CHECK1024-NEXT:    .cfi_offset vg, -48
-; CHECK1024-NEXT:    .cfi_offset w30, -56
-; CHECK1024-NEXT:    .cfi_offset w29, -64
-; CHECK1024-NEXT:    .cfi_offset b8, -1096
-; CHECK1024-NEXT:    .cfi_offset b9, -1104
-; CHECK1024-NEXT:    .cfi_offset b10, -1112
-; CHECK1024-NEXT:    .cfi_offset b11, -1120
-; CHECK1024-NEXT:    .cfi_offset b12, -1128
-; CHECK1024-NEXT:    .cfi_offset b13, -1136
-; CHECK1024-NEXT:    .cfi_offset b14, -1144
-; CHECK1024-NEXT:    .cfi_offset b15, -1152
-; CHECK1024-NEXT:    sub sp, sp, #1088
-; CHECK1024-NEXT:    .cfi_def_cfa_offset 2240
-; CHECK1024-NEXT:    mov w19, w1
-; CHECK1024-NEXT:    mov w20, w0
-; CHECK1024-NEXT:    str q3, [sp, #1072] // 16-byte Spill
-; CHECK1024-NEXT:    str q2, [sp, #1056] // 16-byte Spill
-; CHECK1024-NEXT:    str q1, [sp, #1040] // 16-byte Spill
-; CHECK1024-NEXT:    str q0, [sp, #1024] // 16-byte Spill
-; CHECK1024-NEXT:    bl __arm_sme_state
-; CHECK1024-NEXT:    mov x21, x0
-; CHECK1024-NEXT:    tbz w21, #0, .LBB27_2
-; CHECK1024-NEXT:  // %bb.1:
-; CHECK1024-NEXT:    smstop sm
-; CHECK1024-NEXT:  .LBB27_2:
-; CHECK1024-NEXT:    ldr q0, [sp, #1024] // 16-byte Reload
-; CHECK1024-NEXT:    ldr q1, [sp, #1040] // 16-byte Reload
-; CHECK1024-NEXT:    bl __lttf2
-; CHECK1024-NEXT:    tbz w21, #0, .LBB27_4
-; CHECK1024-NEXT:  // %bb.3:
-; CHECK1024-NEXT:    smstart sm
-; CHECK1024-NEXT:  .LBB27_4:
-; CHECK1024-NEXT:    cmp w0, #0
-; CHECK1024-NEXT:    cset w22, mi
-; CHECK1024-NEXT:    tbz w21, #0, .LBB27_6
-; CHECK1024-NEXT:  // %bb.5:
-; CHECK1024-NEXT:    smstop sm
-; CHECK1024-NEXT:  .LBB27_6:
-; CHECK1024-NEXT:    ldr q0, [sp, #1056] // 16-byte Reload
-; CHECK1024-NEXT:    ldr q1, [sp, #1072] // 16-byte Reload
-; CHECK1024-NEXT:    bl __getf2
-; CHECK1024-NEXT:    tbz w21, #0, .LBB27_8
-; CHECK1024-NEXT:  // %bb.7:
-; CHECK1024-NEXT:    smstart sm
-; CHECK1024-NEXT:  .LBB27_8:
-; CHECK1024-NEXT:    cmp w0, #0
-; CHECK1024-NEXT:    cset w8, pl
-; CHECK1024-NEXT:    tst w8, w22
-; CHECK1024-NEXT:    csel w0, w20, w19, ne
-; CHECK1024-NEXT:    add sp, sp, #1088
-; CHECK1024-NEXT:    .cfi_def_cfa_offset 1152
-; CHECK1024-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
-; CHECK1024-NEXT:    ldr x19, [sp, #1144] // 8-byte Reload
-; CHECK1024-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
-; CHECK1024-NEXT:    ldr x20, [sp, #1136] // 8-byte Reload
-; CHECK1024-NEXT:    ldr x21, [sp, #1128] // 8-byte Reload
-; CHECK1024-NEXT:    ldr x22, [sp, #1120] // 8-byte Reload
-; CHECK1024-NEXT:    ldr x28, [sp, #1112] // 8-byte Reload
-; CHECK1024-NEXT:    ldr x30, [sp, #1096] // 8-byte Reload
-; CHECK1024-NEXT:    ldr x29, [sp, #1088] // 8-byte Reload
-; CHECK1024-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
-; CHECK1024-NEXT:    ldp d15, d14, [sp] // 16-byte Folded Reload
-; CHECK1024-NEXT:    add sp, sp, #1152
-; CHECK1024-NEXT:    .cfi_def_cfa_offset 0
-; CHECK1024-NEXT:    .cfi_restore w19
-; CHECK1024-NEXT:    .cfi_restore w20
-; CHECK1024-NEXT:    .cfi_restore w21
-; CHECK1024-NEXT:    .cfi_restore w22
-; CHECK1024-NEXT:    .cfi_restore w28
-; CHECK1024-NEXT:    .cfi_restore vg
-; CHECK1024-NEXT:    .cfi_restore w30
-; CHECK1024-NEXT:    .cfi_restore w29
-; CHECK1024-NEXT:    .cfi_restore b8
-; CHECK1024-NEXT:    .cfi_restore b9
-; CHECK1024-NEXT:    .cfi_restore b10
-; CHECK1024-NEXT:    .cfi_restore b11
-; CHECK1024-NEXT:    .cfi_restore b12
-; CHECK1024-NEXT:    .cfi_restore b13
-; CHECK1024-NEXT:    .cfi_restore b14
-; CHECK1024-NEXT:    .cfi_restore b15
-; CHECK1024-NEXT:    ret
+; CHECK1024-NOSPLITSVE-LABEL: f128_libcall:
+; CHECK1024-NOSPLITSVE:       // %bb.0:
+; CHECK1024-NOSPLITSVE-NEXT:    sub sp, sp, #1152
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_def_cfa_offset 1152
+; CHECK1024-NOSPLITSVE-NEXT:    cntd x9
+; CHECK1024-NOSPLITSVE-NEXT:    stp d15, d14, [sp] // 16-byte Folded Spill
+; CHECK1024-NOSPLITSVE-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
+; CHECK1024-NOSPLITSVE-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
+; CHECK1024-NOSPLITSVE-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
+; CHECK1024-NOSPLITSVE-NEXT:    str x29, [sp, #1088] // 8-byte Spill
+; CHECK1024-NOSPLITSVE-NEXT:    str x30, [sp, #1096] // 8-byte Spill
+; CHECK1024-NOSPLITSVE-NEXT:    str x9, [sp, #1104] // 8-byte Spill
+; CHECK1024-NOSPLITSVE-NEXT:    str x28, [sp, #1112] // 8-byte Spill
+; CHECK1024-NOSPLITSVE-NEXT:    str x22, [sp, #1120] // 8-byte Spill
+; CHECK1024-NOSPLITSVE-NEXT:    str x21, [sp, #1128] // 8-byte Spill
+; CHECK1024-NOSPLITSVE-NEXT:    str x20, [sp, #1136] // 8-byte Spill
+; CHECK1024-NOSPLITSVE-NEXT:    str x19, [sp, #1144] // 8-byte Spill
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_offset w19, -8
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_offset w20, -16
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_offset w21, -24
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_offset w22, -32
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_offset w28, -40
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_offset vg, -48
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_offset w30, -56
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_offset w29, -64
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_offset b8, -1096
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_offset b9, -1104
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_offset b10, -1112
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_offset b11, -1120
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_offset b12, -1128
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_offset b13, -1136
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_offset b14, -1144
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_offset b15, -1152
+; CHECK1024-NOSPLITSVE-NEXT:    sub sp, sp, #1088
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_def_cfa_offset 2240
+; CHECK1024-NOSPLITSVE-NEXT:    mov w19, w1
+; CHECK1024-NOSPLITSVE-NEXT:    mov w20, w0
+; CHECK1024-NOSPLITSVE-NEXT:    str q3, [sp, #1072] // 16-byte Spill
+; CHECK1024-NOSPLITSVE-NEXT:    str q2, [sp, #1056] // 16-byte Spill
+; CHECK1024-NOSPLITSVE-NEXT:    str q1, [sp, #1040] // 16-byte Spill
+; CHECK1024-NOSPLITSVE-NEXT:    str q0, [sp, #1024] // 16-byte Spill
+; CHECK1024-NOSPLITSVE-NEXT:    bl __arm_sme_state
+; CHECK1024-NOSPLITSVE-NEXT:    mov x21, x0
+; CHECK1024-NOSPLITSVE-NEXT:    tbz w21, #0, .LBB27_2
+; CHECK1024-NOSPLITSVE-NEXT:  // %bb.1:
+; CHECK1024-NOSPLITSVE-NEXT:    smstop sm
+; CHECK1024-NOSPLITSVE-NEXT:  .LBB27_2:
+; CHECK1024-NOSPLITSVE-NEXT:    ldr q0, [sp, #1024] // 16-byte Reload
+; CHECK1024-NOSPLITSVE-NEXT:    ldr q1, [sp, #1040] // 16-byte Reload
+; CHECK1024-NOSPLITSVE-NEXT:    bl __lttf2
+; CHECK1024-NOSPLITSVE-NEXT:    tbz w21, #0, .LBB27_4
+; CHECK1024-NOSPLITSVE-NEXT:  // %bb.3:
+; CHECK1024-NOSPLITSVE-NEXT:    smstart sm
+; CHECK1024-NOSPLITSVE-NEXT:  .LBB27_4:
+; CHECK1024-NOSPLITSVE-NEXT:    cmp w0, #0
+; CHECK1024-NOSPLITSVE-NEXT:    cset w22, mi
+; CHECK1024-NOSPLITSVE-NEXT:    tbz w21, #0, .LBB27_6
+; CHECK1024-NOSPLITSVE-NEXT:  // %bb.5:
+; CHECK1024-NOSPLITSVE-NEXT:    smstop sm
+; CHECK1024-NOSPLITSVE-NEXT:  .LBB27_6:
+; CHECK1024-NOSPLITSVE-NEXT:    ldr q0, [sp, #1056] // 16-byte Reload
+; CHECK1024-NOSPLITSVE-NEXT:    ldr q1, [sp, #1072] // 16-byte Reload
+; CHECK1024-NOSPLITSVE-NEXT:    bl __getf2
+; CHECK1024-NOSPLITSVE-NEXT:    tbz w21, #0, .LBB27_8
+; CHECK1024-NOSPLITSVE-NEXT:  // %bb.7:
+; CHECK1024-NOSPLITSVE-NEXT:    smstart sm
+; CHECK1024-NOSPLITSVE-NEXT:  .LBB27_8:
+; CHECK1024-NOSPLITSVE-NEXT:    cmp w0, #0
+; CHECK1024-NOSPLITSVE-NEXT:    cset w8, pl
+; CHECK1024-NOSPLITSVE-NEXT:    tst w8, w22
+; CHECK1024-NOSPLITSVE-NEXT:    csel w0, w20, w19, ne
+; CHECK1024-NOSPLITSVE-NEXT:    add sp, sp, #1088
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_def_cfa_offset 1152
+; CHECK1024-NOSPLITSVE-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
+; CHECK1024-NOSPLITSVE-NEXT:    ldr x19, [sp, #1144] // 8-byte Reload
+; CHECK1024-NOSPLITSVE-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
+; CHECK1024-NOSPLITSVE-NEXT:    ldr x20, [sp, #1136] // 8-byte Reload
+; CHECK1024-NOSPLITSVE-NEXT:    ldr x21, [sp, #1128] // 8-byte Reload
+; CHECK1024-NOSPLITSVE-NEXT:    ldr x22, [sp, #1120] // 8-byte Reload
+; CHECK1024-NOSPLITSVE-NEXT:    ldr x28, [sp, #1112] // 8-byte Reload
+; CHECK1024-NOSPLITSVE-NEXT:    ldr x30, [sp, #1096] // 8-byte Reload
+; CHECK1024-NOSPLITSVE-NEXT:    ldr x29, [sp, #1088] // 8-byte Reload
+; CHECK1024-NOSPLITSVE-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
+; CHECK1024-NOSPLITSVE-NEXT:    ldp d15, d14, [sp] // 16-byte Folded Reload
+; CHECK1024-NOSPLITSVE-NEXT:    add sp, sp, #1152
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_def_cfa_offset 0
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_restore w19
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_restore w20
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_restore w21
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_restore w22
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_restore w28
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_restore vg
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_restore w30
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_restore w29
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_restore b8
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_restore b9
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_restore b10
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_restore b11
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_restore b12
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_restore b13
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_restore b14
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_restore b15
+; CHECK1024-NOSPLITSVE-NEXT:    ret
+;
+; CHECK1024-SPLITSVE-LABEL: f128_libcall:
+; CHECK1024-SPLITSVE:       // %bb.0:
+; CHECK1024-SPLITSVE-NEXT:    stp x29, x30, [sp, #-64]! // 16-byte Folded Spill
+; CHECK1024-SPLITSVE-NEXT:    .cfi_def_cfa_offset 64
+; CHECK1024-SPLITSVE-NEXT:    cntd x9
+; CHECK1024-SPLITSVE-NEXT:    stp x22, x21, [sp, #32] // 16-byte Folded Spill
+; CHECK1024-SPLITSVE-NEXT:    stp x9, x28, [sp, #16] // 16-byte Folded Spill
+; CHECK1024-SPLITSVE-NEXT:    stp x20, x19, [sp, #48] // 16-byte Folded Spill
+; CHECK1024-SPLITSVE-NEXT:    mov x29, sp
+; CHECK1024-SPLITSVE-NEXT:    .cfi_def_cfa w29, 64
+; CHECK1024-SPLITSVE-NEXT:    .cfi_offset w19, -8
+; CHECK1024-SPLITSVE-NEXT:    .cfi_offset w20, -16
+; CHECK1024-SPLITSVE-NEXT:    .cfi_offset w21, -24
+; CHECK1024-SPLITSVE-NEXT:    .cfi_offset w22, -32
+; CHECK1024-SPLITSVE-NEXT:    .cfi_offset w28, -40
+; CHECK1024-SPLITSVE-NEXT:    .cfi_offset vg, -48
+; CHECK1024-SPLITSVE-NEXT:    .cfi_offset w30, -56
+; CHECK1024-SPLITSVE-NEXT:    .cfi_offset w29, -64
+; CHECK1024-SPLITSVE-NEXT:    sub sp, sp, #1024
+; CHECK1024-SPLITSVE-NEXT:    addvl sp, sp, #-8
+; CHECK1024-SPLITSVE-NEXT:    str z15, [sp] // 16-byte Folded Spill
+; CHECK1024-SPLITSVE-NEXT:    str z14, [sp, #1, mul vl] // 16-byte Folded Spill
+; CHECK1024-SPLITSVE-NEXT:    str z13, [sp, #2, mul vl] // 16-byte Folded Spill
+; CHECK1024-SPLITSVE-NEXT:    str z12, [sp, #3, mul vl] // 16-byte Folded Spill
+; CHECK1024-SPLITSVE-NEXT:    str z11, [sp, #4, mul vl] // 16-byte Folded Spill
+; CHECK1024-SPLITSVE-NEXT:    str z10, [sp, #5, mul vl] // 16-byte Folded Spill
+; CHECK1024-SPLITSVE-NEXT:    str z9, [sp, #6, mul vl] // 16-byte Folded Spill
+; CHECK1024-SPLITSVE-NEXT:    str z8, [sp, #7, mul vl] // 16-byte Folded Spill
+; CHECK1024-SPLITSVE-NEXT:    .cfi_escape 0x10, 0x48, 0x0d, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x78, 0x1e, 0x22, 0x11, 0xc0, 0x77, 0x22 // $d8 @ cfa - 8 * IncomingVG - 1088
+; CHECK1024-SPLITSVE-NEXT:    .cfi_escape 0x10, 0x49, 0x0d, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x70, 0x1e, 0x22, 0x11, 0xc0, 0x77, 0x22 // $d9 @ cfa - 16 * IncomingVG - 1088
+; CHECK1024-SPLITSVE-NEXT:    .cfi_escape 0x10, 0x4a, 0x0d, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x68, 0x1e, 0x22, 0x11, 0xc0, 0x77, 0x22 // $d10 @ cfa - 24 * IncomingVG - 1088
+; CHECK1024-SPLITSVE-NEXT:    .cfi_escape 0x10, 0x4b, 0x0d, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x60, 0x1e, 0x22, 0x11, 0xc0, 0x77, 0x22 // $d11 @ cfa - 32 * IncomingVG - 1088
+; CHECK1024-SPLITSVE-NEXT:    .cfi_escape 0x10, 0x4c, 0x0d, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x58, 0x1e, 0x22, 0x11, 0xc0, 0x77, 0x22 // $d12 @ cfa - 40 * IncomingVG - 1088
+; CHECK1024-SPLITSVE-NEXT:    .cfi_escape 0x10, 0x4d, 0x0d, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x50, 0x1e, 0x22, 0x11, 0xc0, 0x77, 0x22 // $d13 @ cfa - 48 * IncomingVG - 1088
+; CHECK1024-SPLITSVE-NEXT:    .cfi_escape 0x10, 0x4e, 0x0d, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x48, 0x1e, 0x22, 0x11, 0xc0, 0x77, 0x22 // $d14 @ cfa - 56 * IncomingVG - 1088
+; CHECK1024-SPLITSVE-NEXT:    .cfi_escape 0x10, 0x4f, 0x0d, 0x12, 0x11, 0x50, 0x22, 0x06, 0x11, 0x40, 0x1e, 0x22, 0x11, 0xc0, 0x77, 0x22 // $d15 @ cfa - 64 * IncomingVG - 1088
+; CHECK1024-SPLITSVE-NEXT:    sub sp, sp, #1088
+; CHECK1024-SPLITSVE-NEXT:    mov w19, w1
+; CHECK1024-SPLITSVE-NEXT:    mov w20, w0
+; CHECK1024-SPLITSVE-NEXT:    str q3, [sp, #1072] // 16-byte Spill
+; CHECK1024-SPLITSVE-NEXT:    str q2, [sp, #1056] // 16-byte Spill
+; CHECK1024-SPLITSVE-NEXT:    str q1, [sp, #1040] // 16-byte Spill
+; CHECK1024-SPLITSVE-NEXT:    str q0, [sp, #1024] // 16-byte Spill
+; CHECK1024-SPLITSVE-NEXT:    bl __arm_sme_state
+; CHECK1024-SPLITSVE-NEXT:    mov x21, x0
+; CHECK1024-SPLITSVE-NEXT:    tbz w21, #0, .LBB27_2
+; CHECK1024-SPLITSVE-NEXT:  // %bb.1:
+; CHECK1024-SPLITSVE-NEXT:    smstop sm
+; CHECK1024-SPLITSVE-NEXT:  .LBB27_2:
+; CHECK1024-SPLITSVE-NEXT:    ldr q0, [sp, #1024] // 16-byte Reload
+; CHECK1024-SPLITSVE-NEXT:    ldr q1, [sp, #1040] // 16-byte Reload
+; CHECK1024-SPLITSVE-NEXT:    bl __lttf2
+; CHECK1024-SPLITSVE-NEXT:    tbz w21, #0, .LBB27_4
+; CHECK1024-SPLITSVE-NEXT:  // %bb.3:
+; CHECK1024-SPLITSVE-NEXT:    smstart sm
+; CHECK1024-SPLITSVE-NEXT:  .LBB27_4:
+; CHECK1024-SPLITSVE-NEXT:    cmp w0, #0
+; CHECK1024-SPLITSVE-NEXT:    cset w22, mi
+; CHECK1024-SPLITSVE-NEXT:    tbz w21, #0, .LBB27_6
+; CHECK1024-SPLITSVE-NEXT:  // %bb.5:
+; CHECK1024-SPLITSVE-NEXT:    smstop sm
+; CHECK1024-SPLITSVE-NEXT:  .LBB27_6:
+; CHECK1024-SPLITSVE-NEXT:    ldr q0, [sp, #1056] // 16-byte Reload
+; CHECK1024-SPLITSVE-NEXT:    ldr q1, [sp, #1072] // 16-byte Reload
+; CHECK1024-SPLITSVE-NEXT:    bl __getf2
+; CHECK1024-SPLITSVE-NEXT:    tbz w21, #0, .LBB27_8
+; CHECK1024-SPLITSVE-NEXT:  // %bb.7:
+; CHECK1024-SPLITSVE-NEXT:    smstart sm
+; CHECK1024-SPLITSVE-NEXT:  .LBB27_8:
+; CHECK1024-SPLITSVE-NEXT:    cmp w0, #0
+; CHECK1024-SPLITSVE-NEXT:    cset w8, pl
+; CHECK1024-SPLITSVE-NEXT:    tst w8, w22
+; CHECK1024-SPLITSVE-NEXT:    csel w0, w20, w19, ne
+; CHECK1024-SPLITSVE-NEXT:    add sp, sp, #1088
+; CHECK1024-SPLITSVE-NEXT:    ldr z15, [sp] // 16-byte Folded Reload
+; CHECK1024-SPLITSVE-NEXT:    ldr z14, [sp, #1, mul vl] // 16-byte Folded Reload
+; CHECK1024-SPLITSVE-NEXT:    ldr z13, [sp, #2, mul vl] // 16-byte Folded Reload
+; CHECK1024-SPLITSVE-NEXT:    ldr z12, [sp, #3, mul vl] // 16-byte Folded Reload
+; CHECK1024-SPLITSVE-NEXT:    ldr z11, [sp, #4, mul vl] // 16-byte Folded Reload
+; CHECK1024-SPLITSVE-NEXT:    ldr z10, [sp, #5, mul vl] // 16-byte Folded Reload
+; CHECK1024-SPLITSVE-NEXT:    ldr z9, [sp, #6, mul vl] // 16-byte Folded Reload
+; CHECK1024-SPLITSVE-NEXT:    ldr z8, [sp, #7, mul vl] // 16-byte Folded Reload
+; CHECK1024-SPLITSVE-NEXT:    add sp, sp, #1024
+; CHECK1024-SPLITSVE-NEXT:    addvl sp, sp, #8
+; CHECK1024-SPLITSVE-NEXT:    .cfi_restore z8
+; CHECK1024-SPLITSVE-NEXT:    .cfi_restore z9
+; CHECK1024-SPLITSVE-NEXT:    .cfi_restore z10
+; CHECK1024-SPLITSVE-NEXT:    .cfi_restore z11
+; CHECK1024-SPLITSVE-NEXT:    .cfi_restore z12
+; CHECK1024-SPLITSVE-NEXT:    .cfi_restore z13
+; CHECK1024-SPLITSVE-NEXT:    .cfi_restore z14
+; CHECK1024-SPLITSVE-NEXT:    .cfi_restore z15
+; CHECK1024-SPLITSVE-NEXT:    .cfi_def_cfa wsp, 64
+; CHECK1024-SPLITSVE-NEXT:    ldp x20, x19, [sp, #48] // 16-byte Folded Reload
+; CHECK1024-SPLITSVE-NEXT:    ldr x28, [sp, #24] // 8-byte Reload
+; CHECK1024-SPLITSVE-NEXT:    ldp x22, x21, [sp, #32] // 16-byte Folded Reload
+; CHECK1024-SPLITSVE-NEXT:    ldp x29, x30, [sp], #64 // 16-byte Folded Reload
+; CHECK1024-SPLITSVE-NEXT:    .cfi_def_cfa_offset 0
+; CHECK1024-SPLITSVE-NEXT:    .cfi_restore w19
+; CHECK1024-SPLITSVE-NEXT:    .cfi_restore w20
+; CHECK1024-SPLITSVE-NEXT:    .cfi_restore w21
+; CHECK1024-SPLITSVE-NEXT:    .cfi_restore w22
+; CHECK1024-SPLITSVE-NEXT:    .cfi_restore w28
+; CHECK1024-SPLITSVE-NEXT:    .cfi_restore vg
+; CHECK1024-SPLITSVE-NEXT:    .cfi_restore w30
+; CHECK1024-SPLITSVE-NEXT:    .cfi_restore w29
+; CHECK1024-SPLITSVE-NEXT:    ret
 ;el w0, w20, w19, ne
   %c0 = fcmp olt fp128 %v0, %v1
   %c1 = fcmp oge fp128 %v2, %v3
@@ -3051,44 +3567,198 @@ define void @call_with_doubles() "aarch64_pstate_sm_compatible" {
 ;
 ; CHECK64-LABEL: call_with_doubles:
 ; CHECK64:       // %bb.0: // %entry
-; CHECK64-NEXT:    sub sp, sp, #144
-; CHECK64-NEXT:    str d8, [sp, #64] // 8-byte Spill
-; CHECK64-NEXT:    str x30, [sp, #136] // 8-byte Spill
-; CHECK64-NEXT:    .cfi_def_cfa_offset 144
+; CHECK64-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
+; CHECK64-NEXT:    addvl sp, sp, #-2
+; CHECK64-NEXT:    str p15, [sp, #4, mul vl] // 2-byte Spill
+; CHECK64-NEXT:    str p14, [sp, #5, mul vl] // 2-byte Spill
+; CHECK64-NEXT:    str p13, [sp, #6, mul vl] // 2-byte Spill
+; CHECK64-NEXT:    str p12, [sp, #7, mul vl] // 2-byte Spill
+; CHECK64-NEXT:    str p11, [sp, #8, mul vl] // 2-byte Spill
+; CHECK64-NEXT:    str p10, [sp, #9, mul vl] // 2-byte Spill
+; CHECK64-NEXT:    str p9, [sp, #10, mul vl] // 2-byte Spill
+; CHECK64-NEXT:    str p8, [sp, #11, mul vl] // 2-byte Spill
+; CHECK64-NEXT:    str p7, [sp, #12, mul vl] // 2-byte Spill
+; CHECK64-NEXT:    str p6, [sp, #13, mul vl] // 2-byte Spill
+; CHECK64-NEXT:    str p5, [sp, #14, mul vl] // 2-byte Spill
+; CHECK64-NEXT:    str p4, [sp, #15, mul vl] // 2-byte Spill
+; CHECK64-NEXT:    sub sp, sp, #64
+; CHECK64-NEXT:    addvl sp, sp, #-16
+; CHECK64-NEXT:    str z23, [sp] // 16-byte Folded Spill
+; CHECK64-NEXT:    str z22, [sp, #1, mul vl] // 16-byte Folded Spill
+; CHECK64-NEXT:    str z21, [sp, #2, mul vl] // 16-byte Folded Spill
+; CHECK64-NEXT:    str z20, [sp, #3, mul vl] // 16-byte Folded Spill
+; CHECK64-NEXT:    str z19, [sp, #4, mul vl] // 16-byte Folded Spill
+; CHECK64-NEXT:    str z18, [sp, #5, mul vl] // 16-byte Folded Spill
+; CHECK64-NEXT:    str z17, [sp, #6, mul vl] // 16-byte Folded Spill
+; CHECK64-NEXT:    str z16, [sp, #7, mul vl] // 16-byte Folded Spill
+; CHECK64-NEXT:    str z15, [sp, #8, mul vl] // 16-byte Folded Spill
+; CHECK64-NEXT:    str z14, [sp, #9, mul vl] // 16-byte Folded Spill
+; CHECK64-NEXT:    str z13, [sp, #10, mul vl] // 16-byte Folded Spill
+; CHECK64-NEXT:    str z12, [sp, #11, mul vl] // 16-byte Folded Spill
+; CHECK64-NEXT:    str z11, [sp, #12, mul vl] // 16-byte Folded Spill
+; CHECK64-NEXT:    str z10, [sp, #13, mul vl] // 16-byte Folded Spill
+; CHECK64-NEXT:    str z9, [sp, #14, mul vl] // 16-byte Folded Spill
+; CHECK64-NEXT:    str z8, [sp, #15, mul vl] // 16-byte Folded Spill
+; CHECK64-NEXT:    sub sp, sp, #64
+; CHECK64-NEXT:    .cfi_escape 0x0f, 0x0b, 0x8f, 0x90, 0x01, 0x92, 0x2e, 0x00, 0x11, 0x90, 0x01, 0x1e, 0x22 // sp + 144 + 144 * VG
 ; CHECK64-NEXT:    .cfi_offset w30, -8
-; CHECK64-NEXT:    .cfi_offset b8, -80
+; CHECK64-NEXT:    .cfi_offset w29, -16
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x48, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x68, 0x1e, 0x22, 0x11, 0xb0, 0x7f, 0x22 // $d8 @ cfa - 24 * VG - 80
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x49, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x60, 0x1e, 0x22, 0x11, 0xb0, 0x7f, 0x22 // $d9 @ cfa - 32 * VG - 80
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x4a, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x58, 0x1e, 0x22, 0x11, 0xb0, 0x7f, 0x22 // $d10 @ cfa - 40 * VG - 80
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x4b, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x50, 0x1e, 0x22, 0x11, 0xb0, 0x7f, 0x22 // $d11 @ cfa - 48 * VG - 80
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x4c, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x48, 0x1e, 0x22, 0x11, 0xb0, 0x7f, 0x22 // $d12 @ cfa - 56 * VG - 80
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x4d, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x40, 0x1e, 0x22, 0x11, 0xb0, 0x7f, 0x22 // $d13 @ cfa - 64 * VG - 80
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x4e, 0x0c, 0x92, 0x2e, 0x00, 0x11, 0xb8, 0x7f, 0x1e, 0x22, 0x11, 0xb0, 0x7f, 0x22 // $d14 @ cfa - 72 * VG - 80
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x4f, 0x0c, 0x92, 0x2e, 0x00, 0x11, 0xb0, 0x7f, 0x1e, 0x22, 0x11, 0xb0, 0x7f, 0x22 // $d15 @ cfa - 80 * VG - 80
 ; CHECK64-NEXT:    mov x8, #9221120237041090560 // =0x7ff8000000000000
 ; CHECK64-NEXT:    fmov d8, x8
 ; CHECK64-NEXT:    fmov d0, d8
 ; CHECK64-NEXT:    bl calld
 ; CHECK64-NEXT:    fmov d0, d8
-; CHECK64-NEXT:    ldr x30, [sp, #136] // 8-byte Reload
-; CHECK64-NEXT:    ldr d8, [sp, #64] // 8-byte Reload
-; CHECK64-NEXT:    add sp, sp, #144
+; CHECK64-NEXT:    add sp, sp, #64
+; CHECK64-NEXT:    ldr z23, [sp] // 16-byte Folded Reload
+; CHECK64-NEXT:    ldr z22, [sp, #1, mul vl] // 16-byte Folded Reload
+; CHECK64-NEXT:    ldr z21, [sp, #2, mul vl] // 16-byte Folded Reload
+; CHECK64-NEXT:    ldr z20, [sp, #3, mul vl] // 16-byte Folded Reload
+; CHECK64-NEXT:    ldr z19, [sp, #4, mul vl] // 16-byte Folded Reload
+; CHECK64-NEXT:    ldr z18, [sp, #5, mul vl] // 16-byte Folded Reload
+; CHECK64-NEXT:    ldr z17, [sp, #6, mul vl] // 16-byte Folded Reload
+; CHECK64-NEXT:    ldr z16, [sp, #7, mul vl] // 16-byte Folded Reload
+; CHECK64-NEXT:    ldr z15, [sp, #8, mul vl] // 16-byte Folded Reload
+; CHECK64-NEXT:    ldr z14, [sp, #9, mul vl] // 16-byte Folded Reload
+; CHECK64-NEXT:    ldr z13, [sp, #10, mul vl] // 16-byte Folded Reload
+; CHECK64-NEXT:    ldr z12, [sp, #11, mul vl] // 16-byte Folded Reload
+; CHECK64-NEXT:    ldr z11, [sp, #12, mul vl] // 16-byte Folded Reload
+; CHECK64-NEXT:    ldr z10, [sp, #13, mul vl] // 16-byte Folded Reload
+; CHECK64-NEXT:    ldr z9, [sp, #14, mul vl] // 16-byte Folded Reload
+; CHECK64-NEXT:    ldr z8, [sp, #15, mul vl] // 16-byte Folded Reload
+; CHECK64-NEXT:    add sp, sp, #64
+; CHECK64-NEXT:    addvl sp, sp, #16
+; CHECK64-NEXT:    ldr p15, [sp, #4, mul vl] // 2-byte Reload
+; CHECK64-NEXT:    ldr p14, [sp, #5, mul vl] // 2-byte Reload
+; CHECK64-NEXT:    ldr p13, [sp, #6, mul vl] // 2-byte Reload
+; CHECK64-NEXT:    ldr p12, [sp, #7, mul vl] // 2-byte Reload
+; CHECK64-NEXT:    ldr p11, [sp, #8, mul vl] // 2-byte Reload
+; CHECK64-NEXT:    ldr p10, [sp, #9, mul vl] // 2-byte Reload
+; CHECK64-NEXT:    ldr p9, [sp, #10, mul vl] // 2-byte Reload
+; CHECK64-NEXT:    ldr p8, [sp, #11, mul vl] // 2-byte Reload
+; CHECK64-NEXT:    ldr p7, [sp, #12, mul vl] // 2-byte Reload
+; CHECK64-NEXT:    ldr p6, [sp, #13, mul vl] // 2-byte Reload
+; CHECK64-NEXT:    ldr p5, [sp, #14, mul vl] // 2-byte Reload
+; CHECK64-NEXT:    ldr p4, [sp, #15, mul vl] // 2-byte Reload
+; CHECK64-NEXT:    addvl sp, sp, #2
+; CHECK64-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
 ; CHECK64-NEXT:    b calld
 ;
-; CHECK1024-LABEL: call_with_doubles:
-; CHECK1024:       // %bb.0: // %entry
-; CHECK1024-NEXT:    sub sp, sp, #1056
-; CHECK1024-NEXT:    str d8, [sp] // 8-byte Spill
-; CHECK1024-NEXT:    str x29, [sp, #1032] // 8-byte Spill
-; CHECK1024-NEXT:    str x30, [sp, #1040] // 8-byte Spill
-; CHECK1024-NEXT:    sub sp, sp, #1024
-; CHECK1024-NEXT:    .cfi_def_cfa_offset 2080
-; CHECK1024-NEXT:    .cfi_offset w30, -16
-; CHECK1024-NEXT:    .cfi_offset w29, -24
-; CHECK1024-NEXT:    .cfi_offset b8, -1056
-; CHECK1024-NEXT:    mov x8, #9221120237041090560 // =0x7ff8000000000000
-; CHECK1024-NEXT:    fmov d8, x8
-; CHECK1024-NEXT:    fmov d0, d8
-; CHECK1024-NEXT:    bl calld
-; CHECK1024-NEXT:    fmov d0, d8
-; CHECK1024-NEXT:    add sp, sp, #1024
-; CHECK1024-NEXT:    ldr x30, [sp, #1040] // 8-byte Reload
-; CHECK1024-NEXT:    ldr x29, [sp, #1032] // 8-byte Reload
-; CHECK1024-NEXT:    ldr d8, [sp] // 8-byte Reload
-; CHECK1024-NEXT:    add sp, sp, #1056
-; CHECK1024-NEXT:    b calld
+; CHECK1024-NOSPLITSVE-LABEL: call_with_doubles:
+; CHECK1024-NOSPLITSVE:       // %bb.0: // %entry
+; CHECK1024-NOSPLITSVE-NEXT:    sub sp, sp, #1056
+; CHECK1024-NOSPLITSVE-NEXT:    str d8, [sp] // 8-byte Spill
+; CHECK1024-NOSPLITSVE-NEXT:    str x29, [sp, #1032] // 8-byte Spill
+; CHECK1024-NOSPLITSVE-NEXT:    str x30, [sp, #1040] // 8-byte Spill
+; CHECK1024-NOSPLITSVE-NEXT:    sub sp, sp, #1024
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_def_cfa_offset 2080
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_offset w30, -16
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_offset w29, -24
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_offset b8, -1056
+; CHECK1024-NOSPLITSVE-NEXT:    mov x8, #9221120237041090560 // =0x7ff8000000000000
+; CHECK1024-NOSPLITSVE-NEXT:    fmov d8, x8
+; CHECK1024-NOSPLITSVE-NEXT:    fmov d0, d8
+; CHECK1024-NOSPLITSVE-NEXT:    bl calld
+; CHECK1024-NOSPLITSVE-NEXT:    fmov d0, d8
+; CHECK1024-NOSPLITSVE-NEXT:    add sp, sp, #1024
+; CHECK1024-NOSPLITSVE-NEXT:    ldr x30, [sp, #1040] // 8-byte Reload
+; CHECK1024-NOSPLITSVE-NEXT:    ldr x29, [sp, #1032] // 8-byte Reload
+; CHECK1024-NOSPLITSVE-NEXT:    ldr d8, [sp] // 8-byte Reload
+; CHECK1024-NOSPLITSVE-NEXT:    add sp, sp, #1056
+; CHECK1024-NOSPLITSVE-NEXT:    b calld
+;
+; CHECK1024-SPLITSVE-LABEL: call_with_doubles:
+; CHECK1024-SPLITSVE:       // %bb.0: // %entry
+; CHECK1024-SPLITSVE-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
+; CHECK1024-SPLITSVE-NEXT:    addvl sp, sp, #-2
+; CHECK1024-SPLITSVE-NEXT:    str p15, [sp, #4, mul vl] // 2-byte Spill
+; CHECK1024-SPLITSVE-NEXT:    str p14, [sp, #5, mul vl] // 2-byte Spill
+; CHECK1024-SPLITSVE-NEXT:    str p13, [sp, #6, mul vl] // 2-byte Spill
+; CHECK1024-SPLITSVE-NEXT:    str p12, [sp, #7, mul vl] // 2-byte Spill
+; CHECK1024-SPLITSVE-NEXT:    str p11, [sp, #8, mul vl] // 2-byte Spill
+; CHECK1024-SPLITSVE-NEXT:    str p10, [sp, #9, mul vl] // 2-byte Spill
+; CHECK1024-SPLITSVE-NEXT:    str p9, [sp, #10, mul vl] // 2-byte Spill
+; CHECK1024-SPLITSVE-NEXT:    str p8, [sp, #11, mul vl] // 2-byte Spill
+; CHECK1024-SPLITSVE-NEXT:    str p7, [sp, #12, mul vl] // 2-byte Spill
+; CHECK1024-SPLITSVE-NEXT:    str p6, [sp, #13, mul vl] // 2-byte Spill
+; CHECK1024-SPLITSVE-NEXT:    str p5, [sp, #14, mul vl] // 2-byte Spill
+; CHECK1024-SPLITSVE-NEXT:    str p4, [sp, #15, mul vl] // 2-byte Spill
+; CHECK1024-SPLITSVE-NEXT:    sub sp, sp, #1024
+; CHECK1024-SPLITSVE-NEXT:    addvl sp, sp, #-16
+; CHECK1024-SPLITSVE-NEXT:    str z23, [sp] // 16-byte Folded Spill
+; CHECK1024-SPLITSVE-NEXT:    str z22, [sp, #1, mul vl] // 16-byte Folded Spill
+; CHECK1024-SPLITSVE-NEXT:    str z21, [sp, #2, mul vl] // 16-byte Folded Spill
+; CHECK1024-SPLITSVE-NEXT:    str z20, [sp, #3, mul vl] // 16-byte Folded Spill
+; CHECK1024-SPLITSVE-NEXT:    str z19, [sp, #4, mul vl] // 16-byte Folded Spill
+; CHECK1024-SPLITSVE-NEXT:    str z18, [sp, #5, mul vl] // 16-byte Folded Spill
+; CHECK1024-SPLITSVE-NEXT:    str z17, [sp, #6, mul vl] // 16-byte Folded Spill
+; CHECK1024-SPLITSVE-NEXT:    str z16, [sp, #7, mul vl] // 16-byte Folded Spill
+; CHECK1024-SPLITSVE-NEXT:    str z15, [sp, #8, mul vl] // 16-byte Folded Spill
+; CHECK1024-SPLITSVE-NEXT:    str z14, [sp, #9, mul vl] // 16-byte Folded Spill
+; CHECK1024-SPLITSVE-NEXT:    str z13, [sp, #10, mul vl] // 16-byte Folded Spill
+; CHECK1024-SPLITSVE-NEXT:    str z12, [sp, #11, mul vl] // 16-byte Folded Spill
+; CHECK1024-SPLITSVE-NEXT:    str z11, [sp, #12, mul vl] // 16-byte Folded Spill
+; CHECK1024-SPLITSVE-NEXT:    str z10, [sp, #13, mul vl] // 16-byte Folded Spill
+; CHECK1024-SPLITSVE-NEXT:    str z9, [sp, #14, mul vl] // 16-byte Folded Spill
+; CHECK1024-SPLITSVE-NEXT:    str z8, [sp, #15, mul vl] // 16-byte Folded Spill
+; CHECK1024-SPLITSVE-NEXT:    sub sp, sp, #1024
+; CHECK1024-SPLITSVE-NEXT:    .cfi_escape 0x0f, 0x0b, 0x8f, 0x90, 0x10, 0x92, 0x2e, 0x00, 0x11, 0x90, 0x01, 0x1e, 0x22 // sp + 2064 + 144 * VG
+; CHECK1024-SPLITSVE-NEXT:    .cfi_offset w30, -8
+; CHECK1024-SPLITSVE-NEXT:    .cfi_offset w29, -16
+; CHECK1024-SPLITSVE-NEXT:    .cfi_escape 0x10, 0x48, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x68, 0x1e, 0x22, 0x11, 0xf0, 0x77, 0x22 // $d8 @ cfa - 24 * VG - 1040
+; CHECK1024-SPLITSVE-NEXT:    .cfi_escape 0x10, 0x49, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x60, 0x1e, 0x22, 0x11, 0xf0, 0x77, 0x22 // $d9 @ cfa - 32 * VG - 1040
+; CHECK1024-SPLITSVE-NEXT:    .cfi_escape 0x10, 0x4a, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x58, 0x1e, 0x22, 0x11, 0xf0, 0x77, 0x22 // $d10 @ cfa - 40 * VG - 1040
+; CHECK1024-SPLITSVE-NEXT:    .cfi_escape 0x10, 0x4b, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x50, 0x1e, 0x22, 0x11, 0xf0, 0x77, 0x22 // $d11 @ cfa - 48 * VG - 1040
+; CHECK1024-SPLITSVE-NEXT:    .cfi_escape 0x10, 0x4c, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x48, 0x1e, 0x22, 0x11, 0xf0, 0x77, 0x22 // $d12 @ cfa - 56 * VG - 1040
+; CHECK1024-SPLITSVE-NEXT:    .cfi_escape 0x10, 0x4d, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x40, 0x1e, 0x22, 0x11, 0xf0, 0x77, 0x22 // $d13 @ cfa - 64 * VG - 1040
+; CHECK1024-SPLITSVE-NEXT:    .cfi_escape 0x10, 0x4e, 0x0c, 0x92, 0x2e, 0x00, 0x11, 0xb8, 0x7f, 0x1e, 0x22, 0x11, 0xf0, 0x77, 0x22 // $d14 @ cfa - 72 * VG - 1040
+; CHECK1024-SPLITSVE-NEXT:    .cfi_escape 0x10, 0x4f, 0x0c, 0x92, 0x2e, 0x00, 0x11, 0xb0, 0x7f, 0x1e, 0x22, 0x11, 0xf0, 0x77, 0x22 // $d15 @ cfa - 80 * VG - 1040
+; CHECK1024-SPLITSVE-NEXT:    mov x8, #9221120237041090560 // =0x7ff8000000000000
+; CHECK1024-SPLITSVE-NEXT:    fmov d8, x8
+; CHECK1024-SPLITSVE-NEXT:    fmov d0, d8
+; CHECK1024-SPLITSVE-NEXT:    bl calld
+; CHECK1024-SPLITSVE-NEXT:    fmov d0, d8
+; CHECK1024-SPLITSVE-NEXT:    add sp, sp, #1024
+; CHECK1024-SPLITSVE-NEXT:    ldr z23, [sp] // 16-byte Folded Reload
+; CHECK1024-SPLITSVE-NEXT:    ldr z22, [sp, #1, mul vl] // 16-byte Folded Reload
+; CHECK1024-SPLITSVE-NEXT:    ldr z21, [sp, #2, mul vl] // 16-byte Folded Reload
+; CHECK1024-SPLITSVE-NEXT:    ldr z20, [sp, #3, mul vl] // 16-byte Folded Reload
+; CHECK1024-SPLITSVE-NEXT:    ldr z19, [sp, #4, mul vl] // 16-byte Folded Reload
+; CHECK1024-SPLITSVE-NEXT:    ldr z18, [sp, #5, mul vl] // 16-byte Folded Reload
+; CHECK1024-SPLITSVE-NEXT:    ldr z17, [sp, #6, mul vl] // 16-byte Folded Reload
+; CHECK1024-SPLITSVE-NEXT:    ldr z16, [sp, #7, mul vl] // 16-byte Folded Reload
+; CHECK1024-SPLITSVE-NEXT:    ldr z15, [sp, #8, mul vl] // 16-byte Folded Reload
+; CHECK1024-SPLITSVE-NEXT:    ldr z14, [sp, #9, mul vl] // 16-byte Folded Reload
+; CHECK1024-SPLITSVE-NEXT:    ldr z13, [sp, #10, mul vl] // 16-byte Folded Reload
+; CHECK1024-SPLITSVE-NEXT:    ldr z12, [sp, #11, mul vl] // 16-byte Folded Reload
+; CHECK1024-SPLITSVE-NEXT:    ldr z11, [sp, #12, mul vl] // 16-byte Folded Reload
+; CHECK1024-SPLITSVE-NEXT:    ldr z10, [sp, #13, mul vl] // 16-byte Folded Reload
+; CHECK1024-SPLITSVE-NEXT:    ldr z9, [sp, #14, mul vl] // 16-byte Folded Reload
+; CHECK1024-SPLITSVE-NEXT:    ldr z8, [sp, #15, mul vl] // 16-byte Folded Reload
+; CHECK1024-SPLITSVE-NEXT:    add sp, sp, #1024
+; CHECK1024-SPLITSVE-NEXT:    addvl sp, sp, #16
+; CHECK1024-SPLITSVE-NEXT:    ldr p15, [sp, #4, mul vl] // 2-byte Reload
+; CHECK1024-SPLITSVE-NEXT:    ldr p14, [sp, #5, mul vl] // 2-byte Reload
+; CHECK1024-SPLITSVE-NEXT:    ldr p13, [sp, #6, mul vl] // 2-byte Reload
+; CHECK1024-SPLITSVE-NEXT:    ldr p12, [sp, #7, mul vl] // 2-byte Reload
+; CHECK1024-SPLITSVE-NEXT:    ldr p11, [sp, #8, mul vl] // 2-byte Reload
+; CHECK1024-SPLITSVE-NEXT:    ldr p10, [sp, #9, mul vl] // 2-byte Reload
+; CHECK1024-SPLITSVE-NEXT:    ldr p9, [sp, #10, mul vl] // 2-byte Reload
+; CHECK1024-SPLITSVE-NEXT:    ldr p8, [sp, #11, mul vl] // 2-byte Reload
+; CHECK1024-SPLITSVE-NEXT:    ldr p7, [sp, #12, mul vl] // 2-byte Reload
+; CHECK1024-SPLITSVE-NEXT:    ldr p6, [sp, #13, mul vl] // 2-byte Reload
+; CHECK1024-SPLITSVE-NEXT:    ldr p5, [sp, #14, mul vl] // 2-byte Reload
+; CHECK1024-SPLITSVE-NEXT:    ldr p4, [sp, #15, mul vl] // 2-byte Reload
+; CHECK1024-SPLITSVE-NEXT:    addvl sp, sp, #2
+; CHECK1024-SPLITSVE-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
+; CHECK1024-SPLITSVE-NEXT:    b calld
 entry:
   %call = tail call i32 @calld(double 0x7FF8000000000000)
   %call.1 = tail call i32 @calld(double 0x7FF8000000000000)
@@ -3112,32 +3782,50 @@ define void @ordering_test(double %d, half %h, <4 x i32> %v) "aarch64_pstate_sm_
 ;
 ; CHECK64-LABEL: ordering_test:
 ; CHECK64:       // %bb.0: // %entry
-; CHECK64-NEXT:    sub sp, sp, #128
-; CHECK64-NEXT:    .cfi_def_cfa_offset 128
+; CHECK64-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK64-NEXT:    sub sp, sp, #192
+; CHECK64-NEXT:    .cfi_def_cfa_offset 208
+; CHECK64-NEXT:    .cfi_offset w29, -16
 ; CHECK64-NEXT:    stp wzr, wzr, [sp, #12]
 ; CHECK64-NEXT:    str d0, [sp, #120]
 ; CHECK64-NEXT:    str wzr, [sp, #28]
 ; CHECK64-NEXT:    str h1, [sp, #118]
 ; CHECK64-NEXT:    str q2, [sp, #96]
 ; CHECK64-NEXT:    add sp, sp, #128
+; CHECK64-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK64-NEXT:    ret
 ;
-; CHECK1024-LABEL: ordering_test:
-; CHECK1024:       // %bb.0: // %entry
-; CHECK1024-NEXT:    sub sp, sp, #1040
-; CHECK1024-NEXT:    str x29, [sp, #1024] // 8-byte Spill
-; CHECK1024-NEXT:    sub sp, sp, #1088
-; CHECK1024-NEXT:    .cfi_def_cfa_offset 2128
-; CHECK1024-NEXT:    .cfi_offset w29, -16
-; CHECK1024-NEXT:    stp wzr, wzr, [sp, #12]
-; CHECK1024-NEXT:    str d0, [sp, #1080]
-; CHECK1024-NEXT:    str wzr, [sp, #28]
-; CHECK1024-NEXT:    str h1, [sp, #1078]
-; CHECK1024-NEXT:    str q2, [sp, #1056]
-; CHECK1024-NEXT:    add sp, sp, #1088
-; CHECK1024-NEXT:    ldr x29, [sp, #1024] // 8-byte Reload
-; CHECK1024-NEXT:    add sp, sp, #1040
-; CHECK1024-NEXT:    ret
+; CHECK1024-NOSPLITSVE-LABEL: ordering_test:
+; CHECK1024-NOSPLITSVE:       // %bb.0: // %entry
+; CHECK1024-NOSPLITSVE-NEXT:    sub sp, sp, #1040
+; CHECK1024-NOSPLITSVE-NEXT:    str x29, [sp, #1024] // 8-byte Spill
+; CHECK1024-NOSPLITSVE-NEXT:    sub sp, sp, #1088
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_def_cfa_offset 2128
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_offset w29, -16
+; CHECK1024-NOSPLITSVE-NEXT:    stp wzr, wzr, [sp, #12]
+; CHECK1024-NOSPLITSVE-NEXT:    str d0, [sp, #1080]
+; CHECK1024-NOSPLITSVE-NEXT:    str wzr, [sp, #28]
+; CHECK1024-NOSPLITSVE-NEXT:    str h1, [sp, #1078]
+; CHECK1024-NOSPLITSVE-NEXT:    str q2, [sp, #1056]
+; CHECK1024-NOSPLITSVE-NEXT:    add sp, sp, #1088
+; CHECK1024-NOSPLITSVE-NEXT:    ldr x29, [sp, #1024] // 8-byte Reload
+; CHECK1024-NOSPLITSVE-NEXT:    add sp, sp, #1040
+; CHECK1024-NOSPLITSVE-NEXT:    ret
+;
+; CHECK1024-SPLITSVE-LABEL: ordering_test:
+; CHECK1024-SPLITSVE:       // %bb.0: // %entry
+; CHECK1024-SPLITSVE-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK1024-SPLITSVE-NEXT:    sub sp, sp, #2112
+; CHECK1024-SPLITSVE-NEXT:    .cfi_def_cfa_offset 2128
+; CHECK1024-SPLITSVE-NEXT:    .cfi_offset w29, -16
+; CHECK1024-SPLITSVE-NEXT:    stp wzr, wzr, [sp, #12]
+; CHECK1024-SPLITSVE-NEXT:    str d0, [sp, #1080]
+; CHECK1024-SPLITSVE-NEXT:    str wzr, [sp, #28]
+; CHECK1024-SPLITSVE-NEXT:    str h1, [sp, #1078]
+; CHECK1024-SPLITSVE-NEXT:    str q2, [sp, #1056]
+; CHECK1024-SPLITSVE-NEXT:    add sp, sp, #1088
+; CHECK1024-SPLITSVE-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK1024-SPLITSVE-NEXT:    ret
 entry:
   %i32 = alloca i32
   %i64 = alloca i64
@@ -3171,32 +3859,47 @@ define void @ordering_test_array(i64 %o, i64 %p, float %f, i32 %x) "aarch64_psta
 ;
 ; CHECK64-LABEL: ordering_test_array:
 ; CHECK64:       // %bb.0: // %entry
-; CHECK64-NEXT:    sub sp, sp, #400
-; CHECK64-NEXT:    str x29, [sp, #384] // 8-byte Spill
+; CHECK64-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK64-NEXT:    sub sp, sp, #384
 ; CHECK64-NEXT:    .cfi_def_cfa_offset 400
 ; CHECK64-NEXT:    .cfi_offset w29, -16
 ; CHECK64-NEXT:    mov x8, sp
 ; CHECK64-NEXT:    str w2, [x8, x0, lsl #2]
 ; CHECK64-NEXT:    add x8, sp, #192
 ; CHECK64-NEXT:    str s0, [x8, x1, lsl #2]
-; CHECK64-NEXT:    add sp, sp, #400
+; CHECK64-NEXT:    add sp, sp, #320
+; CHECK64-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK64-NEXT:    ret
 ;
-; CHECK1024-LABEL: ordering_test_array:
-; CHECK1024:       // %bb.0: // %entry
-; CHECK1024-NEXT:    sub sp, sp, #1040
-; CHECK1024-NEXT:    str x29, [sp, #1024] // 8-byte Spill
-; CHECK1024-NEXT:    sub sp, sp, #1280
-; CHECK1024-NEXT:    .cfi_def_cfa_offset 2320
-; CHECK1024-NEXT:    .cfi_offset w29, -16
-; CHECK1024-NEXT:    mov x8, sp
-; CHECK1024-NEXT:    str w2, [x8, x0, lsl #2]
-; CHECK1024-NEXT:    add x8, sp, #1152
-; CHECK1024-NEXT:    str s0, [x8, x1, lsl #2]
-; CHECK1024-NEXT:    add sp, sp, #1280
-; CHECK1024-NEXT:    ldr x29, [sp, #1024] // 8-byte Reload
-; CHECK1024-NEXT:    add sp, sp, #1040
-; CHECK1024-NEXT:    ret
+; CHECK1024-NOSPLITSVE-LABEL: ordering_test_array:
+; CHECK1024-NOSPLITSVE:       // %bb.0: // %entry
+; CHECK1024-NOSPLITSVE-NEXT:    sub sp, sp, #1040
+; CHECK1024-NOSPLITSVE-NEXT:    str x29, [sp, #1024] // 8-byte Spill
+; CHECK1024-NOSPLITSVE-NEXT:    sub sp, sp, #1280
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_def_cfa_offset 2320
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_offset w29, -16
+; CHECK1024-NOSPLITSVE-NEXT:    mov x8, sp
+; CHECK1024-NOSPLITSVE-NEXT:    str w2, [x8, x0, lsl #2]
+; CHECK1024-NOSPLITSVE-NEXT:    add x8, sp, #1152
+; CHECK1024-NOSPLITSVE-NEXT:    str s0, [x8, x1, lsl #2]
+; CHECK1024-NOSPLITSVE-NEXT:    add sp, sp, #1280
+; CHECK1024-NOSPLITSVE-NEXT:    ldr x29, [sp, #1024] // 8-byte Reload
+; CHECK1024-NOSPLITSVE-NEXT:    add sp, sp, #1040
+; CHECK1024-NOSPLITSVE-NEXT:    ret
+;
+; CHECK1024-SPLITSVE-LABEL: ordering_test_array:
+; CHECK1024-SPLITSVE:       // %bb.0: // %entry
+; CHECK1024-SPLITSVE-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK1024-SPLITSVE-NEXT:    sub sp, sp, #2304
+; CHECK1024-SPLITSVE-NEXT:    .cfi_def_cfa_offset 2320
+; CHECK1024-SPLITSVE-NEXT:    .cfi_offset w29, -16
+; CHECK1024-SPLITSVE-NEXT:    mov x8, sp
+; CHECK1024-SPLITSVE-NEXT:    str w2, [x8, x0, lsl #2]
+; CHECK1024-SPLITSVE-NEXT:    add x8, sp, #1152
+; CHECK1024-SPLITSVE-NEXT:    str s0, [x8, x1, lsl #2]
+; CHECK1024-SPLITSVE-NEXT:    add sp, sp, #1280
+; CHECK1024-SPLITSVE-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK1024-SPLITSVE-NEXT:    ret
 entry:
   %i32 = alloca [32 x i32]
   %f32 = alloca [32 x float]
@@ -3282,30 +3985,37 @@ define i32 @vastate(i32 %x) "aarch64_inout_za" "aarch64_pstate_sm_enabled" "targ
 ;
 ; CHECK64-LABEL: vastate:
 ; CHECK64:       // %bb.0: // %entry
-; CHECK64-NEXT:    stp d15, d14, [sp, #-176]! // 16-byte Folded Spill
-; CHECK64-NEXT:    .cfi_def_cfa_offset 176
+; CHECK64-NEXT:    stp x29, x30, [sp, #-48]! // 16-byte Folded Spill
+; CHECK64-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK64-NEXT:    cntd x9
-; CHECK64-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
-; CHECK64-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
-; CHECK64-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
-; CHECK64-NEXT:    stp x29, x30, [sp, #128] // 16-byte Folded Spill
-; CHECK64-NEXT:    stp x9, x20, [sp, #144] // 16-byte Folded Spill
-; CHECK64-NEXT:    str x19, [sp, #160] // 8-byte Spill
-; CHECK64-NEXT:    add x29, sp, #128
+; CHECK64-NEXT:    stp x20, x19, [sp, #32] // 16-byte Folded Spill
+; CHECK64-NEXT:    stp x9, x28, [sp, #16] // 16-byte Folded Spill
+; CHECK64-NEXT:    mov x29, sp
 ; CHECK64-NEXT:    .cfi_def_cfa w29, 48
-; CHECK64-NEXT:    .cfi_offset w19, -16
-; CHECK64-NEXT:    .cfi_offset w20, -24
+; CHECK64-NEXT:    .cfi_offset w19, -8
+; CHECK64-NEXT:    .cfi_offset w20, -16
+; CHECK64-NEXT:    .cfi_offset w28, -24
 ; CHECK64-NEXT:    .cfi_offset vg, -32
 ; CHECK64-NEXT:    .cfi_offset w30, -40
 ; CHECK64-NEXT:    .cfi_offset w29, -48
-; CHECK64-NEXT:    .cfi_offset b8, -120
-; CHECK64-NEXT:    .cfi_offset b9, -128
-; CHECK64-NEXT:    .cfi_offset b10, -136
-; CHECK64-NEXT:    .cfi_offset b11, -144
-; CHECK64-NEXT:    .cfi_offset b12, -152
-; CHECK64-NEXT:    .cfi_offset b13, -160
-; CHECK64-NEXT:    .cfi_offset b14, -168
-; CHECK64-NEXT:    .cfi_offset b15, -176
+; CHECK64-NEXT:    sub sp, sp, #64
+; CHECK64-NEXT:    addvl sp, sp, #-8
+; CHECK64-NEXT:    str z15, [sp] // 16-byte Folded Spill
+; CHECK64-NEXT:    str z14, [sp, #1, mul vl] // 16-byte Folded Spill
+; CHECK64-NEXT:    str z13, [sp, #2, mul vl] // 16-byte Folded Spill
+; CHECK64-NEXT:    str z12, [sp, #3, mul vl] // 16-byte Folded Spill
+; CHECK64-NEXT:    str z11, [sp, #4, mul vl] // 16-byte Folded Spill
+; CHECK64-NEXT:    str z10, [sp, #5, mul vl] // 16-byte Folded Spill
+; CHECK64-NEXT:    str z9, [sp, #6, mul vl] // 16-byte Folded Spill
+; CHECK64-NEXT:    str z8, [sp, #7, mul vl] // 16-byte Folded Spill
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x48, 0x0d, 0x12, 0x11, 0x60, 0x22, 0x06, 0x11, 0x78, 0x1e, 0x22, 0x11, 0x90, 0x7f, 0x22 // $d8 @ cfa - 8 * IncomingVG - 112
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x49, 0x0d, 0x12, 0x11, 0x60, 0x22, 0x06, 0x11, 0x70, 0x1e, 0x22, 0x11, 0x90, 0x7f, 0x22 // $d9 @ cfa - 16 * IncomingVG - 112
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x4a, 0x0d, 0x12, 0x11, 0x60, 0x22, 0x06, 0x11, 0x68, 0x1e, 0x22, 0x11, 0x90, 0x7f, 0x22 // $d10 @ cfa - 24 * IncomingVG - 112
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x4b, 0x0d, 0x12, 0x11, 0x60, 0x22, 0x06, 0x11, 0x60, 0x1e, 0x22, 0x11, 0x90, 0x7f, 0x22 // $d11 @ cfa - 32 * IncomingVG - 112
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x4c, 0x0d, 0x12, 0x11, 0x60, 0x22, 0x06, 0x11, 0x58, 0x1e, 0x22, 0x11, 0x90, 0x7f, 0x22 // $d12 @ cfa - 40 * IncomingVG - 112
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x4d, 0x0d, 0x12, 0x11, 0x60, 0x22, 0x06, 0x11, 0x50, 0x1e, 0x22, 0x11, 0x90, 0x7f, 0x22 // $d13 @ cfa - 48 * IncomingVG - 112
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x4e, 0x0d, 0x12, 0x11, 0x60, 0x22, 0x06, 0x11, 0x48, 0x1e, 0x22, 0x11, 0x90, 0x7f, 0x22 // $d14 @ cfa - 56 * IncomingVG - 112
+; CHECK64-NEXT:    .cfi_escape 0x10, 0x4f, 0x0d, 0x12, 0x11, 0x60, 0x22, 0x06, 0x11, 0x40, 0x1e, 0x22, 0x11, 0x90, 0x7f, 0x22 // $d15 @ cfa - 64 * IncomingVG - 112
 ; CHECK64-NEXT:    sub sp, sp, #80
 ; CHECK64-NEXT:    rdsvl x8, #1
 ; CHECK64-NEXT:    mov x9, sp
@@ -3326,114 +4036,208 @@ define i32 @vastate(i32 %x) "aarch64_inout_za" "aarch64_pstate_sm_enabled" "targ
 ; CHECK64-NEXT:  // %bb.1: // %entry
 ; CHECK64-NEXT:    bl __arm_tpidr2_restore
 ; CHECK64-NEXT:  .LBB33_2: // %entry
+; CHECK64-NEXT:    sub x8, x29, #64
 ; CHECK64-NEXT:    mov w0, w20
 ; CHECK64-NEXT:    msr TPIDR2_EL0, xzr
-; CHECK64-NEXT:    sub sp, x29, #128
-; CHECK64-NEXT:    .cfi_def_cfa wsp, 176
-; CHECK64-NEXT:    ldp x20, x19, [sp, #152] // 16-byte Folded Reload
-; CHECK64-NEXT:    ldr d14, [sp, #8] // 8-byte Reload
-; CHECK64-NEXT:    ldp x29, x30, [sp, #128] // 16-byte Folded Reload
-; CHECK64-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
-; CHECK64-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
-; CHECK64-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
-; CHECK64-NEXT:    ldr d15, [sp], #176 // 8-byte Folded Reload
+; CHECK64-NEXT:    addvl sp, x8, #-8
+; CHECK64-NEXT:    ldr z15, [sp] // 16-byte Folded Reload
+; CHECK64-NEXT:    ldr z14, [sp, #1, mul vl] // 16-byte Folded Reload
+; CHECK64-NEXT:    ldr z13, [sp, #2, mul vl] // 16-byte Folded Reload
+; CHECK64-NEXT:    ldr z12, [sp, #3, mul vl] // 16-byte Folded Reload
+; CHECK64-NEXT:    ldr z11, [sp, #4, mul vl] // 16-byte Folded Reload
+; CHECK64-NEXT:    ldr z10, [sp, #5, mul vl] // 16-byte Folded Reload
+; CHECK64-NEXT:    ldr z9, [sp, #6, mul vl] // 16-byte Folded Reload
+; CHECK64-NEXT:    ldr z8, [sp, #7, mul vl] // 16-byte Folded Reload
+; CHECK64-NEXT:    .cfi_restore z8
+; CHECK64-NEXT:    .cfi_restore z9
+; CHECK64-NEXT:    .cfi_restore z10
+; CHECK64-NEXT:    .cfi_restore z11
+; CHECK64-NEXT:    .cfi_restore z12
+; CHECK64-NEXT:    .cfi_restore z13
+; CHECK64-NEXT:    .cfi_restore z14
+; CHECK64-NEXT:    .cfi_restore z15
+; CHECK64-NEXT:    mov sp, x29
+; CHECK64-NEXT:    .cfi_def_cfa wsp, 48
+; CHECK64-NEXT:    ldp x20, x19, [sp, #32] // 16-byte Folded Reload
+; CHECK64-NEXT:    ldr x28, [sp, #24] // 8-byte Reload
+; CHECK64-NEXT:    ldp x29, x30, [sp], #48 // 16-byte Folded Reload
 ; CHECK64-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK64-NEXT:    .cfi_restore w19
 ; CHECK64-NEXT:    .cfi_restore w20
+; CHECK64-NEXT:    .cfi_restore w28
 ; CHECK64-NEXT:    .cfi_restore vg
 ; CHECK64-NEXT:    .cfi_restore w30
 ; CHECK64-NEXT:    .cfi_restore w29
-; CHECK64-NEXT:    .cfi_restore b8
-; CHECK64-NEXT:    .cfi_restore b9
-; CHECK64-NEXT:    .cfi_restore b10
-; CHECK64-NEXT:    .cfi_restore b11
-; CHECK64-NEXT:    .cfi_restore b12
-; CHECK64-NEXT:    .cfi_restore b13
-; CHECK64-NEXT:    .cfi_restore b14
-; CHECK64-NEXT:    .cfi_restore b15
 ; CHECK64-NEXT:    ret
 ;
-; CHECK1024-LABEL: vastate:
-; CHECK1024:       // %bb.0: // %entry
-; CHECK1024-NEXT:    sub sp, sp, #1136
-; CHECK1024-NEXT:    .cfi_def_cfa_offset 1136
-; CHECK1024-NEXT:    cntd x9
-; CHECK1024-NEXT:    stp d15, d14, [sp] // 16-byte Folded Spill
-; CHECK1024-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
-; CHECK1024-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
-; CHECK1024-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
-; CHECK1024-NEXT:    str x29, [sp, #1088] // 8-byte Spill
-; CHECK1024-NEXT:    str x30, [sp, #1096] // 8-byte Spill
-; CHECK1024-NEXT:    str x9, [sp, #1104] // 8-byte Spill
-; CHECK1024-NEXT:    str x28, [sp, #1112] // 8-byte Spill
-; CHECK1024-NEXT:    str x20, [sp, #1120] // 8-byte Spill
-; CHECK1024-NEXT:    str x19, [sp, #1128] // 8-byte Spill
-; CHECK1024-NEXT:    add x29, sp, #1088
-; CHECK1024-NEXT:    .cfi_def_cfa w29, 48
-; CHECK1024-NEXT:    .cfi_offset w19, -8
-; CHECK1024-NEXT:    .cfi_offset w20, -16
-; CHECK1024-NEXT:    .cfi_offset w28, -24
-; CHECK1024-NEXT:    .cfi_offset vg, -32
-; CHECK1024-NEXT:    .cfi_offset w30, -40
-; CHECK1024-NEXT:    .cfi_offset w29, -48
-; CHECK1024-NEXT:    .cfi_offset b8, -1080
-; CHECK1024-NEXT:    .cfi_offset b9, -1088
-; CHECK1024-NEXT:    .cfi_offset b10, -1096
-; CHECK1024-NEXT:    .cfi_offset b11, -1104
-; CHECK1024-NEXT:    .cfi_offset b12, -1112
-; CHECK1024-NEXT:    .cfi_offset b13, -1120
-; CHECK1024-NEXT:    .cfi_offset b14, -1128
-; CHECK1024-NEXT:    .cfi_offset b15, -1136
-; CHECK1024-NEXT:    sub sp, sp, #1040
-; CHECK1024-NEXT:    rdsvl x8, #1
-; CHECK1024-NEXT:    mov x9, sp
-; CHECK1024-NEXT:    mov w20, w0
-; CHECK1024-NEXT:    msub x9, x8, x8, x9
-; CHECK1024-NEXT:    mov x19, sp
-; CHECK1024-NEXT:    mov sp, x9
-; CHECK1024-NEXT:    add x10, x19, #0
-; CHECK1024-NEXT:    stp x9, x8, [x19]
-; CHECK1024-NEXT:    msr TPIDR2_EL0, x10
-; CHECK1024-NEXT:    smstop sm
-; CHECK1024-NEXT:    bl other
-; CHECK1024-NEXT:    smstart sm
-; CHECK1024-NEXT:    smstart za
-; CHECK1024-NEXT:    mrs x8, TPIDR2_EL0
-; CHECK1024-NEXT:    add x0, x19, #0
-; CHECK1024-NEXT:    cbnz x8, .LBB33_2
-; CHECK1024-NEXT:  // %bb.1: // %entry
-; CHECK1024-NEXT:    bl __arm_tpidr2_restore
-; CHECK1024-NEXT:  .LBB33_2: // %entry
-; CHECK1024-NEXT:    mov w0, w20
-; CHECK1024-NEXT:    msr TPIDR2_EL0, xzr
-; CHECK1024-NEXT:    sub sp, x29, #1088
-; CHECK1024-NEXT:    .cfi_def_cfa wsp, 1136
-; CHECK1024-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
-; CHECK1024-NEXT:    ldr x19, [sp, #1128] // 8-byte Reload
-; CHECK1024-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
-; CHECK1024-NEXT:    ldr x20, [sp, #1120] // 8-byte Reload
-; CHECK1024-NEXT:    ldr x28, [sp, #1112] // 8-byte Reload
-; CHECK1024-NEXT:    ldr x30, [sp, #1096] // 8-byte Reload
-; CHECK1024-NEXT:    ldr x29, [sp, #1088] // 8-byte Reload
-; CHECK1024-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
-; CHECK1024-NEXT:    ldp d15, d14, [sp] // 16-byte Folded Reload
-; CHECK1024-NEXT:    add sp, sp, #1136
-; CHECK1024-NEXT:    .cfi_def_cfa_offset 0
-; CHECK1024-NEXT:    .cfi_restore w19
-; CHECK1024-NEXT:    .cfi_restore w20
-; CHECK1024-NEXT:    .cfi_restore w28
-; CHECK1024-NEXT:    .cfi_restore vg
-; CHECK1024-NEXT:    .cfi_restore w30
-; CHECK1024-NEXT:    .cfi_restore w29
-; CHECK1024-NEXT:    .cfi_restore b8
-; CHECK1024-NEXT:    .cfi_restore b9
-; CHECK1024-NEXT:    .cfi_restore b10
-; CHECK1024-NEXT:    .cfi_restore b11
-; CHECK1024-NEXT:    .cfi_restore b12
-; CHECK1024-NEXT:    .cfi_restore b13
-; CHECK1024-NEXT:    .cfi_restore b14
-; CHECK1024-NEXT:    .cfi_restore b15
-; CHECK1024-NEXT:    ret
+; CHECK1024-NOSPLITSVE-LABEL: vastate:
+; CHECK1024-NOSPLITSVE:       // %bb.0: // %entry
+; CHECK1024-NOSPLITSVE-NEXT:    sub sp, sp, #1136
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_def_cfa_offset 1136
+; CHECK1024-NOSPLITSVE-NEXT:    cntd x9
+; CHECK1024-NOSPLITSVE-NEXT:    stp d15, d14, [sp] // 16-byte Folded Spill
+; CHECK1024-NOSPLITSVE-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
+; CHECK1024-NOSPLITSVE-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
+; CHECK1024-NOSPLITSVE-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
+; CHECK1024-NOSPLITSVE-NEXT:    str x29, [sp, #1088] // 8-byte Spill
+; CHECK1024-NOSPLITSVE-NEXT:    str x30, [sp, #1096] // 8-byte Spill
+; CHECK1024-NOSPLITSVE-NEXT:    str x9, [sp, #1104] // 8-byte Spill
+; CHECK1024-NOSPLITSVE-NEXT:    str x28, [sp, #1112] // 8-byte Spill
+; CHECK1024-NOSPLITSVE-NEXT:    str x20, [sp, #1120] // 8-byte Spill
+; CHECK1024-NOSPLITSVE-NEXT:    str x19, [sp, #1128] // 8-byte Spill
+; CHECK1024-NOSPLITSVE-NEXT:    add x29, sp, #1088
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_def_cfa w29, 48
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_offset w19, -8
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_offset w20, -16
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_offset w28, -24
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_offset vg, -32
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_offset w30, -40
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_offset w29, -48
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_offset b8, -1080
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_offset b9, -1088
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_offset b10, -1096
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_offset b11, -1104
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_offset b12, -1112
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_offset b13, -1120
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_offset b14, -1128
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_offset b15, -1136
+; CHECK1024-NOSPLITSVE-NEXT:    sub sp, sp, #1040
+; CHECK1024-NOSPLITSVE-NEXT:    rdsvl x8, #1
+; CHECK1024-NOSPLITSVE-NEXT:    mov x9, sp
+; CHECK1024-NOSPLITSVE-NEXT:    mov w20, w0
+; CHECK1024-NOSPLITSVE-NEXT:    msub x9, x8, x8, x9
+; CHECK1024-NOSPLITSVE-NEXT:    mov x19, sp
+; CHECK1024-NOSPLITSVE-NEXT:    mov sp, x9
+; CHECK1024-NOSPLITSVE-NEXT:    add x10, x19, #0
+; CHECK1024-NOSPLITSVE-NEXT:    stp x9, x8, [x19]
+; CHECK1024-NOSPLITSVE-NEXT:    msr TPIDR2_EL0, x10
+; CHECK1024-NOSPLITSVE-NEXT:    smstop sm
+; CHECK1024-NOSPLITSVE-NEXT:    bl other
+; CHECK1024-NOSPLITSVE-NEXT:    smstart sm
+; CHECK1024-NOSPLITSVE-NEXT:    smstart za
+; CHECK1024-NOSPLITSVE-NEXT:    mrs x8, TPIDR2_EL0
+; CHECK1024-NOSPLITSVE-NEXT:    add x0, x19, #0
+; CHECK1024-NOSPLITSVE-NEXT:    cbnz x8, .LBB33_2
+; CHECK1024-NOSPLITSVE-NEXT:  // %bb.1: // %entry
+; CHECK1024-NOSPLITSVE-NEXT:    bl __arm_tpidr2_restore
+; CHECK1024-NOSPLITSVE-NEXT:  .LBB33_2: // %entry
+; CHECK1024-NOSPLITSVE-NEXT:    mov w0, w20
+; CHECK1024-NOSPLITSVE-NEXT:    msr TPIDR2_EL0, xzr
+; CHECK1024-NOSPLITSVE-NEXT:    sub sp, x29, #1088
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_def_cfa wsp, 1136
+; CHECK1024-NOSPLITSVE-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
+; CHECK1024-NOSPLITSVE-NEXT:    ldr x19, [sp, #1128] // 8-byte Reload
+; CHECK1024-NOSPLITSVE-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
+; CHECK1024-NOSPLITSVE-NEXT:    ldr x20, [sp, #1120] // 8-byte Reload
+; CHECK1024-NOSPLITSVE-NEXT:    ldr x28, [sp, #1112] // 8-byte Reload
+; CHECK1024-NOSPLITSVE-NEXT:    ldr x30, [sp, #1096] // 8-byte Reload
+; CHECK1024-NOSPLITSVE-NEXT:    ldr x29, [sp, #1088] // 8-byte Reload
+; CHECK1024-NOSPLITSVE-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
+; CHECK1024-NOSPLITSVE-NEXT:    ldp d15, d14, [sp] // 16-byte Folded Reload
+; CHECK1024-NOSPLITSVE-NEXT:    add sp, sp, #1136
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_def_cfa_offset 0
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_restore w19
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_restore w20
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_restore w28
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_restore vg
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_restore w30
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_restore w29
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_restore b8
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_restore b9
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_restore b10
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_restore b11
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_restore b12
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_restore b13
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_restore b14
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_restore b15
+; CHECK1024-NOSPLITSVE-NEXT:    ret
+;
+; CHECK1024-SPLITSVE-LABEL: vastate:
+; CHECK1024-SPLITSVE:       // %bb.0: // %entry
+; CHECK1024-SPLITSVE-NEXT:    stp x29, x30, [sp, #-48]! // 16-byte Folded Spill
+; CHECK1024-SPLITSVE-NEXT:    .cfi_def_cfa_offset 48
+; CHECK1024-SPLITSVE-NEXT:    cntd x9
+; CHECK1024-SPLITSVE-NEXT:    stp x20, x19, [sp, #32] // 16-byte Folded Spill
+; CHECK1024-SPLITSVE-NEXT:    stp x9, x28, [sp, #16] // 16-byte Folded Spill
+; CHECK1024-SPLITSVE-NEXT:    mov x29, sp
+; CHECK1024-SPLITSVE-NEXT:    .cfi_def_cfa w29, 48
+; CHECK1024-SPLITSVE-NEXT:    .cfi_offset w19, -8
+; CHECK1024-SPLITSVE-NEXT:    .cfi_offset w20, -16
+; CHECK1024-SPLITSVE-NEXT:    .cfi_offset w28, -24
+; CHECK1024-SPLITSVE-NEXT:    .cfi_offset vg, -32
+; CHECK1024-SPLITSVE-NEXT:    .cfi_offset w30, -40
+; CHECK1024-SPLITSVE-NEXT:    .cfi_offset w29, -48
+; CHECK1024-SPLITSVE-NEXT:    sub sp, sp, #1024
+; CHECK1024-SPLITSVE-NEXT:    addvl sp, sp, #-8
+; CHECK1024-SPLITSVE-NEXT:    str z15, [sp] // 16-byte Folded Spill
+; CHECK1024-SPLITSVE-NEXT:    str z14, [sp, #1, mul vl] // 16-byte Folded Spill
+; CHECK1024-SPLITSVE-NEXT:    str z13, [sp, #2, mul vl] // 16-byte Folded Spill
+; CHECK1024-SPLITSVE-NEXT:    str z12, [sp, #3, mul vl] // 16-byte Folded Spill
+; CHECK1024-SPLITSVE-NEXT:    str z11, [sp, #4, mul vl] // 16-byte Folded Spill
+; CHECK1024-SPLITSVE-NEXT:    str z10, [sp, #5, mul vl] // 16-byte Folded Spill
+; CHECK1024-SPLITSVE-NEXT:    str z9, [sp, #6, mul vl] // 16-byte Folded Spill
+; CHECK1024-SPLITSVE-NEXT:    str z8, [sp, #7, mul vl] // 16-byte Folded Spill
+; CHECK1024-SPLITSVE-NEXT:    .cfi_escape 0x10, 0x48, 0x0d, 0x12, 0x11, 0x60, 0x22, 0x06, 0x11, 0x78, 0x1e, 0x22, 0x11, 0xd0, 0x77, 0x22 // $d8 @ cfa - 8 * IncomingVG - 1072
+; CHECK1024-SPLITSVE-NEXT:    .cfi_escape 0x10, 0x49, 0x0d, 0x12, 0x11, 0x60, 0x22, 0x06, 0x11, 0x70, 0x1e, 0x22, 0x11, 0xd0, 0x77, 0x22 // $d9 @ cfa - 16 * IncomingVG - 1072
+; CHECK1024-SPLITSVE-NEXT:    .cfi_escape 0x10, 0x4a, 0x0d, 0x12, 0x11, 0x60, 0x22, 0x06, 0x11, 0x68, 0x1e, 0x22, 0x11, 0xd0, 0x77, 0x22 // $d10 @ cfa - 24 * IncomingVG - 1072
+; CHECK1024-SPLITSVE-NEXT:    .cfi_escape 0x10, 0x4b, 0x0d, 0x12, 0x11, 0x60, 0x22, 0x06, 0x11, 0x60, 0x1e, 0x22, 0x11, 0xd0, 0x77, 0x22 // $d11 @ cfa - 32 * IncomingVG - 1072
+; CHECK1024-SPLITSVE-NEXT:    .cfi_escape 0x10, 0x4c, 0x0d, 0x12, 0x11, 0x60, 0x22, 0x06, 0x11, 0x58, 0x1e, 0x22, 0x11, 0xd0, 0x77, 0x22 // $d12 @ cfa - 40 * IncomingVG - 1072
+; CHECK1024-SPLITSVE-NEXT:    .cfi_escape 0x10, 0x4d, 0x0d, 0x12, 0x11, 0x60, 0x22, 0x06, 0x11, 0x50, 0x1e, 0x22, 0x11, 0xd0, 0x77, 0x22 // $d13 @ cfa - 48 * IncomingVG - 1072
+; CHECK1024-SPLITSVE-NEXT:    .cfi_escape 0x10, 0x4e, 0x0d, 0x12, 0x11, 0x60, 0x22, 0x06, 0x11, 0x48, 0x1e, 0x22, 0x11, 0xd0, 0x77, 0x22 // $d14 @ cfa - 56 * IncomingVG - 1072
+; CHECK1024-SPLITSVE-NEXT:    .cfi_escape 0x10, 0x4f, 0x0d, 0x12, 0x11, 0x60, 0x22, 0x06, 0x11, 0x40, 0x1e, 0x22, 0x11, 0xd0, 0x77, 0x22 // $d15 @ cfa - 64 * IncomingVG - 1072
+; CHECK1024-SPLITSVE-NEXT:    sub sp, sp, #1040
+; CHECK1024-SPLITSVE-NEXT:    rdsvl x8, #1
+; CHECK1024-SPLITSVE-NEXT:    mov x9, sp
+; CHECK1024-SPLITSVE-NEXT:    mov w20, w0
+; CHECK1024-SPLITSVE-NEXT:    msub x9, x8, x8, x9
+; CHECK1024-SPLITSVE-NEXT:    mov x19, sp
+; CHECK1024-SPLITSVE-NEXT:    mov sp, x9
+; CHECK1024-SPLITSVE-NEXT:    add x10, x19, #0
+; CHECK1024-SPLITSVE-NEXT:    stp x9, x8, [x19]
+; CHECK1024-SPLITSVE-NEXT:    msr TPIDR2_EL0, x10
+; CHECK1024-SPLITSVE-NEXT:    smstop sm
+; CHECK1024-SPLITSVE-NEXT:    bl other
+; CHECK1024-SPLITSVE-NEXT:    smstart sm
+; CHECK1024-SPLITSVE-NEXT:    smstart za
+; CHECK1024-SPLITSVE-NEXT:    mrs x8, TPIDR2_EL0
+; CHECK1024-SPLITSVE-NEXT:    add x0, x19, #0
+; CHECK1024-SPLITSVE-NEXT:    cbnz x8, .LBB33_2
+; CHECK1024-SPLITSVE-NEXT:  // %bb.1: // %entry
+; CHECK1024-SPLITSVE-NEXT:    bl __arm_tpidr2_restore
+; CHECK1024-SPLITSVE-NEXT:  .LBB33_2: // %entry
+; CHECK1024-SPLITSVE-NEXT:    sub x8, x29, #1024
+; CHECK1024-SPLITSVE-NEXT:    mov w0, w20
+; CHECK1024-SPLITSVE-NEXT:    msr TPIDR2_EL0, xzr
+; CHECK1024-SPLITSVE-NEXT:    addvl sp, x8, #-8
+; CHECK1024-SPLITSVE-NEXT:    ldr z15, [sp] // 16-byte Folded Reload
+; CHECK1024-SPLITSVE-NEXT:    ldr z14, [sp, #1, mul vl] // 16-byte Folded Reload
+; CHECK1024-SPLITSVE-NEXT:    ldr z13, [sp, #2, mul vl] // 16-byte Folded Reload
+; CHECK1024-SPLITSVE-NEXT:    ldr z12, [sp, #3, mul vl] // 16-byte Folded Reload
+; CHECK1024-SPLITSVE-NEXT:    ldr z11, [sp, #4, mul vl] // 16-byte Folded Reload
+; CHECK1024-SPLITSVE-NEXT:    ldr z10, [sp, #5, mul vl] // 16-byte Folded Reload
+; CHECK1024-SPLITSVE-NEXT:    ldr z9, [sp, #6, mul vl] // 16-byte Folded Reload
+; CHECK1024-SPLITSVE-NEXT:    ldr z8, [sp, #7, mul vl] // 16-byte Folded Reload
+; CHECK1024-SPLITSVE-NEXT:    .cfi_restore z8
+; CHECK1024-SPLITSVE-NEXT:    .cfi_restore z9
+; CHECK1024-SPLITSVE-NEXT:    .cfi_restore z10
+; CHECK1024-SPLITSVE-NEXT:    .cfi_restore z11
+; CHECK1024-SPLITSVE-NEXT:    .cfi_restore z12
+; CHECK1024-SPLITSVE-NEXT:    .cfi_restore z13
+; CHECK1024-SPLITSVE-NEXT:    .cfi_restore z14
+; CHECK1024-SPLITSVE-NEXT:    .cfi_restore z15
+; CHECK1024-SPLITSVE-NEXT:    mov sp, x29
+; CHECK1024-SPLITSVE-NEXT:    .cfi_def_cfa wsp, 48
+; CHECK1024-SPLITSVE-NEXT:    ldp x20, x19, [sp, #32] // 16-byte Folded Reload
+; CHECK1024-SPLITSVE-NEXT:    ldr x28, [sp, #24] // 8-byte Reload
+; CHECK1024-SPLITSVE-NEXT:    ldp x29, x30, [sp], #48 // 16-byte Folded Reload
+; CHECK1024-SPLITSVE-NEXT:    .cfi_def_cfa_offset 0
+; CHECK1024-SPLITSVE-NEXT:    .cfi_restore w19
+; CHECK1024-SPLITSVE-NEXT:    .cfi_restore w20
+; CHECK1024-SPLITSVE-NEXT:    .cfi_restore w28
+; CHECK1024-SPLITSVE-NEXT:    .cfi_restore vg
+; CHECK1024-SPLITSVE-NEXT:    .cfi_restore w30
+; CHECK1024-SPLITSVE-NEXT:    .cfi_restore w29
+; CHECK1024-SPLITSVE-NEXT:    ret
 entry:
   tail call void @other()
   ret i32 %x
@@ -3472,11 +4276,10 @@ define i32 @sve_stack_object_and_vla(double %d, i64 %sz) "aarch64_pstate_sm_comp
 ;
 ; CHECK64-LABEL: sve_stack_object_and_vla:
 ; CHECK64:       // %bb.0: // %entry
-; CHECK64-NEXT:    sub sp, sp, #96
-; CHECK64-NEXT:    stp x29, x30, [sp, #64] // 16-byte Folded Spill
-; CHECK64-NEXT:    add x29, sp, #64
-; CHECK64-NEXT:    stp x28, x19, [sp, #80] // 16-byte Folded Spill
-; CHECK64-NEXT:    sub sp, sp, #64
+; CHECK64-NEXT:    stp x29, x30, [sp, #-32]! // 16-byte Folded Spill
+; CHECK64-NEXT:    stp x28, x19, [sp, #16] // 16-byte Folded Spill
+; CHECK64-NEXT:    mov x29, sp
+; CHECK64-NEXT:    sub sp, sp, #128
 ; CHECK64-NEXT:    addvl sp, sp, #-1
 ; CHECK64-NEXT:    mov x19, sp
 ; CHECK64-NEXT:    .cfi_def_cfa w29, 32
@@ -3495,46 +4298,74 @@ define i32 @sve_stack_object_and_vla(double %d, i64 %sz) "aarch64_pstate_sm_comp
 ; CHECK64-NEXT:    str z0, [x8, #-1, mul vl]
 ; CHECK64-NEXT:    bl bar
 ; CHECK64-NEXT:    mov w0, wzr
-; CHECK64-NEXT:    sub sp, x29, #64
-; CHECK64-NEXT:    ldp x28, x19, [sp, #80] // 16-byte Folded Reload
-; CHECK64-NEXT:    ldp x29, x30, [sp, #64] // 16-byte Folded Reload
-; CHECK64-NEXT:    add sp, sp, #96
+; CHECK64-NEXT:    mov sp, x29
+; CHECK64-NEXT:    ldp x28, x19, [sp, #16] // 16-byte Folded Reload
+; CHECK64-NEXT:    ldp x29, x30, [sp], #32 // 16-byte Folded Reload
 ; CHECK64-NEXT:    ret
 ;
-; CHECK1024-LABEL: sve_stack_object_and_vla:
-; CHECK1024:       // %bb.0: // %entry
-; CHECK1024-NEXT:    sub sp, sp, #1056
-; CHECK1024-NEXT:    str x29, [sp, #1024] // 8-byte Spill
-; CHECK1024-NEXT:    add x29, sp, #1024
-; CHECK1024-NEXT:    str x30, [sp, #1032] // 8-byte Spill
-; CHECK1024-NEXT:    str x28, [sp, #1040] // 8-byte Spill
-; CHECK1024-NEXT:    str x19, [sp, #1048] // 8-byte Spill
-; CHECK1024-NEXT:    sub sp, sp, #1024
-; CHECK1024-NEXT:    addvl sp, sp, #-1
-; CHECK1024-NEXT:    mov x19, sp
-; CHECK1024-NEXT:    .cfi_def_cfa w29, 32
-; CHECK1024-NEXT:    .cfi_offset w19, -8
-; CHECK1024-NEXT:    .cfi_offset w28, -16
-; CHECK1024-NEXT:    .cfi_offset w30, -24
-; CHECK1024-NEXT:    .cfi_offset w29, -32
-; CHECK1024-NEXT:    lsl x9, x0, #2
-; CHECK1024-NEXT:    mov x8, sp
-; CHECK1024-NEXT:    add x9, x9, #15
-; CHECK1024-NEXT:    and x9, x9, #0xfffffffffffffff0
-; CHECK1024-NEXT:    sub x0, x8, x9
-; CHECK1024-NEXT:    mov sp, x0
-; CHECK1024-NEXT:    mov z0.s, #0 // =0x0
-; CHECK1024-NEXT:    sub x8, x29, #1024
-; CHECK1024-NEXT:    str z0, [x8, #-1, mul vl]
-; CHECK1024-NEXT:    bl bar
-; CHECK1024-NEXT:    mov w0, wzr
-; CHECK1024-NEXT:    sub sp, x29, #1024
-; CHECK1024-NEXT:    ldr x19, [sp, #1048] // 8-byte Reload
-; CHECK1024-NEXT:    ldr x28, [sp, #1040] // 8-byte Reload
-; CHECK1024-NEXT:    ldr x30, [sp, #1032] // 8-byte Reload
-; CHECK1024-NEXT:    ldr x29, [sp, #1024] // 8-byte Reload
-; CHECK1024-NEXT:    add sp, sp, #1056
-; CHECK1024-NEXT:    ret
+; CHECK1024-NOSPLITSVE-LABEL: sve_stack_object_and_vla:
+; CHECK1024-NOSPLITSVE:       // %bb.0: // %entry
+; CHECK1024-NOSPLITSVE-NEXT:    sub sp, sp, #1056
+; CHECK1024-NOSPLITSVE-NEXT:    str x29, [sp, #1024] // 8-byte Spill
+; CHECK1024-NOSPLITSVE-NEXT:    add x29, sp, #1024
+; CHECK1024-NOSPLITSVE-NEXT:    str x30, [sp, #1032] // 8-byte Spill
+; CHECK1024-NOSPLITSVE-NEXT:    str x28, [sp, #1040] // 8-byte Spill
+; CHECK1024-NOSPLITSVE-NEXT:    str x19, [sp, #1048] // 8-byte Spill
+; CHECK1024-NOSPLITSVE-NEXT:    sub sp, sp, #1024
+; CHECK1024-NOSPLITSVE-NEXT:    addvl sp, sp, #-1
+; CHECK1024-NOSPLITSVE-NEXT:    mov x19, sp
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_def_cfa w29, 32
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_offset w19, -8
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_offset w28, -16
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_offset w30, -24
+; CHECK1024-NOSPLITSVE-NEXT:    .cfi_offset w29, -32
+; CHECK1024-NOSPLITSVE-NEXT:    lsl x9, x0, #2
+; CHECK1024-NOSPLITSVE-NEXT:    mov x8, sp
+; CHECK1024-NOSPLITSVE-NEXT:    add x9, x9, #15
+; CHECK1024-NOSPLITSVE-NEXT:    and x9, x9, #0xfffffffffffffff0
+; CHECK1024-NOSPLITSVE-NEXT:    sub x0, x8, x9
+; CHECK1024-NOSPLITSVE-NEXT:    mov sp, x0
+; CHECK1024-NOSPLITSVE-NEXT:    mov z0.s, #0 // =0x0
+; CHECK1024-NOSPLITSVE-NEXT:    sub x8, x29, #1024
+; CHECK1024-NOSPLITSVE-NEXT:    str z0, [x8, #-1, mul vl]
+; CHECK1024-NOSPLITSVE-NEXT:    bl bar
+; CHECK1024-NOSPLITSVE-NEXT:    mov w0, wzr
+; CHECK1024-NOSPLITSVE-NEXT:    sub sp, x29, #1024
+; CHECK1024-NOSPLITSVE-NEXT:    ldr x19, [sp, #1048] // 8-byte Reload
+; CHECK1024-NOSPLITSVE-NEXT:    ldr x28, [sp, #1040] // 8-byte Reload
+; CHECK1024-NOSPLITSVE-NEXT:    ldr x30, [sp, #1032] // 8-byte Reload
+; CHECK1024-NOSPLITSVE-NEXT:    ldr x29, [sp, #1024] // 8-byte Reload
+; CHECK1024-NOSPLITSVE-NEXT:    add sp, sp, #1056
+; CHECK1024-NOSPLITSVE-NEXT:    ret
+;
+; CHECK1024-SPLITSVE-LABEL: sve_stack_object_and_vla:
+; CHECK1024-SPLITSVE:       // %bb.0: // %entry
+; CHECK1024-SPLITSVE-NEXT:    stp x29, x30, [sp, #-32]! // 16-byte Folded Spill
+; CHECK1024-SPLITSVE-NEXT:    stp x28, x19, [sp, #16] // 16-byte Folded Spill
+; CHECK1024-SPLITSVE-NEXT:    mov x29, sp
+; CHECK1024-SPLITSVE-NEXT:    sub sp, sp, #2048
+; CHECK1024-SPLITSVE-NEXT:    addvl sp, sp, #-1
+; CHECK1024-SPLITSVE-NEXT:    mov x19, sp
+; CHECK1024-SPLITSVE-NEXT:    .cfi_def_cfa w29, 32
+; CHECK1024-SPLITSVE-NEXT:    .cfi_offset w19, -8
+; CHECK1024-SPLITSVE-NEXT:    .cfi_offset w28, -16
+; CHECK1024-SPLITSVE-NEXT:    .cfi_offset w30, -24
+; CHECK1024-SPLITSVE-NEXT:    .cfi_offset w29, -32
+; CHECK1024-SPLITSVE-NEXT:    lsl x9, x0, #2
+; CHECK1024-SPLITSVE-NEXT:    mov x8, sp
+; CHECK1024-SPLITSVE-NEXT:    add x9, x9, #15
+; CHECK1024-SPLITSVE-NEXT:    and x9, x9, #0xfffffffffffffff0
+; CHECK1024-SPLITSVE-NEXT:    sub x0, x8, x9
+; CHECK1024-SPLITSVE-NEXT:    mov sp, x0
+; CHECK1024-SPLITSVE-NEXT:    mov z0.s, #0 // =0x0
+; CHECK1024-SPLITSVE-NEXT:    sub x8, x29, #1024
+; CHECK1024-SPLITSVE-NEXT:    str z0, [x8, #-1, mul vl]
+; CHECK1024-SPLITSVE-NEXT:    bl bar
+; CHECK1024-SPLITSVE-NEXT:    mov w0, wzr
+; CHECK1024-SPLITSVE-NEXT:    mov sp, x29
+; CHECK1024-SPLITSVE-NEXT:    ldp x28, x19, [sp, #16] // 16-byte Folded Reload
+; CHECK1024-SPLITSVE-NEXT:    ldp x29, x30, [sp], #32 // 16-byte Folded Reload
+; CHECK1024-SPLITSVE-NEXT:    ret
 entry:
   %a = alloca <vscale x 4 x i32>
   %b = alloca i32, i64 %sz, align 4
@@ -5104,3 +5935,5 @@ entry:
   call void @bar(ptr noundef nonnull %c)
   ret i32 -396142473
 }
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; CHECK1024: {{.*}}
