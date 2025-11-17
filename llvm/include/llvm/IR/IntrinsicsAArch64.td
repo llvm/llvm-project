@@ -2813,7 +2813,7 @@ def int_aarch64_sve_fmmla
 
 def int_aarch64_sve_fp8_fmmla
   : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
-                          [LLVMMatchType<0>, llvm_anyvector_ty, LLVMMatchType<1>],
+                          [LLVMMatchType<0>, llvm_anyvector_ty, llvm_nxv16i8_ty],
                           [IntrReadMem, IntrInaccessibleMemOnly]>;
 
 //
