@@ -1653,7 +1653,6 @@ int32_t getScaleSel(int32_t blockSize, unsigned bitWidth,
 LogicalResult ScaledExtPacked816OpLowering::matchAndRewrite(
     ScaledExtPacked816Op op, ScaledExtPacked816OpAdaptor adaptor,
     ConversionPatternRewriter &rewriter) const {
-
   int32_t firstScaleLane = op.getFirstScaleLane();
   int32_t firstScaleByte = op.getFirstScaleByte();
   int32_t blockSize = op.getBlockSize();
