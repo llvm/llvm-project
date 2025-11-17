@@ -9,6 +9,6 @@
 #include <clc/math/clc_logb.h>
 #include <clc/opencl/math/logb.h>
 
-#define FUNCTION logb
+#define __CLC_FUNCTION logb
 #define __CLC_BODY <clc/shared/unary_def.inc>
 #include <clc/math/gentype.inc>

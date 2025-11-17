@@ -41,6 +41,16 @@ template <typename T>
 struct OpenMPOpConversion : public ConvertOpToLLVMPattern<T> {
   using ConvertOpToLLVMPattern<T>::ConvertOpToLLVMPattern;
 
+  OpenMPOpConversion(LLVMTypeConverter &typeConverter,
+                     PatternBenefit benefit = 1)
+      : ConvertOpToLLVMPattern<T>(typeConverter, benefit) {
+    // Operations using CanonicalLoopInfoType are lowered only by
+    // mlir::translateModuleToLLVMIR() using the OpenMPIRBuilder. Until then,
+    // the type and operations using it must be preserved.
+    typeConverter.addConversion(
+        [&](::mlir::omp::CanonicalLoopInfoType type) { return type; });
+  }
+
   LogicalResult
   matchAndRewrite(T op, typename T::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
@@ -85,8 +95,8 @@ struct OpenMPOpConversion : public ConvertOpToLLVMPattern<T> {
     }
 
     // Create new operation.
-    auto newOp = rewriter.create<T>(op.getLoc(), resTypes, convertedOperands,
-                                    convertedAttrs);
+    auto newOp = T::create(rewriter, op.getLoc(), resTypes, convertedOperands,
+                           convertedAttrs);
 
     // Translate regions.
     for (auto [originalRegion, convertedRegion] :

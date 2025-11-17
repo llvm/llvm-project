@@ -31,6 +31,7 @@ namespace llvm {
 
 namespace HexagonISD {
 
+// clang-format off
 enum NodeType : unsigned {
   OP_BEGIN = ISD::BUILTIN_OP_END,
 
@@ -78,6 +79,7 @@ enum NodeType : unsigned {
   DCFETCH,
   READCYCLE,
   READTIMER,
+  THREAD_POINTER,
   PTRUE,
   PFALSE,
   D2P,         // Convert 8-byte value to 8-bit predicate register. [*]
@@ -121,6 +123,7 @@ enum NodeType : unsigned {
 };
 
 } // end namespace HexagonISD
+// clang-format on
 
 class HexagonSubtarget;
 
@@ -156,6 +159,10 @@ public:
   bool hasBitTest(SDValue X, SDValue Y) const override;
 
   bool allowTruncateForTailCall(Type *Ty1, Type *Ty2) const override;
+
+  bool isMaskAndCmp0FoldingBeneficial(const Instruction &AndI) const override;
+
+  bool isUsedByReturnOnly(SDNode *N, SDValue &Chain) const override;
 
   /// Return true if an FMA operation is faster than a pair of mul and add
   /// instructions. fmuladd intrinsics will be expanded to FMAs when this
@@ -574,6 +581,8 @@ private:
   SDValue LowerHvxFpExtend(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerHvxFpToInt(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerHvxIntToFp(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerHvxPred32ToFp(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerHvxPred64ToFp(SDValue Op, SelectionDAG &DAG) const;
   SDValue ExpandHvxFpToInt(SDValue Op, SelectionDAG &DAG) const;
   SDValue ExpandHvxIntToFp(SDValue Op, SelectionDAG &DAG) const;
 

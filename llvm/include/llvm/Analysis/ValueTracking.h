@@ -359,11 +359,6 @@ GetPointerBaseWithConstantOffset(const Value *Ptr, int64_t &Offset,
                                           AllowNonInbounds);
 }
 
-/// Returns true if the GEP is based on a pointer to a string (array of
-// \p CharSize integers) and is indexing into this string.
-LLVM_ABI bool isGEPBasedOnPointerToString(const GEPOperator *GEP,
-                                          unsigned CharSize = 8);
-
 /// Represents offset+length into a ConstantDataArray.
 struct ConstantDataArraySlice {
   /// ConstantDataArray pointer. nullptr indicates a zeroinitializer (a valid
@@ -617,6 +612,12 @@ LLVM_ABI bool isValidAssumeForContext(const Instruction *I,
                                       const Instruction *CxtI,
                                       const DominatorTree *DT = nullptr,
                                       bool AllowEphemerals = false);
+
+/// Returns true, if no instruction between \p Assume and \p CtxI may free
+/// memory and the function is marked as NoSync. The latter ensures the current
+/// function cannot arrange for another thread to free on its behalf.
+LLVM_ABI bool willNotFreeBetween(const Instruction *Assume,
+                                 const Instruction *CtxI);
 
 enum class OverflowResult {
   /// Always overflows in the direction of signed/unsigned min value.
@@ -1022,6 +1023,16 @@ findValuesAffectedByCondition(Value *Cond, bool IsAssume,
 /// where f(X) == 0 if and only if X == 0, otherwise returns nullptr.
 LLVM_ABI Value *stripNullTest(Value *V);
 LLVM_ABI const Value *stripNullTest(const Value *V);
+
+/// Enumerates all possible immediate values of V and inserts them into the set
+/// \p Constants. If \p AllowUndefOrPoison is false, it fails when V may contain
+/// undef/poison elements. Returns true if the result is complete. Otherwise,
+/// the result is incomplete (more than MaxCount values).
+/// NOTE: The constant values are not distinct.
+LLVM_ABI bool
+collectPossibleValues(const Value *V,
+                      SmallPtrSetImpl<const Constant *> &Constants,
+                      unsigned MaxCount, bool AllowUndefOrPoison = true);
 
 } // end namespace llvm
 

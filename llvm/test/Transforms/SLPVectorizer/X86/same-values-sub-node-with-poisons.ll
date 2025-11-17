@@ -35,13 +35,15 @@ define i32 @test(ptr %f, i1 %tobool.i.4, i32 %retval.0.i.219) {
 ; CHECK-NEXT:    [[TMP16:%.*]] = add <4 x i32> [[TMP15]], [[TMP13]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <2 x i32> [[TMP6]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
 ; CHECK-NEXT:    [[TMP21:%.*]] = shufflevector <4 x i32> [[TMP14]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP22:%.*]] = call <8 x i32> @llvm.vector.insert.v8i32.v4i32(<8 x i32> [[TMP21]], <4 x i32> [[TMP10]], i64 4)
+; CHECK-NEXT:    [[TMP24:%.*]] = shufflevector <4 x i32> [[TMP10]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP22:%.*]] = shufflevector <8 x i32> [[TMP21]], <8 x i32> [[TMP24]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
 ; CHECK-NEXT:    [[TMP23:%.*]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> poison, <8 x i32> <i32 0, i32 0, i32 poison, i32 poison, i32 poison, i32 0, i32 0, i32 poison>
 ; CHECK-NEXT:    [[TMP18:%.*]] = shufflevector <8 x i32> [[TMP23]], <8 x i32> <i32 poison, i32 poison, i32 1, i32 1, i32 1, i32 poison, i32 poison, i32 1>, <8 x i32> <i32 0, i32 1, i32 10, i32 11, i32 12, i32 5, i32 6, i32 15>
 ; CHECK-NEXT:    [[TMP19:%.*]] = add <8 x i32> [[TMP18]], [[TMP22]]
-; CHECK-NEXT:    [[TMP20:%.*]] = call <4 x i32> @llvm.vector.extract.v4i32.v8i32(<8 x i32> [[TMP19]], i64 0)
+; CHECK-NEXT:    [[TMP20:%.*]] = shufflevector <8 x i32> [[TMP19]], <8 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[RDX_OP:%.*]] = or <4 x i32> [[TMP20]], [[TMP16]]
-; CHECK-NEXT:    [[TMP12:%.*]] = call <8 x i32> @llvm.vector.insert.v8i32.v4i32(<8 x i32> [[TMP19]], <4 x i32> [[RDX_OP]], i64 0)
+; CHECK-NEXT:    [[TMP25:%.*]] = shufflevector <4 x i32> [[RDX_OP]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <8 x i32> [[TMP19]], <8 x i32> [[TMP25]], <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    [[TMP17:%.*]] = call i32 @llvm.vector.reduce.or.v8i32(<8 x i32> [[TMP12]])
 ; CHECK-NEXT:    ret i32 [[TMP17]]
 ;

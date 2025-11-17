@@ -1,4 +1,4 @@
-//===--- UseAfterMoveCheck.h - clang-tidy ---------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -17,7 +17,7 @@ namespace clang::tidy::bugprone {
 /// intervening reinitialization.
 ///
 /// For details, see the user-facing documentation:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/use-after-move.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/use-after-move.html
 class UseAfterMoveCheck : public ClangTidyCheck {
 public:
   UseAfterMoveCheck(StringRef Name, ClangTidyContext *Context)

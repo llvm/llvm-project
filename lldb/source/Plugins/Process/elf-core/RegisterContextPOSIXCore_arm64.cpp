@@ -96,14 +96,19 @@ RegisterContextCorePOSIX_arm64::RegisterContextCorePOSIX_arm64(
   llvm::Triple::OSType os = process->GetArchitecture().GetTriple().getOS();
   if ((os == llvm::Triple::Linux) || (os == llvm::Triple::FreeBSD)) {
     AuxVector aux_vec(process->GetAuxvData());
-    std::optional<uint64_t> auxv_at_hwcap = aux_vec.GetAuxValue(
-        os == llvm::Triple::FreeBSD ? AuxVector::AUXV_FREEBSD_AT_HWCAP
-                                    : AuxVector::AUXV_AT_HWCAP);
+    bool is_freebsd = os == llvm::Triple::FreeBSD;
+    std::optional<uint64_t> auxv_at_hwcap =
+        aux_vec.GetAuxValue(is_freebsd ? AuxVector::AUXV_FREEBSD_AT_HWCAP
+                                       : AuxVector::AUXV_AT_HWCAP);
     std::optional<uint64_t> auxv_at_hwcap2 =
         aux_vec.GetAuxValue(AuxVector::AUXV_AT_HWCAP2);
+    std::optional<uint64_t> auxv_at_hwcap3 =
+        is_freebsd ? std::nullopt
+                   : aux_vec.GetAuxValue(AuxVector::AUXV_AT_HWCAP3);
 
     m_register_flags_detector.DetectFields(auxv_at_hwcap.value_or(0),
-                                           auxv_at_hwcap2.value_or(0));
+                                           auxv_at_hwcap2.value_or(0),
+                                           auxv_at_hwcap3.value_or(0));
     m_register_flags_detector.UpdateRegisterInfo(GetRegisterInfo(),
                                                  GetRegisterCount());
   }

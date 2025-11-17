@@ -77,7 +77,7 @@ inline APInt operator-(APInt);
 ///
 class [[nodiscard]] APInt {
 public:
-  typedef uint64_t WordType;
+  using WordType = uint64_t;
 
   /// Byte size of a word.
   static constexpr unsigned APINT_WORD_SIZE = sizeof(WordType);
@@ -151,9 +151,10 @@ public:
   /// deprecated because this constructor is prone to ambiguity with the
   /// APInt(unsigned, uint64_t, bool) constructor.
   ///
-  /// If this overload is ever deleted, care should be taken to prevent calls
-  /// from being incorrectly captured by the APInt(unsigned, uint64_t, bool)
-  /// constructor.
+  /// Once all uses of this constructor are migrated to other constructors,
+  /// consider marking this overload ""= delete" to prevent calls from being
+  /// incorrectly bound to the APInt(unsigned, uint64_t, bool) constructor.
+  [[deprecated("Use other constructors of APInt")]]
   LLVM_ABI APInt(unsigned numBits, unsigned numWords, const uint64_t bigVal[]);
 
   /// Construct an APInt from a string representation.
@@ -2294,6 +2295,12 @@ LLVM_ABI APInt mulhs(const APInt &C1, const APInt &C2);
 /// Returns the high N bits of the multiplication result.
 LLVM_ABI APInt mulhu(const APInt &C1, const APInt &C2);
 
+/// Performs (2*N)-bit multiplication on sign-extended operands.
+LLVM_ABI APInt mulsExtended(const APInt &C1, const APInt &C2);
+
+/// Performs (2*N)-bit multiplication on zero-extended operands.
+LLVM_ABI APInt muluExtended(const APInt &C1, const APInt &C2);
+
 /// Compute X^N for N>=0.
 /// 0^0 is supported and returns 1.
 LLVM_ABI APInt pow(const APInt &X, int64_t N);
@@ -2404,6 +2411,35 @@ LLVM_ABI std::optional<unsigned> GetMostSignificantDifferentBit(const APInt &A,
 /// A.getBitwidth() or NewBitWidth must be a whole multiples of the other.
 LLVM_ABI APInt ScaleBitMask(const APInt &A, unsigned NewBitWidth,
                             bool MatchAllBits = false);
+
+/// Perform a funnel shift left.
+///
+/// Concatenate Hi and Lo (Hi is the most significant bits of the wide value),
+/// the combined value is shifted left by Shift (modulo the bit width of the
+/// original arguments), and the most significant bits are extracted to produce
+/// a result that is the same size as the original arguments.
+///
+/// Examples:
+/// (1) fshl(i8 255, i8 0, i8 15) = 128 (0b10000000)
+/// (2) fshl(i8 15, i8 15, i8 11) = 120 (0b01111000)
+/// (3) fshl(i8 0, i8 255, i8 8)  = 0   (0b00000000)
+/// (4) fshl(i8 255, i8 0, i8 15) = fshl(i8 255, i8 0, i8 7) // 15 % 8
+LLVM_ABI APInt fshl(const APInt &Hi, const APInt &Lo, const APInt &Shift);
+
+/// Perform a funnel shift right.
+///
+/// Concatenate Hi and Lo (Hi is the most significant bits of the wide value),
+/// the combined value is shifted right by Shift (modulo the bit width of the
+/// original arguments), and the least significant bits are extracted to produce
+/// a result that is the same size as the original arguments.
+///
+/// Examples:
+/// (1) fshr(i8 255, i8 0, i8 15) = 254 (0b11111110)
+/// (2) fshr(i8 15, i8 15, i8 11) = 225 (0b11100001)
+/// (3) fshr(i8 0, i8 255, i8 8)  = 255 (0b11111111)
+/// (4) fshr(i8 255, i8 0, i8 9)  = fshr(i8 255, i8 0, i8 1) // 9 % 8
+LLVM_ABI APInt fshr(const APInt &Hi, const APInt &Lo, const APInt &Shift);
+
 } // namespace APIntOps
 
 // See friend declaration above. This additional declaration is required in

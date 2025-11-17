@@ -7,9 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "ProtocolUtils.h"
+#include "JSONUtils.h"
 #include "LLDBUtils.h"
 
 #include "lldb/API/SBDebugger.h"
+#include "lldb/API/SBDeclaration.h"
 #include "lldb/API/SBFormat.h"
 #include "lldb/API/SBMutex.h"
 #include "lldb/API/SBStream.h"
@@ -25,7 +27,7 @@ using namespace lldb_dap::protocol;
 namespace lldb_dap {
 
 static bool ShouldDisplayAssemblySource(
-    lldb::SBAddress address,
+    lldb::SBLineEntry line_entry,
     lldb::StopDisassemblyType stop_disassembly_display) {
   if (stop_disassembly_display == lldb::eStopDisassemblyTypeNever)
     return false;
@@ -35,7 +37,6 @@ static bool ShouldDisplayAssemblySource(
 
   // A line entry of 0 indicates the line is compiler generated i.e. no source
   // file is associated with the frame.
-  auto line_entry = address.GetLineEntry();
   auto file_spec = line_entry.GetFileSpec();
   if (!file_spec.IsValid() || line_entry.GetLine() == 0 ||
       line_entry.GetLine() == LLDB_INVALID_LINE_NUMBER)
@@ -172,10 +173,10 @@ bool IsAssemblySource(const protocol::Source &source) {
 }
 
 bool DisplayAssemblySource(lldb::SBDebugger &debugger,
-                           lldb::SBAddress address) {
+                           lldb::SBLineEntry line_entry) {
   const lldb::StopDisassemblyType stop_disassembly_display =
       GetStopDisassemblyDisplay(debugger);
-  return ShouldDisplayAssemblySource(address, stop_disassembly_display);
+  return ShouldDisplayAssemblySource(line_entry, stop_disassembly_display);
 }
 
 std::string GetLoadAddressString(const lldb::addr_t addr) {
@@ -227,15 +228,87 @@ std::vector<protocol::Thread> GetThreads(lldb::SBProcess process,
   return threads;
 }
 
-protocol::ExceptionBreakpointsFilter
+ExceptionBreakpointsFilter
 CreateExceptionBreakpointFilter(const ExceptionBreakpoint &bp) {
-  protocol::ExceptionBreakpointsFilter filter;
+  ExceptionBreakpointsFilter filter;
   filter.filter = bp.GetFilter();
   filter.label = bp.GetLabel();
   filter.description = bp.GetLabel();
   filter.defaultState = ExceptionBreakpoint::kDefaultValue;
   filter.supportsCondition = true;
   return filter;
+}
+
+Variable CreateVariable(lldb::SBValue v, int64_t var_ref, bool format_hex,
+                        bool auto_variable_summaries,
+                        bool synthetic_child_debugging, bool is_name_duplicated,
+                        std::optional<std::string> custom_name) {
+  VariableDescription desc(v, auto_variable_summaries, format_hex,
+                           is_name_duplicated, custom_name);
+  Variable var;
+  var.name = desc.name;
+  var.value = desc.display_value;
+  var.type = desc.display_type_name;
+
+  if (!desc.evaluate_name.empty())
+    var.evaluateName = desc.evaluate_name;
+
+  // If we have a type with many children, we would like to be able to
+  // give a hint to the IDE that the type has indexed children so that the
+  // request can be broken up in grabbing only a few children at a time. We
+  // want to be careful and only call "v.GetNumChildren()" if we have an array
+  // type or if we have a synthetic child provider producing indexed children.
+  // We don't want to call "v.GetNumChildren()" on all objects as class, struct
+  // and union types don't need to be completed if they are never expanded. So
+  // we want to avoid calling this to only cases where we it makes sense to keep
+  // performance high during normal debugging.
+
+  // If we have an array type, say that it is indexed and provide the number
+  // of children in case we have a huge array. If we don't do this, then we
+  // might take a while to produce all children at onces which can delay your
+  // debug session.
+  if (desc.type_obj.IsArrayType()) {
+    var.indexedVariables = v.GetNumChildren();
+  } else if (v.IsSynthetic()) {
+    // For a type with a synthetic child provider, the SBType of "v" won't tell
+    // us anything about what might be displayed. Instead, we check if the first
+    // child's name is "[0]" and then say it is indexed. We call
+    // GetNumChildren() only if the child name matches to avoid a potentially
+    // expensive operation.
+    if (lldb::SBValue first_child = v.GetChildAtIndex(0)) {
+      llvm::StringRef first_child_name = first_child.GetName();
+      if (first_child_name == "[0]") {
+        size_t num_children = v.GetNumChildren();
+        // If we are creating a "[raw]" fake child for each synthetic type, we
+        // have to account for it when returning indexed variables.
+        if (synthetic_child_debugging)
+          ++num_children;
+        var.indexedVariables = num_children;
+      }
+    }
+  }
+
+  if (v.MightHaveChildren())
+    var.variablesReference = var_ref;
+
+  if (v.GetDeclaration().IsValid())
+    var.declarationLocationReference = PackLocation(var_ref, false);
+
+  if (ValuePointsToCode(v))
+    var.valueLocationReference = PackLocation(var_ref, true);
+
+  if (lldb::addr_t addr = v.GetLoadAddress(); addr != LLDB_INVALID_ADDRESS)
+    var.memoryReference = addr;
+
+  bool is_readonly = v.GetType().IsAggregateType() ||
+                     v.GetValueType() == lldb::eValueTypeRegisterSet;
+  if (is_readonly) {
+    if (!var.presentationHint)
+      var.presentationHint = {VariablePresentationHint()};
+    var.presentationHint->attributes.push_back("readOnly");
+  }
+
+  return var;
 }
 
 } // namespace lldb_dap

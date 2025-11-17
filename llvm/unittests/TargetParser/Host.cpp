@@ -59,15 +59,27 @@ Serial          : 0000000000000000
 
   EXPECT_EQ(sys::detail::getHostCPUNameForARM(CortexA9ProcCpuinfo),
             "cortex-a9");
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM(
+                0x4100c090, ArrayRef<uint64_t>{0x4100c090, 0x4100c090}),
+            "cortex-a9");
   EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x41\n"
                                               "CPU part        : 0xc0f"),
+            "cortex-a15");
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM(0x4100c0f0,
+                                              ArrayRef<uint64_t>{0x4100c0f0}),
             "cortex-a15");
   // Verify that both CPU implementer and CPU part are checked:
   EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x40\n"
                                               "CPU part        : 0xc0f"),
             "generic");
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM(0x4000c0f0,
+                                              ArrayRef<uint64_t>{0x4000c0f0}),
+            "generic");
   EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x51\n"
                                               "CPU part        : 0x06f"),
+            "krait");
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM(0x510006f0,
+                                              ArrayRef<uint64_t>{0x510006f0}),
             "krait");
 }
 
@@ -126,9 +138,15 @@ TEST(getLinuxHostCPUName, AArch64) {
                                               "CPU part        : 0xd85\n"
                                               "CPU part        : 0xd87"),
             "cortex-x925");
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM(
+                0x4100d850, ArrayRef<uint64_t>{0x4100d850, 0x4100d870}),
+            "cortex-x925");
   EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x41\n"
                                               "CPU part        : 0xd87\n"
                                               "CPU part        : 0xd85"),
+            "cortex-x925");
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM(
+                0x4100d870, ArrayRef<uint64_t>{0x4100d870, 0x4100d850}),
             "cortex-x925");
   EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x51\n"
                                               "CPU part        : 0xc00"),
@@ -200,15 +218,24 @@ CPU architecture: 8
                                               "CPU variant     : 0xc\n"
                                               "CPU part        : 0xafe"),
             "exynos-m3");
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM(
+                0x53c0afe0, ArrayRef<uint64_t>{0x53c0afe0, 0x5300d050}),
+            "exynos-m3");
   // Verify Exynos M3.
   EXPECT_EQ(sys::detail::getHostCPUNameForARM(ExynosProcCpuInfo +
                                               "CPU variant     : 0x1\n"
                                               "CPU part        : 0x002"),
             "exynos-m3");
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM(
+                0x53100020, ArrayRef<uint64_t>{0x53100020, 0x5300d050}),
+            "exynos-m3");
   // Verify Exynos M4.
   EXPECT_EQ(sys::detail::getHostCPUNameForARM(ExynosProcCpuInfo +
                                               "CPU variant     : 0x1\n"
                                               "CPU part        : 0x003"),
+            "exynos-m4");
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM(
+                0x53100030, ArrayRef<uint64_t>{0x53100030, 0x5300d050}),
             "exynos-m4");
 
   const std::string ThunderX2T99ProcCpuInfo = R"(

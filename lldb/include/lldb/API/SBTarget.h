@@ -324,6 +324,16 @@ public:
 
   lldb::SBModule FindModule(const lldb::SBFileSpec &file_spec);
 
+  /// Find a module with the given module specification.
+  ///
+  /// \param[in] module_spec
+  ///     A lldb::SBModuleSpec object that contains module specification.
+  ///
+  /// \return
+  ///     A lldb::SBModule object that represents the found module, or an
+  ///     invalid SBModule object if no module was found.
+  lldb::SBModule FindModule(const lldb::SBModuleSpec &module_spec);
+
   /// Find compile units related to *this target and passed source
   /// file.
   ///
@@ -346,6 +356,14 @@ public:
   const char *GetABIName();
 
   const char *GetLabel() const;
+
+  /// Get the globally unique ID for this target. This ID is unique
+  /// across all debugger instances within the same lldb process.
+  ///
+  /// \return
+  ///     The globally unique ID for this target, or
+  ///     LLDB_INVALID_GLOBALLY_UNIQUE_TARGET_ID if the target is invalid.
+  lldb::user_id_t GetGloballyUniqueID() const;
 
   SBError SetLabel(const char *label);
 
@@ -657,6 +675,14 @@ public:
           name_type_mask, // Logical OR one or more FunctionNameType enum bits
       lldb::LanguageType symbol_language,
       const SBFileSpecList &module_list, const SBFileSpecList &comp_unit_list);
+
+  lldb::SBBreakpoint BreakpointCreateByName(
+      const char *symbol_name,
+      uint32_t
+          name_type_mask, // Logical OR one or more FunctionNameType enum bits
+      lldb::LanguageType symbol_language, lldb::addr_t offset,
+      bool offset_is_insn_count, const SBFileSpecList &module_list,
+      const SBFileSpecList &comp_unit_list);
 
 #ifdef SWIG
   lldb::SBBreakpoint BreakpointCreateByNames(
@@ -973,6 +999,7 @@ protected:
   friend class SBFunction;
   friend class SBInstruction;
   friend class SBModule;
+  friend class SBModuleSpec;
   friend class SBPlatform;
   friend class SBProcess;
   friend class SBSection;

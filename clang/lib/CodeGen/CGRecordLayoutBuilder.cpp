@@ -369,11 +369,11 @@ void CGRecordLowering::lowerUnion(bool isNonVirtualBaseType) {
   appendPaddingBytes(LayoutSize - getSize(StorageType));
   // Set packed if we need it.
   const auto StorageAlignment = getAlignment(StorageType);
-  assert((Layout.getSize() % StorageAlignment == 0 ||
-          Layout.getDataSize() % StorageAlignment) &&
+  assert((Layout.getSize().isMultipleOf(StorageAlignment) ||
+          !Layout.getDataSize().isMultipleOf(StorageAlignment)) &&
          "Union's standard layout and no_unique_address layout must agree on "
          "packedness");
-  if (Layout.getDataSize() % StorageAlignment)
+  if (!Layout.getDataSize().isMultipleOf(StorageAlignment))
     Packed = true;
 }
 
@@ -977,7 +977,7 @@ void CGRecordLowering::determinePacked(bool NVBaseType) {
       continue;
     // If any member falls at an offset that it not a multiple of its alignment,
     // then the entire record must be packed.
-    if (Member.Offset % getAlignment(Member.Data))
+    if (!Member.Offset.isMultipleOf(getAlignment(Member.Data)))
       Packed = true;
     if (Member.Offset < NVSize)
       NVAlignment = std::max(NVAlignment, getAlignment(Member.Data));
@@ -985,12 +985,12 @@ void CGRecordLowering::determinePacked(bool NVBaseType) {
   }
   // If the size of the record (the capstone's offset) is not a multiple of the
   // record's alignment, it must be packed.
-  if (Members.back().Offset % Alignment)
+  if (!Members.back().Offset.isMultipleOf(Alignment))
     Packed = true;
   // If the non-virtual sub-object is not a multiple of the non-virtual
   // sub-object's alignment, it must be packed.  We cannot have a packed
   // non-virtual sub-object and an unpacked complete object or vise versa.
-  if (NVSize % NVAlignment)
+  if (!NVSize.isMultipleOf(NVAlignment))
     Packed = true;
   // Update the alignment of the sentinel.
   if (!Packed)
@@ -1027,8 +1027,11 @@ void CGRecordLowering::fillOutputFields() {
       if (Member.FD)
         Fields[Member.FD->getCanonicalDecl()] = FieldTypes.size() - 1;
       // A field without storage must be a bitfield.
-      if (!Member.Data)
+      if (!Member.Data) {
+        assert(Member.FD &&
+               "Member.Data is a nullptr so Member.FD should not be");
         setBitFieldInfo(Member.FD, Member.Offset, FieldTypes.back());
+      }
     } else if (Member.Kind == MemberInfo::Base)
       NonVirtualBases[Member.RD] = FieldTypes.size() - 1;
     else if (Member.Kind == MemberInfo::VBase)

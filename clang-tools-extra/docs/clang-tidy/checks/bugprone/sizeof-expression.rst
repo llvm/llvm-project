@@ -73,9 +73,9 @@ Suspicious usage of 'sizeof(char*)'
 
 There is a subtle difference between declaring a string literal with
 ``char* A = ""`` and ``char A[] = ""``. The first case has the type ``char*``
-instead of the aggregate type ``char[]``. Using ``sizeof`` on an object declared
-with ``char*`` type is returning the size of a pointer instead of the number of
-characters (bytes) in the string literal.
+instead of the aggregate type ``char[]``. Using ``sizeof`` on an object
+declared with ``char*`` type is returning the size of a pointer instead of
+the number of characters (bytes) in the string literal.
 
 .. code-block:: c++
 
@@ -266,8 +266,9 @@ This check corresponds to the CERT C Coding Standard rule
 `ARR39-C. Do not add or subtract a scaled integer to a pointer
 <http://wiki.sei.cmu.edu/confluence/display/c/ARR39-C.+Do+not+add+or+subtract+a+scaled+integer+to+a+pointer>`_.
 
+
 Limitations
-"""""""""""
+-----------
 
 Cases where the pointee type has a size of `1` byte (such as, and most
 importantly, ``char``) are excluded.

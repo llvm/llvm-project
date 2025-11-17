@@ -213,6 +213,37 @@ TEST(IOApiTests, ListInputTest) {
       << "', but got '" << output << "'";
 }
 
+TEST(IOApiTests, ListInputComplexRegressionTest) {
+  static const char input[]{"(1,;2, );(3,;4,)"};
+  auto cookie{IONAME(BeginInternalListInput)(input, sizeof input - 1)};
+  static constexpr int numRealValues{4};
+  float z[numRealValues];
+  ASSERT_TRUE(IONAME(SetDecimal)(cookie, "COMMA", 5));
+  for (int j{0}; j < numRealValues; j += 2) {
+    ASSERT_TRUE(IONAME(InputComplex32)(cookie, &z[j]))
+        << "InputComplex32 failed with value " << z[j];
+  }
+  auto status{IONAME(EndIoStatement)(cookie)};
+  ASSERT_EQ(status, 0) << "Failed complex list-directed input, status "
+                       << static_cast<int>(status);
+  static constexpr int bufferSize{18};
+  char output[bufferSize];
+  output[bufferSize - 1] = '\0';
+  cookie = IONAME(BeginInternalListOutput)(output, bufferSize - 1);
+  for (int j{0}; j < numRealValues; j += 2) {
+    ASSERT_TRUE(IONAME(OutputComplex32)(cookie, z[j], z[j + 1]))
+        << "OutputComplex32 failed when outputting value " << z[j] << ", "
+        << z[j + 1];
+  }
+  status = IONAME(EndIoStatement)(cookie);
+  ASSERT_EQ(status, 0) << "Failed complex list-directed output, status "
+                       << static_cast<int>(status);
+  static const char expect[bufferSize]{" (1.,2.) (3.,4.) "};
+  ASSERT_EQ(std::strncmp(output, expect, bufferSize), 0)
+      << "Failed complex list-directed output, expected '" << expect
+      << "', but got '" << output << "'";
+}
+
 TEST(IOApiTests, DescriptorOutputTest) {
   static constexpr int bufferSize{10};
   char buffer[bufferSize];
@@ -890,6 +921,7 @@ TEST(IOApiTests, EditDoubleInputValues) {
       {"(BZ,F18.0)", "           .      ", 0x0, 0},
       {"(BZ,F18.0)", "           . e +1 ", 0x0, 0},
       {"(DC,F18.0)", "              12,5", 0x4029000000000000, 0},
+      {"(DC,F18.0)", "             12,5;", 0x4029000000000000, 0},
       {"(EX22.0)", "0X0P0                 ", 0x0, 0}, // +0.
       {"(EX22.0)", "-0X0P0                ", 0x8000000000000000, 0}, // -0.
       {"(EX22.0)", "0X.8P1                ", 0x3ff0000000000000, 0}, // 1.0
@@ -933,6 +965,10 @@ TEST(IOApiTests, EditDoubleInputValues) {
       {"(RU,E9.1)", " 1.0E-325", 0x1, 0},
       {"(E9.1)", "-1.0E-325", 0x8000000000000000, 0},
       {"(RD,E9.1)", "-1.0E-325", 0x8000000000000001, 0},
+      {"(F7.0)", "+NaN(q)", 0x7ff8000000000000, 0},
+      {"(G)", "D", 0, IostatBadRealInput},
+      {"(G0)", "D", 0, IostatErrorInFormat},
+      {"(G1.0)", "D", 0, 0},
   };
   for (auto const &[format, data, want, iostat] : testCases) {
     auto cookie{IONAME(BeginInternalFormattedInput)(
@@ -955,13 +991,13 @@ TEST(IOApiTests, EditDoubleInputValues) {
     // union value
     IONAME(GetIoMsg)(cookie, iomsg, bufferSize - 1);
     auto status{IONAME(EndIoStatement)(cookie)};
-    ASSERT_EQ(status, iostat)
+    EXPECT_EQ(status, iostat)
         << '\'' << format << "' failed reading '" << data << "', status "
         << static_cast<int>(status) << " != expected " << iostat << " iomsg '"
         << iomsg << "'";
 
     // Ensure raw uint64 value matches expected conversion from double
-    ASSERT_EQ(u.raw, want) << '\'' << format << "' failed reading '" << data
+    EXPECT_EQ(u.raw, want) << '\'' << format << "' failed reading '" << data
                            << "', want " << want << ", got " << u.raw;
   }
 }

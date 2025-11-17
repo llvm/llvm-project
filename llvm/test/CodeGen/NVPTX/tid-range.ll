@@ -12,7 +12,7 @@ define i1 @test1() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
 ; CHECK-NEXT:    mov.u32 %r1, %tid.x;
-; CHECK-NEXT:    setp.eq.s32 %p1, %r1, 1;
+; CHECK-NEXT:    setp.eq.b32 %p1, %r1, 1;
 ; CHECK-NEXT:    selp.b32 %r2, -1, 0, %p1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;

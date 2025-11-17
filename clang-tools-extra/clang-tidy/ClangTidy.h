@@ -1,4 +1,4 @@
-//===--- ClangTidy.h - clang-tidy -------------------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -56,15 +56,16 @@ private:
 /// Fills the list of check names that are enabled when the provided
 /// filters are applied.
 std::vector<std::string> getCheckNames(const ClangTidyOptions &Options,
-                                       bool AllowEnablingAnalyzerAlphaCheckers);
+                                       bool AllowEnablingAnalyzerAlphaCheckers,
+                                       bool ExperimentalCustomChecks);
 
 struct ChecksAndOptions {
   llvm::StringSet<> Checks;
   llvm::StringSet<> Options;
 };
 
-ChecksAndOptions
-getAllChecksAndOptions(bool AllowEnablingAnalyzerAlphaCheckers = true);
+ChecksAndOptions getAllChecksAndOptions(bool AllowEnablingAnalyzerAlphaCheckers,
+                                        bool ExperimentalCustomChecks);
 
 /// Returns the effective check-specific options.
 ///
@@ -74,7 +75,13 @@ getAllChecksAndOptions(bool AllowEnablingAnalyzerAlphaCheckers = true);
 /// Options.
 ClangTidyOptions::OptionMap
 getCheckOptions(const ClangTidyOptions &Options,
-                bool AllowEnablingAnalyzerAlphaCheckers);
+                bool AllowEnablingAnalyzerAlphaCheckers,
+                bool ExperimentalCustomChecks);
+
+/// Filters CheckOptions in \p Options to only include options specified in
+/// the \p EnabledChecks which is a sorted vector.
+void filterCheckOptions(ClangTidyOptions &Options,
+                        const std::vector<std::string> &EnabledChecks);
 
 /// Run a set of clang-tidy checks on a set of files.
 ///
@@ -89,7 +96,8 @@ runClangTidy(clang::tidy::ClangTidyContext &Context,
              ArrayRef<std::string> InputFiles,
              llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> BaseFS,
              bool ApplyAnyFix, bool EnableCheckProfile = false,
-             llvm::StringRef StoreCheckProfile = StringRef());
+             llvm::StringRef StoreCheckProfile = StringRef(),
+             bool Quiet = false);
 
 /// Controls what kind of fixes clang-tidy is allowed to apply.
 enum FixBehaviour {
@@ -119,6 +127,10 @@ void exportReplacements(StringRef MainFilePath,
                         const std::vector<ClangTidyError> &Errors,
                         raw_ostream &OS);
 
+namespace custom {
+extern void (*RegisterCustomChecks)(const ClangTidyOptions &O,
+                                    ClangTidyCheckFactories &Factories);
+} // namespace custom
 } // end namespace tidy
 } // end namespace clang
 

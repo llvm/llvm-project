@@ -28,15 +28,14 @@ func.func @_QPtest1(%arg0: !fir.box<!fir.array<?x?xf32>> {fir.bindc_name = "x"})
 // CHECK:               %[[VAL_17:.*]] = fir.shape %[[VAL_15]]#1, %[[VAL_16]]#1 : (index, index) -> !fir.shape<2>
 // CHECK:               %[[VAL_18:.*]] = fir.allocmem !fir.array<?x?xf32>, %[[VAL_15]]#1, %[[VAL_16]]#1 {bindc_name = ".repacked", uniq_name = ""}
 // CHECK:               %[[VAL_19:.*]] = fir.declare %[[VAL_18]](%[[VAL_17]]) {uniq_name = ".repacked"} : (!fir.heap<!fir.array<?x?xf32>>, !fir.shape<2>) -> !fir.heap<!fir.array<?x?xf32>>
-// CHECK:               %[[VAL_20:.*]] = fir.embox %[[VAL_19]](%[[VAL_17]]) : (!fir.heap<!fir.array<?x?xf32>>, !fir.shape<2>) -> !fir.box<!fir.heap<!fir.array<?x?xf32>>>
+// CHECK:               %[[VAL_25:.*]] = fir.shape_shift %[[VAL_15]]#0, %[[VAL_15]]#1, %[[VAL_16]]#0, %[[VAL_16]]#1 : (index, index, index, index) -> !fir.shapeshift<2>
+// CHECK:               %[[VAL_20:.*]] = fir.embox %[[VAL_19]](%[[VAL_25]]) : (!fir.heap<!fir.array<?x?xf32>>, !fir.shapeshift<2>) -> !fir.box<!fir.array<?x?xf32>>
 // CHECK:               %[[VAL_21:.*]] = fir.address_of(@{{_QQcl.*}}
-// CHECK:               %[[VAL_22:.*]] = fir.convert %[[VAL_20]] : (!fir.box<!fir.heap<!fir.array<?x?xf32>>>) -> !fir.box<none>
+// CHECK:               %[[VAL_22:.*]] = fir.convert %[[VAL_20]] : (!fir.box<!fir.array<?x?xf32>>) -> !fir.box<none>
 // CHECK:               %[[VAL_23:.*]] = fir.convert %[[VAL_0]] : (!fir.box<!fir.array<?x?xf32>>) -> !fir.box<none>
 // CHECK:               %[[VAL_24:.*]] = fir.convert %[[VAL_21]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
 // CHECK:               fir.call @_FortranAShallowCopyDirect(%[[VAL_22]], %[[VAL_23]], %[[VAL_24]], %[[VAL_2]]) : (!fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> ()
-// CHECK:               %[[VAL_25:.*]] = fir.shift %[[VAL_15]]#0, %[[VAL_16]]#0 : (index, index) -> !fir.shift<2>
-// CHECK:               %[[VAL_26:.*]] = fir.rebox %[[VAL_20]](%[[VAL_25]]) : (!fir.box<!fir.heap<!fir.array<?x?xf32>>>, !fir.shift<2>) -> !fir.box<!fir.array<?x?xf32>>
-// CHECK:               fir.result %[[VAL_26]] : !fir.box<!fir.array<?x?xf32>>
+// CHECK:               fir.result %[[VAL_20]] : !fir.box<!fir.array<?x?xf32>>
 // CHECK:             } else {
 // CHECK:               fir.result %[[VAL_0]] : !fir.box<!fir.array<?x?xf32>>
 // CHECK:             }
@@ -93,15 +92,14 @@ func.func @_QPtest1_whole(%arg0: !fir.box<!fir.array<?x?xf32>> {fir.bindc_name =
 // CHECK:               %[[VAL_17:.*]] = fir.shape %[[VAL_15]]#1, %[[VAL_16]]#1 : (index, index) -> !fir.shape<2>
 // CHECK:               %[[VAL_18:.*]] = fir.alloca !fir.array<?x?xf32>, %[[VAL_15]]#1, %[[VAL_16]]#1 {bindc_name = ".repacked"}
 // CHECK:               %[[VAL_19:.*]] = fir.declare %[[VAL_18]](%[[VAL_17]]) {uniq_name = ".repacked"} : (!fir.ref<!fir.array<?x?xf32>>, !fir.shape<2>) -> !fir.ref<!fir.array<?x?xf32>>
-// CHECK:               %[[VAL_20:.*]] = fir.embox %[[VAL_19]](%[[VAL_17]]) : (!fir.ref<!fir.array<?x?xf32>>, !fir.shape<2>) -> !fir.box<!fir.array<?x?xf32>>
+// CHECK:               %[[VAL_25:.*]] = fir.shape_shift %[[VAL_15]]#0, %[[VAL_15]]#1, %[[VAL_16]]#0, %[[VAL_16]]#1 : (index, index, index, index) -> !fir.shapeshift<2>
+// CHECK:               %[[VAL_20:.*]] = fir.embox %[[VAL_19]](%[[VAL_25]]) : (!fir.ref<!fir.array<?x?xf32>>, !fir.shapeshift<2>) -> !fir.box<!fir.array<?x?xf32>>
 // CHECK:               %[[VAL_21:.*]] = fir.address_of(@{{_QQcl.*}}
 // CHECK:               %[[VAL_22:.*]] = fir.convert %[[VAL_20]] : (!fir.box<!fir.array<?x?xf32>>) -> !fir.box<none>
 // CHECK:               %[[VAL_23:.*]] = fir.convert %[[VAL_0]] : (!fir.box<!fir.array<?x?xf32>>) -> !fir.box<none>
 // CHECK:               %[[VAL_24:.*]] = fir.convert %[[VAL_21]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
 // CHECK:               fir.call @_FortranAShallowCopyDirect(%[[VAL_22]], %[[VAL_23]], %[[VAL_24]], %[[VAL_2]]) : (!fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> ()
-// CHECK:               %[[VAL_25:.*]] = fir.shift %[[VAL_15]]#0, %[[VAL_16]]#0 : (index, index) -> !fir.shift<2>
-// CHECK:               %[[VAL_26:.*]] = fir.rebox %[[VAL_20]](%[[VAL_25]]) : (!fir.box<!fir.array<?x?xf32>>, !fir.shift<2>) -> !fir.box<!fir.array<?x?xf32>>
-// CHECK:               fir.result %[[VAL_26]] : !fir.box<!fir.array<?x?xf32>>
+// CHECK:               fir.result %[[VAL_20]] : !fir.box<!fir.array<?x?xf32>>
 // CHECK:             } else {
 // CHECK:               fir.result %[[VAL_0]] : !fir.box<!fir.array<?x?xf32>>
 // CHECK:             }
@@ -156,15 +154,14 @@ func.func @_QPtest1_in(%arg0: !fir.box<!fir.array<?x?xf32>> {fir.bindc_name = "x
 // CHECK:               %[[VAL_16:.*]] = fir.shape %[[VAL_14]]#1, %[[VAL_15]]#1 : (index, index) -> !fir.shape<2>
 // CHECK:               %[[VAL_17:.*]] = fir.allocmem !fir.array<?x?xf32>, %[[VAL_14]]#1, %[[VAL_15]]#1 {bindc_name = ".repacked", uniq_name = ""}
 // CHECK:               %[[VAL_18:.*]] = fir.declare %[[VAL_17]](%[[VAL_16]]) {uniq_name = ".repacked"} : (!fir.heap<!fir.array<?x?xf32>>, !fir.shape<2>) -> !fir.heap<!fir.array<?x?xf32>>
-// CHECK:               %[[VAL_19:.*]] = fir.embox %[[VAL_18]](%[[VAL_16]]) : (!fir.heap<!fir.array<?x?xf32>>, !fir.shape<2>) -> !fir.box<!fir.heap<!fir.array<?x?xf32>>>
+// CHECK:               %[[VAL_24:.*]] = fir.shape_shift %[[VAL_14]]#0, %[[VAL_14]]#1, %[[VAL_15]]#0, %[[VAL_15]]#1 : (index, index, index, index) -> !fir.shapeshift<2>
+// CHECK:               %[[VAL_19:.*]] = fir.embox %[[VAL_18]](%[[VAL_24]]) : (!fir.heap<!fir.array<?x?xf32>>, !fir.shapeshift<2>) -> !fir.box<!fir.array<?x?xf32>>
 // CHECK:               %[[VAL_20:.*]] = fir.address_of(@{{_QQcl.*}}
-// CHECK:               %[[VAL_21:.*]] = fir.convert %[[VAL_19]] : (!fir.box<!fir.heap<!fir.array<?x?xf32>>>) -> !fir.box<none>
+// CHECK:               %[[VAL_21:.*]] = fir.convert %[[VAL_19]] : (!fir.box<!fir.array<?x?xf32>>) -> !fir.box<none>
 // CHECK:               %[[VAL_22:.*]] = fir.convert %[[VAL_0]] : (!fir.box<!fir.array<?x?xf32>>) -> !fir.box<none>
 // CHECK:               %[[VAL_23:.*]] = fir.convert %[[VAL_20]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
 // CHECK:               fir.call @_FortranAShallowCopyDirect(%[[VAL_21]], %[[VAL_22]], %[[VAL_23]], %[[VAL_1]]) : (!fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> ()
-// CHECK:               %[[VAL_24:.*]] = fir.shift %[[VAL_14]]#0, %[[VAL_15]]#0 : (index, index) -> !fir.shift<2>
-// CHECK:               %[[VAL_25:.*]] = fir.rebox %[[VAL_19]](%[[VAL_24]]) : (!fir.box<!fir.heap<!fir.array<?x?xf32>>>, !fir.shift<2>) -> !fir.box<!fir.array<?x?xf32>>
-// CHECK:               fir.result %[[VAL_25]] : !fir.box<!fir.array<?x?xf32>>
+// CHECK:               fir.result %[[VAL_19]] : !fir.box<!fir.array<?x?xf32>>
 // CHECK:             } else {
 // CHECK:               fir.result %[[VAL_0]] : !fir.box<!fir.array<?x?xf32>>
 // CHECK:             }
@@ -215,10 +212,9 @@ func.func @_QPtest1_out(%arg0: !fir.box<!fir.array<?x?xf32>> {fir.bindc_name = "
 // CHECK:               %[[VAL_16:.*]] = fir.shape %[[VAL_14]]#1, %[[VAL_15]]#1 : (index, index) -> !fir.shape<2>
 // CHECK:               %[[VAL_17:.*]] = fir.allocmem !fir.array<?x?xf32>, %[[VAL_14]]#1, %[[VAL_15]]#1 {bindc_name = ".repacked", uniq_name = ""}
 // CHECK:               %[[VAL_18:.*]] = fir.declare %[[VAL_17]](%[[VAL_16]]) {uniq_name = ".repacked"} : (!fir.heap<!fir.array<?x?xf32>>, !fir.shape<2>) -> !fir.heap<!fir.array<?x?xf32>>
-// CHECK:               %[[VAL_19:.*]] = fir.embox %[[VAL_18]](%[[VAL_16]]) : (!fir.heap<!fir.array<?x?xf32>>, !fir.shape<2>) -> !fir.box<!fir.heap<!fir.array<?x?xf32>>>
-// CHECK:               %[[VAL_20:.*]] = fir.shift %[[VAL_14]]#0, %[[VAL_15]]#0 : (index, index) -> !fir.shift<2>
-// CHECK:               %[[VAL_21:.*]] = fir.rebox %[[VAL_19]](%[[VAL_20]]) : (!fir.box<!fir.heap<!fir.array<?x?xf32>>>, !fir.shift<2>) -> !fir.box<!fir.array<?x?xf32>>
-// CHECK:               fir.result %[[VAL_21]] : !fir.box<!fir.array<?x?xf32>>
+// CHECK:               %[[VAL_20:.*]] = fir.shape_shift %[[VAL_14]]#0, %[[VAL_14]]#1, %[[VAL_15]]#0, %[[VAL_15]]#1 : (index, index, index, index) -> !fir.shapeshift<2>
+// CHECK:               %[[VAL_19:.*]] = fir.embox %[[VAL_18]](%[[VAL_20]]) : (!fir.heap<!fir.array<?x?xf32>>, !fir.shapeshift<2>) -> !fir.box<!fir.array<?x?xf32>>
+// CHECK:               fir.result %[[VAL_19]] : !fir.box<!fir.array<?x?xf32>>
 // CHECK:             } else {
 // CHECK:               fir.result %[[VAL_0]] : !fir.box<!fir.array<?x?xf32>>
 // CHECK:             }
@@ -286,15 +282,14 @@ func.func @_QPtest2(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir.box
 // CHECK:               %[[VAL_23:.*]] = fir.shape %[[VAL_21]]#1, %[[VAL_22]]#1 : (index, index) -> !fir.shape<2>
 // CHECK:               %[[VAL_24:.*]] = fir.allocmem !fir.array<?x?x!fir.char<1,?>>(%[[VAL_12]] : i32), %[[VAL_21]]#1, %[[VAL_22]]#1 {bindc_name = ".repacked", uniq_name = ""}
 // CHECK:               %[[VAL_25:.*]] = fir.declare %[[VAL_24]](%[[VAL_23]]) typeparams %[[VAL_12]] {uniq_name = ".repacked"} : (!fir.heap<!fir.array<?x?x!fir.char<1,?>>>, !fir.shape<2>, i32) -> !fir.heap<!fir.array<?x?x!fir.char<1,?>>>
-// CHECK:               %[[VAL_26:.*]] = fir.embox %[[VAL_25]](%[[VAL_23]]) typeparams %[[VAL_12]] : (!fir.heap<!fir.array<?x?x!fir.char<1,?>>>, !fir.shape<2>, i32) -> !fir.box<!fir.heap<!fir.array<?x?x!fir.char<1,?>>>>
+// CHECK:               %[[VAL_31:.*]] = fir.shape_shift %[[VAL_21]]#0, %[[VAL_21]]#1, %[[VAL_22]]#0, %[[VAL_22]]#1 : (index, index, index, index) -> !fir.shapeshift<2>
+// CHECK:               %[[VAL_26:.*]] = fir.embox %[[VAL_25]](%[[VAL_31]]) typeparams %[[VAL_12]] : (!fir.heap<!fir.array<?x?x!fir.char<1,?>>>, !fir.shapeshift<2>, i32) -> !fir.box<!fir.array<?x?x!fir.char<1,?>>>
 // CHECK:               %[[VAL_27:.*]] = fir.address_of(@{{_QQcl.*}}
-// CHECK:               %[[VAL_28:.*]] = fir.convert %[[VAL_26]] : (!fir.box<!fir.heap<!fir.array<?x?x!fir.char<1,?>>>>) -> !fir.box<none>
+// CHECK:               %[[VAL_28:.*]] = fir.convert %[[VAL_26]] : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>) -> !fir.box<none>
 // CHECK:               %[[VAL_29:.*]] = fir.convert %[[VAL_1]] : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>) -> !fir.box<none>
 // CHECK:               %[[VAL_30:.*]] = fir.convert %[[VAL_27]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
 // CHECK:               fir.call @_FortranAShallowCopyDirect(%[[VAL_28]], %[[VAL_29]], %[[VAL_30]], %[[VAL_3]]) : (!fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> ()
-// CHECK:               %[[VAL_31:.*]] = fir.shift %[[VAL_21]]#0, %[[VAL_22]]#0 : (index, index) -> !fir.shift<2>
-// CHECK:               %[[VAL_32:.*]] = fir.rebox %[[VAL_26]](%[[VAL_31]]) : (!fir.box<!fir.heap<!fir.array<?x?x!fir.char<1,?>>>>, !fir.shift<2>) -> !fir.box<!fir.array<?x?x!fir.char<1,?>>>
-// CHECK:               fir.result %[[VAL_32]] : !fir.box<!fir.array<?x?x!fir.char<1,?>>>
+// CHECK:               fir.result %[[VAL_26]] : !fir.box<!fir.array<?x?x!fir.char<1,?>>>
 // CHECK:             } else {
 // CHECK:               fir.result %[[VAL_1]] : !fir.box<!fir.array<?x?x!fir.char<1,?>>>
 // CHECK:             }
@@ -362,15 +357,14 @@ func.func @_QPtest2_stack(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !f
 // CHECK:               %[[VAL_23:.*]] = fir.shape %[[VAL_21]]#1, %[[VAL_22]]#1 : (index, index) -> !fir.shape<2>
 // CHECK:               %[[VAL_24:.*]] = fir.alloca !fir.array<?x?x!fir.char<1,?>>(%[[VAL_12]] : i32), %[[VAL_21]]#1, %[[VAL_22]]#1 {bindc_name = ".repacked"}
 // CHECK:               %[[VAL_25:.*]] = fir.declare %[[VAL_24]](%[[VAL_23]]) typeparams %[[VAL_12]] {uniq_name = ".repacked"} : (!fir.ref<!fir.array<?x?x!fir.char<1,?>>>, !fir.shape<2>, i32) -> !fir.ref<!fir.array<?x?x!fir.char<1,?>>>
-// CHECK:               %[[VAL_26:.*]] = fir.embox %[[VAL_25]](%[[VAL_23]]) typeparams %[[VAL_12]] : (!fir.ref<!fir.array<?x?x!fir.char<1,?>>>, !fir.shape<2>, i32) -> !fir.box<!fir.array<?x?x!fir.char<1,?>>>
+// CHECK:               %[[VAL_31:.*]] = fir.shape_shift %[[VAL_21]]#0, %[[VAL_21]]#1, %[[VAL_22]]#0, %[[VAL_22]]#1 : (index, index, index, index) -> !fir.shapeshift<2>
+// CHECK:               %[[VAL_26:.*]] = fir.embox %[[VAL_25]](%[[VAL_31]]) typeparams %[[VAL_12]] : (!fir.ref<!fir.array<?x?x!fir.char<1,?>>>, !fir.shapeshift<2>, i32) -> !fir.box<!fir.array<?x?x!fir.char<1,?>>>
 // CHECK:               %[[VAL_27:.*]] = fir.address_of(@{{_QQcl.*}}
 // CHECK:               %[[VAL_28:.*]] = fir.convert %[[VAL_26]] : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>) -> !fir.box<none>
 // CHECK:               %[[VAL_29:.*]] = fir.convert %[[VAL_1]] : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>) -> !fir.box<none>
 // CHECK:               %[[VAL_30:.*]] = fir.convert %[[VAL_27]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
 // CHECK:               fir.call @_FortranAShallowCopyDirect(%[[VAL_28]], %[[VAL_29]], %[[VAL_30]], %[[VAL_3]]) : (!fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> ()
-// CHECK:               %[[VAL_31:.*]] = fir.shift %[[VAL_21]]#0, %[[VAL_22]]#0 : (index, index) -> !fir.shift<2>
-// CHECK:               %[[VAL_32:.*]] = fir.rebox %[[VAL_26]](%[[VAL_31]]) : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>, !fir.shift<2>) -> !fir.box<!fir.array<?x?x!fir.char<1,?>>>
-// CHECK:               fir.result %[[VAL_32]] : !fir.box<!fir.array<?x?x!fir.char<1,?>>>
+// CHECK:               fir.result %[[VAL_26]] : !fir.box<!fir.array<?x?x!fir.char<1,?>>>
 // CHECK:             } else {
 // CHECK:               fir.result %[[VAL_1]] : !fir.box<!fir.array<?x?x!fir.char<1,?>>>
 // CHECK:             }
@@ -427,15 +421,14 @@ func.func @_QPtest3(%arg0: !fir.box<!fir.array<?x?x!fir.char<1,?>>> {fir.bindc_n
 // CHECK:               %[[VAL_18:.*]] = fir.shape %[[VAL_15]]#1, %[[VAL_16]]#1 : (index, index) -> !fir.shape<2>
 // CHECK:               %[[VAL_19:.*]] = fir.allocmem !fir.array<?x?x!fir.char<1,?>>(%[[VAL_17]] : index), %[[VAL_15]]#1, %[[VAL_16]]#1 {bindc_name = ".repacked", uniq_name = ""}
 // CHECK:               %[[VAL_20:.*]] = fir.declare %[[VAL_19]](%[[VAL_18]]) typeparams %[[VAL_17]] {uniq_name = ".repacked"} : (!fir.heap<!fir.array<?x?x!fir.char<1,?>>>, !fir.shape<2>, index) -> !fir.heap<!fir.array<?x?x!fir.char<1,?>>>
-// CHECK:               %[[VAL_21:.*]] = fir.embox %[[VAL_20]](%[[VAL_18]]) typeparams %[[VAL_17]] : (!fir.heap<!fir.array<?x?x!fir.char<1,?>>>, !fir.shape<2>, index) -> !fir.box<!fir.heap<!fir.array<?x?x!fir.char<1,?>>>>
+// CHECK:               %[[VAL_26:.*]] = fir.shape_shift %[[VAL_15]]#0, %[[VAL_15]]#1, %[[VAL_16]]#0, %[[VAL_16]]#1 : (index, index, index, index) -> !fir.shapeshift<2>
+// CHECK:               %[[VAL_21:.*]] = fir.embox %[[VAL_20]](%[[VAL_26]]) typeparams %[[VAL_17]] : (!fir.heap<!fir.array<?x?x!fir.char<1,?>>>, !fir.shapeshift<2>, index) -> !fir.box<!fir.array<?x?x!fir.char<1,?>>>
 // CHECK:               %[[VAL_22:.*]] = fir.address_of(@{{_QQcl.*}}
-// CHECK:               %[[VAL_23:.*]] = fir.convert %[[VAL_21]] : (!fir.box<!fir.heap<!fir.array<?x?x!fir.char<1,?>>>>) -> !fir.box<none>
+// CHECK:               %[[VAL_23:.*]] = fir.convert %[[VAL_21]] : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>) -> !fir.box<none>
 // CHECK:               %[[VAL_24:.*]] = fir.convert %[[VAL_0]] : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>) -> !fir.box<none>
 // CHECK:               %[[VAL_25:.*]] = fir.convert %[[VAL_22]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
 // CHECK:               fir.call @_FortranAShallowCopyDirect(%[[VAL_23]], %[[VAL_24]], %[[VAL_25]], %[[VAL_2]]) : (!fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> ()
-// CHECK:               %[[VAL_26:.*]] = fir.shift %[[VAL_15]]#0, %[[VAL_16]]#0 : (index, index) -> !fir.shift<2>
-// CHECK:               %[[VAL_27:.*]] = fir.rebox %[[VAL_21]](%[[VAL_26]]) : (!fir.box<!fir.heap<!fir.array<?x?x!fir.char<1,?>>>>, !fir.shift<2>) -> !fir.box<!fir.array<?x?x!fir.char<1,?>>>
-// CHECK:               fir.result %[[VAL_27]] : !fir.box<!fir.array<?x?x!fir.char<1,?>>>
+// CHECK:               fir.result %[[VAL_21]] : !fir.box<!fir.array<?x?x!fir.char<1,?>>>
 // CHECK:             } else {
 // CHECK:               fir.result %[[VAL_0]] : !fir.box<!fir.array<?x?x!fir.char<1,?>>>
 // CHECK:             }
@@ -493,15 +486,14 @@ func.func @_QPtest3_stack(%arg0: !fir.box<!fir.array<?x?x!fir.char<1,?>>> {fir.b
 // CHECK:               %[[VAL_18:.*]] = fir.shape %[[VAL_15]]#1, %[[VAL_16]]#1 : (index, index) -> !fir.shape<2>
 // CHECK:               %[[VAL_19:.*]] = fir.alloca !fir.array<?x?x!fir.char<1,?>>(%[[VAL_17]] : index), %[[VAL_15]]#1, %[[VAL_16]]#1 {bindc_name = ".repacked"}
 // CHECK:               %[[VAL_20:.*]] = fir.declare %[[VAL_19]](%[[VAL_18]]) typeparams %[[VAL_17]] {uniq_name = ".repacked"} : (!fir.ref<!fir.array<?x?x!fir.char<1,?>>>, !fir.shape<2>, index) -> !fir.ref<!fir.array<?x?x!fir.char<1,?>>>
-// CHECK:               %[[VAL_21:.*]] = fir.embox %[[VAL_20]](%[[VAL_18]]) typeparams %[[VAL_17]] : (!fir.ref<!fir.array<?x?x!fir.char<1,?>>>, !fir.shape<2>, index) -> !fir.box<!fir.array<?x?x!fir.char<1,?>>>
+// CHECK:               %[[VAL_26:.*]] = fir.shape_shift %[[VAL_15]]#0, %[[VAL_15]]#1, %[[VAL_16]]#0, %[[VAL_16]]#1 : (index, index, index, index) -> !fir.shapeshift<2>
+// CHECK:               %[[VAL_21:.*]] = fir.embox %[[VAL_20]](%[[VAL_26]]) typeparams %[[VAL_17]] : (!fir.ref<!fir.array<?x?x!fir.char<1,?>>>, !fir.shapeshift<2>, index) -> !fir.box<!fir.array<?x?x!fir.char<1,?>>>
 // CHECK:               %[[VAL_22:.*]] = fir.address_of(@{{_QQcl.*}}
 // CHECK:               %[[VAL_23:.*]] = fir.convert %[[VAL_21]] : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>) -> !fir.box<none>
 // CHECK:               %[[VAL_24:.*]] = fir.convert %[[VAL_0]] : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>) -> !fir.box<none>
 // CHECK:               %[[VAL_25:.*]] = fir.convert %[[VAL_22]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
 // CHECK:               fir.call @_FortranAShallowCopyDirect(%[[VAL_23]], %[[VAL_24]], %[[VAL_25]], %[[VAL_2]]) : (!fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> ()
-// CHECK:               %[[VAL_26:.*]] = fir.shift %[[VAL_15]]#0, %[[VAL_16]]#0 : (index, index) -> !fir.shift<2>
-// CHECK:               %[[VAL_27:.*]] = fir.rebox %[[VAL_21]](%[[VAL_26]]) : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>, !fir.shift<2>) -> !fir.box<!fir.array<?x?x!fir.char<1,?>>>
-// CHECK:               fir.result %[[VAL_27]] : !fir.box<!fir.array<?x?x!fir.char<1,?>>>
+// CHECK:               fir.result %[[VAL_21]] : !fir.box<!fir.array<?x?x!fir.char<1,?>>>
 // CHECK:             } else {
 // CHECK:               fir.result %[[VAL_0]] : !fir.box<!fir.array<?x?x!fir.char<1,?>>>
 // CHECK:             }
@@ -559,15 +551,14 @@ func.func @_QPtest4(%arg0: !fir.box<!fir.array<?x?x!fir.char<1,10>>> {fir.bindc_
 // CHECK:               %[[VAL_18:.*]] = fir.shape %[[VAL_16]]#1, %[[VAL_17]]#1 : (index, index) -> !fir.shape<2>
 // CHECK:               %[[VAL_19:.*]] = fir.allocmem !fir.array<?x?x!fir.char<1,10>>, %[[VAL_16]]#1, %[[VAL_17]]#1 {bindc_name = ".repacked", uniq_name = ""}
 // CHECK:               %[[VAL_20:.*]] = fir.declare %[[VAL_19]](%[[VAL_18]]) typeparams %[[VAL_6]] {uniq_name = ".repacked"} : (!fir.heap<!fir.array<?x?x!fir.char<1,10>>>, !fir.shape<2>, index) -> !fir.heap<!fir.array<?x?x!fir.char<1,10>>>
-// CHECK:               %[[VAL_21:.*]] = fir.embox %[[VAL_20]](%[[VAL_18]]) : (!fir.heap<!fir.array<?x?x!fir.char<1,10>>>, !fir.shape<2>) -> !fir.box<!fir.heap<!fir.array<?x?x!fir.char<1,10>>>>
+// CHECK:               %[[VAL_26:.*]] = fir.shape_shift %[[VAL_16]]#0, %[[VAL_16]]#1, %[[VAL_17]]#0, %[[VAL_17]]#1 : (index, index, index, index) -> !fir.shapeshift<2>
+// CHECK:               %[[VAL_21:.*]] = fir.embox %[[VAL_20]](%[[VAL_26]]) : (!fir.heap<!fir.array<?x?x!fir.char<1,10>>>, !fir.shapeshift<2>) -> !fir.box<!fir.array<?x?x!fir.char<1,10>>>
 // CHECK:               %[[VAL_22:.*]] = fir.address_of(@{{_QQcl.*}}
-// CHECK:               %[[VAL_23:.*]] = fir.convert %[[VAL_21]] : (!fir.box<!fir.heap<!fir.array<?x?x!fir.char<1,10>>>>) -> !fir.box<none>
+// CHECK:               %[[VAL_23:.*]] = fir.convert %[[VAL_21]] : (!fir.box<!fir.array<?x?x!fir.char<1,10>>>) -> !fir.box<none>
 // CHECK:               %[[VAL_24:.*]] = fir.convert %[[VAL_0]] : (!fir.box<!fir.array<?x?x!fir.char<1,10>>>) -> !fir.box<none>
 // CHECK:               %[[VAL_25:.*]] = fir.convert %[[VAL_22]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
 // CHECK:               fir.call @_FortranAShallowCopyDirect(%[[VAL_23]], %[[VAL_24]], %[[VAL_25]], %[[VAL_2]]) : (!fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> ()
-// CHECK:               %[[VAL_26:.*]] = fir.shift %[[VAL_16]]#0, %[[VAL_17]]#0 : (index, index) -> !fir.shift<2>
-// CHECK:               %[[VAL_27:.*]] = fir.rebox %[[VAL_21]](%[[VAL_26]]) : (!fir.box<!fir.heap<!fir.array<?x?x!fir.char<1,10>>>>, !fir.shift<2>) -> !fir.box<!fir.array<?x?x!fir.char<1,10>>>
-// CHECK:               fir.result %[[VAL_27]] : !fir.box<!fir.array<?x?x!fir.char<1,10>>>
+// CHECK:               fir.result %[[VAL_21]] : !fir.box<!fir.array<?x?x!fir.char<1,10>>>
 // CHECK:             } else {
 // CHECK:               fir.result %[[VAL_0]] : !fir.box<!fir.array<?x?x!fir.char<1,10>>>
 // CHECK:             }
@@ -626,15 +617,14 @@ func.func @_QPtest4_stack(%arg0: !fir.box<!fir.array<?x?x!fir.char<1,10>>> {fir.
 // CHECK:               %[[VAL_18:.*]] = fir.shape %[[VAL_16]]#1, %[[VAL_17]]#1 : (index, index) -> !fir.shape<2>
 // CHECK:               %[[VAL_19:.*]] = fir.alloca !fir.array<?x?x!fir.char<1,10>>, %[[VAL_16]]#1, %[[VAL_17]]#1 {bindc_name = ".repacked"}
 // CHECK:               %[[VAL_20:.*]] = fir.declare %[[VAL_19]](%[[VAL_18]]) typeparams %[[VAL_6]] {uniq_name = ".repacked"} : (!fir.ref<!fir.array<?x?x!fir.char<1,10>>>, !fir.shape<2>, index) -> !fir.ref<!fir.array<?x?x!fir.char<1,10>>>
-// CHECK:               %[[VAL_21:.*]] = fir.embox %[[VAL_20]](%[[VAL_18]]) : (!fir.ref<!fir.array<?x?x!fir.char<1,10>>>, !fir.shape<2>) -> !fir.box<!fir.array<?x?x!fir.char<1,10>>>
+// CHECK:               %[[VAL_26:.*]] = fir.shape_shift %[[VAL_16]]#0, %[[VAL_16]]#1, %[[VAL_17]]#0, %[[VAL_17]]#1 : (index, index, index, index) -> !fir.shapeshift<2>
+// CHECK:               %[[VAL_21:.*]] = fir.embox %[[VAL_20]](%[[VAL_26]]) : (!fir.ref<!fir.array<?x?x!fir.char<1,10>>>, !fir.shapeshift<2>) -> !fir.box<!fir.array<?x?x!fir.char<1,10>>>
 // CHECK:               %[[VAL_22:.*]] = fir.address_of(@{{_QQcl.*}}
 // CHECK:               %[[VAL_23:.*]] = fir.convert %[[VAL_21]] : (!fir.box<!fir.array<?x?x!fir.char<1,10>>>) -> !fir.box<none>
 // CHECK:               %[[VAL_24:.*]] = fir.convert %[[VAL_0]] : (!fir.box<!fir.array<?x?x!fir.char<1,10>>>) -> !fir.box<none>
 // CHECK:               %[[VAL_25:.*]] = fir.convert %[[VAL_22]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
 // CHECK:               fir.call @_FortranAShallowCopyDirect(%[[VAL_23]], %[[VAL_24]], %[[VAL_25]], %[[VAL_2]]) : (!fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> ()
-// CHECK:               %[[VAL_26:.*]] = fir.shift %[[VAL_16]]#0, %[[VAL_17]]#0 : (index, index) -> !fir.shift<2>
-// CHECK:               %[[VAL_27:.*]] = fir.rebox %[[VAL_21]](%[[VAL_26]]) : (!fir.box<!fir.array<?x?x!fir.char<1,10>>>, !fir.shift<2>) -> !fir.box<!fir.array<?x?x!fir.char<1,10>>>
-// CHECK:               fir.result %[[VAL_27]] : !fir.box<!fir.array<?x?x!fir.char<1,10>>>
+// CHECK:               fir.result %[[VAL_21]] : !fir.box<!fir.array<?x?x!fir.char<1,10>>>
 // CHECK:             } else {
 // CHECK:               fir.result %[[VAL_0]] : !fir.box<!fir.array<?x?x!fir.char<1,10>>>
 // CHECK:             }
@@ -690,15 +680,15 @@ func.func @_QPtest5(%arg0: !fir.box<!fir.array<?x?x!fir.type<_QMmTt>>> {fir.bind
 // CHECK:               %[[VAL_17:.*]] = fir.shape %[[VAL_15]]#1, %[[VAL_16]]#1 : (index, index) -> !fir.shape<2>
 // CHECK:               %[[VAL_18:.*]] = fir.allocmem !fir.array<?x?x!fir.type<_QMmTt>>, %[[VAL_15]]#1, %[[VAL_16]]#1 {bindc_name = ".repacked", uniq_name = ""}
 // CHECK:               %[[VAL_19:.*]] = fir.declare %[[VAL_18]](%[[VAL_17]]) {uniq_name = ".repacked"} : (!fir.heap<!fir.array<?x?x!fir.type<_QMmTt>>>, !fir.shape<2>) -> !fir.heap<!fir.array<?x?x!fir.type<_QMmTt>>>
-// CHECK:               %[[VAL_20:.*]] = fir.embox %[[VAL_19]](%[[VAL_17]]) : (!fir.heap<!fir.array<?x?x!fir.type<_QMmTt>>>, !fir.shape<2>) -> !fir.box<!fir.heap<!fir.array<?x?x!fir.type<_QMmTt>>>>
+// CHECK:               %[[VAL_25:.*]] = fir.shape_shift %[[VAL_15]]#0, %[[VAL_15]]#1, %[[VAL_16]]#0, %[[VAL_16]]#1 : (index, index, index, index) -> !fir.shapeshift<2>
+// CHECK:               %[[VAL_20:.*]] = fir.embox %[[VAL_19]](%[[VAL_25]]) source_box %[[VAL_0]] : (!fir.heap<!fir.array<?x?x!fir.type<_QMmTt>>>, !fir.shapeshift<2>, !fir.box<!fir.array<?x?x!fir.type<_QMmTt>>>) -> !fir.class<!fir.array<?x?x!fir.type<_QMmTt>>>
+// CHECK:               %[[BOX:.*]] = fir.convert %[[VAL_20]] : (!fir.class<!fir.array<?x?x!fir.type<_QMmTt>>>) -> !fir.box<!fir.array<?x?x!fir.type<_QMmTt>>>
 // CHECK:               %[[VAL_21:.*]] = fir.address_of(@{{_QQcl.*}}
-// CHECK:               %[[VAL_22:.*]] = fir.convert %[[VAL_20]] : (!fir.box<!fir.heap<!fir.array<?x?x!fir.type<_QMmTt>>>>) -> !fir.box<none>
+// CHECK:               %[[VAL_22:.*]] = fir.convert %[[BOX]] : (!fir.box<!fir.array<?x?x!fir.type<_QMmTt>>>) -> !fir.box<none>
 // CHECK:               %[[VAL_23:.*]] = fir.convert %[[VAL_0]] : (!fir.box<!fir.array<?x?x!fir.type<_QMmTt>>>) -> !fir.box<none>
 // CHECK:               %[[VAL_24:.*]] = fir.convert %[[VAL_21]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
 // CHECK:               fir.call @_FortranAShallowCopyDirect(%[[VAL_22]], %[[VAL_23]], %[[VAL_24]], %[[VAL_2]]) : (!fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> ()
-// CHECK:               %[[VAL_25:.*]] = fir.shift %[[VAL_15]]#0, %[[VAL_16]]#0 : (index, index) -> !fir.shift<2>
-// CHECK:               %[[VAL_26:.*]] = fir.rebox %[[VAL_20]](%[[VAL_25]]) : (!fir.box<!fir.heap<!fir.array<?x?x!fir.type<_QMmTt>>>>, !fir.shift<2>) -> !fir.box<!fir.array<?x?x!fir.type<_QMmTt>>>
-// CHECK:               fir.result %[[VAL_26]] : !fir.box<!fir.array<?x?x!fir.type<_QMmTt>>>
+// CHECK:               fir.result %[[BOX]] : !fir.box<!fir.array<?x?x!fir.type<_QMmTt>>>
 // CHECK:             } else {
 // CHECK:               fir.result %[[VAL_0]] : !fir.box<!fir.array<?x?x!fir.type<_QMmTt>>>
 // CHECK:             }
@@ -755,15 +745,15 @@ func.func @_QPtest5_stack(%arg0: !fir.box<!fir.array<?x?x!fir.type<_QMmTt>>> {fi
 // CHECK:               %[[VAL_17:.*]] = fir.shape %[[VAL_15]]#1, %[[VAL_16]]#1 : (index, index) -> !fir.shape<2>
 // CHECK:               %[[VAL_18:.*]] = fir.alloca !fir.array<?x?x!fir.type<_QMmTt>>, %[[VAL_15]]#1, %[[VAL_16]]#1 {bindc_name = ".repacked"}
 // CHECK:               %[[VAL_19:.*]] = fir.declare %[[VAL_18]](%[[VAL_17]]) {uniq_name = ".repacked"} : (!fir.ref<!fir.array<?x?x!fir.type<_QMmTt>>>, !fir.shape<2>) -> !fir.ref<!fir.array<?x?x!fir.type<_QMmTt>>>
-// CHECK:               %[[VAL_20:.*]] = fir.embox %[[VAL_19]](%[[VAL_17]]) : (!fir.ref<!fir.array<?x?x!fir.type<_QMmTt>>>, !fir.shape<2>) -> !fir.box<!fir.array<?x?x!fir.type<_QMmTt>>>
+// CHECK:               %[[VAL_25:.*]] = fir.shape_shift %[[VAL_15]]#0, %[[VAL_15]]#1, %[[VAL_16]]#0, %[[VAL_16]]#1 : (index, index, index, index) -> !fir.shapeshift<2>
+// CHECK:               %[[VAL_20:.*]] = fir.embox %[[VAL_19]](%[[VAL_25]]) source_box %[[VAL_0]] : (!fir.ref<!fir.array<?x?x!fir.type<_QMmTt>>>, !fir.shapeshift<2>, !fir.box<!fir.array<?x?x!fir.type<_QMmTt>>>) -> !fir.class<!fir.array<?x?x!fir.type<_QMmTt>>>
+// CHECK:               %[[BOX:.*]] = fir.convert %[[VAL_20]] : (!fir.class<!fir.array<?x?x!fir.type<_QMmTt>>>) -> !fir.box<!fir.array<?x?x!fir.type<_QMmTt>>>
 // CHECK:               %[[VAL_21:.*]] = fir.address_of(@{{_QQcl.*}}
-// CHECK:               %[[VAL_22:.*]] = fir.convert %[[VAL_20]] : (!fir.box<!fir.array<?x?x!fir.type<_QMmTt>>>) -> !fir.box<none>
+// CHECK:               %[[VAL_22:.*]] = fir.convert %[[BOX]] : (!fir.box<!fir.array<?x?x!fir.type<_QMmTt>>>) -> !fir.box<none>
 // CHECK:               %[[VAL_23:.*]] = fir.convert %[[VAL_0]] : (!fir.box<!fir.array<?x?x!fir.type<_QMmTt>>>) -> !fir.box<none>
 // CHECK:               %[[VAL_24:.*]] = fir.convert %[[VAL_21]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
 // CHECK:               fir.call @_FortranAShallowCopyDirect(%[[VAL_22]], %[[VAL_23]], %[[VAL_24]], %[[VAL_2]]) : (!fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> ()
-// CHECK:               %[[VAL_25:.*]] = fir.shift %[[VAL_15]]#0, %[[VAL_16]]#0 : (index, index) -> !fir.shift<2>
-// CHECK:               %[[VAL_26:.*]] = fir.rebox %[[VAL_20]](%[[VAL_25]]) : (!fir.box<!fir.array<?x?x!fir.type<_QMmTt>>>, !fir.shift<2>) -> !fir.box<!fir.array<?x?x!fir.type<_QMmTt>>>
-// CHECK:               fir.result %[[VAL_26]] : !fir.box<!fir.array<?x?x!fir.type<_QMmTt>>>
+// CHECK:               fir.result %[[BOX]] : !fir.box<!fir.array<?x?x!fir.type<_QMmTt>>>
 // CHECK:             } else {
 // CHECK:               fir.result %[[VAL_0]] : !fir.box<!fir.array<?x?x!fir.type<_QMmTt>>>
 // CHECK:             }
@@ -830,13 +820,14 @@ func.func @_QPtest6(%arg0: !fir.class<!fir.array<?x?x!fir.type<_QMmTt>>> {fir.bi
 // CHECK:               %[[VAL_26:.*]] = fir.call @_FortranAAllocatableAllocate(%[[VAL_23]], %[[VAL_24]], %[[VAL_4]], %[[VAL_22]], %[[VAL_25]], %[[VAL_1]]) : (!fir.ref<!fir.box<none>>, !fir.ref<i64>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
 // CHECK:               %[[VAL_27:.*]] = fir.load %[[VAL_5]] : !fir.ref<!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMmTt>>>>>
 // CHECK:               %[[VAL_28:.*]] = fir.declare %[[VAL_27]] {uniq_name = ".repacked"} : (!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMmTt>>>>) -> !fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMmTt>>>>
+// CHECK:               %[[ADDR:.*]] = fir.box_addr %[[VAL_28]] : (!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMmTt>>>>) -> !fir.heap<!fir.array<?x?x!fir.type<_QMmTt>>>
+// CHECK:               %[[VAL_33:.*]] = fir.shape_shift %[[VAL_15]]#0, %[[VAL_15]]#1, %[[VAL_16]]#0, %[[VAL_16]]#1 : (index, index, index, index) -> !fir.shapeshift<2>
+// CHECK:               %[[VAL_34:.*]] = fir.embox %[[ADDR]](%[[VAL_33]]) source_box %[[ARG0]] : (!fir.heap<!fir.array<?x?x!fir.type<_QMmTt>>>, !fir.shapeshift<2>, !fir.class<!fir.array<?x?x!fir.type<_QMmTt>>>) -> !fir.class<!fir.array<?x?x!fir.type<_QMmTt>>>
 // CHECK:               %[[VAL_29:.*]] = fir.address_of(@{{_QQcl.*}}) : !fir.ref<!fir.char<1,{{.*}}>>
-// CHECK:               %[[VAL_30:.*]] = fir.convert %[[VAL_28]] : (!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMmTt>>>>) -> !fir.box<none>
+// CHECK:               %[[VAL_30:.*]] = fir.convert %[[VAL_34]] : (!fir.class<!fir.array<?x?x!fir.type<_QMmTt>>>) -> !fir.box<none>
 // CHECK:               %[[VAL_31:.*]] = fir.convert %[[ARG0]] : (!fir.class<!fir.array<?x?x!fir.type<_QMmTt>>>) -> !fir.box<none>
 // CHECK:               %[[VAL_32:.*]] = fir.convert %[[VAL_29]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
 // CHECK:               fir.call @_FortranAShallowCopyDirect(%[[VAL_30]], %[[VAL_31]], %[[VAL_32]], %[[VAL_1]]) : (!fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> ()
-// CHECK:               %[[VAL_33:.*]] = fir.shift %[[VAL_15]]#0, %[[VAL_16]]#0 : (index, index) -> !fir.shift<2>
-// CHECK:               %[[VAL_34:.*]] = fir.rebox %[[VAL_28]](%[[VAL_33]]) : (!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMmTt>>>>, !fir.shift<2>) -> !fir.class<!fir.array<?x?x!fir.type<_QMmTt>>>
 // CHECK:               fir.result %[[VAL_34]] : !fir.class<!fir.array<?x?x!fir.type<_QMmTt>>>
 // CHECK:             } else {
 // CHECK:               fir.result %[[ARG0]] : !fir.class<!fir.array<?x?x!fir.type<_QMmTt>>>
@@ -906,13 +897,14 @@ func.func @_QPtest6_stack(%arg0: !fir.class<!fir.array<?x?x!fir.type<_QMmTt>>> {
 // CHECK:               %[[VAL_26:.*]] = fir.call @_FortranAAllocatableAllocate(%[[VAL_23]], %[[VAL_24]], %[[VAL_4]], %[[VAL_22]], %[[VAL_25]], %[[VAL_1]]) : (!fir.ref<!fir.box<none>>, !fir.ref<i64>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
 // CHECK:               %[[VAL_27:.*]] = fir.load %[[VAL_5]] : !fir.ref<!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMmTt>>>>>
 // CHECK:               %[[VAL_28:.*]] = fir.declare %[[VAL_27]] {uniq_name = ".repacked"} : (!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMmTt>>>>) -> !fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMmTt>>>>
+// CHECK:               %[[ADDR:.*]] = fir.box_addr %[[VAL_28]] : (!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMmTt>>>>) -> !fir.heap<!fir.array<?x?x!fir.type<_QMmTt>>>
+// CHECK:               %[[VAL_33:.*]] = fir.shape_shift %[[VAL_15]]#0, %[[VAL_15]]#1, %[[VAL_16]]#0, %[[VAL_16]]#1 : (index, index, index, index) -> !fir.shapeshift<2>
+// CHECK:               %[[VAL_34:.*]] = fir.embox %[[ADDR]](%[[VAL_33]]) source_box %[[ARG0]] : (!fir.heap<!fir.array<?x?x!fir.type<_QMmTt>>>, !fir.shapeshift<2>, !fir.class<!fir.array<?x?x!fir.type<_QMmTt>>>) -> !fir.class<!fir.array<?x?x!fir.type<_QMmTt>>>
 // CHECK:               %[[VAL_29:.*]] = fir.address_of(@{{_QQcl.*}}) : !fir.ref<!fir.char<1,{{.*}}>>
-// CHECK:               %[[VAL_30:.*]] = fir.convert %[[VAL_28]] : (!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMmTt>>>>) -> !fir.box<none>
+// CHECK:               %[[VAL_30:.*]] = fir.convert %[[VAL_34]] : (!fir.class<!fir.array<?x?x!fir.type<_QMmTt>>>) -> !fir.box<none>
 // CHECK:               %[[VAL_31:.*]] = fir.convert %[[ARG0]] : (!fir.class<!fir.array<?x?x!fir.type<_QMmTt>>>) -> !fir.box<none>
 // CHECK:               %[[VAL_32:.*]] = fir.convert %[[VAL_29]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
 // CHECK:               fir.call @_FortranAShallowCopyDirect(%[[VAL_30]], %[[VAL_31]], %[[VAL_32]], %[[VAL_1]]) : (!fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> ()
-// CHECK:               %[[VAL_33:.*]] = fir.shift %[[VAL_15]]#0, %[[VAL_16]]#0 : (index, index) -> !fir.shift<2>
-// CHECK:               %[[VAL_34:.*]] = fir.rebox %[[VAL_28]](%[[VAL_33]]) : (!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMmTt>>>>, !fir.shift<2>) -> !fir.class<!fir.array<?x?x!fir.type<_QMmTt>>>
 // CHECK:               fir.result %[[VAL_34]] : !fir.class<!fir.array<?x?x!fir.type<_QMmTt>>>
 // CHECK:             } else {
 // CHECK:               fir.result %[[ARG0]] : !fir.class<!fir.array<?x?x!fir.type<_QMmTt>>>
@@ -981,13 +973,14 @@ func.func @_QPtest7(%arg0: !fir.class<!fir.array<?x?xnone>> {fir.bindc_name = "x
 // CHECK:               %[[VAL_26:.*]] = fir.call @_FortranAAllocatableAllocate(%[[VAL_23]], %[[VAL_24]], %[[VAL_4]], %[[VAL_22]], %[[VAL_25]], %[[VAL_1]]) : (!fir.ref<!fir.box<none>>, !fir.ref<i64>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
 // CHECK:               %[[VAL_27:.*]] = fir.load %[[VAL_5]] : !fir.ref<!fir.class<!fir.heap<!fir.array<?x?xnone>>>>
 // CHECK:               %[[VAL_28:.*]] = fir.declare %[[VAL_27]] {uniq_name = ".repacked"} : (!fir.class<!fir.heap<!fir.array<?x?xnone>>>) -> !fir.class<!fir.heap<!fir.array<?x?xnone>>>
+// CHECK:               %[[ADDR:.*]] = fir.box_addr %[[VAL_28]] : (!fir.class<!fir.heap<!fir.array<?x?xnone>>>) -> !fir.heap<!fir.array<?x?xnone>>
+// CHECK:               %[[VAL_33:.*]] = fir.shape_shift %[[VAL_15]]#0, %[[VAL_15]]#1, %[[VAL_16]]#0, %[[VAL_16]]#1 : (index, index, index, index) -> !fir.shapeshift<2>
+// CHECK:               %[[VAL_34:.*]] = fir.embox %[[ADDR]](%[[VAL_33]]) source_box %[[ARG0]] : (!fir.heap<!fir.array<?x?xnone>>, !fir.shapeshift<2>, !fir.class<!fir.array<?x?xnone>>) -> !fir.class<!fir.array<?x?xnone>>
 // CHECK:               %[[VAL_29:.*]] = fir.address_of(@{{_QQcl.*}}) : !fir.ref<!fir.char<1,{{.*}}>>
-// CHECK:               %[[VAL_30:.*]] = fir.convert %[[VAL_28]] : (!fir.class<!fir.heap<!fir.array<?x?xnone>>>) -> !fir.box<none>
+// CHECK:               %[[VAL_30:.*]] = fir.convert %[[VAL_34]] : (!fir.class<!fir.array<?x?xnone>>) -> !fir.box<none>
 // CHECK:               %[[VAL_31:.*]] = fir.convert %[[ARG0]] : (!fir.class<!fir.array<?x?xnone>>) -> !fir.box<none>
 // CHECK:               %[[VAL_32:.*]] = fir.convert %[[VAL_29]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
 // CHECK:               fir.call @_FortranAShallowCopyDirect(%[[VAL_30]], %[[VAL_31]], %[[VAL_32]], %[[VAL_1]]) : (!fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> ()
-// CHECK:               %[[VAL_33:.*]] = fir.shift %[[VAL_15]]#0, %[[VAL_16]]#0 : (index, index) -> !fir.shift<2>
-// CHECK:               %[[VAL_34:.*]] = fir.rebox %[[VAL_28]](%[[VAL_33]]) : (!fir.class<!fir.heap<!fir.array<?x?xnone>>>, !fir.shift<2>) -> !fir.class<!fir.array<?x?xnone>>
 // CHECK:               fir.result %[[VAL_34]] : !fir.class<!fir.array<?x?xnone>>
 // CHECK:             } else {
 // CHECK:               fir.result %[[ARG0]] : !fir.class<!fir.array<?x?xnone>>
@@ -1057,13 +1050,14 @@ func.func @_QPtest7_stack(%arg0: !fir.class<!fir.array<?x?xnone>> {fir.bindc_nam
 // CHECK:               %[[VAL_26:.*]] = fir.call @_FortranAAllocatableAllocate(%[[VAL_23]], %[[VAL_24]], %[[VAL_4]], %[[VAL_22]], %[[VAL_25]], %[[VAL_1]]) : (!fir.ref<!fir.box<none>>, !fir.ref<i64>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
 // CHECK:               %[[VAL_27:.*]] = fir.load %[[VAL_5]] : !fir.ref<!fir.class<!fir.heap<!fir.array<?x?xnone>>>>
 // CHECK:               %[[VAL_28:.*]] = fir.declare %[[VAL_27]] {uniq_name = ".repacked"} : (!fir.class<!fir.heap<!fir.array<?x?xnone>>>) -> !fir.class<!fir.heap<!fir.array<?x?xnone>>>
+// CHECK:               %[[ADDR:.*]] = fir.box_addr %[[VAL_28]] : (!fir.class<!fir.heap<!fir.array<?x?xnone>>>) -> !fir.heap<!fir.array<?x?xnone>>
+// CHECK:               %[[VAL_33:.*]] = fir.shape_shift %[[VAL_15]]#0, %[[VAL_15]]#1, %[[VAL_16]]#0, %[[VAL_16]]#1 : (index, index, index, index) -> !fir.shapeshift<2>
+// CHECK:               %[[VAL_34:.*]] = fir.embox %[[ADDR]](%[[VAL_33]]) source_box %[[ARG0]] : (!fir.heap<!fir.array<?x?xnone>>, !fir.shapeshift<2>, !fir.class<!fir.array<?x?xnone>>) -> !fir.class<!fir.array<?x?xnone>>
 // CHECK:               %[[VAL_29:.*]] = fir.address_of(@{{_QQcl.*}}) : !fir.ref<!fir.char<1,{{.*}}>>
-// CHECK:               %[[VAL_30:.*]] = fir.convert %[[VAL_28]] : (!fir.class<!fir.heap<!fir.array<?x?xnone>>>) -> !fir.box<none>
+// CHECK:               %[[VAL_30:.*]] = fir.convert %[[VAL_34]] : (!fir.class<!fir.array<?x?xnone>>) -> !fir.box<none>
 // CHECK:               %[[VAL_31:.*]] = fir.convert %[[ARG0]] : (!fir.class<!fir.array<?x?xnone>>) -> !fir.box<none>
 // CHECK:               %[[VAL_32:.*]] = fir.convert %[[VAL_29]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
 // CHECK:               fir.call @_FortranAShallowCopyDirect(%[[VAL_30]], %[[VAL_31]], %[[VAL_32]], %[[VAL_1]]) : (!fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> ()
-// CHECK:               %[[VAL_33:.*]] = fir.shift %[[VAL_15]]#0, %[[VAL_16]]#0 : (index, index) -> !fir.shift<2>
-// CHECK:               %[[VAL_34:.*]] = fir.rebox %[[VAL_28]](%[[VAL_33]]) : (!fir.class<!fir.heap<!fir.array<?x?xnone>>>, !fir.shift<2>) -> !fir.class<!fir.array<?x?xnone>>
 // CHECK:               fir.result %[[VAL_34]] : !fir.class<!fir.array<?x?xnone>>
 // CHECK:             } else {
 // CHECK:               fir.result %[[ARG0]] : !fir.class<!fir.array<?x?xnone>>

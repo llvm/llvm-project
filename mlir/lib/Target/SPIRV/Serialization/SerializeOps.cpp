@@ -66,6 +66,16 @@ LogicalResult Serializer::processConstantOp(spirv::ConstantOp op) {
   return failure();
 }
 
+LogicalResult Serializer::processConstantCompositeReplicateOp(
+    spirv::EXTConstantCompositeReplicateOp op) {
+  if (uint32_t resultID = prepareConstantCompositeReplicate(
+          op.getLoc(), op.getType(), op.getValue())) {
+    valueIDMap[op.getResult()] = resultID;
+    return success();
+  }
+  return failure();
+}
+
 LogicalResult Serializer::processSpecConstantOp(spirv::SpecConstantOp op) {
   if (auto resultID = prepareConstantScalar(op.getLoc(), op.getDefaultValue(),
                                             /*isSpec=*/true)) {
@@ -118,6 +128,38 @@ Serializer::processSpecConstantCompositeOp(spirv::SpecConstantCompositeOp op) {
   return processName(resultID, op.getSymName());
 }
 
+LogicalResult Serializer::processSpecConstantCompositeReplicateOp(
+    spirv::EXTSpecConstantCompositeReplicateOp op) {
+  uint32_t typeID = 0;
+  if (failed(processType(op.getLoc(), op.getType(), typeID))) {
+    return failure();
+  }
+
+  auto constituent = dyn_cast<FlatSymbolRefAttr>(op.getConstituent());
+  if (!constituent)
+    return op.emitError(
+               "expected flat symbol reference for constituent instead of ")
+           << op.getConstituent();
+
+  StringRef constituentName = constituent.getValue();
+  uint32_t constituentID = getSpecConstID(constituentName);
+  if (!constituentID) {
+    return op.emitError("unknown result <id> for replicated spec constant ")
+           << constituentName;
+  }
+
+  uint32_t resultID = getNextID();
+  uint32_t operands[] = {typeID, resultID, constituentID};
+
+  encodeInstructionInto(typesGlobalValues,
+                        spirv::Opcode::OpSpecConstantCompositeReplicateEXT,
+                        operands);
+
+  specConstIDMap[op.getSymName()] = resultID;
+
+  return processName(resultID, op.getSymName());
+}
+
 LogicalResult
 Serializer::processSpecConstantOperationOp(spirv::SpecConstantOperationOp op) {
   uint32_t typeID = 0;
@@ -159,6 +201,16 @@ Serializer::processSpecConstantOperationOp(spirv::SpecConstantOperationOp op) {
   valueIDMap[op.getResult()] = resultID;
 
   return success();
+}
+
+LogicalResult
+Serializer::processGraphConstantARMOp(spirv::GraphConstantARMOp op) {
+  if (uint32_t resultID = prepareGraphConstantId(op.getLoc(), op.getType(),
+                                                 op.getGraphConstantIdAttr())) {
+    valueIDMap[op.getResult()] = resultID;
+    return success();
+  }
+  return failure();
 }
 
 LogicalResult Serializer::processUndefOp(spirv::UndefOp op) {
@@ -259,6 +311,14 @@ LogicalResult Serializer::processFuncOp(spirv::FuncOp op) {
     op.addEntryBlock();
     if (failed(processFuncParameter(op)))
       return failure();
+
+    // Erasing the body of the function destroys arguments, so we need to remove
+    // them from the map to avoid problems when processing invalid values used
+    // as keys. We have already serialized function arguments so we probably can
+    // remove them from the map as external function will not have any uses.
+    for (Value arg : op.getArguments())
+      valueIDMap.erase(arg);
+
     // Don't need to process the added block, there is nothing to process,
     // the fake body was added just to get the arguments, remove the body,
     // since it's use is done.
@@ -323,6 +383,118 @@ LogicalResult Serializer::processFuncOp(spirv::FuncOp op) {
   functionHeader.clear();
   functionBody.clear();
 
+  return success();
+}
+
+LogicalResult Serializer::processGraphARMOp(spirv::GraphARMOp op) {
+  if (op.getNumResults() < 1) {
+    return op.emitError("cannot serialize graph with no return types");
+  }
+
+  LLVM_DEBUG(llvm::dbgs() << "-- start graph '" << op.getName() << "' --\n");
+  assert(functionHeader.empty() && functionBody.empty());
+
+  uint32_t funcID = getOrCreateFunctionID(op.getName());
+  uint32_t fnTypeID = 0;
+  // Generate type of the function.
+  if (failed(processType(op.getLoc(), op.getFunctionType(), fnTypeID)))
+    return failure();
+  encodeInstructionInto(functionHeader, spirv::Opcode::OpGraphARM,
+                        {fnTypeID, funcID});
+
+  // Declare the parameters.
+  for (auto [idx, arg] : llvm::enumerate(op.getArguments())) {
+    uint32_t argTypeID = 0;
+    SmallVector<uint32_t, 3> inputOperands;
+
+    if (failed(processType(op.getLoc(), arg.getType(), argTypeID))) {
+      return failure();
+    }
+
+    uint32_t argValueID = getNextID();
+    valueIDMap[arg] = argValueID;
+
+    auto attr = IntegerAttr::get(IntegerType::get(op.getContext(), 32), idx);
+    uint32_t indexID = prepareConstantInt(op.getLoc(), attr, false);
+
+    inputOperands.push_back(argTypeID);
+    inputOperands.push_back(argValueID);
+    inputOperands.push_back(indexID);
+
+    encodeInstructionInto(functionHeader, spirv::Opcode::OpGraphInputARM,
+                          inputOperands);
+  }
+
+  if (failed(processBlock(&op.front(), /*omitLabel=*/true)))
+    return failure();
+  if (failed(visitInPrettyBlockOrder(
+          &op.front(), [&](Block *block) { return processBlock(block); },
+          /*skipHeader=*/true))) {
+    return failure();
+  }
+
+  LLVM_DEBUG(llvm::dbgs() << "-- completed graph '" << op.getName()
+                          << "' --\n");
+  // Insert OpGraphEndARM.
+  encodeInstructionInto(functionBody, spirv::Opcode::OpGraphEndARM, {});
+
+  llvm::append_range(graphs, functionHeader);
+  llvm::append_range(graphs, functionBody);
+  functionHeader.clear();
+  functionBody.clear();
+
+  return success();
+}
+
+LogicalResult
+Serializer::processGraphEntryPointARMOp(spirv::GraphEntryPointARMOp op) {
+  SmallVector<uint32_t, 4> operands;
+  StringRef graph = op.getFn();
+  // Add the graph <id>.
+  uint32_t graphID = getOrCreateFunctionID(graph);
+  operands.push_back(graphID);
+  // Add the name of the graph.
+  spirv::encodeStringLiteralInto(operands, graph);
+
+  // Add the interface values.
+  if (ArrayAttr interface = op.getInterface()) {
+    for (Attribute var : interface.getValue()) {
+      StringRef value = cast<FlatSymbolRefAttr>(var).getValue();
+      if (uint32_t id = getVariableID(value)) {
+        operands.push_back(id);
+      } else {
+        return op.emitError(
+            "referencing undefined global variable."
+            "spirv.GraphEntryPointARM is at the end of spirv.module. All "
+            "referenced variables should already be defined");
+      }
+    }
+  }
+  encodeInstructionInto(graphs, spirv::Opcode::OpGraphEntryPointARM, operands);
+  return success();
+}
+
+LogicalResult
+Serializer::processGraphOutputsARMOp(spirv::GraphOutputsARMOp op) {
+  for (auto [idx, value] : llvm::enumerate(op->getOperands())) {
+    SmallVector<uint32_t, 2> outputOperands;
+
+    Type resType = value.getType();
+    uint32_t resTypeID = 0;
+    if (failed(processType(op.getLoc(), resType, resTypeID))) {
+      return failure();
+    }
+
+    uint32_t outputID = getValueID(value);
+    auto attr = IntegerAttr::get(IntegerType::get(op.getContext(), 32), idx);
+    uint32_t indexID = prepareConstantInt(op.getLoc(), attr, false);
+
+    outputOperands.push_back(outputID);
+    outputOperands.push_back(indexID);
+
+    encodeInstructionInto(functionBody, spirv::Opcode::OpGraphSetOutputARM,
+                          outputOperands);
+  }
   return success();
 }
 

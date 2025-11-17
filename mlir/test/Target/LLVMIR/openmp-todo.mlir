@@ -249,24 +249,6 @@ llvm.func @target_is_device_ptr(%x : !llvm.ptr) {
 
 // -----
 
-omp.private {type = firstprivate} @x.privatizer : i32 copy {
-^bb0(%mold: !llvm.ptr, %private: !llvm.ptr):
-  %0 = llvm.load %mold : !llvm.ptr -> i32
-  llvm.store %0, %private : i32, !llvm.ptr
-  omp.yield(%private: !llvm.ptr)
-}
-llvm.func @target_firstprivate(%x : !llvm.ptr) {
-  %0 = omp.map.info var_ptr(%x : !llvm.ptr, i32) map_clauses(to) capture(ByRef) -> !llvm.ptr
-  // expected-error@below {{not yet implemented: Unhandled clause privatization for deferred target tasks in omp.target operation}}
-  // expected-error@below {{LLVM Translation failed for operation: omp.target}}
-  omp.target nowait map_entries(%0 -> %blockarg0 : !llvm.ptr) private(@x.privatizer %x -> %arg0 [map_idx=0] : !llvm.ptr) {
-    omp.terminator
-  }
-  llvm.return
-}
-
-// -----
-
 llvm.func @target_enter_data_depend(%x: !llvm.ptr) {
   // expected-error@below {{not yet implemented: Unhandled clause depend in omp.target_enter_data operation}}
   // expected-error@below {{LLVM Translation failed for operation: omp.target_enter_data}}
@@ -487,45 +469,5 @@ llvm.func @wsloop_order(%lb : i32, %ub : i32, %step : i32) {
       omp.yield
     }
   }
-  llvm.return
-}
-
-// -----
-
-llvm.func @do_simd_if(%1 : !llvm.ptr, %5 : i32, %4 : i32, %6 : i1) {
-  omp.wsloop {
-    // expected-warning@below {{simd information on composite construct discarded}}
-    omp.simd if(%6) {
-      omp.loop_nest (%arg0) : i32 = (%5) to (%4) inclusive step (%5) {
-        llvm.store %arg0, %1 : i32, !llvm.ptr
-        omp.yield
-      }
-    } {omp.composite}
-  } {omp.composite}
-  llvm.return
-}
-
-// -----
-
-omp.declare_reduction @add_reduction_i32 : i32 init {
-^bb0(%arg0: i32):
-  %0 = llvm.mlir.constant(0 : i32) : i32
-  omp.yield(%0 : i32)
-} combiner {
-^bb0(%arg0: i32, %arg1: i32):
-  %0 = llvm.add %arg0, %arg1 : i32
-  omp.yield(%0 : i32)
-}
-llvm.func @do_simd_reduction(%1 : !llvm.ptr, %3 : !llvm.ptr, %6 : i32, %7 : i32) {
-  omp.wsloop reduction(@add_reduction_i32 %3 -> %arg0 : !llvm.ptr) {
-    // expected-warning@below {{simd information on composite construct discarded}}
-    omp.simd reduction(@add_reduction_i32 %arg0 -> %arg1 : !llvm.ptr) {
-      omp.loop_nest (%arg2) : i32 = (%7) to (%6) inclusive step (%7) {
-        llvm.store %arg2, %1 : i32, !llvm.ptr
-        %12 = llvm.load %arg1 : !llvm.ptr -> i32
-        omp.yield
-      }
-    } {omp.composite}
-  } {omp.composite}
   llvm.return
 }

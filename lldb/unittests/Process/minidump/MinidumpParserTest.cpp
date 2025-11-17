@@ -308,16 +308,19 @@ Streams:
 )"),
                     llvm::Succeeded());
 
-  EXPECT_EQ((llvm::ArrayRef<uint8_t>{0x54}), parser->GetMemory(0x401d46, 1));
-  EXPECT_EQ((llvm::ArrayRef<uint8_t>{0x54, 0x21}),
-            parser->GetMemory(0x401d46, 4));
-
-  EXPECT_EQ((llvm::ArrayRef<uint8_t>{0xc8, 0x4d, 0x04, 0xbc, 0xe9}),
-            parser->GetMemory(0x7ffceb34a000, 5));
-  EXPECT_EQ((llvm::ArrayRef<uint8_t>{0xc8, 0x4d, 0x04}),
-            parser->GetMemory(0x7ffceb34a000, 3));
-
-  EXPECT_EQ(llvm::ArrayRef<uint8_t>(), parser->GetMemory(0x500000, 512));
+  EXPECT_THAT_EXPECTED(parser->GetMemory(0x401d46, 1),
+                       llvm::HasValue(llvm::ArrayRef<uint8_t>{0x54}));
+  EXPECT_THAT_EXPECTED(parser->GetMemory(0x401d46, 4),
+                       llvm::HasValue(llvm::ArrayRef<uint8_t>{0x54, 0x21}));
+  EXPECT_THAT_EXPECTED(
+      parser->GetMemory(0x7ffceb34a000, 5),
+      llvm::HasValue(llvm::ArrayRef<uint8_t>{0xc8, 0x4d, 0x04, 0xbc, 0xe9}));
+  EXPECT_THAT_EXPECTED(
+      parser->GetMemory(0x7ffceb34a000, 3),
+      llvm::HasValue(llvm::ArrayRef<uint8_t>{0xc8, 0x4d, 0x04}));
+  EXPECT_THAT_EXPECTED(
+      parser->GetMemory(0x500000, 512),
+      llvm::FailedWithMessage("No memory range found for address (0x500000)"));
 }
 
 TEST_F(MinidumpParserTest, FindMemoryRangeWithFullMemoryMinidump) {

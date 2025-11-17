@@ -41,26 +41,34 @@ extern bool EnableARCOpts;
 /// Test if the given module looks interesting to run ARC optimization
 /// on.
 inline bool ModuleHasARC(const Module &M) {
-  return M.getNamedValue("llvm.objc.retain") ||
-         M.getNamedValue("llvm.objc.release") ||
-         M.getNamedValue("llvm.objc.autorelease") ||
-         M.getNamedValue("llvm.objc.retainAutoreleasedReturnValue") ||
-         M.getNamedValue("llvm.objc.unsafeClaimAutoreleasedReturnValue") ||
-         M.getNamedValue("llvm.objc.retainBlock") ||
-         M.getNamedValue("llvm.objc.autoreleaseReturnValue") ||
-         M.getNamedValue("llvm.objc.autoreleasePoolPush") ||
-         M.getNamedValue("llvm.objc.loadWeakRetained") ||
-         M.getNamedValue("llvm.objc.loadWeak") ||
-         M.getNamedValue("llvm.objc.destroyWeak") ||
-         M.getNamedValue("llvm.objc.storeWeak") ||
-         M.getNamedValue("llvm.objc.initWeak") ||
-         M.getNamedValue("llvm.objc.moveWeak") ||
-         M.getNamedValue("llvm.objc.copyWeak") ||
-         M.getNamedValue("llvm.objc.retainedObject") ||
-         M.getNamedValue("llvm.objc.unretainedObject") ||
-         M.getNamedValue("llvm.objc.unretainedPointer") ||
-         M.getNamedValue("llvm.objc.clang.arc.noop.use") ||
-         M.getNamedValue("llvm.objc.clang.arc.use");
+  std::initializer_list<Intrinsic::ID> Intrinsics = {
+      Intrinsic::objc_retain,
+      Intrinsic::objc_release,
+      Intrinsic::objc_autorelease,
+      Intrinsic::objc_retainAutoreleasedReturnValue,
+      Intrinsic::objc_retainBlock,
+      Intrinsic::objc_autoreleaseReturnValue,
+      Intrinsic::objc_autoreleasePoolPush,
+      Intrinsic::objc_loadWeakRetained,
+      Intrinsic::objc_loadWeak,
+      Intrinsic::objc_destroyWeak,
+      Intrinsic::objc_initWeak,
+      Intrinsic::objc_copyWeak,
+      Intrinsic::objc_retainedObject,
+      Intrinsic::objc_unretainedObject,
+      Intrinsic::objc_unretainedPointer,
+      Intrinsic::objc_clang_arc_noop_use,
+      Intrinsic::objc_clang_arc_use,
+  };
+#ifndef NDEBUG
+  for (Intrinsic::ID IID : Intrinsics)
+    assert(!Intrinsic::isOverloaded(IID) &&
+           "Can only check non-overloaded intrinsics");
+#endif
+  for (Intrinsic::ID IID : Intrinsics)
+    if (Intrinsic::getDeclarationIfExists(&M, IID))
+      return true;
+  return false;
 }
 
 /// This is a wrapper around getUnderlyingObject which also knows how to

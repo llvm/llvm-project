@@ -17,6 +17,7 @@
 #define LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_PROCESSELFCORE_H
 
 #include <list>
+#include <unordered_map>
 #include <vector>
 
 #include "lldb/Target/PostMortemProcess.h"
@@ -115,10 +116,6 @@ private:
     lldb::addr_t end;
     lldb::addr_t file_ofs;
     std::string path;
-    // Add a UUID member for convenient access. The UUID value is not in the
-    // NT_FILE entries, we will find it in core memory and store it here for
-    // easy access.
-    lldb_private::UUID uuid;
   };
 
   // For ProcessElfCore only
@@ -152,6 +149,12 @@ private:
   // NT_FILE entries found from the NOTE segment
   std::vector<NT_FILE_Entry> m_nt_file_entries;
 
+  // Map from file path to UUID for quick lookup
+  std::unordered_map<std::string, lldb_private::UUID> m_uuids;
+
+  // Executable name found from the ELF PRPSINFO
+  std::string m_executable_name;
+
   // Parse thread(s) data structures(prstatus, prpsinfo) from given NOTE segment
   llvm::Error ParseThreadContextsFromNoteSegment(
       const elf::ELFProgramHeader &segment_header,
@@ -164,6 +167,9 @@ private:
   void UpdateBuildIdForNTFileEntries();
 
   lldb_private::UUID FindModuleUUID(const llvm::StringRef path) override;
+
+  // Returns the main executable path
+  llvm::StringRef GetMainExecutablePath();
 
   // Returns the value of certain type of note of a given start address
   lldb_private::UUID FindBuidIdInCoreMemory(lldb::addr_t address);

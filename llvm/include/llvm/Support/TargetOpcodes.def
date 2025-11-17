@@ -233,6 +233,9 @@ HANDLE_TARGET_OPCODE(MEMBARRIER)
 // using.
 HANDLE_TARGET_OPCODE(JUMP_TABLE_DEBUG_INFO)
 
+// Issue a no-op relocation against a given symbol at the current location.
+HANDLE_TARGET_OPCODE(RELOC_NONE)
+
 HANDLE_TARGET_OPCODE(CONVERGENCECTRL_ENTRY)
 HANDLE_TARGET_OPCODE(CONVERGENCECTRL_ANCHOR)
 HANDLE_TARGET_OPCODE(CONVERGENCECTRL_LOOP)
@@ -475,6 +478,15 @@ HANDLE_TARGET_OPCODE(G_ANYEXT)
 /// elements of the vector.
 HANDLE_TARGET_OPCODE(G_TRUNC)
 
+/// Generic instruction to truncate a signed operand to a signed result with saturation.
+HANDLE_TARGET_OPCODE(G_TRUNC_SSAT_S)
+
+/// Generic instruction to truncate a signed operand to an unsigned result with saturation.
+HANDLE_TARGET_OPCODE(G_TRUNC_SSAT_U)
+
+/// Generic instruction to truncate a unsigned operand to an unsigned result with saturation.
+HANDLE_TARGET_OPCODE(G_TRUNC_USAT_U)
+
 /// Generic integer constant.
 HANDLE_TARGET_OPCODE(G_CONSTANT)
 
@@ -641,6 +653,9 @@ HANDLE_TARGET_OPCODE(G_FDIV)
 /// Generic FP remainder.
 HANDLE_TARGET_OPCODE(G_FREM)
 
+/// Generic FP modf
+HANDLE_TARGET_OPCODE(G_FMODF)
+
 /// Generic FP exponentiation.
 HANDLE_TARGET_OPCODE(G_FPOW)
 
@@ -734,6 +749,9 @@ HANDLE_TARGET_OPCODE(G_RESET_FPENV)
 HANDLE_TARGET_OPCODE(G_GET_FPMODE)
 HANDLE_TARGET_OPCODE(G_SET_FPMODE)
 HANDLE_TARGET_OPCODE(G_RESET_FPMODE)
+
+HANDLE_TARGET_OPCODE(G_GET_ROUNDING)
+HANDLE_TARGET_OPCODE(G_SET_ROUNDING)
 
 /// Generic pointer offset
 HANDLE_TARGET_OPCODE(G_PTR_ADD)

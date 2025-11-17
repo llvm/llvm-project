@@ -4,7 +4,7 @@
 ; RUN: sed 's/iXLen/i64/g' %s | llc -mtriple=riscv64 -mattr=+zve64x,+xandesvsintload \
 ; RUN:   -verify-machineinstrs -target-abi=lp64 | FileCheck %s
 
-define <vscale x 1 x i8> @intrinsic_nds_vln_v_nxv1i8_nxv1i8(<vscale x 1 x i8>* %0, iXLen %1) nounwind {
+define <vscale x 1 x i8> @intrinsic_nds_vln_v_nxv1i8_nxv1i8(ptr %0, iXLen %1) nounwind {
 ; CHECK-LABEL: intrinsic_nds_vln_v_nxv1i8_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, ta, ma
@@ -13,13 +13,13 @@ define <vscale x 1 x i8> @intrinsic_nds_vln_v_nxv1i8_nxv1i8(<vscale x 1 x i8>* %
 entry:
   %a = call <vscale x 1 x i8> @llvm.riscv.nds.vln.nxv1i8(
     <vscale x 1 x i8> poison,
-    <vscale x 1 x i8>* %0,
+    ptr %0,
     iXLen %1)
 
   ret <vscale x 1 x i8> %a
 }
 
-define <vscale x 1 x i8> @intrinsic_nds_vln_mask_v_nxv1i8_nxv1i8(<vscale x 1 x i8> %0, <vscale x 1 x i8>* %1, <vscale x 1 x i1> %2, iXLen %3) nounwind {
+define <vscale x 1 x i8> @intrinsic_nds_vln_mask_v_nxv1i8_nxv1i8(<vscale x 1 x i8> %0, ptr %1, <vscale x 1 x i1> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_nds_vln_mask_v_nxv1i8_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, ta, mu
@@ -28,14 +28,14 @@ define <vscale x 1 x i8> @intrinsic_nds_vln_mask_v_nxv1i8_nxv1i8(<vscale x 1 x i
 entry:
   %a = call <vscale x 1 x i8> @llvm.riscv.nds.vln.mask.nxv1i8(
     <vscale x 1 x i8> %0,
-    <vscale x 1 x i8>* %1,
+    ptr %1,
     <vscale x 1 x i1> %2,
     iXLen %3, iXLen 1)
 
   ret <vscale x 1 x i8> %a
 }
 
-define <vscale x 2 x i8> @intrinsic_nds_vln_v_nxv2i8_nxv2i8(<vscale x 2 x i8>* %0, iXLen %1) nounwind {
+define <vscale x 2 x i8> @intrinsic_nds_vln_v_nxv2i8_nxv2i8(ptr %0, iXLen %1) nounwind {
 ; CHECK-LABEL: intrinsic_nds_vln_v_nxv2i8_nxv2i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf4, ta, ma
@@ -44,13 +44,13 @@ define <vscale x 2 x i8> @intrinsic_nds_vln_v_nxv2i8_nxv2i8(<vscale x 2 x i8>* %
 entry:
   %a = call <vscale x 2 x i8> @llvm.riscv.nds.vln.nxv2i8(
     <vscale x 2 x i8> poison,
-    <vscale x 2 x i8>* %0,
+    ptr %0,
     iXLen %1)
 
   ret <vscale x 2 x i8> %a
 }
 
-define <vscale x 2 x i8> @intrinsic_nds_vln_mask_v_nxv2i8_nxv2i8(<vscale x 2 x i8> %0, <vscale x 2 x i8>* %1, <vscale x 2 x i1> %2, iXLen %3) nounwind {
+define <vscale x 2 x i8> @intrinsic_nds_vln_mask_v_nxv2i8_nxv2i8(<vscale x 2 x i8> %0, ptr %1, <vscale x 2 x i1> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_nds_vln_mask_v_nxv2i8_nxv2i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf4, ta, mu
@@ -59,14 +59,14 @@ define <vscale x 2 x i8> @intrinsic_nds_vln_mask_v_nxv2i8_nxv2i8(<vscale x 2 x i
 entry:
   %a = call <vscale x 2 x i8> @llvm.riscv.nds.vln.mask.nxv2i8(
     <vscale x 2 x i8> %0,
-    <vscale x 2 x i8>* %1,
+    ptr %1,
     <vscale x 2 x i1> %2,
     iXLen %3, iXLen 1)
 
   ret <vscale x 2 x i8> %a
 }
 
-define <vscale x 4 x i8> @intrinsic_nds_vln_v_nxv4i8_nxv4i8(<vscale x 4 x i8>* %0, iXLen %1) nounwind {
+define <vscale x 4 x i8> @intrinsic_nds_vln_v_nxv4i8_nxv4i8(ptr %0, iXLen %1) nounwind {
 ; CHECK-LABEL: intrinsic_nds_vln_v_nxv4i8_nxv4i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, ta, ma
@@ -75,13 +75,13 @@ define <vscale x 4 x i8> @intrinsic_nds_vln_v_nxv4i8_nxv4i8(<vscale x 4 x i8>* %
 entry:
   %a = call <vscale x 4 x i8> @llvm.riscv.nds.vln.nxv4i8(
     <vscale x 4 x i8> poison,
-    <vscale x 4 x i8>* %0,
+    ptr %0,
     iXLen %1)
 
   ret <vscale x 4 x i8> %a
 }
 
-define <vscale x 4 x i8> @intrinsic_nds_vln_mask_v_nxv4i8_nxv4i8(<vscale x 4 x i8> %0, <vscale x 4 x i8>* %1, <vscale x 4 x i1> %2, iXLen %3) nounwind {
+define <vscale x 4 x i8> @intrinsic_nds_vln_mask_v_nxv4i8_nxv4i8(<vscale x 4 x i8> %0, ptr %1, <vscale x 4 x i1> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_nds_vln_mask_v_nxv4i8_nxv4i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, ta, mu
@@ -90,14 +90,14 @@ define <vscale x 4 x i8> @intrinsic_nds_vln_mask_v_nxv4i8_nxv4i8(<vscale x 4 x i
 entry:
   %a = call <vscale x 4 x i8> @llvm.riscv.nds.vln.mask.nxv4i8(
     <vscale x 4 x i8> %0,
-    <vscale x 4 x i8>* %1,
+    ptr %1,
     <vscale x 4 x i1> %2,
     iXLen %3, iXLen 1)
 
   ret <vscale x 4 x i8> %a
 }
 
-define <vscale x 8 x i8> @intrinsic_nds_vln_v_nxv8i8_nxv8i8(<vscale x 8 x i8>* %0, iXLen %1) nounwind {
+define <vscale x 8 x i8> @intrinsic_nds_vln_v_nxv8i8_nxv8i8(ptr %0, iXLen %1) nounwind {
 ; CHECK-LABEL: intrinsic_nds_vln_v_nxv8i8_nxv8i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, ma
@@ -106,13 +106,13 @@ define <vscale x 8 x i8> @intrinsic_nds_vln_v_nxv8i8_nxv8i8(<vscale x 8 x i8>* %
 entry:
   %a = call <vscale x 8 x i8> @llvm.riscv.nds.vln.nxv8i8(
     <vscale x 8 x i8> poison,
-    <vscale x 8 x i8>* %0,
+    ptr %0,
     iXLen %1)
 
   ret <vscale x 8 x i8> %a
 }
 
-define <vscale x 8 x i8> @intrinsic_nds_vln_mask_v_nxv8i8_nxv8i8(<vscale x 8 x i8> %0, <vscale x 8 x i8>* %1, <vscale x 8 x i1> %2, iXLen %3) nounwind {
+define <vscale x 8 x i8> @intrinsic_nds_vln_mask_v_nxv8i8_nxv8i8(<vscale x 8 x i8> %0, ptr %1, <vscale x 8 x i1> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_nds_vln_mask_v_nxv8i8_nxv8i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, mu
@@ -121,14 +121,14 @@ define <vscale x 8 x i8> @intrinsic_nds_vln_mask_v_nxv8i8_nxv8i8(<vscale x 8 x i
 entry:
   %a = call <vscale x 8 x i8> @llvm.riscv.nds.vln.mask.nxv8i8(
     <vscale x 8 x i8> %0,
-    <vscale x 8 x i8>* %1,
+    ptr %1,
     <vscale x 8 x i1> %2,
     iXLen %3, iXLen 1)
 
   ret <vscale x 8 x i8> %a
 }
 
-define <vscale x 16 x i8> @intrinsic_nds_vln_v_nxv16i8_nxv16i8(<vscale x 16 x i8>* %0, iXLen %1) nounwind {
+define <vscale x 16 x i8> @intrinsic_nds_vln_v_nxv16i8_nxv16i8(ptr %0, iXLen %1) nounwind {
 ; CHECK-LABEL: intrinsic_nds_vln_v_nxv16i8_nxv16i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
@@ -137,13 +137,13 @@ define <vscale x 16 x i8> @intrinsic_nds_vln_v_nxv16i8_nxv16i8(<vscale x 16 x i8
 entry:
   %a = call <vscale x 16 x i8> @llvm.riscv.nds.vln.nxv16i8(
     <vscale x 16 x i8> poison,
-    <vscale x 16 x i8>* %0,
+    ptr %0,
     iXLen %1)
 
   ret <vscale x 16 x i8> %a
 }
 
-define <vscale x 16 x i8> @intrinsic_nds_vln_mask_v_nxv16i8_nxv16i8(<vscale x 16 x i8> %0, <vscale x 16 x i8>* %1, <vscale x 16 x i1> %2, iXLen %3) nounwind {
+define <vscale x 16 x i8> @intrinsic_nds_vln_mask_v_nxv16i8_nxv16i8(<vscale x 16 x i8> %0, ptr %1, <vscale x 16 x i1> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_nds_vln_mask_v_nxv16i8_nxv16i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m2, ta, mu
@@ -152,14 +152,14 @@ define <vscale x 16 x i8> @intrinsic_nds_vln_mask_v_nxv16i8_nxv16i8(<vscale x 16
 entry:
   %a = call <vscale x 16 x i8> @llvm.riscv.nds.vln.mask.nxv16i8(
     <vscale x 16 x i8> %0,
-    <vscale x 16 x i8>* %1,
+    ptr %1,
     <vscale x 16 x i1> %2,
     iXLen %3, iXLen 1)
 
   ret <vscale x 16 x i8> %a
 }
 
-define <vscale x 32 x i8> @intrinsic_nds_vln_v_nxv32i8_nxv32i8(<vscale x 32 x i8>* %0, iXLen %1) nounwind {
+define <vscale x 32 x i8> @intrinsic_nds_vln_v_nxv32i8_nxv32i8(ptr %0, iXLen %1) nounwind {
 ; CHECK-LABEL: intrinsic_nds_vln_v_nxv32i8_nxv32i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m4, ta, ma
@@ -168,13 +168,13 @@ define <vscale x 32 x i8> @intrinsic_nds_vln_v_nxv32i8_nxv32i8(<vscale x 32 x i8
 entry:
   %a = call <vscale x 32 x i8> @llvm.riscv.nds.vln.nxv32i8(
     <vscale x 32 x i8> poison,
-    <vscale x 32 x i8>* %0,
+    ptr %0,
     iXLen %1)
 
   ret <vscale x 32 x i8> %a
 }
 
-define <vscale x 32 x i8> @intrinsic_nds_vln_mask_v_nxv32i8_nxv32i8(<vscale x 32 x i8> %0, <vscale x 32 x i8>* %1, <vscale x 32 x i1> %2, iXLen %3) nounwind {
+define <vscale x 32 x i8> @intrinsic_nds_vln_mask_v_nxv32i8_nxv32i8(<vscale x 32 x i8> %0, ptr %1, <vscale x 32 x i1> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_nds_vln_mask_v_nxv32i8_nxv32i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m4, ta, mu
@@ -183,14 +183,14 @@ define <vscale x 32 x i8> @intrinsic_nds_vln_mask_v_nxv32i8_nxv32i8(<vscale x 32
 entry:
   %a = call <vscale x 32 x i8> @llvm.riscv.nds.vln.mask.nxv32i8(
     <vscale x 32 x i8> %0,
-    <vscale x 32 x i8>* %1,
+    ptr %1,
     <vscale x 32 x i1> %2,
     iXLen %3, iXLen 1)
 
   ret <vscale x 32 x i8> %a
 }
 
-define <vscale x 64 x i8> @intrinsic_nds_vln_v_nxv64i8_nxv64i8(<vscale x 64 x i8>* %0, iXLen %1) nounwind {
+define <vscale x 64 x i8> @intrinsic_nds_vln_v_nxv64i8_nxv64i8(ptr %0, iXLen %1) nounwind {
 ; CHECK-LABEL: intrinsic_nds_vln_v_nxv64i8_nxv64i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m8, ta, ma
@@ -199,13 +199,13 @@ define <vscale x 64 x i8> @intrinsic_nds_vln_v_nxv64i8_nxv64i8(<vscale x 64 x i8
 entry:
   %a = call <vscale x 64 x i8> @llvm.riscv.nds.vln.nxv64i8(
     <vscale x 64 x i8> poison,
-    <vscale x 64 x i8>* %0,
+    ptr %0,
     iXLen %1)
 
   ret <vscale x 64 x i8> %a
 }
 
-define <vscale x 64 x i8> @intrinsic_nds_vln_mask_v_nxv64i8_nxv64i8(<vscale x 64 x i8> %0, <vscale x 64 x i8>* %1, <vscale x 64 x i1> %2, iXLen %3) nounwind {
+define <vscale x 64 x i8> @intrinsic_nds_vln_mask_v_nxv64i8_nxv64i8(<vscale x 64 x i8> %0, ptr %1, <vscale x 64 x i1> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_nds_vln_mask_v_nxv64i8_nxv64i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m8, ta, mu
@@ -214,7 +214,7 @@ define <vscale x 64 x i8> @intrinsic_nds_vln_mask_v_nxv64i8_nxv64i8(<vscale x 64
 entry:
   %a = call <vscale x 64 x i8> @llvm.riscv.nds.vln.mask.nxv64i8(
     <vscale x 64 x i8> %0,
-    <vscale x 64 x i8>* %1,
+    ptr %1,
     <vscale x 64 x i1> %2,
     iXLen %3, iXLen 1)
 

@@ -1,14 +1,11 @@
-# RUN: llc -run-pass=machine-combiner -mtriple=aarch64-unknown-linux-gnu %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-SAFE
-# RUN: llc -run-pass=machine-combiner -mtriple=aarch64-unknown-linux-gnu -enable-unsafe-fp-math %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-UNSAFE
+# RUN: llc -run-pass=machine-combiner -mtriple=aarch64-unknown-linux-gnu %s -o - | FileCheck %s
 
 # fadd without the reassoc flags can be reassociate only when unsafe fp math is
 # enabled.
 # CHECK-LABEL: name: fadd_no_reassoc
 # CHECK:             [[ADD1:%[0-9]+]]:fpr32 = FADDSrr %0, %1, implicit $fpcr
-# CHECK-SAFE-NEXT:   [[ADD2:%[0-9]+]]:fpr32 = FADDSrr killed [[ADD1]], %2, implicit $fpcr
-# CHECK-SAFE-NEXT:   [[ADD3:%[0-9]+]]:fpr32 = FADDSrr killed [[ADD2]], %3, implicit $fpcr
-# CHECK-UNSAFE-NEXT: [[ADD2:%[0-9]+]]:fpr32 = FADDSrr %2, %3, implicit $fpcr
-# CHECK-UNSAFE-NEXT: [[ADD3:%[0-9]+]]:fpr32 = FADDSrr killed [[ADD1]], killed [[ADD2]], implicit $fpcr
+# CHECK:             [[ADD2:%[0-9]+]]:fpr32 = FADDSrr killed [[ADD1]], %2, implicit $fpcr
+# CHECK:             [[ADD3:%[0-9]+]]:fpr32 = FADDSrr killed [[ADD2]], %3, implicit $fpcr
 ---
 name:            fadd_no_reassoc
 alignment:       4
@@ -49,10 +46,9 @@ body:             |
 # the reassoc flag is ignored.
 # CHECK-LABEL: name: fadd_reassoc
 # CHECK:             [[ADD1:%[0-9]+]]:fpr32 = reassoc FADDSrr %0, %1, implicit $fpcr
-# CHECK-SAFE-NEXT:   [[ADD2:%[0-9]+]]:fpr32 = reassoc FADDSrr killed [[ADD1]], %2, implicit $fpcr
-# CHECK-SAFE-NEXT:   [[ADD3:%[0-9]+]]:fpr32 = reassoc FADDSrr killed [[ADD2]], %3, implicit $fpcr
-# CHECK-UNSAFE-NEXT: [[ADD2:%[0-9]+]]:fpr32 = reassoc FADDSrr %2, %3, implicit $fpcr
-# CHECK-UNSAFE-NEXT: [[ADD3:%[0-9]+]]:fpr32 = reassoc FADDSrr killed [[ADD1]], killed [[ADD2]], implicit $fpcr
+# CHECK:             [[ADD2:%[0-9]+]]:fpr32 = reassoc FADDSrr killed [[ADD1]], %2, implicit $fpcr
+# CHECK:             [[ADD3:%[0-9]+]]:fpr32 = reassoc FADDSrr killed [[ADD2]], %3, implicit $fpcr
+
 ---
 name:            fadd_reassoc
 alignment:       4
@@ -92,10 +88,8 @@ body:             |
 # Check that flags on the instructions are preserved after reassociation.
 # CHECK-LABEL: name: fadd_flags
 # CHECK:             [[ADD1:%[0-9]+]]:fpr32 = nnan ninf nsz FADDSrr %0, %1, implicit $fpcr
-# CHECK-SAFE-NEXT:   [[ADD2:%[0-9]+]]:fpr32 = nnan nsz FADDSrr killed [[ADD1]], %2, implicit $fpcr
-# CHECK-SAFE-NEXT:   [[ADD3:%[0-9]+]]:fpr32 = ninf nsz FADDSrr killed [[ADD2]], %3, implicit $fpcr
-# CHECK-UNSAFE-NEXT: [[ADD2:%[0-9]+]]:fpr32 = nsz FADDSrr %2, %3, implicit $fpcr
-# CHECK-UNSAFE-NEXT: [[ADD3:%[0-9]+]]:fpr32 = nsz FADDSrr killed [[ADD1]], killed [[ADD2]], implicit $fpcr
+# CHECK:             [[ADD2:%[0-9]+]]:fpr32 = nnan nsz FADDSrr killed [[ADD1]], %2, implicit $fpcr
+# CHECK:             [[ADD3:%[0-9]+]]:fpr32 = ninf nsz FADDSrr killed [[ADD2]], %3, implicit $fpcr
 ---
 name:            fadd_flags
 alignment:       4

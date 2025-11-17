@@ -6,5 +6,5 @@ def getRoot(config):
 
 root = getRoot(config)
 
-if root.host_os not in ["Linux"]:
+if root.target_os not in ["Linux"]:
     config.unsupported = True

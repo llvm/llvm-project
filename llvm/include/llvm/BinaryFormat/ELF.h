@@ -303,7 +303,7 @@ enum {
   EM_BA2 = 202,           // Beyond BA2 CPU architecture
   EM_XCORE = 203,         // XMOS xCORE processor family
   EM_MCHP_PIC = 204,      // Microchip 8-bit PIC(r) family
-  EM_INTEL205 = 205,      // Reserved by Intel
+  EM_INTELGT = 205,       // Intel Graphics Technology
   EM_INTEL206 = 206,      // Reserved by Intel
   EM_INTEL207 = 207,      // Reserved by Intel
   EM_INTEL208 = 208,      // Reserved by Intel
@@ -362,6 +362,7 @@ enum {
   ELFOSABI_FENIXOS = 16,       // FenixOS
   ELFOSABI_CLOUDABI = 17,      // Nuxi CloudABI
   ELFOSABI_CUDA = 51,          // NVIDIA CUDA architecture.
+  ELFOSABI_CUDA_V2 = 41,       // NVIDIA CUDA architecture.
   ELFOSABI_FIRST_ARCH = 64,    // First architecture-specific OS ABI
   ELFOSABI_AMDGPU_HSA = 64,    // AMD HSA runtime
   ELFOSABI_AMDGPU_PAL = 65,    // AMD PAL runtime
@@ -383,6 +384,12 @@ enum {
   ELFABIVERSION_AMDGPU_HSA_V4 = 2,
   ELFABIVERSION_AMDGPU_HSA_V5 = 3,
   ELFABIVERSION_AMDGPU_HSA_V6 = 4,
+};
+
+// CUDA OS ABI Version identification.
+enum {
+  ELFABIVERSION_CUDA_V1 = 7,
+  ELFABIVERSION_CUDA_V2 = 8,
 };
 
 #define ELF_RELOC(name, value) name = value,
@@ -640,6 +647,7 @@ enum {
   EF_HEXAGON_ISA_V85 = 0x00000085,  // Hexagon V85 ISA
   EF_HEXAGON_ISA_V87 = 0x00000087,  // Hexagon V87 ISA
   EF_HEXAGON_ISA_V89 = 0x00000089,  // Hexagon V89 ISA
+  EF_HEXAGON_ISA_V91 = 0x00000091,  // Hexagon V91 ISA
   EF_HEXAGON_ISA = 0x000003ff,      // Hexagon V.. ISA
 
   // Tiny core flag, bit[15]
@@ -673,6 +681,7 @@ enum {
   EF_HEXAGON_MACH_V85 = EF_HEXAGON_ISA_V85,      // Hexagon V85
   EF_HEXAGON_MACH_V87 = EF_HEXAGON_ISA_V87,      // Hexagon V87
   EF_HEXAGON_MACH_V89 = EF_HEXAGON_ISA_V89,      // Hexagon V89
+  EF_HEXAGON_MACH_V91 = EF_HEXAGON_ISA_V91,      // Hexagon V91
 
   EF_HEXAGON_MACH = 0x0000ffff, // Hexagon V..
 };
@@ -852,6 +861,7 @@ enum : unsigned {
   EF_AMDGPU_MACH_AMDGCN_RESERVED_0X57   = 0x057,
   EF_AMDGPU_MACH_AMDGCN_GFX1153         = 0x058,
   EF_AMDGPU_MACH_AMDGCN_GFX12_GENERIC   = 0x059,
+  EF_AMDGPU_MACH_AMDGCN_GFX1251         = 0x05a,
   EF_AMDGPU_MACH_AMDGCN_GFX9_4_GENERIC  = 0x05f,
   // clang-format on
 
@@ -921,8 +931,14 @@ enum {
 
 // NVPTX specific e_flags.
 enum : unsigned {
-  // Processor selection mask for EF_CUDA_SM* values.
+  // Processor selection mask for EF_CUDA_SM* values prior to blackwell.
   EF_CUDA_SM = 0xff,
+
+  // Processor selection mask for EF_CUDA_SM* values following blackwell.
+  EF_CUDA_SM_MASK = 0xff00,
+
+  // Processor selection mask for EF_CUDA_SM* values following blackwell.
+  EF_CUDA_SM_OFFSET = 8,
 
   // SM based processor values.
   EF_CUDA_SM20 = 0x14,
@@ -943,9 +959,15 @@ enum : unsigned {
   EF_CUDA_SM80 = 0x50,
   EF_CUDA_SM86 = 0x56,
   EF_CUDA_SM87 = 0x57,
+  EF_CUDA_SM88 = 0x58,
   EF_CUDA_SM89 = 0x59,
-  // The sm_90a variant uses the same machine flag.
   EF_CUDA_SM90 = 0x5a,
+  EF_CUDA_SM100 = 0x64,
+  EF_CUDA_SM101 = 0x65,
+  EF_CUDA_SM103 = 0x67,
+  EF_CUDA_SM110 = 0x6e,
+  EF_CUDA_SM120 = 0x78,
+  EF_CUDA_SM121 = 0x79,
 
   // Unified texture binding is enabled.
   EF_CUDA_TEXMODE_UNIFIED = 0x100,
@@ -954,12 +976,15 @@ enum : unsigned {
   // The target is using 64-bit addressing.
   EF_CUDA_64BIT_ADDRESS = 0x400,
   // Set when using the sm_90a processor.
-  EF_CUDA_ACCELERATORS = 0x800,
+  EF_CUDA_ACCELERATORS_V1 = 0x800,
   // Undocumented software feature.
   EF_CUDA_SW_FLAG_V2 = 0x1000,
 
   // Virtual processor selection mask for EF_CUDA_VIRTUAL_SM* values.
   EF_CUDA_VIRTUAL_SM = 0xff0000,
+
+  // Set when using an accelerator variant like sm_100a in the new ABI.
+  EF_CUDA_ACCELERATORS = 0x8,
 };
 
 // ELF Relocation types for BPF
@@ -1100,6 +1125,8 @@ struct Elf64_Shdr {
   Elf64_Xword sh_entsize;
 };
 
+enum { PN_XNUM = 0xffff };
+
 // Special section indices.
 enum {
   SHN_UNDEF = 0,          // Undefined, missing, irrelevant, or meaningless
@@ -1159,9 +1186,12 @@ enum : unsigned {
   SHT_LLVM_OFFLOADING = 0x6fff4c0b,         // LLVM device offloading data.
   SHT_LLVM_LTO = 0x6fff4c0c,                // .llvm.lto for fat LTO.
   SHT_LLVM_JT_SIZES = 0x6fff4c0d,           // LLVM jump tables sizes.
+  SHT_LLVM_CFI_JUMP_TABLE = 0x6fff4c0e,     // LLVM CFI jump table.
+  SHT_LLVM_CALL_GRAPH = 0x6fff4c0f,         // LLVM Call Graph Section.
   // Android's experimental support for SHT_RELR sections.
   // https://android.googlesource.com/platform/bionic/+/b7feec74547f84559a1467aca02708ff61346d2a/libc/include/elf.h#512
   SHT_ANDROID_RELR = 0x6fffff00,   // Relocation entries; only offsets.
+  SHT_GNU_SFRAME = 0x6ffffff4,     // GNU SFrame stack trace format.
   SHT_GNU_ATTRIBUTES = 0x6ffffff5, // Object attributes.
   SHT_GNU_HASH = 0x6ffffff6,       // GNU-style hash table.
   SHT_GNU_verdef = 0x6ffffffd,     // GNU version definitions.
@@ -1546,6 +1576,7 @@ enum {
   PT_GNU_STACK = 0x6474e551,    // Indicates stack executability.
   PT_GNU_RELRO = 0x6474e552,    // Read-only after relocation.
   PT_GNU_PROPERTY = 0x6474e553, // .note.gnu.property notes sections.
+  PT_GNU_SFRAME = 0x6474e554,   // GNU SFrame stack trace format.
 
   PT_OPENBSD_MUTABLE = 0x65a3dbe5,   // Like bss, but not immutable.
   PT_OPENBSD_RANDOMIZE = 0x65a3dbe6, // Fill with random data.
@@ -1968,7 +1999,6 @@ enum {
   GNU_ABI_TAG_FREEBSD = 3,
   GNU_ABI_TAG_NETBSD = 4,
   GNU_ABI_TAG_SYLLABLE = 5,
-  GNU_ABI_TAG_NACL = 6,
 };
 
 constexpr const char *ELF_NOTE_GNU = "GNU";

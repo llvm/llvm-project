@@ -20,17 +20,6 @@
 
 namespace llvm {
 class BPFSubtarget;
-namespace BPFISD {
-enum NodeType : unsigned {
-  FIRST_NUMBER = ISD::BUILTIN_OP_END,
-  RET_GLUE,
-  CALL,
-  SELECT_CC,
-  BR_CC,
-  Wrapper,
-  MEMCPY
-};
-}
 
 class BPFTargetLowering : public TargetLowering {
 public:
@@ -39,12 +28,13 @@ public:
   // Provide custom lowering hooks for some operations.
   SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
 
-  // This method returns the name of a target specific DAG node.
-  const char *getTargetNodeName(unsigned Opcode) const override;
-
   // This method decides whether folding a constant offset
   // with the given GlobalAddress is legal.
   bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;
+
+  bool allowsMisalignedMemoryAccesses(EVT VT, unsigned, Align,
+                                      MachineMemOperand::Flags,
+                                      unsigned *) const override;
 
   BPFTargetLowering::ConstraintType
   getConstraintType(StringRef Constraint) const override;
@@ -66,12 +56,17 @@ public:
 
   MVT getScalarShiftAmountTy(const DataLayout &, EVT) const override;
 
+  unsigned getJumpTableEncoding() const override;
+
 private:
   // Control Instruction Selection Features
   bool HasAlu32;
   bool HasJmp32;
   bool HasJmpExt;
   bool HasMovsx;
+
+  // Allows Misalignment
+  bool AllowsMisalignedMemAccess;
 
   SDValue LowerSDIVSREM(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;
@@ -81,6 +76,8 @@ private:
   SDValue LowerConstantPool(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerTRAP(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerBlockAddress(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerJumpTable(SDValue Op, SelectionDAG &DAG) const;
 
   template <class NodeTy>
   SDValue getAddr(NodeTy *N, SelectionDAG &DAG, unsigned Flags = 0) const;
@@ -163,7 +160,9 @@ private:
   MachineBasicBlock * EmitInstrWithCustomInserterMemcpy(MachineInstr &MI,
                                                         MachineBasicBlock *BB)
                                                         const;
-
+  MachineBasicBlock *
+  EmitInstrWithCustomInserterLDimm64(MachineInstr &MI,
+                                     MachineBasicBlock *BB) const;
 };
 }
 

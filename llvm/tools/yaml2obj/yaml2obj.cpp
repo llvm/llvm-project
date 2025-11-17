@@ -115,7 +115,7 @@ int main(int argc, char **argv) {
   cl::HideUnrelatedOptions(Cat);
   cl::ParseCommandLineOptions(
       argc, argv, "Create an object file from a YAML description", nullptr,
-      nullptr, /*LongOptionsUseDoubleDash=*/true);
+      nullptr, nullptr, /*LongOptionsUseDoubleDash=*/true);
 
   constexpr StringRef ProgName = "yaml2obj";
   auto ErrHandler = [&](const Twine &Msg) {

@@ -26,7 +26,7 @@ class LibcxxUniquePtrDataFormatterSimulatorTestCase(TestBase):
         )
 
 
-for r in range(4):
+for r in range(5):
     name = "test_r%d" % r
     defines = ["COMPRESSED_PAIR_REV=%d" % r]
 

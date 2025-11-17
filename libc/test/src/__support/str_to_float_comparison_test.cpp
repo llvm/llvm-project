@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/stdint_proxy.h"
 #include "src/__support/CPP/bit.h"
 #include "src/stdio/fclose.h"
 #include "src/stdio/fgets.h"
@@ -17,7 +18,6 @@
 #include "src/string/strdup.h"
 #include "src/string/strtok.h"
 #include "test/UnitTest/Test.h"
-#include <stdint.h>
 
 // The intent of this test is to read in files in the format used in this test
 // dataset: https://github.com/nigeltao/parse-number-fxx-test-data

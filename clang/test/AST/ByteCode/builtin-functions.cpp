@@ -21,6 +21,27 @@
 #error "huh?"
 #endif
 
+
+inline constexpr void* operator new(__SIZE_TYPE__, void* p) noexcept { return p; }
+namespace std {
+  using size_t = decltype(sizeof(0));
+  template<typename T> struct allocator {
+    constexpr T *allocate(size_t N) {
+      return (T*)__builtin_operator_new(sizeof(T) * N); // #alloc
+    }
+    constexpr void deallocate(void *p, __SIZE_TYPE__) {
+      __builtin_operator_delete(p);
+    }
+  };
+template<typename T, typename... Args>
+constexpr T* construct_at(T* p, Args&&... args) { return ::new((void*)p) T(static_cast<Args&&>(args)...); }
+
+  template<typename T>
+  constexpr void destroy_at(T* p) {
+    p->~T();
+  }
+}
+
 extern "C" {
   typedef decltype(sizeof(int)) size_t;
   extern size_t wcslen(const wchar_t *p);
@@ -42,6 +63,19 @@ constexpr int test_address_of_incomplete_array_type() { // both-error {{never pr
 static_assert(test_address_of_incomplete_array_type() == 1234, ""); // both-error {{constant}} \
                                                                     // both-note {{in call}}
 
+namespace LocalExternRedecl {
+  constexpr int externRedecl1() {
+    extern int arr[];
+    return 0;
+  }
+  constexpr int externRedecl2() { // both-error {{never produces a constant expression}}
+    extern int arr[];
+    __builtin_memmove(&arr, &arr, 4 * sizeof(arr[0])); // both-note 2{{incomplete type}}
+    return 1234;
+  }
+  static_assert(externRedecl2() == 1234); // both-error {{not an integral constant expression}} \
+                                          // both-note {{in call to}}
+}
 
   struct NonTrivial {
     constexpr NonTrivial() : n(0) {}
@@ -433,6 +467,7 @@ namespace SourceLocation {
 }
 
 #define BITSIZE(x) (sizeof(x) * 8)
+constexpr bool __attribute__((ext_vector_type(4))) v4b{};
 namespace popcount {
   static_assert(__builtin_popcount(~0u) == __CHAR_BIT__ * sizeof(unsigned int), "");
   static_assert(__builtin_popcount(0) == 0, "");
@@ -450,6 +485,7 @@ namespace popcount {
   static_assert(__builtin_popcountg(0ul) == 0, "");
   static_assert(__builtin_popcountg(~0ull) == __CHAR_BIT__ * sizeof(unsigned long long), "");
   static_assert(__builtin_popcountg(0ull) == 0, "");
+  static_assert(__builtin_popcountg(v4b) == 0, "");
 #ifdef __SIZEOF_INT128__
   static_assert(__builtin_popcountg(~(unsigned __int128)0) == __CHAR_BIT__ * sizeof(unsigned __int128), "");
   static_assert(__builtin_popcountg((unsigned __int128)0) == 0, "");
@@ -722,6 +758,7 @@ namespace clz {
   char clz62[__builtin_clzg((unsigned _BitInt(128))0xf) == BITSIZE(_BitInt(128)) - 4 ? 1 : -1];
   char clz63[__builtin_clzg((unsigned _BitInt(128))0xf, 42) == BITSIZE(_BitInt(128)) - 4 ? 1 : -1];
 #endif
+  char clz64[__builtin_clzg(v4b, 0) == 0 ? 1 : -1];
 }
 
 namespace ctz {
@@ -792,6 +829,7 @@ namespace ctz {
   char ctz62[__builtin_ctzg((unsigned _BitInt(128))1 << (BITSIZE(_BitInt(128)) - 1)) == BITSIZE(_BitInt(128)) - 1 ? 1 : -1];
   char ctz63[__builtin_ctzg((unsigned _BitInt(128))1 << (BITSIZE(_BitInt(128)) - 1), 42) == BITSIZE(_BitInt(128)) - 1 ? 1 : -1];
 #endif
+  char clz64[__builtin_ctzg(v4b, 0) == 0 ? 1 : -1];
 }
 
 namespace bswap {
@@ -799,6 +837,39 @@ namespace bswap {
   int h3 = __builtin_bswap16(0x1234) == 0x3412 ? 1 : f();
   int h4 = __builtin_bswap32(0x1234) == 0x34120000 ? 1 : f();
   int h5 = __builtin_bswap64(0x1234) == 0x3412000000000000 ? 1 : f();
+  int h6 = __builtin_bswapg(0x12) == 0x12 ? 1 : f();
+  int h7 = __builtin_bswapg(0x1234) == 0x3412 ? 1 : f();
+  int h8 = __builtin_bswapg(0x00001234) == 0x34120000 ? 1 : f();
+  int h9 = __builtin_bswapg(0x0000000000001234) == 0x3412000000000000 ? 1 : f();
+#ifndef __AVR__
+  int h10 = __builtin_bswapg((_BitInt(8))0x12) == (_BitInt(8))0x12 ? 1 : f();
+  int h11 = __builtin_bswapg((_BitInt(16))0x1234) == (_BitInt(16))0x3412 ? 1 : f();
+  int h12 = __builtin_bswapg((_BitInt(32))0x00001234) == (_BitInt(32))0x34120000 ? 1 : f();
+  int h13 = __builtin_bswapg((_BitInt(64))0x0000000000001234) == (_BitInt(64))0x3412000000000000 ? 1 : f();
+  int h14 = __builtin_bswapg(~(_BitInt(128))0) == (~(_BitInt(128))0) ? 1 : f();
+  int h15 = __builtin_bswapg((_BitInt(24))0x1234) == (_BitInt(24))0x3412 ? 1 : f();
+  // expected-error@-1 {{_BitInt type '_BitInt(24)' (24 bits) must be a multiple of 16 bits for byte swapping}}
+  // ref-error@-2 {{_BitInt type '_BitInt(24)' (24 bits) must be a multiple of 16 bits for byte swapping}}
+#endif
+
+  constexpr const int const_expr = 0x1234;
+
+  void test_constexpr_reference() {
+    const int expr = 0x1234; 
+    const int& ref = expr; // #declare
+    
+    constexpr const int& const_ref = const_expr;
+
+    constexpr auto result2 = __builtin_bswapg(ref); 
+    //expected-error@-1 {{constexpr variable 'result2' must be initialized by a constant expression}}
+    //expected-note@-2 {{initializer of 'ref' is not a constant expression}}
+    //expected-note@#declare {{declared here}}
+    //ref-error@-4 {{constexpr variable 'result2' must be initialized by a constant expression}}
+    //ref-note@-5 {{initializer of 'ref' is not a constant expression}}
+    //ref-note@#declare {{declared here}}
+      
+    constexpr auto result3 = __builtin_bswapg(const_ref);
+  }
 }
 
 #define CFSTR __builtin___CFStringMakeConstantString
@@ -1472,6 +1543,8 @@ namespace Memcmp {
   static_assert(f());
 #endif
 
+  int unknown;
+  void foo(void) { unknown *= __builtin_memcmp(0, 0, 2); }
 }
 
 namespace Memchr {
@@ -1514,7 +1587,7 @@ namespace Memchr {
   extern struct Incomplete incomplete;
   static_assert(__builtin_memchr(&incomplete, 0, 0u) == nullptr);
   static_assert(__builtin_memchr(&incomplete, 0, 1u) == nullptr); // both-error {{not an integral constant}} \
-                                                                  // ref-note {{read of incomplete type 'struct Incomplete'}}
+                                                                  // both-note {{read of incomplete type 'struct Incomplete'}}
 
   const unsigned char &u1 = 0xf0;
   auto &&i1 = (const signed char []){-128};
@@ -1697,6 +1770,15 @@ namespace WMemMove {
                                                                      // both-note {{source of 'wmemmove' is nullptr}}
   static_assert(__builtin_wmemmove(null, &global, sizeof(wchar_t))); // both-error {{}} \
                                                                      // both-note {{destination of 'wmemmove' is nullptr}}
+
+  // Check that a pointer to an incomplete array is rejected.
+  constexpr int test_address_of_incomplete_array_type() { // both-error {{never produces a constant}}
+    extern int arr[];
+    __builtin_memmove(&arr, &arr, 4 * sizeof(arr[0])); // both-note 2{{cannot constant evaluate 'memmove' between objects of incomplete type 'int[]'}}
+    return arr[0] * 1000 + arr[1] * 100 + arr[2] * 10 + arr[3];
+  }
+  static_assert(test_address_of_incomplete_array_type() == 1234); // both-error {{constant}} \
+                                                                  // both-note {{in call}}
 }
 
 namespace Invalid {
@@ -1758,6 +1840,30 @@ namespace WithinLifetime {
     }
   } xstd; // both-error {{is not a constant expression}} \
           // both-note {{in call to}}
+
+  /// FIXME: We do not have per-element lifetime information for primitive arrays.
+  /// See https://github.com/llvm/llvm-project/issues/147528
+  consteval bool test_dynamic(bool read_after_deallocate) {
+    std::allocator<int> a;
+    int* p = a.allocate(1); // expected-note 2{{allocation performed here was not deallocated}}
+    // a.allocate starts the lifetime of an array,
+    // the complete object of *p has started its lifetime
+    if (__builtin_is_within_lifetime(p))
+      return false;
+    std::construct_at(p);
+    if (!__builtin_is_within_lifetime(p))
+      return false;
+    std::destroy_at(p);
+    if (__builtin_is_within_lifetime(p))
+      return false;
+    a.deallocate(p, 1);
+    if (read_after_deallocate)
+      __builtin_is_within_lifetime(p); // ref-note {{read of heap allocated object that has been deleted}}
+    return true;
+  }
+  static_assert(test_dynamic(false)); // expected-error {{not an integral constant expression}}
+  static_assert(test_dynamic(true)); // both-error {{not an integral constant expression}} \
+                                     // ref-note {{in call to}}
 }
 
 #ifdef __SIZEOF_INT128__
@@ -1782,3 +1888,9 @@ namespace InitParam {
 }
 
 #endif
+
+namespace NonBlockPointerStore {
+  int a;
+  void foo(void) { a *= __builtin_sadd_overflow(1, 2, 0); }
+  void foo2(void) { a *= __builtin_addc(1, 2, 0, 0); }
+}

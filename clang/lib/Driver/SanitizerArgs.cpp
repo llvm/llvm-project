@@ -8,8 +8,8 @@
 #include "clang/Driver/SanitizerArgs.h"
 #include "clang/Basic/Sanitizers.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/Options.h"
 #include "clang/Driver/ToolChain.h"
+#include "clang/Options/Options.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -61,8 +61,9 @@ static const SanitizerMask RecoverableByDefault =
     SanitizerKind::ImplicitConversion | SanitizerKind::Nullability |
     SanitizerKind::FloatDivideByZero | SanitizerKind::ObjCCast |
     SanitizerKind::Vptr;
-static const SanitizerMask Unrecoverable =
-    SanitizerKind::Unreachable | SanitizerKind::Return;
+static const SanitizerMask Unrecoverable = SanitizerKind::Unreachable |
+                                           SanitizerKind::Return |
+                                           SanitizerKind::AllocToken;
 static const SanitizerMask AlwaysRecoverable = SanitizerKind::KernelAddress |
                                                SanitizerKind::KernelHWAddress |
                                                SanitizerKind::KCFI;
@@ -84,7 +85,8 @@ static const SanitizerMask CFIClasses =
 static const SanitizerMask CompatibleWithMinimalRuntime =
     TrappingSupported | SanitizerKind::Scudo | SanitizerKind::ShadowCallStack |
     SanitizerKind::MemtagStack | SanitizerKind::MemtagHeap |
-    SanitizerKind::MemtagGlobals | SanitizerKind::KCFI;
+    SanitizerKind::MemtagGlobals | SanitizerKind::KCFI |
+    SanitizerKind::AllocToken;
 
 enum CoverageFeature {
   CoverageFunc = 1 << 0,
@@ -203,6 +205,7 @@ static void addDefaultIgnorelists(const Driver &D, SanitizerMask Kinds,
                      {"tysan_blacklist.txt", SanitizerKind::Type},
                      {"dfsan_abilist.txt", SanitizerKind::DataFlow},
                      {"cfi_ignorelist.txt", SanitizerKind::CFI},
+                     {"alloc_token_ignorelist.txt", SanitizerKind::AllocToken},
                      {"ubsan_ignorelist.txt",
                       SanitizerKind::Undefined | SanitizerKind::Vptr |
                           SanitizerKind::Integer | SanitizerKind::Nullability |
@@ -650,7 +653,12 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
       std::make_pair(SanitizerKind::KCFI, SanitizerKind::Function),
       std::make_pair(SanitizerKind::Realtime,
                      SanitizerKind::Address | SanitizerKind::Thread |
-                         SanitizerKind::Undefined | SanitizerKind::Memory)};
+                         SanitizerKind::Undefined | SanitizerKind::Memory),
+      std::make_pair(SanitizerKind::AllocToken,
+                     SanitizerKind::Address | SanitizerKind::HWAddress |
+                         SanitizerKind::KernelAddress |
+                         SanitizerKind::KernelHWAddress |
+                         SanitizerKind::Memory)};
 
   // Enable toolchain specific default sanitizers if not explicitly disabled.
   SanitizerMask Default = TC.getDefaultSanitizers() & ~AllRemove;
@@ -851,6 +859,8 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
   }
 
   if (AllAddedKinds & SanitizerKind::KCFI) {
+    CfiICallGeneralizePointers =
+        Args.hasArg(options::OPT_fsanitize_cfi_icall_generalize_pointers);
     CfiICallNormalizeIntegers =
         Args.hasArg(options::OPT_fsanitize_cfi_icall_normalize_integers);
 
@@ -1157,9 +1167,18 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
         !TC.getTriple().isAndroid() && !TC.getTriple().isOSFuchsia();
   }
 
-  LinkRuntimes =
-      Args.hasFlag(options::OPT_fsanitize_link_runtime,
-                   options::OPT_fno_sanitize_link_runtime, LinkRuntimes);
+  if (AllAddedKinds & SanitizerKind::AllocToken) {
+    AllocTokenFastABI = Args.hasFlag(
+        options::OPT_fsanitize_alloc_token_fast_abi,
+        options::OPT_fno_sanitize_alloc_token_fast_abi, AllocTokenFastABI);
+    AllocTokenExtended = Args.hasFlag(
+        options::OPT_fsanitize_alloc_token_extended,
+        options::OPT_fno_sanitize_alloc_token_extended, AllocTokenExtended);
+  }
+
+  LinkRuntimes = Args.hasFlag(options::OPT_fsanitize_link_runtime,
+                              options::OPT_fno_sanitize_link_runtime,
+                              !Args.hasArg(options::OPT_r));
 
   // Parse -link-cxx-sanitizer flag.
   LinkCXXRuntimes = D.CCCIsCXX();
@@ -1382,6 +1401,8 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
     CmdArgs.push_back(Args.MakeArgString("-fsanitize-annotate-debug-info=" +
                                          toString(AnnotateDebugInfo)));
 
+  Args.AddLastArg(CmdArgs, options::OPT_fsanitize_debug_trap_reasons_EQ);
+
   addSpecialCaseListOpt(Args, CmdArgs,
                         "-fsanitize-ignorelist=", UserIgnorelistFiles);
   addSpecialCaseListOpt(Args, CmdArgs,
@@ -1522,6 +1543,12 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
   if (Sanitizers.has(SanitizerKind::Memory) ||
       Sanitizers.has(SanitizerKind::Address))
     CmdArgs.push_back("-fno-assume-sane-operator-new");
+
+  // Flags for -fsanitize=alloc-token.
+  if (AllocTokenFastABI)
+    CmdArgs.push_back("-fsanitize-alloc-token-fast-abi");
+  if (AllocTokenExtended)
+    CmdArgs.push_back("-fsanitize-alloc-token-extended");
 
   // libFuzzer wants to intercept calls to certain library functions, so the
   // following -fno-builtin-* flags force the compiler to emit interposable

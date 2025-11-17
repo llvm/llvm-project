@@ -30,8 +30,9 @@ using namespace llvm::AMDGPU;
 
 #define DEBUG_TYPE "amdgpu-resource-usage"
 
-char llvm::AMDGPUResourceUsageAnalysis::ID = 0;
-char &llvm::AMDGPUResourceUsageAnalysisID = AMDGPUResourceUsageAnalysis::ID;
+char llvm::AMDGPUResourceUsageAnalysisWrapperPass::ID = 0;
+char &llvm::AMDGPUResourceUsageAnalysisID =
+    AMDGPUResourceUsageAnalysisWrapperPass::ID;
 
 // In code object v4 and older, we need to tell the runtime some amount ahead of
 // time if we don't know the true stack size. Assume a smaller number if this is
@@ -47,7 +48,7 @@ static cl::opt<uint32_t> clAssumedStackSizeForDynamicSizeObjects(
              "variable sized objects (in bytes)"),
     cl::Hidden, cl::init(4096));
 
-INITIALIZE_PASS(AMDGPUResourceUsageAnalysis, DEBUG_TYPE,
+INITIALIZE_PASS(AMDGPUResourceUsageAnalysisWrapperPass, DEBUG_TYPE,
                 "Function register usage analysis", true, true)
 
 static const Function *getCalleeFunction(const MachineOperand &Op) {
@@ -68,7 +69,8 @@ static bool hasAnyNonFlatUseOfReg(const MachineRegisterInfo &MRI,
   return false;
 }
 
-bool AMDGPUResourceUsageAnalysis::runOnMachineFunction(MachineFunction &MF) {
+bool AMDGPUResourceUsageAnalysisWrapperPass::runOnMachineFunction(
+    MachineFunction &MF) {
   auto *TPC = getAnalysisIfAvailable<TargetPassConfig>();
   if (!TPC)
     return false;
@@ -90,14 +92,40 @@ bool AMDGPUResourceUsageAnalysis::runOnMachineFunction(MachineFunction &MF) {
       AssumedStackSizeForExternalCall = 0;
   }
 
-  ResourceInfo = analyzeResourceUsage(MF, AssumedStackSizeForDynamicSizeObjects,
-                                      AssumedStackSizeForExternalCall);
+  ResourceInfo = AMDGPUResourceUsageAnalysisImpl().analyzeResourceUsage(
+      MF, AssumedStackSizeForDynamicSizeObjects,
+      AssumedStackSizeForExternalCall);
 
   return false;
 }
 
-AMDGPUResourceUsageAnalysis::SIFunctionResourceInfo
-AMDGPUResourceUsageAnalysis::analyzeResourceUsage(
+AnalysisKey AMDGPUResourceUsageAnalysis::Key;
+AMDGPUResourceUsageAnalysis::Result
+AMDGPUResourceUsageAnalysis::run(MachineFunction &MF,
+                                 MachineFunctionAnalysisManager &MFAM) {
+  const MCSubtargetInfo &STI = *TM.getMCSubtargetInfo();
+
+  // By default, for code object v5 and later, track only the minimum scratch
+  // size
+  uint32_t AssumedStackSizeForDynamicSizeObjects =
+      clAssumedStackSizeForDynamicSizeObjects;
+  uint32_t AssumedStackSizeForExternalCall = clAssumedStackSizeForExternalCall;
+  if (AMDGPU::getAMDHSACodeObjectVersion(*MF.getFunction().getParent()) >=
+          AMDGPU::AMDHSA_COV5 ||
+      STI.getTargetTriple().getOS() == Triple::AMDPAL) {
+    if (!clAssumedStackSizeForDynamicSizeObjects.getNumOccurrences())
+      AssumedStackSizeForDynamicSizeObjects = 0;
+    if (!clAssumedStackSizeForExternalCall.getNumOccurrences())
+      AssumedStackSizeForExternalCall = 0;
+  }
+
+  return AMDGPUResourceUsageAnalysisImpl().analyzeResourceUsage(
+      MF, AssumedStackSizeForDynamicSizeObjects,
+      AssumedStackSizeForExternalCall);
+}
+
+AMDGPUResourceUsageAnalysisImpl::SIFunctionResourceInfo
+AMDGPUResourceUsageAnalysisImpl::analyzeResourceUsage(
     const MachineFunction &MF, uint32_t AssumedStackSizeForDynamicSizeObjects,
     uint32_t AssumedStackSizeForExternalCall) const {
   SIFunctionResourceInfo Info;
@@ -113,6 +141,8 @@ AMDGPUResourceUsageAnalysis::analyzeResourceUsage(
                          MRI.isPhysRegUsed(AMDGPU::FLAT_SCR_HI) ||
                          MRI.isLiveIn(MFI->getPreloadedReg(
                              AMDGPUFunctionArgInfo::FLAT_SCRATCH_INIT));
+
+  Info.NumNamedBarrier = MFI->getNumNamedBarriers();
 
   // Even if FLAT_SCRATCH is implicitly used, it has no effect if flat
   // instructions aren't used to access the scratch buffer. Inline assembly may
@@ -139,75 +169,37 @@ AMDGPUResourceUsageAnalysis::analyzeResourceUsage(
 
   Info.UsesVCC =
       MRI.isPhysRegUsed(AMDGPU::VCC_LO) || MRI.isPhysRegUsed(AMDGPU::VCC_HI);
+  Info.NumExplicitSGPR = TRI.getNumUsedPhysRegs(MRI, AMDGPU::SGPR_32RegClass,
+                                                /*IncludeCalls=*/false);
+  if (ST.hasMAIInsts())
+    Info.NumAGPR = TRI.getNumUsedPhysRegs(MRI, AMDGPU::AGPR_32RegClass,
+                                          /*IncludeCalls=*/false);
 
   // If there are no calls, MachineRegisterInfo can tell us the used register
   // count easily.
   // A tail call isn't considered a call for MachineFrameInfo's purposes.
   if (!FrameInfo.hasCalls() && !FrameInfo.hasTailCall()) {
-    Info.NumVGPR = TRI.getNumUsedPhysRegs(MRI, AMDGPU::VGPR_32RegClass);
-    Info.NumExplicitSGPR = TRI.getNumUsedPhysRegs(MRI, AMDGPU::SGPR_32RegClass);
-    if (ST.hasMAIInsts())
-      Info.NumAGPR = TRI.getNumUsedPhysRegs(MRI, AMDGPU::AGPR_32RegClass);
+    Info.NumVGPR = TRI.getNumUsedPhysRegs(MRI, AMDGPU::VGPR_32RegClass,
+                                          /*IncludeCalls=*/false);
     return Info;
   }
 
   int32_t MaxVGPR = -1;
-  int32_t MaxAGPR = -1;
-  int32_t MaxSGPR = -1;
   Info.CalleeSegmentSize = 0;
 
   for (const MachineBasicBlock &MBB : MF) {
     for (const MachineInstr &MI : MBB) {
-      // TODO: Check regmasks? Do they occur anywhere except calls?
-      for (const MachineOperand &MO : MI.operands()) {
-        unsigned Width = 0;
-        bool IsSGPR = false;
-        bool IsAGPR = false;
+      for (unsigned I = 0; I < MI.getNumOperands(); ++I) {
+        const MachineOperand &MO = MI.getOperand(I);
 
         if (!MO.isReg())
           continue;
 
         Register Reg = MO.getReg();
         switch (Reg) {
-        case AMDGPU::EXEC:
-        case AMDGPU::EXEC_LO:
-        case AMDGPU::EXEC_HI:
-        case AMDGPU::SCC:
-        case AMDGPU::M0:
-        case AMDGPU::M0_LO16:
-        case AMDGPU::M0_HI16:
-        case AMDGPU::SRC_SHARED_BASE_LO:
-        case AMDGPU::SRC_SHARED_BASE:
-        case AMDGPU::SRC_SHARED_LIMIT_LO:
-        case AMDGPU::SRC_SHARED_LIMIT:
-        case AMDGPU::SRC_PRIVATE_BASE_LO:
-        case AMDGPU::SRC_PRIVATE_BASE:
-        case AMDGPU::SRC_PRIVATE_LIMIT_LO:
-        case AMDGPU::SRC_PRIVATE_LIMIT:
-        case AMDGPU::SRC_POPS_EXITING_WAVE_ID:
-        case AMDGPU::SGPR_NULL:
-        case AMDGPU::SGPR_NULL64:
-        case AMDGPU::MODE:
-          continue;
-
         case AMDGPU::NoRegister:
           assert(MI.isDebugInstr() &&
                  "Instruction uses invalid noreg register");
-          continue;
-
-        case AMDGPU::VCC:
-        case AMDGPU::VCC_LO:
-        case AMDGPU::VCC_HI:
-        case AMDGPU::VCC_LO_LO16:
-        case AMDGPU::VCC_LO_HI16:
-        case AMDGPU::VCC_HI_LO16:
-        case AMDGPU::VCC_HI_HI16:
-          Info.UsesVCC = true;
-          continue;
-
-        case AMDGPU::FLAT_SCR:
-        case AMDGPU::FLAT_SCR_LO:
-        case AMDGPU::FLAT_SCR_HI:
           continue;
 
         case AMDGPU::XNACK_MASK:
@@ -239,170 +231,25 @@ AMDGPUResourceUsageAnalysis::analyzeResourceUsage(
           break;
         }
 
-        if (AMDGPU::SGPR_32RegClass.contains(Reg) ||
-            AMDGPU::SGPR_LO16RegClass.contains(Reg) ||
-            AMDGPU::SGPR_HI16RegClass.contains(Reg)) {
-          IsSGPR = true;
-          Width = 1;
-        } else if (AMDGPU::VGPR_32RegClass.contains(Reg) ||
-                   AMDGPU::VGPR_16RegClass.contains(Reg)) {
-          IsSGPR = false;
-          Width = 1;
-        } else if (AMDGPU::AGPR_32RegClass.contains(Reg) ||
-                   AMDGPU::AGPR_LO16RegClass.contains(Reg)) {
-          IsSGPR = false;
-          IsAGPR = true;
-          Width = 1;
-        } else if (AMDGPU::SGPR_64RegClass.contains(Reg)) {
-          IsSGPR = true;
-          Width = 2;
-        } else if (AMDGPU::VReg_64RegClass.contains(Reg)) {
-          IsSGPR = false;
-          Width = 2;
-        } else if (AMDGPU::AReg_64RegClass.contains(Reg)) {
-          IsSGPR = false;
-          IsAGPR = true;
-          Width = 2;
-        } else if (AMDGPU::VReg_96RegClass.contains(Reg)) {
-          IsSGPR = false;
-          Width = 3;
-        } else if (AMDGPU::SReg_96RegClass.contains(Reg)) {
-          IsSGPR = true;
-          Width = 3;
-        } else if (AMDGPU::AReg_96RegClass.contains(Reg)) {
-          IsSGPR = false;
-          IsAGPR = true;
-          Width = 3;
-        } else if (AMDGPU::SGPR_128RegClass.contains(Reg)) {
-          IsSGPR = true;
-          Width = 4;
-        } else if (AMDGPU::VReg_128RegClass.contains(Reg)) {
-          IsSGPR = false;
-          Width = 4;
-        } else if (AMDGPU::AReg_128RegClass.contains(Reg)) {
-          IsSGPR = false;
-          IsAGPR = true;
-          Width = 4;
-        } else if (AMDGPU::VReg_160RegClass.contains(Reg)) {
-          IsSGPR = false;
-          Width = 5;
-        } else if (AMDGPU::SReg_160RegClass.contains(Reg)) {
-          IsSGPR = true;
-          Width = 5;
-        } else if (AMDGPU::AReg_160RegClass.contains(Reg)) {
-          IsSGPR = false;
-          IsAGPR = true;
-          Width = 5;
-        } else if (AMDGPU::VReg_192RegClass.contains(Reg)) {
-          IsSGPR = false;
-          Width = 6;
-        } else if (AMDGPU::SReg_192RegClass.contains(Reg)) {
-          IsSGPR = true;
-          Width = 6;
-        } else if (AMDGPU::AReg_192RegClass.contains(Reg)) {
-          IsSGPR = false;
-          IsAGPR = true;
-          Width = 6;
-        } else if (AMDGPU::VReg_224RegClass.contains(Reg)) {
-          IsSGPR = false;
-          Width = 7;
-        } else if (AMDGPU::SReg_224RegClass.contains(Reg)) {
-          IsSGPR = true;
-          Width = 7;
-        } else if (AMDGPU::AReg_224RegClass.contains(Reg)) {
-          IsSGPR = false;
-          IsAGPR = true;
-          Width = 7;
-        } else if (AMDGPU::SReg_256RegClass.contains(Reg)) {
-          IsSGPR = true;
-          Width = 8;
-        } else if (AMDGPU::VReg_256RegClass.contains(Reg)) {
-          IsSGPR = false;
-          Width = 8;
-        } else if (AMDGPU::AReg_256RegClass.contains(Reg)) {
-          IsSGPR = false;
-          IsAGPR = true;
-          Width = 8;
-        } else if (AMDGPU::VReg_288RegClass.contains(Reg)) {
-          IsSGPR = false;
-          Width = 9;
-        } else if (AMDGPU::SReg_288RegClass.contains(Reg)) {
-          IsSGPR = true;
-          Width = 9;
-        } else if (AMDGPU::AReg_288RegClass.contains(Reg)) {
-          IsSGPR = false;
-          IsAGPR = true;
-          Width = 9;
-        } else if (AMDGPU::VReg_320RegClass.contains(Reg)) {
-          IsSGPR = false;
-          Width = 10;
-        } else if (AMDGPU::SReg_320RegClass.contains(Reg)) {
-          IsSGPR = true;
-          Width = 10;
-        } else if (AMDGPU::AReg_320RegClass.contains(Reg)) {
-          IsSGPR = false;
-          IsAGPR = true;
-          Width = 10;
-        } else if (AMDGPU::VReg_352RegClass.contains(Reg)) {
-          IsSGPR = false;
-          Width = 11;
-        } else if (AMDGPU::SReg_352RegClass.contains(Reg)) {
-          IsSGPR = true;
-          Width = 11;
-        } else if (AMDGPU::AReg_352RegClass.contains(Reg)) {
-          IsSGPR = false;
-          IsAGPR = true;
-          Width = 11;
-        } else if (AMDGPU::VReg_384RegClass.contains(Reg)) {
-          IsSGPR = false;
-          Width = 12;
-        } else if (AMDGPU::SReg_384RegClass.contains(Reg)) {
-          IsSGPR = true;
-          Width = 12;
-        } else if (AMDGPU::AReg_384RegClass.contains(Reg)) {
-          IsSGPR = false;
-          IsAGPR = true;
-          Width = 12;
-        } else if (AMDGPU::SReg_512RegClass.contains(Reg)) {
-          IsSGPR = true;
-          Width = 16;
-        } else if (AMDGPU::VReg_512RegClass.contains(Reg)) {
-          IsSGPR = false;
-          Width = 16;
-        } else if (AMDGPU::AReg_512RegClass.contains(Reg)) {
-          IsSGPR = false;
-          IsAGPR = true;
-          Width = 16;
-        } else if (AMDGPU::SReg_1024RegClass.contains(Reg)) {
-          IsSGPR = true;
-          Width = 32;
-        } else if (AMDGPU::VReg_1024RegClass.contains(Reg)) {
-          IsSGPR = false;
-          Width = 32;
-        } else if (AMDGPU::AReg_1024RegClass.contains(Reg)) {
-          IsSGPR = false;
-          IsAGPR = true;
-          Width = 32;
-        } else {
-          // We only expect TTMP registers or registers that do not belong to
-          // any RC.
-          assert((AMDGPU::TTMP_32RegClass.contains(Reg) ||
-                  AMDGPU::TTMP_64RegClass.contains(Reg) ||
-                  AMDGPU::TTMP_128RegClass.contains(Reg) ||
-                  AMDGPU::TTMP_256RegClass.contains(Reg) ||
-                  AMDGPU::TTMP_512RegClass.contains(Reg) ||
-                  !TRI.getPhysRegBaseClass(Reg)) &&
-                 "Unknown register class");
-        }
+        const TargetRegisterClass *RC = TRI.getPhysRegBaseClass(Reg);
+        assert((!RC || TRI.isVGPRClass(RC) || TRI.isSGPRClass(RC) ||
+                TRI.isAGPRClass(RC) || AMDGPU::TTMP_32RegClass.contains(Reg) ||
+                AMDGPU::TTMP_64RegClass.contains(Reg) ||
+                AMDGPU::TTMP_128RegClass.contains(Reg) ||
+                AMDGPU::TTMP_256RegClass.contains(Reg) ||
+                AMDGPU::TTMP_512RegClass.contains(Reg)) &&
+               "Unknown register class");
+
+        if (!RC || !TRI.isVGPRClass(RC))
+          continue;
+
+        if (MI.isCall() || MI.isMetaInstruction())
+          continue;
+
+        unsigned Width = divideCeil(TRI.getRegSizeInBits(*RC), 32);
         unsigned HWReg = TRI.getHWRegIndex(Reg);
         int MaxUsed = HWReg + Width - 1;
-        if (IsSGPR) {
-          MaxSGPR = MaxUsed > MaxSGPR ? MaxUsed : MaxSGPR;
-        } else if (IsAGPR) {
-          MaxAGPR = MaxUsed > MaxAGPR ? MaxUsed : MaxAGPR;
-        } else {
-          MaxVGPR = MaxUsed > MaxVGPR ? MaxUsed : MaxVGPR;
-        }
+        MaxVGPR = std::max(MaxUsed, MaxVGPR);
       }
 
       if (MI.isCall()) {
@@ -413,13 +260,6 @@ AMDGPUResourceUsageAnalysis::analyzeResourceUsage(
             TII->getNamedOperand(MI, AMDGPU::OpName::callee);
 
         const Function *Callee = getCalleeFunction(*CalleeOp);
-
-        // Avoid crashing on undefined behavior with an illegal call to a
-        // kernel. If a callsite's calling convention doesn't match the
-        // function's, it's undefined behavior. If the callsite calling
-        // convention does match, that would have errored earlier.
-        if (Callee && AMDGPU::isEntryFunctionCC(Callee->getCallingConv()))
-          report_fatal_error("invalid call to entry function");
 
         auto isSameFunction = [](const MachineFunction &MF, const Function *F) {
           return F == &MF.getFunction();
@@ -464,9 +304,7 @@ AMDGPUResourceUsageAnalysis::analyzeResourceUsage(
     }
   }
 
-  Info.NumExplicitSGPR = MaxSGPR + 1;
   Info.NumVGPR = MaxVGPR + 1;
-  Info.NumAGPR = MaxAGPR + 1;
 
   return Info;
 }

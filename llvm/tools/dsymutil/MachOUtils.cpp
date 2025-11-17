@@ -331,7 +331,7 @@ static bool createDwarfSegment(const MCAssembler& Asm,uint64_t VMAddr, uint64_t 
                                  /* InitProt =*/3);
 
   for (unsigned int i = 0, n = Writer.getSectionOrder().size(); i != n; ++i) {
-    MCSection *Sec = Writer.getSectionOrder()[i];
+    auto *Sec = static_cast<MCSectionMachO *>(Writer.getSectionOrder()[i]);
     if (!Asm.getSectionFileSize(*Sec))
       continue;
 

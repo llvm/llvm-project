@@ -37,7 +37,7 @@
 define void @music_task(ptr nocapture readnone %p) local_unnamed_addr {
 entry:
   %mapi = alloca ptr, align 8
-  call void @llvm.lifetime.start.p0(i64 8, ptr %mapi)
+  call void @llvm.lifetime.start.p0(ptr %mapi)
   store ptr null, ptr %mapi, align 8, !tbaa !1
   %call = call i32 @music_decoder_init(ptr nonnull %mapi)
   br label %while.cond
@@ -99,7 +99,7 @@ while.cond2.backedge:                             ; preds = %sw.default, %sw.bb1
   br label %while.cond2
 }
 
-declare void @llvm.lifetime.start.p0(i64, ptr nocapture)
+declare void @llvm.lifetime.start.p0(ptr nocapture)
 declare i32 @music_decoder_init(ptr)
 declare i32 @music_play_api(ptr, i32, i32, i32, ptr)
 declare i32 @printf(ptr nocapture readonly, ...)

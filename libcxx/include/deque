@@ -193,7 +193,6 @@ template <class T, class Allocator, class Predicate>
 #  include <__algorithm/move_backward.h>
 #  include <__algorithm/remove.h>
 #  include <__algorithm/remove_if.h>
-#  include <__algorithm/unwrap_iter.h>
 #  include <__assert>
 #  include <__config>
 #  include <__debug_utils/sanitizers.h>
@@ -220,21 +219,19 @@ template <class T, class Allocator, class Predicate>
 #  include <__ranges/concepts.h>
 #  include <__ranges/container_compatible_range.h>
 #  include <__ranges/from_range.h>
-#  include <__ranges/size.h>
 #  include <__split_buffer>
 #  include <__type_traits/conditional.h>
 #  include <__type_traits/container_traits.h>
-#  include <__type_traits/disjunction.h>
 #  include <__type_traits/enable_if.h>
 #  include <__type_traits/is_allocator.h>
 #  include <__type_traits/is_convertible.h>
 #  include <__type_traits/is_nothrow_assignable.h>
 #  include <__type_traits/is_nothrow_constructible.h>
-#  include <__type_traits/is_replaceable.h>
 #  include <__type_traits/is_same.h>
 #  include <__type_traits/is_swappable.h>
 #  include <__type_traits/is_trivially_relocatable.h>
 #  include <__type_traits/type_identity.h>
+#  include <__utility/exception_guard.h>
 #  include <__utility/forward.h>
 #  include <__utility/move.h>
 #  include <__utility/pair.h>
@@ -461,9 +458,8 @@ private:
       __deque_iterator<_ValueType, _Pointer, _Reference, _MapPointer, _DiffType, _BlockSize>;
 
 public:
-  using __is_segmented_iterator _LIBCPP_NODEBUG = true_type;
-  using __segment_iterator _LIBCPP_NODEBUG      = _MapPointer;
-  using __local_iterator _LIBCPP_NODEBUG        = _Pointer;
+  using __segment_iterator _LIBCPP_NODEBUG = _MapPointer;
+  using __local_iterator _LIBCPP_NODEBUG   = _Pointer;
 
   static _LIBCPP_HIDE_FROM_ABI __segment_iterator __segment(_Iterator __iter) { return __iter.__m_iter_; }
   static _LIBCPP_HIDE_FROM_ABI __local_iterator __local(_Iterator __iter) { return __iter.__ptr_; }
@@ -488,6 +484,9 @@ const _DiffType __deque_iterator<_ValueType, _Pointer, _Reference, _MapPointer, 
 
 template <class _Tp, class _Allocator /*= allocator<_Tp>*/>
 class deque {
+  template <class _Up, class _Alloc>
+  using __split_buffer _LIBCPP_NODEBUG = std::__split_buffer<_Up, _Alloc, __split_buffer_pointer_layout>;
+
 public:
   // types:
 
@@ -531,10 +530,6 @@ public:
       __libcpp_is_trivially_relocatable<__map>::value && __libcpp_is_trivially_relocatable<allocator_type>::value,
       deque,
       void>;
-  using __replaceable _LIBCPP_NODEBUG =
-      __conditional_t<__is_replaceable_v<__map> && __container_allocator_is_replaceable<__alloc_traits>::value,
-                      deque,
-                      void>;
 
   static_assert(is_nothrow_default_constructible<allocator_type>::value ==
                     is_nothrow_default_constructible<__pointer_allocator>::value,
@@ -635,7 +630,7 @@ public:
 #  endif
   _LIBCPP_HIDE_FROM_ABI deque(size_type __n, const value_type& __v);
 
-  template <__enable_if_t<__is_allocator<_Allocator>::value, int> = 0>
+  template <__enable_if_t<__is_allocator_v<_Allocator>, int> = 0>
   _LIBCPP_HIDE_FROM_ABI deque(size_type __n, const value_type& __v, const allocator_type& __a)
       : __map_(__pointer_allocator(__a)), __start_(0), __size_(0), __alloc_(__a) {
     __annotate_new(0);
@@ -779,6 +774,10 @@ public:
   // 23.2.2.3 modifiers:
   _LIBCPP_HIDE_FROM_ABI void push_front(const value_type& __v);
   _LIBCPP_HIDE_FROM_ABI void push_back(const value_type& __v);
+
+  template <class... _Args>
+  _LIBCPP_HIDE_FROM_ABI iterator __emplace(const_iterator __p, _Args&&... __args);
+
 #  ifndef _LIBCPP_CXX03_LANG
 #    if _LIBCPP_STD_VER >= 17
   template <class... _Args>
@@ -791,8 +790,11 @@ public:
   template <class... _Args>
   _LIBCPP_HIDE_FROM_ABI void emplace_back(_Args&&... __args);
 #    endif
+
   template <class... _Args>
-  _LIBCPP_HIDE_FROM_ABI iterator emplace(const_iterator __p, _Args&&... __args);
+  _LIBCPP_HIDE_FROM_ABI iterator emplace(const_iterator __p, _Args&&... __args) {
+    return __emplace(__p, std::forward<_Args>(__args)...);
+  }
 
   _LIBCPP_HIDE_FROM_ABI void push_front(value_type&& __v);
   _LIBCPP_HIDE_FROM_ABI void push_back(value_type&& __v);
@@ -809,13 +811,13 @@ public:
   }
 #    endif
 
-  _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __p, value_type&& __v);
+  _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __p, value_type&& __v) { return __emplace(__p, std::move(__v)); }
 
   _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __p, initializer_list<value_type> __il) {
     return insert(__p, __il.begin(), __il.end());
   }
 #  endif // _LIBCPP_CXX03_LANG
-  _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __p, const value_type& __v);
+  _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __p, const value_type& __v) { return __emplace(__p, __v); }
   _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __p, size_type __n, const value_type& __v);
   template <class _InputIter, __enable_if_t<__has_exactly_input_iterator_category<_InputIter>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __p, _InputIter __f, _InputIter __l);
@@ -1239,8 +1241,8 @@ private:
       clear();
       shrink_to_fit();
     }
-    __alloc()       = __c.__alloc();
-    __map_.__alloc_ = __c.__map_.__alloc_;
+    __alloc()                = __c.__alloc();
+    __map_.__get_allocator() = __c.__map_.__get_allocator();
   }
 
   _LIBCPP_HIDE_FROM_ABI void __copy_assign_alloc(const deque&, false_type) {}
@@ -1256,22 +1258,22 @@ _LIBCPP_CONSTEXPR const typename allocator_traits<_Alloc>::difference_type deque
 
 #  if _LIBCPP_STD_VER >= 17
 template <class _InputIterator,
-          class _Alloc = allocator<__iter_value_type<_InputIterator>>,
+          class _Alloc = allocator<__iterator_value_type<_InputIterator>>,
           class        = enable_if_t<__has_input_iterator_category<_InputIterator>::value>,
-          class        = enable_if_t<__is_allocator<_Alloc>::value> >
-deque(_InputIterator, _InputIterator) -> deque<__iter_value_type<_InputIterator>, _Alloc>;
+          class        = enable_if_t<__is_allocator_v<_Alloc>>>
+deque(_InputIterator, _InputIterator) -> deque<__iterator_value_type<_InputIterator>, _Alloc>;
 
 template <class _InputIterator,
           class _Alloc,
           class = enable_if_t<__has_input_iterator_category<_InputIterator>::value>,
-          class = enable_if_t<__is_allocator<_Alloc>::value> >
-deque(_InputIterator, _InputIterator, _Alloc) -> deque<__iter_value_type<_InputIterator>, _Alloc>;
+          class = enable_if_t<__is_allocator_v<_Alloc>>>
+deque(_InputIterator, _InputIterator, _Alloc) -> deque<__iterator_value_type<_InputIterator>, _Alloc>;
 #  endif
 
 #  if _LIBCPP_STD_VER >= 23
 template <ranges::input_range _Range,
           class _Alloc = allocator<ranges::range_value_t<_Range>>,
-          class        = enable_if_t<__is_allocator<_Alloc>::value> >
+          class        = enable_if_t<__is_allocator_v<_Alloc>>>
 deque(from_range_t, _Range&&, _Alloc = _Alloc()) -> deque<ranges::range_value_t<_Range>, _Alloc>;
 #  endif
 
@@ -1319,7 +1321,7 @@ deque<_Tp, _Allocator>::deque(const deque& __c)
     : __map_(__pointer_allocator(__alloc_traits::select_on_container_copy_construction(__c.__alloc()))),
       __start_(0),
       __size_(0),
-      __alloc_(__map_.__alloc_) {
+      __alloc_(__map_.__get_allocator()) {
   __annotate_new(0);
   __append(__c.begin(), __c.end());
 }
@@ -1661,56 +1663,11 @@ deque<_Tp, _Allocator>::emplace_front(_Args&&... __args) {
   return *begin();
 #    endif
 }
-
-template <class _Tp, class _Allocator>
-typename deque<_Tp, _Allocator>::iterator deque<_Tp, _Allocator>::insert(const_iterator __p, value_type&& __v) {
-  size_type __pos     = __p - begin();
-  size_type __to_end  = size() - __pos;
-  allocator_type& __a = __alloc();
-  if (__pos < __to_end) { // insert by shifting things backward
-    if (__front_spare() == 0)
-      __add_front_capacity();
-    // __front_spare() >= 1
-    __annotate_increase_front(1);
-    if (__pos == 0) {
-      __alloc_traits::construct(__a, std::addressof(*--begin()), std::move(__v));
-      --__start_;
-      ++__size();
-    } else {
-      iterator __b   = begin();
-      iterator __bm1 = std::prev(__b);
-      __alloc_traits::construct(__a, std::addressof(*__bm1), std::move(*__b));
-      --__start_;
-      ++__size();
-      if (__pos > 1)
-        __b = std::move(std::next(__b), __b + __pos, __b);
-      *__b = std::move(__v);
-    }
-  } else { // insert by shifting things forward
-    if (__back_spare() == 0)
-      __add_back_capacity();
-    // __back_capacity >= 1
-    __annotate_increase_back(1);
-    size_type __de = size() - __pos;
-    if (__de == 0) {
-      __alloc_traits::construct(__a, std::addressof(*end()), std::move(__v));
-      ++__size();
-    } else {
-      iterator __e   = end();
-      iterator __em1 = std::prev(__e);
-      __alloc_traits::construct(__a, std::addressof(*__e), std::move(*__em1));
-      ++__size();
-      if (__de > 1)
-        __e = std::move_backward(__e - __de, __em1, __e);
-      *--__e = std::move(__v);
-    }
-  }
-  return begin() + __pos;
-}
+#  endif // _LIBCPP_CXX03_LANG
 
 template <class _Tp, class _Allocator>
 template <class... _Args>
-typename deque<_Tp, _Allocator>::iterator deque<_Tp, _Allocator>::emplace(const_iterator __p, _Args&&... __args) {
+typename deque<_Tp, _Allocator>::iterator deque<_Tp, _Allocator>::__emplace(const_iterator __p, _Args&&... __args) {
   size_type __pos     = __p - begin();
   size_type __to_end  = size() - __pos;
   allocator_type& __a = __alloc();
@@ -1752,60 +1709,6 @@ typename deque<_Tp, _Allocator>::iterator deque<_Tp, _Allocator>::emplace(const_
       if (__de > 1)
         __e = std::move_backward(__e - __de, __em1, __e);
       *--__e = std::move(__tmp.get());
-    }
-  }
-  return begin() + __pos;
-}
-
-#  endif // _LIBCPP_CXX03_LANG
-
-template <class _Tp, class _Allocator>
-typename deque<_Tp, _Allocator>::iterator deque<_Tp, _Allocator>::insert(const_iterator __p, const value_type& __v) {
-  size_type __pos     = __p - begin();
-  size_type __to_end  = size() - __pos;
-  allocator_type& __a = __alloc();
-  if (__pos < __to_end) { // insert by shifting things backward
-    if (__front_spare() == 0)
-      __add_front_capacity();
-    // __front_spare() >= 1
-    __annotate_increase_front(1);
-    if (__pos == 0) {
-      __alloc_traits::construct(__a, std::addressof(*--begin()), __v);
-      --__start_;
-      ++__size();
-    } else {
-      const_pointer __vt = pointer_traits<const_pointer>::pointer_to(__v);
-      iterator __b       = begin();
-      iterator __bm1     = std::prev(__b);
-      if (__vt == pointer_traits<const_pointer>::pointer_to(*__b))
-        __vt = pointer_traits<const_pointer>::pointer_to(*__bm1);
-      __alloc_traits::construct(__a, std::addressof(*__bm1), std::move(*__b));
-      --__start_;
-      ++__size();
-      if (__pos > 1)
-        __b = __move_and_check(std::next(__b), __b + __pos, __b, __vt);
-      *__b = *__vt;
-    }
-  } else { // insert by shifting things forward
-    if (__back_spare() == 0)
-      __add_back_capacity();
-    // __back_capacity >= 1
-    __annotate_increase_back(1);
-    size_type __de = size() - __pos;
-    if (__de == 0) {
-      __alloc_traits::construct(__a, std::addressof(*end()), __v);
-      ++__size();
-    } else {
-      const_pointer __vt = pointer_traits<const_pointer>::pointer_to(__v);
-      iterator __e       = end();
-      iterator __em1     = std::prev(__e);
-      if (__vt == pointer_traits<const_pointer>::pointer_to(*__em1))
-        __vt = pointer_traits<const_pointer>::pointer_to(*__e);
-      __alloc_traits::construct(__a, std::addressof(*__e), std::move(*__em1));
-      ++__size();
-      if (__de > 1)
-        __e = __move_backward_and_check(__e - __de, __em1, __e, __vt);
-      *--__e = *__vt;
     }
   }
   return begin() + __pos;
@@ -2072,7 +1975,7 @@ void deque<_Tp, _Allocator>::__add_front_capacity() {
   // Else need to allocate 1 buffer, *and* we need to reallocate __map_.
   else {
     __split_buffer<pointer, __pointer_allocator&> __buf(
-        std::max<size_type>(2 * __map_.capacity(), 1), 0, __map_.__alloc_);
+        std::max<size_type>(2 * __map_.capacity(), 1), 0, __map_.__get_allocator());
 
     typedef __allocator_destructor<_Allocator> _Dp;
     unique_ptr<pointer, _Dp> __hold(__alloc_traits::allocate(__a, __block_size), _Dp(__a, __block_size));
@@ -2081,10 +1984,7 @@ void deque<_Tp, _Allocator>::__add_front_capacity() {
 
     for (__map_pointer __i = __map_.begin(); __i != __map_.end(); ++__i)
       __buf.emplace_back(*__i);
-    std::swap(__map_.__first_, __buf.__first_);
-    std::swap(__map_.__begin_, __buf.__begin_);
-    std::swap(__map_.__end_, __buf.__end_);
-    std::swap(__map_.__cap_, __buf.__cap_);
+    __map_.__swap_without_allocator(__buf);
     __start_ = __map_.size() == 1 ? __block_size / 2 : __start_ + __block_size;
   }
   __annotate_whole_block(0, __asan_poison);
@@ -2135,33 +2035,25 @@ void deque<_Tp, _Allocator>::__add_front_capacity(size_type __n) {
   else {
     size_type __ds = (__nb + __back_capacity) * __block_size - __map_.empty();
     __split_buffer<pointer, __pointer_allocator&> __buf(
-        std::max<size_type>(2 * __map_.capacity(), __nb + __map_.size()), 0, __map_.__alloc_);
-#  if _LIBCPP_HAS_EXCEPTIONS
-    try {
-#  endif // _LIBCPP_HAS_EXCEPTIONS
-      for (; __nb > 0; --__nb) {
-        __buf.emplace_back(__alloc_traits::allocate(__a, __block_size));
-        // ASan: this is empty container, we have to poison whole block
-        __annotate_poison_block(std::__to_address(__buf.back()), std::__to_address(__buf.back() + __block_size));
-      }
-#  if _LIBCPP_HAS_EXCEPTIONS
-    } catch (...) {
+        std::max<size_type>(2 * __map_.capacity(), __nb + __map_.size()), 0, __map_.__get_allocator());
+    auto __guard = std::__make_exception_guard([&] {
       __annotate_delete();
       for (__map_pointer __i = __buf.begin(); __i != __buf.end(); ++__i)
         __alloc_traits::deallocate(__a, *__i, __block_size);
-      throw;
+    });
+    for (; __nb > 0; --__nb) {
+      __buf.emplace_back(__alloc_traits::allocate(__a, __block_size));
+      // ASan: this is empty container, we have to poison whole block
+      __annotate_poison_block(std::__to_address(__buf.back()), std::__to_address(__buf.back() + __block_size));
     }
-#  endif // _LIBCPP_HAS_EXCEPTIONS
+    __guard.__complete();
     for (; __back_capacity > 0; --__back_capacity) {
       __buf.emplace_back(__map_.back());
       __map_.pop_back();
     }
     for (__map_pointer __i = __map_.begin(); __i != __map_.end(); ++__i)
       __buf.emplace_back(*__i);
-    std::swap(__map_.__first_, __buf.__first_);
-    std::swap(__map_.__begin_, __buf.__begin_);
-    std::swap(__map_.__end_, __buf.__end_);
-    std::swap(__map_.__cap_, __buf.__cap_);
+    __map_.__swap_without_allocator(__buf);
     __start_ += __ds;
   }
 }
@@ -2195,7 +2087,7 @@ void deque<_Tp, _Allocator>::__add_back_capacity() {
   // Else need to allocate 1 buffer, *and* we need to reallocate __map_.
   else {
     __split_buffer<pointer, __pointer_allocator&> __buf(
-        std::max<size_type>(2 * __map_.capacity(), 1), __map_.size(), __map_.__alloc_);
+        std::max<size_type>(2 * __map_.capacity(), 1), __map_.size(), __map_.__get_allocator());
 
     typedef __allocator_destructor<_Allocator> _Dp;
     unique_ptr<pointer, _Dp> __hold(__alloc_traits::allocate(__a, __block_size), _Dp(__a, __block_size));
@@ -2204,10 +2096,7 @@ void deque<_Tp, _Allocator>::__add_back_capacity() {
 
     for (__map_pointer __i = __map_.end(); __i != __map_.begin();)
       __buf.emplace_front(*--__i);
-    std::swap(__map_.__first_, __buf.__first_);
-    std::swap(__map_.__begin_, __buf.__begin_);
-    std::swap(__map_.__end_, __buf.__end_);
-    std::swap(__map_.__cap_, __buf.__cap_);
+    __map_.__swap_without_allocator(__buf);
     __annotate_whole_block(__map_.size() - 1, __asan_poison);
   }
 }
@@ -2260,33 +2149,25 @@ void deque<_Tp, _Allocator>::__add_back_capacity(size_type __n) {
     __split_buffer<pointer, __pointer_allocator&> __buf(
         std::max<size_type>(2 * __map_.capacity(), __nb + __map_.size()),
         __map_.size() - __front_capacity,
-        __map_.__alloc_);
-#  if _LIBCPP_HAS_EXCEPTIONS
-    try {
-#  endif // _LIBCPP_HAS_EXCEPTIONS
-      for (; __nb > 0; --__nb) {
-        __buf.emplace_back(__alloc_traits::allocate(__a, __block_size));
-        // ASan: this is an empty container, we have to poison the whole block
-        __annotate_poison_block(std::__to_address(__buf.back()), std::__to_address(__buf.back() + __block_size));
-      }
-#  if _LIBCPP_HAS_EXCEPTIONS
-    } catch (...) {
+        __map_.__get_allocator());
+    auto __guard = std::__make_exception_guard([&] {
       __annotate_delete();
       for (__map_pointer __i = __buf.begin(); __i != __buf.end(); ++__i)
         __alloc_traits::deallocate(__a, *__i, __block_size);
-      throw;
+    });
+    for (; __nb > 0; --__nb) {
+      __buf.emplace_back(__alloc_traits::allocate(__a, __block_size));
+      // ASan: this is an empty container, we have to poison the whole block
+      __annotate_poison_block(std::__to_address(__buf.back()), std::__to_address(__buf.back() + __block_size));
     }
-#  endif // _LIBCPP_HAS_EXCEPTIONS
+    __guard.__complete();
     for (; __front_capacity > 0; --__front_capacity) {
       __buf.emplace_back(__map_.front());
       __map_.pop_front();
     }
     for (__map_pointer __i = __map_.end(); __i != __map_.begin();)
       __buf.emplace_front(*--__i);
-    std::swap(__map_.__first_, __buf.__first_);
-    std::swap(__map_.__begin_, __buf.__begin_);
-    std::swap(__map_.__end_, __buf.__end_);
-    std::swap(__map_.__cap_, __buf.__cap_);
+    __map_.__swap_without_allocator(__buf);
     __start_ -= __ds;
   }
 }

@@ -6,6 +6,7 @@ load("@bazel_skylib//lib:selects.bzl", "selects")
 load("@bazel_skylib//rules:common_settings.bzl", "bool_flag")
 load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
 load("@build_bazel_apple_support//rules:apple_genrule.bzl", "apple_genrule")
+load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_import", "cc_library", "objc_library")
 load("@rules_python//python:defs.bzl", "py_binary")
 load("//:vars.bzl", "LLVM_VERSION_MAJOR", "LLVM_VERSION_MINOR", "LLVM_VERSION_PATCH", "LLVM_VERSION_SUFFIX", "PACKAGE_VERSION")
 load("//lldb/source/Plugins:plugin_config.bzl", "DEFAULT_PLUGINS", "DEFAULT_SCRIPT_PLUGINS", "OBJCPP_COPTS")
@@ -58,6 +59,14 @@ selects.config_setting_group(
     match_any = [
         ":libedit_enabled_setting",
         "@platforms//os:macos",
+    ],
+)
+
+selects.config_setting_group(
+    name = "needs_libbsd",
+    match_all = [
+        ":libedit_enabled_setting",
+        "@platforms//os:linux",
     ],
 )
 
@@ -114,6 +123,9 @@ expand_template(
         "#cmakedefine01 LLVM_ENABLE_CURL": "#define LLVM_ENABLE_CURL 0",
 
         # TODO: python support
+        # Note this substitution has to be defined before LLDB_ENABLE_PYTHON.
+        # Otherwise it will get replaced to 0_LIMITED_API.
+        "#cmakedefine01 LLDB_ENABLE_PYTHON_LIMITED_API": "#define LLDB_ENABLE_PYTHON_LIMITED_API 0",
         "#cmakedefine01 LLDB_ENABLE_PYTHON": "#define LLDB_ENABLE_PYTHON 0",
         # Only enabled by default on Windows
         "#cmakedefine01 LLDB_EMBED_PYTHON_HOME": "#define LLDB_EMBED_PYTHON_HOME 0",
@@ -453,6 +465,7 @@ cc_library(
         ":TargetHeaders",
         ":Utility",
         ":UtilityPrivateHeaders",
+        "//llvm:BinaryFormat",
         "//llvm:DebugInfo",
         "//llvm:DebugInfoDWARF",
         "//llvm:DebugInfoDWARFLowLevel",
@@ -537,6 +550,7 @@ cc_library(
             "include/lldb/Host/posix/*.h",
         ]),
     }),
+    features = ["-layering_check"],  # histedit.h breaks this.
     includes = ["include"],
     # TODO: Move this to Config library when https://github.com/bazelbuild/bazel/issues/21884 is fixed
     linkopts = select({
@@ -556,6 +570,11 @@ cc_library(
     }) + select({
         ":libedit_enabled": [
             "-ledit",
+        ],
+        "//conditions:default": [],
+    }) + select({
+        ":needs_libbsd": [
+            "-lbsd",
         ],
         "//conditions:default": [],
     }),
@@ -1000,6 +1019,7 @@ cc_binary(
         "//lldb/source/Plugins:PluginInstructionRISCV",
         "//lldb/source/Plugins:PluginObjCLanguage",
         "//lldb/source/Plugins:PluginProcessGDBRemote",
+        "//lldb/source/Plugins:PluginProcessWasm",
         "//lldb/source/Plugins:PluginSymbolFileDWARF",
         "//lldb/source/Plugins:PluginSymbolFileNativePDB",
         "//lldb/source/Plugins:PluginSymbolFilePDB",
@@ -1032,7 +1052,7 @@ gentbl_cc_library(
     strip_include_prefix = "tools/lldb-dap",
     tbl_outs = {"tools/lldb-dap/Options.inc": ["-gen-opt-parser-defs"]},
     tblgen = "//llvm:llvm-tblgen",
-    td_file = "tools/lldb-dap/Options.td",
+    td_file = "tools/lldb-dap/tool/Options.td",
     deps = ["//llvm:OptParserTdFiles"],
 )
 

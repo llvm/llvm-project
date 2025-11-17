@@ -183,7 +183,7 @@ RuntimeDyldImpl::loadObjectImpl(const object::ObjectFile &Obj) {
   std::lock_guard<sys::Mutex> locked(lock);
 
   // Save information about our target
-  Arch = (Triple::ArchType)Obj.getArch();
+  Arch = Obj.getArch();
   IsTargetLittleEndian = Obj.isLittleEndian();
   setMipsABI(Obj);
 
@@ -891,7 +891,7 @@ RuntimeDyldImpl::emitSection(const ObjectFile &Obj,
       // Align DataSize to stub alignment if we have any stubs (PaddingSize will
       // have been increased above to account for this).
       if (StubBufSize > 0)
-        DataSize &= -(uint64_t)getStubAlignment().value();
+        DataSize &= -getStubAlignment().value();
     }
 
     LLVM_DEBUG(dbgs() << "emitSection SectionID: " << SectionID << " Name: "
@@ -1361,18 +1361,17 @@ std::unique_ptr<RuntimeDyld::LoadedObjectInfo>
 RuntimeDyld::loadObject(const ObjectFile &Obj) {
   if (!Dyld) {
     if (Obj.isELF())
-      Dyld =
-          createRuntimeDyldELF(static_cast<Triple::ArchType>(Obj.getArch()),
-                               MemMgr, Resolver, ProcessAllSections,
-                               std::move(NotifyStubEmitted));
+      Dyld = createRuntimeDyldELF(Obj.getArch(), MemMgr, Resolver,
+                                  ProcessAllSections,
+                                  std::move(NotifyStubEmitted));
     else if (Obj.isMachO())
-      Dyld = createRuntimeDyldMachO(
-               static_cast<Triple::ArchType>(Obj.getArch()), MemMgr, Resolver,
-               ProcessAllSections, std::move(NotifyStubEmitted));
+      Dyld = createRuntimeDyldMachO(Obj.getArch(), MemMgr, Resolver,
+                                    ProcessAllSections,
+                                    std::move(NotifyStubEmitted));
     else if (Obj.isCOFF())
-      Dyld = createRuntimeDyldCOFF(
-               static_cast<Triple::ArchType>(Obj.getArch()), MemMgr, Resolver,
-               ProcessAllSections, std::move(NotifyStubEmitted));
+      Dyld = createRuntimeDyldCOFF(Obj.getArch(), MemMgr, Resolver,
+                                   ProcessAllSections,
+                                   std::move(NotifyStubEmitted));
     else
       report_fatal_error("Incompatible object format!");
   }

@@ -465,6 +465,14 @@ MlirModule mlirModuleFromOperation(MlirOperation op) {
   return wrap(dyn_cast<ModuleOp>(unwrap(op)));
 }
 
+bool mlirModuleEqual(MlirModule lhs, MlirModule rhs) {
+  return unwrap(lhs) == unwrap(rhs);
+}
+
+size_t mlirModuleHashValue(MlirModule mod) {
+  return OperationEquivalence::computeHash(unwrap(mod).getOperation());
+}
+
 //===----------------------------------------------------------------------===//
 // Operation state API.
 //===----------------------------------------------------------------------===//
@@ -636,12 +644,20 @@ bool mlirOperationEqual(MlirOperation op, MlirOperation other) {
   return unwrap(op) == unwrap(other);
 }
 
+size_t mlirOperationHashValue(MlirOperation op) {
+  return OperationEquivalence::computeHash(unwrap(op));
+}
+
 MlirContext mlirOperationGetContext(MlirOperation op) {
   return wrap(unwrap(op)->getContext());
 }
 
 MlirLocation mlirOperationGetLocation(MlirOperation op) {
   return wrap(unwrap(op)->getLoc());
+}
+
+void mlirOperationSetLocation(MlirOperation op, MlirLocation loc) {
+  unwrap(op)->setLoc(unwrap(loc));
 }
 
 MlirTypeID mlirOperationGetTypeID(MlirOperation op) {
@@ -848,6 +864,10 @@ void mlirOperationMoveAfter(MlirOperation op, MlirOperation other) {
 
 void mlirOperationMoveBefore(MlirOperation op, MlirOperation other) {
   return unwrap(op)->moveBefore(unwrap(other));
+}
+
+bool mlirOperationIsBeforeInBlock(MlirOperation op, MlirOperation other) {
+  return unwrap(op)->isBeforeInBlock(unwrap(other));
 }
 
 static mlir::WalkResult unwrap(MlirWalkResult result) {

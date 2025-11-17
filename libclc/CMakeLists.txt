@@ -31,6 +31,7 @@ set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
   clc/lib/amdgcn/SOURCES;
   clc/lib/amdgpu/SOURCES;
   clc/lib/clspv/SOURCES;
+  clc/lib/ptx-nvidiacl/SOURCES;
   clc/lib/r600/SOURCES;
   clc/lib/spirv/SOURCES;
 )
@@ -41,6 +42,16 @@ set( LIBCLC_TARGETS_TO_BUILD "all"
     CACHE STRING "Semicolon-separated list of libclc targets to build, or 'all'." )
 
 option( ENABLE_RUNTIME_SUBNORMAL "Enable runtime linking of subnormal support." OFF )
+
+option(
+  LIBCLC_USE_SPIRV_BACKEND "Build SPIR-V targets with the SPIR-V backend." OFF
+)
+
+# Top level target used to build all Libclc libraries.
+add_custom_target( libclc ALL )
+
+add_custom_target( libclc-opencl-builtins COMMENT "Build libclc OpenCL builtins" )
+add_dependencies( libclc libclc-opencl-builtins )
 
 if( LIBCLC_STANDALONE_BUILD OR CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR )
   # Out-of-tree configuration
@@ -63,6 +74,10 @@ if( LIBCLC_STANDALONE_BUILD OR CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DI
       set( ${tool}_target )
     endforeach()
   endif()
+
+  # Setup the paths where libclc runtimes should be stored.
+  set( LIBCLC_OUTPUT_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR} )
+  set( LIBCLC_INSTALL_DIR ${CMAKE_INSTALL_DATADIR}/clc )
 else()
   # In-tree configuration
   set( LIBCLC_STANDALONE_BUILD FALSE )
@@ -82,10 +97,18 @@ else()
     get_host_tool_path( llvm-link LLVM_LINK llvm-link_exe llvm-link_target )
     get_host_tool_path( opt OPT opt_exe opt_target )
   endif()
-endif()
 
-# Setup the paths where libclc runtimes should be stored.
-set( LIBCLC_OUTPUT_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR} )
+  # Setup the paths where libclc runtimes should be stored. By default, in an
+  # in-tree build we place the libraries in clang's resource driectory.
+  include(GetClangResourceDir)
+  get_clang_resource_dir( LIBCLC_INSTALL_DIR )
+  cmake_path( APPEND LIBCLC_INSTALL_DIR "lib" "libclc" )
+
+  # Note we do not adhere to LLVM_ENABLE_PER_TARGET_RUNTIME_DIR.
+  cmake_path( GET LLVM_LIBRARY_OUTPUT_INTDIR PARENT_PATH LIBCLC_OUTPUT_LIBRARY_DIR )
+  cmake_path( APPEND LIBCLC_OUTPUT_LIBRARY_DIR ${LIBCLC_INSTALL_DIR} )
+  file( MAKE_DIRECTORY ${LIBCLC_OUTPUT_LIBRARY_DIR} )
+endif()
 
 if( EXISTS ${LIBCLC_CUSTOM_LLVM_TOOLS_BINARY_DIR} )
   message( WARNING "Using custom LLVM tools to build libclc: "
@@ -104,19 +127,22 @@ if( EXISTS ${LIBCLC_CUSTOM_LLVM_TOOLS_BINARY_DIR} )
 endif()
 
 foreach( tool IN ITEMS clang opt llvm-as llvm-link )
-  if( NOT EXISTS "${${tool}_exe}" AND "${tool}_target" STREQUAL "" )
+  if( NOT EXISTS "${${tool}_exe}" AND "${${tool}_target}" STREQUAL "" )
     message( FATAL_ERROR "libclc toolchain incomplete - missing tool ${tool}!" )
   endif()
 endforeach()
 
-# llvm-spirv is an optional dependency, used to build spirv-* targets.
-# It may be provided in-tree or externally.
-if( TARGET llvm-spirv )
-  get_host_tool_path( llvm-spirv LLVM_SPIRV llvm-spirv_exe llvm-spirv_target )
-else()
-  find_program( LLVM_SPIRV llvm-spirv HINTS ${LLVM_TOOLS_BINARY_DIR} )
-  set( llvm-spirv_exe "${LLVM_SPIRV}" )
-  set( llvm-spirv_target )
+if( NOT LIBCLC_USE_SPIRV_BACKEND )
+  # llvm-spirv is an optional dependency, used to build spirv-* targets when
+  # the SPIR-V backend hasn't been requested. It may be provided in-tree or
+  # externally.
+  if( TARGET llvm-spirv )
+    get_host_tool_path( llvm-spirv LLVM_SPIRV llvm-spirv_exe llvm-spirv_target )
+  else()
+    find_program( LLVM_SPIRV llvm-spirv HINTS ${LLVM_TOOLS_BINARY_DIR} )
+    set( llvm-spirv_exe "${LLVM_SPIRV}" )
+    set( llvm-spirv_target )
+  endif()
 endif()
 
 # List of all targets. Note that some are added dynamically below.
@@ -132,22 +158,24 @@ set( LIBCLC_TARGETS_ALL
   nvptx64--nvidiacl
 )
 
-# mesa3d environment is only available since LLVM 4.0
+# The mesa3d environment is only available since LLVM 4.0
 if( LLVM_PACKAGE_VERSION VERSION_GREATER_EQUAL 4.0.0 )
   list( APPEND LIBCLC_TARGETS_ALL amdgcn-mesa-mesa3d )
 endif()
 
-# spirv-mesa3d and spirv64-mesa3d targets can only be built with the (optional)
-# llvm-spirv external tool.
-if( llvm-spirv_exe )
-  list( APPEND LIBCLC_TARGETS_ALL  spirv-mesa3d- spirv64-mesa3d- )
+# The spirv-mesa3d and spirv64-mesa3d targets are optional and can be built
+# with either the LLVM SPIR-V backend or the external llvm-spirv tool.
+if( LIBCLC_USE_SPIRV_BACKEND OR llvm-spirv_exe )
+  list( APPEND LIBCLC_TARGETS_ALL spirv-mesa3d- spirv64-mesa3d- )
 endif()
 
 # Verify that the user hasn't requested mesa3d targets without an available
 # llvm-spirv tool.
-if( "spirv-mesa3d-" IN_LIST LIBCLC_TARGETS_TO_BUILD OR "spirv64-mesa3d-" IN_LIST LIBCLC_TARGETS_TO_BUILD )
-  if( NOT llvm-spirv_exe )
-    message( FATAL_ERROR "SPIR-V targets requested, but spirv-tools is not installed" )
+if( spirv-mesa3d- IN_LIST LIBCLC_TARGETS_TO_BUILD
+    OR spirv64-mesa3d- IN_LIST LIBCLC_TARGETS_TO_BUILD )
+  if( NOT LIBCLC_USE_SPIRV_BACKEND AND NOT llvm-spirv_exe )
+    message( FATAL_ERROR "SPIR-V targets requested, but spirv-tools is not "
+      "installed and the SPIR-V backend has not been requested." )
   endif()
 endif()
 
@@ -164,34 +192,14 @@ endif()
 
 list( SORT LIBCLC_TARGETS_TO_BUILD )
 
-# Construct LLVM version define
-set( LLVM_VERSION_DEFINE "-DHAVE_LLVM=0x${LLVM_VERSION_MAJOR}0${LLVM_VERSION_MINOR}" )
-
 # This needs to be set before any target that needs it
 # We need to use LLVM_INCLUDE_DIRS here, because if we are linking to an
 # llvm build directory, this includes $src/llvm/include which is where all the
 # headers are not $build/include/ which is what LLVM_INCLUDE_DIR is set to.
 include_directories( ${LLVM_INCLUDE_DIRS} )
 
-# Setup prepare_builtins tools
-set(LLVM_LINK_COMPONENTS
-  BitReader
-  BitWriter
-  Core
-  IRReader
-  Support
-)
-if( LIBCLC_STANDALONE_BUILD )
-  add_llvm_executable( prepare_builtins utils/prepare-builtins.cpp )
-  set( prepare_builtins_exe prepare_builtins )
-  set( prepare_builtins_target prepare_builtins )
-else()
-  add_llvm_utility( prepare_builtins utils/prepare-builtins.cpp )
-  setup_host_tool( prepare_builtins PREPARE_BUILTINS prepare_builtins_exe prepare_builtins_target )
-endif()
-target_compile_definitions( prepare_builtins PRIVATE ${LLVM_VERSION_DEFINE} )
-# These were not properly reported in early LLVM and we don't need them
-target_compile_options( prepare_builtins PRIVATE -fno-rtti -fno-exceptions )
+# Configure prepare_builtins
+add_subdirectory( utils )
 
 # Setup arch devices
 set( r600--_devices cedar cypress barts cayman )
@@ -220,7 +228,7 @@ set( tahiti_aliases pitcairn verde oland hainan bonaire kabini kaveri hawaii
   gfx1030 gfx1031 gfx1032 gfx1033 gfx1034 gfx1035 gfx1036
   gfx1100 gfx1101 gfx1102 gfx1103
   gfx1150 gfx1151 gfx1152 gfx1153
-  gfx1200 gfx1201
+  gfx1200 gfx1201 gfx1250 gfx1251
 )
 
 # pkg-config file
@@ -390,6 +398,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
 
     message( STATUS "  device: ${d} ( ${${d}_aliases} )" )
 
+    set( MACRO_ARCH ${ARCH} )
     if ( ARCH STREQUAL spirv OR ARCH STREQUAL spirv64 )
       set( build_flags -O0 -finline-hint-functions -DCLC_SPIRV )
       set( opt_flags )
@@ -408,7 +417,6 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
     else()
       set( build_flags )
       set( opt_flags -O3 )
-      set( MACRO_ARCH ${ARCH} )
     endif()
 
     set( LIBCLC_ARCH_OBJFILE_DIR "${LIBCLC_OBJFILE_DIR}/${arch_suffix}" )
@@ -425,6 +433,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
       -I${CMAKE_CURRENT_SOURCE_DIR}/clc/include
       # Error on undefined macros
       -Werror=undef
+      -fdiscard-value-names
     )
 
     if( NOT "${cpu}" STREQUAL "" )
@@ -456,14 +465,12 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
       -D__CLC_GENERIC_ADDRSPACE_VAL=${generic_addrspace_val}
     )
 
-    set( clc_build_flags ${build_flags} -DCLC_INTERNAL )
-
     add_libclc_builtin_set(
       CLC_INTERNAL
       ARCH ${ARCH}
       ARCH_SUFFIX clc-${arch_suffix}
       TRIPLE ${clang_triple}
-      COMPILE_FLAGS ${clc_build_flags}
+      COMPILE_FLAGS ${build_flags}
       OPT_FLAGS ${opt_flags}
       LIB_FILES ${clc_lib_files}
       GEN_FILES ${clc_gen_files}
@@ -482,6 +489,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
       LIB_FILES ${opencl_lib_files}
       GEN_FILES ${opencl_gen_files}
       ALIASES ${${d}_aliases}
+      PARENT_TARGET libclc-opencl-builtins
       # Link in the CLC builtins and internalize their symbols
       INTERNAL_LINK_DEPENDENCIES builtins.link.clc-${arch_suffix}
     )

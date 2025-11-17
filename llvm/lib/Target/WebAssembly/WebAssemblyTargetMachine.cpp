@@ -26,7 +26,6 @@
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Function.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Target/TargetOptions.h"
@@ -128,16 +127,11 @@ LLVMInitializeWebAssemblyTarget() {
 // WebAssembly Lowering public interface.
 //===----------------------------------------------------------------------===//
 
-static Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM,
-                                           const Triple &TT) {
-  if (!RM) {
-    // Default to static relocation model.  This should always be more optimial
-    // than PIC since the static linker can determine all global addresses and
-    // assume direct function calls.
-    return Reloc::Static;
-  }
-
-  return *RM;
+static Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM) {
+  // Default to static relocation model.  This should always be more optimial
+  // than PIC since the static linker can determine all global addresses and
+  // assume direct function calls.
+  return RM.value_or(Reloc::Static);
 }
 
 using WebAssembly::WasmEnableEH;
@@ -197,19 +191,9 @@ WebAssemblyTargetMachine::WebAssemblyTargetMachine(
     const Target &T, const Triple &TT, StringRef CPU, StringRef FS,
     const TargetOptions &Options, std::optional<Reloc::Model> RM,
     std::optional<CodeModel::Model> CM, CodeGenOptLevel OL, bool JIT)
-    : CodeGenTargetMachineImpl(
-          T,
-          TT.isArch64Bit()
-              ? (TT.isOSEmscripten() ? "e-m:e-p:64:64-p10:8:8-p20:8:8-i64:64-"
-                                       "i128:128-f128:64-n32:64-S128-ni:1:10:20"
-                                     : "e-m:e-p:64:64-p10:8:8-p20:8:8-i64:64-"
-                                       "i128:128-n32:64-S128-ni:1:10:20")
-              : (TT.isOSEmscripten() ? "e-m:e-p:32:32-p10:8:8-p20:8:8-i64:64-"
-                                       "i128:128-f128:64-n32:64-S128-ni:1:10:20"
-                                     : "e-m:e-p:32:32-p10:8:8-p20:8:8-i64:64-"
-                                       "i128:128-n32:64-S128-ni:1:10:20"),
-          TT, CPU, FS, Options, getEffectiveRelocModel(RM, TT),
-          getEffectiveCodeModel(CM, CodeModel::Large), OL),
+    : CodeGenTargetMachineImpl(T, TT.computeDataLayout(), TT, CPU, FS, Options,
+                               getEffectiveRelocModel(RM),
+                               getEffectiveCodeModel(CM, CodeModel::Large), OL),
       TLOF(new WebAssemblyTargetObjectFile()),
       UsesMultivalueABI(Options.MCOptions.getABIName() == "experimental-mv") {
   // WebAssembly type-checks instructions, but a noreturn function with a return

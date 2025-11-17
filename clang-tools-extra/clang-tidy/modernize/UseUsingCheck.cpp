@@ -1,4 +1,4 @@
-//===--- UseUsingCheck.cpp - clang-tidy------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -34,7 +34,7 @@ static constexpr llvm::StringLiteral DeclStmtName = "decl-stmt";
 
 UseUsingCheck::UseUsingCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      IgnoreMacros(Options.getLocalOrGlobal("IgnoreMacros", true)),
+      IgnoreMacros(Options.get("IgnoreMacros", true)),
       IgnoreExternC(Options.get("IgnoreExternC", false)) {}
 
 void UseUsingCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
@@ -92,7 +92,7 @@ void UseUsingCheck::check(const MatchFinder::MatchResult &Result) {
   const LangOptions &LO = getLangOpts();
 
   // Match CXXRecordDecl only to store the range of the last non-implicit full
-  // declaration, to later check whether it's within the typdef itself.
+  // declaration, to later check whether it's within the typedef itself.
   const auto *MatchedTagDecl = Result.Nodes.getNodeAs<TagDecl>(TagDeclName);
   if (MatchedTagDecl) {
     // It is not sufficient to just track the last TagDecl that we've seen,
@@ -114,7 +114,7 @@ void UseUsingCheck::check(const MatchFinder::MatchResult &Result) {
   if (ExternCDecl && IgnoreExternC)
     return;
 
-  SourceLocation StartLoc = MatchedDecl->getBeginLoc();
+  const SourceLocation StartLoc = MatchedDecl->getBeginLoc();
 
   if (StartLoc.isMacroID() && IgnoreMacros)
     return;
@@ -152,7 +152,7 @@ void UseUsingCheck::check(const MatchFinder::MatchResult &Result) {
     StringRef ExtraReference = "";
     if (MainTypeEndLoc.isValid() && TypeRange.fullyContains(MainTypeEndLoc)) {
       // Each type introduced in a typedef can specify being a reference or
-      // pointer type seperately, so we need to sigure out if the new using-decl
+      // pointer type separately, so we need to figure out if the new using-decl
       // needs to be to a reference or pointer as well.
       const SourceLocation Tok = utils::lexer::findPreviousAnyTokenKind(
           MatchedDecl->getLocation(), SM, LO, tok::TokenKind::star,
@@ -172,7 +172,7 @@ void UseUsingCheck::check(const MatchFinder::MatchResult &Result) {
             .str(),
         ExtraReference.str()};
   }();
-  StringRef Name = MatchedDecl->getName();
+  const StringRef Name = MatchedDecl->getName();
   SourceRange ReplaceRange = MatchedDecl->getSourceRange();
 
   // typedefs with multiple comma-separated definitions produce multiple
@@ -223,7 +223,8 @@ void UseUsingCheck::check(const MatchFinder::MatchResult &Result) {
       return;
   }
 
-  std::string Replacement = (Using + Name + " = " + Type + QualifierStr).str();
+  const std::string Replacement =
+      (Using + Name + " = " + Type + QualifierStr).str();
   Diag << FixItHint::CreateReplacement(ReplaceRange, Replacement);
 }
 } // namespace clang::tidy::modernize

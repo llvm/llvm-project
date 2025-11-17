@@ -4,9 +4,16 @@
 // RUN: %clang_cc1 -std=c++11 -verify \
 // RUN:  -fopenmp-simd -ferror-limit 200 %s -Wuninitialized
 
+// RUN: %clang_cc1 -std=c++11 -verify \
+// RUN:  -fopenmp -fopenmp-version=60 -ferror-limit 200 %s -Wuninitialized
+
+// RUN: %clang_cc1 -std=c++11 -verify \
+// RUN:  -fopenmp-simd -fopenmp-version=60 -ferror-limit 200 %s -Wuninitialized
+
 struct ST {
   int *a;
 };
+
 typedef int arr[10];
 typedef ST STarr[10];
 struct SA {
@@ -133,9 +140,9 @@ typedef struct {
   int a;
 } S6;
 
-template <typename T, int I>
-T tmain(T argc) {
-  const T d = 5;
+template <typename T, typename S, int I>
+T tfoo(T argc, S ub[]) {
+  const T d = I;
   const T da[5] = { 0 };
   S4 e(4);
   S5 g(5);
@@ -200,10 +207,14 @@ T tmain(T argc) {
   {}
 #pragma omp target private(ps) has_device_addr(ps) // expected-error{{private variable cannot be in a has_device_addr clause in '#pragma omp target' directive}} expected-note{{defined as private}}
   {}
+#pragma omp target has_device_addr(ps[:]) // expected-error {{section length is unspecified and cannot be inferred because subscripted value is not an array}}
+  {}
+#pragma omp target has_device_addr(ub[:]) // expected-error {{section length is unspecified and cannot be inferred because subscripted value is an array of unknown bound}}
+  {}
   return 0;
 }
 
-int main(int argc, char **argv) {
+int foo(int argc, float ub[]) {
   const int d = 5;
   const int da[5] = { 0 };
   S4 e(4);
@@ -269,5 +280,10 @@ int main(int argc, char **argv) {
   {}
 #pragma omp target private(ps) has_device_addr(ps) // expected-error{{private variable cannot be in a has_device_addr clause in '#pragma omp target' directive}} expected-note{{defined as private}}
   {}
-  return tmain<int, 3>(argc);
+#pragma omp target has_device_addr(ps[:]) // expected-error {{section length is unspecified and cannot be inferred because subscripted value is not an array}}
+  {}
+#pragma omp target has_device_addr(ub[:]) // expected-error {{section length is unspecified and cannot be inferred because subscripted value is an array of unknown bound}}
+  {}
+  return tfoo<int, float, 5>(argc, ub); // expected-note {{in instantiation of function template specialization 'tfoo<int, float, 5>' requested here}}
+
 }

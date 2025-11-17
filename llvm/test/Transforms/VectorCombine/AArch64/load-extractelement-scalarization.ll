@@ -669,10 +669,10 @@ define i1 @load_with_non_power_of_2_element_type_2(ptr %x) {
 ; Scalarizing the load for multiple constant indices may not be profitable.
 define i32 @load_multiple_extracts_with_constant_idx(ptr %x) {
 ; CHECK-LABEL: @load_multiple_extracts_with_constant_idx(
-; CHECK-NEXT:    [[LV:%.*]] = load <4 x i32>, ptr [[X:%.*]], align 16
-; CHECK-NEXT:    [[SHIFT:%.*]] = shufflevector <4 x i32> [[LV]], <4 x i32> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP1:%.*]] = add <4 x i32> [[LV]], [[SHIFT]]
-; CHECK-NEXT:    [[RES:%.*]] = extractelement <4 x i32> [[TMP1]], i32 0
+; CHECK-NEXT:    [[E_0:%.*]] = load i32, ptr [[TMP1:%.*]], align 16
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds <4 x i32>, ptr [[TMP1]], i32 0, i32 1
+; CHECK-NEXT:    [[E_1:%.*]] = load i32, ptr [[TMP2]], align 4
+; CHECK-NEXT:    [[RES:%.*]] = add i32 [[E_0]], [[E_1]]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
   %lv = load <4 x i32>, ptr %x
@@ -686,10 +686,10 @@ define i32 @load_multiple_extracts_with_constant_idx(ptr %x) {
 ; because the vector large vector requires 2 vector registers.
 define i32 @load_multiple_extracts_with_constant_idx_profitable(ptr %x) {
 ; CHECK-LABEL: @load_multiple_extracts_with_constant_idx_profitable(
-; CHECK-NEXT:    [[LV:%.*]] = load <8 x i32>, ptr [[X:%.*]], align 16
-; CHECK-NEXT:    [[SHIFT:%.*]] = shufflevector <8 x i32> [[LV]], <8 x i32> poison, <8 x i32> <i32 6, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP1:%.*]] = add <8 x i32> [[LV]], [[SHIFT]]
-; CHECK-NEXT:    [[RES:%.*]] = extractelement <8 x i32> [[TMP1]], i32 0
+; CHECK-NEXT:    [[E_0:%.*]] = load i32, ptr [[TMP1:%.*]], align 16
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds <8 x i32>, ptr [[TMP1]], i32 0, i32 6
+; CHECK-NEXT:    [[E_1:%.*]] = load i32, ptr [[TMP2]], align 8
+; CHECK-NEXT:    [[RES:%.*]] = add i32 [[E_0]], [[E_1]]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
   %lv = load <8 x i32>, ptr %x, align 16

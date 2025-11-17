@@ -152,12 +152,6 @@ std::string ARM_MC::ParseARMTriple(const Triple &TT, StringRef CPU) {
     ARMArchFeature += "+thumb-mode,+v4t";
   }
 
-  if (TT.isOSNaCl()) {
-    if (!ARMArchFeature.empty())
-      ARMArchFeature += ",";
-    ARMArchFeature += "+nacl-trap";
-  }
-
   if (TT.isOSWindows()) {
     if (!ARMArchFeature.empty())
       ARMArchFeature += ",";

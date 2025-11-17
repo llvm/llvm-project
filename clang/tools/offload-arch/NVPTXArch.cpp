@@ -21,6 +21,8 @@
 
 using namespace llvm;
 
+extern cl::opt<bool> Verbose;
+
 typedef enum cudaError_enum {
   CUDA_SUCCESS = 0,
   CUDA_ERROR_NO_DEVICE = 100,
@@ -78,7 +80,10 @@ static int handleError(CUresult Err) {
 int printGPUsByCUDA() {
   // Attempt to load the NVPTX driver runtime.
   if (llvm::Error Err = loadCUDA()) {
-    logAllUnhandledErrors(std::move(Err), llvm::errs());
+    if (Verbose)
+      logAllUnhandledErrors(std::move(Err), llvm::errs());
+    else
+      consumeError(std::move(Err));
     return 1;
   }
 

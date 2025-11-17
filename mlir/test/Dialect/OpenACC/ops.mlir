@@ -1,8 +1,8 @@
-// RUN: mlir-opt -split-input-file %s | FileCheck %s
+// RUN: mlir-opt -split-input-file %s | FileCheck %s --check-prefixes=CHECK,CHECK-3
 // Verify the printed output can be parsed.
-// RUN: mlir-opt -split-input-file %s | mlir-opt  -split-input-file  | FileCheck %s
+// RUN: mlir-opt -split-input-file %s | mlir-opt  -split-input-file  | FileCheck %s --check-prefixes=CHECK,CHECK-3
 // Verify the generic form can be parsed.
-// RUN: mlir-opt -split-input-file -mlir-print-op-generic %s | mlir-opt -split-input-file | FileCheck %s
+// RUN: mlir-opt -split-input-file -mlir-print-op-generic %s | mlir-opt -split-input-file | FileCheck %s --check-prefixes=CHECK,CHECK-3
 
 func.func @compute1(%A: memref<10x10xf32>, %B: memref<10x10xf32>, %C: memref<10x10xf32>) -> memref<10x10xf32> {
   %c0 = arith.constant 0 : index
@@ -358,6 +358,41 @@ func.func @acc_loop_multiple_block() {
 
 // -----
 
+acc.firstprivate.recipe @firstprivatization_memref_10xf32 : memref<10xf32> init {
+^bb0(%arg0: memref<10xf32>):
+  %0 = memref.alloca() : memref<10xf32>
+  acc.yield %0 : memref<10xf32>
+} copy {
+^bb0(%arg0: memref<10xf32>, %arg1: memref<10xf32>):
+  memref.copy %arg0, %arg1 : memref<10xf32> to memref<10xf32>
+  acc.terminator
+} destroy {
+^bb0(%arg0: memref<10xf32>):
+  acc.terminator
+}
+
+func.func @testloopfirstprivate(%a: memref<10xf32>, %b: memref<10xf32>) -> () {
+  %c0 = arith.constant 0 : index
+  %c10 = arith.constant 10 : index
+  %c1 = arith.constant 1 : index
+  %firstprivate = acc.firstprivate varPtr(%a : memref<10xf32>) varType(tensor<10xf32>) -> memref<10xf32>
+  acc.loop firstprivate(@firstprivatization_memref_10xf32 -> %firstprivate : memref<10xf32>) control(%iv : index) = (%c0 : index) to (%c10 : index) step (%c1 : index) {
+    "test.openacc_dummy_op"() : () -> ()
+    acc.yield
+  } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+  return
+}
+
+// CHECK-LABEL: func.func @testloopfirstprivate(
+// CHECK-SAME:    %[[ARG0:.*]]: memref<10xf32>, %[[ARG1:.*]]: memref<10xf32>)
+// CHECK:         %[[FIRSTPRIVATE:.*]] = acc.firstprivate varPtr(%[[ARG0]] : memref<10xf32>) varType(tensor<10xf32>) -> memref<10xf32>
+// CHECK:         acc.loop firstprivate(@firstprivatization_memref_10xf32 -> %[[FIRSTPRIVATE]] : memref<10xf32>) control(%{{.*}}) = (%{{.*}}) to (%{{.*}}) step (%{{.*}}) {
+// CHECK:           "test.openacc_dummy_op"() : () -> ()
+// CHECK:           acc.yield
+// CHECK:         } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+
+// -----
+
 acc.private.recipe @privatization_memref_10_f32 : memref<10xf32> init {
 ^bb0(%arg0: memref<10xf32>):
   %0 = memref.alloc() : memref<10xf32>
@@ -535,6 +570,7 @@ acc.firstprivate.recipe @firstprivatization_memref_10xf32 : memref<10xf32> init 
   acc.yield %0 : memref<10xf32>
 } copy {
 ^bb0(%arg0: memref<10xf32>, %arg1: memref<10xf32>):
+  memref.copy %arg0, %arg1 : memref<10xf32> to memref<10xf32>
   acc.terminator
 } destroy {
 ^bb0(%arg0: memref<10xf32>):
@@ -1730,6 +1766,12 @@ acc.set default_async(%i32Value : i32)
 func.func @acc_atomic_read(%v: memref<i32>, %x: memref<i32>) {
   // CHECK: acc.atomic.read %[[v]] = %[[x]] : memref<i32>, memref<i32>, i32
   acc.atomic.read %v = %x : memref<i32>, memref<i32>, i32
+
+  // CHECK-NEXT: %[[IFCOND1:.*]] = arith.constant true
+  // CHECK-NEXT: acc.atomic.read if(%[[IFCOND1]]) %[[v]] = %[[x]] : memref<i32>, memref<i32>, i32
+  %ifCond = arith.constant true
+  acc.atomic.read if(%ifCond) %v = %x : memref<i32>, memref<i32>, i32
+
   return
 }
 
@@ -1740,6 +1782,12 @@ func.func @acc_atomic_read(%v: memref<i32>, %x: memref<i32>) {
 func.func @acc_atomic_write(%addr : memref<i32>, %val : i32) {
   // CHECK: acc.atomic.write %[[ADDR]] = %[[VAL]] : memref<i32>, i32
   acc.atomic.write %addr = %val : memref<i32>, i32
+
+  // CHECK-NEXT: %[[IFCOND1:.*]] = arith.constant true
+  // CHECK-NEXT: acc.atomic.write if(%[[IFCOND1]]) %[[ADDR]] = %[[VAL]] : memref<i32>, i32
+  %ifCond = arith.constant true
+  acc.atomic.write if(%ifCond) %addr = %val : memref<i32>, i32
+
   return
 }
 
@@ -1757,6 +1805,19 @@ func.func @acc_atomic_update(%x : memref<i32>, %expr : i32, %xBool : memref<i1>,
     %newval = llvm.add %xval, %expr : i32
     acc.yield %newval : i32
   }
+
+  // CHECK: %[[IFCOND1:.*]] = arith.constant true
+  // CHECK-NEXT: acc.atomic.update if(%[[IFCOND1]]) %[[X]] : memref<i32>
+  // CHECK-NEXT: (%[[XVAL:.*]]: i32):
+  // CHECK-NEXT:   %[[NEWVAL:.*]] = llvm.add %[[XVAL]], %[[EXPR]] : i32
+  // CHECK-NEXT:   acc.yield %[[NEWVAL]] : i32
+  %ifCond = arith.constant true
+  acc.atomic.update if (%ifCond) %x : memref<i32> {
+  ^bb0(%xval: i32):
+    %newval = llvm.add %xval, %expr : i32
+    acc.yield %newval : i32
+  }
+
   // CHECK: acc.atomic.update %[[XBOOL]] : memref<i1>
   // CHECK-NEXT: (%[[XVAL:.*]]: i1):
   // CHECK-NEXT:   %[[NEWVAL:.*]] = llvm.and %[[XVAL]], %[[EXPRBOOL]] : i1
@@ -1866,6 +1927,17 @@ func.func @acc_atomic_capture(%v: memref<i32>, %x: memref<i32>, %expr: i32) {
     acc.atomic.write %x = %expr : memref<i32>, i32
   }
 
+  // CHECK: %[[IFCOND1:.*]] = arith.constant true
+  // CHECK-NEXT: acc.atomic.capture if(%[[IFCOND1]]) {
+  // CHECK-NEXT: acc.atomic.read %[[v]] = %[[x]] : memref<i32>, memref<i32>, i32
+  // CHECK-NEXT: acc.atomic.write %[[x]] = %[[expr]] : memref<i32>, i32
+  // CHECK-NEXT: }
+  %ifCond = arith.constant true
+  acc.atomic.capture if (%ifCond) {
+    acc.atomic.read %v = %x : memref<i32>, memref<i32>, i32
+    acc.atomic.write %x = %expr : memref<i32>, i32
+  }
+
   return
 }
 
@@ -1954,6 +2026,70 @@ acc.reduction.recipe @reduction_add_memref_i32 : memref<i32> reduction_operator 
 // CHECK-LABEL: acc.reduction.recipe @reduction_add_memref_i32
 // CHECK:       memref.alloca
 
+// -----
+
+// Test reduction recipe with destroy region using dynamic memory allocation
+acc.reduction.recipe @reduction_add_with_destroy : memref<?xf32> reduction_operator<add> init {
+^bb0(%arg0: memref<?xf32>):
+  %cst = arith.constant 0.000000e+00 : f32
+  %c0 = arith.constant 0 : index
+  %size = memref.dim %arg0, %c0 : memref<?xf32>
+  %alloc = memref.alloc(%size) : memref<?xf32>
+  %c1 = arith.constant 1 : index
+  scf.for %i = %c0 to %size step %c1 {
+    memref.store %cst, %alloc[%i] : memref<?xf32>
+  }
+  acc.yield %alloc : memref<?xf32>
+} combiner {
+^bb0(%arg0: memref<?xf32>, %arg1: memref<?xf32>):
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %size = memref.dim %arg0, %c0 : memref<?xf32>
+  scf.for %i = %c0 to %size step %c1 {
+    %val0 = memref.load %arg0[%i] : memref<?xf32>
+    %val1 = memref.load %arg1[%i] : memref<?xf32>
+    %sum = arith.addf %val0, %val1 : f32
+    memref.store %sum, %arg0[%i] : memref<?xf32>
+  }
+  acc.yield %arg0 : memref<?xf32>
+} destroy {
+^bb0(%arg0: memref<?xf32>):
+  // destroy region to deallocate dynamically allocated memory
+  memref.dealloc %arg0 : memref<?xf32>
+  acc.yield
+}
+
+// CHECK-LABEL: acc.reduction.recipe @reduction_add_with_destroy : memref<?xf32> reduction_operator <add> init {
+// CHECK:       ^bb0(%[[ARG:.*]]: memref<?xf32>):
+// CHECK:         %[[CST:.*]] = arith.constant 0.000000e+00 : f32
+// CHECK:         %[[C0:.*]] = arith.constant 0 : index
+// CHECK:         %[[SIZE:.*]] = memref.dim %[[ARG]], %[[C0]] : memref<?xf32>
+// CHECK:         %[[ALLOC:.*]] = memref.alloc(%[[SIZE]]) : memref<?xf32>
+// CHECK:         %[[C1:.*]] = arith.constant 1 : index
+// CHECK:         scf.for %[[I:.*]] = %[[C0]] to %[[SIZE]] step %[[C1]] {
+// CHECK:           memref.store %[[CST]], %[[ALLOC]][%[[I]]] : memref<?xf32>
+// CHECK:         }
+// CHECK:         acc.yield %[[ALLOC]] : memref<?xf32>
+// CHECK:       } combiner {
+// CHECK:       ^bb0(%[[ARG0:.*]]: memref<?xf32>, %[[ARG1:.*]]: memref<?xf32>):
+// CHECK:         %[[C0_1:.*]] = arith.constant 0 : index
+// CHECK:         %[[C1_1:.*]] = arith.constant 1 : index
+// CHECK:         %[[SIZE_1:.*]] = memref.dim %[[ARG0]], %[[C0_1]] : memref<?xf32>
+// CHECK:         scf.for %[[I_1:.*]] = %[[C0_1]] to %[[SIZE_1]] step %[[C1_1]] {
+// CHECK:           %{{.*}} = memref.load %[[ARG0]][%[[I_1]]] : memref<?xf32>
+// CHECK:           %{{.*}} = memref.load %[[ARG1]][%[[I_1]]] : memref<?xf32>
+// CHECK:           %[[SUM:.*]] = arith.addf %{{.*}}, %{{.*}} : f32
+// CHECK:           memref.store %[[SUM]], %[[ARG0]][%[[I_1]]] : memref<?xf32>
+// CHECK:         }
+// CHECK:         acc.yield %[[ARG0]] : memref<?xf32>
+// CHECK:       } destroy {
+// CHECK:       ^bb0(%[[ARG_DESTROY:.*]]: memref<?xf32>):
+// CHECK:         memref.dealloc %[[ARG_DESTROY]] : memref<?xf32>
+// CHECK:         acc.yield
+// CHECK:       }
+
+// -----
+
 acc.private.recipe @privatization_memref_i32 : memref<i32> init {
 ^bb0(%arg0: memref<i32>):
   %alloca = memref.alloca() : memref<i32>
@@ -2004,3 +2140,193 @@ func.func @acc_loop_container() {
 // CHECK:       acc.loop
 // CHECK:       scf.for
 // CHECK:       scf.for
+
+// -----
+
+func.func @acc_unstructured_loop() {
+  acc.loop {
+    acc.yield
+  } attributes {independent = [#acc.device_type<none>], unstructured}
+  return
+}
+
+// CHECK-LABEL: func.func @acc_unstructured_loop
+// CHECK:       acc.loop
+// CHECK:         acc.yield
+// CHECK:       } attributes {independent = [#acc.device_type<none>], unstructured}
+
+// -----
+
+// Test private recipe with data bounds for array slicing
+acc.private.recipe @privatization_memref_slice : memref<10x10xf32> init {
+^bb0(%arg0: memref<10x10xf32>, %bounds0: !acc.data_bounds_ty, %bounds1: !acc.data_bounds_ty):
+  // NOTE: OpenACC bounds are ordered from inner-most to outer-most dimension (rank 0 = inner-most)
+  // MLIR memref<10x10xf32> has first dimension as outer (10) and second as inner (10)
+  // So bounds0 corresponds to memref's second dimension (inner), bounds1 to first dimension (outer)
+
+  // Extract bounds information for the slice
+  // bounds0 = inner dimension (memref dimension 1)
+  %lb0 = acc.get_lowerbound %bounds0 : (!acc.data_bounds_ty) -> index
+  %extent0 = acc.get_extent %bounds0 : (!acc.data_bounds_ty) -> index
+  %stride0 = acc.get_stride %bounds0 : (!acc.data_bounds_ty) -> index
+
+  // bounds1 = outer dimension (memref dimension 0)
+  %lb1 = acc.get_lowerbound %bounds1 : (!acc.data_bounds_ty) -> index
+  %extent1 = acc.get_extent %bounds1 : (!acc.data_bounds_ty) -> index
+  %stride1 = acc.get_stride %bounds1 : (!acc.data_bounds_ty) -> index
+
+  // Allocate memory for only the slice dimensions on the stack
+  // Note: memref dimensions are outer-first, so extent1 (outer) comes first, extent0 (inner) second
+  %slice_alloc = memref.alloca(%extent1, %extent0) : memref<?x?xf32>
+
+  // Adjust base pointer to account for the slice offset
+  // We need to create a view that makes the slice appear as if it starts at the original indices
+  %c0 = arith.constant 0 : index
+  %c10 = arith.constant 10 : index
+  %c1 = arith.constant 1 : index
+
+  // Calculate linear offset: -(lb1 * stride1 + lb0 * stride0)
+  // For memref<10x10xf32>, stride1=10, stride0=1
+  %lb1_scaled = arith.muli %lb1, %c10 : index  // lb1 * 10
+  %lb0_scaled = arith.muli %lb0, %c1 : index   // lb0 * 1
+  %total_offset = arith.addi %lb1_scaled, %lb0_scaled : index  // lb1*10 + lb0*1
+  %neg_offset = arith.subi %c0, %total_offset : index  // -(lb1*10 + lb0*1)
+
+  // Create a view that adjusts for the lowerbound offset
+  // This makes accesses like result[lb1][lb0] map to slice_alloc[0][0]
+  //
+  // Example for slice a[2:4, 3:5] where:
+  // - bounds0 (inner): lb0=3, extent0=2
+  // - bounds1 (outer): lb1=2, extent1=2
+  // - Allocated memory: 2x2 array (extent1 x extent0 = 2 rows x 2 cols)
+  // - Linear offset calculation: -(2*10 + 3*1) = -23
+  // - Result mapping:
+  //   * result[2][3] -> slice_alloc[0][0] (because 2*10+3 + (-23) = 0)
+  //   * result[2][4] -> slice_alloc[0][1] (because 2*10+4 + (-23) = 1)
+  //   * result[3][3] -> slice_alloc[1][0] (because 3*10+3 + (-23) = 10)
+  //   * result[3][4] -> slice_alloc[1][1] (because 3*10+4 + (-23) = 11)
+  %adjusted_view = memref.reinterpret_cast %slice_alloc to
+    offset: [%neg_offset], sizes: [10, 10], strides: [%c10, %c1]
+    : memref<?x?xf32> to memref<10x10xf32, strided<[?, ?], offset: ?>>
+
+  // Cast to the expected return type
+  %result = memref.cast %adjusted_view : memref<10x10xf32, strided<[?, ?], offset: ?>> to memref<10x10xf32>
+
+  acc.yield %result : memref<10x10xf32>
+}
+
+// -----
+
+func.func @test_firstprivate_map(%arg0: memref<10xf32>) {
+  // Map the function argument using firstprivate_map to enable
+  // moving to accelerator but prevent any present counter updates.
+  %mapped = acc.firstprivate_map varPtr(%arg0 : memref<10xf32>) varType(tensor<10xf32>) -> memref<10xf32>
+
+  acc.parallel {
+    // Allocate a local variable inside the parallel region to represent
+    // materialized privatization.
+    %local = memref.alloca() : memref<10xf32>
+
+    // Initialize the local variable with the mapped firstprivate value
+    %c0 = arith.constant 0 : index
+    %c10 = arith.constant 10 : index
+    %c1 = arith.constant 1 : index
+
+    scf.for %i = %c0 to %c10 step %c1 {
+      %val = memref.load %mapped[%i] : memref<10xf32>
+      memref.store %val, %local[%i] : memref<10xf32>
+    }
+
+    acc.yield
+  }
+
+  return
+}
+
+// CHECK-LABEL: func @test_firstprivate_map
+// CHECK-NEXT:   %[[MAPPED:.*]] = acc.firstprivate_map varPtr(%{{.*}} : memref<10xf32>) varType(tensor<10xf32>) -> memref<10xf32>
+// CHECK-NEXT:   acc.parallel {
+// CHECK-NEXT:     %[[LOCAL:.*]] = memref.alloca() : memref<10xf32>
+// CHECK-NEXT:     %[[C0:.*]] = arith.constant 0 : index
+// CHECK-NEXT:     %[[C10:.*]] = arith.constant 10 : index
+// CHECK-NEXT:     %[[C1:.*]] = arith.constant 1 : index
+// CHECK-NEXT:     scf.for %{{.*}} = %[[C0]] to %[[C10]] step %[[C1]] {
+// CHECK-NEXT:       %{{.*}} = memref.load %[[MAPPED]][%{{.*}}] : memref<10xf32>
+// CHECK-NEXT:       memref.store %{{.*}}, %[[LOCAL]][%{{.*}}] : memref<10xf32>
+// CHECK-NEXT:     }
+// CHECK-NEXT:     acc.yield
+// CHECK-NEXT:   }
+// CHECK-NEXT:   return
+
+// -----
+
+func.func @test_kernel_environment(%arg0: memref<1024xf32>, %arg1: memref<1024xf32>) {
+  %c1 = arith.constant 1 : index
+  %c1024 = arith.constant 1024 : index
+
+  // Create data clause operands for the kernel environment
+  %copyin = acc.copyin varPtr(%arg0 : memref<1024xf32>) -> memref<1024xf32>
+  %create = acc.create varPtr(%arg1 : memref<1024xf32>) -> memref<1024xf32>
+
+  // Kernel environment wraps gpu.launch and captures data mapping
+  acc.kernel_environment dataOperands(%copyin, %create : memref<1024xf32>, memref<1024xf32>) {
+    gpu.launch blocks(%bx, %by, %bz) in (%grid_x = %c1, %grid_y = %c1, %grid_z = %c1)
+               threads(%tx, %ty, %tz) in (%block_x = %c1024, %block_y = %c1, %block_z = %c1) {
+      // Kernel body uses the mapped data
+      %val = memref.load %copyin[%tx] : memref<1024xf32>
+      %result = arith.mulf %val, %val : f32
+      memref.store %result, %create[%tx] : memref<1024xf32>
+      gpu.terminator
+    }
+  }
+
+  // Copy results back to host and deallocate device memory
+  acc.copyout accPtr(%create : memref<1024xf32>) to varPtr(%arg1 : memref<1024xf32>)
+  acc.delete accPtr(%copyin : memref<1024xf32>)
+
+  return
+}
+
+// CHECK-LABEL: func @test_kernel_environment
+// CHECK:         %[[COPYIN:.*]] = acc.copyin varPtr(%{{.*}} : memref<1024xf32>) -> memref<1024xf32>
+// CHECK:         %[[CREATE:.*]] = acc.create varPtr(%{{.*}} : memref<1024xf32>) -> memref<1024xf32>
+// CHECK:         acc.kernel_environment dataOperands(%[[COPYIN]], %[[CREATE]] : memref<1024xf32>, memref<1024xf32>) {
+// CHECK:           gpu.launch
+// CHECK:             memref.load %[[COPYIN]]
+// CHECK:             memref.store %{{.*}}, %[[CREATE]]
+// CHECK:           }
+// CHECK:         }
+// CHECK:         acc.copyout accPtr(%[[CREATE]] : memref<1024xf32>) to varPtr(%{{.*}} : memref<1024xf32>)
+// CHECK:         acc.delete accPtr(%[[COPYIN]] : memref<1024xf32>)
+
+// -----
+
+func.func @test_kernel_environment_with_async(%arg0: memref<1024xf32>) {
+  %c1 = arith.constant 1 : index
+  %c1024 = arith.constant 1024 : index
+  %async_val = arith.constant 1 : i32
+
+  %create = acc.create varPtr(%arg0 : memref<1024xf32>) async(%async_val : i32) -> memref<1024xf32>
+
+  // Kernel environment with async clause
+  acc.kernel_environment dataOperands(%create : memref<1024xf32>) async(%async_val : i32) {
+    gpu.launch blocks(%bx, %by, %bz) in (%grid_x = %c1, %grid_y = %c1, %grid_z = %c1)
+               threads(%tx, %ty, %tz) in (%block_x = %c1024, %block_y = %c1, %block_z = %c1) {
+      %f0 = arith.constant 0.0 : f32
+      memref.store %f0, %create[%tx] : memref<1024xf32>
+      gpu.terminator
+    }
+  }
+
+  acc.copyout accPtr(%create : memref<1024xf32>) async(%async_val : i32) to varPtr(%arg0 : memref<1024xf32>)
+
+  return
+}
+
+// CHECK-LABEL: func @test_kernel_environment_with_async
+// CHECK:         %[[ASYNC:.*]] = arith.constant 1 : i32
+// CHECK:         %[[CREATE:.*]] = acc.create varPtr(%{{.*}} : memref<1024xf32>) async(%[[ASYNC]] : i32) -> memref<1024xf32>
+// CHECK:         acc.kernel_environment dataOperands(%[[CREATE]] : memref<1024xf32>) async(%[[ASYNC]] : i32)
+// CHECK:           gpu.launch
+// CHECK:             memref.store %{{.*}}, %[[CREATE]]
+// CHECK:         acc.copyout accPtr(%[[CREATE]] : memref<1024xf32>) async(%[[ASYNC]] : i32) to varPtr(%{{.*}} : memref<1024xf32>)

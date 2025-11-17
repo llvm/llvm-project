@@ -126,6 +126,9 @@ clang-format is turned off or back on.
   // clang-format on
   void formatted_code_again;
 
+In addition, the ``OneLineFormatOffRegex`` option gives you a concise way to
+disable formatting for all of the lines that match the regular expression.
+
 
 Configuring Style in Code
 =========================
@@ -194,57 +197,29 @@ the configuration (without a prefix: ``Auto``).
 
 .. _AlignAfterOpenBracket:
 
-**AlignAfterOpenBracket** (``BracketAlignmentStyle``) :versionbadge:`clang-format 3.8` :ref:`¶ <AlignAfterOpenBracket>`
+**AlignAfterOpenBracket** (``Boolean``) :versionbadge:`clang-format 3.8` :ref:`¶ <AlignAfterOpenBracket>`
   If ``true``, horizontally aligns arguments after an open bracket.
+
+
+  .. code-block:: c++
+
+    true:                         vs.   false
+    someLongFunction(argument1,         someLongFunction(argument1,
+                     argument2);            argument2);
+
+
+  .. note::
+
+    As of clang-format 22 this option is a bool with the previous
+    option of ``Align`` replaced with ``true``, ``DontAlign`` replaced
+    with ``false``, and the options of ``AlwaysBreak`` and ``BlockIndent``
+    replaced with ``true`` and with setting of new style options using
+    ``BreakAfterOpenBracketBracedList``, ``BreakAfterOpenBracketFunction``,
+    ``BreakAfterOpenBracketIf``, ``BreakBeforeCloseBracketBracedList``,
+    ``BreakBeforeCloseBracketFunction``, and ``BreakBeforeCloseBracketIf``.
 
   This applies to round brackets (parentheses), angle brackets and square
   brackets.
-
-  Possible values:
-
-  * ``BAS_Align`` (in configuration: ``Align``)
-    Align parameters on the open bracket, e.g.:
-
-    .. code-block:: c++
-
-      someLongFunction(argument1,
-                       argument2);
-
-  * ``BAS_DontAlign`` (in configuration: ``DontAlign``)
-    Don't align, instead use ``ContinuationIndentWidth``, e.g.:
-
-    .. code-block:: c++
-
-      someLongFunction(argument1,
-          argument2);
-
-  * ``BAS_AlwaysBreak`` (in configuration: ``AlwaysBreak``)
-    Always break after an open bracket, if the parameters don't fit
-    on a single line, e.g.:
-
-    .. code-block:: c++
-
-      someLongFunction(
-          argument1, argument2);
-
-  * ``BAS_BlockIndent`` (in configuration: ``BlockIndent``)
-    Always break after an open bracket, if the parameters don't fit
-    on a single line. Closing brackets will be placed on a new line.
-    E.g.:
-
-    .. code-block:: c++
-
-      someLongFunction(
-          argument1, argument2
-      )
-
-
-    .. note::
-
-     This currently only applies to braced initializer lists (when
-     ``Cpp11BracedListStyle`` is ``true``) and parentheses.
-
-
 
 .. _AlignArrayOfStructures:
 
@@ -1554,9 +1529,9 @@ the configuration (without a prefix: ``Auto``).
 
     .. code-block:: c++
 
-      #define A                                                                      \
-        int aaaa;                                                                    \
-        int b;                                                                       \
+      #define A                                                            \
+        int aaaa;                                                          \
+        int b;                                                             \
         int dddddddddd;
 
 
@@ -1698,6 +1673,16 @@ the configuration (without a prefix: ``Auto``).
 
       int abcdef; // but this isn't
 
+  * ``bool AlignPPAndNotPP`` If comments following preprocessor directive should be aligned with
+    comments that don't.
+
+    .. code-block:: c++
+
+      true:                               false:
+      #define A  // Comment   vs.         #define A  // Comment
+      #define AB // Aligned               #define AB // Aligned
+      int i;     // Aligned               int i; // Not aligned
+
 
 .. _AllowAllArgumentsOnNextLine:
 
@@ -1791,6 +1776,13 @@ the configuration (without a prefix: ``Auto``).
                    noexcept(baz(arg2)));
 
 
+
+.. _AllowBreakBeforeQtProperty:
+
+**AllowBreakBeforeQtProperty** (``Boolean``) :versionbadge:`clang-format 22` :ref:`¶ <AllowBreakBeforeQtProperty>`
+  Allow breaking before ``Q_Property`` keywords ``READ``, ``WRITE``, etc. as
+  if they were preceded by a comma (``,``). This allows them to be formatted
+  according to ``BinPackParameters``.
 
 .. _AllowShortBlocksOnASingleLine:
 
@@ -1912,7 +1904,7 @@ the configuration (without a prefix: ``Auto``).
 
   * ``SFS_InlineOnly`` (in configuration: ``InlineOnly``)
     Only merge functions defined inside a class. Same as ``inline``,
-    except it does not implies ``empty``: i.e. top level empty functions
+    except it does not imply ``empty``: i.e. top level empty functions
     are not merged either.
 
     .. code-block:: c++
@@ -2736,6 +2728,67 @@ the configuration (without a prefix: ``Auto``).
      @Mock
      DataLoad loader;
 
+.. _BreakAfterOpenBracketBracedList:
+
+**BreakAfterOpenBracketBracedList** (``Boolean``) :versionbadge:`clang-format 22` :ref:`¶ <BreakAfterOpenBracketBracedList>`
+  Force break after the left bracket of a braced initializer list (when
+  ``Cpp11BracedListStyle`` is ``true``) when the list exceeds the column
+  limit.
+
+  .. code-block:: c++
+
+    true:                             false:
+    vector<int> x {         vs.       vector<int> x {1,
+       1, 2, 3}                            2, 3}
+
+.. _BreakAfterOpenBracketFunction:
+
+**BreakAfterOpenBracketFunction** (``Boolean``) :versionbadge:`clang-format 22` :ref:`¶ <BreakAfterOpenBracketFunction>`
+  Force break after the left parenthesis of a function (declaration,
+  definition, call) when the parameters exceed the column limit.
+
+  .. code-block:: c++
+
+    true:                             false:
+    foo (                   vs.       foo (a,
+       a , b)                              b)
+
+.. _BreakAfterOpenBracketIf:
+
+**BreakAfterOpenBracketIf** (``Boolean``) :versionbadge:`clang-format 22` :ref:`¶ <BreakAfterOpenBracketIf>`
+  Force break after the left parenthesis of an if control statement
+  when the expression exceeds the column limit.
+
+  .. code-block:: c++
+
+    true:                             false:
+    if constexpr (          vs.       if constexpr (a ||
+       a || b)                                      b)
+
+.. _BreakAfterOpenBracketLoop:
+
+**BreakAfterOpenBracketLoop** (``Boolean``) :versionbadge:`clang-format 22` :ref:`¶ <BreakAfterOpenBracketLoop>`
+  Force break after the left parenthesis of a loop control statement
+  when the expression exceeds the column limit.
+
+  .. code-block:: c++
+
+    true:                             false:
+    while (                  vs.      while (a &&
+       a && b) {                             b) {
+
+.. _BreakAfterOpenBracketSwitch:
+
+**BreakAfterOpenBracketSwitch** (``Boolean``) :versionbadge:`clang-format 22` :ref:`¶ <BreakAfterOpenBracketSwitch>`
+  Force break after the left parenthesis of a switch control statement
+  when the expression exceeds the column limit.
+
+  .. code-block:: c++
+
+    true:                             false:
+    switch (                 vs.      switch (a +
+       a + b) {                               b) {
+
 .. _BreakAfterReturnType:
 
 **BreakAfterReturnType** (``ReturnTypeBreakingStyle``) :versionbadge:`clang-format 19` :ref:`¶ <BreakAfterReturnType>`
@@ -3373,6 +3426,79 @@ the configuration (without a prefix: ``Auto``).
 
 
 
+.. _BreakBeforeCloseBracketBracedList:
+
+**BreakBeforeCloseBracketBracedList** (``Boolean``) :versionbadge:`clang-format 22` :ref:`¶ <BreakBeforeCloseBracketBracedList>`
+  Force break before the right bracket of a braced initializer list (when
+  ``Cpp11BracedListStyle`` is ``true``) when the list exceeds the column
+  limit. The break before the right bracket is only made if there is a
+  break after the opening bracket.
+
+  .. code-block:: c++
+
+    true:                             false:
+    vector<int> x {         vs.       vector<int> x {
+       1, 2, 3                           1, 2, 3}
+    }
+
+.. _BreakBeforeCloseBracketFunction:
+
+**BreakBeforeCloseBracketFunction** (``Boolean``) :versionbadge:`clang-format 22` :ref:`¶ <BreakBeforeCloseBracketFunction>`
+  Force break before the right parenthesis of a function (declaration,
+  definition, call) when the parameters exceed the column limit.
+
+  .. code-block:: c++
+
+    true:                             false:
+    foo (                   vs.       foo (
+       a , b                             a , b)
+    )
+
+.. _BreakBeforeCloseBracketIf:
+
+**BreakBeforeCloseBracketIf** (``Boolean``) :versionbadge:`clang-format 22` :ref:`¶ <BreakBeforeCloseBracketIf>`
+  Force break before the right parenthesis of an if control statement
+  when the expression exceeds the column limit. The break before the
+  closing parenthesis is only made if there is a break after the opening
+  parenthesis.
+
+  .. code-block:: c++
+
+    true:                             false:
+    if constexpr (          vs.       if constexpr (
+       a || b                            a || b )
+    )
+
+.. _BreakBeforeCloseBracketLoop:
+
+**BreakBeforeCloseBracketLoop** (``Boolean``) :versionbadge:`clang-format 22` :ref:`¶ <BreakBeforeCloseBracketLoop>`
+  Force break before the right parenthesis of a loop control statement
+  when the expression exceeds the column limit. The break before the
+  closing parenthesis is only made if there is a break after the opening
+  parenthesis.
+
+  .. code-block:: c++
+
+    true:                             false:
+    while (                  vs.      while (
+       a && b                            a && b) {
+    ) {
+
+.. _BreakBeforeCloseBracketSwitch:
+
+**BreakBeforeCloseBracketSwitch** (``Boolean``) :versionbadge:`clang-format 22` :ref:`¶ <BreakBeforeCloseBracketSwitch>`
+  Force break before the right parenthesis of a switch control statement
+  when the expression exceeds the column limit. The break before the
+  closing parenthesis is only made if there is a break after the opening
+  parenthesis.
+
+  .. code-block:: c++
+
+    true:                             false:
+    switch (                 vs.      switch (
+       a + b                             a + b) {
+    ) {
+
 .. _BreakBeforeConceptDeclarations:
 
 **BreakBeforeConceptDeclarations** (``BreakBeforeConceptDeclarationsStyle``) :versionbadge:`clang-format 12` :ref:`¶ <BreakBeforeConceptDeclarations>`
@@ -3806,29 +3932,72 @@ the configuration (without a prefix: ``Auto``).
 
 .. _Cpp11BracedListStyle:
 
-**Cpp11BracedListStyle** (``Boolean``) :versionbadge:`clang-format 3.4` :ref:`¶ <Cpp11BracedListStyle>`
-  If ``true``, format braced lists as best suited for C++11 braced
-  lists.
+**Cpp11BracedListStyle** (``BracedListStyle``) :versionbadge:`clang-format 3.4` :ref:`¶ <Cpp11BracedListStyle>`
+  The style to handle braced lists.
 
-  Important differences:
+  Possible values:
 
-  * No spaces inside the braced list.
-  * No line break before the closing brace.
-  * Indentation with the continuation indent, not with the block indent.
+  * ``BLS_Block`` (in configuration: ``Block``)
+    Best suited for pre C++11 braced lists.
 
-  Fundamentally, C++11 braced lists are formatted exactly like function
-  calls would be formatted in their place. If the braced list follows a name
-  (e.g. a type or variable name), clang-format formats as if the ``{}`` were
-  the parentheses of a function call with that name. If there is no name,
-  a zero-length name is assumed.
+    * Spaces inside the braced list.
+    * Line break before the closing brace.
+    * Indentation with the block indent.
 
-  .. code-block:: c++
 
-     true:                                  false:
-     vector<int> x{1, 2, 3, 4};     vs.     vector<int> x{ 1, 2, 3, 4 };
-     vector<T> x{{}, {}, {}, {}};           vector<T> x{ {}, {}, {}, {} };
-     f(MyMap[{composite, key}]);            f(MyMap[{ composite, key }]);
-     new int[3]{1, 2, 3};                   new int[3]{ 1, 2, 3 };
+    .. code-block:: c++
+
+       vector<int> x{ 1, 2, 3, 4 };
+       vector<T> x{ {}, {}, {}, {} };
+       f(MyMap[{ composite, key }]);
+       new int[3]{ 1, 2, 3 };
+       Type name{ // Comment
+                  value
+       };
+
+  * ``BLS_FunctionCall`` (in configuration: ``FunctionCall``)
+    Best suited for C++11 braced lists.
+
+    * No spaces inside the braced list.
+    * No line break before the closing brace.
+    * Indentation with the continuation indent.
+
+    Fundamentally, C++11 braced lists are formatted exactly like function
+    calls would be formatted in their place. If the braced list follows a
+    name (e.g. a type or variable name), clang-format formats as if the
+    ``{}`` were the parentheses of a function call with that name. If there
+    is no name, a zero-length name is assumed.
+
+    .. code-block:: c++
+
+       vector<int> x{1, 2, 3, 4};
+       vector<T> x{{}, {}, {}, {}};
+       f(MyMap[{composite, key}]);
+       new int[3]{1, 2, 3};
+       Type name{ // Comment
+           value};
+
+  * ``BLS_AlignFirstComment`` (in configuration: ``AlignFirstComment``)
+    Same as ``FunctionCall``, except for the handling of a comment at the
+    begin, it then aligns everything following with the comment.
+
+    * No spaces inside the braced list. (Even for a comment at the first
+      position.)
+    * No line break before the closing brace.
+    * Indentation with the continuation indent, except when followed by a
+      line comment, then it uses the block indent.
+
+
+    .. code-block:: c++
+
+       vector<int> x{1, 2, 3, 4};
+       vector<T> x{{}, {}, {}, {}};
+       f(MyMap[{composite, key}]);
+       new int[3]{1, 2, 3};
+       Type name{// Comment
+                 value};
+
+
 
 .. _DeriveLineEnding:
 
@@ -4201,8 +4370,8 @@ the configuration (without a prefix: ``Auto``).
   * ``""`` means "arbitrary suffix"
   * ``"$"`` means "no suffix"
 
-  For example, if configured to ``"(_test)?$"``, then a header a.h would be seen
-  as the "main" include in both a.cc and a_test.cc.
+  For example, if configured to ``"(_test)?$"``, then a header a.h would be
+  seen as the "main" include in both a.cc and a_test.cc.
 
 .. _IncludeIsMainSourceRegex:
 
@@ -4422,6 +4591,21 @@ the configuration (without a prefix: ``Auto``).
            #include <foo>
          #endif
        #endif
+
+  * ``PPDIS_Leave`` (in configuration: ``Leave``)
+    Leaves indentation of directives as-is.
+
+    .. note::
+
+     Ignores ``PPIndentWidth``.
+
+    .. code-block:: c++
+
+      #if FOO
+        #if BAR
+      #include <foo>
+        #endif
+      #endif
 
 
 
@@ -4975,6 +5159,12 @@ the configuration (without a prefix: ``Auto``).
      A(z); -> z;
      A(a, b); // will not be expanded.
 
+.. _MacrosSkippedByRemoveParentheses:
+
+**MacrosSkippedByRemoveParentheses** (``List of Strings``) :versionbadge:`clang-format 21` :ref:`¶ <MacrosSkippedByRemoveParentheses>`
+  A vector of function-like macros whose invocations should be skipped by
+  ``RemoveParentheses``.
+
 .. _MainIncludeChar:
 
 **MainIncludeChar** (``MainIncludeCharDiscriminator``) :versionbadge:`clang-format 19` :ref:`¶ <MainIncludeChar>`
@@ -5069,6 +5259,113 @@ the configuration (without a prefix: ``Auto``).
     }
 
   For example: TESTSUITE
+
+.. _NumericLiteralCase:
+
+**NumericLiteralCase** (``NumericLiteralCaseStyle``) :versionbadge:`clang-format 22` :ref:`¶ <NumericLiteralCase>`
+  Capitalization style for numeric literals.
+
+  Nested configuration flags:
+
+  Separate control for each numeric literal component.
+
+  For example, the config below will leave exponent letters alone, reformat
+  hexadecimal digits in lowercase, reformat numeric literal prefixes in
+  uppercase, and reformat suffixes in lowercase.
+
+  .. code-block:: c++
+
+    NumericLiteralCase:
+      ExponentLetter: Leave
+      HexDigit: Lower
+      Prefix: Upper
+      Suffix: Lower
+
+  * ``NumericLiteralComponentStyle ExponentLetter``
+    Format floating point exponent separator letter case.
+
+    .. code-block:: c++
+
+      float a = 6.02e23 + 1.0E10; // Leave
+      float a = 6.02E23 + 1.0E10; // Upper
+      float a = 6.02e23 + 1.0e10; // Lower
+
+    Possible values:
+
+    * ``NLCS_Leave`` (in configuration: ``Leave``)
+      Leave this component of the literal as is.
+
+    * ``NLCS_Upper`` (in configuration: ``Upper``)
+      Format this component with uppercase characters.
+
+    * ``NLCS_Lower`` (in configuration: ``Lower``)
+      Format this component with lowercase characters.
+
+
+  * ``NumericLiteralComponentStyle HexDigit``
+    Format hexadecimal digit case.
+
+    .. code-block:: c++
+
+      a = 0xaBcDeF; // Leave
+      a = 0xABCDEF; // Upper
+      a = 0xabcdef; // Lower
+
+    Possible values:
+
+    * ``NLCS_Leave`` (in configuration: ``Leave``)
+      Leave this component of the literal as is.
+
+    * ``NLCS_Upper`` (in configuration: ``Upper``)
+      Format this component with uppercase characters.
+
+    * ``NLCS_Lower`` (in configuration: ``Lower``)
+      Format this component with lowercase characters.
+
+
+  * ``NumericLiteralComponentStyle Prefix``
+    Format integer prefix case.
+
+    .. code-block:: c++
+
+       a = 0XF0 | 0b1; // Leave
+       a = 0XF0 | 0B1; // Upper
+       a = 0xF0 | 0b1; // Lower
+
+    Possible values:
+
+    * ``NLCS_Leave`` (in configuration: ``Leave``)
+      Leave this component of the literal as is.
+
+    * ``NLCS_Upper`` (in configuration: ``Upper``)
+      Format this component with uppercase characters.
+
+    * ``NLCS_Lower`` (in configuration: ``Lower``)
+      Format this component with lowercase characters.
+
+
+  * ``NumericLiteralComponentStyle Suffix``
+    Format suffix case. This option excludes case-sensitive reserved
+    suffixes, such as ``min`` in C++.
+
+    .. code-block:: c++
+
+      a = 1uLL; // Leave
+      a = 1ULL; // Upper
+      a = 1ull; // Lower
+
+    Possible values:
+
+    * ``NLCS_Leave`` (in configuration: ``Leave``)
+      Leave this component of the literal as is.
+
+    * ``NLCS_Upper`` (in configuration: ``Upper``)
+      Format this component with uppercase characters.
+
+    * ``NLCS_Lower`` (in configuration: ``Lower``)
+      Format this component with lowercase characters.
+
+
 
 .. _ObjCBinPackProtocolList:
 
@@ -6009,6 +6306,16 @@ the configuration (without a prefix: ``Auto``).
        #include "B/A.h"           #include "B/a.h"
        #include "B/a.h"           #include "a/b.h"
 
+  * ``bool IgnoreExtension`` When sorting includes in each block, only take file extensions into
+    account if two includes compare equal otherwise.
+
+    .. code-block:: c++
+
+       true:                          false:
+       # include "A.h"         vs.    # include "A-util.h"
+       # include "A.inc"              # include "A.h"
+       # include "A-util.h"           # include "A.inc"
+
 
 .. _SortJavaStaticImport:
 
@@ -6384,6 +6691,14 @@ the configuration (without a prefix: ``Auto``).
        IF (...)                        vs.    IF(...)
          <conditional-body>                     <conditional-body>
 
+  * ``bool AfterNot`` If ``true``, put a space between alternative operator ``not`` and the
+    opening parenthesis.
+
+    .. code-block:: c++
+
+       true:                                  false:
+       return not (a || b);            vs.    return not(a || b);
+
   * ``bool AfterOverloadedOperator`` If ``true``, put a space between operator overloading and opening
     parentheses.
 
@@ -6459,13 +6774,51 @@ the configuration (without a prefix: ``Auto``).
 .. _SpaceInEmptyBlock:
 
 **SpaceInEmptyBlock** (``Boolean``) :versionbadge:`clang-format 10` :ref:`¶ <SpaceInEmptyBlock>`
-  If ``true``, spaces will be inserted into ``{}``.
+  This option is **deprecated**. See ``Block`` of ``SpaceInEmptyBraces``.
 
-  .. code-block:: c++
+.. _SpaceInEmptyBraces:
 
-     true:                                false:
-     void f() { }                   vs.   void f() {}
-     while (true) { }                     while (true) {}
+**SpaceInEmptyBraces** (``SpaceInEmptyBracesStyle``) :versionbadge:`clang-format 22` :ref:`¶ <SpaceInEmptyBraces>`
+  Specifies when to insert a space in empty braces.
+
+  .. note::
+
+   This option doesn't apply to initializer braces if
+   ``Cpp11BracedListStyle`` is not ``Block``.
+
+  Possible values:
+
+  * ``SIEB_Always`` (in configuration: ``Always``)
+    Always insert a space in empty braces.
+
+    .. code-block:: c++
+
+       void f() { }
+       class Unit { };
+       auto a = [] { };
+       int x{ };
+
+  * ``SIEB_Block`` (in configuration: ``Block``)
+    Only insert a space in empty blocks.
+
+    .. code-block:: c++
+
+       void f() { }
+       class Unit { };
+       auto a = [] { };
+       int x{};
+
+  * ``SIEB_Never`` (in configuration: ``Never``)
+    Never insert a space in empty braces.
+
+    .. code-block:: c++
+
+       void f() {}
+       class Unit {};
+       auto a = [] {};
+       int x{};
+
+
 
 .. _SpaceInEmptyParentheses:
 

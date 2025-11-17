@@ -77,7 +77,7 @@ struct WorklistEntry {
   };
   struct AppendingGVTy {
     GlobalVariable *GV;
-    Constant *InitPrefix;
+    GlobalVariable *OldGV;
   };
   struct AliasOrIFuncTy {
     GlobalValue *GV;
@@ -162,7 +162,7 @@ public:
 
   void scheduleMapGlobalInitializer(GlobalVariable &GV, Constant &Init,
                                     unsigned MCID);
-  void scheduleMapAppendingVariable(GlobalVariable &GV, Constant *InitPrefix,
+  void scheduleMapAppendingVariable(GlobalVariable &GV, GlobalVariable *OldGV,
                                     bool IsOldCtorDtor,
                                     ArrayRef<Constant *> NewMembers,
                                     unsigned MCID);
@@ -173,7 +173,7 @@ public:
   void flush();
 
 private:
-  void mapAppendingVariable(GlobalVariable &GV, Constant *InitPrefix,
+  void mapAppendingVariable(GlobalVariable &GV, GlobalVariable *OldGV,
                             bool IsOldCtorDtor,
                             ArrayRef<Constant *> NewMembers);
 
@@ -944,7 +944,7 @@ void Mapper::flush() {
           drop_begin(AppendingInits, PrefixSize));
       AppendingInits.resize(PrefixSize);
       mapAppendingVariable(*E.Data.AppendingGV.GV,
-                           E.Data.AppendingGV.InitPrefix,
+                           E.Data.AppendingGV.OldGV,
                            E.AppendingGVIsOldCtorDtor, ArrayRef(NewInits));
       break;
     }
@@ -985,6 +985,13 @@ void Mapper::remapInstruction(Instruction *I) {
     else
       assert((Flags & RF_IgnoreMissingLocals) &&
              "Referenced value not in value map!");
+  }
+
+  // Drop callee_type metadata from calls that were remapped
+  // into a direct call from an indirect one.
+  if (auto *CB = dyn_cast<CallBase>(I)) {
+    if (CB->getMetadata(LLVMContext::MD_callee_type) && !CB->isIndirectCall())
+      CB->setMetadata(LLVMContext::MD_callee_type, nullptr);
   }
 
   // Remap phi nodes' incoming blocks.
@@ -1087,15 +1094,21 @@ void Mapper::remapFunction(Function &F) {
   }
 }
 
-void Mapper::mapAppendingVariable(GlobalVariable &GV, Constant *InitPrefix,
+void Mapper::mapAppendingVariable(GlobalVariable &GV, GlobalVariable *OldGV,
                                   bool IsOldCtorDtor,
                                   ArrayRef<Constant *> NewMembers) {
+  Constant *InitPrefix =
+      (OldGV && !OldGV->isDeclaration()) ? OldGV->getInitializer() : nullptr;
+
   SmallVector<Constant *, 16> Elements;
   if (InitPrefix) {
     unsigned NumElements =
         cast<ArrayType>(InitPrefix->getType())->getNumElements();
     for (unsigned I = 0; I != NumElements; ++I)
       Elements.push_back(InitPrefix->getAggregateElement(I));
+    OldGV->setInitializer(nullptr);
+    if (InitPrefix->hasUseList() && InitPrefix->use_empty())
+      InitPrefix->destroyConstant();
   }
 
   PointerType *VoidPtrTy;
@@ -1141,7 +1154,7 @@ void Mapper::scheduleMapGlobalInitializer(GlobalVariable &GV, Constant &Init,
 }
 
 void Mapper::scheduleMapAppendingVariable(GlobalVariable &GV,
-                                          Constant *InitPrefix,
+                                          GlobalVariable *OldGV,
                                           bool IsOldCtorDtor,
                                           ArrayRef<Constant *> NewMembers,
                                           unsigned MCID) {
@@ -1152,7 +1165,7 @@ void Mapper::scheduleMapAppendingVariable(GlobalVariable &GV,
   WE.Kind = WorklistEntry::MapAppendingVar;
   WE.MCID = MCID;
   WE.Data.AppendingGV.GV = &GV;
-  WE.Data.AppendingGV.InitPrefix = InitPrefix;
+  WE.Data.AppendingGV.OldGV = OldGV;
   WE.AppendingGVIsOldCtorDtor = IsOldCtorDtor;
   WE.AppendingGVNumNewMembers = NewMembers.size();
   Worklist.push_back(WE);
@@ -1275,12 +1288,12 @@ void ValueMapper::scheduleMapGlobalInitializer(GlobalVariable &GV,
 }
 
 void ValueMapper::scheduleMapAppendingVariable(GlobalVariable &GV,
-                                               Constant *InitPrefix,
+                                               GlobalVariable *OldGV,
                                                bool IsOldCtorDtor,
                                                ArrayRef<Constant *> NewMembers,
                                                unsigned MCID) {
   getAsMapper(pImpl)->scheduleMapAppendingVariable(
-      GV, InitPrefix, IsOldCtorDtor, NewMembers, MCID);
+      GV, OldGV, IsOldCtorDtor, NewMembers, MCID);
 }
 
 void ValueMapper::scheduleMapGlobalAlias(GlobalAlias &GA, Constant &Aliasee,

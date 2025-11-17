@@ -59,22 +59,10 @@ except ImportError:
 // Parameter types will be used in the autodoc string.
 %feature("autodoc", "1");
 
-%define ARRAYHELPER(type,name)
-%inline %{
-type *new_ ## name (int nitems) {
-   return (type *) malloc(sizeof(type)*nitems);
-}
-void delete_ ## name(type *t) {
-   free(t);
-}
-type name ## _get(type *t, int index) {
-   return t[index];
-}
-void name ## _set(type *t, int index, type val) {
-   t[index] = val;
-}
+// Include lldb-python first as it sets Py_LIMITED_API.
+%begin %{
+#include "../source/Plugins/ScriptInterpreter/Python/lldb-python.h"
 %}
-%enddef
 
 %pythoncode%{
 import uuid

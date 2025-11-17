@@ -14,6 +14,7 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/WindowsError.h"
 #include <algorithm>
+#include <atomic>
 #include <cassert>
 #include <ctime>
 #include <io.h>
@@ -54,11 +55,7 @@ public:
     if (m_monitor_thread.joinable()) {
       m_stopped = true;
       SetEvent(m_ready);
-      // Keep trying to cancel ReadFile() until the thread exits.
-      do {
-        CancelIoEx(m_handle, /*lpOverlapped=*/NULL);
-      } while (WaitForSingleObject(m_monitor_thread.native_handle(), 1) ==
-               WAIT_TIMEOUT);
+      CancelIoEx(m_handle, /*lpOverlapped=*/NULL);
       m_monitor_thread.join();
     }
     CloseHandle(m_event);
@@ -222,7 +219,7 @@ MainLoopWindows::RegisterReadObject(const IOObjectSP &object_sp,
 
   if (m_read_fds.find(waitable_handle) != m_read_fds.end()) {
     error = Status::FromErrorStringWithFormat(
-        "File descriptor %d already monitored.", waitable_handle);
+        "File descriptor %p already monitored.", waitable_handle);
     return nullptr;
   }
 
@@ -234,7 +231,7 @@ MainLoopWindows::RegisterReadObject(const IOObjectSP &object_sp,
   } else {
     DWORD file_type = GetFileType(waitable_handle);
     if (file_type != FILE_TYPE_PIPE) {
-      error = Status::FromErrorStringWithFormat("Unsupported file type %d",
+      error = Status::FromErrorStringWithFormat("Unsupported file type %ld",
                                                 file_type);
       return nullptr;
     }
@@ -275,4 +272,6 @@ Status MainLoopWindows::Run() {
   return Status();
 }
 
-void MainLoopWindows::Interrupt() { WSASetEvent(m_interrupt_event); }
+bool MainLoopWindows::Interrupt() {
+  return WSASetEvent(m_interrupt_event);
+}

@@ -8,9 +8,9 @@ target triple = "x86_64-unknown-linux-gnu"
 define i32 @unused_blend_after_unrolling(ptr %p, i32 %a, i1 %c.1, i16 %x, i16 %y) {
 ; CHECK-LABEL: define i32 @unused_blend_after_unrolling(
 ; CHECK-SAME: ptr [[P:%.*]], i32 [[A:%.*]], i1 [[C_1:%.*]], i16 [[X:%.*]], i16 [[Y:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[A]], 0
-; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i1> poison, i1 [[C_1]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i1> [[BROADCAST_SPLATINSERT]], <4 x i1> poison, <4 x i32> zeroinitializer
@@ -46,36 +46,23 @@ define i32 @unused_blend_after_unrolling(ptr %p, i32 %a, i1 %c.1, i16 %x, i16 %y
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i1> [[TMP0]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP6]], label %[[PRED_SDIV_IF10:.*]], label %[[PRED_SDIV_CONTINUE11:.*]]
 ; CHECK:       [[PRED_SDIV_IF10]]:
-; CHECK-NEXT:    [[TMP7:%.*]] = sdiv i16 [[X]], [[Y]]
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x i16> poison, i16 [[TMP7]], i32 0
 ; CHECK-NEXT:    br label %[[PRED_SDIV_CONTINUE11]]
 ; CHECK:       [[PRED_SDIV_CONTINUE11]]:
-; CHECK-NEXT:    [[TMP9:%.*]] = phi <4 x i16> [ poison, %[[PRED_SDIV_CONTINUE9]] ], [ [[TMP8]], %[[PRED_SDIV_IF10]] ]
 ; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x i1> [[TMP0]], i32 1
 ; CHECK-NEXT:    br i1 [[TMP10]], label %[[PRED_SDIV_IF12:.*]], label %[[PRED_SDIV_CONTINUE13:.*]]
 ; CHECK:       [[PRED_SDIV_IF12]]:
-; CHECK-NEXT:    [[TMP11:%.*]] = sdiv i16 [[X]], [[Y]]
-; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <4 x i16> [[TMP9]], i16 [[TMP11]], i32 1
 ; CHECK-NEXT:    br label %[[PRED_SDIV_CONTINUE13]]
 ; CHECK:       [[PRED_SDIV_CONTINUE13]]:
-; CHECK-NEXT:    [[TMP13:%.*]] = phi <4 x i16> [ [[TMP9]], %[[PRED_SDIV_CONTINUE11]] ], [ [[TMP12]], %[[PRED_SDIV_IF12]] ]
 ; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <4 x i1> [[TMP0]], i32 2
 ; CHECK-NEXT:    br i1 [[TMP14]], label %[[PRED_SDIV_IF14:.*]], label %[[PRED_SDIV_CONTINUE15:.*]]
 ; CHECK:       [[PRED_SDIV_IF14]]:
-; CHECK-NEXT:    [[TMP15:%.*]] = sdiv i16 [[X]], [[Y]]
-; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <4 x i16> [[TMP13]], i16 [[TMP15]], i32 2
 ; CHECK-NEXT:    br label %[[PRED_SDIV_CONTINUE15]]
 ; CHECK:       [[PRED_SDIV_CONTINUE15]]:
-; CHECK-NEXT:    [[TMP17:%.*]] = phi <4 x i16> [ [[TMP13]], %[[PRED_SDIV_CONTINUE13]] ], [ [[TMP16]], %[[PRED_SDIV_IF14]] ]
 ; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <4 x i1> [[TMP0]], i32 3
 ; CHECK-NEXT:    br i1 [[TMP18]], label %[[PRED_SDIV_IF16:.*]], label %[[PRED_SDIV_CONTINUE17]]
 ; CHECK:       [[PRED_SDIV_IF16]]:
-; CHECK-NEXT:    [[TMP19:%.*]] = sdiv i16 [[X]], [[Y]]
-; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <4 x i16> [[TMP17]], i16 [[TMP19]], i32 3
 ; CHECK-NEXT:    br label %[[PRED_SDIV_CONTINUE17]]
 ; CHECK:       [[PRED_SDIV_CONTINUE17]]:
-; CHECK-NEXT:    [[TMP21:%.*]] = phi <4 x i16> [ [[TMP17]], %[[PRED_SDIV_CONTINUE15]] ], [ [[TMP20]], %[[PRED_SDIV_IF16]] ]
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[BROADCAST_SPLAT]], <4 x i16> zeroinitializer, <4 x i16> [[TMP21]]
 ; CHECK-NEXT:    [[TMP24]] = or <4 x i1> [[VEC_PHI]], [[TMP22]]
 ; CHECK-NEXT:    [[TMP25]] = or <4 x i1> [[VEC_PHI3]], [[TMP22]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
@@ -86,15 +73,12 @@ define i32 @unused_blend_after_unrolling(ptr %p, i32 %a, i1 %c.1, i16 %x, i16 %y
 ; CHECK-NEXT:    [[TMP27:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[BIN_RDX]])
 ; CHECK-NEXT:    [[TMP28:%.*]] = freeze i1 [[TMP27]]
 ; CHECK-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[TMP28]], i32 0, i32 0
-; CHECK-NEXT:    [[TMP29:%.*]] = extractelement <4 x i16> [[PREDPHI]], i32 3
-; CHECK-NEXT:    br i1 false, label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; CHECK-NEXT:    br label %[[SCALAR_PH:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[RDX_SELECT]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 97, %[[MIDDLE_BLOCK]] ], [ 1, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
-; CHECK-NEXT:    [[B:%.*]] = phi i32 [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[SEL:%.*]], %[[LOOP_LATCH:.*]] ]
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH]] ]
+; CHECK-NEXT:    [[B:%.*]] = phi i32 [ [[RDX_SELECT]], %[[SCALAR_PH]] ], [ [[SEL:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 97, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH]] ]
 ; CHECK-NEXT:    br i1 [[C_1]], label %[[LOOP_LATCH]], label %[[THEN:.*]]
 ; CHECK:       [[THEN]]:
 ; CHECK-NEXT:    [[DIV:%.*]] = sdiv i16 [[X]], [[Y]]
@@ -104,10 +88,10 @@ define i32 @unused_blend_after_unrolling(ptr %p, i32 %a, i1 %c.1, i16 %x, i16 %y
 ; CHECK-NEXT:    [[SEL]] = select i1 [[C]], i32 [[B]], i32 0
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i32 [[IV]], 100
-; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[BLEND_LCSSA:%.*]] = phi i16 [ [[BLEND]], %[[LOOP_LATCH]] ], [ [[TMP29]], %[[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    [[SEL_LCSSA:%.*]] = phi i32 [ [[SEL]], %[[LOOP_LATCH]] ], [ [[RDX_SELECT]], %[[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[BLEND_LCSSA:%.*]] = phi i16 [ [[BLEND]], %[[LOOP_LATCH]] ]
+; CHECK-NEXT:    [[SEL_LCSSA:%.*]] = phi i32 [ [[SEL]], %[[LOOP_LATCH]] ]
 ; CHECK-NEXT:    store i16 [[BLEND_LCSSA]], ptr [[P]], align 2
 ; CHECK-NEXT:    ret i32 [[SEL_LCSSA]]
 ;

@@ -7,9 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Tools/PDLL/ODS/Dialect.h"
-#include "mlir/Tools/PDLL/ODS/Constraint.h"
 #include "mlir/Tools/PDLL/ODS/Operation.h"
-#include "llvm/Support/raw_ostream.h"
 
 using namespace mlir;
 using namespace mlir::pdll::ods;

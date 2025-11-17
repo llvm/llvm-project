@@ -749,7 +749,7 @@ func.func @replace_single_iteration_const_diff(%arg0 : index) {
   // CHECK-NEXT: %[[CST:.*]] = arith.constant 2
   %c1 = arith.constant 1 : index
   %c2 = arith.constant 2 : index
-  %5 = arith.addi %arg0, %c1 : index
+  %5 = arith.addi %arg0, %c1 overflow<nsw> : index
   // CHECK-NOT: scf.for
   scf.for %arg2 = %arg0 to %5 step %c1 {
     // CHECK-NEXT: %[[MUL:.*]] = arith.muli %[[A0]], %[[CST]]
@@ -1475,8 +1475,8 @@ func.func @propagate_into_execute_region() {
 
 // -----
 
-// CHECK-LABEL: func @execute_region_elim
-func.func @execute_region_elim() {
+// CHECK-LABEL: func @execute_region_inline
+func.func @execute_region_inline() {
   affine.for %i = 0 to 100 {
     "test.foo"() : () -> ()
     %v = scf.execute_region -> i64 {
@@ -1496,8 +1496,48 @@ func.func @execute_region_elim() {
 
 // -----
 
-// CHECK-LABEL: func @func_execute_region_elim
-func.func @func_execute_region_elim() {
+// CHECK-LABEL: func @execute_region_no_inline
+func.func @execute_region_no_inline() {
+  affine.for %i = 0 to 100 {
+    "test.foo"() : () -> ()
+    %v = scf.execute_region -> i64 no_inline {
+      %x = "test.val"() : () -> i64
+      scf.yield %x : i64
+    }
+    "test.bar"(%v) : (i64) -> ()
+  }
+  return
+}
+
+// CHECK-NEXT:     affine.for %arg0 = 0 to 100 {
+// CHECK-NEXT:       "test.foo"() : () -> ()
+// CHECK-NEXT:       scf.execute_region
+// CHECK-NEXT:       %[[VAL:.*]] = "test.val"() : () -> i64
+// CHECK-NEXT:       scf.yield %[[VAL]] : i64
+// CHECK-NOT:      no_inline
+
+// -----
+
+// CHECK-LABEL: func @execute_region_under_func_no_inline
+func.func @execute_region_under_func_no_inline() {
+    "test.foo"() : () -> ()
+    %v = scf.execute_region -> i64 no_inline {
+      %x = "test.val"() : () -> i64
+      scf.yield %x : i64
+    }
+    "test.bar"(%v) : (i64) -> ()
+  return
+}
+
+// CHECK-NEXT:       "test.foo"() : () -> ()
+// CHECK-NEXT:       scf.execute_region
+// CHECK-NEXT:       %[[VAL:.*]] = "test.val"() : () -> i64
+// CHECK-NEXT:       scf.yield %[[VAL]] : i64
+
+// -----
+
+// CHECK-LABEL: func @func_execute_region_inline
+func.func @func_execute_region_inline() {
     "test.foo"() : () -> ()
     %v = scf.execute_region -> i64 {
       %c = "test.cmp"() : () -> i1
@@ -1531,8 +1571,8 @@ func.func @func_execute_region_elim() {
 
 // -----
 
-// CHECK-LABEL: func @func_execute_region_elim_multi_yield
-func.func @func_execute_region_elim_multi_yield() {
+// CHECK-LABEL: func @func_execute_region_inline_multi_yield
+func.func @func_execute_region_inline_multi_yield() {
     "test.foo"() : () -> ()
     %v = scf.execute_region -> i64 {
       %c = "test.cmp"() : () -> i1
@@ -1561,6 +1601,148 @@ func.func @func_execute_region_elim_multi_yield() {
 // CHECK:   ^[[bb3]](%[[z:.+]]: i64):
 // CHECK:     "test.bar"(%[[z]])
 // CHECK:     return
+
+// -----
+
+// Test case with single scf.yield op inside execute_region and its operand is defined outside the execute_region op.
+// Make scf.execute_region not to return anything.
+
+// CHECK:           scf.execute_region no_inline {
+// CHECK:             func.call @foo() : () -> ()
+// CHECK:             scf.yield
+// CHECK:           }
+
+module {
+func.func private @foo()->()
+func.func private @execute_region_yeilding_external_value() -> memref<1x60xui8> {
+  %alloc = memref.alloc() {alignment = 64 : i64} : memref<1x60xui8>  
+  %1 = scf.execute_region -> memref<1x60xui8> no_inline {    
+    func.call @foo():()->()
+    scf.yield %alloc: memref<1x60xui8>
+  }  
+  return %1 : memref<1x60xui8>
+}
+}
+
+// -----
+
+// Test case with scf.yield op inside execute_region with multiple operands.
+// One of operands is defined outside the execute_region op.
+// Remove just this operand from the op results.
+
+// CHECK:           %[[VAL_1:.*]] = scf.execute_region -> memref<1x120xui8> no_inline {
+// CHECK:             %[[VAL_2:.*]] = memref.alloc() {alignment = 64 : i64} : memref<1x120xui8>
+// CHECK:             func.call @foo() : () -> ()
+// CHECK:             scf.yield %[[VAL_2]] : memref<1x120xui8>
+// CHECK:           }
+module {
+func.func private @foo()->()
+func.func private @execute_region_yeilding_external_and_local_values() -> (memref<1x60xui8>, memref<1x120xui8>) {
+  %alloc = memref.alloc() {alignment = 64 : i64} : memref<1x60xui8>  
+  %1, %2 = scf.execute_region -> (memref<1x60xui8>, memref<1x120xui8>) no_inline {    
+    %alloc_1 = memref.alloc() {alignment = 64 : i64} : memref<1x120xui8>
+    func.call @foo():()->()
+    scf.yield %alloc, %alloc_1: memref<1x60xui8>,  memref<1x120xui8>
+  }  
+  return %1, %2 : memref<1x60xui8>, memref<1x120xui8>
+}
+}
+
+// -----
+
+// Test case with multiple scf.yield ops inside execute_region with same operands and those operands are defined outside the execute_region op..
+// Make scf.execute_region not to return anything.
+// scf.yield must remain, cause scf.execute_region can't be empty.
+
+// CHECK:           scf.execute_region no_inline {
+// CHECK:             %[[VAL_3:.*]] = "test.cmp"() : () -> i1
+// CHECK:             cf.cond_br %[[VAL_3]], ^bb1, ^bb2
+// CHECK:           ^bb1:
+// CHECK:             scf.yield
+// CHECK:           ^bb2:
+// CHECK:             scf.yield
+// CHECK:           }
+
+module {
+  func.func private @foo()->()
+  func.func private @execute_region_multiple_yields_same_operands() -> (memref<1x60xui8>, memref<1x120xui8>) {
+    %alloc = memref.alloc() {alignment = 64 : i64} : memref<1x60xui8>  
+    %alloc_1 = memref.alloc() {alignment = 64 : i64} : memref<1x120xui8>  
+    %1, %2 = scf.execute_region -> (memref<1x60xui8>, memref<1x120xui8>) no_inline {
+      %c = "test.cmp"() : () -> i1
+      cf.cond_br %c, ^bb2, ^bb3
+    ^bb2:    
+      func.call @foo():()->()
+      scf.yield %alloc, %alloc_1 : memref<1x60xui8>, memref<1x120xui8>
+    ^bb3: 
+      func.call @foo():()->()   
+      scf.yield %alloc, %alloc_1 : memref<1x60xui8>, memref<1x120xui8>
+    }  
+    return %1, %2 : memref<1x60xui8>, memref<1x120xui8>
+  }
+}
+
+// -----
+
+// Test case with multiple scf.yield ops with at least one different operand, then no change.
+
+// CHECK:           %[[VAL_3:.*]]:2 = scf.execute_region -> (memref<1x60xui8>, memref<1x120xui8>) no_inline {
+// CHECK:           ^bb1:
+// CHECK:             scf.yield %{{.*}}, %{{.*}} : memref<1x60xui8>, memref<1x120xui8>
+// CHECK:           ^bb2:
+// CHECK:             scf.yield %{{.*}}, %{{.*}} : memref<1x60xui8>, memref<1x120xui8>
+// CHECK:           }
+
+module {
+  func.func private @foo()->()
+  func.func private @execute_region_multiple_yields_different_operands() -> (memref<1x60xui8>, memref<1x120xui8>) {
+    %alloc = memref.alloc() {alignment = 64 : i64} : memref<1x60xui8>  
+    %alloc_1 = memref.alloc() {alignment = 64 : i64} : memref<1x120xui8>  
+    %alloc_2 = memref.alloc() {alignment = 64 : i64} : memref<1x120xui8>  
+    %1, %2 = scf.execute_region -> (memref<1x60xui8>, memref<1x120xui8>) no_inline {
+      %c = "test.cmp"() : () -> i1
+      cf.cond_br %c, ^bb2, ^bb3
+    ^bb2:    
+      func.call @foo():()->()
+      scf.yield %alloc, %alloc_1 : memref<1x60xui8>, memref<1x120xui8>
+    ^bb3: 
+      func.call @foo():()->()   
+      scf.yield %alloc, %alloc_2 : memref<1x60xui8>, memref<1x120xui8>
+    }  
+    return %1, %2 : memref<1x60xui8>, memref<1x120xui8>
+  }
+}
+
+// -----
+
+// Test case with multiple scf.yield ops each has different operand.
+// In this case scf.execute_region isn't changed.
+
+// CHECK:           %[[VAL_2:.*]] = scf.execute_region -> memref<1x60xui8> no_inline {
+// CHECK:           ^bb1:
+// CHECK:             scf.yield %{{.*}} : memref<1x60xui8>
+// CHECK:           ^bb2:
+// CHECK:             scf.yield %{{.*}} : memref<1x60xui8>
+// CHECK:           }
+
+module {
+func.func private @foo()->()
+func.func private @execute_region_multiple_yields_different_operands() -> (memref<1x60xui8>) {
+  %alloc = memref.alloc() {alignment = 64 : i64} : memref<1x60xui8>  
+  %alloc_1 = memref.alloc() {alignment = 64 : i64} : memref<1x60xui8>   
+  %1 = scf.execute_region -> (memref<1x60xui8>) no_inline {
+    %c = "test.cmp"() : () -> i1
+    cf.cond_br %c, ^bb2, ^bb3
+  ^bb2:    
+    func.call @foo():()->()
+    scf.yield %alloc : memref<1x60xui8>
+  ^bb3:    
+    func.call @foo():()->()
+    scf.yield %alloc_1 : memref<1x60xui8>
+  }    
+  return %1 : memref<1x60xui8>
+}
+}
 
 // -----
 
@@ -1925,3 +2107,17 @@ func.func @index_switch_fold_no_res() {
 
 // CHECK-LABEL: func.func @index_switch_fold_no_res()
 //  CHECK-NEXT: "test.op"() : () -> ()
+
+// -----
+
+// Step 0 is invalid, the loop is eliminated.
+// CHECK-LABEL: func @scf_for_all_step_size_0()
+//       CHECK-NOT:   scf.forall
+func.func @scf_for_all_step_size_0()  {
+  %x = arith.constant 0 : index
+  scf.forall (%i, %j) = (0, 4) to (1, 5) step (%x, 8) {
+    vector.print %x : index
+    scf.forall.in_parallel {}
+  }
+  return
+}

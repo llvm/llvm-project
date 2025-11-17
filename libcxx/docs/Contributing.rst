@@ -174,10 +174,11 @@ Pre-commit CI
 Introduction
 ------------
 
-Unlike most parts of the LLVM project, libc++ uses a pre-commit CI [#]_. This
-CI is hosted on `Buildkite <https://buildkite.com/llvm-project/libcxx-ci>`__ and
-the build results are visible in the review on GitHub. Please make sure
-the CI is green before committing a patch.
+Unlike most parts of the LLVM project, libc++ uses a pre-commit CI [#]_. Some of
+this CI is hosted on `Buildkite <https://buildkite.com/llvm-project/libcxx-ci>`__,
+but some has migrated to the LLVM CI infrastructure. The build results are
+visible in the review on GitHub. Please make sure the CI is green before
+committing a patch.
 
 The CI tests libc++ for all :ref:`supported platforms <SupportedPlatforms>`.
 The build is started for every commit added to a Pull Request. A complete CI
@@ -246,20 +247,81 @@ Below is a short description of the most interesting CI builds [#]_:
 Infrastructure
 --------------
 
-All files of the CI infrastructure are in the directory ``libcxx/utils/ci``.
-Note that quite a bit of this infrastructure is heavily Linux focused. This is
-the platform used by most of libc++'s Buildkite runners and developers.
+The files for the CI infrastructure are split between the llvm-project
+and the llvm-zorg repositories. All files of the CI infrastructure in
+the llvm-project are in the directory ``libcxx/utils/ci``. Note that
+quite a bit of this infrastructure is heavily Linux focused. This is
+the platform used by most of libc++'s Buildkite runners and
+developers.
 
-Dockerfile
-~~~~~~~~~~
+Dockerfile/Container Images
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Contains the Docker image for the Ubuntu CI. Because the same Docker image is
 used for the ``main`` and ``release`` branch, it should contain no hard-coded
-versions.  It contains the used versions of Clang, various clang-tools,
+versions. It contains the used versions of Clang, various clang-tools,
 GCC, and CMake.
 
 .. note:: This image is pulled from Docker hub and not rebuild when changing
    the Dockerfile.
+
+Updating the CI testing container images
+----------------------------------------
+
+The libcxx linux premerge testing can run on one of three sets of runner
+groups. The three runner group names are ``llvm-premerge-libcxx-runners``,
+``llvm-premerge-libcxx-release-runners`` and ``llvm-premerge-libcxx-next-runners``.
+The runner set to use is controlled by the contents of
+https://github.com/llvm/llvm-project/blob/main/.github/workflows/libcxx-build-and-test.yaml.
+By default, it uses ``llvm-premerge-libcxx-runners``. To switch to one of the
+other runner sets, just replace all uses of ``llvm-premerge-libcxx-runners`` in
+the yaml file with the desired runner set.
+
+Which container image is used by these three runner sets is controlled
+and set by the variable values in
+https://github.com/llvm/llvm-zorg/blob/main/premerge/premerge_resources/variables.tf.
+The table below shows the variable names and
+the runner sets to which they correspond. To see their values, follow the
+link above (to ``variables.tf`` in llvm-zorg).
+
++------------------------------------+---------------------------+
+|Runner Set                          |Variable                   |
++====================================+===========================+
+|llvm-premerge-libcxx-runners        |libcxx_runner_image        |
++------------------------------------+---------------------------+
+|llvm-premerge-libcxx-release-runners|libcxx_release_runner_image|
++------------------------------------+---------------------------+
+|llvm-premerge-libcxx-next-runners   |libcxx_next_runner_image   |
++------------------------------------+---------------------------+
+
+
+When updating the container image you can either update just the runner binary (the part
+that connects to Github), or you can update everything (tools, etc.). To update the runner
+binary, bump the value of ``GITHUB_RUNNER_VERSION`` in ``libcxx/utils/ci/docker/docker-compose.yml``.
+To update all of the tools, bump ``BASE_IMAGE_VERSION`` to a newer version of the ``libcxx-linux-builder-base``
+image. You can see all versions of that image at https://github.com/llvm/llvm-project/pkgs/container/libcxx-linux-builder-base.
+
+On push to ``main``, a new version of both the ``libcxx-linux-builder`` and the ``libcxx-android-builder``
+images will be built and pushed to https://github.com/llvm/llvm-project/packages.
+
+You can then update the image used by the actual runners by changing the sha associated
+to ``libcxx_runner_image``, ``libcxx_release_runner_image`` or ``libcxx_next_runner_image``
+in `the Terraform configuration file <https://github.com/llvm/llvm-zorg/blob/main/premerge/premerge_resources/variables.tf>`_.
+To do so, you will need to create a PR in the llvm-zorg repository and wait for it to be
+merged. Once that change has been merged, an LLVM premerge maintainer (a Google employee)
+must use terraform to apply the change to the running GKE cluster.
+
+
+Monitoring premerge testing performance
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The llvm-premerge-libcxx runners mentioned above collect metrics regarding the
+time the tests spend queued up before they start running and also the time it
+takes the tests to actually complete running. These metrics are collected and
+aggregated (based on stage and PR), and the results can be seen at the
+`Libc++ Premerge Testing dashboard
+<https://llvm.grafana.net/public-dashboards/0bd453e8b3034733a1b0ff8c7728086d>`__
+.
 
 run-buildbot-container
 ~~~~~~~~~~~~~~~~~~~~~~

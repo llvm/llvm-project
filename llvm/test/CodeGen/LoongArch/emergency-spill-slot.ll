@@ -28,12 +28,12 @@ define void @func() {
 ; CHECK-NEXT:    ld.w $a3, $a1, 0
 ; CHECK-NEXT:    ld.w $a2, $a1, 0
 ; CHECK-NEXT:    ld.w $a0, $a1, 0
-; CHECK-NEXT:    st.d $fp, $sp, 0
+; CHECK-NEXT:    st.d $fp, $sp, 0 # 8-byte Folded Spill
 ; CHECK-NEXT:    lu12i.w $fp, 1
 ; CHECK-NEXT:    ori $fp, $fp, 12
 ; CHECK-NEXT:    add.d $fp, $sp, $fp
 ; CHECK-NEXT:    st.w $t8, $fp, 0
-; CHECK-NEXT:    ld.d $fp, $sp, 0
+; CHECK-NEXT:    ld.d $fp, $sp, 0 # 8-byte Folded Reload
 ; CHECK-NEXT:    st.w $t8, $a1, 0
 ; CHECK-NEXT:    st.w $t7, $a1, 0
 ; CHECK-NEXT:    st.w $t6, $a1, 0

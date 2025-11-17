@@ -4,10 +4,8 @@
 #include "sanitizer_common/sanitizer_asm.h"
 #include "builtins/assembly.h"
 
-#if !defined(__APPLE__)
-.section .text
-#else
-.section __TEXT,__text
+TEXT_SECTION
+#if defined(__APPLE__)
 .align 3
 #endif
 
@@ -222,6 +220,6 @@ ASM_SIZE(ASM_SYMBOL_INTERCEPTOR(__sigsetjmp))
 
 NO_EXEC_STACK_DIRECTIVE
 
-GNU_PROPERTY_BTI_PAC
+GNU_PROPERTY_BTI_PAC_GCS
 
 #endif

@@ -6,6 +6,8 @@ module std_config [system] {
   textual header "__configuration/abi.h"
   textual header "__configuration/availability.h"
   textual header "__configuration/compiler.h"
+  textual header "__configuration/experimental.h"
+  textual header "__configuration/hardening.h"
   textual header "__configuration/language.h"
   textual header "__configuration/platform.h"
   textual header "version"
@@ -70,7 +72,6 @@ module std_core [system] {
     module aligned_storage                            { header "__type_traits/aligned_storage.h" }
     module aligned_union                              { header "__type_traits/aligned_union.h" }
     module alignment_of                               { header "__type_traits/alignment_of.h" }
-    module can_extract_key                            { header "__type_traits/can_extract_key.h" }
     module common_reference                           { header "__type_traits/common_reference.h" }
     module common_type {
       header "__type_traits/common_type.h"
@@ -104,10 +105,7 @@ module std_core [system] {
       header "__type_traits/is_aggregate.h"
       export std_core.type_traits.integral_constant
     }
-    module is_allocator {
-      header "__type_traits/is_allocator.h"
-      export std_core.type_traits.integral_constant
-    }
+    module is_allocator { header "__type_traits/is_allocator.h" }
     module is_always_bitcastable {
       header "__type_traits/is_always_bitcastable.h"
       export std_core.type_traits.integral_constant
@@ -126,10 +124,6 @@ module std_core [system] {
     }
     module is_base_of {
       header "__type_traits/is_base_of.h"
-      export std_core.type_traits.integral_constant
-    }
-    module is_bounded_array {
-      header "__type_traits/is_bounded_array.h"
       export std_core.type_traits.integral_constant
     }
     module is_callable {
@@ -204,6 +198,7 @@ module std_core [system] {
       header "__type_traits/is_fundamental.h"
       export std_core.type_traits.integral_constant
     }
+    module is_generic_transparent_comparator { header "__type_traits/is_generic_transparent_comparator.h" }
     module is_implicit_lifetime {
       header "__type_traits/is_implicit_lifetime.h"
       export std_core.type_traits.integral_constant
@@ -272,10 +267,6 @@ module std_core [system] {
       header "__type_traits/is_referenceable.h"
       export std_core.type_traits.integral_constant
     }
-    module is_replaceable {
-      header "__type_traits/is_replaceable.h"
-      export std_core.type_traits.integral_constant
-    }
     module is_same {
       header "__type_traits/is_same.h"
       export std_core.type_traits.integral_constant
@@ -328,14 +319,11 @@ module std_core [system] {
       header "__type_traits/is_trivially_relocatable.h"
       export std_core.type_traits.integral_constant
     }
-    module is_unbounded_array {
-      header "__type_traits/is_unbounded_array.h"
-      export std_core.type_traits.integral_constant
-    }
     module is_union {
       header "__type_traits/is_union.h"
       export std_core.type_traits.integral_constant
     }
+    module is_unqualified { header "__type_traits/is_unqualified.h" }
     module is_unsigned {
       header "__type_traits/is_unsigned.h"
       export std_core.type_traits.integral_constant
@@ -352,10 +340,12 @@ module std_core [system] {
       header "__type_traits/is_volatile.h"
       export std_core.type_traits.integral_constant
     }
+    module is_within_lifetime                         { header "__type_traits/is_within_lifetime.h" }
     module lazy                                       { header "__type_traits/lazy.h" }
     module make_32_64_or_128_bit                      { header "__type_traits/make_32_64_or_128_bit.h" }
     module make_const_lvalue_ref                      { header "__type_traits/make_const_lvalue_ref.h" }
     module make_signed                                { header "__type_traits/make_signed.h" }
+    module make_transparent                           { header "__type_traits/make_transparent.h" }
     module make_unsigned                              { header "__type_traits/make_unsigned.h" }
     module maybe_const                                { header "__type_traits/maybe_const.h" }
     module nat                                        { header "__type_traits/nat.h" }
@@ -842,7 +832,7 @@ module std [system] {
     module stable_partition                       { header "__algorithm/stable_partition.h" }
     module stable_sort {
       header "__algorithm/stable_sort.h"
-      export std.memory.unique_temporary_buffer // TODO: Workaround for https://github.com/llvm/llvm-project/issues/120108
+      export std.memory.unique_temporary_buffer // TODO: Workaround for https://llvm.org/PR120108
     }
     module swap_ranges                            { header "__algorithm/swap_ranges.h" }
     module three_way_comp_ref_type                { header "__algorithm/three_way_comp_ref_type.h" }
@@ -885,6 +875,7 @@ module std [system] {
     module check_memory_order     { header "__atomic/check_memory_order.h" }
     module contention_t           { header "__atomic/contention_t.h" }
     module fence                  { header "__atomic/fence.h" }
+    module floating_point_helper  { header "__atomic/floating_point_helper.h" }
     module is_always_lock_free    { header "__atomic/is_always_lock_free.h" }
     module kill_dependency        { header "__atomic/kill_dependency.h" }
     module memory_order           { header "__atomic/memory_order.h" }
@@ -971,6 +962,10 @@ module std [system] {
     module high_resolution_clock {
       header "__chrono/high_resolution_clock.h"
       export *
+    }
+    module is_clock {
+      header "__chrono/is_clock.h"
+      export std_core.type_traits.integral_constant
     }
     module leap_second {
       header "__chrono/leap_second.h"
@@ -1227,6 +1222,7 @@ module std [system] {
     header "deque"
     export *
     export std.iterator.reverse_iterator
+    export std.algorithm.simd_utils // This is a workaround for https://llvm.org/PR120108.
   }
 
   module exception {
@@ -1260,7 +1256,7 @@ module std [system] {
     module directory_entry                { header "__filesystem/directory_entry.h" }
     module directory_iterator             {
       header "__filesystem/directory_iterator.h"
-      // This is a workaround for https://github.com/llvm/llvm-project/issues/120108.
+      // This is a workaround for https://llvm.org/PR120108.
       export *
     }
     module directory_options              { header "__filesystem/directory_options.h" }
@@ -1338,6 +1334,7 @@ module std [system] {
     module enable_insertable                  { header "__format/enable_insertable.h" }
     module escaped_output_table               { header "__format/escaped_output_table.h" }
     module extended_grapheme_cluster_table    { header "__format/extended_grapheme_cluster_table.h" }
+    module fmt_pair_like                      { header "__format/fmt_pair_like.h" }
     module format_arg                         { header "__format/format_arg.h" }
     module format_arg_store                   { header "__format/format_arg_store.h" }
     module format_args                        { header "__format/format_args.h" }
@@ -1369,6 +1366,7 @@ module std [system] {
     module indic_conjunct_break_table         { header "__format/indic_conjunct_break_table.h" }
     module parser_std_format_spec             { header "__format/parser_std_format_spec.h" }
     module range_default_formatter            { header "__format/range_default_formatter.h" }
+    module range_format                       { header "__format/range_format.h" }
     module range_formatter                    { header "__format/range_formatter.h" }
     module unicode                            { header "__format/unicode.h" }
     module width_estimation_table             { header "__format/width_estimation_table.h" }
@@ -1584,13 +1582,13 @@ module std [system] {
       textual header "__locale_dir/support/freebsd.h"
       textual header "__locale_dir/support/fuchsia.h"
       textual header "__locale_dir/support/linux.h"
+      textual header "__locale_dir/support/netbsd.h"
       textual header "__locale_dir/support/no_locale/characters.h"
       textual header "__locale_dir/support/no_locale/strtonum.h"
       textual header "__locale_dir/support/windows.h"
     }
 
     module locale_base_api {
-      textual header "__locale_dir/locale_base_api/android.h"
       textual header "__locale_dir/locale_base_api/bsd_locale_fallbacks.h"
       textual header "__locale_dir/locale_base_api/ibm.h"
       textual header "__locale_dir/locale_base_api/musl.h"
@@ -1606,7 +1604,6 @@ module std [system] {
   }
 
   module map {
-    module fwd { header "__fwd/map.h" }
     header "map"
     export *
     export std.iterator.reverse_iterator
@@ -1637,7 +1634,7 @@ module std [system] {
     module allocation_guard                   { header "__memory/allocation_guard.h" }
     module allocator {
       header "__memory/allocator.h"
-      export * // TODO: Workaround for https://github.com/llvm/llvm-project/issues/120108
+      export * // TODO: Workaround for https://llvm.org/PR120108
     }
     module allocator_arg_t                    { header "__memory/allocator_arg_t.h" }
     module allocator_destructor               { header "__memory/allocator_destructor.h" }
@@ -1682,7 +1679,7 @@ module std [system] {
       header "__memory/unique_temporary_buffer.h"
       export std.memory.unique_ptr
       export std_core.type_traits.is_constant_evaluated
-      export * // TODO: Workaround for https://github.com/llvm/llvm-project/issues/120108
+      export * // TODO: Workaround for https://llvm.org/PR120108
     }
     module uses_allocator                     { header "__memory/uses_allocator.h" }
     module uses_allocator_construction        { header "__memory/uses_allocator_construction.h" }
@@ -1721,7 +1718,7 @@ module std [system] {
     module allocate {
       header "__new/allocate.h"
       export std.utility.element_count // used as part of the API
-      export * // TODO: Workaround for https://github.com/llvm/llvm-project/issues/120108
+      export * // TODO: Workaround for https://llvm.org/PR120108
     }
     module destroying_delete_t  { header "__new/destroying_delete_t.h" }
     module exceptions           { header "__new/exceptions.h" }
@@ -1849,7 +1846,10 @@ module std [system] {
 
   module ranges {
     module access                         { header "__ranges/access.h" }
-    module all                            { header "__ranges/all.h" }
+    module all                            {
+      header "__ranges/all.h"
+      export std.ranges.ref_view
+    }
     module as_rvalue_view                 { header "__ranges/as_rvalue_view.h" }
     module chunk_by_view {
       header "__ranges/chunk_by_view.h"
@@ -1943,6 +1943,9 @@ module std [system] {
       header "__ranges/zip_view.h"
       export std.utility.pair
     }
+    module zip_transform_view {
+      header "__ranges/zip_transform_view.h"
+    }
 
     header "ranges"
     export *
@@ -1970,7 +1973,6 @@ module std [system] {
   }
 
   module set {
-    module fwd { header "__fwd/set.h" }
     header "set"
     export *
     export std.iterator.reverse_iterator
@@ -2107,15 +2109,11 @@ module std [system] {
   module tuple {
     module find_index               { header "__tuple/find_index.h" }
     module ignore                   { header "__tuple/ignore.h" }
-    module make_tuple_types         { header "__tuple/make_tuple_types.h" }
     module sfinae_helpers           { header "__tuple/sfinae_helpers.h" }
     module tuple_element            { header "__tuple/tuple_element.h" }
-    module tuple_indices            { header "__tuple/tuple_indices.h" }
-    module tuple_like_ext           { header "__tuple/tuple_like_ext.h" }
     module tuple_like_no_subrange   { header "__tuple/tuple_like_no_subrange.h" }
     module tuple_like               { header "__tuple/tuple_like.h" }
     module tuple_size               { header "__tuple/tuple_size.h" }
-    module tuple_types              { header "__tuple/tuple_types.h" }
 
     header "tuple"
     export *
@@ -2144,37 +2142,43 @@ module std [system] {
   }
 
   module utility {
-    module as_const                   { header "__utility/as_const.h" }
-    module as_lvalue                  { header "__utility/as_lvalue.h" }
-    module auto_cast                  {
+    module as_const                        { header "__utility/as_const.h" }
+    module as_lvalue                       { header "__utility/as_lvalue.h" }
+    module auto_cast                       {
       header "__utility/auto_cast.h"
       export std_core.type_traits.decay // the macro expansion uses that trait
     }
-    module cmp                        { header "__utility/cmp.h" }
-    module convert_to_integral        { header "__utility/convert_to_integral.h" }
-    module element_count              { header "__utility/element_count.h" }
-    module exception_guard            { header "__utility/exception_guard.h" }
-    module exchange                   { header "__utility/exchange.h" }
-    module forward_like               { header "__utility/forward_like.h" }
-    module in_place {
+    module cmp                             { header "__utility/cmp.h" }
+    module convert_to_integral             { header "__utility/convert_to_integral.h" }
+    module default_three_way_comparator    { header "__utility/default_three_way_comparator.h" }
+    module element_count                   { header "__utility/element_count.h" }
+    module exception_guard                 { header "__utility/exception_guard.h" }
+    module exchange                        { header "__utility/exchange.h" }
+    module forward_like                    { header "__utility/forward_like.h" }
+    module in_place                        {
       header "__utility/in_place.h"
       export std_core.type_traits.integral_constant
     }
-    module integer_sequence           { header "__utility/integer_sequence.h" }
-    module is_pointer_in_range        { header "__utility/is_pointer_in_range.h" }
-    module is_valid_range             { header "__utility/is_valid_range.h" }
-    module move                       { header "__utility/move.h" }
-    module no_destroy                 { header "__utility/no_destroy.h" }
-    module pair                       { header "__utility/pair.h" }
-    module piecewise_construct        { header "__utility/piecewise_construct.h" }
-    module priority_tag               { header "__utility/priority_tag.h" }
-    module private_constructor_tag    { header "__utility/private_constructor_tag.h" }
-    module rel_ops                    { header "__utility/rel_ops.h" }
-    module scope_guard                { header "__utility/scope_guard.h" }
-    module small_buffer               { header "__utility/small_buffer.h" }
-    module swap                       { header "__utility/swap.h" }
-    module to_underlying              { header "__utility/to_underlying.h" }
-    module unreachable                { header "__utility/unreachable.h" }
+    module integer_sequence                { header "__utility/integer_sequence.h" }
+    module is_pointer_in_range             { header "__utility/is_pointer_in_range.h" }
+    module is_valid_range                  { header "__utility/is_valid_range.h" }
+    module lazy_synth_three_way_comparator { header "__utility/lazy_synth_three_way_comparator.h" }
+    module move                            { header "__utility/move.h" }
+    module no_destroy                      { header "__utility/no_destroy.h" }
+    module pair                            {
+      header "__utility/pair.h"
+      export std.utility.piecewise_construct
+    }
+    module piecewise_construct             { header "__utility/piecewise_construct.h" }
+    module priority_tag                    { header "__utility/priority_tag.h" }
+    module private_constructor_tag         { header "__utility/private_constructor_tag.h" }
+    module rel_ops                         { header "__utility/rel_ops.h" }
+    module scope_guard                     { header "__utility/scope_guard.h" }
+    module small_buffer                    { header "__utility/small_buffer.h" }
+    module swap                            { header "__utility/swap.h" }
+    module to_underlying                   { header "__utility/to_underlying.h" }
+    module try_key_extraction              { header "__utility/try_key_extraction.h" }
+    module unreachable                     { header "__utility/unreachable.h" }
 
     header "utility"
     export *
@@ -2231,6 +2235,7 @@ module std [system] {
     header "vector"
     export std.iterator.reverse_iterator
     export *
+    export std.algorithm.simd_utils // This is a workaround for https://llvm.org/PR120108.
   }
 
   // Experimental C++ Standard Library interfaces
@@ -2348,13 +2353,22 @@ module std [system] {
   module hash_table           { header "__hash_table" }
   module node_handle          { header "__node_handle" }
   module split_buffer         { header "__split_buffer" }
-  module tree                 { header "__tree" }
+  module tree                 {
+    header "__tree"
+    export std.memory.unique_ptr
+  }
   module std_mbstate_t {
     header "__std_mbstate_t.h"
     export *
   }
+  module log_hardening_failure {
+    header "__log_hardening_failure"
+  }
   module verbose_abort {
     header "__verbose_abort"
+  }
+  module verbose_trap {
+    header "__verbose_trap"
   }
   module internal_assert {
     header "__assert"
@@ -2417,10 +2431,6 @@ module std_math_h [system] {
 module std_stdatomic_h [system] {
   header "stdatomic.h"
   export *
-}
-module std_stdbool_h [system] {
-  // <stdbool.h>'s __bool_true_false_are_defined macro requires textual inclusion.
-  textual header "stdbool.h"
 }
 module std_stddef_h [system] {
   // <stddef.h> supports being included multiple times with different pre-defined macros

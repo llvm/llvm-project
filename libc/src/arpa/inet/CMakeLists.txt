@@ -5,6 +5,7 @@ add_entrypoint_object(
   HDRS
     htonl.h
   DEPENDS
+    libc.hdr.stdint_proxy
     libc.include.arpa_inet
     libc.src.__support.common
 )
@@ -16,8 +17,22 @@ add_entrypoint_object(
   HDRS
     htons.h
   DEPENDS
+    libc.hdr.stdint_proxy
     libc.include.arpa_inet
     libc.src.__support.common
+)
+
+add_entrypoint_object(
+  inet_aton
+  SRCS
+    inet_aton.cpp
+  HDRS
+    inet_aton.h
+  DEPENDS
+    libc.include.arpa_inet
+    libc.include.llvm-libc-types.in_addr
+    libc.src.__support.common
+    libc.src.__support.str_to_integer
 )
 
 add_entrypoint_object(
@@ -27,6 +42,7 @@ add_entrypoint_object(
   HDRS
     ntohl.h
   DEPENDS
+    libc.hdr.stdint_proxy
     libc.include.arpa_inet
     libc.src.__support.common
 )
@@ -38,6 +54,7 @@ add_entrypoint_object(
   HDRS
     ntohs.h
   DEPENDS
+    libc.hdr.stdint_proxy
     libc.include.arpa_inet
     libc.src.__support.common
 )

@@ -1,11 +1,11 @@
-; RUN: llc -mtriple=amdgcn -mcpu=tahiti -enable-amdgpu-aa=0 -misched=gcn-iterative-minreg -verify-machineinstrs < %s | FileCheck --check-prefix=SI-MINREG %s
-; RUN: llc -mtriple=amdgcn -mcpu=tahiti -enable-amdgpu-aa=0 -misched=gcn-iterative-max-occupancy-experimental -verify-machineinstrs < %s | FileCheck --check-prefix=SI-MAXOCC %s
-; RUN: llc -mtriple=amdgcn -mcpu=tahiti -enable-amdgpu-aa=0 -amdgpu-sched-strategy=iterative-minreg -verify-machineinstrs < %s | FileCheck --check-prefix=SI-MINREG %s
-; RUN: llc -mtriple=amdgcn -mcpu=tahiti -enable-amdgpu-aa=0 -amdgpu-sched-strategy=iterative-maxocc -verify-machineinstrs < %s | FileCheck --check-prefix=SI-MAXOCC %s
-; RUN: llc -mtriple=amdgcn -mcpu=fiji -enable-amdgpu-aa=0 -misched=gcn-iterative-minreg -verify-machineinstrs < %s | FileCheck --check-prefix=VI-MINREG %s
-; RUN: llc -mtriple=amdgcn -mcpu=fiji -enable-amdgpu-aa=0 -misched=gcn-iterative-max-occupancy-experimental -verify-machineinstrs < %s | FileCheck --check-prefix=VI-MAXOCC %s
-; RUN: llc -mtriple=amdgcn -mcpu=fiji -enable-amdgpu-aa=0 -amdgpu-sched-strategy=iterative-minreg -verify-machineinstrs < %s | FileCheck --check-prefix=VI-MINREG %s
-; RUN: llc -mtriple=amdgcn -mcpu=fiji -enable-amdgpu-aa=0 -amdgpu-sched-strategy=iterative-maxocc -verify-machineinstrs < %s | FileCheck --check-prefix=VI-MAXOCC %s
+; RUN: llc -mtriple=amdgcn -mcpu=tahiti -enable-amdgpu-aa=0 -misched=gcn-iterative-minreg < %s | FileCheck --check-prefix=SI-MINREG %s
+; RUN: llc -mtriple=amdgcn -mcpu=tahiti -enable-amdgpu-aa=0 -misched=gcn-iterative-max-occupancy-experimental < %s | FileCheck --check-prefix=SI-MAXOCC %s
+; RUN: llc -mtriple=amdgcn -mcpu=tahiti -enable-amdgpu-aa=0 -amdgpu-sched-strategy=iterative-minreg < %s | FileCheck --check-prefix=SI-MINREG %s
+; RUN: llc -mtriple=amdgcn -mcpu=tahiti -enable-amdgpu-aa=0 -amdgpu-sched-strategy=iterative-maxocc < %s | FileCheck --check-prefix=SI-MAXOCC %s
+; RUN: llc -mtriple=amdgcn -mcpu=fiji -enable-amdgpu-aa=0 -misched=gcn-iterative-minreg < %s | FileCheck --check-prefix=VI-MINREG %s
+; RUN: llc -mtriple=amdgcn -mcpu=fiji -enable-amdgpu-aa=0 -misched=gcn-iterative-max-occupancy-experimental < %s | FileCheck --check-prefix=VI-MAXOCC %s
+; RUN: llc -mtriple=amdgcn -mcpu=fiji -enable-amdgpu-aa=0 -amdgpu-sched-strategy=iterative-minreg < %s | FileCheck --check-prefix=VI-MINREG %s
+; RUN: llc -mtriple=amdgcn -mcpu=fiji -enable-amdgpu-aa=0 -amdgpu-sched-strategy=iterative-maxocc < %s | FileCheck --check-prefix=VI-MAXOCC %s
 
 ; SI-MINREG: NumSgprs: {{[1-9]$}}
 ; SI-MINREG: NumVgprs: {{[1-9]$}}
