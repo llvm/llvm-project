@@ -54,7 +54,7 @@ jobs:
           path: golden-images
       - name: Setup Windows
         if: runner.os == 'Windows'
-        uses: llvm/actions/setup-windows@42d80571b13f4599bbefbc7189728b64723c7f78 # main
+        uses: llvm/actions/setup-windows@5dd955034a6742a2e21d82bf165fcb1050ae7b49 # main
         with:
           arch: amd64
       - name: Build DXC
