@@ -929,7 +929,10 @@ static void ConfigureCASStorage(SwiftASTContext *m_ast_context,
   }
   m_ast_context->SetCASStorage(std::move(maybe_cas->first),
                                std::move(maybe_cas->second));
-  m_ast_context->GetCASOptions().Config = *cas_config;
+  m_ast_context->GetCASOptions().CASOpts.CASPath = cas_config->CASPath;
+  m_ast_context->GetCASOptions().CASOpts.PluginPath = cas_config->PluginPath;
+  m_ast_context->GetCASOptions().CASOpts.PluginOptions =
+      cas_config->PluginOptions;
   LOG_PRINTF(GetLog(LLDBLog::Types),
              "Setup CAS from module list properties with cas path: %s",
              cas_config->CASPath.c_str());
@@ -1962,10 +1965,10 @@ void SwiftASTContext::AddExtraClangCC1Args(
   bool use_cas_module = m_cas && m_action_cache;
   if (use_cas_module) {
     // Load from CAS.
-    invocation.getCASOpts().CASPath = GetCASOptions().Config.CASPath;
-    invocation.getCASOpts().PluginPath = GetCASOptions().Config.PluginPath;
+    invocation.getCASOpts().CASPath = GetCASOptions().CASOpts.CASPath;
+    invocation.getCASOpts().PluginPath = GetCASOptions().CASOpts.PluginPath;
     invocation.getCASOpts().PluginOptions =
-        GetCASOptions().Config.PluginOptions;
+        GetCASOptions().CASOpts.PluginOptions;
 
     // Check the module availability in CAS, if not, fallback to regular load.
     auto CheckModuleInCAS = [&](const std::string &key) {
