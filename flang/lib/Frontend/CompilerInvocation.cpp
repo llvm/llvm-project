@@ -1553,7 +1553,7 @@ bool CompilerInvocation::createFromArgs(
 
   // User-specified or default resource dir
   if (const llvm::opt::Arg *a =
-          args.getLastArg(clang::driver::options::OPT_resource_dir))
+          args.getLastArg(clang::options::OPT_resource_dir))
     invoc.resourceDir = a->getValue();
   else
     invoc.resourceDir = clang::driver::Driver::GetResourcesPath(
