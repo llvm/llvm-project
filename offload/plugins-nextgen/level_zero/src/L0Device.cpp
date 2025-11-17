@@ -563,6 +563,20 @@ Expected<InfoTreeNode> L0DeviceTy::obtainInfoImpl() {
   Info.add("Number of slices", getNumSlices());
   Info.add("Max Group size", getMaxGroupSize(), "",
            DeviceInfo::MAX_WORK_GROUP_SIZE);
+  auto &MaxGroupSize =
+      *Info.add("Workgroup Max Size per Dimension", std::monostate{}, "",
+                DeviceInfo::MAX_WORK_GROUP_SIZE_PER_DIMENSION);
+  MaxGroupSize.add("x", getMaxGroupSizeX());
+  MaxGroupSize.add("y", getMaxGroupSizeY());
+  MaxGroupSize.add("z", getMaxGroupSizeZ());
+  Info.add("Maximum Grid Dimensions", getMaxGroupSize() * getMaxGroupCount(),
+           "", DeviceInfo::MAX_WORK_SIZE);
+  auto &MaxSize = *Info.add("Grid Size per Dimension", std::monostate{}, "",
+                            DeviceInfo::MAX_WORK_SIZE_PER_DIMENSION);
+  MaxSize.add("x", getMaxGroupSizeX() * getMaxGroupCountX());
+  MaxSize.add("y", getMaxGroupSizeY() * getMaxGroupCountY());
+  MaxSize.add("z", getMaxGroupSizeZ() * getMaxGroupCountZ());
+
   Info.add("Local memory size (bytes)", getMaxSharedLocalMemory());
   Info.add("Global memory size (bytes)", getGlobalMemorySize(), "",
            DeviceInfo::GLOBAL_MEM_SIZE);
@@ -571,6 +585,10 @@ Expected<InfoTreeNode> L0DeviceTy::obtainInfoImpl() {
            DeviceInfo::MAX_MEM_ALLOC_SIZE);
   Info.add("Max clock frequency (MHz)", getClockRate(), "",
            DeviceInfo::MAX_CLOCK_FREQUENCY);
+  Info.add("Max memory clock frequency (MHz)", getMemoryClockRate(), "",
+           DeviceInfo::MEMORY_CLOCK_RATE);
+  Info.add("Memory Address Size", uint64_t{64u}, "bits",
+           DeviceInfo::ADDRESS_BITS);
   return Info;
 }
 

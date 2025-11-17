@@ -351,6 +351,23 @@ public:
   uint32_t getMaxGroupSize() const {
     return ComputeProperties.maxTotalGroupSize;
   }
+  uint32_t getMaxGroupCount() const {
+    return getMaxGroupCountX() * getMaxGroupCountY() * getMaxGroupCountZ();
+  }
+
+  uint32_t getMaxGroupSizeX() const { return ComputeProperties.maxGroupSizeX; }
+  uint32_t getMaxGroupSizeY() const { return ComputeProperties.maxGroupSizeY; }
+  uint32_t getMaxGroupSizeZ() const { return ComputeProperties.maxGroupSizeZ; }
+  uint32_t getMaxGroupCountX() const {
+    return ComputeProperties.maxGroupCountX;
+  }
+  uint32_t getMaxGroupCountY() const {
+    return ComputeProperties.maxGroupCountY;
+  }
+  uint32_t getMaxGroupCountZ() const {
+    return ComputeProperties.maxGroupCountZ;
+  }
+  uint32_t getMemoryClockRate() const { return MemoryProperties.maxClockRate; }
   uint64_t getGlobalMemorySize() const { return MemoryProperties.totalSize; }
   size_t getCacheSize() const { return CacheProperties.cacheSize; }
   uint64_t getMaxMemAllocSize() const {
@@ -597,6 +614,12 @@ public:
   }
 
   Expected<InfoTreeNode> obtainInfoImpl() override;
+  uint64_t getClockFrequency() const override { return DeviceProperties.coreClockRate; }
+  uint64_t getHardwareParallelism() const override { return getTotalThreads(); }
+  Error getDeviceMemorySize(uint64_t &DSize) {
+    DSize = getGlobalMemorySize();
+    return Plugin::success();
+  }
 
   Error getDeviceStackSize(uint64_t &V) override {
     V = 0;
