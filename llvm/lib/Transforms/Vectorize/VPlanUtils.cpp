@@ -18,12 +18,12 @@ using namespace llvm::VPlanPatternMatch;
 
 bool vputils::onlyFirstLaneUsed(const VPValue *Def) {
   return all_of(Def->users(),
-                [Def](const VPUser *U) { return U->onlyFirstLaneUsed(Def); });
+                [Def](const VPUser *U) { return U->usesFirstLaneOnly(Def); });
 }
 
 bool vputils::onlyFirstPartUsed(const VPValue *Def) {
   return all_of(Def->users(),
-                [Def](const VPUser *U) { return U->onlyFirstPartUsed(Def); });
+                [Def](const VPUser *U) { return U->usesFirstPartOnly(Def); });
 }
 
 bool vputils::onlyScalarValuesUsed(const VPValue *Def) {
@@ -89,6 +89,15 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
         return SE.getAddRecExpr(Start, SE.getOne(Start->getType()), L,
                                 SCEV::FlagAnyWrap);
       })
+      .Case<VPWidenIntOrFpInductionRecipe>(
+          [&SE, L](const VPWidenIntOrFpInductionRecipe *R) {
+            const SCEV *Step = getSCEVExprForVPValue(R->getStepValue(), SE, L);
+            if (!L || isa<SCEVCouldNotCompute>(Step))
+              return SE.getCouldNotCompute();
+            const SCEV *Start =
+                getSCEVExprForVPValue(R->getStartValue(), SE, L);
+            return SE.getAddRecExpr(Start, Step, L, SCEV::FlagAnyWrap);
+          })
       .Case<VPDerivedIVRecipe>([&SE, L](const VPDerivedIVRecipe *R) {
         const SCEV *Start = getSCEVExprForVPValue(R->getOperand(0), SE, L);
         const SCEV *IV = getSCEVExprForVPValue(R->getOperand(1), SE, L);

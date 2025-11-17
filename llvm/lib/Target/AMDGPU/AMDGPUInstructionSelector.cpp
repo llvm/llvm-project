@@ -1998,7 +1998,7 @@ bool AMDGPUInstructionSelector::selectDSAppendConsume(MachineInstr &MI,
 }
 
 bool AMDGPUInstructionSelector::selectInitWholeWave(MachineInstr &MI) const {
-  MachineFunction *MF = MI.getParent()->getParent();
+  MachineFunction *MF = MI.getMF();
   SIMachineFunctionInfo *MFInfo = MF->getInfo<SIMachineFunctionInfo>();
 
   MFInfo->setInitWholeWave();
@@ -3690,7 +3690,7 @@ bool AMDGPUInstructionSelector::selectBVHIntersectRayIntrinsic(
       MI.getOpcode() == AMDGPU::G_AMDGPU_BVH_INTERSECT_RAY ? 1 : 3;
   MI.setDesc(TII.get(MI.getOperand(OpcodeOpIdx).getImm()));
   MI.removeOperand(OpcodeOpIdx);
-  MI.addImplicitDefUseOperands(*MI.getParent()->getParent());
+  MI.addImplicitDefUseOperands(*MI.getMF());
   return constrainSelectedInstRegOperands(MI, TII, TRI, RBI);
 }
 
@@ -3793,7 +3793,7 @@ bool AMDGPUInstructionSelector::selectSMFMACIntrin(MachineInstr &MI) const {
   MI.removeOperand(4); // VDst_In
   MI.removeOperand(1); // Intrinsic ID
   MI.addOperand(VDst_In); // Readd VDst_In to the end
-  MI.addImplicitDefUseOperands(*MI.getParent()->getParent());
+  MI.addImplicitDefUseOperands(*MI.getMF());
   const MCInstrDesc &MCID = MI.getDesc();
   if (MCID.getOperandConstraint(0, MCOI::EARLY_CLOBBER) != -1) {
     MI.getOperand(0).setIsEarlyClobber(true);
@@ -6764,7 +6764,7 @@ bool AMDGPUInstructionSelector::selectSGetBarrierState(
     MachineInstr &I, Intrinsic::ID IntrID) const {
   MachineBasicBlock *MBB = I.getParent();
   const DebugLoc &DL = I.getDebugLoc();
-  MachineOperand BarOp = I.getOperand(2);
+  const MachineOperand &BarOp = I.getOperand(2);
   std::optional<int64_t> BarValImm =
       getIConstantVRegSExtVal(BarOp.getReg(), *MRI);
 
@@ -6817,8 +6817,8 @@ bool AMDGPUInstructionSelector::selectNamedBarrierInit(
     MachineInstr &I, Intrinsic::ID IntrID) const {
   MachineBasicBlock *MBB = I.getParent();
   const DebugLoc &DL = I.getDebugLoc();
-  MachineOperand BarOp = I.getOperand(1);
-  MachineOperand CntOp = I.getOperand(2);
+  const MachineOperand &BarOp = I.getOperand(1);
+  const MachineOperand &CntOp = I.getOperand(2);
 
   // BarID = (BarOp >> 4) & 0x3F
   Register TmpReg0 = MRI->createVirtualRegister(&AMDGPU::SReg_32RegClass);

@@ -412,6 +412,16 @@ void CIRGenFunction::LexicalScope::emitImplicitReturn() {
   (void)emitReturn(localScope->endLoc);
 }
 
+cir::TryOp CIRGenFunction::LexicalScope::getClosestTryParent() {
+  LexicalScope *scope = this;
+  while (scope) {
+    if (scope->isTry())
+      return scope->getTry();
+    scope = scope->parentScope;
+  }
+  return nullptr;
+}
+
 void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
                                    cir::FuncOp fn, cir::FuncType funcType,
                                    FunctionArgList args, SourceLocation loc,
@@ -632,6 +642,10 @@ cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
 
     startFunction(gd, retTy, fn, funcType, args, loc, bodyRange.getBegin());
 
+    // Save parameters for coroutine function.
+    if (body && isa_and_nonnull<CoroutineBodyStmt>(body))
+      llvm::append_range(fnArgs, funcDecl->parameters());
+
     if (isa<CXXDestructorDecl>(funcDecl)) {
       emitDestructorBody(args);
     } else if (isa<CXXConstructorDecl>(funcDecl)) {
@@ -734,7 +748,9 @@ void CIRGenFunction::emitDestructorBody(FunctionArgList &args) {
   // outside of the function-try-block, which means it's always
   // possible to delegate the destructor body to the complete
   // destructor.  Do so.
-  if (dtorType == Dtor_Deleting) {
+  if (dtorType == Dtor_Deleting || dtorType == Dtor_VectorDeleting) {
+    if (cxxStructorImplicitParamValue && dtorType == Dtor_VectorDeleting)
+      cgm.errorNYI(dtor->getSourceRange(), "emitConditionalArrayDtorCall");
     RunCleanupsScope dtorEpilogue(*this);
     enterDtorCleanups(dtor, Dtor_Deleting);
     if (haveInsertPoint()) {
@@ -767,6 +783,7 @@ void CIRGenFunction::emitDestructorBody(FunctionArgList &args) {
   case Dtor_Comdat:
     llvm_unreachable("not expecting a COMDAT");
   case Dtor_Deleting:
+  case Dtor_VectorDeleting:
     llvm_unreachable("already handled deleting case");
 
   case Dtor_Complete:
@@ -883,6 +900,8 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
     return emitConditionalOperatorLValue(cast<BinaryConditionalOperator>(e));
   case Expr::ArraySubscriptExprClass:
     return emitArraySubscriptExpr(cast<ArraySubscriptExpr>(e));
+  case Expr::ExtVectorElementExprClass:
+    return emitExtVectorElementExpr(cast<ExtVectorElementExpr>(e));
   case Expr::UnaryOperatorClass:
     return emitUnaryOpLValue(cast<UnaryOperator>(e));
   case Expr::StringLiteralClass:
@@ -912,6 +931,18 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
   case Expr::CXXOperatorCallExprClass:
   case Expr::UserDefinedLiteralClass:
     return emitCallExprLValue(cast<CallExpr>(e));
+  case Expr::ExprWithCleanupsClass: {
+    const auto *cleanups = cast<ExprWithCleanups>(e);
+    RunCleanupsScope scope(*this);
+    LValue lv = emitLValue(cleanups->getSubExpr());
+    assert(!cir::MissingFeatures::cleanupWithPreservedValues());
+    return lv;
+  }
+  case Expr::CXXDefaultArgExprClass: {
+    auto *dae = cast<CXXDefaultArgExpr>(e);
+    CXXDefaultArgExprScope scope(*this, dae);
+    return emitLValue(dae->getExpr());
+  }
   case Expr::ParenExprClass:
     return emitLValue(cast<ParenExpr>(e)->getSubExpr());
   case Expr::GenericSelectionExprClass:

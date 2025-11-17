@@ -83,15 +83,21 @@ llvm::createUnpackMachineBundles(
   return new UnpackMachineBundles(std::move(Ftor));
 }
 
-/// Return the first found DebugLoc that has a DILocation, given a range of
-/// instructions. The search range is from FirstMI to LastMI (exclusive). If no
-/// DILocation is found, then an empty location is returned.
+/// Return the first DebugLoc that has line number information, given a
+/// range of instructions. The search range is from FirstMI to LastMI
+/// (exclusive). Otherwise return the first DILocation or an empty location if
+/// there are none.
 static DebugLoc getDebugLoc(MachineBasicBlock::instr_iterator FirstMI,
                             MachineBasicBlock::instr_iterator LastMI) {
-  for (auto MII = FirstMI; MII != LastMI; ++MII)
-    if (MII->getDebugLoc())
-      return MII->getDebugLoc();
-  return DebugLoc();
+  DebugLoc DL;
+  for (auto MII = FirstMI; MII != LastMI; ++MII) {
+    if (DebugLoc MIIDL = MII->getDebugLoc()) {
+      if (MIIDL.getLine() != 0)
+        return MIIDL;
+      DL = MIIDL.get();
+    }
+  }
+  return DL;
 }
 
 /// Check if target reg is contained in given lists, which are:
@@ -102,7 +108,7 @@ static bool containsReg(SmallSetVector<Register, 32> LocalDefsV,
                         const TargetRegisterInfo *TRI) {
   if (Reg.isPhysical()) {
     for (MCRegUnit Unit : TRI->regunits(Reg.asMCReg()))
-      if (!LocalDefsP[Unit])
+      if (!LocalDefsP[static_cast<unsigned>(Unit)])
         return false;
 
     return true;
@@ -137,6 +143,7 @@ void llvm::finalizeBundle(MachineBasicBlock &MBB,
   SmallSet<Register, 8> KilledUseSet;
   SmallSet<Register, 8> UndefUseSet;
   SmallVector<std::pair<Register, Register>> TiedOperands;
+  SmallVector<MachineInstr *> MemMIs;
   for (auto MII = FirstMI; MII != LastMI; ++MII) {
     // Debug instructions have no effects to track.
     if (MII->isDebugInstr())
@@ -182,7 +189,7 @@ void llvm::finalizeBundle(MachineBasicBlock &MBB,
       if (LocalDefs.insert(Reg)) {
         if (!MO.isDead() && Reg.isPhysical()) {
           for (MCRegUnit Unit : TRI->regunits(Reg.asMCReg()))
-            LocalDefsP.set(Unit);
+            LocalDefsP.set(static_cast<unsigned>(Unit));
         }
       } else {
         if (!MO.isDead()) {
@@ -200,6 +207,9 @@ void llvm::finalizeBundle(MachineBasicBlock &MBB,
       MIB.setMIFlag(MachineInstr::FrameSetup);
     if (MII->getFlag(MachineInstr::FrameDestroy))
       MIB.setMIFlag(MachineInstr::FrameDestroy);
+
+    if (MII->mayLoadOrStore())
+      MemMIs.push_back(&*MII);
   }
 
   for (Register Reg : LocalDefs) {
@@ -225,6 +235,8 @@ void llvm::finalizeBundle(MachineBasicBlock &MBB,
     assert(UseIdx < ExternUses.size());
     MIB->tieOperands(DefIdx, LocalDefs.size() + UseIdx);
   }
+
+  MIB->cloneMergedMemRefs(MF, MemMIs);
 }
 
 /// finalizeBundle - Same functionality as the previous finalizeBundle except
