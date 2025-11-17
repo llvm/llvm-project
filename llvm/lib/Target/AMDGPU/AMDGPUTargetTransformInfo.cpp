@@ -1652,6 +1652,8 @@ unsigned GCNTTIImpl::getNumberOfParts(Type *Tp) const {
   return BaseT::getNumberOfParts(Tp);
 }
 
+// New API that wraps the old isSourceOfDivergence and isAlwaysUniform APIs
+// with additional support for new uniformity classifications
 InstructionUniformity
 GCNTTIImpl::getInstructionUniformity(const Value *V) const {
   if (isAlwaysUniform(V))

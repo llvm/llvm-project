@@ -151,15 +151,11 @@ bool llvm::GenericUniformityAnalysisImpl<MachineSSAContext>::isDivergentUse(
   return isTemporalDivergent(*UseInstr->getParent(), *DefInstr);
 }
 
+// This can be defined later depending on use of the MachineUniformityAnalysis.
 template <>
 bool GenericUniformityAnalysisImpl<MachineSSAContext>::isOperandUniform(
-    const MachineInstr &I, InstructionUniformity IU) const {
-  switch (IU) {
-  case InstructionUniformity::AnyOfFirstTwoUseOp:
-    return !isDivergentUse(I.getOperand(1)) || !isDivergentUse(I.getOperand(2));
-  default:
-    return false;
-  }
+    const MachineInstr &MI, InstructionUniformity IU) const {
+  return false;
 }
 
 // This ensures explicit instantiation of

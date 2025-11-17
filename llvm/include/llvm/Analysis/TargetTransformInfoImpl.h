@@ -1150,8 +1150,11 @@ public:
       SmallVectorImpl<std::pair<StringRef, int64_t>> &LB) const {}
 
   virtual bool allowVectorElementIndexingUsingGEP() const { return true; }
-  virtual InstructionUniformity
-  getInstructionUniformity(const Instruction &I) const {
+
+  // New API for uniformity classification
+  // Targets should override this to provide target-specific uniformity analysis
+  // The default implementation returns Default (conservative behavior)
+  virtual InstructionUniformity getInstructionUniformity(const Value *V) const {
     return InstructionUniformity::Default;
   }
 
