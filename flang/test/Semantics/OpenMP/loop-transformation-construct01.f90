@@ -13,13 +13,13 @@ end subroutine
 subroutine loop_transformation_construct2
   implicit none
   integer :: i = 5
-  integer :: y
+  integer :: x
   integer :: v(i)
 
   !$omp do
   !$omp tile
   do x = 1, i
-    v(x) = x(x) * 2
+    v(x) = v(x) * 2
   end do
   !$omp end tile
   !$omp end do
@@ -30,26 +30,26 @@ end subroutine
 subroutine loop_transformation_construct2
   implicit none
   integer :: i = 5
-  integer :: y
+  integer :: x
   integer :: v(i)
 
   !$omp do
   !ERROR: Only Loop Transformation Constructs or Loop Nests can be nested within Loop Constructs
   !$omp parallel do
   do x = 1, i
-    v(x) = x(x) * 2
+    v(x) = v(x) * 2
   end do
 end subroutine
 
 subroutine loop_transformation_construct3
   implicit none
   integer :: i = 5
-  integer :: y
+  integer :: x
   integer :: v(i)
 
   !$omp do
   do x = 1, i
-    v(x) = x(x) * 2
+    v(x) = v(x) * 2
   end do
   !ERROR: A DO loop must follow the TILE directive
   !$omp tile
@@ -58,7 +58,7 @@ end subroutine
 subroutine loop_transformation_construct4
   implicit none
   integer :: i = 5
-  integer :: y
+  integer :: x
   integer :: v(i)
 
   !$omp do
@@ -66,14 +66,14 @@ subroutine loop_transformation_construct4
   !$omp tile
   !$omp unroll full
   do x = 1, i
-    v(x) = x(x) * 2
+    v(x) = v(x) * 2
   end do
 end subroutine
 
 subroutine loop_transformation_construct5
   implicit none
   integer :: i = 5
-  integer :: y
+  integer :: x
   integer :: v(i)
 
   !$omp do
@@ -81,20 +81,20 @@ subroutine loop_transformation_construct5
   !$omp tile
   !$omp unroll
   do x = 1, i
-    v(x) = x(x) * 2
+    v(x) = v(x) * 2
   end do
 end subroutine
 
 subroutine loop_transformation_construct6
   implicit none
   integer :: i = 5
-  integer :: y
+  integer :: x
   integer :: v(i)
 
   !$omp do
   !$omp tile
   !$omp unroll partial(2)
   do x = 1, i
-    v(x) = x(x) * 2
+    v(x) = v(x) * 2
   end do
 end subroutine
