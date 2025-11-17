@@ -50,6 +50,8 @@ def GFX10Gen : GFXGen<isGFX10Only, "GFX10", "_gfx10", SIEncodingFamily.GFX10>;
 // SI DAG Nodes
 //===----------------------------------------------------------------------===//
 
+// CLAMP value between 0.0 and 1.0. NaN clamped to 0, following clamp output
+// modifier behavior with dx10_enable.
 def AMDGPUclamp : SDNode<"AMDGPUISD::CLAMP", SDTFPUnaryOp>;
 
 def SDTSBufferLoad : SDTypeProfile<1, 3,
