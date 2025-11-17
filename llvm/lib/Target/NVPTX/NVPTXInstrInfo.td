@@ -101,12 +101,6 @@ def PrmtMode : Operand<i32> {
 // NVPTX Instruction Predicate Definitions
 //===----------------------------------------------------------------------===//
 
-// AnyPred - helper class to create an OR condition between multiple predicates.
-class AnyPred<list<Predicate> predicates> : Predicate<""> {
-  let CondString = !foldl("false", predicates, acc, pred, 
-                         acc # " || (" # pred.CondString # ")");
-}
-
 // Checks PTX version and family-specific and architecture-specific SM versions.
 // For example, sm_100{f/a} and any future variants in the same family will match
 // for any PTX version greater than or equal to `PTXVersion`.

@@ -2008,7 +2008,7 @@ def : Pat<(int_nvvm_ull2d_rp i64:$a), (CVT_f64_u64 $a, CvtRP)>;
 def : Pat<(int_nvvm_f2h_rn_ftz f32:$a), (CVT_f16_f32 $a, CvtRN_FTZ)>;
 def : Pat<(int_nvvm_f2h_rn f32:$a), (CVT_f16_f32 $a, CvtRN)>;
 
-let Predicates = [hasPTX<81>, hasSM<89>] in {
+let Predicates = [callSubtarget<"hasFP8ConversionSupport">] in {
   def : Pat<(int_nvvm_ff_to_e4m3x2_rn f32:$a, f32:$b),
             (CVT_e4m3x2_f32 $a, $b, CvtRN)>;
   def : Pat<(int_nvvm_ff_to_e4m3x2_rn_relu f32:$a, f32:$b),
@@ -2037,11 +2037,7 @@ let Predicates = [hasPTX<81>, hasSM<89>] in {
             (CVT_f16x2_e5m2x2 $a, CvtRN_RELU)>;
 }
 
-let Predicates = [AnyPred<[
-                    PTXWithFamilySMs<90, [100, 110, 120]>,
-                    PTXWithFamilySMs<88, [100, 101, 120]>,
-                    PTXWithAccelSMs<86, [100, 101, 120]>
-                  ]>] in {
+let Predicates = [callSubtarget<"hasNarrowFPConversionSupport">] in {
   def : Pat<(int_nvvm_ff_to_e2m3x2_rn_satfinite f32:$a, f32:$b),
             (CVT_e2m3x2_f32_sf $a, $b, CvtRN)>;
   def : Pat<(int_nvvm_ff_to_e2m3x2_rn_relu_satfinite f32:$a, f32:$b),
