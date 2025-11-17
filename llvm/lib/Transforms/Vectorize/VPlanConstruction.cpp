@@ -672,7 +672,7 @@ void VPlanTransforms::attachCheckBlock(VPlan &Plan, Value *Cond,
     MDBuilder MDB(Plan.getContext());
     MDNode *BranchWeights =
         MDB.createBranchWeights(CheckBypassWeights, /*IsExpected=*/false);
-    Term->addMetadata(LLVMContext::MD_prof, BranchWeights);
+    Term->setMetadata(LLVMContext::MD_prof, BranchWeights);
   }
 }
 
@@ -756,7 +756,7 @@ void VPlanTransforms::addMinimumIterationCheck(
     MDBuilder MDB(Plan.getContext());
     MDNode *BranchWeights = MDB.createBranchWeights(
         ArrayRef(MinItersBypassWeights, 2), /*IsExpected=*/false);
-    Term->addMetadata(LLVMContext::MD_prof, BranchWeights);
+    Term->setMetadata(LLVMContext::MD_prof, BranchWeights);
   }
 }
 
@@ -793,7 +793,7 @@ void VPlanTransforms::addMinimumVectorEpilogueIterationCheck(
   MDBuilder MDB(Plan.getContext());
   MDNode *BranchWeights =
       MDB.createBranchWeights(Weights, /*IsExpected=*/false);
-  Branch->addMetadata(LLVMContext::MD_prof, BranchWeights);
+  Branch->setMetadata(LLVMContext::MD_prof, BranchWeights);
 }
 
 /// If \p RedPhiR is used by a ComputeReductionResult recipe, return it.

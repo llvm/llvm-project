@@ -4458,7 +4458,7 @@ void VPlanTransforms::addBranchWeightToMiddleTerminator(
   MDBuilder MDB(Plan.getContext());
   MDNode *BranchWeights =
       MDB.createBranchWeights({1, VectorStep - 1}, /*IsExpected=*/false);
-  MiddleTerm->addMetadata(LLVMContext::MD_prof, BranchWeights);
+  MiddleTerm->setMetadata(LLVMContext::MD_prof, BranchWeights);
 }
 
 /// Create and return a ResumePhi for \p WideIV, unless it is truncated. If the
