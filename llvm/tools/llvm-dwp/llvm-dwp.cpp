@@ -176,8 +176,9 @@ int llvm_dwp_main(int argc, char **argv, const llvm::ToolContext &) {
       } else if (OptValue == "always") {
         Dwarf64StrOffsetsValue = Dwarf64StrOffsets::Always;
       } else {
-        llvm::errs() << "invalid value for --dwarf64-str-offsets. Valid values "
-            "are one of: \"enabled\", \"disabled\" or \"always\".\n";
+        llvm::errs()
+            << "invalid value for --dwarf64-str-offsets. Valid values "
+               "are one of: \"enabled\", \"disabled\" or \"always\".\n";
         exit(1);
       }
     }
@@ -296,8 +297,8 @@ int llvm_dwp_main(int argc, char **argv, const llvm::ToolContext &) {
   if (!MS)
     return error("no object streamer for target " + TripleName, Context);
 
-  if (auto Err = write(*MS, DWOFilenames, OverflowOptValue,
-                       Dwarf64StrOffsetsValue)) {
+  if (auto Err =
+          write(*MS, DWOFilenames, OverflowOptValue, Dwarf64StrOffsetsValue)) {
     logAllUnhandledErrors(std::move(Err), WithColor::error());
     return 1;
   }
