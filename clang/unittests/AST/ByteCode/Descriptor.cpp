@@ -1,5 +1,6 @@
 #include "../../../lib/AST/ByteCode/Descriptor.h"
 #include "../../../lib/AST/ByteCode/Context.h"
+#include "../../../lib/AST/ByteCode/Integral.h"
 #include "../../../lib/AST/ByteCode/Program.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
@@ -356,7 +357,7 @@ TEST(Descriptor, Primitives) {
     // Last element of the first dimension.
     const Pointer &PE1 = PF4.atIndex(0).narrow().atIndex(2);
     ASSERT_TRUE(PE1.isLive());
-    ASSERT_EQ(PE1.deref<short>(), 3);
+    ASSERT_EQ(static_cast<int>(PE1.deref < Integral<16, true>()), 3);
     ASSERT_EQ(PE1.getArray(), NE1);
     ASSERT_EQ(PE1.getIndex(), 2u);
 
@@ -389,7 +390,7 @@ TEST(Descriptor, Primitives) {
     // Last element of the last dimension
     const Pointer &PE3 = PF4.atIndex(2).narrow().atIndex(2);
     ASSERT_TRUE(PE3.isLive());
-    ASSERT_EQ(PE3.deref<short>(), 9);
+    ASSERT_EQ(static_cast<int>(PE3.deref < Integral<16, true>()), 9);
     ASSERT_EQ(PE3.getArray(), NE3);
     ASSERT_EQ(PE3.getIndex(), 2u);
   }

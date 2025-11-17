@@ -28,6 +28,7 @@ class FunctionPointer;
 class MemberPointer;
 class FixedPoint;
 template <bool Signed> class IntegralAP;
+template <bool Signed> class Char;
 template <unsigned Bits, bool Signed> class Integral;
 
 /// Enumeration of the primitive types of the VM.
@@ -135,13 +136,22 @@ constexpr bool needsAlloc(PrimType T) {
   return T == PT_IntAP || T == PT_IntAPS || T == PT_Float || T == PT_MemberPtr;
 }
 
+template <typename T> constexpr bool isIntegralOrPointer() {
+  return std::is_same_v<T, Integral<16, false>> ||
+         std::is_same_v<T, Integral<16, true>> ||
+         std::is_same_v<T, Integral<32, false>> ||
+         std::is_same_v<T, Integral<32, true>> ||
+         std::is_same_v<T, Integral<64, false>> ||
+         std::is_same_v<T, Integral<64, true>>;
+}
+
 /// Mapping from primitive types to their representation.
 template <PrimType T> struct PrimConv;
 template <> struct PrimConv<PT_Sint8> {
-  using T = Integral<8, true>;
+  using T = Char<true>;
 };
 template <> struct PrimConv<PT_Uint8> {
-  using T = Integral<8, false>;
+  using T = Char<false>;
 };
 template <> struct PrimConv<PT_Sint16> {
   using T = Integral<16, true>;
@@ -244,6 +254,22 @@ static inline bool aligned(const void *P) {
       TYPE_SWITCH_CASE(PT_IntAP, B)                                            \
       TYPE_SWITCH_CASE(PT_IntAPS, B)                                           \
       TYPE_SWITCH_CASE(PT_Bool, B)                                             \
+    default:                                                                   \
+      llvm_unreachable("Not an integer value");                                \
+    }                                                                          \
+  } while (0)
+
+#define FIXED_SIZE_INT_TYPE_SWITCH(Expr, B)                                    \
+  do {                                                                         \
+    switch (Expr) {                                                            \
+      TYPE_SWITCH_CASE(PT_Sint8, B)                                            \
+      TYPE_SWITCH_CASE(PT_Uint8, B)                                            \
+      TYPE_SWITCH_CASE(PT_Sint16, B)                                           \
+      TYPE_SWITCH_CASE(PT_Uint16, B)                                           \
+      TYPE_SWITCH_CASE(PT_Sint32, B)                                           \
+      TYPE_SWITCH_CASE(PT_Uint32, B)                                           \
+      TYPE_SWITCH_CASE(PT_Sint64, B)                                           \
+      TYPE_SWITCH_CASE(PT_Uint64, B)                                           \
     default:                                                                   \
       llvm_unreachable("Not an integer value");                                \
     }                                                                          \
