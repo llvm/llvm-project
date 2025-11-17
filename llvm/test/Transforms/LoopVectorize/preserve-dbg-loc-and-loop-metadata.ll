@@ -224,7 +224,7 @@ define void @predicated_phi_dbg(i64 %n, ptr %x) {
 ; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr i64, ptr [[X]], i64 [[INDEX]]
 ; CHECK-NEXT:    store <4 x i64> [[PREDPHI]], ptr [[TMP21]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4)
 ; CHECK-NEXT:    [[TMP22:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP22]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
@@ -304,7 +304,7 @@ define void @predicated_phi_dbg(i64 %n, ptr %x) {
 ; DEBUGLOC-NEXT:    [[TMP21:%.*]] = getelementptr i64, ptr [[X]], i64 [[INDEX]], !dbg [[DBG57:![0-9]+]]
 ; DEBUGLOC-NEXT:    store <4 x i64> [[PREDPHI]], ptr [[TMP21]], align 8, !dbg [[DBG58:![0-9]+]]
 ; DEBUGLOC-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4, !dbg [[DBG53]]
-; DEBUGLOC-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 4), !dbg [[DBG53]]
+; DEBUGLOC-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4), !dbg [[DBG53]]
 ; DEBUGLOC-NEXT:    [[TMP22:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]], !dbg [[DBG59:![0-9]+]]
 ; DEBUGLOC-NEXT:    br i1 [[TMP22]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !dbg [[DBG59]], !llvm.loop [[LOOP60:![0-9]+]]
 ; DEBUGLOC:       [[MIDDLE_BLOCK]]:
@@ -385,7 +385,7 @@ define void @scalar_cast_dbg(ptr nocapture %a, i32 %start, i64 %k) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[TMP5]]
 ; CHECK-NEXT:    store <4 x i32> [[VEC_IND]], ptr [[TMP6]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IND]], splat (i32 4)
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i32> [[VEC_IND]], splat (i32 4)
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
@@ -428,7 +428,7 @@ define void @scalar_cast_dbg(ptr nocapture %a, i32 %start, i64 %k) {
 ; DEBUGLOC-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[TMP5]], !dbg [[DBG77:![0-9]+]]
 ; DEBUGLOC-NEXT:    store <4 x i32> [[VEC_IND]], ptr [[TMP6]], align 4, !dbg [[DBG78:![0-9]+]]
 ; DEBUGLOC-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4, !dbg [[DBG75]]
-; DEBUGLOC-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IND]], splat (i32 4), !dbg [[DBG76]]
+; DEBUGLOC-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i32> [[VEC_IND]], splat (i32 4), !dbg [[DBG76]]
 ; DEBUGLOC-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]], !dbg [[DBG79:![0-9]+]]
 ; DEBUGLOC-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !dbg [[DBG79]], !llvm.loop [[LOOP80:![0-9]+]]
 ; DEBUGLOC:       [[MIDDLE_BLOCK]]:

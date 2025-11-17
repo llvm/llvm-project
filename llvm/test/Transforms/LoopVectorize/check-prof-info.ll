@@ -17,7 +17,7 @@ define void @_Z3foov() {
 ; CHECK:  vector.ph:
 ; CHECK:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:  vector.body:
-; CHECK:    br i1 [[TMP6:%.*]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !prof [[PROF1:![0-9]+]], !llvm.loop [[LOOP2:![0-9]+]]
+; CHECK:    br i1 [[TMP4:%.*]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !prof [[PROF0:![0-9]+]], !llvm.loop [[LOOP1:![0-9]+]]
 ; CHECK:  middle.block:
 ; CHECK:    br label [[FOR_BODY:%.*]]
 ; CHECK:  for.cond.cleanup:
@@ -28,7 +28,7 @@ define void @_Z3foov() {
 ; CHECK-MASKED:  vector.ph:
 ; CHECK-MASKED:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-MASKED:  vector.body:
-; CHECK-MASKED:    br i1 [[TMP18:%.*]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !prof [[PROF1:![0-9]+]], !llvm.loop [[LOOP2:![0-9]+]]
+; CHECK-MASKED:    br i1 [[TMP16:%.*]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !prof [[PROF0:![0-9]+]], !llvm.loop [[LOOP1:![0-9]+]]
 ; CHECK-MASKED:  middle.block:
 ; CHECK-MASKED:    br label [[FOR_BODY:%.*]]
 ; CHECK-MASKED:  for.cond.cleanup:
@@ -41,15 +41,15 @@ define void @_Z3foov() {
 ; CHECK-SCALABLE:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 ; CHECK-SCALABLE:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-SCALABLE:  vector.body:
-; CHECK-SCALABLE:    [[VEC_IND_NEXT:%.*]] = add <vscale x 4 x i32> [[VEC_IND:%.*]], [[BROADCAST_SPLAT]]
-; CHECK-SCALABLE:    br i1 [[TMP16:%.*]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !prof [[PROF1:![0-9]+]], !llvm.loop [[LOOP2:![0-9]+]]
+; CHECK-SCALABLE:    [[VEC_IND_NEXT:%.*]] = add nuw nsw <vscale x 4 x i32> [[VEC_IND:%.*]], [[BROADCAST_SPLAT]]
+; CHECK-SCALABLE:    br i1 [[TMP11:%.*]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !prof [[PROF1:![0-9]+]], !llvm.loop [[LOOP2:![0-9]+]]
 ; CHECK-SCALABLE:  middle.block:
-; CHECK-SCALABLE:    br i1 [[CMP_N:%.*]], label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH]], !prof [[PROF5:![0-9]+]]
+; CHECK-SCALABLE:    br i1 [[CMP_N:%.*]], label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH]], !prof [[PROF6:![0-9]+]]
 ; CHECK-SCALABLE:  scalar.ph:
 ; CHECK-SCALABLE:    br label [[FOR_BODY:%.*]]
 ; CHECK-SCALABLE:  for.cond.cleanup:
 ; CHECK-SCALABLE:  for.body:
-; CHECK-SCALABLE:    br i1 [[EXITCOND:%.*]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], !prof [[PROF6:![0-9]+]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK-SCALABLE:    br i1 [[EXITCOND:%.*]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], !prof [[PROF7:![0-9]+]], !llvm.loop [[LOOP8:![0-9]+]]
 ;
 entry:
   br label %for.body
@@ -80,14 +80,14 @@ define void @_Z3foo2v() {
 ; CHECK:  vector.ph:
 ; CHECK:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:  vector.body:
-; CHECK:    br i1 [[TMP6:%.*]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !prof [[PROF1]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK:    br i1 [[TMP4:%.*]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !prof [[PROF0]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:  middle.block:
-; CHECK:    br label [[SCALAR_PH:%.+]]
+; CHECK:    br label [[SCALAR_PH:%.*]]
 ; CHECK:  scalar.ph:
 ; CHECK:    br label [[FOR_BODY:%.*]]
 ; CHECK:  for.cond.cleanup:
 ; CHECK:  for.body:
-; CHECK:    br i1 [[EXITCOND:%.*]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY]], !prof [[PROF8:![0-9]+]], !llvm.loop [[LOOP9:![0-9]+]]
+; CHECK:    br i1 [[EXITCOND:%.*]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY]], !prof [[PROF6:![0-9]+]], !llvm.loop [[LOOP7:![0-9]+]]
 ;
 ; CHECK-MASKED-LABEL: @_Z3foo2v(
 ; CHECK-MASKED:  entry:
@@ -95,14 +95,14 @@ define void @_Z3foo2v() {
 ; CHECK-MASKED:  vector.ph:
 ; CHECK-MASKED:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-MASKED:  vector.body:
-; CHECK-MASKED:    br i1 [[TMP18:%.*]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !prof [[PROF1]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK-MASKED:    br i1 [[TMP16:%.*]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !prof [[PROF0]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK-MASKED:  middle.block:
-; CHECK-MASKED:    br label [[SCALAR_PH:%.+]]
+; CHECK-MASKED:    br label [[SCALAR_PH:%.*]]
 ; CHECK-MASKED:  scalar.ph:
 ; CHECK-MASKED:    br label [[FOR_BODY:%.*]]
 ; CHECK-MASKED:  for.cond.cleanup:
 ; CHECK-MASKED:  for.body:
-; CHECK-MASKED:    br i1 [[EXITCOND:%.*]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY]], !prof [[PROF8:![0-9]+]], !llvm.loop [[LOOP9:![0-9]+]]
+; CHECK-MASKED:    br i1 [[EXITCOND:%.*]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY]], !prof [[PROF6:![0-9]+]], !llvm.loop [[LOOP7:![0-9]+]]
 ;
 ; CHECK-SCALABLE-LABEL: @_Z3foo2v(
 ; CHECK-SCALABLE:  entry:
@@ -112,15 +112,15 @@ define void @_Z3foo2v() {
 ; CHECK-SCALABLE:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 ; CHECK-SCALABLE:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-SCALABLE:  vector.body:
-; CHECK-SCALABLE:    [[VEC_IND_NEXT:%.*]] = add <vscale x 4 x i32> [[VEC_IND:%.*]], [[BROADCAST_SPLAT]]
-; CHECK-SCALABLE:    br i1 [[TMP16:%.*]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !prof [[PROF1]], !llvm.loop [[LOOP8:![0-9]+]]
+; CHECK-SCALABLE:    [[VEC_IND_NEXT:%.*]] = add nuw nsw <vscale x 4 x i32> [[VEC_IND:%.*]], [[BROADCAST_SPLAT]]
+; CHECK-SCALABLE:    br i1 [[TMP11:%.*]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !prof [[PROF1]], !llvm.loop [[LOOP10:![0-9]+]]
 ; CHECK-SCALABLE:  middle.block:
-; CHECK-SCALABLE:    br i1 [[CMP_N:%.*]], label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH]], !prof [[PROF5]]
+; CHECK-SCALABLE:    br i1 [[CMP_N:%.*]], label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH]], !prof [[PROF6]]
 ; CHECK-SCALABLE:  scalar.ph:
 ; CHECK-SCALABLE:    br label [[FOR_BODY:%.*]]
 ; CHECK-SCALABLE:  for.cond.cleanup:
 ; CHECK-SCALABLE:  for.body:
-; CHECK-SCALABLE:    br i1 [[EXITCOND:%.*]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], !prof [[PROF9:![0-9]+]], !llvm.loop [[LOOP10:![0-9]+]]
+; CHECK-SCALABLE:    br i1 [[EXITCOND:%.*]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], !prof [[PROF11:![0-9]+]], !llvm.loop [[LOOP12:![0-9]+]]
 ;
 entry:
   br label %for.body

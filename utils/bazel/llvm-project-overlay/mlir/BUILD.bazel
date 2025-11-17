@@ -9860,6 +9860,7 @@ cc_library(
     deps = [
         ":SparseTensorEnums",
         ":SparseTensorRuntime",
+        ":mlir_apfloat_utils",
         ":mlir_float16_utils",
         "//llvm:Support",
     ],

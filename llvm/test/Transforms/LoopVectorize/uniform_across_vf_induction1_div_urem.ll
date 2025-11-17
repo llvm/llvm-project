@@ -53,7 +53,7 @@ define void @ld_div2_urem3_1(ptr noalias %A, ptr noalias %B) {
 ; CHECK-NEXT:    [[TMP35:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[INDEX]]
 ; CHECK-NEXT:    store <8 x i64> [[TMP34]], ptr [[TMP35]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <8 x i64> [[VEC_IND]], splat (i64 8)
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nsw <8 x i64> [[VEC_IND]], splat (i64 8)
 ; CHECK-NEXT:    [[TMP36:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[TMP36]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
@@ -129,7 +129,7 @@ define void @ld_div2_urem3_2(ptr noalias %A, ptr noalias %B) {
 ; CHECK-NEXT:    [[TMP36:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[INDEX]]
 ; CHECK-NEXT:    store <8 x i64> [[TMP35]], ptr [[TMP36]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <8 x i64> [[VEC_IND]], splat (i64 8)
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nsw <8 x i64> [[VEC_IND]], splat (i64 8)
 ; CHECK-NEXT:    [[TMP37:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[TMP37]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       middle.block:
@@ -203,7 +203,7 @@ define void @ld_div4(ptr noalias %A, ptr noalias %B) {
 ; CHECK-NEXT:    [[TMP34:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[INDEX]]
 ; CHECK-NEXT:    store <8 x i64> [[TMP33]], ptr [[TMP34]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <8 x i64> [[VEC_IND]], splat (i64 8)
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nsw <8 x i64> [[VEC_IND]], splat (i64 8)
 ; CHECK-NEXT:    [[TMP35:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[TMP35]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       middle.block:

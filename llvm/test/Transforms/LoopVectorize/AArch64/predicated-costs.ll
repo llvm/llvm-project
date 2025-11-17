@@ -320,7 +320,7 @@ define void @srem_sdiv_without_tail_folding(i32 %d.0, i32 %d.1, ptr %dst, i32 %e
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE12]]
 ; CHECK:       [[PRED_STORE_CONTINUE12]]:
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IND]], splat (i32 4)
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i32> [[VEC_IND]], splat (i32 4)
 ; CHECK-NEXT:    [[TMP42:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP42]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:

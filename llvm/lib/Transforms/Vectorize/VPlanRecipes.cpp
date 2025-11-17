@@ -2387,7 +2387,9 @@ void VPWidenIntOrFpInductionRecipe::printRecipe(
     raw_ostream &O, const Twine &Indent, VPSlotTracker &SlotTracker) const {
   O << Indent;
   printAsOperand(O, SlotTracker);
-  O << " = WIDEN-INDUCTION  ";
+  O << " = WIDEN-INDUCTION";
+  printFlags(O);
+  O << " ";
   printOperands(O, SlotTracker);
 
   if (auto *TI = getTruncInst())
