@@ -538,6 +538,7 @@ unsigned VPInstruction::getNumOperandsForOpcode(unsigned Opcode) {
   case Instruction::Load:
   case VPInstruction::AnyOf:
   case VPInstruction::BranchOnCond:
+  case VPInstruction::Broadcast:
   case VPInstruction::BuildStructVector:
   case VPInstruction::BuildVector:
   case VPInstruction::CalculateTripCountMinusVF:
@@ -548,13 +549,16 @@ unsigned VPInstruction::getNumOperandsForOpcode(unsigned Opcode) {
   case VPInstruction::ExtractPenultimateElement:
   case VPInstruction::FirstActiveLane:
   case VPInstruction::Not:
+  case VPInstruction::ResumeForEpilogue:
   case VPInstruction::Unpack:
     return 1;
   case Instruction::ICmp:
   case Instruction::FCmp:
+  case Instruction::ExtractElement:
   case Instruction::Store:
   case VPInstruction::BranchOnCount:
   case VPInstruction::ComputeReductionResult:
+  case VPInstruction::ExtractLane:
   case VPInstruction::FirstOrderRecurrenceSplice:
   case VPInstruction::LogicalAnd:
   case VPInstruction::PtrAdd:
@@ -572,6 +576,8 @@ unsigned VPInstruction::getNumOperandsForOpcode(unsigned Opcode) {
   case Instruction::GetElementPtr:
   case Instruction::PHI:
   case Instruction::Switch:
+  case VPInstruction::SLPLoad:
+  case VPInstruction::SLPStore:
     // Cannot determine the number of operands from the opcode.
     return -1u;
   }
@@ -821,10 +827,9 @@ Value *VPInstruction::generate(VPTransformState &State) {
     auto *OrigPhi = cast<PHINode>(PhiR->getUnderlyingValue());
     Value *ReducedPartRdx = State.get(getOperand(2));
     for (unsigned Idx = 3; Idx < getNumOperands(); ++Idx)
-      ReducedPartRdx = Builder.CreateBinOp(
-          (Instruction::BinaryOps)RecurrenceDescriptor::getOpcode(
-              RecurKind::AnyOf),
-          State.get(getOperand(Idx)), ReducedPartRdx, "bin.rdx");
+      ReducedPartRdx =
+          Builder.CreateBinOp(Instruction::Or, State.get(getOperand(Idx)),
+                              ReducedPartRdx, "bin.rdx");
     return createAnyOfReduction(Builder, ReducedPartRdx,
                                 State.get(getOperand(1), VPLane(0)), OrigPhi);
   }

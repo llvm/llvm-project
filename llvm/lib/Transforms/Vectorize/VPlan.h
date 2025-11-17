@@ -1105,8 +1105,7 @@ private:
 public:
   VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands,
                 DebugLoc DL = DebugLoc::getUnknown(), const Twine &Name = "")
-      : VPRecipeWithIRFlags(VPDef::VPInstructionSC, Operands, DL),
-        VPIRMetadata(), Opcode(Opcode), Name(Name.str()) {}
+      : VPInstruction(Opcode, Operands, {}, {}, DL, Name) {}
 
   VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands,
                 const VPIRFlags &Flags, const VPIRMetadata &MD = {},
@@ -4214,10 +4213,9 @@ public:
 
   /// Construct a VPlan with a new VPBasicBlock as entry, a VPIRBasicBlock
   /// wrapping \p ScalarHeaderBB and a trip count of \p TC.
-  VPlan(BasicBlock *ScalarHeaderBB, VPValue *TC) {
+  VPlan(BasicBlock *ScalarHeaderBB) {
     setEntry(createVPBasicBlock("preheader"));
     ScalarHeader = createVPIRBasicBlock(ScalarHeaderBB);
-    TripCount = TC;
   }
 
   LLVM_ABI_FOR_TEST ~VPlan();
