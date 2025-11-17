@@ -1546,12 +1546,12 @@ multiclass ExtAddPairwiseShuffle<ValueType from_ty, ValueType to_ty, string suff
                               int b0, int b1, int b2, int b3, int b4, int b5, int b6, int b7> {
   foreach sign = ["s", "u"] in {
     def : Pat<(to_ty (add
-                    (!cast<SDNode>("extend_low_"#sign) (from_ty (wasm_shuffle (from_ty V128:$vec), (from_ty V128:$undef),
+                    (!cast<SDNode>("extend_low_"#sign) (from_ty (wasm_shuffle (from_ty V128:$vec), (from_ty srcvalue),
                                   (i32 a0), (i32 a1), (i32 a2), (i32 a3),
                                   (i32 a4), (i32 a5), (i32 a6), (i32 a7),
                                   (i32 srcvalue), (i32 srcvalue), (i32 srcvalue), (i32 srcvalue),
                                   (i32 srcvalue), (i32 srcvalue), (i32 srcvalue), (i32 srcvalue)))),
-                    (!cast<SDNode>("extend_low_"#sign) (from_ty (wasm_shuffle (from_ty V128:$vec), (from_ty V128:$undef),
+                    (!cast<SDNode>("extend_low_"#sign) (from_ty (wasm_shuffle (from_ty V128:$vec), (from_ty srcvalue),
                                   (i32 b0), (i32 b1), (i32 b2), (i32 b3),
                                   (i32 b4), (i32 b5), (i32 b6), (i32 b7),
                                   (i32 srcvalue), (i32 srcvalue), (i32 srcvalue), (i32 srcvalue),
