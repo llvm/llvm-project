@@ -83,7 +83,7 @@ def NVVM_Dialect : Dialect {
 
     **Memory Spaces:** The NVVM dialect introduces the following memory spaces,
     each with distinct scopes and lifetimes:
-
+```
     | Memory Space      | Address Space | Scope                | Lifetime          |
     |-------------------|---------------|----------------------|-------------------|
     | `generic`         | 0             | All threads          | Context-dependent |
@@ -93,7 +93,7 @@ def NVVM_Dialect : Dialect {
     | `local`           | 5             | Single thread        | Kernel execution  |
     | `tensor`          | 6             | Thread block (CTA)   | Kernel execution  |
     | `shared_cluster`  | 7             | Thread block cluster | Kernel execution  |
-
+```
     **Memory Space Details:**
     - **generic**: Can point to any memory space; requires runtime resolution of
       actual address space. Use when pointer origin is unknown at compile time.
