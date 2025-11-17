@@ -20130,6 +20130,30 @@ EnumConstantDecl *Sema::CheckEnumConstant(EnumDecl *Enum,
     Val = DefaultLvalueConversion(Val).get();
 
   if (Val) {
+    if (const BinaryOperator *BinOp =
+            dyn_cast<BinaryOperator>(Val->IgnoreParenImpCasts())) {
+      if (BinOp->getOpcode() == BO_LT || BinOp->getOpcode() == BO_GT) {
+        const Expr *LHS = BinOp->getLHS()->IgnoreParenImpCasts();
+        if (const auto *IntLiteral = dyn_cast<IntegerLiteral>(LHS)) {
+          if (IntLiteral->getValue() == 1) {
+            auto suggestedOp = (BinOp->getOpcode() == BO_LT)
+                                   ? BinaryOperator::getOpcodeStr(BO_Shl)
+                                   : BinaryOperator::getOpcodeStr(BO_Shr);
+            SourceLocation OperatorLoc = BinOp->getOperatorLoc();
+
+            Diag(OperatorLoc, diag::warn_comparison_in_enum_initializer)
+                << BinOp->getOpcodeStr() << suggestedOp;
+
+            Diag(OperatorLoc, diag::note_enum_compare_typo_suggest)
+                << suggestedOp
+                << FixItHint::CreateReplacement(OperatorLoc, suggestedOp);
+          }
+        }
+      }
+    }
+  }
+
+  if (Val) {
     if (Enum->isDependentType() || Val->isTypeDependent() ||
         Val->containsErrors())
       EltTy = Context.DependentTy;
