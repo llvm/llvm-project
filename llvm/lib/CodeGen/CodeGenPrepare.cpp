@@ -6400,7 +6400,8 @@ bool CodeGenPrepare::optimizeGatherScatterInst(Instruction *MemoryInst,
 // of the intrinsic which are the extract instructions.
 static bool matchOverflowPattern(Instruction *&I, ExtractValueInst *&MulExtract,
                                  ExtractValueInst *&OverflowExtract) {
-  if (I->getNumUses() > 2)
+  // Bail out if it's more than 2 users:
+  if (I->hasNUsesOrMore(3))
     return false;
 
   for (User *U : I->users()) {
