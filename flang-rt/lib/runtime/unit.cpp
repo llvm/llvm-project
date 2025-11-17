@@ -783,8 +783,11 @@ void ExternalFileUnit::DoEndfile(IoErrorHandler &handler) {
   frameOffsetInFile_ += recordOffsetInFrame_ + furthestPositionInRecord;
   recordOffsetInFrame_ = 0;
   FlushOutput(handler);
-  Truncate(frameOffsetInFile_, handler);
-  TruncateFrame(frameOffsetInFile_, handler);
+  if (access != Access::Stream || executionEnvironment.truncateStream) {
+    // Stream output after positioning truncates with some compilers.
+    Truncate(frameOffsetInFile_, handler);
+    TruncateFrame(frameOffsetInFile_, handler);
+  }
   BeginRecord();
   impliedEndfile_ = false;
   anyWriteSinceLastPositioning_ = false;
