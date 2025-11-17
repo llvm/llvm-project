@@ -24,7 +24,7 @@ enum OnCuIndexOverflow {
 
 enum Dwarf64StrOffsets {
   Disabled, ///< Don't do any conversion of .debug_str_offsets tables.
-  Enabled,  ///< Convert any .debug_str_offsets tables to DWARD64 if needed.
+  Enabled,  ///< Convert any .debug_str_offsets tables to DWARF64 if needed.
   Always,   ///< Always emit .debug_str_offsets talbes as DWARF64 for testing.
 };
 
