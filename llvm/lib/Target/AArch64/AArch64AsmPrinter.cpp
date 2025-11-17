@@ -2677,23 +2677,32 @@ AArch64AsmPrinter::lowerBlockAddressConstant(const BlockAddress &BA) {
 
 void AArch64AsmPrinter::emitCBPseudoExpansion(const MachineInstr *MI) {
   bool IsImm = false;
-  bool Is32Bit = false;
+  unsigned Width = 0;
 
   switch (MI->getOpcode()) {
   default:
     llvm_unreachable("This is not a CB pseudo instruction");
+  case AArch64::CBBAssertExt:
+    IsImm = false;
+    Width = 8;
+    break;
+  case AArch64::CBHAssertExt:
+    IsImm = false;
+    Width = 16;
+    break;
   case AArch64::CBWPrr:
-    Is32Bit = true;
+    Width = 32;
     break;
   case AArch64::CBXPrr:
-    Is32Bit = false;
+    Width = 64;
     break;
   case AArch64::CBWPri:
     IsImm = true;
-    Is32Bit = true;
+    Width = 32;
     break;
   case AArch64::CBXPri:
     IsImm = true;
+    Width = 64;
     break;
   }
 
@@ -2703,61 +2712,61 @@ void AArch64AsmPrinter::emitCBPseudoExpansion(const MachineInstr *MI) {
   bool NeedsImmDec = false;
   bool NeedsImmInc = false;
 
+#define GET_CB_OPC(IsImm, Width, ImmCond, RegCond)                             \
+  (IsImm                                                                       \
+       ? (Width == 32 ? AArch64::CB##ImmCond##Wri : AArch64::CB##ImmCond##Xri) \
+       : (Width == 8                                                           \
+              ? AArch64::CBB##RegCond##Wrr                                     \
+              : (Width == 16 ? AArch64::CBH##RegCond##Wrr                      \
+                             : (Width == 32 ? AArch64::CB##RegCond##Wrr        \
+                                            : AArch64::CB##RegCond##Xrr))))
+  unsigned MCOpC;
+
   // Decide if we need to either swap register operands or increment/decrement
   // immediate operands
-  unsigned MCOpC;
   switch (CC) {
   default:
     llvm_unreachable("Invalid CB condition code");
   case AArch64CC::EQ:
-    MCOpC = IsImm ? (Is32Bit ? AArch64::CBEQWri : AArch64::CBEQXri)
-                  : (Is32Bit ? AArch64::CBEQWrr : AArch64::CBEQXrr);
+    MCOpC = GET_CB_OPC(IsImm, Width, /* Reg-Imm */ EQ, /* Reg-Reg */ EQ);
     break;
   case AArch64CC::NE:
-    MCOpC = IsImm ? (Is32Bit ? AArch64::CBNEWri : AArch64::CBNEXri)
-                  : (Is32Bit ? AArch64::CBNEWrr : AArch64::CBNEXrr);
+    MCOpC = GET_CB_OPC(IsImm, Width, /* Reg-Imm */ NE, /* Reg-Reg */ NE);
     break;
   case AArch64CC::HS:
-    MCOpC = IsImm ? (Is32Bit ? AArch64::CBHIWri : AArch64::CBHIXri)
-                  : (Is32Bit ? AArch64::CBHSWrr : AArch64::CBHSXrr);
+    MCOpC = GET_CB_OPC(IsImm, Width, /* Reg-Imm */ HI, /* Reg-Reg */ HS);
     NeedsImmDec = IsImm;
     break;
   case AArch64CC::LO:
-    MCOpC = IsImm ? (Is32Bit ? AArch64::CBLOWri : AArch64::CBLOXri)
-                  : (Is32Bit ? AArch64::CBHIWrr : AArch64::CBHIXrr);
+    MCOpC = GET_CB_OPC(IsImm, Width, /* Reg-Imm */ LO, /* Reg-Reg */ HI);
     NeedsRegSwap = !IsImm;
     break;
   case AArch64CC::HI:
-    MCOpC = IsImm ? (Is32Bit ? AArch64::CBHIWri : AArch64::CBHIXri)
-                  : (Is32Bit ? AArch64::CBHIWrr : AArch64::CBHIXrr);
+    MCOpC = GET_CB_OPC(IsImm, Width, /* Reg-Imm */ HI, /* Reg-Reg */ HI);
     break;
   case AArch64CC::LS:
-    MCOpC = IsImm ? (Is32Bit ? AArch64::CBLOWri : AArch64::CBLOXri)
-                  : (Is32Bit ? AArch64::CBHSWrr : AArch64::CBHSXrr);
+    MCOpC = GET_CB_OPC(IsImm, Width, /* Reg-Imm */ LO, /* Reg-Reg */ HS);
     NeedsRegSwap = !IsImm;
     NeedsImmInc = IsImm;
     break;
   case AArch64CC::GE:
-    MCOpC = IsImm ? (Is32Bit ? AArch64::CBGTWri : AArch64::CBGTXri)
-                  : (Is32Bit ? AArch64::CBGEWrr : AArch64::CBGEXrr);
+    MCOpC = GET_CB_OPC(IsImm, Width, /* Reg-Imm */ GT, /* Reg-Reg */ GE);
     NeedsImmDec = IsImm;
     break;
   case AArch64CC::LT:
-    MCOpC = IsImm ? (Is32Bit ? AArch64::CBLTWri : AArch64::CBLTXri)
-                  : (Is32Bit ? AArch64::CBGTWrr : AArch64::CBGTXrr);
+    MCOpC = GET_CB_OPC(IsImm, Width, /* Reg-Imm */ LT, /* Reg-Reg */ GT);
     NeedsRegSwap = !IsImm;
     break;
   case AArch64CC::GT:
-    MCOpC = IsImm ? (Is32Bit ? AArch64::CBGTWri : AArch64::CBGTXri)
-                  : (Is32Bit ? AArch64::CBGTWrr : AArch64::CBGTXrr);
+    MCOpC = GET_CB_OPC(IsImm, Width, /* Reg-Imm */ GT, /* Reg-Reg */ GT);
     break;
   case AArch64CC::LE:
-    MCOpC = IsImm ? (Is32Bit ? AArch64::CBLTWri : AArch64::CBLTXri)
-                  : (Is32Bit ? AArch64::CBGEWrr : AArch64::CBGEXrr);
+    MCOpC = GET_CB_OPC(IsImm, Width, /* Reg-Imm */ LT, /* Reg-Reg */ GE);
     NeedsRegSwap = !IsImm;
     NeedsImmInc = IsImm;
     break;
   }
+#undef GET_CB_OPC
 
   MCInst Inst;
   Inst.setOpcode(MCOpC);
@@ -3438,6 +3447,8 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
   }
   case AArch64::CBWPri:
   case AArch64::CBXPri:
+  case AArch64::CBBAssertExt:
+  case AArch64::CBHAssertExt:
   case AArch64::CBWPrr:
   case AArch64::CBXPrr:
     emitCBPseudoExpansion(MI);
