@@ -1511,6 +1511,10 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
     CmdArgs.push_back("-mllvm");
     CmdArgs.push_back("-tysan-outline-instrumentation");
   }
+  else{
+    CmdArgs.push_back("-mllvm");
+    CmdArgs.push_back("-tysan-outline-instrumentation=false");
+  }
 
   // When emitting Stable ABI instrumentation, force outlining calls and avoid
   // inlining shadow memory poisoning. While this is a big performance burden

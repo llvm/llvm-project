@@ -217,6 +217,8 @@ Changes to BOLT
 Changes to Sanitizers
 ---------------------
 
+* TypeSanitizer no longer inlines all instrumentation by default
+
 Other Changes
 -------------
 

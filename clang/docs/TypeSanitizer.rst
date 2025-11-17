@@ -187,10 +187,6 @@ Limitations
   shadow memory for each byte of user memory.
 * There are transformation passes which run before TypeSanitizer. If these 
   passes optimize out an aliasing violation, TypeSanitizer cannot catch it.
-* Currently, all instrumentation is inlined. This can result in a **15x** 
-  (on average) increase in generated file size, and **3x** to **7x** increase 
-  in compile time. In some documented cases this can cause the compiler to hang.
-  There are plans to improve this in the future.
 * Codebases that use unions and struct-initialized variables can see incorrect 
   results, as TypeSanitizer doesn't yet instrument these reliably.
 * Since Clang & LLVM's TBAA system is used to generate the checks used by the 
