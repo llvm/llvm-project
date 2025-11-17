@@ -13,10 +13,12 @@
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/Dominance.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
+#include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Interfaces/Utils/InferIntRangeCommon.h"
@@ -793,8 +795,32 @@ bool CastOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
   return false;
 }
 
+static OpFoldResult foldUseDominateCast(CastOp castOp) {
+  auto funcOp = castOp->getParentOfType<FunctionOpInterface>();
+  if (!funcOp)
+    return {};
+  auto castOps = castOp->getBlock()->getOps<CastOp>();
+  CastOp dominateCastOp = castOp;
+  SmallVector<CastOp> ops(castOps);
+  mlir::DominanceInfo dominanceInfo(castOp);
+  for (auto it : castOps) {
+    if (it.getSource() == dominateCastOp.getSource() &&
+        it.getDest().getType() == dominateCastOp.getDest().getType() &&
+        dominanceInfo.dominates(it.getOperation(),
+                                dominateCastOp.getOperation())) {
+      dominateCastOp = it;
+    }
+  }
+  return dominateCastOp == castOp ? Value() : dominateCastOp.getResult();
+}
+
 OpFoldResult CastOp::fold(FoldAdaptor adaptor) {
-  return succeeded(foldMemRefCast(*this)) ? getResult() : Value();
+  OpFoldResult result;
+  if (OpFoldResult value = foldUseDominateCast(*this))
+    result = value;
+  if (succeeded(foldMemRefCast(*this)))
+    result = getResult();
+  return result;
 }
 
 FailureOr<std::optional<SmallVector<Value>>>
