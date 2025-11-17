@@ -11,75 +11,165 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+d,+zfhmin,+zvfhmin,+zvfbfmin,+v \
 ; RUN:     -target-abi=lp64d -verify-machineinstrs < %s | FileCheck %s \
 ; RUN:     --check-prefixes=CHECK,ZVFHMIN
+; RUN: llc -mtriple=riscv32 -mattr=+d,+zfhmin,+zvfhmin,+experimental-zvfbfa,+v \
+; RUN:     -target-abi=ilp32d -verify-machineinstrs < %s | FileCheck %s \
+; RUN:     --check-prefixes=CHECK,ZVFBFA
+; RUN: llc -mtriple=riscv64 -mattr=+d,+zfhmin,+zvfhmin,+experimental-zvfbfa,+v \
+; RUN:     -target-abi=lp64d -verify-machineinstrs < %s | FileCheck %s \
+; RUN:     --check-prefixes=CHECK,ZVFBFA
 
 define <vscale x 1 x bfloat> @nxv1bf16(<vscale x 1 x bfloat> %v) {
-; CHECK-LABEL: nxv1bf16:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, 8
-; CHECK-NEXT:    addi a0, a0, -1
-; CHECK-NEXT:    vsetvli a1, zero, e16, mf4, ta, ma
-; CHECK-NEXT:    vand.vx v8, v8, a0
-; CHECK-NEXT:    ret
+; ZVFH-LABEL: nxv1bf16:
+; ZVFH:       # %bb.0:
+; ZVFH-NEXT:    lui a0, 8
+; ZVFH-NEXT:    addi a0, a0, -1
+; ZVFH-NEXT:    vsetvli a1, zero, e16, mf4, ta, ma
+; ZVFH-NEXT:    vand.vx v8, v8, a0
+; ZVFH-NEXT:    ret
+;
+; ZVFHMIN-LABEL: nxv1bf16:
+; ZVFHMIN:       # %bb.0:
+; ZVFHMIN-NEXT:    lui a0, 8
+; ZVFHMIN-NEXT:    addi a0, a0, -1
+; ZVFHMIN-NEXT:    vsetvli a1, zero, e16, mf4, ta, ma
+; ZVFHMIN-NEXT:    vand.vx v8, v8, a0
+; ZVFHMIN-NEXT:    ret
+;
+; ZVFBFA-LABEL: nxv1bf16:
+; ZVFBFA:       # %bb.0:
+; ZVFBFA-NEXT:    vsetvli a0, zero, e16alt, mf4, ta, ma
+; ZVFBFA-NEXT:    vfabs.v v8, v8
+; ZVFBFA-NEXT:    ret
   %r = call <vscale x 1 x bfloat> @llvm.fabs.nxv1bf16(<vscale x 1 x bfloat> %v)
   ret <vscale x 1 x bfloat> %r
 }
 
 define <vscale x 2 x bfloat> @nxv2bf16(<vscale x 2 x bfloat> %v) {
-; CHECK-LABEL: nxv2bf16:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, 8
-; CHECK-NEXT:    addi a0, a0, -1
-; CHECK-NEXT:    vsetvli a1, zero, e16, mf2, ta, ma
-; CHECK-NEXT:    vand.vx v8, v8, a0
-; CHECK-NEXT:    ret
+; ZVFH-LABEL: nxv2bf16:
+; ZVFH:       # %bb.0:
+; ZVFH-NEXT:    lui a0, 8
+; ZVFH-NEXT:    addi a0, a0, -1
+; ZVFH-NEXT:    vsetvli a1, zero, e16, mf2, ta, ma
+; ZVFH-NEXT:    vand.vx v8, v8, a0
+; ZVFH-NEXT:    ret
+;
+; ZVFHMIN-LABEL: nxv2bf16:
+; ZVFHMIN:       # %bb.0:
+; ZVFHMIN-NEXT:    lui a0, 8
+; ZVFHMIN-NEXT:    addi a0, a0, -1
+; ZVFHMIN-NEXT:    vsetvli a1, zero, e16, mf2, ta, ma
+; ZVFHMIN-NEXT:    vand.vx v8, v8, a0
+; ZVFHMIN-NEXT:    ret
+;
+; ZVFBFA-LABEL: nxv2bf16:
+; ZVFBFA:       # %bb.0:
+; ZVFBFA-NEXT:    vsetvli a0, zero, e16alt, mf2, ta, ma
+; ZVFBFA-NEXT:    vfabs.v v8, v8
+; ZVFBFA-NEXT:    ret
   %r = call <vscale x 2 x bfloat> @llvm.fabs.nxv2bf16(<vscale x 2 x bfloat> %v)
   ret <vscale x 2 x bfloat> %r
 }
 
 define <vscale x 4 x bfloat> @nxv4bf16(<vscale x 4 x bfloat> %v) {
-; CHECK-LABEL: nxv4bf16:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, 8
-; CHECK-NEXT:    addi a0, a0, -1
-; CHECK-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
-; CHECK-NEXT:    vand.vx v8, v8, a0
-; CHECK-NEXT:    ret
+; ZVFH-LABEL: nxv4bf16:
+; ZVFH:       # %bb.0:
+; ZVFH-NEXT:    lui a0, 8
+; ZVFH-NEXT:    addi a0, a0, -1
+; ZVFH-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
+; ZVFH-NEXT:    vand.vx v8, v8, a0
+; ZVFH-NEXT:    ret
+;
+; ZVFHMIN-LABEL: nxv4bf16:
+; ZVFHMIN:       # %bb.0:
+; ZVFHMIN-NEXT:    lui a0, 8
+; ZVFHMIN-NEXT:    addi a0, a0, -1
+; ZVFHMIN-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
+; ZVFHMIN-NEXT:    vand.vx v8, v8, a0
+; ZVFHMIN-NEXT:    ret
+;
+; ZVFBFA-LABEL: nxv4bf16:
+; ZVFBFA:       # %bb.0:
+; ZVFBFA-NEXT:    vsetvli a0, zero, e16alt, m1, ta, ma
+; ZVFBFA-NEXT:    vfabs.v v8, v8
+; ZVFBFA-NEXT:    ret
   %r = call <vscale x 4 x bfloat> @llvm.fabs.nxv4bf16(<vscale x 4 x bfloat> %v)
   ret <vscale x 4 x bfloat> %r
 }
 
 define <vscale x 8 x bfloat> @nxv8bf16(<vscale x 8 x bfloat> %v) {
-; CHECK-LABEL: nxv8bf16:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, 8
-; CHECK-NEXT:    addi a0, a0, -1
-; CHECK-NEXT:    vsetvli a1, zero, e16, m2, ta, ma
-; CHECK-NEXT:    vand.vx v8, v8, a0
-; CHECK-NEXT:    ret
+; ZVFH-LABEL: nxv8bf16:
+; ZVFH:       # %bb.0:
+; ZVFH-NEXT:    lui a0, 8
+; ZVFH-NEXT:    addi a0, a0, -1
+; ZVFH-NEXT:    vsetvli a1, zero, e16, m2, ta, ma
+; ZVFH-NEXT:    vand.vx v8, v8, a0
+; ZVFH-NEXT:    ret
+;
+; ZVFHMIN-LABEL: nxv8bf16:
+; ZVFHMIN:       # %bb.0:
+; ZVFHMIN-NEXT:    lui a0, 8
+; ZVFHMIN-NEXT:    addi a0, a0, -1
+; ZVFHMIN-NEXT:    vsetvli a1, zero, e16, m2, ta, ma
+; ZVFHMIN-NEXT:    vand.vx v8, v8, a0
+; ZVFHMIN-NEXT:    ret
+;
+; ZVFBFA-LABEL: nxv8bf16:
+; ZVFBFA:       # %bb.0:
+; ZVFBFA-NEXT:    vsetvli a0, zero, e16alt, m2, ta, ma
+; ZVFBFA-NEXT:    vfabs.v v8, v8
+; ZVFBFA-NEXT:    ret
   %r = call <vscale x 8 x bfloat> @llvm.fabs.nxv8bf16(<vscale x 8 x bfloat> %v)
   ret <vscale x 8 x bfloat> %r
 }
 
 define <vscale x 16 x bfloat> @nxv16bf16(<vscale x 16 x bfloat> %v) {
-; CHECK-LABEL: nxv16bf16:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, 8
-; CHECK-NEXT:    addi a0, a0, -1
-; CHECK-NEXT:    vsetvli a1, zero, e16, m4, ta, ma
-; CHECK-NEXT:    vand.vx v8, v8, a0
-; CHECK-NEXT:    ret
+; ZVFH-LABEL: nxv16bf16:
+; ZVFH:       # %bb.0:
+; ZVFH-NEXT:    lui a0, 8
+; ZVFH-NEXT:    addi a0, a0, -1
+; ZVFH-NEXT:    vsetvli a1, zero, e16, m4, ta, ma
+; ZVFH-NEXT:    vand.vx v8, v8, a0
+; ZVFH-NEXT:    ret
+;
+; ZVFHMIN-LABEL: nxv16bf16:
+; ZVFHMIN:       # %bb.0:
+; ZVFHMIN-NEXT:    lui a0, 8
+; ZVFHMIN-NEXT:    addi a0, a0, -1
+; ZVFHMIN-NEXT:    vsetvli a1, zero, e16, m4, ta, ma
+; ZVFHMIN-NEXT:    vand.vx v8, v8, a0
+; ZVFHMIN-NEXT:    ret
+;
+; ZVFBFA-LABEL: nxv16bf16:
+; ZVFBFA:       # %bb.0:
+; ZVFBFA-NEXT:    vsetvli a0, zero, e16alt, m4, ta, ma
+; ZVFBFA-NEXT:    vfabs.v v8, v8
+; ZVFBFA-NEXT:    ret
   %r = call <vscale x 16 x bfloat> @llvm.fabs.nxv16bf16(<vscale x 16 x bfloat> %v)
   ret <vscale x 16 x bfloat> %r
 }
 
 define <vscale x 32 x bfloat> @nxv32bf16(<vscale x 32 x bfloat> %v) {
-; CHECK-LABEL: nxv32bf16:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, 8
-; CHECK-NEXT:    addi a0, a0, -1
-; CHECK-NEXT:    vsetvli a1, zero, e16, m8, ta, ma
-; CHECK-NEXT:    vand.vx v8, v8, a0
-; CHECK-NEXT:    ret
+; ZVFH-LABEL: nxv32bf16:
+; ZVFH:       # %bb.0:
+; ZVFH-NEXT:    lui a0, 8
+; ZVFH-NEXT:    addi a0, a0, -1
+; ZVFH-NEXT:    vsetvli a1, zero, e16, m8, ta, ma
+; ZVFH-NEXT:    vand.vx v8, v8, a0
+; ZVFH-NEXT:    ret
+;
+; ZVFHMIN-LABEL: nxv32bf16:
+; ZVFHMIN:       # %bb.0:
+; ZVFHMIN-NEXT:    lui a0, 8
+; ZVFHMIN-NEXT:    addi a0, a0, -1
+; ZVFHMIN-NEXT:    vsetvli a1, zero, e16, m8, ta, ma
+; ZVFHMIN-NEXT:    vand.vx v8, v8, a0
+; ZVFHMIN-NEXT:    ret
+;
+; ZVFBFA-LABEL: nxv32bf16:
+; ZVFBFA:       # %bb.0:
+; ZVFBFA-NEXT:    vsetvli a0, zero, e16alt, m8, ta, ma
+; ZVFBFA-NEXT:    vfabs.v v8, v8
+; ZVFBFA-NEXT:    ret
   %r = call <vscale x 32 x bfloat> @llvm.fabs.nxv32bf16(<vscale x 32 x bfloat> %v)
   ret <vscale x 32 x bfloat> %r
 }
@@ -100,6 +190,14 @@ define <vscale x 1 x half> @vfabs_nxv1f16(<vscale x 1 x half> %v) {
 ; ZVFHMIN-NEXT:    vsetvli a1, zero, e16, mf4, ta, ma
 ; ZVFHMIN-NEXT:    vand.vx v8, v8, a0
 ; ZVFHMIN-NEXT:    ret
+;
+; ZVFBFA-LABEL: vfabs_nxv1f16:
+; ZVFBFA:       # %bb.0:
+; ZVFBFA-NEXT:    lui a0, 8
+; ZVFBFA-NEXT:    addi a0, a0, -1
+; ZVFBFA-NEXT:    vsetvli a1, zero, e16, mf4, ta, ma
+; ZVFBFA-NEXT:    vand.vx v8, v8, a0
+; ZVFBFA-NEXT:    ret
   %r = call <vscale x 1 x half> @llvm.fabs.nxv1f16(<vscale x 1 x half> %v)
   ret <vscale x 1 x half> %r
 }
@@ -120,6 +218,14 @@ define <vscale x 2 x half> @vfabs_nxv2f16(<vscale x 2 x half> %v) {
 ; ZVFHMIN-NEXT:    vsetvli a1, zero, e16, mf2, ta, ma
 ; ZVFHMIN-NEXT:    vand.vx v8, v8, a0
 ; ZVFHMIN-NEXT:    ret
+;
+; ZVFBFA-LABEL: vfabs_nxv2f16:
+; ZVFBFA:       # %bb.0:
+; ZVFBFA-NEXT:    lui a0, 8
+; ZVFBFA-NEXT:    addi a0, a0, -1
+; ZVFBFA-NEXT:    vsetvli a1, zero, e16, mf2, ta, ma
+; ZVFBFA-NEXT:    vand.vx v8, v8, a0
+; ZVFBFA-NEXT:    ret
   %r = call <vscale x 2 x half> @llvm.fabs.nxv2f16(<vscale x 2 x half> %v)
   ret <vscale x 2 x half> %r
 }
@@ -140,6 +246,14 @@ define <vscale x 4 x half> @vfabs_nxv4f16(<vscale x 4 x half> %v) {
 ; ZVFHMIN-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
 ; ZVFHMIN-NEXT:    vand.vx v8, v8, a0
 ; ZVFHMIN-NEXT:    ret
+;
+; ZVFBFA-LABEL: vfabs_nxv4f16:
+; ZVFBFA:       # %bb.0:
+; ZVFBFA-NEXT:    lui a0, 8
+; ZVFBFA-NEXT:    addi a0, a0, -1
+; ZVFBFA-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
+; ZVFBFA-NEXT:    vand.vx v8, v8, a0
+; ZVFBFA-NEXT:    ret
   %r = call <vscale x 4 x half> @llvm.fabs.nxv4f16(<vscale x 4 x half> %v)
   ret <vscale x 4 x half> %r
 }
@@ -160,6 +274,14 @@ define <vscale x 8 x half> @vfabs_nxv8f16(<vscale x 8 x half> %v) {
 ; ZVFHMIN-NEXT:    vsetvli a1, zero, e16, m2, ta, ma
 ; ZVFHMIN-NEXT:    vand.vx v8, v8, a0
 ; ZVFHMIN-NEXT:    ret
+;
+; ZVFBFA-LABEL: vfabs_nxv8f16:
+; ZVFBFA:       # %bb.0:
+; ZVFBFA-NEXT:    lui a0, 8
+; ZVFBFA-NEXT:    addi a0, a0, -1
+; ZVFBFA-NEXT:    vsetvli a1, zero, e16, m2, ta, ma
+; ZVFBFA-NEXT:    vand.vx v8, v8, a0
+; ZVFBFA-NEXT:    ret
   %r = call <vscale x 8 x half> @llvm.fabs.nxv8f16(<vscale x 8 x half> %v)
   ret <vscale x 8 x half> %r
 }
@@ -180,6 +302,14 @@ define <vscale x 16 x half> @vfabs_nxv16f16(<vscale x 16 x half> %v) {
 ; ZVFHMIN-NEXT:    vsetvli a1, zero, e16, m4, ta, ma
 ; ZVFHMIN-NEXT:    vand.vx v8, v8, a0
 ; ZVFHMIN-NEXT:    ret
+;
+; ZVFBFA-LABEL: vfabs_nxv16f16:
+; ZVFBFA:       # %bb.0:
+; ZVFBFA-NEXT:    lui a0, 8
+; ZVFBFA-NEXT:    addi a0, a0, -1
+; ZVFBFA-NEXT:    vsetvli a1, zero, e16, m4, ta, ma
+; ZVFBFA-NEXT:    vand.vx v8, v8, a0
+; ZVFBFA-NEXT:    ret
   %r = call <vscale x 16 x half> @llvm.fabs.nxv16f16(<vscale x 16 x half> %v)
   ret <vscale x 16 x half> %r
 }
@@ -200,6 +330,14 @@ define <vscale x 32 x half> @vfabs_nxv32f16(<vscale x 32 x half> %v) {
 ; ZVFHMIN-NEXT:    vsetvli a1, zero, e16, m8, ta, ma
 ; ZVFHMIN-NEXT:    vand.vx v8, v8, a0
 ; ZVFHMIN-NEXT:    ret
+;
+; ZVFBFA-LABEL: vfabs_nxv32f16:
+; ZVFBFA:       # %bb.0:
+; ZVFBFA-NEXT:    lui a0, 8
+; ZVFBFA-NEXT:    addi a0, a0, -1
+; ZVFBFA-NEXT:    vsetvli a1, zero, e16, m8, ta, ma
+; ZVFBFA-NEXT:    vand.vx v8, v8, a0
+; ZVFBFA-NEXT:    ret
   %r = call <vscale x 32 x half> @llvm.fabs.nxv32f16(<vscale x 32 x half> %v)
   ret <vscale x 32 x half> %r
 }

@@ -1409,10 +1409,15 @@ public:
   /// before calling this method.
   unsigned getColumnNumber(FileID FID, unsigned FilePos,
                            bool *Invalid = nullptr) const;
+  unsigned getColumnNumber(SourceLocation Loc, bool *Invalid = nullptr) const;
   unsigned getSpellingColumnNumber(SourceLocation Loc,
-                                   bool *Invalid = nullptr) const;
+                                   bool *Invalid = nullptr) const {
+    return getColumnNumber(getSpellingLoc(Loc), Invalid);
+  }
   unsigned getExpansionColumnNumber(SourceLocation Loc,
-                                    bool *Invalid = nullptr) const;
+                                    bool *Invalid = nullptr) const {
+    return getColumnNumber(getExpansionLoc(Loc), Invalid);
+  }
   unsigned getPresumedColumnNumber(SourceLocation Loc,
                                    bool *Invalid = nullptr) const;
 
@@ -1423,8 +1428,15 @@ public:
   /// MemoryBuffer, so this is not cheap: use only when about to emit a
   /// diagnostic.
   unsigned getLineNumber(FileID FID, unsigned FilePos, bool *Invalid = nullptr) const;
-  unsigned getSpellingLineNumber(SourceLocation Loc, bool *Invalid = nullptr) const;
-  unsigned getExpansionLineNumber(SourceLocation Loc, bool *Invalid = nullptr) const;
+  unsigned getLineNumber(SourceLocation Loc, bool *Invalid = nullptr) const;
+  unsigned getSpellingLineNumber(SourceLocation Loc,
+                                 bool *Invalid = nullptr) const {
+    return getLineNumber(getSpellingLoc(Loc), Invalid);
+  }
+  unsigned getExpansionLineNumber(SourceLocation Loc,
+                                  bool *Invalid = nullptr) const {
+    return getLineNumber(getExpansionLoc(Loc), Invalid);
+  }
   unsigned getPresumedLineNumber(SourceLocation Loc, bool *Invalid = nullptr) const;
 
   /// Return the filename or buffer identifier of the buffer the
@@ -1452,8 +1464,9 @@ public:
   /// directives.  This provides a view on the data that a user should see
   /// in diagnostics, for example.
   ///
-  /// Note that a presumed location is always given as the expansion point of
-  /// an expansion location, not at the spelling location.
+  /// If \p Loc is a macro expansion location, the presumed location
+  /// computation uses the spelling location for macro arguments and the
+  /// expansion location for other macro expansions.
   ///
   /// \returns The presumed location of the specified SourceLocation. If the
   /// presumed location cannot be calculated (e.g., because \p Loc is invalid
