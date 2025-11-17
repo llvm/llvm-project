@@ -1879,6 +1879,7 @@ public:
             [&](const CompilerDirective::NoInline &) {
               Word("!DIR$ NOINLINE");
             },
+            [&](const CompilerDirective::IVDep &) { Word("!DIR$ IVDEP"); },
             [&](const CompilerDirective::Unrecognized &) {
               Word("!DIR$ ");
               Word(x.source.ToString());
@@ -2704,12 +2705,6 @@ public:
     Walk(x.v);
     Put("\n");
     EndOpenMP();
-  }
-  void Unparse(const OpenMPLoopConstruct &x) {
-    Walk(std::get<OmpBeginLoopDirective>(x.t));
-    Walk(std::get<std::optional<std::variant<DoConstruct,
-            common::Indirection<parser::OpenMPLoopConstruct>>>>(x.t));
-    Walk(std::get<std::optional<OmpEndLoopDirective>>(x.t));
   }
   void Unparse(const BasedPointer &x) {
     Put('('), Walk(std::get<0>(x.t)), Put(","), Walk(std::get<1>(x.t));

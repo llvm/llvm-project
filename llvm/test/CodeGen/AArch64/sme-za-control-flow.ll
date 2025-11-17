@@ -49,7 +49,7 @@ define void @private_za_loop(i32 %n) "aarch64_inout_za" nounwind {
 ; CHECK-NEWLOWERING-LABEL: private_za_loop:
 ; CHECK-NEWLOWERING:       // %bb.0: // %entry
 ; CHECK-NEWLOWERING-NEXT:    stp x29, x30, [sp, #-32]! // 16-byte Folded Spill
-; CHECK-NEWLOWERING-NEXT:    str x19, [sp, #16] // 8-byte Folded Spill
+; CHECK-NEWLOWERING-NEXT:    str x19, [sp, #16] // 8-byte Spill
 ; CHECK-NEWLOWERING-NEXT:    mov x29, sp
 ; CHECK-NEWLOWERING-NEXT:    sub sp, sp, #16
 ; CHECK-NEWLOWERING-NEXT:    rdsvl x8, #1
@@ -78,7 +78,7 @@ define void @private_za_loop(i32 %n) "aarch64_inout_za" nounwind {
 ; CHECK-NEWLOWERING-NEXT:  .LBB0_5: // %exit
 ; CHECK-NEWLOWERING-NEXT:    msr TPIDR2_EL0, xzr
 ; CHECK-NEWLOWERING-NEXT:    mov sp, x29
-; CHECK-NEWLOWERING-NEXT:    ldr x19, [sp, #16] // 8-byte Folded Reload
+; CHECK-NEWLOWERING-NEXT:    ldr x19, [sp, #16] // 8-byte Reload
 ; CHECK-NEWLOWERING-NEXT:    ldp x29, x30, [sp], #32 // 16-byte Folded Reload
 ; CHECK-NEWLOWERING-NEXT:    ret
 entry:
@@ -367,7 +367,7 @@ define void @cond_clobber_followed_by_clobber(i1 %cond) "aarch64_inout_za" nounw
 ; CHECK-LABEL: cond_clobber_followed_by_clobber:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stp x29, x30, [sp, #-32]! // 16-byte Folded Spill
-; CHECK-NEXT:    str x19, [sp, #16] // 8-byte Folded Spill
+; CHECK-NEXT:    str x19, [sp, #16] // 8-byte Spill
 ; CHECK-NEXT:    mov x29, sp
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    rdsvl x8, #1
@@ -403,14 +403,14 @@ define void @cond_clobber_followed_by_clobber(i1 %cond) "aarch64_inout_za" nounw
 ; CHECK-NEXT:  .LBB5_6: // %exit
 ; CHECK-NEXT:    msr TPIDR2_EL0, xzr
 ; CHECK-NEXT:    mov sp, x29
-; CHECK-NEXT:    ldr x19, [sp, #16] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x19, [sp, #16] // 8-byte Reload
 ; CHECK-NEXT:    ldp x29, x30, [sp], #32 // 16-byte Folded Reload
 ; CHECK-NEXT:    b shared_za_call
 ;
 ; CHECK-NEWLOWERING-LABEL: cond_clobber_followed_by_clobber:
 ; CHECK-NEWLOWERING:       // %bb.0:
 ; CHECK-NEWLOWERING-NEXT:    stp x29, x30, [sp, #-32]! // 16-byte Folded Spill
-; CHECK-NEWLOWERING-NEXT:    str x19, [sp, #16] // 8-byte Folded Spill
+; CHECK-NEWLOWERING-NEXT:    str x19, [sp, #16] // 8-byte Spill
 ; CHECK-NEWLOWERING-NEXT:    mov x29, sp
 ; CHECK-NEWLOWERING-NEXT:    sub sp, sp, #16
 ; CHECK-NEWLOWERING-NEXT:    rdsvl x8, #1
@@ -436,7 +436,7 @@ define void @cond_clobber_followed_by_clobber(i1 %cond) "aarch64_inout_za" nounw
 ; CHECK-NEWLOWERING-NEXT:  .LBB5_4: // %exit
 ; CHECK-NEWLOWERING-NEXT:    msr TPIDR2_EL0, xzr
 ; CHECK-NEWLOWERING-NEXT:    mov sp, x29
-; CHECK-NEWLOWERING-NEXT:    ldr x19, [sp, #16] // 8-byte Folded Reload
+; CHECK-NEWLOWERING-NEXT:    ldr x19, [sp, #16] // 8-byte Reload
 ; CHECK-NEWLOWERING-NEXT:    ldp x29, x30, [sp], #32 // 16-byte Folded Reload
 ; CHECK-NEWLOWERING-NEXT:    b shared_za_call
   tail call void @shared_za_call()
@@ -638,7 +638,7 @@ define void @critical_edge_mixed_za(i1 %c1, i1 %c2) "aarch64_inout_za" nounwind 
 ; CHECK-LABEL: critical_edge_mixed_za:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    stp x29, x30, [sp, #-32]! // 16-byte Folded Spill
-; CHECK-NEXT:    str x19, [sp, #16] // 8-byte Folded Spill
+; CHECK-NEXT:    str x19, [sp, #16] // 8-byte Spill
 ; CHECK-NEXT:    mov x29, sp
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    rdsvl x8, #1
@@ -681,14 +681,14 @@ define void @critical_edge_mixed_za(i1 %c1, i1 %c2) "aarch64_inout_za" nounwind 
 ; CHECK-NEXT:    bl shared_za_call
 ; CHECK-NEXT:  .LBB9_9: // %common.ret
 ; CHECK-NEXT:    mov sp, x29
-; CHECK-NEXT:    ldr x19, [sp, #16] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x19, [sp, #16] // 8-byte Reload
 ; CHECK-NEXT:    ldp x29, x30, [sp], #32 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-NEWLOWERING-LABEL: critical_edge_mixed_za:
 ; CHECK-NEWLOWERING:       // %bb.0: // %entry
 ; CHECK-NEWLOWERING-NEXT:    stp x29, x30, [sp, #-32]! // 16-byte Folded Spill
-; CHECK-NEWLOWERING-NEXT:    str x19, [sp, #16] // 8-byte Folded Spill
+; CHECK-NEWLOWERING-NEXT:    str x19, [sp, #16] // 8-byte Spill
 ; CHECK-NEWLOWERING-NEXT:    mov x29, sp
 ; CHECK-NEWLOWERING-NEXT:    sub sp, sp, #16
 ; CHECK-NEWLOWERING-NEXT:    rdsvl x8, #1
@@ -731,7 +731,7 @@ define void @critical_edge_mixed_za(i1 %c1, i1 %c2) "aarch64_inout_za" nounwind 
 ; CHECK-NEWLOWERING-NEXT:    bl shared_za_call
 ; CHECK-NEWLOWERING-NEXT:  .LBB9_9: // %common.ret
 ; CHECK-NEWLOWERING-NEXT:    mov sp, x29
-; CHECK-NEWLOWERING-NEXT:    ldr x19, [sp, #16] // 8-byte Folded Reload
+; CHECK-NEWLOWERING-NEXT:    ldr x19, [sp, #16] // 8-byte Reload
 ; CHECK-NEWLOWERING-NEXT:    ldp x29, x30, [sp], #32 // 16-byte Folded Reload
 ; CHECK-NEWLOWERING-NEXT:    ret
 entry:
