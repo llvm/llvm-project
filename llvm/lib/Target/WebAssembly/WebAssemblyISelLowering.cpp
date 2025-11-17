@@ -2604,9 +2604,8 @@ SDValue WebAssemblyTargetLowering::LowerBUILD_VECTOR(SDValue Op,
         // within the expected range during ISel. Check whether the value is in
         // bounds based on the lane bit width and if it is out of bounds, lop
         // off the extra bits.
-        auto *Const = dyn_cast<ConstantSDNode>(Lane.getNode());
         uint64_t LaneBits = 128 / Lanes;
-        if (Const) {
+        if (auto *Const = dyn_cast<ConstantSDNode>(Lane.getNode())) {
           ConstLanes.push_back(DAG.getConstant(
               Const->getAPIntValue().trunc(LaneBits).getZExtValue(),
               SDLoc(Lane), LaneT));
