@@ -631,11 +631,21 @@ void SIPreEmitPeephole::collectUnpackingCandidates(
     // latency, add latency of two unpacked instructions (currently estimated
     // as 2 cycles).
     TotalCyclesBetweenCandidates -= Latency;
+    // Once we've removed the packed latency, if we're already past the MFMA
+    // overlap window, later instructions can only increase the distance.  Stop
+    // scanning for more candidates for this MFMA.  Subtract 1 to account for
+    // MFMA issue latency. If the packed instruction cannot be immediately
+    // issued in the last cycle of the MFMA's execution we still want to
+    // unpack.
+    //
+    // FIXME: We shouldn't need to subtract 1 here, this should be reflected in
+    // the SchedModel.
+    if (TotalCyclesBetweenCandidates >= NumMFMACycles - 1)
+      return;
+
     // TODO: improve latency handling based on instruction modeling.
     TotalCyclesBetweenCandidates += 2;
-    // Subtract 1 to account for MFMA issue latency.
-    if (TotalCyclesBetweenCandidates < NumMFMACycles - 1)
-      InstrsToUnpack.insert(&Instr);
+    InstrsToUnpack.insert(&Instr);
   }
 }
 
