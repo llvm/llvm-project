@@ -2273,7 +2273,9 @@ private:
   // Allocate a buffer of __capacity size with __alloc and return it
   _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR_SINCE_CXX20 __long
   __allocate_long_buffer(_Allocator& __alloc, size_type __capacity) {
-    auto __buffer = std::__allocate_at_least(__alloc, __recommend(__capacity) + 1);
+    _LIBCPP_ASSERT_INTERNAL(!__fits_in_sso(__capacity),
+                            "Trying to allocate long buffer for a capacity what would fit into the small buffer");
+    auto __buffer = std::__allocate_at_least(__alloc, __align_allocation_size(__capacity));
 
     if (__libcpp_is_constant_evaluated()) {
       for (size_type __i = 0; __i != __buffer.count; ++__i)
@@ -2365,16 +2367,20 @@ private:
     return (__s + (__a - 1)) & ~(__a - 1);
   }
   enum { __alignment = 8 };
-  static _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 size_type __recommend(size_type __s) _NOEXCEPT {
-    if (__s < __min_cap) {
-      return static_cast<size_type>(__min_cap) - 1;
-    }
+
+  // This makes sure that we're using a capacity with some extra alignment, since allocators almost always over-align
+  // the allocations anyways, improving memory usage. More importantly, this ensures that the lowest bit is never set
+  // if __endian_factor == 2, allowing us to store whether we're in the long string inside the lowest bit.
+  _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR_SINCE_CXX20 size_type
+  __align_allocation_size(size_type __size) _NOEXCEPT {
+    _LIBCPP_ASSERT_INTERNAL(
+        !__fits_in_sso(__size), "Trying to align allocation of a size which would fit into the SSO");
     const size_type __boundary = sizeof(value_type) < __alignment ? __alignment / sizeof(value_type) : __endian_factor;
-    size_type __guess          = __align_it<__boundary>(__s + 1) - 1;
-    if (__guess == __min_cap)
+    size_type __guess          = __align_it<__boundary>(__size + 1);
+    if (__guess == __min_cap + 1)
       __guess += __endian_factor;
 
-    _LIBCPP_ASSERT_INTERNAL(__guess >= __s, "recommendation is below the requested size");
+    _LIBCPP_ASSERT_INTERNAL(__guess >= __size, "aligned allocation size is below the requested size");
     return __guess;
   }
 
@@ -2712,8 +2718,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void basic_string<_CharT, _Traits, _Allocator>::__
   if (__delta_cap > __ms - __old_cap)
     __throw_length_error();
   pointer __old_p = __get_pointer();
-  size_type __cap =
-      __old_cap < __ms / 2 - __alignment ? __recommend(std::max(__old_cap + __delta_cap, 2 * __old_cap)) : __ms;
+  size_type __cap = __old_cap < __ms / 2 - __alignment ? std::max(__old_cap + __delta_cap, 2 * __old_cap) : __ms;
   __annotate_delete();
   auto __guard    = std::__make_scope_guard(__annotate_new_size(*this));
   __long __buffer = __allocate_long_buffer(__alloc_, __cap);
@@ -2750,8 +2755,7 @@ _LIBCPP_DEPRECATED_("use __grow_by_without_replace") basic_string<_CharT, _Trait
   if (__delta_cap > __ms - __old_cap)
     this->__throw_length_error();
   pointer __old_p = __get_pointer();
-  size_type __cap =
-      __old_cap < __ms / 2 - __alignment ? __recommend(std::max(__old_cap + __delta_cap, 2 * __old_cap)) : __ms;
+  size_type __cap = __old_cap < __ms / 2 - __alignment ? std::max(__old_cap + __delta_cap, 2 * __old_cap) : __ms;
   __long __buffer = __allocate_long_buffer(__alloc_, __cap);
   if (__n_copy != 0)
     traits_type::copy(std::__to_address(__buffer.__data_), std::__to_address(__old_p), __n_copy);
@@ -3417,24 +3421,24 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void basic_string<_CharT, _Traits, _Allocator>::re
 
 template <class _CharT, class _Traits, class _Allocator>
 inline _LIBCPP_CONSTEXPR_SINCE_CXX20 void basic_string<_CharT, _Traits, _Allocator>::shrink_to_fit() _NOEXCEPT {
-  size_type __target_capacity = __recommend(size());
-  if (__target_capacity == capacity())
+  if (!__is_long())
     return;
 
-  _LIBCPP_ASSERT_INTERNAL(__is_long(), "Trying to shrink small string");
-
-  // We're a long string and we're shrinking into the small buffer.
   const auto __ptr  = __get_long_pointer();
   const auto __size = __get_long_size();
   const auto __cap  = __get_long_cap();
 
-  if (__fits_in_sso(__target_capacity)) {
+  // We're a long string and we're shrinking into the small buffer.
+  if (__fits_in_sso(__size)) {
     __annotation_guard __g(*this);
     __set_short_size(__size);
     traits_type::copy(std::__to_address(__get_short_pointer()), std::__to_address(__ptr), __size + 1);
     __alloc_traits::deallocate(__alloc_, __ptr, __cap);
     return;
   }
+
+  if (__align_allocation_size(__size) == __cap)
+    return;
 
 #  if _LIBCPP_HAS_EXCEPTIONS
   try {

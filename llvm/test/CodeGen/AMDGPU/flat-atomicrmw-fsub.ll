@@ -405,7 +405,7 @@ define float @flat_agent_atomic_fsub_ret_f32__offset12b_pos(ptr %ptr, float %val
 ; GFX7-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr float, ptr %ptr, i64 511
+  %gep = getelementptr inbounds float, ptr %ptr, i64 511
   %result = atomicrmw fsub ptr %gep, float %val syncscope("agent") seq_cst
   ret float %result
 }
@@ -620,7 +620,7 @@ define float @flat_agent_atomic_fsub_ret_f32__offset12b_neg(ptr %ptr, float %val
 ; GFX7-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr float, ptr %ptr, i64 -512
+  %gep = getelementptr inbounds float, ptr %ptr, i64 -512
   %result = atomicrmw fsub ptr %gep, float %val syncscope("agent") seq_cst
   ret float %result
 }
@@ -999,7 +999,7 @@ define void @flat_agent_atomic_fsub_noret_f32__offset12b_pos(ptr %ptr, float %va
 ; GFX7-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr float, ptr %ptr, i64 511
+  %gep = getelementptr inbounds float, ptr %ptr, i64 511
   %unused = atomicrmw fsub ptr %gep, float %val syncscope("agent") seq_cst
   ret void
 }
@@ -1211,7 +1211,7 @@ define void @flat_agent_atomic_fsub_noret_f32__offset12b_neg(ptr %ptr, float %va
 ; GFX7-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr float, ptr %ptr, i64 -512
+  %gep = getelementptr inbounds float, ptr %ptr, i64 -512
   %unused = atomicrmw fsub ptr %gep, float %val syncscope("agent") seq_cst
   ret void
 }
@@ -1414,7 +1414,7 @@ define float @flat_system_atomic_fsub_ret_f32__offset12b_pos(ptr %ptr, float %va
 ; GFX7-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr float, ptr %ptr, i64 511
+  %gep = getelementptr inbounds float, ptr %ptr, i64 511
   %result = atomicrmw fsub ptr %gep, float %val seq_cst
   ret float %result
 }
@@ -1610,7 +1610,7 @@ define void @flat_system_atomic_fsub_noret_f32__offset12b_pos(ptr %ptr, float %v
 ; GFX7-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr float, ptr %ptr, i64 511
+  %gep = getelementptr inbounds float, ptr %ptr, i64 511
   %unused = atomicrmw fsub ptr %gep, float %val seq_cst
   ret void
 }
@@ -2010,7 +2010,7 @@ define float @flat_agent_atomic_fsub_ret_f32__offset12b_pos__ftz(ptr %ptr, float
 ; GFX7-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr float, ptr %ptr, i64 511
+  %gep = getelementptr inbounds float, ptr %ptr, i64 511
   %result = atomicrmw fsub ptr %gep, float %val syncscope("agent") seq_cst
   ret float %result
 }
@@ -2225,7 +2225,7 @@ define float @flat_agent_atomic_fsub_ret_f32__offset12b_neg__ftz(ptr %ptr, float
 ; GFX7-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr float, ptr %ptr, i64 -512
+  %gep = getelementptr inbounds float, ptr %ptr, i64 -512
   %result = atomicrmw fsub ptr %gep, float %val syncscope("agent") seq_cst
   ret float %result
 }
@@ -2604,7 +2604,7 @@ define void @flat_agent_atomic_fsub_noret_f32__offset12b_pos__ftz(ptr %ptr, floa
 ; GFX7-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr float, ptr %ptr, i64 511
+  %gep = getelementptr inbounds float, ptr %ptr, i64 511
   %unused = atomicrmw fsub ptr %gep, float %val syncscope("agent") seq_cst
   ret void
 }
@@ -2816,7 +2816,7 @@ define void @flat_agent_atomic_fsub_noret_f32__offset12b_neg__ftz(ptr %ptr, floa
 ; GFX7-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr float, ptr %ptr, i64 -512
+  %gep = getelementptr inbounds float, ptr %ptr, i64 -512
   %unused = atomicrmw fsub ptr %gep, float %val syncscope("agent") seq_cst
   ret void
 }
@@ -3019,7 +3019,7 @@ define float @flat_system_atomic_fsub_ret_f32__offset12b_pos__ftz(ptr %ptr, floa
 ; GFX7-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr float, ptr %ptr, i64 511
+  %gep = getelementptr inbounds float, ptr %ptr, i64 511
   %result = atomicrmw fsub ptr %gep, float %val seq_cst
   ret float %result
 }
@@ -3215,7 +3215,7 @@ define void @flat_system_atomic_fsub_noret_f32__offset12b_pos__ftz(ptr %ptr, flo
 ; GFX7-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr float, ptr %ptr, i64 511
+  %gep = getelementptr inbounds float, ptr %ptr, i64 511
   %unused = atomicrmw fsub ptr %gep, float %val seq_cst
   ret void
 }
@@ -4077,7 +4077,7 @@ define double @flat_agent_atomic_fsub_ret_f64__offset12b_pos(ptr %ptr, double %v
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr double, ptr %ptr, i64 255
+  %gep = getelementptr inbounds double, ptr %ptr, i64 255
   %result = atomicrmw fsub ptr %gep, double %val syncscope("agent") seq_cst
   ret double %result
 }
@@ -4524,7 +4524,7 @@ define double @flat_agent_atomic_fsub_ret_f64__offset12b_neg(ptr %ptr, double %v
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr double, ptr %ptr, i64 -256
+  %gep = getelementptr inbounds double, ptr %ptr, i64 -256
   %result = atomicrmw fsub ptr %gep, double %val syncscope("agent") seq_cst
   ret double %result
 }
@@ -5377,7 +5377,7 @@ define void @flat_agent_atomic_fsub_noret_f64__offset12b_pos(ptr %ptr, double %v
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr double, ptr %ptr, i64 255
+  %gep = getelementptr inbounds double, ptr %ptr, i64 255
   %unused = atomicrmw fsub ptr %gep, double %val syncscope("agent") seq_cst
   ret void
 }
@@ -5814,7 +5814,7 @@ define void @flat_agent_atomic_fsub_noret_f64__offset12b_neg(ptr %ptr, double %v
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr double, ptr %ptr, i64 -256
+  %gep = getelementptr inbounds double, ptr %ptr, i64 -256
   %unused = atomicrmw fsub ptr %gep, double %val syncscope("agent") seq_cst
   ret void
 }
@@ -6574,7 +6574,7 @@ define half @flat_agent_atomic_fsub_ret_f16__offset12b_pos(ptr %ptr, half %val) 
 ; GFX7-NEXT:    v_lshrrev_b32_e32 v0, v2, v5
 ; GFX7-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr half, ptr %ptr, i64 1023
+  %gep = getelementptr inbounds half, ptr %ptr, i64 1023
   %result = atomicrmw fsub ptr %gep, half %val syncscope("agent") seq_cst
   ret half %result
 }
@@ -6959,7 +6959,7 @@ define half @flat_agent_atomic_fsub_ret_f16__offset12b_neg(ptr %ptr, half %val) 
 ; GFX7-NEXT:    v_lshrrev_b32_e32 v0, v2, v5
 ; GFX7-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr half, ptr %ptr, i64 -1024
+  %gep = getelementptr inbounds half, ptr %ptr, i64 -1024
   %result = atomicrmw fsub ptr %gep, half %val syncscope("agent") seq_cst
   ret half %result
  }
@@ -7689,7 +7689,7 @@ define void @flat_agent_atomic_fsub_noret_f16__offset12b_pos(ptr %ptr, half %val
 ; GFX7-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr half, ptr %ptr, i64 1023
+  %gep = getelementptr inbounds half, ptr %ptr, i64 1023
   %unused = atomicrmw fsub ptr %gep, half %val syncscope("agent") seq_cst
   ret void
 }
@@ -8061,7 +8061,7 @@ define void @flat_agent_atomic_fsub_noret_f16__offset12b_neg(ptr %ptr, half %val
 ; GFX7-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr half, ptr %ptr, i64 -1024
+  %gep = getelementptr inbounds half, ptr %ptr, i64 -1024
   %unused = atomicrmw fsub ptr %gep, half %val syncscope("agent") seq_cst
   ret void
 }
@@ -8345,7 +8345,7 @@ define half @flat_agent_atomic_fsub_ret_f16__offset12b_pos__align4(ptr %ptr, hal
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX7-NEXT:    v_cvt_f32_f16_e32 v0, v3
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr half, ptr %ptr, i64 1023
+  %gep = getelementptr inbounds half, ptr %ptr, i64 1023
   %result = atomicrmw fsub ptr %gep, half %val syncscope("agent") seq_cst, align 4
   ret half %result
 }
@@ -8619,7 +8619,7 @@ define void @flat_agent_atomic_fsub_noret_f16__offset12b__align4_pos(ptr %ptr, h
 ; GFX7-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr half, ptr %ptr, i64 1023
+  %gep = getelementptr inbounds half, ptr %ptr, i64 1023
   %unused = atomicrmw fsub ptr %gep, half %val syncscope("agent") seq_cst, align 4
   ret void
 }
@@ -9007,7 +9007,7 @@ define half @flat_system_atomic_fsub_ret_f16__offset12b_pos(ptr %ptr, half %val)
 ; GFX7-NEXT:    v_lshrrev_b32_e32 v0, v2, v5
 ; GFX7-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr half, ptr %ptr, i64 1023
+  %gep = getelementptr inbounds half, ptr %ptr, i64 1023
   %result = atomicrmw fsub ptr %gep, half %val seq_cst
   ret half %result
 }
@@ -9382,7 +9382,7 @@ define void @flat_system_atomic_fsub_noret_f16__offset12b_pos(ptr %ptr, half %va
 ; GFX7-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr half, ptr %ptr, i64 1023
+  %gep = getelementptr inbounds half, ptr %ptr, i64 1023
   %unused = atomicrmw fsub ptr %gep, half %val seq_cst
   ret void
 }
@@ -10305,7 +10305,7 @@ define bfloat @flat_agent_atomic_fsub_ret_bf16__offset12b_pos(ptr %ptr, bfloat %
 ; GFX7-NEXT:    v_lshrrev_b32_e32 v0, v3, v5
 ; GFX7-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr bfloat, ptr %ptr, i64 1023
+  %gep = getelementptr inbounds bfloat, ptr %ptr, i64 1023
   %result = atomicrmw fsub ptr %gep, bfloat %val syncscope("agent") seq_cst
   ret bfloat %result
 }
@@ -10773,7 +10773,7 @@ define bfloat @flat_agent_atomic_fsub_ret_bf16__offset12b_neg(ptr %ptr, bfloat %
 ; GFX7-NEXT:    v_lshrrev_b32_e32 v0, v3, v5
 ; GFX7-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr bfloat, ptr %ptr, i64 -1024
+  %gep = getelementptr inbounds bfloat, ptr %ptr, i64 -1024
   %result = atomicrmw fsub ptr %gep, bfloat %val syncscope("agent") seq_cst
   ret bfloat %result
  }
@@ -11662,7 +11662,7 @@ define void @flat_agent_atomic_fsub_noret_bf16__offset12b_pos(ptr %ptr, bfloat %
 ; GFX7-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr bfloat, ptr %ptr, i64 1023
+  %gep = getelementptr inbounds bfloat, ptr %ptr, i64 1023
   %unused = atomicrmw fsub ptr %gep, bfloat %val syncscope("agent") seq_cst
   ret void
 }
@@ -12115,7 +12115,7 @@ define void @flat_agent_atomic_fsub_noret_bf16__offset12b_neg(ptr %ptr, bfloat %
 ; GFX7-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr bfloat, ptr %ptr, i64 -1024
+  %gep = getelementptr inbounds bfloat, ptr %ptr, i64 -1024
   %unused = atomicrmw fsub ptr %gep, bfloat %val syncscope("agent") seq_cst
   ret void
 }
@@ -12488,7 +12488,7 @@ define bfloat @flat_agent_atomic_fsub_ret_bf16__offset12b_pos__align4(ptr %ptr, 
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX7-NEXT:    v_lshlrev_b32_e32 v0, 16, v3
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr bfloat, ptr %ptr, i64 1023
+  %gep = getelementptr inbounds bfloat, ptr %ptr, i64 1023
   %result = atomicrmw fsub ptr %gep, bfloat %val syncscope("agent") seq_cst, align 4
   ret bfloat %result
 }
@@ -12849,7 +12849,7 @@ define void @flat_agent_atomic_fsub_noret_bf16__offset12b__align4_pos(ptr %ptr, 
 ; GFX7-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr bfloat, ptr %ptr, i64 1023
+  %gep = getelementptr inbounds bfloat, ptr %ptr, i64 1023
   %unused = atomicrmw fsub ptr %gep, bfloat %val syncscope("agent") seq_cst, align 4
   ret void
 }
@@ -13320,7 +13320,7 @@ define bfloat @flat_system_atomic_fsub_ret_bf16__offset12b_pos(ptr %ptr, bfloat 
 ; GFX7-NEXT:    v_lshrrev_b32_e32 v0, v3, v5
 ; GFX7-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr bfloat, ptr %ptr, i64 1023
+  %gep = getelementptr inbounds bfloat, ptr %ptr, i64 1023
   %result = atomicrmw fsub ptr %gep, bfloat %val seq_cst
   ret bfloat %result
 }
@@ -13776,7 +13776,7 @@ define void @flat_system_atomic_fsub_noret_bf16__offset12b_pos(ptr %ptr, bfloat 
 ; GFX7-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr bfloat, ptr %ptr, i64 1023
+  %gep = getelementptr inbounds bfloat, ptr %ptr, i64 1023
   %unused = atomicrmw fsub ptr %gep, bfloat %val seq_cst
   ret void
 }
@@ -14221,7 +14221,7 @@ define <2 x half> @flat_agent_atomic_fsub_ret_v2f16__offset12b_pos(ptr %ptr, <2 
 ; GFX7-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr <2 x half>, ptr %ptr, i64 511
+  %gep = getelementptr inbounds <2 x half>, ptr %ptr, i64 511
   %result = atomicrmw fsub ptr %gep, <2 x half> %val syncscope("agent") seq_cst
   ret <2 x half> %result
 }
@@ -14458,7 +14458,7 @@ define <2 x half> @flat_agent_atomic_fsub_ret_v2f16__offset12b_neg(ptr %ptr, <2 
 ; GFX7-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr <2 x half>, ptr %ptr, i64 -512
+  %gep = getelementptr inbounds <2 x half>, ptr %ptr, i64 -512
   %result = atomicrmw fsub ptr %gep, <2 x half> %val syncscope("agent") seq_cst
   ret <2 x half> %result
 }
@@ -14881,7 +14881,7 @@ define void @flat_agent_atomic_fsub_noret_v2f16__offset12b_pos(ptr %ptr, <2 x ha
 ; GFX7-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr <2 x half>, ptr %ptr, i64 511
+  %gep = getelementptr inbounds <2 x half>, ptr %ptr, i64 511
   %unused = atomicrmw fsub ptr %gep, <2 x half> %val syncscope("agent") seq_cst
   ret void
 }
@@ -15115,7 +15115,7 @@ define void @flat_agent_atomic_fsub_noret_v2f16__offset12b_neg(ptr %ptr, <2 x ha
 ; GFX7-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr <2 x half>, ptr %ptr, i64 -512
+  %gep = getelementptr inbounds <2 x half>, ptr %ptr, i64 -512
   %unused = atomicrmw fsub ptr %gep, <2 x half> %val syncscope("agent") seq_cst
   ret void
 }
@@ -15340,7 +15340,7 @@ define <2 x half> @flat_system_atomic_fsub_ret_v2f16__offset12b_pos(ptr %ptr, <2
 ; GFX7-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr <2 x half>, ptr %ptr, i64 511
+  %gep = getelementptr inbounds <2 x half>, ptr %ptr, i64 511
   %result = atomicrmw fsub ptr %gep, <2 x half> %val seq_cst
   ret <2 x half> %result
 }
@@ -15558,7 +15558,7 @@ define void @flat_system_atomic_fsub_noret_v2f16__offset12b_pos(ptr %ptr, <2 x h
 ; GFX7-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr <2 x half>, ptr %ptr, i64 511
+  %gep = getelementptr inbounds <2 x half>, ptr %ptr, i64 511
   %unused = atomicrmw fsub ptr %gep, <2 x half> %val seq_cst
   ret void
 }
@@ -16459,7 +16459,7 @@ define <2 x bfloat> @flat_agent_atomic_fsub_ret_v2bf16__offset12b_pos(ptr %ptr, 
 ; GFX7-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr <2 x bfloat>, ptr %ptr, i64 511
+  %gep = getelementptr inbounds <2 x bfloat>, ptr %ptr, i64 511
   %result = atomicrmw fsub ptr %gep, <2 x bfloat> %val syncscope("agent") seq_cst
   ret <2 x bfloat> %result
 }
@@ -16925,7 +16925,7 @@ define <2 x bfloat> @flat_agent_atomic_fsub_ret_v2bf16__offset12b_neg(ptr %ptr, 
 ; GFX7-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr <2 x bfloat>, ptr %ptr, i64 -512
+  %gep = getelementptr inbounds <2 x bfloat>, ptr %ptr, i64 -512
   %result = atomicrmw fsub ptr %gep, <2 x bfloat> %val syncscope("agent") seq_cst
   ret <2 x bfloat> %result
 }
@@ -17796,7 +17796,7 @@ define void @flat_agent_atomic_fsub_noret_v2bf16__offset12b_pos(ptr %ptr, <2 x b
 ; GFX7-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr <2 x bfloat>, ptr %ptr, i64 511
+  %gep = getelementptr inbounds <2 x bfloat>, ptr %ptr, i64 511
   %unused = atomicrmw fsub ptr %gep, <2 x bfloat> %val syncscope("agent") seq_cst
   ret void
 }
@@ -18257,7 +18257,7 @@ define void @flat_agent_atomic_fsub_noret_v2bf16__offset12b_neg(ptr %ptr, <2 x b
 ; GFX7-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr <2 x bfloat>, ptr %ptr, i64 -512
+  %gep = getelementptr inbounds <2 x bfloat>, ptr %ptr, i64 -512
   %unused = atomicrmw fsub ptr %gep, <2 x bfloat> %val syncscope("agent") seq_cst
   ret void
 }
@@ -18711,7 +18711,7 @@ define <2 x bfloat> @flat_system_atomic_fsub_ret_v2bf16__offset12b_pos(ptr %ptr,
 ; GFX7-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr <2 x bfloat>, ptr %ptr, i64 511
+  %gep = getelementptr inbounds <2 x bfloat>, ptr %ptr, i64 511
   %result = atomicrmw fsub ptr %gep, <2 x bfloat> %val seq_cst
   ret <2 x bfloat> %result
 }
@@ -19154,7 +19154,7 @@ define void @flat_system_atomic_fsub_noret_v2bf16__offset12b_pos(ptr %ptr, <2 x 
 ; GFX7-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr <2 x bfloat>, ptr %ptr, i64 511
+  %gep = getelementptr inbounds <2 x bfloat>, ptr %ptr, i64 511
   %unused = atomicrmw fsub ptr %gep, <2 x bfloat> %val seq_cst
   ret void
 }
