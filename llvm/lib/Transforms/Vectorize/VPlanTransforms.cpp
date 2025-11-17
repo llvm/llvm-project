@@ -236,7 +236,7 @@ static bool sinkScalarOperands(VPlan &Plan) {
 
 /// If \p R is a region with a VPBranchOnMaskRecipe in the entry block, return
 /// the mask.
-VPValue *getPredicatedMask(VPRegionBlock *R) {
+static VPValue *getPredicatedMask(VPRegionBlock *R) {
   auto *EntryBB = dyn_cast<VPBasicBlock>(R->getEntry());
   if (!EntryBB || EntryBB->size() != 1 ||
       !isa<VPBranchOnMaskRecipe>(EntryBB->begin()))
