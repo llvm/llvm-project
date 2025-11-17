@@ -167,8 +167,7 @@ int llvm::TableGenMain(const char *argv0,
 
   // Write output to memory.
   Timer.startBackendTimer("Backend overall");
-  SmallString<128> FilenamePrefix(OutputFilename);
-  sys::path::replace_extension(FilenamePrefix, "");
+  SmallString<128> FilenamePrefix(sys::path::stem(OutputFilename));
   TableGenOutputFiles OutFiles;
   unsigned status = 0;
   // ApplyCallback will return true if it did not apply any callback. In that
