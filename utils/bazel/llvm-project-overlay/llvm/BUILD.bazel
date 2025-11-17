@@ -2435,6 +2435,10 @@ llvm_target_lib_list = [lib for lib in [
                 ["-gen-searchable-tables"],
                 "lib/Target/AMDGPU/AMDGPUGenSearchableTables.inc",
             ),
+            (
+                ["-gen-sd-node-info"],
+                "lib/Target/AMDGPU/AMDGPUGenSDNodeInfo.inc",
+            ),
         ],
         "tbl_deps": [
             ":InstCombineTableGen",
