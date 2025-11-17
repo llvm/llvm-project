@@ -324,7 +324,7 @@ Error BasicBlockSectionsProfileReader::ReadV1Profile() {
       Values[0].split(PrefetchTargetStr, ',');
       if (PrefetchTargetStr.size() != 2)
         return createProfileParseError(
-            Twine("Prefetch target target expected: ") + Value);
+            Twine("Prefetch target target expected: ") + Values[0]);
       auto TargetBBID = parseUniqueBBID(PrefetchTargetStr[0]);
       if (!TargetBBID)
         return TargetBBID.takeError();
