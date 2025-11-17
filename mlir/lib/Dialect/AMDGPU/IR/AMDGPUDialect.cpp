@@ -374,8 +374,8 @@ LogicalResult ScaledExtPacked816Op::verify() {
       bool is_valid = ((firstScaleLane == 0) && (firstScaleByte == 0)) ||
                       ((firstScaleLane == 1) && (firstScaleByte == 2));
       if (!is_valid) {
-        return emitOpError(
-            "blockSize of 16 can only have firstScaleByte be 0 or 2 for f8.");
+        return emitOpError("blockSize of 16 can only have (firstScaleLane, "
+                           "firstScaleByte) be (0, 0) or (1, 2) for f8.");
       }
     }
   }
