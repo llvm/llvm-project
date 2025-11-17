@@ -1097,14 +1097,15 @@ RegsForValue::getRegsAndSizes() const {
 }
 
 void SelectionDAGBuilder::init(GCFunctionInfo *gfi, BatchAAResults *aa,
-                               AssumptionCache *ac,
-                               const TargetLibraryInfo *li) {
+                               AssumptionCache *ac, const TargetLibraryInfo *li,
+                               const TargetTransformInfo &TTI) {
   BatchAA = aa;
   AC = ac;
   GFI = gfi;
   LibInfo = li;
   Context = DAG.getContext();
   LPadToCallSiteMap.clear();
+  this->TTI = &TTI;
   SL->init(DAG.getTargetLoweringInfo(), TM, DAG.getDataLayout());
   AssignmentTrackingEnabled = isAssignmentTrackingEnabled(
       *DAG.getMachineFunction().getFunction().getParent());
