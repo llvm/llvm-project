@@ -67,13 +67,13 @@ private:
       IDAndDiagnostic;
   std::vector<IDAndDiagnostic> m_diagnostics;
   std::unique_ptr<clang::DiagnosticOptions> m_diag_opts;
+  /// Output string filled by m_os. Will be reused for different diagnostics.
+  std::string m_output;
+  /// Output stream of m_diag_printer.
+  std::unique_ptr<llvm::raw_string_ostream> m_os;
   /// The DiagnosticPrinter used for creating the full diagnostic messages
   /// that are stored in m_diagnostics.
   std::unique_ptr<clang::TextDiagnosticPrinter> m_diag_printer;
-  /// Output stream of m_diag_printer.
-  std::unique_ptr<llvm::raw_string_ostream> m_os;
-  /// Output string filled by m_os. Will be reused for different diagnostics.
-  std::string m_output;
   /// A Progress with explicitly managed lifetime.
   std::unique_ptr<Progress> m_current_progress_up;
   std::vector<std::string> m_module_build_stack;
