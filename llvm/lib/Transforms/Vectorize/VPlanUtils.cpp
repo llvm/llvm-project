@@ -46,12 +46,6 @@ VPValue *vputils::getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr) {
   return Expanded;
 }
 
-static inline auto m_CanonicalScalarIVSteps(const VPlan &Plan) {
-  return m_ScalarIVSteps(
-      m_Specific(Plan.getVectorLoopRegion()->getCanonicalIV()), m_One(),
-      m_Specific(&Plan.getVF()));
-}
-
 bool vputils::isHeaderMask(const VPValue *V, const VPlan &Plan) {
   if (isa<VPActiveLaneMaskPHIRecipe>(V))
     return true;
@@ -64,12 +58,16 @@ bool vputils::isHeaderMask(const VPValue *V, const VPlan &Plan) {
 
   VPValue *A, *B;
 
+  auto m_CanonicalScalarIVSteps =
+      m_ScalarIVSteps(m_Specific(Plan.getVectorLoopRegion()->getCanonicalIV()),
+                      m_One(), m_Specific(&Plan.getVF()));
+
   if (match(V, m_ActiveLaneMask(m_VPValue(A), m_VPValue(B), m_One())))
     return B == Plan.getTripCount() &&
-           (match(A, m_CanonicalScalarIVSteps(Plan)) || IsWideCanonicalIV(A));
+           (match(A, m_CanonicalScalarIVSteps) || IsWideCanonicalIV(A));
 
   // For scalar plans, the header mask uses the scalar steps.
-  if (match(V, m_ICmp(m_CanonicalScalarIVSteps(Plan),
+  if (match(V, m_ICmp(m_CanonicalScalarIVSteps,
                       m_Specific(Plan.getBackedgeTakenCount())))) {
     assert(Plan.hasScalarVFOnly() &&
            "Non-scalar VF using scalar IV steps for header mask?");
