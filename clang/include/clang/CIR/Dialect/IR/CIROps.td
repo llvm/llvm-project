@@ -3386,6 +3386,10 @@ def CIR_BaseClassAddrOp : CIR_Op<"base_class_addr"> {
     cannot be known by the operation, and that information affects how the
     operation is lowered.
 
+    The validity of the relationship of derived and base cannot yet be verified.
+    If the target class is not a valid base class for the object, the behavior
+    is undefined.
+
     Example:
     ```c++
     struct Base { };
@@ -3399,8 +3403,6 @@ def CIR_BaseClassAddrOp : CIR_Op<"base_class_addr"> {
     ```
   }];
 
-  // The validity of the relationship of derived and base cannot yet be
-  // verified, currently not worth adding a verifier.
   let arguments = (ins
     Arg<CIR_PointerType, "derived class pointer", [MemRead]>:$derived_addr,
     IndexAttr:$offset, UnitAttr:$assume_not_null);
@@ -3411,6 +3413,56 @@ def CIR_BaseClassAddrOp : CIR_Op<"base_class_addr"> {
       $derived_addr `:` qualified(type($derived_addr))
       (`nonnull` $assume_not_null^)?
       ` ` `[` $offset `]` `->` qualified(type($base_addr)) attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// DerivedClassAddrOp
+//===----------------------------------------------------------------------===//
+
+def CIR_DerivedClassAddrOp : CIR_Op<"derived_class_addr"> {
+  let summary = "Get the derived class address for a class/struct";
+  let description = [{
+    The `cir.derived_class_addr` operaration gets the address of a particular
+    derived class given a non-virtual base class pointer. The offset in bytes
+    of the base class must be passed in, similar to `cir.base_class_addr`, but
+    going into the other direction. This means lowering to a negative offset.
+
+    The operation contains a flag for whether or not the operand may be nullptr.
+    That depends on the context and cannot be known by the operation, and that
+    information affects how the operation is lowered.
+
+    The validity of the relationship of derived and base cannot yet be verified.
+    If the target class is not a valid derived class for the object, the
+    behavior is undefined.
+
+    Example:
+    ```c++
+    class A {};
+    class B : public A {};
+
+    B *getAsB(A *a) {
+      return static_cast<B*>(a);
+    }
+    ```
+
+    leads to
+    ```mlir
+      %2 = cir.load %0 : !cir.ptr<!cir.ptr<!rec_A>>, !cir.ptr<!rec_A>
+      %3 = cir.base_class_addr %2 : !cir.ptr<!rec_B> [0] -> !cir.ptr<!rec_A>
+    ```
+  }];
+
+  let arguments = (ins
+    Arg<CIR_PointerType, "base class pointer", [MemRead]>:$base_addr,
+    IndexAttr:$offset, UnitAttr:$assume_not_null);
+
+  let results = (outs Res<CIR_PointerType, "">:$derived_addr);
+
+  let assemblyFormat = [{
+      $base_addr `:` qualified(type($base_addr))
+      (`nonnull` $assume_not_null^)?
+      ` ` `[` $offset `]` `->` qualified(type($derived_addr)) attr-dict
   }];
 }
 
