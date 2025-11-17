@@ -3180,7 +3180,7 @@ llvm_target_lib_list = [lib for lib in [
             (
                 ["-gen-sd-node-info"],
                 "lib/Target/SystemZ/SystemZGenSDNodeInfo.inc",
-            )
+            ),
         ],
     },
     {
