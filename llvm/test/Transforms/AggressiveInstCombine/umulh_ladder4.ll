@@ -6,25 +6,11 @@ define i32 @mul_ladder4(i32 %x, i32 %y) {
 ; CHECK-LABEL: define i32 @mul_ladder4(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[XL:%.*]] = and i32 [[X]], 65535
-; CHECK-NEXT:    [[XH:%.*]] = lshr i32 [[X]], 16
-; CHECK-NEXT:    [[YL:%.*]] = and i32 [[Y]], 65535
-; CHECK-NEXT:    [[YH:%.*]] = lshr i32 [[Y]], 16
-; CHECK-NEXT:    [[MULLL:%.*]] = mul nuw i32 [[XL]], [[YL]]
-; CHECK-NEXT:    [[MULLH:%.*]] = mul nuw i32 [[XL]], [[YH]]
-; CHECK-NEXT:    [[MULHL:%.*]] = mul nuw i32 [[XH]], [[YL]]
-; CHECK-NEXT:    [[MULHH:%.*]] = mul nuw i32 [[XH]], [[YH]]
-; CHECK-NEXT:    [[SHR8:%.*]] = lshr i32 [[MULLL]], 16
-; CHECK-NEXT:    [[CONV10:%.*]] = and i32 [[MULLH]], 65535
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[SHR8]], [[CONV10]]
-; CHECK-NEXT:    [[CONV12:%.*]] = and i32 [[MULHL]], 65535
-; CHECK-NEXT:    [[ADD13:%.*]] = add nuw nsw i32 [[ADD]], [[CONV12]]
-; CHECK-NEXT:    [[SHR14:%.*]] = lshr i32 [[ADD13]], 16
-; CHECK-NEXT:    [[SHR15:%.*]] = lshr i32 [[MULLH]], 16
-; CHECK-NEXT:    [[ADD16:%.*]] = add nuw i32 [[MULHH]], [[SHR15]]
-; CHECK-NEXT:    [[SHR17:%.*]] = lshr i32 [[MULHL]], 16
-; CHECK-NEXT:    [[ADD18:%.*]] = add nuw i32 [[ADD16]], [[SHR17]]
-; CHECK-NEXT:    [[ADD19:%.*]] = add nuw i32 [[ADD18]], [[SHR14]]
+; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[X]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[Y]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw i64 [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP2]], 32
+; CHECK-NEXT:    [[ADD19:%.*]] = trunc nuw i64 [[TMP3]] to i32
 ; CHECK-NEXT:    ret i32 [[ADD19]]
 ;
 entry:
@@ -54,25 +40,11 @@ define <2 x i32> @mul_ladder4_v2i32(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: define <2 x i32> @mul_ladder4_v2i32(
 ; CHECK-SAME: <2 x i32> [[X:%.*]], <2 x i32> [[Y:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[XL:%.*]] = and <2 x i32> [[X]], splat (i32 65535)
-; CHECK-NEXT:    [[XH:%.*]] = lshr <2 x i32> [[X]], splat (i32 16)
-; CHECK-NEXT:    [[YL:%.*]] = and <2 x i32> [[Y]], splat (i32 65535)
-; CHECK-NEXT:    [[YH:%.*]] = lshr <2 x i32> [[Y]], splat (i32 16)
-; CHECK-NEXT:    [[MULLL:%.*]] = mul nuw <2 x i32> [[XL]], [[YL]]
-; CHECK-NEXT:    [[MULLH:%.*]] = mul nuw <2 x i32> [[XL]], [[YH]]
-; CHECK-NEXT:    [[MULHL:%.*]] = mul nuw <2 x i32> [[XH]], [[YL]]
-; CHECK-NEXT:    [[MULHH:%.*]] = mul nuw <2 x i32> [[XH]], [[YH]]
-; CHECK-NEXT:    [[SHR8:%.*]] = lshr <2 x i32> [[MULLL]], splat (i32 16)
-; CHECK-NEXT:    [[CONV10:%.*]] = and <2 x i32> [[MULLH]], splat (i32 65535)
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw <2 x i32> [[SHR8]], [[CONV10]]
-; CHECK-NEXT:    [[CONV12:%.*]] = and <2 x i32> [[MULHL]], splat (i32 65535)
-; CHECK-NEXT:    [[ADD13:%.*]] = add nuw nsw <2 x i32> [[ADD]], [[CONV12]]
-; CHECK-NEXT:    [[SHR14:%.*]] = lshr <2 x i32> [[ADD13]], splat (i32 16)
-; CHECK-NEXT:    [[SHR15:%.*]] = lshr <2 x i32> [[MULLH]], splat (i32 16)
-; CHECK-NEXT:    [[ADD16:%.*]] = add nuw <2 x i32> [[MULHH]], [[SHR15]]
-; CHECK-NEXT:    [[SHR17:%.*]] = lshr <2 x i32> [[MULHL]], splat (i32 16)
-; CHECK-NEXT:    [[ADD18:%.*]] = add nuw <2 x i32> [[ADD16]], [[SHR17]]
-; CHECK-NEXT:    [[ADD19:%.*]] = add nuw <2 x i32> [[ADD18]], [[SHR14]]
+; CHECK-NEXT:    [[TMP0:%.*]] = zext <2 x i32> [[X]] to <2 x i64>
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <2 x i32> [[Y]] to <2 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw <2 x i64> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = lshr <2 x i64> [[TMP2]], splat (i64 32)
+; CHECK-NEXT:    [[ADD19:%.*]] = trunc nuw <2 x i64> [[TMP3]] to <2 x i32>
 ; CHECK-NEXT:    ret <2 x i32> [[ADD19]]
 ;
 entry:
@@ -102,25 +74,11 @@ define i128 @mul_ladder4_i128(i128 %x, i128 %y) {
 ; CHECK-LABEL: define i128 @mul_ladder4_i128(
 ; CHECK-SAME: i128 [[X:%.*]], i128 [[Y:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[XL:%.*]] = and i128 [[X]], 18446744073709551615
-; CHECK-NEXT:    [[XH:%.*]] = lshr i128 [[X]], 64
-; CHECK-NEXT:    [[YL:%.*]] = and i128 [[Y]], 18446744073709551615
-; CHECK-NEXT:    [[YH:%.*]] = lshr i128 [[Y]], 64
-; CHECK-NEXT:    [[MULLL:%.*]] = mul nuw i128 [[XL]], [[YL]]
-; CHECK-NEXT:    [[MULLH:%.*]] = mul nuw i128 [[XL]], [[YH]]
-; CHECK-NEXT:    [[MULHL:%.*]] = mul nuw i128 [[XH]], [[YL]]
-; CHECK-NEXT:    [[MULHH:%.*]] = mul nuw i128 [[XH]], [[YH]]
-; CHECK-NEXT:    [[SHR8:%.*]] = lshr i128 [[MULLL]], 64
-; CHECK-NEXT:    [[CONV10:%.*]] = and i128 [[MULLH]], 18446744073709551615
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i128 [[SHR8]], [[CONV10]]
-; CHECK-NEXT:    [[CONV12:%.*]] = and i128 [[MULHL]], 18446744073709551615
-; CHECK-NEXT:    [[ADD13:%.*]] = add nuw nsw i128 [[ADD]], [[CONV12]]
-; CHECK-NEXT:    [[SHR14:%.*]] = lshr i128 [[ADD13]], 64
-; CHECK-NEXT:    [[SHR15:%.*]] = lshr i128 [[MULLH]], 64
-; CHECK-NEXT:    [[ADD16:%.*]] = add nuw i128 [[MULHH]], [[SHR15]]
-; CHECK-NEXT:    [[SHR17:%.*]] = lshr i128 [[MULHL]], 64
-; CHECK-NEXT:    [[ADD18:%.*]] = add nuw i128 [[ADD16]], [[SHR17]]
-; CHECK-NEXT:    [[ADD19:%.*]] = add nuw i128 [[ADD18]], [[SHR14]]
+; CHECK-NEXT:    [[TMP0:%.*]] = zext i128 [[X]] to i256
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i128 [[Y]] to i256
+; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw i256 [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = lshr i256 [[TMP2]], 128
+; CHECK-NEXT:    [[ADD19:%.*]] = trunc nuw i256 [[TMP3]] to i128
 ; CHECK-NEXT:    ret i128 [[ADD19]]
 ;
 entry:
@@ -150,25 +108,11 @@ define i32 @mul_ladder4_commutted(i32 %x, i32 %y) {
 ; CHECK-LABEL: define i32 @mul_ladder4_commutted(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[XL:%.*]] = and i32 [[X]], 65535
-; CHECK-NEXT:    [[XH:%.*]] = lshr i32 [[X]], 16
-; CHECK-NEXT:    [[YL:%.*]] = and i32 [[Y]], 65535
-; CHECK-NEXT:    [[YH:%.*]] = lshr i32 [[Y]], 16
-; CHECK-NEXT:    [[MULLL:%.*]] = mul nuw i32 [[YL]], [[XL]]
-; CHECK-NEXT:    [[MULLH:%.*]] = mul nuw i32 [[YH]], [[XL]]
-; CHECK-NEXT:    [[MULHL:%.*]] = mul nuw i32 [[YL]], [[XH]]
-; CHECK-NEXT:    [[MULHH:%.*]] = mul nuw i32 [[YH]], [[XH]]
-; CHECK-NEXT:    [[SHR8:%.*]] = lshr i32 [[MULLL]], 16
-; CHECK-NEXT:    [[CONV10:%.*]] = and i32 [[MULLH]], 65535
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[CONV10]], [[SHR8]]
-; CHECK-NEXT:    [[CONV12:%.*]] = and i32 [[MULHL]], 65535
-; CHECK-NEXT:    [[ADD13:%.*]] = add nuw nsw i32 [[CONV12]], [[ADD]]
-; CHECK-NEXT:    [[SHR14:%.*]] = lshr i32 [[ADD13]], 16
-; CHECK-NEXT:    [[SHR15:%.*]] = lshr i32 [[MULLH]], 16
-; CHECK-NEXT:    [[SHR17:%.*]] = lshr i32 [[MULHL]], 16
-; CHECK-NEXT:    [[ADD16:%.*]] = add nuw nsw i32 [[SHR14]], [[SHR17]]
-; CHECK-NEXT:    [[ADD18:%.*]] = add nuw nsw i32 [[ADD16]], [[SHR15]]
-; CHECK-NEXT:    [[ADD19:%.*]] = add nuw i32 [[MULHH]], [[ADD18]]
+; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[Y]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[X]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw i64 [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP2]], 32
+; CHECK-NEXT:    [[ADD19:%.*]] = trunc nuw i64 [[TMP3]] to i32
 ; CHECK-NEXT:    ret i32 [[ADD19]]
 ;
 entry:
@@ -198,25 +142,11 @@ define i32 @mul_ladder4_swap_hl_lh(i32 %x, i32 %y) {
 ; CHECK-LABEL: define i32 @mul_ladder4_swap_hl_lh(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[XL:%.*]] = and i32 [[X]], 65535
-; CHECK-NEXT:    [[XH:%.*]] = lshr i32 [[X]], 16
-; CHECK-NEXT:    [[YL:%.*]] = and i32 [[Y]], 65535
-; CHECK-NEXT:    [[YH:%.*]] = lshr i32 [[Y]], 16
-; CHECK-NEXT:    [[MULLL:%.*]] = mul nuw i32 [[XL]], [[YL]]
-; CHECK-NEXT:    [[MULLH:%.*]] = mul nuw i32 [[XL]], [[YH]]
-; CHECK-NEXT:    [[MULHL:%.*]] = mul nuw i32 [[XH]], [[YL]]
-; CHECK-NEXT:    [[MULHH:%.*]] = mul nuw i32 [[XH]], [[YH]]
-; CHECK-NEXT:    [[SHR8:%.*]] = lshr i32 [[MULLL]], 16
-; CHECK-NEXT:    [[CONV10:%.*]] = and i32 [[MULHL]], 65535
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[SHR8]], [[CONV10]]
-; CHECK-NEXT:    [[CONV12:%.*]] = and i32 [[MULLH]], 65535
-; CHECK-NEXT:    [[ADD13:%.*]] = add nuw nsw i32 [[ADD]], [[CONV12]]
-; CHECK-NEXT:    [[SHR14:%.*]] = lshr i32 [[ADD13]], 16
-; CHECK-NEXT:    [[SHR15:%.*]] = lshr i32 [[MULHL]], 16
-; CHECK-NEXT:    [[ADD16:%.*]] = add nuw i32 [[MULHH]], [[SHR15]]
-; CHECK-NEXT:    [[SHR17:%.*]] = lshr i32 [[MULLH]], 16
-; CHECK-NEXT:    [[ADD18:%.*]] = add nuw i32 [[ADD16]], [[SHR17]]
-; CHECK-NEXT:    [[ADD19:%.*]] = add nuw i32 [[ADD18]], [[SHR14]]
+; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[X]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[Y]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw i64 [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP2]], 32
+; CHECK-NEXT:    [[ADD19:%.*]] = trunc nuw i64 [[TMP3]] to i32
 ; CHECK-NEXT:    ret i32 [[ADD19]]
 ;
 entry:

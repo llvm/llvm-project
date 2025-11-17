@@ -5,22 +5,11 @@
 define i64 @umulh_variant(i64 %x, i64 %y) {
 ; CHECK-LABEL: define i64 @umulh_variant(
 ; CHECK-SAME: i64 [[X:%.*]], i64 [[Y:%.*]]) {
-; CHECK-NEXT:    [[X_LO:%.*]] = and i64 [[X]], 4294967295
-; CHECK-NEXT:    [[Y_LO:%.*]] = and i64 [[Y]], 4294967295
-; CHECK-NEXT:    [[X_HI:%.*]] = lshr i64 [[X]], 32
-; CHECK-NEXT:    [[Y_HI:%.*]] = lshr i64 [[Y]], 32
-; CHECK-NEXT:    [[T0:%.*]] = mul nuw i64 [[Y_LO]], [[X_LO]]
-; CHECK-NEXT:    [[T1:%.*]] = mul nuw i64 [[Y_LO]], [[X_HI]]
-; CHECK-NEXT:    [[T2:%.*]] = mul nuw i64 [[Y_HI]], [[X_LO]]
-; CHECK-NEXT:    [[T3:%.*]] = mul nuw i64 [[Y_HI]], [[X_HI]]
-; CHECK-NEXT:    [[T0_HI:%.*]] = lshr i64 [[T0]], 32
-; CHECK-NEXT:    [[U0:%.*]] = add nuw i64 [[T0_HI]], [[T1]]
-; CHECK-NEXT:    [[U0_LO:%.*]] = and i64 [[U0]], 4294967295
-; CHECK-NEXT:    [[U0_HI:%.*]] = lshr i64 [[U0]], 32
-; CHECK-NEXT:    [[U1:%.*]] = add nuw i64 [[U0_LO]], [[T2]]
-; CHECK-NEXT:    [[U1_HI:%.*]] = lshr i64 [[U1]], 32
-; CHECK-NEXT:    [[U2:%.*]] = add nuw i64 [[U0_HI]], [[T3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = add nuw i64 [[U2]], [[U1_HI]]
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i64 [[Y]] to i128
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i64 [[X]] to i128
+; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i128 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = lshr i128 [[TMP3]], 64
+; CHECK-NEXT:    [[TMP5:%.*]] = trunc nuw i128 [[TMP4]] to i64
 ; CHECK-NEXT:    ret i64 [[TMP5]]
 ;
   %x_lo = and i64 %x, 4294967295
@@ -48,22 +37,11 @@ define i64 @umulh_variant(i64 %x, i64 %y) {
 define i32 @umulh_variant_i32(i32 %x, i32 %y) {
 ; CHECK-LABEL: define i32 @umulh_variant_i32(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
-; CHECK-NEXT:    [[X_LO:%.*]] = and i32 [[X]], 65535
-; CHECK-NEXT:    [[Y_LO:%.*]] = and i32 [[Y]], 65535
-; CHECK-NEXT:    [[X_HI:%.*]] = lshr i32 [[X]], 16
-; CHECK-NEXT:    [[Y_HI:%.*]] = lshr i32 [[Y]], 16
-; CHECK-NEXT:    [[T0:%.*]] = mul nuw i32 [[Y_LO]], [[X_LO]]
-; CHECK-NEXT:    [[T1:%.*]] = mul nuw i32 [[Y_LO]], [[X_HI]]
-; CHECK-NEXT:    [[T2:%.*]] = mul nuw i32 [[Y_HI]], [[X_LO]]
-; CHECK-NEXT:    [[T3:%.*]] = mul nuw i32 [[Y_HI]], [[X_HI]]
-; CHECK-NEXT:    [[T0_HI:%.*]] = lshr i32 [[T0]], 16
-; CHECK-NEXT:    [[U0:%.*]] = add nuw i32 [[T0_HI]], [[T1]]
-; CHECK-NEXT:    [[U0_LO:%.*]] = and i32 [[U0]], 65535
-; CHECK-NEXT:    [[U0_HI:%.*]] = lshr i32 [[U0]], 16
-; CHECK-NEXT:    [[U1:%.*]] = add nuw i32 [[U0_LO]], [[T2]]
-; CHECK-NEXT:    [[U1_HI:%.*]] = lshr i32 [[U1]], 16
-; CHECK-NEXT:    [[U2:%.*]] = add nuw i32 [[U0_HI]], [[T3]]
-; CHECK-NEXT:    [[HW64:%.*]] = add nuw i32 [[U2]], [[U1_HI]]
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[Y]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[X]] to i64
+; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = lshr i64 [[TMP3]], 32
+; CHECK-NEXT:    [[HW64:%.*]] = trunc nuw i64 [[TMP4]] to i32
 ; CHECK-NEXT:    ret i32 [[HW64]]
 ;
   %x_lo = and i32 %x, u0xffff
@@ -91,22 +69,11 @@ define i32 @umulh_variant_i32(i32 %x, i32 %y) {
 define <2 x i32> @umulh_variant_v2i32(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: define <2 x i32> @umulh_variant_v2i32(
 ; CHECK-SAME: <2 x i32> [[X:%.*]], <2 x i32> [[Y:%.*]]) {
-; CHECK-NEXT:    [[X_LO:%.*]] = and <2 x i32> [[X]], splat (i32 65535)
-; CHECK-NEXT:    [[Y_LO:%.*]] = and <2 x i32> [[Y]], splat (i32 65535)
-; CHECK-NEXT:    [[X_HI:%.*]] = lshr <2 x i32> [[X]], splat (i32 16)
-; CHECK-NEXT:    [[Y_HI:%.*]] = lshr <2 x i32> [[Y]], splat (i32 16)
-; CHECK-NEXT:    [[T0:%.*]] = mul nuw <2 x i32> [[Y_LO]], [[X_LO]]
-; CHECK-NEXT:    [[T1:%.*]] = mul nuw <2 x i32> [[Y_LO]], [[X_HI]]
-; CHECK-NEXT:    [[T2:%.*]] = mul nuw <2 x i32> [[Y_HI]], [[X_LO]]
-; CHECK-NEXT:    [[T3:%.*]] = mul nuw <2 x i32> [[Y_HI]], [[X_HI]]
-; CHECK-NEXT:    [[T0_HI:%.*]] = lshr <2 x i32> [[T0]], splat (i32 16)
-; CHECK-NEXT:    [[U0:%.*]] = add nuw <2 x i32> [[T0_HI]], [[T1]]
-; CHECK-NEXT:    [[U0_LO:%.*]] = and <2 x i32> [[U0]], splat (i32 65535)
-; CHECK-NEXT:    [[U0_HI:%.*]] = lshr <2 x i32> [[U0]], splat (i32 16)
-; CHECK-NEXT:    [[U1:%.*]] = add nuw <2 x i32> [[U0_LO]], [[T2]]
-; CHECK-NEXT:    [[U1_HI:%.*]] = lshr <2 x i32> [[U1]], splat (i32 16)
-; CHECK-NEXT:    [[U2:%.*]] = add nuw <2 x i32> [[U0_HI]], [[T3]]
-; CHECK-NEXT:    [[HW64:%.*]] = add nuw <2 x i32> [[U2]], [[U1_HI]]
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <2 x i32> [[Y]] to <2 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = zext <2 x i32> [[X]] to <2 x i64>
+; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw <2 x i64> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = lshr <2 x i64> [[TMP3]], splat (i64 32)
+; CHECK-NEXT:    [[HW64:%.*]] = trunc nuw <2 x i64> [[TMP4]] to <2 x i32>
 ; CHECK-NEXT:    ret <2 x i32> [[HW64]]
 ;
   %x_lo = and <2 x i32> %x, <i32 u0xffff, i32 u0xffff>
@@ -134,22 +101,11 @@ define <2 x i32> @umulh_variant_v2i32(<2 x i32> %x, <2 x i32> %y) {
 define i128 @umulh_variant_i128(i128 %x, i128 %y) {
 ; CHECK-LABEL: define i128 @umulh_variant_i128(
 ; CHECK-SAME: i128 [[X:%.*]], i128 [[Y:%.*]]) {
-; CHECK-NEXT:    [[X_LO:%.*]] = and i128 [[X]], 18446744073709551615
-; CHECK-NEXT:    [[Y_LO:%.*]] = and i128 [[Y]], 18446744073709551615
-; CHECK-NEXT:    [[X_HI:%.*]] = lshr i128 [[X]], 64
-; CHECK-NEXT:    [[Y_HI:%.*]] = lshr i128 [[Y]], 64
-; CHECK-NEXT:    [[T0:%.*]] = mul nuw i128 [[Y_LO]], [[X_LO]]
-; CHECK-NEXT:    [[T1:%.*]] = mul nuw i128 [[Y_LO]], [[X_HI]]
-; CHECK-NEXT:    [[T2:%.*]] = mul nuw i128 [[Y_HI]], [[X_LO]]
-; CHECK-NEXT:    [[T3:%.*]] = mul nuw i128 [[Y_HI]], [[X_HI]]
-; CHECK-NEXT:    [[T0_HI:%.*]] = lshr i128 [[T0]], 64
-; CHECK-NEXT:    [[U0:%.*]] = add nuw i128 [[T0_HI]], [[T1]]
-; CHECK-NEXT:    [[U0_LO:%.*]] = and i128 [[U0]], 18446744073709551615
-; CHECK-NEXT:    [[U0_HI:%.*]] = lshr i128 [[U0]], 64
-; CHECK-NEXT:    [[U1:%.*]] = add nuw i128 [[U0_LO]], [[T2]]
-; CHECK-NEXT:    [[U1_HI:%.*]] = lshr i128 [[U1]], 64
-; CHECK-NEXT:    [[U2:%.*]] = add nuw i128 [[U0_HI]], [[T3]]
-; CHECK-NEXT:    [[HW64:%.*]] = add nuw i128 [[U2]], [[U1_HI]]
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i128 [[Y]] to i256
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i128 [[X]] to i256
+; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i256 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = lshr i256 [[TMP3]], 128
+; CHECK-NEXT:    [[HW64:%.*]] = trunc nuw i256 [[TMP4]] to i128
 ; CHECK-NEXT:    ret i128 [[HW64]]
 ;
   %x_lo = and i128 %x, u0xffffffffffffffff
@@ -177,22 +133,11 @@ define i128 @umulh_variant_i128(i128 %x, i128 %y) {
 define i64 @umulh_variant_commuted(i64 %x, i64 %y) {
 ; CHECK-LABEL: define i64 @umulh_variant_commuted(
 ; CHECK-SAME: i64 [[X:%.*]], i64 [[Y:%.*]]) {
-; CHECK-NEXT:    [[X_LO:%.*]] = and i64 [[X]], 4294967295
-; CHECK-NEXT:    [[Y_LO:%.*]] = and i64 [[Y]], 4294967295
-; CHECK-NEXT:    [[X_HI:%.*]] = lshr i64 [[X]], 32
-; CHECK-NEXT:    [[Y_HI:%.*]] = lshr i64 [[Y]], 32
-; CHECK-NEXT:    [[T0:%.*]] = mul nuw i64 [[X_LO]], [[Y_LO]]
-; CHECK-NEXT:    [[T1:%.*]] = mul nuw i64 [[X_LO]], [[Y_HI]]
-; CHECK-NEXT:    [[T2:%.*]] = mul nuw i64 [[X_HI]], [[Y_LO]]
-; CHECK-NEXT:    [[T3:%.*]] = mul nuw i64 [[X_HI]], [[Y_HI]]
-; CHECK-NEXT:    [[T0_HI:%.*]] = lshr i64 [[T0]], 32
-; CHECK-NEXT:    [[U0:%.*]] = add nuw i64 [[T1]], [[T0_HI]]
-; CHECK-NEXT:    [[U0_LO:%.*]] = and i64 [[U0]], 4294967295
-; CHECK-NEXT:    [[U0_HI:%.*]] = lshr i64 [[U0]], 32
-; CHECK-NEXT:    [[U1:%.*]] = add nuw i64 [[T2]], [[U0_LO]]
-; CHECK-NEXT:    [[U1_HI:%.*]] = lshr i64 [[U1]], 32
-; CHECK-NEXT:    [[U2:%.*]] = add nuw nsw i64 [[U1_HI]], [[U0_HI]]
-; CHECK-NEXT:    [[HW64:%.*]] = add nuw i64 [[T3]], [[U2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i64 [[X]] to i128
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i64 [[Y]] to i128
+; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i128 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = lshr i128 [[TMP3]], 64
+; CHECK-NEXT:    [[HW64:%.*]] = trunc nuw i128 [[TMP4]] to i64
 ; CHECK-NEXT:    ret i64 [[HW64]]
 ;
   %x_lo = and i64 %x, 4294967295
@@ -403,21 +348,13 @@ define i64 @umulh_variant__mul_use__t0(i64 %x, i64 %y) {
 ; CHECK-SAME: i64 [[X:%.*]], i64 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[X_LO:%.*]] = and i64 [[X]], 4294967295
 ; CHECK-NEXT:    [[Y_LO:%.*]] = and i64 [[Y]], 4294967295
-; CHECK-NEXT:    [[X_HI:%.*]] = lshr i64 [[X]], 32
-; CHECK-NEXT:    [[Y_HI:%.*]] = lshr i64 [[Y]], 32
 ; CHECK-NEXT:    [[T0:%.*]] = mul nuw i64 [[Y_LO]], [[X_LO]]
 ; CHECK-NEXT:    call void (...) @llvm.fake.use(i64 [[T0]])
-; CHECK-NEXT:    [[T1:%.*]] = mul nuw i64 [[Y_LO]], [[X_HI]]
-; CHECK-NEXT:    [[T2:%.*]] = mul nuw i64 [[Y_HI]], [[X_LO]]
-; CHECK-NEXT:    [[T3:%.*]] = mul nuw i64 [[Y_HI]], [[X_HI]]
-; CHECK-NEXT:    [[T0_HI:%.*]] = lshr i64 [[T0]], 32
-; CHECK-NEXT:    [[U0:%.*]] = add nuw i64 [[T0_HI]], [[T1]]
-; CHECK-NEXT:    [[U0_LO:%.*]] = and i64 [[U0]], 4294967295
-; CHECK-NEXT:    [[U0_HI:%.*]] = lshr i64 [[U0]], 32
-; CHECK-NEXT:    [[U1:%.*]] = add nuw i64 [[U0_LO]], [[T2]]
-; CHECK-NEXT:    [[U1_HI:%.*]] = lshr i64 [[U1]], 32
-; CHECK-NEXT:    [[U2:%.*]] = add nuw i64 [[U0_HI]], [[T3]]
-; CHECK-NEXT:    [[HW64:%.*]] = add nuw i64 [[U2]], [[U1_HI]]
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i64 [[Y]] to i128
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i64 [[X]] to i128
+; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i128 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = lshr i128 [[TMP3]], 64
+; CHECK-NEXT:    [[HW64:%.*]] = trunc nuw i128 [[TMP4]] to i64
 ; CHECK-NEXT:    ret i64 [[HW64]]
 ;
   %x_lo = and i64 %x, 4294967295
@@ -447,23 +384,15 @@ define i64 @umulh_variant__mul_use__t0(i64 %x, i64 %y) {
 define i64 @umulh_variant__mul_use__t1(i64 %x, i64 %y) {
 ; CHECK-LABEL: define i64 @umulh_variant__mul_use__t1(
 ; CHECK-SAME: i64 [[X:%.*]], i64 [[Y:%.*]]) {
-; CHECK-NEXT:    [[X_LO:%.*]] = and i64 [[X]], 4294967295
 ; CHECK-NEXT:    [[Y_LO:%.*]] = and i64 [[Y]], 4294967295
 ; CHECK-NEXT:    [[X_HI:%.*]] = lshr i64 [[X]], 32
-; CHECK-NEXT:    [[Y_HI:%.*]] = lshr i64 [[Y]], 32
-; CHECK-NEXT:    [[T0:%.*]] = mul nuw i64 [[Y_LO]], [[X_LO]]
 ; CHECK-NEXT:    [[T1:%.*]] = mul nuw i64 [[Y_LO]], [[X_HI]]
 ; CHECK-NEXT:    call void (...) @llvm.fake.use(i64 [[T1]])
-; CHECK-NEXT:    [[T2:%.*]] = mul nuw i64 [[Y_HI]], [[X_LO]]
-; CHECK-NEXT:    [[T3:%.*]] = mul nuw i64 [[Y_HI]], [[X_HI]]
-; CHECK-NEXT:    [[T0_HI:%.*]] = lshr i64 [[T0]], 32
-; CHECK-NEXT:    [[U0:%.*]] = add nuw i64 [[T0_HI]], [[T1]]
-; CHECK-NEXT:    [[U0_LO:%.*]] = and i64 [[U0]], 4294967295
-; CHECK-NEXT:    [[U0_HI:%.*]] = lshr i64 [[U0]], 32
-; CHECK-NEXT:    [[U1:%.*]] = add nuw i64 [[U0_LO]], [[T2]]
-; CHECK-NEXT:    [[U1_HI:%.*]] = lshr i64 [[U1]], 32
-; CHECK-NEXT:    [[U2:%.*]] = add nuw i64 [[U0_HI]], [[T3]]
-; CHECK-NEXT:    [[HW64:%.*]] = add nuw i64 [[U2]], [[U1_HI]]
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i64 [[Y]] to i128
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i64 [[X]] to i128
+; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i128 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = lshr i128 [[TMP3]], 64
+; CHECK-NEXT:    [[HW64:%.*]] = trunc nuw i128 [[TMP4]] to i64
 ; CHECK-NEXT:    ret i64 [[HW64]]
 ;
   %x_lo = and i64 %x, 4294967295
@@ -494,22 +423,14 @@ define i64 @umulh_variant__mul_use__t2(i64 %x, i64 %y) {
 ; CHECK-LABEL: define i64 @umulh_variant__mul_use__t2(
 ; CHECK-SAME: i64 [[X:%.*]], i64 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[X_LO:%.*]] = and i64 [[X]], 4294967295
-; CHECK-NEXT:    [[Y_LO:%.*]] = and i64 [[Y]], 4294967295
-; CHECK-NEXT:    [[X_HI:%.*]] = lshr i64 [[X]], 32
 ; CHECK-NEXT:    [[Y_HI:%.*]] = lshr i64 [[Y]], 32
-; CHECK-NEXT:    [[T0:%.*]] = mul nuw i64 [[Y_LO]], [[X_LO]]
-; CHECK-NEXT:    [[T1:%.*]] = mul nuw i64 [[Y_LO]], [[X_HI]]
 ; CHECK-NEXT:    [[T2:%.*]] = mul nuw i64 [[Y_HI]], [[X_LO]]
 ; CHECK-NEXT:    call void (...) @llvm.fake.use(i64 [[T2]])
-; CHECK-NEXT:    [[T3:%.*]] = mul nuw i64 [[Y_HI]], [[X_HI]]
-; CHECK-NEXT:    [[T0_HI:%.*]] = lshr i64 [[T0]], 32
-; CHECK-NEXT:    [[U0:%.*]] = add nuw i64 [[T0_HI]], [[T1]]
-; CHECK-NEXT:    [[U0_LO:%.*]] = and i64 [[U0]], 4294967295
-; CHECK-NEXT:    [[U0_HI:%.*]] = lshr i64 [[U0]], 32
-; CHECK-NEXT:    [[U1:%.*]] = add nuw i64 [[U0_LO]], [[T2]]
-; CHECK-NEXT:    [[U1_HI:%.*]] = lshr i64 [[U1]], 32
-; CHECK-NEXT:    [[U2:%.*]] = add nuw i64 [[U0_HI]], [[T3]]
-; CHECK-NEXT:    [[HW64:%.*]] = add nuw i64 [[U2]], [[U1_HI]]
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i64 [[Y]] to i128
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i64 [[X]] to i128
+; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i128 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = lshr i128 [[TMP3]], 64
+; CHECK-NEXT:    [[HW64:%.*]] = trunc nuw i128 [[TMP4]] to i64
 ; CHECK-NEXT:    ret i64 [[HW64]]
 ;
   %x_lo = and i64 %x, 4294967295
@@ -587,21 +508,14 @@ define i64 @umulh_variant__mul_use__t0_hi(i64 %x, i64 %y) {
 ; CHECK-SAME: i64 [[X:%.*]], i64 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[X_LO:%.*]] = and i64 [[X]], 4294967295
 ; CHECK-NEXT:    [[Y_LO:%.*]] = and i64 [[Y]], 4294967295
-; CHECK-NEXT:    [[X_HI:%.*]] = lshr i64 [[X]], 32
-; CHECK-NEXT:    [[Y_HI:%.*]] = lshr i64 [[Y]], 32
 ; CHECK-NEXT:    [[T0:%.*]] = mul nuw i64 [[Y_LO]], [[X_LO]]
-; CHECK-NEXT:    [[T1:%.*]] = mul nuw i64 [[Y_LO]], [[X_HI]]
-; CHECK-NEXT:    [[T2:%.*]] = mul nuw i64 [[Y_HI]], [[X_LO]]
-; CHECK-NEXT:    [[T3:%.*]] = mul nuw i64 [[Y_HI]], [[X_HI]]
 ; CHECK-NEXT:    [[T0_HI:%.*]] = lshr i64 [[T0]], 32
 ; CHECK-NEXT:    call void (...) @llvm.fake.use(i64 [[T0_HI]])
-; CHECK-NEXT:    [[U0:%.*]] = add nuw i64 [[T0_HI]], [[T1]]
-; CHECK-NEXT:    [[U0_LO:%.*]] = and i64 [[U0]], 4294967295
-; CHECK-NEXT:    [[U0_HI:%.*]] = lshr i64 [[U0]], 32
-; CHECK-NEXT:    [[U1:%.*]] = add nuw i64 [[U0_LO]], [[T2]]
-; CHECK-NEXT:    [[U1_HI:%.*]] = lshr i64 [[U1]], 32
-; CHECK-NEXT:    [[U2:%.*]] = add nuw i64 [[U0_HI]], [[T3]]
-; CHECK-NEXT:    [[HW64:%.*]] = add nuw i64 [[U2]], [[U1_HI]]
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i64 [[Y]] to i128
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i64 [[X]] to i128
+; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i128 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = lshr i128 [[TMP3]], 64
+; CHECK-NEXT:    [[HW64:%.*]] = trunc nuw i128 [[TMP4]] to i64
 ; CHECK-NEXT:    ret i64 [[HW64]]
 ;
   %x_lo = and i64 %x, 4294967295
