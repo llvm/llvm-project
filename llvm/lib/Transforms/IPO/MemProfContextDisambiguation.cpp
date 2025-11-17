@@ -228,7 +228,7 @@ extern cl::opt<bool> MemProfReportHintedSizes;
 extern cl::opt<unsigned> MinClonedColdBytePercent;
 
 cl::opt<unsigned> MemProfTopNImportant(
-    "memprof-top-n-important", cl::init(0), cl::Hidden,
+    "memprof-top-n-important", cl::init(10), cl::Hidden,
     cl::desc("Number of largest cold contexts to consider important"));
 
 cl::opt<bool> MemProfFixupImportant(
@@ -885,7 +885,7 @@ private:
   /// Saves information for the contexts identified as important (the largest
   /// cold contexts up to MemProfTopNImportant).
   struct ImportantContextInfo {
-    // The original list of stack ids corresponding to this context.
+    // The original list of leaf first stack ids corresponding to this context.
     std::vector<uint64_t> StackIds;
     // Max length of stack ids corresponding to a single stack ContextNode for
     // this context (i.e. the max length of a key in StackIdsToNode below).
@@ -1436,9 +1436,8 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::addStackNodesForMIB(
     // contexts, see if this is a candidate.
     if (AllocType == AllocationType::Cold && MemProfTopNImportant > 0) {
       uint64_t TotalCold = 0;
-      for (auto &CSI : ContextSizeInfo) {
+      for (auto &CSI : ContextSizeInfo)
         TotalCold += CSI.TotalSize;
-      }
       // Record this context if either we haven't found the first top-n largest
       // yet, or if it is larger than the smallest already recorded.
       if (TotalSizeToContextIdTopNCold.size() < MemProfTopNImportant ||
@@ -1937,7 +1936,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy,
   // removing edges where necessary) for this context. In the
   // ImportantContextInfo struct in this case we should have a MaxLength = 2,
   // and map entries for {A B}, {A C}, {A D}, and {E}.
-  for (auto &[CurId, Info] : ImportantContextIdInfo) {
+  for (auto &[CurContextId, Info] : ImportantContextIdInfo) {
     if (Info.StackIdsToNode.empty())
       continue;
     bool Changed = false;
@@ -1948,7 +1947,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy,
     // Try to identify what callsite ContextNode maps to which slice of the
     // context's ordered stack ids.
     for (unsigned I = 0; I < AllStackIds.size(); I++, PrevNode = CurNode) {
-      // We will do this greedily, trying up to MaxLengh stack ids in a row, to
+      // We will do this greedily, trying up to MaxLength stack ids in a row, to
       // see if we recorded a context node for that sequence.
       auto Len = Info.MaxLength;
       auto LenToEnd = AllStackIds.size() - I;
@@ -1983,17 +1982,17 @@ void CallsiteContextGraph<DerivedCCG, FuncTy,
       auto *CurEdge = PrevNode->findEdgeFromCaller(CurNode);
       if (CurEdge) {
         // We already have an edge. Make sure it contains this context id.
-        if (!CurEdge->getContextIds().contains(CurId)) {
-          CurEdge->getContextIds().insert(CurId);
+        if (CurEdge->getContextIds().insert(CurContextId).second) {
           NumFixupEdgeIdsInserted++;
           Changed = true;
         }
       } else {
         // No edge exists - add one.
         NumFixupEdgesAdded++;
-        DenseSet<uint32_t> ContextIds({CurId});
+        DenseSet<uint32_t> ContextIds({CurContextId});
+        auto AllocType = computeAllocType(ContextIds);
         auto NewEdge = std::make_shared<ContextEdge>(
-            PrevNode, CurNode, computeAllocType(ContextIds), ContextIds);
+            PrevNode, CurNode, AllocType, std::move(ContextIds));
         PrevNode->CallerEdges.push_back(NewEdge);
         CurNode->CalleeEdges.push_back(NewEdge);
         // Save the new edge for the below handling.
@@ -2004,13 +2003,10 @@ void CallsiteContextGraph<DerivedCCG, FuncTy,
       // Now remove this context id from any other caller edges calling
       // PrevNode.
       for (auto &Edge : PrevNode->CallerEdges) {
-        // Skip the edge updating/created above, and edges we have already
-        // visited (due to recursion), or edges that we don't need to update
-        // because they don't contain the context id we're working on.
-        if (Edge.get() == CurEdge || VisitedEdges.contains(Edge.get()) ||
-            !Edge->getContextIds().contains(CurId))
-          continue;
-        Edge->getContextIds().erase(CurId);
+        // Skip the edge updating/created above and edges we have already
+        // visited (due to recursion).
+        if (Edge.get() != CurEdge && !VisitedEdges.contains(Edge.get()))
+          Edge->getContextIds().erase(CurContextId);
       }
     }
     if (Changed)

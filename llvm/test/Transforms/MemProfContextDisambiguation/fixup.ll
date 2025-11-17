@@ -6,9 +6,10 @@
 ;; -stats requires asserts
 ; REQUIRES: asserts
 
-;; First try default which does not enable any detection of the largest
-;; cold contexts. We will not get any cloning.
+;; First try disabling detection of the largest cold contexts.
+;; We will not get any cloning.
 ; RUN: opt -passes=memprof-context-disambiguation -supports-hot-cold-new \
+; RUN:  -memprof-top-n-important=0 \
 ; RUN:  -memprof-verify-ccg -memprof-verify-nodes -stats \
 ; RUNL	-pass-remarks=memprof-context-disambiguation \
 ; RUN:  %s -S 2>&1 | FileCheck %s --implicit-check-not="created clone" \
@@ -17,10 +18,9 @@
 ; RUN:	--implicit-check-not="Number of important context ids" \
 ; RUN:	--implicit-check-not="Number of fixup"
 
-;; Specify detection of the largest cold context, but disable fixup.
+;; Allow default detection of the largest cold contexts, but disable fixup.
 ;; We should find 1 important context, but still not get cloning.
 ; RUN: opt -passes=memprof-context-disambiguation -supports-hot-cold-new \
-; RUN:  -memprof-top-n-important=1 \
 ; RUN:  -memprof-fixup-important=false \
 ; RUN:  -memprof-verify-ccg -memprof-verify-nodes -stats \
 ; RUNL	-pass-remarks=memprof-context-disambiguation \
@@ -32,10 +32,9 @@
 
 ; TOPN1-NOFIXUP: 1 memprof-context-disambiguation - Number of important context ids
 
-;; Specify detection of largest cold context, fixup is enabled by default.
+;; Allow default detection of largest cold contexts, fixup is enabled by default.
 ;; This case should get fixup and cloning.
 ; RUN: opt -passes=memprof-context-disambiguation -supports-hot-cold-new \
-; RUN:  -memprof-top-n-important=1 \
 ; RUN:  -memprof-verify-ccg -memprof-verify-nodes -stats \
 ; RUN:	-pass-remarks=memprof-context-disambiguation \
 ; RUN:  %s -S 2>&1 | FileCheck %s --check-prefix=TOPN1

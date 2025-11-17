@@ -9,10 +9,11 @@
 ;; Need context sizes in summary, so enable reporting.
 ; RUN: opt -thinlto-bc -memprof-report-hinted-sizes %s >%t.o
 
-;; First try default which does not enable any detection of the largest
-;; cold contexts. We will not get any cloning.
+;; First try disabling detection of the largest cold contexts.
+;; We will not get any cloning.
 ; RUN: llvm-lto2 run %t.o -enable-memprof-context-disambiguation \
 ; RUN:  -supports-hot-cold-new \
+; RUN:  -memprof-top-n-important=0 \
 ; RUN:  -r=%t.o,E,plx \
 ; RUN:  -r=%t.o,DB,plx \
 ; RUN:  -r=%t.o,CB,plx \
@@ -27,11 +28,10 @@
 ; RUN:	--implicit-check-not="Number of important context ids" \
 ; RUN:	--implicit-check-not="Number of fixup"
 
-;; Specify detection of the largest cold context, but disable fixup.
+;; Allow default detection of the largest cold contexts, but disable fixup.
 ;; We should find 1 important context, but still not get cloning.
 ; RUN: llvm-lto2 run %t.o -enable-memprof-context-disambiguation \
 ; RUN:  -supports-hot-cold-new \
-; RUN:  -memprof-top-n-important=1 \
 ; RUN:  -memprof-fixup-important=false \
 ; RUN:  -r=%t.o,E,plx \
 ; RUN:  -r=%t.o,DB,plx \
@@ -49,11 +49,10 @@
 
 ; TOPN1-NOFIXUP: 1 memprof-context-disambiguation - Number of important context ids
 
-;; Specify detection of largest cold context, fixup is enabled by default.
+;; Allow default detection of largest cold contexts, fixup is enabled by default.
 ;; This case should get fixup and cloning.
 ; RUN: llvm-lto2 run %t.o -enable-memprof-context-disambiguation \
 ; RUN:  -supports-hot-cold-new \
-; RUN:  -memprof-top-n-important=1 \
 ; RUN:  -r=%t.o,E,plx \
 ; RUN:  -r=%t.o,DB,plx \
 ; RUN:  -r=%t.o,CB,plx \
