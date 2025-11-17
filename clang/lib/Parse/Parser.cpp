@@ -1110,7 +1110,7 @@ Parser::DeclGroupPtrTy Parser::ParseDeclOrFunctionDefInternal(
           if (ED->getIdentifier()) {
             CorrectLocationForAttributes = ED->getLocation();
           } else {
-            const auto Begin = ED->getBraceRange().getBegin();
+            SourceLocation Begin = ED->getBraceRange().getBegin();
             CorrectLocationForAttributes =
                 Begin.isValid() ? Begin :
                                 // If there is no brace, fall back to the end
