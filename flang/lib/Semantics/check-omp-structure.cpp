@@ -5215,6 +5215,13 @@ bool OmpStructureChecker::CheckTargetBlockOnlyTeams(
         if (dirId == llvm::omp::Directive::OMPD_teams) {
           nestedTeams = true;
         }
+      } else if (const auto *ompLoopConstruct{
+                     std::get_if<parser::OpenMPLoopConstruct>(
+                         &ompConstruct->u)}) {
+        llvm::omp::Directive dirId{ompLoopConstruct->BeginDir().DirId()};
+        if (llvm::omp::allTeamsSet.test(dirId)) {
+          nestedTeams = true;
+        }
       }
     }
 

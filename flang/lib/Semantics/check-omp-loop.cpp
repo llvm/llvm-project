@@ -262,6 +262,15 @@ void OmpStructureChecker::Enter(const parser::OpenMPLoopConstruct &x) {
     EnterDirectiveNest(SIMDNest);
   }
 
+  if (CurrentDirectiveIsNested() &&
+      llvm::omp::allTeamsSet.test(GetContext().directive) &&
+      GetContextParent().directive == llvm::omp::Directive::OMPD_target &&
+      !GetDirectiveNest(TargetBlockOnlyTeams)) {
+    context_.Say(GetContextParent().directiveSource,
+        "TARGET construct with nested TEAMS region contains statements or "
+        "directives outside of the TEAMS construct"_err_en_US);
+  }
+
   // Combined target loop constructs are target device constructs. Keep track of
   // whether any such construct has been visited to later check that REQUIRES
   // directives for target-related options don't appear after them.
