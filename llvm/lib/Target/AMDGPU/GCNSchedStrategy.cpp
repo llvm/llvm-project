@@ -2291,8 +2291,7 @@ void PreRARematStage::rematerialize(const RematReg &Remat,
 
   // Rematerialize the register in the region where it is used.
   MachineBasicBlock::iterator InsertPos = Remat.UseMI;
-  TII->reMaterialize(*InsertPos->getParent(), InsertPos, NewReg, 0, DefMI,
-                     *DAG.TRI);
+  TII->reMaterialize(*InsertPos->getParent(), InsertPos, NewReg, 0, DefMI);
   MachineInstr *RematMI = &*std::prev(InsertPos);
   Remat.UseMI->substituteRegister(Reg, NewReg, 0, *DAG.TRI);
   Remat.insertMI(Remat.UseRegion, RematMI, DAG);
@@ -2359,7 +2358,7 @@ void PreRARematStage::rollback(const RollbackInfo &Rollback,
   // rematerialized exactly in the same position as originally within the
   // region, but it should not matter much.
   MachineBasicBlock::iterator InsertPos(DAG.Regions[Remat->DefRegion].second);
-  TII->reMaterialize(*MBB, InsertPos, NewReg, 0, *RematMI, *DAG.TRI);
+  TII->reMaterialize(*MBB, InsertPos, NewReg, 0, *RematMI);
   MachineInstr *ReRematMI = &*std::prev(InsertPos);
   REMAT_DEBUG(dbgs() << '[' << Remat->DefRegion << "] Re-rematerialized as "
                      << *ReRematMI);
