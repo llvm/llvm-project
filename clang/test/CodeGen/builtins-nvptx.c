@@ -1031,7 +1031,7 @@ __device__ void nvvm_cvt_sm80() {
   #if PTX >= 81
   // CHECK_PTX81_SM80: call i32 @llvm.nvvm.f2tf32.rna.satfinite(float 1.000000e+00)
   __nvvm_f2tf32_rna_satfinite(1.0f);
- #endif
+  #endif
 #endif
   // CHECK: ret void
 }
