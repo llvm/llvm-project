@@ -8,7 +8,7 @@
 
 #include "hdr/errno_macros.h"
 #include "hdr/types/wchar_t.h"
-#include "src/wchar/mbtowc.h"
+#include "src/stdlib/mbtowc.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/Test.h"
 
