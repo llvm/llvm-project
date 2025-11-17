@@ -138,7 +138,7 @@ define amdgpu_kernel void @atomic_add_i64_offset(ptr %out, i64 %in) {
 ; GFX12-NEXT:    scratch_store_b64 off, v[0:1], s0
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %tmp0 = atomicrmw volatile add ptr %gep, i64 %in syncscope("agent") seq_cst
   ret void
 }
@@ -284,7 +284,7 @@ define amdgpu_kernel void @atomic_add_i64_ret_offset(ptr %out, ptr %out2, i64 %i
 ; GFX12-NEXT:    flat_store_b64 v[2:3], v[0:1]
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %tmp0 = atomicrmw volatile add ptr %gep, i64 %in syncscope("agent") seq_cst
   store i64 %tmp0, ptr %out2
   ret void
@@ -438,8 +438,8 @@ define amdgpu_kernel void @atomic_add_i64_addr64_offset(ptr %out, i64 %in, i64 %
 ; GFX12-NEXT:    scratch_store_b64 off, v[0:1], s0
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %ptr = getelementptr i64, ptr %out, i64 %index
-  %gep = getelementptr i64, ptr %ptr, i64 4
+  %ptr = getelementptr inbounds i64, ptr %out, i64 %index
+  %gep = getelementptr inbounds i64, ptr %ptr, i64 4
   %tmp0 = atomicrmw volatile add ptr %gep, i64 %in syncscope("agent") seq_cst
   ret void
 }
@@ -590,8 +590,8 @@ define amdgpu_kernel void @atomic_add_i64_ret_addr64_offset(ptr %out, ptr %out2,
 ; GFX12-NEXT:    flat_store_b64 v[2:3], v[0:1]
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %ptr = getelementptr i64, ptr %out, i64 %index
-  %gep = getelementptr i64, ptr %ptr, i64 4
+  %ptr = getelementptr inbounds i64, ptr %out, i64 %index
+  %gep = getelementptr inbounds i64, ptr %ptr, i64 4
   %tmp0 = atomicrmw volatile add ptr %gep, i64 %in syncscope("agent") seq_cst
   store i64 %tmp0, ptr %out2
   ret void
@@ -1015,7 +1015,7 @@ define amdgpu_kernel void @atomic_add_i64_addr64(ptr %out, i64 %in, i64 %index) 
 ; GFX12-NEXT:    scratch_store_b64 off, v[0:1], s0
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %ptr = getelementptr i64, ptr %out, i64 %index
+  %ptr = getelementptr inbounds i64, ptr %out, i64 %index
   %tmp0 = atomicrmw volatile add ptr %ptr, i64 %in syncscope("agent") seq_cst
   ret void
 }
@@ -1161,7 +1161,7 @@ define amdgpu_kernel void @atomic_add_i64_ret_addr64(ptr %out, ptr %out2, i64 %i
 ; GFX12-NEXT:    flat_store_b64 v[2:3], v[0:1]
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %ptr = getelementptr i64, ptr %out, i64 %index
+  %ptr = getelementptr inbounds i64, ptr %out, i64 %index
   %tmp0 = atomicrmw volatile add ptr %ptr, i64 %in syncscope("agent") seq_cst
   store i64 %tmp0, ptr %out2
   ret void
@@ -1299,7 +1299,7 @@ define amdgpu_kernel void @atomic_and_i64_offset(ptr %out, i64 %in) {
 ; GFX12-NEXT:    scratch_store_b64 off, v[0:1], s0
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %tmp0 = atomicrmw volatile and ptr %gep, i64 %in syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
@@ -1442,7 +1442,7 @@ define amdgpu_kernel void @atomic_and_i64_ret_offset(ptr %out, ptr %out2, i64 %i
 ; GFX12-NEXT:    flat_store_b64 v[2:3], v[0:1]
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %tmp0 = atomicrmw volatile and ptr %gep, i64 %in syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   store i64 %tmp0, ptr %out2
   ret void
@@ -1593,8 +1593,8 @@ define amdgpu_kernel void @atomic_and_i64_addr64_offset(ptr %out, i64 %in, i64 %
 ; GFX12-NEXT:    scratch_store_b64 off, v[0:1], s0
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %ptr = getelementptr i64, ptr %out, i64 %index
-  %gep = getelementptr i64, ptr %ptr, i64 4
+  %ptr = getelementptr inbounds i64, ptr %out, i64 %index
+  %gep = getelementptr inbounds i64, ptr %ptr, i64 4
   %tmp0 = atomicrmw volatile and ptr %gep, i64 %in syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
@@ -1742,8 +1742,8 @@ define amdgpu_kernel void @atomic_and_i64_ret_addr64_offset(ptr %out, ptr %out2,
 ; GFX12-NEXT:    flat_store_b64 v[2:3], v[0:1]
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %ptr = getelementptr i64, ptr %out, i64 %index
-  %gep = getelementptr i64, ptr %ptr, i64 4
+  %ptr = getelementptr inbounds i64, ptr %out, i64 %index
+  %gep = getelementptr inbounds i64, ptr %ptr, i64 4
   %tmp0 = atomicrmw volatile and ptr %gep, i64 %in syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   store i64 %tmp0, ptr %out2
   ret void
@@ -2158,7 +2158,7 @@ define amdgpu_kernel void @atomic_and_i64_addr64(ptr %out, i64 %in, i64 %index) 
 ; GFX12-NEXT:    scratch_store_b64 off, v[0:1], s0
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %ptr = getelementptr i64, ptr %out, i64 %index
+  %ptr = getelementptr inbounds i64, ptr %out, i64 %index
   %tmp0 = atomicrmw volatile and ptr %ptr, i64 %in syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
@@ -2301,7 +2301,7 @@ define amdgpu_kernel void @atomic_and_i64_ret_addr64(ptr %out, ptr %out2, i64 %i
 ; GFX12-NEXT:    flat_store_b64 v[2:3], v[0:1]
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %ptr = getelementptr i64, ptr %out, i64 %index
+  %ptr = getelementptr inbounds i64, ptr %out, i64 %index
   %tmp0 = atomicrmw volatile and ptr %ptr, i64 %in syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   store i64 %tmp0, ptr %out2
   ret void
@@ -2442,7 +2442,7 @@ define amdgpu_kernel void @atomic_sub_i64_offset(ptr %out, i64 %in) {
 ; GFX12-NEXT:    scratch_store_b64 off, v[0:1], s0
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %tmp0 = atomicrmw volatile sub ptr %gep, i64 %in syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
@@ -2588,7 +2588,7 @@ define amdgpu_kernel void @atomic_sub_i64_ret_offset(ptr %out, ptr %out2, i64 %i
 ; GFX12-NEXT:    flat_store_b64 v[2:3], v[0:1]
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %tmp0 = atomicrmw volatile sub ptr %gep, i64 %in syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   store i64 %tmp0, ptr %out2
   ret void
@@ -2742,8 +2742,8 @@ define amdgpu_kernel void @atomic_sub_i64_addr64_offset(ptr %out, i64 %in, i64 %
 ; GFX12-NEXT:    scratch_store_b64 off, v[0:1], s0
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %ptr = getelementptr i64, ptr %out, i64 %index
-  %gep = getelementptr i64, ptr %ptr, i64 4
+  %ptr = getelementptr inbounds i64, ptr %out, i64 %index
+  %gep = getelementptr inbounds i64, ptr %ptr, i64 4
   %tmp0 = atomicrmw volatile sub ptr %gep, i64 %in syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
@@ -2894,8 +2894,8 @@ define amdgpu_kernel void @atomic_sub_i64_ret_addr64_offset(ptr %out, ptr %out2,
 ; GFX12-NEXT:    flat_store_b64 v[2:3], v[0:1]
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %ptr = getelementptr i64, ptr %out, i64 %index
-  %gep = getelementptr i64, ptr %ptr, i64 4
+  %ptr = getelementptr inbounds i64, ptr %out, i64 %index
+  %gep = getelementptr inbounds i64, ptr %ptr, i64 4
   %tmp0 = atomicrmw volatile sub ptr %gep, i64 %in syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   store i64 %tmp0, ptr %out2
   ret void
@@ -3319,7 +3319,7 @@ define amdgpu_kernel void @atomic_sub_i64_addr64(ptr %out, i64 %in, i64 %index) 
 ; GFX12-NEXT:    scratch_store_b64 off, v[0:1], s0
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %ptr = getelementptr i64, ptr %out, i64 %index
+  %ptr = getelementptr inbounds i64, ptr %out, i64 %index
   %tmp0 = atomicrmw volatile sub ptr %ptr, i64 %in syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
@@ -3465,7 +3465,7 @@ define amdgpu_kernel void @atomic_sub_i64_ret_addr64(ptr %out, ptr %out2, i64 %i
 ; GFX12-NEXT:    flat_store_b64 v[2:3], v[0:1]
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %ptr = getelementptr i64, ptr %out, i64 %index
+  %ptr = getelementptr inbounds i64, ptr %out, i64 %index
   %tmp0 = atomicrmw volatile sub ptr %ptr, i64 %in syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   store i64 %tmp0, ptr %out2
   ret void
@@ -3606,7 +3606,7 @@ define amdgpu_kernel void @atomic_max_i64_offset(ptr %out, i64 %in) {
 ; GFX12-NEXT:    scratch_store_b64 off, v[0:1], s0
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %tmp0 = atomicrmw volatile max ptr %gep, i64 %in syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
@@ -3754,7 +3754,7 @@ define amdgpu_kernel void @atomic_max_i64_ret_offset(ptr %out, ptr %out2, i64 %i
 ; GFX12-NEXT:    flat_store_b64 v[2:3], v[0:1]
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %tmp0 = atomicrmw volatile max ptr %gep, i64 %in syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   store i64 %tmp0, ptr %out2
   ret void
@@ -3908,8 +3908,8 @@ define amdgpu_kernel void @atomic_max_i64_addr64_offset(ptr %out, i64 %in, i64 %
 ; GFX12-NEXT:    scratch_store_b64 off, v[0:1], s0
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %ptr = getelementptr i64, ptr %out, i64 %index
-  %gep = getelementptr i64, ptr %ptr, i64 4
+  %ptr = getelementptr inbounds i64, ptr %out, i64 %index
+  %gep = getelementptr inbounds i64, ptr %ptr, i64 4
   %tmp0 = atomicrmw volatile max ptr %gep, i64 %in syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
@@ -4062,8 +4062,8 @@ define amdgpu_kernel void @atomic_max_i64_ret_addr64_offset(ptr %out, ptr %out2,
 ; GFX12-NEXT:    flat_store_b64 v[2:3], v[0:1]
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %ptr = getelementptr i64, ptr %out, i64 %index
-  %gep = getelementptr i64, ptr %ptr, i64 4
+  %ptr = getelementptr inbounds i64, ptr %out, i64 %index
+  %gep = getelementptr inbounds i64, ptr %ptr, i64 4
   %tmp0 = atomicrmw volatile max ptr %gep, i64 %in syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   store i64 %tmp0, ptr %out2
   ret void
@@ -4489,7 +4489,7 @@ define amdgpu_kernel void @atomic_max_i64_addr64(ptr %out, i64 %in, i64 %index) 
 ; GFX12-NEXT:    scratch_store_b64 off, v[0:1], s0
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %ptr = getelementptr i64, ptr %out, i64 %index
+  %ptr = getelementptr inbounds i64, ptr %out, i64 %index
   %tmp0 = atomicrmw volatile max ptr %ptr, i64 %in syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
@@ -4637,7 +4637,7 @@ define amdgpu_kernel void @atomic_max_i64_ret_addr64(ptr %out, ptr %out2, i64 %i
 ; GFX12-NEXT:    flat_store_b64 v[2:3], v[0:1]
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %ptr = getelementptr i64, ptr %out, i64 %index
+  %ptr = getelementptr inbounds i64, ptr %out, i64 %index
   %tmp0 = atomicrmw volatile max ptr %ptr, i64 %in syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   store i64 %tmp0, ptr %out2
   ret void
@@ -4778,7 +4778,7 @@ define amdgpu_kernel void @atomic_umax_i64_offset(ptr %out, i64 %in) {
 ; GFX12-NEXT:    scratch_store_b64 off, v[0:1], s0
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %tmp0 = atomicrmw volatile umax ptr %gep, i64 %in syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
@@ -4926,7 +4926,7 @@ define amdgpu_kernel void @atomic_umax_i64_ret_offset(ptr %out, ptr %out2, i64 %
 ; GFX12-NEXT:    flat_store_b64 v[2:3], v[0:1]
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %tmp0 = atomicrmw volatile umax ptr %gep, i64 %in syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   store i64 %tmp0, ptr %out2
   ret void
@@ -5080,8 +5080,8 @@ define amdgpu_kernel void @atomic_umax_i64_addr64_offset(ptr %out, i64 %in, i64 
 ; GFX12-NEXT:    scratch_store_b64 off, v[0:1], s0
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %ptr = getelementptr i64, ptr %out, i64 %index
-  %gep = getelementptr i64, ptr %ptr, i64 4
+  %ptr = getelementptr inbounds i64, ptr %out, i64 %index
+  %gep = getelementptr inbounds i64, ptr %ptr, i64 4
   %tmp0 = atomicrmw volatile umax ptr %gep, i64 %in syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
@@ -5234,8 +5234,8 @@ define amdgpu_kernel void @atomic_umax_i64_ret_addr64_offset(ptr %out, ptr %out2
 ; GFX12-NEXT:    flat_store_b64 v[2:3], v[0:1]
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %ptr = getelementptr i64, ptr %out, i64 %index
-  %gep = getelementptr i64, ptr %ptr, i64 4
+  %ptr = getelementptr inbounds i64, ptr %out, i64 %index
+  %gep = getelementptr inbounds i64, ptr %ptr, i64 4
   %tmp0 = atomicrmw volatile umax ptr %gep, i64 %in syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   store i64 %tmp0, ptr %out2
   ret void
@@ -5661,7 +5661,7 @@ define amdgpu_kernel void @atomic_umax_i64_addr64(ptr %out, i64 %in, i64 %index)
 ; GFX12-NEXT:    scratch_store_b64 off, v[0:1], s0
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %ptr = getelementptr i64, ptr %out, i64 %index
+  %ptr = getelementptr inbounds i64, ptr %out, i64 %index
   %tmp0 = atomicrmw volatile umax ptr %ptr, i64 %in syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
@@ -5809,7 +5809,7 @@ define amdgpu_kernel void @atomic_umax_i64_ret_addr64(ptr %out, ptr %out2, i64 %
 ; GFX12-NEXT:    flat_store_b64 v[2:3], v[0:1]
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %ptr = getelementptr i64, ptr %out, i64 %index
+  %ptr = getelementptr inbounds i64, ptr %out, i64 %index
   %tmp0 = atomicrmw volatile umax ptr %ptr, i64 %in syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   store i64 %tmp0, ptr %out2
   ret void
@@ -5950,7 +5950,7 @@ define amdgpu_kernel void @atomic_min_i64_offset(ptr %out, i64 %in) {
 ; GFX12-NEXT:    scratch_store_b64 off, v[0:1], s0
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %tmp0 = atomicrmw volatile min ptr %gep, i64 %in syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
@@ -6098,7 +6098,7 @@ define amdgpu_kernel void @atomic_min_i64_ret_offset(ptr %out, ptr %out2, i64 %i
 ; GFX12-NEXT:    flat_store_b64 v[2:3], v[0:1]
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %tmp0 = atomicrmw volatile min ptr %gep, i64 %in syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   store i64 %tmp0, ptr %out2
   ret void
@@ -6252,8 +6252,8 @@ define amdgpu_kernel void @atomic_min_i64_addr64_offset(ptr %out, i64 %in, i64 %
 ; GFX12-NEXT:    scratch_store_b64 off, v[0:1], s0
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %ptr = getelementptr i64, ptr %out, i64 %index
-  %gep = getelementptr i64, ptr %ptr, i64 4
+  %ptr = getelementptr inbounds i64, ptr %out, i64 %index
+  %gep = getelementptr inbounds i64, ptr %ptr, i64 4
   %tmp0 = atomicrmw volatile min ptr %gep, i64 %in syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
@@ -6406,8 +6406,8 @@ define amdgpu_kernel void @atomic_min_i64_ret_addr64_offset(ptr %out, ptr %out2,
 ; GFX12-NEXT:    flat_store_b64 v[2:3], v[0:1]
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %ptr = getelementptr i64, ptr %out, i64 %index
-  %gep = getelementptr i64, ptr %ptr, i64 4
+  %ptr = getelementptr inbounds i64, ptr %out, i64 %index
+  %gep = getelementptr inbounds i64, ptr %ptr, i64 4
   %tmp0 = atomicrmw volatile min ptr %gep, i64 %in syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   store i64 %tmp0, ptr %out2
   ret void
@@ -6833,7 +6833,7 @@ define amdgpu_kernel void @atomic_min_i64_addr64(ptr %out, i64 %in, i64 %index) 
 ; GFX12-NEXT:    scratch_store_b64 off, v[0:1], s0
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %ptr = getelementptr i64, ptr %out, i64 %index
+  %ptr = getelementptr inbounds i64, ptr %out, i64 %index
   %tmp0 = atomicrmw volatile min ptr %ptr, i64 %in syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
@@ -6981,7 +6981,7 @@ define amdgpu_kernel void @atomic_min_i64_ret_addr64(ptr %out, ptr %out2, i64 %i
 ; GFX12-NEXT:    flat_store_b64 v[2:3], v[0:1]
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %ptr = getelementptr i64, ptr %out, i64 %index
+  %ptr = getelementptr inbounds i64, ptr %out, i64 %index
   %tmp0 = atomicrmw volatile min ptr %ptr, i64 %in syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   store i64 %tmp0, ptr %out2
   ret void
@@ -7122,7 +7122,7 @@ define amdgpu_kernel void @atomic_umin_i64_offset(ptr %out, i64 %in) {
 ; GFX12-NEXT:    scratch_store_b64 off, v[0:1], s0
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %tmp0 = atomicrmw volatile umin ptr %gep, i64 %in syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
@@ -7270,7 +7270,7 @@ define amdgpu_kernel void @atomic_umin_i64_ret_offset(ptr %out, ptr %out2, i64 %
 ; GFX12-NEXT:    flat_store_b64 v[2:3], v[0:1]
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %tmp0 = atomicrmw volatile umin ptr %gep, i64 %in syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   store i64 %tmp0, ptr %out2
   ret void
@@ -7424,8 +7424,8 @@ define amdgpu_kernel void @atomic_umin_i64_addr64_offset(ptr %out, i64 %in, i64 
 ; GFX12-NEXT:    scratch_store_b64 off, v[0:1], s0
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %ptr = getelementptr i64, ptr %out, i64 %index
-  %gep = getelementptr i64, ptr %ptr, i64 4
+  %ptr = getelementptr inbounds i64, ptr %out, i64 %index
+  %gep = getelementptr inbounds i64, ptr %ptr, i64 4
   %tmp0 = atomicrmw volatile umin ptr %gep, i64 %in syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
@@ -7578,8 +7578,8 @@ define amdgpu_kernel void @atomic_umin_i64_ret_addr64_offset(ptr %out, ptr %out2
 ; GFX12-NEXT:    flat_store_b64 v[2:3], v[0:1]
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %ptr = getelementptr i64, ptr %out, i64 %index
-  %gep = getelementptr i64, ptr %ptr, i64 4
+  %ptr = getelementptr inbounds i64, ptr %out, i64 %index
+  %gep = getelementptr inbounds i64, ptr %ptr, i64 4
   %tmp0 = atomicrmw volatile umin ptr %gep, i64 %in syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   store i64 %tmp0, ptr %out2
   ret void
@@ -8005,7 +8005,7 @@ define amdgpu_kernel void @atomic_umin_i64_addr64(ptr %out, i64 %in, i64 %index)
 ; GFX12-NEXT:    scratch_store_b64 off, v[0:1], s0
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %ptr = getelementptr i64, ptr %out, i64 %index
+  %ptr = getelementptr inbounds i64, ptr %out, i64 %index
   %tmp0 = atomicrmw volatile umin ptr %ptr, i64 %in syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
@@ -8153,7 +8153,7 @@ define amdgpu_kernel void @atomic_umin_i64_ret_addr64(ptr %out, ptr %out2, i64 %
 ; GFX12-NEXT:    flat_store_b64 v[2:3], v[0:1]
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %ptr = getelementptr i64, ptr %out, i64 %index
+  %ptr = getelementptr inbounds i64, ptr %out, i64 %index
   %tmp0 = atomicrmw volatile umin ptr %ptr, i64 %in syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0
   store i64 %tmp0, ptr %out2
   ret void
@@ -8291,7 +8291,7 @@ define amdgpu_kernel void @atomic_or_i64_offset(ptr %out, i64 %in) {
 ; GFX12-NEXT:    scratch_store_b64 off, v[0:1], s0
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %tmp0 = atomicrmw volatile or ptr %gep, i64 %in syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
@@ -8434,7 +8434,7 @@ define amdgpu_kernel void @atomic_or_i64_ret_offset(ptr %out, ptr %out2, i64 %in
 ; GFX12-NEXT:    flat_store_b64 v[2:3], v[0:1]
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %tmp0 = atomicrmw volatile or ptr %gep, i64 %in syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   store i64 %tmp0, ptr %out2
   ret void
@@ -8585,8 +8585,8 @@ define amdgpu_kernel void @atomic_or_i64_addr64_offset(ptr %out, i64 %in, i64 %i
 ; GFX12-NEXT:    scratch_store_b64 off, v[0:1], s0
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %ptr = getelementptr i64, ptr %out, i64 %index
-  %gep = getelementptr i64, ptr %ptr, i64 4
+  %ptr = getelementptr inbounds i64, ptr %out, i64 %index
+  %gep = getelementptr inbounds i64, ptr %ptr, i64 4
   %tmp0 = atomicrmw volatile or ptr %gep, i64 %in syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
@@ -8734,8 +8734,8 @@ define amdgpu_kernel void @atomic_or_i64_ret_addr64_offset(ptr %out, ptr %out2, 
 ; GFX12-NEXT:    flat_store_b64 v[2:3], v[0:1]
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %ptr = getelementptr i64, ptr %out, i64 %index
-  %gep = getelementptr i64, ptr %ptr, i64 4
+  %ptr = getelementptr inbounds i64, ptr %out, i64 %index
+  %gep = getelementptr inbounds i64, ptr %ptr, i64 4
   %tmp0 = atomicrmw volatile or ptr %gep, i64 %in syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   store i64 %tmp0, ptr %out2
   ret void
@@ -9150,7 +9150,7 @@ define amdgpu_kernel void @atomic_or_i64_addr64(ptr %out, i64 %in, i64 %index) {
 ; GFX12-NEXT:    scratch_store_b64 off, v[0:1], s0
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %ptr = getelementptr i64, ptr %out, i64 %index
+  %ptr = getelementptr inbounds i64, ptr %out, i64 %index
   %tmp0 = atomicrmw volatile or ptr %ptr, i64 %in syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
@@ -9293,7 +9293,7 @@ define amdgpu_kernel void @atomic_or_i64_ret_addr64(ptr %out, ptr %out2, i64 %in
 ; GFX12-NEXT:    flat_store_b64 v[2:3], v[0:1]
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %ptr = getelementptr i64, ptr %out, i64 %index
+  %ptr = getelementptr inbounds i64, ptr %out, i64 %index
   %tmp0 = atomicrmw volatile or ptr %ptr, i64 %in syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   store i64 %tmp0, ptr %out2
   ret void
@@ -9420,7 +9420,7 @@ define amdgpu_kernel void @atomic_xchg_i64_offset(ptr %out, i64 %in) {
 ; GFX12-NEXT:    scratch_store_b64 off, v[0:1], s0
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %tmp0 = atomicrmw volatile xchg ptr %gep, i64 %in syncscope("agent") seq_cst
   ret void
 }
@@ -9546,7 +9546,7 @@ define amdgpu_kernel void @atomic_xchg_f64_offset(ptr %out, double %in) {
 ; GFX12-NEXT:    scratch_store_b64 off, v[0:1], s0
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %gep = getelementptr double, ptr %out, i64 4
+  %gep = getelementptr inbounds double, ptr %out, i64 4
   %tmp0 = atomicrmw volatile xchg ptr %gep, double %in syncscope("agent") seq_cst
   ret void
 }
@@ -9672,7 +9672,7 @@ define amdgpu_kernel void @atomic_xchg_pointer_offset(ptr %out, ptr %in) {
 ; GFX12-NEXT:    scratch_store_b64 off, v[0:1], s0
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %gep = getelementptr ptr, ptr %out, i32 4
+  %gep = getelementptr inbounds ptr, ptr %out, i32 4
   %val = atomicrmw volatile xchg ptr %gep, ptr %in syncscope("agent") seq_cst
   ret void
 }
@@ -9812,7 +9812,7 @@ define amdgpu_kernel void @atomic_xchg_i64_ret_offset(ptr %out, ptr %out2, i64 %
 ; GFX12-NEXT:    flat_store_b64 v[2:3], v[0:1]
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %tmp0 = atomicrmw volatile xchg ptr %gep, i64 %in syncscope("agent") seq_cst
   store i64 %tmp0, ptr %out2
   ret void
@@ -9952,8 +9952,8 @@ define amdgpu_kernel void @atomic_xchg_i64_addr64_offset(ptr %out, i64 %in, i64 
 ; GFX12-NEXT:    scratch_store_b64 off, v[0:1], s0
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %ptr = getelementptr i64, ptr %out, i64 %index
-  %gep = getelementptr i64, ptr %ptr, i64 4
+  %ptr = getelementptr inbounds i64, ptr %out, i64 %index
+  %gep = getelementptr inbounds i64, ptr %ptr, i64 4
   %tmp0 = atomicrmw volatile xchg ptr %gep, i64 %in syncscope("agent") seq_cst
   ret void
 }
@@ -10098,8 +10098,8 @@ define amdgpu_kernel void @atomic_xchg_i64_ret_addr64_offset(ptr %out, ptr %out2
 ; GFX12-NEXT:    flat_store_b64 v[2:3], v[0:1]
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %ptr = getelementptr i64, ptr %out, i64 %index
-  %gep = getelementptr i64, ptr %ptr, i64 4
+  %ptr = getelementptr inbounds i64, ptr %out, i64 %index
+  %gep = getelementptr inbounds i64, ptr %ptr, i64 4
   %tmp0 = atomicrmw volatile xchg ptr %gep, i64 %in syncscope("agent") seq_cst
   store i64 %tmp0, ptr %out2
   ret void
@@ -10489,7 +10489,7 @@ define amdgpu_kernel void @atomic_xchg_i64_addr64(ptr %out, i64 %in, i64 %index)
 ; GFX12-NEXT:    scratch_store_b64 off, v[0:1], s0
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %ptr = getelementptr i64, ptr %out, i64 %index
+  %ptr = getelementptr inbounds i64, ptr %out, i64 %index
   %tmp0 = atomicrmw volatile xchg ptr %ptr, i64 %in syncscope("agent") seq_cst
   ret void
 }
@@ -10629,7 +10629,7 @@ define amdgpu_kernel void @atomic_xchg_i64_ret_addr64(ptr %out, ptr %out2, i64 %
 ; GFX12-NEXT:    flat_store_b64 v[2:3], v[0:1]
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %ptr = getelementptr i64, ptr %out, i64 %index
+  %ptr = getelementptr inbounds i64, ptr %out, i64 %index
   %tmp0 = atomicrmw volatile xchg ptr %ptr, i64 %in syncscope("agent") seq_cst
   store i64 %tmp0, ptr %out2
   ret void
@@ -10767,7 +10767,7 @@ define amdgpu_kernel void @atomic_xor_i64_offset(ptr %out, i64 %in) {
 ; GFX12-NEXT:    scratch_store_b64 off, v[0:1], s0
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %tmp0 = atomicrmw volatile xor ptr %gep, i64 %in syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
@@ -10910,7 +10910,7 @@ define amdgpu_kernel void @atomic_xor_i64_ret_offset(ptr %out, ptr %out2, i64 %i
 ; GFX12-NEXT:    flat_store_b64 v[2:3], v[0:1]
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %tmp0 = atomicrmw volatile xor ptr %gep, i64 %in syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   store i64 %tmp0, ptr %out2
   ret void
@@ -11061,8 +11061,8 @@ define amdgpu_kernel void @atomic_xor_i64_addr64_offset(ptr %out, i64 %in, i64 %
 ; GFX12-NEXT:    scratch_store_b64 off, v[0:1], s0
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %ptr = getelementptr i64, ptr %out, i64 %index
-  %gep = getelementptr i64, ptr %ptr, i64 4
+  %ptr = getelementptr inbounds i64, ptr %out, i64 %index
+  %gep = getelementptr inbounds i64, ptr %ptr, i64 4
   %tmp0 = atomicrmw volatile xor ptr %gep, i64 %in syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
@@ -11210,8 +11210,8 @@ define amdgpu_kernel void @atomic_xor_i64_ret_addr64_offset(ptr %out, ptr %out2,
 ; GFX12-NEXT:    flat_store_b64 v[2:3], v[0:1]
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %ptr = getelementptr i64, ptr %out, i64 %index
-  %gep = getelementptr i64, ptr %ptr, i64 4
+  %ptr = getelementptr inbounds i64, ptr %out, i64 %index
+  %gep = getelementptr inbounds i64, ptr %ptr, i64 4
   %tmp0 = atomicrmw volatile xor ptr %gep, i64 %in syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   store i64 %tmp0, ptr %out2
   ret void
@@ -11626,7 +11626,7 @@ define amdgpu_kernel void @atomic_xor_i64_addr64(ptr %out, i64 %in, i64 %index) 
 ; GFX12-NEXT:    scratch_store_b64 off, v[0:1], s0
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %ptr = getelementptr i64, ptr %out, i64 %index
+  %ptr = getelementptr inbounds i64, ptr %out, i64 %index
   %tmp0 = atomicrmw volatile xor ptr %ptr, i64 %in syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
@@ -11769,7 +11769,7 @@ define amdgpu_kernel void @atomic_xor_i64_ret_addr64(ptr %out, ptr %out2, i64 %i
 ; GFX12-NEXT:    flat_store_b64 v[2:3], v[0:1]
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %ptr = getelementptr i64, ptr %out, i64 %index
+  %ptr = getelementptr inbounds i64, ptr %out, i64 %index
   %tmp0 = atomicrmw volatile xor ptr %ptr, i64 %in syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   store i64 %tmp0, ptr %out2
   ret void
@@ -11820,7 +11820,7 @@ define amdgpu_kernel void @atomic_load_i64_offset(ptr %in, ptr %out) {
 ; GFX12-NEXT:    flat_store_b64 v[2:3], v[0:1]
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %gep = getelementptr i64, ptr %in, i64 4
+  %gep = getelementptr inbounds i64, ptr %in, i64 4
   %val = load atomic i64, ptr %gep  seq_cst, align 8
   store i64 %val, ptr %out
   ret void
@@ -11930,8 +11930,8 @@ define amdgpu_kernel void @atomic_load_i64_addr64_offset(ptr %in, ptr %out, i64 
 ; GFX12-NEXT:    flat_store_b64 v[2:3], v[0:1]
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %ptr = getelementptr i64, ptr %in, i64 %index
-  %gep = getelementptr i64, ptr %ptr, i64 4
+  %ptr = getelementptr inbounds i64, ptr %in, i64 %index
+  %gep = getelementptr inbounds i64, ptr %ptr, i64 4
   %val = load atomic i64, ptr %gep seq_cst, align 8
   store i64 %val, ptr %out
   ret void
@@ -11991,7 +11991,7 @@ define amdgpu_kernel void @atomic_load_i64_addr64(ptr %in, ptr %out, i64 %index)
 ; GFX12-NEXT:    flat_store_b64 v[2:3], v[0:1]
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %ptr = getelementptr i64, ptr %in, i64 %index
+  %ptr = getelementptr inbounds i64, ptr %in, i64 %index
   %val = load atomic i64, ptr %ptr seq_cst, align 8
   store i64 %val, ptr %out
   ret void
@@ -12035,7 +12035,7 @@ define amdgpu_kernel void @atomic_store_i64_offset(i64 %in, ptr %out) {
 ; GFX12-NEXT:    flat_store_b64 v[2:3], v[0:1] offset:32 scope:SCOPE_SYS
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   store atomic i64 %in, ptr %gep  seq_cst, align 8
   ret void
 }
@@ -12129,8 +12129,8 @@ define amdgpu_kernel void @atomic_store_i64_addr64_offset(i64 %in, ptr %out, i64
 ; GFX12-NEXT:    flat_store_b64 v[2:3], v[0:1] offset:32 scope:SCOPE_SYS
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %ptr = getelementptr i64, ptr %out, i64 %index
-  %gep = getelementptr i64, ptr %ptr, i64 4
+  %ptr = getelementptr inbounds i64, ptr %out, i64 %index
+  %gep = getelementptr inbounds i64, ptr %ptr, i64 4
   store atomic i64 %in, ptr %gep seq_cst, align 8
   ret void
 }
@@ -12182,7 +12182,7 @@ define amdgpu_kernel void @atomic_store_i64_addr64(i64 %in, ptr %out, i64 %index
 ; GFX12-NEXT:    flat_store_b64 v[2:3], v[0:1] scope:SCOPE_SYS
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %ptr = getelementptr i64, ptr %out, i64 %index
+  %ptr = getelementptr inbounds i64, ptr %out, i64 %index
   store atomic i64 %in, ptr %ptr seq_cst, align 8
   ret void
 }
@@ -12333,7 +12333,7 @@ define amdgpu_kernel void @atomic_cmpxchg_i64_offset(ptr %out, i64 %in, i64 %old
 ; GFX12-NEXT:    scratch_store_b64 off, v[0:1], s0
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %val = cmpxchg volatile ptr %gep, i64 %old, i64 %in syncscope("agent") seq_cst seq_cst
   ret void
 }
@@ -12484,7 +12484,7 @@ define amdgpu_kernel void @atomic_cmpxchg_i64_soffset(ptr %out, i64 %in, i64 %ol
 ; GFX12-NEXT:    scratch_store_b64 off, v[0:1], s0
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %gep = getelementptr i64, ptr %out, i64 9000
+  %gep = getelementptr inbounds i64, ptr %out, i64 9000
   %val = cmpxchg volatile ptr %gep, i64 %old, i64 %in syncscope("agent") seq_cst seq_cst
   ret void
 }
@@ -12633,7 +12633,7 @@ define amdgpu_kernel void @atomic_cmpxchg_i64_ret_offset(ptr %out, ptr %out2, i6
 ; GFX12-NEXT:    flat_store_b64 v[2:3], v[0:1]
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %val = cmpxchg volatile ptr %gep, i64 %old, i64 %in syncscope("agent") seq_cst seq_cst
   %extract0 = extractvalue { i64, i1 } %val, 0
   store i64 %extract0, ptr %out2
@@ -12791,8 +12791,8 @@ define amdgpu_kernel void @atomic_cmpxchg_i64_addr64_offset(ptr %out, i64 %in, i
 ; GFX12-NEXT:    scratch_store_b64 off, v[0:1], s0
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %ptr = getelementptr i64, ptr %out, i64 %index
-  %gep = getelementptr i64, ptr %ptr, i64 4
+  %ptr = getelementptr inbounds i64, ptr %out, i64 %index
+  %gep = getelementptr inbounds i64, ptr %ptr, i64 4
   %val = cmpxchg volatile ptr %gep, i64 %old, i64 %in syncscope("agent") seq_cst seq_cst
   ret void
 }
@@ -12954,8 +12954,8 @@ define amdgpu_kernel void @atomic_cmpxchg_i64_ret_addr64_offset(ptr %out, ptr %o
 ; GFX12-NEXT:    flat_store_b64 v[2:3], v[0:1]
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %ptr = getelementptr i64, ptr %out, i64 %index
-  %gep = getelementptr i64, ptr %ptr, i64 4
+  %ptr = getelementptr inbounds i64, ptr %out, i64 %index
+  %gep = getelementptr inbounds i64, ptr %ptr, i64 4
   %val = cmpxchg volatile ptr %gep, i64 %old, i64 %in syncscope("agent") seq_cst seq_cst
   %extract0 = extractvalue { i64, i1 } %val, 0
   store i64 %extract0, ptr %out2
@@ -13398,7 +13398,7 @@ define amdgpu_kernel void @atomic_cmpxchg_i64_addr64(ptr %out, i64 %in, i64 %ind
 ; GFX12-NEXT:    scratch_store_b64 off, v[0:1], s0
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %ptr = getelementptr i64, ptr %out, i64 %index
+  %ptr = getelementptr inbounds i64, ptr %out, i64 %index
   %val = cmpxchg volatile ptr %ptr, i64 %old, i64 %in syncscope("agent") seq_cst seq_cst
   ret void
 }
@@ -13555,7 +13555,7 @@ define amdgpu_kernel void @atomic_cmpxchg_i64_ret_addr64(ptr %out, ptr %out2, i6
 ; GFX12-NEXT:    flat_store_b64 v[2:3], v[0:1]
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %ptr = getelementptr i64, ptr %out, i64 %index
+  %ptr = getelementptr inbounds i64, ptr %out, i64 %index
   %val = cmpxchg volatile ptr %ptr, i64 %old, i64 %in syncscope("agent") seq_cst seq_cst
   %extract0 = extractvalue { i64, i1 } %val, 0
   store i64 %extract0, ptr %out2
@@ -13607,7 +13607,7 @@ define amdgpu_kernel void @atomic_load_f64_offset(ptr %in, ptr %out) {
 ; GFX12-NEXT:    flat_store_b64 v[2:3], v[0:1]
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %gep = getelementptr double, ptr %in, i64 4
+  %gep = getelementptr inbounds double, ptr %in, i64 4
   %val = load atomic double, ptr %gep  seq_cst, align 8
   store double %val, ptr %out
   ret void
@@ -13717,8 +13717,8 @@ define amdgpu_kernel void @atomic_load_f64_addr64_offset(ptr %in, ptr %out, i64 
 ; GFX12-NEXT:    flat_store_b64 v[2:3], v[0:1]
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %ptr = getelementptr double, ptr %in, i64 %index
-  %gep = getelementptr double, ptr %ptr, i64 4
+  %ptr = getelementptr inbounds double, ptr %in, i64 %index
+  %gep = getelementptr inbounds double, ptr %ptr, i64 4
   %val = load atomic double, ptr %gep seq_cst, align 8
   store double %val, ptr %out
   ret void
@@ -13778,7 +13778,7 @@ define amdgpu_kernel void @atomic_load_f64_addr64(ptr %in, ptr %out, i64 %index)
 ; GFX12-NEXT:    flat_store_b64 v[2:3], v[0:1]
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %ptr = getelementptr double, ptr %in, i64 %index
+  %ptr = getelementptr inbounds double, ptr %in, i64 %index
   %val = load atomic double, ptr %ptr seq_cst, align 8
   store double %val, ptr %out
   ret void
@@ -13822,7 +13822,7 @@ define amdgpu_kernel void @atomic_store_f64_offset(double %in, ptr %out) {
 ; GFX12-NEXT:    flat_store_b64 v[2:3], v[0:1] offset:32 scope:SCOPE_SYS
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %gep = getelementptr double, ptr %out, i64 4
+  %gep = getelementptr inbounds double, ptr %out, i64 4
   store atomic double %in, ptr %gep  seq_cst, align 8
   ret void
 }
@@ -13916,8 +13916,8 @@ define amdgpu_kernel void @atomic_store_f64_addr64_offset(double %in, ptr %out, 
 ; GFX12-NEXT:    flat_store_b64 v[2:3], v[0:1] offset:32 scope:SCOPE_SYS
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %ptr = getelementptr double, ptr %out, i64 %index
-  %gep = getelementptr double, ptr %ptr, i64 4
+  %ptr = getelementptr inbounds double, ptr %out, i64 %index
+  %gep = getelementptr inbounds double, ptr %ptr, i64 4
   store atomic double %in, ptr %gep seq_cst, align 8
   ret void
 }
@@ -13969,7 +13969,7 @@ define amdgpu_kernel void @atomic_store_f64_addr64(double %in, ptr %out, i64 %in
 ; GFX12-NEXT:    flat_store_b64 v[2:3], v[0:1] scope:SCOPE_SYS
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %ptr = getelementptr double, ptr %out, i64 %index
+  %ptr = getelementptr inbounds double, ptr %out, i64 %index
   store atomic double %in, ptr %ptr seq_cst, align 8
   ret void
 }
@@ -14116,7 +14116,7 @@ define amdgpu_kernel void @atomic_inc_i64_offset(ptr %out, i64 %in) {
 ; GFX12-NEXT:    scratch_store_b64 off, v[0:1], s0
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %tmp0 = atomicrmw volatile uinc_wrap ptr %gep, i64 %in syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
@@ -14269,7 +14269,7 @@ define amdgpu_kernel void @atomic_inc_i64_ret_offset(ptr %out, ptr %out2, i64 %i
 ; GFX12-NEXT:    flat_store_b64 v[2:3], v[0:1]
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %tmp0 = atomicrmw volatile uinc_wrap ptr %gep, i64 %in syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   store i64 %tmp0, ptr %out2
   ret void
@@ -14430,8 +14430,8 @@ define amdgpu_kernel void @atomic_inc_i64_incr64_offset(ptr %out, i64 %in, i64 %
 ; GFX12-NEXT:    scratch_store_b64 off, v[0:1], s0
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %ptr = getelementptr i64, ptr %out, i64 %index
-  %gep = getelementptr i64, ptr %ptr, i64 4
+  %ptr = getelementptr inbounds i64, ptr %out, i64 %index
+  %gep = getelementptr inbounds i64, ptr %ptr, i64 4
   %tmp0 = atomicrmw volatile uinc_wrap ptr %gep, i64 %in syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
@@ -14589,8 +14589,8 @@ define amdgpu_kernel void @atomic_inc_i64_ret_incr64_offset(ptr %out, ptr %out2,
 ; GFX12-NEXT:    flat_store_b64 v[2:3], v[0:1]
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %ptr = getelementptr i64, ptr %out, i64 %index
-  %gep = getelementptr i64, ptr %ptr, i64 4
+  %ptr = getelementptr inbounds i64, ptr %out, i64 %index
+  %gep = getelementptr inbounds i64, ptr %ptr, i64 4
   %tmp0 = atomicrmw volatile uinc_wrap ptr %gep, i64 %in syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   store i64 %tmp0, ptr %out2
   ret void
@@ -15035,7 +15035,7 @@ define amdgpu_kernel void @atomic_inc_i64_incr64(ptr %out, i64 %in, i64 %index) 
 ; GFX12-NEXT:    scratch_store_b64 off, v[0:1], s0
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %ptr = getelementptr i64, ptr %out, i64 %index
+  %ptr = getelementptr inbounds i64, ptr %out, i64 %index
   %tmp0 = atomicrmw volatile uinc_wrap ptr %ptr, i64 %in syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
@@ -15188,7 +15188,7 @@ define amdgpu_kernel void @atomic_inc_i64_ret_incr64(ptr %out, ptr %out2, i64 %i
 ; GFX12-NEXT:    flat_store_b64 v[2:3], v[0:1]
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %ptr = getelementptr i64, ptr %out, i64 %index
+  %ptr = getelementptr inbounds i64, ptr %out, i64 %index
   %tmp0 = atomicrmw volatile uinc_wrap ptr %ptr, i64 %in syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   store i64 %tmp0, ptr %out2
   ret void
@@ -15345,7 +15345,7 @@ define amdgpu_kernel void @atomic_dec_i64_offset(ptr %out, i64 %in) {
 ; GFX12-NEXT:    scratch_store_b64 off, v[0:1], s4
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %tmp0 = atomicrmw volatile udec_wrap ptr %gep, i64 %in syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
@@ -15509,7 +15509,7 @@ define amdgpu_kernel void @atomic_dec_i64_ret_offset(ptr %out, ptr %out2, i64 %i
 ; GFX12-NEXT:    flat_store_b64 v[2:3], v[0:1]
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %tmp0 = atomicrmw volatile udec_wrap ptr %gep, i64 %in syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   store i64 %tmp0, ptr %out2
   ret void
@@ -15679,8 +15679,8 @@ define amdgpu_kernel void @atomic_dec_i64_decr64_offset(ptr %out, i64 %in, i64 %
 ; GFX12-NEXT:    scratch_store_b64 off, v[0:1], s4
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %ptr = getelementptr i64, ptr %out, i64 %index
-  %gep = getelementptr i64, ptr %ptr, i64 4
+  %ptr = getelementptr inbounds i64, ptr %out, i64 %index
+  %gep = getelementptr inbounds i64, ptr %ptr, i64 4
   %tmp0 = atomicrmw volatile udec_wrap ptr %gep, i64 %in syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
@@ -15849,8 +15849,8 @@ define amdgpu_kernel void @atomic_dec_i64_ret_decr64_offset(ptr %out, ptr %out2,
 ; GFX12-NEXT:    flat_store_b64 v[2:3], v[0:1]
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %ptr = getelementptr i64, ptr %out, i64 %index
-  %gep = getelementptr i64, ptr %ptr, i64 4
+  %ptr = getelementptr inbounds i64, ptr %out, i64 %index
+  %gep = getelementptr inbounds i64, ptr %ptr, i64 4
   %tmp0 = atomicrmw volatile udec_wrap ptr %gep, i64 %in syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   store i64 %tmp0, ptr %out2
   ret void
@@ -16324,7 +16324,7 @@ define amdgpu_kernel void @atomic_dec_i64_decr64(ptr %out, i64 %in, i64 %index) 
 ; GFX12-NEXT:    scratch_store_b64 off, v[0:1], s4
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %ptr = getelementptr i64, ptr %out, i64 %index
+  %ptr = getelementptr inbounds i64, ptr %out, i64 %index
   %tmp0 = atomicrmw volatile udec_wrap ptr %ptr, i64 %in syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
@@ -16488,7 +16488,7 @@ define amdgpu_kernel void @atomic_dec_i64_ret_decr64(ptr %out, ptr %out2, i64 %i
 ; GFX12-NEXT:    flat_store_b64 v[2:3], v[0:1]
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %ptr = getelementptr i64, ptr %out, i64 %index
+  %ptr = getelementptr inbounds i64, ptr %out, i64 %index
   %tmp0 = atomicrmw volatile udec_wrap ptr %ptr, i64 %in syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   store i64 %tmp0, ptr %out2
   ret void
