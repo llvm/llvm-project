@@ -654,21 +654,17 @@ define void @aligned_memset_zero_64(ptr %a) nounwind {
 define void @aligned_memset_zero_66(ptr %a) nounwind {
 ; RV32-BOTH-LABEL: aligned_memset_zero_66:
 ; RV32-BOTH:       # %bb.0:
-; RV32-BOTH-NEXT:    li a1, 128
-; RV32-BOTH-NEXT:    vsetvli zero, a1, e8, m8, ta, ma
-; RV32-BOTH-NEXT:    vmv.v.i v8, 0
 ; RV32-BOTH-NEXT:    li a1, 66
 ; RV32-BOTH-NEXT:    vsetvli zero, a1, e8, m8, ta, ma
+; RV32-BOTH-NEXT:    vmv.v.i v8, 0
 ; RV32-BOTH-NEXT:    vse8.v v8, (a0)
 ; RV32-BOTH-NEXT:    ret
 ;
 ; RV64-BOTH-LABEL: aligned_memset_zero_66:
 ; RV64-BOTH:       # %bb.0:
-; RV64-BOTH-NEXT:    li a1, 128
-; RV64-BOTH-NEXT:    vsetvli zero, a1, e8, m8, ta, ma
-; RV64-BOTH-NEXT:    vmv.v.i v8, 0
 ; RV64-BOTH-NEXT:    li a1, 66
 ; RV64-BOTH-NEXT:    vsetvli zero, a1, e8, m8, ta, ma
+; RV64-BOTH-NEXT:    vmv.v.i v8, 0
 ; RV64-BOTH-NEXT:    vse8.v v8, (a0)
 ; RV64-BOTH-NEXT:    ret
   tail call void @llvm.memset.inline.p0.i64(ptr align 64 %a, i8 0, i64 66, i1 0)
