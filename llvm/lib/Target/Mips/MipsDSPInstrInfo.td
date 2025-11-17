@@ -47,6 +47,7 @@ class MipsDSPBase<string Opc, SDTypeProfile Prof> :
 class MipsDSPSideEffectBase<string Opc, SDTypeProfile Prof> :
   SDNode<!strconcat("MipsISD::", Opc), Prof, [SDNPHasChain, SDNPSideEffect]>;
 
+// EXTR.W intrinsic nodes.
 def MipsEXTP : MipsDSPSideEffectBase<"EXTP", SDT_MipsExtr>;
 def MipsEXTPDP : MipsDSPSideEffectBase<"EXTPDP", SDT_MipsExtr>;
 def MipsEXTR_S_H : MipsDSPSideEffectBase<"EXTR_S_H", SDT_MipsExtr>;
@@ -57,6 +58,7 @@ def MipsEXTR_RS_W : MipsDSPSideEffectBase<"EXTR_RS_W", SDT_MipsExtr>;
 def MipsSHILO : MipsDSPBase<"SHILO", SDT_MipsShilo>;
 def MipsMTHLIP : MipsDSPSideEffectBase<"MTHLIP", SDT_MipsShilo>;
 
+// DPA.W intrinsic nodes.
 def MipsMULSAQ_S_W_PH : MipsDSPSideEffectBase<"MULSAQ_S_W_PH", SDT_MipsDPA_W>;
 def MipsMAQ_S_W_PHL : MipsDSPSideEffectBase<"MAQ_S_W_PHL", SDT_MipsDPA_W>;
 def MipsMAQ_S_W_PHR : MipsDSPSideEffectBase<"MAQ_S_W_PHR", SDT_MipsDPA_W>;
@@ -88,9 +90,13 @@ def MipsMADD_DSP : MipsDSPBase<"MADD_DSP", SDT_MipsDPA_L>;
 def MipsMADDU_DSP : MipsDSPBase<"MADDU_DSP", SDT_MipsDPA_L>;
 def MipsMSUB_DSP : MipsDSPBase<"MSUB_DSP", SDT_MipsDPA_L>;
 def MipsMSUBU_DSP : MipsDSPBase<"MSUBU_DSP", SDT_MipsDPA_L>;
+
+// DSP shift nodes.
 def MipsSHLL_DSP : MipsDSPBase<"SHLL_DSP", SDT_MipsSHIFT_DSP>;
 def MipsSHRA_DSP : MipsDSPBase<"SHRA_DSP", SDT_MipsSHIFT_DSP>;
 def MipsSHRL_DSP : MipsDSPBase<"SHRL_DSP", SDT_MipsSHIFT_DSP>;
+
+// DSP setcc and select_cc nodes.
 def MipsSETCC_DSP : MipsDSPBase<"SETCC_DSP", SDTSetCC>;
 def MipsSELECT_CC_DSP : MipsDSPBase<"SELECT_CC_DSP", SDTSelectCC>;
 
