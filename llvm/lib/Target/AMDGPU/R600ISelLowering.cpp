@@ -13,6 +13,7 @@
 
 #include "R600ISelLowering.h"
 #include "AMDGPU.h"
+#include "AMDGPUSelectionDAGInfo.h"
 #include "MCTargetDesc/R600MCTargetDesc.h"
 #include "R600Defines.h"
 #include "R600MachineFunctionInfo.h"

@@ -15,6 +15,7 @@ tablegen(LLVM AMDGPUGenMCCodeEmitter.inc -gen-emitter)
 tablegen(LLVM AMDGPUGenMCPseudoLowering.inc -gen-pseudo-lowering)
 tablegen(LLVM AMDGPUGenRegisterBank.inc -gen-register-bank)
 tablegen(LLVM AMDGPUGenRegisterInfo.inc -gen-register-info)
+tablegen(LLVM AMDGPUGenSDNodeInfo.inc -gen-sd-node-info)
 tablegen(LLVM AMDGPUGenSearchableTables.inc -gen-searchable-tables)
 tablegen(LLVM AMDGPUGenSubtargetInfo.inc -gen-subtarget)
 
