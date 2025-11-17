@@ -13039,11 +13039,8 @@ SDValue DAGCombiner::foldPartialReduceMLAMulOp(SDNode *N) {
 
   // Handle predication by moving the SELECT into the operand of the MUL.
   SDValue Pred;
-  if (Opc == ISD::VSELECT) {
-    APInt C;
-    if (!ISD::isConstantSplatVector(Op1->getOperand(2).getNode(), C) ||
-        !C.isZero())
-      return SDValue();
+  if (Opc == ISD::VSELECT && (isZeroOrZeroSplat(Op1->getOperand(2)) ||
+                              isZeroOrZeroSplatFP(Op1->getOperand(2)))) {
     Pred = Op1->getOperand(0);
     Op1 = Op1->getOperand(1);
     Opc = Op1->getOpcode();
@@ -13083,18 +13080,17 @@ SDValue DAGCombiner::foldPartialReduceMLAMulOp(SDNode *N) {
   SDValue LHSExtOp = LHS->getOperand(0);
   EVT LHSExtOpVT = LHSExtOp.getValueType();
 
-  // Sets Op = select(P, Op, splat(0)) if P is nonzero, or Op otherwise.
-  // Set ToFreezeOp = freeze(ToFreezeOp) if the value may be poison, to
-  // keep the same semantics.
-  auto ApplyPredicate = [&](SDValue P, SDValue &Op, SDValue &ToFreezeOp) {
-    if (!P)
-      return;
-    if (!DAG.isGuaranteedNotToBePoison(ToFreezeOp))
-      ToFreezeOp = DAG.getFreeze(ToFreezeOp);
-    EVT OpVT = Op.getValueType();
-    SDValue Zero = OpVT.isFloatingPoint() ? DAG.getConstantFP(0.0, DL, OpVT)
-                                          : DAG.getConstant(0, DL, OpVT);
-    Op = DAG.getSelect(DL, OpVT, P, Op, Zero);
+  // When Pred is non-zero, set Op = select(Pred, Op, splat(0)) and freeze
+  // OtherOp to keep the same semantics when moving the selects into the MUL
+  // operands.
+  auto ApplyPredicate = [&](SDValue &Op, SDValue &OtherOp) {
+    if (Pred) {
+      EVT OpVT = Op.getValueType();
+      SDValue Zero = OpVT.isFloatingPoint() ? DAG.getConstantFP(0.0, DL, OpVT)
+                                            : DAG.getConstant(0, DL, OpVT);
+      Op = DAG.getSelect(DL, OpVT, Pred, Op, Zero);
+      OtherOp = DAG.getFreeze(OtherOp);
+    }
   };
 
   // partial_reduce_*mla(acc, mul(ext(x), splat(C)), splat(1))
@@ -13120,7 +13116,7 @@ SDValue DAGCombiner::foldPartialReduceMLAMulOp(SDNode *N) {
       return SDValue();
 
     SDValue C = DAG.getConstant(CTrunc, DL, LHSExtOpVT);
-    ApplyPredicate(Pred, C, LHSExtOp);
+    ApplyPredicate(C, LHSExtOp);
     return DAG.getNode(NewOpcode, DL, N->getValueType(0), Acc, LHSExtOp, C);
   }
 
@@ -13162,7 +13158,7 @@ SDValue DAGCombiner::foldPartialReduceMLAMulOp(SDNode *N) {
           TLI.getTypeToTransformTo(*Context, LHSExtOpVT)))
     return SDValue();
 
-  ApplyPredicate(Pred, RHSExtOp, LHSExtOp);
+  ApplyPredicate(RHSExtOp, LHSExtOp);
   return DAG.getNode(NewOpc, DL, N->getValueType(0), Acc, LHSExtOp, RHSExtOp);
 }
 
@@ -13184,11 +13180,8 @@ SDValue DAGCombiner::foldPartialReduceAdd(SDNode *N) {
 
   SDValue Pred;
   unsigned Op1Opcode = Op1.getOpcode();
-  if (Op1Opcode == ISD::VSELECT) {
-    APInt C;
-    if (!ISD::isConstantSplatVector(Op1->getOperand(2).getNode(), C) ||
-        !C.isZero())
-      return SDValue();
+  if (Op1Opcode == ISD::VSELECT && (isZeroOrZeroSplat(Op1->getOperand(2)) ||
+                                    isZeroOrZeroSplatFP(Op1->getOperand(2)))) {
     Pred = Op1->getOperand(0);
     Op1 = Op1->getOperand(1);
     Op1Opcode = Op1->getOpcode();
