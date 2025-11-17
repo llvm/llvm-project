@@ -88,3 +88,34 @@ class TestDAP_reuseAdapter(lldbdap_testcase.DAPTestCaseBase):
             "expect new session id in console output",
         )
         self.dap_server.request_disconnect()
+
+    @skipIfWindows
+    def test_exception_breakopints(self):
+        """
+        Test reuse lldb-dap works across debug sessions.
+        """
+        self.build()
+        program = self.getBuildArtifact("a.out")
+        (_, connection) = self.start_server(connection="listen://localhost:0")
+
+        # First debug session
+        self.dap_server = dap_server.DebugAdapterServer(connection=connection)
+        self.launch(program, disconnectAutomatically=False)
+
+        filters = ["cpp_throw", "cpp_catch"]
+        response = self.dap_server.request_setExceptionBreakpoints(filters=filters)
+        self.assertTrue(response)
+        self.assertTrue(response["success"])
+        self.continue_to_exception_breakpoint("C++ Throw")
+        self.dap_server.request_disconnect()
+
+        # Second debug session by reusing lldb-dap server
+        self.dap_server = dap_server.DebugAdapterServer(connection=connection)
+        self.launch(program, disconnectAutomatically=False)
+
+        filters = ["cpp_throw", "cpp_catch"]
+        response = self.dap_server.request_setExceptionBreakpoints(filters=filters)
+        self.assertTrue(response)
+        self.assertTrue(response["success"])
+        self.continue_to_exception_breakpoint("C++ Throw")
+        self.dap_server.request_disconnect()
