@@ -970,14 +970,17 @@ public:
   /// Add all metadata to \p I.
   void applyMetadata(Instruction &I) const;
 
-  /// Add metadata with kind \p Kind and \p Node.
-  void addMetadata(unsigned Kind, MDNode *Node) {
-    assert(none_of(Metadata,
-                   [Kind](const std::pair<unsigned, MDNode *> &P) {
-                     return P.first == Kind;
-                   }) &&
-           "Kind must appear at most once in Metadata");
-    Metadata.emplace_back(Kind, Node);
+  /// Set metadata with kind \p Kind to \p Node. If metadata with \p Kind
+  /// already exists, it will be replaced. Otherwise, it will be added.
+  void setMetadata(unsigned Kind, MDNode *Node) {
+    auto It =
+        llvm::find_if(Metadata, [Kind](const std::pair<unsigned, MDNode *> &P) {
+          return P.first == Kind;
+        });
+    if (It != Metadata.end())
+      It->second = Node;
+    else
+      Metadata.emplace_back(Kind, Node);
   }
 
   /// Intersect this VPIRMetada object with \p MD, keeping only metadata
