@@ -19,9 +19,19 @@
   .text
   .p2align 2
 
-DEFINE_AEABI_FUNCTION_ALIAS(__aeabi_fmul, __mulsf3)
-
+#if __ARM_PCS_VFP
 DEFINE_COMPILERRT_FUNCTION(__mulsf3)
+  push {r4, lr}
+  vmov r0, s0
+  vmov r1, s1
+  bl __aeabi_fmul
+  vmov s0, r0
+  pop {r4, pc}
+#else
+DEFINE_COMPILERRT_FUNCTION_ALIAS(__mulsf3, __aeabi_fmul)
+#endif
+
+DEFINE_COMPILERRT_FUNCTION(__aeabi_fmul)
 
   // Check if either input exponent is 00 or FF (i.e. not a normalized number),
   // and if so, branch out of line. If we don't branch out of line, then we've
@@ -304,6 +314,6 @@ LOCAL_LABEL(inf_NaN):
   orreq   r0, r0, #0x400000        // otherwise, set the 'quiet NaN' bit
   bx      lr                       // and return
 
-END_COMPILERRT_FUNCTION(__mulsf3)
+END_COMPILERRT_FUNCTION(__aeabi_fmul)
 
 NO_EXEC_STACK_DIRECTIVE

@@ -19,9 +19,19 @@
   .text
   .p2align 2
 
-DEFINE_AEABI_FUNCTION_ALIAS(__aeabi_fdiv, __divsf3)
-
+#if __ARM_PCS_VFP
 DEFINE_COMPILERRT_FUNCTION(__divsf3)
+  push {r4, lr}
+  vmov r0, s0
+  vmov r1, s1
+  bl __aeabi_fdiv
+  vmov s0, r0
+  pop {r4, pc}
+#else
+DEFINE_COMPILERRT_FUNCTION_ALIAS(__divsf3, __aeabi_fdiv)
+#endif
+
+DEFINE_COMPILERRT_FUNCTION(__aeabi_fdiv)
   // Extract the exponents of the inputs into r2 and r3, occupying bits 16-23
   // of each register so that there will be space lower down to store extra
   // data without exponent arithmetic carrying into it. In the process, check
@@ -603,6 +613,6 @@ LOCAL_LABEL(tab):
   .byte 0x82  // input [0xfc0000,0xfdffff], candidate outputs [0x82,0x82]
   .byte 0x81  // input [0xfe0000,0xffffff], candidate outputs [0x80,0x81]
 
-END_COMPILERRT_FUNCTION(__divsf3)
+END_COMPILERRT_FUNCTION(__aeabi_fdiv)
 
 NO_EXEC_STACK_DIRECTIVE
