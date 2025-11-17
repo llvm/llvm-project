@@ -506,11 +506,10 @@ void CodeGenIntrinsic::addPrettyPrintFunction(unsigned ArgIdx,
   auto It = llvm::find_if(PrettyPrintFunctions, [ArgIdx](const auto &Info) {
     return Info.ArgIdx == ArgIdx;
   });
-  if (It != PrettyPrintFunctions.end()) {
+  if (It != PrettyPrintFunctions.end()) 
     PrintFatalError(TheDef->getLoc(), "ArgInfo for argument " + Twine(ArgIdx) +
                                           " is already defined as '" +
                                           It->FuncName + "'");
-    return;
-  }
+
   PrettyPrintFunctions.emplace_back(ArgIdx, ArgName, FuncName);
 }
