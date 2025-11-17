@@ -449,3 +449,27 @@ namespace VolatileWrites {
   static_assert(test7(12)); // all-error {{not an integral constant expression}} \
                             // all-note {{in call to}}
 }
+
+namespace AIEWithIndex0Narrows {
+  template <class _Tp> struct greater {
+    constexpr void operator()(_Tp, _Tp) {}
+  };
+  struct S {
+    constexpr S() : i_() {}
+    int i_;
+  };
+
+  constexpr void sort(S *__first) {
+    for (int __start = 0; __start >= 0; --__start) {
+      greater<S>{}(__first[0], __first[0]);
+    }
+  }
+  constexpr bool test() {
+    S *ia = new S[2];
+
+    sort(ia + 1);
+    delete[] ia;
+    return true;
+  }
+  static_assert(test());
+}
