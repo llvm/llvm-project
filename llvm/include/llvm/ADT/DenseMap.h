@@ -556,9 +556,9 @@ private:
     return llvm::make_range(getBuckets(), getBucketsEnd());
   }
 
-  void grow(unsigned AtLeast) {
-    AtLeast = derived().computeNumBuckets(AtLeast);
-    derived().grow(AtLeast);
+  void grow(unsigned NumBuckets) {
+    NumBuckets = DerivedT::roundUpNumBuckets(NumBuckets);
+    derived().grow(NumBuckets);
   }
 
   template <typename LookupKeyT>
@@ -843,8 +843,9 @@ private:
     NumBuckets = 0;
   }
 
-  static unsigned computeNumBuckets(unsigned NumBuckets) {
-    return std::max(64u, static_cast<unsigned>(NextPowerOf2(NumBuckets - 1)));
+  static unsigned roundUpNumBuckets(unsigned MinNumBuckets) {
+    return std::max(64u,
+                    static_cast<unsigned>(NextPowerOf2(MinNumBuckets - 1)));
   }
 
   void grow(unsigned AtLeast) {
@@ -1112,15 +1113,15 @@ private:
     new (getLargeRep()) LargeRep{nullptr, 0};
   }
 
-  static unsigned computeNumBuckets(unsigned NumBuckets) {
-    if (NumBuckets > InlineBuckets)
-      NumBuckets =
-          std::max(64u, static_cast<unsigned>(NextPowerOf2(NumBuckets - 1)));
-    return NumBuckets;
+  static unsigned roundUpNumBuckets(unsigned MinNumBuckets) {
+    if (MinNumBuckets <= InlineBuckets)
+      return MinNumBuckets;
+    return std::max(64u,
+                    static_cast<unsigned>(NextPowerOf2(MinNumBuckets - 1)));
   }
 
-  void grow(unsigned AtLeast) {
-    SmallDenseMap Tmp(AtLeast, typename BaseT::ExactBucketCount{});
+  void grow(unsigned NumBuckets) {
+    SmallDenseMap Tmp(NumBuckets, typename BaseT::ExactBucketCount{});
     Tmp.moveFrom(*this);
 
     if (Tmp.Small) {
