@@ -4,6 +4,9 @@
 
 // RUN: mlir-opt %s -linalg-generalize-named-ops | mlir-opt --linalg-specialize-generic-ops | FileCheck %s --implicit-check-not=linalg.generic
 
+// -----------------------------
+// Convolution ops.
+// -----------------------------
 func.func @conv_1d(%in : tensor<?xf32>, %filter : tensor<?xf32>, %out : tensor<?xf32>) -> tensor<?xf32> {
   %0 = linalg.conv_1d
          ins(%in, %filter : tensor<?xf32>, tensor<?xf32>)
@@ -63,6 +66,9 @@ func.func @conv_3d(%in : tensor<?x?x?xf32>, %filter : tensor<?x?x?xf32>, %out : 
 
 // -----
 
+// -----------------------------
+// Depthwise Convolution ops.
+// -----------------------------
 func.func @depthwise_conv_1d_ncw_cw(%input: tensor<?x?x?xf32>, %filter: tensor<?x?xf32>, %output: tensor<?x?x?xf32>) -> tensor<?x?x?xf32> {
   %0 = linalg.depthwise_conv_1d_ncw_cw
          {dilations = dense<3> : tensor<1xi64>, strides = dense<2> : tensor<1xi64>}
@@ -128,6 +134,9 @@ func.func @depthwise_conv_3d_ndhwc_dhwcm(%input: tensor<?x?x?x?x?xf32>, %filter:
 
 // -----
 
+// -----------------------------
+// Pooling ops.
+// -----------------------------
 func.func @pooling_nhwc_max(%input: tensor<?x?x?x?xf32>, %filter: tensor<?x?xf32>, %output: tensor<?x?x?x?xf32>) -> tensor<?x?x?x?xf32> {
   %0 = linalg.pooling_nhwc_max
          {dilations = dense<1> : tensor<2xi64>, strides = dense<1> : tensor<2xi64>}
