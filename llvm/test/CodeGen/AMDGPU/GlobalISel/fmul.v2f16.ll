@@ -4,6 +4,8 @@
 ; RUN: llc -global-isel -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 < %s | FileCheck -check-prefix=GFX10 %s
 ; RUN: llc -global-isel -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 < %s | FileCheck -check-prefix=GFX10 %s
 
+; TODO: Switch test to use -new-reg-bank-select after adding G_FNEG support.
+
 define <2 x half> @v_fmul_v2f16(<2 x half> %a, <2 x half> %b) {
 ; GFX9-LABEL: v_fmul_v2f16:
 ; GFX9:       ; %bb.0:
