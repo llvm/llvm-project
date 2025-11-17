@@ -1232,8 +1232,7 @@ void SwingSchedulerDAG::updatePhiDependences() {
               // S2_storerb_io %0:intregs, 0, %2:intregs
               // Make sure we do not create an edge between SU2 and SU0.
 
-              if (SU->NodeNum < I.NodeNum && !I.isPred(SU) &&
-                  !IsReachable(&I, SU))
+              if (SU->NodeNum < I.NodeNum && !I.isPred(SU))
                 SU->addPred(SDep(&I, SDep::Barrier));
             }
           }
