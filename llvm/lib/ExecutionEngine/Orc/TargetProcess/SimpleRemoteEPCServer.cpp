@@ -9,6 +9,7 @@
 #include "llvm/ExecutionEngine/Orc/TargetProcess/SimpleRemoteEPCServer.h"
 
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
+#include "llvm/ExecutionEngine/Orc/TargetProcess/DefaultHostBootstrapValues.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/RegisterEHFrames.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Process.h"
@@ -206,10 +207,7 @@ Error SimpleRemoteEPCServer::sendSetupMessage(
          "Dispatch function name should not be set");
   EI.BootstrapSymbols[ExecutorSessionObjectName] = ExecutorAddr::fromPtr(this);
   EI.BootstrapSymbols[DispatchFnName] = ExecutorAddr::fromPtr(jitDispatchEntry);
-  EI.BootstrapSymbols[rt::RegisterEHFrameSectionAllocActionName] =
-      ExecutorAddr::fromPtr(&llvm_orc_registerEHFrameSectionAllocAction);
-  EI.BootstrapSymbols[rt::DeregisterEHFrameSectionAllocActionName] =
-      ExecutorAddr::fromPtr(&llvm_orc_deregisterEHFrameSectionAllocAction);
+  addDefaultBootstrapValuesForHostProcess(EI.BootstrapMap, EI.BootstrapSymbols);
 
   using SPSSerialize =
       shared::SPSArgList<shared::SPSSimpleRemoteEPCExecutorInfo>;

@@ -236,7 +236,7 @@ static bool sinkScalarOperands(VPlan &Plan) {
 
 /// If \p R is a region with a VPBranchOnMaskRecipe in the entry block, return
 /// the mask.
-VPValue *getPredicatedMask(VPRegionBlock *R) {
+static VPValue *getPredicatedMask(VPRegionBlock *R) {
   auto *EntryBB = dyn_cast<VPBasicBlock>(R->getEntry());
   if (!EntryBB || EntryBB->size() != 1 ||
       !isa<VPBranchOnMaskRecipe>(EntryBB->begin()))
@@ -2594,9 +2594,7 @@ template <typename Op0_t, typename Op1_t> struct RemoveMask_match {
       Out = nullptr;
       return true;
     }
-    if (m_LogicalAnd(m_Specific(In), m_VPValue(Out)).match(V))
-      return true;
-    return false;
+    return m_LogicalAnd(m_Specific(In), m_VPValue(Out)).match(V);
   }
 };
 
