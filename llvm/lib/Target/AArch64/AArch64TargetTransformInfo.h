@@ -345,9 +345,28 @@ public:
 
   bool isLegalMaskedCompressStore(Type *DataType,
                                   Align Alignment) const override {
-    ElementCount EC = cast<VectorType>(DataType)->getElementCount();
-    if (EC.getKnownMinValue() != 2 && EC.getKnownMinValue() != 4)
-      return false;
+    auto VecTy = cast<VectorType>(DataType);
+    Type *ElTy = VecTy->getScalarType();
+    unsigned ElSizeInBits = ElTy->getScalarSizeInBits();
+    TypeSize VecSizeInBits = VecTy->getPrimitiveSizeInBits();
+
+    if (isa<FixedVectorType>(VecTy)) {
+      // Each 128-bit segment must contain 2 or 4 elements (packed).
+      if (ElSizeInBits != 32 && ElSizeInBits != 64)
+        return false;
+      if (VecSizeInBits % 128 != 0 ||
+          VecSizeInBits > std::max(128U, ST->getMinSVEVectorSizeInBits()))
+        return false;
+    } else {
+      // Each segment must contain 2 or 4 elements, but the segments can be
+      // < 128-bits for unpacked vector types.
+      if (VecSizeInBits.getKnownMinValue() > 128)
+        return false;
+      unsigned ElementsPerSegment =
+          VecSizeInBits.getKnownMinValue() / ElSizeInBits;
+      if (ElementsPerSegment != 2 && ElementsPerSegment != 4)
+        return false;
+    }
 
     if (!isElementTypeLegalForCompressStore(DataType->getScalarType()))
       return false;
