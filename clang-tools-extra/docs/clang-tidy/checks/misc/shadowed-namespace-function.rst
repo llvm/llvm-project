@@ -31,16 +31,32 @@ The check will suggest adding the appropriate namespace qualification:
   - void process() {}
   + void utils::process() {}
 
-Options
--------
-
-None
+The check will not warn about:
+- Static functions or member functions;
+- Functions in anonymous namespaces;
+- The ``main`` function.
 
 Limitations
 -----------
 
-- Does not warn about functions in anonymous namespaces
+- Does not warn about friend functions:
+
+.. code-block:: c++
+
+  namespace llvm::gsym {
+    struct MergedFunctionsInfo {
+        friend bool operator==(const llvm::gsym::MergedFunctionsInfo &LHS,
+                               const llvm::gsym::MergedFunctionsInfo &RHS);
+    };
+  }
+
+  using namespace llvm::gsym;
+
+  bool operator==(const MergedFunctionsInfo &LHS,  // no warning in this version
+                  const MergedFunctionsInfo &RHS) {
+    return LHS.MergedFunctions == RHS.MergedFunctions;
+  }
+
 - Does not warn about template functions
-- Does not warn about static functions or member functions
 - Does not warn about variadic functions
-- Does not warn about the ``main`` function
+
