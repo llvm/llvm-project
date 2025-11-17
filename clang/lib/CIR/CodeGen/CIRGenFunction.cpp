@@ -412,6 +412,16 @@ void CIRGenFunction::LexicalScope::emitImplicitReturn() {
   (void)emitReturn(localScope->endLoc);
 }
 
+cir::TryOp CIRGenFunction::LexicalScope::getClosestTryParent() {
+  LexicalScope *scope = this;
+  while (scope) {
+    if (scope->isTry())
+      return scope->getTry();
+    scope = scope->parentScope;
+  }
+  return nullptr;
+}
+
 void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
                                    cir::FuncOp fn, cir::FuncType funcType,
                                    FunctionArgList args, SourceLocation loc,
@@ -921,6 +931,18 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
   case Expr::CXXOperatorCallExprClass:
   case Expr::UserDefinedLiteralClass:
     return emitCallExprLValue(cast<CallExpr>(e));
+  case Expr::ExprWithCleanupsClass: {
+    const auto *cleanups = cast<ExprWithCleanups>(e);
+    RunCleanupsScope scope(*this);
+    LValue lv = emitLValue(cleanups->getSubExpr());
+    assert(!cir::MissingFeatures::cleanupWithPreservedValues());
+    return lv;
+  }
+  case Expr::CXXDefaultArgExprClass: {
+    auto *dae = cast<CXXDefaultArgExpr>(e);
+    CXXDefaultArgExprScope scope(*this, dae);
+    return emitLValue(dae->getExpr());
+  }
   case Expr::ParenExprClass:
     return emitLValue(cast<ParenExpr>(e)->getSubExpr());
   case Expr::GenericSelectionExprClass:
