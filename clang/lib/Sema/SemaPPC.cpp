@@ -261,12 +261,12 @@ bool SemaPPC::CheckPPCBuiltinFunctionCall(const TargetInfo &TI,
     if (SemaRef.BuiltinConstantArg(TheCall, 2, Result))
       return true;
     unsigned Val = Result.getZExtValue();
-    static constexpr unsigned ValidFC[] = {0, 1, 2, 3, 4, 6, 8, 16, 24, 25, 28};
+    static constexpr unsigned ValidFC[] = {0, 1, 2, 3, 4, 6, 8};
     if (llvm::is_contained(ValidFC, Val))
       return false;
     Expr *Arg = TheCall->getArg(2);
     return SemaRef.Diag(Arg->getBeginLoc(), diag::err_argument_invalid_range)
-           << toString(Result, 10) << "0-4, 6, 8, 16, 24-25" << "28"
+           << toString(Result, 10) << "0-4, 6" << "8"
            << Arg->getSourceRange();
   }
   }
