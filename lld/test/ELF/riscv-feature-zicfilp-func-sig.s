@@ -51,9 +51,24 @@
 # REPORT-WARN: warning: f2.o: -z zicfilp-func-sig-report: file does not have GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_FUNC_SIG property
 # REPORT-ERROR: error: f3.o: -z zicfilp-func-sig-report: file does not have GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_FUNC_SIG property
 
+## zicfilp-func-sig-report-dynamic should report any dynamic objects that does
+## not have the ZICFILP-func-sig property. This also ensures the inhertance from
+## zicfilp-func-sig-report is working correctly.
+# RUN: ld.lld f1-s.o f3-s.o out.no.so out.force.so -z zicfilp-func-sig-report=warning -z zicfilp=func-sig 2>&1 | FileCheck --check-prefix=REPORT-WARN-DYNAMIC %s
+# RUN: ld.lld f1-s.o f3-s.o out.no.so out.force.so -z zicfilp-func-sig-report=error -z zicfilp=func-sig 2>&1 | FileCheck --check-prefix=REPORT-WARN-DYNAMIC %s
+# RUN: ld.lld f1-s.o f3-s.o out.no.so out.force.so -z zicfilp-func-sig-report-dynamic=none -z zicfilp=func-sig 2>&1 | count 0
+# RUN: ld.lld f1-s.o f3-s.o out.no.so out.force.so -z zicfilp-func-sig-report-dynamic=warning -z zicfilp=func-sig 2>&1 | FileCheck --check-prefix=REPORT-WARN-DYNAMIC %s
+# RUN: not ld.lld f1-s.o f3-s.o out.no.so out.force.so -z zicfilp-func-sig-report-dynamic=error -z zicfilp=func-sig 2>&1 | FileCheck --check-prefix=REPORT-ERROR-DYNAMIC %s
+# RUN: ld.lld f1-s.o f3-s.o out.force.so -z zicfilp-func-sig-report-dynamic=error -z zicfilp=func-sig 2>&1 | count 0
+# REPORT-WARN-DYNAMIC: warning: out.no.so: ZICFILP-func-sig is enabled, but this shared library lacks the necessary property note. The dynamic loader might not enable ZICFILP-func-sig or refuse to load the program unless all shared library dependencies have the ZICFILP-func-sig marking.
+# REPORT-WARN-DYNAMIC-NOT: {{.}}
+# REPORT-ERROR-DYNAMIC: error: out.no.so: ZICFILP-func-sig is enabled, but this shared library lacks the necessary property note. The dynamic loader might not enable ZICFILP-func-sig or refuse to load the program unless all shared library dependencies have the ZICFILP-func-sig marking.
+# REPORT-ERROR-DYNAMIC-NOT: error:
+
 ## An invalid -z zicfilp-func-sig-report option should give an error
-# RUN: not ld.lld f2-s.o -z zicfilp-func-sig-report=x 2>&1 | FileCheck --check-prefix=INVALID %s
+# RUN: not ld.lld f2-s.o -z zicfilp-func-sig-report=x -z zicfilp-func-sig-report-dynamic=x 2>&1 | FileCheck --check-prefix=INVALID %s
 # INVALID: error: unknown -z zicfilp-func-sig-report= value: x
+# INVALID: error: unknown -z zicfilp-func-sig-report-dynamic= value: x
 
 ## ZICFILP-unlabeled and ZICFILP-func-sig should conflict with each other.
 # RUN: ld.lld f3-u.o -o out.override -z zicfilp=func-sig 2>&1 | FileCheck --check-prefix=FORCE-CONFLICT %s
