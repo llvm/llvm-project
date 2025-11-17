@@ -2766,7 +2766,7 @@ LogicalResult OperationLegalizer::legalizeWithPattern(Operation *op) {
       rewriterImpl.patternMaterializations.clear();
 #if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
       // Expensive pattern check that can detect API violations.
-      if (checkOp) {
+      if (checkOp && topLevelFingerPrint) {
         OperationFingerPrint fingerPrintAfterPattern(checkOp);
         if (fingerPrintAfterPattern != *topLevelFingerPrint)
           llvm::report_fatal_error("pattern '" + pattern.getDebugName() +

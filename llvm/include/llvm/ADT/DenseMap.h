@@ -556,7 +556,10 @@ private:
     return llvm::make_range(getBuckets(), getBucketsEnd());
   }
 
-  void grow(unsigned AtLeast) { derived().grow(AtLeast); }
+  void grow(unsigned MinNumBuckets) {
+    unsigned NumBuckets = DerivedT::roundUpNumBuckets(MinNumBuckets);
+    derived().grow(NumBuckets);
+  }
 
   template <typename LookupKeyT>
   BucketT *findBucketForInsertion(const LookupKeyT &Lookup,
@@ -751,18 +754,12 @@ public:
     init(NumElementsToReserve);
   }
 
-  DenseMap(const DenseMap &other) : BaseT() {
-    init(0);
-    this->copyFrom(other);
-  }
+  DenseMap(const DenseMap &other) : DenseMap() { this->copyFrom(other); }
 
-  DenseMap(DenseMap &&other) : BaseT() {
-    init(0);
-    this->swap(other);
-  }
+  DenseMap(DenseMap &&other) : DenseMap() { this->swap(other); }
 
-  template <typename InputIt> DenseMap(const InputIt &I, const InputIt &E) {
-    init(std::distance(I, E));
+  template <typename InputIt>
+  DenseMap(const InputIt &I, const InputIt &E) : DenseMap(std::distance(I, E)) {
     this->insert(I, E);
   }
 
@@ -840,8 +837,12 @@ private:
     NumBuckets = 0;
   }
 
+  static unsigned roundUpNumBuckets(unsigned MinNumBuckets) {
+    return std::max(64u,
+                    static_cast<unsigned>(NextPowerOf2(MinNumBuckets - 1)));
+  }
+
   void grow(unsigned AtLeast) {
-    AtLeast = std::max<unsigned>(64, NextPowerOf2(AtLeast - 1));
     DenseMap Tmp(AtLeast, typename BaseT::ExactBucketCount{});
     Tmp.moveFrom(*this);
     swapImpl(Tmp);
@@ -901,19 +902,15 @@ public:
     init(NumElementsToReserve);
   }
 
-  SmallDenseMap(const SmallDenseMap &other) : BaseT() {
-    init(0);
+  SmallDenseMap(const SmallDenseMap &other) : SmallDenseMap() {
     this->copyFrom(other);
   }
 
-  SmallDenseMap(SmallDenseMap &&other) : BaseT() {
-    init(0);
-    this->swap(other);
-  }
+  SmallDenseMap(SmallDenseMap &&other) : SmallDenseMap() { this->swap(other); }
 
   template <typename InputIt>
-  SmallDenseMap(const InputIt &I, const InputIt &E) {
-    init(std::distance(I, E));
+  SmallDenseMap(const InputIt &I, const InputIt &E)
+      : SmallDenseMap(std::distance(I, E)) {
     this->insert(I, E);
   }
 
@@ -1106,11 +1103,15 @@ private:
     new (getLargeRep()) LargeRep{nullptr, 0};
   }
 
-  void grow(unsigned AtLeast) {
-    if (AtLeast > InlineBuckets)
-      AtLeast = std::max<unsigned>(64, NextPowerOf2(AtLeast - 1));
+  static unsigned roundUpNumBuckets(unsigned MinNumBuckets) {
+    if (MinNumBuckets <= InlineBuckets)
+      return MinNumBuckets;
+    return std::max(64u,
+                    static_cast<unsigned>(NextPowerOf2(MinNumBuckets - 1)));
+  }
 
-    SmallDenseMap Tmp(AtLeast, typename BaseT::ExactBucketCount{});
+  void grow(unsigned NumBuckets) {
+    SmallDenseMap Tmp(NumBuckets, typename BaseT::ExactBucketCount{});
     Tmp.moveFrom(*this);
 
     if (Tmp.Small) {

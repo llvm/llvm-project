@@ -749,7 +749,7 @@ TEST_F(VPBasicBlockTest, print) {
     std::string I3Dump;
     raw_string_ostream OS(I3Dump);
     VPSlotTracker SlotTracker;
-    I3->print(OS, "", SlotTracker);
+    cast<VPRecipeBase>(I3)->print(OS, "", SlotTracker);
     EXPECT_EQ("EMIT store <badref>, <badref>", I3Dump);
   }
 
@@ -818,7 +818,7 @@ Successor(s): ir-bb<scalar.header>
     std::string I3Dump;
     raw_string_ostream OS(I3Dump);
     VPSlotTracker SlotTracker(&Plan);
-    I3->print(OS, "", SlotTracker);
+    cast<VPRecipeBase>(I3)->print(OS, "", SlotTracker);
     EXPECT_EQ("EMIT store vp<%1>, vp<%2>", I3Dump);
   }
 
@@ -1726,8 +1726,8 @@ struct VPDoubleValueDef : public VPRecipeBase {
 
   void execute(struct VPTransformState &State) override {}
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  void print(raw_ostream &O, const Twine &Indent,
-             VPSlotTracker &SlotTracker) const override {}
+  void printRecipe(raw_ostream &O, const Twine &Indent,
+                   VPSlotTracker &SlotTracker) const override {}
 #endif
 };
 
