@@ -1,17 +1,10 @@
 // UNSUPPORTED: target={{.*}}-windows-{{.*}}
 
 // RUN: %clang -S -fsanitize=type -emit-llvm -o - -fsanitize=type %s \
+// RUN:     -fno-sanitize-type-outline-instrumentation \
 // RUN:     | FileCheck %s --check-prefixes=CHECK-NO-OUTLINE
 // RUN: %clang -S -fsanitize=type -emit-llvm -o - -fsanitize=type %s \
 // RUN:     -fsanitize-type-outline-instrumentation \
-// RUN:     | FileCheck %s --check-prefixes=CHECK-OUTLINE
-
-// RUN: %clang -S -fsanitize=type -emit-llvm -o - -fsanitize=type %s \
-// RUN:     -fsanitize-type-outline-instrumentation \
-// RUN:     -fsanitize-type-verify-outlined-instrumentation \
-// RUN:     | FileCheck %s --check-prefixes=CHECK-OUTLINE
-// RUN: %clang -S -fsanitize=type -emit-llvm -o - -fsanitize=type %s \
-// RUN:     -fsanitize-type-verify-outlined-instrumentation \
 // RUN:     | FileCheck %s --check-prefixes=CHECK-OUTLINE
 
 // CHECK-LABEL: @alias

@@ -217,7 +217,9 @@ Changes to BOLT
 Changes to Sanitizers
 ---------------------
 
-* TypeSanitizer no longer inlines all instrumentation by default
+* TypeSanitizer no longer inlines all instrumentation by default. Added the
+  `-f[no-]sanitize-type-outline-instrumentation` flags to give users control
+  over this behaviour.
 
 Other Changes
 -------------
