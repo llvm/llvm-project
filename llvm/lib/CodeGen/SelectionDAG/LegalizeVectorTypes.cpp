@@ -413,7 +413,7 @@ SDValue DAGTypeLegalizer::ScalarizeVecRes_LOOP_DEPENDENCE_MASK(SDNode *N) {
   SDValue Diff = DAG.getNode(ISD::SUB, DL, PtrVT, SinkValue, SourceValue);
   EVT CmpVT = TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(),
                                      Diff.getValueType());
-  SDValue Zero = DAG.getTargetConstant(0, DL, PtrVT);
+  SDValue Zero = DAG.getConstant(0, DL, PtrVT);
   return DAG.getNode(ISD::OR, DL, CmpVT,
                      DAG.getSetCC(DL, CmpVT, Diff, EltSize, ISD::SETGE),
                      DAG.getSetCC(DL, CmpVT, Diff, Zero, ISD::SETEQ));
@@ -2186,7 +2186,7 @@ void DAGTypeLegalizer::SplitVecRes_ScalarOp(SDNode *N, SDValue &Lo,
   std::tie(LoVT, HiVT) = DAG.GetSplitDestVTs(N->getValueType(0));
   Lo = DAG.getNode(N->getOpcode(), dl, LoVT, N->getOperand(0));
   if (N->getOpcode() == ISD::SCALAR_TO_VECTOR) {
-    Hi = DAG.getUNDEF(HiVT);
+    Hi = DAG.getPOISON(HiVT);
   } else {
     assert(N->getOpcode() == ISD::SPLAT_VECTOR && "Unexpected opcode");
     Hi = Lo;
@@ -2363,7 +2363,7 @@ void DAGTypeLegalizer::SplitVecRes_VP_LOAD_FF(VPLoadFFSDNode *LD, SDValue &Lo,
   Lo = DAG.getLoadFFVP(LoVT, dl, Ch, Ptr, MaskLo, EVLLo, MMO);
 
   // Fill the upper half with poison.
-  Hi = DAG.getUNDEF(HiVT);
+  Hi = DAG.getPOISON(HiVT);
 
   ReplaceValueWith(SDValue(LD, 1), Lo.getValue(1));
   ReplaceValueWith(SDValue(LD, 2), Lo.getValue(2));
@@ -6057,11 +6057,11 @@ SDValue DAGTypeLegalizer::WidenVecRes_LOOP_DEPENDENCE_MASK(SDNode *N) {
 
 SDValue DAGTypeLegalizer::WidenVecRes_BUILD_VECTOR(SDNode *N) {
   SDLoc dl(N);
-  // Build a vector with undefined for the new nodes.
+  // Build a vector with poison for the new nodes.
   EVT VT = N->getValueType(0);
 
   // Integer BUILD_VECTOR operands may be larger than the node's vector element
-  // type. The UNDEFs need to have the same type as the existing operands.
+  // type. The POISONs need to have the same type as the existing operands.
   EVT EltVT = N->getOperand(0).getValueType();
   unsigned NumElts = VT.getVectorNumElements();
 
@@ -6070,7 +6070,7 @@ SDValue DAGTypeLegalizer::WidenVecRes_BUILD_VECTOR(SDNode *N) {
 
   SmallVector<SDValue, 16> NewOps(N->ops());
   assert(WidenNumElts >= NumElts && "Shrinking vector instead of widening!");
-  NewOps.append(WidenNumElts - NumElts, DAG.getUNDEF(EltVT));
+  NewOps.append(WidenNumElts - NumElts, DAG.getPOISON(EltVT));
 
   return DAG.getBuildVector(WidenVT, dl, NewOps);
 }
