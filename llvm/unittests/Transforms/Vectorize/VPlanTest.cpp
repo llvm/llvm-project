@@ -35,9 +35,9 @@ namespace {
 using VPInstructionTest = VPlanTestBase;
 
 TEST_F(VPInstructionTest, insertBefore) {
-  VPInstruction *I1 = new VPInstruction(0, {});
-  VPInstruction *I2 = new VPInstruction(1, {});
-  VPInstruction *I3 = new VPInstruction(2, {});
+  VPInstruction *I1 = new VPInstruction(VPInstruction::StepVector, {});
+  VPInstruction *I2 = new VPInstruction(VPInstruction::VScale, {});
+  VPInstruction *I3 = new VPInstruction(VPInstruction::StepVector, {});
 
   VPBasicBlock &VPBB1 = *getPlan().createVPBasicBlock("");
   VPBB1.appendRecipe(I1);
@@ -50,9 +50,9 @@ TEST_F(VPInstructionTest, insertBefore) {
 }
 
 TEST_F(VPInstructionTest, eraseFromParent) {
-  VPInstruction *I1 = new VPInstruction(0, {});
-  VPInstruction *I2 = new VPInstruction(1, {});
-  VPInstruction *I3 = new VPInstruction(2, {});
+  VPInstruction *I1 = new VPInstruction(VPInstruction::StepVector, {});
+  VPInstruction *I2 = new VPInstruction(VPInstruction::VScale, {});
+  VPInstruction *I3 = new VPInstruction(VPInstruction::StepVector, {});
 
   VPBasicBlock &VPBB1 = *getPlan().createVPBasicBlock("");
   VPBB1.appendRecipe(I1);
@@ -70,9 +70,9 @@ TEST_F(VPInstructionTest, eraseFromParent) {
 }
 
 TEST_F(VPInstructionTest, moveAfter) {
-  VPInstruction *I1 = new VPInstruction(0, {});
-  VPInstruction *I2 = new VPInstruction(1, {});
-  VPInstruction *I3 = new VPInstruction(2, {});
+  VPInstruction *I1 = new VPInstruction(VPInstruction::StepVector, {});
+  VPInstruction *I2 = new VPInstruction(VPInstruction::VScale, {});
+  VPInstruction *I3 = new VPInstruction(VPInstruction::StepVector, {});
 
   VPBasicBlock &VPBB1 = *getPlan().createVPBasicBlock("");
   VPBB1.appendRecipe(I1);
@@ -83,8 +83,8 @@ TEST_F(VPInstructionTest, moveAfter) {
 
   CHECK_ITERATOR(VPBB1, I2, I1, I3);
 
-  VPInstruction *I4 = new VPInstruction(4, {});
-  VPInstruction *I5 = new VPInstruction(5, {});
+  VPInstruction *I4 = new VPInstruction(VPInstruction::VScale, {});
+  VPInstruction *I5 = new VPInstruction(VPInstruction::StepVector, {});
   VPBasicBlock &VPBB2 = *getPlan().createVPBasicBlock("");
   VPBB2.appendRecipe(I4);
   VPBB2.appendRecipe(I5);
@@ -97,9 +97,9 @@ TEST_F(VPInstructionTest, moveAfter) {
 }
 
 TEST_F(VPInstructionTest, moveBefore) {
-  VPInstruction *I1 = new VPInstruction(0, {});
-  VPInstruction *I2 = new VPInstruction(1, {});
-  VPInstruction *I3 = new VPInstruction(2, {});
+  VPInstruction *I1 = new VPInstruction(VPInstruction::StepVector, {});
+  VPInstruction *I2 = new VPInstruction(VPInstruction::VScale, {});
+  VPInstruction *I3 = new VPInstruction(VPInstruction::StepVector, {});
 
   VPBasicBlock &VPBB1 = *getPlan().createVPBasicBlock("");
   VPBB1.appendRecipe(I1);
@@ -110,8 +110,8 @@ TEST_F(VPInstructionTest, moveBefore) {
 
   CHECK_ITERATOR(VPBB1, I2, I1, I3);
 
-  VPInstruction *I4 = new VPInstruction(4, {});
-  VPInstruction *I5 = new VPInstruction(5, {});
+  VPInstruction *I4 = new VPInstruction(VPInstruction::VScale, {});
+  VPInstruction *I5 = new VPInstruction(VPInstruction::StepVector, {});
   VPBasicBlock &VPBB2 = *getPlan().createVPBasicBlock("");
   VPBB2.appendRecipe(I4);
   VPBB2.appendRecipe(I5);
@@ -136,7 +136,7 @@ TEST_F(VPInstructionTest, setOperand) {
   IntegerType *Int32 = IntegerType::get(C, 32);
   VPValue *VPV1 = getPlan().getOrAddLiveIn(ConstantInt::get(Int32, 1));
   VPValue *VPV2 = getPlan().getOrAddLiveIn(ConstantInt::get(Int32, 2));
-  VPInstruction *I1 = new VPInstruction(0, {VPV1, VPV2});
+  VPInstruction *I1 = new VPInstruction(Instruction::Add, {VPV1, VPV2});
   EXPECT_EQ(1u, VPV1->getNumUsers());
   EXPECT_EQ(I1, *VPV1->user_begin());
   EXPECT_EQ(1u, VPV2->getNumUsers());
@@ -179,7 +179,7 @@ TEST_F(VPInstructionTest, replaceAllUsesWith) {
   IntegerType *Int32 = IntegerType::get(C, 32);
   VPValue *VPV1 = getPlan().getOrAddLiveIn(ConstantInt::get(Int32, 1));
   VPValue *VPV2 = getPlan().getOrAddLiveIn(ConstantInt::get(Int32, 2));
-  VPInstruction *I1 = new VPInstruction(0, {VPV1, VPV2});
+  VPInstruction *I1 = new VPInstruction(Instruction::Add, {VPV1, VPV2});
 
   // Replace all uses of VPV1 with VPV3.
   VPValue *VPV3 = getPlan().getOrAddLiveIn(ConstantInt::get(Int32, 3));
@@ -210,7 +210,7 @@ TEST_F(VPInstructionTest, replaceAllUsesWith) {
   EXPECT_EQ(0u, VPV2->getNumUsers());
   EXPECT_EQ(0u, VPV3->getNumUsers());
 
-  VPInstruction *I2 = new VPInstruction(0, {VPV1, VPV2});
+  VPInstruction *I2 = new VPInstruction(Instruction::Add, {VPV1, VPV2});
   EXPECT_EQ(3u, VPV1->getNumUsers());
   VPV1->replaceAllUsesWith(VPV3);
   EXPECT_EQ(3u, VPV3->getNumUsers());
@@ -223,7 +223,7 @@ TEST_F(VPInstructionTest, releaseOperandsAtDeletion) {
   IntegerType *Int32 = IntegerType::get(C, 32);
   VPValue *VPV1 = getPlan().getOrAddLiveIn(ConstantInt::get(Int32, 1));
   VPValue *VPV2 = getPlan().getOrAddLiveIn(ConstantInt::get(Int32, 1));
-  VPInstruction *I1 = new VPInstruction(0, {VPV1, VPV2});
+  VPInstruction *I1 = new VPInstruction(Instruction::Add, {VPV1, VPV2});
 
   EXPECT_EQ(1u, VPV1->getNumUsers());
   EXPECT_EQ(I1, *VPV1->user_begin());
@@ -706,7 +706,7 @@ TEST_F(VPBasicBlockTest, reassociateBlocks) {
 
 TEST_F(VPBasicBlockTest, splitAtEnd) {
   VPlan &Plan = getPlan();
-  VPInstruction *VPI = new VPInstruction(0, {});
+  VPInstruction *VPI = new VPInstruction(VPInstruction::StepVector, {});
   VPBasicBlock *VPBB = Plan.createVPBasicBlock("VPBB1", VPI);
   VPBlockUtils::connectBlocks(Plan.getEntry(), VPBB);
   VPBlockUtils::connectBlocks(VPBB, Plan.getScalarHeader());
@@ -720,16 +720,14 @@ TEST_F(VPBasicBlockTest, splitAtEnd) {
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 TEST_F(VPBasicBlockTest, print) {
-  VPInstruction *TC = new VPInstruction(Instruction::PHI, {});
-  VPlan &Plan = getPlan(TC);
+  VPlan &Plan = getPlan();
   IntegerType *Int32 = IntegerType::get(C, 32);
   VPValue *Val = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
   VPBasicBlock *VPBB0 = Plan.getEntry();
-  VPBB0->appendRecipe(TC);
 
   VPInstruction *I1 = new VPInstruction(Instruction::Add, {Val, Val});
   VPInstruction *I2 = new VPInstruction(Instruction::Sub, {I1, Val});
-  VPInstruction *I3 = new VPInstruction(Instruction::Br, {I1, I2});
+  VPInstruction *I3 = new VPInstruction(Instruction::Store, {I1, I2});
 
   VPBasicBlock *VPBB1 = Plan.createVPBasicBlock("");
   VPBB1->appendRecipe(I1);
@@ -738,7 +736,7 @@ TEST_F(VPBasicBlockTest, print) {
   VPBB1->setName("bb1");
 
   VPInstruction *I4 = new VPInstruction(Instruction::Mul, {I2, I1});
-  VPInstruction *I5 = new VPInstruction(Instruction::Br, {I4});
+  VPInstruction *I5 = new VPInstruction(Instruction::Freeze, {I4});
   VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("");
   VPBB2->appendRecipe(I4);
   VPBB2->appendRecipe(I5);
@@ -752,7 +750,7 @@ TEST_F(VPBasicBlockTest, print) {
     raw_string_ostream OS(I3Dump);
     VPSlotTracker SlotTracker;
     I3->print(OS, "", SlotTracker);
-    EXPECT_EQ("EMIT br <badref>, <badref>", I3Dump);
+    EXPECT_EQ("EMIT store <badref>, <badref>", I3Dump);
   }
 
   VPBlockUtils::connectBlocks(VPBB2, Plan.getScalarHeader());
@@ -762,28 +760,27 @@ TEST_F(VPBasicBlockTest, print) {
   Plan.printDOT(OS);
 
   const char *ExpectedStr = R"(digraph VPlan {
-graph [labelloc=t, fontsize=30; label="Vectorization Plan\n for UF\>=1\nvp\<%1\> = original trip-count\n"]
+graph [labelloc=t, fontsize=30; label="Vectorization Plan\n for UF\>=1\nLive-in ir\<1024\> = original trip-count\n"]
 node [shape=rect, fontname=Courier, fontsize=30]
 edge [fontname=Courier, fontsize=30]
 compound=true
   N0 [label =
     "preheader:\l" +
-    "  EMIT-SCALAR vp\<%1\> = phi \l" +
     "Successor(s): bb1\l"
   ]
   N0 -> N1 [ label=""]
   N1 [label =
     "bb1:\l" +
-    "  EMIT vp\<%2\> = add ir\<1\>, ir\<1\>\l" +
-    "  EMIT vp\<%3\> = sub vp\<%2\>, ir\<1\>\l" +
-    "  EMIT br vp\<%2\>, vp\<%3\>\l" +
+    "  EMIT vp\<%1\> = add ir\<1\>, ir\<1\>\l" +
+    "  EMIT vp\<%2\> = sub vp\<%1\>, ir\<1\>\l" +
+    "  EMIT store vp\<%1\>, vp\<%2\>\l" +
     "Successor(s): bb2\l"
   ]
   N1 -> N2 [ label=""]
   N2 [label =
     "bb2:\l" +
-    "  EMIT vp\<%5\> = mul vp\<%3\>, vp\<%2\>\l" +
-    "  EMIT br vp\<%5\>\l" +
+    "  EMIT vp\<%4\> = mul vp\<%2\>, vp\<%1\>\l" +
+    "  EMIT vp\<%5\> = freeze vp\<%4\>\l" +
     "Successor(s): ir-bb\<scalar.header\>\l"
   ]
   N2 -> N3 [ label=""]
@@ -796,9 +793,9 @@ compound=true
   EXPECT_EQ(ExpectedStr, FullDump);
 
   const char *ExpectedBlock1Str = R"(bb1:
-  EMIT vp<%2> = add ir<1>, ir<1>
-  EMIT vp<%3> = sub vp<%2>, ir<1>
-  EMIT br vp<%2>, vp<%3>
+  EMIT vp<%1> = add ir<1>, ir<1>
+  EMIT vp<%2> = sub vp<%1>, ir<1>
+  EMIT store vp<%1>, vp<%2>
 Successor(s): bb2
 )";
   std::string Block1Dump;
@@ -808,8 +805,8 @@ Successor(s): bb2
 
   // Ensure that numbering is good when dumping the second block in isolation.
   const char *ExpectedBlock2Str = R"(bb2:
-  EMIT vp<%5> = mul vp<%3>, vp<%2>
-  EMIT br vp<%5>
+  EMIT vp<%4> = mul vp<%2>, vp<%1>
+  EMIT vp<%5> = freeze vp<%4>
 Successor(s): ir-bb<scalar.header>
 )";
   std::string Block2Dump;
@@ -822,24 +819,24 @@ Successor(s): ir-bb<scalar.header>
     raw_string_ostream OS(I3Dump);
     VPSlotTracker SlotTracker(&Plan);
     I3->print(OS, "", SlotTracker);
-    EXPECT_EQ("EMIT br vp<%2>, vp<%3>", I3Dump);
+    EXPECT_EQ("EMIT store vp<%1>, vp<%2>", I3Dump);
   }
 
   {
     std::string I4Dump;
     raw_string_ostream OS(I4Dump);
     OS << *I4;
-    EXPECT_EQ("EMIT vp<%5> = mul vp<%3>, vp<%2>", I4Dump);
+    EXPECT_EQ("EMIT vp<%4> = mul vp<%2>, vp<%1>", I4Dump);
   }
 }
 
 TEST_F(VPBasicBlockTest, printPlanWithVFsAndUFs) {
-  VPInstruction *TC = new VPInstruction(Instruction::Sub, {});
-  VPlan &Plan = getPlan(TC);
+  VPlan &Plan = getPlan();
+  IntegerType *Int32 = IntegerType::get(C, 32);
+  VPValue *Val = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
   VPBasicBlock *VPBB0 = Plan.getEntry();
-  VPBB0->appendRecipe(TC);
 
-  VPInstruction *I1 = new VPInstruction(Instruction::Add, {});
+  VPInstruction *I1 = new VPInstruction(Instruction::Add, {Val, Val});
   VPBasicBlock *VPBB1 = Plan.createVPBasicBlock("");
   VPBB1->appendRecipe(I1);
   VPBB1->setName("bb1");
@@ -855,14 +852,13 @@ TEST_F(VPBasicBlockTest, printPlanWithVFsAndUFs) {
     Plan.print(OS);
 
     const char *ExpectedStr = R"(VPlan 'TestPlan for VF={4},UF>=1' {
-vp<%1> = original trip-count
+Live-in ir<1024> = original trip-count
 
 preheader:
-  EMIT vp<%1> = sub 
 Successor(s): bb1
 
 bb1:
-  EMIT vp<%2> = add 
+  EMIT vp<%1> = add ir<1>, ir<1>
 Successor(s): ir-bb<scalar.header>
 
 ir-bb<scalar.header>:
@@ -879,14 +875,13 @@ No successors
     Plan.print(OS);
 
     const char *ExpectedStr = R"(VPlan 'TestPlan for VF={4,vscale x 8},UF>=1' {
-vp<%1> = original trip-count
+Live-in ir<1024> = original trip-count
 
 preheader:
-  EMIT vp<%1> = sub 
 Successor(s): bb1
 
 bb1:
-  EMIT vp<%2> = add 
+  EMIT vp<%1> = add ir<1>, ir<1>
 Successor(s): ir-bb<scalar.header>
 
 ir-bb<scalar.header>:
@@ -903,14 +898,13 @@ No successors
     Plan.print(OS);
 
     const char *ExpectedStr = R"(VPlan 'TestPlan for VF={4,vscale x 8},UF={4}' {
-vp<%1> = original trip-count
+Live-in ir<1024> = original trip-count
 
 preheader:
-  EMIT vp<%1> = sub 
 Successor(s): bb1
 
 bb1:
-  EMIT vp<%2> = add 
+  EMIT vp<%1> = add ir<1>, ir<1>
 Successor(s): ir-bb<scalar.header>
 
 ir-bb<scalar.header>:
@@ -922,7 +916,7 @@ No successors
 }
 
 TEST_F(VPBasicBlockTest, cloneAndPrint) {
-  VPlan &Plan = getPlan(nullptr);
+  VPlan &Plan = getPlan();
   VPBasicBlock *VPBB0 = Plan.getEntry();
 
   IntegerType *Int32 = IntegerType::get(C, 32);
@@ -940,7 +934,7 @@ TEST_F(VPBasicBlockTest, cloneAndPrint) {
   VPBlockUtils::connectBlocks(VPBB0, VPBB1);
 
   const char *ExpectedStr = R"(digraph VPlan {
-graph [labelloc=t, fontsize=30; label="Vectorization Plan\n for UF\>=1\n"]
+graph [labelloc=t, fontsize=30; label="Vectorization Plan\n for UF\>=1\nLive-in ir\<1024\> = original trip-count\n"]
 node [shape=rect, fontname=Courier, fontsize=30]
 edge [fontname=Courier, fontsize=30]
 compound=true
@@ -1744,15 +1738,15 @@ TEST(VPDoubleValueDefTest, traverseUseLists) {
   // directions.
 
   // Create a new VPDef which defines 2 values and has 2 operands.
-  VPInstruction Op0(20, {});
-  VPInstruction Op1(30, {});
+  VPInstruction Op0(VPInstruction::StepVector, {});
+  VPInstruction Op1(VPInstruction::VScale, {});
   VPDoubleValueDef DoubleValueDef({&Op0, &Op1});
 
   // Create a new users of the defined values.
-  VPInstruction I1(
-      1, {DoubleValueDef.getVPValue(0), DoubleValueDef.getVPValue(1)});
-  VPInstruction I2(2, {DoubleValueDef.getVPValue(0)});
-  VPInstruction I3(3, {DoubleValueDef.getVPValue(1)});
+  VPInstruction I1(Instruction::Add, {DoubleValueDef.getVPValue(0),
+                                      DoubleValueDef.getVPValue(1)});
+  VPInstruction I2(Instruction::Freeze, {DoubleValueDef.getVPValue(0)});
+  VPInstruction I3(Instruction::Freeze, {DoubleValueDef.getVPValue(1)});
 
   // Check operands of the VPDef (traversing upwards).
   SmallVector<VPValue *, 4> DoubleOperands(DoubleValueDef.op_begin(),
