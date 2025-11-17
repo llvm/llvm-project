@@ -2108,8 +2108,7 @@ static void createAndInsertBasicBlocks(DenseMap<Value *, BasicBlock *> &OldMap,
 
   for (Value *RetVal : SortedKeys) {
     BasicBlock *NewBB = BasicBlock::Create(
-        ParentFunc->getContext(),
-        Twine(BaseName) + Twine("_") + Twine(static_cast<unsigned>(Idx++)),
+        ParentFunc->getContext(), Twine(BaseName) + Twine("_") + Twine(Idx++),
         ParentFunc);
     NewMap.insert(std::make_pair(RetVal, NewBB));
   }
