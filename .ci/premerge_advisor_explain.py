@@ -39,6 +39,7 @@ def get_comment(
 ) -> dict[str, str]:
     repo = github.Github(github_token).get_repo("llvm/llvm-project")
     pr = repo.get_issue(pr_number).as_pull_request()
+    body = COMMENT_TAG + "\n" + body
     comment = {"body": body}
     comment_id = get_comment_id(platform.system(), pr)
     if comment_id:
