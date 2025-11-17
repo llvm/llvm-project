@@ -152,7 +152,7 @@ public:
                          this->PtrOffset);
   }
 
-  APValue toAPValue(const ASTContext &) const;
+  APValue toAPValue(const ASTContext &, const Program &) const;
 
   void print(llvm::raw_ostream &OS) const {
     OS << "MemberPtr(" << Base << " " << (const void *)getDecl() << " + "
@@ -160,8 +160,9 @@ public:
        << ". IsDerived: " << isDerivedMember() << ")";
   }
 
-  std::string toDiagnosticString(const ASTContext &Ctx) const {
-    return toAPValue(Ctx).getAsString(Ctx, getDecl()->getType());
+  std::string toDiagnosticString(const ASTContext &Ctx,
+                                 const Program &P) const {
+    return toAPValue(Ctx, P).getAsString(Ctx, getDecl()->getType());
   }
 };
 

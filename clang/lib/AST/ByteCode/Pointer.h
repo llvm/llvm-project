@@ -137,10 +137,10 @@ public:
   bool operator!=(const Pointer &P) const { return !(P == *this); }
 
   /// Converts the pointer to an APValue.
-  APValue toAPValue(const ASTContext &ASTCtx) const;
+  APValue toAPValue(const ASTContext &ASTCtx, const Program &) const;
 
   /// Converts the pointer to a string usable in diagnostics.
-  std::string toDiagnosticString(const ASTContext &Ctx) const;
+  std::string toDiagnosticString(const ASTContext &Ctx, const Program &) const;
 
   uint64_t getIntegerRepresentation() const {
     if (isIntegralPointer())
@@ -151,8 +151,8 @@ public:
   }
 
   /// Converts the pointer to an APValue that is an rvalue.
-  std::optional<APValue> toRValue(const Context &Ctx,
-                                  QualType ResultType) const;
+  std::optional<APValue> toRValue(const Context &Ctx, QualType ResultType,
+                                  const Program &) const;
 
   /// Offsets a pointer inside an array.
   [[nodiscard]] Pointer atIndex(uint64_t Idx) const {
@@ -366,7 +366,7 @@ public:
     if (isIntegralPointer()) {
       if (!Int.Desc)
         return 1;
-      return Int.Desc->getElemSize();
+      return Int.Desc->getElemDataSize();
     }
 
     if (BS.Base == RootPtrMark)
@@ -809,6 +809,7 @@ public:
   /// i.e. a non-MaterializeTemporaryExpr Expr.
   bool pointsToLiteral() const;
   bool pointsToStringLiteral() const;
+  bool pointsToLabel() const;
 
   /// Prints the pointer.
   void print(llvm::raw_ostream &OS) const;

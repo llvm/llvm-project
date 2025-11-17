@@ -26,6 +26,8 @@
 namespace clang {
 namespace interp {
 
+class Program;
+
 using APInt = llvm::APInt;
 using APSInt = llvm::APSInt;
 
@@ -150,7 +152,9 @@ public:
     else
       return APSInt(getValue().zext(Bits), !Signed);
   }
-  APValue toAPValue(const ASTContext &) const { return APValue(toAPSInt()); }
+  APValue toAPValue(const ASTContext &, const Program &) const {
+    return APValue(toAPSInt());
+  }
 
   bool isZero() const { return getValue().isZero(); }
   bool isPositive() const {
@@ -179,12 +183,13 @@ public:
   unsigned countLeadingZeros() const { return getValue().countl_zero(); }
 
   void print(llvm::raw_ostream &OS) const { getValue().print(OS, Signed); }
-  std::string toDiagnosticString(const ASTContext &Ctx) const {
+  std::string toDiagnosticString(const ASTContext &Ctx, const Program &) const {
     std::string NameStr;
     llvm::raw_string_ostream OS(NameStr);
     print(OS);
     return NameStr;
   }
+  static IntegralKind getKind() { return IntegralKind::Number; }
 
   IntegralAP truncate(unsigned BitWidth) const {
     if constexpr (Signed)

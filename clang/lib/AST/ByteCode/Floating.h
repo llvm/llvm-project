@@ -24,6 +24,7 @@
 namespace clang {
 namespace interp {
 
+class Program;
 using APFloat = llvm::APFloat;
 using APSInt = llvm::APSInt;
 using APInt = llvm::APInt;
@@ -86,14 +87,16 @@ public:
   APSInt toAPSInt(unsigned NumBits = 0) const {
     return APSInt(getValue().bitcastToAPInt());
   }
-  APValue toAPValue(const ASTContext &) const { return APValue(getValue()); }
+  APValue toAPValue(const ASTContext &, const Program &) const {
+    return APValue(getValue());
+  }
   void print(llvm::raw_ostream &OS) const {
     // Can't use APFloat::print() since it appends a newline.
     SmallVector<char, 16> Buffer;
     getValue().toString(Buffer);
     OS << Buffer;
   }
-  std::string toDiagnosticString(const ASTContext &Ctx) const {
+  std::string toDiagnosticString(const ASTContext &Ctx, const Program &) const {
     std::string NameStr;
     llvm::raw_string_ostream OS(NameStr);
     print(OS);
