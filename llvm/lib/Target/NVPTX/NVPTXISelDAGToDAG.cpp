@@ -1211,16 +1211,14 @@ bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
   //          type is integer
   // Float  : ISD::NON_EXTLOAD or ISD::EXTLOAD and the type is float
   // Read at least 8 bits (predicates are stored as 8-bit values)
-  // The last operand holds the original LoadSDNode::getExtensionType() value
-  const unsigned ExtensionType =
-      N->getConstantOperandVal(N->getNumOperands() - 1);
+  // Get the original LoadSDNode::getExtensionType() value
+  const unsigned ExtensionType = N->getConstantOperandVal(4);
   const unsigned FromType = (ExtensionType == ISD::SEXTLOAD)
                                 ? NVPTX::PTXLdStInstCode::Signed
                                 : NVPTX::PTXLdStInstCode::Untyped;
 
   const unsigned FromTypeWidth = getFromTypeWidthForLoad(LD);
-  const uint32_t UsedBytesMask =
-      N->getConstantOperandVal(N->getNumOperands() - 2);
+  const uint32_t UsedBytesMask = N->getConstantOperandVal(3);
 
   assert(!(EltVT.isVector() && ExtensionType != ISD::NON_EXTLOAD));
 
@@ -1273,8 +1271,8 @@ bool NVPTXDAGToDAGISel::tryLDG(MemSDNode *LD) {
     ExtensionType = Load->getExtensionType();
     UsedBytesMask = UINT32_MAX;
   } else {
-    ExtensionType = LD->getConstantOperandVal(LD->getNumOperands() - 1);
-    UsedBytesMask = LD->getConstantOperandVal(LD->getNumOperands() - 2);
+    ExtensionType = LD->getConstantOperandVal(4);
+    UsedBytesMask = LD->getConstantOperandVal(3);
   }
   const unsigned FromType = (ExtensionType == ISD::SEXTLOAD)
                                 ? NVPTX::PTXLdStInstCode::Signed
