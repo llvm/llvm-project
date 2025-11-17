@@ -4027,12 +4027,9 @@ def t2TBH : T2I<(outs), (ins (addrmode_tbh $Rn, $Rm):$addr), IIC_Br,
 
 } // isBranch, isTerminator, isBarrier
 
-// FIXME: should be able to write a pattern for ARMBrcond, but can't use
-// a two-value operand where a dag node expects ", "two operands. :(
 let isBranch = 1, isTerminator = 1 in
 def t2Bcc : T2I<(outs), (ins brtarget:$target), IIC_Br,
-                "b", ".w\t$target",
-                [/*(ARMbrcond bb:$target, imm:$cc)*/]>, Sched<[WriteBr]> {
+                "b", ".w\t$target", []>, Sched<[WriteBr]> {
   let Inst{31-27} = 0b11110;
   let Inst{15-14} = 0b10;
   let Inst{12} = 0;

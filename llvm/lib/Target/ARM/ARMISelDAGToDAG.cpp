@@ -4057,14 +4057,8 @@ void ARMDAGToDAGISel::Select(SDNode *N) {
   case ARMISD::BRCOND: {
     // Pattern: (ARMbrcond:void (bb:Other):$dst, (imm:i32):$cc)
     // Emits: (Bcc:void (bb:Other):$dst, (imm:i32):$cc)
-    // Pattern complexity = 6  cost = 1  size = 0
-
-    // Pattern: (ARMbrcond:void (bb:Other):$dst, (imm:i32):$cc)
-    // Emits: (tBcc:void (bb:Other):$dst, (imm:i32):$cc)
-    // Pattern complexity = 6  cost = 1  size = 0
-
-    // Pattern: (ARMbrcond:void (bb:Other):$dst, (imm:i32):$cc)
-    // Emits: (t2Bcc:void (bb:Other):$dst, (imm:i32):$cc)
+    //    or: (tBcc:void (bb:Other):$dst, (imm:i32):$cc)
+    //    or: (t2Bcc:void (bb:Other):$dst, (imm:i32):$cc)
     // Pattern complexity = 6  cost = 1  size = 0
 
     unsigned Opc = Subtarget->isThumb() ?
