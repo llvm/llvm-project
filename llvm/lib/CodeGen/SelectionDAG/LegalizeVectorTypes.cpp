@@ -1692,6 +1692,18 @@ void DAGTypeLegalizer::SplitVecRes_BITCAST(SDNode *N, SDValue &Lo,
   Hi = DAG.getNode(ISD::BITCAST, dl, HiVT, Hi);
 }
 
+/// Split a loop dependence mask.
+/// This is done by creating a high and low mask, each of half the vector
+/// length. A select of the high mask and a predicate of all zeroes is needed to
+/// guarantee that the high mask is safe. A case where simply producing a high
+/// mask without the select is unsafe, is when the difference between the two
+/// pointers is less than half the vector length, e.g. ptrA = 0 and ptrB 3 when
+/// the vector length is 32.
+///     The full 32xi1 mask should be three active lanes and the rest inactive,
+///     however when half the vector length is added to ptrA to produce the high
+///     mask, the difference between ptrA and ptrB is now -13, which will result
+///     in a mask with all lanes active. The select will guard against this case
+///     by choosing a mask of all inactive lanes when ptrA + VL/2 >= ptrB.
 void DAGTypeLegalizer::SplitVecRes_LOOP_DEPENDENCE_MASK(SDNode *N, SDValue &Lo,
                                                         SDValue &Hi) {
   SDLoc DL(N);
@@ -1708,7 +1720,14 @@ void DAGTypeLegalizer::SplitVecRes_LOOP_DEPENDENCE_MASK(SDNode *N, SDValue &Lo,
                        : DAG.getConstant(Offset, DL, MVT::i64);
 
   PtrA = DAG.getNode(ISD::ADD, DL, MVT::i64, PtrA, Addend);
+  EVT CmpVT = MVT::i1;
+  SDValue Cmp = DAG.getSetCC(DL, CmpVT, PtrA, PtrB, ISD::CondCode::SETUGE);
+  Cmp = DAG.getSplat(EVT::getVectorVT(*DAG.getContext(), CmpVT,
+                                      HiVT.getVectorMinNumElements(),
+                                      HiVT.isScalableVT()),
+                     DL, Cmp);
   Hi = DAG.getNode(N->getOpcode(), DL, HiVT, PtrA, PtrB, N->getOperand(2));
+  Hi = DAG.getSelect(DL, HiVT, Cmp, DAG.getConstant(0, DL, HiVT), Hi);
 }
 
 void DAGTypeLegalizer::SplitVecRes_BUILD_VECTOR(SDNode *N, SDValue &Lo,

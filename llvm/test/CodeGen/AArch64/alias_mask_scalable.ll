@@ -84,9 +84,15 @@ entry:
 define <vscale x 32 x i1> @whilewr_8_split(ptr %a, ptr %b) {
 ; CHECK-LABEL: whilewr_8_split:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov x8, x0
+; CHECK-NEXT:    incb x8
+; CHECK-NEXT:    cmp x8, x1
+; CHECK-NEXT:    cset w9, hs
+; CHECK-NEXT:    whilewr p0.b, x8, x1
+; CHECK-NEXT:    sbfx x8, x9, #0, #1
+; CHECK-NEXT:    whilelo p1.b, xzr, x8
+; CHECK-NEXT:    bic p1.b, p0/z, p0.b, p1.b
 ; CHECK-NEXT:    whilewr p0.b, x0, x1
-; CHECK-NEXT:    incb x0
-; CHECK-NEXT:    whilewr p1.b, x0, x1
 ; CHECK-NEXT:    ret
 entry:
   %0 = call <vscale x 32 x i1> @llvm.loop.dependence.war.mask.nxv32i1(ptr %a, ptr %b, i64 1)
@@ -96,14 +102,40 @@ entry:
 define <vscale x 64 x i1> @whilewr_8_split2(ptr %a, ptr %b) {
 ; CHECK-LABEL: whilewr_8_split2:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov x8, x0
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Spill
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 16 + 8 * VG
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    mov x9, x0
+; CHECK-NEXT:    mov x10, x0
+; CHECK-NEXT:    rdvl x8, #3
+; CHECK-NEXT:    incb x9
+; CHECK-NEXT:    incb x10, all, mul #2
+; CHECK-NEXT:    add x8, x0, x8
+; CHECK-NEXT:    cmp x9, x1
+; CHECK-NEXT:    cset w11, hs
+; CHECK-NEXT:    whilewr p0.b, x9, x1
+; CHECK-NEXT:    sbfx x11, x11, #0, #1
+; CHECK-NEXT:    whilelo p1.b, xzr, x11
+; CHECK-NEXT:    cmp x10, x1
+; CHECK-NEXT:    cset w9, hs
+; CHECK-NEXT:    whilewr p2.b, x10, x1
+; CHECK-NEXT:    sbfx x9, x9, #0, #1
+; CHECK-NEXT:    bic p1.b, p0/z, p0.b, p1.b
+; CHECK-NEXT:    whilelo p3.b, xzr, x9
+; CHECK-NEXT:    cmp x8, x1
+; CHECK-NEXT:    cset w9, hs
+; CHECK-NEXT:    whilewr p4.b, x8, x1
+; CHECK-NEXT:    sbfx x9, x9, #0, #1
+; CHECK-NEXT:    bic p2.b, p2/z, p2.b, p3.b
+; CHECK-NEXT:    whilelo p0.b, xzr, x9
+; CHECK-NEXT:    bic p4.b, p4/z, p4.b, p0.b
 ; CHECK-NEXT:    whilewr p0.b, x0, x1
-; CHECK-NEXT:    addvl x9, x0, #3
-; CHECK-NEXT:    incb x0, all, mul #2
-; CHECK-NEXT:    incb x8
-; CHECK-NEXT:    whilewr p3.b, x9, x1
-; CHECK-NEXT:    whilewr p2.b, x0, x1
-; CHECK-NEXT:    whilewr p1.b, x8, x1
+; CHECK-NEXT:    bic p3.b, p4/z, p4.b, p3.b
+; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Reload
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
 entry:
   %0 = call <vscale x 64 x i1> @llvm.loop.dependence.war.mask.nxv64i1(ptr %a, ptr %b, i64 1)
@@ -176,6 +208,8 @@ define <vscale x 32 x i1> @whilewr_16_expand2(ptr %a, ptr %b) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    str p11, [sp] // 2-byte Spill
+; CHECK-NEXT:    str p10, [sp, #1, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    str p9, [sp, #2, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    str p8, [sp, #3, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    str p7, [sp, #4, mul vl] // 2-byte Spill
@@ -186,75 +220,81 @@ define <vscale x 32 x i1> @whilewr_16_expand2(ptr %a, ptr %b) {
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    index z0.d, #0, #1
 ; CHECK-NEXT:    sub x8, x1, x0
-; CHECK-NEXT:    incb x0, all, mul #2
-; CHECK-NEXT:    add x8, x8, x8, lsr #63
 ; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    add x8, x8, x8, lsr #63
+; CHECK-NEXT:    incb x0, all, mul #2
 ; CHECK-NEXT:    asr x8, x8, #1
-; CHECK-NEXT:    sub x9, x1, x0
 ; CHECK-NEXT:    mov z1.d, z0.d
 ; CHECK-NEXT:    mov z2.d, z0.d
-; CHECK-NEXT:    mov z3.d, z0.d
+; CHECK-NEXT:    mov z4.d, z0.d
 ; CHECK-NEXT:    mov z5.d, x8
-; CHECK-NEXT:    add x9, x9, x9, lsr #63
 ; CHECK-NEXT:    incd z1.d
 ; CHECK-NEXT:    incd z2.d, all, mul #2
-; CHECK-NEXT:    incd z3.d, all, mul #4
-; CHECK-NEXT:    cmphi p2.d, p0/z, z5.d, z0.d
-; CHECK-NEXT:    asr x9, x9, #1
-; CHECK-NEXT:    mov z4.d, z1.d
-; CHECK-NEXT:    mov z6.d, z1.d
-; CHECK-NEXT:    mov z7.d, z2.d
-; CHECK-NEXT:    cmphi p1.d, p0/z, z5.d, z1.d
-; CHECK-NEXT:    cmphi p3.d, p0/z, z5.d, z3.d
+; CHECK-NEXT:    incd z4.d, all, mul #4
+; CHECK-NEXT:    cmphi p7.d, p0/z, z5.d, z0.d
+; CHECK-NEXT:    mov z3.d, z1.d
+; CHECK-NEXT:    mov z6.d, z2.d
+; CHECK-NEXT:    mov z7.d, z1.d
+; CHECK-NEXT:    cmphi p3.d, p0/z, z5.d, z4.d
 ; CHECK-NEXT:    cmphi p5.d, p0/z, z5.d, z2.d
-; CHECK-NEXT:    incd z4.d, all, mul #2
+; CHECK-NEXT:    cmphi p6.d, p0/z, z5.d, z1.d
+; CHECK-NEXT:    incd z3.d, all, mul #2
 ; CHECK-NEXT:    incd z6.d, all, mul #4
 ; CHECK-NEXT:    incd z7.d, all, mul #4
-; CHECK-NEXT:    uzp1 p1.s, p2.s, p1.s
-; CHECK-NEXT:    mov z24.d, z4.d
-; CHECK-NEXT:    cmphi p4.d, p0/z, z5.d, z6.d
-; CHECK-NEXT:    cmphi p6.d, p0/z, z5.d, z4.d
-; CHECK-NEXT:    cmphi p7.d, p0/z, z5.d, z7.d
-; CHECK-NEXT:    incd z24.d, all, mul #4
-; CHECK-NEXT:    uzp1 p2.s, p3.s, p4.s
-; CHECK-NEXT:    uzp1 p3.s, p5.s, p6.s
-; CHECK-NEXT:    cmphi p8.d, p0/z, z5.d, z24.d
-; CHECK-NEXT:    mov z5.d, x9
-; CHECK-NEXT:    cmp x8, #1
-; CHECK-NEXT:    uzp1 p1.h, p1.h, p3.h
-; CHECK-NEXT:    cset w8, lt
-; CHECK-NEXT:    cmphi p4.d, p0/z, z5.d, z24.d
-; CHECK-NEXT:    cmphi p5.d, p0/z, z5.d, z7.d
-; CHECK-NEXT:    cmphi p6.d, p0/z, z5.d, z6.d
-; CHECK-NEXT:    uzp1 p7.s, p7.s, p8.s
+; CHECK-NEXT:    uzp1 p6.s, p7.s, p6.s
+; CHECK-NEXT:    mov z24.d, z3.d
+; CHECK-NEXT:    cmphi p2.d, p0/z, z5.d, z6.d
+; CHECK-NEXT:    cmphi p8.d, p0/z, z5.d, z7.d
 ; CHECK-NEXT:    cmphi p9.d, p0/z, z5.d, z3.d
-; CHECK-NEXT:    cmphi p3.d, p0/z, z5.d, z4.d
-; CHECK-NEXT:    cmphi p8.d, p0/z, z5.d, z2.d
-; CHECK-NEXT:    sbfx x8, x8, #0, #1
-; CHECK-NEXT:    uzp1 p2.h, p2.h, p7.h
-; CHECK-NEXT:    cmphi p7.d, p0/z, z5.d, z1.d
-; CHECK-NEXT:    cmphi p0.d, p0/z, z5.d, z0.d
-; CHECK-NEXT:    uzp1 p4.s, p5.s, p4.s
-; CHECK-NEXT:    uzp1 p5.s, p9.s, p6.s
-; CHECK-NEXT:    ldr p9, [sp, #2, mul vl] // 2-byte Reload
-; CHECK-NEXT:    whilelo p6.b, xzr, x8
-; CHECK-NEXT:    uzp1 p3.s, p8.s, p3.s
-; CHECK-NEXT:    cmp x9, #1
-; CHECK-NEXT:    ldr p8, [sp, #3, mul vl] // 2-byte Reload
-; CHECK-NEXT:    uzp1 p0.s, p0.s, p7.s
+; CHECK-NEXT:    incd z24.d, all, mul #4
+; CHECK-NEXT:    uzp1 p3.s, p3.s, p8.s
+; CHECK-NEXT:    uzp1 p5.s, p5.s, p9.s
+; CHECK-NEXT:    cmphi p4.d, p0/z, z5.d, z24.d
+; CHECK-NEXT:    cmp x8, #1
+; CHECK-NEXT:    uzp1 p5.h, p6.h, p5.h
 ; CHECK-NEXT:    cset w8, lt
-; CHECK-NEXT:    ldr p7, [sp, #4, mul vl] // 2-byte Reload
-; CHECK-NEXT:    uzp1 p4.h, p5.h, p4.h
 ; CHECK-NEXT:    sbfx x8, x8, #0, #1
+; CHECK-NEXT:    uzp1 p2.s, p2.s, p4.s
+; CHECK-NEXT:    whilelo p1.b, xzr, x8
+; CHECK-NEXT:    subs x8, x1, x0
+; CHECK-NEXT:    uzp1 p2.h, p3.h, p2.h
+; CHECK-NEXT:    add x8, x8, x8, lsr #63
+; CHECK-NEXT:    cset w9, ls
+; CHECK-NEXT:    uzp1 p2.b, p5.b, p2.b
 ; CHECK-NEXT:    ldr p5, [sp, #6, mul vl] // 2-byte Reload
-; CHECK-NEXT:    uzp1 p0.h, p0.h, p3.h
-; CHECK-NEXT:    uzp1 p1.b, p1.b, p2.b
-; CHECK-NEXT:    uzp1 p2.b, p0.b, p4.b
-; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Reload
+; CHECK-NEXT:    asr x8, x8, #1
+; CHECK-NEXT:    mov z5.d, x8
+; CHECK-NEXT:    cmphi p7.d, p0/z, z5.d, z24.d
+; CHECK-NEXT:    cmphi p9.d, p0/z, z5.d, z6.d
+; CHECK-NEXT:    cmphi p8.d, p0/z, z5.d, z7.d
+; CHECK-NEXT:    cmphi p10.d, p0/z, z5.d, z4.d
+; CHECK-NEXT:    cmphi p6.d, p0/z, z5.d, z3.d
+; CHECK-NEXT:    cmphi p11.d, p0/z, z5.d, z2.d
+; CHECK-NEXT:    cmphi p4.d, p0/z, z5.d, z1.d
+; CHECK-NEXT:    cmphi p0.d, p0/z, z5.d, z0.d
+; CHECK-NEXT:    cmp x8, #1
+; CHECK-NEXT:    uzp1 p7.s, p9.s, p7.s
+; CHECK-NEXT:    cset w8, lt
+; CHECK-NEXT:    ldr p9, [sp, #2, mul vl] // 2-byte Reload
+; CHECK-NEXT:    uzp1 p8.s, p10.s, p8.s
+; CHECK-NEXT:    sbfx x8, x8, #0, #1
+; CHECK-NEXT:    ldr p10, [sp, #1, mul vl] // 2-byte Reload
+; CHECK-NEXT:    uzp1 p6.s, p11.s, p6.s
+; CHECK-NEXT:    ldr p11, [sp] // 2-byte Reload
+; CHECK-NEXT:    uzp1 p0.s, p0.s, p4.s
+; CHECK-NEXT:    uzp1 p4.h, p8.h, p7.h
+; CHECK-NEXT:    ldr p8, [sp, #3, mul vl] // 2-byte Reload
+; CHECK-NEXT:    uzp1 p0.h, p0.h, p6.h
+; CHECK-NEXT:    ldr p7, [sp, #4, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    whilelo p3.b, xzr, x8
-; CHECK-NEXT:    sel p0.b, p1, p1.b, p6.b
+; CHECK-NEXT:    sbfx x8, x9, #0, #1
 ; CHECK-NEXT:    ldr p6, [sp, #5, mul vl] // 2-byte Reload
-; CHECK-NEXT:    sel p1.b, p2, p2.b, p3.b
+; CHECK-NEXT:    uzp1 p0.b, p0.b, p4.b
+; CHECK-NEXT:    whilelo p4.b, xzr, x8
+; CHECK-NEXT:    mov p3.b, p0/m, p0.b
+; CHECK-NEXT:    sel p0.b, p2, p2.b, p1.b
+; CHECK-NEXT:    bic p1.b, p3/z, p3.b, p4.b
+; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
@@ -364,6 +404,7 @@ define <vscale x 32 x i1> @whilewr_32_expand3(ptr %a, ptr %b) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    str p11, [sp] // 2-byte Spill
 ; CHECK-NEXT:    str p10, [sp, #1, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    str p9, [sp, #2, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    str p8, [sp, #3, mul vl] // 2-byte Spill
@@ -387,65 +428,70 @@ define <vscale x 32 x i1> @whilewr_32_expand3(ptr %a, ptr %b) {
 ; CHECK-NEXT:    incd z1.d
 ; CHECK-NEXT:    incd z2.d, all, mul #2
 ; CHECK-NEXT:    incd z4.d, all, mul #4
-; CHECK-NEXT:    cmphi p5.d, p0/z, z5.d, z0.d
+; CHECK-NEXT:    cmphi p7.d, p0/z, z5.d, z0.d
 ; CHECK-NEXT:    mov z3.d, z1.d
 ; CHECK-NEXT:    mov z6.d, z2.d
 ; CHECK-NEXT:    mov z7.d, z1.d
-; CHECK-NEXT:    cmphi p2.d, p0/z, z5.d, z4.d
-; CHECK-NEXT:    cmphi p3.d, p0/z, z5.d, z2.d
-; CHECK-NEXT:    cmphi p4.d, p0/z, z5.d, z1.d
+; CHECK-NEXT:    cmphi p3.d, p0/z, z5.d, z4.d
+; CHECK-NEXT:    cmphi p5.d, p0/z, z5.d, z2.d
+; CHECK-NEXT:    cmphi p6.d, p0/z, z5.d, z1.d
 ; CHECK-NEXT:    incd z3.d, all, mul #2
 ; CHECK-NEXT:    incd z6.d, all, mul #4
 ; CHECK-NEXT:    incd z7.d, all, mul #4
-; CHECK-NEXT:    uzp1 p4.s, p5.s, p4.s
+; CHECK-NEXT:    uzp1 p6.s, p7.s, p6.s
 ; CHECK-NEXT:    mov z24.d, z3.d
-; CHECK-NEXT:    cmphi p6.d, p0/z, z5.d, z6.d
-; CHECK-NEXT:    cmphi p7.d, p0/z, z5.d, z7.d
-; CHECK-NEXT:    cmphi p8.d, p0/z, z5.d, z3.d
+; CHECK-NEXT:    cmphi p2.d, p0/z, z5.d, z6.d
+; CHECK-NEXT:    cmphi p8.d, p0/z, z5.d, z7.d
+; CHECK-NEXT:    cmphi p9.d, p0/z, z5.d, z3.d
 ; CHECK-NEXT:    incd z24.d, all, mul #4
-; CHECK-NEXT:    uzp1 p2.s, p2.s, p7.s
 ; CHECK-NEXT:    uzp1 p3.s, p3.s, p8.s
-; CHECK-NEXT:    cmphi p9.d, p0/z, z5.d, z24.d
+; CHECK-NEXT:    uzp1 p5.s, p5.s, p9.s
+; CHECK-NEXT:    cmphi p4.d, p0/z, z5.d, z24.d
 ; CHECK-NEXT:    cmp x8, #1
-; CHECK-NEXT:    uzp1 p3.h, p4.h, p3.h
+; CHECK-NEXT:    uzp1 p5.h, p6.h, p5.h
 ; CHECK-NEXT:    cset w8, lt
 ; CHECK-NEXT:    sbfx x8, x8, #0, #1
-; CHECK-NEXT:    uzp1 p6.s, p6.s, p9.s
+; CHECK-NEXT:    uzp1 p2.s, p2.s, p4.s
 ; CHECK-NEXT:    whilelo p1.b, xzr, x8
 ; CHECK-NEXT:    subs x8, x1, x0
-; CHECK-NEXT:    uzp1 p2.h, p2.h, p6.h
+; CHECK-NEXT:    uzp1 p2.h, p3.h, p2.h
 ; CHECK-NEXT:    add x9, x8, #3
 ; CHECK-NEXT:    csel x8, x9, x8, mi
-; CHECK-NEXT:    uzp1 p2.b, p3.b, p2.b
+; CHECK-NEXT:    cset w9, ls
+; CHECK-NEXT:    uzp1 p2.b, p5.b, p2.b
 ; CHECK-NEXT:    asr x8, x8, #2
+; CHECK-NEXT:    ldr p5, [sp, #6, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    mov z5.d, x8
-; CHECK-NEXT:    cmphi p5.d, p0/z, z5.d, z24.d
-; CHECK-NEXT:    cmphi p7.d, p0/z, z5.d, z6.d
+; CHECK-NEXT:    cmphi p7.d, p0/z, z5.d, z24.d
+; CHECK-NEXT:    cmphi p9.d, p0/z, z5.d, z6.d
 ; CHECK-NEXT:    cmphi p8.d, p0/z, z5.d, z7.d
-; CHECK-NEXT:    cmphi p9.d, p0/z, z5.d, z4.d
-; CHECK-NEXT:    cmphi p4.d, p0/z, z5.d, z3.d
-; CHECK-NEXT:    cmphi p10.d, p0/z, z5.d, z2.d
-; CHECK-NEXT:    cmphi p6.d, p0/z, z5.d, z1.d
+; CHECK-NEXT:    cmphi p10.d, p0/z, z5.d, z4.d
+; CHECK-NEXT:    cmphi p6.d, p0/z, z5.d, z3.d
+; CHECK-NEXT:    cmphi p11.d, p0/z, z5.d, z2.d
+; CHECK-NEXT:    cmphi p4.d, p0/z, z5.d, z1.d
 ; CHECK-NEXT:    cmphi p0.d, p0/z, z5.d, z0.d
 ; CHECK-NEXT:    cmp x8, #1
-; CHECK-NEXT:    uzp1 p5.s, p7.s, p5.s
+; CHECK-NEXT:    uzp1 p7.s, p9.s, p7.s
 ; CHECK-NEXT:    cset w8, lt
-; CHECK-NEXT:    uzp1 p7.s, p9.s, p8.s
-; CHECK-NEXT:    sbfx x8, x8, #0, #1
 ; CHECK-NEXT:    ldr p9, [sp, #2, mul vl] // 2-byte Reload
-; CHECK-NEXT:    uzp1 p4.s, p10.s, p4.s
+; CHECK-NEXT:    uzp1 p8.s, p10.s, p8.s
+; CHECK-NEXT:    sbfx x8, x8, #0, #1
 ; CHECK-NEXT:    ldr p10, [sp, #1, mul vl] // 2-byte Reload
-; CHECK-NEXT:    uzp1 p0.s, p0.s, p6.s
+; CHECK-NEXT:    uzp1 p6.s, p11.s, p6.s
+; CHECK-NEXT:    ldr p11, [sp] // 2-byte Reload
+; CHECK-NEXT:    uzp1 p0.s, p0.s, p4.s
+; CHECK-NEXT:    uzp1 p4.h, p8.h, p7.h
 ; CHECK-NEXT:    ldr p8, [sp, #3, mul vl] // 2-byte Reload
-; CHECK-NEXT:    uzp1 p5.h, p7.h, p5.h
+; CHECK-NEXT:    uzp1 p0.h, p0.h, p6.h
 ; CHECK-NEXT:    ldr p7, [sp, #4, mul vl] // 2-byte Reload
-; CHECK-NEXT:    uzp1 p0.h, p0.h, p4.h
+; CHECK-NEXT:    whilelo p3.b, xzr, x8
+; CHECK-NEXT:    sbfx x8, x9, #0, #1
 ; CHECK-NEXT:    ldr p6, [sp, #5, mul vl] // 2-byte Reload
+; CHECK-NEXT:    uzp1 p0.b, p0.b, p4.b
 ; CHECK-NEXT:    whilelo p4.b, xzr, x8
-; CHECK-NEXT:    uzp1 p3.b, p0.b, p5.b
-; CHECK-NEXT:    ldr p5, [sp, #6, mul vl] // 2-byte Reload
+; CHECK-NEXT:    mov p3.b, p0/m, p0.b
 ; CHECK-NEXT:    sel p0.b, p2, p2.b, p1.b
-; CHECK-NEXT:    sel p1.b, p3, p3.b, p4.b
+; CHECK-NEXT:    bic p1.b, p3/z, p3.b, p4.b
 ; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
@@ -582,6 +628,7 @@ define <vscale x 32 x i1> @whilewr_64_expand4(ptr %a, ptr %b) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    str p11, [sp] // 2-byte Spill
 ; CHECK-NEXT:    str p10, [sp, #1, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    str p9, [sp, #2, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    str p8, [sp, #3, mul vl] // 2-byte Spill
@@ -605,65 +652,70 @@ define <vscale x 32 x i1> @whilewr_64_expand4(ptr %a, ptr %b) {
 ; CHECK-NEXT:    incd z1.d
 ; CHECK-NEXT:    incd z2.d, all, mul #2
 ; CHECK-NEXT:    incd z4.d, all, mul #4
-; CHECK-NEXT:    cmphi p5.d, p0/z, z5.d, z0.d
+; CHECK-NEXT:    cmphi p7.d, p0/z, z5.d, z0.d
 ; CHECK-NEXT:    mov z3.d, z1.d
 ; CHECK-NEXT:    mov z6.d, z2.d
 ; CHECK-NEXT:    mov z7.d, z1.d
-; CHECK-NEXT:    cmphi p2.d, p0/z, z5.d, z4.d
-; CHECK-NEXT:    cmphi p3.d, p0/z, z5.d, z2.d
-; CHECK-NEXT:    cmphi p4.d, p0/z, z5.d, z1.d
+; CHECK-NEXT:    cmphi p3.d, p0/z, z5.d, z4.d
+; CHECK-NEXT:    cmphi p5.d, p0/z, z5.d, z2.d
+; CHECK-NEXT:    cmphi p6.d, p0/z, z5.d, z1.d
 ; CHECK-NEXT:    incd z3.d, all, mul #2
 ; CHECK-NEXT:    incd z6.d, all, mul #4
 ; CHECK-NEXT:    incd z7.d, all, mul #4
-; CHECK-NEXT:    uzp1 p4.s, p5.s, p4.s
+; CHECK-NEXT:    uzp1 p6.s, p7.s, p6.s
 ; CHECK-NEXT:    mov z24.d, z3.d
-; CHECK-NEXT:    cmphi p6.d, p0/z, z5.d, z6.d
-; CHECK-NEXT:    cmphi p7.d, p0/z, z5.d, z7.d
-; CHECK-NEXT:    cmphi p8.d, p0/z, z5.d, z3.d
+; CHECK-NEXT:    cmphi p2.d, p0/z, z5.d, z6.d
+; CHECK-NEXT:    cmphi p8.d, p0/z, z5.d, z7.d
+; CHECK-NEXT:    cmphi p9.d, p0/z, z5.d, z3.d
 ; CHECK-NEXT:    incd z24.d, all, mul #4
-; CHECK-NEXT:    uzp1 p2.s, p2.s, p7.s
 ; CHECK-NEXT:    uzp1 p3.s, p3.s, p8.s
-; CHECK-NEXT:    cmphi p9.d, p0/z, z5.d, z24.d
+; CHECK-NEXT:    uzp1 p5.s, p5.s, p9.s
+; CHECK-NEXT:    cmphi p4.d, p0/z, z5.d, z24.d
 ; CHECK-NEXT:    cmp x8, #1
-; CHECK-NEXT:    uzp1 p3.h, p4.h, p3.h
+; CHECK-NEXT:    uzp1 p5.h, p6.h, p5.h
 ; CHECK-NEXT:    cset w8, lt
 ; CHECK-NEXT:    sbfx x8, x8, #0, #1
-; CHECK-NEXT:    uzp1 p6.s, p6.s, p9.s
+; CHECK-NEXT:    uzp1 p2.s, p2.s, p4.s
 ; CHECK-NEXT:    whilelo p1.b, xzr, x8
 ; CHECK-NEXT:    subs x8, x1, x9
-; CHECK-NEXT:    uzp1 p2.h, p2.h, p6.h
+; CHECK-NEXT:    uzp1 p2.h, p3.h, p2.h
 ; CHECK-NEXT:    add x9, x8, #7
 ; CHECK-NEXT:    csel x8, x9, x8, mi
-; CHECK-NEXT:    uzp1 p2.b, p3.b, p2.b
+; CHECK-NEXT:    cset w9, ls
+; CHECK-NEXT:    uzp1 p2.b, p5.b, p2.b
 ; CHECK-NEXT:    asr x8, x8, #3
+; CHECK-NEXT:    ldr p5, [sp, #6, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    mov z5.d, x8
-; CHECK-NEXT:    cmphi p5.d, p0/z, z5.d, z24.d
-; CHECK-NEXT:    cmphi p7.d, p0/z, z5.d, z6.d
+; CHECK-NEXT:    cmphi p7.d, p0/z, z5.d, z24.d
+; CHECK-NEXT:    cmphi p9.d, p0/z, z5.d, z6.d
 ; CHECK-NEXT:    cmphi p8.d, p0/z, z5.d, z7.d
-; CHECK-NEXT:    cmphi p9.d, p0/z, z5.d, z4.d
-; CHECK-NEXT:    cmphi p4.d, p0/z, z5.d, z3.d
-; CHECK-NEXT:    cmphi p10.d, p0/z, z5.d, z2.d
-; CHECK-NEXT:    cmphi p6.d, p0/z, z5.d, z1.d
+; CHECK-NEXT:    cmphi p10.d, p0/z, z5.d, z4.d
+; CHECK-NEXT:    cmphi p6.d, p0/z, z5.d, z3.d
+; CHECK-NEXT:    cmphi p11.d, p0/z, z5.d, z2.d
+; CHECK-NEXT:    cmphi p4.d, p0/z, z5.d, z1.d
 ; CHECK-NEXT:    cmphi p0.d, p0/z, z5.d, z0.d
 ; CHECK-NEXT:    cmp x8, #1
-; CHECK-NEXT:    uzp1 p5.s, p7.s, p5.s
+; CHECK-NEXT:    uzp1 p7.s, p9.s, p7.s
 ; CHECK-NEXT:    cset w8, lt
-; CHECK-NEXT:    uzp1 p7.s, p9.s, p8.s
-; CHECK-NEXT:    sbfx x8, x8, #0, #1
 ; CHECK-NEXT:    ldr p9, [sp, #2, mul vl] // 2-byte Reload
-; CHECK-NEXT:    uzp1 p4.s, p10.s, p4.s
+; CHECK-NEXT:    uzp1 p8.s, p10.s, p8.s
+; CHECK-NEXT:    sbfx x8, x8, #0, #1
 ; CHECK-NEXT:    ldr p10, [sp, #1, mul vl] // 2-byte Reload
-; CHECK-NEXT:    uzp1 p0.s, p0.s, p6.s
+; CHECK-NEXT:    uzp1 p6.s, p11.s, p6.s
+; CHECK-NEXT:    ldr p11, [sp] // 2-byte Reload
+; CHECK-NEXT:    uzp1 p0.s, p0.s, p4.s
+; CHECK-NEXT:    uzp1 p4.h, p8.h, p7.h
 ; CHECK-NEXT:    ldr p8, [sp, #3, mul vl] // 2-byte Reload
-; CHECK-NEXT:    uzp1 p5.h, p7.h, p5.h
+; CHECK-NEXT:    uzp1 p0.h, p0.h, p6.h
 ; CHECK-NEXT:    ldr p7, [sp, #4, mul vl] // 2-byte Reload
-; CHECK-NEXT:    uzp1 p0.h, p0.h, p4.h
+; CHECK-NEXT:    whilelo p3.b, xzr, x8
+; CHECK-NEXT:    sbfx x8, x9, #0, #1
 ; CHECK-NEXT:    ldr p6, [sp, #5, mul vl] // 2-byte Reload
+; CHECK-NEXT:    uzp1 p0.b, p0.b, p4.b
 ; CHECK-NEXT:    whilelo p4.b, xzr, x8
-; CHECK-NEXT:    uzp1 p3.b, p0.b, p5.b
-; CHECK-NEXT:    ldr p5, [sp, #6, mul vl] // 2-byte Reload
+; CHECK-NEXT:    mov p3.b, p0/m, p0.b
 ; CHECK-NEXT:    sel p0.b, p2, p2.b, p1.b
-; CHECK-NEXT:    sel p1.b, p3, p3.b, p4.b
+; CHECK-NEXT:    bic p1.b, p3/z, p3.b, p4.b
 ; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
