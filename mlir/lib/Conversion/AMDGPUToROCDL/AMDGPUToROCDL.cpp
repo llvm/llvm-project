@@ -1615,12 +1615,10 @@ LogicalResult ExtPackedFp8OpLowering::matchAndRewrite(
 
 int32_t getScaleSel(int32_t blockSize, unsigned bitWidth,
                     int32_t firstScaleLane, int32_t firstScaleByte) {
-  // When lowering amdgpu.scaled_ext_packed816 to
-  // rocdl.cvt.scale.pk*.f*.f* operations, the
-  // attributes blockSize, sourceType, firstScaleLane and firstScaleByte
-  // are merged into a single attribute scaleSel.
-  //
-  // This is how those values are merged together.
+  // When lowering amdgpu.scaled_ext_packed816 to rocdl.cvt.scale.pk*.f*.f*
+  // operations, the attributes blockSize, sourceType, firstScaleLane and
+  // firstScaleByte are merged into a single attribute scaleSel. This is how
+  // those values are merged together.
   assert(llvm::is_contained({16, 32}, blockSize));
   assert(llvm::is_contained({4, 6, 8}, bitWidth));
 
