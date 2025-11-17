@@ -1,5 +1,13 @@
 // RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify %s
 
+struct span_with_static {
+  void *ptr;
+  int n;
+  static int static_field;
+};
+
+span_with_static  returns_span_with_static  (void) __attribute((malloc_span)); // no-warning
+
 class SomeClass {
 public:
   int Data;
