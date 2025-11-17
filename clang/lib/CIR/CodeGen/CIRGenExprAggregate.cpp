@@ -839,6 +839,9 @@ void AggExprEmitter::visitCXXParenListOrInitListExpr(
     }
   }
 
+  // Prepare a 'this' for CXXDefaultInitExprs.
+  CIRGenFunction::FieldConstructionScope fcScope(cgf, dest.getAddress());
+
   LValue destLV = cgf.makeAddrLValue(dest.getAddress(), e->getType());
 
   if (record->isUnion()) {
