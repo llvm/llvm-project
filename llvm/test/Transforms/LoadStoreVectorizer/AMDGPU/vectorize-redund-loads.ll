@@ -21,3 +21,42 @@ define void @test(ptr %ptr) {
   ret void
 }
 
+@ptr = external local_unnamed_addr addrspace(1) global <8 x float>, align 4
+
+define void @test2() {
+; CHECK-LABEL: define void @test2() {
+; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x float>, ptr addrspace(1) @ptr, align 4
+; CHECK-NEXT:    [[VECINS1:%.*]] = shufflevector <8 x float> [[TMP1]], <8 x float> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <8 x float> [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <8 x float> [[TMP1]], i32 2
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <8 x float> [[TMP1]], i32 3
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <8 x float> [[TMP1]], i32 4
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <8 x float> [[TMP1]], i32 5
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <8 x float> [[TMP1]], i32 6
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <8 x float> [[TMP1]], i32 7
+; CHECK-NEXT:    [[VECINS_1:%.*]] = insertelement <8 x float> [[VECINS1]], float [[TMP2]], i64 1
+; CHECK-NEXT:    [[VECINS_2:%.*]] = insertelement <8 x float> [[VECINS_1]], float [[TMP3]], i64 2
+; CHECK-NEXT:    [[VECINS_3:%.*]] = insertelement <8 x float> [[VECINS_2]], float [[TMP4]], i64 3
+; CHECK-NEXT:    [[VECINS_4:%.*]] = insertelement <8 x float> [[VECINS_3]], float [[TMP5]], i64 4
+; CHECK-NEXT:    [[VECINS_5:%.*]] = insertelement <8 x float> [[VECINS_4]], float [[TMP6]], i64 5
+; CHECK-NEXT:    [[VECINS_6:%.*]] = insertelement <8 x float> [[VECINS_5]], float [[TMP7]], i64 6
+; CHECK-NEXT:    [[VECINS_7:%.*]] = insertelement <8 x float> [[VECINS_6]], float [[TMP8]], i64 7
+; CHECK-NEXT:    ret void
+;
+  %vecins = load <8 x float>, ptr addrspace(1) @ptr, align 4
+  %5 = load float, ptr addrspace(1) getelementptr inbounds nuw (i8, ptr addrspace(1) @ptr, i32 4), align 4
+  %vecins.1 = insertelement <8 x float> %vecins, float %5, i64 1
+  %6 = load float, ptr addrspace(1) getelementptr inbounds nuw (i8, ptr addrspace(1) @ptr, i32 8), align 4
+  %vecins.2 = insertelement <8 x float> %vecins.1, float %6, i64 2
+  %7 = load float, ptr addrspace(1) getelementptr inbounds nuw (i8, ptr addrspace(1) @ptr, i32 12), align 4
+  %vecins.3 = insertelement <8 x float> %vecins.2, float %7, i64 3
+  %8 = load float, ptr addrspace(1) getelementptr inbounds nuw (i8, ptr addrspace(1) @ptr, i32 16), align 4
+  %vecins.4 = insertelement <8 x float> %vecins.3, float %8, i64 4
+  %9 = load float, ptr addrspace(1) getelementptr inbounds nuw (i8, ptr addrspace(1) @ptr, i32 20), align 4
+  %vecins.5 = insertelement <8 x float> %vecins.4, float %9, i64 5
+  %10 = load float, ptr addrspace(1) getelementptr inbounds nuw (i8, ptr addrspace(1) @ptr, i32 24), align 4
+  %vecins.6 = insertelement <8 x float> %vecins.5, float %10, i64 6
+  %11 = load float, ptr addrspace(1) getelementptr inbounds nuw (i8, ptr addrspace(1) @ptr, i32 28), align 4
+  %vecins.7 = insertelement <8 x float> %vecins.6, float %11, i64 7
+  ret void
+}
