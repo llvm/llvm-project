@@ -127,7 +127,8 @@ bool InsertCodePrefetch::runOnMachineFunction(MachineFunction &MF) {
     auto InstrIt = BB.begin();
     for (auto HintIt = PrefetchHints.begin(); HintIt != PrefetchHints.end();) {
       auto NextInstrIt = InstrIt == BB.end() ? BB.end() : std::next(InstrIt);
-      while (HintIt != PrefetchHints.end() && NumCallsInBB >= HintIt->SiteID.SubblockIndex) {
+      while (HintIt != PrefetchHints.end() &&
+             NumCallsInBB >= HintIt->SiteID.SubblockIndex) {
         auto *GV = MF.getFunction().getParent()->getOrInsertGlobal(
             getPrefetchTargetSymbolName(HintIt->TargetFunction,
                                         HintIt->TargetID.BBID,

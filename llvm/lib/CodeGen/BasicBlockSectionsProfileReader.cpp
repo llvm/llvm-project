@@ -359,11 +359,12 @@ Error BasicBlockSectionsProfileReader::ReadV1Profile() {
       if (FI == ProgramPathAndClusterInfo.end())
         continue;
       if (Values.size() != 2)
-        return createProfileParseError(Twine("Prefetch hint expected: "+ S));
+        return createProfileParseError(Twine("Prefetch hint expected: " + S));
       SmallVector<StringRef, 2> PrefetchSiteStr;
       Values[0].split(PrefetchSiteStr, ',');
       if (PrefetchSiteStr.size() != 2)
-        return createProfileParseError(Twine("Prefetch site expected: ") + Values[0]);
+        return createProfileParseError(Twine("Prefetch site expected: ") +
+                                       Values[0]);
       auto SiteBBID = parseUniqueBBID(PrefetchSiteStr[0]);
       if (!SiteBBID)
         return SiteBBID.takeError();
@@ -375,7 +376,8 @@ Error BasicBlockSectionsProfileReader::ReadV1Profile() {
       SmallVector<StringRef, 3> PrefetchTargetStr;
       Values[1].split(PrefetchTargetStr, ',');
       if (PrefetchTargetStr.size() != 3)
-        return createProfileParseError(Twine("Prefetch target target expected: ") + Values[1]);
+        return createProfileParseError(
+            Twine("Prefetch target target expected: ") + Values[1]);
       auto TargetBBID = parseUniqueBBID(PrefetchTargetStr[1]);
       if (!TargetBBID)
         return TargetBBID.takeError();
@@ -396,11 +398,12 @@ Error BasicBlockSectionsProfileReader::ReadV1Profile() {
         continue;
       SmallVector<StringRef, 2> PrefetchTargetStr;
       if (Values.size() != 1)
-        return createProfileParseError(Twine("Prefetch target expected: ")+ S);
+        return createProfileParseError(Twine("Prefetch target expected: ") + S);
       SmallVector<StringRef, 2> PrefetchTargetStr;
       Values[0].split(PrefetchTargetStr, ',');
       if (PrefetchTargetStr.size() != 2)
-        return createProfileParseError(Twine("Prefetch target expected: ")+ Values[0]);
+        return createProfileParseError(Twine("Prefetch target expected: ") +
+                                       Values[0]);
       auto TargetBBID = parseUniqueBBID(PrefetchTargetStr[0]);
       if (!TargetBBID)
         return TargetBBID.takeError();
