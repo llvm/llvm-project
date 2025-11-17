@@ -57,7 +57,6 @@ Status TargetList::CreateTarget(Debugger &debugger,
       debugger, user_exe_path, triple_str, load_dependent_files,
       platform_options, target_sp);
 
-  std::lock_guard<std::recursive_mutex> guard(m_target_list_mutex);
   if (target_sp && result.Success())
     AddTargetInternal(target_sp, /*do_select*/ true);
   return result;
@@ -77,7 +76,6 @@ Status TargetList::CreateTarget(Debugger &debugger,
       debugger, user_exe_path, specified_arch, load_dependent_files,
       platform_sp, target_sp);
 
-  std::lock_guard<std::recursive_mutex> guard(m_target_list_mutex);
   if (target_sp && result.Success())
     AddTargetInternal(target_sp, /*do_select*/ true);
   return result;
@@ -531,6 +529,7 @@ uint32_t TargetList::GetIndexOfTarget(lldb::TargetSP target_sp) const {
 }
 
 void TargetList::AddTargetInternal(TargetSP target_sp, bool do_select) {
+  std::lock_guard<std::recursive_mutex> guard(m_target_list_mutex);
   lldbassert(!llvm::is_contained(m_target_list, target_sp) &&
              "target already exists it the list");
   UnregisterInProcessTarget(target_sp);
