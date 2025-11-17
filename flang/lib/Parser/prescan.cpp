@@ -845,6 +845,9 @@ bool Prescanner::NextToken(TokenSequence &tokens) {
     if (InFixedFormSource()) {
       SkipSpaces();
     }
+    if (inFixedForm_ && (IsOpenMPDirective() && parenthesisNesting_ > 0)) {
+      SkipSpaces();
+    }
     if ((*at_ == '\'' || *at_ == '"') &&
         tokens.CharAt(tokens.SizeInChars() - 1) == '_') { // kind_"..."
       QuotedCharacterLiteral(tokens, start);
