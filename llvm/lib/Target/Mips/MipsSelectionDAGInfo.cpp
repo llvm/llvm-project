@@ -39,28 +39,6 @@ void MipsSelectionDAGInfo::verifyTargetNode(const SelectionDAG &DAG,
     break;
   case MipsISD::ERet:
     // invalid number of operands; expected at most 2, got 3
-  case MipsISD::DPAQX_SA_W_PH:
-  case MipsISD::DPAQX_S_W_PH:
-  case MipsISD::DPAQ_S_W_PH:
-  case MipsISD::DPAX_W_PH:
-  case MipsISD::DPA_W_PH:
-  case MipsISD::DPSQX_SA_W_PH:
-  case MipsISD::DPSQX_S_W_PH:
-  case MipsISD::DPSQ_S_W_PH:
-  case MipsISD::DPSX_W_PH:
-  case MipsISD::DPS_W_PH:
-  case MipsISD::MAQ_SA_W_PHL:
-  case MipsISD::MAQ_SA_W_PHR:
-  case MipsISD::MAQ_S_W_PHL:
-  case MipsISD::MAQ_S_W_PHR:
-  case MipsISD::MULSAQ_S_W_PH:
-  case MipsISD::MULSA_W_PH:
-    // operand #0 must have type i32, but has type v2i16
-  case MipsISD::DPAU_H_QBL:
-  case MipsISD::DPAU_H_QBR:
-  case MipsISD::DPSU_H_QBL:
-  case MipsISD::DPSU_H_QBR:
-    // operand #0 must have type i32, but has type v4i8
     return;
   }
 
