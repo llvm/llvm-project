@@ -43,6 +43,7 @@ constexpr Chipset kGfx908 = Chipset(9, 0, 8);
 constexpr Chipset kGfx90a = Chipset(9, 0, 0xa);
 constexpr Chipset kGfx942 = Chipset(9, 4, 2);
 constexpr Chipset kGfx950 = Chipset(9, 5, 0);
+constexpr Chipset kGfx1250 = Chipset(12, 5, 0);
 
 /// Convert an unsigned number `val` to i32.
 static Value convertUnsignedToI32(ConversionPatternRewriter &rewriter,
@@ -1149,7 +1150,7 @@ static std::optional<StringRef> wmmaOpToIntrinsic(WMMAOp wmma,
                                  k, isRDNA3);
 
   // Handle gfx1250.
-  if (chipset == Chipset{12, 5, 0})
+  if (chipset == kGfx1250)
     return wmmaOpToIntrinsicGfx1250(elemSourceType, elemBSourceType,
                                     elemDestType, k);
 
@@ -1300,7 +1301,7 @@ struct WMMAOpLowering : public ConvertOpToLLVMPattern<WMMAOp> {
     if (chipset.majorVersion != 11 && chipset.majorVersion != 12)
       return op->emitOpError("WMMA only supported on gfx11 and gfx12");
 
-    bool isGFX1250 = chipset >= Chipset(12, 5, 0);
+    bool isGFX1250 = chipset >= kGfx1250;
 
     // The WMMA operations represent vectors of bf16s as vectors of i16s
     // (except on gfx1250), so we need to bitcast bfloats to i16 and then
@@ -1725,7 +1726,7 @@ LogicalResult ScaledExtPacked816OpLowering::matchAndRewrite(
   using fp6 = Float6E2M3FNType;
   using bf6 = Float6E3M2FNType;
   Location loc = op.getLoc();
-  if (chipset != Chipset{12, 5, 0}) {
+  if (chipset != kGfx1250) {
     return rewriter.notifyMatchFailure(
         loc,
         "Scaled fp packed conversion instructions are not available on target "
