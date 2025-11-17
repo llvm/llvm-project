@@ -118,7 +118,7 @@ public:
   MachineInstr *getParentInst() const { return Target->getParent(); }
 
   MachineRegisterInfo *getMRI() const {
-    return &getParentInst()->getParent()->getParent()->getRegInfo();
+    return &getParentInst()->getMF()->getRegInfo();
   }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -1029,7 +1029,8 @@ void SIPeepholeSDWA::pseudoOpConvertToVOP2(MachineInstr &MI,
   MachineOperand *CarryOut = TII->getNamedOperand(MISucc, AMDGPU::OpName::sdst);
   if (!CarryOut)
     return;
-  if (!MRI->hasOneUse(CarryIn->getReg()) || !MRI->use_empty(CarryOut->getReg()))
+  if (!MRI->hasOneNonDBGUse(CarryIn->getReg()) ||
+      !MRI->use_nodbg_empty(CarryOut->getReg()))
     return;
   // Make sure VCC or its subregs are dead before MI.
   MachineBasicBlock &MBB = *MI.getParent();
@@ -1283,7 +1284,7 @@ bool SIPeepholeSDWA::convertToSDWA(MachineInstr &MI,
     // Clone the instruction to allow revoking changes
     // made to MI during the processing of the operands
     // if the conversion fails.
-    SDWAInst = MI.getParent()->getParent()->CloneMachineInstr(&MI);
+    SDWAInst = MI.getMF()->CloneMachineInstr(&MI);
     MI.getParent()->insert(MI.getIterator(), SDWAInst);
   } else {
     SDWAInst = createSDWAVersion(MI);
@@ -1333,19 +1334,21 @@ void SIPeepholeSDWA::legalizeScalarOperands(MachineInstr &MI,
   const MCInstrDesc &Desc = TII->get(MI.getOpcode());
   unsigned ConstantBusCount = 0;
   for (MachineOperand &Op : MI.explicit_uses()) {
-    if (!Op.isImm() && !(Op.isReg() && !TRI->isVGPR(*MRI, Op.getReg())))
+    if (Op.isReg()) {
+      if (TRI->isVGPR(*MRI, Op.getReg()))
+        continue;
+
+      if (ST.hasSDWAScalar() && ConstantBusCount == 0) {
+        ++ConstantBusCount;
+        continue;
+      }
+    } else if (!Op.isImm())
       continue;
 
     unsigned I = Op.getOperandNo();
-    if (Desc.operands()[I].RegClass == -1 ||
-        !TRI->isVSSuperClass(TRI->getRegClass(Desc.operands()[I].RegClass)))
+    const TargetRegisterClass *OpRC = TII->getRegClass(Desc, I);
+    if (!OpRC || !TRI->isVSSuperClass(OpRC))
       continue;
-
-    if (ST.hasSDWAScalar() && ConstantBusCount == 0 && Op.isReg() &&
-        TRI->isSGPRReg(*MRI, Op.getReg())) {
-      ++ConstantBusCount;
-      continue;
-    }
 
     Register VGPR = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
     auto Copy = BuildMI(*MI.getParent(), MI.getIterator(), MI.getDebugLoc(),

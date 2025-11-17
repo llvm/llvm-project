@@ -365,6 +365,40 @@ LLVM_ABI bool setLoopEstimatedTripCount(
     Loop *L, unsigned EstimatedTripCount,
     std::optional<unsigned> EstimatedLoopInvocationWeight = std::nullopt);
 
+/// Based on branch weight metadata, return either:
+/// - An unknown probability if the implementation is unable to handle the loop
+///   form of \p L (e.g., \p L must have a latch block that controls the loop
+///   exit).
+/// - The probability \c P that, at the end of any iteration, the latch of \p L
+///   will start another iteration such that `1 - P` is the probability of
+///   exiting the loop.
+BranchProbability getLoopProbability(Loop *L);
+
+/// Set branch weight metadata for the latch of \p L to indicate that, at the
+/// end of any iteration, \p P and `1 - P` are the probabilities of starting
+/// another iteration and exiting the loop, respectively.  Return false if the
+/// implementation is unable to handle the loop form of \p L (e.g., \p L must
+/// have a latch block that controls the loop exit).  Otherwise, return true.
+bool setLoopProbability(Loop *L, BranchProbability P);
+
+/// Based on branch weight metadata, return either:
+/// - An unknown probability if the implementation cannot extract the
+///   probability (e.g., \p B must have exactly two target labels, so it must be
+///   a conditional branch).
+/// - The probability \c P that control flows from \p B to its first target
+///   label such that `1 - P` is the probability of control flowing to its
+///   second target label, or vice-versa if \p ForFirstTarget is false.
+BranchProbability getBranchProbability(BranchInst *B, bool ForFirstTarget);
+
+/// Set branch weight metadata for \p B to indicate that \p P and `1 - P` are
+/// the probabilities of control flowing to its first and second target labels,
+/// respectively, or vice-versa if \p ForFirstTarget is false.  Return false if
+/// the implementation cannot set the probability (e.g., \p B must have exactly
+/// two target labels, so it must be a conditional branch).  Otherwise, return
+/// true.
+bool setBranchProbability(BranchInst *B, BranchProbability P,
+                          bool ForFirstTarget);
+
 /// Check inner loop (L) backedge count is known to be invariant on all
 /// iterations of its outer loop. If the loop has no parent, this is trivially
 /// true.
@@ -532,23 +566,6 @@ LLVM_ABI int rewriteLoopExitValues(Loop *L, LoopInfo *LI,
                                    SCEVExpander &Rewriter, DominatorTree *DT,
                                    ReplaceExitVal ReplaceExitValue,
                                    SmallVector<WeakTrackingVH, 16> &DeadInsts);
-
-/// Set weights for \p UnrolledLoop and \p RemainderLoop based on weights for
-/// \p OrigLoop and the following distribution of \p OrigLoop iteration among \p
-/// UnrolledLoop and \p RemainderLoop. \p UnrolledLoop receives weights that
-/// reflect TC/UF iterations, and \p RemainderLoop receives weights that reflect
-/// the remaining TC%UF iterations.
-///
-/// Note that \p OrigLoop may be equal to either \p UnrolledLoop or \p
-/// RemainderLoop in which case weights for \p OrigLoop are updated accordingly.
-/// Note also behavior is undefined if \p UnrolledLoop and \p RemainderLoop are
-/// equal. \p UF must be greater than zero.
-/// If \p OrigLoop has no profile info associated nothing happens.
-///
-/// This utility may be useful for such optimizations as unroller and
-/// vectorizer as it's typical transformation for them.
-LLVM_ABI void setProfileInfoAfterUnrolling(Loop *OrigLoop, Loop *UnrolledLoop,
-                                           Loop *RemainderLoop, uint64_t UF);
 
 /// Utility that implements appending of loops onto a worklist given a range.
 /// We want to process loops in postorder, but the worklist is a LIFO data

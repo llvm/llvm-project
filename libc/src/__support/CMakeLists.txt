@@ -161,6 +161,7 @@ add_header_library(
   HDRS
     wctype_utils.h
   DEPENDS
+    libc.hdr.types.wchar_t
     libc.hdr.types.wint_t
 )
 
@@ -179,19 +180,7 @@ add_header_library(
   DEPENDS
     .ctype_utils
     .str_to_num_result
-    libc.hdr.errno_macros
-    libc.src.__support.CPP.limits
-    libc.src.__support.CPP.type_traits
-    libc.src.__support.common
-)
-
-add_header_library(
-  wcs_to_integer
-  HDRS
-    wcs_to_integer.h
-  DEPENDS
     .wctype_utils
-    .str_to_num_result
     libc.hdr.errno_macros
     libc.src.__support.CPP.limits
     libc.src.__support.CPP.type_traits
@@ -232,7 +221,9 @@ add_header_library(
   HDRS
     high_precision_decimal.h
   DEPENDS
+    .ctype_utils
     .str_to_integer
+    .wctype_utils
     libc.hdr.stdint_proxy
 )
 
@@ -247,6 +238,7 @@ add_header_library(
     .str_to_integer
     .str_to_num_result
     .uint128
+    .wctype_utils
     libc.hdr.errno_macros
     libc.hdr.stdint_proxy
     libc.src.__support.common

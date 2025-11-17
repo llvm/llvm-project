@@ -126,7 +126,7 @@ def G_FRAME_INDEX : GenericInstruction {
 }
 
 def G_GLOBAL_VALUE : GenericInstruction {
-  let OutOperandList = (outs type0:$dst);
+  let OutOperandList = (outs ptype0:$dst);
   let InOperandList = (ins unknown:$src);
   let hasSideEffects = false;
 }
@@ -981,6 +981,13 @@ def G_FREM : GenericInstruction {
   let hasSideEffects = false;
 }
 
+/// Generic FP modf
+def G_FMODF : GenericInstruction {
+  let OutOperandList = (outs type0:$dst1, type0:$dst2);
+  let InOperandList = (ins type0:$src1);
+  let hasSideEffects = false;
+}
+
 // Floating point exponentiation.
 def G_FPOW : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
@@ -1270,6 +1277,12 @@ def G_READSTEADYCOUNTER : GenericInstruction {
 def G_GET_ROUNDING : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins);
+  let hasSideEffects = true;
+}
+
+def G_SET_ROUNDING : GenericInstruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins type0:$src);
   let hasSideEffects = true;
 }
 

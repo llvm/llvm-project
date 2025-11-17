@@ -137,7 +137,7 @@ ol_result_t printDeviceValue(std::ostream &S, ol_device_handle_t Dev,
     size_t Size;
     OFFLOAD_ERR(olGetDeviceInfoSize(Dev, Info, &Size));
     Val.resize(Size);
-    OFFLOAD_ERR(olGetDeviceInfo(Dev, Info, sizeof(Val), Val.data()));
+    OFFLOAD_ERR(olGetDeviceInfo(Dev, Info, Size, Val.data()));
     doWrite<T, PK>(S, reinterpret_cast<T>(Val.data()));
   } else {
     T Val;
@@ -174,6 +174,9 @@ ol_result_t printDevice(std::ostream &S, ol_device_handle_t D) {
 
   OFFLOAD_ERR(
       printDeviceValue<const char *>(S, D, OL_DEVICE_INFO_NAME, "Name"));
+  OFFLOAD_ERR(printDeviceValue<const char *>(S, D, OL_DEVICE_INFO_PRODUCT_NAME,
+                                             "Product Name"));
+  OFFLOAD_ERR(printDeviceValue<const char *>(S, D, OL_DEVICE_INFO_UID, "UID"));
   OFFLOAD_ERR(
       printDeviceValue<ol_device_type_t>(S, D, OL_DEVICE_INFO_TYPE, "Type"));
   OFFLOAD_ERR(printDeviceValue<const char *>(
@@ -202,6 +205,9 @@ ol_result_t printDevice(std::ostream &S, ol_device_handle_t D) {
       S, D, OL_DEVICE_INFO_MAX_MEM_ALLOC_SIZE, "Max Mem Allocation Size", "B"));
   OFFLOAD_ERR(printDeviceValue<uint64_t>(S, D, OL_DEVICE_INFO_GLOBAL_MEM_SIZE,
                                          "Global Mem Size", "B"));
+  OFFLOAD_ERR(
+      printDeviceValue<uint64_t>(S, D, OL_DEVICE_INFO_WORK_GROUP_LOCAL_MEM_SIZE,
+                                 "Work Group Shared Mem Size", "B"));
   OFFLOAD_ERR(
       (printDeviceValue<ol_device_fp_capability_flags_t, PrintKind::FP_FLAGS>(
           S, D, OL_DEVICE_INFO_SINGLE_FP_CONFIG,

@@ -67,6 +67,7 @@ extern char ***_NSGetArgv(void);
 #  include <libkern/OSAtomic.h>
 #  include <mach-o/dyld.h>
 #  include <mach/mach.h>
+#  include <mach/mach_error.h>
 #  include <mach/mach_time.h>
 #  include <mach/vm_statistics.h>
 #  include <malloc/malloc.h>
@@ -102,7 +103,15 @@ extern "C" {
     natural_t *nesting_depth,
     vm_region_recurse_info_t info,
     mach_msg_type_number_t *infoCnt);
+
+  extern const void* _dyld_get_shared_cache_range(size_t* length);
 }
+
+#  if !SANITIZER_GO
+// Weak symbol no-op when TSan is not linked
+SANITIZER_WEAK_ATTRIBUTE extern void __tsan_set_in_internal_write_call(
+    bool value) {}
+#  endif
 
 namespace __sanitizer {
 
@@ -174,7 +183,15 @@ uptr internal_read(fd_t fd, void *buf, uptr count) {
 }
 
 uptr internal_write(fd_t fd, const void *buf, uptr count) {
+#  if SANITIZER_GO
   return write(fd, buf, count);
+#  else
+  // We need to disable interceptors when writing in TSan
+  __tsan_set_in_internal_write_call(true);
+  uptr res = write(fd, buf, count);
+  __tsan_set_in_internal_write_call(false);
+  return res;
+#  endif
 }
 
 uptr internal_stat(const char *path, void *buf) {
@@ -945,7 +962,17 @@ static void DisableMmapExcGuardExceptions() {
       RTLD_DEFAULT, "task_set_exc_guard_behavior");
   if (set_behavior == nullptr) return;
   const task_exc_guard_behavior_t task_exc_guard_none = 0;
-  set_behavior(mach_task_self(), task_exc_guard_none);
+  kern_return_t res = set_behavior(mach_task_self(), task_exc_guard_none);
+  if (res != KERN_SUCCESS) {
+    Report(
+        "WARN: task_set_exc_guard_behavior returned %d (%s), "
+        "mmap may fail unexpectedly.\n",
+        res, mach_error_string(res));
+    if (res == KERN_DENIED)
+      Report(
+          "HINT: Check that task_set_exc_guard_behavior is allowed by "
+          "sandbox.\n");
+  }
 }
 
 static void VerifyInterceptorsWorking();
@@ -1146,8 +1173,8 @@ static void PrintVmmap() {
         lastsz += vmsize;
       } else {
         if (lastsz)
-          Printf("|| `[%p, %p]` || size=0x%016" PRIx64 " ||\n", last,
-                 last + lastsz, lastsz);
+          Printf("|| `[%p, %p]` || size=0x%016" PRIx64 " ||\n", (void*)last,
+                 (void*)(last + lastsz), lastsz);
 
         last = address;
         lastsz = vmsize;
@@ -1157,8 +1184,8 @@ static void PrintVmmap() {
       // We've reached the end of the memory map. Print the last remaining
       // region, if there is one.
       if (lastsz)
-        Printf("|| `[%p, %p]` || size=0x%016" PRIx64 " ||\n", last,
-               last + lastsz, lastsz);
+        Printf("|| `[%p, %p]` || size=0x%016" PRIx64 " ||\n", (void*)last,
+               (void*)(last + lastsz), lastsz);
 
       break;
     }
@@ -1169,7 +1196,7 @@ static void ReportShadowAllocFail(uptr shadow_size_bytes, uptr alignment) {
   Report(
       "FATAL: Failed to allocate shadow memory. Tried to allocate %p bytes "
       "(alignment=%p).\n",
-      shadow_size_bytes, alignment);
+      (void*)shadow_size_bytes, (void*)alignment);
   PrintVmmap();
 }
 
@@ -1327,17 +1354,35 @@ uptr FindAvailableMemoryRange(uptr size, uptr alignment, uptr left_padding,
     kr = mach_vm_region_recurse(mach_task_self(), &address, &vmsize, &depth,
                                 (vm_region_info_t)&vminfo, &count);
 
-    // There are cases where going beyond the processes' max vm does
-    // not return KERN_INVALID_ADDRESS so we check for going beyond that
-    // max address as well.
-    if (kr == KERN_INVALID_ADDRESS || address > max_vm_address) {
+    if (kr == KERN_SUCCESS) {
+      // There are cases where going beyond the processes' max vm does
+      // not return KERN_INVALID_ADDRESS so we check for going beyond that
+      // max address as well.
+      if (address > max_vm_address) {
+        address = max_vm_address;
+        kr = -1;  // break after this iteration.
+      }
+
+      if (max_occupied_addr)
+        *max_occupied_addr = address + vmsize;
+    } else if (kr == KERN_INVALID_ADDRESS) {
       // No more regions beyond "address", consider the gap at the end of VM.
       address = max_vm_address;
-      vmsize = 0;
-      kr = -1;  // break after this iteration.
+
+      // We will break after this iteration anyway since kr != KERN_SUCCESS
+    } else if (kr == KERN_DENIED) {
+      Report("ERROR: Unable to find a memory range for dynamic shadow.\n");
+      Report("HINT: Ensure mach_vm_region_recurse is allowed under sandbox.\n");
+      Die();
     } else {
-      if (max_occupied_addr) *max_occupied_addr = address + vmsize;
+      Report(
+          "WARNING: mach_vm_region_recurse returned unexpected code %d (%s)\n",
+          kr, mach_error_string(kr));
+      DCHECK(false && "mach_vm_region_recurse returned unexpected code");
+      break;  // address is not valid unless KERN_SUCCESS, therefore we must not
+              // use it.
     }
+
     if (free_begin != address) {
       // We found a free region [free_begin..address-1].
       uptr gap_start = RoundUpTo((uptr)free_begin + left_padding, alignment);
@@ -1358,6 +1403,58 @@ uptr FindAvailableMemoryRange(uptr size, uptr alignment, uptr left_padding,
 
   // We looked at all free regions and could not find one large enough.
   return 0;
+}
+
+// This function (when used during initialization when there is
+// only a single thread), can be used to verify that a range
+// of memory hasn't already been mapped, and won't be mapped
+// later in the shared cache.
+//
+// If the syscall mach_vm_region_recurse fails (due to sandbox),
+// we assume that the memory is not mapped so that execution can continue.
+//
+// NOTE: range_end is inclusive
+//
+// WARNING: This function must NOT allocate memory, since it is
+// used in InitializeShadowMemory between where we search for
+// space for shadow and where we actually allocate it.
+bool MemoryRangeIsAvailable(uptr range_start, uptr range_end) {
+  mach_vm_size_t vmsize = 0;
+  natural_t depth = 0;
+  vm_region_submap_short_info_data_64_t vminfo;
+  mach_msg_type_number_t count = VM_REGION_SUBMAP_SHORT_INFO_COUNT_64;
+  mach_vm_address_t address = range_start;
+
+  // First, check if the range is already mapped.
+  kern_return_t kr =
+      mach_vm_region_recurse(mach_task_self(), &address, &vmsize, &depth,
+                             (vm_region_info_t)&vminfo, &count);
+
+  if (kr == KERN_DENIED) {
+    Report(
+        "WARN: mach_vm_region_recurse returned KERN_DENIED when checking "
+        "whether an address is mapped.\n");
+    Report("HINT: Is mach_vm_region_recurse allowed by sandbox?\n");
+  }
+
+  if (kr == KERN_SUCCESS && !IntervalsAreSeparate(address, address + vmsize - 1,
+                                                  range_start, range_end)) {
+    // Overlaps with already-mapped memory
+    return false;
+  }
+
+  size_t cacheLength;
+  uptr cacheStart = (uptr)_dyld_get_shared_cache_range(&cacheLength);
+
+  if (cacheStart &&
+      !IntervalsAreSeparate(cacheStart, cacheStart + cacheLength - 1,
+                            range_start, range_end)) {
+    // Overlaps with shared cache region
+    return false;
+  }
+
+  // We believe this address is available.
+  return true;
 }
 
 // FIXME implement on this platform.

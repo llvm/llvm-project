@@ -99,7 +99,7 @@ private:
 
   /// Emits an opcode.
   template <typename... Tys>
-  bool emitOp(Opcode Op, const Tys &...Args, const SourceInfo &L);
+  bool emitOp(Opcode Op, const Tys &...Args, SourceInfo L);
 
 protected:
 #define GET_LINK_PROTO

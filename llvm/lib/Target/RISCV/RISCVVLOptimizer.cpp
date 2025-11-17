@@ -156,13 +156,13 @@ FunctionPass *llvm::createRISCVVLOptimizerPass() {
   return new RISCVVLOptimizer();
 }
 
-LLVM_ATTRIBUTE_UNUSED
+[[maybe_unused]]
 static raw_ostream &operator<<(raw_ostream &OS, const OperandInfo &OI) {
   OI.print(OS);
   return OS;
 }
 
-LLVM_ATTRIBUTE_UNUSED
+[[maybe_unused]]
 static raw_ostream &operator<<(raw_ostream &OS,
                                const std::optional<OperandInfo> &OI) {
   if (OI)
@@ -1665,7 +1665,8 @@ bool RISCVVLOptimizer::runOnMachineFunction(MachineFunction &MF) {
   for (MachineBasicBlock *MBB : post_order(&MF)) {
     assert(MDT->isReachableFromEntry(MBB));
     for (MachineInstr &MI : reverse(*MBB))
-      Worklist.insert(&MI);
+      if (!MI.isDebugInstr())
+        Worklist.insert(&MI);
   }
 
   while (!Worklist.empty()) {

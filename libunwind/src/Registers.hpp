@@ -17,7 +17,13 @@
 
 #include "config.h"
 #include "libunwind.h"
+#include "libunwind_ext.h"
 #include "shadow_stack_unwind.h"
+
+#if __has_include(<sys/auxv.h>)
+#include <sys/auxv.h>
+#define HAVE_SYS_AUXV_H
+#endif
 
 namespace libunwind {
 
@@ -59,6 +65,9 @@ class _LIBUNWIND_HIDDEN Registers_x86 {
 public:
   Registers_x86();
   Registers_x86(const void *registers);
+
+  typedef uint32_t reg_t;
+  typedef uint32_t link_reg_t;
 
   bool        validRegister(int num) const;
   uint32_t    getRegister(int num) const;
@@ -277,6 +286,9 @@ class _LIBUNWIND_HIDDEN Registers_x86_64 {
 public:
   Registers_x86_64();
   Registers_x86_64(const void *registers);
+
+  typedef uint64_t reg_t;
+  typedef uint64_t link_reg_t;
 
   bool        validRegister(int num) const;
   uint64_t    getRegister(int num) const;
@@ -596,6 +608,9 @@ class _LIBUNWIND_HIDDEN Registers_ppc {
 public:
   Registers_ppc();
   Registers_ppc(const void *registers);
+
+  typedef uint32_t reg_t;
+  typedef uint32_t link_reg_t;
 
   bool        validRegister(int num) const;
   uint32_t    getRegister(int num) const;
@@ -1168,6 +1183,9 @@ class _LIBUNWIND_HIDDEN Registers_ppc64 {
 public:
   Registers_ppc64();
   Registers_ppc64(const void *registers);
+
+  typedef uint64_t reg_t;
+  typedef uint64_t link_reg_t;
 
   bool        validRegister(int num) const;
   uint64_t    getRegister(int num) const;
@@ -1814,7 +1832,9 @@ inline const char *Registers_ppc64::getRegisterName(int regNum) {
 /// Registers_arm64  holds the register state of a thread in a 64-bit arm
 /// process.
 class _LIBUNWIND_HIDDEN Registers_arm64;
-extern "C" void __libunwind_Registers_arm64_jumpto(Registers_arm64 *);
+extern "C" int64_t __libunwind_Registers_arm64_za_disable();
+extern "C" void __libunwind_Registers_arm64_jumpto(Registers_arm64 *,
+                                                   unsigned walkedFrames);
 
 #if defined(_LIBUNWIND_USE_GCS)
 extern "C" void *__libunwind_shstk_get_jump_target() {
@@ -1824,8 +1844,13 @@ extern "C" void *__libunwind_shstk_get_jump_target() {
 
 class _LIBUNWIND_HIDDEN Registers_arm64 {
 public:
-  Registers_arm64();
+  Registers_arm64() = default;
   Registers_arm64(const void *registers);
+  Registers_arm64(const Registers_arm64 &);
+  Registers_arm64 &operator=(const Registers_arm64 &);
+
+  typedef uint64_t reg_t;
+  typedef uint64_t __ptrauth_unwind_registers_arm64_link_reg link_reg_t;
 
   bool        validRegister(int num) const;
   uint64_t    getRegister(int num) const;
@@ -1837,7 +1862,14 @@ public:
   v128        getVectorRegister(int num) const;
   void        setVectorRegister(int num, v128 value);
   static const char *getRegisterName(int num);
-  void        jumpto() { __libunwind_Registers_arm64_jumpto(this); }
+  void        jumpto(unsigned walkedFrames = 0) {
+    zaDisable();
+    __libunwind_Registers_arm64_jumpto(this, walkedFrames);
+  }
+#ifdef _LIBUNWIND_TRACE_RET_INJECT
+  _LIBUNWIND_TRACE_NO_INLINE
+  void        returnto(unsigned walkedFrames) { jumpto(walkedFrames); }
+#endif
   static constexpr int lastDwarfRegNum() {
     return _LIBUNWIND_HIGHEST_DWARF_REGISTER_ARM64;
   }
@@ -1845,33 +1877,88 @@ public:
 
   uint64_t  getSP() const         { return _registers.__sp; }
   void      setSP(uint64_t value) { _registers.__sp = value; }
-  uint64_t  getIP() const         { return _registers.__pc; }
-  void      setIP(uint64_t value) { _registers.__pc = value; }
-  uint64_t  getFP() const         { return _registers.__fp; }
-  void      setFP(uint64_t value) { _registers.__fp = value; }
+  uint64_t  getIP() const {
+    uint64_t value = _registers.__pc;
+#if defined(_LIBUNWIND_TARGET_AARCH64_AUTHENTICATED_UNWINDING)
+    // Note the value of the PC was signed to its address in the register state
+    // but everyone else expects it to be sign by the SP, so convert on return.
+    value = (uint64_t)ptrauth_auth_and_resign((void *)_registers.__pc,
+                                              ptrauth_key_return_address,
+                                              &_registers.__pc,
+                                              ptrauth_key_return_address,
+                                              getSP());
+#endif
+    return value;
+  }
+  void      setIP(uint64_t value) {
+#if defined(_LIBUNWIND_TARGET_AARCH64_AUTHENTICATED_UNWINDING)
+    // Note the value which was set should have been signed with the SP.
+    // We then resign with the slot we are being stored in to so that both SP
+    // and LR can't be spoofed at the same time.
+    value = (uint64_t)ptrauth_auth_and_resign((void *)value,
+                                              ptrauth_key_return_address,
+                                              getSP(),
+                                              ptrauth_key_return_address,
+                                              &_registers.__pc);
+#endif
+    _registers.__pc = value;
+  }
+  uint64_t getFP() const { return _registers.__fp; }
+  void setFP(uint64_t value) { _registers.__fp = value; }
+
+#if defined(_LIBUNWIND_TARGET_AARCH64_AUTHENTICATED_UNWINDING)
+  void
+  loadAndAuthenticateLinkRegister(reg_t inplaceAuthedLinkRegister,
+                                  link_reg_t *referenceAuthedLinkRegister) {
+    // If we are in an arm64/arm64e frame, then the PC should have been signed
+    // with the SP
+    *referenceAuthedLinkRegister =
+      (uint64_t)ptrauth_auth_data((void *)inplaceAuthedLinkRegister,
+                                  ptrauth_key_return_address,
+                                  _registers.__sp);
+  }
+#endif
 
 private:
   uint64_t lazyGetVG() const;
 
+  void zaDisable() const {
+    if (!_misc_registers.__has_sme)
+      return;
+    if (__libunwind_Registers_arm64_za_disable() != 0)
+      _LIBUNWIND_ABORT("SME ZA disable failed");
+  }
+
+  static bool checkHasSME() {
+#if defined(HAVE_SYS_AUXV_H)
+    constexpr int hwcap2_sme = (1 << 23);
+    unsigned long hwcap2 = getauxval(AT_HWCAP2);
+    return (hwcap2 & hwcap2_sme) != 0;
+#endif
+    // TODO: Support other platforms.
+    return false;
+  }
+
   struct GPRs {
-    uint64_t __x[29]; // x0-x28
-    uint64_t __fp;    // Frame pointer x29
-    uint64_t __lr;    // Link register x30
-    uint64_t __sp;    // Stack pointer x31
-    uint64_t __pc;    // Program counter
-    uint64_t __ra_sign_state; // RA sign state register
+    uint64_t __x[29] = {};        // x0-x28
+    uint64_t __fp = 0;            // Frame pointer x29
+    uint64_t __lr = 0;            // Link register x30
+    uint64_t __sp = 0;            // Stack pointer x31
+    uint64_t __pc = 0;            // Program counter
+    uint64_t __ra_sign_state = 0; // RA sign state register
   };
 
   struct Misc {
-    mutable uint64_t __vg = 0; // Vector Granule
+    mutable uint32_t __vg = 0; // Vector Granule
+    bool __has_sme = checkHasSME();
   };
 
-  GPRs _registers;
+  GPRs _registers = {};
   // Currently only the lower double in 128-bit vectore registers
   // is perserved during unwinding.  We could define new register
   // numbers (> 96) which mean whole vector registers, then this
   // struct would need to change to contain whole vector registers.
-  double _vectorHalfRegisters[32];
+  double _vectorHalfRegisters[32] = {};
 
   // Miscellaneous/virtual registers. These are stored below the GPRs and FPRs
   // as they do not correspond to physical registers, so do not need to be
@@ -1889,11 +1976,31 @@ inline Registers_arm64::Registers_arm64(const void *registers) {
   memcpy(_vectorHalfRegisters,
          static_cast<const uint8_t *>(registers) + sizeof(GPRs),
          sizeof(_vectorHalfRegisters));
+  _misc_registers.__vg = 0;
+
+#if defined(_LIBUNWIND_TARGET_AARCH64_AUTHENTICATED_UNWINDING)
+  // We have to do some pointer authentication fixups after this copy,
+  // and as part of that we need to load the source pc without
+  // authenticating so that we maintain the signature for the resigning
+  // performed by setIP.
+  uint64_t pcRegister = 0;
+  memmove(&pcRegister, ((uint8_t *)&_registers) + offsetof(GPRs, __pc),
+          sizeof(pcRegister));
+  setIP(pcRegister);
+#endif
 }
 
-inline Registers_arm64::Registers_arm64() {
-  memset(&_registers, 0, sizeof(_registers));
-  memset(&_vectorHalfRegisters, 0, sizeof(_vectorHalfRegisters));
+inline Registers_arm64::Registers_arm64(const Registers_arm64 &other) {
+  *this = other;
+}
+
+inline Registers_arm64 &
+Registers_arm64::operator=(const Registers_arm64 &other) {
+  memmove(static_cast<void *>(this), &other, sizeof(*this));
+  // We perform this step to ensure that we correctly authenticate and re-sign
+  // the pc after the bitwise copy.
+  setIP(other.getIP());
+  return *this;
 }
 
 inline bool Registers_arm64::validRegister(int regNum) const {
@@ -1930,13 +2037,13 @@ inline uint64_t Registers_arm64::lazyGetVG() const {
 
 inline uint64_t Registers_arm64::getRegister(int regNum) const {
   if (regNum == UNW_REG_IP || regNum == UNW_AARCH64_PC)
-    return _registers.__pc;
+    return getIP();
   if (regNum == UNW_REG_SP || regNum == UNW_AARCH64_SP)
     return _registers.__sp;
   if (regNum == UNW_AARCH64_RA_SIGN_STATE)
     return _registers.__ra_sign_state;
   if (regNum == UNW_AARCH64_FP)
-    return _registers.__fp;
+    return getFP();
   if (regNum == UNW_AARCH64_LR)
     return _registers.__lr;
   if (regNum == UNW_AARCH64_VG)
@@ -1948,13 +2055,13 @@ inline uint64_t Registers_arm64::getRegister(int regNum) const {
 
 inline void Registers_arm64::setRegister(int regNum, uint64_t value) {
   if (regNum == UNW_REG_IP || regNum == UNW_AARCH64_PC)
-    _registers.__pc = value;
+    setIP(value);
   else if (regNum == UNW_REG_SP || regNum == UNW_AARCH64_SP)
     _registers.__sp = value;
   else if (regNum == UNW_AARCH64_RA_SIGN_STATE)
     _registers.__ra_sign_state = value;
   else if (regNum == UNW_AARCH64_FP)
-    _registers.__fp = value;
+    setFP(value);
   else if (regNum == UNW_AARCH64_LR)
     _registers.__lr = value;
   else if (regNum == UNW_AARCH64_VG)
@@ -2147,6 +2254,9 @@ class _LIBUNWIND_HIDDEN Registers_arm {
 public:
   Registers_arm();
   Registers_arm(const void *registers);
+
+  typedef uint32_t reg_t;
+  typedef uint32_t link_reg_t;
 
   bool        validRegister(int num) const;
   uint32_t    getRegister(int num) const;
@@ -2653,6 +2763,9 @@ public:
   Registers_or1k();
   Registers_or1k(const void *registers);
 
+  typedef uint32_t reg_t;
+  typedef uint32_t link_reg_t;
+
   bool        validRegister(int num) const;
   uint32_t    getRegister(int num) const;
   void        setRegister(int num, uint32_t value);
@@ -2851,6 +2964,9 @@ class _LIBUNWIND_HIDDEN Registers_mips_o32 {
 public:
   Registers_mips_o32();
   Registers_mips_o32(const void *registers);
+
+  typedef uint32_t reg_t;
+  typedef uint32_t link_reg_t;
 
   bool        validRegister(int num) const;
   uint32_t    getRegister(int num) const;
@@ -3187,6 +3303,9 @@ public:
   Registers_mips_newabi();
   Registers_mips_newabi(const void *registers);
 
+  typedef uint64_t reg_t;
+  typedef uint64_t link_reg_t;
+
   bool        validRegister(int num) const;
   uint64_t    getRegister(int num) const;
   void        setRegister(int num, uint64_t value);
@@ -3490,6 +3609,9 @@ public:
   Registers_sparc();
   Registers_sparc(const void *registers);
 
+  typedef uint32_t reg_t;
+  typedef uint32_t link_reg_t;
+
   bool        validRegister(int num) const;
   uint32_t    getRegister(int num) const;
   void        setRegister(int num, uint32_t value);
@@ -3676,6 +3798,9 @@ public:
   Registers_sparc64() = default;
   Registers_sparc64(const void *registers);
 
+  typedef uint64_t reg_t;
+  typedef uint64_t link_reg_t;
+
   bool validRegister(int num) const;
   uint64_t getRegister(int num) const;
   void setRegister(int num, uint64_t value);
@@ -3860,6 +3985,9 @@ class _LIBUNWIND_HIDDEN Registers_hexagon {
 public:
   Registers_hexagon();
   Registers_hexagon(const void *registers);
+
+  typedef uint32_t reg_t;
+  typedef uint32_t link_reg_t;
 
   bool        validRegister(int num) const;
   uint32_t    getRegister(int num) const;
@@ -4075,6 +4203,9 @@ class _LIBUNWIND_HIDDEN Registers_riscv {
 public:
   Registers_riscv();
   Registers_riscv(const void *registers);
+
+  typedef ::libunwind::reg_t reg_t;
+  typedef ::libunwind::reg_t link_reg_t;
 
   bool        validRegister(int num) const;
   reg_t       getRegister(int num) const;
@@ -4372,6 +4503,9 @@ class _LIBUNWIND_HIDDEN Registers_ve {
 public:
   Registers_ve();
   Registers_ve(const void *registers);
+
+  typedef uint64_t reg_t;
+  typedef uint64_t link_reg_t;
 
   bool        validRegister(int num) const;
   uint64_t    getRegister(int num) const;
@@ -4816,6 +4950,9 @@ public:
   Registers_s390x();
   Registers_s390x(const void *registers);
 
+  typedef uint64_t reg_t;
+  typedef uint64_t link_reg_t;
+
   bool        validRegister(int num) const;
   uint64_t    getRegister(int num) const;
   void        setRegister(int num, uint64_t value);
@@ -5103,6 +5240,9 @@ class _LIBUNWIND_HIDDEN Registers_loongarch {
 public:
   Registers_loongarch();
   Registers_loongarch(const void *registers);
+
+  typedef uint64_t reg_t;
+  typedef uint64_t link_reg_t;
 
   bool validRegister(int num) const;
   uint64_t getRegister(int num) const;

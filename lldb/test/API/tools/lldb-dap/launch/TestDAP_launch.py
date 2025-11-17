@@ -96,8 +96,6 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         # Check the return code
         self.assertEqual(self.dap_server.process.poll(), 0)
 
-    # Flakey on Windows, https://github.com/llvm/llvm-project/issues/137660.
-    @skipIfWindows
     def test_stopOnEntry(self):
         """
         Tests the default launch of a simple program that stops at the
@@ -144,7 +142,6 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
                 )
         self.assertTrue(found, "verified program working directory")
 
-    @skipIfWindows # https://github.com/llvm/llvm-project/issues/137660
     def test_debuggerRoot(self):
         """
         Tests the "debuggerRoot" will change the working directory of
@@ -635,7 +632,28 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         program = self.getBuildArtifact("a.out")
 
         with tempfile.NamedTemporaryFile("rt") as f:
-            self.launch(program, stdio=[None, f.name, None])
+            self.launch(program, stdio=[None, f.name])
+            self.continue_to_exit()
+            lines = f.readlines()
+            self.assertIn(
+                program, lines[0], "make sure program path is in first argument"
+            )
+
+    @skipIfAsan
+    @skipIfWindows
+    @skipIf(oslist=["linux"], archs=no_match(["x86_64"]))
+    @skipIfBuildType(["debug"])
+    def test_stdio_redirection_and_console(self):
+        """
+        Test stdio redirection and console.
+        """
+        self.build_and_create_debug_adapter()
+        program = self.getBuildArtifact("a.out")
+
+        with tempfile.NamedTemporaryFile("rt") as f:
+            self.launch(
+                program, console="integratedTerminal", stdio=[None, f.name, None]
+            )
             self.continue_to_exit()
             lines = f.readlines()
             self.assertIn(

@@ -53,8 +53,6 @@
 #include "llvm/Transforms/Utils/LowerIFunc.h"
 #include "llvm/Transforms/Vectorize/LoopIdiomVectorize.h"
 #include <memory>
-#include <optional>
-#include <string>
 
 using namespace llvm;
 
@@ -694,12 +692,6 @@ bool AArch64PassConfig::addPreISel() {
     // is disabled as we emit the .subsections_via_symbols directive which
     // means that merging extern globals is not safe.
     bool MergeExternalByDefault = !TM->getTargetTriple().isOSBinFormatMachO();
-
-    // FIXME: extern global merging is only enabled when we optimise for size
-    // because there are some regressions with it also enabled for performance.
-    if (!OnlyOptimizeForSize)
-      MergeExternalByDefault = false;
-
     addPass(createGlobalMergePass(TM, 4095, OnlyOptimizeForSize,
                                   MergeExternalByDefault));
   }
@@ -770,8 +762,8 @@ bool AArch64PassConfig::addGlobalInstructionSelect() {
 }
 
 void AArch64PassConfig::addMachineSSAOptimization() {
-  if (EnableNewSMEABILowering && TM->getOptLevel() != CodeGenOptLevel::None)
-    addPass(createMachineSMEABIPass());
+  if (TM->getOptLevel() != CodeGenOptLevel::None && EnableNewSMEABILowering)
+    addPass(createMachineSMEABIPass(TM->getOptLevel()));
 
   if (TM->getOptLevel() != CodeGenOptLevel::None && EnableSMEPeepholeOpt)
     addPass(createSMEPeepholeOptPass());
@@ -804,7 +796,7 @@ bool AArch64PassConfig::addILPOpts() {
 
 void AArch64PassConfig::addPreRegAlloc() {
   if (TM->getOptLevel() == CodeGenOptLevel::None && EnableNewSMEABILowering)
-    addPass(createMachineSMEABIPass());
+    addPass(createMachineSMEABIPass(CodeGenOptLevel::None));
 
   // Change dead register definitions to refer to the zero register.
   if (TM->getOptLevel() != CodeGenOptLevel::None &&

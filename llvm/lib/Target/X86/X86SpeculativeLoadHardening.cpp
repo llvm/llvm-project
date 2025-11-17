@@ -54,7 +54,6 @@
 #include <cassert>
 #include <iterator>
 #include <optional>
-#include <utility>
 
 using namespace llvm;
 
@@ -841,7 +840,7 @@ getRegClassForUnfoldedLoad(const X86InstrInfo &TII, unsigned Opcode) {
   unsigned UnfoldedOpc = TII.getOpcodeAfterMemoryUnfold(
       Opcode, /*UnfoldLoad*/ true, /*UnfoldStore*/ false, &Index);
   const MCInstrDesc &MCID = TII.get(UnfoldedOpc);
-  return TII.getRegClass(MCID, Index, &TII.getRegisterInfo());
+  return TII.getRegClass(MCID, Index);
 }
 
 void X86SpeculativeLoadHardeningPass::unfoldCallAndJumpLoads(

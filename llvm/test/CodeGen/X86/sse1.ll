@@ -251,5 +251,5 @@ define <2 x float> @PR31672() #0 {
 
 declare <2 x float> @llvm.sqrt.v2f32(<2 x float>) #1
 
-attributes #0 = { nounwind "unsafe-fp-math"="true" }
+attributes #0 = { nounwind }
 

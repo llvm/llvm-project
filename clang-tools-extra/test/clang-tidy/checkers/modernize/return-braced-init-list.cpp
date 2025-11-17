@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++14-or-later %s modernize-return-braced-init-list %t
+// RUN: %check_clang_tidy -std=c++11-or-later %s modernize-return-braced-init-list %t
 
 namespace std {
 typedef decltype(sizeof(int)) size_t;
@@ -80,10 +80,12 @@ Foo f2() {
   return {b2};
 }
 
+#if __cplusplus >= 201402L
 auto f3() {
   Bar b3;
   return Foo(b3);
 }
+#endif
 
 #define A(b) Foo(b)
 

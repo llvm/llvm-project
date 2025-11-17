@@ -50,6 +50,14 @@ struct FunctionPathAndClusterInfo {
   // the edge a -> b (a is not cloned). The index of the path in this vector
   // determines the `UniqueBBID::CloneID` of the cloned blocks in that path.
   SmallVector<SmallVector<unsigned>> ClonePaths;
+  // Node counts for each basic block.
+  DenseMap<UniqueBBID, uint64_t> NodeCounts;
+  // Edge counts for each edge, stored as a nested map.
+  DenseMap<UniqueBBID, DenseMap<UniqueBBID, uint64_t>> EdgeCounts;
+  // Hash for each basic block. The Hashes are stored for every original block
+  // (not cloned blocks), hence the map key being unsigned instead of
+  // UniqueBBID.
+  DenseMap<unsigned, uint64_t> BBHashes;
 };
 
 class BasicBlockSectionsProfileReader {
@@ -58,24 +66,25 @@ public:
   BasicBlockSectionsProfileReader(const MemoryBuffer *Buf)
       : MBuf(Buf), LineIt(*Buf, /*SkipBlanks=*/true, /*CommentMarker=*/'#'){};
 
-  BasicBlockSectionsProfileReader(){};
+  BasicBlockSectionsProfileReader() = default;
 
-  // Returns true if basic block sections profile exist for function \p
-  // FuncName.
+  // Returns true if function \p FuncName is hot based on the basic block
+  // section profile.
   bool isFunctionHot(StringRef FuncName) const;
 
-  // Returns a pair with first element representing whether basic block sections
-  // profile exist for the function \p FuncName, and the second element
-  // representing the basic block sections profile (cluster info) for this
-  // function. If the first element is true and the second element is empty, it
-  // means unique basic block sections are desired for all basic blocks of the
-  // function.
-  std::pair<bool, SmallVector<BBClusterInfo>>
+  // Returns the cluster info for the function \p FuncName. Returns an empty
+  // vector if function has no cluster info.
+  SmallVector<BBClusterInfo>
   getClusterInfoForFunction(StringRef FuncName) const;
 
   // Returns the path clonings for the given function.
   SmallVector<SmallVector<unsigned>>
   getClonePathsForFunction(StringRef FuncName) const;
+
+  // Returns the profile count for the edge from `SrcBBID` to `SinkBBID` in
+  // function `FuncName` or zero if it does not exist.
+  uint64_t getEdgeCount(StringRef FuncName, const UniqueBBID &SrcBBID,
+                        const UniqueBBID &SinkBBID) const;
 
 private:
   StringRef getAliasName(StringRef FuncName) const {
@@ -146,7 +155,7 @@ class BasicBlockSectionsProfileReaderAnalysis
 public:
   static AnalysisKey Key;
   typedef BasicBlockSectionsProfileReader Result;
-  BasicBlockSectionsProfileReaderAnalysis(const TargetMachine *TM) : TM(TM) {}
+  BasicBlockSectionsProfileReaderAnalysis(const TargetMachine &TM) : TM(&TM) {}
 
   Result run(Function &F, FunctionAnalysisManager &AM);
 
@@ -177,11 +186,14 @@ public:
 
   bool isFunctionHot(StringRef FuncName) const;
 
-  std::pair<bool, SmallVector<BBClusterInfo>>
+  SmallVector<BBClusterInfo>
   getClusterInfoForFunction(StringRef FuncName) const;
 
   SmallVector<SmallVector<unsigned>>
   getClonePathsForFunction(StringRef FuncName) const;
+
+  uint64_t getEdgeCount(StringRef FuncName, const UniqueBBID &SrcBBID,
+                        const UniqueBBID &DestBBID) const;
 
   // Initializes the FunctionNameToDIFilename map for the current module and
   // then reads the profile for the matching functions.

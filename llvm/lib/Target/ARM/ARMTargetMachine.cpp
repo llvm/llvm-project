@@ -111,6 +111,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeARMTarget() {
   initializeMVELaneInterleavingPass(Registry);
   initializeARMFixCortexA57AES1742098Pass(Registry);
   initializeARMDAGToDAGISelLegacyPass(Registry);
+  initializeKCFIPass(Registry);
 }
 
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
@@ -229,6 +230,10 @@ ARMBaseTargetMachine::getSubtargetImpl(const Function &F) const {
   if (F.hasMinSize())
     Key += "+minsize";
 
+  DenormalMode DM = F.getDenormalModeRaw();
+  if (DM != DenormalMode::getIEEE())
+    Key += "denormal-fp-math=" + DM.str();
+
   auto &I = SubtargetMap[Key];
   if (!I) {
     // This needs to be done before we create a new subtarget since any
@@ -236,7 +241,7 @@ ARMBaseTargetMachine::getSubtargetImpl(const Function &F) const {
     // function that reside in TargetOptions.
     resetTargetOptions(F);
     I = std::make_unique<ARMSubtarget>(TargetTriple, CPU, FS, *this, isLittle,
-                                        F.hasMinSize());
+                                       F.hasMinSize(), DM);
 
     if (!I->isThumb() && !I->hasARMOps())
       F.getContext().emitError("Function '" + F.getName() + "' uses ARM "
@@ -331,7 +336,7 @@ char ARMExecutionDomainFix::ID;
 
 INITIALIZE_PASS_BEGIN(ARMExecutionDomainFix, "arm-execution-domain-fix",
   "ARM Execution Domain Fix", false, false)
-INITIALIZE_PASS_DEPENDENCY(ReachingDefAnalysis)
+INITIALIZE_PASS_DEPENDENCY(ReachingDefInfoWrapperPass)
 INITIALIZE_PASS_END(ARMExecutionDomainFix, "arm-execution-domain-fix",
   "ARM Execution Domain Fix", false, false)
 
@@ -483,6 +488,9 @@ void ARMPassConfig::addPreSched2() {
   // proper scheduling.
   addPass(createARMExpandPseudoPass());
 
+  // Emit KCFI checks for indirect calls.
+  addPass(createKCFIPass());
+
   if (getOptLevel() != CodeGenOptLevel::None) {
     // When optimising for size, always run the Thumb2SizeReduction pass before
     // IfConversion. Otherwise, check whether IT blocks are restricted
@@ -513,9 +521,12 @@ void ARMPassConfig::addPreSched2() {
 void ARMPassConfig::addPreEmitPass() {
   addPass(createThumb2SizeReductionPass());
 
-  // Constant island pass work on unbundled instructions.
+  // Unpack bundles for:
+  // - Thumb2: Constant island pass requires unbundled instructions
+  // - KCFI: KCFI_CHECK pseudo instructions need to be unbundled for AsmPrinter
   addPass(createUnpackMachineBundles([](const MachineFunction &MF) {
-    return MF.getSubtarget<ARMSubtarget>().isThumb2();
+    return MF.getSubtarget<ARMSubtarget>().isThumb2() ||
+           MF.getFunction().getParent()->getModuleFlag("kcfi");
   }));
 
   // Don't optimize barriers or block placement at -O0.
@@ -526,6 +537,7 @@ void ARMPassConfig::addPreEmitPass() {
 }
 
 void ARMPassConfig::addPreEmitPass2() {
+
   // Inserts fixup instructions before unsafe AES operations. Instructions may
   // be inserted at the start of blocks and at within blocks so this pass has to
   // come before those below.
