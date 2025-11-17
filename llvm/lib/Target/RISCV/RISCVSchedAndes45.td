@@ -8,7 +8,6 @@
 
 //===----------------------------------------------------------------------===//
 
-// Refer to `Table 5: Supported VLEN and DLEN` for legal VLEN and DLEN.
 defvar Andes45VLEN = 512;
 defvar Andes45DLEN = 512;
 defvar Andes45VLEN_DLEN_RATIO = !div(Andes45VLEN, Andes45DLEN);
@@ -16,7 +15,6 @@ defvar Andes45VLEN_DLEN_RATIO = !div(Andes45VLEN, Andes45DLEN);
 assert !or(!eq(Andes45VLEN_DLEN_RATIO, 1), !eq(Andes45VLEN_DLEN_RATIO, 2)),
        "Andes45VLEN / Andes45DLEN should be 1 or 2";
 
-// Refer to `Table 6: Supported DLEN and BIU_DATA_WIDTH` for legal BIU_DATA_WIDTH.
 defvar Andes45BIU_DATA_WIDTH = 512;
 defvar Andes45DLEN_BIU_DATA_WIDTH_RATIO = !div(Andes45DLEN, Andes45BIU_DATA_WIDTH);
 
