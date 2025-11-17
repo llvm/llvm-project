@@ -15,6 +15,7 @@
 
 #include "clang/AST/Expr.h"
 #include "clang/AST/StmtVisitor.h"
+#include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/MissingFeatures.h"
 
 #include "mlir/IR/Location.h"
@@ -91,6 +92,7 @@ public:
   //===--------------------------------------------------------------------===//
   //                               Utilities
   //===--------------------------------------------------------------------===//
+  mlir::Type convertType(QualType ty) { return cgf.convertType(ty); }
 
   mlir::Value emitComplexToScalarConversion(mlir::Location loc,
                                             mlir::Value value, CastKind kind,
@@ -197,6 +199,12 @@ public:
     return emitNullValue(e->getType(), cgf.getLoc(e->getSourceRange()));
   }
 
+  mlir::Value VisitGNUNullExpr(const GNUNullExpr *e) {
+    return emitNullValue(e->getType(), cgf.getLoc(e->getSourceRange()));
+  }
+
+  mlir::Value VisitOffsetOfExpr(OffsetOfExpr *e);
+
   mlir::Value VisitOpaqueValueExpr(OpaqueValueExpr *e) {
     if (e->isGLValue())
       return emitLoadOfLValue(cgf.getOrCreateOpaqueLValueMapping(e),
@@ -276,6 +284,8 @@ public:
                                 e->getSrcExpr()->getType(), e->getType(),
                                 e->getSourceRange().getBegin());
   }
+
+  mlir::Value VisitExtVectorElementExpr(Expr *e) { return emitLoadOfLValue(e); }
 
   mlir::Value VisitMemberExpr(MemberExpr *e);
 
@@ -436,6 +446,10 @@ public:
     }
 
     return cgf.emitVAArg(ve);
+  }
+
+  mlir::Value VisitCXXRewrittenBinaryOperator(CXXRewrittenBinaryOperator *e) {
+    return Visit(e->getSemanticForm());
   }
 
   mlir::Value VisitUnaryExprOrTypeTraitExpr(const UnaryExprOrTypeTraitExpr *e);
@@ -1884,6 +1898,35 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
     return cgf.getBuilder().createBitcast(cgf.getLoc(subExpr->getSourceRange()),
                                           src, dstTy);
   }
+  case CK_AddressSpaceConversion: {
+    Expr::EvalResult result;
+    if (subExpr->EvaluateAsRValue(result, cgf.getContext()) &&
+        result.Val.isNullPointer()) {
+      // If e has side effect, it is emitted even if its final result is a
+      // null pointer. In that case, a DCE pass should be able to
+      // eliminate the useless instructions emitted during translating E.
+      if (result.HasSideEffects)
+        Visit(subExpr);
+      return cgf.cgm.emitNullConstant(destTy,
+                                      cgf.getLoc(subExpr->getExprLoc()));
+    }
+
+    clang::QualType srcTy = subExpr->IgnoreImpCasts()->getType();
+    if (srcTy->isPointerType() || srcTy->isReferenceType())
+      srcTy = srcTy->getPointeeType();
+
+    clang::LangAS srcLangAS = srcTy.getAddressSpace();
+    cir::TargetAddressSpaceAttr subExprAS;
+    if (clang::isTargetAddressSpace(srcLangAS))
+      subExprAS = cir::toCIRTargetAddressSpace(cgf.getMLIRContext(), srcLangAS);
+    else
+      cgf.cgm.errorNYI(subExpr->getSourceRange(),
+                       "non-target address space conversion");
+    // Since target may map different address spaces in AST to the same address
+    // space, an address space conversion may end up as a bitcast.
+    return cgf.cgm.getTargetCIRGenInfo().performAddrSpaceCast(
+        cgf, Visit(subExpr), subExprAS, convertType(destTy));
+  }
 
   case CK_AtomicToNonAtomic: {
     cgf.getCIRGenModule().errorNYI(subExpr->getSourceRange(),
@@ -1927,6 +1970,14 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
     }
 
     return builder.createIntToPtr(middleVal, destCIRTy);
+  }
+
+  case CK_UncheckedDerivedToBase:
+  case CK_DerivedToBase: {
+    // The EmitPointerWithAlignment path does this fine; just discard
+    // the alignment.
+    return cgf.getAsNaturalPointerTo(cgf.emitPointerWithAlignment(ce),
+                                     ce->getType()->getPointeeType());
   }
 
   case CK_Dynamic: {
@@ -2158,6 +2209,21 @@ mlir::Value ScalarExprEmitter::VisitUnaryLNot(const UnaryOperator *e) {
 
   // ZExt result to the expr type.
   return maybePromoteBoolResult(boolVal, cgf.convertType(e->getType()));
+}
+
+mlir::Value ScalarExprEmitter::VisitOffsetOfExpr(OffsetOfExpr *e) {
+  // Try folding the offsetof to a constant.
+  Expr::EvalResult evalResult;
+  if (e->EvaluateAsInt(evalResult, cgf.getContext())) {
+    mlir::Type type = cgf.convertType(e->getType());
+    llvm::APSInt value = evalResult.Val.getInt();
+    return builder.getConstAPInt(cgf.getLoc(e->getExprLoc()), type, value);
+  }
+
+  cgf.getCIRGenModule().errorNYI(
+      e->getSourceRange(),
+      "ScalarExprEmitter::VisitOffsetOfExpr Can't eval expr as int");
+  return {};
 }
 
 mlir::Value ScalarExprEmitter::VisitUnaryReal(const UnaryOperator *e) {

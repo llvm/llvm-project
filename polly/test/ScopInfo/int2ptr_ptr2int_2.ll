@@ -1,7 +1,5 @@
-; RUN: opt %loadNPMPolly '-passes=print<polly-function-scops>' \
-; RUN: -polly-invariant-load-hoisting=true -disable-output < %s 2>&1 | FileCheck %s
-; RUN: opt %loadNPMPolly -S -passes=polly-codegen \
-; RUN: -polly-invariant-load-hoisting=true < %s 2>&1 | FileCheck %s --check-prefix=IR
+; RUN: opt %loadNPMPolly '-passes=polly-custom<scops>' -polly-print-scops -polly-invariant-load-hoisting=true -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly -S '-passes=polly<no-default-opts>' -polly-invariant-load-hoisting=true < %s 2>&1 | FileCheck %s --check-prefix=IR
 ;
 ;    void f(long *A, long *B, long *ptr, long val) {
 ;      for (long i = 0; i < 100; i++) {

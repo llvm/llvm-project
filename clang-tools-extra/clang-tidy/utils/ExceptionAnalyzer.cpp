@@ -192,7 +192,7 @@ static bool isFunctionPointerConvertible(QualType From, QualType To) {
 //
 // The function should only be called in C++ mode.
 static bool isQualificationConvertiblePointer(QualType From, QualType To,
-                                              LangOptions LangOpts) {
+                                              const LangOptions &LangOpts) {
 
   // [N4659 7.5 (1)]
   // A cv-decomposition of a type T is a sequence of cv_i and P_i such that T is
@@ -562,17 +562,6 @@ ExceptionAnalyzer::throwsException(const Stmt *St,
       }
     }
     Results.merge(Uncaught);
-  } else if (const auto *Call = dyn_cast<CallExpr>(St)) {
-    if (const FunctionDecl *Func = Call->getDirectCallee()) {
-      const ExceptionInfo Excs =
-          throwsException(Func, Caught, CallStack, Call->getBeginLoc());
-      Results.merge(Excs);
-    }
-  } else if (const auto *Construct = dyn_cast<CXXConstructExpr>(St)) {
-    const ExceptionInfo Excs =
-        throwsException(Construct->getConstructor(), Caught, CallStack,
-                        Construct->getBeginLoc());
-    Results.merge(Excs);
   } else if (const auto *DefaultInit = dyn_cast<CXXDefaultInitExpr>(St)) {
     const ExceptionInfo Excs =
         throwsException(DefaultInit->getExpr(), Caught, CallStack);
@@ -602,8 +591,23 @@ ExceptionAnalyzer::throwsException(const Stmt *St,
       Results.merge(Excs);
     }
   } else {
+    // Check whether any of this node's subexpressions throws.
     for (const Stmt *Child : St->children()) {
       const ExceptionInfo Excs = throwsException(Child, Caught, CallStack);
+      Results.merge(Excs);
+    }
+
+    // If this node is a call to a function or constructor, also check
+    // whether the call itself throws.
+    if (const auto *Call = dyn_cast<CallExpr>(St)) {
+      if (const FunctionDecl *Func = Call->getDirectCallee()) {
+        ExceptionInfo Excs =
+            throwsException(Func, Caught, CallStack, Call->getBeginLoc());
+        Results.merge(Excs);
+      }
+    } else if (const auto *Construct = dyn_cast<CXXConstructExpr>(St)) {
+      ExceptionInfo Excs = throwsException(Construct->getConstructor(), Caught,
+                                           CallStack, Construct->getBeginLoc());
       Results.merge(Excs);
     }
   }

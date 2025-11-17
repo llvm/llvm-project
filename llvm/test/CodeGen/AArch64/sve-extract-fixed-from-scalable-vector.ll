@@ -147,15 +147,15 @@ define <2 x float> @extract_v2f32_nxv16f32_2(<vscale x 16 x float> %arg) {
 define <4 x i1> @extract_v4i1_nxv32i1_0(<vscale x 32 x i1> %arg) {
 ; CHECK-LABEL: extract_v4i1_nxv32i1_0:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z1.b, p0/z, #1 // =0x1
-; CHECK-NEXT:    umov w8, v1.b[1]
-; CHECK-NEXT:    mov v0.16b, v1.16b
-; CHECK-NEXT:    umov w9, v1.b[2]
+; CHECK-NEXT:    mov z0.b, p0/z, #1 // =0x1
+; CHECK-NEXT:    umov w8, v0.b[1]
+; CHECK-NEXT:    mov v1.16b, v0.16b
 ; CHECK-NEXT:    mov v0.h[1], w8
+; CHECK-NEXT:    umov w8, v1.b[2]
+; CHECK-NEXT:    mov v0.h[2], w8
 ; CHECK-NEXT:    umov w8, v1.b[3]
-; CHECK-NEXT:    mov v0.h[2], w9
 ; CHECK-NEXT:    mov v0.h[3], w8
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %ext = call <4 x i1> @llvm.vector.extract.v4i1.nxv32i1(<vscale x 32 x i1> %arg, i64 0)
   ret <4 x i1> %ext

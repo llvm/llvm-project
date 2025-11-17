@@ -81,7 +81,7 @@ static cl::opt<bool> EnableJoining("join-liveintervals",
 
 static cl::opt<bool> UseTerminalRule("terminal-rule",
                                      cl::desc("Apply the terminal rule"),
-                                     cl::init(false), cl::Hidden);
+                                     cl::init(true), cl::Hidden);
 
 /// Temporary flag to test critical edge unsplitting.
 static cl::opt<bool> EnableJoinSplits(
@@ -1373,7 +1373,7 @@ bool RegisterCoalescer::reMaterializeDef(const CoalescerPair &CP,
   }
 
   const unsigned DefSubIdx = DefMI->getOperand(0).getSubReg();
-  const TargetRegisterClass *DefRC = TII->getRegClass(MCID, 0, TRI);
+  const TargetRegisterClass *DefRC = TII->getRegClass(MCID, 0);
   if (!DefMI->isImplicitDef()) {
     if (DstReg.isPhysical()) {
       Register NewDstReg = DstReg;
