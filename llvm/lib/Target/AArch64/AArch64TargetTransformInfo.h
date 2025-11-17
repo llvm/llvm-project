@@ -332,6 +332,29 @@ public:
     return isLegalMaskedLoadStore(DataType, Alignment);
   }
 
+  bool isElementTypeLegalForCompressStore(Type *Ty) const {
+    if (Ty->isFloatTy() || Ty->isDoubleTy())
+      return true;
+
+    if (Ty->isIntegerTy(8) || Ty->isIntegerTy(16) || Ty->isIntegerTy(32) ||
+        Ty->isIntegerTy(64))
+      return true;
+
+    return false;
+  }
+
+  bool isLegalMaskedCompressStore(Type *DataType,
+                                  Align Alignment) const override {
+    ElementCount EC = cast<VectorType>(DataType)->getElementCount();
+    if (EC.getKnownMinValue() != 2 && EC.getKnownMinValue() != 4)
+      return false;
+
+    if (!isElementTypeLegalForCompressStore(DataType->getScalarType()))
+      return false;
+
+    return isLegalMaskedLoadStore(DataType, Alignment);
+  }
+
   bool isLegalMaskedGatherScatter(Type *DataType) const {
     if (!ST->isSVEAvailable())
       return false;
