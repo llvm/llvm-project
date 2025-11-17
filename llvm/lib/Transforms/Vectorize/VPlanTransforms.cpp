@@ -85,20 +85,19 @@ bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
               Ingredient.getDebugLoc());
         }
       } else {
-        assert(isa<VPInstruction>(&Ingredient) &&
-               "only VPInstructions expected here");
+        auto *VPI = cast<VPInstruction>(&Ingredient);
         assert(!isa<PHINode>(Inst) && "phis should be handled above");
         // Create VPWidenMemoryRecipe for loads and stores.
         if (LoadInst *Load = dyn_cast<LoadInst>(Inst)) {
           NewRecipe = new VPWidenLoadRecipe(
               *Load, Ingredient.getOperand(0), nullptr /*Mask*/,
-              false /*Consecutive*/, false /*Reverse*/, VPIRMetadata(*Load),
+              false /*Consecutive*/, false /*Reverse*/, *VPI,
               Ingredient.getDebugLoc());
         } else if (StoreInst *Store = dyn_cast<StoreInst>(Inst)) {
           NewRecipe = new VPWidenStoreRecipe(
               *Store, Ingredient.getOperand(1), Ingredient.getOperand(0),
-              nullptr /*Mask*/, false /*Consecutive*/, false /*Reverse*/,
-              VPIRMetadata(*Store), Ingredient.getDebugLoc());
+              nullptr /*Mask*/, false /*Consecutive*/, false /*Reverse*/, *VPI,
+              Ingredient.getDebugLoc());
         } else if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(Inst)) {
           NewRecipe = new VPWidenGEPRecipe(GEP, Ingredient.operands());
         } else if (CallInst *CI = dyn_cast<CallInst>(Inst)) {
@@ -107,15 +106,17 @@ bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
             return false;
           NewRecipe = new VPWidenIntrinsicRecipe(
               *CI, getVectorIntrinsicIDForCall(CI, &TLI),
-              drop_end(Ingredient.operands()), CI->getType(),
+              drop_end(Ingredient.operands()), CI->getType(), *VPI,
               CI->getDebugLoc());
         } else if (SelectInst *SI = dyn_cast<SelectInst>(Inst)) {
-          NewRecipe = new VPWidenSelectRecipe(*SI, Ingredient.operands());
+          NewRecipe = new VPWidenSelectRecipe(*SI, Ingredient.operands(), *VPI);
         } else if (auto *CI = dyn_cast<CastInst>(Inst)) {
-          NewRecipe = new VPWidenCastRecipe(
-              CI->getOpcode(), Ingredient.getOperand(0), CI->getType(), *CI);
+          NewRecipe =
+              new VPWidenCastRecipe(CI->getOpcode(), Ingredient.getOperand(0),
+                                    CI->getType(), *CI, *VPI);
         } else {
-          NewRecipe = new VPWidenRecipe(*Inst, Ingredient.operands());
+          NewRecipe = new VPWidenRecipe(*Inst, Ingredient.operands(), *VPI,
+                                        Ingredient.getDebugLoc());
         }
       }
 
@@ -1705,8 +1706,9 @@ static bool tryToReplaceALMWithWideALM(VPlan &Plan, ElementCount VF,
       Ops.append({ALM, Plan.getOrAddLiveIn(
                            ConstantInt::get(IntegerType::getInt64Ty(Ctx),
                                             VF.getKnownMinValue() * Part))});
-      auto *Ext = new VPWidenIntrinsicRecipe(Intrinsic::vector_extract, Ops,
-                                             IntegerType::getInt1Ty(Ctx), DL);
+      auto *Ext =
+          new VPWidenIntrinsicRecipe(Intrinsic::vector_extract, Ops,
+                                     IntegerType::getInt1Ty(Ctx), {}, {}, DL);
       Extracts[Part] = Ext;
       Ext->insertAfter(ALM);
     }
@@ -1845,7 +1847,7 @@ static bool simplifyBranchConditionForVFAndUF(VPlan &Plan, ElementCount BestVF,
     // The vector region contains header phis for which we cannot remove the
     // loop region yet.
     auto *BOC = new VPInstruction(VPInstruction::BranchOnCond, {Plan.getTrue()},
-                                  Term->getDebugLoc());
+                                  {}, {}, Term->getDebugLoc());
     ExitingVPBB->appendRecipe(BOC);
   }
 
@@ -2679,13 +2681,13 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
             m_Select(m_Specific(HeaderMask), m_VPValue(LHS), m_VPValue(RHS))))
     return new VPWidenIntrinsicRecipe(
         Intrinsic::vp_merge, {Plan->getTrue(), LHS, RHS, &EVL},
-        TypeInfo.inferScalarType(LHS), CurRecipe.getDebugLoc());
+        TypeInfo.inferScalarType(LHS), {}, {}, CurRecipe.getDebugLoc());
 
   if (match(&CurRecipe, m_Select(m_RemoveMask(HeaderMask, Mask), m_VPValue(LHS),
                                  m_VPValue(RHS))))
     return new VPWidenIntrinsicRecipe(
         Intrinsic::vp_merge, {Mask, LHS, RHS, &EVL},
-        TypeInfo.inferScalarType(LHS), CurRecipe.getDebugLoc());
+        TypeInfo.inferScalarType(LHS), {}, {}, CurRecipe.getDebugLoc());
 
   return nullptr;
 }
@@ -2753,7 +2755,8 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
         VPWidenIntrinsicRecipe *VPSplice = new VPWidenIntrinsicRecipe(
             Intrinsic::experimental_vp_splice,
             {V1, V2, Imm, Plan.getTrue(), PrevEVL, &EVL},
-            TypeInfo.inferScalarType(R.getVPSingleValue()), R.getDebugLoc());
+            TypeInfo.inferScalarType(R.getVPSingleValue()), {}, {},
+            R.getDebugLoc());
         VPSplice->insertBefore(&R);
         R.getVPSingleValue()->replaceAllUsesWith(VPSplice);
         ToErase.push_back(&R);
