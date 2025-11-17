@@ -65,10 +65,9 @@ class MarkDeclareTargetPass
     }
   }
 
-  void
-  processReductionRefs(std::optional<mlir::ArrayAttr> symRefs,
-                             ParentInfo parentInfo,
-                             llvm::SmallPtrSet<mlir::Operation *, 16> visited) {
+  void processReductionRefs(std::optional<mlir::ArrayAttr> symRefs,
+                            ParentInfo parentInfo,
+                            llvm::SmallPtrSet<mlir::Operation *, 16> visited) {
     if (!symRefs)
       return;
 
@@ -82,11 +81,10 @@ class MarkDeclareTargetPass
   }
 
   void
-  processReductionClauses(mlir::Operation *op,
-                          ParentInfo parentInfo,
+  processReductionClauses(mlir::Operation *op, ParentInfo parentInfo,
                           llvm::SmallPtrSet<mlir::Operation *, 16> visited) {
     llvm::TypeSwitch<mlir::Operation &>(*op)
-      .Case([&](mlir::omp::LoopOp op) {
+        .Case([&](mlir::omp::LoopOp op) {
           processReductionRefs(op.getReductionSyms(), parentInfo, visited);
         })
         .Case([&](mlir::omp::ParallelOp op) {

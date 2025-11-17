@@ -619,7 +619,7 @@ bool ReductionProcessor::doReductionByRef(mlir::Type reductionType) {
       !fir::isa_derived(fir::unwrapRefType(reductionType)))
     return true;
 
-    return false;
+  return false;
 }
 
 bool ReductionProcessor::doReductionByRef(mlir::Value reductionVar) {

@@ -3584,7 +3584,7 @@ processReductionCombiner(lower::AbstractConverter &converter,
   const parser::OmpStylizedInstance &combinerInstance =
       combinerExpression.v.front();
   const parser::OmpStylizedInstance::Instance &instance =
-    std::get<parser::OmpStylizedInstance::Instance>(combinerInstance.t);
+      std::get<parser::OmpStylizedInstance::Instance>(combinerInstance.t);
   if (const auto *as = std::get_if<parser::AssignmentStmt>(&instance.u)) {
     auto &expr = std::get<parser::Expr>(as->t);
     genCombinerCB = [&](fir::FirOpBuilder &builder, mlir::Location loc,
@@ -3593,7 +3593,8 @@ processReductionCombiner(lower::AbstractConverter &converter,
       const auto &evalExpr = makeExpr(expr, semaCtx);
       lower::SymMapScope scope(symTable);
       const std::list<parser::OmpStylizedDeclaration> &declList =
-        std::get<std::list<parser::OmpStylizedDeclaration>>(combinerInstance.t);
+          std::get<std::list<parser::OmpStylizedDeclaration>>(
+              combinerInstance.t);
       for (const parser::OmpStylizedDeclaration &decl : declList) {
         auto &name = std::get<parser::ObjectName>(decl.var.t);
         mlir::Value addr = lhs;
@@ -3606,13 +3607,13 @@ processReductionCombiner(lower::AbstractConverter &converter,
 
         assert(name.symbol && "Reduction object name does not have a symbol");
         if (!fir::conformsWithPassByRef(type)) {
-            addr = builder.createTemporary(loc, type);
-            fir::StoreOp::create(builder, loc, isRhs ? rhs : lhs, addr);
+          addr = builder.createTemporary(loc, type);
+          fir::StoreOp::create(builder, loc, isRhs ? rhs : lhs, addr);
         }
         fir::FortranVariableFlagsEnum extraFlags = {};
         fir::FortranVariableFlagsAttr attributes =
-          Fortran::lower::translateSymbolAttributes(builder.getContext(),
-                                                    *name.symbol, extraFlags);
+            Fortran::lower::translateSymbolAttributes(builder.getContext(),
+                                                      *name.symbol, extraFlags);
         auto declareOp = hlfir::DeclareOp::create(
             builder, loc, addr, name.ToString(), nullptr, {}, nullptr, nullptr,
             0, attributes);
@@ -3622,8 +3623,7 @@ processReductionCombiner(lower::AbstractConverter &converter,
       lower::StatementContext stmtCtx;
       mlir::Value result = fir::getBase(
           convertExprToValue(loc, converter, evalExpr, symTable, stmtCtx));
-      if (auto refType =
-          llvm::dyn_cast<fir::ReferenceType>(result.getType()))
+      if (auto refType = llvm::dyn_cast<fir::ReferenceType>(result.getType()))
         if (lhs.getType() == refType.getElementType())
           result = fir::LoadOp::create(builder, loc, result);
       stmtCtx.finalizeAndPop();
