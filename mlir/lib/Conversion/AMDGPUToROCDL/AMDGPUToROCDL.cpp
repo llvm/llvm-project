@@ -1647,6 +1647,46 @@ int32_t getScaleSel(int32_t blockSize, unsigned bitWidth,
   return bits;
 }
 
+static std::optional<StringRef>
+scaledExtPacked816ToIntrinsic(Type srcElemType, Type destElemType) {
+  using fp4 = Float4E2M1FNType;
+  using fp8 = Float8E4M3FNType;
+  using bf8 = Float8E5M2Type;
+  using fp6 = Float6E2M3FNType;
+  using bf6 = Float6E3M2FNType;
+  if (isa<fp4>(srcElemType) && destElemType.isF16())
+    return ROCDL::CvtPkScalePk8F16Fp4Op::getOperationName();
+  if (isa<fp8>(srcElemType) && destElemType.isF16())
+    return ROCDL::CvtPkScalePk8F16Fp8Op::getOperationName();
+  if (isa<bf8>(srcElemType) && destElemType.isF16())
+    return ROCDL::CvtPkScalePk8F16Bf8Op::getOperationName();
+  if (isa<fp4>(srcElemType) && destElemType.isBF16())
+    return ROCDL::CvtPkScalePk8Bf16Fp4Op::getOperationName();
+  if (isa<fp8>(srcElemType) && destElemType.isBF16())
+    return ROCDL::CvtPkScalePk8Bf16Fp8Op::getOperationName();
+  if (isa<bf8>(srcElemType) && destElemType.isBF16())
+    return ROCDL::CvtPkScalePk8Bf16Bf8Op::getOperationName();
+  if (isa<fp4>(srcElemType) && destElemType.isF32())
+    return ROCDL::CvtPkScalePk8F32Fp4Op::getOperationName();
+  if (isa<fp8>(srcElemType) && destElemType.isF32())
+    return ROCDL::CvtPkScalePk8F32Fp8Op::getOperationName();
+  if (isa<bf8>(srcElemType) && destElemType.isF32())
+    return ROCDL::CvtPkScalePk8F32Bf8Op::getOperationName();
+  if (isa<fp6>(srcElemType) && destElemType.isF16())
+    return ROCDL::CvtPkScalePk16F16Fp6Op::getOperationName();
+  if (isa<bf6>(srcElemType) && destElemType.isF16())
+    return ROCDL::CvtPkScalePk16F16Bf6Op::getOperationName();
+  if (isa<fp6>(srcElemType) && destElemType.isBF16())
+    return ROCDL::CvtPkScalePk16Bf16Fp6Op::getOperationName();
+  if (isa<bf6>(srcElemType) && destElemType.isBF16())
+    return ROCDL::CvtPkScalePk16Bf16Bf6Op::getOperationName();
+  if (isa<fp6>(srcElemType) && destElemType.isF32())
+    return ROCDL::CvtPkScalePk16F32Fp6Op::getOperationName();
+  if (isa<bf6>(srcElemType) && destElemType.isF32())
+    return ROCDL::CvtPkScalePk16F32Bf6Op::getOperationName();
+  return std::nullopt;
+}
+
 LogicalResult ScaledExtPacked816OpLowering::matchAndRewrite(
     ScaledExtPacked816Op op, ScaledExtPacked816OpAdaptor adaptor,
     ConversionPatternRewriter &rewriter) const {
@@ -1694,54 +1734,23 @@ LogicalResult ScaledExtPacked816OpLowering::matchAndRewrite(
   Value castedSource =
       LLVM::BitcastOp::create(rewriter, loc, packedType, source);
 
-  if (isa<fp4>(srcElemType) && destElemType.isF16()) {
-    rewriter.replaceOpWithNewOp<ROCDL::CvtPkScalePk8F16Fp4Op>(
-        op, op.getResult().getType(), castedSource, castedScale, scaleSel);
-  } else if (isa<fp8>(srcElemType) && destElemType.isF16()) {
-    rewriter.replaceOpWithNewOp<ROCDL::CvtPkScalePk8F16Fp8Op>(
-        op, op.getResult().getType(), castedSource, castedScale, scaleSel);
-  } else if (isa<bf8>(srcElemType) && destElemType.isF16()) {
-    rewriter.replaceOpWithNewOp<ROCDL::CvtPkScalePk8F16Bf8Op>(
-        op, op.getResult().getType(), castedSource, castedScale, scaleSel);
-  } else if (isa<fp4>(srcElemType) && destElemType.isBF16()) {
-    rewriter.replaceOpWithNewOp<ROCDL::CvtPkScalePk8Bf16Fp4Op>(
-        op, op.getResult().getType(), castedSource, castedScale, scaleSel);
-  } else if (isa<fp8>(srcElemType) && destElemType.isBF16()) {
-    rewriter.replaceOpWithNewOp<ROCDL::CvtPkScalePk8Bf16Fp8Op>(
-        op, op.getResult().getType(), castedSource, castedScale, scaleSel);
-  } else if (isa<bf8>(srcElemType) && destElemType.isBF16()) {
-    rewriter.replaceOpWithNewOp<ROCDL::CvtPkScalePk8Bf16Bf8Op>(
-        op, op.getResult().getType(), castedSource, castedScale, scaleSel);
-  } else if (isa<fp4>(srcElemType) && destElemType.isF32()) {
-    rewriter.replaceOpWithNewOp<ROCDL::CvtPkScalePk8F32Fp4Op>(
-        op, op.getResult().getType(), castedSource, castedScale, scaleSel);
-  } else if (isa<fp8>(srcElemType) && destElemType.isF32()) {
-    rewriter.replaceOpWithNewOp<ROCDL::CvtPkScalePk8F32Fp8Op>(
-        op, op.getResult().getType(), castedSource, castedScale, scaleSel);
-  } else if (isa<bf8>(srcElemType) && destElemType.isF32()) {
-    rewriter.replaceOpWithNewOp<ROCDL::CvtPkScalePk8F32Bf8Op>(
-        op, op.getResult().getType(), castedSource, castedScale, scaleSel);
-  } else if (isa<fp6>(srcElemType) && destElemType.isF16()) {
-    rewriter.replaceOpWithNewOp<ROCDL::CvtPkScalePk16F16Fp6Op>(
-        op, op.getResult().getType(), castedSource, castedScale, scaleSel);
-  } else if (isa<bf6>(srcElemType) && destElemType.isF16()) {
-    rewriter.replaceOpWithNewOp<ROCDL::CvtPkScalePk16F16Bf6Op>(
-        op, op.getResult().getType(), castedSource, castedScale, scaleSel);
-  } else if (isa<fp6>(srcElemType) && destElemType.isBF16()) {
-    rewriter.replaceOpWithNewOp<ROCDL::CvtPkScalePk16Bf16Fp6Op>(
-        op, op.getResult().getType(), castedSource, castedScale, scaleSel);
-  } else if (isa<bf6>(srcElemType) && destElemType.isBF16()) {
-    rewriter.replaceOpWithNewOp<ROCDL::CvtPkScalePk16Bf16Bf6Op>(
-        op, op.getResult().getType(), castedSource, castedScale, scaleSel);
-  } else if (isa<fp6>(srcElemType) && destElemType.isF32()) {
-    rewriter.replaceOpWithNewOp<ROCDL::CvtPkScalePk16F32Fp6Op>(
-        op, op.getResult().getType(), castedSource, castedScale, scaleSel);
-  } else if (isa<bf6>(srcElemType) && destElemType.isF32()) {
-    rewriter.replaceOpWithNewOp<ROCDL::CvtPkScalePk16F32Bf6Op>(
-        op, op.getResult().getType(), castedSource, castedScale, scaleSel);
-  } else {
-    return failure();
-  }
+  std::optional<StringRef> maybeIntrinsic =
+      scaledExtPacked816ToIntrinsic(srcElemType, destElemType);
+  if (!maybeIntrinsic.has_value())
+    return op.emitOpError(
+        "no intrinsic matching packed scaled conversion on the given chipset");
+
+  OperationState loweredOp(loc, *maybeIntrinsic);
+  loweredOp.addTypes({op.getResult().getType()});
+  loweredOp.addOperands({castedSource, castedScale});
+
+  SmallVector<NamedAttribute, 1> attrs;
+  attrs.push_back(
+      NamedAttribute("scaleSel", rewriter.getI32IntegerAttr(scaleSel)));
+
+  loweredOp.addAttributes(attrs);
+  Operation *lowered = rewriter.create(loweredOp);
+  rewriter.replaceOp(op, lowered);
 
   return success();
 }
