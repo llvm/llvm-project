@@ -512,11 +512,11 @@ StringRef sys::detail::getHostCPUNameForS390x(StringRef ProcCpuinfoContent) {
 
   // Look for the CPU features.
   SmallVector<StringRef, 32> CPUFeatures;
-  for (unsigned I = 0, E = Lines.size(); I != E; ++I)
-    if (Lines[I].starts_with("features")) {
-      size_t Pos = Lines[I].find(':');
+  for (StringRef Line : Lines)
+    if (Line.starts_with("features")) {
+      size_t Pos = Line.find(':');
       if (Pos != StringRef::npos) {
-        Lines[I].drop_front(Pos + 1).split(CPUFeatures, ' ');
+        Line.drop_front(Pos + 1).split(CPUFeatures, ' ');
         break;
       }
     }
@@ -524,20 +524,16 @@ StringRef sys::detail::getHostCPUNameForS390x(StringRef ProcCpuinfoContent) {
   // We need to check for the presence of vector support independently of
   // the machine type, since we may only use the vector register set when
   // supported by the kernel (and hypervisor).
-  bool HaveVectorSupport = false;
-  for (unsigned I = 0, E = CPUFeatures.size(); I != E; ++I) {
-    if (CPUFeatures[I] == "vx")
-      HaveVectorSupport = true;
-  }
+  bool HaveVectorSupport = llvm::is_contained(CPUFeatures, "vx");
 
   // Now check the processor machine type.
-  for (unsigned I = 0, E = Lines.size(); I != E; ++I) {
-    if (Lines[I].starts_with("processor ")) {
-      size_t Pos = Lines[I].find("machine = ");
+  for (StringRef Line : Lines) {
+    if (Line.starts_with("processor ")) {
+      size_t Pos = Line.find("machine = ");
       if (Pos != StringRef::npos) {
         Pos += sizeof("machine = ") - 1;
         unsigned int Id;
-        if (!Lines[I].drop_front(Pos).getAsInteger(10, Id))
+        if (!Line.drop_front(Pos).getAsInteger(10, Id))
           return getCPUNameFromS390Model(Id, HaveVectorSupport);
       }
       break;
@@ -554,9 +550,9 @@ StringRef sys::detail::getHostCPUNameForRISCV(StringRef ProcCpuinfoContent) {
 
   // Look for uarch line to determine cpu name
   StringRef UArch;
-  for (unsigned I = 0, E = Lines.size(); I != E; ++I) {
-    if (Lines[I].starts_with("uarch")) {
-      UArch = Lines[I].substr(5).ltrim("\t :");
+  for (StringRef Line : Lines) {
+    if (Line.starts_with("uarch")) {
+      UArch = Line.substr(5).ltrim("\t :");
       break;
     }
   }
