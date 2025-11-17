@@ -263,7 +263,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPLoopConstruct &x) {
   }
 
   if (CurrentDirectiveIsNested() &&
-      llvm::omp::allTeamsSet.test(GetContext().directive) &&
+      llvm::omp::topTeamsSet.test(GetContext().directive) &&
       GetContextParent().directive == llvm::omp::Directive::OMPD_target &&
       !GetDirectiveNest(TargetBlockOnlyTeams)) {
     context_.Say(GetContextParent().directiveSource,
