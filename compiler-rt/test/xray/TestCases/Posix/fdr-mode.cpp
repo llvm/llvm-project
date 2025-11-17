@@ -10,11 +10,13 @@
 // RUN:     verbosity=1" \
 // RUN: env XRAY_FDR_OPTIONS="func_duration_threshold_us=5000" \
 // RUN:     %run %t 2>&1 | FileCheck %s
+// RUN: ls fdr-logging-test-* | head -1 | tr -d '\n' > %t.log
 // RUN: %llvm_xray convert --symbolize --output-format=yaml -instr_map=%t \
-// RUN:     "`ls fdr-logging-test-* | head -1`" \
+// RUN:     "%{readfile:%t.log}" \
 // RUN:     | FileCheck %s --check-prefix=TRACE
+// RUN: ls fdr-unwrite-test-* | head -1 | tr -d '\n' > %t.log
 // RUN: %llvm_xray convert --symbolize --output-format=yaml -instr_map=%t \
-// RUN:     "`ls fdr-unwrite-test-* | head -1`" \
+// RUN:     "%{readfile:%t.log}" \
 // RUN:     | FileCheck %s --check-prefix=UNWRITE
 // RUN: rm fdr-logging-test-*
 // RUN: rm fdr-unwrite-test-*
