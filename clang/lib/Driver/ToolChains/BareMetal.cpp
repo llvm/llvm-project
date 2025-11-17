@@ -420,13 +420,12 @@ void BareMetal::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
       llvm::sys::path::append(Dir, M.includeSuffix());
       llvm::sys::path::append(Dir, "include");
       addSystemInclude(DriverArgs, CC1Args, Dir.str());
-
-      Dir = SysRootDir;
-      llvm::sys::path::append(Dir, getTripleString());
-      if (D.getVFS().exists(Dir)) {
-        llvm::sys::path::append(Dir, "include");
-        addSystemInclude(DriverArgs, CC1Args, Dir.str());
-      }
+    }
+    SmallString<128> Dir = SysRootDir;
+    llvm::sys::path::append(Dir, getTripleString());
+    if (D.getVFS().exists(Dir)) {
+      llvm::sys::path::append(Dir, "include");
+      addSystemInclude(DriverArgs, CC1Args, Dir.str());
     }
   }
 }
