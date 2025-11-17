@@ -1,19 +1,22 @@
 add_custom_target(OpenMPUnitTests)
 set_target_properties(OpenMPUnitTests PROPERTIES FOLDER "OpenMP/Tests")
 
-if (NOT TARGET llvm_gtest)
+if(NOT TARGET llvm_gtest)
   message(WARNING "OpenMP unittests disabled due to GTest being unavailable; "
                   "Try LLVM_INSTALL_GTEST=ON for the LLVM build")
-  return ()
-endif ()
+  return()
+endif()
+if(NOT TARGET omp_testing)
+  message(WARNING "OpenMP unittests disabled due to omp_testing library being unavailable")
+  return()
+endif()
 
 function(add_openmp_unittest test_dirname)
   add_unittest(OpenMPUnitTests ${test_dirname} ${ARGN})
 
-  # Link against the object library created in runtime/src
-  target_link_libraries(${test_dirname} PRIVATE
-    $<TARGET_OBJECTS:omp_objects>
-  )
+  # Link against the testing library which exports all symbols.
+  target_link_libraries(${test_dirname} PRIVATE omp_testing)
+  add_dependencies(${test_dirname} omp_testing)
 
   target_include_directories(${test_dirname} PRIVATE
     ${LIBOMP_INCLUDE_DIR}

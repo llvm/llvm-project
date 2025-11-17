@@ -176,17 +176,19 @@ endif()
 # Add the OpenMP library
 
 # First, create an OBJECT library with all the runtime sources.
-# This allows both the main library and unit tests to link against the same compiled objects.
+# This allows both the main library and unit tests to link against the same
+# compiled objects.
 add_library(omp_objects OBJECT ${LIBOMP_SOURCE_FILES})
 set_property(TARGET omp_objects PROPERTY FOLDER "OpenMP/Libraries")
 set_property(TARGET omp_objects PROPERTY POSITION_INDEPENDENT_CODE ON)
-# Export the omp_objects target so unittests can use it
+# Export the omp_objects target so unit tests can use it
 set(LIBOMP_OBJECTS_TARGET omp_objects PARENT_SCOPE)
 
 libomp_get_ldflags(LIBOMP_CONFIGURED_LDFLAGS)
-
 libomp_get_libflags(LIBOMP_CONFIGURED_LIBFLAGS)
-# Build libomp library. Add LLVMSupport dependency if building in-tree with libomptarget profiling enabled.
+
+# Build libomp library. Add LLVMSupport dependency if building in-tree with
+# libomptarget profiling enabled.
 if(OPENMP_STANDALONE_BUILD OR (NOT OPENMP_ENABLE_LIBOMP_PROFILING))
   add_library(omp ${LIBOMP_LIBRARY_KIND} $<TARGET_OBJECTS:omp_objects>)
   set_property(TARGET omp PROPERTY FOLDER "OpenMP/Libraries")
@@ -207,6 +209,31 @@ if(${LIBOMP_USE_HWLOC})
 			     "$<BUILD_INTERFACE:${LIBOMP_HWLOC_INCLUDE_DIR}>"
 			     "$<INSTALL_INTERFACE:${LIBOMP_HWLOC_INCLUDE_DIR}>"
   )
+endif()
+
+# Build a testing version of libomp that exports all symbols for unit tests.
+# This library uses the same compiled objects as libomp, but with all symbols
+# exported to allow testing internal functions.
+if(NOT WIN32 AND NOT STUBS_LIBRARY)
+  set(LIBOMP_TEST_LDFLAGS ${LIBOMP_CONFIGURED_LDFLAGS})
+  # Replace the libomp exports with the test exports exporting all symbols.
+  if(LIBOMP_HAVE_VERSION_SCRIPT_FLAG)
+    string(REPLACE "${LIBOMP_SRC_DIR}/exports_so.txt"
+                   "${LIBOMP_SRC_DIR}/exports_test_so.txt"
+                   LIBOMP_TEST_LDFLAGS "${LIBOMP_TEST_LDFLAGS}")
+  endif()
+
+  # Create the testing library from the same objects as libomp.
+  add_library(omp_testing SHARED $<TARGET_OBJECTS:omp_objects>)
+  set_property(TARGET omp_testing PROPERTY FOLDER "OpenMP/Libraries")
+  target_link_libraries(omp_testing ${LIBOMP_CONFIGURED_LIBFLAGS} ${LIBOMP_DL_LIBS})
+  set_target_properties(omp_testing PROPERTIES
+    PREFIX "" SUFFIX "" OUTPUT_NAME "libomp_testing${LIBOMP_LIBRARY_SUFFIX}"
+    LINK_FLAGS "${LIBOMP_TEST_LDFLAGS}"
+    LINKER_LANGUAGE ${LIBOMP_LINKER_LANGUAGE}
+    EXCLUDE_FROM_ALL TRUE  # Don't build by default, only when tests need it
+  )
+  add_dependencies(omp_testing libomp-needed-headers)
 endif()
 
 if(OPENMP_MSVC_NAME_SCHEME)
