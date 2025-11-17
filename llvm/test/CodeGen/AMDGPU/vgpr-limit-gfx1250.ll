@@ -575,5 +575,5 @@ define amdgpu_kernel void @use1024vgprs_codegen(ptr %p) #1281 {
   ret void
 }
 
-attributes #2561 = { nounwind "amdgpu-flat-work-group-size"="256,256" "amdgpu-waves-per-eu"="1" }
-attributes #1281 = { nounwind "amdgpu-flat-work-group-size"="128,128" "amdgpu-waves-per-eu"="1" }
+attributes #2561 = { nounwind "amdgpu-flat-work-group-size"="256,256" }
+attributes #1281 = { nounwind "amdgpu-flat-work-group-size"="128,128" }
