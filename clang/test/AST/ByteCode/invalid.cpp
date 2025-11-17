@@ -106,4 +106,8 @@ namespace InvalidBitCast {
       return ((sockaddr_in *)&addr)->sin_addr.s_addr;
   }
 
+
+  struct s { int a; int b[1]; };
+  struct s myx;
+  int *myy = ((struct s *)&myx.a)->b;
 }

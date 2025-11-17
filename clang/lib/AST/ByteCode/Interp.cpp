@@ -1448,6 +1448,10 @@ static bool getField(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
     return false;
   }
 
+  // We can't get the field of something that's not a record.
+  if (!Ptr.getFieldDesc()->isRecord())
+    return false;
+
   if ((Ptr.getByteOffset() + Off) >= Ptr.block()->getSize())
     return false;
 
