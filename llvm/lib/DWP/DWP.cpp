@@ -430,7 +430,7 @@ void writeStringsAndOffsets(MCStreamer &Out, DWPStringPool &Strings,
                             StringRef CurStrSection,
                             StringRef CurStrOffsetSection, uint16_t Version,
                             SectionLengths &SectionLength,
-                            const bool ForceDwarf64StringOffsets) {
+                            const Dwarf64StrOffsets StrOffsetsOptValue) {
   // Could possibly produce an error or warning if one of these was non-null but
   // the other was null.
   if (CurStrSection.empty() || CurStrOffsetSection.empty())
@@ -444,15 +444,19 @@ void writeStringsAndOffsets(MCStreamer &Out, DWPStringPool &Strings,
 
   // Keep track if any new string offsets exceed UINT32_MAX. If any do, we can
   // emit a DWARF64 .debug_str_offsets table for this compile unit. If the
-  // \a ForceDwarf64StringOffsets argument is true, then force the emission of
-  // DWARF64 .debug_str_offsets for testing.
+  // \a StrOffsetsOptValue argument is Dwarf64StrOffsets::Always, then force
+  // the emission of DWARF64 .debug_str_offsets for testing.
   uint32_t OldOffsetSize = 4;
-  uint32_t NewOffsetSize = ForceDwarf64StringOffsets ? 8 : 4;
+  uint32_t NewOffsetSize =
+      StrOffsetsOptValue == Dwarf64StrOffsets::Always ? 8 : 4;
   while (const char *S = Data.getCStr(&LocalOffset)) {
     uint64_t NewOffset = Strings.getOffset(S, LocalOffset - PrevOffset);
     OffsetRemapping[PrevOffset] = NewOffset;
-    if (NewOffset > UINT32_MAX)
+    // Only promote the .debug_str_offsets to DWARF64 if our setting allows it.
+    if (StrOffsetsOptValue != Dwarf64StrOffsets::Disabled &&
+        NewOffset > UINT32_MAX) {
       NewOffsetSize = 8;
+    }
     PrevOffset = LocalOffset;
   }
 
@@ -670,7 +674,7 @@ Error handleSection(
 
 Error write(MCStreamer &Out, ArrayRef<std::string> Inputs,
             OnCuIndexOverflow OverflowOptValue,
-            bool ForceDwarf64StringOffsets) {
+            Dwarf64StrOffsets StrOffsetsOptValue) {
   const auto &MCOFI = *Out.getContext().getObjectFileInfo();
   MCSection *const StrSection = MCOFI.getDwarfStrDWOSection();
   MCSection *const StrOffsetSection = MCOFI.getDwarfStrOffDWOSection();
@@ -764,7 +768,7 @@ Error write(MCStreamer &Out, ArrayRef<std::string> Inputs,
 
     writeStringsAndOffsets(Out, Strings, StrOffsetSection, CurStrSection,
                            CurStrOffsetSection, Header.Version, SectionLength,
-                           ForceDwarf64StringOffsets);
+                           StrOffsetsOptValue);
 
     for (auto Pair : SectionLength) {
       auto Index = getContributionIndex(Pair.first, IndexVersion);

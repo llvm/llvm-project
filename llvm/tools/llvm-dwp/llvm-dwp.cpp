@@ -73,7 +73,6 @@ public:
 static std::vector<std::string> ExecFilenames;
 static std::string OutputFilename;
 static std::string ContinueOption;
-static bool ForceDwarf64StringOffsets = false;
 
 static Expected<SmallVector<std::string, 16>>
 getDWOFilenames(StringRef ExecFilename) {
@@ -126,6 +125,8 @@ int llvm_dwp_main(int argc, char **argv, const llvm::ToolContext &) {
   llvm::BumpPtrAllocator A;
   llvm::StringSaver Saver{A};
   OnCuIndexOverflow OverflowOptValue = OnCuIndexOverflow::HardStop;
+  Dwarf64StrOffsets Dwarf64StrOffsetsValue = Dwarf64StrOffsets::Disabled;
+
   opt::InputArgList Args =
       Tbl.parseArgs(argc, argv, OPT_UNKNOWN, Saver, [&](StringRef Msg) {
         llvm::errs() << Msg << '\n';
@@ -161,8 +162,26 @@ int llvm_dwp_main(int argc, char **argv, const llvm::ToolContext &) {
       }
     }
   }
-  if (Args.getLastArg(OPT_forceDwarf64StringOffsets))
-    ForceDwarf64StringOffsets = true;
+
+  if (Arg *Arg = Args.getLastArg(OPT_dwarf64StringOffsets,
+                                 OPT_dwarf64StringOffsets_EQ)) {
+    if (Arg->getOption().matches(OPT_dwarf64StringOffsets)) {
+      Dwarf64StrOffsetsValue = Dwarf64StrOffsets::Enabled;
+    } else {
+      std::string OptValue = Arg->getValue();
+      if (OptValue == "disabled") {
+        Dwarf64StrOffsetsValue = Dwarf64StrOffsets::Disabled;
+      } else if (OptValue == "enabled") {
+        Dwarf64StrOffsetsValue = Dwarf64StrOffsets::Enabled;
+      } else if (OptValue == "always") {
+        Dwarf64StrOffsetsValue = Dwarf64StrOffsets::Always;
+      } else {
+        llvm::errs() << "invalid value for --dwarf64-str-offsets. Valid values "
+            "are one of: \"enabled\", \"disabled\" or \"always\".\n";
+        exit(1);
+      }
+    }
+  }
 
   for (const llvm::opt::Arg *A : Args.filtered(OPT_execFileNames))
     ExecFilenames.emplace_back(A->getValue());
@@ -278,7 +297,7 @@ int llvm_dwp_main(int argc, char **argv, const llvm::ToolContext &) {
     return error("no object streamer for target " + TripleName, Context);
 
   if (auto Err = write(*MS, DWOFilenames, OverflowOptValue,
-                       ForceDwarf64StringOffsets)) {
+                       Dwarf64StrOffsetsValue)) {
     logAllUnhandledErrors(std::move(Err), WithColor::error());
     return 1;
   }
