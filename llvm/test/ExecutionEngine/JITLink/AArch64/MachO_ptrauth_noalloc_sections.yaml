@@ -16,6 +16,7 @@
 # CHECK: llvm-jitlink error: {{.*}} unsupported edge kind Pointer64Authenticated
 
 --- !mach-o
+IsLittleEndian: true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x100000C
