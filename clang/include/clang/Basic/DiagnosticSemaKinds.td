@@ -3465,6 +3465,8 @@ def note_returned_not_integer_field
 def note_returned_not_wide_enough_field
     : Note<"integer field #%0 of span-like type is not wide enough (minimum "
            "width: %1)">;
+def note_inherits_not_empty_base
+    : Note<"returned struct/class inherits from a non-empty base">;
 def warn_attribute_return_pointers_refs_only : Warning<
   "%0 attribute only applies to return values that are pointers or references">,
   InGroup<IgnoredAttributes>;
