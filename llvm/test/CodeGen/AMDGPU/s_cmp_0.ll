@@ -28,8 +28,7 @@ define amdgpu_ps i32 @shl32_eq(i32 inreg %val0, i32 inreg %val1) {
 ; CHECK-LABEL: shl32_eq:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_lshl_b32 s0, s0, 1
-; CHECK-NEXT:    s_cmp_eq_u32 s0, 0
-; CHECK-NEXT:    s_cselect_b32 s0, s1, 0
+; CHECK-NEXT:    s_cselect_b32 s0, 0, s1
 ; CHECK-NEXT:    ; return to shader part epilog
   %result = shl i32 %val0, 1
   %cmp = icmp eq i32 %result, 0
