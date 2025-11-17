@@ -1,4 +1,4 @@
-//===-- Implementation header for wcstombs --------------------------------===//
+//===-- Implementation header for mbstowcs --------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_WCHAR_WCSTOMBS_H
-#define LLVM_LIBC_SRC_WCHAR_WCSTOMBS_H
+#ifndef LLVM_LIBC_SRC_STDLIB_MBSTOWCS_H
+#define LLVM_LIBC_SRC_STDLIB_MBSTOWCS_H
 
 #include "hdr/types/size_t.h"
 #include "hdr/types/wchar_t.h"
@@ -15,8 +15,8 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-size_t wcstombs(char *__restrict s, const wchar_t *__restrict pwcs, size_t n);
+size_t mbstowcs(wchar_t *__restrict pwcs, const char *__restrict s, size_t n);
 
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC_WCHAR_WCSTOMBS_H
+#endif // LLVM_LIBC_SRC_STDLIB_MBSTOWCS_H
