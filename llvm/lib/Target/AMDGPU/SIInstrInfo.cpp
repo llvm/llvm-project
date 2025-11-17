@@ -3460,6 +3460,21 @@ void SIInstrInfo::removeModOperands(MachineInstr &MI) const {
   }
 }
 
+void SIInstrInfo::mutateAndCleanupImplicit(MachineInstr &MI,
+                                           const MCInstrDesc &NewDesc) const {
+  MI.setDesc(NewDesc);
+
+  // Remove any leftover implicit operands from mutating the instruction. e.g.
+  // if we replace an s_and_b32 with a copy, we don't need the implicit scc def
+  // anymore.
+  const MCInstrDesc &Desc = MI.getDesc();
+  unsigned NumOps = Desc.getNumOperands() + Desc.implicit_uses().size() +
+                    Desc.implicit_defs().size();
+
+  for (unsigned I = MI.getNumOperands() - 1; I >= NumOps; --I)
+    MI.removeOperand(I);
+}
+
 std::optional<int64_t> SIInstrInfo::extractSubregFromImm(int64_t Imm,
                                                          unsigned SubRegIndex) {
   switch (SubRegIndex) {
@@ -8177,26 +8192,34 @@ void SIInstrInfo::moveToVALUImpl(SIInstrWorklist &Worklist,
       return;
     }
 
-    if (Inst.isCopy() && Inst.getOperand(1).getReg().isVirtual() &&
-        NewDstRC == RI.getRegClassForReg(MRI, Inst.getOperand(1).getReg())) {
-      // Instead of creating a copy where src and dst are the same register
-      // class, we just replace all uses of dst with src.  These kinds of
-      // copies interfere with the heuristics MachineSink uses to decide
-      // whether or not to split a critical edge.  Since the pass assumes
-      // that copies will end up as machine instructions and not be
-      // eliminated.
-      addUsersToMoveToVALUWorklist(DstReg, MRI, Worklist);
+    if (Inst.isCopy() && Inst.getOperand(1).getReg().isVirtual()) {
       Register NewDstReg = Inst.getOperand(1).getReg();
-      MRI.replaceRegWith(DstReg, NewDstReg);
-      MRI.clearKillFlags(NewDstReg);
-      Inst.getOperand(0).setReg(DstReg);
-      Inst.eraseFromParent();
-      // Legalize t16 operand since replaceReg is called after addUsersToVALU
-      for (MachineOperand &MO :
-           make_early_inc_range(MRI.use_operands(NewDstReg))) {
-        legalizeOperandsVALUt16(*MO.getParent(), MRI);
+      const TargetRegisterClass *SrcRC = RI.getRegClassForReg(MRI, NewDstReg);
+      if (const TargetRegisterClass *CommonRC =
+              RI.getCommonSubClass(NewDstRC, SrcRC)) {
+        // Instead of creating a copy where src and dst are the same register
+        // class, we just replace all uses of dst with src.  These kinds of
+        // copies interfere with the heuristics MachineSink uses to decide
+        // whether or not to split a critical edge.  Since the pass assumes
+        // that copies will end up as machine instructions and not be
+        // eliminated.
+        addUsersToMoveToVALUWorklist(DstReg, MRI, Worklist);
+        MRI.replaceRegWith(DstReg, NewDstReg);
+        MRI.clearKillFlags(NewDstReg);
+        Inst.getOperand(0).setReg(DstReg);
+
+        if (!MRI.constrainRegClass(NewDstReg, CommonRC))
+          llvm_unreachable("failed to constrain register");
+
+        Inst.eraseFromParent();
+        // Legalize t16 operand since replaceReg is called after addUsersToVALU
+        for (MachineOperand &MO :
+             make_early_inc_range(MRI.use_operands(NewDstReg))) {
+          legalizeOperandsVALUt16(*MO.getParent(), MRI);
+        }
+
+        return;
       }
-      return;
     }
 
     // If this is a v2s copy between 16bit and 32bit reg,

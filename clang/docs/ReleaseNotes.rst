@@ -69,6 +69,8 @@ Potentially Breaking Changes
   call the member ``operator delete`` instead of the expected global
   delete operator. The old behavior is retained under ``-fclang-abi-compat=21``
   flag.
+- Clang warning suppressions file, ``--warning-suppression-mappings=``, now will
+  use the last matching entry instead of the longest one.
 - Trailing null statements in GNU statement expressions are no longer
   ignored by Clang; they now result in a void type. Clang previously
   matched GCC's behavior, which was recently clarified to be incorrect.
@@ -310,6 +312,10 @@ Non-comprehensive list of changes in this release
   allocator-level heap organization strategies. A feature to instrument all
   allocation functions with a token ID can be enabled via the
   ``-fsanitize=alloc-token`` flag.
+ 
+- A new generic byte swap builtin function ``__builtin_bswapg`` that extends the existing 
+  __builtin_bswap{16,32,64} function family to support all standard integer types.
+
 - A builtin ``__builtin_infer_alloc_token(<args>, ...)`` is provided to allow
   compile-time querying of allocation token IDs, where the builtin arguments
   mirror those normally passed to an allocation function.
