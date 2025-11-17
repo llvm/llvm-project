@@ -162,7 +162,7 @@ public:
       return;
     }
     derived().deallocateBuckets();
-    derived().init(NewNumBuckets);
+    initWithExactBucketCount(NewNumBuckets);
   }
 
   /// Return true if the specified key is in the map, false otherwise.
@@ -755,9 +755,9 @@ class DenseMap : public DenseMapBase<DenseMap<KeyT, ValueT, KeyInfoT, BucketT>,
 public:
   /// Create a DenseMap with an optional \p NumElementsToReserve to guarantee
   /// that this number of elements can be inserted in the map without grow().
-  explicit DenseMap(unsigned NumElementsToReserve = 0) {
-    init(NumElementsToReserve);
-  }
+  explicit DenseMap(unsigned NumElementsToReserve = 0)
+      : DenseMap(BaseT::getMinBucketToReserveForEntries(NumElementsToReserve),
+                 typename BaseT::ExactBucketCount{}) {}
 
   DenseMap(const DenseMap &other) : DenseMap() { this->copyFrom(other); }
 
@@ -789,7 +789,7 @@ public:
   DenseMap &operator=(DenseMap &&other) {
     this->destroyAll();
     deallocateBuckets();
-    init(0);
+    this->initWithExactBucketCount(0);
     this->swap(other);
     return *this;
   }
@@ -828,11 +828,6 @@ private:
     Buckets = static_cast<BucketT *>(
         allocate_buffer(sizeof(BucketT) * NumBuckets, alignof(BucketT)));
     return true;
-  }
-
-  void init(unsigned InitNumEntries) {
-    auto InitBuckets = BaseT::getMinBucketToReserveForEntries(InitNumEntries);
-    this->initWithExactBucketCount(InitBuckets);
   }
 
   // Put the zombie instance in a known good state after a move.
@@ -902,9 +897,10 @@ class SmallDenseMap
   }
 
 public:
-  explicit SmallDenseMap(unsigned NumElementsToReserve = 0) {
-    init(NumElementsToReserve);
-  }
+  explicit SmallDenseMap(unsigned NumElementsToReserve = 0)
+      : SmallDenseMap(
+            BaseT::getMinBucketToReserveForEntries(NumElementsToReserve),
+            typename BaseT::ExactBucketCount{}) {}
 
   SmallDenseMap(const SmallDenseMap &other) : SmallDenseMap() {
     this->copyFrom(other);
@@ -939,7 +935,7 @@ public:
   SmallDenseMap &operator=(SmallDenseMap &&other) {
     this->destroyAll();
     deallocateBuckets();
-    init(0);
+    this->initWithExactBucketCount(0);
     this->swap(other);
     return *this;
   }
@@ -1093,11 +1089,6 @@ private:
       new (getLargeRep()) LargeRep{NewBuckets, Num};
     }
     return true;
-  }
-
-  void init(unsigned InitNumEntries) {
-    auto InitBuckets = BaseT::getMinBucketToReserveForEntries(InitNumEntries);
-    this->initWithExactBucketCount(InitBuckets);
   }
 
   // Put the zombie instance in a known good state after a move.
