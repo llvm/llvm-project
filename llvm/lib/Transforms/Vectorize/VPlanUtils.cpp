@@ -368,6 +368,36 @@ vputils::getRecipesForUncountableExit(VPlan &Plan,
   return UncountableCondition;
 }
 
+VPSingleDefRecipe *vputils::getSingleScalarClone(VPSingleDefRecipe *R) {
+  return TypeSwitch<VPSingleDefRecipe *, VPSingleDefRecipe *>(R)
+      .Case<VPInstruction, VPWidenRecipe, VPWidenSelectRecipe,
+            VPWidenCallRecipe, VPReplicateRecipe>([](auto *I) {
+        assert(I->getUnderlyingValue() &&
+               "Cannot narrow recipe without underlying value");
+        return new VPReplicateRecipe(I->getUnderlyingInstr(), I->operands(),
+                                     /*IsSingleScalar*/ true,
+                                     /*Mask*/ nullptr,
+                                     /*Metadata*/ *I);
+      })
+      .Case<VPWidenGEPRecipe>([](auto *I) {
+        assert(I->getUnderlyingValue() &&
+               "Cannot narrow recipe without underlying value");
+        // WidenGEP does not have metadata.
+        return new VPReplicateRecipe(I->getUnderlyingInstr(), I->operands(),
+                                     /*IsSingleScalar*/ true, /*Mask*/ nullptr);
+      })
+      .Case<VPWidenCastRecipe>([](auto *I) {
+        return new VPInstructionWithType(I->getOpcode(), I->operands(),
+                                         I->getResultType(), I->getDebugLoc(),
+                                         /*Flags*/ *I, /*Metadata*/ *I);
+      })
+      .Default([](auto *I) {
+        assert(isa<VPScalarIVStepsRecipe>(I) &&
+               "Don't know how to convert to single-scalar");
+        return I->clone();
+      });
+}
+
 bool VPBlockUtils::isHeader(const VPBlockBase *VPB,
                             const VPDominatorTree &VPDT) {
   auto *VPBB = dyn_cast<VPBasicBlock>(VPB);
