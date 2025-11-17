@@ -421,13 +421,12 @@ void VPPartialReductionRecipe::execute(VPTransformState &State) {
   }
 
   assert(getOpcode() == Instruction::Add || getOpcode() == Instruction::FAdd);
-  llvm::Intrinsic::IndependentIntrinsics PRIntrinsic =
+  Intrinsic::IndependentIntrinsics PRIntrinsic =
       getOpcode() == Instruction::Add ? Intrinsic::vector_partial_reduce_add
                                       : Intrinsic::vector_partial_reduce_fadd;
 
-  CallInst *V =
-      Builder.CreateIntrinsic(RetTy, PRIntrinsic,
-                              {PhiVal, BinOpVal}, nullptr, "partial.reduce");
+  CallInst *V = Builder.CreateIntrinsic(RetTy, PRIntrinsic, {PhiVal, BinOpVal},
+                                        nullptr, "partial.reduce");
 
   State.set(this, V);
 }
