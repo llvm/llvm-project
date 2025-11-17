@@ -126,7 +126,7 @@ jobs:
         with:
           name: workflow-args
           path: |
-            comments
+            comment
 
   premerge-checks-windows:
     name: Build and Test Windows
