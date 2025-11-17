@@ -1712,12 +1712,10 @@ void computeCalleeSaveRegisterPairs(const AArch64FrameLowering &AFL,
   // NOTE: we currently do not account for the D registers as LLVM does not
   // support non-ABI compliant D register spills.
   bool SpillExtendedVolatile =
-      IsWindows && std::any_of(std::begin(CSI), std::end(CSI),
-                               [](const CalleeSavedInfo &CSI) {
-                                 const auto &Reg = CSI.getReg();
-                                 return Reg >= AArch64::X0 &&
-                                        Reg <= AArch64::X18;
-                               });
+      IsWindows && llvm::any_of(CSI, [](const CalleeSavedInfo &CSI) {
+        const auto &Reg = CSI.getReg();
+        return Reg >= AArch64::X0 && Reg <= AArch64::X18;
+      });
 
   int ZPRByteOffset = 0;
   int PPRByteOffset = 0;

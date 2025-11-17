@@ -1442,18 +1442,16 @@ define <4 x i8> @test_select(<4 x i8> %a, <4 x i8> %b, i1 zeroext %c) #0 {
 ; O3:       {
 ; O3-NEXT:    .reg .pred %p<2>;
 ; O3-NEXT:    .reg .b16 %rs<3>;
-; O3-NEXT:    .reg .b32 %r<2>;
-; O3-NEXT:    .reg .b64 %rd<4>;
+; O3-NEXT:    .reg .b32 %r<4>;
 ; O3-EMPTY:
 ; O3-NEXT:  // %bb.0:
 ; O3-NEXT:    ld.param.b8 %rs1, [test_select_param_2];
 ; O3-NEXT:    and.b16 %rs2, %rs1, 1;
 ; O3-NEXT:    setp.ne.b16 %p1, %rs2, 0;
-; O3-NEXT:    mov.b64 %rd1, test_select_param_1;
-; O3-NEXT:    mov.b64 %rd2, test_select_param_0;
-; O3-NEXT:    selp.b64 %rd3, %rd2, %rd1, %p1;
-; O3-NEXT:    ld.param.b32 %r1, [%rd3];
-; O3-NEXT:    st.param.b32 [func_retval0], %r1;
+; O3-NEXT:    ld.param.b32 %r1, [test_select_param_0];
+; O3-NEXT:    ld.param.b32 %r2, [test_select_param_1];
+; O3-NEXT:    selp.b32 %r3, %r1, %r2, %p1;
+; O3-NEXT:    st.param.b32 [func_retval0], %r3;
 ; O3-NEXT:    ret;
   %r = select i1 %c, <4 x i8> %a, <4 x i8> %b
   ret <4 x i8> %r
