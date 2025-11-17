@@ -69,11 +69,4 @@
 // RUN:   %s 2>&1 | FileCheck -check-prefix=CC1 %s
 
 // CC1: "-cc1" {{.*}}"-mcode-object-version=5" {{.*}}"-mllvm" "--amdhsa-code-object-version=5"
-// CC1: "-cc1as" {{.*}}"-mllvm" "--amdhsa-code-object-version=5"
-
-// RUN: not %clang -### --target=x86_64-linux-gnu \
-// RUN:   -mcode-object-version=5 \
-// RUN:   --offload-arch=gfx906 --rocm-path=%S/Inputs/rocm -save-temps \
-// RUN:   %s 2>&1 | FileCheck -check-prefix=CC1NEG %s
-
-// CC1NEG-NOT: "-cc1as" {{.*}}"-mcode-object-version=5"
+// CC1: clang-linker-wrapper{{.*}}"--device-compiler=amdgcn-amd-amdhsa=-mcode-object-version=5"
