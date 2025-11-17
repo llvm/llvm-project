@@ -19167,24 +19167,31 @@ static SDValue LowerFLDEXP(SDValue Op, const X86Subtarget &Subtarget,
   default:
     return SDValue();
   case MVT::f16:
-    if (!Subtarget.hasFP16()) {
-      X = DAG.getNode(ISD::FP_EXTEND, DL, MVT::f32, X);
-    }
-    break;
+    if (!Subtarget.hasFP16())
+      X = DAG.getFPExtendOrRound(X, DL, MVT::f32);
+    [[fallthrough]];
   case MVT::f32:
-  case MVT::f64:
-    break;
+  case MVT::f64: {
+    MVT VT = MVT::getVectorVT(X.getSimpleValueType(),
+                              128 / X.getSimpleValueType().getSizeInBits());
+    Exp = DAG.getNode(ISD::SINT_TO_FP, DL, X.getValueType(), Exp);
+    SDValue VX = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VT, X);
+    SDValue VExp = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VT, Exp);
+    SDValue Scalefs = DAG.getNode(X86ISD::SCALEFS, DL, VT, VX, VExp, VX);
+    SDValue Final = DAG.getExtractVectorElt(DL, X.getValueType(), Scalefs, 0);
+    if (X.getValueType() != XTy)
+      Final = DAG.getFPExtendOrRound(Final, DL, XTy);
+    return Final;
+  }
   case MVT::v4f32:
   case MVT::v2f64:
   case MVT::v8f32:
   case MVT::v4f64:
   case MVT::v16f32:
   case MVT::v8f64:
-    if (XTy.getSizeInBits() == 512 || Subtarget.hasVLX()) {
-      Exp = DAG.getNode(ISD::SINT_TO_FP, DL, XTy, Exp);
+    Exp = DAG.getNode(ISD::SINT_TO_FP, DL, XTy, Exp);
+    if (XTy.getSizeInBits() == 512 || Subtarget.hasVLX())
       return DAG.getNode(X86ISD::SCALEF, DL, XTy, X, Exp, X);
-    }
-    Exp = DAG.getNode(ISD::SINT_TO_FP, DL, X.getValueType(), Exp);
     break;
   case MVT::v8f16:
   case MVT::v16f16:
@@ -19196,8 +19203,8 @@ static SDValue LowerFLDEXP(SDValue Op, const X86Subtarget &Subtarget,
       break;
     }
     ExtVT = XTy.changeVectorElementType(MVT::f32);
-    X = DAG.getNode(ISD::FP_EXTEND, DL, ExtVT, X);
-    Exp = DAG.getNode(ISD::SIGN_EXTEND, DL, ExtVT.changeTypeToInteger(), Exp);
+    X = DAG.getFPExtendOrRound(X, DL, ExtVT);
+    Exp = DAG.getSExtOrTrunc(Exp, DL, ExtVT.changeTypeToInteger());
     break;
   case MVT::v32f16:
     if (Subtarget.hasFP16()) {
@@ -19207,35 +19214,20 @@ static SDValue LowerFLDEXP(SDValue Op, const X86Subtarget &Subtarget,
     return splitVectorOp(Op, DAG, DL);
   }
 
-  if (XTy.isVector()) {
-    SDValue WideX = widenSubVector(X, true, Subtarget, DAG, DL, 512);
-    SDValue WideExp = widenSubVector(Exp, true, Subtarget, DAG, DL, 512);
-    if (XTy.getScalarType() == MVT::f16 && !Subtarget.hasFP16()) {
-      WideExp =
-          DAG.getNode(ISD::SINT_TO_FP, DL, WideX.getSimpleValueType(), WideExp);
-      SDValue Scalef = DAG.getNode(X86ISD::SCALEF, DL, WideX.getValueType(),
-                                   WideX, WideExp, WideX);
-      SDValue Final =
-          DAG.getExtractSubvector(DL, X.getSimpleValueType(), Scalef, 0);
-      return DAG.getNode(ISD::FP_ROUND, DL, XTy, Final,
-                         DAG.getTargetConstant(0, DL, MVT::i32));
-    }
+  SDValue WideX = widenSubVector(X, true, Subtarget, DAG, DL, 512);
+  SDValue WideExp = widenSubVector(Exp, true, Subtarget, DAG, DL, 512);
+  if (X.getValueType() != XTy) {
+    WideExp =
+        DAG.getNode(ISD::SINT_TO_FP, DL, WideX.getSimpleValueType(), WideExp);
     SDValue Scalef = DAG.getNode(X86ISD::SCALEF, DL, WideX.getValueType(),
                                  WideX, WideExp, WideX);
-    return DAG.getExtractSubvector(DL, XTy, Scalef, 0);
-  } else {
-    MVT VT = MVT::getVectorVT(X.getSimpleValueType(),
-                              128 / X.getSimpleValueType().getSizeInBits());
-    Exp = DAG.getNode(ISD::SINT_TO_FP, DL, X.getValueType(), Exp);
-    SDValue VX = DAG.getInsertVectorElt(DL, DAG.getUNDEF(VT), X, 0);
-    SDValue VExp = DAG.getInsertVectorElt(DL, DAG.getUNDEF(VT), Exp, 0);
-    SDValue Scalefs = DAG.getNode(X86ISD::SCALEFS, DL, VT, VX, VExp, VX);
-    SDValue Final = DAG.getExtractVectorElt(DL, X.getValueType(), Scalefs, 0);
-    if (X.getValueType() != XTy)
-      Final = DAG.getNode(ISD::FP_ROUND, DL, XTy, Final,
-                          DAG.getTargetConstant(0, DL, MVT::i32));
-    return Final;
+    SDValue Final =
+        DAG.getExtractSubvector(DL, X.getSimpleValueType(), Scalef, 0);
+    return DAG.getFPExtendOrRound(Final, DL, XTy);
   }
+  SDValue Scalef = DAG.getNode(X86ISD::SCALEF, DL, WideX.getValueType(), WideX,
+                               WideExp, WideX);
+  return DAG.getExtractSubvector(DL, XTy, Scalef, 0);
 }
 
 static SDValue LowerSCALAR_TO_VECTOR(SDValue Op, const X86Subtarget &Subtarget,
