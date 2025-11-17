@@ -357,9 +357,9 @@ MipsTargetLowering::MipsTargetLowering(const MipsTargetMachine &TM,
   setOperationAction(ISD::FCOPYSIGN,          MVT::f64,   Custom);
   setOperationAction(ISD::FP_TO_SINT,         MVT::i32,   Custom);
 
-  setOperationAction(ISD::STRICT_FSETCC,  MVT::f32, Custom);
+  setOperationAction(ISD::STRICT_FSETCC, MVT::f32, Custom);
   setOperationAction(ISD::STRICT_FSETCCS, MVT::f32, Custom);
-  setOperationAction(ISD::STRICT_FSETCC,  MVT::f64, Custom);
+  setOperationAction(ISD::STRICT_FSETCC, MVT::f64, Custom);
   setOperationAction(ISD::STRICT_FSETCCS, MVT::f64, Custom);
 
   if (Subtarget.hasMips32r2() ||
@@ -666,8 +666,8 @@ static bool invertFPCondCodeUser(Mips::CondCode CC) {
 // Returns Op if setcc is not a floating point comparison.
 static SDValue createFPCmp(SelectionDAG &DAG, const SDValue &Op) {
   // must be a SETCC node
-  if (Op.getOpcode() != ISD::SETCC && Op.getOpcode() != ISD::STRICT_FSETCC 
-                                   && Op.getOpcode() != ISD::STRICT_FSETCCS)
+  if (Op.getOpcode() != ISD::SETCC && Op.getOpcode() != ISD::STRICT_FSETCC &&
+      Op.getOpcode() != ISD::STRICT_FSETCCS)
     return Op;
 
   SDValue LHS = Op.getOperand(0);
@@ -1345,7 +1345,8 @@ LowerOperation(SDValue Op, SelectionDAG &DAG) const
   case ISD::SELECT:             return lowerSELECT(Op, DAG);
   case ISD::SETCC:              return lowerSETCC(Op, DAG);
   case ISD::STRICT_FSETCC:
-  case ISD::STRICT_FSETCCS:			return lowerFSETCC(Op, DAG);
+  case ISD::STRICT_FSETCCS:
+    return lowerFSETCC(Op, DAG);
   case ISD::VASTART:            return lowerVASTART(Op, DAG);
   case ISD::VAARG:              return lowerVAARG(Op, DAG);
   case ISD::FCOPYSIGN:          return lowerFCOPYSIGN(Op, DAG);
@@ -2245,9 +2246,9 @@ SDValue MipsTargetLowering::lowerFSETCC(SDValue Op, SelectionDAG &DAG) const {
   ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(3))->get();
 
   SDValue Cond = DAG.getNode(MipsISD::FPCmp, DL, MVT::Glue, LHS, RHS,
-                     DAG.getConstant(condCodeToFCC(CC), DL, MVT::i32));
+                             DAG.getConstant(condCodeToFCC(CC), DL, MVT::i32));
   SDValue True = DAG.getConstant(1, DL, MVT::i32);
-  SDValue False =  DAG.getConstant(0, DL, MVT::i32);
+  SDValue False = DAG.getConstant(0, DL, MVT::i32);
   SDValue CMovFP = createCMovFP(DAG, Cond, True, False, DL);
 
   return DAG.getMergeValues({CMovFP, Chain}, DL);
