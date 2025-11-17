@@ -114,18 +114,18 @@ void InterpFrame::destroy(unsigned Idx) {
 
 template <typename T>
 static void print(llvm::raw_ostream &OS, const T &V, ASTContext &ASTCtx,
-                  QualType Ty) {
+                  QualType Ty, const Program &P) {
   if constexpr (std::is_same_v<Pointer, T>) {
     if (Ty->isPointerOrReferenceType())
-      V.toAPValue(ASTCtx).printPretty(OS, ASTCtx, Ty);
+      V.toAPValue(ASTCtx, P).printPretty(OS, ASTCtx, Ty);
     else {
-      if (std::optional<APValue> RValue = V.toRValue(ASTCtx, Ty))
+      if (std::optional<APValue> RValue = V.toRValue(ASTCtx, Ty, P))
         RValue->printPretty(OS, ASTCtx, Ty);
       else
         OS << "...";
     }
   } else {
-    V.toAPValue(ASTCtx).printPretty(OS, ASTCtx, Ty);
+    V.toAPValue(ASTCtx, P).printPretty(OS, ASTCtx, Ty);
   }
 }
 
@@ -185,7 +185,8 @@ void InterpFrame::describe(llvm::raw_ostream &OS) const {
     } else if (const auto *M = dyn_cast<CXXMethodDecl>(F)) {
       print(OS, getThis(), S.getASTContext(),
             S.getASTContext().getLValueReferenceType(
-                S.getASTContext().getCanonicalTagType(M->getParent())));
+                S.getASTContext().getCanonicalTagType(M->getParent())),
+            S.P);
       OS << ".";
     }
   }
@@ -204,7 +205,8 @@ void InterpFrame::describe(llvm::raw_ostream &OS) const {
     QualType Ty = Param->getType();
     PrimType PrimTy = S.Ctx.classify(Ty).value_or(PT_Ptr);
 
-    TYPE_SWITCH(PrimTy, print(OS, stackRef<T>(Off), S.getASTContext(), Ty));
+    TYPE_SWITCH(PrimTy,
+                print(OS, stackRef<T>(Off), S.getASTContext(), Ty, S.P));
     Off += align(primSize(PrimTy));
   }
   OS << ")";

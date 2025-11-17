@@ -32,6 +32,14 @@ class VarDecl;
 namespace interp {
 class Context;
 
+struct AddrLabelDiff {
+  const AddrLabelExpr *LHS;
+  const AddrLabelExpr *RHS;
+  bool operator==(const AddrLabelDiff &Other) const {
+    return LHS == Other.LHS && RHS == Other.RHS;
+  }
+};
+
 /// The program contains and links the bytecode for all functions.
 class Program final {
 public:
@@ -59,6 +67,9 @@ public:
 
   /// Returns the value of a marshalled native pointer.
   const void *getNativePointer(unsigned Idx) const;
+  unsigned getOrCreateAddrLabelDiff(const AddrLabelExpr *LHS,
+                                    const AddrLabelExpr *RHS);
+  AddrLabelDiff getLabelDiff(unsigned Index) const;
 
   /// Emits a string literal among global data.
   unsigned createGlobalString(const StringLiteral *S,
@@ -181,6 +192,10 @@ private:
   /// Cached native pointer indices.
   llvm::DenseMap<const void *, unsigned> NativePointerIndices;
 
+  std::vector<AddrLabelDiff> AddrLabelDiffs;
+  /// Cached native pointer indices.
+  llvm::DenseMap<AddrLabelDiff, unsigned> AddrLabelDiffIndices;
+
   /// Custom allocator for global storage.
   using PoolAllocTy = llvm::BumpPtrAllocator;
 
@@ -256,5 +271,29 @@ inline void *operator new[](size_t Bytes, const clang::interp::Program &C,
                             size_t Alignment = 8) {
   return C.Allocate(Bytes, Alignment);
 }
+
+namespace llvm {
+template <> struct DenseMapInfo<clang::interp::AddrLabelDiff> {
+  static clang::interp::AddrLabelDiff getEmptyKey() {
+    return clang::interp::AddrLabelDiff{};
+  }
+
+  static clang::interp::AddrLabelDiff getTombstoneKey() {
+    return clang::interp::AddrLabelDiff{
+        DenseMapInfo<const clang::AddrLabelExpr *>::getTombstoneKey(),
+        DenseMapInfo<const clang::AddrLabelExpr *>::getTombstoneKey()};
+  }
+
+  static unsigned getHashValue(const clang::interp::AddrLabelDiff &D) {
+    return DenseMapInfo<const clang::Expr *>::getHashValue(D.LHS) +
+           DenseMapInfo<const clang::Expr *>::getHashValue(D.RHS);
+  }
+
+  static bool isEqual(const clang::interp::AddrLabelDiff &LHS,
+                      const clang::interp::AddrLabelDiff &RHS) {
+    return LHS == RHS;
+  }
+};
+} // namespace llvm
 
 #endif

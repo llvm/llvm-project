@@ -423,3 +423,15 @@ namespace DummyToGlobalBlockMove {
   Baz Bar::_m[] = {{0}};
   const AP m = {&Bar ::m};
 }
+
+namespace AddSubMulNonNumber {
+#define fold(x) (__builtin_constant_p(x) ? (x) : (x))
+
+  typedef decltype(sizeof(int)) LabelDiffTy;
+  constexpr LabelDiffTy mulBy3(LabelDiffTy x) { return x * 3; } // both-note {{subexpression}}
+  void LabelDiffTest() {
+    static_assert(mulBy3(fold((LabelDiffTy)&&a-(LabelDiffTy)&&b)) == 3, ""); // both-error {{constant expression}} \
+                                                                             // both-note {{call to 'mulBy3(&&a - &&b)'}}
+    a:b:return;
+  }
+}

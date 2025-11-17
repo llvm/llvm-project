@@ -249,6 +249,22 @@ static inline bool aligned(const void *P) {
     }                                                                          \
   } while (0)
 
+#define FIXED_SIZE_INT_TYPE_SWITCH(Expr, B)                                    \
+  do {                                                                         \
+    switch (Expr) {                                                            \
+      TYPE_SWITCH_CASE(PT_Sint8, B)                                            \
+      TYPE_SWITCH_CASE(PT_Uint8, B)                                            \
+      TYPE_SWITCH_CASE(PT_Sint16, B)                                           \
+      TYPE_SWITCH_CASE(PT_Uint16, B)                                           \
+      TYPE_SWITCH_CASE(PT_Sint32, B)                                           \
+      TYPE_SWITCH_CASE(PT_Uint32, B)                                           \
+      TYPE_SWITCH_CASE(PT_Sint64, B)                                           \
+      TYPE_SWITCH_CASE(PT_Uint64, B)                                           \
+    default:                                                                   \
+      llvm_unreachable("Not an integer value");                                \
+    }                                                                          \
+  } while (0)
+
 #define INT_TYPE_SWITCH_NO_BOOL(Expr, B)                                       \
   do {                                                                         \
     switch (Expr) {                                                            \

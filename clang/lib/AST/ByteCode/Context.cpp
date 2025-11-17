@@ -186,7 +186,7 @@ bool Context::evaluateStringRepr(State &Parent, const Expr *SizeExpr,
       return false;
 
     // Must be char.
-    if (Ptr.getFieldDesc()->getElemSize() != 1 /*bytes*/)
+    if (Ptr.getFieldDesc()->getElemDataSize() != 1 /*bytes*/)
       return false;
 
     if (Size > Ptr.getNumElems()) {
@@ -199,7 +199,7 @@ bool Context::evaluateStringRepr(State &Parent, const Expr *SizeExpr,
       Result = APValue(APValue::UninitArray{}, Size, Size);
       for (uint64_t I = 0; I != Size; ++I) {
         if (std::optional<APValue> ElemVal =
-                Ptr.atIndex(I).toRValue(*this, CharTy))
+                Ptr.atIndex(I).toRValue(*this, CharTy, *P))
           Result.getArrayInitializedElt(I) = *ElemVal;
         else
           return false;
@@ -208,7 +208,12 @@ bool Context::evaluateStringRepr(State &Parent, const Expr *SizeExpr,
       assert((std::is_same_v<ResultT, std::string>));
       if (Size < Result.max_size())
         Result.resize(Size);
-      Result.assign(reinterpret_cast<const char *>(Ptr.getRawAddress()), Size);
+      unsigned StartIndex = Ptr.getIndex();
+      for (uint64_t I = 0; I != Size; ++I) {
+        FIXED_SIZE_INT_TYPE_SWITCH(Ptr.getFieldDesc()->getPrimType(), {
+          Result[I] = static_cast<char>(Ptr.elem<T>(StartIndex + I));
+        });
+      }
     }
 
     return true;
