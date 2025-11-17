@@ -369,6 +369,17 @@ public:
 protected:
   DenseMapBase() = default;
 
+  struct ExactBucketCount {};
+
+  void initWithExactBucketCount(unsigned NewNumBuckets) {
+    if (derived().allocateBuckets(NewNumBuckets)) {
+      initEmpty();
+    } else {
+      setNumEntries(0);
+      setNumTombstones(0);
+    }
+  }
+
   void destroyAll() {
     // No need to iterate through the buckets if both KeyT and ValueT are
     // trivially destructible.
@@ -729,9 +740,8 @@ class DenseMap : public DenseMapBase<DenseMap<KeyT, ValueT, KeyInfoT, BucketT>,
   unsigned NumTombstones;
   unsigned NumBuckets;
 
-  struct ExactBucketCount {};
-  explicit DenseMap(unsigned NumBuckets, ExactBucketCount) {
-    initWithExactBucketCount(NumBuckets);
+  explicit DenseMap(unsigned NumBuckets, typename BaseT::ExactBucketCount) {
+    this->initWithExactBucketCount(NumBuckets);
   }
 
 public:
@@ -818,18 +828,9 @@ private:
     return true;
   }
 
-  void initWithExactBucketCount(unsigned NewNumBuckets) {
-    if (allocateBuckets(NewNumBuckets)) {
-      this->BaseT::initEmpty();
-    } else {
-      NumEntries = 0;
-      NumTombstones = 0;
-    }
-  }
-
   void init(unsigned InitNumEntries) {
     auto InitBuckets = BaseT::getMinBucketToReserveForEntries(InitNumEntries);
-    initWithExactBucketCount(InitBuckets);
+    this->initWithExactBucketCount(InitBuckets);
   }
 
   // Put the zombie instance in a known good state after a move.
@@ -841,7 +842,7 @@ private:
 
   void grow(unsigned AtLeast) {
     AtLeast = std::max<unsigned>(64, NextPowerOf2(AtLeast - 1));
-    DenseMap Tmp(AtLeast, ExactBucketCount{});
+    DenseMap Tmp(AtLeast, typename BaseT::ExactBucketCount{});
     Tmp.moveFrom(*this);
     swapImpl(Tmp);
   }
@@ -891,10 +892,8 @@ class SmallDenseMap
   /// a large bucket. This union will be discriminated by the 'Small' bit.
   AlignedCharArrayUnion<BucketT[InlineBuckets], LargeRep> storage;
 
-  struct ExactBucketCount {};
-  SmallDenseMap(unsigned NumBuckets, ExactBucketCount) {
-    allocateBuckets(NumBuckets);
-    this->BaseT::initEmpty();
+  SmallDenseMap(unsigned NumBuckets, typename BaseT::ExactBucketCount) {
+    this->initWithExactBucketCount(NumBuckets);
   }
 
 public:
@@ -1097,8 +1096,7 @@ private:
 
   void init(unsigned InitNumEntries) {
     auto InitBuckets = BaseT::getMinBucketToReserveForEntries(InitNumEntries);
-    allocateBuckets(InitBuckets);
-    this->BaseT::initEmpty();
+    this->initWithExactBucketCount(InitBuckets);
   }
 
   // Put the zombie instance in a known good state after a move.
@@ -1112,7 +1110,7 @@ private:
     if (AtLeast > InlineBuckets)
       AtLeast = std::max<unsigned>(64, NextPowerOf2(AtLeast - 1));
 
-    SmallDenseMap Tmp(AtLeast, ExactBucketCount{});
+    SmallDenseMap Tmp(AtLeast, typename BaseT::ExactBucketCount{});
     Tmp.moveFrom(*this);
 
     if (Tmp.Small) {

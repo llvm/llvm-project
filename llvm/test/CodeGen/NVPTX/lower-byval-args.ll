@@ -584,25 +584,44 @@ define ptx_kernel void @test_select(ptr byval(i32) align 4 %input1, ptr byval(i3
 ; COPY-NEXT:    store i32 [[VALLOADED]], ptr [[OUT]], align 4
 ; COPY-NEXT:    ret void
 ;
-; PTX-LABEL: test_select(
-; PTX:       {
-; PTX-NEXT:    .reg .pred %p<2>;
-; PTX-NEXT:    .reg .b16 %rs<3>;
-; PTX-NEXT:    .reg .b32 %r<2>;
-; PTX-NEXT:    .reg .b64 %rd<6>;
-; PTX-EMPTY:
-; PTX-NEXT:  // %bb.0: // %bb
-; PTX-NEXT:    ld.param.b8 %rs1, [test_select_param_3];
-; PTX-NEXT:    and.b16 %rs2, %rs1, 1;
-; PTX-NEXT:    setp.ne.b16 %p1, %rs2, 0;
-; PTX-NEXT:    mov.b64 %rd1, test_select_param_0;
-; PTX-NEXT:    ld.param.b64 %rd2, [test_select_param_2];
-; PTX-NEXT:    cvta.to.global.u64 %rd3, %rd2;
-; PTX-NEXT:    mov.b64 %rd4, test_select_param_1;
-; PTX-NEXT:    selp.b64 %rd5, %rd1, %rd4, %p1;
-; PTX-NEXT:    ld.param.b32 %r1, [%rd5];
-; PTX-NEXT:    st.global.b32 [%rd3], %r1;
-; PTX-NEXT:    ret;
+; PTX_60-LABEL: test_select(
+; PTX_60:       {
+; PTX_60-NEXT:    .reg .pred %p<2>;
+; PTX_60-NEXT:    .reg .b16 %rs<3>;
+; PTX_60-NEXT:    .reg .b32 %r<4>;
+; PTX_60-NEXT:    .reg .b64 %rd<3>;
+; PTX_60-EMPTY:
+; PTX_60-NEXT:  // %bb.0: // %bb
+; PTX_60-NEXT:    ld.param.b8 %rs1, [test_select_param_3];
+; PTX_60-NEXT:    and.b16 %rs2, %rs1, 1;
+; PTX_60-NEXT:    setp.ne.b16 %p1, %rs2, 0;
+; PTX_60-NEXT:    ld.param.b64 %rd1, [test_select_param_2];
+; PTX_60-NEXT:    cvta.to.global.u64 %rd2, %rd1;
+; PTX_60-NEXT:    ld.param.b32 %r1, [test_select_param_1];
+; PTX_60-NEXT:    ld.param.b32 %r2, [test_select_param_0];
+; PTX_60-NEXT:    selp.b32 %r3, %r2, %r1, %p1;
+; PTX_60-NEXT:    st.global.b32 [%rd2], %r3;
+; PTX_60-NEXT:    ret;
+;
+; PTX_70-LABEL: test_select(
+; PTX_70:       {
+; PTX_70-NEXT:    .reg .pred %p<2>;
+; PTX_70-NEXT:    .reg .b16 %rs<3>;
+; PTX_70-NEXT:    .reg .b32 %r<2>;
+; PTX_70-NEXT:    .reg .b64 %rd<6>;
+; PTX_70-EMPTY:
+; PTX_70-NEXT:  // %bb.0: // %bb
+; PTX_70-NEXT:    ld.param.b8 %rs1, [test_select_param_3];
+; PTX_70-NEXT:    and.b16 %rs2, %rs1, 1;
+; PTX_70-NEXT:    setp.ne.b16 %p1, %rs2, 0;
+; PTX_70-NEXT:    mov.b64 %rd1, test_select_param_0;
+; PTX_70-NEXT:    ld.param.b64 %rd2, [test_select_param_2];
+; PTX_70-NEXT:    cvta.to.global.u64 %rd3, %rd2;
+; PTX_70-NEXT:    mov.b64 %rd4, test_select_param_1;
+; PTX_70-NEXT:    selp.b64 %rd5, %rd1, %rd4, %p1;
+; PTX_70-NEXT:    ld.param.b32 %r1, [%rd5];
+; PTX_70-NEXT:    st.global.b32 [%rd3], %r1;
+; PTX_70-NEXT:    ret;
 bb:
   %ptrnew = select i1 %cond, ptr %input1, ptr %input2
   %valloaded = load i32, ptr %ptrnew, align 4
