@@ -20,5 +20,5 @@ jobs:
           git config --global core.autocrlf false
       - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1A
       - run: |
-          cd llvm\utils\release\
+          cd S:\llvm\utils\release\
           .\build_llvm_release.bat --x64 --version 22.0.0 --local-python --skip-checkout
