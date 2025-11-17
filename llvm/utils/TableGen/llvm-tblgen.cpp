@@ -12,8 +12,6 @@
 
 #include "Basic/TableGen.h"
 
-#error compilation failure
-
 /// Command line parameters are shared between llvm-tblgen and llvm-min-tblgen.
 /// The indirection to tblgen_main exists to ensure that the static variables
 /// for the llvm::cl:: mechanism are linked into both executables.
