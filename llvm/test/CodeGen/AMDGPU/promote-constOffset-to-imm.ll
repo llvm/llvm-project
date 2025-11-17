@@ -2658,7 +2658,7 @@ define amdgpu_kernel void @negativeoffsetnullptr(ptr %buffer) {
 ; GFX11-FAKE16-NEXT:    s_endpgm
 entry:
   %null = select i1 false, ptr %buffer, ptr addrspacecast (ptr addrspace(5) null to ptr)
-  %gep = getelementptr i8, ptr %null, i64 -1
+  %gep = getelementptr inbounds i8, ptr %null, i64 -1
   %ld = load i8, ptr %gep
   %cmp = icmp eq i8 %ld, 0
   br label %branch

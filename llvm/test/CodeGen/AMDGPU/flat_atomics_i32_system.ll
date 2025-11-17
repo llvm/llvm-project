@@ -63,7 +63,7 @@ define void @flat_atomic_xchg_i32_noret_offset(ptr %out, i32 %in) {
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    buffer_wbinvl1_vol
 ; GCN3-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %tmp0 = atomicrmw xchg ptr %gep, i32 %in seq_cst
   ret void
 }
@@ -124,7 +124,7 @@ define i32 @flat_atomic_xchg_i32_ret_offset(ptr %out, i32 %in) {
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    buffer_wbinvl1_vol
 ; GCN3-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %result = atomicrmw xchg ptr %gep, i32 %in seq_cst
   ret i32 %result
 }
@@ -203,7 +203,7 @@ define amdgpu_gfx void @flat_atomic_xchg_i32_noret_offset_scalar(ptr inreg %out,
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    buffer_wbinvl1_vol
 ; GCN3-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %tmp0 = atomicrmw xchg ptr %gep, i32 %in seq_cst
   ret void
 }
@@ -282,7 +282,7 @@ define amdgpu_gfx i32 @flat_atomic_xchg_i32_ret_offset_scalar(ptr inreg %out, i3
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    buffer_wbinvl1_vol
 ; GCN3-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %result = atomicrmw xchg ptr %gep, i32 %in seq_cst
   ret i32 %result
 }
@@ -315,7 +315,7 @@ define void @flat_atomic_xchg_i32_noret_offset__amdgpu_no_remote_memory(ptr %out
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    buffer_wbinvl1_vol
 ; GCN3-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i32, ptr %out, i64 4
+  %gep = getelementptr inbounds i32, ptr %out, i64 4
   %tmp0 = atomicrmw xchg ptr %gep, i32 %in seq_cst, !amdgpu.no.remote.memory !0
   ret void
 }
@@ -348,7 +348,7 @@ define i32 @flat_atomic_xchg_i32_ret_offset__amdgpu_no_remote_memory(ptr %out, i
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    buffer_wbinvl1_vol
 ; GCN3-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i32, ptr %out, i64 4
+  %gep = getelementptr inbounds i32, ptr %out, i64 4
   %result = atomicrmw xchg ptr %gep, i32 %in seq_cst, !amdgpu.no.remote.memory !0
   ret i32 %result
 }
@@ -413,7 +413,7 @@ define void @flat_atomic_xchg_f32_noret_offset(ptr %out, float %in) {
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    buffer_wbinvl1_vol
 ; GCN3-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr float, ptr %out, i32 4
+  %gep = getelementptr inbounds float, ptr %out, i32 4
   %tmp0 = atomicrmw xchg ptr %gep, float %in seq_cst
   ret void
 }
@@ -474,7 +474,7 @@ define float @flat_atomic_xchg_f32_ret_offset(ptr %out, float %in) {
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    buffer_wbinvl1_vol
 ; GCN3-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr float, ptr %out, i32 4
+  %gep = getelementptr inbounds float, ptr %out, i32 4
   %result = atomicrmw xchg ptr %gep, float %in seq_cst
   ret float %result
 }
@@ -553,7 +553,7 @@ define amdgpu_gfx void @flat_atomic_xchg_f32_noret_offset_scalar(ptr inreg %out,
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    buffer_wbinvl1_vol
 ; GCN3-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr float, ptr %out, i32 4
+  %gep = getelementptr inbounds float, ptr %out, i32 4
   %tmp0 = atomicrmw xchg ptr %gep, float %in seq_cst
   ret void
 }
@@ -632,7 +632,7 @@ define amdgpu_gfx float @flat_atomic_xchg_f32_ret_offset_scalar(ptr inreg %out, 
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    buffer_wbinvl1_vol
 ; GCN3-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr float, ptr %out, i32 4
+  %gep = getelementptr inbounds float, ptr %out, i32 4
   %result = atomicrmw xchg ptr %gep, float %in seq_cst
   ret float %result
 }
@@ -665,7 +665,7 @@ define void @flat_atomic_xchg_f32_noret_offset__amdgpu_no_remote_memory(ptr %out
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    buffer_wbinvl1_vol
 ; GCN3-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr float, ptr %out, i64 4
+  %gep = getelementptr inbounds float, ptr %out, i64 4
   %tmp0 = atomicrmw xchg ptr %gep, float %in seq_cst, !amdgpu.no.remote.memory !0
   ret void
 }
@@ -698,7 +698,7 @@ define float @flat_atomic_xchg_f32_ret_offset__amdgpu_no_remote_memory(ptr %out,
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    buffer_wbinvl1_vol
 ; GCN3-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr float, ptr %out, i64 4
+  %gep = getelementptr inbounds float, ptr %out, i64 4
   %result = atomicrmw xchg ptr %gep, float %in seq_cst, !amdgpu.no.remote.memory !0
   ret float %result
 }
@@ -763,7 +763,7 @@ define void @flat_atomic_add_i32_noret_offset(ptr %out, i32 %in) {
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    buffer_wbinvl1_vol
 ; GCN3-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %tmp0 = atomicrmw add ptr %gep, i32 %in seq_cst
   ret void
 }
@@ -824,7 +824,7 @@ define i32 @flat_atomic_add_i32_ret_offset(ptr %out, i32 %in) {
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    buffer_wbinvl1_vol
 ; GCN3-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %result = atomicrmw add ptr %gep, i32 %in seq_cst
   ret i32 %result
 }
@@ -903,7 +903,7 @@ define amdgpu_gfx void @flat_atomic_add_i32_noret_offset_scalar(ptr inreg %out, 
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    buffer_wbinvl1_vol
 ; GCN3-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %tmp0 = atomicrmw add ptr %gep, i32 %in seq_cst
   ret void
 }
@@ -982,7 +982,7 @@ define amdgpu_gfx i32 @flat_atomic_add_i32_ret_offset_scalar(ptr inreg %out, i32
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    buffer_wbinvl1_vol
 ; GCN3-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %result = atomicrmw add ptr %gep, i32 %in seq_cst
   ret i32 %result
 }
@@ -1015,7 +1015,7 @@ define void @flat_atomic_add_i32_noret_offset__amdgpu_no_remote_memory(ptr %out,
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    buffer_wbinvl1_vol
 ; GCN3-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i32, ptr %out, i64 4
+  %gep = getelementptr inbounds i32, ptr %out, i64 4
   %tmp0 = atomicrmw add ptr %gep, i32 %in seq_cst, !amdgpu.no.remote.memory !0
   ret void
 }
@@ -1048,7 +1048,7 @@ define i32 @flat_atomic_add_i32_ret_offset__amdgpu_no_remote_memory(ptr %out, i3
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    buffer_wbinvl1_vol
 ; GCN3-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i32, ptr %out, i64 4
+  %gep = getelementptr inbounds i32, ptr %out, i64 4
   %result = atomicrmw add ptr %gep, i32 %in seq_cst, !amdgpu.no.remote.memory !0
   ret i32 %result
 }
@@ -1191,7 +1191,7 @@ define void @flat_atomic_sub_i32_noret_offset(ptr %out, i32 %in) {
 ; GCN3-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GCN3-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GCN3-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %tmp0 = atomicrmw sub ptr %gep, i32 %in seq_cst
   ret void
 }
@@ -1334,7 +1334,7 @@ define i32 @flat_atomic_sub_i32_ret_offset(ptr %out, i32 %in) {
 ; GCN3-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GCN3-NEXT:    v_mov_b32_e32 v0, v3
 ; GCN3-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %result = atomicrmw sub ptr %gep, i32 %in seq_cst
   ret i32 %result
 }
@@ -1485,7 +1485,7 @@ define amdgpu_gfx void @flat_atomic_sub_i32_noret_offset_scalar(ptr inreg %out, 
 ; GCN3-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GCN3-NEXT:    s_or_b64 exec, exec, s[34:35]
 ; GCN3-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %tmp0 = atomicrmw sub ptr %gep, i32 %in seq_cst
   ret void
 }
@@ -1644,7 +1644,7 @@ define amdgpu_gfx i32 @flat_atomic_sub_i32_ret_offset_scalar(ptr inreg %out, i32
 ; GCN3-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GCN3-NEXT:    s_or_b64 exec, exec, s[34:35]
 ; GCN3-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %result = atomicrmw sub ptr %gep, i32 %in seq_cst
   ret i32 %result
 }
@@ -1677,7 +1677,7 @@ define void @flat_atomic_sub_i32_noret_offset__amdgpu_no_remote_memory(ptr %out,
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    buffer_wbinvl1_vol
 ; GCN3-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i32, ptr %out, i64 4
+  %gep = getelementptr inbounds i32, ptr %out, i64 4
   %tmp0 = atomicrmw sub ptr %gep, i32 %in seq_cst, !amdgpu.no.remote.memory !0
   ret void
 }
@@ -1710,7 +1710,7 @@ define i32 @flat_atomic_sub_i32_ret_offset__amdgpu_no_remote_memory(ptr %out, i3
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    buffer_wbinvl1_vol
 ; GCN3-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i32, ptr %out, i64 4
+  %gep = getelementptr inbounds i32, ptr %out, i64 4
   %result = atomicrmw sub ptr %gep, i32 %in seq_cst, !amdgpu.no.remote.memory !0
   ret i32 %result
 }
@@ -1853,7 +1853,7 @@ define void @flat_atomic_and_i32_noret_offset(ptr %out, i32 %in) {
 ; GCN3-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GCN3-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GCN3-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %tmp0 = atomicrmw and ptr %gep, i32 %in seq_cst
   ret void
 }
@@ -1996,7 +1996,7 @@ define i32 @flat_atomic_and_i32_ret_offset(ptr %out, i32 %in) {
 ; GCN3-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GCN3-NEXT:    v_mov_b32_e32 v0, v3
 ; GCN3-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %result = atomicrmw and ptr %gep, i32 %in seq_cst
   ret i32 %result
 }
@@ -2147,7 +2147,7 @@ define amdgpu_gfx void @flat_atomic_and_i32_noret_offset_scalar(ptr inreg %out, 
 ; GCN3-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GCN3-NEXT:    s_or_b64 exec, exec, s[34:35]
 ; GCN3-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %tmp0 = atomicrmw and ptr %gep, i32 %in seq_cst
   ret void
 }
@@ -2306,7 +2306,7 @@ define amdgpu_gfx i32 @flat_atomic_and_i32_ret_offset_scalar(ptr inreg %out, i32
 ; GCN3-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GCN3-NEXT:    s_or_b64 exec, exec, s[34:35]
 ; GCN3-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %result = atomicrmw and ptr %gep, i32 %in seq_cst
   ret i32 %result
 }
@@ -2339,7 +2339,7 @@ define void @flat_atomic_and_i32_noret_offset__amdgpu_no_remote_memory(ptr %out,
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    buffer_wbinvl1_vol
 ; GCN3-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i32, ptr %out, i64 4
+  %gep = getelementptr inbounds i32, ptr %out, i64 4
   %tmp0 = atomicrmw and ptr %gep, i32 %in seq_cst, !amdgpu.no.remote.memory !0
   ret void
 }
@@ -2372,7 +2372,7 @@ define i32 @flat_atomic_and_i32_ret_offset__amdgpu_no_remote_memory(ptr %out, i3
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    buffer_wbinvl1_vol
 ; GCN3-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i32, ptr %out, i64 4
+  %gep = getelementptr inbounds i32, ptr %out, i64 4
   %result = atomicrmw and ptr %gep, i32 %in seq_cst, !amdgpu.no.remote.memory !0
   ret i32 %result
 }
@@ -2521,7 +2521,7 @@ define void @flat_atomic_nand_i32_noret_offset(ptr %out, i32 %in) {
 ; GCN3-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GCN3-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GCN3-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %tmp0 = atomicrmw nand ptr %gep, i32 %in seq_cst
   ret void
 }
@@ -2670,7 +2670,7 @@ define i32 @flat_atomic_nand_i32_ret_offset(ptr %out, i32 %in) {
 ; GCN3-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GCN3-NEXT:    v_mov_b32_e32 v0, v3
 ; GCN3-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %result = atomicrmw nand ptr %gep, i32 %in seq_cst
   ret i32 %result
 }
@@ -2827,7 +2827,7 @@ define amdgpu_gfx void @flat_atomic_nand_i32_noret_offset_scalar(ptr inreg %out,
 ; GCN3-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GCN3-NEXT:    s_or_b64 exec, exec, s[34:35]
 ; GCN3-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %tmp0 = atomicrmw nand ptr %gep, i32 %in seq_cst
   ret void
 }
@@ -2992,7 +2992,7 @@ define amdgpu_gfx i32 @flat_atomic_nand_i32_ret_offset_scalar(ptr inreg %out, i3
 ; GCN3-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GCN3-NEXT:    s_or_b64 exec, exec, s[34:35]
 ; GCN3-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %result = atomicrmw nand ptr %gep, i32 %in seq_cst
   ret i32 %result
 }
@@ -3067,7 +3067,7 @@ define void @flat_atomic_nand_i32_noret_offset__amdgpu_no_remote_memory(ptr %out
 ; GCN3-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GCN3-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GCN3-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i32, ptr %out, i64 4
+  %gep = getelementptr inbounds i32, ptr %out, i64 4
   %tmp0 = atomicrmw nand ptr %gep, i32 %in seq_cst, !amdgpu.no.remote.memory !0
   ret void
 }
@@ -3143,7 +3143,7 @@ define i32 @flat_atomic_nand_i32_ret_offset__amdgpu_no_remote_memory(ptr %out, i
 ; GCN3-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GCN3-NEXT:    v_mov_b32_e32 v0, v3
 ; GCN3-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i32, ptr %out, i64 4
+  %gep = getelementptr inbounds i32, ptr %out, i64 4
   %result = atomicrmw nand ptr %gep, i32 %in seq_cst, !amdgpu.no.remote.memory !0
   ret i32 %result
 }
@@ -3286,7 +3286,7 @@ define void @flat_atomic_or_i32_noret_offset(ptr %out, i32 %in) {
 ; GCN3-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GCN3-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GCN3-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %tmp0 = atomicrmw or ptr %gep, i32 %in seq_cst
   ret void
 }
@@ -3429,7 +3429,7 @@ define i32 @flat_atomic_or_i32_ret_offset(ptr %out, i32 %in) {
 ; GCN3-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GCN3-NEXT:    v_mov_b32_e32 v0, v3
 ; GCN3-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %result = atomicrmw or ptr %gep, i32 %in seq_cst
   ret i32 %result
 }
@@ -3580,7 +3580,7 @@ define amdgpu_gfx void @flat_atomic_or_i32_noret_offset_scalar(ptr inreg %out, i
 ; GCN3-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GCN3-NEXT:    s_or_b64 exec, exec, s[34:35]
 ; GCN3-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %tmp0 = atomicrmw or ptr %gep, i32 %in seq_cst
   ret void
 }
@@ -3739,7 +3739,7 @@ define amdgpu_gfx i32 @flat_atomic_or_i32_ret_offset_scalar(ptr inreg %out, i32 
 ; GCN3-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GCN3-NEXT:    s_or_b64 exec, exec, s[34:35]
 ; GCN3-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %result = atomicrmw or ptr %gep, i32 %in seq_cst
   ret i32 %result
 }
@@ -3772,7 +3772,7 @@ define void @flat_atomic_or_i32_noret_offset__amdgpu_no_remote_memory(ptr %out, 
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    buffer_wbinvl1_vol
 ; GCN3-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i32, ptr %out, i64 4
+  %gep = getelementptr inbounds i32, ptr %out, i64 4
   %tmp0 = atomicrmw or ptr %gep, i32 %in seq_cst, !amdgpu.no.remote.memory !0
   ret void
 }
@@ -3805,7 +3805,7 @@ define i32 @flat_atomic_or_i32_ret_offset__amdgpu_no_remote_memory(ptr %out, i32
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    buffer_wbinvl1_vol
 ; GCN3-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i32, ptr %out, i64 4
+  %gep = getelementptr inbounds i32, ptr %out, i64 4
   %result = atomicrmw or ptr %gep, i32 %in seq_cst, !amdgpu.no.remote.memory !0
   ret i32 %result
 }
@@ -3948,7 +3948,7 @@ define void @flat_atomic_xor_i32_noret_offset(ptr %out, i32 %in) {
 ; GCN3-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GCN3-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GCN3-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %tmp0 = atomicrmw xor ptr %gep, i32 %in seq_cst
   ret void
 }
@@ -4091,7 +4091,7 @@ define i32 @flat_atomic_xor_i32_ret_offset(ptr %out, i32 %in) {
 ; GCN3-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GCN3-NEXT:    v_mov_b32_e32 v0, v3
 ; GCN3-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %result = atomicrmw xor ptr %gep, i32 %in seq_cst
   ret i32 %result
 }
@@ -4242,7 +4242,7 @@ define amdgpu_gfx void @flat_atomic_xor_i32_noret_offset_scalar(ptr inreg %out, 
 ; GCN3-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GCN3-NEXT:    s_or_b64 exec, exec, s[34:35]
 ; GCN3-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %tmp0 = atomicrmw xor ptr %gep, i32 %in seq_cst
   ret void
 }
@@ -4401,7 +4401,7 @@ define amdgpu_gfx i32 @flat_atomic_xor_i32_ret_offset_scalar(ptr inreg %out, i32
 ; GCN3-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GCN3-NEXT:    s_or_b64 exec, exec, s[34:35]
 ; GCN3-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %result = atomicrmw xor ptr %gep, i32 %in seq_cst
   ret i32 %result
 }
@@ -4434,7 +4434,7 @@ define void @flat_xor_i32_noret_offset__amdgpu_no_remote_memory(ptr %out, i32 %i
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    buffer_wbinvl1_vol
 ; GCN3-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i32, ptr %out, i64 4
+  %gep = getelementptr inbounds i32, ptr %out, i64 4
   %tmp0 = atomicrmw xor ptr %gep, i32 %in seq_cst, !amdgpu.no.remote.memory !0
   ret void
 }
@@ -4467,7 +4467,7 @@ define i32 @flat_atomic_xor_i32_ret_offset__amdgpu_no_remote_memory(ptr %out, i3
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    buffer_wbinvl1_vol
 ; GCN3-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i32, ptr %out, i64 4
+  %gep = getelementptr inbounds i32, ptr %out, i64 4
   %result = atomicrmw xor ptr %gep, i32 %in seq_cst, !amdgpu.no.remote.memory !0
   ret i32 %result
 }
@@ -4610,7 +4610,7 @@ define void @flat_atomic_max_i32_noret_offset(ptr %out, i32 %in) {
 ; GCN3-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GCN3-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GCN3-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %tmp0 = atomicrmw max ptr %gep, i32 %in seq_cst
   ret void
 }
@@ -4753,7 +4753,7 @@ define i32 @flat_atomic_max_i32_ret_offset(ptr %out, i32 %in) {
 ; GCN3-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GCN3-NEXT:    v_mov_b32_e32 v0, v3
 ; GCN3-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %result = atomicrmw max ptr %gep, i32 %in seq_cst
   ret i32 %result
 }
@@ -4904,7 +4904,7 @@ define amdgpu_gfx void @flat_atomic_max_i32_noret_offset_scalar(ptr inreg %out, 
 ; GCN3-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GCN3-NEXT:    s_or_b64 exec, exec, s[34:35]
 ; GCN3-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %tmp0 = atomicrmw max ptr %gep, i32 %in seq_cst
   ret void
 }
@@ -5063,7 +5063,7 @@ define amdgpu_gfx i32 @flat_atomic_max_i32_ret_offset_scalar(ptr inreg %out, i32
 ; GCN3-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GCN3-NEXT:    s_or_b64 exec, exec, s[34:35]
 ; GCN3-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %result = atomicrmw max ptr %gep, i32 %in seq_cst
   ret i32 %result
 }
@@ -5157,8 +5157,8 @@ define amdgpu_kernel void @atomic_max_i32_addr64_offset(ptr %out, i32 %in, i32 %
 ; GCN3-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GCN3-NEXT:    s_endpgm
 entry:
-  %ptr = getelementptr i32, ptr %out, i32 %index
-  %gep = getelementptr i32, ptr %ptr, i32 4
+  %ptr = getelementptr inbounds i32, ptr %out, i32 %index
+  %gep = getelementptr inbounds i32, ptr %ptr, i32 4
   %tmp0 = atomicrmw max ptr %gep, i32 %in seq_cst
   ret void
 }
@@ -5267,8 +5267,8 @@ define amdgpu_kernel void @atomic_max_i32_ret_addr64_offset(ptr %out, ptr %out2,
 ; GCN3-NEXT:    flat_store_dword v[0:1], v2
 ; GCN3-NEXT:    s_endpgm
 entry:
-  %ptr = getelementptr i32, ptr %out, i32 %index
-  %gep = getelementptr i32, ptr %ptr, i32 4
+  %ptr = getelementptr inbounds i32, ptr %out, i32 %index
+  %gep = getelementptr inbounds i32, ptr %ptr, i32 4
   %tmp0 = atomicrmw max ptr %gep, i32 %in seq_cst
   store i32 %tmp0, ptr %out2
   ret void
@@ -5359,7 +5359,7 @@ define amdgpu_kernel void @atomic_max_i32_addr64(ptr %out, i32 %in, i32 %index) 
 ; GCN3-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GCN3-NEXT:    s_endpgm
 entry:
-  %ptr = getelementptr i32, ptr %out, i32 %index
+  %ptr = getelementptr inbounds i32, ptr %out, i32 %index
   %tmp0 = atomicrmw max ptr %ptr, i32 %in seq_cst
   ret void
 }
@@ -5464,7 +5464,7 @@ define amdgpu_kernel void @atomic_max_i32_ret_addr64(ptr %out, ptr %out2, i32 %i
 ; GCN3-NEXT:    flat_store_dword v[0:1], v2
 ; GCN3-NEXT:    s_endpgm
 entry:
-  %ptr = getelementptr i32, ptr %out, i32 %index
+  %ptr = getelementptr inbounds i32, ptr %out, i32 %index
   %tmp0 = atomicrmw max ptr %ptr, i32 %in seq_cst
   store i32 %tmp0, ptr %out2
   ret void
@@ -5498,7 +5498,7 @@ define void @flat_max_i32_noret_offset__amdgpu_no_remote_memory(ptr %out, i32 %i
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    buffer_wbinvl1_vol
 ; GCN3-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i32, ptr %out, i64 4
+  %gep = getelementptr inbounds i32, ptr %out, i64 4
   %tmp0 = atomicrmw max ptr %gep, i32 %in seq_cst, !amdgpu.no.remote.memory !0
   ret void
 }
@@ -5531,7 +5531,7 @@ define i32 @flat_atomic_max_i32_ret_offset__amdgpu_no_remote_memory(ptr %out, i3
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    buffer_wbinvl1_vol
 ; GCN3-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i32, ptr %out, i64 4
+  %gep = getelementptr inbounds i32, ptr %out, i64 4
   %result = atomicrmw max ptr %gep, i32 %in seq_cst, !amdgpu.no.remote.memory !0
   ret i32 %result
 }
@@ -5674,7 +5674,7 @@ define void @flat_atomic_umax_i32_noret_offset(ptr %out, i32 %in) {
 ; GCN3-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GCN3-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GCN3-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %tmp0 = atomicrmw umax ptr %gep, i32 %in seq_cst
   ret void
 }
@@ -5817,7 +5817,7 @@ define i32 @flat_atomic_umax_i32_ret_offset(ptr %out, i32 %in) {
 ; GCN3-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GCN3-NEXT:    v_mov_b32_e32 v0, v3
 ; GCN3-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %result = atomicrmw umax ptr %gep, i32 %in seq_cst
   ret i32 %result
 }
@@ -5968,7 +5968,7 @@ define amdgpu_gfx void @flat_atomic_umax_i32_noret_offset_scalar(ptr inreg %out,
 ; GCN3-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GCN3-NEXT:    s_or_b64 exec, exec, s[34:35]
 ; GCN3-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %tmp0 = atomicrmw umax ptr %gep, i32 %in seq_cst
   ret void
 }
@@ -6127,7 +6127,7 @@ define amdgpu_gfx i32 @flat_atomic_umax_i32_ret_offset_scalar(ptr inreg %out, i3
 ; GCN3-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GCN3-NEXT:    s_or_b64 exec, exec, s[34:35]
 ; GCN3-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %result = atomicrmw umax ptr %gep, i32 %in seq_cst
   ret i32 %result
 }
@@ -6221,8 +6221,8 @@ define amdgpu_kernel void @atomic_umax_i32_addr64_offset(ptr %out, i32 %in, i32 
 ; GCN3-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GCN3-NEXT:    s_endpgm
 entry:
-  %ptr = getelementptr i32, ptr %out, i32 %index
-  %gep = getelementptr i32, ptr %ptr, i32 4
+  %ptr = getelementptr inbounds i32, ptr %out, i32 %index
+  %gep = getelementptr inbounds i32, ptr %ptr, i32 4
   %tmp0 = atomicrmw umax ptr %gep, i32 %in seq_cst
   ret void
 }
@@ -6331,8 +6331,8 @@ define amdgpu_kernel void @atomic_umax_i32_ret_addr64_offset(ptr %out, ptr %out2
 ; GCN3-NEXT:    flat_store_dword v[0:1], v2
 ; GCN3-NEXT:    s_endpgm
 entry:
-  %ptr = getelementptr i32, ptr %out, i32 %index
-  %gep = getelementptr i32, ptr %ptr, i32 4
+  %ptr = getelementptr inbounds i32, ptr %out, i32 %index
+  %gep = getelementptr inbounds i32, ptr %ptr, i32 4
   %tmp0 = atomicrmw umax ptr %gep, i32 %in seq_cst
   store i32 %tmp0, ptr %out2
   ret void
@@ -6438,7 +6438,7 @@ define amdgpu_kernel void @atomic_umax_i32_ret_addr64(ptr %out, ptr %out2, i32 %
 ; GCN3-NEXT:    flat_store_dword v[0:1], v2
 ; GCN3-NEXT:    s_endpgm
 entry:
-  %ptr = getelementptr i32, ptr %out, i32 %index
+  %ptr = getelementptr inbounds i32, ptr %out, i32 %index
   %tmp0 = atomicrmw umax ptr %ptr, i32 %in seq_cst
   store i32 %tmp0, ptr %out2
   ret void
@@ -6472,7 +6472,7 @@ define void @flat_umax_i32_noret_offset__amdgpu_no_remote_memory(ptr %out, i32 %
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    buffer_wbinvl1_vol
 ; GCN3-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i32, ptr %out, i64 4
+  %gep = getelementptr inbounds i32, ptr %out, i64 4
   %tmp0 = atomicrmw umax ptr %gep, i32 %in seq_cst, !amdgpu.no.remote.memory !0
   ret void
 }
@@ -6505,7 +6505,7 @@ define i32 @flat_atomic_umax_i32_ret_offset__amdgpu_no_remote_memory(ptr %out, i
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    buffer_wbinvl1_vol
 ; GCN3-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i32, ptr %out, i64 4
+  %gep = getelementptr inbounds i32, ptr %out, i64 4
   %result = atomicrmw umax ptr %gep, i32 %in seq_cst, !amdgpu.no.remote.memory !0
   ret i32 %result
 }
@@ -6648,7 +6648,7 @@ define void @flat_atomic_umin_i32_noret_offset(ptr %out, i32 %in) {
 ; GCN3-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GCN3-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GCN3-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %tmp0 = atomicrmw umin ptr %gep, i32 %in seq_cst
   ret void
 }
@@ -6791,7 +6791,7 @@ define i32 @flat_atomic_umin_i32_ret_offset(ptr %out, i32 %in) {
 ; GCN3-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GCN3-NEXT:    v_mov_b32_e32 v0, v3
 ; GCN3-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %result = atomicrmw umin ptr %gep, i32 %in seq_cst
   ret i32 %result
 }
@@ -6942,7 +6942,7 @@ define amdgpu_gfx void @flat_atomic_umin_i32_noret_offset_scalar(ptr inreg %out,
 ; GCN3-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GCN3-NEXT:    s_or_b64 exec, exec, s[34:35]
 ; GCN3-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %tmp0 = atomicrmw umin ptr %gep, i32 %in seq_cst
   ret void
 }
@@ -7101,7 +7101,7 @@ define amdgpu_gfx i32 @flat_atomic_umin_i32_ret_offset_scalar(ptr inreg %out, i3
 ; GCN3-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GCN3-NEXT:    s_or_b64 exec, exec, s[34:35]
 ; GCN3-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %result = atomicrmw umin ptr %gep, i32 %in seq_cst
   ret i32 %result
 }
@@ -7134,7 +7134,7 @@ define void @flat_umin_i32_noret_offset__amdgpu_no_remote_memory(ptr %out, i32 %
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    buffer_wbinvl1_vol
 ; GCN3-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i32, ptr %out, i64 4
+  %gep = getelementptr inbounds i32, ptr %out, i64 4
   %tmp0 = atomicrmw umin ptr %gep, i32 %in seq_cst, !amdgpu.no.remote.memory !0
   ret void
 }
@@ -7167,7 +7167,7 @@ define i32 @flat_atomic_umin_i32_ret_offset__amdgpu_no_remote_memory(ptr %out, i
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    buffer_wbinvl1_vol
 ; GCN3-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i32, ptr %out, i64 4
+  %gep = getelementptr inbounds i32, ptr %out, i64 4
   %result = atomicrmw umin ptr %gep, i32 %in seq_cst, !amdgpu.no.remote.memory !0
   ret i32 %result
 }
@@ -7310,7 +7310,7 @@ define void @flat_atomic_min_i32_noret_offset(ptr %out, i32 %in) {
 ; GCN3-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GCN3-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GCN3-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %tmp0 = atomicrmw min ptr %gep, i32 %in seq_cst
   ret void
 }
@@ -7453,7 +7453,7 @@ define i32 @flat_atomic_min_i32_ret_offset(ptr %out, i32 %in) {
 ; GCN3-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GCN3-NEXT:    v_mov_b32_e32 v0, v3
 ; GCN3-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %result = atomicrmw min ptr %gep, i32 %in seq_cst
   ret i32 %result
 }
@@ -7604,7 +7604,7 @@ define amdgpu_gfx void @flat_atomic_min_i32_noret_offset_scalar(ptr inreg %out, 
 ; GCN3-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GCN3-NEXT:    s_or_b64 exec, exec, s[34:35]
 ; GCN3-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %tmp0 = atomicrmw min ptr %gep, i32 %in seq_cst
   ret void
 }
@@ -7763,7 +7763,7 @@ define amdgpu_gfx i32 @flat_atomic_min_i32_ret_offset_scalar(ptr inreg %out, i32
 ; GCN3-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GCN3-NEXT:    s_or_b64 exec, exec, s[34:35]
 ; GCN3-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %result = atomicrmw min ptr %gep, i32 %in seq_cst
   ret i32 %result
 }
@@ -7857,8 +7857,8 @@ define amdgpu_kernel void @atomic_min_i32_addr64_offset(ptr %out, i32 %in, i32 %
 ; GCN3-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GCN3-NEXT:    s_endpgm
 entry:
-  %ptr = getelementptr i32, ptr %out, i32 %index
-  %gep = getelementptr i32, ptr %ptr, i32 4
+  %ptr = getelementptr inbounds i32, ptr %out, i32 %index
+  %gep = getelementptr inbounds i32, ptr %ptr, i32 4
   %tmp0 = atomicrmw min ptr %gep, i32 %in seq_cst
   ret void
 }
@@ -7967,8 +7967,8 @@ define amdgpu_kernel void @atomic_min_i32_ret_addr64_offset(ptr %out, ptr %out2,
 ; GCN3-NEXT:    flat_store_dword v[0:1], v2
 ; GCN3-NEXT:    s_endpgm
 entry:
-  %ptr = getelementptr i32, ptr %out, i32 %index
-  %gep = getelementptr i32, ptr %ptr, i32 4
+  %ptr = getelementptr inbounds i32, ptr %out, i32 %index
+  %gep = getelementptr inbounds i32, ptr %ptr, i32 4
   %tmp0 = atomicrmw min ptr %gep, i32 %in seq_cst
   store i32 %tmp0, ptr %out2
   ret void
@@ -8151,7 +8151,7 @@ define amdgpu_kernel void @atomic_min_i32_ret_addr64(ptr %out, ptr %out2, i32 %i
 ; GCN3-NEXT:    flat_store_dword v[0:1], v2
 ; GCN3-NEXT:    s_endpgm
 entry:
-  %ptr = getelementptr i32, ptr %out, i32 %index
+  %ptr = getelementptr inbounds i32, ptr %out, i32 %index
   %tmp0 = atomicrmw min ptr %ptr, i32 %in seq_cst
   store i32 %tmp0, ptr %out2
   ret void
@@ -8185,7 +8185,7 @@ define void @flat_min_i32_noret_offset__amdgpu_no_remote_memory(ptr %out, i32 %i
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    buffer_wbinvl1_vol
 ; GCN3-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i32, ptr %out, i64 4
+  %gep = getelementptr inbounds i32, ptr %out, i64 4
   %tmp0 = atomicrmw min ptr %gep, i32 %in seq_cst, !amdgpu.no.remote.memory !0
   ret void
 }
@@ -8218,7 +8218,7 @@ define i32 @flat_atomic_min_i32_ret_offset__amdgpu_no_remote_memory(ptr %out, i3
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    buffer_wbinvl1_vol
 ; GCN3-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i32, ptr %out, i64 4
+  %gep = getelementptr inbounds i32, ptr %out, i64 4
   %result = atomicrmw min ptr %gep, i32 %in seq_cst, !amdgpu.no.remote.memory !0
   ret i32 %result
 }
@@ -8373,7 +8373,7 @@ define void @flat_atomic_uinc_wrap_i32_noret_offset(ptr %out, i32 %in) {
 ; GCN3-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GCN3-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GCN3-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %tmp0 = atomicrmw uinc_wrap ptr %gep, i32 %in seq_cst
   ret void
 }
@@ -8528,7 +8528,7 @@ define i32 @flat_atomic_uinc_wrap_i32_ret_offset(ptr %out, i32 %in) {
 ; GCN3-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GCN3-NEXT:    v_mov_b32_e32 v0, v3
 ; GCN3-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %result = atomicrmw uinc_wrap ptr %gep, i32 %in seq_cst
   ret i32 %result
 }
@@ -8691,7 +8691,7 @@ define amdgpu_gfx void @flat_atomic_uinc_wrap_i32_noret_offset_scalar(ptr inreg 
 ; GCN3-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GCN3-NEXT:    s_or_b64 exec, exec, s[34:35]
 ; GCN3-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %tmp0 = atomicrmw uinc_wrap ptr %gep, i32 %in seq_cst
   ret void
 }
@@ -8862,7 +8862,7 @@ define amdgpu_gfx i32 @flat_atomic_uinc_wrap_i32_ret_offset_scalar(ptr inreg %ou
 ; GCN3-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GCN3-NEXT:    s_or_b64 exec, exec, s[34:35]
 ; GCN3-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %result = atomicrmw uinc_wrap ptr %gep, i32 %in seq_cst
   ret i32 %result
 }
@@ -8895,7 +8895,7 @@ define void @flat_uinc_wrap_i32_noret_offset__amdgpu_no_remote_memory(ptr %out, 
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    buffer_wbinvl1_vol
 ; GCN3-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i32, ptr %out, i64 4
+  %gep = getelementptr inbounds i32, ptr %out, i64 4
   %tmp0 = atomicrmw uinc_wrap ptr %gep, i32 %in seq_cst, !amdgpu.no.remote.memory !0
   ret void
 }
@@ -8928,7 +8928,7 @@ define i32 @flat_atomic_uinc_wrap_i32_ret_offset__amdgpu_no_remote_memory(ptr %o
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    buffer_wbinvl1_vol
 ; GCN3-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i32, ptr %out, i64 4
+  %gep = getelementptr inbounds i32, ptr %out, i64 4
   %result = atomicrmw uinc_wrap ptr %gep, i32 %in seq_cst, !amdgpu.no.remote.memory !0
   ret i32 %result
 }
@@ -9089,7 +9089,7 @@ define void @flat_atomic_udec_wrap_i32_noret_offset(ptr %out, i32 %in) {
 ; GCN3-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GCN3-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GCN3-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %tmp0 = atomicrmw udec_wrap ptr %gep, i32 %in seq_cst
   ret void
 }
@@ -9250,7 +9250,7 @@ define i32 @flat_atomic_udec_wrap_i32_ret_offset(ptr %out, i32 %in) {
 ; GCN3-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GCN3-NEXT:    v_mov_b32_e32 v0, v3
 ; GCN3-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %result = atomicrmw udec_wrap ptr %gep, i32 %in seq_cst
   ret i32 %result
 }
@@ -9433,7 +9433,7 @@ define amdgpu_gfx void @flat_atomic_udec_wrap_i32_noret_offset_scalar(ptr inreg 
 ; GCN3-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GCN3-NEXT:    s_or_b64 exec, exec, s[36:37]
 ; GCN3-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %tmp0 = atomicrmw udec_wrap ptr %gep, i32 %in seq_cst
   ret void
 }
@@ -9616,7 +9616,7 @@ define amdgpu_gfx i32 @flat_atomic_udec_wrap_i32_ret_offset_scalar(ptr inreg %ou
 ; GCN3-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GCN3-NEXT:    s_or_b64 exec, exec, s[36:37]
 ; GCN3-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %result = atomicrmw udec_wrap ptr %gep, i32 %in seq_cst
   ret i32 %result
 }
@@ -9649,7 +9649,7 @@ define void @flat_udec_wrap_i32_noret_offset__amdgpu_no_remote_memory(ptr %out, 
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    buffer_wbinvl1_vol
 ; GCN3-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i32, ptr %out, i64 4
+  %gep = getelementptr inbounds i32, ptr %out, i64 4
   %tmp0 = atomicrmw udec_wrap ptr %gep, i32 %in seq_cst, !amdgpu.no.remote.memory !0
   ret void
 }
@@ -9682,7 +9682,7 @@ define i32 @flat_atomic_udec_wrap_i32_ret_offset__amdgpu_no_remote_memory(ptr %o
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    buffer_wbinvl1_vol
 ; GCN3-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i32, ptr %out, i64 4
+  %gep = getelementptr inbounds i32, ptr %out, i64 4
   %result = atomicrmw udec_wrap ptr %gep, i32 %in seq_cst, !amdgpu.no.remote.memory !0
   ret i32 %result
 }
