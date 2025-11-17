@@ -636,6 +636,13 @@ bool TargetInfo::callGlobalDeleteInDeletingDtor(
   return false;
 }
 
+bool TargetInfo::emitVectorDeletingDtors(const LangOptions &LangOpts) const {
+  if (getCXXABI() == TargetCXXABI::Microsoft &&
+      LangOpts.getClangABICompat() > LangOptions::ClangABI::Ver21)
+    return true;
+  return false;
+}
+
 bool TargetInfo::areDefaultedSMFStillPOD(const LangOptions &LangOpts) const {
   return LangOpts.getClangABICompat() > LangOptions::ClangABI::Ver15;
 }

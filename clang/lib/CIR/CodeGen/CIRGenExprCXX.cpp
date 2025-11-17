@@ -234,6 +234,89 @@ RValue CIRGenFunction::emitCXXMemberOrOperatorCall(
   return emitCall(fnInfo, callee, returnValue, args, nullptr, loc);
 }
 
+static void emitNullBaseClassInitialization(CIRGenFunction &cgf,
+                                            Address destPtr,
+                                            const CXXRecordDecl *base) {
+  if (base->isEmpty())
+    return;
+
+  cgf.cgm.errorNYI(base->getSourceRange(),
+                   "emitNullBaseClassInitialization: not empty");
+}
+
+void CIRGenFunction::emitCXXConstructExpr(const CXXConstructExpr *e,
+                                          AggValueSlot dest) {
+  assert(!dest.isIgnored() && "Must have a destination!");
+  const CXXConstructorDecl *cd = e->getConstructor();
+
+  // If we require zero initialization before (or instead of) calling the
+  // constructor, as can be the case with a non-user-provided default
+  // constructor, emit the zero initialization now, unless destination is
+  // already zeroed.
+  if (e->requiresZeroInitialization() && !dest.isZeroed()) {
+    switch (e->getConstructionKind()) {
+    case CXXConstructionKind::Delegating:
+    case CXXConstructionKind::Complete:
+      emitNullInitialization(getLoc(e->getSourceRange()), dest.getAddress(),
+                             e->getType());
+      break;
+    case CXXConstructionKind::VirtualBase:
+    case CXXConstructionKind::NonVirtualBase:
+      emitNullBaseClassInitialization(*this, dest.getAddress(),
+                                      cd->getParent());
+      break;
+    }
+  }
+
+  // If this is a call to a trivial default constructor, do nothing.
+  if (cd->isTrivial() && cd->isDefaultConstructor())
+    return;
+
+  // Elide the constructor if we're constructing from a temporary
+  if (getLangOpts().ElideConstructors && e->isElidable()) {
+    // FIXME: This only handles the simplest case, where the source object is
+    //        passed directly as the first argument to the constructor. This
+    //        should also handle stepping through implicit casts and conversion
+    //        sequences which involve two steps, with a conversion operator
+    //        follwed by a converting constructor.
+    const Expr *srcObj = e->getArg(0);
+    assert(srcObj->isTemporaryObject(getContext(), cd->getParent()));
+    assert(
+        getContext().hasSameUnqualifiedType(e->getType(), srcObj->getType()));
+    emitAggExpr(srcObj, dest);
+    return;
+  }
+
+  if (const ArrayType *arrayType = getContext().getAsArrayType(e->getType())) {
+    assert(!cir::MissingFeatures::sanitizers());
+    emitCXXAggrConstructorCall(cd, arrayType, dest.getAddress(), e, false);
+  } else {
+
+    clang::CXXCtorType type = Ctor_Complete;
+    bool forVirtualBase = false;
+    bool delegating = false;
+
+    switch (e->getConstructionKind()) {
+    case CXXConstructionKind::Complete:
+      type = Ctor_Complete;
+      break;
+    case CXXConstructionKind::Delegating:
+      // We should be emitting a constructor; GlobalDecl will assert this
+      type = curGD.getCtorType();
+      delegating = true;
+      break;
+    case CXXConstructionKind::VirtualBase:
+      forVirtualBase = true;
+      [[fallthrough]];
+    case CXXConstructionKind::NonVirtualBase:
+      type = Ctor_Base;
+      break;
+    }
+
+    emitCXXConstructorCall(cd, type, forVirtualBase, delegating, dest, e);
+  }
+}
+
 static CharUnits calculateCookiePadding(CIRGenFunction &cgf,
                                         const CXXNewExpr *e) {
   if (!e->isArray())
@@ -624,6 +707,13 @@ void CIRGenFunction::emitCXXDeleteExpr(const CXXDeleteExpr *e) {
   // We might be deleting a pointer to array.
   deleteTy = getContext().getBaseElementType(deleteTy);
   ptr = ptr.withElementType(builder, convertTypeForMem(deleteTy));
+
+  if (e->isArrayForm() &&
+      cgm.getASTContext().getTargetInfo().emitVectorDeletingDtors(
+          cgm.getASTContext().getLangOpts())) {
+    cgm.errorNYI(e->getSourceRange(),
+                 "emitCXXDeleteExpr: emitVectorDeletingDtors");
+  }
 
   if (e->isArrayForm()) {
     assert(!cir::MissingFeatures::deleteArray());

@@ -456,11 +456,10 @@ public:
 
   /// FP16 and BF16 operations are lowered to fptrunc(op(fpext, fpext) if the
   /// architecture features are not present.
-  std::optional<InstructionCost>
-  getFP16BF16PromoteCost(Type *Ty, TTI::TargetCostKind CostKind,
-                         TTI::OperandValueInfo Op1Info,
-                         TTI::OperandValueInfo Op2Info, bool IncludeTrunc,
-                         std::function<InstructionCost(Type *)> InstCost) const;
+  std::optional<InstructionCost> getFP16BF16PromoteCost(
+      Type *Ty, TTI::TargetCostKind CostKind, TTI::OperandValueInfo Op1Info,
+      TTI::OperandValueInfo Op2Info, bool IncludeTrunc, bool CanUseSVE,
+      std::function<InstructionCost(Type *)> InstCost) const;
 
   InstructionCost
   getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,

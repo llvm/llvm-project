@@ -236,7 +236,7 @@ static bool sinkScalarOperands(VPlan &Plan) {
 
 /// If \p R is a region with a VPBranchOnMaskRecipe in the entry block, return
 /// the mask.
-VPValue *getPredicatedMask(VPRegionBlock *R) {
+static VPValue *getPredicatedMask(VPRegionBlock *R) {
   auto *EntryBB = dyn_cast<VPBasicBlock>(R->getEntry());
   if (!EntryBB || EntryBB->size() != 1 ||
       !isa<VPBranchOnMaskRecipe>(EntryBB->begin()))
@@ -580,10 +580,13 @@ void VPlanTransforms::removeDeadRecipes(VPlan &Plan) {
 
       // Check if R is a dead VPPhi <-> update cycle and remove it.
       auto *PhiR = dyn_cast<VPPhi>(&R);
-      if (!PhiR || PhiR->getNumOperands() != 2 || PhiR->getNumUsers() != 1)
+      if (!PhiR || PhiR->getNumOperands() != 2)
+        continue;
+      VPUser *PhiUser = PhiR->getSingleUser();
+      if (!PhiUser)
         continue;
       VPValue *Incoming = PhiR->getOperand(1);
-      if (*PhiR->user_begin() != Incoming->getDefiningRecipe() ||
+      if (PhiUser != Incoming->getDefiningRecipe() ||
           Incoming->getNumUsers() != 1)
         continue;
       PhiR->replaceAllUsesWith(PhiR->getOperand(0));
@@ -1217,6 +1220,17 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
     }
   }
 
+  // Fold (fcmp uno %X, %X) or (fcmp uno %Y, %Y) -> fcmp uno %X, %Y
+  // This is useful for fmax/fmin without fast-math flags, where we need to
+  // check if any operand is NaN.
+  if (match(Def, m_BinaryOr(m_SpecificCmp(CmpInst::FCMP_UNO, m_VPValue(X),
+                                          m_Deferred(X)),
+                            m_SpecificCmp(CmpInst::FCMP_UNO, m_VPValue(Y),
+                                          m_Deferred(Y))))) {
+    VPValue *NewCmp = Builder.createFCmp(CmpInst::FCMP_UNO, X, Y);
+    return Def->replaceAllUsesWith(NewCmp);
+  }
+
   // Remove redundant DerviedIVs, that is 0 + A * 1 -> A and 0 + 0 * x -> 0.
   if ((match(Def, m_DerivedIV(m_ZeroInt(), m_VPValue(A), m_One())) ||
        match(Def, m_DerivedIV(m_ZeroInt(), m_ZeroInt(), m_VPValue()))) &&
@@ -1307,7 +1321,7 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
       isa<VPPhi>(X)) {
     auto *Phi = cast<VPPhi>(X);
     if (Phi->getOperand(1) != Def && match(Phi->getOperand(0), m_ZeroInt()) &&
-        Phi->getNumUsers() == 1 && (*Phi->user_begin() == Def)) {
+        Phi->getSingleUser() == Def) {
       Phi->setOperand(0, Y);
       Def->replaceAllUsesWith(Phi);
       return;
@@ -1387,8 +1401,7 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry()))) {
     for (VPRecipeBase &R : make_early_inc_range(reverse(*VPBB))) {
-      if (!isa<VPWidenRecipe, VPWidenSelectRecipe, VPWidenGEPRecipe,
-               VPReplicateRecipe>(&R))
+      if (!isa<VPWidenRecipe, VPWidenSelectRecipe, VPReplicateRecipe>(&R))
         continue;
       auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
       if (RepR && (RepR->isSingleScalar() || RepR->isPredicated()))
@@ -1419,11 +1432,11 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
           !all_of(RepOrWidenR->users(), [RepOrWidenR](const VPUser *U) {
             if (auto *Store = dyn_cast<VPWidenStoreRecipe>(U)) {
               // VPWidenStore doesn't have users, and stores are always
-              // profitable to widen: hence, permitting single-scalar stored
-              // values is an important leaf condition. The assert must hold as
-              // we checked the RepOrWidenR operand against
-              // vputils::isSingleScalar.
-              assert(RepOrWidenR == Store->getAddr() ||
+              // profitable to widen: hence, permitting address and mask
+              // operands, and single-scalar stored values is an important leaf
+              // condition. The assert must hold as we checked the RepOrWidenR
+              // operand against vputils::isSingleScalar.
+              assert(RepOrWidenR != Store->getStoredValue() ||
                      vputils::isSingleScalar(Store->getStoredValue()));
               return true;
             }
@@ -1593,10 +1606,11 @@ static bool optimizeVectorInductionWidthForTCAndVFUF(VPlan &Plan,
 
     // Currently only handle cases where the single user is a header-mask
     // comparison with the backedge-taken-count.
-    if (!match(*WideIV->user_begin(),
-               m_ICmp(m_Specific(WideIV),
-                      m_Broadcast(
-                          m_Specific(Plan.getOrCreateBackedgeTakenCount())))))
+    VPUser *SingleUser = WideIV->getSingleUser();
+    if (!SingleUser ||
+        !match(SingleUser, m_ICmp(m_Specific(WideIV),
+                                  m_Broadcast(m_Specific(
+                                      Plan.getOrCreateBackedgeTakenCount())))))
       continue;
 
     // Update IV operands and comparison bound to use new narrower type.
@@ -1608,7 +1622,7 @@ static bool optimizeVectorInductionWidthForTCAndVFUF(VPlan &Plan,
     auto *NewBTC = new VPWidenCastRecipe(
         Instruction::Trunc, Plan.getOrCreateBackedgeTakenCount(), NewIVTy);
     Plan.getVectorPreheader()->appendRecipe(NewBTC);
-    auto *Cmp = cast<VPInstruction>(*WideIV->user_begin());
+    auto *Cmp = cast<VPInstruction>(WideIV->getSingleUser());
     Cmp->setOperand(1, NewBTC);
 
     MadeChange = true;
@@ -1830,6 +1844,35 @@ static bool simplifyBranchConditionForVFAndUF(VPlan &Plan, ElementCount BestVF,
   return true;
 }
 
+/// From the definition of llvm.experimental.get.vector.length,
+/// VPInstruction::ExplicitVectorLength(%AVL) = %AVL when %AVL <= VF.
+static bool simplifyKnownEVL(VPlan &Plan, ElementCount VF,
+                             PredicatedScalarEvolution &PSE) {
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_deep(Plan.getEntry()))) {
+    for (VPRecipeBase &R : *VPBB) {
+      VPValue *AVL;
+      if (!match(&R, m_EVL(m_VPValue(AVL))))
+        continue;
+
+      ScalarEvolution &SE = *PSE.getSE();
+      const SCEV *AVLSCEV = vputils::getSCEVExprForVPValue(AVL, SE);
+      if (isa<SCEVCouldNotCompute>(AVLSCEV))
+        continue;
+      const SCEV *VFSCEV = SE.getElementCount(AVLSCEV->getType(), VF);
+      if (!SE.isKnownPredicate(CmpInst::ICMP_ULE, AVLSCEV, VFSCEV))
+        continue;
+
+      VPValue *Trunc = VPBuilder(&R).createScalarZExtOrTrunc(
+          AVL, Type::getInt32Ty(Plan.getContext()), AVLSCEV->getType(),
+          R.getDebugLoc());
+      R.getVPSingleValue()->replaceAllUsesWith(Trunc);
+      return true;
+    }
+  }
+  return false;
+}
+
 void VPlanTransforms::optimizeForVFAndUF(VPlan &Plan, ElementCount BestVF,
                                          unsigned BestUF,
                                          PredicatedScalarEvolution &PSE) {
@@ -1839,14 +1882,12 @@ void VPlanTransforms::optimizeForVFAndUF(VPlan &Plan, ElementCount BestVF,
   bool MadeChange = tryToReplaceALMWithWideALM(Plan, BestVF, BestUF);
   MadeChange |= simplifyBranchConditionForVFAndUF(Plan, BestVF, BestUF, PSE);
   MadeChange |= optimizeVectorInductionWidthForTCAndVFUF(Plan, BestVF, BestUF);
+  MadeChange |= simplifyKnownEVL(Plan, BestVF, PSE);
 
   if (MadeChange) {
     Plan.setVF(BestVF);
     assert(Plan.getUF() == BestUF && "BestUF must match the Plan's UF");
   }
-  // TODO: Further simplifications are possible
-  //      1. Replace inductions with constants.
-  //      2. Replace vector loop region with VPBasicBlock.
 }
 
 /// Sink users of \p FOR after the recipe defining the previous value \p
@@ -2553,9 +2594,7 @@ template <typename Op0_t, typename Op1_t> struct RemoveMask_match {
       Out = nullptr;
       return true;
     }
-    if (m_LogicalAnd(m_Specific(In), m_VPValue(Out)).match(V))
-      return true;
-    return false;
+    return m_LogicalAnd(m_Specific(In), m_VPValue(Out)).match(V);
   }
 };
 
@@ -2630,6 +2669,12 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
             m_Select(m_Specific(HeaderMask), m_VPValue(LHS), m_VPValue(RHS))))
     return new VPWidenIntrinsicRecipe(
         Intrinsic::vp_merge, {Plan->getTrue(), LHS, RHS, &EVL},
+        TypeInfo.inferScalarType(LHS), CurRecipe.getDebugLoc());
+
+  if (match(&CurRecipe, m_Select(m_RemoveMask(HeaderMask, Mask), m_VPValue(LHS),
+                                 m_VPValue(RHS))))
+    return new VPWidenIntrinsicRecipe(
+        Intrinsic::vp_merge, {Mask, LHS, RHS, &EVL},
         TypeInfo.inferScalarType(LHS), CurRecipe.getDebugLoc());
 
   return nullptr;
@@ -3716,11 +3761,9 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
 
   // Try to match reduce.add(mul(...)).
   if (match(VecOp, m_Mul(m_VPValue(A), m_VPValue(B)))) {
-    auto *RecipeA =
-        dyn_cast_if_present<VPWidenCastRecipe>(A->getDefiningRecipe());
-    auto *RecipeB =
-        dyn_cast_if_present<VPWidenCastRecipe>(B->getDefiningRecipe());
-    auto *Mul = cast<VPWidenRecipe>(VecOp->getDefiningRecipe());
+    auto *RecipeA = dyn_cast_if_present<VPWidenCastRecipe>(A);
+    auto *RecipeB = dyn_cast_if_present<VPWidenCastRecipe>(B);
+    auto *Mul = cast<VPWidenRecipe>(VecOp);
 
     // Convert reduce.add(mul(ext, const)) to reduce.add(mul(ext, ext(const)))
     ExtendAndReplaceConstantOp(RecipeA, RecipeB, B, Mul);
@@ -3745,10 +3788,10 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
 
   // Match reduce.add(ext(mul(A, B))).
   if (match(VecOp, m_ZExtOrSExt(m_Mul(m_VPValue(A), m_VPValue(B))))) {
-    auto *Ext = cast<VPWidenCastRecipe>(VecOp->getDefiningRecipe());
-    auto *Mul = cast<VPWidenRecipe>(Ext->getOperand(0)->getDefiningRecipe());
-    auto *Ext0 = dyn_cast_if_present<VPWidenCastRecipe>(A->getDefiningRecipe());
-    auto *Ext1 = dyn_cast_if_present<VPWidenCastRecipe>(B->getDefiningRecipe());
+    auto *Ext = cast<VPWidenCastRecipe>(VecOp);
+    auto *Mul = cast<VPWidenRecipe>(Ext->getOperand(0));
+    auto *Ext0 = dyn_cast_if_present<VPWidenCastRecipe>(A);
+    auto *Ext1 = dyn_cast_if_present<VPWidenCastRecipe>(B);
 
     // reduce.add(ext(mul(ext, const)))
     // -> reduce.add(ext(mul(ext, ext(const))))
@@ -4159,8 +4202,9 @@ static bool canNarrowLoad(VPWidenRecipe *WideMember0, unsigned OpIdx,
 /// members both equal to \p VF. The interleave group must also access the full
 /// vector width \p VectorRegWidth.
 static bool isConsecutiveInterleaveGroup(VPInterleaveRecipe *InterleaveR,
-                                         unsigned VF, VPTypeAnalysis &TypeInfo,
-                                         unsigned VectorRegWidth) {
+                                         ElementCount VF,
+                                         VPTypeAnalysis &TypeInfo,
+                                         TypeSize VectorRegWidth) {
   if (!InterleaveR || InterleaveR->getMask())
     return false;
 
@@ -4182,9 +4226,11 @@ static bool isConsecutiveInterleaveGroup(VPInterleaveRecipe *InterleaveR,
       return false;
   }
 
-  unsigned GroupSize = GroupElementTy->getScalarSizeInBits() * VF;
-  auto IG = InterleaveR->getInterleaveGroup();
-  return IG->getFactor() == VF && IG->getNumMembers() == VF &&
+  unsigned VFMin = VF.getKnownMinValue();
+  TypeSize GroupSize = TypeSize::get(
+      GroupElementTy->getScalarSizeInBits() * VFMin, VF.isScalable());
+  const auto *IG = InterleaveR->getInterleaveGroup();
+  return IG->getFactor() == VFMin && IG->getNumMembers() == VFMin &&
          GroupSize == VectorRegWidth;
 }
 
@@ -4250,14 +4296,13 @@ narrowInterleaveGroupOp(VPValue *V, SmallPtrSetImpl<VPValue *> &NarrowedOps) {
 }
 
 void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
-                                             unsigned VectorRegWidth) {
+                                             TypeSize VectorRegWidth) {
   VPRegionBlock *VectorLoop = Plan.getVectorLoopRegion();
   if (!VectorLoop || VectorLoop->getEntry()->getNumSuccessors() != 0)
     return;
 
   VPTypeAnalysis TypeInfo(Plan);
 
-  unsigned VFMinVal = VF.getKnownMinValue();
   SmallVector<VPInterleaveRecipe *> StoreGroups;
   for (auto &R : *VectorLoop->getEntryBasicBlock()) {
     if (isa<VPCanonicalIVPHIRecipe>(&R))
@@ -4292,7 +4337,7 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
       continue;
 
     // Bail out on non-consecutive interleave groups.
-    if (!isConsecutiveInterleaveGroup(InterleaveR, VFMinVal, TypeInfo,
+    if (!isConsecutiveInterleaveGroup(InterleaveR, VF, TypeInfo,
                                       VectorRegWidth))
       return;
 
@@ -4326,12 +4371,12 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
 
     // Check if all values feeding InterleaveR are matching wide recipes, which
     // operands that can be narrowed.
-    auto *WideMember0 = dyn_cast_or_null<VPWidenRecipe>(
-        InterleaveR->getStoredValues()[0]->getDefiningRecipe());
+    auto *WideMember0 =
+        dyn_cast_or_null<VPWidenRecipe>(InterleaveR->getStoredValues()[0]);
     if (!WideMember0)
       return;
     for (const auto &[I, V] : enumerate(InterleaveR->getStoredValues())) {
-      auto *R = dyn_cast_or_null<VPWidenRecipe>(V->getDefiningRecipe());
+      auto *R = dyn_cast_or_null<VPWidenRecipe>(V);
       if (!R || R->getOpcode() != WideMember0->getOpcode() ||
           R->getNumOperands() > 2)
         return;
