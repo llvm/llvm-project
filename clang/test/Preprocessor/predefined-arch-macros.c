@@ -2534,10 +2534,9 @@
 // CHECK_ARL_M32: #define __ADX__ 1
 // CHECK_ARL_M32: #define __AES__ 1
 // CHECK_ARL_M32-NOT: AVX512
-// CHECK_NVL_M32: #define __AVX10_1_512__ 1
 // CHECK_NVL_M32: #define __AVX10_1__ 1
-// CHECK_NVL_M32: #define __AVX10_2_512__ 1
 // CHECK_NVL_M32: #define __AVX10_2__ 1
+// AVX2 needs to be here, not after AES because otherwise NVL fails
 // CHECK_ARL_M32: #define __AVX2__ 1
 // CHECK_NVL_M32: #define __AVX512BF16__ 1
 // CHECK_NVL_M32: #define __AVX512BITALG__ 1
@@ -2669,9 +2668,7 @@
 // CHECK_ARL_M64: #define __ADX__ 1
 // CHECK_ARL_M64: #define __AES__ 1
 // CHECK_ARL_M64-NOT: AVX512
-// CHECK_NVL_M64: #define __AVX10_1_512__ 1
 // CHECK_NVL_M64: #define __AVX10_1__ 1
-// CHECK_NVL_M64: #define __AVX10_2_512__ 1
 // CHECK_NVL_M64: #define __AVX10_2__ 1
 // CHECK_ARL_M64: #define __AVX2__ 1
 // CHECK_NVL_M64: #define __AVX512BF16__ 1
