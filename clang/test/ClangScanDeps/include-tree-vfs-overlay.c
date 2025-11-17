@@ -6,7 +6,7 @@
 // RUN: split-file %s %t
 // RUN: sed -e "s|DIR|%/t|g" %t/vfs-overlay.yaml.template > %t/vfs-overlay.yaml
 
-// RUN: %clang -I%t -fdepscan=inline -fdepscan-include-tree -Xclang -fcas-path -Xclang %t/cas -Xclang -ivfsoverlay -Xclang %t/vfs-overlay.yaml -c %t/test.c
+// RUN: %clang -I%t -fdepscan=inline -Xclang -fcas-path -Xclang %t/cas -Xclang -ivfsoverlay -Xclang %t/vfs-overlay.yaml -c %t/test.c
 
 //--- test.c
 #include "header.h"

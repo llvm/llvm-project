@@ -94,9 +94,6 @@ static int executeAsProcess(ArrayRef<const char *> Args,
 /// functionalities.
 static void addCommonArgs(bool ForDriver, SmallVectorImpl<const char *> &Args,
                           llvm::StringSaver &Saver) {
-  if (!llvm::sys::Process::GetEnv("CLANG_CACHE_USE_CASFS_DEPSCAN")) {
-    Args.push_back("-fdepscan-include-tree");
-  }
   auto addCC1Args = [&](ArrayRef<const char *> NewArgs) {
     for (const char *Arg : NewArgs) {
       if (ForDriver) {

@@ -38,8 +38,6 @@ def deprecated_driver_command : F<"deprecated-driver-command", "use a single dri
 
 defm resource_dir_recipe : Eq<"resource-dir-recipe", "How to produce missing '-resource-dir' argument">;
 
-def emit_cas_compdb : F<"emit-cas-compdb", "Emit compilation DB with updated clang arguments for CAS based dependency scanning build.">;
-
 defm cas_path : Eq<"cas-path", "Path for on-disk CAS.">;
 
 defm fcas_plugin_path : Eq<"fcas-plugin-path", "Path to a shared library implementing the LLVM CAS plugin API">;

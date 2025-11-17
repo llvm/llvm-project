@@ -9,7 +9,6 @@
 #include "clang/Tooling/DependencyScanning/DependencyScanningFilesystem.h"
 #include "clang/Tooling/DependencyScanning/DependencyScanningService.h"
 #include "clang/CAS/CASOptions.h"
-#include "llvm/CAS/CachingOnDiskFileSystem.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/CAS/CachingOnDiskFileSystem.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -25,7 +24,7 @@ TEST(DependencyScanningWorkerFilesystem, CacheStatusFailures) {
 
   DependencyScanningService Service(
       ScanningMode::DependencyDirectivesScan, ScanningOutputFormat::Make,
-      clang::CASOptions(), nullptr, nullptr, nullptr,
+      clang::CASOptions(), nullptr, nullptr,
       ScanningOptimizations::Default, /*EagerLoadModules=*/false,
       /*TraceVFS=*/false, llvm::sys::toTimeT(std::chrono::system_clock::now()),
       /*CacheNegativeStats=*/true);
@@ -56,7 +55,7 @@ TEST(DependencyScanningFilesystem, CacheGetRealPath) {
 
   DependencyScanningService Service(
       ScanningMode::DependencyDirectivesScan, ScanningOutputFormat::Make,
-      clang::CASOptions(), nullptr, nullptr, nullptr,
+      clang::CASOptions(), nullptr, nullptr,
       ScanningOptimizations::Default, /*EagerLoadModules=*/false,
       /*TraceVFS=*/false, llvm::sys::toTimeT(std::chrono::system_clock::now()),
       /*CacheNegativeStats=*/true);
@@ -96,7 +95,7 @@ TEST(DependencyScanningFilesystem, RealPathAndStatusInvariants) {
 
   DependencyScanningService Service(
       ScanningMode::DependencyDirectivesScan, ScanningOutputFormat::Make,
-      clang::CASOptions(), nullptr, nullptr, nullptr);
+      clang::CASOptions(), nullptr, nullptr);
   DependencyScanningWorkerFilesystem DepFS(Service, InMemoryFS);
 
   // Success.
@@ -151,7 +150,7 @@ TEST(DependencyScanningFilesystem, CacheStatOnExists) {
   InMemoryFS->addFile("/bar", 0, llvm::MemoryBuffer::getMemBuffer(""));
   DependencyScanningService Service(
       ScanningMode::DependencyDirectivesScan, ScanningOutputFormat::Make,
-      clang::CASOptions(), nullptr, nullptr, nullptr,
+      clang::CASOptions(), nullptr, nullptr,
       ScanningOptimizations::Default, /*EagerLoadModules=*/false,
       /*TraceVFS=*/false, llvm::sys::toTimeT(std::chrono::system_clock::now()),
       /*CacheNegativeStats=*/true);
@@ -179,7 +178,7 @@ TEST(DependencyScanningFilesystem, CacheStatFailures) {
 
   DependencyScanningService Service(
       ScanningMode::DependencyDirectivesScan, ScanningOutputFormat::Make,
-      clang::CASOptions(), nullptr, nullptr, nullptr,
+      clang::CASOptions(), nullptr, nullptr,
       ScanningOptimizations::Default, /*EagerLoadModules=*/false,
       /*TraceVFS=*/false, llvm::sys::toTimeT(std::chrono::system_clock::now()),
       /*CacheNegativeStats=*/true);
@@ -211,7 +210,7 @@ TEST(DependencyScanningFilesystem, DiagnoseStaleStatFailures) {
 
   DependencyScanningService Service(
       ScanningMode::DependencyDirectivesScan, ScanningOutputFormat::Make,
-      clang::CASOptions(), nullptr, nullptr, nullptr,
+      clang::CASOptions(), nullptr, nullptr,
       ScanningOptimizations::Default, /*EagerLoadModules=*/false,
       /*TraceVFS=*/false, llvm::sys::toTimeT(std::chrono::system_clock::now()),
       /*CacheNegativeStats=*/true);
@@ -242,7 +241,7 @@ TEST(DependencyScanningFilesystem, DiagnoseCachedFileSizeChange) {
 
   DependencyScanningService Service(
       ScanningMode::DependencyDirectivesScan, ScanningOutputFormat::Make,
-      clang::CASOptions(), nullptr, nullptr, nullptr,
+      clang::CASOptions(), nullptr, nullptr,
       ScanningOptimizations::Default, /*EagerLoadModules=*/false,
       /*TraceVFS=*/false, llvm::sys::toTimeT(std::chrono::system_clock::now()),
       /*CacheNegativeStats=*/true);
@@ -281,7 +280,7 @@ TEST(DependencyScanningFilesystem, DoNotDiagnoseDirSizeChange) {
 
   DependencyScanningService Service(
       ScanningMode::DependencyDirectivesScan, ScanningOutputFormat::Make,
-      clang::CASOptions(), nullptr, nullptr, nullptr);
+      clang::CASOptions(), nullptr, nullptr);
   DependencyScanningWorkerFilesystem DepFS(Service, FS);
 
   // Trigger the file system cache.

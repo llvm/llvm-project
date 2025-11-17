@@ -10,12 +10,10 @@
 #define LLVM_CLANG_TOOLING_DEPENDENCYSCANNING_DEPENDENCYSCANNINGSERVICE_H
 
 #include "clang/CAS/CASOptions.h"
-#include "clang/Tooling/DependencyScanning/DependencyScanningCASFilesystem.h"
 #include "clang/Tooling/DependencyScanning/DependencyScanningFilesystem.h"
 #include "clang/Tooling/DependencyScanning/InProcessModuleCache.h"
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/CAS/ActionCache.h"
-#include "llvm/CAS/CachingOnDiskFileSystem.h"
 #include "llvm/Support/Chrono.h"
 
 namespace clang {
@@ -45,13 +43,6 @@ enum class ScanningOutputFormat {
   /// This outputs the full clang module dependency graph suitable for use for
   /// explicitly building modules.
   Full,
-
-  /// This emits the CAS ID of the scanned files.
-  Tree,
-
-  /// This emits the full dependency graph but with CAS tree embedded as file
-  /// dependency.
-  FullTree,
 
   /// This emits the CAS ID of the include tree.
   IncludeTree,
@@ -111,7 +102,6 @@ public:
       ScanningMode Mode, ScanningOutputFormat Format, CASOptions CASOpts,
       std::shared_ptr<llvm::cas::ObjectStore> CAS,
       std::shared_ptr<llvm::cas::ActionCache> Cache,
-      IntrusiveRefCntPtr<llvm::cas::CachingOnDiskFileSystem> SharedFS,
       ScanningOptimizations OptimizeArgs = ScanningOptimizations::Default,
       bool EagerLoadModules = false, bool TraceVFS = false,
       std::time_t BuildSessionTimestamp =
@@ -131,19 +121,13 @@ public:
   bool shouldCacheNegativeStats() const { return CacheNegativeStats; }
 
   DependencyScanningFilesystemSharedCache &getSharedCache() {
-    assert(!SharedFS && "Expected not to have a CASFS");
-    assert(SharedCache && "Expected a shared cache");
-    return *SharedCache;
+    return SharedCache;
   }
 
   const CASOptions &getCASOpts() const { return CASOpts; }
 
   std::shared_ptr<llvm::cas::ObjectStore> getCAS() const { return CAS; }
   std::shared_ptr<llvm::cas::ActionCache> getCache() const { return Cache; }
-
-  llvm::cas::CachingOnDiskFileSystem &getSharedFS() { return *SharedFS; }
-
-  bool useCASFS() const { return (bool)SharedFS; }
 
   ModuleCacheEntries &getModuleCacheEntries() { return ModCacheEntries; }
 
@@ -162,11 +146,8 @@ private:
   /// Whether to trace VFS accesses.
   const bool TraceVFS;
   const bool CacheNegativeStats;
-  /// Shared CachingOnDiskFileSystem. Set to nullptr to not use CAS dependency
-  /// scanning.
-  IntrusiveRefCntPtr<llvm::cas::CachingOnDiskFileSystem> SharedFS;
   /// The global file system cache.
-  std::optional<DependencyScanningFilesystemSharedCache> SharedCache;
+  DependencyScanningFilesystemSharedCache SharedCache;
   /// The global module cache entries.
   ModuleCacheEntries ModCacheEntries;
   /// The build session timestamp.

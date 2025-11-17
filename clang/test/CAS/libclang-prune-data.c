@@ -5,7 +5,7 @@
 
 // RUN: rm -rf %t && mkdir -p %t
 
-// RUN: %clang -cc1depscan -fdepscan=inline -fdepscan-include-tree -o %t/t.rsp -cc1-args \
+// RUN: %clang -cc1depscan -fdepscan=inline -o %t/t.rsp -cc1-args \
 // RUN:   -cc1 -triple x86_64-apple-macos12 -fcas-path %t/cas -emit-obj %s -o %t/output.o
 // RUN: %clang @%t/t.rsp
 // RUN: ls %t/cas | wc -l | grep 2
@@ -35,7 +35,7 @@
 
 // RUN: rm -rf %t/cas
 
-// RUN: %clang -cc1depscan -fdepscan=inline -fdepscan-include-tree -o %t/t.rsp -cc1-args \
+// RUN: %clang -cc1depscan -fdepscan=inline -o %t/t.rsp -cc1-args \
 // RUN:   -cc1 -triple x86_64-apple-macos12 -fcas-path %t/cas -emit-obj %s -o %t/output.o \
 // RUN:   -fcas-plugin-path %llvmshlibdir/libCASPluginTest%pluginext
 // RUN: %clang @%t/t.rsp

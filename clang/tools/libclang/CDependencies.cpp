@@ -26,7 +26,6 @@
 #include "clang/Tooling/DependencyScanning/DependencyScanningWorker.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/CAS/CASProvidingFileSystem.h"
-#include "llvm/CAS/CachingOnDiskFileSystem.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/OptTable.h"
 #include "llvm/Support/Process.h"
@@ -172,12 +171,11 @@ void clang_experimental_DependencyScannerServiceOptions_setCacheNegativeStats(
 
 CXDependencyScannerService
 clang_experimental_DependencyScannerService_create_v0(CXDependencyMode Format) {
-  // FIXME: Pass default CASOpts and nullptr as CachingOnDiskFileSystem now.
+  // FIXME: Pass default CASOpts now.
   CASOptions CASOpts;
-  IntrusiveRefCntPtr<llvm::cas::CachingOnDiskFileSystem> FS;
   return wrap(new DependencyScanningService(
       ScanningMode::DependencyDirectivesScan, unwrap(Format), CASOpts,
-      /*CAS=*/nullptr, /*ActionCache=*/nullptr, FS));
+      /*CAS=*/nullptr, /*ActionCache=*/nullptr));
 }
 
 ScanningOutputFormat DependencyScannerServiceOptions::getFormat() const {
@@ -187,36 +185,18 @@ ScanningOutputFormat DependencyScannerServiceOptions::getFormat() const {
   if (!CAS || !Cache)
     return ConfiguredFormat;
 
-  if (llvm::sys::Process::GetEnv("CLANG_CACHE_USE_INCLUDE_TREE"))
-    return ScanningOutputFormat::FullIncludeTree;
-
-  if (llvm::sys::Process::GetEnv("CLANG_CACHE_USE_CASFS_DEPSCAN"))
-    return ScanningOutputFormat::FullTree;
-
-  // Use include-tree by default.
   return ScanningOutputFormat::FullIncludeTree;
 }
 
 CXDependencyScannerService
 clang_experimental_DependencyScannerService_create_v1(
     CXDependencyScannerServiceOptions Opts) {
-  // FIXME: Pass default CASOpts and nullptr as CachingOnDiskFileSystem now.
+  // FIXME: Pass default CASOpts now.
   std::shared_ptr<llvm::cas::ObjectStore> CAS = unwrap(Opts)->CAS;
   std::shared_ptr<llvm::cas::ActionCache> Cache = unwrap(Opts)->Cache;
-  IntrusiveRefCntPtr<llvm::cas::CachingOnDiskFileSystem> FS;
-  ScanningOutputFormat Format = unwrap(Opts)->getFormat();
-  bool IsCASFSOutput = Format == ScanningOutputFormat::Tree ||
-                       Format == ScanningOutputFormat::FullTree;
-  if (CAS && Cache && IsCASFSOutput) {
-    assert(unwrap(Opts)->CASOpts.getKind() != CASOptions::UnknownCAS &&
-           "CAS and ActionCache must match CASOptions");
-    FS = llvm::cantFail(
-        llvm::cas::createCachingOnDiskFileSystem(CAS));
-  }
   return wrap(new DependencyScanningService(
-      ScanningMode::DependencyDirectivesScan, Format, unwrap(Opts)->CASOpts,
-      std::move(CAS), std::move(Cache), std::move(FS),
-      unwrap(Opts)->OptimizeArgs, /*EagerLoadModules=*/false,
+      ScanningMode::DependencyDirectivesScan, unwrap(Opts)->getFormat(), unwrap(Opts)->CASOpts,
+      std::move(CAS), std::move(Cache), unwrap(Opts)->OptimizeArgs, /*EagerLoadModules=*/false,
       /*TraceVFS=*/false, llvm::sys::toTimeT(std::chrono::system_clock::now()),
       unwrap(Opts)->CacheNegativeStats ? *unwrap(Opts)->CacheNegativeStats
                                        : shouldCacheNegativeStatsDefault()));
@@ -363,7 +343,6 @@ enum CXErrorCode clang_experimental_DependencyScannerWorker_getDepGraph(
   DependencyScanningWorker *Worker = unwrap(W);
 
   if (Worker->getScanningFormat() != ScanningOutputFormat::Full &&
-      Worker->getScanningFormat() != ScanningOutputFormat::FullTree &&
       Worker->getScanningFormat() != ScanningOutputFormat::FullIncludeTree)
     return CXError_InvalidArguments;
 
@@ -477,9 +456,6 @@ clang_experimental_DepGraphModule_getBuildArguments(CXDepGraphModule CXDepMod) {
 
 const char *clang_experimental_DepGraphModule_getFileSystemRootID(
     CXDepGraphModule CXDepMod) {
-  const ModuleDeps &ModDeps = *unwrap(CXDepMod)->ModDeps;
-  if (ModDeps.CASFileSystemRootID)
-    return ModDeps.CASFileSystemRootID->c_str();
   return nullptr;
 }
 
@@ -554,9 +530,6 @@ CXCStringArray clang_experimental_DepGraph_getTUModuleDeps(CXDepGraph Graph) {
 
 const char *
 clang_experimental_DepGraph_getTUFileSystemRootID(CXDepGraph Graph) {
-  TranslationUnitDeps &TUDeps = unwrap(Graph)->TUDeps;
-  if (TUDeps.CASFileSystemRootID)
-    return TUDeps.CASFileSystemRootID->c_str();
   return nullptr;
 }
 
@@ -643,11 +616,6 @@ CXDepScanFSOutOfDateEntrySet
 clang_experimental_DependencyScannerService_getFSCacheOutOfDateEntrySet(
     CXDependencyScannerService S) {
   DependencyScanningService &Service = *unwrap(S);
-
-  // FIXME: CAS FS currently does not use the shared cache, and cannot produce
-  // the same diagnostics. We should add such a diagnostics to CAS as well.
-  if (Service.useCASFS())
-    return nullptr;
 
   // Note that it is critical that this FS is the same as the default virtual
   // file system we pass to the DependencyScanningWorkers.
@@ -805,10 +773,9 @@ enum CXErrorCode clang_experimental_DependencyScanner_generateReproducer(
            << "non-unique reproducer is allowed only in a custom location";
 
   CASOptions CASOpts;
-  IntrusiveRefCntPtr<llvm::cas::CachingOnDiskFileSystem> FS;
   DependencyScanningService DepsService(
       ScanningMode::DependencyDirectivesScan, ScanningOutputFormat::Full,
-      CASOpts, /*CAS=*/nullptr, /*ActionCache=*/nullptr, FS);
+      CASOpts, /*CAS=*/nullptr, /*ActionCache=*/nullptr);
   DependencyScanningTool DepsTool(DepsService);
 
   llvm::SmallString<128> ReproScriptPath;

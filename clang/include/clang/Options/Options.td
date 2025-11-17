@@ -9065,40 +9065,6 @@ def fsycl_is_host : Flag<["-"], "fsycl-is-host">,
 // CAS Options
 //===----------------------------------------------------------------------===//
 
-// Example command-lines we expect:
-//
-// For building against some pre-ingested, CAS-based filesystem in the builtin
-// on-disk CAS:
-// ```
-// % clang -fcas-path=auto -fcas-fs=llvmcas://1af12fa2afa1af2a1fa
-// % clang -fcas-path=path/to/cas -fcas-fs=llvmcas://1af12fa2afa1af2a1fa
-// ```
-//
-// For building against some pre-ingested, CAS-based filesystem using a plugin:
-// ```
-// % clang -fcas-plugin=path/to/some/cas-plugind \
-//         -fcas-plugin-args=-X,-Y,-Z            \
-//         -fcas-fs=llvmcas://1af12fa2afa1af2a1fa
-// ```
-//
-// For automatically ingesting from the live filesystem into a CAS,
-// canonicalizing the paths, and running the `-cc1` against the CAS tree:
-// ```
-// % clang -fdepscan                              \
-//         -fdepscan-prefix-map=/my/sources=/^src \
-//         -fdepscan-prefix-map=/my/build/dir=/^build
-// ```
-//
-// For pruning and canonicalizing even when starting from a pre-ingested,
-// CAS-based filesystem:
-// ```
-// % clang -fcas-path=path/to/the/cas             \
-//         -fcas-fs=llvmcas://1af12fa2afa1af2a1fa \
-//         -fdepscan                              \
-//         -fdepscan-prefix-map=/my/sources=/^src \
-//         -fdepscan-prefix-map=/my/build/dir=/^build
-// ```
-
 // Driver CAS options.
 def fdepscan_EQ : Joined<["-"], "fdepscan=">,
     Group<f_Group>,
@@ -9154,10 +9120,6 @@ def fdepscan_daemon_EQ : Joined<["-"], "fdepscan-daemon=">, Group<f_Group>,
     HelpText<"Specify the path to the daemon to be used. Clang will use the"
              " daemon specified, rather than try to spawn its own based on"
              " parent processes.">;
-
-def fdepscan_include_tree : Flag<["-"], "fdepscan-include-tree">,
-    Visibility<[ClangOption, CLOption]>,
-    Group<f_Group>, HelpText<"Set dep-scanner to produce the include tree">;
 
 // CAS prefix map options.
 //
@@ -9218,20 +9180,6 @@ def fcas_plugin_option : Separate<["-"], "fcas-plugin-option">,
     Group<f_Group>, MetaVarName<"<name>=<value>">,
     HelpText<"Option to pass to the CAS plugin.">,
     MarshallingInfoStringPairVector<CASOpts<"PluginOptions">>;
-
-// FIXME: Add to driver once it's supported by -fdepscan.
-def fcas_fs : Separate<["-"], "fcas-fs">,
-    Group<f_Group>, MetaVarName<"<tree>">,
-    HelpText<"Configure the filesystem to read from the provided CAS tree."
-             " See also -fcas-builtin-path for loading a tree.">,
-    MarshallingInfoString<FileSystemOpts<"CASFileSystemRootID">>;
-
-// FIXME: Remove / merge with -fworking-directory?
-def fcas_fs_working_directory : Separate<["-"], "fcas-fs-working-directory">,
-    Group<f_Group>, MetaVarName<"<dir>">,
-    HelpText<"Working directory for -fcas-fs (if not the root).">,
-    ShouldParseIf<!strconcat("!", fcas_fs.KeyPath, ".empty()")>,
-    MarshallingInfoString<FileSystemOpts<"CASFileSystemWorkingDirectory">>;
 
 def fcas_include_tree : Separate<["-"], "fcas-include-tree">,
     Group<f_Group>, MetaVarName<"<tree>">,

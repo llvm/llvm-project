@@ -8,12 +8,6 @@
 // RUN:     -o FoE.o -x objective-c %s > %t.result
 // RUN: cat %t.result | FileCheck %s -DPREFIX=%S -DOUTPUTS=%/t -check-prefix=INCLUDE_TREE
 
-// RUN: env CLANG_CACHE_USE_CASFS_DEPSCAN=1 c-index-test core --scan-deps -working-dir %S -output-dir=%t -cas-path %t/cas \
-// RUN:  -- %clang -c -I %S/Inputs/module \
-// RUN:     -fmodules -fmodules-cache-path=%t/mcp \
-// RUN:     -o FoE.o -x objective-c %s > %t.casfs.result
-// RUN: cat %t.casfs.result | FileCheck %s -DPREFIX=%S -DOUTPUTS=%/t
-
 // RUN: env CLANG_CACHE_USE_INCLUDE_TREE=1 c-index-test core --scan-deps -working-dir %S -output-dir=%t -cas-path %t/cas \
 // RUN:  -- %clang -c -I %S/Inputs/module \
 // RUN:     -fmodules -fmodules-cache-path=%t/mcpit \

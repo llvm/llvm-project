@@ -35,15 +35,12 @@ public:
       DependencyScanningService &Service, StringRef WorkingDirectory,
       DependencyConsumer &Consumer, DependencyActionController &Controller,
       llvm::IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS,
-      llvm::IntrusiveRefCntPtr<DependencyScanningCASFilesystem> DepCASFS,
-      llvm::IntrusiveRefCntPtr<llvm::cas::CachingOnDiskFileSystem> CacheFS,
       bool EmitDependencyFile, bool DiagGenerationAsCompilation,
       const CASOptions &CASOpts,
       std::optional<StringRef> ModuleName = std::nullopt,
       raw_ostream *VerboseOS = nullptr)
       : Service(Service), WorkingDirectory(WorkingDirectory),
         Consumer(Consumer), Controller(Controller), DepFS(std::move(DepFS)),
-        DepCASFS(std::move(DepCASFS)), CacheFS(std::move(CacheFS)),
         CASOpts(CASOpts), EmitDependencyFile(EmitDependencyFile),
         DiagGenerationAsCompilation(DiagGenerationAsCompilation),
         VerboseOS(VerboseOS) {}
@@ -62,16 +59,12 @@ public:
 
   std::optional<std::string> takeLastCC1CacheKey();
 
-  IntrusiveRefCntPtr<llvm::vfs::FileSystem> getDepScanFS();
-
 private:
   DependencyScanningService &Service;
   StringRef WorkingDirectory;
   DependencyConsumer &Consumer;
   DependencyActionController &Controller;
   llvm::IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS;
-  llvm::IntrusiveRefCntPtr<DependencyScanningCASFilesystem> DepCASFS;
-  llvm::IntrusiveRefCntPtr<llvm::cas::CachingOnDiskFileSystem> CacheFS;
   const CASOptions &CASOpts;
   bool EmitDependencyFile = false;
   bool DiagGenerationAsCompilation;
@@ -124,27 +117,25 @@ createCompilerInvocation(ArrayRef<std::string> CommandLine,
                          DiagnosticsEngine &Diags);
 
 std::pair<IntrusiveRefCntPtr<llvm::vfs::FileSystem>, std::vector<std::string>>
-initVFSForTUBuferScanning(
-    IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
-    ArrayRef<std::string> CommandLine, StringRef WorkingDirectory,
-    llvm::MemoryBufferRef TUBuffer, std::shared_ptr<cas::ObjectStore> CAS,
-    IntrusiveRefCntPtr<DependencyScanningCASFilesystem> DepCASFS);
+initVFSForTUBuferScanning(IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
+                          ArrayRef<std::string> CommandLine,
+                          StringRef WorkingDirectory,
+                          llvm::MemoryBufferRef TUBuffer,
+                          std::shared_ptr<cas::ObjectStore> CAS);
 
 std::pair<IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem>,
           std::vector<std::string>>
-initVFSForByNameScanning(
-    IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
-    ArrayRef<std::string> CommandLine, StringRef WorkingDirectory,
-    StringRef ModuleName, std::shared_ptr<cas::ObjectStore> CAS,
-    IntrusiveRefCntPtr<DependencyScanningCASFilesystem> DepCASFS);
+initVFSForByNameScanning(IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
+                         ArrayRef<std::string> CommandLine,
+                         StringRef WorkingDirectory, StringRef ModuleName,
+                         std::shared_ptr<cas::ObjectStore> CAS);
 
 bool initializeScanCompilerInstance(
     CompilerInstance &ScanInstance,
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
     DiagnosticConsumer *DiagConsumer, DependencyScanningService &Service,
     IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS,
-    bool DiagGenerationAsCompilation, raw_ostream *VerboseOS,
-    llvm::IntrusiveRefCntPtr<DependencyScanningCASFilesystem> DepCASFS);
+    bool DiagGenerationAsCompilation, raw_ostream *VerboseOS);
 
 SmallVector<StringRef>
 getInitialStableDirs(const CompilerInstance &ScanInstance);

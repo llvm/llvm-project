@@ -3605,15 +3605,6 @@ ASTReader::ReadControlBlock(ModuleFile &F,
       F.ModuleCacheKey = Blob.str();
       break;
 
-    case CASFS_ROOT_ID:
-      F.CASFileSystemRootID = Blob.str();
-      if (Listener) {
-        bool Complain =
-            !canRecoverFromOutOfDate(F.FileName, ClientLoadCapabilities);
-        if (Listener->readCASFileSystemRootID(F.CASFileSystemRootID, Complain))
-          return OutOfDate;
-      }
-      break;
     case CAS_INCLUDE_TREE_ID:
       F.IncludeTreeID = Blob.str();
       if (Listener) {
