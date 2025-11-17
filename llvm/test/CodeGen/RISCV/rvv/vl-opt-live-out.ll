@@ -7,13 +7,10 @@ define i32 @loop_live_out(ptr %p, i64 %n) {
 ; CHECK-NEXT:    mv a2, a0
 ; CHECK-NEXT:  .LBB0_1: # %loop
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    mv a4, a1
-; CHECK-NEXT:    vsetvli a3, a1, e8, mf2, ta, ma
+; CHECK-NEXT:    vsetvli a3, a1, e32, m2, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a2)
 ; CHECK-NEXT:    sub a1, a1, a3
-; CHECK-NEXT:    vsetvli a5, zero, e32, m2, ta, ma
 ; CHECK-NEXT:    vadd.vi v8, v8, 1
-; CHECK-NEXT:    vsetvli zero, a4, e32, m2, ta, ma
 ; CHECK-NEXT:    vse32.v v8, (a2)
 ; CHECK-NEXT:    slli a2, a3, 2
 ; CHECK-NEXT:    add a2, a0, a2
