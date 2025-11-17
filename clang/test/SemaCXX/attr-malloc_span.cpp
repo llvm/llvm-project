@@ -74,29 +74,29 @@ void TestGoodBadSpan() {
 }
 
 // Ensure that trailing return types are also supported.
-__attribute__((malloc_span)) auto trailling_return_type(int size)  -> GoodSpan { // no-warning
+__attribute__((malloc_span)) auto trailing_return_type(int size)  -> GoodSpan { // no-warning
   return GoodSpan{};
 }
 
 template<typename T>
 // expected-warning@+2 {{'malloc_span' attribute only applies to functions that return span-like structures}}
 // expected-note@+1 {{returned struct/class has 1 fields, expected 2}}
-__attribute__((malloc_span)) auto templated_trailling_return_type()  -> T { // no-warning
+__attribute__((malloc_span)) auto templated_trailing_return_type()  -> T {
   return T{};
 }
 
 void TestGoodBadTrailingReturnType() {
-  templated_trailling_return_type<GoodSpan>(); // no-warnings
-  // expected-note@+1 {{in instantiation of function template specialization 'templated_trailling_return_type<BadSpan>' requested here}}
-  templated_trailling_return_type<BadSpan>();
+  templated_trailing_return_type<GoodSpan>(); // no-warnings
+  // expected-note@+1 {{in instantiation of function template specialization 'templated_trailing_return_type<BadSpan>' requested here}}
+  templated_trailing_return_type<BadSpan>();
 }
 
-__attribute((malloc_span)) auto trailling_return_temmplate_good(void) -> Pair<int*, int> { // no-warning
+__attribute((malloc_span)) auto trailing_return_temmplate_good(void) -> Pair<int*, int> { // no-warning
   return Pair<int*, int>{};
 }
 
 // expected-warning@+2 {{attribute only applies to functions that return span-like structures}}
 // expected-note@+1 {{returned struct/class fields are not a supported combination for a span-like type}}
-__attribute((malloc_span)) auto trailling_return_temmplate_bad(void) -> Pair<int, int> {
+__attribute((malloc_span)) auto trailing_return_temmplate_bad(void) -> Pair<int, int> {
   return Pair<int, int>{};
 }
