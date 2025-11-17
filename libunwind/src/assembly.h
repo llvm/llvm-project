@@ -254,6 +254,8 @@ aliasname:                                                                     \
 #define NO_EXEC_STACK_DIRECTIVE
 
 // clang-format on
+#elif defined(__wasm__)
+
 #else
 
 #error Unsupported target
