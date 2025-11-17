@@ -176,7 +176,7 @@ define float @test_fma_f32_f16(half %a, half %b, float %c) {
 ; CHECK-NEXT:    fma.rp.sat.f32.f16 %r9, %rs1, %rs2, %r8;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r9;
 ; CHECK-NEXT:    ret;
-  %r1= call float @llvm.nvvm.fma.mixed.rn.f32.f16(half %a, half %b, float %c)
+  %r1 = call float @llvm.nvvm.fma.mixed.rn.f32.f16(half %a, half %b, float %c)
   %r2 = call float @llvm.nvvm.fma.mixed.rz.f32.f16(half %a, half %b, float %r1)
   %r3 = call float @llvm.nvvm.fma.mixed.rm.f32.f16(half %a, half %b, float %r2)
   %r4 = call float @llvm.nvvm.fma.mixed.rp.f32.f16(half %a, half %b, float %r3)
