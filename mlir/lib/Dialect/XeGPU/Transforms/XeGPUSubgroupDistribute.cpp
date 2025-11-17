@@ -35,6 +35,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/LogicalResult.h"
 
 namespace mlir {
 namespace xegpu {
@@ -172,6 +173,19 @@ static bool requireTranspose(const xegpu::LayoutAttr layout,
   if (laneLayout.size() != 2)
     return false;
   return laneLayout[0] == uArch->getSubgroupSize() && laneLayout[1] == 1;
+}
+
+static SmallVector<int64_t> getDistributedDims(VectorType sequentialType,
+                                               VectorType distributedType) {
+  assert(sequentialType.getRank() == distributedType.getRank() &&
+         "sequential and distributed vector types must have the same rank");
+  SmallVector<int64_t> distributedDims;
+  for (int64_t i = 0; i < sequentialType.getRank(); ++i) {
+    if (distributedType.getDimSize(i) != sequentialType.getDimSize(i)) {
+      distributedDims.push_back(i);
+    }
+  }
+  return distributedDims;
 }
 
 /// Given a GPUFuncOp, this pattern creates a new GPUFuncOp and moves the body
@@ -1471,19 +1485,6 @@ struct VectorShapeCastDistribution : public gpu::WarpDistributionPattern {
   }
 };
 
-static SmallVector<int64_t> getDistributedDims(VectorType sequentialType,
-                                               VectorType distributedType) {
-  assert(sequentialType.getRank() == distributedType.getRank() &&
-         "sequential and distributed vector types must have the same rank");
-  SmallVector<int64_t> distributedDims;
-  for (int64_t i = 0; i < sequentialType.getRank(); ++i) {
-    if (distributedType.getDimSize(i) != sequentialType.getDimSize(i)) {
-      distributedDims.push_back(i);
-    }
-  }
-  return distributedDims;
-}
-
 struct VectorExtractStridedSliceDistribution
     : public gpu::WarpDistributionPattern {
   using gpu::WarpDistributionPattern::WarpDistributionPattern;
@@ -1501,6 +1502,96 @@ struct VectorExtractStridedSliceDistribution
     // Find the distributed dimension. There should be exactly one.
     auto yieldedType = cast<VectorType>(operand->get().getType());
     auto distributedDims = getDistributedDims(yieldedType, distributedType);
+    // Only single dimension distribution is supported.
+    if (distributedDims.size() != 1)
+      return rewriter.notifyMatchFailure(
+          warpOp, "Expecting source to be distributed in a single dimension.");
+    int64_t distributedDim = distributedDims[0];
+    // Check if the distributed dimension is fully extracted. If so, we exit
+    // early becuase this case already handled by vector distribution patterns.
+    // Distributed dimension is fully extracted if:
+    //  1) Distributed dim comes after all the extracted dimensions.
+    //  2) Or, the size extacted along the distributed dimension is equal the
+    //  size of that dim in source vector.
+    auto extractedSizes = extractOp.getSizes();
+    if (distributedDim >= static_cast<int64_t>(extractedSizes.size()))
+      return rewriter.notifyMatchFailure(
+          warpOp, "Distributed dimension is fully extracted, skipping.");
+
+    int distrDimExtractedSize =
+        cast<IntegerAttr>(extractOp.getSizes()[distributedDim]).getInt();
+    if (distrDimExtractedSize ==
+        extractOp.getSourceVectorType().getShape()[distributedDim])
+      return rewriter.notifyMatchFailure(
+          warpOp, "Distributed dimension is fully extracted, skipping.");
+
+    // Check if the size extracted along the distributed dimension is a multiple
+    // of the source dim size and should be distributable to lanes.
+    int64_t sourceDisrDimSize = yieldedType.getShape()[distributedDim];
+    if (sourceDisrDimSize % distrDimExtractedSize != 0)
+      return rewriter.notifyMatchFailure(
+          warpOp,
+          "Extracted size along distributed dimension is not a multiple of "
+          "source dim size.");
+    auto sourceLayout =
+        xegpu::getDistributeLayoutAttr(extractOp->getOpOperand(0));
+    auto sourceLaneLayout = sourceLayout.getEffectiveLaneLayoutAsInt();
+    // Because only single dimension distribution is supported, lane layout size
+    // at the distributed dim must be the subgroup size.
+    int subgroupSize = sourceLaneLayout[distributedDim];
+    // Check if the distributed extracted dim is a multiple of the lane size.
+    if (distrDimExtractedSize % subgroupSize != 0)
+      return rewriter.notifyMatchFailure(
+          warpOp,
+          "Extracted size along distributed dimension is not a multiple of "
+          "lane size in source layout.");
+    auto sourceLaneData = sourceLayout.getEffectiveLaneDataAsInt();
+    // We expect lane data to be all ones in this case.
+    if (!llvm::all_of(sourceLaneData, [](int64_t v) { return v == 1; }))
+      return rewriter.notifyMatchFailure(
+          warpOp, "Expecting unit lane data in source layout");
+    // The offsets in the distributed dimention must be a multiple of subgroup
+    // size.
+    int64_t distrDimOffset =
+        cast<IntegerAttr>(extractOp.getOffsets()[distributedDim]).getInt();
+    if (distrDimOffset % subgroupSize != 0)
+      return rewriter.notifyMatchFailure(warpOp,
+                                         "Offset along distributed dimension "
+                                         "is not a multiple of subgroup size.");
+    // Do the distribution by yielding the source of the extract op from
+    // the warp op and creating a new extract op outside the warp op.
+    FailureOr<VectorType> sourceDistTypeOrFailure =
+        getDistVecTypeBasedOnLaneLayout(sourceLayout,
+                                        extractOp.getSourceVectorType());
+    if (failed(sourceDistTypeOrFailure))
+      return rewriter.notifyMatchFailure(
+          warpOp, "failed to get distributed vector type for source");
+    VectorType sourceDistType = sourceDistTypeOrFailure.value();
+    // Create a new warp op that yields the source of the extract op.
+    SmallVector<size_t> newRetIndices;
+    auto newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
+        rewriter, warpOp, {extractOp.getSource()}, {sourceDistType},
+        newRetIndices);
+    rewriter.setInsertionPointAfter(newWarpOp);
+    // Distributed sizes and offsets must be adjusted.
+    SmallVector<Attribute> distributedSizes = llvm::map_to_vector(
+        extractOp.getSizes(), [](Attribute attr) { return attr; });
+    SmallVector<Attribute> distributedOffsets = llvm::map_to_vector(
+        extractOp.getOffsets(), [](Attribute attr) { return attr; });
+    // Update the distributed sizes to match the distributed type.
+    distributedSizes[distributedDim] =
+        rewriter.getI64IntegerAttr(distributedType.getDimSize(distributedDim));
+    // Update the distributed offsets to match round robin distribution.
+    distributedOffsets[distributedDim] = rewriter.getI64IntegerAttr(
+        distrDimOffset / subgroupSize); // because lane data is 1
+    Value source = newWarpOp.getResult(newRetIndices[0]);
+    // Create a new extract op outside the warp op.
+    Value newExtractOp = vector::ExtractStridedSliceOp::create(
+        rewriter, extractOp.getLoc(), distributedType, source,
+        ArrayAttr::get(rewriter.getContext(), distributedOffsets),
+        ArrayAttr::get(rewriter.getContext(), distributedSizes),
+        extractOp.getStrides());
+    rewriter.replaceAllUsesWith(newWarpOp.getResult(operandIdx), newExtractOp);
     return success();
   }
 };
@@ -1662,9 +1753,10 @@ void xegpu::populateXeGPUSubgroupDistributePatterns(
                MemrefExtractAlignedPointerAsIndexDistribution>(
       patterns.getContext(),
       /*pattern benefit=*/regularPatternBenefit);
-  patterns.add<VectorShapeCastDistribution>(
-      patterns.getContext(),
-      /*pattern benefit=*/highPatternBenefit);
+  patterns
+      .add<VectorShapeCastDistribution, VectorExtractStridedSliceDistribution>(
+          patterns.getContext(),
+          /*pattern benefit=*/highPatternBenefit);
 }
 
 void xegpu::populateXeGPUMoveFuncBodyToWarpOpPatterns(
