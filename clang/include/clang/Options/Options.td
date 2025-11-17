@@ -1669,6 +1669,13 @@ defm coro_aligned_allocation : BoolFOption<"coro-aligned-allocation",
           "Prefer aligned allocation for C++ Coroutines">,
   NegFlag<SetFalse>>;
 
+// C++ Customizable Functions
+defm customizable_functions : BoolFOption<"customizable-functions",
+  LangOpts<"CustomizableFunctions">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+          "Enable support for customizable functions with tag_invoke">,
+  NegFlag<SetFalse>>;
+
 defm experimental_library : BoolFOption<"experimental-library",
   LangOpts<"ExperimentalLibrary">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option, CLOption],
