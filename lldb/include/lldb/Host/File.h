@@ -66,6 +66,9 @@ public:
     LLVM_MARK_AS_BITMASK_ENUM(/* largest_value= */ eOpenOptionInvalid)
   };
 
+  static constexpr OpenOptions OpenOptionsModeMask =
+      eOpenOptionReadOnly | eOpenOptionWriteOnly | eOpenOptionReadWrite;
+
   static mode_t ConvertOpenOptionsForPOSIXOpen(OpenOptions open_options);
   static llvm::Expected<OpenOptions> GetOptionsFromMode(llvm::StringRef mode);
   static bool DescriptorIsValid(int descriptor) { return descriptor >= 0; };
@@ -384,7 +387,7 @@ public:
 
   NativeFile();
 
-  NativeFile(FILE *fh, bool transfer_ownership);
+  NativeFile(FILE *fh, OpenOptions options, bool transfer_ownership);
 
   NativeFile(int fd, OpenOptions options, bool transfer_ownership);
 
