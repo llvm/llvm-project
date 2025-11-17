@@ -33,6 +33,7 @@ enum NodeType : unsigned {
   TAIL,
   TAIL_MEDIUM,
   TAIL_LARGE,
+  UNIMP,
 
   // Select
   SELECT_CC,
@@ -415,6 +416,7 @@ private:
   SDValue lowerVECREDUCE_ADD(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVECREDUCE(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerConstantFP(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerTrap(SDValue Op, SelectionDAG &DAG) const;
 
   bool isFPImmLegal(const APFloat &Imm, EVT VT,
                     bool ForCodeSize) const override;
