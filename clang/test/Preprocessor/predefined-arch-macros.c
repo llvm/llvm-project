@@ -2533,7 +2533,6 @@
 // RUN:   | FileCheck -match-full-lines %s -check-prefixes=CHECK_ARL_M32,CHECK_ARLS_M32,CHECK_CWF_M32,CHECK_NVL_M32,CHECK_NKL_M32
 // CHECK_ARL_M32: #define __ADX__ 1
 // CHECK_ARL_M32: #define __AES__ 1
-// CHECK_ARL_M32-NOT: AVX512
 // CHECK_NVL_M32: #define __AVX10_1__ 1
 // CHECK_NVL_M32: #define __AVX10_2__ 1
 // AVX2 needs to be here, not after AES because otherwise NVL fails
@@ -2551,6 +2550,7 @@
 // CHECK_NVL_M32: #define __AVX512VL__ 1
 // CHECK_NVL_M32: #define __AVX512VNNI__ 1
 // CHECK_NVL_M32: #define __AVX512VPOPCNTDQ__ 1
+// CHECK_ARL_M32-NOT: AVX512
 // CHECK_ARL_M32: #define __AVXIFMA__ 1
 // CHECK_ARL_M32: #define __AVXNECONVERT__ 1
 // CHECK_ARL_M32-NOT: #define __AVXVNNIINT16__ 1
@@ -2667,7 +2667,6 @@
 // RUN:   | FileCheck -match-full-lines %s -check-prefixes=CHECK_ARL_M64,CHECK_ARLS_M64,CHECK_CWF_M64,CHECK_NVL_M64,CHECK_NKL_M64
 // CHECK_ARL_M64: #define __ADX__ 1
 // CHECK_ARL_M64: #define __AES__ 1
-// CHECK_ARL_M64-NOT: AVX512
 // CHECK_NVL_M64: #define __AVX10_1__ 1
 // CHECK_NVL_M64: #define __AVX10_2__ 1
 // CHECK_ARL_M64: #define __AVX2__ 1
@@ -2684,6 +2683,7 @@
 // CHECK_NVL_M64: #define __AVX512VL__ 1
 // CHECK_NVL_M64: #define __AVX512VNNI__ 1
 // CHECK_NVL_M64: #define __AVX512VPOPCNTDQ__ 1
+// CHECK_ARL_M64-NOT: AVX512
 // CHECK_ARL_M64: #define __AVXIFMA__ 1
 // CHECK_ARL_M64: #define __AVXNECONVERT__ 1
 // CHECK_ARL_M64-NOT: #define __AVXVNNIINT16__ 1
