@@ -1569,7 +1569,7 @@ enum NodeType {
   GET_ACTIVE_LANE_MASK,
 
   // The `llvm.loop.dependence.{war, raw}.mask` intrinsics
-  // Operands: Load pointer, Store pointer, Element size
+  // Operands: Load pointer, Store pointer, Element size, Lane offset
   // Output: Mask
   LOOP_DEPENDENCE_WAR_MASK,
   LOOP_DEPENDENCE_RAW_MASK,

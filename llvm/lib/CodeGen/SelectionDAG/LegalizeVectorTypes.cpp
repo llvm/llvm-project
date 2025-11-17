@@ -407,8 +407,15 @@ SDValue DAGTypeLegalizer::ScalarizeVecRes_LOOP_DEPENDENCE_MASK(SDNode *N) {
   SDValue SourceValue = N->getOperand(0);
   SDValue SinkValue = N->getOperand(1);
   SDValue EltSize = N->getOperand(2);
+  SDValue Offset = N->getOperand(3);
   EVT PtrVT = SourceValue->getValueType(0);
   SDLoc DL(N);
+
+  // Increment the source pointer by the lane offset multiplied by the element
+  // size. A non-zero offset is normally used when a larger-than-legal mask has
+  // been split.
+  Offset = DAG.getNode(ISD::MUL, DL, PtrVT, Offset, EltSize);
+  SourceValue = DAG.getNode(ISD::ADD, DL, PtrVT, SourceValue, Offset);
 
   SDValue Diff = DAG.getNode(ISD::SUB, DL, PtrVT, SinkValue, SourceValue);
   EVT CmpVT = TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(),
@@ -1692,6 +1699,10 @@ void DAGTypeLegalizer::SplitVecRes_BITCAST(SDNode *N, SDValue &Lo,
   Hi = DAG.getNode(ISD::BITCAST, dl, HiVT, Hi);
 }
 
+/// Split a loop dependence mask.
+/// This is done by creating a high and low mask, each of half the vector
+/// length. The low mask inherits the lane offset from the original mask, and
+/// the high mask adds half the vector length.
 void DAGTypeLegalizer::SplitVecRes_LOOP_DEPENDENCE_MASK(SDNode *N, SDValue &Lo,
                                                         SDValue &Hi) {
   SDLoc DL(N);
@@ -1699,14 +1710,15 @@ void DAGTypeLegalizer::SplitVecRes_LOOP_DEPENDENCE_MASK(SDNode *N, SDValue &Lo,
   std::tie(LoVT, HiVT) = DAG.GetSplitDestVTs(N->getValueType(0));
   SDValue PtrA = N->getOperand(0);
   SDValue PtrB = N->getOperand(1);
-  Lo = DAG.getNode(N->getOpcode(), DL, LoVT, PtrA, PtrB, N->getOperand(2));
 
-  unsigned EltSize = N->getConstantOperandVal(2);
-  ElementCount Offset = HiVT.getVectorElementCount() * EltSize;
-  SDValue Addend = DAG.getElementCount(DL, MVT::i64, Offset);
-
-  PtrA = DAG.getNode(ISD::ADD, DL, MVT::i64, PtrA, Addend);
-  Hi = DAG.getNode(N->getOpcode(), DL, HiVT, PtrA, PtrB, N->getOperand(2));
+  Lo = DAG.getNode(N->getOpcode(), DL, LoVT, PtrA, PtrB,
+                   /*ElementSizeInBytes=*/N->getOperand(2),
+                   /*LaneOffset=*/N->getOperand(3));
+  unsigned LaneOffset =
+      N->getConstantOperandVal(3) + LoVT.getVectorMinNumElements();
+  Hi = DAG.getNode(N->getOpcode(), DL, HiVT, PtrA, PtrB,
+                   /*ElementSizeInBytes=*/N->getOperand(2),
+                   /*LaneOffset=*/DAG.getConstant(LaneOffset, DL, MVT::i64));
 }
 
 void DAGTypeLegalizer::SplitVecRes_BUILD_VECTOR(SDNode *N, SDValue &Lo,
@@ -6062,7 +6074,7 @@ SDValue DAGTypeLegalizer::WidenVecRes_LOOP_DEPENDENCE_MASK(SDNode *N) {
   return DAG.getNode(
       N->getOpcode(), SDLoc(N),
       TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0)),
-      N->getOperand(0), N->getOperand(1), N->getOperand(2));
+      N->getOperand(0), N->getOperand(1), N->getOperand(2), N->getOperand(3));
 }
 
 SDValue DAGTypeLegalizer::WidenVecRes_BUILD_VECTOR(SDNode *N) {
