@@ -72,9 +72,9 @@ subroutine nested_loop_with_inner_goto()
   integer :: ii = 0, jj = 0
   integer, parameter :: nn = 3
   real, dimension(nn, nn) :: aa
-  
+
   aa = -1
-  
+
   ! Nested loop with goto from inner loop - unstructured control flow is not converted.
   !$acc kernels
   do ii = 1, nn

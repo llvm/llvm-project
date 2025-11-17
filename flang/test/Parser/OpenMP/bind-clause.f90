@@ -22,5 +22,5 @@ end
 !PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = loop
 !PARSE-TREE: | | OmpClauseList -> OmpClause -> Bind -> OmpBindClause -> Binding = Parallel
 !PARSE-TREE: | | Flags = None
-!PARSE-TREE: | DoConstruct
+!PARSE-TREE: | ExecutionPartConstruct -> ExecutableConstruct -> DoConstruct
 

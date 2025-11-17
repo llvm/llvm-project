@@ -143,6 +143,8 @@ private:
           parser::ToUpperCaseLetters(dirName.source.ToString()));
     };
 
+    auto &body{std::get<parser::Block>(x.t)};
+
     nextIt = it;
     while (++nextIt != block.end()) {
       // Ignore compiler directives.
@@ -152,9 +154,7 @@ private:
       if (auto *doCons{GetConstructIf<parser::DoConstruct>(*nextIt)}) {
         if (doCons->GetLoopControl()) {
           // move DoConstruct
-          std::get<std::optional<std::variant<parser::DoConstruct,
-              common::Indirection<parser::OpenMPLoopConstruct>>>>(x.t) =
-              std::move(*doCons);
+          body.push_back(std::move(*nextIt));
           nextIt = block.erase(nextIt);
           // try to match OmpEndLoopDirective
           if (nextIt != block.end()) {
@@ -198,10 +198,7 @@ private:
             ++endIt;
           }
           RewriteOpenMPLoopConstruct(*ompLoopCons, block, nextIt);
-          auto &ompLoop = std::get<std::optional<parser::NestedConstruct>>(x.t);
-          ompLoop =
-              std::optional<parser::NestedConstruct>{parser::NestedConstruct{
-                  common::Indirection{std::move(*ompLoopCons)}}};
+          body.push_back(std::move(*nextIt));
           nextIt = block.erase(nextIt);
         } else if (nestedBeginName.v == llvm::omp::Directive::OMPD_unroll &&
             beginName.v == llvm::omp::Directive::OMPD_tile) {
