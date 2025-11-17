@@ -16798,9 +16798,7 @@ static SDValue expandMulToAddOrSubOfShl(SDNode *N, SelectionDAG &DAG,
     // because X is exact (Y >> M + 2).
     uint64_t ShAmt = Log2_64(MulAmtLowBit) + 2;
     using namespace SDPatternMatch;
-    return sd_match(X, m_AnyOf(m_Sra(m_Value(), m_SpecificInt(ShAmt)),
-                               m_Srl(m_Value(), m_SpecificInt(ShAmt)))) &&
-           X->getFlags().hasExact();
+    return sd_match(X, m_ExactSr(m_Value(), m_SpecificInt(ShAmt)));
   };
   if (isPowerOf2_64(MulAmt - MulAmtLowBit) && !(CanSub && PreferSub())) {
     Op = ISD::ADD;
@@ -16825,10 +16823,13 @@ static SDValue getShlAddShlAdd(SDNode *N, SelectionDAG &DAG, unsigned ShX,
   SDLoc DL(N);
   EVT VT = N->getValueType(0);
   SDValue X = N->getOperand(0);
-  // Put the shift first if we can fold a zext into the shift forming a slli.uw.
+  // Put the shift first if we can fold:
+  // a. a zext into the shift forming a slli.uw
+  // b. an exact shift right forming one shorter shift or no shift at all
   using namespace SDPatternMatch;
   if (Shift != 0 &&
-      sd_match(X, m_And(m_Value(), m_SpecificInt(UINT64_C(0xffffffff))))) {
+      sd_match(X, m_AnyOf(m_And(m_Value(), m_SpecificInt(UINT64_C(0xffffffff))),
+                          m_ExactSr(m_Value(), m_ConstInt())))) {
     X = DAG.getNode(ISD::SHL, DL, VT, X, DAG.getConstant(Shift, DL, VT));
     Shift = 0;
   }
