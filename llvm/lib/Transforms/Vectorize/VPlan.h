@@ -2151,7 +2151,8 @@ public:
 /// A recipe for handling phi nodes of integer and floating-point inductions,
 /// producing their vector values. This is an abstract recipe and must be
 /// converted to concrete recipes before executing.
-class VPWidenIntOrFpInductionRecipe : public VPWidenInductionRecipe {
+class VPWidenIntOrFpInductionRecipe : public VPWidenInductionRecipe,
+                                      public VPIRFlags {
   TruncInst *Trunc;
 
   // If this recipe is unrolled it will have 2 additional operands.
@@ -2160,19 +2161,20 @@ class VPWidenIntOrFpInductionRecipe : public VPWidenInductionRecipe {
 public:
   VPWidenIntOrFpInductionRecipe(PHINode *IV, VPValue *Start, VPValue *Step,
                                 VPValue *VF, const InductionDescriptor &IndDesc,
-                                DebugLoc DL)
+                                const VPIRFlags &Flags, DebugLoc DL)
       : VPWidenInductionRecipe(VPDef::VPWidenIntOrFpInductionSC, IV, Start,
                                Step, IndDesc, DL),
-        Trunc(nullptr) {
+        VPIRFlags(Flags), Trunc(nullptr) {
     addOperand(VF);
   }
 
   VPWidenIntOrFpInductionRecipe(PHINode *IV, VPValue *Start, VPValue *Step,
                                 VPValue *VF, const InductionDescriptor &IndDesc,
-                                TruncInst *Trunc, DebugLoc DL)
+                                TruncInst *Trunc, const VPIRFlags &Flags,
+                                DebugLoc DL)
       : VPWidenInductionRecipe(VPDef::VPWidenIntOrFpInductionSC, IV, Start,
                                Step, IndDesc, DL),
-        Trunc(Trunc) {
+        VPIRFlags(Flags), Trunc(Trunc) {
     addOperand(VF);
     SmallVector<std::pair<unsigned, MDNode *>> Metadata;
     (void)Metadata;
@@ -2186,7 +2188,7 @@ public:
   VPWidenIntOrFpInductionRecipe *clone() override {
     return new VPWidenIntOrFpInductionRecipe(
         getPHINode(), getStartValue(), getStepValue(), getVFValue(),
-        getInductionDescriptor(), Trunc, getDebugLoc());
+        getInductionDescriptor(), Trunc, *this, getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPDef::VPWidenIntOrFpInductionSC)
