@@ -372,7 +372,7 @@ def github_get_metrics(
 
             if completed_at is None:
                 logging.info(
-                    "Workflow {} is marked completed but has a job without a "
+                    f"Workflow {task.id} is marked completed but has a job without a "
                     "completion timestamp."
                 )
                 continue
