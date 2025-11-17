@@ -8989,6 +8989,7 @@ __m256 test_mm256_shuffle_f32x4(__m256 __A, __m256 __B) {
   // CHECK: shufflevector <8 x float> %{{.*}}, <8 x float> %{{.*}}, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 12, i32 13, i32 14, i32 15>
   return _mm256_shuffle_f32x4(__A, __B, 3); 
 }
+TEST_CONSTEXPR(match_m256(_mm256_shuffle_f32x4(((__m256){1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0}), ((__m256){10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0}), 1), 5.0, 6.0, 7.0, 8.0, 10.0, 20.0, 30.0, 40.0));
 
 __m256 test_mm256_mask_shuffle_f32x4(__m256 __W, __mmask8 __U, __m256 __A, __m256 __B) {
   // CHECK-LABEL: test_mm256_mask_shuffle_f32x4
@@ -9009,6 +9010,7 @@ __m256d test_mm256_shuffle_f64x2(__m256d __A, __m256d __B) {
   // CHECK: shufflevector <4 x double> %{{.*}}, <4 x double> %{{.*}}, <4 x i32> <i32 2, i32 3, i32 6, i32 7>
   return _mm256_shuffle_f64x2(__A, __B, 3); 
 }
+TEST_CONSTEXPR(match_m256d(_mm256_shuffle_f64x2(((__m256d){1.0, 2.0, 3.0, 4.0}), ((__m256d){10.0, 20.0, 30.0, 40.0}), 3), 3.0, 4.0, 30.0, 40.0));
 
 __m256d test_mm256_mask_shuffle_f64x2(__m256d __W, __mmask8 __U, __m256d __A, __m256d __B) {
   // CHECK-LABEL: test_mm256_mask_shuffle_f64x2
@@ -9031,6 +9033,7 @@ __m256i test_mm256_shuffle_i32x4(__m256i __A, __m256i __B) {
   // CHECK: shufflevector <8 x i32> %{{.*}}, <8 x i32> %{{.*}}, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 12, i32 13, i32 14, i32 15>
   return _mm256_shuffle_i32x4(__A, __B, 3); 
 }
+TEST_CONSTEXPR(match_v8si(_mm256_shuffle_i32x4(((__m256i)(__v8si){1, 2, 3, 4, 5, 6, 7, 8}), ((__m256i)(__v8si){10, 20, 30, 40, 50, 60, 70, 80}), 0), 1, 2, 3, 4, 10, 20, 30, 40));
 
 __m256i test_mm256_mask_shuffle_i32x4(__m256i __W, __mmask8 __U, __m256i __A, __m256i __B) {
   // CHECK-LABEL: test_mm256_mask_shuffle_i32x4
@@ -9051,6 +9054,7 @@ __m256i test_mm256_shuffle_i64x2(__m256i __A, __m256i __B) {
   // CHECK: shufflevector <4 x i64> %{{.*}}, <4 x i64> %{{.*}}, <4 x i32> <i32 2, i32 3, i32 6, i32 7>
   return _mm256_shuffle_i64x2(__A, __B, 3); 
 }
+TEST_CONSTEXPR(match_m256i(_mm256_shuffle_i64x2(((__m256i){1ULL, 2ULL, 3ULL, 4ULL}), ((__m256i){10ULL, 20ULL, 30ULL, 40ULL}), 2), 1ULL, 2ULL, 30ULL, 40ULL));
 
 __m256i test_mm256_mask_shuffle_i64x2(__m256i __W, __mmask8 __U, __m256i __A, __m256i __B) {
   // CHECK-LABEL: test_mm256_mask_shuffle_i64x2

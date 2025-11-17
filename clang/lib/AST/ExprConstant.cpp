@@ -50,6 +50,7 @@
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/AST/Type.h"
+#include "clang/AST/TypeBase.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/DiagnosticSema.h"
@@ -13459,6 +13460,56 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     }
 
     return Success(APValue(ResultElements.data(), ResultElements.size()), E);
+  }
+
+  case X86::BI__builtin_ia32_shuf_f32x4_256:
+  case X86::BI__builtin_ia32_shuf_i32x4_256:
+  case X86::BI__builtin_ia32_shuf_f64x2_256:
+  case X86::BI__builtin_ia32_shuf_i64x2_256:
+  case X86::BI__builtin_ia32_shuf_f32x4:
+  case X86::BI__builtin_ia32_shuf_i32x4:
+  case X86::BI__builtin_ia32_shuf_f64x2:
+  case X86::BI__builtin_ia32_shuf_i64x2: {
+    APValue SourceA, SourceB;
+    if (!EvaluateAsRValue(Info, E->getArg(0), SourceA) ||
+        !EvaluateAsRValue(Info, E->getArg(1), SourceB))
+      return false;
+
+    APSInt Imm;
+    if (!EvaluateInteger(E->getArg(2), Imm, Info))
+      return false;
+
+    // Destination and sources A, B all have the same type.
+    unsigned NumElems = SourceA.getVectorLength();
+    const VectorType *VT = E->getArg(0)->getType()->castAs<VectorType>();
+    QualType ElemQT = VT->getElementType();
+    unsigned ElemBits = Info.Ctx.getTypeSize(ElemQT);
+    constexpr unsigned LaneBits = 128u;
+    unsigned NumLanes = (NumElems * ElemBits) / LaneBits;
+    unsigned NumElemsPerLane = LaneBits / ElemBits;
+
+    unsigned DstLen = SourceA.getVectorLength();
+    SmallVector<APValue, 16> ResultElements;
+    ResultElements.reserve(DstLen);
+
+    APValue R;
+    if (!evalShuffleGeneric(
+            Info, E, R,
+            [NumLanes, NumElemsPerLane](unsigned DstIdx, unsigned ShuffleMask)
+                -> std::pair<unsigned, int> {
+              // DstIdx determines source. ShuffleMask selects lane in source.
+              unsigned BitsPerElem = NumLanes / 2;
+              unsigned IndexMask = (1u << BitsPerElem) - 1;
+              unsigned Lane = DstIdx / NumElemsPerLane;
+              unsigned SrcIdx = (Lane < NumLanes / 2) ? 0 : 1;
+              unsigned BitIdx = BitsPerElem * Lane;
+              unsigned SrcLaneIdx = (ShuffleMask >> BitIdx) & IndexMask;
+              unsigned ElemInLane = DstIdx % NumElemsPerLane;
+              unsigned IdxToPick = SrcLaneIdx * NumElemsPerLane + ElemInLane;
+              return {SrcIdx, IdxToPick};
+            }))
+      return false;
+    return Success(R, E);
   }
 
   case X86::BI__builtin_ia32_insertf32x4_256:

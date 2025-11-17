@@ -4718,6 +4718,39 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
     return interp__builtin_elementwise_triop(S, OpPC, Call,
                                              llvm::APIntOps::fshr);
 
+  case X86::BI__builtin_ia32_shuf_f32x4_256:
+  case X86::BI__builtin_ia32_shuf_i32x4_256:
+  case X86::BI__builtin_ia32_shuf_f64x2_256:
+  case X86::BI__builtin_ia32_shuf_i64x2_256:
+  case X86::BI__builtin_ia32_shuf_f32x4:
+  case X86::BI__builtin_ia32_shuf_i32x4:
+  case X86::BI__builtin_ia32_shuf_f64x2:
+  case X86::BI__builtin_ia32_shuf_i64x2: {
+    // Destination and sources A, B all have the same type.
+    QualType VecQT = Call->getArg(0)->getType();
+    const auto *VecT = VecQT->castAs<VectorType>();
+    unsigned NumElems = VecT->getNumElements();
+    unsigned ElemBits = S.getASTContext().getTypeSize(VecT->getElementType());
+    constexpr unsigned LaneBits = 128u;
+    unsigned NumLanes = (NumElems * ElemBits) / LaneBits;
+    unsigned NumElemsPerLane = LaneBits / ElemBits;
+
+    return interp__builtin_ia32_shuffle_generic(
+        S, OpPC, Call,
+        [NumLanes, NumElemsPerLane](unsigned DstIdx, unsigned ShuffleMask) {
+          // DstIdx determines source. ShuffleMask selects lane in source.
+          unsigned BitsPerElem = NumLanes / 2;
+          unsigned IndexMask = (1u << BitsPerElem) - 1;
+          unsigned Lane = DstIdx / NumElemsPerLane;
+          unsigned SrcIdx = (Lane < NumLanes / 2) ? 0 : 1;
+          unsigned BitIdx = BitsPerElem * Lane;
+          unsigned SrcLaneIdx = (ShuffleMask >> BitIdx) & IndexMask;
+          unsigned ElemInLane = DstIdx % NumElemsPerLane;
+          unsigned IdxToPick = SrcLaneIdx * NumElemsPerLane + ElemInLane;
+          return std::pair<unsigned, int>{SrcIdx, IdxToPick};
+        });
+  }
+
   case X86::BI__builtin_ia32_insertf32x4_256:
   case X86::BI__builtin_ia32_inserti32x4_256:
   case X86::BI__builtin_ia32_insertf64x2_256:
