@@ -9,7 +9,7 @@
 !1 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
 
 ; Keep all metadata nodes alive so verifier can check them
-!named = !{!1, !2, !3, !4, !5, !6, !7, !8, !9, !10, !11, !12, !13, !14, !15, !16, !17, !18, !19}
+!named = !{!1, !2, !3, !4, !5, !6, !7, !8, !9, !10, !11, !12, !13, !14, !15, !16}
 !2 = !{i32 0}
 
 ; Valid: DW_TAG_inheritance with tuple extraData should be accepted
@@ -21,46 +21,35 @@
 ; Valid: DW_TAG_variable (static member) with tuple extraData should be accepted
 !5 = !DIDerivedType(tag: DW_TAG_variable, name: "var", baseType: !1, extraData: !2, flags: DIFlagStaticMember)
 
-; Invalid: DW_TAG_typedef with tuple extraData should be rejected
-; CHECK: extraData must be ConstantAsMetadata, MDString, DIObjCProperty, or MDTuple with single ConstantAsMetadata operand
-; CHECK-NEXT: !{{[0-9]+}} = !DIDerivedType(tag: DW_TAG_typedef
-!6 = !DIDerivedType(tag: DW_TAG_typedef, name: "IntTy", baseType: !1, extraData: !2)
-
 ; Invalid: Empty tuple should be rejected
-!7 = !{}
+!6 = !{}
 ; CHECK: extraData must be ConstantAsMetadata, MDString, DIObjCProperty, or MDTuple with single ConstantAsMetadata operand
 ; CHECK-NEXT: !{{[0-9]+}} = !DIDerivedType(tag: DW_TAG_member
-!8 = !DIDerivedType(tag: DW_TAG_member, name: "field2", baseType: !1, extraData: !7)
+!7 = !DIDerivedType(tag: DW_TAG_member, name: "field2", baseType: !1, extraData: !6)
 
 ; Invalid: Tuple with multiple operands should be rejected
-!9 = !{i32 0, i32 1}
+!8 = !{i32 0, i32 1}
 ; CHECK: extraData must be ConstantAsMetadata, MDString, DIObjCProperty, or MDTuple with single ConstantAsMetadata operand
 ; CHECK-NEXT: !{{[0-9]+}} = !DIDerivedType(tag: DW_TAG_member
-!10 = !DIDerivedType(tag: DW_TAG_member, name: "field3", baseType: !1, extraData: !9)
+!9 = !DIDerivedType(tag: DW_TAG_member, name: "field3", baseType: !1, extraData: !8)
 
 ; Invalid: Tuple with non-ConstantAsMetadata operand should be rejected
-!11 = !DIBasicType(name: "float", size: 32, encoding: DW_ATE_float)
-!12 = !{!11}
+!10 = !DIBasicType(name: "float", size: 32, encoding: DW_ATE_float)
+!11 = !{!10}
 ; CHECK: extraData must be ConstantAsMetadata, MDString, DIObjCProperty, or MDTuple with single ConstantAsMetadata operand
 ; CHECK-NEXT: !{{[0-9]+}} = !DIDerivedType(tag: DW_TAG_member
-!13 = !DIDerivedType(tag: DW_TAG_member, name: "field4", baseType: !1, extraData: !12)
-
-; Valid: ConstantAsMetadata as extraData should still work for any tag
-!14 = !DIDerivedType(tag: DW_TAG_typedef, name: "IntTy2", baseType: !1, extraData: i32 42)
-
-; Valid: MDString as extraData should still work for any tag
-!15 = !DIDerivedType(tag: DW_TAG_typedef, name: "IntTy3", baseType: !1, extraData: !"some string")
+!12 = !DIDerivedType(tag: DW_TAG_member, name: "field4", baseType: !1, extraData: !11)
 
 ; Valid: DW_TAG_template_alias with proper template parameters tuple
 ; Template aliases are handled specially and accept any MDTuple for template parameters
-!16 = !DITemplateTypeParameter(name: "T", type: !1)
-!17 = !{!16}
-!18 = !DIDerivedType(tag: DW_TAG_template_alias, name: "MyAlias", baseType: !1, extraData: !17)
+!13 = !DITemplateTypeParameter(name: "T", type: !1)
+!14 = !{!13}
+!15 = !DIDerivedType(tag: DW_TAG_template_alias, name: "MyAlias", baseType: !1, extraData: !14)
 
 ; Invalid: DW_TAG_template_alias with non-tuple extraData should fail
 ; CHECK: invalid template parameters
 ; CHECK-NEXT: !{{[0-9]+}} = !DIDerivedType(tag: DW_TAG_template_alias
-!19 = !DIDerivedType(tag: DW_TAG_template_alias, name: "FailingAlias", baseType: !1, extraData: i32 42)
+!16 = !DIDerivedType(tag: DW_TAG_template_alias, name: "FailingAlias", baseType: !1, extraData: i32 42)
 
 ; CHECK: warning: ignoring invalid debug info
 

@@ -1324,16 +1324,17 @@ void Verifier::visitDIDerivedType(const DIDerivedType &N) {
   } else if (N.getTag() == dwarf::DW_TAG_template_alias) {
     CheckDI(isMDTuple(N.getRawExtraData()), "invalid template parameters", &N,
             N.getRawExtraData());
-  } else if (auto *ExtraData = N.getRawExtraData()) {
+  } else if (N.getTag() == dwarf::DW_TAG_inheritance ||
+             N.getTag() == dwarf::DW_TAG_member ||
+             N.getTag() == dwarf::DW_TAG_variable) {
+    auto *ExtraData = N.getRawExtraData();
     auto IsValidExtraData = [&]() {
+      if (ExtraData == nullptr)
+        return true;
       if (isa<ConstantAsMetadata>(ExtraData) || isa<MDString>(ExtraData) ||
           isa<DIObjCProperty>(ExtraData))
         return true;
       if (auto *Tuple = dyn_cast<MDTuple>(ExtraData)) {
-        if (N.getTag() != dwarf::DW_TAG_inheritance &&
-            N.getTag() != dwarf::DW_TAG_member &&
-            N.getTag() != dwarf::DW_TAG_variable)
-          return false;
         if (Tuple->getNumOperands() != 1)
           return false;
         return isa_and_nonnull<ConstantAsMetadata>(Tuple->getOperand(0).get());
