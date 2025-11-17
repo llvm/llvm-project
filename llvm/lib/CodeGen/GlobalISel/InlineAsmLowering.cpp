@@ -479,7 +479,7 @@ bool InlineAsmLowering::lowerInlineAsm(
         // Needs to be made indirect. Store the value on the stack and use
         // a pointer to it.
         Value *OpVal = OpInfo.CallOperandVal;
-        unsigned Bytes = DL.getTypeStoreSize(OpVal->getType());
+        TypeSize Bytes = DL.getTypeStoreSize(OpVal->getType());
         Align Alignment = DL.getPrefTypeAlign(OpVal->getType());
         int FrameIdx =
             MF.getFrameInfo().CreateStackObject(Bytes, Alignment, false);
