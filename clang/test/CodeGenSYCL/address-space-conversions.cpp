@@ -1,16 +1,16 @@
 // RUN: %clang_cc1 -triple spir64 -fsycl-is-device -disable-llvm-passes -emit-llvm %s -o - | FileCheck %s
 void bar(int &Data) {}
-// CHECK-DAG: define{{.*}} spir_func void @[[RAW_REF:[a-zA-Z0-9_]+]](ptr addrspace(4) noundef align 4 dereferenceable(4) %
+// CHECK-DAG: define{{.*}} void @[[RAW_REF:[a-zA-Z0-9_]+]](ptr addrspace(4) noundef align 4 dereferenceable(4) %
 void bar2(int &Data) {}
-// CHECK-DAG: define{{.*}} spir_func void @[[RAW_REF2:[a-zA-Z0-9_]+]](ptr addrspace(4) noundef align 4 dereferenceable(4) %
+// CHECK-DAG: define{{.*}} void @[[RAW_REF2:[a-zA-Z0-9_]+]](ptr addrspace(4) noundef align 4 dereferenceable(4) %
 void bar(__attribute__((opencl_local)) int &Data) {}
-// CHECK-DAG: define{{.*}} spir_func void [[LOC_REF:@[a-zA-Z0-9_]+]](ptr addrspace(3) noundef align 4 dereferenceable(4) %
+// CHECK-DAG: define{{.*}} void [[LOC_REF:@[a-zA-Z0-9_]+]](ptr addrspace(3) noundef align 4 dereferenceable(4) %
 void foo(int *Data) {}
-// CHECK-DAG: define{{.*}} spir_func void @[[RAW_PTR:[a-zA-Z0-9_]+]](ptr addrspace(4) noundef %
+// CHECK-DAG: define{{.*}} void @[[RAW_PTR:[a-zA-Z0-9_]+]](ptr addrspace(4) noundef %
 void foo2(int *Data) {}
-// CHECK-DAG: define{{.*}} spir_func void @[[RAW_PTR2:[a-zA-Z0-9_]+]](ptr addrspace(4) noundef %
+// CHECK-DAG: define{{.*}} void @[[RAW_PTR2:[a-zA-Z0-9_]+]](ptr addrspace(4) noundef %
 void foo(__attribute__((opencl_local)) int *Data) {}
-// CHECK-DAG: define{{.*}} spir_func void [[LOC_PTR:@[a-zA-Z0-9_]+]](ptr addrspace(3) noundef %
+// CHECK-DAG: define{{.*}} void [[LOC_PTR:@[a-zA-Z0-9_]+]](ptr addrspace(3) noundef %
 
 template <typename T>
 void tmpl(T t) {}
@@ -79,65 +79,65 @@ void tmpl(T t) {}
   bar(*GLOB);
   // CHECK-DAG: [[GLOB_LOAD:%[a-zA-Z0-9]+]] = load ptr addrspace(1), ptr addrspace(4) [[GLOB]].ascast
   // CHECK-DAG: [[GLOB_CAST:%[a-zA-Z0-9]+]] = addrspacecast ptr addrspace(1) [[GLOB_LOAD]] to ptr addrspace(4)
-  // CHECK-DAG: call spir_func void @[[RAW_REF]](ptr addrspace(4) noundef align 4 dereferenceable(4) [[GLOB_CAST]])
+  // CHECK-DAG: call{{.*}} void @[[RAW_REF]](ptr addrspace(4) noundef align 4 dereferenceable(4) [[GLOB_CAST]])
   bar2(*GLOB);
   // CHECK-DAG: [[GLOB_LOAD2:%[a-zA-Z0-9]+]] = load ptr addrspace(1), ptr addrspace(4) [[GLOB]].ascast
   // CHECK-DAG: [[GLOB_CAST2:%[a-zA-Z0-9]+]] = addrspacecast ptr addrspace(1) [[GLOB_LOAD2]] to ptr addrspace(4)
-  // CHECK-DAG: call spir_func void @[[RAW_REF2]](ptr addrspace(4) noundef align 4 dereferenceable(4) [[GLOB_CAST2]])
+  // CHECK-DAG: call{{.*}} void @[[RAW_REF2]](ptr addrspace(4) noundef align 4 dereferenceable(4) [[GLOB_CAST2]])
 
   bar(*LOC);
   // CHECK-DAG: [[LOC_LOAD:%[a-zA-Z0-9]+]] = load ptr addrspace(3), ptr addrspace(4) [[LOC]].ascast
-  // CHECK-DAG: call spir_func void [[LOC_REF]](ptr addrspace(3) noundef align 4 dereferenceable(4) [[LOC_LOAD]])
+  // CHECK-DAG: call{{.*}} void [[LOC_REF]](ptr addrspace(3) noundef align 4 dereferenceable(4) [[LOC_LOAD]])
   bar2(*LOC);
   // CHECK-DAG: [[LOC_LOAD2:%[a-zA-Z0-9]+]] = load ptr addrspace(3), ptr addrspace(4) [[LOC]].ascast
   // CHECK-DAG: [[LOC_CAST2:%[a-zA-Z0-9]+]] = addrspacecast ptr addrspace(3) [[LOC_LOAD2]] to ptr addrspace(4)
-  // CHECK-DAG: call spir_func void @[[RAW_REF2]](ptr addrspace(4) noundef align 4 dereferenceable(4) [[LOC_CAST2]])
+  // CHECK-DAG: call{{.*}} void @[[RAW_REF2]](ptr addrspace(4) noundef align 4 dereferenceable(4) [[LOC_CAST2]])
 
   bar(*NoAS);
   // CHECK-DAG: [[NoAS_LOAD:%[a-zA-Z0-9]+]] = load ptr addrspace(4), ptr addrspace(4) [[NoAS]].ascast
-  // CHECK-DAG: call spir_func void @[[RAW_REF]](ptr addrspace(4) noundef align 4 dereferenceable(4) [[NoAS_LOAD]])
+  // CHECK-DAG: call{{.*}} void @[[RAW_REF]](ptr addrspace(4) noundef align 4 dereferenceable(4) [[NoAS_LOAD]])
   bar2(*NoAS);
   // CHECK-DAG: [[NoAS_LOAD2:%[a-zA-Z0-9]+]] = load ptr addrspace(4), ptr addrspace(4) [[NoAS]].ascast
-  // CHECK-DAG: call spir_func void @[[RAW_REF2]](ptr addrspace(4) noundef align 4 dereferenceable(4) [[NoAS_LOAD2]])
+  // CHECK-DAG: call{{.*}} void @[[RAW_REF2]](ptr addrspace(4) noundef align 4 dereferenceable(4) [[NoAS_LOAD2]])
 
   foo(GLOB);
   // CHECK-DAG: [[GLOB_LOAD3:%[a-zA-Z0-9]+]] = load ptr addrspace(1), ptr addrspace(4) [[GLOB]].ascast
   // CHECK-DAG: [[GLOB_CAST3:%[a-zA-Z0-9]+]] = addrspacecast ptr addrspace(1) [[GLOB_LOAD3]] to ptr addrspace(4)
-  // CHECK-DAG: call spir_func void @[[RAW_PTR]](ptr addrspace(4) noundef [[GLOB_CAST3]])
+  // CHECK-DAG: call{{.*}} void @[[RAW_PTR]](ptr addrspace(4) noundef [[GLOB_CAST3]])
   foo2(GLOB);
   // CHECK-DAG: [[GLOB_LOAD4:%[a-zA-Z0-9]+]] = load ptr addrspace(1), ptr addrspace(4) [[GLOB]].ascast
   // CHECK-DAG: [[GLOB_CAST4:%[a-zA-Z0-9]+]] = addrspacecast ptr addrspace(1) [[GLOB_LOAD4]] to ptr addrspace(4)
-  // CHECK-DAG: call spir_func void @[[RAW_PTR2]](ptr addrspace(4) noundef [[GLOB_CAST4]])
+  // CHECK-DAG: call{{.*}} void @[[RAW_PTR2]](ptr addrspace(4) noundef [[GLOB_CAST4]])
   foo(LOC);
   // CHECK-DAG: [[LOC_LOAD3:%[a-zA-Z0-9]+]] = load ptr addrspace(3), ptr addrspace(4) [[LOC]].ascast
-  // CHECK-DAG: call spir_func void [[LOC_PTR]](ptr addrspace(3) noundef [[LOC_LOAD3]])
+  // CHECK-DAG: call{{.*}} void [[LOC_PTR]](ptr addrspace(3) noundef [[LOC_LOAD3]])
   foo2(LOC);
   // CHECK-DAG: [[LOC_LOAD4:%[a-zA-Z0-9]+]] = load ptr addrspace(3), ptr addrspace(4) [[LOC]].ascast
   // CHECK-DAG: [[LOC_CAST4:%[a-zA-Z0-9]+]] = addrspacecast ptr addrspace(3) [[LOC_LOAD4]] to ptr addrspace(4)
-  // CHECK-DAG: call spir_func void @[[RAW_PTR2]](ptr addrspace(4) noundef [[LOC_CAST4]])
+  // CHECK-DAG: call{{.*}} void @[[RAW_PTR2]](ptr addrspace(4) noundef [[LOC_CAST4]])
   foo(NoAS);
   // CHECK-DAG: [[NoAS_LOAD3:%[a-zA-Z0-9]+]] = load ptr addrspace(4), ptr addrspace(4) [[NoAS]].ascast
-  // CHECK-DAG: call spir_func void @[[RAW_PTR]](ptr addrspace(4) noundef [[NoAS_LOAD3]])
+  // CHECK-DAG: call{{.*}} void @[[RAW_PTR]](ptr addrspace(4) noundef [[NoAS_LOAD3]])
   foo2(NoAS);
   // CHECK-DAG: [[NoAS_LOAD4:%[a-zA-Z0-9]+]] = load ptr addrspace(4), ptr addrspace(4) [[NoAS]].ascast
-  // CHECK-DAG: call spir_func void @[[RAW_PTR2]](ptr addrspace(4) noundef [[NoAS_LOAD4]])
+  // CHECK-DAG: call{{.*}} void @[[RAW_PTR2]](ptr addrspace(4) noundef [[NoAS_LOAD4]])
 
   // Ensure that we still get 3 different template instantiations.
   tmpl(GLOB);
   // CHECK-DAG: [[GLOB_LOAD4:%[a-zA-Z0-9]+]] = load ptr addrspace(1), ptr addrspace(4) [[GLOB]].ascast
-  // CHECK-DAG: call spir_func void @_Z4tmplIPU3AS1iEvT_(ptr addrspace(1) noundef [[GLOB_LOAD4]])
+  // CHECK-DAG: call{{.*}} void @_Z4tmplIPU3AS1iEvT_(ptr addrspace(1) noundef [[GLOB_LOAD4]])
   tmpl(LOC);
   // CHECK-DAG: [[LOC_LOAD5:%[a-zA-Z0-9]+]] = load ptr addrspace(3), ptr addrspace(4) [[LOC]].ascast
-  // CHECK-DAG: call spir_func void @_Z4tmplIPU3AS3iEvT_(ptr addrspace(3) noundef [[LOC_LOAD5]])
+  // CHECK-DAG: call{{.*}} void @_Z4tmplIPU3AS3iEvT_(ptr addrspace(3) noundef [[LOC_LOAD5]])
   tmpl(PRIV);
   // CHECK-DAG: [[PRIV_LOAD5:%[a-zA-Z0-9]+]] = load ptr, ptr addrspace(4) [[PRIV]].ascast
-  // CHECK-DAG: call spir_func void @_Z4tmplIPU3AS0iEvT_(ptr noundef [[PRIV_LOAD5]])
+  // CHECK-DAG: call{{.*}} void @_Z4tmplIPU3AS0iEvT_(ptr noundef [[PRIV_LOAD5]])
   tmpl(NoAS);
   // CHECK-DAG: [[NoAS_LOAD5:%[a-zA-Z0-9]+]] = load ptr addrspace(4), ptr addrspace(4) [[NoAS]].ascast
-  // CHECK-DAG: call spir_func void @_Z4tmplIPiEvT_(ptr addrspace(4) noundef [[NoAS_LOAD5]])
+  // CHECK-DAG: call{{.*}} void @_Z4tmplIPiEvT_(ptr addrspace(4) noundef [[NoAS_LOAD5]])
 }
 
-// CHECK-DAG: define linkonce_odr spir_func void @_Z4tmplIPU3AS1iEvT_(ptr addrspace(1) noundef %
-// CHECK-DAG: define linkonce_odr spir_func void @_Z4tmplIPU3AS3iEvT_(ptr addrspace(3) noundef %
-// CHECK-DAG: define linkonce_odr spir_func void @_Z4tmplIPU3AS0iEvT_(ptr noundef %
-// CHECK-DAG: define linkonce_odr spir_func void @_Z4tmplIPiEvT_(ptr addrspace(4) noundef %
+// CHECK-DAG: define{{.*}} void @_Z4tmplIPU3AS1iEvT_(ptr addrspace(1) noundef %
+// CHECK-DAG: define{{.*}} void @_Z4tmplIPU3AS3iEvT_(ptr addrspace(3) noundef %
+// CHECK-DAG: define{{.*}} void @_Z4tmplIPU3AS0iEvT_(ptr noundef %
+// CHECK-DAG: define{{.*}} void @_Z4tmplIPiEvT_(ptr addrspace(4) noundef %
