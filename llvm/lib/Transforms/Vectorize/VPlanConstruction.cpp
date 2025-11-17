@@ -241,9 +241,9 @@ void PlainCFGBuilder::createVPInstructionsForVPBB(VPBasicBlock *VPBB,
         const auto &[AliasScopeMD, NoAliasMD] =
             LVer->getNoAliasMetadataFor(Inst);
         if (AliasScopeMD)
-          MD.addMetadata(LLVMContext::MD_alias_scope, AliasScopeMD);
+          MD.setMetadata(LLVMContext::MD_alias_scope, AliasScopeMD);
         if (NoAliasMD)
-          MD.addMetadata(LLVMContext::MD_noalias, NoAliasMD);
+          MD.setMetadata(LLVMContext::MD_noalias, NoAliasMD);
       }
 
       // Translate LLVM-IR operands into VPValue operands and set them in the
