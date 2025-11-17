@@ -9,6 +9,9 @@
 #ifndef __CLC_OPENCL_ATOMIC_ATOMIC_STORE_H__
 #define __CLC_OPENCL_ATOMIC_ATOMIC_STORE_H__
 
+#include <clc/opencl/opencl-base.h>
+#include <clc/opencl/types.h>
+
 #define __CLC_FUNCTION atomic_store
 #define __CLC_RETURN_VOID
 

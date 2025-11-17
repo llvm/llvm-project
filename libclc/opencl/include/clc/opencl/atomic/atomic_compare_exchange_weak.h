@@ -9,6 +9,9 @@
 #ifndef __CLC_OPENCL_ATOMIC_ATOMIC_COMPARE_EXCHANGE_WEAK_H__
 #define __CLC_OPENCL_ATOMIC_ATOMIC_COMPARE_EXCHANGE_WEAK_H__
 
+#include <clc/opencl/opencl-base.h>
+#include <clc/opencl/types.h>
+
 #define __CLC_FUNCTION atomic_compare_exchange_weak
 #define __CLC_COMPARE_EXCHANGE
 

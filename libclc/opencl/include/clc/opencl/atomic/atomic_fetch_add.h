@@ -9,6 +9,9 @@
 #ifndef __CLC_OPENCL_ATOMIC_ATOMIC_FETCH_ADD_H__
 #define __CLC_OPENCL_ATOMIC_ATOMIC_FETCH_ADD_H__
 
+#include <clc/opencl/opencl-base.h>
+#include <clc/opencl/types.h>
+
 #define __CLC_FUNCTION atomic_fetch_add
 
 #define __CLC_BODY <clc/opencl/atomic/atomic_decl.inc>
